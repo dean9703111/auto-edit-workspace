@@ -84,8 +84,8 @@
 ### 2.6 Studio 預覽與修改
 
 1. `cd work/hyperframes && npx hyperframes preview --no-open`。在非互動的 shell 裡它會自己轉到背景，印出網址就結束，不用加 `&` 或 nohup。網址像 `http://localhost:3002/#project/hyperframes`（印成 `127.0.0.1` 也可以）。查狀態 `npx hyperframes preview --status`，關掉 `--stop`。
-2. 給網址時一起說三件事：要使用者確認的卡（例：碰撞 ⚠ 那張）；請他順便看字幕有沒有對到講話（snapshot 檢查不到）；選卡的方法是暫停在卡出現的畫面，點卡片上的字，出現綠色框線就是選到了。
-3. 使用者說「這張卡」「我選的」時，讀他在 Studio 選到的元素：
+2. 給網址時一起說三件事：要使用者確認的卡（例：碰撞 ⚠ 那張）；請他順便看字幕有沒有對到講話（snapshot 檢查不到）；要改哪一段，直接說 Studio 左側 Compositions 或時間軸上的段落編號（例「s05 的金句卡往左移」）就可以。
+3. 使用者直接說段落編號（例「s05 的金句卡」）時，直接改 plan.json 的那個 `id`，不用讀選取。他說「這張卡」「我選的」時，才讀他在 Studio 選到的元素：
    ```bash
    cd work/hyperframes && npx hyperframes preview --context --json --context-fields selection
    ```
