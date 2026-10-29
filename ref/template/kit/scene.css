@@ -1,0 +1,747 @@
+/* ==========================================================================
+   動畫情境庫 設計系統（scene.css）— 可換主題的共用元件
+   本檔只放 token 預設值（頻道預設 channel）、字體與可組裝的元件，不寫死任何顏色；
+   所有顏色讀 --sc-* token。token 與主題契約見 references/theming.md；
+   主題＝assets/themes/<name>/theme.css（只覆寫 :root token＋少量裝飾），載入順序：scene.css → scene-theme.css。
+   各段只在自己 index.html 的 <style> 寫「位置」（position/left/top/bottom）與少量覆寫，不改本檔。
+   段目錄以 symlink 引用：scene.css、scene-theme.css、scene-motion.js、assets。
+
+   ── 用法速查（class 一覽）─────────────────────────────────────────────────
+   版面
+     .fill                     clip 內的全畫布容器（absolute inset 0）。它的直接子元素一律在段內寫
+                               position:absolute＋left＋top（或 bottom），否則 audit 報「未定位頂層元素」。
+     .sc-bg                    全畫面幕的滿版背景圖 <img class="sc-bg" src="assets/bg/chapter.jpg" alt="">（不加 id）
+     .sc-surface-fs／-ch／-side  不透明幕的底（加在 root）：底色＋底紋 token，1920×1080（side 為 960×1080）、不重複；
+                               主題有背景圖時由產生器在段內 style 另補 background-image
+   字級／字重／字色（字級都是整數行高；字級是下限，空間夠就放大）
+     .sc-t30 … .sc-t150        font-size＋整數 line-height，並設定光學置中量 --opt
+     .sc-w900／.sc-w700／.sc-w500   Heavy／Bold／Medium（只用這三個字重）
+     .sc-kw                    關鍵詞色（--sc-kw）；在 .sc-side／.sc-wcard 裡自動改用該面板的關鍵詞色
+     .sc-mute／.sc-gray        深底次要字／淺底（全畫面、側邊欄）次要字
+     .sc-opt                   光學置中：思源黑體字面中心比行框中心低約 0.055em，
+                               在「固定高度、垂直置中」的容器（膠囊、卡片列、斜板）裡給文字加這個 class
+   語氣（tone）：元件或 root 加 data-tone="warn"｜"good"，子樹內主色改成警示／解方色（theming.md 第 3 節）
+   透明疊加層（疊在講者上，與實拍交界一律深色）
+     .sc-card                  深色卡（--sc-card）＋2px --sc-card-line 框＋圓角 16；寬 max-content
+       .sc-card--row           下方字卡單列：高 112、左側 80 元件內縮 16（含框）、文字右內距 40（含框）
+       .sc-card--topline       卡內頂部 6px 主色線（四周留 4px 深色，不貼卡緣）
+     .sc-pill                  深色膠囊眉標：高 72、字 40／700、字前 14px 主色圓點；文字包 <span class="sc-opt">
+       .sc-pill--outline       TIPS 標籤：主色字 36／900＋3px 主色框、無圓點、高 64
+     .sc-icon                  主色圖示圓（lucide 圖示用 --sc-on-accent-glyph）：預設 80／圖示 44；72／40 用 .sc-icon--72
+     .sc-num                   主色序號圓：預設 64＋字 36／900；56 用 .sc-num--56（字 32）
+     .sc-sq                    主色圓角方塊：預設 80、圓角 14；60 用 .sc-sq--60（章節角標）、48 用 .sc-sq--48（Tips 勾選）
+       .sc-sq--white           亮板底深字（QA 的「A」，--sc-board／--sc-board-ink）
+     .sc-divider               卡內 2px 分隔線
+     .sc-kwboard               關鍵詞條列的深色板（padding 10 28；板內底部 8px 主色條，四周留 4px 深色）
+     .sc-row                   橫排一列（序號圓／圖示＋文字），gap 24、不換行、寬 max-content
+   KV2 斜角語彙（clip-path 平行四邊形；斜度＝高度×0.2，--h 請用 5 的倍數讓斜度是整數；交付一律 ss-render 2×）
+     .sc-slant  style="--h:160px"   高 --h、左右內距＝斜度＋24、寬 max-content；文字包 <span class="sc-opt">
+       .sc-slant--white        章名斜板（--sc-ch-title-bg／-ink，只在全畫面幕）
+       .sc-slant--paper        卡內嵌亮板（--sc-board／--sc-board-kw；距卡外緣 ≥ 8px，由段內定位保證）
+       .sc-slant--black        副標斜帶（--sc-ch-sub-bg／-ink；--sc-ch-sub-line 有值時畫 2px 框，none 不畫）
+       .sc-slant--orange       主色底斜標（Step 標籤，只放在深色卡內、四周 ≥ 4px 深色）
+   不透明幕
+     .sc-chapnum               章節號卡 280×280：<span class="sc-chapnum__label">CHAPTER</span>
+                               <span class="sc-chapnum__line"></span><span class="sc-chapnum__num">01</span>
+     .sc-wcard                 全畫面主卡（radius 20、--sc-fs-card／--sc-fs-card-line、--sc-lift）
+       .sc-wcard__bar          標題列（--sc-fs-bar／-ink，字 64／900，padding 20 40）
+       .sc-wcard__body         內文區（padding 36 40 40，列間 28）
+     .sc-dot                   16px 主色方點（全畫面清單）
+     .sc-side                  側邊欄面板 960×1080（--sc-side-*，右緣 6px 主色線＋12px 深色條，與實拍交界是深色條）；
+                               背景圖放第一個子元素 <img class="sc-side__bg" src="assets/bg/side.jpg" alt="">。
+                               **不要給面板 id**：audit 只量「帶 id 的絕對定位元素」，面板是 0–1080 的背景層，
+                               帶 id 會讓「內容底部」變 1080、內容區塊被當成子元素而量不到；動畫用 class 選取（P.sideIn('.sc-side', 0)）。
+
+   ── 組裝範例 ──────────────────────────────────────────────────────────────
+   下方字卡（情境 6）：
+     <div id="gCard" class="sc-card sc-card--row">
+       <span class="sc-icon"><svg …lucide…></svg></span>
+       <span class="sc-t52 sc-w700 sc-opt"><span class="sc-kw">連接器</span>：讓 AI 連上你的外部工具</span>
+     </div>
+     段內：#gCard { position:absolute; left:120px; bottom:220px; }   卡底 860 ＝ 1080 − 220
+   清單列（情境 3）：
+     <div id="sItem1" class="sc-row"><span class="sc-num">1</span><span class="sc-t52 sc-w500 sc-opt">…</span></div>
+
+   ── v2（間距、下方字卡底座、迷你章節卡）─────────────────────────────────────
+   間距 token：--sp-1 8／--sp-2 16／--sp-3 24／--sp-4 32／--sp-5 40／--sp-6 56
+   字級：.sc-t54（54／行高 68，v2 正文）；.sc-optr＝光學置中但不加高度（固定列高的兩列卡用，取代 .sc-opt）
+   徽章：.sc-icon.sc-icon--88（主色圓 88＋圖示 48）
+
+   下方字卡底座 .sc-lt（情境 6–11、13、14）
+     <div id="gCard" class="sc-lt">                        ← 段內只寫 #gCard { left:120px; bottom:220px; }（置中卡另見下）
+       <i class="sc-lt__plate"></i>                        ← 錯位底板：右下 8、--sc-plate、外緣 4px 深色（固定，照抄）
+       <div class="sc-lt__card">                           ← 主卡：不透明（--sc-card-solid）、radius 20、2px 框；內距 上 56／下 32／左右 40（含框）
+         <i class="sc-lt__dots"></i>                       ← 選配細節 A：右上網點（或 B：<i class="sc-lt__accent"></i> 左下 96×4 主色短線；二選一）
+         <div class="sc-lt__body sc-lt__row"> … </div>     ← 內容層（P.rise 的對象）；單列卡用 .sc-lt__row（flex、gap 24、min-height 88）
+       </div>
+       <div class="sc-lt__tag"><span class="sc-lt__tagin">概念</span></div>   ← 標籤只放中文（56／900，高 88）
+     </div>
+     幾何契約（外框盒＝所有可見層聯集，audit 量的就是它）：
+       單列卡  主卡 672–852（高 180＝框 2＋上 56＋內容 88＋下 32＋框 2）、標籤 616–704、底板到 860
+       兩列卡  主卡 592–852（高 260）、標籤 536–624、內容區 650–818 共 168（QA：68＋32＋68；講者介紹：112＋16＋40）
+       左緣直線 x160（卡左＋40）：標籤左下角、正文／徽章／方標、短線、姓名板直條全部對齊這條
+       主卡上內距 56＝標籤伸進卡內的 32＋24（標籤上凸 56；各段 root data-top＝520，講者保護區 x640–1280 內容仍須 ≥ 560）：標籤下緣到正文 ≥ 24
+     焦點（一張卡只一個）：徽章 .sc-icon.sc-icon--88，或亮色斜板
+       <span class="sc-slant sc-slant--paper sc-lt__kw"><span id="kWord" class="sc-t56 sc-w900 sc-opt">大幅減少 AI 幻覺</span></span>
+       （高 88、斜切 24；標籤斜率 0.2727 與它平行）
+     兩列卡零件：.sc-lt__mark--line／--solid（64 方標：問句安靜、答案主色底）、.sc-lt__divider（2px）
+     講者介紹零件：.sc-lt__name（姓名板：左 8px 主色直條＋右斜切 24、80／900，<span id="spkName" class="sc-optr">林鼎淵</span>）、
+       .sc-lt__meta > .sc-lt__metaitem（[<i class="sc-lt__sq"></i>]＋<span class="sc-optr">頭銜</span>，40／700、方塊 10×10、間距 24）
+     置中卡（總結）：#id { left: 8px; right: 0; margin: 0 auto; bottom: 220px; }——外框盒比主卡多右側 8（底板），
+       在 8–1920 置中＝主卡中心剛好 960；寬度由 scene-motion 補成偶數，左右緣都是整數（實測主卡 407–1513）
+     動態（scene-motion.js）：P.reveal('#gCard', 0) → P.rise('#gCard .sc-lt__body', P.BEAT) → … → P.out('#gCard', D − P.OUT)
+       斜板字／姓名改 P.maskUp(字, P.BEAT)，斜板本身算外殼（隨揭開出現，字再從板內浮出）
+
+   迷你章節卡 .sc-chtag（情境 2；全畫面幕右上角標同一個元件）
+     <div id="cBadge" class="sc-chtag">
+       <div class="sc-chtag__shell"><span class="sc-chtag__num">01</span></div>
+       <div class="sc-chtag__band"><span class="sc-chtag__name">Claude 網頁版</span></div>
+     </div>
+     段內只寫 #cBadge { right:96px; top:56px; }（右緣 1824、頂 56；全畫面幕改 top:150px）。高 112、寬隨章名。
+     動態：P.drift('#cBadge', 0) → P.in('#cBadge .sc-chtag__num, #cBadge .sc-chtag__name', P.BEAT) → P.out('#cBadge', D − P.OUT)
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   字體：由 kit/fonts.css 提供（Noto Sans TC 可變字型，隨包附、離線可用），這裡只透過 --font-cjk 引用。
+   -------------------------------------------------------------------------- */
+:root {
+  /* token 預設值＝頻道預設（channel）；契約與各 token 用途見 references/theming.md 第 2 節。
+     主題 theme.css 只覆寫這些 token。底紋（--sc-*-pattern）預設 none，頻道底紋由 themes/channel/theme.css 提供。 */
+
+  /* 全域 */
+  --sc-font:           var(--font-cjk);
+  --sc-accent:         #FFD400;
+  --sc-accent-hi:      #FFE45C;
+  --sc-accent-deep:    #E0B000;
+  --sc-accent-dim:     #322F1B;
+  --sc-on-accent:      #0B1020;
+  --sc-on-accent-glyph:#0B1020;
+  --sc-kw:             #FFD400;
+  --sc-kw-min:         0;
+  --sc-deep:           #070B14;
+  --sc-card:           rgba(11, 16, 32, 0.96);
+  --sc-card-solid:     #0B1020;
+  --sc-card-line:      rgba(255, 255, 255, 0.34);   /* overlay 不變量：框 alpha ≥ 0.34 */
+  --sc-plate:          #1E2740;
+  --sc-ink:            #FFFFFF;
+  --sc-mute:           rgba(255, 255, 255, 0.78);
+  --sc-board:          #FFFFFF;
+  --sc-board-kw:       #0B1020;
+  --sc-board-ink:      #0B1020;
+  --sc-warn:           #E0202A;
+  --sc-on-warn:        #FFFFFF;
+  --sc-warn-kw:        #FF5A5F;
+  --sc-good:           #2FB36B;
+  --sc-on-good:        #FFFFFF;
+  --sc-good-kw:        #4ADE9B;
+  --sc-warn-dim:       #2D1322;   /* 警示色 16% 疊深底（data-tone 時取代 --sc-accent-dim） */
+  --sc-good-dim:       #112A2C;
+  --sc-info:           #3B82F6;
+  --sc-lift:           0 10px 24px rgba(0, 0, 0, 0.55);   /* 不透明幕上的白卡／淺卡貼身投影（透明層不加） */
+
+  /* 全畫面幕 */
+  --sc-fs-bg:          #0A0F1E;
+  --sc-fs-pattern:     none;
+  --sc-fs-card:        #111A2E;
+  --sc-fs-card-line:   rgba(255, 255, 255, 0.16);
+  --sc-fs-ink:         #FFFFFF;
+  --sc-fs-mute:        rgba(255, 255, 255, 0.72);
+  --sc-fs-kw:          #FFD400;
+  --sc-fs-kw-min:      0;
+  --sc-fs-bar:         #FFD400;
+  --sc-fs-bar-ink:     #0B1020;
+  --sc-fs-head:        #070B14;
+  --sc-fs-head-ink:    #FFFFFF;
+  --sc-fs-tint:        #16213A;
+  --sc-fs-line:        rgba(255, 255, 255, 0.86);
+  --sc-fs-node:        #111A2E;
+  --sc-fs-node-line:   rgba(255, 255, 255, 0.34);
+
+  /* 章節轉場、迷你章節卡 */
+  --sc-ch-bg:          #0A0F1E;
+  --sc-ch-pattern:     none;
+  --sc-chnum-bg:       #FFD400;
+  --sc-chnum-label:    #0B1020;
+  --sc-chnum-line:     #0B1020;
+  --sc-chnum-num:      #0B1020;
+  --sc-ch-title-bg:    #FFFFFF;
+  --sc-ch-title-ink:   #0B1020;
+  --sc-ch-sub-bg:      #070B14;
+  --sc-ch-sub-ink:     #FFFFFF;
+  --sc-ch-sub-line:    rgba(255, 255, 255, 0.34);   /* none＝不畫框 */
+  --sc-chtag-plate:    #FFD400;
+  --sc-chtag-num:      #0B1020;
+
+  /* 側邊欄 */
+  --sc-side-bg:        #0E1528;
+  --sc-side-pattern:   none;
+  --sc-side-ink:       #FFFFFF;
+  --sc-side-mute:      rgba(255, 255, 255, 0.72);
+  --sc-side-kw:        #FFD400;
+  --sc-side-veil:      none;
+  --sc-side-edge:      #FFD400;
+  --sc-side-pill:      #FFD400;
+  --sc-side-pill-ink:  #0B1020;
+
+  --opt: 6px;                                    /* 光學置中量的預設（＝52px 字），字級 class 會覆寫 */
+}
+
+/* 語氣變體（theming.md 第 3 節）：子樹內把主色換成警示／解方色；一張卡只有一個語氣 */
+[data-tone="warn"] { --sc-accent: var(--sc-warn); --sc-on-accent: var(--sc-on-warn); --sc-on-accent-glyph: var(--sc-on-warn); --sc-kw: var(--sc-warn-kw); --sc-accent-dim: var(--sc-warn-dim); }
+[data-tone="good"] { --sc-accent: var(--sc-good); --sc-on-accent: var(--sc-on-good); --sc-on-accent-glyph: var(--sc-on-good); --sc-kw: var(--sc-good-kw); --sc-accent-dim: var(--sc-good-dim); }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent;                     /* 疊加層：畫布全透明 */
+}
+
+body, #root {
+  font-family: var(--sc-font);
+  font-weight: 500;
+  color: var(--sc-ink);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+.fill { position: absolute; inset: 0; }
+
+/* --------------------------------------------------------------------------
+   字級：整數行高；--opt＝光學置中的 padding-bottom（≈ 0.12em 取整數，字面上移 --opt/2）。
+   實測（每 100px）：網 ascent 85／descent 9、數字 ascent 76／descent 1；行框 ascent 116／descent 29。
+   -------------------------------------------------------------------------- */
+.sc-t30  { font-size: 30px;  line-height: 42px;  --opt: 4px; }
+.sc-t34  { font-size: 34px;  line-height: 48px;  --opt: 4px; }
+.sc-t36  { font-size: 36px;  line-height: 50px;  --opt: 4px; }
+.sc-t40  { font-size: 40px;  line-height: 56px;  --opt: 4px; }
+.sc-t44  { font-size: 44px;  line-height: 60px;  --opt: 6px; }
+.sc-t48  { font-size: 48px;  line-height: 66px;  --opt: 6px; }
+.sc-t52  { font-size: 52px;  line-height: 72px;  --opt: 6px; }
+.sc-t56  { font-size: 56px;  line-height: 76px;  --opt: 6px; }
+.sc-t60  { font-size: 60px;  line-height: 84px;  --opt: 8px; }
+.sc-t64  { font-size: 64px;  line-height: 88px;  --opt: 8px; }
+.sc-t72  { font-size: 72px;  line-height: 100px; --opt: 8px; }
+.sc-t80  { font-size: 80px;  line-height: 104px; --opt: 10px; }
+.sc-t112 { font-size: 112px; line-height: 136px; --opt: 14px; }
+.sc-t150 { font-size: 150px; line-height: 150px; --opt: 18px; }
+
+.sc-w900 { font-weight: 900; }
+.sc-w700 { font-weight: 700; }
+.sc-w500 { font-weight: 500; }
+
+.sc-kw   { color: var(--sc-kw); }
+.sc-side .sc-kw { color: var(--sc-side-kw); }
+.sc-wcard .sc-kw { color: var(--sc-fs-kw); }
+.sc-slant--paper .sc-kw { color: var(--sc-board-kw); }
+.sc-mute { color: var(--sc-mute); }
+.sc-gray { color: var(--sc-fs-mute); }
+.sc-side .sc-gray { color: var(--sc-side-mute); }
+.sc-opt  { padding-bottom: var(--opt); }
+
+/* --------------------------------------------------------------------------
+   全畫面背景圖（不透明幕）
+   -------------------------------------------------------------------------- */
+.sc-bg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; display: block; }
+
+/* 不透明幕的底（加在 root 或幕容器上）：底色＋底紋 token；底紋 none 時只剩底色。
+   主題有背景圖時，產生器在段內 style 另補 background-image（scene.css 是共用檔，不能寫相對 url） */
+.sc-surface-fs   { background: var(--sc-fs-bg)   var(--sc-fs-pattern)   no-repeat 0 0 / 1920px 1080px; }
+.sc-surface-ch   { background: var(--sc-ch-bg)   var(--sc-ch-pattern)   no-repeat 0 0 / 1920px 1080px; }
+.sc-surface-side { background: var(--sc-side-bg) var(--sc-side-pattern) no-repeat 0 0 / 960px 1080px; }
+
+/* --------------------------------------------------------------------------
+   黑卡（透明疊加層）
+   -------------------------------------------------------------------------- */
+.sc-card {
+  background: var(--sc-card);
+  border: 2px solid var(--sc-card-line);
+  border-radius: 16px;
+  color: var(--sc-ink);
+  width: max-content;
+}
+/* 下方字卡單列：高 112（含框）；左側 80 元件距卡外緣 16＝框 2＋內距 14（上下 (112−4−80)/2＝14）；
+   文字右側距卡外緣 40＝框 2＋內距 38 */
+.sc-card--row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 112px;
+  padding: 0 38px 0 14px;
+  white-space: nowrap;
+}
+/* 卡內頂部 6px 主色線：絕對定位在 padding box 內 4px（四周留 4px 黑）；卡本身要是 absolute（頂層元素本來就是） */
+.sc-card--topline::before {
+  content: "";
+  position: absolute;
+  left: 4px; right: 4px; top: 4px;
+  height: 6px;
+  border-radius: 3px;                          /* 讓主色線兩端落在卡內圓角（半徑 14）裡 */
+  background: var(--sc-accent);
+}
+
+/* 膠囊眉標：高 72＝行高 56＋上下各 8；左內距 28 → 主色點 14 → 間距 14 → 字 → 右內距 32 */
+.sc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  height: 72px;
+  padding: 0 32px 0 28px;
+  border-radius: 999px;
+  background: var(--sc-deep);
+  color: var(--sc-ink);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 56px;
+  --opt: 4px;
+  white-space: nowrap;
+  width: max-content;
+}
+.sc-pill::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 50%; background: var(--sc-accent); }
+.sc-pill--outline {
+  height: 64px;
+  padding: 0 28px;
+  border: 3px solid var(--sc-accent);
+  color: var(--sc-accent);
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 50px;
+  letter-spacing: 0.08em;
+}
+.sc-pill--outline::before { display: none; }
+
+/* 主色色圖示圓：--d 直徑、--i 圖示邊長；(80−44)/2＝18、(72−40)/2＝16 都是整數 */
+.sc-icon {
+  --d: 80px; --i: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--d);
+  height: var(--d);
+  border-radius: 50%;
+  background: var(--sc-accent);
+  color: var(--sc-on-accent-glyph);
+}
+.sc-icon--72 { --d: 72px; --i: 40px; }
+.sc-icon svg { display: block; width: var(--i); height: var(--i); }
+
+/* 主色色序號圓：數字字面中心比行框中心低 0.063em → padding-bottom --opt 抵銷 */
+.sc-num {
+  --d: 64px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--d);
+  height: var(--d);
+  padding-bottom: var(--opt);
+  border-radius: 50%;
+  background: var(--sc-accent);
+  color: var(--sc-on-accent-glyph);
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1;
+  --opt: 4px;
+}
+.sc-num--56 { --d: 56px; font-size: 32px; --opt: 4px; }
+
+/* 主色色圓角方塊（章節號、重點「!」、QA 的 Q、Tips 勾選） */
+.sc-sq {
+  --d: 80px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--d);
+  height: var(--d);
+  padding-bottom: var(--opt);
+  border-radius: 14px;
+  background: var(--sc-accent);
+  color: var(--sc-on-accent-glyph);
+  font-weight: 900;
+  line-height: 1;
+}
+.sc-sq--60 { --d: 60px; border-radius: 12px; }
+.sc-sq--48 { --d: 48px; border-radius: 10px; }
+.sc-sq--white { background: var(--sc-board); color: var(--sc-board-ink); }
+.sc-sq svg { display: block; width: 60%; height: 60%; }
+
+.sc-divider { height: 2px; background: var(--sc-card-line); }
+
+/* 關鍵詞條列板：上內距 10＋文字＋10＋主色條 8＋4（底內距 22）；左右 28 */
+.sc-kwboard {
+  position: relative;
+  width: max-content;
+  padding: 10px 28px 22px;
+  border: 2px solid var(--sc-card-line);
+  border-radius: 16px;
+  background: var(--sc-card);
+  color: var(--sc-ink);
+  white-space: nowrap;
+}
+.sc-kwboard::after {
+  content: "";
+  position: absolute;
+  left: 4px; right: 4px; bottom: 4px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--sc-accent);
+}
+
+.sc-row { display: flex; align-items: center; gap: 24px; white-space: nowrap; width: max-content; }
+
+/* --------------------------------------------------------------------------
+   KV2 斜角板：平行四邊形 (S,0)→(W,0)→(W−S,H)→(0,H)，S＝0.2H
+   -------------------------------------------------------------------------- */
+.sc-slant {
+  --h: 160px;
+  --s: calc(var(--h) * 0.2);
+  display: flex;
+  align-items: center;
+  height: var(--h);
+  padding: 0 calc(var(--s) + 24px);
+  clip-path: polygon(var(--s) 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%);
+  white-space: nowrap;
+  width: max-content;
+}
+.sc-slant--white  { background: var(--sc-ch-title-bg); color: var(--sc-ch-title-ink); }
+.sc-slant--paper  { background: var(--sc-board);        color: var(--sc-board-kw); }
+.sc-slant--black  { background: var(--sc-ch-sub-bg);    color: var(--sc-ch-sub-ink); position: relative; }
+.sc-slant--orange { background: var(--sc-accent);       color: var(--sc-on-accent-glyph); }
+/* 副標斜帶外框：--sc-ch-sub-line 為 none 時 background 無效＝不畫；有值時用 evenodd 挖空的平行四邊形環畫 2px，
+   外緣與斜帶同形，內緣內縮 2px（斜邊水平內縮 2.04、頂底內縮 2），不改變幾何、不用 border */
+.sc-slant--black::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--sc-ch-sub-line);
+  clip-path: polygon(evenodd,
+    var(--s) 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%,
+    calc(var(--s) + 1.64px) 2px, calc(100% - 2.44px) 2px, calc(100% - var(--s) - 1.64px) calc(100% - 2px), 2.44px calc(100% - 2px));
+}
+
+/* --------------------------------------------------------------------------
+   章節號卡 280×280（情境 1）
+   字面位置以實測字形算（不是行框）：CHAPTER 大寫字面 53–79、主色線 92–95、數字字面 111–226，上下留白 53／54
+   -------------------------------------------------------------------------- */
+.sc-chapnum {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 280px;
+  height: 280px;
+  padding-top: 44px;                           /* 標籤行框頂 44（字面頂 44＋9） */
+  border-radius: 28px;
+  background: var(--sc-chnum-bg);
+}
+.sc-chapnum__label {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 40px;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;                         /* 抵銷最後一個字母後面的字距，讓字面置中 */
+  color: var(--sc-chnum-label);
+  white-space: nowrap;
+}
+.sc-chapnum__line {
+  width: 200px;
+  height: 3px;
+  margin-top: 8px;                             /* 標籤行框底 84 → 分隔線 92–95 */
+  background: var(--sc-chnum-line);
+}
+.sc-chapnum__num {
+  margin-top: -11px;                           /* 數字行框 84–234（行框頂的 26px 是空白，字面從 111 起） */
+  font-size: 150px;
+  font-weight: 900;
+  line-height: 150px;
+  color: var(--sc-chnum-num);
+}
+
+/* --------------------------------------------------------------------------
+   全畫面白卡（情境 4）
+   -------------------------------------------------------------------------- */
+.sc-wcard {
+  width: max-content;
+  border: 2px solid var(--sc-fs-card-line);
+  border-radius: 20px;
+  background: var(--sc-fs-card);
+  box-shadow: var(--sc-lift);
+  color: var(--sc-fs-ink);
+  overflow: hidden;
+}
+.sc-wcard__bar {
+  padding: 20px 40px;
+  background: var(--sc-fs-bar);
+  color: var(--sc-fs-bar-ink);
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 88px;
+  white-space: nowrap;
+}
+.sc-wcard__body { display: flex; flex-direction: column; gap: 28px; padding: 36px 40px 40px; }
+.sc-dot { flex: none; width: 16px; height: 16px; background: var(--sc-accent); }
+
+/* --------------------------------------------------------------------------
+   側邊欄面板（情境 3）：x 0–960、y 0–1080 不透明；右緣由內而外 6px 主色線（942–948）＋12px 黑條（948–960）
+   -------------------------------------------------------------------------- */
+.sc-side {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 960px;
+  height: 1080px;
+  background: var(--sc-side-bg) var(--sc-side-pattern) no-repeat 0 0 / 960px 1080px;   /* 背景圖沒載入時的備援；主題有底紋時畫底紋 */
+  color: var(--sc-side-ink);
+  z-index: 0;                                 /* 自成堆疊環境：::before 提亮紗只壓在背景圖上，不蓋到後面的內容區塊 */
+}
+.sc-side__bg { position: absolute; left: 0; top: 0; width: 960px; height: 1080px; object-fit: cover; display: block; }
+/* 文字區提亮紗（--sc-side-veil，none＝不畫）：淺色主題用來把文字區底色提亮到對比 ≥ 3:1（large text），底部漸退保留背景圖裝飾。 */
+.sc-side::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 942px;
+  height: 1080px;
+  z-index: 1;
+  background: var(--sc-side-veil);
+}
+.sc-side .sc-pill { background: var(--sc-side-pill); color: var(--sc-side-pill-ink); }   /* 面板內眉標膠囊 */
+.sc-side > :not(.sc-side__bg) { z-index: 2; }   /* 面板內的內容區塊（皆 absolute）浮在提亮紗之上 */
+.sc-side::after {
+  content: "";
+  position: absolute;
+  left: 942px;
+  top: 0;
+  width: 18px;
+  height: 1080px;
+  background: linear-gradient(90deg, var(--sc-side-edge) 0 6px, var(--sc-deep) 6px 18px);
+}
+
+/* ==========================================================================
+   v2（情境規範 §1.6）：間距尺度、下方字卡底座 .sc-lt、迷你章節卡 .sc-chtag
+   只新增、不改上面的 v1 class。DOM 範例與幾何契約寫在檔頭「v2」段。
+   ========================================================================== */
+:root {
+  --sp-1: 8px;    /* 元件內微間距 */
+  --sp-2: 16px;   /* 行內元素、膠囊上下 */
+  --sp-3: 24px;   /* 圖示→文字、列與列、標籤下緣→正文 */
+  --sp-4: 32px;   /* 卡片上下內距下限 */
+  --sp-5: 40px;   /* 卡片左右內距下限、區塊之間 */
+  --sp-6: 56px;   /* 大區塊之間；下方字卡頂內距（標籤下半 32＋24） */
+}
+
+.sc-t54 { font-size: 54px; line-height: 68px; --opt: 6px; }   /* v2 下方字卡正文 54／700、行高 68 */
+.sc-optr { position: relative; top: calc(var(--opt) / -2); }   /* 光學置中但不改版面高度（固定列高的兩列卡用；.sc-opt 會多 --opt 的高度） */
+.sc-icon--88 { --d: 88px; --i: 48px; }                         /* v2 焦點徽章：主色圓 88＋白圖示 48（(88−48)/2＝20） */
+
+/* --------------------------------------------------------------------------
+   下方字卡底座 .sc-lt（情境 6–11、13）
+   外框盒＝所有可見層的聯集：上緣＝標籤頂、右／下緣＝錯位底板的右／下緣。
+   段內只寫 #id { left: 120px; bottom: 220px; }（bottom 220 → 底板底 860、主卡底 852）。
+   -------------------------------------------------------------------------- */
+.sc-lt {
+  position: absolute;
+  width: max-content;
+  max-width: 1688px;                            /* 主卡 1680＋底板錯開 8 */
+  padding: 56px 8px 8px 0;                      /* 上：標籤上凸 56；右、下：底板錯開 8 */
+}
+/* 錯位底板：與主卡同尺寸、右下錯開 8；實心暖深灰＋外緣 4px 深色（與實拍交界是深色） */
+.sc-lt__plate {
+  position: absolute;
+  left: 8px;
+  top: 64px;                                    /* 56＋8 */
+  right: 0;
+  bottom: 0;
+  border: 4px solid var(--sc-deep);
+  border-radius: 20px;
+  background: var(--sc-plate);
+}
+/* 主卡：不透明黑（0.96 會讓後方底板透出 4%，在主卡上緣、左緣 8px 形成 L 形色差）；
+   內距：上 56（標籤伸進卡內 32＋間距 24，標籤不貼正文）、下 32、左右 38＋框 2＝內容線在卡左＋40 */
+.sc-lt__card {
+  position: relative;
+  z-index: 1;
+  padding: 56px 38px 32px;
+  border: 2px solid var(--sc-card-line);
+  border-radius: 20px;
+  background: var(--sc-card-solid);
+  color: var(--sc-ink);
+  white-space: nowrap;
+}
+/* 內容層（P.layered 在外殼後 0.15s 淡入）；單列卡放 .sc-lt__row */
+.sc-lt__body { position: relative; }
+.sc-lt__row { display: flex; align-items: center; gap: 24px; min-height: 88px; }
+
+/* 分類標籤（只放中文一個字串）：KV2 平行四邊形，高 88（含 4px 深色外圈）、斜率 0.2727（＝焦點斜板 24/88，兩者斜邊平行）。
+   外層＝深色外圈（clip 外框，斜切 24），內層 .sc-lt__tagin＝主色底黑字（clip 內框，四邊與外框平行、垂直距離 4px）。
+   斜邊水平內縮 4×√(1+0.2727²)＝4.15；內框高 80、角點 27.06／5.24。
+   左緣（外框左下角）對齊主卡內容線（卡左＋40）；上凸 56、伸入主卡 32（標籤下緣到卡內正文 24）。 */
+.sc-lt__tag {
+  position: absolute;
+  left: 40px;
+  top: 0;
+  z-index: 2;
+  height: 88px;
+  padding: 4px 0;
+  background: var(--sc-deep);
+  clip-path: polygon(24px 0, 100% 0, calc(100% - 24px) 100%, 0 100%);
+}
+.sc-lt__tagin {
+  display: flex;
+  align-items: center;
+  height: 80px;
+  padding: 0 56px 6px;                          /* 左右 56：字面離斜邊最近處約 32；下 6＝光學置中 */
+  background: var(--sc-accent);
+  color: var(--sc-on-accent);
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 64px;
+  white-space: nowrap;
+  clip-path: polygon(27.06px 0, calc(100% - 5.24px) 0, calc(100% - 27.06px) 100%, 5.24px 100%);
+}
+/* 停用（作者 2026-10-13：標籤只要中文）。以下兩條保留 class 不再使用 */
+.sc-lt__en { margin-right: -2px; font-size: 28px; letter-spacing: 2px; }
+.sc-lt__zh + .sc-lt__en { margin-left: 12px; font-size: 24px; }
+
+/* 焦點（一張卡只放一個）：
+   徽章＝.sc-icon.sc-icon--88；白色斜板＝.sc-slant.sc-slant--paper.sc-lt__kw（高 88、斜切 24、字面離斜邊 ≥ 40） */
+.sc-lt__kw { --h: 88px; --s: 24px; padding: 0 52px 0 52px; flex: none; }
+
+/* 選配細節（二選一）
+   網點：主卡右上角（標籤對角），白點 12% alpha、6px 網格、點徑由左到右 0→3px；SVG 圓點 repeat-y，硬邊、靜態、seek 無關 */
+.sc-lt__dots {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 192px;                                 /* ＝SVG 一列的寬（32 欄 × 6），不要改寬：改了右邊會缺點 */
+  height: var(--dots-h, 36px);                  /* 預設 6 列，只佔頂內距（底端離正文 12）；右上有大塊空白時段內加高（seg14），底端離下方內容 ≥ 12 */
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='192' height='6' fill='%23fff' fill-opacity='.12'><circle cx='9' cy='3' r='0.05'/><circle cx='15' cy='3' r='0.1'/><circle cx='21' cy='3' r='0.15'/><circle cx='27' cy='3' r='0.19'/><circle cx='33' cy='3' r='0.24'/><circle cx='39' cy='3' r='0.29'/><circle cx='45' cy='3' r='0.34'/><circle cx='51' cy='3' r='0.39'/><circle cx='57' cy='3' r='0.44'/><circle cx='63' cy='3' r='0.48'/><circle cx='69' cy='3' r='0.53'/><circle cx='75' cy='3' r='0.58'/><circle cx='81' cy='3' r='0.63'/><circle cx='87' cy='3' r='0.68'/><circle cx='93' cy='3' r='0.73'/><circle cx='99' cy='3' r='0.77'/><circle cx='105' cy='3' r='0.82'/><circle cx='111' cy='3' r='0.87'/><circle cx='117' cy='3' r='0.92'/><circle cx='123' cy='3' r='0.97'/><circle cx='129' cy='3' r='1.02'/><circle cx='135' cy='3' r='1.06'/><circle cx='141' cy='3' r='1.11'/><circle cx='147' cy='3' r='1.16'/><circle cx='153' cy='3' r='1.21'/><circle cx='159' cy='3' r='1.26'/><circle cx='165' cy='3' r='1.31'/><circle cx='171' cy='3' r='1.35'/><circle cx='177' cy='3' r='1.4'/><circle cx='183' cy='3' r='1.45'/><circle cx='189' cy='3' r='1.5'/></svg>") 0 0 / 192px 6px repeat-y;
+}
+/* 底部短線：4px 主色、長 96；左端對齊內容線（卡左＋40，與標籤、正文同一條直線），距主卡外緣下 16（框 2＋14）。
+   規格寫「距左下 16」，實測 x136 會在標籤／正文的 x160 直線旁多出第二條左緣，改對齊內容線 */
+.sc-lt__accent {
+  position: absolute;
+  left: 38px;
+  bottom: 14px;
+  width: 96px;
+  height: 4px;
+  background: var(--sc-accent);
+}
+
+/* 列首方標（QA 的 Q／A）：64、圓角 14、字 36／900 置中；
+   --solid＝主色底黑字（同標籤配色，用在答案）；--line＝深底 2px 主色框主色字（安靜，用在問句） */
+.sc-lt__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding-bottom: 4px;
+  border-radius: 14px;
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1;
+}
+.sc-lt__mark--solid { background: var(--sc-accent); color: var(--sc-on-accent); }
+.sc-lt__mark--line  { border: 2px solid var(--sc-accent); background: var(--sc-accent-dim); color: var(--sc-accent); }   /* accent-dim＝主色 16% 疊深底的實色，不用 alpha */
+.sc-lt__divider { height: 2px; background: var(--sc-card-line); }
+
+/* 姓名板（情境 14 講者介紹的焦點）：KV2 姓名板＝左端直邊＋8px 主色色直條、右端斜切 24；白底黑字 80／900、字距 0.08em。
+   高 112（字面約 72，上下各約 20）；左內距 40（從主色條右緣算）、右 52（斜切的一半＋40）。左緣直邊＝內容線，頭銜列與它同一條直線。 */
+.sc-lt__name {
+  flex: none;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  height: 112px;
+  padding: 0 52px 0 40px;
+  border-left: 8px solid var(--sc-accent);
+  background: var(--sc-board);
+  color: var(--sc-board-ink);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 24px) 100%, 0 100%);
+  white-space: nowrap;
+}
+.sc-lt__name > span {
+  --opt: 10px;
+  font-size: 80px;
+  font-weight: 900;
+  line-height: 80px;
+  letter-spacing: 0.08em;
+  margin-right: -0.08em;                        /* 抵銷字尾字距，字面在板內左右對稱 */
+}
+/* 頭銜列：白字 40／700、字距 0.04em；頭銜之間 10×10 主色色小方塊（KV2），方塊兩側各 24。
+   每一組（方塊＋頭銜）包成 .sc-lt__metaitem，P.drift 逐組進場。 */
+.sc-lt__meta { display: flex; align-items: center; gap: 24px; height: 40px; }
+.sc-lt__metaitem { display: flex; align-items: center; gap: 24px; }
+.sc-lt__metaitem > span { --opt: 4px; font-size: 40px; font-weight: 700; line-height: 40px; letter-spacing: 0.04em; text-indent: 0.02em; }   /* 字距兩端各分一半；寬度由 sc-motion 左右平均補內距成整數（方塊才落在整數 px） */
+.sc-lt__sq { flex: none; width: 10px; height: 10px; background: var(--sc-accent); }
+
+/* --------------------------------------------------------------------------
+   迷你章節卡 .sc-chtag（情境 2；§1.6 C）
+   左：112 黑殼（radius 18）內嵌 96 白號板（內縮 8、radius 12），號碼 56／900 主色；
+   右：黑斜帶 高 112、斜切 24，左端整段藏在黑殼後（同色黑，殼的右側圓角被斜帶補平 → 整組是一條左圓右斜的黑帶）；
+   章名 44／700 白、行高 60，與號碼同一條中心線（上下各 26）、左 40（從黑殼右緣算）、右 40（從斜邊算）；底部內側 4px 主色線（下 8，左端接黑殼右緣，
+   主色線下緣＝白號板下緣 y104，同一條水平線）。段內只寫 #id { right: 96px; top: 56px; }（右緣 1824、頂 56）。
+   -------------------------------------------------------------------------- */
+.sc-chtag {
+  position: absolute;
+  display: flex;
+  width: max-content;
+  height: 112px;
+}
+.sc-chtag__shell {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 112px;
+  height: 112px;
+  padding: 8px;
+  border-radius: 18px;
+  background: var(--sc-deep);
+}
+.sc-chtag__num {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  padding-bottom: 6px;                          /* 數字字面比行框中心低約 3px（實測）→ 上提 */
+  border-radius: 12px;
+  background: var(--sc-chtag-plate);
+  color: var(--sc-chtag-num);
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 72px;
+  font-variant-numeric: tabular-nums;
+}
+.sc-chtag__band {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  height: 112px;
+  margin-left: -42px;                           /* 斜帶左上角藏在黑殼右緣後 18（＝殼圓角），左下角藏 42 */
+  padding: 0 64px 0 82px;                       /* 左 42＋40；右 24＋40；章名與號碼同一條中心線（y56），字底→主色線約 24 */
+  background: var(--sc-deep);
+  clip-path: polygon(24px 0, 100% 0, calc(100% - 24px) 100%, 0 100%);
+}
+.sc-chtag__band::after {
+  content: "";
+  position: absolute;
+  left: 42px;                                   /* 黑殼右緣 */
+  right: 31px;                                  /* 斜邊在 y104 處內縮 22.3，再留 8 黑 */
+  bottom: 8px;
+  height: 4px;
+  background: var(--sc-accent);
+}
+.sc-chtag__name {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 60px;
+  color: var(--sc-ink);
+  white-space: nowrap;
+  padding-bottom: 6px;                          /* 光學置中（--opt 44px＝6） */
+}

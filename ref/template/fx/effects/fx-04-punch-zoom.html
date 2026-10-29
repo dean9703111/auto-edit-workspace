@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"衝刺縮放"},
+  {"id":"accent","type":"color","label":"主色","default":"#f25c54"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>04 Punch Zoom 衝刺縮放</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 04 Punch Zoom */
+    .fx-04-wrap { position: relative; display: grid; place-items: center; }
+    .fx-04-word { grid-area: 1 / 1; white-space: nowrap; opacity: 0; }
+    .fx-04-main { color: var(--fx-ink); text-shadow: var(--fx-scrim); }
+    .fx-04-ghost { color: var(--fx-hi); }
+  </style>
+  <div id="root" data-composition-id="fx-04-punch-zoom" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-04-wrap"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 04 Punch Zoom：scale 0.05→1 expo.out 衝到前方，後面 3 層主色殘影逐層延遲跟上；停留後往前衝出畫面淡出 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const wrap = document.querySelector('.fx-04-wrap');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    const size = FXKit.fitSize(v.text, 300, FXKit.SAFE.w);
+    const layers = [0.15, 0.28, 0.45].map((op, k) => ({ op, delay: (3 - k) * 0.05, cls: 'fx-04-ghost' }));
+    layers.push({ op: 1, delay: 0, cls: 'fx-04-main' });   // 主體最後建、疊在最上面
+    const els = layers.map((l) => {
+      const e = document.createElement('div');
+      e.className = 'fx-04-word ' + l.cls;
+      e.textContent = v.text;
+      e.style.fontSize = size + 'px';
+      wrap.appendChild(e);
+      return e;
+    });
+
+    const tl = gsap.timeline({ paused: true });
+    const IN = 0.7, OUT = 0.35;
+    const exitAt = Math.max(0.15 + IN + 0.2, D - 0.6);
+    layers.forEach((l, i) => {
+      const e = els[i];
+      const t = l.delay;
+      tl.fromTo(e, { scale: 0.05, opacity: 0 }, { scale: 1, duration: IN, ease: 'expo.out' }, t)
+        .fromTo(e, { opacity: 0 }, { opacity: l.op, duration: 0.1, ease: 'none' }, t)
+        .to(e, { scale: 7, duration: OUT, ease: 'power3.in' }, exitAt + l.delay)
+        .to(e, { opacity: 0, duration: OUT * 0.8, ease: 'power1.in' }, exitAt + l.delay + OUT * 0.2);
+    });
+    window.__timelines['fx-04-punch-zoom'] = tl;
+  </script>
+</template>
+</body>
+</html>

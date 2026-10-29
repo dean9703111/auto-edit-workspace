@@ -1,0 +1,14 @@
+{
+  "pop":      { "zh": "泡泡 pop", "use": "下方字卡揭開、第一張卡片出現", "peak": 0.01, "volume": 0.6 },
+  "tick":     { "zh": "輕 tick", "use": "條列逐條出現、步驟切換，每條一顆", "peak": 0.005, "volume": 0.55 },
+  "swipe":    { "zh": "短 swoosh", "use": "側邊欄推入、角標滑入", "peak": 0.07, "volume": 0.55 },
+  "whoosh":   { "zh": "空氣 whoosh", "use": "章節轉場、全畫面幕進場", "peak": 0.743, "volume": 0.5 },
+  "ding":     { "zh": "清亮鈴聲", "use": "講重點、答案揭曉", "peak": 0.016, "volume": 0.4 },
+  "success":  { "zh": "完成 chime", "use": "解法、成果、完成", "peak": 0, "volume": 0.45 },
+  "alert":    { "zh": "柔和錯誤音", "use": "千萬不要、踩坑、注意", "peak": 0.039, "volume": 0.4 },
+  "impact":   { "zh": "悶重 thud", "use": "蓋章、重擊、字爆發", "peak": 0.003, "volume": 0.9 },
+  "flip":     { "zh": "翻牌", "use": "翻牌、翻卡、切換", "peak": 0.078, "volume": 0.8 },
+  "type":     { "zh": "打字短串", "use": "打字機動畫起手", "peak": 0.005, "volume": 0.3 },
+  "glitch":   { "zh": "數位故障", "use": "出錯、系統崩潰、bug", "peak": 0.016, "volume": 0.35 },
+  "riser":    { "zh": "上升張力音", "use": "隧道、穿越、揭曉前的鋪墊（峰值在結尾）", "peak": 1.472, "volume": 0.45 }
+}

@@ -1,0 +1,25 @@
+<!-- @style -->
+/* 置中卡（同 11 總結）：外框盒在 8–1920 置中 → 主卡中心 x960；bottom 220 → 底板底 860、主卡 592–852、標籤 536–624。
+   焦點＝正文前後一對主色引號「…」（與正文同字級、行內，跟著第一行開頭與最後一行結尾走，不漂浮）；正文 54／700 置中、行距 68。
+   有出處時多一列 36／500（行高 44、--sc-mute）靠右對齊內容線，卡高 +12（272），標籤頂 524。細節＝右上網點。 */
+#gCard { left: 8px; right: 0; margin: 0 auto; bottom: 220px; }
+.qt-body { display: flex; flex-direction: column; justify-content: center; min-height: 168px; padding: 0 16px; text-align: center; }
+.qt-q { color: var(--sc-kw); font-weight: 900; }
+.qt-by { text-align: right; font-size: 36px; font-weight: 500; line-height: 44px; }
+<!-- @body -->
+<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <i class="sc-lt__plate"></i>
+  <div class="sc-lt__card">
+    <i class="sc-lt__dots"></i>
+    <div class="sc-lt__body qt-body">
+      <div class="sc-t54 sc-w700 sc-optr"><span class="qt-q">「</span>{{{text}}}<span class="qt-q">」</span></div>
+      {{#by}}<div class="qt-by sc-mute sc-optr">— {{by}}</div>{{/by}}
+    </div>
+  </div>
+  <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
+</div>
+<!-- @timeline -->
+/* 外殼遮罩揭開 → 引號＋正文＋出處 0.15 後一起淡入上漂 8（引號在內容層裡，同一拍）→ 停 → 段尾 0.4 淡出 */
+P.reveal('#gCard', {{{in}}});
+P.rise('#gCard .sc-lt__body', {{{in}}} + P.BEAT);
+{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}

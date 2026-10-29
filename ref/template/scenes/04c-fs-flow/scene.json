@@ -1,0 +1,45 @@
+{
+  "key": "fs-flow",
+  "no": "04c",
+  "zh": "全畫面流程",
+  "aliases": ["流程", "架構圖", "步驟流程"],
+  "family": "fullscreen",
+  "when": "3–4 步的流程或架構，每一步有名稱和圖示，由左到右走一遍",
+  "avoid": "步驟超過四個（拆兩段）、步驟內要寫整句說明（改全畫面清單）",
+  "layout": { "data-layout": "全畫面", "data-pip": "br" },
+  "surface": "fs",
+  "bindsSrt": true,
+  "duration": { "default": 6, "min": 4, "fixed": null },
+  "addons": ["chtag"],
+  "slots": {
+    "title": { "label": "標題", "type": "text", "required": true, "max": 14 },
+    "nodes": {
+      "label": "節點", "type": "list", "min": 3, "maxItems": 4, "required": true,
+      "item": {
+        "text": { "type": "text", "max": 5 },
+        "icon": { "type": "icon", "required": true }
+      }
+    },
+    "current": { "label": "目前", "type": "number" }
+  },
+  "beats": {},
+  "lists": {
+    "nodes": { "at": "0.5 + {{i}} * 0.35" }
+  },
+  "sfx": {
+    "main": { "sound": "whoosh", "at": "start - 0.15" },
+    "extra": [ { "sound": "tick", "at": "nodes[0:]" } ]
+  },
+  "rules": [],
+  "sample": {
+    "title": "從原始口播到成片",
+    "sub": "先轉逐字稿，AI 再找出 NG",
+    "duration": 6,
+    "slots": {
+      "title": "從原始口播到成片",
+      "nodes": ["轉逐字稿 ｜icon=file-text", "列剪輯清單 ｜icon=list-checks", "初剪 ｜icon=scissors", "包裝成片 ｜icon=clapperboard"],
+      "current": "2"
+    },
+    "beats": {}
+  }
+}

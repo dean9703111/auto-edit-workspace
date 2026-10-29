@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字（B）","default":"標題切換"},
+  {"id":"alt","type":"string","label":"切換文字（A）","default":"Headline"},
+  {"id":"tag","type":"string","label":"左側標籤","default":"快訊"},
+  {"id":"accent","type":"color","label":"主色","default":"#a78bfa"},
+  {"id":"bg","type":"enum","label":"底色","default":"accent","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>30 Headline Swap 標題切換</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 30 Headline Swap */
+    .fx-30-row { display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+    .fx-30-tag { flex: none; background: #fff; color: #14161c; border-radius: 10px; }
+    .fx-30-win { position: relative; flex: none; overflow: hidden; }
+    .fx-30-it { position: absolute; left: 0; top: 0; display: flex; align-items: center; width: 100%;
+      color: var(--fx-ink); text-shadow: var(--fx-scrim); white-space: nowrap; }
+    .fx-stage[data-bg="none"] .fx-30-tag { background: var(--fx-panel); color: var(--fx-hi); text-shadow: none; }
+  </style>
+  <div id="root" data-composition-id="fx-30-headline-swap" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-30-row"><div class="fx-30-tag"></div><div class="fx-30-win"></div></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 30 Headline Swap：左側固定標籤；右側標題在遮罩框內由下推入，舊標題往上推出，A → B → A */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const tag = document.querySelector('.fx-30-tag');
+    const win = document.querySelector('.fx-30-win');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const TG = String(v.tag ?? ''), TA = String(v.alt ?? ''), TB = String(v.text ?? '');
+    const maxE = Math.max(FXKit.emWidth(TA), FXKit.emWidth(TB));
+    const fh = Math.min(180, Math.floor(FXKit.SAFE.w / (FXKit.emWidth(TG) * 0.6 + 0.6 + 0.35 + maxE)));
+    const H = Math.round(fh * 1.35);
+    const ft = Math.round(fh * 0.6);
+    tag.textContent = TG;
+    tag.style.cssText = `font-size:${ft}px;padding:${Math.round(ft * 0.35)}px ${Math.round(ft * 0.5)}px;margin-right:${Math.round(fh * 0.35)}px;`;
+    win.style.cssText = `font-size:${fh}px;width:${Math.ceil(maxE * fh * 1.02)}px;height:${H}px;`;
+    const mk = (s) => {
+      const it = document.createElement('div');
+      it.className = 'fx-30-it';
+      it.style.height = H + 'px';
+      it.textContent = s;
+      win.appendChild(it);
+      return it;
+    };
+    const iA = mk(TA), iB = mk(TB);
+
+    const push = Math.max(0.2, Math.min(0.5, (D - 0.8) * 0.3));
+    const t1 = 0.4, t2 = D - 0.4 - push;
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(iA, { y: 0 }, { y: -H, duration: push, ease: 'power3.inOut' }, t1)
+      .fromTo(iB, { y: H }, { y: 0, duration: push, ease: 'power3.inOut' }, t1)
+      .fromTo(iB, { y: 0 }, { y: -H, duration: push, ease: 'power3.inOut', immediateRender: false }, t2)
+      .fromTo(iA, { y: H }, { y: 0, duration: push, ease: 'power3.inOut', immediateRender: false }, t2);
+    window.__timelines['fx-30-headline-swap'] = tl;
+  </script>
+</template>
+</body>
+</html>

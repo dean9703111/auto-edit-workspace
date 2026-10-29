@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"LED 點陣"},
+  {"id":"accent","type":"color","label":"主色","default":"#a78bfa"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>31 LED Text LED 點陣</title></head>
+<body>
+<template>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400&display=block');
+    #root { position: absolute; inset: 0; }
+    /* 31 LED Text */
+    .fx-31-panel { position: absolute; left: 0; width: 1920px; overflow: hidden; background: var(--fx-panel);
+      font-family: "DotGothic16", "Noto Sans TC", sans-serif; font-weight: 400; }
+    .fx-31-track { position: absolute; left: 0; top: 0; height: 100%; display: flex; align-items: center; white-space: nowrap; }
+    .fx-31-unit { flex: none; color: var(--fx-hi); text-shadow: 0 0 10px var(--accent), 0 0 26px var(--accent); }
+    .fx-stage[data-bg="none"] .fx-31-unit { text-shadow: 0 1px 3px rgba(0,0,0,.85); }
+    .fx-31-scan { position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(rgba(0,0,0,.3) 0, rgba(0,0,0,.3) 2px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 6px); }
+  </style>
+  <div id="root" data-composition-id="fx-31-led-text" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-31-panel"><div class="fx-31-track"></div><div class="fx-31-scan"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 31 LED Text：DotGothic16 點陣字「text・」重複橫向捲動（整數週期），主色發光暈＋緩慢下移的掃描線 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const panel = document.querySelector('.fx-31-panel');
+    const track = document.querySelector('.fx-31-track');
+    const scan = document.querySelector('.fx-31-scan');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const T = String(v.text ?? '');
+    const fs = 240, Hp = 330;
+    panel.style.top = (FXKit.SAFE.cy - Hp / 2) + 'px';
+    panel.style.height = Hp + 'px';
+    panel.style.fontSize = fs + 'px';
+    // 每個單位固定寬度＝一個週期；寬度估算寧可寬
+    const W = Math.ceil((FXKit.emWidth(T) + 0.9) * fs);
+    const copies = Math.ceil(1920 / W) + 1;
+    for (let i = 0; i < copies; i++) {
+      const u = document.createElement('div');
+      u.className = 'fx-31-unit';
+      u.style.width = W + 'px';
+      u.textContent = T + '・';
+      track.appendChild(u);
+    }
+
+    // 整數週期：D 秒內剛好捲 k 個單位寬
+    const k = Math.max(1, Math.round((D * 260) / W));
+    const shift = 6 * Math.round(D * 4);        // 掃描線週期 6px，整數個週期
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(track, { x: 0 }, { x: -k * W, duration: D, ease: 'none',
+      modifiers: { x: (x) => (parseFloat(x) % W) + 'px' } }, 0)
+      .fromTo(scan, { backgroundPositionY: 0 }, { backgroundPositionY: shift, duration: D, ease: 'none' }, 0);
+    window.__timelines['fx-31-led-text'] = tl;
+  </script>
+</template>
+</body>
+</html>

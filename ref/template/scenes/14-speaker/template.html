@@ -1,0 +1,30 @@
+<!-- @style -->
+/* 兩列卡：主卡 592–852（高 260）、標籤 536–624。主卡內：頂內距 56 → 姓名板 650–762（112）→ 間距 16 → 頭銜列 778–818（40）→ 底內距 32。
+   一條左緣直線 x160：標籤左下角、姓名板主色直條、第一個頭銜。細節＝右上網點加高成半調塊（補姓名板右側的空），底端離頭銜列 20。 */
+#spkCard { left: 120px; bottom: 220px; }
+.spk-body { display: flex; flex-direction: column; gap: 16px; }
+#spkCard .sc-lt__dots { --dots-h: 156px; }
+<!-- @body -->
+<div id="spkCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <i class="sc-lt__plate"></i>
+  <div class="sc-lt__card">
+    <i class="sc-lt__dots"></i>
+    <div class="sc-lt__body spk-body">
+      <div class="sc-lt__name"><span id="spkName" class="sc-optr">{{name}}</span></div>
+      <div class="sc-lt__meta">
+{{#titles}}
+        <span id="ti{{n}}" class="sc-lt__metaitem">{{^first}}<i class="sc-lt__sq"></i>{{/first}}<span class="sc-optr">{{text}}</span></span>
+{{/titles}}
+      </div>
+    </div>
+  </div>
+  <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
+</div>
+<!-- @timeline -->
+/* 外殼遮罩揭開 0.55 → 姓名 0.15 後遮罩上升 0.6（0.75 到位）→ 頭銜逐組從左 drift 12（間隔 0.1，姓名已走完 94%，同一時間只有一個方向在動）→ 停 → 段尾 0.4 淡出 */
+P.reveal('#spkCard', {{{in}}});
+P.maskUp('#spkName', {{{in}}} + P.BEAT);
+{{#titles}}
+P.drift('#ti{{n}}', {{{at}}}, { dx: -12 });
+{{/titles}}
+{{#exitFade}}P.out('#spkCard', D - P.OUT);{{/exitFade}}

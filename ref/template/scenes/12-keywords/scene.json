@@ -1,0 +1,39 @@
+{
+  "key": "keywords",
+  "no": 12,
+  "zh": "關鍵詞條列",
+  "aliases": ["關鍵詞", "條列", "關鍵字"],
+  "family": "edge",
+  "when": "口播連續點名 2–3 個短關鍵詞，依序在左側直排出現",
+  "avoid": "四個以上關鍵詞（拆兩段）、每條還要附說明（改標題條列或全畫面清單）",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-vbal-ignore": "" },
+  "layoutByProfile": { "yt": { "data-top": "165" } },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 6, "min": 3.5, "fixed": null },
+  "addons": ["chtag"],
+  "slots": {
+    "items": {
+      "label": "詞", "type": "list", "min": 2, "maxItems": 3, "required": true,
+      "item": { "text": { "type": "rich", "max": 10, "maxLine": 5, "maxLines": 2 } }
+    }
+  },
+  "beats": {},
+  "lists": {
+    "items": { "at": "0.2 + {{i}} * 0.5" }
+  },
+  "sfx": {
+    "main": { "sound": "pop", "at": "items[0]" },
+    "extra": [ { "sound": "tick", "at": "items[1:]" } ]
+  },
+  "rules": [],
+  "sample": {
+    "title": "三個階段",
+    "sub": "今天的流程分成三個階段",
+    "duration": 6,
+    "slots": {
+      "items": ["剪乾淨", "剪好看", "一句重跑"]
+    },
+    "beats": {}
+  }
+}

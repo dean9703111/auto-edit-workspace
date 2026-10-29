@@ -1,0 +1,123 @@
+{
+  "key": "fs-table",
+  "no": "04d",
+  "zh": "全畫面表格",
+  "aliases": [
+    "表格",
+    "比較表",
+    "一張表格"
+  ],
+  "family": "fullscreen",
+  "when": "多個項目 × 多個屬性的對照（工具比較、方案比較），2–5 列、2–4 欄",
+  "avoid": "只有兩個東西對比（改全畫面對照）；格內是整句話（改全畫面清單）",
+  "layout": {
+    "data-layout": "全畫面",
+    "data-pip": "br"
+  },
+  "surface": "fs",
+  "bindsSrt": true,
+  "duration": {
+    "default": 7,
+    "min": 5,
+    "fixed": null
+  },
+  "addons": [
+    "chtag"
+  ],
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "required": true,
+      "max": 14
+    },
+    "head": {
+      "label": "欄頭",
+      "type": "list",
+      "min": 1,
+      "maxItems": 1,
+      "required": true,
+      "item": {
+        "c1": {
+          "type": "text",
+          "max": 8
+        },
+        "c2": {
+          "type": "text",
+          "max": 8
+        },
+        "c3": {
+          "type": "text",
+          "max": 8
+        },
+        "c4": {
+          "type": "text",
+          "max": 8
+        }
+      }
+    },
+    "rows": {
+      "label": "列",
+      "type": "list",
+      "min": 2,
+      "maxItems": 5,
+      "required": true,
+      "item": {
+        "c1": {
+          "type": "rich",
+          "max": 10
+        },
+        "c2": {
+          "type": "rich",
+          "max": 10
+        },
+        "c3": {
+          "type": "rich",
+          "max": 10
+        },
+        "c4": {
+          "type": "rich",
+          "max": 10
+        }
+      }
+    },
+    "highlight": {
+      "label": "強調列",
+      "type": "number"
+    }
+  },
+  "beats": {},
+  "lists": {
+    "head": {
+      "at": "0.5"
+    },
+    "rows": {
+      "at": "0.85 + {{i}} * 0.35"
+    }
+  },
+  "sfx": {
+    "main": { "sound": "whoosh", "at": "start - 0.15" },
+    "extra": [ { "sound": "tick", "at": "rows[0:]" } ]
+  },
+  "rules": [
+    {
+      "if": "rows.some(r => r.c4 && [r.c1_len, r.c2_len, r.c3_len, r.c4_len].some(n => n > 4))",
+      "error": "4 欄時每格最多 4 字（欄寬 266，字 44）；縮文案或減欄"
+    },
+    {
+      "if": "rows.some(r => r.c3 && !r.c4 && [r.c1_len, r.c2_len, r.c3_len].some(n => n > 6))",
+      "error": "3 欄時每格最多 6 字（欄寬 355，字 44）；縮文案或減欄"
+    }
+  ],
+  "sample": {
+    "title": "兩個工具怎麼分工",
+    "sub": "需要判斷的工作，才交給 AI",
+    "duration": 7,
+    "slots": {
+      "title": "兩個工具怎麼分工",
+      "head": ["工具 / 負責"],
+      "rows": ["HyperFrames / 字幕與動畫", "auto-editor / 剪掉停頓", "AI / 找出 NG"]
+    },
+    "beats": {}
+  }
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"重複波紋"},
+  {"id":"accent","type":"color","label":"主色","default":"#f5c518"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>11 Repeating Text Wave 重複波紋</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 11 Repeating Text Wave */
+    .fx-11-cell { position: absolute; white-space: nowrap; text-align: center; }
+    .fx-11-cell > span { position: absolute; left: 0; top: 0; width: 100%; }
+    .fx-11-base { color: var(--fx-sub); text-shadow: var(--fx-scrim); }
+    .fx-11-wave { color: var(--fx-hi); opacity: 0; text-shadow: var(--fx-scrim); }
+  </style>
+  <div id="root" data-composition-id="fx-11-repeating-text-wave" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage"></div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 11 Repeating Text Wave：滿版文字格，每格兩層（淺色層＋主色層），主色層 opacity 依格子對角位置錯相，形成一道對角傳遞的波 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const { D } = FXKit.setup(stage, v, 4);
+    const P = 4;
+    const cycles = Math.max(1, Math.round(D / P));
+    const Pp = D / cycles;
+
+    const emW = FXKit.emWidth(v.text);
+    const cols = emW <= 6 ? 4 : emW <= 10 ? 3 : 2;
+    const fs = Math.max(20, Math.min(120, Math.floor(1920 / cols / (emW + 0.7))));
+    const cw = 1920 / cols, rh = Math.round(fs * 1.4);
+    const rows = Math.ceil(1080 / rh) + 1;
+    const y0 = Math.round((1080 - (rows - 1) * rh) / 2);
+    const tl = gsap.timeline({ paused: true });
+    for (let r = 0; r < rows; r++) {
+      const shift = r % 2 ? cw / 2 : 0;
+      for (let c = -1; c <= cols; c++) {
+        const x = c * cw + shift, y = y0 + r * rh - fs / 2;
+        if (x + cw < 0 || x > 1920) continue;
+        const cell = document.createElement('div');
+        cell.className = 'fx-11-cell';
+        cell.style.cssText = `left:${x}px;top:${y}px;width:${cw}px;height:${fs}px;font-size:${fs}px;line-height:1;`;
+        const base = document.createElement('span'); base.className = 'fx-11-base'; base.textContent = v.text;
+        const wave = document.createElement('span'); wave.className = 'fx-11-wave'; wave.textContent = v.text;
+        cell.appendChild(base); cell.appendChild(wave);
+        stage.appendChild(cell);
+        // 對角相位：沿 (x+y) 一個半波長，波每個週期往右下推進一次
+        const d = 1.5 * ((x + cw / 2) / 1920 + (y + fs / 2) / 1080) / 2;
+        // 餘弦波取樣成 K 段線性關鍵幀：首尾取樣值相同，週期首尾一致
+        const g = (p) => 0.5 - 0.5 * Math.cos(2 * Math.PI * (p - d));
+        const K = 24;
+        wave.style.opacity = g(0);   // t=0 不會觸發 render，初始值要直接寫進去
+        for (let i = 0; i < cycles; i++) {
+          const kf = [];
+          for (let s = 1; s <= K; s++) kf.push({ opacity: g(s / K), duration: Pp / K, ease: 'none' });
+          tl.to(wave, { keyframes: kf }, i * Pp);
+        }
+      }
+    }
+    window.__timelines['fx-11-repeating-text-wave'] = tl;
+  </script>
+</template>
+</body>
+</html>

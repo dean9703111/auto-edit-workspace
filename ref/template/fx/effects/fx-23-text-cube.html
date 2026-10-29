@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"文字方塊"},
+  {"id":"items","type":"string","label":"四個面的詞（用 | 分隔）","default":"文字|方塊|立體|擠出"},
+  {"id":"accent","type":"color","label":"主色","default":"#2dd4bf"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>23 Text Cube 文字方塊</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 23 Text Cube */
+    .fx-23-scene { position: absolute; left: 960px; top: 495px; width: 0; height: 0; perspective: 1700px; }
+    .fx-23-tilt { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; transform: rotateY(-24deg); }
+    .fx-23-cube { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+    .fx-23-face { position: absolute; display: flex; align-items: center; justify-content: center; white-space: nowrap;
+      box-sizing: border-box; border: 10px solid var(--fx-fill); }
+    .fx-23-face.a { background: var(--fx-fill); color: var(--fx-on-fill); }
+    .fx-23-face.b { background: var(--fx-panel); color: var(--fx-hi); }
+  </style>
+  <div id="root" data-composition-id="fx-23-text-cube" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-23-scene"><div class="fx-23-tilt"><div class="fx-23-cube"></div></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 23 Text Cube：立方體四面各一詞，rotateX 每 90° 停頓一次；每步＝停頓＋翻轉，4 步剛好轉 360° 回到第一面 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const cube = document.querySelector('.fx-23-cube');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    let words = FXKit.list(v.items);
+    if (!words.length) words = [v.text];
+    words = Array.from({ length: 4 }, (_, i) => words[i % words.length]);
+    const S = 400;
+    words.forEach((w, i) => {
+      const f = document.createElement('div');
+      f.className = 'fx-23-face ' + (i % 2 ? 'b' : 'a');
+      f.style.width = S + 'px'; f.style.height = S + 'px';
+      f.style.left = (-S / 2) + 'px'; f.style.top = (-S / 2) + 'px';
+      f.style.fontSize = FXKit.fitSize(w, 170, S - 70) + 'px';
+      f.style.transform = `rotateX(${i * 90}deg) translateZ(${S / 2}px)`;
+      f.textContent = w;
+      cube.appendChild(f);
+    });
+
+    // 兩端封蓋（沒有字），不然傾斜視角會看穿方塊
+    [90, -90].forEach((ry) => {
+      const c = document.createElement('div');
+      c.className = 'fx-23-face a';
+      c.style.width = S + 'px'; c.style.height = S + 'px';
+      c.style.left = (-S / 2) + 'px'; c.style.top = (-S / 2) + 'px';
+      c.style.transform = `rotateY(${ry}deg) translateZ(${S / 2}px)`;
+      cube.appendChild(c);
+    });
+
+    const slot = D / 4;
+    const flip = Math.min(0.6, slot * 0.4);
+    const tl = gsap.timeline({ paused: true });
+    tl.set(cube, { rotationX: 0 }, 0);
+    for (let k = 0; k < 4; k++) {
+      tl.to(cube, { rotationX: -(k + 1) * 90, duration: flip, ease: 'power3.inOut' }, k * slot + (slot - flip));
+    }
+    window.__timelines['fx-23-text-cube'] = tl;
+  </script>
+</template>
+</body>
+</html>

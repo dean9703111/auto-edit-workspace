@@ -1,0 +1,30 @@
+<!-- @style -->
+/* 兩列卡：主卡 592–852（高 260）、標籤 536–624。主卡內：頂內距 56 → 標題列 650–710（60：勾選方塊 48＋標題 56／900）
+   → 間距 16 → 說明兩行 726–818（40／500、行高 46、--sc-mute）→ 底內距 32。左緣直線 x160：標籤、勾選方塊、說明。
+   沒有說明時退成單列卡（標題列撐到 88，卡高 180）。細節＝右上網點。 */
+#tipCard { left: 120px; bottom: 220px; }
+.tp-body { display: flex; flex-direction: column; gap: 16px; }
+.tp-title { height: 60px; min-height: 60px; }
+.tp-solo .tp-title { height: 88px; min-height: 88px; }
+.tp-title .tp-text { font-size: 56px; font-weight: 900; line-height: 60px; --opt: 6px; }
+.tp-desc { font-size: 40px; font-weight: 500; line-height: 46px; }
+<!-- @body -->
+<div id="tipCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <i class="sc-lt__plate"></i>
+  <div class="sc-lt__card">
+    <i class="sc-lt__dots"></i>
+    <div class="sc-lt__body tp-body{{^desc}} tp-solo{{/desc}}">
+      <div class="sc-lt__row tp-title">
+        <span class="sc-sq sc-sq--48"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span>
+        <span class="tp-text sc-optr">{{title}}</span>
+      </div>
+      {{#desc}}<div class="tp-desc sc-mute">{{{desc}}}</div>{{/desc}}
+    </div>
+  </div>
+  <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
+</div>
+<!-- @timeline -->
+/* 外殼遮罩揭開 → 內容 0.15 後淡入上漂 8 → 停 → 段尾 0.4 淡出 */
+P.reveal('#tipCard', {{{in}}});
+P.rise('#tipCard .sc-lt__body', {{{in}}} + P.BEAT);
+{{#exitFade}}P.out('#tipCard', D - P.OUT);{{/exitFade}}

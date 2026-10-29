@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"直書三層"},
+  {"id":"accent","type":"color","label":"主色","default":"#f5c518"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>15 Parallax Columns 直書三層</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 15 Parallax Columns */
+    .fx-15-col { position: absolute; top: 0; height: 1080px; will-change: transform; }
+    .fx-15-u { display: block; writing-mode: vertical-rl; text-orientation: mixed; white-space: nowrap; text-shadow: var(--fx-scrim); }
+    .fx-15-back .fx-15-u { color: var(--fx-sub); }
+    .fx-15-mid .fx-15-u { color: var(--fx-hi); }
+    .fx-15-front .fx-15-u { color: var(--fx-ink); }
+  </style>
+  <div id="root" data-composition-id="fx-15-parallax-columns" data-width="1920" data-height="1080" data-duration="6">
+    <div class="fx-stage"></div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 15 Parallax Columns：背景淡灰慢、中景主色中速、前景大字黑快速，三層直書欄同向上行形成視差；位移＝整數個重複單元 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const { D } = FXKit.setup(stage, v, 6);
+    const H = 1080, P = 6;
+    const cycles = Math.max(1, Math.round(D / P));
+    const Pp = D / cycles;
+
+    const emW = FXKit.emWidth(v.text + '・');
+    const k = Math.min(1, 1800 / (330 * emW));   // 長文字時整體縮小
+    // 由後到前：字級、欄數、速度（px/s）、層 class
+    const LAYERS = [
+      { cls: 'fx-15-back',  fs: 110, n: 9, speed: 120 },
+      { cls: 'fx-15-mid',   fs: 190, n: 5, speed: 260 },
+      { cls: 'fx-15-front', fs: 330, n: 3, speed: 520 },
+    ];
+    const tl = gsap.timeline({ paused: true });
+    LAYERS.forEach((L, li) => {
+      const fs = Math.max(24, Math.round(L.fs * k));
+      const U = Math.round(fs * emW);
+      const m = Math.max(1, Math.round(L.speed * Pp / U));
+      const S = cycles * m * U;
+      const cnt = Math.ceil((H + S) / U) + 2;
+      for (let c = 0; c < L.n; c++) {
+        const col = document.createElement('div');
+        col.className = 'fx-15-col ' + L.cls;
+        col.style.cssText = `width:${fs}px;font-size:${fs}px;line-height:1;left:${Math.round((c + 0.5) * 1920 / L.n - fs / 2)}px;`;
+        for (let j = 0; j < cnt; j++) {
+          const u = document.createElement('span');
+          u.className = 'fx-15-u';
+          u.style.height = U + 'px';
+          u.style.width = fs + 'px';
+          u.textContent = v.text + '・';
+          col.appendChild(u);
+        }
+        stage.appendChild(col);
+        const phase = -(((c * 0.29) + li * 0.17) % 1) * U;
+        tl.fromTo(col, { y: phase }, { y: phase - S, duration: D, ease: 'none' }, 0);
+      }
+    });
+    window.__timelines['fx-15-parallax-columns'] = tl;
+  </script>
+</template>
+</body>
+</html>

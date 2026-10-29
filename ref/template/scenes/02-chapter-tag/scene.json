@@ -1,0 +1,38 @@
+{
+  "key": "chapter-tag",
+  "no": 2,
+  "zh": "章節角標",
+  "aliases": ["角標", "迷你章節卡", "章節卡"],
+  "family": "edge",
+  "when": "章節轉場後的口播段，右上角提醒觀眾現在在哪一章（也可當附件疊在其他情境上）",
+  "avoid": "同一段已有下方字卡的章節角標附件、兩側、側邊欄、章節轉場本身（附件不可用）",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "56", "data-vbal-ignore": "" },
+  "layoutByProfile": { "course": { "data-top": "56" }, "yt": { "data-top": "176" } },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 6, "min": 3.5, "fixed": null },
+  "addons": [],
+  "slots": {
+    "num":  { "label": "號碼", "type": "number", "required": true },
+    "name": { "label": "章名", "type": "text", "required": true, "max": 10 }
+  },
+  "beats": {
+    "in": { "label": "進場", "default": "0" }
+  },
+  "sfx": {
+    "main": { "sound": "swipe", "at": "in" },
+    "extra": []
+  },
+  "lists": {},
+  "rules": [],
+  "sample": {
+    "title": "先剪乾淨",
+    "sub": "要先知道每一句話是在第幾秒講的",
+    "duration": 6,
+    "slots": {
+      "num": "01",
+      "name": "先剪乾淨"
+    },
+    "beats": {}
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "qa",
+  "no": 9,
+  "zh": "QA 字卡",
+  "aliases": ["QA", "問答", "問答字卡", "QA字卡"],
+  "family": "lower-third",
+  "when": "口播先拋一個問題、停一拍再揭曉答案",
+  "avoid": "問題和答案同一句講完（改重點字卡），或答案超過一行",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 7, "min": 5, "fixed": null },
+  "addons": ["chtag"],
+  "tone": true,
+  "slots": {
+    "tag": { "label": "標籤", "type": "text", "default": "問答", "max": 4 },
+    "q":   { "label": "問", "type": "text", "required": true, "max": 18 },
+    "a":   { "label": "答", "type": "rich", "required": true, "max": 16 }
+  },
+  "beats": {
+    "in":  { "label": "進場", "default": "0" },
+    "aAt": { "label": "答案進場", "default": "{{in}} + 1.9", "min": "{{in}} + 1.85" }
+  },
+  "sfx": {
+    "main": { "sound": "pop", "at": "in + 0.1" },
+    "extra": [ { "sound": "ding", "at": "aAt", "volume": 0.8 } ]
+  },
+  "lists": {},
+  "rules": [],
+  "sample": {
+    "title": "AI 剪完就能上傳嗎",
+    "sub": "錯誤必須由人類來承擔",
+    "duration": 7,
+    "slots": {
+      "q": "AI 剪完就能直接上傳嗎？",
+      "a": "不行，**三道關**都要看"
+    },
+    "beats": {}
+  }
+}

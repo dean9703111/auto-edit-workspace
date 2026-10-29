@@ -1,0 +1,47 @@
+<!-- @style -->
+/* 全畫面表格：主卡左 120、頂 150、寬 1180（右緣 1300；要滿寬時整段 子母畫面：none，另行改寬）；標題列高 128；內容區 1176×580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
+   表格寬 1064 水平垂直置中；欄等寬（flex 1）、格左右內距 32、字 44（≥ 38）、首欄 700；格內可用 // 斷兩行（列高 128 放得下兩行，4–5 列請單行）。
+   欄頭列 112（--sc-fs-head 底／--sc-fs-head-ink 字，上圓角 12）、隔列 --sc-fs-tint；列高依列數：≤ 3 列 128、4 列 112、5 列 92。
+   強調列（data-highlight）：4px 主色內框。 */
+#wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
+#wCard .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+#wBody { width: 1176px; height: 580px; display: flex; align-items: center; justify-content: center; }
+#fTbl { width: 1064px; }
+.fTr { display: flex; align-items: center; height: 128px; }
+.fTr.fHead { height: 112px; background: var(--sc-fs-head); color: var(--sc-fs-head-ink); border-radius: 12px 12px 0 0; font-weight: 700; }
+.fTr.fRow:nth-child(odd) { background: var(--sc-fs-tint); }
+.fTd { flex: 1 1 0; min-width: 0; padding: 0 32px; font-size: 44px; line-height: 60px; white-space: nowrap; }
+.fTd > span { display: block; padding-bottom: 6px; }
+.fRow .fTd { font-weight: 500; }
+.fRow .fTd:first-child { font-weight: 700; }
+#fTbl:has(.fTr:nth-child(5)) .fRow { height: 112px; }
+#fTbl:has(.fTr:nth-child(6)) .fRow { height: 92px; }
+#fTbl:has(.fTr:nth-child(6)) .fHead { height: 96px; }
+#fTbl[data-highlight="1"] > :nth-child(2),
+#fTbl[data-highlight="2"] > :nth-child(3),
+#fTbl[data-highlight="3"] > :nth-child(4),
+#fTbl[data-highlight="4"] > :nth-child(5),
+#fTbl[data-highlight="5"] > :nth-child(6) { box-shadow: inset 0 0 0 4px var(--sc-accent); }
+<!-- @body -->
+<div id="wCard" class="sc-wcard">
+  <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>
+  <div id="wBody">
+    <div id="fTbl" data-highlight="{{highlight}}">
+      {{#head}}
+      <div id="fHd" class="fTr fHead">{{#c1}}<span class="fTd"><span>{{c1}}</span></span>{{/c1}}{{#c2}}<span class="fTd"><span>{{c2}}</span></span>{{/c2}}{{#c3}}<span class="fTd"><span>{{c3}}</span></span>{{/c3}}{{#c4}}<span class="fTd"><span>{{c4}}</span></span>{{/c4}}</div>
+      {{/head}}
+      {{#rows}}
+      <div id="fTr{{n}}" class="fTr fRow">{{#c1}}<span class="fTd"><span>{{{c1}}}</span></span>{{/c1}}{{#c2}}<span class="fTd"><span>{{{c2}}}</span></span>{{/c2}}{{#c3}}<span class="fTd"><span>{{{c3}}}</span></span>{{/c3}}{{#c4}}<span class="fTd"><span>{{{c4}}}</span></span>{{/c4}}</div>
+      {{/rows}}
+    </div>
+  </div>
+</div>
+<!-- @timeline -->
+/* 欄頭 0.5 起 P.rise → 各列逐列 P.rise（綁句號；預設 0.85 起每 0.35s）→ 全部到位後停住。
+   全畫面幕不在 HF 內淡出（離場由剪映端整段渐隐） */
+{{#head}}
+P.rise('#fHd', {{{at}}});
+{{/head}}
+{{#rows}}
+P.rise('#fTr{{n}}', {{{at}}});
+{{/rows}}

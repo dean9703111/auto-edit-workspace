@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"殘影軌跡"},
+  {"id":"accent","type":"color","label":"主色","default":"#f78c3c"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>40 Text Echo 殘影軌跡</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 40 Text Echo */
+    .fx-40-c { position: absolute; left: 50%; top: 50%; white-space: nowrap; text-shadow: 0 0 8px var(--fx-hi); }
+    .fx-stage[data-bg="none"] .fx-40-c { text-shadow: var(--fx-scrim); }
+  </style>
+  <div id="root" data-composition-id="fx-40-text-echo" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage"></div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 40 Text Echo：主字沿 8 字形 Lissajous（x=A·sin θ, y=B·sin 2θ）移動，後方 10 個延遲複本
+       （同一路徑函數延遲 Δt）opacity 遞減、顏色由 ink 漸變到 hi；位置全由時間純函數算出 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const size = FXKit.fitSize(v.text, 220, FXKit.SAFE.w * 0.6);
+    const w = FXKit.emWidth(v.text) * size;
+    // 路徑範圍留在安全區：x 半幅 = (安全區寬 − 字寬)/2，y 半幅 ≤ (安全區高 − 字高)/2
+    const A = Math.max(40, (FXKit.SAFE.w - w) / 2 - 10);
+    const B = Math.min(220, (FXKit.SAFE.h - size) / 2 - 10);
+    const CY = FXKit.SAFE.cy - 540, CX = 0; // 以畫面中心為原點的安全區中心偏移
+
+    const N = 10; // 殘影數
+    const els = [];
+    for (let k = 0; k <= N; k++) { // k=0 是主字
+      const e = document.createElement('div');
+      e.className = 'fx-40-c';
+      e.textContent = v.text;
+      e.style.fontSize = size + 'px';
+      const f = k / (N + 1);
+      e.style.color = 'color-mix(in srgb, var(--fx-ink) ' + Math.round((1 - f) * 100) + '%, var(--fx-hi))';
+      e.style.opacity = k === 0 ? 1 : Math.pow(1 - f, 2) * 0.6;
+      e.style.zIndex = N - k;
+      stage.appendChild(e);
+      els.push(e);
+    }
+
+    const CYCLES = Math.max(1, Math.round(D / 4));
+    const P = D / CYCLES;      // 實際週期
+    const DT = P * 0.03;       // 相鄰殘影的延遲
+    function apply(t) {
+      els.forEach((e, k) => {
+        const th = ((t - k * DT) / P) * Math.PI * 2;
+        const x = CX + A * Math.sin(th), y = CY + B * Math.sin(2 * th);
+        e.style.transform = 'translate(-50%,-50%) translate(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px)';
+      });
+    }
+    apply(0);
+
+    const tl = gsap.timeline({ paused: true });
+    const prog = { p: 0 };
+    tl.to(prog, { p: 1, duration: D, ease: 'none', onUpdate: () => apply(prog.p * D) }, 0);
+    window.__timelines['fx-40-text-echo'] = tl;
+  </script>
+</template>
+</body>
+</html>

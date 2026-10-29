@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字（B）","default":"上下分割"},
+  {"id":"alt","type":"string","label":"切換文字（A）","default":"Split Halves"},
+  {"id":"inner","type":"string","label":"中間小字","default":"上下分割"},
+  {"id":"accent","type":"color","label":"主色","default":"#a78bfa"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>32 Split Halves 上下分割</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 32 Split Halves */
+    .fx-32-box { position: relative; display: grid; place-items: center; }
+    .fx-32-half { grid-area: 1 / 1; display: grid; place-items: center; }
+    .fx-32-top { clip-path: inset(0 0 50% 0); }
+    .fx-32-bot { clip-path: inset(50% 0 0 0); }
+    .fx-32-t { grid-area: 1 / 1; white-space: nowrap; color: var(--fx-ink); text-shadow: var(--fx-scrim); }
+    .fx-32-B { opacity: 0; }
+    .fx-32-inner { position: absolute; left: 50%; top: 50%; white-space: nowrap; opacity: 0;
+      color: var(--fx-hi); text-shadow: var(--fx-scrim); transform: translate(-50%, -50%); }
+  </style>
+  <div id="root" data-composition-id="fx-32-split-halves" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-safe">
+        <div class="fx-32-box">
+          <div class="fx-32-half fx-32-top"><div class="fx-32-t fx-32-A"></div><div class="fx-32-t fx-32-B"></div></div>
+          <div class="fx-32-half fx-32-bot"><div class="fx-32-t fx-32-A"></div><div class="fx-32-t fx-32-B"></div></div>
+          <div class="fx-32-inner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 32 Split Halves：大字（同一行字兩份，各用 clip-path 露上／下半）向外分開，中間露出主色小字，切換後合回；A → B → A */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const TA = String(v.alt ?? ''), TB = String(v.text ?? ''), TI = String(v.inner ?? '');
+    const f = Math.min(FXKit.fitSize(TA, 260), FXKit.fitSize(TB, 260));
+    const g = Math.round(f * 0.32);
+    const box = document.querySelector('.fx-32-box');
+    const top = document.querySelector('.fx-32-top');
+    const bot = document.querySelector('.fx-32-bot');
+    const inner = document.querySelector('.fx-32-inner');
+    box.style.cssText = `font-size:${f}px;line-height:1;`;
+    document.querySelectorAll('.fx-32-A').forEach((e) => { e.textContent = TA; });
+    document.querySelectorAll('.fx-32-B').forEach((e) => { e.textContent = TB; });
+    inner.textContent = TI;
+    inner.style.fontSize = FXKit.fitSize(TI, Math.round(f * 0.27), FXKit.SAFE.w * 0.9) + 'px';
+    const As = document.querySelectorAll('.fx-32-A'), Bs = document.querySelectorAll('.fx-32-B');
+
+    const LEAD = 0.4;
+    const s = Math.max(0.3, Math.min(1, (D - 1.1) / 2.1));
+    const open = 0.45 * s, pause = 0.15 * s, close = 0.45 * s;
+    const cyc = open + pause + close;
+    const hold = Math.max(0, D - 2 * LEAD - 2 * cyc);
+    const t1 = LEAD, t2 = LEAD + cyc + hold;
+
+    const tl = gsap.timeline({ paused: true });
+    tl.set(inner, { opacity: 0 }, 0);
+    [[t1, As, Bs], [t2, Bs, As]].forEach(([t, from, to], n) => {
+      const imm = n === 0;
+      tl.fromTo(top, { y: 0 }, { y: -g, duration: open, ease: 'power3.out', immediateRender: imm }, t)
+        .fromTo(bot, { y: 0 }, { y: g, duration: open, ease: 'power3.out', immediateRender: imm }, t)
+        .fromTo(inner, { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: open, ease: 'power3.out', immediateRender: imm }, t)
+        .set(from, { opacity: 0 }, t + open + pause / 2)
+        .set(to, { opacity: 1 }, t + open + pause / 2)
+        .to(top, { y: 0, duration: close, ease: 'power3.inOut' }, t + open + pause)
+        .to(bot, { y: 0, duration: close, ease: 'power3.inOut' }, t + open + pause)
+        .to(inner, { opacity: 0, scale: 0.7, duration: close, ease: 'power3.inOut' }, t + open + pause);
+    });
+    window.__timelines['fx-32-split-halves'] = tl;
+  </script>
+</template>
+</body>
+</html>

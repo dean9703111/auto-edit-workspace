@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"雙色反轉"},
+  {"id":"accent","type":"color","label":"主色","default":"#f78c3c"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>39 Split Color Word 雙色反轉</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 39 Split Color Word */
+    .fx-39-box { position: relative; display: inline-grid; white-space: nowrap; }
+    .fx-39-l { grid-area: 1 / 1; color: var(--fx-ink); }
+    .fx-39-r { grid-area: 1 / 1; color: var(--fx-hi); }
+    .fx-39-cut { position: absolute; left: 0; top: 50%; width: 3px; margin-left: -1.5px; background: var(--fx-ink); transform-origin: 50% 50%; }
+    .fx-stage[data-bg="none"] .fx-39-box { filter: drop-shadow(0 2px 4px rgba(0,0,0,.85)); }
+  </style>
+  <div id="root" data-composition-id="fx-39-split-color-word" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-39-box">
+        <div class="fx-39-l"></div><div class="fx-39-r"></div><div class="fx-39-cut"></div>
+      </div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 39 Split Color Word：兩份重疊的字各用斜邊 polygon 露一側（左 ink／右 hi）；分界線依 sin 來回掃動，
+       字被掃過時兩色互換（線左永遠是 ink、線右永遠是 hi，所以每個字會隨分界線過去而反轉顏色） */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const box = document.querySelector('.fx-39-box');
+    const L = document.querySelector('.fx-39-l');
+    const R = document.querySelector('.fx-39-r');
+    const cut = document.querySelector('.fx-39-cut');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    L.textContent = v.text; R.textContent = v.text;
+    const SIZE = FXKit.fitSize(v.text, 300, FXKit.SAFE.w);
+    box.style.fontSize = SIZE + 'px';
+
+    const SLOPE = 0.3; // 每下降 1px 水平偏移 0.3px
+    const TRIPS = Math.max(1, Math.round(D / 3)); // 整數個來回
+    function apply(t) {
+      const H = SIZE; // line-height 1，高度＝字級；水平位置一律用寬度百分比，不量 DOM
+      const cp = 50 + 50 * Math.sin((t / D) * TRIPS * Math.PI * 2);
+      const pad = 60;
+      const ya = SLOPE * (-pad - H / 2), yb = SLOPE * (H + pad - H / 2); // 斜邊上下端的水平偏移 px
+      const X = (off) => 'calc(' + cp.toFixed(3) + '% + ' + off.toFixed(2) + 'px)';
+      const Y = (n) => n.toFixed(2) + 'px';
+      L.style.clipPath = 'polygon(-100% ' + Y(-pad) + ',' + X(ya + 0.6) + ' ' + Y(-pad) + ',' + X(yb + 0.6) + ' ' + Y(H + pad) + ',-100% ' + Y(H + pad) + ')';
+      R.style.clipPath = 'polygon(' + X(ya) + ' ' + Y(-pad) + ',200% ' + Y(-pad) + ',200% ' + Y(H + pad) + ',' + X(yb) + ' ' + Y(H + pad) + ')';
+      // 分界線：細線沿斜邊
+      const len = Math.hypot(H + 2 * pad, SLOPE * (H + 2 * pad));
+      cut.style.height = len + 'px';
+      cut.style.marginTop = (-len / 2) + 'px';
+      cut.style.left = cp + '%';
+      cut.style.transform = 'rotate(' + (-Math.atan(SLOPE) * 180 / Math.PI) + 'deg)';
+    }
+    apply(0);
+
+    const tl = gsap.timeline({ paused: true });
+    const prog = { p: 0 };
+    tl.to(prog, { p: 1, duration: D, ease: 'none', onUpdate: () => apply(prog.p * D) }, 0);
+    window.__timelines['fx-39-split-color-word'] = tl;
+  </script>
+</template>
+</body>
+</html>

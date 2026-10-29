@@ -1,0 +1,22 @@
+<!-- @style -->
+/* 下方字卡底座 .sc-lt：左 120、bottom 220 → 底板底 860、主卡 672–852（單列卡高 180）、標籤 616–704。
+   焦點只有一個：白色斜板（高 88、斜切 24，與標籤斜邊平行）上的重點字 56／900；細節＝左下主色短線（右上被斜板佔住，不用網點）。 */
+#gCard { left: 120px; bottom: 220px; }
+<!-- @body -->
+<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <i class="sc-lt__plate"></i>
+  <div class="sc-lt__card">
+    <i class="sc-lt__accent"></i>
+    <div class="sc-lt__body sc-lt__row">
+      {{#lead}}<span id="kLead" class="sc-t54 sc-w700 sc-opt">{{lead}}</span>{{/lead}}
+      <span class="sc-slant sc-slant--paper sc-lt__kw"><span id="kWord" class="sc-t56 sc-w900 sc-opt">{{key}}</span></span>
+    </div>
+  </div>
+  <div class="sc-lt__tag"><span class="sc-lt__tagin">{{#tag}}{{tag}}{{/tag}}{{^tag}}{{#tone_warn}}注意{{/tone_warn}}{{^tone_warn}}重點{{/tone_warn}}{{/tag}}</span></div>
+</div>
+<!-- @timeline -->
+/* 外殼（底板＋主卡＋標籤＋斜板＋短線）遮罩揭開 → 0.15 後前句淡入上漂、斜板內的字遮罩上升（同一拍）→ 停 → 段尾 0.4 淡出 */
+P.reveal('#gCard', {{{in}}});
+{{#lead}}P.rise('#kLead', {{{in}}} + P.BEAT);{{/lead}}
+P.maskUp('#kWord', {{{in}}} + P.BEAT);
+{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}

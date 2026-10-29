@@ -1,0 +1,39 @@
+{
+  "key": "quote",
+  "no": 15,
+  "zh": "金句字卡",
+  "aliases": ["金句", "金句卡", "名言", "核心價值"],
+  "family": "lower-third",
+  "when": "口播丟出一句金句、核心價值或反差翻轉句，讓觀眾截圖帶走",
+  "avoid": "普通說明句（改一般字卡），或超過兩行的長句",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 6, "min": 4, "fixed": null },
+  "addons": ["chtag"],
+  "tone": true,
+  "slots": {
+    "tag":  { "label": "標籤", "type": "text", "default": "金句", "max": 4 },
+    "text": { "label": "正文", "type": "rich", "maxLine": 16, "maxLines": 2, "required": true, "max": 32, "note": "最多兩行、每行 ≤ 16，用 // 斷行" },
+    "by":   { "label": "出處", "type": "text", "max": 10 }
+  },
+  "beats": {
+    "in": { "label": "進場", "default": "0" }
+  },
+  "sfx": {
+    "main": { "sound": "pop", "at": "in + 0.1" },
+    "extra": []
+  },
+  "lists": {},
+  "rules": [],
+  "sample": {
+    "title": "經驗變成資產",
+    "sub": "工具會一直更新，這個思維會跟著你",
+    "duration": 6,
+    "slots": {
+      "text": "把解決問題的經驗//變成可以重複使用的資產",
+      "by": "鼎淵"
+    },
+    "beats": {}
+  }
+}

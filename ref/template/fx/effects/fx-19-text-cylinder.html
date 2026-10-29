@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"文字圓柱"},
+  {"id":"accent","type":"color","label":"主色","default":"#2dd4bf"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>19 Text Cylinder 文字圓柱</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 19 Text Cylinder */
+    .fx-19-scene { position: absolute; left: 960px; top: 495px; width: 0; height: 0; perspective: 1400px; }
+    .fx-19-tilt { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(-12deg); }
+    .fx-19-ring { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+    .fx-19-c { position: absolute; left: 0; top: 0; white-space: pre; text-shadow: var(--fx-scrim); }
+  </style>
+  <div id="root" data-composition-id="fx-19-text-cylinder" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-19-scene"><div class="fx-19-tilt"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 19 Text Cylinder：拆字重複到至少 12 個，環繞成上下兩個文字環（rotateY＋translateZ），反向各轉一圈；背面字依角度變淡 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const tilt = document.querySelector('.fx-19-tilt');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const P = 4, Pp = D / Math.max(1, Math.round(D / P));   // 整數週期：每週期各環轉一整圈
+    const base = [...v.text].filter((c) => c.trim());
+    const reps = Math.ceil(12 / base.length);
+    const chars = Array.from({ length: reps }, () => base).flat();
+    const n = chars.length;
+    const fs = Math.min(200, Math.floor((2 * Math.PI * 400) / (n * 1.1)));   // 半徑上限約 400
+    const r = Math.round((n * fs * 1.1) / (2 * Math.PI));
+    const gap = Math.round(fs * 0.62);
+
+    const rings = [-gap, gap].map((y, ri) => {
+      const el = document.createElement('div');
+      el.className = 'fx-19-ring';
+      tilt.appendChild(el);
+      const cs = chars.map((ch, i) => {
+        const s = document.createElement('div');
+        s.className = 'fx-19-c';
+        s.style.fontSize = fs + 'px';
+        s.style.color = ri ? 'var(--fx-hi)' : 'var(--fx-ink)';
+        s.textContent = ch;
+        const th = (i / n) * 360;
+        s.style.transform = `translate(-50%, -50%) rotateY(${th}deg) translateZ(${r}px)`;
+        el.appendChild(s);
+        return { s, th };
+      });
+      return { el, y, dir: ri ? -1 : 1, cs };
+    });
+
+    function draw(time) {
+      const f = time / Pp;
+      rings.forEach((g) => {
+        const phi = g.dir * f * 360;
+        g.el.style.transform = `translateY(${g.y}px) rotateY(${phi}deg)`;
+        g.cs.forEach((c) => {
+          const cosA = Math.cos(((c.th + phi) * Math.PI) / 180);   // >0 面向鏡頭
+          const q = Math.min(1, Math.max(0, (cosA + 0.35) / 1.35));
+          c.s.style.opacity = (0.1 + 0.9 * q).toFixed(3);
+        });
+      });
+    }
+
+    const proxy = { t: 0 };
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(proxy, { t: 0 }, { t: D, duration: D, ease: 'none', onUpdate: () => draw(proxy.t) }, 0);
+    draw(0);
+    window.__timelines['fx-19-text-cylinder'] = tl;
+  </script>
+</template>
+</body>
+</html>

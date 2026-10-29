@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"文字爆發"},
+  {"id":"accent","type":"color","label":"主色","default":"#f25c54"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>01 Word Burst 文字爆發</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 01 Word Burst */
+    .fx-01-word { display: inline-block; color: var(--fx-ink); text-shadow: var(--fx-scrim); white-space: nowrap; }
+  </style>
+  <div id="root" data-composition-id="fx-01-word-burst" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-01-word"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 01 Word Burst：scale 0 以 back.out 彈到 1.15 → 回 1，停留後每字往不同方向飛散淡出 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const word = document.querySelector('.fx-01-word');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    // 彈出峰值 1.15 倍，寬度以放大後預留
+    word.style.fontSize = FXKit.fitSize(v.text, 280, FXKit.SAFE.w / 1.15) + 'px';
+    const chars = FXKit.splitChars(word, v.text);
+    const rand = FXKit.rng(v.text);
+
+    // 短卡（D < 2.4s）進場與飛散等比加快，保證最後一字在 D 之前飛完
+    const k = Math.min(1, D / 2.4);
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(word, { scale: 0 }, { scale: 1.15, duration: 0.42 * k, ease: 'back.out(2.2)' }, 0)
+      .to(word, { scale: 1, duration: 0.22 * k, ease: 'power2.out' }, 0.42 * k);
+
+    // 飛散：每字方向沿圓周平均分配再加亂數，避免兩字同向
+    const ST = Math.min(0.015, 0.12 * k / chars.length), FLY = 0.62 * k;
+    const out = Math.max(0.64 * k, D - FLY - ST * (chars.length - 1) - 0.03);
+    chars.forEach((ch, i) => {
+      const ang = (i / chars.length) * Math.PI * 2 + rand() * 0.9 - Math.PI / 2;
+      const dist = 420 + rand() * 360;
+      tl.fromTo(ch, { x: 0, y: 0, rotation: 0, opacity: 1, scale: 1 },
+        { x: Math.cos(ang) * dist, y: Math.sin(ang) * dist, rotation: (rand() - 0.5) * 80,
+          scale: 0.6, opacity: 0, duration: FLY, ease: 'power3.in' }, out + i * ST);
+    });
+    window.__timelines['fx-01-word-burst'] = tl;
+  </script>
+</template>
+</body>
+</html>

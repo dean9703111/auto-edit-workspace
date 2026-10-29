@@ -1,0 +1,728 @@
+{
+  "title": "TEXT MOTION 40",
+  "categories": {
+    "IMPACT": {
+      "color": "#f25c54",
+      "zh": "一個字改變氛圍",
+      "range": "01–08"
+    },
+    "FLOW": {
+      "color": "#f5c518",
+      "zh": "不停流動的文字",
+      "range": "09–16"
+    },
+    "DEPTH": {
+      "color": "#2dd4bf",
+      "zh": "潛入文字之中",
+      "range": "17–24"
+    },
+    "SWITCH": {
+      "color": "#a78bfa",
+      "zh": "切換文字",
+      "range": "25–32"
+    },
+    "STYLE": {
+      "color": "#f78c3c",
+      "zh": "用呈現方式加分",
+      "range": "33–40"
+    }
+  },
+  "effects": [
+    {
+      "id": "01",
+      "slug": "word-burst",
+      "file": "effects/fx-01-word-burst.html",
+      "category": "IMPACT",
+      "en": "Word Burst",
+      "zh": "文字爆發",
+      "tag": "強調・高潮",
+      "bg": "dark",
+      "animText": "文字爆發",
+      "spec": "文字從 scale 0 以 back.out 彈出到 1.15 再回 1，停留後每字向不同方向飛散淡出",
+      "desc": "彈出放大後回彈，停留後逐字四散淡出",
+      "when": "段落高潮、要重重強調一個關鍵詞（「重點來了」「就是這個」）",
+      "sfx": {
+        "sound": "impact",
+        "at": 0.42
+      }
+    },
+    {
+      "id": "02",
+      "slug": "letter-sequence",
+      "file": "effects/fx-02-letter-sequence.html",
+      "category": "IMPACT",
+      "en": "Letter Sequence",
+      "zh": "逐字敲擊",
+      "tag": "節奏・歌詞",
+      "bg": "accent",
+      "animText": "逐字敲擊",
+      "spec": "一次只顯示一個超大字，每字從上方砸下並有輕微畫面震動，依序換字",
+      "desc": "超大單字由上砸下、畫面輕震，依序換字",
+      "when": "逐字唸出的口號、節奏感強的短句、倒數或歌詞式強調",
+      "sfx": {
+        "sound": "impact",
+        "at": 0.22
+      }
+    },
+    {
+      "id": "03",
+      "slug": "text-stamp",
+      "file": "effects/fx-03-text-stamp.html",
+      "category": "IMPACT",
+      "en": "Text Stamp",
+      "zh": "印章蓋印",
+      "tag": "公告・定案",
+      "bg": "light",
+      "animText": "印章蓋印",
+      "spec": "紅框印章字從 scale 2.5 縮到 1 並旋轉 -8°，落點有墨跡顆粒感，之後在不同位置連續蓋出 3 次",
+      "desc": "紅框印章縮放旋轉落下帶墨點，連蓋三次",
+      "when": "宣布結論、定案、「就這麼決定」「官方確認」「通過」",
+      "sfx": {
+        "sound": "impact",
+        "at": 0.3
+      }
+    },
+    {
+      "id": "04",
+      "slug": "punch-zoom",
+      "file": "effects/fx-04-punch-zoom.html",
+      "category": "IMPACT",
+      "en": "Punch Zoom",
+      "zh": "衝刺縮放",
+      "tag": "轉場・強調",
+      "bg": "dark",
+      "animText": "衝刺縮放",
+      "spec": "文字從深處快速飛到前方，後面拖 3 層半透明殘影逐層延遲",
+      "desc": "從深處衝到眼前，拖著三層殘影",
+      "when": "轉場進入新話題、一個詞要有衝擊力",
+      "sfx": {
+        "sound": "whoosh",
+        "at": 0.35
+      }
+    },
+    {
+      "id": "05",
+      "slug": "kinetic-stack",
+      "file": "effects/fx-05-kinetic-stack.html",
+      "category": "IMPACT",
+      "en": "Kinetic Stack",
+      "zh": "動態堆疊",
+      "tag": "MV・歌詞",
+      "bg": "dark",
+      "animText": "衝刺／縮放（兩行）",
+      "spec": "第一行從左飛入、第二行用主色從右飛入並疊在下方，整組上推後換下一組",
+      "desc": "兩行左右飛入疊成一組，整組上推換下一組",
+      "when": "兩個並列關鍵詞或上下句（「衝刺／縮放」「便宜／好用」）",
+      "sfx": {
+        "sound": "pop",
+        "at": 0.4
+      }
+    },
+    {
+      "id": "06",
+      "slug": "stretch-text",
+      "file": "effects/fx-06-stretch-text.html",
+      "category": "IMPACT",
+      "en": "Stretch Text",
+      "zh": "縱向伸縮",
+      "tag": "流行・衝擊",
+      "bg": "accent",
+      "animText": "縱向伸縮",
+      "spec": "文字 scaleY 在 0.4 與 1.6 之間彈性伸縮，每字有相位差",
+      "desc": "每字有相位差地上下彈性伸縮",
+      "when": "輕快、流行感的關鍵詞，語氣有彈性",
+      "sfx": {
+        "sound": "pop",
+        "at": 0.38
+      }
+    },
+    {
+      "id": "07",
+      "slug": "text-zoom-through",
+      "file": "effects/fx-07-text-zoom-through.html",
+      "category": "IMPACT",
+      "en": "Text Zoom Through",
+      "zh": "穿越縮放",
+      "tag": "轉換・疾走",
+      "bg": "light",
+      "animText": "Zoom Through → 穿越縮放",
+      "spec": "第一個詞放大到充滿畫面並穿過，下一個詞從後方出現，循環切換",
+      "desc": "詞放大穿過鏡頭，下一個詞從後方出現",
+      "when": "「從 A 到 B」的轉變、話題切換、穿越到下一段",
+      "sfx": {
+        "sound": "whoosh",
+        "at": 0.84
+      }
+    },
+    {
+      "id": "08",
+      "slug": "text-squeeze",
+      "file": "effects/fx-08-text-squeeze.html",
+      "category": "IMPACT",
+      "en": "Text Squeeze",
+      "zh": "彈性擠壓",
+      "tag": "彈力・切換",
+      "bg": "dark",
+      "animText": "彈性擠壓",
+      "spec": "文字像橡膠一樣被橫向擠扁再彈回，擠到最扁時切換為英文關鍵字，再彈回中文",
+      "desc": "像橡膠被擠扁，最扁時換成英文再彈回",
+      "when": "中英對照的術語、反差或切換語氣",
+      "sfx": {
+        "sound": "pop",
+        "at": 0.75
+      }
+    },
+    {
+      "id": "09",
+      "slug": "huge-text-scroll",
+      "file": "effects/fx-09-huge-text-scroll.html",
+      "category": "FLOW",
+      "en": "Huge Text Scroll",
+      "zh": "巨字捲動",
+      "tag": "背景・吸睛",
+      "bg": "light",
+      "animText": "巨字捲動・巨字捲動・（重複）",
+      "spec": "超大字橫向無限捲動並帶緩急（快—慢—快），下方一行小字反向等速捲動",
+      "desc": "超大字快慢交替捲動，小字反向等速",
+      "when": "章節或主題字當滿版背景，吸睛開場",
+      "sfx": {
+        "sound": "swipe",
+        "at": 0
+      }
+    },
+    {
+      "id": "10",
+      "slug": "vertical-typography",
+      "file": "effects/fx-10-vertical-typography.html",
+      "category": "FLOW",
+      "en": "Vertical Typography",
+      "zh": "直書逆流",
+      "tag": "和風・靜與動",
+      "bg": "accent",
+      "animText": "直書逆流（拆成多欄）",
+      "spec": "直書多欄，相鄰欄位一上一下反向流動，字級大小不一",
+      "desc": "多欄直書，相鄰欄一上一下反向流動",
+      "when": "和風、沉靜的段落標題",
+      "sfx": null
+    },
+    {
+      "id": "11",
+      "slug": "repeating-text-wave",
+      "file": "effects/fx-11-repeating-text-wave.html",
+      "category": "FLOW",
+      "en": "Repeating Text Wave",
+      "zh": "重複波紋",
+      "tag": "背景・圖紋",
+      "bg": "light",
+      "animText": "重複波紋（滿版重複）",
+      "spec": "文字排成滿版格線，顏色以對角波狀由淺到主色再回淺地傳遞",
+      "desc": "滿版文字格，顏色沿對角線波狀傳遞",
+      "when": "背景圖紋、反覆強調同一個詞",
+      "sfx": null
+    },
+    {
+      "id": "12",
+      "slug": "diagonal-text-bands",
+      "file": "effects/fx-12-diagonal-text-bands.html",
+      "category": "FLOW",
+      "en": "Diagonal Text Bands",
+      "zh": "斜向帶狀",
+      "tag": "轉場・流行",
+      "bg": "accent",
+      "animText": "斜向帶狀・（重複）",
+      "spec": "3 條斜 -12° 帶狀，黑白交錯，相鄰帶反向捲動",
+      "desc": "三條斜帶黑白交錯，相鄰帶反向捲動",
+      "when": "轉場、流行街頭風的標題過場",
+      "sfx": {
+        "sound": "swipe",
+        "at": 0
+      }
+    },
+    {
+      "id": "13",
+      "slug": "text-ribbon",
+      "file": "effects/fx-13-text-ribbon.html",
+      "category": "FLOW",
+      "en": "Text Ribbon",
+      "zh": "緞帶文字",
+      "tag": "裝飾・音樂感",
+      "bg": "dark",
+      "animText": "緞帶文字・（重複）",
+      "spec": "白色文字沿 SVG 正弦波路徑（textPath）流動，波形本身也緩慢起伏",
+      "desc": "文字沿正弦波路徑流動，波形緩慢起伏",
+      "when": "輕鬆、有音樂感的段落標題",
+      "sfx": {
+        "sound": "swipe",
+        "at": 0
+      }
+    },
+    {
+      "id": "14",
+      "slug": "marquee-board",
+      "file": "effects/fx-14-marquee-board.html",
+      "category": "FLOW",
+      "en": "Marquee Board",
+      "zh": "跑馬看板",
+      "tag": "公告・街頭",
+      "bg": "accent",
+      "animText": "跑馬看板・限時・新發售・（各行不同詞）",
+      "spec": "4–5 行橫帶，字體、字級、速度、方向各不同地疊加捲動",
+      "desc": "多行字體、字級、速度、方向各異的跑馬燈",
+      "when": "公告、限時、促銷，多個標語同時出現",
+      "sfx": null
+    },
+    {
+      "id": "15",
+      "slug": "parallax-columns",
+      "file": "effects/fx-15-parallax-columns.html",
+      "category": "FLOW",
+      "en": "Parallax Columns",
+      "zh": "直書三層",
+      "tag": "景深・和風",
+      "bg": "light",
+      "animText": "直書三層（拆字成欄）",
+      "spec": "三層直書欄：前景大字黑色快速、中景主色中速、背景淡灰慢速，形成視差",
+      "desc": "前中後三層直書欄，速度不同形成視差",
+      "when": "和風、有層次感的標題",
+      "sfx": null
+    },
+    {
+      "id": "16",
+      "slug": "tape-cross",
+      "file": "effects/fx-16-tape-cross.html",
+      "category": "FLOW",
+      "en": "Tape Cross",
+      "zh": "膠帶交叉",
+      "tag": "警示・街頭",
+      "bg": "dark",
+      "animText": "膠帶交叉・（重複）",
+      "spec": "兩條主色底黑字膠帶以 X 形交叉，各自反向無限流動，帶邊有細黑線",
+      "desc": "兩條警示膠帶 X 形交叉、反向流動",
+      "when": "警告、注意事項、「千萬不要」「踩雷」",
+      "sfx": {
+        "sound": "impact",
+        "at": 0
+      }
+    },
+    {
+      "id": "17",
+      "slug": "text-tunnel",
+      "file": "effects/fx-17-text-tunnel.html",
+      "category": "DEPTH",
+      "en": "Text Tunnel",
+      "zh": "文字隧道",
+      "tag": "開場・科幻",
+      "bg": "dark",
+      "animText": "文字隧道",
+      "spec": "文字從遠方小點沿 Z 軸迎面衝來並穿過鏡頭，下一份接續，形成穿越感",
+      "desc": "從遠方小點迎面衝來並穿過鏡頭",
+      "when": "開場、科幻感、進入主題",
+      "sfx": {
+        "sound": "riser",
+        "at": 2.67
+      }
+    },
+    {
+      "id": "18",
+      "slug": "text-corridor",
+      "file": "effects/fx-18-text-corridor.html",
+      "category": "DEPTH",
+      "en": "Text Corridor",
+      "zh": "文字走廊",
+      "tag": "沉浸・MV",
+      "bg": "accent",
+      "animText": "文字走廊・（重複）",
+      "spec": "上下左右四面牆貼滿重複文字並一點透視向消失點延伸，牆面持續向前流動",
+      "desc": "四面牆貼滿文字，一點透視向前流動",
+      "when": "沉浸式段落開場、MV 感",
+      "sfx": {
+        "sound": "riser",
+        "at": 3
+      }
+    },
+    {
+      "id": "19",
+      "slug": "text-cylinder",
+      "file": "effects/fx-19-text-cylinder.html",
+      "category": "DEPTH",
+      "en": "Text Cylinder",
+      "zh": "文字圓柱",
+      "tag": "立體・Logo",
+      "bg": "light",
+      "animText": "文字圓柱（拆字環繞）",
+      "spec": "兩個文字環排成圓柱，上下兩環反向旋轉，背面字變淡",
+      "desc": "上下兩個文字環反向旋轉，背面變淡",
+      "when": "Logo、品牌名、產品名展示",
+      "sfx": null
+    },
+    {
+      "id": "20",
+      "slug": "text-vortex",
+      "file": "effects/fx-20-text-vortex.html",
+      "category": "DEPTH",
+      "en": "Text Vortex",
+      "zh": "文字漩渦",
+      "tag": "奇幻・高潮",
+      "bg": "dark",
+      "animText": "文字漩渦",
+      "spec": "文字被扭曲拉長並繞中心旋轉成漩渦，再還原，循環",
+      "desc": "文字扭曲拉長繞中心旋轉成漩渦，再還原",
+      "when": "奇幻、混亂、「腦袋打結」類的高潮",
+      "sfx": {
+        "sound": "riser",
+        "at": 3.52
+      }
+    },
+    {
+      "id": "21",
+      "slug": "ring-tunnel",
+      "file": "effects/fx-21-ring-tunnel.html",
+      "category": "DEPTH",
+      "en": "Ring Tunnel",
+      "zh": "環形隧道",
+      "tag": "開場・科幻",
+      "bg": "dark",
+      "animText": "環形隧道・（沿圓環重複）",
+      "spec": "多個同心文字環從中心放大逼近並淡出，持續生成",
+      "desc": "同心文字環從中心放大逼近並淡出",
+      "when": "開場、科幻感、聚焦一個詞",
+      "sfx": {
+        "sound": "riser",
+        "at": 2.77
+      }
+    },
+    {
+      "id": "22",
+      "slug": "text-orbit",
+      "file": "effects/fx-22-text-orbit.html",
+      "category": "DEPTH",
+      "en": "Text Orbit",
+      "zh": "軌道環繞",
+      "tag": "Logo・標題",
+      "bg": "accent",
+      "animText": "軌道環繞",
+      "spec": "虛線橢圓軌道，文字沿軌道繞行，到前方時放大、到後方時縮小變淡並被遮擋",
+      "desc": "沿虛線橢圓軌道繞行，前大後小有遮擋",
+      "when": "品牌名、標題環繞展示",
+      "sfx": null
+    },
+    {
+      "id": "23",
+      "slug": "text-cube",
+      "file": "effects/fx-23-text-cube.html",
+      "category": "DEPTH",
+      "en": "Text Cube",
+      "zh": "文字方塊",
+      "tag": "切換・立體",
+      "bg": "light",
+      "animText": "文字／方塊／立體／擠出（四面各一詞）",
+      "spec": "立方體四面各一詞，以 rotateX 每 90° 停頓一次依序翻轉",
+      "desc": "立方體四面各一詞，每 90° 停頓翻轉",
+      "when": "三到四個關鍵詞輪流（例：快／穩／省／簡單）",
+      "sfx": {
+        "sound": "flip",
+        "at": 1
+      }
+    },
+    {
+      "id": "24",
+      "slug": "extrude-text",
+      "file": "effects/fx-24-extrude-text.html",
+      "category": "DEPTH",
+      "en": "Extrude Text",
+      "zh": "立體擠出",
+      "tag": "標題",
+      "bg": "dark",
+      "animText": "立體擠出",
+      "spec": "主色文字帶 12 層以上的厚度疊影，厚度方向繞圈旋轉，像光源在移動",
+      "desc": "十多層厚度疊影，厚度方向繞圈旋轉",
+      "when": "大標題、要有分量的立體標題",
+      "sfx": {
+        "sound": "impact",
+        "at": 0
+      }
+    },
+    {
+      "id": "25",
+      "slug": "split-flap",
+      "file": "effects/fx-25-split-flap.html",
+      "category": "SWITCH",
+      "en": "Split Flap",
+      "zh": "翻牌看板",
+      "tag": "復古・車站",
+      "bg": "dark",
+      "animText": "Split → 翻牌看板",
+      "spec": "每字一格翻牌，上下半片快速翻動亂碼後依序停在正確字，有中線",
+      "desc": "每字一格翻牌，亂碼翻動後依序停住",
+      "when": "復古、公布結果、車站看板感",
+      "sfx": {
+        "sound": "flip",
+        "at": 0.39
+      }
+    },
+    {
+      "id": "26",
+      "slug": "flip-cards",
+      "file": "effects/fx-26-flip-cards.html",
+      "category": "SWITCH",
+      "en": "Flip Cards",
+      "zh": "翻轉卡片",
+      "tag": "切換・公告",
+      "bg": "accent",
+      "animText": "Flip → 翻轉卡片",
+      "spec": "黑底白字卡片，逐字 rotateY 翻轉到背面顯示新字，有時間差",
+      "desc": "黑底白字卡逐字翻面換字，有時間差",
+      "when": "切換、公告、「答案是」",
+      "sfx": {
+        "sound": "flip",
+        "at": 1
+      }
+    },
+    {
+      "id": "27",
+      "slug": "typewriter",
+      "file": "effects/fx-27-typewriter.html",
+      "category": "SWITCH",
+      "en": "Typewriter",
+      "zh": "打字機",
+      "tag": "故事・字幕",
+      "bg": "light",
+      "animText": "打字機（打完刪除再打英文）",
+      "spec": "Noto Serif 字逐字打出並有閃爍游標，停留後逐字刪除，切換為英文關鍵字再打",
+      "desc": "逐字打出帶游標，刪除後改打英文",
+      "when": "故事敘述、引用原句、字幕式呈現",
+      "sfx": {
+        "sound": "type",
+        "at": 0.4
+      }
+    },
+    {
+      "id": "28",
+      "slug": "slot-text",
+      "file": "effects/fx-28-slot-text.html",
+      "category": "SWITCH",
+      "en": "Slot Text",
+      "zh": "拉霸滾輪",
+      "tag": "結果發表",
+      "bg": "dark",
+      "animText": "拉霸滾輪（每字一個滾輪）",
+      "spec": "每字一個直向滾輪高速轉動，由左至右依序減速並彈性停在正確字",
+      "desc": "每字一個滾輪，由左至右依序彈性停住",
+      "when": "抽獎式的結果發表、揭曉",
+      "sfx": {
+        "sound": "flip",
+        "at": 1.7
+      }
+    },
+    {
+      "id": "29",
+      "slug": "odometer",
+      "file": "effects/fx-29-odometer.html",
+      "category": "SWITCH",
+      "en": "Odometer",
+      "zh": "數字計數",
+      "tag": "實績・數字",
+      "bg": "dark",
+      "animText": "左側固定「數字計數」，中間數字",
+      "spec": "數字從 0000 滾動計數到 0029，每位數獨立滾動，到位後停留再重來",
+      "desc": "每位數獨立滾動，從 0000 計數到目標",
+      "when": "實績數字、成長數字、統計（「做了 29 支影片」）",
+      "sfx": {
+        "sound": "ding",
+        "at": 1.8
+      }
+    },
+    {
+      "id": "30",
+      "slug": "headline-swap",
+      "file": "effects/fx-30-headline-swap.html",
+      "category": "SWITCH",
+      "en": "Headline Swap",
+      "zh": "標題切換",
+      "tag": "快訊・解說",
+      "bg": "accent",
+      "animText": "快訊（固定標籤）＋ Headline → 標題切換",
+      "spec": "左側固定白底「快訊」標籤，右側標題由遮罩從下方推入替換，交替切換",
+      "desc": "固定快訊標籤，標題由下推入交替切換",
+      "when": "快訊、新聞式解說、標題切換",
+      "sfx": {
+        "sound": "swipe",
+        "at": 0.65
+      }
+    },
+    {
+      "id": "31",
+      "slug": "led-text",
+      "file": "effects/fx-31-led-text.html",
+      "category": "SWITCH",
+      "en": "LED Text",
+      "zh": "LED 點陣",
+      "tag": "復古・科技",
+      "bg": "light",
+      "animText": "LED 點陣・（重複）",
+      "spec": "DotGothic16 點陣字橫向捲動，字有發光暈與輕微掃描線",
+      "desc": "點陣字發光橫向捲動，帶掃描線",
+      "when": "復古科技感、跑馬公告",
+      "sfx": null
+    },
+    {
+      "id": "32",
+      "slug": "split-halves",
+      "file": "effects/fx-32-split-halves.html",
+      "category": "SWITCH",
+      "en": "Split Halves",
+      "zh": "上下分割",
+      "tag": "轉換・反差",
+      "bg": "dark",
+      "animText": "Split Halves → 上下分割",
+      "spec": "文字從中間水平裂成上下兩半向外分開，中間露出主色小字中文名，再合回切換 （註：32 中間露出的小字固定為「上下分割」，外層大字輪流為英文與中文）",
+      "desc": "大字上下裂開露出小字，再合回切換",
+      "when": "反差、轉換、前後對比",
+      "sfx": {
+        "sound": "swipe",
+        "at": 0.67
+      }
+    },
+    {
+      "id": "33",
+      "slug": "outline-text",
+      "file": "effects/fx-33-outline-text.html",
+      "category": "STYLE",
+      "en": "Outline Text",
+      "zh": "輪廓填色",
+      "tag": "洗鍊・MV",
+      "bg": "dark",
+      "animText": "輪廓填色・（多行重複、斜置）",
+      "spec": "多行斜置空心輪廓字，從上到下一行一行被主色實心填滿，再一起清空",
+      "desc": "斜置空心字逐行被填滿，再一起清空",
+      "when": "MV 感的洗鍊標題",
+      "sfx": {
+        "sound": "pop",
+        "at": 0.6
+      }
+    },
+    {
+      "id": "34",
+      "slug": "glitch-slices",
+      "file": "effects/fx-34-glitch-slices.html",
+      "category": "STYLE",
+      "en": "Glitch Slices",
+      "zh": "故障切片",
+      "tag": "衝擊・MV",
+      "bg": "accent",
+      "animText": "故障切片",
+      "spec": "巨大黑字被切成 5–7 條水平切片，各條隨機左右錯位並偶爾閃出色差，再瞬間對齊",
+      "desc": "巨字切成水平條隨機錯位帶色差，再對齊",
+      "when": "衝擊、出錯、系統崩潰、bug",
+      "sfx": {
+        "sound": "glitch",
+        "at": 0.68
+      }
+    },
+    {
+      "id": "35",
+      "slug": "text-mask-pattern",
+      "file": "effects/fx-35-text-mask-pattern.html",
+      "category": "STYLE",
+      "en": "Text Mask Pattern",
+      "zh": "圖紋遮罩",
+      "tag": "流行・祭典",
+      "bg": "light",
+      "animText": "圖紋遮罩",
+      "spec": "文字當作窗口（background-clip: text），內部為主色與黑色斜紋持續流動",
+      "desc": "文字當窗口，內部斜紋持續流動",
+      "when": "流行、祭典、活潑的主題字",
+      "sfx": {
+        "sound": "pop",
+        "at": 0
+      }
+    },
+    {
+      "id": "36",
+      "slug": "long-shadow",
+      "file": "effects/fx-36-long-shadow.html",
+      "category": "STYLE",
+      "en": "Long Shadow",
+      "zh": "旋轉長影",
+      "tag": "扁平",
+      "bg": "dark",
+      "animText": "旋轉長影",
+      "spec": "白字帶主色長陰影延伸到卡片外，陰影方向以 360° 緩慢繞一圈",
+      "desc": "主色長陰影方向以 360° 緩慢繞圈",
+      "when": "扁平風標題",
+      "sfx": {
+        "sound": "pop",
+        "at": 0
+      }
+    },
+    {
+      "id": "37",
+      "slug": "liquid-fill",
+      "file": "effects/fx-37-liquid-fill.html",
+      "category": "STYLE",
+      "en": "Liquid Fill",
+      "zh": "液體填充",
+      "tag": "清爽・MV",
+      "bg": "dark",
+      "animText": "液體填充",
+      "spec": "空心輪廓字內有主色液體，波浪表面持續晃動並從底部上升到滿、再下降",
+      "desc": "空心字內液面晃動上升到滿，再下降",
+      "when": "清爽、進度、累積感（「慢慢補滿」）",
+      "sfx": {
+        "sound": "riser",
+        "at": 1.48
+      }
+    },
+    {
+      "id": "38",
+      "slug": "highlight-text",
+      "file": "effects/fx-38-highlight-text.html",
+      "category": "STYLE",
+      "en": "Highlight Text",
+      "zh": "螢光筆劃線",
+      "tag": "強調・解說",
+      "bg": "accent",
+      "animText": "螢光筆劃線（只標最後兩字）",
+      "spec": "Noto Serif 黑字，最後兩字後方有白色螢光筆底色從左到右刷開，停留後收回",
+      "desc": "最後兩字下方螢光筆刷開，停留後收回",
+      "when": "解說時強調句尾關鍵字",
+      "sfx": {
+        "sound": "swipe",
+        "at": 0.3
+      }
+    },
+    {
+      "id": "39",
+      "slug": "split-color-word",
+      "file": "effects/fx-39-split-color-word.html",
+      "category": "STYLE",
+      "en": "Split Color Word",
+      "zh": "雙色反轉",
+      "tag": "切換・標題",
+      "bg": "light",
+      "animText": "雙色反轉",
+      "spec": "巨大文字被一條斜向分界線分成兩色（黑／主色），分界線左右來回掃動，兩側顏色互相反轉",
+      "desc": "斜向分界線來回掃動，兩側顏色互換",
+      "when": "對立觀點、雙面、黑白切換的標題",
+      "sfx": {
+        "sound": "flip",
+        "at": 0.75
+      }
+    },
+    {
+      "id": "40",
+      "slug": "text-echo",
+      "file": "effects/fx-40-text-echo.html",
+      "category": "STYLE",
+      "en": "Text Echo",
+      "zh": "殘影軌跡",
+      "tag": "漂浮・MV",
+      "bg": "dark",
+      "animText": "殘影軌跡",
+      "spec": "文字沿 8 字形（Lissajous）路徑移動，後方拖著 8 個以上逐漸淡出、帶主色暈染的延遲複本",
+      "desc": "沿 8 字形路徑移動，拖著暈染殘影",
+      "when": "漂浮、夢幻、輕盈感",
+      "sfx": null
+    }
+  ]
+}

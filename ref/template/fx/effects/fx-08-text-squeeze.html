@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"彈性擠壓"},
+  {"id":"alt","type":"string","label":"英文關鍵字","default":"Text Squeeze"},
+  {"id":"accent","type":"color","label":"主色","default":"#f25c54"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>08 Text Squeeze 彈性擠壓</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 08 Text Squeeze */
+    .fx-08-wrap { display: grid; place-items: center; }
+    .fx-08-word { grid-area: 1 / 1; white-space: nowrap; text-shadow: var(--fx-scrim); }
+    .fx-08-zh { color: var(--fx-ink); }
+    .fx-08-en { color: var(--fx-hi); opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="fx-08-text-squeeze" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-08-wrap">
+        <div class="fx-08-word fx-08-zh"></div>
+        <div class="fx-08-word fx-08-en"></div>
+      </div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 08 Text Squeeze：中文被橫向擠扁（scaleX 0.08、scaleY 1.15），最扁時換英文，elastic.out 彈回；再擠一次換回中文 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const zh = document.querySelector('.fx-08-zh');
+    const en = document.querySelector('.fx-08-en');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    zh.textContent = v.text;
+    en.textContent = v.alt;
+    // elastic 回彈會略超過 1 倍寬，預留 1.25
+    zh.style.fontSize = FXKit.fitSize(v.text, 260, FXKit.SAFE.w / 1.25) + 'px';
+    en.style.fontSize = FXKit.fitSize(v.alt, 260, FXKit.SAFE.w / 1.25) + 'px';
+
+    const lead = 0.25, tail = 0.15;
+    const u = Math.min(1, (D - lead - tail - 0.2) / 2.2);
+    const sq = 0.25 * u, el = 0.85 * u;
+    const mid = D - lead - tail - 2 * (sq + el);
+    const FLAT = { scaleX: 0.08, scaleY: 1.15 };
+    const EL = 'elastic.out(1, 0.45)';
+
+    const tl = gsap.timeline({ paused: true });
+    tl.set(en, { opacity: 0, ...FLAT }, 0);
+    const t1 = lead;
+    tl.to(zh, { ...FLAT, duration: sq, ease: 'power2.in' }, t1)
+      .set(zh, { opacity: 0 }, t1 + sq)
+      .set(en, { opacity: 1 }, t1 + sq)
+      .to(en, { scaleX: 1, scaleY: 1, duration: el, ease: EL }, t1 + sq);
+    const t2 = t1 + sq + el + mid;
+    tl.to(en, { ...FLAT, duration: sq, ease: 'power2.in' }, t2)
+      .set(en, { opacity: 0 }, t2 + sq)
+      .set(zh, { opacity: 1, ...FLAT }, t2 + sq)
+      .to(zh, { scaleX: 1, scaleY: 1, duration: el, ease: EL }, t2 + sq);
+    window.__timelines['fx-08-text-squeeze'] = tl;
+  </script>
+</template>
+</body>
+</html>

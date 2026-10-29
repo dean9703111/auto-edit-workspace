@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"立體擠出"},
+  {"id":"accent","type":"color","label":"主色","default":"#2dd4bf"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>24 Extrude Text 立體擠出</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 24 Extrude Text */
+    .fx-24-wrap { position: absolute; left: 120px; top: 120px; width: 1680px; height: 750px; }
+    .fx-24-layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+  </style>
+  <div id="root" data-composition-id="fx-24-extrude-text" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-24-wrap"></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 24 Extrude Text：主色文字後面疊 18 層逐層變深的複本形成厚度，偏移方向 θ 每週期轉一圈，像光源繞著字走 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const wrap = document.querySelector('.fx-24-wrap');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const P = 4, Pp = D / Math.max(1, Math.round(D / P));   // 整數週期：每週期轉一整圈
+    const LAYERS = 18, STEP = 4.5, DEPTH = LAYERS * STEP;
+    const fs = FXKit.fitSize(v.text, 300, FXKit.SAFE.w - DEPTH * 2.2);
+
+    const layers = [];
+    for (let k = LAYERS; k >= 0; k--) {          // 先放最深的，前景最後放（DOM 後者在上）
+      const el = document.createElement('div');
+      el.className = 'fx-24-layer';
+      el.style.fontSize = fs + 'px';
+      el.textContent = v.text;
+      if (k === 0) {
+        el.style.color = 'var(--fx-hi)';
+        el.style.textShadow = 'var(--fx-scrim)';
+      } else {
+        el.style.color = `color-mix(in srgb, var(--fx-hi) ${Math.round(68 - 26 * (k / LAYERS))}%, #000)`;
+      }
+      wrap.appendChild(el);
+      layers.push({ el, k });
+    }
+
+    function draw(time) {
+      const th = (time / Pp) * Math.PI * 2;
+      const dx = Math.cos(th) * STEP, dy = Math.sin(th) * STEP;
+      layers.forEach((l) => {
+        l.el.style.transform = `translate(${(dx * l.k).toFixed(2)}px, ${(dy * l.k).toFixed(2)}px)`;
+      });
+    }
+
+    const proxy = { t: 0 };
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(proxy, { t: 0 }, { t: D, duration: D, ease: 'none', onUpdate: () => draw(proxy.t) }, 0);
+    draw(0);
+    window.__timelines['fx-24-extrude-text'] = tl;
+  </script>
+</template>
+</body>
+</html>

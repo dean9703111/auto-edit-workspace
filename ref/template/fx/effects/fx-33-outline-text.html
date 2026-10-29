@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"輪廓填色"},
+  {"id":"accent","type":"color","label":"主色","default":"#f78c3c"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>33 Outline Text 輪廓填色</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 33 Outline Text */
+    .fx-33-group { position: absolute; left: 50%; top: 50%; width: 3000px; transform: translate(-50%, -50%) rotate(-8deg); }
+    .fx-33-row { position: relative; height: 170px; margin: 12px 0; }
+    .fx-33-row span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      white-space: nowrap; font-size: 150px; line-height: 1; }
+    .fx-33-line { color: var(--fx-ink); filter: url(#fx-33-ring); }
+    .fx-33-fill { color: var(--fx-hi); filter: url(#fx-33-grow); clip-path: inset(0 100% 0 0); }
+    .fx-stage[data-bg="none"] .fx-33-group { filter: drop-shadow(0 2px 4px rgba(0,0,0,.85)); }
+  </style>
+  <div id="root" data-composition-id="fx-33-outline-text" data-width="1920" data-height="1080" data-duration="3">
+    <svg width="0" height="0" style="position:absolute">
+      <!-- 可變字型的 -webkit-text-stroke 會露出筆畫重疊線，改用形態學濾鏡：外擴 3px 後扣掉原字形＝乾淨的外框環 -->
+      <filter id="fx-33-ring" x="-2%" y="-20%" width="104%" height="140%">
+        <feMorphology in="SourceGraphic" operator="dilate" radius="3" result="d"/>
+        <feComposite in="d" in2="SourceAlpha" operator="out"/>
+      </filter>
+      <filter id="fx-33-grow" x="-2%" y="-20%" width="104%" height="140%">
+        <feMorphology in="SourceGraphic" operator="dilate" radius="3"/>
+      </filter>
+    </svg>
+    <div class="fx-stage">
+      <div class="fx-33-group"></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 33 Outline Text：5 行斜置空心字，逐行由左到右被主色填滿，停留後一起淡出清空 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const group = document.querySelector('.fx-33-group');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    // 每行重複「text・」直到寬度超過 2800（旋轉後兩端仍超出畫面）
+    const unit = v.text + '・';
+    const reps = Math.ceil(2800 / (FXKit.emWidth(unit) * 150)) + 1;
+    const rowText = unit.repeat(reps);
+    const ROWS = 5;
+    const fills = [];
+    for (let i = 0; i < ROWS; i++) {
+      const row = document.createElement('div');
+      row.className = 'fx-33-row';
+      const shift = i % 2 ? -190 : 0; // 奇偶行錯開
+      row.style.transform = 'translateX(' + shift + 'px)';
+      row.innerHTML = '<span class="fx-33-line"></span><span class="fx-33-fill"></span>';
+      row.children[0].textContent = rowText;
+      row.children[1].textContent = rowText;
+      group.appendChild(row);
+      fills.push(row.children[1]);
+    }
+
+    const tl = gsap.timeline({ paused: true });
+    const s = Math.max(0.5, Math.min(1, (D - 0.8) / 2.2));
+    const st = 0.2 * s, fd = 0.5 * s;
+    fills.forEach((f, i) => {
+      tl.fromTo(f, { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: fd, ease: 'power2.inOut' }, 0.1 + i * st);
+    });
+    // 一起清空：實心層整組淡出，在 D 之前結束
+    const outDur = 0.4;
+    fills.forEach((f) => {
+      tl.fromTo(f, { opacity: 1 }, { opacity: 0, duration: outDur, ease: 'power1.inOut' }, D - outDur - 0.08);
+    });
+    window.__timelines['fx-33-outline-text'] = tl;
+  </script>
+</template>
+</body>
+</html>

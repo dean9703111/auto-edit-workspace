@@ -1,0 +1,25 @@
+<!-- @style -->
+/* 章節轉場：全畫面不透明幕 2.5s，背景＋章節號卡第一幀就在，HF 不淡出。
+   整組（號卡 280 ＋ 間距 48 ＋ 標題欄）以 margin:auto 水平置中、頂 400（course：垂直置中於 y 540）／450（yt：品牌橫幅在場，置中於可用區 y 100–1080 的中心 590）；
+   標題欄 = 主標板 160 ＋ 間距 20 ＋ 副標帶 100（向右錯開 40）。寬度由 scene-motion 補成偶數，左緣是整數 px。 */
+#chGroup { position: absolute; left: 0; right: 0; top: {{#yt}}450{{/yt}}{{^yt}}400{{/yt}}px; margin: 0 auto; display: flex; align-items: flex-start; gap: 48px; width: max-content; }
+#chCol { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+#chSub { margin-left: 40px; }
+<!-- @body -->
+<div id="chGroup" data-snap-width>
+  <div id="chNum" class="sc-chapnum">
+    <span class="sc-chapnum__label">CHAPTER</span>
+    <span class="sc-chapnum__line"></span>
+    <span class="sc-chapnum__num">{{num}}</span>
+  </div>
+  <div id="chCol">
+    <div id="chTitle" class="sc-slant sc-slant--white sc-t112 sc-w900" style="--h: 160px"><span class="sc-opt">{{title}}</span></div>
+    {{#sub}}<div id="chSub" class="sc-slant sc-slant--black sc-t60 sc-w700" style="--h: 100px"><span class="sc-opt">{{sub}}</span></div>{{/sub}}
+  </div>
+</div>
+<!-- @timeline -->
+/* 背景＋號卡第一幀就在（剪映整幕淡入負責）；標題板、副標帶各淡入 0.5，板內的字同時間 maskUp（字從板內下緣浮出，板外框不動）；HF 不淡出 */
+P.in('#chTitle', {{{titleAt}}});
+P.maskUp('#chTitle .sc-opt', {{{titleAt}}});
+{{#sub}}P.in('#chSub', {{{subAt}}});
+P.maskUp('#chSub .sc-opt', {{{subAt}}});{{/sub}}

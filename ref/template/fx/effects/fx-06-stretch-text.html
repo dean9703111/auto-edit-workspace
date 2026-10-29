@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"縱向伸縮"},
+  {"id":"accent","type":"color","label":"主色","default":"#f25c54"},
+  {"id":"bg","type":"enum","label":"底色","default":"accent","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>06 Stretch Text 縱向伸縮</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 06 Stretch Text */
+    .fx-06-word { display: inline-block; white-space: nowrap; color: var(--fx-ink); text-shadow: var(--fx-scrim); }
+    .fx-06-word .fx-ch { transform-origin: 50% 50%; }
+  </style>
+  <div id="root" data-composition-id="fx-06-stretch-text" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-06-word"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 06 Stretch Text：每字 scaleY = 1 + 0.6·sin(…)，在 0.4～1.6 間伸縮，字與字之間有相位差；整數週期首尾相同 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const word = document.querySelector('.fx-06-word');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    // 1.6 倍高度 ≤ 安全區高度 750
+    word.style.fontSize = Math.min(FXKit.fitSize(v.text, 300, FXKit.SAFE.w), Math.floor(750 / 1.6 / 1.05)) + 'px';
+    const chars = FXKit.splitChars(word, v.text);
+    const cycles = Math.max(1, Math.round(D / 1.8));
+    const phase = (Math.PI * 2) / Math.max(4, chars.length) * 1.1;
+
+    const apply = (p) => {
+      chars.forEach((ch, i) => {
+        gsap.set(ch, { scaleY: 1 + 0.6 * Math.sin(Math.PI * 2 * cycles * p - i * phase) });
+      });
+    };
+    apply(0);
+    const prog = { p: 0 };
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(prog, { p: 0 }, { p: 1, duration: D, ease: 'none', onUpdate: () => apply(prog.p) }, 0);
+    window.__timelines['fx-06-stretch-text'] = tl;
+  </script>
+</template>
+</body>
+</html>

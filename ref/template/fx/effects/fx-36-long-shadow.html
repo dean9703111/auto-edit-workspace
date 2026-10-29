@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"旋轉長影"},
+  {"id":"accent","type":"color","label":"主色","default":"#f78c3c"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>36 Long Shadow 旋轉長影</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 36 Long Shadow */
+    .fx-36-word { display: inline-block; white-space: nowrap; color: var(--fx-ink); }
+  </style>
+  <div id="root" data-composition-id="fx-36-long-shadow" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-36-word"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 36 Long Shadow：白字＋主色長陰影（1px 一步疊出），方向依時間繞 360° 整圈；onUpdate 依角度重算 text-shadow */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const word = document.querySelector('.fx-36-word');
+    const { D, bg } = FXKit.setup(stage, v, 4);
+
+    word.textContent = v.text;
+    word.style.fontSize = FXKit.fitSize(v.text, 260, FXKit.SAFE.w) + 'px';
+
+    // 透明疊加層：陰影縮短、字外加貼身深色描影，避免大片主色壓在講者身上
+    const LEN = bg === 'none' ? 60 : 180;
+    const BASE = Math.PI / 4; // 起始方向：右下
+
+    function shadow(a) {
+      const dx = Math.cos(a), dy = Math.sin(a);
+      const parts = [];
+      for (let i = 1; i <= LEN; i++) parts.push((dx * i).toFixed(2) + 'px ' + (dy * i).toFixed(2) + 'px 0 var(--fx-hi)');
+      if (bg === 'none') parts.unshift('0 2px 5px rgba(0,0,0,.9)');
+      return parts.join(',');
+    }
+    word.style.textShadow = shadow(BASE);
+
+    const tl = gsap.timeline({ paused: true });
+    const prog = { p: 0 };
+    tl.to(prog, { p: 1, duration: D, ease: 'none',
+      onUpdate: () => { word.style.textShadow = shadow(BASE + prog.p * Math.PI * 2); } }, 0);
+    window.__timelines['fx-36-long-shadow'] = tl;
+  </script>
+</template>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!-- @style -->
+/* 兩列卡：主卡 592–852（高 260）、標籤 536–624。主卡內：頂內距 56 → Q 列 650–718（68）→ 列間 32、2px 分隔線在正中
+   → A 列 750–818（68）→ 底內距 32。列首方標 64（圖文距 24）：Q＝安靜（框＋淡底），A＝主色底（答案＝焦點）。
+   A 列一開始就佔位（opacity 0），卡高不因答案出現而變。細節＝右上網點。 */
+#qaCard { left: 120px; bottom: 220px; }
+.qa-body { display: flex; flex-direction: column; gap: 15px; }
+.qa-row { min-height: 68px; }
+<!-- @body -->
+<div id="qaCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <i class="sc-lt__plate"></i>
+  <div class="sc-lt__card">
+    <i class="sc-lt__dots"></i>
+    <div class="sc-lt__body qa-body">
+      <div id="rowQ" class="sc-lt__row qa-row">
+        <span class="sc-lt__mark sc-lt__mark--line">Q</span>
+        <span class="sc-t54 sc-w700 sc-optr">{{q}}</span>
+      </div>
+      <div class="sc-lt__divider"></div>
+      <div id="rowA" class="sc-lt__row qa-row">
+        <span class="sc-lt__mark sc-lt__mark--solid">A</span>
+        <span class="sc-t54 sc-w700 sc-optr sc-kw">{{{a}}}</span>
+      </div>
+    </div>
+  </div>
+  <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
+</div>
+<!-- @timeline -->
+/* 外殼揭開 → 問句（含分隔線）0.15 後淡入上漂，0.65 可讀 → 停 1.2s → 答案淡入上漂 8（第二層新訊息）→ 段尾 0.4 淡出 */
+P.reveal('#qaCard', {{{in}}});
+P.rise('#qaCard .sc-lt__body', {{{in}}} + P.BEAT);
+P.rise('#rowA', {{{aAt}}});
+{{#exitFade}}P.out('#qaCard', D - P.OUT);{{/exitFade}}

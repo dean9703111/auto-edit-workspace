@@ -1,0 +1,13 @@
+<!-- @style -->
+/* 迷你章節卡 .sc-chtag：右緣 1824（right 96）；頂 56（course）／176（yt：品牌橫幅盒到 y 100）。高 112、寬隨章名。 */
+#cBadge { position: absolute; right: 96px; top: {{#yt}}176{{/yt}}{{^yt}}56{{/yt}}px; }
+<!-- @body -->
+<div id="cBadge" class="sc-chtag">
+  <div class="sc-chtag__shell"><span class="sc-chtag__num">{{num}}</span></div>
+  <div class="sc-chtag__band"><span class="sc-chtag__name">{{name}}</span></div>
+</div>
+<!-- @timeline -->
+/* 貼邊元件：整組從右 drift +16＋淡入 0.5 → 號碼、章名 0.15 後淡入 → 停 → 段尾 0.4 淡出 */
+P.drift('#cBadge', {{{in}}}, { dx: P.DRIFT });
+P.in('#cBadge .sc-chtag__num, #cBadge .sc-chtag__name', {{{in}}} + P.BEAT);
+{{#exitFade}}P.out('#cBadge', D - P.OUT);{{/exitFade}}

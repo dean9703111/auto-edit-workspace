@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"螢光筆劃線"},
+  {"id":"mark","type":"number","label":"標示最後幾字","default":2},
+  {"id":"accent","type":"color","label":"主色","default":"#f78c3c"},
+  {"id":"bg","type":"enum","label":"底色","default":"accent","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>38 Highlight Text 螢光筆劃線</title></head>
+<body>
+<template>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=block');
+    #root { position: absolute; inset: 0; }
+    /* 38 Highlight Text */
+    .fx-38-line { position: relative; display: inline-block; white-space: nowrap; font-family: "Noto Serif TC", serif; font-weight: 700;
+      color: var(--fx-ink); text-shadow: var(--fx-scrim); }
+    .fx-38-mk { position: relative; display: inline-block; white-space: nowrap; isolation: isolate; }
+    .fx-38-bar { position: absolute; left: -10px; right: -10px; top: 20%; bottom: 0%;
+      transform-origin: 0 50%; transform: scaleX(0); clip-path: inset(0 0 0 0); }
+    .fx-38-bar i { position: absolute; inset: 0; background: var(--fx-mk);
+      clip-path: polygon(0 14%, 2.5% 0, 97% 7%, 100% 0, 98% 100%, 3% 93%); }
+    .fx-38-tx { position: relative; }
+    /* 螢光筆顏色（本地變數）：accent 白、dark／light 主色、none 深色板＋字改主色 */
+    .fx-stage[data-bg="accent"] { --fx-mk: #ffffff; }
+    .fx-stage[data-bg="dark"], .fx-stage[data-bg="light"] { --fx-mk: var(--accent); }
+    .fx-stage[data-bg="none"] { --fx-mk: var(--fx-panel); }
+    .fx-stage[data-bg="none"] .fx-38-mk .fx-38-tx { color: var(--fx-hi); text-shadow: none; }
+  </style>
+  <div id="root" data-composition-id="fx-38-highlight-text" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-38-line"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 38 Highlight Text：只標最後 mark 個字；螢光筆底色 scaleX 0→1（origin 左）刷開，停留後用 clip-path 由左往右收回 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const line = document.querySelector('.fx-38-line');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    const chars = [...String(v.text)];
+    const m = Math.max(1, Math.min(chars.length, Math.round(Number(v.mark) || 2)));
+    line.style.fontSize = FXKit.fitSize(v.text, 220, FXKit.SAFE.w - 60) + 'px';
+    const head = document.createElement('span');
+    head.className = 'fx-38-tx';
+    head.textContent = chars.slice(0, chars.length - m).join('');
+    const mk = document.createElement('span');
+    mk.className = 'fx-38-mk';
+    mk.innerHTML = '<span class="fx-38-bar"><i></i></span><span class="fx-38-tx"></span>';
+    mk.querySelector('.fx-38-tx').textContent = chars.slice(chars.length - m).join('');
+    line.appendChild(head);
+    line.appendChild(mk);
+    const bar = mk.querySelector('.fx-38-bar');
+
+    const tl = gsap.timeline({ paused: true });
+    const IN = 0.5, OUT = 0.45;
+    tl.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: IN, ease: 'power3.out' }, 0.3);
+    tl.fromTo(bar, { clipPath: 'inset(0 0% 0 0%)' }, { clipPath: 'inset(0 0% 0 100%)', duration: OUT, ease: 'power2.in' }, Math.max(0.3 + IN + 0.2, D - OUT - 0.1));
+    window.__timelines['fx-38-highlight-text'] = tl;
+  </script>
+</template>
+</body>
+</html>

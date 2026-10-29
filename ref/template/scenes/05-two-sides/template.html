@@ -1,0 +1,25 @@
+<!-- @style -->
+/* 左欄 x 96–600、右欄 x 1320–1824（寬 504）；每欄 2 張同寬同高不透明卡（高 280、卡間 48），y 160–870 內垂直置中：
+   上卡 top 211、下卡 top 539（底 819）。講者保護區 x 640–1280 內不放東西。
+   卡內（直排置中）：圖示圓 96 → 間距 24 → 標題行高 72；頂部主色線 4px，離卡左右與頂邊各 16。 */
+.sCard { position: absolute; width: 504px; height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; background: var(--sc-card-solid); }
+.sCard .sc-t60 { line-height: 64px; }   /* 行高 64 ＋ .sc-opt 光學 padding-bottom 8 ＝ 標題行 72 */
+.sCard.sc-card--topline::before { left: 16px; right: 16px; top: 16px; height: 4px; border-radius: 2px; }
+.sc-icon--96 { --d: 96px; --i: 56px; }
+#sCard1 { left: 96px;   top: 211px; }
+#sCard2 { left: 96px;   top: 539px; }
+#sCard3 { left: 1320px; top: 211px; }
+#sCard4 { left: 1320px; top: 539px; }
+<!-- @body -->
+{{#cards}}
+<div id="sCard{{n}}" class="sc-card sc-card--topline sCard">
+  <span class="sc-icon sc-icon--96">{{{icon}}}</span>
+  <span class="sc-t60 sc-w700 sc-opt">{{{text}}}</span>
+</div>
+{{/cards}}
+<!-- @timeline -->
+/* 左上 → 左下 → 右上 → 右下依序 drift（左欄 dx −16、右欄 +16）→ 停 → 段尾一起淡出 */
+{{#cards}}
+P.drift('#sCard{{n}}', {{{at}}}, { dx: {{n}} <= 2 ? -P.DRIFT : P.DRIFT });
+{{/cards}}
+{{#exitFade}}P.out('#sCard1, #sCard2, #sCard3, #sCard4', D - P.OUT);{{/exitFade}}

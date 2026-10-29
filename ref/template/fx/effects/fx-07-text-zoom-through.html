@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"穿越縮放"},
+  {"id":"alt","type":"string","label":"第二個詞","default":"Zoom Through"},
+  {"id":"accent","type":"color","label":"主色","default":"#f25c54"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>07 Text Zoom Through 穿越縮放</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 07 Text Zoom Through */
+    .fx-07-wrap { display: grid; place-items: center; }
+    .fx-07-word { grid-area: 1 / 1; white-space: nowrap; text-shadow: var(--fx-scrim); }
+    .fx-07-a { color: var(--fx-ink); }
+    .fx-07-b { color: var(--fx-hi); opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="fx-07-text-zoom-through" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-07-wrap">
+        <div class="fx-07-word fx-07-a"></div>
+        <div class="fx-07-word fx-07-b"></div>
+      </div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 07 Text Zoom Through：A 放大到 10 倍穿過鏡頭淡出，B 同時從後方（小、淡）浮現；再 B 穿過、A 浮回，首尾都是 A */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const A = document.querySelector('.fx-07-a');
+    const B = document.querySelector('.fx-07-b');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    A.textContent = v.alt;
+    B.textContent = v.text;
+    // 英文實際字寬比 fitSize 估的寬，多預留 15%
+    A.style.fontSize = FXKit.fitSize(v.alt, 260, FXKit.SAFE.w / 1.15) + 'px';
+    B.style.fontSize = FXKit.fitSize(v.text, 260, FXKit.SAFE.w / 1.15) + 'px';
+
+    const Z = Math.min(0.75, D * 0.18);
+    const ta = D * 0.28;
+    const tb = D - Z - 0.15;
+    const through = (tl, el, t) => {
+      tl.to(el, { scale: 10, duration: Z, ease: 'power3.in' }, t)
+        .to(el, { opacity: 0, duration: Z * 0.6, ease: 'power1.in' }, t + Z * 0.4);
+    };
+    const rise = (tl, el, t) => {
+      tl.fromTo(el, { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: Z, ease: 'power2.out', immediateRender: false }, t);
+    };
+
+    const tl = gsap.timeline({ paused: true });
+    through(tl, A, ta);
+    tl.fromTo(B, { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: Z, ease: 'power2.out' }, ta);
+    through(tl, B, tb);
+    rise(tl, A, tb);
+    window.__timelines['fx-07-text-zoom-through'] = tl;
+  </script>
+</template>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"膠帶交叉"},
+  {"id":"accent","type":"color","label":"主色","default":"#f5c518"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>16 Tape Cross 膠帶交叉</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 16 Tape Cross */
+    .fx-stage { --fx-16-line: #14161c; }
+    .fx-stage[data-bg="accent"], .fx-stage[data-bg="none"] { --fx-16-line: var(--fx-on-fill); }
+    .fx-16-tape { position: absolute; left: -400px; width: 2720px; height: 170px; top: 455px; overflow: hidden;
+      background: var(--fx-fill); color: var(--fx-on-fill); transform-origin: 50% 50%; }
+    .fx-16-tape::before, .fx-16-tape::after { content: ""; position: absolute; left: 0; right: 0; height: 2px; background: var(--fx-16-line); }
+    .fx-16-tape::before { top: 7px; }
+    .fx-16-tape::after { bottom: 7px; }
+    .fx-16-a { transform: rotate(-14deg); }
+    .fx-16-b { transform: rotate(14deg); }
+    .fx-16-row { position: absolute; left: 0; top: 0; height: 170px; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
+    .fx-16-u { flex: 0 0 auto; display: block; white-space: nowrap; line-height: 1; }
+  </style>
+  <div id="root" data-composition-id="fx-16-tape-cross" data-width="1920" data-height="1080" data-duration="6">
+    <div class="fx-stage">
+      <div class="fx-16-tape fx-16-a"><div class="fx-16-row"></div></div>
+      <div class="fx-16-tape fx-16-b"><div class="fx-16-row"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 16 Tape Cross：兩條主色底膠帶以 ±14° 交叉，各自反向無限流動，帶的上下邊各有一條 2px 細線；位移＝整數個重複單元 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const { D } = FXKit.setup(stage, v, 6);
+    const W = 2720, P = 6;
+    const cycles = Math.max(1, Math.round(D / P));
+    const Pp = D / cycles;
+
+    const emW = FXKit.emWidth(v.text + '・');
+    const fs = Math.min(104, Math.floor(2600 / emW));
+    const U = Math.round(fs * emW);
+    const tapes = [
+      { sel: '.fx-16-a .fx-16-row', speed: 440, dir: -1 },
+      { sel: '.fx-16-b .fx-16-row', speed: 560, dir: 1 },
+    ];
+    const tl = gsap.timeline({ paused: true });
+    tapes.forEach((t, i) => {
+      const row = document.querySelector(t.sel);
+      row.style.fontSize = fs + 'px';
+      const m = Math.max(1, Math.round(t.speed * Pp / U));
+      const S = cycles * m * U;
+      const n = Math.ceil((W + S) / U) + 1;
+      for (let j = 0; j < n; j++) {
+        const u = document.createElement('span');
+        u.className = 'fx-16-u';
+        u.style.width = U + 'px';
+        u.textContent = v.text + '・';
+        row.appendChild(u);
+      }
+      const phase = -((i * 0.5) % 1) * U;
+      const from = t.dir < 0 ? phase : phase - S, to = t.dir < 0 ? phase - S : phase;
+      tl.fromTo(row, { x: from }, { x: to, duration: D, ease: 'none' }, 0);
+    });
+    window.__timelines['fx-16-tape-cross'] = tl;
+  </script>
+</template>
+</body>
+</html>

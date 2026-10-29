@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"跑馬看板"},
+  {"id":"items","type":"string","label":"各行詞（用 | 分隔，4–5 行）","default":"跑馬看板|限時|新發售|跑馬看板|限時"},
+  {"id":"accent","type":"color","label":"主色","default":"#f5c518"},
+  {"id":"bg","type":"enum","label":"底色","default":"accent","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>14 Marquee Board 跑馬看板</title></head>
+<body>
+<template>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&display=block');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=block');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=block');
+    @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=block');
+    #root { position: absolute; inset: 0; }
+    /* 14 Marquee Board */
+    .fx-14-band { position: absolute; left: 0; width: 1920px; overflow: hidden; }
+    .fx-14-fill { background: var(--fx-fill); color: var(--fx-on-fill); }
+    .fx-14-plain { color: var(--fx-ink); text-shadow: var(--fx-scrim); }
+    .fx-14-row { position: absolute; left: 0; top: 0; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
+    .fx-14-u { flex: 0 0 auto; display: block; white-space: nowrap; line-height: 1; }
+  </style>
+  <div id="root" data-composition-id="fx-14-marquee-board" data-width="1920" data-height="1080" data-duration="6">
+    <div class="fx-stage"></div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 14 Marquee Board：4–5 行橫帶，字體、字級、速度、方向各不同；色塊行與透明行交錯；位移＝整數個重複單元 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const { D } = FXKit.setup(stage, v, 6);
+    const W = 1920, P = 6;
+    const cycles = Math.max(1, Math.round(D / P));
+    const Pp = D / cycles;
+
+    const items = FXKit.list(v.items);
+    const rows = (items.length ? items : [v.text]).slice(0, 5);
+    // 每行樣式：字體、字重、寬度係數（等寬字比估算寬）、速度（px/s）、方向（-1 向左）、高度占比
+    const STYLES = [
+      { ff: '"Noto Sans TC"', fw: 900, wk: 1,    speed: 480, dir: -1, h: 1.15 },
+      { ff: '"Noto Serif TC"', fw: 700, wk: 1,   speed: 340, dir: 1,  h: 0.85 },
+      { ff: '"JetBrains Mono","Noto Sans TC"', fw: 700, wk: 1.12, speed: 620, dir: -1, h: 1.25 },
+      { ff: '"DotGothic16"', fw: 400, wk: 1,     speed: 400, dir: 1,  h: 0.85 },
+      { ff: '"Noto Sans TC"', fw: 900, wk: 1,    speed: 560, dir: -1, h: 0.9 },
+    ];
+    const totalH = 1000;
+    const wsum = rows.reduce((a, _, i) => a + STYLES[i].h, 0);
+    let y = (1080 - totalH) / 2;
+    const tl = gsap.timeline({ paused: true });
+    rows.forEach((word, i) => {
+      const st = STYLES[i];
+      const bh = Math.round(totalH * st.h / wsum);
+      const fs = Math.min(Math.round(bh * 0.72), Math.floor(2600 / (FXKit.emWidth(word + '・') * st.wk)));
+      const U = Math.round(fs * FXKit.emWidth(word + '・') * st.wk);
+      const m = Math.max(1, Math.round(st.speed * Pp / U));
+      const S = cycles * m * U;
+      const n = Math.ceil((W + S) / U) + 1;
+      const band = document.createElement('div');
+      band.className = 'fx-14-band ' + (i % 2 === 0 ? 'fx-14-fill' : 'fx-14-plain');
+      band.style.cssText = `top:${y}px;height:${bh}px;font-family:${st.ff},sans-serif;font-weight:${st.fw};font-size:${fs}px;`;
+      const row = document.createElement('div');
+      row.className = 'fx-14-row';
+      row.style.height = bh + 'px';
+      for (let j = 0; j < n; j++) {
+        const u = document.createElement('span');
+        u.className = 'fx-14-u';
+        u.style.width = U + 'px';
+        u.textContent = word + '・';
+        row.appendChild(u);
+      }
+      band.appendChild(row);
+      stage.appendChild(band);
+      const phase = -((i * 0.43) % 1) * U;
+      const from = st.dir < 0 ? phase : phase - S, to = st.dir < 0 ? phase - S : phase;
+      tl.fromTo(row, { x: from }, { x: to, duration: D, ease: 'none' }, 0);
+      y += bh;
+    });
+    window.__timelines['fx-14-marquee-board'] = tl;
+  </script>
+</template>
+</body>
+</html>

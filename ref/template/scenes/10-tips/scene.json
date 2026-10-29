@@ -1,0 +1,39 @@
+{
+  "key": "tips",
+  "no": 10,
+  "zh": "Tips 字卡",
+  "aliases": ["Tips", "小技巧", "技巧卡", "補充建議"],
+  "family": "lower-third",
+  "when": "口播給一個小技巧或補充建議：一句標題＋一兩行說明",
+  "avoid": "說明超過兩行（縮文案），或是必須記住的重點（改重點字卡）",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 6, "min": 4, "fixed": null },
+  "addons": ["chtag"],
+  "tone": true,
+  "slots": {
+    "tag":   { "label": "標籤", "type": "text", "default": "小技巧", "max": 4 },
+    "title": { "label": "標題", "type": "text", "required": true, "max": 14 },
+    "desc":  { "label": "說明", "type": "rich", "maxLine": 22, "maxLines": 2, "max": 44, "note": "最多兩行、每行 ≤ 22，用 // 斷行；不填＝單列卡" }
+  },
+  "beats": {
+    "in": { "label": "進場", "default": "0" }
+  },
+  "sfx": {
+    "main": { "sound": "pop", "at": "in + 0.1" },
+    "extra": []
+  },
+  "lists": {},
+  "rules": [],
+  "sample": {
+    "title": "先用 Plan 模式列分鏡",
+    "sub": "這個提示詞，我會先切到 Plan 模式",
+    "duration": 6,
+    "slots": {
+      "title": "先用 Plan 模式列分鏡",
+      "desc": "文字寫錯，改一句就好//動畫做錯，要等好幾分鐘重做"
+    },
+    "beats": {}
+  }
+}

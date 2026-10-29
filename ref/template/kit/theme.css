@@ -1,0 +1,101 @@
+/* 主題 channel：「工程師下班有約」YouTube 長片
+   夜色深藍黑底、白字、招牌黃重點、紅色警示——與頻道封面（平面高對比）、剪映字卡同一套語言。
+   這份是完整 token 明列（references/theming.md 第 2 節 channel 欄）；即使與 scene.css 的 :root 預設相同也寫出來，
+   做新主題時整份複製、改值即可。底紋為「淡程式碼編輯器」SVG（行號欄＋語法色短條，alpha 0.05–0.12，硬邊、無模糊、座標寫死）。
+   素材包版：主色衍生的 token 一律從 brand.css 的 --brand／--brand-ink／--brand-text 推出，換主色只改 brand.css，不改本檔。
+   警示紅、解方綠、深藍黑底、程式碼底紋維持原值（底紋 SVG 裡的淡黃短條也不跟主色）。
+   載入順序：fonts.css → scene.css → theme.css → brand.css（CSS 變數在使用時才解析，brand.css 放前放後都可以）。 */
+:root {
+  /* 全域 */
+  --sc-font:           var(--font-cjk);
+  --sc-accent:         var(--brand);
+  --sc-accent-hi:      color-mix(in srgb, var(--brand) 65%, #FFFFFF);
+  --sc-accent-deep:    color-mix(in srgb, var(--brand) 85%, #000000);
+  --sc-accent-dim:     color-mix(in srgb, var(--brand) 16%, #070B14);
+  --sc-on-accent:      var(--brand-ink);
+  --sc-on-accent-glyph:var(--brand-ink);
+  --sc-kw:             var(--brand-text);
+  --sc-kw-min:         0;
+  --sc-deep:           #070B14;
+  --sc-card:           rgba(11, 16, 32, 0.96);
+  --sc-card-solid:     #0B1020;
+  --sc-card-line:      rgba(255, 255, 255, 0.34);
+  --sc-plate:          #1E2740;
+  --sc-ink:            #FFFFFF;
+  --sc-mute:           rgba(255, 255, 255, 0.78);
+  --sc-board:          #FFFFFF;
+  --sc-board-kw:       #0B1020;
+  --sc-board-ink:      #0B1020;
+  --sc-warn:           #E0202A;
+  --sc-on-warn:        #FFFFFF;
+  --sc-warn-kw:        #FF5A5F;
+  --sc-good:           #2FB36B;
+  --sc-on-good:        #FFFFFF;
+  --sc-good-kw:        #4ADE9B;
+  --sc-warn-dim:       #2D1322;
+  --sc-good-dim:       #112A2C;
+  --sc-info:           #3B82F6;
+  --sc-lift:           0 10px 24px rgba(0, 0, 0, 0.55);
+
+  /* 全畫面幕 */
+  --sc-fs-bg:          #0A0F1E;
+  --sc-fs-pattern:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><rect x='104' y='0' width='2' height='1080' fill='%23FFFFFF' fill-opacity='.05'/><g fill='%23FFFFFF' fill-opacity='.07'><rect x='48' y='17' width='24' height='10' rx='3'/><rect x='48' y='53' width='16' height='10' rx='3'/><rect x='48' y='89' width='16' height='10' rx='3'/><rect x='48' y='125' width='24' height='10' rx='3'/><rect x='48' y='161' width='16' height='10' rx='3'/><rect x='48' y='197' width='16' height='10' rx='3'/><rect x='48' y='233' width='24' height='10' rx='3'/><rect x='48' y='269' width='16' height='10' rx='3'/><rect x='48' y='305' width='16' height='10' rx='3'/><rect x='48' y='341' width='24' height='10' rx='3'/><rect x='48' y='377' width='16' height='10' rx='3'/><rect x='48' y='413' width='16' height='10' rx='3'/><rect x='48' y='449' width='24' height='10' rx='3'/><rect x='48' y='485' width='16' height='10' rx='3'/><rect x='48' y='521' width='16' height='10' rx='3'/><rect x='48' y='557' width='24' height='10' rx='3'/><rect x='48' y='593' width='16' height='10' rx='3'/><rect x='48' y='629' width='16' height='10' rx='3'/><rect x='48' y='665' width='24' height='10' rx='3'/><rect x='48' y='701' width='16' height='10' rx='3'/><rect x='48' y='737' width='16' height='10' rx='3'/><rect x='48' y='773' width='24' height='10' rx='3'/><rect x='48' y='809' width='16' height='10' rx='3'/><rect x='48' y='845' width='16' height='10' rx='3'/><rect x='48' y='881' width='24' height='10' rx='3'/><rect x='48' y='917' width='16' height='10' rx='3'/><rect x='48' y='953' width='16' height='10' rx='3'/><rect x='48' y='989' width='24' height='10' rx='3'/><rect x='48' y='1025' width='16' height='10' rx='3'/></g><g fill='%237DB4FF' fill-opacity='.07'><rect x='164' y='87' width='176' height='14' rx='4'/><rect x='164' y='159' width='192' height='14' rx='4'/><rect x='544' y='159' width='160' height='14' rx='4'/><rect x='164' y='195' width='224' height='14' rx='4'/><rect x='496' y='195' width='192' height='14' rx='4'/><rect x='282' y='267' width='120' height='14' rx='4'/><rect x='440' y='339' width='128' height='14' rx='4'/><rect x='164' y='375' width='96' height='14' rx='4'/><rect x='274' y='375' width='88' height='14' rx='4'/><rect x='258' y='411' width='72' height='14' rx='4'/><rect x='298' y='519' width='72' height='14' rx='4'/><rect x='324' y='591' width='160' height='14' rx='4'/><rect x='630' y='807' width='136' height='14' rx='4'/><rect x='284' y='843' width='160' height='14' rx='4'/><rect x='324' y='879' width='88' height='14' rx='4'/><rect x='426' y='879' width='48' height='14' rx='4'/></g><g fill='%23C792EA' fill-opacity='.07'><rect x='164' y='123' width='88' height='14' rx='4'/><rect x='204' y='303' width='64' height='14' rx='4'/><rect x='204' y='339' width='112' height='14' rx='4'/><rect x='164' y='411' width='80' height='14' rx='4'/><rect x='284' y='555' width='40' height='14' rx='4'/><rect x='870' y='627' width='88' height='14' rx='4'/><rect x='284' y='699' width='216' height='14' rx='4'/><rect x='244' y='771' width='224' height='14' rx='4'/><rect x='718' y='915' width='64' height='14' rx='4'/></g><g fill='%23FFD400' fill-opacity='.06'><rect x='370' y='159' width='160' height='14' rx='4'/><rect x='402' y='195' width='80' height='14' rx='4'/><rect x='330' y='339' width='96' height='14' rx='4'/><rect x='514' y='699' width='104' height='14' rx='4'/><rect x='512' y='807' width='104' height='14' rx='4'/></g><g fill='%234ADE9B' fill-opacity='.06'><rect x='204' y='15' width='112' height='14' rx='4'/><rect x='330' y='15' width='200' height='14' rx='4'/><rect x='204' y='51' width='96' height='14' rx='4'/><rect x='314' y='51' width='152' height='14' rx='4'/><rect x='354' y='87' width='136' height='14' rx='4'/><rect x='266' y='123' width='80' height='14' rx='4'/><rect x='702' y='195' width='48' height='14' rx='4'/><rect x='164' y='267' width='104' height='14' rx='4'/><rect x='416' y='267' width='184' height='14' rx='4'/><rect x='582' y='339' width='160' height='14' rx='4'/><rect x='376' y='375' width='88' height='14' rx='4'/><rect x='204' y='447' width='96' height='14' rx='4'/><rect x='314' y='447' width='112' height='14' rx='4'/><rect x='244' y='519' width='40' height='14' rx='4'/><rect x='284' y='627' width='184' height='14' rx='4'/><rect x='482' y='627' width='184' height='14' rx='4'/><rect x='244' y='663' width='72' height='14' rx='4'/><rect x='244' y='807' width='80' height='14' rx='4'/><rect x='458' y='843' width='208' height='14' rx='4'/><rect x='488' y='879' width='208' height='14' rx='4'/><rect x='284' y='915' width='160' height='14' rx='4'/><rect x='458' y='915' width='176' height='14' rx='4'/><rect x='244' y='951' width='64' height='14' rx='4'/><rect x='284' y='1023' width='56' height='14' rx='4'/></g><g fill='%23FFFFFF' fill-opacity='.05'><rect x='360' y='123' width='200' height='14' rx='4'/><rect x='478' y='375' width='80' height='14' rx='4'/><rect x='440' y='447' width='88' height='14' rx='4'/><rect x='680' y='627' width='176' height='14' rx='4'/><rect x='330' y='663' width='112' height='14' rx='4'/><rect x='338' y='807' width='160' height='14' rx='4'/><rect x='648' y='915' width='56' height='14' rx='4'/><rect x='322' y='951' width='136' height='14' rx='4'/></g></svg>");
+  --sc-fs-card:        #111A2E;
+  --sc-fs-card-line:   rgba(255, 255, 255, 0.16);
+  --sc-fs-ink:         #FFFFFF;
+  --sc-fs-mute:        rgba(255, 255, 255, 0.72);
+  --sc-fs-kw:          var(--brand-text);
+  --sc-fs-kw-min:      0;
+  --sc-fs-bar:         var(--brand);
+  --sc-fs-bar-ink:     var(--brand-ink);
+  --sc-fs-head:        #070B14;
+  --sc-fs-head-ink:    #FFFFFF;
+  --sc-fs-tint:        #16213A;
+  --sc-fs-line:        rgba(255, 255, 255, 0.86);
+  --sc-fs-node:        #111A2E;
+  --sc-fs-node-line:   rgba(255, 255, 255, 0.34);
+
+  /* 章節轉場、迷你章節卡 */
+  --sc-ch-bg:          #0A0F1E;
+  --sc-ch-pattern:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><rect x='112' y='0' width='2' height='1080' fill='%23FFFFFF' fill-opacity='.07'/><g fill='%23FFFFFF' fill-opacity='.09'><rect x='56' y='22' width='24' height='18' rx='3'/><rect x='56' y='76' width='16' height='18' rx='3'/><rect x='56' y='130' width='16' height='18' rx='3'/><rect x='56' y='184' width='24' height='18' rx='3'/><rect x='56' y='238' width='16' height='18' rx='3'/><rect x='56' y='292' width='16' height='18' rx='3'/><rect x='56' y='346' width='24' height='18' rx='3'/><rect x='56' y='400' width='16' height='18' rx='3'/><rect x='56' y='454' width='16' height='18' rx='3'/><rect x='56' y='508' width='24' height='18' rx='3'/><rect x='56' y='562' width='16' height='18' rx='3'/><rect x='56' y='616' width='16' height='18' rx='3'/><rect x='56' y='670' width='24' height='18' rx='3'/><rect x='56' y='724' width='16' height='18' rx='3'/><rect x='56' y='778' width='16' height='18' rx='3'/><rect x='56' y='832' width='24' height='18' rx='3'/><rect x='56' y='886' width='16' height='18' rx='3'/><rect x='56' y='940' width='16' height='18' rx='3'/><rect x='56' y='994' width='24' height='18' rx='3'/></g><g fill='%237DB4FF' fill-opacity='.11'><rect x='398' y='20' width='201' height='22' rx='7'/><rect x='322' y='74' width='213' height='22' rx='7'/><rect x='200' y='236' width='100' height='22' rx='7'/><rect x='322' y='236' width='326' height='22' rx='7'/><rect x='956' y='290' width='352' height='22' rx='7'/><rect x='486' y='830' width='326' height='22' rx='7'/><rect x='260' y='992' width='150' height='22' rx='7'/></g><g fill='%23C792EA' fill-opacity='.11'><rect x='200' y='74' width='100' height='22' rx='7'/><rect x='260' y='182' width='163' height='22' rx='7'/><rect x='200' y='776' width='176' height='22' rx='7'/><rect x='260' y='884' width='75' height='22' rx='7'/><rect x='200' y='938' width='176' height='22' rx='7'/></g><g fill='%23FFD400' fill-opacity='.10'><rect x='781' y='182' width='75' height='22' rx='7'/><rect x='733' y='290' width='201' height='22' rx='7'/><rect x='542' y='992' width='201' height='22' rx='7'/></g><g fill='%234ADE9B' fill-opacity='.10'><rect x='200' y='20' width='176' height='22' rx='7'/><rect x='621' y='20' width='188' height='22' rx='7'/><rect x='200' y='128' width='176' height='22' rx='7'/><rect x='200' y='290' width='213' height='22' rx='7'/><rect x='200' y='668' width='88' height='22' rx='7'/><rect x='200' y='830' width='264' height='22' rx='7'/></g><g fill='%23FFFFFF' fill-opacity='.08'><rect x='831' y='20' width='238' height='22' rx='7'/><rect x='445' y='182' width='314' height='22' rx='7'/><rect x='435' y='290' width='276' height='22' rx='7'/><rect x='357' y='884' width='88' height='22' rx='7'/><rect x='432' y='992' width='88' height='22' rx='7'/></g></svg>");
+  --sc-chnum-bg:       var(--brand);
+  --sc-chnum-label:    var(--brand-ink);
+  --sc-chnum-line:     var(--brand-ink);
+  --sc-chnum-num:      var(--brand-ink);
+  --sc-ch-title-bg:    #FFFFFF;
+  --sc-ch-title-ink:   #0B1020;
+  --sc-ch-sub-bg:      #070B14;
+  --sc-ch-sub-ink:     #FFFFFF;
+  --sc-ch-sub-line:    rgba(255, 255, 255, 0.34);
+  --sc-chtag-plate:    var(--brand);
+  --sc-chtag-num:      var(--brand-ink);
+
+  /* 側邊欄 */
+  --sc-side-bg:        #0E1528;
+  --sc-side-pattern:   url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='960' height='1080'><rect x='92' y='0' width='2' height='1080' fill='%23FFFFFF' fill-opacity='.05'/><g fill='%23FFFFFF' fill-opacity='.07'><rect x='40' y='17' width='24' height='10' rx='3'/><rect x='40' y='53' width='16' height='10' rx='3'/><rect x='40' y='89' width='16' height='10' rx='3'/><rect x='40' y='125' width='24' height='10' rx='3'/><rect x='40' y='161' width='16' height='10' rx='3'/><rect x='40' y='197' width='16' height='10' rx='3'/><rect x='40' y='233' width='24' height='10' rx='3'/><rect x='40' y='269' width='16' height='10' rx='3'/><rect x='40' y='305' width='16' height='10' rx='3'/><rect x='40' y='341' width='24' height='10' rx='3'/><rect x='40' y='377' width='16' height='10' rx='3'/><rect x='40' y='413' width='16' height='10' rx='3'/><rect x='40' y='449' width='24' height='10' rx='3'/><rect x='40' y='485' width='16' height='10' rx='3'/><rect x='40' y='521' width='16' height='10' rx='3'/><rect x='40' y='557' width='24' height='10' rx='3'/><rect x='40' y='593' width='16' height='10' rx='3'/><rect x='40' y='629' width='16' height='10' rx='3'/><rect x='40' y='665' width='24' height='10' rx='3'/><rect x='40' y='701' width='16' height='10' rx='3'/><rect x='40' y='737' width='16' height='10' rx='3'/><rect x='40' y='773' width='24' height='10' rx='3'/><rect x='40' y='809' width='16' height='10' rx='3'/><rect x='40' y='845' width='16' height='10' rx='3'/><rect x='40' y='881' width='24' height='10' rx='3'/><rect x='40' y='917' width='16' height='10' rx='3'/><rect x='40' y='953' width='16' height='10' rx='3'/><rect x='40' y='989' width='24' height='10' rx='3'/><rect x='40' y='1025' width='16' height='10' rx='3'/></g><g fill='%237DB4FF' fill-opacity='.07'><rect x='370' y='87' width='56' height='14' rx='4'/><rect x='220' y='195' width='120' height='14' rx='4'/><rect x='354' y='195' width='72' height='14' rx='4'/><rect x='292' y='303' width='144' height='14' rx='4'/><rect x='450' y='303' width='152' height='14' rx='4'/><rect x='584' y='411' width='168' height='14' rx='4'/><rect x='292' y='447' width='152' height='14' rx='4'/><rect x='500' y='591' width='144' height='14' rx='4'/><rect x='430' y='627' width='104' height='14' rx='4'/><rect x='220' y='699' width='96' height='14' rx='4'/><rect x='330' y='699' width='224' height='14' rx='4'/><rect x='256' y='771' width='72' height='14' rx='4'/><rect x='292' y='843' width='80' height='14' rx='4'/><rect x='292' y='879' width='192' height='14' rx='4'/><rect x='292' y='951' width='120' height='14' rx='4'/><rect x='426' y='951' width='88' height='14' rx='4'/><rect x='292' y='1023' width='56' height='14' rx='4'/></g><g fill='%23C792EA' fill-opacity='.07'><rect x='184' y='15' width='152' height='14' rx='4'/><rect x='786' y='51' width='96' height='14' rx='4'/><rect x='220' y='87' width='136' height='14' rx='4'/><rect x='220' y='123' width='144' height='14' rx='4'/><rect x='256' y='159' width='120' height='14' rx='4'/><rect x='256' y='267' width='192' height='14' rx='4'/><rect x='292' y='339' width='136' height='14' rx='4'/><rect x='256' y='519' width='88' height='14' rx='4'/><rect x='292' y='555' width='128' height='14' rx='4'/><rect x='256' y='663' width='40' height='14' rx='4'/><rect x='646' y='807' width='176' height='14' rx='4'/><rect x='292' y='915' width='184' height='14' rx='4'/><rect x='678' y='915' width='208' height='14' rx='4'/></g><g fill='%23FFD400' fill-opacity='.06'><rect x='378' y='123' width='56' height='14' rx='4'/><rect x='548' y='159' width='136' height='14' rx='4'/><rect x='354' y='411' width='216' height='14' rx='4'/><rect x='374' y='591' width='112' height='14' rx='4'/><rect x='712' y='879' width='72' height='14' rx='4'/><rect x='362' y='1023' width='184' height='14' rx='4'/></g><g fill='%234ADE9B' fill-opacity='.06'><rect x='184' y='51' width='208' height='14' rx='4'/><rect x='406' y='51' width='176' height='14' rx='4'/><rect x='440' y='195' width='192' height='14' rx='4'/><rect x='616' y='303' width='104' height='14' rx='4'/><rect x='442' y='339' width='136' height='14' rx='4'/><rect x='292' y='375' width='64' height='14' rx='4'/><rect x='370' y='375' width='96' height='14' rx='4'/><rect x='292' y='411' width='48' height='14' rx='4'/><rect x='434' y='555' width='168' height='14' rx='4'/><rect x='256' y='591' width='104' height='14' rx='4'/><rect x='256' y='627' width='160' height='14' rx='4'/><rect x='548' y='627' width='168' height='14' rx='4'/><rect x='568' y='699' width='152' height='14' rx='4'/><rect x='342' y='771' width='192' height='14' rx='4'/><rect x='292' y='807' width='56' height='14' rx='4'/><rect x='362' y='807' width='208' height='14' rx='4'/><rect x='386' y='843' width='176' height='14' rx='4'/><rect x='490' y='915' width='72' height='14' rx='4'/></g><g fill='%23FFFFFF' fill-opacity='.05'><rect x='350' y='15' width='64' height='14' rx='4'/><rect x='596' y='51' width='176' height='14' rx='4'/><rect x='390' y='159' width='144' height='14' rx='4'/><rect x='592' y='339' width='120' height='14' rx='4'/><rect x='616' y='555' width='192' height='14' rx='4'/><rect x='584' y='807' width='48' height='14' rx='4'/><rect x='498' y='879' width='200' height='14' rx='4'/><rect x='576' y='915' width='88' height='14' rx='4'/></g></svg>");
+  --sc-side-ink:       #FFFFFF;
+  --sc-side-mute:      rgba(255, 255, 255, 0.72);
+  --sc-side-kw:        var(--brand-text);
+  --sc-side-veil:      none;
+  --sc-side-edge:      var(--brand);
+  --sc-side-pill:      var(--brand);
+  --sc-side-pill-ink:  var(--brand-ink);
+}
+
+/* 裝飾 1：側邊欄眉標膠囊是主色底，圓點改用膠囊字色（主色圓點會融掉） */
+.sc-side .sc-pill::before { background: var(--sc-side-pill-ink); }
+
+/* 裝飾 2：章節幕右上、左下角的主色斜條（KV2 斜度＝高度×0.2；平行四邊形、硬邊），只在 y 0–220／860–1080，不進中央 y 300–780
+   形狀用 SVG 當遮罩、顏色用 background-color: var(--brand)：data URI 裡沒辦法用 CSS 變數，這樣換主色時斜條才會跟著變。 */
+.sc-surface-ch::before, .sc-surface-ch::after {
+  content: "";
+  position: absolute;
+  width: 640px;
+  height: 220px;
+  background-color: var(--brand);
+  mask-repeat: no-repeat;
+  mask-size: 640px 220px;
+  pointer-events: none;
+}
+.sc-surface-ch::before { right: 0; top: 0; mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='220'><g fill='%23000000'><polygon points='192.0,0 680,0 668.0,60 180,60'/><polygon points='336.0,80 680,80 674.0,110 330,110'/><polygon points='473.2,130 680,130 676.8,146 470,146'/></g></svg>"); }
+.sc-surface-ch::after { left: 0; bottom: 0; mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='220'><g fill='%23000000'><polygon points='-36.8,64 170,64 166.8,80 -40,80'/><polygon points='-34.0,110 310,110 304.0,140 -40,140'/><polygon points='-28.0,160 460,160 448.0,220 -40,220'/></g></svg>"); }

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"items","type":"string","label":"詞組（以 | 分隔，兩兩一組）","default":"衝刺|縮放|動態|堆疊"},
+  {"id":"accent","type":"color","label":"主色","default":"#f25c54"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>05 Kinetic Stack 動態堆疊</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 05 Kinetic Stack */
+    .fx-05-group { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    .fx-05-line { white-space: nowrap; text-shadow: var(--fx-scrim); }
+    .fx-05-a { color: var(--fx-ink); }
+    .fx-05-b { color: var(--fx-hi); }
+  </style>
+  <div id="root" data-composition-id="fx-05-kinetic-stack" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-safe"></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 05 Kinetic Stack：兩兩一組，第一行從左、第二行（主色）從右飛入疊在下方，整組上推出畫面後換下一組 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const safe = document.querySelector('.fx-safe');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const items = FXKit.list(v.items);
+    const groups = [];
+    for (let i = 0; i < items.length; i += 2) groups.push(items.slice(i, i + 2));
+    const G = groups.length;
+    const s = D / G;
+    const ein = Math.min(0.4, s * 0.32);
+    const eout = Math.min(0.4, s * 0.3);
+
+    const tl = gsap.timeline({ paused: true });
+    groups.forEach((g, gi) => {
+      const box = document.createElement('div');
+      box.className = 'fx-05-group';
+      const lines = g.map((txt, li) => {
+        const e = document.createElement('div');
+        e.className = 'fx-05-line ' + (li === 0 ? 'fx-05-a' : 'fx-05-b');
+        e.textContent = txt;
+        e.style.fontSize = FXKit.fitSize(txt, 260, FXKit.SAFE.w) + 'px';
+        box.appendChild(e);
+        return e;
+      });
+      safe.appendChild(box);
+      const t = gi * s;
+      lines.forEach((e, li) => {
+        const dir = li === 0 ? -1 : 1;
+        tl.fromTo(e, { x: dir * 2600 }, { x: 0, duration: ein, ease: 'power3.out' }, t + li * 0.12)
+          .to(e, { y: -1000, duration: eout, ease: 'power3.in' }, t + s - eout - 0.12 + li * 0.05);
+      });
+    });
+    window.__timelines['fx-05-kinetic-stack'] = tl;
+  </script>
+</template>
+</body>
+</html>

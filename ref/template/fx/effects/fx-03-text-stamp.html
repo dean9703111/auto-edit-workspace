@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"印章蓋印"},
+  {"id":"accent","type":"color","label":"主色","default":"#f25c54"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>03 Text Stamp 印章蓋印</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 03 Text Stamp */
+    .fx-03-field { position: absolute; inset: 0; }
+    .fx-03-pos { position: absolute; width: 0; height: 0; }
+    .fx-03-stamp { position: absolute; left: 0; top: 0; white-space: nowrap; box-sizing: content-box;
+      color: var(--fx-hi); border: 10px solid var(--fx-hi); border-radius: 14px; padding: 0.2em 0.3em; text-shadow: var(--fx-scrim); }
+    .fx-03-dot { position: absolute; border-radius: 50%; background: var(--fx-hi); opacity: 0; }
+    .fx-stage[data-bg="none"] .fx-03-stamp { filter: drop-shadow(0 2px 4px rgba(0,0,0,.85)); }
+  </style>
+  <div id="root" data-composition-id="fx-03-text-stamp" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-03-field"></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 03 Text Stamp：印章 scale 2.5→1＋旋轉落下，周圍墨點迸開；在三個位置連蓋，停留後整體淡出 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const field = document.querySelector('.fx-03-field');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    const rand = FXKit.rng(v.text);
+    // 左上、右中、左下（主印：最大最正，最後蓋）；design＝設計字級、cap＝文字可用寬
+    const spots = [
+      { x: 520, y: 250, a: -8, design: 170, cap: 640 },
+      { x: 1420, y: 390, a: 6, design: 170, cap: 640 },
+      { x: 700, y: 710, a: -2, design: 225, cap: 1000 },
+    ];
+
+    const tl = gsap.timeline({ paused: true });
+    const step = Math.min(0.5, Math.max(0.2, (D - 1.0) / 3));
+    const FD = 0.2;
+
+    spots.forEach((s, i) => {
+      const fs = FXKit.fitSize(v.text, s.design, s.cap);
+      const w = FXKit.emWidth(v.text) * fs + 0.6 * fs + 20;
+      const h = 1.4 * fs + 20;
+      const pos = document.createElement('div');
+      pos.className = 'fx-03-pos';
+      pos.style.left = s.x + 'px';
+      pos.style.top = s.y + 'px';
+      const stamp = document.createElement('div');
+      stamp.className = 'fx-03-stamp';
+      stamp.textContent = v.text;
+      stamp.style.fontSize = fs + 'px';
+      pos.appendChild(stamp);
+      const dots = [];
+      for (let k = 0; k < 16; k++) {
+        const ang = rand() * Math.PI * 2;
+        const rx = w / 2 + 6 + rand() * 34, ry = h / 2 + 6 + rand() * 34;
+        const d = document.createElement('div');
+        d.className = 'fx-03-dot';
+        const sz = 5 + rand() * 9;
+        d.style.width = d.style.height = sz + 'px';
+        d.style.left = Math.cos(ang) * rx - sz / 2 + 'px';
+        d.style.top = Math.sin(ang) * ry - sz / 2 + 'px';
+        pos.appendChild(d);
+        dots.push({ d, dx: Math.cos(ang) * (10 + rand() * 14), dy: Math.sin(ang) * (10 + rand() * 14) });
+      }
+      field.appendChild(pos);
+
+      const t = 0.1 + i * step;
+      tl.fromTo(stamp, { scale: 2.5, rotation: s.a + 16, xPercent: -50, yPercent: -50 },
+        { scale: 1, rotation: s.a, duration: FD, ease: 'power3.in' }, t)
+        .fromTo(stamp, { opacity: 0 }, { opacity: 1, duration: 0.1, ease: 'none' }, t)
+        .to(stamp, { scale: 0.95, duration: 0.05, ease: 'power2.out' }, t + FD)
+        .to(stamp, { scale: 1, duration: 0.09, ease: 'power2.in' }, t + FD + 0.05);
+      dots.forEach((o) => {
+        tl.fromTo(o.d, { x: 0, y: 0, scale: 0.3, opacity: 0 }, { x: o.dx, y: o.dy, scale: 1, opacity: 0.85, duration: 0.18, ease: 'power2.out' }, t + FD);
+      });
+    });
+    tl.fromTo(field, { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power1.in' }, D - 0.45);
+    window.__timelines['fx-03-text-stamp'] = tl;
+  </script>
+</template>
+</body>
+</html>

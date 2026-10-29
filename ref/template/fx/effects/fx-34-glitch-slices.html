@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"故障切片"},
+  {"id":"accent","type":"color","label":"主色","default":"#f78c3c"},
+  {"id":"bg","type":"enum","label":"底色","default":"accent","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>34 Glitch Slices 故障切片</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 34 Glitch Slices */
+    .fx-34-box { position: relative; display: inline-block; white-space: nowrap; }
+    .fx-34-slice { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+    .fx-34-layer { position: absolute; left: 0; top: 0; white-space: nowrap; }
+    .fx-34-ghost { visibility: hidden; }
+    .fx-34-w { color: #ffffff; }
+    .fx-34-d { color: var(--fx-panel); }
+    .fx-34-m { color: var(--fx-ink); }
+    .fx-stage[data-bg="none"] .fx-34-box { filter: drop-shadow(0 2px 4px rgba(0,0,0,.85)); }
+  </style>
+  <div id="root" data-composition-id="fx-34-glitch-slices" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-34-box"><div class="fx-34-ghost"></div></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 34 Glitch Slices：同一行字複製成 6 條水平切片，短促時間步隨機左右錯位＋白／深色差，再瞬間對齊 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const box = document.querySelector('.fx-34-box');
+    const ghost = document.querySelector('.fx-34-ghost');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    const size = FXKit.fitSize(v.text, 300, FXKit.SAFE.w - 280);
+    box.style.fontSize = size + 'px';
+    ghost.textContent = v.text; // 撐出盒子大小
+
+    const N = 6;
+    const slices = [];
+    for (let i = 0; i < N; i++) {
+      const sl = document.createElement('div');
+      sl.className = 'fx-34-slice';
+      // 水平方向給負值，錯位後的字不會被切片邊界裁掉
+      sl.style.clipPath = 'inset(' + (i / N * 100) + '% -400px ' + ((N - 1 - i) / N * 100) + '% -400px)';
+      const layers = ['fx-34-w', 'fx-34-d', 'fx-34-m'].map((c) => {
+        const l = document.createElement('div');
+        l.className = 'fx-34-layer ' + c;
+        l.textContent = v.text;
+        sl.appendChild(l);
+        return l;
+      });
+      box.appendChild(sl);
+      slices.push(layers);
+    }
+
+    // 爆發窗口：每個 0.64 秒（8 個 0.08s 時間步），其餘時間完全對齊；頭尾各留對齊靜止
+    const STEP = 0.08, BLEN = 0.64;
+    const nb = D < 3 ? 1 : 2;
+    const wins = [];
+    for (let b = 0; b < nb; b++) wins.push(D * (b + 1) / (nb + 1) - BLEN / 2);
+
+    // 純函數：只依時間 t 算出每條切片的偏移
+    function apply(t) {
+      const w = wins.find((s) => t >= s && t < s + BLEN);
+      slices.forEach((L, i) => {
+        let dx = 0, ca = 0;
+        if (w !== undefined) {
+          const j = Math.floor((t - w) / STEP);
+          if (j % 3 !== 2) { // 每三步有一步完全對齊
+            const r = FXKit.rng(i * 1000 + Math.floor(w * 100) + j * 7 + 1);
+            if (r() < 0.75) dx = (r() < 0.5 ? -1 : 1) * (30 + r() * 110);
+            if (r() < 0.55) ca = 8 + r() * 8;
+          }
+        }
+        L[0].style.transform = 'translateX(' + (dx + ca) + 'px)';
+        L[0].style.visibility = ca ? 'visible' : 'hidden';
+        L[1].style.transform = 'translateX(' + (dx - ca) + 'px)';
+        L[1].style.visibility = ca ? 'visible' : 'hidden';
+        L[2].style.transform = 'translateX(' + dx + 'px)';
+      });
+    }
+    apply(0);
+
+    const tl = gsap.timeline({ paused: true });
+    const prog = { p: 0 };
+    tl.to(prog, { p: 1, duration: D, ease: 'none', onUpdate: () => apply(prog.p * D) }, 0);
+    window.__timelines['fx-34-glitch-slices'] = tl;
+  </script>
+</template>
+</body>
+</html>

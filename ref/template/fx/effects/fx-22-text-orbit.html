@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"軌道環繞"},
+  {"id":"accent","type":"color","label":"主色","default":"#2dd4bf"},
+  {"id":"bg","type":"enum","label":"底色","default":"accent","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>22 Text Orbit 軌道環繞</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 22 Text Orbit */
+    .fx-22-svg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 1; }
+    .fx-22-core { position: absolute; left: 960px; top: 495px; width: 380px; height: 380px; margin: -190px 0 0 -190px;
+      border-radius: 50%; background: var(--fx-panel); z-index: 2; display: flex; align-items: center; justify-content: center; }
+    .fx-22-core-t { white-space: nowrap; color: var(--fx-hi); text-shadow: var(--fx-scrim); }
+    .fx-22-item { position: absolute; left: 960px; top: 495px; white-space: nowrap; color: var(--fx-ink); text-shadow: var(--fx-scrim); }
+  </style>
+  <div id="root" data-composition-id="fx-22-text-orbit" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <svg class="fx-22-svg" viewBox="0 0 1920 1080"><ellipse class="fx-22-ell" cx="960" cy="495" rx="690" ry="170"
+        fill="none" stroke="var(--fx-ink)" stroke-opacity="0.55" stroke-width="5" stroke-dasharray="16 14" transform="rotate(-8 960 495)"/></svg>
+      <div class="fx-22-core"><div class="fx-22-core-t"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 22 Text Orbit：虛線橢圓軌道（微傾）；字沿軌道繞行，前方放大、後方縮小變淡並躲到中央實心圓後面（z-index 依前後切換） */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const ell = document.querySelector('.fx-22-ell');
+    const coreT = document.querySelector('.fx-22-core-t');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const P = 4, Pp = D / Math.max(1, Math.round(D / P));   // 整數週期：每週期繞一圈
+    const RX = 690, RY = 170, TILT = (-8 * Math.PI) / 180;
+    coreT.textContent = v.text;
+    coreT.style.fontSize = FXKit.fitSize(v.text, 130, 300) + 'px';
+
+    const base = [...v.text].filter((c) => c.trim());
+    const chars = Array.from({ length: Math.ceil(8 / base.length) }, () => base).flat();
+    const N = chars.length;
+    const fs = 150;
+    const items = chars.map((ch, i) => {
+      const el = document.createElement('div');
+      el.className = 'fx-22-item';
+      el.style.fontSize = fs + 'px';
+      el.textContent = ch;
+      stage.appendChild(el);
+      return el;
+    });
+
+    function draw(time) {
+      const f = time / Pp;
+      ell.setAttribute('stroke-dashoffset', (-30 * 20 * f).toFixed(2));   // 虛線也流動，週期內走 20 個 dash 週期
+      items.forEach((el, i) => {
+        const a = (f + i / N) * Math.PI * 2;
+        const ex = RX * Math.cos(a), ey = RY * Math.sin(a);
+        const x = ex * Math.cos(TILT) - ey * Math.sin(TILT);
+        const y = ex * Math.sin(TILT) + ey * Math.cos(TILT);
+        const d = Math.sin(a);                       // +1 最前、-1 最後
+        const s = 0.95 + 0.4 * d;
+        const op = 0.35 + 0.65 * ((d + 1) / 2);
+        el.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) translate(-50%, -50%) scale(${s.toFixed(3)})`;
+        el.style.opacity = op.toFixed(3);
+        el.style.zIndex = d > 0 ? 3 : 0;
+      });
+    }
+
+    const proxy = { t: 0 };
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(proxy, { t: 0 }, { t: D, duration: D, ease: 'none', onUpdate: () => draw(proxy.t) }, 0);
+    draw(0);
+    window.__timelines['fx-22-text-orbit'] = tl;
+  </script>
+</template>
+</body>
+</html>

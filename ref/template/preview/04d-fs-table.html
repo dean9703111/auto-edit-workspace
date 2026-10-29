@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04d 全畫面表格｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg.jpg 後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1344px; top: 630px; width: 512px; height: 288px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -124px; top: -9px; width: 776px; height: 436px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：有 ../bg.jpg 就蓋在底紋上，沒有就只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-ch { background-image: url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg.jpg"), var(--sc-side-pattern); background-size: 1920px auto, 960px 1080px; background-position: 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-fs-table #pv-wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
+  #pv-fs-table #pv-wCard .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+  #pv-fs-table #pv-wBody { width: 1176px; height: 580px; display: flex; align-items: center; justify-content: center; }
+  #pv-fs-table #pv-fTbl { width: 1064px; }
+  #pv-fs-table .fTr { display: flex; align-items: center; height: 128px; }
+  #pv-fs-table .fTr.fHead { height: 112px; background: var(--sc-fs-head); color: var(--sc-fs-head-ink); border-radius: 12px 12px 0 0; font-weight: 700; }
+  #pv-fs-table .fTr.fRow:nth-child(odd) { background: var(--sc-fs-tint); }
+  #pv-fs-table .fTd { flex: 1 1 0; min-width: 0; padding: 0 32px; font-size: 44px; line-height: 60px; white-space: nowrap; }
+  #pv-fs-table .fTd > span { display: block; padding-bottom: 6px; }
+  #pv-fs-table .fRow .fTd { font-weight: 500; }
+  #pv-fs-table .fRow .fTd:first-child { font-weight: 700; }
+  #pv-fs-table #pv-fTbl:has(.fTr:nth-child(5)) .fRow { height: 112px; }
+  #pv-fs-table #pv-fTbl:has(.fTr:nth-child(6)) .fRow { height: 92px; }
+  #pv-fs-table #pv-fTbl:has(.fTr:nth-child(6)) .fHead { height: 96px; }
+  #pv-fs-table #pv-fTbl[data-highlight="1"] > :nth-child(2), #pv-fs-table #pv-fTbl[data-highlight="2"] > :nth-child(3), #pv-fs-table #pv-fTbl[data-highlight="3"] > :nth-child(4), #pv-fs-table #pv-fTbl[data-highlight="4"] > :nth-child(5), #pv-fs-table #pv-fTbl[data-highlight="5"] > :nth-child(6) { box-shadow: inset 0 0 0 4px var(--sc-accent); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+    <div id="pv-fs-table" class="fill">
+      <div class="sc-surface-fs fill"></div>
+      <div id="pv-aWrap" class="fill">
+        <div id="pv-wCard" class="sc-wcard">
+          <div class="sc-wcard__bar"><span class="sc-opt">兩個工具怎麼分工</span></div>
+          <div id="pv-wBody">
+            <div id="pv-fTbl" data-highlight="">
+              <div id="pv-fHd" class="fTr fHead"><span class="fTd"><span>工具</span></span><span class="fTd"><span>負責</span></span></div>
+              <div id="pv-fTr1" class="fTr fRow"><span class="fTd"><span>HyperFrames</span></span><span class="fTd"><span>字幕與動畫</span></span></div>
+              <div id="pv-fTr2" class="fTr fRow"><span class="fTd"><span>auto-editor</span></span><span class="fTd"><span>剪掉停頓</span></span></div>
+              <div id="pv-fTr3" class="fTr fRow"><span class="fTd"><span>AI</span></span><span class="fTd"><span>找出 NG</span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+  <div class="cg" id="cap"><span>需要判斷的工作，才交給 AI</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"fs-table","duration":7,"cues":[{"sound":"whoosh","at":-0.15},{"sound":"tick","at":0.85,"volume":1},{"sound":"tick","at":1.2,"volume":1},{"sound":"tick","at":1.55,"volume":1}]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-fs-table'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 7;
+    /* 欄頭 0.5 起 P.rise → 各列逐列 P.rise（綁句號；預設 0.85 起每 0.35s）→ 全部到位後停住。
+       全畫面幕不在 HF 內淡出（離場由剪映端整段渐隐） */
+    P.rise('#pv-fHd', 0.5);
+    P.rise('#pv-fTr1', 0.85);
+    P.rise('#pv-fTr2', 1.2);
+    P.rise('#pv-fTr3', 1.55);
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 6.5);
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

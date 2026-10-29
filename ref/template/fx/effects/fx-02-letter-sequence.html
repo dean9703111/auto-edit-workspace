@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"逐字敲擊"},
+  {"id":"accent","type":"color","label":"主色","default":"#f25c54"},
+  {"id":"bg","type":"enum","label":"底色","default":"accent","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>02 Letter Sequence 逐字敲擊</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 02 Letter Sequence */
+    .fx-02-shake { display: grid; place-items: center; }
+    .fx-02-ch { grid-area: 1 / 1; display: block; white-space: nowrap; color: var(--fx-ink); text-shadow: var(--fx-scrim); opacity: 0; }
+  </style>
+  <div id="root" data-composition-id="fx-02-letter-sequence" data-width="1920" data-height="1080" data-duration="3">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-02-shake"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 02 Letter Sequence：一次一個超大字，power4.in 砸下＋落地回彈，落地時 wrapper 震動，依序換字，最後一字退場後空畫面 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const shake = document.querySelector('.fx-02-shake');
+    const { D } = FXKit.setup(stage, v, 3);
+
+    const glyphs = [...String(v.text)].filter((c) => c.trim());
+    const size = Math.min(...glyphs.map((c) => FXKit.fitSize(c, 520, FXKit.SAFE.w)));
+    const els = glyphs.map((c) => {
+      const s = document.createElement('span');
+      s.className = 'fx-02-ch';
+      s.textContent = c;
+      s.style.fontSize = size + 'px';
+      shake.appendChild(s);
+      return s;
+    });
+
+    const tl = gsap.timeline({ paused: true });
+    const N = els.length;
+    const slot = (D - 0.25) / N;
+    const fd = Math.min(0.22, slot * 0.6);
+    const bd = Math.max(0.02, Math.min(0.07, (slot - fd) / 2));
+    const SH = [[9, -7], [-7, 5], [4, -3], [0, 0]];
+
+    els.forEach((el, i) => {
+      const t = i * slot;
+      const land = t + fd;
+      tl.fromTo(el, { y: -900, opacity: 1 }, { y: 0, duration: fd, ease: 'power4.in' }, t)
+        .to(el, { y: -26, duration: bd, ease: 'power2.out' }, land)
+        .to(el, { y: 0, duration: bd, ease: 'power2.in' }, land + bd);
+      SH.forEach((p, k) => tl.to(shake, { x: p[0], y: p[1], duration: 0.035, ease: 'none' }, land + k * 0.035));
+      tl.set(el, { opacity: 0 }, i < N - 1 ? (i + 1) * slot : D - 0.12);
+    });
+    window.__timelines['fx-02-letter-sequence'] = tl;
+  </script>
+</template>
+</body>
+</html>

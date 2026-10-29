@@ -1,0 +1,38 @@
+{
+  "key": "steps",
+  "no": 8,
+  "zh": "Step 字卡",
+  "aliases": ["步驟", "步驟字卡", "Step", "Step字卡"],
+  "family": "lower-third",
+  "when": "口播依序講 2–4 個操作步驟，同一個位置一步換一步",
+  "avoid": "步驟超過四個（拆兩段或改全畫面流程），或步驟之間沒有順序（改標題條列）",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 8, "min": 5.5, "fixed": null },
+  "addons": ["chtag"],
+  "tone": true,
+  "slots": {
+    "steps": { "label": "步驟", "type": "list", "required": true, "min": 2, "maxItems": 4, "item": { "text": { "label": "內容", "type": "rich", "required": true, "max": 20 } } }
+  },
+  "beats": {
+    "in": { "label": "進場", "default": "0" }
+  },
+  "sfx": {
+    "main": { "sound": "pop", "at": "in + 0.1" },
+    "extra": [ { "sound": "tick", "at": "steps[1:]" } ]
+  },
+  "lists": {
+    "steps": { "at": "{{in}} + 0.15 + {{i}} * 2.6" }
+  },
+  "rules": [],
+  "sample": {
+    "title": "環境準備三步",
+    "sub": "貼上第一個提示詞",
+    "duration": 8,
+    "slots": {
+      "steps": ["貼上**第一個提示詞**，裝好工具", "確認**剪輯清單**再剪", "在 **Studio** 預覽後輸出"]
+    },
+    "beats": {}
+  }
+}

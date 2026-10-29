@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"環形隧道"},
+  {"id":"accent","type":"color","label":"主色","default":"#2dd4bf"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>21 Ring Tunnel 環形隧道</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 21 Ring Tunnel */
+    .fx-21-field { position: absolute; left: 960px; top: 495px; width: 0; height: 0; }
+    .fx-21-ring { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+    .fx-21-c { position: absolute; left: 0; top: 0; white-space: pre; text-shadow: var(--fx-scrim); }
+  </style>
+  <div id="root" data-composition-id="fx-21-ring-tunnel" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-21-field"></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 21 Ring Tunnel：「text・」逐字沿圓環排成文字環，5 個環相位錯開，從中心放大逼近、淡出，持續生成 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const field = document.querySelector('.fx-21-field');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const P = 4, Pp = D / Math.max(1, Math.round(D / P));   // 整數週期
+    const NR = 5, SMIN = 0.04, SMAX = 4.2, R = 360;
+    const tok = [...(v.text + '・')];
+    const M = tok.length * Math.ceil(22 / tok.length);
+    const chars = Array.from({ length: M / tok.length }, () => tok).flat();
+    const fs = Math.min(110, Math.floor((2 * Math.PI * R) / (M * 1.15)));
+
+    const rings = Array.from({ length: NR }, (_, k) => {
+      const el = document.createElement('div');
+      el.className = 'fx-21-ring';
+      field.appendChild(el);
+      chars.forEach((ch, i) => {
+        const s = document.createElement('div');
+        s.className = 'fx-21-c';
+        s.style.fontSize = fs + 'px';
+        s.style.color = k % 2 ? 'var(--fx-hi)' : 'var(--fx-ink)';
+        s.textContent = ch;
+        s.style.transform = `translate(-50%, -50%) rotate(${(i / M) * 360}deg) translateY(${-R}px)`;
+        el.appendChild(s);
+      });
+      return { el, dir: k % 2 ? -1 : 1 };
+    });
+
+    function draw(time) {
+      const ph = time / Pp;
+      rings.forEach((g, k) => {
+        const p = (((ph + k / NR) % 1) + 1) % 1;
+        const s = SMIN * Math.pow(SMAX / SMIN, p);
+        const op = Math.min(p / 0.1, 1) * Math.min((1 - p) / 0.25, 1);
+        g.el.style.transform = `rotate(${(g.dir * p * 70).toFixed(2)}deg) scale(${s.toFixed(4)})`;
+        g.el.style.opacity = Math.max(0, op).toFixed(3);
+        g.el.style.zIndex = Math.round(p * 100);
+      });
+    }
+
+    const proxy = { t: 0 };
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(proxy, { t: 0 }, { t: D, duration: D, ease: 'none', onUpdate: () => draw(proxy.t) }, 0);
+    draw(0);
+    window.__timelines['fx-21-ring-tunnel'] = tl;
+  </script>
+</template>
+</body>
+</html>

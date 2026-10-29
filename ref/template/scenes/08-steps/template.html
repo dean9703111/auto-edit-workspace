@@ -1,0 +1,31 @@
+<!-- @style -->
+/* 單列卡：主卡 672–852、標籤 616–704。各步驟疊在同一格（grid 同儲存格），卡寬取最長那一步，換步時外框不動；
+   標籤「步驟 01／02…」的數字也疊在同一格（等寬數字），換步時 swap。細節＝右上網點。 */
+#gCard { left: 120px; bottom: 220px; }
+.st-body { display: grid; }
+.st-body > * { grid-area: 1 / 1; justify-self: start; }
+.st-num { display: inline-grid; vertical-align: top; font-variant-numeric: tabular-nums; }
+.st-num > * { grid-area: 1 / 1; }
+<!-- @body -->
+<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <i class="sc-lt__plate"></i>
+  <div class="sc-lt__card">
+    <i class="sc-lt__dots"></i>
+    <div class="sc-lt__body st-body">
+{{#steps}}
+      <div id="s{{n}}" class="sc-lt__row"><span class="sc-t54 sc-w700 sc-opt">{{{text}}}</span></div>
+{{/steps}}
+    </div>
+  </div>
+  <div class="sc-lt__tag"><span class="sc-lt__tagin">步驟&nbsp;<span class="st-num">{{#steps}}<span id="n{{n}}">0{{n}}</span>{{/steps}}</span></span></div>
+</div>
+<!-- @timeline -->
+/* 外殼遮罩揭開 → 第 1 步 0.15 後淡入上漂（跟外殼一起出現）→ 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步至少停 ≥ 0.65＋READ 1.2）→ 段尾 0.4 淡出 */
+const stepAt = [{{#steps}}{{{at}}}{{^last}}, {{/last}}{{/steps}}];
+P.reveal('#gCard', {{{in}}});
+P.rise('#s1', stepAt[0]);
+for (let i = 1; i < stepAt.length; i++) {
+  P.axis('#s' + i, '#s' + (i + 1), stepAt[i]);
+  P.swap('#n' + i, '#n' + (i + 1), stepAt[i]);
+}
+{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}

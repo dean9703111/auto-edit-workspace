@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"文字隧道"},
+  {"id":"accent","type":"color","label":"主色","default":"#2dd4bf"},
+  {"id":"bg","type":"enum","label":"底色","default":"dark","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>17 Text Tunnel 文字隧道</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 17 Text Tunnel */
+    .fx-17-field { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    .fx-17-streak { position: absolute; left: 960px; top: 495px; height: 3px; width: 200px; margin-top: -1px;
+      transform-origin: 0 50%; background: var(--fx-sub); opacity: 0; }
+    .fx-17-copy { position: absolute; left: 120px; top: 120px; width: 1680px; height: 750px;
+      display: flex; align-items: center; justify-content: center; will-change: transform; }
+    .fx-17-word { white-space: nowrap; text-shadow: var(--fx-scrim); }
+  </style>
+  <div id="root" data-composition-id="fx-17-text-tunnel" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-17-field"></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 17 Text Tunnel：4 份文字相位錯開，各自從小點沿 Z 軸（等比放大）衝向鏡頭並淡出；背景放射星芒加強穿越感 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const field = document.querySelector('.fx-17-field');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const P = 4;
+    const Pp = D / Math.max(1, Math.round(D / P));   // 整數週期
+    const N = 4, SMAX = 7, SMIN = 0.02;
+    const fs = FXKit.fitSize(v.text, 280, FXKit.SAFE.w);     // scale 1 時剛好填滿安全區寬
+
+    // 星芒
+    const rand = FXKit.rng('tunnel-' + v.text);
+    const SN = 28;
+    const streaks = Array.from({ length: SN }, (_, j) => {
+      const el = document.createElement('div');
+      el.className = 'fx-17-streak';
+      field.appendChild(el);
+      return { el, ang: (j / SN) * 360 + rand() * 10, off: rand() };
+    });
+
+    const copies = Array.from({ length: N }, (_, k) => {
+      const c = document.createElement('div');
+      c.className = 'fx-17-copy';
+      const w = document.createElement('div');
+      w.className = 'fx-17-word';
+      w.style.fontSize = fs + 'px';
+      w.style.color = k % 2 ? 'var(--fx-hi)' : 'var(--fx-ink)';
+      w.textContent = v.text;
+      c.appendChild(w);
+      field.appendChild(c);
+      return c;
+    });
+
+    function draw(time) {
+      const ph = time / Pp;
+      streaks.forEach((s) => {
+        const p = (((ph * 2 + s.off) % 1) + 1) % 1;
+        const q = p * p;
+        s.el.style.opacity = (0.55 * Math.sin(Math.PI * p)).toFixed(3);
+        s.el.style.width = (30 + 420 * q).toFixed(1) + 'px';
+        s.el.style.transform = `rotate(${s.ang}deg) translateX(${(60 + 1100 * q).toFixed(1)}px)`;
+      });
+      copies.forEach((c, k) => {
+        const p = ((((ph + k / N) % 1) + 1) % 1);
+        const s = SMIN * Math.pow(SMAX / SMIN, p);
+        const op = Math.min(p / 0.08, 1) * Math.min((1 - p) / 0.2, 1);
+        const roll = (k % 2 ? 1 : -1) * p * 8;
+        c.style.transform = `scale(${s.toFixed(4)}) rotate(${roll.toFixed(2)}deg)`;
+        c.style.opacity = Math.max(0, op).toFixed(3);
+        c.style.zIndex = Math.round(p * 100);
+      });
+    }
+
+    const proxy = { t: 0 };
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(proxy, { t: 0 }, { t: D, duration: D, ease: 'none', onUpdate: () => draw(proxy.t) }, 0);
+    draw(0);
+    window.__timelines['fx-17-text-tunnel'] = tl;
+  </script>
+</template>
+</body>
+</html>

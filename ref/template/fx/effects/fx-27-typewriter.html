@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字（中文）","default":"打字機"},
+  {"id":"alt","type":"string","label":"切換文字（英文）","default":"Typewriter"},
+  {"id":"accent","type":"color","label":"主色","default":"#a78bfa"},
+  {"id":"bg","type":"enum","label":"底色","default":"light","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>27 Typewriter 打字機</title></head>
+<body>
+<template>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&display=block');
+    #root { position: absolute; inset: 0; }
+    /* 27 Typewriter */
+    .fx-27-wrap { display: grid; font-family: "Noto Serif TC", serif; font-weight: 700; }
+    .fx-27-line { grid-area: 1 / 1; justify-self: start; position: relative; display: flex; white-space: pre;
+      color: var(--fx-ink); text-shadow: var(--fx-scrim); }
+    .fx-27-ch { position: relative; display: inline-block; white-space: pre; opacity: 0; }
+    .fx-27-cur { position: absolute; top: 6%; width: 0.07em; height: 0.88em; background: var(--fx-hi); opacity: 0; }
+    .fx-27-cur0 { left: -0.1em; }
+    .fx-27-ch .fx-27-cur { left: 100%; }
+  </style>
+  <div id="root" data-composition-id="fx-27-typewriter" data-width="1920" data-height="1080" data-duration="5">
+    <div class="fx-stage">
+      <div class="fx-safe"><div class="fx-27-wrap"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 27 Typewriter：逐字打出中文（閃爍游標）→ 停留 → 逐字刪除 → 逐字打出英文 → 停留 → 刪除；首尾皆空白＋游標 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const wrap = document.querySelector('.fx-27-wrap');
+    const { D } = FXKit.setup(stage, v, 5);
+
+    const TB = String(v.text ?? ''), TA = String(v.alt ?? '');
+    wrap.style.fontSize = Math.min(
+      FXKit.fitSize(TB, 220, FXKit.SAFE.w - 40), FXKit.fitSize(TA, 220, FXKit.SAFE.w - 40)) + 'px';
+
+    // 每行：spans[k] 是第 k 個字；curs[0] 是起點游標、curs[k] 是第 k 字後的游標
+    function buildLine(str) {
+      const line = document.createElement('div');
+      line.className = 'fx-27-line';
+      const c0 = document.createElement('span');
+      c0.className = 'fx-27-cur fx-27-cur0';
+      line.appendChild(c0);
+      const spans = [], curs = [c0];
+      [...str].forEach((c) => {
+        const s = document.createElement('span');
+        s.className = 'fx-27-ch';
+        s.textContent = c;
+        const cu = document.createElement('span');
+        cu.className = 'fx-27-cur';
+        s.appendChild(cu);
+        line.appendChild(s);
+        spans.push(s); curs.push(cu);
+      });
+      wrap.appendChild(line);
+      return { spans, curs, n: spans.length };
+    }
+    const LB = buildLine(TB), LA = buildLine(TA);
+
+    // 時間配置
+    const LEAD = 0.4, PAUSE = 0.15, TAIL = 0.4;
+    const per = (LB.n + LA.n) * 0.15;
+    const s = Math.max(0.15, Math.min(1, (D - LEAD - PAUSE - TAIL - 0.7) / Math.max(per, 0.01)));
+    const tc = 0.1 * s, td = 0.05 * s;
+    const hold = Math.max(0.2, (D - LEAD - PAUSE - TAIL - per * s) / 2);
+
+    const tl = gsap.timeline({ paused: true });
+    let cur = null;
+    const show = (c, t) => { if (cur) tl.set(cur, { opacity: 0 }, t); tl.set(c, { opacity: 1 }, t); cur = c; };
+    // 閒置時游標每 0.5s 閃爍一次；最後一段結尾保證游標亮著
+    const blink = (t0, t1, last) => {
+      const lim = last ? t1 - 0.3 : t1 - 0.02;
+      for (let k = 1; t0 + 0.5 * k < lim; k++) tl.set(cur, { opacity: k % 2 ? 0 : 1 }, t0 + 0.5 * k);
+      if (last) tl.set(cur, { opacity: 1 }, t1 - 0.15);
+    };
+    const typeLine = (L, t) => {
+      for (let k = 1; k <= L.n; k++) {
+        tl.set(L.spans[k - 1], { opacity: 1 }, t);
+        show(L.curs[k], t);
+        t += tc;
+      }
+      return t;
+    };
+    const eraseLine = (L, t) => {
+      for (let k = L.n; k >= 1; k--) {
+        tl.set(L.spans[k - 1], { opacity: 0 }, t);
+        show(L.curs[k - 1], t);
+        t += td;
+      }
+      return t;
+    };
+
+    let t = 0;
+    show(LB.curs[0], 0);
+    blink(0, LEAD); t = LEAD;
+    let e = typeLine(LB, t);
+    blink(e, e + hold); t = e + hold;
+    e = eraseLine(LB, t);
+    show(LA.curs[0], e);
+    blink(e, e + PAUSE); t = e + PAUSE;
+    e = typeLine(LA, t);
+    blink(e, e + hold); t = e + hold;
+    e = eraseLine(LA, t);
+    show(LB.curs[0], e);
+    blink(e, D, true);
+    tl.set({}, {}, D);
+    window.__timelines['fx-27-typewriter'] = tl;
+  </script>
+</template>
+</body>
+</html>

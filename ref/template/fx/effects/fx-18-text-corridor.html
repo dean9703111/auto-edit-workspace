@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-Hant" data-composition-variables='[
+  {"id":"text","type":"string","label":"動畫文字","default":"文字走廊"},
+  {"id":"accent","type":"color","label":"主色","default":"#2dd4bf"},
+  {"id":"bg","type":"enum","label":"底色","default":"accent","options":[{"value":"dark","label":"深色"},{"value":"light","label":"淺色"},{"value":"accent","label":"主色"},{"value":"none","label":"透明"}]}
+]'>
+<head><meta charset="UTF-8"><title>18 Text Corridor 文字走廊</title></head>
+<body>
+<template>
+  <style>
+    #root { position: absolute; inset: 0; }
+    /* 18 Text Corridor */
+    .fx-18-mask { position: absolute; inset: 0;
+      -webkit-mask-image: radial-gradient(ellipse 62% 70% at 50% 45.8%, transparent 3%, #000 42%);
+      mask-image: radial-gradient(ellipse 62% 70% at 50% 45.8%, transparent 3%, #000 42%); }
+    .fx-18-scene { position: absolute; left: 960px; top: 495px; width: 0; height: 0; perspective: 900px; }
+    .fx-18-wall { position: absolute; overflow: hidden; }
+    .fx-18-inner { position: absolute; left: 0; top: 0; }
+    .fx-18-row { position: absolute; white-space: nowrap; display: flex; }
+    .fx-18-tok { flex: none; text-align: center; color: var(--fx-ink); text-shadow: var(--fx-scrim); }
+  </style>
+  <div id="root" data-composition-id="fx-18-text-corridor" data-width="1920" data-height="1080" data-duration="4">
+    <div class="fx-stage">
+      <div class="fx-18-mask"><div class="fx-18-scene"></div></div>
+    </div>
+  </div>
+  <script src="fx-kit.js"></script>
+  <script>
+    /* 18 Text Corridor：四面牆（地、天、左、右）用 CSS 3D 擺出一點透視，牆上重複的「text・」沿牆面朝鏡頭流動；中心用遮罩淡出消失點 */
+    const v = window.__hyperframes.getVariables();
+    const stage = document.querySelector('.fx-stage');
+    const scene = document.querySelector('.fx-18-scene');
+    const { D } = FXKit.setup(stage, v, 4);
+
+    const P = 4;
+    const Pp = D / Math.max(1, Math.round(D / P));   // 整數週期
+
+    const tok = v.text + '・';
+    const fs = FXKit.fitSize(tok, 120, 520);
+    const tokW = Math.ceil(FXKit.emWidth(tok) * fs) + 40;     // 每個 token 固定寬，才能算出整數位移
+    const rowH = Math.ceil(fs * 1.6);
+    const HX = 800, HY = 450, L = 4200, ZC = -1800;            // 牆距中心、牆長、牆中心 z（延伸 z=+300 ～ -3900）
+    const W = HX * 2, H = HY * 2;
+
+    function makeTokens(row, count, offset) {
+      row.style.left = offset + 'px';
+      for (let i = 0; i < count; i++) {
+        const s = document.createElement('span');
+        s.className = 'fx-18-tok';
+        s.style.width = tokW + 'px';
+        s.style.fontSize = fs + 'px';
+        s.style.lineHeight = rowH + 'px';
+        s.textContent = tok;
+        row.appendChild(s);
+      }
+    }
+
+    // 每個週期沿牆流動的距離（各牆取整數個位移單位）；牆內的內容往流動的反方向多鋪這麼長，才不會露邊
+    const DIST = 1200;
+    const flatU = rowH * 2;        // 奇偶列錯位，所以地板／天花板的位移單位取 2 列
+    const flatS = Math.max(1, Math.round(DIST / flatU)) * flatU;
+    const sideS = Math.max(1, Math.round(DIST / tokW)) * tokW;
+
+    // 地板／天花板：長邊 = 深度；列沿深度堆疊、每列橫向重複
+    function makeFlat(cy, rotX, dir) {
+      const wall = document.createElement('div');
+      wall.className = 'fx-18-wall';
+      wall.style.width = W + 'px'; wall.style.height = L + 'px';
+      wall.style.left = (-W / 2) + 'px'; wall.style.top = (-L / 2) + 'px';
+      wall.style.transform = `translate3d(0, ${cy}px, ${ZC}px) rotateX(${rotX}deg)`;
+      const inner = document.createElement('div');
+      inner.className = 'fx-18-inner';
+      inner.style.width = W + 'px'; inner.style.height = L + 'px';
+      const y0 = (dir > 0 ? -flatS : 0) - flatU;
+      const rows = Math.ceil((L + flatS) / rowH) + 4;
+      for (let r = 0; r < rows; r++) {
+        const row = document.createElement('div');
+        row.className = 'fx-18-row';
+        row.style.top = (y0 + r * rowH) + 'px';
+        makeTokens(row, Math.ceil(W / tokW) + 2, -(r % 2) * tokW / 2 - tokW);
+        inner.appendChild(row);
+      }
+      wall.appendChild(inner);
+      scene.appendChild(wall);
+      return { inner, axis: 'y', S: flatS, dir };
+    }
+    // 左右牆：長邊 = 深度（牆的 x 軸）；列橫向流動，位移整數個 token
+    function makeSide(cx, rotY, dir) {
+      const wall = document.createElement('div');
+      wall.className = 'fx-18-wall';
+      wall.style.width = L + 'px'; wall.style.height = H + 'px';
+      wall.style.left = (-L / 2) + 'px'; wall.style.top = (-H / 2) + 'px';
+      wall.style.transform = `translate3d(${cx}px, 0, ${ZC}px) rotateY(${rotY}deg)`;
+      const inner = document.createElement('div');
+      inner.className = 'fx-18-inner';
+      inner.style.width = L + 'px'; inner.style.height = H + 'px';
+      const rows = Math.ceil(H / rowH);
+      const y0 = (H - rows * rowH) / 2;
+      const x0 = (dir > 0 ? -sideS : 0) - tokW;
+      const cnt = Math.ceil((L + sideS) / tokW) + 4;
+      for (let r = 0; r < rows; r++) {
+        const row = document.createElement('div');
+        row.className = 'fx-18-row';
+        row.style.top = (y0 + r * rowH) + 'px';
+        makeTokens(row, cnt, x0 - (r % 2) * tokW / 2);
+        inner.appendChild(row);
+      }
+      wall.appendChild(inner);
+      scene.appendChild(wall);
+      return { inner, axis: 'x', S: sideS, dir };
+    }
+
+    // 往鏡頭方向流：地板 +y、右牆 +x 是朝向鏡頭；天花板 -y、左牆 -x 是遠離，所以位移方向取反
+    const walls = [
+      makeFlat(HY, 90, 1),
+      makeFlat(-HY, -90, -1),
+      makeSide(-HX, 90, -1),
+      makeSide(HX, -90, 1),
+    ];
+
+    function draw(time) {
+      const f = time / Pp;
+      walls.forEach((w) => {
+        const shift = (w.dir * f * w.S).toFixed(2);
+        w.inner.style.transform = w.axis === 'x' ? `translate(${shift}px, 0px)` : `translate(0px, ${shift}px)`;
+      });
+    }
+
+    const proxy = { t: 0 };
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo(proxy, { t: 0 }, { t: D, duration: D, ease: 'none', onUpdate: () => draw(proxy.t) }, 0);
+    draw(0);
+    window.__timelines['fx-18-text-corridor'] = tl;
+  </script>
+</template>
+</body>
+</html>

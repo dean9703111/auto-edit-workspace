@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14 講者介紹｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg.jpg 後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 20; }
+  #pip { position: absolute; left: 1344px; top: 630px; width: 512px; height: 288px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -124px; top: -9px; width: 776px; height: 436px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：有 ../bg.jpg 就蓋在底紋上，沒有就只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-ch { background-image: url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg.jpg"), var(--sc-side-pattern); background-size: 1920px auto, 960px 1080px; background-position: 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-speaker #pv-spkCard { left: 120px; bottom: 220px; }
+  #pv-speaker .spk-body { display: flex; flex-direction: column; gap: 16px; }
+  #pv-speaker #pv-spkCard .sc-lt__dots { --dots-h: 156px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+    <div id="pv-speaker" class="fill">
+      <div id="pv-aWrap" class="fill">
+        <div id="pv-spkCard" class="sc-lt">
+          <i class="sc-lt__plate"></i>
+          <div class="sc-lt__card">
+            <i class="sc-lt__dots"></i>
+            <div class="sc-lt__body spk-body">
+              <div class="sc-lt__name"><span id="pv-spkName" class="sc-optr">林鼎淵</span></div>
+              <div class="sc-lt__meta">
+                <span id="pv-ti1" class="sc-lt__metaitem"><span class="sc-optr">外商工程師</span></span>
+                <span id="pv-ti2" class="sc-lt__metaitem"><i class="sc-lt__sq"></i><span class="sc-optr">暢銷書作家</span></span>
+                <span id="pv-ti3" class="sc-lt__metaitem"><i class="sc-lt__sq"></i><span class="sc-optr">企業內訓講師</span></span>
+              </div>
+            </div>
+          </div>
+          <div class="sc-lt__tag"><span class="sc-lt__tagin">講師</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cg" id="cap"><span>我是鼎淵，歡迎來到工程師下班有約</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"speaker","duration":7,"cues":[{"sound":"pop","at":0.1}]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-speaker'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 7;
+    /* 外殼遮罩揭開 0.55 → 姓名 0.15 後遮罩上升 0.6（0.75 到位）→ 頭銜逐組從左 drift 12（間隔 0.1，姓名已走完 94%，同一時間只有一個方向在動）→ 停 → 段尾 0.4 淡出 */
+    P.reveal('#pv-spkCard', 0);
+    P.maskUp('#pv-spkName', 0 + P.BEAT);
+    P.drift('#pv-ti1', 0.6, { dx: -12 });
+    P.drift('#pv-ti2', 0.7, { dx: -12 });
+    P.drift('#pv-ti3', 0.8, { dx: -12 });
+    P.out('#pv-spkCard', D - P.OUT);
+
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>
