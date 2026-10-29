@@ -29,7 +29,7 @@
 2. 找 NG：同一句話講了兩次以上，代表講錯重來，只保留最後一次完整的版本；講到一半卡住、停下來重講的，卡住那次也算 NG。
 3. 列剪輯清單：用表格列出要剪掉的 NG（時間碼、內容、原因），存成 `work/cuts.md`，**停下來等我確認**。句子之間的空白不用列，下一步 auto-editor 會處理。
 4. 我確認後，用 auto-editor 一次輸出 `work/rough.mp4`，加 `--no-open` 不要自動開播放器：
-   - 沒講話的空白和停頓：`--edit audio:threshold=0.1`，先用 `--preview` 看會剪掉多少
+   - 沒講話的空白和停頓：`--edit audio:-20dB`（門檻是相對整支影片最大聲的那一點，-20dB 等於 `threshold=0.1`），先用 `--preview` 看會剪掉多少。正常講話的尾音被切到就放寬到 `-26dB` 或 `-30dB`；小聲的自言自語沒剪掉就收緊到 `-16dB`。改了門檻要再 `--preview` 一次再輸出
    - NG：把清單裡的時間範圍一起剪掉。逐字稿的時間碼會有誤差，每段的起訖點要對齊前後的靜音，不要切到字
 5. 對 `work/rough.mp4` 重新轉逐字稿，存成 `work/rough.srt`：照規則 4 用 `ref/` 的講稿校正錯字和專有名詞（沒有講稿就只轉繁體、補標點，不要自己猜內容）；每則最多 18 個字，優先在標點處斷開。
 6. 回報：原始長度、初剪長度、剪掉幾段，以及每個剪接點在 `rough.mp4` 的時間。
@@ -66,7 +66,7 @@
 - 做成片前先把 `ref/template/USAGE.md` 從頭讀完（`USAGE-reference.md` 照它的指示，做到那一步再查）；成片用 `node ref/template/tools/build.mjs` 產生，不要從零寫。
 - 缺 Node.js 或其他工具時，照 `setup/` 的手冊裝，不要自己想辦法。
 - 轉逐字稿用 `npx hyperframes transcribe`，**一定要帶 `--model small --language zh`**；預設的 `small.en` 會把中文翻成英文。
-- 剪停頓和小聲的自言自語用 `auto-editor`；它的 Skill 文件和實際安裝的版本參數名稱可能不同（例如 `--cut` 與 `--cut-out`），**以 `auto-editor --help` 為準**。Windows 的 PowerShell 會把逗號拆成兩個參數，帶逗號或冒號的參數要加引號：`--cut-out "17sec,25sec"`、`--edit "audio:threshold=0.1"`。
+- 剪停頓和小聲的自言自語用 `auto-editor`；它的 Skill 文件和實際安裝的版本參數名稱可能不同（例如 `--cut` 與 `--cut-out`），**以 `auto-editor --help` 為準**。Windows 的 PowerShell 會把逗號拆成兩個參數，帶逗號或冒號的參數要加引號：`--cut-out "17sec,25sec"`、`--edit "audio:-20dB"`。
 - 音效只用 `sfx/`，不要另外下載素材，也不要登入任何第三方服務。
 - 輸出前抽查畫面用 `npx hyperframes snapshot --review`（每段的開頭和中間、每個轉場前後都會截圖）；`hyperframes check` 回報沒問題，不代表版面正確，一定要看截圖。
 - `hyperframes render` 沒有指定時間範圍的參數；要測短片段，用 `node ref/template/tools/build.mjs --test 起點,秒數` 產生 `compositions/test-clip.html`，再用 `npx hyperframes render -c compositions/test-clip.html --quality draft` 輸出。

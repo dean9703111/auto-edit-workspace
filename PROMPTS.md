@@ -155,13 +155,15 @@ Studio 預覽沒問題之後貼。AI 會先輸出一小段測試片段，確認�
 | 執行 auto-editor 時系統說「無法驗證開發者」（Mac）或 SmartScreen 擋下（Windows） | 手動下載的執行檔會這樣。Mac 照手冊用 Homebrew 裝就不會；Windows 點「其他資訊 → 仍要執行」一次就好 |
 | auto-editor 出現 `Error! Unknown option: --cut` | 新版改名成 `--cut-out`。每一段範圍各寫一次，例如 `--cut-out "17sec,25sec" --cut-out "69sec,75sec"`（Windows 的 PowerShell 一定要加引號，不然逗號會被拆開）。用空格隔開會被當成檔名，出現 `Could not open input file`。參數以 `auto-editor --help` 為準 |
 | auto-editor 跑完自動跳出播放器 | 這是預設行為，加上 `--no-open` 就不會開 |
+| 初剪把正常講話的尾音切掉了 | 音量門檻太嚴。跟 AI 說「門檻放寬到 -26dB 再 preview 一次」，還是切到就 -30dB。門檻是相對整支影片最大聲的地方，不是絕對音量 |
+| 小聲的自言自語、「啊不對重講」留在初剪裡 | 這種段落 whisper 常常轉不出來，清單上看不到，只能靠音量剪。跟 AI 說「門檻收緊到 -16dB 再 preview 一次」，或直接把那段時間加進 `--cut-out` |
 | 字幕和嘴巴對不上，提早一秒左右 | 逐字稿的時間碼會漂，停頓多的地方更明顯，畫面抽查看不出來。跟 AI 說「把第 N 則字幕的開始時間對齊實際開口的時間」，改完字幕再重新產生成片 |
 | 回覆「開始製作」之後，AI 還是只給計畫 | 還停在 Plan 模式。先關閉 Plan 模式，再回覆一次 |
 | AI 說要先寫一份暫時的設定檔檢查字幕長度，但 Plan 模式不讓它寫檔 | 回它「Plan 模式下先自己數字數，確認後再檢查」 |
 | AI 自己從零寫 HyperFrames 的網頁，沒有用範本 | 回它「照 `ref/template/USAGE.md`，用 `node ref/template/tools/build.mjs` 產生」。通常是 `AGENTS.md` 沒被讀到，確認資料夾選的是看得到 `AGENTS.md` 的那一層 |
 | 檢查出現 ✖ 就停住 | 每一行 `→` 後面就是改法，請 AI 照改再跑一次。有 ✖ 的時候，不會產生任何檔案 |
 | Studio 網址打不開 | 請 AI 執行 `npx hyperframes preview --status`，看 Studio 還在不在。網址可能是 `localhost` 或 `127.0.0.1`，兩個都可以 |
-| 說「我選的這張卡」，AI 回答沒有選到東西 | 在 Studio 先暫停在那張卡出現的畫面，點卡片上的字，出現綠色框線再說一次。也可以直接說「第 75 秒那張卡」 |
+| 想改某張卡，不知道怎麼跟 AI 指定 | 看 Studio 左邊 Compositions 或時間軸上的編號，直接說「s05 的金句卡往左移」。不確定編號就說「第 75 秒那張卡」，AI 會對照時間找 |
 | 改完之後 Studio 畫面沒變 | 重新整理 Studio，並請 AI 確認產生的檔案裡是新內容 |
 | 重新產生時，AI 說檔案「被手改過」 | 你在 Studio 裡拖過東西或改過字。把想保留的改動告訴 AI，請它寫進設定後，加上 `--force` 重新產生 |
 | 想要「字再大一點」 | 模板的字級是固定的，改不了。請 AI 縮短卡片上的文字，或換成全畫面的版型 |
