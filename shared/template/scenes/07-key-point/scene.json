@@ -1,0 +1,45 @@
+{
+  "key": "key-point",
+  "no": 7,
+  "zh": "重點字卡",
+  "aliases": ["重點", "重點卡", "重點字卡", "警示字卡"],
+  "family": "lower-third",
+  "when": "口播講到一句必須記住的重點；語氣 warn＝千萬不要／踩雷／注意，good＝解法",
+  "avoid": "一次出現兩個以上重點（拆兩段），或只是帶出名詞（改一般字卡）",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 5, "min": 3.5, "fixed": null },
+  "addons": ["chtag"],
+  "tone": true,
+  "slots": {
+    "tag":  { "label": "標籤", "type": "text", "max": 4, "note": "不填＝重點（語氣 warn 時＝注意）" },
+    "icon": { "label": "圖示", "type": "icon", "default": "star", "toneDefault": { "warn": "triangle-alert", "good": "circle-check" } },
+    "lead": { "label": "前句", "type": "text", "max": 10, "note": "有圖示（預設）時 ≤ 7；寫 \"icon\": \"none\" 才能用到 10" },
+    "key":  { "label": "重點", "type": "text", "required": true, "max": 12 }
+  },
+  "beats": {
+    "in": { "label": "進場", "default": "0" }
+  },
+  "sfx": {
+    "main": { "sound": { "default": "ding", "warn": "alert", "good": "success" }, "at": "in + 0.15" },
+    "extra": []
+  },
+  "lists": {},
+  "rules": [
+    {
+      "if": "v.icon && v.lead_len > 7",
+      "error": "有圖示時前句最多 7 字（88 的徽章＋24 間距占掉約 3 字寬）；縮文案，或寫 \"icon\": \"none\" 拿掉圖示（前句可到 10 字）"
+    }
+  ],
+  "sample": {
+    "title": "AI 負責剪，我負責把關",
+    "sub": "而我只負責一件事：把關品質",
+    "duration": 5,
+    "slots": {
+      "lead": "我只負責一件事",
+      "key": "AI 負責剪，我負責把關"
+    },
+    "beats": {}
+  }
+}

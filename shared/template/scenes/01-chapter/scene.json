@@ -1,0 +1,43 @@
+{
+  "key": "chapter",
+  "no": 1,
+  "zh": "章節轉場",
+  "aliases": ["章節", "章節幕", "章節轉場"],
+  "family": "chapter",
+  "when": "每一章開頭（含總結章），用全畫面幕交代章號與章名",
+  "avoid": "章內換小節（改章節角標），或不想打斷口播節奏時",
+  "layout": { "data-layout": "全畫面", "data-pip": "none", "data-top": "0", "data-bottom": "1080" },
+  "layoutByProfile": { "yt": { "data-top": "100" } },
+  "surface": "ch",
+  "bindsSrt": false,
+  "duration": { "default": 2.5, "min": 2.5, "fixed": 2.5 },
+  "addons": [],
+  "slots": {
+    "num":   { "label": "號碼", "type": "number", "required": true },
+    "title": { "label": "章名", "type": "text", "required": true, "max": 10 },
+    "sub":   { "label": "副標", "type": "text", "max": 12 },
+    "icon":  { "label": "圖示", "type": "icon" }
+  },
+  "beats": {
+    "titleAt": { "label": "章名進場", "default": "0.45" },
+    "subAt":   { "label": "副標進場", "default": "0.60" }
+  },
+  "sfx": {
+    "main": { "sound": "whoosh", "at": "start - 0.15" },
+    "extra": []
+  },
+  "lists": {},
+  "rules": [],
+  "sample": {
+    "title": "先剪乾淨",
+    "sub": "接下來，我們先把影片剪乾淨",
+    "duration": 2.5,
+    "slots": {
+      "num": "01",
+      "title": "先剪乾淨",
+      "sub": "NG 交給 AI 找",
+      "icon": "scissors"
+    },
+    "beats": {}
+  }
+}

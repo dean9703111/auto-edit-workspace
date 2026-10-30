@@ -1,0 +1,33 @@
+<!-- @style -->
+/* 左側直排 x 120–560（不進講者保護區 x ≥ 640）：flex 容器 y 160–870（高 710）內垂直置中、列距 32。
+   板內距 左右 48、上下 40；字 72／900、行高 88；主色條 4px，離板左右下邊各 16。
+   寬度契約：字寬＋左右內距 96＋框 4 ≤ 440（單行 4 字內放得下，5 字請用 // 斷兩行）。
+   有圖示（itemsHasIcon）：膠囊內 flex「圖示 60（主色線條，不加圓）→ gap 12 → 文字」，多出 72 寬；
+   max 10→8、maxLine 5→4（4 字行：288＋72＋100＝460 ＝ 原 5 字行 360＋100），最寬膠囊不變寬。
+   板高（含 .sc-opt 光學 padding-bottom 8）：單行 180、兩行 268。 */
+#kwList { position: absolute; left: 120px; top: {{#yt}}165{{/yt}}{{^yt}}160{{/yt}}px; width: 440px; height: {{#yt}}705{{/yt}}{{^yt}}710{{/yt}}px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 32px; }
+.sKw { padding: 40px 48px; }
+.sKw::after { left: 16px; right: 16px; bottom: 16px; height: 4px; border-radius: 2px; }
+.sKw .sc-t72 { display: block; line-height: 88px; }
+.sKw--icon { display: flex; align-items: center; gap: 12px; }
+.sKw--icon > svg { flex: none; display: block; width: 60px; height: 60px; margin-bottom: 8px; color: var(--sc-accent); }
+<!-- @body -->
+<div id="kwList" data-layout-allow-slack>
+  {{#items}}
+  {{#itemsHasIcon}}
+  <div class="sc-kwboard sKw sKw--icon">{{{icon}}}<span class="sc-t72 sc-w900 sc-opt">{{{text}}}</span></div>
+  {{/itemsHasIcon}}
+  {{^itemsHasIcon}}
+  <div class="sc-kwboard sKw"><span class="sc-t72 sc-w900 sc-opt">{{{text}}}</span></div>
+  {{/itemsHasIcon}}
+  {{/items}}
+</div>
+<!-- @timeline -->
+/* 逐條 drift（dx −16，貼左側）淡入並停住，有圖示的各條 P.BEAT 後圖示描線 → 段尾一起淡出 */
+{{#items}}
+P.drift('#kwList > :nth-child({{n}})', {{{at}}}, { dx: -P.DRIFT });
+{{#itemsHasIcon}}
+P.icon('#kwList > :nth-child({{n}})', {{{at}}} + P.BEAT);
+{{/itemsHasIcon}}
+{{/items}}
+{{#exitFade}}P.out('#kwList', D - P.OUT);{{/exitFade}}

@@ -1,0 +1,45 @@
+{
+  "key": "fs-list",
+  "no": "04a",
+  "zh": "全畫面清單",
+  "aliases": ["全畫面清單", "清單", "大清單"],
+  "family": "fullscreen",
+  "when": "資訊量大的 3–4 項清單，一項一句話，需要觀眾逐項看完",
+  "avoid": "只有關鍵詞沒有句子（改關鍵詞條列）、需要比較（改全畫面對照）、有先後步驟（改全畫面流程）",
+  "layout": { "data-layout": "全畫面", "data-pip": "br" },
+  "surface": "fs",
+  "bindsSrt": true,
+  "duration": { "default": 6, "min": 4, "fixed": null },
+  "addons": ["chtag"],
+  "slots": {
+    "title": { "label": "標題", "type": "text", "required": true, "max": 14 },
+    "items": {
+      "label": "項目", "type": "list", "min": 3, "maxItems": 4, "required": true,
+      "item": { "text": { "type": "rich", "max": 18 }, "icon": { "type": "icon" } }
+    }
+  },
+  "beats": {},
+  "lists": {
+    "items": { "at": "0.5 + {{i}} * 0.35" }
+  },
+  "sfx": {
+    "main": { "sound": "whoosh", "at": "start - 0.15" },
+    "extra": [ { "sound": "tick", "at": "items[0:]" } ]
+  },
+  "rules": [
+    {
+      "if": "v.itemsHasIcon && items.some(x => x.text_len > 17)",
+      "error": "有圖示時每項最多 17 字（72 的圖示圓＋24 間距，卡內寬 1064）；縮文案或拿掉圖示"
+    }
+  ],
+  "sample": {
+    "title": "AI 找得出的 NG",
+    "sub": "錄這段口播的時候，我犯了不少錯",
+    "duration": 6,
+    "slots": {
+      "title": "AI 找得出的 NG",
+      "items": ["講錯重來：只留最後一次 ｜icon=repeat", "卡詞：講到一半停下 ｜icon=pause", "長停頓：交給 **auto-editor** ｜icon=timer"]
+    },
+    "beats": {}
+  }
+}

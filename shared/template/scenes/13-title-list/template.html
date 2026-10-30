@@ -1,0 +1,43 @@
+<!-- @style -->
+/* 底座 .sc-lt 不加分類標籤：段內覆寫 padding-top 0、底板 top 8、主卡 padding-top 32。
+   主卡 616–852（高 236）：頂內距 32 → 白斜板（高 88，標題 64／900）→ 間距 24 → 條目列 56（序號圓 56＋52／700）→ 底內距 32。
+   各條目疊在同一格（grid 同儲存格），卡寬取最長那條；換條 P.axis。左緣直線 x160：斜板左下角、序號圓。細節＝右上網點。 */
+#gCard { left: 120px; bottom: 220px; padding-top: 0; }
+#gCard .sc-lt__plate { top: 8px; }
+#gCard .sc-lt__card { padding-top: 32px; }
+.tl-title { margin-bottom: 24px; }
+.tl-items { display: grid; }
+.tl-items .sc-icon { --d: 56px; --i: 32px; }  /* 有圖示：圖示圓與序號圓同直徑 56，(56−32)/2＝12 */
+.tl-items > .sc-row { grid-area: 1 / 1; justify-self: start; height: 56px; }
+<!-- @body -->
+<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <i class="sc-lt__plate"></i>
+  <div class="sc-lt__card">
+    <i class="sc-lt__dots"></i>
+    <div class="sc-lt__body">
+      <div class="tl-title sc-slant sc-slant--paper sc-lt__kw"><span id="tTitle" class="sc-t64 sc-w900 sc-opt">{{title}}</span></div>
+      <div id="items" class="tl-items">
+{{#items}}
+{{#itemsHasIcon}}
+        <div id="it{{n}}" class="sc-row"><span class="sc-icon">{{{icon}}}</span><span class="sc-t52 sc-w700 sc-opt">{{{text}}}</span></div>
+{{/itemsHasIcon}}
+{{^itemsHasIcon}}
+        <div id="it{{n}}" class="sc-row"><span class="sc-num sc-num--56">{{n}}</span><span class="sc-t52 sc-w700 sc-opt">{{{text}}}</span></div>
+{{/itemsHasIcon}}
+{{/items}}
+      </div>
+    </div>
+  </div>
+</div>
+<!-- @timeline -->
+/* 外殼（底板＋主卡＋斜板＋網點）遮罩揭開 → 0.15 後標題字 maskUp、第 1 條 rise → 之後每條 P.axis 換（每條停 ≥ 1.5s）→ 段尾 0.4 淡出 */
+const itemAt = [{{#items}}{{{at}}}{{^last}}, {{/last}}{{/items}}];
+P.reveal('#gCard', {{{in}}});
+P.maskUp('#tTitle', {{{in}}} + P.BEAT);
+P.rise('#it1', itemAt[0]);
+for (let i = 1; i < itemAt.length; i++) P.axis('#it' + i, '#it' + (i + 1), itemAt[i]);
+{{#itemsHasIcon}}
+P.icon('#it1 .sc-icon', itemAt[0] + P.BEAT);
+for (let i = 1; i < itemAt.length; i++) P.icon('#it' + (i + 1) + ' .sc-icon', itemAt[i] + P.AXIS_LAG + P.BEAT);
+{{/itemsHasIcon}}
+{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}

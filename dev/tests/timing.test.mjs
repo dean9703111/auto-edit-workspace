@@ -1,0 +1,293 @@
+// 時間準確度：關鍵詞對齊（"#N@詞"）＋ 字幕起點對齊開口（media.mjs snap-srt）
+// snap-srt 的音訊全部用 ffmpeg aevalsrc 現場合成（已知開口時間），驗證對齊誤差 ≤ 50ms
+import { test, before } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { lib, imp, TOOLS } from './helpers.mjs';
+
+const T = await imp('lib/time.mjs');
+const { resolvePlan } = await imp('lib/plan.mjs');
+const { parseSrt } = await imp('lib/srt.mjs');
+const { visibleLen } = await imp('lib/scenes.mjs');
+const S = await imp('editor/subtitles.mjs');
+const ET = await imp('editor/text.mjs');
+const W = await imp('editor/server/write.mjs');
+const M = await imp('media.mjs');
+const L = await lib();
+
+// ---------- 關鍵詞對齊 ----------
+
+// 句 1：10–20 秒、共 17.5 字寬。「剪輯清單」前面是「我們用 Claude Code 做」＝ 3＋0.5＋3＋0.5＋2＋0.5＋1 ＝ 10.5 字寬
+const TEXT = '我們用 Claude Code 做剪輯清單這件事';
+const cues = [
+  { n: 1, start: 10, end: 20, text: TEXT },
+  { n: 2, start: 21, end: 25, text: '版本是 GPT-4 這一代' },
+  { n: 3, start: 26, end: 30, text: '最後收尾' },
+];
+const sec = (v, c = cues) => { const t = T.parseTime(v); assert.ok(!t.error, t.error); return T.cueSeconds(t, c); };
+
+test('parseTime：舊寫法的結構一個字都沒變；新增 #N@詞、#Ne@詞、#N@詞±秒', () => {
+  assert.deepEqual(T.parseTime('#5'), { kind: 'cue', n: 5, end: false, off: 0, raw: '#5' });
+  assert.deepEqual(T.parseTime('#5e-0.2'), { kind: 'cue', n: 5, end: true, off: -0.2, raw: '#5e-0.2' });
+  assert.deepEqual(T.parseTime('#12@剪輯清單'), { kind: 'cue', n: 12, end: false, off: 0, kw: '剪輯清單', kwFull: '剪輯清單', raw: '#12@剪輯清單' });
+  const e = T.parseTime('#12e@剪輯清單+0.2');
+  assert.equal(e.end, true); assert.equal(e.kw, '剪輯清單'); assert.equal(e.off, 0.2);
+  assert.equal(T.parseTime('#3@剪輯清單-0.5').off, -0.5);
+  assert.match(T.parseTime('#3@').error, /看不懂的時間/);
+  assert.match(T.TIME_HELP, /#12@詞/);
+});
+
+test('#N@詞＝起點＋詞前面的字數 ÷ 全句字數 × 句長（全形 1、半形 0.5）', () => {
+  assert.equal(T.textWidth(TEXT), 17.5);
+  assert.equal(T.textWidth('ab中'), 2);
+  assert.equal(sec('#1@剪輯清單').sec, T.r3(10 + (10.5 / 17.5) * 10));   // 16
+  assert.equal(sec('#1@我們').sec, 10);                                   // 句首的詞＝起點
+  // 字數算法跟 visibleLen 一致（visibleLen 四捨五入成整數）
+  assert.equal(Math.round(T.textWidth(TEXT)), visibleLen(TEXT));
+});
+
+test('#Ne@詞＝詞講完的位置；和 #N@詞 差剛好一個詞的寬度', () => {
+  const a = sec('#1@剪輯清單').sec, b = sec('#1e@剪輯清單').sec;
+  assert.equal(T.r3(b - a), T.r3((4 / 17.5) * 10));
+  assert.equal(sec('#1e@這件事').sec, 20);   // 詞在句尾 → 等於句尾
+});
+
+test('+／- 秒數可疊在後面；詞本身有 +／- 時先整串當詞找，找不到才拆出秒數', () => {
+  assert.equal(sec('#1@剪輯清單+0.2').sec, T.r3(16.2));
+  assert.equal(sec('#1e@剪輯清單-0.3').sec, T.r3(sec('#1e@剪輯清單').sec - 0.3));
+  // GPT-4 在原文裡 → 整串當詞，不被當成「GPT 減 4 秒」
+  const g = sec('#2@GPT-4');
+  assert.equal(g.word, 'GPT-4');
+  assert.equal(g.sec, T.r3(21 + (T.textWidth('版本是 ') / T.textWidth(cues[1].text)) * 4));
+  // 整串找不到、拆開後的詞找得到 → 拆開用
+  const h = sec('#2@GPT-0.5');
+  assert.equal(h.word, 'GPT');
+  assert.equal(h.sec, T.r3(g.sec - 0.5));
+});
+
+test('找詞：精確 → 不分大小寫 → 忽略空白（srt-enhancer 會在中英之間加空格）', () => {
+  assert.equal(sec('#1@claude code').word, 'claude code');
+  assert.equal(sec('#1@claude code').sec, sec('#1@Claude Code').sec);
+  assert.equal(sec('#1@ClaudeCode').sec, sec('#1@Claude Code').sec);
+  assert.deepEqual(T.findKw('做 AI 剪輯', 'AI剪輯'), { i: 2, len: 5 });
+  assert.equal(T.findKw('abc', 'xyz'), null);
+});
+
+test('找不到詞或句號：回 error，附那一句的原文', () => {
+  const e = sec('#1@不存在的詞');
+  assert.match(e.error, /#1 找不到詞「不存在的詞」/);
+  assert.ok(e.error.includes(TEXT), '訊息要附原文');
+  assert.match(sec('#9@詞').error, /字幕沒有第 9 句/);
+});
+
+test('plan.json：from／to／清單 at／beats／chapter 都吃 #N@詞；找不到詞報 ✖ 並附原文', () => {
+  const cs = parseSrt([1, 2, 3, 4, 5, 6].map((n) => `${n}\n00:00:${String(n * 4).padStart(2, '0')},000 --> 00:00:${String(n * 4 + 3).padStart(2, '0')},000\n${n === 4 ? '今天先講重點整理這個動作' : `第${n}句內容在此`}\n`).join('\n'));
+  const run = (scenes) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes }, cues: cs, videoDur: 40, lib: L, outDir: os.tmpdir() });
+  const c4 = cs.find((c) => c.n === 4);
+  const at = (kw, end = false) => T.r3(c4.start + (T.textWidth(c4.text.slice(0, c4.text.indexOf(kw) + (end ? kw.length : 0))) / T.textWidth(c4.text)) * (c4.end - c4.start));
+
+  const r1 = run([{ id: 's01', scene: 'concept', from: '#4@重點整理', to: '#6e', slots: { text: '重點' } }]);
+  const r0 = run([{ id: 's00', scene: 'concept', from: '#1', to: '#4e@重點整理', slots: { text: '前' } }]);
+  assert.deepEqual(r0.errors, []);
+  assert.deepEqual(r1.errors, []);
+  const s1 = r1.items.find((x) => x.id === 's01');
+  assert.equal(s1.start, at('重點整理'));
+  assert.equal(r0.items[0].end, at('重點整理', true));
+
+  // 清單項目 at（物件寫法與字串「｜at=」寫法）、beats
+  const r2 = run([{ id: 's02', scene: 'side-panel', from: '#3', to: '#5e', beats: { head: '#4@整理' },
+    slots: { title: '標題', items: ['第一項', { text: '第二項', at: '#4@重點' }, '第三項 ｜at="#4@這個動作"'] } }]);
+  assert.deepEqual(r2.errors, [], r2.errors.join('\n'));
+  assert.ok(r2.warnings.every((w) => !/找不到詞/.test(w)));
+
+  // 找不到詞：✖ 附原文（from／清單 at／beats 三個位置）
+  const bad = run([
+    { id: 's03', scene: 'concept', from: '#4@不在句子裡', to: '#4e', slots: { text: '重點' } },
+    { id: 's04', scene: 'side-panel', from: '#3', to: '#5e', beats: { head: '#4@沒這個詞' }, slots: { title: '標題', items: ['一', { text: '二', at: '#4@也沒有' }] } },
+  ]);
+  const msg = bad.errors.join('\n');
+  assert.match(msg, /s03[\s\S]*#4 找不到詞「不在句子裡」→ 第 4 句原文是「今天先講重點整理這個動作」/);
+  assert.match(msg, /沒這個詞/);
+  assert.match(msg, /也沒有/);
+
+  // 章節轉場的 at 只吃 "#N"
+  const ch = run([{ id: 'c01', scene: 'chapter', at: '#4@重點', slots: { num: '01', title: '開場' } }]);
+  assert.match(ch.errors.join('\n'), /章節轉場只寫 "#N"/);
+});
+
+// ---------- 剪輯台不會壞 ----------
+
+test('剪輯台 subtitles.mjs：parseRef／fmtRef／refTime 認得 #N@詞，且和 build 算出同一個秒數', () => {
+  const r = S.parseRef('#12e@剪輯清單+0.2');
+  assert.equal(r.n, 12); assert.equal(r.end, true); assert.equal(r.kw, '剪輯清單'); assert.equal(r.off, 0.2);
+  assert.equal(S.fmtRef(r), '#12e@剪輯清單+0.2');
+  assert.equal(S.fmtRef(S.parseRef('#2@GPT-4')), '#2@GPT-4');            // 沒動過的詞整串寫回，不被拆壞
+  assert.equal(S.fmtRef({ ...S.parseRef('#2@GPT-4'), n: 3 }), '#3@GPT-4');
+  for (const v of ['#1@剪輯清單', '#1e@剪輯清單', '#1@剪輯清單+0.2', '#2@GPT-4', '#1@claude code']) assert.equal(S.refTime(v, cues), sec(v).sec, v);
+  assert.equal(S.refTime('#1@不存在', cues), null);
+  assert.equal(W.resolveTime('#1@剪輯清單', cues), sec('#1@剪輯清單').sec);
+  // 頁面用的 findKw／textWidth 跟 lib/time.mjs 同結果
+  for (const [t, k] of [[TEXT, '剪輯清單'], [TEXT, 'claude code'], ['做 AI 剪輯', 'AI剪輯'], ['abc', 'x']]) assert.deepEqual(ET.findKw(t, k), T.findKw(t, k));
+  assert.equal(ET.textWidth(TEXT), T.textWidth(TEXT));
+});
+
+test('剪輯台改字幕結構：#N@詞 跟著文字走（分割看詞在哪一半、合併綁前一句、其餘句號平移）', () => {
+  const cs = [1, 2, 3].map((n) => ({ n, start: n * 10, end: n * 10 + 8, text: n === 2 ? '先講前半部分，再講剪輯清單的重點' : `第${n}句` }));
+  const plan = { version: 1, scenes: [
+    { id: 'a', scene: 'concept', from: '#2@前半', to: '#2e@剪輯清單' },
+    { id: 'b', scene: 'concept', from: '#3@第3句', to: '#3e', slots: { text: '#2@剪輯清單 是文字不改' } },
+    { id: 'c', scene: 'side-panel', from: '#2', to: '#2e', slots: { items: ['x ｜at="#2@剪輯清單"', 'y ｜at=#2@重點'] } },
+  ] };
+  // 分割第 2 句在「，」後面（pos 8）：前半 / 後半
+  const sp = S.remapPlan(plan, { op: 'split', n: 2, at: 14, pos: 8 }, cs);
+  assert.equal(sp.scenes[0].from, '#2@前半');          // 詞在前半 → #2
+  assert.equal(sp.scenes[0].to, '#3e@剪輯清單');        // 詞在後半 → #3，e 保留
+  assert.equal(sp.scenes[1].from, '#4@第3句');          // 後面的句號 +1
+  assert.equal(sp.scenes[1].slots.text, '#2@剪輯清單 是文字不改');
+  assert.deepEqual(sp.scenes[2].slots.items, ['x ｜at="#3@剪輯清單"', 'y ｜at=#3@重點']);
+  // 合併第 1、2 句：#2@詞 → #1@詞，第 3 句變第 2 句
+  const mg = S.remapPlan(plan, { op: 'merge', n: 1 }, cs);
+  assert.equal(mg.scenes[0].from, '#1@前半');
+  assert.equal(mg.scenes[0].to, '#1e@剪輯清單');
+  assert.equal(mg.scenes[1].from, '#2@第3句');
+  // 在第 1 句後新增：>1 的 +1
+  const ins = S.remapPlan(plan, { op: 'insert', after: 1, start: 19, end: 19.8, text: '新' }, cs);
+  assert.equal(ins.scenes[0].from, '#3@前半');
+  // 刪除第 2 句：綁在它上面的詞拿掉，退成一般 ref（bind prev → 綁前一句）
+  const del = S.remapPlan(plan, { op: 'delete', n: 2, bind: 'prev' }, cs);
+  assert.equal(del.scenes[0].from, '#1');
+  assert.equal(del.scenes[0].to, '#1e');
+  assert.equal(del.scenes[1].from, '#2@第3句');
+});
+
+test('剪輯台 applySave 的 from／to：認 #N@詞，找不到詞擋下來並附原文', () => {
+  assert.ok(S.refTime('#2@GPT', cues) != null);
+  assert.equal(S.refTime('#2@沒有', cues), null);
+});
+
+// ---------- snap-srt：合成音訊（已知開口時間）----------
+
+let root, ENV_OK = true;
+const ff = (args) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
+const stamp = (t) => { const ms = Math.round(t * 1000), p = (n, w = 2) => String(n).padStart(w, '0'); return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`; };
+const srtOf = (list) => list.map(([a, b, tx], i) => `${i + 1}\n${stamp(a)} --> ${stamp(b)}\n${tx}\n`).join('\n');
+// 用 aevalsrc 在指定區間放一個音（amp 控制音量）＋極小的底噪，模擬「有人聲的區間」
+const tone = (ranges, amp, dur) => `${amp}*sin(2*PI*220*t)*(${ranges.map(([a, b]) => `between(t,${a},${b})`).join('+')})+0.0005*sin(2*PI*50*t)`;
+function project(name, { ranges, amp = 0.05, dur, srt }) {
+  const proj = path.join(root, 'projects', name);
+  fs.mkdirSync(path.join(proj, 'work'), { recursive: true });
+  ff(['-f', 'lavfi', '-i', `aevalsrc='${tone(ranges, amp, dur)}':s=48000:d=${dur}`, '-f', 'lavfi', '-i', `color=c=black:s=160x90:r=10:d=${dur}`, '-shortest', '-c:v', 'libx264', '-c:a', 'aac', '-pix_fmt', 'yuv420p', path.join(proj, 'work', 'rough.mp4')]);
+  fs.writeFileSync(path.join(proj, 'work', 'rough.srt'), srtOf(srt));
+  return proj;
+}
+const P = (proj) => ({ project: proj });
+const quiet = () => {};
+
+before(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-timing-')); });
+
+test('snap-srt：字幕故意偏早 1 秒，對齊後開口誤差 ≤ 50ms；音量大小不影響（門檻是相對的）', () => {
+  const ranges = [[1, 3], [4.2, 6.5], [7, 9], [10.5, 12]];
+  for (const amp of [0.5, 0.05, 0.005]) {
+    const proj = project(`syn-${amp}`, { ranges, amp, dur: 14, srt: [[0, 1.9, '第一句'], [3.2, 5.2, '第二句'], [6.0, 8.1, '第三句'], [9.6, 12.9, '第四句']] });
+    const r = M.snapSrt(P(proj), { dryRun: true, log: quiet });
+    ranges.forEach(([a], i) => assert.ok(Math.abs(r.rows[i].start - a) <= 0.05, `amp ${amp} 第 ${i + 1} 則：${r.rows[i].start} vs 開口 ${a}`));
+    assert.equal(r.written, false);
+  }
+});
+
+test('snap-srt：結尾拖進靜音超過 0.4 秒 → 收到說話結束＋0.15；不重疊、每則 ≥ 0.6 秒、順序不變', () => {
+  const proj = project('syn-end', { ranges: [[1, 3], [4.2, 6.5], [7, 9], [10.5, 12]], dur: 14, srt: [[0, 1.9, '一'], [3.2, 5.2, '二'], [6.0, 8.1, '三'], [9.6, 12.9, '四']] });
+  const { rows } = M.snapSrt(P(proj), { dryRun: true, log: quiet });
+  assert.ok(Math.abs(rows[3].end - 12.15) <= 0.05, `第 4 則結尾 ${rows[3].end}`);
+  rows.forEach((r, i) => {
+    assert.ok(r.end - r.start >= 0.6 - 1e-6, `第 ${i + 1} 則太短`);
+    if (i) assert.ok(r.start >= rows[i - 1].end - 1e-6, `第 ${i + 1} 則和前一則重疊`);
+    if (i) assert.ok(r.start > rows[i - 1].start, '順序');
+  });
+});
+
+test('snap-srt：已經對準的不動（差 ≤ 0.25 秒）；窗外的不動；沒有任何調整時不寫檔也不備份', () => {
+  const proj = project('syn-ok', { ranges: [[1, 3], [4.2, 6.5], [7, 9]], dur: 11, srt: [[1.1, 3, '一'], [4.3, 6.5, '二'], [7.2, 9, '三']] });
+  const r = M.snapSrt(P(proj), { log: quiet });
+  assert.equal(r.changed.length, 0);
+  assert.equal(r.written, false);
+  assert.deepEqual(fs.readdirSync(path.join(proj, 'work')).filter((f) => f.includes('.bak')), []);
+  // 開口點離字幕起點超過視窗（字幕早 2 秒以上）→ 不亂動
+  const far = project('syn-far', { ranges: [[5, 7]], dur: 9, srt: [[1, 3, '太早']] });
+  assert.equal(M.snapSrt(P(far), { dryRun: true, log: quiet }).rows[0].dStart, 0);
+});
+
+test('snap-srt：寫回前備份成 rough.srt.bak-<時間戳>（新檔，原檔內容一字不差）；文字與格式原樣保留；--dry-run 不寫；不刪任何檔', () => {
+  const srt = [[0, 1.9, '第一句，有逗號'], [3.2, 5.2, '第二句'], [6.0, 8.1, '第三句']];
+  const proj = project('syn-write', { ranges: [[1, 3], [4.2, 6.5], [7, 9]], dur: 11, srt });
+  const f = path.join(proj, 'work', 'rough.srt');
+  const before0 = fs.readFileSync(f, 'utf8');
+  const filesBefore = fs.readdirSync(path.join(proj, 'work')).sort();
+  M.snapSrt(P(proj), { dryRun: true, log: quiet });
+  assert.equal(fs.readFileSync(f, 'utf8'), before0, '--dry-run 不能動檔');
+  assert.deepEqual(fs.readdirSync(path.join(proj, 'work')).sort(), filesBefore);
+  const logs = [];
+  const r = M.snapSrt(P(proj), { log: (...a) => logs.push(a.join(' ')), now: new Date(2026, 0, 2, 3, 4, 5) });
+  assert.equal(r.written, true);
+  assert.equal(path.basename(r.backup), 'rough.srt.bak-20260102-030405');
+  assert.equal(fs.readFileSync(r.backup, 'utf8'), before0);
+  const after = parseSrt(fs.readFileSync(f, 'utf8'));
+  assert.deepEqual(after.map((c) => c.text), ['第一句，有逗號', '第二句', '第三句']);
+  assert.ok(Math.abs(after[0].start - 1) <= 0.05);
+  assert.ok(logs.some((l) => /第一句|嗨|#1/.test(l)) && logs.some((l) => l.includes('備份')), '要印調整表和備份位置');
+  // 同一秒再跑一次：備份檔名不覆蓋舊的
+  fs.writeFileSync(f, before0);
+  const r2 = M.snapSrt(P(proj), { log: quiet, now: new Date(2026, 0, 2, 3, 4, 5) });
+  assert.notEqual(r2.backup, r.backup);
+  assert.ok(fs.existsSync(r.backup) && fs.existsSync(r2.backup));
+  // 原檔檔案都還在（只多不少）
+  for (const n of filesBefore) assert.ok(fs.existsSync(path.join(proj, 'work', n)), n);
+});
+
+test('rewriteSrtTimes：只改時間行，CRLF、BOM、多行字幕、空行原樣保留', () => {
+  const src = '﻿1\r\n00:00:00,000 --> 00:00:01,000\r\n第一行\r\n第二行\r\n\r\n2\r\n00:00:02,000 --> 00:00:03,000\r\n字\r\n';
+  const out = M.rewriteSrtTimes(src, [{ n: 1, start: 0.5, end: 1.25 }, { n: 2, start: 2, end: 3 }]);
+  assert.equal(out, '﻿1\r\n00:00:00,500 --> 00:00:01,250\r\n第一行\r\n第二行\r\n\r\n2\r\n00:00:02,000 --> 00:00:03,000\r\n字\r\n');
+});
+
+test('snapCues（純函式）：起點撞到鄰居就退回原值，不重疊；視窗邊界', () => {
+  const speech = [[1, 2], [2.4, 3]];
+  // 兩則字幕都想往後對，但第二個開口點離第一個太近（< 0.6 秒）→ 動過的退回
+  const cs = [{ n: 1, start: 0.2, end: 1.2, text: 'a' }, { n: 2, start: 1.9, end: 3, text: 'b' }];
+  const { rows } = M.snapCues(cs, speech);
+  assert.ok(rows[1].start - rows[0].start >= 0.6 - 1e-6);
+  assert.ok(rows[0].end <= rows[1].start + 1e-6);
+  // 視窗：開口點比字幕晚 1.5 秒內才抓，晚 1.6 秒不抓；比字幕早 0.6 秒內才抓
+  assert.notEqual(M.snapCues([{ n: 1, start: 0, end: 4, text: 'a' }], [[1.4, 3]]).rows[0].dStart, 0);
+  assert.equal(M.snapCues([{ n: 1, start: 0, end: 4, text: 'a' }], [[1.6, 3]]).rows[0].dStart, 0);
+  assert.notEqual(M.snapCues([{ n: 1, start: 2, end: 4, text: 'a' }], [[1.5, 3]]).rows[0].dStart, 0);
+  assert.equal(M.snapCues([{ n: 1, start: 2, end: 4, text: 'a' }], [[1.3, 3]]).rows[0].dStart, 0);
+});
+
+test('snap-srt：缺檔、沒有聲音、整段靜音都給 ✖ 風格的中文訊息', () => {
+  const none = path.join(root, 'projects', 'empty');
+  fs.mkdirSync(path.join(none, 'work'), { recursive: true });
+  assert.throws(() => M.snapSrt(P(none), { log: quiet }), /找不到.*rough\.srt → 先照/);
+  fs.writeFileSync(path.join(none, 'work', 'rough.srt'), srtOf([[0, 1, 'a']]));
+  assert.throws(() => M.snapSrt(P(none), { log: quiet }), /找不到.*rough\.mp4/);
+  ff(['-f', 'lavfi', '-i', 'color=c=black:s=160x90:r=10:d=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(none, 'work', 'rough.mp4')]);
+  assert.throws(() => M.snapSrt(P(none), { log: quiet }), /沒有聲音軌/);
+  const flat = project('syn-flat', { ranges: [[0, 6]], dur: 6, srt: [[0, 1, 'a']] });   // 整段同一個音量：分不出說話與停頓
+  assert.throws(() => M.snapSrt(P(flat), { log: quiet }), /分不出哪裡在說話/);
+  assert.throws(() => M.snapSrt(P(none), { below: 'abc', log: quiet }), /--below 要是/);
+});
+
+test('CLI：snap-srt --dry-run 印調整表、--help 有說明、build 不會呼叫它', () => {
+  const proj = project('syn-cli', { ranges: [[1, 3], [4.2, 6.5]], dur: 8, srt: [[0, 1.9, '一'], [3.2, 5.2, '二']] });
+  const run = (...a) => spawnSync(process.execPath, [path.join(TOOLS, 'media.mjs'), ...a], { encoding: 'utf8', cwd: root });
+  const r = run('snap-srt', '--project', proj, '--dry-run');
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /開口門檻/);
+  assert.match(r.stdout, /#1\s+0:00\.00 → 0:00\.9\d\s+\+0\.9\d/);
+  assert.match(r.stdout, /--dry-run：只印不寫/);
+  assert.match(run('--help').stdout, /snap-srt/);
+  for (const f of ['build.mjs', 'lib/plan.mjs', 'lib/main.mjs', 'lib/assemble.mjs']) assert.ok(!/snapSrt|snap-srt/.test(fs.readFileSync(path.join(TOOLS, f), 'utf8')), `${f} 不能呼叫 snap-srt`);
+});

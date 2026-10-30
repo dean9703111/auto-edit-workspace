@@ -1,0 +1,45 @@
+<!-- @style -->
+/* 全畫面對照：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128；內容區 1176×580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
+   雙欄：內容區左右 56（寬 1064）；兩欄各 531（含中線 2 的兩半）、文字各距中線 40；欄頭 72／900 → 24 → 4px 主色線；項 44／500，方點 16 → 20 → 文字。
+   欄頭加圖示（選填，線條圖示不加底圓、主色）：56 → 間距 16 → 文字；欄內寬 531－40＝491，6 字 432＋72＝504 會超 → 欄頭 max 5（360＋72＝432）。
+   欄內垂直置中：欄頭 128＋3 項 × 66＋列距 56 × 3 ＝ 494 ≤ 580；中線 2px 隨較高的欄拉長。 */
+#wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
+#wCard .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+#wBody { width: 1176px; height: 580px; display: flex; align-items: center; padding: 0 56px; }
+#fCmp { display: flex; align-items: stretch; width: 1064px; }
+.fCol { width: 531px; display: flex; flex-direction: column; gap: 56px; }
+.fCol:first-child { padding-right: 40px; }
+.fCol:last-child { padding-left: 40px; }
+.fHead { width: max-content; padding-bottom: 24px; border-bottom: 4px solid var(--sc-accent); white-space: nowrap; }
+.fHead--icon { display: flex; align-items: center; gap: 16px; }
+.fHIcon { flex: none; display: block; width: 56px; height: 56px; color: var(--sc-accent); }
+.fHIcon svg { display: block; width: 56px; height: 56px; }
+.fItem { display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+.fLine { flex: none; width: 2px; background: var(--sc-fs-line); opacity: 0.4; }
+<!-- @body -->
+<div id="wCard" class="sc-wcard">
+  <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>
+  <div id="wBody">
+    <div id="fCmp">
+      <div id="fColL" class="fCol">
+        {{#leftIcon}}<div class="fHead fHead--icon"><span class="fHIcon">{{{leftIcon}}}</span><span class="sc-t72 sc-w900 sc-optr">{{{leftHead}}}</span></div>{{/leftIcon}}{{^leftIcon}}<div class="fHead sc-t72 sc-w900">{{{leftHead}}}</div>{{/leftIcon}}
+        {{#left}}
+        <div class="fItem"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">{{text}}</span></div>
+        {{/left}}
+      </div>
+      <div class="fLine"></div>
+      <div id="fColR" class="fCol">
+        {{#rightIcon}}<div class="fHead fHead--icon"><span class="fHIcon">{{{rightIcon}}}</span><span class="sc-t72 sc-w900 sc-optr">{{{rightHead}}}</span></div>{{/rightIcon}}{{^rightIcon}}<div class="fHead sc-t72 sc-w900">{{{rightHead}}}</div>{{/rightIcon}}
+        {{#right}}
+        <div class="fItem"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">{{text}}</span></div>
+        {{/right}}
+      </div>
+    </div>
+  </div>
+</div>
+<!-- @timeline -->
+/* 左欄整欄 → 右欄整欄（各綁句號）P.rise；全畫面幕不在 HF 內淡出（離場由剪映端整段渐隐） */
+P.rise('#fColL', {{{leftAt}}});
+P.rise('#fColR', {{{rightAt}}});
+{{#leftIcon}}P.icon('#fColL .fHIcon', {{{leftAt}}} + P.BEAT);{{/leftIcon}}
+{{#rightIcon}}P.icon('#fColR .fHIcon', {{{rightAt}}} + P.BEAT);{{/rightIcon}}

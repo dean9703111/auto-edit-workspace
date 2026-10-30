@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13 標題條列｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg.jpg 後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 20; }
+  #pip { position: absolute; left: 1344px; top: 630px; width: 512px; height: 288px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -124px; top: -9px; width: 776px; height: 436px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：有 ../bg.jpg 就蓋在底紋上，沒有就只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-ch { background-image: url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg.jpg"), var(--sc-side-pattern); background-size: 1920px auto, 960px 1080px; background-position: 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-title-list #pv-gCard { left: 120px; bottom: 220px; padding-top: 0; }
+  #pv-title-list #pv-gCard .sc-lt__plate { top: 8px; }
+  #pv-title-list #pv-gCard .sc-lt__card { padding-top: 32px; }
+  #pv-title-list .tl-title { margin-bottom: 24px; }
+  #pv-title-list .tl-items { display: grid; }
+  #pv-title-list .tl-items .sc-icon { --d: 56px; --i: 32px; }
+  #pv-title-list .tl-items > .sc-row { grid-area: 1 / 1; justify-self: start; height: 56px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+    <div id="pv-title-list" class="fill">
+      <div id="pv-aWrap" class="fill">
+        <div id="pv-gCard" class="sc-lt">
+          <i class="sc-lt__plate"></i>
+          <div class="sc-lt__card">
+            <i class="sc-lt__dots"></i>
+            <div class="sc-lt__body">
+              <div class="tl-title sc-slant sc-slant--paper sc-lt__kw"><span id="pv-tTitle" class="sc-t64 sc-w900 sc-opt">三道關卡</span></div>
+              <div id="pv-items" class="tl-items">
+                <div id="pv-it1" class="sc-row"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="m3 17 2 2 4-4" /> <path class="stroke-draw" pathLength="1" d="m3 7 2 2 4-4" /> <path class="stroke-draw" pathLength="1" d="M13 6h8" /> <path class="stroke-draw" pathLength="1" d="M13 12h8" /> <path class="stroke-draw" pathLength="1" d="M13 18h8" /> </svg></span><span class="sc-t52 sc-w700 sc-opt"><span class="sc-kw">剪輯清單</span>：先確認 NG</span></div>
+                <div id="pv-it2" class="sc-row"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path class="stroke-draw" pathLength="1" d="M14 2v4a2 2 0 0 0 2 2h4" /> <path class="stroke-draw" pathLength="1" d="M10 9H8" /> <path class="stroke-draw" pathLength="1" d="M16 13H8" /> <path class="stroke-draw" pathLength="1" d="M16 17H8" /> </svg></span><span class="sc-t52 sc-w700 sc-opt"><span class="sc-kw">分鏡表</span>：先有腳本再動畫</span></div>
+                <div id="pv-it3" class="sc-row"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.64z" /> <path class="stroke-draw" pathLength="1" d="M12 17v4" /> <path class="stroke-draw" pathLength="1" d="M8 21h8" /> <rect class="stroke-draw" pathLength="1" x="2" y="3" width="20" height="14" rx="2" /> </svg></span><span class="sc-t52 sc-w700 sc-opt"><span class="sc-kw">Studio 預覽</span>：點一下就能改</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cg" id="cap"><span>過程中有三道關</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"title-list","duration":8,"cues":[{"sound":"pop","at":0.1},{"sound":"tick","at":2.55,"volume":1},{"sound":"tick","at":4.95,"volume":1}]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-title-list'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 8;
+    /* 外殼（底板＋主卡＋斜板＋網點）遮罩揭開 → 0.15 後標題字 maskUp、第 1 條 rise → 之後每條 P.axis 換（每條停 ≥ 1.5s）→ 段尾 0.4 淡出 */
+    const itemAt = [0.15, 2.55, 4.95];
+    P.reveal('#pv-gCard', 0);
+    P.maskUp('#pv-tTitle', 0 + P.BEAT);
+    P.rise('#pv-it1', itemAt[0]);
+    for (let i = 1; i < itemAt.length; i++) P.axis('#pv-it' + i, '#pv-it' + (i + 1), itemAt[i]);
+    P.icon('#pv-it1 .sc-icon', itemAt[0] + P.BEAT);
+    for (let i = 1; i < itemAt.length; i++) P.icon('#pv-it' + (i + 1) + ' .sc-icon', itemAt[i] + P.AXIS_LAG + P.BEAT);
+    P.out('#pv-gCard', D - P.OUT);
+
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<!--
+  x-before-after.html — 第二層 custom 範例：前後對比（同一個容器從「before」變形成「after」）
+
+  【適用的口播】
+    口播在講「同一件事，換個做法，時間／成本／數量差很多」：例「手動剪輯要 3 小時，用 AI 只要 20 分鐘」。
+    畫面邏輯：左上標籤換字（手動剪輯 → AI 剪輯）、圖示換掉並重新描線、數字從 3 小時換成 20 分鐘（都用 P.count 數上去）、
+    同一條量條縮短、卡片高度變形（P.morph）、最後蓋出「省下多少」。
+
+  【不要用在哪裡】
+    - 只是兩個選項並排比較、沒有「變」的過程：用 04b 全畫面對照（第一層）。
+    - 前後的差別不是數量（是做法的不同、步驟的多寡）：用 04c 流程。
+    - 一集已經有 2 段 custom：改回第一層（USAGE-reference R7.1）。
+    - 單位不同的數字硬比（3 小時 vs 20 分鐘）時，量條要用同一把尺（這裡統一換算成分鐘：180 與 20），不要各自拉滿。
+
+  【要改的地方】
+    1. 文字：#xba-lab1／#xba-lab2（左上標籤）、#xba-n1／#xba-n2 的單位（小時／分鐘）、三顆灰色小膠囊（逐句剪／反覆預覽／等渲染，≤ 5 字）、
+       「省」後面的單位。圖示：換成 kit/icons.json 的別的名稱（把 svg 原文貼進去）。
+    2. 數字與量條：P.count 的 to（3、20、160）、P.bar 的 to（20 ÷ 180 ＝ 0.111，改數字時一起算）。
+    3. 時間點：下面時間軸每一行的第二個參數（秒數，本段起點之後）。before 區（0.6–5.0）、after 區（5.2–7.9）。
+    4. D（本段長度，秒）：跑 build.mjs --check，把報告裡這段的「長度」填回 data-duration 與 const D；最後一個動作結束後至少再停 1.5 秒（P.HOLD_END）。
+
+  【時間軸怎麼對到字幕句】
+    本段時間軸 0 秒＝plan.json 這段的起點（--check 報告的「起點」）。
+    某句口播要觸發的時間 ＝ 該句字幕起點（work/rough.srt） − 本段起點。
+    例：本段起點 12.2 秒、「用 AI 剪只要 20 分鐘」那句起點 17.4 秒 → 變形、換標籤的時間是 17.4 − 12.2 ＝ 5.2。
+    把下面「5.2」附近的幾行（morph／swap／count／bar）一起平移同樣的秒數。
+
+  【版型】fullscreen：整段淡入淡出 0.5 秒由 build 處理，主內容右緣 1300，0.5 秒前不動。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-before-after 前後對比</title></head>
+<body>
+<template id="x-before-after-template">
+  <style>
+    #x-before-after { position: absolute; inset: 0; }
+    #x-before-after .fill { position: absolute; inset: 0; }
+    /* 卡：左 120、頂 150、寬 1180（右緣 1300）；before 高 620（底 770）→ after 高 480（底 630） */
+    #x-before-after #xba-card { position: absolute; left: 120px; top: 150px; width: 1180px; height: 620px; box-sizing: border-box; }
+    #x-before-after #xba-bar { position: relative; height: 128px; padding: 0; }
+    #x-before-after .xba-lab { position: absolute; left: 56px; top: 0; height: 128px; display: flex; align-items: center; white-space: nowrap; }
+    #x-before-after #xba-body { position: relative; height: 0; }
+    /* 數字列：高 144，圖示／數字／省下膠囊同一條中線 */
+    #x-before-after #xba-row { position: absolute; left: 56px; top: 40px; width: 1064px; height: 144px; display: flex; align-items: center; gap: 32px; }
+    #x-before-after .xba-stack { display: grid; align-items: center; }
+    #x-before-after .xba-stack > * { grid-area: 1 / 1; }
+    #x-before-after #xba-icos { width: 88px; height: 88px; }
+    #x-before-after #xba-nums { width: 380px; height: 144px; }
+    #x-before-after .xba-num { display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-before-after .xba-numv { display: block; text-align: right; }
+    #x-before-after #xba-n1v { min-width: 64px; }
+    #x-before-after #xba-n2v { min-width: 128px; }
+    #x-before-after #xba-save { margin-left: auto; display: flex; align-items: center; gap: 20px; height: 96px; padding: 0 36px 0 28px; border-radius: 12px;
+                                background: var(--sc-accent); color: var(--sc-on-accent); white-space: nowrap; }
+    #x-before-after #xba-save .xba-sic { display: block; width: 48px; height: 48px; color: var(--sc-on-accent); }
+    #x-before-after #xba-save .xba-sic svg { display: block; width: 48px; height: 48px; }
+    /* 量條：軌道（框）＋填充（scaleX，左緣為原點） */
+    #x-before-after #xba-track { position: absolute; left: 56px; top: 244px; width: 1064px; height: 48px; box-sizing: border-box;
+                                 border: 4px solid var(--sc-fs-node-line); border-radius: 10px; background: var(--sc-fs-node); }
+    #x-before-after #xba-fill { position: absolute; inset: 0; border-radius: 6px; background: var(--sc-accent); }
+    /* before 專屬的三顆灰膠囊：after 開始前淡出，卡片高度縮掉這一區 */
+    #x-before-after #xba-chips { position: absolute; left: 56px; top: 336px; display: flex; gap: 24px; }
+    #x-before-after .xba-chip { display: flex; align-items: center; gap: 16px; height: 96px; padding: 0 32px 0 28px; box-sizing: border-box;
+                                border: 3px solid var(--sc-fs-node-line); border-radius: 12px; background: var(--sc-fs-node); white-space: nowrap; }
+    #x-before-after .xba-chip .xba-cic { display: block; width: 40px; height: 40px; color: var(--sc-accent); }
+    #x-before-after .xba-chip .xba-cic svg { display: block; width: 40px; height: 40px; }
+  </style>
+  <div id="x-before-after" data-composition-id="x-before-after" data-width="1920" data-height="1080" data-duration="10">
+    <div class="sc-surface-fs fill"></div>
+    <div id="xba-card" class="sc-wcard">
+      <div id="xba-bar" class="sc-wcard__bar">
+        <div id="xba-lab1" class="xba-lab" data-layout-allow-overlap><span class="sc-opt">手動剪輯</span></div>
+        <div id="xba-lab2" class="xba-lab" data-layout-allow-overlap><span class="sc-opt">AI 剪輯</span></div>
+      </div>
+      <div id="xba-body">
+        <div id="xba-row">
+          <div id="xba-icos" class="xba-stack">
+            <span id="xba-ico1" class="sc-icon sc-icon--88" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /> </svg></span>
+            <span id="xba-ico2" class="sc-icon sc-icon--88" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span>
+          </div>
+          <div id="xba-nums" class="xba-stack">
+            <div id="xba-n1" class="xba-num" data-layout-allow-overlap><span id="xba-n1v" class="xba-numv sc-t112 sc-w900">0</span><span class="sc-t72 sc-w700 sc-opt">小時</span></div>
+            <div id="xba-n2" class="xba-num" data-layout-allow-overlap><span id="xba-n2v" class="xba-numv sc-t112 sc-w900 sc-kw">0</span><span class="sc-t72 sc-w700 sc-opt">分鐘</span></div>
+          </div>
+          <div id="xba-save">
+            <span class="xba-sic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /> <polyline points="16 17 22 17 22 11" /> </svg></span>
+            <span class="sc-t52 sc-w900 sc-opt">省 <span id="xba-savev">0</span> 分鐘</span>
+          </div>
+        </div>
+        <div id="xba-track"><div id="xba-fill"></div></div>
+        <div id="xba-chips">
+          <div class="xba-chip"><span class="xba-cic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span class="sc-t52 sc-w700 sc-opt">逐句剪</span></div>
+          <div class="xba-chip"><span class="xba-cic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /> </svg></span><span class="sc-t52 sc-w700 sc-opt">反覆預覽</span></div>
+          <div class="xba-chip"><span class="xba-cic"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M5 22h14" /> <path d="M5 2h14" /> <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" /> <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" /> </svg></span><span class="sc-t52 sc-w700 sc-opt">等渲染</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-before-after'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 10;
+
+    // ── before（手動剪輯 3 小時）──
+    P.rise('#xba-lab1, #xba-ico1, #xba-n1, #xba-track', 0.6, { stagger: 0.1 });
+    P.icon('#xba-ico1', 0.6 + P.BEAT);                                   // 時鐘描線
+    P.count('#xba-n1v', 1.0, { from: 0, to: 3, dur: 1.2 });               // 0 → 3 小時
+    P.bar('#xba-fill', 1.2, { from: 0, to: 1, dur: 1.4 });                // 180 分鐘＝整條
+    P.rise('.xba-chip', 2.8, { stagger: 0.15 });                          // 三個痛點（口播講到再出現）
+
+    // ── 變形：before → after（口播講到「用 AI」那句，換算成秒數放在 T）──
+    const T = 5.2;
+    P.out('.xba-chip', T - 0.2);                                          // 先退掉 before 專屬內容
+    P.morph('#xba-card', T, { height: 480 }, { from: { height: 620 } });  // 同一個容器縮短
+    P.swap('#xba-lab1', '#xba-lab2', T);                                  // 左上標籤換字
+    P.swap('#xba-ico1', '#xba-ico2', T);                                  // 圖示換成閃電
+    P.icon('#xba-ico2', T + 0.3);                                         // 重新描線
+    P.swap('#xba-n1', '#xba-n2', T + 0.1);                                // 3 小時 → 20 分鐘
+    P.count('#xba-n2v', T + 0.3, { from: 0, to: 20, dur: 1.0 });
+    P.bar('#xba-fill', T + 0.2, { from: 1, to: 0.111, dur: 0.9 });        // 20 ÷ 180 ＝ 0.111，同一把尺縮短
+
+    // ── 省下多少（最後一幕）──
+    P.rise('#xba-save', 6.7);
+    P.icon('#xba-save .xba-sic', 6.7 + P.BEAT);
+    P.count('#xba-savev', 6.9, { from: 0, to: 160, dur: 1.0 });
+    // 7.9 秒動作結束，停到 D＝10（≥ 1.5 秒）
+
+    P.end(D);
+    window.__timelines['x-before-after'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

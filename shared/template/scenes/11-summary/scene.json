@@ -1,0 +1,43 @@
+{
+  "key": "summary",
+  "no": 11,
+  "zh": "總結字卡",
+  "aliases": ["總結", "總結卡", "收尾"],
+  "family": "lower-third",
+  "when": "段落或章節收尾，用一兩行置中的總結句讓觀眾帶走",
+  "avoid": "中途的新資訊（改一般字卡或重點字卡），或總結超過兩行",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 6, "min": 4, "fixed": null },
+  "addons": ["chtag"],
+  "tone": true,
+  "slots": {
+    "tag":  { "label": "標籤", "type": "text", "default": "總結", "max": 4 },
+    "icon": { "label": "圖示", "type": "icon", "default": "circle-check" },
+    "text": { "label": "正文", "type": "rich", "maxLine": 18, "maxLines": 2, "required": true, "max": 36, "note": "最多兩行，用 // 斷行；有圖示（預設）時每行 ≤ 15，寫 \"icon\": \"none\" 才能每行到 18" }
+  },
+  "beats": {
+    "in": { "label": "進場", "default": "0" }
+  },
+  "sfx": {
+    "main": { "sound": "pop", "at": "in + 0.1" },
+    "extra": []
+  },
+  "lists": {},
+  "rules": [
+    {
+      "if": "v.icon && (text_len > 30 || text_lines.some(n => n > 15))",
+      "error": "有圖示時每行最多 15 字（88 的徽章＋24 間距占掉約 3 字寬）；縮文案，或寫 \"icon\": \"none\" 拿掉圖示（每行可到 18 字）"
+    }
+  ],
+  "sample": {
+    "title": "規則寫清楚，每集都一樣",
+    "sub": "模板和節奏固定之後，每集都照著做",
+    "duration": 6,
+    "slots": {
+      "text": "把剪輯習慣寫成文件//AI 每一集都照著做"
+    },
+    "beats": {}
+  }
+}

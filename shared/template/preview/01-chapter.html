@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 章節轉場｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg.jpg 後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1344px; top: 630px; width: 512px; height: 288px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -124px; top: -9px; width: 776px; height: 436px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：有 ../bg.jpg 就蓋在底紋上，沒有就只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-ch { background-image: url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg.jpg"), var(--sc-side-pattern); background-size: 1920px auto, 960px 1080px; background-position: 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-chapter #pv-chGroup { position: absolute; left: 0; right: 0; top: 510px; margin: 0 auto; display: flex; align-items: flex-start; gap: 48px; width: max-content; }
+  #pv-chapter #pv-chCol { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+  #pv-chapter #pv-chSub { margin-left: 40px; }
+  #pv-chapter #pv-chIcon { position: absolute; left: 0; top: -220px; width: 180px; height: 180px; color: var(--sc-accent); }
+  #pv-chapter #pv-chIcon svg { display: block; width: 180px; height: 180px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+    <div id="pv-chapter" class="fill">
+      <div class="sc-surface-ch fill"></div>
+      <div id="pv-aWrap" class="fill">
+        <div id="pv-chGroup" data-snap-width>
+          <span id="pv-chIcon" class="sc-icon-line"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle class="stroke-draw" pathLength="1" cx="6" cy="6" r="3" /> <path class="stroke-draw" pathLength="1" d="M8.12 8.12 12 12" /> <path class="stroke-draw" pathLength="1" d="M20 4 8.12 15.88" /> <circle class="stroke-draw" pathLength="1" cx="6" cy="18" r="3" /> <path class="stroke-draw" pathLength="1" d="M14.8 14.8 20 20" /> </svg></span>
+          <div id="pv-chNum" class="sc-chapnum">
+            <span class="sc-chapnum__label">CHAPTER</span>
+            <span class="sc-chapnum__line"></span>
+            <span class="sc-chapnum__num">01</span>
+          </div>
+          <div id="pv-chCol">
+            <div id="pv-chTitle" class="sc-slant sc-slant--white sc-t112 sc-w900" style="--h: 160px"><span class="sc-opt">先剪乾淨</span></div>
+            <div id="pv-chSub" class="sc-slant sc-slant--black sc-t60 sc-w700" style="--h: 100px"><span class="sc-opt">NG 交給 AI 找</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cg" id="cap"><span>接下來，我們先把影片剪乾淨</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"chapter","duration":2.5,"cues":[{"sound":"whoosh","at":-0.15}]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-chapter'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 2.5;
+    /* 背景＋號卡第一幀就在（剪映整幕淡入負責）；標題板、副標帶各淡入 0.5，板內的字同時間 maskUp（字從板內下緣浮出，板外框不動）；HF 不淡出 */
+    P.in('#pv-chTitle', 0.45);
+    P.maskUp('#pv-chTitle .sc-opt', 0.45);
+    P.icon('#pv-chIcon', 0.45 + P.BEAT, { dur: 0.9 });
+    P.in('#pv-chSub', 0.6);
+    P.maskUp('#pv-chSub .sc-opt', 0.6);
+    tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.to('#scene', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 2);
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

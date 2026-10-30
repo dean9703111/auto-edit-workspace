@@ -1,0 +1,113 @@
+<!doctype html>
+<!--
+  x-metaphor：比喻圖解（第二層 custom，layout: "fullscreen"）
+
+  【適用的口播】
+  作者的比喻三段式：「生活物件 → 技術概念 → 一句代價／限制」。
+  例：「Skill 就像工具附的使用說明書（左：說明書、右：Skill），AI 照著說明書做事（結論），所以說明書寫錯，AI 就照錯的做（限制）」。
+  左邊是觀眾熟悉的東西，右邊是這集要教的概念，下面兩句是結論與代價。
+
+  【不要用在哪裡】
+  - 只有「一句定義」沒有比喻：用 06 概念字卡。
+  - 比喻有兩個以上的生活物件、或要比較兩個概念：用 05 兩側或 04b 對照。
+  - 沒有「代價／限制」那一句：刪掉最下面的警示條，結論句往下移到垂直置中（見下面「要改的地方」）。
+  - 流程、數字、前後對比：用 x-process、x-numbers、x-before-after。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、左右兩個名稱（≤ 6 字）、結論句（≤ 10 字）、限制句（≤ 10 字）。
+     完整的句子留給字幕，畫面只放關鍵詞。
+  2. 圖示：#xmeta-icoL（生活物件）、#xmeta-icoR（技術概念）、#xmeta-icoW（警示）裡的 svg。
+     到 kit/icons.json 找名稱，把 svg 原文貼上（拿掉 class、width、height）。
+  3. 時間點：<script> 開頭的 T1–T5。
+     T1 左邊圖示描線、T2 箭頭描線、T3 右邊圖示描線（同時右邊框亮起）、T4 結論句浮出、T5 限制句進場。
+  4. D：整段長度。plan.json 的 to 往後延時，跑 `build.mjs --check` 把報告裡這段的「長度」填回 data-duration 與 const D。
+     D ≥ T5 + 2.5（淡出 0.5 ＋最後一幕停 ≥ 1.5 秒）。
+
+  【時間軸怎麼對到字幕句】
+  時間軸的秒數 ＝ 該句字幕起點 − 本段起點。本段起點看 `build.mjs --check` 報告這段的起點（或 plan.json 的 from 對到的字幕句起點）。
+  例：本段從句 #30（起點 100.0 秒）開始，講「就像說明書」的是 #30 → T1 取 2.0（卡片與兩個框進場要先走完，不要小於 2.0）；
+  講「所以說明書寫錯」的是 #33（起點 108.4 秒）→ T5 ＝ 108.4 − 100.0 ＝ 8.4。
+  圖示描線、箭頭描線各 0.7 秒，兩拍之間至少隔 1.2 秒，觀眾才看得完。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-metaphor 比喻圖解</title></head>
+<body>
+<template id="x-metaphor-template">
+  <style>
+    #x-metaphor { position: absolute; inset: 0; }
+    #x-metaphor .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；內容區 1176×580（卡底 862） */
+    #x-metaphor #xmeta-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-metaphor #xmeta-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-metaphor #xmeta-body { position: relative; width: 1176px; height: 580px; }
+    #x-metaphor #xmeta-arrow { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-metaphor .xmeta-line { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 左右兩個框：同高（220）、同中線（y 150）；圖示和名稱同一塊 */
+    #x-metaphor .xmeta-box { position: absolute; top: 40px; width: 360px; height: 220px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
+                             border-radius: 20px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-metaphor .xmeta-box .sc-icon { --d: 112px; --i: 64px; position: relative; }
+    #x-metaphor .xmeta-box .xmeta-name { position: relative; }
+    #x-metaphor #xmeta-boxL { left: 48px; }
+    #x-metaphor #xmeta-boxR { left: 768px; }
+    #x-metaphor .xmeta-on { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 20px; }
+    /* 結論句：整列置中，maskUp 從自己的下緣浮出 */
+    #x-metaphor #xmeta-sum { position: absolute; left: 0; top: 300px; width: 1176px; height: 88px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 限制句：警示條（警示色框＋深底），圖示和文字同一條；寬 max-content 置中靠 left/margin 寫死 */
+    #x-metaphor #xmeta-warn { position: absolute; left: 288px; top: 428px; width: 600px; height: 112px; box-sizing: border-box;
+                              border: 4px solid var(--sc-warn); border-radius: 20px; background: var(--sc-warn-dim); color: var(--sc-fs-ink);
+                              display: flex; align-items: center; justify-content: center; gap: 24px; white-space: nowrap; }
+    #x-metaphor #xmeta-warn .sc-icon { --d: 72px; --i: 40px; background: var(--sc-warn); color: var(--sc-fs-ink); }
+    #x-metaphor #xmeta-warn .xmeta-bad { color: var(--sc-warn-kw); }
+  </style>
+  <div id="x-metaphor" data-composition-id="x-metaphor" data-width="1920" data-height="1080" data-duration="13">
+    <div class="sc-surface-fs fill"></div>
+    <div id="xmeta-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">Skill 的比喻</span></div>
+      <div id="xmeta-body">
+        <svg id="xmeta-arrow" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- 箭頭：從左框右緣（x 408）到右框左緣（x 768），同一條中線 y 150 -->
+          <path id="xmeta-line" class="xmeta-line" d="M408 150 H768" />
+          <path id="xmeta-head" class="xmeta-line" d="M752 134 L768 150 L752 166" />
+        </svg>
+        <div id="xmeta-boxL" class="xmeta-box">
+          <span id="xmeta-icoL" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /></svg></span><span class="xmeta-name sc-t52 sc-w900 sc-opt">使用說明書</span></div>
+        <div id="xmeta-boxR" class="xmeta-box"><i id="xmeta-onR" class="xmeta-on"></i>
+          <span id="xmeta-icoR" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></svg></span><span class="xmeta-name sc-t52 sc-w900 sc-opt">Skill</span></div>
+        <div id="xmeta-sum" class="sc-t64 sc-w900">AI 照<span class="sc-kw">說明書</span>做事</div>
+        <div id="xmeta-warn">
+          <span id="xmeta-icoW" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg></span><span class="sc-t52 sc-w900 sc-opt"><span class="xmeta-bad">寫錯</span>了，照錯做</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-metaphor'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 13;                                           // 整段長度（秒）：跑 --check 後填報告裡的「長度」
+    const T1 = 2.0, T2 = 3.4, T3 = 4.8, T4 = 6.6, T5 = 9.0; // 左圖示／箭頭／右圖示／結論／限制 ＝ 該句字幕起點 − 本段起點
+
+    // 1. 卡片與兩個框先進場（先有節點再畫連接線）；0.5 秒前不動。限制條的位置已預留（opacity 0），不擠壓別的元素
+    P.reveal('#xmeta-card', 0.5);
+    P.rise('#xmeta-boxL, #xmeta-boxR', 0.8, { stagger: 0.15 });
+    // 2. 左邊生活物件的圖示描線 → 箭頭描線（線 0.7 秒、箭頭 0.2 秒）→ 右邊技術概念的圖示描線，右框同時亮起主色框
+    P.icon('#xmeta-icoL', T1);
+    P.stroke('#xmeta-line', T2);
+    P.stroke('#xmeta-head', T2 + P.STROKE, { dur: 0.2 });
+    P.in('#xmeta-onR', T3);
+    P.icon('#xmeta-icoR', T3);
+    // 3. 結論句從下緣浮出，最後是限制句（警示條）進場、警示圖示描線
+    P.maskUp('#xmeta-sum', T4);
+    P.rise('#xmeta-warn', T5);
+    P.icon('#xmeta-icoW', T5 + P.BEAT);
+
+    P.end(D);                                               // 最後一幕（限制句）停到 D（含 build 加的 0.5 秒淡出）
+    window.__timelines['x-metaphor'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

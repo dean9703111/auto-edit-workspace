@@ -1,0 +1,40 @@
+{
+  "key": "title-list",
+  "no": 13,
+  "zh": "標題條列",
+  "aliases": ["標題條列", "條列", "清單字卡"],
+  "family": "lower-third",
+  "when": "標題固定、2–4 個條目依口播逐條替換（同時只看一條）",
+  "avoid": "要同時看到全部條目（改全畫面清單或側邊欄），或條目超過四條",
+  "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "560", "data-vbal-ignore": "" },
+  "surface": null,
+  "bindsSrt": true,
+  "duration": { "default": 8, "min": 6, "fixed": null },
+  "addons": ["chtag"],
+  "tone": true,
+  "slots": {
+    "title": { "label": "標題", "type": "text", "required": true, "max": 10 },
+    "items": { "label": "條目", "type": "list", "required": true, "min": 2, "maxItems": 4, "item": { "text": { "label": "內容", "type": "rich", "required": true, "max": 16 }, "icon": { "label": "圖示", "type": "icon" } } }
+  },
+  "beats": {
+    "in": { "label": "進場", "default": "0" }
+  },
+  "sfx": {
+    "main": { "sound": "pop", "at": "in + 0.1" },
+    "extra": [ { "sound": "tick", "at": "items[1:]" } ]
+  },
+  "lists": {
+    "items": { "at": "{{in}} + 0.15 + {{i}} * 2.4" }
+  },
+  "rules": [],
+  "sample": {
+    "title": "三道關卡",
+    "sub": "過程中有三道關",
+    "duration": 8,
+    "slots": {
+      "title": "三道關卡",
+      "items": ["**剪輯清單**：先確認 NG ｜icon=list-checks", "**分鏡表**：先有腳本再動畫 ｜icon=file-text", "**Studio 預覽**：點一下就能改 ｜icon=monitor-play"]
+    },
+    "beats": {}
+  }
+}

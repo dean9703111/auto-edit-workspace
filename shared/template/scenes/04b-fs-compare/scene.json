@@ -1,0 +1,62 @@
+{
+  "key": "fs-compare",
+  "no": "04b",
+  "zh": "全畫面對照",
+  "aliases": ["對照", "雙欄對照", "A vs B", "以前現在"],
+  "family": "fullscreen",
+  "when": "A vs B、以前 vs 現在、有／沒有的對照，左右各 2–3 項",
+  "avoid": "不是兩邊對比的並列清單（改全畫面清單）、超過三項（拆兩段）",
+  "layout": { "data-layout": "全畫面", "data-pip": "br" },
+  "surface": "fs",
+  "bindsSrt": true,
+  "duration": { "default": 7, "min": 5, "fixed": null },
+  "addons": ["chtag"],
+  "slots": {
+    "title": { "label": "標題", "type": "text", "required": true, "max": 14 },
+    "leftHead": { "label": "左欄頭", "type": "rich", "required": true, "max": 6 },
+    "leftIcon": { "label": "左欄圖示", "type": "icon" },
+    "left": {
+      "label": "左項", "type": "list", "min": 2, "maxItems": 3, "required": true,
+      "item": { "text": { "type": "text", "max": 10 } }
+    },
+    "rightHead": { "label": "右欄頭", "type": "rich", "required": true, "max": 6 },
+    "rightIcon": { "label": "右欄圖示", "type": "icon" },
+    "right": {
+      "label": "右項", "type": "list", "min": 2, "maxItems": 3, "required": true,
+      "item": { "text": { "type": "text", "max": 10 } }
+    }
+  },
+  "beats": {
+    "leftAt":  { "label": "左欄進場", "default": "0.5" },
+    "rightAt": { "label": "右欄進場", "default": "2.5" }
+  },
+  "sfx": {
+    "main": { "sound": "whoosh", "at": "start - 0.15" },
+    "extra": [ { "sound": "tick", "at": "leftAt" }, { "sound": "tick", "at": "rightAt" } ]
+  },
+  "lists": {
+    "left":  { "at": "{{leftAt}}" },
+    "right": { "at": "{{rightAt}}" }
+  },
+  "rules": [
+    {
+      "if": "(v.leftIcon && leftHead_len > 5) || (v.rightIcon && rightHead_len > 5)",
+      "error": "欄頭有圖示時最多 5 字（56 的圖示＋16 間距，欄內寬 491）；縮文案或拿掉圖示"
+    }
+  ],
+  "sample": {
+    "title": "一鍵剪輯 vs 照規則剪",
+    "sub": "一鍵剪出來的，常常不是我要的",
+    "duration": 7,
+    "slots": {
+      "title": "一鍵剪輯 vs 照規則剪",
+      "leftHead": "一鍵剪輯",
+      "leftIcon": "wand-sparkles",
+      "left": ["字卡位置亂放", "音效塞太多"],
+      "rightHead": "**照規則剪**",
+      "rightIcon": "list-checks",
+      "right": ["對齊那一句字幕", "一張卡一個音效"]
+    },
+    "beats": {}
+  }
+}

@@ -1,0 +1,8 @@
+/* 字幕樣式（規格：shared/style.md「字幕」）。build.mjs 產生 compositions/captions.html 時套用。
+   每則字幕一個 <div class="cg" id="cg-<n>"><span>文字</span></div>，同一時間只顯示一則（開關由時間軸 tl.set 控制）。
+   字型用 var(--cap-font)（定義在 fonts.css：Google Sans Flex 排英數、Noto Sans TC 排中文）。
+   不寫字面字型名：lint 只認識有 @font-face 的字型名或 var()，寫字面值會報 error，整段 check 就跑不起來。 */
+.cg { position: absolute; left: 0; right: 0; bottom: 60px; display: flex; justify-content: center; pointer-events: none; }
+.cg > span { font-family: var(--cap-font); font-weight: 500; font-size: 54px; line-height: 64px; letter-spacing: 1px;
+             color: #FFFFFF; background: rgba(0, 0, 0, 0.7); border-radius: 0; padding: 8px 24px; white-space: nowrap; }
+/* 字幕框 940–1020：在畫面底部 160px 字幕區內；子母畫面外框底約 927，和字幕框不重疊 */

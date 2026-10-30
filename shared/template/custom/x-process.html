@@ -1,0 +1,114 @@
+<!doctype html>
+<!--
+  x-process：流程逐步亮起＋曲線連接線（第二層 custom，layout: "fullscreen"）
+
+  【適用的口播】
+  在講一條「有先後順序的過程」：3–4 站、每站一句話，例如「先錄影，接著轉成逐字稿，再列出剪輯清單，最後才初剪」。
+  站和站不在同一條直線上（上下錯落），連接線是曲線；口播講到哪一站，那一站就亮起來。
+
+  【不要用在哪裡】
+  - 站只有 3 個以上、同一直線、站名都很短，而且每站有字幕句可以對：先用 04c 全畫面流程（fs-flow），不寫第二層。
+  - 超過 4 站：拆成兩段，或改用 04a 清單。
+  - 在講「兩個東西比較」（用 04b）、「數字變化」（x-numbers）、「前後差異」（x-before-after）。
+  - 流程圖的站不打勾：走過的站只換框色；要打勾的是總結／回顧（用 P.check）。
+
+  【要改的地方】
+  1. 文字：標題列（#xproc-card 裡的 .sc-wcard__bar，≤ 10 字）、四個站名（≤ 5 字；字級 52，站寬 248，放不下就縮文案）。
+  2. 圖示：四個 .sc-icon 裡的 svg。到 kit/icons.json 找名稱，把 svg 原文貼上（拿掉 class、width、height）。同一站全集用同一個圖示。
+  3. 時間點：<script> 開頭的 T1–T4（每一站亮起的秒數，從「本段起點」算起）。連接線會自動在亮起前 0.9 秒開始描。
+  4. D：整段長度。plan.json 的 to 往後延時，跑 `build.mjs --check` 把報告裡這段的「長度」填回 data-duration 與 const D。
+     最後一站亮起後至少要留 2 秒（淡出 0.5 ＋最後一幕停 ≥ 1.5 秒）：D ≥ T4 + 2.5。
+  站數不是 4：刪掉第 4 站與 c3（或加一站就照 c3 的寫法補一段曲線），其餘不用動。
+
+  【時間軸怎麼對到字幕句】
+  時間軸的秒數 ＝ 該句字幕起點 − 本段起點。本段起點看 `build.mjs --check` 報告這段的起點（或 plan.json 的 from 對到的字幕句起點）。
+  例：本段從句 #17（起點 40.0 秒）開始；講「轉成逐字稿」的是句 #18（起點 43.2 秒）→ T2 ＝ 43.2 − 40.0 ＝ 3.2。
+  本檔預設 T1=2.6、T2=5.6、T3=8.6、T4=11.6，是「每站約 3 秒、前面留 2.6 秒讓卡片與圖示進場」的樣子。
+  第一站若在句子開頭就要亮：卡片進場（0.5–1.6 秒）與圖示描線仍要先走完，T1 不要小於 2.0。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-process 流程逐步亮起</title></head>
+<body>
+<template id="x-process-template">
+  <style>
+    #x-process { position: absolute; inset: 0; }
+    #x-process .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-process #xproc-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-process #xproc-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-process #xproc-body { position: relative; width: 1176px; height: 580px; }
+    /* 連接線：整個內容區大小的 svg，疊在站的「下面」（線端被站蓋住，視覺上剛好貼齊邊框） */
+    #x-process #xproc-lines { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-process .xproc-line { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 站：寬 248、高 208，上排頂 40、下排頂 332（上下錯落）；圖示和站名同一塊 */
+    #x-process .xproc-node { position: absolute; width: 248px; height: 208px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
+                             border-radius: 20px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-process .xproc-node .sc-icon { --d: 96px; --i: 56px; position: relative; }
+    #x-process .xproc-node .xproc-name { position: relative; }
+    #x-process #xproc-n1 { left: 24px;  top: 40px; }
+    #x-process #xproc-n2 { left: 316px; top: 332px; }
+    #x-process #xproc-n3 { left: 608px; top: 40px; }
+    #x-process #xproc-n4 { left: 900px; top: 332px; }
+    /* 亮起：now＝目前這一站的底色（下一站亮起時淡掉）；on＝主色框（亮起後保留，代表「走過」） */
+    #x-process .xproc-now { position: absolute; inset: 0; border-radius: 16px; background: var(--sc-fs-tint); }
+    #x-process .xproc-on  { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 20px; }
+  </style>
+  <div id="x-process" data-composition-id="x-process" data-width="1920" data-height="1080" data-duration="14.5">
+    <div class="sc-surface-fs fill"></div>
+    <div id="xproc-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">從錄影到初剪</span></div>
+      <div id="xproc-body">
+        <svg id="xproc-lines" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- 三段曲線：起點貼在上一站的邊框，終點貼在下一站的邊框；箭頭是另一條短折線 -->
+          <path id="xproc-c1" class="xproc-line" d="M148 248 C148 356 200 436 316 436" />
+          <path id="xproc-h1" class="xproc-line" d="M302 422 L316 436 L302 450" />
+          <path id="xproc-c2" class="xproc-line" d="M440 332 C440 224 492 144 608 144" />
+          <path id="xproc-h2" class="xproc-line" d="M594 130 L608 144 L594 158" />
+          <path id="xproc-c3" class="xproc-line" d="M732 248 C732 356 784 436 900 436" />
+          <path id="xproc-h3" class="xproc-line" d="M886 422 L900 436 L886 450" />
+        </svg>
+        <div id="xproc-n1" class="xproc-node"><i id="xproc-now1" class="xproc-now"></i><i id="xproc-on1" class="xproc-on"></i>
+          <span id="xproc-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">錄影</span></div>
+        <div id="xproc-n2" class="xproc-node"><i id="xproc-now2" class="xproc-now"></i><i id="xproc-on2" class="xproc-on"></i>
+          <span id="xproc-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">逐字稿</span></div>
+        <div id="xproc-n3" class="xproc-node"><i id="xproc-now3" class="xproc-now"></i><i id="xproc-on3" class="xproc-on"></i>
+          <span id="xproc-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">剪輯清單</span></div>
+        <div id="xproc-n4" class="xproc-node"><i id="xproc-now4" class="xproc-now"></i><i id="xproc-on4" class="xproc-on"></i>
+          <span id="xproc-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /><path d="M8.12 8.12 12 12" /><path d="M20 4 8.12 15.88" /><circle cx="6" cy="18" r="3" /><path d="M14.8 14.8 20 20" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">初剪</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-process'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 14.5;                                    // 整段長度（秒）：跑 --check 後填報告裡的「長度」
+    const T1 = 2.6, T2 = 5.6, T3 = 8.6, T4 = 11.6;   // 每一站亮起的時間 ＝ 該句字幕起點 − 本段起點
+
+    // 1. 卡片先進場，再依序放出四個站（站先全部在，之後才畫連接線）；0.5 秒前不動
+    P.reveal('#xproc-card', 0.5);
+    P.rise('#xproc-n1, #xproc-n2, #xproc-n3, #xproc-n4', 0.8, { stagger: 0.12 });
+    // 2. 站進場後 0.15 秒，圖示的線描出來（四個依序錯開 0.12）
+    P.icon('#xproc-ico1, #xproc-ico2, #xproc-ico3, #xproc-ico4', 1.3, { stagger: 0.12 });
+
+    // 3. 講到哪一站，那一站亮起：疊主色框＋底色淡入；下一站亮起時，上一站的底色淡掉、框保留（走過只換框色，不打勾）
+    P.in('#xproc-on1, #xproc-now1', T1);
+    // 連接線在下一站亮起前 0.9 秒開始描（線 0.7 秒，箭頭 0.2 秒），線到了站才亮
+    P.stroke('#xproc-c1', T2 - 0.9);  P.stroke('#xproc-h1', T2 - 0.2, { dur: 0.2 });
+    P.out('#xproc-now1', T2);  P.in('#xproc-on2, #xproc-now2', T2);
+    P.stroke('#xproc-c2', T3 - 0.9);  P.stroke('#xproc-h2', T3 - 0.2, { dur: 0.2 });
+    P.out('#xproc-now2', T3);  P.in('#xproc-on3, #xproc-now3', T3);
+    P.stroke('#xproc-c3', T4 - 0.9);  P.stroke('#xproc-h3', T4 - 0.2, { dur: 0.2 });
+    P.out('#xproc-now3', T4);  P.in('#xproc-on4, #xproc-now4', T4);
+
+    P.end(D);                                        // 最後一站亮起後停到 D（含 build 加的 0.5 秒淡出）
+    window.__timelines['x-process'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

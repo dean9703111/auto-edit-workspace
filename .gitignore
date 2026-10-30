@@ -1,5 +1,8 @@
-work/
-output/
+# 專案：只保留給大家練習的範例專案；其他專案（自己的影片、測試素材）都不進版控，避免檔案太大
+projects/*
+!projects/範例/
+projects/範例/work/
+projects/範例/成片/
 node_modules/
 *.log
 .DS_Store

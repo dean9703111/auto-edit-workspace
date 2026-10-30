@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>剪輯台</title>
+<link rel="icon" href="/editor/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/kit/fonts.css">
+<link rel="stylesheet" href="/kit/brand.css">
+<link rel="stylesheet" href="/editor/editor.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brandmark">
+    <span class="logo" aria-hidden="true">剪</span>
+    <div class="titles">
+      <h1>剪輯台</h1>
+      <div class="sub" id="projName">載入中…</div>
+    </div>
+  </div>
+  <div class="save-state" id="saveState" data-state="loading" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
+  <div class="actions">
+    <button id="btnUndo" class="icon ghost" data-tip="復原（⌘／Ctrl＋Z）" aria-label="復原" disabled>↶</button>
+    <button id="btnRedo" class="icon ghost" data-tip="重做（⌘／Ctrl＋Shift＋Z）" aria-label="重做" disabled>↷</button>
+    <span class="sep"></span>
+    <button id="btnSave" class="primary" data-tip="寫進 plan.json 和字幕檔（⌘／Ctrl＋S）" disabled>儲存</button>
+    <button id="btnBuild" data-tip="跑 build.mjs，更新成片預覽（沒存的會先存）">重新產生</button>
+    <button id="btnHelp" class="icon ghost" data-tip="操作說明與快捷鍵（?）" aria-label="說明">?</button>
+  </div>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<main class="workspace">
+  <section class="viewer">
+    <div class="viewer-bar">
+      <div class="seg" role="tablist" aria-label="預覽模式">
+        <button data-mode="sim" class="on" role="tab" data-tip="播粗剪影片＋你現在的設定（還沒存也看得到）">即時模擬</button>
+        <button data-mode="player" role="tab">成片預覽</button>
+      </div>
+      <div class="mode-note" id="modeNote"></div>
+      <div class="view-toggles">
+        <button id="btnSafe" class="toggle small" data-tip="顯示安全框：重要文字放在框內，手機和電視都不會被切到" aria-pressed="false">安全框</button>
+        <button id="btnSpeaker" class="toggle small" data-tip="顯示講者框（plan.json 的 speakerBox）：卡片不要擋到這裡" aria-pressed="false">講者框</button>
+        <button id="btnFull" class="small icon" data-tip="全螢幕預覽（F）" aria-label="全螢幕">⛶</button>
+      </div>
+    </div>
+    <div class="stage-row">
+      <div class="stage" id="stage">
+        <div class="stage-box" id="stageBox">
+          <div class="sim" id="sim">
+            <video id="simVideo" playsinline preload="auto"></video>
+            <div id="simMedia" class="sim-media"></div>
+            <canvas id="simPip" class="sim-pip" width="512" height="288"></canvas>
+            <div id="simCaption" class="sim-caption"></div>
+            <div id="simBlack" class="sim-black"></div>
+            <div id="simCutBadge" class="cut-badge" hidden>✂ 這段會被剪掉（播放時會跳過）</div>
+          </div>
+          <div class="player-host" id="playerHost" hidden></div>
+          <div class="ov-safe" id="ovSafe" hidden><div class="act"></div><div class="title"></div></div>
+          <div class="ov-speaker" id="ovSpeaker" hidden><span>講者框</span></div>
+          <div class="mode-badge" id="modeBadge">即時模擬</div>
+          <div class="stage-empty" id="stageEmpty" hidden></div>
+        </div>
+      </div>
+      <div class="meter" id="meter" data-tip="音量表（播放時）：超過 0 dB 會爆音，亮紅燈">
+        <div class="clip" id="meterClip">爆</div>
+        <canvas id="meterCanvas" width="28" height="200"></canvas>
+      </div>
+    </div>
+    <div class="transport">
+      <div class="tp-btns">
+        <button id="btnHome" class="icon ghost" data-tip="跳到開頭（Home）" aria-label="跳到開頭">⏮</button>
+        <button id="btnJ" class="icon ghost" data-tip="倒退播放（J，再按加速）" aria-label="倒退播放">◀◀</button>
+        <button id="btnPrevFrame" class="icon ghost" data-tip="退 1 格（←；Shift＋← 退 1 秒）" aria-label="退一格">◀︎|</button>
+        <button id="btnPlay" class="play" data-tip="播放／暫停（空白鍵、K）" aria-label="播放">▶</button>
+        <button id="btnNextFrame" class="icon ghost" data-tip="進 1 格（→；Shift＋→ 進 1 秒）" aria-label="進一格">|▶︎</button>
+        <button id="btnL" class="icon ghost" data-tip="往前播放（L，再按加速）" aria-label="快轉">▶▶</button>
+        <button id="btnEnd" class="icon ghost" data-tip="跳到結尾（End）" aria-label="跳到結尾">⏭</button>
+      </div>
+      <div class="tc-wrap">
+        <button id="tc" class="tc" data-tip="目前位置（時:分:秒:格）。點一下輸入時間跳過去">00:00:00:00</button>
+        <input id="tcInput" class="tc tc-input" hidden aria-label="跳到時間" placeholder="00:00:12:00 或 1:23">
+        <span class="tc-dur">／<span id="tcDur">00:00:00:00</span></span>
+        <span class="tc-out" data-tip="扣掉剪掉的範圍之後，在成片裡的位置與總長">成片 <b id="tcOut">00:00:00:00</b>／<span id="tcOutDur">—</span></span>
+        <span class="rate" id="rate" hidden></span>
+      </div>
+      <div class="inout">
+        <button id="btnIn" class="small" data-tip="把播放頭位置設成入點（I）"><kbd>I</kbd> 入點</button>
+        <button id="btnOut" class="small" data-tip="把播放頭位置設成出點（O）"><kbd>O</kbd> 出點</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="inspector" id="inspector" aria-label="屬性">
+    <header class="insp-head">
+      <div class="insp-kind" id="inspKind">整支影片</div>
+      <h2 id="inspTitle">整支影片的設定</h2>
+    </header>
+    <div class="insp-body" id="inspBody"></div>
+  </aside>
+</main>
+
+<section class="timeline-wrap">
+  <div class="tl-toolbar">
+    <div class="tool-group" role="group" aria-label="工具">
+      <button id="toolSelect" class="tool on" data-tip="選取（V）：點時間軸上的東西，右邊顯示它的屬性">⬚ 選取 <kbd>V</kbd></button>
+      <button id="toolSplit" class="tool" data-tip="分割（B）：在播放頭把主軌切開；選著字幕時＝分割字幕">✂ 分割 <kbd>B</kbd></button>
+      <button id="btnSnap" class="tool toggle on" aria-pressed="true" data-tip="吸附（S）：拖曳時對齊播放頭、字幕、剪接點、段落邊緣；按住 Alt 暫時不吸">🧲 吸附 <kbd>S</kbd></button>
+    </div>
+    <div class="tool-group" role="group" aria-label="字幕">
+      <span class="tg-label">字幕</span>
+      <button id="capAdd" class="small" data-tip="在空檔新增一句字幕">＋ 新增</button>
+      <button id="capSplit" class="small" data-tip="分割字幕（B）">分割</button>
+      <button id="capMerge" class="small" data-tip="和下一句合併">合併</button>
+      <button id="capDel" class="small" data-tip="刪除這句字幕（Delete）">刪除</button>
+      <button id="capFind" class="small" data-tip="尋找與取代（⌘／Ctrl＋F）：一次修正整集重複的錯字">尋找與取代</button>
+    </div>
+    <div class="zoom">
+      <button id="zoomOut" class="icon ghost small" data-tip="縮小（−）" aria-label="縮小">−</button>
+      <input type="range" id="zoom" min="0" max="1000" value="0" aria-label="時間軸縮放">
+      <button id="zoomIn" class="icon ghost small" data-tip="放大（＋）" aria-label="放大">＋</button>
+      <button id="zoomFit" class="ghost small" data-tip="整支影片放進畫面（Shift＋Z）">符合視窗</button>
+      <label class="follow" data-tip="播放時時間軸跟著播放頭捲動"><input type="checkbox" id="follow" checked> 跟隨</label>
+    </div>
+  </div>
+  <div class="tl-body">
+    <div class="tl-heads" id="tlHeads"></div>
+    <div class="tl" id="tl">
+      <canvas id="tlCanvas"></canvas>
+      <div id="tlTip" class="tl-tip" hidden></div>
+      <input id="capEditor" class="cap-editor" hidden aria-label="編輯字幕">
+    </div>
+  </div>
+</section>
+
+<footer class="statusbar">
+  <button id="stIssues" class="st-issues" data-tip="檢查結果：點開看清單，點任一則跳到那裡"><span class="e">✖ 0</span><span class="w">⚠ 0</span></button>
+  <span id="stHint" class="st-hint"></span>
+  <span id="stSel" class="st-item"></span>
+  <span id="stOut" class="st-item"></span>
+  <span id="stZoom" class="st-item"></span>
+</footer>
+
+<div id="issuesPop" class="popover issues-pop" hidden>
+  <div class="pop-head"><b>檢查結果</b><button id="btnRecheck" class="ghost small">重新檢查</button></div>
+  <div id="checkSummary" class="check-summary"></div>
+  <ul id="checkList" class="check-list"></ul>
+</div>
+
+<dialog id="dlgConflict" class="dlg">
+  <h2>檔案被改過了</h2>
+  <p id="conflictMsg">在你打開剪輯台之後，plan.json 被改過（通常是 AI 剛改了它）。為了不蓋掉那些修改，這次沒有存。</p>
+  <div class="dlg-actions col">
+    <button id="conflictKeep" class="primary">重新載入，保留我剛剛的調整（之後再按一次儲存）</button>
+    <button id="conflictDrop">重新載入，放棄我剛剛的調整</button>
+    <button id="conflictCancel" class="ghost">先不要</button>
+  </div>
+</dialog>
+
+<dialog id="dlgDelete" class="dlg">
+  <h2 id="delTitle">刪除字幕</h2>
+  <p id="delMsg"></p>
+  <ul id="delRefs" class="ref-list"></ul>
+  <div class="dlg-actions col">
+    <button id="delPrev" class="primary">改綁到前一句，再刪除</button>
+    <button id="delNext">改綁到後一句，再刪除</button>
+    <button id="delCancel" class="ghost">取消</button>
+  </div>
+</dialog>
+
+<dialog id="dlgFind" class="dlg">
+  <h2>尋找與取代（字幕）</h2>
+  <div class="find-row"><label for="findText">尋找</label><input id="findText" placeholder="例如：鼎源"></div>
+  <div class="find-row"><label for="replText">取代成</label><input id="replText" placeholder="例如：鼎淵"></div>
+  <p class="mute" id="findCount">輸入要找的字</p>
+  <ul id="findList" class="find-list"></ul>
+  <div class="dlg-actions">
+    <button id="findClose" class="ghost">關閉</button>
+    <button id="findAll" class="primary" disabled>全部取代</button>
+  </div>
+</dialog>
+
+<dialog id="dlgLog" class="dlg wide">
+  <h2 id="logTitle" tabindex="-1" autofocus>重新產生的訊息</h2>
+  <p id="logSub" class="mute"></p>
+  <ul id="logIssues" class="check-list"></ul>
+  <details id="logWrap"><summary>完整訊息（log）</summary><pre id="logText"></pre></details>
+  <div class="dlg-actions"><button id="logClose" class="primary">關閉</button></div>
+</dialog>
+
+<dialog id="dlgHelp" class="dlg wide">
+  <h2 tabindex="-1" autofocus>剪輯台怎麼用</h2>
+  <div class="help-grid">
+    <section>
+      <h3>基本流程</h3>
+      <ol class="plain">
+        <li>點時間軸上的東西（字幕、卡片、插入素材、剪接點、音效），右邊「屬性」就會顯示能改的地方；什麼都沒選＝整支影片的設定。</li>
+        <li>改好按「儲存」寫進 <code>plan.json</code>（字幕寫進 <code>work/rough.srt</code>）。</li>
+        <li>改了卡片文字，存檔後會自動重新產生，完成後切到「成片預覽」停在那一段。</li>
+        <li>調好回到 AI 那邊說「調好了」。</li>
+      </ol>
+      <h3>時間軸（由上到下＝畫面疊放順序）</h3>
+      <ul class="plain">
+        <li><b>動畫</b>：資訊卡（藍）、字卡動態（紫）。時間和版型請 AI 改。</li>
+        <li><b>插入素材</b>：拖左右邊緣裁剪、拖中間移動；黃線是原聲音量，上下拖。</li>
+        <li><b>主軌畫面</b>：拖頭尾的白色把手直接裁掉片頭片尾；按 B 在播放頭切開，點選切出的那段按 Delete 刪掉。菱形＝剪接點的轉場。</li>
+        <li><b>字幕</b>：雙擊改字、拖邊緣改時間；空檔夠大（≥ 0.5 秒）才能新增。</li>
+        <li><b>人聲</b>：黃線是音量，上下拖整條；先拖曳選一段範圍，再拖範圍裡的黃線＝只調那一段。</li>
+        <li><b>音效</b>：點一下看屬性，上下拖調音量，雙擊或 Delete 靜音。</li>
+      </ul>
+      <h3>想看卡片細節？</h3>
+      <p>要逐格看資訊卡、或在畫面上點選某張卡請 AI 改，請 AI 開 HyperFrames Studio：</p>
+      <pre id="studioCmd"></pre>
+    </section>
+    <section>
+      <h3>快捷鍵</h3>
+      <table class="keys">
+        <tr><td><kbd>空白鍵</kbd>／<kbd>K</kbd></td><td>播放／暫停</td></tr>
+        <tr><td><kbd>J</kbd> <kbd>L</kbd></td><td>倒退／往前播放（再按加速）</td></tr>
+        <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>退／進 1 格（加 <kbd>Shift</kbd>＝1 秒）</td></tr>
+        <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>上一個／下一個剪接點</td></tr>
+        <tr><td><kbd>Home</kbd> <kbd>End</kbd></td><td>跳到開頭／結尾</td></tr>
+        <tr><td><kbd>I</kbd> <kbd>O</kbd></td><td>設入點／出點（選範圍）</td></tr>
+        <tr><td><kbd>V</kbd></td><td>選取工具</td></tr>
+        <tr><td><kbd>B</kbd>／<kbd>⌘</kbd>／<kbd>Ctrl</kbd>＋<kbd>B</kbd></td><td>分割：在播放頭切開主軌；選著字幕時＝分割字幕</td></tr>
+        <tr><td><kbd>Delete</kbd></td><td>刪除選到的東西（主軌片段／範圍＝剪掉；剪掉的範圍＝恢復；字幕＝刪除；音效＝靜音）</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>編輯選到的字幕</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>取消選取</td></tr>
+        <tr><td><kbd>S</kbd></td><td>吸附開／關（拖曳時按住 <kbd>Alt</kbd> 暫時不吸）</td></tr>
+        <tr><td><kbd>＋</kbd> <kbd>−</kbd></td><td>時間軸放大／縮小</td></tr>
+        <tr><td><kbd>Shift</kbd>＋<kbd>Z</kbd></td><td>整支放進視窗</td></tr>
+        <tr><td><kbd>F</kbd></td><td>全螢幕預覽</td></tr>
+        <tr><td><kbd>⌘</kbd>／<kbd>Ctrl</kbd>＋<kbd>F</kbd></td><td>尋找與取代字幕</td></tr>
+        <tr><td><kbd>⌘</kbd>／<kbd>Ctrl</kbd>＋<kbd>S</kbd></td><td>儲存</td></tr>
+        <tr><td><kbd>⌘</kbd>／<kbd>Ctrl</kbd>＋<kbd>Z</kbd></td><td>復原（加 <kbd>Shift</kbd>＝重做）</td></tr>
+        <tr><td><kbd>?</kbd></td><td>這個說明</td></tr>
+        <tr><td>滾輪／<kbd>⌘</kbd>／<kbd>Ctrl</kbd>＋滾輪</td><td>時間軸左右捲動／縮放</td></tr>
+      </table>
+    </section>
+  </div>
+  <div class="dlg-actions"><button id="helpClose" class="primary">知道了</button></div>
+</dialog>
+
+<div id="coach" class="coach" hidden>
+  <div class="coach-card" role="dialog" aria-labelledby="coachTitle">
+    <h2 id="coachTitle">第一次用剪輯台？</h2>
+    <ol>
+      <li><b>點</b>時間軸上的字幕、卡片、插入素材，右邊會出現能改的地方。</li>
+      <li><b>拖</b>插入素材的左右邊緣就能裁剪；主軌頭尾的白色把手拖進來＝裁掉片頭片尾。</li>
+      <li>按 <kbd>B</kbd> 在播放頭切開，選切出來的那段按 <kbd>Delete</kbd> 就剪掉。</li>
+      <li>雙擊字幕直接改字；改完記得按<b>儲存</b>（<kbd>⌘</kbd>／<kbd>Ctrl</kbd>＋<kbd>S</kbd>）。</li>
+    </ol>
+    <p class="mute">隨時按 <kbd>?</kbd> 看全部快捷鍵。</p>
+    <div class="dlg-actions"><button id="coachClose" class="primary">開始剪輯</button></div>
+  </div>
+</div>
+
+<div id="tipBox" class="tipbox" hidden></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<script type="module" src="/editor/app.js"></script>
+</body>
+</html>

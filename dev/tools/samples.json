@@ -1,0 +1,125 @@
+{
+  "chapter": {
+    "title": "先剪乾淨",
+    "sub": "接下來，我們先把影片剪乾淨",
+    "slots": { "num": "01", "title": "先剪乾淨", "sub": "NG 交給 AI 找", "icon": "scissors" }
+  },
+  "chapter-tag": {
+    "title": "先剪乾淨",
+    "sub": "要先知道每一句話是在第幾秒講的",
+    "slots": { "num": "01", "name": "先剪乾淨" }
+  },
+  "side-panel": {
+    "title": "本集流程",
+    "sub": "所以我讓 AI 照我的規則剪",
+    "slots": {
+      "eyebrow": "本集流程",
+      "title": "AI 照規則剪//我只負責**把關**",
+      "items": ["先剪乾淨：找出 NG ｜icon=scissors", "再剪好看：字幕與字卡 ｜icon=sparkles", "封裝成 **Skill** 重跑 ｜icon=package"]
+    }
+  },
+  "fs-list": {
+    "title": "AI 找得出的 NG",
+    "sub": "錄這段口播的時候，我犯了不少錯",
+    "slots": {
+      "title": "AI 找得出的 NG",
+      "items": ["講錯重來：只留最後一次 ｜icon=repeat", "卡詞：講到一半停下 ｜icon=pause", "長停頓：交給 **auto-editor** ｜icon=timer"]
+    }
+  },
+  "fs-compare": {
+    "title": "一鍵剪輯 vs 照規則剪",
+    "sub": "一鍵剪出來的，常常不是我要的",
+    "slots": {
+      "title": "一鍵剪輯 vs 照規則剪",
+      "leftHead": "一鍵剪輯",
+      "leftIcon": "wand-sparkles",
+      "left": ["字卡位置亂放", "音效塞太多"],
+      "rightHead": "**照規則剪**",
+      "rightIcon": "list-checks",
+      "right": ["對齊那一句字幕", "一張卡一個音效"]
+    }
+  },
+  "fs-flow": {
+    "title": "從原始口播到成片",
+    "sub": "先轉逐字稿，AI 再找出 NG",
+    "slots": {
+      "title": "從原始口播到成片",
+      "nodes": ["轉逐字稿 ｜icon=file-text", "列剪輯清單 ｜icon=list-checks", "初剪 ｜icon=scissors", "包裝成片 ｜icon=clapperboard"],
+      "current": "2"
+    }
+  },
+  "fs-table": {
+    "title": "兩個工具怎麼分工",
+    "sub": "需要判斷的工作，才交給 AI",
+    "slots": {
+      "title": "兩個工具怎麼分工",
+      "head": ["工具 / 負責"],
+      "rows": ["HyperFrames / 字幕與動畫", "auto-editor / 剪掉停頓", "AI / 找出 NG"]
+    }
+  },
+  "two-sides": {
+    "title": "工作區範本裡有什麼",
+    "sub": "剪輯要用到的檔案，我做成了範本",
+    "slots": {
+      "cards": ["原始口播 ｜icon=video", "講稿 ｜icon=file-text", "場地照 ｜icon=camera", "音效 ｜icon=volume-2"]
+    }
+  },
+  "concept": {
+    "title": "Skill",
+    "sub": "Skill 就像工具附的使用說明書",
+    "slots": { "icon": "package", "text": "**Skill**：工具附的使用說明書" }
+  },
+  "key-point": {
+    "title": "AI 負責剪，我負責把關",
+    "sub": "而我只負責一件事：把關品質",
+    "slots": { "lead": "我只負責一件事", "key": "AI 負責剪，我負責把關" }
+  },
+  "steps": {
+    "title": "環境準備三步",
+    "sub": "貼上第一個提示詞",
+    "slots": {
+      "steps": ["貼上**第一個提示詞**，裝好工具 ｜icon=terminal", "確認**剪輯清單**再剪 ｜icon=list-checks", "在 **Studio** 預覽後輸出 ｜icon=monitor-play"]
+    }
+  },
+  "qa": {
+    "title": "AI 剪完就能上傳嗎",
+    "sub": "錯誤必須由人類來承擔",
+    "slots": { "q": "AI 剪完就能直接上傳嗎？", "a": "不行，**三道關**都要看" }
+  },
+  "tips": {
+    "title": "先用 Plan 模式列分鏡",
+    "sub": "這個提示詞，我會先切到 Plan 模式",
+    "slots": {
+      "title": "先用 Plan 模式列分鏡",
+      "desc": "文字寫錯，改一句就好//動畫做錯，要等好幾分鐘重做"
+    }
+  },
+  "summary": {
+    "title": "規則寫清楚，每集都一樣",
+    "sub": "模板和節奏固定之後，每集都照著做",
+    "slots": { "text": "把剪輯習慣寫成文件//AI 每一集都照著做" }
+  },
+  "keywords": {
+    "title": "三個階段",
+    "sub": "今天的流程分成三個階段",
+    "slots": { "items": ["剪乾淨 ｜icon=scissors", "剪好看 ｜icon=sparkles", "一句重跑 ｜icon=repeat"] }
+  },
+  "title-list": {
+    "title": "三道關卡",
+    "sub": "過程中有三道關",
+    "slots": {
+      "title": "三道關卡",
+      "items": ["**剪輯清單**：先確認 NG ｜icon=list-checks", "**分鏡表**：先有腳本再動畫 ｜icon=file-text", "**Studio 預覽**：點一下就能改 ｜icon=monitor-play"]
+    }
+  },
+  "speaker": {
+    "title": "講者介紹",
+    "sub": "我是鼎淵，歡迎來到工程師下班有約",
+    "slots": { "titles": ["外商工程師", "暢銷書作家", "企業內訓講師"] }
+  },
+  "quote": {
+    "title": "經驗變成資產",
+    "sub": "工具會一直更新，這個思維會跟著你",
+    "slots": { "text": "把解決問題的經驗//變成可以重複使用的資產", "by": "鼎淵" }
+  }
+}

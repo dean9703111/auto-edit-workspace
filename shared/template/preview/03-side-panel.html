@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 半版側邊欄｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg.jpg 後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 20; }
+  #pip { position: absolute; left: 1344px; top: 630px; width: 512px; height: 288px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -124px; top: -9px; width: 776px; height: 436px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：有 ../bg.jpg 就蓋在底紋上，沒有就只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-ch { background-image: url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg.jpg"), var(--sc-side-pattern); background-size: 1920px auto, 960px 1080px; background-position: 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-side-panel #pv-sEyebrow { position: absolute; left: 96px; top: 150px; height: 96px; padding: 0 40px; }
+  #pv-side-panel #pv-sTitle { position: absolute; left: 96px; top: 286px; max-width: 768px; white-space: nowrap; color: var(--sc-side-ink); }
+  #pv-side-panel .sItem { position: absolute; left: 96px; }
+  #pv-side-panel #pv-sItem1 { top: 534px; }
+  #pv-side-panel #pv-sItem2 { top: 660px; }
+  #pv-side-panel #pv-sItem3 { top: 786px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) #pv-sEyebrow { top: 120px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) #pv-sTitle { top: 248px; font-size: 72px; line-height: 100px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) #pv-sItem1 { top: 480px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) #pv-sItem2 { top: 586px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) #pv-sItem3 { top: 692px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) #pv-sItem4 { top: 798px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) .sItem .sc-num { --d: 56px; font-size: 32px; }
+  #pv-side-panel .sItem .sc-icon { --d: 64px; --i: 36px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) .sItem .sc-icon { --d: 56px; --i: 32px; }
+  #pv-side-panel .sc-side:has(#pv-sItem4) .sItem .sItemT { font-size: 48px; line-height: 66px; --opt: 6px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+    <div id="pv-side-panel" class="fill">
+      <div id="pv-aWrap" class="fill">
+        <div class="sc-side sc-surface-side" data-layout-allow-overflow>
+          <div id="pv-sEyebrow" class="sc-pill"><span class="sc-opt">本集流程</span></div>
+          <div id="pv-sTitle" class="sc-t80 sc-w900">AI 照規則剪<br>我只負責<span class="sc-kw">把關</span></div>
+          <div id="pv-sItem1" class="sc-row sItem"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle class="stroke-draw" pathLength="1" cx="6" cy="6" r="3" /> <path class="stroke-draw" pathLength="1" d="M8.12 8.12 12 12" /> <path class="stroke-draw" pathLength="1" d="M20 4 8.12 15.88" /> <circle class="stroke-draw" pathLength="1" cx="6" cy="18" r="3" /> <path class="stroke-draw" pathLength="1" d="M14.8 14.8 20 20" /> </svg></span><span class="sItemT sc-t52 sc-w500 sc-opt">先剪乾淨：找出 NG</span></div>
+          <div id="pv-sItem2" class="sc-row sItem"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path class="stroke-draw" pathLength="1" d="M20 3v4" /> <path class="stroke-draw" pathLength="1" d="M22 5h-4" /> <path class="stroke-draw" pathLength="1" d="M4 17v2" /> <path class="stroke-draw" pathLength="1" d="M5 18H3" /> </svg></span><span class="sItemT sc-t52 sc-w500 sc-opt">再剪好看：字幕與字卡</span></div>
+          <div id="pv-sItem3" class="sc-row sItem"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /> <path class="stroke-draw" pathLength="1" d="M12 22V12" /> <path class="stroke-draw" pathLength="1" d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /> <path class="stroke-draw" pathLength="1" d="m7.5 4.27 9 5.15" /> </svg></span><span class="sItemT sc-t52 sc-w500 sc-opt">封裝成 <span class="sc-kw">Skill</span> 重跑</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cg" id="cap"><span>所以我讓 AI 照我的規則剪</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"side-panel","duration":9,"cues":[{"sound":"swipe","at":0},{"sound":"tick","at":1.3,"volume":1},{"sound":"tick","at":1.9,"volume":1},{"sound":"tick","at":2.5,"volume":1}]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-side-panel'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 9;
+    /* 0 → 0.7 面板推入（P.pushEase，與剪映端講者右移同一組 9 點）→ 眉標＋標題 → 項目逐條（錨或每 0.6s；圖示版每項 +P.BEAT 圖示描線）
+       → 段尾：D−1.1 內容淡出、D−0.7 面板推出（接全畫面或章節時停在完成態） */
+    P.sideIn('.sc-side', 0);
+    P.rise('#pv-sEyebrow, #pv-sTitle', 0.7);
+    P.rise('#pv-sItem1', 1.3);
+    P.icon('#pv-sItem1 .sc-icon', 1.3 + P.BEAT);
+    P.rise('#pv-sItem2', 1.9);
+    P.icon('#pv-sItem2 .sc-icon', 1.9 + P.BEAT);
+    P.rise('#pv-sItem3', 2.5);
+    P.icon('#pv-sItem3 .sc-icon', 2.5 + P.BEAT);
+    P.out('#pv-sEyebrow, #pv-sTitle, #pv-sItem1, #pv-sItem2, #pv-sItem3', D - 1.1);
+    P.sideOut('.sc-side', D - P.PUSH);
+    tl.fromTo('#footage', { x: 0 }, { x: 480, duration: 0.7, ease: SceneMotion.pushEase }, 0);
+    tl.fromTo('#footage', { x: 480 }, { x: 0, duration: 0.7, ease: SceneMotion.pushEase, immediateRender: false }, 8.3);
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

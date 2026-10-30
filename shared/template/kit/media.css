@@ -1,0 +1,26 @@
+/* 插入素材（plan.json 的 type: "media"）與剪輯台效果（edit）的樣式。build.mjs 只在用到時才在 index.html 連這個檔。
+   視覺沿用主題：硬邊、無光暈；紅框用警示紅 --sc-warn、放大鏡框用主色 --brand。 */
+
+/* 整層：不計時的外框，進出場只動它（opacity／x／scale）；裡面的底、錄影、紅框各自計時 */
+.mlayer { position: absolute; inset: 0; transform-origin: 50% 50%; }
+.mbg { position: absolute; inset: 0; }
+/* 運鏡只動 stage（x／y／scale，transform-origin 0 0）；不要加 will-change，推近時字會糊（motion-recipes §6） */
+.mstage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+.mstage video, .mstage .mimg { position: absolute; object-fit: fill; }
+
+/* 紅框：實線 4px、上下左右等距，描線進場（pathLength=1）、描完閉環 */
+.mmarks { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; pointer-events: none; }
+.mmark { fill: none; stroke: var(--sc-warn); stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+
+/* 放大鏡：壓暗層 → 原區域描框（主色 3px）→ 鏡片從原區域彈出到畫面中央偏上，縮回原位才收 */
+.mlz { position: absolute; inset: 0; pointer-events: none; }
+.mdim { position: absolute; inset: 0; background: #000000; opacity: 0; }
+.mlreg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+.mlreg rect { fill: none; stroke: var(--brand); stroke-width: 3px; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.mlens { position: absolute; box-sizing: border-box; padding: 10px; background: #101219; border: 3px solid var(--brand); border-radius: 22px; opacity: 0; transform-origin: 50% 50%; }
+.mlens canvas { display: block; width: 100%; height: 100%; border-radius: 10px; }
+.mlsrc { display: none; }
+
+/* 剪輯台：dip（過黑，在字幕下面）、整支淡入淡出（連字幕一起） */
+#edit-dip { position: absolute; inset: 0; background: #000000; opacity: 0; z-index: 58; pointer-events: none; }
+#edit-fade { position: absolute; inset: 0; background: #000000; opacity: 0; z-index: 70; pointer-events: none; }
