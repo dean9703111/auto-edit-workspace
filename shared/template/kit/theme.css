@@ -99,3 +99,13 @@
 }
 .sc-surface-ch::before { right: 0; top: 0; mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='220'><g fill='%23000000'><polygon points='192.0,0 680,0 668.0,60 180,60'/><polygon points='336.0,80 680,80 674.0,110 330,110'/><polygon points='473.2,130 680,130 676.8,146 470,146'/></g></svg>"); }
 .sc-surface-ch::after { left: 0; bottom: 0; mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='220'><g fill='%23000000'><polygon points='-36.8,64 170,64 166.8,80 -40,80'/><polygon points='-34.0,110 310,110 304.0,140 -40,140'/><polygon points='-28.0,160 460,160 448.0,220 -40,220'/></g></svg>"); }
+
+/* ---- 淺色版（2026-10-30 換成 PPA 風格）：全畫面與側邊欄是淺暖底黑字、下方字卡近黑＋暖深灰錯位底板；背景圖 bg-fs／bg-side／bg-ch.jpg 由 Codex 生成 ---- */
+:root {
+  --sc-deep: #141414; --sc-card: rgba(20, 20, 20, 0.96); --sc-card-solid: #141414; --sc-plate: #2A2522;
+  --sc-fs-bg: #FFF8F3; --sc-fs-pattern: none; --sc-fs-card: #FFFFFF; --sc-fs-card-line: rgba(20, 20, 20, 0.10);
+  --sc-fs-ink: #141414; --sc-fs-mute: #5C5C5C; --sc-fs-kw: var(--brand); --sc-fs-head: #141414; --sc-fs-head-ink: #FFFFFF;
+  --sc-fs-tint: #FEE9DD; --sc-fs-line: rgba(20, 20, 20, 0.55); --sc-fs-node: #FFFFFF; --sc-fs-node-line: rgba(20, 20, 20, 0.34);
+  --sc-side-bg: #FFF8F3; --sc-side-pattern: none; --sc-side-ink: #141414; --sc-side-mute: #5C5C5C; --sc-side-kw: var(--brand);
+  --sc-side-pill: #141414; --sc-side-pill-ink: #FFFFFF;
+}

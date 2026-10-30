@@ -1,6 +1,6 @@
 // build.mjs --gallery 產生，不要手改
 window.__SFX_DATA = {
-  "generated": "2026-10-29T13:46:47.122Z",
+  "generated": "2026-10-30T09:38:10.483Z",
   "sounds": {
     "pop": {
       "zh": "泡泡 pop",

@@ -62,11 +62,12 @@ export function probeMedia(file) {
 
 // 重新編碼：固定 30fps、每秒一個關鍵幀（關鍵幀間隔太大時 seek 會凍結），聲音轉 AAC 讓長度和畫面一致
 // opts.audioFilter＝聲音濾鏡（例如 loudnorm）；opts.audioRaw＝{ file, rate, channels }：聲音改用處理過的 f32le PCM（build 先把剪接點淡化好）
-export function encodeFootage(src, dst, { audioFilter = null, audioRaw = null } = {}) {
+// opts.crop＝{ x, y, w, h }（來源影片的像素）：構圖裁切，裁完放大回 1920×1080
+export function encodeFootage(src, dst, { audioFilter = null, audioRaw = null, crop = null } = {}) {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   const args = ['-y', '-v', 'error', '-i', src];
   if (audioRaw) args.push('-f', 'f32le', '-ar', String(audioRaw.rate), '-ac', String(audioRaw.channels), '-i', audioRaw.file, '-map', '0:v:0', '-map', '1:a:0');
-  args.push('-vf', 'fps=30', '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p');
+  args.push('-vf', crop ? `crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=1920:1080:flags=lanczos,fps=30` : 'fps=30', '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p');
   if (audioFilter) args.push('-af', audioFilter);
   args.push('-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', dst);
   const r = run('ffmpeg', args);

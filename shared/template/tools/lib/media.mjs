@@ -22,7 +22,7 @@ export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5 };
 export const EXIT = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.4 };
 // contain：放在字幕帶上方（y 0–940，和作者錄影段「可見區不碰字幕帶」同理）；cover：鋪滿 1920×1080
 export const VIEW = { contain: [0, 0, 1920, 940], cover: [0, 0, 1920, 1080] };
-export const PIP_ZONE = [1344, 617, 1888, 951];   // 子母畫面外框禁入區 x1, y1, x2, y2
+export const PIP_ZONE = [1424, 581, 1888, 951];   // 子母畫面外框禁入區 x1, y1, x2, y2
 const CAPTION_Y = 920;
 const MAX_FILE = [3840, 2160];
 const MARK = { pad: 6, sw: 4, draw: 0.4, out: 0.3, min: 0.5, hold: 1, max: 2, rx: 6 };

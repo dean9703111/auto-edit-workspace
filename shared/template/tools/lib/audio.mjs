@@ -111,9 +111,10 @@ export function applyDipsToFile(file, { channels = 2, rate = RATE, points, fade 
 }
 
 // ---------- 快取戳記 ----------
-export function audioKey({ src, cutpoints = [], loudnorm = true, declick = true }) {
+// frame（構圖裁切）有寫才放進 key：沒用構圖裁切的舊專案，戳記不變、不必重新編碼
+export function audioKey({ src, cutpoints = [], loudnorm = true, declick = true, frame = null }) {
   const st = fs.statSync(src);
-  return { v: AUDIO_VER, size: st.size, mtimeMs: Math.round(st.mtimeMs), loudnorm: !!loudnorm, target: LOUD, declick: !!declick, fade: CUT_FADE, points: declick ? cleanPoints(cutpoints) : [] };
+  return { v: AUDIO_VER, size: st.size, mtimeMs: Math.round(st.mtimeMs), loudnorm: !!loudnorm, target: LOUD, declick: !!declick, fade: CUT_FADE, points: declick ? cleanPoints(cutpoints) : [], ...(frame ? { frame } : {}) };
 }
 export function readStamp(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
@@ -129,12 +130,12 @@ const lufsOf = (file) => {
 };
 
 // 回傳 { hasAudio, before, after, linear, gainDb, cuts, fade, notes[] }
-export function encodeFootagePolished(src, dst, { cacheDir, cutpoints = [], loudnorm = true, declick = true, onMeasure = null } = {}) {
+export function encodeFootagePolished(src, dst, { cacheDir, cutpoints = [], loudnorm = true, declick = true, onMeasure = null, crop = null } = {}) {
   const info = { hasAudio: false, before: null, after: null, linear: null, gainDb: 0, cuts: 0, fade: 0, notes: [] };
   const media = probeMedia(src);
   if (!media.hasAudio) {
     info.notes.push('rough.mp4 沒有聲音，略過響度標準化與剪接點淡化');
-    encodeFootage(src, dst);
+    encodeFootage(src, dst, { crop });
     return info;
   }
   info.hasAudio = true;
@@ -161,7 +162,7 @@ export function encodeFootagePolished(src, dst, { cacheDir, cutpoints = [], loud
     info.cuts = applyDipsToFile(raw, { channels: 2, rate: RATE, points, fade: CUT_FADE });
   }
   try {
-    encodeFootage(src, dst, { audioFilter: filter, audioRaw: raw ? { file: raw, rate: RATE, channels: 2 } : null });
+    encodeFootage(src, dst, { audioFilter: filter, audioRaw: raw ? { file: raw, rate: RATE, channels: 2 } : null, crop });
   } finally {
     if (raw) try { fs.rmSync(raw, { force: true }); } catch { /* 暫存檔刪不掉不影響結果 */ }
   }

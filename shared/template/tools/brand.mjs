@@ -105,7 +105,7 @@ export function encodePng(rgba, w, h) {
 
 // 照 hyperframes-scenes make-pip-frame.py：本體 1344,630–1856,918；由外而內 3px 白 alpha 0.4 描邊（外圓角 15）→ 6px 主色環（圓角 12）
 // → 內縮 3px 的 #141414 環（圓角 6）→ 挖空本體（圓角 3）。4 倍超取樣畫好，再用 Lanczos-3（預乘 alpha）縮回 1×，和 PIL 的 LANCZOS 相同做法。
-export function drawPipFrame(color, { box = [1344, 630, 1856, 918], W = 1920, H = 1080 } = {}) {
+export function drawPipFrame(color, { box = [1424, 594, 1856, 918], W = 1920, H = 1080 } = {}) {
   const ring = parseHex(color);
   const K = 4;
   const [x1, y1, x2, y2] = box;

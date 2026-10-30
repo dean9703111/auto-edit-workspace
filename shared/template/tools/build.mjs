@@ -405,7 +405,7 @@ export function build(flags, { log = console.log } = {}) {
   const audioOpts = { loudnorm: !flags['no-loudnorm'], declick: !flags['no-declick'] };
   const stampFile = path.join(P.out, '.cache', 'footage-audio.json');
   const stamp = readStamp(stampFile);
-  const wantKey = fs.existsSync(P.video) ? audioKey({ src: P.video, cutpoints: cp.list.map((c) => c.at), ...audioOpts }) : null;
+  const wantKey = fs.existsSync(P.video) ? audioKey({ src: P.video, cutpoints: cp.list.map((c) => c.at), ...audioOpts, frame: plan.frame ?? null }) : null;
   const fresh = fs.existsSync(assetVideo) && (!fs.existsSync(P.video) || (fs.statSync(assetVideo).mtimeMs >= fs.statSync(P.video).mtimeMs && stampMatches(stamp, wantKey)));
   if (!fresh && !fs.existsSync(P.video)) throw new Error(`找不到影片 ${rel(P.video)}`);
   const projectDir = mediaRoot(P);
@@ -438,11 +438,18 @@ export function build(flags, { log = console.log } = {}) {
     return { ok: !res.errors.length, res };
   }
 
+  // 構圖裁切 plan.frame＝[x, y, w, h]（1920×1080 座標、16:9）→ 換成來源影片的像素
+  function frameCrop(pl, src) {
+    if (!Array.isArray(pl.frame)) return null;
+    const m = probeMedia(src), k = (m.width || 1920) / 1920, ev = (v) => Math.round(v * k / 2) * 2;
+    const [x, y, w, h] = pl.frame;
+    return { x: ev(x), y: ev(y), w: ev(w), h: ev(h) };
+  }
   // 底片：專案的 work/rough.mp4 比較新才重新編碼
   let encoded = false, audioInfo = null;
   if (!fresh) {
     log(`重新編碼底片 → ${rel(assetVideo)}（30fps、每秒一個關鍵幀${audioOpts.loudnorm ? '、人聲調到 −14 LUFS' : ''}${audioOpts.declick && cp.list.length ? '、剪接點微淡化' : ''}）…`);
-    audioInfo = encodeFootagePolished(P.video, assetVideo, { cacheDir: path.join(P.out, '.cache'), cutpoints: cp.list.map((c) => c.at), ...audioOpts,
+    audioInfo = encodeFootagePolished(P.video, assetVideo, { cacheDir: path.join(P.out, '.cache'), cutpoints: cp.list.map((c) => c.at), ...audioOpts, crop: frameCrop(plan, P.video),
       onMeasure: () => log('量人聲響度（第一次會花一點時間，之後用快取）…') });
     fs.mkdirSync(path.dirname(stampFile), { recursive: true });
     fs.writeFileSync(stampFile, JSON.stringify({ key: wantKey, info: audioInfo }, null, 2) + '\n');
@@ -489,7 +496,10 @@ export function build(flags, { log = console.log } = {}) {
   }
   const cap = buildCaptions(capCues, { duration: outDur });
   files.push([cap.file, cap.html]);
-  const bg = fs.existsSync(path.join(P.templateDir, 'bg.jpg'));
+  const bgOne = fs.existsSync(path.join(P.templateDir, 'bg.jpg'));
+  const bgPick = (f) => (fs.existsSync(path.join(P.templateDir, f)) ? f : bgOne ? 'bg.jpg' : null);
+  const bgMap = { fs: bgPick('bg-fs.jpg'), side: bgPick('bg-side.jpg'), ch: bgPick('bg-ch.jpg') };
+  const bg = bgMap.fs || bgMap.side || bgMap.ch ? bgMap : false;
   // 插入素材的檔（放大鏡的逐幀要先抽好，主合成才知道每一格用哪一張）
   const mediaN = prepareMedia(res.items, P.out, log);
   const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, bg, footage: res.footage, editFx: res.editFx };
@@ -525,7 +535,7 @@ export function build(flags, { log = console.log } = {}) {
   if (P.project) for (const d of OUTPUT_DIRS) fs.mkdirSync(path.join(P.project, d), { recursive: true });
   const kitN = copyDir(path.join(P.templateDir, 'kit'), path.join(P.out, 'kit'), ['icons.json']);
   if (fs.existsSync(P.sfx)) for (const f of fs.readdirSync(P.sfx).filter((x) => x.endsWith('.wav'))) copyIfChanged(path.join(P.sfx, f), path.join(P.out, 'assets', 'sfx', f));
-  if (bg) copyIfChanged(path.join(P.templateDir, 'bg.jpg'), path.join(P.out, 'assets', 'bg.jpg'));
+  if (bg) for (const f of new Set(Object.values(bg).filter(Boolean))) copyIfChanged(path.join(P.templateDir, f), path.join(P.out, 'assets', f));
   const generated = new Set();
   for (const [f, c] of files) { W.write(f, c); generated.add(f); }
   W.write('index.html', main.html); generated.add('index.html');

@@ -25,7 +25,7 @@ projects/<專案>/
 | 資料夾 | 用途 | 權限 |
 |---|---|---|
 | `setup/` | 環境檢測與安裝手冊（Mac／Windows），我說「幫我檢測環境」時照它做 | 只能讀 |
-| `shared/` | 每支影片共用：`style.md`（風格規範）、`template/`（情境庫模板與工具）、`sfx/`（可用的音效，只能從這裡挑） | 只能讀（例外：我要求換主色或背景時，可以改 `shared/template/kit/brand.css`、`shared/template/kit/pip-frame.png`（`brand.mjs` 會重畫）與 `shared/template/bg.jpg`） |
+| `shared/` | 每支影片共用：`style.md`（風格規範）、`template/`（情境庫模板與工具）、`sfx/`（可用的音效，只能從這裡挑） | 只能讀（例外：我要求換主色或背景時，可以改 `shared/template/kit/brand.css`、`shared/template/kit/pip-frame.png`（`brand.mjs` 會重畫）與背景圖 `shared/template/bg-fs.jpg`／`bg-side.jpg`／`bg-ch.jpg`） |
 | `projects/<專案>/素材/` | 真人錄影、聲音、螢幕錄影、圖片 | 只能讀，不可覆寫、移動或刪除 |
 | `projects/<專案>/講稿.md` | 這支影片的講稿 | 只能讀 |
 | `projects/<專案>/work/` | 中間產物：逐字稿、剪輯清單、初剪、HyperFrames 專案 | AI 可新增、修改 |
@@ -34,7 +34,7 @@ projects/<專案>/
 
 ## 規則
 
-1. 不要覆寫、移動或刪除 `projects/*/素材/`、`projects/*/講稿.md`、`shared/` 的任何檔案（例外：我要求換主色或背景時，可以改 `shared/template/kit/brand.css`、`shared/template/kit/pip-frame.png` 與 `shared/template/bg.jpg`）；要刪除 `work/` 以外的檔案前，先問我。
+1. 不要覆寫、移動或刪除 `projects/*/素材/`、`projects/*/講稿.md`、`shared/` 的任何檔案（例外：我要求換主色或背景時，可以改 `shared/template/kit/brand.css`、`shared/template/kit/pip-frame.png` 與背景圖 `shared/template/bg-fs.jpg`／`bg-side.jpg`／`bg-ch.jpg`）；要刪除 `work/` 以外的檔案前，先問我。
 2. 提示詞裡寫「停下來等我確認」的地方，一定要停：剪輯清單、分鏡表、Studio 預覽、剪輯台都要經過我同意。
 3. 安裝新工具前，先告訴我指令和用途，等我同意再執行。照 `setup/` 手冊做時，整份清單問一次就好。
 4. 字幕以專案的 `講稿.md` 為準校正；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿就只轉繁體、補標點，不要自己猜內容。
@@ -79,13 +79,30 @@ projects/<專案>/
 
 我說「把 X 包裝成成片」「做成片」時，照 `shared/template/USAGE.md` 第 2 節的 SOP 做，HyperFrames 專案放 `projects/<專案>/work/hyperframes/`。下面是我的要求，USAGE.md 沒寫到的以這裡為準：
 
+**正式開始之前，先做「構圖＋套卡預覽」**（在下面第 1 步之前、分鏡表之前做，避免倍率定錯後面整個重做）：
+
+- 跑 `node shared/template/tools/qc.mjs framing --project projects/<專案> --cards`（約 15 秒 × 倍率數）。它會產生兩張圖：
+  - `work/構圖預覽.jpg`：1.0／1.15／1.3 倍的裁切框並排，橘框是講者動作範圍。
+  - `work/構圖預覽-套卡.jpg`：抓影片中間一格，每個倍率一列，由左到右套上「疊加（下方字卡）｜半畫面（側邊欄）｜子母畫面（全畫面清單＋右下小窗）」三種版面的示意卡，用目前的風格。
+- 看圖給建議：四周有多餘外框（黑邊、櫃子、大片空牆）讓構圖鬆散就建議放大；會切到手勢、卡片壓到臉，或原片解析度太低（每個像素放大超過 3.5 倍）就往小選。把兩張圖、指令印的倍率表和你的建議給我，**停下來等我選倍率**。
+- 我選好之後，把那一列的 `frame` 寫進 plan.json 第一層（1.0 倍不用寫；做法照 `shared/template/USAGE.md` 2.2 第 0 步），後面的講者框、分鏡截圖都用裁切後的畫面。
+
 1. 字幕用 `work/rough.srt`（已校正，不要重新轉錄）。
-2. 版面：看專案資料夾裡檔名含「場地照」的圖判斷講者的位置（這種圖只用來量位置，不會插進影片），沒有就從 `work/rough.mp4` 截一張存成 `work/場地照.jpg`；再跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案>`，看 `work/場地照-動作範圍.jpg`（8 張畫面的疊影＋格線）量手勢會比到哪，座標直接寫進講者框（做法照 `shared/template/USAGE.md` 2.2）；資訊卡和字幕都不能擋到臉和手勢。
+2. 構圖與版面：
+   - 構圖倍率已在上面的「構圖＋套卡預覽」選好（plan.json 有 `frame`）。
+   - 看專案資料夾裡檔名含「場地照」的圖判斷講者的位置（這種圖只用來量位置，不會插進影片），沒有就從 `work/rough.mp4` 截一張存成 `work/場地照.jpg`；再跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案>`，看 `work/場地照-動作範圍.jpg`（8 張畫面的疊影＋格線）量手勢會比到哪，座標直接寫進講者框（做法照 `shared/template/USAGE.md` 2.2）；資訊卡和字幕都不能擋到臉和手勢。
 3. 螢幕錄影與圖片：`素材/螢幕錄影/`、`素材/圖片/` 有檔案，或 `node shared/template/tools/build.mjs --check --project projects/<專案>` 回報有「只有聲音」的區間（旁白沒有畫面）時，先跑 `node shared/template/tools/media.mjs scan --project projects/<專案>`，看 `work/media/` 裡的 contact sheet，對照字幕，自己找出每段口播該配哪支錄影的第幾秒，寫進分鏡表（media 列要寫素材檔名與起點秒數），用 media 段插入。錄影裡有操作時，依口播加運鏡、紅框、放大鏡（座標用 `media.mjs frame --grid` 截格線圖來讀），做法照 `shared/template/USAGE.md` 第 5 節。「只有聲音」的區間一定要被 media 段（或不透明的全畫面情境）蓋住。
 4. 情境動畫優先：口播在講一個情境（過程、前後對比、數值變化、比喻、因果、沒有錄影的介面操作）時，做第二層情境動畫，從 `shared/template/custom/` 的範例改（挑法見 `shared/template/USAGE-reference.md` R7.1）；合適的動畫越多越好，字卡只放名詞、一句重點和提醒。
    資訊卡：版型只從 `shared/template/` 的情境庫裡挑，照每個情境標的使用時機和進場方式；密度、字數、進場時機、停留時間照 `shared/style.md`；講到 3 個以上並列的項目用條列卡。情境有圖示欄位就配圖示（圖示先行，做法見 `shared/template/USAGE-reference.md` R2.7），分鏡表的「畫面文字」欄寫出圖示名稱。
 5. 音效：只用 `shared/sfx/`，照 `shared/style.md` 的對照表。build 會自動把人聲調到 −14 LUFS，並在剪接點做 15 毫秒的微淡化；回報時把 build 印的「人聲響度…」「剪接點微淡化…」那兩行貼給我，有「音效比例」的提醒也要說。
-6. 分鏡表用表格列出（段落編號、時間碼、字幕、卡片類型、畫面文字、音效、理由），段落編號用 s01、s02… 並跟 plan.json 的 `id` 一致，**停下來等我確認**；我確認後先存成 `work/storyboard.md` 再開始做。
+6. 分鏡表寫成 `work/storyboard.md`（草稿），**停下來等我確認**。檔案內容：
+   - 開頭：講者框 speakerBox（看哪張場地照量的）、本集圖示表、總覽表（段落編號、句號、時間碼、卡片類型、一句話摘要）。
+   - 每段一節，段落編號用 s01、s02… 並跟 plan.json 的 `id` 一致，寫明：時間（句號與秒數）、起點那句字幕、版面怎麼呈現、每個欄位的文字（附字數上限）、圖示、清單項目綁的句號、音效、理由。
+   - 最後列出需要我決定的事。
+   - 每段標「版面」，只用這四個名稱：**疊加**（講者滿版，卡片疊在上面：06–15、02、05、透明字卡動態）、**半畫面**（講者推到右半邊、左半邊面板：03）、**子母畫面**（資訊卡占滿畫面、講者縮到右下角小窗：04 家族、media、custom fullscreen）、**全幕**（不透明整張蓋住、沒有小窗：01、字卡動態 bg dark／light／accent）。檔案開頭附這四種的對照表。
+   - 每段附實際畫面截圖：照草稿寫 `work/hyperframes/plan.json` → `--check`（✖ 先修掉）→ build → `cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --at <每段完成態的秒數> --no-end -o ../storyboard-preview`，截在全部內容都出現、還沒退場的那一刻（條列逐條換的，每條各截一張）；檔名改成段落編號（`s01.png`、`s04-1.png`），用 `![s01](storyboard-preview/s01.png)` 嵌進該段，下面寫「截圖觀察」（有沒有擋臉、壓手勢、文字問題）。拿不定版面的段落，兩個方案都截圖並排，請我選。這一版 plan.json 只是預覽用，確認後照最後的 MD 重寫。
+
+   我可能會直接改這份檔。我說「改好了」或「可以」之後，先重新讀 `work/storyboard.md`，以檔案內容為準寫 plan.json；有超過字數上限或違反規則的地方，先告訴我，不要自己改。`shared/template/USAGE.md` 寫「分鏡表只寫在回覆裡、確認後才存檔」的地方，以這條為準。
 7. 做好之後，有情境動畫就先跑 `node shared/template/tools/audit.mjs --project projects/<專案>` 量版面，✖ 全部修掉（⚠ 照 → 處理，或說明保留的理由）；再用 `cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review` 抽查開頭、中間、結尾和每個轉場（段數多時照下面「子代理分工」分給 verifier 一起看），自己檢查文字斷行、字幕、卡片位置，有問題先修好；再用 `npx hyperframes preview --no-open` 開 Studio，把網址給我，**停下來等我確認**。我看完說「s05 的金句卡往左移」這類要求時，直接改 plan.json 那一段再重跑 build（做法照 `shared/template/USAGE.md` 2.6），不需要我在 Studio 點選。
 8. 我說可以之後，先輸出 3–5 秒的測試片段（挑第一張資訊卡出現的地方）到 `成片/測試片段/`，用 ffprobe 確認有音軌、截一張畫面確認版面；沒問題再輸出 `成片/final.mp4`，然後跑 `node shared/template/tools/qc.mjs final --project projects/<專案>` 驗收（格式、長度、響度、畫面凍結、黑畫面、長時間沒聲音，做法照 `shared/template/USAGE.md` 2.8）：有 ✖ 先修好再交；⚠ 逐項說明是不是刻意的。把輸出和 `成片/驗收截圖/qc-sheet.jpg` 一起給我。
 
@@ -117,7 +134,7 @@ projects/<專案>/
 我說「使用「換風格」流程」「換成我的風格」「換主色」「換背景」時：
 
 1. 主色：用 `node shared/template/tools/brand.mjs "#RRGGBB"` 換（它會寫入 `shared/template/kit/brand.css` 的 `--brand`、算好 `--brand-ink`／`--brand-text` 的對比，並重畫子母畫面外框 `shared/template/kit/pip-frame.png`）。我給的是顏色名稱就先轉成色碼，回報你用了哪個色碼；主色太深、對比不夠時 brand.mjs 會自動把字的顏色調亮，不用問我。
-2. 背景圖：我有上傳圖片，就縮放／裁切成 1920×1080 存成 `shared/template/bg.jpg`；沒有就依主色生成一張同色系的暗色背景圖存到同一路徑。主要內容不要放在左上角，全畫面的白卡會蓋在那裡。
+2. 背景圖：每種版面一張——`shared/template/bg-fs.jpg`（1920×1080，全畫面與插入素材）、`bg-side.jpg`（960×1080，側邊欄面板）、`bg-ch.jpg`（1920×1080，章節轉場）。我有上傳圖片，就縮放／裁切成對應尺寸存檔；沒有就用 Codex 依主色生成（`codex exec` 的生圖功能，提示詞從 stdin 給，做法與每張要留空的區域見 `shared/template/USAGE-reference.md` R9.2），生成後先給我看三張並排的預覽圖，我同意才放進 `shared/template/`。
 3. 改完告訴我改了哪些檔，我會重新打開 `shared/template/index.html` 預覽。
 
 ## 環境準備

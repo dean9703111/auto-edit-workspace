@@ -22,9 +22,16 @@ const indent = (s, n) => s.replace(/\s+$/, '').split('\n').map((l) => (l ? ' '.r
 
 export const KIT_LINKS = ['kit/fonts.css', 'kit/brand.css', 'kit/scene.css', 'kit/theme.css', 'kit/captions.css'];
 
-export function bgCss(prefix) {
-  return `.sc-surface-fs, .sc-surface-ch { background-image: url("${prefix}bg.jpg"); background-size: cover; background-position: center; }
-.sc-surface-side { background-image: url("${prefix}bg.jpg"); background-size: 1920px auto; background-position: 0 50%; }`;
+// 背景圖：每種版面各一張（bg-fs.jpg 全畫面與插入素材、bg-side.jpg 側邊欄面板 960×1080、bg-ch.jpg 章節轉場），沒有的那張退回 bg.jpg
+export const BG_FILES = { fs: "bg-fs.jpg", side: "bg-side.jpg", ch: "bg-ch.jpg" };
+export function bgCss(prefix, bg = { fs: "bg.jpg", side: "bg.jpg", ch: "bg.jpg" }) {
+  const out = [];
+  if (bg.fs) out.push(`.sc-surface-fs { background-image: url("${prefix}${bg.fs}"); background-size: cover; background-position: center; }`);
+  if (bg.ch) out.push(`.sc-surface-ch { background-image: url("${prefix}${bg.ch}"); background-size: cover; background-position: center; }`);
+  if (bg.side) out.push(bg.side === "bg.jpg"
+    ? `.sc-surface-side { background-image: url("${prefix}bg.jpg"); background-size: 1920px auto; background-position: 0 50%; }`
+    : `.sc-surface-side { background-image: url("${prefix}${bg.side}"); background-size: cover; background-position: center; }`);
+  return out.join("\n");
 }
 
 export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null }) {
@@ -179,11 +186,11 @@ ${KIT_LINKS.map((l) => `  <link rel="stylesheet" href="${base}${l}">`).join('\n'
     #${rootId} { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
     #footage { position: absolute; inset: 0; z-index: 0; }
 ${footCss}    #footage video { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
-    /* 子母畫面本體 x 1344–1856、y 630–918（512×288），和 scene-catalog／pip-frame.png 同一組數字 */
-    .pip { position: absolute; left: 1344px; top: 630px; width: 512px; height: 288px; overflow: hidden; border-radius: 6px; z-index: 40; }
+    /* 子母畫面本體 x 1424–1856、y 594–918（432×324，4:3），和 lib/media.mjs 的 PIP_ZONE、pip-frame.png 同一組數字 */
+    .pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
     .pip video { position: absolute; }
     .pip-frame { z-index: 41; }
-${bg ? indent(bgCss(`${base}assets/`), 4) + '\n' : ''}  </style>
+${bg ? indent(bgCss(`${base}assets/`, bg), 4) + '\n' : ''}  </style>
 </head>
 <body>
 <!-- build.mjs 產生；要改請改 plan.json 再重跑 build（手改會被雜湊保護擋下）-->
@@ -245,7 +252,7 @@ export function buildPreview({ scene, parts, D, sub, pipStyle, cues = [] }) {
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(`${scene.num} ${scene.zh}｜預覽`)}</title>
-<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg.jpg 後重新整理就會更新 -->
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg-fs.jpg、../bg-side.jpg、../bg-ch.jpg（或單一 ../bg.jpg）後重新整理就會更新 -->
 ${KIT_LINKS.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
@@ -256,14 +263,14 @@ ${KIT_LINKS.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
   #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
   .fill { position: absolute; inset: 0; }
   #scene { position: absolute; inset: 0; z-index: ${opaque ? 30 : 20}; }
-  #pip { position: absolute; left: 1344px; top: 630px; width: 512px; height: 288px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
   #pip img { position: absolute; left: ${st.left}px; top: ${st.top}px; width: ${st.width}px; height: ${st.height}px; }
   #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
   #cap { z-index: 60; }
-  /* 背景圖：有 ../bg.jpg 就蓋在底紋上，沒有就只顯示底紋（不必重新產生預覽頁） */
-  .sc-surface-fs { background-image: url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
-  .sc-surface-ch { background-image: url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
-  .sc-surface-side { background-image: url("../bg.jpg"), var(--sc-side-pattern); background-size: 1920px auto, 960px 1080px; background-position: 0 50%, 0 0; background-repeat: no-repeat; }
+  /* 背景圖：各版面先用自己的 ../bg-*.jpg，沒有就用 ../bg.jpg，都沒有只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
 ${indent(parts.style, 2)}
 </style>
 </head>

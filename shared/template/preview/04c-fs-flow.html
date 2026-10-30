@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>04c 全畫面流程｜預覽</title>
-<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg.jpg 後重新整理就會更新 -->
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg-fs.jpg、../bg-side.jpg、../bg-ch.jpg（或單一 ../bg.jpg）後重新整理就會更新 -->
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
@@ -18,14 +18,14 @@
   #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
   .fill { position: absolute; inset: 0; }
   #scene { position: absolute; inset: 0; z-index: 30; }
-  #pip { position: absolute; left: 1344px; top: 630px; width: 512px; height: 288px; overflow: hidden; border-radius: 6px; z-index: 40; }
-  #pip img { position: absolute; left: -124px; top: -9px; width: 776px; height: 436px; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
   #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
   #cap { z-index: 60; }
-  /* 背景圖：有 ../bg.jpg 就蓋在底紋上，沒有就只顯示底紋（不必重新產生預覽頁） */
-  .sc-surface-fs { background-image: url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
-  .sc-surface-ch { background-image: url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
-  .sc-surface-side { background-image: url("../bg.jpg"), var(--sc-side-pattern); background-size: 1920px auto, 960px 1080px; background-position: 0 50%, 0 0; background-repeat: no-repeat; }
+  /* 背景圖：各版面先用自己的 ../bg-*.jpg，沒有就用 ../bg.jpg，都沒有只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
   #pv-fs-flow #pv-wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
   #pv-fs-flow #pv-wCard .sc-wcard__bar { height: 128px; padding: 20px 56px; }
   #pv-fs-flow #pv-wBody { width: 1176px; height: 580px; display: flex; align-items: center; justify-content: center; }

@@ -14,6 +14,14 @@
  *         work/場地照-動作範圍.jpg   疊影（平均）＋動作範圍上色＋青色建議框＋每 100px 座標格線
  *         work/場地照-8格.jpg        8 格總表（每格標時間）
  *       不是 1920×1080 的影片先等比放大（不足的邊補黑），圖上的座標直接就是 speakerBox 的座標。
+ *       plan.json 有 frame（構圖裁切）時，先照 frame 裁切放大再量，座標就是裁切後成片上的座標。
+ *   node shared/template/tools/qc.mjs framing --project projects/<專案> [--file <mp4>] [--zooms 1,1.15,1.3]
+ *       構圖預覽：量講者動作範圍、偵測四周黑邊，算出每個放大倍率的 16:9 裁切框（頭頂上方留 120px、講者水平置中），
+ *       存 work/構圖預覽.jpg（每個倍率一格，橘框是講者動作範圍）並印出每個倍率的 frame 與會不會切到手勢。
+ *       使用者選好倍率後，把那一列的 frame 寫進 plan.json 第一層，再跑 speaker 量講者框。
+ *       加 --cards：再抓影片中間一格，每個倍率各 build 一次「疊加（下方字卡）／半畫面（側邊欄）／子母畫面（全畫面清單）」
+ *       三種版面的示意卡（用目前 shared/template 的風格），拼成 work/構圖預覽-套卡.jpg（列＝倍率、欄＝版面），
+ *       讓使用者看著卡片套上去的樣子選倍率。暫存檔在 work/.framing-preview/（可以刪）。約 15 秒 × 倍率數。
  *
  * --project：專案資料夾（projects/範例，或只寫名稱 範例）。測試用：--template <shared/template 資料夾>
  */
@@ -27,7 +35,7 @@ import { canvas, fillRect, blit, text, textWidth } from './lib/raster.mjs';
 import { drawGrid } from './media.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const VALUE_FLAGS = ['project', 'template', 'file'];
+const VALUE_FLAGS = ['project', 'template', 'file', 'zooms'];
 const r1 = (n) => Number(n).toFixed(1);
 const r2 = (n) => Number(n).toFixed(2);
 const r3 = (n) => +Number(n).toFixed(3);
@@ -48,7 +56,7 @@ export function parseArgs(argv) {
       const v = inline ?? rest[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['json', 'help'].includes(k)) flags[k] = true;
+    } else if (['json', 'help', 'cards'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -301,9 +309,10 @@ function printFinal(P, r) {
 
 // ---------- speaker ----------
 
-// 抽一格，等比放進 1920×1080（不足補黑）
-function frame1080(file, at) {
-  const vf = 'scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,format=rgb24';
+// 抽一格，等比放進 1920×1080（不足補黑）；frame＝[x, y, w, h]（1920×1080 座標）時再裁切放大回 1920×1080
+function frame1080(file, at, frame = null) {
+  const crop = frame ? `,crop=${frame[2]}:${frame[3]}:${frame[0]}:${frame[1]},scale=1920:1080:flags=lanczos` : '';
+  const vf = `scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black${crop},format=rgb24`;
   const args = ['-v', 'error', '-ss', String(r3(at)), '-i', file, '-frames:v', '1', '-vf', vf, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'];
   const r = spawnSync('ffmpeg', args, { maxBuffer: 1 << 28 });
   if (r.error) throw r.error.code === 'ENOENT' ? new Error('找不到 ffmpeg：先跑 npx hyperframes doctor') : r.error;
@@ -350,7 +359,8 @@ export function speakerMaps(P, flags) {
   const info = probeMedia(src);
   if (!info.hasVideo || !info.duration) throw new Error(`${rel(src)} 讀不到影像或長度`);
   const ts = speakerTimes(info.duration);
-  const frames = ts.map((t) => frame1080(src, t));
+  const frame = planFrame(P);
+  const frames = ts.map((t) => frame1080(src, t, frame));
   const W = 1920, H = 1080;
 
   // 疊影圖：平均畫面；動作範圍上橘色，青色框是動作範圍外擴 40px 的建議框
@@ -378,7 +388,7 @@ export function speakerMaps(P, flags) {
   });
   const sheetFile = path.join(P.project, 'work', '場地照-8格.jpg');
   writeJpg(s, sheetFile, 3);
-  return { src, srcSize: [info.width, info.height], times: ts, mapFile, sheetFile, bbox, suggest, scaled: info.width !== W || info.height !== H };
+  return { src, srcSize: [info.width, info.height], times: ts, mapFile, sheetFile, bbox, suggest, frame, scaled: info.width !== W || info.height !== H };
 }
 
 // 最近鄰縮小（總表用，夠看就好）
@@ -395,8 +405,165 @@ function frame1080Down(buf, w, h, tw, th) {
   return out;
 }
 
+// plan.json 的 frame（沒有或格式不對就是 null；格式錯誤由 build --check 報）
+function planFrame(P) {
+  try {
+    const fr = JSON.parse(fs.readFileSync(P.plan, 'utf8')).frame;
+    return Array.isArray(fr) && fr.length === 4 && fr.every((v) => Number.isFinite(v)) ? fr.map(Math.round) : null;
+  } catch { return null; }
+}
+
+// ---------- framing（構圖預覽） ----------
+
+// 四周的黑邊（平均畫面每一列／行的平均亮度 < 18 就算黑邊）→ 內容範圍 [x1, y1, x2, y2]
+export function contentBox(mean, w = 1920, h = 1080, th = 18) {
+  const rowL = (y) => { let t = 0; for (let x = 0; x < w; x += 4) t += lum(mean, (y * w + x) * 3); return t / Math.ceil(w / 4); };
+  const colL = (x) => { let t = 0; for (let y = 0; y < h; y += 4) t += lum(mean, (y * w + x) * 3); return t / Math.ceil(h / 4); };
+  let y1 = 0, y2 = h, x1 = 0, x2 = w;
+  while (y1 < h / 3 && rowL(y1) < th) y1++;
+  while (y2 > (h * 2) / 3 && rowL(y2 - 1) < th) y2--;
+  while (x1 < w / 3 && colL(x1) < th) x1++;
+  while (x2 > (w * 2) / 3 && colL(x2 - 1) < th) x2--;
+  return [x1, y1, x2, y2];
+}
+
+// 每個放大倍率的 16:9 裁切框：寬取 16 的倍數；講者水平置中；頭頂上方留 head px（成片座標）；夾在內容範圍裡
+export function framingCandidates(motion, content, zooms = [1, 1.15, 1.3], head = 120) {
+  const [bx1, by1, bx2, by2] = motion, cx = (bx1 + bx2) / 2;
+  const cw = content[2] - content[0], ch = content[3] - content[1];
+  const maxW = Math.floor(Math.min(cw, (ch * 16) / 9) / 16) * 16;
+  return zooms.map((z) => {
+    const w = Math.min(maxW, Math.round(1920 / z / 16) * 16), h = (w * 9) / 16, k = 1920 / w;
+    const clamp = (v, lo, hi) => Math.round(Math.min(Math.max(v, lo), hi));
+    const x = clamp(cx - w / 2, content[0], content[2] - w), y = clamp(by1 - head / k, content[1], content[3] - h);
+    const tf = (b) => [Math.round((b[0] - x) * k), Math.round((b[1] - y) * k), Math.round((b[2] - x) * k), Math.round((b[3] - y) * k)];
+    const m = tf(motion);
+    const cut = [m[0] < 40 && '左', m[1] < 40 && '上', m[2] > 1880 && '右'].filter(Boolean);
+    return { zoom: +r2(k), frame: [x, y, w, h], motion: m, cut };
+  });
+}
+
+export function framingPreview(P, flags) {
+  const src = flags.file ? path.resolve(flags.file) : path.join(P.project, 'work', 'rough.mp4');
+  if (!fs.existsSync(src)) throw new Error(`找不到 ${rel(src)} → 先完成「剪乾淨」產生 work/rough.mp4，或用 --file 指定影片`);
+  const info = probeMedia(src);
+  if (!info.hasVideo || !info.duration) throw new Error(`${rel(src)} 讀不到影像或長度`);
+  const ts = speakerTimes(info.duration);
+  const frames = ts.map((t) => frame1080(src, t));
+  const W = 1920, H = 1080;
+  const { mean, bbox } = motionStats(frames, W, H);
+  if (!bbox) throw new Error('8 格之間幾乎沒有動作，量不到講者範圍：請看 work/場地照-8格.jpg 手動決定 frame');
+  const content = contentBox(mean, W, H);
+  // 動作範圍的下緣常包到桌面倒影：只取到內容範圍的 90%，頭頂與左右照量到的
+  const motion = [bbox[0], bbox[1], bbox[2], Math.min(bbox[3], content[1] + (content[3] - content[1]) * 0.9)];
+  const zooms = (flags.zooms ? String(flags.zooms).split(',').map(Number) : [1, 1.15, 1.3]).filter((z) => z >= 1 && z <= 2);
+  const cands = framingCandidates(motion, content, zooms.length ? zooms : [1, 1.15, 1.3]);
+  for (const c of cands) c.upscale = +r2((c.zoom * 1920) / (info.width || 1920));   // 來源像素被放大幾倍（> 3 會明顯變軟）
+  // 預覽圖：每個倍率一格（用中間那一格畫面，不用平均圖，比較看得清楚）
+  const pw = 640, ph = 360, gap = 10, bar = 30;
+  const c = canvas(cands.length * pw + (cands.length + 1) * gap, ph + bar + 2 * gap, [11, 16, 32]);
+  const pick = frames[Math.floor(frames.length / 2)];
+  cands.forEach((cd, i) => {
+    const x0 = gap + i * (pw + gap), [fx, fy, fw, fh] = cd.frame;
+    const out = Buffer.alloc(pw * ph * 3);
+    for (let y = 0; y < ph; y++) {
+      const sy = Math.min(H - 1, Math.floor(fy + ((y + 0.5) * fh) / ph));
+      for (let x = 0; x < pw; x++) {
+        const sx = Math.min(W - 1, Math.floor(fx + ((x + 0.5) * fw) / pw));
+        const si = (sy * W + sx) * 3, di = (y * pw + x) * 3;
+        out[di] = pick[si]; out[di + 1] = pick[si + 1]; out[di + 2] = pick[si + 2];
+      }
+    }
+    const panel = { w: pw, h: ph, data: out };
+    const s = pw / 1920, m = cd.motion.map((v) => Math.round(v * s));
+    rectOutline(panel, [Math.max(0, m[0]), Math.max(0, m[1]), Math.min(pw, m[2]), Math.min(ph, m[3])], [255, 140, 0], 2);
+    blit(c, panel, x0, gap + bar);
+    fillRect(c, x0, gap, pw, bar, cd.cut.length ? [90, 20, 30] : [30, 39, 64]);
+    text(c, `${cd.zoom.toFixed(2)}x  ${cd.frame.join(',')}`, x0 + 8, gap + 5, 3, [255, 212, 0]);
+  });
+  const file = path.join(P.project, 'work', '構圖預覽.jpg');
+  writeJpg(c, file, 2);
+  const cards = flags.cards ? cardsPreview(P, flags, src, info, cands) : null;
+  return { src, srcSize: [info.width, info.height], times: ts, motion, content, cands, file, cards };
+}
+
+// 套卡預覽的示意段落（秒數是 24 秒靜態短片上的絕對秒數）＋各段完成態的截圖時間
+const CARD_SCENES = [
+  { id: 'c1', scene: 'key-point', from: 0.4, to: 6.0, slots: { lead: '下方字卡', key: '重點會疊在這個位置' } },
+  { id: 'c2', scene: 'side-panel', from: 6.4, to: 15.0, slots: { eyebrow: '半畫面', title: '講者推到**右半邊**//左邊放重點',
+    items: ['第一個重點 ｜icon=check', '第二個重點 ｜icon=check', '第三個重點 ｜icon=check'] } },
+  { id: 'c3', scene: 'fs-list', from: 15.4, to: 23.6, slots: { title: '子母畫面',
+    items: ['資訊卡占滿畫面 ｜icon=layout-template', '講者縮到右下角小窗 ｜icon=user', '適合清單、流程、對照 ｜icon=list-checks'] } },
+];
+const CARD_SHOTS = [{ label: 'overlay', at: 4.8 }, { label: 'side', at: 13.6 }, { label: 'pip', at: 22.6 }];
+
+export function cardsPreview(P, flags, src, info, cands) {
+  const tmp = path.join(P.project, 'work', '.framing-preview');
+  fs.mkdirSync(tmp, { recursive: true });
+  // 中間一格 → 24 秒靜態短片（沒有聲音）＋一則示意字幕
+  const mid = path.join(tmp, 'mid.jpg');
+  writeJpg({ w: 1920, h: 1080, data: frame1080(src, info.duration / 2) }, mid, 2);
+  const still = path.join(tmp, 'still.mp4');
+  let r = run('ffmpeg', ['-y', '-v', 'error', '-loop', '1', '-i', mid, '-t', '24', '-r', '30', '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'veryfast', still]);
+  if (r.status !== 0) throw new Error(`做不出靜態短片：${tail(r.stderr)}`);
+  const srt = path.join(tmp, 'sample.srt');
+  fs.writeFileSync(srt, '1\n00:00:00,000 --> 00:00:24,000\n字幕會出現在這個位置\n');
+  const build = path.join(HERE, 'build.mjs'), sfx = path.resolve(HERE, '..', '..', 'sfx');
+  const rows = [];
+  for (const cd of cands) {
+    const dir = path.join(tmp, `z${cd.zoom.toFixed(2).replace('.', '')}`);
+    fs.mkdirSync(dir, { recursive: true });
+    const plan = { version: 1, ...(cd.zoom > 1.001 ? { frame: cd.frame } : {}), speakerBox: padBox(cd.motion), pipCrop: 'auto', scenes: CARD_SCENES };
+    const planFile = path.join(tmp, `plan-${path.basename(dir)}.json`);
+    fs.writeFileSync(planFile, JSON.stringify(plan, null, 1));
+    const args = [build, '--project', P.project, '--video', still, '--srt', srt, '--plan', planFile, '--out', dir, '--no-loudnorm', '--no-declick', '--force'];
+    if (fs.existsSync(sfx)) args.push('--sfx', sfx);
+    if (flags.template) args.push('--template', path.resolve(flags.template));
+    r = run(process.execPath, args);
+    if (r.status !== 0) throw new Error(`${cd.zoom}x 的示意 build 失敗：${tail(r.stdout + r.stderr, 600)}`);
+    const shots = path.join(dir, 'shots');
+    fs.rmSync(shots, { recursive: true, force: true });
+    r = run('npx', ['hyperframes', 'snapshot', '--at', CARD_SHOTS.map((x) => x.at).join(','), '--no-end', '-o', 'shots'], { cwd: dir });
+    const pngs = fs.existsSync(shots) ? fs.readdirSync(shots).filter((x) => /^frame-.*\.png$/.test(x)).sort() : [];
+    if (pngs.length < CARD_SHOTS.length) throw new Error(`${cd.zoom}x 的示意截圖不完整：${tail(r.stdout + r.stderr)}`);
+    rows.push({ cd, files: pngs.map((x) => path.join(shots, x)) });
+  }
+  // 拼表：列＝倍率、欄＝版面
+  const cw = 640, ch = 360, gap = 10, bar = 30;
+  const head = gap;   // 點陣字只有數字與少數符號，欄名寫在指令輸出裡（左到右：疊加／半畫面／子母畫面）
+  const c = canvas(CARD_SHOTS.length * cw + (CARD_SHOTS.length + 1) * gap, head + rows.length * (ch + bar + gap) + gap, [11, 16, 32]);
+  rows.forEach(({ cd, files }, i) => {
+    const y = head + i * (ch + bar + gap);
+    fillRect(c, gap, y, c.w - 2 * gap, bar, cd.cut.length ? [90, 20, 30] : [30, 39, 64]);
+    text(c, `${cd.zoom.toFixed(2)}x  ${cd.frame.join(',')}`, gap + 8, y + 5, 3, [255, 212, 0]);
+    files.forEach((f, k) => blit(c, { w: cw, h: ch, data: rawFrame(f, { width: cw, height: ch }) }, gap + k * (cw + gap), y + bar));
+  });
+  const file = path.join(P.project, 'work', '構圖預覽-套卡.jpg');
+  writeJpg(c, file, 2);
+  return { file, tmp };
+}
+
+function printFraming(P, r) {
+  console.log(`專案：${rel(P.project)}\n來源：${rel(r.src)}（${r.srcSize[0]}×${r.srcSize[1]}）`);
+  console.log(`講者動作範圍 [${r.motion.join(', ')}]（下緣只算到內容範圍 90%，避開桌面倒影）`);
+  const [x1, y1, x2, y2] = r.content;
+  console.log(x1 || y1 || x2 < 1920 || y2 < 1080 ? `偵測到黑邊：內容範圍 [${r.content.join(', ')}]，裁切框都在這裡面` : '四周沒有黑邊');
+  console.log(`\n→ ${rel(r.file)}：每個倍率一格，橘框是講者動作範圍（裁切後）；紅底標題＝會切到手勢\n`);
+  console.log('倍率｜frame（寫進 plan.json）｜講者動作範圍（裁切後）｜備註');
+  for (const c of r.cands) {
+    const notes = [];
+    if (c.zoom === 1) notes.push('原樣，不裁切（不用寫 frame）');
+    if (c.cut.length) notes.push(`⚠ 會切到${c.cut.join('、')}側手勢`);
+    if (r.srcSize[0] < 1920) notes.push(`來源 ${r.srcSize[0]}px 寬，每個像素放大 ${c.upscale} 倍${c.upscale > 3.5 ? '，會明顯變軟' : ''}`);
+    console.log(`${c.zoom.toFixed(2)}x｜[${c.frame.join(', ')}]｜[${c.motion.join(', ')}]｜${notes.join('；') || '—'}`);
+  }
+  if (r.cards) console.log(`\n→ ${rel(r.cards.file)}：套卡預覽，每一列是一個倍率，欄由左到右是「疊加（下方字卡）｜半畫面（側邊欄）｜子母畫面（全畫面清單＋右下小窗）」，用影片中間一格套目前的風格`);
+  console.log('\n下一步：把使用者選的那一列 frame 寫進 plan.json 第一層（"frame": [x, y, w, h]），再跑 qc.mjs speaker 量講者框');
+}
+
 function printSpeaker(P, r) {
   console.log(`專案：${rel(P.project)}\n來源：${rel(r.src)}（${r.srcSize[0]}×${r.srcSize[1]}${r.scaled ? ' → 已等比放大成 1920×1080，圖上座標可直接寫進 speakerBox' : ''}）`);
+  if (r.frame) console.log(`構圖裁切：照 plan.json 的 frame [${r.frame.join(', ')}] 裁切放大後量（座標是成片上的座標）`);
   console.log(`抽幀時間：${r.times.map(fmtT).join('、')}\n`);
   console.log(`→ ${rel(r.mapFile)}：疊影圖。橘色是動作掃過的地方，黃線每 100px 一條（粗線每 500px），數字是 1920×1080 的座標`);
   console.log(`→ ${rel(r.sheetFile)}：8 格總表，看每個時間點講者的姿勢`);
@@ -413,7 +580,7 @@ function printSpeaker(P, r) {
 export async function cli() {
   const flags = parseArgs(process.argv.slice(2));
   if (flags.help || !flags.cmd || flags.cmd === '--help') { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
-  if (!['final', 'speaker'].includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 final、speaker（用 --help 看用法）`);
+  if (!['final', 'speaker', 'framing'].includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 final、speaker、framing（用 --help 看用法）`);
   const P = pathsFrom({ project: flags.project, template: flags.template });
   if (flags.cmd === 'final') {
     const r = finalCheck(P, flags);
@@ -428,6 +595,7 @@ export async function cli() {
     } else printFinal(P, r);
     return r.ok ? 0 : 1;
   }
+  if (flags.cmd === 'framing') { printFraming(P, framingPreview(P, flags)); return 0; }
   printSpeaker(P, speakerMaps(P, flags));
   return 0;
 }

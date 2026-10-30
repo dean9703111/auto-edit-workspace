@@ -3,7 +3,7 @@
    子母畫面外框 pip-frame.png 是圖檔，CSS 改不到：建議用 node shared/template/tools/brand.mjs "#色碼" 換色，
    它會寫這 3 行、檢查 --brand-ink／--brand-text 的對比，並重畫 pip-frame.png。 */
 :root {
-  --brand:      #FFD400;  /* 主色：填色、強調線、章節號卡、側邊欄邊線、子母畫面外框 */
-  --brand-ink:  #0B1020;  /* 主色底上的字（淺主色用深字；深主色改 #FFFFFF） */
-  --brand-text: #FFD400;  /* 深底上的主色字（深主色時改用它的亮色版，對比 ≥ 4.5） */
+  --brand:      #F6630F;  /* 主色：填色、強調線、章節號卡、側邊欄邊線、子母畫面外框 */
+  --brand-ink:  #FFFFFF;  /* 主色底上的字（淺主色用深字；深主色改 #FFFFFF） */
+  --brand-text: #F6630F;  /* 深底上的主色字（深主色時改用它的亮色版，對比 ≥ 4.5） */
 }

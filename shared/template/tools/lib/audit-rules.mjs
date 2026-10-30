@@ -15,7 +15,7 @@ import { PIP_ZONE } from './media.mjs';
 export const CANVAS = [1920, 1080];
 export const CAPTION_Y = 920;       // 字幕區從 y 920 起（R4.1；check --caption-zone 的 y0=0.852）
 export const CONTENT_BOTTOM = 870;  // 內容區下緣（R4.1），改法建議移到這條線以上
-export const FS_RIGHT = 1300;       // 全畫面主內容右緣上限（R4.1、R7.2）
+export const FS_RIGHT = 1380;       // 全畫面主內容右緣上限（R4.1、R7.2）
 export { PIP_ZONE };                // 子母畫面外框禁入區（lib/media.mjs，和 build 同一組數字）
 export const DONE_BEFORE = 0.6;     // 完成態＝段尾前 0.6 秒（完成態至少停 0.6s，USAGE 4.2）
 export const MIN_FONT = 30;         // 字太小的門檻（R8.5 的下限是正文 52、標籤 38；30 以下一定看不清）

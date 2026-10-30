@@ -22,7 +22,7 @@ import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS } from './time.mj
 import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } from './edit.mjs';
 import { MEDIA_KEYS, ENTER, checkMediaSeg, resolveMedia } from './media.mjs';
 
-const TOP_KEYS = ['version', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'edit', 'scenes'];
+const TOP_KEYS = ['version', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'edit', 'scenes'];
 const KEYS = {
   scene: ['id', 'type', 'scene', 'from', 'to', 'duration', 'at', 'anchor', 'slots', 'beats', 'tone', 'sfx', 'sfxExtra', 'css', 'chtag', 'pip', 'sfxVolume', 'note'],
   fx: ['id', 'type', 'fx', 'from', 'to', 'duration', 'anchor', 'bg', 'vars', 'sfx', 'sfxExtra', 'sfxVolume', 'note'],
@@ -48,23 +48,23 @@ const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
 const fmt = (t) => (t == null ? '—' : `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`);
 
 export function pipGeometry(pipCrop, speakerBox) {
+  const PW = 432, AR = 4 / 3;   // 子母畫面本體 432×324（4:3）
   let crop;
   if (Array.isArray(pipCrop)) {
     const [x, y, w, h] = pipCrop;
     crop = { x, y, w, h };
+  } else if (!speakerBox) {
+    const h = 0.66 * 1080, w = h * AR;
+    crop = { x: (1920 - w) / 2, y: 0.02 * 1080, w, h };
   } else {
-    const cx = speakerBox ? (speakerBox[0] + speakerBox[2]) / 2 : 960;
-    if (!speakerBox || (cx >= 860 && cx <= 1060)) crop = { x: 0.16 * 1920, y: 0.02 * 1080, w: 0.66 * 1920, h: 0.66 * 1080 };
-    else {
-      const bw = speakerBox[2] - speakerBox[0], bh = speakerBox[3] - speakerBox[1];
-      const cy = (speakerBox[1] + speakerBox[3]) / 2;
-      let h = Math.min(1080, Math.max(bh * 1.15, bw * 1.15 * 9 / 16));
-      let w = h * 16 / 9;
-      if (w > 1920) { w = 1920; h = 1080; }
-      crop = { x: Math.min(Math.max(cx - w / 2, 0), 1920 - w), y: Math.min(Math.max(cy - h / 2, 0), 1080 - h), w, h };
-    }
+    const bw = speakerBox[2] - speakerBox[0], bh = speakerBox[3] - speakerBox[1];
+    const cx = (speakerBox[0] + speakerBox[2]) / 2, cy = (speakerBox[1] + speakerBox[3]) / 2;
+    let h = Math.min(1080, Math.max(bh * 1.15, bw * 1.15 / AR));
+    let w = h * AR;
+    if (w > 1920) { w = 1920; h = w / AR; }
+    crop = { x: Math.min(Math.max(cx - w / 2, 0), 1920 - w), y: Math.min(Math.max(cy - h / 2, 0), 1080 - h), w, h };
   }
-  const s = 512 / crop.w;
+  const s = PW / crop.w;
   return { crop, style: { left: Math.round(-crop.x * s), top: Math.round(-crop.y * s), width: Math.round(1920 * s), height: Math.round(1080 * s) } };
 }
 
@@ -161,6 +161,13 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   if (speakerBox == null && !errors.length) warnings.push('沒寫 speakerBox：看場地照框出講者頭、身體與手勢（外擴 40px），build 才能檢查右移與碰撞');
   const sideShift = plan.sideShift ?? 480;
   if (!isNum(sideShift) || sideShift < 0 || sideShift > 960) errors.push(`sideShift 要是 0–960 的數字（預設 480），現在是 ${JSON.stringify(plan.sideShift)}`);
+  if (plan.frame != null) {
+    const fr = plan.frame;
+    if (!(Array.isArray(fr) && fr.length === 4 && fr.every(isNum) && fr[0] >= 0 && fr[1] >= 0 && fr[2] > 0 && fr[3] > 0 && fr[0] + fr[2] <= 1920 && fr[1] + fr[3] <= 1080))
+      errors.push(`frame 要寫 [x, y, w, h]（1920×1080 座標、在畫面內），現在是 ${JSON.stringify(fr)} → 跑 qc.mjs framing 看建議值`);
+    else if (Math.abs(fr[2] / fr[3] - 16 / 9) > 0.01) errors.push(`frame 的寬高比要是 16:9（現在 ${fr[2]}×${fr[3]}）→ 照 qc.mjs framing 印的值寫`);
+    else if (1920 / fr[2] > 1.5) warnings.push(`frame 放大 ${(1920 / fr[2]).toFixed(2)} 倍，畫質會明顯變軟（建議 ≤ 1.3）`);
+  }
   const pipCrop = plan.pipCrop ?? 'auto';
   if (pipCrop !== 'auto' && !(Array.isArray(pipCrop) && pipCrop.length === 4 && pipCrop.every(isNum) && pipCrop[2] > 0 && pipCrop[3] > 0 && pipCrop[0] >= 0 && pipCrop[1] >= 0 && pipCrop[0] + pipCrop[2] <= 1920 && pipCrop[1] + pipCrop[3] <= 1080)) {
     errors.push(`pipCrop 要寫 "auto" 或 [x, y, w, h]（裁切框在 1920×1080 內），現在是 ${JSON.stringify(plan.pipCrop)}`);

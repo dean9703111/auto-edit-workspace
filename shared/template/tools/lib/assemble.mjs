@@ -113,7 +113,7 @@ export function checkRefs({ style, css = '', body, timeline }, rootId) {
 // ---------- 附件：章節角標 ----------
 
 function chtagParts(chapter, fullscreen) {
-  const pos = fullscreen ? 'left: 1344px; top: 150px; width: 512px;' : 'right: 96px; top: 56px;';
+  const pos = fullscreen ? 'left: 1424px; top: 150px; width: 432px;' : 'right: 96px; top: 56px;';
   return {
     style: `#cBadge { position: absolute; ${pos} }\n`,
     body: `<div id="cBadge" class="sc-chtag">\n  <div class="sc-chtag__shell"><span class="sc-chtag__num">${esc(chapter.num)}</span></div>\n  <div class="sc-chtag__band"><span class="sc-chtag__name">${esc(chapter.name)}</span></div>\n</div>\n`,

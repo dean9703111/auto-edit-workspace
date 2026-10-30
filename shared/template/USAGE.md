@@ -27,7 +27,7 @@
 | # | 做什麼 | 指令 | 查 | 停？ |
 |---|---|---|---|---|
 | 1 | 讀完本檔與 `shared/style.md` | — | | |
-| 2 | 列出字幕每一句的句號與內容；看場地照量 `speakerBox`。有螢幕錄影／圖片，或主軌接過聲音檔（只有聲音的區間）時，掃素材、看 contact sheet（`work/media/index.md` 也會列出只有聲音的區間） | 2.2；`node shared/template/tools/media.mjs scan --project projects/<專案>` | R4、第 5 節 | |
+| 2 | 先確認構圖（2.2 第 0 步，放大倍率給使用者選、寫進 `frame`）；列出字幕每一句的句號與內容；看場地照量 `speakerBox`。有螢幕錄影／圖片，或主軌接過聲音檔（只有聲音的區間）時，掃素材、看 contact sheet（`work/media/index.md` 也會列出只有聲音的區間） | 2.2；`node shared/template/tools/qc.mjs framing --project projects/<專案> --cards`；`node shared/template/tools/media.mjs scan --project projects/<專案>` | R4、第 5 節 | **構圖倍率停，等確認** |
 | 3 | 字幕超過 18 字的先拆句 | `node shared/template/tools/build.mjs --project projects/<專案> --check`（暫時的 plan.json，2.4） | | |
 | 4 | 挑情境、配螢幕錄影與圖片，列分鏡表，存成 `work/storyboard.md` | `node shared/template/tools/build.mjs --list` | R1、R2、R6、第 5 節 | **停，等確認** |
 | 5 | 寫 `work/hyperframes/plan.json` | — | 第 3 節 | |
@@ -51,6 +51,11 @@
 
 ### 2.2 量 `speakerBox`
 
+0. **先確認構圖（畫面要不要放大）**：跑 `node shared/template/tools/qc.mjs framing --project projects/<專案> --cards`。它量講者的動作範圍、偵測四周黑邊，算出 1.0／1.15／1.3 倍的 16:9 裁切框（講者水平置中、頭頂上方留 120px），存 `work/構圖預覽.jpg`（每個倍率一格，橘框是講者動作範圍；紅底標題＝會切到手勢），並印出每個倍率的 `frame` 與畫質提醒（來源像素被放大的倍數）。
+   - 加 `--cards` 會再產生 `work/構圖預覽-套卡.jpg`：抓影片中間一格，每個倍率一列，由左到右套上「疊加（下方字卡）｜半畫面（側邊欄）｜子母畫面（全畫面清單＋右下小窗）」三種示意卡（目前的模板風格），讓使用者看著卡片套上去的樣子選倍率（約 15 秒 × 倍率數；暫存在 `work/.framing-preview/`）。這一步要在列分鏡表之前做。
+   - 看預覽圖判斷：四周有多餘的外框（黑邊、櫃子、大片空牆、桌面倒影）讓構圖鬆散時，建議放大；講者的手勢會被切到、或原片解析度低（每個像素放大超過 3.5 倍會明顯變軟）時，倍率往小選。
+   - 把預覽圖與建議倍率給使用者，**停下來等確認**。選定後把那一列寫進 plan.json 第一層：`"frame": [x, y, w, h]`（1.0 倍不用寫）。build 重新編碼底片時會照它裁切放大回 1920×1080，子母畫面、碰撞檢查都以裁切後的畫面為準。
+   - 寫好 `frame` 之後才做下面的步驟（場地照的座標要換算：`(x − frame.x) × 1920 ÷ frame.w`；`qc.mjs speaker` 會自動照 `frame` 裁切後再量）。
 1. 場地照：專案資料夾裡檔名有「場地照」的圖（範本附的是 `projects/範例/場地照-測試.jpg`），或 Skill 每集自動截的 `work/場地照.jpg`。都沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
 2. 確認是 1920×1080：`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <場地照路徑>`。不是的話，量出來的數字要等比換算（範例的 `示範口播.mp4` 是 640×360，從它截的場地照量出來要乘 3）。講者框整個落在底片尺寸內時，`--check` 會提醒「看起來是用原尺寸截圖的像素量的」並附換算後的框。
 3. 框出講者的頭頂、兩肩、手勢會到的範圍，四邊各外擴 40px，寫成 `[x1, y1, x2, y2]`（左上到右下）。
@@ -202,7 +207,8 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | 欄位 | 必填 | 值 | 說明 |
 |---|---|---|---|
 | `version` | ✓ | `1` | 固定 |
-| `speakerBox` | 強烈建議 | `[x1, y1, x2, y2]` | 講者框（2.2）。沒寫會提醒，也無法檢查碰撞 |
+| `frame` | | `[x, y, w, h]` | 構圖裁切（2.2 第 0 步）：1920×1080 座標、16:9；底片照它裁切放大回 1920×1080。不寫＝原樣 |
+| `speakerBox` | 強烈建議 | `[x1, y1, x2, y2]` | 講者框（2.2）。有 `frame` 時是裁切後的座標。沒寫會提醒，也無法檢查碰撞 |
 | `sideShift` | | `0`–`960`，預設 `480` | 03 側邊欄時講者往右推多少 px（R4） |
 | `pipCrop` | | `"auto"` 或 `[x, y, w, h]` | 子母畫面裁切哪一塊（R4） |
 | `avoid` | | 情境 key 陣列 | 使用者說「不要用 XX」時寫進來，用了會報錯 |
@@ -417,7 +423,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜whoosh 1:00.79｜—�
 | `from`／`to`／`duration`／`anchor` | `to` 或 `duration` 必填 | 同其他段（3.4） |
 | `in` | `0` | 錄影從第幾秒開始播；`in ＋ 段長 × speed` 不能超過錄影長度 |
 | `speed` | `1` | 0.5–4 |
-| `fit` | `"contain"` | `contain`＝整張看得到，放在字幕帶上方（y 0–940），空白處是主題深底（有 `bg.jpg` 就用它）；`cover`＝鋪滿 1920×1080，多的裁掉 |
+| `fit` | `"contain"` | `contain`＝整張看得到，放在字幕帶上方（y 0–940），空白處是主題底色（有 `bg-fs.jpg` 或 `bg.jpg` 就用它）；`cover`＝鋪滿 1920×1080，多的裁掉 |
 | `pip` | `true` | 右下角子母畫面露臉；只有聲音的區間自動不放。`false`＝整段不露臉 |
 | `volume` | `null` | `null`＝素材靜音；寫 dB 數字（−60～+12）＝保留素材原聲 |
 | `enter`／`exit` | `"fade"` | `"cut"`、`"fade"`、`"slide"`（從右滑入、往左滑出）、`"zoom"` |

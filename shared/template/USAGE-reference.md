@@ -155,7 +155,7 @@
 | `anchor` | 選填 | 文字 | | 起點那句的一小段原文 |
 | `in` | 選填 | 秒數 ≥ 0 | `0` | 錄影從第幾秒開始播（圖片忽略）；`in ＋ 段長 × speed` 超過錄影長度 ✖ |
 | `speed` | 選填 | 0.5–4 | `1` | 播放速度（圖片忽略）；聲音也跟著變速 |
-| `fit` | 選填 | `"contain"`、`"cover"` | `"contain"` | contain：整張放進 1920×940（字幕帶上方）置中，空白處是主題深底或 `bg.jpg`；cover：鋪滿 1920×1080 |
+| `fit` | 選填 | `"contain"`、`"cover"` | `"contain"` | contain：整張放進 1920×940（字幕帶上方）置中，空白處是主題底色或 `bg-fs.jpg`（沒有就 `bg.jpg`）；cover：鋪滿 1920×1080 |
 | `pip` | 選填 | `true`、`false` | `true` | 右下角子母畫面；只有聲音的區間自動不放 |
 | `volume` | 選填 | `null` 或 −60～+12（dB） | `null` | `null`＝靜音；數字＝保留素材原聲（素材沒有聲音時 ⚠ 並忽略），疊在 `edit.volume.media` 上 |
 | `enter`／`exit` | 選填 | `"cut"`、`"fade"`、`"slide"`、`"zoom"` | `"fade"` | 進場 0.5／0.5／0.6／0.5 秒、出場 0.5／0.5／0.6／0.4 秒；接在另一張整張幕後面時 `fade` 自動變 `cut` |
@@ -252,7 +252,7 @@
 |---|---|---|
 | 內容區 | y 120–870 | 所有卡片文字都在這裡；下方字卡底座在 y 860 |
 | 字幕區 | y ≥ 920（底部 160px） | **什麼都不放**（字幕框在 y 940–1020）。`check --caption-zone` 會把壓到這裡的文字當錯誤 |
-| 子母畫面 | 本體 x 1344–1856、y 630–918（512×288）；外框禁入區 x 1344–1888、y 617–951 | 只在全畫面情境與 media 段出現。全畫面主卡右緣 ≤ 1300；media 段的紅框、放大鏡壓到這裡會 ⚠ |
+| 子母畫面 | 本體 x 1424–1856、y 594–918（432×324，4:3）；外框禁入區 x 1424–1888、y 581–951 | 只在全畫面情境與 media 段出現。全畫面主卡右緣 ≤ 1380（模板的 04 家族目前寬 1180、右緣 1300）；media 段的紅框、放大鏡壓到這裡會 ⚠ |
 | media 段可見區 | `fit: "contain"`：y 0–940 置中；`"cover"`：整個畫面 | 素材下緣碰到字幕帶上緣，字幕照常疊在上面 |
 | 講者框 | speakerBox | 透明的卡不能壓到臉與手勢 |
 
@@ -301,8 +301,8 @@
 
 ### R4.5 `pipCrop`（子母畫面裁哪一塊）
 
-- `"auto"`：講者置中時裁 x 16–82%、y 2–68% 的區域；不置中時以 speakerBox 中心取一個 16:9 的框（高＝max(框高×1.15, 框寬×1.15×9/16)，夾在畫面內）。
-- 也可以直接寫 `[x, y, w, h]`（1920×1080 座標、寬高比 16:9）。snapshot 看到子母畫面裡的講者被切到頭或手時才改。
+- `"auto"`：以 speakerBox 中心取一個 4:3 的框（高＝max(框高×1.15, 框寬×1.15×3/4)，夾在畫面內）；沒寫 speakerBox 時裁畫面中央、高 66%。有 `frame` 時座標是裁切後的畫面。
+- 也可以直接寫 `[x, y, w, h]`（1920×1080 座標、寬高比 4:3）。snapshot 看到子母畫面裡的講者被切到頭或手時才改。
 
 ### R4.6 用 `css` 微調位置
 
@@ -480,7 +480,7 @@
 
 | `layout` | 用在 | build 會做什麼 | 你要做什麼 |
 |---|---|---|---|
-| `"fullscreen"` | 不透明全畫面圖解 | 整段淡入淡出 0.5 秒、加子母畫面（`"pip": false` 可以拿掉）、和相鄰不透明幕接縫不淡 | 第一個子元素放滿版底 `<div class="sc-surface-fs fill"></div>`；主內容右緣 ≤ 1300；內容從第 0.5 秒（淡入完）之後才開始動 |
+| `"fullscreen"` | 不透明全畫面圖解 | 整段淡入淡出 0.5 秒、加子母畫面（`"pip": false` 可以拿掉）、和相鄰不透明幕接縫不淡 | 第一個子元素放滿版底 `<div class="sc-surface-fs fill"></div>`；主內容右緣 ≤ 1380（範例目前排到 1300）；內容從第 0.5 秒（淡入完）之後才開始動 |
 | `"overlay"` | 透明、疊在講者上 | 只在時間到時掛上、時間到拿掉，**不幫你淡入淡出** | 自己寫進場與退場（`P.out(..., D - P.OUT)`）；不放滿版底；不能壓到 speakerBox |
 
 4. 子合成的長度 D：先用估計值寫，跑 `--check` 後，把報告裡這段的「長度」填回檔內的 `data-duration` 與 `const D`（理由：時間軸要撐到整段長度，短了最後一段不會被取樣）。
@@ -615,7 +615,7 @@
 | 14 | 子合成：style 與 script 放在 `<template>` 裡、id 三處一致、用 `fromTo` 不用 `from`、root 用 id 選擇器 | 沒有樣式；時間軸 45 秒後變靜止幀 |
 | 15 | 動作：不要縮放彈跳、旋轉、大位移飛入；位移 8–16px、進場 0.3–0.5 秒、出場 0.3–0.4 秒 | 作者定調「以淡入為底，只加有理由的方向」 |
 | 16 | 含 `<video>` 的合成一律用 `npx hyperframes render`，不用其他截圖式 render 工具 | 影片會凍在同一幀，ffprobe 卻全部通過 |
-| 17 | 第二層與 `css` 移位不能壓到 speakerBox、不能進子母畫面禁入區（全畫面時 x 1344–1888、y 617–951） | 擋臉；壓到子母畫面（audit 會報：壓到子母畫面 ✖、壓到講者 ⚠） |
+| 17 | 第二層與 `css` 移位不能壓到 speakerBox、不能進子母畫面禁入區（全畫面時 x 1424–1888、y 581–951） | 擋臉；壓到子母畫面（audit 會報：壓到子母畫面 ✖、壓到講者 ⚠） |
 
 | audit 抓得到 | audit 抓不到（要看 snapshot） |
 |---|---|
@@ -648,14 +648,18 @@ node shared/template/tools/build.mjs --project projects/<專案>
 
 把它印出的對比值與警告原文轉告使用者。紅色系的警告要明講「觀眾會分不出哪個是警告」，建議換色。換完重跑 build（`kit/` 每次 build 都會重新複製，成片才會換色）；預覽頁 `shared/template/index.html` 重新整理就會更新。
 
+目前的設定（2026-10-30，PPA 風格）：`--brand: #F6630F`，`--brand-ink` 手動改成 `#FFFFFF`（橘底白字，對比約 3.2，作者指定）。重跑 `brand.mjs` 會把 `--brand-ink` 算回 `#0B1020`；要維持橘底白字，跑完再把這一行改回 `#FFFFFF`。
+
 不要只手改 `brand.css` 的 `--brand` 一行（理由：`--brand-ink`、`--brand-text` 不會跟著算，深色主色會看不清楚；子母畫面外框也不會換色）。
 
 ### R9.2 背景圖
 
-- 把圖放成 `shared/template/bg.jpg`（檔名固定）。建議 1920×1080、暗色、主要內容不要放在左上（全畫面主卡在 x 120–1300、y 150–862）。
+- 每種版面一張，檔名固定：`shared/template/bg-fs.jpg`（1920×1080，全畫面與插入素材的空白處）、`bg-side.jpg`（960×1080，側邊欄面板）、`bg-ch.jpg`（1920×1080，章節轉場）。哪張沒有就用 `shared/template/bg.jpg`（舊的單張寫法，側邊欄取它的左半）；都沒有就是主題底色與底紋。
+- 留空的地方：全畫面主卡 x 120–1380、y 150–862，子母畫面 x 1424–1888、y 581–951，字幕帶 y ≥ 920；側邊欄文字區在左 85%、y 8–80%；章節幕中央放章名卡。裝飾放在這些區域以外。
+- 現在的三張是 2026-10-30 用 Codex 照 PPA 風格生成的（淺暖底、橘色線稿；提示詞與參考圖見 git log）。重新生成：`codex exec --skip-git-repo-check -C <暫存資料夾> -s workspace-write -i <參考圖> ... < prompt.md`（`-i` 會吃掉後面的字串，提示詞一定從 stdin 給），生成後用 ffmpeg 縮放成上面的尺寸存 jpg。
 - 影響範圍：01 章節轉場、04 全畫面家族、03 側邊欄面板（取圖的左半）。
-- 放好後重跑 build。拿掉背景就刪掉 `bg.jpg` 再重跑 build。
-- 使用者要「生成同色系背景圖」時，用你自己的生圖能力產生，存成 `shared/template/bg.jpg`；做不到就說明，建議只換主色、保留預設的程式碼底紋。
+- 放好後重跑 build。拿掉背景就刪掉那張 jpg 再重跑 build。
+- 使用者要「生成同色系背景圖」時，用你自己的生圖能力產生，依上面三種版面存成 `bg-fs.jpg`／`bg-side.jpg`／`bg-ch.jpg`；做不到就說明，建議只換主色、保留預設的程式碼底紋。
 
 ---
 
@@ -664,7 +668,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 不可以 | 理由 |
 |---|---|
 | 重新設計卡片、自己畫第一層情境的版面 | 版型只從素材包挑 |
-| 改 `shared/template/` 裡的任何檔（例外：使用者要求時的 `kit/brand.css`、`kit/pip-frame.png`（brand.mjs 寫）、`bg.jpg`） | 模板是共用素材；改壞了每集都壞 |
+| 改 `shared/template/` 裡的任何檔（例外：使用者要求時的 `kit/brand.css`、`kit/pip-frame.png`（brand.mjs 寫）、`bg-fs.jpg`／`bg-side.jpg`／`bg-ch.jpg`／`bg.jpg`） | 模板是共用素材；改壞了每集都壞 |
 | 手改 build 產生的檔（`index.html`、`compositions/sNN-*.html`、`captions.html`、`test-clip.html`、`work/hyperframes/kit/`） | 下次 build 會被擋下或蓋掉；改 plan.json 再重跑 |
 | 用 `css` 改字級、顏色、寬度、內距 | 字級是作者定好的下限；`css` 只改位置 |
 | 另外下載字型、圖示、音效、素材，或用 CDN | 全部都附了；另外下載的東西 Windows 與離線環境不一定有 |
@@ -686,7 +690,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 字卡動態 | `shared/template/fx/effects/fx-NN-*.html` | 40 種（5 類 × 8） | plan.json 寫 `"type": "fx", "fx": 編號`；效果看 `shared/template/fx/index.html` |
 | 情境預覽 | `shared/template/preview/<NN>-<key>.html`、`shared/template/gallery/*.jpg` | 18 頁 | 給使用者看用；預覽講者是 Q 版圖、位置置中，實際版面以場地照與 snapshot 為準 |
 | 頻道主題 | `shared/template/kit/brand.css`（主色 3 行）、`theme.css`、`scene.css` | 1 套 | 換主色見 R9 |
-| 背景圖掛鉤 | `shared/template/bg.jpg`（預設沒有） | 1 個 | 放了就套到章節轉場、全畫面、側邊欄 |
+| 背景圖掛鉤 | `shared/template/bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（沒有的退回 `bg.jpg`） | 3 個 | 分別套到全畫面（含插入素材）、側邊欄、章節轉場 |
 | 圖示 | `shared/template/kit/icons.json` | 約 1,550 個 lucide 圖示 | slots 裡寫圖示名（例：`clipboard-list`） |
 | 字型 | `shared/template/kit/fonts/` | Noto Sans TC、Google Sans Flex（OFL） | 已由 `kit/fonts.css` 載入，不用安裝 |
 | 音效 | `shared/sfx/*.wav`＋`shared/template/kit/sfx.json` | 12 個 | build 自動配，見 R5 |
