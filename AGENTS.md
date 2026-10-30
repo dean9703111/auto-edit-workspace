@@ -30,6 +30,7 @@ projects/<專案>/
 | `projects/<專案>/講稿.md` | 這支影片的講稿 | 只能讀 |
 | `projects/<專案>/work/` | 中間產物：逐字稿、剪輯清單、初剪、HyperFrames 專案 | AI 可新增、修改 |
 | `projects/<專案>/成片/` | 最終成品、測試片段、驗收截圖 | AI 可新增 |
+| `dev/` | 作者維護工作區用的測試與工具（有 Python），不是剪片流程的一部分 | 剪片時不要讀、不要執行；找不到合適的工具時照 `shared/template/USAGE.md`，也不要自己另寫腳本 |
 
 ## 規則
 
