@@ -99,7 +99,12 @@ test('底片切片：cut 的地方換一支 <video>（data-media-start 跳過剪
   // s02（fs-list，有子母畫面）是 18.5–25.0 → 成片 18.5–24.0，cut 收在 20：子母畫面兩支
   assert.match(html, /<video id="pipv-s02" src="assets\/rough\.mp4" data-start="18\.5" data-duration="1\.5" data-media-start="18\.5"/);
   assert.match(html, /<video id="pipv-s02-2" src="assets\/rough\.mp4" data-start="20" data-duration="4" data-media-start="21"/);
-  assert.match(html, /tl\.fromTo\('#el-s02, #pip-s02, #pipf-s02, #pip-s02-2, #pipf-s02-2', \{ opacity: 0 \}/);
+  // 幕的進場（v2 色帶擦開）不含子母畫面；cut 切開的第二支接續（enter none、沒有 tween），最後一支在色帶收回時一起淡出（exit layer）
+  assert.match(html, /tl\.fromTo\('#el-s02', \{ clipPath: 'inset\(0% 0% 0% 110\.4%\)' \}/);
+  assert.doesNotMatch(html, /tl\.fromTo\('#pip-s02-2', \{ (x|opacity: 0)/, '第二支不飛入、不淡入');
+  assert.match(html, /tl\.fromTo\('#pip-s02-2, #pipf-s02-2', \{ opacity: 1 \}, \{ opacity: 0, duration: 0\.3/);
+  assert.deepEqual(byId(res, 's02').pipPieces.map((p) => [p.enter, p.exit]).slice(1), [['none', 'layer']]);
+  assert.equal(byId(res, 's02').pipPieces[0].exit, 'none');
 });
 
 test('dip／punch／整支淡入淡出／volume／gains：畫面用 GSAP，聲音用原生 data-fade-*、data-volume', () => {

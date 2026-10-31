@@ -1,12 +1,17 @@
+<!-- 預設拍型：F 重點字卡的拍 1–3（問 → 答，不寫動畫分鏡） -->
 <!-- @style -->
 /* 兩列卡：主卡 592–852（高 260）、標籤 536–624。主卡內：頂內距 56 → Q 列 650–718（68）→ 列間 32、2px 分隔線在正中
    → A 列 750–818（68）→ 底內距 32。列首方標 64（圖文距 24）：Q＝安靜（框＋淡底），A＝主色底（答案＝焦點）。
    A 列一開始就佔位（opacity 0），卡高不因答案出現而變。細節＝右上網點。 */
+/* 排法 free（kit/scene-layout.js 不排）：Q／A 兩列靠左同一條左緣（helper 的 col 會改成中線對齊）；列間 15＋分隔線 2＋15 讓卡高 260 和 10／14 一樣，不換 token。 */
 #qaCard { left: 120px; bottom: 220px; }
 .qa-body { display: flex; flex-direction: column; gap: 15px; }
 .qa-row { min-height: 68px; }
+<!-- @style-portrait -->
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+#qaCard { left: 60px; bottom: 680px; }
 <!-- @body -->
-<div id="qaCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+<div id="qaCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
   <div class="sc-lt__card">
     <i class="sc-lt__dots"></i>
@@ -25,8 +30,14 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* 外殼揭開 → 問句（含分隔線）0.15 後淡入上漂，0.65 可讀 → 停 1.2s → 答案淡入上漂 8（第二層新訊息）→ 段尾 0.4 淡出 */
-P.reveal('#qaCard', {{{in}}});
-P.rise('#qaCard .sc-lt__body', {{{in}}} + P.BEAT);
-P.rise('#rowA', {{{aAt}}});
-{{#exitFade}}P.out('#qaCard', D - P.OUT);{{/exitFade}}
+/* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；停留：整組漂浮 3u、徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張）；aAt：問句退焦 0.62 → A 徽章彈入 → 答案逐字彈出（過衝） */
+P.wipe('#qaCard .sc-lt__plate, #qaCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#qaCard .sc-lt__plate, #qaCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+P.pop('#qaCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+P.pop('#rowQ .sc-lt__mark', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+P.chars('#rowQ .sc-optr', {{{in}}} + 0.22);
+P.idle('#qaCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+P.dim('#rowQ', {{{aAt}}}, { to: 0.62 });
+P.pop('#rowA .sc-lt__mark', {{{aAt}}}, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+P.chars('#rowA .sc-kw', {{{aAt}}} + 0.12, { mode: 'pop' });
+{{#exitFade}}P.wipeOut('#qaCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#qaCard', D - 0.8, { dir: 'left' });{{/exitFade}}

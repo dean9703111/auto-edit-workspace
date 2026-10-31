@@ -61,7 +61,7 @@ test('build --project：產生到專案的 work/hyperframes，建好 成片/、�
     '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', path.join(work, 'rough.mp4')]);
   assert.equal(v.status, 0, String(v.stderr));
   fs.writeFileSync(path.join(work, 'rough.srt'), makeSrt({ n: 5 }));
-  fs.writeFileSync(path.join(work, 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, speakerBox: [700, 200, 1220, 1000],
+  fs.writeFileSync(path.join(work, 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, speakerBox: [700, 200, 1220, 1000], look: false,
     scenes: [{ id: 's01', scene: 'concept', from: '#2', to: '#3e', slots: { text: '**場地設定**：一份文件' } }] }));
   const r = spawnSync(process.execPath, [BUILD, '--template', tpl, '--project', 'projects/範例', '--test', '4,3'], { encoding: 'utf8', cwd: root });
   assert.equal(r.status, 0, r.stdout + r.stderr);

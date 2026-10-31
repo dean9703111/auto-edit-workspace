@@ -1,13 +1,18 @@
+<!-- 預設拍型：章節角標（擦開＋號碼彈出＋章名逐字），不寫動畫分鏡 -->
 <!-- @style -->
-/* 迷你章節卡 .sc-chtag：右緣 1824（right 96）；頂 56（course）／176（yt：品牌橫幅盒到 y 100）。高 112、寬隨章名。 */
+/* 迷你章節卡 .sc-chtag：右緣 1824（right 96）；頂 56（course）／176（yt：品牌橫幅盒到 y 100）。高 112、寬隨章名。排法 free：單一元件靠右上，沒有列／欄。 */
 #cBadge { position: absolute; right: 96px; top: {{#yt}}176{{/yt}}{{^yt}}56{{/yt}}px; }
+<!-- @style-portrait -->
+/* 直式（canvas.mjs 的 badge：左上 x 60、y 250；右上是平台按鈕列）。 */
+#cBadge { left: 60px; right: auto; top: 250px; }
 <!-- @body -->
-<div id="cBadge" class="sc-chtag">
+<div id="cBadge" class="sc-chtag" data-layout="free">
   <div class="sc-chtag__shell"><span class="sc-chtag__num">{{num}}</span></div>
   <div class="sc-chtag__band"><span class="sc-chtag__name">{{name}}</span></div>
 </div>
 <!-- @timeline -->
-/* 貼邊元件：整組從右 drift +16＋淡入 0.5 → 號碼、章名 0.15 後淡入 → 停 → 段尾 0.4 淡出 */
-P.drift('#cBadge', {{{in}}}, { dx: P.DRIFT });
-P.in('#cBadge .sc-chtag__num, #cBadge .sc-chtag__name', {{{in}}} + P.BEAT);
-{{#exitFade}}P.out('#cBadge', D - P.OUT);{{/exitFade}}
+/* v2（shared/template/BEATS.md §2 的動作）：角標由右擦開 0.35 → 0.12 號碼彈出 → 0.2 章名逐字上浮 → 停 → 段尾向右擦掉 0.3 */
+P.wipe('#cBadge', {{{in}}}, { dir: 'right', dur: 0.35 });
+P.pop('#cBadge .sc-chtag__num', {{{in}}} + 0.12, { from: 0.4, dy: 0 });
+P.chars('#cBadge .sc-chtag__name', {{{in}}} + 0.2);
+{{#exitFade}}P.wipeOut('#cBadge', D - P.V2.OUT, { dir: 'right' });{{/exitFade}}

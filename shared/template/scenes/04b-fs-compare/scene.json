@@ -4,6 +4,7 @@
   "zh": "全畫面對照",
   "aliases": ["對照", "雙欄對照", "A vs B", "以前現在"],
   "family": "fullscreen",
+  "portrait": "stage",
   "when": "A vs B、以前 vs 現在、有／沒有的對照，左右各 2–3 項",
   "avoid": "不是兩邊對比的並列清單（改全畫面清單）、超過三項（拆兩段）",
   "layout": { "data-layout": "全畫面", "data-pip": "br" },

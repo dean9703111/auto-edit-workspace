@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -27,18 +30,18 @@
   .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
   #pv-fs-table #pv-wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
-  #pv-fs-table #pv-wCard .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-  #pv-fs-table #pv-wBody { width: 1176px; height: 580px; display: flex; align-items: center; justify-content: center; }
-  #pv-fs-table #pv-fTbl { width: 1064px; }
+  #pv-fs-table #pv-wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+  #pv-fs-table #pv-wBody { width: 1176px; height: 580px; }
+  #pv-fs-table #pv-fTbl { width: calc(100% - 2 * var(--sc-pad-card)); }
   #pv-fs-table .fTr { display: flex; align-items: center; height: 128px; }
   #pv-fs-table .fTr.fHead { height: 112px; background: var(--sc-fs-head); color: var(--sc-fs-head-ink); border-radius: 12px 12px 0 0; font-weight: 700; }
   #pv-fs-table .fTr.fRow:nth-child(odd) { background: var(--sc-fs-tint); }
-  #pv-fs-table .fTd { flex: 1 1 0; min-width: 0; padding: 0 32px; font-size: 44px; line-height: 60px; white-space: nowrap; }
+  #pv-fs-table .fTd { flex: 1 1 0; min-width: 0; padding: 0 var(--sc-gap-md); font-size: 44px; line-height: 60px; white-space: nowrap; }
   #pv-fs-table .fTd > span { display: block; padding-bottom: 6px; }
   #pv-fs-table .fRow .fTd { font-weight: 500; }
   #pv-fs-table .fRow .fTd:first-child { font-weight: 700; }
-  #pv-fs-table #pv-fTbl:has(.fTr:nth-child(5)) .fRow { height: 112px; }
-  #pv-fs-table #pv-fTbl:has(.fTr:nth-child(6)) .fRow { height: 92px; }
+  #pv-fs-table #pv-fTbl:has(.fTr:nth-child(5)) .fRow { height: 96px; }
+  #pv-fs-table #pv-fTbl:has(.fTr:nth-child(6)) .fRow { height: 84px; }
   #pv-fs-table #pv-fTbl:has(.fTr:nth-child(6)) .fHead { height: 96px; }
   #pv-fs-table #pv-fTbl[data-highlight="1"] > :nth-child(2), #pv-fs-table #pv-fTbl[data-highlight="2"] > :nth-child(3), #pv-fs-table #pv-fTbl[data-highlight="3"] > :nth-child(4), #pv-fs-table #pv-fTbl[data-highlight="4"] > :nth-child(5), #pv-fs-table #pv-fTbl[data-highlight="5"] > :nth-child(6) { box-shadow: inset 0 0 0 4px var(--sc-accent); }
 </style>
@@ -52,8 +55,8 @@
       <div id="pv-aWrap" class="fill">
         <div id="pv-wCard" class="sc-wcard">
           <div class="sc-wcard__bar"><span class="sc-opt">兩個工具怎麼分工</span></div>
-          <div id="pv-wBody">
-            <div id="pv-fTbl" data-highlight="">
+          <div id="pv-wBody" data-layout="col">
+            <div id="pv-fTbl" data-slot data-highlight="">
               <div id="pv-fHd" class="fTr fHead"><span class="fTd"><span>工具</span></span><span class="fTd"><span>負責</span></span></div>
               <div id="pv-fTr1" class="fTr fRow"><span class="fTd"><span>HyperFrames</span></span><span class="fTd"><span>字幕與動畫</span></span></div>
               <div id="pv-fTr2" class="fTr fRow"><span class="fTd"><span>auto-editor</span></span><span class="fTd"><span>剪掉停頓</span></span></div>
@@ -84,12 +87,23 @@ window.__PREVIEW = {"key":"fs-table","duration":7,"cues":[{"sound":"whoosh","at"
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 7;
-    /* 欄頭 0.5 起 P.rise → 各列逐列 P.rise（綁句號；預設 0.85 起每 0.35s）→ 全部到位後停住。
-       全畫面幕不在 HF 內淡出（離場由剪映端整段渐隐） */
-    P.rise('#pv-fHd', 0.5);
-    P.rise('#pv-fTr1', 0.85);
-    P.rise('#pv-fTr2', 1.2);
-    P.rise('#pv-fTr3', 1.55);
+    /* v2（shared/template/BEATS.md §2 的動作）：欄頭擦開 → 每列各綁 at 由左擦開＋滑入；新的一列出現時前一列退焦 0.6 → 最後一列講完 2 秒回均衡。主卡進場看 P.prev()（換卡不換景／長出），離場由 build 負責 */
+    // 開場：前一段也是全畫面＝換卡不換景（由下擦開＋上浮 60u）；前一段是講者或其他畫面＝主卡從子母畫面長出（P.prev() 由 build 給，不用改）
+    if (P.prev() === 'fullscreen') { P.wipe('#pv-wCard', 0, { dir: 'up', dur: 0.8 }); P.pop('#pv-wCard', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    else P.grow('#pv-wCard', 0.3);
+    P.chars('#pv-wCard .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.wipe('#pv-fHd', 0.5, { dir: 'left', dur: P.V2.SHELL });
+    const rowAt = [0.85, 1.2, 1.55];
+    P.wipe('#pv-fTr1', 0.85, { dir: 'left' });
+    P.drift('#pv-fTr1', 0.85, { dx: -24 * P.U });
+    P.wipe('#pv-fTr2', 1.2, { dir: 'left' });
+    P.drift('#pv-fTr2', 1.2, { dx: -24 * P.U });
+    P.wipe('#pv-fTr3', 1.55, { dir: 'left' });
+    P.drift('#pv-fTr3', 1.55, { dx: -24 * P.U });
+    for (let i = 1; i < rowAt.length; i++) P.dim('#pv-fTr' + i, rowAt[i], { to: 0.6 });
+    // 回均衡：最後一條講完 2 秒（不晚於段尾前 1.6 秒）全部亮回
+    const endAt = Math.min(rowAt[rowAt.length - 1] + 2.0, D - 1.6);
+    if (rowAt.length > 1 && endAt > rowAt[rowAt.length - 1] + 0.6) for (let i = 1; i < rowAt.length; i++) P.dim('#pv-fTr' + i, endAt, { to: 1 });
     tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
     tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 6.5);
     P.end(D);

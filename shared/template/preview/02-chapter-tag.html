@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -35,7 +38,7 @@
   <div id="scene">
     <div id="pv-chapter-tag" class="fill">
       <div id="pv-aWrap" class="fill">
-        <div id="pv-cBadge" class="sc-chtag">
+        <div id="pv-cBadge" class="sc-chtag" data-layout="free">
           <div class="sc-chtag__shell"><span class="sc-chtag__num">01</span></div>
           <div class="sc-chtag__band"><span class="sc-chtag__name">先剪乾淨</span></div>
         </div>
@@ -60,10 +63,11 @@ window.__PREVIEW = {"key":"chapter-tag","duration":6,"cues":[{"sound":"swipe","a
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 6;
-    /* 貼邊元件：整組從右 drift +16＋淡入 0.5 → 號碼、章名 0.15 後淡入 → 停 → 段尾 0.4 淡出 */
-    P.drift('#pv-cBadge', 0, { dx: P.DRIFT });
-    P.in('#pv-cBadge .sc-chtag__num, #pv-cBadge .sc-chtag__name', 0 + P.BEAT);
-    P.out('#pv-cBadge', D - P.OUT);
+    /* v2（shared/template/BEATS.md §2 的動作）：角標由右擦開 0.35 → 0.12 號碼彈出 → 0.2 章名逐字上浮 → 停 → 段尾向右擦掉 0.3 */
+    P.wipe('#pv-cBadge', 0, { dir: 'right', dur: 0.35 });
+    P.pop('#pv-cBadge .sc-chtag__num', 0 + 0.12, { from: 0.4, dy: 0 });
+    P.chars('#pv-cBadge .sc-chtag__name', 0 + 0.2);
+    P.wipeOut('#pv-cBadge', D - P.V2.OUT, { dir: 'right' });
 
     P.end(D);
     // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）

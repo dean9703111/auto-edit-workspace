@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-versus A vs B 逐項比較｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-versus.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-versus { position: absolute; inset: 0; }
+    #x-versus .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-versus #xvs-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-versus #xvs-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    /* 內容區：data-layout="col"（kit/scene-layout.js）由上往下排標頭列與各列；組裡用 flex 排（data-layout="free"），都不寫 left／top */
+    #x-versus #xvs-body { position: relative; width: 1176px; height: 580px; }
+    #x-versus #xvs-heads, #x-versus .xvs-row { position: absolute; width: max-content; height: 112px; display: flex; align-items: center; gap: var(--sc-gap-sm); }
+    /* 兩個對手的標頭：472×112，圖示和名稱同一塊；底色層（贏家在結論時亮起、光澤在裡面掃過）墊在最下面 */
+    #x-versus .xvs-head { position: relative; width: 472px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                          border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
+                          display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-versus .xvs-head .sc-icon, #x-versus .xvs-head .xvs-hname { position: relative; }
+    #x-versus .xvs-tint { position: absolute; inset: 0; border-radius: 12px; overflow: hidden; background: var(--v2-node-tint); opacity: 0; }
+    /* VS 圓：88，在兩個標頭中間 */
+    #x-versus #xvs-vs { position: relative; width: 88px; height: 88px; border-radius: 44px;
+                        background: var(--sc-fs-ink); color: var(--sc-fs-card); display: flex; align-items: center; justify-content: center; }
+    /* 一列：數字、條、名稱框、條、數字同一條中線 */
+    #x-versus .xvs-num { position: relative; width: 136px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-versus .xvs-na { text-align: right; }
+    #x-versus .xvs-nb { text-align: left; }
+    /* 條：寬 236 的軌道裡，P.bar 從左緣長到 DATA 算出的比例；A 的軌道整個鏡像（scaleX(-1)），看起來從右緣往左長 */
+    #x-versus .xvs-wa { position: relative; width: 236px; height: 48px; transform: scaleX(-1); }
+    #x-versus .xvs-bar { position: absolute; top: 0; left: 0; width: 236px; height: 48px; border-radius: 8px; }
+    #x-versus .xvs-bb { position: relative; }
+    #x-versus .xvs-lab { position: relative; width: 272px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                         border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
+                         display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+    /* 贏＝主色、輸＝灰（script 依 DATA 的 win 加 class，不補間顏色） */
+    #x-versus .xvs-bar.xvs-win { background: var(--brand); }
+    #x-versus .xvs-bar.xvs-lose { background: var(--sc-fs-node-line); }
+    #x-versus .xvs-num.xvs-win { color: var(--sc-fs-kw); }
+    #x-versus .xvs-num.xvs-lose { color: var(--sc-fs-mute); }
+  </style>
+  <div id="x-versus" data-composition-id="x-versus" data-width="1920" data-height="1080" data-duration="15.5"
+       data-cues-sample='{"start":0,"D":15.5,"cues":{"141":[2.4,4.9],"142":[5,7.4],"143":[7.5,9.9],"144":[10,13]},"refs":{"#141@分鐘":2.6,"#142@步驟":5.1,"#143@月費":7.6,"#144@AI":10.1}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xvs-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">手動剪 vs AI 剪</span></div>
+      <div id="xvs-body" data-layout="col" data-gap="sm">
+        <div id="xvs-heads" data-slot data-layout="free">
+          <div id="xvs-ha" class="xvs-head" data-slot><i class="xvs-tint"></i>
+            <span id="xvs-icoa" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" /> <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" /> <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" /> <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width>手動剪</span></div>
+          <div id="xvs-vs" data-slot><span class="sc-t40 sc-w900 sc-opt">VS</span></div>
+          <div id="xvs-hb" class="xvs-head" data-slot><i class="xvs-tint"></i>
+            <span id="xvs-icob" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width>AI 剪</span></div>
+        </div>
+        <div id="xvs-r1" class="xvs-row" data-slot data-layout="free">
+          <span id="xvs-na1" class="xvs-num xvs-na sc-t52 sc-w900" data-slot>0</span><span id="xvs-wa1" class="xvs-wa" data-slot><i id="xvs-ba1" class="xvs-bar"></i></span>
+          <div id="xvs-l1" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt">分鐘</span></div>
+          <i id="xvs-bb1" class="xvs-bar xvs-bb" data-slot></i><span id="xvs-nb1" class="xvs-num xvs-nb sc-t52 sc-w900" data-slot>0</span>
+        </div>
+        <div id="xvs-r2" class="xvs-row" data-slot data-layout="free">
+          <span id="xvs-na2" class="xvs-num xvs-na sc-t52 sc-w900" data-slot>0</span><span id="xvs-wa2" class="xvs-wa" data-slot><i id="xvs-ba2" class="xvs-bar"></i></span>
+          <div id="xvs-l2" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt">步驟數</span></div>
+          <i id="xvs-bb2" class="xvs-bar xvs-bb" data-slot></i><span id="xvs-nb2" class="xvs-num xvs-nb sc-t52 sc-w900" data-slot>0</span>
+        </div>
+        <div id="xvs-r3" class="xvs-row" data-slot data-layout="free">
+          <span id="xvs-na3" class="xvs-num xvs-na sc-t52 sc-w900" data-slot>0</span><span id="xvs-wa3" class="xvs-wa" data-slot><i id="xvs-ba3" class="xvs-bar"></i></span>
+          <div id="xvs-l3" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt">月費</span></div>
+          <i id="xvs-bb3" class="xvs-bar xvs-bb" data-slot></i><span id="xvs-nb3" class="xvs-num xvs-nb sc-t52 sc-w900" data-slot>0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-versus'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#141@分鐘'), T2 = P.at('#142@步驟'), T3 = P.at('#143@月費');   // 講到每一列面向詞的時刻
+    const WIN = P.at('#144@AI');                                                   // 講到結論的時刻（沒有結論句：見檔頭「要改的地方」）
+
+    P.sfx('tick', '#141@分鐘'); P.sfx('tick', '#142@步驟'); P.sfx('tick', '#143@月費'); P.sfx('success', '#144@AI');   // 每列一顆 tick、結論一顆 success（句號和上兩行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const DATA = [ { a: 180, b: 20, win: 'b' }, { a: 6, b: 2, win: 'b' }, { a: 0, b: 600, win: 'a' } ];   // 只改這一行的數字
+    const WINNER = 'b';                                                            // 結論的贏家：'a' 或 'b'
+    const MAXW = 236;                                                              // 每列較大的數字＝236 px（版面固定，不用改）
+    const HEADS = '#xvs-ha, #xvs-hb';
+
+    // 0. 由 DATA 算每條長到軌道的幾成（整數 px ÷ 236，最短 8 px，數字 0 就是 0），並在建 tween 之前上色：贏＝主色、輸＝灰（靜態 class，不補間顏色）；
+    //    結論的贏家標頭加 xvs-champ（拍 6、7 用）。只用常數，不讀版面量測，每次載入結果相同
+    const R = DATA.map(function (d) {
+      var m = Math.max(d.a, d.b, 1);
+      var f = function (v) { return v === 0 ? 0 : Math.max(8, Math.round(v / m * MAXW)) / MAXW; };
+      return { a: f(d.a), b: f(d.b) };
+    });
+    DATA.forEach(function (d, i) {
+      [ 'a', 'b' ].forEach(function (s) {
+        var k = s === d.win ? 'xvs-win' : 'xvs-lose';
+        $q('#xvs-b' + s + (i + 1) + ', #xvs-n' + s + (i + 1)).forEach(function (el) { el.classList.add(k); });
+      });
+    });
+    $q('#xvs-h' + WINNER).forEach(function (el) { el.classList.add('xvs-champ'); });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；VS 跟著主卡彈出
+    if (ENTER === 'grow') P.grow('#xvs-card', 0.3);
+    else { P.wipe('#xvs-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xvs-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xvs-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop('#xvs-vs', 0.6, { from: 0.6, dy: 0 });
+    // 拍 1 A 標頭（1.0）：由左擦開＋滑入，＋0.15 圖示描線
+    P.wipe('#xvs-ha', 1.0, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#xvs-ha', 1.0, { dx: -24 });
+    P.icon('#xvs-icoa', 1.0 + P.BEAT);
+    // 拍 2 B 標頭（1.5）：由右擦開＋滑入，＋0.15 圖示描線
+    P.wipe('#xvs-hb', 1.5, { dir: 'right', dur: P.V2.SHELL });
+    P.drift('#xvs-hb', 1.5, { dx: 24 });
+    P.icon('#xvs-icob', 1.5 + P.BEAT);
+
+    // 拍 3 第 1 列（T1）：整列彈出 → ＋0.15 兩條同時長、兩個數字同時跑（0.65 秒）→ ＋0.8 贏的數字重拍；＋0.8 漂浮到下一拍前
+    P.pop('#xvs-r1', T1, { from: 0.9, dy: 28 });
+    P.bar('#xvs-ba1', T1 + P.BEAT, { from: 0, to: R[0].a, dur: 0.65 });
+    P.bar('#xvs-bb1', T1 + P.BEAT, { from: 0, to: R[0].b, dur: 0.65 });
+    P.count('#xvs-na1', T1 + P.BEAT, { from: 0, to: DATA[0].a, dur: 0.65 });
+    P.count('#xvs-nb1', T1 + P.BEAT, { from: 0, to: DATA[0].b, dur: 0.65 });
+    P.punch('#xvs-r1 .xvs-num.xvs-win', T1 + 0.8, { scale: 1.12 });
+    P.idle('#xvs-r1', T1 + 0.8, { y: 3, period: 3.2, until: T2 - 0.1 });
+    // 拍 4 第 2 列（T2）：同拍 3；第 1 列退後（預覽態：亮度 0.6、縮小 0.96）
+    P.spot('#xvs-r1', 'none', T2, { dim: 0.6 });
+    P.pop('#xvs-r2', T2, { from: 0.9, dy: 28 });
+    P.bar('#xvs-ba2', T2 + P.BEAT, { from: 0, to: R[1].a, dur: 0.65 });
+    P.bar('#xvs-bb2', T2 + P.BEAT, { from: 0, to: R[1].b, dur: 0.65 });
+    P.count('#xvs-na2', T2 + P.BEAT, { from: 0, to: DATA[1].a, dur: 0.65 });
+    P.count('#xvs-nb2', T2 + P.BEAT, { from: 0, to: DATA[1].b, dur: 0.65 });
+    P.punch('#xvs-r2 .xvs-num.xvs-win', T2 + 0.8, { scale: 1.12 });
+    P.idle('#xvs-r2', T2 + 0.8, { y: 3, period: 3.2, until: T3 - 0.1 });
+    // 拍 5 第 3 列（T3）：同拍 4（2 列時刪掉這一組 9 行）
+    P.spot('#xvs-r2', 'none', T3, { dim: 0.6 });
+    P.pop('#xvs-r3', T3, { from: 0.9, dy: 28 });
+    P.bar('#xvs-ba3', T3 + P.BEAT, { from: 0, to: R[2].a, dur: 0.65 });
+    P.bar('#xvs-bb3', T3 + P.BEAT, { from: 0, to: R[2].b, dur: 0.65 });
+    P.count('#xvs-na3', T3 + P.BEAT, { from: 0, to: DATA[2].a, dur: 0.65 });
+    P.count('#xvs-nb3', T3 + P.BEAT, { from: 0, to: DATA[2].b, dur: 0.65 });
+    P.punch('#xvs-r3 .xvs-num.xvs-win', T3 + 0.8, { scale: 1.12 });
+    P.idle('#xvs-r3', T3 + 0.8, { y: 3, period: 3.2, until: WIN - 0.1 });
+
+    // 拍 6 結論（WIN）：各列退後（0.6）；贏家名稱螢光筆＋重拍、底色亮起，＋0.2 光澤掃過
+    P.spot('.xvs-row', 'none', WIN, { dim: 0.6 });
+    P.in('.xvs-champ .xvs-tint', WIN);
+    P.marker('.xvs-champ .xvs-hname', WIN);
+    P.punch('.xvs-champ .xvs-hname', WIN, { scale: 1.12 });
+    P.sheen('.xvs-champ .xvs-tint', WIN + 0.2);
+    // 拍 7（WIN + 0.6）：贏家標頭聚焦（放大抬起發光、輸家壓暗縮小）；＋0.6 漂浮
+    P.spot(HEADS, '.xvs-champ', WIN + 0.6, { scale: 1.04, lift: -10 });
+    P.idle('.xvs-champ', WIN + 1.2, { y: 4, period: 2.8 });
+
+    // 收：講完結論 2.6 秒回均衡（標頭回原大小、各列亮回；贏家底色留著），完成態停到段尾
+    const TR = WIN + 2.6;
+    P.spot(HEADS, null, TR, { dur: 0.6 });
+    P.spot('.xvs-row', null, TR, { dur: 0.6 });
+
+    P.end();                                                                       // 長度＝plan.json 這段的長度
+    window.__timelines['x-versus'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-versus";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

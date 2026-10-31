@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -26,7 +29,7 @@
   .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
-  #pv-chapter #pv-chGroup { position: absolute; left: 0; right: 0; top: 510px; margin: 0 auto; display: flex; align-items: flex-start; gap: 48px; width: max-content; }
+  #pv-chapter #pv-chGroup { position: absolute; left: 0; right: 0; top: 510px; margin: 0 auto; display: flex; align-items: flex-start; gap: var(--sc-gap-lg); width: max-content; }
   #pv-chapter #pv-chCol { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
   #pv-chapter #pv-chSub { margin-left: 40px; }
   #pv-chapter #pv-chIcon { position: absolute; left: 0; top: -220px; width: 180px; height: 180px; color: var(--sc-accent); }
@@ -40,7 +43,7 @@
     <div id="pv-chapter" class="fill">
       <div class="sc-surface-ch fill"></div>
       <div id="pv-aWrap" class="fill">
-        <div id="pv-chGroup" data-snap-width>
+        <div id="pv-chGroup" data-layout="free" data-snap-width>
           <span id="pv-chIcon" class="sc-icon-line"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle class="stroke-draw" pathLength="1" cx="6" cy="6" r="3" /> <path class="stroke-draw" pathLength="1" d="M8.12 8.12 12 12" /> <path class="stroke-draw" pathLength="1" d="M20 4 8.12 15.88" /> <circle class="stroke-draw" pathLength="1" cx="6" cy="18" r="3" /> <path class="stroke-draw" pathLength="1" d="M14.8 14.8 20 20" /> </svg></span>
           <div id="pv-chNum" class="sc-chapnum">
             <span class="sc-chapnum__label">CHAPTER</span>
@@ -58,7 +61,7 @@
   <div class="cg" id="cap"><span>接下來，我們先把影片剪乾淨</span></div>
 </div>
 <script>
-window.__PREVIEW = {"key":"chapter","duration":2.5,"cues":[{"sound":"whoosh","at":-0.15}]};
+window.__PREVIEW = {"key":"chapter","duration":2.5,"cues":[{"sound":"chapter","at":0.45}]};
 </script>
 <script>
 (function () {
@@ -73,12 +76,13 @@ window.__PREVIEW = {"key":"chapter","duration":2.5,"cues":[{"sound":"whoosh","at
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 2.5;
-    /* 背景＋號卡第一幀就在（剪映整幕淡入負責）；標題板、副標帶各淡入 0.5，板內的字同時間 maskUp（字從板內下緣浮出，板外框不動）；HF 不淡出 */
-    P.in('#pv-chTitle', 0.45);
-    P.maskUp('#pv-chTitle .sc-opt', 0.45);
-    P.icon('#pv-chIcon', 0.45 + P.BEAT, { dur: 0.9 });
-    P.in('#pv-chSub', 0.6);
-    P.maskUp('#pv-chSub .sc-opt', 0.6);
+    /* v2（shared/template/BEATS.md §2 的動作）：背景第一幀就在（build 整幕淡入）；章號 0.1 起重拍進場（1.3 → 1、back.out(2)）→ 標題板由左擦開、0.15 後章名逐字上浮 → 圖示描線 → 副標同樣擦開＋逐字；HF 不淡出 */
+    P.pop('#pv-chNum', 0.1, { from: 1.3, dy: 0, ease: 'back.out(2)' });
+    P.wipe('#pv-chTitle', 0.45, { dir: 'left', dur: P.V2.SHELL });
+    P.chars('#pv-chTitle .sc-opt', 0.45 + 0.15);
+    P.icon('#pv-chIcon', 0.45 + 0.15, { dur: 0.9 });
+    P.wipe('#pv-chSub', 0.6, { dir: 'left', dur: P.V2.SHELL });
+    P.chars('#pv-chSub .sc-opt', 0.6 + 0.15);
     tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
     tl.to('#scene', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 2);
     P.end(D);

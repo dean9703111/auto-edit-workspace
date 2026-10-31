@@ -4,6 +4,7 @@
   "zh": "半版側邊欄",
   "aliases": ["側邊欄", "半版面板", "左側面板"],
   "family": "panel",
+  "portrait": "none",
   "when": "口播講一個主題加 3–4 個重點，講者右移、左半版面板推入列出重點",
   "avoid": "只有一兩個重點（用字卡）、需要比較（用全畫面家族）；不可加章節角標",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-person-shift": "480", "data-vbal-ignore": "" },

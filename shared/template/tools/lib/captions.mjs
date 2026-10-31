@@ -1,9 +1,11 @@
 // 字幕子合成 compositions/captions.html（規格 §B.4）
 //
-//   buildCaptions(cues, { duration, offset, compId }) → { html, file, compId, shown, warnings }
+//   buildCaptions(cues, { duration, offset, compId, blackout, canvas }) → { html, file, compId, shown, warnings }
 //     duration  主合成長度（秒）；超過的字幕截掉
 //     offset    測試片段的起點（--test）：所有字幕往前平移 offset 秒，落在 [0, duration) 外的略過
-//   captionWarnings(cues)  → 字數／寬度警告（--check 也印）
+//     blackout  [[起, 迄]]（成片秒數，章節轉場的 2.5 秒）：這些時間不放字幕，被切到的字幕提早收或晚出現（spec FR-007）
+//     canvas    lib/canvas.mjs 的版式設定（預設橫式）：直式時 root 1080×1920、帶 data-format="portrait"（kit/captions.css 換位置）
+//   captionWarnings(cues, canvas)  → 字數／寬度警告（--check 也印）；字數與寬度上限讀 canvas.caption.maxChars／maxW（橫式 18／1840、直式 10／834）
 //
 // 每則字幕 <div class="cg" id="cg-N"><span>…</span></div>，初始 opacity:0; visibility:hidden（inline，captions.css 沒寫），
 // tl.set 開、tl.set 硬關；同一時間只顯示一則（前一則截到下一則起點）；0 秒開頭的挪到 0.1。
@@ -11,28 +13,39 @@
 import { stampHash } from './assemble.mjs';
 import { visibleLen } from './scenes.mjs';
 import { r3 } from './time.mjs';
+import { subtract } from './edit.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-// 估寬：Noto Sans TC 54px 全形 54、半形約 0.55 em，字距 1，左右內距 24
+// 估寬（F8，kit/captions.css）：Noto Sans TC 76px 全形 76、半形約 0.52 em（40）、空白約 0.25 em（19），無字距，左右內距 37
+export const CAPTION = { font: 76, half: 40, space: 19, pad: 74, maxW: 1840, maxChars: 18, minDur: 0.6 };
 export const captionWidth = (text) => {
   let w = 0;
-  for (const ch of String(text)) { const c = ch.codePointAt(0); w += (c >= 0x2e80 || (c >= 0xff00 && c <= 0xffef) ? 54 : ch === ' ' ? 15 : 30) + 1; }
-  return Math.round(w + 48);
+  for (const ch of String(text)) { const c = ch.codePointAt(0); w += c >= 0x2e80 || (c >= 0xff00 && c <= 0xffef) ? CAPTION.font : ch === ' ' ? CAPTION.space : CAPTION.half; }
+  return Math.round(w + CAPTION.pad);
 };
 
-export function captionWarnings(cues) {
+// 字幕不顯示的句中標點（F8：剪映 437 則只有「、！？」）
+const MID_PUNCT = /[，。；：]/;
+const listN = (xs) => `${xs.slice(0, 8).map((c) => `#${c.n}`).join('、')}${xs.length > 8 ? ` 等 ${xs.length} 則` : ''}`;
+export function captionWarnings(cues, canvas = null) {
   const out = [];
+  const lim = canvas?.format === 'portrait' ? canvas.caption : CAPTION;
   for (const c of cues) {
     const len = visibleLen(c.text);
     const w = captionWidth(c.text);
-    if (len > 18) out.push(`字幕 #${c.n}「${c.text}」${len} 字，超過 18 字 → 在 rough.srt 拆成兩則（斷在標點處）`);
-    else if (w > 1600) out.push(`字幕 #${c.n} 估寬 ${w}px，超過 1600px → 在 rough.srt 拆句`);
+    if (len > lim.maxChars) out.push(`字幕 #${c.n}「${c.text}」${len} 字，超過 ${lim.maxChars} 字 → 在 rough.srt 拆成兩則（斷在標點處）`);
+    else if (w > lim.maxW) out.push(`字幕 #${c.n} 估寬 ${w}px，超過 ${lim.maxW}px → 在 rough.srt 拆句`);
   }
+  const punct = cues.filter((c) => MID_PUNCT.test(c.text));
+  if (punct.length) out.push(`字幕含句中標點「，。；：」：${listN(punct)} → 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在剪輯台改`);
+  const short = cues.filter((c) => Number.isFinite(c.start) && Number.isFinite(c.end) && c.end - c.start < CAPTION.minDur - 1e-9);
+  if (short.length) out.push(`字幕不到 ${CAPTION.minDur} 秒：${listN(short)} → 在剪輯台和前後句合併，或把起迄拉長`);
   return out;
 }
 
-export function buildCaptions(cues, { duration, offset = 0, compId = 'captions' }) {
+export function buildCaptions(cues, { duration, offset = 0, compId = 'captions', blackout = [], canvas = null }) {
+  const portrait = canvas?.format === 'portrait';
   const items = [];
   const sorted = [...cues].sort((a, b) => a.start - b.start);
   sorted.forEach((c, i) => {
@@ -43,10 +56,12 @@ export function buildCaptions(cues, { duration, offset = 0, compId = 'captions' 
     b = Math.min(b, duration);
     if (a < 0.1) a = 0.1;                               // 0 秒就出現看起來像殘留
     if (b - a < 0.05) return;
-    items.push({ n: c.n, text: c.text, a: r3(a), b: r3(b) });
+    if (!blackout.length) { items.push({ n: c.n, text: c.text, a: r3(a), b: r3(b), spans: [[r3(a), r3(b)]] }); return; }
+    const spans = subtract([a, b], blackout.map(([x, y]) => [x - offset, y - offset])).filter(([x, y]) => y - x >= 0.05).map(([x, y]) => [r3(x), r3(y)]);
+    if (spans.length) items.push({ n: c.n, text: c.text, a: spans[0][0], b: spans[spans.length - 1][1], spans });
   });
   const divs = items.map((it) => `    <div class="cg" id="cg-${it.n}" style="opacity:0;visibility:hidden"><span>${esc(it.text)}</span></div>`).join('\n');
-  const sets = items.map((it) => `    tl.set('#cg-${it.n}', { opacity: 1, visibility: 'visible' }, ${it.a});\n    tl.set('#cg-${it.n}', { opacity: 0, visibility: 'hidden' }, ${it.b});`).join('\n');
+  const sets = items.flatMap((it) => it.spans.map(([a, b]) => `    tl.set('#cg-${it.n}', { opacity: 1, visibility: 'visible' }, ${a});\n    tl.set('#cg-${it.n}', { opacity: 0, visibility: 'hidden' }, ${b});`)).join('\n');
   const html = `<!doctype html>
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>字幕</title></head>
@@ -55,7 +70,7 @@ export function buildCaptions(cues, { duration, offset = 0, compId = 'captions' 
   <style>
     #${compId} { position: absolute; inset: 0; pointer-events: none; }
   </style>
-  <div id="${compId}" data-composition-id="${compId}" data-width="1920" data-height="1080" data-duration="${r3(duration)}" data-layout-allow-caption-zone>
+  <div id="${compId}" data-composition-id="${compId}" data-width="${portrait ? canvas.W : 1920}" data-height="${portrait ? canvas.H : 1080}"${portrait ? ' data-format="portrait"' : ''} data-duration="${r3(duration)}" data-layout-allow-caption-zone>
 ${divs}
   </div>
   <script>

@@ -1,0 +1,13 @@
+{
+  "name": "@mediapipe/tasks-vision + face_landmarker",
+  "version": "1.2.0",
+  "approved": "2026-10-31（作者核准，憲法 II：唯一的新資產）",
+  "license": "Apache-2.0",
+  "files": [
+    { "path": "vision_bundle.mjs", "size": 156344, "sha256": "870da5cfc43bfcf2a8b0f14e8152dae8c7e701722e1191b0e592b94b81b4127a", "url": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs" },
+    { "path": "wasm/vision_wasm_internal.js", "size": 334128, "sha256": "85c1a342be70427987f900969a5f26e17557351111364e6585e97fb03e93e108", "url": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm/vision_wasm_internal.js" },
+    { "path": "wasm/vision_wasm_internal.wasm", "size": 14466654, "sha256": "bcc13df22d3d69ec8cbe8e280989356d844ae00f4523eb82072d2484f44134dc", "url": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm/vision_wasm_internal.wasm" },
+    { "path": "face_landmarker.task", "size": 3758596, "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff", "url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task" }
+  ],
+  "npm": { "tarball": "https://registry.npmjs.org/@mediapipe/tasks-vision/-/tasks-vision-1.2.0.tgz", "integrity": "sha512-7+dr9GbGyTtcuLh11wE5TOn4dNFRncIT9oAWs72620WX99KW5FfzF6rFJ/ChTgXG9vJ6dCiE9FrEEY4CnwPWKQ==" }
+}

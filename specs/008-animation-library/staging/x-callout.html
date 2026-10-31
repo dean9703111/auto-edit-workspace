@@ -1,0 +1,149 @@
+<!doctype html>
+<!--
+  x-callout：一個主體，四周逐一貼上標籤（第二層 custom，layout: "fullscreen"；取代關鍵詞條列）
+
+  【適用的口播】
+  在講「一個主體＋ 2–4 個短名詞」：主體的毛病、零件、用途、特徵，一個詞一句或一句裡連講，
+  例如「像腳架不穩造成畫面輕微晃動，或自己穿的衣服太薄有激凸問題」（主體＝手機錄的畫面）。
+  中央一個大圖示圓（主體）；講到哪個詞，四角之一的標籤浮出，引線從標籤描到主體邊緣、端點一個小圓；目前這個標籤有主色框。
+
+  【不要用在哪裡】
+  - 名詞之間沒有共同的主體：用 12 關鍵詞條列或 04a。
+  - 每個名詞後面還有一句說明要同時看到：用 13 標題條列或 x-stack。
+  - 段長不到 4 秒或只有一句字幕：維持 12（style.md「情境動畫優先」的三條判準）。
+  - 超過 4 個詞：拆兩段，或用 04a。
+
+  【要改的地方】
+  1. 文字：標題列（#xcall-card 裡的 .sc-wcard__bar，≤ 10 字，寫主體與主題，例「錄影常見小毛病」）；四個標籤的 .xcall-name（≤ 4 字；字級 52，放不下就縮文案，不縮字）。
+  2. 圖示：中央主體 #xcall-obj 的 svg、四個標籤的 .sc-icon。到 kit/icons.json 找名稱，把 svg 原文整段貼上（拿掉 class、width、height）。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】）。
+  標籤是 3 個：刪掉 #xcall-t4、#xcall-c4、#xcall-d4，再刪 script 開頭的「, T4 = P.at(…)」和「第 4 個標籤」那 3 行（右下角空著）；
+  2 個：再刪 #xcall-t3、#xcall-c3、#xcall-d3、「, T3 = P.at(…)」和「第 3 個標籤」那 3 行（只留上排）。座標不用改；最後 ALL 那一行不用改。
+
+  【綁句欄位】
+  T1 = P.at('#101@腳架不穩')、T2 = P.at('#102@衣服太薄')、T3 = P.at('#103@收音太遠')、T4 = P.at('#104@背光太暗')：講到那個詞的時刻，那個標籤浮出、引線描到主體。
+  ALL = P.at('#105')：講到總結那一句，主色框全部拿掉。沒有這句就刪掉「, ALL = P.at(…)」和最後 ALL 那一行。
+  名詞在句中間或句尾時一定用 @詞，不要綁句首（綁句首，標籤會比講到早 1–3 秒出現）；剛好是那句的第一個詞才寫 P.at('#102')。
+  「@詞」要寫成字串字面值（P.at('#102@衣服太薄')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#102@衣服太薄', 0.3)。
+  相鄰兩個標籤至少差 2.1 秒（標籤 0.5 秒、引線 0.3 秒起描 0.5 秒、圖示描到 0.85 秒，再停 1.2 秒）；太近就綁後面那個詞、延長段，或拆兩段。
+  audit 會比對：這一拍出現的字（標籤）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 1.6（卡片 0.5 秒、主體 1.0 秒）
+  T2 ≥ T1 + 2.1；T3 ≥ T2 + 2.1；T4 ≥ T3 + 2.1；ALL ≥ T4 + 2.1
+  D ≥ ALL + 2.4（框淡出 0.4 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；沒有 ALL 時 D ≥ 最後一個標籤 + 2.9；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：整段淡入淡出 0.5 秒由 build 處理；0.5 秒前不動。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
+  標題列 128、內容區 1176×580（卡底 862，在字幕區 y 920 之上）。以下是內容區座標。
+  主體圖示圓 220（x 478–698、y 180–400，中心 588,290）。標籤 360×112：左上 (40, 92)、右上 (776, 92)、左下 (40, 376)、右下 (776, 376)。
+  引線從標籤內側邊的中點水平 40 px 再斜到主體圓周（約 45 度），端點小圓 r 10 的圓心壓在圓周上；四條座標寫死，不要改。
+  圖層由下往上：主體圓 → 引線與端點 → 標籤（引線起點藏在標籤框下、端點小圓整顆疊在主體圓邊上）。
+-->
+<!-- 靈感（只借技法，不含程式與素材；003 搬進 custom 時改記 NOTICE.md、這行可刪）：stokebuilder-356793（stokebuilder，https://x.com/stokebuilder/status/2103896101120356793）；heyiamnick-119558（heyiamnick，https://x.com/heyiamnick/status/2109174851412119558） -->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-callout 主體四周貼標籤</title></head>
+<body>
+<template id="x-callout-template">
+  <style>
+    #x-callout { position: absolute; inset: 0; }
+    #x-callout .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-callout #xcall-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-callout #xcall-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-callout #xcall-body { position: relative; width: 1176px; height: 580px; }
+    /* 主體：中央一個 220 的主色圖示圓（中心 588,290、半徑 110） */
+    #x-callout #xcall-obj { position: absolute; left: 478px; top: 180px; --d: 220px; --i: 120px; }
+    /* 引線與端點：整個內容區大小的 svg（座標＝內容區座標），疊在主體上、標籤下 */
+    #x-callout #xcall-lines { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-callout .xcall-line { fill: none; stroke: var(--sc-fs-ink); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+    #x-callout .xcall-dot { fill: var(--sc-fs-card); stroke: var(--brand); stroke-width: 4px; }
+    /* 標籤：360×112，圖示和名稱同一塊；四角位置寫死 */
+    #x-callout .xcall-tag { position: absolute; width: 360px; height: 112px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
+                            border-radius: 16px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                            display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-callout .xcall-tag .sc-icon { --d: 64px; --i: 36px; position: relative; }
+    #x-callout .xcall-tag .xcall-name { position: relative; }
+    #x-callout #xcall-t1 { left: 40px;  top: 92px; }
+    #x-callout #xcall-t2 { left: 776px; top: 92px; }
+    #x-callout #xcall-t3 { left: 40px;  top: 376px; }
+    #x-callout #xcall-t4 { left: 776px; top: 376px; }
+    /* 目前這個標籤：主色框疊在標籤外框上（P.focus 的 ring） */
+    #x-callout .xcall-on { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 16px; }
+  </style>
+  <div id="x-callout" data-composition-id="x-callout" data-width="1920" data-height="1080" data-duration="13"
+       data-cues-sample='{"start":0,"D":13,"cues":{"101":[1.6,3.8],"102":[3.9,6],"103":[6.1,8.2],"104":[8.3,10.4],"105":[10.6,12.6]},"refs":{"#101@腳架不穩":1.8,"#102@衣服太薄":4.0,"#103@收音太遠":6.2,"#104@背光太暗":8.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcall-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">錄影常見小毛病</span></div>
+      <div id="xcall-body">
+        <span id="xcall-obj" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span>
+        <svg id="xcall-lines" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- 四條引線：起點在標籤內側邊的中點（藏在標籤框下），水平 40 px 再斜到主體圓周；端點小圓的圓心在圓周上 -->
+          <path id="xcall-c1" class="xcall-line" d="M400 148 H440 L510 212" />
+          <path id="xcall-c2" class="xcall-line" d="M776 148 H736 L666 212" />
+          <path id="xcall-c3" class="xcall-line" d="M400 432 H440 L510 368" />
+          <path id="xcall-c4" class="xcall-line" d="M776 432 H736 L666 368" />
+          <circle id="xcall-d1" class="xcall-dot" cx="510" cy="212" r="10" />
+          <circle id="xcall-d2" class="xcall-dot" cx="666" cy="212" r="10" />
+          <circle id="xcall-d3" class="xcall-dot" cx="510" cy="368" r="10" />
+          <circle id="xcall-d4" class="xcall-dot" cx="666" cy="368" r="10" />
+        </svg>
+        <div id="xcall-t1" class="xcall-tag"><i class="xcall-on"></i>
+          <span id="xcall-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m2 8 2 2-2 2 2 2-2 2" /> <path d="m22 8-2 2 2 2-2 2 2 2" /> <rect width="8" height="14" x="8" y="5" rx="1" /> </svg></span><span class="xcall-name sc-t52 sc-w900 sc-opt">腳架不穩</span></div>
+        <div id="xcall-t2" class="xcall-tag"><i class="xcall-on"></i>
+          <span id="xcall-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" /> </svg></span><span class="xcall-name sc-t52 sc-w900 sc-opt">衣服太薄</span></div>
+        <div id="xcall-t3" class="xcall-tag"><i class="xcall-on"></i>
+          <span id="xcall-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /> <path d="M19 10v2a7 7 0 0 1-14 0v-2" /> <line x1="12" x2="12" y1="19" y2="22" /> </svg></span><span class="xcall-name sc-t52 sc-w900 sc-opt">收音太遠</span></div>
+        <div id="xcall-t4" class="xcall-tag"><i class="xcall-on"></i>
+          <span id="xcall-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="m4.93 4.93 1.41 1.41" /> <path d="m17.66 17.66 1.41 1.41" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="m6.34 17.66-1.41 1.41" /> <path d="m19.07 4.93-1.41 1.41" /> </svg></span><span class="xcall-name sc-t52 sc-w900 sc-opt">背光太暗</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-callout'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#101@腳架不穩'), T2 = P.at('#102@衣服太薄'), T3 = P.at('#103@收音太遠'), T4 = P.at('#104@背光太暗'), ALL = P.at('#105');   // 講到每個標籤的時刻；ALL＝總結那一句
+
+    // 1. 卡片先進場 → 主體圓浮出、0.15 秒後圖示描線；0.5 秒前不動
+    P.reveal('#xcall-card', 0.5);
+    P.rise('#xcall-obj', 1.0);
+    P.icon('#xcall-obj', 1.0 + P.BEAT);
+
+    // 2. 講到第 i 個詞：標籤浮出 → 0.15 秒後圖示描線 → 0.3 秒後引線從標籤描到主體（0.5 秒），端點小圓在引線快到時描出；
+    //    主色框移到這個標籤（dim 1：其他標籤不變暗，只換框）。P.focus 的第一個參數只列已經出現的標籤
+    P.rise('#xcall-t1', T1);  P.icon('#xcall-ico1', T1 + P.BEAT);
+    P.stroke('#xcall-c1', T1 + 0.3, { dur: 0.5 });  P.stroke('#xcall-d1', T1 + 0.6, { dur: 0.25 });
+    P.focus('#xcall-t1', '#xcall-t1', T1 + 0.3, { dim: 1, ring: '.xcall-on' });
+
+    P.rise('#xcall-t2', T2);  P.icon('#xcall-ico2', T2 + P.BEAT);
+    P.stroke('#xcall-c2', T2 + 0.3, { dur: 0.5 });  P.stroke('#xcall-d2', T2 + 0.6, { dur: 0.25 });
+    P.focus('#xcall-t1, #xcall-t2', '#xcall-t2', T2 + 0.3, { dim: 1, ring: '.xcall-on' });
+
+    // 第 3 個標籤（只有 2 個標籤時刪掉這 3 行）
+    P.rise('#xcall-t3', T3);  P.icon('#xcall-ico3', T3 + P.BEAT);
+    P.stroke('#xcall-c3', T3 + 0.3, { dur: 0.5 });  P.stroke('#xcall-d3', T3 + 0.6, { dur: 0.25 });
+    P.focus('#xcall-t1, #xcall-t2, #xcall-t3', '#xcall-t3', T3 + 0.3, { dim: 1, ring: '.xcall-on' });
+
+    // 第 4 個標籤（3 個以下時刪掉這 3 行）
+    P.rise('#xcall-t4', T4);  P.icon('#xcall-ico4', T4 + P.BEAT);
+    P.stroke('#xcall-c4', T4 + 0.3, { dur: 0.5 });  P.stroke('#xcall-d4', T4 + 0.6, { dur: 0.25 });
+    P.focus('#xcall-t1, #xcall-t2, #xcall-t3, #xcall-t4', '#xcall-t4', T4 + 0.3, { dim: 1, ring: '.xcall-on' });
+
+    // 3. 總結那一句：主色框全部拿掉（沒有 ALL 就刪掉這一行）
+    P.focus('#xcall-t1, #xcall-t2, #xcall-t3, #xcall-t4', null, ALL, { dim: 1, ring: '.xcall-on' });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-callout'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

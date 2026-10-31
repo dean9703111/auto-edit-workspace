@@ -4,6 +4,7 @@
   "zh": "QA 字卡",
   "aliases": ["QA", "問答", "問答字卡", "QA字卡"],
   "family": "lower-third",
+  "portrait": "move",
   "when": "口播先拋一個問題、停一拍再揭曉答案",
   "avoid": "問題和答案同一句講完（改重點字卡），或答案超過一行",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },

@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -27,7 +30,7 @@
   .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
   #pv-quote #pv-gCard { left: 8px; right: 0; margin: 0 auto; bottom: 220px; }
-  #pv-quote .qt-body { display: flex; flex-direction: column; justify-content: center; min-height: 168px; padding: 0 16px; text-align: center; }
+  #pv-quote .qt-body { display: flex; flex-direction: column; justify-content: center; min-height: 168px; padding: 0 var(--sc-gap-sm); text-align: center; }
   #pv-quote .qt-q { color: var(--sc-kw); font-weight: 900; }
   #pv-quote .qt-by { text-align: right; font-size: 36px; font-weight: 500; line-height: 44px; }
 </style>
@@ -38,12 +41,12 @@
   <div id="scene">
     <div id="pv-quote" class="fill">
       <div id="pv-aWrap" class="fill">
-        <div id="pv-gCard" class="sc-lt">
+        <div id="pv-gCard" class="sc-lt" data-layout="free">
           <i class="sc-lt__plate"></i>
           <div class="sc-lt__card">
             <i class="sc-lt__dots"></i>
             <div class="sc-lt__body qt-body">
-              <div class="sc-t54 sc-w700 sc-optr"><span class="qt-q">「</span>把解決問題的經驗<br>變成可以重複使用的資產<span class="qt-q">」</span></div>
+              <div class="sc-t54 sc-w700 sc-optr"><span class="qt-q" data-sc-ch>「</span>把解決問題的經驗<br>變成可以重複使用的資產<span class="qt-q" data-sc-ch>」</span></div>
               <div class="qt-by sc-mute sc-optr">— 鼎淵</div>
             </div>
           </div>
@@ -55,7 +58,7 @@
   <div class="cg" id="cap"><span>工具會一直更新，這個思維會跟著你</span></div>
 </div>
 <script>
-window.__PREVIEW = {"key":"quote","duration":6,"cues":[{"sound":"pop","at":0.1}]};
+window.__PREVIEW = {"key":"quote","duration":6,"cues":[{"sound":"sparkle","at":0.1}]};
 </script>
 <script>
 (function () {
@@ -70,10 +73,15 @@ window.__PREVIEW = {"key":"quote","duration":6,"cues":[{"sound":"pop","at":0.1}]
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 6;
-    /* 外殼遮罩揭開 → 引號＋正文＋出處 0.15 後一起淡入上漂 8（引號在內容層裡，同一拍）→ 停 → 段尾 0.4 淡出 */
-    P.reveal('#pv-gCard', 0);
-    P.rise('#pv-gCard .sc-lt__body', 0 + P.BEAT);
-    P.out('#pv-gCard', D - P.OUT);
+    /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 0.18 兩個引號彈出（過衝）→ 0.3 金句逐字上浮（間隔 0.035）→ 1.2 出處從左滑入 → 漂浮 → 段尾向左擦掉 */
+    P.wipe('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });
+    P.pop('#pv-gCard .sc-lt__tag', 0 + 0.12, { from: 0.4, dy: 18 });
+    P.pop('#pv-gCard .qt-q', 0 + 0.18, { from: 0.3, dy: 0, ease: P.V2.EASE.emph });
+    P.chars('#pv-gCard .qt-body > div:first-child', 0 + 0.3, { stagger: 0.035 });
+    P.drift('#pv-gCard .qt-by', 0 + 1.2, { dx: -16 * P.U });
+    P.idle('#pv-gCard', 0 + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+    P.wipeOut('#pv-gCard', D - P.V2.OUT, { dir: 'left' });
 
     P.end(D);
     // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）

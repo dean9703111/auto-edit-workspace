@@ -106,6 +106,17 @@
    字體：由 kit/fonts.css 提供（Noto Sans TC 可變字型，隨包附、離線可用），這裡只透過 --font-cjk 引用。
    -------------------------------------------------------------------------- */
 :root {
+  /* 間距 token（012 版面系統；kit/scene-layout.js 讀；直式一樣）：位置、尺寸、間距都是 8 的倍數 */
+  --sc-grid: 8px;
+  --sc-pad-card: 48px;      /* 卡片內容區左右內距 */
+  --sc-pad-card-y: 40px;    /* 卡片內容區上下內距 */
+  --sc-gap-xxl: 160px;      /* 一對元件要拉開（分歧、對照、比喻的兩邊） */
+  --sc-gap-xl: 96px;        /* 站與站之間（中間放連接線） */
+  --sc-gap-lg: 48px;        /* 兩欄之間、群組之間 */
+  --sc-gap-md: 24px;        /* 同一群裡的元件之間、序號圓到文字 */
+  --sc-gap-sm: 16px;        /* 插圖到它的標籤、圖示到文字 */
+  --sc-link-gap: 12px;      /* 連接線端點離元件外框 */
+  --sc-link-head: 16px;     /* 箭頭頭長 */
   /* token 預設值＝頻道預設（channel）；契約與各 token 用途見 references/theming.md 第 2 節。
      主題 theme.css 只覆寫這些 token。底紋（--sc-*-pattern）預設 none，頻道底紋由 themes/channel/theme.css 提供。 */
 
@@ -390,7 +401,9 @@ body, #root {
   background: var(--sc-accent);
 }
 
-.sc-row { display: flex; align-items: center; gap: 24px; white-space: nowrap; width: max-content; }
+.sc-row { display: flex; align-items: center; gap: var(--sc-gap-md); white-space: nowrap; width: max-content; }
+/* data-links 產生的連接線（kit/scene-layout.js）：主色實線 6px、圓頭 */
+.sc-link { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
 
 /* --------------------------------------------------------------------------
    KV2 斜角板：平行四邊形 (S,0)→(W,0)→(W−S,H)→(0,H)，S＝0.2H
@@ -745,3 +758,158 @@ body, #root {
   white-space: nowrap;
   padding-bottom: 6px;                          /* 光學置中（--opt 44px＝6） */
 }
+
+/* ==========================================================================
+   動態 v2 的主題 token 與原語零件（specs/010-motion-v2/design-system.md §4、§10；契約 specs/contracts/motion.md）
+   亮色＝:root（預設）；暗色＝<html data-theme="dark">（plan.json 第一層 "theme": "dark"，build 寫到主合成的 <html>）。
+   兩套只差 token，元件 CSS 只用 var(--v2-*)。疊在實拍上：硬邊錯位底板＋一層淡落影（不發光）；不透明幕上才用柔光、光暈、漸層。
+   暗色底圖（bg-fs-dark.jpg）由 004 決定是否進 shared/template，這裡不引用。
+   ========================================================================== */
+:root {
+  --v2-ink:          #141414;
+  --v2-mute:         #6E6660;
+  --v2-card:         #FFFFFF;
+  --v2-card-line:    rgba(20, 20, 20, 0.08);
+  --v2-card-shadow:  0 2px 4px rgba(20, 20, 20, 0.05), 0 28px 56px -18px rgba(122, 64, 20, 0.34);
+  --v2-node:         #FFFFFF;
+  --v2-node-line:    rgba(20, 20, 20, 0.14);
+  --v2-node-tint:    color-mix(in srgb, var(--brand) 9%, #FFFFFF);
+  --v2-line:         rgba(20, 20, 20, 0.28);
+  --v2-spot-ring:    var(--brand);
+  --v2-spot-glow:    0 0 0 4px var(--brand), 0 22px 44px -10px color-mix(in srgb, var(--brand) 60%, transparent);
+  --v2-ripple:       var(--brand);
+  --v2-comet:        var(--brand);
+  --v2-comet-halo:   color-mix(in srgb, var(--brand) 30%, transparent);
+  --v2-marker:       color-mix(in srgb, var(--brand) 26%, transparent);
+  --v2-strike:       var(--sc-warn, #E5484D);
+  --v2-sheen:        linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.55) 48%, transparent 76%);
+  --v2-amb-a:        radial-gradient(closest-side, color-mix(in srgb, var(--brand) 22%, transparent), transparent);
+  --v2-amb-b:        radial-gradient(closest-side, rgba(255, 196, 150, 0.50), transparent);
+  --v2-amb-blend:    normal;
+  /* 浮塵：遮罩（黑點的透明度＝點的濃淡），顏色由 --v2-dust-ink 上，brand.mjs 換主色會跟著換 */
+  --v2-dust:         url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1200'><g fill-opacity='.22'><circle cx='212' cy='140' r='2'/><circle cx='540' cy='880' r='3'/><circle cx='860' cy='260' r='2'/><circle cx='1180' cy='1010' r='2'/><circle cx='1490' cy='420' r='3'/><circle cx='1760' cy='760' r='2'/><circle cx='330' cy='620' r='2'/><circle cx='1020' cy='560' r='2'/><circle cx='1640' cy='120' r='2'/><circle cx='720' cy='1120' r='3'/><circle cx='90' cy='980' r='2'/><circle cx='1340' cy='720' r='2'/></g></svg>");
+  --v2-dust-ink:     var(--brand);
+  --v2-dust-2:       none;
+  --v2-dust-2-ink:   transparent;
+  /* 下方字卡（疊在實拍上：硬邊錯位底板＋一層很淡的落影；不用發光） */
+  --v2-lt-card:      #FFFFFF;
+  --v2-lt-ink:       #141414;
+  --v2-lt-mute:      #57504A;
+  --v2-lt-plate:     var(--brand);
+  --v2-lt-shadow:    10px 10px 0 0 var(--v2-lt-plate), 0 18px 30px -12px rgba(0, 0, 0, 0.35);
+  --v2-lt-tag:       #141414;
+  --v2-lt-tag-ink:   #FFFFFF;
+  --v2-lt-key:       var(--brand);
+  --v2-lt-key-ink:   var(--brand-ink);
+  --v2-lt-key-shadow:10px 10px 0 0 #141414;
+  /* 轉場色帶 */
+  --v2-tx-a:         var(--brand);
+  --v2-tx-b:         #141414;
+}
+:root[data-theme="dark"] {
+  --v2-ink:          #F3EFEA;
+  --v2-mute:         rgba(243, 239, 234, 0.62);
+  --v2-card:         linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02)), #13161C;
+  --v2-card-line:    rgba(255, 255, 255, 0.12);
+  --v2-card-shadow:  inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 40px 80px -24px rgba(0, 0, 0, 0.80);
+  --v2-node:         rgba(255, 255, 255, 0.045);
+  --v2-node-line:    rgba(255, 255, 255, 0.16);
+  --v2-node-tint:    color-mix(in srgb, var(--brand) 20%, #13161C);
+  --v2-line:         rgba(255, 255, 255, 0.30);
+  --v2-spot-glow:    0 0 0 3px var(--brand), 0 0 44px 6px color-mix(in srgb, var(--brand) 55%, transparent);
+  --v2-comet-halo:   color-mix(in srgb, var(--brand) 45%, transparent);
+  --v2-marker:       color-mix(in srgb, var(--brand) 40%, transparent);
+  --v2-sheen:        linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.28) 48%, transparent 76%);
+  --v2-amb-a:        radial-gradient(closest-side, color-mix(in srgb, var(--brand) 38%, transparent), transparent);
+  --v2-amb-b:        radial-gradient(closest-side, rgba(90, 150, 210, 0.22), transparent);
+  --v2-amb-blend:    screen;
+  --v2-dust:         url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1200'><g fill-opacity='.45'><circle cx='420' cy='330' r='2'/><circle cx='1270' cy='180' r='2'/><circle cx='1580' cy='980' r='2'/></g></svg>");
+  --v2-dust-ink:     var(--brand);
+  --v2-dust-2:       url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1200'><g fill-opacity='.30'><circle cx='212' cy='140' r='1.5'/><circle cx='540' cy='880' r='2'/><circle cx='860' cy='260' r='1.5'/><circle cx='1180' cy='1010' r='1.5'/><circle cx='1490' cy='420' r='2'/><circle cx='1760' cy='760' r='1.5'/><circle cx='330' cy='620' r='1.5'/><circle cx='1020' cy='560' r='1.5'/><circle cx='1640' cy='120' r='1.5'/><circle cx='720' cy='1120' r='2'/><circle cx='90' cy='980' r='1.5'/><circle cx='1340' cy='720' r='1.5'/></g></svg>");
+  --v2-dust-2-ink:   #FFFFFF;
+  --v2-lt-card:      #121418;
+  --v2-lt-ink:       #F3EFEA;
+  --v2-lt-mute:      rgba(243, 239, 234, 0.70);
+  --v2-lt-plate:     color-mix(in srgb, var(--brand) 55%, #121418);
+  --v2-lt-shadow:    inset 0 1px 0 rgba(255, 255, 255, 0.10), 10px 10px 0 0 var(--v2-lt-plate), 0 18px 30px -12px rgba(0, 0, 0, 0.5);
+  --v2-lt-tag:       #F3EFEA;
+  --v2-lt-tag-ink:   #121418;
+  --v2-lt-key-shadow:10px 10px 0 0 #000000;
+  --v2-tx-b:         #0C0E12;
+  /* 舊情境 token 的暗色值（x-*.html、04 系列直接吃這些） */
+  --sc-fs-card:      #15181E;
+  --sc-fs-card-line: rgba(255, 255, 255, 0.12);
+  --sc-fs-ink:       #F3EFEA;
+  --sc-fs-mute:      rgba(243, 239, 234, 0.62);
+  --sc-fs-bar:       linear-gradient(90deg, color-mix(in srgb, var(--brand) 92%, #000), color-mix(in srgb, var(--brand) 22%, #15181E) 92%);
+  --sc-fs-bar-ink:   #FFFFFF;
+  --sc-fs-tint:      color-mix(in srgb, var(--brand) 20%, #15181E);
+  --sc-fs-line:      rgba(255, 255, 255, 0.36);
+  --sc-fs-node:      #1B1F26;
+  --sc-fs-node-line: rgba(255, 255, 255, 0.16);
+  /* 側邊欄（03）、下方字卡（.sc-lt：06–15）、章節（01）：亮色版是淺底深字或近黑卡，暗色全部換成石墨底淺字（主色類 token 不動） */
+  --sc-side-bg:      #121418;
+  --sc-side-pattern: none;
+  --sc-side-ink:     #F3EFEA;
+  --sc-side-mute:    rgba(243, 239, 234, 0.70);
+  --sc-side-kw:      var(--brand-text);
+  --sc-side-veil:    none;
+  --sc-side-edge:    var(--brand);
+  --sc-side-pill:    #F3EFEA;
+  --sc-side-pill-ink:#121418;
+  --sc-deep:         #0E1014;
+  --sc-card:         rgba(18, 20, 24, 0.96);
+  --sc-card-solid:   #121418;
+  --sc-card-line:    rgba(255, 255, 255, 0.34);
+  --sc-plate:        color-mix(in srgb, var(--brand) 55%, #121418);
+  --sc-ch-bg:        #0E1014;
+  --sc-ch-pattern:   none;
+  --sc-ch-title-bg:  #F3EFEA;
+  --sc-ch-title-ink: #121418;
+  --sc-ch-sub-bg:    #050608;
+  --sc-ch-sub-ink:   #F3EFEA;
+  --sc-ch-sub-line:  rgba(255, 255, 255, 0.34);
+  --v2-marker-blend: screen;
+  --sc-lift:         0 40px 80px -24px rgba(0, 0, 0, 0.8);
+}
+
+/* v2 全畫面主卡：卡片有景深（落影）＋暗色玻璃層 */
+.sc-wcard { background: var(--v2-card); border-color: var(--v2-card-line); box-shadow: var(--v2-card-shadow); color: var(--v2-ink); }
+
+/* 背景環境層（P.ambient 自動插） */
+.sc-surface-fs { overflow: hidden; }
+.sc-amb { position: absolute; width: 1100px; height: 1100px; border-radius: 50%; pointer-events: none; mix-blend-mode: var(--v2-amb-blend); }
+.sc-amb--a { left: 980px; top: -420px; background: var(--v2-amb-a); }
+.sc-amb--b { left: -360px; top: 420px; background: var(--v2-amb-b); }
+/* 浮塵容器本身不畫；::before＝主色點、::after＝第二色點（各自一層遮罩，父層不加 mask 才不會互相裁掉） */
+.sc-dust { position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; pointer-events: none; }
+.sc-dust::before, .sc-dust::after { content: ''; position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; }
+.sc-dust::before { background: var(--v2-dust-ink); -webkit-mask: var(--v2-dust) no-repeat 0 0 / 1920px 1200px; mask: var(--v2-dust) no-repeat 0 0 / 1920px 1200px; }
+.sc-dust::after { background: var(--v2-dust-2-ink); -webkit-mask: var(--v2-dust-2) no-repeat 0 0 / 1920px 1200px; mask: var(--v2-dust-2) no-repeat 0 0 / 1920px 1200px; }
+
+/* 原語自動插入的零件 */
+/* 螢光筆：不用負 z-index（HyperFrames lint 會警告），改用混色疊在字上：亮色 multiply、暗色 screen，字仍然清楚 */
+.sc-mk { position: absolute; left: -10px; right: -10px; bottom: 4%; height: 40%; background: var(--v2-marker); mix-blend-mode: var(--v2-marker-blend, multiply); border-radius: 4px; pointer-events: none; }
+.sc-ripple { position: absolute; left: 50%; top: 50%; width: 100%; aspect-ratio: 1; translate: -50% -50%; border: 4px solid var(--v2-ripple); border-radius: 50%; opacity: 0; pointer-events: none; box-sizing: border-box; }
+.sc-comet__head { fill: var(--v2-comet); }
+.sc-comet__halo { fill: var(--v2-comet-halo); }
+.sc-spot { position: absolute; inset: -4px; border-radius: inherit; box-shadow: var(--v2-spot-glow); opacity: 0; pointer-events: none; }
+.sc-sheen { position: absolute; inset: 0; background: var(--v2-sheen); opacity: 0; pointer-events: none; }
+.sc-strike { position: absolute; left: -4px; right: -4px; top: calc(50% - 3px); height: 6px; border-radius: 3px; background: var(--v2-strike); pointer-events: none; }
+
+/* 轉場色帶（build 的全畫面擦入；002 用） */
+.v2-tx { position: absolute; top: 0; height: 1080px; z-index: 35; pointer-events: none; }
+.v2-tx--a { width: 150px; background: var(--v2-tx-a); }
+.v2-tx--b { width: 48px; background: var(--v2-tx-b); }
+/* v2 下方字卡（07 重點字卡）：卡片＋抽屜（重點從卡片右緣抽出來） */
+.v2-lt { position: absolute; width: max-content; padding: 52px 26px 26px 0; }
+.v2-lt__tag { position: absolute; left: 36px; top: 16px; z-index: 3; height: 72px; clip-path: polygon(16px 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
+  background: var(--v2-lt-tag); color: var(--v2-lt-tag-ink); display: flex; align-items: center; padding: 0 36px 4px; font-size: 44px; font-weight: 900; line-height: 56px; white-space: nowrap; }
+.v2-lt__row { display: flex; align-items: center; }
+.v2-lt__card { position: relative; z-index: 2; display: flex; align-items: center; gap: 24px; height: 160px; padding: 20px 48px 0 36px; box-sizing: border-box;
+  border-radius: 20px; background: var(--v2-lt-card); color: var(--v2-lt-ink); box-shadow: var(--v2-lt-shadow); white-space: nowrap; }
+.v2-lt__card .sc-icon { background: var(--sc-accent); color: var(--sc-on-accent-glyph); }
+.v2-lt__lead { color: var(--v2-lt-ink); }
+.v2-lt__drawer { position: relative; z-index: 1; margin: 20px 0 0 -24px; padding: 0 26px 26px 0; margin-bottom: -26px; overflow: hidden; }
+.v2-lt__key { position: relative; overflow: hidden; display: flex; align-items: center; height: 112px; padding: 0 48px 4px 64px; box-sizing: border-box;
+  border-radius: 0 18px 18px 0; background: var(--v2-lt-key); color: var(--v2-lt-key-ink); box-shadow: var(--v2-lt-key-shadow); white-space: nowrap; }

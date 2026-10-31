@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-before-after 前後對比｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-before-after.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-before-after { position: absolute; inset: 0; }
+    #x-before-after .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-before-after #xba-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-before-after #xba-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-before-after #xba-body { position: relative; width: 1176px; height: 580px; }
+    /* 兩欄：456×468；位置由 #xba-body 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
+    #x-before-after .xba-col { position: absolute; width: 456px; height: 468px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                               border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink); }
+    #x-before-after .xba-in { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; }
+    /* 欄內：名稱列、數字列、量條、說明，都靠左 36 */
+    #x-before-after .xba-head { position: absolute; left: 36px; top: 36px; height: 88px; display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-before-after .xba-num { position: absolute; left: 36px; top: 156px; height: 136px; display: flex; align-items: center; gap: 16px; white-space: nowrap; }
+    #x-before-after .xba-track { position: absolute; left: 36px; top: 316px; width: 376px; height: 40px; box-sizing: border-box;
+                                 border: 4px solid var(--v2-node-line); border-radius: 10px; background: var(--sc-fs-node); }
+    #x-before-after .xba-fill { position: absolute; inset: 0; border-radius: 6px; }
+    #x-before-after #xba-fill1 { background: var(--sc-warn); }
+    #x-before-after #xba-fill2 { background: var(--sc-good); }
+    #x-before-after .xba-note { position: absolute; left: 36px; top: 380px; white-space: nowrap; }
+    /* 箭頭：#xba-arrow 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link） */
+  </style>
+  <div id="x-before-after" data-composition-id="x-before-after" data-width="1920" data-height="1080" data-duration="15"
+       data-cues-sample='{"start":0,"D":15,"cues":{"32":[1.6,4.2],"33":[4.3,6.9],"34":[7,9.5],"35":[9.6,14.6]},"refs":{"#32@手動":1.8,"#33@逐句":4.4,"#34@AI":7.1,"#35@省下":9.7}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xba-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">剪一集要多久</span></div>
+      <div id="xba-body" data-layout="row" data-gap="xl">
+        <svg id="xba-arrow" data-links="xba-left>xba-right" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="xba-left" class="xba-col" data-slot>
+          <div class="xba-head">
+            <span id="xba-ico1" class="sc-icon sc-icon--88"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /> </svg></span>
+            <span id="xba-lab1" class="xba-lab sc-t52 sc-w900 sc-opt">手動剪輯</span>
+          </div>
+          <div id="xba-num1" class="xba-num"><span class="xba-v sc-t112 sc-w900">3</span><span class="xba-u sc-t52 sc-w700 sc-opt">小時</span></div>
+          <div class="xba-track"><div id="xba-fill1" class="xba-fill"></div></div>
+          <div id="xba-pain" class="xba-note sc-t40 sc-w700 sc-gray sc-opt">逐句剪、反覆預覽</div>
+        </div>
+        <div id="xba-right" class="xba-col" data-slot>
+          <div id="xba-in2" class="xba-in">
+            <div class="xba-head">
+              <span id="xba-ico2" class="sc-icon sc-icon--88"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span>
+              <span id="xba-lab2" class="xba-lab sc-t52 sc-w900 sc-opt">AI 剪輯</span>
+            </div>
+            <div id="xba-num2" class="xba-num"><span class="xba-v sc-t112 sc-w900 sc-kw">20</span><span class="xba-u sc-t52 sc-w700 sc-opt">分鐘</span></div>
+            <div class="xba-track"><div id="xba-fill2" class="xba-fill"></div></div>
+            <div id="xba-gain" class="xba-note sc-t40 sc-w700 sc-gray sc-opt">NG 一次剪掉</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-before-after'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const BEFORE = P.at('#32@手動'), PAIN = P.at('#33@逐句'), AFTER = P.at('#34@AI'), SAVE = P.at('#35@省下');   // 舊做法／缺點／新做法／好處
+
+    P.sfx('tick', '#32@手動'); P.sfx('alert', '#33@逐句'); P.sfx('success', '#35@省下');   // 舊做法、缺點、好處各一顆音效（句號和上一行一樣；新做法那一拍不配）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xba-card', 0.3);
+    else { P.wipe('#xba-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xba-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xba-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+
+    // 拍 1 講到舊做法：左欄由左擦開 → ＋0.1 名稱與數字逐字上浮 → ＋0.15 圖示描線 → ＋0.3 量條長滿（舊做法的量）→ ＋1.1 漂浮
+    P.wipe('#xba-left', BEFORE, { dir: 'left' });
+    P.chars('#xba-lab1, #xba-num1', BEFORE + 0.1);
+    P.icon('#xba-ico1', BEFORE + 0.15);
+    P.bar('#xba-fill1', BEFORE + 0.3, { from: 0, to: 1, dur: 0.8 });
+    P.idle('#xba-left', BEFORE + 1.1, { y: 3, period: 3.2, until: PAIN - 0.1 });
+
+    // 拍 2 講到缺點：缺點那一行被劃掉 → 劃完左欄退焦到 0.5
+    P.strike('#xba-pain', PAIN, { dim: false });
+    P.dim('#xba-left', PAIN + 0.35, { to: 0.5 });
+
+    // 拍 3 講到新做法：箭頭提早 0.6 秒帶著發光頭從左欄走過來（線與箭頭頭同一條 path，helper 產生的 id）→ 右欄彈出 → ＋0.15 數字逐字落下、圖示描線 → ＋0.3 量條只長一小段（同一把尺）
+    P.comet('#xba-left-xba-right', AFTER - 0.6, { dur: 0.5 });
+    P.pop('#xba-right', AFTER);
+    P.chars('#xba-num2', AFTER + 0.15, { mode: 'drop' });
+    P.icon('#xba-ico2', AFTER + 0.15);
+    P.bar('#xba-fill2', AFTER + 0.3, { from: 0, to: 0.111, dur: 0.8 });   // 20 ÷ 180
+
+    // 拍 4 講到好處：右欄數字畫螢光筆、光澤掃過右欄、數字重拍（音效 success 見上面 P.sfx）
+    P.marker('#xba-num2', SAVE);
+    P.sheen('#xba-in2', SAVE + 0.1);
+    P.punch('#xba-num2', SAVE + 0.1, { scale: 1.1 });
+    // 拍 5 ＋0.6 右欄聚焦（放大抬起、主色亮框）→ ＋1.1 漂浮
+    P.spot('#xba-right', '#xba-right', SAVE + 0.6, { scale: 1.04, lift: -8 });
+    P.idle('#xba-right', SAVE + 1.1, { y: 3, period: 3.2 });
+
+    // 收：講完 2.6 秒回均衡（右欄亮框收掉；左欄亮回一點，維持退焦 0.7），完成態停到段尾
+    const TR = SAVE + 2.6;
+    P.spot('#xba-right', null, TR, { dur: 0.6 });
+    P.dim('#xba-left', TR, { to: 0.7 });
+
+    P.end();                                                                 // 長度＝plan.json 這段的長度
+    window.__timelines['x-before-after'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-before-after";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

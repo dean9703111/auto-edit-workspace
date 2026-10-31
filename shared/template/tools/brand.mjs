@@ -4,25 +4,34 @@
  *
  *   1. 寫入 kit/brand.css 的 --brand
  *   2. 算 --brand-ink：主色對 #0B1020 對比 ≥ 4.5 用 #0B1020，否則用 #FFFFFF（印出對比值）
- *   3. 算 --brand-text：主色對 #0B1020 對比 ≥ 4.5 直接用主色，否則逐步混白直到 ≥ 4.5
+ *   3. 算 --brand-text：主色對 #0B1020 與暗色主題最亮的暗底 #1B1F26 對比都 ≥ 4.5 直接用主色，否則逐步混白直到 ≥ 4.5
+ *   3b. 暗色主題（plan.json "theme": "dark"）跟著主色變的 token：kit/scene.css 用 color-mix(var(--brand)) 推，
+ *       這裡算出同樣的值印出來，並檢查標題列白字（大字 ≥ 3）、暗底主色字（≥ 4.5）
  *   4. 主色色相在紅色範圍（340°–20°）時警告：會和警示紅撞色
  *   5. 重畫 kit/pip-frame.png（子母畫面外框跟著主色變；Node 內建 zlib 寫 PNG，不需要 Python）
+ *      與 kit/pip-frame-v.png（直式講者面板：1080×1920 透明，y 897–903 一條主色分隔線；009 FR-130）
  *
  * 測試用：--kit <kit 資料夾>（預設是 tools 旁邊的 ../kit）、--no-frame（不重畫外框）
+ *
+ * 背景圖（HTML 路線）：node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
+ *   用 HyperFrames 的 Chrome 把 HTML 截成 bg-<kind>.jpg，疊留空區框、量留空區乾不乾淨，三張到齊做並排預覽 preview.jpg。
+ *   不寫 shared/template/：使用者同意後才複製（AGENTS.md「換風格」）。完整用法：--help
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEEP = '#0B1020';
+// 暗色主題的底色（specs/010-motion-v2/design-system.md §10、kit/scene.css :root[data-theme="dark"]）
+export const DARK = { base: '#0C0E12', card: '#13161C', bar: '#15181E', lt: '#121418', node: '#1B1F26' };
 
 // ---------- 顏色 ----------
 
 export function parseHex(s) {
   const m = String(s).trim().match(/^#?([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/);
-  if (!m) throw new Error(`色碼要寫成 #RRGGBB（例如 "#1B7F4B"），現在是「${s}」`);
+  if (!m) throw new Error(`色碼要寫成 #RRGGBB（例如 "#1B7F4B"），現在是「${s}」→ 改成 # 加 6 位 16 進位數字；給的是顏色名稱就先換成色碼`);
   const h = m[1].length === 3 ? m[1].split('').map((c) => c + c).join('') : m[1];
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
 }
@@ -49,23 +58,39 @@ export function brandColors(input) {
   const c = contrast(brand, deep);
   const ink = c >= 4.5 ? DEEP : '#FFFFFF';
   const inkContrast = contrast(brand, parseHex(ink));
+  // 深底上的主色字：亮色主題的深底與暗色主題最亮的暗底（節點 #1B1F26）都要 ≥ 4.5
+  const dark = parseHex(DARK.node), worst = (t) => Math.min(contrast(t, deep), contrast(t, dark));
   let text = brand, mixed = 0;
-  while (contrast(text, deep) < 4.5 && mixed < 100) {
+  while (worst(text) < 4.5 && mixed < 100) {
     mixed += 5;
     text = brand.map((v) => v + (255 - v) * mixed / 100);
   }
   const h = hue(brand);
   const sat = Math.max(...brand) - Math.min(...brand);
   return {
-    brand: toHex(brand), ink, inkContrast: +inkContrast.toFixed(2), text: toHex(text), textContrast: +contrast(text, deep).toFixed(2),
+    brand: toHex(brand), ink, inkContrast: +inkContrast.toFixed(2), text: toHex(text), textContrast: +worst(text).toFixed(2),
     mixed, brandContrast: +c.toFixed(2), reddish: h != null && sat > 40 && (h >= 340 || h <= 20),
+  };
+}
+
+// 暗色主題跟著主色變的 token（design-system.md §10；scene.css 用同樣的 color-mix 比例）：
+// 標題列 主色 92%＋黑 → 主色 22%＋#15181E、錯位底板 主色 55%＋#121418、節點底 主色 20%＋#13161C、光暈球 主色 38%；
+// barInk＝標題列左端（最亮處）白字對比（大字標準 ≥ 3）、textOnDark＝--brand-text 對暗色節點底、keyInk＝重點抽屜（主色底）上的字
+export const mixRgb = (a, b, p) => a.map((v, i) => v * p + b[i] * (1 - p));
+export function darkTokens(input) {
+  const c = brandColors(input), brand = parseHex(c.brand), white = [255, 255, 255];
+  const bar0 = mixRgb(brand, [0, 0, 0], 0.92), bar1 = mixRgb(brand, parseHex(DARK.bar), 0.22);
+  return {
+    bar: [toHex(bar0), toHex(bar1)], barInk: +contrast(bar0, white).toFixed(2),
+    plate: toHex(mixRgb(brand, parseHex(DARK.lt), 0.55)), tint: toHex(mixRgb(brand, parseHex(DARK.card), 0.2)),
+    textOnDark: +contrast(parseHex(c.text), parseHex(DARK.node)).toFixed(2), keyInk: c.inkContrast,
   };
 }
 
 export function rewriteBrandCss(css, { brand, ink, text }) {
   const set = (src, name, val) => {
     const re = new RegExp(`(--${name}\\s*:\\s*)#[0-9a-fA-F]{3,8}`);
-    if (!re.test(src)) throw new Error(`brand.css 找不到 --${name}，檔案格式被改過：請從 shared/template 重新取一份 brand.css`);
+    if (!re.test(src)) throw new Error(`brand.css 找不到 --${name}，檔案格式被改過 → 從 git 還原 shared/template/kit/brand.css 再重跑`);
     return src.replace(re, `$1${val}`);
   };
   return set(set(set(css, 'brand', brand), 'brand-ink', ink), 'brand-text', text);
@@ -171,37 +196,187 @@ export function drawPipFrame(color, { box = [1424, 594, 1856, 918], W = 1920, H 
   return encodePng(out, W, H);
 }
 
+// ---------- 背景圖：HTML 路線（brand.mjs bg，cli-004 §5）----------
+
+// 每種版面的尺寸與留空區 [x1, y1, x2, y2]（出處：USAGE-reference R9.2、R4.1；ch 是建議初值）
+export const BG_KINDS = {
+  fs: { w: 1920, h: 1080, zh: '全畫面與插入素材', zones: [
+    { name: '全畫面主卡', color: 'red', zh: '紅', rect: [120, 150, 1380, 862] },
+    { name: '子母畫面', color: 'blue', zh: '藍', rect: [1424, 581, 1888, 951] },
+    { name: '字幕帶', color: 'yellow', zh: '黃', rect: [0, 920, 1920, 1080] }] },
+  side: { w: 960, h: 1080, zh: '側邊欄面板', zones: [{ name: '側邊欄文字區', color: 'red', zh: '紅', rect: [0, 86, 816, 864] }] },
+  ch: { w: 1920, h: 1080, zh: '章節轉場', zones: [{ name: '章名卡', color: 'red', zh: '紅', rect: [160, 260, 1760, 870] }] },
+};
+export const BG_DECOR = { lumDiff: 40, maxRatio: 0.005 };   // 和框內中位亮度差 > 40 的像素占比 > 0.5% 就提醒（建議初值）
+
+// 截圖前接上 kit 的字型與主色、固定頁面大小；相對路徑照原 HTML 所在資料夾解析
+export function injectHead(html, { baseUrl, links = [], w, h }) {
+  const add = `<base href="${baseUrl}">${links.map((u) => `<link rel="stylesheet" href="${u}">`).join('')}<style>html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden}</style>`;
+  const m = html.match(/<head\b[^>]*>/i);
+  return m ? html.replace(m[0], `${m[0]}${add}`) : `<meta charset="utf-8">${add}${html}`;
+}
+
+// 框內「裝飾」像素的占比：亮度和框內中位數差 > th 的像素數 ÷ 框內像素數（rgb＝rgb24 Buffer）
+export function decorRatio(rgb, W, H, [x1, y1, x2, y2], th = BG_DECOR.lumDiff) {
+  const hist = new Uint32Array(256);
+  const L = (i) => Math.round(0.299 * rgb[i] + 0.587 * rgb[i + 1] + 0.114 * rgb[i + 2]);
+  let n = 0;
+  for (let y = Math.max(0, y1); y < Math.min(H, y2); y++) for (let x = Math.max(0, x1); x < Math.min(W, x2); x++) { hist[L((y * W + x) * 3)]++; n++; }
+  if (!n) return 0;
+  let acc = 0, med = 0;
+  while (med < 255 && acc + hist[med] < n / 2) acc += hist[med++];
+  let off = 0;
+  for (let v = 0; v < 256; v++) if (Math.abs(v - med) > th) off += hist[v];
+  return off / n;
+}
+
+const shown = (p, root) => { const r = path.relative(root, p); return r && !r.startsWith('..') && !path.isAbsolute(r) ? r : p; };
+
+export async function renderBg({ html, kind, out, chrome, kitDir }) {
+  const { run, probeMedia, rawFrame } = await import('./lib/ff.mjs');
+  const { htmlShot } = await import('./lib/raster.mjs');
+  const K = BG_KINDS[kind];
+  const htmlAbs = path.resolve(html);
+  const src = fs.readFileSync(htmlAbs, 'utf8');
+  fs.mkdirSync(out, { recursive: true });
+  const render = path.join(out, `.bg-${kind}.render.html`), raw = path.join(out, `raw-${kind}.png`), jpg = path.join(out, `bg-${kind}.jpg`), zones = path.join(out, `zones-${kind}.jpg`);
+  fs.writeFileSync(render, injectHead(src, { baseUrl: `${pathToFileURL(path.dirname(htmlAbs)).href}/`, links: [pathToFileURL(path.join(kitDir, 'fonts.css')).href, pathToFileURL(path.join(kitDir, 'brand.css')).href], w: K.w, h: K.h }));
+  try {
+    try { htmlShot({ chrome, file: render, out: raw, width: K.w, height: K.h }); } catch (e) { throw new Error(`Chrome 截圖失敗：${e.message} → 先用瀏覽器打開這個 HTML 看有沒有錯，或跑 npx hyperframes browser ensure`); }
+  } finally { fs.rmSync(render, { force: true }); }
+  let r = run('ffmpeg', ['-y', '-v', 'error', '-i', raw, '-q:v', '2', jpg]);
+  if (r.status !== 0) throw new Error(`轉 JPG 失敗：${String(r.stderr).trim().slice(-300)} → 重跑一次；還是失敗就把這行回報`);
+  const info = probeMedia(jpg);
+  if (info.width !== K.w || info.height !== K.h) throw new Error(`截出來是 ${info.width}×${info.height}，不是 ${K.w}×${K.h} → 回報這一行（Chrome 版本：${chrome}）`);
+  const boxes = K.zones.map((z) => `drawbox=x=${z.rect[0]}:y=${z.rect[1]}:w=${z.rect[2] - z.rect[0]}:h=${z.rect[3] - z.rect[1]}:color=${z.color}@0.8:t=4`).join(',');
+  r = run('ffmpeg', ['-y', '-v', 'error', '-i', jpg, '-vf', boxes, '-q:v', '2', zones]);
+  if (r.status !== 0) throw new Error(`疊留空區框失敗：${String(r.stderr).trim().slice(-300)} → 重跑一次；還是失敗就把這行回報`);
+  const px = rawFrame(jpg, { width: K.w, height: K.h });
+  const decor = K.zones.map((z) => ({ ...z, ratio: decorRatio(px, K.w, K.h, z.rect) }));
+  return { kind, jpg, zones, raw, decor, external: /\bhttps?:\/\//i.test(src) };
+}
+
+export async function makePreview(out) {
+  const { run } = await import('./lib/ff.mjs');
+  const f = (k, p) => path.join(out, `${p}-${k}.jpg`);
+  const need = ['fs', 'side', 'ch'];
+  const missing = need.filter((k) => !fs.existsSync(f(k, 'bg')) || !fs.existsSync(f(k, 'zones')));
+  if (missing.length) return { missing };
+  const file = path.join(out, 'preview.jpg');
+  const ins = [...need.map((k) => f(k, 'bg')), ...need.map((k) => f(k, 'zones'))].flatMap((x) => ['-i', x]);
+  const fc = '[0]scale=640:360[a];[1]scale=320:360[b];[2]scale=640:360[c];[3]scale=640:360[d];[4]scale=320:360[e];[5]scale=640:360[f];[a][b][c]hstack=3[top];[d][e][f]hstack=3[bot];[top][bot]vstack';
+  const r = run('ffmpeg', ['-y', '-v', 'error', ...ins, '-filter_complex', fc, '-q:v', '2', file]);
+  if (r.status !== 0) throw new Error(`並排預覽失敗：${String(r.stderr).trim().slice(-300)} → 重跑一次；還是失敗就把這行回報`);
+  return { file, missing: [] };
+}
+
+const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與 HyperFrames 的 Chrome）
+
+  node shared/template/tools/brand.mjs "#1B7F4B"
+      換主色：寫 kit/brand.css 的 --brand、算 --brand-ink／--brand-text 的對比（≥ 4.5）、
+      紅色系警告、重畫子母畫面外框 kit/pip-frame.png 與直式講者面板分隔線 kit/pip-frame-v.png。
+
+  node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
+      背景圖的 HTML 路線：用 Chrome 把 HTML 截成 bg-<kind>.jpg（fs 1920×1080、side 960×1080、ch 1920×1080），
+      另存疊上留空區框的 zones-<kind>.jpg；三張都在時產生並排預覽 preview.jpg。
+      HTML 裡顏色用 var(--brand)、字型用 var(--font-cjk)（工具自動接上 kit/brand.css 與 kit/fonts.css）。
+      輸出在 --out（預設 HTML 所在的資料夾），不能在 shared/template/ 裡；使用者看過 preview.jpg 同意後，
+      才把 bg-*.jpg 複製進 shared/template/。
+
+測試用：--kit <kit 資料夾>、--no-frame（換主色時不重畫外框）、--chrome <chrome 路徑>`;
+
+const inside = (child, parent) => {
+  const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+  const r = path.relative(real(parent), real(child));
+  return r === '' || (!r.startsWith('..') && !path.isAbsolute(r));
+};
+
+async function bgCli(args) {
+  const o = {};
+  for (let i = 0; i < args.length; i++) {
+    const k = args[i];
+    if (['--html', '--kind', '--out', '--kit', '--chrome'].includes(k)) {
+      if (args[i + 1] == null) throw new Error(`${k} 後面要接值 → 在 ${k} 後面補上值（用 node shared/template/tools/brand.mjs bg --help 看格式）`);
+      o[k.slice(2)] = args[++i];
+    } else throw new Error(`brand.mjs bg 看不懂「${k}」→ 照這個用法改：node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]`);
+  }
+  if (!Object.hasOwn(BG_KINDS, o.kind ?? '')) throw new Error(`--kind 只能是 fs（1920×1080，全畫面與插入素材）、side（960×1080，側邊欄面板）、ch（1920×1080，章節轉場），現在是「${o.kind ?? ''}」→ 改成 fs、side 或 ch`);
+  if (!o.html || !/\.html?$/i.test(o.html) || !fs.existsSync(o.html)) throw new Error(`--html 要指一個 .html 檔，找不到「${o.html ?? ''}」→ 先把背景圖做成 .html 檔（USAGE-reference.md R9.3），再用 --html 指它的路徑`);
+  const kitDir = o.kit ? path.resolve(o.kit) : path.resolve(HERE, '..', 'kit');
+  const templateDir = path.dirname(kitDir);
+  const out = path.resolve(o.out ?? path.dirname(path.resolve(o.html)));
+  if (inside(out, templateDir)) throw new Error(`輸出資料夾不能在 shared/template/ 裡（${out}）→ 先放暫存資料夾，使用者看過 preview.jpg 同意後再複製`);
+  const { findChrome } = await import('./lib/audit-browser.mjs');
+  const chrome = findChrome({ chrome: o.chrome });
+  const root = path.resolve(templateDir, '..', '..');
+  const K = BG_KINDS[o.kind];
+  console.log(`背景圖（HTML 路線）：${shown(path.resolve(o.html), root)} → ${o.kind}（${K.w}×${K.h}）`);
+  console.log(`Chrome：${chrome}`);
+  const r = await renderBg({ html: o.html, kind: o.kind, out, chrome, kitDir });
+  console.log(`→ ${shown(r.jpg, root)}（${K.w}×${K.h} ✔）`);
+  const zh = (z) => `${z.zh}＝${z.name} ${z.rect[0] === 0 && z.rect[2] === K.w ? '' : `x ${z.rect[0]}–${z.rect[2]}、`}y ${z.rect[1]}–${z.rect[3]}`;
+  console.log(`→ ${shown(r.zones, root)}（${K.zones.map(zh).join('；')}）`);
+  if (r.external) console.log('⚠ HTML 裡有網路網址（http／https）：離線或沒有網路時會載不到 → 圖片、字型改用本機檔案');
+  const bad = r.decor.filter((z) => z.ratio > BG_DECOR.maxRatio);
+  if (bad.length) for (const z of bad) console.log(`⚠ ${z.zh}框（${z.name}）裡有 ${(z.ratio * 100).toFixed(z.ratio < 0.01 ? 2 : 1)}% 的像素是裝飾（和框內中位亮度差 > ${BG_DECOR.lumDiff}）→ 裝飾移到框外，重跑這個指令`);
+  else console.log(`✔ 留空區乾淨（${K.zones.map((z) => z.zh).join('、')}框裡沒有裝飾）`);
+  const pv = await makePreview(out);
+  if (pv.missing.length) { console.log(`還沒做：${pv.missing.join('、')} → 各寫一個 HTML，跑 ${pv.missing.map((k) => `--kind ${k}`).join('、')}（三張都有才產生 preview.jpg）`); return 0; }
+  console.log(`→ ${shown(pv.file, root)}（三張並排：上排原圖、下排疊留空區框，1600×720）`);
+  console.log('下一步：把 preview.jpg 給使用者看，停下來等同意；同意後才複製進 shared/template/：');
+  for (const k of ['fs', 'side', 'ch']) {
+    const f = path.join(out, `bg-${k}.jpg`);
+    console.log(process.platform === 'win32' ? `  Windows：Copy-Item "${f}" "shared\\template\\bg-${k}.jpg"` : `  Mac：cp "${f}" "shared/template/bg-${k}.jpg"`);
+  }
+  return 0;
+}
+
 // ---------- CLI ----------
+
+// 直式講者面板（009 FR-130）：1080×1920 透明，y 897–903 一條 6px 主色線（上半資訊面板／下半講者面板的分隔線，canvas.mjs pip.frame）
+export function drawPipFrameV(color, { W = 1080, H = 1920, line = [897, 903] } = {}) {
+  const [r, g, b] = parseHex(color);
+  const rgba = Buffer.alloc(W * H * 4);
+  for (let y = line[0]; y < line[1]; y++) for (let x = 0; x < W; x++) rgba.set([r, g, b, 255], (y * W + x) * 4);
+  return encodePng(rgba, W, H);
+}
 
 export function applyBrand(color, { kitDir = path.resolve(HERE, '..', 'kit'), frame = true } = {}) {
   const c = brandColors(color);
   const cssPath = path.join(kitDir, 'brand.css');
-  if (!fs.existsSync(cssPath)) throw new Error(`找不到 ${cssPath}`);
+  if (!fs.existsSync(cssPath)) throw new Error(`找不到 ${cssPath} → 從 git 還原 shared/template/kit/brand.css 再重跑`);
   fs.writeFileSync(cssPath, rewriteBrandCss(fs.readFileSync(cssPath, 'utf8'), c));
-  if (frame) fs.writeFileSync(path.join(kitDir, 'pip-frame.png'), drawPipFrame(c.brand));
+  if (frame) {
+    fs.writeFileSync(path.join(kitDir, 'pip-frame.png'), drawPipFrame(c.brand));
+    fs.writeFileSync(path.join(kitDir, 'pip-frame-v.png'), drawPipFrameV(c.brand));
+  }
   return c;
 }
 
-function cli() {
+async function cli() {
   const args = process.argv.slice(2);
+  if (args[0] === 'bg') return bgCli(args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--kit') kitDir = path.resolve(args[++i]);
     else if (args[i] === '--no-frame') frame = false;
-    else if (args[i] === '--help') { console.log('用法：node shared/template/tools/brand.mjs "#1B7F4B"'); return 0; }
+    else if (args[i] === '--help') { console.log(BG_HELP); return 0; }
     else color = args[i];
   }
-  if (!color) { console.error('✖ 要給一個色碼，例如：node shared/template/tools/brand.mjs "#1B7F4B"'); return 1; }
+  if (!color) { console.error('✖ 要給一個色碼 → 例如：node shared/template/tools/brand.mjs "#1B7F4B"；背景圖用 brand.mjs bg --html <檔> --kind fs|side|ch'); return 1; }
   const c = applyBrand(color, { kitDir, frame });
   console.log(`--brand      ${c.brand}（對深底 ${DEEP} 對比 ${c.brandContrast}）`);
   console.log(`--brand-ink  ${c.ink}（主色底上的字，對比 ${c.inkContrast}${c.inkContrast < 4.5 ? ' ⚠ 低於 4.5，主色太中間調，標籤字可能不好讀' : ''}）`);
-  console.log(`--brand-text ${c.text}（深底上的主色字，對比 ${c.textContrast}${c.mixed ? `；主色太暗，已混 ${c.mixed}% 白色` : ''}）`);
+  console.log(`--brand-text ${c.text}（深底上的主色字，對 ${DEEP} 與暗色主題 ${DARK.node} 最低對比 ${c.textContrast}${c.mixed ? `；主色太暗，已混 ${c.mixed}% 白色` : ''}）`);
+  const d = darkTokens(c.brand);
+  console.log(`暗色主題（plan.json "theme": "dark"）跟著換：標題列 ${d.bar[0]}→${d.bar[1]}、錯位底板 ${d.plate}、節點底 ${d.tint}（kit/scene.css 自動推，不用改）`);
+  if (d.barInk < 3) console.log(`⚠ 暗色主題標題列的白字對比只有 ${d.barInk}（大字要 ≥ 3）：主色太亮，暗色主題的標題看不清楚 → 換深一點的主色，或這支影片用亮色主題`);
   if (c.reddish) console.log('⚠ 主色是紅色系：會和警示紅（踩雷、注意）撞色，觀眾分不出哪個是警告。建議換別的顏色');
-  if (frame) console.log('已重畫 kit/pip-frame.png（子母畫面外框）');
+  if (frame) console.log('已重畫 kit/pip-frame.png（子母畫面外框）與 kit/pip-frame-v.png（直式講者面板分隔線）');
   console.log('接著重跑 node shared/template/tools/build.mjs，成片就會換色；預覽頁 shared/template/index.html 重新整理即可');
   return 0;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  try { process.exitCode = cli(); } catch (e) { console.error(`✖ ${e.message}`); process.exitCode = 1; }
+  cli().then((code) => { process.exitCode = code; }, (e) => { console.error(`✖ ${e.message}`); process.exitCode = 1; });
 }

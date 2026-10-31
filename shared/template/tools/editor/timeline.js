@@ -229,6 +229,8 @@ export class Timeline {
       });
     }
     if (!anim.length) { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.itemsHint || '沒有資訊卡或字卡動態', PAD + 6, (L.anim[0] + L.anim[1]) / 2); }
+    // 沒有任何卡片、動畫或素材的口播（002 check-json 的 uncovered）：灰色斜線
+    for (const [a, b] of A.uncovered || []) if (vis(a, b)) hatch(a, b, L.anim[0] + 2, L.anim[1] - 2, 'rgba(160,170,190,0.35)', 8);
 
     // ---- 插入素材 ----
     const mediaItems = A.itemsView.filter((it) => it.type === 'media');
@@ -276,6 +278,11 @@ export class Timeline {
         g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(X(a), y, X(b) - X(a), h);
         hatch(a, b, y, y + h, C.voice, 8);
         if (X(b) - X(a) > 70) { g.font = font(10.5, 700); g.fillStyle = 'rgba(255,255,255,0.8)'; g.textBaseline = 'bottom'; g.fillText('只有聲音', X(a) + 5, y + h - 3); }
+      }
+      // 只有聲音、沒被素材蓋住（002 check-json 的 voiceUncovered）：紅色斜線
+      for (const [a, b] of A.voiceUncovered || []) if (vis(a, b)) {
+        hatch(a, b, y, y + h, 'rgba(255,90,95,0.85)', 5);
+        if (X(b) - X(a) > 90) { g.font = font(10.5, 700); g.fillStyle = '#FF8A8E'; g.textBaseline = 'top'; g.fillText('沒被蓋住', X(a) + 5, y + 3); }
       }
       // 片段（分割點、剪掉的範圍隔開）
       for (const p of A.pieces) {

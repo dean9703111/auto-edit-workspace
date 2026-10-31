@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-past-flow 流程逐步亮起</title></head>
+<body>
+<template id="x-past-flow-template">
+  <style>
+    #x-past-flow { position: absolute; inset: 0; }
+    #x-past-flow .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-past-flow #xpast-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-past-flow #xpast-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-past-flow #xpast-body { position: relative; width: 1176px; height: 580px; }
+    /* 連接線：整個內容區大小的 svg，疊在站的「下面」（線端被站蓋住，視覺上剛好貼齊邊框） */
+    #x-past-flow #xpast-lines { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-past-flow .xpast-line { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 站：寬 264、高 224，上排頂 40、下排頂 316（上下錯落）；圖示和站名同一塊 */
+    #x-past-flow .xpast-node { position: absolute; width: 264px; height: 224px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
+                             border-radius: 20px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-past-flow .xpast-node .sc-icon { --d: 96px; --i: 56px; position: relative; }
+    #x-past-flow .xpast-node .xpast-name { position: relative; }
+    #x-past-flow #xpast-n1 { left: 40px;  top: 40px; }
+    #x-past-flow #xpast-n2 { left: 316px; top: 316px; }
+    #x-past-flow #xpast-n3 { left: 592px; top: 40px; }
+    #x-past-flow #xpast-n4 { left: 868px; top: 316px; }
+    /* 亮起：now＝目前這一站的底色（下一站亮起時淡掉）；on＝主色框（亮起後保留，代表「走過」） */
+    #x-past-flow .xpast-now { position: absolute; inset: 0; border-radius: 16px; background: var(--sc-fs-tint); }
+    #x-past-flow .xpast-on  { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 20px; }
+  </style>
+  <div data-hf-id="hf-nz4c" id="x-past-flow" data-composition-id="x-past-flow" data-width="1920" data-height="1080" data-duration="14.5"
+       data-cues-sample='{"start":0,"D":14.5,"cues":{"12":[3.2,5.7],"13":[6,8.5],"14":[8.8,11.3],"15":[11.6,14]}}'>
+    <div data-hf-id="hf-rs5n" class="sc-surface-fs fill"></div>
+    <div data-hf-id="hf-rfd5" id="xpast-card" class="sc-wcard">
+      <div data-hf-id="hf-djs5" class="sc-wcard__bar"><span data-hf-id="hf-lp1s" class="sc-opt">過去的拍片流程</span></div>
+      <div data-hf-id="hf-tyfo" id="xpast-body">
+        <svg data-hf-id="hf-ejt5" id="xpast-lines" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- 三段曲線：起點貼在上一站的邊框，終點貼在下一站的邊框；箭頭是另一條短折線 -->
+          <path data-hf-id="hf-sy7b" id="xpast-c1" class="xpast-line" d="M172 264 C172 372 224 428 316 428" />
+          <path data-hf-id="hf-19su" id="xpast-h1" class="xpast-line" d="M302 414 L316 428 L302 442" />
+          <path data-hf-id="hf-ifvj" id="xpast-c2" class="xpast-line" d="M448 316 C448 208 500 152 592 152" />
+          <path data-hf-id="hf-lui5" id="xpast-h2" class="xpast-line" d="M578 138 L592 152 L578 166" />
+          <path data-hf-id="hf-9ryv" id="xpast-c3" class="xpast-line" d="M724 264 C724 372 776 428 868 428" />
+          <path data-hf-id="hf-66ng" id="xpast-h3" class="xpast-line" d="M854 414 L868 428 L854 442" />
+        </svg>
+        <div data-hf-id="hf-m7v5" id="xpast-n1" class="xpast-node"><i data-hf-id="hf-a6mp" id="xpast-now1" class="xpast-now"></i><i data-hf-id="hf-eqq3" id="xpast-on1" class="xpast-on"></i>
+          <span data-hf-id="hf-7o1o" id="xpast-ico1" class="sc-icon"><svg data-hf-id="hf-ew5e" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect data-hf-id="hf-fk15" width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path data-hf-id="hf-p3i6" d="M12 18h.01" /> </svg></span><span data-hf-id="hf-6vsr" class="xpast-name sc-t52 sc-w900 sc-opt">手機錄影</span></div>
+        <div data-hf-id="hf-sdky" id="xpast-n2" class="xpast-node"><i data-hf-id="hf-e4qq" id="xpast-now2" class="xpast-now"></i><i data-hf-id="hf-3v8g" id="xpast-on2" class="xpast-on"></i>
+          <span data-hf-id="hf-ijjb" id="xpast-ico2" class="sc-icon"><svg data-hf-id="hf-a17q" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path data-hf-id="hf-r420" d="M12 13v8" /> <path data-hf-id="hf-0m8d" d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /> <path data-hf-id="hf-82yg" d="m8 17 4-4 4 4" /> </svg></span><span data-hf-id="hf-9vaa" class="xpast-name sc-t52 sc-w900 sc-opt">上傳雲端</span></div>
+        <div data-hf-id="hf-wboz" id="xpast-n3" class="xpast-node"><i data-hf-id="hf-i2ur" id="xpast-now3" class="xpast-now"></i><i data-hf-id="hf-4mw9" id="xpast-on3" class="xpast-on"></i>
+          <span data-hf-id="hf-elfa" id="xpast-ico3" class="sc-icon"><svg data-hf-id="hf-afir" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path data-hf-id="hf-l57f" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline data-hf-id="hf-9u64" points="7 10 12 15 17 10" /> <line data-hf-id="hf-4itj" x1="12" x2="12" y1="15" y2="3" /> </svg></span><span data-hf-id="hf-zugj" class="xpast-name sc-t52 sc-w900 sc-opt">下載電腦</span></div>
+        <div data-hf-id="hf-8u7g" id="xpast-n4" class="xpast-node"><i data-hf-id="hf-uld8" id="xpast-now4" class="xpast-now"></i><i data-hf-id="hf-vz0e" id="xpast-on4" class="xpast-on"></i>
+          <span data-hf-id="hf-n9b5" id="xpast-ico4" class="sc-icon"><svg data-hf-id="hf-atts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle data-hf-id="hf-m1lh" cx="12" cy="12" r="10" /> <line data-hf-id="hf-22rf" x1="12" x2="12" y1="8" y2="12" /> <line data-hf-id="hf-3g57" x1="12" x2="12.01" y1="16" y2="16" /> </svg></span><span data-hf-id="hf-268f" class="xpast-name sc-t52 sc-w900 sc-opt">發現問題</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-past-flow'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#24', 0.3), T2 = P.at('#24', 1.5), T3 = P.at('#25', 0.3), T4 = P.at('#27', -0.3);
+
+    // 1. 卡片先進場，再每 0.5 秒放出一站（站先全部在，之後才畫連接線）；0.5 秒前不動
+    P.reveal('#xpast-card', 0.5);
+    P.rise('#xpast-n1, #xpast-n2, #xpast-n3, #xpast-n4', 1.1, { stagger: 0.5 });
+    // 2. 站進場後 0.15 秒，圖示的線描出來（跟著站錯開 0.5）
+    P.icon('#xpast-ico1, #xpast-ico2, #xpast-ico3, #xpast-ico4', 1.1 + P.BEAT, { stagger: 0.5 });
+
+    // 3. 講到哪一站，那一站亮起：疊主色框＋底色淡入；下一站亮起時，上一站的底色淡掉、框保留（走過只換框色，不打勾）
+    P.in('#xpast-on1, #xpast-now1', T1);
+    // 連接線在下一站亮起前 0.9 秒開始描（線 0.7 秒，箭頭 0.2 秒），線到了站才亮
+    P.stroke('#xpast-c1', T2 - 0.9);  P.stroke('#xpast-h1', T2 - 0.2, { dur: 0.2 });
+    P.out('#xpast-now1', T2);  P.in('#xpast-on2, #xpast-now2', T2);
+    P.stroke('#xpast-c2', T3 - 0.9);  P.stroke('#xpast-h2', T3 - 0.2, { dur: 0.2 });
+    P.out('#xpast-now2', T3);  P.in('#xpast-on3, #xpast-now3', T3);
+    P.stroke('#xpast-c3', T4 - 0.9);  P.stroke('#xpast-h3', T4 - 0.2, { dur: 0.2 });
+    P.out('#xpast-now3', T4);  P.in('#xpast-on4, #xpast-now4', T4);
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-past-flow'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

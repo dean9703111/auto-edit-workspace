@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-callout 主體四周貼標籤｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-callout.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-callout { position: absolute; inset: 0; }
+    #x-callout .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-callout #xcall-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-callout #xcall-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-callout #xcall-body { position: relative; width: 1176px; height: 580px; }
+    /* 主體：中央一個 200 的主色圖示圓；位置由 #xcall-body 的 data-layout 排，不寫 left／top */
+    #x-callout #xcall-obj { position: absolute; --d: 200px; --i: 112px; }
+    /* 引線與端點：#xcall-lines 的 data-links 自動產生引線（class 用 data-link-class 的 xcall-line）；svg 大小由 kit/scene-layout.js 設成整個內容區 */
+    #x-callout #xcall-lines { position: absolute; }
+    #x-callout .xcall-line { fill: none; stroke: var(--sc-fs-ink); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+    #x-callout .xcall-dot { fill: var(--sc-fs-card); stroke: var(--brand); stroke-width: 4px; }
+    /* 標籤：344×112，圖示和名稱同一塊；位置由 data-layout 排（左欄 t1、t3，右欄 t2、t4） */
+    #x-callout .xcall-tag { position: absolute; width: 344px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                            border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
+                            display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-callout .xcall-tag .sc-icon { --d: 64px; --i: 36px; position: relative; }
+    #x-callout .xcall-tag .xcall-name { position: relative; }
+  </style>
+  <div id="x-callout" data-composition-id="x-callout" data-width="1920" data-height="1080" data-duration="14.9"
+       data-cues-sample='{"start":0,"D":14.9,"cues":{"101":[1.9,4.3],"102":[4.4,6.8],"103":[6.9,9.3],"104":[9.4,11.8],"105":[12.2,14.6]},"refs":{"#101@腳架不穩":2.1,"#102@衣服太薄":4.6,"#103@收音太遠":7.1,"#104@背光太暗":9.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcall-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">錄影常見小毛病</span></div>
+      <div id="xcall-body" data-layout="row" data-gap="xl">
+        <svg id="xcall-lines" data-links="xcall-t1-xcall-obj xcall-t2-xcall-obj xcall-t3-xcall-obj xcall-t4-xcall-obj" data-link-class="xcall-line" xmlns="http://www.w3.org/2000/svg">
+          <!-- 四條引線由 data-links 產生（id xcall-t1-xcall-obj …）；端點小圓的位置由 script 算 -->
+          <circle id="xcall-d1" class="xcall-dot" r="10" />
+          <circle id="xcall-d2" class="xcall-dot" r="10" />
+          <circle id="xcall-d3" class="xcall-dot" r="10" />
+          <circle id="xcall-d4" class="xcall-dot" r="10" />
+        </svg>
+        <div id="xcall-left" data-slot data-layout="col" data-gap="md">
+          <div id="xcall-t1" class="xcall-tag" data-slot>
+            <span id="xcall-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m2 8 2 2-2 2 2 2-2 2" /> <path d="m22 8-2 2 2 2-2 2 2 2" /> <rect width="8" height="14" x="8" y="5" rx="1" /> </svg></span><span id="xcall-n1" class="xcall-name sc-t52 sc-w900 sc-opt">腳架不穩</span></div>
+          <div id="xcall-t3" class="xcall-tag" data-slot>
+            <span id="xcall-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /> <path d="M19 10v2a7 7 0 0 1-14 0v-2" /> <line x1="12" x2="12" y1="19" y2="22" /> </svg></span><span id="xcall-n3" class="xcall-name sc-t52 sc-w900 sc-opt">收音太遠</span></div>
+        </div>
+        <span id="xcall-obj" class="sc-icon" data-slot><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span>
+        <div id="xcall-right" data-slot data-layout="col" data-gap="md">
+          <div id="xcall-t2" class="xcall-tag" data-slot>
+            <span id="xcall-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" /> </svg></span><span id="xcall-n2" class="xcall-name sc-t52 sc-w900 sc-opt">衣服太薄</span></div>
+          <div id="xcall-t4" class="xcall-tag" data-slot>
+            <span id="xcall-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="4" /> <path d="M12 2v2" /> <path d="M12 20v2" /> <path d="m4.93 4.93 1.41 1.41" /> <path d="m17.66 17.66 1.41 1.41" /> <path d="M2 12h2" /> <path d="M20 12h2" /> <path d="m6.34 17.66-1.41 1.41" /> <path d="m19.07 4.93-1.41 1.41" /> </svg></span><span id="xcall-n4" class="xcall-name sc-t52 sc-w900 sc-opt">背光太暗</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-callout'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#101@腳架不穩'), T2 = P.at('#102@衣服太薄'), T3 = P.at('#103@收音太遠'), T4 = P.at('#104@背光太暗');   // 講到每個標籤的時刻
+    P.sfx('tick', '#101@腳架不穩'); P.sfx('tick', '#102@衣服太薄'); P.sfx('tick', '#103@收音太遠'); P.sfx('tick', '#104@背光太暗');   // 每個標籤一顆音效（句號和上一行一樣）
+    const ALL = P.at('#105');                        // 講到總結那一句（沒有這句見檔頭【綁句欄位】）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const TAGS = '#xcall-t1, #xcall-t2, #xcall-t3, #xcall-t4';   // 全部標籤（收尾用；少的標籤選不到，不用改）
+    // 端點小圓：放在每條引線（data-links 產生的）終點再往主體 --sc-link-gap，也就是主體外框邊上（載入時算一次，不用改）
+    const LG = window.SceneLayout.token('link-gap');
+    [1, 2, 3, 4].forEach(function (k) {
+      const p = $q('#xcall-t' + k + '-xcall-obj')[0], d = $q('#xcall-d' + k)[0];
+      if (!p || !d) return;
+      const q = JSON.parse(p.getAttribute('data-pts')), a = q[0], b = q[q.length - 1];
+      d.setAttribute('cx', String(b[0] + (b[0] > a[0] ? LG : -LG))); d.setAttribute('cy', String(b[1]));
+    });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；1.0 秒主體圓彈出、＋0.15 圖示描線（先看到主角是誰）
+    if (ENTER === 'grow') P.grow('#xcall-card', 0.3);
+    else { P.wipe('#xcall-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcall-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xcall-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop('#xcall-obj', 1.0, { from: 0.7 });
+    P.icon('#xcall-obj', 1.15);
+
+    // 拍 1 第 1 個標籤：從下彈出 → ＋0.12 字逐字浮出、＋0.15 圖示描線 → ＋0.25 引線帶發光頭走到主體（0.5 秒）、＋0.65 端點小圓描出
+    //   → ＋0.6 聚焦（放大抬起發光）→ ＋0.9 漂浮
+    P.pop('#xcall-t1', T1);  P.chars('#xcall-n1', T1 + 0.12);  P.icon('#xcall-ico1', T1 + 0.15);
+    P.comet('#xcall-t1-xcall-obj', T1 + 0.25, { dur: 0.5 });  P.stroke('#xcall-d1', T1 + 0.65, { dur: 0.25 });
+    P.spot('#xcall-t1', '#xcall-t1', T1 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    P.idle('#xcall-t1', T1 + 0.9, { y: 3, period: 2.8, until: T2 - 0.1 });
+    // 拍 2 第 2 個標籤：同拍 1；＋0.6 聚焦移過來、上一個標籤的引線與端點退焦 0.6
+    P.pop('#xcall-t2', T2);  P.chars('#xcall-n2', T2 + 0.12);  P.icon('#xcall-ico2', T2 + 0.15);
+    P.comet('#xcall-t2-xcall-obj', T2 + 0.25, { dur: 0.5 });  P.stroke('#xcall-d2', T2 + 0.65, { dur: 0.25 });
+    P.spot('#xcall-t1, #xcall-t2', '#xcall-t2', T2 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });  P.dim('#xcall-t1-xcall-obj, #xcall-d1', T2 + 0.6);
+    P.idle('#xcall-t2', T2 + 0.9, { y: 3, period: 2.8, until: T3 - 0.1 });
+    // 第 3 個標籤（只有 2 個標籤時刪掉這 4 行）
+    P.pop('#xcall-t3', T3);  P.chars('#xcall-n3', T3 + 0.12);  P.icon('#xcall-ico3', T3 + 0.15);
+    P.comet('#xcall-t3-xcall-obj', T3 + 0.25, { dur: 0.5 });  P.stroke('#xcall-d3', T3 + 0.65, { dur: 0.25 });
+    P.spot('#xcall-t1, #xcall-t2, #xcall-t3', '#xcall-t3', T3 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });  P.dim('#xcall-t2-xcall-obj, #xcall-d2', T3 + 0.6);
+    P.idle('#xcall-t3', T3 + 0.9, { y: 3, period: 2.8, until: T4 - 0.1 });
+    // 第 4 個標籤（3 個以下時刪掉這 4 行）
+    P.pop('#xcall-t4', T4);  P.chars('#xcall-n4', T4 + 0.12);  P.icon('#xcall-ico4', T4 + 0.15);
+    P.comet('#xcall-t4-xcall-obj', T4 + 0.25, { dur: 0.5 });  P.stroke('#xcall-d4', T4 + 0.65, { dur: 0.25 });
+    P.spot('#xcall-t1, #xcall-t2, #xcall-t3, #xcall-t4', '#xcall-t4', T4 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });  P.dim('#xcall-t3-xcall-obj, #xcall-d3', T4 + 0.6);
+    P.idle('#xcall-t4', T4 + 0.9, { y: 3, period: 2.8, until: ALL - 0.1 });
+
+    // 收：總結那一句 → 回均衡（標籤全部亮回、亮框收掉，引線亮回），完成態停到段尾
+    P.spot(TAGS, null, ALL, { dur: 0.6 });
+    P.dim('#xcall-t1-xcall-obj, #xcall-d1, #xcall-t2-xcall-obj, #xcall-d2, #xcall-t3-xcall-obj, #xcall-d3', ALL, { to: 1 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-callout'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-callout";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

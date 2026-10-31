@@ -54,3 +54,8 @@ Windows 的解法都**未在 Windows 實測**，照做後一定要再驗證。
 | 第一次執行 `npx` 等很久 | npx 會先下載套件，網路慢時要一兩分鐘，等它跑完 |
 | `auto-editor --version` 第一次很慢、畫面在下載 | 用 pip 或 uv 裝的 auto-editor，第一次執行會下載對應平台的執行檔。等它跑完就好 |
 | 檢測顯示「轉逐字稿模型」ℹ️ 或 ⚠️ | 不用處理。第一次轉逐字稿時會自動下載（約 488 MB），下載不完整也會自動重抓 |
+| S3 `npm install` 失敗：`npm ERR! network`、`ETIMEDOUT` | 網路問題。等 1 分鐘重跑一次；公司網路擋 npm 時換一個網路。不要改用系統管理員權限 |
+| S3 `npm install` 失敗：`npm ERR! code EACCES` | 不是在工作區根目錄跑，或資料夾沒有寫入權限。確認目前資料夾看得到 `package.json`、`AGENTS.md`，再跑一次；不要改用系統管理員權限 |
+| S4 印 `✖ 衝突 … 這個資料夾不是 install-skills 裝的` | 那個位置已經有同名、但不是這個工具裝的 Skill（或是捷徑）。把路徑給使用者看，請他改名或移走，再跑 `node setup/install-skills.mjs`；不要自己刪 |
+| S5 `look.mjs ensure` 或 `look.mjs status` 印 `✖`（少檔、`sha256 不對`） | 瘦臉要用的 MediaPipe 檔不完整。先 `git checkout -- shared/template/vendor/mediapipe`（下載 ZIP 的使用者：重新下載工作區），再跑 `node shared/template/tools/look.mjs ensure`；還是 ✖ 才跑 `node shared/template/tools/look.mjs ensure --download`（約 18.7 MB，算安裝：先問使用者）。下載失敗就確認網路能連 `cdn.jsdelivr.net` 與 `storage.googleapis.com`；都不行就跳過，之後只調光、不瘦臉 |
+| 輸入框「+ → Skills」看不到 `auto-edit-*` | 先跑 `node setup/install-skills.mjs --check`：印 `還沒裝` 或 `和原始檔不同` 就跑 `node setup/install-skills.mjs`；都一致就重開 MiniMax Code。Claude Code 讀的是工作區的 `.claude/skills/` |

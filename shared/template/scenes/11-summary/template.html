@@ -1,12 +1,17 @@
+<!-- 預設拍型：F 重點字卡的拍 1、2（總結：描圈打勾，不寫動畫分鏡） -->
 <!-- @style -->
 /* 置中兩列高卡：外框盒比主卡多右側 8（底板），在 8–1920 置中 → 主卡中心剛好 x960；bottom 220 → 底板底 860、主卡 592–852、標籤 536–624。
    正文 54／700 置中、行距 84（兩行剛好 168，等於 PPA 兩個 div 加 16 間距）、不加斜板；細節＝右上網點。 */
+/* 排法 free（kit/scene-layout.js 不排）：圖示＋正文在卡裡 flex 置中（單行時靠 min-height 168 上下置中）；helper 的 row 會照放大預留把長句的圖文距撐到 24 以上。圖文距 --sc-gap-md。 */
 #gCard { left: 8px; right: 0; margin: 0 auto; bottom: 220px; }
 .sm-body { display: flex; flex-direction: column; justify-content: center; min-height: 168px; text-align: center; }
-.sm-body.sm-icon { flex-direction: row; align-items: center; justify-content: center; gap: 24px; }
+.sm-body.sm-icon { flex-direction: row; align-items: center; justify-content: center; gap: var(--sc-gap-md); }
 .sm-body .sm-text { line-height: 84px; }
+<!-- @style-portrait -->
+/* 直式（canvas.mjs 的 centerCard：x 60–940、y 880–1240）：在 60–940 置中、bottom 680。 */
+#gCard { left: 60px; right: 140px; margin: 0 auto; bottom: 680px; }
 <!-- @body -->
-<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+<div id="gCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
   <div class="sc-lt__card">
     <i class="sc-lt__dots"></i>
@@ -18,8 +23,13 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* 外殼遮罩揭開 → 徽章＋正文 0.15 後淡入上漂 8 → 再 0.15 圓環描線、勾晚 0.25 → 停 → 段尾 0.4 淡出 */
-P.reveal('#gCard', {{{in}}});
-P.rise('#gCard .sc-lt__body', {{{in}}} + P.BEAT);
-{{#icon}}P.check('#gCard .sc-icon', {{{in}}} + P.BEAT * 2);{{/icon}}
-{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}
+/* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 描圈打勾 → 0.22 字逐字上浮；停留：整組漂浮 3u、徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張） */
+P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+{{#icon}}P.pop('#gCard .sc-icon', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+P.check('#gCard .sc-icon', {{{in}}} + 0.3);
+P.idle('#gCard .sc-icon', {{{in}}} + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });{{/icon}}
+P.chars('#gCard .sm-text', {{{in}}} + 0.22, { stagger: 0.02 });
+P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+{{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

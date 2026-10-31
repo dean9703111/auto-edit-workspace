@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -26,8 +29,8 @@
   .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
-  #pv-keywords #pv-kwList { position: absolute; left: 120px; top: 160px; width: 440px; height: 710px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 32px; }
-  #pv-keywords .sKw { padding: 40px 48px; }
+  #pv-keywords #pv-kwList { position: absolute; left: calc(120px - var(--sc-pad-card)); top: calc(160px - var(--sc-pad-card-y)); width: calc(460px + 2 * var(--sc-pad-card)); height: calc(710px + 2 * var(--sc-pad-card-y)); }
+  #pv-keywords .sKw { padding: var(--sc-pad-card-y) var(--sc-pad-card); }
   #pv-keywords .sKw::after { left: 16px; right: 16px; bottom: 16px; height: 4px; border-radius: 2px; }
   #pv-keywords .sKw .sc-t72 { display: block; line-height: 88px; }
   #pv-keywords .sKw--icon { display: flex; align-items: center; gap: 12px; }
@@ -40,10 +43,10 @@
   <div id="scene">
     <div id="pv-keywords" class="fill">
       <div id="pv-aWrap" class="fill">
-        <div id="pv-kwList" data-layout-allow-slack>
-          <div class="sc-kwboard sKw sKw--icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle class="stroke-draw" pathLength="1" cx="6" cy="6" r="3" /> <path class="stroke-draw" pathLength="1" d="M8.12 8.12 12 12" /> <path class="stroke-draw" pathLength="1" d="M20 4 8.12 15.88" /> <circle class="stroke-draw" pathLength="1" cx="6" cy="18" r="3" /> <path class="stroke-draw" pathLength="1" d="M14.8 14.8 20 20" /> </svg><span class="sc-t72 sc-w900 sc-opt">剪乾淨</span></div>
-          <div class="sc-kwboard sKw sKw--icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path class="stroke-draw" pathLength="1" d="M20 3v4" /> <path class="stroke-draw" pathLength="1" d="M22 5h-4" /> <path class="stroke-draw" pathLength="1" d="M4 17v2" /> <path class="stroke-draw" pathLength="1" d="M5 18H3" /> </svg><span class="sc-t72 sc-w900 sc-opt">剪好看</span></div>
-          <div class="sc-kwboard sKw sKw--icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="m17 2 4 4-4 4" /> <path class="stroke-draw" pathLength="1" d="M3 11v-1a4 4 0 0 1 4-4h14" /> <path class="stroke-draw" pathLength="1" d="m7 22-4-4 4-4" /> <path class="stroke-draw" pathLength="1" d="M21 13v1a4 4 0 0 1-4 4H3" /> </svg><span class="sc-t72 sc-w900 sc-opt">一句重跑</span></div>
+        <div id="pv-kwList" data-layout="col" data-gap="md" data-justify="start" data-layout-allow-slack>
+          <div class="sc-kwboard sKw sKw--icon" data-slot><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle class="stroke-draw" pathLength="1" cx="6" cy="6" r="3" /> <path class="stroke-draw" pathLength="1" d="M8.12 8.12 12 12" /> <path class="stroke-draw" pathLength="1" d="M20 4 8.12 15.88" /> <circle class="stroke-draw" pathLength="1" cx="6" cy="18" r="3" /> <path class="stroke-draw" pathLength="1" d="M14.8 14.8 20 20" /> </svg><span class="sc-t72 sc-w900 sc-opt">剪乾淨</span></div>
+          <div class="sc-kwboard sKw sKw--icon" data-slot><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path class="stroke-draw" pathLength="1" d="M20 3v4" /> <path class="stroke-draw" pathLength="1" d="M22 5h-4" /> <path class="stroke-draw" pathLength="1" d="M4 17v2" /> <path class="stroke-draw" pathLength="1" d="M5 18H3" /> </svg><span class="sc-t72 sc-w900 sc-opt">剪好看</span></div>
+          <div class="sc-kwboard sKw sKw--icon" data-slot><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="m17 2 4 4-4 4" /> <path class="stroke-draw" pathLength="1" d="M3 11v-1a4 4 0 0 1 4-4h14" /> <path class="stroke-draw" pathLength="1" d="m7 22-4-4 4-4" /> <path class="stroke-draw" pathLength="1" d="M21 13v1a4 4 0 0 1-4 4H3" /> </svg><span class="sc-t72 sc-w900 sc-opt">一句重跑</span></div>
         </div>
       </div>
     </div>
@@ -66,14 +69,15 @@ window.__PREVIEW = {"key":"keywords","duration":6,"cues":[{"sound":"pop","at":0.
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 6;
-    /* 逐條 drift（dx −16，貼左側）淡入並停住，有圖示的各條 P.BEAT 後圖示描線 → 段尾一起淡出 */
-    P.drift('#pv-kwList > :nth-child(1)', 0.2, { dx: -P.DRIFT });
-    P.icon('#pv-kwList > :nth-child(1)', 0.2 + P.BEAT);
-    P.drift('#pv-kwList > :nth-child(2)', 0.7, { dx: -P.DRIFT });
-    P.icon('#pv-kwList > :nth-child(2)', 0.7 + P.BEAT);
-    P.drift('#pv-kwList > :nth-child(3)', 1.2, { dx: -P.DRIFT });
-    P.icon('#pv-kwList > :nth-child(3)', 1.2 + P.BEAT);
-    P.out('#pv-kwList', D - P.OUT);
+    /* v2（shared/template/BEATS.md §2 的動作）：逐條彈出（從下 28u、0.82 → 1，各綁 at）→ 有圖示的 0.15 後描線 → 整組漂浮 → 段尾整組向左擦掉 */
+    P.pop('#pv-kwList > :nth-child(1)', 0.2, { from: 0.82, dy: 28 });
+    P.icon('#pv-kwList > :nth-child(1)', 0.2 + 0.15);
+    P.pop('#pv-kwList > :nth-child(2)', 0.7, { from: 0.82, dy: 28 });
+    P.icon('#pv-kwList > :nth-child(2)', 0.7 + 0.15);
+    P.pop('#pv-kwList > :nth-child(3)', 1.2, { from: 0.82, dy: 28 });
+    P.icon('#pv-kwList > :nth-child(3)', 1.2 + 0.15);
+    P.idle('#pv-kwList', 0.5, { y: 3, x: 1.5, period: 3.6, until: D });
+    P.wipeOut('#pv-kwList', D - P.V2.OUT, { dir: 'left' });
 
     P.end(D);
     // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）

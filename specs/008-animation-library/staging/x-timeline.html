@@ -1,0 +1,168 @@
+<!doctype html>
+<!--
+  x-timeline：時間軸逐點前進（第二層 custom，layout: "fullscreen"；也用在「本集分成幾個部分」）
+
+  【適用的口播】
+  在講「有時間先後的 3–4 個點」：年份、版本、階段，或「這集分成三個部分，先…接著…最後…」。
+  畫面一開始只有一條橫軸和幾個空心點；講到哪個時間點，主色進度沿著軸走到那個點、點填滿，點上方浮出卡片（圖示＋年份或序號），下方一行說明。
+  目前這一點的卡片有主色框；下一點亮起時框移走，走過的點保持實心。
+
+  【不要用在哪裡】
+  - 沒有先後的並列項目：用 x-callout、12 或 04a。
+  - 每一站是一個動作、要看出「做完這步才做下一步」：用 x-process 或 04c。
+  - 超過 4 個點：拆兩段；年份加說明都很長（說明 > 8 字）：縮文案，放不下就改 04a。
+  - 「以前 vs 現在」只有兩個點：用 04b 或 x-before-after。
+
+  【要改的地方】
+  1. 文字：標題列（#xtl-card 裡的 .sc-wcard__bar，≤ 10 字）；每個點的 .xtl-lab（4 位數字的年份，或 ≤ 2 個字；本集大綱就寫 01／02／03）；
+     每個點的 .xtl-cap 說明（≤ 8 字，每行 ≤ 4 字，3 點時每行 ≤ 5 字；超過一行用 <br> 斷在語意處，最多 2 行；字級 52，不縮字）。
+  2. 圖示：每個點 .sc-icon 裡的 svg。到 kit/icons.json 找名稱，把 svg 原文整段貼上（拿掉 class、width、height）。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 綁句：<script> 開頭 T1–T4 的句號與詞（見【綁句欄位】）。
+  點數是 3：刪掉第 4 點的卡片 #xtl-n4、說明 #xtl-c4、兩個圓點 #xtl-dot4 與 #xtl-don4，再刪 script 開頭的「, T4 = P.at(…)」和「第 4 點」那 4 行。
+  位置、寬度、進度比例由 script 依卡片數自動排，不用改任何數字。
+
+  【綁句欄位】
+  T1 = P.at('#131@2019')、T2 = P.at('#132@2022')、T3 = P.at('#133@2024')、T4 = P.at('#134@今年')：講到那個時間點（年份、「第一部分」「接著」「最後」後面那個詞）的時刻，
+  進度走到那個點、卡片和說明出現；進度在 T 之前 0.4 秒出發，剛好在 T 到點。
+  時間詞在句中間或句尾時一定用 @詞，不要綁句首（綁句首，卡片會比講到早 1–3 秒出現）；剛好是那句的第一個詞才寫 P.at('#132')。
+  「@詞」要寫成字串字面值（P.at('#132@2022')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#132@2022', 0.3)。
+  相鄰兩點至少差 2.5 秒（卡片 0.5 秒、說明晚 0.15 秒、圖示描線到 0.85 秒，停 1.2 秒，下一段進度提早 0.4 秒出發）；太近就綁後面一句，或拆兩段。
+  audit 會比對：這一拍出現的字（年份、說明）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.1（卡片 0.5 秒、橫軸 1.0 秒起描 0.7 秒，第一段進度 T1 − 0.4 出發要在 1.7 秒之後）
+  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5；T4 ≥ T3 + 2.5
+  D ≥ T4 + 2.9（圖示描完 0.85 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；3 點時改看 D ≥ T3 + 2.9；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：整段淡入淡出 0.5 秒由 build 處理；0.5 秒前不動。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
+  標題列 128、內容區 1176×580（卡底 862，在字幕區 y 920 之上）。以下是內容區座標。
+  橫軸 y 356、x 56–1120；點的中心 x（script 依卡片數自動選）：
+    4 點：X = [168, 448, 728, 1008]，卡片與說明寬 256、left = X − 128；
+    3 點：X = [196, 588, 980]，卡片與說明寬 320、left = X − 160（說明每行可到 5 字）。
+  卡片 top 72、高 256（圖示 88＋年份 72 字）；說明 top 392、置中、行高 72（兩行時底 542）。卡片底 328 離軸 28，說明離軸 36。
+-->
+<!-- 靈感（只借技法，不含程式與素材；003 搬進 custom 時改記 NOTICE.md、這行可刪）：rpa-dake-593915（rpa_dake，https://x.com/rpa_dake/status/2104466394859593915）；kloss-xyz-067876（kloss_xyz，https://x.com/kloss_xyz/status/2103652674336067876）；airobertdaily-416945（aiRobertDaily，https://x.com/aiRobertDaily/status/2108596616756416945） -->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-timeline 時間軸逐點前進</title></head>
+<body>
+<template id="x-timeline-template">
+  <style>
+    #x-timeline { position: absolute; inset: 0; }
+    #x-timeline .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-timeline #xtl-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-timeline #xtl-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-timeline #xtl-body { position: relative; width: 1176px; height: 580px; }
+    /* 橫軸在最下層、進度條疊在上面、圓點再疊上去；兩層 svg 都是整個內容區大小（座標＝內容區座標） */
+    #x-timeline #xtl-track { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-timeline #xtl-dots { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-timeline #xtl-axis { stroke: var(--sc-fs-line); stroke-width: 8px; stroke-linecap: round; }
+    #x-timeline #xtl-fill { position: absolute; left: 56px; top: 352px; width: 1064px; height: 8px; border-radius: 4px; background: var(--brand); }
+    /* 空心點：r 14、框 6；實心點：r 9 的粗描邊（18）描完就是填滿的圓，蓋住空心點的框 */
+    #x-timeline .xtl-dot { fill: var(--sc-fs-card); stroke: var(--sc-fs-line); stroke-width: 6px; }
+    #x-timeline .xtl-don { fill: none; stroke: var(--brand); stroke-width: 18px; }
+    /* 卡片：頂 72、高 256；left 與 width 由 script 依點數算（4 點寬 256、3 點寬 320）；圖示和年份同一塊 */
+    #x-timeline .xtl-node { position: absolute; top: 72px; height: 256px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
+                            border-radius: 20px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; white-space: nowrap; }
+    #x-timeline .xtl-node .sc-icon { --d: 88px; --i: 48px; position: relative; }
+    #x-timeline .xtl-node .xtl-lab { position: relative; }
+    /* 目前這一點：主色框疊在卡片外框上（下一點亮起時淡掉） */
+    #x-timeline .xtl-on { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 20px; }
+    /* 說明：軸下方置中一行（最多兩行）；left 與 width 由 script 算，和卡片同寬 */
+    #x-timeline .xtl-cap { position: absolute; top: 392px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }
+  </style>
+  <div id="x-timeline" data-composition-id="x-timeline" data-width="1920" data-height="1080" data-duration="13"
+       data-cues-sample='{"start":0,"D":13,"cues":{"131":[2,4.5],"132":[4.6,7.1],"133":[7.2,9.7],"134":[9.8,12.5]},"refs":{"#131@2019":2.2,"#132@2022":4.8,"#133@2024":7.4,"#134@今年":10.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xtl-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">我的拍片歷程</span></div>
+      <div id="xtl-body">
+        <svg id="xtl-track" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <line id="xtl-axis" x1="56" y1="356" x2="1120" y2="356" />
+        </svg>
+        <div id="xtl-fill"></div>
+        <svg id="xtl-dots" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- cx 由 script 依點數填（不用改）；每個點兩個圓：空心 .xtl-dot、講到時填滿的 .xtl-don -->
+          <circle id="xtl-dot1" class="xtl-dot" cy="356" r="14" />
+          <circle id="xtl-dot2" class="xtl-dot" cy="356" r="14" />
+          <circle id="xtl-dot3" class="xtl-dot" cy="356" r="14" />
+          <circle id="xtl-dot4" class="xtl-dot" cy="356" r="14" />
+          <circle id="xtl-don1" class="xtl-don" cy="356" r="9" />
+          <circle id="xtl-don2" class="xtl-don" cy="356" r="9" />
+          <circle id="xtl-don3" class="xtl-don" cy="356" r="9" />
+          <circle id="xtl-don4" class="xtl-don" cy="356" r="9" />
+        </svg>
+        <div id="xtl-n1" class="xtl-node"><i id="xtl-on1" class="xtl-on"></i>
+          <span id="xtl-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path d="m6.2 5.3 3.1 3.9" /> <path d="m12.4 3.4 3.1 4" /> <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2019</span></div>
+        <div id="xtl-n2" class="xtl-node"><i id="xtl-on2" class="xtl-on"></i>
+          <span id="xtl-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2022</span></div>
+        <div id="xtl-n3" class="xtl-node"><i id="xtl-on3" class="xtl-on"></i>
+          <span id="xtl-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2024</span></div>
+        <div id="xtl-n4" class="xtl-node"><i id="xtl-on4" class="xtl-on"></i>
+          <span id="xtl-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">今年</span></div>
+        <div id="xtl-c1" class="xtl-cap sc-t52 sc-w700 sc-opt">開始拍片</div>
+        <div id="xtl-c2" class="xtl-cap sc-t52 sc-w700 sc-opt">改用手機</div>
+        <div id="xtl-c3" class="xtl-cap sc-t52 sc-w700 sc-opt">多機錄影</div>
+        <div id="xtl-c4" class="xtl-cap sc-t52 sc-w700 sc-opt">交給 AI</div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-timeline'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#131@2019'), T2 = P.at('#132@2022'), T3 = P.at('#133@2024'), T4 = P.at('#134@今年');   // 講到每個時間點的時刻
+    const N = $q('#x-timeline .xtl-node').length;                  // 幾個點＝上面 HTML 的卡片數（3 或 4），不用改
+    const X = N === 3 ? [196, 588, 980] : [168, 448, 728, 1008];   // 點的中心 x（內容區座標），不用改
+    const W = N === 3 ? 320 : 256;                                 // 卡片與說明的寬，不用改
+    const F = X.map(function (x) { return (x - 56) / 1064; });      // 進度條走到每一點的比例（橫軸 x 56–1120，自動算）
+
+    // 0. 版面：卡片、說明、圓點的位置都由 X 算（只用常數，不讀版面量測值，每次載入結果相同）
+    X.forEach(function (x, i) {
+      $q('#xtl-n' + (i + 1) + ', #xtl-c' + (i + 1)).forEach(function (el) { el.style.left = (x - W / 2) + 'px'; el.style.width = W + 'px'; });
+      $q('#xtl-dot' + (i + 1) + ', #xtl-don' + (i + 1)).forEach(function (el) { el.setAttribute('cx', String(x)); });
+    });
+
+    // 1. 卡片先進場 → 橫軸描出來 → 空心點每 0.15 秒描一個（先看到有幾站）；0.5 秒前不動
+    P.reveal('#xtl-card', 0.5);
+    P.stroke('#xtl-axis', 1.0);
+    P.stroke('.xtl-dot', 1.2, { stagger: 0.15 });
+
+    // 2. 講到第 i 個時間點：進度提早 0.4 秒出發、剛好講到時到點，點填滿；卡片連主色框浮出；0.15 秒後圖示描線、說明浮出。
+    //    下一點亮起時，上一點的主色框淡掉（走過的點保持實心、進度留在原處）
+    P.bar('#xtl-fill', T1 - 0.4, { from: 0, to: F[0], dur: 0.4 });
+    P.stroke('#xtl-don1', T1, { dur: 0.3 });
+    P.rise('#xtl-n1', T1);  P.in('#xtl-on1', T1);
+    P.icon('#xtl-ico1', T1 + P.BEAT);  P.rise('#xtl-c1', T1 + P.BEAT);
+
+    P.bar('#xtl-fill', T2 - 0.4, { from: F[0], to: F[1], dur: 0.4 });
+    P.stroke('#xtl-don2', T2, { dur: 0.3 });
+    P.out('#xtl-on1', T2);  P.rise('#xtl-n2', T2);  P.in('#xtl-on2', T2);
+    P.icon('#xtl-ico2', T2 + P.BEAT);  P.rise('#xtl-c2', T2 + P.BEAT);
+
+    P.bar('#xtl-fill', T3 - 0.4, { from: F[1], to: F[2], dur: 0.4 });
+    P.stroke('#xtl-don3', T3, { dur: 0.3 });
+    P.out('#xtl-on2', T3);  P.rise('#xtl-n3', T3);  P.in('#xtl-on3', T3);
+    P.icon('#xtl-ico3', T3 + P.BEAT);  P.rise('#xtl-c3', T3 + P.BEAT);
+
+    // 第 4 點（3 點時刪掉這 4 行）
+    P.bar('#xtl-fill', T4 - 0.4, { from: F[2], to: F[3], dur: 0.4 });
+    P.stroke('#xtl-don4', T4, { dur: 0.3 });
+    P.out('#xtl-on3', T4);  P.rise('#xtl-n4', T4);  P.in('#xtl-on4', T4);
+    P.icon('#xtl-ico4', T4 + P.BEAT);  P.rise('#xtl-c4', T4 + P.BEAT);
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-timeline'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

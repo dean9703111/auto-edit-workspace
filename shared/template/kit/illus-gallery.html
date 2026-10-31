@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>示意插圖元件 illus 畫廊</title>
+<!-- 查表用：亮色／暗色兩個主題並列，每個元件、每個狀態一格，格子下面是 data-* 寫法。
+     直接開這個檔就能看（file:// 也可以）；kit/illus-gallery.jpg 是同一頁的截圖。
+     兩欄各是一個 iframe（本檔加 ?theme=light／?theme=dark），主題開關和成片一樣在 <html data-theme>。 -->
+<script>
+  var THEME = (location.search.match(/[?&]theme=(light|dark)/) || [])[1] || null;
+  if (THEME === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+</script>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="scene.css">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="brand.css">
+<link rel="stylesheet" href="illus.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: auto; height: auto; overflow: visible; }
+  body { font-family: var(--font-cjk); }
+  /* 外框（兩欄） */
+  body.wrap { width: 1920px; background: #FEF7F3; color: #141414; }
+  .wrap header { padding: 28px 40px 22px; border-bottom: 2px solid rgba(20, 20, 20, 0.12); }
+  .wrap h1 { margin: 0 0 8px; font-size: 34px; font-weight: 900; }
+  .wrap header p { margin: 0; font-size: 17px; line-height: 1.6; color: #57504A; }
+  .wrap code { font: 15px/1.5 ui-monospace, Menlo, monospace; background: rgba(20, 20, 20, 0.06); padding: 1px 6px; border-radius: 4px; }
+  .cols { display: flex; }
+  .cols iframe { display: block; width: 960px; height: 2000px; border: 0; }
+  /* 單欄 */
+  body.col { width: 960px; padding: 28px 28px 40px; }
+  :root:not([data-theme="dark"]) body.col { background: #FEF7F3; color: #141414; }
+  :root[data-theme="dark"] body.col { background: #1A191C; color: #F3EFEA; }
+  .col h2 { margin: 0 0 4px; font-size: 28px; font-weight: 900; }
+  .col .sub { margin: 0 0 20px; font-size: 15px; opacity: 0.7; }
+  .grp { margin: 0 0 30px; }
+  .grp h3 { margin: 0 0 4px; font-size: 22px; font-weight: 900; }
+  .grp .parts { margin: 0 0 14px; font: 13px/1.5 ui-monospace, Menlo, monospace; opacity: 0.72; }
+  .grid { display: flex; flex-wrap: wrap; gap: 22px 28px; align-items: flex-end; }
+  .cell { display: flex; flex-direction: column; gap: 8px; }
+  .lab { font: 12px/1.45 ui-monospace, Menlo, monospace; word-break: break-all; opacity: 0.85; }
+  .lab .st { font-family: var(--font-cjk); font-weight: 700; opacity: 1; }
+</style>
+</head>
+<body>
+<script>
+(function () {
+  if (!THEME) {
+    // 兩欄外框：左亮右暗；欄高由 iframe 回報
+    document.body.className = 'wrap';
+    document.body.innerHTML =
+      '<header><h1>示意插圖元件 illus（20 個）</h1>' +
+      '<p>用法：<code>&lt;div data-illus="phone" data-screen="rec" style="width:120px;height:250px"&gt;&lt;/div&gt;</code>（尺寸寫在外層，下面每格的寬＝建議尺寸）；' +
+      '子元素用 class 抓（<code>.il-rec</code>）。左欄亮色主題、右欄暗色主題（<code>&lt;html data-theme="dark"&gt;</code>）；「黃」＝主色 <code>--brand</code>。' +
+      '畫廊沒有的物件照 <code>kit/illus-style.md</code> 自己畫。</p></header>' +
+      '<div class="cols"><iframe id="f-light" src="illus-gallery.html?theme=light" title="亮色"></iframe>' +
+      '<iframe id="f-dark" src="illus-gallery.html?theme=dark" title="暗色"></iframe></div>';
+    var hs = {};
+    window.addEventListener('message', function (e) {
+      var d = e.data || {};
+      if (!d.illusGallery) return;
+      hs[d.illusGallery] = d.h;
+      document.getElementById('f-' + d.illusGallery).style.height = d.h + 'px';
+      if (hs.light && hs.dark) {
+        document.querySelectorAll('.cols iframe').forEach(function (f) { f.style.height = Math.max(hs.light, hs.dark) + 'px'; });
+        document.documentElement.setAttribute('data-h', String(document.documentElement.scrollHeight));
+      }
+    });
+    return;
+  }
+
+  var G = [];   // [元件, 子元素 class, 格子[]]
+  function grp(name, parts) { G.push({ name: name, parts: parts, cells: [] }); }
+  function add(name, opts, w, state) { G[G.length - 1].cells.push({ name: name, opts: opts || {}, w: w, state: state }); }
+  var SCR = ['blank', 'video', 'play', 'rec', 'check', 'warn', 'shorts', 'qr'];
+  var LSCR = ['blank', 'video', 'play', 'rec', 'check', 'warn', 'app'];
+  grp('phone', '120×250 直／250×120 橫 · .il-body .il-screen ＋ 螢幕狀態 .il-content .il-play .il-rec .il-check .il-warn .il-shorts .il-qr');
+  ['portrait', 'landscape'].forEach(function (or) { SCR.forEach(function (s) { add('phone', { orient: or, screen: s }, or === 'portrait' ? 120 : 250); }); });
+  grp('tripod', '140×180 · .il-legs .il-tripod-head');
+  add('tripod', {}, 140);
+  grp('phoneTripod', '140×360 直／260×300 橫 · phone 的子元素＋tripod 的子元素');
+  ['portrait', 'landscape'].forEach(function (or) { SCR.forEach(function (s) { add('phoneTripod', { orient: or, screen: s }, or === 'portrait' ? 140 : 260); }); });
+  grp('laptop', '280×190 · .il-screen ＋ 螢幕狀態 .il-content .il-play .il-rec .il-check .il-warn .il-app');
+  LSCR.forEach(function (s) { add('laptop', { screen: s }, 280); });
+  grp('monitor', '360×300 · 同 laptop');
+  LSCR.forEach(function (s) { add('monitor', { screen: s }, 360); });
+  grp('cloud', '220×150 · .il-arrow（none 時 opacity 0 仍在）');
+  ['none', 'up', 'down'].forEach(function (a) { add('cloud', { arrow: a }, 220); });
+  grp('personBust', '160×170 · .il-head .il-talk（說話弧，預設 opacity 0）');
+  add('personBust', { tone: 'a' }, 160);
+  add('personBust', { tone: 'b' }, 160);
+  add('personBust', { tone: 'a' }, 160, 'talk');
+  grp('personTop', '110×72 · .il-head .il-face（俯視；黃三角＝面朝方向，用 CSS rotate 90° 倍數轉）');
+  add('personTop', {}, 110);
+  grp('desk', '320×150 · .il-desk .il-laptop');
+  add('desk', {}, 320);
+  grp('cone', '寬 len+4 · .il-cone（頂點在左、朝右張開）');
+  add('cone', { angle: 50, len: 300, fill: false }, 304);
+  add('cone', { angle: 80, len: 220, fill: true }, 224);
+  grp('waveform', '360×90 · .il-bar（scaleY 動畫）');
+  add('waveform', { bars: 28, seed: 1, color: 'white' }, 360);
+  add('waveform', { bars: 28, seed: 1, color: 'yellow' }, 360);
+  add('waveform', { bars: 40, seed: 7, color: 'red' }, 360);
+  grp('progress', '320×28 · .il-track .il-fill（scaleX 0→1）');
+  add('progress', {}, 320);
+  add('progress', {}, 320, 'progress');
+  grp('energy', '220×90 · .il-body .il-cell（5 格）');
+  add('energy', {}, 220);
+  add('energy', {}, 220, 'energy');
+  grp('fileVideo', '100×120 · .il-play');
+  add('fileVideo', {}, 100);
+  grp('window', '480×300 · .il-title .il-content（空 <g>，內容區 x2..478、y48..298）');
+  add('window', { title: '' }, 480);
+  add('window', { title: 'Surfshark - Chrome' }, 480);
+  grp('searchBar', '640×84 · .il-text .il-caret');
+  add('searchBar', { text: '' }, 640);
+  add('searchBar', { text: 'eSIM 旅遊上網' }, 640);
+  grp('badge', '72×72 · .il-badge');
+  ['check', 'cross', 'warn'].forEach(function (k) { add('badge', { kind: k }, 72); });
+  grp('recPill', '200×60 · .il-dot .il-time .il-label');
+  add('recPill', {}, 200);
+  grp('stopwatch', '220×240 · .il-hand（svgOrigin "110 135"）.il-sweep（dashoffset 100→0）.il-ticks');
+  add('stopwatch', {}, 220);
+  add('stopwatch', {}, 220, 'stopwatch');
+  grp('bookmark', '220×72 · .il-off .il-on（用 opacity 切換）');
+  add('bookmark', { saved: false }, 220);
+  add('bookmark', { saved: true }, 220);
+
+  var STATE = { talk: '狀態：.il-talk opacity 1', progress: '狀態：.il-fill scaleX(.6)', energy: '狀態：.il-cell 改 fill var(--il-warn)、熄一格',
+    stopwatch: '狀態：.il-hand 轉 110°、.il-sweep 走 30%' };
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+  var h = '<h2>' + (THEME === 'dark' ? '暗色主題 data-theme="dark"' : '亮色主題（預設）') + '</h2>' +
+    '<p class="sub">' + (THEME === 'dark' ? '底色取自 bg-fs-dark.jpg 的平均色' : '底色取自 bg-fs.jpg 的平均色') + '</p>';
+  G.forEach(function (g) {
+    h += '<section class="grp"><h3>' + g.name + '</h3><div class="parts">' + esc(g.parts) + '</div><div class="grid">';
+    g.cells.forEach(function (c) {
+      var attrs = ' data-illus="' + c.name + '"', code = [];
+      Object.keys(c.opts).forEach(function (k) { attrs += ' data-' + k + '="' + esc(c.opts[k]) + '"'; code.push('data-' + k + '="' + esc(c.opts[k]) + '"'); });
+      h += '<div class="cell" style="width:' + Math.max(c.w, 160) + 'px"><div class="stage" style="width:' + c.w + 'px"' + attrs + (c.state ? ' data-after="' + c.state + '"' : '') + '></div>' +
+        '<div class="lab">' + (code.length ? code.join('<br>') : '（預設）') + (c.state ? '<br><span class="st">' + STATE[c.state] + '</span>' : '') + '</div></div>';
+    });
+    h += '</div></section>';
+  });
+  document.body.className = 'col';
+  document.body.innerHTML = h;
+})();
+</script>
+<script src="illus.js"></script>
+<script>
+(function () {
+  if (!THEME) return;
+  // 依 viewBox 設舞台高度；套用「中途狀態」示範
+  document.querySelectorAll('.stage').forEach(function (st) {
+    var vb = st.querySelector('svg').viewBox.baseVal;
+    st.style.height = (parseFloat(st.style.width) * vb.height / vb.width) + 'px';
+    var a = st.dataset.after;
+    if (a === 'talk') st.querySelector('.il-talk').style.opacity = 1;
+    if (a === 'progress') st.querySelector('.il-fill').style.transform = 'scaleX(.6)';
+    if (a === 'energy') {
+      var c = st.querySelectorAll('.il-cell');
+      c[2].setAttribute('fill', 'var(--il-warn)'); c[3].setAttribute('fill', 'var(--il-warn)'); c[4].style.opacity = 0;
+    }
+    if (a === 'stopwatch') {
+      st.querySelector('.il-hand').style.transform = 'rotate(110deg)';
+      st.querySelector('.il-sweep').setAttribute('stroke-dashoffset', 70);
+    }
+  });
+  var post = function () {
+    if (window.parent !== window) window.parent.postMessage({ illusGallery: THEME, h: document.documentElement.scrollHeight }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(post); else post();
+})();
+</script>
+</body>
+</html>

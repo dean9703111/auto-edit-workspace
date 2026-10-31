@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "theme": "dark",
+  "speakerBox": [
+    700,
+    200,
+    1220,
+    1000
+  ],
+  "scenes": [
+    {
+      "id": "s01",
+      "scene": "concept",
+      "from": "#2",
+      "to": "#3e",
+      "slots": {
+        "text": "**場地設定**：一份文件"
+      }
+    },
+    {
+      "id": "s02",
+      "scene": "side-panel",
+      "from": "#5",
+      "to": "#7e",
+      "slots": {
+        "title": "拍完之後",
+        "items": [
+          "初剪",
+          "轉字幕",
+          "校對"
+        ]
+      }
+    },
+    {
+      "id": "s03",
+      "scene": "fs-list",
+      "from": "#9",
+      "to": "#10e",
+      "slots": {
+        "title": "清單",
+        "items": [
+          "一",
+          "二",
+          "三"
+        ]
+      }
+    },
+    {
+      "id": "s04",
+      "type": "fx",
+      "fx": 29,
+      "from": "#12",
+      "to": "#12e",
+      "vars": {
+        "number": "18",
+        "label": "字"
+      }
+    }
+  ]
+}

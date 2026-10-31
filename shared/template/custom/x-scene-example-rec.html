@@ -1,0 +1,177 @@
+<!-- 預設拍型：S 示意（BEATS.md §5；x-scene 骨架的填法示範：場景骨架 → 手機進場 → 錄影 → 人走過去 → 播放 → 結果） -->
+<!doctype html>
+<!--
+  x-scene-example-rec：示意動畫參考——開拍前先試錄、走過去回放確認（第二層 custom，layout: "fullscreen"；從 x-scene.html 骨架填 DATA 而來）
+
+  【適用的口播】
+  在描述一連串具體的動作：「以前開拍前，我會先把手機架上腳架，按下錄影試錄一小段，錄完走到手機旁邊播放，確認畫面和聲音，都符合需求才正式開拍」。
+  這支是 x-scene 骨架的填法示範（ep2 seg03 試錄確認改寫成 v2 動作與插圖元件）：場景骨架（桌子、人）→ 手機進場 → 換狀態（錄影 → 播放）→ 人走過去 → 結果。
+
+  【不要用在哪裡】
+  - 只有名詞、沒有動作：用 12 關鍵詞或 x-callout。
+  - 抽象的先後步驟、沒有具體物件：用 x-process。
+  - 要做新的示意動畫：從 x-scene.html 骨架複製，照分鏡填兩塊 DATA；這支只當參考（看 DATA 怎麼寫）。
+
+  【要改的地方】
+  和 x-scene.html 一樣只改兩塊 DATA（這支沒有圖示：主角是插圖元件；script 第一行的 ILLUS.mount 不要動）。
+  1. DATA 1 元件清單（不寫 left／top）：左組 xscr-desk-set（data-layout="col" data-gap="none"：人站在桌子後面；兩個都加 xscr-pre＝一開始就在）、手機腳架（data-screen="blank"，要換的狀態寫在拍）、右組 xscr-right（col：錄影膠囊、聲音波形、結果徽章；xscr-side＝標籤在右邊）。
+  2. DATA 2 拍：手機進場 → state 錄影＋錄影膠囊進場＋count 計時 00:00→00:05 → move 人走到手機左邊（move: ['xscr-person', 'xscr-phone', 'left']）→ state 播放 → 波形進場 → check 結果。
+  開場：ENTER 預設自動判斷，通常不用改；標題列（≤ 10 字）在 #xscr-card 的 .sc-wcard__bar。
+
+  【綁句欄位】
+  T1 = P.at('#192@腳架')、T2 = P.at('#193@試錄')、T3 = P.at('#194@走到')、T4 = P.at('#195@播放')、T5 = P.at('#196@聲音')、T6 = P.at('#197@符合')：講到那個物件、那個動作的詞的時刻。
+  物件名、動作在句中間或句尾時一定用 @詞，不要綁句首；「@詞」要寫成字串字面值，build 才算得到；要再晚一點加第二個參數：P.at('#193@試錄', 0.3)。
+  分鏡第 0 拍（段起點，開場）不用寫 P.at：主卡進場與標題由骨架的程式做。
+  audit 會比對：這一拍出現的字（標籤）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.0（主卡 0.3 秒長出、0.5 標題逐字上浮、1.0 場景骨架）
+  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5；T4 ≥ T3 + 2.5；T5 ≥ T4 + 2.5；T6 ≥ T5 + 2.5（每拍：彈出或換狀態＋聚焦，停 ≥ 1.2 秒；人走 1 秒）
+  D ≥ T6 + 4.6（最後一拍講完 2 秒回均衡＋0.6 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡在 panelTop 區（x 120–1300、y 150–858），標題列 128、內容區 xscr-stage 1176×580。
+  xscr-stage 是 data-layout="row" data-gap="lg"（kit/scene-layout.js，shared/style.md「版面」）：左組（人＋桌子）、手機腳架、右組（膠囊／波形／結果）三組等距 48、
+  手機腳架的插圖中線和兩組的中線對齊，整組在內容區置中；組裡是 col（垂直排、中線對齊）。人走過去的終點由手機腳架的位置算，不寫座標。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-scene-example-rec 示意動畫參考：試錄確認</title></head>
+<body>
+<template id="x-scene-example-rec-template">
+  <style>
+    #x-scene-example-rec { position: absolute; inset: 0; }
+    #x-scene-example-rec .fill { position: absolute; inset: 0; }
+    /* 主卡：panelTop 區（左 120、頂 150、寬 1180；標題列 128＋內容區 580＝708） */
+    #x-scene-example-rec #xscr-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-scene-example-rec #xscr-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    #x-scene-example-rec #xscr-stage { position: relative; width: 1176px; height: 580px; }
+    /* 元件：插圖＋下面的標籤（xscr-side＝標籤在右邊）；位置由 xscr-stage 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
+    #x-scene-example-rec .xscr-it { position: absolute; display: flex; flex-direction: column; align-items: center; gap: var(--sc-gap-sm); white-space: nowrap; }
+    #x-scene-example-rec .xscr-side { flex-direction: row; gap: var(--sc-gap-sm); }
+    #x-scene-example-rec .xscr-lbl { display: block; font-size: 32px; line-height: 40px; }   /* 標籤 32px：退到 0.96 時仍 ≥ 30px */
+  </style>
+  <div id="x-scene-example-rec" data-composition-id="x-scene-example-rec" data-width="1920" data-height="1080" data-duration="23"
+       data-cues-sample='{"start":0,"D":23,"cues":{"192":[2.5,5],"193":[5.5,8],"194":[8.5,11],"195":[11.5,14],"196":[14.5,17],"197":[17.5,20]},"refs":{"#192@腳架":3.4,"#193@試錄":6.2,"#194@走到":9,"#195@播放":12,"#196@聲音":15.4,"#197@符合":18.1}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xscr-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">開拍前先試錄</span></div>
+      <div id="xscr-stage" data-layout="row" data-gap="lg">
+        <!-- ══ DATA 1：元件清單（一個元件一行；只改這裡）══ -->
+        <div id="xscr-desk-set" data-slot data-layout="col" data-gap="none">
+          <div id="xscr-person" class="xscr-it xscr-pre" data-slot><div data-illus="personBust" data-tone="a" style="width:200px;height:212px"></div></div>
+          <div id="xscr-desk" class="xscr-it xscr-pre" data-slot><div data-illus="desk" style="width:400px;height:184px"></div></div>
+        </div>
+        <div id="xscr-phone" class="xscr-it" data-slot><div data-illus="phoneTripod" data-orient="landscape" data-screen="blank" style="width:320px;height:370px"></div><b class="xscr-lbl sc-w700">手機</b></div>
+        <div id="xscr-right" data-slot data-layout="col" data-gap="md">
+          <div id="xscr-pill" class="xscr-it" data-slot><div data-illus="recPill" style="width:216px;height:64px"></div></div>
+          <div id="xscr-wave" class="xscr-it" data-slot><div data-illus="waveform" data-bars="20" data-seed="3" data-color="yellow" style="width:216px;height:88px"></div><b class="xscr-lbl sc-w700">聲音</b></div>
+          <div id="xscr-ok" class="xscr-it xscr-side" data-slot><div data-illus="badge" data-kind="check" style="width:80px;height:80px"></div><b class="xscr-lbl sc-w700">符合需求</b></div>
+        </div>
+        <!-- ══ DATA 1 到這裡 ══ -->
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    ILLUS.mount(document.getElementById('x-scene-example-rec'));   // 第一行：元件清單的 data-illus／data-illus-src 先換成 SVG，之後建的動畫才抓得到 .il-* 子元素
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-scene-example-rec'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+
+    // ══ DATA 2：拍（一拍一行；只改這裡）══
+    const T1 = P.at('#192@腳架');   P.sfx('tick', '#192@腳架');
+    const T2 = P.at('#193@試錄');   P.sfx('tick', '#193@試錄');
+    const T3 = P.at('#194@走到');   P.sfx('tick', '#194@走到');
+    const T4 = P.at('#195@播放');   P.sfx('tick', '#195@播放');
+    const T5 = P.at('#196@聲音');   P.sfx('tick', '#196@聲音');
+    const T6 = P.at('#197@符合');   P.sfx('success', '#197@符合');
+    const BEATS = [
+      [T1, { in: ['xscr-phone'], focus: 'xscr-phone' }],
+      [T2, { state: ['xscr-phone', 'blank', 'rec'], in: ['xscr-pill'], count: ['#xscr-pill .il-time', 0, 5, '00:0'], focus: 'xscr-phone' }],
+      [T3, { move: ['xscr-person', 'xscr-phone', 'left'], focus: 'xscr-person' }],
+      [T4, { state: ['xscr-phone', 'rec', 'play'], focus: 'xscr-phone' }],
+      [T5, { in: ['xscr-wave'], focus: 'xscr-wave' }],
+      [T6, { check: 'xscr-ok', focus: 'xscr-ok' }],
+    ];
+    // ══ DATA 2 到這裡；下面不用改 ══
+
+    const ROOT = document.getElementById('x-scene-example-rec');
+    const R = P.region('panelTop');   // 主卡＝全畫面主卡區（design-system §2；直式由 window.__regions 蓋過）
+    const CARD = document.getElementById('xscr-card');
+    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; CARD.style.width = R[2] + 'px';
+    const sel = function (id) { return '#' + id; };
+    const stateSel = function (s) { return !s || s === 'blank' ? null : s === 'video' ? '.il-content' : '.il-' + s; };   // 狀態名 → 狀態群組
+    // 位置由 data-layout 排好（kit/scene-layout.js；ILLUS.mount 之後自動跑一次），這裡只讀
+    const L = window.SceneLayout, moved = {};
+    const illusOf = function (el) { return el.querySelector('[data-illus], [data-illus-src]') || el; };
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    if (ENTER === 'grow') P.grow('#xscr-card', 0.3);
+    else { P.wipe('#xscr-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xscr-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xscr-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 場景骨架：一開始就在的元件（class 有 xscr-pre）錯拍彈出
+    P.pop('#x-scene-example-rec .xscr-pre', 1.0, { stagger: 0.12, from: 0.9, dy: 20 });
+
+    // 每一拍：進場 → 換狀態／移動／數字 → 連接線 → 結果 → 聚焦（同一時間只有一個焦點）
+    const entered = [], dimmed = [], idled = {};
+    Array.prototype.forEach.call(ROOT.querySelectorAll('.xscr-pre'), function (el) { entered.push('#' + el.id); });   // 場景骨架也可以被聚焦、移動
+    let spotted = false;
+    BEATS.forEach(function (b, k) {
+      const t = b[0], o = b[1], next = k + 1 < BEATS.length ? BEATS[k + 1][0] : t + 2.0;
+      const ins = (o.in || []).map(sel);
+      if (ins.length) {
+        P.pop(ins.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
+        ins.forEach(function (s, i) { if (ROOT.querySelector(s + ' .xscr-lbl')) P.chars(s + ' .xscr-lbl', t + 0.14 + i * 0.12, { stagger: 0.035 }); });
+        ins.forEach(function (s) { if (entered.indexOf(s) < 0) entered.push(s); });
+      }
+      if (o.state) {
+        const s = sel(o.state[0]), a = stateSel(o.state[1]), z = stateSel(o.state[2]);
+        if (a && z) P.swap(s + ' ' + a, s + ' ' + z, t + 0.15);
+        else if (z) P.in(s + ' ' + z, t + 0.15);
+        else if (a) P.out(s + ' ' + a, t + 0.15);
+        P.ripple(s + ' .il', t + 0.2, { to: 1.5 });
+      }
+      if (o.move) {   // move: [元件, 目標元件, 'left'｜'right']：走到目標插圖的左（右）邊，隔 --sc-gap-md，兩個都有標籤＝插圖底對齊（標籤同一條線），否則插圖中線對齊
+        const el = document.getElementById(o.move[0]), tg = document.getElementById(o.move[1]);
+        const a = L.box(illusOf(el), el.offsetParent), b = L.box(illusOf(tg), el.offsetParent), ea = L.box(illusOf(el), el), g = L.token('gap-md'), lbl = (e) => !!e.querySelector(':scope > [class*="lbl"]');
+        const from = moved[o.move[0]] || { left: el.offsetLeft, top: el.offsetTop };
+        const x = o.move[2] === 'right' ? b[0] + b[2] + g : b[0] - g - a[2];
+        const to = { left: Math.round(x - ea[0]), top: Math.round((lbl(el) && lbl(tg) ? b[1] + b[3] - a[3] : b[1] + b[3] / 2 - a[3] / 2) - ea[1]) };
+        P.morph(sel(o.move[0]), t, to, { from: from, dur: 1.0, ease: P.V2.EASE.move });
+        moved[o.move[0]] = to;
+      }
+      if (o.count) P.count(o.count[0], t + 0.2, { from: o.count[1], to: o.count[2], dur: 1.2, prefix: o.count[3] || '' });
+      if (o.line) P.stroke(sel(o.line), t + 0.7, { dur: 0.5 });   // 先有節點再畫線：這一拍的元件彈出（0.55 秒）之後才描
+      if (o.check) {
+        const s = sel(o.check);
+        P.pop(s, t, { from: 0.6, dy: 0 });
+        if (ROOT.querySelector(s + ' .xscr-lbl')) P.chars(s + ' .xscr-lbl', t + 0.14, { stagger: 0.035 });
+        P.check(s + ' .il', t + 0.3);
+        if (entered.indexOf(s) < 0) entered.push(s);
+      }
+      (o.dim || []).forEach(function (id) { P.dim(sel(id), t, { to: 0.6 }); if (dimmed.indexOf(sel(id)) < 0) dimmed.push(sel(id)); });
+      if (o.focus) {
+        const f = sel(o.focus), fresh = (o.in || []).indexOf(o.focus) >= 0 || o.check === o.focus;
+        const at = t + (fresh ? 0.6 : 0.1);
+        P.spot(entered.join(', '), f, at, { scale: 1.05, lift: -8 });
+        spotted = true;
+        if (!idled[f]) { idled[f] = true; P.idle(f, at + 0.6, { y: 4, period: 3.2, until: next - 0.1 }); }
+      }
+    });
+
+    // 收：最後一拍講完 2 秒回均衡（全部亮回），完成態停到段尾
+    const TR = BEATS[BEATS.length - 1][0] + 2.0;
+    if (spotted) P.spot(entered.join(', '), null, TR, { dur: 0.6 });
+    if (dimmed.length) P.dim(dimmed.join(', '), TR, { to: 1 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-scene-example-rec'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

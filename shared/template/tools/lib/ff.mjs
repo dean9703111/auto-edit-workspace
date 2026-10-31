@@ -3,7 +3,11 @@
 //   run(cmd, args, opts)                 → spawnSync 結果（找不到指令時丟出中文錯誤）
 //   probeDuration(file)                  → 秒數
 //   probeMedia(file)                     → { kind:'video'|'image'|'audio', duration, width, height, fps, vfr, hasAudio, hasVideo }
-//   encodeFootage(src, dst, { audioFilter, audioRaw })  主軌底片：30fps CFR、每秒一個關鍵幀、聲音 AAC（聲音處理見 audio.mjs）
+//   encodeFootage(src, dst, { audioFilter, audioRaw, crop, lut, canvas })  主軌底片：30fps CFR、每秒一個關鍵幀、聲音 AAC（聲音處理見 audio.mjs）；lut＝講者調光的 .cube
+//                                        canvas＝lib/canvas.mjs 的 canvasOf(format)（不傳＝橫式，輸出和原本逐位元組相同）
+//   footageVf({ crop, canvas })          → 底片的裁切／縮放濾鏡陣列（frame 寬高比不對時丟出中文錯誤）
+//   filterPath(p)                        → 濾鏡參數裡的路徑（'C\:/x/a.cube'；Windows 的磁碟機冒號要跳脫）
+//   lut3dFilter(file)                    → lut3d=file=…:interp=tetrahedral
 //   encodeMedia(src, dst, { speed, keepAudio })   插入的錄影：同上（另外把 speed 做進檔案、太大的畫面縮到 3840×2160 內）
 //   blackDetect(file, cacheFile, onMiss) → [[起, 迄], …]（全黑＝只有聲音的區間；依檔案大小＋修改時間快取，沒命中時先呼叫 onMiss）
 //   rawFrame(file, { at, width, height })→ Buffer（rgb24；給 contact sheet、格線圖用）
@@ -13,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { CANVAS } from './canvas.mjs';
 
 export const VIDEO_EXT = ['.mp4', '.mov', '.m4v', '.webm'];
 export const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
@@ -60,19 +65,50 @@ export function probeMedia(file) {
   return out;
 }
 
+// 底片的裁切／縮放（FR-100）：
+//   有 crop：寬高比要等於 canvas.framing.aspect（差 2 % 內；frame 換成來源像素時取偶數會差一點），裁完縮放到 W×H
+//   沒有 crop：直式等比縮放到蓋滿 1080×1920、置中裁掉多出來的（不補邊）；橫式不縮放（和改版前一樣）
+export const FRAME_ASPECT_TOL = 0.02;
+export function footageVf({ crop = null, canvas = CANVAS.landscape } = {}) {
+  const { W, H } = canvas;
+  if (crop) {
+    const a = crop.w / crop.h, want = canvas.framing.aspect;
+    if (Math.abs(a / want - 1) > FRAME_ASPECT_TOL) {
+      const ratio = canvas.format === 'portrait' ? '9:16' : '16:9';
+      throw new Error(`frame 的寬高比要是 ${ratio}（換成來源像素是 ${crop.w}×${crop.h}＝${a.toFixed(3)}，要 ${want.toFixed(3)}）→ 照 qc.mjs framing 印的值重寫 plan.json 的 frame`);
+    }
+    return [`crop=${crop.w}:${crop.h}:${crop.x}:${crop.y}`, `scale=${W}:${H}:flags=lanczos`];
+  }
+  if (canvas.format === 'landscape') return [];
+  return [`scale=${W}:${H}:force_original_aspect_ratio=increase:flags=lanczos`, `crop=${W}:${H}`];
+}
+
 // 重新編碼：固定 30fps、每秒一個關鍵幀（關鍵幀間隔太大時 seek 會凍結），聲音轉 AAC 讓長度和畫面一致
 // opts.audioFilter＝聲音濾鏡（例如 loudnorm）；opts.audioRaw＝{ file, rate, channels }：聲音改用處理過的 f32le PCM（build 先把剪接點淡化好）
-// opts.crop＝{ x, y, w, h }（來源影片的像素）：構圖裁切，裁完放大回 1920×1080
-export function encodeFootage(src, dst, { audioFilter = null, audioRaw = null, crop = null } = {}) {
+// opts.crop＝{ x, y, w, h }（來源影片的像素）：構圖裁切，裁完縮放到畫布 W×H
+// opts.lut＝.cube 路徑：講者調光（已經照強度混好，contracts/look.md §3）；順序 crop → scale → lut3d → fps
+// opts.canvas＝畫布（specs/009-vertical FR-100）：不傳＝橫式
+export function encodeFootage(src, dst, { audioFilter = null, audioRaw = null, crop = null, lut = null, canvas = CANVAS.landscape } = {}) {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   const args = ['-y', '-v', 'error', '-i', src];
   if (audioRaw) args.push('-f', 'f32le', '-ar', String(audioRaw.rate), '-ac', String(audioRaw.channels), '-i', audioRaw.file, '-map', '0:v:0', '-map', '1:a:0');
-  args.push('-vf', crop ? `crop=${crop.w}:${crop.h}:${crop.x}:${crop.y},scale=1920:1080:flags=lanczos,fps=30` : 'fps=30', '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p');
+  const vf = footageVf({ crop, canvas });
+  if (lut) vf.push(lut3dFilter(lut));
+  vf.push('fps=30');
+  args.push('-vf', vf.join(','), '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p');
   if (audioFilter) args.push('-af', audioFilter);
   args.push('-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', dst);
   const r = run('ffmpeg', args);
   if (r.status !== 0) throw new Error(`ffmpeg 重新編碼失敗：${String(r.stderr).trim().slice(0, 400)}`);
 }
+
+// 濾鏡圖裡的路徑：ffmpeg 先拆濾鏡圖（'…' 裡面原樣），再拆選項（\: → :），所以 C:\x\a.cube 要寫成 'C\:/x/a.cube'
+export function filterPath(p) {
+  const abs = path.resolve(p).split(path.sep).join('/').replace(/\\/g, '/');
+  if (/['\[\],;]/.test(abs)) throw new Error(`路徑裡有 ' [ ] , ; 這些字元，ffmpeg 濾鏡讀不了：${abs} → 把專案資料夾改名`);
+  return `'${abs.replace(/:/g, '\\:')}'`;
+}
+export const lut3dFilter = (file) => `lut3d=file=${filterPath(file)}:interp=tetrahedral`;
 
 // atempo 一次只能 0.5–2 倍，超過就串起來
 const atempo = (speed) => {

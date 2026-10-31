@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-timeline 時間軸逐點前進｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-timeline.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-timeline { position: absolute; inset: 0; }
+    #x-timeline .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-timeline #xtl-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-timeline #xtl-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-timeline #xtl-body { position: relative; width: 1176px; height: 580px; }
+    /* 橫軸在最下層、進度條疊在上面、圓點再疊上去；兩層 svg 都是整個內容區大小（座標＝內容區座標；位置由 script 讀排好的點算） */
+    #x-timeline #xtl-track { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-timeline #xtl-dots { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-timeline #xtl-axis { stroke: var(--sc-fs-line); stroke-width: 8px; stroke-linecap: round; }
+    #x-timeline #xtl-fill { position: absolute; height: 8px; border-radius: 4px; background: var(--brand); }
+    /* 空心點：r 14、框 6；實心點：r 9 的粗描邊（18）描完就是填滿的圓，蓋住空心點的框 */
+    #x-timeline .xtl-dot { fill: var(--sc-fs-card); stroke: var(--sc-fs-line); stroke-width: 6px; }
+    #x-timeline .xtl-don { fill: none; stroke: var(--brand); stroke-width: 18px; }
+    /* 點：卡片＋說明一欄，中間空 --sc-gap-lg＋--sc-gap-md 給橫軸；4 點寬 248、3 點（沒有 #xtl-p4）寬 320；位置由 #xtl-body 的 data-layout 排，不寫 left／top */
+    #x-timeline .xtl-pt { position: absolute; width: 248px; display: flex; flex-direction: column; gap: calc(var(--sc-gap-lg) + var(--sc-gap-md)); }
+    #x-timeline #xtl-body:not(:has(#xtl-p4)) .xtl-pt { width: 320px; }
+    /* 卡片：高 256，寬跟著點；圖示和年份同一塊 */
+    #x-timeline .xtl-node { position: relative; height: 256px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                            border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
+                            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; white-space: nowrap; }
+    #x-timeline .xtl-node .sc-icon { --d: 88px; --i: 48px; position: relative; }
+    #x-timeline .xtl-node .xtl-lab { position: relative; }
+    /* 進度頭：圓點跟著進度條走到每一點（目前這一點的主色亮框由 P.spot 自動加） */
+    #x-timeline #xtl-head { position: absolute; width: 24px; height: 24px; border-radius: 12px; background: var(--brand); }
+    /* 說明：軸下方置中一行（最多兩行，高固定 144，四個點一樣高才排得齊），和卡片同寬 */
+    #x-timeline .xtl-cap { position: relative; height: 144px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }
+  </style>
+  <div id="x-timeline" data-composition-id="x-timeline" data-width="1920" data-height="1080" data-duration="17.5"
+       data-cues-sample='{"start":0,"D":17.5,"cues":{"131":[2.9,5.9],"132":[6.0,8.9],"133":[9.0,11.9],"134":[12.0,15.0]},"refs":{"#131@2019":3.1,"#132@2022":6.1,"#133@2024":9.1,"#134@今年":12.1}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xtl-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">我的拍片歷程</span></div>
+      <div id="xtl-body" data-layout="row" data-gap="md">
+        <svg id="xtl-track" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg" data-layout-ignore>
+          <line id="xtl-axis" />
+        </svg>
+        <div id="xtl-fill"></div>
+        <i id="xtl-head" data-layout-allow-overlap></i>
+        <svg id="xtl-dots" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- cx、cy 由 script 讀排好的點填（不用改）；每個點兩個圓：空心 .xtl-dot、講到時填滿的 .xtl-don -->
+          <circle id="xtl-dot1" class="xtl-dot" r="14" />
+          <circle id="xtl-dot2" class="xtl-dot" r="14" />
+          <circle id="xtl-dot3" class="xtl-dot" r="14" />
+          <circle id="xtl-dot4" class="xtl-dot" r="14" />
+          <circle id="xtl-don1" class="xtl-don" r="9" />
+          <circle id="xtl-don2" class="xtl-don" r="9" />
+          <circle id="xtl-don3" class="xtl-don" r="9" />
+          <circle id="xtl-don4" class="xtl-don" r="9" />
+        </svg>
+        <div id="xtl-p1" class="xtl-pt" data-slot>
+          <div id="xtl-n1" class="xtl-node">
+            <span id="xtl-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path d="m6.2 5.3 3.1 3.9" /> <path d="m12.4 3.4 3.1 4" /> <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2019</span></div>
+          <div id="xtl-c1" class="xtl-cap sc-t52 sc-w700 sc-opt">開始拍片</div>
+        </div>
+        <div id="xtl-p2" class="xtl-pt" data-slot>
+          <div id="xtl-n2" class="xtl-node">
+            <span id="xtl-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2022</span></div>
+          <div id="xtl-c2" class="xtl-cap sc-t52 sc-w700 sc-opt">改用手機</div>
+        </div>
+        <div id="xtl-p3" class="xtl-pt" data-slot>
+          <div id="xtl-n3" class="xtl-node">
+            <span id="xtl-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2024</span></div>
+          <div id="xtl-c3" class="xtl-cap sc-t52 sc-w700 sc-opt">多機錄影</div>
+        </div>
+        <div id="xtl-p4" class="xtl-pt" data-slot>
+          <div id="xtl-n4" class="xtl-node">
+            <span id="xtl-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">今年</span></div>
+          <div id="xtl-c4" class="xtl-cap sc-t52 sc-w700 sc-opt">交給 AI</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-timeline'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#131@2019'), T2 = P.at('#132@2022'), T3 = P.at('#133@2024'), T4 = P.at('#134@今年');   // 講到每個時間點的時刻
+    P.sfx('tick', '#131@2019'); P.sfx('tick', '#132@2022'); P.sfx('tick', '#133@2024'); P.sfx('tick', '#134@今年');   // 每一點一顆音效（句號和上一行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    // 0. 版面：點（卡片＋說明）由 #xtl-body 的 data-layout 排好（kit/scene-layout.js），這裡只讀，載入時算一次、每次結果相同（以下都不用改）
+    const L = window.SceneLayout, BODY = document.getElementById('xtl-body');
+    const PT = $q('#x-timeline .xtl-pt').map(function (el) { return L.box(el, BODY); });   // 每個點的 [x, y, 寬, 高]（內容區座標）
+    const N = PT.length;                                            // 幾個點＝上面 HTML 的點數（3 或 4）
+    const X = PT.map(function (b) { return b[0] + b[2] / 2; });     // 點的中心 x＝卡片中線
+    const AX0 = PT[0][0], AX1 = PT[N - 1][0] + PT[N - 1][2];        // 橫軸：第一點左緣到最後一點右緣
+    const AY = Math.round((L.box($q('#xtl-n1')[0], BODY)[1] + $q('#xtl-n1')[0].offsetHeight + L.box($q('#xtl-c1')[0], BODY)[1]) / 2);   // 橫軸 y：卡片底和說明頂的正中
+    const F = X.map(function (x) { return (x - AX0) / (AX1 - AX0); });   // 進度條走到每一點的比例
+    const HX = X.map(function (x) { return x - 12; });              // 進度頭走到每一點的 left（頭寬 24）
+    const ALL = N === 3 ? '#xtl-n1, #xtl-n2, #xtl-n3' : '#xtl-n1, #xtl-n2, #xtl-n3, #xtl-n4';
+    const AXIS = $q('#xtl-axis')[0], FILL = $q('#xtl-fill')[0], HEAD = $q('#xtl-head')[0];
+    AXIS.setAttribute('x1', String(AX0)); AXIS.setAttribute('x2', String(AX1)); AXIS.setAttribute('y1', String(AY)); AXIS.setAttribute('y2', String(AY));
+    FILL.style.left = AX0 + 'px'; FILL.style.width = (AX1 - AX0) + 'px'; FILL.style.top = (AY - 4) + 'px';
+    HEAD.style.left = (AX0 - 12) + 'px'; HEAD.style.top = (AY - 12) + 'px';
+    X.forEach(function (x, i) {
+      $q('#xtl-dot' + (i + 1) + ', #xtl-don' + (i + 1)).forEach(function (el) { el.setAttribute('cx', String(x)); el.setAttribute('cy', String(AY)); });
+    });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 0.5 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xtl-card', 0.3);
+    else { P.wipe('#xtl-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xtl-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xtl-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 骨架：橫軸由左往右帶著發光頭畫出，空心點跟著彗星經過描出來（先看到有幾個點）
+    P.comet('#xtl-axis', 1.2, { dur: 0.8 });
+    P.stroke('.xtl-dot', 1.35, { stagger: 0.17, dur: 0.25 });
+    // 拍 2 準備：軸的左端彈出進度頭（第 1 點前 1.1 秒）
+    P.pop('#xtl-head', T1 - 1.1, { from: 0.2, dy: 0 });
+
+    // 拍 3 第 1 點：進度推進（提早 0.5 出發、講到時到點）→ 點填滿、進度頭漣漪、站卡從軸上彈起 → ＋0.14 說明逐字 → ＋0.18 圖示描線
+    //   → ＋0.6 聚焦（站卡放大抬起、主色亮框；前一點的站卡壓暗、說明退焦）→ ＋0.9 漂浮
+    P.bar('#xtl-fill', T1 - 0.5, { from: 0, to: F[0], dur: 0.5, ease: P.V2.EASE.move });
+    P.morph('#xtl-head', T1 - 0.5, { left: HX[0] }, { from: { left: AX0 - 12 }, dur: 0.5, ease: P.V2.EASE.move });
+    P.stroke('#xtl-don1', T1, { dur: 0.3 });  P.ripple('#xtl-head', T1);
+    P.pop('#xtl-n1', T1, { from: 0.82, dy: 60 });  P.chars('#xtl-c1', T1 + 0.14);  P.icon('#xtl-ico1', T1 + 0.18);
+    P.spot('#xtl-n1', '#xtl-n1', T1 + 0.6, { scale: 1.06, lift: -10 });
+    P.idle('#xtl-n1', T1 + 0.9, { y: 4, period: 2.8, until: T2 - 0.1 });
+    // 拍 4 第 2 點：同拍 3
+    P.bar('#xtl-fill', T2 - 0.5, { from: F[0], to: F[1], dur: 0.5, ease: P.V2.EASE.move });
+    P.morph('#xtl-head', T2 - 0.5, { left: HX[1] }, { from: { left: HX[0] }, dur: 0.5, ease: P.V2.EASE.move });
+    P.stroke('#xtl-don2', T2, { dur: 0.3 });  P.ripple('#xtl-head', T2);
+    P.pop('#xtl-n2', T2, { from: 0.82, dy: 60 });  P.chars('#xtl-c2', T2 + 0.14);  P.icon('#xtl-ico2', T2 + 0.18);
+    P.spot('#xtl-n1, #xtl-n2', '#xtl-n2', T2 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c1', T2 + 0.6, { to: 0.5 });
+    P.idle('#xtl-n2', T2 + 0.9, { y: 4, period: 2.8, until: T3 - 0.1 });
+    // 拍 5 第 3 點：同拍 3
+    P.bar('#xtl-fill', T3 - 0.5, { from: F[1], to: F[2], dur: 0.5, ease: P.V2.EASE.move });
+    P.morph('#xtl-head', T3 - 0.5, { left: HX[2] }, { from: { left: HX[1] }, dur: 0.5, ease: P.V2.EASE.move });
+    P.stroke('#xtl-don3', T3, { dur: 0.3 });  P.ripple('#xtl-head', T3);
+    P.pop('#xtl-n3', T3, { from: 0.82, dy: 60 });  P.chars('#xtl-c3', T3 + 0.14);  P.icon('#xtl-ico3', T3 + 0.18);
+    P.spot('#xtl-n1, #xtl-n2, #xtl-n3', '#xtl-n3', T3 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c2', T3 + 0.6, { to: 0.5 });
+    P.idle('#xtl-n3', T3 + 0.9, { y: 4, period: 2.8, until: T4 - 0.1 });
+    // 拍 6 第 4 點：同拍 3（3 點時刪掉這 6 行，收尾的 T4 改 T3）
+    P.bar('#xtl-fill', T4 - 0.5, { from: F[2], to: F[3], dur: 0.5, ease: P.V2.EASE.move });
+    P.morph('#xtl-head', T4 - 0.5, { left: HX[3] }, { from: { left: HX[2] }, dur: 0.5, ease: P.V2.EASE.move });
+    P.stroke('#xtl-don4', T4, { dur: 0.3 });  P.ripple('#xtl-head', T4);
+    P.pop('#xtl-n4', T4, { from: 0.82, dy: 60 });  P.chars('#xtl-c4', T4 + 0.14);  P.icon('#xtl-ico4', T4 + 0.18);
+    P.spot('#xtl-n1, #xtl-n2, #xtl-n3, #xtl-n4', '#xtl-n4', T4 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c3', T4 + 0.6, { to: 0.5 });
+    P.idle('#xtl-n4', T4 + 0.9, { y: 4, period: 2.8 });
+
+    // 收：最後一點講完 2.6 秒回均衡（站卡全部亮回、說明亮回），完成態停到段尾
+    const TR = T4 + 2.6;
+    P.spot(ALL, null, TR, { dur: 0.6 });
+    P.dim('#xtl-c1, #xtl-c2, #xtl-c3', TR, { to: 1 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-timeline'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-timeline";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -37,7 +40,7 @@
   <div id="scene">
     <div id="pv-qa" class="fill">
       <div id="pv-aWrap" class="fill">
-        <div id="pv-qaCard" class="sc-lt">
+        <div id="pv-qaCard" class="sc-lt" data-layout="free">
           <i class="sc-lt__plate"></i>
           <div class="sc-lt__card">
             <i class="sc-lt__dots"></i>
@@ -76,11 +79,17 @@ window.__PREVIEW = {"key":"qa","duration":7,"cues":[{"sound":"pop","at":0.1},{"s
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 7;
-    /* 外殼揭開 → 問句（含分隔線）0.15 後淡入上漂，0.65 可讀 → 停 1.2s → 答案淡入上漂 8（第二層新訊息）→ 段尾 0.4 淡出 */
-    P.reveal('#pv-qaCard', 0);
-    P.rise('#pv-qaCard .sc-lt__body', 0 + P.BEAT);
-    P.rise('#pv-rowA', 1.9);
-    P.out('#pv-qaCard', D - P.OUT);
+    /* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；停留：整組漂浮 3u、徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張）；aAt：問句退焦 0.62 → A 徽章彈入 → 答案逐字彈出（過衝） */
+    P.wipe('#pv-qaCard .sc-lt__plate, #pv-qaCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#pv-qaCard .sc-lt__plate, #pv-qaCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });
+    P.pop('#pv-qaCard .sc-lt__tag', 0 + 0.12, { from: 0.4, dy: 18 });
+    P.pop('#pv-rowQ .sc-lt__mark', 0 + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+    P.chars('#pv-rowQ .sc-optr', 0 + 0.22);
+    P.idle('#pv-qaCard', 0 + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+    P.dim('#pv-rowQ', 1.9, { to: 0.62 });
+    P.pop('#pv-rowA .sc-lt__mark', 1.9, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+    P.chars('#pv-rowA .sc-kw', 1.9 + 0.12, { mode: 'pop' });
+    P.wipeOut('#pv-qaCard', D - P.V2.OUT, { dir: 'left' });
 
     P.end(D);
     // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）

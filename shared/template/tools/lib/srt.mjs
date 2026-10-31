@@ -5,6 +5,7 @@
 //   similarity(a, b)                     → 0–1；max(Dice 係數, a 的 bigram 被 b 涵蓋的比例 × 0.95)
 //   findCue(cues, anchor, { from, to })  → 句號範圍內第一個包含 anchor 的句子；沒有就取相似度最高且 ≥ 0.5 者；都沒有回 null
 //   cueByN(cues, n)                      → 該句物件
+//   formatSrt(cues, { eol, bom })        → SRT 文字（parseSrt 的反函式；句號照 cues 的 n，時間 hh:mm:ss,mmm）
 
 const toSec = (stamp) => {
   const [h, m, rest] = stamp.trim().split(':');
@@ -63,3 +64,14 @@ export function findCue(cues, anchor, { from = -Infinity, to = Infinity } = {}) 
 }
 
 export const cueByN = (cues, n) => cues.find((c) => c.n === n) || null;
+
+const stamp = (sec) => {
+  const ms = Math.max(0, Math.round(Number(sec) * 1000));
+  const p = (n, w = 2) => String(n).padStart(w, "0");
+  return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`;
+};
+
+export function formatSrt(cues, { eol = "\n", bom = false } = {}) {
+  const body = cues.map((c) => [String(c.n), `${stamp(c.start)} --> ${stamp(c.end)}`, c.text].join(eol)).join(eol + eol) + eol;
+  return (bom ? "\uFEFF" : "") + body;
+}

@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -27,7 +30,7 @@
   .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
   #pv-speaker #pv-spkCard { left: 120px; bottom: 220px; }
-  #pv-speaker .spk-body { display: flex; flex-direction: column; gap: 16px; }
+  #pv-speaker .spk-body { display: flex; flex-direction: column; gap: var(--sc-gap-sm); }
   #pv-speaker #pv-spkCard .sc-lt__dots { --dots-h: 156px; }
 </style>
 </head>
@@ -37,7 +40,7 @@
   <div id="scene">
     <div id="pv-speaker" class="fill">
       <div id="pv-aWrap" class="fill">
-        <div id="pv-spkCard" class="sc-lt">
+        <div id="pv-spkCard" class="sc-lt" data-layout="free">
           <i class="sc-lt__plate"></i>
           <div class="sc-lt__card">
             <i class="sc-lt__dots"></i>
@@ -58,7 +61,7 @@
   <div class="cg" id="cap"><span>我是鼎淵，歡迎來到工程師下班有約</span></div>
 </div>
 <script>
-window.__PREVIEW = {"key":"speaker","duration":7,"cues":[{"sound":"pop","at":0.1}]};
+window.__PREVIEW = {"key":"speaker","duration":7,"cues":[{"sound":"sparkle","at":0.1}]};
 </script>
 <script>
 (function () {
@@ -73,13 +76,16 @@ window.__PREVIEW = {"key":"speaker","duration":7,"cues":[{"sound":"pop","at":0.1
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 7;
-    /* 外殼遮罩揭開 0.55 → 姓名 0.15 後遮罩上升 0.6（0.75 到位）→ 頭銜逐組從左 drift 12（間隔 0.1，姓名已走完 94%，同一時間只有一個方向在動）→ 停 → 段尾 0.4 淡出 */
-    P.reveal('#pv-spkCard', 0);
-    P.maskUp('#pv-spkName', 0 + P.BEAT);
-    P.drift('#pv-ti1', 0.6, { dx: -12 });
-    P.drift('#pv-ti2', 0.7, { dx: -12 });
-    P.drift('#pv-ti3', 0.8, { dx: -12 });
-    P.out('#pv-spkCard', D - P.OUT);
+    /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 姓名逐字彈出（過衝）→ 頭銜逐組從左滑入（各綁 at）→ 漂浮 → 段尾向左擦掉 */
+    P.wipe('#pv-spkCard .sc-lt__plate, #pv-spkCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#pv-spkCard .sc-lt__plate, #pv-spkCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });
+    P.pop('#pv-spkCard .sc-lt__tag', 0 + 0.12, { from: 0.4, dy: 18 });
+    P.chars('#pv-spkName', 0 + 0.22, { mode: 'pop' });
+    P.drift('#pv-ti1', 0.6, { dx: -16 * P.U });
+    P.drift('#pv-ti2', 0.7, { dx: -16 * P.U });
+    P.drift('#pv-ti3', 0.8, { dx: -16 * P.U });
+    P.idle('#pv-spkCard', 0 + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+    P.wipeOut('#pv-spkCard', D - P.V2.OUT, { dir: 'left' });
 
     P.end(D);
     // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）

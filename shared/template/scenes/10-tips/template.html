@@ -1,16 +1,21 @@
+<!-- 預設拍型：F 重點字卡的拍 1、2（字卡固定兩拍，不寫動畫分鏡） -->
 <!-- @style -->
 /* 兩列卡：主卡 592–852（高 260）、標籤 536–624。主卡內：頂內距 56 → 標題列 650–710（60：勾選方塊 48＋標題 56／900）
    → 間距 16 → 說明兩行 726–818（40／500、行高 46、--sc-mute）→ 底內距 32。左緣直線 x160：標籤、勾選方塊、說明。
    沒有說明時退成單列卡（標題列撐到 88，卡高 180）。細節＝右上網點。 */
+/* 排法 free（kit/scene-layout.js 不排）：標題列與說明靠左同一條左緣 x160（helper 的 col 會改成中線對齊）；標題到說明 --sc-gap-sm。 */
 #tipCard { left: 120px; bottom: 220px; }
-.tp-body { display: flex; flex-direction: column; gap: 16px; }
+.tp-body { display: flex; flex-direction: column; gap: var(--sc-gap-sm); }
 .tp-title { height: 60px; min-height: 60px; }
 .tp-solo .tp-title { height: 88px; min-height: 88px; }
 .tp-title .tp-text { font-size: 56px; font-weight: 900; line-height: 60px; --opt: 6px; }
 .tp-title .sc-sq svg { stroke-width: 3; }
 .tp-desc { font-size: 40px; font-weight: 500; line-height: 46px; }
+<!-- @style-portrait -->
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+#tipCard { left: 60px; bottom: 680px; }
 <!-- @body -->
-<div id="tipCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+<div id="tipCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
   <div class="sc-lt__card">
     <i class="sc-lt__dots"></i>
@@ -25,8 +30,14 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* 外殼遮罩揭開 → 內容 0.15 後淡入上漂 8 → 再 0.15 方塊徽章裡的圖示描線 0.7 → 停 → 段尾 0.4 淡出 */
-P.reveal('#tipCard', {{{in}}});
-P.rise('#tipCard .sc-lt__body', {{{in}}} + P.BEAT);
-{{#icon}}P.icon('#tipCard .sc-sq', {{{in}}} + P.BEAT * 2);{{/icon}}
-{{#exitFade}}P.out('#tipCard', D - P.OUT);{{/exitFade}}
+/* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；停留：整組漂浮 3u、徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張）；說明 0.5 起逐字上浮（間隔 0.015） */
+P.wipe('#tipCard .sc-lt__plate, #tipCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#tipCard .sc-lt__plate, #tipCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+P.pop('#tipCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+{{#icon}}P.pop('#tipCard .sc-sq', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+P.icon('#tipCard .sc-sq', {{{in}}} + 0.3);
+P.idle('#tipCard .sc-sq', {{{in}}} + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });{{/icon}}
+P.chars('#tipCard .tp-text', {{{in}}} + 0.22);
+{{#desc}}P.chars('#tipCard .tp-desc', {{{in}}} + 0.5, { stagger: 0.015 });{{/desc}}
+P.idle('#tipCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+{{#exitFade}}P.wipeOut('#tipCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#tipCard', D - 0.8, { dir: 'left' });{{/exitFade}}

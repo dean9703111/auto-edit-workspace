@@ -4,18 +4,48 @@
 /* 整層：不計時的外框，進出場只動它（opacity／x／scale）；裡面的底、錄影、紅框各自計時 */
 .mlayer { position: absolute; inset: 0; transform-origin: 50% 50%; }
 .mbg { position: absolute; inset: 0; }
+/* 面板：錄影可見區大小的外框（動態 v2 由 P.grow 從小窗長出）；stage 在裡面用 left／top 抵回畫面座標 */
+.mgrow { position: absolute; }
+/* 標註的焦點容器（P.dim 壓暗只動它） */
+.mfo { position: absolute; inset: 0; pointer-events: none; }
 /* 運鏡只動 stage（x／y／scale，transform-origin 0 0）；不要加 will-change，推近時字會糊（motion-recipes §6） */
-.mstage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+.mstage { position: absolute; left: 0; top: 0; width: var(--cw, 1920px); height: var(--ch, 1080px); transform-origin: 0 0; }
 .mstage video, .mstage .mimg { position: absolute; object-fit: fill; }
 
 /* 紅框：實線 4px、上下左右等距，描線進場（pathLength=1）、描完閉環 */
-.mmarks { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; pointer-events: none; }
+.mmarks { position: absolute; left: 0; top: 0; width: var(--cw, 1920px); height: var(--ch, 1080px); overflow: visible; pointer-events: none; }
 .mmark { fill: none; stroke: var(--sc-warn); stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+
+/* 標註（說明卡、聚光燈、箭頭、STEP 膠囊）：畫在運鏡層外面的畫面座標；位置由 build 算好寫進 style／屬性。
+   畫面寬高＝--cw／--ch（橫式不設，預設 1920×1080；直式 build 在 #el-<id> 上設 1080×1920，STEP 膠囊位置也寫在 style） */
+.mann { position: absolute; left: 0; top: 0; width: var(--cw, 1920px); height: var(--ch, 1080px); overflow: visible; pointer-events: none; }
+/* 聚光燈：整層壓暗 35%，mask 挖出亮區（外擴 8px、圓角 12） */
+.mspot { opacity: 0; }
+.mspot-dim { fill: #000000; fill-opacity: 0.35; }
+/* 說明卡的紅框＝和 marks 同一種框；引線 3px＋框端紅點 */
+.mcbox { fill: none; stroke: var(--sc-warn); stroke-width: 4px; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.mclead path { fill: none; stroke: var(--sc-warn); stroke-width: 3px; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.mclead circle { fill: var(--sc-warn); opacity: 0; }
+/* 箭頭：箭身 4px＋三角形箭頭，警示紅 */
+.marrow { opacity: 0; }
+.marrow line { stroke: var(--sc-warn); stroke-width: 4px; }
+.marrow polygon { fill: var(--sc-warn); }
+/* 卡片層：說明卡（高 96、字 40px、可配圖示圓）與左上角 STEP 膠囊 */
+.mcards { position: absolute; inset: 0; pointer-events: none; }
+.mcard { position: absolute; box-sizing: border-box; height: 96px; display: flex; align-items: center; gap: 20px; padding: 0 32px 0 14px; border-radius: 16px; background: var(--sc-card); border: 2px solid var(--sc-card-line); color: var(--sc-ink); font: 700 40px/56px var(--sc-font); white-space: nowrap; opacity: 0; }
+.mcard--plain { padding: 0 32px; }
+.mcard--top, .mcard--bottom { translate: -50% 0; }
+.mcard .mic { flex: none; width: 64px; height: 64px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; }
+.mcard .mic svg { width: 34px; height: 34px; }
+.msteps { position: absolute; left: 48px; top: 40px; height: 80px; box-sizing: border-box; display: grid; padding: 0 30px 0 10px; border-radius: 999px; background: var(--sc-card); border: 2px solid var(--sc-card-line); opacity: 0; }
+.mstep { grid-area: 1 / 1; display: flex; align-items: center; gap: 18px; height: 76px; white-space: nowrap; opacity: 0; }
+.mstep .mnum { flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font: 700 32px/56px var(--sc-font); text-align: center; }
+.mstep .mtxt { font: 700 40px/56px var(--sc-font); color: var(--sc-ink); }
 
 /* 放大鏡：壓暗層 → 原區域描框（主色 3px）→ 鏡片從原區域彈出到畫面中央偏上，縮回原位才收 */
 .mlz { position: absolute; inset: 0; pointer-events: none; }
 .mdim { position: absolute; inset: 0; background: #000000; opacity: 0; }
-.mlreg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+.mlreg { position: absolute; left: 0; top: 0; width: var(--cw, 1920px); height: var(--ch, 1080px); overflow: visible; }
 .mlreg rect { fill: none; stroke: var(--brand); stroke-width: 3px; stroke-dasharray: 1; stroke-dashoffset: 1; }
 .mlens { position: absolute; box-sizing: border-box; padding: 10px; background: #101219; border: 3px solid var(--brand); border-radius: 22px; opacity: 0; transform-origin: 50% 50%; }
 .mlens canvas { display: block; width: 100%; height: 100%; border-radius: 10px; }

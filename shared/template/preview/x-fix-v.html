@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-fix 問題換成解法｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-fix.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-fix { position: absolute; inset: 0; }
+    #x-fix .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-fix #xfix-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-fix #xfix-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    /* 內容區：data-layout="row"（kit/scene-layout.js）排痛點欄和解法卡；元件不寫 left／top */
+    #x-fix #xfix-body { position: relative; width: 1176px; height: 580px; }
+    /* 痛點：寬跟著字（max-content），高 112；位置由 #xfix-pains（data-layout="col" data-justify="start"）排 */
+    #x-fix .xfix-pain { position: absolute; width: max-content; height: 112px; box-sizing: border-box; padding: 0 28px;
+                        border: 4px solid var(--v2-node-line); border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
+                        display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-fix .xfix-ico { background: var(--sc-warn); color: var(--sc-on-warn); }
+    #x-fix .xfix-t { position: relative; }
+    /* 箭頭：#xfix-arrow 的 data-links 自動產生（kit/scene-layout.js；svg 疊在內容區最下層），線色用 .xfix-arr */
+    #x-fix .xfix-arr { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 解法卡：432×328；主色框＋淡主色底；圖示 120＋解法＋副句置中 */
+    #x-fix #xfix-sol { position: absolute; width: 432px; height: 328px; box-sizing: border-box;
+                       border: 4px solid var(--brand); border-radius: 20px; background: var(--v2-node-tint); color: var(--sc-fs-ink);
+                       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-fix #xfix-sico { --d: 120px; --i: 64px; position: relative; }
+    #x-fix #xfix-st, #x-fix #xfix-sub { position: relative; }
+    /* 光澤層：疊在解法卡內容上面、裁成卡的圓角（P.sheen 在裡面掃過；卡本身不裁，聚焦的亮框才不會被切掉） */
+    #x-fix #xfix-gloss { position: absolute; inset: 0; border-radius: 16px; overflow: hidden; pointer-events: none; }
+  </style>
+  <div id="x-fix" data-composition-id="x-fix" data-width="1920" data-height="1080" data-duration="15"
+       data-cues-sample='{"start":0,"D":15,"cues":{"171":[1.4,3.9],"172":[4,6.4],"173":[6.5,9],"174":[9.1,12.4]},"refs":{"#171@不同步":1.6,"#172@走來走去":4.1,"#173@一支一支":6.6,"#174@自己":9.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xfix-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">多機錄影的痛點</span></div>
+      <div id="xfix-body" data-layout="row" data-gap="xl">
+        <svg id="xfix-arrow" data-links="xfix-pains>xfix-sol" data-link-class="xfix-arr" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="xfix-pains" data-slot data-layout="col" data-justify="start" data-gap="lg">
+          <div id="xfix-p1" class="xfix-pain" data-slot data-snap-width><span id="xfix-pico1" class="sc-icon sc-icon--72 xfix-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" /> </svg></span><span id="xfix-t1" class="xfix-t sc-t52 sc-w900 sc-opt">啟動不同步</span></div>
+          <div id="xfix-p2" class="xfix-pain" data-slot data-snap-width><span id="xfix-pico2" class="sc-icon sc-icon--72 xfix-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" /> </svg></span><span id="xfix-t2" class="xfix-t sc-t52 sc-w900 sc-opt">走來走去</span></div>
+          <div id="xfix-p3" class="xfix-pain" data-slot data-snap-width><span id="xfix-pico3" class="sc-icon sc-icon--72 xfix-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" /> </svg></span><span id="xfix-t3" class="xfix-t sc-t52 sc-w900 sc-opt">一支一支檢查</span></div>
+        </div>
+        <div id="xfix-sol" data-slot>
+          <span id="xfix-sico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /> </svg></span>
+          <span id="xfix-st" class="sc-t52 sc-w900 sc-opt">電腦一鍵控制</span>
+          <span id="xfix-sub" class="sc-t40 sc-w500 sc-gray sc-opt">自己設計一套</span>
+          <i id="xfix-gloss"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-fix'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const P1 = P.at('#171@不同步'), P2 = P.at('#172@走來走去'), P3 = P.at('#173@一支一支'), FIX = P.at('#174@自己');   // 講到每個痛點／解法的時刻
+
+    P.sfx('tick', '#171@不同步'); P.sfx('tick', '#172@走來走去'); P.sfx('tick', '#173@一支一支'); P.sfx('shine', '#174@自己');   // 痛點各一顆 tick、解法一顆 shine（句號和上一行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const PAINS = '#xfix-p1, #xfix-p2, #xfix-p3';   // 三個痛點（2 個時拿掉 p3）
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xfix-card', 0.3);
+    else { P.wipe('#xfix-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xfix-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xfix-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+
+    // 拍 1 痛點 1：由左擦開＋滑入 → ＋0.12 字逐字上浮 → ＋0.15 警示圖示描線；＋0.6 漂浮到下一拍前
+    P.wipe('#xfix-p1', P1, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#xfix-p1', P1, { dx: -24 });
+    P.chars('#xfix-t1', P1 + 0.12);
+    P.icon('#xfix-pico1', P1 + P.BEAT);
+    P.idle('#xfix-p1', P1 + 0.6, { y: 3, period: 3.2, until: P2 - 0.1 });
+    // 拍 2 痛點 2：同拍 1；痛點 1 退焦（0.6）
+    P.dim('#xfix-p1', P2, { to: 0.6 });
+    P.wipe('#xfix-p2', P2, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#xfix-p2', P2, { dx: -24 });
+    P.chars('#xfix-t2', P2 + 0.12);
+    P.icon('#xfix-pico2', P2 + P.BEAT);
+    P.idle('#xfix-p2', P2 + 0.6, { y: 3, period: 3.2, until: P3 - 0.1 });
+    // 拍 3 痛點 3：同拍 2（2 個痛點時刪掉這一組 6 行）
+    P.dim('#xfix-p2', P3, { to: 0.6 });
+    P.wipe('#xfix-p3', P3, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#xfix-p3', P3, { dx: -24 });
+    P.chars('#xfix-t3', P3 + 0.12);
+    P.icon('#xfix-pico3', P3 + P.BEAT);
+    P.idle('#xfix-p3', P3 + 0.6, { y: 3, period: 3.2, until: FIX - 0.85 });
+
+    // 拍 4 劃掉（解法前 0.75 秒）：三條痛點一起被劃線（不擦回）→ 劃完左欄退焦到 0.5
+    P.strike('#xfix-t1, #xfix-t2, #xfix-t3', FIX - 0.75, { dim: false });
+    P.dim(PAINS, FIX - 0.4, { to: 0.5 });
+    // 拍 5 解法（FIX）：箭頭（data-links 產生；箭頭頭在線描完時淡入）帶著發光頭提早 0.45 秒描過去 → 解法卡過衝彈出 → ＋0.12 解法逐字落下 → ＋0.15 圖示描線 → ＋0.3 副句逐字上浮
+    P.comet('#xfix-pains-xfix-sol', FIX - 0.45, { dur: 0.4 });
+    P.pop('#xfix-sol', FIX, { from: 0.7, dy: 40, ease: P.V2.EASE.emph });
+    P.chars('#xfix-st', FIX + 0.12, { mode: 'drop' });
+    P.icon('#xfix-sico', FIX + P.BEAT);
+    P.chars('#xfix-sub', FIX + 0.3);
+    // 拍 6 爆點（FIX + 0.6）：解法字重拍＋螢光筆，整張卡光澤掃過
+    P.punch('#xfix-st', FIX + 0.6, { scale: 1.12 });
+    P.marker('#xfix-st', FIX + 0.6);
+    P.sheen('#xfix-gloss', FIX + 0.6);
+    // 拍 7 聚焦（FIX + 1.2）：解法卡放大抬起發光；＋0.6 漂浮
+    P.spot('#xfix-sol', '#xfix-sol', FIX + 1.2, { scale: 1.05, lift: -10 });
+    P.idle('#xfix-sol', FIX + 1.8, { y: 4, period: 2.8 });
+
+    // 收：講完解法 2.6 秒回均衡（解法卡回原大小、左欄回到 0.7），完成態停到段尾
+    const TR = FIX + 2.6;
+    P.spot('#xfix-sol', null, TR, { dur: 0.6 });
+    P.dim(PAINS, TR, { to: 0.7 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-fix'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-fix";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

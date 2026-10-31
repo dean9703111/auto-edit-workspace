@@ -1,9 +1,14 @@
+<!-- 預設拍型：F 重點字卡的拍 1、2（字卡固定兩拍，不寫動畫分鏡） -->
 <!-- @style -->
 /* 下方字卡底座 .sc-lt：左 120、bottom 220 → 底板底 860、主卡 672–852（單列卡高 180）、標籤 616–704。
    焦點只有一個：圖示徽章；關鍵詞只上色、不加斜板。 */
+/* 排法 free（kit/scene-layout.js 不排）：單列卡（圖示＋一句），卡寬隨字，沒有列／欄。 */
 #gCard { left: 120px; bottom: 220px; }
+<!-- @style-portrait -->
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+#gCard { left: 60px; bottom: 680px; }
 <!-- @body -->
-<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+<div id="gCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
   <div class="sc-lt__card">
     <i class="sc-lt__dots"></i>
@@ -15,8 +20,13 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* 外殼（底板＋主卡＋標籤＋網點）遮罩由左往右揭開 0.55 → 內容（徽章＋正文）0.15 後淡入＋上漂 8 → 再 0.15 徽章裡的圖示描線 0.7 → 停 → 段尾 0.4 整組淡出 */
-P.reveal('#gCard', {{{in}}});
-P.rise('#gCard .sc-lt__body', {{{in}}} + P.BEAT);
-P.icon('#gCard .sc-icon', {{{in}}} + P.BEAT * 2);
-{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}
+/* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；停留：整組漂浮 3u、徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張） */
+P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+P.pop('#gCard .sc-icon', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+P.icon('#gCard .sc-icon', {{{in}}} + 0.3);
+P.idle('#gCard .sc-icon', {{{in}}} + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });
+P.chars('#gCard .sc-lt__body .sc-opt', {{{in}}} + 0.22);
+P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+{{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

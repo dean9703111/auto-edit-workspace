@@ -163,3 +163,13 @@ export function snapTime(t, candidates, tol) {
   for (const c of candidates) { const d = Math.abs(c - t); if (d < bd) { bd = d; best = c; } }
   return best;
 }
+
+// 講者調光的即時預覽（contracts/look.md §7.4；係數出自 04 §3）：CSS filter 近似 LUT。
+// 播的影片已經 bake 了 baked（assets/rough.mp4 的戳記），就用比值「從 baked 改到 color」；一樣時回 'none'
+export const LOOK_CSS = { b: 0.0825, k: 0.02, s: 0.071 };
+export function lookCss(color, baked = 0) {
+  const c = Number(color) || 0, b = Number(baked) || 0;
+  if (Math.abs(c - b) < 1e-6) return 'none';
+  const f = (k) => Math.round(((1 + k * c) / (1 + k * b)) * 10000) / 10000;
+  return `brightness(${f(LOOK_CSS.b)}) contrast(${f(LOOK_CSS.k)}) saturate(${f(LOOK_CSS.s)})`;
+}

@@ -1,38 +1,56 @@
+<!-- 預設拍型：A 流程（BEATS.md §3 A；全畫面） -->
 <!-- @style -->
-/* 全畫面流程：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128；內容區 1176×580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
-   流程列寬 1128（卡內左右各 24）水平垂直置中；節點寬 240：圖示圓 192 → 24 → 名稱 44／700；上下內距 24。
-   節點之間的箭頭是 flex 伸縮（兩端貼齊）：4 節點時各 56、3 節點時各 ≈ 136；線 4px ＋ 14×14 三角，垂直對齊圖示圓中線（24＋96＝120）。
-   「目前」節點（data-current）：--sc-fs-tint 底＋ 4px 主色內框。 */
+/* 全畫面流程：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128（左右內距 --sc-pad-card）；卡身 580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
+   排法（kit/scene-layout.js）：#wBody data-layout="row"、站距 --sc-gap-xl；每站 .fNode 是 data-slot，外框＝圖示圓 192×192（連接線對齊圓心），
+   名稱 44／700 掛在圓下方 --sc-gap-md（不算進外框，5 字 220 比圓寬，左右各超出 14）。
+   #wBody 高＝580 扣掉名稱那一帶（60＋--sc-gap-md），下面用 margin 補回：helper 把圓排在 #wBody 正中，圓＋名稱整組在卡身上下置中。
+   4 站 4×192＋3×96＝1056（左右內距 60）。箭頭是 #fLinks 的 data-links（站 n>站 n＋1；線 4px --sc-fs-line，箭頭頭另一條 path 描完淡入）。
+   「目前」站（data-current）：圖示圓外加一圈卡片底色 4＋主色 4 的環、名稱主色（站框改成環：框比圓寬，會和箭頭端點相撞）。 */
 #wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
-#wCard .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-#wBody { width: 1176px; height: 580px; display: flex; align-items: center; justify-content: center; }
-#fFlow { display: flex; align-items: flex-start; width: 1128px; }
-.fNode { flex: none; display: flex; flex-direction: column; align-items: center; gap: 24px; width: 240px; padding: 24px 0; border-radius: 20px; white-space: nowrap; }
+#wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+#wBody { width: 1176px; height: calc(580px - 60px - var(--sc-gap-md)); margin-bottom: calc(60px + var(--sc-gap-md)); }
+.fNode { width: 192px; height: 192px; white-space: nowrap; }
 .fNode .sc-icon { --d: 192px; --i: 104px; }
-.fNode .sc-t44 { line-height: 60px; }
-.fArrow { position: relative; flex: 1 1 0; min-width: 56px; height: 14px; margin-top: 113px; }
-.fArrow::before { content: ""; position: absolute; left: 0; right: 12px; top: 5px; height: 4px; background: var(--sc-fs-line); }
-.fArrow::after { content: ""; position: absolute; right: 0; top: 0; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 14px solid var(--sc-fs-line); }
-#fFlow[data-current="1"] > :nth-child(1),
-#fFlow[data-current="2"] > :nth-child(3),
-#fFlow[data-current="3"] > :nth-child(5),
-#fFlow[data-current="4"] > :nth-child(7) { background: var(--sc-fs-tint); box-shadow: inset 0 0 0 4px var(--sc-accent); }
+.fNode .sc-t44 { position: absolute; left: -100px; right: -100px; top: calc(100% + var(--sc-gap-md)); line-height: 60px; text-align: center; }
+.fLink { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+#wBody[data-current="1"] #fNode1 .sc-icon,
+#wBody[data-current="2"] #fNode2 .sc-icon,
+#wBody[data-current="3"] #fNode3 .sc-icon,
+#wBody[data-current="4"] #fNode4 .sc-icon { box-shadow: 0 0 0 4px var(--sc-fs-card), 0 0 0 8px var(--sc-accent); }
+#wBody[data-current="1"] #fNode1 .sc-t44,
+#wBody[data-current="2"] #fNode2 .sc-t44,
+#wBody[data-current="3"] #fNode3 .sc-t44,
+#wBody[data-current="4"] #fNode4 .sc-t44 { color: var(--sc-accent); }
 <!-- @body -->
 <div id="wCard" class="sc-wcard">
   <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>
-  <div id="wBody">
-    <div id="fFlow" data-current="{{current}}">
-      {{#nodes}}
-      {{^first}}<div id="fArr{{n}}" class="fArrow"></div>{{/first}}
-      <div id="fNode{{n}}" class="fNode"><span class="sc-icon">{{{icon}}}</span><span class="sc-t44 sc-w700 sc-opt">{{text}}</span></div>
-      {{/nodes}}
-    </div>
+  <div id="wBody" data-layout="row" data-gap="xl" data-current="{{current}}">
+    {{#nodes}}
+    <div id="fNode{{n}}" class="fNode" data-slot><span class="sc-icon">{{{icon}}}</span><span class="sc-t44 sc-w700 sc-opt">{{text}}</span></div>
+    {{/nodes}}
+    <svg id="fLinks" data-link-class="fLink" data-links="fNode1{{#nodes}}{{^first}}>fNode{{n}}{{^last}} fNode{{n}}{{/last}}{{/first}}{{/nodes}}"></svg>
   </div>
 </div>
 <!-- @timeline -->
-/* 節點逐個 P.rise（箭頭跟著它所指向的節點一起出現；綁句號，預設 0.5 起每 0.35s）→ 各節點進場 P.BEAT 後，圖示圓裡的線描出來（0.7s；流程的站不打勾，「目前」只換底色＋主色內框）→ 全部到位後停住。
-   全畫面幕不在 HF 內淡出（離場由剪映端整段渐隐） */
+/* v2（shared/template/BEATS.md §2 的動作）：每個節點各綁 at：箭頭（data-links 的線）提早 0.25 描出 → 節點彈出（從下 28u）→ 0.15 圖示描線 → 0.6 聚焦（放大抬起發光、前面的站壓暗；各站綁句、相鄰 ≥ 1.2 秒才走）→ 最後一站講完 2.6 秒回均衡。主卡進場看 P.prev()（換卡不換景／長出），離場由 build 負責 */
+// 開場：前一段也是全畫面＝換卡不換景（由下擦開＋上浮 60u）；前一段是講者或其他畫面＝主卡從子母畫面長出（P.prev() 由 build 給，不用改）
+if (P.prev() === 'fullscreen') { P.wipe('#wCard', 0, { dir: 'up', dur: 0.8 }); P.pop('#wCard', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+else P.grow('#wCard', 0.3);
+P.chars('#wCard .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+const nodeAt = [{{#nodes}}{{{at}}}{{^last}}, {{/last}}{{/nodes}}];
+// 箭頭＝data-links 產生的線 #fNode<n>-fNode<n+1>（mustache 沒有 n−1：前一站的編號在這裡接上）
+const LINK = [{{#nodes}}{{^first}}{{n}}'{{/first}}{{^last}}{{^first}}, {{/first}}'#fNode{{n}}-fNode{{/last}}{{/nodes}}];
 {{#nodes}}
-P.rise('#fNode{{n}}{{^first}}, #fArr{{n}}{{/first}}', {{{at}}});
-P.icon('#fNode{{n}} .sc-icon', {{{at}}} + P.BEAT);
+{{^first}}P.stroke(LINK[{{i}} - 1], {{{at}}} - 0.25, { dur: 0.25 });{{/first}}
+P.pop('#fNode{{n}}', {{{at}}}, { from: 0.82, dy: 28 });
+P.icon('#fNode{{n}} .sc-icon', {{{at}}} + 0.15);
 {{/nodes}}
+// 聚焦：group 只放已經進場的站（P.spot 規則）；講完回均衡
+const upTo = (k) => Array.from({ length: k }, (_, j) => '#fNode' + (j + 1)).join(', ');
+// 只有各站都綁了句子、相鄰 ≥ 1.2 秒時才走焦點（沒綁句的預設間隔 0.35 秒，逐站聚焦會閃）
+const paced = nodeAt.every((t, i) => !i || t - nodeAt[i - 1] >= 1.2);
+if (paced) {
+  for (let k = 1; k <= nodeAt.length; k++) P.spot(upTo(k), '#fNode' + k, nodeAt[k - 1] + 0.6);
+  const endAt = Math.min(nodeAt[nodeAt.length - 1] + 2.6, D - 1.6);
+  if (endAt > nodeAt[nodeAt.length - 1] + 1.2) P.spot(upTo(nodeAt.length), null, endAt);
+}

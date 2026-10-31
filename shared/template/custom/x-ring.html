@@ -1,0 +1,170 @@
+<!-- 預設拍型：E 數字（BEATS.md §3 E；圓環＝數字框＋軌道，終點列是「對照」那一拍） -->
+<!doctype html>
+<!--
+  x-ring：進度環（第二層 custom，layout: "fullscreen"；百分比、計時、倒數共用一個檔）
+
+  【適用的口播】
+  在講「一個比例」或「一段時間」，前後各有一句主題或起點、結論或終點，例如
+  「32 段 NG 裡，AI 剪掉了 87%，也就是 28 段」「這個工具從萌生想法到完成產品原型，前後只花了一個小時」。
+  講到主題時右上的起點列擦開，接著左邊的大圓環彈出（灰軌道、中央 0%、單位）；數字前 1.2 秒，主色弧從 12 點鐘方向順時針走、數字同步跑，
+  講到數字那一刻剛好停在比例上（重拍、漣漪、單位畫螢光筆、音效）；講到結論時右下的終點列擦開、向下箭頭描下來、圓環退焦，終點列抬起發光；最後全部亮回。
+  倒數：從滿走到空、數字往下數，同一個檔、只改 RING。
+
+  【不要用在哪裡】
+  - 只有一個數字、沒有比例也沒有起訖：用 fx 29 數字計數。
+  - 兩個數字在比：用 x-versus 或 x-numbers。
+  - 一個比例要和另一個比例並排：用 04d 表格或拆兩段。
+  - 中央數字超過 4 個字元（例「1,200」）：換單位（「1.2 千」）或用 fx 29。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）；中央單位 #xring-unit（≤ 3 字，例「剪掉」「分鐘」「完成度」）；右邊兩列 .xring-text（各 ≤ 8 字）。
+  2. 圖示：右邊兩列的 .sc-icon。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來。
+  3. 數字：只改 <script> 開頭 RING 那一行：{ from: 起點, to: 終點, max: 一整圈代表多少, suffix: 數字後面的字 }。
+     百分比 { from: 0, to: 87, max: 100, suffix: '%' }；計時一小時 { from: 0, to: 60, max: 60, suffix: '' }（單位寫「分鐘」）；
+     倒數十秒 { from: 10, to: 0, max: 10, suffix: '' }。弧走多少、中央數字的起始值由程式算，不用改 CSS。
+  4. 綁句：<script> 開頭 R1、ARC、R2 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
+  5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
+
+  【綁句欄位】
+  R1 = P.at('#161@32')：講到主題或起點的時刻，右上那一列由左擦開，0.25 秒後圓環彈出（顯示起始值）。
+  ARC = P.at('#162@87')：講到數字的時刻，數字剛好停在比例上（弧和數字提早 1.2 秒開始走）；重拍、漣漪、螢光筆，音效 impact。
+  R2 = P.at('#163@剪掉')：講到結論或終點的時刻，右下那一列由左擦開、箭頭描下來、圓環退焦；音效 impact。
+  三拍照 R1 → ARC → R2 的順序（主題 → 數字 → 結論）；口播順序不同就換綁的詞，不要改下面的程式。
+  詞在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#162')。
+  「@詞」要寫成字串字面值（P.at('#162@87')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#162@87', 0.3)。
+  R1 和 ARC 至少差 3.4 秒：同一句裡太近（例「32 段 NG 裡，AI 剪掉了 87%」）就把 R1 綁上一句的主題詞。
+  audit 會比對：這一拍出現的字（兩列文字）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  R1 ≥ 1.5（主卡 0.3 秒長出、0.5 秒起標題逐字）
+  ARC ≥ R1 + 3.4（起點列與圓環進場、圖示描線、單位落下忙到 R1 + 0.9，停 1.2 秒，弧在 ARC − 1.2 開始走）
+  R2 ≥ ARC + 2.5（ARC 落定後停 1.2 秒；相鄰兩拍至少 2.5 秒）
+  D ≥ R2 + 4.6（R2 ＋ 2 秒回均衡、0.6 秒動完＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
+  標題列 128（左右內距 --sc-pad-card）、內容區 1176×580（卡底 862）。
+  位置由 kit/scene-layout.js 排（shared/style.md「版面」），不寫 left／top：內容區 #xring-body 是 data-layout="row" data-gap="lg"，
+  左邊圓環、右邊一欄 #xring-col（data-layout="col" data-gap="xl"：起點列、終點列，中間 96 留給箭頭），兩組中線對齊、整組在內容區置中（內距 ≥ 48／40）。
+  向下箭頭由 #xring-arrow 的 data-links="xring-r1>xring-r2" 自動畫在兩列之間（端點離列 12；線的 path id＝xring-r1-xring-r2，箭頭頭是另一條 xring-r1-xring-r2-head，線描完時淡入）。
+  圓環 440×440：半徑 195、線寬 40（外緣 215、內緣 175；灰軌道＋主色弧，弧的線頭 butt，起點不留圓點）；
+  中央數字 112 字、單位 40 字，放在寬 320 的置中框（最寬的「100%」約 308，離環內緣 ≥ 8）；漣漪從中央框擴散到環的外緣。
+  右邊兩列 584×112（用擦開進場、不用彈出：彈出的起始縮放會讓 data-snap-width 量到縮過的字寬，置中後圖示落在半像素），內容置中。
+  弧：#xring-arc 的 pathLength＝1000（一圈＝1000；GSAP 補間 px 數值會取整數，用 1 當一圈會整圈跳格），轉 −90 度讓起點在 12 點鐘；
+  虛線長 DASH 在 script 開頭（不用改）。
+-->
+<!-- 靈感（只借技法，不含程式與素材；同一份清單在 NOTICE.md）：0xnicc0-516612／0xnicc0／https://x.com/0xnicc0/status/2107217691505516612；
+     twoclipping-747965／twoclipping／https://x.com/twoclipping/status/2105927781678747965；dys-hay-749645／Dys_hay／https://x.com/Dys_hay/status/2103819139307749645 -->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-ring 進度環</title></head>
+<body>
+<template id="x-ring-template">
+  <style>
+    #x-ring { position: absolute; inset: 0; }
+    #x-ring .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-ring #xring-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-ring #xring-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    /* 內容區：data-layout="row"（kit/scene-layout.js）排圓環和右欄，右欄 #xring-col 是 data-layout="col"；元件不寫 left／top */
+    #x-ring #xring-body { position: relative; width: 1176px; height: 580px; }
+    /* 圓環：440×440；灰軌道＋主色弧（同圓、半徑 195、線寬 40）；中央數字＋單位放在環內寬 320 的置中框 */
+    #x-ring #xring-dial { position: absolute; width: 440px; height: 440px; }
+    #x-ring #xring-svg { position: absolute; left: 0; top: 0; width: 440px; height: 440px; }
+    #x-ring #xring-track { fill: none; stroke: var(--sc-fs-node-line); stroke-width: 40px; }
+    #x-ring #xring-arc { fill: none; stroke: var(--brand); stroke-width: 40px; stroke-linecap: butt; }
+    #x-ring #xring-mid { position: absolute; left: 60px; top: 100px; width: 320px; height: 240px;
+                         display: flex; flex-direction: column; align-items: center; justify-content: center; white-space: nowrap; }
+    #x-ring #xring-num { width: 320px; text-align: center; color: var(--sc-fs-ink); }
+    /* 向下箭頭：#xring-arrow 的 data-links 自動產生（kit/scene-layout.js；svg 疊在內容區最下層），線色用 .xring-line */
+    #x-ring .xring-line { fill: none; stroke: var(--sc-fs-ink); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 右邊兩列：584×112，圖示和文字同一塊、置中；位置由 #xring-col 排 */
+    #x-ring .xring-row { position: absolute; width: 584px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                         border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
+                         display: flex; align-items: center; justify-content: center; gap: 24px; white-space: nowrap; }
+  </style>
+  <div id="x-ring" data-composition-id="x-ring" data-width="1920" data-height="1080" data-duration="12.5"
+       data-cues-sample='{"start":0,"D":12.5,"cues":{"161":[1.6,4.4],"162":[4.6,7.4],"163":[7.6,12]},"refs":{"#161@32":1.8,"#162@87":5.3,"#163@剪掉":7.8}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xring-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">AI 剪掉多少 NG</span></div>
+      <div id="xring-body" data-layout="row" data-gap="lg">
+        <svg id="xring-arrow" data-links="xring-r1>xring-r2" data-link-class="xring-line" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="xring-dial" data-slot>
+          <svg id="xring-svg" viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg">
+            <circle id="xring-track" cx="220" cy="220" r="195" />
+            <circle id="xring-arc" cx="220" cy="220" r="195" pathLength="1000" transform="rotate(-90 220 220)" />
+          </svg>
+          <div id="xring-mid">
+            <span id="xring-num" class="sc-t112 sc-w900">0%</span>
+            <span id="xring-unit" class="sc-t40 sc-w700 sc-gray sc-opt">剪掉</span>
+          </div>
+        </div>
+        <div id="xring-col" data-slot data-layout="col" data-gap="xl">
+          <div id="xring-r1" class="xring-row" data-slot>
+          <span id="xring-ico1" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span class="xring-text sc-t52 sc-w900 sc-opt" data-snap-width>32 段 NG</span></div>
+          <div id="xring-r2" class="xring-row" data-slot>
+          <span id="xring-ico2" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xring-text sc-t52 sc-w900 sc-opt" data-snap-width>AI 剪掉 28 段</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-ring'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const R1 = P.at('#161@32'), ARC = P.at('#162@87'), R2 = P.at('#163@剪掉');    // 主題／起點、數字、結論／終點（照這個順序）
+
+    P.sfx('impact', '#162@87'); P.sfx('impact', '#163@剪掉');                     // 數字落定、結論各一顆音效（句號和上一行一樣；主題那一拍不配）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const RING = { from: 0, to: 87, max: 100, suffix: '%' };                       // 只改這一行
+    const DASH = 1002;                                                             // 弧的虛線長：比一圈（pathLength 1000）多 2，滿圈時 12 點鐘接縫不留缺口（不用改）
+    const OFF0 = DASH * (1 - RING.from / RING.max), OFF1 = DASH * (1 - RING.to / RING.max);   // 弧的起訖（自動算）
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xring-card', 0.3);
+    else { P.wipe('#xring-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xring-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xring-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+
+    // 拍 1 講到主題：起點列由左擦開 → ＋0.15 圖示描線 → ＋0.25 圓環彈出（灰軌道淡入、中央起始值）→ ＋0.3 單位逐字落下
+    P.wipe('#xring-r1', R1, { dir: 'left' });
+    P.icon('#xring-ico1', R1 + 0.15);
+    P.pop('#xring-dial', R1 + 0.25, { from: 0.9, dy: 0 });
+    P.in('#xring-track', R1 + 0.35);
+    P.chars('#xring-unit', R1 + 0.3, { mode: 'drop' });
+
+    // 拍 2 數字前 1.2 秒：主色弧從 12 點鐘走到比例、數字同步跑（同一個 ease、同樣 1.2 秒）
+    P.morph('#xring-arc', ARC - 1.2, { strokeDasharray: DASH, strokeDashoffset: OFF1 }, { from: { strokeDasharray: DASH, strokeDashoffset: OFF0 }, dur: 1.2, ease: 'power2.out' });
+    P.count('#xring-num', ARC - 1.2, { from: RING.from, to: RING.to, dur: 1.2, suffix: RING.suffix });
+    // 拍 3 講到數字、落定：重拍、從中央擴散的漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）→ ＋0.6 圓環漂浮
+    P.punch('#xring-num', ARC, { scale: 1.12 });
+    P.ripple('#xring-mid', ARC, { from: 0.7, to: 1.35 });
+    P.marker('#xring-unit', ARC + 0.1);
+    P.idle('#xring-dial', ARC + 0.6, { y: 3, period: 3.2, until: R2 - 0.1 });
+
+    // 拍 4 講到結論：終點列由左擦開 → ＋0.15 箭頭描下來（data-links 產生的線 0.3 秒，描完箭頭頭淡入）、圖示描線；圓環退焦
+    P.wipe('#xring-r2', R2, { dir: 'left' });
+    P.stroke('#xring-r1-xring-r2', R2 + 0.15, { dur: 0.3 });
+    P.icon('#xring-ico2', R2 + 0.15);
+    P.dim('#xring-dial', R2, { to: 0.6 });
+    // 拍 5 ＋0.6 終點列聚焦（放大抬起、主色亮框）→ ＋1.1 漂浮
+    P.spot('#xring-r2', '#xring-r2', R2 + 0.6, { scale: 1.04, lift: -6 });
+    P.idle('#xring-r2', R2 + 1.1, { y: 3, period: 3.2 });
+
+    // 收：講完 2 秒回均衡（圓環亮回、終點列亮框收掉），中央數字呼吸；完成態停到段尾
+    const TR = R2 + 2.0;
+    P.spot('#xring-r2', null, TR, { dur: 0.6 });
+    P.dim('#xring-dial', TR, { to: 1 });
+    P.idle('#xring-num', TR, { y: 0, scale: 0.04, period: 1.8 });
+
+    P.end();                                                                       // 長度＝plan.json 這段的長度
+    window.__timelines['x-ring'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

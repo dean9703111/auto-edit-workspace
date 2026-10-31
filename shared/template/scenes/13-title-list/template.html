@@ -1,16 +1,21 @@
+<!-- 預設拍型：D 清單（同一張卡逐條換，不寫動畫分鏡） -->
 <!-- @style -->
 /* 底座 .sc-lt 不加分類標籤：段內覆寫 padding-top 0、底板 top 8、主卡 padding-top 32。
    主卡 616–852（高 236）：頂內距 32 → 白斜板（高 88，標題 64／900）→ 間距 24 → 條目列 56（序號圓 56＋52／700）→ 底內距 32。
    各條目疊在同一格（grid 同儲存格），卡寬取最長那條；換條 P.axis。左緣直線 x160：斜板左下角、序號圓。細節＝右上網點。 */
+/* 排法 free（kit/scene-layout.js 不排）：斜板標題＋條目靠左同一條左緣 x160，各條疊在同一格輪播（helper 的 col 會改成中線對齊）；標題到條目 --sc-gap-md。 */
 #gCard { left: 120px; bottom: 220px; padding-top: 0; }
 #gCard .sc-lt__plate { top: 8px; }
 #gCard .sc-lt__card { padding-top: 32px; }
-.tl-title { margin-bottom: 24px; }
+.tl-title { margin-bottom: var(--sc-gap-md); }
 .tl-items { display: grid; }
 .tl-items .sc-icon { --d: 56px; --i: 32px; }  /* 有圖示：圖示圓與序號圓同直徑 56，(56−32)/2＝12 */
 .tl-items > .sc-row { grid-area: 1 / 1; justify-self: start; height: 56px; }
+<!-- @style-portrait -->
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+#gCard { left: 60px; bottom: 680px; }
 <!-- @body -->
-<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+<div id="gCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
   <div class="sc-lt__card">
     <i class="sc-lt__dots"></i>
@@ -30,14 +35,16 @@
   </div>
 </div>
 <!-- @timeline -->
-/* 外殼（底板＋主卡＋斜板＋網點）遮罩揭開 → 0.15 後標題字 maskUp、第 1 條 rise → 之後每條 P.axis 換（每條停 ≥ 1.5s）→ 段尾 0.4 淡出 */
+/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 0.22 標題逐字上浮 → 第 1 條上漂 → 之後每條 P.axis 換（每條停 ≥ 1.5s）→ 漂浮 → 段尾向左擦掉 */
 const itemAt = [{{#items}}{{{at}}}{{^last}}, {{/last}}{{/items}}];
-P.reveal('#gCard', {{{in}}});
-P.maskUp('#tTitle', {{{in}}} + P.BEAT);
+P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+P.chars('#tTitle', {{{in}}} + 0.22);
 P.rise('#it1', itemAt[0]);
 for (let i = 1; i < itemAt.length; i++) P.axis('#it' + i, '#it' + (i + 1), itemAt[i]);
 {{#itemsHasIcon}}
-P.icon('#it1 .sc-icon', itemAt[0] + P.BEAT);
-for (let i = 1; i < itemAt.length; i++) P.icon('#it' + (i + 1) + ' .sc-icon', itemAt[i] + P.AXIS_LAG + P.BEAT);
+P.icon('#it1 .sc-icon', itemAt[0] + 0.15);
+for (let i = 1; i < itemAt.length; i++) P.icon('#it' + (i + 1) + ' .sc-icon', itemAt[i] + P.AXIS_LAG + 0.15);
 {{/itemsHasIcon}}
-{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}
+P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+{{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

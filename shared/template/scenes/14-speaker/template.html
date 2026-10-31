@@ -1,11 +1,16 @@
+<!-- 預設拍型：F 重點字卡的拍 1、2（講者介紹，不寫動畫分鏡） -->
 <!-- @style -->
 /* 兩列卡：主卡 592–852（高 260）、標籤 536–624。主卡內：頂內距 56 → 姓名板 650–762（112）→ 間距 16 → 頭銜列 778–818（40）→ 底內距 32。
    一條左緣直線 x160：標籤左下角、姓名板主色直條、第一個頭銜。細節＝右上網點加高成半調塊（補姓名板右側的空），底端離頭銜列 20。 */
+/* 排法 free（kit/scene-layout.js 不排）：姓名板＋頭銜列靠左同一條左緣 x160（helper 的 col 會改成中線對齊）；姓名板到頭銜 --sc-gap-sm。 */
 #spkCard { left: 120px; bottom: 220px; }
-.spk-body { display: flex; flex-direction: column; gap: 16px; }
+.spk-body { display: flex; flex-direction: column; gap: var(--sc-gap-sm); }
 #spkCard .sc-lt__dots { --dots-h: 156px; }
+<!-- @style-portrait -->
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+#spkCard { left: 60px; bottom: 680px; }
 <!-- @body -->
-<div id="spkCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+<div id="spkCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
   <div class="sc-lt__card">
     <i class="sc-lt__dots"></i>
@@ -21,10 +26,13 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* 外殼遮罩揭開 0.55 → 姓名 0.15 後遮罩上升 0.6（0.75 到位）→ 頭銜逐組從左 drift 12（間隔 0.1，姓名已走完 94%，同一時間只有一個方向在動）→ 停 → 段尾 0.4 淡出 */
-P.reveal('#spkCard', {{{in}}});
-P.maskUp('#spkName', {{{in}}} + P.BEAT);
+/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 姓名逐字彈出（過衝）→ 頭銜逐組從左滑入（各綁 at）→ 漂浮 → 段尾向左擦掉 */
+P.wipe('#spkCard .sc-lt__plate, #spkCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#spkCard .sc-lt__plate, #spkCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+P.pop('#spkCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+P.chars('#spkName', {{{in}}} + 0.22, { mode: 'pop' });
 {{#titles}}
-P.drift('#ti{{n}}', {{{at}}}, { dx: -12 });
+P.drift('#ti{{n}}', {{{at}}}, { dx: -16 * P.U });
 {{/titles}}
-{{#exitFade}}P.out('#spkCard', D - P.OUT);{{/exitFade}}
+P.idle('#spkCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+{{#exitFade}}P.wipeOut('#spkCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#spkCard', D - 0.8, { dir: 'left' });{{/exitFade}}

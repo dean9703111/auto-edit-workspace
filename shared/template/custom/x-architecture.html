@@ -1,0 +1,185 @@
+<!-- 預設拍型：A 流程（BEATS.md §3 A；兩個裝置當站、資料沿直連走過去，結尾劃掉中繼） -->
+<!doctype html>
+<!--
+  x-architecture：資料怎麼走（第二層 custom，layout: "fullscreen"；兩個裝置＋一個中繼，直連不經過中繼）
+
+  【適用的口播】
+  講資料在裝置之間怎麼走、不經過某個中繼：「手機的照片直接傳到電腦，不經過雲端」。
+  兩個裝置和雲端先錯拍彈出、經過雲端的路是往前流的虛線，兩個裝置退成預覽態 → 講到「直接」，手機亮起、直連線帶著發光頭描到電腦 →
+  講到傳的東西，三個檔案（發光點）沿直連走過去、第一個到站時電腦亮起 → 講到「不經過」，雲端被劃掉、經過雲端的虛線退焦，結論膠囊彈出、聚焦。
+
+  【不要用在哪裡】
+  - 有先後的步驟（不是資料流）：用 x-process。
+  - 一個來源分到好幾個去處：用 x-branch。
+  - 超過 3 個節點、要畫完整架構圖：拆成兩段，或用截圖放 media 段。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、兩個裝置名稱（≤ 4 字）、中繼名稱（≤ 3 字）、結論膠囊（≤ 6 字）。放不下就縮文案，不縮字。
+  2. 圖示：#xarch-aico（smartphone）、#xarch-bico（laptop）、#xarch-cico（cloud）、#xarch-noico（cloud-off）。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 綁句：<script> 開頭 PATH、FLOW、CUT（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
+  4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
+  沒有「不經過」那一句：刪掉結論 #xarch-no、CUT = P.at(…) 與它的 P.sfx、「拍 6」「拍 7」「拍 8」三組，電腦的漂浮拿掉 until，收尾的 CUT 改成 FLOW、拿掉 #xarch-no 那一行；
+  「D 下限」那一節改成 D ≥ FLOW + 5.2。
+
+  【綁句欄位】
+  PATH = P.at('#82@直接')：講到「直接傳」的時刻，手機亮起（聚焦、底色、圖示漣漪，鏡頭提早 0.2 秒帶過去），0.1 秒後直連線帶著發光頭描到電腦（0.8 秒）。
+  FLOW = P.at('#83@照片')：講到傳的東西的時刻，三個檔案（發光點）每 0.3 秒出發一個、各走 0.8 秒；第一個到站（FLOW + 0.8）電腦亮起、手機退到 0.8。
+  CUT = P.at('#84@不經過')：講到「不經過雲端」的時刻，雲端被劃掉（提早 0.2 秒先亮回來，劃完壓暗）、經過雲端的虛線退焦；
+  CUT + 0.35 兩個裝置退焦、結論膠囊彈出（字逐字落下、圖示描線），CUT + 0.95 膠囊聚焦，CUT + 2.6 回均衡。
+  音效：PATH、FLOW 各一顆 tick，CUT 一顆 ding。
+  關鍵詞在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#82')。
+  「@詞」要寫成字串字面值（P.at('#84@不經過')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#84@不經過', 0.3)。
+  audit 會比對：這一拍出現的字（站名、項目）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  PATH ≥ 2.8（主卡 0.3 秒長出、1.0 秒三個節點錯拍彈出、2.0 秒預覽態，鏡頭慢推到 PATH − 0.2 至少 0.6 秒）
+  FLOW ≥ PATH + 2.5（手機亮起、直連線連發光頭忙到 PATH + 1.2，再停 1.2 秒）
+  CUT ≥ FLOW + 3.2（第三個檔案 FLOW + 1.7 到站淡掉，停 1.2 秒，雲端提早 0.2 秒亮回來）
+  D ≥ CUT + 5.2（講完 2.6 秒回均衡＋0.6 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 139、寬 1180（右緣 1300），標題列 128（左右內距 --sc-pad-card）、內容區 1176×580（卡高 712）。
+  版面不寫座標（shared/style.md「版面」）：內容區 #xarch-body 是 data-layout="free"（kit/scene-layout.js 不排、audit 照樣量；三角形的架構圖，兩個裝置要拉開，row 的間距 token 不夠寬）：
+  雲端 320×120 水平置中、貼上內距；手機、電腦 264×224 貼下內距、分別貼左右內距（--sc-pad-card／--sc-pad-card-y）；
+  結論膠囊水平置中（寬＝156＋52×字數）、top 184（雲端底＋--sc-gap-md；底在裝置頂之上，不和裝置算同一列）。
+  連接線由 data-links 自動畫（端點離元件 12）：#xarch-direct 的「xarch-a-xarch-b」＝直連（手機右緣 → 電腦左緣，裝置中線高度）；
+  #xarch-lines 的「xarch-cloud-xarch-a xarch-cloud-xarch-b」＝經過雲端（L 形：雲端左右緣 → 裝置頂，往前流的虛線）。helper 的 L 形是先水平再垂直，
+  上段只能從雲端畫到手機，script 載入時把那條的點反過來（虛線才從手機往雲端流；audit 量的端點不變）。
+  檔案＝三條和直連重疊、不畫線的路徑（.xarch-file，script 載入時從直連複製），只看得到 P.comet 的發光頭：從手機右緣外出發、走到電腦左緣外，頭在裝置下面。
+  劃掉的線（P.strike）在雲端框的中線、兩端各超出 4 px。
+  鏡頭跟焦點用 k 0.09（x-process 是 0.12）：裝置在下排，0.12 會把主卡帶上 25 px，垂直不平衡（上下留白差 > 40）。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-architecture 資料怎麼走</title></head>
+<body>
+<template id="x-architecture-template">
+  <style>
+    #x-architecture { position: absolute; inset: 0; }
+    #x-architecture .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 139、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 851） */
+    #x-architecture #xarch-card { position: absolute; left: 120px; top: 139px; width: 1180px; }
+    #x-architecture #xarch-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    /* 內容區：data-layout="free"（kit/scene-layout.js 不排、audit 照樣量）；元件貼內距或置中，不寫座標數字（結論膠囊的 top 除外） */
+    #x-architecture #xarch-body { position: relative; width: 1176px; height: 580px; }
+    /* 線：data-links 自動產生（svg 疊在節點下面）；經過雲端的是往前流的虛線，直連講到時主色實線描出，檔案路徑不畫線 */
+    #x-architecture .xarch-via { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 2 14; }
+    #x-architecture .xarch-direct { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; }
+    #x-architecture .xarch-file { fill: none; stroke: none; }
+    /* 裝置與中繼：和 x-process 的站同一種框 */
+    #x-architecture .xarch-node { position: absolute; box-sizing: border-box; border: 4px solid var(--v2-node-line); border-radius: 24px;
+                                  background: var(--v2-node); color: var(--sc-fs-ink); display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+    #x-architecture .xarch-dev { bottom: var(--sc-pad-card-y); width: 264px; height: 224px; flex-direction: column; gap: 16px; }
+    #x-architecture .xarch-dev .sc-icon { --d: 96px; --i: 56px; position: relative; }
+    #x-architecture .xarch-dev .xarch-name { position: relative; }
+    #x-architecture #xarch-a { left: var(--sc-pad-card); }
+    #x-architecture #xarch-b { right: var(--sc-pad-card); }
+    /* 亮起：now＝目前這個裝置的底色；主色亮框由 P.spot 自動加 */
+    #x-architecture .xarch-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
+    #x-architecture #xarch-cloud { left: 0; right: 0; margin: 0 auto; top: var(--sc-pad-card-y); width: 320px; height: 120px; gap: 20px; border-radius: 20px; }
+    #x-architecture #xarch-cico { --d: 72px; --i: 40px; }
+    /* 結論膠囊：水平置中；top 184＝雲端底（40＋120）＋--sc-gap-md，底 296 在裝置頂 316 之上 */
+    #x-architecture #xarch-no { position: absolute; left: 0; right: 0; margin: 0 auto; top: 184px; width: max-content; height: 112px; box-sizing: border-box; padding: 0 40px 0 28px; border: 4px solid var(--sc-warn); border-radius: 20px;
+                                background: var(--v2-node); color: var(--sc-fs-ink); display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-architecture #xarch-noico { --d: 64px; --i: 36px; background: var(--sc-warn); color: var(--sc-on-warn); }
+    #x-architecture #xarch-not { position: relative; }
+  </style>
+  <div id="x-architecture" data-composition-id="x-architecture" data-width="1920" data-height="1080" data-duration="14.6"
+       data-cues-sample='{"start":0,"D":14.6,"cues":{"82":[3,5.6],"83":[5.7,9],"84":[9.1,12.8]},"refs":{"#82@直接":3.2,"#83@照片":5.8,"#84@不經過":9.2}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xarch-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">照片怎麼傳到電腦</span></div>
+      <div id="xarch-body" data-layout="free">
+        <svg id="xarch-lines" data-links="xarch-cloud-xarch-a xarch-cloud-xarch-b" data-link-class="xarch-via" xmlns="http://www.w3.org/2000/svg"></svg>
+        <svg id="xarch-direct" data-links="xarch-a-xarch-b" data-link-class="xarch-direct" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="xarch-cloud" class="xarch-node" data-slot><span id="xarch-cico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /> </svg></span><span class="sc-t52 sc-w900 sc-opt">雲端</span></div>
+        <div id="xarch-a" class="xarch-node xarch-dev" data-slot><i id="xarch-nowa" class="xarch-now"></i><span id="xarch-aico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xarch-name sc-t52 sc-w900 sc-opt">手機</span></div>
+        <div id="xarch-b" class="xarch-node xarch-dev" data-slot><i id="xarch-nowb" class="xarch-now"></i><span id="xarch-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16" /> </svg></span><span class="xarch-name sc-t52 sc-w900 sc-opt">電腦</span></div>
+        <div id="xarch-no" data-slot data-snap-width><span id="xarch-noico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m2 2 20 20" /> <path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" /> <path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07" /> </svg></span><span id="xarch-not" class="sc-t52 sc-w900 sc-opt">不經過雲端</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-architecture'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const PATH = P.at('#82@直接'), FLOW = P.at('#83@照片'), CUT = P.at('#84@不經過');   // 直連／傳過去／不經過雲端
+
+    P.sfx('tick', '#82@直接'); P.sfx('tick', '#83@照片'); P.sfx('ding', '#84@不經過');   // 直連、傳過去各一顆 tick，結論一顆 ding（句號和上一行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const DEV = '#xarch-a, #xarch-b';   // 兩個裝置（輪流聚焦的「站」）
+
+    // 0. 線由 data-links 產生（kit/scene-layout.js，SceneMotion 建立時已畫好）。載入時只做兩件事（建 DOM、不進 timeline，每次結果相同）：
+    //    經過雲端的上段把點反過來（helper 的 L 形先水平再垂直，只能從雲端畫到手機；虛線要從手機往雲端流），直連複製三條不畫線的檔案路徑
+    const up = $q('#xarch-cloud-xarch-a')[0], upPts = JSON.parse(up.getAttribute('data-pts')).reverse();
+    up.setAttribute('d', 'M' + upPts.map(function (p) { return p[0] + ' ' + p[1]; }).join(' L'));
+    ['xarch-f1', 'xarch-f2', 'xarch-f3'].forEach(function (id) {
+      var d = $q('#xarch-a-xarch-b')[0], f = d.cloneNode(false);
+      f.id = id; f.setAttribute('class', 'xarch-file'); f.removeAttribute('data-link'); f.removeAttribute('data-pts'); d.parentNode.appendChild(f);
+    });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xarch-card', 0.3);
+    else { P.wipe('#xarch-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xarch-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xarch-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 骨架：手機、電腦、雲端錯拍彈出（間隔 0.12），＋0.15 圖示描線（先有節點再畫線）
+    P.pop('#xarch-a, #xarch-b, #xarch-cloud', 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
+    P.icon('#xarch-aico, #xarch-bico, #xarch-cico', 1.15, { stagger: 0.12 });
+    // 拍 2 預告：經過雲端的兩段虛線淡入、一直往前流
+    P.in('.xarch-via', 1.5, { stagger: 0.1 });
+    P.flow('.xarch-via', 1.5);
+    // 拍 3 等待：預覽態（兩個裝置壓暗縮小）、雲端退焦＋鏡頭慢推，推到 PATH 前 0.2 秒
+    P.spot(DEV, 'none', 2.0, { dim: 0.45, dur: 0.6 });
+    P.dim('#xarch-cloud', 2.0, { to: 0.45, dur: 0.6 });
+    P.cam('#xarch-card', 2.0, { scale: 1.03, dur: PATH - 2.2 });
+
+    // 拍 4 直連（PATH）：鏡頭帶到手機（提早 0.2）、手機聚焦、底色亮起、圖示漣漪；＋0.1 直連線帶發光頭描到電腦；＋0.6 漂浮
+    P.cam('#xarch-card', PATH - 0.2, { to: '#xarch-a', k: 0.09, scale: 1.04, dur: 0.9 });
+    P.spot(DEV, '#xarch-a', PATH, { scale: 1.08, lift: -12 });
+    P.in('#xarch-nowa', PATH);
+    P.ripple('#xarch-aico', PATH + 0.05, { to: 2.4 });
+    P.comet('#xarch-a-xarch-b', PATH + 0.1, { dur: 0.8 });
+    P.idle('#xarch-a', PATH + 0.6, { y: 4, period: 2.8, until: FLOW + 0.7 });
+    // 拍 5 傳過去（FLOW）：三個檔案（發光點）每 0.3 秒出發一個、各走 0.8 秒；鏡頭帶到電腦；第一個到站（＋0.8）電腦聚焦、手機變「走過」（亮度 0.92、留細框）、圖示漣漪
+    P.comet('#xarch-f1', FLOW, { dur: 0.8, r: 11 });
+    P.comet('#xarch-f2', FLOW + 0.3, { dur: 0.8, r: 11 });
+    P.comet('#xarch-f3', FLOW + 0.6, { dur: 0.8, r: 11 });
+    P.cam('#xarch-card', FLOW + 0.2, { to: '#xarch-b', k: 0.09, scale: 1.04, dur: 0.9 });
+    P.spot(DEV, '#xarch-b', FLOW + 0.8, { scale: 1.08, lift: -12, done: '#xarch-a' });
+    P.out('#xarch-nowa', FLOW + 0.8);  P.in('#xarch-nowb', FLOW + 0.8);
+    P.ripple('#xarch-bico', FLOW + 0.85, { to: 2.4 });
+    P.idle('#xarch-b', FLOW + 1.4, { y: 4, period: 2.8, until: CUT - 0.3 });
+
+    // 拍 6 不經過（CUT）：雲端提早 0.2 秒亮回來 → 劃掉（劃完壓暗 0.5）、經過雲端的虛線退焦（0.3）
+    P.dim('#xarch-cloud', CUT - 0.2, { to: 1, dur: 0.2 });
+    P.strike('#xarch-cloud', CUT);
+    P.dim('.xarch-via', CUT, { to: 0.3 });
+    // 拍 7 結論（CUT + 0.35）：兩個裝置退焦、鏡頭帶到中間；結論膠囊彈出 → ＋0.12 結論逐字落下 → ＋0.15 圖示描線
+    P.spot(DEV, 'none', CUT + 0.35, { dim: 0.6 });
+    P.out('#xarch-nowb', CUT + 0.35);
+    P.cam('#xarch-card', CUT + 0.15, { to: '#xarch-no', k: 0.09, scale: 1.04, dur: 0.9 });
+    P.pop('#xarch-no', CUT + 0.35, { from: 0.7, dy: 40 });
+    P.chars('#xarch-not', CUT + 0.47, { mode: 'drop' });
+    P.icon('#xarch-noico', CUT + 0.5);
+    // 拍 8（CUT + 0.95）：結論膠囊聚焦（放大抬起發光）；＋0.6 漂浮
+    P.spot('#xarch-no', '#xarch-no', CUT + 0.95, { scale: 1.05, lift: -10 });
+    P.idle('#xarch-no', CUT + 1.55, { y: 4, period: 2.8 });
+
+    // 收：講完 2.6 秒回均衡（裝置亮回、膠囊回原大小、鏡頭回正；雲端維持劃掉、虛線維持退焦），完成態停到段尾
+    const TR = CUT + 2.6;
+    P.spot(DEV, null, TR, { dur: 0.6 });
+    P.spot('#xarch-no', null, TR, { dur: 0.6 });
+    P.cam('#xarch-card', TR, { x: 0, y: 0, scale: 1, dur: 0.6 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-architecture'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

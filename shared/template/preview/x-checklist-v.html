@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-checklist 打勾完成清單｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-checklist.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-checklist { position: absolute; inset: 0; }
+    #x-checklist .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-checklist #xchk-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-checklist #xchk-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-checklist #xchk-body { position: relative; width: 1176px; height: 580px; }
+    /* 列：1080×80、圓角 20（聚焦時的亮框跟著圓角）；空框和項目字同一列，聚焦放大抬起時一起動；位置由 #xchk-body 的 data-layout 排，不寫 left／top */
+    #x-checklist .xchk-row { position: absolute; width: 1080px; height: 80px; box-sizing: border-box; border-radius: 20px;
+                             display: flex; align-items: center; gap: 32px; padding: 0 28px; color: var(--sc-fs-ink); white-space: nowrap; }
+    /* 目前這一項的淡色底（P.in／P.out 換列），在列的最底層 */
+    #x-checklist .xchk-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
+    #x-checklist .xchk-box { position: relative; flex: none; width: 56px; height: 56px; }
+    #x-checklist .xchk-t { position: relative; }
+    /* 線稿：空框線寬 4；打勾時的主色框與勾 6 */
+    #x-checklist .xchk-sq { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; }
+    #x-checklist .xchk-sqon { fill: none; stroke: var(--brand); stroke-width: 6px; }
+    #x-checklist .xchk-tick { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 進度區：1064×72（清單最後一格，位置由 data-layout 排）；軌道 800×24、計數靠右（寬 224，數字寬度固定） */
+    #x-checklist #xchk-prog { position: absolute; width: 1064px; height: 72px; }
+    #x-checklist #xchk-track { position: absolute; left: 0; top: 24px; width: 800px; height: 24px; border-radius: 12px; background: var(--sc-fs-node-line); }
+    #x-checklist #xchk-fill { position: absolute; inset: 0; border-radius: 12px; background: var(--brand); }
+    #x-checklist #xchk-fillok { position: absolute; inset: 0; border-radius: 12px; background: var(--sc-good); }
+    #x-checklist #xchk-n { position: absolute; right: 0; top: 0; width: 224px; text-align: right; white-space: nowrap; }
+  </style>
+  <div id="x-checklist" data-composition-id="x-checklist" data-width="1920" data-height="1080" data-duration="15.2"
+       data-cues-sample='{"start":0,"D":15.2,"cues":{"121":[2.0,4.5],"122":[4.6,7.0],"123":[7.1,9.5],"124":[9.6,12.1],"125":[12.4,14.9]},"refs":{"#121@新增專案":2.3,"#122@下載":4.8,"#123@配對手機":7.3,"#124@調整解析度":9.8}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xchk-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">操作前的準備</span></div>
+      <div id="xchk-body" data-layout="col" data-gap="md">
+        <!-- 每一列：淡色底（.xchk-now）＋空框 svg（空框 xchk-sq、打勾時的主色框 xchk-on、勾 xchk-k）＋項目字；svg 座標每列都一樣 -->
+        <div id="xchk-r1" class="xchk-row" data-slot><i id="xchk-now1" class="xchk-now"></i>
+          <svg class="xchk-box" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><rect class="xchk-sq" x="2" y="2" width="52" height="52" rx="12" /><rect id="xchk-on1" class="xchk-sqon" x="2" y="2" width="52" height="52" rx="12" /><path id="xchk-k1" class="xchk-tick" d="M14 29 L24 39 L42 18" /></svg>
+          <span id="xchk-t1" class="xchk-t sc-t52 sc-w900 sc-opt">新增專案</span></div>
+        <div id="xchk-r2" class="xchk-row" data-slot><i id="xchk-now2" class="xchk-now"></i>
+          <svg class="xchk-box" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><rect class="xchk-sq" x="2" y="2" width="52" height="52" rx="12" /><rect id="xchk-on2" class="xchk-sqon" x="2" y="2" width="52" height="52" rx="12" /><path id="xchk-k2" class="xchk-tick" d="M14 29 L24 39 L42 18" /></svg>
+          <span id="xchk-t2" class="xchk-t sc-t52 sc-w900 sc-opt">下載 APP</span></div>
+        <div id="xchk-r3" class="xchk-row" data-slot><i id="xchk-now3" class="xchk-now"></i>
+          <svg class="xchk-box" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><rect class="xchk-sq" x="2" y="2" width="52" height="52" rx="12" /><rect id="xchk-on3" class="xchk-sqon" x="2" y="2" width="52" height="52" rx="12" /><path id="xchk-k3" class="xchk-tick" d="M14 29 L24 39 L42 18" /></svg>
+          <span id="xchk-t3" class="xchk-t sc-t52 sc-w900 sc-opt">配對手機</span></div>
+        <div id="xchk-r4" class="xchk-row" data-slot><i id="xchk-now4" class="xchk-now"></i>
+          <svg class="xchk-box" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><rect class="xchk-sq" x="2" y="2" width="52" height="52" rx="12" /><rect id="xchk-on4" class="xchk-sqon" x="2" y="2" width="52" height="52" rx="12" /><path id="xchk-k4" class="xchk-tick" d="M14 29 L24 39 L42 18" /></svg>
+          <span id="xchk-t4" class="xchk-t sc-t52 sc-w900 sc-opt">調整解析度</span></div>
+        <div id="xchk-prog" data-slot>
+          <div id="xchk-track"><i id="xchk-fill"></i><i id="xchk-fillok"></i></div>
+          <span id="xchk-n" class="sc-t52 sc-w900">0 / 4</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-checklist'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#121@新增專案'), T2 = P.at('#122@下載'), T3 = P.at('#123@配對手機'), T4 = P.at('#124@調整解析度');   // 講到每一項項目詞的時刻
+    P.sfx('tick', '#121@新增專案'); P.sfx('tick', '#122@下載'); P.sfx('tick', '#123@配對手機'); P.sfx('tick', '#124@調整解析度');   // 每一項一顆音效（句號和上一行一樣）
+    const ALL = P.at('#125');                          // 講到「全部好了」那一句（沒有這句見檔頭【綁句欄位】）
+    P.sfx('success', '#125');                          // 完成音（句號和 ALL 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const ROWS = '#xchk-r1, #xchk-r2, #xchk-r3, #xchk-r4';   // 全部的列（3 項時拿掉 r4）
+    const N = $q('#x-checklist .xchk-row').length;    // 幾項＝上面 HTML 的列數，不用改
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xchk-card', 0.3);
+    else { P.wipe('#xchk-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xchk-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xchk-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 骨架：空框從 1.0 秒起每 0.15 秒描一個（先看得出有幾項，字還不出來），進度區（軌道＋「0 / 4」）一起淡入
+    P.stroke('.xchk-sq', 1.0, { stagger: 0.15 });
+    P.in('#xchk-prog', 1.0);
+
+    // 拍 2 第 1 項：聚焦（這一列本來就在：放大抬起發光＋淡色底，其他壓暗 0.6）＋字逐字浮出 → ＋0.3 框變主色、勾描出，計數 +1、進度條前進一格 → ＋0.6 漂浮
+    P.chars('#xchk-t1', T1);
+    P.stroke('#xchk-on1, #xchk-k1', T1 + 0.3, { dur: 0.4 });
+    P.count('#xchk-n', T1 + 0.3, { from: 0, to: 1, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xchk-fill', T1 + 0.3, { from: 0, to: 1 / N, dur: 0.6 });
+    P.spot(ROWS, '#xchk-r1', T1, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.in('#xchk-now1', T1);
+    P.idle('#xchk-r1', T1 + 0.6, { y: 3, period: 2.8, until: T2 - 0.1 });
+    // 拍 3 第 2 項：同拍 2；淡色底從上一項移過來
+    P.chars('#xchk-t2', T2);
+    P.stroke('#xchk-on2, #xchk-k2', T2 + 0.3, { dur: 0.4 });
+    P.count('#xchk-n', T2 + 0.3, { from: 1, to: 2, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xchk-fill', T2 + 0.3, { from: 1 / N, to: 2 / N, dur: 0.6 });
+    P.spot(ROWS, '#xchk-r2', T2, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xchk-now1', T2);  P.in('#xchk-now2', T2);
+    P.idle('#xchk-r2', T2 + 0.6, { y: 3, period: 2.8, until: T3 - 0.1 });
+    // 拍 4 第 3 項：同拍 3
+    P.chars('#xchk-t3', T3);
+    P.stroke('#xchk-on3, #xchk-k3', T3 + 0.3, { dur: 0.4 });
+    P.count('#xchk-n', T3 + 0.3, { from: 2, to: 3, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xchk-fill', T3 + 0.3, { from: 2 / N, to: 3 / N, dur: 0.6 });
+    P.spot(ROWS, '#xchk-r3', T3, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xchk-now2', T3);  P.in('#xchk-now3', T3);
+    P.idle('#xchk-r3', T3 + 0.6, { y: 3, period: 2.8, until: T4 - 0.1 });
+    // 拍 5 第 4 項：同拍 3（3 項時刪掉這 7 行，見檔頭）
+    P.chars('#xchk-t4', T4);
+    P.stroke('#xchk-on4, #xchk-k4', T4 + 0.3, { dur: 0.4 });
+    P.count('#xchk-n', T4 + 0.3, { from: 3, to: 4, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xchk-fill', T4 + 0.3, { from: 3 / N, to: 4 / N, dur: 0.6 });
+    P.spot(ROWS, '#xchk-r4', T4, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xchk-now3', T4);  P.in('#xchk-now4', T4);
+    P.idle('#xchk-r4', T4 + 0.6, { y: 3, period: 2.8, until: ALL - 0.1 });
+
+    // 收：講到「全部好了」→ 回均衡（全部亮回、淡色底收掉）＋完成色疊在進度條上淡入；完成態停到段尾
+    P.spot(ROWS, null, ALL, { dur: 0.6 });
+    P.out('#xchk-now4', ALL);
+    P.in('#xchk-fillok', ALL);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-checklist'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-checklist";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

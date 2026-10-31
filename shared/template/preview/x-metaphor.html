@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-metaphor 比喻圖解｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-metaphor.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-metaphor { position: absolute; inset: 0; }
+    #x-metaphor .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-metaphor #xmeta-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-metaphor #xmeta-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    /* 內容區：data-layout="col"（kit/scene-layout.js）由上往下排兩框一組、結論句、警示條；不寫 left／top */
+    #x-metaphor #xmeta-body { position: relative; width: 1176px; height: 580px; }
+    /* 兩框＋箭頭一組（結論那一拍一起退焦）：data-layout="row"，大小由 helper 照兩框算；箭頭 svg 由 data-links 產生 */
+    #x-metaphor #xmeta-pair { position: absolute; }
+    #x-metaphor .xmeta-line { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 虛線預告層：script 載入時從箭頭複製一份（不用手寫），講到概念之前一直往前流 */
+    #x-metaphor .xmeta-ghost { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-linecap: round; stroke-dasharray: 2 14; }
+    /* 左右兩個框：同高（240）、同中線（y 176）；圖示和名稱同一塊；主色亮框由 P.spot 自動加（.sc-spot） */
+    #x-metaphor .xmeta-box { position: absolute; width: 360px; height: 240px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                             border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
+                             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-metaphor .xmeta-box .sc-icon { --d: 112px; --i: 64px; position: relative; }
+    #x-metaphor .xmeta-box .xmeta-name { position: relative; }
+    /* 結論句：整列置中，逐字浮出；關鍵詞 #xmeta-kw 之後掃螢光筆 */
+    #x-metaphor #xmeta-sum { position: absolute; width: max-content; height: 88px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 限制句：警示條（警示色框＋和框同色的底：淺色、深色主題都讀得到），圖示和文字同一條 */
+    #x-metaphor #xmeta-warn { position: absolute; width: 600px; height: 112px; box-sizing: border-box;
+                              border: 4px solid var(--sc-warn); border-radius: 20px; background: var(--v2-node); color: var(--sc-fs-ink);
+                              display: flex; align-items: center; justify-content: center; gap: 24px; white-space: nowrap; }
+    #x-metaphor #xmeta-warn .sc-icon { --d: 72px; --i: 40px; background: var(--sc-warn); color: var(--sc-fs-ink); }
+    /* 壞的那個詞：inline-block 才吃得到重拍的縮放 */
+    #x-metaphor #xmeta-bad { display: inline-block; color: var(--sc-warn-kw); }
+  </style>
+  <div id="x-metaphor" data-composition-id="x-metaphor" data-width="1920" data-height="1080" data-duration="15.4"
+       data-cues-sample='{"start":0,"D":15.4,"cues":{"22":[2,4.8],"23":[5,7.4],"24":[7.6,9.9],"25":[10.1,12.7]},"refs":{"#22@說明書":2,"#23@Skill":5,"#24@做事":7.6,"#25@寫錯":10.1}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xmeta-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">Skill 的比喻</span></div>
+      <div id="xmeta-body" data-layout="col" data-gap="md">
+        <div id="xmeta-pair" data-slot data-layout="row" data-gap="xxl">
+          <svg id="xmeta-arrow" data-links="xmeta-boxL>xmeta-boxR" data-link-class="xmeta-line" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div id="xmeta-boxL" class="xmeta-box" data-slot>
+            <span id="xmeta-icoL" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /></svg></span><span class="xmeta-name sc-t52 sc-w900 sc-opt">使用說明書</span></div>
+          <div id="xmeta-boxR" class="xmeta-box" data-slot>
+            <span id="xmeta-icoR" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></svg></span><span class="xmeta-name sc-t52 sc-w900 sc-opt">Skill</span></div>
+        </div>
+        <div id="xmeta-sum" class="sc-t64 sc-w900" data-slot>AI 照<span id="xmeta-kw" class="sc-kw">說明書</span>做事</div>
+        <div id="xmeta-warn" data-slot>
+          <span id="xmeta-icoW" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg></span><span id="xmeta-wtext" class="sc-t52 sc-w900 sc-opt"><span id="xmeta-bad">寫錯</span>了，照錯做</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-metaphor'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#22@說明書'), T2 = P.at('#23@Skill'), T3 = P.at('#24@做事'), T4 = P.at('#25@寫錯');   // 講到物件／概念／結論／限制的時刻
+
+    P.sfx('tick', '#22@說明書'); P.sfx('tick', '#23@Skill'); P.sfx('tick', '#24@做事'); P.sfx('alert', '#25@寫錯');   // 每一拍一顆音效（句號和上一行一樣；限制＝alert）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const BOX = '#xmeta-boxL, #xmeta-boxR';
+
+    // 0. 箭頭（data-links 產生，SceneMotion 建立時已畫好）複製一份虛線預告層（只在載入時建 DOM，每次結果相同）
+    ['#xmeta-boxL-xmeta-boxR'].forEach(function (id) {
+      var p = $q(id)[0], g = p.cloneNode(false); g.removeAttribute('id'); g.setAttribute('class', 'xmeta-ghost'); p.parentNode.insertBefore(g, p.parentNode.firstChild);
+    });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xmeta-card', 0.3);
+    else { P.wipe('#xmeta-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xmeta-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xmeta-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+
+    // 拍 1 生活物件：鏡頭帶過去（提早 0.2）→ 左框彈出、＋0.14 名稱逐字、＋0.18 圖示描線 → ＋0.3 虛線預告淡入、一直往前流 → ＋0.6 聚焦 → ＋0.9 漂浮
+    P.cam('#xmeta-card', T1 - 0.2, { to: '#xmeta-boxL', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.pop('#xmeta-boxL', T1, { from: 0.82, dy: 40 });
+    P.chars('#xmeta-boxL .xmeta-name', T1 + 0.14);
+    P.icon('#xmeta-icoL', T1 + 0.18);
+    P.in('.xmeta-ghost', T1 + 0.3);
+    P.flow('.xmeta-ghost', T1 + 0.3);
+    P.spot('#xmeta-boxL', '#xmeta-boxL', T1 + 0.6, { scale: 1.06, lift: -10 });
+    P.idle('#xmeta-boxL', T1 + 0.9, { y: 4, period: 2.8, until: T2 - 0.1 });
+    // 拍 2 技術概念：提早 0.6 秒箭頭（data-links 產生；箭頭頭在線描完時淡入）帶發光頭描過去 → 右框彈出、名稱逐字、圖示描線＋漣漪 → ＋0.6 聚焦右框、左框「走過」
+    P.comet('#xmeta-boxL-xmeta-boxR', T2 - 0.6, { dur: 0.5 });
+    P.cam('#xmeta-card', T2 - 0.2, { to: '#xmeta-boxR', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.pop('#xmeta-boxR', T2, { from: 0.82, dy: 40 });
+    P.chars('#xmeta-boxR .xmeta-name', T2 + 0.14);
+    P.icon('#xmeta-icoR', T2 + 0.18);
+    P.ripple('#xmeta-icoR', T2 + 0.05, { to: 2.4 });
+    P.spot(BOX, '#xmeta-boxR', T2 + 0.6, { scale: 1.06, lift: -10, done: '#xmeta-boxL' });
+    P.idle('#xmeta-boxR', T2 + 0.9, { y: 4, period: 2.8, until: T3 - 0.1 });
+    // 拍 3 結論：鏡頭帶到結論句 → 逐字浮出 → ＋0.5 關鍵詞螢光筆 → ＋0.6 兩框收回焦點、整組退焦
+    P.cam('#xmeta-card', T3 - 0.2, { to: '#xmeta-sum', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.chars('#xmeta-sum', T3);
+    P.marker('#xmeta-kw', T3 + 0.5);
+    P.spot(BOX, null, T3 + 0.6, { dur: 0.5 });
+    P.dim('#xmeta-pair', T3 + 0.6, { to: 0.55 });
+    // 拍 4 代價／限制（鏡頭留在結論句）：彈出、＋0.14 限制句逐字、＋0.18 警示圖示描線 → ＋0.55 壞的詞重拍 → ＋0.6 結論句退焦 → ＋0.9 漂浮
+    P.pop('#xmeta-warn', T4, { from: 0.82, dy: 40 });
+    P.chars('#xmeta-wtext', T4 + 0.14);
+    P.icon('#xmeta-icoW', T4 + 0.18);
+    P.punch('#xmeta-bad', T4 + 0.55, { scale: 1.12 });
+    P.dim('#xmeta-sum', T4 + 0.6, { to: 0.6 });
+    P.idle('#xmeta-warn', T4 + 0.9, { y: 4, period: 2.8 });
+
+    // 收：最後一拍講完 2.6 秒回均衡（全部亮回、鏡頭回正），完成態停到段尾
+    const TR = T4 + 2.6;
+    P.spot(BOX, null, TR, { dur: 0.6 });
+    P.dim('#xmeta-pair, #xmeta-sum', TR, { to: 1, dur: 0.6 });
+    P.cam('#xmeta-card', TR, { x: 0, y: 0, scale: 1, dur: 0.6 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-metaphor'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-metaphor";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

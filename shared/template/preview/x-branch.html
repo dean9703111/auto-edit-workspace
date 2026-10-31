@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-branch 一分多分支｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-branch.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-branch { position: absolute; inset: 0; }
+    #x-branch .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 139、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 851） */
+    #x-branch #xbr-card { position: absolute; left: 120px; top: 139px; width: 1180px; }
+    #x-branch #xbr-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    /* 內容區：data-layout="row"（kit/scene-layout.js）排起點和分支欄（data-layout="col"），元件不寫 left／top */
+    #x-branch #xbr-body { position: relative; width: 1176px; height: 580px; }
+    /* 連接線：整個內容區大小的 svg，疊在節點的「下面」；講到時主色實線描出，之前是往前流的虛線 */
+    #x-branch #xbr-lines { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-branch .xbr-line { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    #x-branch .xbr-ghost { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-linecap: round; stroke-dasharray: 2 14; }
+    /* 起點：和 x-process 的站同一種框 */
+    #x-branch #xbr-root { position: absolute; width: 264px; height: 224px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                          border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
+                          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-branch #xbr-rico { --d: 96px; --i: 56px; }
+    /* 分支：每支 136 高、寬跟著字；位置由 #xbr-col 排 */
+    #x-branch .xbr-b { position: absolute; height: 136px; box-sizing: border-box; border: 4px solid var(--v2-node-line); border-radius: 20px;
+                       background: var(--v2-node); color: var(--sc-fs-ink);
+                       display: flex; align-items: center; gap: 24px; padding: 0 40px 0 28px; white-space: nowrap; }
+    #x-branch .xbr-b .sc-icon { --d: 72px; --i: 40px; position: relative; }
+    #x-branch .xbr-b .xbr-txt { position: relative; }
+    /* 亮起：now＝目前這一條的底色（下一條亮起時淡掉）；主色亮框由 P.spot 自動加（.sc-spot） */
+    #x-branch .xbr-now { position: absolute; inset: 0; border-radius: 16px; background: var(--v2-node-tint); }
+  </style>
+  <div id="x-branch" data-composition-id="x-branch" data-width="1920" data-height="1080" data-duration="14.6"
+       data-cues-sample='{"start":0,"D":14.6,"cues":{"92":[3.6,6.2],"93":[6.4,9],"94":[9.2,12.6]},"refs":{"#92@長片":3.6,"#93@短影音":6.4,"#94@逐字稿":9.2}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xbr-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">一支錄影三種用途</span></div>
+      <div id="xbr-body" data-layout="row" data-gap="xxl">
+        <svg id="xbr-lines" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- 三條曲線（c）與箭頭頭（h）：d 由 script 照版面算（起點框右緣外 12 → 分支左緣外 12），不用手寫 -->
+          <path id="xbr-c1" class="xbr-line" />
+          <path id="xbr-h1" class="xbr-line" />
+          <path id="xbr-c2" class="xbr-line" />
+          <path id="xbr-h2" class="xbr-line" />
+          <path id="xbr-c3" class="xbr-line" />
+          <path id="xbr-h3" class="xbr-line" />
+        </svg>
+        <div id="xbr-root" data-slot><span id="xbr-rico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="sc-t52 sc-w900 sc-opt">一支錄影</span></div>
+        <div id="xbr-col" data-slot data-layout="col" data-justify="start" data-gap="md">
+          <div id="xbr-b1" class="xbr-b" data-slot data-snap-width><i id="xbr-now1" class="xbr-now"></i><span id="xbr-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M7 3v18" /> <path d="M3 7.5h4" /> <path d="M3 12h18" /> <path d="M3 16.5h4" /> <path d="M17 3v18" /> <path d="M17 7.5h4" /> <path d="M17 16.5h4" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt">剪成長片</span></div>
+          <div id="xbr-b2" class="xbr-b" data-slot data-snap-width><i id="xbr-now2" class="xbr-now"></i><span id="xbr-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt">剪短影音</span></div>
+          <div id="xbr-b3" class="xbr-b" data-slot data-snap-width><i id="xbr-now3" class="xbr-now"></i><span id="xbr-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt">出逐字稿</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-branch'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const B1 = P.at('#92@長片'), B2 = P.at('#93@短影音'), B3 = P.at('#94@逐字稿');   // 講到第 1–3 條分支名稱的時刻
+
+    P.sfx('tick', '#92@長片'); P.sfx('tick', '#93@短影音'); P.sfx('tick', '#94@逐字稿');   // 每一條一顆音效（句號和上一行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const ALL = '#xbr-b1, #xbr-b2, #xbr-b3';   // 三條分支（2 條時拿掉 b3）
+    const MERGE = false;                       // 匯流（2–3 個來源 → 一個結果）改 true，見檔頭變體表
+
+    // 0. 曲線與箭頭頭照版面算（kit/scene-layout.js 的 data-links 只有直線／L 形，一分多的曲線在這裡用同一套 token）：
+    //    起點框邊外 --sc-link-gap、中線 → 分支框邊外 --sc-link-gap、中線，控制點 x 取兩端中點；箭頭頭長 --sc-link-head。載入時算一次（版面座標）
+    const LAY = window.SceneLayout, BODY = $q('#xbr-body')[0], GAP = LAY.token('link-gap'), HEAD = LAY.token('link-head');
+    const rb = LAY.box($q('#xbr-root')[0], BODY);
+    ['1', '2', '3'].forEach(function (k) {
+      var c = $q('#xbr-c' + k)[0], h = $q('#xbr-h' + k)[0], b = $q('#xbr-b' + k)[0];
+      if (!c || !b) return;
+      var bb = LAY.box(b, BODY), ry = rb[1] + rb[3] / 2, by = bb[1] + bb[3] / 2;
+      var p = MERGE ? [bb[0] + bb[2] + GAP, by, rb[0] - GAP, ry] : [rb[0] + rb[2] + GAP, ry, bb[0] - GAP, by], mx = (p[0] + p[2]) / 2;
+      c.setAttribute('d', 'M' + p[0] + ' ' + p[1] + ' C' + mx + ' ' + p[1] + ' ' + mx + ' ' + p[3] + ' ' + p[2] + ' ' + p[3]);
+      if (h) h.setAttribute('d', 'M' + (p[2] - HEAD) + ' ' + (p[3] - HEAD) + ' L' + p[2] + ' ' + p[3] + ' L' + (p[2] - HEAD) + ' ' + (p[3] + HEAD));
+    });
+
+    // 0. 每條曲線複製一份虛線預告層（只在載入時建 DOM，不讀版面量測，每次結果相同）
+    ['#xbr-c1', '#xbr-c2', '#xbr-c3'].forEach(function (id) {
+      var p = $q(id)[0], g = p.cloneNode(false); g.removeAttribute('id'); g.setAttribute('class', 'xbr-ghost'); p.parentNode.insertBefore(g, p.parentNode.firstChild);
+    });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xbr-card', 0.3);
+    else { P.wipe('#xbr-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xbr-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xbr-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 骨架：起點與三條分支錯拍彈出（間隔 0.12），＋0.15 圖示描線
+    P.pop('#xbr-root, #xbr-b1, #xbr-b2, #xbr-b3', 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
+    P.icon('#xbr-rico, #xbr-ico1, #xbr-ico2, #xbr-ico3', 1.15, { stagger: 0.12 });
+    // 拍 2 預告：起點到每條分支的虛線淡入、一直往前流
+    P.in('.xbr-ghost', 1.5, { stagger: 0.1 });
+    P.flow('.xbr-ghost', 1.5);
+    // 拍 3 等待：預覽態（三條分支壓暗縮小，起點維持亮）＋鏡頭慢推，推到第 1 條前 0.2 秒
+    P.spot(ALL, 'none', 2.0, { dim: 0.45, dur: 0.6 });
+    P.cam('#xbr-card', 2.0, { scale: 1.03, dur: B1 - 2.2 });
+
+    // 拍 4 第 1 條：提早 0.85 秒主色實線帶發光頭從起點描過去、到站前 0.12 秒補箭頭；鏡頭帶過去（提早 0.2）、聚焦、底色亮起、圖示漣漪；＋0.6 漂浮
+    P.comet('#xbr-c1', B1 - 0.85, { dur: 0.75 });
+    P.stroke('#xbr-h1', B1 - 0.12, { dur: 0.15 });
+    P.cam('#xbr-card', B1 - 0.2, { to: '#xbr-b1', k: 0.07, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xbr-b1', B1, { scale: 1.06, lift: -12 });
+    P.in('#xbr-now1', B1);
+    P.ripple('#xbr-ico1', B1 + 0.05, { to: 2.4 });
+    P.idle('#xbr-b1', B1 + 0.6, { y: 4, period: 2.8, until: B2 - 0.1 });
+    // 拍 5 第 2 條：同拍 4；第 1 條和還沒講的一起壓暗（分支是並列的，不用「走過」）
+    P.comet('#xbr-c2', B2 - 0.85, { dur: 0.75 });
+    P.stroke('#xbr-h2', B2 - 0.12, { dur: 0.15 });
+    P.cam('#xbr-card', B2 - 0.2, { to: '#xbr-b2', k: 0.07, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xbr-b2', B2, { scale: 1.06, lift: -12 });
+    P.out('#xbr-now1', B2);  P.in('#xbr-now2', B2);
+    P.ripple('#xbr-ico2', B2 + 0.05, { to: 2.4 });
+    P.idle('#xbr-b2', B2 + 0.6, { y: 4, period: 2.8, until: B3 - 0.1 });
+    // 拍 6 第 3 條：同拍 5（2 條時刪掉這一組 7 行）
+    P.comet('#xbr-c3', B3 - 0.85, { dur: 0.75 });
+    P.stroke('#xbr-h3', B3 - 0.12, { dur: 0.15 });
+    P.cam('#xbr-card', B3 - 0.2, { to: '#xbr-b3', k: 0.07, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xbr-b3', B3, { scale: 1.06, lift: -12 });
+    P.out('#xbr-now2', B3);  P.in('#xbr-now3', B3);
+    P.ripple('#xbr-ico3', B3 + 0.05, { to: 2.4 });
+    P.idle('#xbr-b3', B3 + 0.6, { y: 4, period: 2.8 });
+
+    // 收：最後一條講完 2.6 秒回均衡（全部亮回、底色收掉、鏡頭回正），完成態停到段尾
+    const TR = B3 + 2.6;   // 選用：講「三條都可以」那句時改成 const TR = P.at('#95@都可以')
+    P.spot(ALL, null, TR, { dur: 0.6 });
+    P.out('#xbr-now3', TR);
+    P.cam('#xbr-card', TR, { x: 0, y: 0, scale: 1, dur: 0.6 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-branch'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-branch";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

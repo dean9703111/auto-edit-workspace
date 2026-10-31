@@ -4,6 +4,7 @@
   "zh": "兩側",
   "aliases": ["兩側卡", "四張卡", "左右兩欄"],
   "family": "edge",
+  "portrait": "none",
   "when": "口播並列點名剛好四個物件（工具、功能、角色），講者表情要留著不被擋",
   "avoid": "不是剛好四個（三個以下用字卡或關鍵詞條列、五個以上用全畫面清單）；不可加章節角標",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-person-zone": "640,140,1280,1080" },

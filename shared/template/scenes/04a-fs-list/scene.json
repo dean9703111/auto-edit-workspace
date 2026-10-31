@@ -4,6 +4,7 @@
   "zh": "全畫面清單",
   "aliases": ["全畫面清單", "清單", "大清單"],
   "family": "fullscreen",
+  "portrait": "stage",
   "when": "資訊量大的 3–4 項清單，一項一句話，需要觀眾逐項看完",
   "avoid": "只有關鍵詞沒有句子（改關鍵詞條列）、需要比較（改全畫面對照）、有先後步驟（改全畫面流程）",
   "layout": { "data-layout": "全畫面", "data-pip": "br" },

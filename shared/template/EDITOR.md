@@ -12,7 +12,7 @@
 
 ### 1. 什麼時候開
 
-使用者說「打開剪輯台」時（流程在 `AGENTS.md` 的「剪輯台」）。開之前要有：
+使用者說「打開剪輯台」時，是停點 ⑤（`AGENTS.md`「停點總表」）；流程照 `.agents/skills/auto-edit-review/SKILL.md` 流程 C。給網址時回覆最後一行照停點 ⑤ 的固定格式。開之前要有：
 
 | 需要 | 沒有時 |
 |---|---|
@@ -55,6 +55,8 @@ node shared/template/tools/editor.mjs --project projects/範例
 
 | 位置 | 欄位 | 內容 |
 |---|---|---|
+| 第一層 | `look` | 講者調光與瘦臉 `{ "color": 0–1, "slim": 0–1.2 }`，兩個都寫；按「恢復預設」整個拿掉。改 `slim` 後按「重新產生」，剪輯台會先跑 `look.mjs run` 再 build |
+| 第一層 | `theme` | 主題 `"light"`（亮，預設）或 `"dark"`（暗）；屬性面板「主題」的亮／暗。原本沒寫又選亮＝不寫；原本有就原地換值。成片預覽切換時馬上換色看（改播放器裡 `<html data-theme>`），按「重新產生」才進成片 |
 | 第一層 `edit` | `cuts` | 剪掉的範圍 `[[起點, 終點], …]`，**rough.mp4 的秒數**；片頭片尾的裁剪是 `[0, t]`、`[t, 影片長度]`；存檔時會排序、合併重疊的範圍 |
 | | `fadeIn`／`fadeOut` | 開頭淡入、結尾淡出的秒數（0＝不淡） |
 | | `volume.voice`／`.sfx`／`.media` | 人聲（主軌）、全部音效、插入素材原聲的增益，dB（−60～+12；−60＝靜音） |
@@ -68,8 +70,9 @@ node shared/template/tools/editor.mjs --project projects/範例
 | `work/rough.srt` | 字幕文字、起訖時間、新增／分割／合併／刪除 | 見下一節 |
 
 - `edit` 每次都整個寫（沒調的欄位寫預設值）；原本沒有 `edit` 時，插在 `scenes` 前面。
+- `look`、`theme` 原本沒有時，插在 `edit` 前面（沒有 `edit` 就插在 `scenes` 前面）；兩個都新插時順序是 `look`、`theme`。
 - `joins` 的 `at`：使用者剪掉的範圍寫**起點**（`cuts` 的第一個數字）；剪乾淨時的剪接點寫 `work/cutpoints.json` 裡的 `at`。片頭、片尾的裁剪不算剪接點。
-- 剪輯台會拒絕其他任何欄位（例如 media 段的 `src`、段落的 `scene`、slots 新增欄位、清單的 `at` 或圖示）。這些請 AI 改。
+- 剪輯台會拒絕其他任何欄位（例如 media 段的 `src`、段落的 `scene`、slots 新增欄位、清單的 `at` 或圖示、第一層的 `format`）。這些請 AI 改；`format` 存檔時原封不動。
 
 ### 4. 字幕與句號
 
@@ -100,7 +103,7 @@ node shared/template/tools/editor.mjs --project projects/範例
 
 1. 重新讀 `plan.json`（`edit`、句號、文字可能都變了）和 `rough.srt`。
 2. 跑 `node shared/template/tools/build.mjs --project projects/範例`，有 ✖ 就照 → 後面的建議修好再跑（使用者在頁面按過「重新產生」而且沒有 ✖，可以略過這步）。
-3. 照 `AGENTS.md`「剪好看」的抽查與輸出步驟。有裁剪時，成片長度＝初剪長度 − 剪掉的範圍。
+3. 照 `auto-edit-review` 流程 A 抽查（build、audit、`snapshot --review`），再回到停點 ④；使用者說可以才照 `auto-edit-deliver` 輸出。有裁剪時，成片長度＝初剪長度 − 剪掉的範圍。
 4. 關掉剪輯台（`--stop`）。不關也沒關係，下次「打開剪輯台」會沿用同一個。
 
 ### 7. 兩種預覽與自動降級
@@ -110,9 +113,17 @@ node shared/template/tools/editor.mjs --project projects/範例
 | 即時模擬 | `work/hyperframes/assets/rough.mp4`（沒有就 `work/rough.mp4`），在瀏覽器裡即時套上目前的設定：跳過剪掉的範圍、各軌音量與人聲範圍音量、淡入淡出、過黑、放大、插入素材的進出場與原聲（示意）、音效（照檢查報告的時間播 `shared/sfx/`）、字幕文字 | 一律可以用（預設） |
 | 成片預覽 | 用 HyperFrames 播放器 `<hyperframes-player>` 播 `work/hyperframes/index.html`＝上一次 build 的完整成片 | 找得到播放器，而且 build 過 |
 
+直式專案（版式和 build 同一套判斷：plan.json `"format"` ＞ `work/製作進度.md`「版式」列 ＞ 主軌寬高比；`/api/state` 的 `canvas` 寫著結果與來源，數字都來自 `tools/lib/canvas.mjs`）：
+
+- 預覽框是 9:16（`editor.css` 的 `--cw`／`--ch`）；講者框照 1080×1920 的座標畫，安全框照比例畫；即時模擬的講者小窗是下半的講者面板（`pip.box`），字幕高度照 `caption.bottom`，樣式照樣是 `kit/captions.css`。
+- 字數提醒用 `caption.maxChars`：直式超過 10 字標紅（橫式 18 字）；縮圖條每格 90×160。
+- 剪輯台不寫 `format`；要換版式請 AI 照 AGENTS.md「版式」改。
+- **上半面板的 host 不要在 Studio 移動**：Studio 的 Inspector 顯示的是沒縮放的 1920×1080，拖動會寫 host 的 transform、蓋掉直式的舞台縮放；位置或內容要改，就改子合成（`compositions/…`）或 plan.json 再 build。
+
 - 播放器的找法：啟動時掃專案與工作區的 `node_modules/hyperframes`，以及 npm 的 npx 快取（`~/.npm/_npx/*/node_modules/hyperframes/dist/`；Windows 是 `%LOCALAPPDATA%\npm-cache\_npx\…`；有設 `npm_config_cache` 就用它），**取版本最新的**那一份，複製到 `work/hyperframes/.editor/player/`。快取資料夾的名字每台電腦都不一樣，程式不寫死。
 - **找不到播放器時自動退回「即時模擬」**：「成片預覽」按鈕變灰，滑鼠移上去會寫原因。要恢復：先跑一次 `cd projects/<專案>/work/hyperframes && npx hyperframes preview --no-open`（npx 會下載 hyperframes），再 `--stop` 後重新啟動剪輯台。
 - 存檔後頁面會跑 `build.mjs --check --json` 取得段落位置、音效時間、只有聲音的區間、剪接點；跑不出 JSON 時退回讀文字報告（看得到段落位置，音效與只有聲音的區間要等報告恢復）。
+- 即時模擬的調光是 CSS 濾鏡近似（`brightness`／`contrast`／`saturate`），和成片的 LUT 不完全一樣，臉部很接近、牆面偏差較大；以成片預覽或 `work/look-preview.jpg` 為準。瘦臉沒有即時預覽，看屬性面板的「前／後」兩張臉。
 
 ### 8. 常見問題
 
@@ -125,6 +136,8 @@ node shared/template/tools/editor.mjs --project projects/範例
 | 成片預覽寫「舊版」 | `plan.json` 在上次 build 之後改過，按「重新產生」 |
 | 「重新產生」失敗，說 index.html 被手改過 | build 的手改保護。照訊息把改動搬進 `plan.json`，或確認可以覆寫後由 AI 加 `--force` 跑 build |
 | 重新剪乾淨、換了 rough.mp4 | 重新整理頁面就好，波形與縮圖會重算 |
+| 「重新產生」很久，訊息停在「偵測臉部」或「套用瘦臉」 | 改了瘦臉強度或 rough.mp4 換過，剪輯台先跑 `look.mjs run`（長片要幾分鐘）。等它跑完；想先看別的，請使用者把瘦臉關掉（`slim` 0）就不用等 |
+| 「講者」的臉部對照寫「還沒偵測臉部」 | 跑 `node shared/template/tools/look.mjs run --project projects/<專案>`，跑完重新整理頁面 |
 | `.editor/` 是什麼 | 剪輯台的快取：波形、縮圖、播放器複本、音效靜音前的值（`memory.json`）、狀態檔、log。在 `work/` 底下、不進 git，刪掉會自動重建（刪 `memory.json` 只會讓「取消靜音」改成恢復情境預設音效） |
 
 剪輯台不會 render、不會改 `素材/` 和 `shared/`，也不會改上面表格以外的任何東西。
@@ -154,7 +167,7 @@ node shared/template/tools/editor.mjs --project projects/範例
 └ 狀態列：✖ 錯誤 ⚠ 提醒（點開看清單）｜成片長度｜縮放 ──────────────────────────────────┘
 ```
 
-- **點時間軸上的東西**，右邊「屬性」就顯示它能改的地方；點空白處＝整支影片的設定（淡入淡出、各軌音量、人聲標準化、轉場、剪掉的範圍）。
+- **點時間軸上的東西**，右邊「屬性」就顯示它能改的地方；點空白處＝整支影片的設定（講者調光與瘦臉、淡入淡出、各軌音量、人聲標準化、轉場、剪掉的範圍）。
 - **儲存狀態**：綠點「已儲存」；黃點「有修改還沒儲存」（沒按儲存就不會寫進去，關掉分頁前會提醒你）。
 - **時間碼**：「時:分:秒:格」（一秒 30 格）。點一下可以打時間跳過去（例如 `1:23` 或 `00:01:23:10`）。後面的「成片」是扣掉剪掉的範圍之後的位置。
 
@@ -182,9 +195,18 @@ node shared/template/tools/editor.mjs --project projects/範例
 - **插入素材的原聲**：素材上的黃線，拖到最下面＝靜音；或在屬性勾「保留原聲」。
 - **音量表**（預覽右邊）：播放時看音量，超過 0 dB 亮紅燈＝會爆音。人聲軌頭出現紅色「!」也是可能爆音的提醒。
 
+### 講者（調光、瘦臉）
+
+點時間軸空白處，右邊「屬性」最上面是「講者」：
+
+- **調光**：開關＋強度（0–1，預設 0.80＝剪映 80）。拖的時候畫面馬上變（是近似效果，成片會更準）。
+- **瘦臉**：開關＋強度（0–1.2，預設 0.60＝剪映 60）。下面兩張是「目前這一格」的臉，左邊原本、右邊瘦臉後，滑桿放開就更新。臉太小或偵測不到時會寫原因。
+- **恢復預設**：回到每支影片共用的設定（`shared/template/kit/look.json`）。
+- 改了瘦臉要按「重新產生」才會套進成片；長片第一次要幾分鐘（右下角會顯示「偵測臉部」「套用瘦臉」的進度）。只改調光很快。
+
 ### 字幕
 
-- **改字**：雙擊字幕直接改，按 Enter 完成；或點一下在右邊改（會顯示字數，超過 18 字有 ⚠）。
+- **改字**：雙擊字幕直接改，按 Enter 完成；或點一下在右邊改（會顯示字數，超過 18 字有 ⚠；直式影片是 10 字）。
 - **改時間**：拖字幕的左右邊緣，或在右邊輸入開始、結束時間。字幕不能重疊。
 - **分割**：播放頭移到要切開的地方，在右邊文字框把游標點在要切的字，按 **B**（或「分割」）。
 - **合併**：「與下一句合併」。

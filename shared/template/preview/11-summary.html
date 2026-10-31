@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -28,7 +31,7 @@
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
   #pv-summary #pv-gCard { left: 8px; right: 0; margin: 0 auto; bottom: 220px; }
   #pv-summary .sm-body { display: flex; flex-direction: column; justify-content: center; min-height: 168px; text-align: center; }
-  #pv-summary .sm-body.sm-icon { flex-direction: row; align-items: center; justify-content: center; gap: 24px; }
+  #pv-summary .sm-body.sm-icon { flex-direction: row; align-items: center; justify-content: center; gap: var(--sc-gap-md); }
   #pv-summary .sm-body .sm-text { line-height: 84px; }
 </style>
 </head>
@@ -38,7 +41,7 @@
   <div id="scene">
     <div id="pv-summary" class="fill">
       <div id="pv-aWrap" class="fill">
-        <div id="pv-gCard" class="sc-lt">
+        <div id="pv-gCard" class="sc-lt" data-layout="free">
           <i class="sc-lt__plate"></i>
           <div class="sc-lt__card">
             <i class="sc-lt__dots"></i>
@@ -70,11 +73,16 @@ window.__PREVIEW = {"key":"summary","duration":6,"cues":[{"sound":"pop","at":0.1
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 6;
-    /* 外殼遮罩揭開 → 徽章＋正文 0.15 後淡入上漂 8 → 再 0.15 圓環描線、勾晚 0.25 → 停 → 段尾 0.4 淡出 */
-    P.reveal('#pv-gCard', 0);
-    P.rise('#pv-gCard .sc-lt__body', 0 + P.BEAT);
-    P.check('#pv-gCard .sc-icon', 0 + P.BEAT * 2);
-    P.out('#pv-gCard', D - P.OUT);
+    /* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 描圈打勾 → 0.22 字逐字上浮；停留：整組漂浮 3u、徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張） */
+    P.wipe('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });
+    P.pop('#pv-gCard .sc-lt__tag', 0 + 0.12, { from: 0.4, dy: 18 });
+    P.pop('#pv-gCard .sc-icon', 0 + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+    P.check('#pv-gCard .sc-icon', 0 + 0.3);
+    P.idle('#pv-gCard .sc-icon', 0 + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });
+    P.chars('#pv-gCard .sm-text', 0 + 0.22, { stagger: 0.02 });
+    P.idle('#pv-gCard', 0 + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+    P.wipeOut('#pv-gCard', D - P.V2.OUT, { dir: 'left' });
 
     P.end(D);
     // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）

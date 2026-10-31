@@ -115,7 +115,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .stage-row { flex: 1; min-height: 200px; display: flex; gap: 8px; }
 .stage { flex: 1; min-width: 0; display: grid; place-items: center; background: #000; border-radius: var(--radius); border: 1px solid var(--line); overflow: hidden; position: relative; container-type: size; }
 .stage:fullscreen { border: 0; border-radius: 0; }
-.stage-box { position: relative; width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
+/* 預覽框的比例＝畫布：--cw／--ch 由 app.js 照 /api/state 的 canvas 設（橫式 1920×1080、直式 1080×1920；009 FR-120） */
+.stage-box { --cw: 1920; --ch: 1080; position: relative; width: min(100cqw, calc(100cqh * var(--cw) / var(--ch))); aspect-ratio: var(--cw) / var(--ch); background: #000; overflow: hidden; }
 @supports not (width: 1cqw) { .stage-box { width: 100%; } }
 .sim, .player-host { position: absolute; inset: 0; }
 .sim video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transform-origin: 50% 45%; background: #000; }
@@ -123,11 +124,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .sim-media > * { position: absolute; inset: 0; width: 100%; height: 100%; background: #0A0F1E; opacity: 0; }
 .sim-media .lab { position: absolute; right: 1.2%; top: 2%; padding: 3px 8px; border-radius: 4px; font-size: 12px; background: rgba(0,0,0,.6); color: var(--c-media); border: 1px solid var(--c-media); opacity: 1; }
 .sim-pip { position: absolute; left: 74.167%; top: 55%; width: 22.5%; height: 30%; border-radius: 4px; border: 2px solid var(--accent); display: none; background: #000; }
-.sim-caption {
-  position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); max-width: 86%; text-align: center; pointer-events: none;
-  font-size: clamp(11px, 2.3cqw, 26px); font-weight: 700; line-height: 1.35; color: #fff; padding: .15em .6em; border-radius: 6px; background: rgba(0, 0, 0, .55);
-}
-.sim-caption:empty { display: none; }
+/* 字幕：樣式全部來自 /kit/captions.css（.cg，和成片同一份）；這裡只放一個畫布大小（--cw×--ch）的圖層，由 preview.js 縮到預覽大小 */
+.cap-layer { position: absolute; left: 0; top: 0; width: calc(var(--cw) * 1px); height: calc(var(--ch) * 1px); transform-origin: 0 0; pointer-events: none; }
+.cap-layer .cg.off { display: none; }
 .sim-black { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
 .cut-badge { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); padding: 8px 14px; border-radius: 8px; font-weight: 700; background: color-mix(in srgb, var(--warn) 85%, #000); color: #fff; border: 2px solid #fff; pointer-events: none; }
 .player-host hyperframes-player { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -302,3 +301,13 @@ ul.plain b, ol.plain b { color: var(--ink); }
 @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
 .toast button { pointer-events: auto; }
 @keyframes tin { from { transform: translateY(8px); opacity: 0; } }
+
+/* 講者（調光、瘦臉）：單格前後對照 */
+.ip-slider.wide { grid-template-columns: 82px minmax(0, 1fr) 112px; }
+.ip-slider.wide output { width: 112px; }
+.look-faces { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.look-faces figure { margin: 0; text-align: center; }
+.look-faces figure:not(.ok) { display: none; }
+.look-faces img { width: 100%; max-width: 180px; aspect-ratio: 1; object-fit: cover; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+.look-faces figcaption { font-size: 12px; color: var(--mute); margin-top: 2px; }
+.look-faces .look-msg { grid-column: 1 / -1; margin: 0; }

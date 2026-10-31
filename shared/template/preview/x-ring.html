@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-ring 進度環｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-ring.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-ring { position: absolute; inset: 0; }
+    #x-ring .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-ring #xring-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-ring #xring-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    /* 內容區：data-layout="row"（kit/scene-layout.js）排圓環和右欄，右欄 #xring-col 是 data-layout="col"；元件不寫 left／top */
+    #x-ring #xring-body { position: relative; width: 1176px; height: 580px; }
+    /* 圓環：440×440；灰軌道＋主色弧（同圓、半徑 195、線寬 40）；中央數字＋單位放在環內寬 320 的置中框 */
+    #x-ring #xring-dial { position: absolute; width: 440px; height: 440px; }
+    #x-ring #xring-svg { position: absolute; left: 0; top: 0; width: 440px; height: 440px; }
+    #x-ring #xring-track { fill: none; stroke: var(--sc-fs-node-line); stroke-width: 40px; }
+    #x-ring #xring-arc { fill: none; stroke: var(--brand); stroke-width: 40px; stroke-linecap: butt; }
+    #x-ring #xring-mid { position: absolute; left: 60px; top: 100px; width: 320px; height: 240px;
+                         display: flex; flex-direction: column; align-items: center; justify-content: center; white-space: nowrap; }
+    #x-ring #xring-num { width: 320px; text-align: center; color: var(--sc-fs-ink); }
+    /* 向下箭頭：#xring-arrow 的 data-links 自動產生（kit/scene-layout.js；svg 疊在內容區最下層），線色用 .xring-line */
+    #x-ring .xring-line { fill: none; stroke: var(--sc-fs-ink); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 右邊兩列：584×112，圖示和文字同一塊、置中；位置由 #xring-col 排 */
+    #x-ring .xring-row { position: absolute; width: 584px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                         border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
+                         display: flex; align-items: center; justify-content: center; gap: 24px; white-space: nowrap; }
+  </style>
+  <div id="x-ring" data-composition-id="x-ring" data-width="1920" data-height="1080" data-duration="12.5"
+       data-cues-sample='{"start":0,"D":12.5,"cues":{"161":[1.6,4.4],"162":[4.6,7.4],"163":[7.6,12]},"refs":{"#161@32":1.8,"#162@87":5.3,"#163@剪掉":7.8}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xring-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">AI 剪掉多少 NG</span></div>
+      <div id="xring-body" data-layout="row" data-gap="lg">
+        <svg id="xring-arrow" data-links="xring-r1>xring-r2" data-link-class="xring-line" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="xring-dial" data-slot>
+          <svg id="xring-svg" viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg">
+            <circle id="xring-track" cx="220" cy="220" r="195" />
+            <circle id="xring-arc" cx="220" cy="220" r="195" pathLength="1000" transform="rotate(-90 220 220)" />
+          </svg>
+          <div id="xring-mid">
+            <span id="xring-num" class="sc-t112 sc-w900">0%</span>
+            <span id="xring-unit" class="sc-t40 sc-w700 sc-gray sc-opt">剪掉</span>
+          </div>
+        </div>
+        <div id="xring-col" data-slot data-layout="col" data-gap="xl">
+          <div id="xring-r1" class="xring-row" data-slot>
+          <span id="xring-ico1" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span class="xring-text sc-t52 sc-w900 sc-opt" data-snap-width>32 段 NG</span></div>
+          <div id="xring-r2" class="xring-row" data-slot>
+          <span id="xring-ico2" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xring-text sc-t52 sc-w900 sc-opt" data-snap-width>AI 剪掉 28 段</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-ring'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const R1 = P.at('#161@32'), ARC = P.at('#162@87'), R2 = P.at('#163@剪掉');    // 主題／起點、數字、結論／終點（照這個順序）
+
+    P.sfx('impact', '#162@87'); P.sfx('impact', '#163@剪掉');                     // 數字落定、結論各一顆音效（句號和上一行一樣；主題那一拍不配）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const RING = { from: 0, to: 87, max: 100, suffix: '%' };                       // 只改這一行
+    const DASH = 1002;                                                             // 弧的虛線長：比一圈（pathLength 1000）多 2，滿圈時 12 點鐘接縫不留缺口（不用改）
+    const OFF0 = DASH * (1 - RING.from / RING.max), OFF1 = DASH * (1 - RING.to / RING.max);   // 弧的起訖（自動算）
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xring-card', 0.3);
+    else { P.wipe('#xring-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xring-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xring-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+
+    // 拍 1 講到主題：起點列由左擦開 → ＋0.15 圖示描線 → ＋0.25 圓環彈出（灰軌道淡入、中央起始值）→ ＋0.3 單位逐字落下
+    P.wipe('#xring-r1', R1, { dir: 'left' });
+    P.icon('#xring-ico1', R1 + 0.15);
+    P.pop('#xring-dial', R1 + 0.25, { from: 0.9, dy: 0 });
+    P.in('#xring-track', R1 + 0.35);
+    P.chars('#xring-unit', R1 + 0.3, { mode: 'drop' });
+
+    // 拍 2 數字前 1.2 秒：主色弧從 12 點鐘走到比例、數字同步跑（同一個 ease、同樣 1.2 秒）
+    P.morph('#xring-arc', ARC - 1.2, { strokeDasharray: DASH, strokeDashoffset: OFF1 }, { from: { strokeDasharray: DASH, strokeDashoffset: OFF0 }, dur: 1.2, ease: 'power2.out' });
+    P.count('#xring-num', ARC - 1.2, { from: RING.from, to: RING.to, dur: 1.2, suffix: RING.suffix });
+    // 拍 3 講到數字、落定：重拍、從中央擴散的漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）→ ＋0.6 圓環漂浮
+    P.punch('#xring-num', ARC, { scale: 1.12 });
+    P.ripple('#xring-mid', ARC, { from: 0.7, to: 1.35 });
+    P.marker('#xring-unit', ARC + 0.1);
+    P.idle('#xring-dial', ARC + 0.6, { y: 3, period: 3.2, until: R2 - 0.1 });
+
+    // 拍 4 講到結論：終點列由左擦開 → ＋0.15 箭頭描下來（data-links 產生的線 0.3 秒，描完箭頭頭淡入）、圖示描線；圓環退焦
+    P.wipe('#xring-r2', R2, { dir: 'left' });
+    P.stroke('#xring-r1-xring-r2', R2 + 0.15, { dur: 0.3 });
+    P.icon('#xring-ico2', R2 + 0.15);
+    P.dim('#xring-dial', R2, { to: 0.6 });
+    // 拍 5 ＋0.6 終點列聚焦（放大抬起、主色亮框）→ ＋1.1 漂浮
+    P.spot('#xring-r2', '#xring-r2', R2 + 0.6, { scale: 1.04, lift: -6 });
+    P.idle('#xring-r2', R2 + 1.1, { y: 3, period: 3.2 });
+
+    // 收：講完 2 秒回均衡（圓環亮回、終點列亮框收掉），中央數字呼吸；完成態停到段尾
+    const TR = R2 + 2.0;
+    P.spot('#xring-r2', null, TR, { dur: 0.6 });
+    P.dim('#xring-dial', TR, { to: 1 });
+    P.idle('#xring-num', TR, { y: 0, scale: 0.04, period: 1.8 });
+
+    P.end();                                                                       // 長度＝plan.json 這段的長度
+    window.__timelines['x-ring'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-ring";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

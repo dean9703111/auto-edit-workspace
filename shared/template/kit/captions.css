@@ -2,7 +2,12 @@
    每則字幕一個 <div class="cg" id="cg-<n>"><span>文字</span></div>，同一時間只顯示一則（開關由時間軸 tl.set 控制）。
    字型用 var(--cap-font)（定義在 fonts.css：Google Sans Flex 排英數、Noto Sans TC 排中文）。
    不寫字面字型名：lint 只認識有 @font-face 的字型名或 var()，寫字面值會報 error，整段 check 就跑不起來。 */
-.cg { position: absolute; left: 0; right: 0; bottom: 60px; display: flex; justify-content: center; pointer-events: none; }
-.cg > span { font-family: var(--cap-font); font-weight: 500; font-size: 54px; line-height: 64px; letter-spacing: 1px;
-             color: #FFFFFF; background: rgba(0, 0, 0, 0.7); border-radius: 0; padding: 8px 24px; white-space: nowrap; }
-/* 字幕框 940–1020：在畫面底部 160px 字幕區內；子母畫面外框底約 927，和字幕框不重疊 */
+/* 照作者剪映的字幕（F8，從 esim_ep2／PPA試看 的 1920×1080 畫面逐像素量）：思源黑體 Regular 76px（畫面高 7%）、無字距、
+   黑底 70% 直角、寬度貼合文字、左右內距 37、上下 24／23、底板高 118（行高 71＋47）、底板下緣離畫面底 6px（y 956–1074）。 */
+.cg { position: absolute; left: 0; right: 0; bottom: 6px; display: flex; justify-content: center; pointer-events: none; }
+.cg > span { font-family: var(--cap-font); font-weight: 400; font-size: 76px; line-height: 71px; letter-spacing: 0;
+             color: #FFFFFF; background: rgba(0, 0, 0, 0.7); border-radius: 0; padding: 24px 37px 23px; white-space: nowrap; }
+/* 字幕框 956–1074：仍在畫面底部 160px 字幕區（920–1080）內；子母畫面外框底約 927，和字幕框不重疊 */
+/* 直式（字幕子合成 root 帶 data-format="portrait"，1080×1920）：樣式完全同上，只換位置（決定 2）：
+   底板 118 高置中在字幕帶 y 1280–1420 裡＝y 1291–1409（lib/canvas.mjs 的 caption.zone／box）：講者面板的臉（940–1280）下面、平台介面（1440 起）上面；每則最多 10 字（底板寬 ≤ 834，x 123–957）。 */
+[data-format="portrait"] .cg { bottom: 511px; }

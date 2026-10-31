@@ -1,0 +1,136 @@
+<!-- 預設拍型：D 清單（BEATS.md §3 D；一條一拍＝彈出＋示意換張＋聚焦，最後一條講完 2 秒回均衡） -->
+<!doctype html>
+<!--
+  x-warnings：一組警告逐條聚焦（第二層 custom，layout: "fullscreen"）
+
+  【適用的口播】
+  一組 2–3 條警告／注意事項，一條一句：「有三件事要小心：金鑰不要外流、原始檔別覆蓋、成品要自己看過再發」。
+  講到哪一條，那一條從下方彈出（圖示描線、字逐字浮出），右邊同一個位置換成那一條的示意（圖示＋一句）；
+  0.6 秒後那一條放大抬起、主色亮框，前面的條壓暗；最後一條講完 2 秒全部亮回。
+
+  【不要用在哪裡】
+  - 只有 1 條：用 07 重點字卡（tone: "warn"）。
+  - 4 條以上：用 04a 全畫面清單逐條出現。
+  - 每條沒有可以放在右邊的示意：用 04a。
+  - 在講先後步驟：用 x-process；一個起點分成幾條路：用 x-branch。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、三列文字（每列 ≤ 8 字；三列字數差 ≤ 1 字，不然短的那列右邊會空太多）、右邊三張示意的說明（≤ 7 字）。
+     放不下就縮文案，不縮字。
+  2. 圖示：三列的 #xwarn-ico1..3、右邊三張的 #xwarn-pico1..3。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 綁句：<script> 開頭 W1–W3 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
+  4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
+  只有 2 條：刪第 3 列（#xwarn-r3）、第 3 張示意（#xwarn-p3）、script 開頭的「, W3 = P.at(…)」與「P.sfx('tick', '#54@…');」、「第 3 條」那 6 行，
+  再把收尾 const ALL 裡的 W3 改 W2、第 2 條 P.idle 的 until: W3 − 0.1 改 ALL − 0.1、收尾 spot 裡的「, #xwarn-r3」拿掉；清單會自己縮，右邊示意區大小不變。
+
+  【綁句欄位】
+  W1 = P.at('#52@金鑰')、W2 = P.at('#53@覆蓋')、W3 = P.at('#54@再看')：講到那一條關鍵詞的時刻，那一條彈出、右邊換成那一張示意，0.6 秒後聚焦。
+  每一條一顆 tick（下一行 P.sfx，句號和 W 一樣）。
+  關鍵詞在句中間或句尾時一定用 @詞，不要綁句首（綁句首，框會比講到早亮）；那一條剛好是句子開頭才寫 P.at('#52')。
+  選用：有「這幾點都要注意」那一句時，收尾的 const ALL = W3 + 2.0 改成 const ALL = P.at('#55')（講到那句全部亮回）。
+  「@詞」要寫成字串字面值（P.at('#53@覆蓋')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#53@覆蓋', 0.3)。
+  相鄰兩條至少差 2.5 秒（彈出、換示意、圖示描線、0.6 秒聚焦＝忙到 1.1 秒，再停 ≥ 1.2 秒）；太近就綁後面一句，或把兩條合併成一條。
+  audit 會比對：這一拍出現的字（站名、項目）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  W1 ≥ 1.6（主卡 0.3 秒長出、0.5 秒起標題逐字，約 1.5 秒寫完）
+  W2 ≥ W1 + 2.5；W3 ≥ W2 + 2.5
+  D ≥ W3 + 4.6（講完 2.0 秒回均衡＋0.6 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  用 ALL 時（ALL 改綁「這幾點都要注意」那一句）：ALL ≥ W3 + 2.5、D ≥ ALL + 2.6。
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 139、寬 1180（右緣 1300），
+  標題列 128、內容區 1176×580（卡高 712，在內容區 y 120–870 垂直置中）。左清單和右示意區由 #xwarn-body 的 data-layout="row" data-gap="lg" 排
+  （kit/scene-layout.js，shared/style.md「版面」）：並排、中間 48、中線對齊、整組在內容區置中（上下 40；第 1 列聚焦抬起後離標題列仍 ≥ 24），不寫 left／top。
+  左清單三列各高 144、間距 24（清單裡的 grid，--sc-gap-md），寬隨最長那列（≤ 576；聚焦放大 1.04 後右緣仍離示意區 ≥ 28）。
+  右示意區 456×500，三張示意疊在同一位置、同一時間只看得到一張。主色亮框由 P.spot 自動加在列外框上，不算新元素。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-warnings 警告逐條聚焦</title></head>
+<body>
+<template id="x-warnings-template">
+  <style>
+    #x-warnings { position: absolute; inset: 0; }
+    #x-warnings .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 139、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 851） */
+    #x-warnings #xwarn-card { position: absolute; left: 120px; top: 139px; width: 1180px; }
+    #x-warnings #xwarn-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-warnings #xwarn-body { position: relative; width: 1176px; height: 580px; }
+    /* 左清單：三列同寬（grid 撐成最長那列），每列 144 高、間距 --sc-gap-md；清單和右示意區的位置由 #xwarn-body 的 data-layout 排，不寫 left／top */
+    #x-warnings #xwarn-list { position: absolute; width: max-content; display: grid; grid-auto-rows: 144px; row-gap: var(--sc-gap-md); }
+    #x-warnings .xwarn-row { position: relative; box-sizing: border-box; border: 4px solid var(--v2-node-line); border-radius: 20px;
+                             background: var(--v2-node); color: var(--sc-fs-ink);
+                             display: flex; align-items: center; gap: 24px; padding: 0 40px 0 28px; white-space: nowrap; }
+    #x-warnings .xwarn-row .sc-icon { --d: 72px; --i: 40px; position: relative; }
+    #x-warnings .xwarn-row .xwarn-txt { position: relative; }
+    /* 右示意區：三張疊在同一位置（講到哪條換哪張） */
+    #x-warnings #xwarn-panel { position: absolute; width: 456px; height: 500px; box-sizing: border-box;
+                               border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node); color: var(--sc-fs-ink); }
+    #x-warnings .xwarn-fig { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; white-space: nowrap; }
+    #x-warnings .xwarn-fig .sc-icon { --d: 160px; --i: 88px; }
+  </style>
+  <div id="x-warnings" data-composition-id="x-warnings" data-width="1920" data-height="1080" data-duration="12.8"
+       data-cues-sample='{"start":0,"D":12.8,"cues":{"52":[2.6,5.0],"53":[5.2,7.6],"54":[7.8,10.2]},"refs":{"#52@金鑰":2.8,"#53@覆蓋":5.4,"#54@再看":8.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xwarn-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">三件要小心的事</span></div>
+      <div id="xwarn-body" data-layout="row" data-gap="lg">
+        <div id="xwarn-list" data-snap-width data-slot>
+          <div id="xwarn-r1" class="xwarn-row"><span id="xwarn-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" /> <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" /> </svg></span><span id="xwarn-t1" class="xwarn-txt sc-t52 sc-w900 sc-opt">金鑰不要外流</span></div>
+          <div id="xwarn-r2" class="xwarn-row"><span id="xwarn-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="m14.5 12.5-5 5" /> <path d="m9.5 12.5 5 5" /> </svg></span><span id="xwarn-t2" class="xwarn-txt sc-t52 sc-w900 sc-opt">原始檔別覆蓋</span></div>
+          <div id="xwarn-r3" class="xwarn-row"><span id="xwarn-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /> <path d="m9 12 2 2 4-4" /> </svg></span><span id="xwarn-t3" class="xwarn-txt sc-t52 sc-w900 sc-opt">成品要再看過</span></div>
+        </div>
+        <div id="xwarn-panel" data-slot>
+          <div id="xwarn-p1" class="xwarn-fig"><span id="xwarn-pico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /> <path d="M2 12h20" /> </svg></span><span class="sc-t52 sc-w700 sc-opt">別貼到網路上</span></div>
+          <div id="xwarn-p2" class="xwarn-fig"><span id="xwarn-pico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <line x1="22" x2="2" y1="12" y2="12" /> <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /> <line x1="6" x2="6.01" y1="16" y2="16" /> <line x1="10" x2="10.01" y1="16" y2="16" /> </svg></span><span class="sc-t52 sc-w700 sc-opt">先另存一份</span></div>
+          <div id="xwarn-p3" class="xwarn-fig"><span id="xwarn-pico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 6 9 17l-5-5" /> </svg></span><span class="sc-t52 sc-w700 sc-opt">看完再發布</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-warnings'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const W1 = P.at('#52@金鑰'), W2 = P.at('#53@覆蓋'), W3 = P.at('#54@再看');   // 講到第 1–3 條關鍵詞的時刻
+    P.sfx('tick', '#52@金鑰'); P.sfx('tick', '#53@覆蓋'); P.sfx('tick', '#54@再看');   // 每一條一顆音效（句號和上一行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xwarn-card', 0.3);
+    else { P.wipe('#xwarn-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xwarn-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xwarn-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+
+    // 拍 1 第 1 條：那一列從下彈出 → ＋0.12 字逐字浮出、＋0.15 圖示描線；右邊示意區和第 1 張一起彈出、＋0.3 圖示描線 → ＋0.6 聚焦 → ＋0.9 漂浮
+    P.pop('#xwarn-r1', W1);  P.chars('#xwarn-t1', W1 + 0.12);  P.icon('#xwarn-ico1', W1 + 0.15);
+    P.pop('#xwarn-panel', W1, { from: 0.9 });  P.icon('#xwarn-pico1', W1 + 0.3);
+    P.spot('#xwarn-r1', '#xwarn-r1', W1 + 0.6, { scale: 1.04, lift: -8, dim: 0.6 });
+    P.idle('#xwarn-r1', W1 + 0.9, { y: 3, period: 2.8, until: W2 - 0.1 });
+    // 拍 2 第 2 條：同拍 1；右邊上一張淡出、這一張在同一個位置彈出；＋0.6 聚焦移過來（上一條壓暗 0.6）
+    P.pop('#xwarn-r2', W2);  P.chars('#xwarn-t2', W2 + 0.12);  P.icon('#xwarn-ico2', W2 + 0.15);
+    P.out('#xwarn-p1', W2);  P.pop('#xwarn-p2', W2 + 0.1, { from: 0.9, dy: 16 });  P.icon('#xwarn-pico2', W2 + 0.3);
+    P.spot('#xwarn-r1, #xwarn-r2', '#xwarn-r2', W2 + 0.6, { scale: 1.04, lift: -8, dim: 0.6 });
+    P.idle('#xwarn-r2', W2 + 0.9, { y: 3, period: 2.8, until: W3 - 0.1 });
+    // 拍 3 第 3 條：同拍 2（只有 2 條時刪掉這 6 行，見檔頭）
+    P.pop('#xwarn-r3', W3);  P.chars('#xwarn-t3', W3 + 0.12);  P.icon('#xwarn-ico3', W3 + 0.15);
+    P.out('#xwarn-p2', W3);  P.pop('#xwarn-p3', W3 + 0.1, { from: 0.9, dy: 16 });  P.icon('#xwarn-pico3', W3 + 0.3);
+    P.spot('#xwarn-r1, #xwarn-r2, #xwarn-r3', '#xwarn-r3', W3 + 0.6, { scale: 1.04, lift: -8, dim: 0.6 });
+    P.idle('#xwarn-r3', W3 + 0.9, { y: 3, period: 2.8, until: W3 + 1.9 });   // 停在回均衡前 0.1 秒
+
+    // 收：最後一條講完 2 秒回均衡（全部亮回、亮框收掉；右邊停在最後一張），完成態停到段尾
+    const ALL = W3 + 2.0;                              // 有「這幾點都要注意」那一句就改成 P.at('#55')
+    P.spot('#xwarn-r1, #xwarn-r2, #xwarn-r3', null, ALL, { dur: 0.6 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-warnings'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

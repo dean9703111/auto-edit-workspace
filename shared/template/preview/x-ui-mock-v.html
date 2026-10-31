@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-ui-mock 示意介面操作｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-ui-mock.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-ui-mock { position: absolute; inset: 0; }
+    #x-ui-mock .fill { position: absolute; inset: 0; }
+    /* 示意視窗：左 120、頂 177、1180×636（右緣 1300、底 813） */
+    #x-ui-mock #xui-win { position: absolute; left: 120px; top: 177px; width: 1180px; height: 636px; box-sizing: border-box; overflow: hidden;
+                          border: 2px solid var(--sc-fs-card-line); border-radius: 20px; background: var(--sc-fs-card); color: var(--sc-fs-ink); }
+    #x-ui-mock #xui-chrome { position: relative; height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 16px;
+                             background: var(--sc-fs-head); color: var(--sc-fs-head-ink); white-space: nowrap; }
+    #x-ui-mock .xui-dot { width: 16px; height: 16px; border-radius: 8px; background: var(--sc-fs-mute); }
+    #x-ui-mock #xui-wtitle { margin-left: 16px; }
+    #x-ui-mock #xui-view { position: relative; width: 1176px; height: 544px; overflow: hidden; background: var(--sc-fs-node); }
+    #x-ui-mock #xui-canvas { position: absolute; left: 0; top: 0; width: 1176px; height: 544px; }
+    #x-ui-mock #xui-side { position: absolute; left: 0; top: 0; width: 264px; height: 544px; background: var(--sc-fs-tint); }
+    /* 頁面區：側欄右邊 912×544；data-layout="col"（kit/scene-layout.js）排標題列和三列設定，元件不寫 left／top */
+    #x-ui-mock #xui-main { position: absolute; left: 264px; top: 0; width: 912px; height: 544px; }
+    #x-ui-mock #xui-head { position: absolute; }
+    #x-ui-mock .xui-nav { position: absolute; left: 8px; width: 248px; height: 88px; box-sizing: border-box; padding: 0 32px; border-radius: 12px;
+                          display: flex; align-items: center; white-space: nowrap; color: var(--sc-fs-mute); }
+    #x-ui-mock #xui-nav1 { top: 40px; background: var(--sc-fs-node); color: var(--sc-fs-ink); }
+    #x-ui-mock #xui-nav2 { top: 152px; }
+    #x-ui-mock #xui-nav3 { top: 264px; }
+    /* 頁面標題：標題列左端；內距讓聚焦的亮框不貼字 */
+    #x-ui-mock #xui-ptitle { position: absolute; left: 0; top: 0; padding: 8px 16px; border-radius: 12px; white-space: nowrap; }
+    /* 按鈕：標題列右端（768 − 208），畫布中心 (1000, 84)；游標終點＝中心各減 8 */
+    #x-ui-mock #xui-btn { position: absolute; left: 560px; top: 0; width: 208px; height: 88px; border-radius: 16px;
+                          background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+    #x-ui-mock .xui-row { position: absolute; width: 768px; height: 88px; box-sizing: border-box; padding: 0 32px; border-radius: 12px;
+                          background: var(--sc-fs-tint); display: flex; align-items: center; justify-content: space-between; white-space: nowrap; }
+    #x-ui-mock .xui-val { color: var(--sc-fs-mute); }
+    /* 游標：箭尖在 (8, 8)；在畫布裡 */
+    #x-ui-mock #xui-cursor { position: absolute; left: 560px; top: 360px; width: 48px; height: 48px; }
+    #x-ui-mock #xui-cursor svg { display: block; width: 48px; height: 48px; fill: var(--sc-fs-ink); stroke: var(--sc-fs-bg); stroke-width: 1.5px; }
+    /* 結果通知：在畫布外面，介面退焦時它是唯一的焦點 */
+    #x-ui-mock #xui-toast { position: absolute; left: 40px; top: 360px; width: max-content; height: 112px; box-sizing: border-box;
+                            padding: 0 40px 0 28px; border: 4px solid var(--sc-good); border-radius: 20px; background: var(--sc-fs-card); color: var(--sc-fs-ink);
+                            display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-ui-mock #xui-tico { --d: 64px; --i: 36px; background: var(--sc-good); color: var(--sc-on-good); }
+  </style>
+  <div id="x-ui-mock" data-composition-id="x-ui-mock" data-width="1920" data-height="1080" data-duration="13.5"
+       data-cues-sample='{"start":0,"D":13.5,"cues":{"72":[2.8,5.5],"73":[5.7,8],"74":[8.2,10.8]},"refs":{"#72@匯出設定":2.8,"#73@匯出":5.7,"#74@完成":8.2}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xui-win">
+      <div id="xui-chrome"><i class="xui-dot"></i><i class="xui-dot"></i><i class="xui-dot"></i><span id="xui-wtitle" class="sc-t40 sc-w700 sc-opt">Auto Edit 設定</span></div>
+      <div id="xui-view">
+        <div id="xui-canvas" data-layout-allow-overflow>
+          <div id="xui-side">
+            <div id="xui-nav1" class="xui-nav" data-layout-allow-slack><span class="sc-t40 sc-w700 sc-opt">匯出</span></div>
+            <div id="xui-nav2" class="xui-nav" data-layout-allow-slack><span class="sc-t40 sc-w700 sc-opt">字幕</span></div>
+            <div id="xui-nav3" class="xui-nav" data-layout-allow-slack><span class="sc-t40 sc-w700 sc-opt">音效</span></div>
+          </div>
+          <div id="xui-main" data-layout="col" data-gap="md" data-align="top">
+            <div id="xui-head" data-slot data-layout="free">
+              <div id="xui-ptitle" class="sc-t52 sc-w900 sc-opt" data-slot>匯出設定</div>
+              <div id="xui-btn" data-slot><span class="sc-t40 sc-w900 sc-opt">匯出檔案</span></div>
+            </div>
+            <div id="xui-row1" class="xui-row" data-slot><span class="sc-t40 sc-w700 sc-opt">輸出格式</span><span class="xui-val sc-t40 sc-w700 sc-opt">MP4</span></div>
+            <div id="xui-row2" class="xui-row" data-slot><span class="sc-t40 sc-w700 sc-opt">解析度</span><span class="xui-val sc-t40 sc-w700 sc-opt">1920×1080</span></div>
+            <div id="xui-row3" class="xui-row" data-slot><span class="sc-t40 sc-w700 sc-opt">字幕</span><span class="xui-val sc-t40 sc-w700 sc-opt">燒進畫面</span></div>
+          </div>
+          <span id="xui-cursor" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z" /> </svg></span>
+        </div>
+        <div id="xui-toast" data-snap-width data-layout-allow-overlap><span id="xui-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 6 9 17l-5-5" /> </svg></span><span id="xui-ttext" class="sc-t52 sc-w900 sc-opt">匯出完成，已存檔</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-ui-mock'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const ZOOM = P.at('#72@匯出設定'), CLICK = P.at('#73@匯出'), RESULT = P.at('#74@完成');   // 哪個畫面／按下／結果
+
+    P.sfx('tick', '#72@匯出設定'); P.sfx('success', '#74@完成');   // 焦點切到畫面＝tick、結果＝success（句號和上一行一樣）；按下的 click 寫在 plan.json 的 "clicks"
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const UI = '#xui-nav1, #xui-nav2, #xui-nav3, #xui-ptitle, #xui-btn, #xui-row1, #xui-row2, #xui-row3';   // 介面元件（彈出順序＝聚焦的組）
+    const BTN = { left: 992, top: 76 };   // 游標終點＝按鈕中心各減 8（改了按鈕位置就改這兩個數字）
+
+    // 拍 0 開場：視窗進場（看 ENTER）→ 視窗標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xui-win', 0.3);
+    else { P.wipe('#xui-win', 0, { dir: 'up', dur: 0.8 }); P.pop('#xui-win', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xui-wtitle', 0.5, { stagger: 0.035 });
+    // 拍 1 全貌：側欄三項、頁面標題、按鈕、三列設定依序彈出（間隔 0.12）
+    P.pop(UI, 1.0, { stagger: 0.12, from: 0.82, dy: 28 });
+
+    // 拍 2 哪個畫面：鏡頭帶到頁面標題（提早 0.2）、頁面標題聚焦（其他壓暗）→ ＋0.6 游標淡入
+    P.cam('#xui-win', ZOOM - 0.2, { to: '#xui-ptitle', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(UI, '#xui-ptitle', ZOOM, { scale: 1.06, lift: -8 });
+    P.in('#xui-cursor', ZOOM + 0.6);
+    // 拍 3 按下：游標提早 0.6 秒出發、CLICK 那一刻到按鈕；鏡頭帶到按鈕（提早 0.2）、按鈕聚焦、頁面標題「走過」、按鈕漣漪
+    P.morph('#xui-cursor', CLICK - 0.6, BTN, { from: { left: 560, top: 360 }, dur: 0.6, ease: P.V2.EASE.move });
+    P.cam('#xui-win', CLICK - 0.2, { to: '#xui-btn', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(UI, '#xui-btn', CLICK, { scale: 1.07, lift: -10, done: '#xui-ptitle' });
+    P.ripple('#xui-btn', CLICK, { to: 1.8 });
+    // 拍 4 結果：通知彈出、＋0.14 通知字逐字、＋0.18 勾描線 → ＋0.6 焦點收掉、整個介面退焦 → ＋0.9 通知漂浮
+    P.pop('#xui-toast', RESULT, { from: 0.82, dy: 40 });
+    P.chars('#xui-ttext', RESULT + 0.14);
+    P.icon('#xui-tico', RESULT + 0.18);
+    P.spot(UI, null, RESULT + 0.6, { dur: 0.5 });
+    P.dim('#xui-canvas', RESULT + 0.6, { to: 0.5 });
+    P.idle('#xui-toast', RESULT + 0.9, { y: 4, period: 2.8 });
+
+    // 收：結果講完 2.6 秒回均衡（介面亮回、鏡頭回正），完成態停到段尾
+    const TR = RESULT + 2.6;
+    P.spot(UI, null, TR, { dur: 0.6 });
+    P.dim('#xui-canvas', TR, { to: 1, dur: 0.6 });
+    P.cam('#xui-win', TR, { x: 0, y: 0, scale: 1, dur: 0.6 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-ui-mock'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-ui-mock";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

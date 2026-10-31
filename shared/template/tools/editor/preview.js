@@ -14,8 +14,17 @@ export class SimPreview {
     this.mediaEls = new Map();
     this.sfxBuf = new Map();      // name → AudioBuffer | Promise | null
     this.lastSkip = 0; this.lastT = 0;
+    // 字幕：直接用 kit/captions.css（成片的樣式與數字），排在畫布大小（app.canvas().W×H）的圖層裡，再整層縮到預覽的大小
+    if (els.capLayer && typeof ResizeObserver === 'function') {
+      new ResizeObserver(() => this.fitCaps()).observe(els.capLayer.parentElement);
+      this.fitCaps();
+    }
     this.v.addEventListener('ended', () => app.onEnded?.());
     this.v.addEventListener('error', () => app.onVideoError?.('瀏覽器播不了 rough.mp4（格式不支援或檔案壞了）'));
+  }
+  fitCaps() {
+    const L = this.el.capLayer, w = L?.parentElement?.clientWidth || 0;
+    if (w) L.style.transform = `scale(${w / (this.app.canvas?.().W || 1920)})`;
   }
   load(url) { if (this.v.getAttribute('src') !== url) { this.v.src = url; this.v.load(); } }
   get time() { return this.v.currentTime || 0; }
@@ -75,6 +84,8 @@ export class SimPreview {
     const fx = effectsAt(o, A.fxCtx());
     this.el.black.style.opacity = String(fx.black);
     v.style.transform = fx.scale !== 1 ? `scale(${fx.scale})` : '';
+    const lf = A.lookCss && A.lookCss !== 'none' ? A.lookCss : '';
+    if (v.style.filter !== lf) v.style.filter = lf;
     // 人聲：軌道音量＋範圍音量＋淡入淡出
     const g = A.trackMuted('voice') ? 0 : dbToGain(E.volume.voice + gainAt(t, E.gains)) * fx.audio;
     if (this.audio) this.audio.voice.gain.setTargetAtTime(g, this.audio.ctx.currentTime, 0.015);
@@ -82,7 +93,8 @@ export class SimPreview {
     if (this.audio) this.audio.sfxBus.gain.setTargetAtTime(A.trackMuted('sfx') ? 0 : fx.audio, this.audio.ctx.currentTime, 0.015);
     const cue = A.captionAt(t);
     const txt = cue ? cue.text : '';
-    if (this.el.caption.textContent !== txt) this.el.caption.textContent = txt;
+    const span = this.el.caption.firstElementChild || this.el.caption;
+    if (span.textContent !== txt) { span.textContent = txt; this.el.caption.classList.toggle('off', !txt); }
     this.tickMedia(t, fx.audio);
     this.tickSfx(t);
     this.lastT = t;
@@ -163,7 +175,9 @@ export class SimPreview {
         const cw = pip.width, ch = pip.height, vr = v.videoWidth / v.videoHeight, cr = cw / ch;
         let sw = v.videoWidth, sh = v.videoHeight, sx = 0, sy = 0;
         if (vr > cr) { sw = sh * cr; sx = (v.videoWidth - sw) / 2; } else { sh = sw / cr; sy = (v.videoHeight - sh) / 2; }
+        g.filter = A.lookCss || 'none';   // 講者調光：子母畫面小窗跟大畫面同色
         try { g.drawImage(v, sx, sy, sw, sh, 0, 0, cw, ch); } catch { /* 影片還沒準備好 */ }
+        g.filter = 'none';
       }
     } else pip.style.display = 'none';
   }
@@ -220,6 +234,7 @@ export class PlayerPreview {
     p.setAttribute('src', src);
     p.addEventListener('ready', () => {
       this.ready = true;
+      this.applyTheme();
       if (this.pendingSeek != null) { p.seek(this.pendingSeek); this.outT = this.pendingSeek; this.pendingSeek = null; }
       this.app.onPlayerReady?.(p.duration);
     });
@@ -246,8 +261,16 @@ export class PlayerPreview {
     try { this.p.seek(this.outT); } catch { this.pendingSeek = this.outT; }
   }
   seek(t) { this.seekOut(outOf(t, this.cuts)); }
+  // 主題：改播放器 iframe 的 <html data-theme>（build 寫在主合成的 <html>；子合成在同一份 document，跟著變）
+  applyTheme() {
+    let root = null;
+    try { root = this.p?.iframeElement?.contentDocument?.documentElement || null; } catch { /* 不同源時讀不到 */ }
+    const want = this.app.theme === 'dark' ? 'dark' : 'light';
+    if (root && root.getAttribute('data-theme') !== want) root.setAttribute('data-theme', want);
+  }
   tick() {
     if (!this.p) return;
+    this.applyTheme();
     const ct = this.p.currentTime;
     if (Number.isFinite(ct) && this.ready) this.outT = ct;
     const paused = this.p.paused;

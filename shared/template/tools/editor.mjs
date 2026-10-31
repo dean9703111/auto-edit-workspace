@@ -10,7 +10,7 @@
  *
  * 選項：--port 4400、--open（順便開瀏覽器）、--foreground（一律前景）、--background（一律背景）；測試用：--template <shared/template 資料夾>
  * 剪輯台只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／anchor、任何段的 sfxVolume 與 sfx: null、
- * slots／vars 的文字值，以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
+ * slots／vars 的文字值、第一層的 look（講者調光與瘦臉）與 theme，以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
  * 存檔前比對 plan.json 與 rough.srt，被別人（AI）改過就兩個都不寫。
  * --project 的找法和 build.mjs 一樣。需要 Node 22 以上、ffmpeg／ffprobe。
  */
@@ -24,12 +24,15 @@ import { fileURLToPath } from 'node:url';
 import { pathsFrom } from './build.mjs';
 import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars } from './editor/server/write.mjs';
 import * as subtitles from './editor/subtitles.mjs';
+import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, lookNeedsRun, LOOK_LIMITS } from './lib/look.mjs';
+import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, subtitles };
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.join(HERE, 'editor');
 const BUILD = path.join(HERE, 'build.mjs');
+const LOOK = path.join(HERE, 'look.mjs');
 const DEFAULT_PORT = 4400;
 const PORT_TRIES = 20;
 const PEAK_RATE = 100;          // 波形：每秒 100 個峰值
@@ -183,15 +186,17 @@ export async function measureLoudness(file, cuts = []) {
 
 // ---------- 縮圖條（ffmpeg 抽格拼成一張 sprite，快取在 .editor/thumbs/）----------
 
-export function thumbPlan(dur) {
+// 每格的比例跟影片走（009 FR-120）：直拍 90×160，其他 160×90
+export function thumbPlan(dur, { width = 16, height = 9 } = {}) {
   const interval = Math.max(1, Math.ceil((dur || 1) / THUMB_MAX));
   const count = Math.max(1, Math.ceil((dur || 1) / interval));
   const cols = Math.min(count, 20);
-  return { interval, count, cols, rows: Math.ceil(count / cols), w: THUMB_W, h: THUMB_H };
+  const tall = height > width;
+  return { interval, count, cols, rows: Math.ceil(count / cols), w: tall ? THUMB_H : THUMB_W, h: tall ? THUMB_W : THUMB_H };
 }
 
-async function makeThumbs(file, outFile, dur) {
-  const t = thumbPlan(dur);
+async function makeThumbs(file, outFile, dur, dims) {
+  const t = thumbPlan(dur, dims ?? undefined);
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
   const tmp = `${outFile}.${process.pid}.tmp.jpg`;
   const vf = `fps=1/${t.interval}:round=down,scale=${t.w}:${t.h}:force_original_aspect_ratio=decrease,pad=${t.w}:${t.h}:(ow-iw)/2:(oh-ih)/2:color=black,tile=${t.cols}x${t.rows}`;
@@ -430,7 +435,8 @@ function readCutpoints(file) {
 
 function reportKey(ctx) {
   const P = ctx.P;
-  const parts = [P.plan, P.srt, P.video, path.join(P.out, 'assets', 'rough.mp4'), ctx.cutpointsFile, ctx.mainJson, BUILD, path.join(path.dirname(BUILD), 'lib', 'plan.mjs')]
+  const parts = [P.plan, P.srt, P.video, path.join(P.out, 'assets', 'rough.mp4'), ctx.cutpointsFile, ctx.mainJson, BUILD, path.join(path.dirname(BUILD), 'lib', 'plan.mjs'),
+    statePaths(P.project).state, path.join(P.templateDir, 'kit', 'look.json')]
     .map((f) => { const s = statOf(f); return s ? `${s.size}:${s.mtimeMs}` : '-'; });
   return parts.join('|');
 }
@@ -495,7 +501,8 @@ async function getSchema(ctx) {
       key, error: null,
       scenes: j.scenes.map((x) => ({ key: x.key, no: x.no, num: x.num, dirName: x.dirName, zh: x.zh, aliases: x.aliases || [], slots: x.slots || {} })),
       fx: (j.fx || []).map((x) => ({ no: x.no, id: x.id, zh: x.zh, vars: x.vars || [] })),
-      sounds: Object.keys(j.sounds || {}),
+      // 配樂（kind: "bgm"，例如 bgm-outro）不是音效，不列進音效清單
+      sounds: Object.entries(j.sounds || {}).filter(([, v]) => v?.kind !== 'bgm').map(([k]) => k),
     } : { key, error: `讀不到 build.mjs --list --json（${(r.stderr || r.stdout).trim().slice(0, 200)}）→ 卡片文字欄位先用 plan.json 原本有的欄位`, scenes: [], fx: [], sounds: [] };
     ctx.schema = data;
     return data;
@@ -529,7 +536,7 @@ async function getThumbs(ctx, which) {
   }
   const st = file && statOf(file);
   if (!st) return { error: '找不到影片' };
-  const dur = probeVideo(file)?.dur || 0;
+  const pv = probeVideo(file), dur = pv?.dur || 0;
   const out = path.join(ctx.editorDir, 'thumbs', `${name}.jpg`);
   const metaFile = `${out}.json`;
   const sig = `${st.size}:${st.mtimeMs}`;
@@ -540,7 +547,7 @@ async function getThumbs(ctx, which) {
   if (job?.sig === sig) return job.error ? { error: job.error } : { pending: true };
   const j = { sig, error: null };
   ctx.thumbs.set(name, j);
-  makeThumbs(file, out, dur).then((t) => {
+  makeThumbs(file, out, dur, pv?.width && pv?.height ? { width: pv.width, height: pv.height } : null).then((t) => {
     fs.writeFileSync(metaFile, JSON.stringify({ ...t, sig, dur }));
     ctx.thumbs.delete(name);
   }, (e) => { j.error = e.message; });
@@ -555,6 +562,36 @@ function mediaKind(src) {
 function builtInfo(ctx, plan) {
   const idx = statOf(path.join(ctx.P.out, 'index.html'));
   return { built: !!idx, builtMtime: idx?.mtimeMs ?? null, stale: !!(idx && plan.exists && plan.mtime > idx.mtimeMs + 1) };
+}
+
+// 講者調光＋瘦臉（contracts/look.md §7.2）
+function lookState(ctx, planData) {
+  const P = ctx.P, plan = isObj(planData) ? planData : {};
+  try {
+    const kit = readKitLook(P.templateDir);
+    const L = resolveLook({ plan, templateDir: P.templateDir });
+    const lines = ensureLook({ projectDir: P.project, plan, templateDir: P.templateDir, strict: false }).report;
+    let baked = null;
+    if (pickVideo(P) === path.join(P.out, 'assets', 'rough.mp4')) {
+      const k = readJson(path.join(P.out, '.cache', 'footage-audio.json'))?.key?.look;
+      baked = isObj(k) ? { color: isNum(k.color) ? k.color : 0, slim: isNum(k.slim) ? k.slim : 0 } : { color: 0, slim: 0 };
+    }
+    const sum = readState(P.project).landmarks?.summary;
+    return {
+      kit: { color: kit.color, slim: kit.slim }, plan: plan.look === undefined ? null : plan.look,
+      effective: { color: L.color, slim: L.slim, source: L.source }, baked,
+      limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, step: LOOK_LIMITS.step },
+      landmarks: sum ? { ready: true, rate: sum.rate, medianFaceWidth: sum.medianFaceWidth, slimOk: sum.slimOk !== false, reason: sum.reason ?? null } : { ready: false },
+      lines,
+    };
+  } catch (e) { return { error: e.message, limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, step: LOOK_LIMITS.step } }; }
+}
+
+// 版式與畫布（009 FR-120）：和 build 同一套判斷（plan.json format > 製作進度.md「版式」> 主軌寬高比）；剪輯台只讀，不寫 format
+export function canvasInfo(projectDir, plan) {
+  const r = resolveFormat({ projectDir, plan: isObj(plan) ? plan : null });
+  const c = canvasOf(r.format);
+  return { format: r.format, source: r.detail, W: c.W, H: c.H, maxChars: c.caption.maxChars, captionBottom: c.caption.bottom, pip: c.pip.box };
 }
 
 async function getState(ctx) {
@@ -591,6 +628,8 @@ async function getState(ctx) {
     plan: { exists: plan.exists, file: relRoot(ctx, P.plan), mtime: plan.mtime, hash: plan.hash, error: plan.error, data: plan.data },
     srt: { exists: srt.exists, file: relRoot(ctx, P.srt), mtime: srt.mtime, hash: srt.hash, eol: srt.eol },
     edit: isObj(plan.data?.edit) ? plan.data.edit : null,
+    look: lookState(ctx, plan.data),
+    canvas: canvasInfo(P.project, plan.data),
     media, video, videoError, captions: srt.cues,
     cutpoints: readCutpoints(ctx.cutpointsFile),
     sfxMemory: readMemory(ctx),
@@ -654,7 +693,7 @@ async function doSave(ctx, body) {
   }
   const nst = statOf(P.plan), nsrt = readSrt(P.srt);
   const rep = await getReport(ctx, { fresh: true });
-  return [200, { ok: true, wrote: { plan: r.text != null, srt: r.srtText != null }, plan: { mtime: nst.mtimeMs, hash: sha(fs.readFileSync(P.plan, 'utf8')), data: r.plan },
+  return [200, { ok: true, look: lookState(ctx, r.plan), wrote: { plan: r.text != null, srt: r.srtText != null }, plan: { mtime: nst.mtimeMs, hash: sha(fs.readFileSync(P.plan, 'utf8')), data: r.plan },
     srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, edit: r.edit ?? r.plan.edit ?? null, anchors: r.anchors || [], sfxMemory: r.memory || {},
     report: reportOut(rep) }];
 }
@@ -680,6 +719,16 @@ async function doBuild(ctx) {
   if (ctx.build.running) return [409, { error: 'busy', message: '已經在重新產生了，等它跑完' }];
   const P = ctx.P;
   ctx.build = { running: true, log: '', code: null, ok: null, startedAt: Date.now(), finishedAt: null };
+  // 瘦臉底片過期而且能跑：先跑 look.mjs run（偵測臉部＋套用瘦臉），成功才 build（contracts/cli-006.md §6）
+  const planData = readPlan(P.plan).data;
+  if (lookNeedsRun({ projectDir: P.project, plan: isObj(planData) ? planData : {}, templateDir: P.templateDir })) {
+    ctx.build.log += '講者瘦臉：先偵測臉部、套用瘦臉（look.mjs run）…\n';
+    const lr = await runNode([LOOK, 'run', '--project', P.project, '--template', P.templateDir], { cwd: P.root, onData: (s) => { ctx.build.log += s; } });
+    if (lr.code !== 0) {
+      Object.assign(ctx.build, { running: false, code: lr.code, ok: false, finishedAt: Date.now() });
+      return [200, { ok: false, code: lr.code, log: ctx.build.log, issues: issuesFromText(ctx.build.log), seconds: r3((ctx.build.finishedAt - ctx.build.startedAt) / 1000) }];
+    }
+  }
   const r = await runNode([BUILD, '--project', P.project, '--template', P.templateDir], { cwd: P.root, onData: (s) => { ctx.build.log += s; } });
   Object.assign(ctx.build, { running: false, code: r.code, ok: r.code === 0, finishedAt: Date.now() });
   ctx.report = null;
@@ -740,6 +789,13 @@ async function handle(ctx, req, res) {
   }
   if (p === '/api/report') { const rep = await getReport(ctx, { fresh: u.searchParams.has('fresh') }); return sendJson(res, 200, reportOut(rep)); }
   if (p === '/api/waveform') return sendJson(res, 200, await getPeaks(ctx));
+  if (p === '/api/look/face') {
+    try {
+      const out = faceImage({ projectDir: P.project, t: Number(u.searchParams.get('t')) || 0, slim: Number(u.searchParams.get('slim')) || 0, cache: (ctx.lookCache ??= {}) });
+      if (Buffer.isBuffer(out)) { res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store', 'Content-Length': out.length }); return res.end(out); }
+      return sendJson(res, 404, out);
+    } catch (e) { return sendJson(res, 500, { error: 'look', message: e.message }); }
+  }
   if (p === '/api/version') {
     const plan = readPlan(P.plan), srt = readSrt(P.srt);
     return sendJson(res, 200, { plan: { exists: plan.exists, mtime: plan.mtime, hash: plan.hash }, srt: { exists: srt.exists, hash: srt.hash }, ...builtInfo(ctx, plan), build: { running: ctx.build.running } });

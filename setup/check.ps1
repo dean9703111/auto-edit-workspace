@@ -371,6 +371,35 @@ try {
         $skills[$pair[0]] = $s
     }
 
+    # 工作區的 HyperFrames（S3：npm install 照 package.json 釘的版本）
+    $wsRoot = Split-Path -Parent $PSScriptRoot
+    $hfPin = ''
+    try { $hfPin = [string](Get-Content -Raw -LiteralPath ($wsRoot + '\package.json') -ErrorAction Stop | ConvertFrom-Json).devDependencies.hyperframes } catch { }
+    $hfLocalDir = $wsRoot + '\node_modules\hyperframes'
+    $hfLocal = @{ Status = 'missing'; Version = ''; Path = $hfLocalDir; Note = '沒裝（README 共用步驟 S3：在工作區根目錄 npm install）' }
+    try { $hfLocal.Version = [string](Get-Content -Raw -LiteralPath ($hfLocalDir + '\package.json') -ErrorAction Stop | ConvertFrom-Json).version } catch { }
+    if ($hfLocal.Version) {
+        if ($hfPin -and $hfLocal.Version -ne $hfPin) { $hfLocal.Status = 'too_old'; $hfLocal.Note = '和 package.json 釘的 ' + $hfPin + ' 不同（README 共用步驟 S3）' }
+        else { $hfLocal.Status = 'ok'; $hfLocal.Note = '' }
+    }
+
+    # 9 支 auto-edit Skill（S4：node setup/install-skills.mjs）
+    $aeMissing = @()
+    foreach ($n in @('longform', 'setup', 'rough', 'storyboard', 'screen', 'motion', 'review', 'deliver', 'style')) {
+        if (-not (Test-File ($skillRoot + '\auto-edit-' + $n + '\SKILL.md'))) { $aeMissing += ('auto-edit-' + $n) }
+    }
+    $aeSkill = @{ Status = 'ok'; Note = '' }
+    if ($aeMissing.Count -gt 0) { $aeSkill.Status = 'missing'; $aeSkill.Note = '少了 ' + ($aeMissing -join '、') + '（README 共用步驟 S4）' }
+
+    # 臉部偵測檔（S5：look.mjs ensure；瘦臉是選用，missing 不算進 todo）
+    $mpDir = $wsRoot + '\shared\template\vendor\mediapipe'
+    $mpMissing = @()
+    foreach ($f in @('vision_bundle.mjs', 'wasm\vision_wasm_internal.js', 'wasm\vision_wasm_internal.wasm', 'face_landmarker.task')) {
+        if (-not (Test-File ($mpDir + '\' + $f))) { $mpMissing += $f }
+    }
+    $mp = @{ Status = 'ok'; Note = '檔案都在；完整性用 look.mjs ensure 檢查（README 共用步驟 S5）' }
+    if ($mpMissing.Count -gt 0) { $mp.Status = 'missing'; $mp.Note = '少了 ' + ($mpMissing -join '、') + '（README 共用步驟 S5；不裝也能剪，只是不瘦臉）' }
+
     $modelPath = $env:USERPROFILE + '\.cache\hyperframes\whisper\models\ggml-small.bin'
     $model = @{ Status = 'info'; Note = '還沒下載；第一次轉逐字稿時自動下載（約 488 MB），不用先處理' }
     if (Test-File $modelPath) {
@@ -393,6 +422,9 @@ try {
     Add-Item 'auto_editor' 'auto-editor' $ae.Status $ae.Version $ae.Path $ae.Note $true 'W8'
     Add-Item 'skill_hyperframes' 'Skill：hyperframes' $skills['hyperframes'].Status '' $skills['hyperframes'].Path $skills['hyperframes'].Note $true 'S1'
     Add-Item 'skill_auto_editor' 'Skill：auto-editor' $skills['auto-editor'].Status '' $skills['auto-editor'].Path $skills['auto-editor'].Note $true 'S2'
+    Add-Item 'hyperframes_local' '工作區的 HyperFrames' $hfLocal.Status $hfLocal.Version $hfLocal.Path $hfLocal.Note $true 'S3'
+    Add-Item 'skill_auto_edit' 'Skill：auto-edit（9 支）' $aeSkill.Status '' $skillRoot $aeSkill.Note $true 'S4'
+    Add-Item 'mediapipe' '臉部偵測檔（瘦臉用）' $mp.Status '' $mpDir $mp.Note $false 'S5'
     Add-Item 'whisper_model' '轉逐字稿模型' $model.Status '' $modelPath $model.Note $false ''
 } catch {
     $script:Fatal = [string]$_.Exception.Message

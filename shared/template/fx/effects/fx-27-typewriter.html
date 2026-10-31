@@ -27,7 +27,7 @@
   </div>
   <script src="fx-kit.js"></script>
   <script>
-    /* 27 Typewriter：逐字打出中文（閃爍游標）→ 停留 → 逐字刪除 → 逐字打出英文 → 停留 → 刪除；首尾皆空白＋游標 */
+    /* 27 Typewriter：逐字打出中文（閃爍游標）→ 停留 → 逐字刪除 → 逐字打出英文 → 停留 → 刪除；首尾皆空白＋游標。label 'done'＝第一行打完停留的中間 */
     const v = window.__hyperframes.getVariables();
     const stage = document.querySelector('.fx-stage');
     const wrap = document.querySelector('.fx-27-wrap');
@@ -97,6 +97,8 @@
     show(LB.curs[0], 0);
     blink(0, LEAD); t = LEAD;
     let e = typeLine(LB, t);
+    // 完成態：第一行（text）整行打完、停留的中間（打字是 tl.set 逐字切換，時間軸上沒有補間，截圖工具讀這個 label；fx/catalog.json 的 done）
+    tl.addLabel('done', e + hold / 2);
     blink(e, e + hold); t = e + hold;
     e = eraseLine(LB, t);
     show(LA.curs[0], e);

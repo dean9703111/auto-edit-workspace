@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -50,7 +53,7 @@
   <div id="scene">
     <div id="pv-side-panel" class="fill">
       <div id="pv-aWrap" class="fill">
-        <div class="sc-side sc-surface-side" data-layout-allow-overflow>
+        <div class="sc-side sc-surface-side" data-layout="free" data-layout-allow-overflow>
           <div id="pv-sEyebrow" class="sc-pill"><span class="sc-opt">本集流程</span></div>
           <div id="pv-sTitle" class="sc-t80 sc-w900">AI 照規則剪<br>我只負責<span class="sc-kw">把關</span></div>
           <div id="pv-sItem1" class="sc-row sItem"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle class="stroke-draw" pathLength="1" cx="6" cy="6" r="3" /> <path class="stroke-draw" pathLength="1" d="M8.12 8.12 12 12" /> <path class="stroke-draw" pathLength="1" d="M20 4 8.12 15.88" /> <circle class="stroke-draw" pathLength="1" cx="6" cy="18" r="3" /> <path class="stroke-draw" pathLength="1" d="M14.8 14.8 20 20" /> </svg></span><span class="sItemT sc-t52 sc-w500 sc-opt">先剪乾淨：找出 NG</span></div>
@@ -78,17 +81,18 @@ window.__PREVIEW = {"key":"side-panel","duration":9,"cues":[{"sound":"swipe","at
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 9;
-    /* 0 → 0.7 面板推入（P.pushEase，與剪映端講者右移同一組 9 點）→ 眉標＋標題 → 項目逐條（錨或每 0.6s；圖示版每項 +P.BEAT 圖示描線）
-       → 段尾：D−1.1 內容淡出、D−0.7 面板推出（接全畫面或章節時停在完成態） */
+    /* v2（shared/template/BEATS.md §2 的動作）：0 → 0.7 面板推入（P.pushEase，與剪映端講者右移同一組 9 點）→ 眉標彈出、標題逐字上浮 → 項目各綁 at 彈出、0.15 後圖示描線
+       → 段尾：D−1.0 內容淡出（0.3）、D−0.7 面板推出（接全畫面或章節時停在完成態） */
     P.sideIn('.sc-side', 0);
-    P.rise('#pv-sEyebrow, #pv-sTitle', 0.7);
-    P.rise('#pv-sItem1', 1.3);
-    P.icon('#pv-sItem1 .sc-icon', 1.3 + P.BEAT);
-    P.rise('#pv-sItem2', 1.9);
-    P.icon('#pv-sItem2 .sc-icon', 1.9 + P.BEAT);
-    P.rise('#pv-sItem3', 2.5);
-    P.icon('#pv-sItem3 .sc-icon', 2.5 + P.BEAT);
-    P.out('#pv-sEyebrow, #pv-sTitle, #pv-sItem1, #pv-sItem2, #pv-sItem3', D - 1.1);
+    P.pop('#pv-sEyebrow', 0.7, { from: 0.6, dy: 12 });
+    P.chars('#pv-sTitle', 0.7 + 0.1);
+    P.pop('#pv-sItem1', 1.3, { from: 0.9, dy: 28 });
+    P.icon('#pv-sItem1 .sc-icon', 1.3 + 0.15);
+    P.pop('#pv-sItem2', 1.9, { from: 0.9, dy: 28 });
+    P.icon('#pv-sItem2 .sc-icon', 1.9 + 0.15);
+    P.pop('#pv-sItem3', 2.5, { from: 0.9, dy: 28 });
+    P.icon('#pv-sItem3 .sc-icon', 2.5 + 0.15);
+    P.out('#pv-sEyebrow, #pv-sTitle, #pv-sItem1, #pv-sItem2, #pv-sItem3', D - P.PUSH - P.OUT);   // 內容淡完剛好面板開始收
     P.sideOut('.sc-side', D - P.PUSH);
     tl.fromTo('#footage', { x: 0 }, { x: 480, duration: 0.7, ease: SceneMotion.pushEase }, 0);
     tl.fromTo('#footage', { x: 480 }, { x: 0, duration: 0.7, ease: SceneMotion.pushEase, immediateRender: false }, 8.3);

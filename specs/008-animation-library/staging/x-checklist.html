@@ -1,0 +1,148 @@
+<!doctype html>
+<!--
+  x-checklist：打勾完成清單（第二層 custom，layout: "fullscreen"；先畫空框，講到哪項寫出來、打勾，進度條跟著走）
+
+  【適用的口播】
+  在講一組「要確認／要完成的事」，2–4 項、一項一句或一個詞，例如「包含新增專案、下載 APP、配對手機、調整解析度等細節」。
+  畫面一開始只有空框和橫線（看得出有幾項，但字還沒出來），講到哪一項，那一項的字浮出、框裡描出勾，底下的進度條和「2 / 4」跟著前進；
+  講到「這樣就全部好了」時進度條換成完成色（選用）。
+
+  【不要用在哪裡】
+  - 回顧剛剛講過的重點（總結、回顧）：用 11 總結字卡。
+  - 有先後順序、每一步是一個動作的流程：用 x-process 或 04c（流程的站不打勾）。
+  - 是警告、注意事項：用 x-warnings 或 07 tone: warn。
+  - 超過 4 項：拆兩段，或用 04a。只有 1 項：不下卡。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、四個 .xchk-t 的項目文字（每項 ≤ 14 字，動詞放前面）。放不下就縮文案，不縮字。這支沒有圖示（勾就是圖示）。
+  2. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】）。
+  項數不是 4：刪掉最後幾列的 .xchk-row（整個 div）、svg 裡同號的 xchk-rule／xchk-box／xchk-boxon／xchk-k，
+  和 script 開頭最後幾個 T（宣告那一行的「, T4 = P.at(…)」與 T 陣列裡的「, T4」）；進度條的分母、「/ 4」的數字會自動跟著項數變，其他不用改。
+
+  【綁句欄位】
+  T1 = P.at('#121@新增專案')、T2 = P.at('#122@下載')、T3 = P.at('#123@配對手機')、T4 = P.at('#124@調整解析度')：講到那一項「項目詞」的時刻，
+  那一項的字浮出，0.3 秒後打勾、進度前進一格。T = [T1, T2, T3, T4] 的個數就是項數。
+  ALL = P.at('#125')：講到「全部完成／都好了」那一句，進度條換成完成色。沒有這句就刪掉 ALL 那兩行（const ALL 與 P.in('#xchk-fillok', ALL)）。
+  項目詞在句中間或句尾時一定用 @詞，不要綁句首（綁句首，字會比講到早 1–3 秒出來）；項目詞剛好是那句的第一個詞才寫 P.at('#122')。
+  「@詞」要寫成字串字面值（P.at('#122@下載')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#122@下載', 0.3)。
+  相鄰兩項至少差 2.1 秒（字浮出 0.5 秒、0.3 秒後打勾、進度條 0.6 秒＝忙到 0.9 秒，再停 1.2 秒）；太近就綁後面一句，或把兩項合併成一項。
+  audit 會比對：這一拍出現的字（項目）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.2（卡片 0.5 秒、空框與橫線從 1.0 秒起每 0.15 秒描一列，2.15 秒描完）
+  T2 ≥ T1 + 2.1；T3 ≥ T2 + 2.1；T4 ≥ T3 + 2.1
+  ALL ≥ T4 + 2.1
+  D ≥ ALL + 2.5（完成色 0.5 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；沒有 ALL 時 D ≥ 最後一項 + 2.9；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：整段淡入淡出 0.5 秒由 build 處理；0.5 秒前不動。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
+  四列每列高 112（top 12／124／236／348）：空框 56×56 在 x 56、列頂 +28；項目字 left 144、列頂 +20；橫線在列底（y 124／236／348／460），x 56–1120。
+  進度區 top 492：軌道 left 56、寬 800、高 24（y 516–540）；計數 x 896–1120 靠右。項目字放不下就縮文案，不縮字。
+  靈感（只借技法）：koushikde-937635／_koushikde_／https://x.com/_koushikde_/status/2105730717455937635；mattbean-917572／mattbean／https://x.com/mattbean/status/2103146389412917572；n01ennn-597182／N01ennn／https://x.com/N01ennn/status/2108520767092597182
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-checklist 打勾完成清單</title></head>
+<body>
+<template id="x-checklist-template">
+  <style>
+    #x-checklist { position: absolute; inset: 0; }
+    #x-checklist .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-checklist #xchk-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-checklist #xchk-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-checklist #xchk-body { position: relative; width: 1176px; height: 580px; }
+    /* 線稿：橫線、空框、亮框、勾都在同一張內容區大小的 svg（線寬 4；打勾時的主色框與勾 6） */
+    #x-checklist #xchk-lines { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-checklist .xchk-rule { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; }
+    #x-checklist .xchk-box { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; }
+    #x-checklist .xchk-boxon { fill: none; stroke: var(--brand); stroke-width: 6px; }
+    #x-checklist .xchk-tick { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 列：只是定位用的透明容器，每列高 112；項目字在列頂 +20、左 144 */
+    #x-checklist .xchk-row { position: absolute; left: 0; width: 1176px; height: 112px; }
+    #x-checklist #xchk-row1 { top: 12px; }
+    #x-checklist #xchk-row2 { top: 124px; }
+    #x-checklist #xchk-row3 { top: 236px; }
+    #x-checklist #xchk-row4 { top: 348px; }
+    #x-checklist .xchk-t { position: absolute; left: 144px; top: 20px; white-space: nowrap; }
+    /* 進度區：軌道 800×24、計數靠右（寬 224，數字寬度固定） */
+    #x-checklist #xchk-prog { position: absolute; left: 56px; top: 492px; width: 1064px; height: 72px; }
+    #x-checklist #xchk-track { position: absolute; left: 0; top: 24px; width: 800px; height: 24px; border-radius: 12px; background: var(--sc-fs-line); }
+    #x-checklist #xchk-fill { position: absolute; inset: 0; border-radius: 12px; background: var(--brand); }
+    #x-checklist #xchk-fillok { position: absolute; inset: 0; border-radius: 12px; background: var(--sc-good); opacity: 0; }
+    #x-checklist #xchk-n { position: absolute; right: 0; top: 0; width: 224px; text-align: right; white-space: nowrap; }
+  </style>
+  <div id="x-checklist" data-composition-id="x-checklist" data-width="1920" data-height="1080" data-duration="14"
+       data-cues-sample='{"start":0,"D":14,"cues":{"121":[2.2,4.4],"122":[4.5,6.6],"123":[6.7,8.8],"124":[8.9,11],"125":[11.2,13.5]},"refs":{"#121@新增專案":2.4,"#122@下載":4.6,"#123@配對手機":6.8,"#124@調整解析度":9.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xchk-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">操作前的準備</span></div>
+      <div id="xchk-body">
+        <svg id="xchk-lines" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- 橫線在每列底（y 124／236／348／460）；空框 52×52（線寬 4，外緣 56×56）在列頂 +30；勾在框中心（第 i 列 y 加 112×(i−1)） -->
+          <line id="xchk-rule1" class="xchk-rule" x1="56" y1="124" x2="1120" y2="124" />
+          <line id="xchk-rule2" class="xchk-rule" x1="56" y1="236" x2="1120" y2="236" />
+          <line id="xchk-rule3" class="xchk-rule" x1="56" y1="348" x2="1120" y2="348" />
+          <line id="xchk-rule4" class="xchk-rule" x1="56" y1="460" x2="1120" y2="460" />
+          <rect id="xchk-box1" class="xchk-box" x="58" y="42" width="52" height="52" rx="12" />
+          <rect id="xchk-box2" class="xchk-box" x="58" y="154" width="52" height="52" rx="12" />
+          <rect id="xchk-box3" class="xchk-box" x="58" y="266" width="52" height="52" rx="12" />
+          <rect id="xchk-box4" class="xchk-box" x="58" y="378" width="52" height="52" rx="12" />
+          <rect id="xchk-boxon1" class="xchk-boxon" x="58" y="42" width="52" height="52" rx="12" />
+          <rect id="xchk-boxon2" class="xchk-boxon" x="58" y="154" width="52" height="52" rx="12" />
+          <rect id="xchk-boxon3" class="xchk-boxon" x="58" y="266" width="52" height="52" rx="12" />
+          <rect id="xchk-boxon4" class="xchk-boxon" x="58" y="378" width="52" height="52" rx="12" />
+          <path id="xchk-k1" class="xchk-tick" d="M70 69 L80 79 L98 58" />
+          <path id="xchk-k2" class="xchk-tick" d="M70 181 L80 191 L98 170" />
+          <path id="xchk-k3" class="xchk-tick" d="M70 293 L80 303 L98 282" />
+          <path id="xchk-k4" class="xchk-tick" d="M70 405 L80 415 L98 394" />
+        </svg>
+        <div id="xchk-row1" class="xchk-row"><span id="xchk-t1" class="xchk-t sc-t52 sc-w900 sc-opt">新增專案</span></div>
+        <div id="xchk-row2" class="xchk-row"><span id="xchk-t2" class="xchk-t sc-t52 sc-w900 sc-opt">下載 APP</span></div>
+        <div id="xchk-row3" class="xchk-row"><span id="xchk-t3" class="xchk-t sc-t52 sc-w900 sc-opt">配對手機</span></div>
+        <div id="xchk-row4" class="xchk-row"><span id="xchk-t4" class="xchk-t sc-t52 sc-w900 sc-opt">調整解析度</span></div>
+        <div id="xchk-prog">
+          <div id="xchk-track"><i id="xchk-fill"></i><i id="xchk-fillok"></i></div>
+          <span id="xchk-n" class="sc-t52 sc-w900">0 / 4</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-checklist'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#121@新增專案'), T2 = P.at('#122@下載'), T3 = P.at('#123@配對手機'), T4 = P.at('#124@調整解析度');   // 講到每一項項目詞的時刻
+    const ALL = P.at('#125');                          // 講到「全部好了」那一句
+    const T = [T1, T2, T3, T4];                        // 項數＝這裡的個數（刪項時上一行的 T4 也刪）
+    const N = T.length;
+
+    // 1. 卡片先進場；橫線和空框從 1.0 秒起每 0.15 秒描一列（先看得出有幾項，字還不出來），進度區（軌道＋「0 / 4」）一起淡入；0.5 秒前不動
+    P.reveal('#xchk-card', 0.5);
+    P.stroke('.xchk-rule', 1.0, { stagger: 0.15 });
+    P.stroke('.xchk-box', 1.0, { stagger: 0.15 });
+    P.in('#xchk-prog', 1.0);
+
+    // 2. 講到第 k 項：字浮出 → 0.3 秒後框變主色、勾描出，計數 +1、進度條前進一格（迴圈跑 N 次，項數改了不用動這裡）
+    const num = $q('#xchk-n'), fill = $q('#xchk-fill');
+    for (let i = 0; i < N; i++) {
+      const k = i + 1, at = T[i];
+      P.rise('#xchk-t' + k, at);
+      P.stroke('#xchk-boxon' + k + ', #xchk-k' + k, at + 0.3, { dur: 0.4 });
+      P.count(num, at + 0.3, { from: i, to: k, dur: 0.4, suffix: ' / ' + N });
+      P.bar(fill, at + 0.3, { from: i / N, to: k / N, dur: 0.6 });
+    }
+
+    // 3. 講到「全部好了」：完成色疊在進度條上淡入
+    P.in('#xchk-fillok', ALL);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-checklist'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

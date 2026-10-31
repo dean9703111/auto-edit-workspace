@@ -4,13 +4,22 @@
 //   sampleTimes(item)                 → [{ t, kind: 'mid'|'done' }]  中點、完成態（段尾前 0.6 秒）
 //   judgeSample(meas, ctx)            → findings[]  一個時間點、一段的判定
 //   mergeFindings(list)               → 同一段、同一規則、同一元素只留一筆（時間合併）
-//   customDuration(html)              → custom 檔裡寫的 data-duration（R7.2 第 4 步要和段長一致）
+//   customDuration(html)              → custom 檔裡寫的 data-duration、const D；autoEnd＝結尾寫 P.end()／用 P.dur()（長度自動等於段長）
+//   ── 003（只判 custom）──
+//   judgeLayout(meas, ctx)            → findings[]  未定位頂層、標題壓到內容／間距、區塊重疊、nowrap 餘裕、右側空白、垂直平衡、內距、行高
+//   judgeMotion(motion, ctx)          → { findings, notes }  同一秒新元素、間隔、完成態停留、最後一幕（motion＝collectMotionInPage 的結果）
+//   stillTimes(motion, item)          → [{ t, kind: 'still' }]  每個 ≥ 0.4 秒的靜止區間取中點（每段最多 8 個）
+//   cueFindings(errors, items)        → { findings, warnings }  window.__cueErrors → 綁句失敗 ✖
 //   formatFinding(f)／fmtT(t)／descText(desc)
+//   ── 009 直式（只在 format: "portrait" 時用；canvas.mjs 的 CANVAS.portrait）──
+//   stageKindOf(item)                 → 'fs'｜'ch'｜'fx'｜null  舞台縮放的段（全畫面 custom 與 04 家族、01、字卡動態）；null＝直式原生（overlay）
+//   portraitPlan(item, canvas, regions) → { unstage, W, H, stage?, geo? }  這段怎麼量：舞台段拿掉 stage transform 量子合成座標，原生段用 1080×1920 量
 //
 // 座標一律是 1920×1080 的畫面像素（頁面就是 1920×1080、deviceScaleFactor 1，getBoundingClientRect 直接就是畫面座標）。
 // 矩形寫成 [左, 上, 右, 下]。只判「靜止」的元素：正在補間（0 < progress < 1）的元素和它的子孫不判，避免把進場暫態當破版。
 
 import { PIP_ZONE } from './media.mjs';
+import { CANVAS as CANVASES, stageTransform } from './canvas.mjs';
 
 export const CANVAS = [1920, 1080];
 export const CAPTION_Y = 920;       // 字幕區從 y 920 起（R4.1；check --caption-zone 的 y0=0.852）
@@ -23,6 +32,17 @@ export const SPEAKER_WARN = 0.02;   // custom 與用 css 移過位的段：蓋�
 export const SPEAKER_WARN_TEMPLATE = 0.15;   // 沒移位的情境模板：和 build --check 的碰撞提醒同一個門檻（R4.1）
 export const SUBPIXEL = 0.2;        // 邊緣離整數 px ≥ 0.2 才算半像素（0.05 這種量測尾數不會糊）
 export const TOL = 2;               // 一般容許誤差（px），和 hyperframes check 的預設 tolerance 相同
+// 003 版面（R8 #6、OV＝作者 overlay 規範）與節奏（style.md〈節奏〉、TR/v3）；標「初值」的是本線訂的、可依實測調
+export const TITLE_GAP_MIN = 24, TITLE_GAP_GOAL = 40;   // 標題到內容：< 24 ⚠，目標 40（OV/AW:L77、R8 #6）
+export const NOWRAP_MIN = 7;                            // nowrap 文字到框的餘裕（OV/SKILL.md:132）
+export const SLACK_MAX = 80, CENTER_TOL = 8, STRIP_TOL = 16;   // 右側空白上限（OV/SKILL.md:140）；置中容許、撐滿父層的橫條（初值）
+export const VBAL_MAX = 40, CONTENT_TOP = 120;          // 垂直平衡（OV/AW:L218）；內容區 y 120–870（R4.1）
+export const PAD_X = [24, 0.45], PAD_Y = [14, 0.28];    // 內距門檻 max(24, 0.45×字級)、max(14, 0.28×字級)（R8 #6）
+export const LH_MIN = 1.25, LH_SKIP_FONT = 100;         // 行高 ≥ 1.25×字級（OV/PS:L27）；字級 ≥ 100 的數字不判
+export const DENSITY_MAX = 2, DENSITY_WIN = 1.0;        // 任何 1 秒內新元素 ≤ 2（TR/v3:L12-13）
+export const STAGGER_MIN = 0.12;                        // 新元素間隔 ≥ 0.12s（TR/v3:L12-13；文件建議 0.15）
+export const HOLD_MIN = 1.2, TAIL_MIN = 1.5;            // 完成態停留、最後一幕（定案；P.READ／P.HOLD_END）
+export const MERGE_WIN = 0.6, SWAP_WIN = 0.15, EMPH_PX = 8, BUSY_GAP = 0.05, STILL_MIN = 0.4, STILL_MAX = 8;   // 初值；STILL_MIN 出自 OV/AW:L215
 
 const r1 = (n) => Math.round(n * 10) / 10;
 const r3 = (n) => Math.round(n * 1000) / 1000;
@@ -58,6 +78,33 @@ export function sampleTimes(item) {
 }
 
 export const layoutOf = (item) => (item.type === 'custom' ? item.seg?.layout || (item.opaque ? 'fullscreen' : 'overlay') : item.opaque ? 'fullscreen' : 'overlay');
+// ---------- 009 直式 ----------
+// 舞台縮放（FR-022、FR-023、FR-051、FR-070）：全畫面 custom 與 04 家族 → fs、01 章節 → ch、字卡動態 → fx；其他段直式原生（FR-072）
+// 情境看 scene.json 的 "portrait"（"stage"＝縮放；"move"／"none"＝原生），沒寫就照編號（01、04 家族）；01 用 ch 舞台，其他 fs
+export function stageKindOf(item) {
+  if (item.type === 'fx') return 'fx';
+  if (item.type === 'custom') return layoutOf(item) === 'fullscreen' ? 'fs' : null;
+  const sc = item.scene && typeof item.scene === 'object' ? item.scene : { no: item.scene };
+  const no = String(sc.no || sc.num || '');
+  if (sc.portrait ? sc.portrait !== 'stage' : !/^0(1|4)/.test(no)) return null;
+  return /^01/.test(no) ? 'ch' : 'fs';
+}
+// regions＝頁面的 window.__regions（build 直式注入）；有 captions 就用它當字幕保留帶，沒有用 canvas 的 caption.zone
+export function portraitPlan(item, canvas = CANVASES.portrait, regions = null) {
+  const kind = stageKindOf(item);
+  if (kind) {
+    const st = stageTransform(kind, canvas, { clear: kind === 'fx' && item.seg?.bg === 'none' });
+    // view＝舞台在直式畫面上看得到的範圍（子合成座標）：左右到畫布邊、上到 unsafe 頂帶下緣、下到講者面板頂（01 沒有面板：到 unsafe 底帶上緣）
+    const top = canvas.unsafe.find((u) => u[1] <= 0)?.[3] ?? 0, bot = kind === 'fs' ? canvas.pip.box[1] : canvas.unsafe.find((u) => u[3] >= canvas.H && u[0] <= 0)?.[1] ?? canvas.H;
+    const r1_ = (n) => Math.round(n * 10) / 10;
+    const view = [Math.max(0, r1_(-st.tx / st.s)), Math.max(0, r1_((top - st.ty) / st.s)), Math.min(CANVAS[0], r1_((canvas.W - st.tx) / st.s)), Math.min(CANVAS[1], r1_((bot - st.ty) / st.s))];
+    return { unstage: true, W: CANVAS[0], H: CANVAS[1], stage: { kind, s: st.s, window: kind === 'fx' ? null : st.window, view: kind === 'fx' ? null : view, minFont: canvas.minTextPx } };
+  }
+  const c = regions && Array.isArray(regions.captions) ? [regions.captions[0], regions.captions[1], regions.captions[0] + regions.captions[2], regions.captions[1] + regions.captions[3]] : canvas.caption.zone;
+  return { unstage: false, W: canvas.W, H: canvas.H, geo: { captionY: c[1], captionEnd: c[3], contentBottom: canvas.lowerThird.rect[3], unsafe: canvas.unsafe, minFont: canvas.minTextPx } };
+}
+const UNSAFE_ZH = (u, W, H) => (u[1] <= 0 ? `上方 ${u[3]}px` : u[3] >= H && u[0] <= 0 ? `下方 ${H - u[1]}px` : '右側按鈕列');
+
 export const pipOnAt = (item, t) => !!item.pip && (item.pipPieces || [{ s: item.start, e: item.end }]).some((p) => t >= p.s - 1e-6 && t < p.e);
 
 // ---------- 矩形 ----------
@@ -119,6 +166,9 @@ const sides = (o) => Object.entries(o).map(([k, v]) => `${{ left: '左', right: 
 export function judgeSample(meas, ctx) {
   const out = [];
   const W = ctx.W ?? CANVAS[0], H = ctx.H ?? CANVAS[1];
+  // 009 直式：geo＝原生段的幾何（字幕保留帶、unsafe、字級下限）；stage＝舞台縮放的段（量的是子合成座標，另判舞台窗與縮放後的字級）
+  const G = ctx.geo || {}, ST = ctx.stage || null;
+  const captionY = G.captionY ?? CAPTION_Y, captionEnd = G.captionEnd ?? Infinity, contentBottom = G.contentBottom ?? CONTENT_BOTTOM;
   const base = { id: ctx.item.id, label: ctx.item.label, t: ctx.t, kind: ctx.kind };
   const push = (level, rule, e, msg, fix, data = {}) => out.push({ ...base, level, rule, el: e ? e.desc : null, msg, fix, data });
   if (!meas || meas.missingHost) {
@@ -210,18 +260,58 @@ export function judgeSample(meas, ctx) {
   for (const { e, r } of content) {
     if (!still(e) || e.allowOverflow) continue;
     const o = overflowOf(r, canvasBox);
-    if (o) push('error', 'canvas', e, `超出畫面：${descText(e.desc)} 超出${sides(o)}`, '把它移回 1920×1080 以內，或縮小容器／縮短文字', { overflow: o, rect: r });
+    if (o) push('error', 'canvas', e, `超出畫面：${descText(e.desc)} 超出${sides(o)}`, `把它移回 ${W}×${H} 以內，或縮小容器／縮短文字`, { overflow: o, rect: r });
   }
-  // ✖ 進字幕區（y ≥ 920）
+  // ✖ 進字幕區（橫式 y ≥ 920；直式原生段 y 1280–1420）
   for (const { e, r } of content) {
     if (!still(e) || e.allowCaption) continue;
-    if (r[3] > CAPTION_Y + 0.5 && r[1] < H) {
-      const up = Math.ceil(r[3] - CONTENT_BOTTOM);
-      push('error', 'caption', e, `進字幕區：${descText(e.desc)} 下緣 y=${Math.round(r[3])}（字幕區 y ≥ ${CAPTION_Y}）`, `整組往上移 ≥ ${up}px，讓下緣 ≤ ${CONTENT_BOTTOM}（內容區 y 120–${CONTENT_BOTTOM}，R4.1），或縮短內容`, { rect: r });
+    if (r[3] > captionY + 0.5 && r[1] < Math.min(H, captionEnd)) {
+      const up = Math.ceil(r[3] - contentBottom);
+      if (ctx.geo) push('error', 'caption', e, `進字幕區：${descText(e.desc)} y ${Math.round(r[1])}–${Math.round(r[3])}（直式字幕保留帶 y ${captionY}–${captionEnd}）`, `整組往上移 ≥ ${up}px，讓下緣 ≤ ${contentBottom}（直式下方字卡的下緣），或縮短內容`, { rect: r });
+      else push('error', 'caption', e, `進字幕區：${descText(e.desc)} 下緣 y=${Math.round(r[3])}（字幕區 y ≥ ${CAPTION_Y}）`, `整組往上移 ≥ ${up}px，讓下緣 ≤ ${CONTENT_BOTTOM}（內容區 y 120–${CONTENT_BOTTOM}，R4.1），或縮短內容`, { rect: r });
+    }
+  }
+  // ✖ 直式：進到平台介面蓋住的區域（unsafe[]：上方、下方、右側按鈕列）
+  for (const u of G.unsafe || []) {
+    for (const { e, r } of content) {
+      if (!still(e) || e.allowOverflow) continue;
+      const x = intersect(r, u);
+      if (!x || x[2] - x[0] <= 1 || x[3] - x[1] <= 1) continue;
+      push('error', 'unsafe', e, `直式會被平台介面蓋住：${descText(e.desc)} x ${Math.round(r[0])}–${Math.round(r[2])}、y ${Math.round(r[1])}–${Math.round(r[3])}，進到${UNSAFE_ZH(u, W, H)}（x ${u[0]}–${u[2]}、y ${u[1]}–${u[3]}）`,
+        '移進 x 60–940、y 240–1240（直式的安全區；右側 x 940 以右留給平台按鈕），或縮小容器／縮短文字', { rect: r, unsafe: u });
+    }
+  }
+  // ✖ 直式：舞台縮放的段只顯示舞台窗（fs [120,130,1300,880]、ch [160,260,1760,870]），帶 id 的絕對定位元素超出就會被切到（FR-071）
+  if (ST && ST.window) {
+    const [x0, y0, x1, y1] = ST.window;
+    for (const e of els) {
+      if (!e.desc || !e.desc.id || e.pos !== 'absolute' || !still(e) || e.bg || e.full || e.allowOverflow) continue;
+      // 量擺位（版面外框，不含 transform）：P.cam 鏡頭推、聚焦放大是暫時的，不算擺位超出
+      const lb = meas.layoutBoxes && meas.layoutBoxes[e.desc.id];
+      const r = lb || visible(e, e.rect);
+      if (!r || r[2] - r[0] <= 0 || r[3] - r[1] <= 0) continue;
+      const o = overflowOf(r, ST.window);
+      if (!o) continue;
+      push('error', 'portrait-window', e, `${ST.kind === 'ch' ? '直式時會被切到' : '直式時會被切到或壓到講者面板'}：${descText(e.desc)} x ${Math.round(r[0])}–${Math.round(r[2])}、y ${Math.round(r[1])}–${Math.round(r[3])}，超出舞台窗 x ${x0}–${x1}、y ${y0}–${y1}（${sides(o)}）`,
+        `內容留在 x ${x0}–${x1}、y ${y0}–${y1}（直式只顯示這一塊，縮 ${ST.s} 倍放進上半面板）；刻意出血的裝飾標 data-layout-allow-overflow`, { overflow: o, rect: r, window: ST.window });
     }
   }
   // ✖ 壓到子母畫面（全畫面版型、這一刻有子母畫面）
-  if (ctx.layout === 'fullscreen' && ctx.pipOn) {
+  // ⚠ 直式：P.cam 鏡頭推（每一個停點的倍率與往焦點帶的位移）把鏡頭容器推出舞台看得到的範圍（只在完成態判一次，每個容器一則）
+  if (ST && ST.view && ctx.kind === 'done' && meas.camBoxes) {
+    const [v0, v1, v2, v3] = ST.view;
+    for (const [key, c] of Object.entries(meas.camBoxes)) {
+      if (!c || !c.box) continue;
+      const o = overflowOf(c.box, ST.view);
+      if (!o) continue;
+      const SIDE = { right: '右緣', left: '左緣', top: '上緣', bottom: '下緣' };
+      const cut = Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${SIDE[k]}會切掉 ${Math.ceil(v)}px`).join('、');
+      const d = { id: /^[A-Za-z][\w-]*$/.test(key) ? key : '', cls: /^[A-Za-z][\w-]*$/.test(key) ? '' : key, text: '', near: '' };
+      out.push({ ...base, level: 'warn', rule: 'portrait-cam', el: d, msg: `鏡頭推時${cut}：${descText(d)}（P.cam 最大 ${c.scale} 倍；直式看得到 x ${Math.round(v0)}–${Math.round(v2)}、y ${Math.round(v1)}–${Math.round(v3)}）`,
+        fix: '內容群縮小一級（data-gap 改小一級或字級 −4），或這段不用 P.cam（shared/style.md「直式」）', data: { overflow: o, box: c.box, view: ST.view, scale: c.scale } });
+    }
+  }
+  if (ctx.layout === 'fullscreen' && ctx.pipOn && !ctx.geo && !ST) {
     for (const { e, r } of content) {
       if (!still(e)) continue;
       const x = intersect(r, PIP_ZONE);
@@ -257,11 +347,18 @@ export function judgeSample(meas, ctx) {
   for (const e of els) {
     if (!e.text || !still(e)) continue;
     const size = e.fontSize * (e.scale > 0 && e.scale < 1 ? e.scale : 1);
-    if (size < MIN_FONT) push('warn', 'font', e, `字太小：${descText(e.desc)} ${r1(size)}px（< ${MIN_FONT}px）`, '正文 ≥ 52px、標籤 ≥ 38px（R8.5）；放不下就縮文案，不縮字', { size: r1(size) });
+    if (ST) {
+      const shown = size * ST.s;
+      if (shown < ST.minFont) push('warn', 'font', e, `字太小：${descText(e.desc)} 直式縮 ${ST.s} 倍後 ${r1(shown)}px（< ${ST.minFont}px）`, `直式要寫 ≥ ${Math.ceil(ST.minFont / ST.s)}px（縮放前）；正文 ≥ 52px、標籤 ≥ 38px（R8.5）；放不下就縮文案，不縮字`, { size: r1(shown) });
+      continue;
+    }
+    const min = G.minFont ?? MIN_FONT;
+    if (size < min) push('warn', 'font', e, `字太小：${descText(e.desc)} ${r1(size)}px（< ${min}px）`, '正文 ≥ 52px、標籤 ≥ 38px（R8.5）；放不下就縮文案，不縮字', { size: r1(size) });
   }
   // ⚠ 半像素邊（卡片、框線）
   for (const e of els) {
     if (!e.painted || e.full || e.shaped || !still(e)) continue;
+    if (e.micro || (e.scale && Math.abs(e.scale - 1) > 0.005)) continue;   // 漂浮中、鏡頭推、聚焦放大中的元素（v2）：邊一定是小數，不是寫錯
     if (e.rect[2] - e.rect[0] < 16 || e.rect[3] - e.rect[1] < 16) continue;
     const s = subpixelEdges(e.rect);
     if (s) push('warn', 'subpixel', e, `半像素邊：${descText(e.desc)} 邊緣 ${Object.entries(s).map(([k, v]) => `${{ left: 'left', top: 'top', right: 'right', bottom: 'bottom' }[k]}=${v}`).join('、')}，直邊與框線會糊`, '寬高、left／top 寫整數 px；flex 平分（flex: 1）算出小數時改寫死寬度，或調 gap／padding 讓總寬整除（R8.4）', { edges: s });
@@ -295,5 +392,423 @@ export function customDuration(html) {
   const m = inner.match(/data-composition-id="[^"]+"[^>]*?data-duration="([\d.]+)"|data-duration="([\d.]+)"[^>]*?data-composition-id="/);
   const d = m ? Number(m[1] ?? m[2]) : null;
   const c = inner.match(/const\s+D\s*=\s*([\d.]+)\s*;/);
-  return { duration: Number.isFinite(d) ? d : null, constD: c ? Number(c[1]) : null };
+  const code = [...inner.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+  const autoEnd = /\bP\.end\(\s*\)/.test(code) || /\bP\.dur\(\s*\)/.test(code);
+  return { duration: Number.isFinite(d) ? d : null, constD: c ? Number(c[1]) : null, autoEnd };
+}
+
+// ====================== 003：custom 的版面規則 ======================
+
+// a 是不是 d 的祖先：用量測端的 anc（中間隔著高 0 的 wrapper 也算得到）；舊資料沒有 anc 時照 parent 鏈
+const isAnc = (byI, a, d) => { if (d && d.anc) return d.anc.includes(a.i); for (let x = d; x && x.parent >= 0; ) { if (x.parent === a.i) return true; x = byI.get(x.parent); } return false; };
+const ancsOf = (byI, e) => (e.anc ? e.anc.map((k) => byI.get(k)).filter(Boolean) : (() => { const out = []; for (let x = byI.get(e.parent); x; x = byI.get(x.parent)) out.push(x); return out; })());
+const clipTo = (byI, e, r) => {
+  let v = r;
+  for (const k of e.clips || []) { const c = byI.get(k); if (!c) continue; v = intersect(v, [c.clipX ? c.inner[0] : -1e9, c.clipY ? c.inner[1] : -1e9, c.clipX ? c.inner[2] : 1e9, c.clipY ? c.inner[3] : 1e9]); if (!v) return null; }
+  return v;
+};
+// 元素畫在畫面上的範圍：svg 用裡面形狀的聯集（連接線圖層的框是整個內容區，不代表畫了什麼）
+const drawnRect = (e) => (e.tag === 'svg' && e.shapeRect ? e.shapeRect : e.rect);
+// 文字：左右用行框、上下用墨跡（大字級的行框比字形高很多）
+const inkBox = (e) => (e.inkRect ? [e.textRect[0], e.inkRect[1], e.textRect[2], e.inkRect[3]] : e.textRect);
+const unionOf = (rs) => (rs.length ? [Math.min(...rs.map((r) => r[0])), Math.min(...rs.map((r) => r[1])), Math.max(...rs.map((r) => r[2])), Math.max(...rs.map((r) => r[3]))] : null);
+const bwOf = (e) => e.bw || [0, 0, 0, 0];
+const padOf = (e) => e.pad || [0, 0, 0, 0];
+const ri = (n) => Math.round(n);
+
+// ctx＝{ item, t, kind, layout }（和 judgeSample 相同）
+export function judgeLayout(meas, ctx) {
+  const out = [];
+  if (!meas || meas.missingHost || !ctx.item || ctx.item.type !== 'custom') return out;
+  const base = { id: ctx.item.id, label: ctx.item.label, t: ctx.t, kind: ctx.kind };
+  const push = (level, rule, el, msg, fix, data = {}) => out.push({ ...base, level, rule, el, msg, fix, data });
+  const els = meas.els || [];
+  const byI = new Map(els.map((e) => [e.i, e]));
+  const shown = (e) => !e.moving && (e.alpha ?? 1) >= 0.05;
+  const parentPainted = (e) => ancsOf(byI, e).find((x) => x.painted) || null;
+  // 疊在父層上的一層（亮框、底色）：四邊離父層 ≤ 8px，算父層的一部分
+  const anchorOf = (e) => { const p = ancsOf(byI, e)[0]; return p && [0, 1, 2, 3].every((k) => Math.abs(e.rect[k] - p.rect[k]) <= EMPH_PX) ? p : e; };
+  const textBoxes = els.filter((e) => shown(e) && e.frame && (e.own || []).length && e.chars > 0);
+
+  // ✖ 未定位頂層
+  for (const tp of meas.tops || []) {
+    if (['absolute', 'fixed'].includes(tp.pos) || !(tp.w > 0 && tp.h > 0)) continue;
+    const pn = tp.parent && tp.parent.root ? `root（${tp.parent.root}）` : descText(boxDesc(tp.parent));
+    push('error', 'unpositioned', tp.desc, `未定位頂層：${descText(tp.desc)} 直接放在 ${pn} 底下，position 是 ${tp.pos}（會照文件順序往下排，換字或加元素就跑位）`,
+      '幫它寫 position: absolute 和整數 px 的 left、top（R7.3 骨架），或把它移進已經定位的卡片裡', { pos: tp.pos });
+  }
+
+  // ✖ 標題壓到內容／⚠ 間距不足
+  for (const T of els) {
+    if (!T.title || !shown(T)) continue;
+    const C = parentPainted(T);
+    const cand = els.filter((e) => e !== T && shown(e) && !e.bg && (e.text || e.painted || e.media) && (!C || isAnc(byI, C, e)) && !isAnc(byI, T, e));
+    let best = null;
+    for (const e of cand) {
+      const r = clipTo(byI, e, e.text && !e.painted && !e.media ? inkBox(e) : drawnRect(e));
+      if (!r || r[1] < T.rect[1] - 0.5 || r[2] <= T.rect[0] || r[0] >= T.rect[2]) continue;
+      if (!best || r[1] < best.r[1]) best = { e, r };
+    }
+    if (!best) continue;
+    const gap = best.r[1] - T.rect[3];
+    if (gap < -TOL) {
+      const n = Math.ceil(-gap);
+      push('error', 'title-overlap', T.desc, `標題壓到內容：${descText(boxDesc(T.desc))} 下緣 y=${ri(T.rect[3])}，${descText(best.e.desc)} 上緣 y=${ri(best.r[1])}（重疊 ${n}px）`,
+        `內容整組往下移 ≥ ${TITLE_GAP_GOAL + n}px，讓間距到 ${TITLE_GAP_GOAL}px（下面每一層一起移）；底部空間不夠就把標題往上、內容往下分攤（R8 #6）`, { gap: r1(gap) });
+    } else if (gap < TITLE_GAP_MIN - 1e-6) {
+      const g = Math.max(0, ri(gap));
+      push('warn', 'title-gap', T.desc, `間距不足：${descText(boxDesc(T.desc))} 到 ${descText(best.e.desc)} 只有 ${g}px（< ${TITLE_GAP_MIN}px；目標 ≥ ${TITLE_GAP_GOAL}px）`,
+        `內容整組往下移 ${TITLE_GAP_GOAL - g}px（下面每一層一起移，移完確認下緣 ≤ ${CONTENT_BOTTOM}）（R8 #6）`, { gap: r1(gap) });
+    }
+  }
+
+  // ⚠ 區塊重疊：有底框的區塊與圖片（svg 線稿不算區塊）
+  const blocks = els.filter((e) => shown(e) && !e.bg && !e.full && !e.allowOverlap && (e.painted || (e.media && e.tag !== 'svg')));
+  for (let a = 0; a < blocks.length; a++) for (let b = a + 1; b < blocks.length; b++) {
+    const A = blocks[a], B = blocks[b];
+    const a0 = anchorOf(A), b0 = anchorOf(B);
+    if (a0 === b0 || isAnc(byI, a0, B) || isAnc(byI, b0, A) || isAnc(byI, A, B) || isAnc(byI, B, A)) continue;
+    const ra = clipTo(byI, A, A.rect), rb = clipTo(byI, B, B.rect);
+    const x = intersect(ra, rb);
+    if (!x || x[2] - x[0] <= TOL || x[3] - x[1] <= TOL) continue;
+    push('warn', 'overlap', A.desc, `區塊重疊：${descText(boxDesc(A.desc))} 和 ${descText(boxDesc(B.desc))} 重疊 ${ri(x[2] - x[0])}×${ri(x[3] - x[1])}px`,
+      '把其中一個移開，至少隔 24px；box 交疊但畫面上沒碰到時看 snapshot；刻意疊的（例：通知疊在介面上）在其中一個加 data-layout-allow-overlap，並在回報寫理由', { with: B.desc });
+  }
+
+  // ⚠ 內距不足／行高不足（文字框）
+  const padReported = new Set();
+  for (const e of textBoxes) {
+    if (e.round || e.kit || e.allowTight || e.chars <= 2) continue;
+    const u = unionOf(e.own), bw = bwOf(e);
+    const fs = e.ownFont ? e.ownFont.fs : e.fontSize;
+    const L = u[0] - (e.rect[0] + bw[0]), T = u[1] - (e.rect[1] + bw[1]), R = (e.rect[2] - bw[2]) - u[2], B = (e.rect[3] - bw[3]) - u[3];
+    const x = Math.max(PAD_X[0], PAD_X[1] * fs), y = Math.max(PAD_Y[0], PAD_Y[1] * fs);
+    const tol = TOL;   // 2px（量測端已還原 .sc-opt 的光學位移；圖示＋字直排時整組仍會被 --opt 撐高幾 px）
+    const shortX = L < x - tol || R < x - tol, shortY = T < y - tol || B < y - tol;
+    if (shortX || shortY) {
+      const w = e.rect[2] - e.rect[0], h = e.rect[3] - e.rect[1];
+      const needW = Math.ceil(w + Math.max(0, x - L) + Math.max(0, x - R)), needH = Math.ceil(h + Math.max(0, y - T) + Math.max(0, y - B));
+      const fix = [shortX ? `寬度加到 ≥ ${needW}px` : '', shortY ? `高度加到 ≥ ${needH}px` : ''].filter(Boolean).join('、');
+      push('warn', 'padding', e.desc, `內距不足：${descText(boxDesc(e.desc))} 裡的文字 左 ${ri(L)}、右 ${ri(R)}、上 ${ri(T)}、下 ${ri(B)}px（字級 ${ri(fs)}px：左右要 ≥ ${ri(x)}px、上下要 ≥ ${ri(y)}px）`,
+        `${fix}（整數），或縮短文字；不要縮字級（R8 #6）`, { L: r1(L), R: r1(R), T: r1(T), B: r1(B), x: r1(x), y: r1(y) });
+      padReported.add(e.i);
+    }
+    if (e.ownFont && fs < LH_SKIP_FONT && e.ownFont.lh / fs < LH_MIN - 1e-6 && B < y + 4) {
+      push('warn', 'line-height', e.desc, `行高不足：${descText(boxDesc(e.desc))} line-height ${r1(e.ownFont.lh)}px／字級 ${ri(fs)}px＝${(e.ownFont.lh / fs).toFixed(2)}（< ${LH_MIN}），下內距只有 ${ri(B)}px`,
+        `改用 kit 的字級 class（.sc-t${ri(fs)} 的行高已經 ≥ ${LH_MIN} 倍），或 line-height 寫 ≥ ${Math.ceil(LH_MIN * fs)}px（R8 #6）`, { lh: e.ownFont.lh, fs });
+    }
+  }
+
+  // ⚠ nowrap 餘裕不足
+  for (const e of els) {
+    if (!shown(e) || e.whiteSpace !== 'nowrap' || !e.text || !e.textRect || e.allowOverflow) continue;
+    const C = e.painted ? e : parentPainted(e);
+    if (!C || padReported.has(C.i) || C.full || C.bg) continue;
+    const bw = bwOf(C);
+    const m = Math.min(e.textRect[0] - (C.rect[0] + bw[0]), (C.rect[2] - bw[2]) - e.textRect[2]);
+    if (m < 0 || m >= NOWRAP_MIN - 1e-6) continue;
+    const w = Math.ceil(C.rect[2] - C.rect[0] + 2 * (NOWRAP_MIN - m));
+    push('warn', 'nowrap', e.desc, `nowrap 餘裕不足：${descText(e.desc)} 離 ${C === e ? '自己' : descText(boxDesc(C.desc))} 的框只剩 ${r1(m)}px（< ${NOWRAP_MIN}px）`,
+      `容器寬度加到 ≥ ${w}px（整數），或縮短文字；不要縮字級（R8 #5）`, { m: r1(m) });
+  }
+
+  // ⚠ 右側空白過多（同一欄 left 與寬相同的一起算，取最小）
+  const groups = new Map();
+  for (const e of textBoxes) {
+    if (e.kit || e.allowSlack || e.widthShared) continue;
+    const w = e.rect[2] - e.rect[0];
+    if (!(w < (e.parentInnerW ?? 1e9) - STRIP_TOL)) continue;   // 撐滿父層的橫條不算
+    const u = unionOf(e.own), bw = bwOf(e), pd = padOf(e);
+    const right = (e.rect[2] - bw[2] - pd[2]) - u[2], left = u[0] - (e.rect[0] + bw[0] + pd[0]);
+    if (e.centered && Math.abs(right - left) <= CENTER_TOL) continue;
+    const k = `${ri(e.rect[0])}|${ri(w)}`;
+    const g = groups.get(k) || [];
+    g.push({ e, right });
+    groups.set(k, g);
+  }
+  for (const g of groups.values()) {
+    const min = g.reduce((a, b) => (b.right < a.right ? b : a));
+    if (min.right <= SLACK_MAX + 1e-6) continue;
+    push('warn', 'slack', min.e.desc, `右側空白過多：${descText(boxDesc(min.e.desc))} 內容最右緣到框內緣 ${ri(min.right)}px（> ${SLACK_MAX}px）${g.length > 1 ? `（同一欄 ${g.length} 個一起算，取最小）` : ''}`,
+      '框寬改 width: max-content（或改成整數 px 的「內容寬＋右內距」）；同一欄要等寬就讓它們 left 和 width 相同；左右並排要等寬加 data-width-shared；刻意留白加 data-layout-allow-slack（R8 #6）', { right: r1(min.right) });
+  }
+
+  // ⚠ 垂直不平衡（全畫面）
+  if (ctx.layout === 'fullscreen') {
+    const rs = [];
+    for (const e of els) {
+      if (!shown(e) || e.bg || e.full) continue;
+      if (e.text && e.textRect) { const v = clipTo(byI, e, inkBox(e)); if (v) rs.push(v); }
+      if (e.painted || e.media) { const v = clipTo(byI, e, drawnRect(e)); if (v) rs.push(v); }
+    }
+    const U = unionOf(rs);
+    // 009 直式舞台縮放的段：內容區＝舞台窗的上下（y 130–880），其他照 R4.1 的 120–870
+    const [CT, CB] = ctx.contentY || [CONTENT_TOP, CONTENT_BOTTOM];
+    if (U) {
+      const up = U[1] - CT, down = CB - U[3], diff = up - down;
+      if (Math.abs(diff) > VBAL_MAX + 1e-6) {
+        const k = Math.abs(Math.round((down - up) / 2));
+        push('warn', 'vbalance', null, `垂直不平衡：內容 y ${ri(U[1])}–${ri(U[3])}，上留白 ${ri(up)}px、下留白 ${ri(down)}px（內容區 y ${CT}–${CB}，差 ${ri(Math.abs(diff))}px，超過 ${VBAL_MAX}px）`,
+          `整組往${diff < 0 ? '下' : '上'}移 ${k}px（每個頂層元素的 top 都 ${diff < 0 ? '+' : '−'}${k}）`, { up: r1(up), down: r1(down) });
+      }
+    }
+  }
+  return out;
+}
+
+// ====================== 003：custom 的節奏規則 ======================
+
+const boxOverlap = (a, b) => {
+  if (!a || !b) return 0;
+  const w = Math.min(a[0] + a[2], b[0] + b[2]) - Math.max(a[0], b[0]), h = Math.min(a[1] + a[3], b[1] + b[3]) - Math.max(a[1], b[1]);
+  if (w <= 0 || h <= 0) return 0;
+  return (w * h) / Math.max(1, Math.min(a[2] * a[3], b[2] * b[3]));
+};
+// 新元素：進場、不是亮框、不是同位置換內容、不是跟著祖先 0.3 秒內一起出現；
+// v2：同一個 P.* 呼叫（stagger 群組、逐字）只算最早那一個（design-system.md §13），微動（role micro）不算
+export const isMicro = (tw) => tw && tw.role === 'micro';
+// 完成態停留、最後一幕只看進場與焦點補間（design-system.md §13）：強調（漣漪、光澤、重拍、螢光筆）也不算
+const holdTweens = (motion) => ((motion && motion.tweens) || []).filter((tw) => !isMicro(tw) && tw.role !== 'accent');
+export function motionUnits(motion) {
+  const tws = ((motion && motion.tweens) || []).filter((tw) => !tw.role || tw.role === 'enter');   // 焦點、強調、微動不是新元素
+  const enters = [], exits = [];
+  for (const tw of tws) for (const tg of tw.targets) {
+    if (tw.kind === 'enter' && !tg.emph) enters.push({ t: tw.start, tg, call: tw.call || null });
+    if (tw.kind === 'exit') exits.push({ t: tw.start, tg });
+  }
+  const swapped = (u) => exits.some((x) => x.tg.key !== u.tg.key && x.tg.parentKey === u.tg.parentKey && Math.abs(x.t - u.t) <= SWAP_WIN + 1e-6 && boxOverlap(x.tg.box, u.tg.box) >= 0.5);
+  const kept = [];
+  for (const u of enters.filter((x) => !swapped(x)).sort((a, b) => a.t - b.t)) {
+    if (kept.some((k) => (u.tg.chain || []).includes(k.tg.key) && u.t - k.t >= -1e-6 && u.t - k.t <= MERGE_WIN + 1e-6)) continue;
+    if (kept.some((k) => k.tg.key === u.tg.key && Math.abs(k.t - u.t) < 1e-6)) continue;
+    if (u.call && kept.some((k) => k.call === u.call)) continue;
+    kept.push(u);
+  }
+  return kept;
+}
+// 忙碌段：微動（idle／flow／ambient／慢推，role micro）整段都在跑，不算（完成態停留、最後一幕、畫面沒有變化、靜止取樣都用這個）
+export function busySpans(motion, { hold = false } = {}) {
+  const spans = (hold ? holdTweens(motion) : ((motion && motion.tweens) || []).filter((tw) => !isMicro(tw))).map((tw) => [tw.start, tw.end]).sort((a, b) => a[0] - b[0]);
+  const out = [];
+  for (const [s, e] of spans) {
+    const last = out[out.length - 1];
+    if (last && s <= last[1] + BUSY_GAP) last[1] = Math.max(last[1], e);
+    else out.push([s, e]);
+  }
+  return out;
+}
+
+// ctx＝{ item, fadeOut }；回傳 { findings, notes }，時間一律換成成片秒數（item.start ＋ 段內秒數）
+export function judgeMotion(motion, ctx) {
+  const findings = [], notes = [];
+  const it = ctx.item;
+  if (!it || it.type !== 'custom') return { findings, notes };
+  if (!motion) { notes.push(`${it.id}：讀不到 window.__timelines['${it.compId || '?'}']，節奏不檢查`); return { findings, notes }; }
+  const at = (t) => r3(it.start + t);
+  const base = { id: it.id, label: it.label, kind: 'motion' };
+  const push = (rule, el, t, msg, fix, data = {}) => findings.push({ ...base, level: 'warn', rule, el, t: at(t), msg, fix, data });
+  const units = motionUnits(motion);
+  const D = Number(motion.D) || it.D || 0;
+
+  // 同一秒新元素太多：只報最擠的那一窗
+  let worst = null;
+  for (const u of units) {
+    const win = units.filter((v) => v.t >= u.t - 1e-6 && v.t < u.t + DENSITY_WIN - 1e-6);
+    if (win.length > DENSITY_MAX && (!worst || win.length > worst.length)) worst = win;
+  }
+  if (worst) {
+    push('density', worst[0].tg.desc, worst[0].t, `同一秒新元素太多：${fmtT(at(worst[0].t))}–${fmtT(at(worst[0].t + DENSITY_WIN))} 出現 ${worst.length} 個（${worst.map((u) => descText(u.tg.desc)).join('、')}；上限 ${DENSITY_MAX} 個）`,
+      '錯開到每 0.5 秒 1 個（stagger: 0.5），或各自綁到講到它的那句（P.at）；同一張卡裡的東西跟著卡一起出現就好，不用各自進場', { n: worst.length });
+  }
+  // 間隔太短
+  for (let k = 1; k < units.length; k++) {
+    const d = units[k].t - units[k - 1].t;
+    if (d > 0.001 && d < STAGGER_MIN - 1e-6) {
+      push('stagger', units[k].tg.desc, units[k].t, `間隔太短：${descText(units[k - 1].tg.desc)} 和 ${descText(units[k].tg.desc)} 只差 ${d.toFixed(2)}s 出現（< ${STAGGER_MIN}s）`,
+        '沒有句子可綁時逐條錯開 ≥ 0.15s，或用同一個時間一起出現；最好各自綁講到它的那句（P.at）', { d: r3(d) });
+    }
+  }
+  const busy = busySpans(motion, { hold: true });
+  // 完成態停太短：兩個綁句點之間最長的靜止
+  const seen = new Set();
+  const marks = (motion.marks || []).filter((m) => m.t > 1e-6 && m.t < D - 1e-6 && !seen.has(m.t) && seen.add(m.t)).sort((a, b) => a.t - b.t);
+  if (!marks.length) notes.push(`${it.id}：沒有 P.at 綁句，完成態停留不檢查（照 R7.3 用 P.at 綁句才會檢查）`);
+  for (let i = 0; i + 1 < marks.length; i++) {
+    const a = marks[i].t, b = marks[i + 1].t;
+    // 窗 [a, b) 裡忙碌段以外最長的一段（忙碌段先裁到窗內；拍前就開始的動作算到它結束為止）
+    let q = 0, cur = a;
+    for (const x of busy) {
+      if (x[1] <= a || x[0] >= b) continue;
+      q = Math.max(q, Math.max(a, x[0]) - cur);
+      cur = Math.max(cur, Math.min(b, x[1]));
+    }
+    q = Math.max(q, b - cur);
+    if (q < HOLD_MIN - 1e-6) {
+      const ref = (m) => (typeof m.ref === 'number' ? String(m.ref) : `'${m.ref}'`);
+      push('hold', null, a, `完成態停太短：P.at(${ref(marks[i])})（${fmtT(at(a))}）這一拍到下一拍 P.at(${ref(marks[i + 1])})（${fmtT(at(b))}）之間，畫面最長只靜止 ${Math.max(0, q).toFixed(2)}s（新資訊要停 ≥ ${HOLD_MIN}s）`,
+        '下一拍綁晚一點的句子，或把這一拍的動作提早、縮短；只是同一件事的中間步驟就不要另外綁句，用「上一拍 + 秒數」接（中間步驟可以只停 0.6s）', { q: r3(Math.max(0, q)) });
+    }
+  }
+  // 最後一幕太短
+  let end0 = D - (ctx.fadeOut ? 0.5 : 0), how = ctx.fadeOut ? '淡出' : '結束';
+  const closing = holdTweens(motion).filter((tw) => tw.kind === 'exit' && tw.end >= end0 - BUSY_GAP);
+  if (closing.length) { end0 = Math.min(...closing.map((tw) => tw.start)); how = '退場'; }
+  const before = holdTweens(motion).filter((tw) => tw.start < end0 - 1e-6);
+  if (before.length) {
+    const last = Math.max(...before.map((tw) => Math.min(tw.end, end0)));
+    const q = end0 - last;
+    if (q < TAIL_MIN - 1e-6) {
+      const need = r3(TAIL_MIN - q).toFixed(2);
+      push('tail', null, last, `最後一幕太短：最後一個動作在 ${fmtT(at(last))} 結束，${fmtT(at(end0))} 就開始${how}，只停 ${q.toFixed(2)}s（< ${TAIL_MIN}s）`,
+        `plan.json 這段的 to 往後延 ≥ ${need}s，或把最後一拍提早 ${need}s`, { q: r3(q) });
+    }
+  }
+  return { findings, notes };
+}
+
+// 靜止取樣：忙碌段之間 ≥ 0.4 秒的空檔取中點（0 到第一個動作、最後一個動作到完成態也算），最多 8 個（取最長的），和中點／完成態差 < 0.1 秒的不重複
+export function stillTimes(motion, item) {
+  if (!motion || !item) return [];
+  const D = Number(motion.D) || item.D || (item.end - item.start);
+  const stop = D - DONE_BEFORE;
+  const busy = busySpans(motion);
+  const gaps = [];
+  let cur = 0;
+  for (const [s, e] of busy) { if (s - cur >= STILL_MIN) gaps.push([cur, s]); cur = Math.max(cur, e); }
+  if (stop - cur >= STILL_MIN) gaps.push([cur, stop]);
+  const fixed = sampleTimes(item).map((x) => x.t);
+  return gaps.sort((a, b) => (b[1] - b[0]) - (a[1] - a[0])).slice(0, STILL_MAX)
+    .map(([a, b]) => r3(item.start + (a + b) / 2))
+    .filter((t) => !fixed.some((f) => Math.abs(f - t) < 0.1))
+    .sort((a, b) => a - b).map((t) => ({ t, kind: 'still' }));
+}
+
+// ====================== 003 P2：畫面沒有變化（口播在講、畫面不動） ======================
+
+export const STATIC_MAX = 6, STATIC_CUE_MIN = 0.3;   // 連續 > 6s 沒有任何補間；字幕句和這段重疊 ≥ 0.3s 才算「在講」
+// 忙碌段（任何補間：進場、點亮、焦點切換、描線、數字變化、位移）以外 > STATIC_MAX 秒的空檔（0 到第一個動作、最後一個動作到結束或淡出也算），
+// 那段時間有字幕句在講 → 一個空檔一則 ⚠；建議綁的句子＝空檔裡開頭、離空檔中點最近的那句（沒有就取重疊的句子裡離中點最近的）
+export function staticFindings(motion, { item, cuesOut = [] } = {}) {
+  const out = [];
+  if (!motion || !item || item.type !== 'custom') return out;
+  const D = Number(motion.D) || item.D || (item.end - item.start);
+  const stop = D - (item.fadeOut ? 0.5 : 0);
+  const gaps = [];
+  let cur = 0;
+  for (const [s, e] of busySpans(motion)) { if (s - cur > STATIC_MAX + 1e-6) gaps.push([cur, s]); cur = Math.max(cur, e); }
+  if (stop - cur > STATIC_MAX + 1e-6) gaps.push([cur, stop]);
+  for (const [a, b] of gaps) {
+    const A = item.start + a, B = item.start + b;
+    const cs = cuesOut.filter((c) => Math.min(c.end, B) - Math.max(c.start, A) >= STATIC_CUE_MIN).sort((x, y) => x.n - y.n);
+    if (!cs.length) continue;
+    const mid = (A + B) / 2, inside = cs.filter((c) => c.start >= A);
+    const pick = (inside.length ? inside : cs).reduce((p, c) => (Math.abs(c.start - mid) < Math.abs(p.start - mid) ? c : p));
+    const span = cs.length > 1 ? `#${cs[0].n}–#${cs[cs.length - 1].n}` : `#${cs[0].n}`;
+    out.push({ id: item.id, label: item.label, level: 'warn', rule: 'static', el: null, t: r3(A), kind: 'motion',
+      msg: `畫面沒有變化：${item.id} 在 ${fmtT(A)}–${fmtT(B)} 畫面 ${(b - a).toFixed(1)}s 沒有變化（口播 ${span} 在講；上限 ${STATIC_MAX}s）`,
+      fix: `補一拍綁 P.at('#${pick.n}@詞')（詞換成 #${pick.n} 講到的站名、項目、數字，讓那一刻有東西出現、亮起或換數字），或在 #${pick.n} 拆成兩段`,
+      data: { from: r3(A), to: r3(B), q: r3(b - a), cues: cs.map((c) => c.n), pick: pick.n } });
+  }
+  return out;
+}
+
+// ====================== 003 r2：綁句對不上（F4 文字對時） ======================
+
+export const CUE_WIN = 0.35, SAY_MIN = 2, SAY_MAX = 12;   // 拍點後 0.35s 內出現的字；2–12 字才比（更長的是整張卡、提示詞，不是站名）
+const normSay = (s) => String(s).replace(/\*\*/g, '').replace(/[\s\p{P}\p{S}]/gu, '');
+const subsOf = (t, L) => { const a = [...t], out = []; for (let i = 0; i + L <= a.length; i++) out.push(a.slice(i, i + L).join('')); return out; };
+// 比對單位：數字、英文整個詞比（「一年翻 100 倍」的 100 不會比到字幕的 200；AI 不會比到 AIR），中文（漢字、假名）取連續 2–4 字；
+// 數字去千分位逗號、至少 2 位，英文不分大小寫、至少 2 個字母
+const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+/gu;
+const tokensOf = (s) => {
+  const t = String(s).replace(/\*\*/g, ''), raw = new Map();
+  const keep = (k, r) => { if (k.length >= 2 && !raw.has(k)) raw.set(k, r); };
+  for (const m of t.matchAll(/\d[\d,.]*\d|\d/g)) keep(m[0].replace(/,/g, ''), m[0]);
+  for (const m of t.matchAll(/[A-Za-z][A-Za-z0-9+#]*/g)) keep(m[0].toLowerCase(), m[0]);
+  return { raw, cjk: (t.match(CJK) || []).join('|') };
+};
+const hasPiece = (tok, x) => (/^[\da-z]/.test(x) ? tok.raw.has(x) : tok.cjk.includes(x));
+// 一段字 → 由強到弱三層：[數字＋英文＋4 字中文, 3 字中文, 2 字中文]
+const piecesOf = (s) => {
+  const tok = tokensOf(s), runs = tok.cjk ? tok.cjk.split('|') : [];
+  const cjk = (L) => [...new Set(runs.flatMap((r) => subsOf(r, L)))];
+  return [[...tok.raw.keys(), ...cjk(4)], cjk(3), cjk(2)];
+};
+
+// custom 檔的 const X = P.at('<ref>'…) → { ref: 'X' }（訊息裡寫「T2 改 …」用）
+export function atNames(html) {
+  const out = {};
+  for (const m of String(html).matchAll(/\b([A-Z][A-Z0-9_]*)\s*=\s*P\.at\(\s*(['"])([^'"\n]+)\2/g)) if (!(m[3] in out)) out[m[3]] = m[1];
+  return out;
+}
+
+// motion（collectMotionInPage）＋ cuesOut（build --check 的成片秒數字幕，有 text）→ ⚠ cue-text
+// 每個 P.at('#N')／P.at('#N@詞') 拍點：拍點後 CUE_WIN 秒內從看不見變看得見的字（站名、項目；audit-page 的 up／say），數字與英文整個詞、中文取 2–4 字，
+// 有一個字在第 N 句講到就過；都沒有、而這段的另一句 #M 有 → 一拍報一則「在 #M 才講到」（取句號離 N 最近的）；都找不到不報
+export function cueTextFindings(motion, { item, cuesOut = [], names = {} } = {}) {
+  const out = [];
+  if (!motion || !item || item.type !== 'custom') return out;
+  const segCues = cuesOut.filter((c) => c.end > item.start && c.start < item.end);
+  const done = new Set();
+  for (const mk of motion.marks || []) {
+    const m = typeof mk.ref === 'string' && mk.ref.match(/^#(\d+)(?:@(.+))?$/);
+    if (!m || done.has(`${mk.ref}|${mk.t}`)) continue;
+    done.add(`${mk.ref}|${mk.t}`);
+    const N = Number(m[1]);
+    const cueN = cuesOut.find((c) => c.n === N);
+    if (!cueN) continue;
+    const tokN = tokensOf(cueN.text);
+    // 這一拍出現的字（同一拍常常還有總覽剛好進場的別站：只要有一個字在第 N 句講到，這一拍就算對上）
+    const cands = [];
+    for (const tw of motion.tweens || []) {
+      if (!tw.up || tw.start < mk.t - 0.05 || tw.start > mk.t + CUE_WIN) continue;
+      for (const tg of tw.targets) {
+        const raw = String(tg.say || '').trim(), T = normSay(raw), len = [...T].length;
+        if (len >= SAY_MIN && len <= SAY_MAX && !cands.some((c) => c.T === T)) cands.push({ raw, T, len, tg, tiers: piecesOf(raw) });
+      }
+    }
+    const inN = (c) => c.tiers.some((xs) => xs.some((x) => hasPiece(tokN, x)));
+    if (!cands.length || cands.some(inN)) continue;
+    let best = null;
+    const others = segCues.filter((q) => q.n !== N).map((q) => ({ q, tok: tokensOf(q.text) }));
+    for (const c of cands) {
+      for (const xs of c.tiers) {
+        let hit = null;
+        for (const x of xs) {
+          const cs = others.filter((o) => hasPiece(o.tok, x)).sort((a, b) => Math.abs(a.q.n - N) - Math.abs(b.q.n - N));
+          if (cs.length && (!hit || Math.abs(cs[0].q.n - N) < Math.abs(hit.q.n - N))) hit = { q: cs[0].q, x: cs[0].tok.raw.get(x) || x };
+        }
+        if (hit) { if (!best || Math.abs(hit.q.n - N) < Math.abs(best.q.n - N)) best = { ...hit, c }; break; }
+      }
+    }
+    if (!best) continue;
+    const name = names[mk.ref];
+    const t = r3(item.start + mk.t);
+    out.push({ id: item.id, label: item.label, level: 'warn', rule: 'cue-text', el: best.c.tg.desc, t, kind: 'motion',
+      msg: `綁句對不上：「${best.c.raw.slice(0, SAY_MAX)}」在 #${best.q.n} 才講到、不是 #${N}（${name ? `${name} = ` : ''}P.at('${mk.ref}')，${fmtT(t)} 出現；#${best.q.n}「${best.q.text.slice(0, 16)}」）`,
+      fix: `${name ? `${name} 改` : '改成'} P.at('#${best.q.n}@${best.x}')（"@詞" 寫成字串字面值，改完重跑 build；字幕那句真的是別的意思就不用改）`,
+      data: { ref: mk.ref, from: N, to: best.q.n, word: best.x } });
+  }
+  return out;
+}
+
+// window.__cueErrors（specs/contracts/cues.md §4.4）→ 綁句失敗 ✖；對不到段的 → warnings
+export function cueFindings(errors, items) {
+  const findings = [], warnings = [];
+  const seen = new Set();
+  for (const raw of errors || []) {
+    const s = String(raw);
+    if (seen.has(s)) continue;
+    seen.add(s);
+    const m = s.match(/^(\S+) (P\.(?:at|dur)\(.*?\))：(.*)$/);
+    const it = m && (items || []).find((x) => x.type === 'custom' && (x.id === m[1] || x.compId === m[1]));
+    if (!it) { warnings.push(`頁面 cue 錯誤：${s}`); continue; }
+    const why = m[3].split(' → ')[0];   // 原因原文自帶的 → 改法拿掉，只留 audit 的 fix（一行一個改法）
+    const fix = /^字幕沒有第/.test(why) ? '改成這段範圍內的句號（build.mjs --check 的報告列出每段的句子），改完重跑 build'
+      : /^「@詞」/.test(why) ? "把 ref 寫成字串字面值 P.at('#N@詞')（不要用變數組字串），確認 rough.srt 那一句有這個詞，再跑 build"
+      : '重跑 node shared/template/tools/build.mjs --project projects/<專案>；還是沒有就檢查 plan.json 這段的 src 是不是這支檔';
+    findings.push({ id: it.id, label: it.label, level: 'error', rule: 'cue', el: null, at: [], t: null, kind: 'done',
+      msg: `綁句失敗：${it.file || it.compId} 的 ${m[2]}：${why}`, fix, data: { call: m[2] } });
+  }
+  return { findings, warnings };
 }

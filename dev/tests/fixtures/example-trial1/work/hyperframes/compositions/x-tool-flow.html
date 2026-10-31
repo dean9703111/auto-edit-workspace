@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-tool-flow 流程逐步亮起</title></head>
+<body>
+<template id="x-tool-flow-template">
+  <style>
+    #x-tool-flow { position: absolute; inset: 0; }
+    #x-tool-flow .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-tool-flow #xtool-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-tool-flow #xtool-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-tool-flow #xtool-body { position: relative; width: 1176px; height: 580px; }
+    /* 連接線：整個內容區大小的 svg，疊在站的「下面」（線端被站蓋住，視覺上剛好貼齊邊框） */
+    #x-tool-flow #xtool-lines { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-tool-flow .xtool-line { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 站：寬 264、高 224，上排頂 40、下排頂 316（上下錯落）；圖示和站名同一塊 */
+    #x-tool-flow .xtool-node { position: absolute; width: 264px; height: 224px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
+                             border-radius: 20px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-tool-flow .xtool-node .sc-icon { --d: 96px; --i: 56px; position: relative; }
+    #x-tool-flow .xtool-node .xtool-name { position: relative; }
+    #x-tool-flow #xtool-n1 { left: 40px;  top: 40px; }
+    #x-tool-flow #xtool-n2 { left: 316px; top: 316px; }
+    #x-tool-flow #xtool-n3 { left: 592px; top: 40px; }
+    #x-tool-flow #xtool-n4 { left: 868px; top: 316px; }
+    /* 亮起：now＝目前這一站的底色（下一站亮起時淡掉）；on＝主色框（亮起後保留，代表「走過」） */
+    #x-tool-flow .xtool-now { position: absolute; inset: 0; border-radius: 16px; background: var(--sc-fs-tint); }
+    #x-tool-flow .xtool-on  { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 20px; }
+  </style>
+  <div data-hf-id="hf-35zc" id="x-tool-flow" data-composition-id="x-tool-flow" data-width="1920" data-height="1080" data-duration="14.5"
+       data-cues-sample='{"start":0,"D":14.5,"cues":{"12":[3.2,5.7],"13":[6,8.5],"14":[8.8,11.3],"15":[11.6,14]}}'>
+    <div data-hf-id="hf-rs5n" class="sc-surface-fs fill"></div>
+    <div data-hf-id="hf-35zn" id="xtool-card" class="sc-wcard">
+      <div data-hf-id="hf-djs5" class="sc-wcard__bar"><span data-hf-id="hf-qvfz" class="sc-opt">多機錄影工具</span></div>
+      <div data-hf-id="hf-6nee" id="xtool-body">
+        <svg data-hf-id="hf-5srf" id="xtool-lines" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <!-- 三段曲線：起點貼在上一站的邊框，終點貼在下一站的邊框；箭頭是另一條短折線 -->
+          <path data-hf-id="hf-32ev" id="xtool-c1" class="xtool-line" d="M172 264 C172 372 224 428 316 428" />
+          <path data-hf-id="hf-k3oy" id="xtool-h1" class="xtool-line" d="M302 414 L316 428 L302 442" />
+          <path data-hf-id="hf-mjir" id="xtool-c2" class="xtool-line" d="M448 316 C448 208 500 152 592 152" />
+          <path data-hf-id="hf-ujf1" id="xtool-h2" class="xtool-line" d="M578 138 L592 152 L578 166" />
+        </svg>
+        <div data-hf-id="hf-080d" id="xtool-n1" class="xtool-node"><i data-hf-id="hf-4j4x" id="xtool-now1" class="xtool-now"></i><i data-hf-id="hf-kn2v" id="xtool-on1" class="xtool-on"></i>
+          <span data-hf-id="hf-xlf2" id="xtool-ico1" class="sc-icon"><svg data-hf-id="hf-ew5e" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect data-hf-id="hf-ou64" width="5" height="5" x="3" y="3" rx="1" /> <rect data-hf-id="hf-053a" width="5" height="5" x="16" y="3" rx="1" /> <rect data-hf-id="hf-bo1o" width="5" height="5" x="3" y="16" rx="1" /> <path data-hf-id="hf-b0ne" d="M21 16h-3a2 2 0 0 0-2 2v3" /> <path data-hf-id="hf-zbo6" d="M21 21v.01" /> <path data-hf-id="hf-ryum" d="M12 7v3a2 2 0 0 1-2 2H7" /> <path data-hf-id="hf-ojx0" d="M3 12h.01" /> <path data-hf-id="hf-nr12" d="M12 3h.01" /> <path data-hf-id="hf-mgvi" d="M12 16v.01" /> <path data-hf-id="hf-bg4e" d="M16 12h1" /> <path data-hf-id="hf-gfnk" d="M21 12v.01" /> <path data-hf-id="hf-iq0f" d="M12 21v-1" /> </svg></span><span data-hf-id="hf-0bla" class="xtool-name sc-t52 sc-w900 sc-opt">掃碼連線</span></div>
+        <div data-hf-id="hf-464e" id="xtool-n2" class="xtool-node"><i data-hf-id="hf-8h8y" id="xtool-now2" class="xtool-now"></i><i data-hf-id="hf-bz70" id="xtool-on2" class="xtool-on"></i>
+          <span data-hf-id="hf-tnb1" id="xtool-ico2" class="sc-icon"><svg data-hf-id="hf-a17q" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path data-hf-id="hf-onj0" d="M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.64z" /> <path data-hf-id="hf-wew8" d="M12 17v4" /> <path data-hf-id="hf-85wg" d="M8 21h8" /> <rect data-hf-id="hf-r7md" x="2" y="3" width="20" height="14" rx="2" /> </svg></span><span data-hf-id="hf-wocu" class="xtool-name sc-t52 sc-w900 sc-opt">即時預覽</span></div>
+        <div data-hf-id="hf-848f" id="xtool-n3" class="xtool-node"><i data-hf-id="hf-cfcz" id="xtool-now3" class="xtool-now"></i><i data-hf-id="hf-cqut" id="xtool-on3" class="xtool-on"></i>
+          <span data-hf-id="hf-svn8" id="xtool-ico3" class="sc-icon"><svg data-hf-id="hf-afir" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle data-hf-id="hf-kysq" cx="12" cy="12" r="4" /> <path data-hf-id="hf-tplc" d="M12 2v2" /> <path data-hf-id="hf-ysdk" d="M12 20v2" /> <path data-hf-id="hf-d1np" d="m4.93 4.93 1.41 1.41" /> <path data-hf-id="hf-8s75" d="m17.66 17.66 1.41 1.41" /> <path data-hf-id="hf-msdq" d="M2 12h2" /> <path data-hf-id="hf-bfo8" d="M20 12h2" /> <path data-hf-id="hf-14cr" d="m6.34 17.66-1.41 1.41" /> <path data-hf-id="hf-6d4n" d="m19.07 4.93-1.41 1.41" /> </svg></span><span data-hf-id="hf-gerl" class="xtool-name sc-t52 sc-w900 sc-opt">確認光暗</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-tool-flow'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#54', 1.6), T2 = P.at('#55', 0.34), T3 = P.at('#56');
+
+    // 1. 卡片先進場，再每 0.5 秒放出一站（站先全部在，之後才畫連接線）；0.5 秒前不動
+    P.reveal('#xtool-card', 0.5);
+    P.rise('#xtool-n1, #xtool-n2, #xtool-n3', 1.1, { stagger: 0.5 });
+    // 2. 站進場後 0.15 秒，圖示的線描出來（跟著站錯開 0.5）
+    P.icon('#xtool-ico1, #xtool-ico2, #xtool-ico3', 1.1 + P.BEAT, { stagger: 0.5 });
+
+    // 3. 講到哪一站，那一站亮起：疊主色框＋底色淡入；下一站亮起時，上一站的底色淡掉、框保留（走過只換框色，不打勾）
+    P.in('#xtool-on1, #xtool-now1', T1);
+    // 連接線在下一站亮起前 0.9 秒開始描（線 0.7 秒，箭頭 0.2 秒），線到了站才亮
+    P.stroke('#xtool-c1', T2 - 0.9);  P.stroke('#xtool-h1', T2 - 0.2, { dur: 0.2 });
+    P.out('#xtool-now1', T2);  P.in('#xtool-on2, #xtool-now2', T2);
+    P.stroke('#xtool-c2', T3 - 0.9);  P.stroke('#xtool-h2', T3 - 0.2, { dur: 0.2 });
+    P.out('#xtool-now2', T3);  P.in('#xtool-on3, #xtool-now3', T3);
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-tool-flow'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

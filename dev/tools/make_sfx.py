@@ -1,4 +1,7 @@
-"""產生工作區 shared/sfx/ 的 12 顆音效：從 CC0 素材（Kenney、OpenGameArt）挑選、剪輯、統一響度。
+"""已由 dev/tools/make-sfx.mjs 取代；只保留當凍結 8 顆（pop tick swipe whoosh flip type glitch riser）的處理紀錄。
+重跑會把新音效蓋回舊檔、把 sources.json 縮回 12 筆，所以直接執行會停下來（specs/005-sfx/spec.md FR-038）。
+
+（以下是退役前的說明）產生工作區 shared/sfx/ 的 12 顆音效：從 CC0 素材（Kenney、OpenGameArt）挑選、剪輯、統一響度。
 
 輸出（都在 video/minimax/素材/ 底下）：
   workspace/shared/sfx/<12 個>.wav     48 kHz、立體聲、pcm_s16le
@@ -30,6 +33,10 @@ import urllib.request
 import zipfile
 from math import gcd
 from pathlib import Path
+
+RETIRED = "✖ make_sfx.py 已由 dev/tools/make-sfx.mjs 取代；只保留當凍結 8 顆的處理紀錄 → 改跑 node dev/tools/make-sfx.mjs --help"
+if __name__ == "__main__":
+    sys.exit(RETIRED)  # 放在 numpy 等第三方 import 之前：沒裝 numpy 的機器也印得出這句
 
 import numpy as np
 import soundfile as sf

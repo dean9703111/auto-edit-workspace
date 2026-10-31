@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-stack 架構堆疊｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-stack.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-stack { position: absolute; inset: 0; }
+    #x-stack .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 140、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 852） */
+    #x-stack #xstk-card { position: absolute; left: 120px; top: 140px; width: 1180px; }
+    #x-stack #xstk-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-stack #xstk-body { position: relative; width: 1176px; height: 580px; }
+    /* 地基線：1080×8（左右各比層寬多 16），script 貼在最底層 l1 下面 16（讀 data-layout 排好的位置） */
+    #x-stack #xstk-base { position: absolute; width: 1080px; height: 8px; }
+    #x-stack #xstk-base svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    #x-stack #xstk-ground { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; }
+    /* 層：同寬 1048×112，左邊圖示＋名稱、右邊說明（靠右）；左右內距 32；位置由 #xstk-body 的 data-layout 排，不寫 left／top */
+    #x-stack .xstk-layer { position: absolute; width: 1048px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                           border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
+                           display: flex; align-items: center; justify-content: space-between; padding: 0 32px; white-space: nowrap; }
+    #x-stack .xstk-left { display: flex; align-items: center; gap: 24px; }
+  </style>
+  <div id="x-stack" data-composition-id="x-stack" data-width="1920" data-height="1080" data-duration="14.9"
+       data-cues-sample='{"start":0,"D":14.9,"cues":{"111":[1.8,4.1],"112":[4.3,6.8],"113":[6.9,9.3],"114":[9.4,11.8],"115":[12.1,14.5]},"refs":{"#111@手機":2.0,"#112@區網":4.5,"#113@控制台":7.0,"#114@剪輯":9.5}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xstk-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">多機錄影工具的架構</span></div>
+      <div id="xstk-body" data-layout="col" data-gap="sm">
+        <!-- 由上往下寫：l4 最上層 … l1 最底層（第 1 個講到）；data-layout="col" 照這個順序由上往下排。地基線不參與排版（沒有 data-slot） -->
+        <div id="xstk-l4" class="xstk-layer" data-slot>
+          <span class="xstk-left"><span id="xstk-ico4" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">剪輯流程</span></span><span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt">直接接剪輯軟體</span></div>
+        <div id="xstk-l3" class="xstk-layer" data-slot>
+          <span class="xstk-left"><span id="xstk-ico3" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="20" height="14" x="2" y="3" rx="2" /> <line x1="8" x2="16" y1="21" y2="21" /> <line x1="12" x2="12" y1="17" y2="21" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">控制台</span></span><span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt">電腦上按開始結束</span></div>
+        <div id="xstk-l2" class="xstk-layer" data-slot>
+          <span class="xstk-left"><span id="xstk-ico2" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 20h.01" /> <path d="M2 8.82a15 15 0 0 1 20 0" /> <path d="M5 12.859a10 10 0 0 1 14 0" /> <path d="M8.5 16.429a5 5 0 0 1 7 0" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">區網連線</span></span><span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt">同一個 Wi-Fi 傳檔</span></div>
+        <div id="xstk-l1" class="xstk-layer" data-slot>
+          <span class="xstk-left"><span id="xstk-ico1" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">手機 App</span></span><span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt">負責錄影與回傳</span></div>
+        <div id="xstk-base"><svg viewBox="0 0 1080 8" xmlns="http://www.w3.org/2000/svg"><line id="xstk-ground" x1="2" y1="4" x2="1078" y2="4" /></svg></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-stack'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#111@手機'), T2 = P.at('#112@區網'), T3 = P.at('#113@控制台'), T4 = P.at('#114@剪輯');   // 由下往上講到每一層名稱的時刻
+    P.sfx('tick', '#111@手機'); P.sfx('tick', '#112@區網'); P.sfx('tick', '#113@控制台'); P.sfx('tick', '#114@剪輯');   // 每一層一顆音效（句號和上一行一樣）
+    const ALL = P.at('#115');                          // 講到「合起來就是…」那一句（沒有這句見檔頭【綁句欄位】）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    // 地基線貼在最底層 l1 下面 --sc-gap-sm、左右各多 --sc-gap-sm（層的位置由 data-layout 排好，這裡只讀；載入時算一次，不用改）
+    const L1 = document.getElementById('xstk-l1'), BASE = document.getElementById('xstk-base'), G = window.SceneLayout.token('gap-sm');
+    BASE.style.left = (L1.offsetLeft - G) + 'px'; BASE.style.top = (L1.offsetTop + L1.offsetHeight + G) + 'px';
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；1.0 秒起地基線描出
+    if (ENTER === 'grow') P.grow('#xstk-card', 0.3);
+    else { P.wipe('#xstk-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xstk-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xstk-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.stroke('#xstk-ground', 1.0);
+
+    // 拍 1 第 1 層：從上方 28u 落下（過衝落地）→ ＋0.12 名稱、＋0.24 說明逐字浮出、＋0.15 圖示描線 → ＋0.6 聚焦（放大抬起發光）→ ＋0.9 漂浮
+    P.pop('#xstk-l1', T1, { from: 0.94, dy: -28 });  P.chars('#xstk-l1 .xstk-name', T1 + 0.12);  P.chars('#xstk-l1 .xstk-desc', T1 + 0.24);  P.icon('#xstk-ico1', T1 + 0.15);
+    P.spot('#xstk-l1', '#xstk-l1', T1 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
+    P.idle('#xstk-l1', T1 + 0.9, { y: 3, period: 2.8, until: T2 - 0.1 });
+    // 拍 2 第 2 層：同拍 1；＋0.6 聚焦移到這一層（下面的層壓暗 0.6）
+    P.pop('#xstk-l2', T2, { from: 0.94, dy: -28 });  P.chars('#xstk-l2 .xstk-name', T2 + 0.12);  P.chars('#xstk-l2 .xstk-desc', T2 + 0.24);  P.icon('#xstk-ico2', T2 + 0.15);
+    P.spot('#xstk-l1, #xstk-l2', '#xstk-l2', T2 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
+    P.idle('#xstk-l2', T2 + 0.9, { y: 3, period: 2.8, until: T3 - 0.1 });
+    // 拍 3 第 3 層：同拍 2
+    P.pop('#xstk-l3', T3, { from: 0.94, dy: -28 });  P.chars('#xstk-l3 .xstk-name', T3 + 0.12);  P.chars('#xstk-l3 .xstk-desc', T3 + 0.24);  P.icon('#xstk-ico3', T3 + 0.15);
+    P.spot('#xstk-l1, #xstk-l2, #xstk-l3', '#xstk-l3', T3 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
+    P.idle('#xstk-l3', T3 + 0.9, { y: 3, period: 2.8, until: T4 - 0.1 });
+    // 拍 4 第 4 層：同拍 2（3 層時刪掉這 3 行，見檔頭）
+    P.pop('#xstk-l4', T4, { from: 0.94, dy: -28 });  P.chars('#xstk-l4 .xstk-name', T4 + 0.12);  P.chars('#xstk-l4 .xstk-desc', T4 + 0.24);  P.icon('#xstk-ico4', T4 + 0.15);
+    P.spot('#xstk-l1, #xstk-l2, #xstk-l3, #xstk-l4', '#xstk-l4', T4 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
+    P.idle('#xstk-l4', T4 + 0.9, { y: 3, period: 2.8, until: ALL - 0.1 });
+
+    // 收：講到「合起來」→ 回均衡（全部亮回、亮框收掉），完成態停到段尾
+    P.spot('#xstk-l1, #xstk-l2, #xstk-l3, #xstk-l4', null, ALL, { dur: 0.6 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-stack'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-stack";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

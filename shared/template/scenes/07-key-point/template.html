@@ -1,25 +1,40 @@
+<!-- 預設拍型：F 重點字卡（BEATS.md §3 F；keyAt＝拍 3，不寫動畫分鏡） -->
 <!-- @style -->
-/* 下方字卡底座 .sc-lt：左 120、bottom 220 → 底板底 860、主卡 672–852（單列卡高 180）、標籤 616–704。
-   焦點只有一個：白色斜板（高 88、斜切 24，與標籤斜邊平行）上的重點字 56／900；細節＝左下主色短線（右上被斜板佔住，不用網點）。 */
+/* v2 重點字卡：左 120、bottom 220。卡片（徽章＋前句）在左，重點在卡片右緣的「抽屜」裡，講到才抽出來（之前不留空白板）。
+   主色只給焦點（重點條＋錯位底板），標籤用墨色；景深＝硬邊錯位底板＋淡落影＋整組微浮。 */
+/* 排法 free（kit/scene-layout.js 不排）：卡片＋抽屜（重點講到才抽出），卡寬隨字，沒有列／欄。 */
 #gCard { left: 120px; bottom: 220px; }
+<!-- @style-portrait -->
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+#gCard { left: 60px; bottom: 680px; }
 <!-- @body -->
-<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
-  <i class="sc-lt__plate"></i>
-  <div class="sc-lt__card">
-    <i class="sc-lt__accent"></i>
-    <div class="sc-lt__body sc-lt__row">
-      {{#icon}}<span class="sc-icon sc-icon--88">{{{icon}}}</span>{{/icon}}
-      {{#lead}}<span id="kLead" class="sc-t54 sc-w700 sc-opt">{{lead}}</span>{{/lead}}
-      <span class="sc-slant sc-slant--paper sc-lt__kw"><span id="kWord" class="sc-t56 sc-w900 sc-opt">{{key}}</span></span>
+<div id="gCard" class="v2-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <div id="kTag" class="v2-lt__tag"><span class="sc-opt">{{#tag}}{{tag}}{{/tag}}{{^tag}}{{#tone_warn}}注意{{/tone_warn}}{{^tone_warn}}重點{{/tone_warn}}{{/tag}}</span></div>
+  <div class="v2-lt__row">
+    <div id="kCard" class="v2-lt__card">
+      {{#icon}}<span id="kIcon" class="sc-icon sc-icon--88">{{{icon}}}</span>{{/icon}}
+      {{#lead}}<span id="kLead" class="v2-lt__lead sc-t54 sc-w700 sc-opt">{{lead}}</span>{{/lead}}
     </div>
+    <div class="v2-lt__drawer"><div id="kSlab" class="v2-lt__key"><span id="kWord" class="sc-t56 sc-w900 sc-opt">{{key}}</span></div></div>
   </div>
-  <div class="sc-lt__tag"><span class="sc-lt__tagin">{{#tag}}{{tag}}{{/tag}}{{^tag}}{{#tone_warn}}注意{{/tone_warn}}{{^tone_warn}}重點{{/tone_warn}}{{/tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* 外殼（底板＋主卡＋標籤＋斜板＋短線）遮罩揭開 → 0.15 後徽章＋前句淡入上漂、斜板內的字遮罩上升（同一拍）→ 再 0.15 徽章圖示描線（tone good＝圓環＋打勾）→ 停 → 段尾 0.4 淡出 */
-P.reveal('#gCard', {{{in}}});
-{{#icon}}P.rise('#gCard .sc-icon', {{{in}}} + P.BEAT);{{/icon}}
-{{#lead}}P.rise('#kLead', {{{in}}} + P.BEAT);{{/lead}}
-P.maskUp('#kWord', {{{in}}} + P.BEAT);
-{{#icon}}{{#tone_good}}P.check('#gCard .sc-icon', {{{in}}} + P.BEAT * 2);{{/tone_good}}{{^tone_good}}P.icon('#gCard .sc-icon', {{{in}}} + P.BEAT * 2);{{/tone_good}}{{/icon}}
-{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}
+/* 進場（0.6s 內完成，錯拍）：卡片從左擦開＋左移 40 → 0.12 標籤彈出 → 0.18 徽章彈入、0.3 描圈打勾 → 0.22 前句逐字上浮
+   停留：整組微浮 3px（3.6s 一個週期）、徽章呼吸 4%
+   keyAt（講到重點）：前句退焦 0.7 → 重點條從卡片右緣抽出（0.5 expo.out）→ +0.12 字逐字彈出（back.out 過衝）→ +0.55 光澤掃過
+   段尾：抽屜收回 0.28、卡片向左擦掉 0.3（退場比進場快）；後面接全畫面時提早 0.5 退完，不被轉場切半張 */
+P.wipe('#kCard', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#kCard', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+P.pop('#kTag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+{{#icon}}P.pop('#kIcon', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+{{#tone_good}}P.check('#kIcon', {{{in}}} + 0.3);{{/tone_good}}{{^tone_good}}P.icon('#kIcon', {{{in}}} + 0.3);{{/tone_good}}
+P.idle('#kIcon', {{{in}}} + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });{{/icon}}
+{{#lead}}P.chars('#kLead', {{{in}}} + 0.22);{{/lead}}
+P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+{{#lead}}P.dim('#kLead', {{{keyAt}}}, { to: 0.62 });{{/lead}}
+P.slide('#kSlab', {{{keyAt}}}, { from: 'left', dur: 0.5 });
+P.chars('#kWord', {{{keyAt}}} + 0.12, { mode: 'pop', stagger: 0.035 });
+P.sheen('#kSlab', {{{keyAt}}} + 0.55);
+{{#exitFade}}P.slideOut('#kSlab', D - 0.45, { to: 'left' });
+P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.slideOut('#kSlab', D - 0.95, { to: 'left' });
+P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

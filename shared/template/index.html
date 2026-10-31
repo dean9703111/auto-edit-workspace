@@ -174,6 +174,7 @@
     <a href="#layout"><span class="n">①</span>版面</a>
     <a href="#lower"><span class="n">②</span>下方字卡</a>
     <a href="#list"><span class="n">③</span>條列</a>
+    <a href="#custom"><span class="n">④</span>情境動畫</a>
     <a href="#fx" class="fx">字卡動態 40 種 →</a>
     <a href="#sfx">音效</a>
     <a href="#motion">動態規則</a>
@@ -502,6 +503,336 @@
   </div>
 </section>
 
+<!-- ④ 情境動畫（第二層 custom） -->
+<section class="block" id="custom">
+  <div class="block-head"><h2>④ 情境動畫</h2><p>第二層：口播在講一個情境時，從 <code>shared/template/custom/</code> 複製一支改（挑法見 SITUATIONS.md）。每支都用 P.at 綁字幕句，長度跟著 plan.json 的段長</p></div>
+  <div class="grid">
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-process.html" loading="lazy" title="x-process 流程逐步亮起 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-process.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-process 流程逐步亮起"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>流程逐步亮起</h3><code>x-process</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一條有先後的過程，3–4 站、每站一句（「先錄影，接著轉逐字稿，再列清單，最後初剪」）</dd>
+          <dt>不要用在</dt><dd class="avoid">站排成一直線、站名很短（用 04c 全畫面流程）；超過 4 站</dd>
+          <dt>畫面上</dt><dd>站逐步亮起、曲線連接線描出來，走過的站只換框色、不打勾</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–4 站</span><span>站名 ≤ 4 字</span><span>綁句 T1–T4</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-metaphor.html" loading="lazy" title="x-metaphor 比喻圖解 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-metaphor.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-metaphor 比喻圖解"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>比喻圖解</h3><code>x-metaphor</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>比喻：生活物件 → 技術概念 → 一句代價（「Skill 像使用說明書，AI 照著做，寫錯就照錯做」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只有一句定義（用 06 概念）；要比較兩個概念（用 04b）</dd>
+          <dt>畫面上</dt><dd>左圖示描線 → 箭頭 → 右圖示 → 結論句浮出 → 警示句</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>名稱 ≤ 6 字</span><span>結論與限制 ≤ 10 字</span><span>綁句 T1／T4／T5</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-before-after.html" loading="lazy" title="x-before-after 前後對比 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-before-after.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-before-after 前後對比"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>前後對比</h3><code>x-before-after</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>同一件事換個做法，時間或成本差很多（「手動剪 3 小時，AI 剪 20 分鐘」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只是兩個選項並排、沒有「變」的過程（用 04b）</dd>
+          <dt>畫面上</dt><dd>同一張卡變形：標籤換字、圖示重描、數字計數、量條縮短，最後蓋出省下多少</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>膠囊 ≤ 4 字</span><span>數字與量條同一把尺</span><span>綁句 BEFORE／CHIPS／AFTER／SAVE</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-numbers.html" loading="lazy" title="x-numbers 數值變化 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-numbers.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-numbers 數值變化"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>數值變化</h3><code>x-numbers</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>數量超過上限，再處理掉大部分（「NG 32 段，剪掉 28 段」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只有一個數字（用 06／07）；4 組以上數字（用 04d 表格）</dd>
+          <dt>畫面上</dt><dd>計數器加量條，超量時同一根軌道撐破、變警示色，第二列用同一把尺比</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>名稱 ≤ 4 字</span><span>撐開後寬 ≤ 1064</span><span>綁句 A／B</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-warnings.html" loading="lazy" title="x-warnings 警告逐條聚焦 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-warnings.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-warnings 警告逐條聚焦"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>警告逐條聚焦</h3><code>x-warnings</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一組 2–3 條警告，一條一句（「有三件事要小心：……」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只有 1 條（用 07 tone warn）；4 條以上（用 04a）</dd>
+          <dt>畫面上</dt><dd>左邊三列依序出現；講到哪條，那條亮框、其他降到 0.4；右邊同一個位置換示意圖</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>每列 ≤ 8 字</span><span>示意 ≤ 7 字</span><span>綁句 W1–W3</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-prompt.html" loading="lazy" title="x-prompt 提示詞打字 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-prompt.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-prompt 提示詞打字"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>提示詞打字</h3><code>x-prompt</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>提示詞（≤ 49 字）、終端機指令、網址（「我是這樣下提示詞的：……」）</dd>
+          <dt>不要用在</dt><dd class="avoid">提示詞 ≥ 50 字（只上字幕、畫面用錄影）；已經有打字的螢幕錄影</dd>
+          <dt>畫面上</dt><dd>提示詞框先出現，文字逐字打出；講到關鍵詞時底線畫出來；最後一個提醒膠囊</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>每行 ≤ 18 字、≤ 3 行</span><span>提醒 ≤ 10 字</span><span>綁句 TYPE／K1／K2／NOTE</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-ui-mock.html" loading="lazy" title="x-ui-mock 示意介面操作 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-ui-mock.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-ui-mock 示意介面操作"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>示意介面操作</h3><code>x-ui-mock</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>介面操作，但沒有螢幕錄影（「在設定頁按右上角的匯出，就會跳出完成通知」）</dd>
+          <dt>不要用在</dt><dd class="avoid">有螢幕錄影（用 media 段）；操作超過 2 步</dd>
+          <dt>畫面上</dt><dd>示意視窗全貌 → 鏡頭推到按鈕 → 游標移過去按下（漣漪）→ 跳出通知</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>按鈕 ≤ 4 字</span><span>通知 ≤ 8 字</span><span>綁句 ZOOM／CLICK／RESULT</span><span>plan.json 寫 clicks</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-architecture.html" loading="lazy" title="x-architecture 資料怎麼走 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-architecture.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-architecture 資料怎麼走"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>資料怎麼走</h3><code>x-architecture</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>資料在裝置之間怎麼走、不經過雲端（「手機的照片直接傳到電腦，不經過雲端」）</dd>
+          <dt>不要用在</dt><dd class="avoid">有先後的步驟（用 x-process）；超過 3 個節點的完整架構圖</dd>
+          <dt>畫面上</dt><dd>兩個裝置和雲端先出現 → 直連的路描出來 → 三個檔案沿路走過去 → 雲端被劃掉、出現結論</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>裝置 ≤ 4 字</span><span>結論 ≤ 6 字</span><span>綁句 PATH／FLOW／CUT</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-branch.html" loading="lazy" title="x-branch 一分多分支 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-branch.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-branch 一分多分支"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>一分多分支</h3><code>x-branch</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一個起點分成 2–3 條路，或 2–3 個來源匯成一個（「同一支錄影，可以剪長片、剪短影音，或直接出逐字稿」）</dd>
+          <dt>不要用在</dt><dd class="avoid">分支有先後順序（用 x-process）；超過 3 條</dd>
+          <dt>畫面上</dt><dd>起點和分支先出現 → 講到哪條，曲線描過去、那條亮框、其他降到 0.4</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>分支 ≤ 5 字</span><span>兩條或匯流照檔頭變體表</span><span>綁句 B1–B3</span></div>
+      </div>
+    </article>
+
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-stack.html" loading="lazy" title="x-stack 架構堆疊 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-stack.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-stack 架構堆疊"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>架構堆疊</h3><code>x-stack</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>由下往上的組成，3–4 層、從底層講起（「最底層是手機上的錄影 App，中間靠區網連線，最上層是電腦端的控制台」）</dd>
+          <dt>不要用在</dt><dd class="avoid">從上往下講、各層只是並列（用 13 或 04a）；有先後的步驟（用 x-process）；超過 4 層</dd>
+          <dt>畫面上</dt><dd>先畫地基線 → 講到哪層，那層從上方落下、圖示描線，主色框移到這一層；講到「合起來」框全部拿掉</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–4 層</span><span>名稱 ≤ 6 字、說明 ≤ 12 字</span><span>綁句 T1–T4／ALL</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-checklist.html" loading="lazy" title="x-checklist 打勾完成清單 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-checklist.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-checklist 打勾完成清單"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>打勾完成清單</h3><code>x-checklist</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一組要確認／要完成的事，2–4 項（「包含新增專案、下載 APP、配對手機、調整解析度」）</dd>
+          <dt>不要用在</dt><dd class="avoid">回顧講過的重點（用 11 總結）；有先後的流程（用 x-process）；警告（用 x-warnings）；超過 4 項</dd>
+          <dt>畫面上</dt><dd>先畫空框和橫線 → 講到哪項，字浮出、打勾，進度條和「2 / 4」跟著走；講到「全部好了」進度條換完成色</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2–4 項</span><span>每項 ≤ 14 字</span><span>沒有圖示（勾就是圖示）</span><span>綁句 T1–T4／ALL</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-callout.html" loading="lazy" title="x-callout 主體四周貼標籤 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-callout.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-callout 主體四周貼標籤"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>主體四周貼標籤</h3><code>x-callout</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一個主體＋2–4 個短名詞：毛病、零件、用途（「像腳架不穩造成畫面晃動，或自己穿的衣服太薄」）</dd>
+          <dt>不要用在</dt><dd class="avoid">名詞之間沒有共同主體（用 12 或 04a）；每個名詞還要配一句說明（用 13 或 x-stack）；超過 4 個詞</dd>
+          <dt>畫面上</dt><dd>中央主體圖示圓 → 講到哪個詞，四角之一的標籤浮出、引線描到主體、主色框移過去；講到總結框全部拿掉</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2–4 個標籤</span><span>標籤 ≤ 4 字</span><span>綁句 T1–T4／ALL</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-timeline.html" loading="lazy" title="x-timeline 時間軸逐點前進 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-timeline.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-timeline 時間軸逐點前進"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>時間軸逐點前進</h3><code>x-timeline</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>有時間先後的 3–4 個點：年份、版本、階段，或「這集分成三個部分，先…接著…最後…」</dd>
+          <dt>不要用在</dt><dd class="avoid">沒有先後的並列項目（用 x-callout、12 或 04a）；每站是一個動作（用 x-process）；只有兩個點（用 04b）</dd>
+          <dt>畫面上</dt><dd>橫軸和空心點先出現 → 講到哪個點，進度走到那裡、點填滿、卡片浮出、下方一行說明</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–4 個點</span><span>年份或 ≤ 2 字、說明 ≤ 8 字</span><span>綁句 T1–T4</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-trend.html" loading="lazy" title="x-trend 長條趨勢 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-trend.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-trend 長條趨勢"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>長條趨勢</h3><code>x-trend</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>同一個量在 3–6 個時間點的變化，最後點出現在的值（「開台第一個月 200 人，半年後 2 千，今年破兩萬」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只有一或兩個數字（用 fx 29、x-numbers）；不是同一個量（用 x-versus 或 04d）；超過 6 個時間點</dd>
+          <dt>畫面上</dt><dd>講到第一個值，長條逐根長出 → 講到最後的值，最後一根換主色、趨勢線描出、提示框數到那個值；結論膠囊（選用）</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–6 組數字</span><span>數字 ≤ 999999</span><span>綁句 T1–T3</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-fix.html" loading="lazy" title="x-fix 痛點劃掉換解法 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-fix.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-fix 痛點劃掉換解法"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>痛點劃掉換解法</h3><code>x-fix</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>先講 2–3 個痛點，接著「所以我…」給一個解法，20 秒內講完（「啟動不同步、要走來走去、還要一支一支檢查，所以我乾脆自己設計了一套」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只有一句「不是 X，而是 Y」（用 15）；痛點是警告、沒有解法（用 x-warnings）；痛點和解法隔超過 20 秒</dd>
+          <dt>畫面上</dt><dd>痛點逐條出現 → 講到解法，解法卡浮出、箭頭描過去，痛點依序被劃掉、變淡，解法畫底線</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2–3 個痛點</span><span>痛點 ≤ 7 字、解法 ≤ 6 字</span><span>綁句 P1–P3／FIX</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-scene.html" loading="lazy" title="x-scene 示意動畫（骨架） 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-scene.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-scene 示意動畫（骨架）"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>示意動畫（骨架）</h3><code>x-scene</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>口播在描述具體的動作、物件或過程（「拍完先上傳雲端，再下載到電腦打開播放」）；畫面主角是線條插圖（kit/illus-gallery.jpg 的元件）</dd>
+          <dt>不要用在</dt><dd class="avoid">只有名詞、沒有動作（用 12 或 x-callout）；抽象步驟、沒有具體物件（用 x-process）；畫廊沒有的物件先照 kit/illus-style.md 畫成 illus-local/*.svg</dd>
+          <dt>畫面上</dt><dd>插圖元件照拍一個一個彈出、元件之間描線、螢幕換狀態（錄影 → 播放）、最後結果徽章打勾；同一時間只有一個焦點</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>物件 2–4 個</span><span>標籤 ≤ 10 字</span><span>只填 DATA：元件清單＋拍</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-scene-example-rec.html" loading="lazy" title="x-scene-example-rec 示意動畫：開拍前先試錄 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-scene-example-rec.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-scene-example-rec 示意動畫：開拍前先試錄"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>示意動畫：開拍前先試錄</h3><code>x-scene-example-rec</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>參考範例：一連串具體動作（「先把手機架上腳架，試錄一小段，走到手機旁邊播放，確認畫面和聲音」）</dd>
+          <dt>不要用在</dt><dd class="avoid">直接拿來用（從 x-scene 骨架複製、照分鏡填 DATA）；只有名詞、沒有動作</dd>
+          <dt>畫面上</dt><dd>桌子和人先在 → 手機腳架彈出 → 螢幕變錄影、計時 00:00→00:05 → 人走到手機旁 → 螢幕變播放 → 聲音波形 → 符合需求打勾</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>6 拍</span><span>走路＝游標移動</span><span>綁句 T1–T6</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-scene-example-outline.html" loading="lazy" title="x-scene-example-outline 示意動畫：本集大綱 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-scene-example-outline.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-scene-example-outline 示意動畫：本集大綱"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>示意動畫：本集大綱</h3><code>x-scene-example-outline</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>參考範例：本集大綱的每個部分都有具體物件可畫（「先實際操作，再安裝工具，接著設定網路，最後聊 AI 開發」）</dd>
+          <dt>不要用在</dt><dd class="avoid">直接拿來用（從 x-scene 骨架複製、照分鏡填 DATA）；大綱只有字（用 x-timeline 或 04a）；超過 4 部分</dd>
+          <dt>畫面上</dt><dd>四個插圖元件一站一站彈出、站和站之間描線（這一站進場完才描），最後一站的螢幕換成打勾</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>4 站</span><span>站名 ≤ 10 字</span><span>綁句 T1–T5</span></div>
+      </div>
+    </article>
+
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-versus.html" loading="lazy" title="x-versus A vs B 逐項比較 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-versus.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-versus A vs B 逐項比較"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>A vs B 逐項比較</h3><code>x-versus</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>兩個選項在 2–3 個面向上比，每個面向有數字（「手動剪要 180 分鐘、AI 只要 20 分鐘；手動 6 個步驟、AI 只剩 2 個」）</dd>
+          <dt>不要用在</dt><dd class="avoid">沒有數字的特點對照（用 04b）；同一件事前後變化（用 x-before-after）；超過 3 個面向或 2 個對手（用 04d）</dd>
+          <dt>畫面上</dt><dd>兩個對手標頭先出現 → 講到哪個面向，那一列出現，A 的條往左長、B 的條往右長、數字同時跑，贏的一邊主色；結論時贏家標頭亮框</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2–3 個面向</span><span>名稱 ≤ 4 字、數字 ≤ 4 位</span><span>綁句 T1–T3／WIN</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-ring.html" loading="lazy" title="x-ring 進度環 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-ring.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-ring 進度環"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>進度環</h3><code>x-ring</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一個比例或一段時間，前後各有一句起點與結論（「32 段 NG 裡，AI 剪掉了 87%，也就是 28 段」）；計時、倒數是同一支</dd>
+          <dt>不要用在</dt><dd class="avoid">只有一個數字（用 fx 29）；兩個數字在比（用 x-versus 或 x-numbers）；中央數字超過 4 個字元</dd>
+          <dt>畫面上</dt><dd>講到起點，右上那列出現 → 講到數字，主色弧從 12 點鐘走到那個比例、數字同步跑 → 講到結論，右下那列出現、箭頭描下來</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>百分比／計時／倒數</span><span>右側兩列 ≤ 8 字</span><span>綁句 R1／ARC／R2</span></div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
 <!-- 字卡動態 40 種 -->
 <section class="block" id="fx">
   <div class="block-head"><h2>字卡動態 40 種</h2><p>一個詞或一句話的大字動畫，分 5 類、每類 8 種</p></div>
@@ -589,7 +920,7 @@
 
 <!-- 音效 -->
 <section class="block" id="sfx">
-  <div class="block-head"><h2>音效 12 種</h2><p>每顆都對準畫面事件；滑過上面的卡片就會聽到</p></div>
+  <div class="block-head"><h2>音效 <span id="sfxCount">—</span> 種</h2><p>每顆都對準畫面事件；滑過上面的卡片就會聽到（結尾配樂另列，不能當段落音效）</p></div>
   <div id="sfxBody"><div class="note"><p>尚未產生 <code>preview/sfx-data.js</code>，在工作區執行 <code>node shared/template/tools/build.mjs --gallery</code></p></div></div>
   <div class="note">
     <p><b>三條規則</b>（來自 style.md）</p>
@@ -622,10 +953,11 @@
     <div class="note">
       <h3>節奏</h3>
       <ul>
-        <li>進場 0.3–0.5 秒，出場 0.3–0.4 秒</li>
+        <li>進場 0.5 秒、出場 0.4 秒（模板固定）</li>
         <li>換卡時舊卡出場、新卡進場同時發生</li>
         <li>一般字卡停 2.5–4 秒，重點字卡至少 4 秒</li>
-        <li>兩段動畫之間，講者至少露臉 3 秒</li>
+        <li>任何 1 秒內新出現的元素 ≤ 2 個；依序出現間隔 ≥ 0.12 秒（沒有句子可綁時每條 ≥ 0.15 秒）</li>
+        <li>新資訊出現完停 ≥ 1.2 秒，中間步驟可以只停 0.6 秒；每段最後一幕停 ≥ 1.5 秒</li>
       </ul>
     </div>
     <div class="note">
@@ -819,14 +1151,25 @@
 
     if (SFX && body) {
       body.textContent = '';
-      body.appendChild(el('h3', '音效清單', 'sfx-sub'));
-      body.appendChild(table(['檔名', '中文', '用在哪', '試聽'], Object.keys(sounds).map(function (name) {
+      // kind: "bgm"（結尾配樂）只能由 plan.json 的 outro 用，不列進段落音效（specs/contracts/sfx.md）
+      var isBgm = function (name) { return sounds[name] && sounds[name].kind === 'bgm'; };
+      var sfxNames = Object.keys(sounds).filter(function (n) { return !isBgm(n); });
+      var bgmNames = Object.keys(sounds).filter(isBgm);
+      var cnt = document.getElementById('sfxCount');
+      if (cnt) cnt.textContent = String(sfxNames.length);
+      var row = function (name) {
         var code = el('code', name + '.wav');
         var b = el('button', '▶ 試聽', 'play');
         b.type = 'button';
         b.addEventListener('click', function () { playSound(name, sounds[name].volume, true); });
         return [code, sounds[name].zh, sounds[name].use, b];
-      })));
+      };
+      body.appendChild(el('h3', '音效清單', 'sfx-sub'));
+      body.appendChild(table(['檔名', '中文', '用在哪', '試聽'], sfxNames.map(row)));
+      if (bgmNames.length) {
+        body.appendChild(el('h3', '配樂（plan.json 寫 outro 才有）', 'sfx-sub'));
+        body.appendChild(table(['檔名', '中文', '用在哪', '試聽'], bgmNames.map(row)));
+      }
 
       var scenes = SFX.scenes || {};
       var keys = Object.keys(scenes).sort(function (a, b) { return String(scenes[a].no).localeCompare(String(scenes[b].no)); });

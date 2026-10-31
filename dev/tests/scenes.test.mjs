@@ -128,5 +128,36 @@ test('beats／清單 at：#Ne 與 +x 換成相對本段起點的秒數', () => {
 test('時間點太晚（完成態停不到 0.6 秒）報錯並給出 to 要延到哪裡', () => {
   const cues = parseSrt(makeSrt());
   const r = resolveScene({ scene: scene('steps'), cues, icons: L.icons, consts: L.consts, t0: cueStart(1), D: 5.5, seg: { id: 's01', slots: { steps: ['一', { text: '二', at: '#2+1.5' }] } } });
-  assert.match(r.errors.join('\n'), /晚於 D−0\.4−0\.6.*把 to 往後延到至少第/);
+  assert.match(r.errors.join('\n'), /晚於 D−0\.3−0\.6 = .*把 to 往後延到至少第/, 'D−P.OUT−0.6：P.OUT 讀 kit 的常數（v2 是 0.3）');
+});
+
+test('直式（009 FR-050／051）：18 個 scene.json 都有 portrait（move／stage／none）；@style-portrait 只在直式接上；12 直式改 free 橫排；橫式輸出不含直式的東西；--list 有直式欄', async () => {
+  const want = { chapter: 'stage', 'chapter-tag': 'move', 'side-panel': 'none', 'fs-list': 'stage', 'fs-compare': 'stage', 'fs-flow': 'stage', 'fs-table': 'stage', 'two-sides': 'none',
+    concept: 'move', 'key-point': 'move', steps: 'move', qa: 'move', tips: 'move', summary: 'move', keywords: 'move', 'title-list': 'move', speaker: 'move', quote: 'move' };
+  assert.deepEqual(Object.fromEntries(L.scenes.map((s) => [s.key, s.portrait])), want);
+  // move 的疊加情境都有 @style-portrait（卡片換到 x 60、bottom 680；角標左上；12 改橫排）
+  for (const s of L.scenes.filter((x) => x.portrait === 'move')) assert.ok(s.template.stylePortrait.trim(), `${s.key} 少了 @style-portrait`);
+  for (const s of L.scenes.filter((x) => x.portrait !== 'move')) assert.equal(s.template.stylePortrait, '', `${s.key} 不需要 @style-portrait`);
+  for (const s of L.scenes) assert.ok(!s.template.style.includes('@style-portrait') && !/left: 60px; bottom: 680px/.test(s.template.style), `${s.key} 的 @style 混進直式規則`);
+  const kw = scene('keywords');
+  const seg = { ...sampleSeg(kw), id: 's09' };
+  const r = resolveScene({ scene: kw, seg, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: seg.duration });
+  const opts = { scene: kw, ctx: r.ctx, beats: r.beats, id: 's09', D: seg.duration };
+  const land = assembleScene(opts), port = assembleScene({ ...opts, format: 'portrait' });
+  assert.match(land.html, /id="s09-kwList" data-layout="col" data-gap="md"/);
+  assert.ok(!land.html.includes('data-layout-portrait') && !land.html.includes('flex-wrap'), '橫式不帶直式的東西');
+  assert.match(land.html, /data-width="1920" data-height="1080"/);
+  assert.match(port.html, /id="s09-kwList" data-layout="free" data-gap="md"/);
+  assert.match(port.html, /#s09-kwList \{ left: 60px; top: auto; bottom: 680px; width: 880px;[^}]*flex-wrap: wrap;/);
+  assert.match(port.html, /data-width="1080" data-height="1920"/);
+  // stage 的情境（04 家族）直式子合成仍是 1920×1080（主合成縮放）
+  const fl = scene('fs-list'), fseg = { ...sampleSeg(fl), id: 's08' };
+  const fr = resolveScene({ scene: fl, seg: fseg, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: fseg.duration });
+  assert.match(assembleScene({ scene: fl, ctx: fr.ctx, beats: fr.beats, id: 's08', D: fseg.duration, format: 'portrait' }).html, /data-width="1920" data-height="1080"/);
+  // --list：直式欄
+  const { listText } = await imp('build.mjs');
+  const t = listText(L);
+  assert.match(t, /\| # \| key \| 中文 \| 組別 \| 直式 \| 長度（秒） \|/);
+  assert.match(t, /\| 03 \| side-panel \| [^|]+ \| [^|]+ \| 不提供 \|/);
+  assert.match(t, /\| 04a \| fs-list \| [^|]+ \| [^|]+ \| 可（縮進上半） \|/);
 });

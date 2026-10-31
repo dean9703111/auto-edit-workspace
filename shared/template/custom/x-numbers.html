@@ -1,32 +1,52 @@
+<!-- 預設拍型：E 數字（BEATS.md §3 E；兩個數字，第一個超量撐破） -->
 <!doctype html>
 <!--
-  x-numbers.html — 第二層 custom 範例：數值變化（計數器＋量條，超量時同一根撐破）
+  x-numbers：數值變化（第二層 custom，layout: "fullscreen"；計數器＋量條，超量時同一根撐破）
 
   【適用的口播】
-    口播在講「數量很大／超過上限」再講「處理掉大部分」：例「NG 有 32 段，超過人工看得完的 20 段；AI 一次剪掉 28 段」。
-    畫面邏輯：數字從 0 數上去（P.count），量條同步長（P.bar），數到上限那一刻軌道本身撐開（P.morph）、
-    量條跟著伸長變警示色（同一根，不另接一塊）；第二列用同一把尺顯示「剪掉 28 段」（綠色量條 28 ÷ 32）。
+  口播在講「數量很大／超過上限」再講「處理掉多少」：例「這次的 NG 有多少？一共 32 段，超過人工看得完的 20 段；AI 一次就剪掉 28 段」。
+  畫面邏輯：講到主題時第一張數字卡彈出（數字 0、單位、空的量條軌道）；數字提早 1.2 秒開始往上數、量條同步長，
+  數到上限 20 那一刻軌道本身撐開、量條變警示色（同一根，不另接一塊），講到「32」時剛好停在 32（重拍、漣漪、單位畫螢光筆、音效）；
+  講到第二個數字時第二張卡已經彈出、用同一把尺數到 28（綠色量條 28 ÷ 32），落定時第一張退焦、第二張抬起發光；最後全部亮回。
 
   【不要用在哪裡】
-    - 只有一個數字、沒有「超過什麼」或「比較什麼」：用 06 概念或 07 重點字卡，把數字寫在字上。
-    - 數字很多（≥ 4 組）：資訊過載，改第一層 04d 表格。
-    - 軌道要超量的比例很誇張（> 2 倍）：撐開後超出卡片，要先算好寬度（撐開後右緣要 ≤ 卡內右緣 1120）。
-    - 一集已經有 2 段 custom：改回第一層（USAGE-reference R7.1）。
+  - 只有一個數字、沒有「超過什麼」或「比較什麼」：用 06 概念或 07 重點字卡，把數字寫在字上。
+  - 數字很多（≥ 4 組）：資訊過載，改第一層 04d 表格。
+  - 軌道要超量的比例很誇張（> 1.6 倍）：撐開後超出卡片，要先算好寬度（撐開後寬度 ≤ 960）。
+  - 在講「同一件事換做法前後差多少」：用 x-before-after。
 
   【要改的地方】
-    1. 文字：#xn-labA／#xn-labB（左側名稱，≤ 5 字）、單位「段」、卡片標題列、兩個圖示（kit/icons.json 的名稱）。
-    2. 數字：P.count 的 to（20、32、28）。量條比例：每 1 單位 ＝ 軌道寬 ÷ 上限（這裡 664 ÷ 20 ＝ 33.2 px），
-       所以撐開後寬度 ＝ 33.2 × 32 ＝ 1062（改 morph 的 width）、綠條 28 ÷ 32 ＝ 0.875（改 P.bar 的 to）。
-    3. 時間點：時間軸每一行的第二個參數（秒數，本段起點之後）。
-    4. D（本段長度，秒）：跑 build.mjs --check，把報告的「長度」填回 data-duration 與 const D；最後一個動作後至少停 1.5 秒。
+  1. 文字：標題列（#xn-card 裡的 .sc-wcard__bar，≤ 10 字）；兩張卡的 .xn-lab 名稱（字級 64、寬 280，≤ 4 個中文字）、單位 #xn-unitA／#xn-unitB（≤ 2 字）。
+  2. 圖示：#xn-icoA、#xn-icoB 裡的 svg。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 數字：P.count 的 to（20、32、28）。量條比例：每 1 單位 ＝ 軌道寬 ÷ 上限（這裡 600 ÷ 20 ＝ 30 px），
+     所以撐開後寬度 ＝ 30 × 32 ＝ 960（改 P.morph 的 width 與 #xn-trackB 的寬）、第二條 28 ÷ 32 ＝ 0.875（改 P.bar 的 to）。
+  4. 綁句：<script> 開頭 T1、T2、T3 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
+  5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
 
-  【時間軸怎麼對到字幕句】
-    本段時間軸 0 秒＝plan.json 這段的起點（--check 報告的「起點」）。
-    某句口播要觸發的時間 ＝ 該句字幕起點（work/rough.srt） − 本段起點。
-    例：本段起點 20.0 秒、「NG 有 32 段」那句起點 21.2 秒 → A 列計數從 1.2 開始；
-    「剪掉 28 段」那句起點 24.6 秒 → B 列從 4.6 開始。
+  【綁句欄位】
+  T1 = P.at('#41@NG')：講到主題（數字前面那個詞）的時刻，第一張數字卡彈出、顯示 0。
+  T2 = P.at('#42@32')：講到第一個數字的時刻，數字剛好停在 32（提早 1.2 秒開始數，數到上限那一刻撐破）；重拍、漣漪、螢光筆，音效 impact。
+  T3 = P.at('#43@28')：講到第二個數字的時刻，第二張卡提早 1.2 秒彈出開始數、講到時停在 28，第一張退焦；音效 impact。
+  數字、名稱在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#42')。
+  「@詞」要寫成字串字面值（P.at('#43@28')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#43@28', 0.3)。
+  T1 和 T2 至少差 3.3 秒：主題要綁在數字前一句（同一句「NG 有 32 段」太近，數字提早 1.2 秒開始數會蓋到卡片進場）。
+  audit 會比對：這一拍出現的字（名稱、項目）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
 
-  【版型】fullscreen：整段淡入淡出 0.5 秒由 build 處理，主內容右緣 1300，0.5 秒前不動。
+  【D 下限】
+  T1 ≥ 1.5（主卡 0.3 秒長出、0.5 秒起標題逐字）
+  T2 ≥ T1 + 3.3（卡片彈出、圖示描線忙到 T1 + 0.85，停 1.2 秒，數字在 T2 − 1.2 開始數）
+  T3 ≥ T2 + 2.5（T2 落定後停 1.2 秒，第二張在 T3 − 1.2 彈出；相鄰兩拍至少 2.5 秒）
+  D ≥ T3 + 4.6（T3 ＋ 2 秒回均衡、0.6 秒動完＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
+  標題列 128、內容區 1176×580（卡底 862，在字幕區 y 920 之上）。以下是內容區座標。
+  兩張數字卡 1064×224 由 #xn-body 的 data-layout="col" data-gap="lg" 排（kit/scene-layout.js，shared/style.md「版面」）：上下疊、中間 48（第二張聚焦抬起時離上卡仍 ≥ 20）、
+  整組在內容區置中（左右 56、上下 40／44），不寫 left／top。卡內：一列 top 16、高 112（圖示 88／名稱 280／數字 160 置右／單位）；
+  量條軌道 left 28、top 148、高 48，上卡 600 寬（撐開到 960）、下卡 960 寬。#xn-overA 疊在填充上（inset 0）＝同一根變色，不算新元素。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-numbers 數值變化</title></head>
@@ -35,45 +55,47 @@
   <style>
     #x-numbers { position: absolute; inset: 0; }
     #x-numbers .fill { position: absolute; inset: 0; }
-    /* 卡：左 120、頂 150、寬 1180（右緣 1300）、高 628（底 778） */
-    #x-numbers #xn-card { position: absolute; left: 120px; top: 150px; width: 1180px; height: 628px; box-sizing: border-box; }
-    #x-numbers #xn-body { position: relative; height: 0; }
-    #x-numbers .xn-block { position: absolute; left: 56px; width: 1064px; height: 220px; }
-    #x-numbers #xn-blockA { top: 36px; }
-    #x-numbers #xn-blockB { top: 276px; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-numbers #xn-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-numbers #xn-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-numbers #xn-body { position: relative; width: 1176px; height: 580px; }
+    /* 數字卡：1064×224；位置由 #xn-body 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
+    #x-numbers .xn-box { position: absolute; width: 1064px; height: 224px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                         border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink); }
     /* 一列：圖示／名稱／數字／單位同一條中線（高 112） */
-    #x-numbers .xn-row { position: absolute; left: 0; top: 0; width: 1064px; height: 112px; display: flex; align-items: center; gap: 24px; white-space: nowrap; }
-    #x-numbers .xn-lab { width: 300px; }
-    #x-numbers .xn-n { width: 150px; text-align: right; }
-    #x-numbers .xn-track { position: absolute; left: 0; top: 132px; height: 48px; box-sizing: border-box;
-                           border: 4px solid var(--sc-fs-node-line); border-radius: 10px; background: var(--sc-fs-node); }
-    #x-numbers #xn-trackA { width: 664px; }
-    #x-numbers #xn-trackB { width: 1062px; }
+    #x-numbers .xn-row { position: absolute; left: 28px; top: 16px; width: 1000px; height: 112px; display: flex; align-items: center; gap: 24px; white-space: nowrap; }
+    #x-numbers .xn-lab { width: 280px; }
+    #x-numbers .xn-n { width: 160px; text-align: right; }
+    #x-numbers .xn-track { position: absolute; left: 28px; top: 148px; height: 48px; box-sizing: border-box;
+                           border: 4px solid var(--v2-node-line); border-radius: 10px; background: var(--sc-fs-node); }
+    #x-numbers #xn-trackA { width: 600px; }
+    #x-numbers #xn-trackB { width: 960px; }
     #x-numbers .xn-fill { position: absolute; inset: 0; border-radius: 6px; }
     #x-numbers #xn-fillA { background: var(--sc-accent); }
     #x-numbers #xn-overA { position: absolute; inset: 0; border-radius: 6px; background: var(--sc-warn); }
     #x-numbers #xn-fillB { background: var(--sc-good); }
   </style>
-  <div id="x-numbers" data-composition-id="x-numbers" data-width="1920" data-height="1080" data-duration="9">
+  <div id="x-numbers" data-composition-id="x-numbers" data-width="1920" data-height="1080" data-duration="12.5"
+       data-cues-sample='{"start":0,"D":12.5,"cues":{"41":[1.6,4.4],"42":[4.6,7.4],"43":[7.6,12]},"refs":{"#41@NG":1.8,"#42@32":5.2,"#43@28":7.8}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xn-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">NG 段落清理</span></div>
-      <div id="xn-body">
-        <div id="xn-blockA" class="xn-block">
+      <div id="xn-body" data-layout="col" data-gap="lg">
+        <div id="xn-cardA" class="xn-box" data-slot>
           <div class="xn-row">
             <span id="xn-icoA" class="sc-icon sc-icon--88"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /> </svg></span>
             <span class="xn-lab sc-t64 sc-w900 sc-opt">NG 段落</span>
             <span id="xn-nA" class="xn-n sc-t112 sc-w900">0</span>
-            <span class="sc-t72 sc-w700 sc-opt">段</span>
+            <span id="xn-unitA" class="sc-t72 sc-w700 sc-opt">段</span>
           </div>
           <div id="xn-trackA" class="xn-track"><div id="xn-fillA" class="xn-fill"><div id="xn-overA"></div></div></div>
         </div>
-        <div id="xn-blockB" class="xn-block">
+        <div id="xn-cardB" class="xn-box" data-slot>
           <div class="xn-row">
             <span id="xn-icoB" class="sc-icon sc-icon--88"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span>
             <span class="xn-lab sc-t64 sc-w900 sc-opt">剪掉</span>
             <span id="xn-nB" class="xn-n sc-t112 sc-w900 sc-kw">0</span>
-            <span class="sc-t72 sc-w700 sc-opt">段</span>
+            <span id="xn-unitB" class="sc-t72 sc-w700 sc-opt">段</span>
           </div>
           <div id="xn-trackB" class="xn-track"><div id="xn-fillB" class="xn-fill"></div></div>
         </div>
@@ -85,30 +107,56 @@
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     const tl = gsap.timeline({ paused: true });
     const P = SceneMotion(tl, document.getElementById('x-numbers'));
-    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
-    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const D = 9;
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#41@NG'), T2 = P.at('#42@32'), T3 = P.at('#43@28');   // 講到主題／第一個數字／第二個數字的時刻
 
-    // ── A 列：NG 32 段（超過上限 20 段，同一根撐破）──
-    const A = 1.2;                                                         // 「NG 有 32 段」那句的秒數
-    P.rise('#xn-blockA', 0.6);
-    P.icon('#xn-icoA', 0.6 + P.BEAT);
-    P.count('#xn-nA', A, { from: 0, to: 20, dur: 1.1, ease: 'none' });     // 數到上限 20，量條同速長滿軌道
-    P.bar('#xn-fillA', A, { from: 0, to: 1, dur: 1.1, ease: 'none' });
-    const B20 = A + 1.1;                                                   // 碰到上限的那一刻：軌道撐開、數字繼續、整條變警示色
-    P.count('#xn-nA', B20, { from: 20, to: 32, dur: 0.7 });
-    P.morph('#xn-trackA', B20, { width: 1062 }, { from: { width: 664 } }); // 同一根軌道 664 → 1062，填充（寬 100%）跟著伸長
-    P.in('#xn-overA', B20, { dur: 0.3 });
+    P.sfx('impact', '#42@32'); P.sfx('impact', '#43@28');   // 兩個數字落定各一顆音效（句號和上一行一樣；主題那一拍不配）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
-    // ── B 列：剪掉 28 段（同一把尺：軌道 1062 ＝ 32 段）──
-    const Bt = 4.6;                                                        // 「剪掉 28 段」那句的秒數
-    P.rise('#xn-blockB', Bt);
-    P.icon('#xn-icoB', Bt + P.BEAT);
-    P.count('#xn-nB', Bt + 0.6, { from: 0, to: 28, dur: 1.2 });
-    P.bar('#xn-fillB', Bt + 0.6, { from: 0, to: 0.875, dur: 1.2 });        // 28 ÷ 32
-    // 5.8 + 1.2 ＝ 7.0 秒動作結束，停到 D＝9（≥ 1.5 秒）
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xn-card', 0.3);
+    else { P.wipe('#xn-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xn-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xn-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
 
-    P.end(D);
+    // 拍 1 講到主題：第一張數字卡彈出（數字 0）→ ＋0.15 圖示描線 → ＋0.2 量條軌道淡入 → ＋0.25 單位逐字落下
+    P.pop('#xn-cardA', T1);
+    P.icon('#xn-icoA', T1 + 0.15);
+    P.in('#xn-trackA', T1 + 0.2);
+    P.chars('#xn-unitA', T1 + 0.25, { mode: 'drop' });
+
+    // 拍 2 提早 1.2 秒開始數：0 → 20（上限）量條同速長滿；碰到上限那一刻軌道撐開 600 → 960、數字繼續到 32、整條變警示色
+    P.count('#xn-nA', T2 - 1.2, { from: 0, to: 20, dur: 0.7, ease: 'none' });
+    P.bar('#xn-fillA', T2 - 1.2, { from: 0, to: 1, dur: 0.7, ease: 'none' });
+    P.count('#xn-nA', T2 - 0.5, { from: 20, to: 32, dur: 0.5 });
+    P.morph('#xn-trackA', T2 - 0.5, { width: 960 }, { from: { width: 600 }, dur: 0.5, ease: P.V2.EASE.move });   // 同一根軌道撐開，填充（寬 100%）跟著伸長
+    P.in('#xn-overA', T2 - 0.5, { dur: 0.3 });
+    // 拍 3 講到「32」數字落定：重拍、圖示漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）→ ＋0.6 卡片漂浮
+    P.punch('#xn-nA', T2, { scale: 1.12 });
+    P.ripple('#xn-icoA', T2);
+    P.marker('#xn-unitA', T2 + 0.1);
+    P.idle('#xn-cardA', T2 + 0.6, { y: 3, period: 3.2, until: T3 - 1.3 });
+
+    // 拍 4 第二個數字：第二張卡提早 1.2 秒彈出並開始數（同一把尺：軌道 960 ＝ 32 段），講到「28」時落定：重拍、漣漪，第一張退焦
+    P.pop('#xn-cardB', T3 - 1.2);
+    P.icon('#xn-icoB', T3 - 1.05);
+    P.chars('#xn-unitB', T3 - 0.95, { mode: 'drop' });
+    P.count('#xn-nB', T3 - 1.2, { from: 0, to: 28, dur: 1.2 });
+    P.bar('#xn-fillB', T3 - 1.2, { from: 0, to: 0.875, dur: 1.2, ease: 'power2.out' });   // 28 ÷ 32，和數字同一條曲線
+    P.punch('#xn-nB', T3, { scale: 1.12 });
+    P.ripple('#xn-icoB', T3);
+    P.dim('#xn-cardA', T3, { to: 0.6 });
+    // 拍 5 ＋0.6 第二張聚焦（放大抬起、主色亮框）→ ＋1.1 漂浮
+    P.spot('#xn-cardB', '#xn-cardB', T3 + 0.6, { scale: 1.03, lift: -8 });
+    P.idle('#xn-cardB', T3 + 1.1, { y: 3, period: 3.2 });
+
+    // 收：講完 2 秒回均衡（第一張亮回、第二張亮框收掉），主數字呼吸；完成態停到段尾
+    const TR = T3 + 2.0;
+    P.spot('#xn-cardB', null, TR, { dur: 0.6 });
+    P.dim('#xn-cardA', TR, { to: 1 });
+    P.idle('#xn-nA', TR, { y: 0, scale: 0.04, period: 1.8 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
     window.__timelines['x-numbers'] = tl;
   })();
   </script>

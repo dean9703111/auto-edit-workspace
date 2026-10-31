@@ -7,6 +7,7 @@
 <link rel="icon" href="/editor/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/kit/fonts.css">
 <link rel="stylesheet" href="/kit/brand.css">
+<link rel="stylesheet" href="/kit/captions.css">
 <link rel="stylesheet" href="/editor/editor.css">
 </head>
 <body>
@@ -52,7 +53,7 @@
             <video id="simVideo" playsinline preload="auto"></video>
             <div id="simMedia" class="sim-media"></div>
             <canvas id="simPip" class="sim-pip" width="432" height="324"></canvas>
-            <div id="simCaption" class="sim-caption"></div>
+            <div id="simCapLayer" class="cap-layer"><div id="simCaption" class="cg off"><span></span></div></div>
             <div id="simBlack" class="sim-black"></div>
             <div id="simCutBadge" class="cut-badge" hidden>✂ 這段會被剪掉（播放時會跳過）</div>
           </div>
@@ -197,6 +198,7 @@
       <ol class="plain">
         <li>點時間軸上的東西（字幕、卡片、插入素材、剪接點、音效），右邊「屬性」就會顯示能改的地方；什麼都沒選＝整支影片的設定。</li>
         <li>改好按「儲存」寫進 <code>plan.json</code>（字幕寫進 <code>work/rough.srt</code>）。</li>
+        <li>講者調光、瘦臉：點時間軸空白處，右邊「屬性」最上面的「講者」。調光拖了馬上看得到；瘦臉看下面的前後兩張臉，按「重新產生」才會套進成片。</li>
         <li>改了卡片文字，存檔後會自動重新產生，完成後切到「成片預覽」停在那一段。</li>
         <li>調好回到 AI 那邊說「調好了」。</li>
       </ol>
@@ -212,6 +214,7 @@
       <h3>想看卡片細節？</h3>
       <p>要逐格看資訊卡、或在畫面上點選某張卡請 AI 改，請 AI 開 HyperFrames Studio：</p>
       <pre id="studioCmd"></pre>
+      <p>直式影片：上半面板的卡片不要在 Studio 裡拖動位置（會蓋掉縮放），要改位置或內容請跟 AI 說。</p>
     </section>
     <section>
       <h3>快捷鍵</h3>

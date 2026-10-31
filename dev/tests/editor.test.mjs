@@ -481,3 +481,196 @@ test('人聲響度（ebur128，剪掉的範圍不算）與縮圖條（ffmpeg spr
   assert.equal((await get2('/sfx/..%2F..%2Fbuild.mjs')).status, 404);
   assert.equal((await get2('/editor-cache/thumbs/../server.json')).status, 404);
 });
+
+// ---------- 講者（調光、瘦臉；contracts/look.md §7） ----------
+
+const FACE58 = [[1.5,62.1],[1.3,30.7],[0.7,21.6],[-0.9,-18.3],[-4.2,-97.9],[1.7,72],[2.6,90.5],[2.8,108.1],[3.9,110.2],[-91.7,-51.4],
+  [-56.7,-21.4],[-84.4,-68.1],[-80.2,73.3],[-27.8,80.2],[-52.3,-91.2],[-79.7,-44.4],[-93.5,27.4],[-72,-81.7],[-60.1,-61.7],[-30.4,-95.9],
+  [-97.1,-13],[-88.7,49.5],[-24.4,-20],[-58.3,103.8],[-11.6,135],[-35.6,122.1],[-45.9,114.5],[5.7,136.5],[-95.7,-33.8],[-1.3,-30.7],
+  [-69.3,91.4],[5.3,131.5],[-24.7,129.2],[4.7,124.2],[4.3,116.4],[-95.7,6.8],[92.7,-60.1],[57.5,-26.9],[82.5,-76.2],[93.1,65.8],
+  [35.1,79.7],[45.4,-95.9],[77.9,-51.1],[103.7,19],[67.4,-88.6],[54.8,-66.6],[22.4,-98.6],[103.1,-22],[100.5,41.5],[25.6,-21.7],
+  [72.1,98.8],[23.8,134.2],[49.2,119.8],[59.7,111],[99.2,-43],[82.8,85.1],[37.7,127.8],[104.1,-1.9]];
+
+test('講者：/api/state 的 look 區塊；存 look（插入、取代、恢復預設、擋錯），rhythm／outro 原樣保留；配樂不列進音效清單', async () => {
+  const s = await (await get('/api/state')).json();
+  assert.deepEqual(s.look.kit, { color: 0.8, slim: 0.6 });
+  assert.equal(s.look.plan, null);
+  assert.deepEqual(s.look.effective, { color: 0.8, slim: 0.6, source: 'kit' });
+  assert.deepEqual(s.look.limits, { color: [0, 1], slim: [0, 1.2], step: 0.05 });
+  assert.equal(s.look.lines.length, 2);
+  assert.match(s.look.lines[0], /^講者調光：0\.8（kit\/look\/jianying-smart\.cube/);
+  assert.ok(s.schema.sounds.includes('pop') && !s.schema.sounds.includes('bgm-outro'), s.schema.sounds.join(','));
+  const orig = planNow();
+  const withExtra = orig.replace('  "speakerBox":', '  "rhythm": { "pace": "normal" },\n  "outro": "#2",\n  "speakerBox":');
+  assert.notEqual(withExtra, orig);
+  fs.writeFileSync(planFile, withExtra);
+  let r = await post('/api/save', { base: await base(), look: { color: 0.5, slim: 0.3 } });
+  assert.equal(r.status, 200, JSON.stringify(await r.clone().json()));
+  let j = await r.json();
+  assert.deepEqual(j.look.effective, { color: 0.5, slim: 0.3, source: 'plan' });
+  const t1 = planNow();
+  assert.match(t1, /\n  "look": \{ "color": 0\.5, "slim": 0\.3 \},\n  "(edit|scenes)": /);
+  assert.equal(t1.replace(/  "look": \{[^}]*\},\n/, ''), withExtra);
+  r = await post('/api/save', { base: await base(), look: { color: 0.6, slim: 0.3 } });
+  assert.equal(r.status, 200);
+  assert.equal(planNow(), t1.replace('"color": 0.5', '"color": 0.6'));
+  for (const [look, re] of [[{ color: 2, slim: 0 }, /look\.color 要是 0–1 的數字，現在是 2/], [false, /look 要是/], [{ color: 0.5 }, /look\.slim 要是 0–1\.2 的數字/], [{ color: 0.5, slim: 0.5, eyes: 1 }, /look 不能有「eyes」/]]) {
+    const before = planNow();
+    r = await post('/api/save', { base: await base(), look });
+    assert.equal(r.status, 400, JSON.stringify(look));
+    assert.match((await r.json()).message, re);
+    assert.equal(planNow(), before);
+  }
+  r = await post('/api/save', { base: await base(), look: null });
+  assert.equal(r.status, 200);
+  assert.equal(planNow(), withExtra);
+  assert.match(planNow(), /"rhythm": \{ "pace": "normal" \},\n  "outro": "#2",\n  "speakerBox"/);
+  // 一行寫好幾個鍵、look 後面接換行：恢復預設只拿掉「, "look": {…}」，換行與縮排留給下一個鍵（C-10）
+  const compact = orig.replace('"speakerBox": [700, 200, 1220, 1000],\n', '"speakerBox": [700, 200, 1220, 1000], "look": { "slim": 0.6, "color": 0.5 },\n');
+  assert.notEqual(compact, orig);
+  fs.writeFileSync(planFile, compact);
+  r = await post('/api/save', { base: await base(), look: null });
+  assert.equal(r.status, 200);
+  assert.equal(planNow(), orig);
+  fs.writeFileSync(planFile, orig);
+});
+
+test('主題（010 §10）：存 theme 插入／原地換／拿掉、選亮又本來沒寫＝不動、擋錯；和 look 一起新插時順序 look、theme', async () => {
+  const W = await imp('editor/server/write.mjs');
+  assert.deepEqual(W.sanitizeTheme('dark'), { theme: 'dark', errors: [] });
+  assert.deepEqual(W.sanitizeTheme(null), { theme: null, errors: [] });
+  assert.deepEqual(W.sanitizeTheme('blue').errors, ['theme 只能是 "light"（亮，預設）或 "dark"（暗），現在是 "blue"']);
+  const orig = planNow();
+  assert.ok(!orig.includes('"theme"'));
+  // 本來沒寫又選亮：不寫檔
+  let r = await post('/api/save', { base: await base(), theme: 'light' });
+  assert.equal(r.status, 200);
+  assert.equal(planNow(), orig);
+  // 暗：插在 edit（或 scenes）前面，其他文字逐字相同
+  r = await post('/api/save', { base: await base(), theme: 'dark' });
+  assert.equal(r.status, 200, JSON.stringify(await r.clone().json()));
+  assert.equal((await r.json()).plan.data.theme, 'dark');
+  const t1 = planNow();
+  assert.match(t1, /\n  "theme": "dark",\n  "(edit|scenes)": /);
+  assert.equal(t1.replace('  "theme": "dark",\n', ''), orig);
+  // 換回亮：原地換值
+  r = await post('/api/save', { base: await base(), theme: 'light' });
+  assert.equal(r.status, 200);
+  assert.equal(planNow(), t1.replace('"theme": "dark"', '"theme": "light"'));
+  // null：拿掉，回到原文
+  r = await post('/api/save', { base: await base(), theme: null });
+  assert.equal(r.status, 200);
+  assert.equal(planNow(), orig);
+  // 擋錯：檔案不動
+  for (const bad of ['blue', 1, { v: 'dark' }]) {
+    r = await post('/api/save', { base: await base(), theme: bad });
+    assert.equal(r.status, 400, JSON.stringify(bad));
+    assert.match((await r.json()).message, /theme 只能是 "light"（亮，預設）或 "dark"（暗）/);
+    assert.equal(planNow(), orig);
+  }
+  // 和 look 一起新插：look、theme 的順序（和 withTop 的物件順序一樣，才是局部改寫）
+  r = await post('/api/save', { base: await base(), theme: 'dark', look: { color: 0.5, slim: 0.3 } });
+  assert.equal(r.status, 200);
+  const t2 = planNow();
+  assert.match(t2, /\n  "look": \{ "color": 0\.5, "slim": 0\.3 \},\n  "theme": "dark",\n  "(edit|scenes)": /);
+  assert.equal(t2.replace('  "look": { "color": 0.5, "slim": 0.3 },\n  "theme": "dark",\n', ''), orig);
+  r = await post('/api/save', { base: await base(), theme: null, look: null });
+  assert.equal(r.status, 200);
+  assert.equal(planNow(), orig);
+});
+
+test('字幕預覽（F8）：頁面直接載 kit/captions.css、字幕放在畫布大小的圖層，剪輯台不自己寫字幕的數字', async () => {
+  const page = await (await get('/')).text();
+  assert.match(page, /<link rel="stylesheet" href="\/kit\/captions\.css">/);
+  assert.match(page, /<div id="simCapLayer" class="cap-layer"><div id="simCaption" class="cg off"><span><\/span><\/div><\/div>/);
+  const css = await get('/kit/captions.css');
+  assert.equal(css.status, 200);
+  assert.match(await css.text(), /\.cg > span \{[^}]*font-size: 76px/);
+  const ed = await (await get('/editor/editor.css')).text();
+  assert.ok(!/\.cg[^{]*\{[^}]*(font-size|bottom|padding)/.test(ed), '剪輯台的 css 不能另外寫字幕的字級、位置、內距');
+  assert.ok(!ed.includes('.sim-caption'));
+  assert.match(ed, /\.cap-layer \{[^}]*width: calc\(var\(--cw\) \* 1px\); height: calc\(var\(--ch\) \* 1px\)/);
+});
+
+// ---------- 直式（009 FR-120）：預覽框 9:16、字數提醒 12、存檔保留 format、縮圖直的 ----------
+
+test('直式（009 FR-120）：/api/state 的 canvas 讀 lib/canvas.mjs；預覽框比例是 CSS 變數；字數提醒 12；存檔不動 format；縮圖每格 90×160', async () => {
+  const { CANVAS } = await imp('lib/canvas.mjs');
+  const P = CANVAS.portrait;
+  // 橫式（範例沒寫 format、沒有主軌）：1920×1080、18 字
+  const s1 = await (await get('/api/state')).json();
+  assert.deepEqual([s1.canvas.format, s1.canvas.W, s1.canvas.H, s1.canvas.maxChars], ['landscape', 1920, 1080, 18]);
+  // 直式專案：plan.json 寫 "format": "portrait"、rough.mp4 是直的
+  const dir = path.join(root, 'projects', '直式'), w3 = path.join(dir, 'work');
+  fs.mkdirSync(path.join(w3, 'hyperframes'), { recursive: true });
+  const v = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=90x160:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
+    '-t', '3', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(w3, 'rough.mp4')]);
+  assert.equal(v.status, 0, String(v.stderr));
+  fs.writeFileSync(path.join(w3, 'rough.srt'), makeSrt({ n: 1 }));
+  const plan3 = path.join(w3, 'hyperframes', 'plan.json');
+  const text3 = '{\n  "version": 1,\n  "format": "portrait",\n  "speakerBox": [200, 1000, 880, 1800],\n  "scenes": [\n    { "id": "s01", "scene": "concept", "from": "#1", "to": "#1e", "slots": { "text": "直式" } }\n  ]\n}\n';
+  fs.writeFileSync(plan3, text3);
+  const ed3 = await E.startEditor({ flags: { project: dir, template: path.join(root, 'shared', 'template') }, cwd: root, port: BASE_PORT + 1000, writeState: false });
+  try {
+    const u = (p) => new URL(p, ed3.url);
+    const s = await (await fetch(u('/api/state'))).json();
+    assert.deepEqual(s.canvas, { format: 'portrait', source: 'plan.json', W: 1080, H: 1920, maxChars: P.caption.maxChars, captionBottom: P.caption.bottom, pip: P.pip.box });
+    assert.equal(s.canvas.W / s.canvas.H, 9 / 16, '預覽框 9:16');
+    // 頁面：預覽框的比例、講者框、字數提醒都讀 canvas，不再寫死 16:9／1920／18
+    const css = await (await fetch(u('/editor/editor.css'))).text();
+    assert.match(css, /\.stage-box \{ --cw: 1920; --ch: 1080;[^}]*width: min\(100cqw, calc\(100cqh \* var\(--cw\) \/ var\(--ch\)\)\); aspect-ratio: var\(--cw\) \/ var\(--ch\);/);
+    const js = await (await fetch(u('/editor/app.js'))).text();
+    assert.match(js, /box\.style\.setProperty\('--cw', String\(c\.W\)\)/);
+    assert.match(js, /left: `\$\{\(x1 \/ W\) \* 100\}%`, top: `\$\{\(y1 \/ H\) \* 100\}%`/);
+    assert.equal(js.split('RULES.capMax').length - 1, 1, '字數提醒要用 canvas 的 maxChars（RULES.capMax 只剩還沒載入時的預設）');
+    assert.ok(!/\/ 1920\b|\/ 1080\b/.test(js + await (await fetch(u('/editor/preview.js'))).text()), 'app.js／preview.js 不再除以 1920／1080');
+    // 存檔：只插 edit，format 原封不動；body 帶 format 被擋
+    const b = { mtime: s.plan.mtime, hash: s.plan.hash };
+    let r = await fetch(u('/api/save'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base: b, edit: { cuts: [[0, 0.5]] } }) });
+    assert.equal(r.status, 200, await r.clone().text());
+    const after1 = fs.readFileSync(plan3, 'utf8');
+    assert.ok(after1.startsWith('{\n  "version": 1,\n  "format": "portrait",\n  "speakerBox": [200, 1000, 880, 1800],\n'), after1);
+    assert.equal(JSON.parse(after1).format, 'portrait');
+    const s2 = await (await fetch(u('/api/state'))).json();
+    r = await fetch(u('/api/save'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base: { mtime: s2.plan.mtime, hash: s2.plan.hash }, format: 'landscape' }) });
+    assert.equal(r.status, 400);
+    assert.match((await r.json()).message, /不能寫「format」/);
+    assert.equal(fs.readFileSync(plan3, 'utf8'), after1);
+    // 縮圖條：直拍每格 90×160（橫的還是 160×90）
+    assert.deepEqual([E.thumbPlan(6, { width: 1080, height: 1920 }).w, E.thumbPlan(6, { width: 1080, height: 1920 }).h], [90, 160]);
+    assert.deepEqual([E.thumbPlan(6, { width: 1920, height: 1080 }).w, E.thumbPlan(6).h], [160, 90]);
+    let t = null;
+    for (let i = 0; i < 60; i++) { t = await (await fetch(u('/api/thumbs?src=main'))).json(); if (!t.pending) break; await new Promise((res) => setTimeout(res, 200)); }
+    assert.deepEqual([t.w, t.h], [90, 160], JSON.stringify(t));
+  } finally { await ed3.close(); }
+});
+
+test('講者：lookCss 係數與比值', async () => {
+  const M = await imp('editor/model.mjs');
+  assert.equal(M.lookCss(0.8, 0), 'brightness(1.066) contrast(1.016) saturate(1.0568)');
+  assert.equal(M.lookCss(0.8, 0.8), 'none');
+  assert.equal(M.lookCss(0, 0), 'none');
+  assert.equal(M.lookCss(0, 0.8), 'brightness(0.9381) contrast(0.9843) saturate(0.9463)');
+});
+
+test('講者：/api/look/face 沒有 landmark 回 nolandmarks；有就回 360×360 JPEG；沒偵測到的格回 noface', async () => {
+  let r = await get('/api/look/face?t=1&slim=0.6');
+  assert.equal(r.status, 404);
+  assert.equal((await r.json()).error, 'nolandmarks');
+  const p = FACE58.flatMap(([x, y]) => [80 + x * 0.2, 45 + y * 0.2]);
+  const frames = Array.from({ length: 180 }, (_, i) => (i === 60 ? null : { p, b: [60, 25, 100, 75], n: 1 }));
+  fs.writeFileSync(path.join(work, 'face-landmarks.json'), JSON.stringify({ version: 1, frames, summary: { rate: 0.99, medianFaceWidth: 40, slimOk: false, reason: 'small' } }));
+  r = await get('/api/look/face?t=1&slim=0.6');
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('content-type'), 'image/jpeg');
+  const buf = Buffer.from(await r.arrayBuffer());
+  assert.deepEqual([buf[0], buf[1]], [0xff, 0xd8]);
+  const f = path.join(work, 'face.jpg');
+  fs.writeFileSync(f, buf);
+  assert.equal(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f], { encoding: 'utf8' }).stdout.trim(), '360,360');
+  r = await get('/api/look/face?t=2&slim=0.6');
+  assert.equal(r.status, 404);
+  assert.equal((await r.json()).error, 'noface');
+  fs.rmSync(path.join(work, 'face-landmarks.json'));
+  fs.rmSync(f);
+});

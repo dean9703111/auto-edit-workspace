@@ -1,26 +1,42 @@
+<!-- 預設拍型：D 清單（左上 → 左下 → 右上 → 右下依序彈出，不寫動畫分鏡） -->
 <!-- @style -->
-/* 左欄 x 96–600、右欄 x 1320–1824（寬 504）；每欄 2 張同寬同高不透明卡（高 280、卡間 48），y 160–870 內垂直置中：
-   上卡 top 211、下卡 top 539（底 819）。講者保護區 x 640–1280 內不放東西。
-   卡內（直排置中）：圖示圓 96 → 間距 24 → 標題行高 72；頂部主色線 4px，離卡左右與頂邊各 16。 */
-.sCard { position: absolute; width: 504px; height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; background: var(--sc-card-solid); }
+/* 左右兩欄（講者保護區 x 640–1280 內不放東西）：卡片區 左 x 96–600、右 x 1320–1824（寬 504）、y 160–870。
+   排法（kit/scene-layout.js）：兩個 data-layout="col" 容器＝卡片區外擴一圈內距（左右 --sc-pad-card、上下 --sc-pad-card-y：
+   左 x 48–648、右 x 1272–1872、y 120–910），每欄 2 張卡是 data-slot，卡間 --sc-gap-lg，helper 上下置中（上卡 208、下卡 536，底 816）。
+   卡片同寬同高不透明（504×280）；卡內（直排置中）：圖示圓 96 → --sc-gap-md → 標題行高 72；頂部主色線 4px，離卡左右與頂邊各 16。
+   卡片固定 4 張（scene.json min＝max＝4）：左欄 cards.0、cards.1，右欄 cards.2、cards.3（出場順序 左上 → 左下 → 右上 → 右下）。 */
+#sColL, #sColR { position: absolute; top: calc(160px - var(--sc-pad-card-y)); width: calc(504px + 2 * var(--sc-pad-card)); height: calc(710px + 2 * var(--sc-pad-card-y)); }
+#sColL { left: calc(96px - var(--sc-pad-card)); }
+#sColR { left: calc(1320px - var(--sc-pad-card)); }
+.sCard { width: 504px; height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--sc-gap-md); background: var(--sc-card-solid); }
 .sCard .sc-t60 { line-height: 64px; }   /* 行高 64 ＋ .sc-opt 光學 padding-bottom 8 ＝ 標題行 72 */
 .sCard.sc-card--topline::before { left: 16px; right: 16px; top: 16px; height: 4px; border-radius: 2px; }
 .sc-icon--96 { --d: 96px; --i: 56px; }
-#sCard1 { left: 96px;   top: 211px; }
-#sCard2 { left: 96px;   top: 539px; }
-#sCard3 { left: 1320px; top: 211px; }
-#sCard4 { left: 1320px; top: 539px; }
 <!-- @body -->
-{{#cards}}
-<div id="sCard{{n}}" class="sc-card sc-card--topline sCard">
-  <span class="sc-icon sc-icon--96">{{{icon}}}</span>
-  <span class="sc-t60 sc-w700 sc-opt">{{{text}}}</span>
+<div id="sColL" data-layout="col" data-gap="lg">
+  {{#cards.0}}<div id="sCard1" class="sc-card sc-card--topline sCard" data-slot>
+    <span class="sc-icon sc-icon--96">{{{icon}}}</span>
+    <span class="sc-t60 sc-w700 sc-opt">{{{text}}}</span>
+  </div>{{/cards.0}}
+  {{#cards.1}}<div id="sCard2" class="sc-card sc-card--topline sCard" data-slot>
+    <span class="sc-icon sc-icon--96">{{{icon}}}</span>
+    <span class="sc-t60 sc-w700 sc-opt">{{{text}}}</span>
+  </div>{{/cards.1}}
 </div>
-{{/cards}}
+<div id="sColR" data-layout="col" data-gap="lg">
+  {{#cards.2}}<div id="sCard3" class="sc-card sc-card--topline sCard" data-slot>
+    <span class="sc-icon sc-icon--96">{{{icon}}}</span>
+    <span class="sc-t60 sc-w700 sc-opt">{{{text}}}</span>
+  </div>{{/cards.2}}
+  {{#cards.3}}<div id="sCard4" class="sc-card sc-card--topline sCard" data-slot>
+    <span class="sc-icon sc-icon--96">{{{icon}}}</span>
+    <span class="sc-t60 sc-w700 sc-opt">{{{text}}}</span>
+  </div>{{/cards.3}}
+</div>
 <!-- @timeline -->
-/* 左上 → 左下 → 右上 → 右下依序 drift（左欄 dx −16、右欄 +16）→ 各卡進場 P.BEAT 後圖示描線 0.7 → 停 → 段尾一起淡出 */
+/* v2（shared/template/BEATS.md §2 的動作）：四張卡各綁 at 彈出（從下 28u、0.82 → 1）→ 0.15 後圖示描線 → 段尾一起向左擦掉 */
 {{#cards}}
-P.drift('#sCard{{n}}', {{{at}}}, { dx: {{n}} <= 2 ? -P.DRIFT : P.DRIFT });
-P.icon('#sCard{{n}} .sc-icon', {{{at}}} + P.BEAT);
+P.pop('#sCard{{n}}', {{{at}}}, { from: 0.82, dy: 28 });
+P.icon('#sCard{{n}} .sc-icon', {{{at}}} + 0.15);
 {{/cards}}
-{{#exitFade}}P.out('#sCard1, #sCard2, #sCard3, #sCard4', D - P.OUT);{{/exitFade}}
+{{#exitFade}}P.wipeOut('#sCard1, #sCard2, #sCard3, #sCard4', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#sCard1, #sCard2, #sCard3, #sCard4', D - 0.8, { dir: 'left' });{{/exitFade}}

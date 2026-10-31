@@ -3,7 +3,7 @@
 //   findChrome({ chrome })        → HyperFrames 自己下載的 chrome-headless-shell 路徑
 //                                   找法：--chrome → ~/.cache/hyperframes/chrome（Mac／Windows 同一處）→ npx hyperframes browser path
 //   findRuntime({ runtime })      → HyperFrames 的 hyperframe.runtime.iife.js（npx 快取裡；有多版時挑 npx hyperframes --version 那一版）
-//   openSession({ dir, chrome, runtime }) → { seek(t), measure(opts), errors, close() }
+//   openSession({ dir, chrome, runtime }) → { seek(t), measure(opts), motion({ hostId, compId }), cueErrors(), errors, close() }
 //     起一個只給這次用的 http server 送 work/hyperframes/（index.html 回傳時注入 runtime，檔案本身不改），
 //     開 headless Chrome（--remote-debugging-port），用 CDP 載頁、等 __playerReady，之後用 __player.renderSeek 跳時間。
 //     這和 npx hyperframes snapshot／check 用的是同一個 runtime 與同一個 seek，子合成的載入、顯示時間、巢狀時間軸都照 HyperFrames 的做法。
@@ -13,7 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
-import { pageSeekSource, pageMeasureSource } from './audit-page.mjs';
+import { pageSeekSource, pageMeasureSource, pageMotionSource } from './audit-page.mjs';
 
 const WIN = process.platform === 'win32';
 const exists = (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
@@ -176,10 +176,10 @@ function cdpClient(wsUrl) {
   });
 }
 
-function launchChrome(chrome, userDir) {
+function launchChrome(chrome, userDir, W = 1920, H = 1080) {
   const args = ['--headless', '--remote-debugging-port=0', `--user-data-dir=${userDir}`, '--no-first-run', '--no-default-browser-check',
     '--hide-scrollbars', '--mute-audio', '--disable-extensions', '--disable-background-networking', '--disable-sync',
-    '--force-device-scale-factor=1', '--window-size=1920,1080', 'about:blank'];
+    '--force-device-scale-factor=1', `--window-size=${W},${H}`, 'about:blank'];
   const cp = spawn(chrome, args, { stdio: ['ignore', 'ignore', 'pipe'] });
   return new Promise((resolve, reject) => {
     let buf = '';
@@ -196,7 +196,8 @@ function launchChrome(chrome, userDir) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function openSession({ dir, chrome, runtime, readyTimeout = 60000 }) {
+// W／H：視窗大小（009 直式量 overlay 用 1080×1920；預設 1920×1080）
+export async function openSession({ dir, chrome, runtime, readyTimeout = 60000, W = 1920, H = 1080 }) {
   const userDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-audit-'));
   const { server, port } = await startServer(dir, runtime);
   let proc = null, cdp = null;
@@ -212,7 +213,7 @@ export async function openSession({ dir, chrome, runtime, readyTimeout = 60000 }
     for (let k = 0; k < 5; k++) { try { fs.rmSync(userDir, { recursive: true, force: true }); break; } catch { await sleep(300); } }
   };
   try {
-    const l = await launchChrome(chrome, userDir);
+    const l = await launchChrome(chrome, userDir, W, H);
     proc = l.cp;
     cdp = await cdpClient(l.ws);
     const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });
@@ -232,7 +233,7 @@ export async function openSession({ dir, chrome, runtime, readyTimeout = 60000 }
     });
     await S('Runtime.enable');
     await S('Page.enable');
-    await S('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+    await S('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
     const evaluate = async (expression, timeout = 30000) => {
       const r = await S('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }, timeout);
       if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description?.split('\n')[0] || r.exceptionDetails.text);
@@ -253,6 +254,9 @@ export async function openSession({ dir, chrome, runtime, readyTimeout = 60000 }
       errors,
       async seek(t) { await evaluate(pageSeekSource(t)); },
       async measure(opts) { return evaluate(pageMeasureSource(opts)); },
+      // 003：custom 段的時間軸（第一次 seek 之後才有）與 P.at 記下的綁句錯誤（specs/contracts/cues.md §4.4）
+      async motion(opts) { return evaluate(pageMotionSource(opts)); },
+      async cueErrors() { return evaluate('(window.__cueErrors || []).slice()'); },
       evaluate,
       async screenshot(file) {
         const r = await S('Page.captureScreenshot', { format: 'jpeg', quality: 80 });

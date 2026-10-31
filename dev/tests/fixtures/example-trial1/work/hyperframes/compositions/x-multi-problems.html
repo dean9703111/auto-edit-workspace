@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-multi-problems 多機錄影的問題</title></head>
+<body>
+<template id="x-multi-problems-template">
+  <style>
+    #x-multi-problems { position: absolute; inset: 0; }
+    #x-multi-problems .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 139、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 851） */
+    #x-multi-problems #xmulti-card { position: absolute; left: 120px; top: 139px; width: 1180px; }
+    #x-multi-problems #xmulti-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-multi-problems #xmulti-body { position: relative; width: 1176px; height: 580px; }
+    /* 左清單：三列同寬（grid 撐成最長那列），每列 144 高、間距 34 */
+    #x-multi-problems #xmulti-list { position: absolute; left: 40px; top: 40px; width: max-content; display: grid; grid-auto-rows: 144px; row-gap: 34px; }
+    #x-multi-problems .xmulti-row { position: relative; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line); border-radius: 20px;
+                             background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                             display: flex; align-items: center; gap: 24px; padding: 0 40px 0 28px; white-space: nowrap; }
+    #x-multi-problems .xmulti-row .sc-icon { --d: 72px; --i: 40px; position: relative; }
+    #x-multi-problems .xmulti-row .xmulti-txt { position: relative; }
+    /* 亮框：主色 4 px，疊在列外框上（P.focus 的 ring） */
+    #x-multi-problems .xmulti-on { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 20px; }
+    /* 右示意區：三張疊在同一位置（P.swap 換） */
+    #x-multi-problems #xmulti-panel { position: absolute; left: 680px; top: 40px; width: 456px; height: 500px; box-sizing: border-box;
+                               border: 4px solid var(--sc-fs-node-line); border-radius: 20px; background: var(--sc-fs-node); color: var(--sc-fs-ink); }
+    #x-multi-problems .xmulti-fig { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; white-space: nowrap; }
+    #x-multi-problems .xmulti-fig .sc-icon { --d: 160px; --i: 88px; }
+  </style>
+  <div data-hf-id="hf-1zlk" id="x-multi-problems" data-composition-id="x-multi-problems" data-width="1920" data-height="1080" data-duration="11.6"
+       data-cues-sample='{"start":0,"D":11.6,"cues":{"52":[3.2,5.5],"53":[5.8,8.1],"54":[8.4,11.1]}}'>
+    <div data-hf-id="hf-rs5n" class="sc-surface-fs fill"></div>
+    <div data-hf-id="hf-gq4c" id="xmulti-card" class="sc-wcard">
+      <div data-hf-id="hf-djs5" class="sc-wcard__bar"><span data-hf-id="hf-ibdy" class="sc-opt">多機錄影的問題</span></div>
+      <div data-hf-id="hf-b6xz" id="xmulti-body">
+        <div data-hf-id="hf-jlns" id="xmulti-list" data-snap-width>
+          <div data-hf-id="hf-yp2h" id="xmulti-r1" class="xmulti-row"><i data-hf-id="hf-2py7" class="xmulti-on"></i><span data-hf-id="hf-vcon" id="xmulti-ico1" class="sc-icon"><svg data-hf-id="hf-ew5e" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect data-hf-id="hf-fk15" width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path data-hf-id="hf-p3i6" d="M12 18h.01" /> </svg></span><span data-hf-id="hf-v1cd" class="xmulti-txt sc-t52 sc-w900 sc-opt">難同時啟動</span></div>
+          <div data-hf-id="hf-4usa" id="xmulti-r2" class="xmulti-row"><i data-hf-id="hf-9sv3" class="xmulti-on"></i><span data-hf-id="hf-moss" id="xmulti-ico2" class="sc-icon"><svg data-hf-id="hf-a17q" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle data-hf-id="hf-m1lh" cx="12" cy="12" r="10" /> <polyline data-hf-id="hf-gj1h" points="12 6 12 12 16 14" /> </svg></span><span data-hf-id="hf-m49f" class="xmulti-txt sc-t52 sc-w900 sc-opt">時間不同步</span></div>
+          <div data-hf-id="hf-8swb" id="xmulti-r3" class="xmulti-row"><i data-hf-id="hf-9ek2" class="xmulti-on"></i><span data-hf-id="hf-nggl" id="xmulti-ico3" class="sc-icon"><svg data-hf-id="hf-afir" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle data-hf-id="hf-t51r" cx="6" cy="6" r="3" /> <path data-hf-id="hf-jupx" d="M8.12 8.12 12 12" /> <path data-hf-id="hf-avu8" d="M20 4 8.12 15.88" /> <circle data-hf-id="hf-2o6c" cx="6" cy="18" r="3" /> <path data-hf-id="hf-pz3r" d="M14.8 14.8 20 20" /> </svg></span><span data-hf-id="hf-r1vk" class="xmulti-txt sc-t52 sc-w900 sc-opt">剪輯校音崩潰</span></div>
+        </div>
+        <div data-hf-id="hf-jyfb" id="xmulti-panel">
+          <div data-hf-id="hf-x3z1" id="xmulti-p1" class="xmulti-fig"><span data-hf-id="hf-wjk5" id="xmulti-pico1" class="sc-icon"><svg data-hf-id="hf-atts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <line data-hf-id="hf-klg6" x1="10" x2="14" y1="2" y2="2" /> <line data-hf-id="hf-6f60" x1="12" x2="15" y1="14" y2="11" /> <circle data-hf-id="hf-1dv0" cx="12" cy="14" r="8" /> </svg></span><span data-hf-id="hf-1628" class="sc-t52 sc-w700 sc-opt">啟動有時間差</span></div>
+          <div data-hf-id="hf-1232" id="xmulti-p2" class="xmulti-fig"><span data-hf-id="hf-2p9y" id="xmulti-pico2" class="sc-icon"><svg data-hf-id="hf-81ol" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path data-hf-id="hf-kkhl" d="M9 17H7A5 5 0 0 1 7 7" /> <path data-hf-id="hf-yi2e" d="M15 7h2a5 5 0 0 1 4 8" /> <line data-hf-id="hf-dws3" x1="8" x2="12" y1="12" y2="12" /> <line data-hf-id="hf-19qe" x1="2" x2="22" y1="2" y2="22" /> </svg></span><span data-hf-id="hf-gfbl" class="sc-t52 sc-w700 sc-opt">錄影起點不同</span></div>
+          <div data-hf-id="hf-5073" id="xmulti-p3" class="xmulti-fig"><span data-hf-id="hf-6ndz" id="xmulti-pico3" class="sc-icon"><svg data-hf-id="hf-8fzm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path data-hf-id="hf-fn22" d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path data-hf-id="hf-mlkx" d="M12 9v4" /> <path data-hf-id="hf-c2s1" d="M12 17h.01" /> </svg></span><span data-hf-id="hf-90rc" class="sc-t52 sc-w700 sc-opt">校正聲音崩潰</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-multi-problems'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const W1 = P.at('#40'), W2 = P.at('#41'), W3 = P.at('#42');   // 講到第 1–3 條那一句的開頭
+
+    // 1. 卡片先進場，三列每 0.5 秒出現一列（觀眾先知道有幾條）；0.5 秒前不動
+    P.reveal('#xmulti-card', 0.5);
+    P.rise('#xmulti-r1, #xmulti-r2, #xmulti-r3', 1.0, { stagger: 0.5 });
+    P.icon('#xmulti-ico1, #xmulti-ico2, #xmulti-ico3', 1.0 + P.BEAT, { stagger: 0.5 });
+
+    // 2. 講到哪一條：那一條亮框、其他降到 0.4；右邊同一個位置換成那一條的示意
+    P.focus('.xmulti-row', '#xmulti-r1', W1, { ring: '.xmulti-on' });
+    P.rise('#xmulti-panel', W1);                        // 示意區和第一張一起出現（不留空框）
+    P.icon('#xmulti-pico1', W1 + P.BEAT);
+    P.focus('.xmulti-row', '#xmulti-r2', W2, { ring: '.xmulti-on' });
+    P.swap('#xmulti-p1', '#xmulti-p2', W2);
+    P.icon('#xmulti-pico2', W2 + 0.3);
+    P.focus('.xmulti-row', '#xmulti-r3', W3, { ring: '.xmulti-on' });
+    P.swap('#xmulti-p2', '#xmulti-p3', W3);
+    P.icon('#xmulti-pico3', W3 + 0.3);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-multi-problems'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

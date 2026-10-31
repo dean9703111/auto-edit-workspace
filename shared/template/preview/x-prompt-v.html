@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-prompt 提示詞打字｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-prompt.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-prompt { position: absolute; inset: 0; }
+    #x-prompt .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 169、寬 1180（右緣 1300）；標題列 128、內容區 1176×520（卡底 821） */
+    #x-prompt #xprompt-card { position: absolute; left: 120px; top: 169px; width: 1180px; }
+    #x-prompt #xprompt-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; gap: 24px; }
+    /* 標題列底是主色：圖示圓反過來用標題字色當底 */
+    #x-prompt #xprompt-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--sc-fs-bar); }
+    /* 內容區：data-layout="col" data-justify="start"（kit/scene-layout.js）：框和膠囊靠左對齊、貼左內距、整組上下置中，不寫 left／top */
+    #x-prompt #xprompt-body { position: relative; width: 1176px; height: 520px; }
+    /* 提示詞框：寬隨最長那行、高固定 288（3 行） */
+    #x-prompt #xprompt-box { position: absolute; width: max-content; max-width: 1064px; height: 288px; box-sizing: border-box;
+                             padding: 32px 40px; border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node); color: var(--sc-fs-ink); }
+    #x-prompt #xprompt-text { white-space: nowrap; }
+    /* 關鍵詞：inline-block 讓變色層和原字同一個行盒；變色層＝同位置的主色字（::before 畫 data-t，不是文字節點，打字不會算到） */
+    #x-prompt .xprompt-k { position: relative; display: inline-block; }
+    #x-prompt .xprompt-c { position: absolute; left: 0; top: 0; width: 100%; height: 100%; font-style: normal; white-space: nowrap; }
+    #x-prompt .xprompt-c::before { content: attr(data-t); }
+    /* 提醒膠囊 */
+    #x-prompt #xprompt-note { position: absolute; width: max-content; height: 112px; box-sizing: border-box;
+                              padding: 0 40px 0 32px; border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node-tint); color: var(--sc-fs-ink);
+                              display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-prompt #xprompt-nico { --d: 64px; --i: 36px; }
+  </style>
+  <div id="x-prompt" data-composition-id="x-prompt" data-width="1920" data-height="1080" data-duration="17.2"
+       data-cues-sample='{"start":0,"D":17.2,"cues":{"62":[1.6,6.6],"63":[6.9,9.1],"64":[9.4,11.6],"65":[11.9,14.4]},"refs":{"#63@表格":6.9,"#64@時間碼":9.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xprompt-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span id="xprompt-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> <path d="M13 8H7" /> <path d="M17 12H7" /> </svg></span><span class="sc-opt">我的提示詞</span></div>
+      <div id="xprompt-body" data-layout="col" data-justify="start" data-gap="md">
+        <div id="xprompt-box" data-slot data-snap-width>
+          <div id="xprompt-text" class="sc-t52 sc-w700">幫我把這支影片的 NG 段落<br>整理成<span id="xprompt-k1" class="xprompt-k">表格<i id="xprompt-c1" class="xprompt-c sc-kw" data-t="表格" data-layout-allow-overlap></i></span>，附上<span id="xprompt-k2" class="xprompt-k">時間碼<i id="xprompt-c2" class="xprompt-c sc-kw" data-t="時間碼" data-layout-allow-overlap></i></span><br>和剪掉的原因。</div>
+        </div>
+        <div id="xprompt-note" data-slot data-snap-width><span id="xprompt-nico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 10 0v4" /> </svg></span><span id="xprompt-ntext" class="sc-t52 sc-w900 sc-opt">貼之前先刪掉個資</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-prompt'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const TYPE = P.at('#62', 0.45), K1 = P.at('#63@表格'), K2 = P.at('#64@時間碼'), NOTE = P.at('#65');   // 開始打字／兩個關鍵詞／提醒
+
+    P.sfx('type', '#62', 0.45); P.sfx('tick', '#63@表格'); P.sfx('tick', '#64@時間碼'); P.sfx('ding', '#65');   // 每一拍一顆音效（句號和上一行一樣；打字＝type、提醒＝ding）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題圖示描線 → 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xprompt-card', 0.3);
+    else { P.wipe('#xprompt-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xprompt-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xprompt-bico', 0.5);
+    P.chars('#xprompt-card .sc-wcard__bar .sc-opt', 0.62, { stagger: 0.035 });
+    // 拍 1 輸入框：提示詞框由左擦開（框的大小已經是打完的樣子，游標停在第一個字前面）→ ＋0.6 漂浮到提醒前
+    P.wipe('#xprompt-box', 1.0, { dir: 'left', dur: 0.5 });
+    P.idle('#xprompt-box', 1.6, { y: 3, period: 3.2, until: NOTE - 0.1 });
+
+    // 拍 2 打字：逐字打出（8.5 字／秒、等速），打完游標消失
+    P.type('#xprompt-text', TYPE);
+    // 拍 3 關鍵詞 1：那個詞從墨色變成主色
+    P.in('#xprompt-c1', K1, { dur: 0.3 });
+    // 拍 4 關鍵詞 2：主色移到第二個詞，第一個詞變回墨色（同一時間只有一個焦點）
+    P.out('#xprompt-c1', K2, { dur: 0.3 });
+    P.in('#xprompt-c2', K2, { dur: 0.3 });
+    // 拍 5 提醒：膠囊彈出、＋0.14 提醒字逐字、＋0.18 圖示描線 → ＋0.6 提示詞框退焦 → ＋0.9 漂浮
+    P.pop('#xprompt-note', NOTE, { from: 0.82, dy: 40 });
+    P.chars('#xprompt-ntext', NOTE + 0.14);
+    P.icon('#xprompt-nico', NOTE + 0.18);
+    P.dim('#xprompt-box', NOTE + 0.6, { to: 0.55 });
+    P.idle('#xprompt-note', NOTE + 0.9, { y: 4, period: 2.8 });
+
+    // 收：提醒講完 2.6 秒回均衡（提示詞框亮回、兩個關鍵詞都是主色），完成態停到段尾
+    const TR = NOTE + 2.6;
+    P.dim('#xprompt-box', TR, { to: 1, dur: 0.6 });
+    P.in('#xprompt-c1', TR, { dur: 0.3 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-prompt'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-prompt";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

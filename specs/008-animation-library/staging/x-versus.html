@@ -1,0 +1,173 @@
+<!doctype html>
+<!--
+  x-versus：A vs B 逐項比較（第二層 custom，layout: "fullscreen"；蝴蝶長條，數字同步計數）
+
+  【適用的口播】
+  在講「兩個選項在 2–3 個面向上比」，每個面向有數字，例如「手動剪要 180 分鐘、AI 只要 20 分鐘；手動 6 個步驟、AI 只剩 2 個」。
+  上方是兩個對手（圖示＋名稱），講到哪個面向，那一列出現：中間是面向名稱，A 的條往左長、B 的條往右長，數字同時跑；
+  贏的那一邊是主色、輸的是灰色。最後講結論時，贏家的標頭亮框（選用）。
+
+  【不要用在哪裡】
+  - 沒有數字，只是兩個名詞的特點對照：用 04b。
+  - 同一件事前後差多少（只有一個面向、要看「變成」的過程）：用 x-before-after。
+  - 超過 3 個面向或超過 2 個對手：用 04d 表格。
+  - 兩邊數字差 20 倍以上：小的那條會只剩 8 px，改成 x-numbers 或把單位換大。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、兩個標頭名稱 .xvs-hname（≤ 4 字）、每列面向名稱 .xvs-lab（≤ 4 字，單位寫進去，例「分鐘」「步驟數」「月費」）。
+  2. 圖示：兩個標頭的 .sc-icon。到 kit/icons.json 找名稱，把 svg 原文整段貼上（拿掉 class、width、height）。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來。
+  3. 數字：只改 <script> 開頭 DATA 那一行：每列 { a: A 的數字, b: B 的數字, win: 'a' 或 'b' }（數字 ≤ 4 位數）；WINNER 寫結論的贏家 'a' 或 'b'。
+     條的長度、顏色由程式算，不用改 CSS。
+  4. 綁句：<script> 開頭 T1–T3、WIN 的句號與詞（見【綁句欄位】）。
+  面向是 2 個：刪掉第 3 列（#xvs-r3 整個 div）、DATA 的第 3 個、T3 = P.at(…)，const T 那一行改成 [T1, T2]；下面的 WIN ≥ T3 改看 T2。
+
+  【綁句欄位】
+  T1 = P.at('#141@分鐘')、T2 = P.at('#142@步驟')、T3 = P.at('#143@月費')：講到那個面向的時刻，那一列出現，0.15 秒後兩條同時長、數字同時跑。
+  WIN = P.at('#144@AI')：講到結論（「所以 AI 完勝」）時，贏家標頭亮框。沒有結論句就刪掉 WIN 那一行和最後的 P.in 那一行。
+  面向詞在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#142')。
+  「@詞」要寫成字串字面值（P.at('#142@步驟')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#142@步驟', 0.3)。
+  相鄰兩列至少差 2.2 秒（列出現 0.5 秒、長條與數字 0.15 秒起跑 0.8 秒＝忙到 0.95 秒，再停 1.2 秒）。
+  audit 會比對：這一拍出現的字（面向名稱）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.0（卡片 0.5 秒、A 標頭 1.0 秒、B 標頭 1.5 秒）
+  T2 ≥ T1 + 2.2；T3 ≥ T2 + 2.2；WIN ≥ T3 + 2.2
+  D ≥ WIN + 2.5（亮框 0.5 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；沒有 WIN 時 D ≥ 最後一列 + 3.0；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：整段淡入淡出 0.5 秒由 build 處理；0.5 秒前不動。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
+  標題列 128、內容區 1176×580（卡底 862）。以下是內容區座標：
+  標頭 top 24、高 112：A x 56–528、B x 648–1120，中間 VS 圓 88（x 544–632，跟主卡一起揭開）。三列 top 176／312／448、高 112：
+  A 數字 x 40–176（靠右）、A 條右緣固定在 x 428（最長 236，往左長）、面向名稱框 x 444–732、B 條左緣固定在 x 748（最長 236）、B 數字 x 1000–1136（靠左）。
+  條高 48、在列中線；每列較大的數字＝236 px，較小的照比例（最短 8 px，數字是 0 就沒有條）。贏＝主色條＋主色字，輸＝灰條＋灰字。
+-->
+<!-- 靈感（只借技法，003 搬進 custom 時移到 NOTICE.md）：n01ennn-597182／N01ennn／https://x.com/N01ennn/status/2108520767092597182；
+     dys-hay-749645／Dys_hay／https://x.com/Dys_hay/status/2103819139307749645；threeaus-886343／threeaus／https://x.com/threeaus/status/2105152377057886343 -->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-versus A vs B 逐項比較</title></head>
+<body>
+<template id="x-versus-template">
+  <style>
+    #x-versus { position: absolute; inset: 0; }
+    #x-versus .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-versus #xvs-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-versus #xvs-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-versus #xvs-body { position: relative; width: 1176px; height: 580px; }
+    /* 兩個對手的標頭：472×112，圖示和名稱同一塊；亮框疊在上面（inset −4 蓋住原本的框） */
+    #x-versus .xvs-head { position: absolute; top: 24px; width: 472px; height: 112px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
+                          border-radius: 16px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                          display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-versus #xvs-ha { left: 56px; }
+    #x-versus #xvs-hb { left: 648px; }
+    #x-versus .xvs-head .sc-icon, #x-versus .xvs-head .xvs-hname { position: relative; }
+    #x-versus .xvs-on { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 16px; opacity: 0; }
+    /* VS 圓：88，在兩個標頭中間（左右各隔 16） */
+    #x-versus #xvs-vs { position: absolute; left: 544px; top: 36px; width: 88px; height: 88px; border-radius: 44px;
+                        background: var(--sc-fs-ink); color: var(--sc-fs-card); display: flex; align-items: center; justify-content: center; }
+    /* 一列：透明容器 1176×112；數字、條、名稱框、條、數字同一條中線（y 56） */
+    #x-versus .xvs-row { position: absolute; left: 0; width: 1176px; height: 112px; }
+    #x-versus #xvs-r1 { top: 176px; }
+    #x-versus #xvs-r2 { top: 312px; }
+    #x-versus #xvs-r3 { top: 448px; }
+    #x-versus .xvs-num { position: absolute; top: 20px; width: 136px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-versus .xvs-na { left: 40px; text-align: right; }
+    #x-versus .xvs-nb { left: 1000px; text-align: left; }
+    /* 條：A 右錨定（右緣 x 428，往左長）、B 左錨定（左緣 x 748，往右長）；寬度由 script 從 0 長到 DATA 算出的整數 px */
+    #x-versus .xvs-bar { position: absolute; top: 32px; width: 0; height: 48px; border-radius: 8px; }
+    #x-versus .xvs-ba { right: 748px; }
+    #x-versus .xvs-bb { left: 748px; }
+    #x-versus .xvs-lab { position: absolute; left: 444px; top: 0; width: 288px; height: 112px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
+                         border-radius: 16px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                         display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+    /* 贏＝主色、輸＝灰（script 依 DATA 的 win 加 class，不補間顏色） */
+    #x-versus .xvs-bar.xvs-win { background: var(--brand); }
+    #x-versus .xvs-bar.xvs-lose { background: var(--sc-fs-node-line); }
+    #x-versus .xvs-num.xvs-win { color: var(--sc-fs-kw); }
+    #x-versus .xvs-num.xvs-lose { color: var(--sc-fs-mute); }
+  </style>
+  <div id="x-versus" data-composition-id="x-versus" data-width="1920" data-height="1080" data-duration="12"
+       data-cues-sample='{"start":0,"D":12,"cues":{"141":[2,4.3],"142":[4.4,6.7],"143":[6.8,9.2],"144":[9.3,11.5]},"refs":{"#141@分鐘":2.2,"#142@步驟":4.6,"#143@月費":7.0,"#144@AI":9.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xvs-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">手動剪 vs AI 剪</span></div>
+      <div id="xvs-body">
+        <div id="xvs-ha" class="xvs-head"><i id="xvs-hon-a" class="xvs-on"></i>
+          <span id="xvs-icoa" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" /> <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" /> <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" /> <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width>手動剪</span></div>
+        <div id="xvs-hb" class="xvs-head"><i id="xvs-hon-b" class="xvs-on"></i>
+          <span id="xvs-icob" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width>AI 剪</span></div>
+        <div id="xvs-vs"><span class="sc-t40 sc-w900 sc-opt">VS</span></div>
+        <div id="xvs-r1" class="xvs-row">
+          <span id="xvs-na1" class="xvs-num xvs-na sc-t52 sc-w900">0</span><i id="xvs-ba1" class="xvs-bar xvs-ba"></i>
+          <div id="xvs-l1" class="xvs-lab"><span class="sc-t52 sc-w900 sc-opt">分鐘</span></div>
+          <i id="xvs-bb1" class="xvs-bar xvs-bb"></i><span id="xvs-nb1" class="xvs-num xvs-nb sc-t52 sc-w900">0</span>
+        </div>
+        <div id="xvs-r2" class="xvs-row">
+          <span id="xvs-na2" class="xvs-num xvs-na sc-t52 sc-w900">0</span><i id="xvs-ba2" class="xvs-bar xvs-ba"></i>
+          <div id="xvs-l2" class="xvs-lab"><span class="sc-t52 sc-w900 sc-opt">步驟數</span></div>
+          <i id="xvs-bb2" class="xvs-bar xvs-bb"></i><span id="xvs-nb2" class="xvs-num xvs-nb sc-t52 sc-w900">0</span>
+        </div>
+        <div id="xvs-r3" class="xvs-row">
+          <span id="xvs-na3" class="xvs-num xvs-na sc-t52 sc-w900">0</span><i id="xvs-ba3" class="xvs-bar xvs-ba"></i>
+          <div id="xvs-l3" class="xvs-lab"><span class="sc-t52 sc-w900 sc-opt">月費</span></div>
+          <i id="xvs-bb3" class="xvs-bar xvs-bb"></i><span id="xvs-nb3" class="xvs-num xvs-nb sc-t52 sc-w900">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-versus'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#141@分鐘'), T2 = P.at('#142@步驟'), T3 = P.at('#143@月費');   // 講到每一列面向詞的時刻
+    const WIN = P.at('#144@AI');                                                   // 講到結論的時刻（沒有結論句：刪掉這一行和最後的 P.in 那一行）
+    const T = [T1, T2, T3];                                                        // 每一列出現的時刻（只有 2 列：改成 [T1, T2]）
+    const DATA = [ { a: 180, b: 20, win: 'b' }, { a: 6, b: 2, win: 'b' }, { a: 0, b: 600, win: 'a' } ];   // 只改這一行的數字
+    const WINNER = 'b';                                                            // 結論的贏家：'a' 或 'b'
+    const MAXW = 236;                                                              // 每列較大的數字＝236 px（版面固定，不用改）
+
+    // 0. 由 DATA 算每條的寬（整數 px，最短 8，數字 0 就是 0），並在建 tween 之前上色：贏＝主色、輸＝灰（靜態 class，不補間顏色）
+    const W = DATA.map(function (d) {
+      var m = Math.max(d.a, d.b, 1);
+      var w = function (v) { return v === 0 ? 0 : Math.max(8, Math.round(v / m * MAXW)); };
+      return { a: w(d.a), b: w(d.b) };
+    });
+    DATA.forEach(function (d, i) {
+      [ 'a', 'b' ].forEach(function (s) {
+        var k = s === d.win ? 'xvs-win' : 'xvs-lose';
+        $q('#xvs-b' + s + (i + 1) + ', #xvs-n' + s + (i + 1)).forEach(function (el) { el.classList.add(k); });
+      });
+    });
+
+    // 1. 卡片（含 VS）→ A 標頭 → B 標頭，每 0.5 秒一個；標頭進場 0.15 秒後圖示描線；0.5 秒前不動
+    P.reveal('#xvs-card', 0.5);
+    P.rise('#xvs-ha', 1.0);
+    P.icon('#xvs-icoa', 1.0 + P.BEAT);
+    P.rise('#xvs-hb', 1.5);
+    P.icon('#xvs-icob', 1.5 + P.BEAT);
+
+    // 2. 講到哪個面向，那一列出現（名稱框＋兩個 0）；0.15 秒後兩條從中間往外長、數字同時跑（0.8 秒）
+    DATA.forEach(function (d, i) {
+      var n = i + 1, t = T[i];
+      P.rise('#xvs-r' + n, t);
+      P.morph('#xvs-ba' + n, t + P.BEAT, { width: W[i].a }, { from: { width: 0 }, dur: 0.8, ease: 'power2.out' });
+      P.morph('#xvs-bb' + n, t + P.BEAT, { width: W[i].b }, { from: { width: 0 }, dur: 0.8, ease: 'power2.out' });
+      P.count('#xvs-na' + n, t + P.BEAT, { from: 0, to: d.a, dur: 0.8 });
+      P.count('#xvs-nb' + n, t + P.BEAT, { from: 0, to: d.b, dur: 0.8 });
+    });
+
+    // 3. 講到結論：贏家標頭亮主色框（疊在標頭上的一層，不算新元素）
+    P.in('#xvs-hon-' + WINNER, WIN);
+
+    P.end();                                                                       // 長度＝plan.json 這段的長度
+    window.__timelines['x-versus'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

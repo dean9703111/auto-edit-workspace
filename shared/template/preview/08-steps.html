@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -39,7 +42,7 @@
   <div id="scene">
     <div id="pv-steps" class="fill">
       <div id="pv-aWrap" class="fill">
-        <div id="pv-gCard" class="sc-lt">
+        <div id="pv-gCard" class="sc-lt" data-layout="free">
           <i class="sc-lt__plate"></i>
           <div class="sc-lt__card">
             <i class="sc-lt__dots"></i>
@@ -72,17 +75,20 @@ window.__PREVIEW = {"key":"steps","duration":8,"cues":[{"sound":"pop","at":0.1},
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 8;
-    /* 外殼遮罩揭開 → 第 1 步 0.15 後淡入上漂（跟外殼一起出現）→（有圖示：進來那一步的圖示再 P.BEAT 後描線，換步時多等 P.AXIS_LAG）→ 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步至少停 ≥ 0.65＋READ 1.2）→ 段尾 0.4 淡出 */
+    /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 第 1 步上漂 → 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步停 ≥ 0.65＋1.2）→ 漂浮 → 段尾向左擦掉 */
     const stepAt = [0.15, 2.75, 5.35];
-    P.reveal('#pv-gCard', 0);
+    P.wipe('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });
+    P.pop('#pv-gCard .sc-lt__tag', 0 + 0.12, { from: 0.4, dy: 18 });
     P.rise('#pv-s1', stepAt[0]);
     for (let i = 1; i < stepAt.length; i++) {
       P.axis('#pv-s' + i, '#pv-s' + (i + 1), stepAt[i]);
       P.swap('#pv-n' + i, '#pv-n' + (i + 1), stepAt[i]);
     }
-    P.icon('#pv-s1 .sc-icon', stepAt[0] + P.BEAT);
-    for (let i = 1; i < stepAt.length; i++) P.icon('#pv-s' + (i + 1) + ' .sc-icon', stepAt[i] + P.AXIS_LAG + P.BEAT);
-    P.out('#pv-gCard', D - P.OUT);
+    P.icon('#pv-s1 .sc-icon', stepAt[0] + 0.15);
+    for (let i = 1; i < stepAt.length; i++) P.icon('#pv-s' + (i + 1) + ' .sc-icon', stepAt[i] + P.AXIS_LAG + 0.15);
+    P.idle('#pv-gCard', 0 + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+    P.wipeOut('#pv-gCard', D - P.V2.OUT, { dir: 'left' });
 
     P.end(D);
     // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）

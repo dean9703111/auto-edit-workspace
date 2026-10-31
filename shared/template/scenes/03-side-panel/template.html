@@ -1,8 +1,10 @@
+<!-- 預設拍型：D 清單（側欄版，不寫動畫分鏡） -->
 <!-- @style -->
 /* 面板 .sc-side x 0–960 由左推入（講者同步右移 480，剪映端 side_shift.py）。面板用 class、不加 id（audit 只量帶 id 的絕對定位元素，面板是背景層）。
    內容區 x 96–864（寬 768）、底 ≤ 870；每列是面板的直接子層、帶 id（不包 wrapper：wrapper 不透明度一直是 1，推入時會被算成超出畫布）。
    3 條（預設）：眉標 top 150 高 96 → 246；標題 top 286，t80 兩行 208 → 494；清單 top 534，三列 × 78 ＋ 列距 48 → 864。
-   4 條（:has(#sItem4)）：眉標 top 120 → 216；標題 top 248，t72 兩行 200 → 448；清單 top 480，四列 × 72（t48）＋ 列距 34 → 870；序號圓縮 56。 */
+   4 條（:has(#sItem4)）：眉標 top 120 → 216；標題 top 248，t72 兩行 200 → 448；清單 top 480，四列 × 72（t48）＋ 列距 34 → 870；序號圓縮 56。
+   排法 free：面板內容靠左對齊同一條左緣 x 96（helper 的 col 會把各列中線對齊），各列 top 照上面手算（3 條列距＝--sc-gap-lg；4 條 34 是塞進 870 推出來的）。 */
 /* 背景掛在面板自己身上（.sc-surface-side，跟著面板推入／推出）；產生器不會把 surface class 加到 root（root 保持透明） */
 #sEyebrow { position: absolute; left: 96px; top: 150px; height: 96px; padding: 0 40px; }
 #sTitle   { position: absolute; left: 96px; top: 286px; max-width: 768px; white-space: nowrap; color: var(--sc-side-ink); }
@@ -30,7 +32,7 @@
 #sItem3   { top: 774px; }
 {{/yt}}
 <!-- @body -->
-<div class="sc-side sc-surface-side" data-layout-allow-overflow>
+<div class="sc-side sc-surface-side" data-layout="free" data-layout-allow-overflow>
   {{#eyebrow}}<div id="sEyebrow" class="sc-pill"><span class="sc-opt">{{eyebrow}}</span></div>{{/eyebrow}}
   <div id="sTitle" class="sc-t80 sc-w900">{{{title}}}</div>
   {{#items}}
@@ -38,15 +40,16 @@
   {{/items}}
 </div>
 <!-- @timeline -->
-/* 0 → 0.7 面板推入（P.pushEase，與剪映端講者右移同一組 9 點）→ 眉標＋標題 → 項目逐條（錨或每 0.6s；圖示版每項 +P.BEAT 圖示描線）
-   → 段尾：D−1.1 內容淡出、D−0.7 面板推出（接全畫面或章節時停在完成態） */
+/* v2（shared/template/BEATS.md §2 的動作）：0 → 0.7 面板推入（P.pushEase，與剪映端講者右移同一組 9 點）→ 眉標彈出、標題逐字上浮 → 項目各綁 at 彈出、0.15 後圖示描線
+   → 段尾：D−1.0 內容淡出（0.3）、D−0.7 面板推出（接全畫面或章節時停在完成態） */
 P.sideIn('.sc-side', 0);
-P.rise('{{#eyebrow}}#sEyebrow, {{/eyebrow}}#sTitle', {{{head}}});
+{{#eyebrow}}P.pop('#sEyebrow', {{{head}}}, { from: 0.6, dy: 12 });{{/eyebrow}}
+P.chars('#sTitle', {{{head}}} + 0.1);
 {{#items}}
-P.rise('#sItem{{n}}', {{{at}}});
-{{#itemsHasIcon}}P.icon('#sItem{{n}} .sc-icon', {{{at}}} + P.BEAT);{{/itemsHasIcon}}
+P.pop('#sItem{{n}}', {{{at}}}, { from: 0.9, dy: 28 });
+{{#itemsHasIcon}}P.icon('#sItem{{n}} .sc-icon', {{{at}}} + 0.15);{{/itemsHasIcon}}
 {{/items}}
 {{#exitFade}}
-P.out('{{#eyebrow}}#sEyebrow, {{/eyebrow}}#sTitle{{#items}}, #sItem{{n}}{{/items}}', D - 1.1);
+P.out('{{#eyebrow}}#sEyebrow, {{/eyebrow}}#sTitle{{#items}}, #sItem{{n}}{{/items}}', D - P.PUSH - P.OUT);   // 內容淡完剛好面板開始收
 P.sideOut('.sc-side', D - P.PUSH);
 {{/exitFade}}

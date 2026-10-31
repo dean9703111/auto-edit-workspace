@@ -38,3 +38,12 @@ export async function lib() {
   }
   return libCache;
 }
+
+// HyperFrames 的 Chrome（chrome-headless-shell）找得到就回傳路徑，找不到回 null（需要 Chrome 的測試用來 skip）
+let chromeCache;
+export async function hasChrome() {
+  if (chromeCache === undefined) {
+    try { chromeCache = (await imp(path.join('lib', 'audit-browser.mjs'))).findChrome(); } catch { chromeCache = null; }
+  }
+  return chromeCache;
+}

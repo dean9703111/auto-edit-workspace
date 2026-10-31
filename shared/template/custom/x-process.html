@@ -1,30 +1,47 @@
+<!-- 預設拍型：A 流程（BEATS.md §3 A；3–4 站上下錯落，講到一站亮一站，連接線帶發光頭描過去） -->
 <!doctype html>
 <!--
-  x-process：流程逐步亮起＋曲線連接線（第二層 custom，layout: "fullscreen"）
+  x-process：流程逐步亮起＋折線連接線（第二層 custom，layout: "fullscreen"）
 
   【適用的口播】
   在講一條「有先後順序的過程」：3–4 站、每站一句話，例如「先錄影，接著轉成逐字稿，再列出剪輯清單，最後才初剪」。
-  站和站不在同一條直線上（上下錯落），連接線是曲線；口播講到哪一站，那一站就亮起來。
+  站和站不在同一條直線上（上下錯落），連接線是先橫再直的折線；口播講到哪一站，那一站就亮起來。
 
   【不要用在哪裡】
   - 站只有 3 個以上、同一直線、站名都很短，而且每站有字幕句可以對：先用 04c 全畫面流程（fs-flow），不寫第二層。
   - 超過 4 站：拆成兩段，或改用 04a 清單。
-  - 在講「兩個東西比較」（用 04b）、「數字變化」（x-numbers）、「前後差異」（x-before-after）。
+  - 在講「兩個東西比較」（用 04b）、「數字變化」（x-numbers）、「前後差異」（x-before-after）、「一個起點分成幾條路」（x-branch）。
   - 流程圖的站不打勾：走過的站只換框色；要打勾的是總結／回顧（用 P.check）。
 
   【要改的地方】
-  1. 文字：標題列（#xproc-card 裡的 .sc-wcard__bar，≤ 10 字）、四個站名（≤ 5 字；字級 52，站寬 248，放不下就縮文案）。
-  2. 圖示：四個 .sc-icon 裡的 svg。到 kit/icons.json 找名稱，把 svg 原文貼上（拿掉 class、width、height）。同一站全集用同一個圖示。
-  3. 時間點：<script> 開頭的 T1–T4（每一站亮起的秒數，從「本段起點」算起）。連接線會自動在亮起前 0.9 秒開始描。
-  4. D：整段長度。plan.json 的 to 往後延時，跑 `build.mjs --check` 把報告裡這段的「長度」填回 data-duration 與 const D。
-     最後一站亮起後至少要留 2 秒（淡出 0.5 ＋最後一幕停 ≥ 1.5 秒）：D ≥ T4 + 2.5。
-  站數不是 4：刪掉第 4 站與 c3（或加一站就照 c3 的寫法補一段曲線），其餘不用動。
+  1. 文字：標題列（#xproc-card 裡的 .sc-wcard__bar，≤ 10 字）、四個站名（≤ 4 字；字級 52，站內寬 256、左右內距 ≥ 24，放不下就縮文案，不縮字）。
+  2. 圖示：四個 .sc-icon 裡的 svg。到 kit/icons.json 找名稱，把 svg 原文整段貼上。同一站全集用同一個圖示。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 綁句：<script> 開頭 T1–T4 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
+  4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
+  站數不是 4：刪掉第 4 站（#xproc-n4）、#xproc-lines 的 data-links 裡的「xproc-n3>xproc-n4」、script 的 T4 與「拍 7」那一組；位置和連接線自動跟著重排，其餘不用動。
 
-  【時間軸怎麼對到字幕句】
-  時間軸的秒數 ＝ 該句字幕起點 − 本段起點。本段起點看 `build.mjs --check` 報告這段的起點（或 plan.json 的 from 對到的字幕句起點）。
-  例：本段從句 #17（起點 40.0 秒）開始；講「轉成逐字稿」的是句 #18（起點 43.2 秒）→ T2 ＝ 43.2 − 40.0 ＝ 3.2。
-  本檔預設 T1=2.6、T2=5.6、T3=8.6、T4=11.6，是「每站約 3 秒、前面留 2.6 秒讓卡片與圖示進場」的樣子。
-  第一站若在句子開頭就要亮：卡片進場（0.5–1.6 秒）與圖示描線仍要先走完，T1 不要小於 2.0。
+  【綁句欄位】
+  T1 = P.at('#12@錄影')、T2 = P.at('#13@逐字稿')、T3 = P.at('#14@剪輯清單')、T4 = P.at('#15@初剪')：講到那一站「站名」的時刻，那一站亮起；
+  連接線在亮起前 0.85 秒帶著發光頭描過來（線連箭頭 0.75 秒）。
+  站名在句中間或句尾時一定用 @詞，不要綁句首（綁句首，站會比講到早 1–3 秒亮）；站名剛好是那句的第一個詞才寫 P.at('#13')。
+  「@詞」要寫成字串字面值（P.at('#13@逐字稿')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#13@逐字稿', 0.3)。
+  相鄰兩站至少差 2.8 秒（鏡頭帶過去到 +0.7 秒＋停 1.2 秒＋下一條線提早 0.85 秒）；太近就綁後面一句，或把兩站合併成一站。
+  audit 會比對：這一拍出現的字（站名、項目）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.8（主卡 0.3 秒長出、1.0 秒四站錯拍彈出、2.0 秒預覽態，鏡頭慢推到 T1 − 0.2 至少 0.4 秒）
+  T2 ≥ T1 + 2.8；T3 ≥ T2 + 2.8；T4 ≥ T3 + 2.8
+  D ≥ T4 + 5.2（講完 2.6 秒回均衡＋0.6 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
+  標題列 128、內容區 1176×580（卡底 862，在字幕區 y 920 之上）。站 264×224，上下錯落：單數站在上排、雙數站在下排（往下錯一站高＋--sc-gap-lg），
+  相鄰兩站左右貼齊（不同排，不會碰到）；#xproc-body 是 data-layout="free"（排版程式沒有錯落排法，站用 flex 排、整組在內容區置中：4 站左右 60、上下 42；
+  聚焦時放大抬起，離標題列仍 ≥ 24），不寫 left／top。連接線由 #xproc-lines 的 data-links 自動畫（kit/scene-layout.js，shared/style.md「版面」）：
+  從上一站右邊中點外 12 水平走到下一站中線，再直走到下一站的頂邊（底邊）外 12，箭頭 16；id＝<上一站>-<下一站>（例 xproc-n1-xproc-n2），站移動線跟著移，不寫座標。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-process 流程逐步亮起</title></head>
@@ -36,45 +53,37 @@
     /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
     #x-process #xproc-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-process #xproc-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-    #x-process #xproc-body { position: relative; width: 1176px; height: 580px; }
-    /* 連接線：整個內容區大小的 svg，疊在站的「下面」（線端被站蓋住，視覺上剛好貼齊邊框） */
-    #x-process #xproc-lines { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
-    #x-process .xproc-line { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
-    /* 站：寬 248、高 208，上排頂 40、下排頂 332（上下錯落）；圖示和站名同一塊 */
-    #x-process .xproc-node { position: absolute; width: 248px; height: 208px; box-sizing: border-box; border: 4px solid var(--sc-fs-node-line);
-                             border-radius: 20px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+    /* 內容區：站用 flex 排成一列、整組置中（data-layout="free"：排版程式沒有上下錯落的排法） */
+    #x-process #xproc-body { position: relative; width: 1176px; height: 580px; display: flex; justify-content: center; align-items: center; }
+    /* 連接線：#xproc-lines 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link），不佔 flex 的位置 */
+    #x-process #xproc-lines { position: absolute; }
+    /* 虛線預告層：script 載入時從每條連接線複製一份（不用手寫），講到之前一直往前流 */
+    #x-process .xproc-ghost { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-linecap: round; stroke-dasharray: 2 14; }
+    /* 站：寬 264、高 224；單數站下面、雙數站上面各空一站高＋--sc-gap-lg（上下錯落，flex 置中後單數在上排、雙數在下排）；圖示和站名同一塊 */
+    #x-process .xproc-node { position: relative; flex: none; width: 264px; height: 224px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                             border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
                              display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
     #x-process .xproc-node .sc-icon { --d: 96px; --i: 56px; position: relative; }
     #x-process .xproc-node .xproc-name { position: relative; }
-    #x-process #xproc-n1 { left: 24px;  top: 40px; }
-    #x-process #xproc-n2 { left: 316px; top: 332px; }
-    #x-process #xproc-n3 { left: 608px; top: 40px; }
-    #x-process #xproc-n4 { left: 900px; top: 332px; }
-    /* 亮起：now＝目前這一站的底色（下一站亮起時淡掉）；on＝主色框（亮起後保留，代表「走過」） */
-    #x-process .xproc-now { position: absolute; inset: 0; border-radius: 16px; background: var(--sc-fs-tint); }
-    #x-process .xproc-on  { position: absolute; inset: -4px; border: 4px solid var(--brand); border-radius: 20px; }
+    #x-process .xproc-node:nth-of-type(odd) { margin-bottom: calc(224px + var(--sc-gap-lg)); }
+    #x-process .xproc-node:nth-of-type(even) { margin-top: calc(224px + var(--sc-gap-lg)); }
+    /* 亮起：now＝目前這一站的底色（下一站亮起時淡掉）；主色亮框與「走過」的細框由 P.spot 自動加（.sc-spot） */
+    #x-process .xproc-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
   </style>
-  <div id="x-process" data-composition-id="x-process" data-width="1920" data-height="1080" data-duration="14.5">
+  <div id="x-process" data-composition-id="x-process" data-width="1920" data-height="1080" data-duration="17"
+       data-cues-sample='{"start":0,"D":17,"cues":{"12":[3.2,5.7],"13":[6,8.5],"14":[8.8,11.3],"15":[11.6,14]},"refs":{"#12@錄影":3.2,"#13@逐字稿":6,"#14@剪輯清單":8.8,"#15@初剪":11.6}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xproc-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">從錄影到初剪</span></div>
-      <div id="xproc-body">
-        <svg id="xproc-lines" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
-          <!-- 三段曲線：起點貼在上一站的邊框，終點貼在下一站的邊框；箭頭是另一條短折線 -->
-          <path id="xproc-c1" class="xproc-line" d="M148 248 C148 356 200 436 316 436" />
-          <path id="xproc-h1" class="xproc-line" d="M302 422 L316 436 L302 450" />
-          <path id="xproc-c2" class="xproc-line" d="M440 332 C440 224 492 144 608 144" />
-          <path id="xproc-h2" class="xproc-line" d="M594 130 L608 144 L594 158" />
-          <path id="xproc-c3" class="xproc-line" d="M732 248 C732 356 784 436 900 436" />
-          <path id="xproc-h3" class="xproc-line" d="M886 422 L900 436 L886 450" />
-        </svg>
-        <div id="xproc-n1" class="xproc-node"><i id="xproc-now1" class="xproc-now"></i><i id="xproc-on1" class="xproc-on"></i>
+      <div id="xproc-body" data-layout="free">
+        <svg id="xproc-lines" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3 xproc-n3>xproc-n4" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="xproc-n1" class="xproc-node" data-slot><i id="xproc-now1" class="xproc-now"></i>
           <span id="xproc-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">錄影</span></div>
-        <div id="xproc-n2" class="xproc-node"><i id="xproc-now2" class="xproc-now"></i><i id="xproc-on2" class="xproc-on"></i>
+        <div id="xproc-n2" class="xproc-node" data-slot><i id="xproc-now2" class="xproc-now"></i>
           <span id="xproc-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">逐字稿</span></div>
-        <div id="xproc-n3" class="xproc-node"><i id="xproc-now3" class="xproc-now"></i><i id="xproc-on3" class="xproc-on"></i>
+        <div id="xproc-n3" class="xproc-node" data-slot><i id="xproc-now3" class="xproc-now"></i>
           <span id="xproc-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">剪輯清單</span></div>
-        <div id="xproc-n4" class="xproc-node"><i id="xproc-now4" class="xproc-now"></i><i id="xproc-on4" class="xproc-on"></i>
+        <div id="xproc-n4" class="xproc-node" data-slot><i id="xproc-now4" class="xproc-now"></i>
           <span id="xproc-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /><path d="M8.12 8.12 12 12" /><path d="M20 4 8.12 15.88" /><circle cx="6" cy="18" r="3" /><path d="M14.8 14.8 20 20" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">初剪</span></div>
       </div>
     </div>
@@ -84,28 +93,68 @@
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     const tl = gsap.timeline({ paused: true });
     const P = SceneMotion(tl, document.getElementById('x-process'));
-    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
-    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const D = 14.5;                                    // 整段長度（秒）：跑 --check 後填報告裡的「長度」
-    const T1 = 2.6, T2 = 5.6, T3 = 8.6, T4 = 11.6;   // 每一站亮起的時間 ＝ 該句字幕起點 − 本段起點
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#12@錄影'), T2 = P.at('#13@逐字稿'), T3 = P.at('#14@剪輯清單'), T4 = P.at('#15@初剪');   // 講到每一站站名的時刻
 
-    // 1. 卡片先進場，再依序放出四個站（站先全部在，之後才畫連接線）；0.5 秒前不動
-    P.reveal('#xproc-card', 0.5);
-    P.rise('#xproc-n1, #xproc-n2, #xproc-n3, #xproc-n4', 0.8, { stagger: 0.12 });
-    // 2. 站進場後 0.15 秒，圖示的線描出來（四個依序錯開 0.12）
-    P.icon('#xproc-ico1, #xproc-ico2, #xproc-ico3, #xproc-ico4', 1.3, { stagger: 0.12 });
+    P.sfx('tick', '#12@錄影'); P.sfx('tick', '#13@逐字稿'); P.sfx('tick', '#14@剪輯清單'); P.sfx('tick', '#15@初剪');   // 每一站一顆音效（句號和上一行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const ALL = '#xproc-n1, #xproc-n2, #xproc-n3, #xproc-n4';   // 四站（3 站時拿掉 n4）
 
-    // 3. 講到哪一站，那一站亮起：疊主色框＋底色淡入；下一站亮起時，上一站的底色淡掉、框保留（走過只換框色，不打勾）
-    P.in('#xproc-on1, #xproc-now1', T1);
-    // 連接線在下一站亮起前 0.9 秒開始描（線 0.7 秒，箭頭 0.2 秒），線到了站才亮
-    P.stroke('#xproc-c1', T2 - 0.9);  P.stroke('#xproc-h1', T2 - 0.2, { dur: 0.2 });
-    P.out('#xproc-now1', T2);  P.in('#xproc-on2, #xproc-now2', T2);
-    P.stroke('#xproc-c2', T3 - 0.9);  P.stroke('#xproc-h2', T3 - 0.2, { dur: 0.2 });
-    P.out('#xproc-now2', T3);  P.in('#xproc-on3, #xproc-now3', T3);
-    P.stroke('#xproc-c3', T4 - 0.9);  P.stroke('#xproc-h3', T4 - 0.2, { dur: 0.2 });
-    P.out('#xproc-now3', T4);  P.in('#xproc-on4, #xproc-now4', T4);
+    // 0. 每條連接線（data-links 產生的）複製一份虛線預告層（只在載入時建 DOM，每次結果相同）
+    $q('#xproc-lines .sc-link').forEach(function (p) {
+      var g = p.cloneNode(false); g.removeAttribute('id'); g.removeAttribute('data-link'); g.setAttribute('class', 'xproc-ghost'); p.parentNode.insertBefore(g, p.parentNode.firstChild);
+    });
 
-    P.end(D);                                        // 最後一站亮起後停到 D（含 build 加的 0.5 秒淡出）
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xproc-card', 0.3);
+    else { P.wipe('#xproc-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xproc-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xproc-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 骨架：四站錯拍彈出（間隔 0.12），＋0.15 圖示描線
+    P.pop(ALL, 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
+    P.icon('#xproc-ico1, #xproc-ico2, #xproc-ico3, #xproc-ico4', 1.15, { stagger: 0.12 });
+    // 拍 2 預告：站間虛線淡入、一直往前流
+    P.in('.xproc-ghost', 1.5, { stagger: 0.1 });
+    P.flow('.xproc-ghost', 1.5);
+    // 拍 3 等待：預覽態（四站壓暗縮小）＋鏡頭慢推，推到第 1 站前 0.2 秒
+    P.spot(ALL, 'none', 2.0, { dim: 0.45, dur: 0.6 });
+    P.cam('#xproc-card', 2.0, { scale: 1.03, dur: T1 - 2.2 });
+
+    // 拍 4 第 1 站：鏡頭帶過去（提早 0.2）、聚焦（放大抬起發光、其他壓暗）、底色亮起、圖示漣漪；＋0.6 漂浮
+    P.cam('#xproc-card', T1 - 0.2, { to: '#xproc-n1', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xproc-n1', T1, { scale: 1.08, lift: -12 });
+    P.in('#xproc-now1', T1);
+    P.ripple('#xproc-ico1', T1 + 0.05, { to: 2.4 });
+    P.idle('#xproc-n1', T1 + 0.6, { y: 4, period: 2.8, until: T2 - 0.1 });
+    // 拍 5 第 2 站：提早 0.85 秒主色實線帶發光頭從上一站描過來（線和箭頭同一條，id＝<上一站>-<這一站>）；上一站變「走過」（0.92、留細框）
+    P.comet('#xproc-n1-xproc-n2', T2 - 0.85, { dur: 0.75 });
+    P.cam('#xproc-card', T2 - 0.2, { to: '#xproc-n2', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xproc-n2', T2, { scale: 1.08, lift: -12, done: '#xproc-n1' });
+    P.out('#xproc-now1', T2);  P.in('#xproc-now2', T2);
+    P.ripple('#xproc-ico2', T2 + 0.05, { to: 2.4 });
+    P.idle('#xproc-n2', T2 + 0.6, { y: 4, period: 2.8, until: T3 - 0.1 });
+    // 拍 6 第 3 站：同拍 5
+    P.comet('#xproc-n2-xproc-n3', T3 - 0.85, { dur: 0.75 });
+    P.cam('#xproc-card', T3 - 0.2, { to: '#xproc-n3', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xproc-n3', T3, { scale: 1.08, lift: -12, done: '#xproc-n1, #xproc-n2' });
+    P.out('#xproc-now2', T3);  P.in('#xproc-now3', T3);
+    P.ripple('#xproc-ico3', T3 + 0.05, { to: 2.4 });
+    P.idle('#xproc-n3', T3 + 0.6, { y: 4, period: 2.8, until: T4 - 0.1 });
+    // 拍 7 第 4 站：同拍 5（3 站時刪掉這一組 6 行，收尾的 T4 改 T3、now4 改 now3）
+    P.comet('#xproc-n3-xproc-n4', T4 - 0.85, { dur: 0.75 });
+    P.cam('#xproc-card', T4 - 0.2, { to: '#xproc-n4', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xproc-n4', T4, { scale: 1.08, lift: -12, done: '#xproc-n1, #xproc-n2, #xproc-n3' });
+    P.out('#xproc-now3', T4);  P.in('#xproc-now4', T4);
+    P.ripple('#xproc-ico4', T4 + 0.05, { to: 2.4 });
+    P.idle('#xproc-n4', T4 + 0.6, { y: 4, period: 2.8 });
+
+    // 收：最後一站講完 2.6 秒回均衡（全部亮回、鏡頭回正），完成態停到段尾
+    const TR = T4 + 2.6;
+    P.spot(ALL, null, TR, { dur: 0.6 });
+    P.out('#xproc-now4', TR);
+    P.cam('#xproc-card', TR, { x: 0, y: 0, scale: 1, dur: 0.6 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
     window.__timelines['x-process'] = tl;
   })();
   </script>

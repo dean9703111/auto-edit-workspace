@@ -1,0 +1,419 @@
+{
+ "version": 1,
+ "speakerBox": [
+  740,
+  245,
+  1270,
+  910
+ ],
+ "scenes": [
+  {
+   "id": "s01",
+   "scene": "speaker",
+   "from": 0,
+   "to": 4.5,
+   "anchor": "嗨",
+   "slots": {}
+  },
+  {
+   "id": "s02",
+   "scene": "two-sides",
+   "from": 4.5,
+   "to": 8.5,
+   "anchor": "如果你打算拍",
+   "slots": {
+    "cards": [
+     {
+      "text": "YouTube",
+      "icon": "youtube"
+     },
+     {
+      "text": "Podcast",
+      "icon": "podcast"
+     },
+     {
+      "text": "線上課程",
+      "icon": "graduation-cap"
+     },
+     {
+      "text": "訪談節目",
+      "icon": "mic"
+     }
+    ]
+   },
+   "sfx": null
+  },
+  {
+   "id": "s03",
+   "scene": "key-point",
+   "from": 8.5,
+   "to": "#9e",
+   "anchor": "並且跟我一樣",
+   "slots": {
+    "lead": "固定機位錄影",
+    "key": "強烈建議儲存這支影片",
+    "icon": "smartphone"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s04",
+   "scene": "concept",
+   "from": "#10",
+   "to": "#11e",
+   "anchor": "分享一個節省",
+   "slots": {
+    "tag": "工具",
+    "icon": "wrench",
+    "text": "**免費工具**省下超多時間"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s05",
+   "scene": "concept",
+   "from": "#12",
+   "to": "#14e",
+   "anchor": "我都要先試錄",
+   "slots": {
+    "tag": "拍前",
+    "icon": "video",
+    "text": "開拍前先**試錄**一小段"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s06",
+   "scene": "key-point",
+   "tone": "warn",
+   "from": "#15",
+   "to": "#16e",
+   "anchor": "而正式開拍後",
+   "slots": {
+    "lead": "每錄完一段",
+    "key": "跑到手機旁邊檢查",
+    "icon": "smartphone"
+   }
+  },
+  {
+   "id": "s07",
+   "scene": "key-point",
+   "tone": "warn",
+   "from": "#17",
+   "to": "#20e",
+   "anchor": "確認動作與聲音",
+   "slots": {
+    "lead": "手機畫面太小",
+    "key": "放到電腦才看得出",
+    "icon": "monitor"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s08",
+   "scene": "keywords",
+   "from": "#21",
+   "to": "#22e",
+   "anchor": "像腳架不穩",
+   "slots": {
+    "items": [
+     {
+      "text": "腳架不穩",
+      "icon": "triangle-alert"
+     },
+     {
+      "text": "衣服太薄",
+      "icon": "shirt",
+      "at": "#22"
+     }
+    ]
+   },
+   "sfx": null
+  },
+  {
+   "id": "s09",
+   "type": "custom",
+   "src": "compositions/x-past-flow.html",
+   "layout": "fullscreen",
+   "from": "#23",
+   "to": "#27e",
+   "anchor": "而我過去的拍片流程",
+   "sfx": null
+  },
+  {
+   "id": "s10b",
+   "type": "fx",
+   "fx": 34,
+   "bg": "dark",
+   "from": "#28",
+   "to": "#29+0.3",
+   "anchor": "非常崩潰",
+   "vars": {
+    "text": "崩潰"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s11",
+   "scene": "concept",
+   "from": "#29+0.3",
+   "to": "#30e",
+   "anchor": "需要用到多機拍攝",
+   "slots": {
+    "tag": "多機",
+    "icon": "video",
+    "text": "**多機**：橫拍長片、直拍短影音"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s12",
+   "scene": "keywords",
+   "from": "#31",
+   "to": "#32e",
+   "anchor": "所以一支橫著錄",
+   "slots": {
+    "items": [
+     {
+      "text": "橫拍長片",
+      "icon": "smartphone"
+     },
+     {
+      "text": "直拍短片",
+      "icon": "smartphone",
+      "at": "#32"
+     }
+    ]
+   },
+   "sfx": null
+  },
+  {
+   "id": "s13",
+   "scene": "concept",
+   "from": "#33",
+   "to": "#35e",
+   "anchor": "或者錄訪談節目時",
+   "slots": {
+    "tag": "訪談",
+    "icon": "mic",
+    "text": "**主持人、來賓**各用一支手機"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s14",
+   "scene": "concept",
+   "from": "#36",
+   "to": "#37e",
+   "anchor": "但我們馬上就會遇到",
+   "slots": {
+    "tag": "單機",
+    "icon": "smartphone",
+    "text": "單機：用**手勢**控制開始與結束"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s15",
+   "type": "custom",
+   "src": "compositions/x-multi-problems.html",
+   "layout": "fullscreen",
+   "from": "#38",
+   "to": "#44+0.8",
+   "anchor": "控制開始跟結束",
+   "sfx": null
+  },
+  {
+   "id": "s16",
+   "scene": "concept",
+   "from": "#44+0.8",
+   "to": "#45e",
+   "anchor": "驗收成果的時候也一樣",
+   "slots": {
+    "tag": "驗收",
+    "icon": "footprints",
+    "text": "驗收要在兩支手機間**走來走去**"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s17",
+   "scene": "key-point",
+   "tone": "warn",
+   "from": "#46",
+   "to": "#48",
+   "anchor": "當要拍攝的段落很多時",
+   "slots": {
+    "lead": "拍攝段落很多時",
+    "key": "走動耗體力",
+    "icon": "activity"
+   }
+  },
+  {
+   "id": "s18",
+   "scene": "concept",
+   "from": "#48",
+   "to": "#51e",
+   "anchor": "為了解決以上問題",
+   "slots": {
+    "tag": "找工具",
+    "icon": "search",
+    "text": "試過**多機錄影工具**都不順手"
+   },
+   "sfx": null
+  },
+  {
+   "id": "s19",
+   "scene": "key-point",
+   "tone": "good",
+   "from": "#52",
+   "to": "#53e",
+   "anchor": "我乾脆根據自己",
+   "slots": {
+    "lead": "自己的工作流",
+    "key": "自己設計一套工具",
+    "icon": "lightbulb"
+   }
+  },
+  {
+   "id": "s20",
+   "type": "custom",
+   "src": "compositions/x-tool-flow.html",
+   "layout": "fullscreen",
+   "from": "#54",
+   "to": "#57e",
+   "anchor": "現在當手機掃碼",
+   "sfx": null
+  },
+  {
+   "id": "s21",
+   "scene": "fs-list",
+   "from": "#58",
+   "to": "#61e",
+   "anchor": "多支手機就能同步",
+   "slots": {
+    "title": "同步錄影與回傳",
+    "items": [
+     {
+      "text": "按下開始，多機同步錄影",
+      "icon": "circle-play"
+     },
+     {
+      "text": "按下結束，影片回傳電腦",
+      "icon": "hard-drive-download",
+      "at": "#60"
+     },
+     {
+      "text": "馬上播放檢查",
+      "icon": "monitor-play",
+      "at": "#61"
+     }
+    ]
+   },
+   "sfx": null
+  },
+  {
+   "id": "s22",
+   "type": "fx",
+   "fx": 4,
+   "bg": "dark",
+   "from": "#62",
+   "to": "#63e",
+   "anchor": "而這個工具",
+   "sfx": null,
+   "vars": {
+    "text": "1 小時"
+   }
+  },
+  {
+   "id": "s23",
+   "scene": "fs-list",
+   "from": "#64",
+   "to": "#71e",
+   "anchor": "這集影片我會分成",
+   "slots": {
+    "title": "本集三個部分",
+    "items": [
+     {
+      "text": "實際操作這個工具",
+      "icon": "wrench"
+     },
+     {
+      "text": "安裝工具與網路設定",
+      "icon": "settings",
+      "at": "#68"
+     },
+     {
+      "text": "AI Coding 做出原型",
+      "icon": "bot",
+      "at": "#70"
+     }
+    ]
+   }
+  },
+  {
+   "id": "s24",
+   "type": "fx",
+   "fx": 27,
+   "bg": "dark",
+   "from": "#72",
+   "to": "#72e",
+   "anchor": "以及在實際應用中",
+   "vars": {
+    "text": "用 AI Coding 一小時做出原型",
+    "alt": "AI Coding"
+   }
+  },
+  {
+   "id": "c01",
+   "scene": "chapter-tag",
+   "from": "#11",
+   "to": "#13e",
+   "anchor": "過去正式開拍前",
+   "slots": {
+    "num": "01",
+    "name": "錄完要檢查"
+   },
+   "sfx": null
+  },
+  {
+   "id": "c02",
+   "scene": "chapter-tag",
+   "from": "#29+0.3",
+   "to": "#30e",
+   "anchor": "需要用到多機拍攝",
+   "slots": {
+    "num": "02",
+    "name": "多機難同步"
+   },
+   "sfx": null
+  },
+  {
+   "id": "c03",
+   "scene": "chapter-tag",
+   "from": "#48",
+   "to": "#50e",
+   "anchor": "為了解決以上問題",
+   "slots": {
+    "num": "03",
+    "name": "自製錄影工具"
+   },
+   "sfx": null
+  },
+  {
+   "id": "c04",
+   "scene": "chapter-tag",
+   "from": "#64",
+   "to": "#66e",
+   "anchor": "這集影片我會分成",
+   "slots": {
+    "num": "04",
+    "name": "本集大綱"
+   },
+   "sfx": null
+  }
+ ],
+ "outro": {
+  "from": "#72"
+ }
+}

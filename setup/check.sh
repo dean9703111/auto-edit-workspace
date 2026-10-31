@@ -363,6 +363,32 @@ skill_status hyperframes S1
 add_item skill_hyperframes "Skill：hyperframes" "$R_STATUS" "" "$R_PATH" "$R_NOTE" 1 "S1"
 skill_status auto-editor S2
 add_item skill_auto_editor "Skill：auto-editor" "$R_STATUS" "" "$R_PATH" "$R_NOTE" 1 "S2"
+
+# 工作區的 HyperFrames（S3：npm install 照 package.json 釘的版本）
+WS_ROOT=$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)
+HF_PIN=$(sed -n 's/.*"hyperframes"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$WS_ROOT/package.json" 2>/dev/null | head -n 1)
+HF_LOCAL=$(sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$WS_ROOT/node_modules/hyperframes/package.json" 2>/dev/null | head -n 1)
+if [ -z "$HF_LOCAL" ]; then HL_STATUS=missing; HL_NOTE="沒裝（README 共用步驟 S3：在工作區根目錄 npm install）"
+elif [ -n "$HF_PIN" ] && [ "$HF_LOCAL" != "$HF_PIN" ]; then HL_STATUS=too_old; HL_NOTE="和 package.json 釘的 $HF_PIN 不同（README 共用步驟 S3）"
+else HL_STATUS=ok; HL_NOTE=""; fi
+add_item hyperframes_local "工作區的 HyperFrames" "$HL_STATUS" "$HF_LOCAL" "$WS_ROOT/node_modules/hyperframes" "$HL_NOTE" 1 "S3"
+
+# 9 支 auto-edit Skill（S4：node setup/install-skills.mjs）
+AE_MISSING=""
+for s in longform setup rough storyboard screen motion review deliver style; do
+  [ -f "$SKILLS_DIR/auto-edit-$s/SKILL.md" ] || AE_MISSING="${AE_MISSING}${AE_MISSING:+、}auto-edit-$s"
+done
+if [ -z "$AE_MISSING" ]; then AE_STATUS=ok; AE_NOTE=""; else AE_STATUS=missing; AE_NOTE="少了 ${AE_MISSING}（README 共用步驟 S4）"; fi
+add_item skill_auto_edit "Skill：auto-edit（9 支）" "$AE_STATUS" "" "$SKILLS_DIR" "$AE_NOTE" 1 "S4"
+
+# 臉部偵測檔（S5：look.mjs ensure；瘦臉是選用，missing 不算進 todo）
+MP_DIR="$WS_ROOT/shared/template/vendor/mediapipe"
+MP_MISSING=""
+for f in vision_bundle.mjs wasm/vision_wasm_internal.js wasm/vision_wasm_internal.wasm face_landmarker.task; do
+  [ -f "$MP_DIR/$f" ] || MP_MISSING="${MP_MISSING}${MP_MISSING:+、}$f"
+done
+if [ -z "$MP_MISSING" ]; then MP_STATUS=ok; MP_NOTE="檔案都在；完整性用 look.mjs ensure 檢查（README 共用步驟 S5）"; else MP_STATUS=missing; MP_NOTE="少了 ${MP_MISSING}（README 共用步驟 S5；不裝也能剪，只是不瘦臉）"; fi
+add_item mediapipe "臉部偵測檔（瘦臉用）" "$MP_STATUS" "" "$MP_DIR" "$MP_NOTE" 0 "S5"
 add_item whisper_model "轉逐字稿模型" "$MODEL_STATUS" "" "$MODEL_FILE" "$MODEL_NOTE" 0 ""
 
 HEAD="作業系統：macOS ${MACOS}（${KIND}"

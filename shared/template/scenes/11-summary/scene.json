@@ -4,6 +4,7 @@
   "zh": "總結字卡",
   "aliases": ["總結", "總結卡", "收尾"],
   "family": "lower-third",
+  "portrait": "move",
   "when": "段落或章節收尾，用一兩行置中的總結句讓觀眾帶走",
   "avoid": "中途的新資訊（改一般字卡或重點字卡），或總結超過兩行",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },

@@ -1,0 +1,138 @@
+<!doctype html>
+<!--
+  x-fix：痛點逐條劃掉，換成一個解法（第二層 custom，layout: "fullscreen"）
+
+  【適用的口播】
+  先講 2–3 個痛點，接著「所以我…」「為了解決…」「後來改成…」給一個解法，同一段 20 秒內講完，例如
+  「試了很多工具都不順手：啟動不同步、要走來走去、還要一支一支檢查，所以我乾脆自己設計了一套」。
+  左欄痛點逐條出現（警示色圖示）；講到解法時，右邊解法卡浮出、箭頭描過去，痛點依序被劃掉、降成淡色，解法下面畫一條主色底線。
+
+  【不要用在哪裡】
+  - 只有一句「不是 X，而是 Y」：用 15 金句字卡（或 fx 32／39）。
+  - 痛點和解法隔很遠（中間超過 20 秒、跨段落）：前段用 x-warnings 或 04a，後段用 07 重點字卡。
+  - 痛點是要觀眾注意的警告、沒有解法：用 x-warnings。
+  - 超過 3 個痛點：挑 3 個，或用 04a。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）；三個痛點 .xfix-t（≤ 7 字，留住 span 裡的 <i class="xfix-strike"></i>）；
+     解法 #xfix-st（≤ 6 字，留住裡面的 <i class="xfix-ul"></i>）；解法副句 #xfix-sub（≤ 8 字，選填：不寫就刪掉那個 span）。
+  2. 圖示：三個痛點的 .sc-icon（建議同一個：circle-x 或 triangle-alert）、解法的 .sc-icon。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 綁句：<script> 開頭 P1–P3、FIX 的句號與詞（見【綁句欄位】）。
+  痛點是 2 個：刪掉 #xfix-p3 那一列（整個 div）、script 的 P3 = P.at(…)、#xfix-p3 那一行與 #xfix-s3 那一行，
+  照下面「版面」那一節的「2 個痛點」改 #xfix-p1、#xfix-p2 的 top；「D 下限」那一節的 P3 換成 P2。
+
+  【綁句欄位】
+  P1 = P.at('#171@不同步')、P2 = P.at('#172@走來走去')、P3 = P.at('#173@一支一支')：講到那個痛點的時刻，那一列出現。
+  FIX = P.at('#174@自己')：講到解法的那個詞，解法卡浮出、箭頭描過去；0.4 秒後痛點依序被劃掉（每條晚 0.15 秒），
+  0.9 秒後痛點降到 0.4，1.2 秒後畫底線。
+  痛點詞、解法詞在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#172')。
+  「@詞」要寫成字串字面值（P.at('#174@自己')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#174@自己', 0.3)。
+  相鄰兩個痛點、最後一個痛點到 FIX，都至少差 2.1 秒（列出現 0.5 秒、圖示 0.15 秒起描 0.7 秒＝忙到 0.85 秒，再停 1.2 秒）。
+  audit 會比對：這一拍出現的字（痛點、解法）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  P1 ≥ 1.0（卡片 0.5 秒）
+  P2 ≥ P1 + 2.1；P3 ≥ P2 + 2.1；FIX ≥ P3 + 2.1
+  D ≥ FIX + 4.0（解法、箭頭、劃掉、降亮度、底線忙到 FIX + 2.0＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：整段淡入淡出 0.5 秒由 build 處理；0.5 秒前不動。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
+  標題列 128、內容區 1176×580（卡底 862，在字幕區 y 920 之上）。
+  左欄痛點 left 40、高 112、寬跟著字（最寬 520，右緣 ≤ 560）：3 個 top 60／234／408；2 個 top 120／348。圖示圓 72 用警示色。
+  箭頭 x 592–676、y 290。解法卡 left 704、top 126、432×328（中線 y 290），圖示 120＋解法 52 字＋副句 40 字，置中。
+  刪除線在字的中線、高 6、兩端各超出字 4 px；底線在解法字底下、高 6，不碰副句。
+-->
+<!-- 靈感（只借技法；003 搬進 custom 時移到 NOTICE.md 並刪掉這行）：techhalla-498547（techhalla，https://x.com/techhalla/status/2103411244468498547）刪除線與底線；alex-prompter-997524（alex_prompter，https://x.com/alex_prompter/status/2103499977632997524）問題 → 解法；0xlangeai-597929（0xlangeai，https://x.com/0xlangeai/status/2106391068367597929）痛點方框 -->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-fix 問題換成解法</title></head>
+<body>
+<template id="x-fix-template">
+  <style>
+    #x-fix { position: absolute; inset: 0; }
+    #x-fix .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-fix #xfix-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-fix #xfix-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-fix #xfix-body { position: relative; width: 1176px; height: 580px; }
+    /* 左欄痛點：寬跟著字（max-content），高 112；三列 top 60／234／408（2 列：120／348） */
+    #x-fix .xfix-pain { position: absolute; left: 40px; width: max-content; height: 112px; box-sizing: border-box; padding: 0 28px;
+                        border: 4px solid var(--sc-fs-node-line); border-radius: 16px; background: var(--sc-fs-node); color: var(--sc-fs-ink);
+                        display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-fix #xfix-p1 { top: 60px; }
+    #x-fix #xfix-p2 { top: 234px; }
+    #x-fix #xfix-p3 { top: 408px; }
+    #x-fix .xfix-ico { background: var(--sc-warn); color: var(--sc-on-warn); }
+    #x-fix .xfix-t { position: relative; }
+    /* 刪除線：痛點字 span 裡 6 px 高的條，兩端各超出字 4 px、在字的中線；P.bar 從左畫到右 */
+    #x-fix .xfix-strike { position: absolute; left: -4px; right: -4px; top: calc(50% - 3px); height: 6px; border-radius: 3px; background: var(--sc-warn); }
+    /* 箭頭：整個內容區大小的 svg，從痛點欄描到解法卡 */
+    #x-fix #xfix-arrow { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-fix .xfix-arr { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 解法卡：432×328、中線 y 290；圖示 120＋解法＋副句置中 */
+    #x-fix #xfix-sol { position: absolute; left: 704px; top: 126px; width: 432px; height: 328px; box-sizing: border-box;
+                       border: 4px solid var(--brand); border-radius: 20px; background: var(--sc-fs-card); color: var(--sc-fs-ink);
+                       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-fix #xfix-sico { --d: 120px; --i: 64px; }
+    #x-fix #xfix-st { position: relative; }
+    /* 底線：解法字 span 裡 6 px 高的條，P.bar 從左畫到右 */
+    #x-fix .xfix-ul { position: absolute; left: 0; right: 0; bottom: -10px; height: 6px; border-radius: 3px; background: var(--brand); }
+  </style>
+  <div id="x-fix" data-composition-id="x-fix" data-width="1920" data-height="1080" data-duration="12"
+       data-cues-sample='{"start":0,"D":12,"cues":{"171":[1,3.3],"172":[3.3,5.5],"173":[5.5,7.6],"174":[7.6,10]},"refs":{"#171@不同步":1.2,"#172@走來走去":3.4,"#173@一支一支":5.6,"#174@自己":7.8}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xfix-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">多機錄影的痛點</span></div>
+      <div id="xfix-body">
+        <div id="xfix-p1" class="xfix-pain" data-snap-width><span id="xfix-pico1" class="sc-icon sc-icon--72 xfix-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" /> </svg></span><span class="xfix-t sc-t52 sc-w900 sc-opt">啟動不同步<i id="xfix-s1" class="xfix-strike"></i></span></div>
+        <div id="xfix-p2" class="xfix-pain" data-snap-width><span id="xfix-pico2" class="sc-icon sc-icon--72 xfix-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" /> </svg></span><span class="xfix-t sc-t52 sc-w900 sc-opt">走來走去<i id="xfix-s2" class="xfix-strike"></i></span></div>
+        <div id="xfix-p3" class="xfix-pain" data-snap-width><span id="xfix-pico3" class="sc-icon sc-icon--72 xfix-ico"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m15 9-6 6" /> <path d="m9 9 6 6" /> </svg></span><span class="xfix-t sc-t52 sc-w900 sc-opt">一支一支檢查<i id="xfix-s3" class="xfix-strike"></i></span></div>
+        <svg id="xfix-arrow" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+          <path id="xfix-a1" class="xfix-arr" d="M592 290 H676" />
+          <path id="xfix-a2" class="xfix-arr" d="M660 274 L676 290 L660 306" />
+        </svg>
+        <div id="xfix-sol">
+          <span id="xfix-sico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /> </svg></span>
+          <span id="xfix-st" class="sc-t52 sc-w900 sc-opt">電腦一鍵控制<i id="xfix-ul" class="xfix-ul"></i></span>
+          <span id="xfix-sub" class="sc-t40 sc-w500 sc-gray sc-opt">自己設計一套</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-fix'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const P1 = P.at('#171@不同步'), P2 = P.at('#172@走來走去'), P3 = P.at('#173@一支一支'), FIX = P.at('#174@自己');   // 講到每個痛點／解法的時刻
+
+    // 1. 卡片先進場；0.5 秒前不動
+    P.reveal('#xfix-card', 0.5);
+    // 2. 講到哪個痛點，那一列浮出，0.15 秒後警示圖示描線
+    P.rise('#xfix-p1', P1);  P.icon('#xfix-pico1', P1 + P.BEAT);
+    P.rise('#xfix-p2', P2);  P.icon('#xfix-pico2', P2 + P.BEAT);
+    P.rise('#xfix-p3', P3);  P.icon('#xfix-pico3', P3 + P.BEAT);
+
+    // 3. 講到解法：解法卡浮出（字在講到的那一刻出現），圖示與箭頭描線（先有卡再畫箭頭）
+    P.rise('#xfix-sol', FIX);
+    P.icon('#xfix-sico', FIX + P.BEAT);
+    P.stroke('#xfix-a1', FIX + P.BEAT, { dur: 0.3 });
+    P.stroke('#xfix-a2', FIX + 0.45, { dur: 0.2 });
+    // 4. 痛點依序被劃掉（每條晚 0.15 秒），再降到 0.4；最後解法字下面畫主色底線
+    P.bar('#xfix-s1', FIX + 0.4, { dur: 0.4 });
+    P.bar('#xfix-s2', FIX + 0.55, { dur: 0.4 });
+    P.bar('#xfix-s3', FIX + 0.7, { dur: 0.4 });
+    P.focus('#xfix-p1, #xfix-p2, #xfix-p3, #xfix-sol', '#xfix-sol', FIX + 0.9);
+    P.bar('#xfix-ul', FIX + 1.2);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-fix'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

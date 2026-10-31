@@ -4,6 +4,7 @@
   "zh": "Step 字卡",
   "aliases": ["步驟", "步驟字卡", "Step", "Step字卡"],
   "family": "lower-third",
+  "portrait": "move",
   "when": "口播依序講 2–4 個操作步驟，同一個位置一步換一步",
   "avoid": "步驟超過四個（拆兩段或改全畫面流程），或步驟之間沒有順序（改標題條列）",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },

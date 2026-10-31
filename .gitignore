@@ -3,6 +3,9 @@ projects/*
 !projects/範例/
 projects/範例/work/
 projects/範例/成片/
+!projects/範例-直式/
+projects/範例-直式/work/
+projects/範例-直式/成片/
 node_modules/
 *.log
 .DS_Store

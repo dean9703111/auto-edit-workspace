@@ -1,32 +1,83 @@
 #!/usr/bin/env node
 /**
- * 版面量測：在瀏覽器裡把 work/hyperframes/ 跳到每一段的中點與完成態（段尾前 0.6 秒），量出破版（零依賴，只用 Node 22 與 HyperFrames 的 Chrome）
+ * 版面量測：在瀏覽器裡把 work/hyperframes/ 跳到每一段的中點、完成態（段尾前 0.6 秒）與每個靜止畫面，量出破版與節奏問題（零依賴，只用 Node 22 與 HyperFrames 的 Chrome）
  *
  *   node shared/template/tools/audit.mjs --project projects/<專案>               只量第二層 custom（x 開頭、type: "custom"）
  *   node shared/template/tools/audit.mjs --project projects/<專案> --all         連情境模板一起量（字卡動態、media 段不量）
  *   node shared/template/tools/audit.mjs --project projects/<專案> --only x01,s03 只量這幾段（字卡動態要量就用這個指名）
  *   node shared/template/tools/audit.mjs --project projects/<專案> --json        stdout 只印一個 JSON
+ *   node shared/template/tools/audit.mjs --project projects/<專案> --format portrait  照直式量（不寫就照 plan.json 的 format、製作進度.md 的「版式」列、主軌寬高比；第一行印版式與來源）
  *
  * 先 build（audit 量的是 build 產生的 work/hyperframes/index.html；只改了 custom 檔不用重 build，改了 plan.json 要先 build）。
  * 段落起迄取自 build.mjs --check（成片秒數，和 Studio、snapshot 的秒數一樣）。完成態那一刻全部還在動（退場比 0.6 秒長）時，每次往前 0.3 秒找靜止的畫面。
- * 和 npx hyperframes snapshot／check 用同一個 runtime 與 seek（__player.renderSeek），所以量到的就是 render 的版面；約 2–5 秒。
+ * custom 段另外讀時間軸，在每個停 ≥ 0.4 秒的靜止畫面再量一次（每段最多 8 次），並檢查節奏。
+ * 和 npx hyperframes snapshot／check 用同一個 runtime 與 seek（__player.renderSeek），所以量到的就是 render 的版面；約 2–5 秒一段。
  *
  * ✖ 錯誤（一定要修，結束碼 1）
  *   文字撐破容器   文字超出最近的有底有框盒（卡片、膠囊、節點）
  *   內容被裁掉     文字或卡片超出 overflow:hidden／固定寬高的框，被切掉
  *   超出畫面       內容超出 1920×1080
  *   進字幕區       內容下緣 y > 920（R4.1；滿版底、從頂撐到底的面板不算）
- *   壓到子母畫面   全畫面版型（layout: "fullscreen"、04 家族）、這一刻有子母畫面時，內容進到 x 1344–1888、y 617–951
+ *   壓到子母畫面   全畫面版型（layout: "fullscreen"、04 家族）、這一刻有子母畫面時，內容進到 x 1424–1888、y 581–951
+ *   ── 直式（版式是直式時；全畫面 custom、04 家族、01、字卡動態縮放進上半面板，量縮放前的 1920×1080 座標；其他段用 1080×1920 量）──
+ *   直式會被切到   portrait-window：縮放的段裡帶 id 的絕對定位元素超出舞台窗 x 120–1300、y 130–880（01 是 x 160–1760、y 260–870）
+ *   直式被介面蓋住 unsafe：不縮放的段，內容進到上方 y < 240、下方 y > 1440、右側按鈕列 x 940–1080 × y 840–1440
+ *   進字幕區       不縮放的段改量直式字幕保留帶 y 1280–1420（超出畫面改量 1080×1920；不量子母畫面）
+ *   ⚠ 鏡頭推會切到 portrait-cam：縮放的段裡 P.cam 每個停點（倍率＋位移）換算的鏡頭容器外框，超出舞台看得到的範圍 x 73–1347、y 130–909（完成態判一次）
+ *   ⚠ 垂直不平衡   縮放的段內容區改成舞台窗 y 130–880
  *   script 出錯    custom 的 <script> 丟錯（時間軸沒建好，畫面停在初始狀態）
  *   對不上         index.html 的段落起點和 plan.json 不同（改了 plan.json 沒重跑 build）
+ *   未定位頂層     custom 的 root 或 .fill 直接底下的元素不是 position: absolute（R7.3 骨架）
+ *   標題壓到內容   custom 的標題列（.sc-wcard__bar、.sc-pill、data-audit-title）下緣蓋到下面的內容
+ *   綁句失敗       custom 的 P.at 找不到句子、詞或這段的 cue 表
+ *   示意元件讀不到 data-illus-src 的檔不在 work/hyperframes/illus-local/、data-illus 不是畫廊的 20 個元件也沒 ILLUS.register（畫面上是空的）
  * ⚠ 提醒
  *   壓到講者       透明版型（layout: "overlay"、下方字卡等）的內容蓋到 plan.json 的 speakerBox（面積比例；custom 與用 css 移位的段 ≥ 2%、
  *                  沒移位的模板 ≥ 15%，和 build 的碰撞提醒同門檻；03 側邊欄期間講者框加上 sideShift）
- *   字太小         文字 < 30px
+ *   字太小         文字 < 30px（直式：縮放的段 字級 × 縮放倍率 < 32px，全畫面 custom 是 0.8475；不縮放的段 < 32px）
  *   半像素邊       有底或有框的元素邊緣離整數 px ≥ 0.2（直邊與框線會糊，R8.4）
- *   段長不符       custom 檔的 data-duration／const D 和 --check 報告的段長不同（R7.2 第 4 步）
+ *   段長不符       custom 檔寫死的 data-duration／const D 和 --check 報告的段長不同（結尾用 P.end() 不帶參數就不檢查）
+ *   ── 下面只量 custom（R8 #6、style.md〈節奏〉）──
+ *   間距不足       標題到下面的內容 < 24px（目標 ≥ 40px）
+ *   區塊重疊       兩個有底或有框的區塊（或圖片）互相蓋到（svg 線稿與連接線不算區塊）
+ *   nowrap 餘裕不足 不換行的文字離框 < 7px
+ *   右側空白過多   框裡內容最右緣到框內緣 > 80px（置中、撐滿父層的橫條、同一欄等寬的、data-width-shared 不算）
+ *   垂直不平衡     全畫面的內容在 y 120–870 裡，上下留白差 > 40px
+ *   內距不足       文字框內距：左右 < max(24, 0.45×字級)、上下 < max(14, 0.28×字級)，容許 2px（圓形、≤ 2 字的徽章、kit 元件不算）
+ *   行高不足       文字框裡 line-height < 1.25×字級（字級 ≥ 100px 的數字不算）
+ *   同一秒新元素太多 任何 1 秒內新出現 > 2 個元素（亮框、同位置換內容、跟著卡片 0.6 秒內一起出現的不算）
+ *   間隔太短       兩個新元素出現的時間差 < 0.12 秒
+ *   完成態停太短   兩個 P.at 綁句點之間，畫面最長的靜止 < 1.2 秒（拍前就開始的動作算到它結束為止）
+ *   最後一幕太短   最後一個動作結束到淡出（或收尾退場）< 1.5 秒
+ *   綁句對不上     custom 的 P.at('#N')、P.at('#N@詞') 那一拍出現的字（站名、項目），在這段的另一句才講到（數字、英文整個詞比，中文取 2–4 字；刪除線、底線、位移不算出現；找不到不報）
+ *   畫面沒有變化   custom 段裡連續 > 6 秒沒有任何動作（進場、點亮、焦點切換、描線、數字變化、位移都算動作），而那段時間有字幕句在講
+ *   沒有動畫分鏡   work/storyboard.md 沒有「#### 動畫分鏡 <段 id>」表（拍型照 shared/template/BEATS.md §3）
+ *   分鏡用了沒做的動作 分鏡「動態」欄寫了某個動作，custom 檔裡沒有對應的 P.*（例：寫「漣漪」卻沒有 P.ripple）
+ *   ── 下面只量有示意插圖元件（kit/illus.js 的 .il）的段；量元件邊緣時描邊外擴 2px ──
+ *   標籤太長       示意動畫裡標題列以外的字 > 10 字（字只當標籤，完整句子交給字幕）
+ *   插圖太小       完成態所有元件的外框聯集 < 卡片內部（扣標題列）面積 50%（主角是圖）
+ *   閃爍           同一個元素出現 → 退場 → 再出現超過 1 次（狀態依序換，不明滅來回）
+ *   線比節點早     連接線開始描的時候還有元件在進場（先有節點再畫線）
+ *   ── 版面（012；data-layout 容器，kit/scene-layout.js 的 SceneLayout.measure，版面座標、只量完成態；free 也量）──
+ *   同一列沒對齊   layout-row-align：同列（上下範圍重疊）沒有標籤的元件，插圖中線 y 差 > 4px ⚠、> 16px ✖（data-align="middle" 全部量；沒有 data-layout 的段量手排的插圖，只報 ⚠）
+ *   間距不一樣     layout-gap：同列（欄）≥ 3 個元件，相鄰間距最大差 > 8px
+ *   內容群沒置中   layout-center：內容群在內容區左右留白差 > 16px（data-justify="start"／"end"：左／右留白不是 48±8px），或 data-align=center 時上下留白差 > 24px
+ *   內距不夠       layout-pad：內容群到內容區邊 < 40px（左右）／< 32px（上下）
+ *   標籤沒對齊插圖 layout-label：標籤中心和插圖中心差 > 4px（標籤在右邊的量上下）
+ *   標籤不在同一條線 layout-label-row：同一列有標籤的元件，標籤上緣差 > 4px（row 預設底對齊；data-align="middle" 不量）
+ *   連接線不對     layout-link：data-links 產生的與手寫的線（兩端各靠一個元件 ≤ 48px），端點離元件外框 < 4 或 > 32px、離邊中點（直線看兩個插圖重疊段的正中）> 8px、穿過別的元件
+ * ✖ 分鏡對齊（custom，有「#### 動畫分鏡 <段 id>」表的段）
+ *   分鏡表表頭不對 表頭要是「| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |」（示意動畫段後面多「插圖元件（狀態） | 位置 |」兩欄）
+ *   缺拍           分鏡某一拍的綁句（#N@詞＋偏移；同一個句號的幾拍算一組）±0.5 秒內沒有 P.at（「段起點 #N」那一拍是開場，不用 P.at）
+ *   多出來的 P.at  檔裡用句號的 P.at 不在分鏡任何一拍 ±0.5 秒內
+ *   語彙不存在     「動態」欄的動作不在 shared/template/BEATS.md §2 的 46 個名稱裡（括號裡的對象與參數、＋0.15 這類時間、「同拍 N」不算）
+ *   插圖元件不存在 示意動畫的「插圖元件（狀態）」欄不是畫廊的 20 個、沒有 ILLUS.register、illus-local/ 也沒有那個 svg
+ *   插圖清單不對   「#### 插圖清單 <段 id>」的來源不是畫廊／圖示組合／新建 SVG、寫畫廊但畫廊沒有、新建 SVG 還沒畫（illus-local/ 沒有檔）
+ *   分鏡綁句算不出 分鏡的 #N@詞 在這段字幕裡找不到
+ * v2 微動（漂浮、呼吸、虛線流動、背景環境、慢推）不算「動作」：完成態停留、最後一幕、畫面沒有變化、靜止取樣都排除；
+ * 同一個 P.* 呼叫（錯拍群組、逐字）算 1 個新元素；彗星頭、漣漪、聚焦光、光澤、螢光筆、劃線、背景層不量版面。
  * 正在補間的元素（進場、退場途中）不判；刻意的例外標 data-layout-allow-overflow／data-layout-allow-caption-zone／data-layout-ignore
- * （和 npx hyperframes check 同一組標記）。
+ * （和 npx hyperframes check 同一組標記），以及 data-layout-allow-overlap／data-layout-allow-slack／data-layout-allow-tight／data-width-shared（只有 audit 認得）。
  *
  * 選填：--chrome <路徑>（預設用 HyperFrames 下載的 chrome-headless-shell）、--runtime <hyperframe.runtime.iife.js>；測試用：--template <shared/template 資料夾>
  */
@@ -35,9 +86,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, pathsFrom, projectLabel } from './build.mjs';
 import { findChrome, findRuntime, openSession } from './lib/audit-browser.mjs';
-import { pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS } from './lib/audit-rules.mjs';
+import { pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
+  judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings } from './lib/audit-rules.mjs';
+import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings } from './lib/audit-beats.mjs';
+import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners } from './lib/audit-illus.mjs';
+import { judgeLayoutRules } from './lib/audit-layout.mjs';
+import { resolveFormat, formatLine, canvasOf } from './lib/canvas.mjs';
 
-const VALUE_FLAGS = ['project', 'only', 'chrome', 'runtime', 'template'];
+const VALUE_FLAGS = ['project', 'only', 'chrome', 'runtime', 'template', 'format'];
 const rel = (p) => path.relative(process.cwd(), p) || '.';
 const r3 = (n) => Math.round(n * 1000) / 1000;
 
@@ -57,26 +113,38 @@ export function parseArgs(argv) {
   return flags;
 }
 
-// custom 檔寫的長度要等於段長（R7.2 第 4 步）；不等時時間軸不是短了（最後一段沒被取樣）就是多了
+// custom 檔寫死的長度要等於段長；不等時時間軸不是短了（最後一段沒被取樣）就是多了。結尾寫 P.end()（不帶參數）或用 P.dur() 的檔不檢查（長度自動等於段長）
 export function durationWarnings(items, outDir) {
   const out = [];
   for (const it of items) {
     if (it.type !== 'custom' || !it.file) continue;
     const f = path.join(outDir, it.file);
     if (!fs.existsSync(f)) continue;
-    const { duration, constD } = customDuration(fs.readFileSync(f, 'utf8'));
+    const { duration, constD, autoEnd } = customDuration(fs.readFileSync(f, 'utf8'));
+    if (autoEnd) continue;
     const bad = [['data-duration', duration], ['const D', constD]].filter(([, v]) => v != null && Math.abs(v - it.D) > 0.05);
     if (bad.length) out.push({ id: it.id, label: it.label, level: 'warn', rule: 'duration', el: null, at: [], t: null,
-      msg: `段長不符：${it.file} 寫 ${bad.map(([k, v]) => `${k} ${v}`).join('、')}，--check 報告的段長是 ${it.D}s`, fix: `把 data-duration 與 const D 都改成 ${it.D}（R7.2 第 4 步）` });
+      msg: `段長不符：${it.file} 寫 ${bad.map(([k, v]) => `${k} ${v}`).join('、')}，--check 報告的段長是 ${it.D}s`, fix: `把結尾改成 P.end()（不帶參數，長度自動等於段長）並刪掉 const D；或把 data-duration 與 const D 都改成 ${it.D}` });
   }
   return out;
 }
 
 // 頁面的 JS 錯誤：量的那幾段的子合成出錯 → 那一段 ✖（時間軸沒建好，量到的是沒有動畫的初始狀態）；其他 → ⚠
-export function scriptErrors(errors, items) {
+// 011：「[ILLUS] 讀不到 data-illus-src=…」→ 用到那個檔的段 ✖（htmlOf(item) 回那段 custom 檔原文；契約 illus.md §4、§5.7）
+export function scriptErrors(errors, items, htmlOf = () => '') {
   const findings = [], warnings = [];
   const seen = new Set();
   for (const e of errors) {
+    const il = illusSrcOwners(e.text, items, htmlOf);
+    if (il && il.items.length) {
+      for (const it of il.items) {
+        if (seen.has(`${it.id}|illus|${il.src}`)) continue;
+        seen.add(`${it.id}|illus|${il.src}`);
+        findings.push({ id: it.id, label: it.label, level: 'error', rule: 'illus-src', el: null, at: [], t: null, kind: 'illus',
+          msg: `${it.file || it.compId} 的 data-illus-src="${il.src}" 讀不到（畫面上那個元件是空的）`, fix: `檔案放在 work/hyperframes/${il.src}（路徑相對主合成 index.html），照 shared/template/kit/illus-style.md 畫；或改用畫廊的元件 data-illus="…"` });
+      }
+      continue;
+    }
     const m = String(e.text).match(/composition script error:\s*(\S+)\s+(.*)$/);
     const it = m && items.find((x) => x.compId === m[1]);
     const key = `${it ? it.id : ''}|${e.text}`;
@@ -93,7 +161,13 @@ export async function audit(flags, { log = console.log } = {}) {
   const P = pathsFrom(flags);
   const project = P.project ? projectLabel(P, P.project) : rel(P.out);
   const index = path.join(P.out, 'index.html');
-  const report = { ok: false, project, errors: [], warnings: [], notes: [], segments: [], findings: [], chrome: null, runtime: null };
+  // 009：版式（--format > plan.json format > 製作進度.md「版式」列 > 主軌寬高比）；直式時舞台縮放的段量子合成座標、其他段用 1080×1920 量
+  let planJson = null;
+  try { planJson = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch { planJson = null; }
+  const fmt = resolveFormat({ projectDir: P.project, plan: planJson, flag: flags.format });
+  const cv = canvasOf(fmt.format), portrait = fmt.format === 'portrait';
+  const report = { ok: false, project, format: fmt.format, canvas: [cv.W, cv.H], errors: [], warnings: [], notes: [], segments: [], findings: [], chrome: null, runtime: null };
+  log(formatLine(fmt));
   if (!fs.existsSync(index)) { report.errors.push(`找不到 ${rel(index)} → 先跑 node shared/template/tools/build.mjs --project ${project}`); return report; }
 
   const chk = build({ project: flags.project, template: flags.template, check: true, json: true }, { log: () => {} });
@@ -112,6 +186,8 @@ export async function audit(flags, { log = console.log } = {}) {
     return report;
   }
   if (fs.existsSync(P.plan) && fs.statSync(P.plan).mtimeMs > fs.statSync(index).mtimeMs + 1) report.warnings.push(`plan.json 比 index.html 新 → 先重跑 build，量到的才是最新版`);
+  const root = fs.readFileSync(index, 'utf8').match(/data-width="(\d+)"[^>]*data-height="(\d+)"/);
+  if (root && (+root[1] !== cv.W || +root[2] !== cv.H)) report.warnings.push(`index.html 是 ${root[1]}×${root[2]}，版式是${portrait ? '直式' : '橫式'} ${cv.W}×${cv.H} → 用同一個版式重跑 build 再 audit（這次照 ${cv.W}×${cv.H} 的規則量）`);
 
   const dur = durationWarnings(pick.list, P.out);
   const chrome = findChrome({ chrome: flags.chrome });
@@ -121,14 +197,34 @@ export async function audit(flags, { log = console.log } = {}) {
   log(`專案：${project}`);
   log(`量 ${pick.list.length} 段（${flags.only ? `--only ${flags.only}` : flags.all ? '情境模板與 custom' : 'custom'}）；HyperFrames runtime ${rt.version}`);
 
-  const jobs = pick.list.flatMap((it) => {
-    const ts = sampleTimes(it);
-    return ts.map((s) => ({ it, ...s, floor: ts[0].kind === 'mid' && s.kind === 'done' ? ts[0].t : it.start }));
-  }).sort((a, b) => a.t - b.t);
   const raw = [];
   const segs = new Map(pick.list.map((it) => [it.id, { id: it.id, type: it.type, label: it.label, layout: layoutOf(it), start: it.start, end: it.end, samples: [] }]));
-  const S = await openSession({ dir: P.out, chrome, runtime: rt.file });
-  const measureAt = async (t, id) => { await S.seek(t); return S.measure({ hostId: `el-${id}`, W: CANVAS[0], H: CANVAS[1] }); };
+  const S = await openSession({ dir: P.out, chrome, runtime: rt.file, W: cv.W, H: cv.H });
+  const plans = new Map();
+  // custom 段：先讀時間軸（子合成掛上之後才有；第一次 seek 到第一段的起點），排靜止取樣、之後判節奏
+  const motions = new Map();
+  const customs = pick.list.filter((it) => it.type === 'custom' && it.compId);
+  let cueErrs = [];
+  try {
+    if (portrait) {
+      const regions = JSON.parse(await S.evaluate('JSON.stringify(window.__regions || null)'));
+      for (const it of pick.list) plans.set(it.id, portraitPlan(it, cv, regions));
+    }
+    if (customs.length) {
+      await S.seek(customs[0].start + 0.01);
+      for (const it of customs) {
+        let mo = await S.motion({ hostId: `el-${it.id}`, compId: it.compId });
+        if (!mo) { await S.seek(it.start + 0.01); mo = await S.motion({ hostId: `el-${it.id}`, compId: it.compId }); }
+        motions.set(it.id, mo);
+      }
+    }
+  } catch (e) { await S.close(); throw e; }
+  const jobs = pick.list.flatMap((it) => {
+    const ts = sampleTimes(it);
+    const still = it.type === 'custom' ? stillTimes(motions.get(it.id), it) : [];
+    return [...ts.map((s) => ({ it, ...s, floor: ts[0].kind === 'mid' && s.kind === 'done' ? ts[0].t : it.start })), ...still.map((s) => ({ it, ...s, floor: it.start }))];
+  }).sort((a, b) => a.t - b.t);
+  const measureAt = async (t, id) => { const pl = plans.get(id); await S.seek(t); return S.measure({ hostId: `el-${id}`, W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.unstage ? { unstage: true } : {}) }); };
   // 「有靜止的內容」：背景層（滿版底、側邊欄面板）不算
   const hasStill = (m) => (m.els || []).some((e) => !e.moving && !e.bg && (e.text || e.painted || e.media));
   try {
@@ -149,16 +245,56 @@ export async function audit(flags, { log = console.log } = {}) {
           msg: `index.html 和 plan.json 對不上：#el-${j.it.id} 在 index.html 從 ${m.host.start}s 開始，plan.json 算出來是 ${j.it.start}s`, fix: `重跑 node shared/template/tools/build.mjs --project ${project}` });
         continue;
       }
-      raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: pipOnAt(j.it, j.t), speakerBox: res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it), W: CANVAS[0], H: CANVAS[1] }));
+      const pl = plans.get(j.it.id);
+      raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), speakerBox: res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
+        W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.geo ? { geo: pl.geo } : {}), ...(pl && pl.stage ? { stage: pl.stage } : {}) }));
+      raw.push(...judgeLayout(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, ...(pl && pl.stage && pl.stage.window ? { contentY: [pl.stage.window[1], pl.stage.window[3]] } : {}) }));
+      // 012 版面：完成態量 data-layout 容器（SceneLayout.measure，版面座標）；有容器時 illus 的手排對齊交給它
+      let lay = null;
+      if (j.kind === 'done' && !m.missingHost) {
+        const js = await S.evaluate(`(() => { const h = document.getElementById(${JSON.stringify(`el-${j.it.id}`)}); return h && window.SceneLayout ? JSON.stringify(window.SceneLayout.measure(h)) : 'null'; })()`);
+        lay = JSON.parse(js || 'null');
+        raw.push(...judgeLayoutRules(lay, { item: j.it, t: j.t }));
+      }
+      raw.push(...judgeIllus(m, { item: j.it, t: j.t, kind: j.kind, hasLayout: !!(lay && lay.containers.length) }));
       if (j.kind === 'done' && !m.missingHost && !hasStill(m)) {
         raw.push({ id: j.it.id, label: j.it.label, level: 'warn', rule: 'empty', el: null, t: j.t, kind: j.kind,
           msg: `完成態沒有量到任何內容（${(m.els || []).length ? '全部還在動畫中' : '畫面上是空的'}）`, fix: `用 npx hyperframes snapshot --at ${j.t} 看這一刻的畫面；內容要在段尾前 0.6 秒停在完成態（R6）` });
       }
     }
+    cueErrs = await S.cueErrors();
   } finally { await S.close(); }
-  const pageErrs = scriptErrors(S.errors, pick.list);
+  const htmlOf = (it) => { const f = it.file && path.join(P.out, it.file); return f && fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : ''; };
+  const pageErrs = scriptErrors(S.errors, pick.list, htmlOf);
+  const ilDir = path.join(P.out, 'illus-local');
+  const local = fs.existsSync(ilDir) ? fs.readdirSync(ilDir).filter((f) => /^[A-Za-z0-9]+\.svg$/.test(f)).map((f) => f.slice(0, -4)) : [];
   report.warnings.push(...pageErrs.warnings);
-  const findings = [...pageErrs.findings, ...mergeFindings(raw), ...dur];
+  const cue = cueFindings(cueErrs, pick.list);
+  report.warnings.push(...cue.warnings);
+  const motion = [];
+  const sbFile = path.join(path.dirname(P.out), 'storyboard.md');
+  const sbText = fs.existsSync(sbFile) ? fs.readFileSync(sbFile, 'utf8') : '';
+  const sheets = parseBeatSheets(sbText), lists = parseIllusLists(sbText);
+  for (const it of customs) {
+    const r = judgeMotion(motions.get(it.id), { item: it, fadeOut: !!it.fadeOut });
+    motion.push(...r.findings);
+    const src = it.file && path.join(P.out, it.file);
+    motion.push(...cueTextFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [], names: src && fs.existsSync(src) ? atNames(fs.readFileSync(src, 'utf8')) : {} }));
+    motion.push(...staticFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [] }));
+    // 分鏡對齊：work/storyboard.md 的「#### 動畫分鏡 <段 id>」表和檔裡的 P.at 逐拍比（cli-003 §2.3d）
+    const sheet = sheets.get(it.id), mo = motions.get(it.id), html = htmlOf(it);
+    if (!sheet) motion.push(noSheetFinding(it, it.file));
+    else if (mo) motion.push(...beatFindings({ item: it, sheet, marks: mo.marks || [], cuesOut: res.cuesOut || [], html, file: it.file, local }));
+    // 011 示意動畫：元件名與 illus-local 檔、閃爍、先有節點再畫線
+    motion.push(...illusNameFindings({ item: it, html, file: it.file, local }));
+    if (lists.has(it.id)) motion.push(...illusListFindings({ item: it, list: lists.get(it.id), html, local }));
+    motion.push(...illusMotionFindings(mo, { item: it }));
+    report.notes.push(...r.notes);
+    const seg = segs.get(it.id);
+    // cli-003 §5：units＝新元素個數；marks、busy 都是段內秒數
+    if (mo && seg) seg.motion = { units: motionUnits(mo).length, marks: mo.marks, busy: busySpans(mo) };
+  }
+  const findings = [...pageErrs.findings, ...cue.findings, ...mergeFindings(raw), ...dur, ...motion];
   const order = [...segs.keys()];
   findings.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id) || (a.level === b.level ? 0 : a.level === 'error' ? -1 : 1));
   report.findings = findings;
@@ -176,7 +312,7 @@ export function formatReport(r) {
   if (r.segments.length) {
     L.push('', 'id｜情境｜版型｜量測時間｜結果');
     for (const s of r.segments) {
-      const times = s.samples.map((x) => `${fmtT(x.t)} ${x.kind === 'done' ? '完成態' : '中點'}${x.moving ? `（${x.moving} 個在動畫中，不判）` : ''}`).join('、');
+      const times = s.samples.map((x) => `${fmtT(x.t)} ${x.kind === 'done' ? '完成態' : x.kind === 'still' ? '靜止' : '中點'}${x.moving ? `（${x.moving} 個在動畫中，不判）` : ''}`).join('、');
       L.push(`${s.id}｜${s.label}｜${s.layout}｜${times}｜${s.errors || s.warns ? [s.errors ? `✖ ${s.errors}` : '', s.warns ? `⚠ ${s.warns}` : ''].filter(Boolean).join(' ') : '✓'}`);
     }
   }

@@ -14,36 +14,48 @@
  *   node shared/template/tools/build.mjs --force      覆寫手改過的產生檔
  *   node shared/template/tools/build.mjs --no-loudnorm  重新編碼底片時不做人聲響度標準化（預設調到 −14 LUFS、true peak ≤ −1 dBTP）
  *   node shared/template/tools/build.mjs --no-declick   重新編碼底片時不在剪接點（work/cutpoints.json）做 15 ms 微淡化
- *   node shared/template/tools/build.mjs --gallery    （作者用）重新產生 shared/template/preview/*.html
+ *   node shared/template/tools/build.mjs --gallery    （作者用）重新產生 shared/template/preview/*.html（情境動畫另出直式 x-<名稱>-v.html，和直式講者示意 speaker-v.jpg）
+ *   --format landscape|portrait（或 橫式|直式）：蓋過版式（預設照 plan.json "format" > work/製作進度.md 開工決策表「版式」> 主軌寬高比；lib/canvas.mjs）
  *
  * --project：專案資料夾（projects/範例，或只寫名稱 範例）。沒寫時：目前資料夾在某個專案裡就用它；
  *   projects/ 底下只有一個專案就用那個；都不是就報錯並列出現有專案。
  * 路徑旗標（選填，相對目前資料夾，會蓋過 --project 的預設）：--plan --srt --video --out --sfx；測試用：--template <shared/template 資料夾>
  * 需要 Node 22 以上、ffmpeg／ffprobe（npx hyperframes doctor 會檢查）。
  * 也會讀：work/cutpoints.json（剪接點，edit.joins 對照用，重新編碼底片時也在這些點做微淡化）；rough.mp4 全黑的區間＝只有聲音（ffmpeg blackdetect，快取在 work/hyperframes/.cache/）。
+ * 報告開頭印版式（「版式：直式 1080×1920（來源：plan.json）」）與 HyperFrames 版本（和工作區根目錄 package.json 釘的版本不同時 ⚠）。
+ * 版式兩個來源（plan.json、開工決策表）不同、或主軌方向和版式不合（直式專案給橫拍素材）時 ✖；build 結尾印字幕保留帶的 hyperframes check --caption-zone 指令。
+ * plan 有情境動畫（type: "custom"）時，index.html 的 <head> 會多一段 window.__cues（字幕時間與每段起點、段長），
+ * 情境動畫用 P.at('#N') 綁句、P.end() 撐到段長，不用手算秒數（寫法見 shared/template/USAGE-reference.md R7.3）。
+ * --check 的節奏照 plan.json 的 rhythm（不寫＝continuous，列出沒有畫面的區間）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseSrt } from './lib/srt.mjs';
 import { floorFrame, r3 } from './lib/time.mjs';
 import { loadScenes, loadIcons, loadFx, motionConsts, resolveScene, sampleSeg } from './lib/scenes.mjs';
 import { assembleScene, sceneParts, hashOf, verifyHash } from './lib/assemble.mjs';
 import { buildCaptions, captionWarnings } from './lib/captions.mjs';
-import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems } from './lib/plan.mjs';
-import { buildMain, buildPreview } from './lib/main.mjs';
-import { probeDuration, probeMedia, encodeFootage, encodeMedia, blackDetect, extractFrames } from './lib/ff.mjs';
-import { mediaJobs, MEDIA_KEYS, TRANSITIONS } from './lib/media.mjs';
+import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
+import { buildMain, buildPreview, KIT_LINKS, withTheme } from './lib/main.mjs';
+import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, blackDetect, extractFrames } from './lib/ff.mjs';
+import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
-import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines } from './lib/audio.mjs';
+import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip } from './lib/audio.mjs';
+import { ensureLook, lookCheck } from './lib/look.mjs';
+import { hyperframesVersion, versionLine } from './caps.mjs';
+import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 
 export { probeDuration, encodeFootage };
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+// 第二層情境動畫的預覽頁（003 的 lib/custom-preview.mjs；檔還沒出現前 --gallery 照常跑，只是不產生 preview/x-*.html）
+const CUSTOM_PREVIEW = path.join(HERE, 'lib', 'custom-preview.mjs');
+const customPreview = fs.existsSync(CUSTOM_PREVIEW) ? await import(pathToFileURL(CUSTOM_PREVIEW).href) : null;
 const TEST_FILE = 'compositions/test-clip.html';
 const OUTPUT_DIRS = ['成片', path.join('成片', '測試片段'), path.join('成片', '驗收截圖')];
-const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only'];
+const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format'];
 
 export function parseArgs(argv) {
   const flags = {};
@@ -192,43 +204,51 @@ function sfxSummary(scene) {
   return parts.join('；') || '—';
 }
 export function listText(lib) {
-  const lines = ['# 情境（type 不寫＝scene；"scene" 填 key）', '', '| # | key | 中文 | 組別 | 長度（秒） | 綁句 | slots（上限） | beats | 音效 | 什麼時候用 | 不要用在 |', '|---|---|---|---|---|---|---|---|---|---|---|'];
+  const PORTRAIT_ZH = { move: '可（換位置）', stage: '可（縮進上半）', none: '不提供' };
+  const lines = ['# 情境（type 不寫＝scene；"scene" 填 key；直式＝plan.json "format": "portrait" 時能不能用）', '', '| # | key | 中文 | 組別 | 直式 | 長度（秒） | 綁句 | slots（上限） | beats | 音效 | 什麼時候用 | 不要用在 |', '|---|---|---|---|---|---|---|---|---|---|---|---|'];
   for (const s of lib.scenes) {
     const d = s.duration || {};
     const len = d.fixed != null ? `固定 ${d.fixed}` : `預設 ${d.default}${d.min ? `、最短 ${d.min}` : ''}`;
     const beats = Object.entries(s.beats || {}).map(([k, b]) => `${k}（${b.label}，預設 ${b.default}）`).join('；') || '—';
-    lines.push(`| ${s.num} | ${s.key} | ${s.zh} | ${s.family} | ${len} | ${s.bindsSrt === false ? 'at: "#N"' : 'from／to'} | ${slotSummary(s)}${s.tone ? '；tone: warn／good' : ''} | ${beats} | ${sfxSummary(s)} | ${s.when} | ${s.avoid || '—'} |`);
+    lines.push(`| ${s.num} | ${s.key} | ${s.zh} | ${s.family} | ${PORTRAIT_ZH[s.portrait] || '—'} | ${len} | ${s.bindsSrt === false ? 'at: "#N"' : 'from／to'} | ${slotSummary(s)}${s.tone ? '；tone: warn／good' : ''} | ${beats} | ${sfxSummary(s)} | ${s.when} | ${s.avoid || '—'} |`);
   }
   lines.push('', '# 字卡動態（"type": "fx", "fx": 編號；bg 預設 none＝透明疊在講者上；dark／light／accent＝不透明整張幕）', '', '| # | 中文 | 英文 | 類別 | vars | 音效 | 看到什麼句子用它 |', '|---|---|---|---|---|---|---|');
   for (const f of lib.fx) {
     const vars = f.vars.filter((v) => !['bg', 'accent'].includes(v.id)).map((v) => `${v.id}（${v.label}）`).join('、');
     lines.push(`| ${f.id} | ${f.zh} | ${f.en} | ${f.category} | ${vars} | ${f.sfx ? `${f.sfx.sound} @ ${f.sfx.at ?? 'start'}` : '—'} | ${f.when} |`);
   }
-  lines.push('', '# 音效（"sfx"）：' + Object.entries(lib.sfx).map(([k, v]) => `${k}（${v.zh || k}，音量 ${v.volume}）`).join('、') + '、null（不配）；"sfxExtra": false 可關掉該段的附加音效（跟動畫節拍的 tick 等）；不寫＝用上表音效欄的預設');
+  const tags = (v) => [v.additive ? '附加' : '', v.maxPerVideo != null ? `每集 ≤ ${v.maxPerVideo}` : ''].filter(Boolean).map((x) => `，${x}`).join('');
+  lines.push('', '# 音效（"sfx"）：' + Object.entries(lib.sfx).filter(([, v]) => v.kind !== 'bgm').map(([k, v]) => `${k}（${v.zh || k}，音量 ${v.volume}${tags(v)}）`).join('、') + '、null（不配）；"sfxExtra": false 可關掉該段的附加音效（跟動畫節拍的 tick 等）；不寫＝用上表音效欄的預設');
+  const bgms = Object.keys(lib.sfx).filter((k) => lib.sfx[k].kind === 'bgm');
+  if (bgms.length) lines.push(`結尾配樂（plan.json "outro"）：${bgms.join('、')}`);
   lines.push('', '# 插入素材（"type": "media"：螢幕錄影或圖片，整張幕＋右下角子母畫面；用法見 shared/template/USAGE.md 第 5 節）', '',
     '| 欄位 | 值 | 預設 | 說明 |', '|---|---|---|---|');
   for (const r of MEDIA_FIELDS) lines.push(`| ${r[0]} | ${r[1]} | ${r[2]} | ${r[3]} |`);
   return lines.join('\n');
 }
 
-// --list 的 media 欄位表（文字與 --json 共用）
-export const MEDIA_FIELDS = [
-  ['src', '"素材/螢幕錄影/<檔名>" 或 "素材/圖片/<檔名>"', '必填', `相對專案資料夾；影片 .mp4 .mov .m4v .webm、圖片 .jpg .jpeg .png .webp（先跑 media.mjs scan）`],
-  ['from／to／duration／anchor', '同其他段', 'to 或 duration 必填', 'rough.srt 的句號或秒數'],
-  ['in', '秒數', '0', '錄影從第幾秒開始播；in＋段長×speed 不能超過錄影長度'],
-  ['speed', '0.5–4', '1', '播放速度（2＝兩倍速）'],
-  ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方，空白處是主題深底或 bg.jpg；cover＝鋪滿畫面'],
-  ['pip', 'true／false', 'true', '右下角子母畫面露臉；只有聲音的區間自動不放'],
-  ['volume', 'null 或 −60～+12（dB）', 'null', 'null＝素材靜音；寫數字＝保留素材原聲'],
-  ['enter／exit', TRANSITIONS.map((x) => `"${x}"`).join('／'), '"fade"', '進場／出場；接在別的整張幕後面時 fade 自動變 cut'],
-  ['moves', '[{ "at", "to": [x,y,w,h] 或 "full", "dur" }]', '—', '運鏡：推近到框、"full" 拉回全景；dur 預設 1 秒。圖片沒寫 moves 時自動慢推（"kenburns": false 關掉）'],
-  ['marks', '[{ "at", "until", "box": [x,y,w,h] }]', '—', '紅框：實線 4px、描線進場；同時最多 2 個、停留 < 0.5s 的拿掉、最後一框多停 1s；until 不寫＝到段尾'],
-  ['lens', '[{ "at", "until", "box": [x,y,w,h], "zoom" }]', '—', '放大鏡：從框的位置彈出到畫面中央偏上，zoom 預設 2（1.2–4）；至少 1.2 秒，until 不寫＝at＋3 秒'],
-  ['sfx', '音效名稱或 null', '不配', '從講者切到錄影的第一段建議 "whoosh"'],
-  ['sfxVolume', '−60～+12（dB）', '0', '這段音效的音量（每一種段落都能寫）'],
-];
+// --list 的 media 欄位表：lib/media.mjs 的 MEDIA_FIELDS（004 擁有；文字與 --json 共用）
+export { MEDIA_FIELDS };
 
 // ---------- --gallery ----------
+
+// 直式預覽頁的講者示意圖 preview/speaker-v.jpg（1080×1920）：speaker.jpg（1920×1080）裁講者那一塊（寬 900，約講者框 × 1.3＝pipCrop auto 的裁法）
+// 放大到 1080 寬，貼在 y 120，上下露出的部分用同一張圖模糊壓暗補滿。custom-preview 的講者面板用 object-position 50% 20%（顯示 y 180–1200），
+// 這樣頭頂落在面板頂端下約 40 px（和 build 的 pipCrop "auto" 一樣）。speaker.jpg 的講者臉＋手勢在 x 780–1320，裁切中心取寬度的 53%；
+// speaker-v.jpg 比 speaker.jpg 新就不重做
+const SPEAKER_V = { cx: 0.53, fgH: 1296, top: 120 };
+export function speakerPortrait(outDir) {
+  const src = path.join(outDir, 'speaker.jpg'), dst = path.join(outDir, 'speaker-v.jpg');
+  if (!fs.existsSync(src)) return {};
+  if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(src).mtimeMs) return {};
+  const m = probeMedia(src), { W, H } = canvasOf('portrait');
+  const cw = Math.round((m.height * W) / SPEAKER_V.fgH / 2) * 2;
+  const x = Math.max(0, Math.min(m.width - cw, Math.round(m.width * SPEAKER_V.cx - cw / 2)));
+  const fc = `[0:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=30:2,eq=brightness=-0.12[bg];`
+    + `[0:v]crop=${cw}:${m.height}:${x}:0,scale=${W}:${SPEAKER_V.fgH}:flags=lanczos[fg];[bg][fg]overlay=0:${SPEAKER_V.top}`;
+  const r = run('ffmpeg', ['-y', '-v', 'error', '-i', src, '-filter_complex', fc, '-frames:v', '1', '-q:v', '3', dst]);
+  return r.status === 0 ? { made: dst } : { error: `preview/speaker-v.jpg 產生失敗：${String(r.stderr).trim().slice(-200)}` };
+}
 
 export function runGallery(templateDir, { only = null } = {}) {
   const lib = loadLib(templateDir);
@@ -252,6 +272,27 @@ export function runGallery(templateDir, { only = null } = {}) {
     fs.writeFileSync(file, buildPreview({ scene, parts, D, sub: scene.sample?.sub, pipStyle, cues }));
     made.push(file);
   }
+  // 第二層情境動畫（custom/x-*.html）的預覽頁：003 的 buildCustomPreview（還沒有時略過）
+  const customDir = path.join(templateDir, 'custom');
+  if (customPreview?.buildCustomPreview && fs.existsSync(customDir)) {
+    for (const f of fs.readdirSync(customDir).filter((x) => /^x-[\w-]+\.html$/.test(x)).sort()) {
+      const name = path.basename(f, '.html');
+      if (only && !only.includes(name)) continue;
+      try {
+        const src = fs.readFileSync(path.join(customDir, f), 'utf8');
+        const html = customPreview.buildCustomPreview({ name, html: src, pipStyle, kitLinks: KIT_LINKS });
+        fs.writeFileSync(path.join(outDir, f), html);
+        made.push(path.join(outDir, f));
+        // 009 FR-073：直式預覽頁 x-<名稱>-v.html（1080×1920：上半舞台縮放的動畫、下半講者面板示意）
+        const vFile = path.join(outDir, `${name}-v.html`);
+        fs.writeFileSync(vFile, customPreview.buildCustomPreview({ name, html: src, kitLinks: KIT_LINKS, format: 'portrait' }));
+        made.push(vFile);
+      } catch (e) { problems.push(`custom/${f}：${e.message}`); }
+    }
+    const sv = speakerPortrait(outDir);
+    if (sv.error) problems.push(sv.error);
+    else if (sv.made) made.push(sv.made);
+  }
   if (!only) {
     const fxData = {};
     for (const f of lib.fx) if (f.sfx) fxData[f.id] = { sound: f.sfx.sound, at: f.sfx.at ?? 0 };
@@ -265,13 +306,30 @@ export function runGallery(templateDir, { only = null } = {}) {
 
 // ---------- 主流程 ----------
 
+// 詞級逐字稿：work/transcript.json（剪乾淨第 6 步對 rough.mp4 轉的，[{ text, start, end }]）。
+// 不比 rough.mp4 舊、最後一個詞和 rough.srt 最後一句差 ≤ 2 秒才掛上 cues.words（#N@詞 用真實時間）；否則記原因在 cues.wordsWhy
+export function attachWords(cues, { transcript, video = null } = {}) {
+  cues.approx = new Set();
+  if (!transcript || !fs.existsSync(transcript)) { cues.wordsWhy = '沒有 work/transcript.json（rough.mp4 的詞級逐字稿）'; return cues; }
+  let words;
+  try { words = JSON.parse(fs.readFileSync(transcript, 'utf8')); } catch { cues.wordsWhy = 'work/transcript.json 不是合法的 JSON'; return cues; }
+  if (Array.isArray(words?.words)) words = words.words;
+  if (!Array.isArray(words) || !words.length || !words.every((w) => w && typeof w.text === 'string' && Number.isFinite(+w.start) && Number.isFinite(+w.end))) { cues.wordsWhy = 'work/transcript.json 的格式不是 [{ text, start, end }]'; return cues; }
+  if (video && fs.existsSync(video) && fs.statSync(transcript).mtimeMs < fs.statSync(video).mtimeMs - 1000) { cues.wordsWhy = 'work/transcript.json 比 rough.mp4 舊（不是這支初剪轉的）'; return cues; }
+  const lastW = Math.max(...words.map((w) => +w.end)), lastC = cues.length ? Math.max(...cues.map((c) => c.end)) : 0;
+  if (Math.abs(lastW - lastC) > 2) { cues.wordsWhy = `work/transcript.json 的長度（${r3(lastW)}s）和 rough.srt（${r3(lastC)}s）對不上`; return cues; }
+  cues.words = words.map((w) => ({ text: w.text, start: +w.start, end: +w.end })).sort((a, b) => a.start - b.start);
+  return cues;
+}
+
 function loadInputs(P) {
-  if (!fs.existsSync(P.plan)) throw new Error(`找不到 ${rel(P.plan)}：先寫 plan.json（格式見 shared/template/USAGE.md）`);
+  if (!fs.existsSync(P.plan)) throw new Error(`找不到 ${rel(P.plan)} → 先照「剪好看」第 3 步寫草稿 plan.json（格式見 shared/template/USAGE.md 3.2）`);
   let plan;
   try { plan = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch (e) { throw new Error(`${rel(P.plan)} 不是合法的 JSON：${e.message}（JSON 不能有註解、最後一項後面不能有逗號）`); }
   if (!fs.existsSync(P.srt)) throw new Error(`找不到字幕 ${rel(P.srt)}`);
   const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
-  if (!cues.length) throw new Error(`${rel(P.srt)} 讀不到任何字幕句（格式要是 SRT）`);
+  if (!cues.length) throw new Error(`${rel(P.srt)} 讀不到任何字幕句（格式要是 SRT）→ 照「剪乾淨」第 6 步重新產生 work/rough.srt`);
+  attachWords(cues, { transcript: path.join(path.dirname(P.srt), 'transcript.json'), video: P.video });
   return { plan, cues };
 }
 
@@ -282,17 +340,24 @@ function printIssues(res, log) {
 
 // 剪接點：剪乾淨第 7 步存的 work/cutpoints.json（edit.joins 要對到這些點）
 // 講者框是 1920×1080 座標；底片不是 1080p（例如 640×360 的手機錄影）而講者框整個落在底片尺寸內，多半是直接用底片截圖的像素量的
-export function speakerBoxScaleWarning(box, dims) {
+// 直式（canvas）：畫布 1080×1920，門檻照比例（寬 > 畫布寬 × 0.75 才算原尺寸）
+export function speakerBoxScaleWarning(box, dims, C = canvasOf('landscape')) {
   if (!Array.isArray(box) || box.length !== 4 || !dims?.width || !dims?.height) return null;
   const { width: w, height: h } = dims;
-  if ((w === 1920 && h === 1080) || w > 1440) return null;
+  if ((w === C.W && h === C.H) || w > C.W * 0.75) return null;
   if (!(box[2] <= w && box[3] <= h)) return null;
-  const k = 1920 / w;
+  const k = C.W / w;
   const fixed = box.map((v) => Math.round(v * k));
-  return `speakerBox ${JSON.stringify(box)} 整個落在 ${w}×${h} 以內，底片是 ${w}×${h}：看起來是用原尺寸截圖的像素量的，但 speakerBox 要寫 1920×1080 座標 → 每個數字乘 ${r3(k)}（例：${JSON.stringify(fixed)}）；講者真的在左上角就忽略這則`;
+  return `speakerBox ${JSON.stringify(box)} 整個落在 ${w}×${h} 以內，底片是 ${w}×${h}：看起來是用原尺寸截圖的像素量的，但 speakerBox 要寫 ${C.W}×${C.H} 座標 → 每個數字乘 ${r3(k)}（例：${JSON.stringify(fixed)}）；講者真的在左上角就忽略這則`;
 }
-const boxWarnings = (plan, file) => {
-  try { const w = speakerBoxScaleWarning(plan.speakerBox, probeMedia(file)); return w ? [w] : []; } catch { return []; }
+// check.textSync false 只給示意／預覽用的 plan（qc.mjs framing --cards）；寫在專案正式的 work/hyperframes/plan.json 就提醒
+export function textSyncOffWarnings(P, plan) {
+  if (plan?.check?.textSync !== false || !P.project) return [];
+  if (path.resolve(P.plan) !== path.join(P.project, 'work', 'hyperframes', 'plan.json')) return [];
+  return ['plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時」→ 這只給示意／預覽用的 plan；正式 plan.json 刪掉 check，照 --check 的「文字對時」改時間'];
+}
+const boxWarnings = (plan, file, C) => {
+  try { const w = speakerBoxScaleWarning(plan.speakerBox, probeMedia(file), C); return w ? [w] : []; } catch { return []; }
 };
 
 export function readCutpoints(P) {
@@ -310,6 +375,23 @@ export function readCutpoints(P) {
 // 只有聲音的區間＝rough.mp4 全黑的地方（聲音檔接進主軌時配的純黑畫面）；結果快取在 work/hyperframes/.cache/
 export function voiceOnlyOf(P, videoFile, log = () => {}) {
   return blackDetect(videoFile, path.join(P.out, '.cache', 'blackdetect.json'), () => log('偵測只有聲音的區間（rough.mp4 全黑的地方；第一次會花一點時間，之後用快取）…'));
+}
+
+// 專案有沒有只有聲音的主軌素材：素材/聲音/ 有檔，或 work/main.json 有 kind "voice" 的段
+export function hasVoiceSource(projectDir) {
+  try { if (fs.readdirSync(path.join(projectDir, '素材', '聲音')).some((x) => !x.startsWith('.'))) return true; } catch { /* 沒有資料夾 */ }
+  try { return (JSON.parse(fs.readFileSync(path.join(projectDir, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice'); } catch { return false; }
+}
+
+// rough.mp4 有全黑區間、專案卻沒有只有聲音的素材 → 初剪壞了（auto-editor 剪手機原檔的已知問題），不能當成「只有聲音」默默拿掉小窗
+// → { voiceOnly（給 resolvePlan 用）, black（併好的全黑區間）, errors }；相鄰 ≤ 0.1 秒的黑段併成一段
+export function roughBlackCheck(projectDir, voiceOnly, projectRel = 'projects/<專案>') {
+  if (!projectDir || !voiceOnly?.length || !fs.existsSync(path.join(projectDir, '素材')) || hasVoiceSource(projectDir)) return { voiceOnly: voiceOnly || [], black: [], errors: [] };
+  const black = [];
+  for (const [a, b] of [...voiceOnly].sort((x, y) => x[0] - y[0])) { const l = black[black.length - 1]; if (l && a - l[1] <= 0.1 + 1e-9) l[1] = Math.max(l[1], b); else black.push([a, b]); }
+  const clock = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+  const where = black.map(([a, b]) => `${clock(a)}–${clock(b)}`).join('、');
+  return { voiceOnly: [], black, errors: [`work/rough.mp4 在 ${where} 是全黑，但素材沒有純聲音檔 → 初剪壞了：跑 node shared/template/tools/media.mjs verify-rough --project ${projectRel}`] };
 }
 
 // media 段的 src 相對專案資料夾：有 --project 就用它；只給 --plan／--out 等路徑時，從 --out（<專案>/work/hyperframes）往上找有 素材/ 的資料夾
@@ -396,36 +478,62 @@ export function build(flags, { log = console.log } = {}) {
   const json = !!(flags.check && flags.json);
   if (json) log = () => {};
   if (P.project) log(`專案：${rel(P.project)}`);
+  const { plan, cues } = loadInputs(P);
+  // 版式（009 FR-003）：--format > plan.json > 開工決策表 > 主軌寬高比；之後的幾何一律讀 canvas
+  const fmt = resolveFormat({ projectDir: P.project, plan, flag: flags.format ?? null });
+  const C = canvasOf(fmt.format);
+  log(formatLine(fmt));
+  const fmtErrors = formatErrors({ projectDir: P.project, plan, format: fmt.format, dims: fs.existsSync(P.video) ? probeDims(P.video) : null });
+  // HyperFrames 版本（環境問題，只印這一行、不進 warnings；--check --json 看 versions）
+  const hfv = hyperframesVersion(P.root);
+  log(versionLine(hfv));
+  const versions = { hyperframes: { pinned: hfv.pinned, installed: hfv.installed, ok: hfv.ok } };
   const lib = loadLib(P.templateDir);
   if (!lib.scenes.length) throw new Error(`找不到情境模板：${rel(path.join(P.templateDir, 'scenes'))}`);
-  const { plan, cues } = loadInputs(P);
+  const planHash = createHash('sha1').update(fs.readFileSync(P.plan)).digest('hex').slice(0, 8);
+  // 講者調光＋瘦臉（006 的 ensureLook）：build 才做；瘦臉底片過期而且能跑時丟錯停下來（裁決 D4，contracts/look.md §3；✖ 原文是 006 的）
+  const look = !flags.check && P.project ? ensureLook({ projectDir: P.project, plan, log, templateDir: P.templateDir, strict: true }) : null;
+  const footSrc = look && path.resolve(look.footage) !== path.resolve(P.project, 'work', 'rough.mp4') ? look.footage : P.video;
   const assetVideo = path.join(P.out, 'assets', 'rough.mp4');
   const cp = readCutpoints(P);
   // 聲音處理（響度標準化＋剪接點微淡化）的戳記：來源、剪接點、參數任一變了就重新編碼底片
   const audioOpts = { loudnorm: !flags['no-loudnorm'], declick: !flags['no-declick'] };
   const stampFile = path.join(P.out, '.cache', 'footage-audio.json');
   const stamp = readStamp(stampFile);
-  const wantKey = fs.existsSync(P.video) ? audioKey({ src: P.video, cutpoints: cp.list.map((c) => c.at), ...audioOpts, frame: plan.frame ?? null }) : null;
-  const fresh = fs.existsSync(assetVideo) && (!fs.existsSync(P.video) || (fs.statSync(assetVideo).mtimeMs >= fs.statSync(P.video).mtimeMs && stampMatches(stamp, wantKey)));
+  const wantKey = fs.existsSync(footSrc) ? audioKey({ src: footSrc, cutpoints: cp.list.map((c) => c.at), ...audioOpts, frame: plan.frame ?? null, look: look?.key ?? null, format: C.format }) : null;
+  const fresh = fs.existsSync(assetVideo) && (!fs.existsSync(footSrc) || (fs.statSync(assetVideo).mtimeMs >= fs.statSync(footSrc).mtimeMs && stampMatches(stamp, wantKey)));
   if (!fresh && !fs.existsSync(P.video)) throw new Error(`找不到影片 ${rel(P.video)}`);
   const projectDir = mediaRoot(P);
   const projectRel = projectDir ? projectLabel(P, projectDir) : 'projects/<專案>';
-  const ctx = (videoDur, voiceOnly) => ({ plan, cues, videoDur, lib, outDir: P.out, sfxDir: P.sfx, projectDir, voiceOnly, cutpoints: cp.list, projectRel });
+  const ctx = (videoDur, voiceOnly) => ({ plan, cues, videoDur, lib, outDir: P.out, sfxDir: P.sfx, projectDir, voiceOnly, cutpoints: cp.list, projectRel, canvas: C });
 
   // --check：不寫檔（只寫偵測快取）
   if (flags.check) {
     const src = fresh ? assetVideo : P.video;
-    const videoDur = floorFrame(probeDuration(src));
-    const voiceOnly = voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log);
+    // 和 build 同一個長度：不超過 rough.mp4（重新編碼的音軌尾巴可能多約 0.1s）
+    const videoDur = floorFrame(src === P.video || !fs.existsSync(P.video) ? probeDuration(src) : Math.min(probeDuration(src), probeDuration(P.video)));
+    const rb = roughBlackCheck(projectDir, voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log), projectRel);
+    const voiceOnly = rb.voiceOnly;
     const res = resolvePlan(ctx(videoDur, voiceOnly));
-    const capW = captionWarnings(cues);
-    res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, src));
+    res.errors.unshift(...fmtErrors, ...rb.errors);
+    const capW = captionWarnings(cues, C);
+    res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, src, C), ...textSyncOffWarnings(P, plan));
+    if (P.project && res.tm) {
+      const lc = lookCheck({ projectDir: P.project, plan, templateDir: P.templateDir });
+      res.errors.push(...lc.errors.filter((e) => !res.errors.includes(e)));
+      // C-14 的決定：「build 會停下來：…」在 --check 維持 ⚠（--check 檢查的是 plan.json；check-json.md §2.7）
+      res.warnings.push(...lc.warnings);
+    }
+    const clip = outroClipOf(res, P);
     if (json) {
+      const top = res.tm ? jsonTop(res, { clip }) : jsonTop({ theme: res.theme }, {});
       const report = {
-        ok: !res.errors.length, errors: res.errors, warnings: [...res.warnings, ...capW],
+        schema: 2, ok: !res.errors.length, errors: res.errors, warnings: [...res.warnings, ...capW],
+        planHash, rhythm: top.rhythm, theme: top.theme, format: C.format, canvas: [C.W, C.H], formatSource: fmt.source, versions,
         videoDur, outputDur: res.outDur ?? videoDur,
-        voiceOnly, cutpoints: cp.list,
+        voiceOnly, roughBlack: rb.black, voiceUncovered: top.voiceUncovered, uncovered: top.uncovered, cutpoints: cp.list, chapters: top.chapters,
         items: res.tm ? jsonItems(res) : [],
+        sfxCount: top.sfxCount, sfxBudget: top.sfxBudget, outro: top.outro,
         edit: res.edit ?? DEFAULT_EDIT(),
         paths: { project: projectDir ? projectLabel(P, projectDir) : null, video: fromRoot(P, fs.existsSync(P.video) ? P.video : src), plan: fromRoot(P, P.plan), out: fromRoot(P, P.out) },
       };
@@ -433,41 +541,47 @@ export function build(flags, { log = console.log } = {}) {
     }
     printIssues(res, log);
     for (const w of capW) log(`⚠ ${w}`);
-    log('', formatReport(res, { videoDur }));
+    log('', formatReport(res, { videoDur, tail: [outroLine(res.outro, clip)] }));
     log(res.errors.length ? `\n未通過：${res.errors.length} 個錯誤（✖），${res.warnings.length + capW.length} 個提醒（⚠）。照 → 後面的建議改 plan.json 再跑一次。` : `\n通過：${res.items.length} 段，${res.warnings.length + capW.length} 個提醒（⚠）。`);
     return { ok: !res.errors.length, res };
   }
 
-  // 構圖裁切 plan.frame＝[x, y, w, h]（1920×1080 座標、16:9）→ 換成來源影片的像素
+  // 構圖裁切 plan.frame＝[x, y, w, h]（畫布座標：橫式 1920×1080、16:9；直式 1080×1920、9:16）→ 換成來源影片的像素
   function frameCrop(pl, src) {
     if (!Array.isArray(pl.frame)) return null;
-    const m = probeMedia(src), k = (m.width || 1920) / 1920, ev = (v) => Math.round(v * k / 2) * 2;
+    const m = probeMedia(src), k = (m.width || C.W) / C.W, ev = (v) => Math.round(v * k / 2) * 2;
     const [x, y, w, h] = pl.frame;
     return { x: ev(x), y: ev(y), w: ev(w), h: ev(h) };
   }
   // 底片：專案的 work/rough.mp4 比較新才重新編碼
   let encoded = false, audioInfo = null;
+  if (look) for (const l of look.report) log(l);
   if (!fresh) {
     log(`重新編碼底片 → ${rel(assetVideo)}（30fps、每秒一個關鍵幀${audioOpts.loudnorm ? '、人聲調到 −14 LUFS' : ''}${audioOpts.declick && cp.list.length ? '、剪接點微淡化' : ''}）…`);
-    audioInfo = encodeFootagePolished(P.video, assetVideo, { cacheDir: path.join(P.out, '.cache'), cutpoints: cp.list.map((c) => c.at), ...audioOpts, crop: frameCrop(plan, P.video),
+    audioInfo = encodeFootagePolished(footSrc, assetVideo, { cacheDir: path.join(P.out, '.cache'), cutpoints: cp.list.map((c) => c.at), ...audioOpts, crop: frameCrop(plan, footSrc), lut: look?.lut ?? null, canvas: C,
       onMeasure: () => log('量人聲響度（第一次會花一點時間，之後用快取）…') });
     fs.mkdirSync(path.dirname(stampFile), { recursive: true });
     fs.writeFileSync(stampFile, JSON.stringify({ key: wantKey, info: audioInfo }, null, 2) + '\n');
     encoded = true;
   } else if (stamp?.info) audioInfo = stamp.info;   // 沒重新編碼：報告用上次的數字
   const rawDur = probeDuration(assetVideo);
-  const videoDur = floorFrame(rawDur);
+  // 成片長度不超過 rough.mp4：人聲響度標準化（loudnorm）會讓音軌尾巴多約 0.1s，容器長度跟著變長，最後幾格會沒有畫面
+  const srcDur = fs.existsSync(P.video) ? probeDuration(P.video) : rawDur;
+  const videoDur = floorFrame(Math.min(rawDur, srcDur));
   if (encoded) {
-    const srcDur = probeDuration(P.video);
     const drift = r3(rawDur - srcDur);
     log(`底片長度：原檔 ${r3(srcDur)}s → 重新編碼 ${r3(rawDur)}s（差 ${drift}s）${Math.abs(drift) > 0.1 ? ' ⚠ 差超過 0.1s，字幕可能對不準' : ''}`);
   }
-  for (const l of audioReportLines(audioInfo, { ...audioOpts, cutpointsExist: cp.list.length > 0 })) log(l);
-  const voiceOnly = voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log);
-  const res = resolvePlan(ctx(videoDur, voiceOnly));
-  res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, assetVideo));
+  const rb = roughBlackCheck(projectDir, voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log), projectRel);
+  const res = resolvePlan(ctx(videoDur, rb.voiceOnly));
+  res.errors.unshift(...fmtErrors, ...rb.errors);
+  res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, assetVideo, C), ...textSyncOffWarnings(P, plan));
+  // 人聲響度、音效比例（005 的 sfxBudget）、剪接點微淡化；音效比例的 ⚠ 已在 warnings 裡就不重印
+  for (const l of audioReportLines(audioInfo, { ...audioOpts, cutpointsExist: cp.list.length > 0, sfx: res.sfxBudget })) {
+    if (!(l.startsWith('⚠ ') && res.warnings.includes(l.slice(2)))) log(l);
+  }
   printIssues(res, log);
-  for (const w of captionWarnings(cues)) log(`⚠ ${w}`);
+  for (const w of captionWarnings(cues, C)) log(`⚠ ${w}`);
   if (res.errors.length) {
     log(`\n未通過：${res.errors.length} 個錯誤，沒有產生任何檔案。照 → 後面的建議改 plan.json 再跑一次。`);
     return { ok: false, res };
@@ -478,9 +592,9 @@ export function build(flags, { log = console.log } = {}) {
   // 產生內容（先全部組好，組不出來就不寫檔）
   const files = [];
   for (const it of res.items) {
-    if (it.type !== 'scene') continue;
+    if (it.type !== 'scene' || it.noHost) continue;   // noHost：02 章節角標段由常駐角標取代（音效照放）
     try {
-      const a = assembleScene({ scene: it.scene, ctx: it.resolved.ctx, beats: it.resolved.beats, id: it.id, D: it.D, tone: it.resolved.tone, exitFade: it.exitFade, chapter: it.chapter, css: it.seg.css || '', chtag: !!it.seg.chtag });
+      const a = assembleScene({ scene: it.scene, ctx: it.resolved.ctx, beats: it.resolved.beats, id: it.id, D: it.D, tone: it.resolved.tone, exitFade: it.exitFade, chapter: it.chapter, css: it.seg.css || '', chtag: !!it.seg.chtag && !res.chapterBadge, prev: it.prev, format: C.format });
       files.push([a.file, a.html]);
     } catch (e) { res.errors.push(`${it.where} ${e.message}`); }
   }
@@ -494,15 +608,32 @@ export function build(flags, { log = console.log } = {}) {
     // 字卡動態裡寫的是相對路徑 fx-kit.js：render 以子合成檔的位置解析（compositions/），HyperFrames 播放器以專案根目錄解析，兩處都放
     files.push(['fx-kit.js', kit]);
   }
-  const cap = buildCaptions(capCues, { duration: outDur });
+  const cap = buildCaptions(capCues, { duration: outDur, blackout: res.blackout || [], canvas: C });
   files.push([cap.file, cap.html]);
   const bgOne = fs.existsSync(path.join(P.templateDir, 'bg.jpg'));
-  const bgPick = (f) => (fs.existsSync(path.join(P.templateDir, f)) ? f : bgOne ? 'bg.jpg' : null);
+  // 暗色（plan.json "theme": "dark"）先用 bg-*-dark.jpg；沒有那張就退回亮色那張並 ⚠
+  const dark = res.theme === 'dark';
+  const bgMissDark = [];
+  const bgPick = (f) => {
+    const d = f.replace(/\.jpg$/, '-dark.jpg');
+    if (dark && fs.existsSync(path.join(P.templateDir, d))) return d;
+    if (dark) bgMissDark.push(d);
+    return fs.existsSync(path.join(P.templateDir, f)) ? f : bgOne ? 'bg.jpg' : null;
+  };
   const bgMap = { fs: bgPick('bg-fs.jpg'), side: bgPick('bg-side.jpg'), ch: bgPick('bg-ch.jpg') };
   const bg = bgMap.fs || bgMap.side || bgMap.ch ? bgMap : false;
+  if (dark) log(`主題：暗色（plan.json "theme": "dark"）：背景 ${Object.values(bgMap).filter(Boolean).join('、') || '無'}；主合成與每個子合成的 <html> 加 data-theme="dark"`);
+  if (bgMissDark.length) log(`⚠ 暗色背景圖 ${bgMissDark.map((f) => `shared/template/${f}`).join('、')} 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/`);
   // 插入素材的檔（放大鏡的逐幀要先抽好，主合成才知道每一格用哪一張）
   const mediaN = prepareMedia(res.items, P.out, log);
-  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, bg, footage: res.footage, editFx: res.editFx };
+  // 結尾配樂：量 wav 長度決定起播點，淡入淡出與增益烤進檔案（005 的 renderBgmClip，同參數不重做）
+  const clip = outroClipOf(res, P);
+  let outro = null;
+  if (clip) {
+    const r = renderBgmClip(path.join(P.sfx, `${res.outro.music}.wav`), path.join(P.out, 'assets'), { from: clip.from, dur: clip.dur, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, gain: clip.gain });
+    outro = { file: posix(path.relative(P.out, r.file)), at: clip.at, dur: r.dur };
+  }
+  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, badges: res.badges || [], speakerBox: res.globals.speakerBox, canvas: C };
   const main = buildMain({ ...mainOpts, captions: cap });
   let test = null;
   if (flags.test) {
@@ -510,10 +641,16 @@ export function build(flags, { log = console.log } = {}) {
     if (!m) throw new Error('--test 要寫成「起點,秒數」，例如 --test 41,4');
     const t0 = Number(m[1]), len = Number(m[2]);
     if (t0 >= outDur) throw new Error(`--test 起點 ${t0}s 超過影片長度 ${outDur}s`);
-    const capT = buildCaptions(capCues, { duration: r3(Math.min(len, outDur - t0)), offset: t0, compId: 'captions-test' });
+    const capT = buildCaptions(capCues, { duration: r3(Math.min(len, outDur - t0)), offset: t0, compId: 'captions-test', blackout: res.blackout || [], canvas: C });
     files.push([capT.file, capT.html]);
     test = buildMain({ ...mainOpts, captions: capT, test: { t0, len } });
     test.t0 = t0;
+  }
+  // 暗色：主合成、測試片段、build 產生的子合成（情境、字卡動態、字幕）都加 data-theme="dark"；情境動畫 x-*.html 不是 build 產生的，跟著主合成的 <html> 走
+  if (dark) {
+    for (const e of files) if (e[0].endsWith('.html')) e[1] = withTheme(e[1], 'dark');
+    main.html = withTheme(main.html, 'dark');
+    if (test) test.html = withTheme(test.html, 'dark');
   }
   const projectJson = fs.readFileSync(path.join(HERE, 'project', 'hyperframes.json'), 'utf8');
   files.push(['hyperframes.json', projectJson]);
@@ -533,7 +670,8 @@ export function build(flags, { log = console.log } = {}) {
   // 寫檔（成片的資料夾先建好，render 的 -o 才寫得進去）
   fs.mkdirSync(P.out, { recursive: true });
   if (P.project) for (const d of OUTPUT_DIRS) fs.mkdirSync(path.join(P.project, d), { recursive: true });
-  const kitN = copyDir(path.join(P.templateDir, 'kit'), path.join(P.out, 'kit'), ['icons.json']);
+  // kit 的畫廊與給工人看的風格說明不進專案（illus-gallery.jpg 1.7 MB）；illus.js／illus.css 照常複製
+  const kitN = copyDir(path.join(P.templateDir, 'kit'), path.join(P.out, 'kit'), ['icons.json', 'illus-gallery.html', 'illus-gallery.jpg', 'illus-style.md']);
   if (fs.existsSync(P.sfx)) for (const f of fs.readdirSync(P.sfx).filter((x) => x.endsWith('.wav'))) copyIfChanged(path.join(P.sfx, f), path.join(P.out, 'assets', 'sfx', f));
   if (bg) for (const f of new Set(Object.values(bg).filter(Boolean))) copyIfChanged(path.join(P.templateDir, f), path.join(P.out, 'assets', f));
   const generated = new Set();
@@ -548,9 +686,10 @@ export function build(flags, { log = console.log } = {}) {
     if (!fs.existsSync(abs)) { delete manifest.files[f]; continue; }
     if (W.isUntouched(f, fs.readFileSync(abs, 'utf8'))) { fs.unlinkSync(abs); delete manifest.files[f]; removed.push(f); }
   }
+  manifest.planHash = planHash;   // 和 --check --json 的 planHash 相同（004 的 qc storyboard 用來判斷截圖是不是最新的）
   fs.writeFileSync(path.join(P.out, '.build-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
-  log('', formatReport(res, { videoDur }));
+  log('', formatReport(res, { videoDur, tail: [outroLine(res.outro, clip)] }));
   log(`\n產生：${W.res.written.length} 個檔（沒變 ${W.res.same.length}）；kit 更新 ${kitN} 個檔${mediaN ? `；插入素材更新 ${mediaN} 個` : ''}${removed.length ? `；刪掉舊檔 ${removed.join('、')}` : ''}`);
   if (W.res.skipped.length) log(`⚠ 這些檔被手改過，沒有覆寫：${W.res.skipped.join('、')} → 把改動搬進 plan.json 後加 --force`);
   if (test) {
@@ -558,6 +697,8 @@ export function build(flags, { log = console.log } = {}) {
     log(`測試片段：${rel(path.join(P.out, TEST_FILE))}（${test.t0}s 起 ${test.duration}s）→ cd ${rel(P.out)} && npx hyperframes render -c ${TEST_FILE} --quality draft -o ${clip}`);
     for (const it of test.skipped) log(`⚠ ${it.id} 在 ${it.start}s 就開始了，測試片段不含這段（要看完整段，把起點改成 ${it.start}）`);
   }
+  // FR-032：字幕保留帶照版式（直式 y 1280–1420，不是畫面底部）；USAGE 2 第 8 步照這一行跑
+  log(`字幕保留帶檢查：cd ${rel(P.out)} && npx hyperframes check --caption-zone "${captionZoneArg(C)}"`);
   return { ok: true, res, written: W.res.written, skipped: W.res.skipped, removed };
 }
 
@@ -583,6 +724,23 @@ async function cli() {
   return r.ok ? 0 : 1;
 }
 
+// --check --json 出錯時也印齊 schema 2 的鍵（specs/contracts/check-json.md §5）
+export function errorJson(message) {
+  return { schema: 2, ok: false, errors: [message], warnings: [], planHash: null, rhythm: null, theme: null, format: null, canvas: null, formatSource: null,
+    versions: { hyperframes: { pinned: null, installed: null, ok: false } },
+    videoDur: null, outputDur: null, voiceOnly: [], roughBlack: [], voiceUncovered: [], uncovered: [], cutpoints: [],
+    chapters: [], items: [], sfxCount: {}, sfxBudget: { perMinuteAvg: 0, over: [], dense: [], loud: [] },
+    outro: null, edit: null, paths: {} };
+}
+
+// 結尾配樂的起播點：量 shared/sfx/<music>.wav 的長度（一次 ffprobe）
+function outroClipOf(res, P) {
+  if (!res.outro?.music) return null;
+  const f = path.join(P.sfx, `${res.outro.music}.wav`);
+  if (!fs.existsSync(f)) return null;
+  return outroClip(res.outro, probeDuration(f), res.outDur);
+}
+
 // 用 realpath 比對：從 symlink 路徑執行時（例如 shared/template 是連結）也要跑，不能靜默 exit 0
 const isMain = () => {
   try { return !!process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url)); } catch { return false; }
@@ -591,7 +749,7 @@ if (isMain()) {
   const wantJson = process.argv.includes('--json') && process.argv.includes('--check');
   cli().then((code) => { process.exitCode = code; }, (e) => {
     // --check --json：出錯也只印 JSON（剪輯台讀 stdout）
-    if (wantJson) console.log(JSON.stringify({ ok: false, errors: [e.message], warnings: [], videoDur: null, outputDur: null, voiceOnly: [], cutpoints: [], items: [], edit: null, paths: {} }, null, 2));
+    if (wantJson) console.log(JSON.stringify(errorJson(e.message), null, 2));
     else console.error(`✖ ${e.message}`);
     process.exitCode = 1;
   });

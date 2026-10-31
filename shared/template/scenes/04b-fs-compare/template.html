@@ -1,26 +1,29 @@
+<!-- 預設拍型：C 對比（BEATS.md §3 C；全畫面） -->
 <!-- @style -->
-/* 全畫面對照：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128；內容區 1176×580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
-   雙欄：內容區左右 56（寬 1064）；兩欄各 531（含中線 2 的兩半）、文字各距中線 40；欄頭 72／900 → 24 → 4px 主色線；項 44／500，方點 16 → 20 → 文字。
-   欄頭加圖示（選填，線條圖示不加底圓、主色）：56 → 間距 16 → 文字；欄內寬 531－40＝491，6 字 432＋72＝504 會超 → 欄頭 max 5（360＋72＝432）。
-   欄內垂直置中：欄頭 128＋3 項 × 66＋列距 56 × 3 ＝ 494 ≤ 580；中線 2px 隨較高的欄拉長。 */
+/* 全畫面對照：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128（左右內距 --sc-pad-card）；內容區 #wBody 1176×580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
+   排法（kit/scene-layout.js）：#wBody data-layout="col"，對照表 #fCmp 是唯一的 data-slot（寬＝內容區扣左右 --sc-pad-card＝1080），helper 上下左右置中。
+   兩欄在 #fCmp 裡用 flex 等寬並排、上緣對齊（欄頭同一條線；不用 cols-2：兩欄項數不同時它會把矮的那欄垂直置中，欄頭就錯開）。
+   每欄（539）文字離中線 --sc-gap-lg；欄頭 72／900 → --sc-gap-md → 4px 主色線；項 44／500，方點 16 → --sc-gap-md → 文字，列距 --sc-gap-lg。
+   欄頭加圖示（選填，線條圖示不加底圓、主色）：56 → --sc-gap-sm → 文字；欄內寬 539－48＝491，6 字 432＋72＝504 會超 → 欄頭 max 5（360＋72＝432）。
+   中線 2px 隨較高的欄拉長。 */
 #wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
-#wCard .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-#wBody { width: 1176px; height: 580px; display: flex; align-items: center; padding: 0 56px; }
-#fCmp { display: flex; align-items: stretch; width: 1064px; }
-.fCol { width: 531px; display: flex; flex-direction: column; gap: 56px; }
-.fCol:first-child { padding-right: 40px; }
-.fCol:last-child { padding-left: 40px; }
-.fHead { width: max-content; padding-bottom: 24px; border-bottom: 4px solid var(--sc-accent); white-space: nowrap; }
-.fHead--icon { display: flex; align-items: center; gap: 16px; }
+#wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+#wBody { width: 1176px; height: 580px; }
+#fCmp { display: flex; align-items: stretch; width: calc(100% - 2 * var(--sc-pad-card)); }
+.fCol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--sc-gap-lg); }
+.fCol:first-child { padding-right: var(--sc-gap-lg); }
+.fCol:last-child { padding-left: var(--sc-gap-lg); }
+.fHead { width: max-content; padding-bottom: var(--sc-gap-md); border-bottom: 4px solid var(--sc-accent); white-space: nowrap; }
+.fHead--icon { display: flex; align-items: center; gap: var(--sc-gap-sm); }
 .fHIcon { flex: none; display: block; width: 56px; height: 56px; color: var(--sc-accent); }
 .fHIcon svg { display: block; width: 56px; height: 56px; }
-.fItem { display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+.fItem { display: flex; align-items: center; gap: var(--sc-gap-md); white-space: nowrap; }
 .fLine { flex: none; width: 2px; background: var(--sc-fs-line); opacity: 0.4; }
 <!-- @body -->
 <div id="wCard" class="sc-wcard">
   <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>
-  <div id="wBody">
-    <div id="fCmp">
+  <div id="wBody" data-layout="col">
+    <div id="fCmp" data-slot>
       <div id="fColL" class="fCol">
         {{#leftIcon}}<div class="fHead fHead--icon"><span class="fHIcon">{{{leftIcon}}}</span><span class="sc-t72 sc-w900 sc-optr">{{{leftHead}}}</span></div>{{/leftIcon}}{{^leftIcon}}<div class="fHead sc-t72 sc-w900">{{{leftHead}}}</div>{{/leftIcon}}
         {{#left}}
@@ -38,8 +41,15 @@
   </div>
 </div>
 <!-- @timeline -->
-/* 左欄整欄 → 右欄整欄（各綁句號）P.rise；全畫面幕不在 HF 內淡出（離場由剪映端整段渐隐） */
-P.rise('#fColL', {{{leftAt}}});
-P.rise('#fColR', {{{rightAt}}});
-{{#leftIcon}}P.icon('#fColL .fHIcon', {{{leftAt}}} + P.BEAT);{{/leftIcon}}
-{{#rightIcon}}P.icon('#fColR .fHIcon', {{{rightAt}}} + P.BEAT);{{/rightIcon}}
+/* v2（shared/template/BEATS.md §2 的動作）：leftAt：左欄由左擦開＋滑入、0.15 圖示描線 → rightAt：左欄退焦 0.6、右欄彈出（過衝）、0.12 右欄標題逐字彈出、0.15 圖示描線。主卡進場看 P.prev()（換卡不換景／長出），離場由 build 負責 */
+// 開場：前一段也是全畫面＝換卡不換景（由下擦開＋上浮 60u）；前一段是講者或其他畫面＝主卡從子母畫面長出（P.prev() 由 build 給，不用改）
+if (P.prev() === 'fullscreen') { P.wipe('#wCard', 0, { dir: 'up', dur: 0.8 }); P.pop('#wCard', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+else P.grow('#wCard', 0.3);
+P.chars('#wCard .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+P.wipe('#fColL', {{{leftAt}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#fColL', {{{leftAt}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+{{#leftIcon}}P.icon('#fColL .fHIcon', {{{leftAt}}} + 0.15);{{/leftIcon}}
+P.dim('#fColL', {{{rightAt}}}, { to: 0.6 });
+P.pop('#fColR', {{{rightAt}}}, { from: 0.9, dy: 28 });
+P.chars('#fColR .fHead .sc-t72, #fColR .fHead.sc-t72', {{{rightAt}}} + 0.12, { mode: 'pop' });
+{{#rightIcon}}P.icon('#fColR .fHIcon', {{{rightAt}}} + 0.15);{{/rightIcon}}

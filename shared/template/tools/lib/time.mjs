@@ -3,14 +3,19 @@
 //   #N        cue N 起點                 from／to／at／beats
 //   #Ne       cue N 結尾                 同上
 //   #N+0.3    cue N 起點再加 0.3 秒（也可 #Ne-0.2）
-//   #N@詞     cue N 裡「詞」開頭的位置：起點 + 詞前面的字數 ÷ 全句字數 × 句長（全形 1、半形 0.5，同 visibleLen）
+//   #N@詞     cue N 裡「詞」開頭的位置：有詞級逐字稿（cues.words，build 讀 work/transcript.json）時用那個詞的真實起點；
+//             沒有、或那句附近找不到這個詞 → 起點 + 詞前面的字數 ÷ 全句字數 × 句長（全形 1、半形 0.5，同 visibleLen），並記在 cues.approx
 //   #Ne@詞    同一個詞「結尾」的位置（to 用：卡片講完這個詞就收）
 //   #N@詞+0.2 詞的位置再加 0.2 秒（也可 #N@詞-0.2；詞本身有 +／- 時先整串當詞找，找不到才拆出秒數）
 //   12.5      絕對秒數                   只能用在 from／to
 //   +1.2      本段起點後 1.2 秒          只能用在 at／beats
 //
 //   parseTime(v)              → { kind:'cue', n, end, off, kw?, kwFull? } | { kind:'abs', sec } | { kind:'rel', off } | { error }
-//   cueSeconds(t, cues)       → { sec } | { error }（kind 必須是 cue；有 kw 時用 cue.text 找詞，找不到回 error 並附原文）
+//   cueSeconds(t, cues)       → { sec, word?, approx? } | { error }（kind 必須是 cue；有 kw 時用 cue.text 找詞，找不到回 error 並附原文；
+//                              approx＝退回字數比例的原因）
+//   wordTime(words, cue, kw, { end, guess })  → 秒數 | null（詞級逐字稿裡、這句前後 1.5 秒內，kw 第一個字的起點／最後一個字的結尾；去掉空白標點、不分大小寫逐字連續比對；
+//                              整個詞找不到時找詞裡最長的一段（≥ 2 字）再推回詞頭；有幾個符合取最接近 guess 的）
+//   normText(s)               → 去掉空白、標點、符號，轉小寫（NFKC）
 //   findKw(text, kw)          → { i, len } | null（字元位置；先精確、再不分大小寫、再忽略空白）
 //   textWidth(s)              → 字數（全形 1、半形 0.5，不四捨五入）
 //   r3(x)                     → 四捨五入到毫秒
@@ -62,6 +67,47 @@ export function findKw(text, kw) {
   return j >= 0 ? { i: keep[j], len: keep[j + fk.length - 1] - keep[j] + 1 } : null;
 }
 
+// ---------- 詞級逐字稿（work/transcript.json：[{ text, start, end }]，rough.mp4 秒數）----------
+// cues.words＝詞陣列（和 cues 同一個時間基準）；cues.wordsWhy＝沒有掛上去的原因；cues.approx＝Set，退回字數比例的 #N@詞
+export const normText = (s) => String(s ?? '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+const charCache = new WeakMap();
+function wordChars(words) {
+  let out = charCache.get(words);
+  if (out) return out;
+  out = [];
+  for (const w of words) {
+    const chs = [...normText(w.text)];
+    const d = (w.end - w.start) / Math.max(1, chs.length);
+    chs.forEach((ch, i) => out.push({ ch, s: w.start + d * i, e: w.start + d * (i + 1) }));
+  }
+  charCache.set(words, out);
+  return out;
+}
+export function wordTime(words, c, kw, { end = false, guess = null, pad = 1.5 } = {}) {
+  const k = [...normText(kw)];
+  if (!k.length || !Array.isArray(words) || !words.length || !c) return null;
+  const win = wordChars(words).filter((x) => x.s >= c.start - pad && x.s <= c.end + pad);
+  if (!win.length) return null;
+  const durs = win.map((x) => x.e - x.s).sort((a, b) => a - b);
+  const per = durs[Math.floor(durs.length / 2)] || 0.2;   // 一個字大約幾秒（這段的中位數）
+  // 先找整個詞；找不到再找詞裡最長的一段（≥ 2 字，逐字稿聽成別的字時），起點往前推「前面少的字數 × 每字秒數」
+  for (let len = k.length; len >= Math.min(2, k.length); len--) {
+    let best = null;
+    for (let o = 0; o + len <= k.length; o++) {
+      for (let i = 0; i + len <= win.length; i++) {
+        let ok = true;
+        for (let j = 0; j < len && ok; j++) ok = win[i + j].ch === k[o + j];
+        if (!ok) continue;
+        const t = end ? win[i + len - 1].e + (k.length - o - len) * per : win[i].s - o * per;
+        const d = guess == null ? 0 : Math.abs(t - guess);
+        if (!best || d < best.d - 1e-9) best = { t, d };
+      }
+    }
+    if (best) return r3(Math.max(0, best.t));
+  }
+  return null;
+}
+
 export function cueSeconds(t, cues) {
   const c = cueByN(cues, t.n);
   if (!c) {
@@ -74,7 +120,14 @@ export function cueSeconds(t, cues) {
     if (!hit) return { error: `#${t.n} 找不到詞「${t.kwFull}」→ 第 ${t.n} 句原文是「${c.text}」；詞要跟字幕寫法一致（或改用 #${t.n} 不指定詞）` };
     const total = textWidth(c.text);
     const at = textWidth(c.text.slice(0, hit.i + (t.end ? hit.len : 0)));
-    return { sec: r3(c.start + (total > 0 ? at / total : 0) * (c.end - c.start) + off), word };
+    const prop = c.start + (total > 0 ? at / total : 0) * (c.end - c.start);
+    let sec = prop, approx = null;
+    if (cues.words?.length) {
+      const real = wordTime(cues.words, c, word, { end: t.end, guess: prop });
+      if (real != null) sec = real; else approx = '詞級逐字稿在這句附近找不到這個詞';
+    } else if (cues.wordsWhy) approx = cues.wordsWhy;
+    if (approx && cues.approx) cues.approx.add(`#${t.n}${t.end ? 'e' : ''}@${word}`);
+    return { sec: r3(sec + off), word, ...(approx ? { approx } : {}) };
   }
   return { sec: r3((t.end ? c.end : c.start) + t.off) };
 }

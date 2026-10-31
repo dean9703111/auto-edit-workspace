@@ -1,0 +1,28 @@
+/* 共用示意插圖元件樣式與顏色 token，搭配 illus.js。尺寸由外層元素的 width/height 決定。
+   顏色：illus.js 產生的 fill／stroke 屬性只寫 var(--il-*)；這裡把 --il-* 接到 scene.css／theme.css／brand.css 既有的 token，
+   接不上的（暗色的內層、次要線、tone b 衣服）在這裡自己給值。亮色＝:root（預設）；暗色＝:root[data-theme="dark"]（和 scene.css 的 --v2-* 同一個開關）。
+   亮色主題元件本體仍是深色（深色實心＋白描邊，疊在淺底或實拍上都看得到）；暗色主題換成石墨色系。
+   主色（--il-accent）、紅、綠兩個主題相同：跟著 --brand、--sc-warn、--sc-good 走，換主色（brand.mjs）會跟著換。 */
+.il{position:relative}
+.il>svg{display:block;width:100%;height:100%;overflow:visible}
+.il>svg text{font-family:var(--font-cjk, "PingFang TC", "Source Han Sans TC", sans-serif);font-weight:700}
+
+:root{
+  --il-body:        var(--sc-card-solid, #0B1020);              /* 主體 */
+  --il-inner:       var(--sc-plate, #1E2740);                    /* 內層、螢幕（暗色的 --sc-plate 混了主色，暗色改用下面的值） */
+  --il-line:        var(--sc-ink, #FFFFFF);                      /* 描邊、白字 */
+  --il-sub:         var(--sc-mute, rgba(255, 255, 255, 0.78));   /* 次要線、次要字 */
+  --il-accent:      var(--brand, #FFD400);                       /* 重點（原黃）：播放、箭頭、說話弧、進度、已儲存、錐形 */
+  --il-on-accent:   var(--brand-ink, #0B1020);                   /* 主色底上的符號：播放三角、警示驚嘆號 */
+  --il-accent-soft: color-mix(in srgb, var(--il-accent) 16%, transparent);   /* cone fill=true 的淡填色 */
+  --il-warn:        var(--sc-warn, #E0202A);                     /* 紅：錄影點、警示、叉 */
+  --il-good:        var(--sc-good, #2FB36B);                     /* 綠：打勾、電量 */
+  --il-alt:         #2A2140;                                     /* personBust tone b 的衣服 */
+}
+:root[data-theme="dark"]{
+  --il-body:        var(--sc-card-solid, #121418);
+  --il-inner:       #262A33;
+  --il-line:        var(--v2-ink, #F3EFEA);
+  --il-sub:         rgba(243, 239, 234, 0.78);
+  --il-alt:         #2C2536;
+}

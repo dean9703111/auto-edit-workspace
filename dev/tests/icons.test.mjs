@@ -87,3 +87,22 @@ test('scene-motion.js 有 P.stroke／P.icon／P.check 與常數', () => {
   for (const k of ['stroke: function', 'icon: function', 'check: function', 'STROKE: STROKE', 'CHECK_LAG: CHECK_LAG']) assert.ok(src.includes(k), k);
   assert.match(src, /strokeDasharray: 'none'/, '描完要把虛線設回 none（閉環）');
 });
+
+// 第二層範例（custom/x-*.html）貼的圖示：svg 原文（拿掉 class／width／height）都能在 kit/icons.json 找到（spec 003 FR-073）
+test('custom 範例的 .sc-icon 都是 icons.json 的原文（x-checklist、x-scene 系列刻意沒有圖示）', () => {
+  // x-checklist：勾就是圖示；x-scene 系列：主角是 kit/illus.js 的插圖元件。examples.test 也檢查它們檔頭寫「這支沒有圖示」
+  const NOICON = new Set(['x-checklist.html', 'x-scene.html', 'x-scene-example-rec.html', 'x-scene-example-outline.html']);
+  const dir = path.join(TEMPLATE, 'custom');
+  const raw = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'icons.json'), 'utf8'));
+  const norm = (s) => s.replace(/\s+/g, '').replace(/class="[^"]*"/g, '').replace(/(width|height)="[^"]*"/g, '');
+  const byNorm = new Map(Object.entries(raw).map(([k, v]) => [norm(v), k]));
+  const files = fs.readdirSync(dir).filter((f) => /^x-.*\.html$/.test(f));
+  assert.ok(files.length >= 9, `custom/ 只有 ${files.length} 支`);
+  for (const f of files) {
+    const tpl = fs.readFileSync(path.join(dir, f), 'utf8').match(/<template[^>]*>([\s\S]*)<\/template>/)[1];
+    const svgs = [...tpl.matchAll(/<span id="([^"]+)" class="[^"]*\bsc-icon\b[^"]*"[^>]*>(<svg[\s\S]*?<\/svg>)<\/span>/g)];
+    if (NOICON.has(f)) { assert.equal(svgs.length, 0, `${f} 刻意不放圖示`); continue; }
+    assert.ok(svgs.length >= 1, `${f} 沒有圖示`);
+    for (const [, id, svg] of svgs) assert.ok(byNorm.has(norm(svg)), `${f} #${id} 的 svg 不是 icons.json 的原文（到 kit/icons.json 找名稱，原文貼上）`);
+  }
+});

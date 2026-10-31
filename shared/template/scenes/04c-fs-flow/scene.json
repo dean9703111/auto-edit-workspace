@@ -4,6 +4,7 @@
   "zh": "全畫面流程",
   "aliases": ["流程", "架構圖", "步驟流程"],
   "family": "fullscreen",
+  "portrait": "stage",
   "when": "3–4 步的流程或架構，每一步有名稱和圖示，由左到右走一遍",
   "avoid": "步驟超過四個（拆兩段）、步驟內要寫整句說明（改全畫面清單）",
   "layout": { "data-layout": "全畫面", "data-pip": "br" },

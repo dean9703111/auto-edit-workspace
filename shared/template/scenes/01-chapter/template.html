@@ -1,8 +1,10 @@
+<!-- 預設拍型：章節轉場（章號重拍＋章名逐字），不寫動畫分鏡 -->
 <!-- @style -->
 /* 章節轉場：全畫面不透明幕 2.5s，背景＋章節號卡第一幀就在，HF 不淡出。
    整組（號卡 280 ＋ 間距 48 ＋ 標題欄）以 margin:auto 水平置中、頂 400（course：垂直置中於 y 540）／450（yt：品牌橫幅在場，置中於可用區 y 100–1080 的中心 590）；
-   標題欄 = 主標板 160 ＋ 間距 20 ＋ 副標帶 100（向右錯開 40）。寬度由 scene-motion 補成偶數，左緣是整數 px。 */
-#chGroup { position: absolute; left: 0; right: 0; top: {{#yt}}{{#icon}}560{{/icon}}{{^icon}}450{{/icon}}{{/yt}}{{^yt}}{{#icon}}510{{/icon}}{{^icon}}400{{/icon}}{{/yt}}px; margin: 0 auto; display: flex; align-items: flex-start; gap: 48px; width: max-content; }
+   標題欄 = 主標板 160 ＋ 間距 20 ＋ 副標帶 100（向右錯開 40）＝ 號卡高 280（間距 20 是這樣推出來的，不換 token）；號卡到標題欄 --sc-gap-lg。
+   排法 free：號卡＋標題欄是一組手排的章節卡（data-snap-width 補偶數寬、margin auto 置中），不用 helper 排。寬度由 scene-motion 補成偶數，左緣是整數 px。 */
+#chGroup { position: absolute; left: 0; right: 0; top: {{#yt}}{{#icon}}560{{/icon}}{{^icon}}450{{/icon}}{{/yt}}{{^yt}}{{#icon}}510{{/icon}}{{^icon}}400{{/icon}}{{/yt}}px; margin: 0 auto; display: flex; align-items: flex-start; gap: var(--sc-gap-lg); width: max-content; }
 #chCol { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
 #chSub { margin-left: 40px; }
 {{#icon}}
@@ -12,7 +14,7 @@
 #chIcon svg { display: block; width: 180px; height: 180px; }
 {{/icon}}
 <!-- @body -->
-<div id="chGroup" data-snap-width>
+<div id="chGroup" data-layout="free" data-snap-width>
   {{#icon}}<span id="chIcon" class="sc-icon-line">{{{icon}}}</span>{{/icon}}
   <div id="chNum" class="sc-chapnum">
     <span class="sc-chapnum__label">CHAPTER</span>
@@ -25,9 +27,10 @@
   </div>
 </div>
 <!-- @timeline -->
-/* 背景＋號卡第一幀就在（剪映整幕淡入負責）；標題板、副標帶各淡入 0.5，板內的字同時間 maskUp（字從板內下緣浮出，板外框不動）；HF 不淡出 */
-P.in('#chTitle', {{{titleAt}}});
-P.maskUp('#chTitle .sc-opt', {{{titleAt}}});
-{{#icon}}P.icon('#chIcon', {{{titleAt}}} + P.BEAT, { dur: 0.9 });{{/icon}}
-{{#sub}}P.in('#chSub', {{{subAt}}});
-P.maskUp('#chSub .sc-opt', {{{subAt}}});{{/sub}}
+/* v2（shared/template/BEATS.md §2 的動作）：背景第一幀就在（build 整幕淡入）；章號 0.1 起重拍進場（1.3 → 1、back.out(2)）→ 標題板由左擦開、0.15 後章名逐字上浮 → 圖示描線 → 副標同樣擦開＋逐字；HF 不淡出 */
+P.pop('#chNum', 0.1, { from: 1.3, dy: 0, ease: 'back.out(2)' });
+P.wipe('#chTitle', {{{titleAt}}}, { dir: 'left', dur: P.V2.SHELL });
+P.chars('#chTitle .sc-opt', {{{titleAt}}} + 0.15);
+{{#icon}}P.icon('#chIcon', {{{titleAt}}} + 0.15, { dur: 0.9 });{{/icon}}
+{{#sub}}P.wipe('#chSub', {{{subAt}}}, { dir: 'left', dur: P.V2.SHELL });
+P.chars('#chSub .sc-opt', {{{subAt}}} + 0.15);{{/sub}}

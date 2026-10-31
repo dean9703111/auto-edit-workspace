@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-trend 成長下降趨勢｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-trend.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-trend { position: absolute; inset: 0; }
+    #x-trend .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-trend #xtr-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-trend #xtr-card .sc-wcard__bar { height: 128px; padding: 20px 56px; display: flex; align-items: center; gap: 24px; }
+    /* 標題列底是主色：圖示圓反過來用標題字色當底 */
+    #x-trend #xtr-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--sc-fs-bar); }
+    #x-trend #xtr-body { position: relative; width: 1176px; height: 580px; }
+    /* 圖表區：1064×496 一個元件，位置由 #xtr-body 的 data-layout 排（kit/scene-layout.js），不寫 left／top；裡面的座標＝圖表區座標 */
+    #x-trend #xtr-chart { position: absolute; width: 1064px; height: 496px; }
+    /* 基線與趨勢線：整個圖表區大小的 svg（趨勢線那張疊在柱子上面） */
+    #x-trend .xtr-svg { position: absolute; left: 0; top: 0; width: 1064px; height: 496px; }
+    #x-trend #xtr-axis { stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; }
+    #x-trend #xtr-line { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 柱：script 依 DATA 產生在 #xtr-plot 裡。.xtr-col 寬＝柱高、高 112，left＝柱中心、top＝424 − 56，以左緣中點（＝柱底中點）轉 −90 度；
+       裡面的 .xtr-fill 用 P.bar 由左往右長＝畫面上由柱底往上長（柱頂的圓角在轉正前的右邊） */
+    #x-trend #xtr-plot { position: absolute; left: 0; top: 0; width: 1064px; height: 496px; }
+    #x-trend .xtr-col { position: absolute; top: 368px; height: 112px; transform-origin: 0 50%; transform: rotate(-90deg); }
+    #x-trend .xtr-fill { position: absolute; inset: 0; border-radius: 0 8px 8px 0; background: var(--sc-fs-node-line); }
+    #x-trend #xtr-hl { position: absolute; inset: 0; border-radius: 0 8px 8px 0; background: var(--brand); }
+    #x-trend .xtr-lab { position: absolute; top: 440px; width: 160px; text-align: center; white-space: nowrap; }
+    /* 趨勢線端點：24×24 小圓（left／top 由程式算） */
+    #x-trend #xtr-end { position: absolute; width: 24px; height: 24px; box-sizing: border-box; border: 4px solid var(--brand); border-radius: 12px; background: var(--sc-fs-card); }
+    /* 提示框：高 112，寬與 left／top 由程式算（數字寬照最後的值的位數，單位每字 40） */
+    #x-trend #xtr-tip { position: absolute; height: 112px; box-sizing: border-box; padding: 0 28px; border: 4px solid var(--brand); border-radius: 16px;
+                        background: var(--sc-fs-card); color: var(--sc-fs-ink); display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+    #x-trend #xtr-num { text-align: right; }
+    /* 結論膠囊：標題列右端（不壓到圖表；標題列的主色底上用深色膠囊） */
+    #x-trend #xtr-pill { margin-left: auto; }
+  </style>
+  <div id="x-trend" data-composition-id="x-trend" data-width="1920" data-height="1080" data-duration="13.5"
+       data-cues-sample='{"start":0,"D":13.5,"cues":{"151":[1.6,5.8],"152":[5.9,8.5],"153":[8.6,13]},"refs":{"#151@200":1.8,"#152@兩萬":6.2,"#153@翻":8.8}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xtr-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span id="xtr-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><span class="sc-opt">訂閱人數</span><div id="xtr-pill" class="sc-pill" data-snap-width><span class="sc-opt">一年翻 100 倍</span></div></div>
+      <div id="xtr-body" data-layout="col">
+        <div id="xtr-chart" data-slot>
+          <svg id="xtr-axis-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg"><line id="xtr-axis" x1="0" y1="424" x2="1064" y2="424" /></svg>
+          <div id="xtr-plot"></div>
+          <svg id="xtr-line-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg">
+            <polyline id="xtr-line" points="0,0 0,0" />
+          </svg>
+          <i id="xtr-end"></i>
+          <div id="xtr-tip"><span id="xtr-num" class="sc-t52 sc-w900">0</span><span id="xtr-unit" class="sc-t40 sc-w700 sc-opt">人</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-trend'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#151@200'), T2 = P.at('#152@兩萬');   // 講到第一個值／最後的值的時刻
+    P.sfx('impact', '#152@兩萬');                         // 最後的值落定一顆音效（句號和上一行一樣；第一個值那一拍不配）
+    const T3 = P.at('#153@翻');                           // 選用：講到結論的時刻（沒有結論句的刪法見檔頭【綁句欄位】）
+    P.sfx('impact', '#153@翻');                           // 選用：結論膠囊一顆音效（句號和上一行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const DATA = [ ['1 月', 200], ['3 月', 900], ['6 月', 2000], ['9 月', 8000], ['12 月', 20000] ];   // 只改這一行：[時間標籤, 數字]，3–6 組
+
+    // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，不量版面，每次載入結果相同；圖表區本身的位置由 data-layout 排）──
+    // 柱：寬 112、最高 280、最矮 16，底貼基線 y 424；第一根 left 40 起、最後一根 left 912 止，等距（除不盡的餘數兩邊平分）
+    var n = DATA.length, step = Math.floor(872 / (n - 1)), x0 = 40 + Math.floor((872 - step * (n - 1)) / 2);
+    var vmax = Math.max.apply(null, DATA.map(function (d) { return d[1]; }));
+    var cx = [], top = [];
+    var plot = document.getElementById('xtr-plot');
+    DATA.forEach(function (d, i) {
+      var left = x0 + i * step, h = Math.max(16, Math.round(d[1] / vmax * 280));
+      cx.push(left + 56); top.push(424 - h);
+      var col = document.createElement('div');                       // 柱＝轉了 −90 度的量條：寬＝柱高，left＝柱中心
+      col.id = 'xtr-c' + i; col.className = 'xtr-col'; col.style.left = (left + 56) + 'px'; col.style.width = h + 'px';
+      var fl = document.createElement('div'); fl.id = 'xtr-f' + i; fl.className = 'xtr-fill'; col.appendChild(fl);
+      if (i === n - 1) { var hl = document.createElement('i'); hl.id = 'xtr-hl'; fl.appendChild(hl); }   // 最後一根的主色層
+      var lab = document.createElement('div');
+      lab.id = 'xtr-l' + i; lab.className = 'xtr-lab sc-t40 sc-w700 sc-gray'; lab.style.left = (left + 56 - 80) + 'px'; lab.textContent = d[0];
+      plot.appendChild(col); plot.appendChild(lab);
+    });
+    // 趨勢線：每根柱頂中點往上 12；端點小圓在最後一點
+    document.getElementById('xtr-line').setAttribute('points', cx.map(function (x, i) { return x + ',' + (top[i] - 12); }).join(' '));
+    var end = document.getElementById('xtr-end');
+    end.style.left = (cx[n - 1] - 12) + 'px'; end.style.top = (top[n - 1] - 24) + 'px';
+    // 提示框：數字寬＝位數 × 32＋逗號 × 19（52 px 字、等寬數字），單位每字 40；右緣 ≤ 1064（圖表區右緣），盡量置中在最後一根上方
+    var last = DATA[n - 1][1], txt = String(last).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    var numW = txt.replace(/,/g, '').length * 32 + (txt.length - txt.replace(/,/g, '').length) * 19;
+    var unitW = Array.from(document.getElementById('xtr-unit').textContent.trim()).length * 40;
+    var tipW = 8 + 56 + numW + 8 + unitW, tipL = Math.min(cx[n - 1] - Math.round(tipW / 2), 1064 - tipW);
+    // 高過它蓋到的柱子（含左邊一根，趨勢線從那裡斜上來）32 px
+    var minTop = Math.min.apply(null, top.filter(function (t, i) { return cx[i] >= tipL - step; }));
+    var tip = document.getElementById('xtr-tip');
+    tip.style.width = tipW + 'px'; tip.style.left = tipL + 'px'; tip.style.top = Math.max(0, minTop - 32 - 112) + 'px';
+    document.getElementById('xtr-num').style.width = numW + 'px';
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮、標題圖示描線
+    if (ENTER === 'grow') P.grow('#xtr-card', 0.3);
+    else { P.wipe('#xtr-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xtr-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xtr-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.icon('#xtr-bico', 0.65);
+
+    // 拍 1 講到第一個值：基線描出、時間標籤一起落下 → ＋0.2 起柱子由左到右每 0.3 秒長一根（量條 0.5 秒；柱數不到 6 根時多的那幾行不會動到東西，不用刪）
+    P.stroke('#xtr-axis', T1, { dur: 0.6 });
+    P.chars('.xtr-lab', T1 + 0.1, { mode: 'drop' });
+    P.bar('#xtr-f0', T1 + 0.2, { dur: 0.5, ease: P.V2.EASE.in });
+    P.bar('#xtr-f1', T1 + 0.5, { dur: 0.5, ease: P.V2.EASE.in });
+    P.bar('#xtr-f2', T1 + 0.8, { dur: 0.5, ease: P.V2.EASE.in });
+    P.bar('#xtr-f3', T1 + 1.1, { dur: 0.5, ease: P.V2.EASE.in });
+    P.bar('#xtr-f4', T1 + 1.4, { dur: 0.5, ease: P.V2.EASE.in });
+    P.bar('#xtr-f5', T1 + 1.7, { dur: 0.5, ease: P.V2.EASE.in });
+
+    // 拍 2 最後的值前 1.2 秒：提示框彈出開始數（同時趨勢線帶著發光頭沿柱頂描過去）→ ＋0.15 單位逐字落下 → 到點前 0.2 秒端點小圓彈出
+    P.pop('#xtr-tip', T2 - 1.2);
+    P.count('#xtr-num', T2 - 1.2, { from: 0, to: last, dur: 1.2, comma: true });
+    P.chars('#xtr-unit', T2 - 1.05, { mode: 'drop' });
+    P.comet('#xtr-line', T2 - 1.2, { dur: 1.0 });
+    P.pop('#xtr-end', T2 - 0.2, { from: 0.3, dy: 0, dur: 0.4 });
+    // 拍 3 講到最後的值、數字落定：重拍、端點漣漪、單位畫螢光筆、最後一根換主色（音效 impact 見上面 P.sfx）→ ＋0.6 提示框漂浮
+    P.punch('#xtr-num', T2, { scale: 1.12 });
+    P.ripple('#xtr-end', T2);
+    P.in('#xtr-hl', T2);
+    P.marker('#xtr-unit', T2 + 0.1);
+    P.idle('#xtr-tip', T2 + 0.6, { y: 3, period: 3.2, until: T3 - 0.1 });
+
+    // 拍 4（選用）講到結論：膠囊彈出、字逐字落下，提示框退焦 → ＋0.6 膠囊聚焦 → ＋1.1 漂浮
+    P.pop('#xtr-pill', T3);
+    P.chars('#xtr-pill .sc-opt', T3 + 0.12, { mode: 'drop' });
+    P.dim('#xtr-tip', T3, { to: 0.6 });
+    P.spot('#xtr-pill', '#xtr-pill', T3 + 0.6, { scale: 1.06, lift: -8 });
+    P.idle('#xtr-pill', T3 + 1.1, { y: 3, period: 3.2 });
+
+    // 收：講完 2 秒回均衡（膠囊亮框收掉、提示框亮回），主數字呼吸；完成態停到段尾
+    const TR = T3 + 2.0;
+    P.spot('#xtr-pill', null, TR, { dur: 0.6 });
+    P.dim('#xtr-tip', TR, { to: 1 });
+    P.idle('#xtr-num', TR, { y: 0, scale: 0.04, period: 1.8 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-trend'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-trend";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

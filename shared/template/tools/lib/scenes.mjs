@@ -17,10 +17,12 @@ import { parseTime, cueSeconds, r3 } from './time.mjs';
 
 // ---------- 載入 ----------
 
+// template.html 的四節：@style、@style-portrait（直式時接在 @style 後面，009 FR-050；橫式不讀）、@body、@timeline
 function splitTemplate(text) {
-  const out = { style: '', body: '', timeline: '' };
-  const parts = text.split(/<!--\s*@(style|body|timeline)\s*-->/);
-  for (let i = 1; i < parts.length; i += 2) out[parts[i]] = parts[i + 1].replace(/^\r?\n/, '').replace(/\s+$/, '') + '\n';
+  const out = { style: '', stylePortrait: '', body: '', timeline: '' };
+  const key = { 'style-portrait': 'stylePortrait' };
+  const parts = text.split(/<!--\s*@(style-portrait|style|body|timeline)\s*-->/);
+  for (let i = 1; i < parts.length; i += 2) out[key[parts[i]] || parts[i]] = parts[i + 1].replace(/^\r?\n/, '').replace(/\s+$/, '') + '\n';
   return out;
 }
 
@@ -87,7 +89,7 @@ export function loadFx(templateDir) {
       const m = readFileSync(file, 'utf8').match(/data-composition-variables='([\s\S]*?)'/);
       if (m) { try { vars = JSON.parse(m[1]); } catch { vars = []; } }
     }
-    return { no: Number(e.id), id: e.id, slug: e.slug, file, fileName: path.basename(e.file), zh: e.zh, en: e.en, category: e.category, when: e.when, bg: e.bg, tag: e.tag, sfx: e.sfx ?? null, vars };
+    return { no: Number(e.id), id: e.id, slug: e.slug, file, fileName: path.basename(e.file), zh: e.zh, en: e.en, category: e.category, when: e.when, bg: e.bg, tag: e.tag, sfx: e.sfx ?? null, portrait: e.portrait ?? 'ok', vars };
   });
 }
 
@@ -363,7 +365,7 @@ export function resolveScene(opts) {
     let last = 0;
     for (const [nm, t] of all) {
       if (t < -1e-6) err(`${nm}：在本段起點前 ${r3(-t)}s → 時間點要在本段範圍內（from 之後）`);
-      if (t > limit + 1e-6) err(`${nm}：在本段第 ${t}s，晚於 D−0.4−0.6 = ${limit}s（段長 ${D}s，完成態至少要停 0.6s）→ 把 to 往後延到至少第 ${r3(t + P.OUT + 0.6)}s，或把這個時間點提早`);
+      if (t > limit + 1e-6) err(`${nm}：在本段第 ${t}s，晚於 D−${P.OUT}−0.6 = ${limit}s（段長 ${D}s，完成態至少要停 0.6s）→ 把 to 往後延到至少第 ${r3(t + P.OUT + 0.6)}s，或把這個時間點提早`);
       last = Math.max(last, t);
     }
     if (all.length && D - P.OUT - last < P.HOLD_END - 1e-6) warn(`最後一個內容在第 ${last}s，到退場只停 ${r3(D - P.OUT - last)}s，建議 ≥ ${P.HOLD_END}s（把 to 往後延）`);

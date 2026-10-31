@@ -4,6 +4,7 @@
   "zh": "關鍵詞條列",
   "aliases": ["關鍵詞", "條列", "關鍵字"],
   "family": "edge",
+  "portrait": "move",
   "when": "口播連續點名 2–3 個短關鍵詞，依序在左側直排出現",
   "avoid": "四個以上關鍵詞（拆兩段）、每條還要附說明（改標題條列或全畫面清單）",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-vbal-ignore": "" },

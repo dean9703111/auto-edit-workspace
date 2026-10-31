@@ -3,10 +3,13 @@
 //   sanitizeEdit(edit, { videoDur })                  → { edit, errors }
 //   sanitizeSegments(segments, plan, ctx)             → { updates: [[id, set, del]], memory, errors }
 //   applySave(planText, body, ctx)                     → { text, srtText, plan, edit, cues, memory, errors }（要寫的新內容；null＝不用寫）
+//   sanitizeLook(v)                                    → { look, errors }（第一層 look：講者調光與瘦臉；null＝恢復預設）
+//   sanitizeTheme(v)                                   → { theme, errors }（第一層 theme："light"｜"dark"；null＝拿掉＝亮色；specs/010-motion-v2/design-system.md §10）
 //   parseSrtBlocks(text) / writeSrt(srtText, cues)     → rough.srt 讀寫（保留 CRLF／LF、BOM；沒改的句子原封不動）
 //   字幕增刪與句號重新對應的規則在 ../subtitles.mjs（頁面也用同一份）
 import { replay, parseRef, refTime, RULES } from '../subtitles.mjs';
 import { visibleLen, richPlain, splitItem, parseAttrs, findSceneDef, findFxDef } from '../text.mjs';
+import { LOOK_LIMITS } from '../../lib/look.mjs';
 
 export { visibleLen, richPlain };
 
@@ -16,7 +19,8 @@ export const LIMITS = Object.freeze({
   editKeys: ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins'], volumeKeys: ['voice', 'sfx', 'media'],
   joinKeys: ['at', 'type', 'dur'], gainKeys: ['from', 'to', 'db'],
   segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'anchor'], segScene: ['slots'], segFx: ['vars'],
-  bodyKeys: ['base', 'edit', 'media', 'segments', 'srt'],
+  bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme'],
+  themes: ['light', 'dark'],
   srt: RULES,
 });
 
@@ -351,7 +355,37 @@ function scanJson(text, start) {
     return null;
   }
 }
-function surgicalText(planText, next, { edit, segIdx }) {
+// 第一層 look（contracts/look.md §7.1）：{ color, slim } 兩個都要有；null＝拿掉（回到 kit/look.json 預設）
+export function sanitizeLook(v) {
+  if (v === null) return { look: null, errors: [] };
+  if (!isObj(v)) return { look: undefined, errors: ['look 要是 { "color": 0–1, "slim": 0–1.2 } 或 null（恢復預設）'] };
+  const errors = [];
+  for (const k of Object.keys(v)) if (!['color', 'slim'].includes(k)) errors.push(`look 不能有「${k}」→ 只能寫 color、slim`);
+  const [c0, c1] = LOOK_LIMITS.color, [s0, s1] = LOOK_LIMITS.slim;
+  if (!isNum(v.color) || v.color < c0 || v.color > c1) errors.push(`look.color 要是 ${c0}–${c1} 的數字，現在是 ${JSON.stringify(v.color)}`);
+  if (!isNum(v.slim) || v.slim < s0 || v.slim > s1) errors.push(`look.slim 要是 ${s0}–${s1} 的數字，現在是 ${JSON.stringify(v.slim)}`);
+  return errors.length ? { look: undefined, errors } : { look: { color: r2(v.color), slim: r2(v.slim) }, errors };
+}
+// 第一層 theme（design-system §10）：亮／暗；不寫＝亮色
+export function sanitizeTheme(v) {
+  if (v === null) return { theme: null, errors: [] };
+  if (LIMITS.themes.includes(v)) return { theme: v, errors: [] };
+  return { theme: undefined, errors: [`theme 只能是 "light"（亮，預設）或 "dark"（暗），現在是 ${JSON.stringify(v)}`] };
+}
+// 第一層的 look／theme：null＝拿掉；原本有就原地換；沒有就插在 edit（沒有 edit 就 scenes）前面
+function withTop(plan, key, value) {
+  if (value === null) { const o = { ...plan }; delete o[key]; return o; }
+  if (key in plan) return { ...plan, [key]: value };
+  const out = {};
+  for (const [k, v] of Object.entries(plan)) {
+    if ((k === 'edit' || k === 'scenes') && !(key in out)) out[key] = value;
+    out[k] = v;
+  }
+  if (!(key in out)) out[key] = value;
+  return out;
+}
+
+function surgicalText(planText, next, { edit, segIdx, look, theme }) {
   const ind = detectIndent(planText);
   const nl = /\r\n/.test(planText) ? '\r\n' : '\n';
   const fix = (s) => s.replace(/\n/g, nl);
@@ -369,6 +403,31 @@ function surgicalText(planText, next, { edit, segIdx }) {
       else ops.push([top.close, top.close, `${nl}${ind}"edit": ${val}${nl}`]);
     }
   }
+  // 第一層的單一鍵（theme、look）：拿掉／原地換／插在 edit（或 scenes）前面。
+  // 同一個位置插好幾個時，後推的會排在前面：照 edit → theme → look 的順序推，文字順序才會和 withTop 的物件順序（look、theme、edit）一樣
+  const topKey = (key, value) => {
+    const k = top.entries.findIndex((x) => x.key === key);
+    if (value === null) {
+      if (k >= 0) {
+        // 吃掉前一個值後面的「,＋空白」到這個值的結尾：後面的換行與縮排留給下一個鍵（FR-043：只有這一段消失）
+        const e = top.entries[k], nx = top.entries[k + 1], pv = top.entries[k - 1];
+        if (pv) ops.push([pv.end, e.end, '']);
+        else if (nx) ops.push([e.keyStart, nx.keyStart, '']);
+        else ops.push([e.keyStart, e.end, '']);
+      }
+      return;
+    }
+    const val = inline(next[key]);
+    if (k >= 0) ops.push([top.entries[k].start, top.entries[k].end, val]);
+    else {
+      const at = top.entries.find((x) => x.key === 'edit') || top.entries.find((x) => x.key === 'scenes');
+      if (at) ops.push([at.keyStart, at.keyStart, `"${key}": ${val},${nl}${ind}`]);
+      else if (top.entries.length) { const last = top.entries[top.entries.length - 1]; ops.push([last.end, last.end, `,${nl}${ind}"${key}": ${val}`]); }
+      else ops.push([top.close, top.close, `${nl}${ind}"${key}": ${val}${nl}`]);
+    }
+  };
+  if (theme !== undefined) topKey('theme', theme);
+  if (look !== undefined) topKey('look', look);
   if (segIdx.length) {
     const sc = top.entries.find((x) => x.key === 'scenes');
     const arr = sc && scanJson(planText, sc.start);
@@ -442,8 +501,25 @@ export function applySave(planText, body, ctx = {}) {
   }
   const s = sanitizeSegments(segments, planR, { ...ctx, cues });
   errors.push(...s.errors);
+  let look;
+  if (body.look !== undefined) {
+    const r = sanitizeLook(body.look);
+    errors.push(...r.errors);
+    look = r.look;
+    if (look === null ? !('look' in plan) : same(look, plan.look)) look = undefined;   // 沒變就不動
+  }
+  let theme;
+  if (body.theme !== undefined) {
+    const r = sanitizeTheme(body.theme);
+    errors.push(...r.errors);
+    theme = r.theme;
+    // 沒變就不動：值一樣、拿掉本來就沒有的、本來沒寫（＝亮）又選亮
+    if (theme === null ? !('theme' in plan) : plan.theme === theme || (theme === 'light' && !('theme' in plan))) theme = undefined;
+  }
   if (errors.length) return { errors };
   let next = edit ? withEdit(planR, edit) : planR;
+  if (look !== undefined) next = withTop(next, 'look', look);
+  if (theme !== undefined) next = withTop(next, 'theme', theme);
   const changed = s.updates.filter(([, set, del]) => Object.keys(set).length || del.length);
   if (changed.length) {
     next = { ...next, scenes: next.scenes.map((seg) => {
@@ -457,8 +533,8 @@ export function applySave(planText, body, ctx = {}) {
   // plan.json：有變的段（剪輯台改的＋句號重新對應的）才重寫
   const segIdx = (next.scenes || []).map((seg, i) => (same(seg, plan.scenes?.[i]) ? -1 : i)).filter((i) => i >= 0);
   let text = null;
-  if (edit || segIdx.length) {
-    try { text = surgicalText(planText, next, { edit, segIdx }); } catch { text = null; }
+  if (edit || segIdx.length || look !== undefined || theme !== undefined) {
+    try { text = surgicalText(planText, next, { edit, segIdx, look, theme }); } catch { text = null; }
     if (text == null) {
       text = JSON.stringify(next, null, detectIndent(planText)) + '\n';
       if (/\r\n/.test(planText)) text = text.replace(/\n/g, '\r\n');

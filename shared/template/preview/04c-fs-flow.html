@@ -7,10 +7,13 @@
 <link rel="stylesheet" href="../kit/fonts.css">
 <link rel="stylesheet" href="../kit/brand.css">
 <link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
 <link rel="stylesheet" href="../kit/theme.css">
 <link rel="stylesheet" href="../kit/captions.css">
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -27,16 +30,14 @@
   .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
   #pv-fs-flow #pv-wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
-  #pv-fs-flow #pv-wCard .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-  #pv-fs-flow #pv-wBody { width: 1176px; height: 580px; display: flex; align-items: center; justify-content: center; }
-  #pv-fs-flow #pv-fFlow { display: flex; align-items: flex-start; width: 1128px; }
-  #pv-fs-flow .fNode { flex: none; display: flex; flex-direction: column; align-items: center; gap: 24px; width: 240px; padding: 24px 0; border-radius: 20px; white-space: nowrap; }
+  #pv-fs-flow #pv-wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+  #pv-fs-flow #pv-wBody { width: 1176px; height: calc(580px - 60px - var(--sc-gap-md)); margin-bottom: calc(60px + var(--sc-gap-md)); }
+  #pv-fs-flow .fNode { width: 192px; height: 192px; white-space: nowrap; }
   #pv-fs-flow .fNode .sc-icon { --d: 192px; --i: 104px; }
-  #pv-fs-flow .fNode .sc-t44 { line-height: 60px; }
-  #pv-fs-flow .fArrow { position: relative; flex: 1 1 0; min-width: 56px; height: 14px; margin-top: 113px; }
-  #pv-fs-flow .fArrow::before { content: ""; position: absolute; left: 0; right: 12px; top: 5px; height: 4px; background: var(--sc-fs-line); }
-  #pv-fs-flow .fArrow::after { content: ""; position: absolute; right: 0; top: 0; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 14px solid var(--sc-fs-line); }
-  #pv-fs-flow #pv-fFlow[data-current="1"] > :nth-child(1), #pv-fs-flow #pv-fFlow[data-current="2"] > :nth-child(3), #pv-fs-flow #pv-fFlow[data-current="3"] > :nth-child(5), #pv-fs-flow #pv-fFlow[data-current="4"] > :nth-child(7) { background: var(--sc-fs-tint); box-shadow: inset 0 0 0 4px var(--sc-accent); }
+  #pv-fs-flow .fNode .sc-t44 { position: absolute; left: -100px; right: -100px; top: calc(100% + var(--sc-gap-md)); line-height: 60px; text-align: center; }
+  #pv-fs-flow .fLink { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+  #pv-fs-flow #pv-wBody[data-current="1"] #pv-fNode1 .sc-icon, #pv-fs-flow #pv-wBody[data-current="2"] #pv-fNode2 .sc-icon, #pv-fs-flow #pv-wBody[data-current="3"] #pv-fNode3 .sc-icon, #pv-fs-flow #pv-wBody[data-current="4"] #pv-fNode4 .sc-icon { box-shadow: 0 0 0 4px var(--sc-fs-card), 0 0 0 8px var(--sc-accent); }
+  #pv-fs-flow #pv-wBody[data-current="1"] #pv-fNode1 .sc-t44, #pv-fs-flow #pv-wBody[data-current="2"] #pv-fNode2 .sc-t44, #pv-fs-flow #pv-wBody[data-current="3"] #pv-fNode3 .sc-t44, #pv-fs-flow #pv-wBody[data-current="4"] #pv-fNode4 .sc-t44 { color: var(--sc-accent); }
 </style>
 </head>
 <body>
@@ -48,17 +49,12 @@
       <div id="pv-aWrap" class="fill">
         <div id="pv-wCard" class="sc-wcard">
           <div class="sc-wcard__bar"><span class="sc-opt">從原始口播到成片</span></div>
-          <div id="pv-wBody">
-            <div id="pv-fFlow" data-current="2">
-              
-              <div id="pv-fNode1" class="fNode"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path class="stroke-draw" pathLength="1" d="M14 2v4a2 2 0 0 0 2 2h4" /> <path class="stroke-draw" pathLength="1" d="M10 9H8" /> <path class="stroke-draw" pathLength="1" d="M16 13H8" /> <path class="stroke-draw" pathLength="1" d="M16 17H8" /> </svg></span><span class="sc-t44 sc-w700 sc-opt">轉逐字稿</span></div>
-              <div id="pv-fArr2" class="fArrow"></div>
-              <div id="pv-fNode2" class="fNode"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="m3 17 2 2 4-4" /> <path class="stroke-draw" pathLength="1" d="m3 7 2 2 4-4" /> <path class="stroke-draw" pathLength="1" d="M13 6h8" /> <path class="stroke-draw" pathLength="1" d="M13 12h8" /> <path class="stroke-draw" pathLength="1" d="M13 18h8" /> </svg></span><span class="sc-t44 sc-w700 sc-opt">列剪輯清單</span></div>
-              <div id="pv-fArr3" class="fArrow"></div>
-              <div id="pv-fNode3" class="fNode"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle class="stroke-draw" pathLength="1" cx="6" cy="6" r="3" /> <path class="stroke-draw" pathLength="1" d="M8.12 8.12 12 12" /> <path class="stroke-draw" pathLength="1" d="M20 4 8.12 15.88" /> <circle class="stroke-draw" pathLength="1" cx="6" cy="18" r="3" /> <path class="stroke-draw" pathLength="1" d="M14.8 14.8 20 20" /> </svg></span><span class="sc-t44 sc-w700 sc-opt">初剪</span></div>
-              <div id="pv-fArr4" class="fArrow"></div>
-              <div id="pv-fNode4" class="fNode"><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path class="stroke-draw" pathLength="1" d="m6.2 5.3 3.1 3.9" /> <path class="stroke-draw" pathLength="1" d="m12.4 3.4 3.1 4" /> <path class="stroke-draw" pathLength="1" d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="sc-t44 sc-w700 sc-opt">包裝成片</span></div>
-            </div>
+          <div id="pv-wBody" data-layout="row" data-gap="xl" data-current="2">
+            <div id="pv-fNode1" class="fNode" data-slot><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path class="stroke-draw" pathLength="1" d="M14 2v4a2 2 0 0 0 2 2h4" /> <path class="stroke-draw" pathLength="1" d="M10 9H8" /> <path class="stroke-draw" pathLength="1" d="M16 13H8" /> <path class="stroke-draw" pathLength="1" d="M16 17H8" /> </svg></span><span class="sc-t44 sc-w700 sc-opt">轉逐字稿</span></div>
+            <div id="pv-fNode2" class="fNode" data-slot><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="m3 17 2 2 4-4" /> <path class="stroke-draw" pathLength="1" d="m3 7 2 2 4-4" /> <path class="stroke-draw" pathLength="1" d="M13 6h8" /> <path class="stroke-draw" pathLength="1" d="M13 12h8" /> <path class="stroke-draw" pathLength="1" d="M13 18h8" /> </svg></span><span class="sc-t44 sc-w700 sc-opt">列剪輯清單</span></div>
+            <div id="pv-fNode3" class="fNode" data-slot><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle class="stroke-draw" pathLength="1" cx="6" cy="6" r="3" /> <path class="stroke-draw" pathLength="1" d="M8.12 8.12 12 12" /> <path class="stroke-draw" pathLength="1" d="M20 4 8.12 15.88" /> <circle class="stroke-draw" pathLength="1" cx="6" cy="18" r="3" /> <path class="stroke-draw" pathLength="1" d="M14.8 14.8 20 20" /> </svg></span><span class="sc-t44 sc-w700 sc-opt">初剪</span></div>
+            <div id="pv-fNode4" class="fNode" data-slot><span class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path class="stroke-draw" pathLength="1" d="m6.2 5.3 3.1 3.9" /> <path class="stroke-draw" pathLength="1" d="m12.4 3.4 3.1 4" /> <path class="stroke-draw" pathLength="1" d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="sc-t44 sc-w700 sc-opt">包裝成片</span></div>
+            <svg id="pv-fLinks" data-link-class="fLink" data-links="pv-fNode1>pv-fNode2 pv-fNode2>pv-fNode3 pv-fNode3>pv-fNode4"></svg>
           </div>
         </div>
       </div>
@@ -84,16 +80,35 @@ window.__PREVIEW = {"key":"fs-flow","duration":6,"cues":[{"sound":"whoosh","at":
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 6;
-    /* 節點逐個 P.rise（箭頭跟著它所指向的節點一起出現；綁句號，預設 0.5 起每 0.35s）→ 各節點進場 P.BEAT 後，圖示圓裡的線描出來（0.7s；流程的站不打勾，「目前」只換底色＋主色內框）→ 全部到位後停住。
-       全畫面幕不在 HF 內淡出（離場由剪映端整段渐隐） */
-    P.rise('#pv-fNode1', 0.5);
-    P.icon('#pv-fNode1 .sc-icon', 0.5 + P.BEAT);
-    P.rise('#pv-fNode2, #pv-fArr2', 0.85);
-    P.icon('#pv-fNode2 .sc-icon', 0.85 + P.BEAT);
-    P.rise('#pv-fNode3, #pv-fArr3', 1.2);
-    P.icon('#pv-fNode3 .sc-icon', 1.2 + P.BEAT);
-    P.rise('#pv-fNode4, #pv-fArr4', 1.55);
-    P.icon('#pv-fNode4 .sc-icon', 1.55 + P.BEAT);
+    /* v2（shared/template/BEATS.md §2 的動作）：每個節點各綁 at：箭頭（data-links 的線）提早 0.25 描出 → 節點彈出（從下 28u）→ 0.15 圖示描線 → 0.6 聚焦（放大抬起發光、前面的站壓暗；各站綁句、相鄰 ≥ 1.2 秒才走）→ 最後一站講完 2.6 秒回均衡。主卡進場看 P.prev()（換卡不換景／長出），離場由 build 負責 */
+    // 開場：前一段也是全畫面＝換卡不換景（由下擦開＋上浮 60u）；前一段是講者或其他畫面＝主卡從子母畫面長出（P.prev() 由 build 給，不用改）
+    if (P.prev() === 'fullscreen') { P.wipe('#pv-wCard', 0, { dir: 'up', dur: 0.8 }); P.pop('#pv-wCard', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    else P.grow('#pv-wCard', 0.3);
+    P.chars('#pv-wCard .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    const nodeAt = [0.5, 0.85, 1.2, 1.55];
+    // 箭頭＝data-links 產生的線 #fNode<n>-fNode<n+1>（mustache 沒有 n−1：前一站的編號在這裡接上）
+    const LINK = ['#pv-fNode1-pv-fNode2', '#pv-fNode2-pv-fNode3', '#pv-fNode3-pv-fNode4'];
+
+    P.pop('#pv-fNode1', 0.5, { from: 0.82, dy: 28 });
+    P.icon('#pv-fNode1 .sc-icon', 0.5 + 0.15);
+    P.stroke(LINK[1 - 1], 0.85 - 0.25, { dur: 0.25 });
+    P.pop('#pv-fNode2', 0.85, { from: 0.82, dy: 28 });
+    P.icon('#pv-fNode2 .sc-icon', 0.85 + 0.15);
+    P.stroke(LINK[2 - 1], 1.2 - 0.25, { dur: 0.25 });
+    P.pop('#pv-fNode3', 1.2, { from: 0.82, dy: 28 });
+    P.icon('#pv-fNode3 .sc-icon', 1.2 + 0.15);
+    P.stroke(LINK[3 - 1], 1.55 - 0.25, { dur: 0.25 });
+    P.pop('#pv-fNode4', 1.55, { from: 0.82, dy: 28 });
+    P.icon('#pv-fNode4 .sc-icon', 1.55 + 0.15);
+    // 聚焦：group 只放已經進場的站（P.spot 規則）；講完回均衡
+    const upTo = (k) => Array.from({ length: k }, (_, j) => '#pv-fNode' + (j + 1)).join(', ');
+    // 只有各站都綁了句子、相鄰 ≥ 1.2 秒時才走焦點（沒綁句的預設間隔 0.35 秒，逐站聚焦會閃）
+    const paced = nodeAt.every((t, i) => !i || t - nodeAt[i - 1] >= 1.2);
+    if (paced) {
+      for (let k = 1; k <= nodeAt.length; k++) P.spot(upTo(k), '#pv-fNode' + k, nodeAt[k - 1] + 0.6);
+      const endAt = Math.min(nodeAt[nodeAt.length - 1] + 2.6, D - 1.6);
+      if (endAt > nodeAt[nodeAt.length - 1] + 1.2) P.spot(upTo(nodeAt.length), null, endAt);
+    }
     tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
     tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 5.5);
     P.end(D);

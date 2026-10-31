@@ -291,3 +291,101 @@ test('CLI：snap-srt --dry-run 印調整表、--help 有說明、build 不會呼
   assert.match(run('--help').stdout, /snap-srt/);
   for (const f of ['build.mjs', 'lib/plan.mjs', 'lib/main.mjs', 'lib/assemble.mjs']) assert.ok(!/snapSrt|snap-srt/.test(fs.readFileSync(path.join(TOOLS, f), 'utf8')), `${f} 不能呼叫 snap-srt`);
 });
+
+// ---------- 002：formatSrt、情境動畫綁句（specs/contracts/cues.md §3.2、§6）----------
+const { formatSrt } = await imp('lib/srt.mjs');
+const { scanCueRefs, readCustom } = await imp('lib/assemble.mjs');
+
+test('formatSrt(parseSrt(x)) === x：LF、CRLF、BOM 都原樣', () => {
+  const lf = '1\n00:00:01,000 --> 00:00:02,500\n第一句\n\n2\n00:01:02,040 --> 00:01:04,000\n第二句 with English\n';
+  assert.equal(formatSrt(parseSrt(lf)), lf);
+  const crlf = lf.replace(/\n/g, '\r\n');
+  assert.equal(formatSrt(parseSrt(crlf), { eol: '\r\n' }), crlf);
+  assert.equal(formatSrt(parseSrt('﻿' + lf), { bom: true }), '﻿' + lf);
+});
+
+test('scanCueRefs：只看 <template> 的 <script>；註解裡的不算；單雙引號都抓；去重、照順序；http:// 不被當註解', () => {
+  const html = `<!doctype html><html><head><script>P.at('#1')</script></head><body><template id="x-a-template"><div id="x-a" data-composition-id="x-a"></div><script>
+    // 例：P.at('#77')
+    /* P.at('#66') */
+    var u = "http://example.com"; P.in('#a', P.at('#18')); P.in('#b', P.at("#18@逐字稿", 0.2)); P.at('#18'); P.at( '#20e' );
+    window.__timelines['x-a'] = gsap.timeline({ paused: true });
+  </script></template></body></html>`;
+  assert.deepEqual(scanCueRefs(html), ['#18', '#18@逐字稿', '#20e']);
+  const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'hf-scan-')), 'x-a.html');
+  fs.writeFileSync(f, html);
+  assert.deepEqual(readCustom(f, 'x-a').refs, ['#18', '#18@逐字稿', '#20e']);
+});
+
+test('cues.md §6 的 002 端：refs[#18] 等於 from #18 算出的起點；#18@逐字稿＝cueSeconds；#99 ✖', () => {
+  const cs = parseSrt('17\n00:00:40,000 --> 00:00:42,900\n先錄影\n\n18\n00:00:43,200 --> 00:00:45,600\n轉成逐字稿\n\n19\n00:00:46,200 --> 00:00:48,400\n再校正\n\n20\n00:00:49,200 --> 00:00:51,800\n最後剪輯\n');
+  const od = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-cues-'));
+  fs.mkdirSync(path.join(od, 'compositions'));
+  fs.writeFileSync(path.join(od, 'compositions', 'x-process.html'), `<template><div id="x-process" data-composition-id="x-process"></div><script>P.at('#18'); P.at('#18@逐字稿'); P.at('#99'); window.__timelines['x-process'] = gsap.timeline({ paused: true });</script></template>`);
+  const go = (scenes) => resolvePlan({ plan: { version: 1, scenes }, cues: cs, videoDur: 60, lib: L, outDir: od });
+  const res = go([{ id: 'x01', type: 'custom', src: 'compositions/x-process.html', layout: 'overlay', from: '#17', to: '#20e' }]);
+  const x = res.allItems[0];
+  const from18 = go([{ id: 'x01', type: 'custom', src: 'compositions/x-process.html', layout: 'overlay', from: '#18', to: '#20e' }]).allItems[0].start;
+  assert.equal(x.cueRefs['#18'], 43.2);
+  assert.equal(x.cueRefs['#18'], from18);
+  assert.equal(x.cueRefs['#18@逐字稿'], +sec('#18@逐字稿', cs).sec.toFixed(3));
+  assert.ok(res.errors.some((e) => e.includes("P.at('#99')") && e.includes('字幕沒有第 99 句')));
+});
+
+// ---------- F4：詞級逐字稿（work/transcript.json）----------
+test('wordTime：去掉標點空白逐字比對、#Ne 用最後一個字的結尾；整個詞找不到時用詞裡最長的一段推回詞頭；離 guess 最近的優先', () => {
+  const words = [
+    { text: '我們', start: 10, end: 10.4 }, { text: '放', start: 10.4, end: 10.6 }, { text: '到電腦', start: 10.6, end: 11.2 },
+    { text: '上，', start: 11.2, end: 11.4 }, { text: '才看得出', start: 11.4, end: 12.2 }, { text: 'AI', start: 13, end: 13.3 }, { text: 'Coding', start: 13.3, end: 13.9 },
+    { text: '放到電腦', start: 20, end: 20.8 },
+  ];
+  const c = { n: 1, start: 9.8, end: 12.5, text: '我們放到電腦上，才看得出' };
+  assert.equal(T.wordTime(words, c, '放到電腦'), 10.4);
+  assert.equal(T.wordTime(words, c, '放到電腦', { end: true }), 11.2);
+  assert.equal(T.wordTime(words, c, '上才看'), 11.2, '中間夾標點');
+  assert.equal(T.wordTime(words, { start: 12.5, end: 14 }, 'ai coding'), 13);
+  // 逐字稿聽成別的字：「拿到電腦」→ 找到「到電腦」，往前推一個字
+  assert.equal(T.wordTime(words, c, '拿到電腦'), 10.4);
+  assert.equal(T.wordTime(words, c, '完全沒有'), null);
+  assert.equal(T.wordTime([], c, '放到電腦'), null);
+});
+
+test('cueSeconds：有 cues.words 時 #N@詞 用真實時間；找不到詞、或沒有逐字稿（wordsWhy）退回字數比例並記進 cues.approx', () => {
+  const cs = parseSrt('1\n00:00:10,000 --> 00:00:20,000\n我們用 Claude Code 做剪輯清單這件事\n');
+  const prop = T.cueSeconds(T.parseTime('#1@剪輯清單'), cs).sec;
+  cs.words = [{ text: '我們用', start: 10, end: 11 }, { text: 'Claude', start: 11, end: 11.5 }, { text: 'Code', start: 11.5, end: 12 }, { text: '做剪輯清單', start: 12, end: 14 }];
+  cs.approx = new Set();
+  assert.equal(T.cueSeconds(T.parseTime('#1@剪輯清單'), cs).sec, 12.4);
+  assert.equal(T.cueSeconds(T.parseTime('#1e@剪輯清單'), cs).sec, 14);
+  assert.equal(T.cueSeconds(T.parseTime('#1@剪輯清單+0.2'), cs).sec, 12.6);
+  assert.equal(cs.approx.size, 0);
+  const r = T.cueSeconds(T.parseTime('#1@這件事'), cs);
+  assert.equal(r.approx, '詞級逐字稿在這句附近找不到這個詞');
+  assert.deepEqual([...cs.approx], ['#1@這件事']);
+  const cs2 = parseSrt('1\n00:00:10,000 --> 00:00:20,000\n我們用 Claude Code 做剪輯清單這件事\n');
+  cs2.wordsWhy = '沒有 work/transcript.json（rough.mp4 的詞級逐字稿）'; cs2.approx = new Set();
+  assert.equal(T.cueSeconds(T.parseTime('#1@剪輯清單'), cs2).sec, prop);
+  assert.deepEqual([...cs2.approx], ['#1@剪輯清單']);
+});
+
+test('attachWords：transcript.json 比 rough.mp4 舊、長度對不上、格式錯 → 不掛並記原因；plan 有 #N@詞 時一則 ⚠', async () => {
+  const { attachWords } = await imp('build.mjs');
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-words-'));
+  const tj = path.join(d, 'transcript.json'), video = path.join(d, 'rough.mp4');
+  const srt = '1\n00:00:01,000 --> 00:00:03,000\n第一句放到電腦\n';
+  fs.writeFileSync(video, 'x');
+  assert.equal(attachWords(parseSrt(srt), { transcript: tj, video }).wordsWhy, '沒有 work/transcript.json（rough.mp4 的詞級逐字稿）');
+  fs.writeFileSync(tj, JSON.stringify([{ text: '第一句', start: 1, end: 1.6, id: 'w0' }, { text: '放到電腦', start: 1.8, end: 2.9, id: 'w1' }]));
+  const ok = attachWords(parseSrt(srt), { transcript: tj, video });
+  assert.equal(ok.words.length, 2);
+  assert.equal(ok.wordsWhy, undefined);
+  fs.writeFileSync(tj, JSON.stringify([{ text: '第一句', start: 1, end: 9 }]));
+  assert.match(attachWords(parseSrt(srt), { transcript: tj, video }).wordsWhy, /長度（9s）和 rough\.srt（3s）對不上/);
+  const old = new Date(Date.now() - 60000);
+  fs.writeFileSync(tj, JSON.stringify([{ text: '第一句', start: 1, end: 3 }]));
+  fs.utimesSync(tj, old, old);
+  assert.equal(attachWords(parseSrt(srt), { transcript: tj, video }).wordsWhy, 'work/transcript.json 比 rough.mp4 舊（不是這支初剪轉的）');
+  const cs = attachWords(parseSrt(srt), { transcript: tj, video });
+  const res = resolvePlan({ plan: { version: 1, scenes: [{ id: 's01', scene: 'concept', from: '#1@放到電腦', to: '#1e', slots: { text: '甲乙' } }] }, cues: cs, videoDur: 10, lib: L, outDir: d, projectRel: 'projects/x' });
+  assert.ok(res.warnings.includes('#N@詞 有 1 個用字數比例估（work/transcript.json 比 rough.mp4 舊（不是這支初剪轉的）），可能差 1 秒：#1@放到電腦 → 對 rough.mp4 重轉詞級逐字稿：npx hyperframes transcribe projects/x/work/rough.mp4 -d projects/x/work --model small --language zh --json'), JSON.stringify(res.warnings));
+});

@@ -4,6 +4,7 @@
   "zh": "章節角標",
   "aliases": ["角標", "迷你章節卡", "章節卡"],
   "family": "edge",
+  "portrait": "move",
   "when": "章節轉場後的口播段，右上角提醒觀眾現在在哪一章（也可當附件疊在其他情境上）",
   "avoid": "同一段已有下方字卡的章節角標附件、兩側、側邊欄、章節轉場本身（附件不可用）",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "56", "data-vbal-ignore": "" },

@@ -1,13 +1,18 @@
+<!-- 預設拍型：D 清單（同一張卡逐步換，不寫動畫分鏡） -->
 <!-- @style -->
 /* 單列卡：主卡 672–852、標籤 616–704。各步驟疊在同一格（grid 同儲存格），卡寬取最長那一步，換步時外框不動；
    標籤「步驟 01／02…」的數字也疊在同一格（等寬數字），換步時 swap。細節＝右上網點。 */
+/* 排法 free（kit/scene-layout.js 不排）：各步驟疊在同一格輪播（不是一列一列排開），卡寬取最長那步。 */
 #gCard { left: 120px; bottom: 220px; }
 .st-body { display: grid; }
 .st-body > * { grid-area: 1 / 1; justify-self: start; }
 .st-num { display: inline-grid; vertical-align: top; font-variant-numeric: tabular-nums; }
 .st-num > * { grid-area: 1 / 1; }
+<!-- @style-portrait -->
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+#gCard { left: 60px; bottom: 680px; }
 <!-- @body -->
-<div id="gCard" class="sc-lt"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+<div id="gCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
   <div class="sc-lt__card">
     <i class="sc-lt__dots"></i>
@@ -25,16 +30,19 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">步驟&nbsp;<span class="st-num">{{#steps}}<span id="n{{n}}">0{{n}}</span>{{/steps}}</span></span></div>
 </div>
 <!-- @timeline -->
-/* 外殼遮罩揭開 → 第 1 步 0.15 後淡入上漂（跟外殼一起出現）→（有圖示：進來那一步的圖示再 P.BEAT 後描線，換步時多等 P.AXIS_LAG）→ 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步至少停 ≥ 0.65＋READ 1.2）→ 段尾 0.4 淡出 */
+/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 第 1 步上漂 → 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步停 ≥ 0.65＋1.2）→ 漂浮 → 段尾向左擦掉 */
 const stepAt = [{{#steps}}{{{at}}}{{^last}}, {{/last}}{{/steps}}];
-P.reveal('#gCard', {{{in}}});
+P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
+P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
 P.rise('#s1', stepAt[0]);
 for (let i = 1; i < stepAt.length; i++) {
   P.axis('#s' + i, '#s' + (i + 1), stepAt[i]);
   P.swap('#n' + i, '#n' + (i + 1), stepAt[i]);
 }
 {{#stepsHasIcon}}
-P.icon('#s1 .sc-icon', stepAt[0] + P.BEAT);
-for (let i = 1; i < stepAt.length; i++) P.icon('#s' + (i + 1) + ' .sc-icon', stepAt[i] + P.AXIS_LAG + P.BEAT);
+P.icon('#s1 .sc-icon', stepAt[0] + 0.15);
+for (let i = 1; i < stepAt.length; i++) P.icon('#s' + (i + 1) + ' .sc-icon', stepAt[i] + P.AXIS_LAG + 0.15);
 {{/stepsHasIcon}}
-{{#exitFade}}P.out('#gCard', D - P.OUT);{{/exitFade}}
+P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
+{{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

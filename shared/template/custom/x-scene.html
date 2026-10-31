@@ -1,0 +1,191 @@
+<!-- 預設拍型：S 示意（BEATS.md §5；場景骨架 → 物件逐個進 → 狀態切換 → 結果；主角是插圖元件 kit/illus.js） -->
+<!doctype html>
+<!--
+  x-scene：示意動畫骨架（第二層 custom，layout: "fullscreen"）——插圖元件照拍一個一個出來、換狀態、得到結果
+
+  【適用的口播】
+  在描述具體的動作、物件或過程：「拍完先從手機上傳到雲端，再下載到電腦打開播放」「把手機架上腳架試錄一小段」「走到手機旁邊按播放」。
+  畫面的主角是線條插圖（shared/template/kit/illus-gallery.jpg 的元件：手機、腳架、電腦、雲端、人、徽章…），字只當標籤。
+
+  【不要用在哪裡】
+  - 只有名詞、沒有動作：用 12 關鍵詞或 x-callout。
+  - 抽象的先後步驟、沒有具體物件：用 x-process；資料在裝置之間怎麼走、要畫架構：用 x-architecture。
+  - 物件超過 4 個、狀態要換超過 3 次：拆成兩段。
+  - 畫廊沒有、圖示組合也表達不了的物件：先照 shared/template/kit/illus-style.md 畫成 work/hyperframes/illus-local/<名稱>.svg，再回來組裝。
+
+  【要改的地方】
+  只改兩塊 DATA，其他不用動（這支沒有圖示：主角是插圖元件；script 第一行的 ILLUS.mount 不要動）。
+  1. DATA 1 元件清單（<body> 裡 xsc-stage 底下，一個元件一行）：照分鏡的「插圖元件（狀態）」「位置」欄。不寫 left／top。
+     <div id="xsc-<名稱>" class="xsc-it" data-slot><div data-illus="<元件>" data-<選項>="<值>" style="width:<寬>px;height:<高>px"></div><b class="xsc-lbl sc-w700">標籤</b></div>
+     - id 用 xsc- 開頭；data-illus 照畫廊每格下面的寫法（大小寫照抄）；寬高照畫廊的比例放大。
+     - 建議尺寸（主角是圖）：全部元件連標籤要佔內容區（1176×580）≥ 70% 高、≥ 75% 寬。一列 3 個（中間放連接線，間距 96）每個寬 ≤ 300px；4 個每個 ≤ 216px；主角高 200–370px，配角（膠囊、勾）長邊 ≥ 80px。寬高都寫 8 的倍數（或偶數）。標籤 32px（.xsc-lbl 已設好，不要加 sc-t 字級）。太小 audit 會報 ⚠ 插圖太小。
+     - 畫廊沒有、自己畫的元件：data-illus="…" 換成 data-illus-src="illus-local/<名稱>.svg"（檔案放 work/hyperframes/illus-local/）。
+     - 狀態：螢幕元件的 data-screen 寫「一開始」的狀態（通常 blank），要換的狀態寫在 DATA 2 的 state。
+     - 位置：交給 xsc-stage 的 data-layout（kit/scene-layout.js）：row＝一列等距、底對齊（標籤在同一條線；要插圖中線對齊寫 data-align="middle"）、整組在內容區置中；放第二列的元件加 data-row="2"。
+       幾個元件要疊成一組（人站在桌子後面、右邊一欄小元件）：外面包 <div id="xsc-<組名>" data-slot data-layout="col" data-gap="none｜md">…</div>，組裡的元件一樣寫 data-slot。
+     - 標籤 ≤ 10 字；不要標籤就刪掉 <b>…</b>。標籤放右邊：class 加 xsc-side。一開始就在的場景（桌子、地板）class 加 xsc-pre。
+     - 連接線：xsc-lines 的 data-links 寫「元件id>元件id」（有箭頭；沒箭頭寫 元件id-元件id），空白隔開；線自動畫在兩個元件外框邊之間（水平線在兩個插圖高度重疊段的正中），id＝<元件id>-<元件id>（DATA 2 的 line 照寫）。
+  2. DATA 2 拍（<script> 開頭，一拍一行）：照分鏡一拍一列。
+     const T<k> = P.at('#N@詞');   P.sfx('<音效>', '#N@詞');   ← 句號與詞照分鏡「講到」欄，P.sfx 和它同一個句號
+     音效照分鏡「音效拍點」欄：骨架每拍都是 tick；分鏡寫 success（結果徽章那拍）才自己把那一拍改成 'success'，沒寫就不要加。
+     BEATS 每一列 [T<k>, { … }]，{ } 裡寫這一拍做什麼（只寫用到的）：
+       in: ['xsc-a']               物件彈出（＋0.14 標籤逐字上浮）          state: ['xsc-a', 'blank', 'rec']  ＋0.15 換狀態（淡出舊的、淡入新的、漣漪）
+       line: 'xsc-a-xsc-b'         ＋0.7 描連接線（元件進場完才描）          move: ['xsc-a', 'xsc-b', 'left']  走到 xsc-b 的左邊（right＝右邊；1 秒）
+       check: 'xsc-ok'             結果徽章彈出、＋0.3 描圈打勾             count: ['#xsc-a .il-time', 0, 5, '00:0']  數字滾動
+       focus: 'xsc-a'              聚焦（其他壓暗；新進場的 0.6 秒後）       dim: ['xsc-a']                  退焦（沒有聚焦的段用）
+     狀態名：blank（沒有畫面）、video、play、rec、check、warn、shorts、qr、app；自己畫的元件寫它的狀態群組名（.il-<狀態> 的 <狀態>）。
+  開場：ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；標題列（≤ 10 字）在 #xsc-card 的 .sc-wcard__bar。
+
+  【綁句欄位】
+  T1 = P.at('#182@手機')、T2 = P.at('#183@雲端')、T3 = P.at('#184@電腦')、T4 = P.at('#185@播放')、T5 = P.at('#186@沒問題')：講到那個物件、那個變化的詞的時刻。
+  物件名在句中間或句尾時一定用 @詞，不要綁句首；物件名剛好是那句的第一個詞才寫 P.at('#183')。
+  「@詞」要寫成字串字面值（P.at('#183@雲端')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#183@雲端', 0.3)。
+  分鏡第 0 拍（段起點，開場）不用寫 P.at：主卡進場與標題由下面的程式做。
+  audit 會比對：這一拍出現的字（標籤）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.0（主卡 0.3 秒長出、0.5 標題逐字上浮、1.0 場景骨架）
+  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5；T4 ≥ T3 + 2.5；T5 ≥ T4 + 2.5（每拍：彈出 0.55＋描線＋聚焦，停 ≥ 1.2 秒）
+  D ≥ T5 + 4.6（最後一拍講完 2 秒回均衡＋0.6 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡在 panelTop 區（P.region('panelTop')＝x 120–1300、y 150–858，右緣避開右下子母畫面）；主卡進場看 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮），離場由 build 處理。
+  標題列 128（左右內距 --sc-pad-card）、內容區 xsc-stage 1176×580（卡底 858，在字幕區 y 920 之上）。
+  元件位置由 data-layout="row" data-gap="xl" 排（kit/scene-layout.js，shared/style.md「版面」）：第一列等距 96、底對齊（標籤同一條線），第二列（data-row="2"，結果徽章）在下面 48，整組在內容區置中、內距 ≥ 48／40。
+  連接線由 data-links 自動畫在元件外框邊之間（水平線在兩個插圖高度重疊段的正中；端點離外框 12px、箭頭 16px；不要線就整個 data-links 留空）；元件換大小或換順序，線跟著移，不用改座標。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-scene 示意動畫骨架</title></head>
+<body>
+<template id="x-scene-template">
+  <style>
+    #x-scene { position: absolute; inset: 0; }
+    #x-scene .fill { position: absolute; inset: 0; }
+    /* 主卡：panelTop 區（左 120、頂 150、寬 1180；標題列 128＋內容區 580＝708） */
+    #x-scene #xsc-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-scene #xsc-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    #x-scene #xsc-stage { position: relative; width: 1176px; height: 580px; }
+    /* 連接線：xsc-lines 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link） */
+    /* 元件：插圖＋下面的標籤（xsc-side＝標籤在右邊）；位置由 xsc-stage 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
+    #x-scene .xsc-it { position: absolute; display: flex; flex-direction: column; align-items: center; gap: var(--sc-gap-sm); white-space: nowrap; }
+    #x-scene .xsc-side { flex-direction: row; gap: var(--sc-gap-sm); }
+    #x-scene .xsc-lbl { display: block; font-size: 32px; line-height: 40px; }   /* 標籤 32px：退到 0.96 時仍 ≥ 30px */
+  </style>
+  <div id="x-scene" data-composition-id="x-scene" data-width="1920" data-height="1080" data-duration="19.5"
+       data-cues-sample='{"start":0,"D":19.5,"cues":{"182":[2.5,5],"183":[5.4,7.9],"184":[8.3,10.8],"185":[11.2,13.7],"186":[14.1,16.6]},"refs":{"#182@手機":2.9,"#183@雲端":5.8,"#184@電腦":9,"#185@播放":11.8,"#186@沒問題":14.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xsc-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">以前的傳檔流程</span></div>
+      <div id="xsc-stage" data-layout="row" data-gap="xl">
+        <svg id="xsc-lines" data-links="xsc-phone>xsc-cloud xsc-cloud>xsc-laptop" xmlns="http://www.w3.org/2000/svg"></svg>
+        <!-- ══ DATA 1：元件清單（一個元件一行；只改這裡）══ -->
+        <div id="xsc-phone" class="xsc-it" data-slot><div data-illus="phone" data-orient="landscape" data-screen="video" style="width:296px;height:148px"></div><b class="xsc-lbl sc-w700">手機</b></div>
+        <div id="xsc-cloud" class="xsc-it" data-slot><div data-illus="cloud" data-arrow="up" style="width:256px;height:174px"></div><b class="xsc-lbl sc-w700">雲端</b></div>
+        <div id="xsc-laptop" class="xsc-it" data-slot><div data-illus="laptop" data-screen="blank" style="width:312px;height:212px"></div><b class="xsc-lbl sc-w700">電腦</b></div>
+        <div id="xsc-ok" class="xsc-it xsc-side" data-slot data-row="2"><div data-illus="badge" data-kind="check" style="width:96px;height:96px"></div><b class="xsc-lbl sc-w700">沒問題</b></div>
+        <!-- ══ DATA 1 到這裡 ══ -->
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    ILLUS.mount(document.getElementById('x-scene'));   // 第一行：元件清單的 data-illus／data-illus-src 先換成 SVG，之後建的動畫才抓得到 .il-* 子元素
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-scene'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+
+    // ══ DATA 2：拍（一拍一行；只改這裡）══
+    const T1 = P.at('#182@手機');     P.sfx('tick', '#182@手機');
+    const T2 = P.at('#183@雲端');     P.sfx('tick', '#183@雲端');
+    const T3 = P.at('#184@電腦');     P.sfx('tick', '#184@電腦');
+    const T4 = P.at('#185@播放');     P.sfx('tick', '#185@播放');
+    const T5 = P.at('#186@沒問題');   P.sfx('tick', '#186@沒問題');
+    const BEATS = [
+      [T1, { in: ['xsc-phone'], focus: 'xsc-phone' }],
+      [T2, { in: ['xsc-cloud'], line: 'xsc-phone-xsc-cloud', focus: 'xsc-cloud' }],
+      [T3, { in: ['xsc-laptop'], line: 'xsc-cloud-xsc-laptop', focus: 'xsc-laptop' }],
+      [T4, { state: ['xsc-laptop', 'blank', 'play'], focus: 'xsc-laptop' }],
+      [T5, { check: 'xsc-ok', focus: 'xsc-ok' }],
+    ];
+    // ══ DATA 2 到這裡；下面不用改 ══
+
+    const ROOT = document.getElementById('x-scene');
+    const R = P.region('panelTop');   // 主卡＝全畫面主卡區（design-system §2；直式由 window.__regions 蓋過）
+    const CARD = document.getElementById('xsc-card');
+    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; CARD.style.width = R[2] + 'px';
+    const sel = function (id) { return '#' + id; };
+    const stateSel = function (s) { return !s || s === 'blank' ? null : s === 'video' ? '.il-content' : '.il-' + s; };   // 狀態名 → 狀態群組
+    // 位置由 data-layout 排好（kit/scene-layout.js；ILLUS.mount 之後自動跑一次），這裡只讀
+    const L = window.SceneLayout, moved = {};
+    const illusOf = function (el) { return el.querySelector('[data-illus], [data-illus-src]') || el; };
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    if (ENTER === 'grow') P.grow('#xsc-card', 0.3);
+    else { P.wipe('#xsc-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xsc-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xsc-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 場景骨架：一開始就在的元件（class 有 xsc-pre）錯拍彈出
+    P.pop('#x-scene .xsc-pre', 1.0, { stagger: 0.12, from: 0.9, dy: 20 });
+
+    // 每一拍：進場 → 換狀態／移動／數字 → 連接線 → 結果 → 聚焦（同一時間只有一個焦點）
+    const entered = [], dimmed = [], idled = {};
+    Array.prototype.forEach.call(ROOT.querySelectorAll('.xsc-pre'), function (el) { entered.push('#' + el.id); });   // 場景骨架也可以被聚焦、移動
+    let spotted = false;
+    BEATS.forEach(function (b, k) {
+      const t = b[0], o = b[1], next = k + 1 < BEATS.length ? BEATS[k + 1][0] : t + 2.0;
+      const ins = (o.in || []).map(sel);
+      if (ins.length) {
+        P.pop(ins.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
+        ins.forEach(function (s, i) { if (ROOT.querySelector(s + ' .xsc-lbl')) P.chars(s + ' .xsc-lbl', t + 0.14 + i * 0.12, { stagger: 0.035 }); });
+        ins.forEach(function (s) { if (entered.indexOf(s) < 0) entered.push(s); });
+      }
+      if (o.state) {
+        const s = sel(o.state[0]), a = stateSel(o.state[1]), z = stateSel(o.state[2]);
+        if (a && z) P.swap(s + ' ' + a, s + ' ' + z, t + 0.15);
+        else if (z) P.in(s + ' ' + z, t + 0.15);
+        else if (a) P.out(s + ' ' + a, t + 0.15);
+        P.ripple(s + ' .il', t + 0.2, { to: 1.5 });
+      }
+      if (o.move) {   // move: [元件, 目標元件, 'left'｜'right']：走到目標插圖的左（右）邊，隔 --sc-gap-md，兩個都有標籤＝插圖底對齊（標籤同一條線），否則插圖中線對齊
+        const el = document.getElementById(o.move[0]), tg = document.getElementById(o.move[1]);
+        const a = L.box(illusOf(el), el.offsetParent), b = L.box(illusOf(tg), el.offsetParent), ea = L.box(illusOf(el), el), g = L.token('gap-md'), lbl = (e) => !!e.querySelector(':scope > [class*="lbl"]');
+        const from = moved[o.move[0]] || { left: el.offsetLeft, top: el.offsetTop };
+        const x = o.move[2] === 'right' ? b[0] + b[2] + g : b[0] - g - a[2];
+        const to = { left: Math.round(x - ea[0]), top: Math.round((lbl(el) && lbl(tg) ? b[1] + b[3] - a[3] : b[1] + b[3] / 2 - a[3] / 2) - ea[1]) };
+        P.morph(sel(o.move[0]), t, to, { from: from, dur: 1.0, ease: P.V2.EASE.move });
+        moved[o.move[0]] = to;
+      }
+      if (o.count) P.count(o.count[0], t + 0.2, { from: o.count[1], to: o.count[2], dur: 1.2, prefix: o.count[3] || '' });
+      if (o.line) P.stroke(sel(o.line), t + 0.7, { dur: 0.5 });   // 先有節點再畫線：這一拍的元件彈出（0.55 秒）之後才描
+      if (o.check) {
+        const s = sel(o.check);
+        P.pop(s, t, { from: 0.6, dy: 0 });
+        if (ROOT.querySelector(s + ' .xsc-lbl')) P.chars(s + ' .xsc-lbl', t + 0.14, { stagger: 0.035 });
+        P.check(s + ' .il', t + 0.3);
+        if (entered.indexOf(s) < 0) entered.push(s);
+      }
+      (o.dim || []).forEach(function (id) { P.dim(sel(id), t, { to: 0.6 }); if (dimmed.indexOf(sel(id)) < 0) dimmed.push(sel(id)); });
+      if (o.focus) {
+        const f = sel(o.focus), fresh = (o.in || []).indexOf(o.focus) >= 0 || o.check === o.focus;
+        const at = t + (fresh ? 0.6 : 0.1);
+        P.spot(entered.join(', '), f, at, { scale: 1.05, lift: -8 });
+        spotted = true;
+        if (!idled[f]) { idled[f] = true; P.idle(f, at + 0.6, { y: 4, period: 3.2, until: next - 0.1 }); }
+      }
+    });
+
+    // 收：最後一拍講完 2 秒回均衡（全部亮回），完成態停到段尾
+    const TR = BEATS[BEATS.length - 1][0] + 2.0;
+    if (spotted) P.spot(entered.join(', '), null, TR, { dur: 0.6 });
+    if (dimmed.length) P.dim(dimmed.join(', '), TR, { to: 1 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-scene'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>
