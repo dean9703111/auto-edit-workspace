@@ -82,7 +82,6 @@
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const W1 = P.at('#52@金鑰'), W2 = P.at('#53@覆蓋'), W3 = P.at('#54@再看');   // 講到第 1–3 條關鍵詞的時刻
-    P.sfx('tick', '#52@金鑰'); P.sfx('tick', '#53@覆蓋'); P.sfx('tick', '#54@再看');   // 每一條一顆音效（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮

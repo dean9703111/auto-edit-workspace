@@ -129,7 +129,7 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const ZOOM = P.at('#72@匯出設定'), CLICK = P.at('#73@匯出'), RESULT = P.at('#74@完成');   // 哪個畫面／按下／結果
 
-    P.sfx('tick', '#72@匯出設定'); P.sfx('success', '#74@完成');   // 焦點切到畫面＝tick、結果＝success（句號和上一行一樣）；按下的 click 寫在 plan.json 的 "clicks"
+    P.sfx('success', '#74@完成');   // 結果＝success（句號和上一行一樣）；按下的 click 寫在 plan.json 的 "clicks"
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const UI = '#xui-nav1, #xui-nav2, #xui-nav3, #xui-ptitle, #xui-btn, #xui-row1, #xui-row2, #xui-row3';   // 介面元件（彈出順序＝聚焦的組）
     const BTN = { left: 992, top: 76 };   // 游標終點＝按鈕中心各減 8（改了按鈕位置就改這兩個數字）

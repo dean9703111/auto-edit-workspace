@@ -201,7 +201,7 @@ export function audioReportLines(info, { loudnorm = true, declick = true, cutpoi
 
 // ---------- 音效政策（specs/contracts/sfx.md §4；訊息原文 specs/contracts/cli-005.md §3）----------
 export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 });
-const SWAP = { thunder: 'alert', sparkle: 'pop', shine: 'ding' };              // 超過每集上限時建議換成誰
+const SWAP = { thunder: 'alert', sparkle: 'ding', shine: 'ding' };              // 超過每集上限時建議換成誰
 const KEEP_FIRST = ['chapter', 'thunder', 'shine', 'sparkle', 'alert', 'success'];
 const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;   // 和 plan.mjs 的 fmt 相同
 const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
@@ -248,7 +248,7 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT }
   if (dense.length) {
     const mm = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
     const adds = Object.keys(sfxConf).filter((k) => sfxConf[k].additive);
-    warnings.push(`⚠ 音效密度：${dense.length} 個一分鐘超過 ${R.perMinute} 顆主音效（${dense.map((d) => `${mm(d.from)}–${mm(d.to)} ${d.n} 顆`).join('、')}；附加音效${adds.length ? ` ${adds.join('、')}` : ''} 不算）→ 每分鐘留最重要的 ${R.perMinute} 顆（${KEEP_FIRST.join('、')} 先留，pop、swipe 先拿掉：那段寫 "sfx": null）`);
+    warnings.push(`⚠ 音效密度：${dense.length} 個一分鐘超過 ${R.perMinute} 顆主音效（${dense.map((d) => `${mm(d.from)}–${mm(d.to)} ${d.n} 顆`).join('、')}；附加音效${adds.length ? ` ${adds.join('、')}` : ''} 不算）→ 每分鐘留最重要的 ${R.perMinute} 顆（${KEEP_FIRST.join('、')} 先留，ding、impact 先拿掉：那段寫 "sfx": null）`);
   }
   const loudLine = loudWarning(loud);
   if (loudLine) warnings.push(loudLine);

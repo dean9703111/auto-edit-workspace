@@ -12,7 +12,7 @@
 | 「剪好看」「做成片」 | `auto-edit-storyboard` |
 | 「配螢幕錄影」 | `auto-edit-screen` |
 | 分鏡表確認後做情境動畫 | `auto-edit-motion` |
-| 定稿、Studio 修改、「打開剪輯台」 | `auto-edit-review` |
+| 定稿、Studio 修改、「打開剪輯台」、「s12 重新設計」「s12 用 v1」 | `auto-edit-review` |
 | 「可以了，輸出成片」 | `auto-edit-deliver` |
 | 「換風格」「換主色」「換背景」「換暗色」 | `auto-edit-style` |
 
@@ -33,6 +33,7 @@ projects/<專案>/
 │  ├─ 螢幕錄影/       操作畫面（插入用，預設靜音）
 │  └─ 圖片/           截圖、照片（插入用）
 ├─ work/              中間產物
+│  └─ 版本/<段>/      每段的 v1、v2…（預覽.mp4、分鏡.md）和 比較-v1-v2.mp4（見「段落版本與改版」）
 └─ 成片/              final.mp4、測試片段/、驗收截圖/
 ```
 
@@ -86,7 +87,7 @@ projects/<專案>/
 4. 字幕以專案的 `講稿.md` 為準：一則＝講稿的一行（完整語句），由 `media.mjs srt-align` 照講稿排、對時間，不要自己拆句，之後只改講稿本身的錯字；顯示時去掉「，」「。」「；」「：」，保留「、」「！」「？」；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿就只轉繁體、照語音的句子切成完整子句，不要自己猜內容。
 5. 文件之間照「怎麼用這份檔」的優先序；同一層的文件互相矛盾才問我。
 6. 每次交付都附上驗證方式（例如 ffprobe 的輸出、截圖），不要只說「完成了」。
-7. `work/` 的中間檔交付後都要保留：`cuts.md`、`cutpoints.json`、`storyboard.md`、字幕（含備份 `rough.srt.align-*`、`rough.srt.bak-*`、`rough.srt.split-*`）、`transcript.json`（rough.mp4 的詞級逐字稿，`#N@詞` 用它）、`hyperframes/`（含 `plan.json.bak-r<N>`）、`製作進度.md`、`回饋/`、`main.json`、`media/`、`face-landmarks.json`、`rough-look.mp4`、`look-preview.jpg`（`work/.look/` 是快取，可以 `look.mjs clear`）。之後修改、換 session 接續都會用到。
+7. `work/` 的中間檔交付後都要保留：`cuts.md`、`cutpoints.json`、`storyboard.md`、字幕（含備份 `rough.srt.align-*`、`rough.srt.bak-*`、`rough.srt.split-*`）、`transcript.json`（rough.mp4 的詞級逐字稿，`#N@詞` 用它）、`hyperframes/`（含 `plan.json.bak-r<N>`）、`製作進度.md`、`回饋/`、`版本/`、`main.json`、`media/`、`face-landmarks.json`、`rough-look.mp4`、`look-preview.jpg`（`work/.look/` 是快取，可以 `look.mjs clear`）。之後修改、換 session 接續都會用到。
 8. 每階段的回報最多 15 行，子代理最多 25 行；工具呼叫超過「階段預算」就停下來回報卡在哪。
 
 ## 停點總表
@@ -95,7 +96,7 @@ projects/<專案>/
 |---|---|---|---|---|
 | ① 剪輯清單 | 剪乾淨 4 | `work/cuts.md` | 「可以」、要改的列、「改好了」 | `work/cuts.md` |
 | ② 構圖倍率 | 剪好看構圖預覽 | 構圖預覽兩張、`work/look-preview.jpg`、倍率表 | 倍率 | plan.json `frame` |
-| ③ 分鏡表 | 剪好看 3 | `work/storyboard.md`（情境動畫段附動畫分鏡） | 「可以」、「改好了」、要改的段或拍 | 正式 plan.json；情境動畫照確認過的動畫分鏡做 |
+| ③ 分鏡表 | 剪好看 3；④ 之後的改版 | `work/storyboard.md`（情境動畫段附動畫分鏡）；改版看 `work/版本/<段>/v<N>/分鏡.md` | 「可以」、「改好了」、要改的段或拍 | 正式 plan.json；情境動畫照確認過的動畫分鏡做；改版由 `versions.mjs accept` 寫回 storyboard.md |
 | ④ Studio 預覽 | 剪好看 5 | Studio 網址 | 要改的段、「可以了，輸出成片」 | plan.json、`work/回饋/` |
 | ⑤ 剪輯台 | 「打開剪輯台」 | 剪輯台網址 | 「調好了」 | 剪輯台自己寫 |
 | ⑥ 背景預覽 | 換風格 2 | 並排圖、留空區預覽 | 「可以」、「重做」 | `shared/template/bg-*.jpg` |
@@ -106,6 +107,7 @@ projects/<專案>/
 ⏸ 停點 ① 剪輯清單｜請看：work/cuts.md｜請回：「可以」或要改的列
 ⏸ 停點 ② 構圖倍率｜請看：work/構圖預覽.jpg、work/構圖預覽-套卡.jpg｜請回：倍率（1.0／1.15／1.3）
 ⏸ 停點 ③ 分鏡表｜請看：work/storyboard.md｜請回：「可以」或要改的地方
+⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/版本/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍
 ⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出成片」
 ⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」
 ⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」
@@ -126,6 +128,7 @@ projects/<專案>/
 | 剪好看到停點 ② | 8 次 | 交付（render log 另計 20 次） | 12 次 |
 | ② 通過到停點 ③ | 55 次 | 換風格 | 15 次 |
 | 配一支螢幕錄影 | 6 次 | 環境準備 | 同一步失敗 2 次就停 |
+| 改版開提案到停點 ③（每段） | 6 次 | 改版確認後到停點 ④（不含情境動畫） | 12 次 |
 
 ## 開工（每個專案第一次）
 
@@ -143,8 +146,9 @@ projects/<專案>/
 
 ## 進度與回饋紀錄
 
-- `work/製作進度.md` 固定四節：`## 開工決策表`、`## 階段`、`## 停點紀錄`、`## 回饋輪`。停點紀錄表頭 `| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |`；時間 `YYYY-MM-DD HH:MM`；停點寫 `① 剪輯清單`；狀態只有 `待回覆`、`通過`、`修改後重停`、`略過`。停下來先加一列「待回覆」，我回覆後**新增**一列、不改舊列；原話用「」逐字貼（超過 40 字截斷加「…」）。
-- 回饋輪：停點 ④ 之後的修改開一輪 `r<N>`（N＝`status.mjs` 印的「下一輪回饋編號」；沒有工具時是 `work/回饋/` 裡 `r*.md` 的最大數字＋1）。改 plan.json 前先複製成 `work/hyperframes/plan.json.bak-r<N>`（Mac `cp`、Windows `Copy-Item`）。`work/回饋/r<N>.md` 四節：原話、分類（規則／個案、改哪段、改法）、改了哪幾段、驗證。「規則」類（「以後都…」）這集照做，只記在「建議改規則」，不改 `shared/` 和本檔。
+- `work/製作進度.md` 固定四節：`## 開工決策表`、`## 階段`、`## 停點紀錄`、`## 回饋輪`。停點紀錄表頭 `| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |`；時間 `YYYY-MM-DD HH:MM`；停點寫 `① 剪輯清單`；狀態只有 `待回覆`、`通過`、`修改後重停`、`略過`。停下來先加一列「待回覆」，我回覆後**新增**一列、不改舊列；原話用「」逐字貼（超過 40 字截斷加「…」）。改版的停點寫 `③ 分鏡表（s12 v2）`。
+- 「## 階段」的狀態：不管走哪一支 Skill（我直接說「剪乾淨」「打開剪輯台」也一樣），開始一個階段改成 🔄、停在停點改成 ⏸、做完改成 ✅。
+- 回饋輪：停點 ④ 之後的修改開一輪 `r<N>`（N＝`status.mjs` 印的「下一輪回饋編號」；沒有工具時是 `work/回饋/` 裡 `r*.md` 的最大數字＋1）。改 plan.json 前先複製成 `work/hyperframes/plan.json.bak-r<N>`（Mac `cp`、Windows `Copy-Item`），改到的每一段在改之前、build 之後各跑一次 `versions.mjs save`（見「段落版本與改版」）。`work/回饋/r<N>.md` 四節：原話、分類（規則／個案、改哪段、改法）、改了哪幾段、驗證。「規則」類（「以後都…」）這集照做，只記在「建議改規則」，不改 `shared/` 和本檔。
 
 ## 開新專案
 
@@ -191,9 +195,9 @@ projects/<專案>/
 
 1. 講者框：看檔名含「場地照」的圖（沒有就從 `work/rough.mp4` 截一張 `work/場地照.jpg`），跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案>`，看 `work/場地照-動作範圍.jpg` 寫 speakerBox（USAGE.md 2.2）。字幕用 `work/rough.srt`，不重新轉錄。
 2. 素材與情境：有螢幕錄影／圖片，或 `node shared/template/tools/build.mjs --check --project projects/<專案>` 報「只有聲音」的區間時，`node shared/template/tools/media.mjs scan --project projects/<專案>` 配每段口播（座標用 `media.mjs frame --grid`）。每段先填情境判定表（`auto-edit-storyboard` 步驟 5：口播在講什麼 → `shared/template/SITUATIONS.md` §3 哪一列 → 首選 → 為什麼不是動畫）。首選欄是情境動畫就做動畫，只有不符合 style.md「情境動畫優先」三條判準才退到字卡；連續 2 段以上都是 06／07／12／13 字卡就要回頭查 §3 有沒有動畫列。情境動畫從 `shared/template/custom/` 改、用 `P.at('#N@詞')` 綁句、結尾 `P.end()`；示意動畫（口播在描述具體的動作、物件）先判定素材（畫廊／圖示／新建 SVG），寫成那段的插圖清單（`shared/template/BEATS.md` §5）；資訊卡照 style.md，有圖示欄位就配。錄影或動畫裡看得到游標按下就寫 `clicks`；要片尾配樂寫 `outro`。
-3. 分鏡表：草稿 plan.json → `--check`（✖ 先修掉）→ build → `node shared/template/tools/qc.mjs storyboard --project projects/<專案>` 截每段 → 照 USAGE.md 2.3 寫 `work/storyboard.md`（版面只用疊加／半畫面／子母畫面／全幕，直式只用疊加／上下分割／全幕，見 SITUATIONS.md §2；金句只列候選）。每段情境動畫（x-*、04 家族）底下加一張動畫分鏡 `#### 動畫分鏡 <段 id>`：抄 `shared/template/BEATS.md` 那個情境的預設拍型，只填講到的詞與畫面上的字，動態欄只用語彙表的名稱；字卡（06／07／12／13）不用 → 停點 ③（版面和動畫分鏡一次確認；某段情境被我改掉，只重出那一段的分鏡）。我說「改好了」「可以」：重新讀 storyboard.md，以檔案為準寫正式 plan.json；超過上限或違反規則的先告訴我，不要自己改。
+3. 分鏡表：草稿 plan.json → `--check`（✖ 先修掉）→ build → `node shared/template/tools/qc.mjs storyboard --project projects/<專案>` 截每段 → 照 USAGE.md 2.3 寫 `work/storyboard.md`（版面只用疊加／半畫面／子母畫面／全幕，直式只用疊加／上下分割／全幕，見 SITUATIONS.md §2；金句只列候選；整集照 SITUATIONS.md §6 看開場、呼應、判決句）。每段情境動畫（x-*、04 家族）底下加一張動畫分鏡 `#### 動畫分鏡 <段 id>`：抄 `shared/template/BEATS.md` 那個情境的預設拍型，只填講到的詞與畫面上的字，動態欄只用語彙表的名稱；字卡（06／07／12／13）不用 → 停點 ③（版面和動畫分鏡一次確認；某段情境被我改掉，只重出那一段的分鏡）。我說「改好了」「可以」：重新讀 storyboard.md，以檔案為準寫正式 plan.json；超過上限或違反規則的先告訴我，不要自己改。
 4. 定稿：`node shared/template/tools/build.mjs --project projects/<專案>`；有情境動畫跑 `node shared/template/tools/audit.mjs --project projects/<專案>`（✖ 全部修掉）；「沒有畫面的區間」要是「無」，刻意留的要說明。
-5. 抽查：`(cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review)` 照 `shared/template/REVIEW.md` 看，再 `(cd projects/<專案>/work/hyperframes && npx hyperframes preview --no-open)` → 停點 ④。我說「s05 往左移」這類修改：開回饋輪，改 plan.json 那一段再 build。
+5. 抽查：`(cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review)` 照 `shared/template/REVIEW.md` 看，再 `(cd projects/<專案>/work/hyperframes && npx hyperframes preview --no-open)` → 停點 ④。我說「s05 往左移」這類修改：開回饋輪，改 plan.json 那一段再 build；要一段重新設計、退回舊版照「段落版本與改版」。
 6. 輸出：`node shared/template/tools/build.mjs --project projects/<專案> --test 起點,4` → `(cd projects/<專案>/work/hyperframes && npx hyperframes render -c compositions/test-clip.html --quality draft -o ../../成片/測試片段/test-clip.mp4)`，ffprobe 確認有音軌，`node shared/template/tools/qc.mjs observe --project projects/<專案> --file projects/<專案>/成片/測試片段/test-clip.mp4 --offset <起點>` 看版面與接縫；再背景 render `成片/final.mp4`（USAGE.md 2.7）→ `node shared/template/tools/qc.mjs observe --project projects/<專案>`（照 REVIEW.md 看觀影總表）→ `node shared/template/tools/qc.mjs final --project projects/<專案>`：✖ 修好再交，⚠ 逐項說明；附 `成片/驗收截圖/qc-sheet.jpg`、`work/觀影/index.md`。
 
 硬規則：
@@ -209,6 +213,21 @@ projects/<專案>/
 | 構圖倍率 | 1.0／1.15／1.3；每個像素放大超過 3.5 倍、或切到手勢的往小選；直式另看頭頂 y 380–520、下巴 ≤ 860 |
 | 分鏡截圖 | `qc.mjs storyboard` 自己算：每段完成態（段尾前 0.6 秒）、條列逐條換的每次一張、錄影段每個標註到位一張 |
 | 測試片段 | 3–5 秒，挑第一張資訊卡出現處 |
+
+## 段落版本與改版（停點 ④ 之後）
+
+每段的版本放 `work/版本/<段>/v<N>/`：`段落.json`（plan.json 那一段）、情境動畫的 `x-*.html` 與 svg、`分鏡.md`、`預覽.mp4`（這一段 render 出來的樣子）、`預覽.jpg`；改過的段另有 `比較-v<舊>-v<新>.mp4`（左舊右新）。版本只用 `versions.mjs` 建、退回，不要手動複製；我在停點 ④ 會看 Studio 和這幾支影片。
+
+| 我說 | 走哪條 | 做法（`auto-edit-review` 流程 B、D、E） |
+|---|---|---|
+| 指名段＋具體改法：位置、文字、時間、音效、大小（「s05 往左移」「s09 字太多」） | 回饋輪直接改 | 改之前、build 之後各跑一次 `node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>` → 停點 ④ |
+| 指名段、想要更好但沒說怎麼改：「更完善」「更細節」「重新設計」「重做」「換個動畫」 | 改版：先出分鏡、我確認再做 | `node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段>` → 改 `v<N>/分鏡.md` → 停點 ③（<段> v<N>）→ 我說「可以」→ `versions.mjs accept` → 照 `auto-edit-motion` 做 → build、audit → `versions.mjs save` → 停點 ④ |
+| 「s12 用 v1」「退回上一版」 | 退回 | `node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v1` → build、audit → 停點 ④ |
+| 「s12 有哪些版本」 | 列出 | `node shared/template/tools/versions.mjs list --project projects/<專案> --seg <段>` |
+| 沒指名段（「動畫都更細節一點」） | 先問 | 列出情境動畫段，每段一句可以改的方向，問要改哪幾段；可以一次改好幾段（`--seg s08,s12`，停點寫「③ 分鏡表（s08 v2、s12 v2）」） |
+
+- 「1:10 那段」「這段」照 USAGE.md 2.6 找段 id。改版也算一輪回饋：照「進度與回饋紀錄」開 `r<N>`，rN.md 的改法寫「改版 <段> v<N>」。
+- 改版的提案只寫在 `v<N>/分鏡.md`（不先改 storyboard.md）；「這版要改什麼」寫 1–5 條和上一版差在哪，動畫分鏡的格式和停點 ③ 一樣（表頭照抄 BEATS.md、動態只用語彙表的名稱）。
 
 ## 子代理分工（選用）
 

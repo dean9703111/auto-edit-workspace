@@ -74,11 +74,11 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
 
     // ══ DATA 2：拍（一拍一行；只改這裡）══
-    const T1 = P.at('#182@手機');     P.sfx('tick', '#182@手機');
-    const T2 = P.at('#183@雲端');     P.sfx('tick', '#183@雲端');
-    const T3 = P.at('#184@電腦');     P.sfx('tick', '#184@電腦');
-    const T4 = P.at('#185@播放');     P.sfx('tick', '#185@播放');
-    const T5 = P.at('#186@沒問題');   P.sfx('tick', '#186@沒問題');
+    const T1 = P.at('#182@手機');
+    const T2 = P.at('#183@雲端');
+    const T3 = P.at('#184@電腦');
+    const T4 = P.at('#185@播放');
+    const T5 = P.at('#186@沒問題');
     const BEATS = [
       [T1, { in: ['xsc-phone'], focus: 'xsc-phone' }],
       [T2, { in: ['xsc-cloud'], line: 'xsc-phone-xsc-cloud', focus: 'xsc-cloud' }],

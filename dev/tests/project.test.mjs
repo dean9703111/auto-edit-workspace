@@ -17,7 +17,7 @@ before(() => {
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   tpl = path.join(root, 'shared', 'template');
   fs.symlinkSync(TEMPLATE, tpl, 'dir');
-  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'pop.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
+  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   fs.mkdirSync(path.join(root, 'projects', '範例', 'work', 'hyperframes'), { recursive: true });
 });
 

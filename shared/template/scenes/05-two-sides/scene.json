@@ -27,8 +27,8 @@
     "cards": { "at": "0.2 + {{i}} * 0.35" }
   },
   "sfx": {
-    "main": { "sound": "pop", "at": "cards[0]" },
-    "extra": [ { "sound": "tick", "at": "cards[1:]" } ]
+    "main": null,
+    "extra": []
   },
   "rules": [],
   "sample": {

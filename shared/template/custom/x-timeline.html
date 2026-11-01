@@ -134,7 +134,6 @@
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#131@2019'), T2 = P.at('#132@2022'), T3 = P.at('#133@2024'), T4 = P.at('#134@今年');   // 講到每個時間點的時刻
-    P.sfx('tick', '#131@2019'); P.sfx('tick', '#132@2022'); P.sfx('tick', '#133@2024'); P.sfx('tick', '#134@今年');   // 每一點一顆音效（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     // 0. 版面：點（卡片＋說明）由 #xtl-body 的 data-layout 排好（kit/scene-layout.js），這裡只讀，載入時算一次、每次結果相同（以下都不用改）
     const L = window.SceneLayout, BODY = document.getElementById('xtl-body');

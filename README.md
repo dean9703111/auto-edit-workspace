@@ -1,10 +1,56 @@
 # auto-edit-workspace
 
-這是配合影片「AI 自動剪輯 EP1」用的工作區。
+把一支原始口播交給 AI Agent，剪成有字幕、資訊卡、情境動畫、音效的成片。
 
-把它交給 MiniMax Code，照影片裡的 4 個提示詞貼上去，AI 就會幫你把一支原始口播，剪成有字幕、資訊卡、音效的成片。
+Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用：守則寫在每個 Agent 都會讀的 `AGENTS.md`，流程寫成 9 支 Skill，真正的剪輯計算交給工作區裡的程式。換哪一個 Agent，剪出來的規格都一樣。
 
-影片連結：待補
+- 官網與情境庫：https://dean9703111.github.io/auto-edit-workspace/
+- 影片教學「AI 自動剪輯 EP1」：待補
+
+## 這是什麼
+
+剪口播影片最花時間的，是一直重複的手工：找出講錯重講的地方、對字幕、做字卡、讓動畫跟著講到的詞出現、配音效、調音量。這個工作區把這些事拆成兩半：
+
+- **AI Agent 負責判斷**：哪一句是 NG、這段口播在講什麼情境、該用哪個版面和動畫、卡片上寫什麼。
+- **程式負責計算**：逐字稿的詞級時間、NG 的起訖、字幕斷句與對時、剪接點、動畫每一拍的秒數、版面有沒有撐破或擋到臉、人聲與音效的響度。
+
+AI 不自己算秒數，也不從零寫動畫。它讀逐字稿、填好一份 `plan.json`，寫上「這張卡在講到『兩支』時出現」（`#38@兩支`），程式就把字幕、資訊卡、情境動畫、子母畫面、音效組成一支 [HyperFrames](https://github.com/heygen-com/hyperframes)（HTML 轉影片）專案，再輸出成 `final.mp4`。同樣的素材、同樣的分鏡，不管哪個 Agent 來做，結果都一樣。
+
+整個流程有六個停點，AI 做到那裡會停下來，把剪輯清單、構圖、分鏡表、預覽網址交給你決定，不會一路自己做到底。
+
+## 怎麼運作
+
+```mermaid
+flowchart LR
+  A["素材<br>口播、旁白、螢幕錄影、圖片"] --> B["剪乾淨<br>逐字稿 → 找 NG → 初剪 → 字幕"]
+  B --> C["剪好看<br>構圖 → 分鏡表 → 情境動畫"]
+  C --> D["預覽與修改<br>Studio、剪輯台"]
+  D --> E["輸出<br>final.mp4 ＋ 驗收截圖"]
+```
+
+| 階段 | AI Agent 判斷 | 程式計算 | 停下來給你看 |
+|---|---|---|---|
+| 剪乾淨 | 逐字稿裡哪一句重講、卡住，列成剪輯清單 | 主軌轉檔（`media.mjs main`）、whisper 詞級逐字稿、NG 對齊停頓並產生 auto-editor 指令（`media.mjs ng-snap`）、初剪驗證（`media.mjs verify-rough`）、字幕照講稿斷句對時（`media.mjs srt-align`） | ① 剪輯清單 |
+| 構圖 | 選畫面放大倍率 | 講者調光、瘦臉、臉部偵測（`look.mjs`），算出每個倍率的構圖預覽（`qc.mjs framing`） | ② 構圖倍率 |
+| 分鏡 | 每段口播在講什麼情境、用哪個版面和動畫、卡片寫什麼 | 檢查字數上限、版面、文字出現時間對不對得上講到的詞（`build.mjs --check`），截出每段的完成態（`qc.mjs storyboard`） | ③ 分鏡表 |
+| 定稿 | 照你的意見改哪一段 | 組成 HyperFrames 專案：字幕、資訊卡、子母畫面、音效對準畫面事件、人聲調到 −14 LUFS（`build.mjs`）；量文字撐破、被裁、擋臉（`audit.mjs`） | ④ Studio 預覽、⑤ 剪輯台 |
+| 輸出 | 看觀影總表判斷哪裡怪 | render、檢查格式、長度、響度、黑畫面、畫面凍結（`qc.mjs final`） | — |
+
+第 ⑥ 個停點是換背景圖時的預覽。每個停點要回什麼、做完寫回哪裡，在 [AGENTS.md](AGENTS.md)「停點總表」。
+
+## 支援的 AI Agent
+
+要用能在你電腦上執行指令、讀寫檔案的 Agent（ChatGPT 網頁版不行，要用 Codex）。打開工作區時選看得到 `AGENTS.md` 的那一層，Agent 就會讀到守則。
+
+| Agent | 守則 | 9 支 Skill |
+|---|---|---|
+| Claude Code | 自動讀 `AGENTS.md` | 環境檢測時由 `node setup/install-skills.mjs` 裝進工作區的 `.claude/skills/` |
+| MiniMax Code | 自動讀 `AGENTS.md` | 環境檢測時裝進 `~/.minimax/skills/` |
+| ChatGPT（Codex） | 自動讀 `AGENTS.md` | `AGENTS.md` 會要它直接讀 `.agents/skills/<名稱>/SKILL.md`，不用安裝 |
+| Cursor | 自動讀 `AGENTS.md` | 同上 |
+| 其他 Agent | 開工先說「先讀 AGENTS.md」 | 同上 |
+
+影片裡示範的是 MiniMax Code（模型 MiniMax-M3.1-Flash）。守則和 Skill 都寫成一步一步照做的格式，不需要最強的模型；換成其他 Agent 遇到問題，歡迎回報。
 
 ## 裡面有什麼
 
@@ -21,7 +67,7 @@
 | 講者調光＋瘦臉 | 預設調光 0.8、瘦臉 0.6（對照剪映「智能調色」80、「瘦臉」60） | `shared/template/kit/look.json`（工具 `look.mjs`） | 自動套在講者畫面；剪輯台「講者」可以調，臉部偵測在本機做、不上傳 |
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
 | 字型 | 2 套（Noto Sans TC、Google Sans Flex） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
-| 音效 | 18 個（pop、tick、swipe、whoosh、ding、success、alert、impact、flip、type、glitch、riser、click、chapter、sparkle、shine、thunder，加結尾配樂 bgm-outro），CC0 素材或程式合成 | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
+| 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處） | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
 | 成片產生器 `build.mjs` | 1 支 | `shared/template/tools/build.mjs` | 一個指令組好字幕、資訊卡、子母畫面、音效；人聲自動調到 YouTube 的響度標準（−14 LUFS），剪接點自動消爆音 |
 | 素材工具 `media.mjs` | 1 支 | `shared/template/tools/media.mjs` | 把多支影片、錄音接成主軌；`ng-snap` 把 NG 對齊停頓並印出 auto-editor 指令；`srt-align` 把字幕照講稿排成完整語句並對好時間（舊流程 `srt-split`、`snap-srt`）、`cutpoints` 算剪接點；掃描螢幕錄影與圖片，產生縮圖總表讓 AI 配對、讀座標 |
 | 進度與能力 `status.mjs`、`caps.mjs` | 2 支 | `shared/template/tools/` | `status`：換 session 說「繼續」時看做到哪、下一步；`caps`：這台電腦能用哪些生圖與影片工具（只檢查、不安裝） |
@@ -32,7 +78,7 @@
 | 講者工具 `look.mjs` | 1 支 | `shared/template/tools/look.mjs` | 偵測講者的臉、產生瘦臉底片與對照圖 `work/look-preview.jpg` |
 | 使用說明 `USAGE.md`、`USAGE-reference.md` | 2 份 | `shared/template/` | AI 第一次用只讀核心的 USAGE.md；每個情境的參數在 reference，或用 `node shared/template/tools/build.mjs --list` 查 |
 | 工作區守則 `AGENTS.md` | 1 份 | `AGENTS.md` | AI 開工前自動讀；六個停點、每個流程對應哪支 Skill |
-| Skill | 9 支（總指揮、環境、剪乾淨、分鏡、螢幕錄影、情境動畫、審查、輸出、換風格） | `.agents/skills/` | 每個流程的逐步指令與退路；環境準備時自動裝進 MiniMax Code 與 Claude Code |
+| Skill | 9 支（總指揮、環境、剪乾淨、分鏡、螢幕錄影、情境動畫、審查、輸出、換風格） | `.agents/skills/` | 每個流程的逐步指令與退路；環境準備時自動裝進 Claude Code 與 MiniMax Code，其他 Agent 照 `AGENTS.md` 直接讀原始檔 |
 | 情境對照 `SITUATIONS.md` | 1 份 | `shared/template/SITUATIONS.md` | 口播在講什麼 → 用哪個版面、情境、動態、音效 |
 | 審查門檻 `REVIEW.md` | 1 份 | `shared/template/REVIEW.md` | 抽查截圖、驗收成片時看哪些地方、怎麼回報 |
 | 剪輯風格 `style.md` | 1 份 | `shared/style.md` | 字幕、節奏、字卡文字、音效規則 |
@@ -42,23 +88,25 @@
 
 ## 事前準備
 
-- [MiniMax Code 桌面版](https://agent.minimax.io/download)
+- 一個 AI Agent（見上面「支援的 AI Agent」）。照影片做的話裝 [MiniMax Code 桌面版](https://agent.minimax.io/download)。
 
 其他工具（git、Node.js、ffmpeg、whisper、auto-editor、兩組外部 Skill、根目錄 `npm install` 的固定版本 HyperFrames、9 支 auto-edit Skill）由提示詞 1 照 [setup/](setup/README.md) 的手冊幫你檢測、安裝，Mac 和 Windows 都有。Windows 還沒有實測，歡迎回報。
 
 ## 怎麼開始
 
 1. 取得這個工作區，三種方式挑一種：
-   - 照影片的做法：打開 MiniMax Code 桌面版，先選 Local，再點 Select folder 選桌面，貼上 [PROMPTS.md](PROMPTS.md) 第 0 步的提示詞，AI 會幫你抓下來（沒裝 git 它會教你裝）。
    - 會用終端機：`git clone https://github.com/dean9703111/auto-edit-workspace.git`
    - 在 GitHub 頁面點「Code → Download ZIP」。解壓縮後的資料夾名稱會多一個 `-main`，不影響使用；Windows 要先「解壓縮全部」再打開。
-2. 回到 MiniMax Code，開一個新任務，先選 Local，再點 Select folder，選進看得到 `AGENTS.md` 的那一層。這樣 AI 才讀得到守則。
-3. 先貼 [PROMPTS.md](PROMPTS.md) 的提示詞 1，讓 AI 檢測環境、把缺的工具裝好。
-4. 接著照 [PROMPTS.md](PROMPTS.md) 的順序，貼上提示詞 2 到 4。
+   - 照影片的做法：打開 MiniMax Code 桌面版，先選 Local，再點 Select folder 選桌面，貼上 [PROMPTS.md](PROMPTS.md) 第 0 步的提示詞，AI 會幫你抓下來（沒裝 git 它會教你裝）。
+2. 用你的 Agent 打開看得到 `AGENTS.md` 的那一層：桌面版選這個資料夾；終端機版先 `cd auto-edit-workspace` 再啟動（例如 `claude`、`codex`）。
+3. 說「幫我檢測環境」（[PROMPTS.md](PROMPTS.md) 提示詞 1）。AI 會照 [setup/](setup/README.md) 的手冊檢查、把缺的工具和 Skill 裝好，裝之前會先列清單問你。
+4. 接著照 [PROMPTS.md](PROMPTS.md) 的順序貼提示詞 2 到 4：「剪乾淨」→「做成片」→「可以了，輸出成片」。第一次可以用內建的 `@projects/範例` 練習。
+
+[PROMPTS.md](PROMPTS.md) 的畫面說明以 MiniMax Code 為例，提示詞本身每個 Agent 都能貼；要「重開 MiniMax Code」的地方，換成重開你用的 Agent。
 
 ## 預覽情境庫
 
-想先看成片會長什麼樣子，打開 `shared/template/index.html`。建議用 Chrome 或 Edge 開。
+想先看成片會長什麼樣子，到[官網的情境庫](https://dean9703111.github.io/auto-edit-workspace/shared/template/)，或在本機打開 `shared/template/index.html`。建議用 Chrome 或 Edge 開。
 
 ## 開自己的專案
 
@@ -135,7 +183,7 @@ TTS、BGM、Docker 都是選用功能，這個工作區用不到。只有這幾�
 
 程式碼採 MIT，情境模板、情境動畫範例與字卡動態採 CC BY 4.0，第三方素材與示範影片的條件見 [NOTICE.md](NOTICE.md)。
 
-音效取自 Kenney（https://kenney.nl）與 OpenGameArt（https://opengameart.org）的 CC0 素材，可以放進自己的影片、商用，不用標示出處。逐檔來源見 [shared/sfx/README.md](shared/sfx/README.md)。
+9 個音效是 AI 生成或取自 Kenney（https://kenney.nl）的 CC0 素材，可以放進自己的影片、商用，不用標示出處。片尾配樂〈Cylinder Five〉（Chris Zabriskie）是 CC BY 4.0，預設不配；用到時影片說明欄要標示出處，build 會印出要貼的那一行。逐檔來源見 [shared/sfx/README.md](shared/sfx/README.md)。
 
 ## 作者
 

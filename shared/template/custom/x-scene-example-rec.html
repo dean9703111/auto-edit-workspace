@@ -82,11 +82,11 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
 
     // ══ DATA 2：拍（一拍一行；只改這裡）══
-    const T1 = P.at('#192@腳架');   P.sfx('tick', '#192@腳架');
-    const T2 = P.at('#193@試錄');   P.sfx('tick', '#193@試錄');
-    const T3 = P.at('#194@走到');   P.sfx('tick', '#194@走到');
-    const T4 = P.at('#195@播放');   P.sfx('tick', '#195@播放');
-    const T5 = P.at('#196@聲音');   P.sfx('tick', '#196@聲音');
+    const T1 = P.at('#192@腳架');
+    const T2 = P.at('#193@試錄');
+    const T3 = P.at('#194@走到');
+    const T4 = P.at('#195@播放');
+    const T5 = P.at('#196@聲音');
     const T6 = P.at('#197@符合');   P.sfx('success', '#197@符合');
     const BEATS = [
       [T1, { in: ['xscr-phone'], focus: 'xscr-phone' }],

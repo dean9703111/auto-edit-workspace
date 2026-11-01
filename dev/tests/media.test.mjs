@@ -28,7 +28,7 @@ before(() => {
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   tpl = path.join(root, 'shared', 'template');
   fs.symlinkSync(TEMPLATE, tpl, 'dir');
-  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'pop.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
+  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   proj = path.join(root, 'projects', 'p1');
   for (const d of ['真人錄影', '聲音', '螢幕錄影', '圖片']) fs.mkdirSync(path.join(proj, '素材', d), { recursive: true });
   out = path.join(proj, 'work', 'hyperframes');
@@ -79,13 +79,13 @@ test('media 段欄位檢查：src、in＋段長、座標範圍、紅框同時 �
 });
 
 test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關鍵幀、放在主合成；子母畫面避開只有聲音的區間；紅框、運鏡、放大鏡', () => {
-  writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 13, in: 1, volume: -6, sfx: 'whoosh',
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 13, in: 1, volume: -6, sfx: 'impact',
     moves: [{ at: '+0.5', to: [0, 0, 320, 200], dur: 0.6 }, { at: '+3', to: 'full', dur: 0.6 }],
     marks: [{ at: '+1', until: '+2.5', box: [40, 40, 200, 100] }],
     lens: [{ at: '+4', until: '+5.5', box: [300, 150, 200, 100] }] }]);
   const r = build();
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.match(r.stdout, /m01｜media 操作示範\.mp4｜0:07\.00–0:13\.00｜6s｜whoosh/);
+  assert.match(r.stdout, /m01｜media 操作示範\.mp4｜0:07\.00–0:13\.00｜6s｜impact/);
   assert.match(r.stdout, /只有聲音（rough\.mp4 0:08\.00–0:12\.00，4s）：已被 media 段或全畫面蓋住/);
   const html = read('index.html');
   const v = html.match(/<video id="mv-m01" src="(assets\/media\/[\w-]+\.mp4)" data-start="7" data-duration="6" data-media-start="1"\s+data-track-index="\d+" data-has-audio="true" data-volume="0\.501"/);
@@ -108,7 +108,7 @@ test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關
   assert.match(html, /<script src="kit\/media\.js"><\/script>/);
   const lensDir = path.join(out, 'assets', 'media', 'm01-l1');
   assert.ok(fs.readdirSync(lensDir).filter((f) => f.endsWith('.jpg')).length >= 1);
-  assert.match(html, /<audio id="sfx-m01" src="assets\/sfx\/whoosh\.wav"/);
+  assert.match(html, /<audio id="sfx-m01" src="assets\/sfx\/impact\.wav"/);
   // 再 build 一次：素材沒變就不重新轉檔
   const again = build();
   assert.doesNotMatch(again.stdout, /轉檔 素材/);
@@ -184,7 +184,7 @@ test('work/cutpoints.json 讀進 --check 與 build：joins 對在剪接點或 cu
 });
 
 test('--check --json 的 items：end＝plan.json 寫的迄點，畫面上自動延長時另給 shownEnd；sfx 每顆帶 volume 與 db', () => {
-  writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 12, sfx: 'whoosh', sfxVolume: -6 }, { id: 'm02', type: 'media', src: IMG, from: 12, to: 14, enter: 'slide' }]);
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 12, sfx: 'impact', sfxVolume: -6 }, { id: 'm02', type: 'media', src: IMG, from: 12, to: 14, enter: 'slide' }]);
   const { j } = checkJson();
   assert.equal(j.ok, true, j.errors.join('\n'));
   const m1 = j.items.find((x) => x.id === 'm01');
@@ -192,9 +192,10 @@ test('--check --json 的 items：end＝plan.json 寫的迄點，畫面上自動�
   assert.equal(m1.shownEnd, 12.6, 'm02 用 slide 進場，m01 墊在底下 0.6 秒');
   assert.ok(!('shownEnd' in j.items.find((x) => x.id === 'm02')));
   const w = m1.sfx[0];
-  assert.equal(w.name, 'whoosh');
+  assert.equal(w.name, 'impact');
   assert.equal(w.db, +(20 * Math.log10(w.volume)).toFixed(1));
-  assert.ok(Math.abs(w.volume - 0.5 * Math.pow(10, -6 / 20)) < 0.002);
+  const base = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')).impact.volume;
+  assert.ok(Math.abs(w.volume - base * Math.pow(10, -6 / 20)) < 0.002);
 });
 
 test('字卡動態：fx-kit.js 放在 compositions/ 與專案根目錄（render 以子合成位置解析、播放器以專案根解析）', () => {

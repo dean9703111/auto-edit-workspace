@@ -91,7 +91,6 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const B1 = P.at('#92@長片'), B2 = P.at('#93@短影音'), B3 = P.at('#94@逐字稿');   // 講到第 1–3 條分支名稱的時刻
 
-    P.sfx('tick', '#92@長片'); P.sfx('tick', '#93@短影音'); P.sfx('tick', '#94@逐字稿');   // 每一條一顆音效（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const ALL = '#xbr-b1, #xbr-b2, #xbr-b3';   // 三條分支（2 條時拿掉 b3）
     const MERGE = false;                       // 匯流（2–3 個來源 → 一個結果）改 true，見檔頭變體表

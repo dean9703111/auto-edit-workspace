@@ -27,8 +27,8 @@
     "items": { "at": "0.2 + {{i}} * 0.5" }
   },
   "sfx": {
-    "main": { "sound": "pop", "at": "items[0]" },
-    "extra": [ { "sound": "tick", "at": "items[1:]" } ]
+    "main": null,
+    "extra": []
   },
   "rules": [
     {

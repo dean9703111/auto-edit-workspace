@@ -110,7 +110,7 @@
 | `bg` | | 選填 | | `"none"`（預設，透明疊在講者上）、`"dark"`、`"light"`、`"accent"`（不透明整張幕） |
 | `sfx` | 選填 | 選填 | 選填 | `kit/sfx.json` 裡 `kind` 是 `sfx` 的名稱之一（R5.2）或 `null`（不配）。不寫＝用預設（R5）；custom 不寫就不配 |
 | `clicks` | | | 選填 | 畫面上看得到游標按下的時間 `["+3.2", "#21@安裝"]`，一下一顆 `click`（R5.2）；media 段也能寫 |
-| `sfxExtra` | 選填 | | | `false`＝關掉這段的附加音效（條列、步驟的 tick 等）；不寫＝開（fx 沒有附加音效） |
+| `sfxExtra` | 選填 | | | `false`＝關掉這段的附加音效（09 答案的 ding、情境動畫的 P.sfx 等）；不寫＝開（fx 沒有附加音效） |
 | `sfxVolume` | 選填 | 選填 | 選填 | 這段音效的音量（dB，−60～+12，0＝預設），主音效與附加音效一起調；疊在 `kit/sfx.json` 與 `edit.volume.sfx` 上。通常是剪輯台寫的（核心 6.3） |
 | `css` | 選填 | | | 微調位置的 CSS，id 寫模板裡的原名（R4） |
 | `chtag` | 不用寫 | | | 章節角標由 build 自動常駐（R2.2）；寫了會 ⚠，只有 `"chapterBadge": false` 時才畫附件 |
@@ -146,7 +146,7 @@
 | `steps` | 選填 | `[{ "at", "text" }]` | | STEP 膠囊；`text` 1–12 字；相鄰兩步 ≥ 1.65 秒；號碼自動 |
 | `arrows` | 選填 | `[{ "at", "until", "to": [x,y], "from" }]` | `until`＝`at`＋3 秒 | 箭頭；`from` `"n" "ne" "e" "se" "s" "sw" "w" "nw"`，不寫＝自動；≥ 2.2 秒；一次一支；放不下自動拿掉（⚠）；期間不能有運鏡 |
 | `clicks` | 選填 | `["+秒數" 或 "#N@詞", …]` | | 錄影裡看得到游標按下的地方，一下一顆 `click`（R5.2） |
-| `sfx` | 選填 | 音效名稱或 `null` | 不配 | 從講者切到錄影的第一段建議 `"whoosh"` |
+| `sfx` | 選填 | 音效名稱或 `null` | 不配 | 錄影段預設不配 |
 | `sfxVolume` | 選填 | −60～+12（dB） | `0` | |
 | `note` | 選填 | 文字 | | build 不讀 |
 
@@ -169,7 +169,7 @@
   "cutpoints": [ { "at": 12.34, "kind": "ng" } ],
   "items": [
     { "id": "s01", "type": "scene", "label": "06 一般字卡", "start": 12.5, "end": 18.0,
-      "sfx": [ { "name": "pop", "at": 12.623, "volume": 0.354, "db": -9 } ], "warnings": 0 },
+      "sfx": [ { "name": "ding", "at": 12.623, "volume": 0.468, "db": -12.6 } ], "warnings": 0 },
     { "id": "m01", "type": "media", "label": "media 操作示範.mp4", "start": 41.0, "end": 58.2, "shownEnd": 58.8,
       "sfx": [], "warnings": 1, "src": "素材/螢幕錄影/操作示範.mp4", "enter": "fade", "exit": "fade", "volume": null, "kind": "video" } ],
   "edit": { "cuts": [], "fadeIn": 0, "fadeOut": 0, "volume": { "voice": 0, "sfx": 0, "media": 0 }, "gains": [], "joins": [] },
@@ -369,31 +369,31 @@
 
 音效對準畫面事件，不放句尾。全部由 build 自動配，AI 只在要換、要拿掉、要加點擊、要配結尾配樂時寫。
 
-**18 個音效**：名稱、用途、對齊哪一格、每集上限照 `shared/style.md` 音效段；峰值、預設音量、相對人聲的大小（`targetDb`）在 `shared/template/kit/sfx.json`。`node shared/template/tools/build.mjs --list` 會印出全部。
+**9 個音效＋1 首片尾配樂**：名稱、用途、對齊哪一格、每集上限照 `shared/style.md` 音效段；峰值、預設音量、相對人聲的大小（`targetDb`）在 `shared/template/kit/sfx.json`。`node shared/template/tools/build.mjs --list` 會印出全部。
 
 **情境預設配對**（寫在各情境 `scene.json` 的 `sfx` 區塊）
 
 | 情境 | 主音效＋落點 | 附加音效 |
 |---|---|---|
 | 01 chapter | `chapter`：章名進場（`titleAt`，段起點後 0.45 秒） | — |
-| 02 chapter-tag | `swipe`：進場 | — |
-| 03 side-panel | `swipe`：段起點 | `tick`：每一條項目 |
-| 04a fs-list | `whoosh`：段起點前 0.15 秒 | `tick`：每一條項目 |
-| 04b fs-compare | `whoosh`：段起點前 0.15 秒 | `tick`：左欄進場、右欄進場 |
-| 04c fs-flow | `whoosh`：段起點前 0.15 秒 | `tick`：每一個節點 |
-| 04d fs-table | `whoosh`：段起點前 0.15 秒 | `tick`：每一列 |
-| 05 two-sides | `pop`：第一張卡片 | `tick`：第 2–4 張卡片 |
-| 06 concept | `pop`：進場後 0.1 秒 | — |
+| 02 chapter-tag | — | — |
+| 03 side-panel | — | — |
+| 04a fs-list | — | — |
+| 04b fs-compare | — | — |
+| 04c fs-flow | — | — |
+| 04d fs-table | — | — |
+| 05 two-sides | — | — |
+| 06 concept | — | — |
 | 07 key-point | `ding`／`alert`／`success`（依 tone）：進場後 0.15 秒 | — |
-| 08 steps | `pop`：進場後 0.1 秒 | `tick`：第 2 步起每一步 |
-| 09 qa | `pop`：進場後 0.1 秒 | `ding`：答案進場（音量 ×0.8） |
-| 10 tips | `pop`：進場後 0.1 秒 | — |
-| 11 summary | `pop`：進場後 0.1 秒 | — |
-| 12 keywords | `pop`：第一個詞 | `tick`：第 2 個詞起每一個 |
-| 13 title-list | `pop`：進場後 0.1 秒 | `tick`：第 2 條起每一條 |
+| 08 steps | — | — |
+| 09 qa | — | `ding`：答案進場（音量 ×0.8） |
+| 10 tips | — | — |
+| 11 summary | — | — |
+| 12 keywords | — | — |
+| 13 title-list | — | — |
 | 14 speaker | `sparkle`：進場後 0.1 秒 | — |
 | 15 quote | `sparkle`（`tone: "warn"` 改 `thunder`）：進場後 0.1 秒 | — |
-| media | 不配（從講者切過來的第一段自己寫 `"sfx": "whoosh"`） | `clicks` 每一項一顆 `click` |
+| media | 不配 | `clicks` 每一項一顆 `click` |
 | custom | 不配（要就自己寫 `"sfx"`，落點＝段起點） | `clicks` 每一項一顆 `click` |
 
 07 的 tone：`warn`＝`alert`、`good`＝`success`、沒寫＝`ding`。15 的 tone：`warn`＝`thunder`，其他＝`sparkle`。
@@ -402,7 +402,7 @@
 
 **覆寫方式**（寫在 plan.json 的那一段）
 
-- `"sfx": "ding"`：換主音效名稱，落點不變。只能寫段落音效；`bgm-outro` 是配樂，寫在第一層 `outro`。
+- `"sfx": "ding"`：換主音效名稱，落點不變。只能寫段落音效；`bgm-cylinder-five` 是配樂，寫在第一層 `outro`。
 - `"sfx": null`：這段不要主音效。
 - `"sfxExtra": false`：關掉這段的附加音效（含 `clicks`），主音效不受影響。
 - `"sfxVolume": -6`：這段音效（主音效＋附加音效）的音量，dB；疊在 `kit/sfx.json` 的預設音量與 `edit.volume.sfx` 上（剪輯台會寫）。
@@ -410,13 +410,13 @@
 
 **結尾配樂**（plan.json 第一層）
 
-- `"outro": { "from": "#N" }`：從第 N 句起播 `bgm-outro` 到片尾；配樂比這段短時，改成對齊片尾起播（報告會說）。
+- `"outro": { "from": "#N", "music": "bgm-cylinder-five" }`：從第 N 句起播到片尾（不寫 `music`＝不配；這首是 CC BY 4.0，影片說明欄要貼 build 印的出處那一行）；配樂比這段短時，改成對齊片尾起播（報告會說）。
 - `"outro": { "from": "#N", "volume": -3 }`：這集配樂再小 3 dB；`"music": null`＝這集不配。
 
 **時間規則**
 
 - 起點＝畫面事件時間 − 音效峰值 ＋ 1 幀（理由：放在句尾的音效會晚 1–3 秒，聽起來像沒對上）。
-- 一張卡最多一個主音效；兩個主音效相距不到 3 秒時只留前一個，被拿掉的會出現在提醒與報告的「音效時間」欄（`（pop 已拿掉）`）。3 秒間隔只比主音效；附加音效和 `tick`、`click` 不算。
+- 一張卡最多一個主音效；兩個主音效相距不到 3 秒時只留前一個，被拿掉的會出現在提醒與報告的「音效時間」欄（`（ding 已拿掉）`）。3 秒間隔只比主音效；附加音效和 `click` 不算。
 - 同一段附加音效的起點相距不到 0.2 秒，丟掉後者（也會和主音效比）。
 - `--check` 最後印「音效次數」（有上限的寫 `次數／上限`）與「音效密度」；超過上限、某一分鐘主音效太多會 ⚠（規則照 `shared/style.md`）。
 
@@ -497,7 +497,7 @@
 
 ```json
 { "id": "x01", "type": "custom", "src": "compositions/x-flow.html", "layout": "fullscreen",
-  "from": "#17", "to": "#25e", "anchor": "接著用 Whisper", "sfx": "whoosh" }
+  "from": "#17", "to": "#25e", "anchor": "接著用 Whisper" }
 ```
 
 | `layout` | 用在 | build 會做什麼 | 你要做什麼 |
@@ -568,9 +568,9 @@
 - 拍點常數（`const T1 = P.at(…)`）的名字用大寫英文字母開頭、只用大寫字母和數字（`T1`、`ALL`、`FIX`、`R2`），不要有底線或小寫；檔頭【D 下限】用同一個名字。
 - 結尾一定要 `P.end()`（不帶參數）：長度自動等於 plan.json 這段的長度。要用到段長（例：overlay 自己退場 `P.out(..., P.dur() - P.OUT)`）寫 `P.dur()`。
 - 顏色只用 token（`var(--brand)`、`var(--sc-*)`、`var(--v2-*)`），不寫色碼。理由：使用者換主色、換主題（亮／暗）後，寫死的顏色不會跟著變。陰影、光暈、漸層只能用 `var(--v2-*)`，不寫 `box-shadow`、`filter`、`gradient` 的字面值（R8 #3）。要「亮起來」用 `P.spot`（聚焦），不要用 GSAP 補間顏色。
-- 動畫裡要配音效的拍點寫 `const T = P.sfx('tick', '#38@兩支')`（回傳秒數，同時當這一拍的動畫時間；`P.sfx('ding', '#41', 0.2)` 晚 0.2 秒）。音效名、ref 都寫字串字面值，off 寫數字；build 會排成 `<audio>`，算進 `--check` 的音效次數與密度。不要在 plan.json 另外寫這些音效。寫成變數或 `+` 組字串、音效名不在 `kit/sfx.json` 都會 ✖；綁到段外的句子會被拿掉並 ⚠（USAGE.md 4.2）。
+- 動畫裡要配音效的拍點寫 `const T = P.sfx('success', '#38@兩支')`（回傳秒數，同時當這一拍的動畫時間；`P.sfx('ding', '#41', 0.2)` 晚 0.2 秒）。音效名、ref 都寫字串字面值，off 寫數字；build 會排成 `<audio>`，算進 `--check` 的音效次數與密度。不要在 plan.json 另外寫這些音效。寫成變數或 `+` 組字串、音效名不在 `kit/sfx.json` 都會 ✖；綁到段外的句子會被拿掉並 ⚠（USAGE.md 4.2）。
 - 動畫照確認過的動畫分鏡一拍一拍做：每一拍一個拍點常數（`const T1 = P.at('#38@兩支')`，分鏡「音效拍點」有寫就用上一條的 `P.sfx`），「動態」欄的每個名稱用 `shared/template/BEATS.md` 語彙表「對應」欄的方法。只用 `SceneMotion` 的方法：
-  - v2：進場 `P.wipe`／`P.drift`／`P.pop`／`P.grow`／`P.slide`／`P.in`；字 `P.chars`／`P.type`／`P.count`；線 `P.stroke`／`P.comet`／`P.icon`／`P.check`／`P.strike`／`P.bar`／`P.flow`；強調 `P.sheen`／`P.marker`／`P.punch`／`P.ripple`；焦點 `P.spot`／`P.dim`；鏡頭 `P.cam`；微動 `P.idle`；退場 `P.wipeOut`／`P.slideOut`／`P.out`；拍點音效 `P.sfx`。參數與預設值寫在 `shared/template/kit/scene-motion.js` 開頭的「v2」那一段。
+  - v2：進場 `P.wipe`／`P.drift`／`P.pop`／`P.grow`／`P.slide`／`P.in`；字 `P.chars`／`P.type`／`P.count`；線 `P.stroke`／`P.comet`／`P.icon`／`P.check`／`P.strike`／`P.bar`／`P.flow`；強調 `P.sheen`／`P.marker`／`P.punch`／`P.ripple`／`P.stamp`（蓋章，對象是自己寫的 `<b class="sc-stamp">過時</b>`，和被蓋的元素放在同一層、不要放進它裡面；`{ on: '#被蓋的' }` 落地時讓它退焦）；`P.strike` 加 `{ wave: true }` 是波浪線；焦點 `P.spot`／`P.dim`；鏡頭 `P.cam`；微動 `P.idle`；退場 `P.wipeOut`／`P.slideOut`／`P.out`；拍點音效 `P.sfx`。參數與預設值寫在 `shared/template/kit/scene-motion.js` 開頭的「v2」那一段。
   - 舊範例裡的 `P.rise`／`P.reveal`／`P.maskUp`／`P.swap`／`P.axis`／`P.focus`／`P.push`／`P.morph` 還能用；新寫的拍照 BEATS.md。
   - 這些方法會自動處理同一元素第二次補間的 `immediateRender:false`，秒數與曲線是 kit 常數（style.md「節奏」），不要自己填。不要用 GSAP 的 `onUpdate`／`onComplete` 改畫面：HyperFrames 跳到任意時間截圖時不會觸發回呼，畫面會停在錯的狀態。
 
@@ -852,8 +852,8 @@ node shared/template/tools/build.mjs --project projects/<專案>
 **情境**：改 `shared/template/scenes/<NN-key>/template.html` 的 `<!-- @style -->`、`<!-- @body -->`、`<!-- @timeline -->` 三段，以及旁邊 `scene.json` 的 slots、beats、lists、rules、sfx、sample。`scene.json` 的 `sfx` 區塊長這樣。
 
 ```json
-"sfx": { "main": { "sound": "pop", "at": "in + 0.1" },
-         "extra": [ { "sound": "tick", "at": "items[1:]" }, { "sound": "ding", "at": "aAt", "volume": 0.8 } ] }
+"sfx": { "main": { "sound": "sparkle", "at": "in + 0.1" },
+         "extra": [ { "sound": "ding", "at": "aAt", "volume": 0.8 } ] }
 ```
 
 - `main.sound` 可寫字串，或 `{ "default": "ding", "warn": "alert", "good": "success" }` 依 tone 挑；`extra[].volume` 是該音效在 `kit/sfx.json` 預設音量的倍數（例：09 的 ding＝0.45×0.8）。

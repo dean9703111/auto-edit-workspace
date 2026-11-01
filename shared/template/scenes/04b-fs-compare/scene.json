@@ -32,8 +32,8 @@
     "rightAt": { "label": "右欄進場", "default": "2.5" }
   },
   "sfx": {
-    "main": { "sound": "whoosh", "at": "start - 0.15" },
-    "extra": [ { "sound": "tick", "at": "leftAt" }, { "sound": "tick", "at": "rightAt" } ]
+    "main": null,
+    "extra": []
   },
   "lists": {
     "left":  { "at": "{{leftAt}}" },

@@ -1,0 +1,43 @@
+# 官網（GitHub Pages）：首頁 dev/site/index.html＋情境庫 shared/template/index.html
+# 第一次要在 GitHub 的 Settings → Pages → Build and deployment 把 Source 選成「GitHub Actions」。
+name: 官網
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dev/site/**'
+      - 'dev/tools/build-site.mjs'
+      - 'shared/template/**'
+      - 'shared/sfx/**'
+      - 'NOTICE.md'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node dev/tools/build-site.mjs --out _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

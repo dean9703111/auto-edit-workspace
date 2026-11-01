@@ -77,7 +77,6 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 - [ ] 座標是素材原尺寸
 - [ ] 只有聲音的區間全部蓋住
 - [ ] 錄影段沒放下方資訊卡（style.md）
-- [ ] 從講者切到錄影的第一段音效是 `whoosh`（style.md「音效」）
 - [ ] 當子代理時沒有寫任何檔
 
 ## 退路表

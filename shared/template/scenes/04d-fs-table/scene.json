@@ -97,8 +97,8 @@
     }
   },
   "sfx": {
-    "main": { "sound": "whoosh", "at": "start - 0.15" },
-    "extra": [ { "sound": "tick", "at": "rows[0:]" } ]
+    "main": null,
+    "extra": []
   },
   "rules": [
     {

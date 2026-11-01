@@ -97,7 +97,6 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#12@錄影'), T2 = P.at('#13@逐字稿'), T3 = P.at('#14@剪輯清單'), T4 = P.at('#15@初剪');   // 講到每一站站名的時刻
 
-    P.sfx('tick', '#12@錄影'); P.sfx('tick', '#13@逐字稿'); P.sfx('tick', '#14@剪輯清單'); P.sfx('tick', '#15@初剪');   // 每一站一顆音效（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const ALL = '#xproc-n1, #xproc-n2, #xproc-n3, #xproc-n4';   // 四站（3 站時拿掉 n4）
 

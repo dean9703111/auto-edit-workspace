@@ -74,10 +74,10 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
 
     // ══ DATA 2：拍（一拍一行；只改這裡）══
-    const T1 = P.at('#202@實際操作');   P.sfx('tick', '#202@實際操作');
-    const T2 = P.at('#203@安裝');       P.sfx('tick', '#203@安裝');
-    const T3 = P.at('#204@網路');       P.sfx('tick', '#204@網路');
-    const T4 = P.at('#205@AI');         P.sfx('tick', '#205@AI');
+    const T1 = P.at('#202@實際操作');
+    const T2 = P.at('#203@安裝');
+    const T3 = P.at('#204@網路');
+    const T4 = P.at('#205@AI');
     const T5 = P.at('#206@迭代');       P.sfx('ding', '#206@迭代');
     const BEATS = [
       [T1, { in: ['xsco-s1'], focus: 'xsco-s1' }],

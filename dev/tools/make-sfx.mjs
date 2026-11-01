@@ -3,12 +3,13 @@
 // 規格：specs/005-sfx/spec.md FR-010～014、FR-034～036；指令與訊息原文：specs/contracts/cli-005.md §1。
 //
 //   node dev/tools/make-sfx.mjs --list
-//   node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾> [--ref <參考.wav>] [--voice <人聲>]
-//   node dev/tools/make-sfx.mjs --write --only <名稱,…>
+//   node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾> [--ref <參考.wav>] [--voice <人聲>] [--src <本機音樂檔>]
+//   node dev/tools/make-sfx.mjs --write --only <名稱,…> [--src <本機音樂檔>]
 //
-// 路線：B＝CC0 素材下載後加工（Kenney 包）；C＝程式合成（固定亂數種子，同一台機器每次位元組相同）。
-// 凍結的 8 顆（pop tick swipe whoosh flip type glitch riser）由舊的 make_sfx.py 產生，這裡沒有配方、不能重產。
-// 試聽檔（--candidates）一定寫在工作區外：A/B 會混入剪映原音，不能進 repo（憲法 VII）。
+// 路線：B＝CC0 素材下載後加工（Kenney 包）；C＝AI 生成（AI 寫的合成程式，固定亂數種子，同一台機器每次位元組相同）；
+//       L＝作者本機的音樂檔（--src 指定，核對 sha256；CC BY，用到的影片要標示出處，文字在 kit/sfx.json 的 credit）。
+// 2026-11-02 作者：pop tick swipe whoosh flip type glitch riser bgm-outro 整顆拿掉（不配音效）；片尾配樂改成 bgm-cylinder-five、預設不配。
+// 試聽檔（--candidates）一定寫在工作區外：A/B 會混入 --ref 的第三方參考音，不能進 repo（憲法 VII）。
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -26,13 +27,12 @@ const SR = 48000;
 const TP_CEIL = -1.2;    // true peak 上限（dBTP），比 −1 再留 0.2 dB 給量測差（沿用 make_sfx.py）
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 const CC0 = { license: 'CC0 1.0', license_url: 'https://creativecommons.org/publicdomain/zero/1.0/' };
-const FROZEN = ['pop', 'tick', 'swipe', 'whoosh', 'flip', 'type', 'glitch', 'riser'];
 
 // 試聽後要換，就改這裡（值是 RECIPES 的候選 id）；A/B 紀錄在 specs/005-sfx/research.md
 const CHOICE = {
-  ding: 'ding-a', alert: 'alert-a', success: 'success-a', click: 'click-a',
-  impact: 'impact-c', chapter: 'chapter-c',
-  sparkle: 'sparkle-a', shine: 'shine-d', thunder: 'thunder-c', 'bgm-outro': 'bgm-d',
+  ding: 'ding-c', alert: 'alert-d', success: 'success-c', click: 'click-a',   // ding、alert、impact、shine、success、sparkle、thunder：2026-11-01 作者試聽選的重做版；chapter：2026-11-02 選 chapter-o
+  impact: 'impact-d', chapter: 'chapter-o',
+  sparkle: 'sparkle-h', shine: 'shine-e', thunder: 'thunder-h', 'bgm-cylinder-five': 'cyl-a',
 };
 
 // Kenney 包（sha256 沿用 make_sfx.py 已核對的值；檔名在 specs/005-sfx/research.md「Kenney 檔名核對」）
@@ -51,17 +51,17 @@ const fail = (msg, code = 1) => { process.stderr.write(`✖ ${msg}\n`); process.
 const HELP = `產生 shared/sfx/ 的音效（作者維護用；剪片時不要跑）。只用 Node 22＋ffmpeg。
 
   node dev/tools/make-sfx.mjs --list
-  node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾> [--ref <參考.wav>] [--voice <人聲>]
-  node dev/tools/make-sfx.mjs --write --only <名稱,…>
+  node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾> [--ref <參考.wav>] [--voice <人聲>] [--src <本機音樂檔>]
+  node dev/tools/make-sfx.mjs --write --only <名稱,…> [--src <本機音樂檔>]
 
 --candidates  產生候選與 A/B 試聽檔（參考→候選→參考，都調到成片大小）＋ index.html
 --write       把程式裡 CHOICE 選的候選寫進 shared/sfx/、sources.json、kit/sfx.json（peak、volume）、README.md
 --cache       原始下載檔的資料夾（預設系統暫存資料夾的 make-sfx-cache）
-凍結的 8 顆（pop tick swipe whoosh flip type glitch riser）沒有配方，不能重產。`;
+--src         路線 L 的本機音樂檔（bgm-cylinder-five 要給〈Cylinder Five〉的 mp3；會核對 sha256）`;
 
 function parseArgs(argv) {
   const o = { only: null };
-  const VAL = ['only', 'out', 'ref', 'voice', 'cache'];
+  const VAL = ['only', 'out', 'ref', 'voice', 'cache', 'src'];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--help' || a === '-h') { console.log(HELP); process.exit(0); }
@@ -73,12 +73,12 @@ function parseArgs(argv) {
   if (!o.mode || o.mode.length !== 1) fail('要選一個：--list、--candidates 或 --write → 例：node dev/tools/make-sfx.mjs --candidates --only ding --out <工作區外的資料夾>', 2);
   o.mode = o.mode[0];
   o.names = o.only ? o.only.split(',').map((s) => s.trim()).filter(Boolean) : Object.keys(RECIPES);
-  for (const n of o.names) if (!RECIPES[n]) fail(`「${n}」沒有配方（可用：${Object.keys(RECIPES).join('、')}；凍結的 8 顆不能重產）→ --only 改成可用的名稱`, 2);
+  for (const n of o.names) if (!RECIPES[n]) fail(`「${n}」沒有配方（可用：${Object.keys(RECIPES).join('、')}）→ --only 改成可用的名稱`, 2);
   if (o.mode === 'candidates') {
     if (!o.out) fail('--candidates 要給 --out <資料夾> → 放 scratchpad 或系統暫存資料夾，不要放進工作區', 2);
     o.out = path.resolve(o.out);
     const rel = path.relative(fs.realpathSync(WS), realish(o.out));
-    if (!rel.startsWith('..') && !path.isAbsolute(rel)) fail(`試聽檔不能放進工作區（--out ${o.out}；A/B 會混入剪映原音，不能進 repo）→ 改放工作區外，例如系統暫存資料夾`, 2);
+    if (!rel.startsWith('..') && !path.isAbsolute(rel)) fail(`試聽檔不能放進工作區（--out ${o.out}；A/B 會混入 --ref 的第三方參考音，不能進 repo）→ 改放工作區外，例如系統暫存資料夾`, 2);
   }
   if (o.ref && o.names.length !== 1) fail(`--ref 一次只能配一個名稱（現在 --only 有 ${o.names.length} 個）→ 一個名稱跑一次`, 2);
   o.cache = path.resolve(o.cache || path.join(os.tmpdir(), 'make-sfx-cache'));
@@ -311,6 +311,7 @@ const RECIPES = {
     candidates: [
       { id: 'ding-a', route: 'C', like: '平穩的電子提示音「滴——」', desc: '正弦 785 Hz、起音 15 ms、持平後慢慢收', build: () => synthDing(0.015, -40) },
       { id: 'ding-b', route: 'C', like: '較圓的電子提示音「滴——」', desc: '同 a，起音 25 ms、2 次諧波 −30 dB', build: () => synthDing(0.025, -30) },
+      { id: 'ding-c', route: 'C', like: '帶拍動的電子提示音「滴～」', desc: 'AI 生成：787／791 Hz 拍動、4.03 倍泛音、0.28 s 後加速收', build: () => synthDingJy() },
       { id: 'ding-keep', route: 'keep', desc: '現在的 shared/sfx/ding.wav' },
     ],
   },
@@ -320,13 +321,15 @@ const RECIPES = {
       { id: 'alert-a', route: 'C', like: '低音電子蜂鳴「嗶-嗶—」', desc: '234 Hz 帶限方波＋117 Hz 正弦，兩聲 80＋160 ms', build: () => synthAlert(234, true) },
       { id: 'alert-b', route: 'C', like: '更低的電子蜂鳴「嗶-嗶—」', desc: '117 Hz 帶限方波，兩聲 80＋160 ms', build: () => synthAlert(117, false) },
       { id: 'alert-c', route: 'B', src: [K('kenney-interface', 'Audio/error_006.ogg')], like: '低沉的「咚」', desc: 'Kenney error_006', build: (c) => c.src(0) },
+      { id: 'alert-d', route: 'C', like: '低沉的電子蜂鳴「嗶、嗶——」', desc: 'AI 生成：117 Hz 基頻、2 次諧波最強，兩聲 80＋190 ms', build: () => synthAlertJy() },
       { id: 'alert-keep', route: 'keep', desc: '現在的 shared/sfx/alert.wav' },
     ],
   },
   success: {
-    limit: 2.0, target: -16, measure: 'M', targetDb: -5.2,   // 長度上限 2026-10-31 放寬（原 1.2 s；剪映參考 1.93 s）
+    limit: 2.0, target: -16, measure: 'M', targetDb: -5.2,   // 長度上限 2026-10-31 放寬（原 1.2 s）
     candidates: [
       { id: 'success-a', route: 'C', like: '鐘琴上行琶音「叮叮叮叮～」', desc: 'C6–D6–G6–C7 四音鐘聲、第一音最大聲', build: () => synthSuccess() },
+      { id: 'success-c', route: 'C', like: '鐘琴四音「叮叮叮叮～」', desc: 'AI 生成：C6、D6、G6、C7 鐘琴＋4.415／5.3 倍金屬泛音、0–110 ms 依序進來', build: () => synthSuccessBell() },
       { id: 'success-keep', route: 'keep', desc: '現在的 shared/sfx/success.wav（Kenney confirmation_002）' },
     ],
   },
@@ -345,6 +348,7 @@ const RECIPES = {
         build: (c) => { const o = stereo(N(0.8)); addStereo(o, normPeak(c.src(0)), 0); addStereo(o, normPeak(c.src(1)), 0.12, -1.5); addStereo(o, normPeak(c.src(2)), 0, -8); return o; } },
       { id: 'impact-b', route: 'B', src: [K('kenney-impact', 'Audio/impactPunch_heavy_000.ogg'), K('kenney-impact', 'Audio/impactPunch_heavy_004.ogg')], like: '兩下重拳「咚、咚」', desc: 'Kenney 重拳兩下（+0.12 s、−1.5 dB）', build: (c) => pair(c, 0.12, -1.5) },
       { id: 'impact-c', route: 'C', like: '合成大鼓「咚、咚」', desc: '130→90 Hz 滑音＋300 Hz 共鳴＋雜訊起音，兩下', build: () => synthImpact() },
+      { id: 'impact-d', route: 'C', like: '綜藝低鼓「咚、咚」', desc: 'AI 生成：兩下 107→96 Hz 滑音、3 次泛音、間隔 0.13 s', build: () => synthImpactJy() },
       { id: 'impact-keep', route: 'keep', desc: '現在的 shared/sfx/impact.wav' },
     ],
   },
@@ -354,24 +358,27 @@ const RECIPES = {
       { id: 'chapter-a', route: 'B+C', src: [K('kenney-scifi', 'Audio/lowFrequency_explosion_000.ogg')], like: '電影感重低音「嘭——」', desc: 'Kenney 低頻爆炸＋合成 60→35 Hz 次低頻', build: (c) => withSub(c.src(0)) },
       { id: 'chapter-b', route: 'B+C', src: [K('kenney-scifi', 'Audio/lowFrequency_explosion_001.ogg')], like: '電影感重低音「嘭——」', desc: 'Kenney 低頻爆炸 001＋合成次低頻', build: (c) => withSub(c.src(0)) },
       { id: 'chapter-c', route: 'C', like: '合成重低音「嘭——」', desc: '次低頻＋140／250 Hz＋2 kHz 爆裂＋7 Hz 顫動', build: () => synthChapter() },
+      { id: 'chapter-o', route: 'C', like: '「喀喀」接有音高的「嘭」、低鼓鼓起來', desc: 'AI 生成：6、24 ms 兩聲「喀」、352→395 Hz 有音高的「嘭」、160→55 Hz 低鼓接手、超低音撐 0.9 s＋逐段等化', build: () => synthChapterSwell({ tonal: -7, kick: -8, kickAt: 0.012, midDb: -6, midHold: 0.05, midTau: 0.03, clickDb: CK_HF + 2, clickTau: 0.007 }) },
     ],
   },
   sparkle: {
-    limit: 2.8, target: -16, measure: 'M', targetDb: -5.9,   // 同上（原 2.0 s；參考 2.74 s）
+    limit: 2.8, target: -16, measure: 'M', targetDb: -5.9,   // 同上（原 2.0 s）
     candidates: [
       { id: 'sparkle-a', route: 'C', like: '仙女棒閃粉「刷啦啦～」', desc: '6→14 kHz 正弦顆粒由疏到密、0.33 s 到頂、1.8 s 尾韻', build: () => synthSparkle() },
       { id: 'sparkle-b', route: 'B', src: [K('kenney-interface', 'Audio/glass_004.ogg'), K('kenney-interface', 'Audio/glass_001.ogg'), K('kenney-interface', 'Audio/glass_006.ogg')], like: '玻璃碎響', desc: 'Kenney glass_004＋001＋006 錯開', build: (c) => { const o = stereo(N(1.2)); addStereo(o, normPeak(c.src(0)), 0); addStereo(o, normPeak(c.src(1)), 0.1, -4); addStereo(o, normPeak(c.src(2)), 0.2, -6); return o; } },
+      { id: 'sparkle-h', route: 'C', like: '高音一簇亮起＋鐘聲「鏘～叮鈴」', desc: 'AI 生成：36 條延續的正弦，0.11–0.2 s 高音一簇與 2–3 kHz 鐘聲同時進來', build: () => synthSparkleLines() },
       { id: 'sparkle-c', route: 'B+C', src: [K('kenney-interface', 'Audio/glass_004.ogg')], like: '閃粉＋玻璃亮點', desc: 'a 的顆粒＋glass_004 疊在 0.30 s', build: (c) => { const o = normPeak(synthSparkle()); addStereo(o, normPeak(c.src(0)), 0.3, -6); return o; } },
     ],
   },
   shine: {
-    limit: 2.0, target: -16, measure: 'M', targetDb: -3,     // 同上（原 1.6 s；參考 1.94 s）
+    limit: 2.0, target: -16, measure: 'M', targetDb: -3,     // 同上（原 1.6 s）
     candidates: [
       // a～c：Steel／Pizzicato／Sax 51 顆裡「後 0.3 s 重心 ÷ 前 0.3 s ≥ 1.3、長 ≤ 2 s」只有這 3 顆（research.md「shine 挑選」）
       { id: 'shine-a', route: 'B', src: [K('kenney-jingles', 'Audio/Sax jingles/jingles_SAX02.ogg')], like: '薩克斯風上行短樂句', desc: 'Kenney Music Jingles SAX02（上行 1.63 倍）', build: (c) => c.src(0) },
       { id: 'shine-b', route: 'B', src: [K('kenney-jingles', 'Audio/Pizzicato jingles/jingles_PIZZI16.ogg')], like: '撥弦上行短樂句', desc: 'Kenney Music Jingles PIZZI16（上行 1.50 倍）', build: (c) => c.src(0) },
       { id: 'shine-c', route: 'B', src: [K('kenney-jingles', 'Audio/Pizzicato jingles/jingles_PIZZI02.ogg')], like: '撥弦上行短樂句', desc: 'Kenney Music Jingles PIZZI02（上行 1.99 倍）', build: (c) => c.src(0) },
       { id: 'shine-d', route: 'C', like: '閃亮的上行鐘琴「登登登～」', desc: 'F6–C7–G7 鐘琴三音＋閃粉尾巴', build: () => synthShine() },
+      { id: 'shine-e', route: 'C', like: '鐘琴音階刷上去「嘩啦啦～叮」', desc: 'AI 生成：G 大調 D4→C8 28 音、每 42 ms 一音', build: () => synthShineJy() },
     ],
   },
   thunder: {
@@ -382,17 +389,15 @@ const RECIPES = {
     ],
     candidates: [
       { id: 'thunder-c', route: 'C', like: '低沉的雷聲「轟隆」', desc: '棕色雜訊＋6 次爆裂＋105／270 Hz 隆隆聲', build: () => synthThunder() },
+      { id: 'thunder-h', route: 'C', like: '翻滾的雷「喀啦——轟隆」', desc: 'AI 生成：物理模型，3000 個 N 字形衝擊波依距離先後到達＋隆隆聲，再逐段 1/3 八度等化', build: () => eqShape(synthThunderPhys(), EQ_TH) },
     ],
   },
-  'bgm-outro': {
+  'bgm-cylinder-five': {
     limit: 20, minLen: 10, target: -20, measure: 'I', targetDb: -11, bgm: true,
-    pending: [
-      { page: 'https://opengameart.org/content/pianosoft8', title: 'Pianosoft8', author: 'Tozan', note: '搜尋結果標 CC0；作品頁授權欄、長度未核對（2026-10-31 頁面回 HTTP 403）' },
-      { page: 'https://opengameart.org/content/distant-jingle', title: 'Distant Jingle', author: 'Centurion_of_war', note: '同上' },
-      { page: 'https://opengameart.org/content/title-screens-beginnings-collection', title: 'Title Screens Beginnings Collection', author: 'Holizna', note: '同上' },
-    ],
-    candidates: [
-      { id: 'bgm-d', route: 'C', like: '溫暖的鋼琴琶音鋪底', desc: 'C–G–Am–F–C 和弦 pad＋電鋼琴琶音＋殘響，約 17 s', build: () => synthBgm() },
+    local: { title: 'Cylinder Five', author: 'Chris Zabriskie', source_url: 'http://chriszabriskie.com/cylinders/', sha256: 'bed2d714393eb6b8893f1d6b4bd7a7754d2832f6a42d53aa21846733e192fdc2',
+      license: 'CC BY 4.0', license_url: 'https://creativecommons.org/licenses/by/4.0/' },
+    candidates: [   // 原曲 3:45，0–35 s 最輕；2026-11-02 作者在開頭、0:30、結尾三段裡選開頭
+      { id: 'cyl-a', route: 'L', like: '原曲開頭，最輕', desc: '原曲 0:00–0:20', build: (c) => c.clip(0, 21) },
     ],
   },
 };
@@ -424,7 +429,7 @@ function synthAlert(f, sub) {
   return addMono(stereo(n), x);
 }
 // FR-010 success：作者 correct-3 的 synth_correct() 改 D6；長 1.0 s＋80 ms 淡出。
-// 四音重疊，最大樣本落在第四音（約 0.23 s）；剪映「正确」也是後段最大聲（到頂 0.17 s），對齊點＝最高音到位
+// 四音重疊，最大樣本落在第四音（約 0.23 s），對齊點＝最高音到位
 function synthSuccess() {
   const n = N(1.0), x = new Float64Array(n);
   const notes = [[0, 1046.5, 0.22, 0], [0.075, 1174.7, 0.22, -1.5], [0.15, 1568.0, 0.25, -2], [0.225, 2093.0, 0.45, -2.5]];
@@ -439,6 +444,202 @@ function synthSuccess() {
     x[i] = s;
   }
   return fadeOut(addMono(stereo(n), x), 0.08);
+}
+// AI 生成（2026-11-01 重做）：音高、泛音、幾聲、起伏都寫在程式參數裡，不取任何錄音樣本
+// ding-c：787 Hz 與 791 Hz 兩個正弦拍動（3.6 Hz，副音 −10 dB）＋4.03 倍泛音 −21 dB；起音 10 ms，0.28 s 前只降 3.4 dB，之後加速收、0.88 s 收完
+function synthDingJy() {
+  const n = N(0.9), x = new Float64Array(n);
+  const bp = [[0, 0], [0.28, -3.4], [0.57, -12.5], [0.75, -23], [0.84, -32], [0.885, -70]];
+  const trend = (t) => { for (let k = 1; k < bp.length; k++) if (t <= bp[k][0]) { const [a, da] = bp[k - 1], [b, db] = bp[k]; return dbl(da + (db - da) * (t - a) / (b - a)); } return 0; };
+  const f1 = 787.4, f2 = f1 + 3.6, ph2 = -TAU * 3.6 * 0.03;   // 兩音在 0.03 s 同相 → 拍動的峰在 0.03、0.31、0.59 s
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    x[i] = (Math.sin(TAU * f1 * t) + 0.3 * Math.sin(TAU * f2 * t + ph2) + dbl(-21) * Math.sin(TAU * f1 * 4.03 * t)) * env.rc(t, 0.01) * trend(t);
+  }
+  return addMono(stereo(n), x);
+}
+// alert-d：基頻 117.3 Hz、2 次諧波最強的蜂鳴（48 個諧波的大小照量測）；兩聲 1–80 ms、109–298 ms 一樣大聲，起落 3 ms
+function synthAlertJy() {
+  const H = [-17, 0, -10, -24, -39, -26, -20, -17, -35, -24, -45, -22, -39, -25, -27, -34, -21, -34, -33, -32, -24, -37, -31, -22,
+    -24, -41, -39, -33, -43, -29, -32, -64, -56, -50, -46, -42, -31, -45, -64, -41, -39, -55, -47, -47, -54, -55, -47, -62];
+  const n = N(0.316), x = new Float64Array(n), f0 = 117.3;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    for (const [a, z] of [[0.001, 0.08], [0.109, 0.298]]) {
+      if (t < a || t >= z) continue;
+      let s = 0; H.forEach((db, k) => { s += dbl(db) * Math.sin(TAU * f0 * (k + 1) * t); });
+      x[i] = s * Math.min(1, (t - a) / 0.003, (z - t) / 0.003);
+    }
+  }
+  return addMono(stereo(n), x);
+}
+// 複數 FFT（radix-2、原地；inv＝反轉換）
+function fftC(re, im, inv = false) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+  for (let size = 2; size <= n; size <<= 1) {
+    const ang = (inv ? 2 : -2) * Math.PI / size, wr = Math.cos(ang), wi = Math.sin(ang), h = size / 2;
+    for (let i = 0; i < n; i += size) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < h; k++) {
+        const p = i + k + h, ar = re[p] * cr - im[p] * ci, ai = re[p] * ci + im[p] * cr;
+        re[p] = re[i + k] - ar; im[p] = im[i + k] - ai; re[i + k] += ar; im[i + k] += ai;
+        const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+      }
+    }
+  }
+  if (inv) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+}
+// 分段 1/3 八度等化：segs＝[[中心秒數, [21 個 dB（100 Hz–10 kHz 的 1/3 八度）]]…]；頻率之間在 log 頻率內插、
+// 100 Hz 以下用 100 Hz 的值（subTaper＝50→100 Hz 漸進、50 Hz 以下不動）、10 kHz 以上用 10 kHz 的值；時間在相鄰中心之間線性內插。STFT 2048 點、hop 512、Hann
+function eqShape(b, segs, subTaper = false) {
+  const n = len(b), W = 2048, H = 512, win = Float64Array.from({ length: W }, (_, i) => 0.5 - 0.5 * Math.cos(TAU * i / W));
+  const curve = (g, f) => { const x = Math.log2(Math.max(100, Math.min(10159, f)) / 100) * 3, k = Math.min(19, Math.floor(x)); const v = g[k] + (g[k + 1] - g[k]) * (x - k); return subTaper && f < 100 ? v * Math.max(0, (f - 50) / 50) : v; };
+  const gainDb = (t, f) => {
+    if (t <= segs[0][0]) return curve(segs[0][1], f);
+    for (let s = 1; s < segs.length; s++) if (t <= segs[s][0]) { const u = (t - segs[s - 1][0]) / (segs[s][0] - segs[s - 1][0]); return curve(segs[s - 1][1], f) * (1 - u) + curve(segs[s][1], f) * u; }
+    return curve(segs[segs.length - 1][1], f);
+  };
+  const out = stereo(n);
+  for (const ch of ['L', 'R']) {
+    const x = b[ch], acc = new Float64Array(n + 2 * W), nrm = new Float64Array(n + 2 * W);
+    for (let s = -W; s < n; s += H) {
+      const re = new Float64Array(W), im = new Float64Array(W);
+      for (let i = 0; i < W; i++) { const j = s + i; re[i] = j >= 0 && j < n ? x[j] * win[i] : 0; }
+      fftC(re, im);
+      const tc = (s + W / 2) / SR;
+      for (let k = 0; k <= W / 2; k++) { const g = dbl(gainDb(tc, k * SR / W)); re[k] *= g; im[k] *= g; if (k > 0 && k < W / 2) { re[W - k] *= g; im[W - k] *= g; } }
+      fftC(re, im, true);
+      for (let i = 0; i < W; i++) { const j = s + i + W; acc[j] += re[i] * win[i]; nrm[j] += win[i] * win[i]; }
+    }
+    for (let i = 0; i < n; i++) out[ch][i] = nrm[i + W] > 1e-6 ? acc[i + W] / nrm[i + W] : 0;
+  }
+  return out;
+}
+// EQ_TH：分段 1/3 八度等化（每段的增益寫死在這裡）
+const EQ_TH = [[0.015, [-13, -10, -2, -3, -9, -8, -5, -2, 0, -6, -12, -14, -17, -20, -23, -28, -33, -39, -41, -39, -39]], [0.165, [6, 0, -3, -2, -1, -4, -7, -7, -6, -6, -6, -7, -5, -4, -2, 2, 3, 2, 2, 1, 0]], [0.55, [-1, -3, -5, -2, 3, 3, 2, 1, 2, 3, 5, 7, 8, 9, 11, 13, 12, 9, 8, 6, 3]]];
+const EQ_CK = [[0.015, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], [0.165, [-6, -4, -2, 2, -2, -11, -16, -20, -20, -20, -20, -18, -15, -13, -10, -6, -5, -2, -1, -1, -3]], [0.55, [0, -3, -8, -9, -8, -9, -9, -11, -13, -15, -16, -14, -15, -17, -15, -13, -11, -10, -11, -14, -19]]];
+// 照 dB 轉折點線性內插的包絡（[秒, dB]…），最後一點之後維持最後的值
+const bpEnv = (bp) => (t) => { if (t <= bp[0][0]) return dbl(bp[0][1]); for (let k = 1; k < bp.length; k++) if (t <= bp[k][0]) { const [a, da] = bp[k - 1], [b, db] = bp[k]; return dbl(da + (db - da) * (t - a) / (b - a)); } return dbl(bp[bp.length - 1][1]); };
+// impact-d：「咚、咚」兩下（0、0.13 s，第一下小 3 dB）；每下 107→96 Hz 滑音 60 ms、3 次泛音 −4 dB、4 次 −17 dB、8 次 −20 dB；
+// 起頭 12 ms 多 +6 dB 的敲擊感＋1.2 kHz 以上的短雜訊（−8 dB），身體撐 40 ms 後 τ 0.11 s 收
+function synthImpactJy() {
+  const o = stereo(N(0.65)), rnd = mulberry32(20261104);
+  for (const [at, g] of [[0, -3], [0.13, 0]]) {
+    const m = N(0.52), x = new Float64Array(m); let ph = 0;
+    for (let i = 0; i < m; i++) {
+      const t = i / SR; ph += TAU * (t < 0.06 ? 107 * (96 / 107) ** (t / 0.06) : 96) / SR;
+      const a = Math.min(1, t / 0.002) * (1 + env.ex(t, 0.012)) * (t < 0.04 ? 1 : env.ex(t - 0.04, 0.11));
+      x[i] = a * (Math.sin(ph) + dbl(-4) * Math.sin(3 * ph) + dbl(-17) * Math.sin(4 * ph) + dbl(-20) * Math.sin(8 * ph));
+    }
+    addMono(o, x, at, g);
+    addMono(o, npk(onePoleHP(burst(N(0.03), rnd, 0.004), 1200)), at, g - 8);
+  }
+  return fadeOut(o, 0.05);
+}
+// shine-e：G 大調音階從 D4 刷到 C8（28 個音、A4＝452 Hz、每 42 ms 一音），前 7 個音由 −24 dB 漸強到 0 dB、2–3 kHz 那幾音小 5 dB；
+// 每音像鐘琴（2 次泛音 −20 dB、τ 0.3 s），最後的 C8 大 2 dB、τ 0.35 s；2.0 s 收完
+function synthShineJy() {
+  const n = N(2.0), x = new Float64Array(n), semis = [-7, -5, -3, -2, 0, 2, 3];   // D E F# G A B C（相對 A4）
+  const notes = []; for (let oc = 0; oc < 4; oc++) for (const s of semis) notes.push(452 * 2 ** (oc + s / 12));
+  notes.forEach((f, k) => {
+    const t0 = 0.042 * k, g = dbl(-24 + 24 * Math.min(1, k / 7) + (k === notes.length - 1 ? 2 : 0) + (f > 2000 && f < 3000 ? -5 : 0)), tau = k === notes.length - 1 ? 0.35 : 0.3;
+    for (let i = N(t0); i < n; i++) { const u = i / SR - t0; x[i] += g * (Math.sin(TAU * f * u) + dbl(-20) * Math.sin(TAU * 2 * f * u)) * Math.min(1, u / 0.003) * env.ex(u, tau); }
+  });
+  return fadeOut(addMono(stereo(n), x), 0.25);
+}
+// success-c：鐘琴四音 C6、D6、G6、C7（1046.5／1174.5／1567.7／2093 Hz）在 0、30、60、110 ms 進來；
+// 每音帶 4.415 倍、5.3 倍的金屬泛音（低音 −24 dB、G6 −4 dB 撐 τ 0.14 s），C6、D6 小 3 dB，本體 τ 低音 0.255 s → 高音 0.175 s；G6、C7 軟起音 30 ms；1.4 s 收完
+function synthSuccessBell() {
+  const n = N(1.4), x = new Float64Array(n);
+  // [起點, 頻率, 增益 dB, 本體 τ, 4.415 倍泛音 dB, 5.3 倍泛音 dB, 泛音 τ, 起音秒數]
+  const notes = [[0, 1046.5, -3, 0.255, -24, -30, 0.12, 0.002], [0.03, 1174.5, -3, 0.235, -23, -26, 0.12, 0.01], [0.06, 1567.7, 0, 0.2, -4, -8, 0.14, 0.03], [0.11, 2093, 0, 0.175, -8, -15, 0.1, 0.03]];
+  for (const [t0, f, g, tau, p1, p2, ptau, att] of notes) {
+    for (let i = N(t0); i < n; i++) {
+      const u = i / SR - t0, a = env.rc(u, att);
+      x[i] += dbl(g) * a * (Math.sin(TAU * f * u) * env.ex(u, tau) + (dbl(p1) * Math.sin(TAU * f * 4.415 * u) + dbl(p2) * Math.sin(TAU * f * 5.3 * u)) * env.ex(u, ptau));
+    }
+  }
+  return fadeOut(addMono(stereo(n), x), 0.15);
+}
+// 立體聲殘響：左右用不同的梳狀延遲，size 放大房間，回傳 stereo（只有濕聲）
+function verb(x, size = 1, fb = 0.84) {
+  const L = schroeder(x, [29.7, 37.1, 41.1, 43.7].map((v) => v * size), fb), R = schroeder(x, [31.3, 36.0, 40.3, 44.9].map((v) => v * size), fb);
+  return { L, R };
+}
+const mix = (o, w, db) => { const g = dbl(db); for (let i = 0; i < len(o); i++) { o.L[i] += g * w.L[i]; o.R[i] += g * w.R[i]; } return o; };
+// chapter-o：開頭每 3 ms 排一次——6 ms、24 ms 兩聲 2 kHz 以上的「喀」（一樣大，51 ms 再一聲小的）；
+// 200 Hz–1 kHz 的「嘭」6 ms 起、12 ms 到頂、撐約 50 ms；低頻不是一下敲下去，而是 6 → 26 ms 鼓起來；24／34.5／52.5 Hz 三層超低音撐 0.9 s。
+// EQ_CK 是拿這支函式還沒等化的輸出量的（開頭那段不等化（0 dB，到 0.165 s 才完全套上），開頭時序是照 3 ms 量測手調的）
+const CK_HF = -2, CK_MID = 0;
+function synthChapterSwell(opt = {}) {
+  const { tonal = null, tonalAt = 0.009, kick = null, kickAt = 0.008, midDb = CK_MID, midHold = 0.05, midTau = 0.03, clickDb = CK_HF, clickTau = 0.004 } = opt;
+  const hold = 0.9, n = N(hold + 0.45), rnd = mulberry32(20261114), x = new Float64Array(n);
+  const modes = [[24, -2, 1.5], [34.5, 0, 1.5], [52.5, 0, 1], [67, -7, 1], [85, -9, 1], [110, -12, 1], [142, -17, 1]], ph = modes.map(() => 0);
+  const rum = npk(onePoleLP(onePoleLP(onePoleHP(onePoleHP(white(n, rnd), 110), 110), 400), 400));
+  for (let i = 0; i < n; i++) {
+    const t = i / SR; let s = 0;
+    modes.forEach(([f, db, w], k) => { ph[k] += TAU * (f + w * Math.sin(TAU * (1.3 + 0.4 * k) * t + k)) / SR; s += dbl(db) * Math.sin(ph[k]); });
+    const e = (t < 0.006 ? 0 : env.rc(t - 0.006, 0.02)) * (t < hold ? dbl(-3 * t / hold) : dbl(-3) * env.ex(t - hold, 0.2));
+    x[i] = s * e + dbl(-20) * 3 * rum[i] * e;
+  }
+  const xp = npk(x);
+  const md = npk(onePoleLP(onePoleLP(onePoleHP(onePoleHP(white(N(0.16), rnd), 200), 200), 1000), 1000));
+  for (let i = N(0.006); i < N(0.16); i++) { const u = i / SR - 0.006; xp[i] += dbl(midDb) * md[i] * env.rc(u, 0.006) * (u < midHold ? 1 : env.ex(u - midHold, midTau)); }
+  if (tonal != null) {   // 有音高的「嘭」：tonalAt 起、3 ms 起音，352 → 395 Hz（90 ms 內升上去）＋1.26、1.55 倍（−8、−12 dB），τ 45 ms
+    let q = 0; for (let i = N(tonalAt); i < N(0.25); i++) { const u = i / SR - tonalAt; q += TAU * (352 + 43 * Math.min(1, u / 0.09)) / SR; xp[i] += dbl(tonal) * env.rc(u, 0.003) * env.ex(u, 0.045) * (Math.sin(q) + dbl(-8) * Math.sin(1.26 * q) + dbl(-12) * Math.sin(1.55 * q)); }
+  }
+  if (kick != null) {   // 12–28 ms 由 152 Hz 接手：160 → 55 Hz 40 ms 滑下去的低鼓，kickAt 起、6 ms 起音
+    const kk = glideSine(N(0.35), 160, 55, 0.04, (t) => env.rc(t, 0.006) * env.ex(t, 0.09)); for (let i = 0; i < kk.length; i++) xp[N(kickAt) + i] += dbl(kick) * kk[i];
+  }
+  for (const [at, db] of [[0.006, 0], [0.024, 0], [0.051, -9]]) {
+    const c = npk(onePoleHP(onePoleHP(burst(N(0.04), rnd, clickTau), 2000), 2000)), k0 = N(at);
+    for (let i = 0; i < c.length; i++) xp[k0 + i] += dbl(clickDb + db) * c[i];
+  }
+  const y = npk(xp).map((v) => Math.tanh(1.5 * v) / Math.tanh(1.5));
+  const o = addMono(stereo(n), y);
+  mix(o, verb(y, 1.2, 0.8), -16);
+  return eqShape(fadeOut(o, 0.15), EQ_CK, true);
+}
+// sparkle-h：用正弦線條組成——前 0.1 s 零星幾條小聲高音（4.7→10 kHz 往上），0.11–0.2 s 主擊：10.6–15 kHz 一簇高音
+// 同時 2.1–2.9 kHz 鐘聲進來（τ 0.45 s）；每條是會延續的正弦（不是短顆粒），高音 τ 0.03–0.14 s
+function synthSparkleLines() {
+  const n = N(2.2), o = stereo(n), rnd = mulberry32(20261112);
+  // [頻率, dB, 起點, τ]
+  const lines = [[4746, -29, 0.058, 0.12], [5133, -29, 0.087, 0.1], [5355, -29, 0.0, 0.2], [6586, -29, 0.0, 0.03], [6832, -29, 0.083, 0.02], [7230, -29, 0.02, 0.03], [7617, -28, 0.0, 0.02], [7816, -24, 0.003, 0.03], [7887, -28, 0.005, 0.04], [8121, -27, 0.005, 0.04], [8473, -29, 0.0, 0.035],
+    [8027, -18, 0.022, 0.07], [9516, -13, 0.015, 0.08], [9656, -17, 0.083, 0.045], [9973, -21, 0.055, 0.06], [10324, -19, 0.077, 0.05], [10523, -26, 0.02, 0.02],
+    [5543, -14, 0.113, 0.08], [6680, -11, 0.158, 0.035], [7477, -17, 0.172, 0.045], [10605, -11, 0.11, 0.035], [10699, -12, 0.11, 0.13], [11238, -3, 0.138, 0.11], [11473, -8, 0.133, 0.05],
+    [11953, -3, 0.158, 0.135], [12527, 0, 0.177, 0.14], [12633, -8, 0.155, 0.04], [12973, -11, 0.203, 0.135], [14074, -10, 0.175, 0.04], [14988, -18, 0.195, 0.05], [15340, -25, 0.172, 0.11],
+    [2051, -28, 0.142, 0.45], [2168, -16, 0.135, 0.45], [2438, -16, 0.158, 0.45], [2730, -14, 0.175, 0.45], [2883, -22, 0.185, 0.36]];
+  for (const [f, db, at, tau] of lines) { const m = n - N(at), x = new Float64Array(m), p = rnd() * TAU; for (let i = 0; i < m; i++) { const u = i / SR; x[i] = Math.sin(p + TAU * f * u) * Math.min(1, u / 0.003) * env.ex(u, tau); } addMono(o, x, at, db, (rnd() * 2 - 1) * 0.5); }
+  return fadeOut(o, 0.3);
+}
+const TH_RUM = -3, TH_CRACK = -14;   // thunder 隆隆層、開頭「喀」的大小（dB，照 150／500 Hz 以上的包絡對過）
+// thunder-h：物理模型的雷——閃電路徑上 3000 個 N 字形衝擊波，依距離 r（1–5）先後到達：越遠越晚（每單位 0.25 s）、越小（1/√r）、
+// 越長（1.5r ms）、越悶（低通 3000/r Hz）；到達時間有三陣：0.08 s（8%）、0.2 s（30%）、0.75 s（8%），其餘 54% 散在 0.05–1.05 s；
+// 底下墊一層 80–350 Hz 的隆隆聲（白雜訊四次低通、兩次高通；包絡 3 Hz 慢慢翻滾），淡淡的殘響；之後再套 EQ_TH
+function synthThunderPhys() {
+  const n = N(1.5), rnd = mulberry32(20261113), x = new Float64Array(n);
+  const gauss = () => { let u = 0; for (let k = 0; k < 6; k++) u += rnd(); return (u - 3) / 1.2; };
+  const lp4 = (x, fc) => onePoleLP(onePoleLP(onePoleLP(onePoleLP(x, fc), fc), fc), fc);
+  for (let k = 0; k < 3000; k++) {
+    const c = rnd(); let t;
+    if (c < 0.08) t = 0.08 + 0.015 * gauss(); else if (c < 0.38) t = 0.2 + 0.05 * gauss(); else if (c < 0.46) t = 0.75 + 0.04 * gauss(); else t = 0.05 + rnd() ** 1.4;
+    t = Math.max(0.03, Math.min(1.1, t));
+    const r = 1 + 4 * Math.min(1, Math.max(0, (t - 0.05) / 1.0 + 0.25 * (rnd() - 0.5))), D = Math.max(2, N(0.0015 * r)), amp = (0.5 + 0.5 * rnd()) / Math.sqrt(r);
+    const w = new Float64Array(D + N(0.02)); for (let i = 0; i < D; i++) w[i] = 1 - 2 * i / D;   // N 字形：+1 斜到 −1
+    const lp = onePoleLP(onePoleLP(w, 3000 / r), 3000 / r), k0 = N(t);
+    for (let i = 0; i < lp.length && k0 + i < n; i++) x[k0 + i] += amp * lp[i];
+  }
+  const rum = npk(onePoleHP(onePoleHP(lp4(white(n, rnd), 330), 80), 80)), roll = npk(onePoleLP(onePoleLP(white(n, rnd), 3), 3));
+  const e = bpEnv([[0, -30], [0.05, -2], [0.1, 0], [0.4, -2], [0.5, -8], [0.6, -11], [0.75, -8], [0.85, -11], [0.95, -17], [1.05, -23], [1.2, -34], [1.3, -60]]);
+  const xp = npk(x);
+  for (let i = 0; i < n; i++) xp[i] += dbl(TH_RUM) * rum[i] * e(i / SR) * dbl(4 * roll[i]);
+  const crack = npk(onePoleLP(onePoleLP(onePoleLP(onePoleLP(onePoleHP(onePoleHP(burst(N(0.06), rnd, 0.01), 1500), 1500), 3000), 3000), 3000), 3000));   // 開頭一聲亮的「喀」（1.5–3 kHz、τ 10 ms）
+  for (let i = 0; i < crack.length; i++) xp[N(0.005) + i] += dbl(TH_CRACK) * crack[i];
+  const o = addMono(stereo(n), npk(xp));
+  mix(o, verb(npk(xp), 1.4, 0.82), -14);
+  return fadeOut(o, 0.2);
 }
 // FR-010 click-c：3 ms 白雜訊（二階高通 6 kHz、τ 0.8 ms）＋4 kHz 共振（帶通 Q 8、τ 2 ms、−12 dB）
 function synthClick() {
@@ -517,34 +718,6 @@ function synthThunder() {
   }
   return o;
 }
-// FR-012 bgm-d：I–V–vi–IV–I，每和弦 3.2 s；pad（3 個鋸齒 ±7 cents、低通 1.5 kHz）＋電鋼琴琶音（FM 1:1，八分音符 0.4 s）＋殘響
-function synthBgm() {
-  const rnd = mulberry32(20261031);
-  const CH = 3.2, chords = [[48, 52, 55, 60], [43, 50, 55, 59], [45, 52, 57, 60], [41, 48, 53, 57], [48, 52, 55, 60]];
-  const total = CH * chords.length + 1.0, n = N(total), dry = stereo(n);
-  const hz = (m) => 440 * 2 ** ((m - 69) / 12);
-  chords.forEach((ch, ci) => {
-    const t0 = ci * CH, last = ci === chords.length - 1, d = last ? CH + 1.0 : CH + 1.2;
-    for (const m of ch) for (const c of [-7, 0, 7]) {
-      const len1 = N(d), s = sawBlep(len1, hz(m) * 2 ** (c / 1200), rnd());
-      const f = onePoleLP(onePoleLP(s, 1500), 1500);
-      for (let i = 0; i < len1; i++) { const t = i / SR; f[i] *= Math.min(1, t / 0.8) * (t > CH ? Math.max(0, 1 - (t - CH) / 1.2) : 1) * 0.05; }
-      addMono(dry, f, t0, 0, c / 10);
-    }
-    const pat = [0, 1, 2, 3, 1 + 4, 3, 2, 1].map((k) => (k < 4 ? ch[k] + 12 : ch[k - 4] + 24));
-    pat.forEach((m, k) => {
-      if (last && k > 4) return;
-      const at = t0 + k * 0.4, nd = N(last && k === 4 ? 2.8 : 1.4), x = new Float64Array(nd), f = hz(m), vel = 0.9 + 0.2 * rnd();
-      for (let i = 0; i < nd; i++) { const t = i / SR; const idx = 0.3 + 1.7 * env.ex(t, 0.8); x[i] = Math.sin(TAU * f * t + idx * Math.sin(TAU * f * t)) * Math.min(1, t / 0.002) * env.ex(t, 0.9) * vel * 0.22; }
-      addMono(dry, x, at, 0, (rnd() * 2 - 1) * 0.3);
-    });
-  });
-  const wl = schroeder(dry.L, [29.7, 37.1, 41.1, 43.7]), wr = schroeder(dry.R, [30.8, 38.2, 42.2, 44.8]);
-  const o = stereo(n);
-  for (let i = 0; i < n; i++) { o.L[i] = dry.L[i] + wl[i] * dbl(-10) * 3; o.R[i] = dry.R[i] + wr[i] * dbl(-10) * 3; }
-  return fadeOut(o, 2.0);
-}
-
 // ───────────── 處理鏈（沿用 make_sfx.py finish()） ─────────────
 function finish(x, R) {
   let m = measure(x);
@@ -579,13 +752,22 @@ function finish(x, R) {
 const readJson = (p, d) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return d; } };
 function targetDbOf(name) { const kit = readJson(KIT, {}); return Number.isFinite(kit[name]?.targetDb) ? kit[name].targetDb : RECIPES[name].targetDb; }
 
-async function buildCandidate(name, cand, cacheDir) {
+async function buildCandidate(name, cand, cacheDir, srcFile = null) {
   const R = RECIPES[name];
   if (cand.route === 'keep') {
     const p = path.join(SFX_DIR, `${name}.wav`);
     if (!fs.existsSync(p)) return null;
     const buf = decodeFile(p);
     return { wav: fs.readFileSync(p), buf, m: measure(buf) };
+  }
+  if (cand.route === 'L') {
+    const Lc = R.local;
+    if (!srcFile) fail(`${name} 是本機音樂檔（路線 L）→ 加 --src <${Lc.author}〈${Lc.title}〉的音檔>`, 2);
+    if (!fs.existsSync(srcFile)) fail(`找不到 --src 的檔：${srcFile} → 確認外接硬碟有接上、路徑沒打錯`, 2);
+    if (sha256(fs.readFileSync(srcFile)) !== Lc.sha256) fail(`--src 的檔跟登記的〈${Lc.title}〉不一樣（sha256 對不上）→ 換成原本那個檔；真的要換曲就改 RECIPES 的 local.sha256`, 2);
+    const full = decodeFile(srcFile);
+    const ctx = { clip: (a, z) => fadeIn(slice(full, N(a), Math.min(len(full), N(z))), 0.03) };
+    return finish(cand.build(ctx), R);
   }
   const srcs = [];
   const zips = {};
@@ -618,7 +800,7 @@ async function cmdCandidates(o) {
     const voice = o.voice ? decodeFile(o.voice) : null;
     const rows = [];
     for (const cand of R.candidates) {
-      const r = await buildCandidate(name, cand, o.cache);
+      const r = await buildCandidate(name, cand, o.cache, o.src);
       if (!r) continue;
       fs.writeFileSync(path.join(dir, `${cand.id}.wav`), r.wav);
       const cent = centroid(r.buf);
@@ -681,9 +863,13 @@ function sourceEntry(name, cand, r, prev) {
       source_file: one(cand.src.map((s) => `${PACKS[s.pack].file}:${s.member}`)),
       source_url: one(packs.map(pageUrl)), download_url: one(packs.map(dlUrl)), zip_sha256: one(packs.map((k) => PACKS[k].sha256)), ...CC0,
     });
-    if (cand.route === 'B+C') e.source = `另疊程式合成的部分（dev/tools/make-sfx.mjs 配方 ${cand.id}）`;
+    if (cand.route === 'B+C') e.source = `另疊 AI 生成的部分（dev/tools/make-sfx.mjs 配方 ${cand.id}）`;
+  } else if (cand.route === 'L') {
+    const Lc = R.local;
+    Object.assign(e, { source_title: Lc.title, source_author: Lc.author, source_url: Lc.source_url, source_sha256: Lc.sha256, license: Lc.license, license_url: Lc.license_url,
+      attribution: `"${Lc.title}" by ${Lc.author} (${Lc.source_url}), licensed under ${Lc.license} (${Lc.license_url}); clipped and loudness-normalized` });
   } else {
-    Object.assign(e, { source: `程式合成（dev/tools/make-sfx.mjs 配方 ${cand.id}）`, ...CC0, license_note: '作者合成，以 CC0 1.0 釋出（2026-10 定案）' });
+    Object.assign(e, { source: `AI 生成（dev/tools/make-sfx.mjs 配方 ${cand.id}）`, ...CC0, license_note: 'AI 生成，作者以 CC0 1.0 釋出（2026-10 定案）' });
   }
   if (R.pending) e.pending_author_check = R.pending;
   e.processing = cand.desc + (R.bgm ? ` → 檔尾 2 s 淡出 → 整合響度 ${R.target} LUFS` : ` → 去前導靜音（起音前留 2 ms）→ 長度上限 ${R.limit} s → 增益到 M max ${R.target} LUFS（true peak 上限 ${TP_CEIL} dBTP）`) + ' → 48 kHz、立體聲、pcm_s16le';
@@ -706,23 +892,26 @@ function writeReadme(sources, kit) {
     if (s.source_pack) {
       const files = [].concat(s.source_file).map((f) => `\`${path.basename(String(f).split(':').pop())}\``).join('、');
       const pk = [].concat(s.source_pack).join('＋');
-      return `${pk}${s.source_author && s.source_author !== 'Kenney' ? `（${s.source_author}）` : ''} ${files}${s.route === 'B+C' ? '＋程式合成' : ''}`;
+      return `${pk}${s.source_author && s.source_author !== 'Kenney' ? `（${s.source_author}）` : ''} ${files}${s.route === 'B+C' ? '＋AI 生成' : ''}`;
     }
-    return `程式合成（\`dev/tools/make-sfx.mjs\` 配方 \`${s.recipe}\`）`;
+    if (s.route === 'L') return `${s.source_author}〈${s.source_title}〉剪輯`;
+    return `AI 生成（\`dev/tools/make-sfx.mjs\` 配方 \`${s.recipe}\`）`;
   };
-  const lic = (s) => (s?.license_note ? 'CC0 1.0（作者合成並釋出）' : s?.license || '—');
+  const lic = (s) => (s?.license_note ? 'CC0 1.0（AI 生成、作者釋出）' : s?.route === 'L' ? `${s.license}（要標示出處）` : s?.license || '—');
+  const nSfx = Object.values(kit).filter((v) => v.kind !== 'bgm').length, music = Object.entries(kit).filter(([, v]) => v.kind === 'bgm');
   const lines = ['# 音效清單', '',
-    `${Object.keys(kit).length} 個音效：取自 CC0（公眾領域）素材，或作者合成並以 CC0 釋出；可以放進自己的影片、改編、商用，不用標示出處。`,
+    `${nSfx} 個音效：取自 CC0（公眾領域）素材，或 AI 生成並以 CC0 釋出；可以放進自己的影片、改編、商用，不用標示出處。`,
+    ...music.map(([k, v]) => `片尾配樂 \`${k}.wav\` 是 ${by[`${k}.wav`]?.license || '—'}：預設不配，plan.json 的 outro 寫 "music": "${k}" 才會用；用到的影片要在說明欄標示「${v.credit}」。`),
     '逐檔的下載網址、sha256、處理方式、峰值秒數與響度在 `sources.json`；每顆在成片裡的大小（相對人聲的 dB）與使用時機在 `shared/template/kit/sfx.json`。', '',
     '| 檔名 | 聽起來像 | 用在哪 | 來源 | 授權 |', '|---|---|---|---|---|'];
   for (const [k, v] of Object.entries(kit)) { const s = by[`${k}.wav`]; lines.push(`| \`${k}.wav\` | ${s?.like || '—'} | ${v.use} | ${srcText(s)} | ${lic(s)} |`); }
   const pend = sources.filter((s) => s.pending_author_check);
-  lines.push('', 'Kenney 素材出自 https://kenney.nl ，OpenGameArt 素材的作品頁網址在 `sources.json` 的 `source_url`，', '`zip_sha256` 是當初下載的檔案（zip 或單一音檔）的 sha256，`sha256` 是 wav 檔本身。');
-  if (pend.length) lines.push('', `${pend.map((s) => `\`${s.file}\``).join('、')} 目前是程式合成版；\`sources.json\` 的 \`pending_author_check\`（待作者瀏覽器確認）列了 OpenGameArt 的 CC0 候選，作者在瀏覽器確認授權欄並試聽後才會換檔。`);
+  lines.push('', 'Kenney 素材出自 https://kenney.nl ，`zip_sha256` 是當初下載的 zip 的 sha256；片尾配樂的 `source_sha256` 是作者本機原曲的 sha256；`sha256` 是 wav 檔本身。');
+  if (pend.length) lines.push('', `${pend.map((s) => `\`${s.file}\``).join('、')} 目前是 AI 生成版；\`sources.json\` 的 \`pending_author_check\`（待作者瀏覽器確認）列了 OpenGameArt 的 CC0 候選，作者在瀏覽器確認授權欄並試聽後才會換檔。`);
   lines.push('', '作者端重新產生（只要 Node 與 ffmpeg；會重新下載 Kenney 素材並核對 sha256）：', '', '```',
     'node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾>   # 試聽候選',
-    'node dev/tools/make-sfx.mjs --write --only <名稱>                                 # 寫進 shared/sfx/', '```', '',
-    `${FROZEN.map((n) => `\`${n}\``).join(' ')} 是凍結的舊檔（由已退役的 \`dev/tools/make_sfx.py\` 產生），處理方式記在 \`sources.json\` 的 \`processing\`，不再重產。`, '');
+    'node dev/tools/make-sfx.mjs --write --only <名稱>                                 # 寫進 shared/sfx/',
+    'node dev/tools/make-sfx.mjs --write --only bgm-cylinder-five --src <原曲 mp3>     # 片尾配樂要給作者本機的原曲', '```', '');
   fs.writeFileSync(path.join(SFX_DIR, 'README.md'), lines.join('\n'));
 }
 
@@ -732,7 +921,7 @@ async function cmdWrite(o) {
   for (const name of o.names) {
     if (!kit[name]) fail(`kit/sfx.json 沒有「${name}」→ 先照 specs/contracts/sfx.md §2 手動加這一項（kind、zh、use、event、targetDb、additive、maxPerVideo），再跑 --write`);
     const R = RECIPES[name], cand = R.candidates.find((c) => c.id === CHOICE[name]);
-    const r = await buildCandidate(name, cand, o.cache);
+    const r = await buildCandidate(name, cand, o.cache, o.src);
     const cur = R.measure === 'I' ? r.m.I : r.m.mmax;
     const vol = +dbl(-14 + kit[name].targetDb - cur).toFixed(3);
     if (vol > 1) fail(`${name} 算出來的 volume 是 ${vol}（> 1）：檔案只有 ${cur} LUFS（被 true peak −1.2 dBTP 壓住）→ 配方的檔案目標調低，或把聲音做得更密（降低峰值因數）`);
@@ -762,10 +951,10 @@ async function cmdWrite(o) {
 }
 
 function cmdList() {
-  console.log(`音效配方（✓＝CHOICE 選的；凍結的 8 顆不在這裡：${FROZEN.join(' ')}）`);
+  console.log('音效配方（✓＝CHOICE 選的）');
   for (const [name, R] of Object.entries(RECIPES)) {
     R.candidates.forEach((c, i) => {
-      const src = c.route === 'keep' ? `現在的 shared/sfx/${name}.wav` : c.src?.length ? `${PACKS[c.src[0].pack].pack} ${c.src.map((s) => path.basename(s.member)).join('＋')}` : c.desc;
+      const src = c.route === 'keep' ? `現在的 shared/sfx/${name}.wav` : c.route === 'L' ? `${R.local.author}〈${R.local.title}〉 ${c.desc}` : c.src?.length ? `${PACKS[c.src[0].pack].pack} ${c.src.map((s) => path.basename(s.member)).join('＋')}` : c.desc;
       console.log(`  ${(i ? '' : name).padEnd(9)} ${CHOICE[name] === c.id ? '✓' : '·'} ${c.id.padEnd(11)} ${(c.route === 'keep' ? '—' : c.route).padEnd(4)} ${src}`);
     });
   }

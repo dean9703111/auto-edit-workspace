@@ -26,7 +26,7 @@
   5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
 
   【綁句欄位】
-  BEFORE = P.at('#32@手動')：講到舊做法的時刻，左欄擦開；音效 tick。
+  BEFORE = P.at('#32@手動')：講到舊做法的時刻，左欄擦開。
   PAIN = P.at('#33@逐句')：講到舊做法缺點的時刻，缺點那一行被劃掉、左欄退焦；音效 alert。
   AFTER = P.at('#34@AI')：講到新做法的時刻，右欄彈出（箭頭提早 0.6 秒從左欄走過來）。
   SAVE = P.at('#35@省下')：講到好處的時刻，右欄數字畫螢光筆、光澤掃過、重拍，0.6 秒後右欄抬起發光；音效 success。
@@ -115,7 +115,7 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const BEFORE = P.at('#32@手動'), PAIN = P.at('#33@逐句'), AFTER = P.at('#34@AI'), SAVE = P.at('#35@省下');   // 舊做法／缺點／新做法／好處
 
-    P.sfx('tick', '#32@手動'); P.sfx('alert', '#33@逐句'); P.sfx('success', '#35@省下');   // 舊做法、缺點、好處各一顆音效（句號和上一行一樣；新做法那一拍不配）
+    P.sfx('alert', '#33@逐句'); P.sfx('success', '#35@省下');   // 缺點、好處各一顆音效（句號和上一行一樣；舊做法、新做法那兩拍不配）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮

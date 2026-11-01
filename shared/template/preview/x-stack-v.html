@@ -79,7 +79,6 @@
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#111@手機'), T2 = P.at('#112@區網'), T3 = P.at('#113@控制台'), T4 = P.at('#114@剪輯');   // 由下往上講到每一層名稱的時刻
-    P.sfx('tick', '#111@手機'); P.sfx('tick', '#112@區網'); P.sfx('tick', '#113@控制台'); P.sfx('tick', '#114@剪輯');   // 每一層一顆音效（句號和上一行一樣）
     const ALL = P.at('#115');                          // 講到「合起來就是…」那一句（沒有這句見檔頭【綁句欄位】）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     // 地基線貼在最底層 l1 下面 --sc-gap-sm、左右各多 --sc-gap-sm（層的位置由 data-layout 排好，這裡只讀；載入時算一次，不用改）

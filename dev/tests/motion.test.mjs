@@ -398,7 +398,7 @@ test('P.type：cps、caret:false、空白跟著下一個字、只有空白的文
 });
 
 // ---------- 動態 v2（specs/010-motion-v2/design-system.md §11；specs/contracts/motion.md） ----------
-const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'cam', 'grow', 'ambient', 'sfx'];
+const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'cam', 'grow', 'ambient', 'sfx'];
 
 test('v2：原語清單、開頭註解、時間與曲線表、區域、u', () => {
   const { P } = mk();
@@ -434,10 +434,10 @@ test('v2：每個 P.* 呼叫的 tween 帶 data { sc, role, fn }；idle／flow／
   P.flow([a], 0.5, { until: 6 });
   P.cam([b], 1, { scale: 1.04, dur: 6 });
   P.cam([b], 7, { scale: 1 });
-  const t = P.sfx('tick', '#3@詞', 0.1);
+  const t = P.sfx('click', '#3@詞', 0.1);
   near(t, 2.7);
-  assert.deepEqual(P.sfxCues, [{ name: 'tick', ref: '#3@詞', off: 0.1, t: 2.7 }]);
-  assert.deepEqual(globalThis.SceneMotion.sfx['?'].at(-1), { name: 'tick', ref: '#3@詞', off: 0.1, t: 2.7 });
+  assert.deepEqual(P.sfxCues, [{ name: 'click', ref: '#3@詞', off: 0.1, t: 2.7 }]);
+  assert.deepEqual(globalThis.SceneMotion.sfx['?'].at(-1), { name: 'click', ref: '#3@詞', off: 0.1, t: 2.7 });
   assert.ok(P.marks.some((m) => m.ref === '#3@詞' && Math.abs(m.t - 2.7) < 1e-9), 'P.sfx 也是一拍（marks）');
   assert.throws(() => P.sfx('', '#3'), /音效名/);
   const kids = tl.getChildren(true, true, false).map((k) => k.data);
@@ -507,7 +507,8 @@ const V2_FIX = {
   punch: `<div id="t-punch" class="t-box" style="left:700px;top:140px"></div>`,
   dim: `<div id="t-dim" class="t-box" style="left:920px;top:140px"></div>`,
   marker: `<div id="t-marker" style="left:40px;top:260px;font-size:44px">螢光筆</div>`,
-  strike: `<div id="t-strike" style="left:300px;top:260px;font-size:44px">劃掉這句</div>`,
+  strike: `<div id="t-strike" style="left:300px;top:260px;font-size:44px">劃掉這句</div><div id="t-wave" style="left:300px;top:330px;font-size:44px">波浪劃掉</div>`,
+  stamp: `<div id="t-stamped" class="t-box" style="left:1160px;top:260px"></div><b id="t-stamp" class="sc-stamp" style="left:1190px;top:274px">過時</b>`,
   sheen: `<div id="t-sheen" class="t-box" style="left:560px;top:260px;overflow:hidden"></div>`,
   ripple: `<div id="t-ripple" style="left:820px;top:270px;width:60px;height:60px;border-radius:50%;background:#e06020"></div>`,
   comet: `<svg style="left:40px;top:380px;width:600px;height:80px;overflow:visible" viewBox="0 0 600 80"><path id="t-comet" d="M10 40 C 200 0, 400 80, 590 40" fill="none" stroke="#e06020" stroke-width="6"/></svg>`,
@@ -525,7 +526,8 @@ const V2_CODE = `
     P.punch('#t-punch', 2.0);
     P.dim('#t-dim', 1.5); P.dim('#t-dim', 3.0, { to: 1 });
     P.marker('#t-marker', 1.6);
-    P.strike('#t-strike', 1.8);
+    P.strike('#t-strike', 1.8); P.strike('#t-wave', 2.0, { wave: true });
+    P.stamp('#t-stamp', 2.4, { on: '#t-stamped' });
     P.sheen('#t-sheen', 2.2);
     P.ripple('#t-ripple', 2.4);
     P.comet('#t-comet', 1.0);
@@ -534,7 +536,7 @@ const V2_CODE = `
     P.pop('.t-spot', 0.5, { stagger: 0.12 }); P.spot('.t-spot', 'none', 1.5); P.spot('.t-spot', '#t-s1', 2.0); P.spot('.t-spot', '#t-s2', 3.0, { done: '#t-s1' }); P.spot('.t-spot', null, 4.0);
     P.cam('#t-cam', 2.8, { to: '#t-camtarget', k: 0.12, scale: 1.04 }); P.cam('#t-cam', 4.2, { x: 0, y: 0, scale: 1 });
     P.grow('#t-grow', 0.3);
-    P.sfx('tick', '#1');
+    P.sfx('click', '#1');
     P.end();`;
 
 test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整張截圖逐像素相同', { skip: !(chrome && runtime) && '找不到 HyperFrames 的 Chrome 或 runtime（npx hyperframes browser ensure）', timeout: 120000 }, async () => {
@@ -583,7 +585,7 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
       for (const k of [...Object.keys(V2_FIX), 'ambient']) assert.ok(times.some((t) => A[t].st[k] !== A[0].st[k]), `P.${k} 看起來沒有動`);
       assert.equal(await S.evaluate(`document.querySelectorAll('.sc-surface-fs .sc-amb').length`), 2);
       assert.equal(await S.evaluate(`document.querySelectorAll('[data-sc-ch]').length`), 10);
-      assert.deepEqual(await S.evaluate(`(window.SceneMotion.sfx['x-v2'] || window.SceneMotion.sfx['?']).map((x) => [x.name, x.ref, x.t])`), [['tick', '#1', 2]]);
+      assert.deepEqual(await S.evaluate(`(window.SceneMotion.sfx['x-v2'] || window.SceneMotion.sfx['?']).map((x) => [x.name, x.ref, x.t])`), [['click', '#1', 2]]);
       assert.deepEqual(await S.cueErrors(), []);
     } finally { await S.close(); }
     // 逐像素：用 HyperFrames 自己的 snapshot（和成片、examples.test 的亂序截圖同一條路；live 頁面的 CDP 截圖會因合成器快取差 1–14 階）

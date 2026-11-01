@@ -56,6 +56,7 @@ const CH_CENTER = 2.8;     // 章節前空檔 ≥ 2.8 秒就置中（2.5＋前�
 const CH_MIN = 2.0;        // 空檔 < 2 秒：章節會壓到人聲（⚠）
 const CH_BRIDGE = 1.0;     // 章節和前後不透明幕相隔 ≤ 1 秒就墊底（不露出講者）
 const UNCOVERED_MIN = 1.0; // 沒有畫面的區間 > 1 秒才報
+const SWEEP_MIN = 1.0;     // 章節擦過：章節起點在片頭 1 秒後才掃（013）
 const FLASH = [0.05, 1.0]; // 兩段之間空 0.05–1 秒：講者會閃一下
 const PIP_FLY_MIN = 1.0;   // 子母畫面片段 ≥ 1 秒才飛入（太短就原地淡入）
 const PIP_FADE = 0.4;      // 子母畫面原地淡入淡出
@@ -790,7 +791,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         });
       }
       // 情境動畫的 P.sfx('名', '#N…', off)（motion.md §5）：附加音效，時間＝ref 的成片秒數＋off；sfxExtra: false 整段關掉、sfxVolume 一起調；
-      // 不受主音效 3 秒規則（作者排好的拍點），但算進每集上限與每分鐘密度（additive 的 tick、click 除外）
+      // 不受主音效 3 秒規則（作者排好的拍點），但算進每集上限與每分鐘密度（additive 的 click 除外）
       if (it.type === 'custom' && seg.sfxExtra !== false) {
         for (const b of it.sfxBeats || []) {
           const head = `${it.where} ${it.file} 的 P.sfx('${b.name}', '${b.ref}')`;
@@ -826,7 +827,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     }
   }
   let lastSfx = null;
-  // 3 秒規則只管主音效；additive（tick、click）疊在別的聲音上，不算
+  // 3 秒規則只管主音效；additive（click）疊在別的聲音上，不算
   for (const it of [...timed].filter((x) => x.sfx && !sfxConf[x.sfx.name]?.additive).sort((a, b) => a.sfx.at - b.sfx.at)) {
     if (lastSfx && it.sfx.at - lastSfx.sfx.at < SFX_GAP) {
       it.warnings.push(`${it.where} 音效 ${it.sfx.name}（${it.sfx.at}s）和 ${lastSfx.id} 的音效只差 ${r3(it.sfx.at - lastSfx.sfx.at)}s（< ${SFX_GAP}s），已拿掉（只保留前一個） → 想留這顆，就在 ${lastSfx.id} 寫 "sfx": null`);
@@ -1026,7 +1027,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     if (!o || typeof o !== 'object' || Array.isArray(o)) errors.push(`outro 要寫成物件，例如 "outro": { "from": "#120" }，現在是 ${JSON.stringify(o)} → 照例子改，不要結尾配樂就刪掉 outro`);
     else {
       for (const k of Object.keys(o)) if (!OUTRO_KEYS.includes(k)) errors.push(`outro 不能有「${k}」→ 只能寫 ${OUTRO_KEYS.join('、')}`);
-      const music = o.music === undefined ? 'bgm-outro' : o.music;
+      const music = o.music === undefined ? null : o.music;   // 預設不配（2026-11-02 作者）：要配樂就寫 kit/sfx.json 裡 kind: "bgm" 的名稱
       let ok = true;
       if (music !== null && sfxConf[music]?.kind !== 'bgm') { ok = false; errors.push(`outro.music：「${music}」不是配樂（可用：${bgmNames(sfxConf).join('、') || '（kit/sfx.json 沒有 kind: "bgm"）'}）→ 改成可用的配樂名稱，或寫 null 不配`); }
       const t = parseTime(o.from);
@@ -1039,7 +1040,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       if (music === null) outro = { music: null };
       else if (ok && start != null) {
         const conf = sfxConf[music];
-        outro = { music, from: String(o.from), start, end: videoDur, span: r3(videoDur - start), fadeIn: conf.fadeIn ?? 0,
+        outro = { music, credit: conf.credit ?? null, from: String(o.from), start, end: videoDur, span: r3(videoDur - start), fadeIn: conf.fadeIn ?? 0,
           fadeOut: Math.max(o.fadeOut ?? conf.fadeOut ?? 0, edit.fadeOut || 0), gain: (conf.volume ?? 1) * dB(o.volume ?? 0) * dB(edit.volume?.sfx ?? 0),
           relDb: r3((conf.targetDb ?? 0) + (o.volume ?? 0) + (edit.volume?.sfx ?? 0) - (edit.volume?.voice ?? 0)) };
       }
@@ -1075,7 +1076,9 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       const hide = merged.map(([a, b]) => [r3(Math.max(a, s)), r3(Math.min(b, e))]).filter(([a, b]) => b - a > 1e-3);
       const show = subtract([s, e], hide).filter(([a, b]) => b - a >= BADGE.minShow - 1e-9).map(([a, b]) => [r3(a), r3(b)]);
       if (!show.length) return;
-      badges.push({ id: c.id, k: badges.length + 1, num: c.num, name: c.name, start: s, end: e, hide, show });
+      // 章節擦過（013）：沒有 01 章節幕、由 02 起頭的章（短片），章節起點露著講者時，主色色帶掃過一次再進角標；片頭 1 秒內的章不掃
+      const sweep = c.kind === 'tag' && s >= SWEEP_MIN && Math.abs(show[0][0] - s) < 1e-6;
+      badges.push({ id: c.id, k: badges.length + 1, num: c.num, name: c.name, start: s, end: e, hide, show, ...(sweep ? { sweep: true } : {}) });
       const entry = chapterList.find((x) => x.id === c.id);
       if (entry) entry.badge = show;
     });
@@ -1194,10 +1197,11 @@ export function outroClip(outro, len, outDur) {
 // 「結尾配樂：…」那一行（原文 specs/contracts/cli-005.md §3.4）
 export function outroLine(outro, clip) {
   if (!outro) return null;
-  if (!outro.music) return '結尾配樂：outro.music 是 null，不配';
+  if (!outro.music) return '結尾配樂：outro 沒寫 music（或寫 null），不配';
   if (!clip) return null;
-  if (clip.aligned === 'end') return `結尾配樂：${outro.music} 只有 ${clip.len.toFixed(1)} 秒，比 outro.from（${outro.from}，${fmt(outro.start)}）到片尾的 ${outro.span.toFixed(1)} 秒短，改從 ${fmt(clip.at)} 起播、對齊片尾`;
-  return `結尾配樂：${outro.music} 從 ${fmt(clip.at)} 起播 ${clip.dur.toFixed(1)} 秒（淡入 ${String(+clip.fadeIn.toFixed(2))} 秒、淡出 ${String(+clip.fadeOut.toFixed(2))} 秒，比人聲小 ${(-outro.relDb).toFixed(1)} dB）`;
+  const credit = outro.credit ? `；這首要在影片說明欄標示出處：${outro.credit}` : '';
+  if (clip.aligned === 'end') return `結尾配樂：${outro.music} 只有 ${clip.len.toFixed(1)} 秒，比 outro.from（${outro.from}，${fmt(outro.start)}）到片尾的 ${outro.span.toFixed(1)} 秒短，改從 ${fmt(clip.at)} 起播、對齊片尾${credit}`;
+  return `結尾配樂：${outro.music} 從 ${fmt(clip.at)} 起播 ${clip.dur.toFixed(1)} 秒（淡入 ${String(+clip.fadeIn.toFixed(2))} 秒、淡出 ${String(+clip.fadeOut.toFixed(2))} 秒，比人聲小 ${(-outro.relDb).toFixed(1)} dB）${credit}`;
 }
 
 // --check --json 的 items：時間換回 rough.mp4 的秒數（剪輯台用 rough.mp4 的時間軸）。

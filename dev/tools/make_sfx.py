@@ -194,7 +194,7 @@ CANDIDATES = {
     ],
     "success": [
         dict(id="success-a", src=[KI("confirmation_002.ogg")], like="快速往上爬的「叮叮叮叮」",
-             desc="四音上行（約 1.2→1.8→2.3→3.5 kHz）、0.54 s；作者剪映自有音效的「正確」也是這一顆"),
+             desc="四音上行（約 1.2→1.8→2.3→3.5 kHz）、0.54 s"),
         dict(id="success-b", src=[KI("confirmation_004.ogg")], like="圓潤的上行音階",
              desc="六段上行 0.66→3.3 kHz、0.49 s，比 a 圓"),
         dict(id="success-c", src=[("oga-kalimba", "kalimba.wav", None)], like="拇指琴兩音往上",

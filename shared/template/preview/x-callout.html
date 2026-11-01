@@ -89,7 +89,6 @@
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#101@腳架不穩'), T2 = P.at('#102@衣服太薄'), T3 = P.at('#103@收音太遠'), T4 = P.at('#104@背光太暗');   // 講到每個標籤的時刻
-    P.sfx('tick', '#101@腳架不穩'); P.sfx('tick', '#102@衣服太薄'); P.sfx('tick', '#103@收音太遠'); P.sfx('tick', '#104@背光太暗');   // 每個標籤一顆音效（句號和上一行一樣）
     const ALL = P.at('#105');                        // 講到總結那一句（沒有這句見檔頭【綁句欄位】）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const TAGS = '#xcall-t1, #xcall-t2, #xcall-t3, #xcall-t4';   // 全部標籤（收尾用；少的標籤選不到，不用改）

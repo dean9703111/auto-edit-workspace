@@ -499,7 +499,7 @@ test('講者：/api/state 的 look 區塊；存 look（插入、取代、恢復�
   assert.deepEqual(s.look.limits, { color: [0, 1], slim: [0, 1.2], step: 0.05 });
   assert.equal(s.look.lines.length, 2);
   assert.match(s.look.lines[0], /^講者調光：0\.8（kit\/look\/jianying-smart\.cube/);
-  assert.ok(s.schema.sounds.includes('pop') && !s.schema.sounds.includes('bgm-outro'), s.schema.sounds.join(','));
+  assert.ok(s.schema.sounds.includes('ding') && !s.schema.sounds.includes('bgm-cylinder-five'), s.schema.sounds.join(','));
   const orig = planNow();
   const withExtra = orig.replace('  "speakerBox":', '  "rhythm": { "pace": "normal" },\n  "outro": "#2",\n  "speakerBox":');
   assert.notEqual(withExtra, orig);

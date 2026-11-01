@@ -15,6 +15,16 @@ const L = await lib();
 const cues = parseSrt(makeSrt({ n: 12 }));
 const VD = 44;
 const run = (scenes, extra = {}, outDir = os.tmpdir()) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes, ...extra }, cues, videoDur: VD, lib: L, outDir });
+// 2026-11-02 起版型預設不配 pop／tick／swipe／whoosh（作者拿掉）。音效機制（主音效、跟節拍的附加音效、3 秒規則、報告欄）
+// 改用測試自己的預設驗：主＝ding（原 pop）、附加＝click（原 tick，同樣 additive）、側邊欄＝impact（原 swipe）、全幕＝alert（原 whoosh）
+const FIX = {
+  'side-panel': { main: { sound: 'impact', at: 'start' }, extra: [{ sound: 'click', at: 'items[0:]' }] },
+  keywords: { main: { sound: 'ding', at: 'items[0]' }, extra: [{ sound: 'click', at: 'items[1:]' }] },
+  concept: { main: { sound: 'ding', at: 'in + 0.1' }, extra: [] },
+  'fs-list': { main: { sound: 'alert', at: 'start - 0.15' }, extra: [{ sound: 'click', at: 'items[0:]' }] },
+};
+const LF = { ...L, scenes: L.scenes.map((sc) => (FIX[sc.key] ? { ...sc, sfx: FIX[sc.key] } : sc)) };
+const runF = (scenes, extra = {}, outDir = os.tmpdir()) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes, ...extra }, cues, videoDur: VD, lib: LF, outDir });
 const byId = (res, id) => res.items.find((x) => x.id === id);
 const r3 = (x) => +x.toFixed(3);
 
@@ -73,16 +83,16 @@ test('相接的下方字卡：前一張的結尾改成後一張起點＋0.4（�
 });
 
 test('音效：3 秒內只留第一個，被拿掉的列進警告；起點＝事件時間−峰值＋1 幀', () => {
-  const res = run([
+  const res = runF([
     { id: 's01', scene: 'keywords', from: 5.5, to: 9.5, slots: { items: ['一', '二'] } },
     { id: 's02', scene: 'key-point', from: '#3', to: '#4e', slots: { key: '二' } },
     { id: 's03', scene: 'concept', from: '#6', to: '#7e', slots: { text: '三' }, sfx: 'success' },
   ]);
   assert.deepEqual(res.errors, []);
   const s1 = byId(res, 's01'), s2 = byId(res, 's02'), s3 = byId(res, 's03');
-  assert.equal(s1.sfx.name, 'pop');
-  // keywords：主 pop 落在 items[0]（0.2）
-  assert.equal(s1.sfx.at, r3(5.5 + 0.2 - L.sfx.pop.peak + 1 / 30));
+  assert.equal(s1.sfx.name, 'ding');
+  // keywords（測試預設）：主 ding 落在 items[0]（0.2）
+  assert.equal(s1.sfx.at, r3(5.5 + 0.2 - L.sfx.ding.peak + 1 / 30));
   assert.equal(s2.sfx, null);
   assert.equal(s2.sfxDropped.name, 'ding');
   assert.ok(s2.warnings.some((w) => /< 3s）.*已拿掉/.test(w)));
@@ -97,7 +107,7 @@ test('音效：3 秒內只留第一個，被拿掉的列進警告；起點＝事
   assert.equal(byId(res2, 's02').sfx.name, 'chapter');
   assert.equal(byId(res2, 's02').sfx.event, r3(byId(res2, 's02').start + 0.45));
   assert.equal(byId(res2, 's02').sfx.at, r3(byId(res2, 's02').start + 0.45 - L.sfx.chapter.peak + 1 / 30));
-  // 14 講者介紹＝sparkle；15 金句 tone warn＝thunder、其他＝sparkle；04a 仍是 whoosh
+  // 14 講者介紹＝sparkle；15 金句 tone warn＝thunder、其他＝sparkle；04a 不配（2026-11-02 拿掉 whoosh）
   const res3 = run([
     { id: 's01', scene: 'quote', tone: 'warn', from: '#2', to: '#3e', slots: { text: '壓力好大' } },
     { id: 's02', scene: 'quote', from: '#5', to: '#6e', slots: { text: '慢慢來' } },
@@ -105,7 +115,7 @@ test('音效：3 秒內只留第一個，被拿掉的列進警告；起點＝事
   ]);
   assert.equal(byId(res3, 's01').sfx.name, 'thunder');
   assert.equal(byId(res3, 's02').sfx.name, 'sparkle');
-  assert.equal(byId(res3, 's03').sfx.name, 'whoosh');
+  assert.equal(byId(res3, 's03').sfx ?? null, null);
   assert.equal(byId(res2, 's03').sfx, undefined);
 });
 
@@ -230,7 +240,7 @@ test('子母畫面裁切：講者置中用預設框，偏右時以講者框為�
 });
 
 test('主合成：底片、子合成 host、子母畫面、字幕、音效、底片右移都在', () => {
-  const res = run([
+  const res = runF([
     { id: 's01', scene: 'side-panel', from: '#2', to: '#4e', slots: { title: '標題', items: ['一', '二', '三'] } },
     { id: 's02', scene: 'fs-list', from: '#6', to: '#8e', slots: { title: '清單', items: ['一', '二', '三'] } },
     { id: 's03', type: 'fx', fx: 29, from: '#10', to: '#10e', vars: { number: '3' } },
@@ -244,7 +254,7 @@ test('主合成：底片、子合成 host、子母畫面、字幕、音效、底
   assert.match(html, /<img id="pipf-s02" class="clip pip-frame" src="kit\/pip-frame\.png"/);
   assert.match(html, /data-variable-values='\{"number":"3","bg":"none","accent":"#[0-9A-Fa-f]{6}"\}'/);
   assert.match(html, /data-track-kind="captions"/);
-  assert.match(html, /<audio id="sfx-s02" src="assets\/sfx\/whoosh\.wav"/);
+  assert.match(html, /<audio id="sfx-s02" src="assets\/sfx\/alert\.wav"/);
   assert.match(html, /tl\.fromTo\('#footage', \{ x: 0 \}, \{ x: 480, duration: 0\.7, ease \}, 4\.5\);/);
   // v2 轉場（design-system §5）：全畫面由色帶帶路擦開（host clip-path＋兩條色帶 0.62 s expo.inOut），子母畫面不跟著擦；
   // 前一格講者滿版 → 子母畫面從講者原位飛入（0.75 s power3.inOut），0.62 s 外框彈出落地；段尾色帶反向收、子母畫面 0.3 s 淡出
@@ -267,7 +277,7 @@ test('主合成：底片、子合成 host、子母畫面、字幕、音效、底
 });
 
 test('--test 平移：root 長度＝秒數、底片 data-media-start＝起點、情境與音效往前移；放在 compositions/ 用 ../ 路徑', () => {
-  const res = run([
+  const res = runF([
     { id: 's01', scene: 'concept', from: '#2', to: '#3e', slots: { text: '一' } },
     { id: 's02', scene: 'concept', from: '#6', to: '#7e', slots: { text: '二' } },
   ]);
@@ -279,7 +289,7 @@ test('--test 平移：root 長度＝秒數、底片 data-media-start＝起點、
   assert.match(html, /src="\.\.\/assets\/rough\.mp4" data-start="0" data-duration="6" data-media-start="17\.5"/);
   assert.match(html, /id="el-s02"[^>]*\n\s+data-start="1"/);
   assert.doesNotMatch(html, /el-s01/);
-  assert.match(html, /<audio id="sfx-s02" src="\.\.\/assets\/sfx\/pop\.wav" data-start="1\.\d+"/);
+  assert.match(html, /<audio id="sfx-s02" src="\.\.\/assets\/sfx\/ding\.wav" data-start="1\.\d+"/);
   assert.match(html, /href="\.\.\/kit\/scene\.css"/);
   assert.match(html, /data-composition-src="compositions\/s02-concept\.html"/, 'data-composition-src 以專案根目錄為準，不加 ../');
   assert.deepEqual(skipped, []);
@@ -294,11 +304,17 @@ test('--test 平移：root 長度＝秒數、底片 data-media-start＝起點、
 const F = 1 / 30;
 const atOf = (start, rel, name) => r3(Math.max(0, start + rel - L.sfx[name].peak + F));
 
-test('音效：06 concept 沒寫 sfx → 主 pop 落在 in+0.1', () => {
-  const s = byId(run([{ id: 's01', scene: 'concept', from: '#2', to: '#3e', slots: { text: '一' } }]), 's01');
-  assert.equal(s.sfx.name, 'pop');
+test('音效：版型預設——02–06、08、10–13 不配（2026-11-02）；09 只有答案 ding；測試預設的主音效落在 in+0.1', () => {
+  const quiet = run([
+    { id: 'a', scene: 'side-panel', from: '#2', to: '#3e', slots: { title: '標題', items: ['一', '二'] } },
+    { id: 'b', scene: 'concept', from: '#5', to: '#6e', slots: { text: '一' } },
+    { id: 'c', scene: 'keywords', from: '#8', to: '#10e', slots: { items: ['一', '二', '三'] } },
+  ]);
+  for (const id of ['a', 'b', 'c']) { assert.equal(byId(quiet, id).sfx ?? null, null, id); assert.deepEqual(byId(quiet, id).sfxExtra, [], id); }
+  const s = byId(runF([{ id: 's01', scene: 'concept', from: '#2', to: '#3e', slots: { text: '一' } }]), 's01');
+  assert.equal(s.sfx.name, 'ding');
   assert.equal(s.sfx.event, r3(s.start + 0.1));
-  assert.equal(s.sfx.at, atOf(s.start, 0.1, 'pop'));
+  assert.equal(s.sfx.at, atOf(s.start, 0.1, 'ding'));
   assert.deepEqual(s.sfxExtra, []);
 });
 
@@ -312,16 +328,16 @@ test('音效：07 key-point 依 tone 選 ding／alert／success', () => {
   assert.deepEqual(['s01', 's02', 's03'].map((id) => byId(res, id).sfx.name), ['ding', 'alert', 'success']);
 });
 
-test('音效：03 side-panel 3 項 → 主 swipe＋tick 3 顆，時間 1.3＋i×0.6', () => {
-  const s = byId(run([{ id: 's01', scene: 'side-panel', from: '#2', to: '#4e', slots: { title: '標題', items: ['一', '二', '三'] } }]), 's01');
-  assert.equal(s.sfx.name, 'swipe');
-  assert.deepEqual(s.sfxExtra.map((c) => c.name), ['tick', 'tick', 'tick']);
-  assert.deepEqual(s.sfxExtra.map((c) => c.at), [0, 1, 2].map((i) => atOf(s.start, 1.3 + i * 0.6, 'tick')));
-  assert.deepEqual(s.sfxExtra.map((c) => c.volume), [1, 2, 3].map(() => L.sfx.tick.volume));
+test('音效：side-panel 3 項（測試預設）→ 主 impact＋附加 click 3 顆，時間 1.3＋i×0.6', () => {
+  const s = byId(runF([{ id: 's01', scene: 'side-panel', from: '#2', to: '#4e', slots: { title: '標題', items: ['一', '二', '三'] } }]), 's01');
+  assert.equal(s.sfx.name, 'impact');
+  assert.deepEqual(s.sfxExtra.map((c) => c.name), ['click', 'click', 'click']);
+  assert.deepEqual(s.sfxExtra.map((c) => c.at), [0, 1, 2].map((i) => atOf(s.start, 1.3 + i * 0.6, 'click')));
+  assert.deepEqual(s.sfxExtra.map((c) => c.volume), [1, 2, 3].map(() => Math.round(L.sfx.click.volume * 100) / 100));
 });
 
-test('音效：12 keywords 3 項 → 主 pop 在 items[0]，tick 2 顆', () => {
-  const s = byId(run([{ id: 's01', scene: 'keywords', from: '#2', to: '#4e', slots: { items: ['一', '二', '三'] } }]), 's01');
+test('音效：keywords 3 項（測試預設）→ 主 ding 在 items[0]，附加 click 2 顆', () => {
+  const s = byId(runF([{ id: 's01', scene: 'keywords', from: '#2', to: '#4e', slots: { items: ['一', '二', '三'] } }]), 's01');
   assert.equal(s.sfx.event, r3(s.start + 0.2));
   assert.deepEqual(s.sfxExtra.map((c) => c.event), [r3(s.start + 0.7), r3(s.start + 1.2)]);
 });
@@ -335,16 +351,16 @@ test('音效：09 qa 的 ding 在 aAt，音量＝ding 預設音量×0.8', () => 
   assert.equal(s.sfxExtra[0].volume, Math.round(L.sfx.ding.volume * 0.8 * 100) / 100);
 });
 
-test('音效：sfxExtra:false 關附加；sfx:null 只關主；sfx:"whoosh" 換名稱落點不變', () => {
+test('音效：sfxExtra:false 關附加；sfx:null 只關主；sfx:"alert" 換名稱落點不變', () => {
   const seg = { scene: 'side-panel', from: '#2', to: '#4e', slots: { title: '標題', items: ['一', '二', '三'] } };
-  const res = run([{ id: 's01', ...seg, sfxExtra: false }, { id: 's02', ...seg, from: '#6', to: '#8e', sfx: null }, { id: 's03', ...seg, from: '#10', to: '#12e', sfx: 'whoosh' }]);
+  const res = runF([{ id: 's01', ...seg, sfxExtra: false }, { id: 's02', ...seg, from: '#6', to: '#8e', sfx: null }, { id: 's03', ...seg, from: '#10', to: '#12e', sfx: 'alert' }]);
   assert.deepEqual(res.errors, []);
   assert.deepEqual(byId(res, 's01').sfxExtra, []);
-  assert.equal(byId(res, 's01').sfx.name, 'swipe');
+  assert.equal(byId(res, 's01').sfx.name, 'impact');
   assert.equal(byId(res, 's02').sfx, undefined);
   assert.equal(byId(res, 's02').sfxExtra.length, 3);
   const s3 = byId(res, 's03');
-  assert.equal(s3.sfx.name, 'whoosh');
+  assert.equal(s3.sfx.name, 'alert');
   assert.equal(s3.sfx.event, s3.start);
   const bad = run([{ id: 's01', ...seg, sfxExtra: 'no' }]);
   assert.ok(bad.errors.some((e) => /sfxExtra/.test(e)));
@@ -356,21 +372,21 @@ test('音效：不存在的名稱 → ✖ 列出 kit/sfx.json 的段落音效（
   assert.ok(e);
   const names = Object.keys(L.sfx).filter((k) => L.sfx[k].kind !== 'bgm');
   for (const n of names) assert.ok(e.includes(n), n);
-  assert.ok(!e.includes('bgm-outro'));
-  const r2 = run([{ id: 's05', scene: 'concept', from: '#2', to: '#3e', slots: { text: '一' }, sfx: 'bgm-outro' }]);
-  assert.ok(r2.errors.includes('[s05 concept] sfx：「bgm-outro」是配樂，不能當段落音效 → 結尾配樂寫在 plan.json 第一層的 "outro"（例 "outro": { "from": "#120" }）'), r2.errors.join('\n'));
+  assert.ok(!e.includes('bgm-cylinder-five'));
+  const r2 = run([{ id: 's05', scene: 'concept', from: '#2', to: '#3e', slots: { text: '一' }, sfx: 'bgm-cylinder-five' }]);
+  assert.ok(r2.errors.includes('[s05 concept] sfx：「bgm-cylinder-five」是配樂，不能當段落音效 → 結尾配樂寫在 plan.json 第一層的 "outro"（例 "outro": { "from": "#120" }）'), r2.errors.join('\n'));
 });
 
 test('音效：3 秒間隔只管主 cue；同段附加 cue 不受影響，起點相距 < 0.2 才丟', () => {
-  const res = run([
+  const res = runF([
     { id: 's01', scene: 'side-panel', from: '#2', to: '#3e', slots: { title: '標題', items: ['一', '二', '三'] } },
     { id: 's02', scene: 'concept', from: 6, to: '#4e', slots: { text: '二' } },
   ]);
   assert.equal(byId(res, 's02').sfx, null);
-  assert.equal(byId(res, 's02').sfxDropped.name, 'pop');
+  assert.equal(byId(res, 's02').sfxDropped.name, 'ding');
   assert.equal(byId(res, 's01').sfxExtra.length, 3);
-  // 兩顆 tick 事件只差 0.1 秒 → 丟後者
-  const close = run([{ id: 's01', scene: 'fs-list', from: '#2', to: '#4e', slots: { title: '清單', items: [{ text: '一', at: '+1' }, { text: '二', at: '+1.1' }, { text: '三', at: '+1.5' }] } }]);
+  // 兩顆附加音效事件只差 0.1 秒 → 丟後者
+  const close = runF([{ id: 's01', scene: 'fs-list', from: '#2', to: '#4e', slots: { title: '清單', items: [{ text: '一', at: '+1' }, { text: '二', at: '+1.1' }, { text: '三', at: '+1.5' }] } }]);
   assert.deepEqual(close.errors, []);
   assert.deepEqual(byId(close, 's01').sfxExtra.map((c) => r3(c.event - byId(close, 's01').start)), [1, 1.5]);
 });
@@ -381,27 +397,27 @@ test('音效：fx 預設來自 catalog 的 sfx，plan 的 sfx 換名稱；custom
   const mk = (scenes) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes }, cues, videoDur: VD, lib: L2, outDir: os.tmpdir() });
   const res = mk([
     { id: 's01', type: 'fx', fx: 1, from: '#2', to: '#2e', vars: { text: '重點' } },
-    { id: 's02', type: 'fx', fx: 1, from: '#6', to: '#6e', vars: { text: '重點' }, sfx: 'glitch' },
+    { id: 's02', type: 'fx', fx: 1, from: '#6', to: '#6e', vars: { text: '重點' }, sfx: 'alert' },
     { id: 's03', type: 'fx', fx: 10, from: '#9', to: '#9e', vars: { text: '重點' } },  // fx 10 的 catalog sfx 是 null
   ]);
   assert.deepEqual(res.errors, []);
   const a = byId(res, 's01'), b = byId(res, 's02');
   assert.equal(a.sfx.name, 'impact');
   assert.equal(a.sfx.event, r3(a.start + 0.3));
-  assert.equal(b.sfx.name, 'glitch');
+  assert.equal(b.sfx.name, 'alert');
   assert.equal(b.sfx.event, r3(b.start + 0.3));
   assert.equal(byId(res, 's03').sfx, undefined);
   assert.match(formatReport(res), /impact \d+:\d\d\.\d\d/);
 });
 
-test('音效：報告欄位 pop 12.55 ＋tick×3；只有附加時 — ＋tick×3', () => {
-  const res = run([
+test('音效：報告欄位 impact 12.55 ＋click×3；只有附加時 — ＋click×3', () => {
+  const res = runF([
     { id: 's01', scene: 'side-panel', from: '#2', to: '#4e', slots: { title: '標題', items: ['一', '二', '三'] } },
     { id: 's02', scene: 'fs-list', from: '#8', to: '#10e', sfx: null, slots: { title: '清單', items: ['一', '二', '三'] } },
   ]);
   const rep = formatReport(res);
-  assert.match(rep, /s01｜.*｜swipe \d+:\d\d\.\d\d ＋tick×3｜/);
-  assert.match(rep, /s02｜.*｜— ＋tick×3｜/);
+  assert.match(rep, /s01｜.*｜impact \d+:\d\d\.\d\d ＋click×3｜/);
+  assert.match(rep, /s02｜.*｜— ＋click×3｜/);
 });
 
 test('音效名稱檢查：scene.json 的 main.sound（含 tone 物件）與 catalog 的 fx sfx.sound 拼錯都 ✖', () => {
@@ -549,21 +565,27 @@ test('情境動畫綁句：P.at 的句號換成秒數；註解不算；不是句
 
 test('outro：錯誤原文 5 種；起點、對齊片尾、淡入淡出取 min；報告行', () => {
   const e = (o) => run([], { outro: o }).errors;
-  assert.ok(e({ from: '#11', music: 'pop' }).includes('outro.music：「pop」不是配樂（可用：bgm-outro）→ 改成可用的配樂名稱，或寫 null 不配'));
+  assert.ok(e({ from: '#11', music: 'ding' }).includes('outro.music：「ding」不是配樂（可用：bgm-cylinder-five）→ 改成可用的配樂名稱，或寫 null 不配'));
   assert.ok(e({ from: '12' }).includes('outro.from：要寫 "#N" 或 "#N@詞"（結語金句講完後那一句），現在是 "12" → 改成收尾那一句的句號，例 "#120"'));
   assert.ok(e({ from: '#11', volume: 9 }).includes('outro.volume 要是 −20～+6 的 dB 數字（0＝預設），現在是 9 → 改成 −20～+6 之間的數字，或刪掉這個欄位用預設'));
   assert.ok(e({ from: '#11', fadeOut: 11 }).includes('outro.fadeOut 要是 0–10 的秒數（不寫＝用 kit/sfx.json 的 fadeOut），現在是 11 → 改成 0–10 之間的秒數，或刪掉這個欄位用預設'));
   assert.ok(e({ from: '#11', gain: 1 }).includes('outro 不能有「gain」→ 只能寫 from、music、volume、fadeOut'));
-  const res = run([], { outro: { from: '#11' } });
+  // 2026-11-02 起預設不配：沒寫 music＝null
+  const none = run([], { outro: { from: '#11' } });
+  assert.deepEqual(none.errors, []);
+  assert.equal(none.outro.music, null);
+  assert.equal(outroLine(none.outro, null), '結尾配樂：outro 沒寫 music（或寫 null），不配');
+  const res = run([], { outro: { from: '#11', music: 'bgm-cylinder-five' } });
   assert.deepEqual(res.errors, []);
-  assert.deepEqual([res.outro.music, res.outro.start, res.outro.span, res.outro.fadeIn, res.outro.fadeOut], ['bgm-outro', 36, 8, L.sfx['bgm-outro'].fadeIn, L.sfx['bgm-outro'].fadeOut]);
+  const B = L.sfx['bgm-cylinder-five'];
+  assert.deepEqual([res.outro.music, res.outro.start, res.outro.span, res.outro.fadeIn, res.outro.fadeOut, res.outro.credit], ['bgm-cylinder-five', 36, 8, B.fadeIn, B.fadeOut, B.credit]);
   const long = outroClip(res.outro, 40, VD);
-  assert.deepEqual([long.aligned, long.at, long.dur, long.fadeIn, long.fadeOut], ['from', 36, 8, r3(8 / 3), Math.min(L.sfx['bgm-outro'].fadeOut, r3(8 / 3))]);
+  assert.deepEqual([long.aligned, long.at, long.dur, long.fadeIn, long.fadeOut], ['from', 36, 8, r3(8 / 3), Math.min(B.fadeOut, r3(8 / 3))]);
   const short = outroClip(res.outro, 5, VD);
   assert.deepEqual([short.aligned, short.at, short.dur], ['end', 39, 5]);
-  assert.equal(outroLine(res.outro, short), '結尾配樂：bgm-outro 只有 5.0 秒，比 outro.from（#11，0:36.00）到片尾的 8.0 秒短，改從 0:39.00 起播、對齊片尾');
-  assert.match(outroLine(res.outro, long), /^結尾配樂：bgm-outro 從 0:36\.00 起播 8\.0 秒（淡入 2\.67 秒、淡出 1\.85 秒，比人聲小 11\.0 dB）$/);
-  assert.equal(outroLine(run([], { outro: { from: '#11', music: null } }).outro, null), '結尾配樂：outro.music 是 null，不配');
+  assert.equal(outroLine(res.outro, short), `結尾配樂：bgm-cylinder-five 只有 5.0 秒，比 outro.from（#11，0:36.00）到片尾的 8.0 秒短，改從 0:39.00 起播、對齊片尾；這首要在影片說明欄標示出處：${B.credit}`);
+  assert.match(outroLine(res.outro, long), /^結尾配樂：bgm-cylinder-five 從 0:36\.00 起播 8\.0 秒（淡入 2\.67 秒、淡出 1\.85 秒，比人聲小 11\.0 dB）；這首要在影片說明欄標示出處：Music: "Cylinder Five" by Chris Zabriskie/);
+  assert.equal(outroLine(run([], { outro: { from: '#11', music: null } }).outro, null), '結尾配樂：outro 沒寫 music（或寫 null），不配');
 });
 
 test('custom 的 clicks：+秒與句號各一顆 click（附加音效）；超出段 ✖；sfxExtra false 不加', () => {
@@ -583,7 +605,7 @@ test('custom 的 clicks：+秒與句號各一顆 click（附加音效）；超�
 // ---------- round 2：F1 常駐章節角標 ----------
 test('常駐章節角標（F1）：02 段起點→下一章；子母畫面／全幕期間隱藏；chapters[] 把 02 段也算章節；chtag ⚠；chapterBadge:false 關掉', () => {
   const scenes = [
-    { id: 'c01', scene: 'chapter-tag', from: '#2', to: '#3e', slots: { num: '01', name: '痛點' } },
+    { id: 'c01', scene: 'chapter-tag', from: '#2', to: '#3e', sfx: 'impact', slots: { num: '01', name: '痛點' } },   // 02 預設不配（2026-11-02），這裡自己寫一顆驗「不放 host、音效照放」
     { id: 's01', scene: 'concept', from: '#2', to: '#3e', chtag: true, slots: { text: '甲乙丙丁' } },
     { id: 's02', scene: 'fs-list', from: '#4', to: '#5e', slots: { title: '清單', items: ['一', '二', '三'] } },
     { id: 's03', scene: 'concept', from: '#6', to: '#7e', slots: { text: '戊己庚辛' } },
@@ -604,6 +626,11 @@ test('常駐章節角標（F1）：02 段起點→下一章；子母畫面／全
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: cap, pip: res.globals.pip, badges: res.badges });
   assert.ok(!html.includes('id="el-c01"'));
   assert.ok(html.includes('id="sfx-c01"'));
+  // 章節擦過（013）：由 02 起頭、起點露著講者的章，在起點掃過一次色帶（色帶擦開那一對）；01 章節幕的章不掃；--test 從章節起點之後開始就不掃
+  assert.deepEqual(res.badges.map((b) => [b.id, !!b.sweep]), [['c01', true], ['s04', false]]);
+  const sweepRe = /tl\.fromTo\('#tx\d+a', \{ x: 1920 \}, \{ x: -198, duration: 0\.62, ease: 'expo\.inOut' \}, 4\.5\);/;
+  assert.match(html, sweepRe);
+  assert.doesNotMatch(buildMain({ items: res.items, videoDur: VD, captions: cap, pip: res.globals.pip, badges: res.badges, test: { t0: 5, len: 3 } }).html, /\}, -0\.5\);/);
   assert.match(html, /<div id="chb-1" class="sc-chtag" data-chapter-badge="4\.5–[\d.]+" style="right:96px;top:56px;z-index:25;opacity:0">/);
   assert.ok(html.includes("tl.set('#chb-1', { opacity: 0 }, 0);"), '時間 0 先透明（不是 clip，靠 opacity）');
   assert.ok(html.includes(`tl.fromTo('#chb-1', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'sine.in', immediateRender: false }, ${s02.start});`));

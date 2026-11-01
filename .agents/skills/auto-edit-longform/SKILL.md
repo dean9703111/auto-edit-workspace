@@ -67,6 +67,7 @@ ffprobe -v error -show_entries format=duration -of csv=p=0 "<主軌>"
 | 沒有 `work/rough.mp4`，或沒有 `work/cutpoints.json` | `auto-edit-rough` |
 | 有 `work/rough.mp4`、`work/rough.srt`；停點 ③ 沒有「通過」 | `auto-edit-storyboard` |
 | ③ 通過；plan.json 有 `"type": "custom"` 的段、對應的 `compositions/x-*.html` 不存在或還是範例原文 | `auto-edit-motion`（每段一次；有子代理可以平行，選用） |
+| status 印「目前在：改版／…」（`work/版本/` 有沒做完的提案） | `auto-edit-review` 流程 D |
 | ③ 通過、情境動畫都做完；④ 沒有「通過」 | `auto-edit-review` |
 | ④ 通過；沒有 `成片/final.mp4` | `auto-edit-deliver` |
 | 有 `成片/final.mp4`，而且 `qc.mjs final` 0 個 ✖ | 完成 → 回報 |

@@ -18,12 +18,12 @@
   1. 文字：標題列（≤ 10 字）、四個 .xchk-t 的項目文字（每項 ≤ 14 字，動詞放前面）。放不下就縮文案，不縮字。這支沒有圖示（勾就是圖示）。
   2. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   3. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
-  項數是 3：刪掉第 4 列（#xchk-r4 整個 div）、script 開頭的「, T4 = P.at(…)」與「P.sfx('tick', '#124@…');」、ROWS 裡的「, #xchk-r4」和「第 4 項」那 7 行，
+  項數是 3：刪掉第 4 列（#xchk-r4 整個 div）、script 開頭的「, T4 = P.at(…)」、ROWS 裡的「, #xchk-r4」和「第 4 項」那 7 行，
   收尾的 now4 改 now3、第 3 項 P.idle 的 until: T4 − 0.1 改 ALL − 0.1；2 項照這樣再刪第 3 項。進度條的分母、「/ 4」的數字會自動跟著列數變，其他不用改。
 
   【綁句欄位】
   T1 = P.at('#121@新增專案')、T2 = P.at('#122@下載')、T3 = P.at('#123@配對手機')、T4 = P.at('#124@調整解析度')：講到那一項「項目詞」的時刻，
-  那一列聚焦、字浮出，0.3 秒後打勾、進度前進一格。每一項一顆 tick（下一行 P.sfx，句號和 T 一樣）。
+  那一列聚焦、字浮出，0.3 秒後打勾、進度前進一格。
   ALL = P.at('#125')：講到「全部完成／都好了」那一句，全部亮回、進度條換成完成色，配一顆 success（P.sfx('success', '#125')，句號一起改）。
   沒有這句：ALL 改成 P.at('#124@調整解析度', 2.5)（最後一項講完 2.5 秒收），P.sfx 那一行改成 P.sfx('success', '#124@調整解析度', 2.5)。
   項目詞在句中間或句尾時一定用 @詞，不要綁句首（綁句首，字會比講到早 1–3 秒出來）；項目詞剛好是那句的第一個詞才寫 P.at('#122')。
@@ -109,7 +109,6 @@
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#121@新增專案'), T2 = P.at('#122@下載'), T3 = P.at('#123@配對手機'), T4 = P.at('#124@調整解析度');   // 講到每一項項目詞的時刻
-    P.sfx('tick', '#121@新增專案'); P.sfx('tick', '#122@下載'); P.sfx('tick', '#123@配對手機'); P.sfx('tick', '#124@調整解析度');   // 每一項一顆音效（句號和上一行一樣）
     const ALL = P.at('#125');                          // 講到「全部好了」那一句（沒有這句見檔頭【綁句欄位】）
     P.sfx('success', '#125');                          // 完成音（句號和 ALL 一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'

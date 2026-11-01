@@ -501,7 +501,7 @@ async function getSchema(ctx) {
       key, error: null,
       scenes: j.scenes.map((x) => ({ key: x.key, no: x.no, num: x.num, dirName: x.dirName, zh: x.zh, aliases: x.aliases || [], slots: x.slots || {} })),
       fx: (j.fx || []).map((x) => ({ no: x.no, id: x.id, zh: x.zh, vars: x.vars || [] })),
-      // 配樂（kind: "bgm"，例如 bgm-outro）不是音效，不列進音效清單
+      // 配樂（kind: "bgm"，例如 bgm-cylinder-five）不是音效，不列進音效清單
       sounds: Object.entries(j.sounds || {}).filter(([, v]) => v?.kind !== 'bgm').map(([k]) => k),
     } : { key, error: `讀不到 build.mjs --list --json（${(r.stderr || r.stdout).trim().slice(0, 200)}）→ 卡片文字欄位先用 plan.json 原本有的欄位`, scenes: [], fx: [], sounds: [] };
     ctx.schema = data;

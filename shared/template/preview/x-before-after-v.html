@@ -96,7 +96,7 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const BEFORE = P.at('#32@手動'), PAIN = P.at('#33@逐句'), AFTER = P.at('#34@AI'), SAVE = P.at('#35@省下');   // 舊做法／缺點／新做法／好處
 
-    P.sfx('tick', '#32@手動'); P.sfx('alert', '#33@逐句'); P.sfx('success', '#35@省下');   // 舊做法、缺點、好處各一顆音效（句號和上一行一樣；新做法那一拍不配）
+    P.sfx('alert', '#33@逐句'); P.sfx('success', '#35@省下');   // 缺點、好處各一顆音效（句號和上一行一樣；舊做法、新做法那兩拍不配）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮

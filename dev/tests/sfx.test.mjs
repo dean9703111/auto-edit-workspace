@@ -19,10 +19,10 @@ const sha = (p) => createHash('sha256').update(fs.readFileSync(p)).digest('hex')
 const make = (...args) => spawnSync(process.execPath, [MAKE, ...args], { encoding: 'utf8' });
 
 // contracts/sfx.md §2（寫死：改名單要先改契約）
-const NAMES = ['pop', 'tick', 'swipe', 'whoosh', 'flip', 'type', 'glitch', 'riser', 'ding', 'success', 'alert', 'click', 'impact', 'chapter', 'sparkle', 'shine', 'thunder', 'bgm-outro'];
-const FROZEN = ['pop', 'tick', 'swipe', 'whoosh', 'flip', 'type', 'glitch', 'riser'];
+// 2026-11-02 作者：pop tick swipe whoosh flip type glitch riser bgm-outro 整顆拿掉；片尾配樂改成 bgm-cylinder-five（CC BY 4.0，預設不配）
+const NAMES = ['ding', 'success', 'alert', 'click', 'impact', 'chapter', 'sparkle', 'shine', 'thunder', 'bgm-cylinder-five'];
 const FIELDS = ['kind', 'zh', 'use', 'event', 'peak', 'volume', 'targetDb', 'additive', 'maxPerVideo'];
-const BGM_FIELDS = ['fadeIn', 'fadeOut'];
+const BGM_FIELDS = ['fadeIn', 'fadeOut', 'credit'];
 const LICENSE_GUARD = /剪映|CapCut|综艺|鼠标|仙尘|打卡成功|正确/;
 
 // WAV：RIFF 標頭＋data 區塊（int16）
@@ -51,7 +51,7 @@ function readWav(p) {
 const M = await import(MAKE);   // 匯入不執行 CLI
 const limitOf = (n) => (M.RECIPES[n] ? M.RECIPES[n].limit : 2.0);
 
-test('名稱清單：18 個，跟 contracts/sfx.md §2 一樣', () => {
+test('名稱清單：9 個音效＋1 首片尾配樂，跟 contracts/sfx.md §2 一樣', () => {
   assert.deepEqual(Object.keys(kit).sort(), [...NAMES].sort());
 });
 
@@ -67,13 +67,13 @@ test('kit 欄位齊全、型別正確、沒有不認得的欄位（FR-001、FR-0
     assert.ok(v.targetDb <= -3, `${n}.targetDb ${v.targetDb} 要 ≤ −3`);
     assert.equal(typeof v.additive, 'boolean', `${n}.additive`);
     assert.ok(v.maxPerVideo === null || (Number.isInteger(v.maxPerVideo) && v.maxPerVideo >= 1), `${n}.maxPerVideo`);
-    if (v.kind === 'bgm') { assert.equal(v.peak, 0); for (const f of BGM_FIELDS) assert.ok(v[f] > 0 && v[f] <= 10, `${n}.${f}`); }
+    if (v.kind === 'bgm') { assert.equal(v.peak, 0); for (const f of ['fadeIn', 'fadeOut']) assert.ok(v[f] > 0 && v[f] <= 10, `${n}.${f}`); assert.match(v.credit, /^Music: ".+" by .+ licensed under CC BY 4\.0/, `${n}.credit`); }
   }
-  assert.deepEqual(Object.keys(kit).filter((n) => kit[n].additive).sort(), ['click', 'tick']);
+  assert.deepEqual(Object.keys(kit).filter((n) => kit[n].additive).sort(), ['click']);
   assert.deepEqual(Object.fromEntries(Object.entries(kit).filter(([, v]) => v.maxPerVideo !== null).map(([n, v]) => [n, v.maxPerVideo])), { sparkle: 6, shine: 3, thunder: 3 });
-  assert.deepEqual(Object.keys(kit).filter((n) => kit[n].kind === 'bgm'), ['bgm-outro']);
-  assert.equal(kit['bgm-outro'].fadeIn, 3.2);
-  assert.equal(kit['bgm-outro'].fadeOut, 1.85);
+  assert.deepEqual(Object.keys(kit).filter((n) => kit[n].kind === 'bgm'), ['bgm-cylinder-five']);
+  assert.equal(kit['bgm-cylinder-five'].fadeIn, 3.2);
+  assert.equal(kit['bgm-cylinder-five'].fadeOut, 1.85);
 });
 
 test('wav 格式：PCM 16-bit、48 kHz、立體聲；長度在上限內（FR-004）', () => {
@@ -90,7 +90,6 @@ test('峰值：kit peak 跟最大樣本的時間差 ≤ 10 ms；起音 ≤ 2.5 m
     if (kit[n].kind === 'bgm') continue;
     const w = readWav(path.join(SFX, `${n}.wav`));
     assert.ok(Math.abs(w.peakSec - kit[n].peak) <= 0.010, `${n}：實測峰值 ${w.peakSec.toFixed(3)} s，kit 寫 ${kit[n].peak}`);
-    if (n === 'riser') continue;
     assert.ok(w.onsetMs <= 2.5, `${n}：第一個超過 −40 dBFS 的樣本在 ${w.onsetMs.toFixed(2)} ms`);
   }
 });
@@ -108,36 +107,42 @@ test('響度：M max（bgm 整合響度）跟 sources.json、targetDb 一致；t
   }
 });
 
-test('sources.json：每個名稱一筆、sha256 跟檔案一致、授權 CC0、來源欄位齊全（FR-003、FR-035）', () => {
+test('sources.json：每個名稱一筆、sha256 跟檔案一致、授權 CC0（片尾配樂 CC BY 4.0＋出處）、來源欄位齊全（FR-003、FR-035）', () => {
   assert.deepEqual(sources.map((s) => s.file).sort(), NAMES.map((n) => `${n}.wav`).sort());
   const hex = (v) => [].concat(v).every((x) => /^[0-9a-f]{64}$/.test(x));
   for (const s of sources) {
     const n = s.file.replace(/\.wav$/, '');
     assert.equal(s.sha256, sha(path.join(SFX, s.file)), `${s.file} sha256`);
     assert.equal(s.kind, kit[n].kind, `${s.file} kind`);
+    if (s.route === 'L') {   // 片尾配樂：作者本機原曲剪輯，CC BY 4.0
+      assert.equal(s.license, 'CC BY 4.0', `${s.file} license`);
+      assert.ok(s.source_title && s.source_author && s.source_url && hex(s.source_sha256) && /licensed under CC BY 4\.0/.test(s.attribution), `${s.file}：L 要有 source_title、source_author、source_url、source_sha256、attribution`);
+      assert.equal(s.candidate, M.CHOICE[n]);
+      continue;
+    }
     assert.equal(s.license, 'CC0 1.0', `${s.file} license`);
     const isB = s.download_url != null;
     if (isB) { assert.ok(s.source_url && hex(s.zip_sha256), `${s.file}：B 要有 source_url、zip_sha256`); }
     if (!isB || s.route === 'B+C') assert.ok(s.source && (isB || s.license_note), `${s.file}：C 要有 source、license_note`);
-    if (!FROZEN.includes(n)) {
-      assert.ok(['B', 'C', 'B+C'].includes(s.route), `${s.file} route`);
-      assert.equal(s.candidate, M.CHOICE[n], `${s.file}：sources.json candidate ${s.candidate}，make-sfx.mjs CHOICE ${M.CHOICE[n]}`);
-      assert.equal(s.recipe, s.candidate);
-    }
+    assert.ok(['B', 'C', 'B+C'].includes(s.route), `${s.file} route`);
+    assert.equal(s.candidate, M.CHOICE[n], `${s.file}：sources.json candidate ${s.candidate}，make-sfx.mjs CHOICE ${M.CHOICE[n]}`);
+    assert.equal(s.recipe, s.candidate);
   }
 });
 
 test('README 每個名稱一列；NOTICE 音效段每個檔名各出現一次（FR-036、FR-037）', () => {
   const readme = fs.readFileSync(path.join(SFX, 'README.md'), 'utf8');
-  assert.match(readme, /^18 個音效：取自 CC0（公眾領域）素材，或作者合成並以 CC0 釋出/m);
+  assert.match(readme, /^9 個音效：取自 CC0（公眾領域）素材，或 AI 生成並以 CC0 釋出/m);
+  assert.match(readme, /^片尾配樂 `bgm-cylinder-five\.wav` 是 CC BY 4\.0：預設不配/m);
   const notice = fs.readFileSync(path.join(WORKSPACE, 'NOTICE.md'), 'utf8');
   const a = notice.indexOf('### 音效'), z = notice.indexOf('\n### ', a + 1);
   assert.ok(a >= 0, 'NOTICE.md 找不到「### 音效」');
   const sec = notice.slice(a, z < 0 ? undefined : z);
-  assert.match(sec, /18 個音效/);
+  assert.match(sec, /9 個音效/);
   for (const n of NAMES) {
     assert.equal(readme.split('\n').filter((l) => l.startsWith(`| \`${n}.wav\` |`)).length, 1, `README 要有一列 ${n}.wav`);
-    assert.equal(sec.split(`shared/sfx/${n}.wav`).length - 1, 1, `NOTICE 音效段要提到 ${n}.wav 一次`);
+    const where = kit[n].kind === 'bgm' ? notice : sec;   // 片尾配樂在 NOTICE 自己的一段
+    assert.equal(where.split(`shared/sfx/${n}.wav`).length - 1, 1, `NOTICE 要提到 ${n}.wav 一次`);
   }
 });
 
@@ -198,8 +203,11 @@ test('make-sfx.mjs 護欄：--out 在工作區裡 → 2；--ref 配多個名稱 
   assert.equal(r2.status, 2);
   assert.match(r2.stderr, /--ref 一次只能配一個名稱/);
   const r3 = make('--write', '--only', 'pop');
-  assert.equal(r3.status, 2, '凍結的 pop 沒有配方');
-  assert.match(r3.stderr, /凍結的 8 顆不能重產/);
+  assert.equal(r3.status, 2, 'pop 已拿掉，沒有配方');
+  assert.match(r3.stderr, /「pop」沒有配方/);
+  const r4 = make('--write', '--only', 'bgm-cylinder-five');
+  assert.equal(r4.status, 2, '片尾配樂沒給 --src');
+  assert.match(r4.stderr, /加 --src/);
 });
 
 test('make-sfx.mjs 的訊息＝cli-005 原文：--help（§1.7）、名稱沒有配方（§1.5）、每則 ✖ 都有 → 改法', () => {

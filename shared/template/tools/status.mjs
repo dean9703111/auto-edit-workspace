@@ -15,8 +15,9 @@
  *   下一輪回饋編號：r<N>      （work/回饋/ 裡 r*.md 的最大編號 ＋ 1）
  *   依據：<判斷用到的檔案與停點紀錄>
  *
- * 判斷依據：work/ 裡各階段產物在不在、修改時間先後（例：storyboard.md 比 plan.json 新＝還在分鏡表），
- * 以及 work/製作進度.md 的「## 停點紀錄」表（同一個停點以最後一列為準，狀態「待回覆」＝卡在這裡）。
+ * 判斷依據：work/ 裡各階段產物在不在、修改時間先後（例：storyboard.md 比 plan.json 新＝還在分鏡表；
+ * storyboard.md 是 versions.mjs accept／use 寫的不算），以及 work/製作進度.md 的「## 停點紀錄」表（同一個停點以最後一列為準，
+ * 狀態「待回覆」＝卡在這裡；改版的停點寫「③ 分鏡表（s12 v2）」）。work/版本/ 有沒做完的改版提案時，目前在印「改版／…」。
  * --json：只印一個 JSON（project、stage、at、next、cmd、nextStop、waiting、feedback、evidence、format、formatSource；cmd 平常是 null）。
  * --project：同 build.mjs。
  */
@@ -27,6 +28,7 @@ import { findProject } from './build.mjs';
 import { VIDEO_EXT, AUDIO_EXT } from './lib/ff.mjs';
 import { lookNextStep } from './lib/look.mjs';
 import { resolveFormat, formatLine } from './lib/canvas.mjs';
+import { pendingRevisions, storyboardByVersions } from './versions.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STOPS = ['① 剪輯清單', '② 構圖倍率', '③ 分鏡表', '④ Studio 預覽', '⑤ 剪輯台', '⑥ 背景預覽'];
@@ -52,7 +54,7 @@ export function readStopLog(text) {
     const c = cells(lines[j]);
     const stop = STOPS.find((s) => c[iS]?.startsWith(s.slice(0, 1))) || null;
     if (!stop) continue;
-    const row = { time: c[iT], stop, state: c[iV], line: j + 1 };
+    const row = { time: c[iT], stop, label: c[iS] || stop, state: c[iV], line: j + 1 };
     rows.push(row);
     last.set(stop, row);
   }
@@ -91,7 +93,7 @@ export function projectStatus(project) {
     ['S7', () => !has(W('cutpoints.json')), '剪乾淨／剪接點', '跑 media.mjs cutpoints', '② 構圖倍率', '沒有 work/cutpoints.json'],
     ['S8', () => !has(W('構圖預覽-套卡.jpg')), '剪好看／構圖預覽', '跑 qc.mjs framing --cards，把兩張圖和倍率表給使用者', '② 構圖倍率', `沒有 work/構圖預覽-套卡.jpg${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`],
     ['S9', () => !has(story), '剪好看／停點 ② 構圖倍率之後，寫分鏡表', '寫 work/storyboard.md（含每段截圖）', '③ 分鏡表', '沒有 work/storyboard.md'],
-    ['S10', () => !has(plan) || newer(story, plan), '剪好看／停點 ③ 分鏡表', '使用者確認後，重新讀 work/storyboard.md，以檔案為準寫正式 plan.json', '③ 分鏡表', has(plan) ? 'work/storyboard.md 比 work/hyperframes/plan.json 新' : '沒有 work/hyperframes/plan.json'],
+    ['S10', () => !has(plan) || (newer(story, plan) && !storyboardByVersions(project)), '剪好看／停點 ③ 分鏡表', '使用者確認後，重新讀 work/storyboard.md，以檔案為準寫正式 plan.json', '③ 分鏡表', has(plan) ? 'work/storyboard.md 比 work/hyperframes/plan.json 新' : '沒有 work/hyperframes/plan.json'],
     ['S11', () => !has(index) || newer(plan, index), '剪好看／build', '跑 build.mjs（有情境動畫先跑 audit.mjs），再 snapshot --review 抽查', '④ Studio 預覽', `${has(index) ? 'plan.json 比 index.html 新' : '沒有 work/hyperframes/index.html'}${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`],
     ['S12', () => !has(finalMp4), '剪好看／停點 ④ Studio 預覽', '開 Studio 給使用者看；使用者說可以後先輸出測試片段，再輸出 成片/final.mp4', '④ Studio 預覽', '沒有 成片/final.mp4'],
     ['S13', () => !has(sheet) || newer(finalMp4, sheet), '交付／驗收', '跑 qc.mjs final，把輸出和 qc-sheet.jpg 給使用者', '無', has(sheet) ? 'final.mp4 比 qc-sheet.jpg 新' : '沒有 成片/驗收截圖/qc-sheet.jpg'],
@@ -103,19 +105,31 @@ export function projectStatus(project) {
   // 構圖預覽（S8）與 build（S11）前，講者調光瘦臉還沒好 → 下一步直接用 lookNextStep 的說明＋指令（指令單獨一行，C-01）
   let cmd = null;
   if (lookTodo && ['S8', 'S11'].includes(stage)) { next = lookTodo.note; cmd = lookTodo.cmd; }
+  // 改版（停點 ④ 之後）：work/版本/<段>/v<N>/ 只有提案 分鏡.md、還沒存進做好的檔
+  const revs = ['S11', 'S12', 'S13', 'S14'].includes(stage) ? pendingRevisions(project) : [];
+  if (revs.length) {
+    const names = revs.map((r) => `${r.id} v${r.v}`).join('、'), ids = revs.map((r) => r.id).join(',');
+    const done = revs.every((r) => r.state === '已確認');
+    at = `改版／${names}（${done ? '分鏡已確認，還沒做完' : '分鏡還沒給使用者確認'}）`;
+    next = done ? `照 auto-edit-motion 做 ${names.replace(/ v\d+/g, '')}，build、audit --only 都 0 個 ✖ 之後跑 versions.mjs save --seg ${ids}，再開 Studio`
+      : `寫好 work/版本/<段>/v<N>/分鏡.md 的「這版要改什麼」和「## 分鏡」，停在停點 ③（${names}）`;
+    nextStop = done ? '④ Studio 預覽' : '③ 分鏡表';
+    ev.push(`work/版本/ 有沒做完的改版：${revs.map((r) => `${r.id}/v${r.v}（${r.state}）`).join('、')}`);
+  }
   // 停點紀錄
   const logFile = W('製作進度.md');
   let waiting = [];
   if (has(logFile)) {
     const sl = readStopLog(fs.readFileSync(logFile, 'utf8'));
     if (sl.bad) ev.push('work/製作進度.md 停點紀錄的表頭看不懂（要有 時間、停點、狀態），略過');
-    waiting = [...sl.last.values()].filter((r) => r.state === '待回覆').map((r) => r.stop);
+    waiting = [...sl.last.values()].filter((r) => r.state === '待回覆').map((r) => r.label);
     const w = [...sl.last.values()].filter((r) => r.state === '待回覆').sort((a, b) => b.line - a.line)[0];
     if (w) {
       const phase = ['① 剪輯清單'].includes(w.stop) ? '剪乾淨' : ['⑥ 背景預覽'].includes(w.stop) ? '換風格' : ['⑤ 剪輯台'].includes(w.stop) ? '剪輯台' : '剪好看';
-      at = `${phase}／停點 ${w.stop}（待回覆）`;
+      at = `${phase}／停點 ${w.label}（待回覆）`;
       nextStop = w.stop;
-      next = {
+      const rev = w.stop === '③ 分鏡表' ? [...w.label.matchAll(/([A-Za-z0-9-]+) v(\d+)/g)] : [];
+      next = rev.length ? `等使用者看 ${rev.map((m) => `work/版本/${m[1]}/v${m[2]}/分鏡.md`).join('、')}；回覆「可以」後跑 versions.mjs accept --seg ${rev.map((m) => m[1]).join(',')}，再照 auto-edit-motion 做（要改就改那份 分鏡.md 再停一次）` : {
         '① 剪輯清單': '等使用者回覆剪輯清單；回覆後（改過 cuts.md 就先重新讀）跑 media.mjs ng-snap，照它印的指令剪',
         '② 構圖倍率': '等使用者選倍率；選好後把那一列的 frame 寫進 plan.json（1.0 倍不寫）',
         '③ 分鏡表': '等使用者回覆分鏡表；回覆「可以」或「改好了」後，先重新讀 work/storyboard.md，以檔案為準寫正式 plan.json',
@@ -123,7 +137,7 @@ export function projectStatus(project) {
         '⑤ 剪輯台': '等使用者在剪輯台調完說「調好了」；之後重新讀 plan.json 與 rough.srt 再 build',
         '⑥ 背景預覽': '等使用者看三張背景圖；說可以才複製進 shared/template/',
       }[w.stop];
-      ev.unshift(`work/製作進度.md 停點紀錄最後一列「${w.time}｜${w.stop}｜${w.state}」`);
+      ev.unshift(`work/製作進度.md 停點紀錄最後一列「${w.time}｜${w.label}｜${w.state}」`);
     }
   }
   let fb = 0;

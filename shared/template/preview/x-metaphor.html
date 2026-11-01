@@ -89,7 +89,7 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#22@說明書'), T2 = P.at('#23@Skill'), T3 = P.at('#24@做事'), T4 = P.at('#25@寫錯');   // 講到物件／概念／結論／限制的時刻
 
-    P.sfx('tick', '#22@說明書'); P.sfx('tick', '#23@Skill'); P.sfx('tick', '#24@做事'); P.sfx('alert', '#25@寫錯');   // 每一拍一顆音效（句號和上一行一樣；限制＝alert）
+    P.sfx('alert', '#25@寫錯');   // 限制那一拍一顆 alert（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const BOX = '#xmeta-boxL, #xmeta-boxR';
 

@@ -20,6 +20,7 @@
 | `additive` | 布林 | 是 | `true`＝附加音效：不受「主音效相距 < 3 s 只留前一個」、不算每分鐘主音效密度（§4） | 002 |
 | `maxPerVideo` | 整數 ≥ 1 或 `null` | 是 | 一集最多幾次；超過印 ⚠（不自動拿掉）。`null`＝不限 | `sfxBudget()` |
 | `fadeIn`、`fadeOut` | 數字（秒） | 只有 `bgm` | 配樂淡入、淡出長度 | 002（呼叫 `renderBgmClip`） |
+| `credit` | 字串 | 只有 `bgm` | 影片說明欄要貼的出處（CC BY 的配樂）；build 的「結尾配樂：…」那行會印出來 | `outroLine()` |
 
 規則（`dev/tests/sfx.test.mjs` 檢查）：
 1. 每個名稱都有 `shared/sfx/<名稱>.wav`、`shared/sfx/sources.json` 一筆、`shared/sfx/README.md` 一列、`NOTICE.md` 音效段出現一次。
@@ -32,24 +33,18 @@
 {
   "click":     { "kind": "sfx", "zh": "滑鼠點擊", "use": "螢幕錄影或情境動畫裡看得到游標按下的地方，一下一顆", "event": "游標按下那一格", "peak": 0.003, "volume": 0.331, "targetDb": -19.6, "additive": true, "maxPerVideo": null },
   "thunder":   { "kind": "sfx", "zh": "打雷", "use": "負面情緒：壓力、焦慮、晴天霹靂（15 金句 tone warn 預設）", "event": "負面問句或壞消息出現那一格", "peak": 0.37, "volume": 0.891, "targetDb": -3.0, "additive": false, "maxPerVideo": 3 },
-  "bgm-outro": { "kind": "bgm", "zh": "結尾配樂", "use": "結語金句講完到片尾，plan.json 寫 outro 才有", "event": "outro.from 那句字幕的起點", "peak": 0, "volume": 0.562, "targetDb": -11.0, "additive": false, "maxPerVideo": null, "fadeIn": 3.2, "fadeOut": 1.85 }
+  "bgm-cylinder-five": { "kind": "bgm", "zh": "片尾配樂〈Cylinder Five〉", "use": "結語金句講完到片尾；預設不配，plan.json 的 outro 寫 \"music\": \"bgm-cylinder-five\" 才有", "event": "outro.from 那句字幕的起點", "peak": 0, "volume": 0.562, "targetDb": -11.0, "additive": false, "maxPerVideo": null, "fadeIn": 3.2, "fadeOut": 1.85, "credit": "Music: \"Cylinder Five\" by Chris Zabriskie (…), licensed under CC BY 4.0 (…)" }
 }
 ```
 
 （`peak`、`volume` 是預估值；實際值由 `node dev/tools/make-sfx.mjs --write` 依實測寫入，見 `contracts/cli-005.md` §1。）
 
-## 2. 事件名清單（18 個，固定）
+## 2. 事件名清單（9 個音效＋1 首片尾配樂，固定）
+
+2026-11-02 作者：`pop` `tick` `swipe` `whoosh` `flip` `type` `glitch` `riser` `bgm-outro` 整顆拿掉——字卡揭開、條列、側邊欄、全畫面幕、切錄影、翻牌、打字、故障、鋪墊都不配音效；片尾配樂改成 `bgm-cylinder-five`（Chris Zabriskie〈Cylinder Five〉，CC BY 4.0），預設不配。下面 §3 之後提到這幾顆的段落是當時的紀錄。
 
 | 名稱 | kind | zh | use（用在哪） | event（峰值對齊） | additive | maxPerVideo | targetDb | 狀態 |
 |---|---|---|---|---|---|---|---|---|
-| `pop` | sfx | 泡泡 pop | 下方字卡揭開、第一張卡片出現 | 卡片或第一個元素出現那一格 | false | null | −7.8 | 凍結 |
-| `tick` | sfx | 輕 tick | 條列逐條出現、步驟切換，每條一顆 | 每一條項目出現那一格 | **true** | null | −16.1 | 凍結 |
-| `swipe` | sfx | 短 swoosh | 側邊欄推入、角標滑入 | 面板開始滑入那一格 | false | null | −8.9 | 凍結 |
-| `whoosh` | sfx | 空氣 whoosh | **全畫面幕進場（04a–d）、從講者切到螢幕錄影的第一段**（不再用在章節） | 全畫面幕蓋滿那一刻（聲音先漸強約 0.74 s） | false | null | −8.0 | 凍結，用途改 |
-| `flip` | sfx | 翻牌 | 翻牌、翻卡、切換 | 牌翻到正面那一格 | false | null | −9.9 | 凍結 |
-| `type` | sfx | 打字短串 | 打字機動畫起手 | 第一個字打出來那一格 | false | null | −16.5 | 凍結 |
-| `glitch` | sfx | 數位故障 | 出錯、系統崩潰、bug | 畫面開始故障那一格 | false | null | −11.1 | 凍結 |
-| `riser` | sfx | 上升張力音 | 揭曉前的鋪墊 | 揭曉那一格（峰值在檔尾，聲音提早約 1.5 s 開始） | false | null | −8.9 | 凍結 |
 | `ding` | sfx | 提示「滴」 | 講重點、提醒（「提醒一下大家」）、答案揭曉 | 重點字出現那一格 | false | null | −12.6 | 第一批換檔 |
 | `success` | sfx | 完成音 | 解法、成果、完成、問題解決 | 綠勾或結果出現那一格 | false | null | −5.2 | 第一批換檔 |
 | `alert` | sfx | 錯誤「嗶嗶」 | 千萬不要、踩坑、錯誤、限制 | 紅章或警告出現那一格 | false | null | −6.9 | 第一批換檔 |
@@ -59,7 +54,7 @@
 | `sparkle` | sfx | 閃粉 | 入場、介紹主角（14 講者介紹）、金句閃亮（15） | 主角或金句出現完成那一格 | false | 6 | −5.9 | 第三批新增 |
 | `shine` | sfx | 閃亮登場 | 轉折亮點：本集最得意的設計、關鍵詞大字進場 | 關鍵詞到位那一格 | false | 3 | −3.0 | 第三批新增 |
 | `thunder` | sfx | 打雷 | 負面情緒：壓力、焦慮、晴天霹靂 | 負面問句或壞消息出現那一格 | false | 3 | −3.0 | 第三批新增 |
-| `bgm-outro` | **bgm** | 結尾配樂 | 結語金句講完到片尾 | `outro.from` 那句字幕的起點 | false | null | −11.0（整合響度） | 第三批新增 |
+| `bgm-cylinder-five` | **bgm** | 片尾配樂 | 結語金句講完到片尾（預設不配；CC BY 4.0，影片要標示出處） | `outro.from` 那句字幕的起點 | false | null | −11.0（整合響度） | 2026-11-02 換曲 |
 
 - 凍結＝音檔與 `volume` 不變，只補新欄位；`targetDb` 是現況換算（sources.json `max_m_lufs`＋20·log10(`volume`)＋14，四捨五入到 0.1 dB）。
 - `targetDb` 的出處：第一到三批取分析報告 `03-sfx-map.json` 各音效的 `rel_to_voice_db`（剪映草稿裡相對人聲的中位數），比 −3 大的壓到 −3（定案「音量跟剪映但上限人聲下 3 dB」）；`bgm-outro` 見 §6.2。完整換算表在 `specs/005-sfx/spec.md` FR-020。
@@ -156,7 +151,7 @@ export const SFX_RULES = { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 
 | 欄位 | 型別 | 預設 | 意思 |
 |---|---|---|---|
 | `from` | `"#N"`／`"#N@詞"` | 必填 | 起播句（結語金句講完後、開始收尾那一句的起點） |
-| `music` | `kind: "bgm"` 的名稱或 `null` | `"bgm-outro"` | `null`＝這集不配 |
+| `music` | `kind: "bgm"` 的名稱或 `null` | 不配（2026-11-02 起預設為空） | 不寫或 `null`＝這集不配 |
 | `volume` | dB（−20～+6） | 0 | 這集配樂再調多少；也會乘 `edit.volume.sfx` |
 | `fadeOut` | 秒（0–10） | kit 那顆的 `fadeOut`（`bgm-outro` 1.85） | 這集的淡出長度（002 spec FR-052 加的覆寫；範圍錯的原文照 `cli-002.md` §1.6） |
 
@@ -212,7 +207,7 @@ export const SFX_RULES = { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 
 
 - 舊 plan.json 寫 `"sfx": "whoosh"` 在章節段：照樣播 whoosh（使用者明寫的優先）。
 - 舊 plan.json 沒有 `clicks`、`outro`：行為和現在一樣，只多「音效次數」「音效密度」「音效比例」資訊行。
-- `build.mjs --sfx <私人資料夾>`：私人資料夾要放齊 `kit/sfx.json` 的每個名稱（18 個 wav）；作者自己的 CC BY 結尾曲可以放在這裡當 `bgm-outro.wav`，但不能進 `shared/sfx/`（憲法 VII），影片說明欄要標出處。
+- `build.mjs --sfx <私人資料夾>`：私人資料夾要放齊 `kit/sfx.json` 的每個名稱。片尾配樂 `bgm-cylinder-five` 是 CC BY 4.0（2026-11-02 作者決定放進 `shared/sfx/` 給大家選用，憲法 VII 加了這個例外），影片說明欄要標出處。
 - `--check --json`（002 的 `contracts/check-json.md`）加 `sfxCount`＝`sfxBudget().count`、`sfxBudget`＝`{ over, dense, loud, perMinuteAvg }`。
 
 ## 10. 測試 fixture（002 的 `plan.test.mjs` 與 005 的 `audio.test.mjs` 共用這組期望值）

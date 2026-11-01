@@ -28,8 +28,8 @@
     "nodes": { "at": "0.5 + {{i}} * 0.35" }
   },
   "sfx": {
-    "main": { "sound": "whoosh", "at": "start - 0.15" },
-    "extra": [ { "sound": "tick", "at": "nodes[0:]" } ]
+    "main": null,
+    "extra": []
   },
   "rules": [],
   "sample": {

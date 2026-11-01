@@ -21,8 +21,8 @@
     "in": { "label": "進場", "default": "0" }
   },
   "sfx": {
-    "main": { "sound": "pop", "at": "in + 0.1" },
-    "extra": [ { "sound": "tick", "at": "items[1:]" } ]
+    "main": null,
+    "extra": []
   },
   "lists": {
     "items": { "at": "{{in}} + 0.15 + {{i}} * 2.4" }

@@ -59,29 +59,27 @@
 
 ### 音效（`shared/sfx/*.wav`）
 
-18 個音效：取自下面這些 CC0 1.0（公眾領域貢獻）素材，或由作者用程式合成並以 CC0 1.0 釋出；可商用、可修改，不需要標示出處。剪接、混音、統一響度由作者處理，處理後的檔案同樣以 CC0 釋出。逐檔的原始檔名、下載網址、sha256 與處理方式在 `shared/sfx/sources.json`。CC0 全文見 https://creativecommons.org/publicdomain/zero/1.0/ 。
+9 個音效：取自下面的 CC0 1.0（公眾領域貢獻）素材，或 AI 生成並由作者以 CC0 1.0 釋出；可商用、可修改，不需要標示出處。剪接、混音、統一響度由作者處理，處理後的檔案同樣以 CC0 釋出。逐檔的原始檔名、下載網址、sha256 與處理方式在 `shared/sfx/sources.json`。CC0 全文見 https://creativecommons.org/publicdomain/zero/1.0/ 。
 
 #### Kenney 音效包
 
-- 檔案：`shared/sfx/tick.wav`、`shared/sfx/click.wav`（UI Audio）、`shared/sfx/flip.wav`（Casino Audio）、`shared/sfx/glitch.wav`（Sci-fi Sounds）
-- 授權：CC0 1.0。各包的 `License.txt` 寫明可用在個人、教育與商業專案，標示 Kenney 或 www.kenney.nl 不是必要條件
+- 檔案：`shared/sfx/click.wav`（UI Audio）
+- 授權：CC0 1.0。包裡的 `License.txt` 寫明可用在個人、教育與商業專案，標示 Kenney 或 www.kenney.nl 不是必要條件
 - 作者：Kenney Vleugels（www.kenney.nl）
-- 出處：https://kenney.nl/assets/ui-audio 、https://kenney.nl/assets/casino-audio 、https://kenney.nl/assets/sci-fi-sounds
+- 出處：https://kenney.nl/assets/ui-audio
 
-#### OpenGameArt
+#### AI 生成
 
-- 檔案與作者：
-  - `shared/sfx/pop.wav`：cogitollc「Pop sounds」，https://opengameart.org/content/pop-sounds
-  - `shared/sfx/swipe.wav`、`shared/sfx/whoosh.wav`：qubodup（Iwan Gabovitch）「Wind, hit, time morph」，https://opengameart.org/content/wind-hit-time-morph
-  - `shared/sfx/type.wav`：unicaegames「Keyboard Soundpack 1」，https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes
-  - `shared/sfx/riser.wav`：starninjas「4 Metal Dings/Rings」，https://opengameart.org/content/4-metal-dingsrings
-- 授權：CC0 1.0，以上作品頁的授權欄都只標 CC0（2026-10-29 確認）
-
-#### 作者合成
-
-- 檔案：`shared/sfx/ding.wav`、`shared/sfx/success.wav`、`shared/sfx/alert.wav`、`shared/sfx/impact.wav`、`shared/sfx/chapter.wav`、`shared/sfx/sparkle.wav`、`shared/sfx/shine.wav`、`shared/sfx/thunder.wav`、`shared/sfx/bgm-outro.wav`
+- 檔案：`shared/sfx/ding.wav`、`shared/sfx/success.wav`、`shared/sfx/alert.wav`、`shared/sfx/impact.wav`、`shared/sfx/chapter.wav`、`shared/sfx/sparkle.wav`、`shared/sfx/shine.wav`、`shared/sfx/thunder.wav`
 - 授權：作者以 CC0 1.0 釋出（2026-10 定案）
-- 產生方式：`dev/tools/make-sfx.mjs` 的配方（正弦、雜訊、FM 等程式合成，固定亂數種子），沒有取用第三方錄音
+- 產生方式：AI 寫的合成程式 `dev/tools/make-sfx.mjs`（正弦、雜訊、FM、物理模型等，固定亂數種子），沒有取用第三方錄音
+
+### 片尾配樂（`shared/sfx/bgm-cylinder-five.wav`）
+
+- 曲目：「Cylinder Five」，作者 Chris Zabriskie，出處 http://chriszabriskie.com/cylinders/
+- 授權：創用 CC 姓名標示 4.0（CC BY 4.0），全文見 https://creativecommons.org/licenses/by/4.0/
+- 修改：作者剪取原曲 0:00–0:20、統一響度、檔尾 2 秒淡出
+- 使用：預設不配，plan.json 的 `outro` 寫 `"music": "bgm-cylinder-five"` 才會用；用到的影片要在說明欄標示出處（文字在 `shared/template/kit/sfx.json` 的 `credit`，build 會印出來）
 
 ### MediaPipe Tasks Vision 1.2.0 與 Face Landmarker 模型
 

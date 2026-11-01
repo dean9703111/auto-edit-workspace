@@ -90,7 +90,7 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const P1 = P.at('#171@不同步'), P2 = P.at('#172@走來走去'), P3 = P.at('#173@一支一支'), FIX = P.at('#174@自己');   // 講到每個痛點／解法的時刻
 
-    P.sfx('tick', '#171@不同步'); P.sfx('tick', '#172@走來走去'); P.sfx('tick', '#173@一支一支'); P.sfx('shine', '#174@自己');   // 痛點各一顆 tick、解法一顆 shine（句號和上一行一樣）
+    P.sfx('shine', '#174@自己');   // 解法一顆 shine（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const PAINS = '#xfix-p1, #xfix-p2, #xfix-p3';   // 三個痛點（2 個時拿掉 p3）
 

@@ -9,7 +9,7 @@
 //   stampHash(html, info) / verifyHash(text)   檔頭第二行雜湊註解（保護手改）
 //   readCustom(file)               → { compId, errors, refs }（第二層 x-*.html 的基本檢查；refs＝scanCueRefs 的結果）
 //   scanCueRefs(html)              → string[]：<template> 裡 <script> 的 P.at('…') 與 P.sfx(名, '…') 的 ref 字面值（去掉註解、去重、照出現順序；specs/contracts/cues.md §3.2、motion.md §5）
-//   scanSfxCues(html)              → [{ name, ref, off }]：P.sfx('tick', '#38@兩支', 0.2) 的靜態解析（motion.md §5 的 regex；build 做成 <audio>）
+//   scanSfxCues(html)              → [{ name, ref, off }]：P.sfx('success', '#38@兩支', 0.2) 的靜態解析（motion.md §5 的 regex；build 做成 <audio>）
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -238,7 +238,7 @@ export function readCustom(file, expectId) {
   if (compId && !new RegExp(`__timelines\\[\\s*['"]${reEsc(compId)}['"]\\s*\\]`).test(inner)) errors.push(`script 沒有登記 window.__timelines['${compId}']`);
   if (/<head>[\s\S]*<style/i.test(text.split(/<template/i)[0])) errors.push('<style> 放在 <head> 會被丟掉，要放進 <template>');
   for (const s of scanBadCueRefs(text)) errors.push(s.startsWith('P.sfx')
-    ? `${s}：音效名與 ref 要寫成字串字面值、off 寫數字（例 P.sfx('tick', '#38@兩支')、P.sfx('ding', '#41', 0.2)；音效名只有小寫英數字與 -），build 才排得出音效 → 不要用變數或 + 組字串`
+    ? `${s}：音效名與 ref 要寫成字串字面值、off 寫數字（例 P.sfx('success', '#38@兩支')、P.sfx('ding', '#41', 0.2)；音效名只有小寫英數字與 -），build 才排得出音效 → 不要用變數或 + 組字串`
     : `${s}：ref 要寫成字串字面值（例 P.at('#18@逐字稿')、P.at('#18', 0.3)），build 才算得到秒數 → 不要用變數或 + 組字串`);
   return { compId, errors, refs: scanCueRefs(text), sfx: scanSfxCues(text) };
 }

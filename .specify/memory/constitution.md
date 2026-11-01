@@ -36,7 +36,8 @@
 - 情境動畫過 R7.6 三關（`--check` 0 ✖、`audit.mjs` 0 ✖、亂序 snapshot 完成態一致）才算完成。
 
 ### VII. 授權乾淨
-- `shared/sfx/` 只放 CC0 或作者自製並以 CC0 釋出的音效；剪映、CapCut 素材庫與其快取檔不進 repo，也不在文件裡教人複製。
+- `shared/sfx/` 只放 CC0 或 AI 生成並以 CC0 釋出的音效；剪映、CapCut 素材庫與其快取檔不進 repo，也不在文件裡教人複製。
+- 例外（2026-11-02 作者決定）：片尾配樂可以是 CC BY（目前只有 `bgm-cylinder-five`），預設不配；出處寫進 `sources.json`、`NOTICE.md` 與 `kit/sfx.json` 的 `credit`，用到的影片要在說明欄標示。
 - 第三方素材來源寫在 `shared/sfx/sources.json` 與 `NOTICE.md`。
 
 ### VIII. 不擴張範圍

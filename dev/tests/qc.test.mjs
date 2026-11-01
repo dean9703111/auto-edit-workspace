@@ -232,7 +232,7 @@ function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-qc-'));
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
-  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'pop.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
+  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   const proj = path.join(root, 'projects', 'p1'), out = path.join(proj, 'work', 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
   ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '12', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, 'work', 'rough.mp4')]);

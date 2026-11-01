@@ -86,7 +86,7 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const PATH = P.at('#82@直接'), FLOW = P.at('#83@照片'), CUT = P.at('#84@不經過');   // 直連／傳過去／不經過雲端
 
-    P.sfx('tick', '#82@直接'); P.sfx('tick', '#83@照片'); P.sfx('ding', '#84@不經過');   // 直連、傳過去各一顆 tick，結論一顆 ding（句號和上一行一樣）
+    P.sfx('ding', '#84@不經過');   // 結論一顆 ding（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const DEV = '#xarch-a, #xarch-b';   // 兩個裝置（輪流聚焦的「站」）
 

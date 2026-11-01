@@ -14,7 +14,8 @@
 | `tools/apply-samples.mjs` | 把 `tools/samples.json` 的範例文案套到 `shared/template/scenes/*/scene.json` 的 sample | `node dev/tools/apply-samples.mjs [--dry-run]` |
 | `tools/build-icons.mjs` | 把 svg 圖示資料夾合併成 `icons.json` | `node dev/tools/build-icons.mjs <out.json> <dir1> <dir2> …` |
 | `tools/illus-gallery-shot.mjs` | 重截 `shared/template/kit/illus-gallery.jpg`（`kit/illus-gallery.html` 的整頁截圖，寬 1920）；illus.js／illus.css 改了或換了主色後重跑 | `node dev/tools/illus-gallery-shot.mjs`（要 HyperFrames 的 Chrome 與 ffmpeg） |
-| `tools/make-sfx.mjs` | 產生 `shared/sfx/` 的音效（CC0 素材加工或程式合成）、A/B 試聽檔、回寫 sources.json 與 `kit/sfx.json`（作者用，只要 Node 與 ffmpeg） | `node dev/tools/make-sfx.mjs --help`；試聽檔一定要寫在工作區外面（`--out`） |
+| `tools/make-sfx.mjs` | 產生 `shared/sfx/` 的音效（CC0 素材加工或 AI 生成）、A/B 試聽檔、回寫 sources.json 與 `kit/sfx.json`（作者用，只要 Node 與 ffmpeg） | `node dev/tools/make-sfx.mjs --help`；試聽檔一定要寫在工作區外面（`--out`） |
+| `site/index.html`、`tools/build-site.mjs` | 官網首頁；`build-site.mjs` 把首頁、`shared/template/` 情境庫（不含 tools、vendor）、`shared/sfx/`、NOTICE 組成 GitHub Pages 網站，`.github/workflows/pages.yml` 推上 main 時自動部署 | `node dev/tools/build-site.mjs --out <資料夾>`（預設 `_site`，不進版控）；第一次要在 GitHub Settings → Pages 把 Source 選「GitHub Actions」 |
 | `tools/make_sfx.py` | 已退役，只保留凍結 8 顆音效的處理紀錄；執行會直接結束 | — |
 | `tools/build_test_media.py` | 產生測試用口播與場地照到 `projects/測試/`（作者用，要 Python） | 見檔頭；答案寫在工作區外面的 `<工作區名>-驗收/`，AI 讀不到 |
 

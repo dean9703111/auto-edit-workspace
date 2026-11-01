@@ -27,7 +27,7 @@
      - 連接線：xsc-lines 的 data-links 寫「元件id>元件id」（有箭頭；沒箭頭寫 元件id-元件id），空白隔開；線自動畫在兩個元件外框邊之間（水平線在兩個插圖高度重疊段的正中），id＝<元件id>-<元件id>（DATA 2 的 line 照寫）。
   2. DATA 2 拍（<script> 開頭，一拍一行）：照分鏡一拍一列。
      const T<k> = P.at('#N@詞');   P.sfx('<音效>', '#N@詞');   ← 句號與詞照分鏡「講到」欄，P.sfx 和它同一個句號
-     音效照分鏡「音效拍點」欄：骨架每拍都是 tick；分鏡寫 success（結果徽章那拍）才自己把那一拍改成 'success'，沒寫就不要加。
+     音效照分鏡「音效拍點」欄：骨架每拍都不配；分鏡寫 success（結果徽章那拍）或 alert（壞事那拍）才自己在那一拍加 P.sfx('success', …)，沒寫就不要加。
      BEATS 每一列 [T<k>, { … }]，{ } 裡寫這一拍做什麼（只寫用到的）：
        in: ['xsc-a']               物件彈出（＋0.14 標籤逐字上浮）          state: ['xsc-a', 'blank', 'rec']  ＋0.15 換狀態（淡出舊的、淡入新的、漣漪）
        line: 'xsc-a-xsc-b'         ＋0.7 描連接線（元件進場完才描）          move: ['xsc-a', 'xsc-b', 'left']  走到 xsc-b 的左邊（right＝右邊；1 秒）
@@ -98,11 +98,11 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
 
     // ══ DATA 2：拍（一拍一行；只改這裡）══
-    const T1 = P.at('#182@手機');     P.sfx('tick', '#182@手機');
-    const T2 = P.at('#183@雲端');     P.sfx('tick', '#183@雲端');
-    const T3 = P.at('#184@電腦');     P.sfx('tick', '#184@電腦');
-    const T4 = P.at('#185@播放');     P.sfx('tick', '#185@播放');
-    const T5 = P.at('#186@沒問題');   P.sfx('tick', '#186@沒問題');
+    const T1 = P.at('#182@手機');
+    const T2 = P.at('#183@雲端');
+    const T3 = P.at('#184@電腦');
+    const T4 = P.at('#185@播放');
+    const T5 = P.at('#186@沒問題');
     const BEATS = [
       [T1, { in: ['xsc-phone'], focus: 'xsc-phone' }],
       [T2, { in: ['xsc-cloud'], line: 'xsc-phone-xsc-cloud', focus: 'xsc-cloud' }],

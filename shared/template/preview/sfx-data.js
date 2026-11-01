@@ -1,57 +1,13 @@
 // build.mjs --gallery 產生，不要手改
 window.__SFX_DATA = {
-  "generated": "2026-10-31T12:31:47.805Z",
+  "generated": "2026-11-01T17:11:01.171Z",
   "sounds": {
-    "pop": {
-      "kind": "sfx",
-      "zh": "泡泡 pop",
-      "use": "下方字卡揭開、第一張卡片出現",
-      "event": "卡片或第一個元素出現那一格",
-      "peak": 0.01,
-      "volume": 0.6,
-      "targetDb": -7.8,
-      "additive": false,
-      "maxPerVideo": null
-    },
-    "tick": {
-      "kind": "sfx",
-      "zh": "輕 tick",
-      "use": "條列逐條出現、步驟切換，每條一顆",
-      "event": "每一條項目出現那一格",
-      "peak": 0.005,
-      "volume": 0.55,
-      "targetDb": -16.1,
-      "additive": true,
-      "maxPerVideo": null
-    },
-    "swipe": {
-      "kind": "sfx",
-      "zh": "短 swoosh",
-      "use": "側邊欄推入、角標滑入",
-      "event": "面板開始滑入那一格",
-      "peak": 0.07,
-      "volume": 0.55,
-      "targetDb": -8.9,
-      "additive": false,
-      "maxPerVideo": null
-    },
-    "whoosh": {
-      "kind": "sfx",
-      "zh": "空氣 whoosh",
-      "use": "全畫面幕進場（04a–d）、從講者切到螢幕錄影的第一段（章節轉場改用 chapter）",
-      "event": "全畫面幕蓋滿那一刻（聲音先漸強約 0.74 s）",
-      "peak": 0.743,
-      "volume": 0.5,
-      "targetDb": -8,
-      "additive": false,
-      "maxPerVideo": null
-    },
     "ding": {
       "kind": "sfx",
       "zh": "提示「滴」",
       "use": "講重點、提醒（「提醒一下大家」）、答案揭曉",
       "event": "重點字出現那一格",
-      "peak": 0.014,
+      "peak": 0.01,
       "volume": 0.468,
       "targetDb": -12.6,
       "additive": false,
@@ -62,7 +18,7 @@ window.__SFX_DATA = {
       "zh": "完成音",
       "use": "解法、成果、完成、問題解決",
       "event": "綠勾或結果出現那一格",
-      "peak": 0.234,
+      "peak": 0.137,
       "volume": 0.692,
       "targetDb": -5.2,
       "additive": false,
@@ -73,7 +29,7 @@ window.__SFX_DATA = {
       "zh": "錯誤「嗶嗶」",
       "use": "千萬不要、踩坑、錯誤、限制",
       "event": "紅章或警告出現那一格",
-      "peak": 0.006,
+      "peak": 0.018,
       "volume": 0.569,
       "targetDb": -6.9,
       "additive": false,
@@ -84,53 +40,9 @@ window.__SFX_DATA = {
       "zh": "綜藝「咚咚」",
       "use": "蓋章、重擊、數字或金句落定",
       "event": "落定、蓋章落地那一格（第一下）",
-      "peak": 0.006,
+      "peak": 0.134,
       "volume": 0.617,
       "targetDb": -6.2,
-      "additive": false,
-      "maxPerVideo": null
-    },
-    "flip": {
-      "kind": "sfx",
-      "zh": "翻牌",
-      "use": "翻牌、翻卡、切換",
-      "event": "牌翻到正面那一格",
-      "peak": 0.078,
-      "volume": 0.8,
-      "targetDb": -9.9,
-      "additive": false,
-      "maxPerVideo": null
-    },
-    "type": {
-      "kind": "sfx",
-      "zh": "打字短串",
-      "use": "打字機動畫起手",
-      "event": "第一個字打出來那一格",
-      "peak": 0.005,
-      "volume": 0.3,
-      "targetDb": -16.5,
-      "additive": false,
-      "maxPerVideo": null
-    },
-    "glitch": {
-      "kind": "sfx",
-      "zh": "數位故障",
-      "use": "出錯、系統崩潰、bug",
-      "event": "畫面開始故障那一格",
-      "peak": 0.016,
-      "volume": 0.35,
-      "targetDb": -11.1,
-      "additive": false,
-      "maxPerVideo": null
-    },
-    "riser": {
-      "kind": "sfx",
-      "zh": "上升張力音",
-      "use": "揭曉前的鋪墊（峰值在結尾）",
-      "event": "揭曉那一格（峰值在檔尾，聲音提早約 1.5 s 開始）",
-      "peak": 1.472,
-      "volume": 0.45,
-      "targetDb": -8.9,
       "additive": false,
       "maxPerVideo": null
     },
@@ -150,7 +62,7 @@ window.__SFX_DATA = {
       "zh": "章節「嘭」",
       "use": "章節轉場（01）",
       "event": "章名落定那一格（01 的 titleAt＝段起點＋0.45 s）",
-      "peak": 0.037,
+      "peak": 0.021,
       "volume": 0.891,
       "targetDb": -3,
       "additive": false,
@@ -161,7 +73,7 @@ window.__SFX_DATA = {
       "zh": "閃粉",
       "use": "入場、介紹主角（14 講者介紹）、金句閃亮（15）",
       "event": "主角或金句出現完成那一格",
-      "peak": 0.275,
+      "peak": 0.18,
       "volume": 0.638,
       "targetDb": -5.9,
       "additive": false,
@@ -172,7 +84,7 @@ window.__SFX_DATA = {
       "zh": "閃亮登場",
       "use": "轉折亮點：本集最得意的設計、關鍵詞大字進場",
       "event": "關鍵詞到位那一格",
-      "peak": 0.122,
+      "peak": 0.699,
       "volume": 0.891,
       "targetDb": -3,
       "additive": false,
@@ -183,16 +95,16 @@ window.__SFX_DATA = {
       "zh": "打雷",
       "use": "負面情緒：壓力、焦慮、晴天霹靂（15 金句 tone warn 預設）",
       "event": "負面問句或壞消息出現那一格",
-      "peak": 0.348,
+      "peak": 0.2,
       "volume": 0.891,
       "targetDb": -3,
       "additive": false,
       "maxPerVideo": 3
     },
-    "bgm-outro": {
+    "bgm-cylinder-five": {
       "kind": "bgm",
-      "zh": "結尾配樂",
-      "use": "結語金句講完到片尾，plan.json 寫 outro 才有",
+      "zh": "片尾配樂〈Cylinder Five〉",
+      "use": "結語金句講完到片尾；預設不配，plan.json 的 outro 寫 \"music\":   \"bgm-cylinder-five\" 才有",
       "event": "outro.from 那句字幕的起點",
       "peak": 0,
       "volume": 0.562,
@@ -200,7 +112,8 @@ window.__SFX_DATA = {
       "additive": false,
       "maxPerVideo": null,
       "fadeIn": 3.2,
-      "fadeOut": 1.85
+      "fadeOut": 1.85,
+      "credit": "Music: \"Cylinder Five\" by Chris Zabriskie (http://chriszabriskie.com/cylinders/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
     }
   },
   "scenes": {
@@ -216,151 +129,49 @@ window.__SFX_DATA = {
     "chapter-tag": {
       "zh": "章節角標",
       "no": "02",
-      "main": {
-        "sound": "swipe",
-        "at": 0
-      },
+      "main": null,
       "extra": []
     },
     "side-panel": {
       "zh": "半版側邊欄",
       "no": "03",
-      "main": {
-        "sound": "swipe",
-        "at": 0
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 1.3
-        },
-        {
-          "sound": "tick",
-          "at": 1.9
-        },
-        {
-          "sound": "tick",
-          "at": 2.5
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "fs-list": {
       "zh": "全畫面清單",
       "no": "04a",
-      "main": {
-        "sound": "whoosh",
-        "at": -0.15
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 0.5
-        },
-        {
-          "sound": "tick",
-          "at": 0.85
-        },
-        {
-          "sound": "tick",
-          "at": 1.2
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "fs-compare": {
       "zh": "全畫面對照",
       "no": "04b",
-      "main": {
-        "sound": "whoosh",
-        "at": -0.15
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 0.5
-        },
-        {
-          "sound": "tick",
-          "at": 2.5
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "fs-flow": {
       "zh": "全畫面流程",
       "no": "04c",
-      "main": {
-        "sound": "whoosh",
-        "at": -0.15
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 0.5
-        },
-        {
-          "sound": "tick",
-          "at": 0.85
-        },
-        {
-          "sound": "tick",
-          "at": 1.2
-        },
-        {
-          "sound": "tick",
-          "at": 1.55
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "fs-table": {
       "zh": "全畫面表格",
       "no": "04d",
-      "main": {
-        "sound": "whoosh",
-        "at": -0.15
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 0.85
-        },
-        {
-          "sound": "tick",
-          "at": 1.2
-        },
-        {
-          "sound": "tick",
-          "at": 1.55
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "two-sides": {
       "zh": "兩側",
       "no": "05",
-      "main": {
-        "sound": "pop",
-        "at": 0.2
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 0.55
-        },
-        {
-          "sound": "tick",
-          "at": 0.9
-        },
-        {
-          "sound": "tick",
-          "at": 1.25
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "concept": {
       "zh": "一般字卡",
       "no": "06",
-      "main": {
-        "sound": "pop",
-        "at": 0.1
-      },
+      "main": null,
       "extra": []
     },
     "key-point": {
@@ -375,28 +186,13 @@ window.__SFX_DATA = {
     "steps": {
       "zh": "Step 字卡",
       "no": "08",
-      "main": {
-        "sound": "pop",
-        "at": 0.1
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 2.75
-        },
-        {
-          "sound": "tick",
-          "at": 5.35
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "qa": {
       "zh": "QA 字卡",
       "no": "09",
-      "main": {
-        "sound": "pop",
-        "at": 0.1
-      },
+      "main": null,
       "extra": [
         {
           "sound": "ding",
@@ -407,56 +203,26 @@ window.__SFX_DATA = {
     "tips": {
       "zh": "Tips 字卡",
       "no": "10",
-      "main": {
-        "sound": "pop",
-        "at": 0.1
-      },
+      "main": null,
       "extra": []
     },
     "summary": {
       "zh": "總結字卡",
       "no": "11",
-      "main": {
-        "sound": "pop",
-        "at": 0.1
-      },
+      "main": null,
       "extra": []
     },
     "keywords": {
       "zh": "關鍵詞條列",
       "no": "12",
-      "main": {
-        "sound": "pop",
-        "at": 0.2
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 0.7
-        },
-        {
-          "sound": "tick",
-          "at": 1.2
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "title-list": {
       "zh": "標題條列",
       "no": "13",
-      "main": {
-        "sound": "pop",
-        "at": 0.1
-      },
-      "extra": [
-        {
-          "sound": "tick",
-          "at": 2.55
-        },
-        {
-          "sound": "tick",
-          "at": 4.95
-        }
-      ]
+      "main": null,
+      "extra": []
     },
     "speaker": {
       "zh": "講者介紹",
@@ -478,97 +244,17 @@ window.__SFX_DATA = {
     }
   },
   "fx": {
-    "12": {
-      "sound": "swipe",
-      "at": 0
-    },
-    "13": {
-      "sound": "swipe",
-      "at": 0
-    },
     "16": {
       "sound": "impact",
       "at": 0
-    },
-    "17": {
-      "sound": "riser",
-      "at": 2.67
-    },
-    "18": {
-      "sound": "riser",
-      "at": 3
-    },
-    "20": {
-      "sound": "riser",
-      "at": 3.52
-    },
-    "21": {
-      "sound": "riser",
-      "at": 2.77
-    },
-    "23": {
-      "sound": "flip",
-      "at": 1
     },
     "24": {
       "sound": "impact",
       "at": 0
     },
-    "25": {
-      "sound": "flip",
-      "at": 0.39
-    },
-    "26": {
-      "sound": "flip",
-      "at": 1
-    },
-    "27": {
-      "sound": "type",
-      "at": 0.4
-    },
-    "28": {
-      "sound": "flip",
-      "at": 1.7
-    },
     "29": {
       "sound": "ding",
       "at": 1.8
-    },
-    "30": {
-      "sound": "swipe",
-      "at": 0.65
-    },
-    "32": {
-      "sound": "swipe",
-      "at": 0.67
-    },
-    "33": {
-      "sound": "pop",
-      "at": 0.6
-    },
-    "34": {
-      "sound": "glitch",
-      "at": 0.68
-    },
-    "35": {
-      "sound": "pop",
-      "at": 0
-    },
-    "36": {
-      "sound": "pop",
-      "at": 0
-    },
-    "37": {
-      "sound": "riser",
-      "at": 1.48
-    },
-    "38": {
-      "sound": "swipe",
-      "at": 0.3
-    },
-    "39": {
-      "sound": "flip",
-      "at": 0.75
     },
     "01": {
       "sound": "impact",
@@ -581,30 +267,6 @@ window.__SFX_DATA = {
     "03": {
       "sound": "impact",
       "at": 0.3
-    },
-    "04": {
-      "sound": "whoosh",
-      "at": 0.35
-    },
-    "05": {
-      "sound": "pop",
-      "at": 0.4
-    },
-    "06": {
-      "sound": "pop",
-      "at": 0.38
-    },
-    "07": {
-      "sound": "whoosh",
-      "at": 0.84
-    },
-    "08": {
-      "sound": "pop",
-      "at": 0.75
-    },
-    "09": {
-      "sound": "swipe",
-      "at": 0
     }
   }
 };

@@ -27,7 +27,7 @@ before(() => {
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   tpl = path.join(root, 'shared', 'template');
   fs.symlinkSync(TEMPLATE, tpl, 'dir');
-  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'pop.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
+  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   proj = path.join(root, 'projects', 'p1');
   for (const d of ['真人錄影', '聲音', '螢幕錄影', '圖片']) fs.mkdirSync(path.join(proj, '素材', d), { recursive: true });
   out = path.join(proj, 'work', 'hyperframes');
@@ -78,7 +78,7 @@ test('media.mjs main：只有一支真人錄影也轉成固定 fps 的 work/main
 });
 
 test('--check --json：stdout 只有一個 JSON；格式照契約 3.3，時間是 rough.mp4 秒數', () => {
-  writePlan([{ id: 's01', scene: 'concept', from: '#1', to: '#2e', sfxVolume: -6, slots: { text: '一般字卡' } }], { edit: { cuts: [[1.5, 2.5]], joins: [{ at: 8.05, type: 'dip' }] } });
+  writePlan([{ id: 's01', scene: 'concept', from: '#1', to: '#2e', sfx: 'ding', sfxVolume: -6, slots: { text: '一般字卡' } }], { edit: { cuts: [[1.5, 2.5]], joins: [{ at: 8.05, type: 'dip' }] } });
   const { r, j } = checkJson();
   assert.equal(r.status, 1);   // 只有聲音的區間沒蓋住
   for (const k of ['ok', 'errors', 'warnings', 'videoDur', 'outputDur', 'voiceOnly', 'cutpoints', 'items', 'edit', 'paths']) assert.ok(k in j, `少了 ${k}`);
@@ -90,7 +90,7 @@ test('--check --json：stdout 只有一個 JSON；格式照契約 3.3，時間�
   assert.deepEqual(j.edit.joins, [{ at: 8, type: 'dip', dur: 0.3 }], 'joins 吸附到 cutpoints');
   const s = j.items[0];
   assert.deepEqual([s.id, s.type, s.start, s.end], ['s01', 'scene', 1, 7.5]);   // rough 秒數（#2e＝7.5；成片是 6.5）
-  assert.equal(s.sfx[0].name, 'pop');
+  assert.equal(s.sfx[0].name, 'ding');
   assert.ok(s.sfx[0].volume > 0 && s.sfx[0].db < 0);
   assert.equal(j.paths.project, 'projects/p1');
   assert.equal(j.paths.plan, 'projects/p1/work/hyperframes/plan.json');
@@ -484,11 +484,11 @@ test('F8 srt-align 重新對句號的三個坑：情境動畫只換 <script> 裡
   const tl = P.timeline();
   tl.to('.a', { opacity: 1 }, P.at('#3'));
   tl.to('.b', { opacity: 1 }, P.at("#4", 0.2));
-  const T = P.sfx('tick', '#3', 0.1);
+  const T = P.sfx('click', '#3', 0.1);
   const s = '#3';
 </script>
 </body></html>`;
-  const want = html.replace(`P.at('#3'));`, `P.at('#4'));`).replace(`P.at("#4", 0.2)`, `P.at("#4+2.6", 0.2)`).replace(`P.sfx('tick', '#3', 0.1)`, `P.sfx('tick', '#4', 0.1)`);
+  const want = html.replace(`P.at('#3'));`, `P.at('#4'));`).replace(`P.at("#4", 0.2)`, `P.at("#4+2.6", 0.2)`).replace(`P.sfx('click', '#3', 0.1)`, `P.sfx('click', '#4', 0.1)`);
   assert.notEqual(want, html);
   assert.equal(remapCustomRefs(html, mapper, 'x-demo'), want);
   // 連接詞清單：程式和文件（cli-002 §4.5、docs.md §9.1）一字不差，弱模型看文件就知道哪些不併

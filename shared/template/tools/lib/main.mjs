@@ -290,6 +290,8 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
   // 常駐章節角標（z 25：在一般情境 20 之上、不透明幕 30 之下）
   const badgeEls = [];
   for (const b of badges) {
+    // 章節擦過（plan.mjs 的 badge.sweep：由 02 起頭的章）：色帶擦開那一對色帶，只掃過、後面沒有新的幕，角標同時由右擦開
+    if (b.sweep && b.start - t0 >= 0 && b.start - t0 < DUR) bandPair(r3(b.start - t0), 'in');
     const bp = badgeParts(b, { t0, DUR, C });
     if (!bp) continue;
     badgeEls.push(bp.html);

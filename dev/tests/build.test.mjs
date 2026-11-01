@@ -29,10 +29,10 @@ before(() => {
   work = path.join(dir, 'work');
   out = path.join(work, 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
-  // 完整的 12 個音效檔（內容用 pop.wav 代替，只測檔案在不在）
+  // 完整的音效檔（內容用 ding.wav 代替，只測檔案在不在）
   sfxDir = path.join(dir, 'sfx');
   fs.mkdirSync(sfxDir);
-  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'pop.wav'), path.join(sfxDir, `${n}.wav`));
+  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(sfxDir, `${n}.wav`));
   // 44 秒的小影片（25fps、關鍵幀稀疏），build 會重新編碼成 30fps、每秒一個關鍵幀
   const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=25', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
     '-t', '44', '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '250', '-c:a', 'aac', '-shortest', path.join(work, 'rough.mp4')]);
@@ -56,7 +56,7 @@ test('--check 不寫檔，通過時 exit 0；有錯時 exit 1 並印出修改建
 test('產生專案：CRLF 字幕、底片重新編碼、kit／音效／字卡動態都複製、檔案結構正確', () => {
   const r = node();
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  for (const f of ['index.html', 'hyperframes.json', 'meta.json', '.build-manifest.json', 'assets/rough.mp4', 'assets/sfx/pop.wav', 'kit/gsap.min.js', 'kit/fonts/NotoSansTC-VF.woff2',
+  for (const f of ['index.html', 'hyperframes.json', 'meta.json', '.build-manifest.json', 'assets/rough.mp4', 'assets/sfx/ding.wav', 'kit/gsap.min.js', 'kit/fonts/NotoSansTC-VF.woff2',
     'compositions/s01-concept.html', 'compositions/s02-side-panel.html', 'compositions/s03-fs-list.html', 'compositions/fx-29-odometer.html', 'compositions/fx-kit.js', 'compositions/captions.html']) {
     assert.ok(fs.existsSync(path.join(out, f)), `少了 ${f}`);
   }
@@ -166,13 +166,17 @@ test('--gallery 產生 18 頁預覽（獨立頁，連 ../kit 與 ../bg.jpg）', 
   // 音效資料與重播協定
   const sandbox = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(tdir, 'preview', 'sfx-data.js'), 'utf8'), sandbox);
-  assert.equal(sandbox.window.__SFX_DATA.scenes.concept.main.sound, 'pop');
-  assert.equal(sandbox.window.__SFX_DATA.scenes['side-panel'].extra.length, 3);
+  // 2026-11-02 起 02–06、08、10–13 版型預設不配；09 qa 只有答案 ding（×0.8）
+  assert.equal(sandbox.window.__SFX_DATA.scenes.concept.main, null);
+  assert.equal(sandbox.window.__SFX_DATA.scenes['side-panel'].extra.length, 0);
+  assert.equal(sandbox.window.__SFX_DATA.scenes.qa.extra.map((c) => c.sound).join(), 'ding');
   assert.equal(Object.keys(sandbox.window.__SFX_DATA.sounds).length, Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8'))).length);
   const concept = fs.readFileSync(path.join(tdir, 'preview', '06-concept.html'), 'utf8');
   assert.match(concept, /hf-preview-ready/);
   assert.match(concept, /hf-preview-replay/);
-  assert.match(concept, /window\.__PREVIEW = \{"key":"concept","duration":\d+(\.\d+)?,"cues":\[\{"sound":"pop","at":0\.1\}\]\}/);
+  assert.match(concept, /window\.__PREVIEW = \{"key":"concept","duration":\d+(\.\d+)?,"cues":\[\]\}/);
+  const qa = fs.readFileSync(path.join(tdir, 'preview', '09-qa.html'), 'utf8');
+  assert.match(qa, /window\.__PREVIEW = \{"key":"qa","duration":\d+(\.\d+)?,"cues":\[\{"sound":"ding","at":1\.9,"volume":0\.8\}\]\}/);
 });
 
 test('--gallery 直式（009 FR-073）：每支 custom 另出 x-<名稱>-v.html（1080×1920）；speaker.jpg 裁出 speaker-v.jpg（1080×1920，比 speaker.jpg 新就不重做）；橫式頁不變', async () => {
@@ -196,29 +200,33 @@ test('--gallery 直式（009 FR-073）：每支 custom 另出 x-<名稱>-v.html�
 });
 
 test('產生的 index.html：每個 cue 一個 <audio>（主 sfx-<id>、附加 sfx-<id>-e<n>），track-index 不重複', () => {
+  // s01、s02 自己寫主音效；s03 換成 09 qa（版型預設只有答案 ding 一顆附加）
+  writePlan([{ ...SCENES[0], sfx: 'ding' }, { ...SCENES[1], sfx: 'impact' }, { id: 's03', scene: 'qa', from: '#9', to: '#10e', slots: { q: '可以直接上傳嗎？', a: '不行' } }, SCENES[3]]);
   assert.equal(node().status, 0);
   const html = read('index.html');
   const audios = [...html.matchAll(/<audio id="([^"]+)"[^>]*data-track-index="(\d+)"/g)];
   const ids = audios.map((m) => m[1]);
-  // s01 concept：主 1；s02 side-panel：主 1＋tick 3；s03 fs-list：主 1＋tick 3；s04 fx 29 catalog 預設 ding：主 1
-  assert.deepEqual(ids, ['sfx-s01', 'sfx-s02', 'sfx-s02-e1', 'sfx-s02-e2', 'sfx-s02-e3', 'sfx-s03', 'sfx-s03-e1', 'sfx-s03-e2', 'sfx-s03-e3', 'sfx-s04']);
+  // s01 concept：主 1；s02 side-panel：主 1；s03 qa：附加 ding 1；s04 fx 29 catalog 預設 ding：主 1
+  assert.deepEqual(ids, ['sfx-s01', 'sfx-s02', 'sfx-s03-e1', 'sfx-s04']);
   const tracks = audios.map((m) => m[2]);
   assert.equal(new Set(tracks).size, tracks.length);
-  const tickVol = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')).tick.volume;
-  const tickAudio = html.match(/<audio id="sfx-s02-e1" src="assets\/sfx\/tick\.wav"[^>]*data-volume="([\d.]+)"/);
-  assert.ok(tickAudio, '附加 tick 的 <audio> 要存在');
-  assert.equal(Number(tickAudio[1]), tickVol);
+  const dingVol = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')).ding.volume;
+  const extraAudio = html.match(/<audio id="sfx-s03-e1" src="assets\/sfx\/ding\.wav"[^>]*data-volume="([\d.]+)"/);
+  assert.ok(extraAudio, '附加 ding 的 <audio> 要存在');
+  assert.equal(Number(extraAudio[1]), Math.round(dingVol * 0.8 * 100) / 100, 'qa 答案 ding 音量＝kit 音量×0.8（取兩位）');
+  writePlan(SCENES);
 });
 
 test('音效檔不存在：--check 與 build 都 ✖，訊息指出缺哪個檔', () => {
   const part = path.join(dir, 'sfx-part');
   fs.mkdirSync(part, { recursive: true });
-  for (const n of ['pop', 'alert']) fs.copyFileSync(path.join(sfxDir, `${n}.wav`), path.join(part, `${n}.wav`));
-  writePlan([{ id: 's02', scene: 'side-panel', from: '#5', to: '#7e', slots: { title: '拍完之後', items: ['初剪', '轉字幕', '校對'] } }]);
+  for (const n of ['alert']) fs.copyFileSync(path.join(sfxDir, `${n}.wav`), path.join(part, `${n}.wav`));
+  writePlan([{ id: 's02', scene: 'side-panel', from: '#5', to: '#7e', sfx: 'impact', slots: { title: '拍完之後', items: ['初剪', '轉字幕', '校對'] } },
+    { id: 's03', scene: 'qa', from: '#9', to: '#10e', slots: { q: '可以直接上傳嗎？', a: '不行' } }]);
   const r = node('--check', '--sfx', part);
   assert.equal(r.status, 1);
-  assert.match(r.stdout, /✖ \[s02 side-panel\] 音效檔 shared\/sfx\/swipe\.wav 不存在 → shared\/sfx\/ 要有完整的 \d+ 個檔/);
-  assert.match(r.stdout, /音效檔 shared\/sfx\/tick\.wav 不存在/);
+  assert.match(r.stdout, /✖ \[s02 side-panel\] 音效檔 shared\/sfx\/impact\.wav 不存在 → shared\/sfx\/ 要有完整的 \d+ 個檔/);
+  assert.match(r.stdout, /音效檔 shared\/sfx\/ding\.wav 不存在/);
   writePlan(SCENES);
 });
 
@@ -226,10 +234,10 @@ test('--list --json：sounds 在最前面、沒有重複的 sfx key，每顆有 
   const j = JSON.parse(spawnSync(process.execPath, [BUILD, '--template', TEMPLATE, '--sfx', sfxDir, '--list', '--json'], { encoding: 'utf8' }).stdout);
   assert.equal(Object.keys(j)[0], 'sounds');
   assert.ok(!('sfx' in j));
-  assert.equal(j.sounds.pop.file, 'shared/sfx/pop.wav');
-  assert.equal(j.sounds.pop.exists, true);
+  assert.equal(j.sounds.ding.file, 'shared/sfx/ding.wav');
+  assert.equal(j.sounds.ding.exists, true);
   const j2 = JSON.parse(spawnSync(process.execPath, [BUILD, '--template', TEMPLATE, '--sfx', path.join(dir, 'nope'), '--list', '--json'], { encoding: 'utf8' }).stdout);
-  assert.equal(j2.sounds.pop.exists, false);
+  assert.equal(j2.sounds.ding.exists, false);
 });
 
 // ---------- 002 pipeline-timing ----------
@@ -248,7 +256,7 @@ test('--check --json schema 2：必有的鍵與型別；planHash 跟著 plan.jso
   assert.deepEqual(Object.keys(j.versions.hyperframes), ['pinned', 'installed', 'ok']);
   assert.ok(Array.isArray(j.uncovered) && j.uncovered.every((u) => ['start', 'end', 'outStart', 'outEnd', 'len'].every((k) => typeof u[k] === 'number')));
   assert.deepEqual(Object.keys(j.sfxBudget), ['perMinuteAvg', 'over', 'dense', 'loud']);
-  assert.equal(j.sfxCount.tick, 6);   // s02 側邊欄 3 條＋s03 全畫面清單 3 條
+  assert.equal(j.sfxCount.ding, 1);   // 只有 s04 fx 29 的 catalog 預設 ding（版型預設 2026-11-02 起不配）
   assert.equal(j.outro, null);
   for (const it of j.items) {
     for (const k of ['id', 'type', 'label', 'key', 'family', 'layout', 'layoutZh', 'opaque', 'start', 'end', 'sfx', 'warnings', 'out']) assert.ok(k in it, `${it.id} 少 ${k}`);
@@ -348,12 +356,15 @@ test('custom 段：index.html 的 head 有 window.__cues（在 scene-motion.js �
   assert.equal(node().status, 0);
 });
 
-test('章節：captions.html 在章節 2.5 s 內沒有字幕；chapters 進 JSON；結尾配樂 <audio id="bgm-outro">', () => {
-  writePlanX({ scenes: [...SCENES, { id: 'c1', scene: 'chapter', at: '#8', slots: { num: '01', title: '章' } }].filter((s) => s.id !== 's03'), outro: { from: '#11' } });
+test('章節：captions.html 在章節 2.5 s 內沒有字幕；chapters 進 JSON；結尾配樂 <audio id="bgm-outro">（outro 寫 music 才配，build 印出處）', () => {
+  const scenesC = [...SCENES, { id: 'c1', scene: 'chapter', at: '#8', slots: { num: '01', title: '章' } }].filter((s) => s.id !== 's03');
+  writePlanX({ scenes: scenesC, outro: { from: '#11' } });
+  assert.equal(JSON.parse(node('--check', '--json').stdout).outro, null, 'outro 沒寫 music＝不配');
+  writePlanX({ scenes: scenesC, outro: { from: '#11', music: 'bgm-cylinder-five' } });
   const j = JSON.parse(node('--check', '--json').stdout);
   assert.deepEqual(j.errors, []);
   assert.deepEqual(j.chapters.map((c) => [c.id, c.cue, c.placement, c.captionsClipped]), [['c1', 8, 'cover', [8]]]);
-  assert.equal(j.outro.music, 'bgm-outro');
+  assert.equal(j.outro.music, 'bgm-cylinder-five');
   const r = node();
   assert.equal(r.status, 0, r.stdout + r.stderr);
   // #8 是 25.5–28.5，章節 25.5–28.0 → #8 只在 28.0 出現
@@ -361,10 +372,10 @@ test('章節：captions.html 在章節 2.5 s 內沒有字幕；chapters 進 JSON
   assert.match(cap, /tl\.set\('#cg-8', \{ opacity: 1, visibility: 'visible' \}, 28\);/);
   assert.match(r.stdout, /字幕避開章節：#8 晚 2\.50s 出現/);
   const html = read('index.html');
-  const a = html.match(/<audio id="bgm-outro" src="(assets\/bgm-outro-[0-9a-f]{12}\.wav)" data-start="([\d.]+)" data-duration="([\d.]+)" data-track-index="\d+" data-volume="1"><\/audio>/);
-  assert.ok(a, '有 bgm-outro');
+  const a = html.match(/<audio id="bgm-outro" src="(assets\/bgm-cylinder-five-[0-9a-f]{12}\.wav)" data-start="([\d.]+)" data-duration="([\d.]+)" data-track-index="\d+" data-volume="1"><\/audio>/);
+  assert.ok(a, '有結尾配樂');
   assert.ok(fs.existsSync(path.join(out, a[1])));
-  assert.match(r.stdout, /結尾配樂：bgm-outro /);
+  assert.match(r.stdout, /結尾配樂：bgm-cylinder-five .*這首要在影片說明欄標示出處：Music: "Cylinder Five" by Chris Zabriskie/);
   assert.match(r.stdout, /音效比例：/);
   writePlan(SCENES);
   assert.equal(node().status, 0);
@@ -373,10 +384,10 @@ test('章節：captions.html 在章節 2.5 s 內沒有字幕；chapters 進 JSON
 test('--list 音效行：不列配樂、標附加與每集上限；另起一行結尾配樂', () => {
   const r = spawnSync(process.execPath, [BUILD, '--template', TEMPLATE, '--list'], { encoding: 'utf8' });
   const line = r.stdout.split('\n').find((l) => l.startsWith('# 音效（"sfx"）'));
-  assert.ok(!line.includes('bgm-outro'));
-  assert.match(line, /tick（[^）]*，附加）/);
+  assert.ok(!line.includes('bgm-cylinder-five'));
+  assert.match(line, /click（[^）]*，附加）/);
   assert.match(line, /thunder（[^）]*，每集 ≤ 3）/);
-  assert.match(r.stdout, /\n結尾配樂（plan\.json "outro"）：bgm-outro\n/);
+  assert.match(r.stdout, /\n結尾配樂（plan\.json "outro"）：bgm-cylinder-five\n/);
 });
 
 test('check.textSync false：示意 plan（--plan 指到別處）不提醒；寫在專案正式的 work/hyperframes/plan.json 就 ⚠', async () => {
@@ -441,40 +452,40 @@ test('P.sfx（motion.md §5）：情境動畫的音效拍點靜態解析成 <aud
   fs.mkdirSync(path.join(out, 'compositions'), { recursive: true });
   const comp = (body) => fs.writeFileSync(path.join(out, 'compositions', 'x-beat.html'), `<template id="x-beat-template"><div id="x-beat" data-composition-id="x-beat" data-width="1920" data-height="1080"></div>
 <script>
-  // 範例：P.sfx('pop', '#9') 是註解，不算
+  // 範例：P.sfx('impact', '#9') 是註解，不算
   const tl = gsap.timeline({ paused: true }); const P = SceneMotion(tl);
   ${body}
   window.__timelines["x-beat"] = tl;
 </script></template>`);
   const seg = (extra = {}) => [{ id: 'x01', type: 'custom', src: 'compositions/x-beat.html', layout: 'overlay', from: '#3', to: '#4e', ...extra }];
-  comp(`const T1 = P.sfx('ding', '#3', 0.2);\n  P.sfx("tick", "#4+0.5");`);
+  comp(`const T1 = P.sfx('ding', '#3', 0.2);\n  P.sfx("click", "#4+0.5");`);
   writePlan(seg());
   const j = JSON.parse(node('--check', '--json').stdout);
   assert.equal(j.ok, true, j.errors.join('\n'));
   const x = j.items.find((i) => i.id === 'x01');
   const frame = 1 / 30, peak = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8'));
-  assert.deepEqual(x.sfx.map((c) => [c.name, c.at]), [['ding', +(8.2 - peak.ding.peak + frame).toFixed(3)], ['tick', +(12 - peak.tick.peak + frame).toFixed(3)]]);
+  assert.deepEqual(x.sfx.map((c) => [c.name, c.at]), [['ding', +(8.2 - peak.ding.peak + frame).toFixed(3)], ['click', +(12 - peak.click.peak + frame).toFixed(3)]]);
   assert.deepEqual(x.out.refs, { '#3': 8, '#4+0.5': 12 }, 'P.sfx 的 ref 也預先算好（@詞 才不會在執行期出錯）');
   assert.equal(x.out.tx.prev, 'speaker');
   assert.equal(j.sfxCount.ding, 1);
-  assert.equal(j.sfxCount.tick, 1);
+  assert.equal(j.sfxCount.click, 1);
   const r = node();
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const idx = read('index.html');
   assert.match(idx, new RegExp(`<audio id="sfx-x01-e1" src="assets/sfx/ding\\.wav" data-start="${x.sfx[0].at}" data-track-index="\\d+" data-volume="[\\d.]+"></audio>`));
-  assert.match(idx, /<audio id="sfx-x01-e2" src="assets\/sfx\/tick\.wav"/);
+  assert.match(idx, /<audio id="sfx-x01-e2" src="assets\/sfx\/click\.wav"/);
   // custom 段的 prev 也進 window.__cues.segs[id]（P 讀得到）
   assert.match(idx, /"x01":\{"comp":"x-beat","start":8,"D":6\.5,"prev":"speaker","refs":/);
   // sfxExtra: false：整段的拍點音效關掉
   writePlan(seg({ sfxExtra: false }));
   assert.deepEqual(JSON.parse(node('--check', '--json').stdout).items.find((i) => i.id === 'x01').sfx, []);
   // 名稱不在 sfx.json、參數不是字面值 → ✖
-  comp(`P.sfx('boom', '#3');\n  const n = 'tick'; P.sfx(n, '#4');`);
+  comp(`P.sfx('boom', '#3');\n  const n = 'click'; P.sfx(n, '#4');`);
   writePlan(seg());
   const bad = node('--check');
   assert.equal(bad.status, 1);
   assert.match(bad.stdout, /✖ \[x01 custom\] src（compositions\/x-beat\.html）：P\.sfx\(n, '#4'\)：音效名與 ref 要寫成字串字面值、off 寫數字/);
-  assert.match(bad.stdout, /✖ \[x01 custom\] compositions\/x-beat\.html 的 P\.sfx\('boom', '#3'\)：kit\/sfx\.json 沒有「boom」這顆音效 → 改成 pop、tick/);
+  assert.match(bad.stdout, /✖ \[x01 custom\] compositions\/x-beat\.html 的 P\.sfx\('boom', '#3'\)：kit\/sfx\.json 沒有「boom」這顆音效 → 改成 ding、success/);
   writePlan(SCENES);
 });
 

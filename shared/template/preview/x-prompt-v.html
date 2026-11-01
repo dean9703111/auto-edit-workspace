@@ -81,7 +81,7 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const TYPE = P.at('#62', 0.45), K1 = P.at('#63@表格'), K2 = P.at('#64@時間碼'), NOTE = P.at('#65');   // 開始打字／兩個關鍵詞／提醒
 
-    P.sfx('type', '#62', 0.45); P.sfx('tick', '#63@表格'); P.sfx('tick', '#64@時間碼'); P.sfx('ding', '#65');   // 每一拍一顆音效（句號和上一行一樣；打字＝type、提醒＝ding）
+    P.sfx('ding', '#65');   // 提醒那一拍一顆 ding（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題圖示描線 → 標題逐字上浮

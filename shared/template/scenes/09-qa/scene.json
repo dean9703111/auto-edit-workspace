@@ -23,8 +23,8 @@
     "aAt": { "label": "答案進場", "default": "{{in}} + 1.9", "min": "{{in}} + 1.85" }
   },
   "sfx": {
-    "main": { "sound": "pop", "at": "in + 0.1" },
-    "extra": [ { "sound": "ding", "at": "aAt", "volume": 0.8 } ]
+    "main": null,
+    "extra": [{"sound":"ding","at":"aAt","volume":0.8}]
   },
   "lists": {},
   "rules": [],

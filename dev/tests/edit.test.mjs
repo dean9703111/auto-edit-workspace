@@ -17,7 +17,7 @@ const run = (scenes, edit, extra = {}) => resolvePlan({ plan: { version: 1, spea
 const byId = (res, id) => res.items.find((x) => x.id === id);
 const main = (res, test = null) => buildMain({ items: res.items, videoDur: res.outDur, captions: { compId: 'captions', file: 'compositions/captions.html' }, pip: res.globals.pip, sideShift: res.globals.sideShift, footage: res.footage, editFx: res.editFx, test }).html;
 const SCENES = [
-  { id: 's01', scene: 'concept', from: '#2', to: '#3e', slots: { text: '一般字卡' } },
+  { id: 's01', scene: 'concept', from: '#2', to: '#3e', sfx: 'ding', slots: { text: '一般字卡' } },   // 06 預設不配（2026-11-02），這裡自己配一顆驗音量
   { id: 's02', scene: 'fs-list', from: '#6', to: '#7e', slots: { title: '清單', items: ['一', '二', '三'] } },
 ];
 
@@ -127,16 +127,17 @@ test('dip／punch／整支淡入淡出／volume／gains：畫面用 GSAP，聲�
   assert.match(html, /data-volume="0\.501"/);
   assert.match(html, /data-start="29" data-duration="2" data-media-start="30"\s+data-track-index="0" data-has-audio="true" data-volume="1\.413" playsinline/);
   // 音效：總增益 −6dB
-  const pop = byId(res, 's01').sfx;
-  assert.equal(pop.volume, +(L.sfx.pop.volume * Math.pow(10, -6 / 20)).toFixed(3));
+  const ding = byId(res, 's01').sfx;
+  assert.equal(ding.volume, +(L.sfx.ding.volume * Math.pow(10, -6 / 20)).toFixed(3));
 });
 
 test('sfxVolume：每段的音效音量（主音效＋附加音效），疊在預設上；超出範圍 ✖', () => {
-  const res = run([{ id: 's01', scene: 'side-panel', from: '#2', to: '#5e', sfxVolume: -6, slots: { title: '標題', items: ['一', '二', '三'] } }]);
+  // 09 qa：主音效自己寫 impact、附加是答案的 ding（×0.8）
+  const res = run([{ id: 's01', scene: 'qa', from: '#2', to: '#5e', sfx: 'impact', sfxVolume: -6, slots: { q: '問', a: '答' } }]);
   assert.deepEqual(res.errors, []);
   const s = byId(res, 's01');
-  assert.equal(s.sfx.volume, +(L.sfx.swipe.volume * Math.pow(10, -6 / 20)).toFixed(3));
-  assert.ok(s.sfxExtra.length && s.sfxExtra.every((c) => c.volume < L.sfx.tick.volume));
+  assert.equal(s.sfx.volume, +(L.sfx.impact.volume * Math.pow(10, -6 / 20)).toFixed(3));
+  assert.ok(s.sfxExtra.length && s.sfxExtra.every((c) => c.volume < L.sfx.ding.volume * 0.8));
   const bad = run([{ id: 's01', scene: 'concept', from: '#2', to: '#3e', sfxVolume: 20, slots: { text: '一' } }]);
   assert.match(bad.errors.join('\n'), /sfxVolume 要是 −60～\+12 的 dB 數字/);
 });

@@ -89,7 +89,11 @@
      P.punch(sel, at, {scale, dur})  重拍：0.12s 放大到 scale（1.06）再 0.45s 回彈（不和 spot／cam 用在同一元素）
      P.dim(sel, at, {to, dur})       退焦：亮度到 to（0.6），0.4s sine.inOut；{to: 1} 回來（記住目前亮度）
      P.marker(sel, at, {dur})        螢光筆：字後 40% 高的主色帶由左掃過（自動插 .sc-mk）
-     P.strike(sel, at, {dim, dur})   劃掉：一條線由左劃過文字（自動插 .sc-strike，0.35s）不擦回；劃完文字壓暗到 dim（0.5；false＝不壓暗）
+     P.strike(sel, at, {dim, dur, wave})  劃掉：一條線由左劃過文字（自動插 .sc-strike，0.35s）不擦回；劃完文字壓暗到 dim（0.5；false＝不壓暗）。
+                                     wave: true＝手寫波浪線（0.45s）：劃掉人的建議、舊習慣用波浪；數字、價格用直線
+     P.stamp(sel, at, {rot, from, dur, on, dim})  蓋章：sel＝寫好的印章元素（class="sc-stamp"，2–4 字），從 from（1.5）倍、多轉 12° 砸到 rot（−8°），
+                                     0.22s power4.in，落地壓 0.96 再回 1；on＝被蓋的元素，落地那一刻退焦到 dim（0.55）。印章和被蓋的元素是兄弟（不要放在它裡面，
+                                     不然跟著退焦）；自動加 data-layout-allow-overlap（印章本來就疊在東西上）
      P.sheen(sel, at, {dur})         光澤：一道斜光 0.7s 掃過（自動插 .sc-sheen；元素要 overflow:hidden）
      P.ripple(sel, at, {rings, from, to, dur})  漣漪：從元素中心擴散 rings（2）圈，大小 from（0.9）→to（2.1）倍，0.9s
      P.comet(path, at, {dur, ease, r, keepDash})  彗星描線：描線＋前端發光頭（半徑 r＝9u）沿路徑走，到站 0.3s 淡掉；0.8s power2.inOut
@@ -105,7 +109,7 @@
      P.grow(sel, at, {from, dur, ease})  長出：卡片從區域 from（預設 'pip'，或 [x, y, w, h]）長成自己的大小，0.8s expo.out；卡片要固定寬高
      P.ambient(D)                    背景環境層：.sc-surface-fs 加兩顆光暈球與浮塵、整段慢拉 1.06→1。P.end() 自動呼叫；root 寫 data-ambient="off" 關掉
      P.sfx(name, ref, off)           音效拍點：回傳 P.at(ref, off) 的秒數，並登記 {name, ref, off, t}（P.sfxCues、window.SceneMotion.sfx[comp id]）；
-                                     ref 寫成字串字面值（例 const T1 = P.sfx('tick', '#38@兩支')），build 靜態解析出 <audio>（motion.md §3）
+                                     ref 寫成字串字面值（例 const T1 = P.sfx('success', '#38@兩支')），build 靜態解析出 <audio>（motion.md §3）
      P.prev()                        前一段是什麼：'speaker'｜'fullscreen'｜'pip'（data-prev → __cues.segs[id].prev；單獨開檔＝'speaker'）。
                                      custom 開場：const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow'（手寫 'grow'／'swap' 也可以）
      P.V2                            時間與曲線表：IN 0.5／SHELL 0.6／EMPH 0.2／OUT 0.3／MOVE 1.0／GROUP 0.12；CH 逐字間隔；EASE.in／emph／move／tx／out／idle
@@ -243,7 +247,7 @@
   // 具名區域的橫式預設 [x, y, w, h]（design-system.md §2）；直式由 009 的 canvas.mjs 注入 window.__regions 蓋過
   var REGIONS = { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972] };
   var CALLS = { n: 0 };
-  var ROLE = { idle: 'micro', flow: 'micro', ambient: 'micro', end: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent' };
+  var ROLE = { idle: 'micro', flow: 'micro', ambient: 'micro', end: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent', stamp: 'accent' };
   var registerType = function () {
     if (typeof gsap === 'undefined' || gsap.plugins.scType) return;
     gsap.registerPlugin({
@@ -662,14 +666,52 @@
       return P;
     };
     // 劃掉：一條線由左劃過文字（自動插 <i class="sc-strike">），不擦回；劃完把文字壓暗（o.dim，預設 0.5；false＝不壓暗）
+    //   wave: true＝波浪線（svg path，波長 0.55 em、振幅 0.09 em，照建立當下的字級與寬度畫），用 clip-path 由左揭開
     P.strike = function (sel, at, o) {
-      var dur = opt(o, 'dur', 0.35), dm = o && o.dim === false ? null : opt(o, 'dim', 0.5);
+      var wave = !!(o && o.wave);
+      var dur = opt(o, 'dur', wave ? 0.45 : 0.35), dm = o && o.dim === false ? null : opt(o, 'dim', 0.5);
       q(sel).forEach(function (el) {
         var s = el.querySelector(':scope > [data-sc-strike]');
-        if (!s) { s = mk(el, 'sc-strike'); s.setAttribute('data-sc-strike', ''); el.appendChild(s); relPos(el); }
-        mv([s], at, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, transformOrigin: '0% 50%' }, dur, 'power2.out', 0);
+        if (!s) {
+          s = mk(el, wave ? 'sc-strike sc-strike--wave' : 'sc-strike'); s.setAttribute('data-sc-strike', '');
+          if (wave) s.appendChild(wavePath(el));
+          el.appendChild(s); relPos(el);
+        }
+        if (wave) mv([s], at, { clipPath: 'inset(-60% 100% -60% 0%)' }, { clipPath: 'inset(-60% 0% -60% 0%)' }, dur, 'power1.inOut', 0);
+        else mv([s], at, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, transformOrigin: '0% 50%' }, dur, 'power2.out', 0);
         if (dm != null) P.dim([el], at + dur, { to: dm });
       });
+      return P;
+    };
+    // 波浪線：寬＝文字寬＋8、高＝0.36 em；整數個波長，path 用 viewBox 座標（preserveAspectRatio none，字型晚到時只會微微拉伸）
+    var wavePath = function (el) {
+      var ns = 'http://www.w3.org/2000/svg', doc = el.ownerDocument;
+      var fs = parseFloat(getComputedStyle(el).fontSize) || 48, w = (el.offsetWidth || fs * 4) + 8, h = fs * 0.36;
+      var n = Math.max(2, Math.round(w / (fs * 0.55))), lam = w / n, a = fs * 0.09, sw = Math.max(3, fs * 0.075), y = h / 2;
+      var d = 'M' + r2(sw / 2) + ' ' + r2(y);
+      for (var k = 0; k < n; k++) {
+        var x0 = k * lam;
+        d += ' Q' + r2(x0 + lam / 4) + ' ' + r2(y - a * 2) + ' ' + r2(x0 + lam / 2) + ' ' + r2(y) + ' T' + r2(Math.min(w - sw / 2, x0 + lam)) + ' ' + r2(y);
+      }
+      var svg = doc.createElementNS(ns, 'svg');
+      svg.setAttribute('viewBox', '0 0 ' + r2(w) + ' ' + r2(h)); svg.setAttribute('preserveAspectRatio', 'none');
+      var path = doc.createElementNS(ns, 'path');
+      path.setAttribute('d', d); path.setAttribute('fill', 'none'); path.setAttribute('stroke-width', String(r2(sw)));
+      path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+      return svg;
+    };
+    // 蓋章：印章元素（.sc-stamp）從 from 倍、多轉 12° 砸下到 rot；落地 0.06s 壓到 0.96、0.12s 回 1；o.on＝被蓋的元素同時退焦
+    P.stamp = function (sel, at, o) {
+      var rot = opt(o, 'rot', -8), from = opt(o, 'from', 1.5), dur = opt(o, 'dur', 0.22), land = at + dur;
+      q(sel).forEach(function (el) {
+        el.setAttribute('data-layout-allow-overlap', '');
+        mv([el], at, { opacity: 0 }, { opacity: 1 }, 0.08, 'none', 0);
+        mv([el], at, { scale: from, rotation: rot + 12 }, { scale: 1, rotation: rot }, dur, 'power4.in', 0);
+        mv([el], land, { scale: 1 }, { scale: 0.96 }, 0.06, 'power2.out', 0);
+        mv([el], land + 0.06, { scale: 0.96 }, { scale: 1 }, 0.12, 'power2.out', 0);
+      });
+      if (o && o.on) P.dim(o.on, land, { to: opt(o, 'dim', 0.55) });
       return P;
     };
     // 重拍：0.12s 放大再 0.45s 回彈（不和 spot／cam 用在同一元素）
@@ -873,7 +915,7 @@
     };
     // 音效拍點：宣告這一拍的音效並回傳秒數（＝P.at(ref, off)）；ref 寫成字串字面值，build 靜態解析出 <audio>（motion.md §3）
     P.sfx = function (name, ref, off) {
-      if (typeof name !== 'string' || !/^[a-z0-9-]+$/.test(name)) throw new Error("P.sfx 第一個參數是音效名（shared/sfx 的檔名、不含 .wav），例如 P.sfx('tick', '#38@兩支')；現在是 " + String(name));
+      if (typeof name !== 'string' || !/^[a-z0-9-]+$/.test(name)) throw new Error("P.sfx 第一個參數是音效名（shared/sfx 的檔名、不含 .wav），例如 P.sfx('success', '#38@兩支')；現在是 " + String(name));
       var t = P.at(ref, off);
       sfxList.push({ name: name, ref: ref, off: off == null ? 0 : off, t: t });
       return t;

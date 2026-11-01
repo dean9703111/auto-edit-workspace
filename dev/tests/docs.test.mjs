@@ -51,6 +51,10 @@ const STOPS = [
   { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」' },
   { n: '⑥', name: '背景預覽', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」' },
 ];
+// 停點 ③ 的改版變體（014；停點仍是六個，stop-points.md §2.1 最後一列）
+const STOP_VARIANTS = [
+  { n: '③ 改版', skill: 'auto-edit-review', line: '⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/版本/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍' },
+];
 
 // ---------- 小工具 ----------
 const stripFences = (text) => text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, (m) => m.replace(/[^\n]/g, ''));
@@ -166,10 +170,10 @@ test('T6 停點：AGENTS.md「停點總表」恰好 6 列、①–⑥', () => {
   check(JSON.stringify(rows) === JSON.stringify(want), `停點總表第一張表的第一欄是 ${JSON.stringify(rows)}，要是 ${JSON.stringify(want)} → 照 stop-points.md §1，只有六列`);
 });
 
-test('T7 停點：六行最後一行原文都在 AGENTS.md 與對應的 SKILL.md', () => {
+test('T7 停點：六行（＋③ 改版）最後一行原文都在 AGENTS.md 與對應的 SKILL.md', () => {
   const agents = read('AGENTS.md');
   const bad = [];
-  for (const s of STOPS) {
+  for (const s of [...STOPS, ...STOP_VARIANTS]) {
     if (!agents.includes(s.line)) bad.push(`AGENTS.md 少了停點 ${s.n} 的原文`);
     if (exists(skillMd(s.skill)) && !read(skillMd(s.skill)).includes(s.line)) bad.push(`${skillMd(s.skill)} 少了停點 ${s.n} 的原文`);
   }
@@ -177,7 +181,7 @@ test('T7 停點：六行最後一行原文都在 AGENTS.md 與對應的 SKILL.md
 });
 
 test('T8 停點：所有「⏸ 停點」都是六行之一', () => {
-  const allowed = new Set(STOPS.map((s) => s.line));
+  const allowed = new Set([...STOPS, ...STOP_VARIANTS].map((s) => s.line));
   const bad = [];
   for (const f of have(['AGENTS.md', U, R, ...SKILL_FILES])) {
     lines(f).forEach((l, i) => {
@@ -389,7 +393,7 @@ test('T24 文件引用的工具原文和程式一字不差（第 2 輪對齊）'
     [skillMd('auto-edit-motion'), '沒有動畫分鏡：'],
     [skillMd('auto-edit-motion'), '分鏡表表頭不對'],
     [skillMd('auto-edit-motion'), '分鏡用了「'],
-    [U, '：音效名與 ref 要寫成字串字面值、off 寫數字（例 P.sfx(\'tick\', \'#38@兩支\')、P.sfx(\'ding\', \'#41\', 0.2)；音效名只有小寫英數字與 -），build 才排得出音效 → 不要用變數或 + 組字串'],
+    [U, '：音效名與 ref 要寫成字串字面值、off 寫數字（例 P.sfx(\'success\', \'#38@兩支\')、P.sfx(\'ding\', \'#41\', 0.2)；音效名只有小寫英數字與 -），build 才排得出音效 → 不要用變數或 + 組字串'],
     [U, ' 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/'],
     [U, '｜主題：'],
     [skillMd('auto-edit-style'), '暗色主題標題列的白字對比只有'],

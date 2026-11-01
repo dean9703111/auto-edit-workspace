@@ -22,12 +22,11 @@
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
   3. 綁句：<script> 開頭 W1–W3 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
-  只有 2 條：刪第 3 列（#xwarn-r3）、第 3 張示意（#xwarn-p3）、script 開頭的「, W3 = P.at(…)」與「P.sfx('tick', '#54@…');」、「第 3 條」那 6 行，
+  只有 2 條：刪第 3 列（#xwarn-r3）、第 3 張示意（#xwarn-p3）、script 開頭的「, W3 = P.at(…)」、「第 3 條」那 6 行，
   再把收尾 const ALL 裡的 W3 改 W2、第 2 條 P.idle 的 until: W3 − 0.1 改 ALL − 0.1、收尾 spot 裡的「, #xwarn-r3」拿掉；清單會自己縮，右邊示意區大小不變。
 
   【綁句欄位】
   W1 = P.at('#52@金鑰')、W2 = P.at('#53@覆蓋')、W3 = P.at('#54@再看')：講到那一條關鍵詞的時刻，那一條彈出、右邊換成那一張示意，0.6 秒後聚焦。
-  每一條一顆 tick（下一行 P.sfx，句號和 W 一樣）。
   關鍵詞在句中間或句尾時一定用 @詞，不要綁句首（綁句首，框會比講到早亮）；那一條剛好是句子開頭才寫 P.at('#52')。
   選用：有「這幾點都要注意」那一句時，收尾的 const ALL = W3 + 2.0 改成 const ALL = P.at('#55')（講到那句全部亮回）。
   「@詞」要寫成字串字面值（P.at('#53@覆蓋')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#53@覆蓋', 0.3)。
@@ -99,7 +98,6 @@
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const W1 = P.at('#52@金鑰'), W2 = P.at('#53@覆蓋'), W3 = P.at('#54@再看');   // 講到第 1–3 條關鍵詞的時刻
-    P.sfx('tick', '#52@金鑰'); P.sfx('tick', '#53@覆蓋'); P.sfx('tick', '#54@再看');   // 每一條一顆音效（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮

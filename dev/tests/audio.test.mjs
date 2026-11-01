@@ -173,7 +173,7 @@ test('sfxBudget：一分鐘 3 顆主音效 ⚠，tick 不算', () => {
   ];
   const b = A.sfxBudget(cues, CONF, { outDur: 120 });
   assert.deepEqual(b.dense, [{ from: 0, to: 60, n: 3, ids: ['s1', 's2', 's3'] }]);
-  assert.equal(b.warnings[0], '⚠ 音效密度：1 個一分鐘超過 2 顆主音效（0:00–1:00 3 顆；附加音效 tick、click 不算）→ 每分鐘留最重要的 2 顆（chapter、thunder、shine、sparkle、alert、success 先留，pop、swipe 先拿掉：那段寫 "sfx": null）');
+  assert.equal(b.warnings[0], '⚠ 音效密度：1 個一分鐘超過 2 顆主音效（0:00–1:00 3 顆；附加音效 tick、click 不算）→ 每分鐘留最重要的 2 顆（chapter、thunder、shine、sparkle、alert、success 先留，ding、impact 先拿掉：那段寫 "sfx": null）');
 });
 
 test('sfxBudget＋報告：chapter 調大 2 dB → 比人聲只小 1 dB，⚠ 音效比例', () => {

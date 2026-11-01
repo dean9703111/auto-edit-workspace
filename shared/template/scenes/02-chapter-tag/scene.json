@@ -21,7 +21,7 @@
     "in": { "label": "進場", "default": "0" }
   },
   "sfx": {
-    "main": { "sound": "swipe", "at": "in" },
+    "main": null,
     "extra": []
   },
   "lists": {},
