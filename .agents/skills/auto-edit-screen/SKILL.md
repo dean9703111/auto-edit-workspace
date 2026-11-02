@@ -10,7 +10,7 @@ version: 0.1.0
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
-| `素材/螢幕錄影/`、`素材/圖片/`，或 `--check` 印的「只有聲音」區間 | `media.mjs scan`、`media.mjs frame --grid` | 分鏡表 media 列草稿（主代理寫進 storyboard.md） | 每段口播對到同一個操作；「只有聲音」的區間全部蓋住 | 沒有（併進 ③） |
+| `assets/screen/`、`assets/images/`，或 `--check` 印的「只有聲音」區間 | `media.mjs scan`、`media.mjs frame --grid` | 分鏡表 media 列草稿（主代理寫進 storyboard.md） | 每段口播對到同一個操作；「只有聲音」的區間全部蓋住 | 沒有（併進 ③） |
 
 做法的唯一定義：USAGE.md 第 5 節；節奏與標註規則：style.md「螢幕錄影與圖片」。
 
@@ -45,7 +45,7 @@ node shared/template/tools/media.mjs scan --project projects/<專案>
 **3. 讀座標**
 
 ```
-node shared/template/tools/media.mjs frame --project projects/<專案> --src "素材/螢幕錄影/<檔名>" --at <秒> --grid
+node shared/template/tools/media.mjs frame --project projects/<專案> --src "assets/screen/<檔名>" --at <秒> --grid
 ```
 
 完成判準：每個運鏡 `moves`、紅框 `marks`（含跟捲動的 `path`）、說明卡 `callouts`、聚光燈 `spot`、放大鏡 `lens` 都有素材原尺寸的 `[x, y, w, h]`，箭頭 `arrows` 有 `[x, y]`（目標靠箭尾那一側的邊，USAGE.md 5.4）。
@@ -83,7 +83,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 
 | 症狀（工具原文） | 做法 | 第二次還失敗 |
 |---|---|---|
-| `src：找不到 素材/螢幕錄影/… → 檔名要和專案的 素材/ 資料夾裡一模一樣（現有：…）` | 照括號裡的檔名改 | 停下來回報：指令、錯誤原文、已經試過什麼 |
+| `src：找不到 assets/screen/… → 檔名要和專案的 assets/ 資料夾裡一模一樣（現有：…）` | 照括號裡的檔名改 | 停下來回報：指令、錯誤原文、已經試過什麼 |
 | `素材 … 長 Ns；從第 Ns 起播 Ns 要用到第 Ns` | `in` 往前、`to` 提早或 `speed` 改小，或拆兩段 | 停下來回報 |
 | `… 超出素材範圍 W×H` | 重跑步驟 3 讀座標 | 停下來回報 |
 | `只有聲音的區間 …–… 有 Ns 是黑畫面` | 把前一段的 `to` 延到下一段的 `from`（0 秒相接），或加一段 media | 停下來回報缺素材 |
@@ -101,7 +101,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 ```
 | 句號 | 素材檔名 | in（sheet 第幾格） | speed | 運鏡／紅框／標註／放大鏡座標 | 理由 |
 |---|---|---|---|---|---|
-| #20–#24e | 素材/螢幕錄影/操作示範.mp4 | 12.5（sheet-01 #7） | 1 | moves #20+0.5 [0,120,640,360]；callouts #21「設定」[40,200,180,60]；clicks #21@設定 | 口播「打開設定頁」＝sheet #7–#10 |
+| #20–#24e | assets/screen/操作示範.mp4 | 12.5（sheet-01 #7） | 1 | moves #20+0.5 [0,120,640,360]；callouts #21「設定」[40,200,180,60]；clicks #21@設定 | 口播「打開設定頁」＝sheet #7–#10 |
 只有聲音的區間：全部蓋住（或：還差 1:10.00–1:12.00）
 我沒有改的東西：plan.json、storyboard.md、rough.srt、shared/
 ```

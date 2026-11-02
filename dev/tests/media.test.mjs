@@ -20,8 +20,8 @@ const build = (...args) => node(BUILD, args);
 const checkJson = () => { const r = build('--check', '--json'); return { r, j: JSON.parse(r.stdout) }; };
 const writePlan = (scenes, extra = {}) => fs.writeFileSync(path.join(out, 'plan.json'), JSON.stringify({ version: 1, look: false, speakerBox: [100, 20, 220, 170], ...extra, scenes }, null, 2));
 const read = (f) => fs.readFileSync(path.join(out, f), 'utf8');
-const REC = '素材/螢幕錄影/操作示範.mp4';
-const IMG = '素材/圖片/架構圖.png';
+const REC = 'assets/screen/操作示範.mp4';
+const IMG = 'assets/images/架構圖.png';
 
 before(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-media-'));
@@ -30,13 +30,13 @@ before(() => {
   fs.symlinkSync(TEMPLATE, tpl, 'dir');
   for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   proj = path.join(root, 'projects', 'p1');
-  for (const d of ['真人錄影', '聲音', '螢幕錄影', '圖片']) fs.mkdirSync(path.join(proj, '素材', d), { recursive: true });
+  for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(proj, 'assets', d), { recursive: true });
   out = path.join(proj, 'work', 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
-  const cam = (name, sec, src) => ff(['-f', 'lavfi', '-i', `${src}=size=320x180:rate=30`, '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', String(sec), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, '素材', '真人錄影', name)]);
+  const cam = (name, sec, src) => ff(['-f', 'lavfi', '-i', `${src}=size=320x180:rate=30`, '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', String(sec), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, 'assets', 'camera', name)]);
   cam('01-開場.mp4', 8, 'testsrc');
   cam('03-結尾.mp4', 6, 'smptebars');
-  ff(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=44100', '-t', '4', '-c:a', 'aac', path.join(proj, '素材', '聲音', '02-旁白.m4a')]);
+  ff(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=44100', '-t', '4', '-c:a', 'aac', path.join(proj, 'assets', 'voice', '02-旁白.m4a')]);
   // 螢幕錄影：640×400、25fps、關鍵幀稀疏（build 要轉成 30fps、每秒一個關鍵幀），有聲音
   ff(['-f', 'lavfi', '-i', 'testsrc=size=640x400:rate=25', '-f', 'lavfi', '-i', 'sine=frequency=880:sample_rate=48000', '-t', '10', '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '250', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, ...REC.split('/'))]);
   ff(['-f', 'lavfi', '-i', 'color=c=0x3B82F6:s=800x500', '-frames:v', '1', path.join(proj, ...IMG.split('/'))]);
@@ -60,11 +60,11 @@ test('只有聲音的區間：blackdetect 抓到 8–12；沒被蓋住超過 1 �
 test('media 段欄位檢查：src、in＋段長、座標範圍、紅框同時 ≤ 2、放大鏡長度、和其他段的層級', () => {
   const m = (o) => ({ id: 'm01', type: 'media', src: REC, from: 7, to: 13, ...o });
   writePlan([m({ src: 'raw/a.mp4' })]);
-  assert.match(checkJson().j.errors.join('\n'), /\[m01 media\] src 要寫專案資料夾裡 素材\/螢幕錄影\/ 或 素材\/圖片\/ 底下的檔案/);
-  writePlan([m({ src: '素材/螢幕錄影/沒有.mp4' })]);
-  assert.match(checkJson().j.errors.join('\n'), /src：找不到 素材\/螢幕錄影\/沒有\.mp4 → .*現有：素材\/螢幕錄影\/操作示範\.mp4/);
+  assert.match(checkJson().j.errors.join('\n'), /\[m01 media\] src 要寫專案資料夾裡 assets\/screen\/ 或 assets\/images\/ 底下的檔案/);
+  writePlan([m({ src: 'assets/screen/沒有.mp4' })]);
+  assert.match(checkJson().j.errors.join('\n'), /src：找不到 assets\/screen\/沒有\.mp4 → .*現有：assets\/screen\/操作示範\.mp4/);
   writePlan([m({ in: 6 })]);
-  assert.match(checkJson().j.errors.join('\n'), /素材 素材\/螢幕錄影\/操作示範\.mp4 長 10s；從第 6s 起播 6s 要用到第 12s → to 提早、in 改小，或 speed 改小/);
+  assert.match(checkJson().j.errors.join('\n'), /素材 assets\/screen\/操作示範\.mp4 長 10s；從第 6s 起播 6s 要用到第 12s → to 提早、in 改小，或 speed 改小/);
   writePlan([m({ marks: [{ at: '+0.5', box: [0, 0, 100, 100] }, { at: '+0.5', box: [200, 0, 100, 100] }, { at: '+1', box: [400, 0, 100, 100] }], lens: [{ at: '+2', until: '+2.5', box: [0, 0, 100, 50] }], moves: [{ at: '+1', to: [0, 0, 9999, 10] }], bogus: 1 })]);
   const e = checkJson().j.errors.join('\n');
   assert.match(e, /同時有 3 個紅框（最多 2 個）/);
@@ -111,7 +111,7 @@ test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關
   assert.match(html, /<audio id="sfx-m01" src="assets\/sfx\/impact\.wav"/);
   // 再 build 一次：素材沒變就不重新轉檔
   const again = build();
-  assert.doesNotMatch(again.stdout, /轉檔 素材/);
+  assert.doesNotMatch(again.stdout, /轉檔 assets/);
 });
 
 test('cut 穿過 media 段：錄影也跳過同一段（data-media-start 跳），圖片預設慢推；換掉素材後舊檔清掉', () => {
@@ -141,7 +141,7 @@ test('剪輯台的呼叫方式（--project 絕對路徑、cwd＝工作區根目�
   assert.equal(j.ok, true, j.errors.join('\n'));
   assert.doesNotMatch(j.errors.join('\n'), /要知道專案資料夾/);
   assert.equal(j.paths.project, 'projects/p1');
-  // 沒有 --project、四個路徑旗標都給：從 --out 往上找到有 素材/ 的專案資料夾
+  // 沒有 --project、四個路徑旗標都給：從 --out 往上找到有 assets/ 的專案資料夾
   const w = path.join(proj, 'work');
   const r2 = spawnSync(process.execPath, [BUILD, '--template', tpl, '--plan', path.join(out, 'plan.json'), '--srt', path.join(w, 'rough.srt'), '--video', path.join(w, 'rough.mp4'), '--out', out, '--check', '--json'], { encoding: 'utf8', cwd: os.tmpdir() });
   const j2 = JSON.parse(r2.stdout);
@@ -562,7 +562,7 @@ test('直式：16:9 與 9:16 錄影放進上半資訊面板（y 240–900）；�
   const { canvasOf } = await import(new URL(`file://${path.join(TOOLS, 'lib', 'canvas.mjs')}`).href);
   const { timeMap } = await import(new URL(`file://${path.join(TOOLS, 'lib', 'edit.mjs')}`).href);
   const C = canvasOf('portrait');
-  const rec = (name, size) => ff(['-f', 'lavfi', '-i', `testsrc2=size=${size}:rate=30`, '-t', '16', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', path.join(proj, '素材', '螢幕錄影', name)]);
+  const rec = (name, size) => ff(['-f', 'lavfi', '-i', `testsrc2=size=${size}:rate=30`, '-t', '16', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', path.join(proj, 'assets', 'screen', name)]);
   rec('橫錄.mp4', '1280x720'); rec('直錄.mp4', '360x640');
   // 幾何：橫式不變；直式 16:9 → 1080×608 在 y 266（上半可見區 240–900 置中）；9:16 → 371×660 置中；沒有講者面板 → 可見區 y 240–1260
   assert.equal(mediaFrame(null).format, 'landscape');
@@ -594,7 +594,7 @@ test('直式：16:9 與 9:16 錄影放進上半資訊面板（y 240–900）；�
     return { it, r, errs, warns };
   };
   // 16:9 錄影＋紅框、說明卡、箭頭、STEP：全部在上半安全區（y 260–880），不壓講者面板
-  const a = run({ id: 'v01', type: 'media', src: '素材/螢幕錄影/橫錄.mp4',
+  const a = run({ id: 'v01', type: 'media', src: 'assets/screen/橫錄.mp4',
     steps: [{ at: '+0.2', text: '打開設定' }],
     marks: [{ at: '+0.5', until: '+2', box: [100, 120, 300, 120] }],
     callouts: [{ at: '+2', until: '+5', box: [800, 300, 240, 120], text: '按這裡' }],
@@ -618,13 +618,13 @@ test('直式：16:9 與 9:16 錄影放進上半資訊面板（y 240–900）；�
   assert.match(html.html, /class="msteps" style="left:60px;top:260px"/);
   assert.ok(html.tl.some((x) => /\{ x: 1080 \}, \{ x: 0/.test(x)) && html.tl.some((x) => /x: -1080/.test(x)));
   // 9:16 錄影、沒有講者面板（pip: false）：可見區伸到字幕區上方（y 1260），右側平台按鈕區要避開
-  const b = run({ id: 'v02', type: 'media', src: '素材/螢幕錄影/直錄.mp4', pip: false,
+  const b = run({ id: 'v02', type: 'media', src: 'assets/screen/直錄.mp4', pip: false,
     callouts: [{ at: '+0.5', until: '+3', box: [250, 500, 100, 60], text: '這一格', side: 'right' }] }, { panel: false });
   assert.deepEqual([b.it.media.geo.top, b.it.media.geo.height], [240, 1020]);
   assert.equal(b.r.json.view, undefined, '直的錄影不加 view');
   assert.equal(b.errs.length, 1);
   assert.match(b.errs[0], /callouts\[0\] 的卡片放 right 會.*壓到右側平台按鈕區（x 940–1080、y 840–1440）.*→ 改 "side": "(left|top|bottom)"（放得下）/);
   // 紅框推到講者面板上（cover 的下緣）→ ⚠ 壓到下半的講者面板
-  const c = run({ id: 'v03', type: 'media', src: '素材/螢幕錄影/橫錄.mp4', fit: 'cover', marks: [{ at: '+0.5', until: '+2', box: [400, 700, 200, 20] }] });
+  const c = run({ id: 'v03', type: 'media', src: 'assets/screen/橫錄.mp4', fit: 'cover', marks: [{ at: '+0.5', until: '+2', box: [400, 700, 200, 20] }] });
   assert.ok(c.warns.some((x) => /marks\[0\] 壓到下半的講者面板（畫面 y > 900）→/.test(x)), c.warns.join('\n'));
 });

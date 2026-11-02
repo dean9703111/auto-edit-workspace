@@ -3,13 +3,13 @@
  * 段落版本：每一段（plan.json 的 id）留 v1、v2…，可以看預覽、並排比較、退回（停點 ④ 之後的回饋輪與改版用）
  *
  *   node shared/template/tools/versions.mjs save --project projects/<專案> --seg s12[,s08]
- *       把這段現在的樣子存成下一版 work/版本/<段>/v<N>/：段落.json（plan.json 那一段）、情境動畫的 x-*.html 與用到的
+ *       把這段現在的樣子存成下一版 work/versions/<段>/v<N>/：段落.json（plan.json 那一段）、情境動畫的 x-*.html 與用到的
  *       illus-local/*.svg、分鏡.md（storyboard.md 那一節）、預覽.mp4（build --test＋render 這一段，6 秒的段約 20 秒）、
  *       預覽.jpg（預覽每 0.5 秒一格，最多 24 格）。
  *       和某一版一模一樣就不另存（印「沒變」，缺預覽才補）；有已確認的提案（versions.mjs accept 過）就存進那一版。
- *       上一個使用中的版本也有預覽時，另出 work/版本/<段>/比較-v<舊>-v<新>.mp4（左舊右新，上方標版本號，聲音用新版）。
+ *       上一個使用中的版本也有預覽時，另出 work/versions/<段>/比較-v<舊>-v<新>.mp4（左舊右新，上方標版本號，聲音用新版）。
  *   node shared/template/tools/versions.mjs new --project projects/<專案> --seg s12[,s08] [--note "使用者原話"]
- *       改版第一步：先 save 現在的樣子，再開提案 work/版本/<段>/v<N+1>/分鏡.md（抄 storyboard.md 那一節，等 AI 改），
+ *       改版第一步：先 save 現在的樣子，再開提案 work/versions/<段>/v<N+1>/分鏡.md（抄 storyboard.md 那一節，等 AI 改），
  *       印出停點 ③ 那一行。已經有還沒做完的提案就沿用它。
  *   node shared/template/tools/versions.mjs accept --project projects/<專案> --seg s12[,s08]
  *       使用者說「可以」之後：把提案 分鏡.md 的「## 分鏡」整節寫回 work/storyboard.md 那一段（audit 照它對拍），印出下一步。
@@ -19,7 +19,7 @@
  *   node shared/template/tools/versions.mjs list --project projects/<專案> [--seg s12] [--json]
  *       列出每段的版本、哪一版是目前的（和現在的 plan.json、x 檔一致）、比較影片。
  *
- * --project：同 build.mjs。版本只能用這支工具建、退回，不要手動複製或改 work/版本/ 裡的檔（分鏡.md 的提案除外）。
+ * --project：同 build.mjs。版本只能用這支工具建、退回，不要手動複製或改 work/versions/ 裡的檔（分鏡.md 的提案除外）。
  * 測試用：--template <shared/template 資料夾>、--no-preview（只存檔案，不 build、不 render）
  */
 import fs from 'node:fs';
@@ -33,7 +33,7 @@ import { canvas, text, textWidth } from './lib/raster.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const npxShell = process.platform === 'win32';
-export const DIR = '版本';
+export const DIR = 'versions';
 const META = '.meta.json';
 const STATE = '.state.json';
 export const PREVIEW = { tail: 0.5, fps: 2, maxCells: 24, bar: 64, labelScale: 6 };

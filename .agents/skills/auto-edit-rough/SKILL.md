@@ -10,7 +10,7 @@ version: 0.1.0
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
-| `素材/真人錄影/`、`素材/聲音/` | 步驟 1–5 | `work/main.mp4`、`work/cuts.md`（多支主軌另有順序表） | NG 表表頭四欄、時間碼是 `work/main.mp4` 的 `起–迄` | ① 剪輯清單 |
+| `assets/camera/`、`assets/voice/` | 步驟 1–5 | `work/main.mp4`、`work/cuts.md`（多支主軌另有順序表） | NG 表表頭四欄、時間碼是 `work/main.mp4` 的 `起–迄` | ① 剪輯清單 |
 | ① 通過 | 步驟 6–8 | `work/rough.mp4`、`work/rough.srt`、`work/cutpoints.json` | 見各步「完成判準」 | — |
 
 指令都在工作區根目錄執行。`<專案>` 換成資料夾名稱；`<主軌>`＝`projects/<專案>/work/main.mp4`（步驟 1 產生）。
@@ -33,13 +33,13 @@ node shared/template/tools/media.mjs main --project projects/<專案>
 
 一律先跑這一行，只有一支真人錄影也要跑：它把原片轉成固定 fps 的 `work/main.mp4`（auto-editor 直接剪手機原檔，`--cut-out` 之後的畫面會全黑），時間和原片一樣；之後逐字稿、ng-snap、auto-editor 都對 `work/main.mp4` 做。
 
-| `素材/真人錄影/` | `素材/聲音/` | 做法 |
+| `assets/camera/` | `assets/voice/` | 做法 |
 |---|---|---|
 | 1 支 | 空 | 跑上面那一行就好 |
 | 其他情況 | — | 先照檔名排序接（上面那一行），把順序寫進 cuts.md 的「主軌順序」表，併進停點 ① 問；使用者改了順序就照「停點」表重接 |
 
 完成判準：`work/main.mp4`、`work/main.json` 存在；只有一支時印「只有一支真人錄影（…）：轉成固定 fps 的 work/main.mp4…」。
-常見錯誤：拿 `素材/` 的原檔直接給 auto-editor → 不要，一律用 `work/main.mp4`（ng-snap 印的三行已經是它；忘了跑 main，ng-snap 會自己先轉）；順序參數有逗號沒加引號（PowerShell）→ 加雙引號 `--order "檔名1,檔名2"`。
+常見錯誤：拿 `assets/` 的原檔直接給 auto-editor → 不要，一律用 `work/main.mp4`（ng-snap 印的三行已經是它；忘了跑 main，ng-snap 會自己先轉）；順序參數有逗號沒加引號（PowerShell）→ 加雙引號 `--order "檔名1,檔名2"`。
 
 **2. 轉逐字稿**
 
@@ -48,7 +48,7 @@ npx hyperframes transcribe "<主軌>" -d projects/<專案>/work --model small --
 ```
 
 完成判準：`work/` 裡有逐字稿 JSON，內容是中文句子。
-常見錯誤：變成英文 → 少了 `--model small --language zh`；`whisper-cli crashed (SIGABRT)` → 指令最前面加 `GGML_METAL_BF16_DISABLE=1`；檔案寫進 `素材/` → 少了 `-d projects/<專案>/work`。
+常見錯誤：變成英文 → 少了 `--model small --language zh`；`whisper-cli crashed (SIGABRT)` → 指令最前面加 `GGML_METAL_BF16_DISABLE=1`；檔案寫進 `assets/` → 少了 `-d projects/<專案>/work`。
 
 **3. 找 NG**（拿不準時讀 `references/ng-rules.md`）
 

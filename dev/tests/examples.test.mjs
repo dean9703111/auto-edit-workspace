@@ -330,7 +330,7 @@ function cueText(n, word, a, b, ref) {
   }
 }
 function makeProject(dir, gap = 1.0) {
-  for (const d of ['素材/真人錄影', '素材/聲音', '素材/螢幕錄影', '素材/圖片', 'work/hyperframes/compositions', '成片']) fs.mkdirSync(path.join(dir, d), { recursive: true });
+  for (const d of ['assets/camera', 'assets/voice', 'assets/screen', 'assets/images', 'work/hyperframes/compositions', 'output']) fs.mkdirSync(path.join(dir, d), { recursive: true });
   const srt = [], scenes = [], segs = [];
   let S = 1.0;
   for (const [k, [name]] of Object.entries(EXAMPLES).entries()) {

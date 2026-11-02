@@ -40,7 +40,7 @@ Windows 的解法都**未在 Windows 實測**，照做後一定要再驗證。
 | `check.ps1` 出現 `cannot be loaded` 或 `is not digitally signed`（已經帶 `-ExecutionPolicy Bypass`） | 公司用群組原則鎖住腳本權限，`Bypass` 沒有用。工作區是從網路下載的 zip 時，請使用者同意後執行 `Unblock-File -LiteralPath (Get-ChildItem -LiteralPath setup -File).FullName` 再試一次；還是擋就請 IT 協助，不要用其他方式繞過 |
 | PATH 只剩一部分、很多指令突然找不到（之前有人用 `setx PATH` 改過） | `setx` 超過 1024 字會直接截斷，截掉的部分救不回來。這份手冊一律用 `[Environment]::SetEnvironmentVariable`，不要用 `setx`。把 `[Environment]::GetEnvironmentVariable('Path','User')` 的結果給使用者看，請他對照或請 IT 補回 |
 | 轉逐字稿出現 `failed to open`、`failed to read audio` 或 `failed to initialize whisper context`，而 Windows 使用者名稱或工作區路徑有中文 | whisper-cli 用「非 Unicode 程式使用的語言」讀路徑，路徑裡有這個語言以外的字就開不了檔（模型和暫存音檔都在使用者資料夾裡）。請使用者到「設定 → 時間與語言 → 語言與地區 → 系統管理語言設定 → 變更系統地區設定」選「中文（繁體，台灣）」，重開機後再試（未實測） |
-| 工作區在 OneDrive 裡（路徑有 `OneDrive`，例如 `OneDrive\桌面`）：讀影片很慢、說檔案被占用，或 `projects/*/素材/` 裡的影片打不開 | OneDrive 會把檔案只留在雲端、同步時鎖檔。請使用者在工作區資料夾按右鍵選「一律保留在此裝置上」，等圖示變成實心綠勾；還是不行就把工作區搬到 OneDrive 以外（例如 `C:\work`），在 MiniMax Code 重新開那個資料夾 |
+| 工作區在 OneDrive 裡（路徑有 `OneDrive`，例如 `OneDrive\桌面`）：讀影片很慢、說檔案被占用，或 `projects/*/assets/` 裡的影片打不開 | OneDrive 會把檔案只留在雲端、同步時鎖檔。請使用者在工作區資料夾按右鍵選「一律保留在此裝置上」，等圖示變成實心綠勾；還是不行就把工作區搬到 OneDrive 以外（例如 `C:\work`），在 MiniMax Code 重新開那個資料夾 |
 | `check.ps1` 一跑就一堆紅字語法錯誤，或中文全是亂碼 | 檔案被存成沒有 BOM 的 UTF-8，Windows PowerShell 5.1 讀不懂中文。重新下載工作區取得原檔；急用時只看最後一行 `JSON:`，它只用英數字 |
 | `check.ps1` 中文變亂碼，但有跑完 | 只是主控台編碼不同。指令前面加 `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8;`，或直接看最後一行 `JSON:` |
 

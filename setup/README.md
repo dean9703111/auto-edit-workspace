@@ -28,7 +28,7 @@
 3. 開始前把這一輪要做的步驟一次列給使用者，問一次「可以開始嗎？」。同意後照做，不再逐項問。
 4. 檢測顯示已經有的，不重裝、不升級。
 5. 不用 sudo。要輸入電腦密碼的步驟（Mac 安裝 Homebrew）交給使用者在終端機執行，你等他說「好了」再驗證。Windows 的 winget 由你執行，執行前先提醒使用者等一下跳出視窗要按「是」。
-6. 不改 `projects/*/素材/`、`projects/*/講稿.md`、`shared/`，也不在工作區留下任何檔案（例外：S3 的 `node_modules/`、`package-lock.json`，S4 的 `.claude/skills/auto-edit-*`）。
+6. 不改 `projects/*/assets/`、`projects/*/講稿.md`、`shared/`，也不在工作區留下任何檔案（例外：S3 的 `node_modules/`、`package-lock.json`，S4 的 `.claude/skills/auto-edit-*`）。
 7. 只裝上面表格裡的東西。
 8. 同一步失敗兩次就停：印出 ❌、一句原因、下一步，再查 `troubleshooting.md`。不要自己改用別的安裝方式（pip、從原始碼編譯等）。這份手冊沒寫到的狀況，把錯誤訊息原文給使用者看，不要猜。
 9. 會跑很久的指令（Homebrew、`brew install ffmpeg`、winget）照你的工具規則用背景執行，跑完再驗證。
@@ -120,7 +120,7 @@ S1–S9 的指令都可以加 PATH 前綴（Mac：`export PATH="/opt/homebrew/bi
 
 **S8 列出專案素材的影片、錄音資訊**（只讀，不改檔）
 
-- Mac：`for f in projects/*/素材/真人錄影/* projects/*/素材/聲音/*; do [ -f "$f" ] || continue; echo "== $f"; ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate:format=duration -of default=nw=1 "$f"; done`
+- Mac：`for f in projects/*/assets/camera/* projects/*/assets/voice/*; do [ -f "$f" ] || continue; echo "== $f"; ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate:format=duration -of default=nw=1 "$f"; done`
 - Windows：`Get-ChildItem 'projects\*\素材\真人錄影','projects\*\素材\聲音' -File -ErrorAction SilentlyContinue | ForEach-Object { '== ' + $_.Name; ffprobe -v error -select_streams v:0 -show_entries 'stream=width,height,r_frame_rate:format=duration' -of default=nw=1 $_.FullName }`
 
 驗證：每支影片都有 `width`、`height`、`r_frame_rate`、`duration`。整理成「檔名｜長度｜解析度｜影格率」回報，例如 `test-raw.mp4｜1 分 47 秒｜1920×1080｜30 fps`（秒數取整數即可；`30/1` 是 30 fps，`30000/1001` 是 29.97 fps）。不是影片的檔案出錯可以忽略；只有聲音的檔案沒有 `width`、`height`，只回報長度。

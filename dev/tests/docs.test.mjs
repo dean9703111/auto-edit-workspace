@@ -53,7 +53,7 @@ const STOPS = [
 ];
 // 停點 ③ 的改版變體（014；停點仍是六個，stop-points.md §2.1 最後一列）
 const STOP_VARIANTS = [
-  { n: '③ 改版', skill: 'auto-edit-review', line: '⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/版本/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍' },
+  { n: '③ 改版', skill: 'auto-edit-review', line: '⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/versions/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍' },
 ];
 
 // ---------- 小工具 ----------

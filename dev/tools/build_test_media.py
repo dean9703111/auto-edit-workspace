@@ -1,9 +1,9 @@
 """產生 MiniMax 集的測試素材（彩排用，正式拍攝換成實拍畫面）。
 
 輸出（都在 video/minimax/素材/ 底下）：
-  workspace/projects/測試/素材/真人錄影/test-raw.mp4   macOS 語音合成的測試口播，刻意放 NG 重講、低音量自言自語、長停頓
+  workspace/projects/測試/assets/camera/test-raw.mp4   macOS 語音合成的測試口播，刻意放 NG 重講、低音量自言自語、長停頓
   workspace/projects/測試/場地照-測試.jpg   固定機位示意圖（講者剪影在右側）
-  workspace/projects/測試/講稿.md   從 projects/範例/講稿.md 複製（測試口播照這份念）
+  workspace/projects/測試/講稿.md   從 projects/example/講稿.md 複製（測試口播照這份念）
   （測試專案獨立一個資料夾，不跟範例專案混在一起；projects/ 底下除了範例都在 .gitignore 裡，不會被發布）
   驗收/答案卷.md                  每段的原始時間碼與「應保留／應剪掉」，用來驗收 AI 初剪
                                   （放在 workspace 外面，避免 AI 讀到答案）
@@ -36,9 +36,9 @@ if (_HERE.parent / "workspace" / "shared" / "template").is_dir():
 else:
     WORKSPACE = _HERE.parents[1]  # auto-edit-workspace
     ROOT = WORKSPACE.parent
-OUT_RAW = WORKSPACE / "projects" / "測試" / "素材" / "真人錄影"
+OUT_RAW = WORKSPACE / "projects" / "測試" / "assets" / "camera"
 OUT_REF = WORKSPACE / "projects" / "測試"
-SCRIPT_SRC = WORKSPACE / "projects" / "範例" / "講稿.md"
+SCRIPT_SRC = WORKSPACE / "projects" / "example" / "講稿.md"
 OUT_KEY = ROOT / "驗收" if WORKSPACE.name == "workspace" else ROOT / f"{WORKSPACE.name}-驗收"  # 答案放在工作區外面，AI 讀不到
 FONT = "/System/Library/Fonts/STHeiti Medium.ttc"
 VOICE = "Meijia"
@@ -282,8 +282,8 @@ def main():
         else:
             build_video(tmp, full_wav, total)
         write_answer_key(timeline, total)
-    for d in ("聲音", "螢幕錄影", "圖片"):
-        (OUT_REF / "素材" / d).mkdir(parents=True, exist_ok=True)
+    for d in ("voice", "screen", "images"):
+        (OUT_REF / "assets" / d).mkdir(parents=True, exist_ok=True)
     shutil.copyfile(SCRIPT_SRC, OUT_REF / "講稿.md")
     print(f"完成：{OUT_RAW / 'test-raw.mp4'}（{total:.1f} 秒）")
 

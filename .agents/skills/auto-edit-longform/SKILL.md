@@ -18,9 +18,9 @@ version: 0.1.0
 |---|---|
 | 提示詞沒指定專案，`projects/` 只有 1 個 | 用那一個 |
 | 沒指定，`projects/` 有 2 個以上 | 列出來問，回覆最後一行 `❓ 請回：專案名稱` |
-| `素材/真人錄影/`、`素材/聲音/` 都是空的 | 照 AGENTS.md「開新專案」第 2 點告訴使用者放什麼，最後一行 `→ 下一步：素材放好後說「剪乾淨」` |
+| `assets/camera/`、`assets/voice/` 都是空的 | 照 AGENTS.md「開新專案」第 2 點告訴使用者放什麼，最後一行 `→ 下一步：素材放好後說「剪乾淨」` |
 
-一次只處理一個專案，不讀寫其他專案的 `work/`、`成片/`（AGENTS.md「專案」）。
+一次只處理一個專案，不讀寫其他專案的 `work/`、`output/`（AGENTS.md「專案」）。
 
 ## 步驟
 
@@ -67,10 +67,10 @@ ffprobe -v error -show_entries format=duration -of csv=p=0 "<主軌>"
 | 沒有 `work/rough.mp4`，或沒有 `work/cutpoints.json` | `auto-edit-rough` |
 | 有 `work/rough.mp4`、`work/rough.srt`；停點 ③ 沒有「通過」 | `auto-edit-storyboard` |
 | ③ 通過；plan.json 有 `"type": "custom"` 的段、對應的 `compositions/x-*.html` 不存在或還是範例原文 | `auto-edit-motion`（每段一次；有子代理可以平行，選用） |
-| status 印「目前在：改版／…」（`work/版本/` 有沒做完的提案） | `auto-edit-review` 流程 D |
+| status 印「目前在：改版／…」（`work/versions/` 有沒做完的提案） | `auto-edit-review` 流程 D |
 | ③ 通過、情境動畫都做完；④ 沒有「通過」 | `auto-edit-review` |
-| ④ 通過；沒有 `成片/final.mp4` | `auto-edit-deliver` |
-| 有 `成片/final.mp4`，而且 `qc.mjs final` 0 個 ✖ | 完成 → 回報 |
+| ④ 通過；沒有 `output/final.mp4` | `auto-edit-deliver` |
+| 有 `output/final.mp4`，而且 `qc.mjs final` 0 個 ✖ | 完成 → 回報 |
 
 完成判準：交出去的 Skill＝表上第一個符合的那列。
 常見錯誤：status 印的和表不一樣 → 以 status 為準；兩者都和實際檔案不符 → 以產物為準（退路表第 1 列）。

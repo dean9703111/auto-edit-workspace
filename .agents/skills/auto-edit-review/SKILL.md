@@ -1,6 +1,6 @@
 ---
 name: auto-edit-review
-description: 分鏡表確認後的定稿與審查：build、audit、snapshot 抽查、開 Studio 給使用者看；使用者在 Studio 看完給修改時開回饋輪 rN（先備份 plan.json、記原話與分類、改到的段存版本）；要一段重新設計時先出分鏡提案（work/版本/<段>/v<N>/）給使用者確認再做；退回某一版；使用者說「打開剪輯台」「調好了」時開關剪輯台。當分鏡表剛確認完，或使用者說「s05 的金句卡往左移」「這張卡…」「s12 的動畫想更完善」「s12 重新設計」「s12 用 v1」「打開剪輯台」「調好了」時使用。還沒有確認分鏡表時不要用（改用 auto-edit-storyboard）；要輸出成片時不要用（改用 auto-edit-deliver）。
+description: 分鏡表確認後的定稿與審查：build、audit、snapshot 抽查、開 Studio 給使用者看；使用者在 Studio 看完給修改時開回饋輪 rN（先備份 plan.json、記原話與分類、改到的段存版本）；要一段重新設計時先出分鏡提案（work/versions/<段>/v<N>/）給使用者確認再做；退回某一版；使用者說「打開剪輯台」「調好了」時開關剪輯台。當分鏡表剛確認完，或使用者說「s05 的金句卡往左移」「這張卡…」「s12 的動畫想更完善」「s12 重新設計」「s12 用 v1」「打開剪輯台」「調好了」時使用。還沒有確認分鏡表時不要用（改用 auto-edit-storyboard）；要輸出成片時不要用（改用 auto-edit-deliver）。
 version: 0.1.0
 ---
 # 定稿、審查、回饋輪、剪輯台
@@ -11,8 +11,8 @@ version: 0.1.0
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
 | ③ 通過、情境動畫都做完 | 流程 A | snapshot 截圖、每段 PASS／FAIL 表、Studio 網址 | build 0 個 ✖、audit 0 個 ✖、每段 PASS | ④ Studio 預覽 |
-| ④ 的修改 | 流程 B | `work/回饋/r<N>.md`、`work/hyperframes/plan.json.bak-r<N>`、`work/版本/<段>/` | rN.md 四節齊全；改到的段有新版本 | ④ Studio 預覽 |
-| ④ 之後一段要重新設計（D）、退回舊版（E） | 流程 D、E | D：`work/版本/<段>/v<N>/分鏡.md` → 做好的 v<N>、`比較-v<舊>-v<N>.mp4`；E：那段換回舊版 | D：使用者確認過分鏡、`versions.mjs save` 存進 v<N>；E：build 0 個 ✖ | D：③ 分鏡表（<段> v<N>）→ ④；E：④ |
+| ④ 的修改 | 流程 B | `work/feedback/r<N>.md`、`work/hyperframes/plan.json.bak-r<N>`、`work/versions/<段>/` | rN.md 四節齊全；改到的段有新版本 | ④ Studio 預覽 |
+| ④ 之後一段要重新設計（D）、退回舊版（E） | 流程 D、E | D：`work/versions/<段>/v<N>/分鏡.md` → 做好的 v<N>、`比較-v<舊>-v<N>.mp4`；E：那段換回舊版 | D：使用者確認過分鏡、`versions.mjs save` 存進 v<N>；E：build 0 個 ✖ | D：③ 分鏡表（<段> v<N>）→ ④；E：④ |
 | 「打開剪輯台」 | 流程 C | 剪輯台網址 | `editor.mjs --status` 印出網址 | ⑤ 剪輯台 |
 
 審查門檻、量法、回報格式的唯一定義：`shared/template/REVIEW.md`（數字照 style.md「審查門檻」）。
@@ -74,8 +74,8 @@ Windows（PowerShell）：Copy-Item projects\<專案>\work\hyperframes\plan.json
 node shared/template/tools/versions.mjs save --project projects/<專案> --seg <改到的段，逗號隔開>
 ```
 
-B1 編號 N 用 status 印的「下一輪回饋編號」（工具沒有時：`work/回饋/` 裡 `r*.md` 的最大數字＋1，例：有 r1、r2 → r3）→ B2 重新讀 plan.json（剪輯台可能改過）→ B3 備份（cp 那兩行擇一，再跑 `versions.mjs save` 存改之前的樣子）→ B4 寫 `work/回饋/r<N>.md` 的「原話」「分類」→ B5 改 plan.json（「s05」直接找 id；「這張卡」才讀 Studio 選取，USAGE.md 2.6）→ B6 A1–A3 只看改到的段，再跑一次 `versions.mjs save`（存改之後的樣子＋比較影片）→ B7 寫 rN.md「改了哪幾段」「驗證」→ 停點 ④。
-完成判準：`plan.json.bak-r<N>` 存在；改到的段在 `work/版本/<段>/` 有改前、改後兩版；rN.md 四節（原話、分類、改了哪幾段、驗證）齊全。
+B1 編號 N 用 status 印的「下一輪回饋編號」（工具沒有時：`work/feedback/` 裡 `r*.md` 的最大數字＋1，例：有 r1、r2 → r3）→ B2 重新讀 plan.json（剪輯台可能改過）→ B3 備份（cp 那兩行擇一，再跑 `versions.mjs save` 存改之前的樣子）→ B4 寫 `work/feedback/r<N>.md` 的「原話」「分類」→ B5 改 plan.json（「s05」直接找 id；「這張卡」才讀 Studio 選取，USAGE.md 2.6）→ B6 A1–A3 只看改到的段，再跑一次 `versions.mjs save`（存改之後的樣子＋比較影片）→ B7 寫 rN.md「改了哪幾段」「驗證」→ 停點 ④。
+完成判準：`plan.json.bak-r<N>` 存在；改到的段在 `work/versions/<段>/` 有改前、改後兩版；rN.md 四節（原話、分類、改了哪幾段、驗證）齊全。
 常見錯誤：「規則」類的回饋（例：「以後金句都放左邊」）去改了 `shared/` → 只記在 rN.md 的「建議改規則」，不改 `shared/`；使用者沒說怎麼改、只說要更好 → 改走流程 D。
 
 **C. 剪輯台 → 停點 ⑤**（EDITOR.md 第一部分）
@@ -95,7 +95,7 @@ node shared/template/tools/editor.mjs --status --project projects/<專案>
 node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段> --note "「使用者原話」"
 ```
 
-工具先把現在的樣子存成 v<舊>（含 預覽.mp4），再開 `work/版本/<段>/v<N>/分鏡.md`。開回饋輪 r<N>（B1–B4），然後改那份分鏡.md：「這版要改什麼」寫 1–5 條（和 v<舊> 差在哪、為什麼，先看 v<舊>/預覽.mp4）；「## 分鏡」改那一節（情境換了照新情境的拍型重寫動畫分鏡，表頭照抄 BEATS.md、動態只用語彙表的名稱，`auto-edit-storyboard` 步驟 5）。停點紀錄加「③ 分鏡表（<段> v<N>）｜待回覆」，最後一行照抄工具印的停點行。
+工具先把現在的樣子存成 v<舊>（含 預覽.mp4），再開 `work/versions/<段>/v<N>/分鏡.md`。開回饋輪 r<N>（B1–B4），然後改那份分鏡.md：「這版要改什麼」寫 1–5 條（和 v<舊> 差在哪、為什麼，先看 v<舊>/預覽.mp4）；「## 分鏡」改那一節（情境換了照新情境的拍型重寫動畫分鏡，表頭照抄 BEATS.md、動態只用語彙表的名稱，`auto-edit-storyboard` 步驟 5）。停點紀錄加「③ 分鏡表（<段> v<N>）｜待回覆」，最後一行照抄工具印的停點行。
 完成判準：分鏡.md 沒有範本那一行「（寫 1–5 條」；回覆最後一行是改版的停點 ③。
 常見錯誤：直接改了 storyboard.md 或 x 檔 → 提案只寫在 v<N>/分鏡.md，使用者說「可以」後才由 D2 寫回。
 
@@ -132,7 +132,7 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 ## 停點
 
 ```
-⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/版本/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍
+⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/versions/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍
 ⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出成片」
 ⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」
 ```
@@ -191,7 +191,7 @@ audit：✖ 0、⚠ <N>（保留的理由一行）
 <停點 ④ 那一行原文，網址照工具印的>
 ```
 
-回饋輪：多兩行 `回饋 r<N>：改了 <段 id…>；驗證 build ✖ 0`、`版本：<段> v<舊> → v<新>｜比較：work/版本/<段>/比較-v<舊>-v<新>.mp4`，最後一行一樣是停點 ④。改版停點 ③：`改版 <段> v<N>：<這版要改什麼>｜現在的樣子：work/版本/<段>/v<舊>/預覽.mp4`，最後一行照抄工具印的停點 ③。
+回饋輪：多兩行 `回饋 r<N>：改了 <段 id…>；驗證 build ✖ 0`、`版本：<段> v<舊> → v<新>｜比較：work/versions/<段>/比較-v<舊>-v<新>.mp4`，最後一行一樣是停點 ④。改版停點 ③：`改版 <段> v<N>：<這版要改什麼>｜現在的樣子：work/versions/<段>/v<舊>/預覽.mp4`，最後一行照抄工具印的停點 ③。
 
 ## 什麼時候讀 references/
 

@@ -3,10 +3,10 @@
  * 檢查迴圈的一鍵檢查（作者維護用，剪片時不用）：
  *
  *   node dev/check-all.mjs                        單元測試 → 合成一個測試專案 → --check → build → audit → snapshot；
- *                                                 再對直式（projects/範例-直式 有 work/rough.mp4 與 plan.json 就用它，沒有就合成一個直式測試專案）跑一次 --check → build → audit → snapshot
+ *                                                 再對直式（projects/example-portrait 有 work/rough.mp4 與 plan.json 就用它，沒有就合成一個直式測試專案）跑一次 --check → build → audit → snapshot
  *   node dev/check-all.mjs --no-portrait          不跑直式那一輪
  *   node dev/check-all.mjs --render               再加：--test 片段 render（draft）並確認有影音軌（多 1–2 分鐘）
- *   node dev/check-all.mjs --real projects/範例   不合成測試專案，改對真實專案跑 --check → build → audit → snapshot（有 成片/final.mp4 就再跑 qc final）
+ *   node dev/check-all.mjs --real projects/example   不合成測試專案，改對真實專案跑 --check → build → audit → snapshot（有 output/final.mp4 就再跑 qc final）
  *   node dev/check-all.mjs --skip-tests           跳過 node --test（只看管線）
  *   node dev/check-all.mjs --keep                 保留合成的測試專案（印出路徑）
  *   node dev/check-all.mjs --out <檔>             報告寫到哪（預設 dev/loop/last-check.md）
@@ -150,10 +150,10 @@ step(`${tag}npx hyperframes snapshot --at（開頭、中段、結尾各一格）
 return built;
 }
 
-// ---------- 6.5 直式（009 T007-V01）：projects/範例-直式 有剪好的 work 就用它，沒有就合成直式測試專案 ----------
+// ---------- 6.5 直式（009 T007-V01）：projects/example-portrait 有剪好的 work 就用它，沒有就合成直式測試專案 ----------
 let portraitProject = null;
 if (!flag('--no-portrait') && !real) {
-  const ex = path.join(ROOT, 'projects', '範例-直式');
+  const ex = path.join(ROOT, 'projects', 'example-portrait');
   if (fs.existsSync(path.join(ex, 'work', 'rough.mp4')) && fs.existsSync(path.join(ex, 'work', 'hyperframes', 'plan.json'))) portraitProject = ex;
   else portraitProject = step('合成直式測試專案（360×640 直拍影片、20 句字幕、7 段 plan，含 16:9 錄影）', () => makeFixture({ portrait: true })).project;
   pipeline(portraitProject, '直式｜');
@@ -167,7 +167,7 @@ if (flag('--render')) {
     const hf = path.join(project, 'work', 'hyperframes');
     const t = node(path.join(TOOLS, 'build.mjs'), [...P, '--test', '8,3']);
     if (t.status !== 0) return { ok: false, detail: (t.stdout + t.stderr).slice(-300) };
-    const clip = path.join(project, '成片', '測試片段', 'check-clip.mp4');
+    const clip = path.join(project, 'output', 'test-clips', 'check-clip.mp4');
     fs.mkdirSync(path.dirname(clip), { recursive: true });
     const r = run('npx', ['hyperframes', 'render', '-c', 'compositions/test-clip.html', '--quality', 'draft', '-o', clip], { cwd: hf });
     if (!fs.existsSync(clip)) return { ok: false, detail: `render 沒有輸出：${(r.stderr || r.stdout).slice(-300)}` };
@@ -177,7 +177,7 @@ if (flag('--render')) {
 }
 
 // ---------- 8. qc final（真實專案有成片時） ----------
-if (real && fs.existsSync(path.join(project, '成片', 'final.mp4'))) {
+if (real && fs.existsSync(path.join(project, 'output', 'final.mp4'))) {
   step('qc.mjs final（0 ✖）', () => {
     const r = node(path.join(TOOLS, 'qc.mjs'), ['final', ...P]);
     const out = r.stdout + r.stderr;
@@ -203,7 +203,7 @@ function makeFixture({ portrait = false } = {}) {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), portrait ? 'auto-edit-check-v-' : 'auto-edit-check-'));
   const project = path.join(base, '專案');
   const work = path.join(project, 'work'), hf = path.join(work, 'hyperframes');
-  for (const d of ['素材/真人錄影', '素材/聲音', '素材/螢幕錄影', '素材/圖片', 'work/hyperframes/compositions', '成片']) fs.mkdirSync(path.join(project, d), { recursive: true });
+  for (const d of ['assets/camera', 'assets/voice', 'assets/screen', 'assets/images', 'work/hyperframes/compositions', 'output']) fs.mkdirSync(path.join(project, d), { recursive: true });
   // 20 句、每句 3 秒、句間 0.5 秒；第 5 句前留 3 秒給章節轉場
   const stamp = (t) => { const ms = Math.round(t * 1000); const p = (n, w = 2) => String(n).padStart(w, '0'); return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`; };
   const srt = []; let t = 1.0; const starts = [];
@@ -214,7 +214,7 @@ function makeFixture({ portrait = false } = {}) {
   const dur = Math.ceil(t + 1);
   let r = run('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `testsrc=size=${portrait ? '360x640' : '640x360'}:rate=25`, '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=48000', '-t', String(dur), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(work, 'rough.mp4')]);
   if (r.status !== 0) throw new Error(`ffmpeg 合成口播失敗：${r.stderr}`);
-  r = run('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30', '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', path.join(project, '素材', '螢幕錄影', '示範.mp4')]);
+  r = run('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30', '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', path.join(project, 'assets', 'screen', '示範.mp4')]);
   if (r.status !== 0) throw new Error(`ffmpeg 合成錄影失敗：${r.stderr}`);
   fs.writeFileSync(path.join(work, 'cutpoints.json'), JSON.stringify({ cuts: [{ at: +(starts[3] + 3.2).toFixed(2), kind: 'pause' }, { at: +(starts[10] + 3.2).toFixed(2), kind: 'ng' }] }, null, 2));
   fs.copyFileSync(path.join(ROOT, 'shared', 'template', 'custom', 'x-process.html'), path.join(hf, 'compositions', 'x-process.html'));
@@ -227,7 +227,7 @@ function makeFixture({ portrait = false } = {}) {
       { id: 's04', scene: 'fs-list', from: '#9', to: '#10e', slots: { title: '清單', items: ['一', '二', '三'] } },
       { id: 'x01', type: 'custom', src: 'compositions/x-process.html', layout: 'fullscreen', from: '#11', to: '#15e' },   // x-process 綁 #12–#15，T1 要 ≥ 3.0 s
       { id: 's05', type: 'fx', fx: 29, from: '#16', to: '#16e', vars: { number: '18', label: '字' } },
-      { id: 'm01', type: 'media', src: '素材/螢幕錄影/示範.mp4', from: '#17', to: '#18e', in: 2, marks: [{ at: '#17+0.5', until: '#18e', box: [100, 100, 400, 200] }] },
+      { id: 'm01', type: 'media', src: 'assets/screen/示範.mp4', from: '#17', to: '#18e', in: 2, marks: [{ at: '#17+0.5', until: '#18e', box: [100, 100, 400, 200] }] },
       { id: 's06', scene: 'quote', from: '#19', to: '#20e', slots: { text: '先做對，再做快' } },
     ],
   };

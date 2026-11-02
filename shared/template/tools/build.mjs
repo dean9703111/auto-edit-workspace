@@ -20,7 +20,7 @@
  *   node shared/template/tools/build.mjs --gallery    （作者用）重新產生 shared/template/preview/*.html（情境動畫另出直式 x-<名稱>-v.html，和直式講者示意 speaker-v.jpg、speaker-v-dark.jpg）
  *   --format landscape|portrait（或 橫式|直式）：蓋過版式（預設照 plan.json "format" > work/製作進度.md 開工決策表「版式」> 主軌寬高比；lib/canvas.mjs）
  *
- * --project：專案資料夾（projects/範例，或只寫名稱 範例）。沒寫時：目前資料夾在某個專案裡就用它；
+ * --project：專案資料夾（projects/example，或只寫名稱 example）。沒寫時：目前資料夾在某個專案裡就用它；
  *   projects/ 底下只有一個專案就用那個；都不是就報錯並列出現有專案。
  * 路徑旗標（選填，相對目前資料夾，會蓋過 --project 的預設）：--plan --srt --video --out --sfx；測試用：--template <shared/template 資料夾>
  * 需要 Node 22 以上、ffmpeg／ffprobe（npx hyperframes doctor 會檢查）。
@@ -61,7 +61,7 @@ const CUSTOM_PREVIEW = path.join(HERE, 'lib', 'custom-preview.mjs');
 const customPreview = fs.existsSync(CUSTOM_PREVIEW) ? await import(pathToFileURL(CUSTOM_PREVIEW).href) : null;
 const TEST_FILE = 'compositions/test-clip.html';
 const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
-const OUTPUT_DIRS = ['成片', path.join('成片', '測試片段'), path.join('成片', '驗收截圖')];
+const OUTPUT_DIRS = ['output', path.join('output', 'test-clips'), path.join('output', 'qc')];
 const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format'];
 
 export function parseArgs(argv) {
@@ -417,16 +417,16 @@ export function voiceOnlyOf(P, videoFile, log = () => {}) {
   return blackDetect(videoFile, path.join(P.out, '.cache', 'blackdetect.json'), () => log('偵測只有聲音的區間（rough.mp4 全黑的地方；第一次會花一點時間，之後用快取）…'));
 }
 
-// 專案有沒有只有聲音的主軌素材：素材/聲音/ 有檔，或 work/main.json 有 kind "voice" 的段
+// 專案有沒有只有聲音的主軌素材：assets/voice/ 有檔，或 work/main.json 有 kind "voice" 的段
 export function hasVoiceSource(projectDir) {
-  try { if (fs.readdirSync(path.join(projectDir, '素材', '聲音')).some((x) => !x.startsWith('.'))) return true; } catch { /* 沒有資料夾 */ }
+  try { if (fs.readdirSync(path.join(projectDir, 'assets', 'voice')).some((x) => !x.startsWith('.'))) return true; } catch { /* 沒有資料夾 */ }
   try { return (JSON.parse(fs.readFileSync(path.join(projectDir, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice'); } catch { return false; }
 }
 
 // rough.mp4 有全黑區間、專案卻沒有只有聲音的素材 → 初剪壞了（auto-editor 剪手機原檔的已知問題），不能當成「只有聲音」默默拿掉小窗
 // → { voiceOnly（給 resolvePlan 用）, black（併好的全黑區間）, errors }；相鄰 ≤ 0.1 秒的黑段併成一段
 export function roughBlackCheck(projectDir, voiceOnly, projectRel = 'projects/<專案>') {
-  if (!projectDir || !voiceOnly?.length || !fs.existsSync(path.join(projectDir, '素材')) || hasVoiceSource(projectDir)) return { voiceOnly: voiceOnly || [], black: [], errors: [] };
+  if (!projectDir || !voiceOnly?.length || !fs.existsSync(path.join(projectDir, 'assets')) || hasVoiceSource(projectDir)) return { voiceOnly: voiceOnly || [], black: [], errors: [] };
   const black = [];
   for (const [a, b] of [...voiceOnly].sort((x, y) => x[0] - y[0])) { const l = black[black.length - 1]; if (l && a - l[1] <= 0.1 + 1e-9) l[1] = Math.max(l[1], b); else black.push([a, b]); }
   const clock = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
@@ -434,18 +434,18 @@ export function roughBlackCheck(projectDir, voiceOnly, projectRel = 'projects/<�
   return { voiceOnly: [], black, errors: [`work/rough.mp4 在 ${where} 是全黑，但素材沒有純聲音檔 → 初剪壞了：跑 node shared/template/tools/media.mjs verify-rough --project ${projectRel}`] };
 }
 
-// media 段的 src 相對專案資料夾：有 --project 就用它；只給 --plan／--out 等路徑時，從 --out（<專案>/work/hyperframes）往上找有 素材/ 的資料夾
+// media 段的 src 相對專案資料夾：有 --project 就用它；只給 --plan／--out 等路徑時，從 --out（<專案>/work/hyperframes）往上找有 assets/ 的資料夾
 export function mediaRoot(P) {
   if (P.project) return P.project;
   for (const base of [P.out && path.resolve(P.out, '..', '..'), P.video && path.resolve(path.dirname(P.video), '..')]) {
-    if (base && fs.existsSync(path.join(base, '素材'))) return base;
+    if (base && fs.existsSync(path.join(base, 'assets'))) return base;
   }
   return null;
 }
 
 const posix = (p) => p.split(path.sep).join('/');
 const realish = (p) => { try { return fs.realpathSync(p); } catch { return p; } };
-// 工作區根目錄底下就寫相對路徑（projects/範例/…）；比對用 realpath（macOS 的 /var 其實是 /private/var）
+// 工作區根目錄底下就寫相對路徑（projects/example/…）；比對用 realpath（macOS 的 /var 其實是 /private/var）
 const fromRoot = (P, p) => { const r = path.relative(realish(P.root), realish(p)); return r && !r.startsWith('..') && !path.isAbsolute(r) ? posix(r) : posix(p); };
 // 訊息裡的專案寫法：在 projects/ 底下就寫 projects/<名稱>（工具從別處 symlink 過來時 root 對不到，也照樣好讀）
 export const projectLabel = (P, dir) => (path.basename(path.dirname(dir)) === 'projects' ? `projects/${path.basename(dir)}` : fromRoot(P, dir));
@@ -761,7 +761,7 @@ export function build(flags, { log = console.log } = {}) {
   log(`\n產生：${W.res.written.length} 個檔（沒變 ${W.res.same.length}）；kit 更新 ${kitN} 個檔${mediaN ? `；插入素材更新 ${mediaN} 個` : ''}${removed.length ? `；刪掉舊檔 ${removed.join('、')}` : ''}`);
   if (W.res.skipped.length) log(`⚠ 這些檔被手改過，沒有覆寫：${W.res.skipped.join('、')} → 把改動搬進 plan.json 後加 --force`);
   if (test) {
-    const clip = path.relative(P.out, path.join(P.project || path.resolve(P.out, '..', '..'), '成片', '測試片段', 'test-clip.mp4')).split(path.sep).join('/');
+    const clip = path.relative(P.out, path.join(P.project || path.resolve(P.out, '..', '..'), 'output', 'test-clips', 'test-clip.mp4')).split(path.sep).join('/');
     log(`測試片段：${rel(path.join(P.out, TEST_FILE))}（${test.t0}s 起 ${test.duration}s）→ cd ${rel(P.out)} && npx hyperframes render -c ${TEST_FILE} --quality draft -o ${clip}`);
     for (const it of test.skipped) log(`⚠ ${it.id} 在 ${it.start}s 就開始了，測試片段不含這段（要看完整段，把起點改成 ${it.start}）`);
   }

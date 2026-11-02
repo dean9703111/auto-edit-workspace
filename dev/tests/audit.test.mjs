@@ -468,7 +468,7 @@ test('--help：印出 ✖／⚠ 規則與門檻（禁入區、節奏數字和 au
 
 
 test('parseArgs', () => {
-  assert.deepEqual(A.parseArgs(['--project', 'projects/範例', '--only=x01,s03', '--all', '--json']), { project: 'projects/範例', only: 'x01,s03', all: true, json: true });
+  assert.deepEqual(A.parseArgs(['--project', 'projects/example', '--only=x01,s03', '--all', '--json']), { project: 'projects/example', only: 'x01,s03', all: true, json: true });
   assert.throws(() => A.parseArgs(['--bogus']), /沒有 --bogus/);
   assert.throws(() => A.parseArgs(['--only']), /--only 後面要接值/);
   assert.deepEqual(A.parseArgs(['--format', 'portrait']), { format: 'portrait' });

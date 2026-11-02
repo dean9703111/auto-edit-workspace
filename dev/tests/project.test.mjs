@@ -18,12 +18,12 @@ before(() => {
   tpl = path.join(root, 'shared', 'template');
   fs.symlinkSync(TEMPLATE, tpl, 'dir');
   for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
-  fs.mkdirSync(path.join(root, 'projects', '範例', 'work', 'hyperframes'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'projects', 'example', 'work', 'hyperframes'), { recursive: true });
 });
 
 test('只有一個專案：不寫 --project 也找得到；預設路徑都在專案的 work/，音效在 shared/sfx', () => {
   const P = pathsFrom({ template: tpl }, root);
-  const proj = path.join(root, 'projects', '範例');
+  const proj = path.join(root, 'projects', 'example');
   assert.equal(P.project, proj);
   assert.equal(P.out, path.join(proj, 'work', 'hyperframes'));
   assert.equal(P.plan, path.join(proj, 'work', 'hyperframes', 'plan.json'));
@@ -54,8 +54,8 @@ test('--list 不需要專案（projects/ 有好幾個也不報錯）', () => {
   fs.rmSync(path.join(root, 'projects', 'EP3'), { recursive: true });
 });
 
-test('build --project：產生到專案的 work/hyperframes，建好 成片/、測試片段/、驗收截圖/，測試片段指令寫進 成片/測試片段/', () => {
-  const proj = path.join(root, 'projects', '範例');
+test('build --project：產生到專案的 work/hyperframes，建好 output/、output/test-clips/、output/qc/，測試片段指令寫進 output/test-clips/', () => {
+  const proj = path.join(root, 'projects', 'example');
   const work = path.join(proj, 'work');
   const v = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
     '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', path.join(work, 'rough.mp4')]);
@@ -63,10 +63,10 @@ test('build --project：產生到專案的 work/hyperframes，建好 成片/、�
   fs.writeFileSync(path.join(work, 'rough.srt'), makeSrt({ n: 5 }));
   fs.writeFileSync(path.join(work, 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, speakerBox: [700, 200, 1220, 1000], look: false,
     scenes: [{ id: 's01', scene: 'concept', from: '#2', to: '#3e', slots: { text: '**場地設定**：一份文件' } }] }));
-  const r = spawnSync(process.execPath, [BUILD, '--template', tpl, '--project', 'projects/範例', '--test', '4,3'], { encoding: 'utf8', cwd: root });
+  const r = spawnSync(process.execPath, [BUILD, '--template', tpl, '--project', 'projects/example', '--test', '4,3'], { encoding: 'utf8', cwd: root });
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.match(r.stdout, /專案：projects\/範例/);
+  assert.match(r.stdout, /專案：projects\/example/);
   assert.ok(fs.existsSync(path.join(work, 'hyperframes', 'index.html')));
-  for (const d of ['成片', '成片/測試片段', '成片/驗收截圖']) assert.ok(fs.statSync(path.join(proj, d)).isDirectory(), `少了 ${d}/`);
-  assert.match(r.stdout, /npx hyperframes render -c compositions\/test-clip\.html --quality draft -o \.\.\/\.\.\/成片\/測試片段\/test-clip\.mp4/);
+  for (const d of ['output', 'output/test-clips', 'output/qc']) assert.ok(fs.statSync(path.join(proj, d)).isDirectory(), `少了 ${d}/`);
+  assert.match(r.stdout, /npx hyperframes render -c compositions\/test-clip\.html --quality draft -o \.\.\/\.\.\/output\/test-clips\/test-clip\.mp4/);
 });

@@ -1,8 +1,8 @@
 # 素材包使用說明：核心（給 AI 讀）
 
-這份寫給在這個工作區剪片的 AI Agent。照著做，就能把初剪好的口播影片（`work/rough.mp4`＋`work/rough.srt`）做成有字幕、資訊卡、子母畫面、音效、插入螢幕錄影與圖片的成片 `成片/final.mp4`。
+這份寫給在這個工作區剪片的 AI Agent。照著做，就能把初剪好的口播影片（`work/rough.mp4`＋`work/rough.srt`）做成有字幕、資訊卡、子母畫面、音效、插入螢幕錄影與圖片的成片 `output/final.mp4`。
 
-**路徑**：一支影片＝一個專案資料夾 `projects/<專案>/`（例：`projects/範例/`）。本文提到的 `work/`、`成片/`、`素材/`、`講稿.md`、場地照都在專案資料夾裡；`shared/`（模板、音效、`style.md`）是每集共用的。指令裡的 `<專案>` 換成這次的專案名稱。
+**路徑**：一支影片＝一個專案資料夾 `projects/<專案>/`（例：`projects/example/`）。本文提到的 `work/`、`output/`、`assets/`、`講稿.md`、場地照都在專案資料夾裡；`shared/`（模板、音效、`style.md`）是每集共用的。指令裡的 `<專案>` 換成這次的專案名稱。
 
 - **查表用**：`AGENTS.md` 與 `.agents/skills/` 的 Skill 會寫做到哪一步查哪一節，不用從頭讀到尾。
 - `shared/template/USAGE-reference.md` 是參考：挑情境、講者位置與 `css`、字幕與音效、密度、第二層 custom、硬規則、換主色。照第 2 節 SOP 的「查」欄，做到那一步再讀那一節（標題是 `## R1`–`## R14`，可以直接搜尋）。
@@ -58,7 +58,7 @@
    - 把預覽圖與建議倍率給使用者，**停下來等確認**。選定後把那一列寫進 plan.json 第一層：`"frame": [x, y, w, h]`（1.0 倍不用寫）。build 重新編碼底片時會照它裁切放大回 1920×1080，子母畫面、碰撞檢查都以裁切後的畫面為準。
    - 直式（plan.json `"format": "portrait"`）：預覽圖是直的、裁切框是 9:16，倍率一樣 1.0／1.15／1.3；另看講者頭頂有沒有落在 y 380–520、下巴 ≤ 860（`shared/style.md`「直式」）。
    - 寫好 `frame` 之後才做下面的步驟（場地照的座標要換算：`(x − frame.x) × 1920 ÷ frame.w`；`qc.mjs speaker` 會自動照 `frame` 裁切後再量）。
-1. 場地照：專案資料夾裡檔名有「場地照」的圖（範本附的是 `projects/範例/場地照-測試.jpg`），或 Skill 每集自動截的 `work/場地照.jpg`。都沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
+1. 場地照：專案資料夾裡檔名有「場地照」的圖（範本附的是 `projects/example/場地照-測試.jpg`），或 Skill 每集自動截的 `work/場地照.jpg`。都沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
 2. 確認是 1920×1080：`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <場地照路徑>`。不是的話，量出來的數字要等比換算（範例的 `示範口播.mp4` 是 640×360，從它截的場地照量出來要乘 3）。講者框整個落在底片尺寸內時，`--check` 會提醒「看起來是用原尺寸截圖的像素量的」並附換算後的框。
 3. 框出講者的頭頂、兩肩、手勢會到的範圍，四邊各外擴 40px，寫成 `[x1, y1, x2, y2]`（左上到右下）。
 4. 場地照只是一張靜止畫面，看不出手勢會比到哪。有 `work/rough.mp4` 之後，一定要再跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案>`，它會產生兩張圖：
@@ -67,14 +67,14 @@
 
    以這兩張圖讀到的手勢最遠邊緣為準，修正第 3 步的框。
 
-範例（`projects/範例/場地照-測試.jpg`）：頭頂 y≈276、雙手與身體 x≈790–1220、桌面 y≈840 → `[750, 236, 1260, 880]`，中心 x≈1005（置中）。中心 x 在 860–1060 算置中，小於 860 在左側，大於 1060 在右側；各位置適合哪些情境見 R4。
+範例（`projects/example/場地照-測試.jpg`）：頭頂 y≈276、雙手與身體 x≈790–1220、桌面 y≈840 → `[750, 236, 1260, 880]`，中心 x≈1005（置中）。中心 x 在 860–1060 算置中，小於 860 在左側，大於 1060 在右側；各位置適合哪些情境見 R4。
 
 ### 2.3 分鏡表格式（`work/storyboard.md`）
 
 | 段 id | 句號（起–迄） | 時間碼 | 字幕（起點那句） | 版面 | 情境 | 畫面文字（slots） | 音效 | 理由 |
 |---|---|---|---|---|---|---|---|---|
 | s02 | #11–#13e | 0:25.83–0:33.44 | 千萬不要小看這份紀錄 | 疊加 | 07 key-point（warn） | lead「少了這份文件」／key「場佈多花半小時」 | 預設 | 「千萬不要」＋負面後果 → 警示重點 |
-| m01 | #20–#24e | 1:02.10–1:15.40 | 接下來打開設定頁 | 子母畫面 | media 螢幕錄影 | `素材/螢幕錄影/操作示範.mp4` 從 12.5s（sheet-01 #7）；#21 推近左側選單、紅框「設定」；#23 拉回全景 | 預設 | 1:03–1:14 只有聲音；sheet #7–#10 正在開設定頁，和口播同一個操作 |
+| m01 | #20–#24e | 1:02.10–1:15.40 | 接下來打開設定頁 | 子母畫面 | media 螢幕錄影 | `assets/screen/操作示範.mp4` 從 12.5s（sheet-01 #7）；#21 推近左側選單、紅框「設定」；#23 拉回全景 | 預設 | 1:03–1:14 只有聲音；sheet #7–#10 正在開設定頁，和口播同一個操作 |
 
 - 開頭寫兩行：「講者框 speakerBox＝[x1, y1, x2, y2]（看哪張場地照估的）」、「本集圖示表」（同一個物件全集用同一個圖示）；再附四種版面的對照表（`shared/template/SITUATIONS.md` §2）與總覽表（段落編號、章、句號、時間碼、版面、卡片類型、一句話摘要）。「章」寫這段屬於哪一章（`01 痛點`；第一章之前寫 `—`），章節起點是 01 段，沒有 01 的短片用 02 段；章節角標由 build 自動常駐，不用另排。
 - 總覽表後面是「情境判定」表（必填，一段一列）：`| 段 | 口播在講什麼 | SITUATIONS §3 哪一列 | 首選 | 為什麼不是動畫 |`。首選是情境動畫就做動畫；退到字卡時「為什麼不是動畫」寫不符合 style.md「情境動畫優先」的哪一條；首選本來就是字卡寫 `首選是字卡`。
@@ -82,9 +82,9 @@
 - 每段放截圖：草稿 plan.json build 後跑 `node shared/template/tools/qc.mjs storyboard --project projects/<專案>`，把它最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每一段，下面寫「截圖觀察」（有沒有擋臉、壓手勢、文字問題）。不要自己算秒數跑 `snapshot --at`。
   - 截圖檔名：一段一張是 `s20.png`；一段多張是 `s20-1.png`、`s20-2.png`…（條列分組、錄影標註各一張）。**只貼這一次印出來的那幾行**：同一段張數變了（例：上一版 s20 是三條的清單 `s20-1.png`～`s20-3.png`，這一版改成情境動畫只截 `s20.png`），工具會清掉同一段的舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪。自己改名的方案圖（`s05-A.png`）不會被動到。
   - 每張後面的「為什麼」：`完成態（段尾前 0.6 秒）`／`完成態（退場前 0.1 秒）`／`完成態（動畫停住的最後一刻）`＝這段內容全部出現、還沒退場的那一刻（工具讀動畫時間軸算，03 側邊欄、數字滾動卡會自動往前）；`第 1 條`、`第 2–3 條`＝條列的那一組進場完成之後（進場動畫重疊的幾條算同一組，所以三條可能只有一張）；`…到位`＝錄影標註；`段很短，截中點`；`…（整段都在動，沒有停住的畫面）`＝循環動畫，截圖觀察寫「循環動畫」即可。
-  - 用了動態 v2 原語的段，每個拍點各截一張：`抽屜抽出後 0.3 秒：「<字>」`、`焦點抬起：「<字>」`；最後一拍之後畫面沒再變，就不另截完成態（最後一拍的「為什麼」加 `（完成態）`）。漂浮、背景慢拉這類微動不算動畫。`qc.mjs observe` 另出 `work/觀影/beat-NN.jpg`：同一套時刻、從成片抽格，對照分鏡截圖看 render 出來的拍點對不對。
+  - 用了動態 v2 原語的段，每個拍點各截一張：`抽屜抽出後 0.3 秒：「<字>」`、`焦點抬起：「<字>」`；最後一拍之後畫面沒再變，就不另截完成態（最後一拍的「為什麼」加 `（完成態）`）。漂浮、背景慢拉這類微動不算動畫。`qc.mjs observe` 另出 `work/observe/beat-NN.jpg`：同一套時刻、從成片抽格，對照分鏡截圖看 render 出來的拍點對不對。
   - 截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard；還是一樣就在「需要我決定的事」列出段號和秒數，不要自己改秒數跑 `snapshot --at`。
-  - 印 `✖ <id> 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…`：不是版面的問題，不要改 plan.json；照 → 跑 `node shared/template/tools/media.mjs verify-rough --project projects/<專案>` 重做初剪，再 build、再截圖。專案有 `素材/聲音/` 的旁白時不會報（全黑本來就是旁白區間）。
+  - 印 `✖ <id> 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…`：不是版面的問題，不要改 plan.json；照 → 跑 `node shared/template/tools/media.mjs verify-rough --project projects/<專案>` 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報（全黑本來就是旁白區間）。
 - 最後一節「需要我決定的事」固定有金句候選表，勾了才上（style.md「字卡文字」）：
 
   | 候選 | 句號 | 原句 | 卡上文字（≤ 14 字） | 情緒（正／負／中） | 要不要 ☐ |
@@ -128,7 +128,7 @@
 - 逐張確認：卡片沒擋到講者的臉；文字沒被切掉、沒超出卡片、沒斷在詞中間；字幕在底部、只有一行、中文是黑體；子母畫面裡的講者沒被切到頭；側邊欄期間講者完整在右半邊。
 - `--check` 的「大約會蓋到講者框 N%」：snapshot 看到擋臉，就用 `css` 移位（R4）或換情境。只壓到身體、臉沒擋到，就保留，交 Studio 時點名請使用者確認（靜態照片看不出手勢會比到哪）。
 - 示範影片本身燒了「原始時間 00:xx」黑框和「測試用場地示意圖」黃字，不是版面問題。
-- 要看特定時間：`npx hyperframes snapshot --at 38.5,45.2 --no-end -o ../../成片/驗收截圖`（另外產生 `contact-sheet.jpg`）。
+- 要看特定時間：`npx hyperframes snapshot --at 38.5,45.2 --no-end -o ../../output/qc`（另外產生 `contact-sheet.jpg`）。
 
 ### 2.6 Studio 預覽與修改
 
@@ -154,7 +154,7 @@
 
 ```bash
 node shared/template/tools/build.mjs --project projects/<專案> --test 41,4
-cd projects/<專案>/work/hyperframes && npx hyperframes render -c compositions/test-clip.html --quality draft -o ../../成片/測試片段/test-clip.mp4
+cd projects/<專案>/work/hyperframes && npx hyperframes render -c compositions/test-clip.html --quality draft -o ../../output/test-clips/test-clip.mp4
 ```
 
 - `--test 起點,秒數` 另外產生 `compositions/test-clip.html`，build 結尾會印出可以直接複製的 render 指令。`render` 沒有時間範圍參數，短片段只能這樣做。
@@ -163,7 +163,7 @@ cd projects/<專案>/work/hyperframes && npx hyperframes render -c compositions/
 完整 render（`--quality draft` 只用來測試，交付一律 `looks`）：
 
 ```bash
-cd projects/<專案>/work/hyperframes && npx hyperframes render --fps 30 --quality looks --output ../../成片/final.mp4
+cd projects/<專案>/work/hyperframes && npx hyperframes render --fps 30 --quality looks --output ../../output/final.mp4
 ```
 
 時間大約和影片一樣長（M1 Max 實測：82 秒的影片 75 秒、107 秒的影片 62 秒），較慢的電腦更久。指令有逾時限制、或預估超過 2 分鐘時，改用背景執行並看 log。背景執行一律用 HyperFrames 自己的背景模式：指令前面加環境變數 `HYPERFRAMES_RENDER_DETACHED=1`（`render --help` 沒有列，寫在 HyperFrames 附的 hyperframes-cli Skill）。**不要用 `nohup`、也不要只加 `&`**：render 會盯著啟動它的程序，子代理的回合一結束就自己取消，log 最後是 `render_cancelled_parent_exited`。
@@ -171,7 +171,7 @@ cd projects/<專案>/work/hyperframes && npx hyperframes render --fps 30 --quali
 Mac（zsh／bash）：
 ```bash
 cd projects/<專案>/work/hyperframes
-HYPERFRAMES_RENDER_DETACHED=1 npx hyperframes render --fps 30 --quality looks --output ../../成片/final.mp4 > ../render.log 2>&1 &
+HYPERFRAMES_RENDER_DETACHED=1 npx hyperframes render --fps 30 --quality looks --output ../../output/final.mp4 > ../render.log 2>&1 &
 tail -n 3 ../render.log
 ```
 
@@ -179,7 +179,7 @@ Windows（PowerShell）：
 ```powershell
 cd projects\<專案>\work\hyperframes
 $env:HYPERFRAMES_RENDER_DETACHED = "1"
-Start-Process -FilePath "npx.cmd" -ArgumentList "hyperframes","render","--fps","30","--quality","looks","--output","../../成片/final.mp4" -RedirectStandardOutput "../render.log" -RedirectStandardError "../render.err.log" -WindowStyle Hidden
+Start-Process -FilePath "npx.cmd" -ArgumentList "hyperframes","render","--fps","30","--quality","looks","--output","../../output/final.mp4" -RedirectStandardOutput "../render.log" -RedirectStandardError "../render.err.log" -WindowStyle Hidden
 Get-Content ..\render.log -Tail 3
 ```
 
@@ -194,7 +194,7 @@ node shared/template/tools/capcut.mjs status --project projects/<專案>
 ```
 
 - 先跑 `build.mjs --capcut`（工具自己跑）：每段一支 `compositions/capcut-<段>.html`（透明底、沒有字幕、角標與主軌聲音；半畫面段連講者一起，因為講者被推到右邊）、一支主軌 `compositions/capcut-main.html`，清單 `work/hyperframes/capcut.json`。
-- 再逐支 render 到 `成片/剪映/`：每段 `NN_<段>_<起點>.mov`（`--format mov`＝ProRes 4444、有透明通道、帶那段的音效）、`主軌.mp4`、`字幕.srt`（照畫面上實際顯示的時間）、`清單.md`。合成和底片都沒變的會略過；`--only s05,s12` 只做幾段；`--no-main` 不做主軌。
+- 再逐支 render 到 `output/capcut/`：每段 `NN_<段>_<起點>.mov`（`--format mov`＝ProRes 4444、有透明通道、帶那段的音效）、`主軌.mp4`、`字幕.srt`（照畫面上實際顯示的時間）、`清單.md`。合成和底片都沒變的會略過；`--only s05,s12` 只做幾段；`--no-main` 不做主軌。
 - 每段約 30 秒 render、5 秒的段約 30 MB；整集常常超過 5 分鐘，所以用 `--background`，每 30 秒跑一次 `status`。
 - 不輸出：章節角標、疊加卡期間講者的慢推（剪映用文字、關鍵幀補）。
 
@@ -217,8 +217,8 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | ⚠ | 沒有聲音 | ≥ 4 秒（可能是漏剪的停頓） |
 
 - ⚠ 會標出時間和段落，例：`⚠ 1:02.3–1:06.0 畫面凍結 3.7 秒（m01 螢幕錄影） → 看 qc-sheet.jpg 與該段起點截圖；…`。有 ✖ 時結束碼是 1；`--json` 給機器讀。
-- 再打開 `成片/驗收截圖/qc-sheet.jpg`（每 10 秒一格）掃一眼，有沒有掉圖、卡片破版、錄影卡住。理由：格式和長度全過，內容仍可能掉圖或卡住，作者踩過。
-- 有插入螢幕錄影時，再截一張錄影段落（`ffmpeg -v error -y -ss <秒數> -i projects/<專案>/成片/final.mp4 -frames:v 1 projects/<專案>/成片/驗收截圖/check-<秒數>s.jpg`），確認紅框框在對的地方。
+- 再打開 `output/qc/qc-sheet.jpg`（每 10 秒一格）掃一眼，有沒有掉圖、卡片破版、錄影卡住。理由：格式和長度全過，內容仍可能掉圖或卡住，作者踩過。
+- 有插入螢幕錄影時，再截一張錄影段落（`ffmpeg -v error -y -ss <秒數> -i projects/<專案>/output/final.mp4 -frames:v 1 projects/<專案>/output/qc/check-<秒數>s.jpg`），確認紅框框在對的地方。
 
 聲音由 build 處理，回報時把 build 印的這三行貼給使用者：
 - 人聲響度：重新編碼底片時，人聲調到 −14 LUFS、true peak ≤ −1 dBTP（YouTube 播放的基準），報告印 `人聲響度 −21.9 LUFS → −13.9 LUFS（true peak −7.1）`。量測結果有快取，素材沒變就不重量。成片的整體響度會落在 −14 ±1.5，因為音效、插入素材的聲音和結尾配樂也混在裡面。
@@ -444,7 +444,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `音效 pop（…s）和 s01 的音效只差 2.427s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 s01 寫 "sfx": null` | ⚠ | 只是告知；想保留後一個，就照 `→` 在前一段寫 `"sfx": null` |
 | `和 X 時間重疊 Ns → 一段只放一個情境` | ⚠ | 錯開時間 |
 | `只有聲音的區間 …–… 有 Ns 沒有畫面（全黑，講者不在）→ 跑 … media.mjs scan …` | ✖（> 1 秒；0.1–1 秒是 ⚠） | 照第 5 節配一段螢幕錄影或圖片，`from`／`to` 蓋住這個區間；或用不透明的全畫面情境（04 家族）蓋住 |
-| `src：找不到 素材/螢幕錄影/… → 檔名要和專案的 素材/ 資料夾裡一模一樣（現有：…）` | ✖ | 照括號裡的現有檔名改；路徑相對專案資料夾，開頭是 `素材/` |
+| `src：找不到 assets/screen/… → 檔名要和專案的 assets/ 資料夾裡一模一樣（現有：…）` | ✖ | 照括號裡的現有檔名改；路徑相對專案資料夾，開頭是 `assets/` |
 | `素材 … 長 Ns；從第 Ns 起播 Ns 要用到第 Ns → to 提早、in 改小，或 speed 改小` | ✖ | 錄影不夠長：`in` 往前、`to` 提早，或拆成兩段 media |
 | `… [x, y, w, h] 超出素材範圍 W×H → 座標是素材原尺寸的像素…` | ✖ | 用 `media.mjs frame --grid` 重讀座標（5.4），不要用 1920×1080 的畫面座標 |
 | `marks：… 同時有 N 個紅框（最多 2 個）` | ✖ | 位置相近的合成一個大框，或錯開 `at`／`until`（5.5） |
@@ -462,8 +462,8 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `⚠ 講者瘦臉還在跑（look.mjs run，pid …）→ 等 … 顯示「完成」再 build` | ⚠ | 背景的 `look.mjs run` 還沒跑完：每 30 秒跑一次 `look.mjs status`，「完成」後再 build |
 | `⚠ 瘦臉還沒套到底片（…），這次先用 work/rough.mp4 → …` | ⚠ | 這次 build 先用沒瘦臉的底片；照 `→` 跑完 `look.mjs run` 再 build |
 | `look.slim 要是 0–1.2 的數字…` 這類 `look…` 開頭的訊息 | ✖ | 照訊息改 plan.json 的 `look`（只能寫 `color`、`slim`） |
-| `✖ s21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 1:56.14–2:33.51 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/<專案> 照它印的做`（`qc.mjs storyboard`、`qc.mjs final`；另一種是「講者小窗在 m:ss.ss 就沒了（段到 …）」） | ✖ | 不是版面的問題，不要改 plan.json；照 → 重做初剪，再 build、再截圖。專案有 `素材/聲音/` 的旁白時不會報 |
-| `⚠ <id> 是全畫面清單卻沒有講者小窗 → 跑 node shared/template/tools/qc.mjs final --project … 看原因`（`qc.mjs observe`；`work/觀影/index.md` 總表的「小窗（子母畫面段）」欄是 `無`／`部分（m:ss.s 起沒有）`） | ⚠ | 照 → 跑 `qc.mjs final` 看原因，再照上一列做 |
+| `✖ s21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 1:56.14–2:33.51 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/<專案> 照它印的做`（`qc.mjs storyboard`、`qc.mjs final`；另一種是「講者小窗在 m:ss.ss 就沒了（段到 …）」） | ✖ | 不是版面的問題，不要改 plan.json；照 → 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報 |
+| `⚠ <id> 是全畫面清單卻沒有講者小窗 → 跑 node shared/template/tools/qc.mjs final --project … 看原因`（`qc.mjs observe`；`work/observe/index.md` 總表的「小窗（子母畫面段）」欄是 `無`／`部分（m:ss.s 起沒有）`） | ⚠ | 照 → 跑 `qc.mjs final` 看原因，再照上一列做 |
 | `清掉同一段的舊截圖（這次張數變了）：…`（`qc.mjs storyboard`） | 資訊 | 只貼這一次印出來的截圖行；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪 |
 | `⚠ <id> 在 m:ss.s 就開始了，測試片段不含這段：格子不標它（要看這段，build --test 的起點改成 …）`（`qc.mjs observe --offset`） | ⚠ | 要看那段，把 `build --test` 的起點改成它印的秒數 |
 
@@ -486,7 +486,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 
 ## 5. 插入螢幕錄影與圖片
 
-`素材/螢幕錄影/`（操作畫面）、`素材/圖片/`（截圖、照片）裡的檔，用 plan.json 的 `"type": "media"` 段插進成片：素材整張蓋住講者，講者縮到右下角子母畫面，口播照常。**「只有聲音」的區間一定要用 media 段蓋住**：旁白檔接進主軌時配的是純黑畫面，build 用 ffmpeg 偵測 `rough.mp4` 全黑的地方，沒蓋住超過 1 秒就 ✖。
+`assets/screen/`（操作畫面）、`assets/images/`（截圖、照片）裡的檔，用 plan.json 的 `"type": "media"` 段插進成片：素材整張蓋住講者，講者縮到右下角子母畫面，口播照常。**「只有聲音」的區間一定要用 media 段蓋住**：旁白檔接進主軌時配的是純黑畫面，build 用 ffmpeg 偵測 `rough.mp4` 全黑的地方，沒蓋住超過 1 秒就 ✖。
 
 ### 5.1 什麼時候用
 
@@ -521,7 +521,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 ### 5.3 寫法
 
 ```json
-{ "id": "m01", "type": "media", "src": "素材/螢幕錄影/操作示範.mp4", "from": "#20", "to": "#26e", "anchor": "打開設定頁",
+{ "id": "m01", "type": "media", "src": "assets/screen/操作示範.mp4", "from": "#20", "to": "#26e", "anchor": "打開設定頁",
   "in": 12.5,
   "steps":    [ { "at": "#20", "text": "打開設定" }, { "at": "#23", "text": "建立金鑰" } ],
   "moves":    [ { "at": "#20+0.5", "to": [0, 120, 640, 400] }, { "at": "#22", "to": "full", "dur": 0.6 } ],
@@ -530,7 +530,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
                   "path": [ { "at": "#24", "box": [498, 759, 450, 52], "dur": 0.6 } ] } ],
   "arrows":   [ { "at": "#25", "to": [1712, 64] } ],
   "lens":     [ { "at": "#26", "until": "#26e", "box": [1500, 40, 300, 90], "zoom": 2 } ] },
-{ "id": "m02", "type": "media", "src": "素材/圖片/架構圖.png", "from": "#27", "to": "#29e", "anchor": "整體架構",
+{ "id": "m02", "type": "media", "src": "assets/images/架構圖.png", "from": "#27", "to": "#29e", "anchor": "整體架構",
   "spot": [ { "at": "#28", "until": "#29", "box": [820, 260, 600, 420] } ] }
 ```
 
@@ -538,7 +538,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 
 | 欄位 | 預設 | 說明 |
 |---|---|---|
-| `src` | 必填 | 相對專案資料夾，只能在 `素材/螢幕錄影/` 或 `素材/圖片/` 底下。影片 `.mp4 .mov .m4v .webm`，圖片 `.jpg .jpeg .png .webp` |
+| `src` | 必填 | 相對專案資料夾，只能在 `assets/screen/` 或 `assets/images/` 底下。影片 `.mp4 .mov .m4v .webm`，圖片 `.jpg .jpeg .png .webp` |
 | `from`／`to`／`duration`／`anchor` | `to` 或 `duration` 必填 | 同其他段（3.4） |
 | `in` | `0` | 錄影從第幾秒開始播；`in ＋ 段長 × speed` 不能超過錄影長度 |
 | `speed` | `1` | 0.5–4 |
@@ -558,7 +558,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 ### 5.4 座標怎麼讀（`frame --grid`）
 
 ```bash
-node shared/template/tools/media.mjs frame --project projects/<專案> --src 素材/螢幕錄影/操作示範.mp4 --at 14.2 --grid
+node shared/template/tools/media.mjs frame --project projects/<專案> --src assets/screen/操作示範.mp4 --at 14.2 --grid
 ```
 
 - 產生 `work/media/frames/操作示範-14.2s-grid.jpg`：**素材原尺寸**的截圖，每 100px 一條黃線（每 500px 粗一點），上緣與左緣標 x、y 數字，每 500px 再重複標一次。圖片不用 `--at`。

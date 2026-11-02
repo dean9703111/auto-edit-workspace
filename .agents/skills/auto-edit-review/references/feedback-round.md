@@ -7,8 +7,8 @@
 | 情況 | 這一輪的編號 |
 |---|---|
 | 有 `status.mjs`：印出 `下一輪回饋編號：r3` | r3 |
-| `work/回饋/` 不存在 | r1（先建資料夾） |
-| `work/回饋/` 有 `r1.md`、`r2.md` | r3（最大數字＋1） |
+| `work/feedback/` 不存在 | r1（先建資料夾） |
+| `work/feedback/` 有 `r1.md`、`r2.md` | r3（最大數字＋1） |
 
 改 plan.json **之前**先備份，一輪一份，不覆蓋舊的：
 
@@ -36,7 +36,7 @@ node shared/template/tools/versions.mjs save --project projects/<專案> --seg <
 | 「這張卡」「我選的」 | 個案 | 讀 Studio 選取：`(cd projects/<專案>/work/hyperframes && npx hyperframes preview --context --json --context-fields selection)` |
 | 分不出來 | 個案 | 照個案改，rN.md 註明「可能是規則，請確認」 |
 
-## 3. `work/回饋/r<N>.md` 範本（四節，標題逐字）
+## 3. `work/feedback/r<N>.md` 範本（四節，標題逐字）
 
 ```markdown
 # 回饋 r<N>（YYYY-MM-DD HH:MM）
@@ -56,7 +56,7 @@ node shared/template/tools/versions.mjs save --project projects/<專案> --seg <
 
 ## 改了哪幾段
 
-- s05：`"css": { "left": "-120px" }`（v1 → v2，比較：work/版本/s05/比較-v1-v2.mp4）
+- s05：`"css": { "left": "-120px" }`（v1 → v2，比較：work/versions/s05/比較-v1-v2.mp4）
 - s09：key「…」→「…」（v1 → v2）
 
 ## 驗證

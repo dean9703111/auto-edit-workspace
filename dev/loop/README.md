@@ -7,7 +7,7 @@
 | 步 | 做什麼 | 指令／做法 | 過關條件 |
 |---|---|---|---|
 | 1 | 單元測試＋管線 | `node dev/check-all.mjs`（第一次加 `--render`） | 全部 ✓（沒有 Chrome 的機器 audit／snapshot 略過不算失敗） |
-| 2 | 真實專案 | 範例專案跑過「剪乾淨」後：`node dev/check-all.mjs --real projects/範例` | 同上；有成片時 `qc final` 0 ✖ |
+| 2 | 真實專案 | 範例專案跑過「剪乾淨」後：`node dev/check-all.mjs --real projects/example` | 同上；有成片時 `qc final` 0 ✖ |
 | 3 | 弱模型試跑 | 用較弱的模型（Sonnet 或更弱）開一個**新 session**，只給 `weak-model-brief.md` 的提示詞，從「剪乾淨」跑到停點 ③ | 它在每個停點都用固定格式停下、沒有自己算時間、沒有讀 `dev/`；卡住的地方記下來 |
 | 4 | 審查員 | 只讀的審查員照 `specs/<編號>/spec.md` 的 SC-xxx 逐項打勾；回報格式照 `shared/template/REVIEW.md` | P0 清零；P1 列出處理方式 |
 | 5 | 修、記錄 | 修完回到第 1 步；這一輪的結果寫 `round-N.md`（下面的範本） | — |

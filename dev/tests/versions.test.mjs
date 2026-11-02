@@ -26,8 +26,8 @@ const touch = (p, rel, text = 'x', ageSec = 0) => {
 };
 function mk() {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-versions-'));
-  for (const d of ['真人錄影', '聲音', '螢幕錄影', '圖片']) fs.mkdirSync(path.join(p, '素材', d), { recursive: true });
-  touch(p, '素材/真人錄影/a.mp4', 'x', 600);
+  for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(p, 'assets', d), { recursive: true });
+  touch(p, 'assets/camera/a.mp4', 'x', 600);
   for (const f of ['work/cuts.md', 'work/rough.mp4', 'work/transcript.json', 'work/rough.srt.align-1', 'work/cutpoints.json', 'work/構圖預覽-套卡.jpg']) touch(p, f, 'x', 600);
   touch(p, 'work/rough.srt', '1\n00:00:01,000 --> 00:00:03,000\n主持人跟來賓\n', 600);
   touch(p, 'work/storyboard.md', SB, 120);
@@ -64,9 +64,9 @@ test('save：第一次存 v1（段落、x 檔、svg、分鏡）；沒變不另�
   const r1 = V.saveSeg(c.P, c.flags, 's12', logTo(c));
   assert.equal(r1.n, 1);
   assert.ok(r1.created);
-  for (const f of ['段落.json', 'x-a.html', 'illus-local/router.svg', '分鏡.md', '.meta.json']) assert.ok(fs.existsSync(path.join(p, 'work', '版本', 's12', 'v1', ...f.split('/'))), f);
-  assert.match(read(p, 'work/版本/s12/v1/分鏡.md'), /^# s12 v1（存檔）[\s\S]*## 分鏡\n\n### s12｜x-a（全幕）[\s\S]*#### 動畫分鏡 s12/);
-  assert.deepEqual(JSON.parse(read(p, 'work/版本/s12/v1/段落.json')).src, 'compositions/x-a.html');
+  for (const f of ['段落.json', 'x-a.html', 'illus-local/router.svg', '分鏡.md', '.meta.json']) assert.ok(fs.existsSync(path.join(p, 'work', 'versions', 's12', 'v1', ...f.split('/'))), f);
+  assert.match(read(p, 'work/versions/s12/v1/分鏡.md'), /^# s12 v1（存檔）[\s\S]*## 分鏡\n\n### s12｜x-a（全幕）[\s\S]*#### 動畫分鏡 s12/);
+  assert.deepEqual(JSON.parse(read(p, 'work/versions/s12/v1/段落.json')).src, 'compositions/x-a.html');
   const r2 = V.saveSeg(c.P, c.flags, 's12', logTo(c));
   assert.equal(r2.n, 1);
   assert.equal(r2.created, false);
@@ -74,11 +74,11 @@ test('save：第一次存 v1（段落、x 檔、svg、分鏡）；沒變不另�
   touch(p, 'work/hyperframes/compositions/x-a.html', X1.replace('主持人跟來賓', '各拍各的'));
   const r3 = V.saveSeg(c.P, c.flags, 's12', logTo(c));
   assert.equal(r3.n, 2);
-  const st = JSON.parse(read(p, 'work/版本/.state.json'));
+  const st = JSON.parse(read(p, 'work/versions/.state.json'));
   assert.deepEqual([st.live.s12, st.prev.s12], [2, 1]);
   const s05 = V.saveSeg(c.P, c.flags, 's05', logTo(c));
   assert.equal(s05.n, 1, '字卡段只存段落與分鏡');
-  assert.deepEqual(fs.readdirSync(path.join(p, 'work', '版本', 's05', 'v1')).sort(), ['.meta.json', '分鏡.md', '段落.json']);
+  assert.deepEqual(fs.readdirSync(path.join(p, 'work', 'versions', 's05', 'v1')).sort(), ['.meta.json', '分鏡.md', '段落.json']);
   assert.throws(() => V.saveSeg(c.P, c.flags, 's99', logTo(c)), /plan\.json 沒有「s99」這一段 →/);
   fs.rmSync(p, { recursive: true });
 });
@@ -87,7 +87,7 @@ test('改版：new 開提案 → 範本沒改不能 accept、提案沒確認不�
   const p = mk(), c = ctx(p);
   const r = V.newProposal(c.P, c.flags, 's12', logTo(c), '「s12 想更完善」');
   assert.equal(r.n, 2, '先存 v1，提案是 v2');
-  const md = read(p, 'work/版本/s12/v2/分鏡.md');
+  const md = read(p, 'work/versions/s12/v2/分鏡.md');
   assert.match(md, /^# s12 v2（改版）\n\n- 提案：.*\n- 原話：「s12 想更完善」\n- 現在的樣子：\[v1\/預覽\.mp4\]/);
   assert.match(md, /## 這版要改什麼\n\n- （寫 1–5 條/);
   assert.equal(V.newProposal(c.P, c.flags, 's12', logTo(c)).reused, true, '提案還在就沿用');
@@ -95,7 +95,7 @@ test('改版：new 開提案 → 範本沒改不能 accept、提案沒確認不�
   assert.throws(() => V.saveSeg(c.P, c.flags, 's12', logTo(c)), /v2 分鏡還在等使用者確認 →/);
   assert.deepEqual(V.pendingRevisions(p), [{ id: 's12', v: 2, state: '提案' }]);
   assert.equal(projectStatus(p).at, '改版／s12 v2（分鏡還沒給使用者確認）');
-  fs.writeFileSync(path.join(p, 'work', '版本', 's12', 'v2', '分鏡.md'), md.replace(/- （寫 1–5 條.*/, '- 收尾加蓋章').replace('| 1 | #1@主持人 | 兩個面向 | 彈出 |', '| 1 | #1@主持人 | 兩個面向＋蓋章 | 彈出；蓋章 |'));
+  fs.writeFileSync(path.join(p, 'work', 'versions', 's12', 'v2', '分鏡.md'), md.replace(/- （寫 1–5 條.*/, '- 收尾加蓋章').replace('| 1 | #1@主持人 | 兩個面向 | 彈出 |', '| 1 | #1@主持人 | 兩個面向＋蓋章 | 彈出；蓋章 |'));
   V.acceptProposal(c.P, 's12', logTo(c));
   const sb = read(p, 'work/storyboard.md');
   assert.match(sb, /兩個面向＋蓋章 \| 彈出；蓋章/);
@@ -109,10 +109,10 @@ test('改版：new 開提案 → 範本沒改不能 accept、提案沒確認不�
   touch(p, 'work/hyperframes/compositions/x-a.html', X1 + '<!-- 蓋章 -->\n');
   const done = V.saveSeg(c.P, c.flags, 's12', logTo(c));
   assert.equal(done.n, 2);
-  const md2 = read(p, 'work/版本/s12/v2/分鏡.md');
+  const md2 = read(p, 'work/versions/s12/v2/分鏡.md');
   assert.match(md2, /- 收尾加蓋章/, '保留「這版要改什麼」');
   assert.match(md2, /兩個面向＋蓋章/, '「## 分鏡」換成 storyboard.md 現在那一節');
-  assert.equal(JSON.parse(read(p, 'work/版本/s12/v2/.meta.json')).state, '完成');
+  assert.equal(JSON.parse(read(p, 'work/versions/s12/v2/.meta.json')).state, '完成');
   assert.deepEqual(V.pendingRevisions(p), []);
   touch(p, 'work/storyboard.md', SB, -5);
   assert.equal(projectStatus(p).stage, 'S10', '之後再手改 storyboard.md（晚 5 秒）就照常算停點 ③');
@@ -134,7 +134,7 @@ test('use：先存現在的樣子，再把 plan.json 那段、x 檔、svg、stor
   assert.equal(JSON.parse(read(p, 'work/hyperframes/plan.json')).scenes[0].id, 's05', '其他段不動');
   assert.equal(read(p, 'work/hyperframes/compositions/x-a.html'), X1);
   assert.equal(read(p, 'work/hyperframes/illus-local/router.svg'), '<svg id="r1"/>');
-  assert.equal(JSON.parse(read(p, 'work/版本/s12/v3/.meta.json')).state, '放棄');
+  assert.equal(JSON.parse(read(p, 'work/versions/s12/v3/.meta.json')).state, '放棄');
   assert.deepEqual(V.pendingRevisions(p), []);
   const all = V.listAll(c.P);
   assert.deepEqual(all[0].versions.map((v) => [v.v, v.current]), [['v1', true], ['v2', false], ['v3', false]]);
@@ -146,12 +146,12 @@ test('status：改版停點「③ 分鏡表（s12 v2）」待回覆 → 下一�
   const p = mk(), c = ctx(p);
   V.newProposal(c.P, c.flags, 's12', logTo(c));
   touch(p, 'work/製作進度.md', ['## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |', '|---|---|---|---|---|',
-    '| 2026-11-02 15:00 | ③ 分鏡表（s12 v2） | 待回覆 | — | work/版本/s12/v2/分鏡.md |', ''].join('\n'));
+    '| 2026-11-02 15:00 | ③ 分鏡表（s12 v2） | 待回覆 | — | work/versions/s12/v2/分鏡.md |', ''].join('\n'));
   const s = projectStatus(p);
   assert.deepEqual(s.waiting, ['③ 分鏡表（s12 v2）']);
   assert.equal(s.at, '剪好看／停點 ③ 分鏡表（s12 v2）（待回覆）');
   assert.equal(s.nextStop, '③ 分鏡表');
-  assert.match(s.next, /work\/版本\/s12\/v2\/分鏡\.md；回覆「可以」後跑 versions\.mjs accept --seg s12/);
+  assert.match(s.next, /work\/versions\/s12\/v2\/分鏡\.md；回覆「可以」後跑 versions\.mjs accept --seg s12/);
   fs.rmSync(p, { recursive: true });
 });
 

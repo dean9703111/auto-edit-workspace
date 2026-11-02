@@ -66,7 +66,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 
 | 條件（看得到的事實） | 做什麼 |
 |---|---|
-| `素材/螢幕錄影/` 或 `素材/圖片/` 有檔案 | 照 `auto-edit-screen` 做（2 支以上可以派 explore 子代理，選用），結果寫進分鏡表的 media 列 |
+| `assets/screen/` 或 `assets/images/` 有檔案 | 照 `auto-edit-screen` 做（2 支以上可以派 explore 子代理，選用），結果寫進分鏡表的 media 列 |
 | `--check` 印「只有聲音」的區間 | 同上；那個區間一定要被 media 段或不透明的全幕蓋住 |
 | 都沒有 | 跳過 |
 

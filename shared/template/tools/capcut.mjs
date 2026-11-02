@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 剪映素材：把成片拆成「主軌＋每段一支透明 MOV＋字幕 SRT」，放進 projects/<專案>/成片/剪映/，在剪映（CapCut）照清單排回時間軸
+// 剪映素材：把成片拆成「主軌＋每段一支透明 MOV＋字幕 SRT」，放進 projects/<專案>/output/capcut/，在剪映（CapCut）照清單排回時間軸
 //   build.mjs --capcut 產生合成（compositions/capcut-*.html、capcut.json、capcut.srt）→ 這支逐支 render、寫清單
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,7 +12,7 @@ const SELF = fileURLToPath(import.meta.url);
 const HERE = path.dirname(SELF);
 const HELP = `剪映素材（主軌＋每段一支透明 MOV＋字幕 SRT；要 Node 22、ffmpeg、HyperFrames）
 
-  node shared/template/tools/capcut.mjs --project projects/<專案>               產生全部：成片/剪映/ 的主軌.mp4、每段 .mov、字幕.srt、清單.md
+  node shared/template/tools/capcut.mjs --project projects/<專案>               產生全部：output/capcut/ 的主軌.mp4、每段 .mov、字幕.srt、清單.md
   node shared/template/tools/capcut.mjs --project projects/<專案> --background  同上，改在背景跑（每段約 30 秒，整集常常超過 5 分鐘；進度用 status 看）
   node shared/template/tools/capcut.mjs status --project projects/<專案>        背景跑到哪一支、做完的有哪些
   node shared/template/tools/capcut.mjs --project projects/<專案> --dry-run     只產生合成和清單，不 render（先看會出幾支、多長）
@@ -85,9 +85,9 @@ function statusCmd(dir, rel) {
   if (!st) { console.log(`還沒跑過 → node shared/template/tools/capcut.mjs --project ${rel}`); return 0; }
   const alive = st.pid && (() => { try { process.kill(st.pid, 0); return true; } catch { return false; } })();
   console.log(`${st.done ? '✔ 做完了' : alive ? '🔄 進行中' : '✖ 中斷了'}：${st.made.length}／${st.total} 支${st.current ? `（現在：${st.current}）` : ''}${st.failed.length ? `；失敗 ${st.failed.join('、')}` : ''}`);
-  if (st.done) console.log(`→ 清單：${rel}/成片/剪映/清單.md`);
+  if (st.done) console.log(`→ 清單：${rel}/output/capcut/清單.md`);
   else if (!alive) console.log(`→ 接著做（做過的會略過）：node shared/template/tools/capcut.mjs --project ${rel} --background`);
-  else console.log(`log：${rel}/成片/剪映/render.log（背景跑時另有 capcut.log）；30 秒後再跑一次 status`);
+  else console.log(`log：${rel}/output/capcut/render.log（背景跑時另有 capcut.log）；30 秒後再跑一次 status`);
   return 0;
 }
 
@@ -96,14 +96,14 @@ async function main() {
   if (flags.help) { console.log(HELP); return 0; }
   const P = pathsFrom(flags);
   const rel = path.relative(process.cwd(), P.project).split(path.sep).join('/') || '.';
-  const dir = path.join(P.project, '成片', '剪映');
+  const dir = path.join(P.project, 'output', 'capcut');
   fs.mkdirSync(dir, { recursive: true });
   if (flags.cmd === 'status') return statusCmd(dir, rel);
   if (flags.background && !process.env.AUTO_EDIT_CAPCUT_CHILD) {
     const fd = fs.openSync(path.join(dir, 'capcut.log'), 'w');
     const child = spawn(process.execPath, [SELF, ...process.argv.slice(2).filter((a) => a !== '--background')], { cwd: process.cwd(), detached: true, stdio: ['ignore', fd, fd], windowsHide: true, env: { ...process.env, AUTO_EDIT_CAPCUT_CHILD: '1' } });
     child.unref();
-    console.log(`在背景做剪映素材（pid ${child.pid}），log：${rel}/成片/剪映/capcut.log`);
+    console.log(`在背景做剪映素材（pid ${child.pid}），log：${rel}/output/capcut/capcut.log`);
     console.log('→ 下一步：30 秒後看進度');
     console.log(`node shared/template/tools/capcut.mjs status --project ${rel}`);
     return 0;
@@ -137,7 +137,7 @@ async function main() {
   if (flags['dry-run']) {
     fs.writeFileSync(path.join(dir, '清單.md'), listMd(cc, { files, project: projName }));
     for (const j of jobs) console.log(`  ${j.out}（${j.comp}）`);
-    console.log(`→ 清單：${rel}/成片/剪映/清單.md、字幕：${rel}/成片/剪映/字幕.srt（--dry-run 沒有 render）`);
+    console.log(`→ 清單：${rel}/output/capcut/清單.md、字幕：${rel}/output/capcut/字幕.srt（--dry-run 沒有 render）`);
     return 0;
   }
 
@@ -161,7 +161,7 @@ async function main() {
     const ok = render(P.out, j.comp, out, j.args, logFd);
     const sec = ((Date.now() - t) / 1000).toFixed(0);
     if (ok) { cache[j.out] = h; fs.writeFileSync(cacheFile, JSON.stringify(cache, null, 2) + '\n'); state.made.push(j.out); console.log(`  [${n + 1}/${jobs.length}] ✔ ${j.out}（${sec} 秒）`); }
-    else { state.failed.push(j.out); console.log(`  [${n + 1}/${jobs.length}] ✖ ${j.out} render 失敗 → 看 ${rel}/成片/剪映/render.log 最後幾行`); }
+    else { state.failed.push(j.out); console.log(`  [${n + 1}/${jobs.length}] ✖ ${j.out} render 失敗 → 看 ${rel}/output/capcut/render.log 最後幾行`); }
     save();
   }
   fs.closeSync(logFd);
@@ -173,7 +173,7 @@ async function main() {
   if (fs.existsSync(path.join(dir, '主軌.mp4'))) console.log(`驗證 主軌.mp4：${probe(path.join(dir, '主軌.mp4'))}`);
   if (first) console.log(`驗證 ${first.out}：${probe(path.join(dir, first.out))}（yuva＝有透明通道）`);
   console.log(`${state.failed.length ? `✖ ${state.failed.length} 支失敗：${state.failed.join('、')}` : `✔ ${state.made.length} 支都好了${state.skipped.length ? `（${state.skipped.length} 支沒變、略過）` : ''}`}`);
-  console.log(`→ 清單：${rel}/成片/剪映/清單.md（照「放在」排進剪映）、字幕：${rel}/成片/剪映/字幕.srt`);
+  console.log(`→ 清單：${rel}/output/capcut/清單.md（照「放在」排進剪映）、字幕：${rel}/output/capcut/字幕.srt`);
   return state.failed.length ? 1 : 0;
 }
 

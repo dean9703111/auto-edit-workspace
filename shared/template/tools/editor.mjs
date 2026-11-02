@@ -814,11 +814,11 @@ async function handle(ctx, req, res) {
     return f ? sendFile(req, res, f, { type: 'video/mp4' }) : sendText(res, 404, '找不到 rough.mp4');
   }
   if (p.startsWith('/file/')) {
-    // 只開放專案的 素材/螢幕錄影/ 與 素材/圖片/（media 段的素材）
+    // 只開放專案的 assets/screen/ 與 assets/images/（media 段的素材）
     const rel = p.slice('/file/'.length);
     const f = safeJoin(P.project, rel);
     const r = f && posix(path.relative(P.project, f));
-    if (!r || !(r.startsWith('素材/螢幕錄影/') || r.startsWith('素材/圖片/'))) return sendText(res, 403, '只能讀 素材/螢幕錄影/ 與 素材/圖片/ 裡的檔案');
+    if (!r || !(r.startsWith('assets/screen/') || r.startsWith('assets/images/'))) return sendText(res, 403, '只能讀 assets/screen/ 與 assets/images/ 裡的檔案');
     return sendFile(req, res, f);
   }
   if (p === '/hf/player.js' || p === '/hf/runtime.js') {

@@ -320,7 +320,7 @@ export function formatReport(r) {
   if (r.segments.length) {
     L.push('', ne ? `未通過：${ne} 個錯誤（✖），${nw} 個提醒（⚠）。照 → 後面的改法改 custom 檔（或 plan.json 後重跑 build），再跑一次 audit。` : `通過：${r.segments.length} 段，${nw} 個提醒（⚠）。audit 量的是幾何，最後仍以 snapshot 看圖為準。`);
     const bad = [...new Set(r.findings.flatMap((f) => f.at || []))].sort((a, b) => a - b).slice(0, 12);
-    if (bad.length) L.push(`看畫面：cd ${r.project}/work/hyperframes && npx hyperframes snapshot --at ${bad.map((t) => r3(t)).join(',')} --no-end -o ../../成片/驗收截圖`);
+    if (bad.length) L.push(`看畫面：cd ${r.project}/work/hyperframes && npx hyperframes snapshot --at ${bad.map((t) => r3(t)).join(',')} --no-end -o ../../output/qc`);
   } else if (ne) L.push('', `未通過：${ne} 個錯誤（✖）。`);
   return L.join('\n');
 }

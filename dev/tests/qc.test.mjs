@@ -177,16 +177,16 @@ test('子母畫面段沒有講者小窗（F2）：哪些段該有、缺口落在
   const scenes = [{ id: 's23', pip: false }];
   assert.deepEqual(Q.pipCoverage(items, scenes).map((c) => [c.id, c.state]), [['s20', '部分'], ['s21', '無'], ['m01', '無']]);
   const voiceOnly = [[116.1, 119.5], [119.53, 153.5]];
-  const miss = Q.pipMissing({ items, scenes, voiceOnly, project: 'projects/範例' });
+  const miss = Q.pipMissing({ items, scenes, voiceOnly, project: 'projects/example' });
   assert.deepEqual(miss.map((m) => m.id), ['s20', 's21', 'm01']);
-  assert.equal(miss[1].msg, 's21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 1:56.10–2:33.50 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/範例 照它印的做');
+  assert.equal(miss[1].msg, 's21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 1:56.10–2:33.50 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/example 照它印的做');
   assert.match(miss[0].msg, /^s20 是全畫面情境動畫（x-tool-flow\.html），講者小窗在 1:56\.10 就沒了（段到 2:00\.40）：/);
   assert.deepEqual(Q.pipMissing({ items, scenes, voiceOnly: [], project: 'p' }), [], '沒有全黑就不是初剪的問題');
   assert.deepEqual(Q.pipMissing({ items, scenes, voiceOnly, hasVoice: true, project: 'p' }), [], '有只有聲音的素材：全黑是旁白區間');
   assert.deepEqual(Q.mergeRanges([[1, 2], [2.05, 3], [5, 6]]), [[1, 3], [5, 6]]);
   // 002 之後：沒有聲音素材時 voiceOnly 是空的、小窗照開，全黑放在 roughBlack → 小窗開著但底片是黑的，一樣 ✖
   const lit = items.map((x) => (x.out && ['s20', 's21'].includes(x.id) ? { ...x, out: { ...x.out, pip: [{ start: x.out.start, end: x.out.end }] } } : x));
-  const miss2 = Q.pipMissing({ items: lit, scenes, voiceOnly: [], roughBlack: [[116.1, 153.5]], project: 'projects/範例' });
+  const miss2 = Q.pipMissing({ items: lit, scenes, voiceOnly: [], roughBlack: [[116.1, 153.5]], project: 'projects/example' });
   assert.deepEqual(miss2.map((m) => m.id), ['s20', 's21', 'm01']);
   assert.equal(miss2[1].msg, miss[1].msg);
   const v = Q.judge({ ...base, pipMissing: miss });
@@ -281,7 +281,7 @@ test('observe：每 0.5 秒一格的總表、靜止區間 6–16 秒、接縫條
   const clip = path.join(F.root, 'still22.mp4');
   ffmpeg(['-f', 'lavfi', '-i', "color=c=gray:s=1280x720:r=30:d=22,noise=alls=80:allf=t:enable='lt(t,6)+gte(t,16)'", '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', clip]);
   fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, look: false, speakerBox: [400, 80, 900, 700], rhythm: 'spaced', scenes: [{ id: 's01', scene: 'key-point', from: '#1', to: '#2e', slots: { lead: '下方字卡', key: '重點在這裡' } }] }));
-  const dir = path.join(F.proj, 'work', '觀影');
+  const dir = path.join(F.proj, 'work', 'observe');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'notes.txt'), '我的筆記');
   fs.writeFileSync(path.join(dir, 'sheet-09.jpg'), 'old');
@@ -357,8 +357,8 @@ test('storyboard：rough.mp4 有一段全黑、專案沒有聲音素材 → 子�
   assert.equal(r.status, 1, r.stdout + r.stderr);
   assert.match(r.stderr, /^✖ s02 是全畫面清單卻沒有講者小窗：work\/rough\.mp4 在 0:08\.\d\d–0:1\d\.\d\d 是全黑（原始素材不是）→ 初剪壞了，跑 node shared\/template\/tools\/media\.mjs verify-rough --project projects\/p1 照它印的做$/m);
   assert.ok(!fs.existsSync(path.join(F.proj, 'work', 'storyboard-preview')), '✖ 時不截圖');
-  fs.mkdirSync(path.join(F.proj, '素材', '聲音'), { recursive: true });
-  fs.writeFileSync(path.join(F.proj, '素材', '聲音', '旁白.m4a'), '');
+  fs.mkdirSync(path.join(F.proj, 'assets', 'voice'), { recursive: true });
+  fs.writeFileSync(path.join(F.proj, 'assets', 'voice', '旁白.m4a'), '');
   const t = F.qc('storyboard');
   assert.doesNotMatch(t.stderr, /沒有講者小窗/);
   assert.match(t.stderr, /✖ 還沒 build/);
@@ -536,7 +536,7 @@ test('暗色主題回歸（T115，fixture dev/tests/fixtures/theme-dark 的段�
   const b = F.build();
   assert.equal(b.status, 0, b.stdout + b.stderr);
   assert.match(fs.readFileSync(path.join(F.out, 'index.html'), 'utf8'), /<html data-theme="dark"[ >]/);
-  const final = path.join(F.proj, '成片', 'final.mp4');
+  const final = path.join(F.proj, 'output', 'final.mp4');
   fs.mkdirSync(path.dirname(final), { recursive: true });
   const rr = spawnSync('npx', ['hyperframes', 'render', '--quality', 'draft', '-o', final], { cwd: F.out, encoding: 'utf8', timeout: 600000, shell: process.platform === 'win32' });
   assert.ok(fs.existsSync(final), rr.stdout + rr.stderr);
@@ -547,7 +547,7 @@ test('暗色主題回歸（T115，fixture dev/tests/fixtures/theme-dark 的段�
   assert.equal(cap?.level, 'ok', JSON.stringify(j.checks));
   assert.ok(j.captions.length >= 2 && j.captions.every((x) => Math.abs(x.top - 956) <= 4 && Math.abs(x.bottom - 1074) <= 4 && Math.abs(x.ink - 71) <= 3), JSON.stringify(j.captions));
   // qc-sheet 最上面的主題列是暗色底
-  const d = spawnSync('ffmpeg', ['-v', 'error', '-i', path.join(F.proj, '成片', '驗收截圖', 'qc-sheet.jpg'), '-vf', 'crop=8:8:1900:4', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1']);
+  const d = spawnSync('ffmpeg', ['-v', 'error', '-i', path.join(F.proj, 'output', 'qc', 'qc-sheet.jpg'), '-vf', 'crop=8:8:1900:4', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1']);
   assert.ok([...d.stdout].reduce((a, v) => a + v, 0) / d.stdout.length < 40);
 });
 
@@ -643,7 +643,7 @@ test('直式 framing／speaker（CLI）：第一行印版式；構圖預覽三�
 
 test('直式 final（CLI）：1080×1920 成片格式 ✔、qc-sheet 9:16；同一支片在橫式專案 ✖ 尺寸', { timeout: 180000 }, () => {
   const F = fixture();
-  const final = path.join(F.proj, '成片', 'final.mp4');
+  const final = path.join(F.proj, 'output', 'final.mp4');
   fs.mkdirSync(path.dirname(final), { recursive: true });
   ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=1080x1920:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '3', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', final]);
   fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, format: 'portrait', look: false, scenes: [] }));
@@ -654,7 +654,7 @@ test('直式 final（CLI）：1080×1920 成片格式 ✔、qc-sheet 9:16；同�
   r = F.qc('final', '--json');
   const j = JSON.parse(r.stdout);
   assert.deepEqual(j.canvas, { format: 'portrait', size: [1080, 1920], source: 'plan' });
-  const sheet = path.join(F.proj, '成片', '驗收截圖', 'qc-sheet.jpg');
+  const sheet = path.join(F.proj, 'output', 'qc', 'qc-sheet.jpg');
   assert.equal(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width', '-of', 'csv=p=0', sheet], { encoding: 'utf8' }).stdout.trim(), String(6 * 270 + 7 * 10));
   fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, look: false, scenes: [] }));
   r = F.qc('final');

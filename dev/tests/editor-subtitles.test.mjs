@@ -16,7 +16,7 @@ const plan = () => ({
     { id: 's02', scene: 'side-panel', from: '#3+0.5', to: '#4e-0.2', beats: { aAt: '#4', bAt: '+1.2' },
       slots: { title: '標題', items: ['第一項', { text: '第二項', at: '#4' }, '第三項 ｜icon=file-text at=#5', '寫著 #2 的項目'] } },
     { id: 's03', type: 'fx', fx: 29, from: '#5', to: '#5e', vars: { text: '#1', label: '第 #5 名' } },
-    { id: 'm01', type: 'media', src: '素材/螢幕錄影/a.mp4', from: '#4', to: 20.5, in: 1,
+    { id: 'm01', type: 'media', src: 'assets/screen/a.mp4', from: '#4', to: 20.5, in: 1,
       moves: [{ at: '#4', to: 'full', dur: 0.6 }], marks: [{ at: '#4e', until: '#5', box: [0, 0, 10, 10] }], lens: [{ at: '+1', until: '+2', box: [0, 0, 1, 1], zoom: 2 }] },
     { id: 'c01', scene: 'chapter', at: '#3', slots: { num: '01', title: '開場' } },
   ],

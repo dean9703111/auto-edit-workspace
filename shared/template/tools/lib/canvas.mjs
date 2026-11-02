@@ -135,13 +135,13 @@ export function resolveFormat({ projectDir = null, plan = null, flag = null, pro
   if (m) return { format: m[1] === '直式' ? 'portrait' : 'landscape', source: 'progress', detail: 'work/製作進度.md' };
   const first = (d) => { const abs = path.join(projectDir, d); return fs.existsSync(abs) ? fs.readdirSync(abs).filter((f) => !f.startsWith('.')).sort()[0] : null; };
   const main = path.join(projectDir, 'work', 'main.mp4');
-  const cam = first('素材/真人錄影');
-  const src = fs.existsSync(main) ? ['work/main.mp4', main] : cam && VIDEO_EXT.test(cam) ? [`素材/真人錄影/${cam}`, path.join(projectDir, '素材', '真人錄影', cam)] : null;
+  const cam = first('assets/camera');
+  const src = fs.existsSync(main) ? ['work/main.mp4', main] : cam && VIDEO_EXT.test(cam) ? [`assets/camera/${cam}`, path.join(projectDir, 'assets', 'camera', cam)] : null;
   if (src) {
     const d = probe(src[1]);
     if (d) return { format: d.w < d.h ? 'portrait' : 'landscape', source: 'media', detail: `${src[0]} ${d.w}×${d.h}` };
   }
-  if (first('素材/聲音')) return { format: 'landscape', source: 'media', detail: '只有聲音（素材/聲音/）' };
+  if (first('assets/voice')) return { format: 'landscape', source: 'media', detail: '只有聲音（assets/voice/）' };
   return { format: 'landscape', source: 'default', detail: '預設' };
 }
 
@@ -155,7 +155,7 @@ export function formatErrors({ projectDir = null, plan = null, format = 'landsca
   if (pf && progFmt && pf !== progFmt) out.push(`plan.json 的 format 是 "${pf}"（${ZH[pf]}），work/製作進度.md 開工決策表「版式」是${ZH[progFmt]} → 兩邊改成一樣：plan.json 寫 "format": "${progFmt}"，或開工決策表改成${ZH[pf]}（新增停點紀錄列）`);
   else if (!pf && progFmt === 'portrait') out.push('work/製作進度.md 開工決策表「版式」是直式，plan.json 沒寫 format → plan.json 第一層加 "format": "portrait"（放在 "version" 後面）');
   if (dims && dims.w < dims.h && format === 'landscape') out.push(`主軌是直的（${dims.w}×${dims.h}），版式是橫式 → plan.json 第一層加 "format": "portrait"；真的要做橫式就換橫拍素材`);
-  if (dims && dims.w > dims.h && format === 'portrait') out.push(`直式專案的主軌是橫的（${dims.w}×${dims.h}）→ 請提供直拍素材（寬 < 高）放進 素材/真人錄影/；橫式素材轉直式還不支援（P2）`);
+  if (dims && dims.w > dims.h && format === 'portrait') out.push(`直式專案的主軌是橫的（${dims.w}×${dims.h}）→ 請提供直拍素材（寬 < 高）放進 assets/camera/；橫式素材轉直式還不支援（P2）`);
   return out;
 }
 

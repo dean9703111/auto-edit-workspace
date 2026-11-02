@@ -21,7 +21,7 @@ audit --only <段 id>：<✖ N、⚠ N；每個 ⚠ 一行原文>
 
 ```
 段落：x01（過程）
-檔案：projects/範例/work/hyperframes/compositions/x-process.html
+檔案：projects/example/work/hyperframes/compositions/x-process.html
 ls -l：-rw-r--r--  1 me  staff  6120 11  2 14:31 x-process.html
 從哪支範例改：shared/template/custom/x-process.html
 動畫分鏡：6 拍都照做了（無）

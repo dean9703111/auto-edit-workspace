@@ -10,7 +10,7 @@ import { TOOLS, imp } from './helpers.mjs';
 const { projectStatus, readStopLog } = await imp('status.mjs');
 const mk = () => {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-status-'));
-  for (const d of ['真人錄影', '聲音', '螢幕錄影', '圖片']) fs.mkdirSync(path.join(p, '素材', d), { recursive: true });
+  for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(p, 'assets', d), { recursive: true });
   return p;
 };
 const touch = (p, rel, text = 'x', ageSec = 0) => {
@@ -26,8 +26,8 @@ test('判斷表：S0–S14 由上往下第一個符合', () => {
   const p = mk();
   const st = () => projectStatus(p).stage;
   assert.equal(st(), 'S0');
-  touch(p, '素材/真人錄影/a.mp4');
-  touch(p, '素材/聲音/b.m4a');
+  touch(p, 'assets/camera/a.mp4');
+  touch(p, 'assets/voice/b.m4a');
   assert.equal(st(), 'S1');
   touch(p, 'work/main.mp4');
   assert.equal(st(), 'S2');
@@ -54,22 +54,22 @@ test('判斷表：S0–S14 由上往下第一個符合', () => {
   assert.equal(st(), 'S11');
   touch(p, 'work/hyperframes/index.html', 'x', 0);
   assert.equal(st(), 'S12');
-  touch(p, '成片/final.mp4');
+  touch(p, 'output/final.mp4');
   assert.equal(st(), 'S13');
-  touch(p, '成片/驗收截圖/qc-sheet.jpg');
+  touch(p, 'output/qc/qc-sheet.jpg');
   assert.equal(st(), 'S14');
   fs.rmSync(p, { recursive: true });
 });
 
 test('停點紀錄：同一停點以最後一列為準；待回覆的停點蓋過判斷表；r 編號；不寫任何檔', () => {
   const p = mk();
-  touch(p, '素材/真人錄影/a.mp4');
+  touch(p, 'assets/camera/a.mp4');
   touch(p, 'work/cuts.md');
   const log = ['# 製作進度', '', '## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |', '|---|---|---|---|---|',
     '| 2026-11-02 14:10 | ① 剪輯清單 | 待回覆 | — | — |', '| 2026-11-02 14:20 | ① 剪輯清單 | 通過 | 「清單沒問題，繼續」 | work/cuts.md |', '| 2026-11-02 15:30 | ③ 分鏡表 | 待回覆 | — | — |', ''].join('\n');
   touch(p, 'work/製作進度.md', log);
-  touch(p, 'work/回饋/r1.md');
-  touch(p, 'work/回饋/r3.md');
+  touch(p, 'work/feedback/r1.md');
+  touch(p, 'work/feedback/r3.md');
   const before = snapshot(p);
   const s = projectStatus(p);
   assert.deepEqual(s.waiting, ['③ 分鏡表']);
@@ -92,7 +92,7 @@ test('停點紀錄：同一停點以最後一列為準；待回覆的停點蓋�
 
 test('A-02：srt-split 的備份（rough.srt.split-*）不算 snap-srt 跑過，停在 S6；有 rough.srt.bak-* 才往下', () => {
   const p = mk();
-  touch(p, '素材/真人錄影/a.mp4');
+  touch(p, 'assets/camera/a.mp4');
   for (const f of ['work/cuts.md', 'work/rough.mp4']) touch(p, f);
   touch(p, 'work/rough.srt', '1\n00:00:01,000 --> 00:00:02,000\n短句\n');
   touch(p, 'work/rough.srt.split-20261031-120000');
@@ -106,7 +106,7 @@ test('A-02：srt-split 的備份（rough.srt.split-*）不算 snap-srt 跑過，
 
 test('F8：有 transcript.json 時 srt-align 已是詞級時間，不用 snap-srt（S5 → S7）', () => {
   const p = mk();
-  touch(p, '素材/真人錄影/a.mp4');
+  touch(p, 'assets/camera/a.mp4');
   for (const f of ['work/cuts.md', 'work/rough.mp4', 'work/transcript.json']) touch(p, f);
   touch(p, 'work/rough.srt', '1\n00:00:01,000 --> 00:00:02,000\n短句\n');
   const s = projectStatus(p);
@@ -119,7 +119,7 @@ test('F8：有 transcript.json 時 srt-align 已是詞級時間，不用 snap-sr
 test('C-01：構圖預覽（S8）前講者調光瘦臉還沒好 → 下一步＝lookNextStep 的說明，指令另外一行（cmd）', async () => {
   const { lookNextStep } = await imp('lib/look.mjs');
   const p = mk();
-  touch(p, '素材/真人錄影/a.mp4');
+  touch(p, 'assets/camera/a.mp4');
   for (const f of ['work/cuts.md', 'work/rough.mp4', 'work/rough.srt.align-1', 'work/rough.srt.bak-1', 'work/cutpoints.json']) touch(p, f);
   touch(p, 'work/rough.srt', '1\n00:00:01,000 --> 00:00:02,000\n短句\n');
   const ns = lookNextStep({ projectDir: p, plan: {} });

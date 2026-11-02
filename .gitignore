@@ -1,11 +1,11 @@
 # 專案：只保留給大家練習的範例專案；其他專案（自己的影片、測試素材）都不進版控，避免檔案太大
 projects/*
-!projects/範例/
-projects/範例/work/
-projects/範例/成片/
-!projects/範例-直式/
-projects/範例-直式/work/
-projects/範例-直式/成片/
+!projects/example/
+projects/example/work/
+projects/example/output/
+!projects/example-portrait/
+projects/example-portrait/work/
+projects/example-portrait/output/
 # 講者資料（創作者自己的姓名、頭銜）：每個人本機各一份，範本是 shared/講者.example.json
 shared/講者.json
 

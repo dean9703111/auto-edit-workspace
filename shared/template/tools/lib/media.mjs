@@ -26,7 +26,7 @@ import { visibleLen, nearest, loadIcons } from './scenes.mjs';
 import { CANVAS } from './canvas.mjs';
 
 export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'speed', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'note'];
-export const MEDIA_DIRS = ['素材/螢幕錄影/', '素材/圖片/'];
+export const MEDIA_DIRS = ['assets/screen/', 'assets/images/'];
 export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom'];
 export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5 };
 export const EXIT = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.4 };
@@ -95,7 +95,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 // --list 的 media 欄位表（build.mjs 的文字與 --list --json 共用；契約 specs/contracts/media.md §5）
 export const MEDIA_FIELDS = [
-  ['src', '"素材/螢幕錄影/<檔名>" 或 "素材/圖片/<檔名>"', '必填', `相對專案資料夾；影片 .mp4 .mov .m4v .webm、圖片 .jpg .jpeg .png .webp（先跑 media.mjs scan）`],
+  ['src', '"assets/screen/<檔名>" 或 "assets/images/<檔名>"', '必填', `相對專案資料夾；影片 .mp4 .mov .m4v .webm、圖片 .jpg .jpeg .png .webp（先跑 media.mjs scan）`],
   ['from／to／duration／anchor', '同其他段', 'to 或 duration 必填', 'rough.srt 的句號或秒數'],
   ['in', '秒數', '0', '錄影從第幾秒開始播；in＋段長×speed 不能超過錄影長度'],
   ['speed', '0.5–4', '1', '播放速度（2＝兩倍速）'],
@@ -255,7 +255,7 @@ export const newStepState = () => ({ n: 0, byText: new Map(), last: null });
 export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }) {
   const src = typeof seg.src === 'string' ? seg.src.trim().replace(/\\/g, '/').replace(/^\.\//, '') : '';
   if (!src || !MEDIA_DIRS.some((d) => src.startsWith(d)) || src.split('/').includes('..')) {
-    err(`src 要寫專案資料夾裡 素材/螢幕錄影/ 或 素材/圖片/ 底下的檔案，例如 "素材/螢幕錄影/操作示範.mp4"，現在是 ${JSON.stringify(seg.src)}`);
+    err(`src 要寫專案資料夾裡 assets/screen/ 或 assets/images/ 底下的檔案，例如 "assets/screen/操作示範.mp4"，現在是 ${JSON.stringify(seg.src)}`);
     return null;
   }
   const ext = path.extname(src).toLowerCase();
@@ -265,7 +265,7 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
   const abs = path.join(projectDir, ...src.split('/'));
   if (!fs.existsSync(abs)) {
     const have = MEDIA_DIRS.flatMap((d) => listDir(projectDir, d));
-    err(`src：找不到 ${src} → 檔名要和專案的 素材/ 資料夾裡一模一樣（現有：${have.join('、') || '素材/螢幕錄影/、素材/圖片/ 都是空的'}）`);
+    err(`src：找不到 ${src} → 檔名要和專案的 assets/ 資料夾裡一模一樣（現有：${have.join('、') || 'assets/screen/、assets/images/ 都是空的'}）`);
     return null;
   }
   let info;

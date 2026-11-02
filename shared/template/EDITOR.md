@@ -27,7 +27,7 @@
 指令一律在工作區根目錄執行：
 
 ```bash
-node shared/template/tools/editor.mjs --project projects/範例
+node shared/template/tools/editor.mjs --project projects/example
 ```
 
 - 在非互動的 shell 裡（AI 執行指令就是這種），它會**自己轉到背景**：印出網址就結束，不用加 `&` 或 `nohup`。在終端機裡手動執行則留在前景，按 Ctrl+C 關閉。
@@ -35,8 +35,8 @@ node shared/template/tools/editor.mjs --project projects/範例
 
   ```
   剪輯台：http://127.0.0.1:4400/
-  專案：projects/範例
-  已在背景執行（log：projects/範例/work/hyperframes/.editor/editor.log）。關閉：node shared/template/tools/editor.mjs --stop --project projects/範例
+  專案：projects/example
+  已在背景執行（log：projects/example/work/hyperframes/.editor/editor.log）。關閉：node shared/template/tools/editor.mjs --stop --project projects/example
   ```
 
 - 已經開著時不會開第二個，會印「剪輯台已經開著：網址」，直接把這個網址給使用者。
@@ -45,8 +45,8 @@ node shared/template/tools/editor.mjs --project projects/範例
 
 | 要做的事 | 指令 |
 |---|---|
-| 查剪輯台開著沒、網址是什麼 | `node shared/template/tools/editor.mjs --status --project projects/範例` |
-| 關掉剪輯台 | `node shared/template/tools/editor.mjs --stop --project projects/範例` |
+| 查剪輯台開著沒、網址是什麼 | `node shared/template/tools/editor.mjs --status --project projects/example` |
+| 關掉剪輯台 | `node shared/template/tools/editor.mjs --stop --project projects/example` |
 | 看出了什麼錯 | 讀 `projects/<專案>/work/hyperframes/.editor/editor.log` |
 
 ### 3. 剪輯台會寫哪些欄位
@@ -102,7 +102,7 @@ node shared/template/tools/editor.mjs --project projects/範例
 ### 6. 使用者說「調好了」之後
 
 1. 重新讀 `plan.json`（`edit`、句號、文字可能都變了）和 `rough.srt`。
-2. 跑 `node shared/template/tools/build.mjs --project projects/範例`，有 ✖ 就照 → 後面的建議修好再跑（使用者在頁面按過「重新產生」而且沒有 ✖，可以略過這步）。
+2. 跑 `node shared/template/tools/build.mjs --project projects/example`，有 ✖ 就照 → 後面的建議修好再跑（使用者在頁面按過「重新產生」而且沒有 ✖，可以略過這步）。
 3. 照 `auto-edit-review` 流程 A 抽查（build、audit、`snapshot --review`），再回到停點 ④；使用者說可以才照 `auto-edit-deliver` 輸出。有裁剪時，成片長度＝初剪長度 − 剪掉的範圍。
 4. 關掉剪輯台（`--stop`）。不關也沒關係，下次「打開剪輯台」會沿用同一個。
 
@@ -140,7 +140,7 @@ node shared/template/tools/editor.mjs --project projects/範例
 | 「講者」的臉部對照寫「還沒偵測臉部」 | 跑 `node shared/template/tools/look.mjs run --project projects/<專案>`，跑完重新整理頁面 |
 | `.editor/` 是什麼 | 剪輯台的快取：波形、縮圖、播放器複本、音效靜音前的值（`memory.json`）、狀態檔、log。在 `work/` 底下、不進 git，刪掉會自動重建（刪 `memory.json` 只會讓「取消靜音」改成恢復情境預設音效） |
 
-剪輯台不會 render、不會改 `素材/` 和 `shared/`，也不會改上面表格以外的任何東西。
+剪輯台不會 render、不會改 `assets/` 和 `shared/`，也不會改上面表格以外的任何東西。
 
 ---
 

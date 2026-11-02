@@ -127,7 +127,7 @@
 |---|---|---|---|---|
 | `id` | ✓ | 英數字 | | 建議 `m01`、`m02` |
 | `type` | ✓ | `"media"` | | |
-| `src` | ✓ | `"素材/螢幕錄影/<檔名>"`、`"素材/圖片/<檔名>"` | | 相對專案資料夾；影片 `.mp4 .mov .m4v .webm`、圖片 `.jpg .jpeg .png .webp` |
+| `src` | ✓ | `"assets/screen/<檔名>"`、`"assets/images/<檔名>"` | | 相對專案資料夾；影片 `.mp4 .mov .m4v .webm`、圖片 `.jpg .jpeg .png .webp` |
 | `from` | ✓ | 時間 | | 同其他段（核心 3.4）；剪輯台可能寫成秒數 |
 | `to`／`duration` | 二選一 | 時間／秒數 | | |
 | `anchor` | 選填 | 文字 | | 起點那句的一小段原文 |
@@ -171,9 +171,9 @@
     { "id": "s01", "type": "scene", "label": "06 一般字卡", "start": 12.5, "end": 18.0,
       "sfx": [ { "name": "ding", "at": 12.623, "volume": 0.468, "db": -12.6 } ], "warnings": 0 },
     { "id": "m01", "type": "media", "label": "media 操作示範.mp4", "start": 41.0, "end": 58.2, "shownEnd": 58.8,
-      "sfx": [], "warnings": 1, "src": "素材/螢幕錄影/操作示範.mp4", "enter": "fade", "exit": "fade", "volume": null, "kind": "video" } ],
+      "sfx": [], "warnings": 1, "src": "assets/screen/操作示範.mp4", "enter": "fade", "exit": "fade", "volume": null, "kind": "video" } ],
   "edit": { "cuts": [], "fadeIn": 0, "fadeOut": 0, "volume": { "voice": 0, "sfx": 0, "media": 0 }, "gains": [], "joins": [] },
-  "paths": { "project": "projects/範例", "video": "projects/範例/work/rough.mp4", "plan": "projects/範例/work/hyperframes/plan.json", "out": "projects/範例/work/hyperframes" } }
+  "paths": { "project": "projects/example", "video": "projects/example/work/rough.mp4", "plan": "projects/example/work/hyperframes/plan.json", "out": "projects/example/work/hyperframes" } }
 ```
 
 | 欄位 | 說明 |
@@ -832,7 +832,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 - Skill 直接引用工作區的 `shared/template/USAGE.md`、`shared/template/USAGE-reference.md` 與 `shared/template/tools/build.mjs`，**不要把模板複製進 Skill**。理由：使用者換過的主色與背景圖都在工作區的 `shared/template/`，複製一份就不會跟著變。
 - 依賴：Node.js ≥ 22、ffmpeg／ffprobe（在 PATH 裡）、`npx hyperframes`（版本照根目錄 `package.json`，`npm install` 安裝）。`build.mjs` 本身零依賴。
 - build 用 `--project projects/<專案>`（或只寫名稱）指定專案；沒寫時，目前資料夾在某個專案裡就用它，`projects/` 只有一個專案就用那個，否則報錯並列出現有專案。路徑旗標（相對目前資料夾，會蓋過專案預設）：`--plan`、`--srt`、`--video`、`--out`、`--sfx`。預設是專案裡的 `work/hyperframes/plan.json`、`work/rough.srt`、`work/rough.mp4`、`work/hyperframes/`，音效是 `shared/sfx/`。
-- 專案結構：`projects/<專案>/講稿.md`、`素材/真人錄影/`（口播主軌）、`素材/螢幕錄影/`、`素材/圖片/`（只讀）、`work/`（中間產物）、`成片/`（`final.mp4`、`測試片段/`、`驗收截圖/`；build 會先建好這三個資料夾）。
+- 專案結構：`projects/<專案>/講稿.md`、`assets/camera/`（口播主軌）、`assets/screen/`、`assets/images/`（只讀）、`work/`（中間產物）、`output/`（`final.mp4`、`test-clips/`、`qc/`；build 會先建好這三個資料夾）。
 - build 結束碼：有 ✖ 錯誤時是 1，可以拿來判斷要不要往下跑。`--list --json` 印出機器可讀的情境、字卡動態、音效清單與 media 段欄位；`--check --json` 印出機器可讀的檢查報告（R2.6）。
 - 素材：`node shared/template/tools/media.mjs scan|frame|main --project projects/<專案>`（核心第 5 節、AGENTS.md「剪乾淨」）。也是零依賴，只用 ffmpeg／ffprobe。
 

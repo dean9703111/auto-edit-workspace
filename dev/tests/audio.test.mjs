@@ -360,7 +360,7 @@ test('renderBgmClip：長度精準、淡入、增益；資料夾模式同參數�
   assert.throws(() => A.renderBgmClip(bad, path.join(dir, 'y.wav'), { dur: 5 }), (e) => e.message.startsWith('ffmpeg 產生結尾配樂失敗：') && e.message.endsWith(` → 確認 ${bad} 是完整的 wav（ffmpeg -i 那個檔看得到長度）；壞了就 git checkout 那個檔`));
 });
 
-// 真實素材（gated）：AUTO_EDIT_RMS_PROJECT=projects/範例 node --test dev/tests/audio.test.mjs
+// 真實素材（gated）：AUTO_EDIT_RMS_PROJECT=projects/example node --test dev/tests/audio.test.mjs
 const RMS_PROJECT = process.env.AUTO_EDIT_RMS_PROJECT;
 const rmsDir = RMS_PROJECT ? path.resolve(process.cwd(), RMS_PROJECT) : null;
 const rmsSkip = !RMS_PROJECT ? '沒設 AUTO_EDIT_RMS_PROJECT' : !hasFfmpeg ? '沒有 ffmpeg'

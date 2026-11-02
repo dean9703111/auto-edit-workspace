@@ -119,22 +119,22 @@ test('stageTransform（FR-011＋spike 三句）：fs＝translate(-61.7px, 129.82
   assert.deepEqual(stagePoint(null, [5, 6]), [5, 6]);
 });
 
-test('resolveFormat：--format > plan.json > 製作進度.md「版式」列 > 主軌寬高比（work/main.mp4 → 素材/真人錄影 第一支 → 素材/聲音 = 橫式）；formatLine', () => {
+test('resolveFormat：--format > plan.json > 製作進度.md「版式」列 > 主軌寬高比（work/main.mp4 → assets/camera 第一支 → assets/voice = 橫式）；formatLine', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'canvas-'));
   const calls = [];
   const probe = (f) => { calls.push(path.relative(dir, f)); return f.endsWith('main.mp4') ? { w: 1080, h: 1920 } : { w: 1920, h: 1080 }; };
   const R = (o) => resolveFormat({ projectDir: dir, probe, ...o });
   assert.deepEqual(R({}), { format: 'landscape', source: 'default', detail: '預設' });
-  fs.mkdirSync(path.join(dir, '素材', '聲音'), { recursive: true });
-  fs.writeFileSync(path.join(dir, '素材', '聲音', 'a.m4a'), '');
-  assert.deepEqual(R({}), { format: 'landscape', source: 'media', detail: '只有聲音（素材/聲音/）' });
-  fs.mkdirSync(path.join(dir, '素材', '真人錄影'), { recursive: true });
-  for (const f of ['b.mov', 'a.mp4', '.DS_Store']) fs.writeFileSync(path.join(dir, '素材', '真人錄影', f), '');
-  assert.deepEqual(R({}), { format: 'landscape', source: 'media', detail: '素材/真人錄影/a.mp4 1920×1080' });
+  fs.mkdirSync(path.join(dir, 'assets', 'voice'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'assets', 'voice', 'a.m4a'), '');
+  assert.deepEqual(R({}), { format: 'landscape', source: 'media', detail: '只有聲音（assets/voice/）' });
+  fs.mkdirSync(path.join(dir, 'assets', 'camera'), { recursive: true });
+  for (const f of ['b.mov', 'a.mp4', '.DS_Store']) fs.writeFileSync(path.join(dir, 'assets', 'camera', f), '');
+  assert.deepEqual(R({}), { format: 'landscape', source: 'media', detail: 'assets/camera/a.mp4 1920×1080' });
   fs.mkdirSync(path.join(dir, 'work'));
   fs.writeFileSync(path.join(dir, 'work', 'main.mp4'), '');
   assert.deepEqual(R({}), { format: 'portrait', source: 'media', detail: 'work/main.mp4 1080×1920' });
-  assert.deepEqual(calls, ['素材/真人錄影/a.mp4', path.join('work', 'main.mp4')]);
+  assert.deepEqual(calls, ['assets/camera/a.mp4', path.join('work', 'main.mp4')]);
   fs.writeFileSync(path.join(dir, 'work', '製作進度.md'), '## 開工決策表\n\n| 欄 | 值 |\n|---|---|\n| 版式 | 橫式（使用者說長片） |\n');
   assert.deepEqual(R({}), { format: 'landscape', source: 'progress', detail: 'work/製作進度.md' });
   assert.deepEqual(R({ plan: { format: 'portrait' } }), { format: 'portrait', source: 'plan', detail: 'plan.json' });

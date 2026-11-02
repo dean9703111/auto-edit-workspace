@@ -19,8 +19,8 @@ const build = (...args) => node(BUILD, args);
 const checkJson = () => { const r = build('--check', '--json'); return { r, j: JSON.parse(r.stdout) }; };
 const writePlan = (scenes, extra = {}) => fs.writeFileSync(path.join(out, 'plan.json'), JSON.stringify({ version: 1, speakerBox: [100, 20, 220, 170], ...extra, scenes }, null, 2));
 const read = (f) => fs.readFileSync(path.join(out, f), 'utf8');
-const REC = '素材/螢幕錄影/操作示範.mp4';
-const IMG = '素材/圖片/架構圖.png';
+const REC = 'assets/screen/操作示範.mp4';
+const IMG = 'assets/images/架構圖.png';
 
 before(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-media-'));
@@ -29,13 +29,13 @@ before(() => {
   fs.symlinkSync(TEMPLATE, tpl, 'dir');
   for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   proj = path.join(root, 'projects', 'p1');
-  for (const d of ['真人錄影', '聲音', '螢幕錄影', '圖片']) fs.mkdirSync(path.join(proj, '素材', d), { recursive: true });
+  for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(proj, 'assets', d), { recursive: true });
   out = path.join(proj, 'work', 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
-  const cam = (name, sec, src) => ff(['-f', 'lavfi', '-i', `${src}=size=320x180:rate=30`, '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', String(sec), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, '素材', '真人錄影', name)]);
+  const cam = (name, sec, src) => ff(['-f', 'lavfi', '-i', `${src}=size=320x180:rate=30`, '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', String(sec), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, 'assets', 'camera', name)]);
   cam('01-開場.mp4', 8, 'testsrc');
   cam('03-結尾.mp4', 6, 'smptebars');
-  ff(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=44100', '-t', '4', '-c:a', 'aac', path.join(proj, '素材', '聲音', '02-旁白.m4a')]);
+  ff(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=44100', '-t', '4', '-c:a', 'aac', path.join(proj, 'assets', 'voice', '02-旁白.m4a')]);
   // 螢幕錄影：640×400、25fps、關鍵幀稀疏（build 要轉成 30fps、每秒一個關鍵幀），有聲音
   ff(['-f', 'lavfi', '-i', 'testsrc=size=640x400:rate=25', '-f', 'lavfi', '-i', 'sine=frequency=880:sample_rate=48000', '-t', '10', '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '250', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, ...REC.split('/'))]);
   ff(['-f', 'lavfi', '-i', 'color=c=0x3B82F6:s=800x500', '-frames:v', '1', path.join(proj, ...IMG.split('/'))]);
@@ -49,31 +49,31 @@ test('media.mjs main：照檔名接主軌，聲音檔配純黑畫面，寫 work/
   assert.ok(Math.abs(Number(probe(main, 'format=duration')) - 18) < 0.05);
   assert.equal(probe(main, 'stream=r_frame_rate').split('\n')[0], '30/1');
   const j = JSON.parse(fs.readFileSync(path.join(proj, 'work', 'main.json'), 'utf8'));
-  assert.deepEqual(j.clips.map((c) => [c.file, c.kind, c.start, c.end]), [['素材/真人錄影/01-開場.mp4', 'camera', 0, 8], ['素材/聲音/02-旁白.m4a', 'voice', 8, 12], ['素材/真人錄影/03-結尾.mp4', 'camera', 12, 18]]);
+  assert.deepEqual(j.clips.map((c) => [c.file, c.kind, c.start, c.end]), [['assets/camera/01-開場.mp4', 'camera', 0, 8], ['assets/voice/02-旁白.m4a', 'voice', 8, 12], ['assets/camera/03-結尾.mp4', 'camera', 12, 18]]);
   fs.copyFileSync(main, path.join(proj, 'work', 'rough.mp4'));
   // --order：只接指定的檔
   const o = node(MEDIA, ['main', '--order', '03-結尾.mp4,02-旁白.m4a']);
   assert.equal(o.status, 0, o.stderr);
   assert.match(o.stdout, /沒寫在 --order，不接進主軌：01-開場\.mp4/);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(proj, 'work', 'main.json'), 'utf8')).clips[0].file, '素材/真人錄影/03-結尾.mp4');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(proj, 'work', 'main.json'), 'utf8')).clips[0].file, 'assets/camera/03-結尾.mp4');
   const bad = node(MEDIA, ['main', '--order', '沒有這個.mp4']);
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /--order 的「沒有這個\.mp4」找不到/);
 });
 
 test('media.mjs main：只有一支真人錄影也轉成固定 fps 的 work/main.mp4（auto-editor 剪手機原檔會黑畫面，F2）', () => {
-  const p2 = path.join(root, 'projects', 'p2', '素材', '真人錄影');
+  const p2 = path.join(root, 'projects', 'p2', 'assets', 'camera');
   fs.mkdirSync(p2, { recursive: true });
   // 29.92 fps 的手機檔 → 30 fps
   ff(['-f', 'lavfi', '-i', 'testsrc=size=160x90:rate=359/12', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '3', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuvj420p', '-c:a', 'aac', '-shortest', path.join(p2, 'a.mp4')]);
   const r = node(MEDIA, ['main'], 'p2');
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /只有一支真人錄影（素材\/真人錄影\/a\.mp4）：轉成固定 fps 的 work\/main\.mp4/);
+  assert.match(r.stdout, /只有一支真人錄影（assets\/camera\/a\.mp4）：轉成固定 fps 的 work\/main\.mp4/);
   const main = path.join(root, 'projects', 'p2', 'work', 'main.mp4');
   assert.equal(probe(main, 'stream=r_frame_rate').split('\n')[0], '30/1');
   assert.equal(probe(main, 'stream=pix_fmt').split('\n')[0], 'yuv420p');
   const j = JSON.parse(fs.readFileSync(path.join(root, 'projects', 'p2', 'work', 'main.json'), 'utf8'));
-  assert.deepEqual(j.clips.map((c) => [c.file, c.kind, c.start]), [['素材/真人錄影/a.mp4', 'camera', 0]]);
+  assert.deepEqual(j.clips.map((c) => [c.file, c.kind, c.start]), [['assets/camera/a.mp4', 'camera', 0]]);
   fs.rmSync(path.join(root, 'projects', 'p2'), { recursive: true });
 });
 
@@ -116,7 +116,7 @@ test('media.mjs scan：contact sheet、index.md／index.json（含只有聲音�
   assert.deepEqual(j.files.find((f) => f.src === IMG).width, 800);
   assert.deepEqual(j.voiceOnly, [[8, 12]]);
   const md = fs.readFileSync(path.join(dir, 'index.md'), 'utf8');
-  assert.match(md, /\| 素材\/螢幕錄影\/操作示範\.mp4 \| 0:10\.0（10s） \| 640×400 \|/);
+  assert.match(md, /\| assets\/screen\/操作示範\.mp4 \| 0:10\.0（10s） \| 640×400 \|/);
   assert.match(md, /rough\.mp4 0:08\.0–0:12\.0/);
 });
 
@@ -135,7 +135,7 @@ test('media.mjs frame --grid：原尺寸截圖＋座標格線', () => {
 // ---------- 剪乾淨的工具：cuts.md、ng-snap、cutpoints、srt-split（specs/contracts/cli-002.md §2–§4）----------
 const mkProj = (name) => {
   const p = path.join(root, 'projects', name);
-  for (const d of ['真人錄影', '聲音', '螢幕錄影', '圖片']) fs.mkdirSync(path.join(p, '素材', d), { recursive: true });
+  for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(p, 'assets', d), { recursive: true });
   fs.mkdirSync(path.join(p, 'work'), { recursive: true });
   return p;
 };
@@ -168,7 +168,7 @@ const CUTS_MD = ['| 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|--
 
 test('ng-snap：NG 吸附停頓、找不到停頓用原值 ⚠、章節保留 3 秒、停頓不足 ⚠、待確認不剪、三行指令一致、不寫 work/.cache 以外的檔', () => {
   const p = mkProj('pn');
-  clip(path.join(p, '素材', '真人錄影', 'a.mp4'), 1);
+  clip(path.join(p, 'assets', 'camera', 'a.mp4'), 1);
   fs.writeFileSync(path.join(p, 'work', 'cuts.md'), CUTS_MD);
   const v1 = path.join(root, 'pn.v1.json');
   fs.writeFileSync(v1, JSON.stringify(V1));
@@ -211,13 +211,13 @@ test('ng-snap：NG 連下一句開頭一起剪、吃掉章節的停頓 → 這�
   const [ng2] = snapNg([{ row: 1, start: 37, end: 39 }], sil, 1, [ch.sil]);
   assert.deepEqual([ng2.a, ng2.b, ng2.missStart, ng2.missEnd, ng2.toChapter], [37, 37.3, true, false, true]);
   const p = mkProj('pm');
-  clip(path.join(p, '素材', '真人錄影', 'a.mp4'), 1);
-  clip(path.join(p, '素材', '真人錄影', 'b.mp4'), 1);
+  clip(path.join(p, 'assets', 'camera', 'a.mp4'), 1);
+  clip(path.join(p, 'assets', 'camera', 'b.mp4'), 1);
   fs.writeFileSync(path.join(p, 'work', 'cuts.md'), '| 時間碼 | 內容 | 原因 |\n|---|---|---|\n| 0:37.00–0:41.90 | x | y |\n\n| 章節 | 第一句 | 時間碼 |\n|---|---|---|\n| 1 痛點 | z | 0:41.10 |\n');
   const v1 = path.join(root, 'pm.v1.json');
   fs.writeFileSync(v1, JSON.stringify(V1));
-  assert.match(node(MEDIA, ['ng-snap', '--v1', v1], 'pm').stderr, /素材\/真人錄影\/ 有 2 支、又沒有 work\/main\.mp4 → 先跑 node shared\/template\/tools\/media\.mjs main --project projects\/pm/);
-  const r = node(MEDIA, ['ng-snap', '--v1', v1, '--src', 'projects/pm/素材/真人錄影/a.mp4'], 'pm');
+  assert.match(node(MEDIA, ['ng-snap', '--v1', v1], 'pm').stderr, /assets\/camera\/ 有 2 支、又沒有 work\/main\.mp4 → 先跑 node shared\/template\/tools\/media\.mjs main --project projects\/pm/);
+  const r = node(MEDIA, ['ng-snap', '--v1', v1, '--src', 'projects/pm/assets/camera/a.mp4'], 'pm');
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /⚠ NG 第 1 列吃掉章節 1 的停頓，這章不保留/);
   assert.ok(!/--add-in/.test(r.stdout));
@@ -301,7 +301,7 @@ test('chapterKeep（A-01）：表上時間落在停頓中間 → 用這個停頓
   const [e] = chapterKeep([{ row: 2, title: 'x', t: 1 }], [[5.167, 8.867]], 0.15);
   assert.ok(e.none, `超過 +${CUT.ahead}s 找不到`);
   const p = mkProj('pk');
-  clip(path.join(p, '素材', '真人錄影', 'a.mp4'), 1);
+  clip(path.join(p, 'assets', 'camera', 'a.mp4'), 1);
   fs.writeFileSync(path.join(p, 'work', 'cuts.md'), '| 章節 | 第一句 | 時間碼 |\n|---|---|---|\n| 1 痛點 | z | 0:38.00 |\n');
   const v1 = path.join(root, 'pk.v1.json');
   fs.writeFileSync(v1, JSON.stringify(V1));
@@ -320,11 +320,11 @@ test('parseArgs（A-07）：--key=value 只在第一個 = 切', async () => {
 // 原片 8 秒；rough 6 秒＝彩條 2 秒＋全黑 2 秒＋彩條 2 秒（模擬 auto-editor 剪壞）；cuts.v1.json：保留 0–2、3–5、6–8 秒
 function brokenRough(name, { blackSource = false } = {}) {
   const p = mkProj(name);
-  const src = path.join(p, '素材', '真人錄影', 'a.mp4');
+  const src = path.join(p, 'assets', 'camera', 'a.mp4');
   ff(['-f', 'lavfi', '-i', `${blackSource ? 'color=c=black:size=160x90:rate=30' : 'testsrc=size=160x90:rate=30'}`, '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '8', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', src]);
   ff(['-f', 'lavfi', '-i', 'testsrc=size=160x90:rate=30:d=2', '-f', 'lavfi', '-i', 'color=c=black:s=160x90:r=30:d=2', '-f', 'lavfi', '-i', 'testsrc=size=160x90:rate=30:d=2', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:d=6',
     '-filter_complex', '[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]', '-map', '[v]', '-map', '3:a', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(p, 'work', 'rough.mp4')]);
-  fs.writeFileSync(path.join(p, 'work', 'cuts.v1.json'), JSON.stringify({ version: '1', source: `projects/${name}/素材/真人錄影/a.mp4`, chunks: [[0, 60, 1], [60, 90, 99999], [90, 150, 1], [150, 180, 99999], [180, 240, 1]] }));
+  fs.writeFileSync(path.join(p, 'work', 'cuts.v1.json'), JSON.stringify({ version: '1', source: `projects/${name}/assets/camera/a.mp4`, chunks: [[0, 60, 1], [60, 90, 99999], [90, 150, 1], [150, 180, 99999], [180, 240, 1]] }));
   return p;
 }
 
@@ -376,7 +376,7 @@ const speak = (parts) => {
   }
   return words;
 };
-const SCRIPT_MD = ['# 示範稿', '這是 `素材/a.mp4` 的講稿（說明行，不唸）', '', '嗨！大家好，我是鼎淵', '歡迎來到工程師下班有約', '',
+const SCRIPT_MD = ['# 示範稿', '這是 `assets/a.mp4` 的講稿（說明行，不唸）', '', '嗨！大家好，我是鼎淵', '歡迎來到工程師下班有約', '',
   '並且跟我一樣使用手機', '在固定的機位錄影', '', '### 第一段', '但用起來都不順手', '如果你打算拍 YouTube、Podcast、線上課程，或訪談節目', '這一行沒有講', '所以我乾脆'].join('\n');
 // 錯字（鼎→頂、聲→身）、多講一個「那」、第 7 行沒講
 const SAID = [['嗨大家好我是頂淵'], ['歡迎來到工程師下班有約', 0.3], ['那並且跟我一樣使用手機', 0.3], ['在固定的機位錄影'], ['但用起來都不順手', 0.3], ['如果你打算拍YouTubePodcast線上課程或訪談節目', 0.3], ['所以我乾脆', 0.6]];

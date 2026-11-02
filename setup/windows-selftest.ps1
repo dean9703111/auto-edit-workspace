@@ -206,7 +206,7 @@ foreach ($pair in @(@('USERPROFILE', $env:USERPROFILE), @('TEMP', $env:TEMP), @(
 if ($root -match '\\OneDrive') { Say 'T11 workspace inside OneDrive' 'WARN' $root } else { Say 'T11 workspace outside OneDrive' 'PASS' '' }
 $mediaDirs = @(Get-ChildItem -Path (Join-Path $root 'projects\*\素材\真人錄影'), (Join-Path $root 'projects\*\素材\聲音') -Directory -ErrorAction SilentlyContinue)
 $cloud = @($mediaDirs | ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -File -ErrorAction SilentlyContinue } | Where-Object { ([int]$_.Attributes -band 0x401000) -ne 0 })
-if ($cloud.Count -gt 0) { Say 'T11 cloud-only files in projects/*/素材/' 'WARN' (($cloud | ForEach-Object { $_.Name }) -join ', ') }
+if ($cloud.Count -gt 0) { Say 'T11 cloud-only files in projects/*/assets/' 'WARN' (($cloud | ForEach-Object { $_.Name }) -join ', ') }
 
 # ---------- T12 Smart App Control ----------
 $sac = $null

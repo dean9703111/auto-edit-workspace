@@ -3,13 +3,13 @@
  * 品質檢查工具：成片驗收、講者動作範圍圖、構圖預覽、分鏡截圖、觀影總表（零依賴，只用 Node 22 與 ffmpeg／ffprobe；分鏡截圖與觀影總表另用 HyperFrames 的 Chrome）
  *
  *   node shared/template/tools/qc.mjs final --project projects/<專案> [--file <mp4>] [--json]
- *       成片驗收（預設檔案 成片/final.mp4）。除了尺寸、30fps、音軌、長度，還抓「四項全過、內容卻壞」的問題：
+ *       成片驗收（預設檔案 output/final.mp4）。除了尺寸、30fps、音軌、長度，還抓「四項全過、內容卻壞」的問題：
  *         響度（整合響度 −15.5～−12.5 LUFS、true peak ≤ −1.0 dBTP）、畫面凍結（≥ 3 秒，章節轉場本來就靜止，已排除）、
  *         黑畫面（≥ 0.5 秒）、長時間沒聲音（≥ 4 秒）。凍結／黑畫面／無聲的時間會對到 plan.json 的段落 id。
  *         子母畫面段沒有講者小窗（rough.mp4 全黑、專案又沒有聲音素材＝初剪壞了）是 ✖（直式叫「上下分割段沒有講者面板」，判準相同）。
  *         字幕（F8，照作者剪映）：抽 5 則中文字幕，量底板 y 956–1074 ± 4（build 好的頁面）與字高 71 ± 3（成片的白字），
  *         不合是 ⚠；字幕含「，」「。」、一則不到 0.6 秒也是 ⚠。直式：尺寸要 1080×1920、底板照 lib/canvas.mjs 的 caption.box（y 1291–1409）。
- *       另存總覽圖 成片/驗收截圖/qc-sheet.jpg（每 10 秒一格，最上面標主題 theme: light／dark），給人或 AI 快速掃一眼；
+ *       另存總覽圖 output/qc/qc-sheet.jpg（每 10 秒一格，最上面標主題 theme: light／dark），給人或 AI 快速掃一眼；
  *         直式每格 9:16，格上疊 unsafe[]（平台介面區）的紅色半透明框。
  *       預期長度跑 build.mjs --check --json 取得（rough.mp4 − cuts）。
  *       輸出 ✔／⚠／✖；有 ✖ 結束碼是 1，只有 ⚠ 是 0。--json 只印一個 JSON。
@@ -38,14 +38,14 @@
  *       work/storyboard.md 的 ![s01](storyboard-preview/s01.png) 行。要先 build；plan.json 改過沒 build 會 ✖。
  *       直式放橫的錄影縮到原尺寸 < 60 %、沒有 moves、> 3 秒 → ⚠ 介面字太小。
  *   node shared/template/tools/qc.mjs observe --project projects/<專案> [--from 60] [--to 120] [--file <mp4> --offset <秒>] [--json]
- *       觀影總表：從 成片/final.mp4（或 --file 指定的測試片段）每 0.5 秒抽一格，拼成 work/觀影/sheet-NN.jpg
+ *       觀影總表：從 output/final.mp4（或 --file 指定的測試片段）每 0.5 秒抽一格，拼成 work/observe/sheet-NN.jpg
  *       （6×8 格＝24 秒，每格下面印「時間｜段 id｜字幕」）；列出 ≥ 8 秒幾乎不變的靜止區間；
- *       每個段落起點與終點各做一條「前 0.5 秒到後 0.2 秒、每 0.1 秒一格」的接縫條帶 work/觀影/seam-NN.jpg；
- *       拍點表 work/觀影/beat-NN.jpg：和 storyboard 同一套取樣時刻（抽屜、焦點抬起、完成態、條列、標註），從成片抽格；
- *       索引在 work/觀影/index.md（「小窗」欄：子母畫面段有沒有講者小窗）。--offset＝這個檔的第 0 秒是成片第幾秒（測試片段寫 build --test 的起點）。
+ *       每個段落起點與終點各做一條「前 0.5 秒到後 0.2 秒、每 0.1 秒一格」的接縫條帶 work/observe/seam-NN.jpg；
+ *       拍點表 work/observe/beat-NN.jpg：和 storyboard 同一套取樣時刻（抽屜、焦點抬起、完成態、條列、標註），從成片抽格；
+ *       索引在 work/observe/index.md（「小窗」欄：子母畫面段有沒有講者小窗）。--offset＝這個檔的第 0 秒是成片第幾秒（測試片段寫 build --test 的起點）。
  *       排版用 HyperFrames 的 Chrome（中文字），找不到會 ✖。直式格子是 9:16（總表 8×6 格＝24 秒、拍點 6 欄）。
  *
- * --project：專案資料夾（projects/範例，或只寫名稱 範例）。測試用：--template <shared/template 資料夾>、--chrome <Chrome 執行檔>
+ * --project：專案資料夾（projects/example，或只寫名稱 example）。測試用：--template <shared/template 資料夾>、--chrome <Chrome 執行檔>
  * --format landscape|portrait：蓋過版式（預設 plan.json "format" > 開工決策表「版式」> 主軌寬高比，lib/canvas.mjs）；每個指令第一行印「版式：…」（--json 不印）
  */
 import fs from 'node:fs';
@@ -493,7 +493,7 @@ export function makeQcSheet(file, dur, outFile, theme = 'light', cv = null) {
 }
 
 export async function finalCheck(P, flags) {
-  const file = flags.file ? path.resolve(flags.file) : path.join(P.project, '成片', 'final.mp4');
+  const file = flags.file ? path.resolve(flags.file) : path.join(P.project, 'output', 'final.mp4');
   if (!fs.existsSync(file)) throw new Error(`找不到成片 ${rel(file)} → 先 render（USAGE.md 2.7），或用 --file 指定 mp4`);
   const info = probeMedia(file);
   if (!info.hasVideo) throw new Error(`${rel(file)} 沒有影像 → 檔案壞了或不是影片`);
@@ -512,7 +512,7 @@ export async function finalCheck(P, flags) {
   const verdict = judge(facts);
   if (exp.error) verdict.checks.splice(2, 0, { key: 'build', level: 'warn', text: `${exp.error} → 時間對不到段落、長度也沒有預期值，先修好專案再重跑 qc` }), verdict.warnings++;
   let sheet = null;
-  try { sheet = makeQcSheet(file, dur, path.join(P.project, '成片', '驗收截圖', 'qc-sheet.jpg'), theme, cv); } catch (e) {
+  try { sheet = makeQcSheet(file, dur, path.join(P.project, 'output', 'qc', 'qc-sheet.jpg'), theme, cv); } catch (e) {
     verdict.checks.push({ key: 'sheet', level: 'warn', text: `總覽圖產生失敗：${e.message}` }); verdict.warnings++;
   }
   return { file, fmt, facts, ...verdict, sheet };
@@ -1267,7 +1267,7 @@ ${extra}</style></head><body>${body}</body></html>`;
 
 export async function observeRun(P, flags) {
   const pj = `projects/${path.basename(P.project)}`;
-  const finalDefault = path.join(P.project, '成片', 'final.mp4');
+  const finalDefault = path.join(P.project, 'output', 'final.mp4');
   const file = flags.file ? path.resolve(flags.file) : finalDefault;
   if (!fs.existsSync(file)) throw new Error(`找不到成片 ${rel(file)} → 先 render（USAGE.md 2.7），或用 --file 指定 mp4`);
   const info = probeMedia(file);
@@ -1283,7 +1283,7 @@ export async function observeRun(P, flags) {
   }
   const chrome = findChrome({ chrome: flags.chrome });
   const fmt = formatOf(P, flags), L = obsLayout(fmt.canvas), words = panelWords(fmt.format === 'portrait');
-  const dir = path.join(P.project, 'work', '觀影');
+  const dir = path.join(P.project, 'work', 'observe');
   const tiles = path.join(dir, '.tiles');
   fs.mkdirSync(dir, { recursive: true });
   for (const f of fs.readdirSync(dir)) if (/^(sheet|seam|beat)-\d+\.jpg$/.test(f) || f === 'index.md') fs.rmSync(path.join(dir, f), { force: true });

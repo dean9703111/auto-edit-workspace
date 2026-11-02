@@ -3,13 +3,13 @@
  * 素材工具：看螢幕錄影與圖片、讀座標、接主軌（零依賴，只用 Node 22 與 ffmpeg／ffprobe）
  *
  *   node shared/template/tools/media.mjs scan --project projects/<專案>
- *       列出 素材/螢幕錄影/、素材/圖片/ 每個檔（長度、解析度、fps、有沒有聲音）；
+ *       列出 assets/screen/、assets/images/ 每個檔（長度、解析度、fps、有沒有聲音）；
  *       影片抽「畫面變化」＋固定間隔的格子，拼成帶時間的 contact sheet：work/media/<檔名>/sheet-01.jpg …
  *       寫 work/media/index.md（給 AI 讀：每一格是素材的第幾秒）與 index.json
- *   node shared/template/tools/media.mjs frame --project projects/<專案> --src 素材/螢幕錄影/<檔名> --at 12.5 [--grid]
+ *   node shared/template/tools/media.mjs frame --project projects/<專案> --src assets/screen/<檔名> --at 12.5 [--grid]
  *       截一張原尺寸畫面到 work/media/frames/；--grid 疊每 100px 一條、標數字的座標格線（plan.json 的 box／moves／lens 用這個座標）
  *   node shared/template/tools/media.mjs main --project projects/<專案> [--order 檔名1,檔名2,…]
- *       把 素材/真人錄影/ 與 素材/聲音/ 的檔照檔名排序（或 --order 的順序）接成 work/main.mp4：
+ *       把 assets/camera/ 與 assets/voice/ 的檔照檔名排序（或 --order 的順序）接成 work/main.mp4：
  *       聲音檔配純黑畫面；解析度／fps 跟第一支真人錄影（沒有就 1920×1080 30fps）；聲音統一 48k AAC。
  *       同時寫 work/main.json：{ "clips": [{ "file", "kind": "camera"|"voice", "start", "end" }] }
  *       只有一支真人錄影時也轉一次（固定 fps、yuv420p）：auto-editor 直接剪手機原檔（VFR、yuvj420p），--cut-out 之後的畫面可能全黑。
@@ -55,7 +55,7 @@
  *       讀不到就只查不用尺寸的規則（⚠）；插圖清單列了新建 SVG 卻沒有檔 ✖。有 ✖ 結束碼 1。不改任何 SVG。
  *       順便拼 work/插圖清單.jpg（插圖清單用到的畫廊元件＋illus-local 的新元件，1:1 px，上亮色、下暗色；要 HyperFrames 的 Chrome）；--no-sheet 不拼。
  *
- * --project：專案資料夾（projects/範例，或只寫名稱 範例）；沒寫時規則同 build.mjs。測試用：--template <shared/template 資料夾>
+ * --project：專案資料夾（projects/example，或只寫名稱 example）；沒寫時規則同 build.mjs。測試用：--template <shared/template 資料夾>
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -160,10 +160,10 @@ export function scan(P, { log = console.log } = {}) {
   const projRel = projectLabel(P, proj);
   const entries = [];
   const used = new Set();
-  for (const [dir, exts, kind] of [['螢幕錄影', VIDEO_EXT, 'video'], ['圖片', IMAGE_EXT, 'image']]) {
-    for (const f of listFiles(path.join(proj, '素材', dir), exts)) {
-      const src = `素材/${dir}/${f}`;
-      const abs = path.join(proj, '素材', dir, f);
+  for (const [dir, exts, kind] of [['screen', VIDEO_EXT, 'video'], ['images', IMAGE_EXT, 'image']]) {
+    for (const f of listFiles(path.join(proj, 'assets', dir), exts)) {
+      const src = `assets/${dir}/${f}`;
+      const abs = path.join(proj, 'assets', dir, f);
       let info;
       try { info = probeMedia(abs); } catch (e) { entries.push({ src, kind, error: e.message }); continue; }
       const e = { src, kind, duration: info.duration, width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, sheets: [] };
@@ -197,7 +197,7 @@ function indexMd(j) {
   const L = [`# 素材清單（media.mjs scan 產生，不要手改）`, '', `專案：${j.project}　掃描時間：${j.scannedAt}`, ''];
   const vids = j.files.filter((f) => f.kind === 'video'), imgs = j.files.filter((f) => f.kind === 'image');
   L.push('## 螢幕錄影', '');
-  if (!vids.length) L.push('（素材/螢幕錄影/ 是空的）', '');
+  if (!vids.length) L.push('（assets/screen/ 是空的）', '');
   else {
     L.push('| 檔案（plan.json 的 src） | 長度 | 解析度（座標範圍） | fps | 聲音 | contact sheet |', '|---|---|---|---|---|---|');
     for (const v of vids) {
@@ -213,7 +213,7 @@ function indexMd(j) {
     }
   }
   L.push('## 圖片', '');
-  if (!imgs.length) L.push('（素材/圖片/ 是空的）', '');
+  if (!imgs.length) L.push('（assets/images/ 是空的）', '');
   else {
     L.push('| 檔案（plan.json 的 src） | 解析度（座標範圍） |', '|---|---|');
     for (const m of imgs) L.push(m.error ? `| ${m.src} | ✖ ${m.error} |` : `| ${m.src} | ${m.width}×${m.height} |`);
@@ -235,10 +235,10 @@ function indexMd(j) {
 // ---------- frame ----------
 
 export function frame(P, { src, at = 0, grid = false } = {}) {
-  if (!src) throw new Error('要寫 --src，例如 --src 素材/螢幕錄影/操作示範.mp4');
+  if (!src) throw new Error('要寫 --src，例如 --src assets/screen/操作示範.mp4');
   const s = String(src).replace(/\\/g, '/');
   const abs = path.isAbsolute(s) ? s : path.join(P.project, ...s.split('/'));
-  if (!fs.existsSync(abs)) throw new Error(`找不到 ${s}（路徑相對專案資料夾 ${rel(P.project)}，例如 素材/螢幕錄影/操作示範.mp4）`);
+  if (!fs.existsSync(abs)) throw new Error(`找不到 ${s}（路徑相對專案資料夾 ${rel(P.project)}，例如 assets/screen/操作示範.mp4）`);
   const info = probeMedia(abs);
   if (!info.width) throw new Error(`${s} 讀不到畫面`);
   const t = Number(at) || 0;
@@ -278,10 +278,10 @@ export const mainFps = (info) => (info.vfr || !info.fps || info.fps > 61 || Math
 
 export function joinMain(P, { order = null, log = console.log } = {}) {
   const proj = P.project;
-  const cams = listFiles(path.join(proj, '素材', '真人錄影'), VIDEO_EXT).map((f) => ({ name: f, file: `素材/真人錄影/${f}`, kind: 'camera' }));
-  const voices = listFiles(path.join(proj, '素材', '聲音'), [...AUDIO_EXT, ...VIDEO_EXT]).map((f) => ({ name: f, file: `素材/聲音/${f}`, kind: 'voice' }));
+  const cams = listFiles(path.join(proj, 'assets', 'camera'), VIDEO_EXT).map((f) => ({ name: f, file: `assets/camera/${f}`, kind: 'camera' }));
+  const voices = listFiles(path.join(proj, 'assets', 'voice'), [...AUDIO_EXT, ...VIDEO_EXT]).map((f) => ({ name: f, file: `assets/voice/${f}`, kind: 'voice' }));
   let list = [...cams, ...voices].sort((a, b) => natural(a.name, b.name));
-  if (!list.length) throw new Error('素材/真人錄影/ 和 素材/聲音/ 都是空的：先把口播影片或旁白放進去');
+  if (!list.length) throw new Error('assets/camera/ 和 assets/voice/ 都是空的：先把口播影片或旁白放進去');
   if (order) {
     const want = String(order).split(',').map((s) => s.trim()).filter(Boolean);
     const picked = want.map((w) => {
@@ -659,19 +659,19 @@ export function aeCommand({ src, edit, margin, cutOut = [], addIn = [], tail = [
 function mainSource(P, src, { normalize = true, log = console.log } = {}) {
   if (src) {
     for (const p of [path.resolve(src), path.join(P.project, src)]) if (fs.existsSync(p) && fs.statSync(p).isFile()) return p;
-    throw new Error(`找不到 --src「${src}」→ 寫原片的路徑（例 projects/範例/work/main.mp4）`);
+    throw new Error(`找不到 --src「${src}」→ 寫原片的路徑（例 projects/example/work/main.mp4）`);
   }
   const work = path.join(P.project, 'work');
   if (fs.existsSync(path.join(work, 'main.json')) && fs.existsSync(path.join(work, 'main.mp4'))) return path.join(work, 'main.mp4');
-  const cams = listFiles(path.join(P.project, '素材', '真人錄影'), VIDEO_EXT), voices = listFiles(path.join(P.project, '素材', '聲音'), AUDIO_EXT);
+  const cams = listFiles(path.join(P.project, 'assets', 'camera'), VIDEO_EXT), voices = listFiles(path.join(P.project, 'assets', 'voice'), AUDIO_EXT);
   if (cams.length === 1 && !voices.length) {
-    if (!normalize) return path.join(P.project, '素材', '真人錄影', cams[0]);
+    if (!normalize) return path.join(P.project, 'assets', 'camera', cams[0]);
     log('還沒有 work/main.mp4：先把原片轉成固定 fps（auto-editor 直接剪手機原檔，--cut-out 之後的畫面可能全黑）');
     fs.mkdirSync(work, { recursive: true });
     return joinMain(P, { log }).file;
   }
-  if (cams.length + voices.length > 1) throw new Error(`素材/真人錄影/ 有 ${cams.length} 支${voices.length ? `、素材/聲音/ 有 ${voices.length} 個` : ''}、又沒有 work/main.mp4 → 先跑 node shared/template/tools/media.mjs main --project ${posixRel(P.project)}（剪乾淨第 1 步）`);
-  throw new Error(`找不到原片：素材/真人錄影/ 是空的 → 把口播影片放進 ${posixRel(path.join(P.project, '素材', '真人錄影'))}/`);
+  if (cams.length + voices.length > 1) throw new Error(`assets/camera/ 有 ${cams.length} 支${voices.length ? `、assets/voice/ 有 ${voices.length} 個` : ''}、又沒有 work/main.mp4 → 先跑 node shared/template/tools/media.mjs main --project ${posixRel(P.project)}（剪乾淨第 1 步）`);
+  throw new Error(`找不到原片：assets/camera/ 是空的 → 把口播影片放進 ${posixRel(path.join(P.project, 'assets', 'camera'))}/`);
 }
 
 function aeSilence(P, src, { edit, margin, log }) {
@@ -879,7 +879,7 @@ export function lumaAt(file, at) {
 }
 
 function hasVoiceSource(project) {
-  if (listFiles(path.join(project, '素材', '聲音'), [...AUDIO_EXT, ...VIDEO_EXT]).length) return true;
+  if (listFiles(path.join(project, 'assets', 'voice'), [...AUDIO_EXT, ...VIDEO_EXT]).length) return true;
   try { return (JSON.parse(fs.readFileSync(path.join(project, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice'); } catch { return false; }
 }
 

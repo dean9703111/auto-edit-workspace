@@ -27,7 +27,7 @@
 | 畫面沒有變化（custom） | custom 段裡連續 > 6 秒沒有任何動作（進場、點亮、焦點切換、描線、數字變化、位移都算動作），而那段時間有字幕句在講 | audit 的 `⚠ 畫面沒有變化：…（口播 #N–#M 在講；上限 6s）`；照 → 在那句補一拍 `P.at('#K@詞')`，或從那句拆成兩段（USAGE-reference.md R8 #21） | P1 |
 | 章節角標 | 疊加、半畫面時右上角有章節角標，一直留到下一章；子母畫面、全幕時隱藏 | `review-beats.jpg`、觀影總表；角標不見了不要在 plan.json 補 `chtag`，回報給使用者 | P1 |
 | 音效 | 照 style.md「審查門檻」的「音效」 | build 印的「音效次數」「音效密度」「音效比例」與 ⚠ | P1 |
-| 靜止 | 照 style.md「審查門檻」的「靜止」 | `work/觀影/index.md` 的「靜止區間」 | P2（口播在講新東西時升 P1） |
+| 靜止 | 照 style.md「審查門檻」的「靜止」 | `work/observe/index.md` 的「靜止區間」 | P2（口播在講新東西時升 P1） |
 | 其他觀感 | 顏色、對齊、留白 | 截圖 | P2 |
 
 ## 3. 觀影 pass（照順序）
@@ -35,18 +35,18 @@
 1. `(cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review)`：先看 `review-beats.jpg`（每段至少兩格；段起點那格還在進場，**判斷版面看段中間那格**），再看 `review-seam-NN.jpg`、`review-phone.jpg`（USAGE.md 2.5）。
 2. 每段一列 PASS／FAIL（§4 的表）。FAIL 的修好後只重看那幾段。
 3. 停點 ③ 之後改過條列或錄影標註的段，跑 `node shared/template/tools/qc.mjs storyboard --project projects/<專案>`，看那段的完成態截圖。
-4. 有 mp4 之後（測試片段、`成片/final.mp4`）照下面「觀影總表」做。
+4. 有 mp4 之後（測試片段、`output/final.mp4`）照下面「觀影總表」做。
 
-- `qc.mjs storyboard` 或 `qc.mjs final` 印 `✖ s21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 1:56.14–2:33.51 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/<專案> 照它印的做`：不是版面的問題，不要改 plan.json；照 → 重做初剪，再 build、再截圖。專案有 `素材/聲音/` 的旁白時不會報（全黑本來就是旁白區間）。
-- `qc.mjs observe` 的 `work/觀影/index.md`「總表」多一欄「小窗（子母畫面段）」：那張總表裡每個該有小窗的段寫 `有`／`無`／`部分（m:ss.s 起沒有）`（照 `--check --json` 判，不用看圖）。看到 `無`、`部分` 就跑 `qc.mjs final` 看原因。
+- `qc.mjs storyboard` 或 `qc.mjs final` 印 `✖ s21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 1:56.14–2:33.51 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/<專案> 照它印的做`：不是版面的問題，不要改 plan.json；照 → 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報（全黑本來就是旁白區間）。
+- `qc.mjs observe` 的 `work/observe/index.md`「總表」多一欄「小窗（子母畫面段）」：那張總表裡每個該有小窗的段寫 `有`／`無`／`部分（m:ss.s 起沒有）`（照 `--check --json` 判，不用看圖）。看到 `無`、`部分` 就跑 `qc.mjs final` 看原因。
 - 測試片段（`--offset` > 0）的總表：起點在片段之前的段不標 id，並印 `⚠ <id> 在 m:ss.s 就開始了，測試片段不含這段`。要看那段，把 `build --test` 的起點改成它印的秒數。
 
 ### 觀影總表（交付前整片看一遍）
 
-1. `node shared/template/tools/qc.mjs observe --project projects/<專案>`（只重看一段：加 `--from 60 --to 120`，單位是成片秒數；測試片段加 `--file projects/<專案>/成片/測試片段/test-clip.mp4 --offset <起點>`）。
-2. 依序看 `work/觀影/sheet-NN.jpg`：每張 6×8 格＝24 秒、每格 0.5 秒；格下是 `時間｜段落編號｜字幕`。找：字幕和畫面對不上、卡片壓臉、文字被切、版面突然空掉、錄影停格。
-3. 看 `work/觀影/seam-NN.jpg`：每個段落接縫從前 0.5 秒到後 0.2 秒、每 0.1 秒一格。找：閃一格黑、卡片殘影、跳格。
-4. 有情境動畫或 v2 字卡時看 `work/觀影/beat-NN.jpg`（和分鏡截圖同一套拍點時刻、從成片抽格）：對照 `work/storyboard.md` 的動畫分鏡，每一拍該出現的東西有沒有在那一刻出現、焦點在不在對的元素上。
+1. `node shared/template/tools/qc.mjs observe --project projects/<專案>`（只重看一段：加 `--from 60 --to 120`，單位是成片秒數；測試片段加 `--file projects/<專案>/output/test-clips/test-clip.mp4 --offset <起點>`）。
+2. 依序看 `work/observe/sheet-NN.jpg`：每張 6×8 格＝24 秒、每格 0.5 秒；格下是 `時間｜段落編號｜字幕`。找：字幕和畫面對不上、卡片壓臉、文字被切、版面突然空掉、錄影停格。
+3. 看 `work/observe/seam-NN.jpg`：每個段落接縫從前 0.5 秒到後 0.2 秒、每 0.1 秒一格。找：閃一格黑、卡片殘影、跳格。
+4. 有情境動畫或 v2 字卡時看 `work/observe/beat-NN.jpg`（和分鏡截圖同一套拍點時刻、從成片抽格）：對照 `work/storyboard.md` 的動畫分鏡，每一拍該出現的東西有沒有在那一刻出現、焦點在不在對的元素上。
 5. `index.md` 的「靜止區間」是連續 8 秒以上幾乎沒變的地方：對照口播決定要不要補畫面（換段、加標註或情境動畫），刻意留白就寫理由。
 6. 每個問題一行：`[P0／P1／P2] m:ss.s（段落編號） 問題｜證據（sheet-02.jpg 第 3 列第 5 格）｜修法`。
 
@@ -83,4 +83,4 @@
 - [ ] 測試片段有音軌（ffprobe）
 - [ ] 觀影總表看過（`qc.mjs observe`）
 - [ ] `node shared/template/tools/qc.mjs final --project projects/<專案>`：0 個 ✖（沒有「沒有講者小窗」的 ✖）；每個 ⚠ 都寫了「刻意」或「要修」
-- [ ] 這一輪的 `work/回饋/r<N>.md` 四節都寫完（有回饋輪時）
+- [ ] 這一輪的 `work/feedback/r<N>.md` 四節都寫完（有回饋輪時）

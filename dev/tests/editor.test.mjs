@@ -20,7 +20,7 @@ const PLAN_TEXT = `{
   "speakerBox": [700, 200, 1220, 1000],
   "scenes": [
     { "id": "s01", "scene": "concept", "from": "#2", "to": "#3e", "slots": { "text": "**場地設定**：一份文件" } },
-    { "id": "m01", "type": "media", "src": "素材/螢幕錄影/demo.mp4", "from": "#4", "to": "#5e", "in": 1 }
+    { "id": "m01", "type": "media", "src": "assets/screen/demo.mp4", "from": "#4", "to": "#5e", "in": 1 }
   ]
 }
 `;
@@ -36,15 +36,15 @@ before(async () => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-editor-'));
   fs.mkdirSync(path.join(root, 'shared'), { recursive: true });
   fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
-  proj = path.join(root, 'projects', '範例');
+  proj = path.join(root, 'projects', 'example');
   work = path.join(proj, 'work');
   out = path.join(work, 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
-  fs.mkdirSync(path.join(proj, '素材', '螢幕錄影'), { recursive: true });
+  fs.mkdirSync(path.join(proj, 'assets', 'screen'), { recursive: true });
   const v = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=160x90:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
     '-t', '6', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(work, 'rough.mp4')]);
   assert.equal(v.status, 0, String(v.stderr));
-  fs.copyFileSync(path.join(work, 'rough.mp4'), path.join(proj, '素材', '螢幕錄影', 'demo.mp4'));
+  fs.copyFileSync(path.join(work, 'rough.mp4'), path.join(proj, 'assets', 'screen', 'demo.mp4'));
   fs.writeFileSync(path.join(work, 'rough.srt'), makeSrt({ n: 2 }));
   fs.writeFileSync(path.join(work, 'cutpoints.json'), JSON.stringify({ cuts: [{ at: 2.2, kind: 'pause' }, { at: 4.1, kind: 'ng' }] }));
   planFile = path.join(out, 'plan.json');
@@ -58,8 +58,8 @@ test('讀狀態：專案、plan、影片資訊、字幕、剪接點、media 段�
   assert.match(url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
   assert.equal(ed.server.address().address, '127.0.0.1');
   const s = await (await get('/api/state')).json();
-  assert.equal(s.project.name, '範例');
-  assert.equal(s.project.dir, 'projects/範例');
+  assert.equal(s.project.name, 'example');
+  assert.equal(s.project.dir, 'projects/example');
   assert.equal(s.plan.exists, true);
   assert.equal(s.plan.data.scenes.length, 2);
   assert.equal(s.edit, null);
@@ -104,7 +104,7 @@ test('只寫允許的欄位：edit 補齊預設、cuts 排序合併、joins 去�
     joins: [{ at: 1, type: 'dip', dur: 0.3 }, { at: 4.1, type: 'punch' }],
   });
   assert.deepEqual(Object.keys(plan), ['version', 'speakerBox', 'edit', 'scenes'], 'edit 插在 scenes 前面');
-  assert.deepEqual(plan.scenes[1], { id: 'm01', type: 'media', src: '素材/螢幕錄影/demo.mp4', from: '#4', to: '#5e', in: 1, enter: 'slide', volume: -3 });
+  assert.deepEqual(plan.scenes[1], { id: 'm01', type: 'media', src: 'assets/screen/demo.mp4', from: '#4', to: '#5e', in: 1, enter: 'slide', volume: -3 });
   const text = planNow();
   assert.ok(text.includes(S01_LINE), '沒改到的段落要保留原本的排版');
   assert.ok(text.includes('"speakerBox": [700, 200, 1220, 1000],'));
@@ -129,7 +129,7 @@ test('拒絕其他欄位：plan 的其他 key、edit／joins 的未知欄位、�
     [{ base: b, edit: { volume: { music: 0 } } }, /edit\.volume 不能有「music」/],
     [{ base: b, edit: { fadeIn: -1 } }, /fadeIn 要是 0–10 的秒數/],
     [{ base: b, edit: { cuts: [[3, 2]] } }, /終點要大於起點/],
-    [{ base: b, media: { m01: { src: '素材/圖片/x.png' } } }, /不能改「src」/],
+    [{ base: b, media: { m01: { src: 'assets/images/x.png' } } }, /不能改「src」/],
     [{ base: b, media: { m01: { enter: 'spin' } } }, /enter 要是 cut、fade、slide、zoom/],
     [{ base: b, media: { s01: { enter: 'fade' } } }, /找不到 media 段「s01」/],
   ];
@@ -198,11 +198,11 @@ test('Range：影片可以分段讀（206／416）、ETag；只開放素材資�
   const etag = full.headers.get('etag');
   await full.arrayBuffer();
   assert.equal((await get('/media/rough.mp4', { 'If-None-Match': etag })).status, 304);
-  const m = await get('/file/素材/螢幕錄影/demo.mp4', { Range: 'bytes=0-9' });
+  const m = await get('/file/assets/screen/demo.mp4', { Range: 'bytes=0-9' });
   assert.equal(m.status, 206);
   await m.arrayBuffer();
   assert.equal((await get('/file/work/hyperframes/plan.json')).status, 403);
-  assert.equal((await get('/file/素材/螢幕錄影/../../work/rough.srt')).status, 403);
+  assert.equal((await get('/file/assets/screen/../../work/rough.srt')).status, 403);
   assert.equal((await get('/composition/..%2F..%2Frough.srt')).status, 404);
   assert.equal((await get('/composition/.editor/server.json')).status, 404);
   assert.equal((await get('/editor/..%2F..%2Fbuild.mjs')).status, 404);
@@ -260,8 +260,8 @@ test('純函式：surgical 寫入保留 CRLF 與排版；檢查報告（契約 3
   // 契約 3.3 格式（前面混了別的輸出也讀得到）
   const mock = { ok: true, errors: [], warnings: ['⚠ 示範'], videoDur: 107.5, outputDur: 103, voiceOnly: [[41, 58.2]], cutpoints: [{ at: 12.34, kind: 'ng' }],
     items: [{ id: 's01', type: 'scene', label: '06 一般字卡', start: 12.5, end: 18, sfx: [{ name: 'pop', at: 12.6 }], warnings: 0 }],
-    edit: { cuts: [], fadeIn: 0, fadeOut: 0, volume: { voice: 0, sfx: 0, media: 0 }, joins: [] }, paths: { project: 'projects/範例' } };
-  assert.deepEqual(E.parseReport(`專案：projects/範例\n${JSON.stringify(mock)}\n`), mock);
+    edit: { cuts: [], fadeIn: 0, fadeOut: 0, volume: { voice: 0, sfx: 0, media: 0 }, joins: [] }, paths: { project: 'projects/example' } };
+  assert.deepEqual(E.parseReport(`專案：projects/example\n${JSON.stringify(mock)}\n`), mock);
   assert.equal(E.parseReport('通過：3 段，2 個提醒（⚠）。'), null);
   assert.deepEqual(E.issuesFromText('✖ [s01] 錯 → 改\n⚠ [s02] 提醒\n通過'), { errors: ['[s01] 錯 → 改'], warnings: ['[s02] 提醒'] });
   const items = E.itemsFromText('id｜情境｜起–迄｜長度｜音效時間｜警告\ns01｜06 一般字卡｜0:04.50–0:11.00｜6.5s｜pop 0:04.62｜⚠ 1（rough 0:07.00–0:13.50）\ns02｜fx 29｜0:15.00–0:18.00｜3s｜—｜—',
@@ -308,7 +308,7 @@ const PLAN2 = `{
     { "id": "s01", "scene": "concept", "from": "#1", "to": "#2e", "anchor": "第一句", "slots": { "text": "**#1** 重點" } },
     { "id": "s02", "scene": "title-list", "from": "#3", "to": "#4e", "slots": { "title": "清單", "items": ["一", { "text": "二", "at": "#4" }, "三 ｜at=#4+0.2"] } },
     { "id": "f01", "type": "fx", "fx": 29, "from": "#2", "to": "#2e", "vars": { "number": "18", "label": "第 #1 名" } },
-    { "id": "m01", "type": "media", "src": "素材/螢幕錄影/demo.mp4", "from": "#3", "to": "#4e", "in": 1, "sfx": "whoosh" }
+    { "id": "m01", "type": "media", "src": "assets/screen/demo.mp4", "from": "#3", "to": "#4e", "in": 1, "sfx": "whoosh" }
   ]
 }
 `;
@@ -320,9 +320,9 @@ async function setup2() {
   if (ed2) return;
   proj2dir = path.join(root, 'projects', '字幕');
   fs.mkdirSync(path.join(proj2dir, 'work', 'hyperframes'), { recursive: true });
-  fs.mkdirSync(path.join(proj2dir, '素材', '螢幕錄影'), { recursive: true });
+  fs.mkdirSync(path.join(proj2dir, 'assets', 'screen'), { recursive: true });
   fs.copyFileSync(path.join(work, 'rough.mp4'), path.join(proj2dir, 'work', 'rough.mp4'));
-  fs.copyFileSync(path.join(work, 'rough.mp4'), path.join(proj2dir, '素材', '螢幕錄影', 'demo.mp4'));
+  fs.copyFileSync(path.join(work, 'rough.mp4'), path.join(proj2dir, 'assets', 'screen', 'demo.mp4'));
   srt2File = path.join(proj2dir, 'work', 'rough.srt');
   plan2File = path.join(proj2dir, 'work', 'hyperframes', 'plan.json');
   ed2 = await E.startEditor({ flags: { project: proj2dir, template: path.join(root, 'shared', 'template') }, cwd: root, port: BASE_PORT + 800, writeState: false });

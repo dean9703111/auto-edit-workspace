@@ -121,7 +121,7 @@ test('音效：3 秒內只留第一個，被拿掉的列進警告；起點＝事
 
 test('章節轉場：空檔 3 s 置中 4.25；2.5 s 貼齊；0.5 s 從該句起點蓋＋⚠（含 ng-snap 指令與專案名）', () => {
   const gapCues = parseSrt('1\n00:00:01,000 --> 00:00:04,000\n第一句\n\n2\n00:00:07,000 --> 00:00:10,000\n第二句\n\n3\n00:00:10,500 --> 00:00:13,000\n第三句\n\n4\n00:00:15,500 --> 00:00:17,000\n第四句\n');
-  const mk = (at) => resolvePlan({ plan: { version: 1, scenes: [{ id: 'c1', scene: 'chapter', at, slots: { num: '01', title: '開始' } }] }, cues: gapCues, videoDur: 20, lib: L, outDir: os.tmpdir(), projectRel: 'projects/範例' });
+  const mk = (at) => resolvePlan({ plan: { version: 1, scenes: [{ id: 'c1', scene: 'chapter', at, slots: { num: '01', title: '開始' } }] }, cues: gapCues, videoDur: 20, lib: L, outDir: os.tmpdir(), projectRel: 'projects/example' });
   const a = mk('#2');
   assert.equal(byId(a, 'c1').start, 4.25);   // 空檔 3 秒：前後各留 0.25
   assert.equal(byId(a, 'c1').chapterNote, '放在 #2 前的空檔（3.00s），前後各留 0.25s');
@@ -133,7 +133,7 @@ test('章節轉場：空檔 3 s 置中 4.25；2.5 s 貼齊；0.5 s 從該句起�
   assert.equal(byId(c, 'c1').start, 10.5);   // 空檔 0.5 秒：從 #3 起點開始
   assert.equal(byId(c, 'c1').D, 2.5);
   assert.equal(byId(c, 'c1').chapterNote, '空檔 0.50s < 2s，從 #3 起點開始蓋 2.5s');
-  assert.ok(c.warnings.includes('[c1 chapter] #3 前的空檔只有 0.50s（< 2s），章節 2.5s 會壓到 #3 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/範例，照它印的指令重剪'), c.warnings.join('\n'));
+  assert.ok(c.warnings.includes('[c1 chapter] #3 前的空檔只有 0.50s（< 2s），章節 2.5s 會壓到 #3 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/example，照它印的指令重剪'), c.warnings.join('\n'));
   assert.ok(!formatReport(c).includes('人聲在下面繼續'));
   // 字幕避開章節：#3（10.5–13.0）整句被章節蓋住
   assert.deepEqual(c.blackout, [[10.5, 13]]);
@@ -510,13 +510,13 @@ test('子母畫面進場／出場＋章節墊底：透明卡→04a＝fly；04a�
 
 test('擦入擦出：只在只有聲音的區間、media↔動畫幕；in 0.2 → 不擦出＋note；圖片可以；相鄰 media 疊化 0.47 s', () => {
   const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-wipe-'));
-  for (const f of ['素材/圖片/a.png', '素材/圖片/b.png', '素材/螢幕錄影/v.mp4']) { fs.mkdirSync(path.dirname(path.join(pdir, f)), { recursive: true }); fs.writeFileSync(path.join(pdir, f), ''); }
+  for (const f of ['assets/images/a.png', 'assets/images/b.png', 'assets/screen/v.mp4']) { fs.mkdirSync(path.dirname(path.join(pdir, f)), { recursive: true }); fs.writeFileSync(path.join(pdir, f), ''); }
   const probe = (f) => (f.endsWith('.mp4') ? { width: 1920, height: 1080, duration: 30, hasAudio: false } : { width: 1920, height: 1080 });
   const go = (scenes) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pdir, probe, voiceOnly: [[10, 30]] });
   const base = (vin) => [
-    { id: 'm1', type: 'media', src: '素材/圖片/a.png', from: 10, to: 20 },
+    { id: 'm1', type: 'media', src: 'assets/images/a.png', from: 10, to: 20 },
     { id: 'f1', type: 'fx', fx: 29, bg: 'dark', from: 20, to: 25, vars: { number: '1' } },
-    { id: 'm2', type: 'media', src: '素材/螢幕錄影/v.mp4', from: 25, to: 30, in: vin },
+    { id: 'm2', type: 'media', src: 'assets/screen/v.mp4', from: 25, to: 30, in: vin },
   ];
   const a = go(base(2));
   assert.deepEqual(a.errors, []);
@@ -530,11 +530,11 @@ test('擦入擦出：只在只有聲音的區間、media↔動畫幕；in 0.2 �
   assert.equal(byId(b, 'f1').wipeOut, undefined);
   assert.match(formatReport(b), /不擦出：m2 的 in 只有 0\.20s，提早不了 0\.5s → in 改 ≥ 0\.5 才有擦出（現在硬切）/);
   // 相鄰兩段 media：疊化，前一段墊在底下 0.47 s，不算整張幕重疊
-  const c = go([{ id: 'm1', type: 'media', src: '素材/圖片/a.png', from: 10, to: 20 }, { id: 'm3', type: 'media', src: '素材/圖片/b.png', from: 20, to: 30 }]);
+  const c = go([{ id: 'm1', type: 'media', src: 'assets/images/a.png', from: 10, to: 20 }, { id: 'm3', type: 'media', src: 'assets/images/b.png', from: 20, to: 30 }]);
   assert.deepEqual(c.errors, []);
   assert.deepEqual([byId(c, 'm3').xfade, byId(c, 'm1').end, byId(c, 'm1').wipeOut, byId(c, 'm3').wipeIn], [0.47, 20.47, undefined, undefined]);
   // 章節不擦；講者段（只有聲音以外）不擦
-  const d = go([{ id: 'm1', type: 'media', src: '素材/圖片/a.png', from: 4, to: 8 }, { id: 'f1', type: 'fx', fx: 29, bg: 'dark', from: 8, to: 9.5, vars: { number: '1' } }]);
+  const d = go([{ id: 'm1', type: 'media', src: 'assets/images/a.png', from: 4, to: 8 }, { id: 'f1', type: 'fx', fx: 29, bg: 'dark', from: 8, to: 9.5, vars: { number: '1' } }]);
   assert.equal(byId(d, 'f1').wipeIn, undefined);
   fs.rmSync(pdir, { recursive: true });
 });
@@ -652,13 +652,13 @@ test('常駐章節角標（F1）：02 段起點→下一章；子母畫面／全
   assert.ok(run(scenes, { chapterBadge: 'yes' }).errors.includes('chapterBadge 只能是 true 或 false（不寫＝true：章節角標自動常駐右上角），現在是 "yes" → 不要常駐角標就寫 false，否則刪掉這個欄位'));
 });
 
-// 範例專案第一次試剪（2026-10-31，projects/範例/work.trial1）的固定檔：plan.json（sha1 931c64f3…）、rough.srt、transcript.json、3 支情境動畫
+// 範例專案第一次試剪（2026-10-31，projects/example/work.trial1）的固定檔：plan.json（sha1 931c64f3…）、rough.srt、transcript.json、3 支情境動畫
 // 回歸測試：F1 角標覆蓋、F4 回饋表 13 列都要 ✖（不依賴 live 專案）
 const EX = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'example-trial1', 'work');
 const exRun = async () => {
   const { attachWords } = await imp('build.mjs');
   const cs = attachWords(parseSrt(fs.readFileSync(path.join(EX, 'rough.srt'), 'utf8')), { transcript: path.join(EX, 'transcript.json') });
-  return resolvePlan({ plan: JSON.parse(fs.readFileSync(path.join(EX, 'hyperframes', 'plan.json'), 'utf8')), cues: cs, videoDur: 153.543, lib: L, outDir: path.join(EX, 'hyperframes'), projectRel: 'projects/範例' });
+  return resolvePlan({ plan: JSON.parse(fs.readFileSync(path.join(EX, 'hyperframes', 'plan.json'), 'utf8')), cues: cs, videoDur: 153.543, lib: L, outDir: path.join(EX, 'hyperframes'), projectRel: 'projects/example' });
 };
 
 test('範例 c01–c04（F1）：每章的角標區間蓋到這章所有疊加段（扣掉不透明段）', async () => {

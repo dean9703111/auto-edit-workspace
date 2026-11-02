@@ -29,7 +29,7 @@ const { chromeCandidates } = await imp('lib/audit-browser.mjs');
 
 const HAS_FFMPEG = !spawnSync('ffmpeg', ['-version']).error;
 const HAS_CHROME = chromeCandidates().length > 0;
-const DEMO = path.join(WORKSPACE, 'projects', '範例', '素材', '真人錄影', '示範口播.mp4');
+const DEMO = path.join(WORKSPACE, 'projects', 'example', 'assets', 'camera', '示範口播.mp4');
 const tmpDir = (p = 'look-') => fs.mkdtempSync(path.join(os.tmpdir(), p));
 const OK_PROBE = { assets: { ok: true, missing: [], bad: [] }, chrome: true };
 const sha256 = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
@@ -521,7 +521,7 @@ test('lookNextStep（C-01、C-02、C-06）：還沒好 → 修／等／重跑／
   assert.deepEqual([s.step, s.done], ['build', true]);
   assert.match(s.cmd, /^node shared\/template\/tools\/build\.mjs --project \S+$/);
   // 路徑有空白就加雙引號（整行複製才跑得動）
-  assert.deepEqual([L.projArg('projects/範例'), L.projArg('projects/my video')], ['projects/範例', '"projects/my video"']);
+  assert.deepEqual([L.projArg('projects/example'), L.projArg('projects/my video')], ['projects/example', '"projects/my video"']);
   // 略過瘦臉（臉太小）也算好了
   freshState(dir, { summary: { rate: 1, medianFaceWidth: 43, lookFaceWidth: 43, slimOk: false, reason: 'small' }, footage: false });
   assert.deepEqual([ns(dir).step, ns(dir).done], ['next', true]);
