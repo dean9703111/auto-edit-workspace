@@ -7,6 +7,7 @@
 //         rhythm, uncovered, spokenLen, chapters, blackout, sfxBudget, outro, theme }
 //     （rhythm／uncovered／chapters／blackout／outro／theme：specs/002-pipeline-timing；sfxBudget：005 的 lib/audio.mjs）
 //     theme＝"light"（預設）或 "dark"（specs/010-motion-v2/design-system.md §10；build 換 bg-*-dark.jpg、所有合成的 <html> 加 data-theme="dark"）
+//     style＝風格包名稱（shared/template/styles/<名稱>/，lib/styles.mjs；不寫＝shared/template/ 目前的主色與背景）；這裡只檢查型別，包在不在由 build 查
 //     lib = { scenes, icons, fx, consts, sfx, accent }
 //     cues／videoDur／voiceOnly／cutpoints 都是 rough.mp4 的秒數；有 edit.cuts 時，items、cuesOut、outDur、footage 一律是「成片」秒數
 //     （rough → 成片用 tm.map，反過來用 tm.unmapStart／unmapEnd）。沒有 edit 時兩者相同，輸出和舊版逐位元組一樣。
@@ -34,7 +35,7 @@ import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
-const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'check', 'look', 'theme', 'edit', 'scenes'];
+const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'check', 'look', 'theme', 'style', 'edit', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
@@ -361,6 +362,8 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const badgeOn = plan.chapterBadge !== false;
   if (plan.theme !== undefined && !THEMES.includes(plan.theme)) errors.push(`theme 只能是 "light"（預設，米白底、白卡）或 "dark"（石墨黑底、玻璃卡），現在是 ${JSON.stringify(plan.theme)} → 改成 "light"／"dark"，或刪掉這個欄位（＝亮色）`);
   const theme = plan.theme === 'dark' ? 'dark' : 'light';
+  if (plan.style !== undefined && (typeof plan.style !== 'string' || !plan.style.trim())) errors.push(`style 要寫風格包的名稱（shared/template/styles/ 底下的資料夾名，例 "預設"），現在是 ${JSON.stringify(plan.style)} → 改成名稱，或刪掉這個欄位（＝用 shared/template/ 目前的主色與背景）`);
+  const style = typeof plan.style === 'string' && plan.style.trim() ? plan.style.trim() : null;
   // check：只給示意／預覽用的 plan 關規則（例 qc.mjs framing --cards 的示意卡文字跟字幕無關）；正式 plan.json 寫了 build 會 ⚠
   if (plan.check !== undefined) {
     const c = plan.check;
@@ -1114,7 +1117,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     globals: { speakerBox, sideShift, pipCrop, pip },
     edit, editActive: ne.active, tm, outDur: videoDur, roughDur, cuesOut: cues, voiceOnly, voiceOut, voiceGaps, footage, editFx, cutpoints,
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro,
-    chapterBadge: badgeOn, badges, theme, format: C.format, canvas: C,
+    chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
   };
 }
 
@@ -1314,7 +1317,7 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
   const txCount = (k, v) => res.items.filter((it) => it[k] === v).map((it) => it.id);
   const txParts = [['txIn', 'wipe', '色帶擦開'], ['txIn', 'swap', '換卡不換景'], ['txOut', 'retract', '色帶收回'], ['txIn', 'band', '疊加卡＋講者慢推'], ['txIn', 'chapter', '章節色塊']]
     .map(([k, v, zh]) => [zh, txCount(k, v)]).filter(([, ids]) => ids.length).map(([zh, ids]) => `${zh} ${ids.length}（${ids.join('、')}）`);
-  lines.push(`轉場：${txParts.join('；') || '無'}｜主題：${res.theme === 'dark' ? '暗色（theme: "dark"）' : '亮色'}`);
+  lines.push(`轉場：${txParts.join('；') || '無'}｜主題：${res.theme === 'dark' ? '暗色（theme: "dark"）' : '亮色'}${res.style ? `｜風格包：${res.style}` : ''}`);
   lines.push(...tail.filter(Boolean));
   return lines.join('\n');
 }

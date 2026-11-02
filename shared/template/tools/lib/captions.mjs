@@ -1,6 +1,7 @@
 // 字幕子合成 compositions/captions.html（規格 §B.4）
 //
-//   buildCaptions(cues, { duration, offset, compId, blackout, canvas }) → { html, file, compId, shown, warnings }
+//   buildCaptions(cues, { duration, offset, compId, blackout, canvas }) → { html, file, compId, shown, items, warnings }
+//     items＝畫面上實際顯示的字幕 [{ n, text, a, b, spans: [[起, 迄]] }]（剪映素材的 字幕.srt 照這份寫）
 //     duration  主合成長度（秒）；超過的字幕截掉
 //     offset    測試片段的起點（--test）：所有字幕往前平移 offset 秒，落在 [0, duration) 外的略過
 //     blackout  [[起, 迄]]（成片秒數，章節轉場的 2.5 秒）：這些時間不放字幕，被切到的字幕提早收或晚出現（spec FR-007）
@@ -85,5 +86,5 @@ ${sets}
 </body>
 </html>
 `;
-  return { html: stampHash(html, `captions=${items.length}`), file: `compositions/${compId}.html`, compId, shown: items.length };
+  return { html: stampHash(html, `captions=${items.length}`), file: `compositions/${compId}.html`, compId, shown: items.length, items };
 }

@@ -31,6 +31,7 @@ export function buildCustomPreview({ name, html, pipStyle, kitLinks = [], format
 <title>${esc(`${title}｜預覽`)}</title>
 <!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/${name}.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
 ${kitLinks.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
+<script src="../kit/style-switch.js"></script>
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
@@ -102,6 +103,7 @@ function portraitPage({ name, title, body, kitLinks }) {
 <title>${esc(`${title}｜直式預覽`)}</title>
 <!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/${name}.html 的 <template> 原樣放進來，舞台縮放 ${tr.s} 倍進上半面板（直式只顯示 x ${tr.window[0]}–${tr.window[2]}、y ${tr.window[1]}–${tr.window[3]}）；改 custom 檔後重跑 --gallery -->
 ${kitLinks.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
+<script src="../kit/style-switch.js"></script>
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>

@@ -1,6 +1,6 @@
 // build.mjs --gallery 產生，不要手改
 window.__SFX_DATA = {
-  "generated": "2026-11-01T17:11:01.171Z",
+  "generated": "2026-11-02T03:15:21.838Z",
   "sounds": {
     "ding": {
       "kind": "sfx",
@@ -104,7 +104,7 @@ window.__SFX_DATA = {
     "bgm-cylinder-five": {
       "kind": "bgm",
       "zh": "片尾配樂〈Cylinder Five〉",
-      "use": "結語金句講完到片尾；預設不配，plan.json 的 outro 寫 \"music\":   \"bgm-cylinder-five\" 才有",
+      "use": "結語金句講完到片尾；預設不配，plan.json 的 outro 寫 \"music\":    \"bgm-cylinder-five\" 才有",
       "event": "outro.from 那句字幕的起點",
       "peak": 0,
       "volume": 0.562,

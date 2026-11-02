@@ -13,8 +13,8 @@
 | 「配螢幕錄影」 | `auto-edit-screen` |
 | 分鏡表確認後做情境動畫 | `auto-edit-motion` |
 | 定稿、Studio 修改、「打開剪輯台」、「s12 重新設計」「s12 用 v1」 | `auto-edit-review` |
-| 「可以了，輸出成片」 | `auto-edit-deliver` |
-| 「換風格」「換主色」「換背景」「換暗色」 | `auto-edit-style` |
+| 「可以了，輸出成片」「輸出剪映素材」 | `auto-edit-deliver` |
+| 「換風格」「換主色」「換背景」「換暗色」「有哪些風格」「這集用 XX 風格」 | `auto-edit-style` |
 
 優先序：我當下的話 > 本檔 > `shared/style.md` > `shared/template/USAGE.md` > `USAGE-reference.md`、`SITUATIONS.md`、`REVIEW.md` > Skill；派工時派工訊息 > Skill。
 
@@ -81,7 +81,7 @@ projects/<專案>/
 
 ## 規則
 
-1. 不要覆寫、移動或刪除 `projects/*/素材/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`。要刪除 `work/` 以外的檔案前，先問我。
+1. 不要覆寫、移動或刪除 `projects/*/素材/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）。要刪除 `work/` 以外的檔案前，先問我。
 2. 停點只有六個，照「停點總表」；停下來時回覆最後一行照固定格式。我說「不用停」「跑到停點 N」才連跑。
 3. 安裝新工具前，先告訴我指令和用途，等我同意再執行。照 `setup/` 手冊做時，整份清單問一次就好。
 4. 字幕以專案的 `講稿.md` 為準：一則＝講稿的一行（完整語句），由 `media.mjs srt-align` 照講稿排、對時間，不要自己拆句，之後只改講稿本身的錯字；顯示時去掉「，」「。」「；」「：」，保留「、」「！」「？」；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿就只轉繁體、照語音的句子切成完整子句，不要自己猜內容。
@@ -129,6 +129,7 @@ projects/<專案>/
 | ② 通過到停點 ③ | 55 次 | 換風格 | 15 次 |
 | 配一支螢幕錄影 | 6 次 | 環境準備 | 同一步失敗 2 次就停 |
 | 改版開提案到停點 ③（每段） | 6 次 | 改版確認後到停點 ④（不含情境動畫） | 12 次 |
+| 剪映素材（不含 status 的等待） | 6 次 | | |
 
 ## 開工（每個專案第一次）
 
@@ -242,6 +243,10 @@ projects/<專案>/
 1. `plan.json`、`work/storyboard.md`、`work/rough.srt` 只有你能寫。子代理可以跑 `node shared/template/tools/build.mjs --check --project projects/<專案>`、`node shared/template/tools/audit.mjs --project projects/<專案> --only <自己的段>`；不跑 build、不開 Studio、不 render，不改 `shared/`、`素材/`。
 2. 派工寫清楚目標、負責的檔、要讀哪幾節（情境動畫附那段確認過的動畫分鏡）、驗收條件、回報格式。收件用 `ls -l` 看時間是剛剛、`grep` 確認真的寫進去了再整合；全部回來才由你跑 `--check`、build、audit、snapshot，audit 有 ✖ 就把原文交回那個子代理。
 
+## 剪映素材
+
+我說「輸出剪映素材」「我要用剪映剪」時（`auto-edit-deliver` 步驟 5）：`node shared/template/tools/capcut.mjs --project projects/<專案> --dry-run` 看會出幾支，再加 `--background` 跑、用 `status` 看進度。產出在 `成片/剪映/`：`主軌.mp4`（講者＋人聲＋片尾配樂）、每段一支有透明通道的 `.mov`（ProRes 4444，帶那段的音效）、`字幕.srt`、`清單.md`（每支放在剪映時間軸的哪一秒）。不用先輸出 final.mp4；章節角標不輸出。
+
 ## 剪輯台
 
 我說「打開剪輯台」時：
@@ -254,9 +259,10 @@ projects/<專案>/
 
 我說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「換暗色」「換主題」時（`auto-edit-style`）：
 
+0. 風格包（`shared/template/styles/<名稱>/`＝主色＋外框＋亮暗背景）：我問「有哪些風格」先跑 `node shared/template/tools/brand.mjs list`；「這集用 XX 風格」只在這一集 plan.json 第一層寫 `"style": "<名稱>"`；「整個換成 XX」「換回預設」跑 `node shared/template/tools/brand.mjs use <名稱>`。內建「預設」（橘色）和示範「藍圖」（藍色）；情境庫 `shared/template/index.html` 上方的「風格」「暗色」可以直接預覽。
 1. 主色：`node shared/template/tools/brand.mjs "#RRGGBB"`。我給色名就先轉成色碼，回報用了哪個；對比值與警告原文貼給我。
-2. 背景圖：我有給圖就直接縮放裁切。沒有就跑 `node shared/template/tools/caps.mjs`，能力表貼給我，照「可用的生圖路線」與 `USAGE-reference.md` R9.3 選（HTML 路線：`node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs`）；沒裝的不裝、沒登入的不幫我登入；全部不行就只換主色並說明原因。三張先放暫存資料夾，檢查尺寸（1920×1080、960×1080、1920×1080）、產生留空區預覽與並排圖 → 停點 ⑥；我同意才複製進 `shared/template/`。
-3. 講者預設：我說「預設不要調光」「預設瘦一點」時，只改 `shared/template/kit/look.json` 的 `color`（0–1）或 `slim`（0–1.2）；只改這一集就寫 plan.json 的 `look`。
+2. 背景圖：我有給圖就直接縮放裁切。沒有就跑 `node shared/template/tools/caps.mjs`，能力表貼給我，照「可用的生圖路線」與 `USAGE-reference.md` R9.3 選（HTML 路線：`node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs`）；沒裝的不裝、沒登入的不幫我登入；全部不行就只換主色並說明原因。三張先放暫存資料夾，檢查尺寸（1920×1080、960×1080、1920×1080）、產生留空區預覽與並排圖 → 停點 ⑥；我同意才存成風格包 `node shared/template/tools/brand.mjs pack <名稱> --color "#RRGGBB" --bg <暫存資料夾>`，再照我要的範圍 `use`（整個工作區）或寫 plan.json `style`（這一集）。
+3. 講者調光、瘦臉：預設都關（`kit/look.json` 兩個 0）。我說「這集要調光、瘦臉」就寫 plan.json 的 `look`（建議 `{ "color": 0.8, "slim": 0.6 }`）；說「以後都要調光」「預設瘦一點」才改 `shared/template/kit/look.json` 的 `color`（0–1）或 `slim`（0–1.2）。
 4. 主題：我說「換暗色」「換主題」時，只改這一集 plan.json 第一層的 `"theme"`（`"light"`＝預設、`"dark"`），不改 `shared/`。
 5. 改完告訴我改了哪些檔、走哪一條路，我會重新打開 `shared/template/index.html` 預覽。
 

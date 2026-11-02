@@ -8,6 +8,7 @@
 <!-- 主色與字型都從 kit 讀：換了 kit/brand.css 的主色，這一頁的強調色跟著變 -->
 <link rel="stylesheet" href="kit/fonts.css">
 <link rel="stylesheet" href="kit/brand.css">
+<link rel="stylesheet" id="pageBrand" href="kit/brand.css">
 <style>
   :root {
     --page: #070B14;
@@ -51,6 +52,18 @@
   .tabs button#sfxToggle { margin-left: auto; appearance: none; cursor: pointer; font: inherit; font-weight: 700; font-size: 15px; white-space: nowrap; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; }
   .tabs button#sfxToggle:hover { border-color: var(--accent); }
   .tabs button#sfxToggle[aria-pressed="false"] { color: var(--muted); }
+  /* 風格切換：選風格包、亮／暗，所有預覽一起換（kit/style-switch.js） */
+  .tabs .look { display: flex; gap: 8px; align-items: center; }
+  .tabs .look select, .tabs .look button { appearance: none; cursor: pointer; font: inherit; font-weight: 700; font-size: 15px; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; }
+  .tabs .look select { padding-right: 30px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: right 16px center, right 11px center; background-size: 5px 5px; background-repeat: no-repeat; }
+  .tabs .look select:hover, .tabs .look button:hover { border-color: var(--accent); }
+  .tabs .look .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); vertical-align: -1px; margin-right: 6px; }
+  .packs { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin: 12px 0 0; }
+  .packs button { appearance: none; cursor: pointer; text-align: left; font: inherit; color: var(--text); background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .packs button[aria-pressed="true"] { border-color: var(--accent); }
+  .packs button b { display: block; font-size: 16px; }
+  .packs button span { color: var(--muted); font-size: 14px; }
+  .packs i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 8px; }
   .sfx-toast { position: fixed; right: 20px; bottom: 24px; z-index: 30; background: var(--text); color: var(--page); padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .sfx-toast.show { opacity: 1; }
   .play { appearance: none; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; color: var(--text); background: var(--card-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 12px; white-space: nowrap; }
@@ -165,7 +178,7 @@
   <div class="wrap">
     <span class="eyebrow">shared/template</span>
     <h1>工程師下班有約<span class="bar">｜</span>影片情境庫</h1>
-    <p class="lead"><b>這一頁給人看；AI 用 <code>build.mjs --list</code> 挑版型，兩邊是同一份資料。</b>每張卡都是即時預覽。滑鼠滑過卡片，會從頭重播進場動畫並播放對應的音效；瀏覽器規定要先在頁面上點一下才會出聲。換了背景圖 <code>bg.jpg</code> 或主色之後，重新整理這一頁就能看到新的樣子。點預覽可以在新分頁看全尺寸。</p>
+    <p class="lead"><b>這一頁給人看；AI 用 <code>build.mjs --list</code> 挑版型，兩邊是同一份資料。</b>每張卡都是即時預覽。滑鼠滑過卡片，會從頭重播進場動畫並播放對應的音效；瀏覽器規定要先在頁面上點一下才會出聲。上方的「風格」可以切換風格包（主色＋背景圖），「暗色」切換亮／暗主題，所有預覽一起換；換了工作區的主色或背景之後，重新整理這一頁就能看到新的樣子。點預覽可以在新分頁看全尺寸。</p>
   </div>
 </header>
 
@@ -179,6 +192,10 @@
     <a href="#sfx">音效</a>
     <a href="#motion">動態規則</a>
     <a href="#style">換成自己的風格</a>
+    <span class="look">
+      <select id="stylePick" aria-label="風格包"><option value="">風格：工作區目前的</option></select>
+      <button type="button" id="themeToggle" aria-pressed="false">☀️ 亮色</button>
+    </span>
     <button type="button" id="sfxToggle" aria-pressed="true">🔊 音效：開</button>
   </div>
 </nav>
@@ -977,23 +994,20 @@
   <div class="how">
 
     <div class="card">
-      <h3>換背景圖</h3>
-      <p>準備一張 1920×1080 的暗色圖，命名成 <code>bg.jpg</code>，放進 <code>shared/template/</code> 資料夾。</p>
-      <p>會換掉的地方：章節轉場、全畫面、半版側邊欄的底。</p>
-      <p class="muted">主要內容不要放在左上角，全畫面的深色卡會蓋在那裡。想換回來，把 bg.jpg 刪掉就好。</p>
+      <h3>先試試別的風格包</h3>
+      <p>風格包＝主色＋子母畫面外框＋三張背景圖（亮、暗各一套），放在 <code>shared/template/styles/&lt;名稱&gt;/</code>。點一下就能在這一頁預覽：</p>
+      <div class="packs" id="packList"><span class="muted">還沒有風格包（<code>styles/styles.js</code> 不在）</span></div>
+      <p class="muted">只想這一集用：跟 AI 說「這集用藍圖風格」，它會在 <code>plan.json</code> 寫 <code>"style": "藍圖"</code>。<br>整個工作區都換：<code>node shared/template/tools/brand.mjs use 藍圖</code>（換回來：<code>use 預設</code>）。</p>
     </div>
 
     <div class="card">
-      <h3>換主色</h3>
-      <p>最簡單的方法，把這句貼給 AI，［］裡換成你要的顏色：</p>
-      <pre id="prompt-brand">把 shared/template/ 的主色從黃色換成<span class="hl">［深綠色］</span>，並生成一張同色系的背景圖存成 shared/template/bg.jpg，改完告訴我，我要重新預覽。</pre>
+      <h3>做自己的風格包</h3>
+      <p>把這句貼給 AI，［］裡換成你要的顏色和感覺：</p>
+      <pre id="prompt-brand">幫我做一個新的風格包<span class="hl">［我的品牌］</span>：主色<span class="hl">［深綠色］</span>，背景要<span class="hl">［簡潔、有一點紙張質感］</span>，亮色、暗色都要，先給我看預覽。</pre>
       <button class="copy" type="button" data-copy="prompt-brand">複製提示詞</button>
-      <p class="muted">AI 會改 <code>kit/brand.css</code> 的這 3 行，並檢查字在主色上看不看得清楚：</p>
-      <pre>--brand:      #FFD400;  主色
---brand-ink:  #0B1020;  主色底上的字
---brand-text: #FFD400;  深底上的主色字</pre>
-      <p class="muted">想自己改的話，用下面這行指令，它會順便把子母畫面的外框換成同一個顏色：</p>
-      <pre>node shared/template/tools/brand.mjs "#1B7F4B"</pre>
+      <p class="muted">AI 會算好字在主色上看不看得清楚、重畫子母畫面外框、產生三張背景圖並檢查卡片和字幕會蓋到的地方，你看過預覽同意才存成一包。自己動手的話：</p>
+      <pre>node shared/template/tools/brand.mjs pack 我的品牌 --color "#1B7F4B" --bg &lt;放三張背景圖的資料夾&gt;
+node shared/template/tools/brand.mjs list</pre>
     </div>
 
     <div class="card">
@@ -1022,6 +1036,59 @@
 </footer>
 
 <script src="preview/sfx-data.js"></script>
+<script src="styles/styles.js"></script>
+<script>
+// 風格切換：改每個預覽 iframe（和「在新分頁看全尺寸」的連結）的 ?style=&theme=；選擇記在這個瀏覽器
+(function () {
+  var packs = window.STYLE_PACKS || [];
+  var pick = document.getElementById('stylePick'), themeBtn = document.getElementById('themeToggle'), list = document.getElementById('packList');
+  var pageBrand = document.getElementById('pageBrand');
+  var KEY = 'hf-gallery-look';
+  var cur = { style: '', theme: 'light' };
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) cur = { style: saved.style || '', theme: saved.theme === 'dark' ? 'dark' : 'light' }; } catch (e) {}
+  if (cur.style && !packs.some(function (p) { return p.dir === cur.style; })) cur.style = '';
+  packs.forEach(function (p) {
+    var o = document.createElement('option');
+    o.value = p.dir; o.textContent = '風格：' + p.name;
+    pick.appendChild(o);
+  });
+  if (list && packs.length) {
+    list.innerHTML = '';
+    packs.forEach(function (p) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.dataset.style = p.dir;
+      b.innerHTML = '<b><i></i></b><span></span>';
+      b.querySelector('i').style.background = p.brand || 'var(--accent)';
+      b.querySelector('b').appendChild(document.createTextNode(p.name + (p.brand ? '　' + p.brand : '')));
+      b.querySelector('span').textContent = p.note || '';
+      b.addEventListener('click', function () { cur.style = p.dir; apply(); });
+      list.appendChild(b);
+    });
+  }
+  var withLook = function (url) {
+    var u = url.split('?')[0], q = [];
+    if (cur.style) q.push('style=' + encodeURIComponent(cur.style));
+    if (cur.theme === 'dark') q.push('theme=dark');
+    return u + (q.length ? '?' + q.join('&') : '');
+  };
+  function apply() {
+    pick.value = cur.style;
+    themeBtn.setAttribute('aria-pressed', cur.theme === 'dark' ? 'true' : 'false');
+    themeBtn.textContent = cur.theme === 'dark' ? '🌙 暗色' : '☀️ 亮色';
+    pageBrand.setAttribute('href', cur.style ? 'styles/' + encodeURIComponent(cur.style) + '/brand.css' : 'kit/brand.css');
+    document.querySelectorAll('iframe[src^="preview/"]').forEach(function (f) {
+      var next = withLook(f.getAttribute('src'));
+      if (next !== f.getAttribute('src')) f.setAttribute('src', next);
+    });
+    document.querySelectorAll('a[href^="preview/"]').forEach(function (a) { a.setAttribute('href', withLook(a.getAttribute('href'))); });
+    if (list) list.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.style === cur.style ? 'true' : 'false'); });
+    try { localStorage.setItem(KEY, JSON.stringify(cur)); } catch (e) {}
+  }
+  pick.addEventListener('change', function () { cur.style = pick.value; apply(); });
+  themeBtn.addEventListener('click', function () { cur.theme = cur.theme === 'dark' ? 'light' : 'dark'; apply(); });
+  apply();
+})();
+</script>
 <script>
   // 音效與滑過重播：預覽頁載入後回報 cues，滑過卡片時叫它重播，收到 started 再照 cues 排程音效
   (function () {

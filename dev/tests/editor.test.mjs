@@ -493,12 +493,12 @@ const FACE58 = [[1.5,62.1],[1.3,30.7],[0.7,21.6],[-0.9,-18.3],[-4.2,-97.9],[1.7,
 
 test('講者：/api/state 的 look 區塊；存 look（插入、取代、恢復預設、擋錯），rhythm／outro 原樣保留；配樂不列進音效清單', async () => {
   const s = await (await get('/api/state')).json();
-  assert.deepEqual(s.look.kit, { color: 0.8, slim: 0.6 });
+  assert.deepEqual(s.look.kit, { color: 0, slim: 0 }, '工作區預設：不調光、不瘦臉（使用者要求才開）');
   assert.equal(s.look.plan, null);
-  assert.deepEqual(s.look.effective, { color: 0.8, slim: 0.6, source: 'kit' });
+  assert.deepEqual(s.look.effective, { color: 0, slim: 0, source: 'kit' });
   assert.deepEqual(s.look.limits, { color: [0, 1], slim: [0, 1.2], step: 0.05 });
   assert.equal(s.look.lines.length, 2);
-  assert.match(s.look.lines[0], /^講者調光：0\.8（kit\/look\/jianying-smart\.cube/);
+  assert.match(s.look.lines[0], /^講者調光：關/);
   assert.ok(s.schema.sounds.includes('ding') && !s.schema.sounds.includes('bgm-cylinder-five'), s.schema.sounds.join(','));
   const orig = planNow();
   const withExtra = orig.replace('  "speakerBox":', '  "rhythm": { "pace": "normal" },\n  "outro": "#2",\n  "speakerBox":');

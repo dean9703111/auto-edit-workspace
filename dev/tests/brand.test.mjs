@@ -10,6 +10,7 @@ import { TOOLS, TEMPLATE, imp, hasChrome } from './helpers.mjs';
 
 const { brandColors, rewriteBrandCss, drawPipFrame, drawPipFrameV, contrast, parseHex, darkTokens, DARK } = await imp('brand.mjs');
 const KIT = path.join(TEMPLATE, 'kit');
+const await_styles = await imp('lib/styles.mjs');
 
 // 最小 PNG 解碼（8-bit RGBA、非交錯，五種 filter 都支援）
 function decodePng(buf) {
@@ -215,5 +216,57 @@ test('暗色底圖（T115，design-system §10）：shared/template/bg-{fs,side,
     let sum = 0;
     for (let i = 0; i < px.length; i += 3) sum += px[i] + px[i + 1] + px[i + 2];
     assert.ok(sum / (px.length) < 60, `bg-${k}-dark.jpg 平均亮度 ${(sum / px.length).toFixed(1)}，不像暗色底`);
+  }
+});
+
+// ---------- 風格包（list／use／pack）----------
+
+function tmpTemplate() {
+  const t = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-pack-'));
+  fs.mkdirSync(path.join(t, 'kit'));
+  for (const f of ['brand.css', 'pip-frame.png', 'pip-frame-v.png']) fs.copyFileSync(path.join(KIT, f), path.join(t, 'kit', f));
+  for (const f of ['bg-fs.jpg', 'bg-side.jpg', 'bg-ch.jpg']) fs.copyFileSync(path.join(TEMPLATE, f), path.join(t, f));
+  return t;
+}
+const brandCli = (t, ...args) => spawnSync(process.execPath, [path.join(TOOLS, 'brand.mjs'), ...args, '--kit', path.join(t, 'kit')], { encoding: 'utf8' });
+
+test('風格包：pack 存目前的／照色碼建、styles.js、list 標目前那包、use 換檔、不屬於任何包時 use 停下來、同名 ✖', () => {
+  const t = tmpTemplate();
+  let r = brandCli(t, 'pack', '甲', '--note', '原本的');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  for (const f of ['brand.css', 'pip-frame.png', 'bg-fs.jpg']) assert.ok(fs.existsSync(path.join(t, 'styles', '甲', f)), f);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(t, 'styles', '甲', 'style.json'), 'utf8')), { name: '甲', brand: '#F6630F', note: '原本的' });
+  r = brandCli(t, 'pack', '乙', '--color', '#2563EB');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /⚠ 這包只有主色、沒有背景圖/);
+  assert.match(fs.readFileSync(path.join(t, 'styles', '乙', 'brand.css'), 'utf8'), /--brand:\s+#2563EB/);
+  const sandbox = {};
+  new Function('window', fs.readFileSync(path.join(t, 'styles', 'styles.js'), 'utf8'))(sandbox);
+  assert.deepEqual(sandbox.STYLE_PACKS.map((p) => [p.dir, p.brand]), [['乙', '#2563EB'], ['甲', '#F6630F']]);
+  assert.match(brandCli(t, 'list').stdout, /● 甲/);
+  r = brandCli(t, 'use', '乙');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /換成風格包「乙」（原本：甲）：shared\/template\/kit\/brand\.css、/);
+  assert.ok(fs.readFileSync(path.join(t, 'kit', 'brand.css')).equals(fs.readFileSync(path.join(t, 'styles', '乙', 'brand.css'))));
+  assert.match(brandCli(t, 'list').stdout, /● 乙/);
+  // 手改過、不屬於任何包 → use 停下來；--force 才蓋
+  fs.appendFileSync(path.join(t, 'kit', 'brand.css'), '\n/* 手改 */\n');
+  r = brandCli(t, 'use', '甲');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /不屬於任何風格包，直接換會弄丟 → 先存起來：node shared\/template\/tools\/brand\.mjs pack <新名稱>/);
+  assert.equal(brandCli(t, 'use', '甲', '--force').status, 0);
+  assert.match(brandCli(t, 'pack', '甲').stderr, /風格包「甲」已經有了/);
+  assert.match(brandCli(t, 'use', '丙').stderr, /找不到風格包「丙」/);
+});
+
+test('風格包：工作區附的「預設」和現在的 shared/template/ 一樣；「藍圖」亮暗六張背景尺寸對', () => {
+  const { listPacks, samePack } = await_styles;
+  const packs = listPacks(TEMPLATE);
+  assert.deepEqual(packs.map((p) => p.dir), ['預設', '藍圖']);
+  assert.ok(samePack(TEMPLATE, path.join(TEMPLATE, 'styles', '預設')), 'shared/template/ 的主色、外框、背景要和「預設」那包一樣（換過就 brand.mjs use 預設）');
+  for (const p of packs) assert.equal(p.files.length, 9, `${p.dir}：${p.files.join('、')}`);
+  for (const [f, w, h] of [['bg-fs', 1920, 1080], ['bg-side', 960, 1080], ['bg-ch', 1920, 1080]]) for (const s of ['', '-dark']) {
+    const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', path.join(TEMPLATE, 'styles', '藍圖', `${f}${s}.jpg`)], { encoding: 'utf8' });
+    assert.equal(r.stdout.trim(), `${w},${h}`, `${f}${s}.jpg`);
   }
 });

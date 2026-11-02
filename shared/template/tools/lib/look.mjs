@@ -75,8 +75,8 @@ export function readKitLook(templateDir = DEFAULT_TEMPLATE) {
   try { j = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { throw new Error(`kit/look.json 讀不到：${e.message} → 從 git 還原 shared/template/kit/look.json`); }
   if (!isObj(j)) throw new Error('kit/look.json 要是物件 { "color", "slim", "lut" } → 從 git 還原 shared/template/kit/look.json');
   for (const k of Object.keys(j)) if (!['color', 'slim', 'lut'].includes(k)) throw new Error(`kit/look.json 不能有「${k}」→ 只能寫 color、slim、lut`);
-  if (!num(j.color) || j.color < 0 || j.color > 1) throw new Error(`kit/look.json 的 color 要是 0–1 的數字，現在是 ${JSON.stringify(j.color)} → 改成 0–1（預設 0.8），或從 git 還原 shared/template/kit/look.json`);
-  if (!num(j.slim) || j.slim < 0 || j.slim > 1.2) throw new Error(`kit/look.json 的 slim 要是 0–1.2 的數字，現在是 ${JSON.stringify(j.slim)} → 改成 0–1.2（預設 0.6），或從 git 還原 shared/template/kit/look.json`);
+  if (!num(j.color) || j.color < 0 || j.color > 1) throw new Error(`kit/look.json 的 color 要是 0–1 的數字，現在是 ${JSON.stringify(j.color)} → 改成 0–1（預設 0＝不調光；要調光建議 0.8），或從 git 還原 shared/template/kit/look.json`);
+  if (!num(j.slim) || j.slim < 0 || j.slim > 1.2) throw new Error(`kit/look.json 的 slim 要是 0–1.2 的數字，現在是 ${JSON.stringify(j.slim)} → 改成 0–1.2（預設 0＝不瘦臉；要瘦臉建議 0.6），或從 git 還原 shared/template/kit/look.json`);
   if (typeof j.lut !== 'string' || !j.lut) throw new Error('kit/look.json 的 lut 要是 kit/ 底下的 .cube 路徑，例如 "look/jianying-smart.cube" → 從 git 還原 shared/template/kit/look.json');
   const lutFile = path.join(templateDir, 'kit', j.lut);
   return { color: r2(j.color), slim: r2(j.slim), lut: j.lut, lutFile };

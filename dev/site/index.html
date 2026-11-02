@@ -51,7 +51,15 @@
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .btn.primary:hover { filter: brightness(1.08); }
   .nav .btn { padding: 6px 14px; font-size: 14px; }
-  @media (max-width: 760px) { .nav ul { display: none; } .nav .btn { margin-left: auto; } }
+  /* 窄螢幕：導覽列換成第二排、可以左右滑的目錄 */
+  @media (max-width: 900px) {
+    .nav .wrap { flex-wrap: wrap; height: auto; padding-top: 10px; gap: 8px 20px; }
+    .nav .btn { margin-left: auto; }
+    .nav ul { order: 3; width: 100%; margin: 0; padding: 4px 0 10px; overflow-x: auto; scrollbar-width: none; gap: 8px; }
+    .nav ul::-webkit-scrollbar { display: none; }
+    .nav ul a { display: block; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 14px; }
+  }
+  @media (max-width: 900px) { html { scroll-padding-top: 116px; } }
 
   /* 首屏 */
   .hero { padding: 64px 0 40px; }
@@ -141,13 +149,26 @@
   @media (max-width: 960px) { .agents { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 520px) { .agents { grid-template-columns: 1fr; } }
 
+  /* 換風格 */
+  .looks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .looks figure { margin: 0; }
+  .looks figcaption { margin-top: 8px; font-size: 15px; color: var(--muted); }
+  .looks figcaption b { color: var(--text); margin-right: 6px; }
+  .looks figcaption i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  @media (max-width: 760px) { .looks { grid-template-columns: 1fr; } }
+  .rows { margin-top: 20px; display: grid; gap: 10px; max-width: 880px; padding: 0; list-style: none; }
+  .rows li { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 4px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+  .rows b { font-weight: 900; }
+  .rows span { color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+  @media (max-width: 640px) { .rows li { grid-template-columns: 1fr; } }
+
   /* 開始使用 */
   .start { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; counter-reset: g; max-width: 880px; }
   .start li { display: grid; grid-template-columns: 44px 1fr; gap: 4px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
   .start li::before { counter-increment: g; content: counter(g); grid-row: span 2; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 900; }
   .start h3 { margin: 4px 0 0; font-size: 19px; font-weight: 900; }
   .start p { margin: 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
-  .start .say { color: var(--text); font-weight: 700; }
+  .say { color: var(--text); font-weight: 700; }
 
   footer { margin-top: 96px; border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
   footer p { margin: 4px 0; }
@@ -163,6 +184,8 @@
     <ul>
       <li><a href="#how">運作方式</a></li>
       <li><a href="#scenes">情境動畫</a></li>
+      <li><a href="#style">換風格</a></li>
+      <li><a href="#capcut">搭配剪映</a></li>
       <li><a href="#agents">支援的 Agent</a></li>
       <li><a href="#start">開始使用</a></li>
       <li><a href="shared/template/index.html">情境庫</a></li>
@@ -305,6 +328,43 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <a class="btn" href="shared/template/fx/index.html">字卡動態 40 種 →</a>
     <p>情境庫裡每張卡都寫了什麼時候用、什麼時候不要用、字數上限。</p>
   </div>
+</section>
+
+<section class="block" id="style">
+  <div class="head">
+    <h2>預設好看，也能換成你的風格</h2>
+    <p>主色、子母畫面外框、背景圖打包成一個「風格包」。內建「預設」和示範用的「藍圖」，亮色、暗色都有；也可以請 AI 照你的品牌色做一包。</p>
+  </div>
+  <div class="looks">
+    <figure><div class="pv"><iframe src="shared/template/preview/04c-fs-flow.html?t=4" loading="lazy" title="預設風格 預覽" tabindex="-1"></iframe></div>
+      <figcaption><i style="background:#F6630F"></i><b>預設</b>橘色、米白線稿</figcaption></figure>
+    <figure><div class="pv"><iframe src="shared/template/preview/04c-fs-flow.html?t=4&amp;style=%E8%97%8D%E5%9C%96" loading="lazy" title="藍圖風格 預覽" tabindex="-1"></iframe></div>
+      <figcaption><i style="background:#2563EB"></i><b>藍圖</b>藍色、網格製圖線稿</figcaption></figure>
+    <figure><div class="pv"><iframe src="shared/template/preview/04c-fs-flow.html?t=4&amp;style=%E8%97%8D%E5%9C%96&amp;theme=dark" loading="lazy" title="藍圖風格暗色 預覽" tabindex="-1"></iframe></div>
+      <figcaption><i style="background:#2563EB"></i><b>藍圖＋暗色</b>同一包的暗色主題</figcaption></figure>
+  </div>
+  <ul class="rows">
+    <li><b>先比較看看</b><span>情境庫上方的「風格」「亮色／暗色」切換，所有預覽一起換。</span></li>
+    <li><b>只換這一集</b><span>說 <span class="say">「這集用藍圖風格」</span>，其他集不受影響。</span></li>
+    <li><b>整個工作區換</b><span>說 <span class="say">「整個換成藍圖」</span>，換回來說「換回預設」。</span></li>
+    <li><b>做自己的一包</b><span>說 <span class="say">「幫我做一個風格包：主色深綠、背景要簡潔」</span>，AI 先給你看預覽，同意才存。</span></li>
+    <li><b>講者調光、瘦臉</b><span>預設關閉。說「這集要調光、瘦臉」，或在剪輯台用滑桿自己調強度。</span></li>
+  </ul>
+  <div class="more"><a class="btn" href="shared/template/index.html">到情境庫切換風格 →</a></div>
+</section>
+
+<section class="block" id="capcut">
+  <div class="head">
+    <h2>習慣剪映？拆成素材帶過去</h2>
+    <p>說 <span class="say">「輸出剪映素材」</span>，成片會拆成主軌、每段一支有透明通道的 MOV、字幕檔和排法清單，拖進剪映照時間排好，就能接著用你熟悉的方式調整。</p>
+  </div>
+  <ul class="rows">
+    <li><b>主軌.mp4</b><span>講者畫面＋人聲＋片尾配樂，沒有字卡和字幕。放主軌道，從 0 秒開始。</span></li>
+    <li><b>每段一支 .mov</b><span>ProRes 4444、有透明通道，帶那段的音效。檔名寫了起點（例 <code>06_s06_0m31.68s.mov</code>），放畫中畫軌道對齊。</span></li>
+    <li><b>字幕.srt</b><span>畫面上實際顯示的字幕。剪映：文本 → 本地字幕 → 匯入。</span></li>
+    <li><b>清單.md</b><span>每一支放在第幾秒、多長、什麼版面。</span></li>
+  </ul>
+  <p class="note">章節角標與講者慢推不會輸出，在剪映用文字、關鍵幀補。每段約 30 秒 render，整集常常要 10 分鐘以上。</p>
 </section>
 
 <section class="block" id="agents">

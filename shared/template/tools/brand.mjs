@@ -13,6 +13,14 @@
  *
  * 測試用：--kit <kit 資料夾>（預設是 tools 旁邊的 ../kit）、--no-frame（不重畫外框）
  *
+ * 風格包（shared/template/styles/<名稱>/：主色＋外框＋背景圖一包，lib/styles.mjs）：
+ *   brand.mjs list                     列出風格包，標出工作區目前用的是哪一包
+ *   brand.mjs use <名稱>               把那一包複製進 shared/template/（之後每一集預設用它）；目前的設定不屬於任何包時先停下來
+ *   brand.mjs pack <名稱> [--color "#RRGGBB"] [--bg <資料夾>] [--note "說明"]
+ *                                      建一包：不給 --color／--bg 就把 shared/template/ 目前的主色與背景存成一包；
+ *                                      給了就照色碼算 brand.css、畫外框，背景圖從 --bg 資料夾拿 bg-*.jpg（不動 shared/template/ 目前的設定）
+ *   單集換包不用這支：plan.json 寫 "style": "<名稱>"
+ *
  * 背景圖（HTML 路線）：node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
  *   用 HyperFrames 的 Chrome 把 HTML 截成 bg-<kind>.jpg，疊留空區框、量留空區乾不乾淨，三張到齊做並排預覽 preview.jpg。
  *   不寫 shared/template/：使用者同意後才複製（AGENTS.md「換風格」）。完整用法：--help
@@ -21,6 +29,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { listPacks, packsJs, samePack, copyIfDiff, templatePathOf, PACK_KIT, PACK_BG, STYLES_DIR, DEFAULT_PACK } from './lib/styles.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEEP = '#0B1020';
@@ -253,7 +262,7 @@ export async function renderBg({ html, kind, out, chrome, kitDir }) {
   if (r.status !== 0) throw new Error(`疊留空區框失敗：${String(r.stderr).trim().slice(-300)} → 重跑一次；還是失敗就把這行回報`);
   const px = rawFrame(jpg, { width: K.w, height: K.h });
   const decor = K.zones.map((z) => ({ ...z, ratio: decorRatio(px, K.w, K.h, z.rect) }));
-  return { kind, jpg, zones, raw, decor, external: /\bhttps?:\/\//i.test(src) };
+  return { kind, jpg, zones, raw, decor, external: /\bhttps?:\/\/(?!www\.w3\.org\/)/i.test(src) };
 }
 
 export async function makePreview(out) {
@@ -275,6 +284,15 @@ const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與
   node shared/template/tools/brand.mjs "#1B7F4B"
       換主色：寫 kit/brand.css 的 --brand、算 --brand-ink／--brand-text 的對比（≥ 4.5）、
       紅色系警告、重畫子母畫面外框 kit/pip-frame.png 與直式講者面板分隔線 kit/pip-frame-v.png。
+
+  node shared/template/tools/brand.mjs list
+      列出風格包（shared/template/styles/<名稱>/：主色＋外框＋背景圖），標出工作區目前用的那一包。
+  node shared/template/tools/brand.mjs use <名稱>
+      把那一包複製進 shared/template/（每一集預設用它；只換一集就在 plan.json 寫 "style": "<名稱>"）。
+      目前的主色與背景不屬於任何包時會停下來，請先 brand.mjs pack <新名稱> 存起來（或加 --force 直接蓋掉）。
+  node shared/template/tools/brand.mjs pack <名稱> [--color "#RRGGBB"] [--bg <資料夾>] [--note "說明"]
+      建一包：只給名稱＝把 shared/template/ 目前的主色與背景存成一包；給 --color 就照色碼算 brand.css、畫外框；
+      給 --bg 就從那個資料夾拿 bg-fs.jpg、bg-side.jpg、bg-ch.jpg（和 -dark 三張，有的話）。不會改 shared/template/ 目前的設定。
 
   node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
       背景圖的 HTML 路線：用 Chrome 把 HTML 截成 bg-<kind>.jpg（fs 1920×1080、side 960×1080、ch 1920×1080），
@@ -331,6 +349,122 @@ async function bgCli(args) {
   return 0;
 }
 
+// ---------- 風格包（list／use／pack）----------
+
+const templateOf = (kitDir) => path.dirname(kitDir ?? path.resolve(HERE, '..', 'kit'));
+const BG_SIZE = { fs: [1920, 1080], side: [960, 1080], ch: [1920, 1080] };
+
+export function writePacksJs(templateDir) {
+  const f = path.join(templateDir, STYLES_DIR, 'styles.js');
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, packsJs(listPacks(templateDir)));
+  return f;
+}
+
+// 目前 shared/template/ 是哪一包（每個檔逐位元組一樣）；都不是回 null
+export function currentPack(templateDir) {
+  return listPacks(templateDir).find((p) => samePack(templateDir, path.join(templateDir, STYLES_DIR, p.dir)))?.dir ?? null;
+}
+
+export function usePack(templateDir, name, { force = false } = {}) {
+  const packs = listPacks(templateDir);
+  const p = packs.find((x) => x.dir === name);
+  if (!p) throw new Error(`找不到風格包「${name}」→ 現有：${packs.map((x) => x.dir).join('、') || '（沒有）'}；看清單：node shared/template/tools/brand.mjs list`);
+  const cur = currentPack(templateDir);
+  if (!cur && !force) throw new Error('shared/template/ 目前的主色或背景不屬於任何風格包，直接換會弄丟 → 先存起來：node shared/template/tools/brand.mjs pack <新名稱>（確定不要了才加 --force）');
+  const dir = path.join(templateDir, STYLES_DIR, name);
+  const changed = [];
+  for (const f of p.files) if (copyIfDiff(path.join(dir, f), path.join(templateDir, templatePathOf(f)))) changed.push(templatePathOf(f));
+  // 這包沒有暗色背景：留著舊的會變成「亮色是新包、暗色是舊包」→ 提醒
+  const noDark = PACK_BG.filter((f) => f.endsWith('-dark.jpg') && !p.files.includes(f));
+  return { from: cur, pack: p, changed, noDark };
+}
+
+export function makePack(templateDir, name, { color = null, bg = null, note = '', kitDir = path.join(templateDir, 'kit') } = {}) {
+  if (!name || /[\\/]/.test(name) || name.startsWith('.')) throw new Error(`風格包名稱「${name ?? ''}」不能有 / 或 \\，也不能用 . 開頭 → 換一個名稱，例如「深綠」`);
+  const dir = path.join(templateDir, STYLES_DIR, name);
+  if (fs.existsSync(dir)) throw new Error(`風格包「${name}」已經有了（shared/template/${STYLES_DIR}/${name}/）→ 換一個名稱，或先刪掉那個資料夾`);
+  const files = [];
+  const put = (f, buf) => { fs.writeFileSync(path.join(dir, f), buf); files.push(f); };
+  let brand;
+  if (bg) {
+    const src = path.resolve(bg);
+    if (!fs.existsSync(src) || !fs.statSync(src).isDirectory()) throw new Error(`--bg 要指一個資料夾（裡面放 bg-fs.jpg、bg-side.jpg、bg-ch.jpg），找不到「${bg}」`);
+    const need = ['bg-fs.jpg', 'bg-side.jpg', 'bg-ch.jpg'].filter((f) => !fs.existsSync(path.join(src, f)));
+    if (need.length) throw new Error(`--bg 的資料夾少了 ${need.join('、')} → 三張都要有（尺寸 fs 1920×1080、side 960×1080、ch 1920×1080；brand.mjs bg 會產生這三張）`);
+  }
+  fs.mkdirSync(dir, { recursive: true });
+  try {
+    if (color) {
+      const c = brandColors(color);
+      brand = c.brand;
+      put('brand.css', rewriteBrandCss(fs.readFileSync(path.join(kitDir, 'brand.css'), 'utf8'), c));
+      put('pip-frame.png', drawPipFrame(c.brand));
+      put('pip-frame-v.png', drawPipFrameV(c.brand));
+    } else {
+      for (const f of PACK_KIT) if (fs.existsSync(path.join(kitDir, f))) put(f, fs.readFileSync(path.join(kitDir, f)));
+      brand = (fs.readFileSync(path.join(kitDir, 'brand.css'), 'utf8').match(/--brand\s*:\s*(#[0-9a-fA-F]{6})/) || [])[1]?.toUpperCase() ?? null;
+    }
+    const bgDir = bg ? path.resolve(bg) : (color ? null : templateDir);
+    if (bgDir) for (const f of PACK_BG) if (fs.existsSync(path.join(bgDir, f))) put(f, fs.readFileSync(path.join(bgDir, f)));
+    fs.writeFileSync(path.join(dir, 'style.json'), JSON.stringify({ name, brand, note }, null, 2) + '\n');
+  } catch (e) { fs.rmSync(dir, { recursive: true, force: true }); throw e; }
+  return { dir, brand, files };
+}
+
+async function packCli(cmd, args) {
+  const o = { _: [] };
+  for (let i = 0; i < args.length; i++) {
+    const k = args[i];
+    if (['--color', '--bg', '--note', '--kit'].includes(k)) {
+      if (args[i + 1] == null) throw new Error(`${k} 後面要接值 → 看用法：node shared/template/tools/brand.mjs --help`);
+      o[k.slice(2)] = args[++i];
+    } else if (k === '--force') o.force = true;
+    else if (k.startsWith('--')) throw new Error(`brand.mjs ${cmd} 沒有 ${k} 這個參數 → 看用法：node shared/template/tools/brand.mjs --help`);
+    else o._.push(k);
+  }
+  const kitDir = o.kit ? path.resolve(o.kit) : undefined;
+  const templateDir = templateOf(kitDir);
+  if (cmd === 'list') {
+    const packs = listPacks(templateDir), cur = currentPack(templateDir);
+    if (!packs.length) { console.log(`還沒有風格包（shared/template/${STYLES_DIR}/）→ 把目前的存起來：node shared/template/tools/brand.mjs pack ${DEFAULT_PACK}`); return 0; }
+    console.log(`風格包（shared/template/${STYLES_DIR}/）：`);
+    for (const p of packs) {
+      const dark = PACK_BG.filter((f) => f.endsWith('-dark.jpg')).every((f) => p.files.includes(f));
+      console.log(`  ${p.dir === cur ? '●' : '○'} ${p.dir}　主色 ${p.brand ?? '—'}　背景 ${p.files.filter((f) => f.startsWith('bg-')).length} 張${dark ? '（含暗色）' : ''}${p.note ? `　${p.note}` : ''}`);
+    }
+    console.log(cur ? `工作區目前用：${cur}（● 那一包）` : '工作區目前的主色或背景不屬於任何包 → 要留著就存起來：node shared/template/tools/brand.mjs pack <新名稱>');
+    console.log('換整個工作區：brand.mjs use <名稱>；只換一集：plan.json 寫 "style": "<名稱>"；預覽：打開 shared/template/index.html 上方的「風格」');
+    return 0;
+  }
+  const name = o._[0];
+  if (!name || o._.length > 1) throw new Error(`brand.mjs ${cmd} 要接一個風格包名稱 → 例：node shared/template/tools/brand.mjs ${cmd} ${DEFAULT_PACK}`);
+  if (cmd === 'use') {
+    const r = usePack(templateDir, name, { force: !!o.force });
+    console.log(`換成風格包「${name}」（原本：${r.from ?? '不屬於任何包'}）：${r.changed.length ? r.changed.map((f) => `shared/template/${f}`).join('、') : '檔案都一樣，沒有變'}`);
+    if (r.noDark.length) console.log(`⚠ 這包沒有暗色背景（${r.noDark.join('、')}），shared/template/ 留著原本的；暗色主題的集數背景會對不上主色 → 補進 shared/template/${STYLES_DIR}/${name}/ 再 use 一次`);
+    console.log('接著重跑 node shared/template/tools/build.mjs，成片就會換；預覽頁 shared/template/index.html 重新整理即可');
+    return 0;
+  }
+  const r = makePack(templateDir, name, { color: o.color ?? null, bg: o.bg ?? null, note: o.note ?? '', kitDir });
+  const js = writePacksJs(templateDir);
+  console.log(`建好風格包「${name}」：shared/template/${STYLES_DIR}/${name}/（主色 ${r.brand ?? '—'}；${r.files.join('、')}）`);
+  const bad = [];
+  if (fs.existsSync(path.join(r.dir, 'bg-fs.jpg'))) {
+    const { probeMedia } = await import('./lib/ff.mjs');
+    for (const [k, [w, h]] of Object.entries(BG_SIZE)) for (const f of [`bg-${k}.jpg`, `bg-${k}-dark.jpg`]) {
+      if (!fs.existsSync(path.join(r.dir, f))) continue;
+      const m = probeMedia(path.join(r.dir, f));
+      if (m.width !== w || m.height !== h) bad.push(`${f} 是 ${m.width}×${m.height}（要 ${w}×${h}）`);
+    }
+  }
+  if (bad.length) console.log(`⚠ 背景圖尺寸不對：${bad.join('、')} → 照 USAGE-reference.md R9.2 縮放裁切後放進這一包`);
+  if (o.color && !o.bg) console.log(`⚠ 這包只有主色、沒有背景圖：用的時候背景會沿用 shared/template/ 目前的 → 要配套的背景，用 brand.mjs bg 做三張再 --bg <資料夾>`);
+  console.log(`情境庫的風格清單已更新：${path.relative(process.cwd(), js)}`);
+  console.log(`用法：整個工作區 node shared/template/tools/brand.mjs use ${name}；只換一集 plan.json 寫 "style": "${name}"`);
+  return 0;
+}
+
 // ---------- CLI ----------
 
 // 直式講者面板（009 FR-130）：1080×1920 透明，y 897–903 一條 6px 主色線（上半資訊面板／下半講者面板的分隔線，canvas.mjs pip.frame）
@@ -356,6 +490,7 @@ export function applyBrand(color, { kitDir = path.resolve(HERE, '..', 'kit'), fr
 async function cli() {
   const args = process.argv.slice(2);
   if (args[0] === 'bg') return bgCli(args.slice(1));
+  if (['list', 'use', 'pack'].includes(args[0])) return packCli(args[0], args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--kit') kitDir = path.resolve(args[++i]);

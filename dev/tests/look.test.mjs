@@ -8,7 +8,18 @@ import path from 'node:path';
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { TEMPLATE, WORKSPACE, imp } from './helpers.mjs';
+import { TEMPLATE as REAL_TEMPLATE, WORKSPACE, imp } from './helpers.mjs';
+
+// kit/look.json 預設關（color 0、slim 0）；下面的測試要的是「預設開」的行為，用一份 look.json 改成 0.8／0.6 的模板（其他檔都連回真的模板）
+function templateWithLookOn() {
+  const t = fs.mkdtempSync(path.join(os.tmpdir(), 'look-tpl-'));
+  for (const f of fs.readdirSync(REAL_TEMPLATE)) if (f !== 'kit') fs.symlinkSync(path.join(REAL_TEMPLATE, f), path.join(t, f));
+  fs.mkdirSync(path.join(t, 'kit'));
+  for (const f of fs.readdirSync(path.join(REAL_TEMPLATE, 'kit'))) if (f !== 'look.json') fs.symlinkSync(path.join(REAL_TEMPLATE, 'kit', f), path.join(t, 'kit', f));
+  fs.writeFileSync(path.join(t, 'kit', 'look.json'), JSON.stringify({ color: 0.8, slim: 0.6, lut: 'look/jianying-smart.cube' }));
+  return t;
+}
+const TEMPLATE = templateWithLookOn();
 
 const L = await imp('lib/look.mjs');
 const FF = await imp('lib/ff.mjs');
@@ -42,6 +53,9 @@ const dAt = (F, X, Y) => {
 // ---------- 設定 ----------
 
 test('設定：kit/look.json 預設、validateLook 每則訊息、resolveLook 三種來源', () => {
+  const k0 = L.readKitLook(REAL_TEMPLATE);
+  assert.deepEqual([k0.color, k0.slim, k0.lut], [0, 0, 'look/jianying-smart.cube'], '工作區預設：不調光、不瘦臉（使用者要求才開）');
+  assert.equal(L.resolveLook({ plan: {}, templateDir: REAL_TEMPLATE }).slim, 0);
   const k = L.readKitLook(TEMPLATE);
   assert.deepEqual([k.color, k.slim, k.lut], [0.8, 0.6, 'look/jianying-smart.cube']);
   assert.deepEqual(L.validateLook(undefined), []);
@@ -408,7 +422,9 @@ test('對照圖的位移數字（C-05）：瘦臉底片最新時用 renderLookFo
 
 async function cli(args, cwd = WORKSPACE) {
   const lines = [];
-  const code = await CLI.main(args, { out: (l) => lines.push(l), cwd });
+  // 有 --project 的子指令照「預設開」的測試模板跑（kit/look.json 0.8／0.6）
+  const full = args.includes('--project') && !args.includes('--template') ? [...args, '--template', TEMPLATE] : args;
+  const code = await CLI.main(full, { out: (l) => lines.push(l), cwd });
   return { code, lines };
 }
 

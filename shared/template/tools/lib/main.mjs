@@ -121,15 +121,27 @@ function badgeParts(b, { t0, DUR, C = CANVAS.landscape }) {
 // 直式字卡動態的底色（fx/effects/fx-kit.js 的 --fx-bg；accent＝主色）
 const FX_BG = { dark: '#232733', light: '#f3efe6', accent: 'var(--brand)' };
 
-export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, badges = [], speakerBox = null, canvas = null }) {
+// cut（剪映素材，capcut.mjs）：要和 test 一起給（時間窗）
+//   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、剪輯台過黑／淡入淡出；
+//                                      keepFootage＝側邊欄段（講者被推到右邊）連底片一起放（靜音），剪映疊上去才對得起來
+//   { kind: 'main' }                  主軌：只有底片＋人聲＋剪輯台（跳接放大、過黑、淡入淡出）＋片尾配樂；沒有情境、字幕、角標、段落音效
+export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, badges = [], speakerBox = null, canvas = null, cut = null }) {
   const C = canvas || CANVAS.landscape, portrait = C.format === 'portrait', W = C.W, H = C.H;
+  const segCut = cut?.kind === 'seg', mainCut = cut?.kind === 'main';
+  if (cut) {
+    items = segCut ? items.filter((it) => it.id === cut.id) : [];
+    badges = [];
+    captions = null;
+    if (segCut) { outro = null; editFx = editFx && { ...editFx, punches: [], dips: [], fadeIn: 0, fadeOut: 0 }; }
+  }
+  const compName = segCut ? `capcut-${cut.id}` : mainCut ? 'capcut-main' : test ? 'test-clip' : 'main';
   const PB = C.pip.box;   // 子母畫面本體（橫式 1424,594、432×324）／講者面板（直式 0,900、1080×1020）
   const t0 = test ? test.t0 : 0;
   // 測試片段放在 compositions/test-clip.html（放在專案根目錄會被 lint 當成第二個 root：multiple_root_compositions，
   // 正式 render 還可能重複播音）。data-composition-src 以專案根目錄為準，其他相對路徑以檔案位置為準，所以 kit／assets 前面加 ../
   const base = test ? '../' : '';
   // root 不用 id="root"：字卡動態（fx-*.html）子合成的根就叫 #root，主合成寫 #root { background:#000 } 會套到它身上、把底片整個蓋黑
-  const rootId = test ? 'test-root' : 'main-root';
+  const rootId = cut ? 'capcut-root' : test ? 'test-root' : 'main-root';
   const DUR = test ? r3(Math.min(test.len, videoDur - t0)) : videoDur;
   const skipped = [];
   // 測試片段：只收起點落在 [t0, t0+len) 的段；起點在 t0 之前、還在播的段略過並回報
@@ -373,7 +385,8 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
   }
   // 底片：沒有 edit 時整支一個 <video>；有 cuts／dip 時切成幾支（data-media-start 跳過剪掉的範圍）
   let footVideo;
-  if (!footage) {
+  if (segCut && !cut.keepFootage) footVideo = '';
+  else if (!footage) {
     footVideo = `    <video id="rough" src="${base}assets/rough.mp4" data-start="0" data-duration="${n3(DUR)}"${test ? ` data-media-start="${n3(t0)}"` : ''}
            data-track-index="0" data-has-audio="true" playsinline></video>`;
   } else {
@@ -389,20 +402,23 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
     }
     footVideo = v.join('\n');
   }
-  const capTrack = track++;
+  // 側邊欄段的底片只是畫面：聲音留給主軌
+  if (segCut && footVideo) footVideo = footVideo.replace(/ data-has-audio="true"/g, ' muted');
+  const capTrack = captions ? track++ : null;
+  const bgColor = segCut ? 'transparent' : '#000';
   const html = `<!doctype html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=${W}, height=${H}">
-  <title>${test ? `測試片段 ${t0}s 起 ${DUR}s` : '成片'}</title>
+  <title>${segCut ? `剪映素材 ${cut.id}（${t0}s 起 ${DUR}s）` : mainCut ? '剪映主軌' : test ? `測試片段 ${t0}s 起 ${DUR}s` : '成片'}</title>
   <script src="${base}kit/gsap.min.js"></script>
 ${KIT_LINKS.map((l) => `  <link rel="stylesheet" href="${base}${l}">`).join('\n')}${needCss ? `\n  <link rel="stylesheet" href="${base}kit/media.css">` : ''}
 ${cueScript}${portrait ? `  ${regionsScript(C)}\n` : ''}  <script src="${base}kit/scene-motion.js"></script>
   <script src="${base}kit/illus.js"></script>
   <script src="${base}kit/scene-layout.js"></script>${hasLens ? `\n  <script src="${base}kit/media.js"></script>` : ''}
   <style>
-    body { margin: 0; background: #000; }
-    #${rootId} { position: relative; width: ${W}px; height: ${H}px; overflow: hidden; background: #000; }
+    ${segCut ? 'html, ' : ''}body { margin: 0; background: ${bgColor}; }
+    #${rootId} { position: relative; width: ${W}px; height: ${H}px; overflow: hidden; background: ${bgColor}; }
     #footage { position: absolute; inset: 0; z-index: 0; }
 ${footCss}${pushes.length ? `    #footage-push { position: absolute; inset: 0; transform-origin: ${O.x}px ${O.y}px; }\n` : ''}    #footage video { position: absolute; left: 0; top: 0; width: ${W}px; height: ${H}px; object-fit: cover; }
 ${portrait ? `    /* 講者面板 x 0–1080、y 900–1920（lib/canvas.mjs 的 pip.box，決定 1：分割線 y 900） */
@@ -415,7 +431,7 @@ ${bg ? indent(bgCss(`${base}assets/`, bg), 4) + '\n' : ''}  </style>
 </head>
 <body>
 <!-- build.mjs 產生；要改請改 plan.json 再重跑 build（手改會被雜湊保護擋下）-->
-<div id="${rootId}" data-composition-id="${test ? 'test-clip' : 'main'}" data-start="0" data-duration="${n3(DUR)}" data-width="${W}" data-height="${H}" data-fps="30">
+<div id="${rootId}" data-composition-id="${compName}" data-start="0" data-duration="${n3(DUR)}" data-width="${W}" data-height="${H}" data-fps="30">
 
   <!-- L0 底片 -->
   <div id="footage">
@@ -428,11 +444,11 @@ ${hosts.join('\n')}
 ${bands.length ? `  <!-- v2 轉場色帶（色帶擦開／收回）-->\n${bands.join('\n')}\n\n` : ''}${badgeEls.length ? `  <!-- 章節角標（常駐；plan.json "chapterBadge": false 可關）-->\n  <div id="chb">\n${badgeEls.join('\n')}\n  </div>\n\n` : ''}  <!-- 子母畫面：靜音主軌複本＋外框 png -->
 ${pips.join('\n')}
 
-  <!-- L3 字幕 -->
+${captions ? `  <!-- L3 字幕 -->
   <div id="el-captions" data-composition-id="${captions.compId}" data-composition-src="${captions.file}"
        data-track-kind="captions" data-start="0" data-duration="${n3(DUR)}" data-track-index="${capTrack}"
        data-width="${W}" data-height="${H}" style="z-index:60"></div>
-${overlays.length ? `\n  <!-- 剪輯台：dip 過黑（字幕下面）、整支淡入淡出（連字幕一起）-->\n${overlays.join('\n')}\n` : ''}
+` : ''}${overlays.length ? `\n  <!-- 剪輯台：dip 過黑（字幕下面）、整支淡入淡出（連字幕一起）-->\n${overlays.join('\n')}\n` : ''}
   <!-- L4 音效 -->
 ${sfx.join('\n')}
 </div>
@@ -443,7 +459,7 @@ ${sfx.join('\n')}
   const ease = SceneMotion.pushEase;
 ${badgeEls.length ? "  const P = SceneMotion(tl, document.getElementById('chb'));\n" : ''}${indent(tl.join('\n'), 2)}
   tl.set({}, {}, ${n3(DUR)});
-  window.__timelines['${test ? 'test-clip' : 'main'}'] = tl;
+  window.__timelines['${compName}'] = tl;
 })();
 </script>
 </body>
@@ -475,6 +491,7 @@ export function buildPreview({ scene, parts, D, sub, pipStyle, cues = [] }) {
 <title>${esc(`${scene.num} ${scene.zh}｜預覽`)}</title>
 <!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg-fs.jpg、../bg-side.jpg、../bg-ch.jpg（或單一 ../bg.jpg）後重新整理就會更新 -->
 ${KIT_LINKS.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
+<script src="../kit/style-switch.js"></script>
 <script src="../kit/gsap.min.js"></script>
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>

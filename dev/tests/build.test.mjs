@@ -580,3 +580,54 @@ test('直式（fixture dev/tests/fixtures/portrait，009 T002-V03–V06）：主
   assert.match(flip.stdout, /✖ 主軌是直的（180×320），版式是橫式 → plan\.json 第一層加 "format": "portrait"/);
   fs.rmSync(d, { recursive: true, force: true });
 });
+
+test('--capcut：每段一支透明底合成（沒有字幕、主軌聲音；半畫面段帶靜音底片）＋主軌合成；capcut.json／capcut.srt；之後一般 build 不刪', () => {
+  writePlan(SCENES);
+  const r = node('--capcut');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const cc = JSON.parse(read('capcut.json'));
+  assert.deepEqual(cc.segs.map((s) => s.id), ['s01', 's02', 's03', 's04']);
+  assert.deepEqual(cc.segs.map((s) => s.layoutZh), ['疊加', '半畫面', '子母畫面', '疊加'], 'fx 不寫 bg＝透明字卡動態，算疊加');
+  assert.equal(cc.segs[1].footage, true);
+  assert.equal(cc.main.file, 'compositions/capcut-main.html');
+  const s01 = read('compositions/capcut-s01.html');
+  assert.match(s01, /data-composition-id="capcut-s01" data-start="0"/);
+  assert.match(s01, /background: transparent/);
+  assert.doesNotMatch(s01, /el-captions|id="rough"|el-s02/, '只有這一段：沒有字幕、底片、其他段');
+  const s02 = read('compositions/capcut-s02.html');
+  assert.match(s02, /<video id="rough" [^>]*data-media-start="15"[^>]*\n\s+data-track-index="0" muted/, '半畫面段帶底片，但靜音');
+  assert.doesNotMatch(s02, /data-has-audio/);
+  assert.match(read('compositions/capcut-s03.html'), /<video id="pipv-s03"/, '子母畫面段帶講者小窗');
+  const main = read('compositions/capcut-main.html');
+  assert.match(main, /<video id="rough" [^>]*data-has-audio="true"/);
+  assert.doesNotMatch(main, /el-s0\d|el-captions|id="sfx-/);
+  const srt = fs.readFileSync(path.join(out, 'capcut.srt'), 'utf8');
+  assert.equal((srt.match(/-->/g) || []).length, 12);
+  assert.match(srt, /^1\n00:00:01,000 --> 00:00:04,000\n第 1 句字幕內容\n/);
+  assert.equal(node().status, 0);
+  assert.ok(fs.existsSync(path.join(out, 'compositions', 'capcut-s01.html')), '一般 build 不刪剪映素材的合成');
+});
+
+test('style（風格包）：主色、外框、背景用 styles/<名稱>/ 的；拿掉就換回 shared/template/ 的；名稱打錯 ✖', () => {
+  const same = (a, b) => fs.readFileSync(a).equals(fs.readFileSync(b));
+  const pack = path.join(TEMPLATE, 'styles', '藍圖');
+  const planFile = path.join(out, 'plan.json');
+  const base = { version: 1, speakerBox: [700, 200, 1220, 1000], scenes: SCENES };
+  fs.writeFileSync(planFile, JSON.stringify({ ...base, style: '藍圖' }));
+  const r = node();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^風格包：藍圖（shared\/template\/styles\/藍圖\/：brand\.css、pip-frame\.png、pip-frame-v\.png、bg-fs\.jpg、bg-side\.jpg、bg-ch\.jpg）$/m);
+  for (const f of ['brand.css', 'pip-frame.png']) assert.ok(same(path.join(out, 'kit', f), path.join(pack, f)), f);
+  assert.ok(same(path.join(out, 'assets', 'bg-fs.jpg'), path.join(pack, 'bg-fs.jpg')));
+  fs.writeFileSync(planFile, JSON.stringify(base));
+  assert.equal(node().status, 0);
+  assert.ok(same(path.join(out, 'kit', 'brand.css'), path.join(TEMPLATE, 'kit', 'brand.css')), '同樣大小的 brand.css 也要換回來');
+  assert.ok(same(path.join(out, 'assets', 'bg-fs.jpg'), path.join(TEMPLATE, 'bg-fs.jpg')));
+  fs.writeFileSync(planFile, JSON.stringify({ ...base, style: '沒有這包' }));
+  const bad = node('--check');
+  assert.equal(bad.status, 1);
+  assert.match(bad.stdout, /✖ style：找不到風格包「沒有這包」→ 現有：預設、藍圖/);
+  fs.writeFileSync(planFile, JSON.stringify({ ...base, style: 3 }));
+  assert.match(node('--check').stdout, /✖ style 要寫風格包的名稱/);
+  writePlan(SCENES);
+});

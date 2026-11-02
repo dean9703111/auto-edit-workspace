@@ -11,6 +11,9 @@
  *   node shared/template/tools/build.mjs --project projects/<專案> --test 41,4
  *                                                     另外產生 compositions/test-clip.html：41 秒起的 4 秒
  *                                                     （再到 work/hyperframes 跑 npx hyperframes render -c compositions/test-clip.html --quality draft）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --capcut
+ *                                                     另外產生剪映素材的合成：每段一支 compositions/capcut-<段>.html（透明底、沒有字幕與主軌聲音）
+ *                                                     和主軌 compositions/capcut-main.html，清單寫 work/hyperframes/capcut.json（render 交給 capcut.mjs）
  *   node shared/template/tools/build.mjs --force      覆寫手改過的產生檔
  *   node shared/template/tools/build.mjs --no-loudnorm  重新編碼底片時不做人聲響度標準化（預設調到 −14 LUFS、true peak ≤ −1 dBTP）
  *   node shared/template/tools/build.mjs --no-declick   重新編碼底片時不在剪接點（work/cutpoints.json）做 15 ms 微淡化
@@ -27,12 +30,13 @@
  * plan 有情境動畫（type: "custom"）時，index.html 的 <head> 會多一段 window.__cues（字幕時間與每段起點、段長），
  * 情境動畫用 P.at('#N') 綁句、P.end() 撐到段長，不用手算秒數（寫法見 shared/template/USAGE-reference.md R7.3）。
  * --check 的節奏照 plan.json 的 rhythm（不寫＝continuous，列出沒有畫面的區間）。
+ * plan.json 寫 "style": "<名稱>" 時，主色、子母畫面外框、背景圖改用 shared/template/styles/<名稱>/ 的（缺的檔退回 shared/template/ 目前那一份）。
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { parseSrt } from './lib/srt.mjs';
+import { parseSrt, formatSrt } from './lib/srt.mjs';
 import { floorFrame, r3 } from './lib/time.mjs';
 import { loadScenes, loadIcons, loadFx, motionConsts, resolveScene, sampleSeg } from './lib/scenes.mjs';
 import { assembleScene, sceneParts, hashOf, verifyHash } from './lib/assemble.mjs';
@@ -46,6 +50,7 @@ import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLi
 import { ensureLook, lookCheck } from './lib/look.mjs';
 import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
+import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 
 export { probeDuration, encodeFootage };
 
@@ -54,6 +59,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CUSTOM_PREVIEW = path.join(HERE, 'lib', 'custom-preview.mjs');
 const customPreview = fs.existsSync(CUSTOM_PREVIEW) ? await import(pathToFileURL(CUSTOM_PREVIEW).href) : null;
 const TEST_FILE = 'compositions/test-clip.html';
+const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
 const OUTPUT_DIRS = ['成片', path.join('成片', '測試片段'), path.join('成片', '驗收截圖')];
 const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format'];
 
@@ -67,7 +73,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['check', 'list', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick'].includes(k)) flags[k] = true;
+    } else if (['check', 'list', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -229,6 +235,37 @@ export function listText(lib) {
 
 // --list 的 media 欄位表：lib/media.mjs 的 MEDIA_FIELDS（004 擁有；文字與 --json 共用）
 export { MEDIA_FIELDS };
+
+// ---------- 風格包、剪映素材 ----------
+
+// plan.json "style" 指的風格包要在 shared/template/styles/ 裡
+function styleErrors(P, res) {
+  if (!res.style) return [];
+  try { packDir(P.templateDir, res.style); return []; } catch (e) { return [`style：${e.message}`]; }
+}
+
+const LAYOUT = { overlay: '疊加', side: '半畫面', pip: '子母畫面', full: '全幕' };
+// 每段一支（時間窗＝那一段；有 noHost 又沒有子母畫面的段畫面上沒東西，略過），加一支主軌；字幕照畫面上實際顯示的時間寫 SRT
+function capcutParts(res, { mainOpts, outDur, captions, format }) {
+  const comps = [], segs = [];
+  for (const it of res.items) {
+    if (it.noHost && !it.pipPieces?.length) continue;
+    const t0 = r3(it.start), len = r3(Math.min(it.end, outDur) - it.start);
+    if (len < 1 / 30) continue;
+    const m = buildMain({ ...mainOpts, test: { t0, len }, cut: { kind: 'seg', id: it.id, keepFootage: !!it.side } });
+    const file = `compositions/capcut-${it.id}.html`;
+    comps.push({ file, html: m.html });
+    const layout = it.side ? 'side' : it.opaque && it.pipPieces?.length ? 'pip' : it.opaque ? 'full' : 'overlay';
+    const sfx = [it.sfx, ...(it.sfxExtra || [])].filter((c) => c && c.at >= t0 - 1e-6 && c.at < t0 + m.duration).length;
+    segs.push({ id: it.id, file, label: it.label || it.id, layout, layoutZh: format === 'portrait' && layout === 'pip' ? '上下分割' : LAYOUT[layout],
+      start: t0, end: r3(t0 + m.duration), duration: m.duration, footage: !!it.side, sfx });
+  }
+  const mm = buildMain({ ...mainOpts, test: { t0: 0, len: outDur }, cut: { kind: 'main' } });
+  comps.push({ file: 'compositions/capcut-main.html', html: mm.html });
+  let n = 0;
+  const srt = formatSrt(captions.items.flatMap((c) => c.spans.map(([a, b]) => ({ n: ++n, start: a, end: b, text: c.text }))));
+  return { comps, segs, main: { file: 'compositions/capcut-main.html', duration: mm.duration }, srt };
+}
 
 // ---------- --gallery ----------
 
@@ -515,7 +552,7 @@ export function build(flags, { log = console.log } = {}) {
     const rb = roughBlackCheck(projectDir, voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log), projectRel);
     const voiceOnly = rb.voiceOnly;
     const res = resolvePlan(ctx(videoDur, voiceOnly));
-    res.errors.unshift(...fmtErrors, ...rb.errors);
+    res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res));
     const capW = captionWarnings(cues, C);
     res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, src, C), ...textSyncOffWarnings(P, plan));
     if (P.project && res.tm) {
@@ -574,7 +611,7 @@ export function build(flags, { log = console.log } = {}) {
   }
   const rb = roughBlackCheck(projectDir, voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log), projectRel);
   const res = resolvePlan(ctx(videoDur, rb.voiceOnly));
-  res.errors.unshift(...fmtErrors, ...rb.errors);
+  res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res));
   res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, assetVideo, C), ...textSyncOffWarnings(P, plan));
   // 人聲響度、音效比例（005 的 sfxBudget）、剪接點微淡化；音效比例的 ⚠ 已在 warnings 裡就不重印
   for (const l of audioReportLines(audioInfo, { ...audioOpts, cutpointsExist: cp.list.length > 0, sfx: res.sfxBudget })) {
@@ -611,19 +648,29 @@ export function build(flags, { log = console.log } = {}) {
   const cap = buildCaptions(capCues, { duration: outDur, blackout: res.blackout || [], canvas: C });
   files.push([cap.file, cap.html]);
   const bgOne = fs.existsSync(path.join(P.templateDir, 'bg.jpg'));
+  // 風格包（plan.json "style"）：包裡有的檔先用，沒有的退回 shared/template/ 目前那一份
+  const pack = res.style ? packDir(P.templateDir, res.style) : null;
+  const srcOf = (f) => (pack && fs.existsSync(path.join(pack, f)) ? path.join(pack, f) : path.join(P.templateDir, f));
+  const has = (f) => fs.existsSync(srcOf(f));
   // 暗色（plan.json "theme": "dark"）先用 bg-*-dark.jpg；沒有那張就退回亮色那張並 ⚠
   const dark = res.theme === 'dark';
   const bgMissDark = [];
   const bgPick = (f) => {
     const d = f.replace(/\.jpg$/, '-dark.jpg');
-    if (dark && fs.existsSync(path.join(P.templateDir, d))) return d;
+    if (dark && has(d)) return d;
     if (dark) bgMissDark.push(d);
-    return fs.existsSync(path.join(P.templateDir, f)) ? f : bgOne ? 'bg.jpg' : null;
+    return has(f) ? f : bgOne ? 'bg.jpg' : null;
   };
   const bgMap = { fs: bgPick('bg-fs.jpg'), side: bgPick('bg-side.jpg'), ch: bgPick('bg-ch.jpg') };
+  if (pack) {
+    const own = [...PACK_KIT, ...Object.values(bgMap).filter(Boolean)].filter((f) => fs.existsSync(path.join(pack, f)));
+    const miss = [...PACK_KIT, ...Object.values(bgMap).filter(Boolean)].filter((f) => !fs.existsSync(path.join(pack, f)));
+    log(`風格包：${res.style}（shared/template/styles/${res.style}/：${own.join('、') || '沒有檔'}${miss.length ? `；${miss.join('、')} 用 shared/template/ 目前的` : ''}）`);
+  }
   const bg = bgMap.fs || bgMap.side || bgMap.ch ? bgMap : false;
   if (dark) log(`主題：暗色（plan.json "theme": "dark"）：背景 ${Object.values(bgMap).filter(Boolean).join('、') || '無'}；主合成與每個子合成的 <html> 加 data-theme="dark"`);
-  if (bgMissDark.length) log(`⚠ 暗色背景圖 ${bgMissDark.map((f) => `shared/template/${f}`).join('、')} 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/`);
+  if (bgMissDark.length && pack) log(`⚠ 暗色背景圖 ${bgMissDark.map((f) => `shared/template/styles/${res.style}/${f}`).join('、')} 不存在，先用亮色那張 → 暗色三張補進這個風格包，或這支改回亮色`);
+  else if (bgMissDark.length) log(`⚠ 暗色背景圖 ${bgMissDark.map((f) => `shared/template/${f}`).join('、')} 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/`);
   // 插入素材的檔（放大鏡的逐幀要先抽好，主合成才知道每一格用哪一張）
   const mediaN = prepareMedia(res.items, P.out, log);
   // 結尾配樂：量 wav 長度決定起播點，淡入淡出與增益烤進檔案（005 的 renderBgmClip，同參數不重做）
@@ -646,6 +693,9 @@ export function build(flags, { log = console.log } = {}) {
     test = buildMain({ ...mainOpts, captions: capT, test: { t0, len } });
     test.t0 = t0;
   }
+  // 剪映素材（--capcut）：每段一支透明底的合成（時間窗＝那一段），加一支主軌；render 交給 capcut.mjs
+  const capcut = flags.capcut ? capcutParts(res, { mainOpts, outDur, captions: cap, format: C.format }) : null;
+  if (capcut) for (const c of capcut.comps) files.push([c.file, c.html]);
   // 暗色：主合成、測試片段、build 產生的子合成（情境、字卡動態、字幕）都加 data-theme="dark"；情境動畫 x-*.html 不是 build 產生的，跟著主合成的 <html> 走
   if (dark) {
     for (const e of files) if (e[0].endsWith('.html')) e[1] = withTheme(e[1], 'dark');
@@ -671,17 +721,27 @@ export function build(flags, { log = console.log } = {}) {
   fs.mkdirSync(P.out, { recursive: true });
   if (P.project) for (const d of OUTPUT_DIRS) fs.mkdirSync(path.join(P.project, d), { recursive: true });
   // kit 的畫廊與給工人看的風格說明不進專案（illus-gallery.jpg 1.7 MB）；illus.js／illus.css 照常複製
-  const kitN = copyDir(path.join(P.templateDir, 'kit'), path.join(P.out, 'kit'), ['icons.json', 'illus-gallery.html', 'illus-gallery.jpg', 'illus-style.md']);
+  const kitSkip = ['icons.json', 'illus-gallery.html', 'illus-gallery.jpg', 'illus-style.md', 'style-switch.js'];
+  let kitN = copyDir(path.join(P.templateDir, 'kit'), path.join(P.out, 'kit'), [...kitSkip, ...PACK_KIT]);
+  // 主色與外框：風格包的（沒有就 shared/template/kit/ 的）；比內容，換包時同樣大小的 brand.css 也會換
+  for (const f of PACK_KIT) {
+    const src = pack && fs.existsSync(path.join(pack, f)) ? path.join(pack, f) : path.join(P.templateDir, 'kit', f);
+    if (fs.existsSync(src) && copyIfDiff(src, path.join(P.out, 'kit', f))) kitN++;
+  }
   if (fs.existsSync(P.sfx)) for (const f of fs.readdirSync(P.sfx).filter((x) => x.endsWith('.wav'))) copyIfChanged(path.join(P.sfx, f), path.join(P.out, 'assets', 'sfx', f));
-  if (bg) for (const f of new Set(Object.values(bg).filter(Boolean))) copyIfChanged(path.join(P.templateDir, f), path.join(P.out, 'assets', f));
+  if (bg) for (const f of new Set(Object.values(bg).filter(Boolean))) copyIfDiff(srcOf(f), path.join(P.out, 'assets', f));
   const generated = new Set();
   for (const [f, c] of files) { W.write(f, c); generated.add(f); }
   W.write('index.html', main.html); generated.add('index.html');
   if (test) { W.write(TEST_FILE, test.html); generated.add(TEST_FILE); }
+  if (capcut) {
+    fs.writeFileSync(path.join(P.out, 'capcut.json'), JSON.stringify({ v: 1, planHash, format: C.format, duration: outDur, segs: capcut.segs, main: capcut.main }, null, 2) + '\n');
+    fs.writeFileSync(path.join(P.out, 'capcut.srt'), capcut.srt);
+  }
   // 舊的產生檔（plan 拿掉的段）：沒被手改才刪
   const removed = [];
   for (const f of Object.keys(manifest.files)) {
-    if (generated.has(f) || [TEST_FILE, 'compositions/captions-test.html'].includes(f)) continue;
+    if (generated.has(f) || [TEST_FILE, 'compositions/captions-test.html'].includes(f) || CAPCUT_RE.test(f)) continue;
     const abs = path.join(P.out, f);
     if (!fs.existsSync(abs)) { delete manifest.files[f]; continue; }
     if (W.isUntouched(f, fs.readFileSync(abs, 'utf8'))) { fs.unlinkSync(abs); delete manifest.files[f]; removed.push(f); }

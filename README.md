@@ -7,6 +7,18 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用：守則寫�
 - 官網與情境庫：https://dean9703111.github.io/auto-edit-workspace/
 - 影片教學「AI 自動剪輯 EP1」：待補
 
+## 目錄
+
+| 想知道 | 看這幾節 |
+|---|---|
+| 這是什麼、怎麼運作 | [這是什麼](#這是什麼)・[怎麼運作](#怎麼運作)・[支援的 AI Agent](#支援的-ai-agent)・[裡面有什麼](#裡面有什麼) |
+| 第一次使用 | [事前準備](#事前準備)・[怎麼開始](#怎麼開始)・[預覽情境庫](#預覽情境庫) |
+| 剪自己的影片 | [開自己的專案](#開自己的專案)・[錄影前檢查](#錄影前檢查) |
+| 換成自己的風格 | [風格包](#換成自己的風格)・[換主色](#換主色)・[換背景圖](#換背景圖)・[講者調光、瘦臉](#講者調光瘦臉選用) |
+| 到剪映繼續剪 | [搭配剪映](#搭配剪映選用) |
+| 卡住了 | [常見問題](#常見問題)・[PROMPTS.md「卡住的時候」](PROMPTS.md) |
+| 其他 | [授權](#授權)・[作者](#作者) |
+
 ## 這是什麼
 
 剪口播影片最花時間的，是一直重複的手工：找出講錯重講的地方、對字幕、做字卡、讓動畫跟著講到的詞出現、配音效、調音量。這個工作區把這些事拆成兩半：
@@ -26,6 +38,7 @@ flowchart LR
   B --> C["剪好看<br>構圖 → 分鏡表 → 情境動畫"]
   C --> D["預覽與修改<br>Studio、剪輯台"]
   D --> E["輸出<br>final.mp4 ＋ 驗收截圖"]
+  D -.-> F["選用：剪映素材<br>主軌＋透明 MOV＋SRT"]
 ```
 
 | 階段 | AI Agent 判斷 | 程式計算 | 停下來給你看 |
@@ -34,7 +47,7 @@ flowchart LR
 | 構圖 | 選畫面放大倍率 | 講者調光、瘦臉、臉部偵測（`look.mjs`），算出每個倍率的構圖預覽（`qc.mjs framing`） | ② 構圖倍率 |
 | 分鏡 | 每段口播在講什麼情境、用哪個版面和動畫、卡片寫什麼 | 檢查字數上限、版面、文字出現時間對不對得上講到的詞（`build.mjs --check`），截出每段的完成態（`qc.mjs storyboard`） | ③ 分鏡表 |
 | 定稿 | 照你的意見改哪一段 | 組成 HyperFrames 專案：字幕、資訊卡、子母畫面、音效對準畫面事件、人聲調到 −14 LUFS（`build.mjs`）；量文字撐破、被裁、擋臉（`audit.mjs`） | ④ Studio 預覽、⑤ 剪輯台 |
-| 輸出 | 看觀影總表判斷哪裡怪 | render、檢查格式、長度、響度、黑畫面、畫面凍結（`qc.mjs final`） | — |
+| 輸出 | 看觀影總表判斷哪裡怪 | render、檢查格式、長度、響度、黑畫面、畫面凍結（`qc.mjs final`）；選用：拆成剪映素材（`capcut.mjs`） | — |
 
 第 ⑥ 個停點是換背景圖時的預覽。每個停點要回什麼、做完寫回哪裡，在 [AGENTS.md](AGENTS.md)「停點總表」。
 
@@ -62,9 +75,10 @@ flowchart LR
 | 情境動畫範例 | 17 支（流程、比喻、前後對比、數值變化、警告、提示詞、介面示意、架構、分支、分層、清單打勾、時間軸、雙邊比較、主體標註、趨勢、比例環、痛點與解法） | `shared/template/custom/` | 口播在講一個情境時，AI 從這裡挑一支改成這一集的動畫，不用從零寫；動畫用 `P.at('#N@詞')` 綁到講到的那個詞，不用手算秒數。做法在 `shared/template/USAGE-reference.md` R7 |
 | 字卡動態 | 40 種 | `shared/template/fx/` | 打開 `shared/template/fx/index.html` 看效果，分鏡寫編號就能用 |
 | 動畫原始檔 | 18 情境＋40 字卡動態都是 HTML（HyperFrames） | `shared/template/scenes/<編號-key>/template.html`＋`scene.json`、`shared/template/fx/effects/fx-NN-*.html` | AI 直接讀、改、換；`fx/renders/` 和 `gallery/` 只是預覽用的影片和圖。要改模板先看 `shared/template/USAGE-reference.md` R14 |
-| 主色 | 1 個（目前是橘色 `#F6630F`） | `shared/template/kit/brand.css` | 說「換主色」，AI 用 `brand.mjs` 換色、算好字的對比、重畫子母畫面外框 |
-| 背景圖 | 3 張（全畫面 `bg-fs.jpg`、側邊欄 `bg-side.jpg`、章節轉場 `bg-ch.jpg`） | `shared/template/` | 說「換背景」，AI 縮放你給的圖，或用 Codex／HTML 產生，先給你看預覽再換 |
-| 講者調光＋瘦臉 | 預設調光 0.8、瘦臉 0.6（對照剪映「智能調色」80、「瘦臉」60） | `shared/template/kit/look.json`（工具 `look.mjs`） | 自動套在講者畫面；剪輯台「講者」可以調，臉部偵測在本機做、不上傳 |
+| 風格包 | 2 包：「預設」（橘色 `#F6630F`、米白線稿）、「藍圖」（藍色 `#2563EB`、網格製圖線稿，示範用），亮色、暗色背景都有 | `shared/template/styles/<名稱>/` | 一包＝主色＋子母畫面外框＋背景圖。情境庫上方的「風格」可以直接預覽；說「這集用藍圖風格」只換這一集，說「整個換成藍圖」換整個工作區 |
+| 主色 | 1 個（工作區目前是「預設」的橘色） | `shared/template/kit/brand.css` | 說「換主色」，AI 用 `brand.mjs` 換色、算好字的對比、重畫子母畫面外框 |
+| 背景圖 | 亮色 3 張（全畫面 `bg-fs.jpg`、側邊欄 `bg-side.jpg`、章節轉場 `bg-ch.jpg`）＋暗色 3 張（`bg-*-dark.jpg`） | `shared/template/` | 說「換背景」，AI 縮放你給的圖，或用 Codex／HTML 產生，先給你看預覽再換 |
+| 講者調光＋瘦臉 | 選用，預設關閉；要開建議調光 0.8、瘦臉 0.6（對照剪映「智能調色」80、「瘦臉」60） | `shared/template/kit/look.json`（工具 `look.mjs`） | 跟 AI 說「這集要調光、瘦臉」就開；剪輯台「講者」也可以開關、調強度。臉部偵測在本機做、不上傳 |
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
 | 字型 | 2 套（Noto Sans TC、Google Sans Flex） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
 | 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處） | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
@@ -74,7 +88,8 @@ flowchart LR
 | 版面量測 `audit.mjs` | 1 支 | `shared/template/tools/audit.mjs` | 在瀏覽器裡把每段情境動畫跳到中點與完成態，量出文字撐破、被裁掉、壓到字幕或子母畫面、擋到講者 |
 | 驗收工具 `qc.mjs` | 1 支 | `shared/template/tools/qc.mjs` | `framing`：構圖倍率預覽；`speaker`：疊出講者的動作範圍，量資訊卡不能擋的地方；`storyboard`：分鏡表每段的完成態截圖；`observe`：成片每 0.5 秒一格的觀影總表；`final`：成片輸出後檢查格式、長度、響度、畫面凍結、黑畫面、長時間沒聲音 |
 | 剪輯台 `editor.mjs` | 1 支 | `shared/template/tools/editor.mjs`，說明在 `shared/template/EDITOR.md` | 網頁介面：剪掉不要的片段、調音量、加淡入淡出和轉場。說「打開剪輯台」，AI 會給你網址 |
-| 換主色工具 `brand.mjs` | 1 支 | `shared/template/tools/brand.mjs` | 換色時自動檢查顏色看不看得清楚；`bg` 把 HTML 截成背景圖並檢查留空區 |
+| 換風格工具 `brand.mjs` | 1 支 | `shared/template/tools/brand.mjs` | 換色時自動檢查顏色看不看得清楚；`bg` 把 HTML 截成背景圖並檢查留空區；`list`／`use`／`pack` 列出、套用、建立風格包 |
+| 剪映素材 `capcut.mjs` | 1 支 | `shared/template/tools/capcut.mjs` | 把成片拆成主軌 MP4、每段一支有透明通道的 MOV、字幕 SRT 和排法清單，拿到剪映自己剪 |
 | 講者工具 `look.mjs` | 1 支 | `shared/template/tools/look.mjs` | 偵測講者的臉、產生瘦臉底片與對照圖 `work/look-preview.jpg` |
 | 使用說明 `USAGE.md`、`USAGE-reference.md` | 2 份 | `shared/template/` | AI 第一次用只讀核心的 USAGE.md；每個情境的參數在 reference，或用 `node shared/template/tools/build.mjs --list` 查 |
 | 工作區守則 `AGENTS.md` | 1 份 | `AGENTS.md` | AI 開工前自動讀；六個停點、每個流程對應哪支 Skill |
@@ -107,6 +122,8 @@ flowchart LR
 ## 預覽情境庫
 
 想先看成片會長什麼樣子，到[官網的情境庫](https://dean9703111.github.io/auto-edit-workspace/shared/template/)，或在本機打開 `shared/template/index.html`。建議用 Chrome 或 Edge 開。
+
+頁面上方有兩個切換：「風格」換風格包（主色＋背景圖），「亮色／暗色」換主題，所有預覽一起變，還沒開始剪就能比較哪一套適合你。
 
 ## 開自己的專案
 
@@ -146,6 +163,20 @@ AI 剪得再好，也救不回糊掉的畫面和聽不清楚的聲音。開錄�
 - **手勢**：盡量在身體前方比畫，不要往畫面左下伸，那裡是資訊卡的位置。
 - **螢幕錄影**：解析度 1920×1080 以上，滑鼠移動放慢，每個操作前先停 1 秒，AI 配對畫面和加運鏡會比較準。
 
+## 換成自己的風格
+
+工作區有預設值，也可以整套換掉，不用改程式：
+
+| 想做的事 | 跟 AI 說 | 會發生什麼 |
+|---|---|---|
+| 看有哪些風格 | 「有哪些風格」 | 列出 `shared/template/styles/` 的每一包；也可以直接在情境庫上方切換預覽 |
+| 只有這一集換 | 「這集用藍圖風格」 | 在這一集的 `plan.json` 寫 `"style": "藍圖"`，其他集不受影響 |
+| 整個工作區換 | 「整個換成藍圖」／「換回預設」 | `brand.mjs use 藍圖`，之後每一集預設都用它 |
+| 做自己的一包 | 「幫我做一個風格包：主色深綠、背景要簡潔」 | 換色、產生亮暗背景，給你看預覽，你同意才存成 `styles/<名稱>/` |
+| 暗色主題 | 「這集換暗色」 | 這一集的 `plan.json` 寫 `"theme": "dark"`，用那一包的暗色背景 |
+
+自己動手的話：`node shared/template/tools/brand.mjs list`、`use <名稱>`、`pack <名稱> --color "#RRGGBB" --bg <資料夾>`。換整個工作區前，如果目前的設定不屬於任何一包，工具會先停下來請你存起來，不會弄丟。細節在 `shared/template/USAGE-reference.md` R9。
+
 ### 換主色
 
 跟 AI 說「把主色換成深綠」就會處理：它會跑 `node shared/template/tools/brand.mjs "#RRGGBB"`，寫入 `shared/template/kit/brand.css` 的 `--brand`，自動算好 `--brand-ink`、`--brand-text` 的對比，並重畫子母畫面外框 `kit/pip-frame.png`（外框是圖檔，只改 CSS 改不到）。
@@ -153,6 +184,23 @@ AI 剪得再好，也救不回糊掉的畫面和聽不清楚的聲音。開錄�
 ### 換背景圖
 
 每種版面一張：`shared/template/bg-fs.jpg`（1920×1080，全畫面與插入素材）、`bg-side.jpg`（960×1080，側邊欄面板）、`bg-ch.jpg`（1920×1080，章節轉場）。跟 AI 說「換背景」：你給圖，它縮放裁切成這三種尺寸；沒給圖，它照這台電腦能用的工具（Codex 生圖，或用 HTML 畫簡潔底紋）產生。不管哪一種，都會先給你看三張並排的預覽和留空區（卡片、子母畫面、字幕會蓋住的地方）檢查圖，你同意才換。做法在 `shared/template/USAGE-reference.md` R9。
+
+### 講者調光、瘦臉（選用）
+
+預設都關閉，講者畫面維持原樣。要開就跟 AI 說「這集要調光、瘦臉」（建議強度調光 0.8、瘦臉 0.6，對照剪映「智能調色」80、「瘦臉」60）；或說「打開剪輯台」，在「講者」面板用開關和滑桿自己調，拖的時候畫面馬上變。想以後每一集都開，說「以後都要調光」。美顏（磨皮、大眼）目前沒有。
+
+## 搭配剪映（選用）
+
+習慣在剪映（CapCut）做最後調整的話，跟 AI 說「輸出剪映素材」，它會跑 `node shared/template/tools/capcut.mjs`，在 `成片/剪映/` 產生：
+
+| 檔案 | 內容 | 在剪映怎麼用 |
+|---|---|---|
+| `主軌.mp4` | 講者畫面＋人聲＋片尾配樂（調光、瘦臉、剪輯台的跳接都在裡面），沒有字卡和字幕 | 拖到主軌道，從 0 秒開始 |
+| `01_s01_0m00.00s.mov`… | 每段字卡、情境動畫一支，ProRes 4444、有透明通道，帶那段的音效 | 拖到畫中畫軌道，起點對齊檔名裡的時間 |
+| `字幕.srt` | 畫面上實際顯示的字幕 | 文本 → 本地字幕 → 匯入，再套你的字幕樣式 |
+| `清單.md` | 每一支放在第幾秒、多長、什麼版面 | 照表排 |
+
+疊加卡的 MOV 只有卡片（其他地方透明）；子母畫面、全幕、半畫面的段整格都有畫面（講者小窗在裡面）。章節角標和講者慢推不會輸出，在剪映用文字、關鍵幀補。每段約 30 秒 render，5 秒的段約 30 MB。
 
 ## 常見問題
 
@@ -169,6 +217,10 @@ Skill 文件寫的參數名稱，可能和你裝的版本不同。以 `auto-edit
 ### Mac M 系列晶片上，轉逐字稿的 whisper 當掉
 
 在整行指令的最前面加上 `GGML_METAL_BF16_DISABLE=1`，再執行一次。
+
+### 我已經全域裝了 hyperframes，還要 `npm install` 嗎
+
+要。工作區的 `package.json` 把 HyperFrames 固定在一個版本（目前 0.8.221），`npx hyperframes` 會優先用工作區 `node_modules/` 裡的這一版。HyperFrames 更新很快（一個月可以從 0.8.214 跳到 0.8.230），模板、字幕位置、render 參數都是照固定的這一版測過的；用別的版本可能 render 出不一樣的畫面。沒有 `npm install` 時，`npx` 會用全域裝的那一版，或下載當下最新的一版，版本就不受控制了。版本不同時 `build.mjs` 會印 ⚠ 提醒。
 
 ### Windows 可以用嗎
 

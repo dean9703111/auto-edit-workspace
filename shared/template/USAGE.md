@@ -185,6 +185,19 @@ Get-Content ..\render.log -Tail 3
 
 每隔一段時間看一次 log；出現 `Render complete` 才算完成。log 停在同一行很久就回報使用者。log 出現 `render_cancelled_parent_exited`：少了 `HYPERFRAMES_RENDER_DETACHED=1`，照上面的指令重跑。
 
+### 2.7b 剪映素材（使用者要求才做）
+
+```bash
+node shared/template/tools/capcut.mjs --project projects/<專案> --dry-run
+node shared/template/tools/capcut.mjs --project projects/<專案> --background
+node shared/template/tools/capcut.mjs status --project projects/<專案>
+```
+
+- 先跑 `build.mjs --capcut`（工具自己跑）：每段一支 `compositions/capcut-<段>.html`（透明底、沒有字幕、角標與主軌聲音；半畫面段連講者一起，因為講者被推到右邊）、一支主軌 `compositions/capcut-main.html`，清單 `work/hyperframes/capcut.json`。
+- 再逐支 render 到 `成片/剪映/`：每段 `NN_<段>_<起點>.mov`（`--format mov`＝ProRes 4444、有透明通道、帶那段的音效）、`主軌.mp4`、`字幕.srt`（照畫面上實際顯示的時間）、`清單.md`。合成和底片都沒變的會略過；`--only s05,s12` 只做幾段；`--no-main` 不做主軌。
+- 每段約 30 秒 render、5 秒的段約 30 MB；整集常常超過 5 分鐘，所以用 `--background`，每 30 秒跑一次 `status`。
+- 不輸出：章節角標、疊加卡期間講者的慢推（剪映用文字、關鍵幀補）。
+
 ### 2.8 驗收（附輸出給使用者）
 
 ```bash
@@ -241,7 +254,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 |---|---|---|---|
 | `version` | ✓ | `1` | 固定 |
 | `format` | 直式必填 | `"landscape"`、`"portrait"` | 版式（`AGENTS.md`「版式」）：直式寫 `"portrait"`，橫式不寫。要和 `work/製作進度.md` 開工決策表的「版式」一樣，不一樣時 `--check` ✖ |
-| `look` | | `false` 或 `{ "color": 0–1, "slim": 0–1.2 }` | 講者調光與瘦臉（第 7 節）。不寫＝用 `shared/template/kit/look.json`（調光 0.8、瘦臉 0.6）；`false`＝兩個都關。使用者要求才寫，剪輯台「講者」也會寫 |
+| `look` | | `false` 或 `{ "color": 0–1, "slim": 0–1.2 }` | 講者調光與瘦臉（第 7 節）。不寫＝用 `shared/template/kit/look.json`（預設兩個都是 0＝關）；`false`＝兩個都關。使用者要求才寫（要開建議 `{ "color": 0.8, "slim": 0.6 }`），剪輯台「講者」也會寫 |
 | `frame` | | `[x, y, w, h]` | 構圖裁切（2.2 第 0 步）：1920×1080 座標、16:9；底片照它裁切放大回 1920×1080。不寫＝原樣 |
 | `speakerBox` | 強烈建議 | `[x1, y1, x2, y2]` | 講者框（2.2）。有 `frame` 時是裁切後的座標。沒寫會提醒，也無法檢查碰撞 |
 | `sideShift` | | `0`–`960`，預設 `480` | 03 側邊欄時講者往右推多少 px（R4） |
@@ -251,6 +264,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `outro` | | 物件 | 結尾配樂：`{ "from": "#N" }`（從第 N 句起播到片尾，淡入淡出自動；`music`、`volume`、`fadeOut` 選填）。使用者要片尾配樂時才寫（R5.2） |
 | `chapterBadge` | | `true`（預設）或 `false` | 章節角標自動常駐右上角：章節開始（01 章節轉場結束；沒有 01 時是 02 章節角標段開始）一直到下一章或片尾配樂，子母畫面、全幕時自動淡出。不要常駐才寫 `false`（回到舊的行為：02 段只顯示那幾秒、`chtag` 附件照舊）。使用者說不要角標時才寫 |
 | `theme` | | `"light"`（預設，不寫）或 `"dark"` | 主題：暗色時 build 換 `bg-*-dark.jpg`、所有合成 `<html data-theme="dark">`；只換顏色 token，版面與動態不變。剪輯台可以切；AI 只在使用者明說「暗色」時寫（`auto-edit-style` 步驟 6） |
+| `style` | | 風格包名稱，例 `"藍圖"` | 這一集用 `shared/template/styles/<名稱>/` 的主色、子母畫面外框、背景圖（亮暗都看包裡的；包裡沒有的檔用 `shared/template/` 目前的）。不寫＝工作區目前的。名稱照 `brand.mjs list`；AI 只在使用者說「這集用 XX 風格」時寫（`auto-edit-style` 步驟 7） |
 | `edit` | | 物件 | 剪輯台寫的設定（裁剪、淡入淡出、音量、轉場），AI 不主動寫（第 6 節） |
 | `scenes` | ✓ | 陣列 | 每一段一個物件，依時間順序寫 |
 
@@ -636,7 +650,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check --json
 
 ## 7. 講者調光與瘦臉（look）
 
-講者的畫面會自動調光（亮一點、膚色紅潤一點）和瘦臉，預設在 `shared/template/kit/look.json`；規則與限制看 `shared/style.md`「講者畫面」。
+講者畫面的調光（亮一點、膚色紅潤一點）和瘦臉是選用的，**預設關閉**（`shared/template/kit/look.json` 兩個都是 0），使用者要求才開；規則與限制看 `shared/style.md`「講者畫面」。
 
 | 誰做 | 什麼時候 | 做什麼 |
 |---|---|---|
@@ -655,10 +669,12 @@ plan.json 的寫法（使用者要求才寫）：
 
 | 使用者說 | 寫 |
 |---|---|
-| 不要調光、不要瘦臉 | `"look": false` |
-| 只要調光 | `"look": { "slim": 0 }` |
-| 調光淡一點 | `"look": { "color": 0.5 }` |
-| 瘦一點／不要那麼瘦 | `"look": { "slim": 0.8 }`／`"look": { "slim": 0.3 }`（改完跑 `look.mjs run`） |
+| 要調光、瘦臉 | `"look": { "color": 0.8, "slim": 0.6 }`（改完跑 `look.mjs run`） |
+| 只要調光 | `"look": { "color": 0.8 }` |
+| 只要瘦臉 | `"look": { "slim": 0.6 }`（改完跑 `look.mjs run`） |
+| 調光淡一點 | `"look": { "color": 0.5, "slim": <原本的值> }` |
+| 瘦一點／不要那麼瘦 | `"look": { "color": <原本的值>, "slim": 0.8 }`／`0.3`（改完跑 `look.mjs run`） |
+| 都不要（kit 預設被改成開的時候） | `"look": false` |
 
 - 自動略過瘦臉（只調光）：臉寬 < 60 px（畫面裡的臉太小）、抽樣 12 格都沒偵測到臉（確定有講者就加 `--force`）、偵測率 < 80 %、找不到臉部偵測的檔案或 Chrome。build 會印 ⚠ 和原因，不用處理。
 - 側臉時瘦臉自動減半、偵測不到的格自動淡掉，不會一格有一格沒有。

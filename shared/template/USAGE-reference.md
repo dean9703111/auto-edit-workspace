@@ -14,7 +14,7 @@
 | R6 | 密度與節奏、build 檢查哪些 | 步驟 4、6 |
 | R7 | 第二層情境動畫（custom）：骨架、`P.at` 綁句、17 支範例、檢查 | 符合 style.md「情境動畫優先」時 |
 | R8 | 硬規則與陷阱 | 寫 custom、用 `css` 移位、步驟 8 |
-| R9 | 換主色與背景（能力探測、生圖路由、HTML 背景圖） | 使用者要求時 |
+| R9 | 換主色與背景、風格包（能力探測、生圖路由、HTML 背景圖） | 使用者要求時 |
 | R10 | 不可以做的事 | 不確定能不能做時 |
 | R11 | 可以重複使用的資源 | 找檔案時 |
 | R12 | Skill 與安裝 | 改 Skill 時 |
@@ -692,6 +692,21 @@ build 已經自動處理、不用你做的（知道就好，不要重做）：�
 ## R9. 換主色與背景
 
 只在使用者明確要求時才改；這是 `shared/` 唯讀規則的唯一例外。
+
+### R9.0 風格包
+
+一包＝`shared/template/styles/<名稱>/`：`style.json`（名稱、主色、說明）、`brand.css`、`pip-frame.png`、`pip-frame-v.png`、`bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（＋暗色 `bg-*-dark.jpg`）。內建「預設」（目前的橘色）與示範「藍圖」（藍色，背景的 HTML 原始檔在 `styles/藍圖/來源/`）。
+
+```bash
+node shared/template/tools/brand.mjs list
+node shared/template/tools/brand.mjs use 藍圖
+node shared/template/tools/brand.mjs pack 我的品牌 --color "#1B7F4B" --bg <放 bg-*.jpg 的資料夾> --note "一句說明"
+```
+
+- 三種範圍：情境庫 `index.html` 上方的「風格」「暗色」只換預覽；plan.json 第一層 `"style": "<名稱>"` 只換這一集（build 印 `風格包：<名稱>…`）；`brand.mjs use <名稱>` 把包裡的檔複製進 `shared/template/`，之後每一集都用它。
+- `use` 前會比對：`shared/template/` 目前的主色、外框、背景不屬於任何包時停下來，先 `pack <新名稱>` 存起來（`--force` 才直接蓋掉）。
+- `pack` 只給名稱＝把 `shared/template/` 目前的檔存成一包；給 `--color` 就照 R9.1 算 `brand.css`、畫外框；`--bg` 資料夾要有三張亮色（有暗色三張就一起收）。建好會重寫 `styles/styles.js`（情境庫的清單）。
+- 已經有的包不改、不刪（AGENTS.md 規則 1）；要改就另存一個新名稱。
 
 ### R9.1 換主色
 
