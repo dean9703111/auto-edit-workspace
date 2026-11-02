@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const TOOLS = path.join(ROOT, 'shared', 'template', 'tools');
+const { hfArgs } = await import(path.join(TOOLS, 'lib', 'hf.mjs'));   // 合成專案在工作區外面：npx 會跑到快取裡的別版，直接跑工作區釘的那一版
 const WIN = process.platform === 'win32';
 const args = process.argv.slice(2);
 const flag = (n) => args.includes(n);
@@ -134,7 +135,7 @@ step(`${tag}audit.mjs --all --json（0 ✖）`, () => {
 });
 
 // ---------- 6. snapshot ----------
-step(`${tag}npx hyperframes snapshot --at（開頭、中段、結尾各一格）`, () => {
+step(`${tag}hyperframes snapshot --at（工作區釘的版本；開頭、中段、結尾各一格）`, () => {
   if (!built.ok) return { ok: false, detail: 'build 沒過' };
   if (!chrome) return noChrome;
   const hf = path.join(project, 'work', 'hyperframes');
@@ -142,7 +143,7 @@ step(`${tag}npx hyperframes snapshot --at（開頭、中段、結尾各一格）
   const dur = Number(meta.outputDur ?? meta.duration ?? meta.durationSec ?? 60);
   const at = [1.5, +(dur / 2).toFixed(1), +(dur - 1.5).toFixed(1)].join(',');
   const outDir = path.join(project, 'work', 'check-snap');
-  const r = run('npx', ['hyperframes', 'snapshot', '--at', at, '--no-end', '-o', outDir], { cwd: hf });
+  const r = run(process.execPath, hfArgs(['snapshot', '--at', at, '--no-end', '-o', outDir]), { cwd: hf });
   const pngs = fs.existsSync(outDir) ? fs.readdirSync(outDir).filter((f) => f.endsWith('.png')) : [];
   const small = pngs.filter((f) => fs.statSync(path.join(outDir, f)).size < 20 * 1024);
   return { ok: r.status === 0 && pngs.length >= 3 && small.length === 0, detail: `${pngs.length} 張（${at}s）${small.length ? '，太小（可能空白）：' + small.join('、') : ''}${r.status ? '\n' + (r.stderr || r.stdout).slice(-300) : ''}` };
@@ -169,7 +170,7 @@ if (flag('--render')) {
     if (t.status !== 0) return { ok: false, detail: (t.stdout + t.stderr).slice(-300) };
     const clip = path.join(project, 'output', 'test-clips', 'check-clip.mp4');
     fs.mkdirSync(path.dirname(clip), { recursive: true });
-    const r = run('npx', ['hyperframes', 'render', '-c', 'compositions/test-clip.html', '--quality', 'draft', '-o', clip], { cwd: hf });
+    const r = run(process.execPath, hfArgs(['render', '-c', 'compositions/test-clip.html', '--quality', 'draft', '-o', clip]), { cwd: hf });
     if (!fs.existsSync(clip)) return { ok: false, detail: `render 沒有輸出：${(r.stderr || r.stdout).slice(-300)}` };
     const p = run('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', clip]);
     return { ok: /video/.test(p.stdout) && /audio/.test(p.stdout), detail: `streams: ${p.stdout.trim().split('\n').join('、')}` };

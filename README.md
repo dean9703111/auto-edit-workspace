@@ -5,7 +5,7 @@
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <img alt="Node.js 22+" src="https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white">
-  <img alt="HyperFrames 0.8.221" src="https://img.shields.io/badge/HyperFrames-0.8.221-F6630F">
+  <img alt="HyperFrames 版本（照 package.json）" src="https://img.shields.io/github/package-json/dependency-version/dean9703111/auto-edit-workspace/dev/hyperframes?label=HyperFrames&color=F6630F">
   <img alt="macOS | Windows" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-555">
   <img alt="Claude Code | Codex | MiniMax Code | Cursor" src="https://img.shields.io/badge/agents-Claude%20Code%20%7C%20Codex%20%7C%20MiniMax%20Code%20%7C%20Cursor-111830">
 </p>
@@ -314,7 +314,7 @@ Skill 文件寫的參數名稱，可能和你裝的版本不同。以 `auto-edit
 
 ### 我已經全域裝了 hyperframes，還要 `npm install` 嗎
 
-要。工作區的 `package.json` 把 HyperFrames 固定在一個版本（目前 0.8.221），`npx hyperframes` 會優先用工作區 `node_modules/` 裡的這一版。HyperFrames 更新很快（一個月可以從 0.8.214 跳到 0.8.230），模板、字幕位置、render 參數都是照固定的這一版測過的；用別的版本可能 render 出不一樣的畫面。沒有 `npm install` 時，`npx` 會用全域裝的那一版，或下載當下最新的一版，版本就不受控制了。版本不同時 `build.mjs` 會印 ⚠ 提醒。
+要。工作區的 `package.json` 把 HyperFrames 固定在一個版本，`npx hyperframes` 會優先用工作區 `node_modules/` 裡的這一版；工作區的工具（audit、剪輯台的成片預覽、剪映素材、分段預覽）也只用這一版，不會去用 npx 快取裡的其他版本。HyperFrames 更新很快（一個月可以從 0.8.214 跳到 0.8.230），模板、字幕位置、render 參數都是照固定的這一版測過的；用別的版本可能 render 出不一樣的畫面。沒有 `npm install` 時，`npx` 會用全域裝的那一版，或下載當下最新的一版，版本就不受控制了；工作區的工具則會直接停下來，提示你先 `npm install`。版本不同時 `build.mjs` 會印 ⚠ 提醒。
 
 ### Windows 可以用嗎
 

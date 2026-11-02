@@ -10,6 +10,7 @@ import { imp, TEMPLATE } from './helpers.mjs';
 
 const R = await imp('lib/audit-rules.mjs');
 const B = await imp('lib/audit-browser.mjs');
+const HF = await imp('lib/hf.mjs');
 const A = await imp('audit.mjs');
 const tmps = [];
 const tmp = (p = 'hf-audit-test-') => { const d = fs.mkdtempSync(path.join(os.tmpdir(), p)); tmps.push(d); return d; };
@@ -476,25 +477,26 @@ test('parseArgs', () => {
 
 // ---------- 找 Chrome／runtime、server ----------
 
-test('cmpVer／pickRuntime：挑最新版', () => {
+test('cmpVer：多段數字比大小', () => {
   assert.ok(B.cmpVer('0.8.220', '0.8.99') > 0);
   assert.ok(B.cmpVer('mac_arm-152.0.7977.30', 'mac_arm-150.0.1.2') > 0);
-  assert.equal(B.pickRuntime([{ version: '0.8.145', mtime: 9 }, { version: '0.8.220', mtime: 1 }, { version: '0.7.107', mtime: 5 }]).version, '0.8.220');
-  assert.equal(B.pickRuntime([]), null);
 });
 
-test('runtimeCandidates／chromeCandidates：照 npx 快取與 ~/.cache/hyperframes 的結構找', () => {
-  const home = tmp();
-  for (const [h, v] of [['aaa', '0.8.145'], ['bbb', '0.8.220']]) {
-    const pkg = path.join(home, '.npm', '_npx', h, 'node_modules', 'hyperframes');
+test('findRuntime 只用工作區 node_modules 那一份（npx 快取裡更新的版本不算）；沒裝就叫你 npm install；chromeCandidates 照 ~/.cache/hyperframes 的結構找', () => {
+  const home = tmp(), root = tmp();
+  const mk = (pkg, v) => {
     fs.mkdirSync(path.join(pkg, 'dist'), { recursive: true });
-    fs.writeFileSync(path.join(pkg, 'package.json'), JSON.stringify({ version: v }));
+    fs.writeFileSync(path.join(pkg, 'package.json'), JSON.stringify({ version: v, bin: { hyperframes: './bin/hyperframes.mjs' } }));
     fs.writeFileSync(path.join(pkg, 'dist', 'hyperframe.runtime.iife.js'), '//');
-  }
-  fs.mkdirSync(path.join(home, '.npm', '_npx', 'ccc', 'node_modules', 'other'), { recursive: true });
-  const rt = B.runtimeCandidates(home, {});
-  assert.deepEqual(rt.map((x) => x.version).sort(), ['0.8.145', '0.8.220']);
-  assert.equal(B.pickRuntime(rt).version, '0.8.220');
+  };
+  mk(path.join(root, 'node_modules', 'hyperframes'), '0.8.221');
+  mk(path.join(home, '.npm', '_npx', 'aaa', 'node_modules', 'hyperframes'), '0.9.3');
+  const rt = B.findRuntime({ root });
+  assert.equal(rt.version, '0.8.221');
+  assert.equal(rt.file, path.join(root, 'node_modules', 'hyperframes', 'dist', 'hyperframe.runtime.iife.js'));
+  assert.throws(() => B.findRuntime({ root: tmp() }), /node_modules\/hyperframes）→ 在工作區根目錄跑 npm install/);
+  assert.deepEqual(HF.hfArgs(['render', '-o', 'a.mp4'], root), [path.join(root, 'node_modules', 'hyperframes', 'bin', 'hyperframes.mjs'), 'render', '-o', 'a.mp4']);
+  assert.throws(() => HF.hfArgs(['render'], tmp()), /在工作區根目錄跑 npm install/);
   const exe = process.platform === 'win32' ? 'chrome-headless-shell.exe' : 'chrome-headless-shell';
   for (const v of ['mac_arm-150.0.1.2', 'mac_arm-152.0.7977.30']) {
     const d = path.join(home, '.cache', 'hyperframes', 'chrome', 'chrome-headless-shell', v, 'chrome-headless-shell-mac-arm64');
@@ -530,7 +532,7 @@ test('startServer：index.html 注入 runtime（檔案不改）、影片回 404�
 // ---------- 真的開瀏覽器（找不到 HyperFrames 的 Chrome 或 runtime 就略過）----------
 
 let chrome = null, runtime = null;
-try { chrome = B.chromeCandidates()[0] || null; runtime = B.pickRuntime(B.runtimeCandidates())?.file || null; } catch { /* 沒裝 */ }
+try { chrome = B.chromeCandidates()[0] || null; runtime = B.findRuntime({}).file; } catch { /* 沒裝 */ }
 
 test('瀏覽器實量：HyperFrames runtime 載入子合成、renderSeek 到完成態、抓到撐破與進字幕區', { skip: !(chrome && runtime) && '找不到 HyperFrames 的 Chrome 或 runtime（先跑 npx hyperframes browser ensure）', timeout: 60000 }, async () => {
   const dir = tmp('hf-audit-page-');

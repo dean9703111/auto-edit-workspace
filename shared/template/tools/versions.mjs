@@ -28,11 +28,11 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { pathsFrom } from './build.mjs';
+import { hfArgs } from './lib/hf.mjs';
 import { run, probeMedia, writeJpg } from './lib/ff.mjs';
 import { canvas, text, textWidth } from './lib/raster.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const npxShell = process.platform === 'win32';
 export const DIR = 'versions';
 const META = '.meta.json';
 const STATE = '.state.json';
@@ -198,7 +198,7 @@ function makePreview(P, flags, id, dir, log) {
   const b = build(['--test', `${t0},${len}`]);
   if (b.status !== 0) return fail(`build 失敗（${firstErr(b)}）`, `照 build 印的 → 修好，${again}`);
   const mp4 = path.join(dir, '預覽.mp4');
-  const r = spawnSync('npx', ['hyperframes', 'render', '-c', 'compositions/test-clip.html', '--quality', 'draft', '-o', posix(path.relative(P.out, mp4))], { cwd: P.out, shell: npxShell, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 28 });
+  const r = spawnSync(process.execPath, hfArgs(['render', '-c', 'compositions/test-clip.html', '--quality', 'draft', '-o', posix(path.relative(P.out, mp4))]), { cwd: P.out, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 28 });
   if (r.status !== 0 || !fs.existsSync(mp4)) return fail(`render 失敗（${tail(r.stderr || r.stdout, 200)}）`, `先跑 (cd ${pj(P)}/work/hyperframes && npx hyperframes check) 看錯誤，${again}`);
   try { contactSheet(mp4, path.join(dir, '預覽.jpg'), j.format === 'portrait'); } catch (e) { log(`⚠ ${id}：${e.message}（預覽.mp4 已經好了，可以直接看）`); }
   return true;

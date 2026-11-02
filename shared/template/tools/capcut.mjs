@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { pathsFrom } from './build.mjs';
+import { hfArgs } from './lib/hf.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const HERE = path.dirname(SELF);
@@ -71,7 +72,7 @@ export function listMd(cc, { files, project }) {
 }
 
 function render(hfDir, comp, out, args, logFd) {
-  const r = spawnSync('npx', ['hyperframes', 'render', '-c', comp, ...args, '--quiet', '-o', out], { cwd: hfDir, stdio: ['ignore', logFd, logFd], shell: process.platform === 'win32' });
+  const r = spawnSync(process.execPath, hfArgs(['render', '-c', comp, ...args, '--quiet', '-o', out]), { cwd: hfDir, stdio: ['ignore', logFd, logFd] });
   return r.status === 0 && fs.existsSync(out);
 }
 

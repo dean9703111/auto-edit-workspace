@@ -267,20 +267,19 @@ test('純函式：surgical 寫入保留 CRLF 與排版；檢查報告（契約 3
   const items = E.itemsFromText('id｜情境｜起–迄｜長度｜音效時間｜警告\ns01｜06 一般字卡｜0:04.50–0:11.00｜6.5s｜pop 0:04.62｜⚠ 1（rough 0:07.00–0:13.50）\ns02｜fx 29｜0:15.00–0:18.00｜3s｜—｜—',
     { scenes: [{ id: 's01' }, { id: 's02', type: 'fx' }] });
   assert.deepEqual(items.map((i) => [i.id, i.type, i.start, i.end, i.warnings]), [['s01', 'scene', 7, 13.5, 1], ['s02', 'fx', 15, 18, 0]]);
-  // 每台電腦的 npx 快取雜湊都不一樣：掃 _npx/*/node_modules/hyperframes，取版本最新的
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-home-'));
-  for (const [hash, ver] of [['aaa111', '0.8.145'], ['bbb222', '0.8.214'], ['ccc333', '0.7.107']]) {
-    const d = path.join(home, '.npm', '_npx', hash, 'node_modules', 'hyperframes');
+  // 播放器只用 roots（工作區、專案）的 node_modules，照順序第一個找到的；不比版本新舊、不掃 npx 快取
+  const roots = ['ws', 'out', 'proj'].map((n) => fs.mkdtempSync(path.join(os.tmpdir(), `hf-${n}-`)));
+  for (const [r, ver] of [[roots[0], '0.8.221'], [roots[1], '0.9.3'], [roots[2], '0.9.9']]) {
+    const d = path.join(r, 'node_modules', 'hyperframes');
     fs.mkdirSync(path.join(d, 'dist'), { recursive: true });
     fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ version: ver }));
     fs.writeFileSync(path.join(d, 'dist', 'hyperframes-player.global.js'), '//');
     fs.writeFileSync(path.join(d, 'dist', 'hyperframe.runtime.iife.js'), '//');
   }
-  fs.rmSync(path.join(home, '.npm', '_npx', 'bbb222', 'node_modules', 'hyperframes', 'dist', 'hyperframe.runtime.iife.js'));
-  const found = E.findPlayer({ home, env: {} });
-  assert.equal(found.version, '0.8.145', '缺 runtime 的版本不算');
-  assert.match(found.player, /aaa111/);
-  assert.equal(E.findPlayer({ home: fs.mkdtempSync(path.join(os.tmpdir(), 'hf-empty-')), env: {} }), null);
+  assert.equal(E.findPlayer({ roots }).version, '0.8.221', '第一個 root（工作區）優先，即使後面有更新的版本');
+  fs.rmSync(path.join(roots[0], 'node_modules', 'hyperframes', 'dist', 'hyperframe.runtime.iife.js'));
+  assert.equal(E.findPlayer({ roots }).version, '0.9.3', '缺 runtime 的不算');
+  assert.equal(E.findPlayer({ roots: [fs.mkdtempSync(path.join(os.tmpdir(), 'hf-empty-'))] }), null);
 });
 
 // ---------- v2：字幕與新欄位（另一個專案：4 句 CRLF 字幕、資訊卡、清單、字卡動態、media）----------

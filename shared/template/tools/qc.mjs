@@ -58,12 +58,12 @@ import { ensureLook } from './lib/look.mjs';
 import { canvas, fillRect, blit, text, textWidth, htmlShot } from './lib/raster.mjs';
 import { parseSrt } from './lib/srt.mjs';
 import { findChrome, findRuntime, openSession } from './lib/audit-browser.mjs';
+import { hfArgs } from './lib/hf.mjs';
 import { drawGrid } from './media.mjs';
 import { canvasOf, resolveFormat, formatLine } from './lib/canvas.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // Windows 的 npx 是 npx.cmd，要經過 shell 才叫得起來（其他平台不變）
-const npxShell = process.platform === 'win32';
 const VALUE_FLAGS = ['project', 'template', 'file', 'zooms', 'from', 'to', 'offset', 'chrome', 'format'];
 const r1 = (n) => Number(n).toFixed(1);
 const r2 = (n) => Number(n).toFixed(2);
@@ -816,7 +816,7 @@ export function cardsPreview(P, flags, src, info, cands, lut = null, cv = canvas
     if (r.status !== 0) throw new Error(`${cd.zoom}x 的示意 build 失敗：${String(r.stdout + r.stderr).split('\n').filter((l) => l.includes('✖')).slice(0, 3).join('；') || tail(r.stdout + r.stderr, 600)} → 先不加 --cards 跑一次；套卡預覽可以之後再補`);
     const shots = path.join(dir, 'shots');
     fs.rmSync(shots, { recursive: true, force: true });
-    r = run('npx', ['hyperframes', 'snapshot', '--at', CARD_SHOTS.map((x) => x.at).join(','), '--no-end', '-o', 'shots'], { cwd: dir, shell: npxShell });
+    r = run(process.execPath, hfArgs(['snapshot', '--at', CARD_SHOTS.map((x) => x.at).join(','), '--no-end', '-o', 'shots']), { cwd: dir });
     const pngs = fs.existsSync(shots) ? fs.readdirSync(shots).filter((x) => /^frame-.*\.png$/.test(x)).sort() : [];
     if (pngs.length < CARD_SHOTS.length) throw new Error(`${cd.zoom}x 的示意截圖不完整：${tail(r.stdout + r.stderr)} → 重跑一次；還是失敗就把這行回報`);
     rows.push({ cd, files: pngs.map((x) => path.join(shots, x)) });
@@ -1147,7 +1147,7 @@ export async function storyboardRun(P, flags) {
   if (shots.length) {
     fs.rmSync(tmp, { recursive: true, force: true });
     const times = [...new Set(shots.map((s) => s.at))];
-    const r = run('npx', ['hyperframes', 'snapshot', '--at', times.join(','), '--no-end', '--keep', '-o', '.storyboard-shots', '--json'], { cwd: P.out, shell: npxShell, timeout: 600000 });
+    const r = run(process.execPath, hfArgs(['snapshot', '--at', times.join(','), '--no-end', '--keep', '-o', '.storyboard-shots', '--json']), { cwd: P.out, timeout: 600000 });
     let sj = null;
     try { sj = JSON.parse(String(r.stdout).slice(String(r.stdout).indexOf('{'))); } catch { /* 下面處理 */ }
     if (r.status !== 0 || !sj?.frames) throw new Error(`npx hyperframes snapshot 失敗：${tail(r.stderr || r.stdout, 400)} → 先跑 cd ${pj}/work/hyperframes && npx hyperframes check 看 runtime 錯誤`);

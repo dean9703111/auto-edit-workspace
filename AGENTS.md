@@ -277,7 +277,7 @@ projects/<專案>/
 ## 工具注意事項
 
 - `USAGE.md`、`USAGE-reference.md` 是查表用，Skill 會寫做到哪一步查哪一節；成片一律用 `build.mjs` 產生，不要從零寫。
-- hyperframes 的指令（`snapshot`、`preview`、`render`）在子殼裡跑：`(cd projects/<專案>/work/hyperframes && npx hyperframes …)`，輸出路徑相對那個資料夾（成片是 `../../output/final.mp4`）。版本照根目錄 `package.json`（0.8.221）：第一次、或 build 印「⚠ HyperFrames … 不同」時，在根目錄 `npm install`。
+- hyperframes 的指令（`snapshot`、`preview`、`render`）在子殼裡跑：`(cd projects/<專案>/work/hyperframes && npx hyperframes …)`，輸出路徑相對那個資料夾（成片是 `../../output/final.mp4`）。版本照根目錄 `package.json`：第一次、或 build 印「⚠ HyperFrames … 不同」時，在根目錄 `npm install`。
 - 工具印「→ 下一步：<說明>」時，下面那一行（最後一行）就是可直接貼的指令：整行複製、單獨一行執行；說明那一行不是指令。
 - 缺工具照 `setup/` 的手冊裝，不要自己想辦法。轉逐字稿一定帶 `--model small --language zh`（預設 `small.en` 會翻成英文）。
 - `auto-editor` 的參數名稱以 `auto-editor --help` 為準（例 `--cut-out`，不是 `--cut`）。PowerShell 會把逗號拆開，帶逗號或冒號的參數加引號：`--cut-out "17sec,25sec"`、`--edit "audio:-20dB"`。

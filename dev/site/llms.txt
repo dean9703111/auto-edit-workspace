@@ -12,7 +12,7 @@
 - 風格包：主色、背景圖、亮色／暗色主題；講者調光、瘦臉（預設關閉）
 - 網頁版剪輯台可以微調字幕、音量、素材起訖
 - 影片的轉檔、轉字幕、render 都在使用者自己的電腦上做；支援 macOS 與 Windows
-- 需要：Node.js 22 以上、ffmpeg、whisper.cpp、auto-editor、HyperFrames 0.8.221（AI 會照手冊幫忙安裝）
+- 需要：Node.js 22 以上、ffmpeg、whisper.cpp、auto-editor、HyperFrames（版本固定在 package.json；AI 會照手冊幫忙安裝）
 
 ## 文件
 

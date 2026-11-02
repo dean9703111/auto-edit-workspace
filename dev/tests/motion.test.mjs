@@ -498,7 +498,7 @@ test('P.grow：目標框在掛載時量好；之後 seek 時量不到大小（�
 // 亂序 seek 逐像素相同（brief 硬限制）：每個原語各自一區，亂序與照順序 seek 後，每區的計算樣式與整張截圖都要相同
 const AB = await import(path.join(TEMPLATE, 'tools', 'lib', 'audit-browser.mjs'));
 let chrome = null, runtime = null;
-try { chrome = AB.chromeCandidates()[0] || null; runtime = AB.pickRuntime(AB.runtimeCandidates())?.file || null; } catch { /* 沒裝 */ }
+try { chrome = AB.chromeCandidates()[0] || null; runtime = AB.findRuntime({}).file; } catch { /* 沒裝 */ }
 const V2_FIX = {
   chars: `<div id="t-chars" class="t-box" style="left:40px;top:40px;font-size:48px">逐字上浮</div><div id="t-charpop" style="left:300px;top:40px;font-size:48px">逐字彈出</div><div id="t-chardrop" style="left:560px;top:40px;font-size:48px">落下</div>`,
   wipe: `<div id="t-wipe" class="t-box" style="left:40px;top:140px"></div>`,

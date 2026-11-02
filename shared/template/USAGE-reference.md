@@ -842,7 +842,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 
 | 項目 | 版本或做法 |
 |---|---|
-| HyperFrames CLI | 0.8.221，釘在工作區根目錄的 `package.json`（`npm install` 安裝；build 與 `caps.mjs` 會印實際版本，不同時 ⚠）。從 `projects/<專案>/work/hyperframes` 執行 `npx hyperframes` 也是用根目錄這一版。指令和本文不一致時，以 `npx hyperframes <指令> --help` 為準 |
+| HyperFrames CLI | 版本釘在工作區根目錄的 `package.json`（`npm install` 安裝；build 與 `caps.mjs` 會印實際版本，不同時 ⚠）。從 `projects/<專案>/work/hyperframes` 執行 `npx hyperframes` 也是用根目錄這一版。指令和本文不一致時，以 `npx hyperframes <指令> --help` 為準 |
 | Node.js | ≥ 22（實測 24.16.0） |
 | 實測平台 | macOS 15.3（M1 Max）。Windows 的指令照官方參數寫，以實際執行結果為準 |
 

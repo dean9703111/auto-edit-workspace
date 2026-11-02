@@ -65,7 +65,7 @@ auto-editor --version
 ```
 
 依序是 S1、S2、S3（在工作區根目錄）、S4、S5、S6、S7；S8 列素材、S9 最後檢測照手冊原文。
-完成判準：S3 之後 `node_modules/hyperframes/package.json` 的 version 是 `0.8.221`；S4 最後一行 `✔ 完成：9 支 × 2 個位置…`；S5 最後一行 `✔ 4 個檔都對`（✖ 不擋其他步驟，照手冊 S5 處理）；S9 的 `all_ok` 是 `true`。
+完成判準：S3 之後 `node_modules/hyperframes/package.json` 的 version 和根目錄 `package.json` 釘的一樣；S4 最後一行 `✔ 完成：9 支 × 2 個位置…`；S5 最後一行 `✔ 4 個檔都對`（✖ 不擋其他步驟，照手冊 S5 處理）；S9 的 `all_ok` 是 `true`。
 常見錯誤：`npm install` 在 `setup/` 裡跑 → 一定在工作區根目錄（有 `package.json` 的那層）；S4 印 `✖ 衝突` → 退路表第 3 列。
 
 **4. 能力探測**（只讀，不裝、不登入）

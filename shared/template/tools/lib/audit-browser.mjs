@@ -2,7 +2,7 @@
 //
 //   findChrome({ chrome })        → HyperFrames 自己下載的 chrome-headless-shell 路徑
 //                                   找法：--chrome → ~/.cache/hyperframes/chrome（Mac／Windows 同一處）→ npx hyperframes browser path
-//   findRuntime({ runtime })      → HyperFrames 的 hyperframe.runtime.iife.js（npx 快取裡；有多版時挑 npx hyperframes --version 那一版）
+//   findRuntime({ runtime })      → HyperFrames 的 hyperframe.runtime.iife.js（工作區 node_modules 那一份＝package.json 釘的版本，和 render 同一版）
 //   openSession({ dir, chrome, runtime }) → { seek(t), measure(opts), motion({ hostId, compId }), cueErrors(), errors, close() }
 //     起一個只給這次用的 http server 送 work/hyperframes/（index.html 回傳時注入 runtime，檔案本身不改），
 //     開 headless Chrome（--remote-debugging-port），用 CDP 載頁、等 __playerReady，之後用 __player.renderSeek 跳時間。
@@ -14,6 +14,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
 import { pageSeekSource, pageMeasureSource, pageMotionSource } from './audit-page.mjs';
+import { hfLocal, HF_MISSING } from './hf.mjs';
 
 const WIN = process.platform === 'win32';
 const exists = (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
@@ -59,51 +60,16 @@ export function findChrome({ chrome } = {}) {
 
 const RUNTIME = path.join('dist', 'hyperframe.runtime.iife.js');
 
-export function runtimeCandidates(home = os.homedir(), env = process.env) {
-  const caches = [];
-  if (env.npm_config_cache) caches.push(env.npm_config_cache);
-  if (WIN && env.LOCALAPPDATA) caches.push(path.join(env.LOCALAPPDATA, 'npm-cache'));
-  if (WIN && env.APPDATA) caches.push(path.join(env.APPDATA, 'npm-cache'));
-  caches.push(path.join(home, '.npm'));
-  const out = [];
-  const add = (pkg) => {
-    const f = path.join(pkg, RUNTIME);
-    if (!exists(f) || out.some((x) => x.file === f)) return;
-    let version = '0';
-    try { version = JSON.parse(fs.readFileSync(path.join(pkg, 'package.json'), 'utf8')).version || '0'; } catch { /* 讀不到版號就當最舊 */ }
-    out.push({ file: f, version, mtime: fs.statSync(f).mtimeMs });
-  };
-  for (const c of caches) for (const d of dirs(path.join(c, '_npx'))) add(path.join(d, 'node_modules', 'hyperframes'));
-  return out;
-}
-
-// 快取裡有多個版本時挑最新版（npx hyperframes 跑的就是最新抓下來的那版）。
-// 不問 npx hyperframes --version：它會連網查新版，實測要 15 秒以上；runtime 的 seek 介面在 0.8.x 之間沒變
-export function pickRuntime(list) {
-  if (!list.length) return null;
-  return [...list].sort((a, b) => cmpVer(b.version, a.version) || b.mtime - a.mtime)[0];
-}
-
-export function findRuntime({ runtime } = {}) {
+// 只用工作區 node_modules 那一份（package.json 釘的版本），不去 npx 快取挑最新版：audit 量到的要和 render 出來的一樣
+export function findRuntime({ runtime, root } = {}) {
   if (runtime) {
     if (!exists(runtime)) throw new Error(`--runtime 指的 ${runtime} 不存在`);
     return { file: runtime, version: '?' };
   }
-  let list = runtimeCandidates();
-  if (!list.length) {
-    // 全域安裝（npm i -g hyperframes）
-    const r = spawnSync('npm', ['root', '-g'], { encoding: 'utf8', shell: WIN, timeout: 30000 });
-    const g = String(r.stdout || '').trim();
-    const f = g && path.join(g, 'hyperframes', RUNTIME);
-    if (f && exists(f)) {
-      let version = '?';
-      try { version = JSON.parse(fs.readFileSync(path.join(g, 'hyperframes', 'package.json'), 'utf8')).version; } catch { /* 沒版號 */ }
-      list = [{ file: f, version, mtime: 0 }];
-    }
-  }
-  const hit = pickRuntime(list);
-  if (!hit) throw new Error('找不到 HyperFrames 的 runtime（hyperframe.runtime.iife.js）→ 先跑一次 npx hyperframes --version 讓 npx 下載 CLI，再重跑 audit');
-  return hit;
+  const hf = hfLocal(root);
+  const file = hf && path.join(hf.dir, RUNTIME);
+  if (!file || !exists(file)) throw new Error(`找不到 HyperFrames 的 runtime（${RUNTIME}）：${HF_MISSING}`);
+  return { file, version: hf.version };
 }
 
 // ---------- 小型 http server ----------

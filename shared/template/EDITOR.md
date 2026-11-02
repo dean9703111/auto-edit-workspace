@@ -120,8 +120,8 @@ node shared/template/tools/editor.mjs --project projects/example
 - 剪輯台不寫 `format`；要換版式請 AI 照 AGENTS.md「版式」改。
 - **上半面板的 host 不要在 Studio 移動**：Studio 的 Inspector 顯示的是沒縮放的 1920×1080，拖動會寫 host 的 transform、蓋掉直式的舞台縮放；位置或內容要改，就改子合成（`compositions/…`）或 plan.json 再 build。
 
-- 播放器的找法：啟動時掃專案與工作區的 `node_modules/hyperframes`，以及 npm 的 npx 快取（`~/.npm/_npx/*/node_modules/hyperframes/dist/`；Windows 是 `%LOCALAPPDATA%\npm-cache\_npx\…`；有設 `npm_config_cache` 就用它），**取版本最新的**那一份，複製到 `work/hyperframes/.editor/player/`。快取資料夾的名字每台電腦都不一樣，程式不寫死。
-- **找不到播放器時自動退回「即時模擬」**：「成片預覽」按鈕變灰，滑鼠移上去會寫原因。要恢復：先跑一次 `cd projects/<專案>/work/hyperframes && npx hyperframes preview --no-open`（npx 會下載 hyperframes），再 `--stop` 後重新啟動剪輯台。
+- 播放器的找法：用工作區 `node_modules/hyperframes` 那一份（根目錄 `package.json` 釘的版本，和 render 同一版），複製到 `work/hyperframes/.editor/player/`；版本換了（升級或降級）會重新複製。不去 npx 快取挑最新版，免得預覽和 render 出來的不一樣。
+- **找不到播放器時自動退回「即時模擬」**：「成片預覽」按鈕變灰，滑鼠移上去會寫原因。要恢復：在工作區根目錄跑 `npm install`，再 `--stop` 後重新啟動剪輯台。
 - 存檔後頁面會跑 `build.mjs --check --json` 取得段落位置、音效時間、只有聲音的區間、剪接點；跑不出 JSON 時退回讀文字報告（看得到段落位置，音效與只有聲音的區間要等報告恢復）。
 - 即時模擬的調光是 CSS 濾鏡近似（`brightness`／`contrast`／`saturate`），和成片的 LUT 不完全一樣，臉部很接近、牆面偏差較大；以成片預覽或 `work/look-preview.jpg` 為準。瘦臉沒有即時預覽，看屬性面板的「前／後」兩張臉。
 

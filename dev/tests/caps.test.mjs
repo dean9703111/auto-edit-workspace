@@ -72,6 +72,6 @@ test('HyperFrames 版本：相同、不同、沒裝、沒有 package.json 的版
   assert.equal(r.exitCode, 0, '版本不符只提醒');
   const pkg = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'package.json'), 'utf8'));
   assert.equal(pkg.private, true);
-  assert.equal(pkg.devDependencies.hyperframes, '0.8.221');
+  assert.match(pkg.devDependencies.hyperframes, /^\d+\.\d+\.\d+$/, '釘精確版本（不能寫 ^ 或 ~）');
   assert.equal(redact('token: abc\nhello sk-123456'), 'hello sk-…');
 });

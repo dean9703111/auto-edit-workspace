@@ -291,7 +291,8 @@ test('--check --json 出錯時（plan.json 不存在）也印齊 schema 2 的鍵
 test('版本行：版式行（009 FR-003；沒有專案時第一行）的下一行印 HyperFrames 版本；工作區根目錄沒有 package.json 時 ⚠', () => {
   const r = node('--check');
   assert.equal(r.stdout.split('\n')[0], '版式：橫式 1920×1080（來源：預設）');
-  assert.match(r.stdout.split('\n')[1], /^(HyperFrames \d+\.\d+\.\d+（package\.json 釘 0\.8\.221）|⚠ )/);
+  const pinned = JSON.parse(fs.readFileSync(path.join(TEMPLATE, '..', '..', 'package.json'), 'utf8')).devDependencies.hyperframes;
+  assert.ok(r.stdout.split('\n')[1] === `HyperFrames ${pinned}（package.json 釘 ${pinned}）` || r.stdout.split('\n')[1].startsWith('⚠ '), r.stdout.split('\n')[1]);
   const fake = path.join(dir, 'ws', 'shared', 'template');
   fs.mkdirSync(path.dirname(fake), { recursive: true });
   if (!fs.existsSync(fake)) fs.symlinkSync(TEMPLATE, fake, 'dir');

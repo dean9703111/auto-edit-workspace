@@ -14,7 +14,7 @@
 | whisper-cli（whisper.cpp） | `npx hyperframes transcribe` 轉逐字稿 |
 | auto-editor | 剪掉空白和停頓 |
 | HyperFrames Skill、auto-editor Skill | 裝到 `~/.minimax/skills/`（實體檔在 `~/.agents/skills/`，`~/.minimax/skills/` 是連結，兩邊都不要刪） |
-| 工作區的 HyperFrames（`npm install`） | 照工作區根目錄 `package.json` 裝固定版本（0.8.221）到 `node_modules/`；之後 `npx hyperframes` 都用這一版 |
+| 工作區的 HyperFrames（`npm install`） | 照工作區根目錄 `package.json` 裝固定版本到 `node_modules/`；之後 `npx hyperframes` 都用這一版 |
 | 9 支 auto-edit Skill | `node setup/install-skills.mjs` 從 `.agents/skills/` 複製到 `.claude/skills/`（Claude Code）與 `~/.minimax/skills/`（MiniMax Code） |
 | HyperFrames 渲染用的瀏覽器 | 不用另外裝。S6 的 doctor 顯示 Chrome ✗ 時用 `npx -y hyperframes browser ensure` 下載，第一次 render 也會自動下載；放在 `~/.cache/hyperframes/chrome`，約 200 MB |
 | 臉部偵測檔（MediaPipe，約 18.7 MB） | 瘦臉用。已經在 `shared/template/vendor/mediapipe/`，不用裝；S5 只檢查檔案完整 |
@@ -107,7 +107,7 @@ S1–S9 的指令都可以加 PATH 前綴（Mac：`export PATH="/opt/homebrew/bi
 驗證：`~/.minimax/skills/auto-editor/SKILL.md` 存在（Windows 同上，換資料夾名稱）。
 
 **S3 安裝工作區的 HyperFrames**（`hyperframes_local` 是 `ok` 就跳過）：在工作區根目錄執行 `npm install`。
-驗證：`node -p "require('./node_modules/hyperframes/package.json').version"` 印出 `0.8.221`（和 `package.json` 釘的版本一樣）；`node shared/template/tools/caps.mjs` 的 HyperFrames 那一列是「可用」（這時 Chrome 那一列還沒好是正常的，S6 處理）。失敗看 `troubleshooting.md`「共用」。
+驗證：`node -p "require('./node_modules/hyperframes/package.json').version"` 印出的版本和 `package.json` 的 `devDependencies.hyperframes` 一樣；`node shared/template/tools/caps.mjs` 的 HyperFrames 那一列是「可用」（這時 Chrome 那一列還沒好是正常的，S6 處理）。失敗看 `troubleshooting.md`「共用」。
 
 **S4 安裝 9 支 auto-edit Skill**（`skill_auto_edit` 是 `ok` 就跳過）：`node setup/install-skills.mjs`（只想看會做什麼：加 `--dry-run`；只比對不寫檔：加 `--check`；只裝一個位置：`--target project` 或 `--target user`；給程式讀：加 `--json`）。
 驗證：最後一行 `✔ 完成：9 支 × 2 個位置…`，結束碼 0。印 `✖ 衝突` 時看 `troubleshooting.md`「共用」。

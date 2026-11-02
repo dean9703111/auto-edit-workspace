@@ -17,7 +17,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import os from 'node:os';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -255,36 +254,21 @@ export function parseReport(stdout) {
   return o && ('ok' in o || 'items' in o || 'errors' in o) ? o : null;
 }
 
-// ---------- HyperFrames 播放器（hyperframes-player＋runtime）：從專案或 npx 快取找，複製到 .editor/player/ ----------
+// ---------- HyperFrames 播放器（hyperframes-player＋runtime）：用工作區 node_modules 那一份（package.json 釘的版本），複製到 .editor/player/ ----------
+// 不去 npx 快取挑最新版：快取裡常有別的版本，預覽會和 render 不一樣
 
-function cmpVer(a, b) {
-  const pa = String(a).split(/[.-]/).map((x) => parseInt(x, 10) || 0), pb = String(b).split(/[.-]/).map((x) => parseInt(x, 10) || 0);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
-  return 0;
-}
-
-export function findPlayer({ roots = [], env = process.env, home = os.homedir() } = {}) {
-  const nms = roots.map((r) => path.join(r, 'node_modules'));
-  const caches = [env.npm_config_cache, path.join(home, '.npm'), env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'npm-cache'), env.APPDATA && path.join(env.APPDATA, 'npm-cache')].filter(Boolean);
-  for (const c of caches) {
-    const npx = path.join(c, '_npx');
-    let ds = [];
-    try { ds = fs.readdirSync(npx); } catch { continue; }
-    for (const d of ds) nms.push(path.join(npx, d, 'node_modules'));
-  }
-  let best = null;
-  for (const nm of nms) {
+export function findPlayer({ roots = [] } = {}) {
+  for (const r of roots) {
+    const nm = path.join(r, 'node_modules');
     const cand = [
       { player: path.join(nm, 'hyperframes', 'dist', 'hyperframes-player.global.js'), runtime: path.join(nm, 'hyperframes', 'dist', 'hyperframe.runtime.iife.js'), pkg: path.join(nm, 'hyperframes', 'package.json') },
       { player: path.join(nm, '@hyperframes', 'player', 'dist', 'hyperframes-player.global.js'), runtime: path.join(nm, '@hyperframes', 'core', 'dist', 'hyperframe.runtime.iife.js'), pkg: path.join(nm, '@hyperframes', 'player', 'package.json') },
     ];
     for (const c of cand) {
-      if (!statOf(c.player) || !statOf(c.runtime)) continue;
-      const version = readJson(c.pkg)?.version || '0.0.0';
-      if (!best || cmpVer(version, best.version) > 0) best = { ...c, version };
+      if (statOf(c.player) && statOf(c.runtime)) return { ...c, version: readJson(c.pkg)?.version || '0.0.0' };
     }
   }
-  return best;
+  return null;
 }
 
 function preparePlayer(ctx) {
@@ -293,7 +277,7 @@ function preparePlayer(ctx) {
   try {
     const src = findPlayer({ roots: [ctx.P.root, ctx.P.out, ctx.P.project] });
     const have = readJson(dst.info);
-    if (src && (!have || cmpVer(src.version, have.version) > 0 || !statOf(dst.player) || !statOf(dst.runtime))) {
+    if (src && (!have || src.version !== have.version || !statOf(dst.player) || !statOf(dst.runtime))) {   // 版本不同就換（升級、降級都換）
       fs.mkdirSync(dir, { recursive: true });
       fs.copyFileSync(src.player, dst.player);
       fs.copyFileSync(src.runtime, dst.runtime);
@@ -304,7 +288,7 @@ function preparePlayer(ctx) {
   } catch (e) {
     return { available: false, reason: `複製 HyperFrames 播放器失敗：${e.message}` };
   }
-  return { available: false, reason: '找不到 HyperFrames 播放器（npx 快取裡沒有 hyperframes）→ 先請 AI 跑一次 npx hyperframes preview --no-open（會下載 hyperframes），再重開剪輯台' };
+  return { available: false, reason: '找不到 HyperFrames 播放器（工作區的 node_modules/hyperframes）→ 在工作區根目錄跑 npm install，再重開剪輯台' };
 }
 
 // ---------- HTTP ----------

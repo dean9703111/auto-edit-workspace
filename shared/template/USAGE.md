@@ -340,7 +340,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 ```
 專案：projects/<專案>
-HyperFrames 0.8.221（package.json 釘 0.8.221）
+HyperFrames <版本>（package.json 釘 <版本>）
 ⚠ 音效密度：1 個一分鐘超過 2 顆主音效（0:00–1:00 4 顆；附加音效 click 不算）→ 每分鐘留最重要的 2 顆（chapter、thunder、shine、sparkle、alert、success 先留，ding、impact 先拿掉：那段寫 "sfx": null）
 ⚠ 沒有畫面的區間共 3 段、35.25s → 照 style.md「連續覆蓋」補卡片或情境動畫，或把前一段的 to 延到下一段的 from（0 秒相接）；故意留給講者的就在 plan.json 寫 "rhythm": "spaced"
 ⚠ [s02 concept] 音效 pop（17.623s）和 s01 的音效只差 2.427s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 s01 寫 "sfx": null
