@@ -875,6 +875,8 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   // --- 只有聲音的區間（rough.mp4 全黑）：沒有講者，一定要被 media 段或不透明的全畫面蓋住 ---
   const opaqueSpans = timed.filter((x) => x.opaque).map((x) => [x.start, x.end]).sort((a, b) => a[0] - b[0]);
   const voiceGaps = [];
+  // 有邊錄邊講的螢幕錄影（media.mjs screen-sync 算好了）：先把那幾段放進 plan.json，不用自己配
+  const syncReady = !!projectDir && fs.existsSync(path.join(projectDir, 'work', 'screen-sync.json'));
   for (const v of voiceOut) {
     for (const [a, b] of subtract(v, opaqueSpans)) {
       const len = r3(b - a);
@@ -882,7 +884,9 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       if (len <= VOICE_WARN + 1e-9) continue;
       voiceGaps.push({ start: a, end: b, len, level: len > VOICE_ERR ? 'error' : 'warn' });
       const where = `只有聲音的區間 ${fmt(a)}–${fmt(b)}${tm.identity ? '' : `（rough.mp4 ${r3(ra)}–${r3(rb)}s）`}`;
-      const fix = `→ 跑 node shared/template/tools/media.mjs scan --project ${projectRel}，看 work/media/ 的 contact sheet，配一段螢幕錄影或圖片（"type": "media"，from／to 蓋住這段），或用不透明的全畫面情境蓋住`;
+      const fix = syncReady && !timed.some((x) => /^sync\d+$/.test(x.id))
+        ? `→ 邊錄邊講的螢幕錄影還沒放進 plan.json：跑 node shared/template/tools/media.mjs screen-sync --project ${projectRel} --write-plan`
+        : `→ 跑 node shared/template/tools/media.mjs scan --project ${projectRel}，看 work/media/ 的 contact sheet，配一段螢幕錄影或圖片（"type": "media"，from／to 蓋住這段），或用不透明的全畫面情境蓋住`;
       if (len > VOICE_ERR) errors.push(`${where} 有 ${len}s 沒有畫面（全黑，講者不在）${fix}`);
       else {
         // 前後有沒有不透明段（A-06）：前面沒有 → 把後一段的 from 提早到區間起點；後面沒有 → 把前一段的 to 延到區間終點

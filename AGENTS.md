@@ -30,7 +30,7 @@ projects/<專案>/
 ├─ assets/            素材
 │  ├─ camera/         真人錄影：有畫面有聲音的口播（主軌）
 │  ├─ voice/          聲音：只有聲音的口播或旁白（主軌，沒有畫面）
-│  ├─ screen/         螢幕錄影：操作畫面（插入用，預設靜音）
+│  ├─ screen/         螢幕錄影：操作畫面（插入用，預設靜音；邊錄邊講的接進主軌）
 │  └─ images/         圖片：截圖、照片（插入用）
 ├─ work/              中間產物
 │  └─ versions/<段>/  每段的 v1、v2…（預覽.mp4、分鏡.md）和 比較-v1-v2.mp4（見「段落版本與改版」）
@@ -87,7 +87,7 @@ projects/<專案>/
 4. 字幕以專案的 `講稿.md` 為準：一則＝講稿的一行（完整語句），由 `media.mjs srt-align` 照講稿排、對時間，不要自己拆句，之後只改講稿本身的錯字；顯示時去掉「，」「。」「；」「：」，保留「、」「！」「？」；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿就只轉繁體、照語音的句子切成完整子句，不要自己猜內容。
 5. 文件之間照「怎麼用這份檔」的優先序；同一層的文件互相矛盾才問我。
 6. 每次交付都附上驗證方式（例如 ffprobe 的輸出、截圖），不要只說「完成了」。
-7. `work/` 的中間檔交付後都要保留：`cuts.md`、`cutpoints.json`、`storyboard.md`、字幕（含備份 `rough.srt.align-*`、`rough.srt.bak-*`、`rough.srt.split-*`）、`transcript.json`（rough.mp4 的詞級逐字稿，`#N@詞` 用它）、`hyperframes/`（含 `plan.json.bak-r<N>`）、`製作進度.md`、`feedback/`、`versions/`、`main.json`、`media/`、`face-landmarks.json`、`rough-look.mp4`、`look-preview.jpg`（`work/.look/` 是快取，可以 `look.mjs clear`）。之後修改、換 session 接續都會用到。
+7. `work/` 的中間檔交付後都要保留：`cuts.md`、`cutpoints.json`、`storyboard.md`、字幕（含備份 `rough.srt.align-*`、`rough.srt.bak-*`、`rough.srt.split-*`）、`screen-sync.json`、`transcript.json`（rough.mp4 的詞級逐字稿，`#N@詞` 用它）、`hyperframes/`（含 `plan.json.bak-r<N>`）、`製作進度.md`、`feedback/`、`versions/`、`main.json`、`media/`、`face-landmarks.json`、`rough-look.mp4`、`look-preview.jpg`（`work/.look/` 是快取，可以 `look.mjs clear`）。之後修改、換 session 接續都會用到。
 8. 每階段的回報最多 15 行，子代理最多 25 行；工具呼叫超過「階段預算」就停下來回報卡在哪。
 
 ## 停點總表
@@ -137,7 +137,7 @@ projects/<專案>/
 
 | 欄 | 怎麼看 | 會影響什麼 |
 |---|---|---|
-| 主軌種類 | `assets/camera/`、`assets/voice/` 的檔 | 只有一支真人錄影＝`media.mjs main` 直接轉；其他＝停點 ① 問順序 |
+| 主軌種類 | `assets/camera/`、`assets/voice/` 的檔，加上 `assets/screen/` 裡邊錄邊講的（`media.mjs main` 會印判斷） | 只有一支真人錄影＝`media.mjs main` 直接轉；其他＝停點 ① 問順序；有邊錄邊講的螢幕錄影＝那幾支只剪 NG，初剪後跑 `screen-sync` |
 | 版式 | 我的話；沒說就看主軌寬高比（見「版式」） | 畫布、版面、字幕字數；plan.json `"format"` |
 | 有沒有講稿 | `講稿.md` 在不在 | 沒有：字幕只轉繁體、補標點 |
 | 有沒有螢幕錄影／圖片 | `assets/screen/`、`assets/images/` | 有：照 `auto-edit-screen` 配 |
@@ -156,20 +156,20 @@ projects/<專案>/
 我說「開一個新專案 <名稱>」時：
 
 1. 建立 `projects/<名稱>/`，以及 `assets/camera`、`assets/voice`、`assets/screen`、`assets/images` 四個空資料夾。
-2. 告訴我各放什麼：有畫面的口播放 `assets/camera/`；只有聲音的旁白放 `assets/voice/`（畫面會配螢幕錄影或圖片）；螢幕錄影放 `assets/screen/`；截圖、照片放 `assets/images/`；講稿存成 `projects/<名稱>/講稿.md`。
+2. 告訴我各放什麼：有畫面的口播放 `assets/camera/`；只有聲音的旁白放 `assets/voice/`（畫面會配螢幕錄影或圖片）；螢幕錄影放 `assets/screen/`（邊錄邊講的也放這裡，會自動接進主軌）；截圖、照片放 `assets/images/`；講稿存成 `projects/<名稱>/講稿.md`。
 3. 等我放好素材，不要自己開始剪。最後一行：`→ 下一步：素材放好後說「剪乾淨」`。
 
 ## 剪乾淨（初剪）
 
 我說「剪乾淨」「剪成初剪」時，照 `auto-edit-rough` 做，產出都放 `work/`：
 
-1. 主軌：一律先跑 `node shared/template/tools/media.mjs main --project projects/<專案>`（寫 `work/main.mp4`、`work/main.json`），之後逐字稿、ng-snap、auto-editor 都對 `work/main.mp4` 做。只有一支真人錄影也要跑（它會轉成固定 fps：auto-editor 直接剪手機原檔，`--cut-out` 之後的畫面會全黑；時間和原片一樣）。有多支或有聲音檔，照檔名排序列出順序併進停點 ①，確認後加 `--order "檔名1,檔名2"` 再跑一次（順序改了，第 2–4 步重做）。忘了跑也沒關係：ng-snap 發現沒有 `work/main.mp4` 會自己先轉。
+1. 主軌：一律先跑 `node shared/template/tools/media.mjs main --project projects/<專案>`（寫 `work/main.mp4`、`work/main.json`），之後逐字稿、ng-snap、auto-editor 都對 `work/main.mp4` 做。只有一支真人錄影也要跑（它會轉成固定 fps：auto-editor 直接剪手機原檔，`--cut-out` 之後的畫面會全黑；時間和原片一樣）。`assets/screen/` 裡邊錄邊講的螢幕錄影（有講話、有換氣停頓）也接進主軌：只取聲音、配純黑，畫面初剪後由 `screen-sync` 蓋回；背景音樂、沒聲音的錄影還是插入素材。main 印的判斷寫進停點 ①，判斷錯了用 `--order` 指定（可以放進沒偵測到的）。有多支或有聲音檔，照檔名排序列出順序併進停點 ①（有講稿時 ng-snap 照講稿比對，順序不同會印 ⚠ 和建議的 `--order`），確認後加 `--order "檔名1,檔名2"` 再跑一次（順序改了，第 2–4 步重做）。忘了跑也沒關係：ng-snap 發現沒有 `work/main.mp4` 會自己先轉。
 2. 逐字稿：`npx hyperframes transcribe projects/<專案>/work/main.mp4 -d projects/<專案>/work --model small --language zh --json`。
 3. 找 NG：同一句話講了兩次以上，只保留最後一次完整的；講到一半卡住、停下來重講的，卡住那次也算 NG。
-4. 剪輯清單 `work/cuts.md`：NG 表表頭 `| 時間碼 | 內容 | 原因 | 待確認 |`，時間碼寫原片的 `起–迄`（例 `0:12.40–0:15.10`），拿不準的在「待確認」寫原因；講稿有 `##` 章節時加章節空檔表（表頭 `| 章節 | 第一句 | 時間碼 |`；時間碼抄逐字稿那句的起點，ng-snap 會往後找實際開口點）。「需要你決定」一項都沒有才寫「無」。列完跑 `node shared/template/tools/media.mjs ng-snap --project projects/<專案>`，它印的 ⚠ 寫進「需要你決定」。→ 停點 ①
+4. 剪輯清單 `work/cuts.md`：NG 表表頭 `| 時間碼 | 內容 | 原因 | 待確認 |`，時間碼寫原片的 `起–迄`（例 `0:12.40–0:15.10`），拿不準的在「待確認」寫原因；講稿有 `##` 章節時加章節空檔表（表頭 `| 章節 | 第一句 | 時間碼 |`；時間碼抄逐字稿那句的起點，ng-snap 會往後找實際開口點）。「需要你決定」一項都沒有才寫「無」。列完跑 `node shared/template/tools/media.mjs ng-snap --project projects/<專案>`，它印的 ⚠ 寫進「需要你決定」（邊錄邊講的螢幕錄影只剪 NG、停頓保留，ng-snap 自己加 `--add-in`）。→ 停點 ①
 5. 我確認後（改過就先重新讀檔）再跑 ng-snap，照它印的三行 auto-editor 指令依序執行：`--preview` 預演 → 輸出 `work/rough.mp4` → 存 `work/cuts.v1.json`。尾音被切就在 ng-snap 加 `--edit "audio:-26dB"`（或 `-30dB`），自言自語沒剪掉就 `--edit "audio:-16dB"`，再預演。三行跑完先跑 `node shared/template/tools/media.mjs verify-rough --project projects/<專案>`：印 ✖「初剪壞了」就照它印的 1–4 行重做（剪輯清單不用改），✓ 才往下；不要自己改 ffmpeg 或 auto-editor 參數。回報附上它印的那一行（✓ 或黑畫面表）。
 6. 字幕：`npx hyperframes transcribe projects/<專案>/work/rough.mp4 -d projects/<專案>/work --model small --language zh --json --to srt -o projects/<專案>/work/rough.srt`（同時寫 `work/transcript.json` 詞級時間與 `work/rough.srt`）→ `node shared/template/tools/media.mjs srt-align --project projects/<專案> --dry-run`，看斷句表合理再去掉 `--dry-run`（有講稿：字幕＝講稿每一行，時間自動對到講話；沒講稿：照「，。！？；」切成完整子句；寫回前自動備份 `work/rough.srt.align-<時間戳>`）→ 照規則 4 只改錯字（講稿本身的錯字、沒講稿時 whisper 的錯字）。**有 `work/transcript.json` 就不跑 snap-srt**（srt-align 的時間已經是詞級）；沒有才照 srt-align 最後一行跑 `snap-srt`（只跑一次）。srt-align 印的 ⚠（對不上、沒標點的長行、不到 0.6 秒）寫進回報。之後我在剪輯台改的字和時間不要再被工具覆蓋。
-7. 剪接點：`node shared/template/tools/media.mjs cutpoints --project projects/<專案>` 寫 `work/cutpoints.json`。回報原始與初剪長度、剪掉幾段（auto-editor 的統計）、srt-align 的最後一行統計（則數、併幾次、平均字數）與 ⚠、cutpoints 的表。
+7. 剪接點：`node shared/template/tools/media.mjs cutpoints --project projects/<專案>` 寫 `work/cutpoints.json`；主軌有邊錄邊講的螢幕錄影時再跑 `node shared/template/tools/media.mjs screen-sync --project projects/<專案>`（寫 `work/screen-sync.json`：初剪後每段對到錄影的哪一秒）。回報原始與初剪長度、剪掉幾段（auto-editor 的統計）、srt-align 的最後一行統計（則數、併幾次、平均字數）與 ⚠、cutpoints 的表。
 
 | 剪乾淨的數字 | 值 |
 |---|---|
@@ -196,7 +196,7 @@ projects/<專案>/
 
 1. 講者框：看檔名含「場地照」的圖（沒有就從 `work/rough.mp4` 截一張 `work/場地照.jpg`），跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案>`，看 `work/場地照-動作範圍.jpg` 寫 speakerBox（USAGE.md 2.2）。字幕用 `work/rough.srt`，不重新轉錄。
 2. 素材與情境：有螢幕錄影／圖片，或 `node shared/template/tools/build.mjs --check --project projects/<專案>` 報「只有聲音」的區間時，`node shared/template/tools/media.mjs scan --project projects/<專案>` 配每段口播（座標用 `media.mjs frame --grid`）。每段先填情境判定表（`auto-edit-storyboard` 步驟 5：口播在講什麼 → `shared/template/SITUATIONS.md` §3 哪一列 → 首選 → 為什麼不是動畫）。首選欄是情境動畫就做動畫，只有不符合 style.md「情境動畫優先」三條判準才退到字卡；連續 2 段以上都是 06／07／12／13 字卡就要回頭查 §3 有沒有動畫列。情境動畫從 `shared/template/custom/` 改、用 `P.at('#N@詞')` 綁句、結尾 `P.end()`；示意動畫（口播在描述具體的動作、物件）先判定素材（畫廊／圖示／新建 SVG），寫成那段的插圖清單（`shared/template/BEATS.md` §5）；資訊卡照 style.md，有圖示欄位就配。錄影或動畫裡看得到游標按下就寫 `clicks`；要片尾配樂寫 `outro`。
-3. 分鏡表：草稿 plan.json → `--check`（✖ 先修掉）→ build → `node shared/template/tools/qc.mjs storyboard --project projects/<專案>` 截每段 → 照 USAGE.md 2.3 寫 `work/storyboard.md`（版面只用疊加／半畫面／子母畫面／全幕，直式只用疊加／上下分割／全幕，見 SITUATIONS.md §2；金句只列候選；整集照 SITUATIONS.md §6 看開場、呼應、判決句）。每段情境動畫（x-*、04 家族）底下加一張動畫分鏡 `#### 動畫分鏡 <段 id>`：抄 `shared/template/BEATS.md` 那個情境的預設拍型，只填講到的詞與畫面上的字，動態欄只用語彙表的名稱；字卡（06／07／12／13）不用 → 停點 ③（版面和動畫分鏡一次確認；某段情境被我改掉，只重出那一段的分鏡）。我說「改好了」「可以」：重新讀 storyboard.md，以檔案為準寫正式 plan.json；超過上限或違反規則的先告訴我，不要自己改。
+3. 分鏡表：草稿 plan.json（有 `work/screen-sync.json` 就先跑 `node shared/template/tools/media.mjs screen-sync --project projects/<專案> --write-plan` 放進 sync 段，不用再配）→ `--check`（✖ 先修掉）→ build → `node shared/template/tools/qc.mjs storyboard --project projects/<專案>` 截每段 → 照 USAGE.md 2.3 寫 `work/storyboard.md`（版面只用疊加／半畫面／子母畫面／全幕，直式只用疊加／上下分割／全幕，見 SITUATIONS.md §2；金句只列候選；整集照 SITUATIONS.md §6 看開場、呼應、判決句）。每段情境動畫（x-*、04 家族）底下加一張動畫分鏡 `#### 動畫分鏡 <段 id>`：抄 `shared/template/BEATS.md` 那個情境的預設拍型，只填講到的詞與畫面上的字，動態欄只用語彙表的名稱；字卡（06／07／12／13）不用 → 停點 ③（版面和動畫分鏡一次確認；某段情境被我改掉，只重出那一段的分鏡）。我說「改好了」「可以」：重新讀 storyboard.md，以檔案為準寫正式 plan.json；超過上限或違反規則的先告訴我，不要自己改。
 4. 定稿：`node shared/template/tools/build.mjs --project projects/<專案>`；有情境動畫跑 `node shared/template/tools/audit.mjs --project projects/<專案>`（✖ 全部修掉）；「沒有畫面的區間」要是「無」，刻意留的要說明。
 5. 抽查：`(cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review)` 照 `shared/template/REVIEW.md` 看，再 `(cd projects/<專案>/work/hyperframes && npx hyperframes preview --no-open)` → 停點 ④。我說「s05 往左移」這類修改：開回饋輪，改 plan.json 那一段再 build；要一段重新設計、退回舊版照「段落版本與改版」。
 6. 輸出：`node shared/template/tools/build.mjs --project projects/<專案> --test 起點,4` → `(cd projects/<專案>/work/hyperframes && npx hyperframes render -c compositions/test-clip.html --quality draft -o ../../output/test-clips/test-clip.mp4)`，ffprobe 確認有音軌，`node shared/template/tools/qc.mjs observe --project projects/<專案> --file projects/<專案>/output/test-clips/test-clip.mp4 --offset <起點>` 看版面與接縫；再背景 render `output/final.mp4`（USAGE.md 2.7）→ `node shared/template/tools/qc.mjs observe --project projects/<專案>`（照 REVIEW.md 看觀影總表）→ `node shared/template/tools/qc.mjs final --project projects/<專案>`：✖ 修好再交，⚠ 逐項說明；附 `output/qc/qc-sheet.jpg`、`work/observe/index.md`。

@@ -7,7 +7,7 @@
 
 | 欄 | 值 | 怎麼看 | 會影響什麼 |
 |---|---|---|---|
-| 主軌種類 | | `ls projects/<專案>/assets/camera projects/<專案>/assets/voice` | 1 支真人錄影＝直接用；其他＝停點 ① 要問順序 |
+| 主軌種類 | | `ls projects/<專案>/assets/camera projects/<專案>/assets/voice`，加上 `media.mjs main` 印的邊錄邊講螢幕錄影 | 1 支真人錄影＝直接用；其他＝停點 ① 要問順序；邊錄邊講的螢幕錄影只剪 NG、初剪後跑 `screen-sync` |
 | 版式 | | 使用者說「短影片」「直式」「Shorts」「Reels」「抖音」→ 直式；說「長片」「橫式」→ 橫式；都沒說：`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "<主軌>"`，寬 < 高 → 直式（AGENTS.md「版式」） | 寫「直式（理由）」或「橫式（理由）」；直式：畫布 1080×1920、版面只有疊加／上下分割／全幕、字幕每則 10 字、plan.json `"format": "portrait"` |
 | 有沒有講稿 | | `projects/<專案>/講稿.md` 在不在 | 沒有：字幕只轉繁體、補標點；沒有章節空檔表 |
 | 有沒有螢幕錄影／圖片 | | `ls projects/<專案>/assets/screen projects/<專案>/assets/images` | 有：分鏡時跑 `auto-edit-screen` |

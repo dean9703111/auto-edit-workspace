@@ -417,10 +417,10 @@ export function voiceOnlyOf(P, videoFile, log = () => {}) {
   return blackDetect(videoFile, path.join(P.out, '.cache', 'blackdetect.json'), () => log('偵測只有聲音的區間（rough.mp4 全黑的地方；第一次會花一點時間，之後用快取）…'));
 }
 
-// 專案有沒有只有聲音的主軌素材：assets/voice/ 有檔，或 work/main.json 有 kind "voice" 的段
+// 專案有沒有只有聲音的主軌素材：assets/voice/ 有檔，或 work/main.json 有 kind "voice"／"screen"（邊錄邊講的螢幕錄影，主軌只取聲音）的段
 export function hasVoiceSource(projectDir) {
   try { if (fs.readdirSync(path.join(projectDir, 'assets', 'voice')).some((x) => !x.startsWith('.'))) return true; } catch { /* 沒有資料夾 */ }
-  try { return (JSON.parse(fs.readFileSync(path.join(projectDir, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice'); } catch { return false; }
+  try { return (JSON.parse(fs.readFileSync(path.join(projectDir, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice' || c.kind === 'screen'); } catch { return false; }
 }
 
 // rough.mp4 有全黑區間、專案卻沒有只有聲音的素材 → 初剪壞了（auto-editor 剪手機原檔的已知問題），不能當成「只有聲音」默默拿掉小窗

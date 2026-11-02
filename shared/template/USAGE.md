@@ -595,6 +595,21 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 - 截圖：`node shared/template/tools/qc.mjs storyboard --project projects/<專案>` 會在紅框、每一步 `path`、說明卡、聚光燈、每一步 STEP、箭頭、放大鏡到位的那一刻各截一張（`work/storyboard-preview/m01-1.png` …），確認框住的是口播講的東西、卡片和箭頭沒壓到字、鏡片沒壓到子母畫面。
 - 測試片段挑一段 media：確認錄影有在動（不是停格）、子母畫面在只有聲音的區間沒出現；跑 `node shared/template/tools/qc.mjs observe --project projects/<專案> --file <測試片段> --offset <起點>` 看接縫條帶有沒有閃。
 
+### 5.7 邊錄邊講的螢幕錄影（主軌）
+
+錄影裡就有講解的螢幕錄影，不是插入素材，是主軌的一部分：
+
+| 步驟 | 工具做什麼 | 你要做的 |
+|---|---|---|
+| `media.mjs main` | 每支 `assets/screen/` 錄影判斷一次：有講話、有換氣停頓（有聲音的時間 20–95%）＝邊錄邊講，接進主軌（只取聲音、配純黑，`main.json` 的 `kind` 是 `screen`）；一路不停的背景音樂、沒聲音＝插入素材 | 判斷印在停點 ①；判斷錯了用 `--order` 指定要接的檔 |
+| `media.mjs ng-snap` | 錄影那幾段整段 `--add-in`（扣掉 NG）：只剪 NG、停頓保留，畫面才不會亂跳；有講稿時照講稿比對主軌順序 | 順序 ⚠ 放進停點 ① |
+| `media.mjs screen-sync` | 照 `work/cuts.v1.json` 算初剪後每段對到錄影的哪一秒，寫 `work/screen-sync.json`（`sync01`、`sync02`…，NG 剪掉的地方切成兩段） | 初剪、cutpoints 之後跑 |
+| `media.mjs screen-sync --write-plan` | 把 sync 段放進 plan.json（先備份 `plan.json.sync-<時間>`；舊的 sync 段整批換掉，其他段不動） | 寫好草稿 plan.json 再跑；初剪重做過要再跑一次 |
+
+- sync 段就是一般的 media 段：可以加 `moves`、`callouts`、`clicks`（5.5），`from`／`to`／`in` 不要改，改了畫面就對不上聲音。
+- 兩段 sync 相接時 build 自動疊化 0.47 秒（NG 剪接點不會硬跳）。
+- sync 段蓋住的區間沒有講者小窗（整段在只有聲音的區間）；build `--check` 報「只有聲音的區間沒有畫面」而有 `work/screen-sync.json` 時，會直接叫你跑 `--write-plan`。
+
 ## 6. 剪輯台的設定（edit）
 
 剪輯台（`shared/template/EDITOR.md`）是給使用者自己拖拉調整的網頁。它只寫 plan.json 的這幾個地方，AI 不主動改；**AI 要改 plan.json 前先重新讀檔，不要蓋掉使用者在剪輯台存的值**：

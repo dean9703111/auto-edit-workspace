@@ -501,3 +501,96 @@ test('F8 srt-align 重新對句號的三個坑：情境動畫只換 <script> 裡
   }
 });
 const parseSrtText = (t) => t.trim().split(/\n\s*\n/).map((b) => { const l = b.split('\n'); const [a, z] = l[1].split(' --> ').map((s) => { const [h, m, x] = s.split(':'); return +h * 3600 + +m * 60 + +x.replace(',', '.'); }); return { n: +l[0], start: a, end: z, text: l.slice(2).join(' ') }; });
+
+// ---------- 邊錄邊講的螢幕錄影：接進主軌（取聲音、配純黑）、只剪 NG、初剪後畫面同步蓋回；主軌順序對講稿 ----------
+// 講話：每秒響 0.6 秒、停 0.4 秒（像換氣停頓）；背景音樂：一路不停的 sine
+const speech = (file, sec, video = 'testsrc') => ff(['-f', 'lavfi', '-i', `${video}=size=320x200:rate=30`, '-f', 'lavfi', '-i', 'aevalsrc=sin(2*PI*300*t)*lt(mod(t\\,1)\\,0.6):s=48000', '-t', String(sec), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', file]);
+
+test('main：邊錄邊講的螢幕錄影接進主軌（kind screen、只取聲音配純黑）；背景音樂與沒聲音的錄影當插入素材；--order 可以放進沒偵測到的、沒聲音的找不到', async () => {
+  const { narrationOf, lumaAt } = await import(MEDIA);
+  const p = mkProj('nscr');
+  clip(path.join(p, 'assets', 'camera', 'a.mp4'), 2);
+  speech(path.join(p, 'assets', 'screen', 'b-講解.mp4'), 3);
+  clip(path.join(p, 'assets', 'screen', 'c-音樂.mp4'), 2);
+  ff(['-f', 'lavfi', '-i', 'testsrc=size=320x200:rate=30', '-t', '2', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', path.join(p, 'assets', 'screen', 'd-無聲.mp4')]);
+  const n = narrationOf(path.join(p, 'assets', 'screen', 'b-講解.mp4'));
+  assert.ok(n.narrated && n.ratio > 0.4 && n.ratio < 0.9, JSON.stringify(n));
+  assert.equal(narrationOf(path.join(p, 'assets', 'screen', 'c-音樂.mp4')).narrated, false, '一路不停的聲音不算講解');
+  const r = node(MEDIA, ['main'], 'nscr');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /assets\/screen\/b-講解\.mp4：偵測到講解/);
+  assert.match(r.stdout, /assets\/screen\/c-音樂\.mp4：聲音幾乎沒停/);
+  const j = JSON.parse(fs.readFileSync(path.join(p, 'work', 'main.json'), 'utf8'));
+  assert.deepEqual(j.clips.map((c) => [c.file, c.kind, c.start, c.end]), [['assets/camera/a.mp4', 'camera', 0, 2], ['assets/screen/b-講解.mp4', 'screen', 2, 5]]);
+  const main = path.join(p, 'work', 'main.mp4');
+  assert.ok(lumaAt(main, 3.5) < 32, '螢幕錄影那段是純黑（build 靠它認出只有聲音的區間）');
+  assert.ok(lumaAt(main, 1) > 32);
+  const o = node(MEDIA, ['main', '--order', 'assets/screen/c-音樂.mp4,a.mp4'], 'nscr');
+  assert.equal(o.status, 0, o.stderr);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(p, 'work', 'main.json'), 'utf8')).clips.map((c) => [c.file, c.kind]), [['assets/screen/c-音樂.mp4', 'screen'], ['assets/camera/a.mp4', 'camera']]);
+  const bad = node(MEDIA, ['main', '--order', 'assets/screen/d-無聲.mp4'], 'nscr');
+  assert.equal(bad.status, 1);
+  assert.match(bad.stderr, /--order 的「assets\/screen\/d-無聲\.mp4」找不到/);
+});
+
+test('subtractRanges、screenSegments（剪掉的地方換回錄影秒數、相接又連續的併成一段）、scriptOrder／suggestOrder（照講稿行號排、對不到的放最後）', async () => {
+  const { subtractRanges, screenSegments, scriptOrder, suggestOrder } = await import(MEDIA);
+  assert.deepEqual(subtractRanges([2, 10], [[6, 7], [3, 4]]), [[2, 3], [4, 6], [7, 10]]);
+  assert.deepEqual(subtractRanges([2, 10], [[0, 3], [9, 12]]), [[3, 9]]);
+  const clips = [{ file: 'assets/camera/a.mp4', kind: 'camera', start: 0, end: 2 }, { file: 'assets/screen/s.mp4', kind: 'screen', start: 2, end: 10 }];
+  // 30fps：保留 0–3、剪 3–4、保留 4–10
+  const segs = screenSegments(clips, { chunks: [[0, 90, 1], [90, 120, 99999], [120, 300, 1]] }, 30);
+  assert.deepEqual(segs, [
+    { id: 'sync01', type: 'media', src: 'assets/screen/s.mp4', from: 2, to: 3, in: 0 },
+    { id: 'sync02', type: 'media', src: 'assets/screen/s.mp4', from: 3, to: 9, in: 2 },
+  ]);
+  assert.equal(screenSegments(clips, { chunks: [[0, 150, 1], [150, 300, 1]] }, 30).length, 1, '中間沒剪就併成一段');
+  const lines = ['大家好歡迎收看這一集', '今天要講剪輯台怎麼用', '最後記得按讚訂閱'];
+  const words = [{ text: '今天要講剪輯台怎麼用', start: 0.5, end: 3 }, { text: '大家好歡迎收看這一集', start: 5.2, end: 7 }, { text: '這段講稿沒有寫', start: 10.5, end: 12 }];
+  const rows = scriptOrder([{ file: 'x.mp4', start: 0, end: 5 }, { file: 'y.mp4', start: 5, end: 10 }, { file: 'z.mp4', start: 10, end: 13 }], words, lines);
+  assert.deepEqual(rows.map((r) => [r.file, r.lines, r.pos]), [['x.mp4', [2], 2], ['y.mp4', [1], 1], ['z.mp4', [], null]]);
+  assert.deepEqual(suggestOrder(rows).map((r) => r.file), ['y.mp4', 'x.mp4', 'z.mp4']);
+});
+
+test('ng-snap：邊錄邊講的螢幕錄影整段 --add-in（扣掉 NG）；主軌順序和講稿不同 → ⚠＋建議的 --order', () => {
+  const p = mkProj('nsnap');
+  clip(path.join(p, 'work', 'main.mp4'), 1);
+  fs.writeFileSync(path.join(p, 'work', 'main.json'), JSON.stringify({ clips: [{ file: 'assets/camera/a.mp4', kind: 'camera', start: 0, end: 30 }, { file: 'assets/screen/s.mp4', kind: 'screen', start: 30, end: 66 }] }));
+  fs.writeFileSync(path.join(p, 'work', 'cuts.md'), '| 時間碼 | 內容 | 原因 |\n|---|---|---|\n| 0:45.00–0:46.00 | 講錯 | 重講 |\n');
+  fs.writeFileSync(path.join(p, '講稿.md'), '# 示範\n\n大家好歡迎收看這一集\n今天要講剪輯台怎麼用\n');
+  fs.writeFileSync(path.join(p, 'work', 'transcript.json'), JSON.stringify([{ text: '今天要講剪輯台怎麼用', start: 2, end: 5 }, { text: '大家好歡迎收看這一集', start: 31, end: 34 }]));
+  const v1 = path.join(root, 'nsnap.v1.json');
+  fs.writeFileSync(v1, JSON.stringify(V1));
+  const r = node(MEDIA, ['ng-snap', '--v1', v1], 'nsnap');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /邊錄邊講的螢幕錄影 1 支：只剪 NG、停頓保留（--add-in 2 段）/);
+  assert.match(r.stdout, /--add-in "30sec,45sec" --add-in "46sec,66sec"/);
+  assert.match(r.stdout, /⚠ 主軌順序和講稿不同：照講稿應該是 s\.mp4 → a\.mp4 → .*--order "assets\/screen\/s\.mp4,assets\/camera\/a\.mp4"/);
+});
+
+test('screen-sync：照 main.json＋cuts.v1.json 算 sync 段（不超過錄影長度）；--dry-run 不寫；寫 work/screen-sync.json；--write-plan 換掉舊 sync 段、保留其他段、先備份', () => {
+  const p = mkProj('py');
+  speech(path.join(p, 'assets', 'screen', 's.mp4'), 8);
+  clip(path.join(p, 'work', 'rough.mp4'), 9);
+  fs.writeFileSync(path.join(p, 'work', 'main.json'), JSON.stringify({ clips: [{ file: 'assets/camera/a.mp4', kind: 'camera', start: 0, end: 2 }, { file: 'assets/screen/s.mp4', kind: 'screen', start: 2, end: 10.02 }] }));
+  fs.writeFileSync(path.join(p, 'work', 'cuts.v1.json'), JSON.stringify({ version: '1', source: 'work/main.mp4', chunks: [[0, 90, 1], [90, 120, 99999], [120, 301, 1]] }));
+  const dry = node(MEDIA, ['screen-sync', '--dry-run'], 'py');
+  assert.equal(dry.status, 0, dry.stdout + dry.stderr);
+  assert.ok(!fs.existsSync(path.join(p, 'work', 'screen-sync.json')));
+  const r = node(MEDIA, ['screen-sync'], 'py');
+  assert.equal(r.status, 0, r.stderr);
+  const segs = JSON.parse(fs.readFileSync(path.join(p, 'work', 'screen-sync.json'), 'utf8')).segments;
+  assert.deepEqual(segs.map((s) => [s.id, s.from, s.in]), [['sync01', 2, 0], ['sync02', 3, 2]]);
+  assert.ok(segs[1].in + (segs[1].to - segs[1].from) <= 8 + 1e-6, `最後一段不超過錄影長度：${JSON.stringify(segs[1])}`);
+  assert.match(node(MEDIA, ['screen-sync', '--write-plan'], 'py').stderr, /還沒有 work\/hyperframes\/plan\.json/);
+  fs.mkdirSync(path.join(p, 'work', 'hyperframes'), { recursive: true });
+  const planFile = path.join(p, 'work', 'hyperframes', 'plan.json');
+  fs.writeFileSync(planFile, JSON.stringify({ version: 1, scenes: [{ id: 's01', scene: 'concept', from: 0.5, to: 1.5 }, { id: 'sync01', type: 'media', src: 'assets/screen/舊.mp4', from: 0, to: 1 }] }));
+  const w = node(MEDIA, ['screen-sync', '--write-plan'], 'py');
+  assert.equal(w.status, 0, w.stderr);
+  assert.match(w.stdout, /換掉舊的 1 段、放進 2 段/);
+  const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
+  assert.deepEqual(plan.scenes.map((s) => s.id), ['s01', 'sync01', 'sync02']);
+  assert.equal(plan.scenes[1].src, 'assets/screen/s.mp4');
+  assert.ok(fs.readdirSync(path.join(p, 'work', 'hyperframes')).some((f) => f.startsWith('plan.json.sync-')));
+});

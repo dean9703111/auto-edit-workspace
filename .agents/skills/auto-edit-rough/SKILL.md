@@ -38,6 +38,8 @@ node shared/template/tools/media.mjs main --project projects/<專案>
 | 1 支 | 空 | 跑上面那一行就好 |
 | 其他情況 | — | 先照檔名排序接（上面那一行），把順序寫進 cuts.md 的「主軌順序」表，併進停點 ① 問；使用者改了順序就照「停點」表重接 |
 
+`assets/screen/` 裡邊錄邊講的螢幕錄影（有講話、有換氣停頓）也會接進主軌：只取聲音、配純黑，畫面在步驟 8 之後由 `screen-sync` 蓋回。main 每支錄影印一行判斷（「偵測到講解」「聲音幾乎沒停」「沒有聲音」），照抄進 cuts.md 的「主軌順序」表；使用者說某支其實有講解（或沒有），用 `--order` 列出要接的檔（可以寫 `assets/screen/<檔名>`）。有講稿時 ng-snap 會照講稿比對順序，印 ⚠ 和建議的 `--order`，一起放進停點 ①。
+
 完成判準：`work/main.mp4`、`work/main.json` 存在；只有一支時印「只有一支真人錄影（…）：轉成固定 fps 的 work/main.mp4…」。
 常見錯誤：拿 `assets/` 的原檔直接給 auto-editor → 不要，一律用 `work/main.mp4`（ng-snap 印的三行已經是它；忘了跑 main，ng-snap 會自己先轉）；順序參數有逗號沒加引號（PowerShell）→ 加雙引號 `--order "檔名1,檔名2"`。
 
@@ -115,6 +117,14 @@ node shared/template/tools/media.mjs cutpoints --project projects/<專案>
 
 完成判準：`work/cutpoints.json` 是合法 JSON，`kind` 只有 `ng`／`pause`；印的「差 N 格」是 0。
 常見錯誤：`✖ 找不到 work/cuts.v1.json` → 照抄 ng-snap 印的第 3 行再跑；`⚠ … 差 N 格` → cuts.v1.json 不是同一組參數產生的，用第 2 行同樣的參數重跑第 3 行。
+
+主軌有邊錄邊講的螢幕錄影（`work/main.json` 有 `"kind": "screen"`）時接著跑：
+
+```
+node shared/template/tools/media.mjs screen-sync --project projects/<專案>
+```
+
+完成判準：寫了 `work/screen-sync.json`，印的 sync 段蓋住 verify-rough 印的那幾段黑畫面。`--write-plan` 等剪好看寫完草稿 plan.json 再加（auto-edit-storyboard 步驟 6）。
 
 ## 停點
 

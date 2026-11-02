@@ -28,6 +28,7 @@ import { fileURLToPath } from 'node:url';
 import { findProject } from './build.mjs';
 import { VIDEO_EXT, AUDIO_EXT } from './lib/ff.mjs';
 import { lookNextStep } from './lib/look.mjs';
+import { narrationOf } from './media.mjs';
 import { resolveFormat, formatLine } from './lib/canvas.mjs';
 import { pendingRevisions, storyboardByVersions } from './versions.mjs';
 import { readSpeaker, SET_CMD } from './lib/speaker.mjs';
@@ -70,7 +71,12 @@ export function projectStatus(project) {
   const has = (f) => !!stat(f);
   const newer = (a, b) => { const sa = stat(a), sb = stat(b); return !!(sa && sb && sa.mtimeMs - sb.mtimeMs > NEWER); };
   const rel = (f) => posix(path.relative(project, f));
-  const mains = files(P('assets', 'camera'), VIDEO_EXT).length + files(P('assets', 'voice'), AUDIO_EXT).length;
+  // 主軌素材：接過主軌就看 work/main.json；還沒接就數真人錄影、聲音檔，加上邊錄邊講的螢幕錄影（音軌有人聲）
+  let mainJson = null;
+  try { mainJson = JSON.parse(fs.readFileSync(W('main.json'), 'utf8')); } catch { mainJson = null; }
+  const scrMain = !!mainJson?.clips?.some((c) => c.kind === 'screen');
+  const mains = mainJson?.clips?.length || (files(P('assets', 'camera'), VIDEO_EXT).length + files(P('assets', 'voice'), AUDIO_EXT).length
+    + files(P('assets', 'screen'), VIDEO_EXT).filter((f) => narrationOf(P('assets', 'screen', f)).narrated).length);
   const plan = W('hyperframes', 'plan.json'), index = W('hyperframes', 'index.html'), story = W('storyboard.md'), finalMp4 = P('output', 'final.mp4'), sheet = P('output', 'qc', 'qc-sheet.jpg');
   const workFiles = (() => { try { return fs.readdirSync(W()); } catch { return []; } })();
   // srt-align 跑過＝有 rough.srt.align-*；snap-srt 跑過＝有 rough.srt.bak-*（srt-split 的備份叫 rough.srt.split-*，不算；A-02）
@@ -85,7 +91,7 @@ export function projectStatus(project) {
   }
 
   const T = [
-    ['S0', () => mains === 0, '開新專案（還沒有主軌素材）', '把口播放進 assets/camera/（有畫面）或 assets/voice/（只有聲音），講稿存成 講稿.md', '無', 'assets/camera/ 與 assets/voice/ 都沒有檔'],
+    ['S0', () => mains === 0, '開新專案（還沒有主軌素材）', '把口播放進 assets/camera/（有畫面）或 assets/voice/（只有聲音）；邊錄邊講的螢幕錄影放 assets/screen/ 也算；講稿存成 講稿.md', '無', 'assets/camera/ 與 assets/voice/ 都沒有檔，assets/screen/ 也沒有邊錄邊講的錄影'],
     ['S1', () => mains > 1 && !has(W('main.mp4')), '剪乾淨／接主軌', '列出主軌順序，和剪輯清單一起在停點 ① 確認後跑 media.mjs main', '① 剪輯清單', `主軌有 ${mains} 個檔、沒有 work/main.mp4`],
     ['S2', () => !has(W('cuts.md')), '剪乾淨／轉逐字稿、找 NG', '轉逐字稿（npx hyperframes transcribe … --model small --language zh），找 NG，寫 work/cuts.md', '① 剪輯清單', '沒有 work/cuts.md'],
     ['S3', () => !has(W('rough.mp4')), '剪乾淨／停點 ① 剪輯清單', '使用者確認剪輯清單後跑 media.mjs ng-snap，照它印的指令輸出 rough.mp4', '① 剪輯清單', '有 work/cuts.md、沒有 work/rough.mp4'],
@@ -93,6 +99,7 @@ export function projectStatus(project) {
     ['S5', () => !aligned && !has(plan), '剪乾淨／字幕斷句', '跑 media.mjs srt-align --dry-run 看斷句表，合理再去掉 --dry-run；之後只改錯字', '② 構圖倍率', '沒有 work/rough.srt.align-*（srt-align 還沒跑）'],
     ['S6', () => !words && !snapped, '剪乾淨／字幕對齊', '跑 media.mjs snap-srt --dry-run，看表合理再去掉 --dry-run（只跑一次）', '② 構圖倍率', '沒有 work/transcript.json（字幕時間是整句按字數估的）、也沒有 work/rough.srt.bak-*（snap-srt 還沒跑；srt-split 的備份叫 rough.srt.split-*，不算）'],
     ['S7', () => !has(W('cutpoints.json')), '剪乾淨／剪接點', '跑 media.mjs cutpoints', '② 構圖倍率', '沒有 work/cutpoints.json'],
+    ['S7s', () => scrMain && (!has(W('screen-sync.json')) || newer(W('cuts.v1.json'), W('screen-sync.json'))), '剪乾淨／螢幕錄影同步', '跑 media.mjs screen-sync（邊錄邊講的螢幕錄影：算出初剪後每段在錄影的秒數；寫好 plan.json 草稿後再加 --write-plan）', '② 構圖倍率', has(W('screen-sync.json')) ? 'work/cuts.v1.json 比 work/screen-sync.json 新（初剪重做過）' : 'work/main.json 有邊錄邊講的螢幕錄影、還沒有 work/screen-sync.json'],
     ['S8', () => !has(W('構圖預覽-套卡.jpg')), '剪好看／構圖預覽', '跑 qc.mjs framing --cards，把兩張圖和倍率表給使用者', '② 構圖倍率', `沒有 work/構圖預覽-套卡.jpg${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`],
     ['S9', () => !has(story), '剪好看／停點 ② 構圖倍率之後，寫分鏡表', '寫 work/storyboard.md（含每段截圖）', '③ 分鏡表', '沒有 work/storyboard.md'],
     ['S10', () => !has(plan) || (newer(story, plan) && !storyboardByVersions(project)), '剪好看／停點 ③ 分鏡表', '使用者確認後，重新讀 work/storyboard.md，以檔案為準寫正式 plan.json', '③ 分鏡表', has(plan) ? 'work/storyboard.md 比 work/hyperframes/plan.json 新' : '沒有 work/hyperframes/plan.json'],

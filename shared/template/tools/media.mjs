@@ -9,9 +9,11 @@
  *   node shared/template/tools/media.mjs frame --project projects/<專案> --src assets/screen/<檔名> --at 12.5 [--grid]
  *       截一張原尺寸畫面到 work/media/frames/；--grid 疊每 100px 一條、標數字的座標格線（plan.json 的 box／moves／lens 用這個座標）
  *   node shared/template/tools/media.mjs main --project projects/<專案> [--order 檔名1,檔名2,…]
- *       把 assets/camera/ 與 assets/voice/ 的檔照檔名排序（或 --order 的順序）接成 work/main.mp4：
- *       聲音檔配純黑畫面；解析度／fps 跟第一支真人錄影（沒有就 1920×1080 30fps）；聲音統一 48k AAC。
- *       同時寫 work/main.json：{ "clips": [{ "file", "kind": "camera"|"voice", "start", "end" }] }
+ *       把 assets/camera/、assets/voice/，以及 assets/screen/ 裡邊錄邊講的螢幕錄影（有聲音的比例 20–95%：講話會停頓，背景音樂不會）照檔名排序
+ *       （或 --order 的順序；--order 可以寫檔名或 assets/… 路徑，也能放進沒偵測到講解、但有音軌的螢幕錄影）接成 work/main.mp4：
+ *       聲音檔與螢幕錄影都只取聲音、配純黑畫面（螢幕錄影的畫面之後由 screen-sync 自動蓋回）；
+ *       解析度／fps 跟第一支真人錄影（沒有就 1920×1080 30fps）；聲音統一 48k AAC。
+ *       同時寫 work/main.json：{ "clips": [{ "file", "kind": "camera"|"voice"|"screen", "start", "end" }] }
  *       只有一支真人錄影時也轉一次（固定 fps、yuv420p）：auto-editor 直接剪手機原檔（VFR、yuvj420p），--cut-out 之後的畫面可能全黑。
  *       fps：原片在 29–31 之間、VFR 或沒有 fps 時用 30，其他照原片（例 25、60）。
  *
@@ -26,6 +28,8 @@
  *       讀 work/cuts.md 的 NG 表（表頭有「時間碼」「原因」）與章節空檔表（表頭有「章節」「第一句」），
  *       用 auto-editor 判斷原片的停頓（結果快取在 work/.cache/），把每段 NG 的起訖對齊到前後的停頓（±1 秒內），
  *       每章第一句前保留 3 秒停頓（--add-in），印出三行可以直接複製的 auto-editor 指令：--preview、輸出 work/rough.mp4、--export v1 -o work/cuts.v1.json。
+ *       邊錄邊講的螢幕錄影（main.json kind "screen"）只剪 NG、停頓保留（停頓時畫面常在操作；整段 --add-in，扣掉 NG）。
+ *       主軌有兩支以上、有 講稿.md、還沒初剪時，用 work/transcript.json 比對每支講的是講稿第幾行，順序和講稿不同就 ⚠ 並印建議的 --order。
  *       「待確認」欄有寫字的列不剪。原始停頓不到 3 秒的章節會 ⚠。除了下面說的自動轉 main.mp4，不寫 work/.cache/ 以外的檔。
  *       --src 不寫：用 work/main.mp4；還沒有、且只有一支真人錄影時，先自動跑 main 轉出 work/main.mp4（會寫 work/main.mp4、work/main.json）；
  *       --v1：用現成的 auto-editor --export v1 結果（不跑 auto-editor）。
@@ -36,6 +40,11 @@
  *   node shared/template/tools/media.mjs cutpoints --project projects/<專案> [--dry-run]
  *       讀 work/cuts.v1.json（auto-editor --export v1）與 work/rough.mp4 的 fps，算出每個剪接點在 rough.mp4 的秒數，
  *       和 work/cuts.md 的 NG 重疊的標 ng、其他標 pause，寫 work/cutpoints.json（舊檔內容不同時先備份成 .bak-<時間戳>）。
+ *   node shared/template/tools/media.mjs screen-sync --project projects/<專案> [--write-plan] [--dry-run]
+ *       邊錄邊講的螢幕錄影：讀 work/main.json（kind "screen"）與 work/cuts.v1.json，算出初剪後每段保留下來的片段
+ *       在 rough.mp4 的起訖與錄影本身的秒數（in），寫 work/screen-sync.json（media 段 sync01、sync02…：畫面蓋回主軌、和聲音同步）。
+ *       --write-plan：再寫進 work/hyperframes/plan.json（先換掉舊的 sync 段，plan.json 先備份 .sync-<時間戳>）；初剪重做過就再跑一次。
+ *       --dry-run：只印表、不寫。秒數都由工具算，不要手改 sync 段的 from／to／in（剪輯台拖邊緣會自動保持同步）。
  *   node shared/template/tools/media.mjs srt-align --project projects/<專案> [--dry-run] [--remap-plan] [--max 18]
  *       字幕重新斷句成完整語句（剪乾淨第 6 步，取代「手動斷句＋srt-split」）：
  *       有 講稿.md：字幕＝講稿每一行（# 標題、> 引言、含 ` 的說明行不算），時間用 work/transcript.json 的詞級時間做全域序列對齊
@@ -94,7 +103,7 @@ export function parseArgs(argv) {
       const v = inline ?? rest[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['grid', 'help', 'dry-run', 'remap-plan', 'no-sheet'].includes(k)) flags[k] = true;
+    } else if (['grid', 'help', 'dry-run', 'remap-plan', 'no-sheet', 'write-plan'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -187,6 +196,10 @@ export function scan(P, { log = console.log } = {}) {
   if (fs.existsSync(rough)) {
     try { voiceOnly = blackDetect(rough, path.join(proj, 'work', 'hyperframes', '.cache', 'blackdetect.json'), () => log('偵測 rough.mp4 只有聲音的區間…')); } catch { voiceOnly = null; }
   }
+  // 已經接進主軌的邊錄邊講錄影：畫面由 screen-sync 蓋回，不用再配
+  let narrated = [];
+  try { narrated = (JSON.parse(fs.readFileSync(path.join(proj, 'work', 'main.json'), 'utf8')).clips || []).filter((c) => c.kind === 'screen').map((c) => c.file); } catch { narrated = []; }
+  for (const e of entries) if (narrated.includes(e.src)) e.inMain = true;
   const json = { project: projRel, scannedAt: new Date().toISOString(), files: entries, voiceOnly };
   fs.writeFileSync(path.join(media, 'index.json'), JSON.stringify(json, null, 2) + '\n');
   fs.writeFileSync(path.join(media, 'index.md'), indexMd(json));
@@ -205,6 +218,8 @@ function indexMd(j) {
       L.push(`| ${v.src} | ${fmtT(v.duration)}（${v.duration}s） | ${v.width}×${v.height} | ${v.fps}${v.vfr ? '（VFR，build 會轉成 30fps）' : ''} | ${v.hasAudio ? '有' : '沒有'} | ${v.sheets.map((s) => `work/${s.file.replace(/^work\//, '')}（#${s.cells[0].n}–#${s.cells[s.cells.length - 1].n}）`).join('、')} |`);
     }
     L.push('');
+    const inMain = vids.filter((v) => v.inMain);
+    if (inMain.length) L.push(`已經接進主軌的邊錄邊講錄影：${inMain.map((v) => v.src).join('、')} → 畫面由 \`media.mjs screen-sync --write-plan\` 蓋回（plan.json 的 sync 段），不用再配；要標註就加在 sync 段上`, '');
     for (const v of vids.filter((x) => !x.error)) {
       L.push(`### ${v.src} 每一格的時間`, '', '格子左上角是格號與「分:秒」；右上角有黃色小方塊的格子＝畫面在這裡變了（切頁、開視窗、跳出選單）。', '');
       L.push('| 格 | 素材秒數（in） | 怎麼選的 |', '|---|---|---|');
@@ -276,18 +291,51 @@ export function drawGrid(c) {
 // 主軌 fps：29–31（手機常見 29.92、29.97）、VFR、沒有 fps、超過 61 → 30；其他照原片取到小數 2 位
 export const mainFps = (info) => (info.vfr || !info.fps || info.fps > 61 || Math.abs(info.fps - 30) < 1 ? 30 : Math.round(info.fps * 100) / 100);
 
-export function joinMain(P, { order = null, log = console.log } = {}) {
-  const proj = P.project;
+// 螢幕錄影有沒有邊錄邊講：音軌不是靜音（silencedetect −35 dB、停 0.3 秒以上才算停頓）的比例在 min–max 之間就算有講解。
+// 只有點擊聲的錄影通常 < 10%；背景音樂、持續的系統聲幾乎不停（> 95%）；講話會換氣停頓，約 40–90%。
+// 判斷錯了在停點 ① 改 --order（寫進去＝接進主軌、拿掉＝當插入素材）
+export const NARR = { noise: '-35dB', d: 0.3, min: 0.2, max: 0.95 };
+export function narrationOf(file, info = probeMedia(file)) {
+  if (!info.hasAudio || !(info.duration > 0)) return { narrated: false, ratio: 0, hasAudio: !!info.hasAudio };
+  const r = run('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-vn', '-sn', '-dn', '-af', `silencedetect=n=${NARR.noise}:d=${NARR.d}`, '-f', 'null', '-']);
+  const err = String(r.stderr);
+  let silent = 0, open = null;
+  for (const m of err.matchAll(/silence_(start|end):\s*(-?[\d.]+)/g)) {
+    if (m[1] === 'start') open = Math.max(0, Number(m[2]));
+    else if (open != null) { silent += Number(m[2]) - open; open = null; }
+  }
+  if (open != null) silent += info.duration - open;   // 靜音一路到檔尾
+  const ratio = r3(Math.min(1, Math.max(0, 1 - silent / info.duration)));
+  return { narrated: ratio >= NARR.min && ratio <= NARR.max, ratio, hasAudio: true };
+}
+
+// 主軌的候選：真人錄影、聲音檔、有音軌的螢幕錄影（narrated＝偵測到講解，沒寫 --order 時才會自動接進主軌）
+export function mainCandidates(proj) {
   const cams = listFiles(path.join(proj, 'assets', 'camera'), VIDEO_EXT).map((f) => ({ name: f, file: `assets/camera/${f}`, kind: 'camera' }));
   const voices = listFiles(path.join(proj, 'assets', 'voice'), [...AUDIO_EXT, ...VIDEO_EXT]).map((f) => ({ name: f, file: `assets/voice/${f}`, kind: 'voice' }));
-  let list = [...cams, ...voices].sort((a, b) => natural(a.name, b.name));
-  if (!list.length) throw new Error('assets/camera/ 和 assets/voice/ 都是空的：先把口播影片或旁白放進去');
+  const screens = listFiles(path.join(proj, 'assets', 'screen'), VIDEO_EXT).map((f) => {
+    const abs = path.join(proj, 'assets', 'screen', f), n = narrationOf(abs);
+    return { name: f, file: `assets/screen/${f}`, kind: 'screen', narrated: n.narrated, ratio: n.ratio, hasAudio: n.hasAudio };
+  }).filter((x) => x.hasAudio);
+  return { cams, voices, screens };
+}
+
+export function joinMain(P, { order = null, log = console.log } = {}) {
+  const proj = P.project;
+  const { cams, voices, screens } = mainCandidates(proj);
+  for (const x of screens) log(x.narrated
+    ? `${x.file}：偵測到講解（有聲音 ${Math.round(x.ratio * 100)}%）→ 接進主軌，畫面之後由 screen-sync 蓋回`
+    : `${x.file}：${x.ratio > NARR.max ? `聲音幾乎沒停（${Math.round(x.ratio * 100)}%，像背景音樂或系統聲音）` : `聲音只有 ${Math.round(x.ratio * 100)}%`}，當插入素材（要接進主軌就寫進 --order）`);
+  const all = [...cams, ...voices, ...screens];
+  let list = [...cams, ...voices, ...screens.filter((x) => x.narrated)].sort((a, b) => natural(a.name, b.name));
+  if (!list.length) throw new Error('assets/camera/ 和 assets/voice/ 都是空的，assets/screen/ 也沒有邊錄邊講的錄影：先把口播影片或旁白放進去');
   if (order) {
     const want = String(order).split(',').map((s) => s.trim()).filter(Boolean);
     const picked = want.map((w) => {
-      const hit = list.find((x) => x.name === w || x.file === w.replace(/\\/g, '/'));
-      if (!hit) throw new Error(`--order 的「${w}」找不到 → 現有：${list.map((x) => x.name).join('、')}`);
-      return hit;
+      const hits = all.filter((x) => x.name === w || x.file === w.replace(/\\/g, '/'));
+      if (hits.length > 1) throw new Error(`--order 的「${w}」有 ${hits.length} 個同名檔（${hits.map((x) => x.file).join('、')}）→ 改寫成 assets/… 路徑`);
+      if (!hits.length) throw new Error(`--order 的「${w}」找不到 → 現有：${all.map((x) => x.file).join('、')}`);
+      return hits[0];
     });
     const left = list.filter((x) => !picked.includes(x));
     if (left.length) log(`⚠ 這些檔沒寫在 --order，不接進主軌：${left.map((x) => x.name).join('、')}`);
@@ -308,18 +356,18 @@ export function joinMain(P, { order = null, log = console.log } = {}) {
   list.forEach((x, i) => {
     const abs = path.join(proj, ...x.file.split('/'));
     const info = probeMedia(abs);
-    if (x.kind === 'voice' && !info.hasAudio) throw new Error(`${x.file} 沒有聲音軌`);
+    if (x.kind !== 'camera' && !info.hasAudio) throw new Error(`${x.file} 沒有聲音軌`);
     const D = r3(Math.round(info.duration * F) / F);
     inputs.push('-i', abs);
     if (x.kind === 'camera') chains.push(`[${i}:v:0]scale=${W}:${H}:force_original_aspect_ratio=decrease:out_range=tv,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,fps=${F},format=yuv420p,tpad=stop_mode=clone:stop_duration=1,trim=duration=${D},setpts=PTS-STARTPTS[v${i}]`);
-    // 聲音檔配純黑畫面（build 靠 blackdetect 認出「只有聲音」的區間，一定要是合成的純黑）
+    // 聲音檔、邊錄邊講的螢幕錄影配純黑畫面（build 靠 blackdetect 認出「只有聲音」的區間，一定要是合成的純黑；螢幕錄影的畫面由 screen-sync 蓋回）
     else chains.push(`color=c=black:s=${W}x${H}:r=${F}:d=${D},format=yuv420p,setpts=PTS-STARTPTS[v${i}]`);
     if (info.hasAudio) chains.push(`[${i}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,apad,atrim=duration=${D},asetpts=PTS-STARTPTS[a${i}]`);
     else chains.push(`anullsrc=r=48000:cl=stereo,atrim=duration=${D},asetpts=PTS-STARTPTS[a${i}]`);
     labels.push(`[v${i}][a${i}]`);
     clips.push({ file: x.file, kind: x.kind, start: r3(t), end: r3(t + D) });
     t += D;
-    log(`接主軌 ${i + 1}/${list.length}：${x.file}${x.kind === 'voice' ? '（聲音，配純黑畫面）' : ''}（${D}s）`);
+    log(`接主軌 ${i + 1}/${list.length}：${x.file}${x.kind === 'voice' ? '（聲音，配純黑畫面）' : x.kind === 'screen' ? '（邊錄邊講的螢幕錄影：取聲音、配純黑畫面）' : ''}（${D}s）`);
   });
   const graph = `${chains.join(';')};${labels.join('')}concat=n=${list.length}:v=1:a=1[v][a]`;
   const mainFile = path.join(proj, 'work', 'main.mp4');
@@ -664,13 +712,14 @@ function mainSource(P, src, { normalize = true, log = console.log } = {}) {
   const work = path.join(P.project, 'work');
   if (fs.existsSync(path.join(work, 'main.json')) && fs.existsSync(path.join(work, 'main.mp4'))) return path.join(work, 'main.mp4');
   const cams = listFiles(path.join(P.project, 'assets', 'camera'), VIDEO_EXT), voices = listFiles(path.join(P.project, 'assets', 'voice'), AUDIO_EXT);
-  if (cams.length === 1 && !voices.length) {
+  const screens = mainCandidates(P.project).screens.filter((x) => x.narrated);
+  if (cams.length === 1 && !voices.length && !screens.length) {
     if (!normalize) return path.join(P.project, 'assets', 'camera', cams[0]);
     log('還沒有 work/main.mp4：先把原片轉成固定 fps（auto-editor 直接剪手機原檔，--cut-out 之後的畫面可能全黑）');
     fs.mkdirSync(work, { recursive: true });
     return joinMain(P, { log }).file;
   }
-  if (cams.length + voices.length > 1) throw new Error(`assets/camera/ 有 ${cams.length} 支${voices.length ? `、assets/voice/ 有 ${voices.length} 個` : ''}、又沒有 work/main.mp4 → 先跑 node shared/template/tools/media.mjs main --project ${posixRel(P.project)}（剪乾淨第 1 步）`);
+  if (cams.length + voices.length + screens.length > 1 || screens.length) throw new Error(`assets/camera/ 有 ${cams.length} 支${voices.length ? `、assets/voice/ 有 ${voices.length} 個` : ''}${screens.length ? `、assets/screen/ 有 ${screens.length} 支邊錄邊講的錄影` : ''}、又沒有 work/main.mp4 → 先跑 node shared/template/tools/media.mjs main --project ${posixRel(P.project)}（剪乾淨第 1 步）`);
   throw new Error(`找不到原片：assets/camera/ 是空的 → 把口播影片放進 ${posixRel(path.join(P.project, 'assets', 'camera'))}/`);
 }
 
@@ -693,6 +742,43 @@ function aeSilence(P, src, { edit, margin, log }) {
   }
   fs.writeFileSync(keyFile, key + '\n');
   return { file: out, cached: false };
+}
+
+// [a, b] 扣掉 cuts（已排序、不重疊也可以）→ 剩下的區間
+export function subtractRanges([a, b], cuts) {
+  const out = [];
+  let x = a;
+  for (const [c, d] of mergeRanges(cuts)) {
+    if (d <= x + 1e-6 || c >= b - 1e-6) continue;
+    if (c > x + 1e-6) out.push([r3(x), r3(c)]);
+    x = Math.max(x, d);
+  }
+  if (b > x + 1e-6) out.push([r3(x), r3(b)]);
+  return out;
+}
+
+// work/main.json 的 clips（原片是 work/main.mp4 時才算數）
+function mainClips(P, source) {
+  if (path.resolve(source) !== path.join(P.project, 'work', 'main.mp4')) return [];
+  try { return JSON.parse(fs.readFileSync(path.join(P.project, 'work', 'main.json'), 'utf8')).clips || []; } catch { return []; }
+}
+
+// 主軌順序照講稿：每支的逐字稿（落在那支時間內的詞）和講稿每一行比「兩個字一組」，命中 ≥ minHit 的行算這支講到的行；
+// 位置＝那些行號的中位數。不管原本的順序（不用全域對齊：檔案排錯時全域對齊會對不起來）
+export function scriptOrder(clips, words, lines, minHit = 0.6) {
+  const pairs = (t) => { const cs = [...normText(t)], set = new Set(); for (let i = 0; i + 1 < cs.length; i++) set.add(cs[i] + cs[i + 1]); return set; };
+  const L = lines.map(pairs);
+  return clips.map((c, k) => {
+    const B = pairs(words.filter((w) => w.start >= c.start - 0.05 && w.start < c.end).map((w) => w.text).join(''));
+    const hits = [];
+    L.forEach((set, i) => { if (set.size < 2) return; let h = 0; for (const g of set) if (B.has(g)) h++; if (h / set.size >= minHit) hits.push(i + 1); });
+    return { ...c, k, lines: hits, pos: hits.length ? hits[Math.floor((hits.length - 1) / 2)] : null };
+  });
+}
+
+// 建議順序：有位置的照位置排；對不到講稿的維持原本的前後、放最後
+export function suggestOrder(rows) {
+  return [...rows.filter((r) => r.pos != null).sort((a, b) => a.pos - b.pos || a.k - b.k), ...rows.filter((r) => r.pos == null)];
 }
 
 export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1 = null, log = console.log } = {}) {
@@ -727,7 +813,11 @@ export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1
       }
     }
   }
-  const addIn = chs.filter((c) => c.keep && !c.dropped).map((c) => c.keep);
+  // 邊錄邊講的螢幕錄影：整段保留（停頓時畫面常在操作），只剪 NG
+  const clips = mainClips(P, source);
+  const scrClips = clips.filter((c) => c.kind === 'screen');
+  const scrKeep = scrClips.flatMap((c) => subtractRanges([c.start, c.end], cutOut));
+  const addIn = mergeRanges([...chs.filter((c) => c.keep && !c.dropped).map((c) => c.keep), ...scrKeep]);
   const srcRel = posixRel(source), roughRel = posixRel(path.join(work, 'rough.mp4')), v1Rel = posixRel(path.join(work, 'cuts.v1.json'));
 
   log(`原片：${srcRel}（${fps}fps，${fmtC(info.duration ?? 0)}）；靜音判斷：${v1 ? `--v1 ${posixRel(v1File)}` : `auto-editor --edit "${edit}" --margin ${margin}（快取 work/.cache/ng-snap.v1.json）`}`);
@@ -761,6 +851,29 @@ export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1
       log(`  ${String(c.row).padEnd(3)} ${`${fmtC(c.t)} → ${fmtC(c.onset)}`.padEnd(22)} ${`${c.pause.toFixed(2)}s`.padEnd(9)} ${keep.padEnd(24)} ${c.dropped ? '—' : `${c.gapAfter.toFixed(2)}s${c.short ? ' ⚠' : ''}`}`);
       if (c.short) warnings.push(`⚠ 章節 ${c.row}「${c.title}」原始停頓只有 ${c.pause.toFixed(2)}s（< ${CUT.chKeep.toFixed(1)}s），剪完只剩 ${c.pause.toFixed(2)}s，章節會壓到人聲 → 可以接受就照下面的指令剪（build 會從那一句起點蓋章節並提醒）；不行就請作者補錄停頓`);
       if (c.conflict) warnings.push(c.conflict);
+    }
+  }
+  if (scrClips.length) {
+    log(''); log(`邊錄邊講的螢幕錄影 ${scrClips.length} 支：只剪 NG、停頓保留（--add-in ${scrKeep.length} 段）`);
+    for (const c of scrClips) log(`  ${fmtC(c.start)}–${fmtC(c.end)}  ${c.file}`);
+  }
+  // 主軌順序對講稿（還沒初剪、有講稿、transcript.json 是 main.mp4 轉的才比）
+  const scriptFile = path.join(P.project, '講稿.md'), tjFile = path.join(work, 'transcript.json');
+  if (clips.length > 1 && fs.existsSync(scriptFile) && fs.existsSync(tjFile) && !fs.existsSync(path.join(work, 'rough.mp4'))
+    && fs.statSync(tjFile).mtimeMs >= fs.statSync(source).mtimeMs - 1000) {
+    let words = null;
+    try { words = JSON.parse(fs.readFileSync(tjFile, 'utf8')); } catch { words = null; }
+    if (Array.isArray(words)) {
+      const rows = scriptOrder(clips, words, scriptLines(fs.readFileSync(scriptFile, 'utf8')));
+      const sug = suggestOrder(rows);
+      log(''); log('主軌順序對講稿：');
+      log('  順序  講稿行      檔');
+      for (const r of rows) log(`  ${String(r.k + 1).padEnd(5)} ${(r.lines.length ? `${r.lines[0]}–${r.lines[r.lines.length - 1]}` : '對不到').padEnd(10)} ${r.file}`);
+      for (const r of rows.filter((x) => x.pos == null)) warnings.push(`⚠ ${r.file} 對不到講稿的任何一行（講稿沒寫到的內容，或不是這集的錄音）→ 停點 ① 問使用者要不要接進主軌、放在哪裡`);
+      if (sug.some((r, i) => r.k !== i)) {
+        const list = sug.map((r) => r.file).join(',');
+        warnings.push(`⚠ 主軌順序和講稿不同：照講稿應該是 ${sug.map((r) => r.name || path.basename(r.file)).join(' → ')} → 停點 ① 跟使用者確認；確認後跑 node shared/template/tools/media.mjs main --project ${posixRel(P.project)} --order "${list}"，再重做剪乾淨第 2–4 步`);
+      }
     }
   }
   if (notes.length || warnings.length) { log(''); for (const w of [...notes, ...warnings]) log(w); }
@@ -839,6 +952,70 @@ export function cutpoints(P, { dryRun = false, log = console.log, now = new Date
   return { ...res, warnings, written, backup, file: outFile };
 }
 
+// ---------- 邊錄邊講的螢幕錄影：初剪後把錄影畫面蓋回主軌（screen-sync）----------
+// cuts.v1.json 每個保留段 ∩ main.json 的 screen 段 → rough.mp4 的起訖＋錄影本身的秒數（in）；前後相接、錄影也連續的併成一段
+export function screenSegments(clips, v1, fps) {
+  const scr = clips.filter((c) => c.kind === 'screen');
+  const out = [];
+  let acc = 0;
+  for (const [s, e, sp] of v1.chunks) {
+    if (sp >= 99999) continue;
+    const a = s / fps, b = e / fps;
+    for (const c of scr) {
+      const x = Math.max(a, c.start), y = Math.min(b, c.end);
+      if (y - x <= 1e-6) continue;
+      const from = acc + (x - a), to = from + (y - x), inn = x - c.start;
+      const l = out[out.length - 1];
+      if (l && l.src === c.file && Math.abs(l.to - from) < 1e-6 && Math.abs(l.in + (l.to - l.from) - inn) < 1e-3) l.to = to;
+      else out.push({ src: c.file, from, to, in: inn });
+    }
+    acc += b - a;
+  }
+  return out.map((x, i) => ({ id: `sync${String(i + 1).padStart(2, '0')}`, type: 'media', src: x.src, from: r3(x.from), to: r3(x.to), in: r3(x.in) }));
+}
+
+export const SYNC_ID = /^sync\d+$/;
+
+export function screenSync(P, { writePlan = false, dryRun = false, log = console.log, now = new Date() } = {}) {
+  const work = path.join(P.project, 'work'), pj = posixRel(P.project);
+  let clips = [];
+  try { clips = JSON.parse(fs.readFileSync(path.join(work, 'main.json'), 'utf8')).clips || []; } catch { throw new Error(`找不到 work/main.json → 先跑 node shared/template/tools/media.mjs main --project ${pj}`); }
+  if (!clips.some((c) => c.kind === 'screen')) { log('work/main.json 沒有邊錄邊講的螢幕錄影（kind "screen"）→ 不用跑 screen-sync'); return { segments: [], written: false }; }
+  const v1File = [path.join(work, 'cuts.v1.json'), path.join(work, 'cuts.v1')].find((f) => fs.existsSync(f));
+  if (!v1File) throw new Error('找不到 work/cuts.v1.json → 先照 ng-snap 印的第 3 行存剪接點（--export v1 -o work/cuts.v1.json）');
+  const rough = path.join(work, 'rough.mp4');
+  if (!fs.existsSync(rough)) throw new Error('找不到 work/rough.mp4 → 先照 ng-snap 印的第 2 行輸出初剪');
+  const fps = probeMedia(rough).fps || 30;
+  const durOf = new Map();
+  const segments = [];
+  for (const seg of screenSegments(clips, readV1(v1File), fps)) {
+    if (!durOf.has(seg.src)) durOf.set(seg.src, probeMedia(path.join(P.project, ...seg.src.split('/'))).duration ?? Infinity);
+    const room = r3(durOf.get(seg.src) - seg.in);   // 主軌把錄影長度補到整格，最後一段可能多出不到一格
+    if (room <= 0) continue;
+    if (seg.to - seg.from > room) seg.to = r3(seg.from + room);
+    segments.push(seg);
+  }
+  segments.forEach((s, i) => { s.id = `sync${String(i + 1).padStart(2, '0')}`; });
+  log(`邊錄邊講的螢幕錄影：${segments.length} 段（${posix(path.relative(P.project, v1File))}、rough.mp4 ${fps}fps）`);
+  log('  id      rough.mp4             錄影從    檔');
+  for (const s of segments) log(`  ${s.id.padEnd(7)} ${`${fmtC(s.from)}–${fmtC(s.to)}`.padEnd(21)} ${fmtC(s.in).padEnd(9)} ${s.src}`);
+  if (dryRun) { log('--dry-run：只印不寫。'); return { segments, written: false }; }
+  const outFile = path.join(work, 'screen-sync.json');
+  fs.writeFileSync(outFile, JSON.stringify({ segments }, null, 2) + '\n');
+  log(`已寫 work/screen-sync.json`);
+  if (!writePlan) { log(`→ 寫好 plan.json 草稿後跑 node shared/template/tools/media.mjs screen-sync --project ${pj} --write-plan，把這幾段放進 plan.json`); return { segments, written: true, file: outFile }; }
+  const planFile = path.join(work, 'hyperframes', 'plan.json');
+  if (!fs.existsSync(planFile)) throw new Error('還沒有 work/hyperframes/plan.json → 先寫 plan.json 草稿，再加 --write-plan');
+  const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
+  const old = (plan.scenes || []).filter((x) => SYNC_ID.test(x.id || '')).length;
+  plan.scenes = [...(plan.scenes || []).filter((x) => !SYNC_ID.test(x.id || '')), ...segments];
+  const backup = backupPath(planFile, now, 'sync');
+  fs.copyFileSync(planFile, backup);
+  fs.writeFileSync(planFile, JSON.stringify(plan, null, 2) + '\n');
+  log(`已寫進 plan.json：${old ? `換掉舊的 ${old} 段、` : ''}放進 ${segments.length} 段（備份 ${posix(path.relative(P.project, backup))}）→ 跑 build --check`);
+  return { segments, written: true, file: outFile, plan: planFile, backup };
+}
+
 // ---------- 剪乾淨第 5 步之後：初剪有沒有壞（verify-rough）----------
 // auto-editor 29.3.1 直接剪手機原檔（VFR、yuvj420p）時，--cut-out 之後的畫面可能全黑、聲音正常（2026-10 範例專案實測）
 export const ROUGH = { d: 0.1, pixTh: 0.10, picTh: 0.98, gap: 0.1, dark: 32 };   // dark：原片 YAVG（0–255）低於這個值才算「原片也黑」
@@ -880,7 +1057,7 @@ export function lumaAt(file, at) {
 
 function hasVoiceSource(project) {
   if (listFiles(path.join(project, 'assets', 'voice'), [...AUDIO_EXT, ...VIDEO_EXT]).length) return true;
-  try { return (JSON.parse(fs.readFileSync(path.join(project, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice'); } catch { return false; }
+  try { return (JSON.parse(fs.readFileSync(path.join(project, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice' || c.kind === 'screen'); } catch { return false; }
 }
 
 export function verifyRough(P, { log = console.log } = {}) {
@@ -1557,7 +1734,7 @@ export async function illusLint(P, { sheet = true, log = console.log } = {}) {
 async function cli() {
   const flags = parseArgs(process.argv.slice(2));
   if (flags.help || !flags.cmd || flags.cmd === '--help') { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
-  if (!['scan', 'frame', 'main', 'snap-srt', 'ng-snap', 'cutpoints', 'srt-split', 'srt-align', 'verify-rough', 'illus-lint'].includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 scan、frame、main、snap-srt、ng-snap、cutpoints、srt-align、srt-split、verify-rough、illus-lint（用 --help 看用法）`);
+  if (!['scan', 'frame', 'main', 'snap-srt', 'ng-snap', 'cutpoints', 'screen-sync', 'srt-split', 'srt-align', 'verify-rough', 'illus-lint'].includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 scan、frame、main、snap-srt、ng-snap、cutpoints、screen-sync、srt-align、srt-split、verify-rough、illus-lint（用 --help 看用法）`);
   const P = pathsFrom({ project: flags.project, template: flags.template });
   console.log(`專案：${rel(P.project)}`);
   if (flags.cmd === 'scan') {
@@ -1571,6 +1748,7 @@ async function cli() {
   }
   if (flags.cmd === 'ng-snap') { ngSnap(P, { edit: flags.edit ?? CUT.edit, margin: flags.margin ?? CUT.margin, src: flags.src ?? null, v1: flags.v1 ?? null }); return 0; }
   if (flags.cmd === 'cutpoints') { cutpoints(P, { dryRun: !!flags['dry-run'] }); return 0; }
+  if (flags.cmd === 'screen-sync') { screenSync(P, { writePlan: !!flags['write-plan'], dryRun: !!flags['dry-run'] }); return 0; }
   if (flags.cmd === 'verify-rough') return verifyRough(P).ok ? 0 : 1;
   if (flags.cmd === 'illus-lint') return (await illusLint(P, { sheet: !flags['no-sheet'] })).ok ? 0 : 1;
   // 每則字數上限照版式（009 FR-031：橫式 18、直式 12＝lib/canvas.mjs 的 caption.maxChars）；明寫 --max 時以參數為準
@@ -1597,7 +1775,7 @@ async function cli() {
   const r = joinMain(P, { order: flags.order });
   if (!r) return 0;
   console.log(`\n→ ${rel(r.file)}（${r.width}×${r.height}、${r.fps}fps、${r.duration}s）＋ ${rel(path.join(P.project, 'work', 'main.json'))}`);
-  for (const c of r.clips) console.log(`  ${fmtT(c.start)}–${fmtT(c.end)}  ${c.kind === 'voice' ? '聲音' : '真人'}  ${c.file}`);
+  for (const c of r.clips) console.log(`  ${fmtT(c.start)}–${fmtT(c.end)}  ${c.kind === 'voice' ? '聲音' : c.kind === 'screen' ? '螢幕錄影（邊錄邊講）' : '真人'}  ${c.file}`);
   return 0;
 }
 
