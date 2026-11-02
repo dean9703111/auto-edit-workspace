@@ -21,6 +21,12 @@
  *                                      給了就照色碼算 brand.css、畫外框，背景圖從 --bg 資料夾拿 bg-*.jpg（不動 shared/template/ 目前的設定）
  *   單集換包不用這支：plan.json 寫 "style": "<名稱>"
  *
+ * 講者資料（shared/講者.json，不進版控；14 講者介紹的姓名、頭銜，15 金句的出處；lib/speaker.mjs）：
+ *   brand.mjs speaker                                   看目前的設定
+ *   brand.mjs speaker --name "林大寶" --titles "影音創作者,科技部落客" [--short "大寶"]
+ *                                                       設定（頭銜 1–3 個，用逗號或「、」分開；--short 是金句出處，不給＝姓名）
+ *   brand.mjs speaker off                               關閉：不放講者介紹
+ *
  * 背景圖（HTML 路線）：node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
  *   用 HyperFrames 的 Chrome 把 HTML 截成 bg-<kind>.jpg，疊留空區框、量留空區乾不乾淨，三張到齊做並排預覽 preview.jpg。
  *   不寫 shared/template/：使用者同意後才複製（AGENTS.md「換風格」）。完整用法：--help
@@ -30,6 +36,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { listPacks, packsJs, samePack, copyIfDiff, templatePathOf, PACK_KIT, PACK_BG, STYLES_DIR, DEFAULT_PACK } from './lib/styles.mjs';
+import { readSpeaker, validateSpeaker, speakerFile, SPEAKER_FILE, SET_CMD } from './lib/speaker.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEEP = '#0B1020';
@@ -465,6 +472,54 @@ async function packCli(cmd, args) {
   return 0;
 }
 
+// ---------- 講者資料 ----------
+
+export function writeSpeaker(templateDir, data) {
+  const file = speakerFile(templateDir);
+  fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
+  return file;
+}
+
+function speakerCli(args) {
+  const o = { _: [] };
+  for (let i = 0; i < args.length; i++) {
+    const k = args[i];
+    if (['--name', '--titles', '--short', '--kit'].includes(k)) {
+      if (args[i + 1] == null) throw new Error(`${k} 後面要接值 → 例：${SET_CMD}`);
+      o[k.slice(2)] = args[++i];
+    } else if (k.startsWith('--')) throw new Error(`brand.mjs speaker 沒有 ${k} 這個參數 → 例：${SET_CMD}`);
+    else o._.push(k);
+  }
+  const templateDir = templateOf(o.kit ? path.resolve(o.kit) : undefined);
+  const where = `shared/${SPEAKER_FILE}`;
+  if (o._[0] === 'off') {
+    writeSpeaker(templateDir, { off: true });
+    console.log(`已關閉講者介紹（${where}：{ "off": true }）：之後 plan.json 用到 14 講者介紹，--check 會擋下來`);
+    console.log(`要再打開：${SET_CMD}`);
+    return 0;
+  }
+  if (o._.length) throw new Error(`brand.mjs speaker 只認得 off → 例：${SET_CMD}`);
+  if (o.name == null && o.titles == null && o.short == null) {
+    const sp = readSpeaker(templateDir);
+    if (sp.state === 'set') console.log(`講者：${sp.name}（金句出處：${sp.short}）｜頭銜：${sp.titles.join('、')}｜${where}`);
+    else if (sp.state === 'off') console.log(`講者介紹：關閉（${where}）`);
+    else if (sp.state === 'bad') console.log(`✖ ${where}：${sp.error}`);
+    else console.log(`⚠ 還沒設定講者：14 講者介紹會用示範人物「林大寶」`);
+    if (sp.state !== 'set') console.log(`→ 設定：${SET_CMD}；不放講者介紹：node shared/template/tools/brand.mjs speaker off`);
+    return sp.state === 'bad' ? 1 : 0;
+  }
+  const cur = readSpeaker(templateDir);
+  const name = o.name ?? (cur.state === 'set' ? cur.name : '');
+  const titles = o.titles != null ? o.titles.split(/[,，、]/).map((t) => t.trim()).filter(Boolean) : (cur.state === 'set' ? cur.titles : []);
+  const short = o.short ?? (o.name == null && cur.state === 'set' && cur.short !== cur.name ? cur.short : null);
+  const errs = validateSpeaker({ name, short, titles });
+  if (errs.length) { console.error(`✖ 講者資料不對：${errs.join('；')} → 例：${SET_CMD}`); return 1; }
+  writeSpeaker(templateDir, { name, ...(short && short !== name ? { short } : {}), titles });
+  console.log(`已設定講者（${where}，不進版控）：${name}｜頭銜：${titles.join('、')}｜金句出處：${short || name}`);
+  console.log('之後 plan.json 的 14 講者介紹不寫 name、titles 就用這份；已經 build 過的專案重跑 build.mjs 就會換');
+  return 0;
+}
+
 // ---------- CLI ----------
 
 // 直式講者面板（009 FR-130）：1080×1920 透明，y 897–903 一條 6px 主色線（上半資訊面板／下半講者面板的分隔線，canvas.mjs pip.frame）
@@ -491,6 +546,7 @@ async function cli() {
   const args = process.argv.slice(2);
   if (args[0] === 'bg') return bgCli(args.slice(1));
   if (['list', 'use', 'pack'].includes(args[0])) return packCli(args[0], args.slice(1));
+  if (args[0] === 'speaker') return speakerCli(args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--kit') kitDir = path.resolve(args[++i]);

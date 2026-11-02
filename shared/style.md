@@ -19,10 +19,11 @@
 
 ## 講者
 
-14 講者介紹字卡用這裡的資料。換成自己的影片時，改成你的名字與頭銜；這一節刪掉或留空，就不放講者介紹。
+14 講者介紹字卡的姓名、頭銜（和 15 金句的出處）放在 `shared/講者.json`：每個人本機各一份、不進版控，更新工作區不會被蓋掉。範本是 `shared/講者.example.json`（示範人物林大寶）。
 
-- 姓名：林鼎淵（最多 5 字）
-- 頭銜：外商工程師、暢銷書作家、企業內訓講師（1–3 個，每個最多 6 字）
+- 設定：`node shared/template/tools/brand.mjs speaker --name "<姓名>" --titles "<頭銜1>,<頭銜2>"`（姓名最多 5 字；頭銜 1–3 個，每個最多 6 字；`--short` 是金句出處，不給＝姓名）
+- 不放講者介紹：`node shared/template/tools/brand.mjs speaker off`
+- 還沒設定時，講者介紹會顯示示範人物林大寶，`status.mjs` 與 `build.mjs --check` 會提醒
 
 ## 字幕
 

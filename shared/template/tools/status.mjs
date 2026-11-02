@@ -14,11 +14,12 @@
  *   待回覆停點：<停點名稱，用「、」接｜無>
  *   下一輪回饋編號：r<N>      （work/回饋/ 裡 r*.md 的最大編號 ＋ 1）
  *   依據：<判斷用到的檔案與停點紀錄>
+ *   講者：⚠ …                 （只有 shared/講者.json 還沒設定或格式不對時才印：提醒設定講者資料，lib/speaker.mjs）
  *
  * 判斷依據：work/ 裡各階段產物在不在、修改時間先後（例：storyboard.md 比 plan.json 新＝還在分鏡表；
  * storyboard.md 是 versions.mjs accept／use 寫的不算），以及 work/製作進度.md 的「## 停點紀錄」表（同一個停點以最後一列為準，
  * 狀態「待回覆」＝卡在這裡；改版的停點寫「③ 分鏡表（s12 v2）」）。work/版本/ 有沒做完的改版提案時，目前在印「改版／…」。
- * --json：只印一個 JSON（project、stage、at、next、cmd、nextStop、waiting、feedback、evidence、format、formatSource；cmd 平常是 null）。
+ * --json：只印一個 JSON（project、stage、at、next、cmd、nextStop、waiting、feedback、evidence、format、formatSource、speaker；cmd 平常是 null；speaker＝set／off／unset／bad）。
  * --project：同 build.mjs。
  */
 import fs from 'node:fs';
@@ -29,6 +30,7 @@ import { VIDEO_EXT, AUDIO_EXT } from './lib/ff.mjs';
 import { lookNextStep } from './lib/look.mjs';
 import { resolveFormat, formatLine } from './lib/canvas.mjs';
 import { pendingRevisions, storyboardByVersions } from './versions.mjs';
+import { readSpeaker, SET_CMD } from './lib/speaker.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STOPS = ['① 剪輯清單', '② 構圖倍率', '③ 分鏡表', '④ Studio 預覽', '⑤ 剪輯台', '⑥ 背景預覽'];
@@ -164,8 +166,11 @@ function cli() {
   let plan = null;
   try { plan = JSON.parse(fs.readFileSync(path.join(project, 'work', 'hyperframes', 'plan.json'), 'utf8')); } catch { plan = null; }
   const fmt = resolveFormat({ projectDir: project, plan });
-  if (flags.json) { console.log(JSON.stringify({ ...s, project: label, format: fmt.format, formatSource: fmt.source }, null, 2)); return 0; }
-  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `下一步：${s.next}`, ...(s.cmd ? [s.cmd] : []), `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`]) console.log(l);
+  const sp = readSpeaker(path.join(root, 'shared', 'template'));
+  if (flags.json) { console.log(JSON.stringify({ ...s, project: label, format: fmt.format, formatSource: fmt.source, speaker: sp.state }, null, 2)); return 0; }
+  const spLine = sp.state === 'unset' ? `講者：⚠ 還沒設定（14 講者介紹會用示範人物林大寶）→ 跟使用者要姓名與頭銜後跑 ${SET_CMD}；不放講者介紹跑 node shared/template/tools/brand.mjs speaker off`
+    : sp.state === 'bad' ? `講者：⚠ shared/講者.json ${sp.error} → ${SET_CMD}` : null;
+  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `下一步：${s.next}`, ...(s.cmd ? [s.cmd] : []), `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : [])]) console.log(l);
   return 0;
 }
 

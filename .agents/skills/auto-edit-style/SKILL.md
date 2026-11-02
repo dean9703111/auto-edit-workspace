@@ -1,6 +1,6 @@
 ---
 name: auto-edit-style
-description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
+description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「講者設定成…」「不要講者介紹」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
 version: 0.1.0
 ---
 # 換風格
@@ -105,6 +105,17 @@ node shared/template/tools/build.mjs --project projects/<專案>
 先跑 list 把清單貼給使用者（也可以請他打開 `shared/template/index.html`，上方「風格」選單可以直接預覽每一包、亮／暗）。只換這一集：重新讀 plan.json，在第一層寫 `"style": "<名稱>"`（不跑 use）；換回工作區目前的就刪掉 `style`。整個工作區換：跑 use（之後每集都用它）。這一步不用停點 ⑥（風格包已經是使用者同意過的檔）。
 完成判準：只換一集時 build 印 `風格包：<名稱>`；整個換時 list 的 ● 在那一包；build 0 個 ✖。
 常見錯誤：`✖ style：找不到風格包` → 名稱照 list 抄（資料夾名，含中文）；use 說「不屬於任何包」→ 先 pack 存起來，不要直接加 `--force`。
+
+**8. 講者資料**（使用者說「講者設定成 <姓名>，頭銜 …」「不要講者介紹」，或 `status.mjs`／`--check` 印「還沒設定講者」而使用者給了資料時）
+
+```
+node shared/template/tools/brand.mjs speaker --name "<姓名>" --titles "<頭銜1>,<頭銜2>" [--short "<金句出處>"]
+node shared/template/tools/brand.mjs speaker
+```
+
+寫 `shared/講者.json`（不進版控；14 講者介紹不寫 `name`、`titles` 就用它，15 金句不寫 `by` 用 `short`）。頭銜用逗號或「、」分開；只改頭銜就只給 `--titles`。不要講者介紹：`brand.mjs speaker off`。姓名、頭銜一定是使用者給的，不要從講稿或頻道名猜；這一步不用停點 ⑥。
+完成判準：第 2 行印 `講者：<姓名>…`；有專案時重跑 build 0 個 ✖、沒有「還沒設定講者」的 ⚠。
+常見錯誤：`✖ 講者資料不對：… 最多 6 字` → 把超過的頭銜唸給使用者、請他給短一點的，不要自己縮。
 
 ## 停點
 

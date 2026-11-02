@@ -85,7 +85,7 @@
        <span class="sc-slant sc-slant--paper sc-lt__kw"><span id="kWord" class="sc-t56 sc-w900 sc-opt">大幅減少 AI 幻覺</span></span>
        （高 88、斜切 24；標籤斜率 0.2727 與它平行）
      兩列卡零件：.sc-lt__mark--line／--solid（64 方標：問句安靜、答案主色底）、.sc-lt__divider（2px）
-     講者介紹零件：.sc-lt__name（姓名板：左 8px 主色直條＋右斜切 24、80／900，<span id="spkName" class="sc-optr">林鼎淵</span>）、
+     講者介紹零件：.sc-lt__name（姓名板：左 8px 主色直條＋右斜切 24、80／900，<span id="spkName" class="sc-optr">林大寶</span>）、
        .sc-lt__meta > .sc-lt__metaitem（[<i class="sc-lt__sq"></i>]＋<span class="sc-optr">頭銜</span>，40／700、方塊 10×10、間距 24）
      置中卡（總結）：#id { left: 8px; right: 0; margin: 0 auto; bottom: 220px; }——外框盒比主卡多右側 8（底板），
        在 8–1920 置中＝主卡中心剛好 960；寬度由 scene-motion 補成偶數，左右緣都是整數（實測主卡 407–1513）

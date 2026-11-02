@@ -46,6 +46,7 @@ import { buildMain, buildPreview, KIT_LINKS, withTheme } from './lib/main.mjs';
 import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, blackDetect, extractFrames } from './lib/ff.mjs';
 import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
+import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
 import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip } from './lib/audio.mjs';
 import { ensureLook, lookCheck } from './lib/look.mjs';
 import { hyperframesVersion, versionLine } from './caps.mjs';
@@ -529,6 +530,9 @@ export function build(flags, { log = console.log } = {}) {
   const versions = { hyperframes: { pinned: hfv.pinned, installed: hfv.installed, ok: hfv.ok } };
   const lib = loadLib(P.templateDir);
   if (!lib.scenes.length) throw new Error(`找不到情境模板：${rel(path.join(P.templateDir, 'scenes'))}`);
+  // 講者資料（shared/講者.json）：14 講者介紹的姓名、頭銜與 15 金句的出處預設值；沒設定就用 scene.json 的示範人物並提醒
+  const speaker = readSpeaker(P.templateDir);
+  lib.scenes = applySpeaker(lib.scenes, speaker);
   const planHash = createHash('sha1').update(fs.readFileSync(P.plan)).digest('hex').slice(0, 8);
   // 講者調光＋瘦臉（006 的 ensureLook）：build 才做；瘦臉底片過期而且能跑時丟錯停下來（裁決 D4，contracts/look.md §3；✖ 原文是 006 的）
   const look = !flags.check && P.project ? ensureLook({ projectDir: P.project, plan, log, templateDir: P.templateDir, strict: true }) : null;
@@ -554,9 +558,10 @@ export function build(flags, { log = console.log } = {}) {
     const rb = roughBlackCheck(projectDir, voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log), projectRel);
     const voiceOnly = rb.voiceOnly;
     const res = resolvePlan(ctx(videoDur, voiceOnly));
-    res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res));
+    const spk = speakerIssues(speaker, res);
+    res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res), ...spk.errors);
     const capW = captionWarnings(cues, C);
-    res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, src, C), ...textSyncOffWarnings(P, plan));
+    res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, src, C), ...textSyncOffWarnings(P, plan), ...spk.warnings);
     if (P.project && res.tm) {
       const lc = lookCheck({ projectDir: P.project, plan, templateDir: P.templateDir });
       res.errors.push(...lc.errors.filter((e) => !res.errors.includes(e)));
@@ -613,8 +618,9 @@ export function build(flags, { log = console.log } = {}) {
   }
   const rb = roughBlackCheck(projectDir, voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log), projectRel);
   const res = resolvePlan(ctx(videoDur, rb.voiceOnly));
-  res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res));
-  res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, assetVideo, C), ...textSyncOffWarnings(P, plan));
+  const spk = speakerIssues(speaker, res);
+  res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res), ...spk.errors);
+  res.warnings.unshift(...cp.warnings, ...boxWarnings(plan, assetVideo, C), ...textSyncOffWarnings(P, plan), ...spk.warnings);
   // 人聲響度、音效比例（005 的 sfxBudget）、剪接點微淡化；音效比例的 ⚠ 已在 warnings 裡就不重印
   for (const l of audioReportLines(audioInfo, { ...audioOpts, cutpointsExist: cp.list.length > 0, sfx: res.sfxBudget })) {
     if (!(l.startsWith('⚠ ') && res.warnings.includes(l.slice(2)))) log(l);

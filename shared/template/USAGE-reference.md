@@ -322,7 +322,7 @@
 
 ```json
 { "id": "s04", "scene": "quote", "from": "#32", "to": "#33e",
-  "slots": { "text": "把踩過的坑//寫成下一次的文件", "by": "鼎淵" },
+  "slots": { "text": "把踩過的坑//寫成下一次的文件", "by": "大寶" },
   "css": "#gCard { left: 120px; right: auto; margin: 0; }" }
 ```
 

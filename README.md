@@ -1,23 +1,82 @@
-# auto-edit-workspace
+<h1 align="center">auto-edit-workspace</h1>
 
-把一支原始口播交給 AI Agent，剪成有字幕、資訊卡、情境動畫、音效的成片。
+<p align="center"><b>AI 自動剪輯工作區：放好素材，用白話文剪成片</b></p>
 
-Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用：守則寫在每個 Agent 都會讀的 `AGENTS.md`，流程寫成 9 支 Skill，真正的剪輯計算交給工作區裡的程式。換哪一個 Agent，剪出來的規格都一樣。
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="Node.js 22+" src="https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white">
+  <img alt="HyperFrames 0.8.221" src="https://img.shields.io/badge/HyperFrames-0.8.221-F6630F">
+  <img alt="macOS | Windows" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-555">
+  <img alt="Claude Code | Codex | MiniMax Code | Cursor" src="https://img.shields.io/badge/agents-Claude%20Code%20%7C%20Codex%20%7C%20MiniMax%20Code%20%7C%20Cursor-111830">
+</p>
 
-- 官網與情境庫：https://dean9703111.github.io/auto-edit-workspace/
-- 影片教學「AI 自動剪輯 EP1」：待補
+<p align="center">
+  <a href="https://deanlin.net/auto-edit-workspace/"><img src="dev/site/og-image.jpg" alt="auto-edit-workspace：放好素材，用白話文剪成片" width="800"></a>
+</p>
+
+<p align="center">
+  <a href="https://deanlin.net/auto-edit-workspace/">官網</a> ·
+  <a href="https://deanlin.net/auto-edit-workspace/shared/template/">情境庫</a> ·
+  <a href="https://deanlin.net/auto-edit-workspace/shared/template/fx/">字卡動態</a> ·
+  <a href="PROMPTS.md">提示詞</a> ·
+  <a href="#常見問題">常見問題</a>
+</p>
+
+準備好影片、聲音、圖片這些素材，**用白話文跟 AI 說「剪乾淨」「做成片」**，它就幫你剪掉講錯的地方、上字幕、加資訊卡和動畫、配音效。每一步都會停下來給你看，不滿意的地方再用一句話微調。
+
+Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用：守則寫在每個 Agent 都會讀的 `AGENTS.md`，流程寫成 9 支 Skill，真正的剪輯計算交給工作區裡的程式。換哪一個 Agent，剪出來的規格都一樣。工作區開源免費，影片的轉檔、轉字幕、render 都在你自己的電腦上做。
+
+> **English** — An open-source AI video editing workspace for talking-head videos. Drop in your footage, voice-over, screen recordings and images, then tell your AI agent (Claude Code, Codex, MiniMax Code or Cursor) in plain language to "cut it clean" or "make the final cut": it removes flubbed takes, aligns subtitles to your script, adds info cards, scene animations and sound effects, and renders an MP4 (or CapCut-ready layers). Built on [HyperFrames](https://github.com/heygen-com/hyperframes); docs are in Traditional Chinese.
+
+影片教學「AI 自動剪輯 EP1」：待補
 
 ## 目錄
 
 | 想知道 | 看這幾節 |
 |---|---|
-| 這是什麼、怎麼運作 | [這是什麼](#這是什麼)・[怎麼運作](#怎麼運作)・[支援的 AI Agent](#支援的-ai-agent)・[裡面有什麼](#裡面有什麼) |
-| 第一次使用 | [事前準備](#事前準備)・[怎麼開始](#怎麼開始)・[預覽情境庫](#預覽情境庫) |
+| 能做什麼 | [用說的就能剪片](#用說的就能剪片)・[哪些細節可以微調](#哪些細節可以微調) |
+| 背後怎麼運作 | [這是什麼](#這是什麼)・[怎麼運作](#怎麼運作)・[支援的 AI Agent](#支援的-ai-agent)・[裡面有什麼](#裡面有什麼) |
+| 第一次使用 | [事前準備](#事前準備)・[怎麼開始](#怎麼開始)・[設定講者](#設定講者)・[預覽情境庫](#預覽情境庫) |
 | 剪自己的影片 | [開自己的專案](#開自己的專案)・[錄影前檢查](#錄影前檢查) |
 | 換成自己的風格 | [風格包](#換成自己的風格)・[換主色](#換主色)・[換背景圖](#換背景圖)・[講者調光、瘦臉](#講者調光瘦臉選用) |
 | 到剪映繼續剪 | [搭配剪映](#搭配剪映選用) |
 | 卡住了 | [常見問題](#常見問題)・[PROMPTS.md「卡住的時候」](PROMPTS.md) |
-| 其他 | [授權](#授權)・[作者](#作者) |
+| 其他 | [回報問題與貢獻](#回報問題與貢獻)・[授權](#授權)・[作者](#作者) |
+
+## 用說的就能剪片
+
+不用學剪輯軟體，也不用寫程式。三個步驟：
+
+1. **放素材**：口播影片放 `素材/真人錄影/`，只有聲音的旁白放 `素材/聲音/`，螢幕錄影、截圖、照片各有資料夾。有講稿的話，字幕會更準。
+2. **說一句話**：用平常說話的方式告訴 AI 要做什麼。
+3. **看預覽、再用一句話改**：AI 做到重要的地方會停下來給你看，你說「可以」它才往下。
+
+| 你說 | AI 會做 |
+|---|---|
+| 「剪乾淨」 | 找出講錯重講、卡住的句子剪掉，縮短停頓，照講稿上字幕 |
+| 「做成片」 | 看每段在講什麼，配上資訊卡、情境動畫、子母畫面和音效，人聲音量調到一致 |
+| 「配螢幕錄影」 | 把操作畫面插到講到的那一段，放大、框出重點 |
+| 「可以了，輸出成片」 | 輸出 `final.mp4`，附上驗收截圖 |
+| 「輸出剪映素材」 | 拆成主軌、透明背景的動畫片段和字幕檔，帶去剪映繼續剪 |
+
+情境動畫長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看。
+
+## 哪些細節可以微調
+
+AI 先做一版，你決定要不要改。大部分只要說一句話；字幕和音量也可以打開「剪輯台」自己拖。
+
+| 想調整 | 怎麼說（例） | 說明 |
+|---|---|---|
+| 哪些地方要剪 | 「第 3 列不要剪」 | 剪輯清單逐條列出要剪的句子和原因，你確認後才剪 |
+| 字幕 | 「打開剪輯台」 | 改錯字、拆句、合併、拖時間；你改過的字幕 AI 不會再改回去 |
+| 畫面放大 | 「用 1.15 倍」 | 構圖有 1.0／1.15／1.3 三種倍率，先給你看預覽圖 |
+| 某一段的卡片 | 「s05 往左移」「s09 字太多」 | 只改那一段，改前改後都存版本 |
+| 某一段的動畫 | 「s12 重新設計」「s12 用 v1」 | 先出新的動畫分鏡給你確認；不喜歡可以退回舊版，也有左右對照影片 |
+| 音效、配樂 | 「s08 不要音效」「結尾加配樂」 | 音效只從內建的音效庫挑，也能在剪輯台調音量 |
+| 講者畫面 | 「這集要調光、瘦臉」 | 預設關閉；剪輯台有開關和強度滑桿 |
+| 主色、背景、亮暗 | 「這集換暗色」「換成藍圖風格」 | 見[換成自己的風格](#換成自己的風格) |
+| 講者名字 | 「講者設定成林大寶，頭銜…」 | 見[設定講者](#設定講者)，設定一次就好 |
+| 橫式／直式 | 「做成直式短影片」 | 長片用橫式；Shorts、Reels、抖音用直式，字幕和版面自動換 |
 
 ## 這是什麼
 
@@ -119,9 +178,23 @@ flowchart LR
 
 [PROMPTS.md](PROMPTS.md) 的畫面說明以 MiniMax Code 為例，提示詞本身每個 Agent 都能貼；要「重開 MiniMax Code」的地方，換成重開你用的 Agent。
 
+## 設定講者
+
+講者介紹卡（14）會顯示你的名字和頭銜，金句卡（15）會署你的名字。這些是你個人的資料，放在 `shared/講者.json`：每個人本機各一份，**不會進 git**，之後更新工作區也不會被蓋掉。
+
+第一次使用時跟 AI 說：
+
+```
+講者設定成林大寶，頭銜影音創作者、科技部落客、線上課程講師
+```
+
+或自己跑 `node shared/template/tools/brand.mjs speaker --name "林大寶" --titles "影音創作者,科技部落客,線上課程講師"`（姓名最多 5 字；頭銜 1–3 個，每個最多 6 字）。不想要講者介紹卡就說「不要講者介紹」（`brand.mjs speaker off`）。
+
+還沒設定時，講者介紹卡會顯示示範人物「林大寶」，AI 接手專案和檢查 plan.json 時都會提醒你。請來賓的那一集，AI 會在那一段另外寫來賓的名字，不影響你的設定。
+
 ## 預覽情境庫
 
-想先看成片會長什麼樣子，到[官網的情境庫](https://dean9703111.github.io/auto-edit-workspace/shared/template/)，或在本機打開 `shared/template/index.html`。建議用 Chrome 或 Edge 開。
+想先看成片會長什麼樣子，到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)，或在本機打開 `shared/template/index.html`。建議用 Chrome 或 Edge 開。
 
 頁面上方有兩個切換：「風格」換風格包（主色＋背景圖），「亮色／暗色」換主題，所有預覽一起變，還沒開始剪就能比較哪一套適合你。
 
@@ -148,7 +221,7 @@ projects/EP2/
 - **螢幕錄影**：操作畫面，預設靜音插入。AI 可以依口播加運鏡、紅框、放大鏡。
 - **圖片**：截圖、照片，插入影片中。
 
-講稿存成 `講稿.md`；沒有講稿也可以，AI 只會轉繁體、補標點。場地照不用準備，AI 會從你的影片自動截。`shared/style.md` 是剪輯風格，不要換掉，只要把裡面「講者」那一節改成你的名字和頭銜（留空就不會出現講者介紹卡）。
+講稿存成 `講稿.md`；沒有講稿也可以，AI 只會轉繁體、補標點。場地照不用準備，AI 會從你的影片自動截。講者介紹卡的名字和頭銜照[設定講者](#設定講者)設定一次就好。
 
 提示詞要指定專案，例如 `@projects/EP2`，AI 一次只處理一個專案。
 
@@ -230,6 +303,12 @@ Skill 文件寫的參數名稱，可能和你裝的版本不同。以 `auto-edit
 
 TTS、BGM、Docker 都是選用功能，這個工作區用不到。只有這幾項失敗的話，可以略過。
 
+
+## 回報問題與貢獻
+
+- 遇到問題：到 [Issues](https://github.com/dean9703111/auto-edit-workspace/issues) 回報，附上用的 Agent、作業系統，以及工具印出的 ✖ 那一行原文。
+- 想加新的情境模板、字卡動態或風格包：先開 Issue 討論，再送 Pull Request。模板的寫法在 `shared/template/USAGE-reference.md` R14，送之前跑一次 `node --test dev/tests/*.test.mjs`。
+- 換成 Claude Code、Codex、MiniMax Code、Cursor 以外的 Agent 也能用的話，歡迎分享經驗。
 
 ## 授權
 

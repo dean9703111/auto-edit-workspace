@@ -242,7 +242,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
       "slots": { "eyebrow": "字幕流程", "title": "**Whisper** 轉字幕//再請 AI 校對",
         "items": [ "轉成 **SRT** 字幕檔", { "text": "AI 檢查錯字", "at": "#19" }, { "text": "專有名詞留英文", "at": "#21" } ] } },
     { "id": "s04", "scene": "quote", "from": "#32", "to": "#33e", "anchor": "踩過的坑",
-      "slots": { "text": "把踩過的坑//寫成下一次的文件", "by": "鼎淵" },
+      "slots": { "text": "把踩過的坑//寫成下一次的文件", "by": "大寶" },
       "css": "#gCard { left: 120px; right: auto; margin: 0; }", "note": "Studio：擋到手勢，移到左半邊" } ] }
 ```
 
@@ -318,7 +318,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 - 動畫不重述口播，只留看一眼就懂的重點；完整句子交給字幕。同一張卡文字元素 ≤ 6 個（不含圖示）。標籤、條列詞 ≤ 6 字，能用一個名詞就不用片語（「回覆客戶信件」→「回信」）。
 - 忠於口播：數字、專有名詞照講稿，不自編案例、數字、職稱。技術名詞保留英文，中英文之間加半形空格（`**Whisper** 轉字幕`）。
 - 金句盡量用原句的詞；原句太長就取後半的翻轉句（例：「靠的不是哪一個工具，而是把每一次踩過的坑都寫成下一次可以直接用的文件」→「把踩過的坑//寫成下一次的文件」）。
-- 14 講者介紹：`name`、`titles` 照 `shared/style.md` 的「講者」一節寫，不要用模板預設值。那一節空白就不放 14；字幕自我介紹的名字和 style.md 不同時，先問使用者。
+- 14 講者介紹：`name`、`titles` 不寫＝`shared/講者.json` 的講者資料（`shared/style.md`「講者」）。`--check` 印「還沒設定講者」→ 先問使用者姓名與頭銜，跑 `brand.mjs speaker` 設定，不要自己編；`講者.json` 是 `{ "off": true }` 就不放 14。來賓或字幕自我介紹的名字和講者資料不同時，先問使用者再在這段寫 `name`、`titles`。
 
 ## 4. 常見錯誤與狀況
 

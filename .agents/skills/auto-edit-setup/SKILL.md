@@ -77,6 +77,16 @@ node shared/template/tools/caps.mjs
 完成判準：能力表貼在總表下面。
 常見錯誤：結束碼 1（Chrome、ffmpeg／ffprobe、HyperFrames 有一項不可用）→ 回 S3／S6 補；codex、mmx 不可用不影響。
 
+**5. 講者資料**（只讀）
+
+```
+node shared/template/tools/brand.mjs speaker
+```
+
+印 `⚠ 還沒設定講者` → 總表下面加一行請使用者給姓名與頭銜（或說「不要講者介紹」），收到後照 `auto-edit-style` 步驟 8 設定；不擋「環境準備完成」。
+完成判準：總表下面有「講者：<姓名>」或「講者：還沒設定」一行。
+常見錯誤：印 `✖ shared/講者.json：…` → 檔案被手改壞了，照它印的 → 重新設定（不要刪 `講者.json` 以外的檔）。
+
 ## 自我核對
 
 - [ ] 安裝清單只問一次
@@ -113,5 +123,6 @@ node shared/template/tools/caps.mjs
 | 9 支 auto-edit Skill | ✅ | .claude/skills/、~/.minimax/skills/ |
 （其他項目）
 能力表：<caps.mjs 的表>
+講者：<brand.mjs speaker 印的姓名｜還沒設定，請給我姓名與頭銜（或說「不要講者介紹」）>
 可以貼第二個提示詞了。
 ```

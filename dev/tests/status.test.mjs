@@ -84,7 +84,8 @@ test('停點紀錄：同一停點以最後一列為準；待回覆的停點蓋�
   assert.deepEqual(lines.map((l) => l.split('：')[0]), ['版式', '專案', '目前在', '下一步', '下一個停點', '待回覆停點', '下一輪回饋編號', '依據']);
   assert.match(lines[0], /^版式：橫式 1920×1080（來源：/);
   const j = JSON.parse(spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p, '--json'], { encoding: 'utf8' }).stdout);
-  assert.deepEqual(Object.keys(j), ['project', 'stage', 'at', 'next', 'cmd', 'nextStop', 'waiting', 'feedback', 'evidence', 'format', 'formatSource']);
+  assert.deepEqual(Object.keys(j), ['project', 'stage', 'at', 'next', 'cmd', 'nextStop', 'waiting', 'feedback', 'evidence', 'format', 'formatSource', 'speaker']);
+  assert.ok(['set', 'off', 'unset', 'bad'].includes(j.speaker));
   assert.deepEqual(snapshot(p), before, '跑完前後檔案與修改時間不變');
   fs.rmSync(p, { recursive: true });
 });

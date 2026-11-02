@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<!-- 官網分享預覽圖（1200×630）的來源：node dev/tools/og-image.mjs 截成 dev/site/og-image.jpg -->
+<style>
+  @font-face { font-family: "Noto Sans TC"; src: url("../../../shared/template/kit/fonts/NotoSansTC-VF.woff2") format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Google Sans Flex"; src: url("../../../shared/template/kit/fonts/GoogleSansFlex-VF.woff2") format("woff2"); font-weight: 100 1000; }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #070B14; }
+  body { font-family: "Google Sans Flex", "Noto Sans TC", sans-serif; color: #fff; position: relative; }
+  .glow { position: absolute; inset: 0; background: radial-gradient(600px 420px at 85% 30%, rgba(246, 99, 15, 0.28), transparent 70%); }
+  .text { position: absolute; left: 64px; top: 64px; width: 560px; }
+  .eyebrow { font-size: 22px; font-weight: 800; color: #F6630F; letter-spacing: 0.04em; }
+  h1 { margin: 18px 0 0; font-size: 76px; line-height: 1.12; font-weight: 900; }
+  h1 em { font-style: normal; color: #F6630F; }
+  .chips { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .chips span { font-size: 22px; font-weight: 700; padding: 6px 16px; border-radius: 999px; background: #111830; border: 1px solid #1E2740; color: #DCE1EC; }
+  .foot { position: absolute; left: 64px; bottom: 52px; font-size: 21px; color: #A3ACC2; }
+  .foot b { color: #fff; }
+  .shot { position: absolute; right: 56px; top: 118px; width: 520px; border-radius: 16px; overflow: hidden; border: 1px solid #1E2740; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+  .shot img { display: block; width: 100%; }
+  .mark { position: absolute; right: 64px; bottom: 52px; font-size: 24px; font-weight: 900; }
+  .mark span { color: #F6630F; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="text">
+    <div class="eyebrow">開源 · AI 自動剪輯工作區</div>
+    <h1>放好素材<br><em>用白話文剪成片</em></h1>
+    <div class="chips"><span>剪掉 NG</span><span>照講稿上字幕</span><span>資訊卡</span><span>情境動畫</span><span>音效</span></div>
+  </div>
+  <div class="shot"><img src="../../../shared/template/gallery/03-side-panel.jpg" alt=""></div>
+  <div class="foot">支援 <b>Claude Code</b> · <b>Codex</b> · <b>MiniMax Code</b> · <b>Cursor</b></div>
+  <div class="mark">auto-edit<span>-</span>workspace</div>
+</body>
+</html>

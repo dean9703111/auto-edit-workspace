@@ -14,7 +14,7 @@
 | 分鏡表確認後做情境動畫 | `auto-edit-motion` |
 | 定稿、Studio 修改、「打開剪輯台」、「s12 重新設計」「s12 用 v1」 | `auto-edit-review` |
 | 「可以了，輸出成片」「輸出剪映素材」 | `auto-edit-deliver` |
-| 「換風格」「換主色」「換背景」「換暗色」「有哪些風格」「這集用 XX 風格」 | `auto-edit-style` |
+| 「換風格」「換主色」「換背景」「換暗色」「有哪些風格」「這集用 XX 風格」「講者設定成…」 | `auto-edit-style` |
 
 優先序：我當下的話 > 本檔 > `shared/style.md` > `shared/template/USAGE.md` > `USAGE-reference.md`、`SITUATIONS.md`、`REVIEW.md` > Skill；派工時派工訊息 > Skill。
 
@@ -37,7 +37,7 @@ projects/<專案>/
 └─ 成片/              final.mp4、測試片段/、驗收截圖/
 ```
 
-**接手**：我說「繼續」或你不確定做到哪時，先跑 `node shared/template/tools/status.mjs --project projects/<專案>`，照它印的「下一步」做（「下一步」下面有單獨一行指令時，整行複製執行）；有待回覆停點就重貼那個停點。
+**接手**：我說「繼續」或你不確定做到哪時，先跑 `node shared/template/tools/status.mjs --project projects/<專案>`，照它印的「下一步」做（「下一步」下面有單獨一行指令時，整行複製執行）；有待回覆停點就重貼那個停點。它最後印「講者：⚠ 還沒設定」時，在回報裡問我姓名與頭銜（不擋流程，不要自己編）。
 
 ## 版式（橫式／直式）
 
@@ -81,7 +81,7 @@ projects/<專案>/
 
 ## 規則
 
-1. 不要覆寫、移動或刪除 `projects/*/素材/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）。要刪除 `work/` 以外的檔案前，先問我。
+1. 不要覆寫、移動或刪除 `projects/*/素材/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/講者.json`。要刪除 `work/` 以外的檔案前，先問我。
 2. 停點只有六個，照「停點總表」；停下來時回覆最後一行照固定格式。我說「不用停」「跑到停點 N」才連跑。
 3. 安裝新工具前，先告訴我指令和用途，等我同意再執行。照 `setup/` 手冊做時，整份清單問一次就好。
 4. 字幕以專案的 `講稿.md` 為準：一則＝講稿的一行（完整語句），由 `media.mjs srt-align` 照講稿排、對時間，不要自己拆句，之後只改講稿本身的錯字；顯示時去掉「，」「。」「；」「：」，保留「、」「！」「？」；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿就只轉繁體、照語音的句子切成完整子句，不要自己猜內容。
@@ -257,14 +257,15 @@ projects/<專案>/
 
 ## 換風格
 
-我說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「換暗色」「換主題」時（`auto-edit-style`）：
+我說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「換暗色」「換主題」「講者設定成…」時（`auto-edit-style`）：
 
 0. 風格包（`shared/template/styles/<名稱>/`＝主色＋外框＋亮暗背景）：我問「有哪些風格」先跑 `node shared/template/tools/brand.mjs list`；「這集用 XX 風格」只在這一集 plan.json 第一層寫 `"style": "<名稱>"`；「整個換成 XX」「換回預設」跑 `node shared/template/tools/brand.mjs use <名稱>`。內建「預設」（橘色）和示範「藍圖」（藍色）；情境庫 `shared/template/index.html` 上方的「風格」「暗色」可以直接預覽。
 1. 主色：`node shared/template/tools/brand.mjs "#RRGGBB"`。我給色名就先轉成色碼，回報用了哪個；對比值與警告原文貼給我。
 2. 背景圖：我有給圖就直接縮放裁切。沒有就跑 `node shared/template/tools/caps.mjs`，能力表貼給我，照「可用的生圖路線」與 `USAGE-reference.md` R9.3 選（HTML 路線：`node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs`）；沒裝的不裝、沒登入的不幫我登入；全部不行就只換主色並說明原因。三張先放暫存資料夾，檢查尺寸（1920×1080、960×1080、1920×1080）、產生留空區預覽與並排圖 → 停點 ⑥；我同意才存成風格包 `node shared/template/tools/brand.mjs pack <名稱> --color "#RRGGBB" --bg <暫存資料夾>`，再照我要的範圍 `use`（整個工作區）或寫 plan.json `style`（這一集）。
 3. 講者調光、瘦臉：預設都關（`kit/look.json` 兩個 0）。我說「這集要調光、瘦臉」就寫 plan.json 的 `look`（建議 `{ "color": 0.8, "slim": 0.6 }`）；說「以後都要調光」「預設瘦一點」才改 `shared/template/kit/look.json` 的 `color`（0–1）或 `slim`（0–1.2）。
 4. 主題：我說「換暗色」「換主題」時，只改這一集 plan.json 第一層的 `"theme"`（`"light"`＝預設、`"dark"`），不改 `shared/`。
-5. 改完告訴我改了哪些檔、走哪一條路，我會重新打開 `shared/template/index.html` 預覽。
+5. 講者：我說「講者設定成 <姓名>，頭銜 …」就跑 `node shared/template/tools/brand.mjs speaker --name "<姓名>" --titles "<頭銜1>,<頭銜2>"`（寫 `shared/講者.json`，不進版控）；「不要講者介紹」跑 `brand.mjs speaker off`。字數超過工具會擋，照它印的改短再問我。
+6. 改完告訴我改了哪些檔、走哪一條路，我會重新打開 `shared/template/index.html` 預覽。
 
 ## 環境準備
 

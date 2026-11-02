@@ -3,7 +3,7 @@
 //
 //   node dev/tools/build-site.mjs [--out <資料夾>]     預設 _site（.github/workflows/pages.yml 用同一支）
 //
-// 網站根目錄＝dev/site/ 的首頁；情境庫與音效照 repo 的路徑放（shared/template/、shared/sfx/），
+// 網站根目錄＝dev/site/ 的首頁（含 og-image.jpg 分享預覽圖、llms.txt 給 AI 搜尋的摘要）＋產生的 sitemap.xml；情境庫與音效照 repo 的路徑放（shared/template/、shared/sfx/），
 // 情境庫裡的 ../sfx/、../../NOTICE.md 這些相對連結才連得到。shared/template/ 的 tools/、vendor/ 不上網站。
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,6 +26,12 @@ fs.cpSync(TPL, path.join(out, 'shared', 'template'), { recursive: true, filter: 
 fs.cpSync(path.join(WS, 'shared', 'sfx'), path.join(out, 'shared', 'sfx'), { recursive: true });
 for (const f of ['NOTICE.md', 'LICENSE']) fs.copyFileSync(path.join(WS, f), path.join(out, f));
 fs.writeFileSync(path.join(out, MARK), '');   // GitHub Pages 不跑 Jekyll（底線開頭的檔案才不會被略過）
+
+// SEO：sitemap.xml（網址是 deanlin.net 的正式網址；github.io 會 301 轉過去）。robots.txt 要放在網域根目錄（deanlin.net 那個 repo），這裡不放
+const SITE = 'https://deanlin.net/auto-edit-workspace/';
+const today = new Date().toISOString().slice(0, 10);
+const pages = [['', '1.0'], ['shared/template/', '0.8'], ['shared/template/fx/', '0.6']];
+fs.writeFileSync(path.join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages.map(([p, pr]) => `  <url><loc>${SITE}${p}</loc><lastmod>${today}</lastmod><priority>${pr}</priority></url>`).join('\n')}\n</urlset>\n`);
 
 const show = (p) => (p.startsWith(WS + path.sep) ? path.relative(WS, p) : p);
 let n = 0, bytes = 0;

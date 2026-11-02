@@ -6,6 +6,9 @@ projects/範例/成片/
 !projects/範例-直式/
 projects/範例-直式/work/
 projects/範例-直式/成片/
+# 講者資料（創作者自己的姓名、頭銜）：每個人本機各一份，範本是 shared/講者.example.json
+shared/講者.json
+
 node_modules/
 *.log
 .DS_Store

@@ -3,13 +3,192 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>auto-edit-workspace｜AI 自動剪輯工作區</title>
-<meta name="description" content="把一支原始口播交給 AI Agent，剪成有字幕、資訊卡、情境動畫、音效的成片。Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。">
-<meta property="og:title" content="auto-edit-workspace｜AI 自動剪輯工作區">
-<meta property="og:description" content="AI 負責判斷，程式負責計算：逐字稿、NG、字幕、情境動畫、音效一次做好。">
-<meta property="og:image" content="https://dean9703111.github.io/auto-edit-workspace/shared/template/gallery/03-side-panel.jpg">
+<title>AI 自動剪輯工作區：用白話文剪片、上字幕、加動畫｜auto-edit-workspace</title>
+<meta name="description" content="開源的 AI 自動剪輯工作區。放好影片、聲音、圖片，跟 Claude Code、Codex、MiniMax Code、Cursor 說「剪乾淨」「做成片」，就能剪掉 NG、照講稿上字幕、加資訊卡和情境動畫、配音效，輸出 MP4 或剪映素材。">
+<meta name="author" content="林鼎淵（Dean Lin）">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#070B14">
+<link rel="canonical" href="https://deanlin.net/auto-edit-workspace/">
+<link rel="sitemap" type="application/xml" href="sitemap.xml">
+<link rel="alternate" type="text/plain" title="llms.txt" href="llms.txt">
 <meta property="og:type" content="website">
-<link rel="icon" href="data:,">
+<meta property="og:site_name" content="auto-edit-workspace">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:url" content="https://deanlin.net/auto-edit-workspace/">
+<meta property="og:title" content="AI 自動剪輯工作區：用白話文剪片、上字幕、加動畫">
+<meta property="og:description" content="放好素材，跟 AI 說「剪乾淨」「做成片」：剪掉 NG、照講稿上字幕、加資訊卡和情境動畫、配音效。每一步停下來給你看，細節一句話就能改。開源免費。">
+<meta property="og:image" content="https://deanlin.net/auto-edit-workspace/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="auto-edit-workspace：放好素材，用白話文剪成片">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AI 自動剪輯工作區：用白話文剪片、上字幕、加動畫">
+<meta name="twitter:description" content="放好素材，跟 AI 說「剪乾淨」「做成片」，剪 NG、字幕、資訊卡、情境動畫、音效一次做好。開源免費。">
+<meta name="twitter:image" content="https://deanlin.net/auto-edit-workspace/og-image.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F6630F'/%3E%3Cpath d='M25 19l21 13-21 13z' fill='%23fff'/%3E%3C/svg%3E">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "WebSite",
+   "@id": "https://deanlin.net/auto-edit-workspace/#website",
+   "url": "https://deanlin.net/auto-edit-workspace/",
+   "name": "auto-edit-workspace",
+   "alternateName": "AI 自動剪輯工作區",
+   "inLanguage": "zh-Hant",
+   "publisher": {
+    "@id": "https://deanlin.net/auto-edit-workspace/#author"
+   }
+  },
+  {
+   "@type": "SoftwareApplication",
+   "@id": "https://deanlin.net/auto-edit-workspace/#app",
+   "name": "auto-edit-workspace",
+   "alternateName": "AI 自動剪輯工作區",
+   "url": "https://deanlin.net/auto-edit-workspace/",
+   "description": "開源的 AI 自動剪輯工作區：放好影片、聲音、圖片，用白話文跟 AI Agent 說「剪乾淨」「做成片」，就能剪掉 NG、上字幕、加資訊卡與情境動畫、配音效，輸出 MP4 或剪映素材。",
+   "applicationCategory": "MultimediaApplication",
+   "applicationSubCategory": "AI 影片剪輯",
+   "operatingSystem": "macOS, Windows",
+   "inLanguage": "zh-Hant",
+   "isAccessibleForFree": true,
+   "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TWD"
+   },
+   "license": "https://opensource.org/licenses/MIT",
+   "downloadUrl": "https://github.com/dean9703111/auto-edit-workspace/archive/refs/heads/main.zip",
+   "softwareRequirements": "Node.js 22 以上、ffmpeg、whisper.cpp、auto-editor、HyperFrames；Claude Code、Codex、MiniMax Code 或 Cursor",
+   "featureList": [
+    "用白話文指令剪片",
+    "自動找出講錯重講的 NG 並剪掉",
+    "照講稿對齊字幕（詞級時間）",
+    "18 種情境模板、17 支情境動畫、40 種字卡動態",
+    "音效自動對準畫面事件、人聲響度標準化",
+    "橫式長片與直式短影片",
+    "風格包：主色、背景、亮暗主題",
+    "網頁版剪輯台微調字幕與音量",
+    "輸出 MP4 或剪映素材（透明 MOV＋SRT）"
+   ],
+   "screenshot": "https://deanlin.net/auto-edit-workspace/og-image.jpg",
+   "image": "https://deanlin.net/auto-edit-workspace/og-image.jpg",
+   "author": {
+    "@id": "https://deanlin.net/auto-edit-workspace/#author"
+   },
+   "sameAs": [
+    "https://github.com/dean9703111/auto-edit-workspace"
+   ]
+  },
+  {
+   "@type": "SoftwareSourceCode",
+   "@id": "https://deanlin.net/auto-edit-workspace/#code",
+   "name": "auto-edit-workspace",
+   "codeRepository": "https://github.com/dean9703111/auto-edit-workspace",
+   "programmingLanguage": "JavaScript",
+   "runtimePlatform": "Node.js 22",
+   "license": "https://opensource.org/licenses/MIT",
+   "author": {
+    "@id": "https://deanlin.net/auto-edit-workspace/#author"
+   },
+   "targetProduct": {
+    "@id": "https://deanlin.net/auto-edit-workspace/#app"
+   }
+  },
+  {
+   "@type": "Person",
+   "@id": "https://deanlin.net/auto-edit-workspace/#author",
+   "name": "林鼎淵",
+   "alternateName": "Dean Lin",
+   "url": "https://deanlin.net/",
+   "sameAs": [
+    "https://www.facebook.com/deanlinbao",
+    "https://dean-lin.medium.com/",
+    "https://github.com/dean9703111"
+   ]
+  },
+  {
+   "@type": "FAQPage",
+   "@id": "https://deanlin.net/auto-edit-workspace/#faq",
+   "mainEntity": [
+    {
+     "@type": "Question",
+     "name": "auto-edit-workspace 是什麼？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "一個開源的 AI 自動剪輯工作區。把口播影片、旁白、螢幕錄影、圖片放進資料夾，用白話文跟 AI Agent 說「剪乾淨」「做成片」，就會剪掉講錯的地方、照講稿上字幕、加資訊卡和情境動畫、配音效，輸出 MP4。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "需要會剪輯或寫程式嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "不用。所有操作都是跟 AI 用一句話說，例如「剪乾淨」「s05 往左移」「可以了，輸出成片」。AI 做到重要的地方會停下來給你看，你同意才往下。字幕和音量也可以在網頁版剪輯台自己拖。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "要付費嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "工作區本身免費開源（程式碼 MIT 授權），用到的 ffmpeg、whisper、auto-editor、HyperFrames 也都免費。要付費的只有你使用的 AI Agent，依各家方案計費。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "支援哪些 AI Agent？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor，以及其他能在你的電腦上執行指令、讀寫檔案、會讀 AGENTS.md 的 Agent。ChatGPT 網頁版不能在電腦上執行指令，要用 Codex。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "可以剪直式短影片嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "可以。說「做成直式短影片」，或直接給直拍的素材，畫布會換成 1080×1920，字幕、版面、卡片位置都改用直式的規格，適合 YouTube Shorts、Instagram Reels、抖音。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "字幕準確嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "先用 whisper 轉詞級逐字稿；有講稿時，字幕一行就是講稿的一行，時間自動對到講話的那一刻，錯字以講稿為準。沒有講稿時照語音斷句、轉成繁體中文。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "影片會上傳到雲端嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "轉檔、轉字幕、剪接、render 成片都在你的電腦上做，影片檔不會上傳。AI Agent 會讀逐字稿、分鏡截圖這些內容來判斷怎麼剪，這些內容會送到你使用的 Agent 服務。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "可以搭配剪映繼續剪嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "可以。說「輸出剪映素材」，會拆成主軌、每段一支有透明通道的 MOV、字幕檔和排法清單，拖進剪映照時間排好就能繼續調整。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Mac 和 Windows 都能用嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "都能用。說「幫我檢測環境」，AI 會照 Mac 或 Windows 的手冊列出缺的工具，你同意後一步一步裝好。"
+     }
+    }
+   ]
+  }
+ ]
+}
+</script>
 <!-- 官網首頁（dev/tools/build-site.mjs 組站時放在網站根目錄）。主色跟著情境庫的 kit/brand.css 走 -->
 <link rel="stylesheet" href="shared/template/kit/brand.css">
 <style>
@@ -124,8 +303,17 @@
   .steps h3 { margin: 4px 0 0; font-size: 19px; font-weight: 900; }
   .steps p { margin: 0; font-size: 15px; color: var(--muted); }
   .steps .stop { margin-top: auto; padding-top: 8px; font-size: 13px; font-weight: 700; color: var(--accent-text); }
+  .steps.three { grid-template-columns: repeat(3, 1fr); }
   @media (max-width: 960px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 760px) { .steps.three { grid-template-columns: 1fr; } }
   @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+
+  /* 可以微調的地方 */
+  .tunes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+  .tune { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
+  .tune h3 { margin: 0; font-size: 19px; font-weight: 900; }
+  .tune p { margin: 0; font-size: 15px; color: var(--muted); }
+  .tune q { margin-top: auto; padding-top: 6px; font-weight: 700; color: var(--accent-text); quotes: "「" "」"; }
 
   /* 情境卡 */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 20px; }
@@ -170,6 +358,17 @@
   .start p { margin: 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
   .say { color: var(--text); font-weight: 700; }
 
+  /* 常見問題 */
+  .faq { display: grid; gap: 10px; max-width: 880px; }
+  .faq details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 0 20px; }
+  .faq details[open] { border-color: var(--accent); }
+  .faq summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; padding: 16px 0; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; margin-left: auto; font-size: 22px; font-weight: 400; color: var(--accent-text); }
+  .faq details[open] summary::after { content: "−"; }
+  .faq h3 { margin: 0; font-size: 18px; font-weight: 900; }
+  .faq p { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
+
   footer { margin-top: 96px; border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
   footer p { margin: 4px 0; }
   footer a { color: var(--muted); }
@@ -182,11 +381,14 @@
   <div class="wrap">
     <a class="logo" href="#top">auto-edit<span>-</span>workspace</a>
     <ul>
+      <li><a href="#use">怎麼用</a></li>
+      <li><a href="#tune">微調</a></li>
       <li><a href="#how">運作方式</a></li>
       <li><a href="#scenes">情境動畫</a></li>
       <li><a href="#style">換風格</a></li>
       <li><a href="#capcut">搭配剪映</a></li>
       <li><a href="#agents">支援的 Agent</a></li>
+      <li><a href="#faq">常見問題</a></li>
       <li><a href="#start">開始使用</a></li>
       <li><a href="shared/template/index.html">情境庫</a></li>
       <li><a href="shared/template/fx/index.html">字卡動態</a></li>
@@ -199,8 +401,8 @@
   <div class="wrap">
     <div>
       <span class="eyebrow">開源 · AI 自動剪輯工作區</span>
-      <h1><span class="nw">口播交給 AI Agent</span><br><em>剪成會動的成片</em></h1>
-      <p class="lead">找 NG、對字幕、做資訊卡、讓動畫跟著講到的詞出現、配音效。<b>AI 負責判斷，程式負責計算</b>，你只在六個停點做決定。</p>
+      <h1><span class="nw">放好素材</span><br><em>用白話文剪成片</em></h1>
+      <p class="lead">影片、聲音、圖片放進資料夾，跟 AI 說<b>「剪乾淨」「做成片」</b>，它就幫你剪掉講錯的地方、上字幕、加資訊卡和動畫、配音效。每一步都停下來給你看，<b>不滿意再用一句話改</b>。</p>
       <div class="cta">
         <a class="btn primary" href="#start">開始使用</a>
         <a class="btn" href="shared/template/index.html">看完整情境庫 →</a>
@@ -231,6 +433,43 @@
 </div>
 
 <main class="wrap">
+
+<section class="block" id="use">
+  <div class="head">
+    <h2>用說的就能剪片</h2>
+    <p>不用學剪輯軟體，也不用寫程式。放好素材，用平常說話的方式告訴 AI 要做什麼。</p>
+  </div>
+  <ol class="steps three">
+    <li><h3>放素材</h3><p>口播影片、只有聲音的旁白、螢幕錄影、截圖照片，各放進對應的資料夾。有講稿的話，字幕會更準。</p></li>
+    <li><h3>說一句話</h3><p><span class="say">「剪乾淨」</span>、<span class="say">「做成片」</span>、<span class="say">「配螢幕錄影」</span>，不用記指令。</p></li>
+    <li><h3>看預覽、再改</h3><p>做到重要的地方會停下來給你看，你說<span class="say">「可以」</span>才往下；要改就說哪一段、怎麼改。</p></li>
+  </ol>
+  <ul class="rows">
+    <li><b>「剪乾淨」</b><span>找出講錯重講、卡住的句子剪掉，縮短停頓，照講稿上字幕</span></li>
+    <li><b>「做成片」</b><span>看每段在講什麼，配上資訊卡、情境動畫、子母畫面和音效，人聲音量調到一致</span></li>
+    <li><b>「配螢幕錄影」</b><span>把操作畫面插到講到的那一段，放大、框出重點</span></li>
+    <li><b>「可以了，輸出成片」</b><span>輸出 final.mp4，附上驗收截圖</span></li>
+    <li><b>「輸出剪映素材」</b><span>拆成主軌、透明背景的動畫片段和字幕檔，帶去剪映繼續剪</span></li>
+  </ul>
+</section>
+
+<section class="block" id="tune">
+  <div class="head">
+    <h2>細節都能微調</h2>
+    <p>AI 先做一版，你決定要不要改。大部分只要說一句話；字幕和音量也可以打開「剪輯台」自己拖。</p>
+  </div>
+  <div class="tunes">
+    <div class="tune"><h3>哪些地方要剪</h3><p>剪輯清單逐條列出要剪的句子和原因，你確認後才剪。</p><q>第 3 列不要剪</q></div>
+    <div class="tune"><h3>字幕</h3><p>改錯字、拆句、合併、拖時間；你改過的字幕 AI 不會再改回去。</p><q>打開剪輯台</q></div>
+    <div class="tune"><h3>畫面放大</h3><p>1.0／1.15／1.3 三種構圖倍率，先給你看預覽圖再選。</p><q>用 1.15 倍</q></div>
+    <div class="tune"><h3>某一段的卡片</h3><p>移位置、改字、換情境，只動那一段，改前改後都存版本。</p><q>s05 往左移</q></div>
+    <div class="tune"><h3>某一段的動畫</h3><p>先出新的動畫分鏡給你確認；不喜歡可以退回舊版，還有左右對照影片。</p><q>s12 重新設計</q></div>
+    <div class="tune"><h3>音效、配樂</h3><p>從內建音效庫挑，關掉某一段、調音量、片尾加配樂。</p><q>s08 不要音效</q></div>
+    <div class="tune"><h3>講者畫面</h3><p>調光、瘦臉預設關閉；剪輯台有開關和強度滑桿。</p><q>這集要調光、瘦臉</q></div>
+    <div class="tune"><h3>主色、背景、亮暗</h3><p>內建風格包一鍵換，也能做自己的一包。</p><q>這集換暗色</q></div>
+    <div class="tune"><h3>橫式／直式</h3><p>長片用橫式；Shorts、Reels、抖音用直式，字幕和版面自動換。</p><q>做成直式短影片</q></div>
+  </div>
+</section>
 
 <section class="block" id="how">
   <div class="head">
@@ -380,6 +619,24 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <div class="agent"><h3>Cursor</h3><p>自動讀 <code>AGENTS.md</code>。</p><p>直接讀 <code>.agents/skills/</code> 的 Skill 原始檔，不用安裝。</p></div>
   </div>
   <p class="note">其他 Agent：開工時先跟它說「先讀 AGENTS.md」。ChatGPT 網頁版沒辦法在你的電腦上跑指令，要用 Codex。</p>
+</section>
+
+<section class="block" id="faq">
+  <div class="head">
+    <h2>常見問題</h2>
+    <p>第一次用之前大家最常問的幾件事。</p>
+  </div>
+  <div class="faq">
+    <details><summary><h3>auto-edit-workspace 是什麼？</h3></summary><p>一個開源的 AI 自動剪輯工作區。把口播影片、旁白、螢幕錄影、圖片放進資料夾，用白話文跟 AI Agent 說「剪乾淨」「做成片」，就會剪掉講錯的地方、照講稿上字幕、加資訊卡和情境動畫、配音效，輸出 MP4。</p></details>
+    <details><summary><h3>需要會剪輯或寫程式嗎？</h3></summary><p>不用。所有操作都是跟 AI 用一句話說，例如「剪乾淨」「s05 往左移」「可以了，輸出成片」。AI 做到重要的地方會停下來給你看，你同意才往下。字幕和音量也可以在網頁版剪輯台自己拖。</p></details>
+    <details><summary><h3>要付費嗎？</h3></summary><p>工作區本身免費開源（程式碼 MIT 授權），用到的 ffmpeg、whisper、auto-editor、HyperFrames 也都免費。要付費的只有你使用的 AI Agent，依各家方案計費。</p></details>
+    <details><summary><h3>支援哪些 AI Agent？</h3></summary><p>Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor，以及其他能在你的電腦上執行指令、讀寫檔案、會讀 AGENTS.md 的 Agent。ChatGPT 網頁版不能在電腦上執行指令，要用 Codex。</p></details>
+    <details><summary><h3>可以剪直式短影片嗎？</h3></summary><p>可以。說「做成直式短影片」，或直接給直拍的素材，畫布會換成 1080×1920，字幕、版面、卡片位置都改用直式的規格，適合 YouTube Shorts、Instagram Reels、抖音。</p></details>
+    <details><summary><h3>字幕準確嗎？</h3></summary><p>先用 whisper 轉詞級逐字稿；有講稿時，字幕一行就是講稿的一行，時間自動對到講話的那一刻，錯字以講稿為準。沒有講稿時照語音斷句、轉成繁體中文。</p></details>
+    <details><summary><h3>影片會上傳到雲端嗎？</h3></summary><p>轉檔、轉字幕、剪接、render 成片都在你的電腦上做，影片檔不會上傳。AI Agent 會讀逐字稿、分鏡截圖這些內容來判斷怎麼剪，這些內容會送到你使用的 Agent 服務。</p></details>
+    <details><summary><h3>可以搭配剪映繼續剪嗎？</h3></summary><p>可以。說「輸出剪映素材」，會拆成主軌、每段一支有透明通道的 MOV、字幕檔和排法清單，拖進剪映照時間排好就能繼續調整。</p></details>
+    <details><summary><h3>Mac 和 Windows 都能用嗎？</h3></summary><p>都能用。說「幫我檢測環境」，AI 會照 Mac 或 Windows 的手冊列出缺的工具，你同意後一步一步裝好。</p></details>
+  </div>
 </section>
 
 <section class="block" id="start">
