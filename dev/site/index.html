@@ -200,8 +200,8 @@
     --card-2: #111830;
     --line: #1E2740;
     --text: #FFFFFF;
-    --muted: #A3ACC2;
-    --faint: #6B7590;
+    --muted: #B7BFD2;
+    --faint: #8E97AE;
     --good: #2FB36B;
     --accent: var(--brand, #F6630F);
     --accent-ink: var(--brand-ink, #FFFFFF);
@@ -210,8 +210,11 @@
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
+  /* 中文段落避免最後一行只剩一兩個字；標題平衡斷行 */
+  p, li, dd { text-wrap: pretty; }
+  h2, h3 { text-wrap: balance; }
   html { background: var(--page); scroll-behavior: smooth; scroll-padding-top: 72px; }
-  body { margin: 0; background: var(--page); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  body { margin: 0; background: var(--page); color: var(--text); font-family: var(--font); font-size: 18px; line-height: 1.7; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   a { color: var(--accent-text); }
   code { font-family: var(--mono); font-size: 0.9em; background: var(--card-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
   .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
@@ -220,100 +223,124 @@
   /* 導覽列 */
   .nav { position: sticky; top: 0; z-index: 20; background: rgba(7, 11, 20, 0.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
   .nav .wrap { display: flex; align-items: center; gap: 20px; height: 60px; }
-  .logo { font-weight: 900; font-size: 17px; color: var(--text); text-decoration: none; white-space: nowrap; }
+  .logo { font-weight: 900; font-size: 19px; color: var(--text); text-decoration: none; white-space: nowrap; }
   .logo span { color: var(--accent-text); }
   .nav ul { display: flex; gap: 18px; margin: 0 0 0 auto; padding: 0; list-style: none; }
-  .nav ul a { color: var(--muted); text-decoration: none; font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .nav ul a { color: var(--muted); text-decoration: none; font-weight: 700; font-size: 16px; white-space: nowrap; }
   .nav ul a:hover { color: var(--text); }
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px; font-weight: 900; font-size: 16px; text-decoration: none; white-space: nowrap; border: 1px solid var(--line); color: var(--text); background: var(--card); }
   .btn:hover { border-color: var(--accent); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .btn.primary:hover { filter: brightness(1.08); }
-  .nav .btn { padding: 6px 14px; font-size: 14px; }
-  /* 窄螢幕：導覽列換成第二排、可以左右滑的目錄 */
-  @media (max-width: 900px) {
+  .nav .btn { padding: 7px 16px; font-size: 16px; }
+  /* 窄螢幕：導覽列換成第二排、可以左右滑的目錄（連結多，1240 以下就換） */
+  @media (max-width: 1240px) {
     .nav .wrap { flex-wrap: wrap; height: auto; padding-top: 10px; gap: 8px 20px; }
     .nav .btn { margin-left: auto; }
     .nav ul { order: 3; width: 100%; margin: 0; padding: 4px 0 10px; overflow-x: auto; scrollbar-width: none; gap: 8px; }
     .nav ul::-webkit-scrollbar { display: none; }
-    .nav ul a { display: block; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 14px; }
+    .nav ul a { display: block; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 16px; }
   }
-  @media (max-width: 900px) { html { scroll-padding-top: 116px; } }
+  @media (max-width: 1240px) { html { scroll-padding-top: 120px; } }
 
+  /* 字級：小字（13–15）標籤 ↔ 內文（17–20）↔ 大標（40–80）↔ 首屏（最大 136），落差拉開做出層次 */
   /* 首屏 */
-  .hero { padding: 64px 0 40px; }
-  .hero .wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 48px; align-items: center; }
-  .eyebrow { display: inline-block; color: var(--accent-text); font-weight: 900; font-size: 14px; letter-spacing: 0.12em; }
-  h1 { margin: 12px 0 18px; font-size: clamp(34px, 4.6vw, 54px); font-weight: 900; line-height: 1.15; letter-spacing: 0.01em; }
-  h1 em { font-style: normal; color: var(--accent-text); }
-  h1 .nw { white-space: nowrap; }
-  .lead { margin: 0 0 28px; font-size: clamp(17px, 1.9vw, 19px); color: var(--muted); }
+  .hero { padding: clamp(48px, 9vw, 112px) 0 56px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; right: -10%; top: -20%; width: 70%; height: 90%; background: radial-gradient(closest-side, rgba(246, 99, 15, 0.18), transparent); pointer-events: none; }
+  .hero .wrap { position: relative; }
+  .eyebrow, .kicker { margin: 0; color: var(--accent-text); font-weight: 800; font-size: clamp(16px, 1.4vw, 18px); letter-spacing: 0.16em; }
+  h1 { margin: 18px 0 clamp(32px, 5vw, 56px); font-weight: 900; line-height: 1.02; letter-spacing: -0.02em; }
+  h1 span { display: block; }
+  h1 .l1 { font-size: clamp(30px, 6vw, 76px); color: var(--muted); font-weight: 800; letter-spacing: -0.01em; }
+  h1 .l2 { font-size: clamp(44px, 11vw, 136px); color: var(--text); margin-top: 0.06em; }
+  .hero-body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(32px, 5vw, 64px); align-items: start; }
+  .lead { margin: 0 0 32px; max-width: 30em; font-size: clamp(19px, 1.7vw, 22px); line-height: 1.85; color: var(--muted); }
   .lead b { color: var(--text); }
   .cta { display: flex; flex-wrap: wrap; gap: 12px; }
-  .agents-line { margin: 22px 0 0; font-size: 14px; color: var(--faint); }
+  .btn.big { padding: 16px 32px; font-size: 19px; }
+  .agents-line { margin: 26px 0 0; font-size: 16px; color: var(--faint); }
   .agents-line b { color: var(--muted); font-weight: 700; }
+  @media (max-width: 900px) { .hero-body { grid-template-columns: 1fr; } }
 
   /* 預覽框：preview/*.html 自己把 1920×1080 的舞台縮到 iframe 大小 */
   .pv { position: relative; aspect-ratio: 16 / 9; background: #000 center / cover no-repeat; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
   .pv iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
   .player .pv { box-shadow: 0 30px 80px -30px rgba(246, 99, 15, 0.35); }
   .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  .tabs button { appearance: none; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; }
+  .tabs button { appearance: none; cursor: pointer; font: inherit; font-size: 16px; font-weight: 700; color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; }
   .tabs button:hover { color: var(--text); }
   .tabs button[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
-  .player figcaption { margin-top: 10px; font-size: 14px; color: var(--muted); min-height: 2.6em; }
-  @media (max-width: 900px) { .hero { padding-top: 40px; } .hero .wrap { grid-template-columns: 1fr; gap: 32px; } }
+  .player figcaption { margin-top: 12px; font-size: 17px; color: var(--muted); min-height: 2.6em; }
 
   /* 數字 */
   .stats { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--card); }
   .stats .wrap { display: grid; grid-template-columns: repeat(5, 1fr); }
-  .stats div { padding: 22px 8px; text-align: center; }
-  .stats b { display: block; font-size: clamp(26px, 3.4vw, 38px); font-weight: 900; line-height: 1.1; color: var(--accent-text); }
-  .stats span { font-size: 14px; color: var(--muted); }
-  @media (max-width: 640px) { .stats .wrap { grid-template-columns: repeat(3, 1fr); } .stats div:nth-child(n+4) { padding-top: 0; } }
+  .stats .wrap > div { padding: clamp(28px, 4vw, 48px) 8px; text-align: center; }
+  .stats b { display: block; font-size: clamp(44px, 7vw, 96px); font-weight: 900; line-height: 1; letter-spacing: -0.03em; color: var(--text); }
+  .stats .wrap > div:nth-child(odd) b { color: var(--accent-text); }
+  .stats span { display: block; margin-top: 12px; font-size: clamp(15px, 1.4vw, 18px); letter-spacing: 0.12em; color: var(--muted); }
+  @media (max-width: 640px) { .stats .wrap { grid-template-columns: repeat(3, 1fr); } .stats .wrap > div:nth-child(n+4) { padding-top: 0; } }
 
   /* 區塊 */
-  section.block { padding: 80px 0 0; }
-  .head { max-width: 760px; margin-bottom: 32px; }
-  .head h2 { margin: 0 0 10px; font-size: clamp(28px, 3.6vw, 40px); font-weight: 900; line-height: 1.2; }
-  .head p { margin: 0; color: var(--muted); font-size: 17px; }
+  section.block { padding: clamp(88px, 12vw, 152px) 0 0; }
+  .head { max-width: 860px; margin-bottom: clamp(32px, 4vw, 48px); }
+  .head h2 { margin: 14px 0 18px; font-size: clamp(36px, 6vw, 76px); font-weight: 900; line-height: 1.08; letter-spacing: -0.02em; }
+  .head p { margin: 0; max-width: 36em; color: var(--muted); font-size: clamp(18px, 1.7vw, 21px); line-height: 1.85; }
+  .head .kicker { margin: 0; }
 
   /* AI 判斷／程式計算 */
   .split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .side { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 24px 26px; }
-  .side h3 { margin: 0 0 4px; font-size: 22px; font-weight: 900; }
-  .side .tag { font-size: 14px; color: var(--faint); margin: 0 0 14px; }
+  .side h3 { margin: 0 0 4px; font-size: 26px; font-weight: 900; }
+  .side .tag { font-size: 16px; color: var(--faint); margin: 0 0 14px; }
   .side ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-  .side li { position: relative; padding-left: 22px; color: #DCE1EC; }
+  .side li { position: relative; padding-left: 22px; color: #DCE1EC; line-height: 1.75; }
   .side li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
   .side.prog li::before { background: var(--good); }
   @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
 
   .code { margin-top: 20px; background: #050810; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-  .code pre { margin: 0; padding: 20px 24px; overflow-x: auto; font-family: var(--mono); font-size: 14px; line-height: 1.7; color: #DCE1EC; }
+  .code pre { margin: 0; padding: 20px 24px; overflow-x: auto; font-family: var(--mono); font-size: 15px; line-height: 1.7; color: #DCE1EC; }
   .code .c { color: var(--faint); }
   .code .s { color: #9FD7A8; }
   .code .k { color: var(--accent-text); }
-  .code p { margin: 0; padding: 14px 24px; border-top: 1px solid var(--line); font-size: 15px; color: var(--muted); }
+  .code p { margin: 0; padding: 14px 24px; border-top: 1px solid var(--line); font-size: 17px; color: var(--muted); }
 
   /* 流程 */
   .steps { margin-top: 20px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; counter-reset: s; padding: 0; list-style: none; }
   .steps li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 6px; }
   .steps li::before { counter-increment: s; content: counter(s); font-weight: 900; font-size: 15px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--card-2); border: 1px solid var(--line); color: var(--accent-text); }
-  .steps h3 { margin: 4px 0 0; font-size: 19px; font-weight: 900; }
-  .steps p { margin: 0; font-size: 15px; color: var(--muted); }
-  .steps .stop { margin-top: auto; padding-top: 8px; font-size: 13px; font-weight: 700; color: var(--accent-text); }
-  .steps.three { grid-template-columns: repeat(3, 1fr); }
+  .steps h3 { margin: 4px 0 0; font-size: 22px; font-weight: 900; }
+  .steps p { margin: 0; font-size: 17px; color: var(--muted); }
+  .steps .stop { margin-top: auto; padding-top: 8px; font-size: 15px; font-weight: 700; color: var(--accent-text); }
   @media (max-width: 960px) { .steps { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 760px) { .steps.three { grid-template-columns: 1fr; } }
   @media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+
+  /* 怎麼用：大號數字三步驟＋指令清單 */
+  .bigsteps { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(20px, 3vw, 40px); margin: 0 0 clamp(48px, 6vw, 72px); padding: 0; list-style: none; counter-reset: b; }
+  .bigsteps li { border-top: 2px solid var(--line); padding-top: 20px; }
+  .bigsteps li::before { counter-increment: b; content: "0" counter(b); display: block; font-size: clamp(64px, 8vw, 112px); font-weight: 900; line-height: 0.9; letter-spacing: -0.04em; color: transparent; -webkit-text-stroke: 2px var(--accent); margin-bottom: 16px; }
+  .bigsteps h3 { margin: 0 0 10px; font-size: clamp(26px, 2.8vw, 36px); font-weight: 900; }
+  .bigsteps p { margin: 0; font-size: clamp(17px, 1.5vw, 19px); color: var(--muted); line-height: 1.85; }
+  @media (max-width: 760px) { .bigsteps { grid-template-columns: 1fr; } }
+  .cmds { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+  .cmds li { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 6px 32px; align-items: baseline; padding: clamp(18px, 2.4vw, 28px) 0; border-bottom: 1px solid var(--line); }
+  .cmds b { font-size: clamp(26px, 3.6vw, 44px); font-weight: 900; letter-spacing: -0.01em; line-height: 1.15; }
+  .cmds span { font-size: clamp(17px, 1.6vw, 20px); line-height: 1.8; color: var(--muted); }
+  @media (max-width: 640px) { .cmds li { grid-template-columns: 1fr; } }
+
+  /* 一句話就是指令：大字帶 */
+  .band { margin-top: clamp(88px, 12vw, 152px); padding: clamp(48px, 7vw, 96px) 16px; background: radial-gradient(80% 120% at 50% 0%, rgba(246, 99, 15, 0.14), transparent 70%), var(--card); border: 1px solid var(--line); border-radius: 20px; text-align: center; overflow: hidden; }
+  .band-k { margin: 0 0 28px; font-size: clamp(17px, 1.8vw, 22px); font-weight: 800; letter-spacing: 0.08em; color: var(--accent-text); }
+  .band-w { margin: 0 auto; max-width: 1200px; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.1em 0.5em; font-size: clamp(34px, 7vw, 92px); font-weight: 900; line-height: 1.15; letter-spacing: -0.02em; }
+  .band-w .o { color: var(--accent-text); }
 
   /* 可以微調的地方 */
   .tunes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; }
-  .tune { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
-  .tune h3 { margin: 0; font-size: 19px; font-weight: 900; }
-  .tune p { margin: 0; font-size: 15px; color: var(--muted); }
-  .tune q { margin-top: auto; padding-top: 6px; font-weight: 700; color: var(--accent-text); quotes: "「" "」"; }
+  .tune { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px 24px 22px; display: flex; flex-direction: column; gap: 8px; }
+  .tune h3 { margin: 14px 0 0; font-size: 17px; font-weight: 800; letter-spacing: 0.06em; color: var(--text); }
+  .tune p { margin: 0; font-size: 17px; line-height: 1.8; color: var(--muted); }
+  .tune q { font-size: clamp(26px, 2.6vw, 34px); font-weight: 900; line-height: 1.25; letter-spacing: -0.01em; color: var(--accent-text); quotes: "「" "」"; }
 
   /* 情境卡 */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 20px; }
@@ -321,41 +348,41 @@
   .card:hover { border-color: var(--accent); }
   .card .pv { border: 0; border-radius: 0; }
   .card .body { padding: 14px 18px 18px; }
-  .card h3 { margin: 0 0 4px; font-size: 19px; font-weight: 900; }
-  .card h3 small { font-family: var(--mono); font-size: 13px; font-weight: 400; color: var(--faint); margin-left: 8px; }
-  .card p { margin: 0; font-size: 15px; color: var(--muted); }
+  .card h3 { margin: 0 0 6px; font-size: 22px; font-weight: 900; }
+  .card h3 small { font-family: var(--mono); font-size: 15px; font-weight: 400; color: var(--faint); margin-left: 8px; }
+  .card p { margin: 0; font-size: 17px; line-height: 1.75; color: var(--muted); }
   .more { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
   .more p { margin: 0; color: var(--muted); }
 
   /* Agent */
   .agents { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .agent { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 20px 18px; }
-  .agent h3 { margin: 0 0 8px; font-size: 20px; font-weight: 900; }
-  .agent p { margin: 0; font-size: 15px; color: var(--muted); }
+  .agent h3 { margin: 0 0 10px; font-size: 24px; font-weight: 900; }
+  .agent p { margin: 0; font-size: 17px; color: var(--muted); }
   .agent p + p { margin-top: 6px; }
-  .note { margin-top: 18px; color: var(--muted); font-size: 15px; }
+  .note { margin-top: 20px; color: var(--muted); font-size: 17px; }
   @media (max-width: 960px) { .agents { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 520px) { .agents { grid-template-columns: 1fr; } }
 
   /* 換風格 */
   .looks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .looks figure { margin: 0; }
-  .looks figcaption { margin-top: 8px; font-size: 15px; color: var(--muted); }
+  .looks figcaption { margin-top: 10px; font-size: 17px; color: var(--muted); }
   .looks figcaption b { color: var(--text); margin-right: 6px; }
   .looks figcaption i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
   @media (max-width: 760px) { .looks { grid-template-columns: 1fr; } }
   .rows { margin-top: 20px; display: grid; gap: 10px; max-width: 880px; padding: 0; list-style: none; }
   .rows li { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 4px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
-  .rows b { font-weight: 900; }
-  .rows span { color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+  .rows b { font-weight: 900; font-size: 19px; }
+  .rows span { color: var(--muted); font-size: 17px; overflow-wrap: anywhere; }
   @media (max-width: 640px) { .rows li { grid-template-columns: 1fr; } }
 
   /* 開始使用 */
   .start { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; counter-reset: g; max-width: 880px; }
   .start li { display: grid; grid-template-columns: 44px 1fr; gap: 4px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
   .start li::before { counter-increment: g; content: counter(g); grid-row: span 2; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 900; }
-  .start h3 { margin: 4px 0 0; font-size: 19px; font-weight: 900; }
-  .start p { margin: 0; color: var(--muted); font-size: 15px; overflow-wrap: anywhere; }
+  .start h3 { margin: 4px 0 0; font-size: 24px; font-weight: 900; }
+  .start p { margin: 0; color: var(--muted); font-size: 17px; overflow-wrap: anywhere; }
   .say { color: var(--text); font-weight: 700; }
 
   /* 常見問題 */
@@ -366,10 +393,10 @@
   .faq summary::-webkit-details-marker { display: none; }
   .faq summary::after { content: "+"; margin-left: auto; font-size: 22px; font-weight: 400; color: var(--accent-text); }
   .faq details[open] summary::after { content: "−"; }
-  .faq h3 { margin: 0; font-size: 18px; font-weight: 900; }
-  .faq p { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
+  .faq h3 { margin: 0; font-size: clamp(19px, 2vw, 24px); font-weight: 900; }
+  .faq p { margin: 0 0 22px; max-width: 40em; color: var(--muted); font-size: 18px; line-height: 1.85; }
 
-  footer { margin-top: 96px; border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+  footer { margin-top: 96px; border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 16px; }
   footer p { margin: 4px 0; }
   footer a { color: var(--muted); }
   footer a:hover { color: var(--text); }
@@ -399,26 +426,28 @@
 
 <header class="hero" id="top">
   <div class="wrap">
-    <div>
-      <span class="eyebrow">開源 · AI 自動剪輯工作區</span>
-      <h1><span class="nw">放好素材</span><br><em>用白話文剪成片</em></h1>
-      <p class="lead">影片、聲音、圖片放進資料夾，跟 AI 說<b>「剪乾淨」「做成片」</b>，它就幫你剪掉講錯的地方、上字幕、加資訊卡和動畫、配音效。每一步都停下來給你看，<b>不滿意再用一句話改</b>。</p>
-      <div class="cta">
-        <a class="btn primary" href="#start">開始使用</a>
-        <a class="btn" href="shared/template/index.html">看完整情境庫 →</a>
+    <p class="eyebrow">開源 · AI 自動剪輯工作區</p>
+    <h1><span class="l1">放好素材，</span><span class="l2">用白話文剪成片</span></h1>
+    <div class="hero-body">
+      <div>
+        <p class="lead">影片、聲音、圖片放進資料夾，跟 AI 說<b>「剪乾淨」「做成片」</b>，它就幫你剪掉講錯的地方、上字幕、加資訊卡和動畫、配音效。每一步都停下來給你看，<b>不滿意再用一句話改</b>。</p>
+        <div class="cta">
+          <a class="btn primary big" href="#start">開始使用</a>
+          <a class="btn big" href="shared/template/index.html">看完整情境庫 →</a>
+        </div>
+        <p class="agents-line">支援 <b>Claude Code</b> · <b>ChatGPT（Codex）</b> · <b>MiniMax Code</b> · <b>Cursor</b>，以及其他會讀 <code>AGENTS.md</code> 的 Agent</p>
       </div>
-      <p class="agents-line">支援 <b>Claude Code</b> · <b>ChatGPT（Codex）</b> · <b>MiniMax Code</b> · <b>Cursor</b>，以及其他會讀 <code>AGENTS.md</code> 的 Agent</p>
+      <figure class="player" style="margin:0">
+        <div class="pv"><iframe id="feature" src="shared/template/preview/x-process.html" title="情境動畫預覽" tabindex="-1"></iframe></div>
+        <div class="tabs" role="group" aria-label="切換預覽">
+          <button type="button" aria-pressed="true" data-src="x-process" data-cap="口播講一條有先後的過程，站一個一個亮起來，連接線跟著描出來。">流程</button>
+          <button type="button" aria-pressed="false" data-src="x-scene-example-rec" data-cap="口播描述一連串具體動作，線條插圖照講到的順序演出來。">示意動畫</button>
+          <button type="button" aria-pressed="false" data-src="03-side-panel" data-cap="講者往右移，左半邊推入面板，重點跟著口播一條一條出現。">半版側邊欄</button>
+          <button type="button" aria-pressed="false" data-src="x-versus" data-cap="兩個選項逐項比較，講到哪一列，哪一列就亮起來。">A vs B</button>
+        </div>
+        <figcaption id="featureCap">口播講一條有先後的過程，站一個一個亮起來，連接線跟著描出來。</figcaption>
+      </figure>
     </div>
-    <figure class="player" style="margin:0">
-      <div class="pv"><iframe id="feature" src="shared/template/preview/x-process.html" title="情境動畫預覽" tabindex="-1"></iframe></div>
-      <div class="tabs" role="group" aria-label="切換預覽">
-        <button type="button" aria-pressed="true" data-src="x-process" data-cap="口播講一條有先後的過程，站一個一個亮起來，連接線跟著描出來。">流程</button>
-        <button type="button" aria-pressed="false" data-src="x-scene-example-rec" data-cap="口播描述一連串具體動作，線條插圖照講到的順序演出來。">示意動畫</button>
-        <button type="button" aria-pressed="false" data-src="03-side-panel" data-cap="講者往右移，左半邊推入面板，重點跟著口播一條一條出現。">半版側邊欄</button>
-        <button type="button" aria-pressed="false" data-src="x-versus" data-cap="兩個選項逐項比較，講到哪一列，哪一列就亮起來。">A vs B</button>
-      </div>
-      <figcaption id="featureCap">口播講一條有先後的過程，站一個一個亮起來，連接線跟著描出來。</figcaption>
-    </figure>
   </div>
 </header>
 
@@ -436,15 +465,16 @@
 
 <section class="block" id="use">
   <div class="head">
+    <p class="kicker">01 · 怎麼用</p>
     <h2>用說的就能剪片</h2>
     <p>不用學剪輯軟體，也不用寫程式。放好素材，用平常說話的方式告訴 AI 要做什麼。</p>
   </div>
-  <ol class="steps three">
+  <ol class="bigsteps">
     <li><h3>放素材</h3><p>口播影片、只有聲音的旁白、螢幕錄影、截圖照片，各放進對應的資料夾。有講稿的話，字幕會更準。</p></li>
     <li><h3>說一句話</h3><p><span class="say">「剪乾淨」</span>、<span class="say">「做成片」</span>、<span class="say">「配螢幕錄影」</span>，不用記指令。</p></li>
     <li><h3>看預覽、再改</h3><p>做到重要的地方會停下來給你看，你說<span class="say">「可以」</span>才往下；要改就說哪一段、怎麼改。</p></li>
   </ol>
-  <ul class="rows">
+  <ul class="cmds">
     <li><b>「剪乾淨」</b><span>找出講錯重講、卡住的句子剪掉，縮短停頓，照講稿上字幕</span></li>
     <li><b>「做成片」</b><span>看每段在講什麼，配上資訊卡、情境動畫、子母畫面和音效，人聲音量調到一致</span></li>
     <li><b>「配螢幕錄影」</b><span>把操作畫面插到講到的那一段，放大、框出重點</span></li>
@@ -453,26 +483,33 @@
   </ul>
 </section>
 
+<section class="band" aria-label="一句話就是一個剪輯指令">
+  <p class="band-k">不用記指令，你說的話就是剪輯指令</p>
+  <p class="band-w"><span>「剪乾淨」</span><span class="o">「做成片」</span><span>「s05 往左移」</span><span class="o">「字太多」</span><span>「換暗色」</span><span class="o">「輸出成片」</span></p>
+</section>
+
 <section class="block" id="tune">
   <div class="head">
+    <p class="kicker">02 · 微調</p>
     <h2>細節都能微調</h2>
     <p>AI 先做一版，你決定要不要改。大部分只要說一句話；字幕和音量也可以打開「剪輯台」自己拖。</p>
   </div>
   <div class="tunes">
-    <div class="tune"><h3>哪些地方要剪</h3><p>剪輯清單逐條列出要剪的句子和原因，你確認後才剪。</p><q>第 3 列不要剪</q></div>
-    <div class="tune"><h3>字幕</h3><p>改錯字、拆句、合併、拖時間；你改過的字幕 AI 不會再改回去。</p><q>打開剪輯台</q></div>
-    <div class="tune"><h3>畫面放大</h3><p>1.0／1.15／1.3 三種構圖倍率，先給你看預覽圖再選。</p><q>用 1.15 倍</q></div>
-    <div class="tune"><h3>某一段的卡片</h3><p>移位置、改字、換情境，只動那一段，改前改後都存版本。</p><q>s05 往左移</q></div>
-    <div class="tune"><h3>某一段的動畫</h3><p>先出新的動畫分鏡給你確認；不喜歡可以退回舊版，還有左右對照影片。</p><q>s12 重新設計</q></div>
-    <div class="tune"><h3>音效、配樂</h3><p>從內建音效庫挑，關掉某一段、調音量、片尾加配樂。</p><q>s08 不要音效</q></div>
-    <div class="tune"><h3>講者畫面</h3><p>調光、瘦臉預設關閉；剪輯台有開關和強度滑桿。</p><q>這集要調光、瘦臉</q></div>
-    <div class="tune"><h3>主色、背景、亮暗</h3><p>內建風格包一鍵換，也能做自己的一包。</p><q>這集換暗色</q></div>
-    <div class="tune"><h3>橫式／直式</h3><p>長片用橫式；Shorts、Reels、抖音用直式，字幕和版面自動換。</p><q>做成直式短影片</q></div>
+    <div class="tune"><q>第 3 列不要剪</q><h3>哪些地方要剪</h3><p>剪輯清單逐條列出要剪的句子和原因，你確認後才剪。</p></div>
+    <div class="tune"><q>打開剪輯台</q><h3>字幕</h3><p>改錯字、拆句、合併、拖時間；你改過的字幕 AI 不會再改回去。</p></div>
+    <div class="tune"><q>用 1.15 倍</q><h3>畫面放大</h3><p>1.0／1.15／1.3 三種構圖倍率，先給你看預覽圖再選。</p></div>
+    <div class="tune"><q>s05 往左移</q><h3>某一段的卡片</h3><p>移位置、改字、換情境，只動那一段，改前改後都存版本。</p></div>
+    <div class="tune"><q>s12 重新設計</q><h3>某一段的動畫</h3><p>先出新的動畫分鏡給你確認；不喜歡可以退回舊版，還有左右對照影片。</p></div>
+    <div class="tune"><q>s08 不要音效</q><h3>音效、配樂</h3><p>從內建音效庫挑，關掉某一段、調音量、片尾加配樂。</p></div>
+    <div class="tune"><q>這集要調光</q><h3>講者畫面</h3><p>調光、瘦臉預設關閉；剪輯台有開關和強度滑桿。</p></div>
+    <div class="tune"><q>這集換暗色</q><h3>主色、背景、亮暗</h3><p>內建風格包一鍵換，也能做自己的一包。</p></div>
+    <div class="tune"><q>做成直式短影片</q><h3>橫式／直式</h3><p>長片用橫式；Shorts、Reels、抖音用直式，字幕和版面自動換。</p></div>
   </div>
 </section>
 
 <section class="block" id="how">
   <div class="head">
+    <p class="kicker">03 · 運作方式</p>
     <h2>AI 判斷，程式計算</h2>
     <p>AI 不自己算秒數，也不從零寫動畫。它看逐字稿決定每一段要怎麼呈現，剩下的時間、版面、響度都交給工作區裡的程式。同樣的素材和分鏡，換哪個 Agent 來做，剪出來都一樣。</p>
   </div>
@@ -522,7 +559,8 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
 
 <section class="block" id="scenes">
   <div class="head">
-    <h2>口播講什麼，畫面就演什麼</h2>
+    <p class="kicker">04 · 情境動畫</p>
+    <h2>口播講什麼，<br>畫面就演什麼</h2>
     <p>AI 照口播的內容挑情境，從現成的模板改，不從零寫。每張卡都是即時預覽，點進去看全尺寸。</p>
   </div>
   <div class="grid">
@@ -572,7 +610,8 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
 
 <section class="block" id="style">
   <div class="head">
-    <h2>預設好看，也能換成你的風格</h2>
+    <p class="kicker">05 · 換風格</p>
+    <h2>預設好看，<br>也能換成你的風格</h2>
     <p>主色、子母畫面外框、背景圖打包成一個「風格包」。內建「預設」和示範用的「藍圖」，亮色、暗色都有；也可以請 AI 照你的品牌色做一包。</p>
   </div>
   <div class="looks">
@@ -595,7 +634,8 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
 
 <section class="block" id="capcut">
   <div class="head">
-    <h2>習慣剪映？拆成素材帶過去</h2>
+    <p class="kicker">06 · 搭配剪映</p>
+    <h2>習慣剪映？<br>拆成素材帶過去</h2>
     <p>說 <span class="say">「輸出剪映素材」</span>，成片會拆成主軌、每段一支有透明通道的 MOV、字幕檔和排法清單，拖進剪映照時間排好，就能接著用你熟悉的方式調整。</p>
   </div>
   <ul class="rows">
@@ -609,6 +649,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
 
 <section class="block" id="agents">
   <div class="head">
+    <p class="kicker">07 · 支援的 Agent</p>
     <h2>換哪個 Agent 都能用</h2>
     <p>守則寫在 <code>AGENTS.md</code>，流程寫成 9 支 Skill，每一步都寫成照著做就會的指令。Agent 只要能在你的電腦上執行指令、讀寫檔案就行。</p>
   </div>
@@ -623,6 +664,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
 
 <section class="block" id="faq">
   <div class="head">
+    <p class="kicker">08 · FAQ</p>
     <h2>常見問題</h2>
     <p>第一次用之前大家最常問的幾件事。</p>
   </div>
@@ -641,6 +683,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
 
 <section class="block" id="start">
   <div class="head">
+    <p class="kicker">09 · 開始</p>
     <h2>開始使用</h2>
     <p>工具缺什麼，AI 會照手冊幫你裝，Mac 和 Windows 都有。內建一個範例專案，第一次照著做就有成片。</p>
   </div>
