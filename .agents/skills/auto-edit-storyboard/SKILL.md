@@ -1,6 +1,6 @@
 ---
 name: auto-edit-storyboard
-description: 剪好看的前半：講者調光瘦臉、構圖倍率預覽、量講者框、配螢幕錄影、挑情境、寫草稿 plan.json 與分鏡表 work/storyboard.md（附每段截圖與金句候選）。當使用者說「剪好看」「做成片」「包裝成成片」「列分鏡表」時使用。還沒有 work/rough.mp4 時不要用（改用 auto-edit-rough）；分鏡表已經確認、要做動畫或看 Studio 時不要用（改用 auto-edit-motion、auto-edit-review）。
+description: 剪好看的前半：講者調光瘦臉、構圖台拖框（停點 ②）、量講者框、配螢幕錄影、挑情境、寫草稿 plan.json 與分鏡表 work/storyboard.md（附每段截圖與金句候選）。當使用者說「剪好看」「做成片」「包裝成成片」「列分鏡表」時使用。還沒有 work/rough.mp4 時不要用（改用 auto-edit-rough）；分鏡表已經確認、要做動畫或看 Studio 時不要用（改用 auto-edit-motion、auto-edit-review）。
 version: 0.1.0
 ---
 # 剪好看（前半）：構圖到分鏡表
@@ -10,7 +10,7 @@ version: 0.1.0
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
-| `work/rough.mp4`、`work/rough.srt` | 步驟 1–2 | `work/look-preview.jpg`（有瘦臉時）、兩張構圖預覽圖 | 圖都在、倍率表原文已貼 | ② 構圖倍率 |
+| `work/rough.mp4`、`work/rough.srt` | 步驟 1–2 | `work/look-preview.jpg`（有瘦臉時）、`work/構圖預覽.jpg`、構圖台網址 | 網址與建議那一行已貼 | ② 構圖 |
 | ② 通過 | 步驟 3–7 | 草稿 plan.json、`work/storyboard.md`、`work/storyboard-preview/` | `--check` 0 個 ✖、每段至少一張截圖 | ③ 分鏡表 |
 
 格式的唯一定義：分鏡表照 `shared/template/USAGE.md` 2.3；版面四個名稱照 `shared/template/SITUATIONS.md` §2。
@@ -26,35 +26,36 @@ version: 0.1.0
 
 ## 步驟
 
-**1. 講者調光＋瘦臉**（構圖預覽要看套好的樣子）
+**1. 講者調光＋瘦臉**（構圖台要看套好的樣子）
 
 ```
 node shared/template/tools/look.mjs status --project projects/<專案>
 ```
 
 照「→ 下一步」做：那一行是說明，最後一行就是要跑的指令（單獨一行，整行複製執行）。預估超過 2 分鐘時，最後一行的 `look.mjs run` 已經帶 `--background`；之後每 30 秒跑一次 `status`，直到「→ 下一步」說 look 好了。不要自己用 `&`、`nohup`、`Start-Process` 放背景。`status` 只讀，不寫任何檔。
-完成判準：`status` 的「→ 下一步」說 look 好了（最後一行變成 `qc.mjs framing … --cards`；plan.json 已經有段落時是 build）；有瘦臉時 `work/look-preview.jpg` 存在。
+完成判準：`status` 的「→ 下一步」說 look 好了（最後一行變成 `qc.mjs framing …`；plan.json 已經有段落時是 build）；有瘦臉時 `work/look-preview.jpg` 存在。
 常見錯誤：臉太小、偵測率太低印 ⚠ → 工具已自動只調光，回報時說明就好；`資產：✖ 少 N 個檔` → 退路表第 1 列。
 
-**2. 構圖預覽 → 停點 ②**
+**2. 構圖台 → 停點 ②**
 
 ```
-node shared/template/tools/qc.mjs framing --project projects/<專案> --cards
+node shared/template/tools/qc.mjs framing --project projects/<專案>
+node shared/template/tools/editor.mjs --project projects/<專案>
 ```
 
-約 15 秒 × 倍率數。把 `work/構圖預覽.jpg`、`work/構圖預覽-套卡.jpg`、`work/look-preview.jpg`（有的話）、印出的倍率表原文和「建議：…」那一行給使用者；調光、瘦臉預設是關的，回報裡加一句「要調光、瘦臉可以說（USAGE.md 第 7 節）」。
-先照倍率表「建議」欄打 ✔ 的那個建議（工具算的：不切到手勢、每個像素放大不超過 3.5 倍的倍率裡最大的）；四周有多餘外框（黑邊、櫃子、大片空牆）就建議放大，切到手勢、卡片壓到臉就往小選。直式另看頭頂有沒有落在 y 380–520、下巴 ≤ 860（`shared/style.md`「直式」）。
-完成判準：兩張圖存在；倍率表（含「建議」欄）與「建議：…」那一行原文已貼進回覆。
+第 1 行量講者動作範圍、算建議的框（約 5–15 秒），第 2 行在背景開剪輯台（已經開著會印網址）。把剪輯台印的「構圖台」網址、`work/look-preview.jpg`（有的話）和「建議：…」那一行給使用者：使用者在構圖台拖框、看右邊套上字幕與字卡的樣子，按「儲存」就寫進 plan.json 的 `frame`（還沒有 plan.json 會新建）；調光、瘦臉預設是關的，回報裡加一句「要調光、瘦臉可以說（USAGE.md 第 7 節）」。
+構圖台一打開的框就是表上 ✔ 的建議（不切到手勢、每個像素放大不超過 3.5 倍的倍率裡最大的），切到手勢、太糊、直式頭頂不在 y 380–520 或下巴超過 860 會即時標紅。
+完成判準：`work/構圖預覽.jpg` 存在；構圖台網址與「建議：…」那一行原文已貼進回覆。
 常見錯誤：印 `建議：1.13x（每個倍率都標了切到手勢或放大超過 3.5 倍，選表上最小的；最後由使用者選）` → 照建議給表上最小的那一列（有黑邊時不是 1.00x，1.00x 會露出黑邊），回報裡說明。
 
-**3. ② 通過：寫 `frame`、量講者框**
+**3. ② 通過（「調好了」或「用建議的」）：量講者框**
 
 ```
 ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg
 node shared/template/tools/qc.mjs speaker --project projects/<專案>
 ```
 
-第 1 行只在專案裡沒有檔名含「場地照」的圖時才跑。把選定那一列的 `frame` 寫進 plan.json 第一層（1.0 倍不寫）；看 `work/場地照-動作範圍.jpg` 讀手勢最遠的邊，寫 `speakerBox`（做法 USAGE.md 2.2）。
+第 1 行只在專案裡沒有檔名含「場地照」的圖時才跑。「調好了」：構圖台已經寫好 `frame`，重新讀 plan.json 就好，不要再改；「用建議的」：把表上 ✔ 那一列的 `frame` 寫進 plan.json 第一層（1.0 倍不寫）。看 `work/場地照-動作範圍.jpg` 讀手勢最遠的邊，寫 `speakerBox`（做法 USAGE.md 2.2）。
 完成判準：plan.json 有 `speakerBox`；`--check` 不再印「沒寫 speakerBox」。
 常見錯誤：`--check` 提醒「看起來是用原尺寸截圖的像素量的」→ 改成它附的換算後的框。
 
@@ -125,7 +126,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 ## 停點
 
 ```
-⏸ 停點 ② 構圖倍率｜請看：work/構圖預覽.jpg、work/構圖預覽-套卡.jpg｜請回：倍率（1.0／1.15／1.3）
+⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」
 ⏸ 停點 ③ 分鏡表｜請看：work/storyboard.md｜請回：「可以」或要改的地方
 ```
 
@@ -168,10 +169,9 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 ## 回報格式
 
 ```
-（停點 ②）構圖預覽好了：建議 <倍率>x（<qc 印的理由>）
-<倍率表原文，最多 4 行>
+（停點 ②）構圖台開好了：建議 <倍率>x（<qc 印的理由>）
 講者調光瘦臉：<look.mjs 印的設定與偵測率一行，或「略過」>
-work/構圖預覽.jpg、work/構圖預覽-套卡.jpg、work/look-preview.jpg
+構圖台：<網址>；work/look-preview.jpg
 <停點 ② 那一行原文>
 
 （停點 ③）分鏡表草稿好了：<N> 段（疊加 <N>、半畫面 <N>、子母畫面 <N>、全幕 <N>），情境動畫 <N> 段，金句候選 <N> 則

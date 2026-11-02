@@ -82,7 +82,7 @@ AI 列出剪輯清單、停下來之後貼。清單有錯就直接在清單上�
 
 ## 3. 用 HyperFrames 包裝
 
-初剪和字幕都完成之後貼。不用開 Plan 模式，AI 會在構圖倍率（停點 ②）、分鏡表（停點 ③）兩處自己停下來，最後一行會寫要你看什麼、回什麼。專案的 `assets/screen/`、`assets/images/` 有檔案時，AI 會自己配對、插進分鏡表；旁白沒有畫面的地方，也會自動配上螢幕錄影或圖片。
+初剪和字幕都完成之後貼。不用開 Plan 模式，AI 會在構圖（停點 ②，給你構圖台網址拖框）、分鏡表（停點 ③）兩處自己停下來，最後一行會寫要你看什麼、回什麼。專案的 `assets/screen/`、`assets/images/` 有檔案時，AI 會自己配對、插進分鏡表；旁白沒有畫面的地方，也會自動配上螢幕錄影或圖片。
 
 ```
 使用「剪好看」流程，把 @projects/example 包裝成成片。每段先查情境判定表，能用動畫就用動畫。
@@ -190,7 +190,7 @@ Studio 預覽沒問題之後貼。AI 會先輸出一小段測試片段，確認�
 | 換了新任務，AI 不知道做到哪 | 貼「繼續 projects/［EP2］」（5a） |
 | Skills 清單看不到 auto-edit | 貼「幫我檢測環境」，或自己執行 `node setup/install-skills.mjs`（4） |
 | AI 在同一步一直重試、越改越亂 | 回它「超過階段預算了，停下來告訴我卡在哪」 |
-| 想一路做到 Studio，中間不要停 | 提示詞最後加「做到 Studio」（構圖倍率、分鏡表會用 AI 的建議，不停下來問你） |
+| 想一路做到 Studio，中間不要停 | 提示詞最後加「做到 Studio」（構圖、分鏡表會用 AI 的建議，不停下來問你） |
 | AI 自己從零寫 HyperFrames 的網頁，沒有用範本 | 回它「照 `shared/template/USAGE.md`，用 `node shared/template/tools/build.mjs --project projects/<專案>` 產生」。通常是 `AGENTS.md` 沒被讀到，確認資料夾選的是看得到 `AGENTS.md` 的那一層 |
 | 檢查出現 ✖ 就停住 | 每一行 `→` 後面就是改法，請 AI 照改再跑一次。有 ✖ 的時候，不會產生任何檔案 |
 | Studio 網址打不開 | 請 AI 執行 `npx hyperframes preview --status`，看 Studio 還在不在。網址可能是 `localhost` 或 `127.0.0.1`，兩個都可以 |

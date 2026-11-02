@@ -10,8 +10,8 @@
  *
  * 選項：--port 4400、--open（順便開瀏覽器）、--foreground（一律前景）、--background（一律背景）；測試用：--template <shared/template 資料夾>
  * 剪輯台只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／anchor、任何段的 sfxVolume 與 sfx: null、
- * slots／vars 的文字值、第一層的 look（講者調光與瘦臉）與 theme，以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
- * 存檔前比對 plan.json 與 rough.srt，被別人（AI）改過就兩個都不寫。
+ * slots／vars 的文字值、第一層的 look（講者調光與瘦臉）、theme 與 frame（構圖台：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
+ * 存檔前比對 plan.json 與 rough.srt，被別人（AI）改過就兩個都不寫。構圖台在還沒有 plan.json 時（停點 ②）只存 frame，會先建一個 { "version": 1 }（直式加 format）。
  * --project 的找法和 build.mjs 一樣。需要 Node 22 以上、ffmpeg／ffprobe。
  */
 import fs from 'node:fs';
@@ -578,6 +578,28 @@ export function canvasInfo(projectDir, plan) {
   return { format: r.format, source: r.detail, W: c.W, H: c.H, maxChars: c.caption.maxChars, captionBottom: c.caption.bottom, pip: c.pip.box };
 }
 
+// 構圖台（停點 ②、之後在剪輯台改構圖）：沒裁切的 work/rough.mp4＋qc.mjs framing 的分析（講者動作範圍、黑邊、各倍率的框、建議），照 rough.mp4 與版式快取
+async function getFraming(ctx) {
+  const P = ctx.P, src = path.join(P.project, 'work', 'rough.mp4'), st = statOf(src);
+  if (!st) return [404, { error: 'novideo', message: `找不到 ${relRoot(ctx, src)} → 請 AI 先完成「剪乾淨」，產生 work/rough.mp4` }];
+  const plan = readPlan(P.plan);
+  const cv = canvasInfo(P.project, plan.data);
+  const key = `${st.mtimeMs}:${st.size}:${cv.format}`;
+  if (ctx.framing?.key !== key) {
+    try {
+      const { framingAnalysis } = await import('./qc.mjs');
+      const a = framingAnalysis(P, {});
+      const sug = a.cands.find((c) => Math.abs(c.zoom - a.suggestion.zoom) < 1e-6) || a.cands[0];
+      ctx.framing = { key, data: { srcSize: a.srcSize, motion: a.motion, content: a.content, cands: a.cands, suggestion: { zoom: sug.zoom, frame: sug.frame, none: a.suggestion.none }, chin: a.chin, lookLine: a.look?.line ?? null } };
+    } catch (e) { return [500, { error: 'framing', message: e.message }]; }
+  }
+  const c = canvasOf(cv.format);
+  return [200, { ...ctx.framing.data, canvas: { format: cv.format, source: cv.source, W: c.W, H: c.H, caption: c.caption.box, card: c.lowerThird.rect, pip: c.pip.box, safe: c.regions.safe, headTop: c.framing.headTop, chinMax: c.framing.chinMax ?? null },
+    video: { url: `/media/source.mp4?v=${Math.floor(st.mtimeMs).toString(36)}${st.size.toString(36)}` }, limits: LIMITS.frame,
+    plan: { exists: plan.exists, hash: plan.hash, mtime: plan.mtime, error: plan.error, frame: Array.isArray(plan.data?.frame) ? plan.data.frame : null, speakerBox: plan.data?.speakerBox ?? null },
+    project: { name: path.basename(P.project) } }];
+}
+
 async function getState(ctx) {
   const P = ctx.P;
   const plan = readPlan(P.plan);
@@ -631,12 +653,15 @@ const reportOut = (rep) => ({ ready: true, data: rep.report, fallback: rep.fallb
 async function doSave(ctx, body) {
   const P = ctx.P;
   const st = statOf(P.plan);
-  if (!st) return [404, { error: 'noplan', message: `找不到 ${relRoot(ctx, P.plan)} → 請 AI 先寫 plan.json，剪輯台才有地方存` }];
-  const text = fs.readFileSync(P.plan, 'utf8');
+  // 構圖台在停點 ②（分鏡表之前，還沒有 plan.json）只存 frame：先建一個只有 version（直式加 format）的 plan.json
+  const frameOnly = isObj(body) && body.frame !== undefined && Object.keys(body).every((k) => k === 'base' || k === 'frame');
+  if (!st && !frameOnly) return [404, { error: 'noplan', message: `找不到 ${relRoot(ctx, P.plan)} → 請 AI 先寫 plan.json，剪輯台才有地方存` }];
+  const cv = canvasInfo(P.project, st ? readPlan(P.plan).data : null);
+  const text = st ? fs.readFileSync(P.plan, 'utf8') : JSON.stringify({ version: 1, ...(cv.format === 'portrait' ? { format: 'portrait' } : {}) }, null, 2) + '\n';
   const base = isObj(body?.base) ? body.base : {};
-  const hash = sha(text);
-  const planConflict = (h, m) => (base.hash != null ? base.hash !== h : base.mtime == null || base.mtime !== m);
-  if (planConflict(hash, st.mtimeMs)) {
+  const hash = st ? sha(text) : null;
+  const planConflict = (h, m) => (!st ? base.hash != null : base.hash != null ? base.hash !== h : base.mtime == null || base.mtime !== m);
+  if (planConflict(hash, st?.mtimeMs)) {
     return [409, { error: 'conflict', file: 'plan', mtime: st.mtimeMs, hash,
       message: 'plan.json 在你打開剪輯台之後被改過（通常是 AI 剛改了它）。為了不蓋掉那些修改，這次 plan.json 和字幕都沒有存 → 按「重新載入」拿最新的 plan.json，再存一次' }];
   }
@@ -653,19 +678,20 @@ async function doSave(ctx, body) {
   const memory = readMemory(ctx);
   const durCache = new Map();
   const mediaDur = (src) => { if (!durCache.has(src)) durCache.set(src, mediaInfo(ctx, src)?.dur ?? null); return durCache.get(src); };
-  const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory });
+  const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory, canvas: cv });
   if (r.errors.length) return [400, { error: 'invalid', errors: r.errors, message: r.errors.join('\n') }];
   // plan.json 與 rough.srt 一起寫：兩個都先寫暫存檔；rename 之前再比對一次，任一個被改過就兩個都不寫
   const writes = [];
   if (r.text != null) writes.push([P.plan, r.text]);
+  if (!st && r.text != null) fs.mkdirSync(path.dirname(P.plan), { recursive: true });
   if (r.srtText != null) writes.push([P.srt, r.srtText]);
   const tmps = [];
   try {
     for (const [f, t] of writes) { const tmp = `${f}.editor-${process.pid}.tmp`; fs.writeFileSync(tmp, t); tmps.push([tmp, f]); }
-    const st2 = statOf(P.plan), now = fs.readFileSync(P.plan, 'utf8'), srt2 = readSrt(P.srt);
-    if (sha(now) !== hash || (srt2.hash ?? null) !== (srt.hash ?? null)) {
+    const st2 = statOf(P.plan), now = st2 ? fs.readFileSync(P.plan, 'utf8') : null, srt2 = readSrt(P.srt);
+    if ((now == null ? null : sha(now)) !== hash || (srt2.hash ?? null) !== (srt.hash ?? null)) {
       for (const [tmp] of tmps) try { fs.unlinkSync(tmp); } catch { /* 已經不在 */ }
-      return [409, { error: 'conflict', file: sha(now) !== hash ? 'plan' : 'srt', mtime: st2?.mtimeMs, message: '存檔的同時 plan.json 或字幕被改過了，這次兩個都沒有存 → 按「重新載入」再存一次' }];
+      return [409, { error: 'conflict', file: (now == null ? null : sha(now)) !== hash ? 'plan' : 'srt', mtime: st2?.mtimeMs, message: '存檔的同時 plan.json 或字幕被改過了，這次兩個都沒有存 → 按「重新載入」再存一次' }];
     }
     for (const [tmp, f] of tmps) fs.renameSync(tmp, f);
   } catch (e) {
@@ -676,9 +702,10 @@ async function doSave(ctx, body) {
     try { fs.mkdirSync(ctx.editorDir, { recursive: true }); fs.writeFileSync(ctx.memoryFile, JSON.stringify({ sfx: r.memory || {} }, null, 2) + '\n'); } catch { /* 記不住只影響「還原音效」 */ }
   }
   const nst = statOf(P.plan), nsrt = readSrt(P.srt);
+  if (frameOnly) return [200, { ok: true, wrote: { plan: r.text != null, srt: false }, notes: r.notes || [], plan: { exists: !!nst, mtime: nst?.mtimeMs ?? null, hash: nst ? sha(fs.readFileSync(P.plan, 'utf8')) : null, frame: Array.isArray(r.plan.frame) ? r.plan.frame : null, speakerBox: r.plan.speakerBox ?? null } }];
   const rep = await getReport(ctx, { fresh: true });
   return [200, { ok: true, look: lookState(ctx, r.plan), wrote: { plan: r.text != null, srt: r.srtText != null }, plan: { mtime: nst.mtimeMs, hash: sha(fs.readFileSync(P.plan, 'utf8')), data: r.plan },
-    srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, edit: r.edit ?? r.plan.edit ?? null, anchors: r.anchors || [], sfxMemory: r.memory || {},
+    srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: r.notes || [], edit: r.edit ?? r.plan.edit ?? null, anchors: r.anchors || [], sfxMemory: r.memory || {},
     report: reportOut(rep) }];
 }
 
@@ -758,8 +785,10 @@ async function handle(ctx, req, res) {
   if (!isGet) return sendText(res, 405, '不支援這個方法');
 
   if (p === '/' || p === '/index.html') return sendFile(req, res, path.join(UI_DIR, 'index.html'));
+  if (p === '/framing' || p === '/framing.html') return sendFile(req, res, path.join(UI_DIR, 'framing.html'));
   if (p === '/api/ping') return sendJson(res, 200, { ok: true, app: 'auto-edit-editor', project: P.project, pid: process.pid });
   if (p === '/api/state') return sendJson(res, 200, await getState(ctx));
+  if (p === '/api/framing') { const [s, o] = await getFraming(ctx); return sendJson(res, s, o); }
   if (p === '/api/thumbs') return sendJson(res, 200, await getThumbs(ctx, u.searchParams.get('src') || 'main'));
   if (p.startsWith('/editor-cache/thumbs/')) {
     const f = safeJoin(path.join(ctx.editorDir, 'thumbs'), p.slice('/editor-cache/thumbs/'.length));
@@ -792,6 +821,11 @@ async function handle(ctx, req, res) {
   if (p.startsWith('/kit/')) {
     const f = safeJoin(path.join(P.templateDir, 'kit'), p.slice('/kit/'.length));
     return f ? sendFile(req, res, f) : sendText(res, 404, '找不到檔案');
+  }
+  if (p === '/media/source.mp4') {
+    // 構圖台：沒裁切的初剪（build 編碼過的底片已經照 frame 裁過）
+    const f = path.join(P.project, 'work', 'rough.mp4');
+    return statOf(f) ? sendFile(req, res, f, { type: 'video/mp4' }) : sendText(res, 404, '找不到 work/rough.mp4');
   }
   if (p === '/media/rough.mp4') {
     const f = pickVideo(P);
@@ -918,6 +952,7 @@ async function cli() {
   const running = await runningEditor(stateFile, P.project);
   if (running) {
     console.log(`剪輯台已經開著：${running.url}`);
+    console.log(`構圖台：${new URL('framing', running.url).href}`);
     console.log(`專案：${rel(P.project)}（要重開先關掉：${stopCmd}）`);
     if (flags.open) openBrowser(running.url);
     return 0;
@@ -939,6 +974,7 @@ async function cli() {
       const s = readJson(stateFile);
       if (s?.pid === child.pid && s.url) {
         console.log(`剪輯台：${s.url}`);
+        console.log(`構圖台：${new URL('framing', s.url).href}`);
         console.log(`專案：${rel(P.project)}`);
         console.log(`已在背景執行（log：${rel(logFile)}）。關閉：${stopCmd}`);
         if (flags.open) openBrowser(s.url);
@@ -958,6 +994,7 @@ async function cli() {
   process.on('SIGTERM', shutdown);
   if (ed.port !== (flags.port ?? DEFAULT_PORT)) console.log(`port ${flags.port ?? DEFAULT_PORT} 被佔用，改用 ${ed.port}`);
   console.log(`剪輯台：${ed.url}`);
+  console.log(`構圖台：${new URL('framing', ed.url).href}`);
   console.log(`專案：${rel(P.project)}`);
   console.log(ed.ctx.player.available ? `成片預覽：HyperFrames 播放器 ${ed.ctx.player.version ?? ''}` : `成片預覽：不能用（${ed.ctx.player.reason}），只有即時模擬`);
   console.log(process.env.AUTO_EDIT_EDITOR_CHILD ? `背景執行中。關閉：${stopCmd}` : '按 Ctrl+C 關閉');

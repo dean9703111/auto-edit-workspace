@@ -364,7 +364,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const theme = plan.theme === 'dark' ? 'dark' : 'light';
   if (plan.style !== undefined && (typeof plan.style !== 'string' || !plan.style.trim())) errors.push(`style 要寫風格包的名稱（shared/template/styles/ 底下的資料夾名，例 "預設"），現在是 ${JSON.stringify(plan.style)} → 改成名稱，或刪掉這個欄位（＝用 shared/template/ 目前的主色與背景）`);
   const style = typeof plan.style === 'string' && plan.style.trim() ? plan.style.trim() : null;
-  // check：只給示意／預覽用的 plan 關規則（例 qc.mjs framing --cards 的示意卡文字跟字幕無關）；正式 plan.json 寫了 build 會 ⚠
+  // check：只給示意／預覽用的 plan 關規則（示意卡的文字跟字幕無關）；正式 plan.json 寫了 build 會 ⚠
   if (plan.check !== undefined) {
     const c = plan.check;
     if (!c || typeof c !== 'object' || Array.isArray(c)) errors.push(`check 要是物件（例 "check": { "textSync": false }），現在是 ${JSON.stringify(c)} → 正式 plan.json 不用寫這個欄位，刪掉`);

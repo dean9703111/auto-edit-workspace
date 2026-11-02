@@ -401,23 +401,6 @@ test('storyboard：catalog 的 done 是 "label" 的 fx（27 打字機）截在�
   assert.ok(fs.existsSync(path.join(F.proj, 'work', 'storyboard-preview', 's01.png')));
 });
 
-test('framing --cards 的示意字幕和每張示意卡的文字沒有連續 2 個字相同（不受「文字對時」✖）', () => {
-  const texts = [];
-  const walk = (v) => { if (typeof v === 'string') texts.push(v.replace(/\*\*|\/\/|｜.*$/g, '')); else if (v && typeof v === 'object') Object.values(v).forEach(walk); };
-  Q.CARD_SCENES.forEach((s) => walk(s.slots));
-  const bi = (t) => [...t].slice(0, -1).map((c, i) => c + [...t][i + 1]);
-  for (const t of texts) for (const b of bi(t)) assert.ok(!Q.CARD_CAPTION.includes(b), `示意字幕「${Q.CARD_CAPTION}」和「${t}」都有「${b}」`);
-});
-
-test('framing --cards：示意 build 不被文字對時與示意段落的 ⚠ 擋下，產生 構圖預覽-套卡.jpg', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 600000 }, () => {
-  const F = fixture();
-  fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, look: false, speakerBox: [400, 80, 900, 700], scenes: [] }));
-  const r = F.qc('framing', '--cards', '--zooms', '1');
-  assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.doesNotMatch(r.stdout + r.stderr, /✖/);
-  assert.ok(fs.existsSync(path.join(F.proj, 'work', '構圖預覽-套卡.jpg')));
-});
-
 // ---------- 動態 v2（specs/010-motion-v2）：新拍點、字幕樣式（F8）、主題 ----------
 
 test('v2 拍點（純函式）：抽屜抽出完成 +0.3 秒；焦點抬起那拍跑完 +0.1 秒、不晚於下一拍前 0.1 秒；之後畫面沒變就併成完成態', () => {
@@ -631,7 +614,8 @@ test('直式 framing／speaker（CLI）：第一行印版式；構圖預覽三�
   assert.match(rows[0], /放大 2 倍/);
   const dims = (f) => spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f], { encoding: 'utf8' }).stdout.trim();
   assert.equal(dims(path.join(F.proj, 'work', '構圖預覽.jpg')), `${3 * 360 + 4 * 10},${640 + 30 + 2 * 10}`);
-  assert.match(lines[lines.length - 2], /^下一步：/, '最後一行和橫式相同');
+  assert.match(lines[lines.length - 3], /^→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框/, '下一步和橫式相同');
+  assert.match(lines[lines.length - 2], /^node shared\/template\/tools\/editor\.mjs --project \S+$/, '指令單獨一行');
   r = F.qc('speaker');
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.equal(r.stdout.split('\n')[0], '版式：直式 1080×1920（來源：plan.json）');

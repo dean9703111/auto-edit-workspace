@@ -4,6 +4,8 @@
 //   sanitizeSegments(segments, plan, ctx)             → { updates: [[id, set, del]], memory, errors }
 //   applySave(planText, body, ctx)                     → { text, srtText, plan, edit, cues, memory, errors }（要寫的新內容；null＝不用寫）
 //   sanitizeLook(v)                                    → { look, errors }（第一層 look：講者調光與瘦臉；null＝恢復預設）
+//   sanitizeFrame(v, { W, H })                         → { frame, errors }（第一層 frame：構圖台的裁切框；null＝不裁切）
+//   remapToFrame(rect, from, to, { W, H }, kind)       → 換框時 speakerBox（'box'）／pipCrop（'rect'）換算成新框裡同一塊畫面
 //   sanitizeTheme(v)                                   → { theme, errors }（第一層 theme："light"｜"dark"；null＝拿掉＝亮色；specs/010-motion-v2/design-system.md §10）
 //   parseSrtBlocks(text) / writeSrt(srtText, cues)     → rough.srt 讀寫（保留 CRLF／LF、BOM；沒改的句子原封不動）
 //   字幕增刪與句號重新對應的規則在 ../subtitles.mjs（頁面也用同一份）
@@ -19,8 +21,9 @@ export const LIMITS = Object.freeze({
   editKeys: ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins'], volumeKeys: ['voice', 'sfx', 'media'],
   joinKeys: ['at', 'type', 'dur'], gainKeys: ['from', 'to', 'db'],
   segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'anchor'], segScene: ['slots'], segFx: ['vars'],
-  bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme'],
+  bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme', 'frame'],
   themes: ['light', 'dark'],
+  frame: { maxZoom: 2, upscaleWarn: 3.5, edge: 40 },   // 構圖台：最多放大 2 倍；來源像素放大超過 3.5 倍會變軟；講者動作範圍離邊 < 40px＝切到手勢
   srt: RULES,
 });
 
@@ -372,6 +375,33 @@ export function sanitizeTheme(v) {
   if (LIMITS.themes.includes(v)) return { theme: v, errors: [] };
   return { theme: undefined, errors: [`theme 只能是 "light"（亮，預設）或 "dark"（暗），現在是 ${JSON.stringify(v)}`] };
 }
+// 構圖裁切 frame＝[x, y, w, h]（畫布座標，cv＝{ W, H }）或 null（不裁切）：寬高比和畫布一樣（差 1% 內）、整個在畫布裡、最多放大 maxZoom 倍；整個畫面＝null
+export function sanitizeFrame(v, cv) {
+  if (v === null) return { frame: null, errors: [] };
+  if (!cv) return { frame: undefined, errors: ['不知道畫布尺寸，不能存 frame → 重新載入構圖台'] };
+  const { W, H } = cv;
+  if (!Array.isArray(v) || v.length !== 4 || !v.every(isNum)) return { frame: undefined, errors: [`frame 要是 [x, y, w, h]（${W}×${H} 座標）或 null（不裁切），現在是 ${JSON.stringify(v)}`] };
+  const [x, y, w, h] = v.map((n) => Math.round(n));
+  const errors = [];
+  if (x < 0 || y < 0 || x + w > W || y + h > H) errors.push(`frame 要整個在畫面裡（x 0–${W}、y 0–${H}），現在是 [${x}, ${y}, ${w}, ${h}]`);
+  if (w < W / LIMITS.frame.maxZoom - 1) errors.push(`frame 最多放大 ${LIMITS.frame.maxZoom} 倍（寬至少 ${Math.ceil(W / LIMITS.frame.maxZoom)}），現在寬 ${w}`);
+  if (!(h > 0) || Math.abs(w / h - W / H) > 0.01 * (W / H)) errors.push(`frame 的寬高比要和畫面一樣（${W}:${H}），現在是 ${w}×${h}`);
+  if (errors.length) return { frame: undefined, errors };
+  return { frame: w >= W && h >= H ? null : [x, y, w, h], errors };
+}
+// speakerBox［x1, y1, x2, y2］、pipCrop［x, y, w, h］是裁切後畫面的座標：換框時換算成新框裡的同一塊畫面（from／to 是舊／新 frame，null＝整個畫面）。
+// speakerBox 夾在畫面裡；pipCrop 出界就交回 "auto"（用 speakerBox 算）
+export function remapToFrame(rect, from, to, cv, kind = 'box') {
+  const { W, H } = cv, F0 = from || [0, 0, W, H], F1 = to || [0, 0, W, H];
+  const X = (v) => ((F0[0] + (v * F0[2]) / W) - F1[0]) * (W / F1[2]), Y = (v) => ((F0[1] + (v * F0[3]) / H) - F1[1]) * (H / F1[3]);
+  if (kind === 'box') {
+    const cl = (v, hi) => Math.round(Math.min(Math.max(v, 0), hi));
+    return [cl(X(rect[0]), W), cl(Y(rect[1]), H), cl(X(rect[2]), W), cl(Y(rect[3]), H)];
+  }
+  const x1 = X(rect[0]), y1 = Y(rect[1]), x2 = X(rect[0] + rect[2]), y2 = Y(rect[1] + rect[3]);
+  if (x1 < -0.5 || y1 < -0.5 || x2 > W + 0.5 || y2 > H + 0.5) return 'auto';
+  return [Math.round(Math.max(0, x1)), Math.round(Math.max(0, y1)), Math.round(x2 - x1), Math.round(y2 - y1)];
+}
 // 第一層的 look／theme：null＝拿掉；原本有就原地換；沒有就插在 edit（沒有 edit 就 scenes）前面
 function withTop(plan, key, value) {
   if (value === null) { const o = { ...plan }; delete o[key]; return o; }
@@ -385,7 +415,7 @@ function withTop(plan, key, value) {
   return out;
 }
 
-function surgicalText(planText, next, { edit, segIdx, look, theme }) {
+function surgicalText(planText, next, { edit, segIdx, look, theme, frame, speakerBox, pipCrop }) {
   const ind = detectIndent(planText);
   const nl = /\r\n/.test(planText) ? '\r\n' : '\n';
   const fix = (s) => s.replace(/\n/g, nl);
@@ -426,8 +456,11 @@ function surgicalText(planText, next, { edit, segIdx, look, theme }) {
       else ops.push([top.close, top.close, `${nl}${ind}"${key}": ${val}${nl}`]);
     }
   };
+  if (frame !== undefined) topKey('frame', frame);
   if (theme !== undefined) topKey('theme', theme);
   if (look !== undefined) topKey('look', look);
+  if (speakerBox !== undefined) topKey('speakerBox', speakerBox);
+  if (pipCrop !== undefined) topKey('pipCrop', pipCrop);
   if (segIdx.length) {
     const sc = top.entries.find((x) => x.key === 'scenes');
     const arr = sc && scanJson(planText, sc.start);
@@ -516,10 +549,34 @@ export function applySave(planText, body, ctx = {}) {
     // 沒變就不動：值一樣、拿掉本來就沒有的、本來沒寫（＝亮）又選亮
     if (theme === null ? !('theme' in plan) : plan.theme === theme || (theme === 'light' && !('theme' in plan))) theme = undefined;
   }
+  let frame;
+  if (body.frame !== undefined) {
+    const r = sanitizeFrame(body.frame, ctx.canvas);
+    errors.push(...r.errors);
+    frame = r.frame;
+    if (frame === null ? !('frame' in plan) : same(frame, plan.frame)) frame = undefined;   // 沒變就不動
+  }
   if (errors.length) return { errors };
   let next = edit ? withEdit(planR, edit) : planR;
   if (look !== undefined) next = withTop(next, 'look', look);
   if (theme !== undefined) next = withTop(next, 'theme', theme);
+  // 換框：speakerBox、pipCrop 是裁切後的座標，跟著換算（不用重量）
+  const notes = [];
+  let speakerBox, pipCrop;
+  if (frame !== undefined) {
+    next = withTop(next, 'frame', frame);
+    const old = Array.isArray(plan.frame) ? plan.frame : null;
+    if (Array.isArray(plan.speakerBox) && plan.speakerBox.length === 4 && plan.speakerBox.every(isNum)) {
+      speakerBox = remapToFrame(plan.speakerBox, old, frame, ctx.canvas, 'box');
+      if (same(speakerBox, plan.speakerBox)) speakerBox = undefined;
+      else { next = withTop(next, 'speakerBox', speakerBox); notes.push(`speakerBox 跟著新的框換算：[${plan.speakerBox.join(', ')}] → [${speakerBox.join(', ')}]`); }
+    }
+    if (Array.isArray(plan.pipCrop) && plan.pipCrop.length === 4 && plan.pipCrop.every(isNum)) {
+      pipCrop = remapToFrame(plan.pipCrop, old, frame, ctx.canvas, 'rect');
+      if (same(pipCrop, plan.pipCrop)) pipCrop = undefined;
+      else { next = withTop(next, 'pipCrop', pipCrop); notes.push(pipCrop === 'auto' ? 'pipCrop 換算後超出畫面，改回 "auto"（用 speakerBox 算）' : `pipCrop 跟著新的框換算：[${plan.pipCrop.join(', ')}] → [${pipCrop.join(', ')}]`); }
+    }
+  }
   const changed = s.updates.filter(([, set, del]) => Object.keys(set).length || del.length);
   if (changed.length) {
     next = { ...next, scenes: next.scenes.map((seg) => {
@@ -533,8 +590,8 @@ export function applySave(planText, body, ctx = {}) {
   // plan.json：有變的段（剪輯台改的＋句號重新對應的）才重寫
   const segIdx = (next.scenes || []).map((seg, i) => (same(seg, plan.scenes?.[i]) ? -1 : i)).filter((i) => i >= 0);
   let text = null;
-  if (edit || segIdx.length || look !== undefined || theme !== undefined) {
-    try { text = surgicalText(planText, next, { edit, segIdx, look, theme }); } catch { text = null; }
+  if (edit || segIdx.length || look !== undefined || theme !== undefined || frame !== undefined) {
+    try { text = surgicalText(planText, next, { edit, segIdx, look, theme, frame, speakerBox, pipCrop }); } catch { text = null; }
     if (text == null) {
       text = JSON.stringify(next, null, detectIndent(planText)) + '\n';
       if (/\r\n/.test(planText)) text = text.replace(/\n/g, '\r\n');
@@ -542,7 +599,7 @@ export function applySave(planText, body, ctx = {}) {
     if (text === planText) text = null;
   }
   const srtText = srtChanged ? writeSrt(ctx.srtText, cues, { renumber: structural }) : null;
-  return { text, srtText: srtText === ctx.srtText ? null : srtText, plan: next, edit, cues: srtChanged ? cues.map(({ n, start, end, text: t }) => ({ n, start, end, text: t })) : cues0.map(({ n, start, end, text: t }) => ({ n, start, end, text: t })), memory: s.memory, anchors, errors: [] };
+  return { text, srtText: srtText === ctx.srtText ? null : srtText, plan: next, edit, cues: srtChanged ? cues.map(({ n, start, end, text: t }) => ({ n, start, end, text: t })) : cues0.map(({ n, start, end, text: t }) => ({ n, start, end, text: t })), memory: s.memory, anchors, notes, errors: [] };
 }
 
 // ---------- rough.srt ----------

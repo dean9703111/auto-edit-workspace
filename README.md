@@ -103,7 +103,7 @@ flowchart LR
 | 階段 | AI Agent 判斷 | 程式計算 | 停下來給你看 |
 |---|---|---|---|
 | 剪乾淨 | 逐字稿裡哪一句重講、卡住，列成剪輯清單 | 主軌轉檔（`media.mjs main`）、whisper 詞級逐字稿、NG 對齊停頓並產生 auto-editor 指令（`media.mjs ng-snap`）、初剪驗證（`media.mjs verify-rough`）、字幕照講稿斷句對時（`media.mjs srt-align`） | ① 剪輯清單 |
-| 構圖 | 選畫面放大倍率 | 講者調光、瘦臉、臉部偵測（`look.mjs`），算出每個倍率的構圖預覽（`qc.mjs framing`） | ② 構圖倍率 |
+| 構圖 | 在構圖台拖框，決定畫面放大多少、講者放哪裡 | 講者調光、瘦臉、臉部偵測（`look.mjs`），量講者動作範圍、算建議的框（`qc.mjs framing`），剪輯台的構圖台即時顯示套上字幕與字卡的樣子 | ② 構圖 |
 | 分鏡 | 每段口播在講什麼情境、用哪個版面和動畫、卡片寫什麼 | 檢查字數上限、版面、文字出現時間對不對得上講到的詞（`build.mjs --check`），截出每段的完成態（`qc.mjs storyboard`） | ③ 分鏡表 |
 | 定稿 | 照你的意見改哪一段 | 組成 HyperFrames 專案：字幕、資訊卡、子母畫面、音效對準畫面事件、人聲調到 −14 LUFS（`build.mjs`）；量文字撐破、被裁、擋臉（`audit.mjs`） | ④ Studio 預覽、⑤ 剪輯台 |
 | 輸出 | 看觀影總表判斷哪裡怪 | render、檢查格式、長度、響度、黑畫面、畫面凍結（`qc.mjs final`）；選用：拆成剪映素材（`capcut.mjs`） | — |
@@ -145,7 +145,7 @@ flowchart LR
 | 素材工具 `media.mjs` | 1 支 | `shared/template/tools/media.mjs` | 把多支影片、錄音接成主軌；`ng-snap` 把 NG 對齊停頓並印出 auto-editor 指令；`srt-align` 把字幕照講稿排成完整語句並對好時間（舊流程 `srt-split`、`snap-srt`）、`cutpoints` 算剪接點；掃描螢幕錄影與圖片，產生縮圖總表讓 AI 配對、讀座標 |
 | 進度與能力 `status.mjs`、`caps.mjs` | 2 支 | `shared/template/tools/` | `status`：換 session 說「繼續」時看做到哪、下一步；`caps`：這台電腦能用哪些生圖與影片工具（只檢查、不安裝） |
 | 版面量測 `audit.mjs` | 1 支 | `shared/template/tools/audit.mjs` | 在瀏覽器裡把每段情境動畫跳到中點與完成態，量出文字撐破、被裁掉、壓到字幕或子母畫面、擋到講者 |
-| 驗收工具 `qc.mjs` | 1 支 | `shared/template/tools/qc.mjs` | `framing`：構圖倍率預覽；`speaker`：疊出講者的動作範圍，量資訊卡不能擋的地方；`storyboard`：分鏡表每段的完成態截圖；`observe`：成片每 0.5 秒一格的觀影總表；`final`：成片輸出後檢查格式、長度、響度、畫面凍結、黑畫面、長時間沒聲音 |
+| 驗收工具 `qc.mjs` | 1 支 | `shared/template/tools/qc.mjs` | `framing`：構圖分析（講者動作範圍、建議的框）；`speaker`：疊出講者的動作範圍，量資訊卡不能擋的地方；`storyboard`：分鏡表每段的完成態截圖；`observe`：成片每 0.5 秒一格的觀影總表；`final`：成片輸出後檢查格式、長度、響度、畫面凍結、黑畫面、長時間沒聲音 |
 | 剪輯台 `editor.mjs` | 1 支 | `shared/template/tools/editor.mjs`，說明在 `shared/template/EDITOR.md` | 網頁介面：剪掉不要的片段、調音量、加淡入淡出和轉場。說「打開剪輯台」，AI 會給你網址 |
 | 換風格工具 `brand.mjs` | 1 支 | `shared/template/tools/brand.mjs` | 換色時自動檢查顏色看不看得清楚；`bg` 把 HTML 截成背景圖並檢查留空區；`list`／`use`／`pack` 列出、套用、建立風格包 |
 | 剪映素材 `capcut.mjs` | 1 支 | `shared/template/tools/capcut.mjs` | 把成片拆成主軌 MP4、每段一支有透明通道的 MOV、字幕 SRT 和排法清單，拿到剪映自己剪 |

@@ -390,7 +390,7 @@ export function speakerBoxScaleWarning(box, dims, C = canvasOf('landscape')) {
   const fixed = box.map((v) => Math.round(v * k));
   return `speakerBox ${JSON.stringify(box)} 整個落在 ${w}×${h} 以內，底片是 ${w}×${h}：看起來是用原尺寸截圖的像素量的，但 speakerBox 要寫 ${C.W}×${C.H} 座標 → 每個數字乘 ${r3(k)}（例：${JSON.stringify(fixed)}）；講者真的在左上角就忽略這則`;
 }
-// check.textSync false 只給示意／預覽用的 plan（qc.mjs framing --cards）；寫在專案正式的 work/hyperframes/plan.json 就提醒
+// check.textSync false 只給示意／預覽用的 plan；寫在專案正式的 work/hyperframes/plan.json 就提醒
 export function textSyncOffWarnings(P, plan) {
   if (plan?.check?.textSync !== false || !P.project) return [];
   if (path.resolve(P.plan) !== path.join(P.project, 'work', 'hyperframes', 'plan.json')) return [];

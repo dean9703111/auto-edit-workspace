@@ -174,7 +174,7 @@ node shared/template/tools/media.mjs screen-sync --project projects/<專案>
 srt-align：<貼它最後一行統計「共 N 則（併 N 次、拆出 N 則）；平均 N 字…」>；⚠：<原文或「無」>
 剪接點 <N> 個：ng <N>、pause <N>（cutpoints 印的表在 work/cutpoints.json）
 驗證：ffprobe work/rough.mp4 → <長度>s、<寬>×<高>；verify-rough → ✓
-→ 下一個停點：② 構圖倍率（說「剪好看」開始）
+→ 下一個停點：② 構圖（說「剪好看」開始）
 ```
 
 ## 什麼時候讀 references/

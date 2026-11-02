@@ -22,12 +22,10 @@
  *   node shared/template/tools/qc.mjs framing --project projects/<專案> [--file <mp4>] [--zooms 1,1.15,1.3]
  *       構圖預覽：量講者動作範圍、偵測四周黑邊，算出每個放大倍率的 16:9 裁切框（頭頂上方留 120px、講者水平置中），
  *       存 work/構圖預覽.jpg（每個倍率一格，橘框是講者動作範圍）並印出每個倍率的 frame 與會不會切到手勢。
- *       使用者選好倍率後，把那一列的 frame 寫進 plan.json 第一層，再跑 speaker 量講者框。
+ *       停點 ② 用剪輯台的構圖台（editor.mjs 印的「構圖台」網址）讓使用者拖框，存檔就寫進 plan.json 的 frame；
+ *       使用者說「用建議的」就把建議那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫）。之後再跑 speaker 量講者框。
  *       直式：候選是 9:16（1.0＝原畫面），垂直位置讓頭頂落在 y 380–520、下巴 ≤ 860（下巴用 work/face-landmarks.json，沒有就用動作範圍估），
- *       不合的倍率標 ⚠、不當建議；--cards 三欄改成「疊加（卡片帶＋字幕）｜上下分割｜全幕」。
- *       加 --cards：再抓影片中間一格，每個倍率各 build 一次「疊加（下方字卡）／半畫面（側邊欄）／子母畫面（全畫面清單）」
- *       三種版面的示意卡（用目前 shared/template 的風格），拼成 work/構圖預覽-套卡.jpg（列＝倍率、欄＝版面），
- *       讓使用者看著卡片套上去的樣子選倍率。暫存檔在 work/.framing-preview/（可以刪）。約 15 秒 × 倍率數。
+ *       不合的倍率標 ⚠、不當建議。
  *       倍率表的「建議」欄：不切到手勢、來源像素放大 ≤ 3.5 倍的倍率裡最大的（只是建議，倍率由使用者在停點 ② 選）。
  *   node shared/template/tools/qc.mjs storyboard --project projects/<專案> [--json]
  *       分鏡截圖：讀 build.mjs --check --json，每段在完成態截一張（段尾前 0.6 秒；讀動畫時間軸，還在退場或在動就往前）；
@@ -86,7 +84,7 @@ export function parseArgs(argv) {
       const v = inline ?? rest[++i];
       if (v == null) throw new Error(`--${k} 後面要接值 → 在 --${k} 後面補上值（用 --help 看格式）`);
       flags[k] = v;
-    } else if (['json', 'help', 'cards'].includes(k)) flags[k] = true;
+    } else if (['json', 'help'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數 → 拿掉它；用 node shared/template/tools/qc.mjs --help 看有哪些參數`);
   }
   return flags;
@@ -717,7 +715,8 @@ export function chinFromLandmarks(P, W, H) {
   } catch { return null; }
 }
 
-export function framingPreview(P, flags) {
+// 構圖分析（qc framing 與剪輯台的構圖台共用）：量講者動作範圍、偵測黑邊、算每個倍率的裁切框與建議；不寫檔
+export function framingAnalysis(P, flags = {}) {
   const raw = flags.file ? path.resolve(flags.file) : path.join(P.project, 'work', 'rough.mp4');
   if (!fs.existsSync(raw)) throw new Error(`找不到 ${rel(raw)} → 先完成「剪乾淨」產生 work/rough.mp4，或用 --file 指定影片`);
   const look = lookFor(P, flags, raw), src = look.src;
@@ -736,6 +735,11 @@ export function framingPreview(P, flags) {
   const chin = portrait ? chinFromLandmarks(P, W, H) : null;
   const cands = portrait ? framingCandidatesV(motion, content, zl, cv, chin) : framingCandidates(motion, content, zl);
   for (const c of cands) c.upscale = +r2((c.zoom * W) / (info.width || W));   // 來源像素被放大幾倍（> 3 會明顯變軟）
+  return { src, srcSize: [info.width, info.height], times: ts, motion, content, cands, suggestion: suggestZoom(cands), look, fmt, chin, chinFrom: chin == null ? null : 'face-landmarks', frames };
+}
+
+export function framingPreview(P, flags) {
+  const r = framingAnalysis(P, flags), { cands, frames } = r, cv = r.fmt.canvas, portrait = r.fmt.format === 'portrait', { W, H } = cv;
   // 預覽圖：每個倍率一格（用中間那一格畫面，不用平均圖，比較看得清楚）；直式每格 9:16，青線＝頭頂範圍、洋紅線＝下巴上限
   const [pw, ph] = portrait ? [360, 640] : [640, 360], gap = 10, bar = 30;
   const c = canvas(cands.length * pw + (cands.length + 1) * gap, ph + bar + 2 * gap, [11, 16, 32]);
@@ -764,76 +768,8 @@ export function framingPreview(P, flags) {
   });
   const file = path.join(P.project, 'work', '構圖預覽.jpg');
   writeJpg(c, file, 2);
-  const cards = flags.cards ? cardsPreview(P, flags, src, info, cands, look.lut, cv) : null;
-  return { src, srcSize: [info.width, info.height], times: ts, motion, content, cands, file, cards, look, fmt, chin, chinFrom: chin == null ? null : 'face-landmarks' };
-}
-
-// 套卡預覽的示意段落（秒數是 24 秒靜態短片上的絕對秒數）＋各段完成態的截圖時間
-export const CARD_SCENES = [
-  { id: 'c1', scene: 'key-point', from: 0.4, to: 6.0, slots: { lead: '下方字卡', key: '重點會疊在這個位置' } },
-  { id: 'c2', scene: 'side-panel', from: 6.4, to: 15.0, slots: { eyebrow: '半畫面', title: '講者推到**右半邊**//左邊放重點',
-    items: ['第一個重點 ｜icon=check', '第二個重點 ｜icon=check', '第三個重點 ｜icon=check'] } },
-  { id: 'c3', scene: 'fs-list', from: 15.4, to: 23.6, slots: { title: '子母畫面',
-    items: ['資訊卡占滿畫面 ｜icon=layout-template', '講者縮到右下角小窗 ｜icon=user', '適合清單、流程、對照 ｜icon=list-checks'] } },
-];
-// 示意字幕：示意卡不綁口播，字幕不能和任何卡片文字有連續 2 個字相同，否則 build --check 的「文字對時」會把它當成講到的那句而 ✖
-export const CARD_CAPTION = '這裡是字幕';
-const CARD_SHOTS = [{ label: 'overlay', at: 4.8 }, { label: 'side', at: 13.6 }, { label: 'pip', at: 22.6 }];
-// 直式（FR-091）：三欄是 疊加（卡片帶＋字幕）｜上下分割（上半清單、下半講者面板）｜全幕（同一張清單、不要講者面板）；截圖時間和橫式相同
-export const CARD_SCENES_V = [
-  CARD_SCENES[0],
-  { id: 'c2', scene: 'fs-list', from: 6.4, to: 15.0, slots: { title: '上下分割',
-    items: ['上半是資訊卡 ｜icon=layout-template', '下半是講者面板 ｜icon=user', '適合清單、流程、對照 ｜icon=list-checks'] } },
-  { id: 'c3', scene: 'fs-list', from: 15.4, to: 23.6, pip: false, slots: { title: '全幕',
-    items: ['資訊卡占滿畫面 ｜icon=layout-template', '這段看不到講者 ｜icon=user', '適合章節、總結 ｜icon=list-checks'] } },
-];
-
-export function cardsPreview(P, flags, src, info, cands, lut = null, cv = canvasOf('landscape')) {
-  const portrait = cv.format === 'portrait', { W, H } = cv;
-  const tmp = path.join(P.project, 'work', '.framing-preview');
-  fs.mkdirSync(tmp, { recursive: true });
-  // 中間一格（已套 look）→ 24 秒靜態短片（沒有聲音）＋一則示意字幕；下面的小 build 寫 look: false，不再套一次
-  const mid = path.join(tmp, 'mid.jpg');
-  writeJpg({ w: W, h: H, data: frame1080(src, info.duration / 2, null, lut, W, H) }, mid, 2);
-  const still = path.join(tmp, 'still.mp4');
-  let r = run('ffmpeg', ['-y', '-v', 'error', '-loop', '1', '-i', mid, '-t', '24', '-r', '30', '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'veryfast', still]);
-  if (r.status !== 0) throw new Error(`做不出靜態短片：${tail(r.stderr)} → 重跑一次；還是失敗就把這行回報`);
-  const srt = path.join(tmp, 'sample.srt');
-  fs.writeFileSync(srt, `1\n00:00:00,000 --> 00:00:24,000\n${CARD_CAPTION}\n`);
-  const build = path.join(HERE, 'build.mjs'), sfx = path.resolve(HERE, '..', '..', 'sfx');
-  const rows = [];
-  for (const cd of cands) {
-    const dir = path.join(tmp, `z${cd.zoom.toFixed(2).replace('.', '')}`);
-    fs.mkdirSync(dir, { recursive: true });
-    const plan = { version: 1, ...(portrait ? { format: 'portrait' } : {}), look: false, check: { textSync: false }, ...(cd.zoom > 1.001 ? { frame: cd.frame } : {}), speakerBox: padBox(cd.motion, 40, W, H), pipCrop: 'auto', scenes: portrait ? CARD_SCENES_V : CARD_SCENES };
-    const planFile = path.join(tmp, `plan-${path.basename(dir)}.json`);
-    fs.writeFileSync(planFile, JSON.stringify(plan, null, 1));
-    const args = [build, '--project', P.project, '--video', still, '--srt', srt, '--plan', planFile, '--out', dir, '--no-loudnorm', '--no-declick', '--force'];
-    if (fs.existsSync(sfx)) args.push('--sfx', sfx);
-    if (flags.template) args.push('--template', path.resolve(flags.template));
-    r = run(process.execPath, args);
-    // 示意 plan 的段落間隔、音效密度本來就不合規：⚠ 不印，失敗時只列 ✖
-    if (r.status !== 0) throw new Error(`${cd.zoom}x 的示意 build 失敗：${String(r.stdout + r.stderr).split('\n').filter((l) => l.includes('✖')).slice(0, 3).join('；') || tail(r.stdout + r.stderr, 600)} → 先不加 --cards 跑一次；套卡預覽可以之後再補`);
-    const shots = path.join(dir, 'shots');
-    fs.rmSync(shots, { recursive: true, force: true });
-    r = run(process.execPath, hfArgs(['snapshot', '--at', CARD_SHOTS.map((x) => x.at).join(','), '--no-end', '-o', 'shots']), { cwd: dir });
-    const pngs = fs.existsSync(shots) ? fs.readdirSync(shots).filter((x) => /^frame-.*\.png$/.test(x)).sort() : [];
-    if (pngs.length < CARD_SHOTS.length) throw new Error(`${cd.zoom}x 的示意截圖不完整：${tail(r.stdout + r.stderr)} → 重跑一次；還是失敗就把這行回報`);
-    rows.push({ cd, files: pngs.map((x) => path.join(shots, x)) });
-  }
-  // 拼表：列＝倍率、欄＝版面（直式每格 9:16）
-  const [cw, ch] = portrait ? [360, 640] : [640, 360], gap = 10, bar = 30;
-  const head = gap;   // 點陣字只有數字與少數符號，欄名寫在指令輸出裡（左到右：疊加／半畫面／子母畫面；直式 疊加／上下分割／全幕）
-  const c = canvas(CARD_SHOTS.length * cw + (CARD_SHOTS.length + 1) * gap, head + rows.length * (ch + bar + gap) + gap, [11, 16, 32]);
-  rows.forEach(({ cd, files }, i) => {
-    const y = head + i * (ch + bar + gap);
-    fillRect(c, gap, y, c.w - 2 * gap, bar, cd.cut.length ? [90, 20, 30] : [30, 39, 64]);
-    text(c, `${cd.zoom.toFixed(2)}x  ${cd.frame.join(',')}`, gap + 8, y + 5, 3, [255, 212, 0]);
-    files.forEach((f, k) => blit(c, { w: cw, h: ch, data: rawFrame(f, { width: cw, height: ch }) }, gap + k * (cw + gap), y + bar));
-  });
-  const file = path.join(P.project, 'work', '構圖預覽-套卡.jpg');
-  writeJpg(c, file, 2);
-  return { file, tmp };
+  const { frames: _, ...out } = r;
+  return { ...out, file };
 }
 
 function printFraming(P, r) {
@@ -848,7 +784,7 @@ function printFraming(P, r) {
   if (portrait) console.log(`直式構圖：頭頂要落在 y ${framing.headTop[0]}–${framing.headTop[1]}、下巴 ≤ ${framing.chinMax}（下巴${r.chinFrom ? '用 work/face-landmarks.json 量' : '沒有 face-landmarks.json，用動作範圍上緣＋框高 30% 估'}）`);
   console.log(`\n→ ${rel(r.file)}：每個倍率一格，橘框是講者動作範圍（裁切後）；紅底標題＝會切到手勢${portrait ? '或頭頂／下巴不在範圍；青線是頭頂範圍、洋紅線是下巴上限' : ''}\n`);
   console.log('倍率｜frame（寫進 plan.json）｜講者動作範圍（裁切後）｜備註｜建議');
-  const sug = suggestZoom(r.cands);
+  const sug = r.suggestion;
   for (const c of r.cands) {
     const notes = [];
     if (c.zoom === 1) notes.push('原樣，不裁切（不用寫 frame）');
@@ -859,8 +795,8 @@ function printFraming(P, r) {
   }
   const face = portrait ? '、頭頂／下巴不合' : '', faceOk = portrait ? '、頭頂／下巴在範圍內' : '';
   console.log(sug.none ? `建議：${sug.zoom.toFixed(2)}x（每個倍率都標了切到手勢${face}或放大超過 3.5 倍，選表上最小的；最後由使用者選）` : `建議：${sug.zoom.toFixed(2)}x（不切到手勢${faceOk}、來源像素放大 ≤ 3.5 倍的倍率裡最大的；最後由使用者選）`);
-  if (r.cards) console.log(`\n→ ${rel(r.cards.file)}：套卡預覽，每一列是一個倍率，欄由左到右是${portrait ? '「疊加（卡片帶＋字幕）｜上下分割（上半資訊、下半講者面板）｜全幕（沒有講者）」' : '「疊加（下方字卡）｜半畫面（側邊欄）｜子母畫面（全畫面清單＋右下小窗）」'}，用影片中間一格套目前的風格`);
-  console.log('\n下一步：把使用者選的那一列 frame 寫進 plan.json 第一層（"frame": [x, y, w, h]），再跑 qc.mjs speaker 量講者框');
+  console.log(`\n→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就把 ✔ 那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫），之後跑 qc.mjs speaker 量講者框`);
+  console.log(`node shared/template/tools/editor.mjs --project ${rel(P.project)}`);
 }
 
 function printSpeaker(P, r) {

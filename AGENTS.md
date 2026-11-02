@@ -95,7 +95,7 @@ projects/<專案>/
 | 停點 | 在哪一步 | 給我看什麼 | 我可以回 | 決定寫回哪裡 |
 |---|---|---|---|---|
 | ① 剪輯清單 | 剪乾淨 4 | `work/cuts.md` | 「可以」、要改的列、「改好了」 | `work/cuts.md` |
-| ② 構圖倍率 | 剪好看構圖預覽 | 構圖預覽兩張、`work/look-preview.jpg`、倍率表 | 倍率 | plan.json `frame` |
+| ② 構圖 | 剪好看構圖 | 構圖台網址（在影片上拖框）、`work/look-preview.jpg` | 「調好了」、「用建議的」 | plan.json `frame`（構圖台存檔時寫） |
 | ③ 分鏡表 | 剪好看 3；④ 之後的改版 | `work/storyboard.md`（情境動畫段附動畫分鏡）；改版看 `work/versions/<段>/v<N>/分鏡.md` | 「可以」、「改好了」、要改的段或拍 | 正式 plan.json；情境動畫照確認過的動畫分鏡做；改版由 `versions.mjs accept` 寫回 storyboard.md |
 | ④ Studio 預覽 | 剪好看 5 | Studio 網址 | 要改的段、「可以了，輸出成片」 | plan.json、`work/feedback/` |
 | ⑤ 剪輯台 | 「打開剪輯台」 | 剪輯台網址 | 「調好了」 | 剪輯台自己寫 |
@@ -105,7 +105,7 @@ projects/<專案>/
 
 ```
 ⏸ 停點 ① 剪輯清單｜請看：work/cuts.md｜請回：「可以」或要改的列
-⏸ 停點 ② 構圖倍率｜請看：work/構圖預覽.jpg、work/構圖預覽-套卡.jpg｜請回：倍率（1.0／1.15／1.3）
+⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」
 ⏸ 停點 ③ 分鏡表｜請看：work/storyboard.md｜請回：「可以」或要改的地方
 ⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/versions/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍
 ⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出成片」
@@ -114,7 +114,7 @@ projects/<專案>/
 ```
 
 - 我的回覆對到最近一個「待回覆」的停點。不在停點上時最後一行寫 `→ 下一個停點：<編號> <名稱>（說「<觸發語>」開始）`；安裝清單用 `❓ 請回：「可以開始」或要拿掉的步驟編號`。
-- 「不用停」：這一則訊息啟動的流程 ①–④ 都不停；「跑到停點 N」「做到分鏡表」「做到 Studio」：N 之前不停；下一則沒再說就恢復。⑤、⑥ 不能略過。略過時照樣寫檔、停點紀錄加「略過」，回報加 `⏭ 停點 <編號> 略過：<採用了什麼>`（① 待確認的不剪；② 用建議倍率，沒有就 1.0；③ 沒勾的金句不上）。
+- 「不用停」：這一則訊息啟動的流程 ①–④ 都不停；「跑到停點 N」「做到分鏡表」「做到 Studio」：N 之前不停；下一則沒再說就恢復。⑤、⑥ 不能略過。略過時照樣寫檔、停點紀錄加「略過」，回報加 `⏭ 停點 <編號> 略過：<採用了什麼>`（① 待確認的不剪；② 用 `qc.mjs framing` 表上 ✔ 的建議框，沒有就不裁切；③ 沒勾的金句不上）。
 
 ## 階段預算
 
@@ -143,7 +143,7 @@ projects/<專案>/
 | 有沒有螢幕錄影／圖片 | `assets/screen/`、`assets/images/` | 有：照 `auto-edit-screen` 配 |
 | 長度 | ffprobe 主軌 | 不到 180 秒（3 分鐘）不用 01 章節轉場 |
 | 有沒有業配段 | 講稿有「業配」「贊助」「優惠碼」→ 待確認 | 業配段不放 01 |
-| 構圖倍率 | 停點 ② 通過後填 | plan.json `frame` |
+| 構圖 | 停點 ② 通過後填（倍率，或「不裁切」） | plan.json `frame` |
 
 ## 進度與回饋紀錄
 
@@ -192,7 +192,7 @@ projects/<專案>/
 
 我說「做成片」「包裝成成片」時，依序照 `auto-edit-storyboard` → `auto-edit-screen`（有素材）→ `auto-edit-motion`（有情境動畫）→ `auto-edit-review` → `auto-edit-deliver`；HyperFrames 專案在 `work/hyperframes/`。
 
-**構圖＋套卡預覽**（分鏡表之前）：`node shared/template/tools/look.mjs status --project projects/<專案>`（講者調光＋瘦臉；只讀，不寫任何檔）照「→ 下一步」做：倒數第二行「→ 下一步：<說明>」是說明，最後一行是可直接貼的指令，整行複製、單獨一行執行（預估超過 2 分鐘時它已經帶 `--background`，之後每 30 秒跑一次 `status`，直到「→ 下一步」說 look 好了）；再 `node shared/template/tools/qc.mjs framing --project projects/<專案> --cards`，兩張預覽圖、`work/look-preview.jpg`、倍率表和建議（先照表上「建議」打 ✔ 的）給我 → 停點 ②。選好後那一列的 `frame` 寫進 plan.json 第一層（1.0 倍不寫）。
+**構圖**（分鏡表之前）：`node shared/template/tools/look.mjs status --project projects/<專案>`（講者調光＋瘦臉；只讀，不寫任何檔）照「→ 下一步」做：倒數第二行「→ 下一步：<說明>」是說明，最後一行是可直接貼的指令，整行複製、單獨一行執行（預估超過 2 分鐘時它已經帶 `--background`，之後每 30 秒跑一次 `status`，直到「→ 下一步」說 look 好了）；再 `node shared/template/tools/qc.mjs framing --project projects/<專案>`（量講者動作範圍、算建議的框），接著照 `shared/template/EDITOR.md` 在背景啟動 `node shared/template/tools/editor.mjs --project projects/<專案>`，把它印的「構圖台」網址、`work/look-preview.jpg`、表上 ✔ 的建議給我 → 停點 ②。我在構圖台拖框按「儲存」，剪輯台就把 `frame` 寫進 plan.json（還沒有 plan.json 會新建）；我說「用建議的」，就把表上 ✔ 那一列的 `frame` 寫進 plan.json 第一層（1.0 倍不寫）。
 
 1. 講者框：看檔名含「場地照」的圖（沒有就從 `work/rough.mp4` 截一張 `work/場地照.jpg`），跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案>`，看 `work/場地照-動作範圍.jpg` 寫 speakerBox（USAGE.md 2.2）。字幕用 `work/rough.srt`，不重新轉錄。
 2. 素材與情境：有螢幕錄影／圖片，或 `node shared/template/tools/build.mjs --check --project projects/<專案>` 報「只有聲音」的區間時，`node shared/template/tools/media.mjs scan --project projects/<專案>` 配每段口播（座標用 `media.mjs frame --grid`）。每段先填情境判定表（`auto-edit-storyboard` 步驟 5：口播在講什麼 → `shared/template/SITUATIONS.md` §3 哪一列 → 首選 → 為什麼不是動畫）。首選欄是情境動畫就做動畫，只有不符合 style.md「情境動畫優先」三條判準才退到字卡；連續 2 段以上都是 06／07／12／13 字卡就要回頭查 §3 有沒有動畫列。情境動畫從 `shared/template/custom/` 改、用 `P.at('#N@詞')` 綁句、結尾 `P.end()`；示意動畫（口播在描述具體的動作、物件）先判定素材（畫廊／圖示／新建 SVG），寫成那段的插圖清單（`shared/template/BEATS.md` §5）；資訊卡照 style.md，有圖示欄位就配。錄影或動畫裡看得到游標按下就寫 `clicks`；要片尾配樂寫 `outro`。
@@ -203,7 +203,7 @@ projects/<專案>/
 
 硬規則：
 
-- 倍率定之前不做分鏡；卡片和字幕不擋臉和手勢；「只有聲音」的區間一定被 media 段或不透明全幕蓋住。
+- 構圖定之前不做分鏡；卡片和字幕不擋臉和手勢；「只有聲音」的區間一定被 media 段或不透明全幕蓋住。
 - 章節角標由 build 自動常駐：章節開始到下一章；子母畫面、全幕時自動隱藏；plan.json 不用寫 `chtag`。沒有 01 的短片，章節起點是那一章的 02 段。
 - 子母畫面一定有講者小窗；只有純聲音素材的區間才沒有。`--check --json` 子母畫面段的 `pip` 是空的，先跑 `media.mjs verify-rough`，不要改版面繞過去。
 - 卡片主文字、每條項目、每個動畫站的出現時間＝講到那個詞的時間：綁 `#N@詞`，差 ≤ 0.5 秒；`--check` 的「文字對時」✖ 全修、⚠ 逐項說明（情境動畫的站看 audit 的「綁句對不上」）。
@@ -211,7 +211,7 @@ projects/<專案>/
 
 | 剪好看的數字 | 值 |
 |---|---|
-| 構圖倍率 | 1.0／1.15／1.3；每個像素放大超過 3.5 倍、或切到手勢的往小選；直式另看頭頂 y 380–520、下巴 ≤ 860 |
+| 構圖 | 構圖台拖框，最多放大 2 倍；建議框＝1.0／1.15／1.3 裡不切到手勢、每個像素放大 ≤ 3.5 倍的最大的；直式另看頭頂 y 380–520、下巴 ≤ 860 |
 | 分鏡截圖 | `qc.mjs storyboard` 自己算：每段完成態（段尾前 0.6 秒）、條列逐條換的每次一張、錄影段每個標註到位一張 |
 | 測試片段 | 3–5 秒，挑第一張資訊卡出現處 |
 
@@ -253,7 +253,7 @@ projects/<專案>/
 
 1. 照 `shared/template/EDITOR.md` 在背景啟動 `node shared/template/tools/editor.mjs --project projects/<專案>`，把網址給我 → 停點 ⑤。
 2. 我說「調好了」：重新讀 plan.json 與 rough.srt、重跑 build，再照「剪好看」第 5、6 步（`auto-edit-review` 流程 C）。
-3. 剪輯台會改的地方（EDITOR.md §3）：plan.json 的 `edit`；plan.json 第一層的 `look`（講者調光、瘦臉）；media 段的 `from`／`to`／`in`／`anchor`／`enter`／`exit`／`volume`；任何段落的 `sfxVolume`、`sfx: null`、`slots`／`vars` 的文字；`work/rough.srt` 的字幕文字與起訖時間，也可以新增、分割、合併、刪除字幕（句子數量變動時，剪輯台會把 plan.json 所有綁句的 `#N` 一起重新對好，`work/storyboard.md` 的句號因此可能過期，以 plan.json 為準）。AI 要改 plan.json 或 rough.srt 之前，先重新讀檔，不要蓋掉我在剪輯台存的設定；我在剪輯台改過的文字、斷句和時間，以我改的為準，不要再改回去。
+3. 剪輯台會改的地方（EDITOR.md §3）：plan.json 的 `edit`；plan.json 第一層的 `look`（講者調光、瘦臉）；第一層的 `frame`（構圖台，換框時 `speakerBox`、`pipCrop` 跟著換算）；media 段的 `from`／`to`／`in`／`anchor`／`enter`／`exit`／`volume`；任何段落的 `sfxVolume`、`sfx: null`、`slots`／`vars` 的文字；`work/rough.srt` 的字幕文字與起訖時間，也可以新增、分割、合併、刪除字幕（句子數量變動時，剪輯台會把 plan.json 所有綁句的 `#N` 一起重新對好，`work/storyboard.md` 的句號因此可能過期，以 plan.json 為準）。AI 要改 plan.json 或 rough.srt 之前，先重新讀檔，不要蓋掉我在剪輯台存的設定；我在剪輯台改過的文字、斷句和時間，以我改的為準，不要再改回去。
 
 ## 換風格
 

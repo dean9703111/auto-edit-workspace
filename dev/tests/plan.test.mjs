@@ -705,7 +705,7 @@ test('文字對時：至少對到 3 字（中文連續 3 字、英文／數字�
   // 數量詞：中文數字當 0–9、數字後的「個」不算（範例 s22「1 小時」↔「一個小時」）
   assert.equal(at('1 小時').kw, '一小時');
   assert.equal(spokenAt('3 個步驟', parseSrt('1\n00:00:01,000 --> 00:00:04,000\n總共三個步驟\n'), { near: 0 }).kw, '三個步驟');
-  // 示意 plan（qc.mjs framing --cards）：關掉文字對時；check 只收 textSync（布林）
+  // 示意 plan：關掉文字對時；check 只收 textSync（布林）
   const plan = (extra) => ({ version: 1, ...extra, scenes: [{ id: 'c1', scene: 'key-point', from: '#1', to: '#3e', slots: { lead: '示意', key: '重點會疊在這個位置' } }] });
   const go = (extra) => resolvePlan({ plan: plan(extra), cues: cs, videoDur: 20, lib: L, outDir: os.tmpdir() });
   assert.ok(go({}).errors.some((m) => m.startsWith('文字對時：c1 的 key')));

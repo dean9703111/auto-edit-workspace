@@ -455,8 +455,8 @@ test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行�
   r = await cli(['status', '--project', d2]);
   assert.ok(r.lines.includes('瘦臉底片：✔ 最新（work/rough-look.mp4，瘦臉 0.6，640×360）'), r.lines.join('\n'));
   // 沒有 plan.json：look 好了 → 構圖預覽，不叫人 build（C-01）；指令單獨一行（C-02）
-  assert.match(r.lines.at(-2), /^→ 下一步：look 好了；接著做構圖＋套卡預覽/);
-  assert.match(r.lines.at(-1), /^node shared\/template\/tools\/qc\.mjs framing --project \S+ --cards$/);
+  assert.match(r.lines.at(-2), /^→ 下一步：look 好了；接著跑構圖分析，再開剪輯台，把構圖台網址/);
+  assert.match(r.lines.at(-1), /^node shared\/template\/tools\/qc\.mjs framing --project \S+$/);
   L.writeState(d2, { run: { pid: process.pid, phase: 'detect', done: 10, total: 100, etaSec: 30, startedAt: new Date().toISOString() } });
   r = await cli(['clear', '--project', d2]);
   assert.equal(r.code, 1);
@@ -507,9 +507,9 @@ test('lookNextStep（C-01、C-02、C-06）：還沒好 → 修／等／重跑／
   // look 好了：沒有 plan.json（或還沒有段落）→ 構圖預覽；構圖預覽比瘦臉底片新 → status.mjs；plan 有段落 → build
   s = ns(dir);
   assert.deepEqual([s.step, s.done], ['framing', true]);
-  assert.match(s.cmd, /^node shared\/template\/tools\/qc\.mjs framing --project \S+ --cards$/);
+  assert.match(s.cmd, /^node shared\/template\/tools\/qc\.mjs framing --project \S+$/);
   assert.equal(ns(dir, { version: 1, scenes: [] }).step, 'framing');
-  const cards = path.join(work, L.FRAMING_CARDS), old = new Date(Date.now() - 600000);
+  const cards = path.join(work, L.FRAMING_PREVIEW), old = new Date(Date.now() - 600000);
   fs.writeFileSync(cards, 'jpg');
   fs.utimesSync(cards, old, old);
   assert.equal(ns(dir).step, 'framing', '構圖預覽比瘦臉底片舊 → 重做');
@@ -655,5 +655,5 @@ test('沒有臉的片（testsrc）：抽樣 12 格都沒臉就略過整支偵測
   const again = await cli(['run', '--project', dir]);
   assert.ok(again.lines.includes('[1/3] 找臉：用快取（抽樣 12 格都沒有臉）'), again.lines.join('\n'));
   const st = await cli(['status', '--project', dir]);
-  assert.match(st.lines.at(-1), /^node shared\/template\/tools\/qc\.mjs framing --project \S+ --cards$/);
+  assert.match(st.lines.at(-1), /^node shared\/template\/tools\/qc\.mjs framing --project \S+$/);
 });

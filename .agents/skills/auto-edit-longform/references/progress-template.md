@@ -13,7 +13,7 @@
 | 有沒有螢幕錄影／圖片 | | `ls projects/<專案>/assets/screen projects/<專案>/assets/images` | 有：分鏡時跑 `auto-edit-screen` |
 | 長度（秒） | | `ffprobe -v error -show_entries format=duration -of csv=p=0 "<主軌>"` | 不到 180 秒（3 分鐘）：不用 01 章節轉場 |
 | 有沒有業配段 | | 講稿出現「業配」「贊助」「優惠碼」→「可能有，待確認」；沒講稿寫「未知」 | 有：業配段不放 01 章節轉場 |
-| 構圖倍率 | 待停點 ② | 停點 ② 通過後填 | plan.json `frame` |
+| 構圖 | 待停點 ② | 停點 ② 通過後填（倍率，或「不裁切」） | plan.json `frame` |
 
 ## 階段
 
@@ -49,7 +49,7 @@
 | 有 cuts.md、沒有 `work/rough.mp4` | 剪乾淨：停點 ① | auto-edit-rough（等使用者回 ①） |
 | 有 rough.mp4、沒有 `work/rough.srt` 或沒有 `work/rough.srt.bak-*` | 剪乾淨：字幕 | auto-edit-rough 步驟 7 |
 | 沒有 `work/cutpoints.json` | 剪乾淨：剪接點 | auto-edit-rough 步驟 8 |
-| 沒有 `work/構圖預覽-套卡.jpg` | 剪好看：構圖預覽 | auto-edit-storyboard 步驟 1 |
+| 沒有 `work/構圖預覽.jpg` | 剪好看：構圖 | auto-edit-storyboard 步驟 1 |
 | 沒有 `work/storyboard.md` | 剪好看：停點 ② 之後 | auto-edit-storyboard 步驟 3 |
 | storyboard.md 比 `work/hyperframes/plan.json` 新 | 剪好看：停點 ③ | auto-edit-storyboard（等使用者回 ③） |
 | 沒有 `work/hyperframes/index.html` | 定稿 | auto-edit-review 流程 A |

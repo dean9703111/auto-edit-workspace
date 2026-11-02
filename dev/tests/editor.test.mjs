@@ -673,3 +673,57 @@ test('講者：/api/look/face 沒有 landmark 回 nolandmarks；有就回 360×3
   fs.rmSync(path.join(work, 'face-landmarks.json'));
   fs.rmSync(f);
 });
+
+// ---------- 構圖台（停點 ②、之後在剪輯台改構圖）----------
+test('構圖台：sanitizeFrame（比例、出界、最多 2 倍、整個畫面＝null）；remapToFrame 換框來回不變、pipCrop 出界交回 auto', async () => {
+  const Wm = await imp('editor/server/write.mjs'), cv = { W: 1920, H: 1080 };
+  assert.deepEqual(Wm.sanitizeFrame([182, 144, 1664, 936], cv), { frame: [182, 144, 1664, 936], errors: [] });
+  assert.deepEqual(Wm.sanitizeFrame([0, 0, 1920, 1080], cv), { frame: null, errors: [] });
+  assert.match(Wm.sanitizeFrame([0, 0, 1000, 1000], cv).errors.join(), /寬高比要和畫面一樣/);
+  assert.match(Wm.sanitizeFrame([1000, 0, 1664, 936], cv).errors.join(), /要整個在畫面裡/);
+  assert.match(Wm.sanitizeFrame([0, 0, 800, 450], cv).errors.join(), /最多放大 2 倍/);
+  assert.match(Wm.sanitizeFrame('1.15', cv).errors.join(), /要是 \[x, y, w, h\]/);
+  const F = [182, 144, 1664, 936], box = [600, 200, 1400, 1000];
+  const full = Wm.remapToFrame(box, F, null, cv);
+  assert.deepEqual(full, [702, 317, 1395, 1011]);
+  assert.deepEqual(Wm.remapToFrame(full, null, F, cv), box);
+  assert.equal(Wm.remapToFrame([0, 0, 432, 324], null, F, cv, 'rect'), 'auto', '放大後左上角跑出畫面');
+  assert.deepEqual(Wm.remapToFrame([800, 400, 432, 324], null, F, cv, 'rect'), [713, 295, 498, 374]);
+});
+
+test('構圖台（server）：/framing 頁、沒裁切的 /media/source.mp4、/api/framing 分析；還沒有 plan.json 時只存 frame 會新建；換框時 speakerBox 跟著換算；舊的 hash 409、比例不對 400', async () => {
+  const dir = path.join(root, 'projects', '構圖'), w = path.join(dir, 'work'), plan = path.join(w, 'hyperframes', 'plan.json');
+  fs.mkdirSync(w, { recursive: true });
+  const v = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=30', '-t', '4', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', path.join(w, 'rough.mp4')]);
+  assert.equal(v.status, 0, String(v.stderr));
+  const ed4 = await E.startEditor({ flags: { project: dir, template: path.join(root, 'shared', 'template') }, cwd: root, port: BASE_PORT + 1200, writeState: false });
+  try {
+    const u = (p) => new URL(p, ed4.url);
+    const save = (body) => fetch(u('/api/save'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    assert.match(await (await fetch(u('/framing'))).text(), /<title>構圖台<\/title>/);
+    assert.equal((await fetch(u('/media/source.mp4'))).status, 200);
+    const a = await (await fetch(u('/api/framing'))).json();
+    assert.deepEqual([a.canvas.format, a.canvas.W, a.canvas.H, a.srcSize[0], a.plan.exists, a.limits.maxZoom], ['landscape', 1920, 1080, 320, false, 2], JSON.stringify(a).slice(0, 300));
+    assert.equal(a.suggestion.frame.length, 4);
+    assert.match(a.video.url, /^\/media\/source\.mp4\?v=/);
+    // 還沒有 plan.json：存 frame 以外的東西還是 404；只存 frame 就新建
+    assert.equal((await save({ base: {}, edit: { cuts: [] } })).status, 404);
+    let r = await save({ base: { hash: null }, frame: [182, 144, 1664, 936] });
+    assert.equal(r.status, 200, await r.clone().text());
+    assert.deepEqual(JSON.parse(fs.readFileSync(plan, 'utf8')), { version: 1, frame: [182, 144, 1664, 936] });
+    const j = await r.json();
+    assert.deepEqual(j.plan.frame, [182, 144, 1664, 936]);
+    assert.equal((await save({ base: { hash: null }, frame: null })).status, 409, '頁面以為還沒有 plan.json，其實已經有了');
+    // 已經量過 speakerBox：換成不裁切，speakerBox 換算成同一塊畫面、拿掉 frame
+    fs.writeFileSync(plan, '{\n  "version": 1,\n  "frame": [182, 144, 1664, 936],\n  "speakerBox": [600, 200, 1400, 1000],\n  "scenes": []\n}\n');
+    const st = await (await fetch(u('/api/framing'))).json();
+    r = await save({ base: { hash: st.plan.hash }, frame: null });
+    assert.equal(r.status, 200, await r.clone().text());
+    assert.deepEqual((await r.json()).notes, ['speakerBox 跟著新的框換算：[600, 200, 1400, 1000] → [702, 317, 1395, 1011]']);
+    assert.equal(fs.readFileSync(plan, 'utf8'), '{\n  "version": 1,\n  "speakerBox": [702, 317, 1395, 1011],\n  "scenes": []\n}\n', '只動 frame 與 speakerBox，其他排版不變');
+    const st2 = await (await fetch(u('/api/framing'))).json();
+    r = await save({ base: { hash: st2.plan.hash }, frame: [0, 0, 1000, 1000] });
+    assert.equal(r.status, 400);
+    assert.match((await r.json()).message, /寬高比要和畫面一樣/);
+  } finally { await ed4.close(); }
+});

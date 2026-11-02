@@ -384,8 +384,8 @@ export function lookCheck({ projectDir, plan = {}, templateDir = DEFAULT_TEMPLAT
 //   step  'fix'｜'wait'｜'retry'｜'run'｜'ensure'｜'chrome'（look 還沒好，done＝false）
 //         'framing'｜'build'｜'next'（look 好了，done＝true）
 //   note  說明（印在「→ 下一步：」後面）；cmd  可以整行複製執行的指令（單獨一行，後面不接任何字）
-// 順序：look run（或 --background）→ 構圖＋套卡預覽 → 停點 ②；plan.json 還沒有 scenes 時不會叫人 build。
-export const FRAMING_CARDS = '構圖預覽-套卡.jpg';
+// 順序：look run（或 --background）→ 構圖分析（qc.mjs framing）→ 構圖台 → 停點 ②；plan.json 還沒有 scenes 時不會叫人 build。
+export const FRAMING_PREVIEW = '構圖預覽.jpg';
 export function lookNextStep({ projectDir, plan = {}, templateDir = DEFAULT_TEMPLATE, probe } = {}) {
   const proj = projectLabel(projectDir, templateDir);
   const statusCmd = `node shared/template/tools/look.mjs status --project ${projArg(proj)}`;
@@ -407,9 +407,9 @@ export function lookNextStep({ projectDir, plan = {}, templateDir = DEFAULT_TEMP
   }
   // 1、2、4、5：look 好了
   if (Array.isArray(plan?.scenes) && plan.scenes.length) return { step: 'build', done: true, note: 'look 好了；plan.json 已經有段落，接著 build', cmd: `node shared/template/tools/build.mjs --project ${projArg(proj)}` };
-  const cards = statOf(path.join(projectDir, 'work', FRAMING_CARDS)), look = d.row === 5 ? statOf(d.P.footage) : null;
+  const cards = statOf(path.join(projectDir, 'work', FRAMING_PREVIEW)), look = d.row === 5 ? statOf(d.P.footage) : null;
   if (cards && (!look || cards.mtimeMs >= look.mtimeMs)) return { step: 'next', done: true, note: 'look 和構圖預覽都做好了；照專案進度往下', cmd: `node shared/template/tools/status.mjs --project ${projArg(proj)}` };
-  return { step: 'framing', done: true, note: 'look 好了；接著做構圖＋套卡預覽，和 work/look-preview.jpg 一起給使用者看（停點 ②）', cmd: `node shared/template/tools/qc.mjs framing --project ${projArg(proj)} --cards` };
+  return { step: 'framing', done: true, note: 'look 好了；接著跑構圖分析，再開剪輯台，把構圖台網址和 work/look-preview.jpg 一起給使用者（停點 ②）', cmd: `node shared/template/tools/qc.mjs framing --project ${projArg(proj)}` };
 }
 export const nextLines = (ns) => [`→ 下一步：${ns.note}`, ns.cmd];
 // 指令裡的專案路徑：有空白或 shell 特殊字元就加雙引號（zsh、PowerShell 都吃），整行複製才跑得動

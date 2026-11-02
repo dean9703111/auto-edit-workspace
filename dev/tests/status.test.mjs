@@ -43,7 +43,7 @@ test('判斷表：S0–S14 由上往下第一個符合', () => {
   assert.equal(st(), 'S7');
   touch(p, 'work/cutpoints.json');
   assert.equal(st(), 'S8');
-  touch(p, 'work/構圖預覽-套卡.jpg');
+  touch(p, 'work/構圖預覽.jpg');
   assert.equal(st(), 'S9');
   touch(p, 'work/storyboard.md', 'x', 0);
   assert.equal(st(), 'S10');

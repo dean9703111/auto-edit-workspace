@@ -45,7 +45,7 @@ const have = (list) => list.filter(exists);
 // ---------- 停點（specs/contracts/stop-points.md §2.1；執行期的真相是 AGENTS.md「停點總表」） ----------
 const STOPS = [
   { n: '①', name: '剪輯清單', skill: 'auto-edit-rough', line: '⏸ 停點 ① 剪輯清單｜請看：work/cuts.md｜請回：「可以」或要改的列' },
-  { n: '②', name: '構圖倍率', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖倍率｜請看：work/構圖預覽.jpg、work/構圖預覽-套卡.jpg｜請回：倍率（1.0／1.15／1.3）' },
+  { n: '②', name: '構圖', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」' },
   { n: '③', name: '分鏡表', skill: 'auto-edit-storyboard', line: '⏸ 停點 ③ 分鏡表｜請看：work/storyboard.md｜請回：「可以」或要改的地方' },
   { n: '④', name: 'Studio 預覽', skill: 'auto-edit-review', line: '⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出成片」' },
   { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」' },

@@ -28,7 +28,7 @@ function mk() {
   const p = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-versions-'));
   for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(p, 'assets', d), { recursive: true });
   touch(p, 'assets/camera/a.mp4', 'x', 600);
-  for (const f of ['work/cuts.md', 'work/rough.mp4', 'work/transcript.json', 'work/rough.srt.align-1', 'work/cutpoints.json', 'work/構圖預覽-套卡.jpg']) touch(p, f, 'x', 600);
+  for (const f of ['work/cuts.md', 'work/rough.mp4', 'work/transcript.json', 'work/rough.srt.align-1', 'work/cutpoints.json', 'work/構圖預覽.jpg']) touch(p, f, 'x', 600);
   touch(p, 'work/rough.srt', '1\n00:00:01,000 --> 00:00:03,000\n主持人跟來賓\n', 600);
   touch(p, 'work/storyboard.md', SB, 120);
   const plan = { version: 1, scenes: [

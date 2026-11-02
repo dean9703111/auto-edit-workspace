@@ -15,7 +15,7 @@
 2. 成片一律用 `build.mjs` 產生，不要從零寫 HyperFrames 的 `index.html`。理由：底片、子母畫面、字幕、音效、淡入淡出的時間都由程式算，手寫一定會漏。
 3. 你要手寫的檔是 `work/hyperframes/plan.json`，以及第二層情境動畫（`compositions/x-*.html`，從範例改）。**口播在講情境（過程、前後對比、數值變化、比喻、因果）時優先做情境動畫**，字卡只放名詞、一句重點和提醒（R7.1）。
 4. 要改任何東西，只改 plan.json，再重跑 build。不要直接改 build 產生的檔（`index.html`、`compositions/sNN-*.html`、`captions.html`、`kit/`）。
-5. 停點照 `AGENTS.md`「停點總表」（①–⑥）：構圖倍率（步驟 2）、分鏡表（步驟 4）、Studio 預覽（步驟 10）都要停下來等使用者確認，最後一行照總表的固定格式。
+5. 停點照 `AGENTS.md`「停點總表」（①–⑥）：構圖（步驟 2）、分鏡表（步驟 4）、Studio 預覽（步驟 10）都要停下來等使用者確認，最後一行照總表的固定格式。
 6. 字級由模板固定，`css` 只能改位置。字放不下就縮文案；使用者要求「字再大一號」也做不到（4.3）。
 7. 「只有聲音」的區間（旁白、`rough.mp4` 全黑的地方）沒有講者，一定要用螢幕錄影或圖片（第 5 節）蓋住，否則 build 報 ✖。
 8. plan.json 的 `edit`、`look`、`sfxVolume` 是使用者在剪輯台調的（第 6 節）。改 plan.json 前先重新讀檔，不要蓋掉；使用者在剪輯台改過的值以他改的為準。
@@ -27,7 +27,7 @@
 | # | 做什麼 | 指令 | 查 | 停？ |
 |---|---|---|---|---|
 | 1 | 看 `AGENTS.md`「停點總表」；規則照 `shared/style.md` | — | | |
-| 2 | 先做講者調光＋瘦臉（第 7 節：`look.mjs status` 的「→ 下一步」下面那一行是指令，整行複製執行；跑完看 `work/look-preview.jpg`）；再確認構圖（2.2 第 0 步，放大倍率給使用者選、寫進 `frame`）；列出字幕每一句的句號與內容；看場地照量 `speakerBox`。有螢幕錄影／圖片，或主軌接過聲音檔（只有聲音的區間）時，掃素材、看 contact sheet（`work/media/index.md` 也會列出只有聲音的區間） | `node shared/template/tools/look.mjs status --project projects/<專案>`；2.2；`node shared/template/tools/qc.mjs framing --project projects/<專案> --cards`；`node shared/template/tools/media.mjs scan --project projects/<專案>` | 第 7 節、R4、第 5 節 | **停點 ②** |
+| 2 | 先做講者調光＋瘦臉（第 7 節：`look.mjs status` 的「→ 下一步」下面那一行是指令，整行複製執行；跑完看 `work/look-preview.jpg`）；再確認構圖（2.2 第 0 步，構圖台給使用者拖框、寫進 `frame`）；列出字幕每一句的句號與內容；看場地照量 `speakerBox`。有螢幕錄影／圖片，或主軌接過聲音檔（只有聲音的區間）時，掃素材、看 contact sheet（`work/media/index.md` 也會列出只有聲音的區間） | `node shared/template/tools/look.mjs status --project projects/<專案>`；2.2；`node shared/template/tools/qc.mjs framing --project projects/<專案>`；`node shared/template/tools/media.mjs scan --project projects/<專案>` | 第 7 節、R4、第 5 節 | **停點 ②** |
 | 3 | 確認字幕沒有超過 18 字（直式 10 字；剪乾淨已經用 srt-align 排成完整語句） | `node shared/template/tools/build.mjs --project projects/<專案> --check`（暫時的 plan.json，2.4） | | |
 | 4 | 挑情境、配螢幕錄影與圖片，列分鏡表，每段截圖，情境動畫段附動畫分鏡，存成 `work/storyboard.md` | `node shared/template/tools/build.mjs --list`；`node shared/template/tools/qc.mjs storyboard --project projects/<專案>` | `SITUATIONS.md`、`BEATS.md`、R2、R6、第 5 節 | **停點 ③** |
 | 5 | 寫 `work/hyperframes/plan.json` | — | 第 3 節 | |
@@ -45,17 +45,17 @@
 
 ### 2.1 不用 Plan 模式
 
-- 不用 Plan 模式：流程會在停點 ② ③ 自己停。使用者開著 Plan 模式時只能列句號、挑情境；要寫檔（構圖預覽、暫時 plan.json、storyboard.md、截圖）時，請他離開 Plan 模式再說一次（不要在 Plan 模式裡硬做）。
+- 不用 Plan 模式：流程會在停點 ② ③ 自己停。使用者開著 Plan 模式時只能列句號、挑情境；要寫檔（構圖分析、暫時 plan.json、storyboard.md、截圖）時，請他離開 Plan 模式再說一次（不要在 Plan 模式裡硬做）。
 - 分鏡表一律存成 `work/storyboard.md`（格式 2.3），停點 ③ 請使用者看檔案。
 - 確認之後的順序：重新讀 `work/storyboard.md` → 寫正式 plan.json → `--check`。
 
 ### 2.2 量 `speakerBox`
 
-0. **先確認構圖（畫面要不要放大）**：跑 `node shared/template/tools/qc.mjs framing --project projects/<專案> --cards`。它量講者的動作範圍、偵測四周黑邊，算出 1.0／1.15／1.3 倍的 16:9 裁切框（講者水平置中、頭頂上方留 120px），存 `work/構圖預覽.jpg`（每個倍率一格，橘框是講者動作範圍；紅底標題＝會切到手勢），並印出每個倍率的 `frame` 與畫質提醒（來源像素被放大的倍數）。
-   - 加 `--cards` 會再產生 `work/構圖預覽-套卡.jpg`：抓影片中間一格，每個倍率一列，由左到右套上「疊加（下方字卡）｜半畫面（側邊欄）｜子母畫面（全畫面清單＋右下小窗）」三種示意卡（目前的模板風格），讓使用者看著卡片套上去的樣子選倍率（約 15 秒 × 倍率數；暫存在 `work/.framing-preview/`）。這一步要在列分鏡表之前做。
+0. **先確認構圖（畫面要不要放大）**：跑 `node shared/template/tools/qc.mjs framing --project projects/<專案>`。它量講者的動作範圍、偵測四周黑邊，算出 1.0／1.15／1.3 倍的 16:9 裁切框（講者水平置中、頭頂上方留 120px），存 `work/構圖預覽.jpg`（每個倍率一格，橘框是講者動作範圍；紅底標題＝會切到手勢），並印出每個倍率的 `frame` 與畫質提醒（來源像素被放大的倍數）。
+   - 接著開剪輯台（`node shared/template/tools/editor.mjs --project projects/<專案>`），把它印的「構圖台」網址給使用者：在沒裁切的 `work/rough.mp4` 上拖一個鎖定比例的框（最多放大 2 倍），右邊即時顯示裁切後套上字幕、下方字卡、子母畫面小窗的樣子；切到手勢、每個像素放大超過 3.5 倍、直式頭頂／下巴不在範圍會標紅。按「儲存」就寫進 plan.json 的 `frame`（還沒有 plan.json 會新建）。這一步要在列分鏡表之前做（`EDITOR.md`「構圖台」）。
    - 看預覽圖判斷：四周有多餘的外框（黑邊、櫃子、大片空牆、桌面倒影）讓構圖鬆散時，建議放大；講者的手勢會被切到、或原片解析度低（每個像素放大超過 3.5 倍會明顯變軟）時，倍率往小選。
    - 每個倍率都會切到手勢或放大超過 3.5 倍時，「建議」是表上倍率最小的那一列（有黑邊時表上最小的是 1.13x 這類，不是 1.00x；1.00x 會露出黑邊）。
-   - 把預覽圖與建議倍率給使用者，**停下來等確認**。選定後把那一列寫進 plan.json 第一層：`"frame": [x, y, w, h]`（1.0 倍不用寫）。build 重新編碼底片時會照它裁切放大回 1920×1080，子母畫面、碰撞檢查都以裁切後的畫面為準。
+   - 把構圖台網址與建議倍率給使用者，**停下來等確認**。使用者說「調好了」：構圖台已經寫好 `frame`，重新讀 plan.json；說「用建議的」：把表上 ✔ 那一列寫進 plan.json 第一層：`"frame": [x, y, w, h]`（1.0 倍不用寫）。之後在構圖台換框，已經量好的 `speakerBox` 會跟著換算，不用重量。build 重新編碼底片時會照它裁切放大回 1920×1080，子母畫面、碰撞檢查都以裁切後的畫面為準。
    - 直式（plan.json `"format": "portrait"`）：預覽圖是直的、裁切框是 9:16，倍率一樣 1.0／1.15／1.3；另看講者頭頂有沒有落在 y 380–520、下巴 ≤ 860（`shared/style.md`「直式」）。
    - 寫好 `frame` 之後才做下面的步驟（場地照的座標要換算：`(x − frame.x) × 1920 ÷ frame.w`；`qc.mjs speaker` 會自動照 `frame` 裁切後再量）。
 1. 場地照：專案資料夾裡檔名有「場地照」的圖（範本附的是 `projects/example/場地照-測試.jpg`），或 Skill 每集自動截的 `work/場地照.jpg`。都沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
@@ -616,6 +616,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 
 - 第一層的 `edit`（下表）。
 - 第一層的 `look`（講者調光、瘦臉）：剪輯台一律兩個都寫，例如 `{ "color": 0.8, "slim": 0.5 }`；按「恢復預設」會整個拿掉。使用者在剪輯台改過，就以剪輯台的值為準。
+- 第一層的 `frame`（構圖台拖的框；停點 ② 還沒有 plan.json 時會新建）：換框時已經有的 `speakerBox`、`pipCrop`（陣列）會跟著換算成同一塊畫面，不用重量。
 - 任何段落的 `sfxVolume`、`"sfx": null`（靜音），以及 `slots`／`vars` 的文字。
 - media 段的 `from`／`to`／`in`／`anchor`／`enter`／`exit`／`volume`。拖到字幕邊界時寫 `"#N"`／`"#Ne"`，沒對到字幕時寫秒數並拿掉 `anchor`；兩種都能直接 build。
 - `work/rough.srt` 的字幕文字與時間，也可能新增、分割、合併、刪除字幕；句子數量變了，剪輯台會把 plan.json 所有 `#N` 一起重新對好，`work/storyboard.md` 的句號會過期，以 plan.json 為準。
@@ -670,7 +671,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check --json
 | 誰做 | 什麼時候 | 做什麼 |
 |---|---|---|
 | build | 每次重新編碼底片 | 套調光的 LUT（`kit/look/jianying-smart.cube`，強度 `color`）。不用另外跑 |
-| `look.mjs run` | 剪乾淨之後、構圖預覽之前；`rough.mp4` 換過或 `slim` 改過之後 | 偵測每一格的臉（`work/face-landmarks.json`）→ 做瘦臉底片 `work/rough-look.mp4` → 對照圖 `work/look-preview.jpg` |
+| `look.mjs run` | 剪乾淨之後、構圖之前；`rough.mp4` 換過或 `slim` 改過之後 | 偵測每一格的臉（`work/face-landmarks.json`）→ 做瘦臉底片 `work/rough-look.mp4` → 對照圖 `work/look-preview.jpg` |
 | build | `slim` > 0 | 用 `work/rough-look.mp4` 當底片；不是最新的就 ✖ 停下來，請你先跑 `look.mjs run` |
 
 指令（完整說明：`node shared/template/tools/look.mjs --help`）：
