@@ -20,6 +20,15 @@
   html { background: var(--page); }
   body { margin: 0; background: var(--page); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
   .wrap { max-width: 1240px; margin: 0 auto; padding: 48px 24px 96px; }
+  :root { --sb-bg: var(--page); --sb-line: var(--line); --sb-text: var(--text); --sb-muted: var(--muted); --sb-max: 1240px; }
+  /* 站內導覽（官網首頁／情境庫／字卡動態）：本機用 file:// 打開時，「官網首頁」改連線上官網 */
+  .sitebar { border-bottom: 1px solid var(--sb-line); background: var(--sb-bg); font-size: 14px; }
+  .sitebar .in { max-width: var(--sb-max); margin: 0 auto; padding: 10px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+  .sitebar a { color: var(--sb-muted); text-decoration: none; font-weight: 700; white-space: nowrap; }
+  .sitebar a:hover { color: var(--sb-text); }
+  .sitebar a[aria-current="page"] { color: var(--sb-text); }
+  .sitebar .home { color: var(--sb-text); }
+  .sitebar .gh { margin-left: auto; }
 
   /* 頁首 */
   .hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
@@ -126,6 +135,18 @@
 </style>
 </head>
 <body>
+<nav class="sitebar" aria-label="網站">
+  <div class="in">
+    <a class="home" data-home href="../../../index.html">← 官網首頁</a>
+    <a href="../index.html">影片情境庫</a>
+    <a href="index.html" aria-current="page">字卡動態 40 種</a>
+    <a class="gh" href="https://github.com/dean9703111/auto-edit-workspace">GitHub ↗</a>
+  </div>
+</nav>
+<script>
+  // 本機（file://）沒有官網首頁：改連線上官網
+  if (location.protocol === 'file:') document.querySelectorAll('[data-home]').forEach(function (a) { a.href = 'https://dean9703111.github.io/auto-edit-workspace/'; });
+</script>
 <div class="wrap">
   <header class="hero">
     <div>

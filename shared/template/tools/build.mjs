@@ -17,7 +17,7 @@
  *   node shared/template/tools/build.mjs --force      覆寫手改過的產生檔
  *   node shared/template/tools/build.mjs --no-loudnorm  重新編碼底片時不做人聲響度標準化（預設調到 −14 LUFS、true peak ≤ −1 dBTP）
  *   node shared/template/tools/build.mjs --no-declick   重新編碼底片時不在剪接點（work/cutpoints.json）做 15 ms 微淡化
- *   node shared/template/tools/build.mjs --gallery    （作者用）重新產生 shared/template/preview/*.html（情境動畫另出直式 x-<名稱>-v.html，和直式講者示意 speaker-v.jpg）
+ *   node shared/template/tools/build.mjs --gallery    （作者用）重新產生 shared/template/preview/*.html（情境動畫另出直式 x-<名稱>-v.html，和直式講者示意 speaker-v.jpg、speaker-v-dark.jpg）
  *   --format landscape|portrait（或 橫式|直式）：蓋過版式（預設照 plan.json "format" > work/製作進度.md 開工決策表「版式」> 主軌寬高比；lib/canvas.mjs）
  *
  * --project：專案資料夾（projects/範例，或只寫名稱 範例）。沒寫時：目前資料夾在某個專案裡就用它；
@@ -272,10 +272,10 @@ function capcutParts(res, { mainOpts, outDur, captions, format }) {
 // 直式預覽頁的講者示意圖 preview/speaker-v.jpg（1080×1920）：speaker.jpg（1920×1080）裁講者那一塊（寬 900，約講者框 × 1.3＝pipCrop auto 的裁法）
 // 放大到 1080 寬，貼在 y 120，上下露出的部分用同一張圖模糊壓暗補滿。custom-preview 的講者面板用 object-position 50% 20%（顯示 y 180–1200），
 // 這樣頭頂落在面板頂端下約 40 px（和 build 的 pipCrop "auto" 一樣）。speaker.jpg 的講者臉＋手勢在 x 780–1320，裁切中心取寬度的 53%；
-// speaker-v.jpg 比 speaker.jpg 新就不重做
+// speaker-v.jpg 比 speaker.jpg 新就不重做。暗色主題用的 speaker-dark.jpg（書櫃版）同樣裁出 speaker-v-dark.jpg（kit/style-switch.js 換圖）
 const SPEAKER_V = { cx: 0.53, fgH: 1296, top: 120 };
-export function speakerPortrait(outDir) {
-  const src = path.join(outDir, 'speaker.jpg'), dst = path.join(outDir, 'speaker-v.jpg');
+export function speakerPortrait(outDir, name = 'speaker') {
+  const src = path.join(outDir, `${name}.jpg`), dst = path.join(outDir, name.replace(/^speaker/, 'speaker-v') + '.jpg');
   if (!fs.existsSync(src)) return {};
   if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(src).mtimeMs) return {};
   const m = probeMedia(src), { W, H } = canvasOf('portrait');
@@ -284,7 +284,7 @@ export function speakerPortrait(outDir) {
   const fc = `[0:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=30:2,eq=brightness=-0.12[bg];`
     + `[0:v]crop=${cw}:${m.height}:${x}:0,scale=${W}:${SPEAKER_V.fgH}:flags=lanczos[fg];[bg][fg]overlay=0:${SPEAKER_V.top}`;
   const r = run('ffmpeg', ['-y', '-v', 'error', '-i', src, '-filter_complex', fc, '-frames:v', '1', '-q:v', '3', dst]);
-  return r.status === 0 ? { made: dst } : { error: `preview/speaker-v.jpg 產生失敗：${String(r.stderr).trim().slice(-200)}` };
+  return r.status === 0 ? { made: dst } : { error: `preview/${path.basename(dst)} 產生失敗：${String(r.stderr).trim().slice(-200)}` };
 }
 
 export function runGallery(templateDir, { only = null } = {}) {
@@ -326,9 +326,11 @@ export function runGallery(templateDir, { only = null } = {}) {
         made.push(vFile);
       } catch (e) { problems.push(`custom/${f}：${e.message}`); }
     }
-    const sv = speakerPortrait(outDir);
-    if (sv.error) problems.push(sv.error);
-    else if (sv.made) made.push(sv.made);
+    for (const name of ['speaker', 'speaker-dark']) {
+      const sv = speakerPortrait(outDir, name);
+      if (sv.error) problems.push(sv.error);
+      else if (sv.made) made.push(sv.made);
+    }
   }
   if (!only) {
     const fxData = {};

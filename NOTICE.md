@@ -7,8 +7,8 @@
 | 內容 | 位置 | 授權 |
 |---|---|---|
 | 程式碼 | `shared/template/tools/` | MIT，全文見 [LICENSE](LICENSE) |
-| 情境模板與字卡動態 | `shared/template/scenes/`、`shared/template/custom/`、`shared/template/kit/`（第三方檔案除外）、`shared/template/fx/`、`shared/template/preview/`（`speaker.jpg` 除外） | CC BY 4.0 |
-| 示範影片、講稿、場地照、Q 版講者圖 | `projects/範例/` 裡的示範影片、講稿與場地照、`shared/template/preview/speaker.jpg` | 作者所有。僅供跟著教學練習，不可另作他用，也不可再散布 |
+| 情境模板與字卡動態 | `shared/template/scenes/`、`shared/template/custom/`、`shared/template/kit/`（第三方檔案除外）、`shared/template/fx/`、`shared/template/preview/`（`speaker*.jpg` 除外） | CC BY 4.0 |
+| 示範影片、講稿、場地照、Q 版講者圖 | `projects/範例/` 裡的示範影片、講稿與場地照、`shared/template/preview/speaker*.jpg`（亮色白牆、暗色書櫃與直式裁切） | 作者所有。僅供跟著教學練習，不可另作他用，也不可再散布 |
 
 示意插圖元件 `shared/template/kit/illus.js`、`illus.css` 是作者自己的程式，搬自作者的 agent-skills repo（`video/surfshark_esim/esim_backup/hyperframes/shared/illus.js`），只把顏色改成 token，授權同上表的 `shared/template/kit/`（CC BY 4.0）。
 

@@ -197,6 +197,11 @@ test('--gallery 直式（009 FR-073）：每支 custom 另出 x-<名稱>-v.html�
   const dims = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', path.join(tdir, 'preview', 'speaker-v.jpg')], { encoding: 'utf8' }).stdout.trim();
   assert.equal(dims, '1080,1920');
   assert.deepEqual(runGallery(tdir, { only: ['x-process'] }).made.map((f) => path.basename(f)), ['x-process.html', 'x-process-v.html'], '第二次不重做 speaker-v.jpg');
+  // 暗色主題的書櫃版 speaker-dark.jpg 同樣裁出 speaker-v-dark.jpg
+  fs.copyFileSync(path.join(TEMPLATE, 'preview', 'speaker-dark.jpg'), path.join(tdir, 'preview', 'speaker-dark.jpg'));
+  assert.deepEqual(runGallery(tdir, { only: ['x-process'] }).made.map((f) => path.basename(f)), ['x-process.html', 'x-process-v.html', 'speaker-v-dark.jpg']);
+  const dimsDark = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', path.join(tdir, 'preview', 'speaker-v-dark.jpg')], { encoding: 'utf8' }).stdout.trim();
+  assert.equal(dimsDark, '1080,1920');
 });
 
 test('產生的 index.html：每個 cue 一個 <audio>（主 sfx-<id>、附加 sfx-<id>-e<n>），track-index 不重複', () => {
