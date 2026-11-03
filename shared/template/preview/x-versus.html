@@ -36,14 +36,14 @@
   <style>
     #x-versus { position: absolute; inset: 0; }
     #x-versus .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-versus #xvs-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-versus #xvs-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
     /* 內容區：data-layout="col"（kit/scene-layout.js）由上往下排標頭列與各列；組裡用 flex 排（data-layout="free"），都不寫 left／top */
-    #x-versus #xvs-body { position: relative; width: 1176px; height: 580px; }
+    #x-versus #xvs-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     #x-versus #xvs-heads, #x-versus .xvs-row { position: absolute; width: max-content; height: 112px; display: flex; align-items: center; gap: var(--sc-gap-sm); }
-    /* 兩個對手的標頭：472×112，圖示和名稱同一塊；底色層（贏家在結論時亮起、光澤在裡面掃過）墊在最下面 */
-    #x-versus .xvs-head { position: relative; width: 472px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+    /* 兩個對手的標頭：456×112，圖示和名稱同一塊；底色層（贏家在結論時亮起、光澤在裡面掃過）墊在最下面 */
+    #x-versus .xvs-head { position: relative; width: 456px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
                           border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
                           display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
     #x-versus .xvs-head .sc-icon, #x-versus .xvs-head .xvs-hname { position: relative; }
@@ -55,9 +55,9 @@
     #x-versus .xvs-num { position: relative; width: 136px; white-space: nowrap; color: var(--sc-fs-ink); }
     #x-versus .xvs-na { text-align: right; }
     #x-versus .xvs-nb { text-align: left; }
-    /* 條：寬 236 的軌道裡，P.bar 從左緣長到 DATA 算出的比例；A 的軌道整個鏡像（scaleX(-1)），看起來從右緣往左長 */
-    #x-versus .xvs-wa { position: relative; width: 236px; height: 48px; transform: scaleX(-1); }
-    #x-versus .xvs-bar { position: absolute; top: 0; left: 0; width: 236px; height: 48px; border-radius: 8px; }
+    /* 條：寬 212 的軌道裡，P.bar 從左緣長到 DATA 算出的比例；A 的軌道整個鏡像（scaleX(-1)），看起來從右緣往左長 */
+    #x-versus .xvs-wa { position: relative; width: 212px; height: 48px; transform: scaleX(-1); }
+    #x-versus .xvs-bar { position: absolute; top: 0; left: 0; width: 212px; height: 48px; border-radius: 8px; }
     #x-versus .xvs-bb { position: relative; }
     #x-versus .xvs-lab { position: relative; width: 272px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
                          border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
@@ -113,10 +113,10 @@
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const DATA = [ { a: 180, b: 20, win: 'b' }, { a: 6, b: 2, win: 'b' }, { a: 0, b: 600, win: 'a' } ];   // 只改這一行的數字
     const WINNER = 'b';                                                            // 結論的贏家：'a' 或 'b'
-    const MAXW = 236;                                                              // 每列較大的數字＝236 px（版面固定，不用改）
+    const MAXW = 212;                                                              // 每列較大的數字＝212 px（版面固定，不用改）
     const HEADS = '#xvs-ha, #xvs-hb';
 
-    // 0. 由 DATA 算每條長到軌道的幾成（整數 px ÷ 236，最短 8 px，數字 0 就是 0），並在建 tween 之前上色：贏＝主色、輸＝灰（靜態 class，不補間顏色）；
+    // 0. 由 DATA 算每條長到軌道的幾成（整數 px ÷ 212，最短 8 px，數字 0 就是 0），並在建 tween 之前上色：贏＝主色、輸＝灰（靜態 class，不補間顏色）；
     //    結論的贏家標頭加 xvs-champ（拍 6、7 用）。只用常數，不讀版面量測，每次載入結果相同
     const R = DATA.map(function (d) {
       var m = Math.max(d.a, d.b, 1);

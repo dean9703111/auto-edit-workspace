@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]}; document.documentElement.style.setProperty('--sc-body-h', '580px');</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -39,20 +39,20 @@
   <style>
     #x-timeline { position: absolute; inset: 0; }
     #x-timeline .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-timeline #xtl-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-timeline #xtl-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-    #x-timeline #xtl-body { position: relative; width: 1176px; height: 580px; }
+    #x-timeline #xtl-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 橫軸在最下層、進度條疊在上面、圓點再疊上去；兩層 svg 都是整個內容區大小（座標＝內容區座標；位置由 script 讀排好的點算） */
-    #x-timeline #xtl-track { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
-    #x-timeline #xtl-dots { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    #x-timeline #xtl-track { position: absolute; left: 0; top: 0; width: 1176px; height: var(--sc-body-h); }
+    #x-timeline #xtl-dots { position: absolute; left: 0; top: 0; width: 1176px; height: var(--sc-body-h); }
     #x-timeline #xtl-axis { stroke: var(--sc-fs-line); stroke-width: 8px; stroke-linecap: round; }
     #x-timeline #xtl-fill { position: absolute; height: 8px; border-radius: 4px; background: var(--brand); }
     /* 空心點：r 14、框 6；實心點：r 9 的粗描邊（18）描完就是填滿的圓，蓋住空心點的框 */
     #x-timeline .xtl-dot { fill: var(--sc-fs-card); stroke: var(--sc-fs-line); stroke-width: 6px; }
     #x-timeline .xtl-don { fill: none; stroke: var(--brand); stroke-width: 18px; }
-    /* 點：卡片＋說明一欄，中間空 --sc-gap-lg＋--sc-gap-md 給橫軸；4 點寬 248、3 點（沒有 #xtl-p4）寬 320；位置由 #xtl-body 的 data-layout 排，不寫 left／top */
-    #x-timeline .xtl-pt { position: absolute; width: 248px; display: flex; flex-direction: column; gap: calc(var(--sc-gap-lg) + var(--sc-gap-md)); }
+    /* 點：卡片＋說明一欄，中間空 --sc-gap-lg＋--sc-gap-md 給橫軸；4 點寬 240、3 點（沒有 #xtl-p4）寬 320；位置由 #xtl-body 的 data-layout 排，不寫 left／top */
+    #x-timeline .xtl-pt { position: absolute; width: 240px; display: flex; flex-direction: column; gap: calc(var(--sc-gap-lg) + var(--sc-gap-md)); }
     #x-timeline #xtl-body:not(:has(#xtl-p4)) .xtl-pt { width: 320px; }
     /* 卡片：高 256，寬跟著點；圖示和年份同一塊 */
     #x-timeline .xtl-node { position: relative; height: 256px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
@@ -71,12 +71,12 @@
     <div id="xtl-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">我的拍片歷程</span></div>
       <div id="xtl-body" data-layout="row" data-gap="md">
-        <svg id="xtl-track" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg" data-layout-ignore>
+        <svg id="xtl-track" xmlns="http://www.w3.org/2000/svg" data-layout-ignore>
           <line id="xtl-axis" />
         </svg>
         <div id="xtl-fill"></div>
         <i id="xtl-head" data-layout-allow-overlap></i>
-        <svg id="xtl-dots" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
+        <svg id="xtl-dots" xmlns="http://www.w3.org/2000/svg">
           <!-- cx、cy 由 script 讀排好的點填（不用改）；每個點兩個圓：空心 .xtl-dot、講到時填滿的 .xtl-don -->
           <circle id="xtl-dot1" class="xtl-dot" r="14" />
           <circle id="xtl-dot2" class="xtl-dot" r="14" />
@@ -89,22 +89,22 @@
         </svg>
         <div id="xtl-p1" class="xtl-pt" data-slot>
           <div id="xtl-n1" class="xtl-node">
-            <span id="xtl-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path d="m6.2 5.3 3.1 3.9" /> <path d="m12.4 3.4 3.1 4" /> <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2019</span></div>
+            <span id="xtl-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path d="m6.2 5.3 3.1 3.9" /> <path d="m12.4 3.4 3.1 4" /> <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="xtl-lab sc-t64 sc-w900 sc-opt">2019</span></div>
           <div id="xtl-c1" class="xtl-cap sc-t52 sc-w700 sc-opt">開始拍片</div>
         </div>
         <div id="xtl-p2" class="xtl-pt" data-slot>
           <div id="xtl-n2" class="xtl-node">
-            <span id="xtl-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2022</span></div>
+            <span id="xtl-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xtl-lab sc-t64 sc-w900 sc-opt">2022</span></div>
           <div id="xtl-c2" class="xtl-cap sc-t52 sc-w700 sc-opt">改用手機</div>
         </div>
         <div id="xtl-p3" class="xtl-pt" data-slot>
           <div id="xtl-n3" class="xtl-node">
-            <span id="xtl-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2024</span></div>
+            <span id="xtl-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xtl-lab sc-t64 sc-w900 sc-opt">2024</span></div>
           <div id="xtl-c3" class="xtl-cap sc-t52 sc-w700 sc-opt">多機錄影</div>
         </div>
         <div id="xtl-p4" class="xtl-pt" data-slot>
           <div id="xtl-n4" class="xtl-node">
-            <span id="xtl-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">今年</span></div>
+            <span id="xtl-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xtl-lab sc-t64 sc-w900 sc-opt">今年</span></div>
           <div id="xtl-c4" class="xtl-cap sc-t52 sc-w700 sc-opt">交給 AI</div>
         </div>
       </div>

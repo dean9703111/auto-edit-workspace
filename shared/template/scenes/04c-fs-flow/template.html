@@ -1,14 +1,14 @@
 <!-- 預設拍型：A 流程（BEATS.md §3 A；全畫面） -->
 <!-- @style -->
-/* 全畫面流程：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128（左右內距 --sc-pad-card）；卡身 580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
+/* 全畫面流程：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128（左右內距 --sc-pad-card）；卡身 636（卡底 918）。右上 x 1344–1856、y 150–262 留給附件章節角標。
    排法（kit/scene-layout.js）：#wBody data-layout="row"、站距 --sc-gap-xl；每站 .fNode 是 data-slot，外框＝圖示圓 192×192（連接線對齊圓心），
    名稱 44／700 掛在圓下方 --sc-gap-md（不算進外框，5 字 220 比圓寬，左右各超出 14）。
-   #wBody 高＝580 扣掉名稱那一帶（60＋--sc-gap-md），下面用 margin 補回：helper 把圓排在 #wBody 正中，圓＋名稱整組在卡身上下置中。
+   #wBody 高＝636 扣掉名稱那一帶（60＋--sc-gap-md），下面用 margin 補回：helper 把圓排在 #wBody 正中，圓＋名稱整組在卡身上下置中。
    4 站 4×192＋3×96＝1056（左右內距 60）。箭頭是 #fLinks 的 data-links（站 n>站 n＋1；線 4px --sc-fs-line，箭頭頭另一條 path 描完淡入）。
    「目前」站（data-current）：圖示圓外加一圈卡片底色 4＋主色 4 的環、名稱主色（站框改成環：框比圓寬，會和箭頭端點相撞）。 */
 #wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
 #wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
-#wBody { width: 1176px; height: calc(580px - 60px - var(--sc-gap-md)); margin-bottom: calc(60px + var(--sc-gap-md)); }
+#wBody { width: 1176px; height: calc(var(--sc-body-h) - 60px - var(--sc-gap-md)); margin-bottom: calc(60px + var(--sc-gap-md)); }
 .fNode { width: 192px; height: 192px; white-space: nowrap; }
 .fNode .sc-icon { --d: 192px; --i: 104px; }
 .fNode .sc-t44 { position: absolute; left: -100px; right: -100px; top: calc(100% + var(--sc-gap-md)); line-height: 60px; text-align: center; }

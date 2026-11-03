@@ -82,9 +82,9 @@ test('直式：FR-010 表＋決定節的值、矩形都在畫布內、區域和�
   assert.deepEqual(R.panelBottom, V.pip.box);
   assert.deepEqual(R.panelTop, [0, 0, 1080, 900]);
   for (const k of Object.keys(L.regions)) assert.ok(k in R, `直式少了區域 ${k}`);
-  // window.__regions：一行 <script>，JSON 可解析，和 regionsOf 相同
+  // window.__regions：一行 <script>，JSON 可解析，和 regionsOf 相同；直式舞台縮放的全畫面主卡內容區維持 580（--sc-body-h）
   const s = regionsScript(V);
-  const m = s.match(/^<script>window\.__regions = (\{.*\});<\/script>$/);
+  const m = s.match(/^<script>window\.__regions = (\{.*\}); document\.documentElement\.style\.setProperty\('--sc-body-h', '580px'\);<\/script>$/);
   assert.ok(m, s);
   assert.deepEqual(JSON.parse(m[1]), R);
   R.band[0] = 999;

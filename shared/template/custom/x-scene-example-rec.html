@@ -31,7 +31,7 @@
   結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
 
   【版面】
-  fullscreen：主卡在 panelTop 區（x 120–1300、y 150–858），標題列 128、內容區 xscr-stage 1176×580。
+  fullscreen：主卡在 panelTop 區（x 120–1300、y 150–918），標題列 128、內容區 xscr-stage 1176×636。
   xscr-stage 是 data-layout="row" data-gap="lg"（kit/scene-layout.js，shared/style.md「版面」）：左組（人＋桌子）、手機腳架、右組（膠囊／波形／結果）三組等距 48、
   手機腳架的插圖中線和兩組的中線對齊，整組在內容區置中；組裡是 col（垂直排、中線對齊）。人走過去的終點由手機腳架的位置算，不寫座標。
 -->
@@ -42,10 +42,10 @@
   <style>
     #x-scene-example-rec { position: absolute; inset: 0; }
     #x-scene-example-rec .fill { position: absolute; inset: 0; }
-    /* 主卡：panelTop 區（左 120、頂 150、寬 1180；標題列 128＋內容區 580＝708） */
+    /* 主卡：panelTop 區（左 120、頂 150、寬 1180；標題列 128＋內容區 636＝764；卡底 918＝子母畫面本體下緣，直式 580） */
     #x-scene-example-rec #xscr-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-scene-example-rec #xscr-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
-    #x-scene-example-rec #xscr-stage { position: relative; width: 1176px; height: 580px; }
+    #x-scene-example-rec #xscr-stage { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 元件：插圖＋下面的標籤（xscr-side＝標籤在右邊）；位置由 xscr-stage 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
     #x-scene-example-rec .xscr-it { position: absolute; display: flex; flex-direction: column; align-items: center; gap: var(--sc-gap-sm); white-space: nowrap; }
     #x-scene-example-rec .xscr-side { flex-direction: row; gap: var(--sc-gap-sm); }

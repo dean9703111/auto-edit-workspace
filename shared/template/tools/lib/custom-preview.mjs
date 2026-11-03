@@ -11,7 +11,7 @@
 //   底下 1080×1920 的 .sc-surface-fs 底（#bd），下半是講者面板示意（pip.box、speaker-v.jpg cover；沒有就用 speaker.jpg）＋ kit/pip-frame-v.png。
 //   檔名建議 x-<名稱>-v.html（呼叫端決定）。
 
-import { CANVAS, stageTransform } from './canvas.mjs';
+import { CANVAS, stageTransform, regionsJs } from './canvas.mjs';
 
 const FADE = 0.5;
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -108,7 +108,7 @@ ${kitLinks.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = ${JSON.stringify(C.regions)};</script>
+<script>${regionsJs(C)}</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: ${C.W}px; height: ${C.H}px; overflow: hidden; background: #000; transform-origin: 0 0; }

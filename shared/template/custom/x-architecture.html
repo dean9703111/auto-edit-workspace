@@ -41,10 +41,10 @@
   結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
 
   【版面】
-  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 139、寬 1180（右緣 1300），標題列 128（左右內距 --sc-pad-card）、內容區 1176×580（卡高 712）。
+  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128（左右內距 --sc-pad-card）、內容區 1176×636（卡高 768）。
   版面不寫座標（shared/style.md「版面」）：內容區 #xarch-body 是 data-layout="free"（kit/scene-layout.js 不排、audit 照樣量；三角形的架構圖，兩個裝置要拉開，row 的間距 token 不夠寬）：
   雲端 320×120 水平置中、貼上內距；手機、電腦 264×224 貼下內距、分別貼左右內距（--sc-pad-card／--sc-pad-card-y）；
-  結論膠囊水平置中（寬＝156＋52×字數）、top 184（雲端底＋--sc-gap-md；底在裝置頂之上，不和裝置算同一列）。
+  結論膠囊水平置中（寬＝156＋52×字數）、top＝雲端底＋--sc-gap-md（情境動畫 64＋120＋24＝208；底在裝置頂之上，不和裝置算同一列）。
   連接線由 data-links 自動畫（端點離元件 12）：#xarch-direct 的「xarch-a-xarch-b」＝直連（手機右緣 → 電腦左緣，裝置中線高度）；
   #xarch-lines 的「xarch-cloud-xarch-a xarch-cloud-xarch-b」＝經過雲端（L 形：雲端左右緣 → 裝置頂，往前流的虛線）。helper 的 L 形是先水平再垂直，
   上段只能從雲端畫到手機，script 載入時把那條的點反過來（虛線才從手機往雲端流；audit 量的端點不變）。
@@ -59,11 +59,11 @@
   <style>
     #x-architecture { position: absolute; inset: 0; }
     #x-architecture .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 139、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 851） */
-    #x-architecture #xarch-card { position: absolute; left: 120px; top: 139px; width: 1180px; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×636（卡底 918） */
+    #x-architecture #xarch-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-architecture #xarch-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
     /* 內容區：data-layout="free"（kit/scene-layout.js 不排、audit 照樣量）；元件貼內距或置中，不寫座標數字（結論膠囊的 top 除外） */
-    #x-architecture #xarch-body { position: relative; width: 1176px; height: 580px; }
+    #x-architecture #xarch-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 線：data-links 自動產生（svg 疊在節點下面）；經過雲端的是往前流的虛線，直連講到時主色實線描出，檔案路徑不畫線 */
     #x-architecture .xarch-via { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 2 14; }
     #x-architecture .xarch-direct { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; }
@@ -80,8 +80,8 @@
     #x-architecture .xarch-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
     #x-architecture #xarch-cloud { left: 0; right: 0; margin: 0 auto; top: var(--sc-pad-card-y); width: 320px; height: 120px; gap: 20px; border-radius: 20px; }
     #x-architecture #xarch-cico { --d: 72px; --i: 40px; }
-    /* 結論膠囊：水平置中；top 184＝雲端底（40＋120）＋--sc-gap-md，底 296 在裝置頂 316 之上 */
-    #x-architecture #xarch-no { position: absolute; left: 0; right: 0; margin: 0 auto; top: 184px; width: max-content; height: 112px; box-sizing: border-box; padding: 0 40px 0 28px; border: 4px solid var(--sc-warn); border-radius: 20px;
+    /* 結論膠囊：水平置中；top＝雲端底（--sc-pad-card-y 64＋120）＋--sc-gap-md＝208，底 320 在裝置頂 348 之上 */
+    #x-architecture #xarch-no { position: absolute; left: 0; right: 0; margin: 0 auto; top: calc(var(--sc-pad-card-y) + 120px + var(--sc-gap-md)); width: max-content; height: 112px; box-sizing: border-box; padding: 0 40px 0 28px; border: 4px solid var(--sc-warn); border-radius: 20px;
                                 background: var(--v2-node); color: var(--sc-fs-ink); display: flex; align-items: center; gap: 20px; white-space: nowrap; }
     #x-architecture #xarch-noico { --d: 64px; --i: 36px; background: var(--sc-warn); color: var(--sc-on-warn); }
     #x-architecture #xarch-not { position: relative; }

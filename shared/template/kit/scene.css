@@ -102,6 +102,10 @@
    ========================================================================== */
 
 
+/* 情境動畫（custom x-*）的內容區留白比字卡大：左右 72、上下 64（使用者：「動畫都非常逼近框，閱讀會有壓力」）。
+   字卡模板（01–13）維持 48／40；scene-layout.js、audit 從元件所在位置讀這兩個值 */
+[data-composition-id^="x-"] { --sc-pad-card: 72px; --sc-pad-card-y: 64px; }
+
 /* --------------------------------------------------------------------------
    字體：由 kit/fonts.css 提供（Noto Sans TC 可變字型，隨包附、離線可用），這裡只透過 --font-cjk 引用。
    -------------------------------------------------------------------------- */
@@ -117,6 +121,8 @@
   --sc-gap-sm: 16px;        /* 插圖到它的標籤、圖示到文字 */
   --sc-link-gap: 12px;      /* 連接線端點離元件外框 */
   --sc-link-head: 16px;     /* 箭頭頭長 */
+  --sc-spot-gap: 14px;      /* 聚焦亮框（.sc-spot）到元件外框的空隙 */
+  --sc-body-h: 636px;       /* 全畫面主卡內容區高：卡底 y 918＝子母畫面本體下緣（字幕區 y 920 之上）；直式舞台縮放時 580（canvas.mjs regionsScript 蓋過） */
   /* token 預設值＝頻道預設（channel）；契約與各 token 用途見 references/theming.md 第 2 節。
      主題 theme.css 只覆寫這些 token。底紋（--sc-*-pattern）預設 none，頻道底紋由 themes/channel/theme.css 提供。 */
 
@@ -944,7 +950,8 @@ body, #root {
 .sc-ripple { position: absolute; left: 50%; top: 50%; width: 100%; aspect-ratio: 1; translate: -50% -50%; border: 4px solid var(--v2-ripple); border-radius: 50%; opacity: 0; pointer-events: none; box-sizing: border-box; }
 .sc-comet__head { fill: var(--v2-comet); }
 .sc-comet__halo { fill: var(--v2-comet-halo); }
-.sc-spot { position: absolute; inset: -4px; border-radius: inherit; box-shadow: var(--v2-spot-glow); opacity: 0; pointer-events: none; }
+/* 聚焦亮框：離元件外框 --sc-spot-gap（14），圓角＝元件圓角＋空隙（P.spot 照元件算；元件是圓的就跟著圓） */
+.sc-spot { position: absolute; inset: calc(-1 * var(--sc-spot-gap, 14px)); border-radius: inherit; box-shadow: var(--v2-spot-glow); opacity: 0; pointer-events: none; }
 .sc-sheen { position: absolute; inset: 0; background: var(--v2-sheen); opacity: 0; pointer-events: none; }
 .sc-strike { position: absolute; left: -4px; right: -4px; top: calc(50% - 3px); height: 6px; border-radius: 3px; background: var(--v2-strike); pointer-events: none; }
 .sc-strike--wave { top: 32%; height: 36%; background: none; border-radius: 0; }

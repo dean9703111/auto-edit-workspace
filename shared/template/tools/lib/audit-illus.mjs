@@ -101,7 +101,7 @@ export function judgeIllus(meas, ctx) {
       const inner = [card.rect[0], Math.max(card.rect[1], ...titles.map((e) => e.rect[3])), card.rect[2], card.rect[3]];
       const k = area(U) / Math.max(1, area(inner));
       if (k < SMALL_MIN) push('illus-small', card.desc, `插圖太小：主角是圖，插圖群只佔卡片內部 ${Math.round(k * 100)}%（< ${SMALL_MIN * 100}%）`,
-        '放大到卡片內部 70% 高、75% 寬（主角長邊 300–450px、標籤 28–32px），照 shared/style.md「示意動畫」', { ratio: Math.round(k * 1000) / 1000 });
+        '放大到內距以內撐開（情境動畫內容區左右留 72、上下留 64：1176×636 的內容區整組最多 1032×508；主角長邊 260–400px、標籤 28–32px），照 shared/style.md「示意動畫」', { ratio: Math.round(k * 1000) / 1000 });
     }
   }
   return out;

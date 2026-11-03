@@ -42,7 +42,7 @@
   結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
 
   【版面】
-  fullscreen：視窗進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。示意視窗 left 120、top 177、1180×636（右緣 1300，底 813；在內容區 y 120–870 垂直置中）。
+  fullscreen：視窗進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。示意視窗 left 120、top 200、1180×636（右緣 1300，底 836；在主卡區 y 120–918 垂直置中）。
   鏡頭是整個視窗（P.cam：往焦點帶 12 %、放大 1.04；帶到按鈕時視窗左移約 50 px、帶到頁面標題時右移一點，右緣仍在 1345 以內，不壓子母畫面）；只推視區裡的畫布會把側欄的字切掉。
   標題列 88 高；視區 1176×544（overflow: hidden），畫布 #xui-canvas 超出視區是刻意的（data-layout-allow-overflow）。
   畫布：側欄 264 寬（三項是整列寬 248 的選單列，右側留白是刻意的：data-layout-allow-slack）；側欄右邊的頁面區 #xui-main（912×544）由 kit/scene-layout.js 排（shared/style.md「版面」）：
@@ -58,8 +58,8 @@
   <style>
     #x-ui-mock { position: absolute; inset: 0; }
     #x-ui-mock .fill { position: absolute; inset: 0; }
-    /* 示意視窗：左 120、頂 177、1180×636（右緣 1300、底 813） */
-    #x-ui-mock #xui-win { position: absolute; left: 120px; top: 177px; width: 1180px; height: 636px; box-sizing: border-box; overflow: hidden;
+    /* 示意視窗：左 120、頂 200、1180×636（右緣 1300、底 836） */
+    #x-ui-mock #xui-win { position: absolute; left: 120px; top: 200px; width: 1180px; height: 636px; box-sizing: border-box; overflow: hidden;
                           border: 2px solid var(--sc-fs-card-line); border-radius: 20px; background: var(--sc-fs-card); color: var(--sc-fs-ink); }
     #x-ui-mock #xui-chrome { position: relative; height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 16px;
                              background: var(--sc-fs-head); color: var(--sc-fs-head-ink); white-space: nowrap; }

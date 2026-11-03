@@ -43,8 +43,8 @@
 
   【版面】
   fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
-  標題列 128、內容區 1176×580（卡底 862，在字幕區 y 920 之上）。以下是內容區座標。
-  兩張數字卡 1064×224 由 #xn-body 的 data-layout="col" data-gap="lg" 排（kit/scene-layout.js，shared/style.md「版面」）：上下疊、中間 48（第二張聚焦抬起時離上卡仍 ≥ 20）、
+  標題列 128、內容區 1176×636（卡底 918＝子母畫面本體下緣，在字幕區 y 920 之上）。以下是內容區座標。
+  兩張數字卡 1032×224 由 #xn-body 的 data-layout="col" data-gap="lg" 排（kit/scene-layout.js，shared/style.md「版面」）：上下疊、中間 48（第二張聚焦抬起時離上卡仍 ≥ 20）、
   整組在內容區置中（左右 56、上下 40／44），不寫 left／top。卡內：一列 top 16、高 112（圖示 88／名稱 280／數字 160 置右／單位）；
   量條軌道 left 28、top 148、高 48，上卡 600 寬（撐開到 960）、下卡 960 寬。#xn-overA 疊在填充上（inset 0）＝同一根變色，不算新元素。
 -->
@@ -55,15 +55,15 @@
   <style>
     #x-numbers { position: absolute; inset: 0; }
     #x-numbers .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-numbers #xn-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-numbers #xn-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-    #x-numbers #xn-body { position: relative; width: 1176px; height: 580px; }
-    /* 數字卡：1064×224；位置由 #xn-body 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
-    #x-numbers .xn-box { position: absolute; width: 1064px; height: 224px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+    #x-numbers #xn-body { position: relative; width: 1176px; height: var(--sc-body-h); }
+    /* 數字卡：1032×224；位置由 #xn-body 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
+    #x-numbers .xn-box { position: absolute; width: 1032px; height: 224px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
                          border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink); }
     /* 一列：圖示／名稱／數字／單位同一條中線（高 112） */
-    #x-numbers .xn-row { position: absolute; left: 28px; top: 16px; width: 1000px; height: 112px; display: flex; align-items: center; gap: 24px; white-space: nowrap; }
+    #x-numbers .xn-row { position: absolute; left: 28px; top: 16px; width: 968px; height: 112px; display: flex; align-items: center; gap: 24px; white-space: nowrap; }
     #x-numbers .xn-lab { width: 280px; }
     #x-numbers .xn-n { width: 160px; text-align: right; }
     #x-numbers .xn-track { position: absolute; left: 28px; top: 148px; height: 48px; box-sizing: border-box;

@@ -1,6 +1,6 @@
 <!-- 預設拍型：C 對比（BEATS.md §3 C；全畫面） -->
 <!-- @style -->
-/* 全畫面對照：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128（左右內距 --sc-pad-card）；內容區 #wBody 1176×580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
+/* 全畫面對照：主卡左 120、頂 150、寬 1180（右緣 1300）；標題列高 128（左右內距 --sc-pad-card）；內容區 #wBody 1176×636（卡底 918）。右上 x 1344–1856、y 150–262 留給附件章節角標。
    排法（kit/scene-layout.js）：#wBody data-layout="col"，對照表 #fCmp 是唯一的 data-slot（寬＝內容區扣左右 --sc-pad-card＝1080），helper 上下左右置中。
    兩欄在 #fCmp 裡用 flex 等寬並排、上緣對齊（欄頭同一條線；不用 cols-2：兩欄項數不同時它會把矮的那欄垂直置中，欄頭就錯開）。
    每欄（539）文字離中線 --sc-gap-lg；欄頭 72／900 → --sc-gap-md → 4px 主色線；項 44／500，方點 16 → --sc-gap-md → 文字，列距 --sc-gap-lg。
@@ -8,7 +8,7 @@
    中線 2px 隨較高的欄拉長。 */
 #wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
 #wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
-#wBody { width: 1176px; height: 580px; }
+#wBody { width: 1176px; height: var(--sc-body-h); }
 #fCmp { display: flex; align-items: stretch; width: calc(100% - 2 * var(--sc-pad-card)); }
 .fCol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--sc-gap-lg); }
 .fCol:first-child { padding-right: var(--sc-gap-lg); }

@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]}; document.documentElement.style.setProperty('--sc-body-h', '580px');</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -39,12 +39,12 @@
   <style>
     #x-checklist { position: absolute; inset: 0; }
     #x-checklist .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-checklist #xchk-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-checklist #xchk-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-    #x-checklist #xchk-body { position: relative; width: 1176px; height: 580px; }
-    /* 列：1080×80、圓角 20（聚焦時的亮框跟著圓角）；空框和項目字同一列，聚焦放大抬起時一起動；位置由 #xchk-body 的 data-layout 排，不寫 left／top */
-    #x-checklist .xchk-row { position: absolute; width: 1080px; height: 80px; box-sizing: border-box; border-radius: 20px;
+    #x-checklist #xchk-body { position: relative; width: 1176px; height: var(--sc-body-h); }
+    /* 列：1032×80、圓角 20（聚焦時的亮框跟著圓角）；空框和項目字同一列，聚焦放大抬起時一起動；位置由 #xchk-body 的 data-layout 排，不寫 left／top */
+    #x-checklist .xchk-row { position: absolute; width: 1032px; height: 80px; box-sizing: border-box; border-radius: 20px;
                              display: flex; align-items: center; gap: 32px; padding: 0 28px; color: var(--sc-fs-ink); white-space: nowrap; }
     /* 目前這一項的淡色底（P.in／P.out 換列），在列的最底層 */
     #x-checklist .xchk-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
@@ -54,8 +54,8 @@
     #x-checklist .xchk-sq { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; }
     #x-checklist .xchk-sqon { fill: none; stroke: var(--brand); stroke-width: 6px; }
     #x-checklist .xchk-tick { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
-    /* 進度區：1064×72（清單最後一格，位置由 data-layout 排）；軌道 800×24、計數靠右（寬 224，數字寬度固定） */
-    #x-checklist #xchk-prog { position: absolute; width: 1064px; height: 72px; }
+    /* 進度區：1032×72（清單最後一格，位置由 data-layout 排）；軌道 800×24、計數靠右（寬 224，數字寬度固定） */
+    #x-checklist #xchk-prog { position: absolute; width: 1032px; height: 72px; }
     #x-checklist #xchk-track { position: absolute; left: 0; top: 24px; width: 800px; height: 24px; border-radius: 12px; background: var(--sc-fs-node-line); }
     #x-checklist #xchk-fill { position: absolute; inset: 0; border-radius: 12px; background: var(--brand); }
     #x-checklist #xchk-fillok { position: absolute; inset: 0; border-radius: 12px; background: var(--sc-good); }

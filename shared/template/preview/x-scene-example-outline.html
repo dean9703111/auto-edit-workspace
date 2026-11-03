@@ -36,10 +36,10 @@
   <style>
     #x-scene-example-outline { position: absolute; inset: 0; }
     #x-scene-example-outline .fill { position: absolute; inset: 0; }
-    /* 主卡：panelTop 區（左 120、頂 150、寬 1180；標題列 128＋內容區 580＝708） */
+    /* 主卡：panelTop 區（左 120、頂 150、寬 1180；標題列 128＋內容區 636＝764；卡底 918＝子母畫面本體下緣，直式 580） */
     #x-scene-example-outline #xsco-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-scene-example-outline #xsco-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
-    #x-scene-example-outline #xsco-stage { position: relative; width: 1176px; height: 580px; }
+    #x-scene-example-outline #xsco-stage { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 連接線：xsco-lines 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link） */
     /* 元件：插圖＋下面的標籤（xsco-side＝標籤在右邊）；位置由 xsco-stage 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
     #x-scene-example-outline .xsco-it { position: absolute; display: flex; flex-direction: column; align-items: center; gap: var(--sc-gap-sm); white-space: nowrap; }
@@ -54,10 +54,10 @@
       <div id="xsco-stage" data-layout="row" data-gap="xl">
         <svg id="xsco-lines" data-links="xsco-s1>xsco-s2 xsco-s2>xsco-s3 xsco-s3>xsco-s4" xmlns="http://www.w3.org/2000/svg"></svg>
         <!-- ══ DATA 1：元件清單（一個元件一行；只改這裡）══ -->
-        <div id="xsco-s1" class="xsco-it" data-slot><div data-illus="phoneTripod" data-orient="portrait" data-screen="rec" style="width:136px;height:350px"></div><b class="xsco-lbl sc-w700">實際操作</b></div>
-        <div id="xsco-s2" class="xsco-it" data-slot><div data-illus="laptop" data-screen="app" style="width:216px;height:148px"></div><b class="xsco-lbl sc-w700">安裝工具</b></div>
-        <div id="xsco-s3" class="xsco-it" data-slot><div data-illus="cloud" data-arrow="down" style="width:216px;height:148px"></div><b class="xsco-lbl sc-w700">網路設定</b></div>
-        <div id="xsco-s4" class="xsco-it" data-slot><div data-illus="monitor" data-screen="app" style="width:216px;height:180px"></div><b class="xsco-lbl sc-w700">AI 開發</b></div>
+        <div id="xsco-s1" class="xsco-it" data-slot><div data-illus="phoneTripod" data-orient="portrait" data-screen="rec" style="width:144px;height:376px"></div><b class="xsco-lbl sc-w700">實際操作</b></div>
+        <div id="xsco-s2" class="xsco-it" data-slot><div data-illus="laptop" data-screen="app" style="width:200px;height:136px"></div><b class="xsco-lbl sc-w700">安裝工具</b></div>
+        <div id="xsco-s3" class="xsco-it" data-slot><div data-illus="cloud" data-arrow="down" style="width:200px;height:136px"></div><b class="xsco-lbl sc-w700">網路設定</b></div>
+        <div id="xsco-s4" class="xsco-it" data-slot><div data-illus="monitor" data-screen="app" style="width:200px;height:168px"></div><b class="xsco-lbl sc-w700">AI 開發</b></div>
         <!-- ══ DATA 1 到這裡 ══ -->
       </div>
     </div>

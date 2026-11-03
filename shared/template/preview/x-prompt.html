@@ -36,13 +36,13 @@
   <style>
     #x-prompt { position: absolute; inset: 0; }
     #x-prompt .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 169、寬 1180（右緣 1300）；標題列 128、內容區 1176×520（卡底 821） */
-    #x-prompt #xprompt-card { position: absolute; left: 120px; top: 169px; width: 1180px; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×636（卡底 918） */
+    #x-prompt #xprompt-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-prompt #xprompt-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; gap: 24px; }
     /* 標題列底是主色：圖示圓反過來用標題字色當底 */
     #x-prompt #xprompt-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--sc-fs-bar); }
     /* 內容區：data-layout="col" data-justify="start"（kit/scene-layout.js）：框和膠囊靠左對齊、貼左內距、整組上下置中，不寫 left／top */
-    #x-prompt #xprompt-body { position: relative; width: 1176px; height: 520px; }
+    #x-prompt #xprompt-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 提示詞框：寬隨最長那行、高固定 288（3 行） */
     #x-prompt #xprompt-box { position: absolute; width: max-content; max-width: 1064px; height: 288px; box-sizing: border-box;
                              padding: 32px 40px; border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node); color: var(--sc-fs-ink); }

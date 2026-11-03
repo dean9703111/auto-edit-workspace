@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]}; document.documentElement.style.setProperty('--sc-body-h', '580px');</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -39,10 +39,10 @@
   <style>
     #x-stack { position: absolute; inset: 0; }
     #x-stack .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 140、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 852） */
+    /* 主卡：左 120、頂 140、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 852） */
     #x-stack #xstk-card { position: absolute; left: 120px; top: 140px; width: 1180px; }
     #x-stack #xstk-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-    #x-stack #xstk-body { position: relative; width: 1176px; height: 580px; }
+    #x-stack #xstk-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 地基線：1080×8（左右各比層寬多 16），script 貼在最底層 l1 下面 16（讀 data-layout 排好的位置） */
     #x-stack #xstk-base { position: absolute; width: 1080px; height: 8px; }
     #x-stack #xstk-base svg { display: block; width: 100%; height: 100%; overflow: visible; }

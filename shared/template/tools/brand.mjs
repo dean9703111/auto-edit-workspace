@@ -217,7 +217,7 @@ export function drawPipFrame(color, { box = [1424, 594, 1856, 918], W = 1920, H 
 // 每種版面的尺寸與留空區 [x1, y1, x2, y2]（出處：USAGE-reference R9.2、R4.1；ch 是建議初值）
 export const BG_KINDS = {
   fs: { w: 1920, h: 1080, zh: '全畫面與插入素材', zones: [
-    { name: '全畫面主卡', color: 'red', zh: '紅', rect: [120, 150, 1380, 862] },
+    { name: '全畫面主卡', color: 'red', zh: '紅', rect: [120, 150, 1380, 918] },
     { name: '子母畫面', color: 'blue', zh: '藍', rect: [1424, 581, 1888, 951] },
     { name: '字幕帶', color: 'yellow', zh: '黃', rect: [0, 920, 1920, 1080] }] },
   side: { w: 960, h: 1080, zh: '側邊欄面板', zones: [{ name: '側邊欄文字區', color: 'red', zh: '紅', rect: [0, 86, 816, 864] }] },

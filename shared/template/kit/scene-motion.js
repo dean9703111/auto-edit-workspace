@@ -247,7 +247,7 @@
     CLIP: { left: 'inset(-20% 100% -20% -20%)', right: 'inset(-20% -20% -20% 100%)', up: 'inset(100% -20% -20% -20%)', down: 'inset(-20% -20% 100% -20%)', open: 'inset(-20% -20% -20% -20%)' }
   };
   // 具名區域的橫式預設 [x, y, w, h]（design-system.md §2）；直式由 009 的 canvas.mjs 注入 window.__regions 蓋過
-  var REGIONS = { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972] };
+  var REGIONS = { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 768], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972] };
   var CALLS = { n: 0 };
   var ROLE = { idle: 'micro', flow: 'micro', ambient: 'micro', end: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent', stamp: 'accent' };
   var registerType = function () {
@@ -621,9 +621,11 @@
     };
     // 009：直式（有 window.__regions）裡的橫式子合成（root 寬 > 高）＝舞台縮放，座標仍是 1920×1080 → 用橫式區域；P.cam 不往焦點帶
     var STAGED = !!window.__regions && !!root && !!root.getAttribute && (+root.getAttribute('data-width') || 1920) > (+root.getAttribute('data-height') || 1080);
+    // 直式舞台縮放只顯示到 y 880：主卡內容區維持 580（--sc-body-h 由 regionsScript 蓋成 580），主卡區跟著用舊高度
+    var STAGED_REGIONS = { panelTop: [120, 150, 1180, 708] };
     var REGION = function (name) {
       if (Array.isArray(name)) return name;
-      var R = (STAGED ? null : (window.__regions || {})[name]) || REGIONS[name];
+      var R = (STAGED ? STAGED_REGIONS[name] : (window.__regions || {})[name]) || REGIONS[name];
       if (!R) throw new Error('沒有這個區域：' + name + '（可用 ' + Object.keys(REGIONS).join('／') + '）');
       return R;
     };
@@ -801,7 +803,14 @@
       var done = o && o.done ? q(o.done) : [];
       items.forEach(function (el) {
         var g = el.querySelector(':scope > [data-sc-spot]');
-        if (!g) { g = mk(el, 'sc-spot'); g.setAttribute('data-sc-spot', ''); el.appendChild(g); relPos(el); }
+        if (!g) {
+          g = mk(el, 'sc-spot'); g.setAttribute('data-sc-spot', ''); el.appendChild(g); relPos(el);
+          // 亮框離元件 --sc-spot-gap：圓角跟著加大（同心）；元件圓角是 % 的（圓形）就照 inherit
+          try {
+            var cs = getComputedStyle(el), gap = parseFloat(cs.getPropertyValue('--sc-spot-gap')), br = cs.borderTopLeftRadius || '';
+            if (/px$/.test(br)) g.style.borderRadius = (parseFloat(br) + (gap >= 0 ? gap : 14)) + 'px';
+          } catch (e) { /* 沒有 getComputedStyle：用 CSS 的 inherit */ }
+        }
         var cur = spotState.get(el) || { o: 1, s: 1, y: 0, g: 0, d: 0, t: -1, t0: -1 }, a = at;
         if (a < cur.t - 0.001) {
           if (a < cur.t0 - 0.001) throw new Error('P.spot 要照時間先後寫：' + nameOf(el) + ' 在 ' + r3(cur.t0) + 's 已經有焦點變化，這一行是 ' + r3(a) + 's');

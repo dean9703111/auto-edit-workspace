@@ -272,6 +272,7 @@ export function measureInPage({ hostId, W, H }) {
       // 003 版面規則
       pos: cs.position,
       title: el.matches('.sc-wcard__bar, .sc-pill, [data-audit-title]'),
+      titlePadY: el.matches('.sc-wcard__bar, .sc-pill, [data-audit-title]') ? r2(px(cs.getPropertyValue('--sc-pad-card-y'))) : null,   // 標題到內容的門檻跟著卡片上內距（情境動畫 64、字卡 40）
       pad: [px(cs.paddingLeft), px(cs.paddingTop), px(cs.paddingRight), px(cs.paddingBottom)].map(r2),
       bw: bw.map(r2),
       round: Math.abs(r.width - r.height) <= 2 && px(cs.borderTopLeftRadius) >= r.width / 2 - 0.5,

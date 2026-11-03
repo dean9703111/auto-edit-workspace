@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]}; document.documentElement.style.setProperty('--sc-body-h', '580px');</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -39,11 +39,11 @@
   <style>
     #x-metaphor { position: absolute; inset: 0; }
     #x-metaphor .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-metaphor #xmeta-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-metaphor #xmeta-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
     /* 內容區：data-layout="col"（kit/scene-layout.js）由上往下排兩框一組、結論句、警示條；不寫 left／top */
-    #x-metaphor #xmeta-body { position: relative; width: 1176px; height: 580px; }
+    #x-metaphor #xmeta-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 兩框＋箭頭一組（結論那一拍一起退焦）：data-layout="row"，大小由 helper 照兩框算；箭頭 svg 由 data-links 產生 */
     #x-metaphor #xmeta-pair { position: absolute; }
     #x-metaphor .xmeta-line { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }

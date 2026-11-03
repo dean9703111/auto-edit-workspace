@@ -327,12 +327,12 @@ test('judgeLayout：⚠ 右側空白過多（> 80px）；同一欄取最小、�
   assert.deepEqual(only(lay([box(0, mid, { centered: true })]), 'slack'), []);
 });
 
-test('judgeLayout：⚠ 垂直不平衡（全畫面、內容區 y 120–870、上下留白差 > 40px）', () => {
+test('judgeLayout：⚠ 垂直不平衡（全畫面、內容區 y 120–918＝主卡到子母畫面本體下緣、上下留白差 > 40px）', () => {
   const blk = (y0, y1) => lel({ i: 0, rect: [40, y0, 1000, y1], painted: true, box: true });
   const f = only(lay([blk(120, 600)], { layout: 'fullscreen' }), 'vbalance');
-  assert.match(f[0].msg, /垂直不平衡：內容 y 120–600，上留白 0px、下留白 270px（內容區 y 120–870，差 270px，超過 40px）/);
-  assert.match(f[0].fix, /整組往下移 135px（每個頂層元素的 top 都 \+135）/);
-  assert.deepEqual(only(lay([blk(200, 790)], { layout: 'fullscreen' }), 'vbalance'), []);
+  assert.match(f[0].msg, /垂直不平衡：內容 y 120–600，上留白 0px、下留白 318px（內容區 y 120–918，差 318px，超過 40px）/);
+  assert.match(f[0].fix, /整組往下移 159px（每個頂層元素的 top 都 \+159）/);
+  assert.deepEqual(only(lay([blk(150, 918)], { layout: 'fullscreen' }), 'vbalance'), []);   // 主卡 y 150–918
   assert.deepEqual(only(lay([blk(120, 600)]), 'vbalance'), []);   // overlay 不判
 });
 
@@ -743,10 +743,11 @@ test('009 直式：⚠ portrait-cam（P.cam 每個停點換算的外框超出舞
   assert.deepEqual(rules(pj({ camBoxes: { 'xproc-card': { box: [96.4, 150, 1323.6, 890.5], scale: 1.04 } } })), [], '直式推法（上緣中點為原點）在範圍內');
   assert.deepEqual(rules(pj({ camBoxes: { 'xproc-card': { box: [96.4, 124.8, 1374.6, 865.2], scale: 1.04 } } }, 'still')), [], '只在完成態判一次');
   assert.deepEqual(rules(pj({})), []);
-  // 垂直平衡：舞台段內容區換成舞台窗（鏡頭推近時卡底 890 不算失衡）；橫式照 120–870
-  const card = el({ rect: [96, 150, 1324, 890], painted: true, desc: { id: 'c' } });
-  const lay = (ctx) => R.judgeLayout({ host: { start: 10 }, els: [card] }, { item: item({ opaque: true, seg: { layout: 'fullscreen' } }), t: 17.4, kind: 'still', layout: 'fullscreen', ...ctx }).filter((x) => x.rule === 'vbalance');
-  assert.equal(lay({}).length, 1);
+  // 垂直平衡：舞台段內容區換成舞台窗（鏡頭推近時卡底 890 不算失衡）；橫式照 120–918（主卡到子母畫面本體下緣）
+  const card = (y1) => el({ rect: [96, 150, 1324, y1], painted: true, desc: { id: 'c' } });
+  const lay = (ctx, y1 = 890) => R.judgeLayout({ host: { start: 10 }, els: [card(y1)] }, { item: item({ opaque: true, seg: { layout: 'fullscreen' } }), t: 17.4, kind: 'still', layout: 'fullscreen', ...ctx }).filter((x) => x.rule === 'vbalance');
+  assert.equal(lay({}, 800).length, 1, '橫式卡底 800：下面空 118');
+  assert.equal(lay({}, 918).length, 0, '橫式主卡 y 150–918');
   assert.equal(lay({ contentY: [130, 880] }).length, 0);
 });
 

@@ -36,9 +36,10 @@ export const SPEAKER_WARN_TEMPLATE = 0.15;   // 沒移位的情境模板：和 b
 export const SUBPIXEL = 0.2;        // 邊緣離整數 px ≥ 0.2 才算半像素（0.05 這種量測尾數不會糊）
 export const TOL = 2;               // 一般容許誤差（px），和 hyperframes check 的預設 tolerance 相同
 // 003 版面（R8 #6、OV＝作者 overlay 規範）與節奏（style.md〈節奏〉、TR/v3）；標「初值」的是本線訂的、可依實測調
-export const TITLE_GAP_MIN = 24, TITLE_GAP_GOAL = 40;   // 標題到內容：< 24 ⚠，目標 40（OV/AW:L77、R8 #6）
+export const TITLE_GAP_MIN = 24, TITLE_GAP_GOAL = 40;   // 標題到內容：< 24 ⚠，目標 40（OV/AW:L77、R8 #6）；字卡的值。卡片上內距不是 40 時跟著它：目標＝上內距、⚠＝上內距 − 16（情境動畫 64／48）
 export const NOWRAP_MIN = 7;                            // nowrap 文字到框的餘裕（OV/SKILL.md:132）
 export const SLACK_MAX = 80, CENTER_TOL = 8, STRIP_TOL = 16;   // 右側空白上限（OV/SKILL.md:140）；置中容許、撐滿父層的橫條（初值）
+export const PANEL_BOTTOM = 918;     // 全畫面主卡下緣＝子母畫面本體下緣（kit/scene.css --sc-body-h 636；在字幕區 y 920 之上）
 export const VBAL_MAX = 40, CONTENT_TOP = 120;          // 垂直平衡（OV/AW:L218）；內容區 y 120–870（R4.1）
 export const PAD_X = [24, 0.45], PAD_Y = [14, 0.28];    // 內距門檻 max(24, 0.45×字級)、max(14, 0.28×字級)（R8 #6）
 export const LH_MIN = 1.25, LH_SKIP_FONT = 100;         // 行高 ≥ 1.25×字級（OV/PS:L27）；字級 ≥ 100 的數字不判
@@ -457,14 +458,15 @@ export function judgeLayout(meas, ctx) {
     }
     if (!best) continue;
     const gap = best.r[1] - T.rect[3];
+    const gGoal = T.titlePadY > 0 ? T.titlePadY : TITLE_GAP_GOAL, gMin = gGoal - (TITLE_GAP_GOAL - TITLE_GAP_MIN);
     if (gap < -TOL) {
       const n = Math.ceil(-gap);
       push('error', 'title-overlap', T.desc, `標題壓到內容：${descText(boxDesc(T.desc))} 下緣 y=${ri(T.rect[3])}，${descText(best.e.desc)} 上緣 y=${ri(best.r[1])}（重疊 ${n}px）`,
-        `內容整組往下移 ≥ ${TITLE_GAP_GOAL + n}px，讓間距到 ${TITLE_GAP_GOAL}px（下面每一層一起移）；底部空間不夠就把標題往上、內容往下分攤（R8 #6）`, { gap: r1(gap) });
-    } else if (gap < TITLE_GAP_MIN - 1e-6) {
+        `內容整組往下移 ≥ ${gGoal + n}px，讓間距到 ${gGoal}px（下面每一層一起移）；底部空間不夠就把標題往上、內容往下分攤（R8 #6）`, { gap: r1(gap) });
+    } else if (gap < gMin - 1e-6) {
       const g = Math.max(0, ri(gap));
-      push('warn', 'title-gap', T.desc, `間距不足：${descText(boxDesc(T.desc))} 到 ${descText(best.e.desc)} 只有 ${g}px（< ${TITLE_GAP_MIN}px；目標 ≥ ${TITLE_GAP_GOAL}px）`,
-        `內容整組往下移 ${TITLE_GAP_GOAL - g}px（下面每一層一起移，移完確認下緣 ≤ ${CONTENT_BOTTOM}）（R8 #6）`, { gap: r1(gap) });
+      push('warn', 'title-gap', T.desc, `間距不足：${descText(boxDesc(T.desc))} 到 ${descText(best.e.desc)} 只有 ${g}px（< ${gMin}px；目標 ≥ ${gGoal}px）`,
+        `${gGoal > TITLE_GAP_GOAL ? '元件縮小，或' : ''}內容整組往下移 ${gGoal - g}px（下面每一層一起移，移完確認下緣 ≤ ${CONTENT_BOTTOM}）（R8 #6）`, { gap: r1(gap) });
     }
   }
 
@@ -548,8 +550,8 @@ export function judgeLayout(meas, ctx) {
       if (e.painted || e.media) { const v = clipTo(byI, e, drawnRect(e)); if (v) rs.push(v); }
     }
     const U = unionOf(rs);
-    // 009 直式舞台縮放的段：內容區＝舞台窗的上下（y 130–880），其他照 R4.1 的 120–870
-    const [CT, CB] = ctx.contentY || [CONTENT_TOP, CONTENT_BOTTOM];
+    // 009 直式舞台縮放的段：內容區＝舞台窗的上下（y 130–880）；橫式全畫面主卡到子母畫面本體下緣，量 y 120–918
+    const [CT, CB] = ctx.contentY || [CONTENT_TOP, PANEL_BOTTOM];
     if (U) {
       const up = U[1] - CT, down = CB - U[3], diff = up - down;
       if (Math.abs(diff) > VBAL_MAX + 1e-6) {

@@ -31,9 +31,10 @@
   var DEF = { grid: 8, 'pad-card': 48, 'pad-card-y': 40, 'gap-xxl': 160, 'gap-xl': 96, 'gap-lg': 48, 'gap-md': 24, 'gap-sm': 16, 'link-gap': 12, 'link-head': 16 };
   var SCALE_MAX = 1.1;
   var GAP_DEFAULT = { row: 'xl', col: 'md', 'cols-2': 'lg', 'grid-2x2': 'lg' };
-  var token = function (name) {
+  // el：從這個元素讀（CSS 變數會繼承：情境動畫 x-* 的內距比字卡大，見 kit/scene.css）；沒給就讀 :root
+  var token = function (name, el) {
     var v = NaN;
-    try { v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sc-' + name)); } catch (e) { /* 沒有 document */ }
+    try { v = parseFloat(getComputedStyle(el || document.documentElement).getPropertyValue('--sc-' + name)); } catch (e) { /* 沒有 document */ }
     return v >= 0 ? v : DEF[name];
   };
   var snap = function (v) { var g = token('grid') || 1; return Math.round(v / g) * g; };
@@ -159,8 +160,8 @@
     else {
       var CW = c.clientWidth, CH = c.clientHeight, top = c.getAttribute('data-align') === 'top', J = c.getAttribute('data-justify') || 'center';
       if (!/^(start|center|end)$/.test(J)) throw new Error('data-justify 要是 start／center／end，現在是 ' + J);
-      ox = J === 'start' ? token('pad-card') : J === 'end' ? CW - r.w - token('pad-card') : snap((CW - r.w) / 2);
-      oy = top ? token('pad-card-y') : snap((CH - r.h) / 2);
+      ox = J === 'start' ? token('pad-card', c) : J === 'end' ? CW - r.w - token('pad-card', c) : snap((CW - r.w) / 2);
+      oy = top ? token('pad-card-y', c) : snap((CH - r.h) / 2);
     }
     items.forEach(function (s, i) { s.style.left = (ox + r.pos[i][0]) + 'px'; s.style.top = (oy + r.pos[i][1]) + 'px'; home.set(s, [ox + r.pos[i][0], oy + r.pos[i][1]]); });
   }
@@ -272,6 +273,7 @@
       var cb = box(c, root);
       out.containers.push({
         id: c.id || null, layout: c.getAttribute('data-layout'), align: c.getAttribute('data-align') || 'center', justify: c.getAttribute('data-justify') || 'center', nested: c.hasAttribute('data-slot'),
+        pad: [token('pad-card', c), token('pad-card-y', c)],   // 這個容器的內距（情境動畫 72／64、字卡 48／40）：audit 的內距門檻跟著它
         box: [cb[0] + c.clientLeft, cb[1] + c.clientTop, cb[0] + c.clientLeft + c.clientWidth, cb[1] + c.clientTop + c.clientHeight],
         slots: kids(c).map(function (s) {
           var k = keyOf(s), a = k.a, l = k.l, b = box(s, root), h = home.get(s);

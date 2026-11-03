@@ -571,7 +571,7 @@ test('直式（fixture dev/tests/fixtures/portrait，009 T002-V03–V06）：主
   assert.match(html, /id="main-root" data-composition-id="main" data-start="0" data-duration="44" data-width="1080" data-height="1920"/);
   assert.match(html, /#footage video \{ position: absolute; left: 0; top: 0; width: 1080px; height: 1920px;/);
   assert.match(html, /id="el-captions"[\s\S]*?data-width="1080" data-height="1920"/);
-  const reg = JSON.parse(html.match(/<script>window\.__regions = (\{.*\});<\/script>/)[1]);
+  const reg = JSON.parse(html.match(/<script>window\.__regions = (\{.*\}); document\.documentElement\.style\.setProperty\('--sc-body-h', '580px'\);<\/script>/)[1]);   // 直式舞台縮放的主卡內容區維持 580
   assert.deepEqual(reg.pip, [0, 900, 1080, 1020]);
   assert.ok(html.indexOf('window.__regions') < html.indexOf('kit/scene-motion.js'), '區域要在 scene-motion.js 之前');
   // FR-022：04a 舞台縮放（transform 寫在 host 的 CSS、allow-overflow、子合成仍 1920×1080）＋整張畫布的純色底，進退場連底一起

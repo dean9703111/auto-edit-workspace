@@ -41,7 +41,7 @@ export const CANVAS = {
     framing: { aspect: 16 / 9, headTop: 120 },
     minTextPx: 30,
     // 具名區域（motion.md §1 的橫式預設，和 kit/scene-motion.js 的 REGIONS 相同）
-    regions: { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972] },
+    regions: { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 768], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972] },
   },
   // 直式：spec FR-010 建議初值＋「決定」節（分割線 y 900、角標左上 y 250）；字幕和橫式同一套（決定 2，16:05 改：76 px／字重 400／底板 118），
   // 只差每則 10 字與位置：底板 118 高置中在字幕帶 zone y 1280–1420 裡＝y 1291–1409（臉 940–1280 下面、平台介面 1440 上面）；
@@ -102,8 +102,11 @@ export const regionsOf = (canvas = CANVAS.landscape) => JSON.parse(JSON.stringif
 // 橫式不注入（原語的橫式預設就是 CANVAS.landscape.regions）；直式給全部名稱
 export function regionsScript(canvas = CANVAS.landscape) {
   if (canvas.format === 'landscape') return '';
-  return `<script>window.__regions = ${JSON.stringify(canvas.regions)};</script>`;
+  return `<script>${regionsJs(canvas)}</script>`;
 }
+// 直式：具名區域＋全畫面主卡內容區維持 580（舞台窗只到 y 880；橫式是 kit/scene.css 的 --sc-body-h 636）
+export const STAGED_BODY_H = 580;
+export const regionsJs = (canvas) => `window.__regions = ${JSON.stringify(canvas.regions)}; document.documentElement.style.setProperty('--sc-body-h', '${STAGED_BODY_H}px');`;
 
 // ---- 版式從哪來（FR-003）----
 const PROGRESS_RE = /^\|\s*版式\s*\|\s*(直式|橫式)/m;

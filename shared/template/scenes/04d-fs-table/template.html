@@ -1,14 +1,14 @@
 <!-- 預設拍型：D 清單（BEATS.md §3 D；表格） -->
 <!-- @style -->
-/* 全畫面表格：主卡左 120、頂 150、寬 1180（右緣 1300；要滿寬時整段 子母畫面：none，另行改寬）；標題列高 128（左右內距 --sc-pad-card）；內容區 #wBody 1176×580（卡底 862）。右上 x 1344–1856、y 150–262 留給附件章節角標。
+/* 全畫面表格：主卡左 120、頂 150、寬 1180（右緣 1300；要滿寬時整段 子母畫面：none，另行改寬）；標題列高 128（左右內距 --sc-pad-card）；內容區 #wBody 1176×636（卡底 918）。右上 x 1344–1856、y 150–262 留給附件章節角標。
    排法（kit/scene-layout.js）：#wBody data-layout="col"，表格 #fTbl 是唯一的 data-slot（寬＝內容區扣左右 --sc-pad-card＝1080），helper 上下左右置中
    （列不各自當 slot：helper 會在相鄰列之間留放大預留的縫，表格的列要貼齊）。
    欄等寬（flex 1）、格左右內距 --sc-gap-md、字 44（≥ 38）、首欄 700；格內可用 // 斷兩行（列高 128 放得下兩行，4–5 列請單行）。
-   欄頭列 112（--sc-fs-head 底／--sc-fs-head-ink 字，上圓角 12）、隔列 --sc-fs-tint；列高依列數：≤ 3 列 128、4 列 96、5 列 84（欄頭 96）→ 表格高都 ≤ 580－2×32（上下內距，audit layout-pad）。
+   欄頭列 112（--sc-fs-head 底／--sc-fs-head-ink 字，上圓角 12）、隔列 --sc-fs-tint；列高依列數：≤ 3 列 128、4 列 96、5 列 84（欄頭 96）→ 表格高都 ≤ 636－2×32（上下內距，audit layout-pad）。
    強調列（data-highlight）：4px 主色內框。 */
 #wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
 #wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
-#wBody { width: 1176px; height: 580px; }
+#wBody { width: 1176px; height: var(--sc-body-h); }
 #fTbl { width: calc(100% - 2 * var(--sc-pad-card)); }
 .fTr { display: flex; align-items: center; height: 128px; }
 .fTr.fHead { height: 112px; background: var(--sc-fs-head); color: var(--sc-fs-head-ink); border-radius: 12px 12px 0 0; font-weight: 700; }

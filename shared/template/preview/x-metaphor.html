@@ -36,11 +36,11 @@
   <style>
     #x-metaphor { position: absolute; inset: 0; }
     #x-metaphor .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-metaphor #xmeta-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-metaphor #xmeta-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
     /* 內容區：data-layout="col"（kit/scene-layout.js）由上往下排兩框一組、結論句、警示條；不寫 left／top */
-    #x-metaphor #xmeta-body { position: relative; width: 1176px; height: 580px; }
+    #x-metaphor #xmeta-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 兩框＋箭頭一組（結論那一拍一起退焦）：data-layout="row"，大小由 helper 照兩框算；箭頭 svg 由 data-links 產生 */
     #x-metaphor #xmeta-pair { position: absolute; }
     #x-metaphor .xmeta-line { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }

@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]}; document.documentElement.style.setProperty('--sc-body-h', '580px');</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -39,12 +39,12 @@
   <style>
     #x-callout { position: absolute; inset: 0; }
     #x-callout .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-callout #xcall-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-callout #xcall-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
-    #x-callout #xcall-body { position: relative; width: 1176px; height: 580px; }
+    #x-callout #xcall-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 主體：中央一個 200 的主色圖示圓；位置由 #xcall-body 的 data-layout 排，不寫 left／top */
-    #x-callout #xcall-obj { position: absolute; --d: 200px; --i: 112px; }
+    #x-callout #xcall-obj { position: absolute; --d: 152px; --i: 88px; }
     /* 引線與端點：#xcall-lines 的 data-links 自動產生引線（class 用 data-link-class 的 xcall-line）；svg 大小由 kit/scene-layout.js 設成整個內容區 */
     #x-callout #xcall-lines { position: absolute; }
     #x-callout .xcall-line { fill: none; stroke: var(--sc-fs-ink); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }

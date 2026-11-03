@@ -469,7 +469,7 @@ test('009 直式：STAGED（window.__regions＋root 寬 > 高）用橫式區域�
     return { x: tw.vars.x, y: tw.vars.y, scale: tw.vars.scale, org: tw.vars.transformOrigin, panelTop: P.region('panelTop') };
   };
   // 橫式（沒有 __regions）：往焦點帶 −k×s×(焦點中心 − 容器中心)，原點 50% 50%
-  assert.deepEqual(camVars(root('1920', '1080')), { x: -51, y: -5, scale: 1.04, org: '50% 50%', panelTop: [120, 150, 1180, 708] });
+  assert.deepEqual(camVars(root('1920', '1080')), { x: -51, y: -5, scale: 1.04, org: '50% 50%', panelTop: [120, 150, 1180, 768] });
   globalThis.__regions = { panelTop: [0, 0, 1080, 900], panelBottom: [0, 900, 1080, 1020], pip: [0, 900, 1080, 1020] };
   try {
     assert.deepEqual(camVars(root('1920', '1080')), { x: 0, y: 0, scale: 1.04, org: '50% 0%', panelTop: [120, 150, 1180, 708] }, '直式舞台縮放：橫式區域、只推近');
@@ -645,7 +645,7 @@ test('SceneLayout：row 等距、底對齊（標籤同一條線）、群組置�
       <svg id="t-lines" data-links="t-a>t-b t-b>t-g t-b-t-d"></svg>
       <svg id="t-empty" data-links=""></svg>
     </div>
-    <div id="t-free" data-layout="free" style="position:absolute;left:1400px;top:100px;width:444px;height:284px;border:2px solid #ccc">
+    <div id="t-free" data-layout="free" style="position:absolute;left:1400px;top:100px;width:444px;height:284px;border:2px solid #ccc;--sc-pad-card:48px;--sc-pad-card-y:40px">
       <div id="t-f1" data-slot style="position:absolute;left:40px;top:100px;width:120px;height:80px;background:#333"></div>
       <div id="t-fg" data-slot data-layout="free" style="position:absolute;left:280px;top:100px"><div id="t-f2" data-slot style="position:absolute;left:0;top:0;width:120px;height:80px;background:#333"></div></div>
       <svg style="position:absolute;left:0;top:0;width:440px;height:280px" viewBox="0 0 440 280"><path id="t-hand" d="M172 140 H268 M252 124 L268 140 L252 156" fill="none" stroke="#e06020" stroke-width="6"/></svg>
@@ -658,7 +658,7 @@ test('SceneLayout：row 等距、底對齊（標籤同一條線）、群組置�
     <div id="t-room" data-layout="row" data-gap="md" style="position:absolute;left:800px;top:780px;width:900px;height:200px">
       <div id="t-q1" data-slot style="width:240px;height:40px;background:#333"></div><div id="t-q2" data-slot style="width:240px;height:40px;background:#333"></div>
     </div>
-    <div id="t-col" data-layout="col" data-justify="start" data-gap="xxl" style="position:absolute;left:120px;top:740px;width:600px;height:320px">
+    <div id="t-col" data-layout="col" data-justify="start" data-gap="xxl" style="position:absolute;left:120px;top:740px;width:600px;height:368px">
       <div id="t-k1" data-slot style="width:200px;height:40px;background:#333"></div><div id="t-k2" data-slot style="width:320px;height:40px;background:#333"></div>
     </div>
   </div>
@@ -728,9 +728,10 @@ test('SceneLayout：row 等距、底對齊（標籤同一條線）、群組置�
       assert.ok(hand && hand.a === 't-f1' && hand.b === 't-f2', `手寫線沒量到 ${JSON.stringify(lay.links)}`);
       assert.deepEqual([hand.pts[0], hand.pts.at(-1)].map((p) => p.map(Math.round)), [[1574, 242], [1670, 242]]);
       assert.deepEqual([rd(hand.pts[0], hand.boxA), rd(hand.pts.at(-1), hand.boxB)].map(Math.round), [12, 12]);
-      // data-justify="start"：col 左邊對齊、群組左內距 --sc-pad-card 48；data-gap="xxl" 160
+      // data-justify="start"：col 左邊對齊、群組左內距 --sc-pad-card（情境動畫 x-* 是 72，字卡 48；kit/scene.css）；data-gap="xxl" 160
       const kc = lay.containers.find((c) => c.id === 't-col'), ks = Object.fromEntries(kc.slots.map((s) => [s.id, s]));
-      assert.deepEqual([ks['t-k1'].box[0] - kc.box[0], ks['t-k2'].box[0] - kc.box[0], ks['t-k2'].box[1] - ks['t-k1'].box[3]], [48, 48, 160]);
+      assert.deepEqual([ks['t-k1'].box[0] - kc.box[0], ks['t-k2'].box[0] - kc.box[0], ks['t-k2'].box[1] - ks['t-k1'].box[3]], [72, 72, 160]);
+      assert.deepEqual(kc.pad, [72, 64], '情境動畫的內距 72／64（audit 的內距門檻跟著它）');
       assert.equal(kc.justify, 'start');
       // 整份量測丟進 audit：六條規則都不報
       assert.deepEqual(judgeLayoutRules(lay, { item: { id: 'x01', label: 'x-lay' }, t: 3.5 }), []);

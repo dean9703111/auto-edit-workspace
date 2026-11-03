@@ -36,11 +36,11 @@
   <style>
     #x-fix { position: absolute; inset: 0; }
     #x-fix .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-fix #xfix-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-fix #xfix-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
     /* 內容區：data-layout="row"（kit/scene-layout.js）排痛點欄和解法卡；元件不寫 left／top */
-    #x-fix #xfix-body { position: relative; width: 1176px; height: 580px; }
+    #x-fix #xfix-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 痛點：寬跟著字（max-content），高 112＝一行；要主句＋副句兩行時 height 改 184、white-space 改 normal，.xfix-t 裡分兩個 span；位置由 #xfix-pains（data-layout="col" data-justify="start"）排 */
     #x-fix .xfix-pain { position: absolute; width: max-content; height: 112px; box-sizing: border-box; padding: 0 28px;
                         border: 4px solid var(--v2-node-line); border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);

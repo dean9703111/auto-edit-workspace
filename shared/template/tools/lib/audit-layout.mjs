@@ -7,8 +7,10 @@
 export const ROW_WARN = 4, ROW_ERR = 16;        // layout-row-align：同列插圖中線 y 差 > 4 ⚠、> 16 ✖
 export const GAP_DIFF = 8;                       // layout-gap：同列（欄）相鄰間距最大差
 export const CENTER_X = 16, CENTER_Y = 24;       // layout-center：左右留白差、上下留白差（data-align=center）
-export const PAD_X = 40, PAD_Y = 32;             // layout-pad：內容群到內容區邊
-export const PAD_CARD = 48, GRID = 8;            // layout-center：data-justify="start"／"end" 時左（右）內距要＝--sc-pad-card ±--sc-grid
+// 內距跟著容器的 --sc-pad-card／--sc-pad-card-y（SceneLayout.measure 的 pad；情境動畫 x-* 72／64、字卡 48／40，kit/scene.css）
+export const PAD_CARD = 48, PAD_CARD_Y = 40, GRID = 8;   // 沒量到 pad 時的預設；layout-center：data-justify="start"／"end" 時左（右）內距要＝pad ±--sc-grid
+export const PAD_SLACK = 8;                      // layout-pad：內容群到內容區邊 < 內距 − 8 ⚠（字卡 40／32、情境動畫 64／56）
+export const PAD_X = PAD_CARD - PAD_SLACK, PAD_Y = PAD_CARD_Y - PAD_SLACK;
 export const LABEL_DIFF = 4;                     // layout-label：標籤中心對插圖中心
 export const LABEL_ROW = 4;                      // layout-label-row：同一列標籤上緣差（row 預設底對齊）
 export const LABEL_SIDE_ROW = 16;                // layout-label-row：側排元件（徽章＋右邊字）的標籤中心對同一列標籤中心（字在圖旁邊，容許寬一點）
@@ -106,15 +108,16 @@ export function judgeLayoutRules(lay, { item, t = null } = {}) {
     const edges = (G) => [G[0] - c.box[0], c.box[2] - G[2], G[1] - c.box[1], c.box[3] - G[3]];
     const [hL, hR, hT, hB] = edges(union(c.slots.map((s) => s.home || s.box)));
     const J = c.justify || 'center', side = J === 'start' ? hL : J === 'end' ? hR : null;
-    const cxBad = side != null ? Math.abs(side - PAD_CARD) > GRID : Math.abs(hL - hR) > CENTER_X, cyBad = c.align !== 'top' && Math.abs(hT - hB) > CENTER_Y;
+    const padX = c.pad?.[0] > 0 ? c.pad[0] : PAD_CARD, padY = c.pad?.[1] > 0 ? c.pad[1] : PAD_CARD_Y, minX = padX - PAD_SLACK, minY = padY - PAD_SLACK;
+    const cxBad = side != null ? Math.abs(side - padX) > GRID : Math.abs(hL - hR) > CENTER_X, cyBad = c.align !== 'top' && Math.abs(hT - hB) > CENTER_Y;
     if (cxBad || cyBad) push('warn', 'layout-center', null, side != null && cxBad
-      ? `內容群沒${J === 'start' ? '靠左' : '靠右'}：${where} 裡${J === 'start' ? '左' : '右'}邊留白 ${Math.round(side)}px（data-justify="${J}" 要 ${PAD_CARD}±${GRID}px）`
+      ? `內容群沒${J === 'start' ? '靠左' : '靠右'}：${where} 裡${J === 'start' ? '左' : '右'}邊留白 ${Math.round(side)}px（data-justify="${J}" 要 ${padX}±${GRID}px）`
       : `內容群沒置中：${where} 裡左右留白 ${Math.round(hL)}／${Math.round(hR)}px${c.align !== 'top' ? `、上下 ${Math.round(hT)}／${Math.round(hB)}px` : ''}（差 > ${cxBad ? `${CENTER_X}px` : `${CENTER_Y}px`}）`,
-      side != null && cxBad ? `data-justify="${J}" 交給 data-layout 排（${J === 'start' ? '左' : '右'}內距 ${PAD_CARD}），不要手寫 left` : '內容群置中：用 data-layout；故意靠上寫 data-align="top"', { L: r1(hL), R: r1(hR), T: r1(hT), B: r1(hB) });
+      side != null && cxBad ? `data-justify="${J}" 交給 data-layout 排（${J === 'start' ? '左' : '右'}內距 ${padX}），不要手寫 left` : '內容群置中：用 data-layout；故意靠上寫 data-align="top"', { L: r1(hL), R: r1(hR), T: r1(hT), B: r1(hB) });
     const [L, R, T, B] = edges(union(c.slots.map((s) => s.box)));
-    const padBad = Math.min(L, R) < PAD_X || Math.min(T, B) < PAD_Y;
-    if (padBad) push('warn', 'layout-pad', null, `內距不夠：內容群到 ${where} 邊 左 ${Math.round(L)}、右 ${Math.round(R)}、上 ${Math.round(T)}、下 ${Math.round(B)}px（左右 ≥ ${PAD_X}、上下 ≥ ${PAD_Y}）`,
-      '元件縮小或減少，內距至少 48／40', { L: r1(L), R: r1(R), T: r1(T), B: r1(B) });
+    const padBad = Math.min(L, R) < minX || Math.min(T, B) < minY;
+    if (padBad) push('warn', 'layout-pad', null, `內距不夠：內容群到 ${where} 邊 左 ${Math.round(L)}、右 ${Math.round(R)}、上 ${Math.round(T)}、下 ${Math.round(B)}px（左右 ≥ ${minX}、上下 ≥ ${minY}）`,
+      `元件縮小或減少，內距至少 ${padX}／${padY}（${padX === PAD_CARD ? '字卡' : '情境動畫'}）`, { L: r1(L), R: r1(R), T: r1(T), B: r1(B) });
   }
   // ── layout-label：標籤中心對插圖中心
   for (const s of allSlots) {

@@ -2,17 +2,17 @@
 <!-- @style -->
 /* 全畫面清單：背景（root 的 .sc-surface-fs）＋主卡外框＋標題列第一幀就在，內容從 0.5s 起。
    主卡左 120、頂 150、寬 1180（右緣 1300，不進子母畫面禁入區 x 1344–1888、y 617–951；右上 x 1344–1856、y 150–262 留給附件章節角標）。
-   標題列高 128（64／900，左右內距 --sc-pad-card）；內容區 #wBody 1176×580（卡內框 2）→ 卡底 862（≤ 870）。
+   標題列高 128（64／900，左右內距 --sc-pad-card）；內容區 #wBody 1176×636（卡內框 2）→ 卡底 918（＝子母畫面本體下緣，字幕區 y 920 之上）。
    排法（kit/scene-layout.js）：#wBody data-layout="col"、列距 --sc-gap-lg；每列是 data-slot，寬＝內容區扣左右 --sc-pad-card（文字靠左、和標題同一條左緣），
-   整組由 helper 上下置中。方點 16 → --sc-gap-md → 文字 56／500（行高 76＋光學 6＝82）；4 列 4×82＋3×48＝472 ≤ 580－2×40。
+   整組由 helper 上下置中。方點 16 → --sc-gap-md → 文字 56／500（行高 76＋光學 6＝82）；4 列 4×82＋3×48＝472 ≤ 636－2×40。
    有圖示時方點換成 .sc-icon--72（圓 72 ≤ 列高 82，列高與列距不變）：72 → 24 → 文字；列寬 1080，18 字 1008＋96＝1104 會超 → 文字 max 17（952＋96＝1048 ≤ 1080）。 */
 #wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
 #wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
-#wBody { width: 1176px; height: 580px; }
+#wBody { width: 1176px; height: var(--sc-body-h); }
 #wBody > .sc-row { width: calc(100% - 2 * var(--sc-pad-card)); }
 /* 全寬版型（只有聲音、沒有子母畫面小窗：build 在 host 寫 data-wide，kit 把主卡拉到 1680）：清單留在左邊 1176（data-wide-keep），
    右邊 500 放主視覺 #fVis（slots.visual＝畫廊插圖元件，380×380 置中）；有小窗時不顯示 */
-#fVis { position: absolute; left: 1176px; top: 128px; width: 500px; height: 580px; display: none; place-items: center; }
+#fVis { position: absolute; left: 1176px; top: 128px; width: 500px; height: var(--sc-body-h); display: none; place-items: center; }
 [data-wide] #fVis { display: grid; }
 #fVis > [data-illus] { width: 380px; height: 380px; }
 <!-- @body -->

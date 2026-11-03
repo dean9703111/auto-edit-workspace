@@ -36,17 +36,17 @@
   <style>
     #x-process { position: absolute; inset: 0; }
     #x-process .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-process #xproc-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-process #xproc-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
     /* 內容區：站用 flex 排成一列、整組置中（data-layout="free"：排版程式沒有上下錯落的排法） */
-    #x-process #xproc-body { position: relative; width: 1176px; height: 580px; display: flex; justify-content: center; align-items: center; }
+    #x-process #xproc-body { position: relative; width: 1176px; height: var(--sc-body-h); display: flex; justify-content: center; align-items: center; }
     /* 連接線：#xproc-lines 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link），不佔 flex 的位置 */
     #x-process #xproc-lines { position: absolute; }
     /* 虛線預告層：script 載入時從每條連接線複製一份（不用手寫），講到之前一直往前流 */
     #x-process .xproc-ghost { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-linecap: round; stroke-dasharray: 2 14; }
-    /* 站：寬 272、高 232（52px 的四字站名左右、圖示到字都要 ≥ 24／15，audit padding）；單數站下面、雙數站上面各空一站高＋--sc-gap-md（上下錯落，flex 置中後單數在上排、雙數在下排）；圖示和站名同一塊 */
-    #x-process .xproc-node { position: relative; flex: none; width: 272px; height: 232px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+    /* 站：寬 256、高 232（48px 的四字站名左右、圖示到字都要 ≥ 24／15，audit padding）；單數站下面、雙數站上面各空一站高＋--sc-gap-md（上下錯落，flex 置中後單數在上排、雙數在下排）；圖示和站名同一塊 */
+    #x-process .xproc-node { position: relative; flex: none; width: 256px; height: 232px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
                              border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
                              display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; white-space: nowrap; }
     #x-process .xproc-node .sc-icon { --d: 96px; --i: 56px; position: relative; }
@@ -64,13 +64,13 @@
       <div id="xproc-body" data-layout="free">
         <svg id="xproc-lines" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3 xproc-n3>xproc-n4" xmlns="http://www.w3.org/2000/svg"></svg>
         <div id="xproc-n1" class="xproc-node" data-slot><i id="xproc-now1" class="xproc-now"></i>
-          <span id="xproc-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">錄影</span></div>
+          <span id="xproc-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg></span><span class="xproc-name sc-t48 sc-w900 sc-opt">錄影</span></div>
         <div id="xproc-n2" class="xproc-node" data-slot><i id="xproc-now2" class="xproc-now"></i>
-          <span id="xproc-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">逐字稿</span></div>
+          <span id="xproc-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span><span class="xproc-name sc-t48 sc-w900 sc-opt">逐字稿</span></div>
         <div id="xproc-n3" class="xproc-node" data-slot><i id="xproc-now3" class="xproc-now"></i>
-          <span id="xproc-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">剪輯清單</span></div>
+          <span id="xproc-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></svg></span><span class="xproc-name sc-t48 sc-w900 sc-opt">剪輯清單</span></div>
         <div id="xproc-n4" class="xproc-node" data-slot><i id="xproc-now4" class="xproc-now"></i>
-          <span id="xproc-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /><path d="M8.12 8.12 12 12" /><path d="M20 4 8.12 15.88" /><circle cx="6" cy="18" r="3" /><path d="M14.8 14.8 20 20" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">初剪</span></div>
+          <span id="xproc-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /><path d="M8.12 8.12 12 12" /><path d="M20 4 8.12 15.88" /><circle cx="6" cy="18" r="3" /><path d="M14.8 14.8 20 20" /></svg></span><span class="xproc-name sc-t48 sc-w900 sc-opt">初剪</span></div>
       </div>
     </div>
   </div>

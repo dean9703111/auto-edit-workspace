@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]}; document.documentElement.style.setProperty('--sc-body-h', '580px');</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -39,10 +39,10 @@
   <style>
     #x-scene { position: absolute; inset: 0; }
     #x-scene .fill { position: absolute; inset: 0; }
-    /* 主卡：panelTop 區（左 120、頂 150、寬 1180；標題列 128＋內容區 580＝708） */
+    /* 主卡：panelTop 區（左 120、頂 150、寬 1180；標題列 128＋內容區 636＝764；卡底 918＝子母畫面本體下緣，直式 580） */
     #x-scene #xsc-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-scene #xsc-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
-    #x-scene #xsc-stage { position: relative; width: 1176px; height: 580px; }
+    #x-scene #xsc-stage { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 連接線：xsc-lines 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link） */
     /* 元件：插圖＋下面的標籤（xsc-side＝標籤在右邊）；位置由 xsc-stage 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
     #x-scene .xsc-it { position: absolute; display: flex; flex-direction: column; align-items: center; gap: var(--sc-gap-sm); white-space: nowrap; }
@@ -57,9 +57,9 @@
       <div id="xsc-stage" data-layout="row" data-gap="xl">
         <svg id="xsc-lines" data-links="xsc-phone>xsc-cloud xsc-cloud>xsc-laptop" xmlns="http://www.w3.org/2000/svg"></svg>
         <!-- ══ DATA 1：元件清單（一個元件一行；只改這裡）══ -->
-        <div id="xsc-phone" class="xsc-it" data-slot><div data-illus="phone" data-orient="landscape" data-screen="video" style="width:296px;height:148px"></div><b class="xsc-lbl sc-w700">手機</b></div>
-        <div id="xsc-cloud" class="xsc-it" data-slot><div data-illus="cloud" data-arrow="up" style="width:256px;height:174px"></div><b class="xsc-lbl sc-w700">雲端</b></div>
-        <div id="xsc-laptop" class="xsc-it" data-slot><div data-illus="laptop" data-screen="blank" style="width:312px;height:212px"></div><b class="xsc-lbl sc-w700">電腦</b></div>
+        <div id="xsc-phone" class="xsc-it" data-slot><div data-illus="phone" data-orient="landscape" data-screen="video" style="width:280px;height:140px"></div><b class="xsc-lbl sc-w700">手機</b></div>
+        <div id="xsc-cloud" class="xsc-it" data-slot><div data-illus="cloud" data-arrow="up" style="width:240px;height:164px"></div><b class="xsc-lbl sc-w700">雲端</b></div>
+        <div id="xsc-laptop" class="xsc-it" data-slot><div data-illus="laptop" data-screen="blank" style="width:296px;height:200px"></div><b class="xsc-lbl sc-w700">電腦</b></div>
         <div id="xsc-ok" class="xsc-it xsc-side" data-slot data-row="2"><div data-illus="badge" data-kind="check" style="width:96px;height:96px"></div><b class="xsc-lbl sc-w700">沒問題</b></div>
         <!-- ══ DATA 1 到這裡 ══ -->
       </div>

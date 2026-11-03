@@ -36,21 +36,21 @@
   <style>
     #x-trend { position: absolute; inset: 0; }
     #x-trend .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-trend #xtr-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-trend #xtr-card .sc-wcard__bar { height: 128px; padding: 20px 56px; display: flex; align-items: center; gap: 24px; }
     /* 標題列底是主色：圖示圓反過來用標題字色當底 */
     #x-trend #xtr-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--sc-fs-bar); }
-    #x-trend #xtr-body { position: relative; width: 1176px; height: 580px; }
-    /* 圖表區：1064×496 一個元件，位置由 #xtr-body 的 data-layout 排（kit/scene-layout.js），不寫 left／top；裡面的座標＝圖表區座標 */
-    #x-trend #xtr-chart { position: absolute; width: 1064px; height: 496px; }
+    #x-trend #xtr-body { position: relative; width: 1176px; height: var(--sc-body-h); }
+    /* 圖表區：1032×496 一個元件，位置由 #xtr-body 的 data-layout 排（kit/scene-layout.js），不寫 left／top；裡面的座標＝圖表區座標 */
+    #x-trend #xtr-chart { position: absolute; width: 1032px; height: 496px; }
     /* 基線與趨勢線：整個圖表區大小的 svg（趨勢線那張疊在柱子上面） */
-    #x-trend .xtr-svg { position: absolute; left: 0; top: 0; width: 1064px; height: 496px; }
+    #x-trend .xtr-svg { position: absolute; left: 0; top: 0; width: 1032px; height: 496px; }
     #x-trend #xtr-axis { stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; }
     #x-trend #xtr-line { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
     /* 柱：script 依 DATA 產生在 #xtr-plot 裡。.xtr-col 寬＝柱高、高 112，left＝柱中心、top＝424 − 56，以左緣中點（＝柱底中點）轉 −90 度；
        裡面的 .xtr-fill 用 P.bar 由左往右長＝畫面上由柱底往上長（柱頂的圓角在轉正前的右邊） */
-    #x-trend #xtr-plot { position: absolute; left: 0; top: 0; width: 1064px; height: 496px; }
+    #x-trend #xtr-plot { position: absolute; left: 0; top: 0; width: 1032px; height: 496px; }
     #x-trend .xtr-col { position: absolute; top: 368px; height: 112px; transform-origin: 0 50%; transform: rotate(-90deg); }
     #x-trend .xtr-fill { position: absolute; inset: 0; border-radius: 0 8px 8px 0; background: var(--sc-fs-node-line); }
     #x-trend #xtr-hl { position: absolute; inset: 0; border-radius: 0 8px 8px 0; background: var(--brand); }
@@ -71,9 +71,9 @@
       <div class="sc-wcard__bar"><span id="xtr-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><span class="sc-opt">訂閱人數</span><div id="xtr-pill" class="sc-pill" data-snap-width><span class="sc-opt">一年翻 100 倍</span></div></div>
       <div id="xtr-body" data-layout="col">
         <div id="xtr-chart" data-slot>
-          <svg id="xtr-axis-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg"><line id="xtr-axis" x1="0" y1="424" x2="1064" y2="424" /></svg>
+          <svg id="xtr-axis-svg" class="xtr-svg" viewBox="0 0 1032 496" xmlns="http://www.w3.org/2000/svg"><line id="xtr-axis" x1="0" y1="424" x2="1032" y2="424" /></svg>
           <div id="xtr-plot"></div>
-          <svg id="xtr-line-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg">
+          <svg id="xtr-line-svg" class="xtr-svg" viewBox="0 0 1032 496" xmlns="http://www.w3.org/2000/svg">
             <polyline id="xtr-line" points="0,0 0,0" />
           </svg>
           <i id="xtr-end"></i>
@@ -97,8 +97,8 @@
     const DATA = [ ['1 月', 200], ['3 月', 900], ['6 月', 2000], ['9 月', 8000], ['12 月', 20000] ];   // 只改這一行：[時間標籤, 數字]，3–6 組
 
     // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，不量版面，每次載入結果相同；圖表區本身的位置由 data-layout 排）──
-    // 柱：寬 112、最高 280、最矮 16，底貼基線 y 424；第一根 left 40 起、最後一根 left 912 止，等距（除不盡的餘數兩邊平分）
-    var n = DATA.length, step = Math.floor(872 / (n - 1)), x0 = 40 + Math.floor((872 - step * (n - 1)) / 2);
+    // 柱：寬 112、最高 280、最矮 16，底貼基線 y 424；第一根 left 40 起、最後一根 left 880 止，等距（除不盡的餘數兩邊平分）
+    var n = DATA.length, step = Math.floor(840 / (n - 1)), x0 = 40 + Math.floor((840 - step * (n - 1)) / 2);
     var vmax = Math.max.apply(null, DATA.map(function (d) { return d[1]; }));
     var cx = [], top = [];
     var plot = document.getElementById('xtr-plot');
@@ -117,11 +117,11 @@
     document.getElementById('xtr-line').setAttribute('points', cx.map(function (x, i) { return x + ',' + (top[i] - 12); }).join(' '));
     var end = document.getElementById('xtr-end');
     end.style.left = (cx[n - 1] - 12) + 'px'; end.style.top = (top[n - 1] - 24) + 'px';
-    // 提示框：數字寬＝位數 × 32＋逗號 × 19（52 px 字、等寬數字），單位每字 40；右緣 ≤ 1064（圖表區右緣），盡量置中在最後一根上方
+    // 提示框：數字寬＝位數 × 32＋逗號 × 19（52 px 字、等寬數字），單位每字 40；右緣 ≤ 1032（圖表區右緣），盡量置中在最後一根上方
     var last = DATA[n - 1][1], txt = String(last).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     var numW = txt.replace(/,/g, '').length * 32 + (txt.length - txt.replace(/,/g, '').length) * 19;
     var unitW = Array.from(document.getElementById('xtr-unit').textContent.trim()).length * 40;
-    var tipW = 8 + 56 + numW + 8 + unitW, tipL = Math.min(cx[n - 1] - Math.round(tipW / 2), 1064 - tipW);
+    var tipW = 8 + 56 + numW + 8 + unitW, tipL = Math.min(cx[n - 1] - Math.round(tipW / 2), 1032 - tipW);
     // 高過它蓋到的柱子（含左邊一根，趨勢線從那裡斜上來）32 px
     var minTop = Math.min.apply(null, top.filter(function (t, i) { return cx[i] >= tipL - step; }));
     var tip = document.getElementById('xtr-tip');

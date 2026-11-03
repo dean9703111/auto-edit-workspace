@@ -44,9 +44,9 @@
 
   【版面】
   fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300，避開右下子母畫面），
-  標題列 128（左右內距 --sc-pad-card）、內容區 1176×580（卡底 862，在字幕區 y 920 之上）。
+  標題列 128（左右內距 --sc-pad-card）、內容區 1176×636（卡底 918＝子母畫面本體下緣，在字幕區 y 920 之上）。
   位置由 kit/scene-layout.js 排（shared/style.md「版面」），不寫 left／top：內容區 #xfix-body 是 data-layout="row" data-gap="xl"，
-  左邊痛點欄 #xfix-pains、右邊解法卡，兩組中線對齊、中間 96 留給箭頭，整組在內容區置中（內距 ≥ 48／40）。
+  左邊痛點欄 #xfix-pains、右邊解法卡，兩組中線對齊、中間 96 留給箭頭，整組在內容區置中（內距 ≥ 72／64（情境動畫））。
   痛點欄是 data-layout="col" data-justify="start" data-gap="lg"（由上往下、靠左對齊、間距 48）；痛點高 112、寬跟著字（最寬 520）。圖示圓 72 用警示色。
   箭頭由 #xfix-arrow 的 data-links="xfix-pains>xfix-sol" 自動畫在兩組之間（高度＝兩組重疊段正中；端點離元件 12；線的 path id＝xfix-pains-xfix-sol，箭頭頭是另一條 xfix-pains-xfix-sol-head，線描完時淡入）。
   解法卡 432×328（聚焦放大 1.05 抬起 10 後仍在內容區裡），圖示 120＋解法 52 字＋副句 40 字，置中。
@@ -60,11 +60,11 @@
   <style>
     #x-fix { position: absolute; inset: 0; }
     #x-fix .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×636（卡底 918） */
     #x-fix #xfix-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-fix #xfix-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
     /* 內容區：data-layout="row"（kit/scene-layout.js）排痛點欄和解法卡；元件不寫 left／top */
-    #x-fix #xfix-body { position: relative; width: 1176px; height: 580px; }
+    #x-fix #xfix-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 痛點：寬跟著字（max-content），高 112＝一行；要主句＋副句兩行時 height 改 184、white-space 改 normal，.xfix-t 裡分兩個 span；位置由 #xfix-pains（data-layout="col" data-justify="start"）排 */
     #x-fix .xfix-pain { position: absolute; width: max-content; height: 112px; box-sizing: border-box; padding: 0 28px;
                         border: 4px solid var(--v2-node-line); border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);

@@ -492,7 +492,7 @@ test('全寬版型：整段只有聲音的全畫面段 host 寫 data-wide、報�
   assert.deepEqual(['s01', 's02', 's03'].map((id) => !!byId(res, id).wide), [false, true, true], '有講者小窗的不算全寬');
   assert.ok(res.warnings.some((w) => w.startsWith('[s02 fs-list] 全寬（沒有子母畫面小窗）的清單右半邊會空 → slots 加 "visual"')), res.warnings.join('\n'));
   assert.ok(!res.warnings.some((w) => w.startsWith('[s03 fs-list] 全寬')), '寫了主視覺就不提醒');
-  assert.match(formatReport(res), /s02｜[^\n]*全寬版型（主卡 1680、內容區 1676×580/);
+  assert.match(formatReport(res), /s02｜[^\n]*全寬版型（主卡 1680、內容區 1676×636/);
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip, badges: res.badges });
   assert.match(html, /id="el-s01"[^>]*style="[^"]*" data-ambient="off"><\/div>/, '子母畫面的段關掉背景環境（光暈漂移、底圖慢拉）');
   assert.match(html, /id="el-s02"[^>]*style="[^"]*" data-wide><\/div>/);

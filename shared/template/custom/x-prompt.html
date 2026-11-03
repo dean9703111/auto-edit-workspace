@@ -47,9 +47,9 @@
   結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
 
   【版面】
-  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 169、寬 1180（右緣 1300），標題列 128（左右內距 --sc-pad-card）、內容區 1176×520（卡高 652，
-  在內容區 y 120–870 垂直置中）。位置由 kit/scene-layout.js 排（shared/style.md「版面」），不寫 left／top：內容區 #xprompt-body 是 data-layout="col" data-justify="start" data-gap="md"：
-  提示詞框、提醒膠囊由上往下、左邊對齊、貼左內距 --sc-pad-card，整組上下置中（內距 ≥ 48／40）。
+  fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128（左右內距 --sc-pad-card）、內容區 1176×636（卡底 918＝子母畫面本體下緣，
+  在字幕區 y 920 之上）。位置由 kit/scene-layout.js 排（shared/style.md「版面」），不寫 left／top：內容區 #xprompt-body 是 data-layout="col" data-justify="start" data-gap="md"：
+  提示詞框、提醒膠囊由上往下、左邊對齊、貼左內距 --sc-pad-card，整組上下置中（內距 ≥ 72／64（情境動畫））。
   提示詞框高 288（3 行 × 72＋上下內距 64＋框 8；1–2 行時框高不變），寬隨最長那行（≤ 1064）。
   打字前框的大小就是打完的樣子（未打的字隱形佔位），不會跳。關鍵詞只變字色、不加色帶也不加底線：變色層是疊在關鍵詞上、同位置的主色字（用 data-t 畫，打字不會算到它）。
   提醒膠囊高 112、寬跟著字。
@@ -61,13 +61,13 @@
   <style>
     #x-prompt { position: absolute; inset: 0; }
     #x-prompt .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 169、寬 1180（右緣 1300）；標題列 128、內容區 1176×520（卡底 821） */
-    #x-prompt #xprompt-card { position: absolute; left: 120px; top: 169px; width: 1180px; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×636（卡底 918） */
+    #x-prompt #xprompt-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-prompt #xprompt-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; gap: 24px; }
     /* 標題列底是主色：圖示圓反過來用標題字色當底 */
     #x-prompt #xprompt-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--sc-fs-bar); }
     /* 內容區：data-layout="col" data-justify="start"（kit/scene-layout.js）：框和膠囊靠左對齊、貼左內距、整組上下置中，不寫 left／top */
-    #x-prompt #xprompt-body { position: relative; width: 1176px; height: 520px; }
+    #x-prompt #xprompt-body { position: relative; width: 1176px; height: var(--sc-body-h); }
     /* 提示詞框：寬隨最長那行、高固定 288（3 行） */
     #x-prompt #xprompt-box { position: absolute; width: max-content; max-width: 1064px; height: 288px; box-sizing: border-box;
                              padding: 32px 40px; border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node); color: var(--sc-fs-ink); }
