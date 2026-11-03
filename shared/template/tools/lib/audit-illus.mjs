@@ -14,7 +14,8 @@ export const ILLUS_BUILTIN = ['phone', 'tripod', 'phoneTripod', 'laptop', 'monit
 export const IL_STROKE = 2;              // 描邊外擴（契約 §5.5）
 export const LABEL_MAX = 10;             // 示意動畫的字只當標籤（ep2 hyperframes-overlay design-rules.md:9）
 export const ALIGN_NEAR = [4, 16];       // 手排（不在 data-layout 裡）的兩個元件中線差 4–16 px ⚠ layout-row-align（012 併進版面規則；design-rules.md:87 同列同中線）
-export const SMALL_MIN = 0.5;           // 插圖群外框 < 卡片內部面積 50%：主角不是圖（2026-10-31 參考範例只佔一半，被嫌像字卡）
+export const SMALL_MIN = 0.6;           // 插圖群外框 < 可用區（卡片內部扣掉標題列與內距）面積 60%：主角不是圖（2026-10-31 參考範例只佔一半，被嫌像字卡）。
+                                        // 2026-11-04 主卡加高、情境動畫內距 72／64 後改用可用區：舊的「卡片內部 50%」等於要佔可用區 63%，加高後變 71%，逼插圖貼框
 export const BLINK_MAX = 1;              // 同一個元素退場後再出現的次數上限（casebook.md:486 依序出現、不明滅閃爍）
 
 const uniq = (a) => [...new Set(a)];
@@ -83,7 +84,7 @@ export function judgeIllus(meas, ctx) {
     if (rowOverlap && !colOverlap && near(dy)) push('layout-row-align', alignIls[b].desc, `同一列沒對齊：${nm(alignIls[a])} 和 ${nm(alignIls[b])} 的插圖中線差 ${dy.toFixed(1)}px`, '這幾個元件放進同一個 data-layout="row"，不要手寫 top（shared/style.md「版面」）', { dy });
     else if (colOverlap && !rowOverlap && near(dx)) push('layout-row-align', alignIls[b].desc, `同一欄沒對齊：${nm(alignIls[a])} 和 ${nm(alignIls[b])} 的插圖中線差 ${dx.toFixed(1)}px`, '這幾個元件放進同一個 data-layout="col"，不要手寫 left（shared/style.md「版面」）', { dx });
   }
-  // ⚠ 插圖太小：完成態所有元件的外框聯集 < 卡片內部（最小的有底有框盒，扣掉標題列）面積的 SMALL_MIN
+  // ⚠ 插圖太小：完成態所有元件的外框聯集 < 可用區（最小的有底有框盒，扣掉標題列，再扣掉上下左右內距 --sc-pad-card／--sc-pad-card-y）面積的 SMALL_MIN
   const ilEls = ctx.kind === 'done' ? els.filter((e) => e.il) : [];   // 大小不受漂浮影響：漂浮中的元件也算（只有對齊才排除）
   // x-callout 的主體插圖（#xcall-obj；同一集用兩次時前綴會換，例 #xcsb-obj）四周是用引線接上的標籤（#xcall-t1…）：
   //   主角是「主體＋標籤」這一整組，標籤一起算
@@ -98,10 +99,12 @@ export function judgeIllus(meas, ctx) {
     const card = els.filter((e) => e.box && !e.il && !all.includes(e) && inside(e.rect, U)).sort((a, b) => area(a.rect) - area(b.rect))[0];
     if (card) {
       const titles = els.filter((e) => e.title && inside(card.rect, e.rect) && e.rect[3] <= U[1] + 1);
-      const inner = [card.rect[0], Math.max(card.rect[1], ...titles.map((e) => e.rect[3])), card.rect[2], card.rect[3]];
+      const tt = titles.find((e) => e.titlePadY > 0), px = tt?.titlePadX > 0 ? tt.titlePadX : 48, py = tt?.titlePadY > 0 ? tt.titlePadY : 40;
+      const top = Math.max(card.rect[1], ...titles.map((e) => e.rect[3]));
+      const inner = [card.rect[0] + px, top + py, card.rect[2] - px, card.rect[3] - py];
       const k = area(U) / Math.max(1, area(inner));
-      if (k < SMALL_MIN) push('illus-small', card.desc, `插圖太小：主角是圖，插圖群只佔卡片內部 ${Math.round(k * 100)}%（< ${SMALL_MIN * 100}%）`,
-        '放大到內距以內撐開（情境動畫內容區左右留 72、上下留 64：1176×636 的內容區整組最多 1032×508；主角長邊 260–400px、標籤 28–32px），照 shared/style.md「示意動畫」', { ratio: Math.round(k * 1000) / 1000 });
+      if (k < SMALL_MIN) push('illus-small', card.desc, `插圖太小：主角是圖，插圖群只佔可用區（卡片內部扣掉內距 ${px}／${py}）${Math.round(k * 100)}%（< ${SMALL_MIN * 100}%）`,
+        '放大到內距以內撐開（情境動畫內容區左右留 72、上下留 64：1176×636 的內容區整組最多 1032×508，至少佔 60%；主角長邊 260–400px、標籤 28–32px），照 shared/style.md「示意動畫」', { ratio: Math.round(k * 1000) / 1000 });
     }
   }
   return out;

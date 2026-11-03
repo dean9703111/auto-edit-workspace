@@ -996,13 +996,13 @@ test('011／012：judgeIllus ⚠ 標籤 > 10 字、完成態兩個手排元件�
   assert.deepEqual(IL.judgeIllus(meas([svg('a', [100, 100, 300, 300]), svg('b', [400, 120, 600, 320]), svg('c', [700, 100, 900, 300])]), { item: it, t: 17, kind: 'done' }), [], '差 > 16px 是刻意錯開、≤ 4px 算對齊');
   assert.deepEqual(IL.judgeIllus(meas([svg('a', [100, 100, 300, 300]), svg('b', [400, 105, 600, 305])]), { item: it, t: 17, kind: 'done', hasLayout: true }), [], '段裡有 data-layout 容器：對齊交給 audit-layout.mjs（不重複報）');
   assert.deepEqual(IL.judgeIllus({ host: { start: 10 }, els: [lbl('一二三四五六七八九十十一', 11)], illus: 0 }, { item: it, t: 17, kind: 'done' }), [], '沒有 .il 元件的段不量');
-  // ⚠ 插圖太小：元件聯集 < 卡片內部（扣標題列）面積 50%
+  // ⚠ 插圖太小：元件聯集 < 可用區（卡片內部扣標題列、再扣內距；量不到內距用字卡的 48／40）面積 60%
   const card = { ...el({ rect: [120, 150, 1300, 858], desc: { id: 'xsc-card' } }), box: true };
   const ttl = { ...el({ rect: [176, 170, 600, 258], textRect: [176, 170, 600, 258], desc: { id: '', text: '標題' } }), title: true, chars: 2 };
   const small = IL.judgeIllus(meas([card, ttl, svg('a', [200, 400, 400, 600]), svg('b', [700, 420, 900, 620])]), { item: it, t: 17, kind: 'done' });
   assert.deepEqual(small.map((x) => x.rule), ['illus-small']);
   assert.match(small[0].fix, /shared\/style\.md/);
-  assert.deepEqual(IL.judgeIllus(meas([card, ttl, svg('a', [150, 300, 700, 820]), svg('b', [760, 300, 1270, 820])]), { item: it, t: 17, kind: 'done' }).map((x) => x.rule), [], '佔 ≥ 50% 不報');
+  assert.deepEqual(IL.judgeIllus(meas([card, ttl, svg('a', [150, 300, 700, 820]), svg('b', [760, 300, 1270, 820])]), { item: it, t: 17, kind: 'done' }).map((x) => x.rule), [], '佔 ≥ 60% 不報');
   // x-callout：主體插圖 #xcall-obj 只佔 10%，但四周的標籤（.xcall-tag）一起算就夠大，不報；沒有 #xcall-obj 時標籤不算
   const obj = { ...svg('', [620, 380, 812, 780]), desc: { id: 'xcall-obj', cls: 'il' } };
   const tag = (r, k, p = 'xcall') => ({ ...el({ rect: r, desc: { id: `${p}-t${k}`, cls: 'xcall-tag' } }), box: true });
