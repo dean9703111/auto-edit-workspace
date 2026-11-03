@@ -128,3 +128,28 @@ test('C-01：構圖預覽（S8）前講者調光瘦臉還沒好 → 下一步＝
   if (ns.done) assert.equal(s.cmd, null);
   else { assert.equal(s.next, ns.note); assert.equal(s.cmd, ns.cmd); }
 });
+
+test('--timeline：產物照第一次出現排；停點等待＝待回覆到同一停點的下一列，其餘算 AI 做事；最久的幾段；不寫任何檔', async () => {
+  const S = await imp('status.mjs');
+  const p = mk();
+  // 3 小時前接主軌、2 小時前剪輯清單、1 小時前初剪；停點 ① 從 2 小時前等到 1.5 小時前
+  touch(p, 'work/main.mp4', 'x', 3 * 3600);
+  touch(p, 'work/cuts.md', 'x', 2 * 3600);
+  touch(p, 'work/rough.mp4', 'x', 3600);
+  touch(p, 'work/hyperframes/compositions/x-flow.html', 'x', 1800);
+  const at = (sec) => { const d = new Date(Date.now() - sec * 1000), z = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  touch(p, 'work/製作進度.md', `## 停點紀錄\n\n| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |\n|---|---|---|---|---|\n| ${at(2 * 3600)} | ① 剪輯清單 | 待回覆 | | |\n| ${at(1.5 * 3600)} | ① 剪輯清單 | 通過 | 「可以」 | cuts.md |\n`, 5 * 3600);
+  const before = fs.readdirSync(path.join(p, 'work'), { recursive: true }).sort();
+  const tl = S.projectTimeline(p);
+  assert.deepEqual(tl.events.filter((e) => e.kind === 'file').map((e) => e.what), ['work/main.mp4', 'work/cuts.md', 'work/rough.mp4', 'work/hyperframes/compositions/x-flow.html']);
+  assert.equal(tl.events.filter((e) => e.kind === 'stop').length, 2);
+  assert.ok(Math.abs(tl.total - 2.5 * 3600e3) < 120e3, `總時長 ${tl.total}`);
+  assert.ok(Math.abs(tl.wait - 0.5 * 3600e3) < 120e3, `等待 ${tl.wait}`);
+  assert.equal(tl.work, tl.total - tl.wait);
+  assert.equal(tl.longest[0].from.what, 'work/main.mp4', '最久的一段是接主軌 → 停點 ①');
+  const r = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p, '--timeline'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /總時長 2:3\d；等使用者回覆 0:\d\d；AI 在做事 /);
+  assert.match(r.stdout, /停點等待：① 剪輯清單 0:3\d/);
+  assert.deepEqual(fs.readdirSync(path.join(p, 'work'), { recursive: true }).sort(), before, '不寫任何檔');
+});

@@ -23,7 +23,9 @@ import { fileURLToPath } from 'node:url';
 import { pathsFrom } from './build.mjs';
 import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars } from './editor/server/write.mjs';
 import * as subtitles from './editor/subtitles.mjs';
-import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, lookNeedsRun, LOOK_LIMITS } from './lib/look.mjs';
+import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, lookNeedsRun, LOOK_LIMITS, isRunning, ensureBlendedLut, lookNextStep } from './lib/look.mjs';
+import { footageVf, lut3dFilter } from './lib/ff.mjs';
+import { CANVAS } from './lib/canvas.mjs';
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, subtitles };
@@ -571,6 +573,66 @@ function lookState(ctx, planData) {
   } catch (e) { return { error: e.message, limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, step: LOOK_LIMITS.step } }; }
 }
 
+// 構圖台的瘦臉進度（打開瘦臉才偵測：按「偵測臉部」→ POST /api/look/run，之後每 2 秒 GET /api/look/status）
+const LOOK_PHASE = { locate: '找臉', detect: '偵測臉部', render: '套用瘦臉', preview: '畫對照圖' };
+function lookRunState(ctx) {
+  const P = ctx.P, st = readState(P.project), run = st.run || null, running = isRunning(st);
+  const plan = readPlan(P.plan).data;
+  let line = '';
+  if (running) {
+    const p = run.total ? Math.floor((run.done / run.total) * 100) : 0;
+    line = `${LOOK_PHASE[run.phase] || run.phase} ${p}%，剩約 ${Math.ceil((run.etaSec || 0) / 60)} 分`;
+  } else if (run?.phase === 'failed') line = `上次失敗：${run.error}`;
+  let next = null;
+  try { next = lookNextStep({ projectDir: P.project, plan: isObj(plan) ? plan : {}, templateDir: P.templateDir }).note; } catch { next = null; }
+  return { running, phase: run?.phase ?? null, line, next, look: lookState(ctx, plan) };
+}
+async function doLookRun(ctx) {
+  const P = ctx.P;
+  if (isRunning(readState(P.project))) return [200, { ok: true, already: true, ...lookRunState(ctx) }];
+  const plan = readPlan(P.plan).data;
+  const L = resolveLook({ plan: isObj(plan) ? plan : {}, templateDir: P.templateDir });
+  if (!(L.slim > 0)) return [400, { error: 'noslim', message: '瘦臉是關的，不用偵測 → 先打開瘦臉並儲存，再按「偵測臉部」' }];
+  const r = await runNode([LOOK, 'run', '--project', P.project, '--template', P.templateDir, '--background'], { cwd: P.root });
+  if (r.code !== 0) return [500, { error: 'look', message: (r.stderr || r.stdout || '').trim().split('\n').slice(-3).join('\n') || `look.mjs run 結束碼 ${r.code}` }];
+  return [200, { ok: true, ...lookRunState(ctx) }];
+}
+
+// 預覽參考圖（構圖台「用這一格當預覽參考圖」）：rough.mp4 的第 t 秒，照構圖框裁切、縮放到畫布、套調光
+//   → shared/template/preview/speaker-local.jpg（直式 speaker-v-local.jpg）。情境庫、風格預覽頁的講者改用它（kit/style-switch.js）；不進版控、不上官網
+const refFile = (ctx, format) => path.join(ctx.previewDir || path.join(ctx.P.templateDir, 'preview'), format === 'portrait' ? 'speaker-v-local.jpg' : 'speaker-local.jpg');
+function refInfo(ctx, format) {
+  const f = refFile(ctx, format), st = statOf(f);
+  return { exists: !!st, file: relRoot(ctx, f), mtime: st?.mtimeMs ?? null };
+}
+async function doRefFrame(ctx, body) {
+  const P = ctx.P, src = path.join(P.project, 'work', 'rough.mp4');
+  if (!statOf(src)) return [404, { error: 'novideo', message: `找不到 ${relRoot(ctx, src)}` }];
+  const t = Number(body?.t), color = Number(body?.color ?? 0);
+  if (!(t >= 0)) return [400, { error: 'invalid', message: 't 要是 ≥ 0 的秒數' }];
+  if (!(color >= 0 && color <= 1)) return [400, { error: 'invalid', message: 'color 要在 0–1' }];
+  const plan = readPlan(P.plan).data, cv = canvasInfo(P.project, plan), C = CANVAS[cv.format];
+  const fr = Array.isArray(body?.frame) ? body.frame : null;
+  let vf;
+  try {
+    const info = probeVideo(src), k = (info.width || C.W) / C.W, ev = (v) => Math.round((v * k) / 2) * 2;
+    vf = footageVf({ crop: fr ? { x: ev(fr[0]), y: ev(fr[1]), w: ev(fr[2]), h: ev(fr[3]) } : null, canvas: C });
+    if (!vf.some((s) => s.startsWith('scale='))) vf.push(`scale=${C.W}:${C.H}:flags=lanczos`);
+    if (color > 0) {
+      const L = resolveLook({ plan: { look: { color, slim: 0 } }, templateDir: P.templateDir });
+      vf.push(lut3dFilter(ensureBlendedLut({ projectDir: P.project, lutFile: L.lutFile, color })));
+    }
+  } catch (e) { return [400, { error: 'invalid', message: e.message }]; }
+  const out = refFile(ctx, cv.format), tmp = `${out}.${process.pid}.tmp.jpg`;
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-nostdin', '-y', '-ss', String(t), '-i', src, '-frames:v', '1', '-vf', vf.join(','), '-q:v', '3', tmp], { encoding: 'utf8', windowsHide: true });
+  if (r.error || r.status !== 0 || !statOf(tmp)) {
+    try { fs.unlinkSync(tmp); } catch { /* 沒產生 */ }
+    return [500, { error: 'ffmpeg', message: r.error?.code === 'ENOENT' ? '找不到 ffmpeg → 先跑 npx hyperframes doctor 安裝 ffmpeg' : (r.stderr || '').trim().split('\n').slice(-2).join('\n') || '擷取畫面失敗' }];
+  }
+  fs.renameSync(tmp, out);
+  return [200, { ok: true, t: r3(t), ref: refInfo(ctx, cv.format) }];
+}
+
 // 版式與畫布（009 FR-120）：和 build 同一套判斷（plan.json format > 製作進度.md「版式」> 主軌寬高比）；剪輯台只讀，不寫 format
 export function canvasInfo(projectDir, plan) {
   const r = resolveFormat({ projectDir, plan: isObj(plan) ? plan : null });
@@ -597,6 +659,7 @@ async function getFraming(ctx) {
   return [200, { ...ctx.framing.data, canvas: { format: cv.format, source: cv.source, W: c.W, H: c.H, caption: c.caption.box, card: c.lowerThird.rect, pip: c.pip.box, safe: c.regions.safe, headTop: c.framing.headTop, chinMax: c.framing.chinMax ?? null },
     video: { url: `/media/source.mp4?v=${Math.floor(st.mtimeMs).toString(36)}${st.size.toString(36)}` }, limits: LIMITS.frame,
     plan: { exists: plan.exists, hash: plan.hash, mtime: plan.mtime, error: plan.error, frame: Array.isArray(plan.data?.frame) ? plan.data.frame : null, speakerBox: plan.data?.speakerBox ?? null },
+    look: lookRunState(ctx), ref: refInfo(ctx, cv.format),
     project: { name: path.basename(P.project) } }];
 }
 
@@ -654,7 +717,8 @@ async function doSave(ctx, body) {
   const P = ctx.P;
   const st = statOf(P.plan);
   // 構圖台在停點 ②（分鏡表之前，還沒有 plan.json）只存 frame：先建一個只有 version（直式加 format）的 plan.json
-  const frameOnly = isObj(body) && body.frame !== undefined && Object.keys(body).every((k) => k === 'base' || k === 'frame');
+  //   構圖台每次都帶 frame（不裁切是 null），也可能一起帶講者調光、瘦臉（look）；剪輯台只存 look 時沒有 frame，照舊走下面的完整存檔
+  const frameOnly = isObj(body) && body.frame !== undefined && Object.keys(body).every((k) => k === 'base' || k === 'frame' || k === 'look');
   if (!st && !frameOnly) return [404, { error: 'noplan', message: `找不到 ${relRoot(ctx, P.plan)} → 請 AI 先寫 plan.json，剪輯台才有地方存` }];
   const cv = canvasInfo(P.project, st ? readPlan(P.plan).data : null);
   const text = st ? fs.readFileSync(P.plan, 'utf8') : JSON.stringify({ version: 1, ...(cv.format === 'portrait' ? { format: 'portrait' } : {}) }, null, 2) + '\n';
@@ -702,7 +766,7 @@ async function doSave(ctx, body) {
     try { fs.mkdirSync(ctx.editorDir, { recursive: true }); fs.writeFileSync(ctx.memoryFile, JSON.stringify({ sfx: r.memory || {} }, null, 2) + '\n'); } catch { /* 記不住只影響「還原音效」 */ }
   }
   const nst = statOf(P.plan), nsrt = readSrt(P.srt);
-  if (frameOnly) return [200, { ok: true, wrote: { plan: r.text != null, srt: false }, notes: r.notes || [], plan: { exists: !!nst, mtime: nst?.mtimeMs ?? null, hash: nst ? sha(fs.readFileSync(P.plan, 'utf8')) : null, frame: Array.isArray(r.plan.frame) ? r.plan.frame : null, speakerBox: r.plan.speakerBox ?? null } }];
+  if (frameOnly) return [200, { ok: true, wrote: { plan: r.text != null, srt: false }, notes: r.notes || [], plan: { exists: !!nst, mtime: nst?.mtimeMs ?? null, hash: nst ? sha(fs.readFileSync(P.plan, 'utf8')) : null, frame: Array.isArray(r.plan.frame) ? r.plan.frame : null, speakerBox: r.plan.speakerBox ?? null }, look: lookRunState(ctx) }];
   const rep = await getReport(ctx, { fresh: true });
   return [200, { ok: true, look: lookState(ctx, r.plan), wrote: { plan: r.text != null, srt: r.srtText != null }, plan: { mtime: nst.mtimeMs, hash: sha(fs.readFileSync(P.plan, 'utf8')), data: r.plan },
     srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: r.notes || [], edit: r.edit ?? r.plan.edit ?? null, anchors: r.anchors || [], sfxMemory: r.memory || {},
@@ -771,6 +835,8 @@ async function handle(ctx, req, res) {
     let body;
     try { body = await readBody(req); } catch (e) { return sendJson(res, e.status || 400, { error: 'badbody', message: e.message }); }
     if (p === '/api/save') { const [s, o] = await doSave(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/refframe') { const [s, o] = await doRefFrame(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/look/run') { const [s, o] = await doLookRun(ctx); return sendJson(res, s, o); }
     if (p === '/api/build') { const [s, o] = await doBuild(ctx); return sendJson(res, s, o); }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/check') { const rep = await getReport(ctx, { fresh: true }); return sendJson(res, 200, reportOut(rep)); }
@@ -789,6 +855,7 @@ async function handle(ctx, req, res) {
   if (p === '/api/ping') return sendJson(res, 200, { ok: true, app: 'auto-edit-editor', project: P.project, pid: process.pid });
   if (p === '/api/state') return sendJson(res, 200, await getState(ctx));
   if (p === '/api/framing') { const [s, o] = await getFraming(ctx); return sendJson(res, s, o); }
+  if (p === '/api/look/status') return sendJson(res, 200, lookRunState(ctx));
   if (p === '/api/thumbs') return sendJson(res, 200, await getThumbs(ctx, u.searchParams.get('src') || 'main'));
   if (p.startsWith('/editor-cache/thumbs/')) {
     const f = safeJoin(path.join(ctx.editorDir, 'thumbs'), p.slice('/editor-cache/thumbs/'.length));
@@ -859,11 +926,13 @@ async function handle(ctx, req, res) {
 }
 
 // 啟動（測試直接呼叫；CLI 也走這裡）→ { url, port, server, ctx, close() }
-export async function startEditor({ flags = {}, cwd = process.cwd(), port, writeState = true } = {}) {
+// previewDir：預覽參考圖寫到哪（預設 shared/template/preview；測試指到暫存資料夾，不蓋掉使用者的參考圖）
+export async function startEditor({ flags = {}, cwd = process.cwd(), port, writeState = true, previewDir = null } = {}) {
   const P = pathsFrom(flags, cwd);
   if (!P.project) throw new Error('要指定專案：加 --project projects/<專案>');
   if (!statOf(UI_DIR)) throw new Error(`找不到剪輯台頁面 ${UI_DIR} → 確認 shared/template/tools/editor/ 還在`);
   const ctx = makeContext(P);
+  ctx.previewDir = previewDir || path.join(P.templateDir, 'preview');
   const server = http.createServer((req, res) => {
     handle(ctx, req, res).catch((e) => { if (!res.headersSent) sendJson(res, 500, { error: 'internal', message: e.message }); else res.end(); });
   });

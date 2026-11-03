@@ -7,7 +7,9 @@
 //   customDuration(html)              → custom 檔裡寫的 data-duration、const D；autoEnd＝結尾寫 P.end()／用 P.dur()（長度自動等於段長）
 //   ── 003（只判 custom）──
 //   judgeLayout(meas, ctx)            → findings[]  未定位頂層、標題壓到內容／間距、區塊重疊、nowrap 餘裕、右側空白、垂直平衡、內距、行高
-//   judgeMotion(motion, ctx)          → { findings, notes }  同一秒新元素、間隔、完成態停留、最後一幕（motion＝collectMotionInPage 的結果）
+//   judgeMotion(motion, ctx)          → { findings, notes }  同一秒新元素、間隔、完成態停留、最後一幕、拍在段尾之後（motion＝collectMotionInPage 的結果）
+//   floorFindings({ item, html, cuesOut, file, tpl }) → findings[]  custom 檔頭【D 下限】的第一拍與段長；tpl＝範例原檔：這兩種下限被改小或刪掉 ⚠
+//   fontShrinkFindings({ item, html, tpl, file }) → findings[]  字級比範例小 ⚠（元素用 id／class 去掉前綴對回範例）
 //   stillTimes(motion, item)          → [{ t, kind: 'still' }]  每個 ≥ 0.4 秒的靜止區間取中點（每段最多 8 個）
 //   cueFindings(errors, items)        → { findings, warnings }  window.__cueErrors → 綁句失敗 ✖
 //   formatFinding(f)／fmtT(t)／descText(desc)
@@ -20,6 +22,7 @@
 
 import { PIP_ZONE } from './media.mjs';
 import { CANVAS as CANVASES, stageTransform } from './canvas.mjs';
+import { parseTime, cueSeconds } from './time.mjs';
 
 export const CANVAS = [1920, 1080];
 export const CAPTION_Y = 920;       // 字幕區從 y 920 起（R4.1；check --caption-zone 的 y0=0.852）
@@ -64,7 +67,10 @@ export function pickItems(items, { only = null, all = false } = {}) {
     if (fx.length) skipped.push(`${fx.map((x) => x.id).join('、')}（字卡動態：特效本來就會飛出畫面或裁切，版面由模板保證；真的要量就用 --only 指名）`);
   }
   for (const it of list) if (it.type === 'media') skipped.push(`${it.id}（插入素材：錄影畫面不是版面，紅框與放大鏡由 build 檢查）`);
-  return { list: list.filter((x) => x.type !== 'media'), skipped, errors };
+  // 範例原文（剛複製、還沒做）不量；--only 指名的照量（量範例本身時用）
+  const named = !!(only && only.length);
+  if (!named) for (const it of list) if (it.sample) skipped.push(`${it.id}（${it.file} 還是範例原文、還沒做 → 照 auto-edit-motion 改完再量）`);
+  return { list: list.filter((x) => x.type !== 'media' && (named || !x.sample)), skipped, errors };
 }
 
 // 壓到講者的門檻：custom 與用 css 移位的段要完全避開（R8.17），沒移位的模板照 build 的 15%
@@ -608,7 +614,8 @@ export function judgeMotion(motion, ctx) {
   const base = { id: it.id, label: it.label, kind: 'motion' };
   const push = (rule, el, t, msg, fix, data = {}) => findings.push({ ...base, level: 'warn', rule, el, t: at(t), msg, fix, data });
   const units = motionUnits(motion);
-  const D = Number(motion.D) || it.D || 0;
+  // 段長以 plan.json 為準：動作排到段尾之後時 timeline 會變長，用它量就會量到段外的畫面
+  const D = it.D || Number(motion.D) || 0;
 
   // 同一秒新元素太多：只報最擠的那一窗
   let worst = null;
@@ -649,8 +656,19 @@ export function judgeMotion(motion, ctx) {
         '下一拍綁晚一點的句子，或把這一拍的動作提早、縮短；只是同一件事的中間步驟就不要另外綁句，用「上一拍 + 秒數」接（中間步驟可以只停 0.6s）', { q: r3(Math.max(0, q)) });
     }
   }
+  // 拍在段尾之後（✖）：P.at 落在淡出（沒有淡出就是段尾）之後，播出時看不到
+  const fade0 = D - (ctx.fadeOut ? 0.5 : 0), lateSeen = new Set();
+  for (const m of motion.marks || []) {
+    if (m.t < fade0 - 1e-6 || lateSeen.has(`${m.ref}|${m.t}`)) continue;
+    lateSeen.add(`${m.ref}|${m.t}`);
+    const ref = typeof m.ref === 'number' ? String(m.ref) : `'${m.ref}'`;
+    findings.push({ ...base, level: 'error', rule: 'late', el: null, t: at(m.t),
+      msg: `拍在段尾之後，看不到：P.at(${ref}) 在 ${fmtT(at(m.t))}，這段 ${fmtT(at(fade0))} 就開始${ctx.fadeOut ? '淡出' : '結束'}`,
+      fix: '這一拍改綁這段裡講到的詞，或刪掉這一拍（分鏡表一起改）；那個詞真的在段尾之後才講，回報主代理決定延長這段的 to 還是把這一拍移到下一段',
+      data: { ref: m.ref, t: r3(m.t) } });
+  }
   // 最後一幕太短
-  let end0 = D - (ctx.fadeOut ? 0.5 : 0), how = ctx.fadeOut ? '淡出' : '結束';
+  let end0 = fade0, how = ctx.fadeOut ? '淡出' : '結束';
   const closing = holdTweens(motion).filter((tw) => tw.kind === 'exit' && tw.end >= end0 - BUSY_GAP);
   if (closing.length) { end0 = Math.min(...closing.map((tw) => tw.start)); how = '退場'; }
   const before = holdTweens(motion).filter((tw) => tw.start < end0 - 1e-6);
@@ -669,7 +687,7 @@ export function judgeMotion(motion, ctx) {
 // 靜止取樣：忙碌段之間 ≥ 0.4 秒的空檔取中點（0 到第一個動作、最後一個動作到完成態也算），最多 8 個（取最長的），和中點／完成態差 < 0.1 秒的不重複
 export function stillTimes(motion, item) {
   if (!motion || !item) return [];
-  const D = Number(motion.D) || item.D || (item.end - item.start);
+  const D = item.D || Number(motion.D) || (item.end - item.start);
   const stop = D - DONE_BEFORE;
   const busy = busySpans(motion);
   const gaps = [];
@@ -691,7 +709,7 @@ export const STATIC_MAX = 6, STATIC_CUE_MIN = 0.3;   // 連續 > 6s 沒有任何
 export function staticFindings(motion, { item, cuesOut = [] } = {}) {
   const out = [];
   if (!motion || !item || item.type !== 'custom') return out;
-  const D = Number(motion.D) || item.D || (item.end - item.start);
+  const D = item.D || Number(motion.D) || (item.end - item.start);
   const stop = D - (item.fadeOut ? 0.5 : 0);
   const gaps = [];
   let cur = 0;
@@ -739,6 +757,129 @@ const piecesOf = (s) => {
 export function atNames(html) {
   const out = {};
   for (const m of String(html).matchAll(/\b([A-Z][A-Z0-9_]*)\s*=\s*P\.at\(\s*(['"])([^'"\n]+)\2/g)) if (!(m[3] in out)) out[m[3]] = m[1];
+  return out;
+}
+
+// ---------- 字級比範例小 ----------
+// 撐破容器時縮字級繞過去最常見；規則是縮文案或加寬容器，不縮字級（auto-edit-motion 退路表）
+// 元素對回範例：id 或第一個非 sc- 的 class 去掉前綴（xtl-c1 → c1、xtla-lab → lab；改名四處會換前綴）；字級看 sc-tNN、style 的 font-size、<style> 裡最後一個選擇器的 font-size
+export function fontSizes(html) {
+  const out = new Map();
+  const put = (own, px) => {
+    if (!own || !own.includes('-') || !(px > 0)) return;
+    const key = own.replace(/^[^-]+-/, '');
+    if (!out.has(key) || px < out.get(key).px) out.set(key, { px, own });
+  };
+  const body = String(html).replace(/<!--[\s\S]*?-->/g, '');
+  for (const m of body.matchAll(/<[a-zA-Z][\w-]*\b([^<>]*)>/g)) {
+    const a = m[1];
+    const cls = ((a.match(/\bclass\s*=\s*"([^"]*)"/) || [])[1] || '').split(/\s+/).filter(Boolean);
+    const px = [...cls.map((c) => (c.match(/^sc-t(\d+)$/) || [])[1]), (a.match(/font-size\s*:\s*(\d+(?:\.\d+)?)px/) || [])[1]].filter(Boolean).map(Number);
+    if (px.length) put((a.match(/\bid\s*=\s*"([^"]+)"/) || [])[1] || cls.find((c) => !/^sc-/.test(c)), Math.min(...px));
+  }
+  for (const st of body.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)) {
+    for (const r of st[1].replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const fs = r[2].match(/font-size\s*:\s*(\d+(?:\.\d+)?)px/);
+      if (!fs) continue;
+      for (const sel of r[1].split(',')) {
+        const last = (sel.trim().split(/[\s>+~]+/).pop() || '').match(/[#.]([\w-]+)(?![\s\S]*[#.][\w-])/);
+        if (last && !/^sc-/.test(last[1])) put(last[1], Number(fs[1]));
+      }
+    }
+  }
+  return out;
+}
+export function fontShrinkFindings({ item, html = '', tpl = '', file = '' } = {}) {
+  const out = [];
+  if (!item || item.type !== 'custom' || !tpl) return out;
+  const a = fontSizes(html), b = fontSizes(tpl);
+  for (const [key, x] of a) {
+    const y = b.get(key);
+    if (!y || x.px >= y.px) continue;
+    out.push({ id: item.id, label: item.label, kind: 'motion', el: null, level: 'warn', rule: 'font-shrink', t: null,
+      msg: `字級比範例小：${file || item.label} 的 ${x.own} 是 ${x.px}px，範例是 ${y.px}px`,
+      fix: '字級改回範例；字放不下就縮短文案（只留關鍵詞）或加寬容器，不要縮字級', data: { key, px: x.px, tpl: y.px } });
+  }
+  return out;
+}
+
+// ---------- 範例檔頭【D 下限】 ----------
+// 「T1 ≥ 3.1」「T2 ≥ T1 + 3.0」「D ≥ T4 + 5.2」→ [{ lhs, rhs, k }]（括號裡的說明、「3 點時改看 …」都不算）
+export function floorRules(html) {
+  const sec = String(html).match(/【D 下限】([\s\S]*?)(?=【|-->)/);
+  if (!sec) return [];
+  let s = sec[1];
+  for (let k = 0; k < 3; k++) s = s.replace(/（[^（）]*）|\([^()]*\)/g, '');
+  return [...s.matchAll(/\b([A-Z][A-Z0-9]*)\s*≥\s*(?:([A-Z][A-Z0-9]*)\s*[+＋]\s*)?(\d+(?:\.\d+)?)/g)].map((m) => ({ lhs: m[1], rhs: m[2] || null, k: Number(m[3]) }));
+}
+
+// script 裡的 const X = P.at('<ref>'[, off])／P.at(<秒>[, off]) → { X: { ref, off } }（只看 <script>，註解不算；檔頭說明裡寫的「<script>」不是 script）
+export function atConsts(html) {
+  const out = {};
+  for (const sc of String(html).replace(/<!--[\s\S]*?-->/g, '').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) {
+    const code = sc[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+    for (const m of code.matchAll(/\b([A-Z][A-Z0-9_]*)\s*=\s*P\.at\(\s*(?:(['"])([^'"\n]+)\2|(\d+(?:\.\d+)?))\s*(?:,\s*([-+]?\d+(?:\.\d+)?)\s*)?\)/g)) {
+      if (!(m[1] in out)) out[m[1]] = { ref: m[3] != null ? m[3] : Number(m[4]), off: m[5] ? Number(m[5]) : 0 };
+    }
+  }
+  return out;
+}
+
+// 【D 下限】只驗兩種：拍點常數的秒數照 P.at 的算法（cuesOut＝build --check 的成片秒數字幕），D＝plan.json 這段的長度
+//   第一拍（「T1 ≥ 3.1」）不夠 ✖：開場的主卡、骨架還沒做完，站就先出來（其他規則都量不到開場）
+//   段長（「D ≥ T4 + 5.2」）不夠 ⚠：回均衡這類排在最後一拍之後的動作會落到段外（最後一幕太短只量段內）
+//   拍距（「T2 ≥ T1 + 3.0」）不驗：完成態停太短量的是實際的靜止時間，比檔頭的算式準
+//   用到的名字有一個不是 P.at（3 點版刪掉的 T4、沒用的 ALL）那條就不驗；換了開場，檔頭那一行要改成新的下限
+export const FLOOR_TOL = 0.05;
+export function floorFindings({ item, html = '', cuesOut = [], file = '', tpl = '' } = {}) {
+  const out = [];
+  if (!item || item.type !== 'custom') return out;
+  const rules = floorRules(html);
+  // 檔頭下限被改小或刪掉（和範例原檔比；只比 audit 會驗的開場、段長兩種）：可能真的壓短了開場，也可能只改數字讓檢查不報，要讓主代理看得到
+  if (tpl) {
+    const kinds = (rs) => ({ open: rs.find((r) => !r.rhs && r.lhs !== 'D') || null, end: rs.filter((r) => r.lhs === 'D' && r.rhs).sort((x, y) => x.k - y.k)[0] || null });
+    const a = kinds(rules), b = kinds(floorRules(tpl));
+    const txt = (r) => `${r.lhs} ≥ ${r.rhs ? `${r.rhs} + ` : ''}${r.k}`;
+    for (const [what, x, y] of [['開場', a.open, b.open], ['段長', a.end, b.end]]) {
+      if (!y || (x && x.k >= y.k - 1e-6)) continue;
+      out.push({ id: item.id, label: item.label, kind: 'motion', el: null, level: 'warn', rule: 'floor-edited', t: null,
+        msg: `檔頭【D 下限】的${what}下限改過：範例是「${txt(y)}」，${file || item.label} ${x ? `改成「${txt(x)}」` : '刪掉了'}`,
+        fix: '回報寫明改了什麼、開場或收尾怎麼跟著壓短（主代理看截圖確認）；動畫沒跟著改，就把檔頭改回範例的數字', data: { what, tpl: txt(y), now: x ? txt(x) : null } });
+    }
+  }
+  if (!rules.length) return out;
+  const consts = atConsts(html), T = { D: item.D || (item.end - item.start) };
+  for (const [name, { ref, off }] of Object.entries(consts)) {
+    let t;
+    if (typeof ref === 'number') t = ref + off;
+    else {
+      const p = parseTime(ref);
+      if (p.error || p.kind !== 'cue') continue;
+      const r = cueSeconds(p, cuesOut);
+      if (r.error) continue;
+      t = r.sec + off - item.start;
+    }
+    T[name] = Math.max(0, r3(t));
+  }
+  const lit = (n) => { const c = consts[n]; return `P.at(${typeof c.ref === 'number' ? c.ref : `'${c.ref}'`}${c.off ? `, ${c.off}` : ''})`; };
+  const name = file || item.label;
+  const base = { id: item.id, label: item.label, kind: 'motion', el: null };
+  for (const r of rules) {
+    const a = T[r.lhs], b = r.rhs ? T[r.rhs] : 0;
+    if (a == null || b == null || r.lhs === r.rhs || (r.rhs && r.lhs !== 'D')) continue;
+    const need = r3(b + r.k), short = r3(need - a);
+    if (short <= FLOOR_TOL) continue;
+    const rule = `${r.lhs} ≥ ${r.rhs ? `${r.rhs} + ` : ''}${r.k}`, data = { rule, need, got: a, short };
+    if (r.lhs === 'D') {
+      out.push({ ...base, level: 'warn', rule: 'floor', t: r3(item.start + b),
+        msg: `段尾不夠：這段長 ${a.toFixed(2)}s，${name} 檔頭【D 下限】要 ${rule}＝${need.toFixed(2)}s（${r.rhs} 在 ${fmtT(item.start + b)}）`,
+        fix: `${r.rhs} 改綁早一點的詞，或刪掉最後一拍（分鏡表一起改）；都不行就回報，請主代理把 plan.json 這段的 to 往後延 ≥ ${short.toFixed(2)}s`, data });
+    } else if (!r.rhs) {
+      out.push({ ...base, level: 'error', rule: 'floor', t: r3(item.start + a),
+        msg: `開場還沒做完第一拍就到了：${r.lhs} = ${lit(r.lhs)} 在段內 ${a.toFixed(2)}s（${fmtT(item.start + a)}），${name} 檔頭【D 下限】要 ${rule}（差 ${short.toFixed(2)}s）`,
+        fix: `把開場（script 裡 ${r.lhs} 之前、寫固定秒數的那幾行）壓到 ${r.lhs} 之前做完，再把檔頭這一行改成新的下限；${short <= 0.5 ? `也可以給 ${r.lhs} 加第二個參數晚 ${short.toFixed(2)}s（還在講到後 0.5s 內）；` : ''}都不行就回報，請主代理把這段的 from 提早 ${short.toFixed(2)}s`, data });
+    }
+  }
   return out;
 }
 

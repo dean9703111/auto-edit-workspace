@@ -183,6 +183,30 @@
       "@type": "Answer",
       "text": "都能用。說「幫我檢測環境」，AI 會照 Mac 或 Windows 的手冊列出缺的工具，你同意後一步一步裝好。"
      }
+    },
+    {
+     "@type": "Question",
+     "name": "只有旁白、沒有畫面的段落怎麼辦？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "AI 會先找對得上口播的螢幕錄影或圖片蓋上去；找不到素材，就照口播把手機、電腦、雲端、人走動這些具體的東西畫成全畫面的示意動畫，不會留黑畫面。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "觀眾怎麼知道現在講到哪一段？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "講稿用 ## 分章、### 分小節，成片右上角會一直顯示「章號＋目前小節」，子母畫面和全畫面動畫也看得到；螢幕錄影段改由錄影角落的 STEP 膠囊標出目前是第幾步。"
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "素材很大，可以放在外接硬碟嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "可以。專案資料夾放在外接硬碟，在 projects/ 底下建一個捷徑指過去，提示詞照樣寫 @projects/<專案>。工具會照常讀寫硬碟上的素材和成片。"
+     }
     }
    ]
   }
@@ -477,7 +501,7 @@
   <ul class="cmds">
     <li><b>「剪乾淨」</b><span>找出講錯重講、卡住的句子剪掉，縮短停頓，照講稿上字幕</span></li>
     <li><b>「做成片」</b><span>看每段在講什麼，配上資訊卡、情境動畫、子母畫面和音效，人聲音量調到一致</span></li>
-    <li><b>「配螢幕錄影」</b><span>把操作畫面插到講到的那一段，放大、框出重點</span></li>
+    <li><b>「配螢幕錄影」</b><span>把操作畫面插到講到的那一段，放大、框出重點，多步驟的操作標上 STEP</span></li>
     <li><b>「可以了，輸出成片」</b><span>輸出 final.mp4，附上驗收截圖</span></li>
     <li><b>「輸出剪映素材」</b><span>拆成主軌、透明背景的動畫片段和字幕檔，帶去剪映繼續剪</span></li>
   </ul>
@@ -500,8 +524,8 @@
     <div class="tune"><q>調好了</q><h3>畫面放大</h3><p>在構圖台直接拖框決定放大多少、講者放哪裡，旁邊即時看套上字幕和字卡的樣子。</p></div>
     <div class="tune"><q>s05 往左移</q><h3>某一段的卡片</h3><p>移位置、改字、換情境，只動那一段，改前改後都存版本。</p></div>
     <div class="tune"><q>s12 重新設計</q><h3>某一段的動畫</h3><p>先出新的動畫分鏡給你確認；不喜歡可以退回舊版，還有左右對照影片。</p></div>
-    <div class="tune"><q>s08 不要音效</q><h3>音效、配樂</h3><p>從內建音效庫挑，關掉某一段、調音量、片尾加配樂。</p></div>
-    <div class="tune"><q>這集要調光</q><h3>講者畫面</h3><p>調光、瘦臉預設關閉；剪輯台有開關和強度滑桿。</p></div>
+    <div class="tune"><q>s08 不要音效</q><h3>音效、配樂</h3><p>從內建音效庫挑，關掉某一段、調音量、片尾加配樂；一分鐘以上沒音效會自動補。</p></div>
+    <div class="tune"><q>這集要調光</q><h3>講者畫面</h3><p>調光、瘦臉預設關閉，構圖時同一頁就能開；剪輯台也有開關和強度滑桿。</p></div>
     <div class="tune"><q>這集換暗色</q><h3>主色、背景、亮暗</h3><p>內建風格包一鍵換，也能做自己的一包。</p></div>
     <div class="tune"><q>做成直式短影片</q><h3>橫式／直式</h3><p>長片用橫式；Shorts、Reels、抖音用直式，字幕和版面自動換。</p></div>
   </div>
@@ -518,9 +542,9 @@
       <h3>AI Agent 做的事</h3>
       <p class="tag">需要理解內容的判斷</p>
       <ul>
-        <li>從逐字稿找出講錯、重講的句子，列成剪輯清單</li>
-        <li>判斷每段口播在講什麼：流程、比喻、前後對比、警告、數字變化</li>
-        <li>挑版面和情境動畫，寫卡片上的字、選圖示</li>
+        <li>看程式列出的重講候選和講稿外的話，決定剪輯清單</li>
+        <li>每段先問四題：有沒有對得上的錄影、有沒有看得見的東西在動、是不是流程或對比這類結構、是不是只有一句重點</li>
+        <li>挑錄影、示意動畫、情境動畫或字卡，寫卡片上的字、選插圖和圖示</li>
         <li>看截圖判斷哪裡不對，照你的意見改指定的段落</li>
       </ul>
     </div>
@@ -528,8 +552,9 @@
       <h3>程式做的事</h3>
       <p class="tag">每次結果都一樣的計算</p>
       <ul>
-        <li>whisper 詞級逐字稿、NG 起訖對齊停頓、auto-editor 初剪</li>
-        <li>字幕照講稿斷句，對到每個詞的時間</li>
+        <li>whisper 詞級逐字稿，對照講稿找出重講的地方、列出章節起點</li>
+        <li>NG 起訖對齊停頓、auto-editor 初剪</li>
+        <li>字幕照講稿斷句，對到每個詞的時間，避開章節前的停頓</li>
         <li>動畫每一拍對準講到那個詞，音效對準畫面事件</li>
         <li>量版面：字撐破、被裁掉、擋到臉或字幕</li>
         <li>人聲調到 −14 LUFS，成片驗收格式、長度、響度、黑畫面</li>
@@ -549,9 +574,9 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
   </div>
 
   <ol class="steps">
-    <li><h3>剪乾淨</h3><p>逐字稿、找 NG、初剪、照講稿對字幕</p><span class="stop">停點 ① 剪輯清單</span></li>
-    <li><h3>構圖</h3><p>講者調光、瘦臉、在構圖台拖框決定畫面</p><span class="stop">停點 ② 構圖</span></li>
-    <li><h3>分鏡</h3><p>每段的情境、版面、動畫分鏡和截圖</p><span class="stop">停點 ③ 分鏡表</span></li>
+    <li><h3>剪乾淨</h3><p>逐字稿對講稿找重講、初剪、照講稿對字幕</p><span class="stop">停點 ① 剪輯清單</span></li>
+    <li><h3>構圖</h3><p>在構圖台拖框決定畫面，同一頁開調光、瘦臉，挑一格自己的畫面當預覽參考圖</p><span class="stop">停點 ② 構圖</span></li>
+    <li><h3>分鏡</h3><p>每段先判斷畫不畫得出來，再寫情境、版面、動畫分鏡和截圖</p><span class="stop">停點 ③ 分鏡表</span></li>
     <li><h3>定稿</h3><p>組成 HyperFrames 專案、量版面、Studio 預覽</p><span class="stop">停點 ④ 預覽 · ⑤ 剪輯台</span></li>
     <li><h3>輸出</h3><p>render 成 final.mp4，附驗收截圖與觀影總表</p><span class="stop">交片</span></li>
   </ol>
@@ -627,7 +652,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <li><b>只換這一集</b><span>說 <span class="say">「這集用藍圖風格」</span>，其他集不受影響。</span></li>
     <li><b>整個工作區換</b><span>說 <span class="say">「整個換成藍圖」</span>，換回來說「換回預設」。</span></li>
     <li><b>做自己的一包</b><span>說 <span class="say">「幫我做一個風格包：主色深綠、背景要簡潔」</span>，AI 先給你看預覽，同意才存。</span></li>
-    <li><b>講者調光、瘦臉</b><span>預設關閉。說「這集要調光、瘦臉」，或在剪輯台用滑桿自己調強度。</span></li>
+    <li><b>講者調光、瘦臉</b><span>預設關閉。構圖台下面勾選、拖強度，畫面馬上變；之後也能說「這集要調光、瘦臉」或在剪輯台調。</span></li>
   </ul>
   <div class="more"><a class="btn" href="shared/template/index.html">到情境庫切換風格 →</a></div>
 </section>
@@ -644,7 +669,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <li><b>字幕.srt</b><span>畫面上實際顯示的字幕。剪映：文本 → 本地字幕 → 匯入。</span></li>
     <li><b>清單.md</b><span>每一支放在第幾秒、多長、什麼版面。</span></li>
   </ul>
-  <p class="note">章節角標與講者慢推不會輸出，在剪映用文字、關鍵幀補。每段約 30 秒 render，整集常常要 10 分鐘以上。</p>
+  <p class="note">章節角標不會輸出，在剪映用文字補。每段約 30 秒 render，整集常常要 10 分鐘以上。</p>
 </section>
 
 <section class="block" id="agents">
@@ -678,6 +703,9 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <details><summary><h3>影片會上傳到雲端嗎？</h3></summary><p>轉檔、轉字幕、剪接、render 成片都在你的電腦上做，影片檔不會上傳。AI Agent 會讀逐字稿、分鏡截圖這些內容來判斷怎麼剪，這些內容會送到你使用的 Agent 服務。</p></details>
     <details><summary><h3>可以搭配剪映繼續剪嗎？</h3></summary><p>可以。說「輸出剪映素材」，會拆成主軌、每段一支有透明通道的 MOV、字幕檔和排法清單，拖進剪映照時間排好就能繼續調整。</p></details>
     <details><summary><h3>Mac 和 Windows 都能用嗎？</h3></summary><p>都能用。說「幫我檢測環境」，AI 會照 Mac 或 Windows 的手冊列出缺的工具，你同意後一步一步裝好。</p></details>
+    <details><summary><h3>只有旁白、沒有畫面的段落怎麼辦？</h3></summary><p>AI 會先找對得上口播的螢幕錄影或圖片蓋上去；找不到素材，就照口播把手機、電腦、雲端、人走動這些具體的東西畫成全畫面的示意動畫，不會留黑畫面。</p></details>
+    <details><summary><h3>觀眾怎麼知道現在講到哪一段？</h3></summary><p>講稿用 ## 分章、### 分小節，成片右上角會一直顯示「章號＋目前小節」，子母畫面和全畫面動畫也看得到；螢幕錄影段改由錄影角落的 STEP 膠囊標出目前是第幾步。</p></details>
+    <details><summary><h3>素材很大，可以放在外接硬碟嗎？</h3></summary><p>可以。專案資料夾放在外接硬碟，在 projects/ 底下建一個捷徑指過去，提示詞照樣寫 @projects/&lt;專案&gt;。工具會照常讀寫硬碟上的素材和成片。</p></details>
   </div>
 </section>
 

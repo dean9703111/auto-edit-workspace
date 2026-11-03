@@ -43,7 +43,8 @@ import { assembleScene, sceneParts, hashOf, verifyHash } from './lib/assemble.mj
 import { buildCaptions, captionWarnings } from './lib/captions.mjs';
 import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
 import { buildMain, buildPreview, KIT_LINKS, withTheme } from './lib/main.mjs';
-import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, blackDetect, extractFrames } from './lib/ff.mjs';
+import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, blackDetect, extractFrames, rawFrame, writeJpg, transcriptFresh } from './lib/ff.mjs';
+import { hfShim } from './lib/hf.mjs';
 import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
@@ -122,6 +123,7 @@ export function loadLib(templateDir) {
   return {
     scenes: loadScenes(templateDir), icons: loadIcons(templateDir), fx: loadFx(templateDir),
     consts: motionConsts(kit), sfx: read(path.join(kit, 'sfx.json'), {}), accent,
+    customDir: path.join(templateDir, 'custom'),
   };
 }
 
@@ -355,7 +357,7 @@ export function attachWords(cues, { transcript, video = null } = {}) {
   try { words = JSON.parse(fs.readFileSync(transcript, 'utf8')); } catch { cues.wordsWhy = 'work/transcript.json 不是合法的 JSON'; return cues; }
   if (Array.isArray(words?.words)) words = words.words;
   if (!Array.isArray(words) || !words.length || !words.every((w) => w && typeof w.text === 'string' && Number.isFinite(+w.start) && Number.isFinite(+w.end))) { cues.wordsWhy = 'work/transcript.json 的格式不是 [{ text, start, end }]'; return cues; }
-  if (video && fs.existsSync(video) && fs.statSync(transcript).mtimeMs < fs.statSync(video).mtimeMs - 1000) { cues.wordsWhy = 'work/transcript.json 比 rough.mp4 舊（不是這支初剪轉的）'; return cues; }
+  if (!transcriptFresh(transcript, video)) { cues.wordsWhy = 'work/transcript.json 比 rough.mp4 舊（不是這支初剪轉的）'; return cues; }
   const lastW = Math.max(...words.map((w) => +w.end)), lastC = cues.length ? Math.max(...cues.map((c) => c.end)) : 0;
   if (Math.abs(lastW - lastC) > 2) { cues.wordsWhy = `work/transcript.json 的長度（${r3(lastW)}s）和 rough.srt（${r3(lastC)}s）對不上`; return cues; }
   cues.words = words.map((w) => ({ text: w.text, start: +w.start, end: +w.end })).sort((a, b) => a.start - b.start);
@@ -471,6 +473,9 @@ function prepareMedia(items, out, log) {
         if (main.type === 'video') {
           log(`轉檔 ${it.media.src} → ${main.rel}（30fps、每秒一個關鍵幀${main.speed !== 1 ? `、×${main.speed}` : ''}）…`);
           encodeMedia(it.media.abs, abs, { speed: main.speed, keepAudio: main.keepAudio, width: main.w, height: main.h });
+        } else if (main.type === 'still') {
+          log(`定格 ${it.media.src} 第 ${main.at}s → ${main.rel}`);
+          writeJpg({ w: main.w, h: main.h, data: rawFrame(it.media.abs, { at: main.at, width: main.w, height: main.h }) }, abs, 2);
         } else {
           fs.mkdirSync(dir, { recursive: true });
           fs.copyFileSync(it.media.abs, abs);
@@ -688,7 +693,7 @@ export function build(flags, { log = console.log } = {}) {
     const r = renderBgmClip(path.join(P.sfx, `${res.outro.music}.wav`), path.join(P.out, 'assets'), { from: clip.from, dur: clip.dur, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, gain: clip.gain });
     outro = { file: posix(path.relative(P.out, r.file)), at: clip.at, dur: r.dur };
   }
-  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, badges: res.badges || [], speakerBox: res.globals.speakerBox, canvas: C };
+  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, badges: res.badges || [], canvas: C };
   const main = buildMain({ ...mainOpts, captions: cap });
   let test = null;
   if (flags.test) {
@@ -737,6 +742,7 @@ export function build(flags, { log = console.log } = {}) {
     if (fs.existsSync(src) && copyIfDiff(src, path.join(P.out, 'kit', f))) kitN++;
   }
   if (fs.existsSync(P.sfx)) for (const f of fs.readdirSync(P.sfx).filter((x) => x.endsWith('.wav'))) copyIfChanged(path.join(P.sfx, f), path.join(P.out, 'assets', 'sfx', f));
+  if (hfShim(P.out)) log('專案在工作區外面：寫了 work/hyperframes/node_modules/.bin/hyperframes，npx hyperframes 會用工作區釘住的版本');
   if (bg) for (const f of new Set(Object.values(bg).filter(Boolean))) copyIfDiff(srcOf(f), path.join(P.out, 'assets', f));
   const generated = new Set();
   for (const [f, c] of files) { W.write(f, c); generated.add(f); }

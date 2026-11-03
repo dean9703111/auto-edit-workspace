@@ -20,7 +20,7 @@ version: 0.1.0
 |---|---|
 | 這一輪還沒讀過 `setup/README.md` | 先讀全文 |
 | 使用者只說「Skills 看不到 auto-edit」 | 只做 S4（`node setup/install-skills.mjs`），再跑一次檢測 |
-| 檢測顯示 `restart` | 請使用者重開 MiniMax Code（Mac `M8`、Windows `W9`）；重開後還看不到，就加 PATH 前綴照樣做（AGENTS.md「環境準備」） |
+| 檢測顯示 `restart` | 請使用者重開 MiniMax Code（Mac `M8`、Windows `W9`）；重開後還看不到，就在指令最前面加 PATH 前綴照樣做（Mac：`export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH";`），不要卡在重開 |
 
 ## 步驟
 
@@ -50,7 +50,7 @@ Windows（PowerShell）：[Console]::OutputEncoding = [System.Text.Encoding]::UT
 ```
 
 完成判準：再跑一次步驟 0，`todo` 裡那幾項不見了。
-常見錯誤：要輸入電腦密碼的步驟（Mac 的 Homebrew）→ 請使用者自己在終端機做，等他說「好了」再驗證；不要改用系統管理員權限執行。
+常見錯誤：要輸入電腦密碼（Mac 的 Homebrew）或按系統確認視窗（Windows 的 winget）的步驟 → 請使用者自己做，等他說「好了」再驗證；不要改用系統管理員權限執行。
 
 **3. 共用步驟 S1–S9**（`setup/README.md` 步驟 3）
 
@@ -64,7 +64,7 @@ npx -y hyperframes doctor
 auto-editor --version
 ```
 
-依序是 S1、S2、S3（在工作區根目錄）、S4、S5、S6、S7；S8 列素材、S9 最後檢測照手冊原文。
+依序是 S1、S2、S3（在工作區根目錄）、S4、S5、S6、S7；S8 列素材、S9 最後檢測照手冊原文。手冊裡的 `npx` 一律加 `-y`，才不會停在 `Ok to proceed?`。
 完成判準：S3 之後 `node_modules/hyperframes/package.json` 的 version 和根目錄 `package.json` 釘的一樣；S4 最後一行 `✔ 完成：9 支 × 2 個位置…`；S5 最後一行 `✔ 4 個檔都對`（✖ 不擋其他步驟，照手冊 S5 處理）；S9 的 `all_ok` 是 `true`。
 常見錯誤：`npm install` 在 `setup/` 裡跑 → 一定在工作區根目錄（有 `package.json` 的那層）；S4 印 `✖ 衝突` → 退路表第 3 列。
 

@@ -25,7 +25,7 @@ import { splitAtJoins, dB } from './edit.mjs';
 import { visibleLen, nearest, loadIcons } from './scenes.mjs';
 import { CANVAS } from './canvas.mjs';
 
-export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'speed', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'note'];
+export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'note'];
 export const MEDIA_DIRS = ['assets/screen/', 'assets/images/'];
 export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom'];
 export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5 };
@@ -37,7 +37,8 @@ const CAPTION_Y = 920;
 const MAX_FILE = [3840, 2160];
 const MARK = { pad: 6, sw: 4, draw: 0.4, out: 0.3, min: 0.5, hold: 1, max: 2, rx: 6 };
 const LENS = { delay: 0.28, pop: 0.6, back: 0.32, fade: 0.1, min: 1.2, zoom: 2, maxW: 1600, maxH: 720, cx: 960, cy: 450, border: 3, pad: 10, dflt: 3 };
-const MOVE = { dur: 1, warnZoom: 4 };
+// 運鏡節奏（參考專案作者：「跳來跳去，眼睛受不了」→ 改慢推）：推近／拉回 ≥ 1.5 s，倍率 ≥ 2 時 ≥ 2.2 s；一段 ≤ 2 次；第一次離段起點 ≥ 0.8 s（先看全景）；相鄰兩框倍率比 ≤ 1.4
+const MOVE = { dur: 1.5, durBig: 2.2, big: 2, warnZoom: 4, max: 2, lead: 0.8, ratio: 1.4 };
 const KB = 1.05;
 const DECLICK = 0.02;
 // 動態 v2（specs/010-motion-v2/design-system.md §5、§7）：從講者進來的錄影面板由小窗位置長出（P.grow，0.3 s 起、kit 預設 0.8 s expo.out）；
@@ -75,7 +76,7 @@ const READ = 1.2, READ_QUICK = 0.8;   // 完整可讀（定案：一般 1.2s、q
 const CALLOUT = { gap: 56, gapV: 40, h: 96, padL: 14, padR: 32, padPlain: 32, icon: 64, iconGap: 20, border: 2, full: 40, half: 24, maxLen: 12,
   edge: 8, lineAt: 0.3, lineDur: 0.25, cardAt: 0.45, cardDur: 0.4, drift: 16, ready: 0.85, quick: 0.25, out: 0.3, elbow: 24, dot: 5 };
 const SPOT = { alpha: 0.35, pad: 8, rx: 12, fade: 0.4 };
-const STEP = { left: 48, top: 40, h: 80, extra: 118, maxLen: 12, in: 0.5, inX: -24, swOut: 0.25, swIn: 0.35, swDelay: 0.1, swReady: 0.45, carry: 0.1 };
+const STEP = { left: 48, top: 40, inset: 32, h: 80, extra: 118, maxLen: 12, in: 0.5, inX: -24, swOut: 0.25, swIn: 0.35, swDelay: 0.1, swReady: 0.45, carry: 0.1 };
 const ARROW = { gap: 9, lens: [120, 96], head: 22, halfW: 2, sample: 2, fade: 0.5, slide: 12, dflt: 3, max: 1, pad: 4, ring: 2 };
 const PATH = { dur: 0.4, min: 0.2, max: 2 };
 const SIDES = ['right', 'left', 'bottom', 'top'];
@@ -98,7 +99,9 @@ export const MEDIA_FIELDS = [
   ['src', '"assets/screen/<檔名>" 或 "assets/images/<檔名>"', '必填', `相對專案資料夾；影片 .mp4 .mov .m4v .webm、圖片 .jpg .jpeg .png .webp（先跑 media.mjs scan）`],
   ['from／to／duration／anchor', '同其他段', 'to 或 duration 必填', 'rough.srt 的句號或秒數'],
   ['in', '秒數', '0', '錄影從第幾秒開始播；in＋段長×speed 不能超過錄影長度'],
+  ['out', '秒數', '—', '錄影播到第幾秒：speed 自動＝(out−in)÷段長（不用寫 speed）；段 ≤ 3 秒時可到 64 倍（快轉跳過等待）'],
   ['speed', '0.5–4', '1', '播放速度（2＝兩倍速）'],
+  ['hold', '秒數', '—', '定格：整段停在錄影第幾秒那一格（in／out／speed 不用寫）；標註、放大鏡、運鏡照常'],
   ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方，空白處是主題深底或 bg.jpg；cover＝鋪滿畫面'],
   ['pip', 'true／false', 'true', '右下角子母畫面露臉；只有聲音的區間自動不放'],
   ['volume', 'null 或 −60～+12（dB）', 'null', 'null＝素材靜音；寫數字＝保留素材原聲'],
@@ -108,7 +111,7 @@ export const MEDIA_FIELDS = [
   ['lens', '[{ "at", "until", "box": [x,y,w,h], "zoom" }]', '—', '放大鏡：從框的位置彈出到畫面中央偏上，zoom 預設 2（1.2–4）；至少 1.2 秒，until 不寫＝at＋3 秒'],
   ['callouts', '[{ "at", "until", "box": [x,y,w,h], "text", "icon", "side", "quick" }]', '—', '標註：紅框＋引線＋說明卡（text 1–12 字、icon 選填）；side 不寫＝自動挑放得下的那邊；完整可讀 ≥ 1.2s（quick ≥ 0.8s）；期間不能有運鏡'],
   ['spot', '[{ "at", "until", "box": [x,y,w,h] }]', '—', '聚光燈：其他地方壓暗 35%，只留框的地方；至少 2 秒、一次一個、不和放大鏡同時'],
-  ['steps', '[{ "at", "text" }]', '—', '左上角 STEP 膠囊（text 1–12 字）；號碼自動累加，同字沿用；相鄰兩步 ≥ 1.65 秒'],
+  ['steps', '[{ "at", "text" }]', '—', 'STEP 膠囊（text 1–12 字）放在錄影可見區左上（離錄影邊 32px）；壓到紅框自動換右上，"stepsSide": "right" 指定右上；號碼自動累加，同字沿用；相鄰兩步 ≥ 1.65 秒'],
   ['arrows', '[{ "at", "until", "to": [x,y], "from" }]', '—', '箭頭：箭尖離 to 9px，from＝箭尾方向（n／ne／e／se／s／sw／w／nw，不寫＝自動）；放不下就拿掉；一次一支、至少 2.2 秒，until 不寫＝at＋3 秒'],
   ['clicks', '["#21@安裝", "+3.2"]', '—', '錄影裡看得到游標按下的時間，一下配一顆 click 附加音效（不受 3 秒規則）；時間寫法同 at，要落在這段裡；"sfxExtra": false 會一起關掉'],
   ['sfx', '音效名稱或 null', '不配', '錄影段預設不配'],
@@ -287,6 +290,12 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
     else if (!isNum(seg.speed) || seg.speed < 0.5 || seg.speed > 4) err(`speed 要是 0.5–4 的數字（2＝兩倍速），現在是 ${JSON.stringify(seg.speed)}`);
     else m.speed = seg.speed;
   }
+  if (seg.out != null) {
+    if (kind === 'image') warn('out：圖片沒有終點，已忽略');
+    else if (seg.speed != null) err('out 和 speed 擇一：寫 out 時速度由 (out−in)÷段長自動算');
+    else if (!isNum(seg.out) || seg.out <= m.in || seg.out > info.duration + 1e-6) err(`out 要是比 in（${m.in}s）大、不超過錄影長度 ${info.duration}s 的秒數（錄影播到第幾秒），現在是 ${JSON.stringify(seg.out)}`);
+    else m.out = r3(seg.out);
+  }
   if (seg.fit != null) {
     if (!['contain', 'cover'].includes(seg.fit)) err(`fit 只能是 "contain"（整張看得到，放在字幕帶上方）或 "cover"（鋪滿畫面、多的裁掉），現在是 ${JSON.stringify(seg.fit)}`);
     else m.fit = seg.fit;
@@ -296,6 +305,15 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
     if (!isNum(seg.volume) || seg.volume < -60 || seg.volume > 12) err(`volume 要寫 null（靜音，預設）或 −60～+12 的 dB 數字（保留素材原聲），現在是 ${JSON.stringify(seg.volume)}`);
     else if (kind === 'image' || !info.hasAudio) warn(`volume：${kind === 'image' ? '圖片' : `${src} 本身`}沒有聲音，已忽略`);
     else m.volume = r3(seg.volume);
+  }
+  // 定格：整段停在素材第 hold 秒那一格，build 抽成一張圖、當圖片放（標註、放大鏡、運鏡照常）
+  if (seg.hold != null) {
+    if (kind === 'image') warn('hold：圖片本來就不動，已忽略');
+    else if (!isNum(seg.hold) || seg.hold < 0 || seg.hold >= info.duration) err(`hold 要是 0 到錄影長度 ${info.duration}s 之間的秒數（定格在錄影第幾秒那一格），現在是 ${JSON.stringify(seg.hold)}`);
+    else {
+      if (['in', 'out', 'speed', 'volume'].some((k) => seg[k] != null)) warn('hold：定格不播放，in／out／speed／volume 已忽略');
+      Object.assign(m, { hold: r3(seg.hold), in: 0, out: null, speed: 1, volume: null, kenburns: false });
+    }
   }
   for (const k of ['enter', 'exit']) {
     if (seg[k] == null) continue;
@@ -312,6 +330,7 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
   const fsx = Math.min(1, MAX_FILE[0] / info.width, MAX_FILE[1] / info.height);
   m.file = kind === 'video' ? { w: even(info.width * fsx), h: even(info.height * fsx) } : { w: info.width, h: info.height };
   m.file.sx = m.file.w / info.width; m.file.sy = m.file.h / info.height;
+  if (m.hold != null) m.kind = 'image';
   return m;
 }
 
@@ -334,9 +353,19 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   // 錄影片段：接點（cut）切開，檔案的第 t 秒＝素材的第 t×speed 秒
   if (m.kind === 'video') {
     const r0 = tm.unmapStart(s);
+    const [rs, re] = it.rough0 || [r0, tm.unmapEnd(e)];
+    // out：速度由素材起訖與段長算；段 ≤ 3 秒的快轉（跳過等待）可到 64 倍
+    if (m.out != null) {
+      const len = r3(re - rs), sp = r3((m.out - m.in) / len);
+      if (sp < 0.5) err(`out：素材 ${m.in}–${m.out}s 只有 ${r3(m.out - m.in)}s，放進 ${len}s 的段要慢到 ×${sp}（下限 0.5）→ out 改大，或段落縮短`);
+      else if (sp > 64 || (sp > 4 && len > 3)) err(`out：素材 ${m.in}–${m.out}s 放進 ${len}s 的段要 ×${sp}（一般上限 4；段 ≤ 3 秒的快轉上限 64）→ 拆成兩段、中間等待的部分另開一段短的快轉`);
+      else {
+        if (sp > 4) warn(`out：×${sp} 快轉 ${len}s（跳過等待）；確定畫面只是在等，不是要看的操作`);
+        m.speed = sp;
+      }
+    }
     const fileDur = m.info.duration / m.speed;
     const pieces = splitAtJoins(s, e, tm).map((p) => ({ s: p.s, e: p.e, fms: r3(m.in / m.speed + (p.ms - r0)) }));
-    const [rs, re] = it.rough0 || [r0, tm.unmapEnd(e)];
     const need = r3(m.in + (re - rs) * m.speed);
     if (need > m.info.duration + 1 / FPS + 1e-6) {
       err(`素材 ${m.src} 長 ${m.info.duration}s；從第 ${m.in}s 起播 ${r3(re - rs)}s${m.speed !== 1 ? `（×${m.speed}）` : ''} 要用到第 ${need}s → to 提早、in 改小，或 speed 改小`);
@@ -403,7 +432,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     if (!keysOk(mv, what, ['at', 'to', 'dur'])) return;
     const at = tAt(mv.at, `${what}.at`);
     if (at == null || !inSeg(at, `${what}.at`)) return;
-    let dur = MOVE.dur;
+    let dur = null;
     if (mv.dur != null) {
       if (!isNum(mv.dur) || mv.dur < 0.2 || mv.dur > 5) { err(`${what}.dur 要是 0.2–5 的秒數，現在是 ${JSON.stringify(mv.dur)}`); return; }
       dur = mv.dur;
@@ -419,12 +448,18 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       if (want < 1) warn(`${what}.to 的框比畫面還大，推不近（已維持原大小）→ 框小一點，或寫 "full"`);
       else if (want > MOVE.warnZoom) warn(`${what}.to 要放大 ${r3(want)} 倍，畫面會糊 → 框大一點，或改用放大鏡 lens`);
     }
+    const zoom = Math.max(prev.z, to.z), slow = zoom >= MOVE.big - 1e-6 ? MOVE.durBig : MOVE.dur;
+    if (dur == null) dur = slow;
+    else if (dur < slow - 1e-6) warn(`${what} ${dur}s 太快（${r3(zoom)} 倍要 ≥ ${slow}s），看的人眼睛跟不上 → dur 改 ${slow}，或不寫用預設`);
+    if (i === 0 && at < s + MOVE.lead - 1e-6) warn(`${what} 在段起點後 ${r3(at - s)}s 就動，觀眾還沒看清全景 → at 至少 "+${MOVE.lead}"`);
+    if (prev !== ID && to !== ID && Math.max(prev.z, to.z) / Math.min(prev.z, to.z) > MOVE.ratio + 1e-6) warn(`${what} 從 ${r3(prev.z)} 倍直接換到 ${r3(to.z)} 倍，跳太大 → 先 "full" 拉回，或拆成兩段硬切`);
     if (at < prevEnd - 1e-6) { err(`${what}.at（${fmt(at)}）在上一個運鏡還沒結束（${fmt(prevEnd)}）時開始 → 往後挪，或把上一個的 dur 改短`); return; }
     if (at + dur > e + 1e-6) { warn(`${what} 在段尾之後才結束，dur 已縮成 ${r3(e - at)}s`); dur = r3(e - at); }
     if (dur < 0.2) return;
     m.cams.push({ i, t0: at, dur: r3(dur), from: prev, to });
     prev = to; prevEnd = at + dur;
   });
+  if (m.cams.length > MOVE.max) warn(`moves 一段有 ${m.cams.length} 次運鏡（建議 ≤ ${MOVE.max}），畫面跳來跳去 → 留最重要的推近，其他改放大鏡 lens 或拆段`);
   m.kb = m.kenburns && !m.cams.length;
   if (m.kenburns && m.cams.length && seg.kenburns === true) warn('kenburns：有 moves 時不做慢推（Ken Burns），已忽略');
   const kbTo = m.kbTo = { z: KB, x: +((G.left + G.width / 2) * (1 - KB)).toFixed(1), y: +((G.top + G.height / 2) * (1 - KB)).toFixed(1) };
@@ -659,7 +694,16 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     st.last = { end: e, text: last.text, n: last.n };
   } else st.last = null;
   const capW = stepList.length ? Math.max(...stepList.map((x) => textPx(x.text))) + STEP.extra : 0;
-  const capsule = stepList.length ? { box: [F.step.left, F.step.top, F.step.left + capW, F.step.top + STEP.h], from: carry ? s : stepList[0].at, to: e } : null;
+  // 膠囊放在錄影可見區裡（離錄影左／上緣 32px，不跨在錄影邊上；參考專案作者：「沒有考量到實際螢幕錄影的上方與右側邊界」）
+  // 直式照 FR-024 固定在左上 y 260（右邊＝安全區右緣）
+  const capAt = (side) => {
+    const port = F.format === 'portrait';
+    const top = port ? F.step.top : Math.max(F.step.top, Math.round(G.top) + STEP.inset);
+    const left = side === 'right' ? (port ? F.safe[2] : Math.min(F.safe[2], Math.round(G.left + G.width) - STEP.inset)) - capW : port ? F.step.left : Math.max(F.step.left, Math.round(G.left) + STEP.inset);
+    return [left, top, left + capW, top + STEP.h];
+  };
+  if (seg.stepsSide != null && !['left', 'right'].includes(seg.stepsSide)) err(`stepsSide 只能是 "left"（預設）或 "right"，現在是 ${JSON.stringify(seg.stepsSide)}`);
+  const capsule = stepList.length ? { box: capAt(seg.stepsSide === 'right' ? 'right' : 'left'), side: seg.stepsSide === 'right' ? 'right' : 'left', from: carry ? s : stepList[0].at, to: e } : null;
   m.steps = { list: stepList, carry, capsule };
 
   // --- 說明卡、聚光燈、箭頭共用 ---
@@ -686,6 +730,13 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const x of steps2) if (ov(a, b, x.at, x.end)) out.push(xyxy(toScreen(x.rect, camAt(Math.max(a, x.at)))));
     return out;
   };
+
+  // 膠囊壓到紅框、沒寫 stepsSide → 換到右邊（右邊也壓到就留左邊，下面的碰撞檢查會 ⚠）
+  if (capsule && seg.stepsSide == null) {
+    const hitAt = (box) => m.marks.some((mk) => markBoxes(mk, capsule.from, capsule.to).some((b) => hits(box, b)));
+    const right = capAt('right');
+    if (hitAt(capsule.box) && !hitAt(right)) Object.assign(capsule, { box: right, side: 'right' });
+  }
 
   // --- 說明卡：擺位置（運鏡、紅框、膠囊都定了）---
   m.callouts = [];
@@ -807,6 +858,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     m.arrows.length || dropped ? `箭頭 ${m.arrows.length}${dropped ? `（拿掉 ${dropped}）` : ''}` : '',
     m.lenses.length ? `放大鏡 ${m.lenses.length}` : '',
   ].filter(Boolean);
+  // 下限：錄影段 ≥ 4 秒（style.md「標註不要密」的平均間距）卻一個標註、運鏡都沒有
+  if ((m.kind === 'video' || m.hold != null) && !parts.length && e - s >= 4) {
+    warn(`錄影 ${r3(e - s)}s 沒有任何標註或運鏡 → 口播講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3–4）；真的沒有要指的東西，回報寫保留理由`);
+  }
   let summary = parts.join('、');
   if (m.kind === 'image' && m.hasAnn && seg.kenburns !== false && !m.cams.length) summary += `${summary ? '；' : ''}有標註，不做慢推`;
   const json = {
@@ -817,8 +872,11 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     arrows: m.arrows.map((a) => ({ i: a.i, at: a.at, until: a.until, ready: a.ready, from: a.from })),
     lens: m.lenses.map((L) => ({ i: L.i, at: L.la, until: L.lb, ready: r3(L.la + LENS.delay + LENS.pop) })),
   };
-  // FR-082：直式放橫的錄影，畫面縮成原尺寸的幾倍、有幾個運鏡（qc storyboard：< 0.6、沒有 moves、> 3 秒 ⚠ 介面字太小）；橫式不加這欄
-  if (F.format === 'portrait' && m.kind === 'video' && W > H) json.view = { scale: r3(G.kx), moves: m.cams.length };
+  // FR-082：錄影（含定格）畫面縮成原尺寸的幾倍、有幾個運鏡／放大鏡（qc storyboard：< 0.6、沒有 moves 和 lens、> 3 秒 ⚠ 介面字太小）
+  // 直式只看橫的錄影；橫式也看（參考專案：3452×2016 的錄影縮到 1609×940，介面字只剩 8–10px，靠放大鏡補）
+  const rec = m.kind === 'video' || m.hold != null;
+  if (F.format === 'portrait' && rec && W > H) json.view = { scale: r3(G.kx), moves: m.cams.length, lens: m.lenses.length };
+  else if (F.format !== 'portrait' && rec) json.view = { scale: r3(G.kx), moves: m.cams.length, lens: m.lenses.length, landscape: true };
   return { summary, json };
 }
 // 過渡期別名（002 改成呼叫 validateMedia 之前 build 照常能跑）
@@ -832,7 +890,11 @@ export function mediaJobs(it) {
   const stem = ascii(path.basename(m.src, m.ext));
   const sig = { src: m.abs, size: st.size, mtimeMs: Math.round(st.mtimeMs) };
   const jobs = { main: null, lenses: [] };
-  if (m.kind === 'video') {
+  if (m.hold != null) {
+    const key = { ...sig, hold: m.hold, w: m.file.w, h: m.file.h, v: 1 };
+    const h = createHash('sha1').update(JSON.stringify(key)).digest('hex').slice(0, 8);
+    jobs.main = { type: 'still', rel: `assets/media/${stem}-${h}.jpg`, key, at: m.hold, w: m.file.w, h: m.file.h };
+  } else if (m.kind === 'video') {
     const key = { ...sig, speed: m.speed, w: m.file.w, h: m.file.h, v: 1 };
     const h = createHash('sha1').update(JSON.stringify(key)).digest('hex').slice(0, 8);
     jobs.main = { type: 'video', rel: `assets/media/${stem}-${h}.mp4`, key, speed: m.speed, keepAudio: !!m.info.hasAudio, w: m.file.w, h: m.file.h };
@@ -881,7 +943,7 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   const style = `left:${G.left}px;top:${G.top}px;width:${G.width}px;height:${G.height}px`;
   // 直式：畫面座標的層（.mstage／.mmarks／.mann／.mlreg）寬高吃 --cw／--ch（kit/media.css 預設 1920×1080）
   html.push(`  <div id="el-${id}" class="mlayer" style="z-index:${it.z}${port ? `;--cw:${CW}px;--ch:${CH}px` : ''}">`);
-  html.push(`    <div id="mbg-${id}" class="clip mbg sc-surface-fs" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}"></div>`);
+  html.push(`    <div id="mbg-${id}" class="clip mbg" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}"></div>`);
   // 面板：不計時的外框，大小＝錄影可見區（P.grow 從小窗長成它）；運鏡層放在裡面、位移抵回去，座標還是畫面座標
   html.push(`    <div id="mgr-${id}" class="mgrow" style="${style}" data-layout-allow-overflow>`);
   html.push(`    <div id="mst-${id}" class="mstage" style="left:${-G.left}px;top:${-G.top}px" data-layout-allow-overflow>`);
@@ -934,7 +996,8 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   if (stl.length || cos.length) {
     html.push(`    <div id="mcd-${id}" class="clip mcards" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}" data-layout-allow-overlap>`);
     if (stl.length) {
-      html.push(`      <div id="msteps-${id}" class="msteps"${port ? ` style="left:${F.step.left}px;top:${F.step.top}px"` : ''}>`);
+      const cb = m.steps.capsule.box;
+      html.push(`      <div id="msteps-${id}" class="msteps"${port || cb[0] !== STEP.left || cb[1] !== STEP.top ? ` style="left:${cb[0]}px;top:${cb[1]}px"` : ''}>`);
       stl.forEach((p, k) => html.push(`        <div id="mstep-${id}-${k + 1}" class="mstep"><span class="mnum">${p.n}</span><span class="mtxt">${esc(p.text)}</span></div>`));
       html.push('      </div>');
     }

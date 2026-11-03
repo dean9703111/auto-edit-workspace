@@ -134,8 +134,8 @@ const CONF = {
   'bgm-outro': { kind: 'bgm', volume: 0.562, targetDb: -11, additive: false, maxPerVideo: null },
 };
 
-test('SFX_RULES：3 s、0.2 s、每分 2 顆、上限比人聲小 3 dB', () => {
-  assert.deepEqual({ ...A.SFX_RULES }, { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 });
+test('SFX_RULES：3 s、0.2 s、每分 2 顆、上限比人聲小 3 dB、超過 60 s 沒有主音效算稀疏', () => {
+  assert.deepEqual({ ...A.SFX_RULES }, { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3, sparseSec: 60 });
 });
 
 test('sfxBudget：次數、附加音效、bgm 不算、資訊行', () => {
@@ -149,7 +149,11 @@ test('sfxBudget：次數、附加音效、bgm 不算、資訊行', () => {
   assert.deepEqual(b.over, []);
   assert.deepEqual(b.dense, []);
   assert.deepEqual(b.loud, []);
-  assert.deepEqual(b.warnings, []);
+  // 稀疏：主音效只有 1.2 s 一顆、片長 120 s → 1.2–120 沒有主音效（附加音效 click、配樂不算）
+  assert.deepEqual(b.sparse, [{ from: 1.2, to: 120 }]);
+  assert.equal(b.warnings.length, 1);
+  assert.match(b.warnings[0], /^⚠ 音效稀疏：0:01\.20–2:00\.00（119 秒）沒有主音效 → 在這段裡找踩坑句配 alert、結果句配 success/);
+  assert.deepEqual(A.sfxBudget([{ id: 's02', name: 'pop', at: 50, volume: 0.6, main: true }, { id: 's03', name: 'pop', at: 100, volume: 0.6, main: true }], CONF, { outDur: 150 }).sparse, []);
   assert.equal(b.lines[0], '音效次數：pop 1、click 2、sparkle 0／6、thunder 0／3');
   assert.equal(b.lines[1], '音效密度：主音效平均 0.5 顆／分（上限：任一分鐘 ≤ 2 顆，超過才 ⚠），附加音效 2 顆');
   assert.deepEqual(b.levels, { main: [-7.8, -7.8, -7.8], extra: [-19.6, -19.6] });

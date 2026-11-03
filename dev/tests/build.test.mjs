@@ -109,6 +109,28 @@ test('Studio 開啟時蓋上的 data-hf-id 不算手改（preview 開著也能�
   assert.doesNotMatch(read('index.html'), /data-hf-id/);
 });
 
+test('剛從 custom/ 複製、還沒改的範例：句號不報 ✖、只 ⚠ 還沒做，build 照樣過（停點 ③ 前截圖、派工前 build）；改過就照常檢查', () => {
+  const x = path.join(out, 'compositions', 'x-callout.html');
+  fs.mkdirSync(path.dirname(x), { recursive: true });
+  fs.copyFileSync(path.join(TEMPLATE, 'custom', 'x-callout.html'), x);
+  // x-checklist 的 P.sfx('success', '#125') 超出這集範圍：範例原文也不報 ✖
+  const xc = path.join(out, 'compositions', 'x-checklist.html');
+  fs.copyFileSync(path.join(TEMPLATE, 'custom', 'x-checklist.html'), xc);
+  writePlan([...SCENES.filter((s) => s.id !== 's03'), { id: 'x01', type: 'custom', src: 'compositions/x-callout.html', layout: 'overlay', from: '#9', to: '#10e' },
+    { id: 'x02', type: 'custom', src: 'compositions/x-checklist.html', layout: 'fullscreen', from: '#11', to: '#11e' }]);
+  const r = node('--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /src（compositions\/x-callout\.html）還是範例原文（還沒做）/);
+  assert.match(r.stdout, /src（compositions\/x-checklist\.html）還是範例原文（還沒做）/);
+  fs.rmSync(xc);
+  writePlan([...SCENES.filter((s) => s.id !== 's03'), { id: 'x01', type: 'custom', src: 'compositions/x-callout.html', layout: 'overlay', from: '#9', to: '#10e' }]);
+  fs.appendFileSync(x, '\n<!-- 改過 -->\n');
+  assert.doesNotMatch(node('--check').stdout, /還是範例原文/);
+  fs.rmSync(x);
+  writePlan(SCENES);
+  assert.equal(node().status, 0);
+});
+
 test('AI 手寫的 compositions/x-*.html 不會被 build 動到；plan 拿掉的段，舊檔（沒手改）會刪掉', () => {
   const x = path.join(out, 'compositions', 'x-flow.html');
   fs.writeFileSync(x, '<!doctype html><html><body><template><div id="x-flow" data-composition-id="x-flow"></div><script>window.__timelines[\'x-flow\'] = gsap.timeline({ paused: true });</script></template></body></html>');
@@ -561,10 +583,10 @@ test('直式（fixture dev/tests/fixtures/portrait，009 T002-V03–V06）：主
   assert.match(s06, /id="s06-kwList" data-layout="free" data-gap="md"/);
   assert.ok(!s06.includes('data-layout-portrait'));
   assert.match(s06, /flex-direction: row; flex-wrap: wrap;/);
-  // FR-025：講者面板 pip.box、上緣 6px 主色線、飛入讀 pip.box（彈出原點＝面板中心）
+  // FR-025：講者面板 pip.box、上緣 6px 主色線、飛入讀 pip.box；外框淡入（不再縮放彈出）
   assert.match(html, /\.pip \{ position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; \}/);
   assert.match(html, /id="pipf-s03" class="clip pip-frame"[^>]*\n\s+style="position:absolute;left:0px;top:897px;width:1080px;height:6px;background:var\(--brand\)"/);
-  assert.match(html, /transformOrigin: '540px 1410px'/);
+  assert.match(html, /tl\.fromTo\('#pipf-s03', \{ opacity: 0 \}, \{ opacity: 1, duration: [\d.]+, ease: 'sine\.out' \}/, '外框只淡入、不縮放（講者不拉近拉遠）');
   assert.ok(!html.includes('kit/pip-frame.png'));
   // FR-024：常駐角標左上 y 250
   assert.match(html, /<div id="chb-1" class="sc-chtag" data-chapter-badge="[^"]+" style="left:60px;top:250px;z-index:25;opacity:0">/);

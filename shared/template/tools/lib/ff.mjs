@@ -9,6 +9,7 @@
 //   filterPath(p)                        → 濾鏡參數裡的路徑（'C\:/x/a.cube'；Windows 的磁碟機冒號要跳脫）
 //   lut3dFilter(file)                    → lut3d=file=…:interp=tetrahedral
 //   encodeMedia(src, dst, { speed, keepAudio })   插入的錄影：同上（另外把 speed 做進檔案、太大的畫面縮到 3840×2160 內）
+//   transcriptFresh(tj, video)           → work/transcript.json 是不是這支 rough.mp4 轉的（noteTranscript 記下轉的時候 rough.mp4 多長）
 //   blackDetect(file, cacheFile, onMiss) → [[起, 迄], …]（全黑＝只有聲音的區間；依檔案大小＋修改時間快取，沒命中時先呼叫 onMiss）
 //   rawFrame(file, { at, width, height })→ Buffer（rgb24；給 contact sheet、格線圖用）
 //   writeJpg(raster, file)               raster＝{ w, h, data }（rgb24）→ JPG
@@ -33,6 +34,25 @@ export function run(cmd, args, opts = {}) {
   return r;
 }
 const tail = (s, n = 400) => String(s ?? '').trim().slice(-n);
+
+// 詞級逐字稿是不是這支 rough.mp4 轉的：不比 rough.mp4 舊就是；比較舊（初剪重做過）時，看 srt-align 記下的當時長度（work/.cache/transcript-of.json）：
+// 逐字稿沒換過、rough.mp4 長度差 ≤ 0.2 秒（剪輯清單沒改、只是重輸出）照用，不用重轉（剪乾淨步驟 6「差超過 0.2 秒才重轉」）
+export const TRANSCRIPT_TOL = 0.2;
+const transcriptNote = (tj) => path.join(path.dirname(tj), '.cache', 'transcript-of.json');
+export function transcriptFresh(tj, video) {
+  if (!video || !fs.existsSync(video) || fs.statSync(tj).mtimeMs >= fs.statSync(video).mtimeMs - 1000) return true;
+  try {
+    const rec = JSON.parse(fs.readFileSync(transcriptNote(tj), 'utf8'));
+    return Math.abs(rec.mtimeMs - fs.statSync(tj).mtimeMs) < 1 && Math.abs(probeDuration(video) - rec.rough) <= TRANSCRIPT_TOL + 1e-6;
+  } catch { return false; }
+}
+export function noteTranscript(tj, video) {
+  try {
+    if (fs.statSync(tj).mtimeMs < fs.statSync(video).mtimeMs - 1000) return;   // 只在剛轉完時記（記的是轉的那一支）
+    fs.mkdirSync(path.dirname(transcriptNote(tj)), { recursive: true });
+    fs.writeFileSync(transcriptNote(tj), JSON.stringify({ rough: probeDuration(video), mtimeMs: fs.statSync(tj).mtimeMs }) + '\n');
+  } catch { /* 記不下來只是之後重輸出初剪時要重轉 */ }
+}
 
 export function probeDuration(file) {
   const r = run('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', file]);

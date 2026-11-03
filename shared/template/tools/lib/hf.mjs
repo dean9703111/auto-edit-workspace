@@ -23,3 +23,26 @@ export function hfArgs(args, root = WS_ROOT) {
   if (!hf?.cli) throw new Error(HF_MISSING);
   return [hf.cli, ...args];
 }
+
+// 專案在工作區外面（例：外接硬碟，projects/ 底下放捷徑）：npx 從實體路徑往上找不到工作區的 node_modules，會跑到快取裡的別版。
+// build 在 work/hyperframes 放 node_modules/.bin/hyperframes（＋Windows 的 .cmd）小腳本指到工作區這一版，
+// 文件裡的 (cd projects/<專案>/work/hyperframes && npx hyperframes …) 就照樣用釘住的版本。外接硬碟常是 exFAT，不能用捷徑，所以寫成腳本。
+export function hfShim(dir, root = WS_ROOT) {
+  const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+  const r = real(root), d = real(dir);
+  if (d === r || d.startsWith(r + path.sep)) return false;
+  const hf = hfLocal(root);
+  if (!hf?.cli) return false;
+  const bin = path.join(dir, 'node_modules', '.bin');
+  fs.mkdirSync(bin, { recursive: true });
+  const sh = `#!/bin/sh\n# build.mjs 產生：專案在工作區外面時，npx hyperframes 用工作區釘住的 ${hf.version}\nexec "${process.execPath}" "${hf.cli}" "$@"\n`;
+  const cmd = `@echo off\r\nrem build.mjs 產生：專案在工作區外面時，npx hyperframes 用工作區釘住的 ${hf.version}\r\n"${process.execPath}" "${hf.cli}" %*\r\n`;
+  let changed = false;
+  for (const [f, c] of [['hyperframes', sh], ['hyperframes.cmd', cmd]]) {
+    const p = path.join(bin, f);
+    if (fs.existsSync(p) && fs.readFileSync(p, 'utf8') === c) continue;
+    fs.writeFileSync(p, c, { mode: 0o755 });
+    changed = true;
+  }
+  return changed;
+}

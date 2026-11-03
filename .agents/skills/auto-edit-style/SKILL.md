@@ -79,7 +79,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 node shared/template/tools/look.mjs status --project projects/<專案>
 ```
 
-改 `shared/template/kit/look.json` 的 `color`（0–1）或 `slim`（0–1.2），其他鍵不動；只想改這一集就寫 plan.json 的 `look`，不要改這個檔。改了 `slim` 照 `look.mjs status` 的「→ 下一步」重跑 `look.mjs run`：「→ 下一步：<說明>」下面那一行（最後一行）就是指令，整行複製、單獨一行執行。
+改 `shared/template/kit/look.json` 的 `color`（0–1）或 `slim`（0–1.2），其他鍵不動；只想改這一集（「這集要調光、瘦臉」）就寫 plan.json 第一層的 `look`（建議 `{ "color": 0.8, "slim": 0.6 }`），不要改這個檔。改了 `slim` 照 `look.mjs status` 的「→ 下一步」重跑 `look.mjs run`：「→ 下一步：<說明>」下面那一行（最後一行）就是指令，整行複製、單獨一行執行。
 完成判準：`look.mjs status` 的「設定」那一行是新的值。
 常見錯誤：把 `color`、`slim` 以外的鍵也改了 → 把那幾個鍵改回原本的值。
 
@@ -102,7 +102,7 @@ node shared/template/tools/brand.mjs use <名稱>
 node shared/template/tools/build.mjs --project projects/<專案>
 ```
 
-先跑 list 把清單貼給使用者（也可以請他打開 `shared/template/index.html`，上方「風格」選單可以直接預覽每一包、亮／暗）。只換這一集：重新讀 plan.json，在第一層寫 `"style": "<名稱>"`（不跑 use）；換回工作區目前的就刪掉 `style`。整個工作區換：跑 use（之後每集都用它）。這一步不用停點 ⑥（風格包已經是使用者同意過的檔）。
+先跑 list 把清單貼給使用者（內建「預設」橘色、示範「藍圖」藍色；也可以請他打開 `shared/template/index.html`，上方「風格」選單可以直接預覽每一包、亮／暗）。只換這一集：重新讀 plan.json，在第一層寫 `"style": "<名稱>"`（不跑 use）；換回工作區目前的就刪掉 `style`。整個工作區換：跑 use（之後每集都用它）。這一步不用停點 ⑥（風格包已經是使用者同意過的檔）。
 完成判準：只換一集時 build 印 `風格包：<名稱>`；整個換時 list 的 ● 在那一包；build 0 個 ✖。
 常見錯誤：`✖ style：找不到風格包` → 名稱照 list 抄（資料夾名，含中文）；use 說「不屬於任何包」→ 先 pack 存起來，不要直接加 `--force`。
 

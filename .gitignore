@@ -8,6 +8,8 @@ projects/example-portrait/work/
 projects/example-portrait/output/
 # 講者資料（創作者自己的姓名、頭銜）：每個人本機各一份，範本是 shared/講者.example.json
 shared/講者.json
+# 構圖台存的預覽參考圖（創作者自己的畫面，情境庫、風格預覽頁的講者改用它）：每個人本機各一份
+shared/template/preview/*-local.jpg
 
 node_modules/
 *.log

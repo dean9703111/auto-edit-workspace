@@ -263,7 +263,7 @@ test('主合成：底片、子合成 host、子母畫面、字幕、音效、底
   assert.match(html, /<i id="tx0b" class="v2-tx v2-tx--b" style="left:0;transform:translateX\(2070px\)"><\/i>/);
   const c = res.globals.pip.crop, k = (x) => String(r3(x)).replace('.', '\\.');
   assert.match(html, new RegExp(`tl\\.fromTo\\('#pip-s02', \\{ x: ${k(c.x - 1424)}, y: ${k(c.y - 594)}, scale: ${k(c.w / 432)}, transformOrigin: '0 0' \\}, \\{ x: 0, y: 0, scale: 1, duration: 0\\.75, ease: 'power3\\.inOut' \\}, 18\\.5\\);`));
-  assert.match(html, /tl\.fromTo\('#pipf-s02', \{ opacity: 0, scale: 1\.04, transformOrigin: '1640px 756px' \}, \{ opacity: 1, scale: 1, duration: 0\.35, ease: 'back\.out\(2\)' \}, 19\.12\);/);
+  assert.match(html, /tl\.fromTo\('#pipf-s02', \{ opacity: 0 \}, \{ opacity: 1, duration: 0\.35, ease: 'sine\.out' \}, 19\.12\);/, '外框只淡入，不縮放');
   const s2 = byId(res, 's02'), back = r3(s2.end - 0.5);
   assert.ok(html.includes(`tl.fromTo('#el-s02', { clipPath: 'inset(0% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 110.4%)', duration: 0.5, ease: 'expo.inOut', immediateRender: false }, ${back});`));
   assert.ok(html.includes(`tl.fromTo('#pip-s02, #pipf-s02', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'sine.in', immediateRender: false }, ${back});`));
@@ -652,6 +652,38 @@ test('常駐章節角標（F1）：02 段起點→下一章；子母畫面／全
   assert.ok(run(scenes, { chapterBadge: 'yes' }).errors.includes('chapterBadge 只能是 true 或 false（不寫＝true：章節角標自動常駐右上角），現在是 "yes" → 不要常駐角標就寫 false，否則刪掉這個欄位'));
 });
 
+test('小節角標（sections）：章號＋目前小節的矮膠囊、全幕也露出；講到那句換名稱；格式錯 ✖、太長／第一章之前 ⚠；講稿有 ### 沒寫 sections → 印可貼的建議', () => {
+  const scenes = [
+    { id: 'c01', scene: 'chapter-tag', from: '#2', to: '#3e', slots: { num: '01', name: '痛點' } },
+    { id: 's02', scene: 'fs-list', from: '#4', to: '#5e', slots: { title: '清單', items: ['一', '二', '三'] } },
+    { id: 's03', scene: 'concept', from: '#6', to: '#7e', slots: { text: '戊己庚辛' } },
+  ];
+  const res = run(scenes, { sections: [{ at: '#4', name: '第一節' }, { at: '#6', name: '第二節' }] });
+  assert.deepEqual(res.errors, []);
+  const b = res.badges[0];
+  assert.deepEqual(b.subs, [{ at: cueStart(4), name: '第一節' }, { at: cueStart(6), name: '第二節' }]);
+  assert.deepEqual(b.show, [[b.start, b.end]], '全幕清單期間不藏（沒有 sections 時會藏，見上一個測試）');
+  const cap = buildCaptions(cues, { duration: VD });
+  const { html } = buildMain({ items: res.items, videoDur: VD, captions: cap, pip: res.globals.pip, badges: res.badges });
+  assert.match(html, /<div id="chb-1" class="sc-sectag" data-chapter-badge="[\d.–]+" style="right:96px;top:56px;z-index:55;opacity:0">/);
+  assert.match(html, /<span id="chb-1-n1" class="sc-sectag__name">痛點<\/span><span id="chb-1-n2" class="sc-sectag__name">第一節<\/span><span id="chb-1-n3" class="sc-sectag__name">第二節<\/span>/);
+  assert.ok(html.includes("tl.set('#chb-1-n1', { opacity: 1 }, 0);") && html.includes("tl.set('#chb-1-n2', { opacity: 0 }, 0);"), '第一個名稱（章名）從頭就在');
+  assert.ok(html.includes(`tl.fromTo('#chb-1-n1', { opacity: 1 }, { opacity: 0, duration: 0.2, ease: 'sine.in', immediateRender: false }, ${cueStart(4)});`));
+  assert.ok(html.includes(`tl.fromTo('#chb-1-n2', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', immediateRender: false }, ${r3(cueStart(4) + 0.1)});`));
+  // 格式與提醒
+  assert.ok(run(scenes, { sections: '#4' }).errors.some((e) => e.startsWith('sections 要寫成陣列')));
+  assert.ok(run(scenes, { sections: [{ at: '#4@字幕', name: '甲' }] }).errors.some((e) => e.startsWith('sections[0].at：只寫 "#N"')));
+  assert.ok(run(scenes, { sections: [{ at: '#6', name: '甲' }, { at: '#4', name: '乙' }] }).errors.some((e) => e.startsWith('sections[1].at：#4 不在前一個小節之後')));
+  assert.ok(run(scenes, { sections: [{ at: '#4', name: '一二三四五六七八九十一二三四五六七' }] }).warnings.some((w) => w.includes('17 字，超過 16 字')));
+  assert.ok(run(scenes, { sections: [{ at: '#1', name: '開場' }] }).warnings.some((w) => w.startsWith('sections[0]（#1「開場」）不在任何一章裡')));
+  // 建議：講稿 ### 底下第一句對字幕；第一章之前的不列
+  const pd = fs.mkdtempSync(path.join(os.tmpdir(), 'sec-'));
+  fs.writeFileSync(path.join(pd, '講稿.md'), '## 開場\n\n### 開頭\n\n第 1 句字幕內容\n\n## 痛點\n\n第 2 句字幕內容\n\n### 第一節\n\n第 4 句字幕內容\n\n### 第二節\n\n```\n不是口播\n```\n第 6 句字幕內容\n');
+  const sug = resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pd });
+  assert.ok(sug.warnings.includes('講稿有 2 個小節（###），plan.json 沒有 sections，觀眾只看得到章名 → 第一層加 "sections": [{"at":"#4","name":"第一節"},{"at":"#6","name":"第二節"}]（name 超過 16 字的自己縮短）'), sug.warnings.join('\n'));
+  fs.rmSync(pd, { recursive: true });
+});
+
 // 範例專案第一次試剪（2026-10-31，projects/example/work.trial1）的固定檔：plan.json（sha1 931c64f3…）、rough.srt、transcript.json、3 支情境動畫
 // 回歸測試：F1 角標覆蓋、F4 回饋表 13 列都要 ✖（不依賴 live 專案）
 const EX = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'example-trial1', 'work');
@@ -748,7 +780,7 @@ test('v2 轉場（design-system §5）：txIn／txOut 分類；換卡不換景�
   const a02 = byId(res, 'a02');
   const asm = assembleScene({ scene: a02.scene, ctx: a02.resolved.ctx, beats: a02.resolved.beats, id: 'a02', D: a02.D, tone: a02.resolved.tone, exitFade: a02.exitFade, chapter: a02.chapter, prev: a02.prev });
   assert.match(asm.html, /<div id="a02-fs-compare" data-composition-id="a02-fs-compare"[^>]* data-prev="fullscreen">/);
-  assert.match(formatReport(res), /\n轉場：色帶擦開 1（a01）；換卡不換景 1（a02）；色帶收回 1（a02）；疊加卡＋講者慢推 2（s01、s02）；章節色塊 1（c01）｜主題：亮色$/m);
+  assert.match(formatReport(res), /\n轉場：色帶擦開 1（a01）；換卡不換景 1（a02）；色帶收回 1（a02）；疊加卡 2（s01、s02）；章節色塊 1（c01）｜主題：亮色$/m);
   const a01 = byId(res, 'a01'), c01 = byId(res, 'c01');
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip, speakerBox: res.globals.speakerBox });
   // 換卡：a01 的 host 多 0.3 s、z 31；接縫那一刻只留內容區，再 0.3 s power2.in 往左擦掉（之前沒有 clip）
@@ -767,30 +799,20 @@ test('v2 轉場（design-system §5）：txIn／txOut 分類；換卡不換景�
   for (const m of html.matchAll(/tl\.(?:fromTo|to|set)\('(#el-[^']+)'[^;]*;/g)) assert.doesNotMatch(m[0], /\b(x|y|scale|xPercent|yPercent|rotation):/, m[0]);
 });
 
-test('講者慢推（§7）：疊加卡期間 #footage-push 1→1.045、原點＝臉（speakerBox 中線、上緣往下 20%）；收卡 0.6 s 推回；接色帶擦開時子母畫面從推過的畫面飛出', () => {
+test('講者不做慢推、子母畫面外框不縮放：疊加卡期間底片不動（沒有 #footage-push）；子母畫面從講者原位（pipCrop）飛入', () => {
   const res = run([
     { id: 's01', scene: 'concept', from: '#1', to: '#3', slots: { text: '甲乙丙丁' } },
     { id: 'a01', scene: 'fs-list', from: '#3', to: '#4e', slots: { title: '清單', items: ['一', '二', '三'] } },
     { id: 's02', scene: 'concept', from: '#7', to: '#8e', slots: { text: '戊己庚辛' } },
   ]);
   assert.deepEqual(res.errors, []);
-  const s01 = byId(res, 's01'), a01 = byId(res, 'a01'), s02 = byId(res, 's02');
-  const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip, speakerBox: res.globals.speakerBox });
-  // speakerBox [700, 200, 1220, 1000] → 臉 (960, 360)
-  assert.ok(html.includes('#footage-push { position: absolute; inset: 0; transform-origin: 960px 360px; }'));
-  assert.match(html, /<div id="footage">\s*<div id="footage-push">\s*<video id="rough"/);
-  assert.ok(html.includes(`tl.fromTo('#footage-push', { scale: 1 }, { scale: 1.045, duration: ${r3(a01.start - s01.start)}, ease: 'sine.inOut', force3D: false }, ${s01.start});`));
-  assert.ok(html.includes(`tl.set('#footage-push', { scale: 1 }, ${r3(a01.start + 0.8)});`), '飛完、幕蓋住之後才歸位');
-  // 飛入起點＝推過 1.045 倍的裁切框（和底下的講者逐像素重合）
-  const c = res.globals.pip.crop, k = 1.045, O = { x: 960, y: 360 };
-  assert.ok(html.includes(`tl.fromTo('#pip-a01', { x: ${r3(O.x + k * (c.x - O.x) - 1424)}, y: ${r3(O.y + k * (c.y - O.y) - 594)}, scale: ${r3(k * c.w / 432)}, transformOrigin: '0 0' }`));
-  // 獨立的疊加卡：推到段尾前 0.6 s，再 0.6 s power2.inOut 推回
-  const back = r3(s02.end - 0.6);
-  assert.ok(html.includes(`tl.fromTo('#footage-push', { scale: 1 }, { scale: 1.045, duration: ${r3(back - s02.start)}, ease: 'sine.inOut', force3D: false, immediateRender: false }, ${s02.start});`));
-  assert.ok(html.includes(`tl.fromTo('#footage-push', { scale: 1.045 }, { scale: 1, duration: 0.6, ease: 'power2.inOut', force3D: false, immediateRender: false }, ${back});`));
-  // 沒有疊加卡：沒有 #footage-push（底片結構不變）
-  const none = run([{ id: 'a01', scene: 'fs-list', from: '#3', to: '#4e', slots: { title: '清單', items: ['一', '二', '三'] } }]);
-  assert.doesNotMatch(buildMain({ items: none.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: none.globals.pip, speakerBox: none.globals.speakerBox }).html, /footage-push/);
+  const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip });
+  assert.doesNotMatch(html, /footage-push/);
+  assert.doesNotMatch(html, /tl\.(fromTo|to|set)\('#footage', \{[^}]*scale/, '底片沒有縮放（只有使用者在剪輯台選 punch 跳接時才有）');
+  assert.match(html, /<div id="footage">\s*<video id="rough"/);
+  const c = res.globals.pip.crop;
+  assert.ok(html.includes(`tl.fromTo('#pip-a01', { x: ${r3(c.x - 1424)}, y: ${r3(c.y - 594)}, scale: ${r3(c.w / 432)}, transformOrigin: '0 0' }`), '飛入起點＝原位的裁切框');
+  assert.doesNotMatch(html, /#pipf-a01', \{ opacity: 0, scale/, '外框只淡入');
 });
 
 test('直式（009 FR-040–043、FR-052）：講者面板 pipGeometry、臉超出面板 ⚠＋pipCrop 建議、format 寫錯 ✖、座標檢查用 1080×1920、footprint 照 canvas、版面中文', async () => {

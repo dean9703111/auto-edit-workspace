@@ -20,7 +20,9 @@
  *       列出每段的版本、哪一版是目前的（和現在的 plan.json、x 檔一致）、比較影片。
  *
  * --project：同 build.mjs。版本只能用這支工具建、退回，不要手動複製或改 work/versions/ 裡的檔（分鏡.md 的提案除外）。
- * 測試用：--template <shared/template 資料夾>、--no-preview（只存檔案，不 build、不 render）
+ * --no-preview：只存檔案，不 build、不 render（一段幾秒，不用等 20–30 秒的預覽）。這一段還沒有任何版本時用（第一次存、
+ *   沒給使用者確認過的草稿，左右比較沒有意義）；之後同一段不加 --no-preview 再 save，會補上缺的預覽。
+ * 測試用：--template <shared/template 資料夾>
  */
 import fs from 'node:fs';
 import path from 'node:path';

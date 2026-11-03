@@ -337,8 +337,10 @@ function decide({ projectDir, plan, templateDir, probe = {} }) {
     warn: `⚠ 瘦臉還沒套到底片（${reason}），這次先用 work/rough.mp4 → ${runCmd}` };
 }
 
+// 關的時候是 kit 預設（沒人決定過）→ 括號裡多一句怎麼開，停點回報貼這兩行，使用者才知道有這個功能
+const offLabel = (L) => (L.source === 'kit' ? 'kit/look.json 預設；要開就在 plan.json 寫 "look"，USAGE.md 第 7 節' : srcLabel(L));
 function colorLine(L) {
-  return L.color > 0 ? `講者調光：${fmtNum(L.color)}（kit/${L.lutRel}，build 重新編碼底片時 bake）` : `講者調光：關（${srcLabel(L)}）`;
+  return L.color > 0 ? `講者調光：${fmtNum(L.color)}（kit/${L.lutRel}，build 重新編碼底片時 bake）` : `講者調光：關（${offLabel(L)}）`;
 }
 
 export function ensureLook({ projectDir, plan = {}, log = () => {}, templateDir = DEFAULT_TEMPLATE, strict = true, probe } = {}) {
@@ -346,11 +348,11 @@ export function ensureLook({ projectDir, plan = {}, log = () => {}, templateDir 
   if (errs.length && strict) throw new Error(errs[0]);
   const d = decide({ projectDir, plan, templateDir, probe });
   const { L, P } = d;
-  if (d.row === 1) return { footage: P.rough, lut: null, key: null, report: [colorLine(L), `講者瘦臉：關（${srcLabel(L)}）`] };
+  if (d.row === 1) return { footage: P.rough, lut: null, key: null, report: [colorLine(L), `講者瘦臉：關（${offLabel(L)}）`] };
   if (d.error && strict) throw new Error(d.error);
   const lut = ensureBlendedLut({ projectDir, lutFile: L.lutFile, color: L.color, log });
   const report = [colorLine(L)];
-  if (d.row === 2) report.push(`講者瘦臉：關（${srcLabel(L)}）`);
+  if (d.row === 2) report.push(`講者瘦臉：關（${offLabel(L)}）`);
   else if (d.row === 5) {
     const s = d.st.landmarks?.summary || {};
     report.push(`講者瘦臉：${fmtNum(L.slim)}（work/rough-look.mp4；偵測率 ${pct(s.rate || 0)}、臉寬中位數 ${Math.round(s.medianFaceWidth || 0)} px）`);

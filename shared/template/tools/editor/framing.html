@@ -40,6 +40,11 @@
   .fr-msg { margin: 10px 0 0; font-size: 13px; white-space: pre-wrap; }
   .fr-msg.err { color: var(--warn-kw); }
   .fr-loading { padding: 48px 16px; text-align: center; color: var(--mute); }
+  .fr-sec { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .fr-lk { display: grid; grid-template-columns: auto 2.5em 1fr 7.5em; gap: 10px; align-items: center; margin-top: 8px; }
+  .fr-lk output { font-family: var(--mono); font-size: 12px; text-align: right; }
+  .fr-ref { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+  .fr-ref .fr-note { margin: 0; }
   @media (max-width: 860px) { .fr-main { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -55,7 +60,7 @@
   <div class="save-state" id="saveState" data-state="loading" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
   <div class="actions">
     <a href="/" class="ghost" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">← 回剪輯台</a>
-    <button id="btnSave" class="primary" disabled title="寫進 plan.json 的 frame（⌘／Ctrl＋S）">儲存</button>
+    <button id="btnSave" class="primary" disabled title="寫進 plan.json 的 frame 和 look（⌘／Ctrl＋S）">儲存</button>
   </div>
 </header>
 
@@ -83,6 +88,10 @@
       <button id="btnFull">原畫面（不裁切）</button>
       <button id="btnSaved">回到存檔的框</button>
     </div>
+    <div class="fr-ref">
+      <button id="btnRef" title="把現在這一格（裁切、調光後的樣子）存成情境庫、風格預覽頁的講者畫面">用這一格當預覽參考圖</button>
+      <p class="fr-note" id="refNote"></p>
+    </div>
   </section>
 
   <section class="fr-panel">
@@ -90,6 +99,14 @@
     <canvas id="preview" class="fr-preview"></canvas>
     <div class="fr-legend" id="legend"></div>
     <ul class="fr-facts" id="facts"></ul>
+    <div class="fr-sec">
+      <h2>講者調光、瘦臉（預設關閉）</h2>
+      <label class="fr-lk"><input type="checkbox" id="colorOn"><span>調光</span><input id="color" type="range" min="0" max="1" step="0.05" value="0"><output id="colorOut">關</output></label>
+      <label class="fr-lk"><input type="checkbox" id="slimOn"><span>瘦臉</span><input id="slim" type="range" min="0" max="1.2" step="0.05" value="0"><output id="slimOut">關</output></label>
+      <p class="fr-note" id="lookNote"></p>
+      <button id="btnDetect" hidden>偵測臉部（會先儲存）</button>
+      <div id="faces" class="look-faces" hidden><figure><img data-k="before" alt="原本"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="瘦臉後"><figcaption>後</figcaption></figure><p class="look-msg fr-note"></p></div>
+    </div>
     <p class="fr-note" id="note"></p>
     <p class="fr-msg" id="msg" role="status"></p>
   </section>

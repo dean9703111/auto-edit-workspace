@@ -727,3 +727,34 @@ test('構圖台（server）：/framing 頁、沒裁切的 /media/source.mp4、/a
     assert.match((await r.json()).message, /寬高比要和畫面一樣/);
   } finally { await ed4.close(); }
 });
+
+test('構圖台（server）：一起存講者調光瘦臉（look，還沒有 plan.json 也行）；瘦臉關著不能偵測；/api/look/status；用這一格當預覽參考圖（裁切、縮放到畫布）', async () => {
+  const dir = path.join(root, 'projects', '構圖二'), w = path.join(dir, 'work'), plan = path.join(w, 'hyperframes', 'plan.json');
+  const prev = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-editor-prev-'));
+  fs.mkdirSync(w, { recursive: true });
+  const v = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=30', '-t', '3', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', path.join(w, 'rough.mp4')]);
+  assert.equal(v.status, 0, String(v.stderr));
+  const ed5 = await E.startEditor({ flags: { project: dir, template: path.join(root, 'shared', 'template') }, cwd: root, port: BASE_PORT + 1210, writeState: false, previewDir: prev });
+  try {
+    const u = (p) => new URL(p, ed5.url);
+    const post5 = (p, body) => fetch(u(p), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const a = await (await fetch(u('/api/framing'))).json();
+    assert.deepEqual([a.look.running, a.look.look.landmarks.ready, a.ref.exists], [false, false, false]);
+    let r = await post5('/api/save', { base: { hash: null }, frame: null, look: { color: 0.8, slim: 0 } });
+    assert.equal(r.status, 200, await r.clone().text());
+    assert.deepEqual(JSON.parse(fs.readFileSync(plan, 'utf8')).look, { color: 0.8, slim: 0 });
+    assert.equal((await r.json()).look.look.effective.color, 0.8);
+    r = await post5('/api/look/run', {});
+    assert.equal(r.status, 400);
+    assert.match((await r.json()).message, /瘦臉是關的/);
+    assert.equal((await (await fetch(u('/api/look/status'))).json()).running, false);
+    assert.equal((await post5('/api/refframe', { t: -1 })).status, 400);
+    r = await post5('/api/refframe', { t: 1, frame: [182, 144, 1664, 936], color: 0.8 });
+    assert.equal(r.status, 200, await r.clone().text());
+    const j = await r.json(), f = path.join(prev, 'speaker-local.jpg');
+    assert.equal(j.ref.exists, true);
+    const p = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f], { encoding: 'utf8' });
+    assert.equal(p.stdout.trim(), '1920,1080', '裁切後縮放到畫布大小');
+    assert.equal((await (await fetch(u('/api/framing'))).json()).ref.exists, true);
+  } finally { await ed5.close(); fs.rmSync(prev, { recursive: true, force: true }); }
+});

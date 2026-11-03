@@ -18,8 +18,9 @@
     }
     // 圖還沒載入時先略過，載入後補畫目前這一格
     imgs.forEach(function (im) { if (!im.complete) im.addEventListener('load', function () { last = -1; draw(); }); });
-    var p = { get f() { return f; }, set f(v) { f = v; draw(); } };
-    tl.fromTo(p, { f: 0 }, { f: map.length, duration: dur, ease: 'none' }, at);
+    // 補間的目標一定要是元素（canvas 本身，幀號掛成它的屬性）：目標是普通物件時，HyperFrames 的 renderSeek 之後畫面不再更新（requestAnimationFrame 不觸發，audit 報 Chrome 沒有回應）
+    Object.defineProperty(cv, 'lensFrame', { configurable: true, get: function () { return f; }, set: function (v) { f = v; draw(); } });
+    tl.fromTo(cv, { lensFrame: 0 }, { lensFrame: map.length, duration: dur, ease: 'none' }, at);
   }
   window.MediaKit = { lens: lens };
 })();

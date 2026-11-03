@@ -133,7 +133,7 @@
 | `anchor` | 選填 | 文字 | | 起點那句的一小段原文 |
 | `in` | 選填 | 秒數 ≥ 0 | `0` | 錄影從第幾秒開始播（圖片忽略）；`in ＋ 段長 × speed` 超過錄影長度 ✖ |
 | `speed` | 選填 | 0.5–4 | `1` | 播放速度（圖片忽略）；聲音也跟著變速 |
-| `fit` | 選填 | `"contain"`、`"cover"` | `"contain"` | contain：整張放進 1920×940（字幕帶上方）置中，空白處是主題底色或 `bg-fs.jpg`（沒有就 `bg.jpg`）；cover：鋪滿 1920×1080 |
+| `fit` | 選填 | `"contain"`、`"cover"` | `"contain"` | contain：整張放進 1920×940（字幕帶上方）置中，空白處是黑底；cover：鋪滿 1920×1080 |
 | `pip` | 選填 | `true`、`false` | `true` | 右下角子母畫面；只有聲音的區間自動不放 |
 | `volume` | 選填 | `null` 或 −60～+12（dB） | `null` | `null`＝靜音；數字＝保留素材原聲（素材沒有聲音時 ⚠ 並忽略），疊在 `edit.volume.media` 上 |
 | `enter`／`exit` | 選填 | `"cut"`、`"fade"`、`"slide"`、`"zoom"` | `"fade"` | 進場 0.5／0.5／0.6／0.5 秒、出場 0.5／0.5／0.6／0.4 秒；接在另一張整張幕後面時 `fade` 自動變 `cut` |
@@ -277,6 +277,7 @@
 | 11 總結、15 金句（置中） | x 510–1410、y 536–860 |
 | 12 關鍵詞條列 | x 120–560、y 160–870 |
 | 02 章節角標 | x 1200–1824、y 56–168 |
+| 小節角標（有 `sections`） | x 1200–1824、y 56–120 |
 | 05 兩側 | x 96–600 與 1320–1824、y 160–870 |
 
 碰撞提醒是用這張固定範圍算的，只是提醒；最後以 snapshot 為準。
@@ -730,7 +731,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 
 ### R9.2 背景圖
 
-- 每種版面一張，檔名固定：`shared/template/bg-fs.jpg`（1920×1080，全畫面與插入素材的空白處）、`bg-side.jpg`（960×1080，側邊欄面板）、`bg-ch.jpg`（1920×1080，章節轉場）。哪張沒有就用 `shared/template/bg.jpg`（舊的單張寫法，側邊欄取它的左半）；都沒有就是主題底色與底紋。
+- 每種版面一張，檔名固定：`shared/template/bg-fs.jpg`（1920×1080，全畫面；插入素材四周一律黑底）、`bg-side.jpg`（960×1080，側邊欄面板）、`bg-ch.jpg`（1920×1080，章節轉場）。哪張沒有就用 `shared/template/bg.jpg`（舊的單張寫法，側邊欄取它的左半）；都沒有就是主題底色與底紋。
 - 留空的地方：全畫面主卡 x 120–1380、y 150–862，子母畫面 x 1424–1888、y 581–951，字幕帶 y ≥ 920；側邊欄文字區 x 0–816、y 86–864（左 85%、y 8–80%）；章節幕章名卡 x 160–1760、y 260–870（建議初值）。裝飾放在這些區域以外。`brand.mjs bg` 用同一組數字疊框、檢查。
 - 現在的三張是 2026-10-30 用 Codex 照 PPA 風格生成的（淺暖底、橘色線稿；提示詞與參考圖見 git log）。重新生成：`codex exec --skip-git-repo-check -C <暫存資料夾> -s workspace-write -i <參考圖> ... < prompt.md`（`-i` 會吃掉後面的字串，提示詞一定從 stdin 給），生成後用 ffmpeg 縮放成上面的尺寸存 jpg。
 - 影響範圍：01 章節轉場、04 全畫面家族、03 側邊欄面板（取圖的左半）。
@@ -808,7 +809,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 情境動畫範例 | `shared/template/custom/x-*.html` | 9 支 | 複製到 `work/hyperframes/compositions/` 改（R7.5） |
 | 情境預覽 | `shared/template/preview/<NN>-<key>.html`、`shared/template/gallery/*.jpg` | 18 頁 | 給使用者看用；預覽講者是 Q 版圖、位置置中，實際版面以場地照與 snapshot 為準 |
 | 頻道主題 | `shared/template/kit/brand.css`（主色 3 行）、`theme.css`、`scene.css` | 1 套 | 換主色見 R9 |
-| 背景圖掛鉤 | `shared/template/bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（沒有的退回 `bg.jpg`） | 3 個 | 分別套到全畫面（含插入素材）、側邊欄、章節轉場 |
+| 背景圖掛鉤 | `shared/template/bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（沒有的退回 `bg.jpg`） | 3 個 | 分別套到全畫面、側邊欄、章節轉場（插入素材四周是黑底） |
 | 圖示 | `shared/template/kit/icons.json` | 約 1,550 個 lucide 圖示 | slots 裡寫圖示名（例：`clipboard-list`） |
 | 字型 | `shared/template/kit/fonts/` | Noto Sans TC、Google Sans Flex（OFL） | 已由 `kit/fonts.css` 載入，不用安裝 |
 | 音效 | `shared/sfx/*.wav`＋`shared/template/kit/sfx.json` | 18 個 | build 自動配，見 R5 |

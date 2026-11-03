@@ -66,7 +66,7 @@ ffprobe -v error -show_entries format=duration -of csv=p=0 "<主軌>"
 | 找不到 `node`／`ffmpeg`，或使用者說裝工具 | `auto-edit-setup` |
 | 沒有 `work/rough.mp4`，或沒有 `work/cutpoints.json` | `auto-edit-rough` |
 | 有 `work/rough.mp4`、`work/rough.srt`；停點 ③ 沒有「通過」 | `auto-edit-storyboard` |
-| ③ 通過；plan.json 有 `"type": "custom"` 的段、對應的 `compositions/x-*.html` 不存在或還是範例原文 | `auto-edit-motion`（每段一次；有子代理可以平行，選用） |
+| ③ 通過；plan.json 有 `"type": "custom"` 的段、對應的 `compositions/x-*.html` 不存在或還是範例原文 | `auto-edit-motion`（2 段以上、有子代理工具就一段一個子代理，一次全部派出，派工訊息照 `auto-edit-motion` 的派工範本 worker-brief.md） |
 | status 印「目前在：改版／…」（`work/versions/` 有沒做完的提案） | `auto-edit-review` 流程 D |
 | ③ 通過、情境動畫都做完；④ 沒有「通過」 | `auto-edit-review` |
 | ④ 通過；沒有 `output/final.mp4` | `auto-edit-deliver` |

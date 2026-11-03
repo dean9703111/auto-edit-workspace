@@ -59,6 +59,16 @@ test('media.mjs main：照檔名接主軌，聲音檔配純黑畫面，寫 work/
   const bad = node(MEDIA, ['main', '--order', '沒有這個.mp4']);
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /--order 的「沒有這個\.mp4」找不到/);
+  // 檔名@起-迄：只取那一段、同一支可以切成前後兩段（補錄插進旁白中間）；clips 記 src
+  const rg = node(MEDIA, ['main', '--order', '01-開場.mp4@0-3,02-旁白.m4a@1-2.5,01-開場.mp4@5-']);
+  assert.equal(rg.status, 0, rg.stdout + rg.stderr);
+  assert.match(rg.stdout, /接主軌 1\/3：assets\/camera\/01-開場\.mp4@0–3s/);
+  const jr = JSON.parse(fs.readFileSync(path.join(proj, 'work', 'main.json'), 'utf8'));
+  assert.deepEqual(jr.clips.map((c) => [c.file, c.start, c.end, c.src]), [['assets/camera/01-開場.mp4', 0, 3, [0, 3]], ['assets/voice/02-旁白.m4a', 3, 4.5, [1, 2.5]], ['assets/camera/01-開場.mp4', 4.5, 7.5, [5, 8]]]);
+  assert.ok(Math.abs(Number(probe(main, 'format=duration')) - 7.5) < 0.05);
+  const bad2 = node(MEDIA, ['main', '--order', '02-旁白.m4a@3-2']);
+  assert.match(bad2.stderr, /迄要比起大/);
+  node(MEDIA, ['main']);   // 還原給後面的測試
 });
 
 test('media.mjs main：只有一支真人錄影也轉成固定 fps 的 work/main.mp4（auto-editor 剪手機原檔會黑畫面，F2）', () => {
@@ -182,8 +192,8 @@ test('ng-snap：NG 吸附停頓、找不到停頓用原值 ⚠、章節保留 3 
   assert.equal(cmds.length, 3);
   const args = '--edit "audio:-20dB" --margin 0.15sec --cut-out "10sec,23sec" --cut-out "30sec,31sec" --add-in "38.3sec,41sec" --add-in "59sec,59.9sec"';
   assert.equal(cmds[0], `auto-editor "projects/pn/work/main.mp4" ${args} --preview`);
-  assert.equal(cmds[1], `auto-editor "projects/pn/work/main.mp4" ${args} -o "projects/pn/work/rough.mp4" --no-open`);
-  assert.equal(cmds[2], `auto-editor "projects/pn/work/main.mp4" ${args} --export v1 -o "projects/pn/work/cuts.v1.json"`);
+  assert.equal(cmds[1], `auto-editor "projects/pn/work/main.mp4" ${args} -o "projects/pn/work/rough.mp4" --no-open --progress none`);
+  assert.equal(cmds[2], `auto-editor "projects/pn/work/main.mp4" ${args} --export v1 -o "projects/pn/work/cuts.v1.json" --progress none`);
   assert.match(r.stdout, /→ 然後跑 node shared\/template\/tools\/media\.mjs verify-rough --project projects\/pn（檢查初剪有沒有黑畫面），再跑 node shared\/template\/tools\/media\.mjs cutpoints --project projects\/pn/);
   // 終點往後延到停頓末端（20.30 → 23.00）：說清楚後一次從 23.00 才開口、完整保留（弱模型才不會誤標待確認）
   assert.match(r.stdout, /1 {3}0:10\.20–0:20\.30\s+0:10\.00–0:23\.00\s+我們先來看；終點落在後一次開口（0:23\.00）之前的停頓末端，後一次完整保留\n/);
@@ -210,6 +220,9 @@ test('ng-snap：NG 連下一句開頭一起剪、吃掉章節的停頓 → 這�
   // A-05：終點落在章節停頓裡 → 吸到停頓起點，起點找不到停頓 → 只有起點用原值
   const [ng2] = snapNg([{ row: 1, start: 37, end: 39 }], sil, 1, [ch.sil]);
   assert.deepEqual([ng2.a, ng2.b, ng2.missStart, ng2.missEnd, ng2.toChapter], [37, 37.3, true, false, true]);
+  // 帶保留區起點 → 吸到保留區起點（中間那段停頓本來就剪，一起剪才不留殘片）
+  const [ng3] = snapNg([{ row: 1, start: 37, end: 39 }], sil, 1, [[...ch.sil, ch.keep[0]]]);
+  assert.deepEqual([ng3.a, ng3.b, ng3.toChapter], [37.3, 38.3, true]);
   const p = mkProj('pm');
   clip(path.join(p, 'assets', 'camera', 'a.mp4'), 1);
   clip(path.join(p, 'assets', 'camera', 'b.mp4'), 1);
@@ -473,6 +486,10 @@ test('F8 srt-align 重新對句號的三個坑：情境動畫只換 <script> 裡
   assert.equal(np.outro.from, '#4+2.6');
   assert.equal(refTime(np.outro.from, newCues), 8);
   assert.deepEqual(plan.scenes[1], { id: 's02', type: 'media', anchor: '重點來了', from: '#3', to: '#3+2.5' }, '不改原物件');
+  // 章節轉場的 at 只能寫 "#N"：照時間換出 "#5-1.5" 這種（字幕避開了章節前的停頓）時收回成那一句
+  const ch = remapPlanByTime({ version: 1, scenes: [{ id: 'c01', scene: 'chapter', at: '#4' }] }, oldCues,
+    [...oldCues.slice(0, 3), { n: 4, start: 9.5, end: 12, text: '第四句很長' }]).plan.scenes[0];
+  assert.equal(ch.at, '#4');
   // 坑 2、3：情境動畫只換 <script> 裡、不在註解裡的 P.at('#N…')；檔頭 HTML 註解（裡面寫了「<script>」）、JS 註解、屬性、一般字串都不動
   const html = `<!doctype html>
 <!-- 情境動畫範例：在 <script> 裡寫 P.at('#3') 綁第 3 句（檔頭說明，不要改） -->
@@ -593,4 +610,26 @@ test('screen-sync：照 main.json＋cuts.v1.json 算 sync 段（不超過錄影�
   assert.deepEqual(plan.scenes.map((s) => s.id), ['s01', 'sync01', 'sync02']);
   assert.equal(plan.scenes[1].src, 'assets/screen/s.mp4');
   assert.ok(fs.readdirSync(path.join(p, 'work', 'hyperframes')).some((f) => f.startsWith('plan.json.sync-')));
+});
+
+test('transcriptFresh：初剪重輸出（長度差 ≤ 0.2 秒）照用 srt-align 記下的逐字稿；長度變了或逐字稿換過 → 要重轉', async () => {
+  const { transcriptFresh, noteTranscript } = await import(path.join(TOOLS, 'lib', 'ff.mjs'));
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-tjf-'));
+  const tj = path.join(d, 'transcript.json'), rough = path.join(d, 'rough.mp4');
+  clip(rough, 1);
+  const t0 = new Date(Date.now() - 120000), t1 = new Date(Date.now() - 60000);
+  fs.utimesSync(rough, t0, t0);
+  fs.writeFileSync(tj, '[]');
+  fs.utimesSync(tj, t1, t1);
+  assert.equal(transcriptFresh(tj, rough), true, '比 rough.mp4 新');
+  noteTranscript(tj, rough);
+  assert.ok(fs.existsSync(path.join(d, '.cache', 'transcript-of.json')));
+  clip(rough, 1);   // 重輸出：同樣長、比逐字稿新
+  assert.equal(transcriptFresh(tj, rough), true, '長度沒變 → 照用');
+  noteTranscript(tj, rough);   // 逐字稿比較舊時不重記
+  clip(rough, 2);
+  assert.equal(transcriptFresh(tj, rough), false, '長度變了 → 重轉');
+  fs.unlinkSync(path.join(d, '.cache', 'transcript-of.json'));
+  clip(rough, 1);
+  assert.equal(transcriptFresh(tj, rough), false, '沒有紀錄 → 照修改時間判斷');
 });

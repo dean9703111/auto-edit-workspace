@@ -43,7 +43,7 @@ node shared/template/tools/qc.mjs framing --project projects/<專案>
 node shared/template/tools/editor.mjs --project projects/<專案>
 ```
 
-第 1 行量講者動作範圍、算建議的框（約 5–15 秒），第 2 行在背景開剪輯台（已經開著會印網址）。把剪輯台印的「構圖台」網址、`work/look-preview.jpg`（有的話）和「建議：…」那一行給使用者：使用者在構圖台拖框、看右邊套上字幕與字卡的樣子，按「儲存」就寫進 plan.json 的 `frame`（還沒有 plan.json 會新建）；調光、瘦臉預設是關的，回報裡加一句「要調光、瘦臉可以說（USAGE.md 第 7 節）」。
+第 1 行量講者動作範圍、算建議的框（約 5–15 秒），第 2 行在背景開剪輯台（已經開著會印網址）。把剪輯台印的「構圖台」網址、`work/look-preview.jpg`（有的話）和「建議：…」那一行給使用者：使用者在構圖台拖框、看右邊套上字幕與字卡的樣子，按「儲存」就寫進 plan.json 的 `frame`（還沒有 plan.json 會新建）。構圖台下面還有講者調光、瘦臉（預設關；打開瘦臉要按「偵測臉部」，在背景跑）和「用這一格當預覽參考圖」（情境庫、風格預覽頁的講者換成使用者自己的畫面），回報裡一句帶到。
 構圖台一打開的框就是表上 ✔ 的建議（不切到手勢、每個像素放大不超過 3.5 倍的倍率裡最大的），切到手勢、太糊、直式頭頂不在 y 380–520 或下巴超過 860 會即時標紅。
 完成判準：`work/構圖預覽.jpg` 存在；構圖台網址與「建議：…」那一行原文已貼進回覆。
 常見錯誤：印 `建議：1.13x（每個倍率都標了切到手勢或放大超過 3.5 倍，選表上最小的；最後由使用者選）` → 照建議給表上最小的那一列（有黑邊時不是 1.00x，1.00x 會露出黑邊），回報裡說明。
@@ -55,7 +55,7 @@ ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<
 node shared/template/tools/qc.mjs speaker --project projects/<專案>
 ```
 
-第 1 行只在專案裡沒有檔名含「場地照」的圖時才跑。「調好了」：構圖台已經寫好 `frame`，重新讀 plan.json 就好，不要再改；「用建議的」：把表上 ✔ 那一列的 `frame` 寫進 plan.json 第一層（1.0 倍不寫）。看 `work/場地照-動作範圍.jpg` 讀手勢最遠的邊，寫 `speakerBox`（做法 USAGE.md 2.2）。
+第 1 行只在專案裡沒有檔名含「場地照」的圖時才跑。「調好了」：構圖台已經寫好 `frame`，重新讀 plan.json 就好，不要再改；「用建議的」：把表上 ✔ 那一列的 `frame` 寫進 plan.json 第一層（1.0 倍不寫）。看 `work/場地照-動作範圍.jpg` 讀手勢最遠的邊，寫 `speakerBox`（做法 USAGE.md 2.2）。字幕用 `work/rough.srt`，不重新轉錄。
 完成判準：plan.json 有 `speakerBox`；`--check` 不再印「沒寫 speakerBox」。
 常見錯誤：`--check` 提醒「看起來是用原尺寸截圖的像素量的」→ 改成它附的換算後的框。
 
@@ -68,7 +68,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 | 條件（看得到的事實） | 做什麼 |
 |---|---|
 | `assets/screen/` 或 `assets/images/` 有檔案 | 照 `auto-edit-screen` 做（2 支以上可以派 explore 子代理，選用），結果寫進分鏡表的 media 列 |
-| `--check` 印「只有聲音」的區間 | 同上；那個區間一定要被 media 段或不透明的全幕蓋住 |
+| `--check` 印「只有聲音」的區間 | 同上；那個區間一定要被 media 段或不透明的全幕蓋住。素材裡找不到對得上口播的錄影或圖片時，照步驟 5 做情境判定，改做不透明的全幕情境動畫（介面操作用 `x-ui-mock`；只有聲音的區間沒有講者小窗），分鏡表那一列寫「沒有對應素材，改做動畫」 |
 | 都沒有 | 跳過 |
 
 完成判準：每個「只有聲音」的區間在分鏡表都有一列寫用哪一段蓋住。
@@ -80,11 +80,13 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 node shared/template/tools/build.mjs --list
 ```
 
-先填情境判定表（storyboard.md 的「情境判定」節，表頭照 `references/storyboard-template.md`），一段一列：口播在講什麼 → `shared/template/SITUATIONS.md` §3 哪一列 → 首選 → 為什麼不是動畫。
-規則：首選欄是情境動畫就做動畫（從哪支範例改看 §3 的「動態」欄）；只有不符合 style.md「情境動畫優先」三條判準才退到字卡，「為什麼不是動畫」寫不符合哪一條。連續 2 段以上都是 06／07／12／13 字卡，就回頭查 §3 有沒有動畫列。列點、數字先對這張（§3 都有那一列）：
+先填情境判定表（storyboard.md 的「情境判定」節，表頭照 `references/storyboard-template.md`），一段一列：口播在講什麼 → `shared/template/SITUATIONS.md` §1 第 1 步的四題（只讀那幾行）定大類 → §3 哪一列 → 首選 → 為什麼不是動畫。第 ② 題（口播裡有看得見的東西在動：裝置、人、檔案、畫面、時間）是「是」就做示意動畫 `x-scene`，畫法先查 `shared/template/BEATS.md` §5.4，句型像流程、條列也一樣。§3 是一張大表，只讀對得上的那一列：先 `grep -n '^| ' shared/template/SITUATIONS.md | cut -d'|' -f1,2` 看每列第一欄「句子長這樣」，挑到再讀那一行整列，不要整節讀。
+規則：首選欄是情境動畫就做動畫（從哪支範例改看 §3 的「動態」欄）；只有不符合 style.md「情境動畫優先」三條判準才退到字卡，「為什麼不是動畫」寫不符合哪一條。
+**快速初稿**（只有使用者說「快速初稿」「先出初稿」「動畫之後再做」才用，回報第一行寫「快速初稿」）：判定表照填、首選照寫；首選是情境動畫的段，plan.json 先放 §3「次選」欄的卡（只有聲音的區間放不透明的全畫面卡），「為什麼不是動畫」寫「快速初稿，待做 x-<名稱>」，先不寫動畫分鏡。停點 ④ 回報列「待做動畫：<段> x-<名稱>、…」；使用者說「s05 做動畫」「動畫都做」就走改版（`node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段,段>`，2 段以上平行派子代理）。連續 2 段以上都是 06／07／12／13 字卡，就回頭查 §3 有沒有動畫列。列點、數字先對這張（§3 都有那一列）：
 
 | 句子長這樣 | 情境動畫 |
 |---|---|
+| 看得見的東西在動：手機、腳架、電腦、雲端、人走過去、檔案傳過去、計時（試錄、上傳下載、跑去看、走來走去） | `x-scene`（拍型 S，BEATS.md §5.4） |
 | 一個主體＋2–4 個短名詞（毛病、零件、用途） | `x-callout` |
 | 2–4 件要確認／完成的事 | `x-checklist` |
 | 由下往上的組成，3–4 層、從底層講起 | `x-stack` |
@@ -94,11 +96,11 @@ node shared/template/tools/build.mjs --list
 | 一個比例或一段時間＋起點與結論 | `x-ring` |
 | 兩個選項在 2–3 個面向上比，都有數字 | `x-versus` |
 
-章節角標不用另排（build 自動常駐）；沒有 01 的短片，在章節起點放一段 02（≥ 3.5 秒，R2.2），build 會在那裡自動掃過一次色帶。金句先放候選表讓使用者勾（style.md「字卡文字」），不直接上。
+章節角標不用另排（build 自動常駐）；講稿有 `###` 小節時，把 `--check` ⚠ 印的 `sections` 整段貼進 plan.json 第一層（名稱太長照 ⚠ 縮短），右上角就會顯示目前在講哪一節；沒有 01 的短片，在章節起點放一段 02（≥ 3.5 秒，R2.2），build 會在那裡自動掃過一次色帶。金句先放候選表讓使用者勾（style.md「字卡文字」），不直接上。資訊卡照 style.md「字卡文字」，有圖示欄位就配（寫進本集圖示表）。
 判定表填完，照 `shared/template/SITUATIONS.md` §6 整集看一次：開場三拍、前後呼應、判決句（蓋章）。口播本來就沒有的不硬湊；有排的在判定表那一段的「首選」寫清楚（例：`x-checklist-2（呼應 s04）`）。
-判定表之後寫動畫分鏡（情境動畫 `x-*`、04 家族的段；06／07／12／13 字卡不用）：看 §3 那一列的「拍型」，從 `shared/template/BEATS.md` §3 抄那個拍型的整張表到那一段底下（標題 `#### 動畫分鏡 <段 id>`，表頭照抄），只填講到的 `#N@詞` 和畫面上的字；動態欄只用語彙表的名稱，不自己加拍、刪拍（BEATS.md §1）。拍型「待定」的照 BEATS.md §4 排，並列進「需要我決定的事」。
+判定表之後寫動畫分鏡（情境動畫 `x-*`、04 家族的段；06／07／12／13 字卡不用）：看 §3 那一列的「拍型」，從 `shared/template/BEATS.md` §3 只讀那個拍型的小節（`### A 流程`…`### I 介面操作`，用 `grep -n '^### ' shared/template/BEATS.md` 找行號），抄那個拍型的整張表到那一段底下（標題 `#### 動畫分鏡 <段 id>`，表頭照抄），只填講到的 `#N@詞` 和畫面上的字；動態欄只用語彙表的名稱，不自己加拍、刪拍（BEATS.md §1）。拍型「待定」的照 BEATS.md §4 排，並列進「需要我決定的事」。
 示意動畫（拍型 S、`x-scene`）的段多做兩件事（BEATS.md §5）：分鏡表用八欄表頭（後面加「插圖元件（狀態）」「位置」），「位置」寫排法 `<區域>｜<排法> <第幾個>`（例 `panelTop｜row 1／3`），不寫像素（`shared/style.md`「版面」）；表下面寫 `#### 插圖清單 <段 id>`，表頭 `| 元件 | 來源 | 怎麼來 |`，每個元件照這個順序選來源，前一種能用就不要往下（`shared/template/kit/illus-style.md` §1）：1. 畫廊裡有 → 直接用 `data-illus="<元件名>"`（畫廊每格下面有寫法）。2. lucide 圖示（`kit/icons.json`）單個或 2–3 個組合放進卡片、膠囊能表達 → 用圖示。3. 都不行 → 照 `shared/template/kit/illus-style.md` 新畫一個 SVG。相片、背景、質感圖不走這條；示意插圖一律是向量線條。畫廊先打開 `shared/template/kit/illus-gallery.jpg` 看；「新建 SVG」列的「怎麼來」寫 `規格：<名稱>，建議尺寸 <寬>×<高>，狀態 <a>／<b>；描述：…`。插圖清單和分鏡在停點 ③ 一起確認。
-完成判準：判定表每段一列、每欄都有值；首選是情境動畫的段不是 custom 時，「為什麼不是動畫」寫的是三條判準之一；每段都有版面（疊加／半畫面／子母畫面／全幕之一；直式只用疊加／上下分割／全幕，不挑 03、05）、情境 key；主句 8–14 字（style.md，build 不檢查，自己數：全形 1、半形 0.5）；每段情境動畫都有一張動畫分鏡，表頭和 BEATS.md 一字不差。
+完成判準：判定表每段一列、每欄都有值；首選是情境動畫的段不是 custom 時，「為什麼不是動畫」寫的是三條判準之一；每段都有版面（疊加／半畫面／子母畫面／全幕之一；直式只用疊加／上下分割／全幕，不挑 03、05）、情境 key；主句 8–14 字（style.md「字卡文字」，build 不檢查，自己數：全形 1、半形 0.5）；每段情境動畫都有一張動畫分鏡，表頭和 BEATS.md 一字不差。
 常見錯誤：「為什麼不是動畫」寫「字卡比較簡單」「時間不夠」→ 不是判準，改做動畫；版面寫成 overlay、panel → 只用四個名稱；動畫分鏡的動態欄寫「閃一下」「放大很多」→ 換成語彙表的名稱（聚焦、重拍…）；畫廊裡有的元件也寫成「新建 SVG」→ 照判定順序改回「畫廊」；「位置」寫成 `x 160–480` 這種像素 → 改寫排法；字幕還有超過 18 字的 → 照 USAGE.md 2.4（到剪輯台分割，剪輯台會一起重對句號）。
 
 **6. 草稿 plan.json → 檢查 → build → 截圖 → 寫分鏡表 → 停點 ③**
@@ -109,8 +111,8 @@ node shared/template/tools/build.mjs --project projects/<專案>
 node shared/template/tools/qc.mjs storyboard --project projects/<專案>
 ```
 
-草稿 plan.json：直式時第一層先寫 `"format": "portrait"`；有 `work/screen-sync.json`（邊錄邊講的螢幕錄影）就先跑 `node shared/template/tools/media.mjs screen-sync --project projects/<專案> --write-plan`，sync 段照錄影原本的時間對好，不用再配也不要改 `in`；段的 `from` 綁這段第一句；卡片主文字、每條項目、每個動畫站綁講到那個詞的 `#N@詞`（USAGE.md 3.4；哪個欄位改哪個時間點見 USAGE-reference.md R2.8，例：07 的 `key` 寫 `beats.keyAt`、清單寫 `slots.items[i].at`）。`--check` 的 ✖ 全部修掉才 build。段尾完成態不到 1.5 秒（印「最後一幕太短」）時，先把這段的 `to` 往後延（不超過下一段起點、最多 0.5 秒）再跑一次；延了還不夠，才列進「需要我決定的事」。`qc.mjs storyboard` 自己算每段的完成態（條列逐條換的每次一張、錄影段每個標註到位一張），最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每段「截圖觀察」上面，**只貼這一次印出來的那幾行**（同一段張數變了，工具會清掉舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」）；每張後面的「為什麼」（完成態、第 N 條、…到位、整段都在動）照 USAGE.md 2.3 讀；截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard，還是一樣就在「需要我決定的事」列出段號和秒數。不要自己算秒數跑 `snapshot --at`。照 `references/storyboard-template.md` 寫 `work/storyboard.md`；「音效」欄寫 `預設`、`無`、換的名稱（例 `shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`。拿不定版面的段落：先把第一個方案的圖改名成 `s05-A.png`，改 plan.json、build、再跑一次 storyboard 得到 `s05.png`，兩張並排請使用者選。
-完成判準：`--check` 的「文字對時」0 個 ✖，⚠ 也照改（不改的在該段「截圖觀察」寫理由）；沒有「#N@詞 有 N 個用字數比例估」的 ⚠；`--check --json` 每個子母畫面段的 `pip` 不是空的；storyboard.md 有 speakerBox、本集圖示表、總覽表（含「章」欄）、情境判定表、每段一節＋截圖＋截圖觀察、需要我決定的事（含金句候選表；`sparkle`、`shine`、`thunder` 超過 style.md 每集上限時列出來讓使用者挑；結尾要不要配樂 `outro` 列一題）；`--check` 報告「沒有畫面的區間」是「無」，或每段都寫了理由。
+草稿 plan.json：直式時第一層先寫 `"format": "portrait"`；有 `work/screen-sync.json`（邊錄邊講的螢幕錄影）就先跑 `node shared/template/tools/media.mjs screen-sync --project projects/<專案> --write-plan`，sync 段照錄影原本的時間對好，不用再配也不要改 `in`；段的 `from` 綁這段第一句；卡片主文字、每條項目、每個動畫站綁講到那個詞的 `#N@詞`（USAGE.md 3.4；哪個欄位改哪個時間點見 USAGE-reference.md R2.8，例：07 的 `key` 寫 `beats.keyAt`、清單寫 `slots.items[i].at`）。例：07 重點字卡寫 `"slots": { "key": "一鍵同步" }, "beats": { "keyAt": "#12@同步" }`，不是綁句首的 `#12`。情境動畫段：從 `shared/template/custom/` 複製最接近的範例成 `compositions/x-<名稱>.html` 登記進草稿（`"type": "custom"`），範例原文 build 只 ⚠「還沒做」、不擋，截圖是範例的樣子，要做的內容寫在動畫分鏡。`--check` 的 ✖ 全部修掉才 build。段尾完成態不到 1.5 秒（印「最後一幕太短」）時，先把這段的 `to` 往後延（不超過下一段起點、最多 0.5 秒）再跑一次；延了還不夠，才列進「需要我決定的事」。`qc.mjs storyboard` 自己算每段的完成態（條列逐條換的每次一張、錄影段每個標註到位一張），最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每段「截圖觀察」上面，**只貼這一次印出來的那幾行**（同一段張數變了，工具會清掉舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」）；每張後面的「為什麼」（完成態、第 N 條、…到位、整段都在動）照 USAGE.md 2.3 讀；截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard，還是一樣就在「需要我決定的事」列出段號和秒數。不要自己算秒數跑 `snapshot --at`。照 `references/storyboard-template.md` 寫 `work/storyboard.md`；「音效」欄寫 `預設`、`無`、換的名稱（例 `shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`。拿不定版面的段落：先把第一個方案的圖改名成 `s05-A.png`，改 plan.json、build、再跑一次 storyboard 得到 `s05.png`，兩張並排請使用者選。
+完成判準：`--check` 的「文字對時」0 個 ✖，⚠ 也照改（不改的在該段「截圖觀察」寫理由）；沒有「#N@詞 有 N 個用字數比例估」的 ⚠；情境動畫段的「動畫分鏡：」⚠（拍序和口播相反、拍在段尾淡出之後、照範例檔頭【D 下限】放不下）照 → 改分鏡表，不改的在那段「需要我決定的事」寫理由；`--check --json` 每個子母畫面段的 `pip` 不是空的；storyboard.md 有 speakerBox、本集圖示表、總覽表（含「章」欄）、情境判定表、每段一節＋截圖＋截圖觀察、需要我決定的事（含金句候選表；`sparkle`、`shine`、`thunder` 超過 style.md「音效」每集上限時列出來讓使用者挑；結尾要不要配樂 `outro` 列一題）；`--check` 報告「沒有畫面的區間」是「無」，或每段都寫了理由；沒有「音效稀疏」⚠（照它括號裡列的段，在情境動畫的結果／壞事那拍或錄影段補 success／alert）。
 常見錯誤：印 `✖ s21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough …`（或 `--check --json` 子母畫面段的 `pip` 是空的）→ 不是版面的問題，不要改 plan.json；照 → 重做初剪（`auto-edit-rough` 步驟 6），再 build、再截圖；`qc.mjs storyboard` 印 `✖ plan.json 在上次 build 之後改過` → 先 build 再截圖；印 ✖ 找不到 Chrome → `npx hyperframes browser ensure` 再跑一次。
 
 **7. ③ 通過：寫正式 plan.json**
@@ -121,7 +123,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 
 先重新讀 `work/storyboard.md`，以檔案內容為準重寫 plan.json；超過字數上限或違反規則的地方先列給使用者，不要自己改。金句候選只留勾了的。動畫分鏡也以檔案為準（使用者改過的拍照改過的做）。
 完成判準：`--check` 0 個 ✖；plan.json 每段 `id` 和 storyboard.md 的段落編號一致。
-常見錯誤：有 `"type": "custom"` 的段 → 交 `auto-edit-motion`（附那段確認過的動畫分鏡）；沒有 → 交 `auto-edit-review` 流程 A。
+常見錯誤：有 `"type": "custom"` 的段 → 交 `auto-edit-motion`（附那段確認過的動畫分鏡；2 段以上有子代理工具就一次全部平行派出，派工訊息照 `auto-edit-motion` 的派工範本 worker-brief.md）；沒有 → 交 `auto-edit-review` 流程 A。
 
 ## 停點
 
@@ -132,7 +134,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 
 | 停點 | 使用者回 | 做什麼 |
 |---|---|---|
-| ② | 倍率數字（例「1.15」）；說要改調光、瘦臉 | 寫 `frame` → 步驟 3；調光瘦臉照 USAGE.md 第 7 節寫 plan.json 的 `look`：改了 `slim` 要再跑 `look.mjs run`，只改 `color` 跑 `node shared/template/tools/look.mjs preview --project projects/<專案>` 重畫對照圖 |
+| ② | 「調好了」；倍率數字（例「1.15」）；說要改調光、瘦臉 | 「調好了」：重新讀 plan.json（構圖台已寫 `frame`、`look`），跑 `look.mjs status` 照「→ 下一步」做（瘦臉還在背景跑就先做不用 build 的步驟）→ 步驟 3。倍率數字：寫 `frame` → 步驟 3。用說的改調光瘦臉：照 USAGE.md 第 7 節寫 plan.json 的 `look`，改了 `slim` 要再跑 `look.mjs run`，只改 `color` 跑 `node shared/template/tools/look.mjs preview --project projects/<專案>` 重畫對照圖 |
 | ③ | 「可以」「改好了」 | 步驟 7 |
 | ③ | 「s05 換成側邊欄」這類指名修改 | 改 storyboard.md 那一節＋重截那段（情境換了，照新情境的拍型重寫那段動畫分鏡）→ 重貼停點 ③ |
 | ③ | 改動畫分鏡（「x05 拍 3 不要預覽態」） | 照改那張表 → 重貼停點 ③（動畫在 ③ 之後才做，不用重截） |
@@ -153,7 +155,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 | 症狀（工具原文） | 做法 | 第二次還失敗 |
 |---|---|---|
 | `資產：✖ 少 N 個檔`、`sha256 不對` | 跑 `node shared/template/tools/look.mjs ensure --download`，再跑一次 `look.mjs status` | 照 `setup/troubleshooting.md`「共用」；還不行就只調光（plan.json `"look": { "slim": 0 }`），回報裡說明 |
-| `✖ …「…」N 字，上限 M` | 縮文案，不改字級（USAGE.md 4.2） | 換情境 |
+| `✖ …「…」N 字，上限 M` | 縮文案，不改字級（USAGE.md 4.2，用訊息原文 grep 那一列） | 換情境 |
 | `找不到圖示「…」（…相近：a、b、c）` | 用括號裡的名稱 | 不配圖示，分鏡表註明 |
 | `anchor「…」不在 #N「…」裡 → 最可能是 #M` | 改成 #M | 停下來回報 |
 | `✖ 文字對時：s07 的 key「…」在 0:28.84 出現，「到電腦」0:34.84（#20）才講到 → beats.keyAt 寫 "#20@到電腦"` | 照 → 後面那一句改 plan.json（`beats.<名>`、`slots.<清單>[i].at` 或 `from`），一則一則改完再跑 `--check`；差 0.6–1.5 秒的 ⚠ 也照改 | 停下來回報那幾則原文 |
@@ -178,7 +180,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 情境判定：首選是動畫 <N> 段，做了 <N> 段，退字卡 <N> 段（理由見 storyboard.md「情境判定」）
 動畫分鏡：<N> 張（拍型 A <N>、B <N>…、S <N>；待定 <N>）；插圖清單 <N> 張（新建 SVG <N> 個）
 驗證：build --check → ✖ 0、⚠ <N>；文字對時 ✖ 0、⚠ <N>；沒有畫面的區間：<無／列出>
-要你決定：<1–3 條>
+要你決定：<1–3 條；結尾配樂一定列（「結尾要配樂嗎？建議從 #N 起」）>
 <停點 ③ 那一行原文>
 ```
 

@@ -43,6 +43,12 @@ test('pickItems：預設只量 custom；--all 加情境、不量字卡動態與 
   assert.deepEqual(only.list.map((x) => x.id), ['f1']);
   assert.match(only.skipped.join(), /m01（插入素材/);
   assert.match(R.pickItems(items, { only: ['zz'] }).errors[0], /--only 的 zz 不在 plan\.json.*現有：s01、x01、f1、m01/);
+  // 還是範例原文的 custom 段不量
+  const sm = R.pickItems([{ id: 'x01', type: 'custom', sample: true, file: 'compositions/x-fix.html' }, { id: 'x02', type: 'custom' }]);
+  assert.deepEqual(sm.list.map((x) => x.id), ['x02']);
+  assert.match(sm.skipped.join(), /x01（compositions\/x-fix\.html 還是範例原文、還沒做/);
+  // --only 指名的範例原文照量（量範例本身）
+  assert.deepEqual(R.pickItems([{ id: 'x01', type: 'custom', sample: true, file: 'compositions/x-fix.html' }], { only: ['x01'] }).list.map((x) => x.id), ['x01']);
 });
 
 test('sampleTimes：中點＋段尾前 0.6 秒；太短只量完成態', () => {
@@ -383,6 +389,18 @@ test('judgeMotion：⚠ 最後一幕太短（最後一個動作到結束／淡�
   assert.match(only(ex.findings, 'tail')[0].msg, /0:16\.50 就開始退場，只停 1\.00s/);
 });
 
+test('judgeMotion：✖ 拍在段尾之後（P.at 落在淡出／段尾之後）；段長以 plan.json 為準，不量段外', () => {
+  // 排到段外的動作把 timeline 拉長到 9.5s；plan.json 這段是 8s（淡出從 7.5s 開始）
+  const r = R.judgeMotion({ D: 9.5, marks: [{ ref: '#12@錄影', t: 2 }, { ref: '#14@上傳', t: 7.6 }], tweens: [tw(2, 2.5, 'enter', tg()), tw(7.6, 8.1, 'enter', tg())] },
+    { item: item({ type: 'custom', compId: 'x-a' }), fadeOut: true });
+  const f = only(r.findings, 'late');
+  assert.equal(f.length, 1);
+  assert.equal(f[0].level, 'error');
+  assert.match(f[0].msg, /拍在段尾之後，看不到：P\.at\('#14@上傳'\) 在 0:17\.60，這段 0:17\.50 就開始淡出/);
+  assert.deepEqual(only(r.findings, 'tail'), [], '最後一幕照 plan 的 8s 量（2.5 → 7.5），不是量到段外的 9.5s');
+  assert.deepEqual(only(mo([tw(1, 1.5, 'enter', tg())], { marks: [{ ref: '#12', t: 1 }] }).findings, 'late'), []);
+});
+
 test('stillTimes：忙碌段之間 ≥ 0.4s 的空檔取中點，和中點／完成態差 < 0.1s 的不重複', () => {
   const it = item({ type: 'custom', start: 10, end: 18, D: 8 });
   const st = R.stillTimes({ D: 8, tweens: [tw(0, 0.5, 'enter', tg()), tw(3, 3.5, 'enter', tg()), tw(3.6, 3.7, 'change', tg())] }, it);
@@ -452,6 +470,56 @@ test('atNames：const X = P.at(字面值) → { ref: X }', () => {
   assert.deepEqual(R.atNames("const T1 = P.at('#12@錄影'), T2 = P.at(\"#13\", 0.3);\nconst ALL = P.at('#15');"), { '#12@錄影': 'T1', '#13': 'T2', '#15': 'ALL' });
 });
 
+test('floorFindings（tpl）：開場、段長下限比範例小或刪掉 → ⚠ floor-edited；fontShrinkFindings：字級比範例小 → ⚠（id／class 去掉前綴對回範例）', () => {
+  const head = (lines) => `<!--\n  【D 下限】\n${lines}\n  【版面】\n-->`;
+  const tpl = head('  T1 ≥ 3.1（主卡）\n  T2 ≥ T1 + 3.0\n  D ≥ T2 + 5.2');
+  const it = item({ type: 'custom', start: 0, end: 30, D: 30 });
+  const ed = (html) => R.floorFindings({ item: it, html, tpl, file: 'x-tl-a.html' }).filter((f) => f.rule === 'floor-edited').map((f) => f.msg);
+  assert.deepEqual(ed(tpl), []);
+  assert.deepEqual(ed(head('  T1 ≥ 3.5\n  D ≥ T2 + 5.2')), [], '改大、刪拍距都不報（拍距不驗）');
+  assert.deepEqual(ed(head('  T1 ≥ 0.5\n  D ≥ T2 + 5.2')), ['檔頭【D 下限】的開場下限改過：範例是「T1 ≥ 3.1」，x-tl-a.html 改成「T1 ≥ 0.5」']);
+  assert.deepEqual(ed(head('  T2 ≥ T1 + 3.0')), ['檔頭【D 下限】的開場下限改過：範例是「T1 ≥ 3.1」，x-tl-a.html 刪掉了', '檔頭【D 下限】的段長下限改過：範例是「D ≥ T2 + 5.2」，x-tl-a.html 刪掉了']);
+  const T = '<style>#x-timeline .xtl-cap { font-size: 52px; }</style><div id="xtl-c1" class="xtl-cap sc-t52"></div><span class="xtl-lab sc-t72 sc-w900">2019</span>';
+  assert.deepEqual([...R.fontSizes(T)].map(([k, v]) => `${k}:${v.px}`), ['c1:52', 'lab:72', 'cap:52']);
+  const shrink = (html) => R.fontShrinkFindings({ item: it, html, tpl: T, file: 'x-tl-a.html' }).map((f) => f.msg);
+  assert.deepEqual(shrink(T.replace(/xtl-/g, 'xtla-')), [], '改名換前綴照樣對得上');
+  assert.deepEqual(shrink(T.replace(/xtl-/g, 'xtla-').replace('sc-t72', 'sc-t52')), ['字級比範例小：x-tl-a.html 的 xtla-lab 是 52px，範例是 72px']);
+  assert.deepEqual(shrink(T.replace('font-size: 52px', 'font-size: 44px')), ['字級比範例小：x-tl-a.html 的 xtl-cap 是 44px，範例是 52px']);
+  assert.deepEqual(R.fontShrinkFindings({ item: it, html: T, tpl: '' }), [], '找不到範例不比');
+});
+
+test('floorFindings：檔頭【D 下限】第一拍不夠 ✖、段長不夠 ⚠；拍距不驗（完成態停太短實測）；用到的名字不是 P.at 的那條不驗；檔頭與註解裡的 P.at 不算', () => {
+  const html = (consts) => `<!--
+  【D 下限】
+  T1 ≥ 3.1（主卡 0.3 秒長出；3 點時改看 D ≥ T3 + 5.2）
+  T2 ≥ T1 + 3.0；T3 ≥ T2 + 3.0；T4 ≥ T3 + 3.0
+  D ≥ T4 + 5.2（講完 2.6 秒回均衡；D＝plan.json 這段的長度）
+  【綁句欄位】
+  <script> 開頭的 T1 = P.at('#99')
+  【版面】
+-->
+<script>
+  // const T4 = P.at('#40');
+  ${consts}
+  P.end();
+</script>`;
+  assert.deepEqual(R.floorRules(html('')).map((r) => [r.lhs, r.rhs, r.k]), [['T1', null, 3.1], ['T2', 'T1', 3], ['T3', 'T2', 3], ['T4', 'T3', 3], ['D', 'T4', 5.2]]);
+  assert.deepEqual(R.atConsts(html("const T1 = P.at('#35@問題', 0.4), T2 = P.at(3.2);")), { T1: { ref: '#35@問題', off: 0.4 }, T2: { ref: 3.2, off: 0 } });
+  const cues = [{ n: 35, start: 72.17, end: 75, text: '但我們馬上就會遇到一個問題' }, { n: 38, start: 78.5, end: 81, text: '但如果要用兩支以上的手機' }, { n: 40, start: 83.5, end: 86, text: '時間不同步' }];
+  const it = item({ type: 'custom', start: 70, end: 90, D: 20 });
+  // 3 點：T1 離段起點 2.17s < 3.1 → ✖；T4 不是 P.at → T4、D 兩條不驗
+  const open = R.floorFindings({ item: it, html: html("const T1 = P.at('#35'), T2 = P.at('#38'), T3 = P.at('#40', 0.2);"), cuesOut: cues, file: 'x-timeline.html' });
+  assert.deepEqual(open.map((f) => [f.level, f.rule]), [['error', 'floor']]);
+  assert.match(open[0].msg, /開場還沒做完第一拍就到了：T1 = P\.at\('#35'\) 在段內 2\.17s（1:12\.17），x-timeline\.html 檔頭【D 下限】要 T1 ≥ 3\.1（差 0\.93s）/);
+  assert.match(open[0].fix, /from 提早 0\.93s/);
+  assert.doesNotMatch(open[0].fix, /第二個參數/, '差 > 0.5s 不建議延後綁句');
+  // 4 點：T4 − T3 = 2.0 < 3.0 不報（拍距交給完成態停太短）；D 20 < T4 + 5.2 = 20.7 → ⚠ 段尾不夠
+  const tail = R.floorFindings({ item: it, html: html("const T1 = P.at('#35', 1), T2 = P.at('#38'), T3 = P.at('#40'), T4 = P.at(15.5);"), cuesOut: cues });
+  assert.deepEqual(tail.map((f) => [f.level, f.data.rule]), [['warn', 'D ≥ T4 + 5.2']]);
+  assert.match(tail[0].msg, /段尾不夠：這段長 20\.00s，.*要 D ≥ T4 \+ 5\.2＝20\.70s（T4 在 1:25\.50）/);
+  assert.deepEqual(R.floorFindings({ item: it, html: '<script>const T1 = P.at(0.5);</script>', cuesOut: cues }), [], '沒有【D 下限】不驗');
+});
+
 test('--help：印出 ✖／⚠ 規則與門檻（禁入區、節奏數字和 audit-rules 相同）', () => {
   const r = spawnSync(process.execPath, [path.join(TEMPLATE, 'tools', 'audit.mjs'), '--help'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
@@ -473,6 +541,9 @@ test('parseArgs', () => {
   assert.throws(() => A.parseArgs(['--bogus']), /沒有 --bogus/);
   assert.throws(() => A.parseArgs(['--only']), /--only 後面要接值/);
   assert.deepEqual(A.parseArgs(['--format', 'portrait']), { format: 'portrait' });
+  assert.deepEqual(A.parseArgs(['--only', 'x01', '--shots']), { only: 'x01', shots: true });
+  const txt = A.formatReport({ errors: [], warnings: [], notes: [], findings: [], segments: [], shots: ['projects/p/work/audit-shots/x01-3.00.jpg'] });
+  assert.match(txt, /截圖 1 張[\s\S]*audit-shots\/x01-3\.00\.jpg/);
 });
 
 // ---------- 找 Chrome／runtime、server ----------
@@ -497,6 +568,16 @@ test('findRuntime 只用工作區 node_modules 那一份（npx 快取裡更新�
   assert.throws(() => B.findRuntime({ root: tmp() }), /node_modules\/hyperframes）→ 在工作區根目錄跑 npm install/);
   assert.deepEqual(HF.hfArgs(['render', '-o', 'a.mp4'], root), [path.join(root, 'node_modules', 'hyperframes', 'bin', 'hyperframes.mjs'), 'render', '-o', 'a.mp4']);
   assert.throws(() => HF.hfArgs(['render'], tmp()), /在工作區根目錄跑 npm install/);
+  // 專案在工作區外面（外接硬碟）：work/hyperframes 放 node_modules/.bin/hyperframes 小腳本指到工作區那一版；在工作區裡面不放
+  const outside = tmp();
+  assert.equal(HF.hfShim(outside, root), true);
+  assert.match(fs.readFileSync(path.join(outside, 'node_modules', '.bin', 'hyperframes'), 'utf8'), new RegExp(`exec ".*" "${path.join(root, 'node_modules', 'hyperframes', 'bin', 'hyperframes.mjs').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}" "\\$@"`));
+  assert.ok(fs.existsSync(path.join(outside, 'node_modules', '.bin', 'hyperframes.cmd')));
+  assert.equal(HF.hfShim(outside, root), false, '內容沒變就不重寫');
+  const inside = path.join(root, 'projects', 'p', 'work', 'hyperframes');
+  fs.mkdirSync(inside, { recursive: true });
+  assert.equal(HF.hfShim(inside, root), false);
+  assert.ok(!fs.existsSync(path.join(inside, 'node_modules')));
   const exe = process.platform === 'win32' ? 'chrome-headless-shell.exe' : 'chrome-headless-shell';
   for (const v of ['mac_arm-150.0.1.2', 'mac_arm-152.0.7977.30']) {
     const d = path.join(home, '.cache', 'hyperframes', 'chrome', 'chrome-headless-shell', v, 'chrome-headless-shell-mac-arm64');
@@ -813,21 +894,23 @@ test('分鏡對齊：parseBeatSheets／movesOf／refsOf 讀原型分鏡表的寫
   ], ['拍', '講到（綁句）', '畫面上出現什麼', '動態（設計系統語彙）', '焦點（觀眾看哪）', '音效拍點']);
   const s = BT.parseBeatSheets(md);
   assert.deepEqual([...s.keys()], ['x05', 'x06']);
+  assert.deepEqual([...BT.parseBeatSheets(md.replace('#### 動畫分鏡 x05', '#### 動畫分鏡 x05（r3 改：手機為主體）')).keys()], ['x05', 'x06'], '標題後面的括號備註不影響段 id');
   assert.equal(s.get('x06').header, null);
   const x = s.get('x05');
   assert.equal(x.line, 3);
   assert.deepEqual(x.rows.map((r) => r.refs), [[{ ref: '#35', off: 0 }], [{ ref: '#35', off: 0.7 }], [{ ref: '#38@兩支', off: -0.75 }], [{ ref: '#41@崩潰', off: 0 }], []]);
   assert.deepEqual(x.rows.map((r) => r.moves), [['換卡不換景', '逐字上浮', '背景環境'], ['錯拍彈出', '圖示描線'], ['彗星描線', '鏡頭跟焦點', '聚焦', '漣漪'], [], []]);
   assert.equal(x.rows[4].note, true);
-  // 語彙：47 個（011 加游標移動、013 加蓋章），和給 AI 查的 shared/template/BEATS.md §2 逐列相同（名稱、「對應」欄第一個 P.*；沒寫 P.* 的是 build 內建）
-  assert.equal(BT.VOCAB.length, 47);
+  // 語彙：46 個（011 加游標移動、013 加蓋章；拿掉講者慢推），和給 AI 查的 shared/template/BEATS.md §2 逐列相同（名稱、「對應」欄第一個 P.*；沒寫 P.* 的是 build 內建）
+  assert.equal(BT.VOCAB.length, 46);
   const beatsMd = fs.readFileSync(path.join(TEMPLATE, 'BEATS.md'), 'utf8').split(/^## 2\./m)[1].split(/^## 3\./m)[0];
   const table = [...beatsMd.matchAll(/^\| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|/gm)].map((m) => [m[2].trim(), m[4].trim()]).filter(([n]) => n !== '名稱' && !/^-+$/.test(n));
   assert.deepEqual(table.map(([n, c]) => [n, (c.match(/P\.(\w+)/) || [])[1] || 'build']), BT.VOCAB.map((v) => [v.name, v.prim]));
   const spec = path.join(TEMPLATE, '..', '..', 'specs', '010-motion-v2', 'design-system.md');
   if (fs.existsSync(spec)) {
     const sec = fs.readFileSync(spec, 'utf8').split(/^### 14\.1/m)[1].split(/^### 14\.2/m)[0];
-    const names = [...sec.matchAll(/^\| ([^|]+) \| ([^|]+) \|/gm)].map((m) => m[2].trim()).filter((n) => n !== '名稱' && !/^-+$/.test(n));
+    // 講者慢推：spec 之後拿掉（使用者 11-03：講者不要拉近拉遠），spec 是當時的設計紀錄、不改
+    const names = [...sec.matchAll(/^\| ([^|]+) \| ([^|]+) \|/gm)].map((m) => m[2].trim()).filter((n) => n !== '名稱' && !/^-+$/.test(n) && n !== '講者慢推');
     assert.deepEqual(names, BT.VOCAB.map((v) => v.name));
   }
   // 每個語彙對應的原語都在 kit 裡（build 內建的除外）
@@ -858,7 +941,7 @@ test('分鏡對齊：beatFindings ✖ 缺拍／多出來的 P.at／語彙不存�
   assert.deepEqual(voc.map((f) => [f.rule, f.data.word]), [['beats-vocab', '彈跳出現']]);
   assert.match(voc[0].fix, /例如「彈出」/);
   // 用了沒做的動作 → ⚠（每個原語一則；build 內建、背景環境有 P.end 不查）
-  const prim = run([['0', '`#35`', '', '漣漪；聚焦；講者慢推；背景環境', '', '']], [m35], 'P.spot(); P.end();');
+  const prim = run([['0', '`#35`', '', '漣漪；聚焦；子母畫面飛入；背景環境', '', '']], [m35], 'P.spot(); P.end();');
   assert.deepEqual(prim.map((f) => `${f.level}:${f.rule}:${f.data.prim}`), ['warn:beats-prim:ripple']);
   // 表頭不對 → ✖ 一則，不再往下比；「焦點（觀眾看哪）」算對
   assert.deepEqual(run(ok, [], '', ['拍', '綁句', '畫面', '動態', '焦點', '音效']).map((f) => f.rule), ['beats-header']);
@@ -919,6 +1002,14 @@ test('011／012：judgeIllus ⚠ 標籤 > 10 字、完成態兩個手排元件�
   assert.deepEqual(small.map((x) => x.rule), ['illus-small']);
   assert.match(small[0].fix, /shared\/style\.md/);
   assert.deepEqual(IL.judgeIllus(meas([card, ttl, svg('a', [150, 300, 700, 820]), svg('b', [760, 300, 1270, 820])]), { item: it, t: 17, kind: 'done' }).map((x) => x.rule), [], '佔 ≥ 50% 不報');
+  // x-callout：主體插圖 #xcall-obj 只佔 10%，但四周的標籤（.xcall-tag）一起算就夠大，不報；沒有 #xcall-obj 時標籤不算
+  const obj = { ...svg('', [620, 380, 812, 780]), desc: { id: 'xcall-obj', cls: 'il' } };
+  const tag = (r, k, p = 'xcall') => ({ ...el({ rect: r, desc: { id: `${p}-t${k}`, cls: 'xcall-tag' } }), box: true });
+  const tags = [tag([196, 330, 540, 442], 1), tag([892, 330, 1236, 442], 2), tag([196, 700, 540, 812], 3), tag([892, 700, 1236, 812], 4)];
+  assert.deepEqual(IL.judgeIllus(meas([card, ttl, obj, ...tags]), { item: it, t: 17, kind: 'done' }).map((x) => x.rule), [], 'x-callout 主體＋標籤一起算');
+  assert.deepEqual(IL.judgeIllus(meas([card, ttl, { ...obj, desc: { id: 'xsc-phone', cls: 'il' } }, ...tags]), { item: it, t: 17, kind: 'done' }).map((x) => x.rule), ['illus-small'], '不是 x-callout 的主體：標籤不算');
+  const tagsB = [tag([196, 330, 540, 442], 1, 'xcsb'), tag([892, 330, 1236, 442], 2, 'xcsb'), tag([196, 700, 540, 812], 3, 'xcsb')];
+  assert.deepEqual(IL.judgeIllus(meas([card, ttl, { ...obj, desc: { id: '', near: 'xcsb-obj', cls: '' } }, ...tagsB]), { item: it, t: 17, kind: 'done' }).map((x) => x.rule), [], '同一集第二支 x-callout 換了前綴（量到的是 .il 裡的 svg，near＝xcsb-obj）也一起算');
 });
 
 test('011：illusMotionFindings ⚠ 同一個元素亮滅兩次以上、連接線在元件進場中開始描；聚焦光不算閃爍', () => {
@@ -949,8 +1040,8 @@ test('011：分鏡「段起點 #N」是隱含的一拍；八欄表頭；插圖�
   assert.deepEqual(run(rows, [m38], undefined, ['router']), [], '段起點不用 P.at；router 在 illus-local；— 不查');
   assert.deepEqual(BT.parseBeatSheets(`#### 動畫分鏡 x05\n\n| ${H8.join(' | ')} |\n|---|---|---|---|---|---|---|---|\n| ${rows[1].join(' | ')} |\n`).get('x05').rows[0].illus, '`phoneTripod`（landscape, rec）、router');
   // 段起點的 #N 離段首 > 0.5 s 就照常要 P.at；沒寫「段起點」的 #35 也要
-  assert.deepEqual(run([['0', '段起點 `#38`', '', '開場', '', '', '—', '']], []).map((x) => x.rule), ['beats-missing']);
-  assert.deepEqual(run([['0', '`#35`', '', '開場', '', '', '—', '']], []).map((x) => x.rule), ['beats-missing']);
+  assert.deepEqual(run([['0', '段起點 `#38`', '', '開場', '', '', '—', '']], [], 'P.pop(); P.end();').map((x) => x.rule), ['beats-missing']);
+  assert.deepEqual(run([['0', '`#35`', '', '開場', '', '', '—', '']], [], 'P.pop(); P.end();').map((x) => x.rule), ['beats-missing']);
   // 白名單：畫廊沒有、沒 register、illus-local 沒有 → ✖；register 過的可以
   const bad = run([rows[1]], [m38]);
   assert.deepEqual(bad.map((x) => `${x.rule}:${x.data.name}`), ['beats-illus:router']);
@@ -962,6 +1053,43 @@ test('011：分鏡「段起點 #N」是隱含的一拍；八欄表頭；插圖�
   // 退焦：聚焦組裡用 P.spot 的預覽態（dim 參數）也算做到
   assert.deepEqual(run([['收', '最後一拍＋2.0', '', '退焦（前一列 → 0.6）', '', '', '—', '']], [], 'P.spot(); P.end();'), []);
   assert.deepEqual(BT.illusNamesOf('`phoneTripod`（landscape, rec）、badge（check）；router／sdCard'), ['phoneTripod', 'badge', 'router', 'sdCard']);
+});
+
+test('分鏡沒寫的動作：檔裡有 P.spot／P.dim／P.idle／P.cam，分鏡一拍都沒寫 → ⚠ beats-unplanned（回均衡算 dim、退焦算 spot）', () => {
+  const H8 = [...BT.BEAT_HEADER, ...BT.BEAT_HEADER_ILLUS];
+  const sheet = (moves) => BT.parseBeatSheets(`#### 動畫分鏡 x05\n\n| ${H8.join(' | ')} |\n|---|---|---|---|---|---|---|---|\n| 1 | 段起點 \`#35\` | 主卡 | ${moves} | — | — | — | — |\n`).get('x05');
+  const run = (moves, html) => BT.beatFindings({ item: bItem, sheet: sheet(moves), marks: [], cuesOut: bCues, html, file: 'x-callout.html' }).filter((f) => f.rule === 'beats-unplanned').map((f) => f.data.prim);
+  // 分鏡寫退焦（範例原本是聚焦＋漂浮）：spot 由退焦涵蓋，漂浮沒寫 → 報 idle
+  assert.deepEqual(run('彈出（主體）；退焦（其他標籤）', 'P.pop(); P.spot(); P.idle(); P.end();'), ['idle']);
+  assert.deepEqual(run('彈出（主體）；聚焦（主體）；漂浮（主體）', 'P.pop(); P.spot(); P.idle(); P.end();'), []);
+  assert.deepEqual(run('彈出（主體）', '// P.cam(…) 註解不算\nP.pop(); P.cam(); P.end();'), ['cam']);
+  assert.deepEqual(run('—', 'P.pop(); P.spot(); P.idle(); P.end();'), [], '動態欄整欄都是 — 不反向比');
+});
+
+test('sheetPlanFindings（build --check）：拍序和口播相反；照範例【D 下限】第一拍、相鄰兩拍、最後一拍到段尾；差 ≤ 0.3s 不報', () => {
+  const H = BT.BEAT_HEADER;
+  const sheet = (rows) => BT.parseBeatSheets(`#### 動畫分鏡 x05\n\n| ${H.join(' | ')} |\n|---|---|---|---|---|---|\n${rows.map((r) => `| ${r} | — | 彈出 | — | — |`).join('\n')}\n`).get('x05');
+  const it = { id: 'x05', where: '[x05 custom]', start: 70, end: 85, D: 15 };
+  const tpl = R.floorRules('<!--\n  【D 下限】\n  T1 ≥ 2.0（主卡）\n  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5\n  D ≥ T3 + 4.6\n  【版面】\n-->');
+  // 拍序：#40 寫在 #38 前面
+  const rev = BT.sheetPlanFindings({ item: it, sheet: sheet(['1 | `#35`', '2 | `#40`', '3 | `#38@兩支`']), cues: bCues });
+  assert.deepEqual(rev.map((f) => f.msg.slice(0, 7)), ['拍序和口播相反']);
+  assert.match(rev[0].msg, /第 3 拍 #38@兩支（1:19\.54）比上一拍第 2 拍 #40（1:23\.50）早講到/);
+  // 照範例：第一拍 #35 在 2.17s ≥ 2.0；#35→#38 6.33s；#38 同句號的 ＋1.2 不算另一拍；#40 到段尾 15 − 13.5 = 1.5 < 4.6 → 報段尾
+  const ok = BT.sheetPlanFindings({ item: it, sheet: sheet(['1 | `#35`', '2 | `#38`', '2b | `#38`＋1.2', '3 | `#40`']), cues: bCues, tplRules: tpl });
+  assert.deepEqual(ok.map((f) => f.msg.slice(0, 4)), ['最後一拍']);
+  assert.match(ok[0].msg, /到段尾只剩 1\.50s，範例檔頭【D 下限】要 ≥ 4\.6s/);
+  // 第一拍太早、兩拍太近；段起點那一拍不算第一拍
+  const it2 = { ...it, start: 71.5, D: 20 };
+  const tight = BT.sheetPlanFindings({ item: it2, sheet: sheet(['0 | 段起點 `#35`', '1 | `#38`', '2 | `#40`']), cues: bCues, tplRules: tpl });
+  assert.deepEqual(tight.map((f) => f.msg.slice(0, 3)), []);
+  const close = BT.sheetPlanFindings({ item: { ...it, start: 77.5, D: 20 }, sheet: sheet(['1 | `#38`', '2 | `#38@兩支`', '3 | `#40`']), cues: bCues, tplRules: tpl });
+  assert.deepEqual(close.map((f) => f.msg.slice(0, 3)), ['第一拍', '第 1'], '#38 → #38@兩支 是兩個綁句，只隔 1.04s');
+  assert.match(close[0].msg, /第一拍 #38 在段內 1\.00s.*要 T1 ≥ 2/);
+  assert.match(close[1].msg, /第 1 拍（1:18\.50）到第 2 拍（1:19\.54）只隔 1\.04s，範例檔頭【D 下限】相鄰兩拍至少 2\.5s/);
+  // 「收」寫 ＋2.5 落在段尾淡出之後（段 70–85：#40 在 13.5s，＋2.5 → 16.0s > 14.5s）
+  const late = BT.sheetPlanFindings({ item: it, sheet: sheet(['1 | `#35`', '2 | `#40`', '收 | `#40`＋2.5']), cues: bCues });
+  assert.deepEqual(late.map((f) => f.msg), ['第 收 拍 #40＋2.5（1:26.00）在段尾淡出之後（這段到 1:25.00），看不到']);
 });
 
 test('011：插圖清單（舊名素材清單）✖ 來源不是三種、畫廊沒有、新建 SVG 還沒畫', () => {
@@ -1043,4 +1171,17 @@ test('012：judgeLayoutRules 六條各一好一壞（row-align／gap／center／
   const all = [...J([cont(three({ b: { anchor: [400, 170, 600, 370] }, c: [712, 150, 912, 350] }))]), ...through, ...hand, ...J([lab([180, 316, 240, 350])])];
   assert.deepEqual([...new Set(all.map((f) => f.rule))].sort(), ['layout-gap', 'layout-label', 'layout-link', 'layout-row-align']);
   for (const f of all) { assert.match(f.fix, /（shared\/style\.md「版面」）$/); assert.doesNotMatch(f.msg + f.fix, /specs\//); }
+});
+
+test('freshRefsScript：頁面設定 window.__cues 時，用 build --check 現算的 P.at 秒數蓋過上次 build 的（子代理新加的 #N@詞 不用等 build 就能量、能截圖）', async () => {
+  const vm = await import('node:vm');
+  const html = B.injectRuntime('<head></head>', B.freshRefsScript({ x01: { '#3@雲端': 5.2 } }));
+  const js = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const win = {};
+  vm.runInNewContext(js, { window: win, Object });
+  win.__cues = { v: 1, cues: {}, segs: { x01: { start: 0, D: 9, refs: { '#2': 1 } }, x02: { refs: { '#9': 4 } } } };
+  const plain = (o) => JSON.parse(JSON.stringify(o));   // vm 裡建的物件原型不同
+  assert.deepEqual(plain(win.__cues.segs.x01.refs), { '#2': 1, '#3@雲端': 5.2 });
+  assert.deepEqual(plain(win.__cues.segs.x02.refs), { '#9': 4 });
+  assert.ok(!B.freshRefsScript({ x: { '#1@</script>': 1 } }).includes('@</script>'), '不能提早結束 script');
 });

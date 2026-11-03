@@ -1,5 +1,5 @@
 // qc.mjs：解析 ffmpeg 輸出的純函式、cuts 時間換算、時間對段落、判定
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -91,6 +91,11 @@ test('sheetTimes／speakerTimes／padBox', () => {
   assert.deepEqual(Q.sheetTimes(5), [0, 4.7]);
   assert.equal(Q.speakerTimes(80).length, 8);
   assert.equal(Q.speakerTimes(80)[0], 5);
+  // 只有聲音的區間不抽：0–10 秒有講者、10–70 全黑、70–80 有講者 → 8 格全落在 0–10、70–80
+  const ts = Q.speakerTimes(80, 8, [[10, 70]]);
+  assert.equal(ts.length, 8);
+  assert.ok(ts.every((t) => t < 10 || t >= 70), JSON.stringify(ts));
+  assert.deepEqual(Q.speakerTimes(80, 8, []), Q.speakerTimes(80));
   assert.deepEqual(Q.padBox([10, 100, 500, 1070]), [0, 60, 540, 1080]);
 });
 
@@ -227,9 +232,13 @@ test('observe 的純函式：時間格、格子標籤、字幕換成片秒數、
 // ---------- 需要 ffmpeg／Chrome／npx hyperframes 的端到端（找不到 Chrome 就略過）----------
 
 const CHROME = await hasChrome();
+// 這個檔建立的暫存資料夾（fixture 有影片＋build 產物，一個 30–200 MB）：全部跑完一起刪，不留在系統暫存
+const TMP = [];
+const mkTmp = (prefix) => { const d = fs.mkdtempSync(path.join(os.tmpdir(), prefix)); TMP.push(d); return d; };
+after(() => { for (const d of TMP) fs.rmSync(d, { recursive: true, force: true }); });
 const ffmpeg = (args) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-qc-'));
+  const root = mkTmp('hf-qc-');
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
   for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
@@ -447,7 +456,7 @@ test('字幕樣式（F8，純函式）：取樣只挑中文 ≥ 4 字 ≥ 0.6 �
 });
 
 test('主題：plan.json 的 theme（"dark" 才是暗色）；qc-sheet 最上面標 theme，暗色深底、亮色淺底', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-qc-theme-'));
+  const dir = mkTmp('hf-qc-theme-');
   const plan = path.join(dir, 'plan.json');
   fs.writeFileSync(plan, JSON.stringify({ version: 1, theme: 'dark', scenes: [] }));
   assert.equal(Q.themeOf({ plan }), 'dark');
@@ -557,7 +566,7 @@ test('直式 final（純函式）：尺寸照畫布 1080×1920；講者面板的
 });
 
 test('直式 qc-sheet：每格 9:16（一列 6 格）、格上 unsafe[] 是紅色半透明框；橫式不畫', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-qc-sheet-v-'));
+  const dir = mkTmp('hf-qc-sheet-v-');
   const mp4 = path.join(dir, 'v.mp4');
   ffmpeg(['-f', 'lavfi', '-i', 'color=c=0x808080:s=360x640:rate=30', '-t', '3', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', mp4]);
   const out = path.join(dir, 'qc-sheet.jpg'), r = Q.makeQcSheet(mp4, 3, out, 'light', PORT);
@@ -589,7 +598,7 @@ test('直式 framing（純函式）：三個倍率的 9:16 框；1.0＝原畫面
   assert.equal(big[0].head, 380);
   assert.deepEqual(big[0].face, ['下巴到 y 953（要 ≤ 860）']);
   // face-landmarks.json（rough.mp4 像素）→ 畫布：540×960 放大 2 倍，下巴取 90 百分位
-  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-qc-lm-'));
+  const proj = mkTmp('hf-qc-lm-');
   fs.mkdirSync(path.join(proj, 'work'));
   const k = 27, frame = (y) => { const p = new Array(116).fill(0); p[2 * k + 1] = y; return { p }; };
   fs.writeFileSync(path.join(proj, 'work', 'face-landmarks.json'), JSON.stringify({ version: 1, source: { width: 540, height: 960 }, points: Array.from({ length: 58 }, (_, i) => (i === k ? 152 : i)), frames: [frame(400), frame(410), null, frame(420), frame(430)] }));
@@ -650,6 +659,9 @@ test('直式 storyboard ⚠（FR-082）：橫錄影縮到 < 60 %、沒有 moves�
   const g = (o) => ({ id: 'm01', type: 'media', start: 10, end: 15, annotations: { view: { scale: 0.5625, moves: 0 } }, ...o });
   assert.deepEqual(Q.smallMediaWarnings([g()]), ['m01 的錄影在直式只有原尺寸 56 %，介面字會太小 → 加 moves 推近到操作區']);
   assert.deepEqual(Q.smallMediaWarnings([g({ annotations: { view: { scale: 0.5625, moves: 1 } } }), g({ end: 13 }), g({ annotations: { view: { scale: 0.84, moves: 0 } } }), g({ annotations: { marks: [] } })]), []);
+  // 橫式也看（參考專案：retina 錄影縮到 0.47，介面字 8–10px）；有放大鏡就不提醒
+  assert.match(Q.smallMediaWarnings([g({ annotations: { view: { scale: 0.47, moves: 0, lens: 0, landscape: true } } })])[0], /^m01 的錄影只有原尺寸 47 %，介面字會太小 → 口播唸到畫面上的字/);
+  assert.deepEqual(Q.smallMediaWarnings([g({ annotations: { view: { scale: 0.47, moves: 0, lens: 1, landscape: true } } })]), []);
   const L = Q.obsLayout(PORT);
   assert.equal(Q.obsLayout(canvasOf('landscape')), Q.OBS);
   assert.deepEqual([L.cols, L.rows, L.tile, L.beatCols], [8, 6, [216, 384], 6]);

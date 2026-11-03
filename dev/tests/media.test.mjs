@@ -134,6 +134,34 @@ test('cut 穿過 media 段：錄影也跳過同一段（data-media-start 跳）�
   assert.ok(!left.some((f) => f.endsWith('.mp4') || f === 'm01-l1'), `沒用到的錄影與放大鏡逐幀要清掉：${left.join(', ')}`);
 });
 
+test('out：速度＝(out−in)÷段長，段 ≤ 3 秒可快轉到 64 倍；hold：整段定格成一張圖（不慢推、標註照常）', () => {
+  const m = (o) => ({ id: 'm01', type: 'media', src: REC, from: 7, to: 13, ...o });
+  writePlan([m({ in: 1, out: 4 })]);
+  let r = build('--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /素材 1s 起 ×0\.5/);
+  writePlan([m({ to: 9, out: 9.9 })]);
+  assert.match(checkJson().j.warnings.join('\n'), /out：×4\.95 快轉 2s（跳過等待）/);
+  writePlan([m({ in: 0.5, to: 8, out: 9.9 })]);
+  assert.match(checkJson().j.warnings.join('\n'), /out：×9\.4 快轉 1s/);
+  writePlan([m({ out: 1 })]);
+  assert.match(checkJson().j.errors.join('\n'), /out：素材 0–1s 只有 1s，放進 6s 的段要慢到 ×0\.167（下限 0\.5）/);
+  writePlan([m({ out: 4, speed: 2 })]);
+  assert.match(checkJson().j.errors.join('\n'), /out 和 speed 擇一/);
+  writePlan([m({ hold: 2.5, in: 1, marks: [{ at: '+1', box: [40, 40, 200, 100] }] })]);
+  assert.match(checkJson().j.warnings.join('\n'), /hold：定格不播放，in／out／speed／volume 已忽略/);
+  r = build();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /定格 assets\/screen\/操作示範\.mp4 第 2\.5s → assets\/media\/[\w-]+\.jpg/);
+  const html = read('index.html');
+  const img = html.match(/<img id="mi-m01" class="clip mimg" src="(assets\/media\/[\w-]+\.jpg)"/);
+  assert.ok(img, '定格要放成 <img>');
+  assert.doesNotMatch(html, /<video id="mv-m01"/);
+  assert.doesNotMatch(html, /scale: 1\.05/, '定格不慢推');
+  assert.match(html, /<rect id="mmk-m01-1" class="mmark"/);
+  assert.equal(probe(path.join(out, img[1]), 'stream=width,height'), '640,400');
+});
+
 test('剪輯台的呼叫方式（--project 絕對路徑、cwd＝工作區根目錄）與只給路徑旗標：media 段都找得到專案資料夾', () => {
   writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 13 }]);
   const r = spawnSync(process.execPath, [BUILD, '--project', proj, '--template', tpl, '--check', '--json'], { encoding: 'utf8', cwd: root });
@@ -317,6 +345,8 @@ test('build：說明卡、聚光燈、STEP、箭頭、紅框跟捲動的 DOM 與
   assert.equal(b.status, 0, b.stdout + b.stderr);
   const html = read('index.html');
   assert.match(html, /<svg id="man-m01" class="clip mann" data-start="7" data-duration="6" data-track-index="\d+" viewBox="0 0 1920 1080" data-layout-allow-overlap>/);
+  // STEP 膠囊在錄影可見區左上（錄影左緣 208＋32），不跨在錄影邊上
+  assert.match(html, /<div id="msteps-m01" class="msteps" style="left:240px;top:40px">/);
   assert.match(html, /<rect id="mcb-m01-1" class="mcbox" x="1199" y="110" width="251" height="63" rx="6" pathLength="1"\/>/);
   assert.match(html, /<g id="mcl-m01-1" class="mclead"><path d="M1199 141 L1143 141" pathLength="1"\/><circle cx="1199" cy="141" r="5"\/><\/g>/);
   assert.match(html, /<div id="mcc-m01-1" class="mcard mcard--left" style="right:777px;top:93px"><span class="mic"><svg[^]*?<\/svg><\/span><span class="mtxt">打開 API 設定<\/span><\/div>/);
@@ -403,13 +433,17 @@ test('標註的 ✖／⚠ 訊息：每則都照契約原文、帶「→」改法
   assert.match(e2, /steps\[3\]\.at（0:07\.50）要晚於 steps\[2\]（0:08\.00）→ 照時間先後排列/);
   assert.match(e2, /steps\[4\] 和前一步只差 0\.5s（要 ≥ 1\.65s：換步 0\.45＋停 1\.2）→ 合併成一步，或把 at 往後挪到 0:09\.65 之後/);
 
-  const j3 = run([m({
+  const j3 = run([m({ stepsSide: 'left',
     marks: [{ at: '+0', until: '+3', box: [0, 0, 40, 20] }],
     steps: [{ at: '+0', text: '第一步' }, { at: '+5', text: '第二步' }],
     arrows: [{ at: '+1', to: [300, 50], from: 'n' }, { at: '+3.5', to: [300, 5] }] })]);
   const e3 = j3.errors.join('\n'), w3 = j3.warnings.join('\n');
   assert.match(e3, /steps\[1\] 在段尾前 1s 才出現（要 ≥ 1\.65s）→ 提早 at，或移到下一段/);
-  assert.match(w3, /STEP 膠囊（x 48–286、y 40–120）在 0:07\.00 壓到 marks\[0\] 的紅框 → 換 side／from/);
+  // 膠囊在錄影可見區左上（錄影 640×400 放成 1504×940、左緣 208 → x 240）；指定 left 才會壓到
+  assert.match(w3, /STEP 膠囊（x 240–478、y 40–120）在 0:07\.00 壓到 marks\[0\] 的紅框 → 換 side／from/);
+  // 沒寫 stepsSide：壓到紅框自動換到錄影右上（右緣 208＋1504−32）
+  const j3b = run([m({ marks: [{ at: '+0', until: '+3', box: [0, 0, 40, 20] }], steps: [{ at: '+0', text: '第一步' }] })]);
+  assert.doesNotMatch(j3b.warnings.join('\n'), /STEP 膠囊/, '換到右上就不會壓到');
   assert.match(e3, /arrows\[0\] 從 "n" 方向放會超出安全區 → 改 "from": "ne"（放得下）/);
   assert.match(w3, /arrows\[1\] 找不到不擋字的位置（超出安全區），已拿掉（作者規則：找不到位置就不放）→ 換一個 to/);
 
@@ -455,6 +489,29 @@ test('media 段的 clicks（contracts/sfx.md §5）：MEDIA_KEYS 認得；時間
   assert.doesNotMatch(read('index.html'), /sfx-m01-e1/);
   const f = MEDIA_LIB.MEDIA_FIELDS.find((r) => r[0] === 'clicks');
   assert.ok(f && /click 附加音效/.test(f[3]));
+});
+
+test('media 段的 sfx 寫 { name, at }：主音效放在那一刻（綁句或 +秒）；格式錯、不在段裡 ✖；字卡段也能用', () => {
+  const m = (o) => ({ id: 'm01', type: 'media', src: REC, from: 7, to: 13, ...o });
+  writePlan([m({ sfx: { name: 'success', at: '+2.5' } })]);
+  let { j } = checkJson();
+  assert.deepEqual(j.errors, []);
+  const it = j.items.find((x) => x.id === 'm01');
+  assert.equal(it.sfx[0].name, 'success');
+  assert.ok(it.sfx[0].at > 9 && it.sfx[0].at <= 9.5, `音效要在 9.5 秒那一刻（扣掉音效本身的起音），現在是 ${it.sfx[0].at}`);
+  writePlan([m({ sfx: { name: 'success', at: '+9' } })]);
+  assert.match(checkJson().j.errors.join('\n'), /\[m01 media\] sfx\.at（0:16\.00）不在這段 0:07\.00–0:13\.00 裡/);
+  writePlan([m({ sfx: { name: 'success' } })]);
+  assert.match(checkJson().j.errors.join('\n'), /sfx 寫成物件時要有 name 和 at/);
+  writePlan([m({ sfx: { name: 'nope', at: '+1' } })]);
+  assert.match(checkJson().j.errors.join('\n'), /sfx\.name：只能是 /);
+  // 字卡段也能寫 { name, at }：主音效放在那一刻（不是情境預設的拍點）
+  writePlan([m(), { id: 's01', scene: 'concept', from: 2, to: 6, slots: { text: '字卡' }, sfx: { name: 'alert', at: '+3' } }]);
+  ({ j } = checkJson());
+  assert.deepEqual(j.errors, []);
+  const s1 = j.items.find((x) => x.id === 's01');
+  assert.equal(s1.sfx[0].name, 'alert');
+  assert.ok(Math.abs(s1.sfx[0].at - 5) < 0.05, `音效要在 5 秒那一刻（扣掉起音、加一格），現在是 ${s1.sfx[0].at}`);
 });
 
 test('標註焦點（design-system §7）：後一個出現時前面還在的壓暗 0.5；最後一個出現後 2.6 s／段尾前 1.4 s／它收掉前 0.3 s 回均衡；同時出現、快收掉的不壓暗', () => {
@@ -601,6 +658,11 @@ test('直式：16:9 與 9:16 錄影放進上半資訊面板（y 240–900）；�
     arrows: [{ at: '+5.5', until: '+8.5', to: [640, 500] }] });
   assert.deepEqual(a.errs, []);
   const m = a.it.media;
+  // 錄影 ≥ 4 秒一個標註、運鏡都沒有 → ⚠（只對好 in 不算配完）；有標註、或不到 4 秒 → 不提醒
+  const bare = run({ id: 'v09', type: 'media', src: 'assets/screen/橫錄.mp4' });
+  assert.ok(bare.warns.some((w) => /^錄影 12s 沒有任何標註或運鏡 → /.test(w)), bare.warns.join('\n'));
+  assert.ok(!run({ id: 'v10', type: 'media', src: 'assets/screen/橫錄.mp4' }, { end: 5.5 }).warns.some((w) => /沒有任何標註/.test(w)));
+  assert.ok(!a.warns.some((w) => /沒有任何標註/.test(w)));
   assert.deepEqual(m.steps.capsule.box.slice(0, 2), [60, 260]);
   const co = m.callouts[0];
   assert.ok(co.card[0] >= 60 && co.card[2] <= 1020 && co.card[1] >= 260 && co.card[3] <= 880, `說明卡 ${co.card}`);
@@ -609,7 +671,7 @@ test('直式：16:9 與 9:16 錄影放進上半資訊面板（y 240–900）；�
   const mk = m.marks[0].rect;
   assert.ok(mk[1] >= 240 && mk[1] + mk[3] <= 900, `紅框 ${mk}`);
   // FR-082：直式放橫錄影時 --check --json 的 annotations 多 view（縮放、運鏡數），給 qc storyboard 判「介面字太小」
-  assert.deepEqual(a.r.json.view, { scale: 0.844, moves: 0 });
+  assert.deepEqual(a.r.json.view, { scale: 0.844, moves: 0, lens: 0 });
   // DOM：畫面座標的層吃 --cw／--ch、viewBox 1080×1920、STEP 膠囊位置寫在 style、滑入用畫布寬
   const html = mediaParts({ ...a.it, enterFx: 'slide', exitFx: 'slide', pipIds: [] }, { nextTrack: (() => { let n = 10; return () => n++; })() });
   assert.match(html.html, /class="mlayer" style="z-index:20;--cw:1080px;--ch:1920px"/);
@@ -627,4 +689,21 @@ test('直式：16:9 與 9:16 錄影放進上半資訊面板（y 240–900）；�
   // 紅框推到講者面板上（cover 的下緣）→ ⚠ 壓到下半的講者面板
   const c = run({ id: 'v03', type: 'media', src: 'assets/screen/橫錄.mp4', fit: 'cover', marks: [{ at: '+0.5', until: '+2', box: [400, 700, 200, 20] }] });
   assert.ok(c.warns.some((x) => /marks\[0\] 壓到下半的講者面板（畫面 y > 900）→/.test(x)), c.warns.join('\n'));
+});
+
+test('kit/media.js 放大鏡：補間目標是 canvas 元素（目標是普通物件時 HyperFrames renderSeek 後畫面不再更新）；任何 seek 都畫對那一格', async () => {
+  const vm = await import('node:vm');
+  const drawn = [];
+  const cv = { getContext: () => ({ drawImage: (im) => drawn.push(im.n) }), width: 10, height: 10 };
+  const imgs = [0, 1, 2].map((n) => ({ n, complete: true, naturalWidth: 10, addEventListener() {} }));
+  const calls = [];
+  const tl = { fromTo: (target, from, to, at) => calls.push({ target, from, to, at }) };
+  const ctx = { window: {}, document: { querySelector: () => cv, querySelectorAll: () => imgs } };
+  vm.runInNewContext(fs.readFileSync(path.join(TEMPLATE, 'kit', 'media.js'), 'utf8'), ctx);
+  ctx.window.MediaKit.lens(tl, '#c', '#s img', [0, 0, 1, 2], 5, 1);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].target, cv, '補間目標要是 canvas 元素，不能是普通物件');
+  assert.deepEqual([calls[0].from.lensFrame, calls[0].to.lensFrame, calls[0].at], [0, 4, 5]);
+  for (const f of [3.5, 0.2, 2.1]) cv.lensFrame = f;   // 亂序 seek：每次都畫那一格的圖
+  assert.deepEqual(drawn, [2, 0, 1]);
 });

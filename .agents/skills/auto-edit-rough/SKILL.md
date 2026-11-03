@@ -38,7 +38,7 @@ node shared/template/tools/media.mjs main --project projects/<專案>
 | 1 支 | 空 | 跑上面那一行就好 |
 | 其他情況 | — | 先照檔名排序接（上面那一行），把順序寫進 cuts.md 的「主軌順序」表，併進停點 ① 問；使用者改了順序就照「停點」表重接 |
 
-`assets/screen/` 裡邊錄邊講的螢幕錄影（有講話、有換氣停頓）也會接進主軌：只取聲音、配純黑，畫面在步驟 8 之後由 `screen-sync` 蓋回。main 每支錄影印一行判斷（「偵測到講解」「聲音幾乎沒停」「沒有聲音」），照抄進 cuts.md 的「主軌順序」表；使用者說某支其實有講解（或沒有），用 `--order` 列出要接的檔（可以寫 `assets/screen/<檔名>`）。有講稿時 ng-snap 會照講稿比對順序，印 ⚠ 和建議的 `--order`，一起放進停點 ①。
+`assets/screen/` 裡邊錄邊講的螢幕錄影（有講話、有換氣停頓）也會接進主軌：只取聲音、配純黑，畫面在步驟 8 之後由 `screen-sync` 蓋回；這幾支只剪 NG、停頓保留（ng-snap 自己加 `--add-in`）。背景音樂、沒聲音的錄影還是插入素材（`auto-edit-screen`）。main 每支錄影印一行判斷（「偵測到講解」「聲音幾乎沒停」「沒有聲音」），照抄進 cuts.md 的「主軌順序」表；使用者說某支其實有講解（或沒有），用 `--order` 列出要接的檔（可以寫 `assets/screen/<檔名>`）。有講稿時 ng-snap 會照講稿比對順序，印 ⚠ 和建議的 `--order`，一起放進停點 ①。
 
 完成判準：`work/main.mp4`、`work/main.json` 存在；只有一支時印「只有一支真人錄影（…）：轉成固定 fps 的 work/main.mp4…」。
 常見錯誤：拿 `assets/` 的原檔直接給 auto-editor → 不要，一律用 `work/main.mp4`（ng-snap 印的三行已經是它；忘了跑 main，ng-snap 會自己先轉）；順序參數有逗號沒加引號（PowerShell）→ 加雙引號 `--order "檔名1,檔名2"`。
@@ -49,26 +49,27 @@ node shared/template/tools/media.mjs main --project projects/<專案>
 npx hyperframes transcribe "<主軌>" -d projects/<專案>/work --model small --language zh --json
 ```
 
-完成判準：`work/` 裡有逐字稿 JSON，內容是中文句子。
-常見錯誤：變成英文 → 少了 `--model small --language zh`；`whisper-cli crashed (SIGABRT)` → 指令最前面加 `GGML_METAL_BF16_DISABLE=1`；檔案寫進 `assets/` → 少了 `-d projects/<專案>/work`。
+完成判準：`work/transcript.json` 存在，內容是中文。
+常見錯誤：變成英文 → 少了 `--model small --language zh`；`whisper-cli crashed (SIGABRT)` → Mac 指令最前面加 `GGML_METAL_BF16_DISABLE=1`（Mac 第一次就可以直接加）；檔案寫進 `assets/` → 少了 `-d projects/<專案>/work`；主軌很長時轉錄要跑好幾分鐘 → 能背景執行就背景執行，不要接 `| tail`、`| head`（錯誤訊息會被截掉）。
 
-**3. 找 NG**（拿不準時讀 `references/ng-rules.md`）
+**3. 找 NG：跑 ng-scan**（拿不準時讀 `references/ng-rules.md`）
 
 ```
-（不用指令：對照逐字稿與 講稿.md）
+node shared/template/tools/media.mjs ng-scan --project projects/<專案>
 ```
 
-完成判準：每段 NG 有原片時間碼、內容、原因；逐字稿和講稿對不上、拿不準的，「待確認」欄寫原因。
-常見錯誤：開始拿音軌驗證逐字稿 → 停，照 AGENTS.md「剪乾淨時不要做的事」，拿不準的放「待確認」。
+它把詞級逐字稿對到講稿：講到後面又跳回前面重講的，前一次列成 NG 候選（留最後一次）；講稿找不到的話列「講稿外」；沒講稿時比相鄰句。印的 NG 表照抄進 cuts.md，「講稿外」逐條看：是講到一半卡住、自言自語的才加進 NG 表，拿不準就放「待確認」。講稿每一行的開口時間在 `work/ng-scan.md`，要查某句在哪就查它，不要自己寫程式比對逐字稿。
+完成判準：每段 NG 有原片時間碼、內容、原因；拿不準的，「待確認」欄寫原因。
+常見錯誤：自己寫腳本、拿音軌驗證逐字稿 → 停，照 AGENTS.md「剪乾淨時不要做的事」，ng-scan 的表就是依據；印 `⚠ work/transcript.json 只到 …` → 步驟 7 已經把它換成 rough.mp4 的了，回到步驟 2 重轉再跑。
 
 **4. 章節空檔（講稿有 `##` 章節標題時）**
 
 ```
-（不用指令：每章第一句的時間碼抄逐字稿那句的起點，寫進「章節空檔」表；ng-snap 會往後找實際開口點，要保留的停頓也由它算）
+（不用指令：照抄 ng-scan 印的「章節空檔表」；ng-snap 會往後找實際開口點，要保留的停頓也由它算）
 ```
 
-完成判準：cuts.md 有章節空檔表，表頭 `| 章節 | 第一句 | 時間碼 |`；時間碼是逐字稿那句的起點原值。
-常見錯誤：時間碼寫成 rough.mp4 的秒數 → 一律寫 `work/main.mp4` 的秒數；自己用詞級時間推開口點 → 不用，照抄那句的起點。
+完成判準：cuts.md 有章節空檔表，表頭 `| 章節 | 第一句 | 時間碼 |`；時間碼是 ng-scan 印的原值。
+常見錯誤：時間碼寫成 rough.mp4 的秒數 → 一律寫 `work/main.mp4` 的秒數；自己用詞級時間推開口點 → 不用，照抄；印「找不到 → 聽 main.mp4 補」→ 那一章在 `work/ng-scan.md` 找前後行的時間，寫進「需要你決定」。
 
 **5. 寫 `work/cuts.md`，先預跑一次 ng-snap，然後停點 ①**（表格範本在 `references/ng-rules.md`）
 
@@ -94,7 +95,7 @@ node shared/template/tools/media.mjs verify-rough --project projects/<專案>
 
 三行跑完先跑 verify-rough：它拿 rough.mp4 的黑畫面對照原片同一秒，原片不黑、rough 黑＝初剪壞了（之後子母畫面會沒有講者小窗）。回報附上它印的那一行（✓ 或黑畫面表）。
 完成判準：ffprobe 的長度和 auto-editor 統計的輸出長度一致；`work/cuts.v1.json` 存在；verify-rough 印 `✓ work/rough.mp4 沒有黑畫面`，或 `✓ 黑畫面 N 段，原片同位置也是黑的（只有聲音的素材配的純黑）：…`。
-常見錯誤：印 `✖ work/rough.mp4 有 N 段黑畫面（共 Ns）原片同位置不黑 → 初剪壞了…` → 照它印的 1–4 行重做（剪輯清單不用改），不要自己改 ffmpeg 或 auto-editor 參數；重做後 rough.mp4 長度和原本差超過 0.2 秒 → 第 7 步字幕重轉、重跑 srt-align；講話尾音被切 → ng-snap 加 `--edit "audio:-26dB"`（還切到就 `-30dB`）重跑再預演；小聲自言自語沒剪掉 → `--edit "audio:-16dB"`（AGENTS.md「剪乾淨的數字」）。
+常見錯誤：把 ng-snap 印的指令存進變數或拼成字串再執行 → 引號會變成參數的一部分而失敗，整行照抄貼上執行（第 2 行要跑好幾分鐘就背景執行）；印 `✖ work/rough.mp4 有 N 段黑畫面（共 Ns）原片同位置不黑 → 初剪壞了…` → 照它印的 1–4 行重做（剪輯清單不用改），不要自己改 ffmpeg 或 auto-editor 參數；重做後 rough.mp4 長度和原本差超過 0.2 秒 → 第 7 步字幕重轉、重跑 srt-align；講話尾音被切 → ng-snap 加 `--edit "audio:-26dB"`（還切到就 `-30dB`）重跑再預演；小聲自言自語沒剪掉 → `--edit "audio:-16dB"`（AGENTS.md「剪乾淨的數字」）。
 
 **7. 字幕：轉詞級逐字稿 → 照講稿排成完整語句**
 
@@ -104,7 +105,7 @@ node shared/template/tools/media.mjs srt-align --project projects/<專案> --dry
 node shared/template/tools/media.mjs srt-align --project projects/<專案>
 ```
 
-第 1 行同時寫 `work/transcript.json`（詞級逐字稿）與 whisper 的 rough.srt。第 2 行只印斷句表：有 `講稿.md` 時每則＝講稿一行、時間由 transcript.json 全域對齊；沒有講稿時把 rough.srt 切成完整子句；超過 18 字（直式 10 字，srt-align 照版式自動用，不用自己加參數）才拆、短句自動併；顯示時去掉「，」「。」「；」「：」、保留「、」「！」「？」（AGENTS.md 規則 4、style.md「字幕」）。表看過合理才跑第 3 行寫回（自動備份 `work/rough.srt.align-<時間戳>`）。之後照規則 4 只改錯字（講稿本身的錯字、沒講稿時 whisper 的錯字）；不要自己按字數切、併句、對時間，不要再跑 srt-split（舊流程），不要把「，。」加回字幕。合併規則與連接詞清單在 AGENTS.md「剪乾淨的數字」，看斷句表時對照。它印的 ⚠ 照 → 做，原文列進回報：`⚠ N 行講稿在逐字稿裡對不上，時間用前後句內插：…`、`⚠ N 則不到 0.6 秒…` 這類要到剪輯台處理的，先列在回報讓使用者知道；印 `⚠ 沒有 work/transcript.json：時間是整則按字數比例估的 → 寫回後要跑 node shared/template/tools/media.mjs snap-srt --project …` 才照 → 跑 snap-srt（先 `--dry-run`，只跑一次）。
+第 1 行同時寫 `work/transcript.json`（詞級逐字稿，蓋掉步驟 2 那份 main.mp4 的）與 whisper 的 rough.srt。第 2 行只印斷句表：有 `講稿.md` 時每則＝講稿一行、時間由 transcript.json 全域對齊；沒有講稿時把 rough.srt 切成完整子句；超過 18 字（直式 10 字，srt-align 照版式自動用，不用自己加參數）才拆、短句自動併；顯示時去掉「，」「。」「；」「：」、保留「、」「！」「？」（AGENTS.md 規則 4、style.md「字幕」）。表看過合理才跑第 3 行寫回（自動備份 `work/rough.srt.align-<時間戳>`）。之後照規則 4 只改錯字（講稿本身的錯字、沒講稿時 whisper 的錯字）；不要自己按字數切、併句、對時間，不要再跑 srt-split（舊流程），不要把「，。」加回字幕。合併規則與連接詞清單在 AGENTS.md「剪乾淨的數字」，看斷句表時對照。它印的 ⚠ 照 → 做，原文列進回報：`⚠ N 行講稿在逐字稿裡對不上，時間用前後句內插：…`、`⚠ N 則不到 0.6 秒…` 這類要到剪輯台處理的，先列在回報讓使用者知道；印 `⚠ 沒有 work/transcript.json：時間是整則按字數比例估的 → 寫回後要跑 node shared/template/tools/media.mjs snap-srt --project …` 才照 → 跑 snap-srt（先 `--dry-run`，只跑一次）。使用者之後在剪輯台改過的字和時間，不要再用工具覆蓋（AGENTS.md「剪輯台」）。
 
 完成判準：`work/rough.srt.align-<時間戳>` 存在（srt-align 寫回過）；`work/rough.srt` 每則是一個完整語句（有講稿＝講稿一行）、最多 18 字（直式 10 字）、沒有「，」「。」「；」「：」、繁體、中英之間半形空格；`work/transcript.json` 是這次 rough.mp4 的詞級逐字稿（剪好看的 `#N@詞` 用它，不要刪）。
 常見錯誤：印 `✖ work/hyperframes/plan.json 已經用到句號（#N），重新斷句後句號會全部位移 → 加 --remap-plan 再跑一次…` → 照 → 第 2、3 行加 `--remap-plan`（plan.json 與情境動畫的 `P.at` 會照時間換句號並先備份；storyboard.md 的句號會過期，以 plan.json 為準）；字幕斷在詞中間、連接詞吊在句尾 → 是講稿那一行本來就這樣斷，照講稿，不要手改 rough.srt。
@@ -137,6 +138,7 @@ node shared/template/tools/media.mjs screen-sync --project projects/<專案>
 | 「可以」「清單沒問題，繼續」 | 停點紀錄加「通過」→ 步驟 6 |
 | 「第 3 列不要剪」這類指名修改 | 改 cuts.md → 重貼停點 ①（紀錄寫「修改後重停」） |
 | 改主軌順序（「聲音檔放最前面」） | 步驟 1 加 `--order "檔名1,檔名2"` 重接 → 步驟 2–5 重做 → 重貼停點 ①（紀錄寫「修改後重停」） |
+| 有補錄要插進旁白中間（「录音3 取代中間音檔裡那一小段」） | 檔名後加 `@起-迄` 只取一段，同一支可切成前後兩段：`--order "a.mp4,旁白.mp3@0-577.7,補錄.aac@2.1-32.4,旁白.mp3@603.4-,b.mp4"`（起訖照逐字稿找那幾句的位置）→ 步驟 2–5 重做 |
 | 「改好了」 | 重新讀 cuts.md，以檔案為準 → 步驟 6 |
 
 ## 自我核對

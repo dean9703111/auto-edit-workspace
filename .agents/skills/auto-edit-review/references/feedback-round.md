@@ -17,13 +17,15 @@ Mac：cp projects/<專案>/work/hyperframes/plan.json projects/<專案>/work/hyp
 Windows（PowerShell）：Copy-Item projects\<專案>\work\hyperframes\plan.json projects\<專案>\work\hyperframes\plan.json.bak-r<N>
 ```
 
-改到的每一段，改之前、build 之後各存一次版本（改之前那次和舊版一樣就不另存；改之後那次會出 `比較-v<舊>-v<新>.mp4`）：
+改到的每一段，改之前、build 之後各存一次版本（改之前那次和舊版一樣就不另存；改之後那次會出 `比較-v<舊>-v<新>.mp4`）。`versions.mjs list` 裡還沒有任何版本的段（第一次存、沒給使用者確認過的草稿），兩次都加 `--no-preview`：只存檔案、不 render 預覽（一段省 20–30 秒，之後改版會自動補）；已經有版本的段照常存，比較影片才做得出來。改到的段很多時，改之後那次背景執行，同時跑 audit、snapshot：
 
 ```
 node shared/template/tools/versions.mjs save --project projects/<專案> --seg <改到的段，逗號隔開>
 ```
 
 要還原這一輪：把 `plan.json.bak-r<N>` 複製回 `plan.json`，再 build。只還原一段：`node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v<N>`（x 檔、svg 一起換回去）。
+
+每段的版本在 `work/versions/<段>/v<N>/`：`段落.json`（plan.json 那一段）、情境動畫的 `x-*.html` 與 svg、`分鏡.md`、`預覽.mp4`（這一段 render 出來的樣子）、`預覽.jpg`；改過的段另有 `比較-v<舊>-v<新>.mp4`（左舊右新），使用者在停點 ④ 會看。版本只用 `versions.mjs` 建、退回，不要手動複製。
 
 ## 2. 規則還是個案
 
@@ -35,6 +37,11 @@ node shared/template/tools/versions.mjs save --project projects/<專案> --seg <
 | 「以後」「每次」「都」「全部的 X」 | 規則 | 這一集照做；在 rN.md「建議改規則」寫一條，**不改** `shared/`、AGENTS.md（AGENTS.md 規則 1） |
 | 「這張卡」「我選的」 | 個案 | 讀 Studio 選取：`(cd projects/<專案>/work/hyperframes && npx hyperframes preview --context --json --context-fields selection)` |
 | 分不出來 | 個案 | 照個案改，rN.md 註明「可能是規則，請確認」 |
+| 一句話可以解成「刪掉」或「避開／挪開」（「擇一即可」「不要重疊」） | 個案 | 先做不刪的那個解讀（挪位置、錯開時間），回報另一種解讀讓使用者選；參考專案曾因刪掉 8 支箭頭白做一輪 |
+
+個案改完再看同型：改的是版面、標註、間距這類「別段也可能一樣」的問題時，跑 `build.mjs --check`、`audit.mjs --all` 找同樣的情況，回報寫「同型 N 段：s08、s14…（這輪沒改，要一起改嗎）」，不要自己全部改（參考專案作者常回「後面的也有一樣問題」）。
+
+同一輪有好幾項時的順序：剪接、字幕、音訊先改（動畫綁句的時間會跟著動），再改版面與動畫。
 
 ## 3. `work/feedback/r<N>.md` 範本（四節，標題逐字）
 

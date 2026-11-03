@@ -34,7 +34,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 node shared/template/tools/build.mjs --project projects/<專案>
 ```
 
-完成判準：0 個 ✖；build 印的「人聲響度…」「音效比例…」「剪接點微淡化…」三行抄下來，`--check` 的「音效次數」「音效密度」有 ⚠ 也抄；「沒有畫面的區間」是「無」，或每段都有理由。
+完成判準：0 個 ✖；build 印的「人聲響度…」「音效比例…」「剪接點微淡化…」「講者調光…」「講者瘦臉…」「結尾配樂…」六行抄下來（沒開、沒配也抄），`--check` 的「音效次數」「音效密度」有 ⚠ 也抄、沒有「音效稀疏」⚠；「沒有畫面的區間」是「無」，或每段都有理由。
 常見錯誤：`⚠ 這些檔被手改過，沒有覆寫` → 退路表第 1 列。
 
 **A2. 量情境動畫的版面**（plan.json 有 custom 段才做）
@@ -74,28 +74,28 @@ Windows（PowerShell）：Copy-Item projects\<專案>\work\hyperframes\plan.json
 node shared/template/tools/versions.mjs save --project projects/<專案> --seg <改到的段，逗號隔開>
 ```
 
-B1 編號 N 用 status 印的「下一輪回饋編號」（工具沒有時：`work/feedback/` 裡 `r*.md` 的最大數字＋1，例：有 r1、r2 → r3）→ B2 重新讀 plan.json（剪輯台可能改過）→ B3 備份（cp 那兩行擇一，再跑 `versions.mjs save` 存改之前的樣子）→ B4 寫 `work/feedback/r<N>.md` 的「原話」「分類」→ B5 改 plan.json（「s05」直接找 id；「這張卡」才讀 Studio 選取，USAGE.md 2.6）→ B6 A1–A3 只看改到的段，再跑一次 `versions.mjs save`（存改之後的樣子＋比較影片）→ B7 寫 rN.md「改了哪幾段」「驗證」→ 停點 ④。
+B1 編號 N 用 status 印的「下一輪回饋編號」（工具沒有時：`work/feedback/` 裡 `r*.md` 的最大數字＋1，例：有 r1、r2 → r3）→ B2 重新讀 plan.json（剪輯台可能改過）→ B3 備份（cp 那兩行擇一，再跑 `versions.mjs save` 存改之前的樣子；還沒有任何版本的段加 `--no-preview`，見 `references/feedback-round.md`）→ B4 寫 `work/feedback/r<N>.md` 的「原話」「分類」→ B5 改 plan.json（「s05」直接找 id；「1:10 那段」「這段」照 USAGE.md 2.6 換成段 id；「這張卡」才讀 Studio 選取，USAGE.md 2.6）→ B6 A1–A3 只看改到的段，再跑一次 `versions.mjs save`（存改之後的樣子＋比較影片）→ B7 寫 rN.md「改了哪幾段」「驗證」→ 停點 ④。
 完成判準：`plan.json.bak-r<N>` 存在；改到的段在 `work/versions/<段>/` 有改前、改後兩版；rN.md 四節（原話、分類、改了哪幾段、驗證）齊全。
 常見錯誤：「規則」類的回饋（例：「以後金句都放左邊」）去改了 `shared/` → 只記在 rN.md 的「建議改規則」，不改 `shared/`；使用者沒說怎麼改、只說要更好 → 改走流程 D。
 
-**C. 剪輯台 → 停點 ⑤**（EDITOR.md 第一部分）
+**C. 剪輯台 → 停點 ⑤**（EDITOR.md「一、給 AI」；剪輯台會改哪些欄位看其中「3. 剪輯台會寫哪些欄位」）
 
 ```
 node shared/template/tools/editor.mjs --project projects/<專案>
 node shared/template/tools/editor.mjs --status --project projects/<專案>
 ```
 
-第 1 行在背景啟動（工具自己轉背景）；第 2 行確認網址。使用者說「調好了」：重新讀 plan.json 與 rough.srt → 流程 A。
+第 1 行在背景啟動（工具自己轉背景）；第 2 行確認網址。使用者說「調好了」：重新讀 plan.json 與 rough.srt → 流程 A（剪輯台增刪字幕時會重對 plan.json 的句號，`work/storyboard.md` 的句號因此可能過期，以 plan.json 為準）。
 完成判準：`--status` 印出網址；「調好了」之後 build 0 個 ✖。
 常見錯誤：使用者在剪輯台改過的文字、斷句、時間被改回去 → 以剪輯台存的為準（AGENTS.md「剪輯台」）。
 
-**D1. 改版：開提案 → 停點 ③**（使用者指名一段要重新設計、更完善、換個動畫；`status.mjs` 印「改版／…分鏡還沒給使用者確認」也從這裡接）
+**D1. 改版：開提案 → 停點 ③**（使用者指名一段要重新設計、更完善、換個動畫；`status.mjs` 印「改版／…分鏡還沒給使用者確認」也從這裡接；沒指名段（「動畫都更細節一點」）先列出情境動畫段、每段一句可以改的方向，問要改哪幾段，可以一次 `--seg s08,s12`，停點紀錄寫「③ 分鏡表（s08 v2、s12 v2）」）
 
 ```
 node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段> --note "「使用者原話」"
 ```
 
-工具先把現在的樣子存成 v<舊>（含 預覽.mp4），再開 `work/versions/<段>/v<N>/分鏡.md`。開回饋輪 r<N>（B1–B4），然後改那份分鏡.md：「這版要改什麼」寫 1–5 條（和 v<舊> 差在哪、為什麼，先看 v<舊>/預覽.mp4）；「## 分鏡」改那一節（情境換了照新情境的拍型重寫動畫分鏡，表頭照抄 BEATS.md、動態只用語彙表的名稱，`auto-edit-storyboard` 步驟 5）。停點紀錄加「③ 分鏡表（<段> v<N>）｜待回覆」，最後一行照抄工具印的停點行。
+工具先把現在的樣子存成 v<舊>（含 預覽.mp4），再開 `work/versions/<段>/v<N>/分鏡.md`。開回饋輪 r<N>（B1–B4），然後改那份分鏡.md：「這版要改什麼」寫 1–5 條（和 v<舊> 差在哪、為什麼，先看 v<舊>/預覽.mp4）；「## 分鏡」改那一節（情境換了照新情境的拍型重寫動畫分鏡，表頭照抄 BEATS.md §1、動態只用 §2 語彙表的名稱，`auto-edit-storyboard` 步驟 5）。停點紀錄加「③ 分鏡表（<段> v<N>）｜待回覆」，最後一行照抄工具印的停點行。
 完成判準：分鏡.md 沒有範本那一行「（寫 1–5 條」；回覆最後一行是改版的停點 ③。
 常見錯誤：直接改了 storyboard.md 或 x 檔 → 提案只寫在 v<N>/分鏡.md，使用者說「可以」後才由 D2 寫回。
 
@@ -150,7 +150,7 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 
 - [ ] build 0 個 ✖；有 custom 段時 audit 0 個 ✖
 - [ ] snapshot 每段有 PASS／FAIL
-- [ ] 改 plan.json 前有 `plan.json.bak-r<N>`；改到的段改前、改後都跑了 `versions.mjs save`；改版先停在停點 ③（<段> v<N>），使用者說「可以」才 accept、才動 x 檔
+- [ ] 改 plan.json 前有 `plan.json.bak-r<N>`；改到的段改前、改後都跑了 `versions.mjs save`；改版先停在停點 ③（<段> v<N>），使用者說「可以」才 accept、才動 x 檔；版本只用 `versions.mjs` 建、退回，沒有手動複製
 - [ ] rN.md 四節齊全
 - [ ] 沒蓋掉剪輯台存的設定
 - [ ] 「規則」類的修改只記在 rN.md，沒改 `shared/`
@@ -162,7 +162,7 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 | `⚠ 這些檔被手改過，沒有覆寫：… → 把改動搬進 plan.json 後加 --force` | 看改了什麼，搬進 plan.json，再加 `--force`（USAGE.md 2.6） | 停下來回報：指令、錯誤原文、已經試過什麼 |
 | `"code": "no-selection"` | 請使用者暫停在那張卡、點卡上的字再說一次（USAGE.md 2.6） | 問使用者是第幾秒 |
 | Studio 網址打不開 | `(cd projects/<專案>/work/hyperframes && npx hyperframes preview --status)` | 停下來回報 |
-| 剪輯台存檔時說檔案被改過 | 請使用者重新載入再調（EDITOR.md） | 停下來回報 |
+| 剪輯台存檔時說檔案被改過 | 請使用者重新載入再調（EDITOR.md「8. 常見問題」） | 停下來回報 |
 | audit `✖ … 綁句失敗`、`未定位頂層`、`標題壓到內容` | 把那幾行原文交回寫那支的子代理，或自己照 `auto-edit-motion` 退路表改 | 停下來回報 |
 | audit `⚠ … 最後一幕太短：…` | plan.json 這段的 `to` 往後延訊息給的秒數，重跑 build | 回報保留理由 |
 | `⚠ 音效密度：…` | 照 → 在 `ding`、`impact` 那幾段寫 `"sfx": null`，或回報說明保留的理由 | — |
@@ -182,12 +182,12 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 ```
 （停點 ④）定稿好了：<N> 段，PASS <N>、FAIL 已修 <N>
 人聲響度 …（build 原文）
-剪接點微淡化 …（build 原文）
+剪接點微淡化 …｜講者調光 …｜講者瘦臉 …｜結尾配樂 …（build 原文；沒開、沒配也貼，使用者才知道可以開）
 音效比例：…（build 原文；有 ⚠ 也貼）
 音效次數／音效密度：<有 ⚠ 才貼原文與處理；沒有寫「無 ⚠」>
 轉場：…｜主題：…（build 報告最後一行原文；轉場是 build 內建的，plan.json 不用寫）
 audit：✖ 0、⚠ <N>（保留的理由一行）
-要你確認：<卡 1–3 張>；請看字幕有沒有對到嘴
+要你確認：<卡 1–3 張>；請看字幕有沒有對到嘴（快速初稿加：待做動畫 <段> x-<名稱>、…，說「s05 做動畫」或「動畫都做」）
 <停點 ④ 那一行原文，網址照工具印的>
 ```
 

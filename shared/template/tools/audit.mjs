@@ -30,6 +30,8 @@
  *   未定位頂層     custom 的 root 或 .fill 直接底下的元素不是 position: absolute（R7.3 骨架）
  *   標題壓到內容   custom 的標題列（.sc-wcard__bar、.sc-pill、data-audit-title）下緣蓋到下面的內容
  *   綁句失敗       custom 的 P.at 找不到句子、詞或這段的 cue 表
+ *   拍在段尾之後   custom 的 P.at 落在淡出（沒有淡出就是段尾）之後，播出時看不到
+ *   開場來不及     custom 檔頭【D 下限】的第一拍下限（例 T1 ≥ 3.1）不成立：開場的主卡、骨架還沒做完，站就先出來（換了開場就把檔頭那一行改成新的下限）
  *   示意元件讀不到 data-illus-src 的檔不在 work/hyperframes/illus-local/、data-illus 不是畫廊的 20 個元件也沒 ILLUS.register（畫面上是空的）
  * ⚠ 提醒
  *   壓到講者       透明版型（layout: "overlay"、下方字卡等）的內容蓋到 plan.json 的 speakerBox（面積比例；custom 與用 css 移位的段 ≥ 2%、
@@ -48,11 +50,15 @@
  *   同一秒新元素太多 任何 1 秒內新出現 > 2 個元素（亮框、同位置換內容、跟著卡片 0.6 秒內一起出現的不算）
  *   間隔太短       兩個新元素出現的時間差 < 0.12 秒
  *   完成態停太短   兩個 P.at 綁句點之間，畫面最長的靜止 < 1.2 秒（拍前就開始的動作算到它結束為止）
- *   最後一幕太短   最後一個動作結束到淡出（或收尾退場）< 1.5 秒
+ *   最後一幕太短   最後一個動作結束到淡出（或收尾退場）< 1.5 秒（段長以 plan.json 為準，排到段尾之後的動作不算）
+ *   段尾不夠       custom 檔頭【D 下限】的「D ≥ T4 + 5.2」不成立（回均衡這類排在最後一拍之後的動作會落到段外；拍點常數照 P.at 算，用到的名字不是 P.at 就不驗）
+ *   下限改過       custom 檔頭【D 下限】的開場、段長下限比範例原檔小或被刪掉（範例用 <title> 的說明對回 shared/template/custom/）
+ *   字級比範例小   custom 的元素（id／class 去掉前綴對回範例）字級比範例小（sc-tNN、style、<style> 的 font-size）：字放不下要縮文案或加寬容器
  *   綁句對不上     custom 的 P.at('#N')、P.at('#N@詞') 那一拍出現的字（站名、項目），在這段的另一句才講到（數字、英文整個詞比，中文取 2–4 字；刪除線、底線、位移不算出現；找不到不報）
  *   畫面沒有變化   custom 段裡連續 > 6 秒沒有任何動作（進場、點亮、焦點切換、描線、數字變化、位移都算動作），而那段時間有字幕句在講
  *   沒有動畫分鏡   work/storyboard.md 沒有「#### 動畫分鏡 <段 id>」表（拍型照 shared/template/BEATS.md §3）
  *   分鏡用了沒做的動作 分鏡「動態」欄寫了某個動作，custom 檔裡沒有對應的 P.*（例：寫「漣漪」卻沒有 P.ripple）
+ *   分鏡沒寫的動作 custom 檔裡有 P.spot／P.dim／P.idle／P.cam，分鏡表一拍都沒寫聚焦、退焦、漂浮、鏡頭（多半是範例沒改到的殘留）
  *   ── 下面只量有示意插圖元件（kit/illus.js 的 .il）的段；量元件邊緣時描邊外擴 2px ──
  *   標籤太長       示意動畫裡標題列以外的字 > 10 字（字只當標籤，完整句子交給字幕）
  *   插圖太小       完成態所有元件的外框聯集 < 卡片內部（扣標題列）面積 50%（主角是圖）
@@ -85,9 +91,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, pathsFrom, projectLabel } from './build.mjs';
-import { findChrome, findRuntime, openSession } from './lib/audit-browser.mjs';
+import { findChrome, findRuntime, openSession, freshRefsScript } from './lib/audit-browser.mjs';
 import { pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
-  judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings } from './lib/audit-rules.mjs';
+  judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings } from './lib/audit-rules.mjs';
+import { templateFor } from './lib/plan.mjs';
 import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings } from './lib/audit-beats.mjs';
 import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners } from './lib/audit-illus.mjs';
 import { judgeLayoutRules } from './lib/audit-layout.mjs';
@@ -97,6 +104,8 @@ const VALUE_FLAGS = ['project', 'only', 'chrome', 'runtime', 'template', 'format
 const rel = (p) => path.relative(process.cwd(), p) || '.';
 const r3 = (n) => Math.round(n * 1000) / 1000;
 
+// --shots（不在 --help：--help 和 specs/contracts/cli-003.md §1 逐字相同）：量的每個取樣時刻（中點、靜止、完成態）各存一張截圖
+// 到 work/audit-shots/<段 id>-<秒>.jpg（子代理看不到 snapshot，用這個看自己那段；改完 x 檔不用 build）。用法寫在 auto-edit-motion 步驟 6、worker-brief
 export function parseArgs(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
@@ -107,7 +116,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['all', 'json', 'help'].includes(k)) flags[k] = true;
+    } else if (['all', 'json', 'help', 'shots'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -199,7 +208,8 @@ export async function audit(flags, { log = console.log } = {}) {
 
   const raw = [];
   const segs = new Map(pick.list.map((it) => [it.id, { id: it.id, type: it.type, label: it.label, layout: layoutOf(it), start: it.start, end: it.end, samples: [] }]));
-  const S = await openSession({ dir: P.out, chrome, runtime: rt.file, W: cv.W, H: cv.H });
+  const fresh = Object.fromEntries(res.items.filter((it) => it.type === 'custom' && it.cueRefs).map((it) => [it.id, it.cueRefs]));
+  const S = await openSession({ dir: P.out, chrome, runtime: rt.file, W: cv.W, H: cv.H, extraHead: freshRefsScript(fresh) });
   const plans = new Map();
   // custom 段：先讀時間軸（子合成掛上之後才有；第一次 seek 到第一段的起點），排靜止取樣、之後判節奏
   const motions = new Map();
@@ -238,6 +248,12 @@ export async function audit(flags, { log = console.log } = {}) {
         if (hasStill(m2)) { m = m2; j.t = t; }
       }
       const seg = segs.get(j.it.id);
+      if (flags.shots) {
+        const f = path.join(P.project || P.out, 'work', 'audit-shots', `${j.it.id}-${j.t.toFixed(2)}.jpg`);
+        fs.mkdirSync(path.dirname(f), { recursive: true });
+        await S.screenshot(f);
+        (report.shots ||= []).push(rel(f));
+      }
       const still = (m.els || []).filter((e) => !e.moving);
       seg.samples.push({ t: j.t, kind: j.kind, measured: still.length, moving: (m.els || []).length - still.length });
       if (!m.missingHost && Math.abs(m.host.start - j.it.start) > 0.02) {
@@ -283,6 +299,10 @@ export async function audit(flags, { log = console.log } = {}) {
     motion.push(...staticFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [] }));
     // 分鏡對齊：work/storyboard.md 的「#### 動畫分鏡 <段 id>」表和檔裡的 P.at 逐拍比（cli-003 §2.3d）
     const sheet = sheets.get(it.id), mo = motions.get(it.id), html = htmlOf(it);
+    // 範例檔頭【D 下限】：第一拍離段起點、段長；和範例原檔比：下限被改小、字級被縮小
+    const tpl = (templateFor(html, path.join(P.templateDir, 'custom')) || {}).html || '';
+    motion.push(...floorFindings({ item: it, html, cuesOut: res.cuesOut || [], file: it.file, tpl }));
+    motion.push(...fontShrinkFindings({ item: it, html, tpl, file: it.file }));
     if (!sheet) motion.push(noSheetFinding(it, it.file));
     else if (mo) motion.push(...beatFindings({ item: it, sheet, marks: mo.marks || [], cuesOut: res.cuesOut || [], html, file: it.file, local }));
     // 011 示意動畫：元件名與 illus-local 檔、閃爍、先有節點再畫線
@@ -322,6 +342,7 @@ export function formatReport(r) {
     const bad = [...new Set(r.findings.flatMap((f) => f.at || []))].sort((a, b) => a - b).slice(0, 12);
     if (bad.length) L.push(`看畫面：cd ${r.project}/work/hyperframes && npx hyperframes snapshot --at ${bad.map((t) => r3(t)).join(',')} --no-end -o ../../output/qc`);
   } else if (ne) L.push('', `未通過：${ne} 個錯誤（✖）。`);
+  if (r.shots?.length) L.push('', `截圖 ${r.shots.length} 張（用看圖的工具打開，對照分鏡看每個動作有沒有真的看得到）：`, ...r.shots.map((f) => `  ${f}`));
   return L.join('\n');
 }
 

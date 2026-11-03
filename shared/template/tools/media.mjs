@@ -11,12 +11,18 @@
  *   node shared/template/tools/media.mjs main --project projects/<專案> [--order 檔名1,檔名2,…]
  *       把 assets/camera/、assets/voice/，以及 assets/screen/ 裡邊錄邊講的螢幕錄影（有聲音的比例 20–95%：講話會停頓，背景音樂不會）照檔名排序
  *       （或 --order 的順序；--order 可以寫檔名或 assets/… 路徑，也能放進沒偵測到講解、但有音軌的螢幕錄影）接成 work/main.mp4：
+ *       檔名後面加 @起-迄（秒，迄可省略＝到檔尾）只取那一段，同一支可以出現好幾次——補錄插進旁白中間：
+ *       --order "a.mp4,旁白.mp3@0-577.7,補錄.aac@2.1-32.4,旁白.mp3@603.4-,b.mp4"
  *       聲音檔與螢幕錄影都只取聲音、配純黑畫面（螢幕錄影的畫面之後由 screen-sync 自動蓋回）；
  *       解析度／fps 跟第一支真人錄影（沒有就 1920×1080 30fps）；聲音統一 48k AAC。
- *       同時寫 work/main.json：{ "clips": [{ "file", "kind": "camera"|"voice"|"screen", "start", "end" }] }
+ *       同時寫 work/main.json：{ "clips": [{ "file", "kind": "camera"|"voice"|"screen", "start", "end"[, "src": [起, 迄]] }] }（src＝有寫 @起-迄 時取的是素材哪一段）
  *       只有一支真人錄影時也轉一次（固定 fps、yuv420p）：auto-editor 直接剪手機原檔（VFR、yuvj420p），--cut-out 之後的畫面可能全黑。
  *       fps：原片在 29–31 之間、VFR 或沒有 fps 時用 30，其他照原片（例 25、60）。
  *
+ *   node shared/template/tools/media.mjs ng-scan --project projects/<專案>
+ *       找 NG（剪乾淨第 3–4 步）：讀 work/transcript.json（main.mp4 的詞級逐字稿），用講稿裡只出現一次的四字組當錨點對位置；
+ *       講到講稿後面又跳回前面（接著往下講 ≥ 6 字）＝重講 → 前一次列成 NG 候選（留最後一次）；講稿找不到的話列「講稿外」；
+ *       沒講稿時比相鄰句（停頓切句）。印 cuts.md 的 NG 表與章節空檔表（照抄），講稿每一行的開口時間寫 work/ng-scan.md。
  *   node shared/template/tools/media.mjs snap-srt --project projects/<專案> [--dry-run] [--below <dB>]
  *       把 work/rough.srt 每則字幕的起點對齊到實際開口的時間（逐字稿的時間碼只有整句，常比嘴巴早 1 秒左右）：
  *       用 ffmpeg 把 work/rough.mp4 的聲音解出來算能量包絡，門檻取這支音軌自己的「說話音量」與「底噪」之間（相對值，不寫死 dB；
@@ -51,6 +57,8 @@
  *       （字元層級，允許錯字／多字／漏字）；沒講稿：work/rough.srt 每則依「，。！？；」切成子句。
  *       一行超過 18 字在「、，」處拆；同一口氣（停頓 ≤ 0.12 秒）或有一邊 ≤ 4 字、下一行不是「而、但、所以…」開頭的新句，合併後 ≤ 18 字就併；
  *       相鄰空檔 < 1 秒補滿；對不上的行用前後句內插（⚠ 列出）。字幕文字去掉「，。；：」，保留「、！？」。
+ *       rough.mp4 聲音裡 ≥ 1.5 秒的停頓（章節前留的 3 秒、--add-in 保留的停頓）字幕不蓋：逐字稿常把字攤進停頓，
+ *       起點落在停頓裡的挪到開口、終點拖進停頓的收到停頓起點（＋0.15 秒），build 才量得到章節前的空檔。
  *       沒有 transcript.json 時用 rough.srt 的整則時間按字數比例（⚠，之後跑 snap-srt）。
  *       寫回前先備份 work/rough.srt.align-<時間戳>；--dry-run 只印表。plan.json 已經用到 #N 時要加 --remap-plan（照時間換句號，plan.json 先備份 .align-<時間戳>）。
  *       每則字數上限（srt-align、srt-split 的 --max）預設照版式：橫式 18、直式 10（lib/canvas.mjs 的 caption.maxChars；直式時第一行印「版式：直式 → 每則最多 10 字」）。
@@ -78,7 +86,7 @@ import { parseSrt, formatSrt } from './lib/srt.mjs';
 import { visibleLen } from './lib/scenes.mjs';
 import { textWidth as tw, normText } from './lib/time.mjs';
 import { mapPlanTimes, refTime, fmtRef, parseRef } from './editor/subtitles.mjs';
-import { run, probeMedia, rawFrame, writeJpg, blackDetect, VIDEO_EXT, IMAGE_EXT, AUDIO_EXT } from './lib/ff.mjs';
+import { run, probeMedia, rawFrame, writeJpg, blackDetect, transcriptFresh, noteTranscript, VIDEO_EXT, IMAGE_EXT, AUDIO_EXT } from './lib/ff.mjs';
 import { canvas, fillRect, blit, text, textWidth } from './lib/raster.mjs';
 import { lintIllusSvg } from './lib/illus-lint.mjs';
 import { KIT_LINKS } from './lib/main.mjs';
@@ -331,13 +339,19 @@ export function joinMain(P, { order = null, log = console.log } = {}) {
   if (!list.length) throw new Error('assets/camera/ 和 assets/voice/ 都是空的，assets/screen/ 也沒有邊錄邊講的錄影：先把口播影片或旁白放進去');
   if (order) {
     const want = String(order).split(',').map((s) => s.trim()).filter(Boolean);
-    const picked = want.map((w) => {
+    const picked = want.map((raw) => {
+      // 檔名@起-迄：只取那一段（補錄插進旁白中間時，同一支旁白切成前後兩段）
+      const m = raw.match(/^(.*)@(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)?$/);
+      const w = m ? m[1].trim() : raw;
       const hits = all.filter((x) => x.name === w || x.file === w.replace(/\\/g, '/'));
       if (hits.length > 1) throw new Error(`--order 的「${w}」有 ${hits.length} 個同名檔（${hits.map((x) => x.file).join('、')}）→ 改寫成 assets/… 路徑`);
       if (!hits.length) throw new Error(`--order 的「${w}」找不到 → 現有：${all.map((x) => x.file).join('、')}`);
-      return hits[0];
+      if (!m) return hits[0];
+      const a = Number(m[2]), b = m[3] != null ? Number(m[3]) : null;
+      if (b != null && b <= a) throw new Error(`--order 的「${raw}」：迄要比起大（寫成 檔名@起-迄，秒數；迄不寫＝到檔尾）`);
+      return { ...hits[0], range: [a, b] };
     });
-    const left = list.filter((x) => !picked.includes(x));
+    const left = list.filter((x) => !picked.some((p) => p.file === x.file));
     if (left.length) log(`⚠ 這些檔沒寫在 --order，不接進主軌：${left.map((x) => x.name).join('、')}`);
     list = picked;
   }
@@ -357,7 +371,14 @@ export function joinMain(P, { order = null, log = console.log } = {}) {
     const abs = path.join(proj, ...x.file.split('/'));
     const info = probeMedia(abs);
     if (x.kind !== 'camera' && !info.hasAudio) throw new Error(`${x.file} 沒有聲音軌`);
-    const D = r3(Math.round(info.duration * F) / F);
+    let src = null;
+    if (x.range) {
+      const a = x.range[0], b = Math.min(x.range[1] ?? info.duration, info.duration);
+      if (a >= info.duration || b - a < 0.1) throw new Error(`--order 的 ${x.file}@${a}-${x.range[1] ?? ''}：素材只有 ${r3(info.duration)}s，這一段是空的`);
+      src = [r3(a), r3(b)];
+    }
+    const D = r3(Math.round((src ? src[1] - src[0] : info.duration) * F) / F);
+    if (src) inputs.push('-ss', String(src[0]), '-t', String(r3(src[1] - src[0])));
     inputs.push('-i', abs);
     if (x.kind === 'camera') chains.push(`[${i}:v:0]scale=${W}:${H}:force_original_aspect_ratio=decrease:out_range=tv,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,fps=${F},format=yuv420p,tpad=stop_mode=clone:stop_duration=1,trim=duration=${D},setpts=PTS-STARTPTS[v${i}]`);
     // 聲音檔、邊錄邊講的螢幕錄影配純黑畫面（build 靠 blackdetect 認出「只有聲音」的區間，一定要是合成的純黑；螢幕錄影的畫面由 screen-sync 蓋回）
@@ -365,9 +386,9 @@ export function joinMain(P, { order = null, log = console.log } = {}) {
     if (info.hasAudio) chains.push(`[${i}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,apad,atrim=duration=${D},asetpts=PTS-STARTPTS[a${i}]`);
     else chains.push(`anullsrc=r=48000:cl=stereo,atrim=duration=${D},asetpts=PTS-STARTPTS[a${i}]`);
     labels.push(`[v${i}][a${i}]`);
-    clips.push({ file: x.file, kind: x.kind, start: r3(t), end: r3(t + D) });
+    clips.push({ file: x.file, kind: x.kind, start: r3(t), end: r3(t + D), ...(src ? { src } : {}) });
     t += D;
-    log(`接主軌 ${i + 1}/${list.length}：${x.file}${x.kind === 'voice' ? '（聲音，配純黑畫面）' : x.kind === 'screen' ? '（邊錄邊講的螢幕錄影：取聲音、配純黑畫面）' : ''}（${D}s）`);
+    log(`接主軌 ${i + 1}/${list.length}：${x.file}${src ? `@${src[0]}–${src[1]}s` : ''}${x.kind === 'voice' ? '（聲音，配純黑畫面）' : x.kind === 'screen' ? '（邊錄邊講的螢幕錄影：取聲音、配純黑畫面）' : ''}（${D}s）`);
   });
   const graph = `${chains.join(';')};${labels.join('')}concat=n=${list.length}:v=1:a=1[v][a]`;
   const mainFile = path.join(proj, 'work', 'main.mp4');
@@ -651,7 +672,8 @@ export function parseMargin(m) {
 }
 
 // NG 起訖吸到前後的停頓：起點用「包含它或最近的靜音段起點」、終點用「包含它或最近的靜音段終點」（±win 秒內）
-// chapterSil＝章節開口用的停頓（chapterKeep 的 sil）：終點「落在」這種停頓裡時改吸停頓「起點」，不吃掉章節的保留區
+// chapterSil＝章節開口用的停頓（chapterKeep 的 sil，可帶第 3 個值＝保留區起點）：終點「落在」這種停頓裡時改吸到保留區起點
+// （沒帶就吸停頓起點），不吃掉章節的保留區；保留區前那段停頓本來就會被剪，一起剪才不會在兩個剪點之間留下一兩格的殘片
 // （終點在停頓後面、NG 連下一句開頭一起剪時照常吸到停頓終點，由 ngSnap 報「吃掉章節的停頓」）
 export function snapNg(rows, sil, win = CUT.ngWin, chapterSil = []) {
   const near = (x, idx) => {
@@ -661,12 +683,13 @@ export function snapNg(rows, sil, win = CUT.ngWin, chapterSil = []) {
     for (const s of sil) { const d = Math.abs(s[idx] - x); if (d <= win + 1e-9 && (!best || d < best.d)) best = { s, d }; }
     return best ? best.s : null;
   };
-  const isCh = (s) => chapterSil.some((c) => c && c[0] === s[0] && c[1] === s[1]);
+  const chOf = (s) => chapterSil.find((c) => c && c[0] === s[0] && c[1] === s[1]);
   return rows.map((r) => {
     if (r.pending) return { ...r, skip: true };
     const sa = near(r.start, 0), sb = near(r.end, 1);
-    const toChapter = !!(sb && isCh(sb) && r.end >= sb[0] - 1e-9 && r.end <= sb[1] + 1e-9);
-    let a = sa ? sa[0] : r.start, b = sb ? (toChapter ? sb[0] : sb[1]) : r.end;
+    const ch = sb && chOf(sb);
+    const toChapter = !!(ch && r.end >= sb[0] - 1e-9 && r.end <= sb[1] + 1e-9);
+    let a = sa ? sa[0] : r.start, b = sb ? (toChapter ? (ch[2] ?? sb[0]) : sb[1]) : r.end;
     let missStart = !sa, missEnd = !sb;
     if (toChapter && !(a < b)) { a = r.start; missStart = true; }
     if (!(a < b)) { a = r.start; b = r.end; missStart = missEnd = true; }
@@ -781,6 +804,169 @@ export function suggestOrder(rows) {
   return [...rows.filter((r) => r.pos != null).sort((a, b) => a.pos - b.pos || a.k - b.k), ...rows.filter((r) => r.pos == null)];
 }
 
+// ---------- ng-scan ----------
+// 詞級逐字稿（main.mp4 的 work/transcript.json）對講稿：講稿裡只出現一次的四字組當錨點，每個錨點＝那一刻講到講稿的哪個字。
+// 講稿位置往回跳（從新位置一路講回前一次講到的地方或重講 ≥ 20 字、前一次在 90 秒內）＝重講：前一次講到這個位置起、到重講開口前，列成 NG 候選（留最後一次）。
+// 錨點之間空 ≥ 3 秒又有字的列「講稿外」。沒講稿：相鄰 3 句兩兩相像（兩字組重疊 ≥ 50%）的前一句列 NG 候選。章節（講稿 ##）第一句的開口時間印成章節空檔表。
+export const NGSCAN = { gap: 0.3, backChars: 3, tol: 2, minLen: 0.6, maxBack: 90, confirm: 3, step: 15, redo: 20, outsideGap: 3, charSec: 0.22, similar: 0.5, window: 3 };
+const pairsOf = (t) => { const cs = [...normText(t)], out = []; for (let i = 0; i + 1 < cs.length; i++) out.push(cs[i] + cs[i + 1]); return out; };
+
+// 講稿 → { lines（口播行）, chapters: [{ title, line（第幾行，0 起）}] }（## 是章節；### 是段落標題，不算）
+// 一段一段丟給 scriptLines 算行數：``` 區塊與 <!-- --> 註解的狀態要跟整份一起看，所以遇到 ## 才切段
+export function scriptChapters(md) {
+  const lines = scriptLines(md), chapters = [];
+  let buf = [], n = 0, fence = false;
+  for (const raw of String(md ?? '').split(/\r?\n/)) {
+    const l = raw.trim();
+    if (/^(```|~~~)/.test(l)) fence = !fence;
+    const m = !fence && l.match(/^##\s+(.+)$/);
+    if (m && !l.startsWith('###')) { n += scriptLines(buf.join('\n')).length; buf = []; chapters.push({ title: m[1].trim(), line: n }); continue; }
+    buf.push(raw);
+  }
+  return { lines, chapters: chapters.filter((c) => c.line < lines.length) };
+}
+
+// words＝[{ text, start, end }]；bounds＝主軌換檔的秒數
+export function utterances(words, bounds = []) {
+  const out = [];
+  let cur = null;
+  for (const w of words) {
+    const cross = cur && bounds.some((b) => cur.end <= b + 1e-6 && w.start >= b - 1e-6);
+    if (!cur || w.start - cur.end >= NGSCAN.gap || cross || /[。！？!?]$/.test(cur.text)) { cur = { start: w.start, end: w.end, text: '' }; out.push(cur); }
+    cur.text += w.text; cur.end = w.end;
+  }
+  return out.map((u) => ({ start: r3(u.start), end: r3(u.end), text: u.text }));
+}
+
+// 錨點：講稿裡只出現一次的四字組，在逐字稿裡出現＝那一刻講到講稿的那個位置（字元偏移）；前後 6 字內有另一個位置相符的錨點才算（擋掉巧合）
+export function scriptAnchors(words, lines, n = 4) {
+  const S = lines.map((l) => normText(l)).join(''), lineAt = [];
+  lines.forEach((l, i) => { for (const _ of normText(l)) lineAt.push(i); });
+  const count = new Map(), pos = new Map();
+  for (let i = 0; i + n <= S.length; i++) { const g = S.slice(i, i + n); count.set(g, (count.get(g) || 0) + 1); pos.set(g, i); }
+  const T = [];
+  for (const w of words) { const cs = [...normText(w.text)]; cs.forEach((c, k) => T.push({ c, t: r3(w.start + (k / Math.max(1, cs.length)) * (w.end - w.start)) })); }
+  const raw = [];
+  for (let i = 0; i + n <= T.length; i++) { const g = T.slice(i, i + n).map((x) => x.c).join(''); if (count.get(g) === 1) raw.push({ i, t: T[i].t, s: pos.get(g) }); }
+  const ok = raw.filter((a, k) => raw.slice(Math.max(0, k - 4), k + 5).some((b) => b !== a && Math.abs(b.i - a.i) <= 6 && Math.abs((b.s - a.s) - (b.i - a.i)) <= 1));
+  return { S, lineAt, T, anchors: ok.map((a) => ({ ...a, line: lineAt[a.s] })) };
+}
+
+export function ngScanRows(words, { lines = null, bounds = [] } = {}) {
+  const ng = [], outside = [];
+  if (lines && lines.length) {
+    const A = scriptAnchors(words, lines);
+    const live = [];
+    let far = -1;
+    const all = A.anchors;
+    // 從錨點 k 起一路往下講（相鄰錨點只往前一點點）的那一串：n＝接了幾個、reach＝講到哪
+    const run = (k) => {
+      let reach = all[k].s, n = 0;
+      for (let j = k + 1; j < all.length && n < 40; j++) {
+        const d = all[j].s - all[j - 1].s;
+        if (d < -NGSCAN.tol || d > NGSCAN.step) break;
+        reach = Math.max(reach, all[j].s); n++;
+      }
+      return { reach, n };
+    };
+    for (let ai = 0; ai < all.length; ai++) {
+      const a = all[ai];
+      // 往前大跳（中間有講稿外的話、或巧合撞到後面相似的字）：後面要接著往下講才算，不然當雜訊
+      if (far >= 0 && a.s > far + NGSCAN.step && run(ai).n < NGSCAN.confirm) continue;
+      if (a.s < far - NGSCAN.backChars) {
+        // 往回跳要站得住：從新位置一路往下講，講回到前一次講到的地方、或重講了 ≥ 20 字（巧合只會往回幾個字就跳走）
+        const r = run(ai);
+        if (r.n < NGSCAN.confirm || !(r.reach >= far - NGSCAN.backChars || r.reach - a.s >= NGSCAN.redo)) continue;
+        // 前一次講到這個位置的那個錨點起（最後一串在重講位置之後的錨點），到重講開口前，都是 NG
+        let k = live.length;
+        while (k > 0 && live[k - 1].s >= a.s) k--;
+        if (a.t - live[k].t > NGSCAN.maxBack) continue;   // 前一次在 90 秒以前：不是重講，是講稿裡相似的另一句
+        const gone = live.splice(k);
+        const t0 = gone[0].t, t1 = a.t;
+        if (t1 - t0 >= NGSCAN.minLen) {
+          const text = A.T.filter((x) => x.t >= t0 - 1e-6 && x.t < t1).map((x) => x.c).join('');
+          ng.push({ start: r3(t0), end: r3(t1), text: text.slice(0, 40), line: a.line + 1, again: r3(t1) });
+        }
+        far = live.length ? Math.max(...live.map((x) => x.s)) : -1;
+      }
+      live.push(a);
+      far = Math.max(far, a.s);
+    }
+    // 講稿外：前後兩個錨點相距 ≥ 3 秒、中間有 ≥ 6 個字
+    for (let k = 1; k < all.length; k++) {
+      const a = all[k - 1], b = all[k];
+      const mid = A.T.filter((x) => x.t > a.t + 0.3 && x.t < b.t - 0.3);
+      if (b.t - a.t >= NGSCAN.outsideGap && mid.length >= 6) outside.push({ start: r3(mid[0].t), end: r3(mid[mid.length - 1].t), text: mid.map((x) => x.c).join('') });
+    }
+    // 每一行第一次（還算數的）開口時間
+    const lineTime = new Map();
+    for (const a of live) if (!lineTime.has(a.line)) lineTime.set(a.line, r3(Math.max(0, a.t - (a.s - A.S.indexOf(normText(lines[a.line]))) * NGSCAN.charSec)));
+    return { ng: markCross(ng, bounds), outside, lineTime, anchors: A.anchors.length };
+  }
+  // 沒講稿：相鄰幾句兩兩相像 → 前一句
+  const U = utterances(words, bounds);
+  for (let i = 0; i < U.length; i++) {
+    const S = new Set(pairsOf(U[i].text));
+    if (S.size < 3) continue;
+    for (let j = i + 1; j <= Math.min(U.length - 1, i + NGSCAN.window); j++) {
+      const B = pairsOf(U[j].text), hit = B.filter((g) => S.has(g)).length;
+      if (hit / Math.max(S.size, B.length) >= NGSCAN.similar) { ng.push({ start: U[i].start, end: U[j].start, text: U[i].text.slice(0, 40), line: null, again: U[j].start }); break; }
+    }
+  }
+  return { ng: markCross(ng, bounds), outside, lineTime: new Map(), anchors: 0 };
+}
+
+// NG 跨過換檔點（前一支結尾＋下一支開頭）：換檔處的詞級時間常被拉長，下一支開頭的試講也常被併掉 → 標出換檔點，交使用者聽
+function markCross(ng, bounds) {
+  for (const g of ng) { const b = bounds.find((x) => x > g.start + 0.1 && x < g.end); if (b != null) g.cross = b; }
+  return ng;
+}
+
+export function ngScan(P, { log = console.log } = {}) {
+  const work = path.join(P.project, 'work');
+  let words;
+  try { words = JSON.parse(fs.readFileSync(path.join(work, 'transcript.json'), 'utf8')); } catch { throw new Error(`找不到 work/transcript.json → 先轉 main.mp4 的逐字稿（剪乾淨步驟 2）`); }
+  if (!Array.isArray(words)) words = words.words || [];
+  const clips = mainClips(P, path.join(work, 'main.mp4'));
+  const total = clips.length ? clips[clips.length - 1].end : null, last = words.length ? words[words.length - 1].end : 0;
+  if (total && last < total * 0.8) log(`⚠ work/transcript.json 只到 ${fmtC(last)}，main.mp4 長 ${fmtC(total)}：可能是 rough.mp4 的逐字稿（剪乾淨步驟 7 會覆蓋）→ 重轉 main.mp4 的逐字稿再跑`);
+  const scriptFile = path.join(P.project, '講稿.md');
+  const sc = fs.existsSync(scriptFile) ? scriptChapters(fs.readFileSync(scriptFile, 'utf8')) : null;
+  const r = ngScanRows(words, { lines: sc?.lines || null, bounds: clips.slice(1).map((c) => c.start) });
+  if (sc) {
+    const md = ['# ng-scan（media.mjs ng-scan 產生）：講稿每一行在 main.mp4 第一次（NG 以外）開口的秒數', '', '| 行 | 時間 | 講稿 |', '|---|---|---|',
+      ...sc.lines.map((l, i) => `| ${i + 1} | ${r.lineTime.has(i) ? fmtC(r.lineTime.get(i)) : '—'} | ${l} |`)];
+    fs.writeFileSync(path.join(work, 'ng-scan.md'), md.join('\n') + '\n');
+  }
+  log(`逐字稿 ${words.length} 個詞${sc ? `；講稿 ${sc.lines.length} 行，對到 ${r.anchors} 個錨點（講稿裡只出現一次的四字組）；每一行的開口時間寫在 work/ng-scan.md` : '；沒有講稿：只比相鄰句'}`);
+  log('');
+  log(`NG 候選 ${r.ng.length} 列（${sc ? '講到講稿後面又跳回前面＝重講，留最後一次' : '相鄰句很像，留後面那句'}；照抄進 cuts.md 的 NG 表，拿不準的寫「待確認」）：`);
+  log('| 時間碼 | 內容 | 原因 | 待確認 |');
+  log('|---|---|---|---|');
+  for (const g of r.ng) log(`| ${fmtC(g.start)}–${fmtC(g.end)} | ${g.text} | ${g.line ? `講稿第 ${g.line} 行在 ${fmtC(g.again)} 又講一次，留後面那次` : `${fmtC(g.again)} 又講一次，留後面那次`} | ${g.cross != null ? `跨過換檔點 ${fmtC(g.cross)}：換檔處逐字稿時間常不準、下一支開頭可能還有試講 → 請聽 ${fmtC(g.cross)} 之後確認從哪裡重講（終點改到那裡）` : '—'} |`);
+  if (r.outside.length) {
+    log('');
+    log(`講稿外 ${r.outside.length} 處（講稿找不到的話：口誤、自言自語、臨場加的話，或 whisper 聽錯；聽了再決定，不確定就不剪）：`);
+    for (const u of r.outside.slice(0, 20)) log(`  ${fmtC(u.start)}–${fmtC(u.end)}  ${u.text.slice(0, 40)}`);
+    if (r.outside.length > 20) log(`  …還有 ${r.outside.length - 20} 處`);
+  }
+  if (sc?.chapters.length) {
+    log('');
+    log('章節空檔表（照抄進 cuts.md；時間碼是這一章第一句的開口秒數，ng-snap 會再往後找實際開口點）：');
+    log('| 章節 | 第一句 | 時間碼 |');
+    log('|---|---|---|');
+    for (const c of sc.chapters) {
+      let i = c.line;
+      while (i < sc.lines.length && !r.lineTime.has(i)) i++;
+      log(`| ${c.title} | ${sc.lines[c.line].slice(0, 16)} | ${i < sc.lines.length ? fmtC(r.lineTime.get(i)) : '（找不到 → 聽 main.mp4 補）'} |`);
+    }
+  }
+  log('');
+  log('→ 下一步：照抄進 work/cuts.md（NG 表、章節空檔表、需要你決定），再跑 ng-snap');
+  log(`node shared/template/tools/media.mjs ng-snap --project ${posixRel(P.project)}`);
+  return r;
+}
+
 export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1 = null, log = console.log } = {}) {
   const mSec = parseMargin(margin);
   const work = path.join(P.project, 'work');
@@ -797,7 +983,7 @@ export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1
   const sil = silencesOf(readV1(v1File), fps);
   const warnings = [], notes = [];
   const chs = chapterKeep(cm.chapters, sil, mSec);
-  const snapped = snapNg(cm.ng, sil, CUT.ngWin, chs.filter((c) => !c.none).map((c) => c.sil));
+  const snapped = snapNg(cm.ng, sil, CUT.ngWin, chs.filter((c) => !c.none).map((c) => [...c.sil, c.keep[0]]));
   let cutOut = mergeRanges(snapped.filter((r) => !r.skip).map((r) => [r.a, r.b]));
   for (const c of chs) {
     if (c.none || !c.keep) continue;
@@ -880,8 +1066,9 @@ export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1
   const base = { src: srcRel, edit, margin, cutOut, addIn };
   const commands = [
     aeCommand({ ...base, tail: ['--preview'] }),
-    aeCommand({ ...base, tail: ['-o', `"${roughRel}"`, '--no-open'] }),
-    aeCommand({ ...base, tail: ['--export', 'v1', '-o', `"${v1Rel}"`] }),
+    // --progress none：進度條每格一行，長片會灌爆 AI 的工具輸出（bench 實測 39KB 被截斷）
+    aeCommand({ ...base, tail: ['-o', `"${roughRel}"`, '--no-open', '--progress', 'none'] }),
+    aeCommand({ ...base, tail: ['--export', 'v1', '-o', `"${v1Rel}"`, '--progress', 'none'] }),
   ];
   for (const l of ['', '1. 先看會剪掉多少：', commands[0], '2. 沒問題就輸出初剪：', commands[1], '3. 再存剪接點（只寫 JSON，不轉檔）：', commands[2],
     `→ 然後跑 node shared/template/tools/media.mjs verify-rough --project ${posixRel(P.project)}（檢查初剪有沒有黑畫面），再跑 node shared/template/tools/media.mjs cutpoints --project ${posixRel(P.project)}`]) log(l);
@@ -964,7 +1151,7 @@ export function screenSegments(clips, v1, fps) {
     for (const c of scr) {
       const x = Math.max(a, c.start), y = Math.min(b, c.end);
       if (y - x <= 1e-6) continue;
-      const from = acc + (x - a), to = from + (y - x), inn = x - c.start;
+      const from = acc + (x - a), to = from + (y - x), inn = x - c.start + (c.src ? c.src[0] : 0);
       const l = out[out.length - 1];
       if (l && l.src === c.file && Math.abs(l.to - from) < 1e-6 && Math.abs(l.in + (l.to - l.from) - inn) < 1e-3) l.to = to;
       else out.push({ src: c.file, from, to, in: inn });
@@ -1188,7 +1375,7 @@ export function srtSplit(P, { max = 18, dryRun = false, log = console.log, now =
 
 // ---------- 剪乾淨第 6 步：字幕對講稿（srt-align，F8）----------
 // 單位是完整語句：有講稿＝講稿每一行；沒講稿＝rough.srt 每則依「，。！？；」切成子句。時間用 work/transcript.json（詞級）做全域序列對齊。
-export const ALIGN = { max: 18, breath: 0.12, short: 4, closeGap: 1.0, minQ: 0.34, minDur: 0.6, maxCells: 4e8 };
+export const ALIGN = { max: 18, breath: 0.12, short: 4, closeGap: 1.0, minQ: 0.34, minDur: 0.6, maxCells: 4e8, pause: 1.5, edge: 0.5, blip: 0.25 };   // pause：聲音停這麼久以上，字幕不蓋（keepPauses）；edge：字幕起點到停頓（停頓到終點）之間說話不到這麼久＝攤進停頓的尾巴；blip：短於這個的聲響不打斷停頓
 const CJK_PUNCT_DROP = /[，。；：]/;
 const isCjk = (c) => !!c && c.codePointAt(0) >= 0x2e80;
 
@@ -1343,6 +1530,29 @@ function interpolate(rows) {
   return rows;
 }
 
+// 字幕不蓋長停頓（純函式）：speech＝說話區間 [[起, 迄], …]，兩段之間空 ≥ ALIGN.pause 的是停頓。
+// 起點落在停頓裡，或起點到停頓之間說話不到 ALIGN.edge 秒（上一句的尾巴、換氣）→ 挪到停頓終點（開口，往前留 SNAP.lead）；
+// 終點落在停頓裡，或停頓到終點之間說話不到 ALIGN.edge 秒 → 收到停頓起點＋SNAP.tailPad。每則至少 ALIGN.minDur、不和下一則重疊。
+export function keepPauses(cues, speech, { pause = ALIGN.pause, edge = ALIGN.edge } = {}) {
+  const gaps = [];
+  for (let i = 1; i < speech.length; i++) if (speech[i][0] - speech[i - 1][1] >= pause - 1e-9) gaps.push([speech[i - 1][1], speech[i][0]]);
+  const talk = (x, y) => speech.reduce((t, [a, b]) => t + Math.max(0, Math.min(b, y) - Math.max(a, x)), 0);
+  const out = cues.map((c) => ({ ...c }));
+  let moved = 0;
+  for (let i = 0; i < out.length; i++) {
+    const c = out[i], next = out[i + 1];
+    const gs = gaps.find(([a, b]) => c.start < b - 1e-6 && b < c.end && talk(c.start, a) < edge);
+    const ge = gaps.find(([a, b]) => c.end > a + SNAP.tailPad + 1e-6 && a > c.start && talk(b, c.end) < edge);
+    let s = c.start, e = c.end;
+    if (gs) s = Math.max(gs[0], gs[1] - SNAP.lead);
+    if (ge && ge[0] > s) e = ge[0] + SNAP.tailPad;
+    if (e - s < ALIGN.minDur) e = s + ALIGN.minDur;
+    if (next && e > next.start) e = Math.max(s + 0.01, next.start);
+    if (Math.abs(s - c.start) > 1e-6 || Math.abs(e - c.end) > 1e-6) { c.start = r3(s); c.end = r3(e); moved++; }
+  }
+  return { cues: out, moved, pauses: gaps.length };
+}
+
 // 講稿行（或子句）＋逐字稿 → 字幕：對齊 → 內插 → 長行拆 → 同一口氣的短行併 → 相鄰空檔 < closeGap 補滿
 // lines：[{ text, from?（講稿第幾行，1 起）, cue?（沒講稿時：原 rough.srt 第幾則）, start?, end?（沒有逐字稿時的比例時間）}]
 export function alignCues(lines, words, { max = ALIGN.max } = {}) {
@@ -1439,6 +1649,14 @@ export function remapPlanByTime(plan, oldCues, newCues) {
   }
   const mp = refMapper(oldCues, newCues, { overrides, segShift });
   let out = mapPlanTimes(plan, (r, id) => mp.map(r, id));
+  // 章節轉場的 at 只能寫 "#N"（該章第一句）：照時間換成 "#282-2.99" 這種時（字幕避開了章節前的停頓），收回成那一句
+  if (Array.isArray(out?.scenes) && out.scenes.some((sg, i) => sg && typeof sg.at === 'string' && sg.at !== plan.scenes[i]?.at)) {
+    out = { ...out, scenes: out.scenes.map((sg) => {
+      const r = sg && typeof sg.at === 'string' ? parseRef(sg.at) : null;
+      if (!r || (!r.end && !r.off && r.kw == null)) return sg;
+      return { ...sg, at: `#${r.end ? r.n + 1 : r.n}` };
+    }) };
+  }
   if (out.outro && typeof out.outro === 'object' && typeof out.outro.from === 'string') {
     const v = mapRefStr(out.outro.from, mp, 'outro');
     if (v !== out.outro.from) out = { ...out, outro: { ...out.outro, from: v } };
@@ -1470,7 +1688,8 @@ export function srtAlign(P, { dryRun = false, remapPlan = false, max = ALIGN.max
   if (fs.existsSync(tjFile)) {
     try { words = JSON.parse(fs.readFileSync(tjFile, 'utf8')); } catch (e) { throw new Error(`work/transcript.json 不是合法的 JSON（${e.message}）→ 重轉：${transcribe}`); }
     if (!Array.isArray(words) || !words.every((w) => w && typeof w.text === 'string' && Number.isFinite(w.start) && Number.isFinite(w.end))) throw new Error(`work/transcript.json 的格式不是 [{ text, start, end }] → 重轉：${transcribe}`);
-    if (fs.existsSync(roughFile) && fs.statSync(tjFile).mtimeMs < fs.statSync(roughFile).mtimeMs - 1000) throw new Error(`work/transcript.json 比 work/rough.mp4 舊（不是這支初剪轉的）→ 重轉：${transcribe}`);
+    if (!transcriptFresh(tjFile, roughFile)) throw new Error(`work/transcript.json 比 work/rough.mp4 舊（不是這支初剪轉的）→ 重轉：${transcribe}`);
+    if (fs.existsSync(roughFile)) noteTranscript(tjFile, roughFile);
   } else why = '沒有 work/transcript.json';
   const srtText = fs.existsSync(srtFile) ? fs.readFileSync(srtFile, 'utf8') : null;
   const oldCues = srtText ? parseSrt(srtText) : [];
@@ -1480,7 +1699,17 @@ export function srtAlign(P, { dryRun = false, remapPlan = false, max = ALIGN.max
   const lines = hasScript ? scriptLines(fs.readFileSync(scriptFile, 'utf8')).map((text, i) => ({ text, from: i + 1 })) : clausesFromSrt(oldCues);
   if (!lines.length) throw new Error(hasScript ? '講稿.md 讀不到口播行（# 標題、> 引言、含 ` 的說明行都不算）→ 一句一行寫進講稿.md' : 'work/rough.srt 讀不到任何字幕');
   const res = alignCues(lines, words, { max });
-  const { cues, info, rows } = res;
+  const { info, rows } = res;
+  let { cues } = res, pauseNote = null;
+  // 字幕不蓋 rough.mp4 裡的長停頓（章節前的 3 秒）：用聲音的能量找停頓；整支有背景音樂分不出說話就跳過
+  if (fs.existsSync(roughFile)) {
+    try {
+      const env = envelope(roughFile);
+      const kp = keepPauses(cues, speechFromEnvelope(env, pickThreshold(env.db).threshold, { minSpeech: ALIGN.blip }));
+      if (kp.moved) { cues = kp.cues; res.cues = cues; }
+      pauseNote = `rough.mp4 有 ${kp.pauses} 個 ≥ ${ALIGN.pause} 秒的停頓，${kp.moved} 則字幕的起迄避開停頓`;
+    } catch (e) { pauseNote = `⚠ 量不到 rough.mp4 的停頓（${e.message.slice(0, 60)}），字幕可能蓋到章節前的停頓`; }
+  }
   // 表
   log(`字幕對${hasScript ? '講稿' : '子句'}：${hasScript ? `講稿.md ${lines.length} 行` : `work/rough.srt ${oldCues.length} 則 → ${lines.length} 個子句`}，時間用 ${why ? `work/rough.srt 的整則時間按字數比例（${why}）` : `work/transcript.json（${words.length} 個詞）全域對齊`}`);
   log('  則   起–迄                 長     字   字幕');
@@ -1493,6 +1722,7 @@ export function srtAlign(P, { dryRun = false, remapPlan = false, max = ALIGN.max
   const gaps = cues.slice(1).map((c, i) => c.start - cues[i].end).sort((a, b) => a - b);
   const med = (a) => (a.length ? a[Math.floor((a.length - 1) / 2)] : 0);
   log(`共 ${cues.length} 則（併 ${info.filter((f) => f.merged > 1).length} 次、拆出 ${info.filter((f) => f.split).length} 則）；平均 ${(lens.reduce((s, x) => s + x, 0) / (lens.length || 1)).toFixed(1)} 字、最長 ${Math.max(0, ...lens)} 字；每則中位 ${med(durs).toFixed(2)} 秒；相鄰空檔中位 ${med(gaps).toFixed(2)} 秒`);
+  if (pauseNote) log(pauseNote);
   const warns = [];
   const bad = rows.filter((r) => !r.ok || r.interp);
   if (bad.length) warns.push(`⚠ ${bad.length} ${hasScript ? '行講稿' : '個子句'}在逐字稿裡對不上，時間用前後句內插：${bad.slice(0, 6).map((r) => `${hasScript ? `第 ${r.from} 行` : `#${r.cue}`}「${r.text}」`).join('、')}${bad.length > 6 ? '…' : ''} → 播 rough.mp4 那一段聽：沒講（剪掉了）就從字幕刪掉，有講就到剪輯台調起迄`);
@@ -1734,7 +1964,7 @@ export async function illusLint(P, { sheet = true, log = console.log } = {}) {
 async function cli() {
   const flags = parseArgs(process.argv.slice(2));
   if (flags.help || !flags.cmd || flags.cmd === '--help') { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
-  if (!['scan', 'frame', 'main', 'snap-srt', 'ng-snap', 'cutpoints', 'screen-sync', 'srt-split', 'srt-align', 'verify-rough', 'illus-lint'].includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 scan、frame、main、snap-srt、ng-snap、cutpoints、screen-sync、srt-align、srt-split、verify-rough、illus-lint（用 --help 看用法）`);
+  if (!['scan', 'frame', 'main', 'snap-srt', 'ng-scan', 'ng-snap', 'cutpoints', 'screen-sync', 'srt-split', 'srt-align', 'verify-rough', 'illus-lint'].includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 scan、frame、main、snap-srt、ng-scan、ng-snap、cutpoints、screen-sync、srt-align、srt-split、verify-rough、illus-lint（用 --help 看用法）`);
   const P = pathsFrom({ project: flags.project, template: flags.template });
   console.log(`專案：${rel(P.project)}`);
   if (flags.cmd === 'scan') {
@@ -1746,6 +1976,7 @@ async function cli() {
     console.log(`\n→ 讀 ${rel(path.join(P.project, 'work', 'media', 'index.md'))}，打開 sheet 看每一格的畫面，對照字幕配對（USAGE.md 第 5 節）`);
     return 0;
   }
+  if (flags.cmd === 'ng-scan') { ngScan(P); return 0; }
   if (flags.cmd === 'ng-snap') { ngSnap(P, { edit: flags.edit ?? CUT.edit, margin: flags.margin ?? CUT.margin, src: flags.src ?? null, v1: flags.v1 ?? null }); return 0; }
   if (flags.cmd === 'cutpoints') { cutpoints(P, { dryRun: !!flags['dry-run'] }); return 0; }
   if (flags.cmd === 'screen-sync') { screenSync(P, { writePlan: !!flags['write-plan'], dryRun: !!flags['dry-run'] }); return 0; }

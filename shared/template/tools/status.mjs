@@ -3,6 +3,9 @@
  * 專案進度：做到哪一步、下一步做什麼、哪個停點在等回覆（只讀檔，不寫任何檔、不跑 ffmpeg；版式要看主軌時用 ffprobe 讀寬高）
  *
  *   node shared/template/tools/status.mjs --project projects/<專案> [--json]
+ *   node shared/template/tools/status.mjs --project projects/<專案> --timeline [--json]
+ *       時間軸：各階段產物第一次出現（建立時間）與最後修改的時間，加上 work/製作進度.md 停點紀錄的時間，
+ *       算出總時長、等使用者回覆的時間、AI 在做事的時間，和最久的幾段（找「哪裡花最久」用；舊專案也能看）。
  *
  * 印出：
  *   版式：<直式 1080×1920｜橫式 1920×1080>（來源：…）   （lib/canvas.mjs 的 resolveFormat：plan.json > 開工決策表 > 主軌寬高比）
@@ -62,6 +65,67 @@ export function readStopLog(text) {
     last.set(stop, row);
   }
   return { found: true, last, rows };
+}
+
+// ---------- 時間軸（--timeline）----------
+// 產物照「第一次出現」排（birthtime；檔案系統不給就用修改時間），停點紀錄照表上的時間；
+// 等待＝停點「待回覆」到同一個停點下一列的時間，其餘算 AI 在做事（含 render、轉檔這類等工具跑的時間）
+export const TIMELINE_FILES = [
+  ['work/main.mp4', '接主軌（剪乾淨開始）'], ['work/cuts.md', '剪輯清單（停點 ①）'], ['work/rough.mp4', '初剪'],
+  ['work/rough.srt', '字幕'], ['work/cutpoints.json', '剪接點'], ['work/screen-sync.json', '螢幕錄影同步'],
+  ['work/rough-look.mp4', '瘦臉底片'], ['work/構圖預覽.jpg', '構圖分析（停點 ②）'], ['work/hyperframes/plan.json', 'plan.json'],
+  ['work/storyboard.md', '分鏡表（停點 ③）'], ['work/hyperframes/index.html', 'build'],
+  ['output/test-clips/test-clip.mp4', '測試片段'], ['output/final.mp4', '成片'], ['output/qc/qc-sheet.jpg', '驗收'],
+];
+const born = (st) => (st.birthtimeMs > 0 && st.birthtimeMs <= st.mtimeMs + 1000 ? st.birthtimeMs : st.mtimeMs);
+const hm = (ms) => { const m = Math.max(0, Math.round(ms / 60000)); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+const stamp = (ms) => { const d = new Date(ms), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+const parseStamp = (t) => { const m = /^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})/.exec(String(t || '').trim()); return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : null; };
+
+export function projectTimeline(project) {
+  const ev = [];
+  const add = (rel, label) => { try { const st = fs.statSync(path.join(project, rel)); ev.push({ t: born(st), last: st.mtimeMs, what: rel, label, kind: 'file' }); } catch { /* 還沒有這個檔 */ } };
+  for (const [rel, label] of TIMELINE_FILES) add(rel, label);
+  // 情境動畫：每支 x-*.html 第一次出現
+  try {
+    const dir = path.join(project, 'work', 'hyperframes', 'compositions');
+    for (const n of fs.readdirSync(dir).filter((x) => /^x-.*\.html$/.test(x))) add(`work/hyperframes/compositions/${n}`, '情境動畫');
+  } catch { /* 沒有情境動畫 */ }
+  // 停點紀錄
+  const waits = [];
+  try {
+    const sl = readStopLog(fs.readFileSync(path.join(project, 'work', '製作進度.md'), 'utf8'));
+    let open = new Map();
+    for (const r of sl.rows) {
+      const t = parseStamp(r.time);
+      if (t == null) continue;
+      ev.push({ t, last: t, what: r.label, label: r.state, kind: 'stop' });
+      const o = open.get(r.stop);
+      if (o != null && r.state !== '待回覆') { waits.push({ stop: r.label, ms: t - o }); open.delete(r.stop); }
+      if (r.state === '待回覆') open.set(r.stop, t);
+    }
+    for (const [stop, t] of open) waits.push({ stop, ms: null, since: t });
+  } catch { /* 沒有製作進度.md */ }
+  ev.sort((a, b) => a.t - b.t || (a.kind === 'stop') - (b.kind === 'stop'));
+  if (!ev.length) return { events: [], total: 0, wait: 0, work: 0, waits, longest: [] };
+  const total = ev[ev.length - 1].t - ev[0].t, wait = waits.reduce((n, w) => n + (w.ms || 0), 0);
+  const gaps = ev.slice(1).map((e, i) => ({ from: ev[i], to: e, ms: e.t - ev[i].t })).sort((a, b) => b.ms - a.ms).slice(0, 3);
+  return { events: ev, total, wait, work: Math.max(0, total - wait), waits, longest: gaps };
+}
+
+function printTimeline(label, tl) {
+  console.log(`專案：${label}`);
+  if (!tl.events.length) { console.log('時間軸：還沒有任何產物'); return; }
+  console.log('時間軸（產物第一次出現的時間；括號是最後修改；⏸ 是停點紀錄）');
+  let prev = tl.events[0].t;
+  for (const e of tl.events) {
+    const d = `+${hm(e.t - prev)}`.padStart(6);
+    console.log(e.kind === 'stop' ? `  ${stamp(e.t)} ${d}  ⏸ ${e.what}｜${e.label}` : `  ${stamp(e.t)} ${d}  ${e.what}  ${e.label}${e.last - e.t > 60000 ? `（最後修改 ${stamp(e.last)}）` : ''}`);
+    prev = e.t;
+  }
+  console.log(`總時長 ${hm(tl.total)}；等使用者回覆 ${hm(tl.wait)}；AI 在做事 ${hm(tl.work)}（含等工具跑，例如轉檔、render）`);
+  if (tl.waits.length) console.log(`停點等待：${tl.waits.map((w) => `${w.stop} ${w.ms == null ? '還在等' : hm(w.ms)}`).join('、')}`);
+  console.log(`最久的幾段：${tl.longest.map((g) => `${g.from.kind === 'stop' ? g.from.what : g.from.what.replace(/^work\/(hyperframes\/)?/, '')} → ${g.to.kind === 'stop' ? g.to.what : g.to.what.replace(/^work\/(hyperframes\/)?/, '')} ${hm(g.ms)}`).join('、')}`);
 }
 
 export function projectStatus(project) {
@@ -161,6 +225,7 @@ function cli() {
     const a = argv[i];
     if (a === '--help') flags.help = true;
     else if (a === '--json') flags.json = true;
+    else if (a === '--timeline') flags.timeline = true;
     else if (a === '--project') flags.project = argv[++i];
     else if (a.startsWith('--project=')) flags.project = a.slice(10);
     else throw new Error(`沒有 ${a} 這個參數（用 --help 看用法）`);
@@ -168,8 +233,14 @@ function cli() {
   if (flags.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
   const root = path.resolve(HERE, '..', '..', '..');
   const project = findProject(flags, root);
-  const s = projectStatus(project);
   const label = posix(path.relative(process.cwd(), project)) || '.';
+  if (flags.timeline) {
+    const tl = projectTimeline(project);
+    if (flags.json) console.log(JSON.stringify({ project: label, ...tl, events: tl.events.map((e) => ({ ...e, at: stamp(e.t) })) }, null, 2));
+    else printTimeline(label, tl);
+    return 0;
+  }
+  const s = projectStatus(project);
   let plan = null;
   try { plan = JSON.parse(fs.readFileSync(path.join(project, 'work', 'hyperframes', 'plan.json'), 'utf8')); } catch { plan = null; }
   const fmt = resolveFormat({ projectDir: project, plan });

@@ -84,6 +84,7 @@
   </div>
   <script>
   (function () {
+    ILLUS.mount(document.getElementById('x-callout'));   // 第一行：主體換成插圖元件（data-illus）時先掛成 SVG；用圖示圓時什麼都不做
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     const tl = gsap.timeline({ paused: true });
     const P = SceneMotion(tl, document.getElementById('x-callout'));
@@ -102,12 +103,12 @@
       d.setAttribute('cx', String(b[0] + (b[0] > a[0] ? LG : -LG))); d.setAttribute('cy', String(b[1]));
     });
 
-    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；1.0 秒主體圓彈出、＋0.15 圖示描線（先看到主角是誰）
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；1.0 秒主體（圓或插圖）彈出、＋0.15 圖示描線（先看到主角是誰）
     if (ENTER === 'grow') P.grow('#xcall-card', 0.3);
     else { P.wipe('#xcall-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcall-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xcall-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     P.pop('#xcall-obj', 1.0, { from: 0.7 });
-    P.icon('#xcall-obj', 1.15);
+    if (!$q('#xcall-obj')[0].classList.contains('il')) P.icon('#xcall-obj', 1.15);   // 插圖元件當主體：彈出就好，不描線
 
     // 拍 1 第 1 個標籤：從下彈出 → ＋0.12 字逐字浮出、＋0.15 圖示描線 → ＋0.25 引線帶發光頭走到主體（0.5 秒）、＋0.65 端點小圓描出
     //   → ＋0.6 聚焦（放大抬起發光）→ ＋0.9 漂浮

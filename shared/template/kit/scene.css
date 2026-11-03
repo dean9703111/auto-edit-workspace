@@ -759,6 +759,42 @@ body, #root {
   padding-bottom: 6px;                          /* 光學置中（--opt 44px＝6） */
 }
 
+/* 小節角標 .sc-sectag（plan.json sections；build 產生，取代常駐章節角標）：章號＋目前小節，高 64（頂 56 → 底 120，在全幕卡片頂 y ≈ 154 之上）
+   黑底圓角 14；號板 48（內縮 8、radius 10）號碼 30／900；小節名 32／700 白、號板右 18、右內距 28；所有小節名疊在同一格（寬＝最長那個，換小節不跳動） */
+.sc-sectag {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 64px;
+  padding: 8px 28px 8px 8px;
+  border-radius: 14px;
+  background: var(--sc-deep);
+  box-sizing: border-box;
+}
+.sc-sectag__num {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--sc-chtag-plate);
+  color: var(--sc-chtag-num);
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sc-sectag__names { display: grid; }
+.sc-sectag__name {
+  grid-area: 1 / 1;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 48px;
+  color: var(--sc-ink);
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    動態 v2 的主題 token 與原語零件（specs/010-motion-v2/design-system.md §4、§10；契約 specs/contracts/motion.md）
    亮色＝:root（預設）；暗色＝<html data-theme="dark">（plan.json 第一層 "theme": "dark"，build 寫到主合成的 <html>）。

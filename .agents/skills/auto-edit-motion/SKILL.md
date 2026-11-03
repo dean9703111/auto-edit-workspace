@@ -12,14 +12,14 @@ version: 0.1.0
 |---|---|---|---|---|
 | 停點 ③ 通過；這段確認過的動畫分鏡；plan.json 已登記這段（`"type": "custom"`、`src`、`layout`）；主代理已 build 過一次 | `build.mjs --check`、`audit.mjs --only <段 id>` | `work/hyperframes/compositions/x-<名稱>.html` | 兩個指令都 0 個 ✖ | 沒有（交回主代理） |
 
-做法的唯一定義：USAGE-reference.md R7（R7.2 檔案與登記、R7.3 骨架與方法、R7.5 範例、R7.6 檢查）；動作名稱與對應的 `P.*`：`shared/template/BEATS.md`；版面與動作門檻：style.md「動畫視覺」「節奏」、USAGE-reference.md R8。
+做法的唯一定義：USAGE-reference.md R7，照步驟只讀那一小節（步驟 2 讀 R7.5、步驟 3 和 5 讀 R7.2 檔案與登記、步驟 4 讀 R7.3 骨架與方法、步驟 6 讀 R7.6 檢查），不整個 R7 讀；動作名稱與對應的 `P.*`：`shared/template/BEATS.md` §2；版面與動作門檻：style.md「動畫視覺」「節奏」、USAGE-reference.md R8（只看下面寫到的那幾條，例 #2、#17）。
 
 ## 開始前
 
 | 條件（看得到的事實） | 做法 |
 |---|---|
 | 當子代理 | 只能寫自己那支 `x-<名稱>.html`；不跑 build、snapshot、preview、render（AGENTS.md「子代理分工」） |
-| 主代理自己做、而且有 2 段以上 | 沒有子代理時一段一段照本檔做；有子代理可以平行（選用） |
+| 主代理、而且有 2 段以上 | 有能派子代理的工具：一段一個子代理，同一則回覆一次全部派出（派工訊息照 `references/worker-brief.md`），等它們回覆或完成通知（不要寫 `sleep` 迴圈等檔案），全部回來再整合、build 一次；沒有才自己一段一段照本檔做 |
 | `compositions/x-<名稱>.html` 已經存在、不是範例原文 | 從步驟 4 接著改，不要重新複製蓋掉 |
 | storyboard.md 沒有這段的 `#### 動畫分鏡`，派工訊息也沒附 | 不要自己編：交回主代理補（`auto-edit-storyboard` 步驟 5），使用者確認後再做 |
 | 停點 ④ 之後的改版（主代理跑過 `versions.mjs accept`） | 步驟 1 讀的就是確認過的新分鏡；x 檔已經在，從步驟 4 照新分鏡改（拍數、動作變了就整段時間軸重排，不保留舊版的拍）；舊版已經存在 `work/versions/<段>/`，不用自己備份 |
@@ -30,7 +30,7 @@ version: 0.1.0
 ```
 grep -n -A 25 "#### 動畫分鏡 <段 id>" projects/<專案>/work/storyboard.md
 ```
-照停點 ③ 確認過的那張表一拍一拍做（派工時用派工訊息附的那張）。每一拍＝一個拍點常數：「講到」欄照抄成 `const T1 = P.at('#38@兩支')`（「`#35`＋0.7」寫 `P.at('#35', 0.7)`）；「音效拍點」有寫就改用 `const T1 = P.sfx('success', '#38@兩支')`（回傳秒數，同時當這一拍的動畫時間；`P.sfx('ding', '#41', 0.2)` 晚 0.2 秒）：音效名、ref 都寫字串字面值，off 寫數字；build 會排成音效、算進 `--check` 的音效次數與密度，不要在 plan.json 另外寫。「動態」欄每個名稱查 `shared/template/BEATS.md` §2 的「對應」欄，用那個 `P.*`；對應寫「build 自動」的（背景環境、講者慢推、色帶擦開、子母畫面飛入、色帶收回）不用寫程式。不從範例猜動作，不自己加拍、刪拍、換動作。
+照停點 ③ 確認過的那張表一拍一拍做（派工時用派工訊息附的那張）。每一拍＝一個拍點常數：「講到」欄照抄成 `const T1 = P.at('#38@兩支')`（「`#35`＋0.7」寫 `P.at('#35', 0.7)`）；「音效拍點」有寫就改用 `const T1 = P.sfx('success', '#38@兩支')`（回傳秒數，同時當這一拍的動畫時間；`P.sfx('ding', '#41', 0.2)` 晚 0.2 秒）：音效名、ref 都寫字串字面值，off 寫數字；build 會排成音效、算進 `--check` 的音效次數與密度，不要在 plan.json 另外寫。「動態」欄每個名稱查 `shared/template/BEATS.md` §2 的「對應」欄，用那個 `P.*`；對應寫「build 自動」的（背景環境、色帶擦開、子母畫面飛入、色帶收回）不用寫程式。不從範例猜動作，不自己加拍、刪拍、換動作。
 完成判準：每一拍都對到一個拍點常數（或「上一拍＋秒數」）；動態欄每個名稱都在 BEATS.md §2 找得到。
 常見錯誤：動態欄有語彙表沒有的詞 → 不要自己解讀，交回主代理問使用者；只抄了「講到」沒抄詞（`#38`）→ 照表寫 `#38@兩支`。
 
@@ -43,7 +43,7 @@ Windows（PowerShell）：Copy-Item shared\template\custom\<範例>.html project
 
 | 看哪裡 | 範例在哪一格 |
 |---|---|
-| 分鏡表「情境判定」那段寫的「SITUATIONS §3 哪一列」 | `shared/template/SITUATIONS.md` §3 那一列的「首選」與「動態（build 自動做／custom 範例）」欄寫的 `x-*.html` |
+| 分鏡表「情境判定」那段寫的「SITUATIONS §3 哪一列」 | `shared/template/SITUATIONS.md` §3 那一列的「首選」與「動態（build 自動做／custom 範例）」欄寫的 `x-*.html`（用 `grep -n` 找那一列，不要整節讀） |
 | §3 沒有對到的情境 | USAGE-reference.md R7.5 的表（每支範例的適用口播、要改的欄位） |
 
 17 支範例（`shared/template/custom/`）：
@@ -97,9 +97,9 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 **6. 自查**
 ```
 node shared/template/tools/build.mjs --project projects/<專案> --check
-node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id>
+node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id> --shots
 ```
-完成判準：兩個都 0 個 ✖；⚠ 照 → 改，或在回報寫保留的理由。
+完成判準：兩個都 0 個 ✖；⚠ 照 → 改，或在回報寫保留的理由；打開 `--shots` 存的截圖（`work/audit-shots/`）對著分鏡看：每個動作看得到（移動有位移、狀態換了）、視角一致（BEATS.md §5.4 下面的條列）。
 常見錯誤：audit 的 ✖ → 照 `→` 改再跑一次（只改 custom 檔不用重 build）；同一個 ✖ 改兩次還在 → 停，把那幾行原文交回主代理。
 
 **7. 回報**
@@ -139,7 +139,7 @@ Windows（PowerShell）：Copy-Item shared\template\custom\x-scene.html projects
 **S4. 三關自驗**
 ```
 node shared/template/tools/build.mjs --project projects/<專案> --check
-node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id>
+node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id> --shots
 node shared/template/tools/media.mjs illus-lint --project projects/<專案>
 ```
 完成判準：三個都 0 個 ✖；audit 的 `layout-*` ⚠ 照改法改，不改的寫理由。
@@ -195,5 +195,5 @@ node shared/template/tools/media.mjs illus-lint --project projects/<專案>
 
 ## 什麼時候讀 references/
 
-- `references/worker-report.md`：步驟 7 回報時才讀。
+- `references/worker-brief.md`：主代理要派子代理時才讀；`references/worker-report.md`：步驟 7 回報時才讀。
 - `references/illus-worker.md`：示意動畫 S1 要派素材工人畫新元件時才讀。

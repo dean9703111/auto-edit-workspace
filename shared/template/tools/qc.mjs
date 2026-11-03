@@ -34,7 +34,7 @@
  *       錄影標註（紅框、標註、聚光燈、STEP、箭頭、放大鏡）每個到位時各一張。
  *       存成 work/storyboard-preview/<段 id>.png（多張時 <段 id>-1.png、-2.png…），並印出可貼進
  *       work/storyboard.md 的 ![s01](storyboard-preview/s01.png) 行。要先 build；plan.json 改過沒 build 會 ✖。
- *       直式放橫的錄影縮到原尺寸 < 60 %、沒有 moves、> 3 秒 → ⚠ 介面字太小。
+ *       錄影縮到原尺寸 < 60 %（直式只看橫的錄影）、沒有 moves 和 lens、> 3 秒 → ⚠ 介面字太小。
  *   node shared/template/tools/qc.mjs observe --project projects/<專案> [--from 60] [--to 120] [--file <mp4> --offset <秒>] [--json]
  *       觀影總表：從 output/final.mp4（或 --file 指定的測試片段）每 0.5 秒抽一格，拼成 work/observe/sheet-NN.jpg
  *       （6×8 格＝24 秒，每格下面印「時間｜段 id｜字幕」）；列出 ≥ 8 秒幾乎不變的靜止區間；
@@ -51,7 +51,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { pathsFrom, hasVoiceSource } from './build.mjs';
-import { run, probeMedia, rawFrame, writeJpg, lut3dFilter } from './lib/ff.mjs';
+import { run, probeMedia, rawFrame, writeJpg, lut3dFilter, blackDetect } from './lib/ff.mjs';
 import { ensureLook } from './lib/look.mjs';
 import { canvas, fillRect, blit, text, textWidth, htmlShot } from './lib/raster.mjs';
 import { parseSrt } from './lib/srt.mjs';
@@ -551,8 +551,24 @@ function lookFor(P, flags, src) {
   return { src: lk.footage, lut: lk.lut, line, warns: lk.report.filter((x) => x.startsWith('⚠')) };
 }
 
-export function speakerTimes(dur, n = 8) {
-  return Array.from({ length: n }, (_, i) => r3(Math.min(Math.max(0, dur - 0.1), (dur * (i + 0.5)) / n)));
+// 均勻抽 n 格；skip＝不抽的區間（只有聲音、全黑的地方：抽到黑畫面，動作範圍會變成整張）
+export function speakerTimes(dur, n = 8, skip = []) {
+  const keep = [];
+  let t = 0;
+  for (const [a, b] of [...skip].sort((x, y) => x[0] - y[0])) { if (a > t) keep.push([t, Math.min(a, dur)]); t = Math.max(t, b); }
+  if (t < dur) keep.push([t, dur]);
+  const L = keep.reduce((s, [a, b]) => s + Math.max(0, b - a), 0);
+  if (!skip.length || L < 1) return Array.from({ length: n }, (_, i) => r3(Math.min(Math.max(0, dur - 0.1), (dur * (i + 0.5)) / n)));
+  return Array.from({ length: n }, (_, i) => {
+    let x = (L * (i + 0.5)) / n;
+    for (const [a, b] of keep) { if (x <= b - a) return r3(Math.min(Math.max(0, b - 0.1), a + x)); x -= b - a; }
+    return r3(dur - 0.1);
+  });
+}
+// rough.mp4 全黑的區間（專案有只有聲音的素材時才算；和 build 共用快取）
+function roughBlack(P, raw) {
+  if (raw !== path.join(P.project, 'work', 'rough.mp4') || !hasVoiceSource(P.project)) return [];
+  try { return blackDetect(raw, path.join(P.project, 'work', 'hyperframes', '.cache', 'blackdetect.json'), () => console.log('偵測 rough.mp4 只有聲音的區間（抽格要避開；第一次會花一點時間）…')); } catch { return []; }
 }
 
 const lum = (d, i) => (d[i] * 54 + d[i + 1] * 183 + d[i + 2] * 19) >> 8;
@@ -590,7 +606,7 @@ export function speakerMaps(P, flags) {
   const look = lookFor(P, flags, raw), src = look.src;
   const info = probeMedia(src);
   if (!info.hasVideo || !info.duration) throw new Error(`${rel(src)} 讀不到影像或長度 → 檔案壞了或不是影片，重新產生 work/rough.mp4 或用 --file 換一支`);
-  const ts = speakerTimes(info.duration);
+  const ts = speakerTimes(info.duration, 8, roughBlack(P, raw));
   const frame = planFrame(P);
   // 畫布尺寸照版式（FR-092）：直式 1080×1920，圖上的數字直接是 speakerBox 座標
   const fmt = formatOf(P, flags), { W, H } = fmt.canvas, portrait = fmt.format === 'portrait';
@@ -722,7 +738,7 @@ export function framingAnalysis(P, flags = {}) {
   const look = lookFor(P, flags, raw), src = look.src;
   const info = probeMedia(src);
   if (!info.hasVideo || !info.duration) throw new Error(`${rel(src)} 讀不到影像或長度 → 檔案壞了或不是影片，重新產生 work/rough.mp4 或用 --file 換一支`);
-  const ts = speakerTimes(info.duration);
+  const ts = speakerTimes(info.duration, 8, roughBlack(P, raw));
   const fmt = formatOf(P, flags), cv = fmt.canvas, portrait = fmt.format === 'portrait', { W, H } = cv;
   const frames = ts.map((t) => frame1080(src, t, null, look.lut, W, H));
   const { mean, bbox } = motionStats(frames, W, H);
@@ -1104,11 +1120,13 @@ export async function storyboardRun(P, flags) {
   return { dir, shots: shots.map((s) => ({ ...s, md: `![${s.file.replace(/\.png$/, '')}](storyboard-preview/${s.file})` })), warnings, stale, cleared, segs: list.length, fmt };
 }
 
-// FR-082（US4-2）：直式放橫的錄影（--check --json 的 annotations.view，只有直式、寬 > 高的錄影段才有）縮到原尺寸 < 0.6、沒有 moves、> 3 秒 → 介面字太小
+// FR-082（US4-2）：錄影（--check --json 的 annotations.view；直式只有寬 > 高的錄影段才有）縮到原尺寸 < 0.6、沒有 moves 和 lens、> 3 秒 → 介面字太小
 export const SMALL_MEDIA = { scale: 0.6, dur: 3 };
 export function smallMediaWarnings(segs) {
-  return (segs || []).filter((g) => { const v = g.annotations?.view; return v && v.scale < SMALL_MEDIA.scale && !v.moves && g.end - g.start > SMALL_MEDIA.dur; })
-    .map((g) => `${g.id} 的錄影在直式只有原尺寸 ${Math.round(g.annotations.view.scale * 100)} %，介面字會太小 → 加 moves 推近到操作區`);
+  return (segs || []).filter((g) => { const v = g.annotations?.view; return v && v.scale < SMALL_MEDIA.scale && !v.moves && !v.lens && g.end - g.start > SMALL_MEDIA.dur; })
+    .map((g) => g.annotations.view.landscape
+      ? `${g.id} 的錄影只有原尺寸 ${Math.round(g.annotations.view.scale * 100)} %，介面字會太小 → 口播唸到畫面上的字（版號、路徑、網址、按鈕名）那句加放大鏡 lens 或 moves 推近；沒唸字就不用`
+      : `${g.id} 的錄影在直式只有原尺寸 ${Math.round(g.annotations.view.scale * 100)} %，介面字會太小 → 加 moves 推近到操作區`);
 }
 
 function printStoryboard(P, r) {

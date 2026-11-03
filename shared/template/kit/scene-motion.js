@@ -102,7 +102,7 @@
                                      頭尾 ramp（0.8s）漸入漸出；寫 CSS translate／scale，不干擾進場位移。同一元素只掛一個；字不單獨 idle
      P.spot(group, active, at, {scale, lift, dim, done, dur})  焦點 v2：active 放大 scale（1.07）＋抬起 lift（−10u）＋亮框發光（自動插 .sc-spot），
                                      其他壓暗到 dim（0.42）縮到 0.96；active＝null 回均衡、'none'＝預覽態（全部壓暗）；done＝走過的（0.92、不縮）。
-                                     group 只放已經進場的元素；照時間先後寫；新進場的元素 0.6s 後才 spot
+                                     group 只放已經進場的元素；照時間先後寫（上一個 spot 還在轉場就接在它後面）；新進場的元素 0.6s 後才 spot
      P.cam(sel, at, {to, k, scale, x, y, dur, ease})  鏡頭：容器推拉搖（x、y 用 u），或 {to: 焦點元素, k: 0.12}＝往焦點帶 k 比例；1.0s power3.inOut。
                                      dur ≥ 2s 的慢推算微動；回正寫 P.cam(sel, at, {x: 0, y: 0, scale: 1})。
                                      直式舞台縮放（STAGED）時 {to} 不往焦點帶，以容器上緣中點為原點推近（主卡推近 1.04 仍在畫面裡）
@@ -796,14 +796,17 @@
       items.forEach(function (el) {
         var g = el.querySelector(':scope > [data-sc-spot]');
         if (!g) { g = mk(el, 'sc-spot'); g.setAttribute('data-sc-spot', ''); el.appendChild(g); relPos(el); }
-        var cur = spotState.get(el) || { o: 1, s: 1, y: 0, g: 0, d: 0, t: -1 };
-        if (at < cur.t - 0.001) throw new Error('P.spot 要照時間先後寫：' + nameOf(el) + ' 在 ' + r3(cur.t) + 's 已經有焦點變化，這一行是 ' + r3(at) + 's');
+        var cur = spotState.get(el) || { o: 1, s: 1, y: 0, g: 0, d: 0, t: -1, t0: -1 }, a = at;
+        if (a < cur.t - 0.001) {
+          if (a < cur.t0 - 0.001) throw new Error('P.spot 要照時間先後寫：' + nameOf(el) + ' 在 ' + r3(cur.t0) + 's 已經有焦點變化，這一行是 ' + r3(a) + 's');
+          a = cur.t;   // 上一個焦點還在轉場（兩拍太近）：接在它後面，不丟錯（丟錯整段會停在空白的初始畫面）
+        }
         var tg = el === act ? { o: 1, s: S, y: lift, g: 1, d: 0 }
           : done.indexOf(el) >= 0 ? { o: 0.92, s: 1, y: 0, g: 0, d: 1 }
           : active === 'none' || act ? { o: dim, s: 0.96, y: 0, g: 0, d: 0 } : { o: 1, s: 1, y: 0, g: 0, d: cur.d };
-        mv([el], at, { opacity: cur.o, scale: cur.s, y: cur.y }, { opacity: tg.o, scale: tg.s, y: tg.y }, dur, 'power3.out', 0);
-        mv([g], at, { opacity: cur.g }, { opacity: tg.g }, dur * 0.8, 'sine.inOut', 0);
-        tg.t = at + dur; spotState.set(el, tg);
+        mv([el], a, { opacity: cur.o, scale: cur.s, y: cur.y }, { opacity: tg.o, scale: tg.s, y: tg.y }, dur, 'power3.out', 0);
+        mv([g], a, { opacity: cur.g }, { opacity: tg.g }, dur * 0.8, 'sine.inOut', 0);
+        tg.t0 = a; tg.t = a + dur; spotState.set(el, tg);
       });
       return P;
     };

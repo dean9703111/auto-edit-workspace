@@ -84,12 +84,18 @@ export function judgeIllus(meas, ctx) {
     else if (colOverlap && !rowOverlap && near(dx)) push('layout-row-align', alignIls[b].desc, `同一欄沒對齊：${nm(alignIls[a])} 和 ${nm(alignIls[b])} 的插圖中線差 ${dx.toFixed(1)}px`, '這幾個元件放進同一個 data-layout="col"，不要手寫 left（shared/style.md「版面」）', { dx });
   }
   // ⚠ 插圖太小：完成態所有元件的外框聯集 < 卡片內部（最小的有底有框盒，扣掉標題列）面積的 SMALL_MIN
-  const all = ctx.kind === 'done' ? els.filter((e) => e.il) : [];   // 大小不受漂浮影響：漂浮中的元件也算（只有對齊才排除）
+  const ilEls = ctx.kind === 'done' ? els.filter((e) => e.il) : [];   // 大小不受漂浮影響：漂浮中的元件也算（只有對齊才排除）
+  // x-callout 的主體插圖（#xcall-obj；同一集用兩次時前綴會換，例 #xcsb-obj）四周是用引線接上的標籤（#xcall-t1…）：
+  //   主角是「主體＋標籤」這一整組，標籤一起算
+  const objOf = (e) => { const m = /^(xc[a-z]*)-obj$/.exec(e.desc?.id || e.desc?.near || ''); return m ? m[1] : null; };
+  const pre = ilEls.map(objOf).find(Boolean);
+  const tagRe = pre ? new RegExp('^' + pre + '-t\\d$') : null;
+  const all = pre ? [...ilEls, ...els.filter((e) => !e.il && tagRe.test(e.desc?.id || ''))] : ilEls;
   if (all.length) {
     const U = [Math.min(...all.map((e) => e.rect[0])), Math.min(...all.map((e) => e.rect[1])), Math.max(...all.map((e) => e.rect[2])), Math.max(...all.map((e) => e.rect[3]))];
     const inside = (r, o) => r[0] <= o[0] + 1 && r[1] <= o[1] + 1 && r[2] >= o[2] - 1 && r[3] >= o[3] - 1;
     const area = (r) => Math.max(0, r[2] - r[0]) * Math.max(0, r[3] - r[1]);
-    const card = els.filter((e) => e.box && !e.il && inside(e.rect, U)).sort((a, b) => area(a.rect) - area(b.rect))[0];
+    const card = els.filter((e) => e.box && !e.il && !all.includes(e) && inside(e.rect, U)).sort((a, b) => area(a.rect) - area(b.rect))[0];
     if (card) {
       const titles = els.filter((e) => e.title && inside(card.rect, e.rect) && e.rect[3] <= U[1] + 1);
       const inner = [card.rect[0], Math.max(card.rect[1], ...titles.map((e) => e.rect[3])), card.rect[2], card.rect[3]];

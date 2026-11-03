@@ -88,7 +88,7 @@ node shared/template/tools/capcut.mjs status --project projects/<專案>
 - [ ] 交付用 `--quality looks`
 - [ ] `qc.mjs final` 0 個 ✖（沒有「沒有講者小窗」的 ✖），⚠ 逐項說明
 - [ ] 附上 `output/qc/qc-sheet.jpg`
-- [ ] 貼了 build 的「人聲響度」「音效比例」「剪接點微淡化」三行（音效次數、密度有 ⚠ 也貼）
+- [ ] 貼了 build 的「人聲響度」「音效比例」「剪接點微淡化」「講者調光」「講者瘦臉」「結尾配樂」六行（音效次數、密度有 ⚠ 也貼；有配樂就把出處那一句提醒使用者貼進說明欄）
 - [ ] 停點紀錄、`work/製作進度.md` 的階段表更新到「交付 ✅」
 
 ## 退路表
@@ -113,7 +113,7 @@ node shared/template/tools/capcut.mjs status --project projects/<專案>
 驗證：ffprobe → 1920×1080、30fps、有音軌
 qc final：<✔／⚠／✖ 原文，每項一行>
 ⚠ 說明：<每個 ⚠ 一行：刻意／要修＋理由>
-人聲響度 …、剪接點微淡化 …、音效比例 …（build 原文）
+人聲響度 …、剪接點微淡化 …、音效比例 …、講者調光 …、講者瘦臉 …、結尾配樂 …（build 原文）
 觀影總表：work/observe/index.md（靜止區間 <N> 段，說明見上）
 output/qc/qc-sheet.jpg
 → 完成

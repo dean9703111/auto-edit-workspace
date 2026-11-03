@@ -20,7 +20,11 @@
   2. 圖示：中央主體 #xcall-obj 的 svg、四個標籤的 .sc-icon。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
      一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
-  3. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
+     主體是看得到的東西（手機、App、電腦、雲端、人）時，主體改用插圖元件（比圖示圓清楚，觀眾一眼看出標籤都在講它）：
+     把 <span id="xcall-obj" class="sc-icon" data-slot>…</span> 整段換成一行
+     <div id="xcall-obj" data-slot data-illus="phone" data-orient="portrait" data-screen="check" style="width:180px;height:360px"></div>
+     （data-* 照 kit/illus-gallery.jpg 每格下面的寫法；寬高照畫廊比例，高 ≤ 400）。其他不用改：script 第一行會掛插圖、自動跳過圖示描線，引線照樣接到插圖外框。
+  3. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】）。
   4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
   標籤是 3 個：刪掉 #xcall-t4、#xcall-d4、#xcall-lines 的 data-links 裡的「xcall-t4-xcall-obj」，再刪 script 開頭的「, T4 = P.at(…)」、「第 4 個標籤」那 4 行，
   第 3 個標籤 P.idle 的 until: T4 − 0.1 改 ALL − 0.1（右邊只剩一個，自動置中）；2 個：再照樣刪第 3 個（左右各一）。位置和引線自動重排，不用改數字；收尾那兩行不用改。
@@ -32,6 +36,7 @@
   名詞在句中間或句尾時一定用 @詞，不要綁句首（綁句首，標籤會比講到早 1–3 秒出現）；剛好是那句的第一個詞才寫 P.at('#102')。
   「@詞」要寫成字串字面值（P.at('#102@衣服太薄')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#102@衣服太薄', 0.3)。
   相鄰兩個標籤至少差 2.5 秒（標籤彈出、引線 0.25 秒起走 0.5 秒、0.6 秒聚焦＝忙到 1.1 秒，再停 ≥ 1.2 秒）；太近就綁後面那個詞、延長段，或拆兩段。
+  口播一口氣講完（相鄰差不到 2.5 秒、綁後面的詞也不夠）：減成 3 個或 2 個標籤（照【要改的地方】最後一段刪），沒放上去的那個交給字幕；不要把段尾延進下一個話題。
   audit 會比對：這一拍出現的字（標籤）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
 
   【D 下限】
@@ -104,6 +109,7 @@
   </div>
   <script>
   (function () {
+    ILLUS.mount(document.getElementById('x-callout'));   // 第一行：主體換成插圖元件（data-illus）時先掛成 SVG；用圖示圓時什麼都不做
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     const tl = gsap.timeline({ paused: true });
     const P = SceneMotion(tl, document.getElementById('x-callout'));
@@ -122,12 +128,12 @@
       d.setAttribute('cx', String(b[0] + (b[0] > a[0] ? LG : -LG))); d.setAttribute('cy', String(b[1]));
     });
 
-    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；1.0 秒主體圓彈出、＋0.15 圖示描線（先看到主角是誰）
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；1.0 秒主體（圓或插圖）彈出、＋0.15 圖示描線（先看到主角是誰）
     if (ENTER === 'grow') P.grow('#xcall-card', 0.3);
     else { P.wipe('#xcall-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcall-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xcall-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     P.pop('#xcall-obj', 1.0, { from: 0.7 });
-    P.icon('#xcall-obj', 1.15);
+    if (!$q('#xcall-obj')[0].classList.contains('il')) P.icon('#xcall-obj', 1.15);   // 插圖元件當主體：彈出就好，不描線
 
     // 拍 1 第 1 個標籤：從下彈出 → ＋0.12 字逐字浮出、＋0.15 圖示描線 → ＋0.25 引線帶發光頭走到主體（0.5 秒）、＋0.65 端點小圓描出
     //   → ＋0.6 聚焦（放大抬起發光）→ ＋0.9 漂浮

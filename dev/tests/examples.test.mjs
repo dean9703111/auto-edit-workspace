@@ -380,7 +380,8 @@ test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build →
   assert.doesNotMatch(chk.stdout, /✖/, chk.stdout);
   const b = node([BUILD, '--project', dir]);
   assert.equal(b.status, 0, b.stdout + b.stderr);
-  const au = node([AUDIT, '--project', dir, '--json']);
+  // 範例原封不動複製＝「還是範例原文」，沒指名的 audit 會跳過；指名全部段才量範例本身
+  const au = node([AUDIT, '--project', dir, '--json', '--only', segs.map((s) => s.id).join(',')]);
   const r = JSON.parse(au.stdout);
   assert.equal(r.segments.length, COUNT);
   assert.deepEqual(r.findings.map((f) => `${f.level} ${f.id} ${f.rule} ${f.msg}`), [], '每支都要 0 ✖、0 ⚠');

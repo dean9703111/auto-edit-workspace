@@ -294,6 +294,16 @@ test('P.focus：之後 P.out 從目前亮度淡出（不跳回 1）；倒著寫�
   seek(n.tl, 0.6, true); assert.equal(Number(c.opacity), 1, '沒記過亮度的元素出場仍從 1 開始');
 });
 
+test('P.spot：上一個焦點還在轉場就接到下一拍 → 接在它後面、不丟錯（丟錯整段會空白）；倒著寫才丟錯', () => {
+  const { tl, P } = mk(); const g = [ITEM('a'), ITEM('b')];
+  P.spot(g, g[0], 2);                       // 2–2.5 轉場
+  P.spot(g, g[1], 2.3);                     // 兩拍只差 0.3 秒 → 從 2.5 開始
+  P.end(4);
+  seek(tl, 2.5, true); assert.ok(g[1].opacity < 0.5, `b 在 2.5 還是暗的，實際 ${g[1].opacity}`);
+  seek(tl, 3.5, true); near(g[1].opacity, 1); near(g[0].opacity, 0.42);
+  assert.throws(() => P.spot(g, g[0], 1), /P\.spot 要照時間先後寫：#a 在 2\.5s/);
+});
+
 // ---------- P.type：DOM shim（只實作 spec FR-019 的 API）----------
 function makeDom() {
   const doc = {};

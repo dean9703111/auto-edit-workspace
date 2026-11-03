@@ -13,7 +13,7 @@
 //   encodeFootagePolished(src, dst, opts)  編碼主軌：先淡化剪接點、再 loudnorm，回傳報告用的數字（lut 原樣轉給 encodeFootage）
 //   audioReportLines(info, { sfx })        build 報告要印的行（sfx＝sfxBudget() 的回傳，印「音效比例」）
 //   SFX_RULES                              音效政策的數字：主音效間隔 3 s、附加音效間隔 0.2 s、每分鐘 2 顆、上限比人聲小 3 dB
-//   sfxBudget(cues, sfxConf, opts)         次數上限、每分鐘密度、音效比例 → { count, over, dense, loud, levels, perMinuteAvg, warnings, lines }
+//   sfxBudget(cues, sfxConf, opts)         次數上限、每分鐘密度、稀疏、音效比例 → { count, over, dense, sparse, loud, levels, perMinuteAvg, warnings, lines }
 //   renderBgmClip(src, dst, opts)          結尾配樂：截取＋淡入淡出＋增益烤進 wav（dst 是資料夾時檔名含參數 hash，同參數不重做）
 //   cutDips(f32, opts)                     剪接點前後 100 ms 的 10 ms RMS，判斷有沒有挖出低於底噪的凹洞（dev 測試用）
 
@@ -200,7 +200,7 @@ export function audioReportLines(info, { loudnorm = true, declick = true, cutpoi
 }
 
 // ---------- 音效政策（specs/contracts/sfx.md §4；訊息原文 specs/contracts/cli-005.md §3）----------
-export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 });
+export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3, sparseSec: 60 });
 const SWAP = { thunder: 'alert', sparkle: 'ding', shine: 'ding' };              // 超過每集上限時建議換成誰
 const KEEP_FIRST = ['chapter', 'thunder', 'shine', 'sparkle', 'alert', 'success'];
 const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;   // 和 plan.mjs 的 fmt 相同
@@ -208,7 +208,7 @@ const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.leng
 const d1 = (v) => n1(r1(v).toFixed(1));
 
 // cues：[{ id, name, at（成片秒數）, volume（最終線性音量）, main（是不是主音效）}]，已扣掉被 3 秒規則拿掉的
-export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT } = {}) {
+export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, gapNote = null } = {}) {
   const R = SFX_RULES;
   const list = (cues || []).filter((c) => c && sfxConf[c.name] && sfxConf[c.name].kind !== 'bgm').sort((a, b) => a.at - b.at);
   const count = {};
@@ -238,6 +238,12 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT }
     extra: extraDb.length ? [r1(Math.min(...extraDb)), r1(Math.max(...extraDb))] : null,
   };
   const nMain = list.filter(isMain).length, nExtra = list.length - nMain;
+  // 音效稀疏：片頭到第一顆、兩顆之間、最後一顆到片尾，超過 60 秒沒有主音效（參考專案：只有旁白的長段沒音效，作者要求補）
+  const sparse = [];
+  if (outDur > 0) {
+    let prev = 0;
+    for (const t of [...list.filter(isMain).map((c) => c.at), outDur]) { if (t - prev > R.sparseSec) sparse.push({ from: r3(prev), to: r3(t) }); prev = t; }
+  }
   const perMinuteAvg = outDur > 0 ? r1(nMain / (outDur / 60)) : 0;
   // 訊息
   const warnings = [];
@@ -250,6 +256,8 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT }
     const adds = Object.keys(sfxConf).filter((k) => sfxConf[k].additive);
     warnings.push(`⚠ 音效密度：${dense.length} 個一分鐘超過 ${R.perMinute} 顆主音效（${dense.map((d) => `${mm(d.from)}–${mm(d.to)} ${d.n} 顆`).join('、')}；附加音效${adds.length ? ` ${adds.join('、')}` : ''} 不算）→ 每分鐘留最重要的 ${R.perMinute} 顆（${KEEP_FIRST.join('、')} 先留，ding、impact 先拿掉：那段寫 "sfx": null）`);
   }
+  // gapNote(g)：空檔裡可以配音效的段（plan.mjs 給，例「x10、x11、m01」），印在秒數後面，讓人知道去哪一段配
+  if (sparse.length) warnings.push(`⚠ 音效稀疏：${sparse.map((g) => { const n = gapNote ? gapNote(g) : ''; return `${fmt(g.from)}–${fmt(g.to)}（${Math.round(g.to - g.from)} 秒${n ? `：${n}` : ''}）`; }).join('、')}沒有主音效 → 在這段裡找踩坑句配 alert、結果句配 success（落在句尾前 0.1–0.2 秒）；情境動畫在那一拍寫 P.sfx('success', '#N@詞')；錄影段寫 "sfx": { "name": "success", "at": "#Ne-0.1" }`);
   const loudLine = loudWarning(loud);
   if (loudLine) warnings.push(loudLine);
   const cnt = Object.keys(sfxConf).filter((k) => sfxConf[k].kind !== 'bgm' && ((count[k] || 0) > 0 || sfxConf[k].maxPerVideo != null))
@@ -258,7 +266,7 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT }
     `音效次數：${cnt.join('、') || '沒有音效'}`,
     nMain ? `音效密度：主音效平均 ${perMinuteAvg} 顆／分（上限：任一分鐘 ≤ ${R.perMinute} 顆，超過才 ⚠），附加音效 ${nExtra} 顆` : `音效密度：主音效 0 顆，附加音效 ${nExtra} 顆`,
   ];
-  return { count, over, dense, loud, levels, perMinuteAvg, warnings, lines };
+  return { count, over, dense, sparse, loud, levels, perMinuteAvg, warnings, lines };
 }
 
 function loudWarning(loud) {

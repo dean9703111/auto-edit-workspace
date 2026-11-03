@@ -83,12 +83,19 @@ const MIME = {
 const SKIP_MEDIA = new Set(['.mp4', '.mov', '.m4v', '.webm', '.wav', '.mp3', '.m4a', '.aac', '.ogg']);
 export const RUNTIME_URL = '/__audit_hf_runtime.js';
 
-export function injectRuntime(html) {
-  const tag = `<script src="${RUNTIME_URL}"></script>`;
+// 用 build --check 現算的 P.at 秒數蓋過 index.html 裡上次 build 的（window.__cues.segs[id].refs）：
+// 子代理改了 x 檔、新加 P.at('#N@詞') 還沒 build，audit 量的、--shots 截的就已經是新的時間
+export function freshRefsScript(refsById) {
+  const json = JSON.stringify(refsById).replace(/</g, '\\u003c');
+  return `<script>(function(){var F=${json},v;Object.defineProperty(window,'__cues',{configurable:true,get:function(){return v;},set:function(x){if(x&&x.segs)for(var id in F)if(x.segs[id])x.segs[id].refs=Object.assign({},x.segs[id].refs,F[id]);v=x;}});})();</script>`;
+}
+
+export function injectRuntime(html, extra = '') {
+  const tag = `<script src="${RUNTIME_URL}"></script>${extra ? `\n${extra}` : ''}`;
   return /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (m) => `${m}\n${tag}`) : `${tag}\n${html}`;
 }
 
-export function startServer(dir, runtimeFile) {
+export function startServer(dir, runtimeFile, extra = '') {
   const root = path.resolve(dir);
   const server = http.createServer((req, res) => {
     let p;
@@ -100,7 +107,7 @@ export function startServer(dir, runtimeFile) {
     const ext = path.extname(f).toLowerCase();
     if (SKIP_MEDIA.has(ext)) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-store' });
-    if (p === '/index.html') res.end(injectRuntime(fs.readFileSync(f, 'utf8')));
+    if (p === '/index.html') res.end(injectRuntime(fs.readFileSync(f, 'utf8'), extra));
     else fs.createReadStream(f).pipe(res);
   });
   return new Promise((resolve, reject) => {
@@ -147,6 +154,11 @@ function launchChrome(chrome, userDir, W = 1920, H = 1080) {
     '--hide-scrollbars', '--mute-audio', '--disable-extensions', '--disable-background-networking', '--disable-sync',
     '--force-device-scale-factor=1', `--window-size=${W},${H}`, 'about:blank'];
   const cp = spawn(chrome, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+  // audit 被中斷（Ctrl-C、工具呼叫逾時送 SIGTERM）時一起關掉 Chrome，不留在背景（平行派工時曾累積 44 個）
+  const reap = () => { try { cp.kill('SIGKILL'); } catch { /* 已經結束 */ } };
+  const onSig = (sig) => { reap(); process.exit(sig === 'SIGINT' ? 130 : 143); };
+  process.once('exit', reap); process.once('SIGINT', onSig); process.once('SIGTERM', onSig);
+  cp.once('exit', () => { process.off('exit', reap); process.off('SIGINT', onSig); process.off('SIGTERM', onSig); });
   return new Promise((resolve, reject) => {
     let buf = '';
     const timer = setTimeout(() => { cp.kill(); reject(new Error(`Chrome 15 秒內沒有啟動（${chrome}）：${buf.trim().slice(-300)}`)); }, 15000);
@@ -163,9 +175,9 @@ function launchChrome(chrome, userDir, W = 1920, H = 1080) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // W／H：視窗大小（009 直式量 overlay 用 1080×1920；預設 1920×1080）
-export async function openSession({ dir, chrome, runtime, readyTimeout = 60000, W = 1920, H = 1080 }) {
+export async function openSession({ dir, chrome, runtime, readyTimeout = 60000, W = 1920, H = 1080, extraHead = '' }) {
   const userDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-audit-'));
-  const { server, port } = await startServer(dir, runtime);
+  const { server, port } = await startServer(dir, runtime, extraHead);
   let proc = null, cdp = null;
   const errors = [];
   const close = async () => {

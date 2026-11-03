@@ -67,7 +67,7 @@ export function listMd(cc, { files, project }) {
   if (files.main) L.push(`| ${files.main} | 0:00.00 | ${mmss(cc.main.duration)} | 主軌 | 講者＋人聲＋片尾配樂 | — |`);
   for (const s of cc.segs) if (files[s.id]) L.push(`| ${files[s.id]} | ${mmss(s.start)} | ${s.duration.toFixed(2)} 秒 | ${s.layoutZh}${s.footage ? '（含講者）' : ''} | ${String(s.label).replace(/\|/g, '｜')} | ${s.sfx ? `${s.sfx} 顆` : '無'} |`);
   L.push('| 字幕.srt | 0:00.00 | — | 字幕 | 畫面上實際顯示的字幕 | — |', '');
-  L.push('沒有輸出：章節角標（剪映用文字貼）、疊加卡期間講者的慢推（1.045 倍，剪映用關鍵幀做）。', '');
+  L.push('沒有輸出：章節角標（剪映用文字貼）。', '');
   return L.join('\n');
 }
 

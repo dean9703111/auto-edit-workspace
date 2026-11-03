@@ -22,7 +22,9 @@ fs.rmSync(out, { recursive: true, force: true });
 const TPL = path.join(WS, 'shared', 'template');
 const SKIP = new Set(['tools', 'vendor']);
 fs.cpSync(path.join(WS, 'dev', 'site'), out, { recursive: true });
-fs.cpSync(TPL, path.join(out, 'shared', 'template'), { recursive: true, filter: (src) => !SKIP.has(path.relative(TPL, src).split(path.sep)[0]) });
+// 構圖台存的預覽參考圖（preview/speaker-local.jpg、speaker-v-local.jpg）是創作者自己的畫面，不上官網
+const LOCAL = /-local\.jpg$/;
+fs.cpSync(TPL, path.join(out, 'shared', 'template'), { recursive: true, filter: (src) => !SKIP.has(path.relative(TPL, src).split(path.sep)[0]) && !LOCAL.test(src) });
 fs.cpSync(path.join(WS, 'shared', 'sfx'), path.join(out, 'shared', 'sfx'), { recursive: true });
 for (const f of ['NOTICE.md', 'LICENSE']) fs.copyFileSync(path.join(WS, f), path.join(out, f));
 fs.writeFileSync(path.join(out, MARK), '');   // GitHub Pages 不跑 Jekyll（底線開頭的檔案才不會被略過）
