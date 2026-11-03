@@ -78,6 +78,10 @@ test('停點紀錄：同一停點以最後一列為準；待回覆的停點蓋�
   assert.equal(s.feedback, 'r4');
   assert.match(s.evidence[0], /停點紀錄最後一列「2026-11-02 15:30｜③ 分鏡表｜待回覆」/);
   assert.equal(readStopLog(log).last.get('① 剪輯清單').state, '通過');
+  // 舊專案的停點名稱（④ Studio 預覽、⑤ 剪輯台、⑥ 背景預覽）對到現在的五個停點
+  const old = readStopLog(['## 停點紀錄', '| 時間 | 停點 | 狀態 |', '|---|---|---|', '| 1 | ④ Studio 預覽 | 待回覆 |', '| 2 | ⑤ 剪輯台 | 通過 |', '| 3 | ⑥ 背景預覽 | 待回覆 |'].join('\n'));
+  assert.deepEqual([...old.last.keys()], ['④ 影片編輯器', '⑤ 背景預覽']);
+  assert.equal(old.last.get('④ 影片編輯器').state, '通過');
   const r = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   const lines = r.stdout.trim().split('\n');

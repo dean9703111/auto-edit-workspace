@@ -184,7 +184,7 @@ test('sfxBudget＋報告：chapter 調大 2 dB → 比人聲只小 1 dB，⚠ �
   const v = +(0.891 * 10 ** (2 / 20)).toFixed(3);
   const b = A.sfxBudget([{ id: 's05', name: 'chapter', at: 62.4, volume: v, main: true }, { id: 's06', name: 'tick', at: 70, volume: 0.55, main: false }], CONF, { outDur: 120 });
   assert.deepEqual(b.loud, [{ id: 's05', name: 'chapter', at: 62.4, relDb: -1 }]);
-  const w = '⚠ 音效比例：1 顆音效比人聲下 3 dB 還大聲（s05 chapter 1:02.40 −1.0 dB → sfxVolume 再減 2.0）→ 在剪輯台把這幾段的音效調小，或改 plan.json 那段的 sfxVolume';
+  const w = '⚠ 音效比例：1 顆音效比人聲下 3 dB 還大聲（s05 chapter 1:02.40 −1.0 dB → sfxVolume 再減 2.0）→ 在影片編輯器把這幾段的音效調小，或改 plan.json 那段的 sfxVolume';
   assert.equal(b.warnings.at(-1), w);
   const info = { hasAudio: true, before: { i: -26, tp: -12 }, after: { i: -14, tp: -1.2 }, linear: true, gainDb: 12, cuts: 0, fade: 0, notes: [] };
   const lines = A.audioReportLines(info, { sfx: b });

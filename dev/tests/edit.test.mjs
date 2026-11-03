@@ -1,4 +1,4 @@
-// plan.json 的 edit（剪輯台）：檢查與正規化、rough ↔ 成片時間對應、cuts 讓段落／字幕／音效重新對時間、
+// plan.json 的 edit（影片編輯器）：檢查與正規化、rough ↔ 成片時間對應、cuts 讓段落／字幕／音效重新對時間、
 // 底片切片（data-media-start、data-fade-*、data-volume）、dip／punch／整支淡入淡出、gains、sfxVolume、--check --json 的時間換回 rough
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

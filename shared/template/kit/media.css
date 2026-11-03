@@ -1,4 +1,4 @@
-/* 插入素材（plan.json 的 type: "media"）與剪輯台效果（edit）的樣式。build.mjs 只在用到時才在 index.html 連這個檔。
+/* 插入素材（plan.json 的 type: "media"）與影片編輯器效果（edit）的樣式。build.mjs 只在用到時才在 index.html 連這個檔。
    視覺沿用主題：硬邊、無光暈；紅框用警示紅 --sc-warn、放大鏡框用主色 --brand。 */
 
 /* 整層：不計時的外框，進出場只動它（opacity／x／scale）；裡面的底、錄影、紅框各自計時 */
@@ -51,7 +51,7 @@
 .mlens canvas { display: block; width: 100%; height: 100%; border-radius: 10px; }
 .mlsrc { display: none; }
 
-/* 剪輯台：dip（過黑，在字幕下面）、整支淡入淡出（連字幕一起） */
+/* 影片編輯器：dip（過黑，在字幕下面）、整支淡入淡出（連字幕一起） */
 #edit-dip { position: absolute; inset: 0; background: #000000; opacity: 0; z-index: 58; pointer-events: none; }
 #edit-fade { position: absolute; inset: 0; background: #000000; opacity: 0; z-index: 70; pointer-events: none; }
 

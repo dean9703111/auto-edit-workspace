@@ -6,7 +6,7 @@
  *                                                     srt=work/rough.srt、video=work/rough.mp4、out=work/hyperframes，都在專案資料夾裡）
  *   node shared/template/tools/build.mjs --project projects/<專案> --check  只檢查 plan.json，不寫檔（分鏡定稿後先跑；只會寫偵測快取 work/hyperframes/.cache/）
  *   node shared/template/tools/build.mjs --project projects/<專案> --check --json
- *                                                     同上，stdout 只印一個 JSON（剪輯台讀；時間都是 rough.mp4 的秒數，格式見 USAGE-reference.md R2.6）
+ *                                                     同上，stdout 只印一個 JSON（影片編輯器讀；時間都是 rough.mp4 的秒數，格式見 USAGE-reference.md R2.6）
  *   node shared/template/tools/build.mjs --list [--json] 印出 18 情境＋40 字卡動態的 key、何時用、slots 與上限，以及插入素材（type: "media"）的欄位
  *   node shared/template/tools/build.mjs --project projects/<專案> --test 41,4
  *                                                     另外產生 compositions/test-clip.html：41 秒起的 4 秒
@@ -265,9 +265,13 @@ function capcutParts(res, { mainOpts, outDur, captions, format }) {
   }
   const mm = buildMain({ ...mainOpts, test: { t0: 0, len: outDur }, cut: { kind: 'main' } });
   comps.push({ file: 'compositions/capcut-main.html', html: mm.html });
+  return { comps, segs, main: { file: 'compositions/capcut-main.html', duration: mm.duration }, srt: captionsSrt(captions) };
+}
+
+// 成片畫面上實際顯示的字幕（時間對成片）：剪映素材的 capcut.srt、影片編輯器「只輸出字幕」的 subtitles.srt
+function captionsSrt(captions) {
   let n = 0;
-  const srt = formatSrt(captions.items.flatMap((c) => c.spans.map(([a, b]) => ({ n: ++n, start: a, end: b, text: c.text }))));
-  return { comps, segs, main: { file: 'compositions/capcut-main.html', duration: mm.duration }, srt };
+  return formatSrt(captions.items.flatMap((c) => c.spans.map(([a, b]) => ({ n: ++n, start: a, end: b, text: c.text }))));
 }
 
 // ---------- --gallery ----------
@@ -757,10 +761,11 @@ export function build(flags, { log = console.log } = {}) {
   const generated = new Set();
   for (const [f, c] of files) { W.write(f, c); generated.add(f); }
   W.write('index.html', main.html); generated.add('index.html');
-  // index.html 的修改時間＝最後一次 build：內容沒變也更新時間（剪輯台「成片預覽是舊的」、audit、status、qc 都拿它和 plan.json 比；
-  //   剪輯台存檔時已經重新產生過，再跑 build 不重寫 index.html，舊時間會讓它們誤報「plan.json 比 index.html 新」）
+  // index.html 的修改時間＝最後一次 build：內容沒變也更新時間（影片編輯器「影片預覽是舊的」、audit、status、qc 都拿它和 plan.json 比；
+  //   影片編輯器存檔時已經重新產生過，再跑 build 不重寫 index.html，舊時間會讓它們誤報「plan.json 比 index.html 新」）
   if (W.res.same.includes('index.html')) { const now = new Date(); fs.utimesSync(path.join(P.out, 'index.html'), now, now); }
   if (test) { W.write(TEST_FILE, test.html); generated.add(TEST_FILE); }
+  fs.writeFileSync(path.join(P.out, 'subtitles.srt'), captionsSrt(cap));   // 影片編輯器「只輸出字幕」複製這份
   if (capcut) {
     fs.writeFileSync(path.join(P.out, 'capcut.json'), JSON.stringify({ v: 1, planHash, format: C.format, duration: outDur, segs: capcut.segs, main: capcut.main }, null, 2) + '\n');
     fs.writeFileSync(path.join(P.out, 'capcut.srt'), capcut.srt);
@@ -835,7 +840,7 @@ const isMain = () => {
 if (isMain()) {
   const wantJson = process.argv.includes('--json') && process.argv.includes('--check');
   cli().then((code) => { process.exitCode = code; }, (e) => {
-    // --check --json：出錯也只印 JSON（剪輯台讀 stdout）
+    // --check --json：出錯也只印 JSON（影片編輯器讀 stdout）
     if (wantJson) console.log(JSON.stringify(errorJson(e.message), null, 2));
     else console.error(`✖ ${e.message}`);
     process.exitCode = 1;

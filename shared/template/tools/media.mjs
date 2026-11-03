@@ -29,7 +29,7 @@
  *       --below <dB> 可手動改成「說話音量減 dB」），找出說話區間；每則起點對齊到附近最接近的開口點（字幕比開口早 1.5 秒到晚 0.6 秒的範圍內，差超過 0.25 秒才動）；
  *       結尾拖進靜音超過 0.4 秒就收到說話結束＋0.15 秒。字幕不重疊、每則至少 0.6 秒、順序不變。
  *       寫回前先把原檔備份成 work/rough.srt.bak-<時間戳>（不刪任何檔）；--dry-run 只印調整表、不寫。
- *       只在「剪乾淨」做完字幕校正後跑一次；之後在剪輯台改的時間不要再跑它（會蓋掉）。build 不會自動執行它。
+ *       只在「剪乾淨」做完字幕校正後跑一次；之後在影片編輯器改的時間不要再跑它（會蓋掉）。build 不會自動執行它。
  *   node shared/template/tools/media.mjs ng-snap --project projects/<專案> [--edit "audio:-20dB"] [--margin 0.15sec] [--src <原片>] [--v1 <檔>]
  *       讀 work/cuts.md 的 NG 表（表頭有「時間碼」「原因」）與章節空檔表（表頭有「章節」「第一句」），
  *       用 auto-editor 判斷原片的停頓（結果快取在 work/.cache/），把每段 NG 的起訖對齊到前後的停頓（±1 秒內），
@@ -50,7 +50,7 @@
  *       邊錄邊講的螢幕錄影：讀 work/main.json（kind "screen"）與 work/cuts.v1.json，算出初剪後每段保留下來的片段
  *       在 rough.mp4 的起訖與錄影本身的秒數（in），寫 work/screen-sync.json（media 段 sync01、sync02…：畫面蓋回主軌、和聲音同步）。
  *       --write-plan：再寫進 work/hyperframes/plan.json（先換掉舊的 sync 段，plan.json 先備份 .sync-<時間戳>）；初剪重做過就再跑一次。
- *       --dry-run：只印表、不寫。秒數都由工具算，不要手改 sync 段的 from／to／in（剪輯台拖邊緣會自動保持同步）。
+ *       --dry-run：只印表、不寫。秒數都由工具算，不要手改 sync 段的 from／to／in（影片編輯器拖邊緣會自動保持同步）。
  *   node shared/template/tools/media.mjs srt-align --project projects/<專案> [--dry-run] [--remap-plan] [--max 18]
  *       字幕重新斷句成完整語句（剪乾淨第 6 步，取代「手動斷句＋srt-split」）：
  *       有 講稿.md：字幕＝講稿每一行（# 標題、> 引言、含 ` 的說明行不算），時間用 work/transcript.json 的詞級時間做全域序列對齊
@@ -65,7 +65,7 @@
  *   node shared/template/tools/media.mjs srt-split --project projects/<專案> [--max 18] [--dry-run]
  *       work/rough.srt 超過 18 字（全形 1、半形 0.5）的字幕拆成兩則以上：先斷在標點，再斷在空白，都沒有才斷在中間（會 ⚠）；
  *       時間依字數比例分配、首尾相接，句號重新連號。寫回前先備份 work/rough.srt.split-<時間戳>（.bak-<時間戳> 留給 snap-srt，status 靠它判斷 snap-srt 跑過沒有）。
- *       work/hyperframes/plan.json 已經用到句號（#N）時拒絕（改到剪輯台分割，剪輯台會一起重對 #N）。
+ *       work/hyperframes/plan.json 已經用到句號（#N）時拒絕（改到影片編輯器分割，影片編輯器會一起重對 #N）。
  *   node shared/template/tools/media.mjs illus-lint --project projects/<專案> [--no-sheet]
  *       檢查專案自己畫的示意插圖元件 work/hyperframes/illus-local/*.svg（規則見 shared/template/kit/illus-style.md）：
  *       建議尺寸與狀態從 work/storyboard.md 的插圖清單讀（「新建 SVG」列寫「規格：<name>，建議尺寸 W×H，狀態 a／b」）；
@@ -576,7 +576,7 @@ export function snapSrt(P, { dryRun = false, below = null, log = console.log, no
   fs.copyFileSync(srtFile, backup);
   fs.writeFileSync(srtFile, rewriteSrtTimes(text, res.rows));
   log(`已寫回 ${rel(srtFile)}；原檔備份在 ${rel(backup)}（要還原就把它複製回 rough.srt）`);
-  log('→ 重跑 build 前先到剪輯台看一眼；之後不要再跑 snap-srt（會蓋掉你在剪輯台改的時間）。');
+  log('→ 重跑 build 前先到影片編輯器看一眼；之後不要再跑 snap-srt（會蓋掉你在影片編輯器改的時間）。');
   return { ...res, backup, written: true, threshold: th.threshold, speech };
 }
 
@@ -1134,7 +1134,7 @@ export function cutpoints(P, { dryRun = false, log = console.log, now = new Date
     if (fs.existsSync(outFile)) { backup = backupPath(outFile, now); fs.copyFileSync(outFile, backup); }
     fs.writeFileSync(outFile, json);
     written = true;
-    log(`已寫 work/cutpoints.json（剪輯台與 build 的剪接點微淡化會讀它）${backup ? `；舊檔備份在 ${posix(path.relative(P.project, backup))}` : ''}`);
+    log(`已寫 work/cutpoints.json（影片編輯器與 build 的剪接點微淡化會讀它）${backup ? `；舊檔備份在 ${posix(path.relative(P.project, backup))}` : ''}`);
   }
   return { ...res, warnings, written, backup, file: outFile };
 }
@@ -1349,7 +1349,7 @@ export function srtSplit(P, { max = 18, dryRun = false, log = console.log, now =
   const srtFile = path.join(work, 'rough.srt');
   if (!fs.existsSync(srtFile)) throw new Error('找不到 work/rough.srt → 先照剪乾淨第 6 步產生');
   const planFile = path.join(work, 'hyperframes', 'plan.json');
-  if (fs.existsSync(planFile) && /"#\d+/.test(fs.readFileSync(planFile, 'utf8'))) throw new Error(`work/hyperframes/plan.json 已經用到句號（#N），拆句會讓後面的句號全部位移 → 改在剪輯台分割字幕（剪輯台會一起重對 plan.json 的 #N）：node shared/template/tools/editor.mjs --project ${posixRel(P.project)}`);
+  if (fs.existsSync(planFile) && /"#\d+/.test(fs.readFileSync(planFile, 'utf8'))) throw new Error(`work/hyperframes/plan.json 已經用到句號（#N），拆句會讓後面的句號全部位移 → 改在影片編輯器分割字幕（影片編輯器會一起重對 plan.json 的 #N）：node shared/template/tools/editor.mjs --project ${posixRel(P.project)}`);
   const text = fs.readFileSync(srtFile, 'utf8');
   const cues = parseSrt(text);
   if (!cues.length) throw new Error('work/rough.srt 讀不到任何字幕 → 照「剪乾淨」第 6 步重新轉出 rough.srt');
@@ -1358,7 +1358,7 @@ export function srtSplit(P, { max = 18, dryRun = false, log = console.log, now =
   if (!res.changed.length) { log(`沒有超過 ${mx} 字的字幕，沒有寫任何檔。`); return { ...res, written: false, backup: null }; }
   for (const c of res.changed) {
     log(`  #${c.n}（${c.len} 字）${fmtC(c.start)}–${fmtC(c.end)}`);
-    c.pieces.forEach((p, i) => log(`      → ${p.text.padEnd(18, '　')}${fmtC(p.start)}–${fmtC(p.end)}${c.forced && i === c.pieces.length - 1 ? `   ⚠ 沒有標點，斷在第 ${visibleLen(c.pieces[0].text)} 字 → 到剪輯台看斷得對不對` : ''}`));
+    c.pieces.forEach((p, i) => log(`      → ${p.text.padEnd(18, '　')}${fmtC(p.start)}–${fmtC(p.end)}${c.forced && i === c.pieces.length - 1 ? `   ⚠ 沒有標點，斷在第 ${visibleLen(c.pieces[0].text)} 字 → 到影片編輯器看斷得對不對` : ''}`));
   }
   let shift = 0;
   const shifts = [];
@@ -1369,7 +1369,7 @@ export function srtSplit(P, { max = 18, dryRun = false, log = console.log, now =
   fs.copyFileSync(srtFile, backup);
   fs.writeFileSync(srtFile, formatSrt(res.cues, { eol: text.includes('\r\n') ? '\r\n' : '\n', bom: text.startsWith('﻿') }));
   log(`已寫回 work/rough.srt；原檔備份在 ${posix(path.relative(P.project, backup))}（要還原就把它複製回 rough.srt）`);
-  log('→ 接著跑 snap-srt（剪乾淨第 6 步）；之後要拆句請到剪輯台分割，不要再跑 srt-split');
+  log('→ 接著跑 snap-srt（剪乾淨第 6 步）；之後要拆句請到影片編輯器分割，不要再跑 srt-split');
   return { ...res, written: true, backup };
 }
 
@@ -1625,7 +1625,7 @@ export function refMapper(oldCues, newCues, { overrides = new Map(), segShift = 
       const hit = newCues.filter((c) => k && normText(c.text).includes(k)).sort((x, y) => near(x) - near(y))[0];
       if (hit && near(hit) < 15) return { ...r, n: hit.n };
       const T = refTime(fmtRef(r), oldCues) ?? o.start;
-      notes.push(`${id}：${fmtRef(r)} 的「${r.kw}」在新字幕找不到 → 改成時間 ${fmtRef(asTime(T))}（到剪輯台或 plan.json 換成新字幕裡的詞）`);
+      notes.push(`${id}：${fmtRef(r)} 的「${r.kw}」在新字幕找不到 → 改成時間 ${fmtRef(asTime(T))}（到影片編輯器或 plan.json 換成新字幕裡的詞）`);
       return asTime(T);
     }
     const T = (r.end ? o.end : o.start) + (r.off || 0) + (segShift.get(id) || 0);
@@ -1725,11 +1725,11 @@ export function srtAlign(P, { dryRun = false, remapPlan = false, max = ALIGN.max
   if (pauseNote) log(pauseNote);
   const warns = [];
   const bad = rows.filter((r) => !r.ok || r.interp);
-  if (bad.length) warns.push(`⚠ ${bad.length} ${hasScript ? '行講稿' : '個子句'}在逐字稿裡對不上，時間用前後句內插：${bad.slice(0, 6).map((r) => `${hasScript ? `第 ${r.from} 行` : `#${r.cue}`}「${r.text}」`).join('、')}${bad.length > 6 ? '…' : ''} → 播 rough.mp4 那一段聽：沒講（剪掉了）就從字幕刪掉，有講就到剪輯台調起迄`);
+  if (bad.length) warns.push(`⚠ ${bad.length} ${hasScript ? '行講稿' : '個子句'}在逐字稿裡對不上，時間用前後句內插：${bad.slice(0, 6).map((r) => `${hasScript ? `第 ${r.from} 行` : `#${r.cue}`}「${r.text}」`).join('、')}${bad.length > 6 ? '…' : ''} → 播 rough.mp4 那一段聽：沒講（剪掉了）就從字幕刪掉，有講就到影片編輯器調起迄`);
   const forced = info.filter((f) => f.forced);
-  if (forced.length) warns.push(`⚠ ${forced.length} 則超過 ${max} 字又沒有「、，」可以斷，斷在中段停頓最長的地方：${forced.map((f) => `#${f.n}`).join('、')} → 到剪輯台看斷得對不對`);
+  if (forced.length) warns.push(`⚠ ${forced.length} 則超過 ${max} 字又沒有「、，」可以斷，斷在中段停頓最長的地方：${forced.map((f) => `#${f.n}`).join('、')} → 到影片編輯器看斷得對不對`);
   const short = cues.filter((c) => c.end - c.start < ALIGN.minDur - 1e-9);
-  if (short.length) warns.push(`⚠ ${short.length} 則不到 ${ALIGN.minDur} 秒：${short.slice(0, 8).map((c) => `#${c.n}「${c.text}」${(c.end - c.start).toFixed(2)}s`).join('、')} → 到剪輯台和前後句合併`);
+  if (short.length) warns.push(`⚠ ${short.length} 則不到 ${ALIGN.minDur} 秒：${short.slice(0, 8).map((c) => `#${c.n}「${c.text}」${(c.end - c.start).toFixed(2)}s`).join('、')} → 到影片編輯器和前後句合併`);
   if (why) warns.push(`⚠ ${why}：時間是整則按字數比例估的 → 寫回後要跑 node shared/template/tools/media.mjs snap-srt --project ${pj}（有 transcript.json 就不用）`);
   for (const w of warns) log(w);
   // plan.json 已經用到 #N

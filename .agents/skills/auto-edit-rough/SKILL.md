@@ -1,6 +1,6 @@
 ---
 name: auto-edit-rough
-description: 把 projects/<專案> 的口播剪成初剪：接主軌、逐字稿、找 NG 列剪輯清單、auto-editor 去停頓、字幕校正拆句與對齊開口、剪接點。當使用者說「剪乾淨」「剪成初剪」「找 NG」時使用。已經有 work/rough.mp4、要做資訊卡或成片時不要用（改用 auto-edit-storyboard）；只改字幕文字或時間時也不要用（改用剪輯台，auto-edit-review 流程 C）。
+description: 把 projects/<專案> 的口播剪成初剪：接主軌、逐字稿、找 NG 列剪輯清單、auto-editor 去停頓、字幕校正拆句與對齊開口、剪接點。當使用者說「剪乾淨」「剪成初剪」「找 NG」時使用。已經有 work/rough.mp4、要做資訊卡或成片時不要用（改用 auto-edit-storyboard）；只改字幕文字或時間時也不要用（改用影片編輯器，auto-edit-review 流程 C）。
 version: 0.1.0
 ---
 # 剪乾淨（初剪）
@@ -105,7 +105,7 @@ node shared/template/tools/media.mjs srt-align --project projects/<專案> --dry
 node shared/template/tools/media.mjs srt-align --project projects/<專案>
 ```
 
-第 1 行同時寫 `work/transcript.json`（詞級逐字稿，蓋掉步驟 2 那份 main.mp4 的）與 whisper 的 rough.srt。第 2 行只印斷句表：有 `講稿.md` 時每則＝講稿一行、時間由 transcript.json 全域對齊；沒有講稿時把 rough.srt 切成完整子句；超過 18 字（直式 10 字，srt-align 照版式自動用，不用自己加參數）才拆、短句自動併；顯示時去掉「，」「。」「；」「：」、保留「、」「！」「？」（AGENTS.md 規則 4、style.md「字幕」）。表看過合理才跑第 3 行寫回（自動備份 `work/rough.srt.align-<時間戳>`）。之後照規則 4 只改錯字（講稿本身的錯字、沒講稿時 whisper 的錯字）；不要自己按字數切、併句、對時間，不要再跑 srt-split（舊流程），不要把「，。」加回字幕。合併規則與連接詞清單在 AGENTS.md「剪乾淨的數字」，看斷句表時對照。它印的 ⚠ 照 → 做，原文列進回報：`⚠ N 行講稿在逐字稿裡對不上，時間用前後句內插：…`、`⚠ N 則不到 0.6 秒…` 這類要到剪輯台處理的，先列在回報讓使用者知道；印 `⚠ 沒有 work/transcript.json：時間是整則按字數比例估的 → 寫回後要跑 node shared/template/tools/media.mjs snap-srt --project …` 才照 → 跑 snap-srt（先 `--dry-run`，只跑一次）。使用者之後在剪輯台改過的字和時間，不要再用工具覆蓋（AGENTS.md「剪輯台」）。
+第 1 行同時寫 `work/transcript.json`（詞級逐字稿，蓋掉步驟 2 那份 main.mp4 的）與 whisper 的 rough.srt。第 2 行只印斷句表：有 `講稿.md` 時每則＝講稿一行、時間由 transcript.json 全域對齊；沒有講稿時把 rough.srt 切成完整子句；超過 18 字（直式 10 字，srt-align 照版式自動用，不用自己加參數）才拆、短句自動併；顯示時去掉「，」「。」「；」「：」、保留「、」「！」「？」（AGENTS.md 規則 4、style.md「字幕」）。表看過合理才跑第 3 行寫回（自動備份 `work/rough.srt.align-<時間戳>`）。之後照規則 4 只改錯字（講稿本身的錯字、沒講稿時 whisper 的錯字）；不要自己按字數切、併句、對時間，不要再跑 srt-split（舊流程），不要把「，。」加回字幕。合併規則與連接詞清單在 AGENTS.md「剪乾淨的數字」，看斷句表時對照。它印的 ⚠ 照 → 做，原文列進回報：`⚠ N 行講稿在逐字稿裡對不上，時間用前後句內插：…`、`⚠ N 則不到 0.6 秒…` 這類要到影片編輯器處理的，先列在回報讓使用者知道；印 `⚠ 沒有 work/transcript.json：時間是整則按字數比例估的 → 寫回後要跑 node shared/template/tools/media.mjs snap-srt --project …` 才照 → 跑 snap-srt（先 `--dry-run`，只跑一次）。使用者之後在影片編輯器改過的字和時間，不要再用工具覆蓋（AGENTS.md「影片編輯器」）。
 
 完成判準：`work/rough.srt.align-<時間戳>` 存在（srt-align 寫回過）；`work/rough.srt` 每則是一個完整語句（有講稿＝講稿一行）、最多 18 字（直式 10 字）、沒有「，」「。」「；」「：」、繁體、中英之間半形空格；`work/transcript.json` 是這次 rough.mp4 的詞級逐字稿（剪好看的 `#N@詞` 用它，不要刪）。
 常見錯誤：印 `✖ work/hyperframes/plan.json 已經用到句號（#N），重新斷句後句號會全部位移 → 加 --remap-plan 再跑一次…` → 照 → 第 2、3 行加 `--remap-plan`（plan.json 與情境動畫的 `P.at` 會照時間換句號並先備份；storyboard.md 的句號會過期，以 plan.json 為準）；字幕斷在詞中間、連接詞吊在句尾 → 是講稿那一行本來就這樣斷，照講稿，不要手改 rough.srt。

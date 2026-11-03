@@ -118,9 +118,9 @@ test('plan.json：from／to／清單 at／beats／chapter 都吃 #N@詞；找不
   assert.match(ch.errors.join('\n'), /章節轉場只寫 "#N"/);
 });
 
-// ---------- 剪輯台不會壞 ----------
+// ---------- 影片編輯器不會壞 ----------
 
-test('剪輯台 subtitles.mjs：parseRef／fmtRef／refTime 認得 #N@詞，且和 build 算出同一個秒數', () => {
+test('影片編輯器 subtitles.mjs：parseRef／fmtRef／refTime 認得 #N@詞，且和 build 算出同一個秒數', () => {
   const r = S.parseRef('#12e@剪輯清單+0.2');
   assert.equal(r.n, 12); assert.equal(r.end, true); assert.equal(r.kw, '剪輯清單'); assert.equal(r.off, 0.2);
   assert.equal(S.fmtRef(r), '#12e@剪輯清單+0.2');
@@ -134,7 +134,7 @@ test('剪輯台 subtitles.mjs：parseRef／fmtRef／refTime 認得 #N@詞，且�
   assert.equal(ET.textWidth(TEXT), T.textWidth(TEXT));
 });
 
-test('剪輯台改字幕結構：#N@詞 跟著文字走（分割看詞在哪一半、合併綁前一句、其餘句號平移）', () => {
+test('影片編輯器改字幕結構：#N@詞 跟著文字走（分割看詞在哪一半、合併綁前一句、其餘句號平移）', () => {
   const cs = [1, 2, 3].map((n) => ({ n, start: n * 10, end: n * 10 + 8, text: n === 2 ? '先講前半部分，再講剪輯清單的重點' : `第${n}句` }));
   const plan = { version: 1, scenes: [
     { id: 'a', scene: 'concept', from: '#2@前半', to: '#2e@剪輯清單' },
@@ -163,7 +163,7 @@ test('剪輯台改字幕結構：#N@詞 跟著文字走（分割看詞在哪一�
   assert.equal(del.scenes[1].from, '#2@第3句');
 });
 
-test('剪輯台 applySave 的 from／to：認 #N@詞，找不到詞擋下來並附原文', () => {
+test('影片編輯器 applySave 的 from／to：認 #N@詞，找不到詞擋下來並附原文', () => {
   assert.ok(S.refTime('#2@GPT', cues) != null);
   assert.equal(S.refTime('#2@沒有', cues), null);
 });

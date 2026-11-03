@@ -117,9 +117,12 @@ export function encodeFootage(src, dst, { audioFilter = null, audioRaw = null, c
   vf.push('fps=30');
   args.push('-vf', vf.join(','), '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p');
   if (audioFilter) args.push('-af', audioFilter);
-  args.push('-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', dst);
+  // 先寫暫存檔、好了才換上：編碼要幾分鐘，這段時間影片編輯器還在播舊的底片
+  const tmp = `${dst}.part.mp4`;
+  args.push('-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', tmp);
   const r = run('ffmpeg', args);
-  if (r.status !== 0) throw new Error(`ffmpeg 重新編碼失敗：${String(r.stderr).trim().slice(0, 400)}`);
+  if (r.status !== 0) { fs.rmSync(tmp, { force: true }); throw new Error(`ffmpeg 重新編碼失敗：${String(r.stderr).trim().slice(0, 400)}`); }
+  fs.renameSync(tmp, dst);
 }
 
 // 濾鏡圖裡的路徑：ffmpeg 先拆濾鏡圖（'…' 裡面原樣），再拆選項（\: → :），所以 C:\x\a.cube 要寫成 'C\:/x/a.cube'

@@ -4,7 +4,7 @@
 
 | 路徑 | 用途 | 怎麼跑（在工作區根目錄） |
 |---|---|---|
-| `tests/` | `shared/template/tools/` 的單元與整合測試（build、剪輯台、插入素材、audit、qc…） | `node --test dev/tests/*.test.mjs`（要 Node 22、ffmpeg；audit 的瀏覽器測試要先 `npx hyperframes browser ensure`，沒有就自動略過） |
+| `tests/` | `shared/template/tools/` 的單元與整合測試（build、影片編輯器、插入素材、audit、qc…） | `node --test dev/tests/*.test.mjs`（要 Node 22、ffmpeg；audit 的瀏覽器測試要先 `npx hyperframes browser ensure`，沒有就自動略過） |
 | `tests/docs.test.mjs` | 文件一致性：9 支 Skill 的骨架、六個停點的原文、門檻數字找得到出處（AGENTS.md、style.md、USAGE*.md、工具 `--help`）、文件寫到的檔案存在、G04 八項矛盾 | `node --test dev/tests/docs.test.mjs`（零依賴；約 1 秒） |
 | `tests/docs-allow.json` | docs.test 的數字白名單：每筆 `{ "file", "text", "reason" }`，上限 40 筆；能搬進 style.md 或 AGENTS.md 的就不要加 | 改完重跑 docs.test |
 | `tests/install-skills.test.mjs` | `setup/install-skills.mjs` 的 9 個案例（在系統暫存資料夾裝，不碰 `~/.minimax`） | `node --test dev/tests/install-skills.test.mjs` |

@@ -162,7 +162,7 @@ test('out：速度＝(out−in)÷段長，段 ≤ 3 秒可快轉到 64 倍；hol
   assert.equal(probe(path.join(out, img[1]), 'stream=width,height'), '640,400');
 });
 
-test('剪輯台的呼叫方式（--project 絕對路徑、cwd＝工作區根目錄）與只給路徑旗標：media 段都找得到專案資料夾', () => {
+test('影片編輯器的呼叫方式（--project 絕對路徑、cwd＝工作區根目錄）與只給路徑旗標：media 段都找得到專案資料夾', () => {
   writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 13 }]);
   const r = spawnSync(process.execPath, [BUILD, '--project', proj, '--template', tpl, '--check', '--json'], { encoding: 'utf8', cwd: root });
   const j = JSON.parse(r.stdout);
@@ -176,7 +176,7 @@ test('剪輯台的呼叫方式（--project 絕對路徑、cwd＝工作區根目�
   assert.equal(j2.ok, true, j2.errors.join('\n'));
 });
 
-test('剪輯台改過的 media 段：from／to 是秒數、沒有 anchor 照樣過；anchor 對不上照常提醒', () => {
+test('影片編輯器改過的 media 段：from／to 是秒數、沒有 anchor 照樣過；anchor 對不上照常提醒', () => {
   writePlan([{ id: 'm01', type: 'media', src: REC, from: 7.25, to: 12.9, in: 0.4 }]);
   const a = checkJson().j;
   assert.equal(a.ok, true, a.errors.join('\n'));

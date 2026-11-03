@@ -69,9 +69,9 @@
     "音效自動對準畫面事件、人聲響度標準化",
     "橫式長片與直式短影片",
     "風格包：主色、背景、亮暗主題",
-    "網頁版剪輯台：裁剪、音量、轉場、字幕、卡片文字即時改",
+    "網頁版影片編輯器：裁剪、音量、轉場、字幕、卡片文字即時改",
     "修改單：勾選想怎麼改，一行指令交給 AI 重做，改完標示可一鍵查看",
-    "輸出 MP4 或剪映素材（透明 MOV＋SRT）"
+    "輸出 1080p／2K／4K MP4、只輸出字幕 SRT，或剪映素材（透明 MOV＋SRT）"
    ],
    "screenshot": ["https://deanlin.net/auto-edit-workspace/og-image.jpg", "https://deanlin.net/auto-edit-workspace/editor.jpg"],
    "image": "https://deanlin.net/auto-edit-workspace/og-image.jpg",
@@ -126,7 +126,7 @@
      "name": "需要會剪輯或寫程式嗎？",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "不用。所有操作都是跟 AI 用一句話說，例如「剪乾淨」「s05 往左移」「可以了，輸出成片」。AI 做到重要的地方會停下來給你看，你同意才往下。字幕、音量、卡片上的字也可以在網頁版剪輯台自己調。"
+      "text": "不用。所有操作都是跟 AI 用一句話說，例如「剪乾淨」「s05 往左移」「可以了，輸出成片」。AI 做到重要的地方會停下來給你看，你同意才往下。字幕、音量、卡片上的字也可以在網頁版影片編輯器自己調。"
      }
     },
     {
@@ -134,7 +134,7 @@
      "name": "說不清楚要怎麼改，怎麼辦？",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "打開剪輯台的修改單，在時間軸點那一段，勾「以圖像展示為主」「畫出關係」「更有質感」這類標籤，或寫一句描述，再複製一行指令貼給 AI。AI 每段派一個子代理一起改，改完那段標 ✓、列出做了什麼，按「看結果」就跳過去。"
+      "text": "打開影片編輯器的修改單，在時間軸點那一段，勾「以圖像展示為主」「畫出關係」「更有質感」這類標籤，或寫一句描述，再複製一行指令貼給 AI。AI 每段派一個子代理一起改，改完那段標 ✓、列出做了什麼，按「看結果」就跳過去。"
      }
     },
     {
@@ -375,7 +375,7 @@
   .tune p { margin: 0; font-size: 17px; line-height: 1.8; color: var(--muted); }
   .tune q { font-size: clamp(26px, 2.6vw, 34px); font-weight: 900; line-height: 1.25; letter-spacing: -0.01em; color: var(--accent-text); quotes: "「" "」"; }
 
-  /* 三種改法＋剪輯台截圖 */
+  /* 三種改法＋影片編輯器截圖 */
   .ways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
   .way { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; display: flex; flex-direction: column; gap: 8px; }
   .way .n { font-size: 15px; font-weight: 800; letter-spacing: 0.08em; color: var(--muted); }
@@ -458,7 +458,7 @@
     <ul>
       <li><a href="#use">怎麼用</a></li>
       <li><a href="#scenes">情境動畫</a></li>
-      <li><a href="#fix">剪輯台與修改單</a></li>
+      <li><a href="#fix">影片編輯器與修改單</a></li>
       <li><a href="#how">運作方式</a></li>
       <li><a href="#style">換風格</a></li>
       <li><a href="#capcut">搭配剪映</a></li>
@@ -478,7 +478,7 @@
     <h1><span class="l1">放好素材，</span><span class="l2">用白話文剪成片</span></h1>
     <div class="hero-body">
       <div>
-        <p class="lead">影片、聲音、圖片放進資料夾，跟 AI 說<b>「剪乾淨」「做成片」</b>，它就幫你剪掉講錯的地方、上字幕、加資訊卡和動畫、配音效。每一步都停下來給你看；不滿意就<b>說一句話、在剪輯台自己調，或勾在修改單上交給 AI 重做</b>。</p>
+        <p class="lead">影片、聲音、圖片放進資料夾，跟 AI 說<b>「剪乾淨」「做成片」</b>，它就幫你剪掉講錯的地方、上字幕、加資訊卡和動畫、配音效。每一步都停下來給你看；不滿意就<b>說一句話、在影片編輯器自己調，或勾在修改單上交給 AI 重做</b>。</p>
         <div class="cta">
           <a class="btn primary big" href="#start">開始使用</a>
           <a class="btn big" href="shared/template/index.html">看完整情境庫 →</a>
@@ -505,7 +505,7 @@
     <div><b>17</b><span>情境動畫</span></div>
     <div><b>40</b><span>字卡動態</span></div>
     <div><b>9</b><span>音效</span></div>
-    <div><b>6</b><span>停點</span></div>
+    <div><b>5</b><span>停點</span></div>
   </div>
 </div>
 
@@ -589,18 +589,18 @@
 
 <section class="block" id="fix">
   <div class="head">
-    <p class="kicker">03 · 剪輯台與修改單</p>
+    <p class="kicker">03 · 影片編輯器與修改單</p>
     <h2>不滿意，<br>有三種改法</h2>
-    <p>AI 先做一版，你決定要不要改。知道怎麼改就說一句話；字幕、音量、卡片上的字在剪輯台自己調；說不清楚怎麼改的，勾在修改單上交給 AI 重做。</p>
+    <p>AI 先做一版，你決定要不要改。知道怎麼改就說一句話；字幕、音量、卡片上的字在影片編輯器自己調；說不清楚怎麼改的，勾在修改單上交給 AI 重做。</p>
   </div>
   <div class="ways">
     <div class="way"><span class="n">說一句話</span><q>s05 往左移</q><p>知道要改哪一段、怎麼改。只動那一段，改前改後都存版本，不喜歡可以退回。</p></div>
-    <div class="way"><span class="n">剪輯台自己調</span><q>打開剪輯台</q><p>裁剪、調音量、加轉場，改字幕和卡片上的字；你改過的地方 AI 不會再改回去。</p></div>
+    <div class="way"><span class="n">影片編輯器自己調</span><q>打開編輯器</q><p>裁剪、調音量、加轉場，改字幕和卡片上的字；你改過的地方 AI 不會再改回去。調好直接輸出 1080p／2K／4K，或只輸出字幕。</p></div>
     <div class="way"><span class="n">修改單交給 AI</span><q>更有質感</q><p>點一段、勾想怎麼改，複製一行指令給 AI；改完那段標 ✓，一鍵跳過去看結果。</p></div>
   </div>
   <figure class="shot">
-    <a href="editor.jpg" target="_blank" rel="noopener"><img src="editor.jpg" alt="剪輯台：左邊成片預覽、中間卡片文字、右邊修改單，下方時間軸" width="2000" height="1300" loading="lazy"></a>
-    <figcaption>剪輯台：在成片預覽改卡片上的字，畫面跟著換；右邊的修改單分「待改」「已改完」，時間軸上那段標 ✎ 或 ✓。點圖看大圖。</figcaption>
+    <a href="editor.jpg" target="_blank" rel="noopener"><img src="editor.jpg" alt="影片編輯器：左邊影片預覽、中間卡片文字、右邊修改單，下方時間軸" width="2000" height="1300" loading="lazy"></a>
+    <figcaption>影片編輯器：在影片預覽改卡片上的字，畫面跟著換；右邊的修改單分「待改」「已改完」，時間軸上那段標 ✎ 或 ✓。點圖看大圖。</figcaption>
   </figure>
   <ol class="steps four">
     <li><h3>點一段</h3><p>在時間軸點一段動畫或螢幕錄影，修改單列出這段的字幕。</p></li>
@@ -611,11 +611,11 @@
   <h3 class="sub">一句話就能改的地方</h3>
   <div class="tunes">
     <div class="tune"><q>第 3 列不要剪</q><h3>哪些地方要剪</h3><p>剪輯清單逐條列出要剪的句子和原因，你確認後才剪。</p></div>
-    <div class="tune"><q>調好了</q><h3>畫面放大</h3><p>在構圖台直接拖框決定放大多少、講者放哪裡，旁邊即時看套上字幕和字卡的樣子。</p></div>
+    <div class="tune"><q>調好了</q><h3>畫面放大</h3><p>在構圖台直接拖框決定放大多少、講者放哪裡，框裡直接畫出字幕和字卡的位置。</p></div>
     <div class="tune"><q>s05 往左移</q><h3>某一段的卡片</h3><p>移位置、改字、換情境，只動那一段，改前改後都存版本。</p></div>
     <div class="tune"><q>s12 重新設計</q><h3>某一段的動畫</h3><p>先出新的動畫分鏡給你確認；不喜歡可以退回舊版，還有左右對照影片。</p></div>
     <div class="tune"><q>s08 不要音效</q><h3>音效、配樂</h3><p>從內建音效庫挑，關掉某一段、調音量、片尾加配樂；一分鐘以上沒音效會自動補。</p></div>
-    <div class="tune"><q>這集要調光</q><h3>講者畫面</h3><p>調光、瘦臉、美顏（磨皮、膚色提亮、淡化黑眼圈）預設關閉，構圖時同一頁就能開；剪輯台也有開關和強度滑桿。</p></div>
+    <div class="tune"><q>這集要調光</q><h3>講者畫面</h3><p>調光、瘦臉、美顏（磨皮、膚色提亮、淡化黑眼圈）預設關閉，構圖時同一頁就能開；影片編輯器也有開關和強度滑桿。</p></div>
     <div class="tune"><q>這集換暗色</q><h3>主色、背景、亮暗</h3><p>內建風格包一鍵換，也能做自己的一包。</p></div>
     <div class="tune"><q>講者設定成林大寶</q><h3>講者名字</h3><p>講者介紹卡顯示名字和頭銜、金句卡署名；設定一次，每一集都用。</p></div>
     <div class="tune"><q>做成直式短影片</q><h3>橫式／直式</h3><p>長片用橫式；Shorts、Reels、抖音用直式，字幕和版面自動換。</p></div>
@@ -668,7 +668,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <li><h3>剪乾淨</h3><p>逐字稿對講稿找重講、初剪、照講稿對字幕</p><span class="stop">停點 ① 剪輯清單</span></li>
     <li><h3>構圖</h3><p>在構圖台拖框決定畫面，同一頁開調光、瘦臉、美顏，挑一格自己的畫面當預覽參考圖</p><span class="stop">停點 ② 構圖</span></li>
     <li><h3>分鏡</h3><p>每段先判斷畫不畫得出來，再寫情境、版面、動畫分鏡和截圖</p><span class="stop">停點 ③ 分鏡表</span></li>
-    <li><h3>定稿</h3><p>組成 HyperFrames 專案、量版面、Studio 預覽</p><span class="stop">停點 ④ 預覽 · ⑤ 剪輯台</span></li>
+    <li><h3>定稿</h3><p>組成 HyperFrames 專案、量版面，在影片編輯器看成片、修改</p><span class="stop">停點 ④ 影片編輯器</span></li>
     <li><h3>輸出</h3><p>render 成 final.mp4，附驗收截圖與觀影總表</p><span class="stop">交片</span></li>
   </ol>
 </section>
@@ -692,7 +692,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <li><b>只換這一集</b><span>說 <span class="say">「這集用藍圖風格」</span>，其他集不受影響。</span></li>
     <li><b>整個工作區換</b><span>說 <span class="say">「整個換成藍圖」</span>，換回來說「換回預設」。</span></li>
     <li><b>做自己的一包</b><span>說 <span class="say">「幫我做一個風格包：主色深綠、背景要簡潔」</span>，AI 先給你看預覽，同意才存。</span></li>
-    <li><b>講者調光、瘦臉、美顏</b><span>預設關閉。構圖台下面勾選、拖強度，畫面馬上變（美顏＝磨皮、膚色提亮、淡化黑眼圈）；之後也能說「這集要調光、瘦臉」或在剪輯台調。臉部偵測在本機做、不上傳。</span></li>
+    <li><b>講者調光、瘦臉、美顏</b><span>預設關閉。構圖台下面勾選、拖強度，畫面馬上變（美顏＝磨皮、膚色提亮、淡化黑眼圈）；之後也能說「這集要調光、瘦臉」或在影片編輯器調。臉部偵測在本機做、不上傳。</span></li>
   </ul>
   <div class="more"><a class="btn" href="shared/template/index.html">到情境庫切換風格 →</a></div>
 </section>
@@ -749,8 +749,8 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
   </div>
   <div class="faq">
     <details><summary><h3>auto-edit-workspace 是什麼？</h3></summary><p>一個開源的 AI 自動剪輯工作區。把口播影片、旁白、螢幕錄影、圖片放進資料夾，用白話文跟 AI Agent 說「剪乾淨」「做成片」，就會剪掉講錯的地方、照講稿上字幕、加資訊卡和情境動畫、配音效，輸出 MP4。</p></details>
-    <details><summary><h3>需要會剪輯或寫程式嗎？</h3></summary><p>不用。所有操作都是跟 AI 用一句話說，例如「剪乾淨」「s05 往左移」「可以了，輸出成片」。AI 做到重要的地方會停下來給你看，你同意才往下。字幕、音量、卡片上的字也可以在網頁版剪輯台自己調。</p></details>
-    <details><summary><h3>說不清楚要怎麼改，怎麼辦？</h3></summary><p>打開剪輯台的修改單，在時間軸點那一段，勾「以圖像展示為主」「畫出關係」「更有質感」這類標籤，或寫一句描述，再複製一行指令貼給 AI。AI 每段派一個子代理一起改，改完那段標 ✓、列出做了什麼，按「看結果」就跳過去。</p></details>
+    <details><summary><h3>需要會剪輯或寫程式嗎？</h3></summary><p>不用。所有操作都是跟 AI 用一句話說，例如「剪乾淨」「s05 往左移」「可以了，輸出成片」。AI 做到重要的地方會停下來給你看，你同意才往下。字幕、音量、卡片上的字也可以在網頁版影片編輯器自己調。</p></details>
+    <details><summary><h3>說不清楚要怎麼改，怎麼辦？</h3></summary><p>打開影片編輯器的修改單，在時間軸點那一段，勾「以圖像展示為主」「畫出關係」「更有質感」這類標籤，或寫一句描述，再複製一行指令貼給 AI。AI 每段派一個子代理一起改，改完那段標 ✓、列出做了什麼，按「看結果」就跳過去。</p></details>
     <details><summary><h3>要付費嗎？</h3></summary><p>工作區本身免費開源（程式碼 MIT 授權），用到的 ffmpeg、whisper、auto-editor、HyperFrames 也都免費。要付費的只有你使用的 AI Agent，依各家方案計費。</p></details>
     <details><summary><h3>支援哪些 AI Agent？</h3></summary><p>Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor，以及其他能在你的電腦上執行指令、讀寫檔案、會讀 AGENTS.md 的 Agent。ChatGPT 網頁版不能在電腦上執行指令，要用 Codex。</p></details>
     <details><summary><h3>可以剪直式短影片嗎？</h3></summary><p>可以。說「做成直式短影片」，或直接給直拍的素材，畫布會換成 1080×1920，字幕、版面、卡片位置都改用直式的規格，適合 YouTube Shorts、Instagram Reels、抖音。</p></details>

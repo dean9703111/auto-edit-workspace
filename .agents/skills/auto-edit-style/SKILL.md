@@ -10,7 +10,7 @@ version: 0.1.0
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
-| 色碼、色名或使用者的圖 | `brand.mjs`、`caps.mjs`、生圖、`brand.mjs bg`、ffmpeg | `kit/brand.css`、`kit/pip-frame.png`、`bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（＋`kit/look.json`） | 三張背景 ffprobe 尺寸對、使用者在停點 ⑥ 同意 | ⑥ 背景預覽 |
+| 色碼、色名或使用者的圖 | `brand.mjs`、`caps.mjs`、生圖、`brand.mjs bg`、ffmpeg | `kit/brand.css`、`kit/pip-frame.png`、`bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（＋`kit/look.json`） | 三張背景 ffprobe 尺寸對、使用者在停點 ⑤ 同意 | ⑤ 背景預覽 |
 | 「換暗色」「換主題」 | 步驟 6 | 這一集 plan.json 第一層的 `theme` | `--check`、build 0 個 ✖ | — |
 | 「有哪些風格」「這集用 XX 風格」「整個換成 XX」 | 步驟 7 | 這一集 plan.json 第一層的 `style`，或 `brand.mjs use` 換掉 `shared/template/` 那幾個檔 | `brand.mjs list` 的 ● 是對的那包、build 0 個 ✖ | — |
 
@@ -47,9 +47,9 @@ node shared/template/tools/caps.mjs
 
 把能力表貼給使用者，照最後一行「可用的生圖路線」與 R9.3 路由表選第一條可用的路；寫一句選了哪條、為什麼。直式專案先沿用三張橫式背景（取中間），不用另做直式背景。
 完成判準：能力表已貼、選了一條路。
-常見錯誤：想幫使用者安裝 codex／mmx 或登入 → 不要，沒裝不裝、沒登入不登入，直接走下一條路（AGENTS.md 規則 3、工具注意事項）；使用者也要換暗色背景（`bg-fs-dark.jpg`、`bg-side-dark.jpg`、`bg-ch-dark.jpg`）→ HTML 路線還不能做暗色，走 mmx（`references/image-routing.md` 第 3 節的暗色提示詞）或使用者的圖，亮、暗各三張一起過停點 ⑥。
+常見錯誤：想幫使用者安裝 codex／mmx 或登入 → 不要，沒裝不裝、沒登入不登入，直接走下一條路（AGENTS.md 規則 3、工具注意事項）；使用者也要換暗色背景（`bg-fs-dark.jpg`、`bg-side-dark.jpg`、`bg-ch-dark.jpg`）→ HTML 路線還不能做暗色，走 mmx（`references/image-routing.md` 第 3 節的暗色提示詞）或使用者的圖，亮、暗各三張一起過停點 ⑤。
 
-**3. 生成到暫存資料夾、驗證、預覽 → 停點 ⑥**（每條路的指令在 `references/image-routing.md`）
+**3. 生成到暫存資料夾、驗證、預覽 → 停點 ⑤**（每條路的指令在 `references/image-routing.md`）
 
 ```
 node shared/template/tools/brand.mjs bg --html <暫存資料夾>/bg-fs.html --kind fs --out <暫存資料夾>
@@ -60,7 +60,7 @@ ffprobe -v error -show_entries stream=width,height -of csv=p=0 <暫存資料夾>
 完成判準：三張尺寸是 `1920,1080`／`960,1080`／`1920,1080`；`zones-fs.jpg`、`preview.jpg` 存在；`brand.mjs bg` 每張都印 `✔ 留空區乾淨`。
 常見錯誤：尺寸不對 → 用 references 第 1 節的 `scale…crop` 指令裁成對的尺寸。
 
-**4. ⑥ 同意後：存成風格包、套用，重跑 build**
+**4. ⑤ 同意後：存成風格包、套用，重跑 build**
 
 ```
 node shared/template/tools/brand.mjs pack <名稱> --color "#RRGGBB" --bg <暫存資料夾> --note "<一句說明>"
@@ -90,7 +90,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 node shared/template/tools/build.mjs --project projects/<專案>
 ```
 
-先重新讀 plan.json（剪輯台可能改過），只改第一層的 `"theme"`：`"dark"`＝暗色（石墨黑底、玻璃卡、主色光暈）；`"light"`＝亮色（預設，不寫也是亮色）。只換顏色 token，版面與動態不變；這一步不改 `shared/`，不用停點 ⑥。
+先重新讀 plan.json（影片編輯器可能改過），只改第一層的 `"theme"`：`"dark"`＝暗色（石墨黑底、玻璃卡、主色光暈）；`"light"`＝亮色（預設，不寫也是亮色）。只換顏色 token，版面與動態不變；這一步不改 `shared/`，不用停點 ⑤。
 完成判準：`--check`、build 都 0 個 ✖；回報寫改成哪個主題、改的是哪個 plan.json。
 常見錯誤：寫成 `"theme": "暗"`、或寫進某一段的 scene 裡 → 只能是 `"light"` 或 `"dark"`，寫在 plan.json 第一層。
 
@@ -102,7 +102,7 @@ node shared/template/tools/brand.mjs use <名稱>
 node shared/template/tools/build.mjs --project projects/<專案>
 ```
 
-先跑 list 把清單貼給使用者（內建「預設」橘色、示範「藍圖」藍色；也可以請他打開 `shared/template/index.html`，上方「風格」選單可以直接預覽每一包、亮／暗）。只換這一集：重新讀 plan.json，在第一層寫 `"style": "<名稱>"`（不跑 use）；換回工作區目前的就刪掉 `style`。整個工作區換：跑 use（之後每集都用它）。這一步不用停點 ⑥（風格包已經是使用者同意過的檔）。
+先跑 list 把清單貼給使用者（內建「預設」橘色、示範「藍圖」藍色；也可以請他打開 `shared/template/index.html`，上方「風格」選單可以直接預覽每一包、亮／暗）。只換這一集：重新讀 plan.json，在第一層寫 `"style": "<名稱>"`（不跑 use）；換回工作區目前的就刪掉 `style`。整個工作區換：跑 use（之後每集都用它）。這一步不用停點 ⑤（風格包已經是使用者同意過的檔）。
 完成判準：只換一集時 build 印 `風格包：<名稱>`；整個換時 list 的 ● 在那一包；build 0 個 ✖。
 常見錯誤：`✖ style：找不到風格包` → 名稱照 list 抄（資料夾名，含中文）；use 說「不屬於任何包」→ 先 pack 存起來，不要直接加 `--force`。
 
@@ -113,17 +113,17 @@ node shared/template/tools/brand.mjs speaker --name "<姓名>" --titles "<頭銜
 node shared/template/tools/brand.mjs speaker
 ```
 
-寫 `shared/講者.json`（不進版控；14 講者介紹不寫 `name`、`titles` 就用它，15 金句不寫 `by` 用 `short`）。頭銜用逗號或「、」分開；只改頭銜就只給 `--titles`。不要講者介紹：`brand.mjs speaker off`。姓名、頭銜一定是使用者給的，不要從講稿或頻道名猜；這一步不用停點 ⑥。
+寫 `shared/講者.json`（不進版控；14 講者介紹不寫 `name`、`titles` 就用它，15 金句不寫 `by` 用 `short`）。頭銜用逗號或「、」分開；只改頭銜就只給 `--titles`。不要講者介紹：`brand.mjs speaker off`。姓名、頭銜一定是使用者給的，不要從講稿或頻道名猜；這一步不用停點 ⑤。
 完成判準：第 2 行印 `講者：<姓名>…`；有專案時重跑 build 0 個 ✖、沒有「還沒設定講者」的 ⚠。
 常見錯誤：`✖ 講者資料不對：… 最多 6 字` → 把超過的頭銜唸給使用者、請他給短一點的，不要自己縮。
 
 ## 停點
 
 ```
-⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」
+⏸ 停點 ⑤ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」
 ```
 
-停點 ⑥ 不能略過：寫 `shared/` 一定要使用者同意（AGENTS.md 規則 1）。暫存資料夾寫完整路徑。
+停點 ⑤ 不能略過：寫 `shared/` 一定要使用者同意（AGENTS.md 規則 1）。暫存資料夾寫完整路徑。
 
 | 使用者回 | 做什麼 |
 |---|---|
@@ -136,7 +136,7 @@ node shared/template/tools/brand.mjs speaker
 - [ ] 能力表已貼
 - [ ] 沒有安裝工具、沒有幫使用者登入任何服務
 - [ ] 三張圖先在暫存資料夾，尺寸 1920×1080／960×1080／1920×1080
-- [ ] 停點 ⑥ 通過才寫 `shared/`
+- [ ] 停點 ⑤ 通過才寫 `shared/`
 - [ ] 只改了 AGENTS.md 規則 1 允許的檔；換主題只改了 plan.json 第一層的 `theme`、單集換風格只改了 `style`
 
 ## 退路表
@@ -161,10 +161,10 @@ node shared/template/tools/brand.mjs speaker
 走的路：<使用者的圖／Codex／mmx／HTML>，理由：<一句>
 主題（只在換主題時）：<light／dark>，改了 projects/<專案>/work/hyperframes/plan.json；build ✖ 0
 三張背景：<暫存資料夾>/bg-fs.jpg 1920×1080、bg-side.jpg 960×1080、bg-ch.jpg 1920×1080
-<停點 ⑥ 那一行原文，暫存資料夾寫完整路徑>
+<停點 ⑤ 那一行原文，暫存資料夾寫完整路徑>
 ```
 
-⑥ 通過後：`存成風格包：shared/template/styles/<名稱>/；套用：<整個工作區（brand.mjs use）／只有這一集（plan.json style）>`＋`→ 重新打開 shared/template/index.html，上方「風格」選 <名稱> 預覽`。
+⑤ 通過後：`存成風格包：shared/template/styles/<名稱>/；套用：<整個工作區（brand.mjs use）／只有這一集（plan.json style）>`＋`→ 重新打開 shared/template/index.html，上方「風格」選 <名稱> 預覽`。
 
 ## 什麼時候讀 references/
 

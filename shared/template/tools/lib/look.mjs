@@ -5,14 +5,14 @@
 //   resolveLook({ plan, templateDir })   → { color, slim, lutFile, lutRel, source: 'kit'|'plan'|'off' }
 //   ensureLook({ projectDir, plan, log, templateDir, strict }) → { footage, lut, key, report }（build 用；同步、不開 Chrome）
 //   lookCheck({ projectDir, plan, templateDir })              → { errors, warnings }（build --check 用；不寫檔）
-//   lookNeedsRun({ projectDir, plan, templateDir })           → 剪輯台「重新產生」前要不要先跑 look.mjs run
+//   lookNeedsRun({ projectDir, plan, templateDir })           → 影片編輯器「重新產生」前要不要先跑 look.mjs run
 //   parseCube／blendCube／cubeText／ensureBlendedLut          調光 LUT：強度＝和恆等混合（m ＝ color ÷ 0.8）
 //   controlPoints／field／warpPlane／maxDisp                  瘦臉變形（analysis/scripts/warp.mjs 移植；YUV 平面與 RGB 共用）
 //   loadTrack(file|data, { lookScale })                       讀 face-landmarks.json：平滑、權重、側臉減半、淡入淡出
 //   statePaths／readState／writeState／landmarksFresh／footageFresh／staleReason／assetsStatus／estimateMinutes
 //   renderLookFootage({ projectDir, track, slim, onProgress }) 解碼 YUV → 變形 → x264（音軌 copy）→ work/rough-look.mp4
 //   lookPreview({ projectDir, templateDir, plan })             對照圖 work/look-preview.jpg ＋印的行
-//   faceImage({ projectDir, t, slim, cache })                  剪輯台「講者」面板的單格前後對照（JPEG）
+//   faceImage({ projectDir, t, slim, cache })                  影片編輯器「講者」面板的單格前後對照（JPEG）
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -369,7 +369,7 @@ export function ensureLook({ projectDir, plan = {}, log = () => {}, templateDir 
   return { footage, lut, key, report };
 }
 
-// 剪輯台「重新產生」前要不要先跑 look.mjs run（§3.1 第 7 列：過期而且能跑）
+// 影片編輯器「重新產生」前要不要先跑 look.mjs run（§3.1 第 7 列：過期而且能跑）
 export function lookNeedsRun({ projectDir, plan = {}, templateDir = DEFAULT_TEMPLATE, probe } = {}) {
   if (validateLook(plan?.look).length) return false;
   try { return decide({ projectDir, plan, templateDir, probe }).row === 7; } catch { return false; }
@@ -416,7 +416,7 @@ export function lookNextStep({ projectDir, plan = {}, templateDir = DEFAULT_TEMP
   if (Array.isArray(plan?.scenes) && plan.scenes.length) return { step: 'build', done: true, note: 'look 好了；plan.json 已經有段落，接著 build', cmd: `node shared/template/tools/build.mjs --project ${projArg(proj)}` };
   const cards = statOf(path.join(projectDir, 'work', FRAMING_PREVIEW)), look = d.row === 5 ? statOf(d.P.footage) : null;
   if (cards && (!look || cards.mtimeMs >= look.mtimeMs)) return { step: 'next', done: true, note: 'look 和構圖預覽都做好了；照專案進度往下', cmd: `node shared/template/tools/status.mjs --project ${projArg(proj)}` };
-  return { step: 'framing', done: true, note: 'look 好了；接著跑構圖分析，再開剪輯台，把構圖台網址和 work/look-preview.jpg 一起給使用者（停點 ②）', cmd: `node shared/template/tools/qc.mjs framing --project ${projArg(proj)}` };
+  return { step: 'framing', done: true, note: 'look 好了；接著跑構圖分析，再開影片編輯器，把構圖台網址和 work/look-preview.jpg 一起給使用者（停點 ②）', cmd: `node shared/template/tools/qc.mjs framing --project ${projArg(proj)}` };
 }
 export const nextLines = (ns) => [`→ 下一步：${ns.note}`, ns.cmd];
 // 指令裡的專案路徑：有空白或 shell 特殊字元就加雙引號（zsh、PowerShell 都吃），整行複製才跑得動
@@ -517,7 +517,7 @@ export function dispStats({ track, slim, w, h, lookScale = 1, fps = 30, step = 1
 }
 // ⚠ 看 95 百分位：短暫轉頭的少數格位移比正臉大（yaw 0.3 左右到 1.5–2 倍），不代表整支瘦太多
 export const dispWarning = (p95) => (p95 > DISP_WARN
-  ? `⚠ 位移 ＝ 臉寬 ${(p95 * 100).toFixed(2)}%（95% 的格；> ${r1(DISP_WARN * 100)}%）→ 瘦臉太強，脖子與領口可能被拉彎；把 slim 調低（plan.json 的 look.slim 或剪輯台「講者」）`
+  ? `⚠ 位移 ＝ 臉寬 ${(p95 * 100).toFixed(2)}%（95% 的格；> ${r1(DISP_WARN * 100)}%）→ 瘦臉太強，脖子與領口可能被拉彎；把 slim 調低（plan.json 的 look.slim 或影片編輯器「講者」）`
   : null);
 
 // 一個平面（Y、U、V 或 RGB 交錯）：geom＝{ w, h, ch, stride, offset }，scale＝平面對全解析度的比例（U／V 是 0.5）
@@ -817,7 +817,7 @@ function probeV0(file) {
   } catch { return { frames: 0, duration: 0 }; }
 }
 
-// ---------- 畫面工具（preview 與剪輯台） ----------
+// ---------- 畫面工具（preview 與影片編輯器） ----------
 
 // 一格 rgb24：from rough.mp4 at t，可選裁切（來源像素）、縮放、套 LUT
 export function grabRgb(file, { at = 0, crop = null, width, height, lut = null }) {
@@ -993,9 +993,10 @@ function resampleRect(src, sw, sh, out) {
   }
 }
 
-// ---------- 剪輯台：單格前後對照（contracts/look.md §7.3） ----------
+// ---------- 影片編輯器：單格前後對照（contracts/look.md §7.3） ----------
 
-export function faceImage({ projectDir, t = 0, slim = 0, beauty = 0, cache = {} }) {
+// size：輸出邊長（'auto'＝照臉在原畫面的大小，240–720）；withBox：回傳 { jpg, box: [x, y, 邊長] }（原畫面像素，構圖台把它疊回影片上）
+export function faceImage({ projectDir, t = 0, slim = 0, beauty = 0, cache = {}, size = 360, withBox = false }) {
   const P = statePaths(projectDir);
   const st = statOf(P.landmarks);
   const proj = projectLabel(projectDir);
@@ -1008,7 +1009,7 @@ export function faceImage({ projectDir, t = 0, slim = 0, beauty = 0, cache = {} 
   }
   const track = cache.track;
   if (!track) return { error: 'nolandmarks', message: `還沒逐格偵測臉部（臉太小時只有抽樣）→ 請 AI 跑 node shared/template/tools/look.mjs run --project ${projArg(proj)}` };
-  const V = probeVideo(P.rough), i = Math.min(track.n - 1, Math.max(0, Math.round(t * V.fpsExact)));
+  const V = probeVideo(P.rough), i = Math.min(track.n - 1, Math.max(0, Math.floor(t * V.fpsExact + 1e-3)));   // 和瀏覽器暫停在 t 時顯示的那一格一樣（t 落在哪一格的時間內）
   const lm = track.lm(i, 1);
   if (!lm) return { error: 'noface', message: '這一格沒偵測到臉（低頭、側身或只有聲音的畫面）→ 換一格再看' };
   if (!cache.frames.has(i)) {
@@ -1016,5 +1017,8 @@ export function faceImage({ projectDir, t = 0, slim = 0, beauty = 0, cache = {} 
     cache.frames.set(i, grabRgb(P.rough, { at: i / V.fpsExact }));
   }
   const s = Math.max(0, Math.min(1.2, Number(slim) || 0)) * track.weight(i), bt = Math.max(0, Math.min(1, Number(beauty) || 0)) * track.weight(i);
-  return jpgBuffer(faceCrop(cache.frames.get(i), V.width, V.height, lm, s, 360, { beauty: bt }), 3);
+  const side = Math.max(8, 2.4 * faceWidth(lm)), [cx, cy] = faceCenter(lm);
+  const px = size === 'auto' ? Math.round(Math.min(720, Math.max(240, side))) : size;
+  const jpg = jpgBuffer(faceCrop(cache.frames.get(i), V.width, V.height, lm, s, px, { beauty: bt }), 3);
+  return withBox ? { jpg, box: [cx - side / 2, cy - side / 2, side].map((v) => Math.round(v * 10) / 10) } : jpg;
 }

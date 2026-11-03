@@ -2,7 +2,7 @@
 
 > 開源的 AI 自動剪輯工作區（繁體中文）。把口播影片、旁白、螢幕錄影、圖片放進專案資料夾，用白話文跟 AI Agent（Claude Code、ChatGPT Codex、MiniMax Code、Cursor）說「剪乾淨」「做成片」，就會剪掉講錯重講的 NG、照講稿對齊字幕、配上資訊卡與情境動畫、音效，輸出 MP4 或剪映素材。程式碼 MIT 授權，免費。
 
-運作方式：AI Agent 負責判斷（哪一句是 NG、每段用什麼情境與動畫、卡片寫什麼），工作區裡的 Node.js 程式負責計算（whisper 詞級逐字稿、auto-editor 初剪、字幕斷句對時、動畫每一拍對準講到的詞、版面檢查、人聲響度 −14 LUFS），再用 HyperFrames（HTML 轉影片）render 成片。流程有六個停點，AI 會停下來給使用者確認。
+運作方式：AI Agent 負責判斷（哪一句是 NG、每段用什麼情境與動畫、卡片寫什麼），工作區裡的 Node.js 程式負責計算（whisper 詞級逐字稿、auto-editor 初剪、字幕斷句對時、動畫每一拍對準講到的詞、版面檢查、人聲響度 −14 LUFS），再用 HyperFrames（HTML 轉影片）render 成片。流程有五個停點，AI 會停下來給使用者確認。
 
 ## 重點
 
@@ -10,18 +10,18 @@
 - 18 種情境模板、17 支情境動畫範例、示意動畫（線條插圖照口播演出具體動作）、40 種字卡動態、9 個音效
 - 橫式長片（1920×1080）與直式短影片（1080×1920，Shorts、Reels、抖音）
 - 風格包：主色、背景圖、亮色／暗色主題；講者調光、瘦臉、美顏（預設關閉，臉部偵測在本機做）
-- 網頁版剪輯台：裁剪、音量、轉場、字幕，卡片上的字在成片預覽即時改；構圖台拖框決定畫面放大
-- 修改單：在剪輯台點一段、勾「以圖像展示為主」「更有質感」這類標籤，複製一行指令交給 AI 重做；改完標 ✓、一鍵看結果
+- 網頁版影片編輯器：裁剪、音量、轉場、字幕，卡片上的字在影片預覽即時改；構圖台拖框決定畫面放大；自己輸出 1080p／2K／4K 影片或只輸出字幕
+- 修改單：在影片編輯器點一段、勾「以圖像展示為主」「更有質感」這類標籤，複製一行指令交給 AI 重做；改完標 ✓、一鍵看結果
 - 影片的轉檔、轉字幕、render 都在使用者自己的電腦上做；支援 macOS 與 Windows
 - 需要：Node.js 22 以上、ffmpeg、whisper.cpp、auto-editor、HyperFrames（版本固定在 package.json；AI 會照手冊幫忙安裝）
 
 ## 文件
 
-- [README](https://github.com/dean9703111/auto-edit-workspace/blob/main/README.md)：開始使用、能做什麼、剪輯台與修改單、換風格、常見問題
+- [README](https://github.com/dean9703111/auto-edit-workspace/blob/main/README.md)：開始使用、能做什麼、影片編輯器與修改單、換風格、常見問題
 - [AGENTS.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/AGENTS.md)：AI Agent 的守則、停點、規則
 - [PROMPTS.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/PROMPTS.md)：可以直接貼的提示詞
 - [CONTENTS.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/CONTENTS.md)：模板、工具、文件總覽
-- [EDITOR.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/shared/template/EDITOR.md)：剪輯台、構圖台、修改單怎麼用
+- [EDITOR.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/shared/template/EDITOR.md)：影片編輯器、構圖台、修改單怎麼用
 - [情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)：18 種情境模板與情境動畫的即時預覽
 - [字卡動態](https://deanlin.net/auto-edit-workspace/shared/template/fx/)：40 種文字動態預覽
 

@@ -240,7 +240,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
 // build --check（停點 ③ 前）：分鏡表本身排不排得下。cues＝成片秒數字幕；item＝{ id, where, start, D }；tplRules＝範例原檔的 floorRules（沒有就只比拍序）
 //   拍序：各拍綁句的時間要照表的順序（同一個句號的「＋秒數」拍跟著上一拍）；倒過來＝分鏡寫錯詞或排錯順序
 //   【D 下限】：每個句號取最早那一拍當一拍（「段起點」那一拍是開場，不算）；第一拍 ≥ 開場下限、相鄰兩拍 ≥ 範例最小拍距、最後一拍到段尾 ≥ 段長下限的秒數
-//   分鏡停點 ③ 之後可能過期（剪輯台重對句號），所以只報 ⚠、不擋 build
+//   分鏡停點 ③ 之後可能過期（影片編輯器重對句號），所以只報 ⚠、不擋 build
 export const PLAN_TOL = 0.3;
 export function sheetPlanFindings({ item, sheet, cues = [], tplRules = [] }) {
   const out = [];

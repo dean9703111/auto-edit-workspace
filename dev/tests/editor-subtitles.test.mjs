@@ -1,4 +1,4 @@
-// 剪輯台的字幕增刪與句號重新對應（shared/template/tools/editor/subtitles.mjs，頁面與 server 共用的純函式）
+// 影片編輯器的字幕增刪與句號重新對應（shared/template/tools/editor/subtitles.mjs，頁面與 server 共用的純函式）
 // 契約第 5 節：分割 #k 不變、#ke→#(k+1)e、>k +1；新增 >k +1；合併 #(k+1)→#k+Δ、#ke→#k+Δ、#(k+1)e→#ke、>k+1 −1；刪除依選擇改綁、>k −1
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -153,7 +153,7 @@ test('anchor：起點那句本來對得上、改完對不上 → 換成新起點
   // 改字幕文字也一樣
   const r2 = S.replay(c, p, [{ op: 'set', n: 2, text: '接著講場地' }]);
   assert.equal(r2.plan.scenes[0].anchor, '接著講場地');
-  assert.equal(S.anchorFor('大家好，今天示範剪輯台'), '大家好');
+  assert.equal(S.anchorFor('大家好，今天示範影片編輯器'), '大家好');
   assert.equal(S.anchorFor('然後切到螢幕錄影的畫面'), '然後切到螢幕錄影');
 });
 

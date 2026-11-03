@@ -22,7 +22,7 @@
  *   node shared/template/tools/qc.mjs framing --project projects/<專案> [--file <mp4>] [--zooms 1,1.15,1.3]
  *       構圖預覽：量講者動作範圍、偵測四周黑邊，算出每個放大倍率的 16:9 裁切框（頭頂上方留 120px、講者水平置中），
  *       存 work/構圖預覽.jpg（每個倍率一格，橘框是講者動作範圍）並印出每個倍率的 frame 與會不會切到手勢。
- *       停點 ② 用剪輯台的構圖台（editor.mjs 印的「構圖台」網址）讓使用者拖框，存檔就寫進 plan.json 的 frame；
+ *       停點 ② 用影片編輯器的構圖台（editor.mjs 印的「構圖台」網址）讓使用者拖框，存檔就寫進 plan.json 的 frame；
  *       使用者說「用建議的」就把建議那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫）。之後再跑 speaker 量講者框。
  *       直式：候選是 9:16（1.0＝原畫面），垂直位置讓頭頂落在 y 380–520、下巴 ≤ 860（下巴用 work/face-landmarks.json，沒有就用動作範圍估），
  *       不合的倍率標 ⚠、不當建議。
@@ -303,7 +303,7 @@ export function judge(f) {
       if (i < L.lufsMin) msgs.push(`整合響度 ${r1(i)} LUFS 偏小聲（應在 ${L.lufsMin}～${L.lufsMax}）`);
       else if (i > L.lufsMax) msgs.push(`整合響度 ${r1(i)} LUFS 偏大聲（應在 ${L.lufsMin}～${L.lufsMax}）`);
       if (tp != null && tp > L.tpMax) msgs.push(`true peak ${r1(tp)} dBTP 太高（應 ≤ ${L.tpMax}）`);
-      if (msgs.length) add('loudness', 'warn', `${msgs.join('；')} → 到剪輯台調音量，或把人聲標準化到 −14 LUFS 後重新 render`);
+      if (msgs.length) add('loudness', 'warn', `${msgs.join('；')} → 到影片編輯器調音量，或把人聲標準化到 −14 LUFS 後重新 render`);
       else add('loudness', 'ok', `響度 ${r1(i)} LUFS、true peak ${tp == null ? '—' : r1(tp)} dBTP`);
     }
   }
@@ -385,8 +385,8 @@ export function captionStyleChecks(m, C = CAPTION) {
 // 字幕文字（F8 第 4 點）：含「，」「。」→ ⚠；一則不到 0.6 秒 → ⚠（剪映最短 0.73 秒）
 export function captionTextChecks(cues) {
   const out = [], punct = cues.filter((c) => /[，。]/.test(c.text)), short = cues.filter((c) => c.end - c.start < CAPTION.minDur - 1e-6);
-  if (punct.length) out.push({ level: 'warn', text: `字幕 ${fmtNs(punct)} 共 ${punct.length} 則含句中標點「，」「。」，照 F8 不顯示 → 跑 srt-align 或在剪輯台改` });
-  if (short.length) out.push({ level: 'warn', text: `字幕 ${fmtNs(short)} 共 ${short.length} 則不到 ${CAPTION.minDur} 秒（#${short[0].n} ${r2(short[0].end - short[0].start)} 秒）→ 在剪輯台併到相鄰那則或拉長` });
+  if (punct.length) out.push({ level: 'warn', text: `字幕 ${fmtNs(punct)} 共 ${punct.length} 則含句中標點「，」「。」，照 F8 不顯示 → 跑 srt-align 或在影片編輯器改` });
+  if (short.length) out.push({ level: 'warn', text: `字幕 ${fmtNs(short)} 共 ${short.length} 則不到 ${CAPTION.minDur} 秒（#${short[0].n} ${r2(short[0].end - short[0].start)} 秒）→ 在影片編輯器併到相鄰那則或拉長` });
   if (!out.length) out.push({ level: 'ok', text: `字幕 ${cues.length} 則：沒有「，」「。」、每則 ≥ ${CAPTION.minDur} 秒` });
   return out;
 }
@@ -731,7 +731,7 @@ export function chinFromLandmarks(P, W, H) {
   } catch { return null; }
 }
 
-// 構圖分析（qc framing 與剪輯台的構圖台共用）：量講者動作範圍、偵測黑邊、算每個倍率的裁切框與建議；不寫檔
+// 構圖分析（qc framing 與影片編輯器的構圖台共用）：量講者動作範圍、偵測黑邊、算每個倍率的裁切框與建議；不寫檔
 export function framingAnalysis(P, flags = {}) {
   const raw = flags.file ? path.resolve(flags.file) : path.join(P.project, 'work', 'rough.mp4');
   if (!fs.existsSync(raw)) throw new Error(`找不到 ${rel(raw)} → 先完成「剪乾淨」產生 work/rough.mp4，或用 --file 指定影片`);
@@ -811,7 +811,7 @@ function printFraming(P, r) {
   }
   const face = portrait ? '、頭頂／下巴不合' : '', faceOk = portrait ? '、頭頂／下巴在範圍內' : '';
   console.log(sug.none ? `建議：${sug.zoom.toFixed(2)}x（每個倍率都標了切到手勢${face}或放大超過 3.5 倍，選表上最小的；最後由使用者選）` : `建議：${sug.zoom.toFixed(2)}x（不切到手勢${faceOk}、來源像素放大 ≤ 3.5 倍的倍率裡最大的；最後由使用者選）`);
-  console.log(`\n→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就把 ✔ 那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫），之後跑 qc.mjs speaker 量講者框`);
+  console.log(`\n→ 下一步：開影片編輯器，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就把 ✔ 那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫），之後跑 qc.mjs speaker 量講者框`);
   console.log(`node shared/template/tools/editor.mjs --project ${rel(P.project)}`);
 }
 

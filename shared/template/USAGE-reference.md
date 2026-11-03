@@ -9,7 +9,7 @@
 | R1 | 挑情境：判斷順序、不下卡的句子（訊號表在 `SITUATIONS.md`） | 步驟 4 列分鏡表 |
 | R2 | 情境細節、清單寫法、全部欄位、media 段欄位、`--check --json` 格式、文字對時的欄位表（R2.8） | 步驟 4–5、插入螢幕錄影時 |
 | R3 | 字卡動態（fx） | 用到 fx 時 |
-| R4 | 畫面分區、講者位置、底片層、`sideShift`、`pipCrop`、`css` | 步驟 2、5，Studio 要移位時 |
+| R4 | 畫面分區、講者位置、底片層、`sideShift`、`pipCrop`、`css` | 步驟 2、5，預覽後要移位時 |
 | R5 | 字幕與音效（build 自動處理） | 要換或拿掉音效時 |
 | R6 | 密度與節奏、build 檢查哪些 | 步驟 4、6 |
 | R7 | 第二層情境動畫（custom）：骨架、`P.at` 綁句、17 支範例、檢查 | 符合 style.md「情境動畫優先」時 |
@@ -111,13 +111,13 @@
 | `sfx` | 選填 | 選填 | 選填 | `kit/sfx.json` 裡 `kind` 是 `sfx` 的名稱之一（R5.2）或 `null`（不配）。不寫＝用預設（R5）；custom 不寫就不配 |
 | `clicks` | | | 選填 | 畫面上看得到游標按下的時間 `["+3.2", "#21@安裝"]`，一下一顆 `click`（R5.2）；media 段也能寫 |
 | `sfxExtra` | 選填 | | | `false`＝關掉這段的附加音效（09 答案的 ding、情境動畫的 P.sfx 等）；不寫＝開（fx 沒有附加音效） |
-| `sfxVolume` | 選填 | 選填 | 選填 | 這段音效的音量（dB，−60～+12，0＝預設），主音效與附加音效一起調；疊在 `kit/sfx.json` 與 `edit.volume.sfx` 上。通常是剪輯台寫的（核心 6.3） |
+| `sfxVolume` | 選填 | 選填 | 選填 | 這段音效的音量（dB，−60～+12，0＝預設），主音效與附加音效一起調；疊在 `kit/sfx.json` 與 `edit.volume.sfx` 上。通常是影片編輯器寫的（核心 6.3） |
 | `css` | 選填 | | | 微調位置的 CSS，id 寫模板裡的原名（R4） |
 | `chtag` | 不用寫 | | | 章節角標由 build 自動常駐（R2.2）；寫了會 ⚠，只有 `"chapterBadge": false` 時才畫附件 |
 | `pip` | 04 家族選填 | | 選填 | `false`＝全畫面時不放子母畫面（講者完全被蓋住） |
 | `note` | 選填 | 選填 | 選填 | 給人看的備註，build 不讀 |
 
-插入螢幕錄影與圖片（`"type": "media"`）的欄位見 R2.5。第一層的 `edit`（剪輯台）見核心第 6 節。
+插入螢幕錄影與圖片（`"type": "media"`）的欄位見 R2.5。第一層的 `edit`（影片編輯器）見核心第 6 節。
 
 ### R2.5 media 段的全部欄位
 
@@ -128,7 +128,7 @@
 | `id` | ✓ | 英數字 | | 建議 `m01`、`m02` |
 | `type` | ✓ | `"media"` | | |
 | `src` | ✓ | `"assets/screen/<檔名>"`、`"assets/images/<檔名>"` | | 相對專案資料夾；影片 `.mp4 .mov .m4v .webm`、圖片 `.jpg .jpeg .png .webp` |
-| `from` | ✓ | 時間 | | 同其他段（核心 3.4）；剪輯台可能寫成秒數 |
+| `from` | ✓ | 時間 | | 同其他段（核心 3.4）；影片編輯器可能寫成秒數 |
 | `to`／`duration` | 二選一 | 時間／秒數 | | |
 | `anchor` | 選填 | 文字 | | 起點那句的一小段原文 |
 | `in` | 選填 | 秒數 ≥ 0 | `0` | 錄影從第幾秒開始播（圖片忽略）；`in ＋ 段長 × speed` 超過錄影長度 ✖ |
@@ -287,7 +287,7 @@
 | 講者位置 | 適合 | 避開或要調整 |
 |---|---|---|
 | 置中 | 全部 18 個 | — |
-| 右側（中心 x > 1060） | 06–10、12、13、14（靠左）、04 家族；03 用 `sideShift: 0` | 11、15 置中會壓到身體：snapshot 看臉，擋到臉就換 06／07 或用 `css` 移到左邊；只壓到身體就保留，交 Studio 時點名請使用者確認（核心 2.5）。05 不用 |
+| 右側（中心 x > 1060） | 06–10、12、13、14（靠左）、04 家族；03 用 `sideShift: 0` | 11、15 置中會壓到身體：snapshot 看臉，擋到臉就換 06／07 或用 `css` 移到左邊；只壓到身體就保留，交影片編輯器時點名請使用者確認（核心 2.5）。05 不用 |
 | 左側（中心 x < 860） | 04 家族、02 | 06–15 下方字卡與 12 都靠左，會壓到講者：用 `css` 把卡移到右邊，或改用 04 家族；03 側邊欄蓋住左半邊，不用；05 不用 |
 
 ### R4.3 哪些情境會動到底片層
@@ -300,7 +300,7 @@
 | 04a–d 全畫面、custom `layout: "fullscreen"` | 不透明幕蓋住講者（聲音照常）；右下角出現子母畫面＝同一支影片的靜音複本，外框 `kit/pip-frame.png` | 幕、子母畫面、外框一起淡入 0.5 秒、淡出 0.5 秒；寫 `"pip": false` 就沒有子母畫面 |
 | 01 章節轉場、fx `bg` 為 dark／light／accent | 不透明幕整個蓋住講者，沒有子母畫面 | 淡入淡出 0.5 秒 |
 | media 段（插入螢幕錄影、圖片） | 素材整張蓋住講者（聲音照常）；右下角子母畫面同 04；只有聲音的區間不放子母畫面 | 依 `enter`／`exit`（核心 5.3） |
-| `edit.joins` 的 `punch`（剪輯台） | 底片放大 1.08 倍（以講者框上方為中心），到下一個接點還原 | 硬切，不補間 |
+| `edit.joins` 的 `punch`（影片編輯器） | 底片放大 1.08 倍（以講者框上方為中心），到下一個接點還原 | 硬切，不補間 |
 | 其他（02、05–15、fx `bg: none`、custom `layout: "overlay"`） | 不動 | — |
 
 不透明幕相接時（後一段起點 ≤ 前一段結尾＋0.1 秒）：接縫不淡出（前段停在完成態），避免每個接縫黑一下。透明卡後面接不透明幕時，透明卡停在完成態、被幕蓋過；如果它是 03，底片在幕完全蓋住後才歸位。
@@ -406,7 +406,7 @@
 - `"sfx": "ding"`：換主音效名稱，落點不變。只能寫段落音效；`bgm-cylinder-five` 是配樂，寫在第一層 `outro`。
 - `"sfx": null`：這段不要主音效。
 - `"sfxExtra": false`：關掉這段的附加音效（含 `clicks`），主音效不受影響。
-- `"sfxVolume": -6`：這段音效（主音效＋附加音效）的音量，dB；疊在 `kit/sfx.json` 的預設音量與 `edit.volume.sfx` 上（剪輯台會寫）。
+- `"sfxVolume": -6`：這段音效（主音效＋附加音效）的音量，dB；疊在 `kit/sfx.json` 的預設音量與 `edit.volume.sfx` 上（影片編輯器會寫）。
 - `"clicks": ["+3.2", "#21@安裝"]`（media、custom 段）：每一項一顆 `click`。時間寫法和紅框 `marks[].at` 一樣：`"+秒數"`＝本段起點後幾秒、`"#N"`／`"#N@詞"`＝綁字幕；只寫畫面上看得到游標按下的地方（錄影用 `media.mjs frame --grid` 確認）。
 
 **結尾配樂**（plan.json 第一層）
@@ -457,7 +457,7 @@
 | `vars 沒寫，會顯示預設文字「…」→ 寫 vars.text` | ⚠ | 補 vars |
 | `vars.text：fx 29 沒有這個變數（可用：…）` | ✖ | 改成括號裡的欄位（fx 29 是 `label`、`number`、`unit`） |
 | `結尾 …s 超過影片長度 …s，已截短` | ⚠ | 通常可接受（最後一句） |
-| `edit.cuts 幾乎剪掉整支影片（剩 Ns）` | ✖ | 剪輯台的 cuts 秒數不對，請使用者在剪輯台檢查 |
+| `edit.cuts 幾乎剪掉整支影片（剩 Ns）` | ✖ | 影片編輯器的 cuts 秒數不對，請使用者在影片編輯器檢查 |
 | `edit.fadeIn＋fadeOut（Ns）比成片長度 Ns 還長` | ✖ | 縮短淡入淡出 |
 | `moves[i].to 要放大 N 倍，畫面會糊 → 框大一點，或改用放大鏡 lens` | ⚠ | 照 `→` 改 |
 | `lens[i] 期間有運鏡，鏡片位置是用 … 那一刻的畫面算的` | ⚠ | 運鏡和放大鏡錯開 |
@@ -485,7 +485,7 @@
 
 - 分鏡表的「情境」欄寫 `custom（fullscreen）` 或 `custom（overlay）`，再寫從哪一支範例改；「理由」欄寫口播在講哪一種情境。使用者確認分鏡表後才開始做。
 - 每段情境動畫是一支獨立的檔，彼此不相依：分鏡表確認後，可以照 `AGENTS.md`「子代理分工」一段派一個子代理同時做（選用；沒有子代理就照 `.agents/skills/auto-edit-motion/SKILL.md` 一段一段做）。
-- 品質關卡：每一段都要通過 R7.6 的檢查，並看過 snapshot 的中段與完成態，才交給使用者看 Studio。
+- 品質關卡：每一段都要通過 R7.6 的檢查，並看過 snapshot 的中段與完成態，才交給使用者看（影片編輯器）。
 - 兩層在同一個主合成裡一起掛：build 依 plan.json 的順序把它們排進時間軸，第二層的子母畫面、淡入淡出也由 build 加。
 - 拿不準的時候：判準照 style.md「情境動畫優先」；口播只是一句話帶過的地方，不要硬做動畫（作者：「影片內容合適時就採納，不合適就不用」）。
 - 動畫裡畫了游標按下：用 `P.at('#N@詞')` 定那一拍，plan.json 該段的 `clicks` 寫同一個 `#N@詞`（R5.2）。
@@ -764,7 +764,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 
 - HTML 路線：照 R9.4（`brand.mjs bg`，`fs`、`side`、`ch` 各跑一次）；輸出 `bg-<種類>.jpg`、疊上留空區框的 `zones-<種類>.jpg`，三張都在時產生並排的 `preview.jpg`。
 - 每條路的完整指令（Mac／Windows）在 `.agents/skills/auto-edit-style/references/image-routing.md`。
-- 一律先存在暫存資料夾：尺寸（`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <檔>`）要是 1920×1080、960×1080、1920×1080；留空區（R9.2）沒有裝飾；三張並排圖給使用者看（停點 ⑥），同意後才複製進 `shared/template/`。
+- 一律先存在暫存資料夾：尺寸（`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <檔>`）要是 1920×1080、960×1080、1920×1080；留空區（R9.2）沒有裝飾；三張並排圖給使用者看（停點 ⑤），同意後才複製進 `shared/template/`。
 - 同一條路重做 2 次還不行就換下一條；全部不行就只換主色，告訴使用者原因。
 
 ### R9.4 用 HTML 畫背景圖（沒有生圖工具時）
@@ -776,7 +776,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 
    產生 `bg-fs.jpg`（成品）、`zones-fs.jpg`（疊上留空區框：紅＝主卡或文字區、藍＝子母畫面、黃＝字幕帶）、`raw-fs.png`（原始截圖）。
 3. 看指令印的那一行：`✔ 留空區乾淨` 就好；`⚠ 紅框（全畫面主卡）裡有 2.3% 的像素是裝飾` 就把裝飾移到框外，重跑。
-4. 三張都做完會多一張 `preview.jpg`（上排原圖、下排疊框版，1600×720）。把它給使用者看，**停下來等同意**（停點 ⑥）；同意後照指令最後印的 `cp`（Mac）或 `Copy-Item`（Windows）那幾行複製進 `shared/template/`，再重跑 build。
+4. 三張都做完會多一張 `preview.jpg`（上排原圖、下排疊框版，1600×720）。把它給使用者看，**停下來等同意**（停點 ⑤）；同意後照指令最後印的 `cp`（Mac）或 `Copy-Item`（Windows）那幾行複製進 `shared/template/`，再重跑 build。
 5. `--out` 不能是 `shared/template/` 裡面（✖）：背景圖一定要經過使用者同意才放進模板。
 
 ---
@@ -817,7 +817,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 音效資料 | `shared/template/preview/sfx-data.js` | 1 個 | `build.mjs --gallery` 產生，畫廊頁與音效總表用 |
 | 主合成產生器 | `shared/template/tools/build.mjs` | 1 支 | 核心第 2 節 |
 | 素材工具 | `shared/template/tools/media.mjs` | 1 支 | `scan`（contact sheet）、`frame --grid`（座標格線圖）、`main`（接主軌）、`ng-snap`／`srt-align`／`cutpoints`（剪乾淨；舊流程 `srt-split`／`snap-srt`）；核心第 5 節 |
-| 插入素材與剪輯台效果的樣式 | `shared/template/kit/media.css`、`kit/media.js` | 各 1 個 | build 用到時自動連；紅框、說明卡、聚光燈、STEP、箭頭、放大鏡、dip、淡入淡出 |
+| 插入素材與影片編輯器效果的樣式 | `shared/template/kit/media.css`、`kit/media.js` | 各 1 個 | build 用到時自動連；紅框、說明卡、聚光燈、STEP、箭頭、放大鏡、dip、淡入淡出 |
 | 換主色工具 | `shared/template/tools/brand.mjs` | 1 支 | 換主色、`bg` 把 HTML 截成背景圖（R9） |
 | 講者調光＋瘦臉 | `shared/template/tools/look.mjs`、`kit/look.json`、`kit/look/*.cube`、`vendor/mediapipe/` | 1 支＋設定 | 核心第 7 節 |
 | 進度、能力 | `shared/template/tools/status.mjs`、`caps.mjs` | 各 1 支 | 接手時看做到哪；換風格前看能用哪條生圖路線（R9.3） |

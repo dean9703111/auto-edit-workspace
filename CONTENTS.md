@@ -19,7 +19,7 @@
 | 風格包 | 2 包：「預設」（橘色 `#F6630F`、米白線稿）、「藍圖」（藍色 `#2563EB`、網格製圖線稿，示範用），亮色、暗色背景都有 | `shared/template/styles/<名稱>/` | 一包＝主色＋子母畫面外框＋背景圖。情境庫上方的「風格」可以直接預覽 |
 | 主色 | 1 個（工作區目前是「預設」的橘色） | `shared/template/kit/brand.css` | 說「換主色」，AI 用 `brand.mjs` 換色、算好字的對比、重畫子母畫面外框 |
 | 背景圖 | 亮色 3 張（全畫面 `bg-fs.jpg`、側邊欄 `bg-side.jpg`、章節轉場 `bg-ch.jpg`）＋暗色 3 張（`bg-*-dark.jpg`） | `shared/template/` | 說「換背景」，AI 縮放你給的圖，或用 Codex／HTML 產生，先給你看預覽再換 |
-| 講者調光、瘦臉、美顏 | 選用，預設關閉；建議值調光 0.8、瘦臉 0.6、美顏 0.5 | `shared/template/kit/look.json`（工具 `look.mjs`） | 構圖台、剪輯台都有開關和強度滑桿。臉部偵測在本機做、不上傳 |
+| 講者調光、瘦臉、美顏 | 選用，預設關閉；建議值調光 0.8、瘦臉 0.6、美顏 0.5 | `shared/template/kit/look.json`（工具 `look.mjs`） | 構圖台、影片編輯器都有開關和強度滑桿。臉部偵測在本機做、不上傳 |
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
 | 字型 | 2 套（Noto Sans TC、Google Sans Flex） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
 | 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處） | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
@@ -37,7 +37,7 @@
 | `caps.mjs` 能力 | 這台電腦能用哪些生圖與影片工具（只檢查、不安裝） |
 | `audit.mjs` 版面量測 | 在瀏覽器裡把每段動畫跳到中點與完成態，量出文字撐破、被裁掉、壓到字幕或子母畫面、擋到講者；`--shots` 存截圖 |
 | `qc.mjs` 驗收 | `framing`：構圖分析（講者動作範圍、建議的框）；`speaker`：量資訊卡不能擋的地方；`storyboard`：分鏡表每段的完成態截圖；`observe`：成片每 0.5 秒一格的觀影總表；`final`：檢查成片的格式、長度、響度、畫面凍結、黑畫面、長時間沒聲音 |
-| `editor.mjs` 剪輯台 | 網頁介面：裁剪、調音量、淡入淡出與轉場、改字幕、改卡片上的字（成片預覽即時換字）、構圖台拖框、修改單（選段寫想怎麼改，一行指令交給 AI）。說明在 `shared/template/EDITOR.md` |
+| `editor.mjs` 影片編輯器 | 網頁介面：裁剪、調音量、淡入淡出與轉場、改字幕、改卡片上的字（影片預覽即時換字）、構圖台拖框、修改單（選段寫想怎麼改，一行指令交給 AI）、輸出（1080p／2K／4K 影片或只輸出字幕）。說明在 `shared/template/EDITOR.md` |
 | `versions.mjs` 段落版本 | 每一段留 v1、v2…，改前改後都存、出左右對照影片，說「s12 用 v1」就退回 |
 | `brand.mjs` 換風格 | 換色時自動檢查顏色看不看得清楚；`bg` 把 HTML 截成背景圖並檢查留空區；`list`／`use`／`pack` 列出、套用、建立風格包；`speaker` 設定講者 |
 | `capcut.mjs` 剪映素材 | 把成片拆成主軌 MP4、每段一支有透明通道的 MOV、字幕 SRT 和排法清單 |
@@ -48,9 +48,9 @@
 | 文件 | 給誰看 | 內容 |
 |---|---|---|
 | [PROMPTS.md](PROMPTS.md) | 你 | 照順序貼的提示詞、停下來時怎麼回、卡住的時候 |
-| [shared/template/EDITOR.md](shared/template/EDITOR.md) | 你與 AI | 剪輯台、構圖台、修改單怎麼用，會寫哪些欄位 |
+| [shared/template/EDITOR.md](shared/template/EDITOR.md) | 你與 AI | 影片編輯器、構圖台、修改單怎麼用，會寫哪些欄位 |
 | [setup/README.md](setup/README.md) | AI | 環境檢測與安裝手冊（Mac、Windows）；說「幫我檢測環境」，AI 照著裝，每步回報進度 |
-| [AGENTS.md](AGENTS.md) | AI | 工作區守則：六個停點、每個流程對應哪支 Skill、資料夾權限 |
+| [AGENTS.md](AGENTS.md) | AI | 工作區守則：五個停點、每個流程對應哪支 Skill、資料夾權限 |
 | `.agents/skills/` | AI | 9 支 Skill（總指揮、環境、剪乾淨、分鏡、螢幕錄影、情境動畫、審查、輸出、換風格）：每個流程的逐步指令與退路 |
 | `shared/template/USAGE.md`、`USAGE-reference.md` | AI | 工具與情境的用法；AI 第一次只讀核心的 USAGE.md，每個情境的參數在 reference，或用 `node shared/template/tools/build.mjs --list` 查 |
 | `shared/template/SITUATIONS.md` | AI | 口播在講什麼 → 用哪個版面、情境、動態、音效 |

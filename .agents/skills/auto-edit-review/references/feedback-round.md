@@ -35,7 +35,7 @@ node shared/template/tools/versions.mjs save --project projects/<專案> --seg <
 | 指名一段，只說要更好、沒說怎麼改（「s12 的動畫想更完善」「s12 重新設計」「換個動畫」） | 個案（改版） | 先出分鏡提案、停點 ③（SKILL.md 流程 D）；rN.md 的改法寫「改版 s12 v2」 |
 | 「s12 用 v1」「退回上一版」 | 個案（退回） | SKILL.md 流程 E；rN.md 的改法寫「退回 v1」 |
 | 「以後」「每次」「都」「全部的 X」 | 規則 | 這一集照做；在 rN.md「建議改規則」寫一條，**不改** `shared/`、AGENTS.md（AGENTS.md 規則 1） |
-| 「這張卡」「我選的」 | 個案 | 讀 Studio 選取：`(cd projects/<專案>/work/hyperframes && npx hyperframes preview --context --json --context-fields selection)` |
+| 「這張卡」「我選的」 | 個案 | 影片編輯器的選取讀不到 → 請使用者說段 id 或第幾秒；有開 Studio 才讀 Studio 選取：`(cd projects/<專案>/work/hyperframes && npx hyperframes preview --context --json --context-fields selection)` |
 | 分不出來 | 個案 | 照個案改，rN.md 註明「可能是規則，請確認」 |
 | 一句話可以解成「刪掉」或「避開／挪開」（「擇一即可」「不要重疊」） | 個案 | 先做不刪的那個解讀（挪位置、錯開時間），回報另一種解讀讓使用者選；參考專案曾因刪掉 8 支箭頭白做一輪 |
 

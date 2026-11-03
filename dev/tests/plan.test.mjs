@@ -889,7 +889,7 @@ test('講者不做慢推、子母畫面外框不縮放：疊加卡期間底片�
   assert.deepEqual(res.errors, []);
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip });
   assert.doesNotMatch(html, /footage-push/);
-  assert.doesNotMatch(html, /tl\.(fromTo|to|set)\('#footage', \{[^}]*scale/, '底片沒有縮放（只有使用者在剪輯台選 punch 跳接時才有）');
+  assert.doesNotMatch(html, /tl\.(fromTo|to|set)\('#footage', \{[^}]*scale/, '底片沒有縮放（只有使用者在影片編輯器選 punch 跳接時才有）');
   assert.match(html, /<div id="footage">\s*<video id="rough"/);
   const c = res.globals.pip.crop;
   assert.ok(html.includes(`tl.fromTo('#pip-a01', { x: ${r3(c.x - 1424)}, y: ${r3(c.y - 594)}, scale: ${r3(c.w / 432)}, transformOrigin: '0 0' }`), '飛入起點＝原位的裁切框');

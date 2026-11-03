@@ -1,5 +1,5 @@
 // 工作區釘住的 HyperFrames：根目錄 package.json 釘版本，npm install 裝到 node_modules/hyperframes。
-// render、snapshot、audit 的 runtime、剪輯台的播放器都只用這一份，不去 npx 快取挑「最新版」（快取裡常有別的版本）。
+// render、snapshot、audit 的 runtime、影片編輯器的播放器都只用這一份，不去 npx 快取挑「最新版」（快取裡常有別的版本）。
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

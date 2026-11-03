@@ -346,7 +346,7 @@ export function judgeSample(meas, ctx) {
       const top = [...groups.entries()].sort((a, b) => b[1] - a[1]).map(([g]) => g);
       const who = top.slice(0, 2).map((g) => descText(boxDesc(g.desc))).join('、');
       push('warn', 'speaker', top[0], `壓到講者：內容蓋到講者框 ${Math.round(ratio * 100)}%（speakerBox ${JSON.stringify(box)}${ctx.item.side ? `，已加 sideShift ${ctx.sideShift}` : ''}）；主要是 ${who}`,
-        `移到講者框外（例：右緣 ≤ ${box[0]}，或左緣 ≥ ${box[2]}）；用 snapshot 看有沒有擋到臉與手勢，擋到就移位或改 layout: "fullscreen"，只壓到身體就保留、交 Studio 時點名`, { ratio: r3(ratio), box });
+        `移到講者框外（例：右緣 ≤ ${box[0]}，或左緣 ≥ ${box[2]}）；用 snapshot 看有沒有擋到臉與手勢，擋到就移位或改 layout: "fullscreen"，只壓到身體就保留、交影片編輯器時點名`, { ratio: r3(ratio), box });
     }
   }
   // ⚠ 字太小

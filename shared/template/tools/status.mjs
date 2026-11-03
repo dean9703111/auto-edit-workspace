@@ -13,7 +13,7 @@
  *   目前在：<階段>            例：剪好看／停點 ③ 分鏡表（待回覆）
  *   下一步：<一句話>
  *   <指令>                   （只有講者調光瘦臉還沒好時：look.mjs 的 lookNextStep 給的指令，單獨一行、整行可以複製執行）
- *   下一個停點：<① 剪輯清單｜② 構圖｜③ 分鏡表｜④ Studio 預覽｜無>
+ *   下一個停點：<① 剪輯清單｜② 構圖｜③ 分鏡表｜④ 影片編輯器｜無>
  *   待回覆停點：<停點名稱，用「、」接｜無>
  *   下一輪回饋編號：r<N>      （work/feedback/ 裡 r*.md 的最大編號 ＋ 1）
  *   依據：<判斷用到的檔案與停點紀錄>
@@ -37,7 +37,14 @@ import { pendingRevisions, storyboardByVersions } from './versions.mjs';
 import { readSpeaker, SET_CMD } from './lib/speaker.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const STOPS = ['① 剪輯清單', '② 構圖', '③ 分鏡表', '④ Studio 預覽', '⑤ 剪輯台', '⑥ 背景預覽'];
+const STOPS = ['① 剪輯清單', '② 構圖', '③ 分鏡表', '④ 影片編輯器', '⑤ 背景預覽'];
+// 停點紀錄的「停點」欄 → 上面五個之一。舊專案的紀錄（④ Studio 預覽、⑤ 剪輯台、⑥ 背景預覽）照名稱對到現在的停點
+export const stopOf = (cell) => {
+  const c = String(cell || '');
+  if (/背景/.test(c)) return '⑤ 背景預覽';
+  if (c.startsWith('④') || /Studio|剪輯台|影片編輯器/.test(c)) return '④ 影片編輯器';
+  return STOPS.slice(0, 3).find((s) => c.startsWith(s.slice(0, 1))) || null;
+};
 const NEWER = 1000;   // 修改時間差 1 秒以內視為同時（同一次 build 寫出的檔）
 
 const posix = (p) => p.split(path.sep).join('/');
@@ -58,7 +65,7 @@ export function readStopLog(text) {
   const rows = [], last = new Map();
   for (let j = i + 2; j < lines.length && /^\s*\|/.test(lines[j]); j++) {
     const c = cells(lines[j]);
-    const stop = STOPS.find((s) => c[iS]?.startsWith(s.slice(0, 1))) || null;
+    const stop = stopOf(c[iS]);
     if (!stop) continue;
     const row = { time: c[iT], stop, label: c[iS] || stop, state: c[iV], line: j + 1 };
     rows.push(row);
@@ -164,11 +171,11 @@ export function projectStatus(project) {
     ['S6', () => !words && !snapped, '剪乾淨／字幕對齊', '跑 media.mjs snap-srt --dry-run，看表合理再去掉 --dry-run（只跑一次）', '② 構圖', '沒有 work/transcript.json（字幕時間是整句按字數估的）、也沒有 work/rough.srt.bak-*（snap-srt 還沒跑；srt-split 的備份叫 rough.srt.split-*，不算）'],
     ['S7', () => !has(W('cutpoints.json')), '剪乾淨／剪接點', '跑 media.mjs cutpoints', '② 構圖', '沒有 work/cutpoints.json'],
     ['S7s', () => scrMain && (!has(W('screen-sync.json')) || newer(W('cuts.v1.json'), W('screen-sync.json'))), '剪乾淨／螢幕錄影同步', '跑 media.mjs screen-sync（邊錄邊講的螢幕錄影：算出初剪後每段在錄影的秒數；寫好 plan.json 草稿後再加 --write-plan）', '② 構圖', has(W('screen-sync.json')) ? 'work/cuts.v1.json 比 work/screen-sync.json 新（初剪重做過）' : 'work/main.json 有邊錄邊講的螢幕錄影、還沒有 work/screen-sync.json'],
-    ['S8', () => !has(W('構圖預覽.jpg')), '剪好看／構圖', '跑 qc.mjs framing（構圖分析），再開剪輯台（editor.mjs），把它印的「構圖台」網址給使用者拖框', '② 構圖', `沒有 work/構圖預覽.jpg${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`],
+    ['S8', () => !has(W('構圖預覽.jpg')), '剪好看／構圖', '跑 qc.mjs framing（構圖分析），再開影片編輯器（editor.mjs），把它印的「構圖台」網址給使用者拖框', '② 構圖', `沒有 work/構圖預覽.jpg${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`],
     ['S9', () => !has(story), '剪好看／停點 ② 構圖之後，寫分鏡表', '寫 work/storyboard.md（含每段截圖）', '③ 分鏡表', '沒有 work/storyboard.md'],
     ['S10', () => !has(plan) || (newer(story, plan) && !storyboardByVersions(project)), '剪好看／停點 ③ 分鏡表', '使用者確認後，重新讀 work/storyboard.md，以檔案為準寫正式 plan.json', '③ 分鏡表', has(plan) ? 'work/storyboard.md 比 work/hyperframes/plan.json 新' : '沒有 work/hyperframes/plan.json'],
-    ['S11', () => !has(index) || newer(plan, index), '剪好看／build', '跑 build.mjs（有情境動畫先跑 audit.mjs），再 snapshot --review 抽查', '④ Studio 預覽', `${has(index) ? 'plan.json 比 index.html 新' : '沒有 work/hyperframes/index.html'}${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`],
-    ['S12', () => !has(finalMp4), '剪好看／停點 ④ Studio 預覽', '開 Studio 給使用者看；使用者說可以後先輸出測試片段，再輸出 output/final.mp4', '④ Studio 預覽', '沒有 output/final.mp4'],
+    ['S11', () => !has(index) || newer(plan, index), '剪好看／build', '跑 build.mjs（有情境動畫先跑 audit.mjs），再 snapshot --review 抽查', '④ 影片編輯器', `${has(index) ? 'plan.json 比 index.html 新' : '沒有 work/hyperframes/index.html'}${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`],
+    ['S12', () => !has(finalMp4), '剪好看／停點 ④ 影片編輯器', '開影片編輯器（editor.mjs）給使用者看；使用者說可以後先輸出測試片段，再輸出 output/final.mp4', '④ 影片編輯器', '沒有 output/final.mp4'],
     ['S13', () => !has(sheet) || newer(finalMp4, sheet), '交付／驗收', '跑 qc.mjs final，把輸出和 qc-sheet.jpg 給使用者', '無', has(sheet) ? 'final.mp4 比 qc-sheet.jpg 新' : '沒有 output/qc/qc-sheet.jpg'],
     ['S14', () => true, '完成', '等使用者的修改要求（改了就從 build 重跑）', '無', '成片與驗收截圖都在'],
   ];
@@ -184,9 +191,9 @@ export function projectStatus(project) {
     const names = revs.map((r) => `${r.id} v${r.v}`).join('、'), ids = revs.map((r) => r.id).join(',');
     const done = revs.every((r) => r.state === '已確認');
     at = `改版／${names}（${done ? '分鏡已確認，還沒做完' : '分鏡還沒給使用者確認'}）`;
-    next = done ? `照 auto-edit-motion 做 ${names.replace(/ v\d+/g, '')}，build、audit --only 都 0 個 ✖ 之後跑 versions.mjs save --seg ${ids}，再開 Studio`
+    next = done ? `照 auto-edit-motion 做 ${names.replace(/ v\d+/g, '')}，build、audit --only 都 0 個 ✖ 之後跑 versions.mjs save --seg ${ids}，再開影片編輯器`
       : `寫好 work/versions/<段>/v<N>/分鏡.md 的「這版要改什麼」和「## 分鏡」，停在停點 ③（${names}）`;
-    nextStop = done ? '④ Studio 預覽' : '③ 分鏡表';
+    nextStop = done ? '④ 影片編輯器' : '③ 分鏡表';
     ev.push(`work/versions/ 有沒做完的改版：${revs.map((r) => `${r.id}/v${r.v}（${r.state}）`).join('、')}`);
   }
   // 停點紀錄
@@ -198,17 +205,16 @@ export function projectStatus(project) {
     waiting = [...sl.last.values()].filter((r) => r.state === '待回覆').map((r) => r.label);
     const w = [...sl.last.values()].filter((r) => r.state === '待回覆').sort((a, b) => b.line - a.line)[0];
     if (w) {
-      const phase = ['① 剪輯清單'].includes(w.stop) ? '剪乾淨' : ['⑥ 背景預覽'].includes(w.stop) ? '換風格' : ['⑤ 剪輯台'].includes(w.stop) ? '剪輯台' : '剪好看';
+      const phase = ['① 剪輯清單'].includes(w.stop) ? '剪乾淨' : ['⑤ 背景預覽'].includes(w.stop) ? '換風格' : '剪好看';
       at = `${phase}／停點 ${w.label}（待回覆）`;
       nextStop = w.stop;
       const rev = w.stop === '③ 分鏡表' ? [...w.label.matchAll(/([A-Za-z0-9-]+) v(\d+)/g)] : [];
       next = rev.length ? `等使用者看 ${rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`).join('、')}；回覆「可以」後跑 versions.mjs accept --seg ${rev.map((m) => m[1]).join(',')}，再照 auto-edit-motion 做（要改就改那份 分鏡.md 再停一次）` : {
         '① 剪輯清單': '等使用者回覆剪輯清單；回覆後（改過 cuts.md 就先重新讀）跑 media.mjs ng-snap，照它印的指令剪',
-        '② 構圖': '等使用者在構圖台拖好框按「儲存」（剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就把 qc.mjs framing 表上 ✔ 那一列的 frame 寫進 plan.json（1.0 倍不寫）。之後跑 qc.mjs speaker 量講者框',
+        '② 構圖': '等使用者在構圖台拖好框按「儲存」（影片編輯器直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就把 qc.mjs framing 表上 ✔ 那一列的 frame 寫進 plan.json（1.0 倍不寫）。之後跑 qc.mjs speaker 量講者框',
         '③ 分鏡表': '等使用者回覆分鏡表；回覆「可以」或「改好了」後，先重新讀 work/storyboard.md，以檔案為準寫正式 plan.json',
-        '④ Studio 預覽': '等使用者看 Studio；要改就改 plan.json 那一段再 build，說可以就輸出測試片段與成片',
-        '⑤ 剪輯台': '等使用者在剪輯台調完說「調好了」；之後重新讀 plan.json 與 rough.srt 再 build',
-        '⑥ 背景預覽': '等使用者看三張背景圖；說可以才複製進 shared/template/',
+        '④ 影片編輯器': '等使用者在影片編輯器看完：要改就改 plan.json 那一段再 build；說「調好了」就重新讀 plan.json 與 rough.srt 再 build；說可以就輸出測試片段與成片',
+        '⑤ 背景預覽': '等使用者看三張背景圖；說可以才複製進 shared/template/',
       }[w.stop];
       ev.unshift(`work/製作進度.md 停點紀錄最後一列「${w.time}｜${w.label}｜${w.state}」`);
     }

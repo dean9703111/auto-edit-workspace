@@ -1,6 +1,6 @@
 ---
 name: auto-edit-deliver
-description: 輸出成片並驗收：先輸出 3–5 秒測試片段確認有聲音與版面，再在背景 render 整支 output/final.mp4，跑觀影總表與 qc.mjs final，照驗收清單回報。使用者要在剪映（CapCut）自己剪時，另外用 capcut.mjs 輸出主軌＋每段透明 MOV＋字幕 SRT。當使用者在 Studio 預覽之後說「可以了，輸出成片」「輸出」「輸出剪映素材」「要用剪映剪」「輸出 mov」時使用。還有要改的地方、還沒看過 Studio 時不要用（改用 auto-edit-review）。
+description: 輸出成片並驗收：先輸出 3–5 秒測試片段確認有聲音與版面，再在背景 render 整支 output/final.mp4，跑觀影總表與 qc.mjs final，照驗收清單回報。使用者要在剪映（CapCut）自己剪時，另外用 capcut.mjs 輸出主軌＋每段透明 MOV＋字幕 SRT。當使用者在影片編輯器預覽之後說「可以了，輸出成片」「輸出」「輸出剪映素材」「要用剪映剪」「輸出 mov」時使用。還有要改的地方、還沒看過 Studio 時不要用（改用 auto-edit-review）。
 version: 0.1.0
 ---
 # 輸出成片與驗收
@@ -22,6 +22,8 @@ version: 0.1.0
 | 停點紀錄 ④ 沒有「通過」 | 改用 `auto-edit-review` |
 | plan.json 比 `work/hyperframes/index.html` 新 | 先 `node shared/template/tools/build.mjs --project projects/<專案>` |
 | 使用者只要剪映素材（不要 final.mp4） | 只做步驟 5 |
+| 使用者已經在影片編輯器按「輸出」做好成片（`work/hyperframes/.editor/exports.json` 的 `video.path`；跳不出存檔視窗時是 `output/final.mp4`），而且比 `work/hyperframes/index.html` 新 | 跳過步驟 1–3，從步驟 4 驗收，`qc.mjs observe`、`qc.mjs final` 加 `--file <video.path>`（2K、4K 只用 ffprobe 回報解析度、長度、有沒有聲音） |
+| 使用者只要字幕檔 | 請他在影片編輯器按「輸出」→「輸出字幕」；或複製 `work/hyperframes/subtitles.srt`（build 每次都寫，成片上顯示的字幕）到 `output/字幕.srt` |
 
 ## 步驟
 
@@ -44,7 +46,7 @@ ffprobe -v error -show_entries stream=codec_type -of csv=p=0 projects/<專案>/o
 node shared/template/tools/qc.mjs observe --project projects/<專案> --file projects/<專案>/output/test-clips/test-clip.mp4 --offset <起點>
 ```
 
-完成判準：ffprobe 印出 `video` 與 `audio` 兩行；`work/observe/sheet-01.jpg` 看過，版面和 Studio 一樣。
+完成判準：ffprobe 印出 `video` 與 `audio` 兩行；`work/observe/sheet-01.jpg` 看過，版面和影片編輯器的影片預覽一樣。
 常見錯誤：`⚠ s04 在 49.5s 就開始了`（build）或 `⚠ s04 在 0:49.5 就開始了，測試片段不含這段`（observe）→ 要看那段，把 `--test` 的起點改成它印的秒數重做；`qc.mjs observe` 印 ✖ 找不到 Chrome → `npx hyperframes browser ensure` 再跑一次。
 
 **3. 整支 render（背景）**
@@ -66,7 +68,7 @@ node shared/template/tools/qc.mjs observe --project projects/<專案>
 node shared/template/tools/qc.mjs final --project projects/<專案>
 ```
 
-直式專案 `qc.mjs final` 的格式是 1080×1920，`qc-sheet.jpg` 上有安全區框，字不能出框。先看 `work/observe/index.md` 的靜止區間與接縫（門檻與看法照 REVIEW.md §3）；總表的「小窗（子母畫面段）」欄每段要是 `有`，看到 `無`、`部分（m:ss.s 起沒有）` 就看 `qc.mjs final` 的原因。再跑 `qc.mjs final`，打開 `output/qc/qc-sheet.jpg` 掃一眼（最上面標 `theme: light`／`theme: dark`，要和 plan.json 一致）。`qc final` 會量字幕樣式（底板 y 956–1074、字高 71，照剪映）與字幕文字（「，」「。」、不到 0.6 秒），都是 ⚠：樣式 ⚠ 多半是成片在 captions.css 改版前 render 的，重新 build、render；還是 ⚠ 就回報維護者，不要改 `shared/`。字幕文字 ⚠ 照 → 到剪輯台改。
+直式專案 `qc.mjs final` 的格式是 1080×1920，`qc-sheet.jpg` 上有安全區框，字不能出框。先看 `work/observe/index.md` 的靜止區間與接縫（門檻與看法照 REVIEW.md §3）；總表的「小窗（子母畫面段）」欄每段要是 `有`，看到 `無`、`部分（m:ss.s 起沒有）` 就看 `qc.mjs final` 的原因。再跑 `qc.mjs final`，打開 `output/qc/qc-sheet.jpg` 掃一眼（最上面標 `theme: light`／`theme: dark`，要和 plan.json 一致）。`qc final` 會量字幕樣式（底板 y 956–1074、字高 71，照剪映）與字幕文字（「，」「。」、不到 0.6 秒），都是 ⚠：樣式 ⚠ 多半是成片在 captions.css 改版前 render 的，重新 build、render；還是 ⚠ 就回報維護者，不要改 `shared/`。字幕文字 ⚠ 照 → 到影片編輯器改。
 完成判準：`qc.mjs final` 0 個 ✖（包括沒有「沒有講者小窗」的 ✖）；每個 ⚠ 寫「刻意」或「要修」；REVIEW.md §5 交付清單每一項都打勾。
 常見錯誤：✖ 長度不符 → 確認 build 和 render 是同一版 plan.json（plan.json 比 index.html 新就重 build、重 render）；印 `✖ s21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough …` → 不要交，不是版面的問題、不要改 plan.json；照 → 重做初剪（`auto-edit-rough` 步驟 6），再 build、render。
 

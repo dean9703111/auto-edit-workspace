@@ -9,7 +9,7 @@ Mac：TMP="$(mktemp -d)"; echo "$TMP"
 Windows（PowerShell）：$TMP = (New-Item -ItemType Directory -Path "$env:TEMP\bg-$(Get-Random)").FullName; $TMP
 ```
 
-回報與停點 ⑥ 寫這個資料夾的完整路徑。所有輸出都先放這裡，使用者同意後才複製進 `shared/template/`。
+回報與停點 ⑤ 寫這個資料夾的完整路徑。所有輸出都先放這裡，使用者同意後才複製進 `shared/template/`。
 
 ## 1. 使用者給的圖
 
@@ -69,4 +69,4 @@ ffmpeg -v error -y -i "$TMP/bg-fs.jpg" -i "$TMP/bg-side.jpg" -i "$TMP/bg-ch.jpg"
 
 - 尺寸要是 `1920,1080`、`960,1080`、`1920,1080`。
 - `zones-fs.jpg`：紅框（全畫面主卡）、藍框（子母畫面）、黃框（字幕帶）裡沒有裝飾（R9.2）。
-- `preview.jpg` 給使用者看 → 停點 ⑥。HTML 路線的 `brand.mjs bg` 已經產生這兩張，不用再跑後兩行。
+- `preview.jpg` 給使用者看 → 停點 ⑤。HTML 路線的 `brand.mjs bg` 已經產生這兩張，不用再跑後兩行。

@@ -36,7 +36,7 @@ import { FORMATS, canvasOf } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
 import { floorRules } from './audit-rules.mjs';
 
-// plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
+// plan.json 第一層（順序＝文件與影片編輯器存檔的順序；specs/contracts/plan-fields.md §1）
 const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
@@ -425,7 +425,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const textSyncOn = plan.check?.textSync !== false;
   errors.push(...validateLook(plan.look));
 
-  // --- edit（剪輯台）：rough.mp4 秒數 → 成片秒數。沒有 cuts 時是恆等對應，下面所有計算和舊版一樣 ---
+  // --- edit（影片編輯器）：rough.mp4 秒數 → 成片秒數。沒有 cuts 時是恆等對應，下面所有計算和舊版一樣 ---
   const ne = normalizeEdit(plan.edit, { videoDur: roughDur, cutpoints });
   errors.push(...ne.errors); warnings.push(...ne.warnings);
   const edit = ne.edit;
@@ -624,19 +624,19 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         if ((type === 'custom' || type === 'media') && seg.to == null && seg.duration == null) { err(`${type} 要寫 to 或 duration`); it.end = null; }
         if (it.end != null && it.end <= it.start) {
           // 有 cuts 時，整段落在剪掉的範圍裡 → 起迄收到同一點：拿掉並提醒（不是寫錯）
-          if (!tm.identity && it.end === it.start && (seg.to != null || seg.duration == null)) { it.cutAway = true; warn('整段都在 edit.cuts 剪掉的範圍裡，已拿掉 → 不要這段就從 plan.json 刪掉；要留就到剪輯台改 cuts'); }
+          if (!tm.identity && it.end === it.start && (seg.to != null || seg.duration == null)) { it.cutAway = true; warn('整段都在 edit.cuts 剪掉的範圍裡，已拿掉 → 不要這段就從 plan.json 刪掉；要留就到影片編輯器改 cuts'); }
           else err(`to（${it.end}s）在 from（${it.start}s）之前或相同 → to 要寫在 from 之後，例如 "#Ne"（第 N 句結尾）`);
           it.end = null;
         }
       }
     }
     if (it.start != null && it.start >= videoDur) {
-      if (!tm.identity && it.start >= videoDur - 1e-6 && seg.from != null) { it.cutAway = true; warn('整段都在 edit.cuts 剪掉的範圍裡，已拿掉 → 不要這段就從 plan.json 刪掉；要留就到剪輯台改 cuts'); }
+      if (!tm.identity && it.start >= videoDur - 1e-6 && seg.from != null) { it.cutAway = true; warn('整段都在 edit.cuts 剪掉的範圍裡，已拿掉 → 不要這段就從 plan.json 刪掉；要留就到影片編輯器改 cuts'); }
       else err(`起點 ${r3(it.start)}s 超過影片長度 ${videoDur}s → 改成影片內的句號`);
       it.start = null;
     }
     if (it.start != null && it.end != null) {
-      it.planEnd = Math.min(it.end, videoDur);   // plan.json 寫的迄點（換卡、接縫自動延長之前）；--check --json 給剪輯台拖曳用
+      it.planEnd = Math.min(it.end, videoDur);   // plan.json 寫的迄點（換卡、接縫自動延長之前）；--check --json 給影片編輯器拖曳用
       it.rough0 = tm.identity ? [it.start, it.end] : [tm.unmapStart(it.start), tm.unmapEnd(it.end)];
       if (!tm.identity) { const cut = r3(it.rough0[1] - it.rough0[0] - (it.end - it.start)); if (cut > 0.01) it.cutTrim = cut; }
     }
@@ -645,7 +645,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     if (seg.anchor != null) {
       const ft = parseTime(type === 'scene' && scene?.bindsSrt === false ? seg.at : seg.from);
       let n = !ft.error && ft.kind === 'cue' ? ft.n : null;
-      // from 是秒數（剪輯台拖過時間會寫成秒數）：anchor 對那個時間點所在或緊接的句子
+      // from 是秒數（影片編輯器拖過時間會寫成秒數）：anchor 對那個時間點所在或緊接的句子
       if (!ft.error && ft.kind === 'abs') {
         const near = roughCues.filter((c) => ft.sec >= c.start - 1 && ft.sec <= c.end + 0.5);
         const hit = near.find((c) => norm(c.text).includes(norm(seg.anchor)));
@@ -793,7 +793,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     if (a.type === 'scene' && a.scene.key === 'fs-list' && !a.seg.slots?.visual) a.warnings.push(`${a.where} 全寬（沒有子母畫面小窗）的清單右半邊會空 → slots 加 "visual": "<畫廊插圖元件>"（右邊的主視覺，講到每一項重拍一下；例 "laptop"、"phone"）`);
   }
 
-  // 小節角標（sections）：用成片秒數（剪輯台剪過之後的字幕）
+  // 小節角標（sections）：用成片秒數（影片編輯器剪過之後的字幕）
   const sections = [];
   if (plan.sections !== undefined) {
     if (!Array.isArray(plan.sections)) errors.push(`sections 要寫成陣列，例如 "sections": [{ "at": "#121", "name": "STEP 1｜設定資料夾" }] → 照例子改；不要小節角標就刪掉這個欄位`);
@@ -1372,8 +1372,8 @@ export function outroLine(outro, clip) {
   return `結尾配樂：${outro.music} 從 ${fmt(clip.at)} 起播 ${clip.dur.toFixed(1)} 秒（淡入 ${String(+clip.fadeIn.toFixed(2))} 秒、淡出 ${String(+clip.fadeOut.toFixed(2))} 秒，比人聲小 ${(-outro.relDb).toFixed(1)} dB）${credit}`;
 }
 
-// --check --json 的 items：時間換回 rough.mp4 的秒數（剪輯台用 rough.mp4 的時間軸）。
-// end＝plan.json 寫的迄點（剪輯台拖邊緣用這個）；shownEnd＝畫面上實際停到哪裡（自動延長或提早收時才有）
+// --check --json 的 items：時間換回 rough.mp4 的秒數（影片編輯器用 rough.mp4 的時間軸）。
+// end＝plan.json 寫的迄點（影片編輯器拖邊緣用這個）；shownEnd＝畫面上實際停到哪裡（自動延長或提早收時才有）
 export function jsonItems(res) {
   const tm = res.tm;
   const back = (t, end) => (!tm || tm.identity ? r3(t) : end ? tm.unmapEnd(t) : tm.unmapStart(t));

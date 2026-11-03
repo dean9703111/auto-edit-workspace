@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>剪輯台</title>
+<title>影片編輯器</title>
 <link rel="icon" href="/editor/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/kit/fonts.css">
 <link rel="stylesheet" href="/kit/brand.css">
@@ -15,7 +15,7 @@
   <div class="brandmark">
     <span class="logo" aria-hidden="true">剪</span>
     <div class="titles">
-      <h1>剪輯台</h1>
+      <h1>影片編輯器</h1>
       <div class="sub" id="projName">載入中…</div>
     </div>
   </div>
@@ -25,9 +25,10 @@
     <button id="btnRedo" class="icon ghost" data-tip="重做（⌘／Ctrl＋Shift＋Z）" aria-label="重做" disabled>↷</button>
     <span class="sep"></span>
     <button id="btnSave" class="primary" data-tip="寫進 plan.json 和字幕檔（⌘／Ctrl＋S）" disabled>儲存</button>
-    <button id="btnBuild" data-tip="跑 build.mjs，更新成片預覽（沒存的會先存）">重新產生</button>
+    <button id="btnBuild" data-tip="跑 build.mjs，更新影片預覽（沒存的會先存）">重新產生</button>
+    <button id="btnExport" data-tip="輸出影片（1080p／2K／4K）或只輸出字幕：跳出系統的存檔視窗選位置，直接存到那裡">輸出</button>
     <button id="btnRequests" class="toggle" aria-pressed="false" data-tip="修改單：選一段動畫或錄影，在右側寫想怎麼改（換動畫、流程更細、以圖為主…），累積好複製給 AI">修改單 <span class="rq-count" id="rqCount"></span></button>
-    <a id="btnFraming" class="ghost" href="/framing" target="_blank" rel="noopener" data-tip="構圖台：拖框調整講者的裁切與縮放（另開分頁）" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">構圖</a>
+    <a id="btnFraming" class="ghost" href="/framing" target="_blank" rel="noopener" data-tip="構圖台：拖框調整講者的裁切與縮放、調光、瘦臉、美顏（在這一頁上面打開，存好就回來）" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">構圖</a>
     <button id="btnHelp" class="icon ghost" data-tip="操作說明與快捷鍵（?）" aria-label="說明">?</button>
   </div>
 </header>
@@ -38,14 +39,13 @@
   <section class="viewer">
     <div class="viewer-bar">
       <div class="seg" role="tablist" aria-label="預覽模式">
-        <button data-mode="sim" class="on" role="tab" data-tip="播粗剪影片＋你現在的設定（還沒存也看得到）">即時模擬</button>
-        <button data-mode="player" role="tab">成片預覽</button>
+        <button data-mode="sim" class="on" role="tab" data-tip="播粗剪影片＋你現在的設定（還沒存也看得到）">即時預覽</button>
+        <button data-mode="player" role="tab">影片預覽</button>
       </div>
       <div class="mode-note" id="modeNote"></div>
       <div class="view-toggles">
         <button id="btnSafe" class="toggle small" data-tip="顯示安全框：重要文字放在框內，手機和電視都不會被切到" aria-pressed="false">安全框</button>
         <button id="btnSpeaker" class="toggle small" data-tip="顯示講者框（plan.json 的 speakerBox）：卡片不要擋到這裡" aria-pressed="false">講者框</button>
-        <button id="btnFull" class="small icon" data-tip="全螢幕預覽（F）" aria-label="全螢幕">⛶</button>
       </div>
     </div>
     <div class="stage-row">
@@ -64,6 +64,21 @@
           <div class="ov-safe" id="ovSafe" hidden><div class="act"></div><div class="title"></div></div>
           <div class="ov-speaker" id="ovSpeaker" hidden><span>講者框</span></div>
           <div class="stage-empty" id="stageEmpty" hidden></div>
+        </div>
+        <!-- 全螢幕時才出現：點畫面播放／暫停、雙擊結束全螢幕；滑鼠不動 2.5 秒控制列自動藏起來 -->
+        <div class="fs-catch" id="fsCatch"></div>
+        <div class="fs-bar" id="fsBar" role="toolbar" aria-label="全螢幕播放控制">
+          <input type="range" id="fsSeek" class="fs-seek" min="0" max="1" step="0.01" value="0" aria-label="播放位置">
+          <div class="fs-row">
+            <span class="fs-time" id="fsTime">0:00 / 0:00</span>
+            <div class="fs-btns">
+              <button data-fs="home" class="icon ghost" aria-label="跳到開頭" title="跳到開頭（Home）">⏮</button>
+              <button data-fs="back" class="ghost" aria-label="倒退 10 秒" title="倒退 10 秒（Shift＋←＝1 秒）">−10 秒</button>
+              <button data-fs="play" class="play" id="fsPlay" aria-label="播放" title="播放／暫停（空白鍵）">▶</button>
+              <button data-fs="fwd" class="ghost" aria-label="快轉 10 秒" title="快轉 10 秒（Shift＋→＝1 秒）">＋10 秒</button>
+            </div>
+            <button data-fs="exit" class="ghost fs-exit" aria-label="結束全螢幕" title="回到原本的畫面（Esc、F）">⤡ 結束全螢幕</button>
+          </div>
         </div>
       </div>
       <div class="meter" id="meter" data-tip="音量表（播放時）：超過 0 dB 會爆音，亮紅燈">
@@ -91,11 +106,13 @@
       <div class="inout">
         <button id="btnIn" class="small" data-tip="把播放頭位置設成入點（I）"><kbd>I</kbd> 入點</button>
         <button id="btnOut" class="small" data-tip="把播放頭位置設成出點（O）"><kbd>O</kbd> 出點</button>
+        <button id="btnFull" class="small icon" data-tip="全螢幕預覽（F）：全螢幕裡也有播放、快轉、結束全螢幕" aria-label="全螢幕">⛶</button>
       </div>
     </div>
   </section>
 
   <aside class="inspector" id="inspector" aria-label="屬性">
+    <div class="col-resizer" data-col="insp" role="separator" aria-orientation="vertical" aria-label="拖曳調整屬性欄寬度" title="拖曳調整寬度；雙擊恢復預設"></div>
     <header class="insp-head">
       <div class="insp-kind" id="inspKind">整支影片</div>
       <h2 id="inspTitle">整支影片的設定</h2>
@@ -103,6 +120,7 @@
     <div class="insp-body" id="inspBody"></div>
   </aside>
   <aside class="requests" id="requests" aria-label="修改單" hidden>
+    <div class="col-resizer" data-col="rq" role="separator" aria-orientation="vertical" aria-label="拖曳調整修改單寬度" title="拖曳調整寬度；雙擊恢復預設"></div>
     <header class="rq-head">
       <h2>修改單</h2>
       <button id="btnRqClose" class="icon ghost small" data-tip="收起修改單（寫好的不會不見）" aria-label="收起修改單">✕</button>
@@ -113,6 +131,7 @@
 </main>
 
 <section class="timeline-wrap">
+  <div class="row-resizer" id="tlResizer" role="separator" aria-orientation="horizontal" aria-label="拖曳調整時間軸高度" title="往下拖讓預覽變大（時間軸可以上下捲）；雙擊恢復"></div>
   <div class="tl-toolbar">
     <div class="tool-group" role="group" aria-label="工具">
       <button id="toolSelect" class="tool on" data-tip="選取（V）：點時間軸上的東西，右邊顯示它的屬性">⬚ 選取 <kbd>V</kbd></button>
@@ -161,7 +180,7 @@
 
 <dialog id="dlgConflict" class="dlg">
   <h2>檔案被改過了</h2>
-  <p id="conflictMsg">在你打開剪輯台之後，plan.json 被改過（通常是 AI 剛改了它）。為了不蓋掉那些修改，這次沒有存。</p>
+  <p id="conflictMsg">在你打開影片編輯器之後，plan.json 被改過（通常是 AI 剛改了它）。為了不蓋掉那些修改，這次沒有存。</p>
   <div class="dlg-actions col">
     <button id="conflictKeep" class="primary">重新載入，保留我剛剛的調整（之後再按一次儲存）</button>
     <button id="conflictDrop">重新載入，放棄我剛剛的調整</button>
@@ -200,8 +219,36 @@
   <div class="dlg-actions"><button id="logClose" class="primary">關閉</button></div>
 </dialog>
 
+<dialog id="dlgFraming" class="dlg-framing" aria-label="構圖台"><iframe id="framingFrame" title="構圖台"></iframe></dialog>
+<dialog id="dlgExport" class="dlg">
+  <h2 tabindex="-1" autofocus>輸出</h2>
+  <section class="ex-sec">
+    <h3>影片</h3>
+    <div class="ex-res" role="radiogroup" aria-label="解析度">
+      <label><input type="radio" name="exRes" value="1080" checked><b>1080p</b><span class="ex-px" data-res="1080"></span><small>最快；一般上傳 YouTube 就夠</small></label>
+      <label><input type="radio" name="exRes" value="2k"><b>2K</b><span class="ex-px" data-res="2k"></span><small>先輸出 4K 再縮，時間和 4K 差不多</small></label>
+      <label><input type="radio" name="exRes" value="4k"><b>4K</b><span class="ex-px" data-res="4k"></span><small>字卡、動畫、字幕最清楚；要比 1080p 久好幾倍</small></label>
+    </div>
+    <p class="mute ex-note">講者畫面還是原本錄影的解析度；沒存的修改會先存，成片比 plan.json 舊會先重新產生。</p>
+    <p class="mute ex-note" id="exWhere"></p>
+    <div class="ex-row">
+      <button id="exVideo" class="primary">輸出影片</button>
+      <button id="exCancel" class="ghost" hidden>取消</button>
+    </div>
+    <div id="exProg" class="ex-prog" hidden><progress id="exBar" max="100" value="0"></progress><span id="exPhase"></span></div>
+    <p id="exVideoMsg" class="ex-msg" role="status"></p>
+  </section>
+  <section class="ex-sec">
+    <h3>只輸出字幕</h3>
+    <p class="mute">成片上實際顯示的字幕（.srt，時間對成片），可以上傳到 YouTube 或匯入剪映。幾秒就好，存檔位置和影片一樣先問你。</p>
+    <div class="ex-row"><button id="exSrt">輸出字幕</button></div>
+    <p id="exSrtMsg" class="ex-msg" role="status"></p>
+  </section>
+  <div class="dlg-actions"><button id="exClose" class="ghost">關閉</button></div>
+</dialog>
+
 <dialog id="dlgHelp" class="dlg wide">
-  <h2 tabindex="-1" autofocus>剪輯台怎麼用</h2>
+  <h2 tabindex="-1" autofocus>影片編輯器怎麼用</h2>
   <div class="help-grid">
     <section>
       <h3>基本流程</h3>
@@ -209,7 +256,9 @@
         <li>點時間軸上的東西（字幕、卡片、插入素材、剪接點、音效），右邊「屬性」就會顯示能改的地方；什麼都沒選＝整支影片的設定。</li>
         <li>改好按「儲存」寫進 <code>plan.json</code>（字幕寫進 <code>work/rough.srt</code>）。</li>
         <li>講者調光、瘦臉：點時間軸空白處，右邊「屬性」最上面的「講者」。調光拖了馬上看得到；瘦臉看下面的前後兩張臉，按「重新產生」才會套進成片。</li>
-        <li>改了卡片文字，存檔後會自動重新產生，完成後切到「成片預覽」停在那一段。</li>
+        <li>改了卡片文字，存檔後會自動重新產生，完成後切到「影片預覽」停在那一段。</li>
+        <li>要自己輸出就按上方「輸出」：選 1080p／2K／4K 輸出影片，或只輸出字幕（.srt）；按下去跳出系統的存檔視窗選位置，直接存到那裡（專案裡不另留一份）。</li>
+        <li>版面可以拖：屬性、修改單的左邊緣改寬度（只動兩邊相鄰的兩塊）；時間軸的上緣往下拖，預覽變大（雙擊邊緣恢復）。灰色 ⓘ 滑過去看說明。</li>
         <li>調好回到 AI 那邊說「調好了」。</li>
       </ol>
       <h3>時間軸（由上到下＝畫面疊放順序）</h3>
@@ -257,7 +306,7 @@
 
 <div id="coach" class="coach" hidden>
   <div class="coach-card" role="dialog" aria-labelledby="coachTitle">
-    <h2 id="coachTitle">第一次用剪輯台？</h2>
+    <h2 id="coachTitle">第一次用影片編輯器？</h2>
     <ol>
       <li><b>點</b>時間軸上的字幕、卡片、插入素材，右邊會出現能改的地方。</li>
       <li><b>拖</b>插入素材的左右邊緣就能裁剪；主軌頭尾的白色把手拖進來＝裁掉片頭片尾。</li>

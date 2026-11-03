@@ -274,7 +274,7 @@ function loudWarning(loud) {
   const R = SFX_RULES;
   const items = loud.slice(0, 8).map((x) => `${x.id} ${x.name} ${fmtT(x.at)} ${d1(x.relDb)} dB → sfxVolume 再減 ${r1(x.relDb - R.capDb).toFixed(1)}`);
   const more = loud.length > 8 ? `…等 ${loud.length} 顆` : '';
-  return `⚠ 音效比例：${loud.length} 顆音效比人聲下 ${-R.capDb} dB 還大聲（${items.join('、')}${more}）→ 在剪輯台把這幾段的音效調小，或改 plan.json 那段的 sfxVolume`;
+  return `⚠ 音效比例：${loud.length} 顆音效比人聲下 ${-R.capDb} dB 還大聲（${items.join('、')}${more}）→ 在影片編輯器把這幾段的音效調小，或改 plan.json 那段的 sfxVolume`;
 }
 
 function sfxLevelLines(b, { loudnorm = true } = {}) {

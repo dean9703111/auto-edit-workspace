@@ -10,13 +10,18 @@
 <link rel="stylesheet" href="/editor/editor.css">
 <style>
   body.framing { display: flex; flex-direction: column; min-height: 100%; height: auto; }
-  .fr-main { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 16px; padding: 16px; align-items: start; }
+  .fr-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; padding: 16px; align-items: start; }
   .fr-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; }
   .fr-panel h2 { margin: 0 0 8px; font-size: 13px; color: var(--mute); font-weight: 700; }
-  .fr-stage { position: relative; width: 100%; background: #000; border-radius: 6px; overflow: hidden; touch-action: none; user-select: none; }
-  .fr-stage.portrait { max-width: max(220px, calc((100vh - 270px) * 9 / 16)); margin: 0 auto; }
-  .fr-stage video, .fr-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .fr-stage video { object-fit: contain; }
+  /* 左邊：沒裁切的影片＋框；框裡直接畫字幕、字卡、小窗（成片看起來的樣子），調光、瘦臉、美顏也直接套在這個畫面 */
+  .fr-stage { position: relative; width: 100%; max-width: calc((100vh - 300px) * 16 / 9); margin: 0 auto; background: #000; border-radius: 6px; overflow: hidden; touch-action: none; user-select: none; }
+  .fr-stage.portrait { max-width: max(220px, calc((100vh - 300px) * 9 / 16)); }
+  .fr-pic, .fr-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .fr-pic video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .fr-patch { position: absolute; pointer-events: none; -webkit-mask-image: radial-gradient(closest-side, #000 78%, transparent 100%); mask-image: radial-gradient(closest-side, #000 78%, transparent 100%); }
+  .fr-pic.orig { filter: none !important; }
+  .fr-pic.orig .fr-patch { visibility: hidden; }
+  .fr-stage svg text { font-family: "Noto Sans TC", system-ui, sans-serif; font-weight: 700; paint-order: stroke; stroke: rgba(0,0,0,0.65); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
   .fr-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .fr-box { cursor: move; }
   .fr-handle { cursor: nwse-resize; }
@@ -27,24 +32,23 @@
   .fr-zoom { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; }
   .fr-zoom output { font-family: var(--mono); min-width: 52px; text-align: right; }
   .fr-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .fr-preview { display: block; width: 100%; background: #000; border-radius: 6px; }
-  .fr-preview.portrait { max-width: 260px; margin: 0 auto; }
-  .fr-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 0; font-size: 12px; color: var(--mute); }
+  .fr-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 8px 0 0; font-size: 12px; color: var(--mute); }
   .fr-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
-  .fr-facts { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+  .fr-legend label { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); }
+  .fr-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
   .fr-facts li { display: flex; gap: 8px; align-items: baseline; }
-  .fr-facts .k { color: var(--mute); min-width: 7.5em; flex: none; }
+  .fr-facts .k { color: var(--mute); min-width: 3.5em; flex: none; }
   .fr-facts .bad { color: var(--warn-kw); font-weight: 700; }
   .fr-facts .ok { color: var(--good-kw); }
-  .fr-note { margin: 12px 0 0; font-size: 12px; color: var(--mute); }
+  .fr-note { margin: 10px 0 0; font-size: 12px; color: var(--mute); }
+  .fr-note:empty { display: none; }
   .fr-msg { margin: 10px 0 0; font-size: 13px; white-space: pre-wrap; }
   .fr-msg.err { color: var(--warn-kw); }
   .fr-loading { padding: 48px 16px; text-align: center; color: var(--mute); }
-  .fr-sec { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .fr-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .fr-lk { display: grid; grid-template-columns: auto 2.5em 1fr 7.5em; gap: 10px; align-items: center; margin-top: 8px; }
   .fr-lk output { font-family: var(--mono); font-size: 12px; text-align: right; }
-  .fr-ref { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
-  .fr-ref .fr-note { margin: 0; }
+  .fr-side button { margin-top: 10px; }
   @media (max-width: 860px) { .fr-main { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -59,7 +63,8 @@
   </div>
   <div class="save-state" id="saveState" data-state="loading" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
   <div class="actions">
-    <a href="/" class="ghost" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">← 回剪輯台</a>
+    <a href="/" id="btnBack" class="ghost" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">← 回影片編輯器</a>
+    <button id="btnClose" class="ghost" hidden title="不存、回影片編輯器（Esc）">關閉</button>
     <button id="btnSave" class="primary" disabled title="寫進 plan.json 的 frame 和 look（⌘／Ctrl＋S）">儲存</button>
   </div>
 </header>
@@ -68,16 +73,21 @@
 
 <main class="fr-main" id="main" hidden>
   <section class="fr-panel">
-    <h2>拖曳框移動、拖四個角縮放（鎖定比例）；方向鍵微調，按住 Shift 移動 20px</h2>
+    <h2>拖曳框移動、拖四個角縮放（鎖定比例）；方向鍵微調，按住 Shift 移動 20px。框裡就是成片的畫面</h2>
     <div class="fr-stage" id="stage" tabindex="0" aria-label="構圖框">
-      <video id="video" muted playsinline preload="auto"></video>
+      <div class="fr-pic" id="pic">
+        <video id="video" muted playsinline preload="auto"></video>
+        <img id="facePatch" class="fr-patch" alt="" hidden>
+      </div>
       <svg id="overlay" aria-hidden="true"></svg>
     </div>
     <div class="fr-transport">
       <button id="btnPlay" class="ghost" aria-label="播放">▶</button>
       <input id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="時間">
       <span class="fr-time" id="time">0:00 / 0:00</span>
+      <button id="btnOrig" class="ghost" hidden title="按住時顯示沒調光、沒瘦臉美顏的原本畫面">按住看原本</button>
     </div>
+    <div class="fr-legend" id="legend"></div>
     <label class="fr-zoom">
       <span>放大</span>
       <input id="zoom" type="range" min="1" max="2" step="0.01" value="1">
@@ -88,29 +98,28 @@
       <button id="btnFull">原畫面（不裁切）</button>
       <button id="btnSaved">回到存檔的框</button>
     </div>
-    <div class="fr-ref">
+  </section>
+
+  <aside class="fr-panel fr-side">
+    <h2>講者調光、瘦臉、美顏（預設關閉）</h2>
+    <label class="fr-lk"><input type="checkbox" id="colorOn"><span>調光</span><input id="color" type="range" min="0" max="1" step="0.05" value="0"><output id="colorOut">關</output></label>
+    <label class="fr-lk"><input type="checkbox" id="slimOn"><span>瘦臉</span><input id="slim" type="range" min="0" max="1.2" step="0.05" value="0"><output id="slimOut">關</output></label>
+    <label class="fr-lk" title="磨皮、膚色提亮、淡化黑眼圈（只動臉，眼睛、眉毛、嘴巴不動）"><input type="checkbox" id="beautyOn"><span>美顏</span><input id="beauty" type="range" min="0" max="1" step="0.05" value="0"><output id="beautyOut">關</output></label>
+    <p class="fr-note" id="lookNote"></p>
+    <p class="fr-note" id="faceMsg"></p>
+    <button id="btnDetect" hidden>偵測臉部（會先儲存）</button>
+    <div class="fr-sec">
+      <h2>構圖</h2>
+      <ul class="fr-facts" id="facts"></ul>
+      <p class="fr-note" id="note"></p>
+    </div>
+    <div class="fr-sec">
+      <h2>預覽參考圖</h2>
       <button id="btnRef" title="把現在這一格（裁切、調光後的樣子）存成情境庫、風格預覽頁的講者畫面">用這一格當預覽參考圖</button>
       <p class="fr-note" id="refNote"></p>
     </div>
-  </section>
-
-  <section class="fr-panel">
-    <h2>成片看起來</h2>
-    <canvas id="preview" class="fr-preview"></canvas>
-    <div class="fr-legend" id="legend"></div>
-    <ul class="fr-facts" id="facts"></ul>
-    <div class="fr-sec">
-      <h2>講者調光、瘦臉、美顏（預設關閉）</h2>
-      <label class="fr-lk"><input type="checkbox" id="colorOn"><span>調光</span><input id="color" type="range" min="0" max="1" step="0.05" value="0"><output id="colorOut">關</output></label>
-      <label class="fr-lk"><input type="checkbox" id="slimOn"><span>瘦臉</span><input id="slim" type="range" min="0" max="1.2" step="0.05" value="0"><output id="slimOut">關</output></label>
-      <label class="fr-lk" title="磨皮、膚色提亮、淡化黑眼圈（只動臉，眼睛、眉毛、嘴巴不動）"><input type="checkbox" id="beautyOn"><span>美顏</span><input id="beauty" type="range" min="0" max="1" step="0.05" value="0"><output id="beautyOut">關</output></label>
-      <p class="fr-note" id="lookNote"></p>
-      <button id="btnDetect" hidden>偵測臉部（會先儲存）</button>
-      <div id="faces" class="look-faces" hidden><figure><img data-k="before" alt="原本"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="套用後"><figcaption>後</figcaption></figure><p class="look-msg fr-note"></p></div>
-    </div>
-    <p class="fr-note" id="note"></p>
     <p class="fr-msg" id="msg" role="status"></p>
-  </section>
+  </aside>
 </main>
 
 <script type="module" src="/editor/framing.js"></script>

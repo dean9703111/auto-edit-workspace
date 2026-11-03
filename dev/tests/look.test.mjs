@@ -455,7 +455,7 @@ test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行�
   r = await cli(['status', '--project', d2]);
   assert.ok(r.lines.includes('瘦臉底片：✔ 最新（work/rough-look.mp4，瘦臉 0.6、美顏 0，640×360）'), r.lines.join('\n'));
   // 沒有 plan.json：look 好了 → 構圖預覽，不叫人 build（C-01）；指令單獨一行（C-02）
-  assert.match(r.lines.at(-2), /^→ 下一步：look 好了；接著跑構圖分析，再開剪輯台，把構圖台網址/);
+  assert.match(r.lines.at(-2), /^→ 下一步：look 好了；接著跑構圖分析，再開影片編輯器，把構圖台網址/);
   assert.match(r.lines.at(-1), /^node shared\/template\/tools\/qc\.mjs framing --project \S+$/);
   L.writeState(d2, { run: { pid: process.pid, phase: 'detect', done: 10, total: 100, etaSec: 30, startedAt: new Date().toISOString() } });
   r = await cli(['clear', '--project', d2]);
@@ -530,7 +530,7 @@ test('lookNextStep（C-01、C-02、C-06）：還沒好 → 修／等／重跑／
 test('位移 ⚠（C-03）：門檻 6.5 %、看 95 百分位；dispSummary／dispStats；正臉在 slim 1.2 也不到門檻', () => {
   assert.equal(L.DISP_WARN, 0.065);
   assert.equal(L.dispWarning(0.0649), null);
-  assert.equal(L.dispWarning(0.0651), '⚠ 位移 ＝ 臉寬 6.51%（95% 的格；> 6.5%）→ 瘦臉太強，脖子與領口可能被拉彎；把 slim 調低（plan.json 的 look.slim 或剪輯台「講者」）');
+  assert.equal(L.dispWarning(0.0651), '⚠ 位移 ＝ 臉寬 6.51%（95% 的格；> 6.5%）→ 瘦臉太強，脖子與領口可能被拉彎；把 slim 調低（plan.json 的 look.slim 或影片編輯器「講者」）');
   const items = Array.from({ length: 100 }, (_, i) => ({ m: i, r: i / 1000, t: i / 10 }));
   assert.deepEqual(L.dispSummary(items), { n: 100, med: 50, mx: 99, mxAt: 9.9, mxR: 0.099, p95: 0.095 });
   assert.deepEqual(L.dispSummary([]), { n: 0, med: 0, mx: 0, mxAt: 0, mxR: 0, p95: 0 });

@@ -1,19 +1,22 @@
 // 構圖台：在沒裁切的 work/rough.mp4 上拖一個鎖定比例（橫式 16:9、直式 9:16）的框，存成 plan.json 的 frame（畫布座標）。
-// 右邊即時畫出裁切後的樣子＋字幕、下方字卡、子母畫面小窗的位置；直式畫頭頂範圍與下巴上限。
+// 框裡直接畫成片的字幕、下方字卡、子母畫面小窗的位置（直式畫頭頂範圍與下巴上限），不另外開一個預覽。
 // 分析（講者動作範圍、黑邊、建議的框）來自 GET /api/framing（qc.mjs framing 同一套）；存檔走 POST /api/save { base, frame, look }。
-// 下面一起決定講者調光、瘦臉（plan.json 的 look；打開瘦臉才偵測臉：POST /api/look/run，GET /api/look/status 看進度），
-// 和「用這一格當預覽參考圖」（POST /api/refframe → shared/template/preview/speaker-local.jpg，情境庫、風格預覽頁的講者改用它）。
+// 右欄最上面決定講者調光、瘦臉、美顏（plan.json 的 look）：調光是影片上的 CSS 濾鏡（近似）；瘦臉、美顏在暫停時
+// 把那一格算好的臉（GET /api/look/face?size=auto，X-Face-Box＝臉在原畫面的位置）疊回影片上；還沒偵測臉就 POST /api/look/run。
+// 「用這一格當預覽參考圖」：POST /api/refframe → shared/template/preview/speaker-local.jpg（情境庫、風格預覽頁的講者改用它）。
 import { lookCss } from './model.mjs';
 const $ = (id) => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
-const ORANGE = '#FF8C00', CYAN = '#00E5FF', MAGENTA = '#FF40C8';
+const ORANGE = '#FF8C00', CYAN = '#00E5FF', MAGENTA = '#FF40C8', GREEN = '#4ADE80';   // 下方字卡用綠色：主色常是橘色，和講者動作範圍分不開
 const ACC = () => getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#FFD400';
 
+// ?embed=1：在影片編輯器的對話框裡打開；?t=秒：從那一秒開始看（影片編輯器目前的位置）
+const Q = new URLSearchParams(location.search), EMBED = Q.has('embed'), START_T = Number.isFinite(parseFloat(Q.get('t'))) ? Math.max(0, parseFloat(Q.get('t'))) : null;
 let D = null;        // /api/framing 的回應
 let F = null;        // 目前的框 { x, y, w }（h 由比例算）
 let saved = null;    // plan.json 現在的 frame（null＝不裁切）
 let drag = null;
-let look = { color: 0, slim: 0, beauty: 0 }, savedLook = { color: 0, slim: 0, beauty: 0 }, lookPrev = {}, poll = null, faceTimer = null;
+let look = { color: 0, slim: 0, beauty: 0 }, savedLook = { color: 0, slim: 0, beauty: 0 }, lookPrev = {}, poll = null, faceTimer = null, faceSeq = 0, faceKey = null;
 const r2 = (v) => Math.round(Number(v) * 100) / 100;
 const sameLook = (a, b) => r2(a.color) === r2(b.color) && r2(a.slim) === r2(b.slim) && r2(a.beauty) === r2(b.beauty);
 const faceOn = (l) => l.slim > 0 || l.beauty > 0;   // 瘦臉或美顏要偵測臉部、做底片
@@ -49,18 +52,17 @@ async function load() {
   $('projName').textContent = `${D.project.name}｜${portrait() ? '直式 9:16' : '橫式 16:9'}（${W()}×${H()}）`;
   $('stage').classList.toggle('portrait', portrait());
   $('stage').style.aspectRatio = `${W()} / ${H()}`;
-  $('preview').classList.toggle('portrait', portrait());
-  [$('preview').width, $('preview').height] = portrait() ? [360, 640] : [640, 360];
   $('overlay').setAttribute('viewBox', `0 0 ${W()} ${H()}`);
   $('zoom').min = (W() / maxW()).toFixed(2);
   $('zoom').max = (W() / minW()).toFixed(2);
   const v = $('video');
   v.src = D.video.url;
-  v.addEventListener('loadedmetadata', () => { $('seek').max = String(v.duration || 1); v.currentTime = Math.min(v.duration / 2, 30); });
-  for (const ev of ['loadeddata', 'seeked', 'timeupdate']) v.addEventListener(ev, () => { drawPreview(); showTime(); });
-  v.addEventListener('play', () => { $('btnPlay').textContent = '❚❚'; tick(); });
+  v.addEventListener('loadedmetadata', () => { $('seek').max = String(v.duration || 1); v.currentTime = START_T != null ? Math.min(START_T, v.duration || START_T) : Math.min(v.duration / 2, 30); });
+  for (const ev of ['loadeddata', 'seeked', 'timeupdate']) v.addEventListener(ev, showTime);
+  v.addEventListener('play', () => { $('btnPlay').textContent = '❚❚'; hidePatch(); tick(); });
   v.addEventListener('pause', () => { $('btnPlay').textContent = '▶'; });
-  for (const ev of ['seeked', 'pause']) v.addEventListener(ev, () => refreshFaces());
+  v.addEventListener('seeking', hidePatch);
+  for (const ev of ['seeked', 'pause', 'loadeddata']) v.addEventListener(ev, () => refreshPatch());
   initLook();
   refNote();
   legend();
@@ -88,6 +90,7 @@ function render() {
     el('line', { x1: F.x + (F.w * i) / 3, y1: F.y, x2: F.x + (F.w * i) / 3, y2: F.y + h, stroke: 'rgba(255,255,255,0.25)', 'vector-effect': 'non-scaling-stroke' }, svg);
     el('line', { x1: F.x, y1: F.y + (h * i) / 3, x2: F.x + F.w, y2: F.y + (h * i) / 3, stroke: 'rgba(255,255,255,0.25)', 'vector-effect': 'non-scaling-stroke' }, svg);
   }
+  guides(svg, px);
   el('rect', { class: 'fr-box', x: F.x, y: F.y, width: F.w, height: h, fill: 'transparent', stroke: ACC(), 'stroke-width': 2.5, 'vector-effect': 'non-scaling-stroke' }, svg);
   const hs = 16 * px;
   for (const [k, x, y] of [['nw', F.x, F.y], ['ne', F.x + F.w, F.y], ['sw', F.x, F.y + h], ['se', F.x + F.w, F.y + h]]) {
@@ -96,48 +99,38 @@ function render() {
   const z = W() / F.w;
   $('zoom').value = z.toFixed(2);
   $('zoomOut').textContent = `${z.toFixed(2)}×`;
-  drawPreview();
   facts();
   dirty();
 }
 
-// ---------- 右邊：成片看起來 ----------
+// ---------- 框裡：成片的字幕、字卡、小窗位置 ----------
 function legend() {
-  const items = [[ORANGE, '講者動作範圍'], ['rgba(255,255,255,0.8)', '字幕'], ['var(--accent)', '下方字卡']];
+  const items = [[ORANGE, '講者動作範圍'], ['rgba(255,255,255,0.8)', '字幕'], [GREEN, '下方字卡']];
   if (!portrait()) items.push(['#3B82F6', '子母畫面小窗']);
   else items.push([CYAN, '頭頂要在兩條線之間'], [MAGENTA, '下巴不超過這條線']);
-  $('legend').replaceChildren(...items.map(([c, t]) => { const s = document.createElement('span'); s.innerHTML = `<i style="background:${c}"></i>`; s.append(t); return s; }));
+  const tg = document.createElement('label');
+  tg.innerHTML = '<input type="checkbox" id="guides" checked>顯示位置';
+  tg.querySelector('input').addEventListener('change', render);
+  $('legend').replaceChildren(tg, ...items.map(([c, t]) => { const s = document.createElement('span'); s.innerHTML = `<i style="background:${c}"></i>`; s.append(t); return s; }));
 }
 function toOut(x, y) { const k = W() / F.w; return [(x - F.x) * k, (y - F.y) * k]; }
-function drawPreview() {
-  if (!D || !F) return;
-  const cv = $('preview'), ctx = cv.getContext('2d'), cw = cv.width, ch = cv.height, v = $('video');
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, cw, ch);
-  if (v.videoWidth) {
-    const s = Math.min(W() / v.videoWidth, H() / v.videoHeight), ox = (W() - v.videoWidth * s) / 2, oy = (H() - v.videoHeight * s) / 2;
-    ctx.filter = lookCss(look.color, 0);   // 調光的近似效果（成片照 LUT 會更準）
-    ctx.drawImage(v, (F.x - ox) / s, (F.y - oy) / s, F.w / s, hOf(F.w) / s, 0, 0, cw, ch);
-    ctx.filter = 'none';
-  }
-  const k = cw / W(), C = D.canvas;
-  const rect = (r, style, dash, label, fill) => {
-    const [x1, y1, x2, y2] = r.map((n) => n * k);
-    if (fill) { ctx.fillStyle = fill; ctx.fillRect(x1, y1, x2 - x1, y2 - y1); }
-    ctx.setLineDash(dash || []); ctx.strokeStyle = style; ctx.lineWidth = 1.5; ctx.strokeRect(x1, y1, x2 - x1, y2 - y1); ctx.setLineDash([]);
-    if (label) { ctx.fillStyle = style; ctx.font = '600 12px "Noto Sans TC", system-ui, sans-serif'; ctx.fillText(label, x1 + 6, y1 + 15); }
+// 成片畫布座標 → 這個畫面（框）裡的座標
+function guides(svg, px) {
+  if (!$('guides')?.checked) return;
+  const k = F.w / W(), C = D.canvas, at = (x, y) => [F.x + x * k, F.y + y * k];
+  const box = ([x1, y1, x2, y2], stroke, label, { dash = '', fill = 'none' } = {}) => {
+    const [a, b] = at(x1, y1), [c, d] = at(x2, y2);
+    el('rect', { x: a, y: b, width: c - a, height: d - b, fill, stroke, 'stroke-width': 1.5, 'stroke-dasharray': dash, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }, svg);
+    if (label) el('text', { x: a + 6 * px, y: b + 15 * px, fill: stroke, 'font-size': 12 * px }, svg).textContent = label;
   };
-  rect(C.caption, 'rgba(255,255,255,0.8)', null, '字幕', 'rgba(0,0,0,0.45)');
-  rect(C.card, ACC(), [6, 4], '下方字卡');
-  if (!portrait()) { const [x, y, w, h] = C.pip; rect([x, y, x + w, y + h], '#3B82F6', [6, 4], '子母畫面小窗'); }
-  else {
-    ctx.fillStyle = CYAN; for (const y of C.headTop) ctx.fillRect(0, y * k - 1, cw, 2);
-    ctx.fillStyle = MAGENTA; ctx.fillRect(0, C.chinMax * k - 1, cw, 2);
-  }
-  const [a, b] = toOut(D.motion[0], D.motion[1]), [c, d] = toOut(D.motion[2], D.motion[3]);
-  rect([a, b, c, d], ORANGE, [5, 4]);
+  box(C.caption, 'rgba(255,255,255,0.85)', '字幕', { fill: 'rgba(0,0,0,0.35)' });
+  box(C.card, GREEN, '下方字卡', { dash: '6 4' });
+  if (!portrait()) { const [x, y, w, h] = C.pip; box([x, y, x + w, y + h], '#3B82F6', '子母畫面小窗', { dash: '6 4' }); return; }
+  const hl = (y, stroke) => { const [a, b] = at(0, y), [c] = at(W(), y); el('line', { x1: a, y1: b, x2: c, y2: b, stroke, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'none' }, svg); };
+  for (const y of C.headTop) hl(y, CYAN);
+  hl(C.chinMax, MAGENTA);
 }
-function tick() { drawPreview(); showTime(); if (!$('video').paused) requestAnimationFrame(tick); }
+function tick() { showTime(); if (!$('video').paused) requestAnimationFrame(tick); }
 const mmss = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 function showTime() { const v = $('video'); $('time').textContent = `${mmss(v.currentTime || 0)} / ${mmss(v.duration || 0)}`; if (!drag) $('seek').value = String(v.currentTime || 0); }
 
@@ -169,7 +162,7 @@ function facts() {
     return li;
   }));
   $('note').textContent = D.plan.speakerBox
-    ? '已經量過講者框：存檔時 speakerBox 會跟著新的框換算，不用重量。存好後回剪輯台按「重新產生」看成片。'
+    ? '已經量過講者框：存檔時 speakerBox 會跟著新的框換算，不用重量。存好後影片編輯器的即時預覽馬上套用新的框，成片在背景重新產生。'
     : '存好後跟 AI 說「調好了」；不想調就說「用建議的」。';
 }
 
@@ -231,10 +224,31 @@ $('seek').addEventListener('input', () => { $('video').currentTime = Number($('s
 $('btnSuggest').addEventListener('click', () => { F = clampFrame(fromArr(D.suggestion.frame)); render(); });
 $('btnFull').addEventListener('click', () => { F = clampFrame({ ...fullFrame(), x: bounds()[0], y: bounds()[1], w: maxW() }); render(); });
 $('btnSaved').addEventListener('click', () => { F = clampFrame(saved || fullFrame()); render(); });
-document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (!$('btnSave').disabled) save(); } });
-$('btnSave').addEventListener('click', save);
+document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (!$('btnSave').disabled) save({ back: true }); } });
+$('btnSave').addEventListener('click', () => save({ back: true }));
 
-async function save() {
+// ---------- 在影片編輯器裡打開（/framing?embed=1）：存好就回去，關閉前提醒沒存的調整 ----------
+if (EMBED) {
+  $('btnBack').hidden = true;
+  $('btnClose').hidden = false;
+  $('btnSave').textContent = '儲存並回去';
+  $('btnClose').addEventListener('click', requestClose);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); requestClose(); } });
+  window.addEventListener('message', (e) => { if (e.origin === location.origin && e.source === parent && e.data?.type === 'framing-close-request') requestClose(); });
+}
+let closeArmed = null;
+function requestClose() {
+  const b = $('btnClose');
+  if (!$('btnSave').disabled && !closeArmed) {
+    b.textContent = '還沒存，再按一次放棄';
+    b.classList.add('danger');
+    closeArmed = setTimeout(() => { closeArmed = null; b.textContent = '關閉'; b.classList.remove('danger'); }, 4000);
+    return;
+  }
+  parent.postMessage({ type: 'framing-close' }, location.origin);
+}
+
+async function save({ back = false } = {}) {
   $('btnSave').disabled = true;
   const msg = $('msg');
   msg.className = 'fr-msg'; msg.textContent = '儲存中…';
@@ -245,7 +259,7 @@ async function save() {
     if (!sameLook(look, savedLook)) body.look = { color: r2(look.color), slim: r2(look.slim), ...(look.beauty > 0 ? { beauty: r2(look.beauty) } : {}) };
     r = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     j = await r.json().catch(() => null);
-  } catch (e) { j = { message: `連不到剪輯台：${e.message}` }; }
+  } catch (e) { j = { message: `連不到影片編輯器：${e.message}` }; }
   if (!r?.ok) {
     $('saveState').dataset.state = 'error';
     $('saveState').querySelector('.txt').textContent = r?.status === 409 ? 'plan.json 被改過' : '沒有存';
@@ -259,9 +273,11 @@ async function save() {
   savedLook = { ...look };
   Object.assign(D.plan, { exists: j.plan.exists, hash: j.plan.hash, frame: j.plan.frame, speakerBox: j.plan.speakerBox });
   saved = j.plan.frame ? fromArr(j.plan.frame) : null;
+  if (j.rebuild) j.notes = [...(j.notes || []), '影片編輯器的即時預覽已經套用新的框；成片在背景重新產生，好了會自動換上（不用按「重新產生」）。'];
   msg.textContent = [j.wrote?.plan ? `已存進 plan.json：${frame ? `"frame": [${frame.join(', ')}]` : '不裁切（拿掉 frame）'}${lookChanged ? `、"look": { "color": ${r2(look.color)}, "slim": ${r2(look.slim)}${look.beauty > 0 ? `, "beauty": ${r2(look.beauty)}` : ''} }` : ''}` : '沒有變，不用存', ...(j.notes || [])].join('\n');
   render();
   renderLook();
+  if (EMBED && back) parent.postMessage({ type: 'framing-saved', rebuild: !!j.rebuild }, location.origin);
   return true;
 }
 
@@ -277,42 +293,57 @@ function initLook() {
   if (D.look?.running) startPoll();
 }
 const lookOut = (k, v) => (v > 0 ? (k === 'color' ? `${v.toFixed(2)}（剪映 ${Math.round(v * 100)}）` : v.toFixed(2)) : '關');
+const faceReady = () => { const lm = D.look?.look?.landmarks || {}; return faceOn(look) && lm.ready && lm.slimOk !== false; };
 function renderLook() {
   for (const k of ['color', 'slim', 'beauty']) { $(k).value = String(look[k]); $(`${k}On`).checked = look[k] > 0; $(`${k}Out`).textContent = lookOut(k, look[k]); }
   const S = D.look || {}, lm = S.look?.landmarks || {};
   const skip = { small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，成片只調光。`, noface: '抽樣都沒偵測到臉，這支只調光。', rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉，自動關掉瘦臉，成片只調光。` };
-  let note = '要開就勾選；調光拖滑桿右邊的畫面馬上變（近似效果，成片照 LUT 更準）。';
+  let note = '要開就勾選，左邊畫面馬上套用（調光是近似效果，成片照 LUT 更準）。';
   const needDetect = faceOn(look) && !lm.ready;
-  if (S.running) note = `正在${S.line}（在背景跑，可以繼續拖框；好了下面會出現前後對照）`;
+  if (S.running) note = `正在${S.line}（在背景跑，可以繼續拖框；好了暫停時左邊的臉就是瘦臉、美顏後的樣子）`;
   else if (needDetect) note = `瘦臉、美顏要先偵測整支影片的臉，長片要十幾分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
   else if (faceOn(look) && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，成片只調光。';
-  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。改了強度存檔後，請 AI 重跑 look.mjs run 更新底片。';
+  else if (faceOn(look)) note = '暫停時左邊畫面的臉就是瘦臉、美顏後的樣子（播放時只看得到調光）；按住「看原本」對照。存檔後影片編輯器會自動重新產生、套進成片（改了瘦臉、美顏要先套用，長片要幾分鐘）。';
   $('lookNote').textContent = note;
   $('btnDetect').hidden = !needDetect || !!S.running;
-  const showFaces = faceOn(look) && lm.ready && lm.slimOk !== false;
-  $('faces').hidden = !showFaces;
-  if (showFaces) refreshFaces(0);
-  drawPreview();
+  $('btnOrig').hidden = !(look.color > 0 || faceReady());
+  $('pic').style.filter = lookCss(look.color, 0);   // 調光的近似效果（臉的疊圖也在這一層，一起套）
+  refreshPatch();
   dirty();
 }
-function refreshFaces(delay = 300) {
+// 瘦臉、美顏：暫停時請伺服器算這一格的臉，疊回影片上同一個位置（邊緣淡出）；播放、換格就先拿掉
+function hidePatch() { faceSeq++; clearTimeout(faceTimer); $('facePatch').hidden = true; faceKey = null; }
+function refreshPatch(delay = 250) {
+  const v = $('video');
+  if (!faceReady() || !v.paused || v.seeking || !v.videoWidth) { hidePatch(); $('faceMsg').textContent = ''; return; }
+  const t = Math.round((v.currentTime || 0) * 1000) / 1000, key = `${t}|${r2(look.slim)}|${r2(look.beauty)}`;
+  if (key === faceKey) return;
   clearTimeout(faceTimer);
-  faceTimer = setTimeout(() => {
-    if ($('faces').hidden) return;
-    const t = Math.round(($('video').currentTime || 0) * 1000) / 1000, box = $('faces');
-    for (const img of box.querySelectorAll('img')) {
-      const after = img.dataset.k === 'after', url = `/api/look/face?t=${t}&slim=${after ? r2(look.slim) : 0}&beauty=${after ? r2(look.beauty) : 0}`;
-      img.style.filter = lookCss(look.color, 0);
-      if (img.dataset.url === url) continue;
-      img.dataset.url = url;
-      const fig = img.closest('figure');
-      fetch(url).then(async (r) => {
-        if (r.ok) { const u = URL.createObjectURL(await r.blob()); if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); img.src = u; fig.classList.add('ok'); box.querySelector('.look-msg').textContent = ''; }
-        else { const j = await r.json().catch(() => ({})); fig.classList.remove('ok'); box.querySelector('.look-msg').textContent = j.message || '這一格看不到臉，移動播放頭換一格'; }
-      }).catch(() => fig.classList.remove('ok'));
+  const seq = ++faceSeq;
+  faceTimer = setTimeout(async () => {
+    const r = await fetch(`/api/look/face?t=${t}&slim=${r2(look.slim)}&beauty=${r2(look.beauty)}&size=auto`).catch(() => null);
+    if (seq !== faceSeq) return;   // 之後又換了格或強度
+    if (!r?.ok) {
+      $('facePatch').hidden = true; faceKey = null;
+      const j = r ? await r.json().catch(() => ({})) : {};
+      $('faceMsg').textContent = j.message || '這一格看不到臉，換一格看';
+      return;
     }
+    const box = (r.headers.get('X-Face-Box') || '').split(',').map(Number), blob = await r.blob();
+    if (seq !== faceSeq || box.length !== 3) return;
+    const img = $('facePatch'), s = Math.min(W() / v.videoWidth, H() / v.videoHeight), ox = (W() - v.videoWidth * s) / 2, oy = (H() - v.videoHeight * s) / 2;
+    Object.assign(img.style, { left: `${((ox + box[0] * s) / W()) * 100}%`, top: `${((oy + box[1] * s) / H()) * 100}%`, width: `${((box[2] * s) / W()) * 100}%`, height: `${((box[2] * s) / H()) * 100}%` });
+    if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+    img.src = URL.createObjectURL(blob);
+    img.hidden = false; faceKey = key;
+    $('faceMsg').textContent = '';
   }, delay);
 }
+const holdOrig = (on) => $('pic').classList.toggle('orig', on);
+$('btnOrig').addEventListener('pointerdown', (e) => { holdOrig(true); $('btnOrig').setPointerCapture(e.pointerId); });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) $('btnOrig').addEventListener(ev, () => holdOrig(false));
+$('btnOrig').addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); holdOrig(true); } });
+$('btnOrig').addEventListener('keyup', () => holdOrig(false));
 function setLook(k, v) { look = { ...look, [k]: r2(v) }; renderLook(); }
 for (const k of ['color', 'slim', 'beauty']) {
   $(k).addEventListener('input', () => setLook(k, Number($(k).value)));

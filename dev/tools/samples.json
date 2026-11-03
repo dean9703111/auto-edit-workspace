@@ -78,7 +78,7 @@
     "title": "環境準備三步",
     "sub": "貼上第一個提示詞",
     "slots": {
-      "steps": ["貼上**第一個提示詞**，裝好工具 ｜icon=terminal", "確認**剪輯清單**再剪 ｜icon=list-checks", "在 **Studio** 預覽後輸出 ｜icon=monitor-play"]
+      "steps": ["貼上**第一個提示詞**，裝好工具 ｜icon=terminal", "確認**剪輯清單**再剪 ｜icon=list-checks", "在**影片編輯器**預覽後輸出 ｜icon=monitor-play"]
     }
   },
   "qa": {
@@ -109,7 +109,7 @@
     "sub": "過程中有三道關",
     "slots": {
       "title": "三道關卡",
-      "items": ["**剪輯清單**：先確認 NG ｜icon=list-checks", "**分鏡表**：先有腳本再動畫 ｜icon=file-text", "**Studio 預覽**：點一下就能改 ｜icon=monitor-play"]
+      "items": ["**剪輯清單**：先確認 NG ｜icon=list-checks", "**分鏡表**：先有腳本再動畫 ｜icon=file-text", "**影片編輯器**：看完就能改 ｜icon=monitor-play"]
     }
   },
   "speaker": {

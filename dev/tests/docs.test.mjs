@@ -47,11 +47,10 @@ const STOPS = [
   { n: '①', name: '剪輯清單', skill: 'auto-edit-rough', line: '⏸ 停點 ① 剪輯清單｜請看：work/cuts.md｜請回：「可以」或要改的列' },
   { n: '②', name: '構圖', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」' },
   { n: '③', name: '分鏡表', skill: 'auto-edit-storyboard', line: '⏸ 停點 ③ 分鏡表｜請看：work/storyboard.md｜請回：「可以」或要改的地方' },
-  { n: '④', name: 'Studio 預覽', skill: 'auto-edit-review', line: '⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出成片」' },
-  { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」' },
-  { n: '⑥', name: '背景預覽', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」' },
+  { n: '④', name: '影片編輯器', skill: 'auto-edit-review', line: '⏸ 停點 ④ 影片編輯器｜請看：<影片編輯器網址>｜請回：要改的段落（例：s05 往左移）、調完按「儲存」後說「調好了」，或「可以了，輸出成片」' },
+  { n: '⑤', name: '背景預覽', skill: 'auto-edit-style', line: '⏸ 停點 ⑤ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」' },
 ];
-// 停點 ③ 的改版變體（014；停點仍是六個，stop-points.md §2.1 最後一列）
+// 停點 ③ 的改版變體（014；停點仍是五個，stop-points.md §2.1 最後一列）
 const STOP_VARIANTS = [
   { n: '③ 改版', skill: 'auto-edit-review', line: '⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/versions/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍' },
 ];
@@ -159,7 +158,7 @@ test('T5 skills：hyperframes 指令用子殼、不寫絕對路徑', () => {
   noProblems(bad, 'Skill 的指令寫法不符 FR-007', 'hyperframes 指令寫成 (cd projects/<專案>/work/hyperframes && npx hyperframes …)；路徑一律相對工作區根目錄');
 });
 
-test('T6 停點：AGENTS.md「停點總表」恰好 6 列、①–⑥', () => {
+test('T6 停點：AGENTS.md「停點總表」恰好 5 列、①–⑤', () => {
   const sec = section(read('AGENTS.md'), '## 停點總表');
   check(sec != null, 'AGENTS.md 沒有「## 停點總表」這一節 → 照 specs/contracts/stop-points.md §1 新增');
   const ls = sec.split('\n');
@@ -167,10 +166,10 @@ test('T6 停點：AGENTS.md「停點總表」恰好 6 列、①–⑥', () => {
   const rows = [];
   for (let i = start + 2; i < ls.length && ls[i].startsWith('|'); i++) rows.push(ls[i].split('|')[1].trim());
   const want = STOPS.map((s) => `${s.n} ${s.name}`);
-  check(JSON.stringify(rows) === JSON.stringify(want), `停點總表第一張表的第一欄是 ${JSON.stringify(rows)}，要是 ${JSON.stringify(want)} → 照 stop-points.md §1，只有六列`);
+  check(JSON.stringify(rows) === JSON.stringify(want), `停點總表第一張表的第一欄是 ${JSON.stringify(rows)}，要是 ${JSON.stringify(want)} → 照 stop-points.md §1，只有五列（④ 影片編輯器合併了舊的 ④ Studio 預覽、⑤ 剪輯台）`);
 });
 
-test('T7 停點：六行（＋③ 改版）最後一行原文都在 AGENTS.md 與對應的 SKILL.md', () => {
+test('T7 停點：五行（＋③ 改版）最後一行原文都在 AGENTS.md 與對應的 SKILL.md', () => {
   const agents = read('AGENTS.md');
   const bad = [];
   for (const s of [...STOPS, ...STOP_VARIANTS]) {
@@ -180,7 +179,7 @@ test('T7 停點：六行（＋③ 改版）最後一行原文都在 AGENTS.md �
   noProblems(bad, '停點最後一行和契約不一致', '逐字照 specs/contracts/stop-points.md §2.1 貼上（<…> 保留原樣）');
 });
 
-test('T8 停點：所有「⏸ 停點」都是六行之一', () => {
+test('T8 停點：所有「⏸ 停點」都是五行之一', () => {
   const allowed = new Set([...STOPS, ...STOP_VARIANTS].map((s) => s.line));
   const bad = [];
   for (const f of have(['AGENTS.md', U, R, ...SKILL_FILES])) {
@@ -193,7 +192,7 @@ test('T8 停點：所有「⏸ 停點」都是六行之一', () => {
       }
     });
   }
-  noProblems(bad, '有自創格式的停點行', '只用 AGENTS.md「停點總表」的六行原文；要提到停點時寫「停點 ③」，不要加 ⏸');
+  noProblems(bad, '有自創格式的停點行', '只用 AGENTS.md「停點總表」的五行原文；要提到停點時寫「停點 ③」，不要加 ⏸');
 });
 
 test('T9 Plan 模式只能出現在否定句', () => {
@@ -385,8 +384,8 @@ test('T24 文件引用的工具原文和程式一字不差（第 2 輪對齊）'
     [SKR, '在逐字稿裡對不上，時間用前後句內插：'],
     [SKR, '：時間是整則按字數比例估的 → 寫回後要跑 node shared/template/tools/media.mjs snap-srt --project'],
     [SKR, 'work/hyperframes/plan.json 已經用到句號（#N），重新斷句後句號會全部位移 → 加 --remap-plan 再跑一次'],
-    [U, '→ 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在剪輯台改'],
-    [U, ' → 在剪輯台和前後句合併，或把起迄拉長'],
+    [U, '→ 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在影片編輯器改'],
+    [U, ' → 在影片編輯器和前後句合併，或把起迄拉長'],
     [skillMd('auto-edit-motion'), '找不到對應的 P.at'],
     [skillMd('auto-edit-motion'), '不在分鏡表'],
     [skillMd('auto-edit-motion'), '不在語彙表'],

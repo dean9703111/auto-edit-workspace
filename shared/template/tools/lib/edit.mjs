@@ -1,4 +1,4 @@
-// plan.json 第一層 edit（剪輯台寫的設定）：檢查、正規化、rough.mp4 秒數 ↔ 成片秒數的對應
+// plan.json 第一層 edit（影片編輯器寫的設定）：檢查、正規化、rough.mp4 秒數 ↔ 成片秒數的對應
 //
 //   normalizeEdit(edit, { videoDur, cutpoints }) → { edit, errors, warnings, active }
 //     edit＝{ cuts:[[a,b]…]（排序合併後）, fadeIn, fadeOut, volume:{ voice, sfx, media }, gains:[{ from, to, db }], joins:[{ at, type, dur }] }
@@ -30,7 +30,7 @@ export function normalizeEdit(edit, { videoDur, cutpoints = [] } = {}) {
   const err = (m) => errors.push(`edit.${m}`);
   const warn = (m) => warnings.push(`edit.${m}`);
   if (typeof edit !== 'object' || Array.isArray(edit)) {
-    errors.push('edit 要是一個物件，例如 { "cuts": [[12.0, 14.5]], "fadeIn": 0.5 }（剪輯台會自動寫，手寫時照 shared/template/USAGE.md 第 6 節）');
+    errors.push('edit 要是一個物件，例如 { "cuts": [[12.0, 14.5]], "fadeIn": 0.5 }（影片編輯器會自動寫，手寫時照 shared/template/USAGE.md 第 6 節）');
     return { edit: out, errors, warnings, active: false };
   }
   for (const k of Object.keys(edit)) if (!EDIT_KEYS.includes(k)) err(`${k}：沒有這個欄位（可用：${EDIT_KEYS.join('、')}）`);

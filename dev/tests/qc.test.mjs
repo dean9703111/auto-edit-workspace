@@ -447,7 +447,7 @@ test('字幕樣式（F8，純函式）：取樣只挑中文 ≥ 4 字 ≥ 0.6 �
   assert.match(Q.captionStyleChecks({ error: '還沒 build' })[0].text, /^量不到字幕樣式：還沒 build/);
   const t = Q.captionTextChecks(cues);
   assert.deepEqual(t.map((c) => c.level), ['warn', 'warn']);
-  assert.match(t[0].text, /字幕 #5 共 1 則含句中標點「，」「。」，照 F8 不顯示 → 跑 srt-align 或在剪輯台改/);
+  assert.match(t[0].text, /字幕 #5 共 1 則含句中標點「，」「。」，照 F8 不顯示 → 跑 srt-align 或在影片編輯器改/);
   assert.match(t[1].text, /字幕 #3 共 1 則不到 0\.6 秒（#3 0\.40 秒）/);
   // judge：有量到才判，key 是 captions／captext
   const j = Q.judge({ width: 1920, height: 1080, fps: 30, hasAudio: true, dur: 10, expected: 10, loud: { i: -14, tp: -2 }, freezes: [], blacks: [], silences: [], items: [], cuts: [], cues, captionStyle: { samples: [] } });
@@ -623,7 +623,7 @@ test('直式 framing／speaker（CLI）：第一行印版式；構圖預覽三�
   assert.match(rows[0], /放大 2 倍/);
   const dims = (f) => spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f], { encoding: 'utf8' }).stdout.trim();
   assert.equal(dims(path.join(F.proj, 'work', '構圖預覽.jpg')), `${3 * 360 + 4 * 10},${640 + 30 + 2 * 10}`);
-  assert.match(lines[lines.length - 3], /^→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框/, '下一步和橫式相同');
+  assert.match(lines[lines.length - 3], /^→ 下一步：開影片編輯器，把它印的「構圖台」網址給使用者拖框/, '下一步和橫式相同');
   assert.match(lines[lines.length - 2], /^node shared\/template\/tools\/editor\.mjs --project \S+$/, '指令單獨一行');
   r = F.qc('speaker');
   assert.equal(r.status, 0, r.stdout + r.stderr);

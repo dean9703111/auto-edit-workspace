@@ -39,9 +39,9 @@ export function captionWarnings(cues, canvas = null) {
     else if (w > lim.maxW) out.push(`字幕 #${c.n} 估寬 ${w}px，超過 ${lim.maxW}px → 在 rough.srt 拆句`);
   }
   const punct = cues.filter((c) => MID_PUNCT.test(c.text));
-  if (punct.length) out.push(`字幕含句中標點「，。；：」：${listN(punct)} → 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在剪輯台改`);
+  if (punct.length) out.push(`字幕含句中標點「，。；：」：${listN(punct)} → 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在影片編輯器改`);
   const short = cues.filter((c) => Number.isFinite(c.start) && Number.isFinite(c.end) && c.end - c.start < CAPTION.minDur - 1e-9);
-  if (short.length) out.push(`字幕不到 ${CAPTION.minDur} 秒：${listN(short)} → 在剪輯台和前後句合併，或把起迄拉長`);
+  if (short.length) out.push(`字幕不到 ${CAPTION.minDur} 秒：${listN(short)} → 在影片編輯器和前後句合併，或把起迄拉長`);
   return out;
 }
 

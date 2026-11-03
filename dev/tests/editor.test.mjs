@@ -1,4 +1,4 @@
-// 剪輯台 editor.mjs：讀狀態、只寫允許的欄位、拒絕其他欄位、修改時間衝突、Range、port 被佔用、背景執行與關閉；
+// 影片編輯器 editor.mjs：讀狀態、只寫允許的欄位、拒絕其他欄位、修改時間衝突、Range、port 被佔用、背景執行與關閉；
 // v2：字幕增刪與句號重新對應（plan.json＋rough.srt 一起寫）、rough.srt 衝突、gains／sfxVolume／音效靜音還原、media 拖曳欄位、卡片文字、響度與縮圖
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,6 +14,9 @@ const EDITOR = path.join(TOOLS, 'editor.mjs');
 const E = await imp('editor.mjs');
 const BASE_PORT = 47000 + (process.pid % 900) * 2;
 let root, proj, work, out, planFile, ed, url;
+// 「輸出」的系統存檔視窗換成假的：pickNext 是回傳值，或 (opts) => 回傳值（丟錯＝跳不出視窗）
+let pickNext = { cancelled: true };
+const pickSeen = [];
 
 const PLAN_TEXT = `{
   "version": 1,
@@ -49,7 +52,8 @@ before(async () => {
   fs.writeFileSync(path.join(work, 'cutpoints.json'), JSON.stringify({ cuts: [{ at: 2.2, kind: 'pause' }, { at: 4.1, kind: 'ng' }] }));
   planFile = path.join(out, 'plan.json');
   fs.writeFileSync(planFile, PLAN_TEXT);
-  ed = await E.startEditor({ flags: { project: proj, template: path.join(root, 'shared', 'template') }, cwd: root, port: BASE_PORT });
+  ed = await E.startEditor({ flags: { project: proj, template: path.join(root, 'shared', 'template') }, cwd: root, port: BASE_PORT,
+    pickSave: async (o) => { pickSeen.push(o); return typeof pickNext === 'function' ? pickNext(o) : pickNext; } });
   url = ed.url;
 });
 after(async () => { await ed?.close(); });
@@ -84,7 +88,7 @@ test('讀狀態：專案、plan、影片資訊、字幕、剪接點、media 段�
   assert.ok(fs.existsSync(path.join(out, '.editor', 'waveform.json')), '波形要快取在 work/hyperframes/.editor/');
   const page = await get('/');
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /剪輯台/);
+  assert.match(await page.text(), /影片編輯器/);
 });
 
 test('只寫允許的欄位：edit 補齊預設、cuts 排序合併、joins 去掉 none；media 段只改 enter／exit／volume；其他文字原封不動', async () => {
@@ -140,7 +144,7 @@ test('拒絕其他欄位：plan 的其他 key、edit／joins 的未知欄位、�
     assert.match(j.message, re);
   }
   assert.equal(planNow(), before);
-  // 不是剪輯台頁面送的（不是 JSON、別的網站、別的 Host）
+  // 不是影片編輯器頁面送的（不是 JSON、別的網站、別的 Host）
   const r1 = await fetch(new URL('/api/save', url), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{}' });
   assert.equal(r1.status, 403);
   const r2 = await post('/api/save', { base: b, edit: {} }, { Origin: 'http://evil.example' });
@@ -166,7 +170,7 @@ test('修改時間衝突：plan.json 在打開之後被改過就回 409、不覆
   // 只送 mtime（舊的）也要擋
   const r2 = await post('/api/save', { base: { mtime: old.mtime }, edit: { fadeOut: 1 } });
   assert.equal(r2.status, 409);
-  // 重新載入後再存：AI 的修改和剪輯台的設定都在
+  // 重新載入後再存：AI 的修改和影片編輯器的設定都在
   const r3 = await post('/api/save', { base: await base(), edit: { fadeOut: 1 } });
   assert.equal(r3.status, 200);
   const p = JSON.parse(planNow());
@@ -174,7 +178,7 @@ test('修改時間衝突：plan.json 在打開之後被改過就回 409、不覆
   assert.equal(p.edit.fadeOut, 1);
 });
 
-test('Range：影片可以分段讀（206／416）、ETag；只開放素材資料夾；成片預覽的路徑不能跳出 work/hyperframes', async () => {
+test('Range：影片可以分段讀（206／416）、ETag；只開放素材資料夾；影片預覽的路徑不能跳出 work/hyperframes', async () => {
   const size = fs.statSync(path.join(work, 'rough.mp4')).size;
   const r = await get('/media/rough.mp4', { Range: 'bytes=0-99' });
   assert.equal(r.status, 206);
@@ -201,6 +205,17 @@ test('Range：影片可以分段讀（206／416）、ETag；只開放素材資�
   const m = await get('/file/assets/screen/demo.mp4', { Range: 'bytes=0-9' });
   assert.equal(m.status, 206);
   await m.arrayBuffer();
+  // 影音的開放式請求（bytes=0-）一次最多給 2 MB：不然幾十支 <video> 佔滿同一主機的 6 條連線，跳到某段要排隊十幾秒
+  const big = path.join(proj, 'assets', 'screen', 'big.mp4'), MB = 1024 * 1024;
+  fs.writeFileSync(big, Buffer.alloc(3 * MB, 7));
+  try {
+    const c1 = await get('/file/assets/screen/big.mp4', { Range: 'bytes=0-' });
+    assert.deepEqual([c1.status, c1.headers.get('content-range'), (await c1.arrayBuffer()).byteLength], [206, `bytes 0-${2 * MB - 1}/${3 * MB}`, 2 * MB]);
+    const c2 = await get('/file/assets/screen/big.mp4', { Range: `bytes=${2 * MB}-` });
+    assert.deepEqual([c2.status, (await c2.arrayBuffer()).byteLength], [206, MB]);
+    const c3 = await get('/file/assets/screen/big.mp4');
+    assert.deepEqual([c3.status, (await c3.arrayBuffer()).byteLength], [200, 3 * MB], '沒有 Range（下載）照樣整個給');
+  } finally { fs.rmSync(big, { force: true }); }
   assert.equal((await get('/file/work/hyperframes/plan.json')).status, 403);
   assert.equal((await get('/file/assets/screen/../../work/rough.srt')).status, 403);
   assert.equal((await get('/composition/..%2F..%2Frough.srt')).status, 404);
@@ -232,22 +247,22 @@ test('CLI：非互動 shell 自動轉背景、印出網址；--status 查得到�
   const run = (...extra) => spawnSync(process.execPath, [...args, ...extra], { cwd: root, encoding: 'utf8', timeout: 30000 });
   const r = run();
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  const m = r.stdout.match(/剪輯台：(http:\/\/127\.0\.0\.1:(\d+)\/)/);
+  const m = r.stdout.match(/影片編輯器：(http:\/\/127\.0\.0\.1:(\d+)\/)/);
   assert.ok(m, r.stdout);
   assert.match(r.stdout, /已在背景執行.*--stop --project projects\/EP2/);
   const u = m[1];
   try {
     assert.equal((await fetch(new URL('/api/ping', u))).status, 200);
     const st = run('--status');
-    assert.match(st.stdout, new RegExp(`剪輯台開著：${u.replace(/[.]/g, '\\.')}`));
+    assert.match(st.stdout, new RegExp(`影片編輯器開著：${u.replace(/[.]/g, '\\.')}`));
     const again = run();
-    assert.match(again.stdout, /剪輯台已經開著/);
+    assert.match(again.stdout, /影片編輯器已經開著/);
   } finally {
     const stop = run('--stop');
-    assert.match(stop.stdout, /已關閉剪輯台/);
+    assert.match(stop.stdout, /已關閉影片編輯器/);
   }
   await assert.rejects(fetch(new URL('/api/ping', u), { signal: AbortSignal.timeout(1000) }));
-  assert.match(run('--status').stdout, /剪輯台沒有開/);
+  assert.match(run('--status').stdout, /影片編輯器沒有開/);
   assert.ok(!fs.existsSync(path.join(proj2, 'work', 'hyperframes', '.editor', 'server.json')));
 });
 
@@ -441,7 +456,7 @@ test('卡片文字：slots／vars 只改文字（可以加字）；欄位增減�
   const b2 = await base2();
   const cases = [
     [{ s01: { slots: { text: 'a', tag: '新欄位' } } }, /欄位不能增減/],
-    [{ s02: { slots: { title: 'x', items: ['1', '2', '3', '4'] } } }, /有 4 項，比原本多（原本 3 項）→ 剪輯台不能加項目/],
+    [{ s02: { slots: { title: 'x', items: ['1', '2', '3', '4'] } } }, /有 4 項，比原本多（原本 3 項）→ 影片編輯器不能加項目/],
     [{ s02: { slots: { title: 'x', items: ['1'] } } }, /有 1 項，至少要 2 項/],
     [{ s02: { slots: { title: 'x', items: ['一', { text: '二', at: '#1' }, '三 ｜at=#4+0.2'] } } }, /「at」不是文字，只能沿用原本的值/],
     [{ s02: { slots: { title: 'x', items: ['一', { text: '二', at: '#4' }, '三 ｜at=#1'] } } }, /「at=#1」不是原本就有的值/],
@@ -465,10 +480,10 @@ test('修改單：/api/requests 整份覆寫 work/feedback/editor-requests.md（
   let r = await post2('/api/requests', { markdown: '  ' });
   assert.equal(r.status, 400);
   assert.match((await r.json()).message, /修改單是空的/);
-  r = await post2('/api/requests', { markdown: '# 剪輯台修改單\n\n## 1. s01' });
+  r = await post2('/api/requests', { markdown: '# 影片編輯器修改單\n\n## 1. s01' });
   assert.equal(r.status, 200, await r.clone().text());
   assert.match((await r.json()).file, /work\/feedback\/editor-requests\.md$/);
-  assert.equal(fs.readFileSync(f, 'utf8'), '# 剪輯台修改單\n\n## 1. s01\n');
+  assert.equal(fs.readFileSync(f, 'utf8'), '# 影片編輯器修改單\n\n## 1. s01\n');
   r = await post2('/api/requests', { markdown: '第二次\n' });
   assert.equal(r.status, 200);
   assert.equal(fs.readFileSync(f, 'utf8'), '第二次\n');
@@ -485,7 +500,7 @@ test('修改單改完了沒（requestsInfo）：比修改單新的 r<N>.md「改
   assert.equal(E.requestsInfo(dir), null, '還沒有修改單');
   const put = (f, text, sec) => { const p = path.join(fb, f); fs.writeFileSync(p, text); const t = new Date(Date.UTC(2026, 10, 3, 12, 0, sec)); fs.utimesSync(p, t, t); };
   put('r3.md', '## 改了哪幾段\n- s03：舊的一輪\n', 0);
-  put('editor-requests.md', '# 剪輯台修改單\n\n## 1. x05　custom x-a.html\n- 要改：更有質感\n\n## 2. s03　07 重點字卡\n', 10);
+  put('editor-requests.md', '# 影片編輯器修改單\n\n## 1. x05　custom x-a.html\n- 要改：更有質感\n\n## 2. s03　07 重點字卡\n', 10);
   put('r4.md', '# 回饋 r4\n\n## 分類\n- s03：個案\n\n## 改了哪幾段\n- x05：補方案拍、刪漂浮\n- 其他：plan.json 沒改\n- m09：不在修改單\n\n## 驗證\n- s03：audit 0 ✖\n', 20);
   const q = E.requestsInfo(dir);
   assert.deepEqual(q.ids, ['x05', 's03']);
@@ -613,7 +628,7 @@ test('主題（010 §10）：存 theme 插入／原地換／拿掉、選亮又�
   assert.equal(planNow(), orig);
 });
 
-test('字幕預覽（F8）：頁面直接載 kit/captions.css、字幕放在畫布大小的圖層，剪輯台不自己寫字幕的數字', async () => {
+test('字幕預覽（F8）：頁面直接載 kit/captions.css、字幕放在畫布大小的圖層，影片編輯器不自己寫字幕的數字', async () => {
   const page = await (await get('/')).text();
   assert.match(page, /<link rel="stylesheet" href="\/kit\/captions\.css">/);
   assert.match(page, /<div id="simCapLayer" class="cap-layer"><div id="simCaption" class="cg off"><span><\/span><\/div><\/div>/);
@@ -621,7 +636,7 @@ test('字幕預覽（F8）：頁面直接載 kit/captions.css、字幕放在畫�
   assert.equal(css.status, 200);
   assert.match(await css.text(), /\.cg > span \{[^}]*font-size: 76px/);
   const ed = await (await get('/editor/editor.css')).text();
-  assert.ok(!/\.cg[^{]*\{[^}]*(font-size|bottom|padding)/.test(ed), '剪輯台的 css 不能另外寫字幕的字級、位置、內距');
+  assert.ok(!/\.cg[^{]*\{[^}]*(font-size|bottom|padding)/.test(ed), '影片編輯器的 css 不能另外寫字幕的字級、位置、內距');
   assert.ok(!ed.includes('.sim-caption'));
   assert.match(ed, /\.cap-layer \{[^}]*width: calc\(var\(--cw\) \* 1px\); height: calc\(var\(--ch\) \* 1px\)/);
 });
@@ -703,6 +718,18 @@ test('講者：/api/look/face 沒有 landmark 回 nolandmarks；有就回 360×3
   const f = path.join(work, 'face.jpg');
   fs.writeFileSync(f, buf);
   assert.equal(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f], { encoding: 'utf8' }).stdout.trim(), '360,360');
+  // 構圖台用的 size=auto：照臉的大小（這裡臉很小 → 最小 240），X-Face-Box＝臉在原畫面的 x,y,邊長
+  r = await get('/api/look/face?t=1&slim=0.6&size=auto');
+  assert.equal(r.status, 200);
+  const box = r.headers.get('x-face-box').split(',').map(Number);
+  assert.equal(box.length, 3);
+  assert.ok(box.every(Number.isFinite) && box[2] > 0, `臉的位置 ${box}`);   // 臉靠近畫面邊緣時 x、y 可以是負的
+  fs.writeFileSync(f, Buffer.from(await r.arrayBuffer()));
+  assert.equal(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f], { encoding: 'utf8' }).stdout.trim(), '240,240');
+  // 同時送好幾張不會擋住其他請求（在 worker 算）
+  const [ping, ...faces] = await Promise.all([get('/api/ping'), ...[1, 1.5, 3].map((t) => get(`/api/look/face?t=${t}&beauty=0.5`))]);
+  assert.equal(ping.status, 200);
+  assert.deepEqual(faces.map((x) => x.status), [200, 200, 200]);
   r = await get('/api/look/face?t=2&slim=0.6');
   assert.equal(r.status, 404);
   assert.equal((await r.json()).error, 'noface');
@@ -710,7 +737,68 @@ test('講者：/api/look/face 沒有 landmark 回 nolandmarks；有就回 360×3
   fs.rmSync(f);
 });
 
-// ---------- 構圖台（停點 ②、之後在剪輯台改構圖）----------
+// ---------- 構圖台（停點 ②、之後在影片編輯器改構圖）----------
+test('輸出：伺服器跳出系統存檔視窗、直接存到選的位置（專案裡不另留一份）；取消不寫；跳不出來改存 output/；記住上次的資料夾；影片的參數不對 400；沒在輸出時取消沒事', async () => {
+  // 成片檔比 plan.json、rough.srt 新 → 不用重新產生，直接複製
+  const later = new Date(Date.now() + 5000), dl = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-save-'));
+  fs.writeFileSync(path.join(out, 'index.html'), '<!doctype html>');
+  fs.writeFileSync(path.join(out, 'subtitles.srt'), '1\n00:00:00,000 --> 00:00:01,500\n第一句\n\n2\n00:00:01,500 --> 00:00:03,000\n第二句\n');
+  for (const f of ['index.html', 'subtitles.srt']) fs.utimesSync(path.join(out, f), later, later);
+  const exportsJson = path.join(out, '.editor', 'exports.json');
+  try {
+    pickSeen.length = 0;
+    pickNext = { path: path.join(dl, '我的字幕.srt') };
+    let r = await post('/api/export', { kind: 'srt' });
+    assert.equal(r.status, 200);
+    let j = await r.json();
+    assert.deepEqual([j.file, j.cues, j.note], [path.join(dl, '我的字幕.srt'), 2, '']);
+    assert.equal(fs.readFileSync(path.join(dl, '我的字幕.srt'), 'utf8'), fs.readFileSync(path.join(out, 'subtitles.srt'), 'utf8'));
+    assert.ok(!fs.existsSync(path.join(proj, 'output')), '專案的 output/ 不另留一份');
+    assert.deepEqual([pickSeen[0].name, pickSeen[0].ext, pickSeen[0].filter], ['example-字幕.srt', 'srt', ['SRT 字幕', 'srt']]);
+    const rec = JSON.parse(fs.readFileSync(exportsJson, 'utf8'));
+    assert.deepEqual([rec.lastDir, rec.srt.path, rec.srt.cues], [dl, path.join(dl, '我的字幕.srt'), 2]);
+    // 取消：不寫檔；下一次從上次的資料夾開始
+    pickNext = { cancelled: true };
+    j = await (await post('/api/export', { kind: 'srt' })).json();
+    assert.deepEqual(j, { cancelled: true });
+    assert.equal(pickSeen[1].dir, dl);
+    // 跳不出系統存檔視窗：改存專案的 output/，訊息說明
+    pickNext = () => { throw new Error('找不到 zenity'); };
+    j = await (await post('/api/export', { kind: 'srt' })).json();
+    assert.equal(j.file, 'projects/example/output/字幕.srt');
+    assert.match(j.note, /打不開系統存檔視窗（找不到 zenity）/);
+    assert.equal((await get('/export/video')).status, 404, '還沒輸出影片');
+    assert.equal((await get('/output/字幕.srt')).status, 404, '舊的 /output/ 下載路徑拿掉了');
+    const n = pickSeen.length;
+    assert.equal((await post('/api/export', { kind: 'video', res: '8k' })).status, 400);
+    assert.equal((await post('/api/export', { kind: 'gif' })).status, 400);
+    assert.equal(pickSeen.length, n, '參數不對不跳存檔視窗');
+    j = await (await post('/api/export', { cancel: true })).json();
+    assert.equal(j.running, false);
+    assert.equal((await (await get('/api/export')).json()).running, false);
+  } finally {
+    pickNext = { cancelled: true };
+    for (const f of ['index.html', 'subtitles.srt']) fs.rmSync(path.join(out, f), { force: true });
+    fs.rmSync(path.join(proj, 'output'), { recursive: true, force: true });
+    fs.rmSync(exportsJson, { force: true });
+    fs.rmSync(dl, { recursive: true, force: true });
+  }
+});
+
+test('系統存檔視窗的指令：Mac osascript（值用參數傳）、Windows PowerShell（值用環境變數傳）、其他 zenity；副檔名補齊', async () => {
+  const D = await imp('lib/save-dialog.mjs'), o = { title: '輸出 1080p 影片', name: 'ep "2"-1080p.mp4', dir: '/Users/me/Downloads/', ext: 'mp4', filter: ['MP4 影片', 'mp4'] };
+  const mac = D.saveCommand(o, 'darwin');
+  assert.equal(mac.cmd, 'osascript');
+  assert.deepEqual(mac.args.slice(-3), [o.title, o.name, o.dir]);
+  assert.ok(mac.args.some((a) => a.includes('choose file name')));
+  const win = D.saveCommand(o, 'win32');
+  assert.ok(win.args.includes('-STA'));
+  assert.deepEqual([win.env.AE_SAVE_NAME, win.env.AE_SAVE_DIR, win.env.AE_SAVE_FILTER], [o.name, o.dir, 'MP4 影片 (*.mp4)|*.mp4']);
+  assert.ok(!win.args.join(' ').includes(o.name), '檔名不拼進指令');
+  assert.deepEqual(D.saveCommand(o, 'linux').args.slice(-1), ['--filename=/Users/me/Downloads/ep "2"-1080p.mp4']);
+  assert.deepEqual([D.withExt('/a/b', 'mp4'), D.withExt('/a/b.MP4', 'mp4'), D.withExt('/a/b.srt', 'srt')], ['/a/b.mp4', '/a/b.MP4', '/a/b.srt']);
+});
+
 test('構圖台：sanitizeFrame（比例、出界、最多 2 倍、整個畫面＝null）；remapToFrame 換框來回不變、pipCrop 出界交回 auto', async () => {
   const Wm = await imp('editor/server/write.mjs'), cv = { W: 1920, H: 1080 };
   assert.deepEqual(Wm.sanitizeFrame([182, 144, 1664, 936], cv), { frame: [182, 144, 1664, 936], errors: [] });
@@ -737,6 +825,7 @@ test('構圖台（server）：/framing 頁、沒裁切的 /media/source.mp4、/a
     const u = (p) => new URL(p, ed4.url);
     const save = (body) => fetch(u('/api/save'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     assert.match(await (await fetch(u('/framing'))).text(), /<title>構圖台<\/title>/);
+    assert.match(await (await fetch(u('/framing?embed=1'))).text(), /id="btnClose"/, '在影片編輯器的彈窗裡打開：有「關閉」');
     assert.equal((await fetch(u('/media/source.mp4'))).status, 200);
     const a = await (await fetch(u('/api/framing'))).json();
     assert.deepEqual([a.canvas.format, a.canvas.W, a.canvas.H, a.srcSize[0], a.plan.exists, a.limits.maxZoom], ['landscape', 1920, 1080, 320, false, 2], JSON.stringify(a).slice(0, 300));
@@ -749,6 +838,19 @@ test('構圖台（server）：/framing 頁、沒裁切的 /media/source.mp4、/a
     assert.deepEqual(JSON.parse(fs.readFileSync(plan, 'utf8')), { version: 1, frame: [182, 144, 1664, 936] });
     const j = await r.json();
     assert.deepEqual(j.plan.frame, [182, 144, 1664, 936]);
+    assert.equal(j.rebuild, false, '還沒產生過成片（停點 ②）不自動重新產生');
+    // 即時預覽套框：底片沒裁（work/rough.mp4）→ frame null；有 build 過的底片 → 戳記裡的框；沒裁的畫面在 /media/source.mp4
+    let s1 = await (await fetch(u('/api/state'))).json();
+    assert.deepEqual([s1.video.frame, s1.plan.data.frame, s1.look.footage], [null, [182, 144, 1664, 936], 'rough.mp4']);
+    assert.match(s1.video.source.url, /^\/media\/source\.mp4\?v=/);
+    assert.equal((await fetch(u('/media/source-look.mp4'))).status, 404, '沒有瘦臉底片');
+    const asset = path.join(w, 'hyperframes', 'assets', 'rough.mp4'), stamp = path.join(w, 'hyperframes', '.cache', 'footage-audio.json');
+    fs.mkdirSync(path.dirname(asset), { recursive: true }); fs.mkdirSync(path.dirname(stamp), { recursive: true });
+    fs.copyFileSync(path.join(w, 'rough.mp4'), asset);
+    fs.writeFileSync(stamp, JSON.stringify({ key: { frame: [174, 144, 1664, 936] } }));
+    s1 = await (await fetch(u('/api/state'))).json();
+    assert.deepEqual([s1.video.url.split('?')[0], s1.video.frame], ['/media/rough.mp4', [174, 144, 1664, 936]], '底片照上一次 build 的框裁過');
+    fs.rmSync(asset, { force: true }); fs.rmSync(stamp, { force: true });
     assert.equal((await save({ base: { hash: null }, frame: null })).status, 409, '頁面以為還沒有 plan.json，其實已經有了');
     // 已經量過 speakerBox：換成不裁切，speakerBox 換算成同一塊畫面、拿掉 frame
     fs.writeFileSync(plan, '{\n  "version": 1,\n  "frame": [182, 144, 1664, 936],\n  "speakerBox": [600, 200, 1400, 1000],\n  "scenes": []\n}\n');
@@ -757,6 +859,17 @@ test('構圖台（server）：/framing 頁、沒裁切的 /media/source.mp4、/a
     assert.equal(r.status, 200, await r.clone().text());
     assert.deepEqual((await r.json()).notes, ['speakerBox 跟著新的框換算：[600, 200, 1400, 1000] → [702, 317, 1395, 1011]']);
     assert.equal(fs.readFileSync(plan, 'utf8'), '{\n  "version": 1,\n  "speakerBox": [702, 317, 1395, 1011],\n  "scenes": []\n}\n', '只動 frame 與 speakerBox，其他排版不變');
+    // 已經產生過成片：構圖台存檔就自動重新產生（影片編輯器從 /api/version 看到 build 在跑、reason 構圖）
+    fs.writeFileSync(path.join(dir, 'work', 'hyperframes', 'index.html'), '<!doctype html>');
+    const st1 = await (await fetch(u('/api/framing'))).json();
+    r = await save({ base: { hash: st1.plan.hash }, frame: [182, 144, 1664, 936] });
+    assert.equal(r.status, 200, await r.clone().text());
+    assert.equal((await r.json()).rebuild, true);
+    const ver = await (await fetch(u('/api/version'))).json();
+    assert.deepEqual([ver.build.running, ver.build.reason], [true, '構圖']);
+    for (let i = 0; i < 300 && (await (await fetch(u('/api/build'))).json()).running; i++) await new Promise((res) => setTimeout(res, 100));
+    fs.rmSync(path.join(dir, 'work', 'hyperframes', 'index.html'), { force: true });
+    fs.writeFileSync(plan, '{\n  "version": 1,\n  "speakerBox": [702, 317, 1395, 1011],\n  "scenes": []\n}\n');
     const st2 = await (await fetch(u('/api/framing'))).json();
     r = await save({ base: { hash: st2.plan.hash }, frame: [0, 0, 1000, 1000] });
     assert.equal(r.status, 400);

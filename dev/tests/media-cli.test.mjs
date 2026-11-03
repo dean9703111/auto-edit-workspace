@@ -299,7 +299,7 @@ test('srt-split：標點優先、沒有標點斷在中間 ⚠、時間依字數�
   fs.writeFileSync(file, srt);
   const bad = node(MEDIA, ['srt-split'], 'ps');
   assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /plan\.json 已經用到句號（#N），拆句會讓後面的句號全部位移 → 改在剪輯台分割字幕/);
+  assert.match(bad.stderr, /plan\.json 已經用到句號（#N），拆句會讓後面的句號全部位移 → 改在影片編輯器分割字幕/);
   assert.equal(fs.readFileSync(file, 'utf8'), srt);
 });
 
@@ -562,8 +562,8 @@ test('subtractRanges、screenSegments（剪掉的地方換回錄影秒數、相�
     { id: 'sync02', type: 'media', src: 'assets/screen/s.mp4', from: 3, to: 9, in: 2 },
   ]);
   assert.equal(screenSegments(clips, { chunks: [[0, 150, 1], [150, 300, 1]] }, 30).length, 1, '中間沒剪就併成一段');
-  const lines = ['大家好歡迎收看這一集', '今天要講剪輯台怎麼用', '最後記得按讚訂閱'];
-  const words = [{ text: '今天要講剪輯台怎麼用', start: 0.5, end: 3 }, { text: '大家好歡迎收看這一集', start: 5.2, end: 7 }, { text: '這段講稿沒有寫', start: 10.5, end: 12 }];
+  const lines = ['大家好歡迎收看這一集', '今天要講影片編輯器怎麼用', '最後記得按讚訂閱'];
+  const words = [{ text: '今天要講影片編輯器怎麼用', start: 0.5, end: 3 }, { text: '大家好歡迎收看這一集', start: 5.2, end: 7 }, { text: '這段講稿沒有寫', start: 10.5, end: 12 }];
   const rows = scriptOrder([{ file: 'x.mp4', start: 0, end: 5 }, { file: 'y.mp4', start: 5, end: 10 }, { file: 'z.mp4', start: 10, end: 13 }], words, lines);
   assert.deepEqual(rows.map((r) => [r.file, r.lines, r.pos]), [['x.mp4', [2], 2], ['y.mp4', [1], 1], ['z.mp4', [], null]]);
   assert.deepEqual(suggestOrder(rows).map((r) => r.file), ['y.mp4', 'x.mp4', 'z.mp4']);
@@ -574,8 +574,8 @@ test('ng-snap：邊錄邊講的螢幕錄影整段 --add-in（扣掉 NG）；主�
   clip(path.join(p, 'work', 'main.mp4'), 1);
   fs.writeFileSync(path.join(p, 'work', 'main.json'), JSON.stringify({ clips: [{ file: 'assets/camera/a.mp4', kind: 'camera', start: 0, end: 30 }, { file: 'assets/screen/s.mp4', kind: 'screen', start: 30, end: 66 }] }));
   fs.writeFileSync(path.join(p, 'work', 'cuts.md'), '| 時間碼 | 內容 | 原因 |\n|---|---|---|\n| 0:45.00–0:46.00 | 講錯 | 重講 |\n');
-  fs.writeFileSync(path.join(p, '講稿.md'), '# 示範\n\n大家好歡迎收看這一集\n今天要講剪輯台怎麼用\n');
-  fs.writeFileSync(path.join(p, 'work', 'transcript.json'), JSON.stringify([{ text: '今天要講剪輯台怎麼用', start: 2, end: 5 }, { text: '大家好歡迎收看這一集', start: 31, end: 34 }]));
+  fs.writeFileSync(path.join(p, '講稿.md'), '# 示範\n\n大家好歡迎收看這一集\n今天要講影片編輯器怎麼用\n');
+  fs.writeFileSync(path.join(p, 'work', 'transcript.json'), JSON.stringify([{ text: '今天要講影片編輯器怎麼用', start: 2, end: 5 }, { text: '大家好歡迎收看這一集', start: 31, end: 34 }]));
   const v1 = path.join(root, 'nsnap.v1.json');
   fs.writeFileSync(v1, JSON.stringify(V1));
   const r = node(MEDIA, ['ng-snap', '--v1', v1], 'nsnap');

@@ -1,4 +1,4 @@
-// 剪輯台的時間換算與 edit 處理（純函式，沒有 DOM）
+// 影片編輯器的時間換算與 edit 處理（純函式，沒有 DOM）
 // 所有時間都是 rough.mp4 的秒數（剪之前），「成片時間」＝扣掉前面 cuts 之後的秒數。
 
 export const r3 = (n) => Math.round(n * 1000) / 1000;
@@ -6,7 +6,7 @@ export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const JOIN_TOL = 0.1;          // joins.at 對到剪接點的容許誤差（契約 3.2：±0.1s）
 export const PUNCH_SCALE = 1.08;
 export const DIP_DEFAULT = 0.3;
-export const MEDIA_TRANS = 0.5;       // 即時模擬裡 media 進出場的長度（示意）
+export const MEDIA_TRANS = 0.5;       // 即時預覽裡 media 進出場的長度（示意）
 
 export const TC_FPS = 30;              // 時間碼 HH:MM:SS:FF 用 30fps
 export function defaultEdit() {

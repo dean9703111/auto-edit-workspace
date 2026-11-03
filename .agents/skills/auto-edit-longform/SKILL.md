@@ -1,6 +1,6 @@
 ---
 name: auto-edit-longform
-description: 長片總指揮：判斷 projects/<專案> 做到哪一步、第一次開工填開工決策表、把工作交給對應的階段 Skill、維護 work/製作進度.md 的階段表與停點紀錄。當使用者說「用 auto-edit-longform 剪 projects/X」「剪這支影片」「繼續」「繼續 projects/X」「下一集」「做到哪了」「剪成短影片」「做直式」時使用。只做單一階段（只剪乾淨、只換主色、只開剪輯台）時不要用，直接用那個階段的 Skill（auto-edit-rough、auto-edit-style、auto-edit-review）。
+description: 長片總指揮：判斷 projects/<專案> 做到哪一步、第一次開工填開工決策表、把工作交給對應的階段 Skill、維護 work/製作進度.md 的階段表與停點紀錄。當使用者說「用 auto-edit-longform 剪 projects/X」「剪這支影片」「繼續」「繼續 projects/X」「下一集」「做到哪了」「剪成短影片」「做直式」時使用。只做單一階段（只剪乾淨、只換主色、只開影片編輯器）時不要用，直接用那個階段的 Skill（auto-edit-rough、auto-edit-style、auto-edit-review）。
 version: 0.1.0
 ---
 # 總指揮：做到哪、交給誰
@@ -85,7 +85,7 @@ ffprobe -v error -show_entries format=duration -of csv=p=0 "<主軌>"
 完成判準：停點紀錄最後一列和剛剛的回覆一致。
 常見錯誤：改了舊的「待回覆」列 → 舊列不動，另加一列。
 
-可以全自動、不用問的：轉逐字稿、`--check`、build、audit、snapshot、`qc.mjs`、`status.mjs`。一定要停的：AGENTS.md「停點總表」的 ①–⑥。
+可以全自動、不用問的：轉逐字稿、`--check`、build、audit、snapshot、`qc.mjs`、`status.mjs`。一定要停的：AGENTS.md「停點總表」的 ①–⑤。
 
 ## 自我核對
 

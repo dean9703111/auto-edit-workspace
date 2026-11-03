@@ -160,9 +160,9 @@ ${caps.map((x) => `    <div id="${x.cid}" class="sc-sectag"><span class="sc-sect
 const FX_BG = { dark: '#232733', light: '#f3efe6', accent: 'var(--brand)' };
 
 // cut（剪映素材，capcut.mjs）：要和 test 一起給（時間窗）
-//   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、剪輯台過黑／淡入淡出；
+//   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、影片編輯器過黑／淡入淡出；
 //                                      keepFootage＝側邊欄段（講者被推到右邊）連底片一起放（靜音），剪映疊上去才對得起來
-//   { kind: 'main' }                  主軌：只有底片＋人聲＋剪輯台（跳接放大、過黑、淡入淡出）＋片尾配樂；沒有情境、字幕、角標、段落音效
+//   { kind: 'main' }                  主軌：只有底片＋人聲＋影片編輯器（跳接放大、過黑、淡入淡出）＋片尾配樂；沒有情境、字幕、角標、段落音效
 export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, badges = [], canvas = null, cut = null }) {
   const C = canvas || CANVAS.landscape, portrait = C.format === 'portrait', W = C.W, H = C.H;
   const segCut = cut?.kind === 'seg', mainCut = cut?.kind === 'main';
@@ -328,7 +328,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
     else tl.push(`tl.set('#footage', { x: 0 }, ${n3(f.at)});`);
   });
 
-  // 剪輯台（edit）：punch 放大跳接、dip 過黑、整支淡入淡出（畫面用 GSAP；聲音在 <video>／<audio> 的 data-fade-*）
+  // 影片編輯器（edit）：punch 放大跳接、dip 過黑、整支淡入淡出（畫面用 GSAP；聲音在 <video>／<audio> 的 data-fade-*）
   const overlays = [];
   let footCss = '';
   if (editFx) {
@@ -459,7 +459,7 @@ ${captions ? `  <!-- L3 字幕 -->
   <div id="el-captions" data-composition-id="${captions.compId}" data-composition-src="${captions.file}"
        data-track-kind="captions" data-start="0" data-duration="${n3(DUR)}" data-track-index="${capTrack}"
        data-width="${W}" data-height="${H}" style="z-index:60"></div>
-` : ''}${overlays.length ? `\n  <!-- 剪輯台：dip 過黑（字幕下面）、整支淡入淡出（連字幕一起）-->\n${overlays.join('\n')}\n` : ''}
+` : ''}${overlays.length ? `\n  <!-- 影片編輯器：dip 過黑（字幕下面）、整支淡入淡出（連字幕一起）-->\n${overlays.join('\n')}\n` : ''}
   <!-- L4 音效 -->
 ${sfx.join('\n')}
 </div>

@@ -95,7 +95,7 @@
     const ROOT = document.getElementById('x-scene-example-rec');
     const R = P.region('panelTop');   // 主卡＝全畫面主卡區（design-system §2；直式由 window.__regions 蓋過）
     const CARD = document.getElementById('xscr-card');
-    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; CARD.style.width = R[2] + 'px';
+    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; if (!CARD.hasAttribute('data-wide')) CARD.style.width = R[2] + 'px';   // 全寬版型：kit 已把主卡拉到 1680，不要蓋回去
     const sel = function (id) { return '#' + id; };
     const stateSel = function (s) { return !s || s === 'blank' ? null : s === 'video' ? '.il-content' : '.il-' + s; };   // 狀態名 → 狀態群組
     // 位置由 data-layout 排好（kit/scene-layout.js；ILLUS.mount 之後自動跑一次），這裡只讀

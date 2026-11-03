@@ -1,7 +1,7 @@
 // 兩種預覽
-//   SimPreview     播 rough.mp4，用 WebAudio 增益、黑色遮罩、CSS transform 即時模擬 cuts（播放時跳過）／音量（含範圍音量）／淡入淡出／dip／punch，
+//   SimPreview     播 rough.mp4，用 WebAudio 增益、黑色遮罩、CSS transform 即時預覽 cuts（播放時跳過）／音量（含範圍音量）／淡入淡出／dip／punch，
 //                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲，位置和成片同一個可見區（橫式 contain＝上方 1920×940，字幕帶空出來）；
-//                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去成片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
+//                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去影片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
 //                  全部聲音最後經過 AnalyserNode 給音量表
 //   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整成片；時間是成片時間）
 // 兩者對外都用 rough.mp4 的秒數（app.t）。
@@ -21,14 +21,22 @@ export class SimPreview {
       this.fitCaps();
     }
     this.v.addEventListener('ended', () => app.onEnded?.());
-    this.v.addEventListener('error', () => app.onVideoError?.('瀏覽器播不了 rough.mp4（格式不支援或檔案壞了）'));
+    this.v.addEventListener('error', () => { this.pendingT = null; app.onVideoError?.('瀏覽器播不了 rough.mp4（格式不支援或檔案壞了）'); });
   }
   fitCaps() {
     const L = this.el.capLayer, w = L?.parentElement?.clientWidth || 0;
     if (w) L.style.transform = `scale(${w / (this.app.canvas?.().W || 1920)})`;
   }
-  load(url) { if (this.v.getAttribute('src') !== url) { this.v.src = url; this.v.load(); } }
-  get time() { return this.v.currentTime || 0; }
+  load(url) {
+    if (this.v.getAttribute('src') === url) return;
+    const had = !!this.v.getAttribute('src'), t = this.time, play = this.playing;
+    this.v.src = url; this.v.load();
+    if (!had) return;
+    // 換檔（構圖改了改播原始畫面、成片重新產生好了換回新底片）：停在同一秒，原本在播就接著播
+    this.pendingT = t;
+    this.v.addEventListener('loadedmetadata', () => { this.v.currentTime = this.pendingT ?? t; this.pendingT = null; if (play) this.v.play().catch(() => {}); }, { once: true });
+  }
+  get time() { return this.pendingT ?? (this.v.currentTime || 0); }
   get playing() { return !this.v.paused && !this.v.ended; }
   ensureAudio() {
     if (this.audio) { if (this.audio.ctx.state === 'suspended') this.audio.ctx.resume(); return; }
@@ -63,7 +71,7 @@ export class SimPreview {
     return this.v.play().catch(() => {});
   }
   pause() { this.v.pause(); for (const m of this.mediaEls.values()) if (m.el.tagName === 'VIDEO') m.el.pause(); }
-  seek(t) { this.v.currentTime = clamp(t, 0, this.v.duration || t); this.lastT = this.v.currentTime; }
+  seek(t) { if (this.pendingT != null) this.pendingT = Math.max(0, t); this.v.currentTime = clamp(t, 0, this.v.duration || t); this.lastT = this.v.currentTime; }
   hide(on) { this.el.root.hidden = on; if (on) this.pause(); }
 
   tick() {
@@ -84,7 +92,12 @@ export class SimPreview {
     const o = outOf(t, E.cuts);
     const fx = effectsAt(o, A.fxCtx());
     this.el.black.style.opacity = String(fx.black);
-    v.style.transform = fx.scale !== 1 ? `scale(${fx.scale})` : '';
+    // 構圖剛改、成片還在重新產生：播的是沒裁的畫面，這裡照新的框（畫布座標）放大、移過去，再疊 punch 的放大
+    const R = A.reframe?.frame, c = A.canvas?.() || {}, W = c.W || 1920, H = c.H || 1080;
+    const punch = fx.scale !== 1 ? `scale(${fx.scale})` : '';
+    const tf = R ? `translate(50%, 45%) ${punch} translate(-50%, -45%) scale(${W / R[2]}) translate(${(-R[0] / W) * 100}%, ${(-R[1] / H) * 100}%)` : punch;
+    if (v.style.transform !== tf) v.style.transform = tf;
+    v.style.transformOrigin = R ? '0 0' : '';
     const lf = A.lookCss && A.lookCss !== 'none' ? A.lookCss : '';
     if (v.style.filter !== lf) v.style.filter = lf;
     // 人聲：軌道音量＋範圍音量＋淡入淡出
@@ -175,9 +188,12 @@ export class SimPreview {
       pip.style.opacity = String(op);
       const g = pip.getContext('2d'), v = this.v;
       if (v.videoWidth) {
-        const cw = pip.width, ch = pip.height, vr = v.videoWidth / v.videoHeight, cr = cw / ch;
-        let sw = v.videoWidth, sh = v.videoHeight, sx = 0, sy = 0;
-        if (vr > cr) { sw = sh * cr; sx = (v.videoWidth - sw) / 2; } else { sh = sw / cr; sy = (v.videoHeight - sh) / 2; }
+        // 小窗取景的範圍＝底片的畫面；構圖剛改（播沒裁的畫面）時只取新的框裡面
+        const R = A.reframe?.frame, c = A.canvas?.() || {}, kx = v.videoWidth / (c.W || 1920), ky = v.videoHeight / (c.H || 1080);
+        const [bx, by, bw, bh] = R ? [R[0] * kx, R[1] * ky, R[2] * kx, R[3] * ky] : [0, 0, v.videoWidth, v.videoHeight];
+        const cw = pip.width, ch = pip.height, vr = bw / bh, cr = cw / ch;
+        let sw = bw, sh = bh, sx = bx, sy = by;
+        if (vr > cr) { sw = sh * cr; sx = bx + (bw - sw) / 2; } else { sh = sw / cr; sy = by + (bh - sh) / 2; }
         g.filter = A.lookCss || 'none';   // 講者調光：子母畫面小窗跟大畫面同色
         try { g.drawImage(v, sx, sy, sw, sh, 0, 0, cw, ch); } catch { /* 影片還沒準備好 */ }
         g.filter = 'none';
@@ -192,7 +208,7 @@ export class SimPreview {
     const css = `position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%;object-fit:${fit};`;
     if (el.style.cssText !== css) el.style.cssText = css;
   }
-  // 只有聲音的地方：底片是黑的，卡片和情境動畫只在成片預覽畫 → 在中間寫是哪一段
+  // 只有聲音的地方：底片是黑的，卡片和情境動畫只在影片預覽畫 → 在中間寫是哪一段
   tickHint(t, covered) {
     const A = this.app, el = this.el.hint;
     if (!el) return;
@@ -200,7 +216,7 @@ export class SimPreview {
     if (!covered && A.voiceOnly.some(([a, b]) => t >= a && t < b)) {
       let it = null;
       for (const x of A.itemsView) if (x.type !== 'media' && t >= x.start && t < (x.vend ?? x.end) && (!it || x.start >= it.start)) it = x;
-      txt = it ? `${it.id}　${it.label || ''}\n這段只有聲音，畫面是卡片或情境動畫 → 切到「成片預覽」看` : '這段只有聲音（沒有講者畫面）';
+      txt = it ? `${it.id}　${it.label || ''}\n這段只有聲音，畫面是卡片或情境動畫 → 切到「影片預覽」看` : '這段只有聲音（沒有講者畫面）';
     }
     if (el.textContent !== txt) { el.textContent = txt; el.style.whiteSpace = 'pre-line'; }
     el.hidden = !txt;
@@ -241,7 +257,7 @@ export class PlayerPreview {
     this.host = host; this.app = app;
     this.p = null; this.ready = false; this.outT = 0; this._playing = false; this.pendingSeek = null; this.failed = null;
   }
-  // 成片時間 ↔ rough 時間：用 plan.json 目前存的 cuts（plan 在上次 build 之後又改過時，頁面會提醒「成片預覽是舊的」）
+  // 成片時間 ↔ rough 時間：用 plan.json 目前存的 cuts（plan 在上次 build 之後又改過時，頁面會提醒「影片預覽是舊的」）
   get cuts() { return this.app.savedEdit.cuts; }
   get time() { return roughOf(this.outT, this.cuts); }
   get playing() { return this._playing; }

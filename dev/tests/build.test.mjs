@@ -60,11 +60,16 @@ test('產生專案：CRLF 字幕、底片重新編碼、kit／音效／字卡動
     'compositions/s01-concept.html', 'compositions/s02-side-panel.html', 'compositions/s03-fs-list.html', 'compositions/fx-29-odometer.html', 'compositions/fx-kit.js', 'compositions/captions.html']) {
     assert.ok(fs.existsSync(path.join(out, f)), `少了 ${f}`);
   }
+  assert.ok(!fs.existsSync(path.join(out, 'assets', 'rough.mp4.part.mp4')), '底片先寫暫存檔、好了才換上，暫存檔不留下');
   assert.ok(!fs.existsSync(path.join(out, 'kit', 'icons.json')), 'icons.json 不用複製');
   const cap = read('compositions/captions.html');
   assert.equal((cap.match(/class="cg"/g) || []).length, 12, 'CRLF 的 12 句都要讀到');
   assert.match(cap, /id="cg-1" style="opacity:0;visibility:hidden"><span>第 1 句字幕內容<\/span>/);
   assert.match(cap, /data-layout-allow-caption-zone/);
+  // 影片編輯器「只輸出字幕」用的 subtitles.srt：成片上顯示的字幕（12 則、LF、去掉句號）
+  const sub = read('subtitles.srt');
+  assert.equal((sub.match(/-->/g) || []).length, 12);
+  assert.match(sub, /^1\n00:00:\d\d,\d{3} --> 00:00:\d\d,\d{3}\n第 1 句字幕內容\n/);
   // 重新編碼：30fps、每秒一個關鍵幀
   const p = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', path.join(out, 'assets', 'rough.mp4')], { encoding: 'utf8' });
   assert.equal(p.stdout.trim(), '30/1');
@@ -447,8 +452,8 @@ test('F8 字幕樣式與提醒：76px 估寬（18 字 1442px、門檻 1840）、
   ]);
   assert.deepEqual(w, [
     '字幕 #4「這一句超過十八個字一定要拆開來才可以放進畫面」22 字，超過 18 字 → 在 rough.srt 拆成兩則（斷在標點處）',
-    '字幕含句中標點「，。；：」：#2 → 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在剪輯台改',
-    '字幕不到 0.6 秒：#3 → 在剪輯台和前後句合併，或把起迄拉長',
+    '字幕含句中標點「，。；：」：#2 → 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在影片編輯器改',
+    '字幕不到 0.6 秒：#3 → 在影片編輯器和前後句合併，或把起迄拉長',
   ]);
   const css = fs.readFileSync(path.join(TEMPLATE, 'kit', 'captions.css'), 'utf8');
   for (const x of ['bottom: 6px', 'font-weight: 400', 'font-size: 76px', 'line-height: 71px', 'padding: 24px 37px 23px', 'rgba(0, 0, 0, 0.7)', 'border-radius: 0']) assert.ok(css.includes(x), x);
@@ -469,7 +474,7 @@ test('theme "dark"（fixture dev/tests/fixtures/theme-dark）：換 bg-*-dark.jp
     assert.ok(fs.existsSync(path.join(out, 'assets', `bg-${k}-dark.jpg`)), `少了 assets/bg-${k}-dark.jpg`);
     assert.ok(read('index.html').includes(`assets/bg-${k}-dark.jpg`), `index.html 沒用 bg-${k}-dark.jpg`);
   }
-  // build 從不寫 plan.json：剪輯台（006）存的 theme 不會被蓋掉
+  // build 從不寫 plan.json：影片編輯器（006）存的 theme 不會被蓋掉
   assert.deepEqual(fs.readFileSync(planFile), planBytes);
   fs.writeFileSync(planFile, JSON.stringify({ ...JSON.parse(planBytes), theme: 'black' }));
   const bad = node('--check');
