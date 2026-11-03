@@ -27,6 +27,7 @@ import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage,
 import { footageVf, lut3dFilter } from './lib/ff.mjs';
 import { CANVAS } from './lib/canvas.mjs';
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
+import { mediaFrame, SIDE } from './lib/media.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, subtitles };
 
@@ -34,6 +35,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.join(HERE, 'editor');
 const BUILD = path.join(HERE, 'build.mjs');
 const LOOK = path.join(HERE, 'look.mjs');
+const AUDIT = path.join(HERE, 'audit.mjs');
 const DEFAULT_PORT = 4400;
 const PORT_TRIES = 20;
 const PEAK_RATE = 100;          // 波形：每秒 100 個峰值
@@ -560,21 +562,21 @@ function lookState(ctx, planData) {
     let baked = null;
     if (pickVideo(P) === path.join(P.out, 'assets', 'rough.mp4')) {
       const k = readJson(path.join(P.out, '.cache', 'footage-audio.json'))?.key?.look;
-      baked = isObj(k) ? { color: isNum(k.color) ? k.color : 0, slim: isNum(k.slim) ? k.slim : 0 } : { color: 0, slim: 0 };
+      baked = isObj(k) ? { color: isNum(k.color) ? k.color : 0, slim: isNum(k.slim) ? k.slim : 0, beauty: isNum(k.beauty) ? k.beauty : 0 } : { color: 0, slim: 0, beauty: 0 };
     }
     const sum = readState(P.project).landmarks?.summary;
     return {
-      kit: { color: kit.color, slim: kit.slim }, plan: plan.look === undefined ? null : plan.look,
-      effective: { color: L.color, slim: L.slim, source: L.source }, baked,
-      limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, step: LOOK_LIMITS.step },
+      kit: { color: kit.color, slim: kit.slim, beauty: kit.beauty }, plan: plan.look === undefined ? null : plan.look,
+      effective: { color: L.color, slim: L.slim, beauty: L.beauty, source: L.source }, baked,
+      limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, beauty: LOOK_LIMITS.beauty, step: LOOK_LIMITS.step },
       landmarks: sum ? { ready: true, rate: sum.rate, medianFaceWidth: sum.medianFaceWidth, slimOk: sum.slimOk !== false, reason: sum.reason ?? null } : { ready: false },
       lines,
     };
-  } catch (e) { return { error: e.message, limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, step: LOOK_LIMITS.step } }; }
+  } catch (e) { return { error: e.message, limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, beauty: LOOK_LIMITS.beauty, step: LOOK_LIMITS.step } }; }
 }
 
 // 構圖台的瘦臉進度（打開瘦臉才偵測：按「偵測臉部」→ POST /api/look/run，之後每 2 秒 GET /api/look/status）
-const LOOK_PHASE = { locate: '找臉', detect: '偵測臉部', render: '套用瘦臉', preview: '畫對照圖' };
+const LOOK_PHASE = { locate: '找臉', detect: '偵測臉部', render: '套用瘦臉、美顏', preview: '畫對照圖' };
 function lookRunState(ctx) {
   const P = ctx.P, st = readState(P.project), run = st.run || null, running = isRunning(st);
   const plan = readPlan(P.plan).data;
@@ -592,7 +594,7 @@ async function doLookRun(ctx) {
   if (isRunning(readState(P.project))) return [200, { ok: true, already: true, ...lookRunState(ctx) }];
   const plan = readPlan(P.plan).data;
   const L = resolveLook({ plan: isObj(plan) ? plan : {}, templateDir: P.templateDir });
-  if (!(L.slim > 0)) return [400, { error: 'noslim', message: '瘦臉是關的，不用偵測 → 先打開瘦臉並儲存，再按「偵測臉部」' }];
+  if (!(L.slim > 0 || L.beauty > 0)) return [400, { error: 'noslim', message: '瘦臉、美顏都是關的，不用偵測 → 先打開瘦臉或美顏並儲存，再按「偵測臉部」' }];
   const r = await runNode([LOOK, 'run', '--project', P.project, '--template', P.templateDir, '--background'], { cwd: P.root });
   if (r.code !== 0) return [500, { error: 'look', message: (r.stderr || r.stdout || '').trim().split('\n').slice(-3).join('\n') || `look.mjs run 結束碼 ${r.code}` }];
   return [200, { ok: true, ...lookRunState(ctx) }];
@@ -634,10 +636,12 @@ async function doRefFrame(ctx, body) {
 }
 
 // 版式與畫布（009 FR-120）：和 build 同一套判斷（plan.json format > 製作進度.md「版式」> 主軌寬高比）；剪輯台只讀，不寫 format
+// media：插入素材的可見區 [x, y, w, h]（lib/media.mjs mediaFrame 的 view；panel＝直式有講者面板），即時模擬照這個放，和成片一樣不壓字幕帶
 export function canvasInfo(projectDir, plan) {
   const r = resolveFormat({ projectDir, plan: isObj(plan) ? plan : null });
   const c = canvasOf(r.format);
-  return { format: r.format, source: r.detail, W: c.W, H: c.H, maxChars: c.caption.maxChars, captionBottom: c.caption.bottom, pip: c.pip.box };
+  const media = { panel: mediaFrame(c, { panel: true }).view, full: mediaFrame(c, { panel: false }).view, side: r.format === 'portrait' ? null : { contain: SIDE.view, cover: SIDE.view } };
+  return { format: r.format, source: r.detail, W: c.W, H: c.H, maxChars: c.caption.maxChars, captionBottom: c.caption.bottom, pip: c.pip.box, media };
 }
 
 // 構圖台（停點 ②、之後在剪輯台改構圖）：沒裁切的 work/rough.mp4＋qc.mjs framing 的分析（講者動作範圍、黑邊、各倍率的框、建議），照 rough.mp4 與版式快取
@@ -680,7 +684,7 @@ async function getState(ctx) {
   const media = scenes.filter((s) => isObj(s) && s.type === 'media' && s.id).map((s) => ({
     id: s.id, src: s.src ?? null, kind: mediaKind(s.src), url: s.src ? `/file/${String(s.src).split('/').map(encodeURIComponent).join('/')}` : null,
     enter: s.enter ?? null, exit: s.exit ?? null, volume: s.volume === undefined ? null : s.volume,
-    in: isNum(s.in) ? s.in : 0, speed: isNum(s.speed) ? s.speed : 1, pip: s.pip !== false, fit: s.fit === 'cover' ? 'cover' : 'contain', note: s.note || '',
+    in: isNum(s.in) ? s.in : 0, speed: isNum(s.speed) ? s.speed : 1, pip: s.pip !== false, fit: s.fit === 'cover' ? 'cover' : 'contain', side: !!s.side, note: s.note || '',
     info: mediaInfo(ctx, s.src),
   }));
   const rel = posix(path.relative(P.root, P.project));
@@ -704,6 +708,7 @@ async function getState(ctx) {
     sfxMemory: readMemory(ctx),
     schema: schema ? { scenes: schema.scenes, fx: schema.fx, sounds: schema.sounds, error: schema.error } : null,
     report: rep ? { ready: true, data: rep.report, fallback: rep.fallback ?? null, error: rep.error, issues: rep.issues, log: rep.log ?? null } : { ready: false },
+    requests: requestsInfo(P.project),
     preview: { player: { available: ctx.player.available, version: ctx.player.version ?? null, reason: ctx.player.reason ?? null }, composition: '/composition/index.html', ...builtInfo(ctx, plan) },
     build: { running: ctx.build.running },
     limits: LIMITS,
@@ -790,9 +795,52 @@ async function doLoudness(ctx, body) {
   }
 }
 
-async function doBuild(ctx) {
+// 剪輯台改了卡片文字的段：build 成功後跑 audit --only 量版面，✖／⚠ 併進 issues（剪輯台檢查清單標紅）
+export function auditIssues(json) {
+  const errors = [], warnings = [];
+  let r;
+  try { r = JSON.parse(json); } catch { return { errors: ['版面檢查（audit）沒有產出結果 → 請 AI 跑 audit.mjs --only 看原因'], warnings }; }
+  for (const e of r.errors || []) errors.push(`版面檢查：${e}`);
+  for (const w of r.warnings || []) warnings.push(`版面檢查：${w}`);
+  for (const f of r.findings || []) (f.level === 'error' ? errors : warnings).push(`[${f.id}] 版面：${f.msg}${f.fix ? ` → ${f.fix}` : ''}`);
+  return { errors, warnings };
+}
+
+// 修改單（剪輯台左側「複製給 AI」）：整份覆寫 work/feedback/editor-requests.md；AI 聽到「照修改單改」就讀這個檔
+// 修改單改完了沒：editor-requests.md 上次複製的時間與裡面的段；AI 照修改單改完，r<N>.md「改了哪幾段」每段寫一列
+//   「- <段 id>：<做了什麼>」（auto-edit-review references/editor-requests.md）。比修改單新的 r<N>.md 寫到的段＝已改，剪輯台標「已改」、可以點「看結果」
+export function requestsInfo(project) {
+  const fb = path.join(project, 'work', 'feedback'), file = path.join(fb, 'editor-requests.md');
+  let at;
+  try { at = fs.statSync(file).mtimeMs; } catch { return null; }
+  const ids = [...fs.readFileSync(file, 'utf8').matchAll(/^## \d+\. (\S+)/gm)].map((m) => m[1]);
+  const rounds = fs.readdirSync(fb).filter((f) => /^r\d+\.md$/.test(f)).map((f) => ({ f, t: fs.statSync(path.join(fb, f)).mtimeMs }))
+    .filter((x) => x.t > at).sort((a, b) => a.t - b.t);
+  const done = {};
+  for (const { f } of rounds) {
+    const sec = fs.readFileSync(path.join(fb, f), 'utf8').split(/^## 改了哪幾段[ \t]*$/m)[1]?.split(/^## /m)[0] || '';
+    for (const m of sec.matchAll(/^- (\S+?)：(.+)$/gm)) if (ids.includes(m[1])) done[m[1]] = { round: f.slice(0, -3), note: m[2].trim() };
+  }
+  return { at: Math.round(at), ids, done };
+}
+
+export function doRequests(ctx, body) {
+  const md = body?.markdown;
+  if (typeof md !== 'string' || !md.trim()) return [400, { error: 'empty', message: '修改單是空的' }];
+  if (md.length > 200000) return [400, { error: 'toolong', message: '修改單太長（超過 20 萬字）' }];
+  const dir = path.join(ctx.P.project, 'work', 'feedback');
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, 'editor-requests.md');
+  fs.writeFileSync(`${file}.tmp`, md.endsWith('\n') ? md : `${md}\n`);
+  fs.renameSync(`${file}.tmp`, file);
+  return [200, { ok: true, file: path.relative(ctx.P.root, file).split(path.sep).join('/') }];
+}
+
+async function doBuild(ctx, body = {}) {
   if (ctx.build.running) return [409, { error: 'busy', message: '已經在重新產生了，等它跑完' }];
   const P = ctx.P;
+  const ids0 = new Set(((readPlan(P.plan).data || {}).scenes || []).filter(isObj).map((x) => String(x.id)));
+  const auditIds = (Array.isArray(body?.audit) ? body.audit : []).map(String).filter((x) => ids0.has(x)).slice(0, 12);
   ctx.build = { running: true, log: '', code: null, ok: null, startedAt: Date.now(), finishedAt: null };
   // 瘦臉底片過期而且能跑：先跑 look.mjs run（偵測臉部＋套用瘦臉），成功才 build（contracts/cli-006.md §6）
   const planData = readPlan(P.plan).data;
@@ -805,10 +853,19 @@ async function doBuild(ctx) {
     }
   }
   const r = await runNode([BUILD, '--project', P.project, '--template', P.templateDir], { cwd: P.root, onData: (s) => { ctx.build.log += s; } });
+  const issues = issuesFromText(ctx.build.log);
+  let audit = null;
+  if (r.code === 0 && auditIds.length) {
+    ctx.build.log += `\n量版面（audit --only ${auditIds.join(',')}）…\n`;
+    const a = await runNode([AUDIT, '--project', P.project, '--only', auditIds.join(','), '--json'], { cwd: P.root });
+    audit = { ids: auditIds, ...auditIssues(a.stdout) };
+    ctx.build.log += audit.errors.length || audit.warnings.length ? [...audit.errors.map((x) => `✖ ${x}`), ...audit.warnings.map((x) => `⚠ ${x}`)].join('\n') + '\n' : `✓ ${auditIds.join('、')} 版面沒有問題\n`;
+    issues.errors.push(...audit.errors); issues.warnings.push(...audit.warnings);
+  }
   Object.assign(ctx.build, { running: false, code: r.code, ok: r.code === 0, finishedAt: Date.now() });
   ctx.report = null;
   ctx.player = preparePlayer(ctx);
-  return [200, { ok: ctx.build.ok, code: r.code, log: ctx.build.log, issues: issuesFromText(ctx.build.log), seconds: r3((ctx.build.finishedAt - ctx.build.startedAt) / 1000) }];
+  return [200, { ok: ctx.build.ok, code: r.code, log: ctx.build.log, issues, audit, seconds: r3((ctx.build.finishedAt - ctx.build.startedAt) / 1000) }];
 }
 
 function hostOk(ctx, req) {
@@ -837,7 +894,8 @@ async function handle(ctx, req, res) {
     if (p === '/api/save') { const [s, o] = await doSave(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/refframe') { const [s, o] = await doRefFrame(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/look/run') { const [s, o] = await doLookRun(ctx); return sendJson(res, s, o); }
-    if (p === '/api/build') { const [s, o] = await doBuild(ctx); return sendJson(res, s, o); }
+    if (p === '/api/build') { const [s, o] = await doBuild(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/check') { const rep = await getReport(ctx, { fresh: true }); return sendJson(res, 200, reportOut(rep)); }
     if (p === '/api/shutdown') {
@@ -871,14 +929,14 @@ async function handle(ctx, req, res) {
   if (p === '/api/waveform') return sendJson(res, 200, await getPeaks(ctx));
   if (p === '/api/look/face') {
     try {
-      const out = faceImage({ projectDir: P.project, t: Number(u.searchParams.get('t')) || 0, slim: Number(u.searchParams.get('slim')) || 0, cache: (ctx.lookCache ??= {}) });
+      const out = faceImage({ projectDir: P.project, t: Number(u.searchParams.get('t')) || 0, slim: Number(u.searchParams.get('slim')) || 0, beauty: Number(u.searchParams.get('beauty')) || 0, cache: (ctx.lookCache ??= {}) });
       if (Buffer.isBuffer(out)) { res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store', 'Content-Length': out.length }); return res.end(out); }
       return sendJson(res, 404, out);
     } catch (e) { return sendJson(res, 500, { error: 'look', message: e.message }); }
   }
   if (p === '/api/version') {
     const plan = readPlan(P.plan), srt = readSrt(P.srt);
-    return sendJson(res, 200, { plan: { exists: plan.exists, mtime: plan.mtime, hash: plan.hash }, srt: { exists: srt.exists, hash: srt.hash }, ...builtInfo(ctx, plan), build: { running: ctx.build.running } });
+    return sendJson(res, 200, { plan: { exists: plan.exists, mtime: plan.mtime, hash: plan.hash }, srt: { exists: srt.exists, hash: srt.hash }, ...builtInfo(ctx, plan), build: { running: ctx.build.running }, requests: requestsInfo(P.project) });
   }
   if (p === '/api/build') return sendJson(res, 200, { ...ctx.build, seconds: ctx.build.startedAt ? r3(((ctx.build.finishedAt || Date.now()) - ctx.build.startedAt) / 1000) : 0 });
   if (p.startsWith('/editor/')) {

@@ -54,3 +54,12 @@
 /* 剪輯台：dip（過黑，在字幕下面）、整支淡入淡出（連字幕一起） */
 #edit-dip { position: absolute; inset: 0; background: #000000; opacity: 0; z-index: 58; pointer-events: none; }
 #edit-fade { position: absolute; inset: 0; background: #000000; opacity: 0; z-index: 70; pointer-events: none; }
+
+/* 右側步驟清單（plan.json 錄影段的 side；lib/media.mjs SIDE）：直式／窄的錄影靠左，右邊一張卡列步驟，講到哪條亮哪條 */
+.mside { position: absolute; box-sizing: border-box; border-radius: 20px; background: var(--sc-fs-card); border: 2px solid var(--sc-fs-card-line); box-shadow: var(--sc-lift); overflow: hidden; }
+.mside__bar { height: 112px; box-sizing: border-box; padding: 0 40px; display: flex; align-items: center; background: var(--sc-fs-bar); color: var(--sc-fs-bar-ink); font: 900 56px/1 var(--sc-font); white-space: nowrap; }
+.mside__list { padding: 32px; }
+.mside__item { position: relative; height: 100px; box-sizing: border-box; display: flex; align-items: center; gap: 24px; padding: 0 24px; opacity: .4; }
+.mside__hi { position: absolute; inset: 8px 0; border-radius: 16px; background: var(--v2-node-tint); opacity: 0; }
+.mside__num { position: relative; flex: none; width: 60px; height: 60px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font: 800 34px/60px var(--sc-font); text-align: center; }
+.mside__txt { position: relative; font: 700 48px/1.2 var(--sc-font); color: var(--sc-fs-ink); white-space: nowrap; }

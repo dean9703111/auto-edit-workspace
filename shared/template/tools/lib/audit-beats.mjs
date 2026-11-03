@@ -10,7 +10,7 @@
 //   示意動畫（x-scene）的分鏡多兩欄「插圖元件（狀態）」「位置」：插圖元件只能是畫廊的 20 個、ILLUS.register 過的、illus-local/ 有檔的（契約 illus.md §5.6）；「—」＝圖示組合，不查
 //   parseIllusLists(md)                 → Map(段 id → { line, rows: [{ name, source, how, line }] })：「#### 插圖清單 <段 id>」（舊名「素材清單」也認）
 //   illusListFindings({ item, list, html, local }) → ✖ 來源不是三種之一、「畫廊」的元件畫廊沒有、「新建 SVG」還沒畫（illus-local/ 沒有那個檔）
-//   beatFindings 另外反向比：檔裡有聚焦、退焦、漂浮、鏡頭的 P.*，分鏡表一拍都沒寫 → ⚠ 分鏡沒寫的動作（多半是範例沒改到的殘留）
+//   beatFindings 另外反向比：檔裡有聚焦、退焦、呼吸、鏡頭的 P.*，分鏡表一拍都沒寫 → ⚠ 分鏡沒寫的動作（多半是範例沒改到的殘留）
 //   sheetPlanFindings({ item, sheet, cues, tplRules }) → [{ msg, fix }]  build --check 用（停點 ③ 前，還沒有動畫檔可量）：
 //     拍序和口播相反、拍落在段尾淡出之後、照範例檔頭【D 下限】第一拍離段起點／相鄰兩拍／最後一拍到段尾放不下（差 > PLAN_TOL 才報）；都是 ⚠
 import { parseTime, cueSeconds } from './time.mjs';
@@ -21,7 +21,7 @@ export const BEAT_TOL = 0.5;   // 分鏡的綁句和 P.at 差 ≤ 0.5 s 算對�
 export const BEAT_HEADER = ['拍', '講到（綁句）', '畫面上出現什麼', '動態（設計系統語彙）', '焦點', '音效拍點'];
 export const BEAT_HEADER_ILLUS = ['插圖元件（狀態）', '位置'];   // 示意動畫段接在 BEAT_HEADER 後面的兩欄
 export const BEAT_TITLE = '#### 動畫分鏡';
-// shared/template/BEATS.md §2（＝design-system.md §14.1）的 47 個具名動作 → 對應的 P.*（build＝main.mjs 內建，custom 檔裡不會出現）
+// shared/template/BEATS.md §2（＝design-system.md §14.1，之後拿掉講者慢推、漂浮）的 45 個具名動作 → 對應的 P.*（build＝main.mjs 內建，custom 檔裡不會出現）
 export const VOCAB = [
   ['進場', '擦開', 'wipe'], ['進場', '滑入', 'drift'], ['進場', '彈出', 'pop'], ['進場', '錯拍彈出', 'pop'], ['進場', '長出', 'grow'], ['進場', '抽屜抽出', 'slide'], ['進場', '淡入', 'in'],
   ['字', '逐字上浮', 'chars'], ['字', '逐字彈出', 'chars'], ['字', '逐字落下', 'chars'], ['字', '打字', 'type'], ['字', '數字滾動', 'count'],
@@ -30,18 +30,20 @@ export const VOCAB = [
   ['焦點', '聚焦', 'spot'], ['焦點', '預覽態', 'spot'], ['焦點', '走過', 'spot'], ['焦點', '退焦', 'dim'], ['焦點', '回均衡', 'spot'],
   ['鏡頭', '鏡頭慢推', 'cam'], ['鏡頭', '鏡頭跟焦點', 'cam'], ['鏡頭', '鏡頭回正', 'cam'],
   ['移動', '游標移動', 'morph'],
-  ['微動', '漂浮', 'idle'], ['微動', '呼吸', 'idle'], ['微動', '背景環境', 'ambient'],
+  ['微動', '呼吸', 'idle'], ['微動', '背景環境', 'ambient'],
   ['退場', '擦掉', 'wipeOut'], ['退場', '抽屜收回', 'slideOut'], ['退場', '淡出', 'out'],
   ['轉場', '色帶擦開', 'build'], ['轉場', '子母畫面飛入', 'build'], ['轉場', '色帶收回', 'build'], ['轉場', '換卡不換景', 'wipe'], ['轉場', '章節色塊擦入', 'wipe'], ['轉場', '章號重拍', 'pop'],
 ].map(([kind, name, prim]) => ({ kind, name, prim }));
 // 拍型表的縮寫：「開場（依前段）」＝從講者來的色帶擦開＋子母畫面飛入＋長出，或從全畫面來的換卡不換景（§14.2）
 export const VOCAB_EXTRA = [{ kind: '轉場', name: '開場', prim: 'build' }];
+// 拿掉的動作：舊分鏡寫了不報錯（漂浮：使用者 11-03「出現的動畫窗都會輕微晃動」，kit 的 P.idle 不再位移）
+export const VOCAB_RETIRED = { 漂浮: 'idle' };
 const BY_NAME = new Map([...VOCAB, ...VOCAB_EXTRA].map((v) => [v.name, v]));
 // 「對應」欄第一個 P.* 以外也算做到的寫法（⚠ 用了沒做的動作時一起找）：沒有聚焦組的段，回均衡＝P.dim(…, {to: 1})；聚焦組裡的退焦＝P.spot 的預覽態或 dim
 export const VOCAB_ALT = { 回均衡: ['dim'], 退焦: ['spot'] };
 
 // 反向比對的動作（P.* → 分鏡要寫的名稱）：進場、字、線、強調是範例每拍的細節，分鏡常只寫主要動作，不反向比
-export const UNPLANNED = { spot: '聚焦／預覽態／走過／回均衡', dim: '退焦', idle: '漂浮／呼吸', cam: '鏡頭慢推／鏡頭跟焦點／鏡頭回正' };
+export const UNPLANNED = { spot: '聚焦／預覽態／走過／回均衡', dim: '退焦', idle: '呼吸', cam: '鏡頭慢推／鏡頭跟焦點／鏡頭回正' };
 
 const cells = (line) => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
 const norm = (s) => s.replace(/（[^（）]*）|\([^()]*\)/g, '').replace(/\s+/g, '');   // 「焦點（觀眾看哪）」這種補充說明不算錯
@@ -173,7 +175,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
   sheet.rows.forEach((row, k) => {
     const beat = row.beat || String(k + 1);
     for (const w of row.moves) {
-      if (BY_NAME.has(w)) continue;
+      if (BY_NAME.has(w) || Object.hasOwn(VOCAB_RETIRED, w)) continue;
       err('beats-vocab', 0, `分鏡第 ${beat} 拍的動態「${w}」不在語彙表（shared/template/BEATS.md §2）`, `改成語彙表的名稱，例如「${closest(w)}」；括號裡寫對象與參數，例「彈出（站）」`, { beat, word: w });
     }
     for (const { ref, off } of row.refs) {
@@ -214,6 +216,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
   for (const row of sheet.rows) for (const w of row.moves) {
     const v = BY_NAME.get(w);
     if (v) [v.prim, ...(VOCAB_ALT[v.name] || [])].forEach((p) => planned.add(p));
+    if (Object.hasOwn(VOCAB_RETIRED, w)) planned.add(VOCAB_RETIRED[w]);
   }
   const anyMoves = sheet.rows.some((row) => row.moves.length);   // 動態欄整欄都是「—」：沒寫就沒得比
   for (const [p, names] of Object.entries(UNPLANNED)) {

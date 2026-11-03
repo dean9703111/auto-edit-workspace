@@ -115,11 +115,10 @@
     P.count('#xn-nA', T2 - 0.5, { from: 20, to: 32, dur: 0.5 });
     P.morph('#xn-trackA', T2 - 0.5, { width: 960 }, { from: { width: 600 }, dur: 0.5, ease: P.V2.EASE.move });   // 同一根軌道撐開，填充（寬 100%）跟著伸長
     P.in('#xn-overA', T2 - 0.5, { dur: 0.3 });
-    // 拍 3 講到「32」數字落定：重拍、圖示漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）→ ＋0.6 卡片漂浮
+    // 拍 3 講到「32」數字落定：重拍、圖示漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）
     P.punch('#xn-nA', T2, { scale: 1.12 });
     P.ripple('#xn-icoA', T2);
     P.marker('#xn-unitA', T2 + 0.1);
-    P.idle('#xn-cardA', T2 + 0.6, { y: 3, period: 3.2, until: T3 - 1.3 });
 
     // 拍 4 第二個數字：第二張卡提早 1.2 秒彈出並開始數（同一把尺：軌道 960 ＝ 32 段），講到「28」時落定：重拍、漣漪，第一張退焦
     P.pop('#xn-cardB', T3 - 1.2);
@@ -130,9 +129,8 @@
     P.punch('#xn-nB', T3, { scale: 1.12 });
     P.ripple('#xn-icoB', T3);
     P.dim('#xn-cardA', T3, { to: 0.6 });
-    // 拍 5 ＋0.6 第二張聚焦（放大抬起、主色亮框）→ ＋1.1 漂浮
+    // 拍 5 ＋0.6 第二張聚焦（放大抬起、主色亮框）
     P.spot('#xn-cardB', '#xn-cardB', T3 + 0.6, { scale: 1.03, lift: -8 });
-    P.idle('#xn-cardB', T3 + 1.1, { y: 3, period: 3.2 });
 
     // 收：講完 2 秒回均衡（第一張亮回、第二張亮框收掉），主數字呼吸；完成態停到段尾
     const TR = T3 + 2.0;

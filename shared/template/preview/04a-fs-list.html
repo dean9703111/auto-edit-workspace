@@ -34,6 +34,9 @@
   #pv-fs-list #pv-wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
   #pv-fs-list #pv-wBody { width: 1176px; height: 580px; }
   #pv-fs-list #pv-wBody > .sc-row { width: calc(100% - 2 * var(--sc-pad-card)); }
+  #pv-fs-list #pv-fVis { position: absolute; left: 1176px; top: 128px; width: 500px; height: 580px; display: none; place-items: center; }
+  #pv-fs-list [data-wide] #pv-fVis { display: grid; }
+  #pv-fs-list #pv-fVis > [data-illus] { width: 380px; height: 380px; }
 </style>
 </head>
 <body>
@@ -45,11 +48,12 @@
       <div id="pv-aWrap" class="fill">
         <div id="pv-wCard" class="sc-wcard">
           <div class="sc-wcard__bar"><span class="sc-opt">AI 找得出的 NG</span></div>
-          <div id="pv-wBody" data-layout="col" data-gap="lg">
+          <div id="pv-wBody" data-layout="col" data-gap="lg" data-wide-keep>
             <div id="pv-fRow1" class="sc-row" data-slot><span class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="m17 2 4 4-4 4" /> <path class="stroke-draw" pathLength="1" d="M3 11v-1a4 4 0 0 1 4-4h14" /> <path class="stroke-draw" pathLength="1" d="m7 22-4-4 4-4" /> <path class="stroke-draw" pathLength="1" d="M21 13v1a4 4 0 0 1-4 4H3" /> </svg></span><span class="sc-t56 sc-w500 sc-opt">講錯重來：只留最後一次</span></div>
             <div id="pv-fRow2" class="sc-row" data-slot><span class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect class="stroke-draw" pathLength="1" x="14" y="4" width="4" height="16" rx="1" /> <rect class="stroke-draw" pathLength="1" x="6" y="4" width="4" height="16" rx="1" /> </svg></span><span class="sc-t56 sc-w500 sc-opt">卡詞：講到一半停下</span></div>
             <div id="pv-fRow3" class="sc-row" data-slot><span class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <line class="stroke-draw" pathLength="1" x1="10" x2="14" y1="2" y2="2" /> <line class="stroke-draw" pathLength="1" x1="12" x2="15" y1="14" y2="11" /> <circle class="stroke-draw" pathLength="1" cx="12" cy="14" r="8" /> </svg></span><span class="sc-t56 sc-w500 sc-opt">長停頓：交給 <span class="sc-kw">auto-editor</span></span></div>
           </div>
+          
         </div>
       </div>
     </div>
@@ -90,6 +94,7 @@ window.__PREVIEW = {"key":"fs-list","duration":6,"cues":[]};
     // 回均衡：最後一條講完 2 秒（不晚於段尾前 1.6 秒）全部亮回
     const endAt = Math.min(rowAt[rowAt.length - 1] + 2.0, D - 1.6);
     if (rowAt.length > 1 && endAt > rowAt[rowAt.length - 1] + 0.6) for (let i = 1; i < rowAt.length; i++) P.dim('#pv-fRow' + i, endAt, { to: 1 });
+    // 主視覺（全寬才看得到）：標題後彈出，每講到一項輕輕重拍一下（跟著口播動）
     tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
     tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 5.5);
     P.end(D);

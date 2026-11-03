@@ -444,6 +444,13 @@ test('標註的 ✖／⚠ 訊息：每則都照契約原文、帶「→」改法
   // 沒寫 stepsSide：壓到紅框自動換到錄影右上（右緣 208＋1504−32）
   const j3b = run([m({ marks: [{ at: '+0', until: '+3', box: [0, 0, 40, 20] }], steps: [{ at: '+0', text: '第一步' }] })]);
   assert.doesNotMatch(j3b.warnings.join('\n'), /STEP 膠囊/, '換到右上就不會壓到');
+  // 有小節角標（sections）：橫式錄影段右上角露出角標 → 膠囊不自動換到右上（留左邊照樣 ⚠）；紅框在角標底下 ⚠
+  const tag = { id: 'c01', scene: 'chapter-tag', from: '#1', to: '#1e', slots: { num: '01', name: '測試' } };
+  const j3c = run([tag, m({ marks: [{ at: '+0', until: '+3', box: [0, 0, 40, 20] }, { at: '+3.2', until: '+5', box: [600, 30, 40, 20] }], steps: [{ at: '+0', text: '第一步' }] })],
+    { sections: [{ at: '#2', name: '第一節' }] });
+  const w3c = j3c.warnings.join('\n');
+  assert.match(w3c, /STEP 膠囊（x 240–478、y 40–120）在 0:07\.00 壓到 marks\[0\] 的紅框/, '右上有角標，膠囊留在左邊');
+  assert.match(w3c, /marks\[1\] 的紅框在 0:10\.20 被右上角的小節角標（x 1452–1696、y 16–96）蓋住 → 用 moves 把那一塊推到畫面中間/);
   assert.match(e3, /arrows\[0\] 從 "n" 方向放會超出安全區 → 改 "from": "ne"（放得下）/);
   assert.match(w3, /arrows\[1\] 找不到不擋字的位置（超出安全區），已拿掉（作者規則：找不到位置就不放）→ 換一個 to/);
 

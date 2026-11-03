@@ -100,12 +100,13 @@
     <div class="fr-legend" id="legend"></div>
     <ul class="fr-facts" id="facts"></ul>
     <div class="fr-sec">
-      <h2>講者調光、瘦臉（預設關閉）</h2>
+      <h2>講者調光、瘦臉、美顏（預設關閉）</h2>
       <label class="fr-lk"><input type="checkbox" id="colorOn"><span>調光</span><input id="color" type="range" min="0" max="1" step="0.05" value="0"><output id="colorOut">關</output></label>
       <label class="fr-lk"><input type="checkbox" id="slimOn"><span>瘦臉</span><input id="slim" type="range" min="0" max="1.2" step="0.05" value="0"><output id="slimOut">關</output></label>
+      <label class="fr-lk" title="磨皮、膚色提亮、淡化黑眼圈（只動臉，眼睛、眉毛、嘴巴不動）"><input type="checkbox" id="beautyOn"><span>美顏</span><input id="beauty" type="range" min="0" max="1" step="0.05" value="0"><output id="beautyOut">關</output></label>
       <p class="fr-note" id="lookNote"></p>
       <button id="btnDetect" hidden>偵測臉部（會先儲存）</button>
-      <div id="faces" class="look-faces" hidden><figure><img data-k="before" alt="原本"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="瘦臉後"><figcaption>後</figcaption></figure><p class="look-msg fr-note"></p></div>
+      <div id="faces" class="look-faces" hidden><figure><img data-k="before" alt="原本"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="套用後"><figcaption>後</figcaption></figure><p class="look-msg fr-note"></p></div>
     </div>
     <p class="fr-note" id="note"></p>
     <p class="fr-msg" id="msg" role="status"></p>

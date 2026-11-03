@@ -139,8 +139,8 @@ const isTextDecl = (d) => !d || !d.type || TEXT_TYPES.has(d.type);
 function checkList(where, o, n, def, errors) {
   if (!Array.isArray(n)) { errors.push(`${where} 要維持清單（陣列）`); return; }
   const min = def?.min ?? (def ? 0 : Math.min(1, o.length));
-  const max = def?.maxItems ?? (def ? Infinity : o.length);
-  if (n.length < min || n.length > max) errors.push(`${where} 有 ${n.length} 項，要在 ${min}–${max === Infinity ? '不限' : max} 項之間`);
+  if (n.length > o.length) { errors.push(`${where} 有 ${n.length} 項，比原本多（原本 ${o.length} 項）→ 剪輯台不能加項目，要加請寫進修改單給 AI`); return; }
+  if (n.length < min) errors.push(`${where} 有 ${n.length} 項，至少要 ${min} 項`);
   const objs = o.filter(isObj);
   const itemDef = def?.item || null;
   const textKey = (k) => (itemDef ? itemDef[k] && isTextDecl(itemDef[k]) : k !== 'icon' && k !== 'at');
@@ -358,16 +358,18 @@ function scanJson(text, start) {
     return null;
   }
 }
-// 第一層 look（contracts/look.md §7.1）：{ color, slim } 兩個都要有；null＝拿掉（回到 kit/look.json 預設）
+// 第一層 look（contracts/look.md §7.1）：{ color, slim } 兩個都要有、beauty（美顏 0–1）選填；null＝拿掉（回到 kit/look.json 預設）
 export function sanitizeLook(v) {
   if (v === null) return { look: null, errors: [] };
   if (!isObj(v)) return { look: undefined, errors: ['look 要是 { "color": 0–1, "slim": 0–1.2 } 或 null（恢復預設）'] };
   const errors = [];
-  for (const k of Object.keys(v)) if (!['color', 'slim'].includes(k)) errors.push(`look 不能有「${k}」→ 只能寫 color、slim`);
+  for (const k of Object.keys(v)) if (!['color', 'slim', 'beauty'].includes(k)) errors.push(`look 不能有「${k}」→ 只能寫 color、slim、beauty`);
   const [c0, c1] = LOOK_LIMITS.color, [s0, s1] = LOOK_LIMITS.slim;
   if (!isNum(v.color) || v.color < c0 || v.color > c1) errors.push(`look.color 要是 ${c0}–${c1} 的數字，現在是 ${JSON.stringify(v.color)}`);
   if (!isNum(v.slim) || v.slim < s0 || v.slim > s1) errors.push(`look.slim 要是 ${s0}–${s1} 的數字，現在是 ${JSON.stringify(v.slim)}`);
-  return errors.length ? { look: undefined, errors } : { look: { color: r2(v.color), slim: r2(v.slim) }, errors };
+  const [b0, b1] = LOOK_LIMITS.beauty;
+  if ('beauty' in v && (!isNum(v.beauty) || v.beauty < b0 || v.beauty > b1)) errors.push(`look.beauty 要是 ${b0}–${b1} 的數字，現在是 ${JSON.stringify(v.beauty)}`);
+  return errors.length ? { look: undefined, errors } : { look: { color: r2(v.color), slim: r2(v.slim), ...(v.beauty > 0 ? { beauty: r2(v.beauty) } : {}) }, errors };
 }
 // 第一層 theme（design-system §10）：亮／暗；不寫＝亮色
 export function sanitizeTheme(v) {

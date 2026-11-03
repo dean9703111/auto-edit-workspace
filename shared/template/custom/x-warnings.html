@@ -22,8 +22,8 @@
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
   3. 綁句：<script> 開頭 W1–W3 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
-  只有 2 條：刪第 3 列（#xwarn-r3）、第 3 張示意（#xwarn-p3）、script 開頭的「, W3 = P.at(…)」、「第 3 條」那 6 行，
-  再把收尾 const ALL 裡的 W3 改 W2、第 2 條 P.idle 的 until: W3 − 0.1 改 ALL − 0.1、收尾 spot 裡的「, #xwarn-r3」拿掉；清單會自己縮，右邊示意區大小不變。
+  只有 2 條：刪第 3 列（#xwarn-r3）、第 3 張示意（#xwarn-p3）、script 開頭的「, W3 = P.at(…)」、「第 3 條」那 5 行，
+  再把收尾 const ALL 裡的 W3 改 W2、收尾 spot 裡的「, #xwarn-r3」拿掉；清單會自己縮，右邊示意區大小不變。
 
   【綁句欄位】
   W1 = P.at('#52@金鑰')、W2 = P.at('#53@覆蓋')、W3 = P.at('#54@再看')：講到那一條關鍵詞的時刻，那一條彈出、右邊換成那一張示意，0.6 秒後聚焦。
@@ -105,21 +105,18 @@
     else { P.wipe('#xwarn-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xwarn-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xwarn-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
 
-    // 拍 1 第 1 條：那一列從下彈出 → ＋0.12 字逐字浮出、＋0.15 圖示描線；右邊示意區和第 1 張一起彈出、＋0.3 圖示描線 → ＋0.6 聚焦 → ＋0.9 漂浮
+    // 拍 1 第 1 條：那一列從下彈出 → ＋0.12 字逐字浮出、＋0.15 圖示描線；右邊示意區和第 1 張一起彈出、＋0.3 圖示描線 → ＋0.6 聚焦
     P.pop('#xwarn-r1', W1);  P.chars('#xwarn-t1', W1 + 0.12);  P.icon('#xwarn-ico1', W1 + 0.15);
     P.pop('#xwarn-panel', W1, { from: 0.9 });  P.icon('#xwarn-pico1', W1 + 0.3);
     P.spot('#xwarn-r1', '#xwarn-r1', W1 + 0.6, { scale: 1.04, lift: -8, dim: 0.6 });
-    P.idle('#xwarn-r1', W1 + 0.9, { y: 3, period: 2.8, until: W2 - 0.1 });
     // 拍 2 第 2 條：同拍 1；右邊上一張淡出、這一張在同一個位置彈出；＋0.6 聚焦移過來（上一條壓暗 0.6）
     P.pop('#xwarn-r2', W2);  P.chars('#xwarn-t2', W2 + 0.12);  P.icon('#xwarn-ico2', W2 + 0.15);
     P.out('#xwarn-p1', W2);  P.pop('#xwarn-p2', W2 + 0.1, { from: 0.9, dy: 16 });  P.icon('#xwarn-pico2', W2 + 0.3);
     P.spot('#xwarn-r1, #xwarn-r2', '#xwarn-r2', W2 + 0.6, { scale: 1.04, lift: -8, dim: 0.6 });
-    P.idle('#xwarn-r2', W2 + 0.9, { y: 3, period: 2.8, until: W3 - 0.1 });
-    // 拍 3 第 3 條：同拍 2（只有 2 條時刪掉這 6 行，見檔頭）
+    // 拍 3 第 3 條：同拍 2（只有 2 條時刪掉這 5 行，見檔頭）
     P.pop('#xwarn-r3', W3);  P.chars('#xwarn-t3', W3 + 0.12);  P.icon('#xwarn-ico3', W3 + 0.15);
     P.out('#xwarn-p2', W3);  P.pop('#xwarn-p3', W3 + 0.1, { from: 0.9, dy: 16 });  P.icon('#xwarn-pico3', W3 + 0.3);
     P.spot('#xwarn-r1, #xwarn-r2, #xwarn-r3', '#xwarn-r3', W3 + 0.6, { scale: 1.04, lift: -8, dim: 0.6 });
-    P.idle('#xwarn-r3', W3 + 0.9, { y: 3, period: 2.8, until: W3 + 1.9 });   // 停在回均衡前 0.1 秒
 
     // 收：最後一條講完 2 秒回均衡（全部亮回、亮框收掉；右邊停在最後一張），完成態停到段尾
     const ALL = W3 + 2.0;                              // 有「這幾點都要注意」那一句就改成 P.at('#55')

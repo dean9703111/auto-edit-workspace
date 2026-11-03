@@ -82,7 +82,7 @@
 - 每段放截圖：草稿 plan.json build 後跑 `node shared/template/tools/qc.mjs storyboard --project projects/<專案>`，把它最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每一段，下面寫「截圖觀察」（有沒有擋臉、壓手勢、文字問題）。不要自己算秒數跑 `snapshot --at`。
   - 截圖檔名：一段一張是 `s20.png`；一段多張是 `s20-1.png`、`s20-2.png`…（條列分組、錄影標註各一張）。**只貼這一次印出來的那幾行**：同一段張數變了（例：上一版 s20 是三條的清單 `s20-1.png`～`s20-3.png`，這一版改成情境動畫只截 `s20.png`），工具會清掉同一段的舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪。自己改名的方案圖（`s05-A.png`）不會被動到。
   - 每張後面的「為什麼」：`完成態（段尾前 0.6 秒）`／`完成態（退場前 0.1 秒）`／`完成態（動畫停住的最後一刻）`＝這段內容全部出現、還沒退場的那一刻（工具讀動畫時間軸算，03 側邊欄、數字滾動卡會自動往前）；`第 1 條`、`第 2–3 條`＝條列的那一組進場完成之後（進場動畫重疊的幾條算同一組，所以三條可能只有一張）；`…到位`＝錄影標註；`段很短，截中點`；`…（整段都在動，沒有停住的畫面）`＝循環動畫，截圖觀察寫「循環動畫」即可。
-  - 用了動態 v2 原語的段，每個拍點各截一張：`抽屜抽出後 0.3 秒：「<字>」`、`焦點抬起：「<字>」`；最後一拍之後畫面沒再變，就不另截完成態（最後一拍的「為什麼」加 `（完成態）`）。漂浮、背景慢拉這類微動不算動畫。`qc.mjs observe` 另出 `work/observe/beat-NN.jpg`：同一套時刻、從成片抽格，對照分鏡截圖看 render 出來的拍點對不對。
+  - 用了動態 v2 原語的段，每個拍點各截一張：`抽屜抽出後 0.3 秒：「<字>」`、`焦點抬起：「<字>」`；最後一拍之後畫面沒再變，就不另截完成態（最後一拍的「為什麼」加 `（完成態）`）。呼吸、光暈這類微動不算動畫。`qc.mjs observe` 另出 `work/observe/beat-NN.jpg`：同一套時刻、從成片抽格，對照分鏡截圖看 render 出來的拍點對不對。
   - 截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard；還是一樣就在「需要我決定的事」列出段號和秒數，不要自己改秒數跑 `snapshot --at`。
   - 印 `✖ <id> 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…`：不是版面的問題，不要改 plan.json；照 → 跑 `node shared/template/tools/media.mjs verify-rough --project projects/<專案>` 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報（全黑本來就是旁白區間）。
 - 最後一節「需要我決定的事」固定有金句候選表，勾了才上（style.md「字卡文字」）：
@@ -101,7 +101,7 @@
   | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
   |---|---|---|---|---|---|
   | 0 | 段起點 | 主卡＋標題「多機錄影的難題」 | 換卡不換景；＋0.5 逐字上浮（標題） | 標題 | — |
-  | 4 | `#38@兩支` | 站 1 亮起 | 鏡頭跟焦點（−0.2）；聚焦（站 1）；漣漪（站 1 圖示）；漂浮 | 站 1 | — |
+  | 4 | `#38@兩支` | 站 1 亮起 | 鏡頭跟焦點（−0.2）；聚焦（站 1）；漣漪（站 1 圖示） | 站 1 | — |
   | 收 | `#44@確認`＋2.6 | 四站＋三條實線 | 回均衡；鏡頭回正 | 整體 | — |
   ```
 
@@ -255,7 +255,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 |---|---|---|---|
 | `version` | ✓ | `1` | 固定 |
 | `format` | 直式必填 | `"landscape"`、`"portrait"` | 版式（`AGENTS.md`「版式」）：直式寫 `"portrait"`，橫式不寫。要和 `work/製作進度.md` 開工決策表的「版式」一樣，不一樣時 `--check` ✖ |
-| `look` | | `false` 或 `{ "color": 0–1, "slim": 0–1.2 }` | 講者調光與瘦臉（第 7 節）。不寫＝用 `shared/template/kit/look.json`（預設兩個都是 0＝關）；`false`＝兩個都關。使用者要求才寫（要開建議 `{ "color": 0.8, "slim": 0.6 }`），剪輯台「講者」也會寫 |
+| `look` | | `false` 或 `{ "color": 0–1, "slim": 0–1.2, "beauty": 0–1 }` | 講者調光、瘦臉、美顏（第 7 節；`beauty` 選填）。不寫＝用 `shared/template/kit/look.json`（預設都是 0＝關）；`false`＝都關。使用者要求才寫（要開建議 `{ "color": 0.8, "slim": 0.6 }`，美顏 `"beauty": 0.5`），構圖台、剪輯台「講者」也會寫 |
 | `frame` | | `[x, y, w, h]` | 構圖裁切（2.2 第 0 步）：1920×1080 座標、16:9；底片照它裁切放大回 1920×1080。不寫＝原樣 |
 | `speakerBox` | 強烈建議 | `[x1, y1, x2, y2]` | 講者框（2.2）。有 `frame` 時是裁切後的座標。沒寫會提醒，也無法檢查碰撞 |
 | `sideShift` | | `0`–`960`，預設 `480` | 03 側邊欄時講者往右推多少 px（R4） |
@@ -264,7 +264,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `rhythm` | | `"continuous"`（預設）或 `"spaced"` | 卡片節奏。`continuous`＝連續覆蓋（style.md）：報「沒有畫面的區間」與「講者會閃一下」；只有使用者說要留露臉空檔時才寫 `"spaced"` |
 | `outro` | | 物件 | 結尾配樂：`{ "from": "#N" }`（從第 N 句起播到片尾，淡入淡出自動；`music`、`volume`、`fadeOut` 選填）。使用者要片尾配樂時才寫（R5.2） |
 | `chapterBadge` | | `true`（預設）或 `false` | 章節角標自動常駐右上角：章節開始（01 章節轉場結束；沒有 01 時是 02 章節角標段開始）一直到下一章或片尾配樂，子母畫面、全幕時自動淡出。不要常駐才寫 `false`（回到舊的行為：02 段只顯示那幾秒、`chtag` 附件照舊）。使用者說不要角標時才寫 |
-| `sections` | | 陣列 | 小節角標：`[{ "at": "#N", "name": "STEP 1｜設定資料夾" }]`（講稿 `###` 小節的第一句、小節名 ≤ 16 字）。有寫時右上角角標改成「章號＋目前小節」，子母畫面、全幕也露出，錄影段由 STEP 膠囊接手。講稿有 `###` 而沒寫時 `--check` 會 ⚠ 並印出可以直接貼的整行 |
+| `sections` | | 陣列 | 小節角標：`[{ "at": "#N", "name": "STEP 1｜設定資料夾" }]`（講稿 `###` 小節的第一句、小節名 ≤ 12 字）。有寫時右上角角標改成「章號＋目前小節」（寬度跟著小節名），子母畫面、全幕、錄影段也露出（橫式錄影段：旁邊有空位就放空位，沒有就貼錄影畫面右上角；錄影的 `steps` 和小節名重複時不畫、⚠ 請刪掉；說明卡、箭頭自動避開，紅框被蓋到 ⚠）。講稿有 `###` 而沒寫時 `--check` 會 ⚠ 並印出可以直接貼的整行 |
 | `theme` | | `"light"`（預設，不寫）或 `"dark"` | 主題：暗色時 build 換 `bg-*-dark.jpg`、所有合成 `<html data-theme="dark">`；只換顏色 token，版面與動態不變。剪輯台可以切；AI 只在使用者明說「暗色」時寫（`auto-edit-style` 步驟 6） |
 | `style` | | 風格包名稱，例 `"藍圖"` | 這一集用 `shared/template/styles/<名稱>/` 的主色、子母畫面外框、背景圖（亮暗都看包裡的；包裡沒有的檔用 `shared/template/` 目前的）。不寫＝工作區目前的。名稱照 `brand.mjs list`；AI 只在使用者說「這集用 XX 風格」時寫（`auto-edit-style` 步驟 7） |
 | `edit` | | 物件 | 剪輯台寫的設定（裁剪、淡入淡出、音量、轉場），AI 不主動寫（第 6 節） |
@@ -466,7 +466,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `⚠ 講者瘦臉略過：找不到 HyperFrames 的 Chrome，只調光 → npx hyperframes browser ensure` | ⚠ | 照 `→` 跑，再 build |
 | `⚠ 講者瘦臉還在跑（look.mjs run，pid …）→ 等 … 顯示「完成」再 build` | ⚠ | 背景的 `look.mjs run` 還沒跑完：每 30 秒跑一次 `look.mjs status`，「完成」後再 build |
 | `⚠ 瘦臉還沒套到底片（…），這次先用 work/rough.mp4 → …` | ⚠ | 這次 build 先用沒瘦臉的底片；照 `→` 跑完 `look.mjs run` 再 build |
-| `look.slim 要是 0–1.2 的數字…` 這類 `look…` 開頭的訊息 | ✖ | 照訊息改 plan.json 的 `look`（只能寫 `color`、`slim`） |
+| `look.slim 要是 0–1.2 的數字…` 這類 `look…` 開頭的訊息 | ✖ | 照訊息改 plan.json 的 `look`（只能寫 `color`、`slim`、`beauty`） |
 | `✖ s21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 1:56.14–2:33.51 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/<專案> 照它印的做`（`qc.mjs storyboard`、`qc.mjs final`；另一種是「講者小窗在 m:ss.ss 就沒了（段到 …）」） | ✖ | 不是版面的問題，不要改 plan.json；照 → 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報 |
 | `⚠ <id> 是全畫面清單卻沒有講者小窗 → 跑 node shared/template/tools/qc.mjs final --project … 看原因`（`qc.mjs observe`；`work/observe/index.md` 總表的「小窗（子母畫面段）」欄是 `無`／`部分（m:ss.s 起沒有）`） | ⚠ | 照 → 跑 `qc.mjs final` 看原因，再照上一列做 |
 | `清掉同一段的舊截圖（這次張數變了）：…`（`qc.mjs storyboard`） | 資訊 | 只貼這一次印出來的截圖行；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪 |
@@ -681,8 +681,8 @@ node shared/template/tools/build.mjs --project projects/<專案> --check --json
 | 誰做 | 什麼時候 | 做什麼 |
 |---|---|---|
 | build | 每次重新編碼底片 | 套調光的 LUT（`kit/look/jianying-smart.cube`，強度 `color`）。不用另外跑 |
-| `look.mjs run` | 剪乾淨之後、構圖之前；`rough.mp4` 換過或 `slim` 改過之後 | 偵測每一格的臉（`work/face-landmarks.json`）→ 做瘦臉底片 `work/rough-look.mp4` → 對照圖 `work/look-preview.jpg` |
-| build | `slim` > 0 | 用 `work/rough-look.mp4` 當底片；不是最新的就 ✖ 停下來，請你先跑 `look.mjs run` |
+| `look.mjs run` | 剪乾淨之後、構圖之前；`rough.mp4` 換過或 `slim`、`beauty` 改過之後 | 偵測每一格的臉（`work/face-landmarks.json`）→ 做瘦臉底片 `work/rough-look.mp4` → 對照圖 `work/look-preview.jpg` |
+| build | `slim` 或 `beauty` > 0 | 用 `work/rough-look.mp4` 當底片；不是最新的就 ✖ 停下來，請你先跑 `look.mjs run` |
 
 指令（完整說明：`node shared/template/tools/look.mjs --help`）：
 
@@ -698,6 +698,7 @@ plan.json 的寫法（使用者要求才寫）：
 | 要調光、瘦臉 | `"look": { "color": 0.8, "slim": 0.6 }`（改完跑 `look.mjs run`） |
 | 只要調光 | `"look": { "color": 0.8 }` |
 | 只要瘦臉 | `"look": { "slim": 0.6 }`（改完跑 `look.mjs run`） |
+| 要美顏（磨皮、提亮、淡化黑眼圈） | `look` 加 `"beauty": 0.5`（0–1；改完跑 `look.mjs run`） |
 | 調光淡一點 | `"look": { "color": 0.5, "slim": <原本的值> }` |
 | 瘦一點／不要那麼瘦 | `"look": { "color": <原本的值>, "slim": 0.8 }`／`0.3`（改完跑 `look.mjs run`） |
 | 都不要（kit 預設被改成開的時候） | `"look": false` |

@@ -24,12 +24,11 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 0.18 兩個引號彈出（過衝）→ 0.3 金句逐字上浮（間隔 0.035）→ 1.2 出處從左滑入 → 漂浮 → 段尾向左擦掉 */
+/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 0.18 兩個引號彈出（過衝）→ 0.3 金句逐字上浮（間隔 0.035）→ 1.2 出處從左滑入 → 段尾向左擦掉 */
 P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
 P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
 P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
 P.pop('#gCard .qt-q', {{{in}}} + 0.18, { from: 0.3, dy: 0, ease: P.V2.EASE.emph });
 P.chars('#gCard .qt-body > div:first-child', {{{in}}} + 0.3, { stagger: 0.035 });
 {{#by}}P.drift('#gCard .qt-by', {{{in}}} + 1.2, { dx: -16 * P.U });{{/by}}
-P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
 {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

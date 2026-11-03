@@ -31,10 +31,9 @@
   {{/items}}
 </div>
 <!-- @timeline -->
-/* v2（shared/template/BEATS.md §2 的動作）：逐條彈出（從下 28u、0.82 → 1，各綁 at）→ 有圖示的 0.15 後描線 → 整組漂浮 → 段尾整組向左擦掉 */
+/* v2（shared/template/BEATS.md §2 的動作）：逐條彈出（從下 28u、0.82 → 1，各綁 at）→ 有圖示的 0.15 後描線 → 段尾整組向左擦掉 */
 {{#items}}
 P.pop('#kwList > :nth-child({{n}})', {{{at}}}, { from: 0.82, dy: 28 });
 {{#itemsHasIcon}}P.icon('#kwList > :nth-child({{n}})', {{{at}}} + 0.15);{{/itemsHasIcon}}
 {{/items}}
-P.idle('#kwList', 0.5, { y: 3, x: 1.5, period: 3.6, until: D });
 {{#exitFade}}P.wipeOut('#kwList', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#kwList', D - 0.8, { dir: 'left' });{{/exitFade}}

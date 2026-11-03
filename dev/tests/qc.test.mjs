@@ -496,7 +496,7 @@ test('storyboard：v2 原語的拍點（P.spot 抬起、P.slide 抽屜）各截�
     const tl = gsap.timeline({ paused: true });
     const P = SceneMotion(tl, document.getElementById('x-v2'));
     P.pop('#a', 0.3); P.pop('#b', 0.5);
-    P.idle('#a, #b', 1.2);
+    P.idle('#a, #b', 1.2, { scale: 0.04 });
     P.spot('#a, #b', '#a', 1.5);
     P.spot('#a, #b', '#b', 3.0);
     P.slide('#slab', 4.2);

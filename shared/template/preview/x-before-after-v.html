@@ -105,12 +105,11 @@
     else { P.wipe('#xba-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xba-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xba-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
 
-    // 拍 1 講到舊做法：左欄由左擦開 → ＋0.1 名稱與數字逐字上浮 → ＋0.15 圖示描線 → ＋0.3 量條長滿（舊做法的量）→ ＋1.1 漂浮
+    // 拍 1 講到舊做法：左欄由左擦開 → ＋0.1 名稱與數字逐字上浮 → ＋0.15 圖示描線 → ＋0.3 量條長滿（舊做法的量）
     P.wipe('#xba-left', BEFORE, { dir: 'left' });
     P.chars('#xba-lab1, #xba-num1', BEFORE + 0.1);
     P.icon('#xba-ico1', BEFORE + 0.15);
     P.bar('#xba-fill1', BEFORE + 0.3, { from: 0, to: 1, dur: 0.8 });
-    P.idle('#xba-left', BEFORE + 1.1, { y: 3, period: 3.2, until: PAIN - 0.1 });
 
     // 拍 2 講到缺點：缺點那一行被劃掉 → 劃完左欄退焦到 0.5
     P.strike('#xba-pain', PAIN, { dim: false });
@@ -127,9 +126,8 @@
     P.marker('#xba-num2', SAVE);
     P.sheen('#xba-in2', SAVE + 0.1);
     P.punch('#xba-num2', SAVE + 0.1, { scale: 1.1 });
-    // 拍 5 ＋0.6 右欄聚焦（放大抬起、主色亮框）→ ＋1.1 漂浮
+    // 拍 5 ＋0.6 右欄聚焦（放大抬起、主色亮框）
     P.spot('#xba-right', '#xba-right', SAVE + 0.6, { scale: 1.04, lift: -8 });
-    P.idle('#xba-right', SAVE + 1.1, { y: 3, period: 3.2 });
 
     // 收：講完 2.6 秒回均衡（右欄亮框收掉；左欄亮回一點，維持退焦 0.7），完成態停到段尾
     const TR = SAVE + 2.6;

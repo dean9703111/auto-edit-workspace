@@ -145,34 +145,30 @@
     P.pop('#xtl-head', T1 - 1.1, { from: 0.2, dy: 0 });
 
     // 拍 3 第 1 點：進度推進（提早 0.5 出發、講到時到點）→ 點填滿、進度頭漣漪、站卡從軸上彈起 → ＋0.14 說明逐字 → ＋0.18 圖示描線
-    //   → ＋0.6 聚焦（站卡放大抬起、主色亮框；前一點的站卡壓暗、說明退焦）→ ＋0.9 漂浮
+    //   → ＋0.6 聚焦（站卡放大抬起、主色亮框；前一點的站卡壓暗、說明退焦）
     P.bar('#xtl-fill', T1 - 0.5, { from: 0, to: F[0], dur: 0.5, ease: P.V2.EASE.move });
     P.morph('#xtl-head', T1 - 0.5, { left: HX[0] }, { from: { left: AX0 - 12 }, dur: 0.5, ease: P.V2.EASE.move });
     P.stroke('#xtl-don1', T1, { dur: 0.3 });  P.ripple('#xtl-head', T1);
     P.pop('#xtl-n1', T1, { from: 0.82, dy: 60 });  P.chars('#xtl-c1', T1 + 0.14);  P.icon('#xtl-ico1', T1 + 0.18);
     P.spot('#xtl-n1', '#xtl-n1', T1 + 0.6, { scale: 1.06, lift: -10 });
-    P.idle('#xtl-n1', T1 + 0.9, { y: 4, period: 2.8, until: T2 - 0.1 });
     // 拍 4 第 2 點：同拍 3
     P.bar('#xtl-fill', T2 - 0.5, { from: F[0], to: F[1], dur: 0.5, ease: P.V2.EASE.move });
     P.morph('#xtl-head', T2 - 0.5, { left: HX[1] }, { from: { left: HX[0] }, dur: 0.5, ease: P.V2.EASE.move });
     P.stroke('#xtl-don2', T2, { dur: 0.3 });  P.ripple('#xtl-head', T2);
     P.pop('#xtl-n2', T2, { from: 0.82, dy: 60 });  P.chars('#xtl-c2', T2 + 0.14);  P.icon('#xtl-ico2', T2 + 0.18);
     P.spot('#xtl-n1, #xtl-n2', '#xtl-n2', T2 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c1', T2 + 0.6, { to: 0.5 });
-    P.idle('#xtl-n2', T2 + 0.9, { y: 4, period: 2.8, until: T3 - 0.1 });
     // 拍 5 第 3 點：同拍 3
     P.bar('#xtl-fill', T3 - 0.5, { from: F[1], to: F[2], dur: 0.5, ease: P.V2.EASE.move });
     P.morph('#xtl-head', T3 - 0.5, { left: HX[2] }, { from: { left: HX[1] }, dur: 0.5, ease: P.V2.EASE.move });
     P.stroke('#xtl-don3', T3, { dur: 0.3 });  P.ripple('#xtl-head', T3);
     P.pop('#xtl-n3', T3, { from: 0.82, dy: 60 });  P.chars('#xtl-c3', T3 + 0.14);  P.icon('#xtl-ico3', T3 + 0.18);
     P.spot('#xtl-n1, #xtl-n2, #xtl-n3', '#xtl-n3', T3 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c2', T3 + 0.6, { to: 0.5 });
-    P.idle('#xtl-n3', T3 + 0.9, { y: 4, period: 2.8, until: T4 - 0.1 });
-    // 拍 6 第 4 點：同拍 3（3 點時刪掉這 6 行，收尾的 T4 改 T3）
+    // 拍 6 第 4 點：同拍 3（3 點時刪掉這 5 行，收尾的 T4 改 T3）
     P.bar('#xtl-fill', T4 - 0.5, { from: F[2], to: F[3], dur: 0.5, ease: P.V2.EASE.move });
     P.morph('#xtl-head', T4 - 0.5, { left: HX[3] }, { from: { left: HX[2] }, dur: 0.5, ease: P.V2.EASE.move });
     P.stroke('#xtl-don4', T4, { dur: 0.3 });  P.ripple('#xtl-head', T4);
     P.pop('#xtl-n4', T4, { from: 0.82, dy: 60 });  P.chars('#xtl-c4', T4 + 0.14);  P.icon('#xtl-ico4', T4 + 0.18);
     P.spot('#xtl-n1, #xtl-n2, #xtl-n3, #xtl-n4', '#xtl-n4', T4 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c3', T4 + 0.6, { to: 0.5 });
-    P.idle('#xtl-n4', T4 + 0.9, { y: 4, period: 2.8 });
 
     // 收：最後一點講完 2.6 秒回均衡（站卡全部亮回、說明亮回），完成態停到段尾
     const TR = T4 + 2.6;

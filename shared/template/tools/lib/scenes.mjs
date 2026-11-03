@@ -14,6 +14,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { parseTime, cueSeconds, r3 } from './time.mjs';
+import { ILLUS_BUILTIN } from './audit-illus.mjs';
 
 // ---------- 載入 ----------
 
@@ -222,6 +223,11 @@ export function resolveScene(opts) {
       const svg = icons?.get(name);
       if (!svg) { err(`${label}：找不到圖示「${value}」（kit/icons.json；相近：${nearest(String(value), icons?.names || []).join('、')}）`); out[key] = ''; }
       else out[key] = svg;
+    } else if (t === 'illus') {
+      // 畫廊插圖元件名（kit/illus.js 的 20 個）；模板寫 <div data-illus="{{key}}">，ILLUS.mount 換成 SVG
+      const name = String(value).trim();
+      if (!ILLUS_BUILTIN.includes(name)) { err(`${label}：「${value}」不是畫廊的插圖元件（可用：${ILLUS_BUILTIN.join('、')}）`); return; }
+      out[key] = name;
     } else if (t === 'enum') {
       const o = decl.options || [];
       if (!o.includes(value)) err(`${label}：要是 ${o.join('／')} 其中之一，現在是「${value}」`);

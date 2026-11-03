@@ -901,16 +901,16 @@ test('分鏡對齊：parseBeatSheets／movesOf／refsOf 讀原型分鏡表的寫
   assert.deepEqual(x.rows.map((r) => r.refs), [[{ ref: '#35', off: 0 }], [{ ref: '#35', off: 0.7 }], [{ ref: '#38@兩支', off: -0.75 }], [{ ref: '#41@崩潰', off: 0 }], []]);
   assert.deepEqual(x.rows.map((r) => r.moves), [['換卡不換景', '逐字上浮', '背景環境'], ['錯拍彈出', '圖示描線'], ['彗星描線', '鏡頭跟焦點', '聚焦', '漣漪'], [], []]);
   assert.equal(x.rows[4].note, true);
-  // 語彙：46 個（011 加游標移動、013 加蓋章；拿掉講者慢推），和給 AI 查的 shared/template/BEATS.md §2 逐列相同（名稱、「對應」欄第一個 P.*；沒寫 P.* 的是 build 內建）
-  assert.equal(BT.VOCAB.length, 46);
+  // 語彙：45 個（011 加游標移動、013 加蓋章；拿掉講者慢推、漂浮），和給 AI 查的 shared/template/BEATS.md §2 逐列相同（名稱、「對應」欄第一個 P.*；沒寫 P.* 的是 build 內建）
+  assert.equal(BT.VOCAB.length, 45);
   const beatsMd = fs.readFileSync(path.join(TEMPLATE, 'BEATS.md'), 'utf8').split(/^## 2\./m)[1].split(/^## 3\./m)[0];
   const table = [...beatsMd.matchAll(/^\| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|/gm)].map((m) => [m[2].trim(), m[4].trim()]).filter(([n]) => n !== '名稱' && !/^-+$/.test(n));
   assert.deepEqual(table.map(([n, c]) => [n, (c.match(/P\.(\w+)/) || [])[1] || 'build']), BT.VOCAB.map((v) => [v.name, v.prim]));
   const spec = path.join(TEMPLATE, '..', '..', 'specs', '010-motion-v2', 'design-system.md');
   if (fs.existsSync(spec)) {
     const sec = fs.readFileSync(spec, 'utf8').split(/^### 14\.1/m)[1].split(/^### 14\.2/m)[0];
-    // 講者慢推：spec 之後拿掉（使用者 11-03：講者不要拉近拉遠），spec 是當時的設計紀錄、不改
-    const names = [...sec.matchAll(/^\| ([^|]+) \| ([^|]+) \|/gm)].map((m) => m[2].trim()).filter((n) => n !== '名稱' && !/^-+$/.test(n) && n !== '講者慢推');
+    // 講者慢推、漂浮：spec 之後拿掉（使用者 11-03：講者不要拉近拉遠；「出現的動畫窗都會輕微晃動」），spec 是當時的設計紀錄、不改
+    const names = [...sec.matchAll(/^\| ([^|]+) \| ([^|]+) \|/gm)].map((m) => m[2].trim()).filter((n) => n !== '名稱' && !/^-+$/.test(n) && n !== '講者慢推' && n !== '漂浮');
     assert.deepEqual(names, BT.VOCAB.map((v) => v.name));
   }
   // 每個語彙對應的原語都在 kit 裡（build 內建的除外）
@@ -1061,6 +1061,7 @@ test('分鏡沒寫的動作：檔裡有 P.spot／P.dim／P.idle／P.cam，分鏡
   const run = (moves, html) => BT.beatFindings({ item: bItem, sheet: sheet(moves), marks: [], cuesOut: bCues, html, file: 'x-callout.html' }).filter((f) => f.rule === 'beats-unplanned').map((f) => f.data.prim);
   // 分鏡寫退焦（範例原本是聚焦＋漂浮）：spot 由退焦涵蓋，漂浮沒寫 → 報 idle
   assert.deepEqual(run('彈出（主體）；退焦（其他標籤）', 'P.pop(); P.spot(); P.idle(); P.end();'), ['idle']);
+  // 舊分鏡寫的漂浮（已拿掉的動作，VOCAB_RETIRED）：不報不在語彙表，也算寫了 P.idle
   assert.deepEqual(run('彈出（主體）；聚焦（主體）；漂浮（主體）', 'P.pop(); P.spot(); P.idle(); P.end();'), []);
   assert.deepEqual(run('彈出（主體）', '// P.cam(…) 註解不算\nP.pop(); P.cam(); P.end();'), ['cam']);
   assert.deepEqual(run('—', 'P.pop(); P.spot(); P.idle(); P.end();'), [], '動態欄整欄都是 — 不反向比');

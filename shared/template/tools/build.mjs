@@ -311,6 +311,16 @@ export function runGallery(templateDir, { only = null } = {}) {
     sfxScenes[scene.key] = { zh: scene.zh, no: scene.num, main: sc.main ? { sound: sc.main.name, at: sc.main.rel } : null, extra: sc.extra.map((c) => ({ sound: c.name, at: c.rel })) };
     fs.writeFileSync(file, buildPreview({ scene, parts, D, sub: scene.sample?.sub, pipStyle, cues }));
     made.push(file);
+    // 全寬版型示意（只有聲音的段沒有講者小窗：主卡 1680）：04 家族各一張 <編號>-<key>-wide.html；有主視覺欄位的（04a）放筆電
+    if (scene.family === 'fullscreen') {
+      const wseg = { ...seg, slots: { ...seg.slots, ...(scene.slots?.visual ? { visual: 'laptop' } : {}) } };
+      const w = resolveScene({ scene, seg: wseg, cues: [], icons: lib.icons, consts: lib.consts, t0: 0, D, where: `[預覽 ${scene.key} 全寬]` });
+      if (w.errors.length) { problems.push(...w.errors); continue; }
+      const wparts = sceneParts({ scene, ctx: w.ctx, beats: w.beats, id: 'pv', D, tone: null, exitFade: true });
+      const wfile = path.join(outDir, `${scene.num}-${scene.key}-wide.html`);
+      fs.writeFileSync(wfile, buildPreview({ scene, parts: wparts, D, sub: scene.sample?.sub, pipStyle, cues, wide: true }));
+      made.push(wfile);
+    }
   }
   // 第二層情境動畫（custom/x-*.html）的預覽頁：003 的 buildCustomPreview（還沒有時略過）
   const customDir = path.join(templateDir, 'custom');
@@ -747,6 +757,9 @@ export function build(flags, { log = console.log } = {}) {
   const generated = new Set();
   for (const [f, c] of files) { W.write(f, c); generated.add(f); }
   W.write('index.html', main.html); generated.add('index.html');
+  // index.html 的修改時間＝最後一次 build：內容沒變也更新時間（剪輯台「成片預覽是舊的」、audit、status、qc 都拿它和 plan.json 比；
+  //   剪輯台存檔時已經重新產生過，再跑 build 不重寫 index.html，舊時間會讓它們誤報「plan.json 比 index.html 新」）
+  if (W.res.same.includes('index.html')) { const now = new Date(); fs.utimesSync(path.join(P.out, 'index.html'), now, now); }
   if (test) { W.write(TEST_FILE, test.html); generated.add(TEST_FILE); }
   if (capcut) {
     fs.writeFileSync(path.join(P.out, 'capcut.json'), JSON.stringify({ v: 1, planHash, format: C.format, duration: outDur, segs: capcut.segs, main: capcut.main }, null, 2) + '\n');

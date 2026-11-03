@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { pathsFrom } from './build.mjs';
 import { findChrome } from './lib/audit-browser.mjs';
-import {
+import { faceOn,
   resolveLook, validateLook, readState, writeState, statePaths, statOf, isRunning, assetsStatus, vendorOf, modelSha,
   landmarksFresh, footageFresh, staleReason, estimateMinutes, lookSize, probeVideo, projectLabel, loadTrack, interpolateEvery2,
   renderLookFootage, lookPreview, ensureLook, lookNextStep, nextLines, projArg, faceWidth, lmFromP, pct, mmss, POINTS, LM_VER, LOOK_VER, MIN_FACE_PX, RATE_OFF,
@@ -15,7 +15,7 @@ import {
 } from './lib/look.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
-const HELP = `講者調光＋瘦臉（零依賴：Node 22、ffmpeg、HyperFrames 的 chrome-headless-shell、shared/template/vendor/mediapipe）
+const HELP = `講者調光、瘦臉、美顏（零依賴：Node 22、ffmpeg、HyperFrames 的 chrome-headless-shell、shared/template/vendor/mediapipe）
 
   node shared/template/tools/look.mjs run --project projects/<專案>               偵測臉部 → 瘦臉底片 work/rough-look.mp4 → 對照圖 work/look-preview.jpg
   node shared/template/tools/look.mjs run --project projects/<專案> --background  同上，改在背景跑（預估超過 2 分鐘時用；進度用 status 看）
@@ -25,7 +25,7 @@ const HELP = `講者調光＋瘦臉（零依賴：Node 22、ffmpeg、HyperFrames
   node shared/template/tools/look.mjs ensure [--download]                         檢查 shared/template/vendor/mediapipe 的 4 個檔（sha256）；--download 補下載缺的
 
 run 的選項：--every 1|2（每幾格偵測一次；2＝偵測快一倍、中間內插；預設 1）、--force（不管快取全部重算）、--chrome <路徑>
-設定：shared/template/kit/look.json（預設）＋ plan.json 第一層的 "look"（{ "color": 0–1, "slim": 0–1.2 } 或 false）
+設定：shared/template/kit/look.json（預設）＋ plan.json 第一層的 "look"（{ "color": 0–1, "slim": 0–1.2, "beauty": 0–1 } 或 false）
 調光不用跑這支：build 重新編碼底片時直接 bake。瘦臉 > 0 時 build 要用最新的 work/rough-look.mp4，過期會停下來請你先跑 run。`;
 
 const CMDS = ['run', 'preview', 'status', 'clear', 'ensure'];
@@ -118,11 +118,11 @@ function cmdStatus({ P, templateDir, out }) {
   const proj = projectLabel(P.project, templateDir), plan = readPlan(P.plan), S = statePaths(P.project), st = readState(P.project);
   const errs = validateLook(plan.look);
   const L = resolveLook({ plan, templateDir });
-  out(`講者調光＋瘦臉：${proj}`);
+  out(`講者調光、瘦臉、美顏：${proj}`);
   const src = L.source === 'kit' ? 'kit/look.json' : 'plan.json 的 look';
   if (errs.length) out(`設定：✖ ${errs[0]}`);
   else if (L.source === 'off') out('設定：調光 關、瘦臉 關（plan.json 寫 "look": false）');
-  else out(`設定：調光 ${L.color || '關'}、瘦臉 ${L.slim || '關'}（來源：${src}）`);
+  else out(`設定：調光 ${L.color || '關'}、瘦臉 ${L.slim || '關'}、美顏 ${L.beauty || '關'}（來源：${src}）`);
   const as = assetsStatus(vendorOf(templateDir), { sha: true });
   if (as.ok) out(`資產：✔ shared/template/vendor/mediapipe（${as.files.length} 個檔，sha256 都對）`);
   else if (as.missing.length) out(`資產：✖ 少 ${as.missing.length} 個檔：${as.missing.join('、')} → node shared/template/tools/look.mjs ensure --download`);
@@ -132,16 +132,16 @@ function cmdStatus({ P, templateDir, out }) {
   const mSha = modelSha(templateDir), sum = st.landmarks?.summary;
   const lmFresh = landmarksFresh(st, S, mSha);
   if (!st.landmarks) out('臉部 landmark：— 還沒跑');
-  else if (!lmFresh) out(`臉部 landmark：✖ 過期（${staleReason(st, S, mSha, L.slim) || '檔案換過'}）`);
+  else if (!lmFresh) out(`臉部 landmark：✖ 過期（${staleReason(st, S, mSha, L.slim, L.beauty) || '檔案換過'}）`);
   else if (sum?.reason === 'small') out(`臉部 landmark：⚠ 略過瘦臉：臉寬 ${Math.round(sum.lookFaceWidth)} px < ${MIN_FACE_PX} px`);
   else if (sum?.reason === 'noface') out('臉部 landmark：⚠ 略過瘦臉：抽樣 12 格都沒偵測到臉（確定有講者就 run --force）');
   else if (sum?.reason === 'rate') out(`臉部 landmark：⚠ 略過瘦臉：偵測率 ${Math.round(sum.rate * 100)}%（< ${Math.round(RATE_OFF * 100)}%）`);
   else out(`臉部 landmark：✔ 最新（${sum.detected}/${sum.detected + sum.missing} 格，${pct(sum.rate)}；臉寬中位數 ${Math.round(sum.medianFaceWidth)} px）`);
-  const ftFresh = footageFresh(st, S, mSha, L.slim);
-  if (L.slim === 0) out('瘦臉底片：— 不用（瘦臉 0）');
-  else if (ftFresh) out(`瘦臉底片：✔ 最新（work/rough-look.mp4，瘦臉 ${L.slim}，${st.footage.width}×${st.footage.height}）`);
+  const ftFresh = footageFresh(st, S, mSha, L.slim, L.beauty);
+  if (!faceOn(L)) out('瘦臉底片：— 不用（瘦臉、美顏都是 0）');
+  else if (ftFresh) out(`瘦臉底片：✔ 最新（work/rough-look.mp4，瘦臉 ${L.slim}、美顏 ${L.beauty}，${st.footage.width}×${st.footage.height}）`);
   else if (!st.footage) out(sum?.slimOk === false && lmFresh ? '瘦臉底片：— 不用（略過瘦臉）' : '瘦臉底片：— 還沒做');
-  else out(`瘦臉底片：✖ 過期（${staleReason(st, S, mSha, L.slim) || '檔案換過'}）`);
+  else out(`瘦臉底片：✖ 過期（${staleReason(st, S, mSha, L.slim, L.beauty) || '檔案換過'}）`);
   const run = st.run, running = isRunning(st);
   const hhmm = (iso) => { const d = new Date(iso); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   if (running) {
@@ -154,11 +154,11 @@ function cmdStatus({ P, templateDir, out }) {
   else out('執行：沒有跑過');
   // status 只讀：不呼叫 ensureLook（它會寫混合 LUT）；底片照契約 §3.1 的順序判斷（還在跑 → 略過瘦臉 → 最新）
   const skipped = lmFresh && sum?.slimOk === false;
-  const usesLook = L.slim > 0 && !running && !skipped && ftFresh;
-  const stale = L.slim > 0 && !ftFresh && !skipped;
+  const usesLook = faceOn(L) && !running && !skipped && ftFresh;
+  const stale = faceOn(L) && !ftFresh && !skipped;
   const color = L.color > 0 ? `調光 ${L.color}` : '';
   if (usesLook) out(`build 會用：work/rough-look.mp4${color ? `＋${color}` : ''}`);
-  else if (!color && !(L.slim > 0)) out('build 會用：work/rough.mp4（不調光、不瘦臉）');
+  else if (!color && !faceOn(L)) out('build 會用：work/rough.mp4（不調光、不瘦臉、不美顏）');
   else out(`build 會用：work/rough.mp4${color ? `＋${color}` : ''}${stale && as.ok && chrome ? '（瘦臉底片過期，build 會停下來）' : ''}`);
   // 最後兩行：「→ 下一步：說明」＋單獨一行的指令（lookNextStep，status.mjs 用同一個判斷；契約 look.md §3.5）
   for (const l of nextLines(lookNextStep({ projectDir: P.project, plan, templateDir, probe: { assets: as, chrome: !!chrome } }))) out(l);
@@ -205,16 +205,16 @@ async function cmdRun({ P, templateDir, flags, out, argv }) {
   if (errs.length) { out(`✖ ${errs[0]}`); return 1; }
   const L = resolveLook({ plan, templateDir });
   let V = null;
-  try { V = probeVideo(S.rough); } catch (e) { if (L.slim > 0) { out(`✖ ${e.message}`); return 1; } }
+  try { V = probeVideo(S.rough); } catch (e) { if (faceOn(L)) { out(`✖ ${e.message}`); return 1; } }
   const LS = V ? lookSize(V.width, V.height) : null, lookScale = V ? LS.w / V.width : 1;
   const src = L.source === 'kit' ? 'kit/look.json' : 'plan.json 的 look';
   const st0 = readState(P.project);
   const child = !!process.env.AUTO_EDIT_LOOK_CHILD;
   if (!child) {
-    out(`講者調光＋瘦臉：${proj}${V ? `（rough.mp4 ${V.width}×${V.height}、${V.fpsNum} fps、${V.frames} 格、${mmss(V.duration)}）` : ''}`);
-    out(`設定：調光 ${L.color || '關'}、瘦臉 ${L.slim || '關'}（${src}${L.source === 'kit' ? '；plan.json 沒有寫 look' : ''}）`);
+    out(`講者調光、瘦臉、美顏：${proj}${V ? `（rough.mp4 ${V.width}×${V.height}、${V.fpsNum} fps、${V.frames} 格、${mmss(V.duration)}）` : ''}`);
+    out(`設定：調光 ${L.color || '關'}、瘦臉 ${L.slim || '關'}、美顏 ${L.beauty || '關'}（${src}${L.source === 'kit' ? '；plan.json 沒有寫 look' : ''}）`);
   }
-  if (!(L.slim > 0)) { out(`瘦臉關閉（${src} slim = 0）→ 不用跑；${L.color > 0 ? `調光 ${L.color} 在 build 時 bake` : '調光也關'}`); return 0; }
+  if (!faceOn(L)) { out(`瘦臉、美顏都關閉（${src} slim = 0、beauty = 0）→ 不用跑；${L.color > 0 ? `調光 ${L.color} 在 build 時 bake` : '調光也關'}`); return 0; }
   if (isRunning(st0) && st0.run.pid !== process.pid) {
     const d = new Date(st0.run.startedAt);
     out(`✖ 已經在跑了（pid ${st0.run.pid}，${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 開始）→ 看進度：node shared/template/tools/look.mjs status --project ${projArg(proj)}`);
@@ -249,7 +249,7 @@ async function cmdRun({ P, templateDir, flags, out, argv }) {
     say(`Chrome：✔ ${chrome}`);
     const vendorDir = vendorOf(templateDir), mSha = modelSha(templateDir);
     const lmFresh0 = landmarksFresh(readState(P.project), S, mSha);
-    const ftFresh0 = footageFresh(readState(P.project), S, mSha, L.slim);
+    const ftFresh0 = footageFresh(readState(P.project), S, mSha, L.slim, L.beauty);
     const st1 = readState(P.project);
     const SKIP = ['small', 'noface'];   // 抽樣就決定略過：臉太小、或 12 格都沒有臉（沒有講者的片，不必逐格掃）
     const cachedSmall = lmFresh0 && SKIP.includes(st1.landmarks?.summary?.reason) && !flags.force;
@@ -328,20 +328,20 @@ async function cmdRun({ P, templateDir, flags, out, argv }) {
       } else say(`[2/3] 偵測臉部 landmark：用快取（work/face-landmarks.json，${pct(summary?.rate || 0)}）`);
       // [3/3] 變形
       if (summary?.slimOk !== false) {
-        if (!flags.force && footageFresh(readState(P.project), S, mSha, L.slim) && !needDetect) say(`[3/3] 套用瘦臉：用快取（work/rough-look.mp4，瘦臉 ${L.slim}）`);
+        if (!flags.force && footageFresh(readState(P.project), S, mSha, L.slim, L.beauty) && !needDetect) say(`[3/3] 套用瘦臉／美顏：用快取（work/rough-look.mp4，瘦臉 ${L.slim}、美顏 ${L.beauty}）`);
         else {
           const est = estimateMinutes({ frames: V.frames, width: V.width, height: V.height, detect: false });
           const res = LS.scaled ? `${LS.w}×${LS.h}，從 ${V.width}×${V.height} 縮小` : `${LS.w}×${LS.h}`;
-          say(`[3/3] 套用瘦臉 ${L.slim} → work/rough-look.mp4（${res}，只動臉部、音軌直接複製）：預估 ${est} 分`);
+          say(`[3/3] 套用瘦臉 ${L.slim}、美顏 ${L.beauty} → work/rough-look.mp4（${res}，只動臉部、音軌直接複製）：預估 ${est} 分`);
           setRun({ phase: 'render', done: 0, total: V.frames, etaSec: est * 60 }, true);
           const track = loadTrack(S.landmarks, { lookScale });
           let lastPct = 0, lastT = Date.now();
-          const r = await renderLookFootage({ projectDir: P.project, track, slim: L.slim, onProgress: ({ done, total, elapsed }) => {
+          const r = await renderLookFootage({ projectDir: P.project, track, slim: L.slim, beauty: L.beauty, onProgress: ({ done, total, elapsed }) => {
             const p = Math.min(1, done / total), eta = p > 0 ? (elapsed / p) * (1 - p) : 0;
             setRun({ phase: 'render', done, total, etaSec: Math.round(eta) });
             if (p - lastPct >= 0.05 || Date.now() - lastT >= 10000) { lastPct = p; lastT = Date.now(); say(`  變形 ${done}/${total} 格（${Math.floor(p * 100)}%），已 ${Math.round(elapsed)} 秒，剩約 ${Math.round(eta)} 秒`); }
           } });
-          writeState(P.project, { footage: { ...statOf(S.footage), rough: statOf(S.rough), landmarks: statOf(S.landmarks), slim: L.slim, lookVer: LOOK_VER, width: r.width, height: r.height,
+          writeState(P.project, { footage: { ...statOf(S.footage), rough: statOf(S.rough), landmarks: statOf(S.landmarks), slim: L.slim, beauty: L.beauty, lookVer: LOOK_VER, width: r.width, height: r.height,
             warped: r.warped, medianDisp: r.medianDisp, maxDisp: r.maxDisp, maxDispRatio: r.maxDispRatio, maxDispAt: r.maxDispAt, dispP95Ratio: r.dispP95Ratio, elapsedSec: Math.round(r.elapsedSec) } });
           say(`  完成：work/rough-look.mp4（${mmss(r.duration)}，和 rough.mp4 差 ${r.diff.toFixed(3)} 秒）`);
         }

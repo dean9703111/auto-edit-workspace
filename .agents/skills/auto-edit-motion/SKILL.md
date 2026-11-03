@@ -167,7 +167,7 @@ node shared/template/tools/media.mjs illus-lint --project projects/<專案>
 | `內容被裁掉`、`超出畫面` | 照 → 移位置或縮小元素 | 停下來回報 |
 | `layout-row-align`、`layout-gap`、`layout-center`、`layout-pad`、`layout-label`、`layout-label-row`、`layout-link` | 照 → 改宣告（`data-layout`／`data-gap`／`data-justify`／`data-align`／`data-links`），不手寫座標（`shared/style.md`「版面」） | 回報保留理由 |
 | `進字幕區` | 元素底邊移到字幕帶上面（R8 #2） | 停下來回報 |
-| `壓到子母畫面` | 照 R7.3 版面原則避開右下角小窗 | 停下來回報 |
+| `壓到子母畫面` | 照 R7.3 版面原則避開右下角小窗；`--check` 寫「全寬版型」的段沒有小窗，照 `shared/style.md`「全寬」用滿 1676 寬（插圖放大、站距 `xxl`、清單型右邊放主視覺） | 停下來回報 |
 | `對不上` | 檔名、`data-composition-id`、`<template id>`、`__timelines` 四處對齊（步驟 3） | 停下來回報 |
 | `⚠ … 間距不足`、`區塊重疊` | 內容整組往下移到 40 px；重疊的移開到隔 24 px，刻意疊的加 `data-layout-allow-overlap` 並在回報寫理由（svg 線稿與連接線不算區塊，不會報） | 回報保留理由 |
 | `⚠ … nowrap 餘裕不足`、`右側空白過多`、`內距不足`、`行高不足`、`垂直不平衡` | 照 → 給的寬度、高度或位移改；框寬用 `width: max-content`；字級用 kit 的 `.sc-tNN` class，不縮字（內距容許 2 px：差 ≤ 2 px 不報） | 回報保留理由 |

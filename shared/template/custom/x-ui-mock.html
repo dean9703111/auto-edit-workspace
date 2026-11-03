@@ -150,13 +150,12 @@
     P.cam('#xui-win', CLICK - 0.2, { to: '#xui-btn', k: 0.12, scale: 1.04, dur: 0.9 });
     P.spot(UI, '#xui-btn', CLICK, { scale: 1.07, lift: -10, done: '#xui-ptitle' });
     P.ripple('#xui-btn', CLICK, { to: 1.8 });
-    // 拍 4 結果：通知彈出、＋0.14 通知字逐字、＋0.18 勾描線 → ＋0.6 焦點收掉、整個介面退焦 → ＋0.9 通知漂浮
+    // 拍 4 結果：通知彈出、＋0.14 通知字逐字、＋0.18 勾描線 → ＋0.6 焦點收掉、整個介面退焦
     P.pop('#xui-toast', RESULT, { from: 0.82, dy: 40 });
     P.chars('#xui-ttext', RESULT + 0.14);
     P.icon('#xui-tico', RESULT + 0.18);
     P.spot(UI, null, RESULT + 0.6, { dur: 0.5 });
     P.dim('#xui-canvas', RESULT + 0.6, { to: 0.5 });
-    P.idle('#xui-toast', RESULT + 0.9, { y: 4, period: 2.8 });
 
     // 收：結果講完 2.6 秒回均衡（介面亮回、鏡頭回正），完成態停到段尾
     const TR = RESULT + 2.6;

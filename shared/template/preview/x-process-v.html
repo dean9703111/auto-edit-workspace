@@ -48,14 +48,14 @@
     #x-process #xproc-lines { position: absolute; }
     /* 虛線預告層：script 載入時從每條連接線複製一份（不用手寫），講到之前一直往前流 */
     #x-process .xproc-ghost { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-linecap: round; stroke-dasharray: 2 14; }
-    /* 站：寬 264、高 224；單數站下面、雙數站上面各空一站高＋--sc-gap-lg（上下錯落，flex 置中後單數在上排、雙數在下排）；圖示和站名同一塊 */
-    #x-process .xproc-node { position: relative; flex: none; width: 264px; height: 224px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+    /* 站：寬 272、高 232（52px 的四字站名左右、圖示到字都要 ≥ 24／15，audit padding）；單數站下面、雙數站上面各空一站高＋--sc-gap-md（上下錯落，flex 置中後單數在上排、雙數在下排）；圖示和站名同一塊 */
+    #x-process .xproc-node { position: relative; flex: none; width: 272px; height: 232px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
                              border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
-                             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+                             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; white-space: nowrap; }
     #x-process .xproc-node .sc-icon { --d: 96px; --i: 56px; position: relative; }
     #x-process .xproc-node .xproc-name { position: relative; }
-    #x-process .xproc-node:nth-of-type(odd) { margin-bottom: calc(224px + var(--sc-gap-lg)); }
-    #x-process .xproc-node:nth-of-type(even) { margin-top: calc(224px + var(--sc-gap-lg)); }
+    #x-process .xproc-node:nth-of-type(odd) { margin-bottom: calc(232px + var(--sc-gap-md)); }
+    #x-process .xproc-node:nth-of-type(even) { margin-top: calc(232px + var(--sc-gap-md)); }
     /* 亮起：now＝目前這一站的底色（下一站亮起時淡掉）；主色亮框與「走過」的細框由 P.spot 自動加（.sc-spot） */
     #x-process .xproc-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
   </style>
@@ -108,33 +108,29 @@
     P.spot(ALL, 'none', 2.0, { dim: 0.45, dur: 0.6 });
     P.cam('#xproc-card', 2.0, { scale: 1.03, dur: T1 - 2.2 });
 
-    // 拍 4 第 1 站：鏡頭帶過去（提早 0.2）、聚焦（放大抬起發光、其他壓暗）、底色亮起、圖示漣漪；＋0.6 漂浮
+    // 拍 4 第 1 站：鏡頭帶過去（提早 0.2）、聚焦（放大抬起發光、其他壓暗）、底色亮起、圖示漣漪
     P.cam('#xproc-card', T1 - 0.2, { to: '#xproc-n1', k: 0.12, scale: 1.04, dur: 0.9 });
     P.spot(ALL, '#xproc-n1', T1, { scale: 1.08, lift: -12 });
     P.in('#xproc-now1', T1);
     P.ripple('#xproc-ico1', T1 + 0.05, { to: 2.4 });
-    P.idle('#xproc-n1', T1 + 0.6, { y: 4, period: 2.8, until: T2 - 0.1 });
     // 拍 5 第 2 站：提早 0.85 秒主色實線帶發光頭從上一站描過來（線和箭頭同一條，id＝<上一站>-<這一站>）；上一站變「走過」（0.92、留細框）
     P.comet('#xproc-n1-xproc-n2', T2 - 0.85, { dur: 0.75 });
     P.cam('#xproc-card', T2 - 0.2, { to: '#xproc-n2', k: 0.12, scale: 1.04, dur: 0.9 });
     P.spot(ALL, '#xproc-n2', T2, { scale: 1.08, lift: -12, done: '#xproc-n1' });
     P.out('#xproc-now1', T2);  P.in('#xproc-now2', T2);
     P.ripple('#xproc-ico2', T2 + 0.05, { to: 2.4 });
-    P.idle('#xproc-n2', T2 + 0.6, { y: 4, period: 2.8, until: T3 - 0.1 });
     // 拍 6 第 3 站：同拍 5
     P.comet('#xproc-n2-xproc-n3', T3 - 0.85, { dur: 0.75 });
     P.cam('#xproc-card', T3 - 0.2, { to: '#xproc-n3', k: 0.12, scale: 1.04, dur: 0.9 });
     P.spot(ALL, '#xproc-n3', T3, { scale: 1.08, lift: -12, done: '#xproc-n1, #xproc-n2' });
     P.out('#xproc-now2', T3);  P.in('#xproc-now3', T3);
     P.ripple('#xproc-ico3', T3 + 0.05, { to: 2.4 });
-    P.idle('#xproc-n3', T3 + 0.6, { y: 4, period: 2.8, until: T4 - 0.1 });
-    // 拍 7 第 4 站：同拍 5（3 站時刪掉這一組 6 行，收尾的 T4 改 T3、now4 改 now3）
+    // 拍 7 第 4 站：同拍 5（3 站時刪掉這一組 5 行，收尾的 T4 改 T3、now4 改 now3）
     P.comet('#xproc-n3-xproc-n4', T4 - 0.85, { dur: 0.75 });
     P.cam('#xproc-card', T4 - 0.2, { to: '#xproc-n4', k: 0.12, scale: 1.04, dur: 0.9 });
     P.spot(ALL, '#xproc-n4', T4, { scale: 1.08, lift: -12, done: '#xproc-n1, #xproc-n2, #xproc-n3' });
     P.out('#xproc-now3', T4);  P.in('#xproc-now4', T4);
     P.ripple('#xproc-ico4', T4 + 0.05, { to: 2.4 });
-    P.idle('#xproc-n4', T4 + 0.6, { y: 4, period: 2.8 });
 
     // 收：最後一站講完 2.6 秒回均衡（全部亮回、鏡頭回正），完成態停到段尾
     const TR = T4 + 2.6;

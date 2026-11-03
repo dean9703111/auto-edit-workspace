@@ -10,14 +10,20 @@
 #wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
 #wBody { width: 1176px; height: 580px; }
 #wBody > .sc-row { width: calc(100% - 2 * var(--sc-pad-card)); }
+/* 全寬版型（只有聲音、沒有子母畫面小窗：build 在 host 寫 data-wide，kit 把主卡拉到 1680）：清單留在左邊 1176（data-wide-keep），
+   右邊 500 放主視覺 #fVis（slots.visual＝畫廊插圖元件，380×380 置中）；有小窗時不顯示 */
+#fVis { position: absolute; left: 1176px; top: 128px; width: 500px; height: 580px; display: none; place-items: center; }
+[data-wide] #fVis { display: grid; }
+#fVis > [data-illus] { width: 380px; height: 380px; }
 <!-- @body -->
 <div id="wCard" class="sc-wcard">
   <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>
-  <div id="wBody" data-layout="col" data-gap="lg">
+  <div id="wBody" data-layout="col" data-gap="lg" data-wide-keep>
     {{#items}}
     <div id="fRow{{n}}" class="sc-row" data-slot>{{#itemsHasIcon}}<span class="sc-icon sc-icon--72">{{{icon}}}</span>{{/itemsHasIcon}}{{^itemsHasIcon}}<span class="sc-dot"></span>{{/itemsHasIcon}}<span class="sc-t56 sc-w500 sc-opt">{{{text}}}</span></div>
     {{/items}}
   </div>
+  {{#visual}}<div id="fVis"><div data-illus="{{visual}}"></div></div>{{/visual}}
 </div>
 <!-- @timeline -->
 /* v2（shared/template/BEATS.md §2 的動作）：每列各綁 at 彈出（從下 28u）→ 0.15 後圖示描線；新的一列出現時前一列退焦 0.6 → 最後一列講完 2 秒回均衡。主卡進場看 P.prev()（換卡不換景／長出），離場由 build 負責 */
@@ -34,3 +40,8 @@ for (let i = 1; i < rowAt.length; i++) P.dim('#fRow' + i, rowAt[i], { to: 0.6 })
 // 回均衡：最後一條講完 2 秒（不晚於段尾前 1.6 秒）全部亮回
 const endAt = Math.min(rowAt[rowAt.length - 1] + 2.0, D - 1.6);
 if (rowAt.length > 1 && endAt > rowAt[rowAt.length - 1] + 0.6) for (let i = 1; i < rowAt.length; i++) P.dim('#fRow' + i, endAt, { to: 1 });
+// 主視覺（全寬才看得到）：標題後彈出，每講到一項輕輕重拍一下（跟著口播動）
+{{#visual}}
+P.pop('#fVis > [data-illus]', 0.6, { from: 0.8, dy: 28 });
+for (let i = 0; i < rowAt.length; i++) P.punch('#fVis > [data-illus]', rowAt[i] + 0.1, { scale: 1.05 });
+{{/visual}}

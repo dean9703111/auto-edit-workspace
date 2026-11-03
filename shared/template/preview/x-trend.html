@@ -150,19 +150,17 @@
     P.chars('#xtr-unit', T2 - 1.05, { mode: 'drop' });
     P.comet('#xtr-line', T2 - 1.2, { dur: 1.0 });
     P.pop('#xtr-end', T2 - 0.2, { from: 0.3, dy: 0, dur: 0.4 });
-    // 拍 3 講到最後的值、數字落定：重拍、端點漣漪、單位畫螢光筆、最後一根換主色（音效 impact 見上面 P.sfx）→ ＋0.6 提示框漂浮
+    // 拍 3 講到最後的值、數字落定：重拍、端點漣漪、單位畫螢光筆、最後一根換主色（音效 impact 見上面 P.sfx）
     P.punch('#xtr-num', T2, { scale: 1.12 });
     P.ripple('#xtr-end', T2);
     P.in('#xtr-hl', T2);
     P.marker('#xtr-unit', T2 + 0.1);
-    P.idle('#xtr-tip', T2 + 0.6, { y: 3, period: 3.2, until: T3 - 0.1 });
 
-    // 拍 4（選用）講到結論：膠囊彈出、字逐字落下，提示框退焦 → ＋0.6 膠囊聚焦 → ＋1.1 漂浮
+    // 拍 4（選用）講到結論：膠囊彈出、字逐字落下，提示框退焦 → ＋0.6 膠囊聚焦
     P.pop('#xtr-pill', T3);
     P.chars('#xtr-pill .sc-opt', T3 + 0.12, { mode: 'drop' });
     P.dim('#xtr-tip', T3, { to: 0.6 });
     P.spot('#xtr-pill', '#xtr-pill', T3 + 0.6, { scale: 1.06, lift: -8 });
-    P.idle('#xtr-pill', T3 + 1.1, { y: 3, period: 3.2 });
 
     // 收：講完 2 秒回均衡（膠囊亮框收掉、提示框亮回），主數字呼吸；完成態停到段尾
     const TR = T3 + 2.0;

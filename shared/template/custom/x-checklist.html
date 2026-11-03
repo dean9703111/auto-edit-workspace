@@ -18,8 +18,8 @@
   1. 文字：標題列（≤ 10 字）、四個 .xchk-t 的項目文字（每項 ≤ 14 字，動詞放前面）。放不下就縮文案，不縮字。這支沒有圖示（勾就是圖示）。
   2. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   3. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
-  項數是 3：刪掉第 4 列（#xchk-r4 整個 div）、script 開頭的「, T4 = P.at(…)」、ROWS 裡的「, #xchk-r4」和「第 4 項」那 7 行，
-  收尾的 now4 改 now3、第 3 項 P.idle 的 until: T4 − 0.1 改 ALL − 0.1；2 項照這樣再刪第 3 項。進度條的分母、「/ 4」的數字會自動跟著列數變，其他不用改。
+  項數是 3：刪掉第 4 列（#xchk-r4 整個 div）、script 開頭的「, T4 = P.at(…)」、ROWS 裡的「, #xchk-r4」和「第 4 項」那 6 行，
+  收尾的 now4 改 now3；2 項照這樣再刪第 3 項。進度條的分母、「/ 4」的數字會自動跟著列數變，其他不用改。
 
   【綁句欄位】
   T1 = P.at('#121@新增專案')、T2 = P.at('#122@下載')、T3 = P.at('#123@配對手機')、T4 = P.at('#124@調整解析度')：講到那一項「項目詞」的時刻，
@@ -123,14 +123,13 @@
     P.stroke('.xchk-sq', 1.0, { stagger: 0.15 });
     P.in('#xchk-prog', 1.0);
 
-    // 拍 2 第 1 項：聚焦（這一列本來就在：放大抬起發光＋淡色底，其他壓暗 0.6）＋字逐字浮出 → ＋0.3 框變主色、勾描出，計數 +1、進度條前進一格 → ＋0.6 漂浮
+    // 拍 2 第 1 項：聚焦（這一列本來就在：放大抬起發光＋淡色底，其他壓暗 0.6）＋字逐字浮出 → ＋0.3 框變主色、勾描出，計數 +1、進度條前進一格
     P.chars('#xchk-t1', T1);
     P.stroke('#xchk-on1, #xchk-k1', T1 + 0.3, { dur: 0.4 });
     P.count('#xchk-n', T1 + 0.3, { from: 0, to: 1, dur: 0.4, suffix: ' / ' + N });
     P.bar('#xchk-fill', T1 + 0.3, { from: 0, to: 1 / N, dur: 0.6 });
     P.spot(ROWS, '#xchk-r1', T1, { scale: 1.03, lift: -8, dim: 0.6 });
     P.in('#xchk-now1', T1);
-    P.idle('#xchk-r1', T1 + 0.6, { y: 3, period: 2.8, until: T2 - 0.1 });
     // 拍 3 第 2 項：同拍 2；淡色底從上一項移過來
     P.chars('#xchk-t2', T2);
     P.stroke('#xchk-on2, #xchk-k2', T2 + 0.3, { dur: 0.4 });
@@ -138,7 +137,6 @@
     P.bar('#xchk-fill', T2 + 0.3, { from: 1 / N, to: 2 / N, dur: 0.6 });
     P.spot(ROWS, '#xchk-r2', T2, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xchk-now1', T2);  P.in('#xchk-now2', T2);
-    P.idle('#xchk-r2', T2 + 0.6, { y: 3, period: 2.8, until: T3 - 0.1 });
     // 拍 4 第 3 項：同拍 3
     P.chars('#xchk-t3', T3);
     P.stroke('#xchk-on3, #xchk-k3', T3 + 0.3, { dur: 0.4 });
@@ -146,15 +144,13 @@
     P.bar('#xchk-fill', T3 + 0.3, { from: 2 / N, to: 3 / N, dur: 0.6 });
     P.spot(ROWS, '#xchk-r3', T3, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xchk-now2', T3);  P.in('#xchk-now3', T3);
-    P.idle('#xchk-r3', T3 + 0.6, { y: 3, period: 2.8, until: T4 - 0.1 });
-    // 拍 5 第 4 項：同拍 3（3 項時刪掉這 7 行，見檔頭）
+    // 拍 5 第 4 項：同拍 3（3 項時刪掉這 6 行，見檔頭）
     P.chars('#xchk-t4', T4);
     P.stroke('#xchk-on4, #xchk-k4', T4 + 0.3, { dur: 0.4 });
     P.count('#xchk-n', T4 + 0.3, { from: 3, to: 4, dur: 0.4, suffix: ' / ' + N });
     P.bar('#xchk-fill', T4 + 0.3, { from: 3 / N, to: 4 / N, dur: 0.6 });
     P.spot(ROWS, '#xchk-r4', T4, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xchk-now3', T4);  P.in('#xchk-now4', T4);
-    P.idle('#xchk-r4', T4 + 0.6, { y: 3, period: 2.8, until: ALL - 0.1 });
 
     // 收：講到「全部好了」→ 回均衡（全部亮回、淡色底收掉）＋完成色疊在進度條上淡入；完成態停到段尾
     P.spot(ROWS, null, ALL, { dur: 0.6 });

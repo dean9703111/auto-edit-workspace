@@ -29,7 +29,7 @@ import { readCustom } from './assemble.mjs';
 import { findCue, norm, cueByN } from './srt.mjs';
 import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTime, textWidth } from './time.mjs';
 import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } from './edit.mjs';
-import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState } from './media.mjs';
+import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner } from './media.mjs';
 import { SFX_RULES, sfxBudget } from './audio.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
@@ -85,9 +85,9 @@ const footprintsOf = (C) => (C.format === 'portrait'
   ? { 'lower-third': [C.lowerThird.rect], summary: [C.centerCard.rect], quote: [C.centerCard.rect], keywords: [C.lowerThird.rect], 'chapter-tag': [C.badge.rect] }
   : FOOTPRINT);
 const badgeOf = (C) => (C.format === 'portrait' ? { ...BADGE, rect: C.badge.rect, zones: {} } : BADGE);
-// 小節角標（plan.json sections）：角標改成「章號＋目前小節」的矮膠囊（高 64、頂 56 → 底 120，全幕卡片頂 y ≈ 154 之上），
-// 子母畫面、全幕也露出（z 55：情境 ≤ 40、子母畫面框 41 之上，字幕 60 之下）；只在錄影段（STEP 膠囊接手）、章節轉場、疊加情境撞到時隱藏
-export const SECTION = { h: 64, z: 55, name: 16 };
+// 小節角標（plan.json sections）：角標改成「章號＋目前小節」的膠囊（高 80、頂 56 → 底 136，全幕卡片頂 y 152 之上；寬度跟著當下的小節名），
+// 子母畫面、全幕、錄影段也露出（z 55：情境 ≤ 40、子母畫面框 41 之上，字幕 60 之下）；只在章節轉場、疊加情境撞到時隱藏
+export const SECTION = { h: 80, z: 55, name: 12, extra: 124 };   // extra：號板 8＋64＋間距 20＋右內距 32（小節名 40px，寬照 media.mjs textPx）
 // 講稿的小節：### 標題＋底下第一句口播（略過的行同 media.mjs scriptLines）；給 sections 的建議用
 export function scriptSections(md) {
   const out = [];
@@ -725,10 +725,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       b.xfade = XFADE; a.end = Math.max(a.end, r3(b.start + XFADE)); a.pipEnd = b.start;
       b.notes.push(`和 ${a.id} 疊化 ${XFADE}s`);
     }
-    // 接縫在只有聲音的區間裡（離兩端 > 0.05 s）、一邊是 media 一邊是動畫幕、都不是章節 → 擦入／擦出（底下的錄影多播或提早 0.5 s）
+    // 一邊是 media 一邊是動畫幕（情境動畫、全畫面卡、字卡動態）、都不是章節 → 擦入／擦出（底下的錄影多播或提早 0.5 s）；
+    // 有講者小窗時小窗在上層（z 40）照常接續，只擦後面的畫面
     const seam = b.start;
-    const inVoice = voiceOut.some(([va, vb]) => va + 0.05 < seam && seam < vb - 0.05);
-    if (!inVoice || a.key === 'chapter' || b.key === 'chapter' || (a.type === 'media') === (b.type === 'media')) continue;
+    if (a.key === 'chapter' || b.key === 'chapter' || (a.type === 'media') === (b.type === 'media')) continue;
     if (a.type === 'media') {
       if (!['fade', 'cut'].includes(a.media.exit)) continue;
       const room = rollRoom(a, 'post');
@@ -742,7 +742,11 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       if (room >= WIPE - 1e-6) {
         a.wipeOut = true; a.z = 31; a.end = seam; b.preroll = r3(Math.min(ROLL, room));
         a.notes.push(`擦出到 ${b.id} ${WIPE}s（${b.id} 錄影提早 ${b.preroll.toFixed(2)}s 開始）`);
-      } else a.notes.push(`不擦出：${b.id} 的 in 只有 ${r3(b.media.in).toFixed(2)}s，提早不了 0.5s → in 改 ≥ 0.5 才有擦出（現在硬切）`);
+      } else {
+        // 錄影前面沒有多的（in 太小）：動畫停在完成態多留 WIPE 秒，蓋在錄影開頭上擦出（錄影照原時間開始，開頭 0.45 s 被擦開）
+        a.wipeOut = true; a.wipeLate = true; a.z = 31; a.end = r3(seam + WIPE); a.pipEnd = seam;
+        a.notes.push(`擦出到 ${b.id} ${WIPE}s（${b.id} 的 in 只有 ${r3(b.media.in).toFixed(2)}s 不能提早 → 停在完成態蓋住錄影開頭 ${WIPE}s 再擦開）`);
+      }
     }
   }
   // 素材的實際進出場：接不透明幕的那一側不淡（停在完成態），slide／zoom 照做
@@ -781,7 +785,58 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     if (!a.pipPieces.length) a.pipNote = '整段在只有聲音的區間，不放子母畫面';
     else if (voiceOut.some(([s, e]) => s < pe && e > a.start)) a.pipNote = '只有聲音的區間不放子母畫面';
   }
+  // 全寬版型：橫式、不透明的全畫面段（04 家族、custom fullscreen）整段沒有子母畫面小窗 → 主卡 1680（main.mjs 寫 data-wide、kit/scene-motion.js widen）
+  for (const a of timed) {
+    if (portrait || !a.opaque || a.pipPieces.length || !(a.type === 'custom' || (a.type === 'scene' && a.scene?.family === 'fullscreen'))) continue;
+    a.wide = true;
+    a.pipNote = `${a.pipNote ? `${a.pipNote}；` : ''}全寬版型（主卡 1680、內容區 1676×580：插圖放大、站距拉開，style.md「全寬」）`;
+    if (a.type === 'scene' && a.scene.key === 'fs-list' && !a.seg.slots?.visual) a.warnings.push(`${a.where} 全寬（沒有子母畫面小窗）的清單右半邊會空 → slots 加 "visual": "<畫廊插圖元件>"（右邊的主視覺，講到每一項重拍一下；例 "laptop"、"phone"）`);
+  }
 
+  // 小節角標（sections）：用成片秒數（剪輯台剪過之後的字幕）
+  const sections = [];
+  if (plan.sections !== undefined) {
+    if (!Array.isArray(plan.sections)) errors.push(`sections 要寫成陣列，例如 "sections": [{ "at": "#121", "name": "STEP 1｜設定資料夾" }] → 照例子改；不要小節角標就刪掉這個欄位`);
+    else plan.sections.forEach((x, i) => {
+      const w = `sections[${i}]`;
+      if (!x || typeof x !== 'object' || typeof x.name !== 'string' || !x.name.trim()) { errors.push(`${w} 要寫 { "at": "#N", "name": "小節名" }，現在是 ${JSON.stringify(x)}`); return; }
+      const t = parseTime(x.at);
+      if (t.error || t.kind !== 'cue' || t.end || t.off || t.kw) { errors.push(`${w}.at：只寫 "#N"（這個小節的第一句），現在是 ${JSON.stringify(x.at)}`); return; }
+      const c = cueByN(cues, t.n);
+      if (!c) { errors.push(`${w}.at：字幕沒有第 ${t.n} 句`); return; }
+      const name = x.name.trim(), len = textWidth(name);
+      if (len > SECTION.name) warnings.push(`${w}.name「${name}」${len} 字，超過 ${SECTION.name} 字 → 縮短（角標字太多會蓋到畫面；例「STEP 1｜設定資料夾」）`);
+      if (sections.length && c.start <= sections[sections.length - 1].at + 1e-6) { errors.push(`${w}.at：#${t.n} 不在前一個小節之後 → sections 照時間先後寫，一個句號只放一個小節`); return; }
+      sections.push({ i, n: t.n, at: r3(c.start), name });
+    });
+  }
+  // 小節角標在橫式錄影段也露出（右上）：錄影段的 STEP 膠囊、說明卡、箭頭要避開，紅框被蓋到要 ⚠。框寬照這段期間會出現的小節名（最寬那個）
+  const secBadgeFor = (it) => {
+    if (!badgeOn || !sections.length || portrait) return null;
+    const heads = timed.filter((x) => (x.key === 'chapter' || x.key === 'chapter-tag') && x.start <= it.start + 1e-6).sort((p, q) => p.start - q.start);
+    const ch = heads[heads.length - 1];
+    if (!ch) return null;
+    const chName = String((ch.key === 'chapter' ? ch.seg.slots?.title : ch.seg.slots?.name) ?? '');
+    const inCh = sections.filter((x) => x.at >= ch.start - 1e-6);
+    const cur = [...inCh].reverse().find((x) => x.at <= it.start + 1e-6);
+    const names = [cur ? cur.name : chName, ...inCh.filter((x) => x.at > it.start + 1e-6 && x.at < it.end - 1e-6).map((x) => x.name)];
+    const w = Math.max(...names.map((n) => textPx(n))) + SECTION.extra;
+    // 錄影段：角標移到錄影旁的空白處或錄影畫面的右上角（media.mjs mediaCorner；main.mjs 照 badges[].spots 做）
+    const spot = secSpot(it, w);
+    const [x1, y0] = spot ? [spot.right, spot.top] : [BAD.rect[2], BAD.rect[1]];
+    return { box: [x1 - w, y0, x1, y0 + SECTION.h], side: 'right', names };
+  };
+  // 橫式錄影段的小節角標位置；跟畫布右上一樣就不用移
+  function secSpot(it, w) {
+    if (portrait || it.type !== 'media' || !it.media?.info?.width || it.seg?.side) return null;   // 右側步驟清單：錄影靠左，角標留在畫布右上（清單卡頂 ≥ 160）
+    const c = mediaCorner(it.media.info, it.media.fit, { w, h: SECTION.h, dflt: [BAD.rect[2], BAD.rect[1]] });
+    return c.right === BAD.rect[2] && c.top === BAD.rect[1] ? null : c;
+  }
+
+  // 章節轉場沒有副標：只剩章號和章名（「結語」兩個字），畫面很空
+  for (const ch of timed.filter((x) => x.key === 'chapter' && !String(x.seg.slots?.sub ?? '').trim())) {
+    ch.warnings.push(`${ch.where} 沒有副標（slots.sub）：只有章號和章名，畫面很空 → 補一句 ≤ 12 字、講這一章要做什麼（講稿 ## 章名冒號後面那句可以直接用）`);
+  }
   // --- 章節（給 chtag）---
   const chapters = timed.filter((x) => x.key === 'chapter').map((x) => ({ start: x.start, num: String(x.seg.slots?.num ?? ''), name: String(x.seg.slots?.title ?? ''), sub: String(x.seg.slots?.sub ?? '') }));
 
@@ -800,7 +855,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       else if (it.seg.chtag && !it.chapter) it.errors.push(`${it.where} chtag：前面沒有章節轉場（chapter），角標不知道要寫哪一章 → 在這段前面加 01 章節轉場，或刪掉 "chtag": true`);
     } else if (it.type === 'media') {
       const pipAt = (t) => it.pipPieces.some((p) => t >= p.s - 1e-6 && t < p.e);
-      it.mediaReport = validateMedia(it, { cues, tm, pipAt, icons, steps, canvas: C, err: (m) => it.errors.push(`${it.where} ${m}`), warn: (m) => it.warnings.push(`${it.where} ${m}`) });
+      it.mediaReport = validateMedia(it, { cues, tm, pipAt, icons, steps, canvas: C, badge: secBadgeFor(it), err: (m) => it.errors.push(`${it.where} ${m}`), warn: (m) => it.warnings.push(`${it.where} ${m}`) });
     } else if (it.type === 'custom') {
       // 情境動畫綁句：x-*.html 裡的 P.at('#N…') 預先算成成片秒數（specs/contracts/cues.md §3）
       it.cueRefs = {};
@@ -938,7 +993,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         const [a, b] = x.start < md.start || (x.start === md.start && x.idx < md.idx) ? [x, md] : [md, x];
         if (b.start >= a.end - 1e-6 || overlapSeen.has(`${a.id}|${b.id}`)) continue;
         // slide／zoom 進場、疊化、章節墊底：前一段刻意墊在底下，容許那一段重疊
-        const allow = a.holdFor === b.id ? FADE : b.xfade && a.seamTo === b.id ? b.xfade : b.type === 'media' && ['slide', 'zoom'].includes(b.enterFx) ? ENTER[b.enterFx] : 0;
+        const allow = a.holdFor === b.id ? FADE : b.xfade && a.seamTo === b.id ? b.xfade : a.wipeLate && a.seamTo === b.id ? WIPE : b.type === 'media' && ['slide', 'zoom'].includes(b.enterFx) ? ENTER[b.enterFx] : 0;
         const ov = r3(Math.min(a.end, b.end) - b.start);
         if (ov > allow + 0.1) {
           overlapSeen.add(`${a.id}|${b.id}`);
@@ -1135,23 +1190,6 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
 
   // --- 常駐章節角標（F1）：章節起點（01 章節轉場結束；沒有 01 時是獨立 02 段的起點）→ 下一章起點、outro 起點或片尾 ---
   //     子母畫面、全幕（不透明的段）期間淡出 0.3 秒、回到疊加／半畫面再淡入；疊加情境和角標重疊（BADGE.zones）才隱藏
-  // 小節角標（sections）：用成片秒數（剪輯台剪過之後的字幕）
-  const sections = [];
-  if (plan.sections !== undefined) {
-    if (!Array.isArray(plan.sections)) errors.push(`sections 要寫成陣列，例如 "sections": [{ "at": "#121", "name": "STEP 1｜設定資料夾" }] → 照例子改；不要小節角標就刪掉這個欄位`);
-    else plan.sections.forEach((x, i) => {
-      const w = `sections[${i}]`;
-      if (!x || typeof x !== 'object' || typeof x.name !== 'string' || !x.name.trim()) { errors.push(`${w} 要寫 { "at": "#N", "name": "小節名" }，現在是 ${JSON.stringify(x)}`); return; }
-      const t = parseTime(x.at);
-      if (t.error || t.kind !== 'cue' || t.end || t.off || t.kw) { errors.push(`${w}.at：只寫 "#N"（這個小節的第一句），現在是 ${JSON.stringify(x.at)}`); return; }
-      const c = cueByN(cues, t.n);
-      if (!c) { errors.push(`${w}.at：字幕沒有第 ${t.n} 句`); return; }
-      const name = x.name.trim(), len = textWidth(name);
-      if (len > SECTION.name) warnings.push(`${w}.name「${name}」${len} 字，超過 ${SECTION.name} 字 → 縮短（角標只放得下一行）`);
-      if (sections.length && c.start <= sections[sections.length - 1].at + 1e-6) { errors.push(`${w}.at：#${t.n} 不在前一個小節之後 → sections 照時間先後寫，一個句號只放一個小節`); return; }
-      sections.push({ i, n: t.n, at: r3(c.start), name });
-    });
-  }
   const badges = [];
   if (badgeOn) {
     const starts = [];
@@ -1167,10 +1205,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       chs.push(s);
       if (s.kind === 'tag') chapterList.push({ id: s.id, kind: 'tag', num: s.num, cue: null, title: s.name, start: s.seg.start, end: s.seg.end, gap: null, placement: null, captionsClipped: [], badge: [] });
     }
-    // 有 sections：矮膠囊（底 120），子母畫面、全幕照樣露出；錄影段（STEP 膠囊接手）、章節轉場、疊加情境撞到才隱藏
+    // 有 sections：膠囊（底 136），子母畫面、全幕、橫式錄影段照樣露出（錄影段的 STEP 膠囊、說明卡避開它，media.mjs）；章節轉場、疊加情境撞到才隱藏
     const sec = sections.length > 0, rect = sec ? [BAD.rect[0], BAD.rect[1], BAD.rect[2], BAD.rect[1] + SECTION.h] : BAD.rect;
     const zoneHit = (x) => (BAD.zones[x.key] || []).some((r) => inter(r, rect) > 0);
-    const hides = (x) => (sec ? ['media', 'chapter'].includes(x.key) : x.opaque) || zoneHit(x);
+    const hides = (x) => (sec ? x.key === 'chapter' || (portrait && x.key === 'media') : x.opaque) || zoneHit(x);   // 直式的錄影段：角標和 STEP 膠囊同在左上，膠囊接手
     const hideAll = timed.filter((x) => x.key !== 'chapter-tag' && hides(x)).map((x) => [x.start, x.end]).sort((a, b) => a[0] - b[0]);
     const merged = [];
     for (const [a, b] of hideAll) { const l = merged[merged.length - 1]; if (l && a - l[1] <= BADGE.minGap + 1e-9) l[1] = Math.max(l[1], b); else merged.push([a, b]); }
@@ -1186,7 +1224,11 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       const sweep = c.kind === 'tag' && s >= SWEEP_MIN && Math.abs(show[0][0] - s) < 1e-6;
       // 小節：從這一章的章節轉場起點（cut）到下一章之間開講的；章節轉場蓋到小節第一句時，從角標起點算
       const subs = sec ? sections.filter((x) => x.at >= c.cut - 1e-6 && x.at < e - 1e-6).map((x) => (x.used = true, { at: r3(Math.max(x.at, s)), name: x.name })) : null;
-      badges.push({ id: c.id, k: badges.length + 1, num: c.num, name: c.name, start: s, end: e, hide, show, ...(sweep ? { sweep: true } : {}), ...(sec ? { subs } : {}) });
+      // 錄影段：外框移到錄影畫面的右上角（dx、dy＝相對畫布右上的位移）
+      const spots = sec ? timed.filter((x) => x.type === 'media' && x.start < e - 1e-6 && x.end > s + 1e-6).map((x) => ({ x, bx: secBadgeFor(x)?.box }))
+        .filter(({ bx }) => bx && (bx[2] !== BAD.rect[2] || bx[1] !== BAD.rect[1]))
+        .map(({ x, bx }) => ({ id: x.id, a: r3(x.start), z: r3(x.end), dx: bx[2] - BAD.rect[2], dy: bx[1] - BAD.rect[1] })) : [];
+      badges.push({ id: c.id, k: badges.length + 1, num: c.num, name: c.name, start: s, end: e, hide, show, ...(sweep ? { sweep: true } : {}), ...(sec ? { subs } : {}), ...(spots.length ? { spots } : {}) });
       const entry = chapterList.find((x) => x.id === c.id);
       if (entry) entry.badge = show;
     });

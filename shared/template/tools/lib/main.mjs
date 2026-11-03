@@ -22,7 +22,7 @@
 //     主時間軸對 host 只動 opacity、clip-path（不動 x／y／scale：009 直式的舞台縮放寫在 host 的 CSS transform）；常駐角標用 kit 的 P.wipe／P.pop／P.chars（同 02 模板）
 //   withTheme(html, theme)：theme＝"dark" 時在第一個 <html 加 data-theme="dark"（主合成與 build 產生的每個子合成都套；亮色原樣回傳）
 //   子母畫面片段的 enter（fly／fade／none）、exit（layer／fade／none）由 plan.mjs 的 pipMotion 決定；擦入擦出 wipeIn／wipeOut 是 host 的 clip-path
-//   buildPreview({ scene, parts, D, sub, pipStyle, cues }) → html（獨立頁，不是 HF 合成；cues＝[{ sound, at, volume? }] 畫面事件秒數，給父頁排音效）
+//   buildPreview({ scene, parts, D, sub, pipStyle, cues, wide }) → html（獨立頁，不是 HF 合成；cues＝[{ sound, at, volume? }] 畫面事件秒數，給父頁排音效；wide＝全寬版型示意）
 
 import { r3, FPS } from './time.mjs';
 import { SCOPE_P } from './assemble.mjs';
@@ -81,7 +81,7 @@ export function bgCss(prefix, bg = { fs: "bg.jpg", side: "bg.jpg", ch: "bg.jpg" 
 }
 
 // 常駐章節角標的動態：進場（章節起點）同 02 模板（由右擦開＋號碼彈出＋章名逐字，kit 的 P.*）；版面切到子母畫面／全幕時淡出 0.3 秒、回來淡入 0.3 秒；章節結束前 0.3 秒向右擦掉
-const BADGE_FADE = 0.3, BADGE_Z = 25, SECTION_Z = 55;   // SECTION_Z 同 plan.mjs 的 SECTION.z（小節角標要蓋過全幕情境）
+const BADGE_FADE = 0.3, BADGE_Z = 25, SECTION_Z = 55, SECTION_SWAP = 0.25, SECTION_MOVE = 0.35;   // SECTION_MOVE：錄影段滑到錄影畫面右上角；SECTION_Z 同 plan.mjs 的 SECTION.z（小節角標要蓋過全幕情境）
 // 角標不是 clip（HF lint：有子元素的 clip 要做成子合成），露出與否全由 GSAP 的 opacity 決定：時間 0 先設好、章節前是 0
 function badgeParts(b, { t0, DUR, C = CANVAS.landscape }) {
   const id = `chb-${b.k}`;
@@ -94,36 +94,58 @@ function badgeParts(b, { t0, DUR, C = CANVAS.landscape }) {
     ev.push(i === 0 ? { at: a, kind: 'enter' } : { at: a, kind: 'in' });
     ev.push(Math.abs(z - b.end) < 1e-6 ? { at: r3(Math.max(a, z - BADGE_FADE)), kind: 'last' } : { at: z, kind: 'out' });
   }
+  // 小節角標（plan.json sections）：一章一個外框（露出／隱藏、章節進退場照下面），裡面每個小節一顆「章號＋小節名」膠囊，寬度跟著自己的字；
+  // 講到下一節時舊的擦掉（0.25 秒）、新的擦開（0.35 秒）。整段都在角標露出前（或測試片段起點前）就結束的小節不放（沒擦開過會整顆露著）
+  const dir = C.format === 'portrait' ? 'left' : 'right', shown0 = b.show[0][0];
+  const caps = b.subs ? (!b.subs.length || b.subs[0].at > b.start + 1e-6 ? [{ at: b.start, name: b.name }] : []).concat(b.subs)
+    .map((x, k, a) => ({ ...x, end: a[k + 1]?.at ?? b.end }))
+    .filter((x) => x.end > shown0 + 1e-6 && x.end - t0 > 1e-6)
+    .map((x, k) => ({ ...x, cid: `${id}-n${k + 1}` })) : null;
+  const capAt = (t) => caps.find((x) => t >= x.at - 1e-6 && t < x.end - 1e-6) || caps[caps.length - 1];
   const tl = [];
   const live = ev.filter((x) => x.at - t0 >= st - 1e-6 && x.at - t0 < DUR);
-  const first = live[0];
+  const first = live[0], lastEv = live.find((x) => x.kind === 'last');
   const shownAt = (t) => b.show.some(([a, z]) => t >= a - 1e-6 && t < z - 1e-6);
   const init = st > 1e-6 ? 0 : first && Math.abs(first.at - t0) < 1e-6 ? (['out', 'last'].includes(first.kind) ? 1 : 0) : shownAt(t0) ? 1 : 0;
   tl.push(`tl.set('#${id}', { opacity: ${init} }, 0);`);
   for (const x of live) {
     const at = n3(x.at - t0);
     // 進場同 02 模板（design-system §5「任何 → 章節角標」）：由右擦開 0.35 → 0.12 號碼彈出 → 0.2 章名逐字；章節結束向右擦掉
-    if (x.kind === 'enter' && b.subs) tl.push(`tl.set('#${id}', { opacity: 1 }, ${at});`, `P.wipe('#${id}', ${at}, { dir: 'right', dur: 0.35 });`, `P.pop('#${id} .sc-sectag__num', ${n3(x.at - t0 + 0.12)}, { from: 0.4, dy: 0 });`);
+    if (x.kind === 'enter' && b.subs) tl.push(`tl.set('#${id}', { opacity: 1 }, ${at});`);   // 膠囊的擦開在下面（小節各一顆）
     else if (x.kind === 'enter') tl.push(`tl.set('#${id}', { opacity: 1 }, ${at});`, `P.wipe('#${id}', ${at}, { dir: 'right', dur: 0.35 });`, `P.pop('#${id} .sc-chtag__num', ${n3(x.at - t0 + 0.12)}, { from: 0.4, dy: 0 });`, `P.chars('#${id} .sc-chtag__name', ${n3(x.at - t0 + 0.2)});`);
+    else if (x.kind === 'last' && caps) continue;   // 章節結束：擦掉當下那顆膠囊（下面，要排在它的擦開之後：同一元素第一個 clipPath 補間會先套用初始狀態）
     else if (x.kind === 'last') tl.push(`P.wipeOut('#${id}', ${at}, { dir: 'right' });`);
     else if (x.kind === 'in') tl.push(`tl.fromTo('#${id}', { opacity: 0 }, { opacity: 1, duration: ${BADGE_FADE}, ease: 'sine.out', immediateRender: false }, ${at});`);
     else tl.push(`tl.fromTo('#${id}', { opacity: 1 }, { opacity: 0, duration: ${BADGE_FADE}, ease: 'sine.in', immediateRender: false }, ${at});`);
   }
   // 直式：左上（canvas.mjs 的 badge.rect；右上是平台按鈕列）
   const pos = C.format === 'portrait' ? `left:${C.badge.rect[0]}px;top:${C.badge.rect[1]}px` : 'right:96px;top:56px';
-  // 小節角標（plan.json sections）：章號＋目前小節的矮膠囊；名稱疊在同一格（寬度＝最長的那個，換小節時不跳動），講到那一句時換
-  if (b.subs) {
-    const list = (!b.subs.length || b.subs[0].at > b.start + 1e-6 ? [{ at: b.start, name: b.name }] : []).concat(b.subs);
-    list.forEach((x, k) => {
-      const nid = `#${id}-n${k + 1}`, end = list[k + 1]?.at ?? b.end;
-      tl.push(`tl.set('${nid}', { opacity: ${(k === 0 || t0 >= x.at - 1e-6) && t0 < end - 1e-6 ? 1 : 0} }, 0);`);   // 第一個從頭就在（整顆角標露出前是透明的）
-      const at = r3(x.at - t0);
-      if (k > 0 && at > 0 && at < DUR) tl.push(`tl.fromTo('#${id}-n${k}', { opacity: 1 }, { opacity: 0, duration: 0.2, ease: 'sine.in', immediateRender: false }, ${n3(at)});`,
-        `tl.fromTo('${nid}', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', immediateRender: false }, ${n3(at + 0.1)});`);
-    });
-    const html = `  <div id="${id}" class="sc-sectag" data-chapter-badge="${n3(st)}–${n3(e)}" style="${pos};z-index:${SECTION_Z};opacity:0">
-    <span class="sc-sectag__num">${esc(b.num)}</span>
-    <span class="sc-sectag__names">${list.map((x, k) => `<span id="${id}-n${k + 1}" class="sc-sectag__name">${esc(x.name)}</span>`).join('')}</span>
+  if (caps) {
+    for (const x of caps) {
+      const inAt = r3(Math.max(x.at, shown0) - t0), enter = x.at <= shown0 + 1e-6;
+      if (inAt >= 0 && inAt < DUR) {
+        const at = enter ? inAt : r3(inAt + SECTION_SWAP);
+        tl.push(`P.wipe('#${x.cid}', ${n3(at)}, { dir: '${dir}', dur: 0.35 });`);
+        if (enter) tl.push(`P.pop('#${x.cid} .sc-sectag__num', ${n3(at + 0.12)}, { from: 0.4, dy: 0 });`);
+      }
+      const outAt = r3(x.end - t0);
+      if (x.end < b.end - 1e-6 && x.end > shown0 + 1e-6 && outAt >= 0 && outAt < DUR) tl.push(`P.wipeOut('#${x.cid}', ${n3(outAt)}, { dir: '${dir}', dur: ${SECTION_SWAP} });`);
+      if (lastEv && capAt(lastEv.at) === x) tl.push(`P.wipeOut('#${x.cid}', ${n3(lastEv.at - t0)}, { dir: '${dir}' });`);
+    }
+    // 橫式錄影段（plan.mjs badges[].spots）：外框滑到錄影畫面的右上角、段落結束滑回（相鄰兩段錄影直接滑到下一個位置）
+    if (b.spots) {
+      const pos = (t) => b.spots.find((p) => t >= p.a - 1e-6 && t < p.z - 1e-6) || { dx: 0, dy: 0 };
+      const marks = [...new Set(b.spots.flatMap((p) => [p.a, p.z]))].sort((p, q) => p - q);
+      const p0 = pos(t0);
+      if (p0.dx || p0.dy) tl.push(`tl.set('#${id}', { x: ${p0.dx}, y: ${p0.dy} }, 0);`);
+      for (const t of marks) {
+        const at = r3(t - t0), f = pos(t - 1e-3), g = pos(t);
+        if (at < 0 || at >= DUR || (f.dx === g.dx && f.dy === g.dy)) continue;
+        tl.push(`tl.fromTo('#${id}', { x: ${f.dx}, y: ${f.dy} }, { x: ${g.dx}, y: ${g.dy}, duration: ${SECTION_MOVE}, ease: 'sine.inOut', immediateRender: false }, ${n3(at)});`);
+      }
+    }
+    const html = `  <div id="${id}" class="sc-secwrap${dir === 'left' ? ' sc-secwrap--left' : ''}" data-chapter-badge="${n3(st)}–${n3(e)}" style="${pos};z-index:${SECTION_Z};opacity:0">
+${caps.map((x) => `    <div id="${x.cid}" class="sc-sectag"><span class="sc-sectag__num">${esc(b.num)}</span><span class="sc-sectag__name">${esc(x.name)}</span></div>`).join('\n')}
   </div>`;
     return { html, tl };
   }
@@ -196,6 +218,8 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
     if (it.type === 'scene') return it.scene.portrait === 'stage' ? stageTransform(it.key === 'chapter' ? 'ch' : 'fs', C) : null;
     return it.type === 'custom' && it.opaque ? stageTransform('fs', C) : null;
   };
+  // 全寬版型：橫式、不透明的全畫面段（04 家族、custom fullscreen）整段沒有子母畫面小窗（只有聲音的區間）→ 主卡拉到 1680（kit/scene-motion.js widen）
+  const wideOf = (it, pieces) => !portrait && it.opaque && !pieces.length && (it.type === 'custom' || (it.type === 'scene' && it.scene?.family === 'fullscreen'));
   for (const it of list) {
     if (it.noHost) continue;
     const d = r3(it.e - it.s);
@@ -230,7 +254,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
       if (bd) hosts.push(`  <div id="bd-${it.id}" class="clip" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-track-index="${track++}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:${it.type === 'fx' ? FX_BG[it.bg] : it.key === 'chapter' ? 'var(--sc-ch-bg)' : 'var(--sc-fs-bg)'};z-index:${it.z - 1}"></div>`);
       const [hw, hh] = portrait && !st ? [W, H] : [1920, 1080];
       hosts.push(`  <div id="el-${it.id}" data-composition-id="${it.compId}" data-composition-src="${it.file}"${varAttr}
-       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"></div>`);
+       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"${pieces.length ? ' data-ambient="off"' : wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 子母畫面的段不要背景環境（kit P.ambient）；沒有小窗的全畫面段用全寬版型（kit widen）
       if (swapOut > 0) {
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: 'inset(0px 0px 0px 0px)' }, { clipPath: '${SWAP_KEEP}', duration: 0.001, ease: 'none', immediateRender: false }, ${n3(it.e)});`);
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: '${SWAP_KEEP}' }, { clipPath: '${SWAP_GONE}', duration: ${swapOut}, ease: 'power2.in', immediateRender: false }, ${n3(it.e + 0.001)});`);
@@ -457,9 +481,9 @@ ${badgeEls.length ? "  const P = SceneMotion(tl, document.getElementById('chb'))
 
 // ---------- 預覽頁（--gallery）----------
 
-export function buildPreview({ scene, parts, D, sub, pipStyle, cues = [] }) {
+export function buildPreview({ scene, parts, D, sub, pipStyle, cues = [], wide = false }) {
   const opaque = ['fullscreen', 'chapter'].includes(scene.family);
-  const pip = scene.family === 'fullscreen';
+  const pip = scene.family === 'fullscreen' && !wide;   // wide：全寬版型示意（只有聲音的段：沒有講者小窗、主卡 1680）
   const side = scene.key === 'side-panel';
   const tl = [];
   if (opaque) {
@@ -475,7 +499,7 @@ export function buildPreview({ scene, parts, D, sub, pipStyle, cues = [] }) {
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(`${scene.num} ${scene.zh}｜預覽`)}</title>
+<title>${esc(`${scene.num} ${scene.zh}${wide ? '（全寬）' : ''}｜預覽`)}</title>
 <!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg-fs.jpg、../bg-side.jpg、../bg-ch.jpg（或單一 ../bg.jpg）後重新整理就會更新 -->
 ${KIT_LINKS.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
 <script src="../kit/style-switch.js"></script>
@@ -504,7 +528,7 @@ ${indent(parts.style, 2)}
 <body>
 <div id="stage">
   <div id="footage"><img src="speaker.jpg" alt=""></div>
-  <div id="scene">
+  <div id="scene"${wide ? ' data-wide' : ''}>
     <div id="${parts.compId}" class="fill">
 ${indent(parts.body, 6)}
     </div>
@@ -523,7 +547,7 @@ window.__PREVIEW = ${JSON.stringify({ key: scene.key, duration: r3(D), cues: [..
   var start = function () {
     const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
     var pv = window.__PREVIEW;
-    const P = SceneMotion(tl, document.getElementById('${parts.compId}'));
+${parts.body.includes('data-illus') ? `    ILLUS.mount(document.getElementById('${parts.compId}'));\n` : ''}    const P = SceneMotion(tl, document.getElementById('${parts.compId}'));
 ${indent(SCOPE_P, 4)}
     const D = ${n3(D)};
 ${indent(parts.timeline, 4)}

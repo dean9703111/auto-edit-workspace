@@ -26,6 +26,7 @@
     <span class="sep"></span>
     <button id="btnSave" class="primary" data-tip="寫進 plan.json 和字幕檔（⌘／Ctrl＋S）" disabled>儲存</button>
     <button id="btnBuild" data-tip="跑 build.mjs，更新成片預覽（沒存的會先存）">重新產生</button>
+    <button id="btnRequests" class="toggle" aria-pressed="false" data-tip="修改單：選一段動畫或錄影，在右側寫想怎麼改（換動畫、流程更細、以圖為主…），累積好複製給 AI">修改單 <span class="rq-count" id="rqCount"></span></button>
     <a id="btnFraming" class="ghost" href="/framing" target="_blank" rel="noopener" data-tip="構圖台：拖框調整講者的裁切與縮放（另開分頁）" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">構圖</a>
     <button id="btnHelp" class="icon ghost" data-tip="操作說明與快捷鍵（?）" aria-label="說明">?</button>
   </div>
@@ -33,7 +34,7 @@
 
 <div id="banner" class="banner" hidden></div>
 
-<main class="workspace">
+<main class="workspace" id="workspace">
   <section class="viewer">
     <div class="viewer-bar">
       <div class="seg" role="tablist" aria-label="預覽模式">
@@ -57,11 +58,11 @@
             <div id="simCapLayer" class="cap-layer"><div id="simCaption" class="cg off"><span></span></div></div>
             <div id="simBlack" class="sim-black"></div>
             <div id="simCutBadge" class="cut-badge" hidden>✂ 這段會被剪掉（播放時會跳過）</div>
+            <div id="simHint" class="sim-hint" hidden></div>
           </div>
           <div class="player-host" id="playerHost" hidden></div>
           <div class="ov-safe" id="ovSafe" hidden><div class="act"></div><div class="title"></div></div>
           <div class="ov-speaker" id="ovSpeaker" hidden><span>講者框</span></div>
-          <div class="mode-badge" id="modeBadge">即時模擬</div>
           <div class="stage-empty" id="stageEmpty" hidden></div>
         </div>
       </div>
@@ -100,6 +101,14 @@
       <h2 id="inspTitle">整支影片的設定</h2>
     </header>
     <div class="insp-body" id="inspBody"></div>
+  </aside>
+  <aside class="requests" id="requests" aria-label="修改單" hidden>
+    <header class="rq-head">
+      <h2>修改單</h2>
+      <button id="btnRqClose" class="icon ghost small" data-tip="收起修改單（寫好的不會不見）" aria-label="收起修改單">✕</button>
+    </header>
+    <div class="rq-body" id="rqBody"><section class="ip-sec rq-top" id="rqTop"></section><div id="rqLists"></div></div>
+    <footer class="rq-foot" id="rqFoot"></footer>
   </aside>
 </main>
 

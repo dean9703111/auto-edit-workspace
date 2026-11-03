@@ -30,7 +30,7 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">步驟&nbsp;<span class="st-num">{{#steps}}<span id="n{{n}}">0{{n}}</span>{{/steps}}</span></span></div>
 </div>
 <!-- @timeline -->
-/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 第 1 步上漂 → 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步停 ≥ 0.65＋1.2）→ 漂浮 → 段尾向左擦掉 */
+/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 第 1 步上漂 → 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步停 ≥ 0.65＋1.2）→ 段尾向左擦掉 */
 const stepAt = [{{#steps}}{{{at}}}{{^last}}, {{/last}}{{/steps}}];
 P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
 P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
@@ -44,5 +44,4 @@ for (let i = 1; i < stepAt.length; i++) {
 P.icon('#s1 .sc-icon', stepAt[0] + 0.15);
 for (let i = 1; i < stepAt.length; i++) P.icon('#s' + (i + 1) + ' .sc-icon', stepAt[i] + P.AXIS_LAG + 0.15);
 {{/stepsHasIcon}}
-P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
 {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

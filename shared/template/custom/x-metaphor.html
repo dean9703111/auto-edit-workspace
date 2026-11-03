@@ -11,7 +11,7 @@
   【不要用在哪裡】
   - 只有「一句定義」沒有比喻：用 06 概念字卡。
   - 比喻有兩個以上的生活物件、或要比較兩個概念：用 05 兩側或 04b 對照。
-  - 沒有「代價／限制」那一句：刪掉最下面的警示條（#xmeta-warn）、script 開頭的「, T4 = P.at(…)」與「P.sfx('alert', …)」、「拍 4」那 6 行，收尾的 T4 改 T3；卡片大小不變，其他位置不用動。
+  - 沒有「代價／限制」那一句：刪掉最下面的警示條（#xmeta-warn）、script 開頭的「, T4 = P.at(…)」與「P.sfx('alert', …)」、「拍 4」那 5 行，收尾的 T4 改 T3；卡片大小不變，其他位置不用動。
   - 流程、數字、前後對比：用 x-process、x-numbers、x-before-after。
 
   【要改的地方】
@@ -128,7 +128,7 @@
     else { P.wipe('#xmeta-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xmeta-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xmeta-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
 
-    // 拍 1 生活物件：鏡頭帶過去（提早 0.2）→ 左框彈出、＋0.14 名稱逐字、＋0.18 圖示描線 → ＋0.3 虛線預告淡入、一直往前流 → ＋0.6 聚焦 → ＋0.9 漂浮
+    // 拍 1 生活物件：鏡頭帶過去（提早 0.2）→ 左框彈出、＋0.14 名稱逐字、＋0.18 圖示描線 → ＋0.3 虛線預告淡入、一直往前流 → ＋0.6 聚焦
     P.cam('#xmeta-card', T1 - 0.2, { to: '#xmeta-boxL', k: 0.12, scale: 1.04, dur: 0.9 });
     P.pop('#xmeta-boxL', T1, { from: 0.82, dy: 40 });
     P.chars('#xmeta-boxL .xmeta-name', T1 + 0.14);
@@ -136,7 +136,6 @@
     P.in('.xmeta-ghost', T1 + 0.3);
     P.flow('.xmeta-ghost', T1 + 0.3);
     P.spot('#xmeta-boxL', '#xmeta-boxL', T1 + 0.6, { scale: 1.06, lift: -10 });
-    P.idle('#xmeta-boxL', T1 + 0.9, { y: 4, period: 2.8, until: T2 - 0.1 });
     // 拍 2 技術概念：提早 0.6 秒箭頭（data-links 產生；箭頭頭在線描完時淡入）帶發光頭描過去 → 右框彈出、名稱逐字、圖示描線＋漣漪 → ＋0.6 聚焦右框、左框「走過」
     P.comet('#xmeta-boxL-xmeta-boxR', T2 - 0.6, { dur: 0.5 });
     P.cam('#xmeta-card', T2 - 0.2, { to: '#xmeta-boxR', k: 0.12, scale: 1.04, dur: 0.9 });
@@ -145,20 +144,18 @@
     P.icon('#xmeta-icoR', T2 + 0.18);
     P.ripple('#xmeta-icoR', T2 + 0.05, { to: 2.4 });
     P.spot(BOX, '#xmeta-boxR', T2 + 0.6, { scale: 1.06, lift: -10, done: '#xmeta-boxL' });
-    P.idle('#xmeta-boxR', T2 + 0.9, { y: 4, period: 2.8, until: T3 - 0.1 });
     // 拍 3 結論：鏡頭帶到結論句 → 逐字浮出 → ＋0.5 關鍵詞螢光筆 → ＋0.6 兩框收回焦點、整組退焦
     P.cam('#xmeta-card', T3 - 0.2, { to: '#xmeta-sum', k: 0.12, scale: 1.04, dur: 0.9 });
     P.chars('#xmeta-sum', T3);
     P.marker('#xmeta-kw', T3 + 0.5);
     P.spot(BOX, null, T3 + 0.6, { dur: 0.5 });
     P.dim('#xmeta-pair', T3 + 0.6, { to: 0.55 });
-    // 拍 4 代價／限制（鏡頭留在結論句）：彈出、＋0.14 限制句逐字、＋0.18 警示圖示描線 → ＋0.55 壞的詞重拍 → ＋0.6 結論句退焦 → ＋0.9 漂浮
+    // 拍 4 代價／限制（鏡頭留在結論句）：彈出、＋0.14 限制句逐字、＋0.18 警示圖示描線 → ＋0.55 壞的詞重拍 → ＋0.6 結論句退焦
     P.pop('#xmeta-warn', T4, { from: 0.82, dy: 40 });
     P.chars('#xmeta-wtext', T4 + 0.14);
     P.icon('#xmeta-icoW', T4 + 0.18);
     P.punch('#xmeta-bad', T4 + 0.55, { scale: 1.12 });
     P.dim('#xmeta-sum', T4 + 0.6, { to: 0.6 });
-    P.idle('#xmeta-warn', T4 + 0.9, { y: 4, period: 2.8 });
 
     // 收：最後一拍講完 2.6 秒回均衡（全部亮回、鏡頭回正），完成態停到段尾
     const TR = T4 + 2.6;

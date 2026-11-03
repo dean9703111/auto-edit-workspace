@@ -87,9 +87,8 @@
     else { P.wipe('#xprompt-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xprompt-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.icon('#xprompt-bico', 0.5);
     P.chars('#xprompt-card .sc-wcard__bar .sc-opt', 0.62, { stagger: 0.035 });
-    // 拍 1 輸入框：提示詞框由左擦開（框的大小已經是打完的樣子，游標停在第一個字前面）→ ＋0.6 漂浮到提醒前
+    // 拍 1 輸入框：提示詞框由左擦開（框的大小已經是打完的樣子，游標停在第一個字前面）
     P.wipe('#xprompt-box', 1.0, { dir: 'left', dur: 0.5 });
-    P.idle('#xprompt-box', 1.6, { y: 3, period: 3.2, until: NOTE - 0.1 });
 
     // 拍 2 打字：逐字打出（8.5 字／秒、等速），打完游標消失
     P.type('#xprompt-text', TYPE);
@@ -98,12 +97,11 @@
     // 拍 4 關鍵詞 2：主色移到第二個詞，第一個詞變回墨色（同一時間只有一個焦點）
     P.out('#xprompt-c1', K2, { dur: 0.3 });
     P.in('#xprompt-c2', K2, { dur: 0.3 });
-    // 拍 5 提醒：膠囊彈出、＋0.14 提醒字逐字、＋0.18 圖示描線 → ＋0.6 提示詞框退焦 → ＋0.9 漂浮
+    // 拍 5 提醒：膠囊彈出、＋0.14 提醒字逐字、＋0.18 圖示描線 → ＋0.6 提示詞框退焦
     P.pop('#xprompt-note', NOTE, { from: 0.82, dy: 40 });
     P.chars('#xprompt-ntext', NOTE + 0.14);
     P.icon('#xprompt-nico', NOTE + 0.18);
     P.dim('#xprompt-box', NOTE + 0.6, { to: 0.55 });
-    P.idle('#xprompt-note', NOTE + 0.9, { y: 4, period: 2.8 });
 
     // 收：提醒講完 2.6 秒回均衡（提示詞框亮回、兩個關鍵詞都是主色），完成態停到段尾
     const TR = NOTE + 2.6;

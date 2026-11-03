@@ -22,8 +22,8 @@
      圖示大小由 .sc-icon--72 決定，<svg> 本身不用寫 width、height。
   3. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
-  層數是 3：刪掉 #xstk-l4（整個 div）、script 開頭的「, T4 = P.at(…)」、「第 4 層」那 3 行，收尾 spot 裡的「, #xstk-l4」拿掉、
-  第 3 層 P.idle 的 until: T4 − 0.1 改 ALL − 0.1；位置和地基線由 data-layout 自動重排，不用改數字。
+  層數是 3：刪掉 #xstk-l4（整個 div）、script 開頭的「, T4 = P.at(…)」、「第 4 層」那 2 行，收尾 spot 裡的「, #xstk-l4」拿掉；
+  位置和地基線由 data-layout 自動重排，不用改數字。
 
   【綁句欄位】
   T1 = P.at('#111@手機')、T2 = P.at('#112@區網')、T3 = P.at('#113@控制台')、T4 = P.at('#114@剪輯')：講到那一層名稱的時刻，那一層落下，0.6 秒後聚焦到這一層。
@@ -108,22 +108,18 @@
     P.chars('#xstk-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     P.stroke('#xstk-ground', 1.0);
 
-    // 拍 1 第 1 層：從上方 28u 落下（過衝落地）→ ＋0.12 名稱、＋0.24 說明逐字浮出、＋0.15 圖示描線 → ＋0.6 聚焦（放大抬起發光）→ ＋0.9 漂浮
+    // 拍 1 第 1 層：從上方 28u 落下（過衝落地）→ ＋0.12 名稱、＋0.24 說明逐字浮出、＋0.15 圖示描線 → ＋0.6 聚焦（放大抬起發光）
     P.pop('#xstk-l1', T1, { from: 0.94, dy: -28 });  P.chars('#xstk-l1 .xstk-name', T1 + 0.12);  P.chars('#xstk-l1 .xstk-desc', T1 + 0.24);  P.icon('#xstk-ico1', T1 + 0.15);
     P.spot('#xstk-l1', '#xstk-l1', T1 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
-    P.idle('#xstk-l1', T1 + 0.9, { y: 3, period: 2.8, until: T2 - 0.1 });
     // 拍 2 第 2 層：同拍 1；＋0.6 聚焦移到這一層（下面的層壓暗 0.6）
     P.pop('#xstk-l2', T2, { from: 0.94, dy: -28 });  P.chars('#xstk-l2 .xstk-name', T2 + 0.12);  P.chars('#xstk-l2 .xstk-desc', T2 + 0.24);  P.icon('#xstk-ico2', T2 + 0.15);
     P.spot('#xstk-l1, #xstk-l2', '#xstk-l2', T2 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
-    P.idle('#xstk-l2', T2 + 0.9, { y: 3, period: 2.8, until: T3 - 0.1 });
     // 拍 3 第 3 層：同拍 2
     P.pop('#xstk-l3', T3, { from: 0.94, dy: -28 });  P.chars('#xstk-l3 .xstk-name', T3 + 0.12);  P.chars('#xstk-l3 .xstk-desc', T3 + 0.24);  P.icon('#xstk-ico3', T3 + 0.15);
     P.spot('#xstk-l1, #xstk-l2, #xstk-l3', '#xstk-l3', T3 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
-    P.idle('#xstk-l3', T3 + 0.9, { y: 3, period: 2.8, until: T4 - 0.1 });
-    // 拍 4 第 4 層：同拍 2（3 層時刪掉這 3 行，見檔頭）
+    // 拍 4 第 4 層：同拍 2（3 層時刪掉這 2 行，見檔頭）
     P.pop('#xstk-l4', T4, { from: 0.94, dy: -28 });  P.chars('#xstk-l4 .xstk-name', T4 + 0.12);  P.chars('#xstk-l4 .xstk-desc', T4 + 0.24);  P.icon('#xstk-ico4', T4 + 0.15);
     P.spot('#xstk-l1, #xstk-l2, #xstk-l3, #xstk-l4', '#xstk-l4', T4 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
-    P.idle('#xstk-l4', T4 + 0.9, { y: 3, period: 2.8, until: ALL - 0.1 });
 
     // 收：講到「合起來」→ 回均衡（全部亮回、亮框收掉），完成態停到段尾
     P.spot('#xstk-l1, #xstk-l2, #xstk-l3, #xstk-l4', null, ALL, { dur: 0.6 });

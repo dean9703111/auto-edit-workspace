@@ -525,7 +525,7 @@ const V2_FIX = {
   flow: `<svg style="left:700px;top:380px;width:400px;height:40px" viewBox="0 0 400 40"><line id="t-flow" x1="0" y1="20" x2="400" y2="20" stroke="#333" stroke-width="4" stroke-dasharray="12 12"/></svg>`,
   idle: `<div id="t-idle" class="t-box" style="left:1160px;top:140px"></div>`,
   spot: `<div class="t-spot t-box" id="t-s1" style="left:40px;top:500px"></div><div class="t-spot t-box" id="t-s2" style="left:280px;top:500px"></div><div class="t-spot t-box" id="t-s3" style="left:520px;top:500px"></div>`,
-  cam: `<div id="t-cam" style="left:800px;top:480px;width:500px;height:300px;background:#ddd"><div id="t-camtarget" class="t-box" style="left:380px;top:200px"></div></div>`,
+  cam: `<div id="t-cam" style="left:800px;top:480px;width:500px;height:300px"><div id="t-camtarget" class="t-box" style="left:380px;top:200px"></div></div>`,
   grow: `<div id="t-grow" class="t-box" style="left:1360px;top:300px;width:300px;height:160px"></div>`,
 };
 const V2_CODE = `

@@ -1,7 +1,7 @@
 <!-- 預設拍型：F 重點字卡（BEATS.md §3 F；keyAt＝拍 3，不寫動畫分鏡） -->
 <!-- @style -->
 /* v2 重點字卡：左 120、bottom 220。卡片（徽章＋前句）在左，重點在卡片右緣的「抽屜」裡，講到才抽出來（之前不留空白板）。
-   主色只給焦點（重點條＋錯位底板），標籤用墨色；景深＝硬邊錯位底板＋淡落影＋整組微浮。 */
+   主色只給焦點（重點條＋錯位底板），標籤用墨色；景深＝硬邊錯位底板＋淡落影。 */
 /* 排法 free（kit/scene-layout.js 不排）：卡片＋抽屜（重點講到才抽出），卡寬隨字，沒有列／欄。 */
 #gCard { left: 120px; bottom: 220px; }
 <!-- @style-portrait -->
@@ -20,7 +20,7 @@
 </div>
 <!-- @timeline -->
 /* 進場（0.6s 內完成，錯拍）：卡片從左擦開＋左移 40 → 0.12 標籤彈出 → 0.18 徽章彈入、0.3 描圈打勾 → 0.22 前句逐字上浮
-   停留：整組微浮 3px（3.6s 一個週期）、徽章呼吸 4%
+   停留：徽章呼吸 4%
    keyAt（講到重點）：前句退焦 0.7 → 重點條從卡片右緣抽出（0.5 expo.out）→ +0.12 字逐字彈出（back.out 過衝）→ +0.55 光澤掃過
    段尾：抽屜收回 0.28、卡片向左擦掉 0.3（退場比進場快）；後面接全畫面時提早 0.5 退完，不被轉場切半張 */
 P.wipe('#kCard', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
@@ -30,7 +30,6 @@ P.pop('#kTag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
 {{#tone_good}}P.check('#kIcon', {{{in}}} + 0.3);{{/tone_good}}{{^tone_good}}P.icon('#kIcon', {{{in}}} + 0.3);{{/tone_good}}
 P.idle('#kIcon', {{{in}}} + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });{{/icon}}
 {{#lead}}P.chars('#kLead', {{{in}}} + 0.22);{{/lead}}
-P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
 {{#lead}}P.dim('#kLead', {{{keyAt}}}, { to: 0.62 });{{/lead}}
 P.slide('#kSlab', {{{keyAt}}}, { from: 'left', dur: 0.5 });
 P.chars('#kWord', {{{keyAt}}} + 0.12, { mode: 'pop', stagger: 0.035 });

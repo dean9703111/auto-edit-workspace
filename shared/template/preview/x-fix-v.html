@@ -100,26 +100,23 @@
     else { P.wipe('#xfix-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xfix-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xfix-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
 
-    // 拍 1 痛點 1：由左擦開＋滑入 → ＋0.12 字逐字上浮 → ＋0.15 警示圖示描線；＋0.6 漂浮到下一拍前
+    // 拍 1 痛點 1：由左擦開＋滑入 → ＋0.12 字逐字上浮 → ＋0.15 警示圖示描線
     P.wipe('#xfix-p1', P1, { dir: 'left', dur: P.V2.SHELL });
     P.drift('#xfix-p1', P1, { dx: -24 });
     P.chars('#xfix-t1', P1 + 0.12);
     P.icon('#xfix-pico1', P1 + P.BEAT);
-    P.idle('#xfix-p1', P1 + 0.6, { y: 3, period: 3.2, until: P2 - 0.1 });
     // 拍 2 痛點 2：同拍 1；痛點 1 退焦（0.6）
     P.dim('#xfix-p1', P2, { to: 0.6 });
     P.wipe('#xfix-p2', P2, { dir: 'left', dur: P.V2.SHELL });
     P.drift('#xfix-p2', P2, { dx: -24 });
     P.chars('#xfix-t2', P2 + 0.12);
     P.icon('#xfix-pico2', P2 + P.BEAT);
-    P.idle('#xfix-p2', P2 + 0.6, { y: 3, period: 3.2, until: P3 - 0.1 });
-    // 拍 3 痛點 3：同拍 2（2 個痛點時刪掉這一組 6 行）
+    // 拍 3 痛點 3：同拍 2（2 個痛點時刪掉這一組 5 行）
     P.dim('#xfix-p2', P3, { to: 0.6 });
     P.wipe('#xfix-p3', P3, { dir: 'left', dur: P.V2.SHELL });
     P.drift('#xfix-p3', P3, { dx: -24 });
     P.chars('#xfix-t3', P3 + 0.12);
     P.icon('#xfix-pico3', P3 + P.BEAT);
-    P.idle('#xfix-p3', P3 + 0.6, { y: 3, period: 3.2, until: FIX - 0.85 });
 
     // 拍 4 劃掉（解法前 0.75 秒）：三條痛點一起被劃線（不擦回）→ 劃完左欄退焦到 0.5
     P.strike('#xfix-t1, #xfix-t2, #xfix-t3', FIX - 0.75, { dim: false });
@@ -134,9 +131,8 @@
     P.punch('#xfix-st', FIX + 0.6, { scale: 1.12 });
     P.marker('#xfix-st', FIX + 0.6);
     P.sheen('#xfix-gloss', FIX + 0.6);
-    // 拍 7 聚焦（FIX + 1.2）：解法卡放大抬起發光；＋0.6 漂浮
+    // 拍 7 聚焦（FIX + 1.2）：解法卡放大抬起發光
     P.spot('#xfix-sol', '#xfix-sol', FIX + 1.2, { scale: 1.05, lift: -10 });
-    P.idle('#xfix-sol', FIX + 1.8, { y: 4, period: 2.8 });
 
     // 收：講完解法 2.6 秒回均衡（解法卡回原大小、左欄回到 0.7），完成態停到段尾
     const TR = FIX + 2.6;

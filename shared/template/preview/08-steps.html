@@ -76,7 +76,7 @@ window.__PREVIEW = {"key":"steps","duration":8,"cues":[]};
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 8;
-    /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 第 1 步上漂 → 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步停 ≥ 0.65＋1.2）→ 漂浮 → 段尾向左擦掉 */
+    /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 第 1 步上漂 → 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步停 ≥ 0.65＋1.2）→ 段尾向左擦掉 */
     const stepAt = [0.15, 2.75, 5.35];
     P.wipe('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
     P.drift('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });
@@ -88,7 +88,6 @@ window.__PREVIEW = {"key":"steps","duration":8,"cues":[]};
     }
     P.icon('#pv-s1 .sc-icon', stepAt[0] + 0.15);
     for (let i = 1; i < stepAt.length; i++) P.icon('#pv-s' + (i + 1) + ' .sc-icon', stepAt[i] + P.AXIS_LAG + 0.15);
-    P.idle('#pv-gCard', 0 + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
     P.wipeOut('#pv-gCard', D - P.V2.OUT, { dir: 'left' });
 
     P.end(D);

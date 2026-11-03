@@ -13,9 +13,10 @@ let D = null;        // /api/framing 的回應
 let F = null;        // 目前的框 { x, y, w }（h 由比例算）
 let saved = null;    // plan.json 現在的 frame（null＝不裁切）
 let drag = null;
-let look = { color: 0, slim: 0 }, savedLook = { color: 0, slim: 0 }, lookPrev = {}, poll = null, faceTimer = null;
+let look = { color: 0, slim: 0, beauty: 0 }, savedLook = { color: 0, slim: 0, beauty: 0 }, lookPrev = {}, poll = null, faceTimer = null;
 const r2 = (v) => Math.round(Number(v) * 100) / 100;
-const sameLook = (a, b) => r2(a.color) === r2(b.color) && r2(a.slim) === r2(b.slim);
+const sameLook = (a, b) => r2(a.color) === r2(b.color) && r2(a.slim) === r2(b.slim) && r2(a.beauty) === r2(b.beauty);
+const faceOn = (l) => l.slim > 0 || l.beauty > 0;   // 瘦臉或美顏要偵測臉部、做底片
 
 const W = () => D.canvas.W, H = () => D.canvas.H;
 const portrait = () => D.canvas.format === 'portrait';
@@ -241,7 +242,7 @@ async function save() {
   let r, j;
   try {
     const body = { base: { hash: D.plan.hash }, frame };
-    if (!sameLook(look, savedLook)) body.look = { color: r2(look.color), slim: r2(look.slim) };
+    if (!sameLook(look, savedLook)) body.look = { color: r2(look.color), slim: r2(look.slim), ...(look.beauty > 0 ? { beauty: r2(look.beauty) } : {}) };
     r = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     j = await r.json().catch(() => null);
   } catch (e) { j = { message: `連不到剪輯台：${e.message}` }; }
@@ -258,7 +259,7 @@ async function save() {
   savedLook = { ...look };
   Object.assign(D.plan, { exists: j.plan.exists, hash: j.plan.hash, frame: j.plan.frame, speakerBox: j.plan.speakerBox });
   saved = j.plan.frame ? fromArr(j.plan.frame) : null;
-  msg.textContent = [j.wrote?.plan ? `已存進 plan.json：${frame ? `"frame": [${frame.join(', ')}]` : '不裁切（拿掉 frame）'}${lookChanged ? `、"look": { "color": ${r2(look.color)}, "slim": ${r2(look.slim)} }` : ''}` : '沒有變，不用存', ...(j.notes || [])].join('\n');
+  msg.textContent = [j.wrote?.plan ? `已存進 plan.json：${frame ? `"frame": [${frame.join(', ')}]` : '不裁切（拿掉 frame）'}${lookChanged ? `、"look": { "color": ${r2(look.color)}, "slim": ${r2(look.slim)}${look.beauty > 0 ? `, "beauty": ${r2(look.beauty)}` : ''} }` : ''}` : '沒有變，不用存', ...(j.notes || [])].join('\n');
   render();
   renderLook();
   return true;
@@ -267,28 +268,28 @@ async function save() {
 // ---------- 講者調光、瘦臉 ----------
 function initLook() {
   const L = D.look?.look || {};
-  const eff = L.effective || L.kit || { color: 0, slim: 0 };
-  look = { color: r2(eff.color || 0), slim: r2(eff.slim || 0) };
+  const eff = L.effective || L.kit || { color: 0, slim: 0, beauty: 0 };
+  look = { color: r2(eff.color || 0), slim: r2(eff.slim || 0), beauty: r2(eff.beauty || 0) };
   savedLook = { ...look };
-  const lim = L.limits || { color: [0, 1], slim: [0, 1.2], step: 0.05 };
-  for (const k of ['color', 'slim']) { $(k).max = String(lim[k][1]); $(k).step = String(lim.step); }
+  const lim = L.limits || { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], step: 0.05 };
+  for (const k of ['color', 'slim', 'beauty']) { $(k).max = String(lim[k][1]); $(k).step = String(lim.step); }
   renderLook();
   if (D.look?.running) startPoll();
 }
 const lookOut = (k, v) => (v > 0 ? (k === 'color' ? `${v.toFixed(2)}（剪映 ${Math.round(v * 100)}）` : v.toFixed(2)) : '關');
 function renderLook() {
-  for (const k of ['color', 'slim']) { $(k).value = String(look[k]); $(`${k}On`).checked = look[k] > 0; $(`${k}Out`).textContent = lookOut(k, look[k]); }
+  for (const k of ['color', 'slim', 'beauty']) { $(k).value = String(look[k]); $(`${k}On`).checked = look[k] > 0; $(`${k}Out`).textContent = lookOut(k, look[k]); }
   const S = D.look || {}, lm = S.look?.landmarks || {};
   const skip = { small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，成片只調光。`, noface: '抽樣都沒偵測到臉，這支只調光。', rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉，自動關掉瘦臉，成片只調光。` };
   let note = '要開就勾選；調光拖滑桿右邊的畫面馬上變（近似效果，成片照 LUT 更準）。';
-  const needDetect = look.slim > 0 && !lm.ready;
+  const needDetect = faceOn(look) && !lm.ready;
   if (S.running) note = `正在${S.line}（在背景跑，可以繼續拖框；好了下面會出現前後對照）`;
-  else if (needDetect) note = `瘦臉要先偵測整支影片的臉，長片要十幾分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
-  else if (look.slim > 0 && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，成片只調光。';
-  else if (look.slim > 0) note = '下面是播放頭那一格的臉，左邊原本、右邊瘦臉後；換一格看就移動播放頭。';
+  else if (needDetect) note = `瘦臉、美顏要先偵測整支影片的臉，長片要十幾分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
+  else if (faceOn(look) && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，成片只調光。';
+  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。改了強度存檔後，請 AI 重跑 look.mjs run 更新底片。';
   $('lookNote').textContent = note;
   $('btnDetect').hidden = !needDetect || !!S.running;
-  const showFaces = look.slim > 0 && lm.ready && lm.slimOk !== false;
+  const showFaces = faceOn(look) && lm.ready && lm.slimOk !== false;
   $('faces').hidden = !showFaces;
   if (showFaces) refreshFaces(0);
   drawPreview();
@@ -300,7 +301,7 @@ function refreshFaces(delay = 300) {
     if ($('faces').hidden) return;
     const t = Math.round(($('video').currentTime || 0) * 1000) / 1000, box = $('faces');
     for (const img of box.querySelectorAll('img')) {
-      const url = `/api/look/face?t=${t}&slim=${img.dataset.k === 'after' ? r2(look.slim) : 0}`;
+      const after = img.dataset.k === 'after', url = `/api/look/face?t=${t}&slim=${after ? r2(look.slim) : 0}&beauty=${after ? r2(look.beauty) : 0}`;
       img.style.filter = lookCss(look.color, 0);
       if (img.dataset.url === url) continue;
       img.dataset.url = url;
@@ -313,10 +314,10 @@ function refreshFaces(delay = 300) {
   }, delay);
 }
 function setLook(k, v) { look = { ...look, [k]: r2(v) }; renderLook(); }
-for (const k of ['color', 'slim']) {
+for (const k of ['color', 'slim', 'beauty']) {
   $(k).addEventListener('input', () => setLook(k, Number($(k).value)));
   $(`${k}On`).addEventListener('change', () => {
-    if ($(`${k}On`).checked) setLook(k, lookPrev[k] || (k === 'color' ? 0.8 : 0.6));
+    if ($(`${k}On`).checked) setLook(k, lookPrev[k] || (k === 'color' ? 0.8 : k === 'slim' ? 0.6 : 0.5));
     else { lookPrev[k] = look[k]; setLook(k, 0); }
   });
 }

@@ -62,7 +62,7 @@ test('設定：kit/look.json 預設、validateLook 每則訊息、resolveLook �
   assert.deepEqual(L.validateLook(false), []);
   assert.deepEqual(L.validateLook({ color: 0.5, slim: 1.2 }), []);
   for (const bad of [null, true, 'x', [1]]) assert.deepEqual(L.validateLook(bad), ['plan.json 的 look 要是物件或 false → 例如 "look": { "color": 0.8, "slim": 0.6 }；要用預設就把 look 整個拿掉']);
-  assert.deepEqual(L.validateLook({ x: 1 }), ['look 不能有「x」→ 只能寫 color、slim']);
+  assert.deepEqual(L.validateLook({ x: 1 }), ['look 不能有「x」→ 只能寫 color、slim、beauty']);
   assert.deepEqual(L.validateLook({ color: 1.5 }), ['look.color 要是 0–1 的數字（0＝不調光），現在是 1.5']);
   assert.deepEqual(L.validateLook({ slim: 2 }), ['look.slim 要是 0–1.2 的數字（0＝不瘦臉；超過 1.2 脖子與領口會被拉彎），現在是 2']);
   assert.equal(L.resolveLook({ plan: {}, templateDir: TEMPLATE }).source, 'kit');
@@ -73,7 +73,7 @@ test('設定：kit/look.json 預設、validateLook 每則訊息、resolveLook �
   const t = tmpDir();
   fs.mkdirSync(path.join(t, 'kit'));
   fs.writeFileSync(path.join(t, 'kit', 'look.json'), '{ "color": 0.8, "slim": 0.6, "lut": "x.cube", "eyes": 1 }');
-  assert.throws(() => L.readKitLook(t), /kit\/look\.json 不能有「eyes」→ 只能寫 color、slim、lut/);
+  assert.throws(() => L.readKitLook(t), /kit\/look\.json 不能有「eyes」→ 只能寫 color、slim、beauty、lut/);
 });
 
 // ---------- LUT ----------
@@ -241,13 +241,13 @@ test('ensureLook 判斷表：七列 × strict、key 與 report 原文、lookChec
   // 1：全關
   let d = fakeProject();
   let r = run(d, { look: false }, true);
-  assert.deepEqual([r.lut, r.key, r.report], [null, null, ['講者調光：關（plan.json 的 look）', '講者瘦臉：關（plan.json 的 look）']]);
+  assert.deepEqual([r.lut, r.key, r.report], [null, null, ['講者調光：關（plan.json 的 look）', '講者瘦臉：關、美顏：關（plan.json 的 look）']]);
   assert.equal(r.footage, path.join(d, 'work', 'rough.mp4'));
   // 2：只調光
   r = run(d, { look: { slim: 0 } }, true);
   assert.deepEqual(r.key, { v: 1, color: 0.8, lut: '56969a5a84ac', slim: 0, footage: 'rough.mp4' });
   assert.equal(path.basename(r.lut), 'lut-0.80-56969a5a.cube');
-  assert.deepEqual(r.report, ['講者調光：0.8（kit/look/jianying-smart.cube，build 重新編碼底片時 bake）', '講者瘦臉：關（plan.json 的 look）']);
+  assert.deepEqual(r.report, ['講者調光：0.8（kit/look/jianying-smart.cube，build 重新編碼底片時 bake）', '講者瘦臉：關、美顏：關（plan.json 的 look）']);
   // 7：沒跑過、能跑 → strict 丟錯、非 strict ⚠
   // 指令放在 → 後面、行尾（C-02）；rough.mp4 是假檔時不預估
   assert.throws(() => run(d, {}, true), /^Error: 瘦臉底片不是最新的（還沒跑過；不要瘦臉就在 plan\.json 寫 "look": \{ "slim": 0 \}）→ 先跑 node shared\/template\/tools\/look\.mjs run --project \S+$/);
@@ -256,7 +256,7 @@ test('ensureLook 判斷表：七列 × strict、key 與 report 原文、lookChec
   assert.equal(r.key.slim, 0);
   assert.equal(L.lookNeedsRun({ projectDir: d, plan: {}, templateDir: TEMPLATE, probe: OK_PROBE }), true);
   const lc = L.lookCheck({ projectDir: d, plan: { look: { slim: 0.6, x: 1 } }, templateDir: TEMPLATE, probe: OK_PROBE });
-  assert.deepEqual(lc.errors, ['look 不能有「x」→ 只能寫 color、slim']);
+  assert.deepEqual(lc.errors, ['look 不能有「x」→ 只能寫 color、slim、beauty']);
   assert.match(lc.warnings[0], /^build 會停下來：瘦臉底片不是最新的/);
   // 6：不能跑
   r = run(d, {}, true, { assets: { ok: false, missing: ['face_landmarker.task'], bad: [] }, chrome: true });
@@ -270,7 +270,7 @@ test('ensureLook 判斷表：七列 × strict、key 與 report 原文、lookChec
   r = run(d, {}, true);
   assert.equal(r.footage, path.join(d, 'work', 'rough-look.mp4'));
   assert.deepEqual(r.key, { v: 1, color: 0.8, lut: '56969a5a84ac', slim: 0.6, footage: 'rough-look.mp4' });
-  assert.equal(r.report[1], '講者瘦臉：0.6（work/rough-look.mp4；偵測率 99.98%、臉寬中位數 172 px）');
+  assert.equal(r.report[1], '講者瘦臉：0.6、美顏：關（work/rough-look.mp4；偵測率 99.98%、臉寬中位數 172 px）');
   assert.equal(L.lookNeedsRun({ projectDir: d, plan: {}, templateDir: TEMPLATE, probe: OK_PROBE }), false);
   // 強度改了 → 過期原因
   assert.throws(() => run(d, { look: { slim: 0.8 } }, true), /瘦臉底片不是最新的（瘦臉強度 0\.6 → 0\.8；/);
@@ -431,7 +431,7 @@ async function cli(args, cwd = WORKSPACE) {
 test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行下一步、clear', async () => {
   let r = await cli(['--help']);
   assert.equal(r.code, 0);
-  assert.match(r.lines[0], /^講者調光＋瘦臉（零依賴/);
+  assert.match(r.lines[0], /^講者調光、瘦臉、美顏（零依賴/);
   for (const bad of [['nope'], ['run', '--every', '3'], ['ensure', '--project', 'x'], ['status', '--zzz'], [], ['status', 'x']]) {
     r = await cli(bad);
     assert.equal(r.code, 2, bad.join(' '));
@@ -444,16 +444,16 @@ test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行�
   const dir = fakeProject({ plan: { version: 1, look: { slim: 0 }, scenes: [] } });
   r = await cli(['run', '--project', dir]);
   assert.equal(r.code, 0);
-  assert.match(r.lines.at(-1), /^瘦臉關閉（plan\.json 的 look slim = 0）→ 不用跑；調光 0\.8 在 build 時 bake$/);
+  assert.match(r.lines.at(-1), /^瘦臉、美顏都關閉（plan\.json 的 look slim = 0、beauty = 0）→ 不用跑；調光 0\.8 在 build 時 bake$/);
   const d2 = fakeProject();
   r = await cli(['status', '--project', d2]);
   assert.equal(r.code, 0);
   assert.equal(r.lines.filter((l) => l.startsWith('→ 下一步：')).length, 1, r.lines.join('\n'));
-  assert.equal(r.lines[1], '設定：調光 0.8、瘦臉 0.6（來源：kit/look.json）');
+  assert.equal(r.lines[1], '設定：調光 0.8、瘦臉 0.6、美顏 關（來源：kit/look.json）');
   freshState(d2);
   fs.writeFileSync(path.join(d2, 'work', 'look-preview.jpg'), 'x');
   r = await cli(['status', '--project', d2]);
-  assert.ok(r.lines.includes('瘦臉底片：✔ 最新（work/rough-look.mp4，瘦臉 0.6，640×360）'), r.lines.join('\n'));
+  assert.ok(r.lines.includes('瘦臉底片：✔ 最新（work/rough-look.mp4，瘦臉 0.6、美顏 0，640×360）'), r.lines.join('\n'));
   // 沒有 plan.json：look 好了 → 構圖預覽，不叫人 build（C-01）；指令單獨一行（C-02）
   assert.match(r.lines.at(-2), /^→ 下一步：look 好了；接著跑構圖分析，再開剪輯台，把構圖台網址/);
   assert.match(r.lines.at(-1), /^node shared\/template\/tools\/qc\.mjs framing --project \S+$/);
@@ -656,4 +656,38 @@ test('沒有臉的片（testsrc）：抽樣 12 格都沒臉就略過整支偵測
   assert.ok(again.lines.includes('[1/3] 找臉：用快取（抽樣 12 格都沒有臉）'), again.lines.join('\n'));
   const st = await cli(['status', '--project', dir]);
   assert.match(st.lines.at(-1), /^node shared\/template\/tools\/qc\.mjs framing --project \S+$/);
+});
+
+test('美顏：臉頰雜訊磨平、提亮；臉外與眼睛不動；眼下變亮、色偏拉回中性；b = 0 不動', () => {
+  // 合成一張臉：OVAL 是圓（中心 200,200、半徑 100），眼角、眉毛、嘴巴照 MediaPipe 編號放
+  const lm = [], cx = 200, cy = 200, R = 100;
+  L.OVAL.forEach((i, k) => { const a = (k / L.OVAL.length) * 2 * Math.PI - Math.PI / 2; lm[i] = [cx + R * Math.cos(a), cy + R * 1.2 * Math.sin(a)]; });
+  lm[234] = [cx - R, cy]; lm[454] = [cx + R, cy];   // 臉寬 200
+  Object.assign(lm, { 33: [140, 170], 133: [180, 170], 362: [220, 170], 263: [260, 170], 70: [135, 145], 105: [160, 140], 300: [265, 145], 334: [240, 140],
+    61: [170, 260], 291: [230, 260], 0: [200, 250], 17: [200, 272] });
+  const W = 400, H = 420, img = Buffer.alloc(W * H);
+  let seed = 7; const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  for (let i = 0; i < img.length; i++) img[i] = 120 + Math.round((rnd() - 0.5) * 16);   // 膚質起伏 ±8
+  const M = L.beautyMasks(lm, W, H);
+  assert.ok(M && M.fw === 200);
+  const stat = (buf, x0, y0, w, h) => { const v = []; for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) v.push(buf[y * W + x]); const m = v.reduce((a, b) => a + b) / v.length; return { m, sd: Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length) }; };
+  const out = Buffer.from(img);
+  L.beautyPlane(out, { w: W, h: H }, M, 1);
+  const cheek0 = stat(img, 140, 210, 20, 20), cheek1 = stat(out, 140, 210, 20, 20);
+  assert.ok(cheek1.sd < cheek0.sd * 0.5, `臉頰起伏 ${cheek0.sd.toFixed(2)} → ${cheek1.sd.toFixed(2)}`);
+  assert.ok(cheek1.m > cheek0.m + 2, '臉頰提亮');
+  assert.deepEqual(stat(out, 2, 2, 20, 20), stat(img, 2, 2, 20, 20), '臉外不動');
+  const eye0 = stat(img, 155, 167, 10, 6), eye1 = stat(out, 155, 167, 10, 6);
+  assert.ok(Math.abs(eye1.sd - eye0.sd) < 1.5, '眼睛（扣掉的橢圓）幾乎不動');
+  const under0 = stat(img, 155, 193, 10, 4).m, under1 = stat(out, 155, 193, 10, 4).m;
+  assert.ok(under1 - under0 > cheek1.m - cheek0.m, '眼下比臉頰亮得多');
+  const uv = Buffer.alloc(W * H, 150);
+  L.beautyChroma(uv, { w: W }, M, 1);
+  assert.ok(uv[195 * W + 160] < 150 && uv[195 * W + 160] > 128, '眼下色度往 128 拉');
+  assert.equal(uv[5 * W + 5], 150);
+  const same = Buffer.from(img); L.beautyPlane(same, { w: W, h: H }, M, 0);
+  assert.ok(same.equals(img), 'b = 0 不動');
+  // 設定：beauty 0–1，plan.json 的 look 可寫
+  assert.deepEqual(L.validateLook({ beauty: 0.5 }), []);
+  assert.deepEqual(L.validateLook({ beauty: 2 }), ['look.beauty 要是 0–1 的數字（0＝不美顏；磨皮、提亮、淡化黑眼圈），現在是 2']);
 });

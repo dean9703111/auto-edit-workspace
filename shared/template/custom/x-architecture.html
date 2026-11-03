@@ -20,7 +20,7 @@
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
   3. 綁句：<script> 開頭 PATH、FLOW、CUT（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
-  沒有「不經過」那一句：刪掉結論 #xarch-no、CUT = P.at(…) 與它的 P.sfx、「拍 6」「拍 7」「拍 8」三組，電腦的漂浮拿掉 until，收尾的 CUT 改成 FLOW、拿掉 #xarch-no 那一行；
+  沒有「不經過」那一句：刪掉結論 #xarch-no、CUT = P.at(…) 與它的 P.sfx、「拍 6」「拍 7」「拍 8」三組，收尾的 CUT 改成 FLOW、拿掉 #xarch-no 那一行；
   「D 下限」那一節改成 D ≥ FLOW + 5.2。
 
   【綁句欄位】
@@ -138,13 +138,12 @@
     P.dim('#xarch-cloud', 2.0, { to: 0.45, dur: 0.6 });
     P.cam('#xarch-card', 2.0, { scale: 1.03, dur: PATH - 2.2 });
 
-    // 拍 4 直連（PATH）：鏡頭帶到手機（提早 0.2）、手機聚焦、底色亮起、圖示漣漪；＋0.1 直連線帶發光頭描到電腦；＋0.6 漂浮
+    // 拍 4 直連（PATH）：鏡頭帶到手機（提早 0.2）、手機聚焦、底色亮起、圖示漣漪；＋0.1 直連線帶發光頭描到電腦
     P.cam('#xarch-card', PATH - 0.2, { to: '#xarch-a', k: 0.09, scale: 1.04, dur: 0.9 });
     P.spot(DEV, '#xarch-a', PATH, { scale: 1.08, lift: -12 });
     P.in('#xarch-nowa', PATH);
     P.ripple('#xarch-aico', PATH + 0.05, { to: 2.4 });
     P.comet('#xarch-a-xarch-b', PATH + 0.1, { dur: 0.8 });
-    P.idle('#xarch-a', PATH + 0.6, { y: 4, period: 2.8, until: FLOW + 0.7 });
     // 拍 5 傳過去（FLOW）：三個檔案（發光點）每 0.3 秒出發一個、各走 0.8 秒；鏡頭帶到電腦；第一個到站（＋0.8）電腦聚焦、手機變「走過」（亮度 0.92、留細框）、圖示漣漪
     P.comet('#xarch-f1', FLOW, { dur: 0.8, r: 11 });
     P.comet('#xarch-f2', FLOW + 0.3, { dur: 0.8, r: 11 });
@@ -153,7 +152,6 @@
     P.spot(DEV, '#xarch-b', FLOW + 0.8, { scale: 1.08, lift: -12, done: '#xarch-a' });
     P.out('#xarch-nowa', FLOW + 0.8);  P.in('#xarch-nowb', FLOW + 0.8);
     P.ripple('#xarch-bico', FLOW + 0.85, { to: 2.4 });
-    P.idle('#xarch-b', FLOW + 1.4, { y: 4, period: 2.8, until: CUT - 0.3 });
 
     // 拍 6 不經過（CUT）：雲端提早 0.2 秒亮回來 → 劃掉（劃完壓暗 0.5）、經過雲端的虛線退焦（0.3）
     P.dim('#xarch-cloud', CUT - 0.2, { to: 1, dur: 0.2 });
@@ -166,9 +164,8 @@
     P.pop('#xarch-no', CUT + 0.35, { from: 0.7, dy: 40 });
     P.chars('#xarch-not', CUT + 0.47, { mode: 'drop' });
     P.icon('#xarch-noico', CUT + 0.5);
-    // 拍 8（CUT + 0.95）：結論膠囊聚焦（放大抬起發光）；＋0.6 漂浮
+    // 拍 8（CUT + 0.95）：結論膠囊聚焦（放大抬起發光）
     P.spot('#xarch-no', '#xarch-no', CUT + 0.95, { scale: 1.05, lift: -10 });
-    P.idle('#xarch-no', CUT + 1.55, { y: 4, period: 2.8 });
 
     // 收：講完 2.6 秒回均衡（裝置亮回、膠囊回原大小、鏡頭回正；雲端維持劃掉、虛線維持退焦），完成態停到段尾
     const TR = CUT + 2.6;

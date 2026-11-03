@@ -26,7 +26,7 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 姓名逐字彈出（過衝）→ 頭銜逐組從左滑入（各綁 at）→ 漂浮 → 段尾向左擦掉 */
+/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 姓名逐字彈出（過衝）→ 頭銜逐組從左滑入（各綁 at）→ 段尾向左擦掉 */
 P.wipe('#spkCard .sc-lt__plate, #spkCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
 P.drift('#spkCard .sc-lt__plate, #spkCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
 P.pop('#spkCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
@@ -34,5 +34,4 @@ P.chars('#spkName', {{{in}}} + 0.22, { mode: 'pop' });
 {{#titles}}
 P.drift('#ti{{n}}', {{{at}}}, { dx: -16 * P.U });
 {{/titles}}
-P.idle('#spkCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
 {{#exitFade}}P.wipeOut('#spkCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#spkCard', D - 0.8, { dir: 'left' });{{/exitFade}}

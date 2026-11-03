@@ -426,24 +426,25 @@ test('新欄位：gains、sfxVolume、音效靜音與還原（記在 .editor/mem
   assert.match((await r.json()).message, /字幕沒有第 9 句/);
 });
 
-test('卡片文字：slots／vars 只能改文字值；欄位增減、清單超過上限、改清單的 at、改非文字欄位都被擋', async () => {
+test('卡片文字：slots／vars 只改文字（可以加字）；欄位增減、加項目、改清單的 at、改非文字欄位都被擋', async () => {
   await setup2(); reset2();
   const b = await base2();
   const ok = await post2('/api/save', { base: b, segments: {
-    s01: { slots: { text: '**場地**設定' } },
-    s02: { slots: { title: '三個重點', items: ['一一', { text: '二二', at: '#4' }, '三三 ｜at=#4+0.2', '四四'] } },
-    f01: { vars: { number: '29', label: '支影片' } },
+    s01: { slots: { text: '**場地**設定好了' } },
+    s02: { slots: { title: '重點', items: ['壹壹', { text: '貳貳', at: '#4' }, '參 ｜at=#4+0.2'] } },
+    f01: { vars: { number: '290', label: '支影片' } },
   } });
   assert.equal(ok.status, 200, await ok.clone().text());
   const p = JSON.parse(fs.readFileSync(plan2File, 'utf8'));
-  assert.deepEqual(p.scenes[1].slots.items, ['一一', { text: '二二', at: '#4' }, '三三 ｜at=#4+0.2', '四四']);
-  assert.deepEqual(p.scenes[2].vars, { number: '29', label: '支影片' });
+  assert.deepEqual(p.scenes[1].slots.items, ['壹壹', { text: '貳貳', at: '#4' }, '參 ｜at=#4+0.2']);
+  assert.deepEqual(p.scenes[2].vars, { number: '290', label: '支影片' });
   const b2 = await base2();
   const cases = [
     [{ s01: { slots: { text: 'a', tag: '新欄位' } } }, /欄位不能增減/],
-    [{ s02: { slots: { title: 'x', items: ['1', '2', '3', '4', '5'] } } }, /有 5 項，要在 2–4 項之間/],
-    [{ s02: { slots: { title: 'x', items: ['一', { text: '二', at: '#1' }, '三 ｜at=#4+0.2', '四'] } } }, /「at」不是文字，只能沿用原本的值/],
-    [{ s02: { slots: { title: 'x', items: ['一', { text: '二', at: '#4' }, '三 ｜at=#1', '四'] } } }, /「at=#1」不是原本就有的值/],
+    [{ s02: { slots: { title: 'x', items: ['1', '2', '3', '4'] } } }, /有 4 項，比原本多（原本 3 項）→ 剪輯台不能加項目/],
+    [{ s02: { slots: { title: 'x', items: ['1'] } } }, /有 1 項，至少要 2 項/],
+    [{ s02: { slots: { title: 'x', items: ['一', { text: '二', at: '#1' }, '三 ｜at=#4+0.2'] } } }, /「at」不是文字，只能沿用原本的值/],
+    [{ s02: { slots: { title: 'x', items: ['一', { text: '二', at: '#4' }, '三 ｜at=#1'] } } }, /「at=#1」不是原本就有的值/],
     [{ f01: { vars: { number: '1', label: 'x', accent: '#ff0000' } } }, /欄位不能增減/],
     [{ s01: { scene: 'quote' } }, /不能改「scene」/],
     [{ s01: { vars: { text: 'x' } } }, /不能改「vars」/],
@@ -456,6 +457,40 @@ test('卡片文字：slots／vars 只能改文字值；欄位增減、清單超�
     assert.match((await r.json()).message, re);
   }
   assert.equal(fs.readFileSync(plan2File, 'utf8'), before);
+});
+
+test('修改單：/api/requests 整份覆寫 work/feedback/editor-requests.md（空的擋下）；改字後的 audit 結果變成 [id] 開頭的檢查清單', async () => {
+  await setup2();
+  const f = path.join(proj2dir, 'work', 'feedback', 'editor-requests.md');
+  let r = await post2('/api/requests', { markdown: '  ' });
+  assert.equal(r.status, 400);
+  assert.match((await r.json()).message, /修改單是空的/);
+  r = await post2('/api/requests', { markdown: '# 剪輯台修改單\n\n## 1. s01' });
+  assert.equal(r.status, 200, await r.clone().text());
+  assert.match((await r.json()).file, /work\/feedback\/editor-requests\.md$/);
+  assert.equal(fs.readFileSync(f, 'utf8'), '# 剪輯台修改單\n\n## 1. s01\n');
+  r = await post2('/api/requests', { markdown: '第二次\n' });
+  assert.equal(r.status, 200);
+  assert.equal(fs.readFileSync(f, 'utf8'), '第二次\n');
+  const a = E.auditIssues(JSON.stringify({ errors: [], warnings: ['w'], findings: [
+    { id: 's02', level: 'error', msg: '文字超出卡片', fix: '改短' }, { id: 's02', level: 'warn', msg: '行距太擠' }] }));
+  assert.deepEqual(a, { errors: ['[s02] 版面：文字超出卡片 → 改短'], warnings: ['版面檢查：w', '[s02] 版面：行距太擠'] });
+  assert.match(E.auditIssues('not json').errors[0], /audit.*沒有產出結果/);
+});
+
+test('修改單改完了沒（requestsInfo）：比修改單新的 r<N>.md「改了哪幾段」裡「- <段 id>：…」＝已改；舊的 rN、修改單沒有的段、其他小節不算', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rq-done-'));
+  const fb = path.join(dir, 'work', 'feedback');
+  fs.mkdirSync(fb, { recursive: true });
+  assert.equal(E.requestsInfo(dir), null, '還沒有修改單');
+  const put = (f, text, sec) => { const p = path.join(fb, f); fs.writeFileSync(p, text); const t = new Date(Date.UTC(2026, 10, 3, 12, 0, sec)); fs.utimesSync(p, t, t); };
+  put('r3.md', '## 改了哪幾段\n- s03：舊的一輪\n', 0);
+  put('editor-requests.md', '# 剪輯台修改單\n\n## 1. x05　custom x-a.html\n- 要改：更有質感\n\n## 2. s03　07 重點字卡\n', 10);
+  put('r4.md', '# 回饋 r4\n\n## 分類\n- s03：個案\n\n## 改了哪幾段\n- x05：補方案拍、刪漂浮\n- 其他：plan.json 沒改\n- m09：不在修改單\n\n## 驗證\n- s03：audit 0 ✖\n', 20);
+  const q = E.requestsInfo(dir);
+  assert.deepEqual(q.ids, ['x05', 's03']);
+  assert.deepEqual(q.done, { x05: { round: 'r4', note: '補方案拍、刪漂浮' } });
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('人聲響度（ebur128，剪掉的範圍不算）與縮圖條（ffmpeg sprite，快取在 .editor/thumbs/）', async () => {
@@ -492,10 +527,10 @@ const FACE58 = [[1.5,62.1],[1.3,30.7],[0.7,21.6],[-0.9,-18.3],[-4.2,-97.9],[1.7,
 
 test('講者：/api/state 的 look 區塊；存 look（插入、取代、恢復預設、擋錯），rhythm／outro 原樣保留；配樂不列進音效清單', async () => {
   const s = await (await get('/api/state')).json();
-  assert.deepEqual(s.look.kit, { color: 0, slim: 0 }, '工作區預設：不調光、不瘦臉（使用者要求才開）');
+  assert.deepEqual(s.look.kit, { color: 0, slim: 0, beauty: 0 }, '工作區預設：不調光、不瘦臉、不美顏（使用者要求才開）');
   assert.equal(s.look.plan, null);
-  assert.deepEqual(s.look.effective, { color: 0, slim: 0, source: 'kit' });
-  assert.deepEqual(s.look.limits, { color: [0, 1], slim: [0, 1.2], step: 0.05 });
+  assert.deepEqual(s.look.effective, { color: 0, slim: 0, beauty: 0, source: 'kit' });
+  assert.deepEqual(s.look.limits, { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], step: 0.05 });
   assert.equal(s.look.lines.length, 2);
   assert.match(s.look.lines[0], /^講者調光：關/);
   assert.ok(s.schema.sounds.includes('ding') && !s.schema.sounds.includes('bgm-cylinder-five'), s.schema.sounds.join(','));
@@ -506,7 +541,7 @@ test('講者：/api/state 的 look 區塊；存 look（插入、取代、恢復�
   let r = await post('/api/save', { base: await base(), look: { color: 0.5, slim: 0.3 } });
   assert.equal(r.status, 200, JSON.stringify(await r.clone().json()));
   let j = await r.json();
-  assert.deepEqual(j.look.effective, { color: 0.5, slim: 0.3, source: 'plan' });
+  assert.deepEqual(j.look.effective, { color: 0.5, slim: 0.3, beauty: 0, source: 'plan' });
   const t1 = planNow();
   assert.match(t1, /\n  "look": \{ "color": 0\.5, "slim": 0\.3 \},\n  "(edit|scenes)": /);
   assert.equal(t1.replace(/  "look": \{[^}]*\},\n/, ''), withExtra);
@@ -613,7 +648,8 @@ test('直式（009 FR-120）：/api/state 的 canvas 讀 lib/canvas.mjs；預覽
   try {
     const u = (p) => new URL(p, ed3.url);
     const s = await (await fetch(u('/api/state'))).json();
-    assert.deepEqual(s.canvas, { format: 'portrait', source: 'plan.json', W: 1080, H: 1920, maxChars: P.caption.maxChars, captionBottom: P.caption.bottom, pip: P.pip.box });
+    assert.deepEqual(s.canvas, { format: 'portrait', source: 'plan.json', W: 1080, H: 1920, maxChars: P.caption.maxChars, captionBottom: P.caption.bottom, pip: P.pip.box,
+      media: { panel: { contain: [0, 240, 1080, 660], cover: [0, 0, 1080, 900] }, full: { contain: [0, 240, 1080, 1020], cover: [0, 0, 1080, 1920] }, side: null } });
     assert.equal(s.canvas.W / s.canvas.H, 9 / 16, '預覽框 9:16');
     // 頁面：預覽框的比例、講者框、字數提醒都讀 canvas，不再寫死 16:9／1920／18
     const css = await (await fetch(u('/editor/editor.css'))).text();
@@ -746,7 +782,7 @@ test('構圖台（server）：一起存講者調光瘦臉（look，還沒有 pla
     assert.equal((await r.json()).look.look.effective.color, 0.8);
     r = await post5('/api/look/run', {});
     assert.equal(r.status, 400);
-    assert.match((await r.json()).message, /瘦臉是關的/);
+    assert.match((await r.json()).message, /瘦臉、美顏都是關的/);
     assert.equal((await (await fetch(u('/api/look/status'))).json()).running, false);
     assert.equal((await post5('/api/refframe', { t: -1 })).status, 400);
     r = await post5('/api/refframe', { t: 1, frame: [182, 144, 1664, 936], color: 0.8 });

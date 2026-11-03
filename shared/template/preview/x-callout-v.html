@@ -114,26 +114,22 @@
     if (!$q('#xcall-obj')[0].classList.contains('il')) P.icon('#xcall-obj', 1.15);   // 插圖元件當主體：彈出就好，不描線
 
     // 拍 1 第 1 個標籤：從下彈出 → ＋0.12 字逐字浮出、＋0.15 圖示描線 → ＋0.25 引線帶發光頭走到主體（0.5 秒）、＋0.65 端點小圓描出
-    //   → ＋0.6 聚焦（放大抬起發光）→ ＋0.9 漂浮
+    //   → ＋0.6 聚焦（放大抬起發光）
     P.pop('#xcall-t1', T1);  P.chars('#xcall-n1', T1 + 0.12);  P.icon('#xcall-ico1', T1 + 0.15);
     P.comet('#xcall-t1-xcall-obj', T1 + 0.25, { dur: 0.5 });  P.stroke('#xcall-d1', T1 + 0.65, { dur: 0.25 });
     P.spot('#xcall-t1', '#xcall-t1', T1 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
-    P.idle('#xcall-t1', T1 + 0.9, { y: 3, period: 2.8, until: T2 - 0.1 });
     // 拍 2 第 2 個標籤：同拍 1；＋0.6 聚焦移過來、上一個標籤的引線與端點退焦 0.6
     P.pop('#xcall-t2', T2);  P.chars('#xcall-n2', T2 + 0.12);  P.icon('#xcall-ico2', T2 + 0.15);
     P.comet('#xcall-t2-xcall-obj', T2 + 0.25, { dur: 0.5 });  P.stroke('#xcall-d2', T2 + 0.65, { dur: 0.25 });
     P.spot('#xcall-t1, #xcall-t2', '#xcall-t2', T2 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });  P.dim('#xcall-t1-xcall-obj, #xcall-d1', T2 + 0.6);
-    P.idle('#xcall-t2', T2 + 0.9, { y: 3, period: 2.8, until: T3 - 0.1 });
-    // 第 3 個標籤（只有 2 個標籤時刪掉這 4 行）
+    // 第 3 個標籤（只有 2 個標籤時刪掉這 3 行）
     P.pop('#xcall-t3', T3);  P.chars('#xcall-n3', T3 + 0.12);  P.icon('#xcall-ico3', T3 + 0.15);
     P.comet('#xcall-t3-xcall-obj', T3 + 0.25, { dur: 0.5 });  P.stroke('#xcall-d3', T3 + 0.65, { dur: 0.25 });
     P.spot('#xcall-t1, #xcall-t2, #xcall-t3', '#xcall-t3', T3 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });  P.dim('#xcall-t2-xcall-obj, #xcall-d2', T3 + 0.6);
-    P.idle('#xcall-t3', T3 + 0.9, { y: 3, period: 2.8, until: T4 - 0.1 });
-    // 第 4 個標籤（3 個以下時刪掉這 4 行）
+    // 第 4 個標籤（3 個以下時刪掉這 3 行）
     P.pop('#xcall-t4', T4);  P.chars('#xcall-n4', T4 + 0.12);  P.icon('#xcall-ico4', T4 + 0.15);
     P.comet('#xcall-t4-xcall-obj', T4 + 0.25, { dur: 0.5 });  P.stroke('#xcall-d4', T4 + 0.65, { dur: 0.25 });
     P.spot('#xcall-t1, #xcall-t2, #xcall-t3, #xcall-t4', '#xcall-t4', T4 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });  P.dim('#xcall-t3-xcall-obj, #xcall-d3', T4 + 0.6);
-    P.idle('#xcall-t4', T4 + 0.9, { y: 3, period: 2.8, until: ALL - 0.1 });
 
     // 收：總結那一句 → 回均衡（標籤全部亮回、亮框收掉，引線亮回），完成態停到段尾
     P.spot(TAGS, null, ALL, { dur: 0.6 });

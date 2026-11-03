@@ -1,6 +1,6 @@
 ---
 name: auto-edit-review
-description: 分鏡表確認後的定稿與審查：build、audit、snapshot 抽查、開 Studio 給使用者看；使用者在 Studio 看完給修改時開回饋輪 rN（先備份 plan.json、記原話與分類、改到的段存版本）；要一段重新設計時先出分鏡提案（work/versions/<段>/v<N>/）給使用者確認再做；退回某一版；使用者說「打開剪輯台」「調好了」時開關剪輯台。當分鏡表剛確認完，或使用者說「s05 的金句卡往左移」「這張卡…」「s12 的動畫想更完善」「s12 重新設計」「s12 用 v1」「打開剪輯台」「調好了」時使用。還沒有確認分鏡表時不要用（改用 auto-edit-storyboard）；要輸出成片時不要用（改用 auto-edit-deliver）。
+description: 分鏡表確認後的定稿與審查：build、audit、snapshot 抽查、開 Studio 給使用者看；使用者在 Studio 看完給修改時開回饋輪 rN（先備份 plan.json、記原話與分類、改到的段存版本）；要一段重新設計時先出分鏡提案（work/versions/<段>/v<N>/）給使用者確認再做；退回某一版；使用者說「打開剪輯台」「調好了」時開關剪輯台。當分鏡表剛確認完，或使用者說「s05 的金句卡往左移」「這張卡…」「s12 的動畫想更完善」「s12 重新設計」「s12 用 v1」「打開剪輯台」「調好了」「照修改單改」時使用。還沒有確認分鏡表時不要用（改用 auto-edit-storyboard）；要輸出成片時不要用（改用 auto-edit-deliver）。
 version: 0.1.0
 ---
 # 定稿、審查、回饋輪、剪輯台
@@ -11,7 +11,7 @@ version: 0.1.0
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
 | ③ 通過、情境動畫都做完 | 流程 A | snapshot 截圖、每段 PASS／FAIL 表、Studio 網址 | build 0 個 ✖、audit 0 個 ✖、每段 PASS | ④ Studio 預覽 |
-| ④ 的修改 | 流程 B | `work/feedback/r<N>.md`、`work/hyperframes/plan.json.bak-r<N>`、`work/versions/<段>/` | rN.md 四節齊全；改到的段有新版本 | ④ Studio 預覽 |
+| ④ 的修改；「照修改單改」（流程 F） | 流程 B、F | `work/feedback/r<N>.md`、`work/hyperframes/plan.json.bak-r<N>`、`work/versions/<段>/` | rN.md 四節齊全；改到的段有新版本 | ④ Studio 預覽 |
 | ④ 之後一段要重新設計（D）、退回舊版（E） | 流程 D、E | D：`work/versions/<段>/v<N>/分鏡.md` → 做好的 v<N>、`比較-v<舊>-v<N>.mp4`；E：那段換回舊版 | D：使用者確認過分鏡、`versions.mjs save` 存進 v<N>；E：build 0 個 ✖ | D：③ 分鏡表（<段> v<N>）→ ④；E：④ |
 | 「打開剪輯台」 | 流程 C | 剪輯台網址 | `editor.mjs --status` 印出網址 | ⑤ 剪輯台 |
 
@@ -65,7 +65,7 @@ node shared/template/tools/audit.mjs --project projects/<專案>
 完成判準：印出網址；回覆附上要使用者確認的卡、提醒「請看字幕有沒有對到嘴」（USAGE.md 2.6）。直式專案上半面板的 host 不要在 Studio 裡拖動或改位置（會蓋掉舞台縮放），要改內容去子合成。
 常見錯誤：網址打不開 → 退路表第 3 列。
 
-**B. 回饋輪**（停點 ④ 收到修改時；細節讀 `references/feedback-round.md`）
+**B. 回饋輪**（停點 ④ 收到修改時；細節讀 `references/feedback-round.md`。**流程 F**＝使用者說「照修改單改」、貼上「照剪輯台修改單改這 N 段（…）」或「# 剪輯台修改單」：一樣走 B1–B7，改法照 `work/feedback/editor-requests.md` 直接做、不出提案、不停 ③，情境動畫段一段一個 `worker` 子代理同時派出；標籤解讀、派工讀 `references/editor-requests.md`）
 
 ```
 node shared/template/tools/status.mjs --project projects/<專案>
@@ -75,7 +75,7 @@ node shared/template/tools/versions.mjs save --project projects/<專案> --seg <
 ```
 
 B1 編號 N 用 status 印的「下一輪回饋編號」（工具沒有時：`work/feedback/` 裡 `r*.md` 的最大數字＋1，例：有 r1、r2 → r3）→ B2 重新讀 plan.json（剪輯台可能改過）→ B3 備份（cp 那兩行擇一，再跑 `versions.mjs save` 存改之前的樣子；還沒有任何版本的段加 `--no-preview`，見 `references/feedback-round.md`）→ B4 寫 `work/feedback/r<N>.md` 的「原話」「分類」→ B5 改 plan.json（「s05」直接找 id；「1:10 那段」「這段」照 USAGE.md 2.6 換成段 id；「這張卡」才讀 Studio 選取，USAGE.md 2.6）→ B6 A1–A3 只看改到的段，再跑一次 `versions.mjs save`（存改之後的樣子＋比較影片）→ B7 寫 rN.md「改了哪幾段」「驗證」→ 停點 ④。
-完成判準：`plan.json.bak-r<N>` 存在；改到的段在 `work/versions/<段>/` 有改前、改後兩版；rN.md 四節（原話、分類、改了哪幾段、驗證）齊全。
+完成判準：`plan.json.bak-r<N>` 存在；改到的段在 `work/versions/<段>/` 有改前、改後兩版；rN.md 四節（原話、分類、改了哪幾段、驗證）齊全；流程 F 修改單每一段在「改了哪幾段」都有一列 `- <段 id>：<做了什麼或沒做的理由>`（剪輯台讀這一列標「已改」）。
 常見錯誤：「規則」類的回饋（例：「以後金句都放左邊」）去改了 `shared/` → 只記在 rN.md 的「建議改規則」，不改 `shared/`；使用者沒說怎麼改、只說要更好 → 改走流程 D。
 
 **C. 剪輯台 → 停點 ⑤**（EDITOR.md「一、給 AI」；剪輯台會改哪些欄位看其中「3. 剪輯台會寫哪些欄位」）
@@ -139,11 +139,10 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 
 | 停點 | 使用者回 | 做什麼 |
 |---|---|---|
-| ④ | 「s05 的金句卡往左移」這類修改 | 流程 B → 重貼停點 ④ |
+| ④、⑤ | 「s05 的金句卡往左移」這類修改／「照修改單改」 | 流程 B／流程 F → 重貼停點 ④ |
 | ④ | 「s12 的動畫想更完善」「s12 重新設計」／「s12 用 v1」 | D1 → 停點 ③（<段> v<N>）／流程 E → 停點 ④ |
 | ③（<段> v<N>） | 「可以」／要改的拍 | D2 → D3 → 停點 ④／改那份分鏡.md → 重貼停點 ③ |
-| ④ | 「可以了，輸出成片」 | 交 `auto-edit-deliver` |
-| ④ | 「打開剪輯台」 | 流程 C |
+| ④ | 「可以了，輸出成片」／「打開剪輯台」 | 交 `auto-edit-deliver`／流程 C |
 | ⑤ | 「調好了」 | 重新讀 plan.json 與 rough.srt → 流程 A → 停點 ④ |
 
 ## 自我核對
@@ -195,5 +194,4 @@ audit：✖ 0、⚠ <N>（保留的理由一行）
 
 ## 什麼時候讀 references/
 
-- `references/feedback-round.md`：流程 B 才讀。
-- `references/reviewer-brief.md`：A3 要派 verifier 子代理時才讀。
+- `references/feedback-round.md`：流程 B、F 才讀；`references/editor-requests.md`：流程 F 才讀；`references/reviewer-brief.md`：A3 要派 verifier 子代理時才讀。

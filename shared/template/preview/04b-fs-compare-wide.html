@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04b 全畫面對照（全寬）｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg-fs.jpg、../bg-side.jpg、../bg-ch.jpg（或單一 ../bg.jpg）後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：各版面先用自己的 ../bg-*.jpg，沒有就用 ../bg.jpg，都沒有只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-fs-compare #pv-wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
+  #pv-fs-compare #pv-wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+  #pv-fs-compare #pv-wBody { width: 1176px; height: 580px; }
+  #pv-fs-compare #pv-fCmp { display: flex; align-items: stretch; width: calc(100% - 2 * var(--sc-pad-card)); }
+  #pv-fs-compare .fCol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: var(--sc-gap-lg); }
+  #pv-fs-compare .fCol:first-child { padding-right: var(--sc-gap-lg); }
+  #pv-fs-compare .fCol:last-child { padding-left: var(--sc-gap-lg); }
+  #pv-fs-compare .fHead { width: max-content; padding-bottom: var(--sc-gap-md); border-bottom: 4px solid var(--sc-accent); white-space: nowrap; }
+  #pv-fs-compare .fHead--icon { display: flex; align-items: center; gap: var(--sc-gap-sm); }
+  #pv-fs-compare .fHIcon { flex: none; display: block; width: 56px; height: 56px; color: var(--sc-accent); }
+  #pv-fs-compare .fHIcon svg { display: block; width: 56px; height: 56px; }
+  #pv-fs-compare .fItem { display: flex; align-items: center; gap: var(--sc-gap-md); white-space: nowrap; }
+  #pv-fs-compare .fLine { flex: none; width: 2px; background: var(--sc-fs-line); opacity: 0.4; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene" data-wide>
+    <div id="pv-fs-compare" class="fill">
+      <div class="sc-surface-fs fill"></div>
+      <div id="pv-aWrap" class="fill">
+        <div id="pv-wCard" class="sc-wcard">
+          <div class="sc-wcard__bar"><span class="sc-opt">一鍵剪輯 vs 照規則剪</span></div>
+          <div id="pv-wBody" data-layout="col">
+            <div id="pv-fCmp" data-slot>
+              <div id="pv-fColL" class="fCol">
+                <div class="fHead fHead--icon"><span class="fHIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72" /> <path class="stroke-draw" pathLength="1" d="m14 7 3 3" /> <path class="stroke-draw" pathLength="1" d="M5 6v4" /> <path class="stroke-draw" pathLength="1" d="M19 14v4" /> <path class="stroke-draw" pathLength="1" d="M10 2v2" /> <path class="stroke-draw" pathLength="1" d="M7 8H3" /> <path class="stroke-draw" pathLength="1" d="M21 16h-4" /> <path class="stroke-draw" pathLength="1" d="M11 3H9" /> </svg></span><span class="sc-t72 sc-w900 sc-optr">一鍵剪輯</span></div>
+                <div class="fItem"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">字卡位置亂放</span></div>
+                <div class="fItem"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">音效塞太多</span></div>
+              </div>
+              <div class="fLine"></div>
+              <div id="pv-fColR" class="fCol">
+                <div class="fHead fHead--icon"><span class="fHIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path class="stroke-draw" pathLength="1" d="m3 17 2 2 4-4" /> <path class="stroke-draw" pathLength="1" d="m3 7 2 2 4-4" /> <path class="stroke-draw" pathLength="1" d="M13 6h8" /> <path class="stroke-draw" pathLength="1" d="M13 12h8" /> <path class="stroke-draw" pathLength="1" d="M13 18h8" /> </svg></span><span class="sc-t72 sc-w900 sc-optr"><span class="sc-kw">照規則剪</span></span></div>
+                <div class="fItem"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">對齊那一句字幕</span></div>
+                <div class="fItem"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">一張卡一個音效</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cg" id="cap"><span>一鍵剪出來的，常常不是我要的</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"fs-compare","duration":7,"cues":[]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-fs-compare'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 7;
+    /* v2（shared/template/BEATS.md §2 的動作）：leftAt：左欄由左擦開＋滑入、0.15 圖示描線 → rightAt：左欄退焦 0.6、右欄彈出（過衝）、0.12 右欄標題逐字彈出、0.15 圖示描線。主卡進場看 P.prev()（換卡不換景／長出），離場由 build 負責 */
+    // 開場：前一段也是全畫面＝換卡不換景（由下擦開＋上浮 60u）；前一段是講者或其他畫面＝主卡從子母畫面長出（P.prev() 由 build 給，不用改）
+    if (P.prev() === 'fullscreen') { P.wipe('#pv-wCard', 0, { dir: 'up', dur: 0.8 }); P.pop('#pv-wCard', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    else P.grow('#pv-wCard', 0.3);
+    P.chars('#pv-wCard .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.wipe('#pv-fColL', 0.5, { dir: 'left', dur: P.V2.SHELL });
+    P.drift('#pv-fColL', 0.5, { dx: -40 * P.U, dur: P.V2.SHELL });
+    P.icon('#pv-fColL .fHIcon', 0.5 + 0.15);
+    P.dim('#pv-fColL', 2.5, { to: 0.6 });
+    P.pop('#pv-fColR', 2.5, { from: 0.9, dy: 28 });
+    P.chars('#pv-fColR .fHead .sc-t72, #pv-fColR .fHead.sc-t72', 2.5 + 0.12, { mode: 'pop' });
+    P.icon('#pv-fColR .fHIcon', 2.5 + 0.15);
+    tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.to('#scene', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 6.5);
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

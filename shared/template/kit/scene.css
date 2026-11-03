@@ -759,38 +759,48 @@ body, #root {
   padding-bottom: 6px;                          /* 光學置中（--opt 44px＝6） */
 }
 
-/* 小節角標 .sc-sectag（plan.json sections；build 產生，取代常駐章節角標）：章號＋目前小節，高 64（頂 56 → 底 120，在全幕卡片頂 y ≈ 154 之上）
-   黑底圓角 14；號板 48（內縮 8、radius 10）號碼 30／900；小節名 32／700 白、號板右 18、右內距 28；所有小節名疊在同一格（寬＝最長那個，換小節不跳動） */
-.sc-sectag {
+/* 小節角標（plan.json sections；build 產生，取代常駐章節角標）：一章一個外框 .sc-secwrap（右上錨定，管露出／隱藏；直式 --left 左上），
+   裡面每個小節一顆 .sc-sectag「章號＋小節名」，寬度跟著自己的字，講到下一節時舊的擦掉、新的擦開（疊在同一格，右緣對齊）。
+   膠囊高 80（頂 56 → 底 136，全幕卡片頂 y 152 之上）、黑底圓角 16；號板 64（內縮 8、radius 12）號碼 38／900；小節名 40／700 白、號板右 20、右內距 32 */
+.sc-secwrap {
   position: absolute;
+  display: grid;
+  justify-items: end;
+}
+.sc-secwrap--left { justify-items: start; }
+.sc-sectag {
+  grid-area: 1 / 1;
   display: flex;
   align-items: center;
-  gap: 18px;
-  height: 64px;
-  padding: 8px 28px 8px 8px;
-  border-radius: 14px;
+  gap: 20px;
+  width: max-content;
+  height: 80px;
+  padding: 8px 32px 8px 8px;
+  border-radius: 16px;
   background: var(--sc-deep);
   box-sizing: border-box;
 }
 .sc-sectag__num {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  padding-bottom: 4px;                          /* 數字字面比行框中心低（同 .sc-chtag__num）→ 上提 */
+  border-radius: 12px;
   background: var(--sc-chtag-plate);
   color: var(--sc-chtag-num);
-  font-size: 30px;
+  font-size: 38px;
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
 }
-.sc-sectag__names { display: grid; }
 .sc-sectag__name {
-  grid-area: 1 / 1;
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 700;
-  line-height: 48px;
+  line-height: 64px;
+  padding-bottom: 4px;                          /* 光學置中 */
   color: var(--sc-ink);
   white-space: nowrap;
 }

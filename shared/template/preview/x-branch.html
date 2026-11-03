@@ -128,14 +128,13 @@
     P.spot(ALL, 'none', 2.0, { dim: 0.45, dur: 0.6 });
     P.cam('#xbr-card', 2.0, { scale: 1.03, dur: B1 - 2.2 });
 
-    // 拍 4 第 1 條：提早 0.85 秒主色實線帶發光頭從起點描過去、到站前 0.12 秒補箭頭；鏡頭帶過去（提早 0.2）、聚焦、底色亮起、圖示漣漪；＋0.6 漂浮
+    // 拍 4 第 1 條：提早 0.85 秒主色實線帶發光頭從起點描過去、到站前 0.12 秒補箭頭；鏡頭帶過去（提早 0.2）、聚焦、底色亮起、圖示漣漪
     P.comet('#xbr-c1', B1 - 0.85, { dur: 0.75 });
     P.stroke('#xbr-h1', B1 - 0.12, { dur: 0.15 });
     P.cam('#xbr-card', B1 - 0.2, { to: '#xbr-b1', k: 0.07, scale: 1.04, dur: 0.9 });
     P.spot(ALL, '#xbr-b1', B1, { scale: 1.06, lift: -12 });
     P.in('#xbr-now1', B1);
     P.ripple('#xbr-ico1', B1 + 0.05, { to: 2.4 });
-    P.idle('#xbr-b1', B1 + 0.6, { y: 4, period: 2.8, until: B2 - 0.1 });
     // 拍 5 第 2 條：同拍 4；第 1 條和還沒講的一起壓暗（分支是並列的，不用「走過」）
     P.comet('#xbr-c2', B2 - 0.85, { dur: 0.75 });
     P.stroke('#xbr-h2', B2 - 0.12, { dur: 0.15 });
@@ -143,15 +142,13 @@
     P.spot(ALL, '#xbr-b2', B2, { scale: 1.06, lift: -12 });
     P.out('#xbr-now1', B2);  P.in('#xbr-now2', B2);
     P.ripple('#xbr-ico2', B2 + 0.05, { to: 2.4 });
-    P.idle('#xbr-b2', B2 + 0.6, { y: 4, period: 2.8, until: B3 - 0.1 });
-    // 拍 6 第 3 條：同拍 5（2 條時刪掉這一組 7 行）
+    // 拍 6 第 3 條：同拍 5（2 條時刪掉這一組 6 行）
     P.comet('#xbr-c3', B3 - 0.85, { dur: 0.75 });
     P.stroke('#xbr-h3', B3 - 0.12, { dur: 0.15 });
     P.cam('#xbr-card', B3 - 0.2, { to: '#xbr-b3', k: 0.07, scale: 1.04, dur: 0.9 });
     P.spot(ALL, '#xbr-b3', B3, { scale: 1.06, lift: -12 });
     P.out('#xbr-now2', B3);  P.in('#xbr-now3', B3);
     P.ripple('#xbr-ico3', B3 + 0.05, { to: 2.4 });
-    P.idle('#xbr-b3', B3 + 0.6, { y: 4, period: 2.8 });
 
     // 收：最後一條講完 2.6 秒回均衡（全部亮回、底色收掉、鏡頭回正），完成態停到段尾
     const TR = B3 + 2.6;   // 選用：講「三條都可以」那句時改成 const TR = P.at('#95@都可以')

@@ -221,10 +221,41 @@
   }
 
   var done = new WeakSet();
+  // 全寬版型（旁白段：整段沒有講者小窗的全畫面段）：build 在 host 寫 data-wide。主卡（寬 1180 的 .sc-wcard）拉寬 500 → 1680（右緣 1800）；
+  // 卡裡的內容區（寬 ≈ 1176 的直接子元素）有 data-layout（free 以外）就一起加寬，由 SceneLayout 照新寬度重排（連接線跟著）；
+  // free 或沒有 data-layout 的寬度不變、往右 250 置中（作者寫的座標照用）；row 的站距 xl 改 xxl；寫了 data-wide-keep 的不動（04a 清單：右邊放主視覺）；
+  // 不是 .sc-wcard 的 1180 面板（介面模擬視窗）整塊置中。
+  // apply 一開始做（排版照加寬後的寬度算；ILLUS.mount 之後的自動排版也會先經過這裡）
+  var WIDE = { card: 1180, add: 500 };
+  function widen(root) {
+    if (!root || !root.closest || root.__scWide || !root.closest('[data-wide]')) return;
+    root.__scWide = true;
+    Array.prototype.forEach.call(root.querySelectorAll('.sc-wcard'), function (card) {
+      if (Math.abs(card.offsetWidth - WIDE.card) > 4 || (card.parentElement && card.parentElement.closest('.sc-wcard'))) return;
+      card.style.width = (card.offsetWidth + WIDE.add) + 'px';
+      card.setAttribute('data-wide', '');   // 版型自己的全寬樣式掛在卡上（合成的 CSS 會加 #root 前綴，寫 [data-wide] #x 才對得到）
+      Array.prototype.forEach.call(card.children, function (k) {
+        var w = k.offsetWidth, lay = k.getAttribute('data-layout');
+        if (k.classList.contains('sc-wcard__bar') || k.hasAttribute('data-wide-keep') || w < WIDE.card - 40) return;
+        if (lay && lay !== 'free') {
+          k.style.width = (w + WIDE.add) + 'px';
+          if (lay === 'row' && (k.getAttribute('data-gap') || 'xl') === 'xl') k.setAttribute('data-gap', 'xxl');   // 站距拉開（96 → 160）
+          Array.prototype.forEach.call(k.querySelectorAll(':scope > svg'), function (g) { if (Math.abs(g.getBoundingClientRect().width - w) < 2 || g.getAttribute('width') == String(w)) { g.style.width = (w + WIDE.add) + 'px'; } });
+        } else k.style.marginLeft = (WIDE.add / 2) + 'px';
+      });
+    });
+    // 不是主卡的同尺寸面板（例：x-ui-mock 的視窗，裡面是寫死座標的介面與游標）：寬度不動，整塊往右 250 置中
+    Array.prototype.forEach.call(root.querySelectorAll(':scope > *, :scope > .fill > *'), function (el) {
+      if (el.classList.contains('sc-wcard') || el.hasAttribute('data-wide-keep') || getComputedStyle(el).position !== 'absolute') return;
+      if (Math.abs(el.offsetLeft - 120) <= 8 && Math.abs(el.offsetWidth - WIDE.card) <= 8) el.style.left = (el.offsetLeft + WIDE.add / 2) + 'px';
+    });
+  }
+
   function apply(root, o) {
     if (!root || !root.querySelectorAll) return;
     if (done.has(root) && !(o && o.force)) return;
     done.add(root);
+    widen(root);
     var list = Array.prototype.slice.call(root.querySelectorAll('[data-layout]'));
     if (root.hasAttribute && root.hasAttribute('data-layout')) list.unshift(root);
     list.reverse().forEach(layOne);   // 反向文件順序＝先排裡面的群組，外面的才量得到它的大小
@@ -299,7 +330,7 @@
     return out;
   }
 
-  window.SceneLayout = { apply: apply, measure: measure, box: box, token: token, SCALE_MAX: SCALE_MAX };
+  window.SceneLayout = { apply: apply, measure: measure, box: box, token: token, widen: widen, SCALE_MAX: SCALE_MAX };
   // ILLUS.mount 之後自動排一次（插圖換成 SVG 後大小才定）
   if (window.ILLUS && window.ILLUS.mount && !window.ILLUS.mount.__layout) {
     var mount = window.ILLUS.mount;

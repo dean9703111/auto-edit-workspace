@@ -114,7 +114,7 @@
     P.pop('#x-scene-example-rec .xscr-pre', 1.0, { stagger: 0.12, from: 0.9, dy: 20 });
 
     // 每一拍：進場 → 換狀態／移動／數字 → 連接線 → 結果 → 聚焦（同一時間只有一個焦點）
-    const entered = [], dimmed = [], idled = {};
+    const entered = [], dimmed = [];
     Array.prototype.forEach.call(ROOT.querySelectorAll('.xscr-pre'), function (el) { entered.push('#' + el.id); });   // 場景骨架也可以被聚焦、移動
     let spotted = false;
     BEATS.forEach(function (b, k) {
@@ -156,7 +156,6 @@
         const at = t + (fresh ? 0.6 : 0.1);
         P.spot(entered.join(', '), f, at, { scale: 1.05, lift: -8 });
         spotted = true;
-        if (!idled[f]) { idled[f] = true; P.idle(f, at + 0.6, { y: 4, period: 3.2, until: next - 0.1 }); }
       }
     });
 

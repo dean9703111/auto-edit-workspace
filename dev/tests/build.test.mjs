@@ -172,14 +172,20 @@ test('--list 印出 18 情境＋40 字卡動態；--json 可解析', () => {
   assert.equal(j.fx.length, 40);
 });
 
-test('--gallery 產生 18 頁預覽（獨立頁，連 ../kit 與 ../bg.jpg）', async () => {
+test('--gallery 產生 18 頁預覽＋04 家族 4 頁全寬示意（獨立頁，連 ../kit 與 ../bg.jpg）', async () => {
   const { runGallery } = await imp('build.mjs');
   const tdir = path.join(dir, 'tpl');
   fs.mkdirSync(tdir);
   for (const sub of ['kit', 'scenes']) fs.cpSync(path.join(TEMPLATE, sub), path.join(tdir, sub), { recursive: true });
   const r = runGallery(tdir);
   assert.deepEqual(r.problems, []);
-  assert.equal(r.made.filter((f) => f.endsWith('.html')).length, 18);
+  assert.equal(r.made.filter((f) => f.endsWith('.html')).length, 22);
+  // 全寬示意：沒有講者小窗、#scene 寫 data-wide；04a 放主視覺（筆電）並先掛插圖元件
+  const wide = fs.readFileSync(path.join(tdir, 'preview', '04a-fs-list-wide.html'), 'utf8');
+  assert.match(wide, /<div id="scene" data-wide>/);
+  assert.doesNotMatch(wide, /<div id="pip">/);
+  assert.match(wide, /<div id="pv-fVis"><div data-illus="laptop"><\/div><\/div>/);
+  assert.match(wide, /ILLUS\.mount\(document\.getElementById\('pv-fs-list'\)\);\n\s+const P = SceneMotion/);
   const side = fs.readFileSync(path.join(tdir, 'preview', '03-side-panel.html'), 'utf8');
   assert.match(side, /<link rel="stylesheet" href="\.\.\/kit\/fonts\.css">\n<link rel="stylesheet" href="\.\.\/kit\/brand\.css">\n<link rel="stylesheet" href="\.\.\/kit\/scene\.css">/);
   assert.match(side, /url\("\.\.\/bg\.jpg"\), var\(--sc-side-pattern\)/);

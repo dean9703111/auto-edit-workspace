@@ -115,20 +115,18 @@
     // 拍 2 數字前 1.2 秒：主色弧從 12 點鐘走到比例、數字同步跑（同一個 ease、同樣 1.2 秒）
     P.morph('#xring-arc', ARC - 1.2, { strokeDasharray: DASH, strokeDashoffset: OFF1 }, { from: { strokeDasharray: DASH, strokeDashoffset: OFF0 }, dur: 1.2, ease: 'power2.out' });
     P.count('#xring-num', ARC - 1.2, { from: RING.from, to: RING.to, dur: 1.2, suffix: RING.suffix });
-    // 拍 3 講到數字、落定：重拍、從中央擴散的漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）→ ＋0.6 圓環漂浮
+    // 拍 3 講到數字、落定：重拍、從中央擴散的漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）
     P.punch('#xring-num', ARC, { scale: 1.12 });
     P.ripple('#xring-mid', ARC, { from: 0.7, to: 1.35 });
     P.marker('#xring-unit', ARC + 0.1);
-    P.idle('#xring-dial', ARC + 0.6, { y: 3, period: 3.2, until: R2 - 0.1 });
 
     // 拍 4 講到結論：終點列由左擦開 → ＋0.15 箭頭描下來（data-links 產生的線 0.3 秒，描完箭頭頭淡入）、圖示描線；圓環退焦
     P.wipe('#xring-r2', R2, { dir: 'left' });
     P.stroke('#xring-r1-xring-r2', R2 + 0.15, { dur: 0.3 });
     P.icon('#xring-ico2', R2 + 0.15);
     P.dim('#xring-dial', R2, { to: 0.6 });
-    // 拍 5 ＋0.6 終點列聚焦（放大抬起、主色亮框）→ ＋1.1 漂浮
+    // 拍 5 ＋0.6 終點列聚焦（放大抬起、主色亮框）
     P.spot('#xring-r2', '#xring-r2', R2 + 0.6, { scale: 1.04, lift: -6 });
-    P.idle('#xring-r2', R2 + 1.1, { y: 3, period: 3.2 });
 
     // 收：講完 2 秒回均衡（圓環亮回、終點列亮框收掉），中央數字呼吸；完成態停到段尾
     const TR = R2 + 2.0;

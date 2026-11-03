@@ -35,7 +35,7 @@
   </div>
 </div>
 <!-- @timeline -->
-/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 0.22 標題逐字上浮 → 第 1 條上漂 → 之後每條 P.axis 換（每條停 ≥ 1.5s）→ 漂浮 → 段尾向左擦掉 */
+/* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 0.22 標題逐字上浮 → 第 1 條上漂 → 之後每條 P.axis 換（每條停 ≥ 1.5s）→ 段尾向左擦掉 */
 const itemAt = [{{#items}}{{{at}}}{{^last}}, {{/last}}{{/items}}];
 P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
 P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
@@ -46,5 +46,4 @@ for (let i = 1; i < itemAt.length; i++) P.axis('#it' + i, '#it' + (i + 1), itemA
 P.icon('#it1 .sc-icon', itemAt[0] + 0.15);
 for (let i = 1; i < itemAt.length; i++) P.icon('#it' + (i + 1) + ' .sc-icon', itemAt[i] + P.AXIS_LAG + 0.15);
 {{/itemsHasIcon}}
-P.idle('#gCard', {{{in}}} + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
 {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

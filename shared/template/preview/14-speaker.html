@@ -77,7 +77,7 @@ window.__PREVIEW = {"key":"speaker","duration":7,"cues":[{"sound":"sparkle","at"
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 7;
-    /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 姓名逐字彈出（過衝）→ 頭銜逐組從左滑入（各綁 at）→ 漂浮 → 段尾向左擦掉 */
+    /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 姓名逐字彈出（過衝）→ 頭銜逐組從左滑入（各綁 at）→ 段尾向左擦掉 */
     P.wipe('#pv-spkCard .sc-lt__plate, #pv-spkCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
     P.drift('#pv-spkCard .sc-lt__plate, #pv-spkCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });
     P.pop('#pv-spkCard .sc-lt__tag', 0 + 0.12, { from: 0.4, dy: 18 });
@@ -85,7 +85,6 @@ window.__PREVIEW = {"key":"speaker","duration":7,"cues":[{"sound":"sparkle","at"
     P.drift('#pv-ti1', 0.6, { dx: -16 * P.U });
     P.drift('#pv-ti2', 0.7, { dx: -16 * P.U });
     P.drift('#pv-ti3', 0.8, { dx: -16 * P.U });
-    P.idle('#pv-spkCard', 0 + 0.7, { y: 3, x: 1.5, period: 3.6, until: D });
     P.wipeOut('#pv-spkCard', D - P.V2.OUT, { dir: 'left' });
 
     P.end(D);

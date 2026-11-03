@@ -207,7 +207,7 @@ ${indent(p.body, 4)}
   (function () {
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     const tl = gsap.timeline({ paused: true });
-    const P = SceneMotion(tl, document.getElementById('${p.compId}'));
+${p.body.includes('data-illus') ? `    ILLUS.mount(document.getElementById('${p.compId}'));   // 插圖元件（例：04a 全寬的主視覺）先換成 SVG\n` : ''}    const P = SceneMotion(tl, document.getElementById('${p.compId}'));
 ${indent(SCOPE_P, 4)}
     const D = ${num(D)};
 ${indent(p.timeline, 4)}

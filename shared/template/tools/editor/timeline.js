@@ -208,6 +208,13 @@ export class Timeline {
     }
 
     // ---- 動畫（資訊卡／字卡動態／自訂）----
+    // 修改單標記：✎ 待改（白底）、✓ 已改完（深底綠勾）；畫在段的右端
+    const rqBadge = (x, y, st) => {
+      g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fillStyle = st === 'done' ? '#0B1020' : '#FFFFFF'; g.fill();
+      if (st === 'done') { g.strokeStyle = C.sfx; g.lineWidth = 1.5; g.stroke(); }
+      g.fillStyle = st === 'done' ? C.sfx : '#0B1020'; g.font = font(9.5, 800); g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(st === 'done' ? '✓' : '✎', x, y + 0.5); g.textAlign = 'left';
+    };
     const anim = A.itemsView.filter((it) => it.type !== 'media');
     const nRows = Math.max(1, Math.min(3, A.animRows || 1));
     const rh = (L.anim[1] - L.anim[0] - 4) / nRows;
@@ -223,7 +230,9 @@ export class Timeline {
       if (it.textDirty) { g.fillStyle = '#FFD400'; g.beginPath(); g.arc(Math.max(xa + 6, Math.min(xb - 6, xa + 6)), y + 5, 3, 0, Math.PI * 2); g.fill(); }
       if (A.isSelected('item', it.id)) { g.strokeStyle = '#fff'; g.lineWidth = 2; rr(xa + 1, y + 1, Math.max(2, xb - xa - 2), h - 2, 3); g.stroke(); }
       if (it.warnings) { g.fillStyle = '#FFD400'; g.fillRect(xa, y + h - 3, Math.max(3, xb - xa), 3); }
-      if (xb - xa > 26) clipRect(xa + 3, y, xb - xa - 6, h, () => {
+      const rq = xb - xa > 22 ? A.rqMark?.(it.id) : null;
+      if (rq) rqBadge(xb - 10, y + h / 2, rq);
+      if (xb - xa > 26) clipRect(xa + 3, y, xb - xa - 6 - (rq ? 16 : 0), h, () => {
         g.fillStyle = it.type === 'custom' ? '#0B1020' : '#fff'; g.font = font(h > 18 ? 11.5 : 10.5, 700); g.textBaseline = 'middle';
         g.fillText(`${it.id}　${it.label || ''}`, Math.max(xa, 0) + 6, y + h / 2 + 0.5);
       });
@@ -248,7 +257,9 @@ export class Timeline {
         g.fillStyle = C.media;
         for (const [xx, dir] of [[xa, 1], [xb, -1]]) { g.fillRect(dir > 0 ? xx : xx - 5, y, 5, h); g.fillStyle = '#0B1020'; g.fillRect(dir > 0 ? xx + 2 : xx - 3, y + h / 2 - 6, 1, 12); g.fillStyle = C.media; }
       }
-      if (xb - xa > 40) clipRect(xa + 6, y, xb - xa - 12, h, () => {
+      const rq = xb - xa > 22 ? A.rqMark?.(it.id) : null;
+      if (rq) rqBadge(xb - 11, y + 10, rq);
+      if (xb - xa > 40) clipRect(xa + 6, y, xb - xa - 12 - (rq ? 16 : 0), h, () => {
         g.font = font(10.5, 700); g.textBaseline = 'top'; g.fillStyle = '#fff';
         g.shadowColor = '#000'; g.shadowBlur = 3;
         g.fillText(`${it.id}　${it.srcName || ''}`, xa + 8, y + 3);

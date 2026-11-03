@@ -1,7 +1,7 @@
 // type: "media"：插入螢幕錄影或圖片（plan.json 的一段）
 //
 //   checkMediaSeg(seg, { projectDir, probe, err, warn }) → media 描述（src、種類、素材資訊、in／speed／fit／volume／enter／exit）或 null
-//   validateMedia(it, { cues, tm, pipAt, icons, steps, canvas, err, warn }) → { summary, json }
+//   validateMedia(it, { cues, tm, pipAt, icons, steps, canvas, badge, err, warn }) → { summary, json }（badge＝小節角標在畫面上的框 { box, side }，plan.json 有 sections 才傳）
 //                                                          段落時間定案後：畫面位置、錄影片段（cut 會切開）、運鏡、紅框（含跟捲動）、放大鏡、
 //                                                          說明卡 callouts、聚光燈 spot、STEP 膠囊 steps、箭頭 arrows（resolveMedia＝過渡期別名）
 //   newStepState()                                         STEP 編號狀態（整份 plan.json 一個）
@@ -25,7 +25,7 @@ import { splitAtJoins, dB } from './edit.mjs';
 import { visibleLen, nearest, loadIcons } from './scenes.mjs';
 import { CANVAS } from './canvas.mjs';
 
-export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'note'];
+export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'note'];
 export const MEDIA_DIRS = ['assets/screen/', 'assets/images/'];
 export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom'];
 export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5 };
@@ -76,6 +76,9 @@ const READ = 1.2, READ_QUICK = 0.8;   // 完整可讀（定案：一般 1.2s、q
 const CALLOUT = { gap: 56, gapV: 40, h: 96, padL: 14, padR: 32, padPlain: 32, icon: 64, iconGap: 20, border: 2, full: 40, half: 24, maxLen: 12,
   edge: 8, lineAt: 0.3, lineDur: 0.25, cardAt: 0.45, cardDur: 0.4, drift: 16, ready: 0.85, quick: 0.25, out: 0.3, elbow: 24, dot: 5 };
 const SPOT = { alpha: 0.35, pad: 8, rx: 12, fade: 0.4 };
+// 右側步驟清單（seg.side）：錄影放左邊 view（x 120、寬 720，置中），清單卡 x 840、寬 960，在 y 160–880（有講者小窗：160–560）裡垂直置中
+// （使用者：「直式的可以靠左，右邊用動畫講解不是更好？」）
+export const SIDE = { view: [120, 0, 720, 940], x: 840, w: 960, top: 160, bottom: 880, pipBottom: 560, bar: 112, row: 100, pad: 32, maxItems: 5, title: 12, text: 14, gap: 0.8, hi: 0.3, dim: 0.4, done: 0.7 };
 const STEP = { left: 48, top: 40, inset: 32, h: 80, extra: 118, maxLen: 12, in: 0.5, inX: -24, swOut: 0.25, swIn: 0.35, swDelay: 0.1, swReady: 0.45, carry: 0.1 };
 const ARROW = { gap: 9, lens: [120, 96], head: 22, halfW: 2, sample: 2, fade: 0.5, slide: 12, dflt: 3, max: 1, pad: 4, ring: 2 };
 const PATH = { dur: 0.4, min: 0.2, max: 2 };
@@ -111,6 +114,7 @@ export const MEDIA_FIELDS = [
   ['lens', '[{ "at", "until", "box": [x,y,w,h], "zoom" }]', '—', '放大鏡：從框的位置彈出到畫面中央偏上，zoom 預設 2（1.2–4）；至少 1.2 秒，until 不寫＝at＋3 秒'],
   ['callouts', '[{ "at", "until", "box": [x,y,w,h], "text", "icon", "side", "quick" }]', '—', '標註：紅框＋引線＋說明卡（text 1–12 字、icon 選填）；side 不寫＝自動挑放得下的那邊；完整可讀 ≥ 1.2s（quick ≥ 0.8s）；期間不能有運鏡'],
   ['spot', '[{ "at", "until", "box": [x,y,w,h] }]', '—', '聚光燈：其他地方壓暗 35%，只留框的地方；至少 2 秒、一次一個、不和放大鏡同時'],
+  ['side', '{ "title", "items": [{ "at", "text" }] }', '—', '右側步驟清單（橫式、直式／窄的錄影）：錄影靠左（左邊 720 寬），右邊一張卡＝標題（1–12 字）＋1–5 條步驟（每條 1–14 字），一開始淡淡列著、講到 at 那條亮起；有講者小窗時清單在小窗上方（最多 2 條）'],
   ['steps', '[{ "at", "text" }]', '—', 'STEP 膠囊（text 1–12 字）放在錄影可見區左上（離錄影邊 32px）；壓到紅框自動換右上，"stepsSide": "right" 指定右上；號碼自動累加，同字沿用；相鄰兩步 ≥ 1.65 秒'],
   ['arrows', '[{ "at", "until", "to": [x,y], "from" }]', '—', '箭頭：箭尖離 to 9px，from＝箭尾方向（n／ne／e／se／s／sw／w／nw，不寫＝自動）；放不下就拿掉；一次一支、至少 2.2 秒，until 不寫＝at＋3 秒'],
   ['clicks', '["#21@安裝", "+3.2"]', '—', '錄影裡看得到游標按下的時間，一下配一顆 click 附加音效（不受 3 秒規則）；時間寫法同 at，要落在這段裡；"sfxExtra": false 會一起關掉'],
@@ -133,6 +137,20 @@ export function mediaGeometry(info, fit = 'contain', F = LAND) {
   const dw = Math.round(W * k0), dh = Math.round(H * k0);
   return { kx: dw / W, ky: dh / H, left: Math.round(vx + (vw - dw) / 2), top: Math.round(vy + (vh - dh) / 2), width: dw, height: dh };
 }
+// 橫式錄影段的小節角標（plan.mjs、main.mjs）：w×h＝角標大小，dflt＝平常的位置 [右緣 x, 上緣 y]；回傳角標右緣 x 與上緣 y
+//   錄影旁邊放得下（窄的錄影、直式手機畫面）：放在空白處，不壓錄影（使用者：「有空間的狀態下，沒必要讓標題跟畫面重疊」）
+//   放不下：貼著錄影畫面的右上角、離右／上緣 BADGE_INSET，盡量少蓋到錄影的內容（「靠右上一些，減少與下方資訊的重疊」）
+const BADGE_INSET = 16, BADGE_GAP = 24;
+export function mediaCorner(info, fit = 'contain', { w = 0, h = 80, dflt = [1824, 56] } = {}) {
+  const G = mediaGeometry(info, fit, LAND), R = [G.left, G.top, G.left + G.width, G.top + G.height];
+  if (inter([dflt[0] - w, dflt[1], dflt[0], dflt[1] + h], R) <= 0) return { right: dflt[0], top: dflt[1] };
+  const right = Math.min(LAND.W - BADGE_INSET, Math.round(R[2]) + BADGE_GAP + w);
+  if (right - w >= R[2] + BADGE_GAP - 1e-6 && LAND.W - R[2] >= w + BADGE_GAP + BADGE_INSET) return { right, top: dflt[1] };
+  return { right: Math.min(LAND.W - BADGE_INSET, Math.round(R[2]) - BADGE_INSET), top: Math.max(BADGE_INSET, Math.round(R[1]) + BADGE_INSET) };
+}
+// STEP 膠囊和小節角標重複（「設定錄影資料夾」vs「STEP 1｜設定錄影資料夾、新增專案」）：去掉「STEP N」與標點後，一邊包含另一邊
+const stepCore = (s) => String(s).replace(/STEP\s*\d+/gi, '').replace(/[\s｜|、，,。：:．.]/g, '');
+export const dupStep = (text, name) => { const a = stepCore(text), b = stepCore(name); return a.length >= 2 && b.length >= 2 && (a.includes(b) || b.includes(a)); };
 // 素材像素 [x, y, w, h] → stage（沒有運鏡時的畫面座標）
 const stageOf = (G, [x, y, w, h]) => [G.left + x * G.kx, G.top + y * G.ky, w * G.kx, h * G.ky];
 export { stageOf as toStage };
@@ -337,14 +355,36 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
 // ---------- 第二輪：時間定案後 ----------
 
 // 回傳 { summary（--check 報告那一列的括號內文字）, json（--check --json 的 items[].out.annotations）}，契約 specs/contracts/media.md §4.1
-export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null, steps: stepState = null, canvas = null, err, warn }) {
+export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null, steps: stepState = null, canvas = null, badge = null, err, warn }) {
   const m = it.media, seg = it.seg;
   const s = it.start, e = it.end;
   const W = m.info.width, H = m.info.height;
 
   // 版式：直式時講者面板（下半）在不在決定可見區（FR-080）；橫式＝原本的常數
   const cv = canvas || it.canvas || null;
-  const F = m.frame = mediaFrame(cv, { panel: [s, (s + e) / 2, e - 0.01].some((t) => pipAt(t)) });
+  let F = m.frame = mediaFrame(cv, { panel: [s, (s + e) / 2, e - 0.01].some((t) => pipAt(t)) });
+  // 右側步驟清單：錄影改放左邊、清單卡的位置（條數決定高度；有講者小窗時在小窗上方）
+  const sd = seg.side;
+  m.side = null;
+  if (sd != null) {
+    const n = Array.isArray(sd?.items) ? sd.items.length : 0;
+    if (F.format === 'portrait') err('side（右側步驟清單）只在橫式用：直式畫面放不下左右兩欄 → 拿掉 side');
+    else if (m.fit === 'cover') err('side 要配 fit "contain"（cover 鋪滿畫面，右邊沒有空位）→ 拿掉 fit 或拿掉 side');
+    else if (!sd || typeof sd !== 'object' || Array.isArray(sd)) err(`side 要寫成 { "title": "…", "items": [{ "at": "#N@詞", "text": "…" }] }，現在是 ${JSON.stringify(sd)}`);
+    else if (n < 1 || n > SIDE.maxItems) err(`side.items 要寫 1–${SIDE.maxItems} 條 [{ "at": "#N@詞", "text": "…" }]，現在是 ${JSON.stringify(sd.items)}`);
+    else {
+      const pipOn = [s, (s + e) / 2, e - 0.01].some((t) => pipAt(t));
+      const bottom = pipOn ? SIDE.pipBottom : SIDE.bottom, h = SIDE.bar + n * SIDE.row + 2 * SIDE.pad;
+      if (h > bottom - SIDE.top) err(`side 有 ${n} 條放不下（${pipOn ? '有講者小窗，清單在小窗上方，' : ''}最多 ${Math.floor((bottom - SIDE.top - SIDE.bar - 2 * SIDE.pad) / SIDE.row)} 條）→ 合併幾條`);
+      else {
+        const box = [SIDE.x, Math.round(SIDE.top + (bottom - SIDE.top - h) / 2), SIDE.w, h];
+        m.side = { title: '', items: [], box };
+        F = m.frame = { ...F, view: { contain: SIDE.view, cover: SIDE.view }, focus: SIDE.view, avoid: [...(F.avoid || []), { box: [box[0], box[1], box[0] + box[2], box[1] + box[3]], why: '壓到右側步驟清單' }] };
+      }
+    }
+  } else if (F.format !== 'portrait' && m.fit !== 'cover' && W / H < 0.8) {
+    warn(`直式錄影（${W}×${H}）在橫式影片只佔中間一條、兩邊空著 → 加 "side": { "title": "…", "items": [{ "at": "#N@詞", "text": "…" }] }：錄影靠左、右邊列步驟，講到哪一條亮哪一條`);
+  }
   // 畫面位置（stage 座標＝沒有運鏡時的畫面座標：橫式 1920×1080、直式 1080×1920）
   const G = m.geo = mediaGeometry(m.info, m.fit, F);
   const [VX, VY, VW, VH] = F.view[m.fit], [FX, FY, FW, FH] = F.focus;
@@ -412,6 +452,27 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const k of Object.keys(o)) if (!keys.includes(k)) { err(`${what}.${k}：沒有這個欄位（可用：${keys.join('、')}）`); ok = false; }
     return ok;
   };
+
+  // --- 右側步驟清單：標題、每一條的字與時間 ---
+  if (m.side) {
+    if (keysOk(sd, 'side', ['title', 'items'])) {
+      const title = typeof sd.title === 'string' ? sd.title.trim() : '';
+      if (!title || visibleLen(title) > SIDE.title) err(`side.title 要寫 1–${SIDE.title} 字（這一段在做什麼，例「配對手機」），現在是 ${JSON.stringify(sd.title)}`);
+      m.side.title = title;
+    }
+    sd.items.forEach((x, i) => {
+      const what = `side.items[${i}]`;
+      if (!keysOk(x, what, ['at', 'text'])) return;
+      const text = typeof x.text === 'string' ? x.text.trim() : '';
+      if (!text || visibleLen(text) > SIDE.text) { err(`${what}.text 要寫 1–${SIDE.text} 字，現在是 ${JSON.stringify(x.text)} → 縮短`); return; }
+      const at = tAt(x.at, `${what}.at`);
+      if (at == null || !inSeg(at, `${what}.at`)) return;
+      const prev = m.side.items[m.side.items.length - 1];
+      if (prev && at <= prev.at + 1e-6) { err(`${what}.at（${fmt(at)}）要晚於前一條（${fmt(prev.at)}）→ 照講的順序排`); return; }
+      if (prev && at - prev.at < SIDE.gap - 1e-6) warn(`${what} 和前一條只差 ${r3(at - prev.at)}s（< ${SIDE.gap}s）→ 亮起來馬上又換，合併成一條或把 at 往後挪`);
+      m.side.items.push({ i, at, text });
+    });
+  }
 
   // --- 運鏡 ---
   const ID = { z: 1, x: 0, y: 0 };
@@ -671,6 +732,8 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       if (!text || /[\r\n]|(?<!:)\/\//.test(text)) { err(`${what}.text 要寫 1–${STEP.maxLen} 字（這一步在做什麼），現在是 ${JSON.stringify(sp.text)} → 補上這一步的動作`); return; }
       const len = visibleLen(text);
       if (len > STEP.maxLen) { err(`${what}.text「${text}」有 ${len} 字（上限 ${STEP.maxLen}）→ 縮短`); return; }
+      const dup = (badge?.names || []).find((n) => dupStep(text, n));
+      if (dup) { warn(`${what}「${text}」和右上角的小節角標「${dup}」重複（畫面上下兩個角各寫一次）→ 刪掉這個 step，角標已經寫了在哪一步；要分更細的步驟再寫不同的字（這次不畫這顆膠囊）`); return; }
       const prev = stepList[stepList.length - 1];
       if (prev && at <= prev.at + 1e-6) { err(`${what}.at（${fmt(at)}）要晚於 steps[${prev.i}]（${fmt(prev.at)}）→ 照時間先後排列`); return; }
       const need = STEP.swReady + READ;
@@ -731,11 +794,12 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     return out;
   };
 
-  // 膠囊壓到紅框、沒寫 stepsSide → 換到右邊（右邊也壓到就留左邊，下面的碰撞檢查會 ⚠）
+  // 膠囊壓到紅框、沒寫 stepsSide → 換到右邊（右邊也壓到、或右上有小節角標就留左邊，下面的碰撞檢查會 ⚠）
+  const BADGE_WHY = '壓到右上角的小節角標';
   if (capsule && seg.stepsSide == null) {
     const hitAt = (box) => m.marks.some((mk) => markBoxes(mk, capsule.from, capsule.to).some((b) => hits(box, b)));
     const right = capAt('right');
-    if (hitAt(capsule.box) && !hitAt(right)) Object.assign(capsule, { box: right, side: 'right' });
+    if (hitAt(capsule.box) && !hitAt(right) && !(badge && hits(right, badge.box))) Object.assign(capsule, { box: right, side: 'right' });
   }
 
   // --- 說明卡：擺位置（運鏡、紅框、膠囊都定了）---
@@ -753,6 +817,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     const avoid = [...F.avoid];
     if (F.pip && pipOn(co.at, co.until)) avoid.push({ box: F.pip, why: F.pipWhy });
     if (capsule && ov(co.at, co.until, capsule.from, capsule.to)) avoid.push({ box: capsule.box, why: '壓到 STEP 膠囊' });
+    if (badge) avoid.push({ box: badge.box, why: BADGE_WHY });
     for (const o of m.callouts) if (ov(co.at, co.until, o.at, o.until)) avoid.push({ box: o.card, why: `壓到 callouts[${o.i}]` }, { box: xyxy(o.R), why: `壓到 callouts[${o.i}]` });
     for (const mk of m.marks) if (ov(co.at, co.until, mk.at, mk.until)) for (const b of markBoxes(mk, co.at, co.until)) avoid.push({ box: grow(b, 2), why: `壓到 marks[${mk.i}] 的紅框` });
     const w = cardWidth(co.text, !!co.iconSvg);
@@ -821,6 +886,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     const P = [c.x + c.z * sp[0], c.y + c.z * sp[1]];
     const avoid = [...F.avoid], rings = [];
     if (capsule && ov(at, until, capsule.from, capsule.to)) avoid.push({ box: grow(capsule.box, ARROW.pad), why: '壓到 STEP 膠囊' });
+    if (badge) avoid.push({ box: grow(badge.box, ARROW.pad), why: BADGE_WHY });
     for (const co of m.callouts) if (ov(at, until, co.at, co.until)) { avoid.push({ box: grow(co.card, ARROW.pad), why: `壓到 callouts[${co.i}]` }); rings.push({ box: xyxy(co.R), why: '壓到紅框' }); }
     for (const mk of m.marks) if (ov(at, until, mk.at, mk.until)) for (const b of markBoxes(mk, at, until)) rings.push({ box: b, why: '壓到紅框' });
     const p = placeArrow({ P, from: ar.from ?? null, avoid, rings, pip: F.pip && pipOn(at, until) ? F.pip : null, F });
@@ -847,6 +913,21 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const mk of m.marks) for (const b of markBoxes(mk, capsule.from, capsule.to)) hit(b, mk.at, mk.until, `marks[${mk.i}] 的紅框`);
   }
 
+  // --- 小節角標碰撞（⚠）：膠囊指定放右上、紅框／亮區在角標底下（角標蓋在錄影上，z 55）---
+  if (badge) {
+    const told = new Set();
+    const where = `x ${ri(badge.box[0])}–${ri(badge.box[2])}、y ${badge.box[1]}–${badge.box[3]}`;
+    const hit = (b, a, name) => {
+      if (told.has(name) || !hits(badge.box, b)) return;
+      told.add(name);
+      warn(`${name}在 ${fmt(a)} 被右上角的小節角標（${where}）蓋住 → 用 moves 把那一塊推到畫面中間，或改指別的地方`);
+    };
+    if (capsule && hits(capsule.box, badge.box)) hit(capsule.box, capsule.from, 'STEP 膠囊（"stepsSide": "right"）');
+    for (const co of m.callouts) hit(xyxy(co.R), co.at, `callouts[${co.i}] 的紅框`);
+    for (const sp of m.spots) hit(xyxy(sp.hole), sp.at, `spot[${sp.i}] 的亮區`);
+    for (const mk of m.marks) for (const b of markBoxes(mk, mk.at, mk.until)) hit(b, mk.at, `marks[${mk.i}] 的紅框`);
+  }
+
   // --- 報告與 JSON ---
   const pathN = m.marks.reduce((a, mk) => a + mk.path.length, 0);
   const nums = stepList.map((x) => x.n);
@@ -869,6 +950,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     callouts: m.callouts.map((co) => ({ i: co.i, at: co.at, until: co.until, ready: co.ready, side: co.side, text: co.text })),
     spot: m.spots.map((sp) => ({ i: sp.i, at: sp.at, until: sp.until, ready: sp.ready })),
     steps: stepList.map((sp) => ({ i: sp.i, at: sp.at, ready: sp.ready, n: sp.n, text: sp.text, carry: sp.carry })),
+    side: m.side ? { title: m.side.title, box: m.side.box, items: m.side.items.map((x) => ({ i: x.i, at: x.at, text: x.text })) } : null,
     arrows: m.arrows.map((a) => ({ i: a.i, at: a.at, until: a.until, ready: a.ready, from: a.from })),
     lens: m.lenses.map((L) => ({ i: L.i, at: L.la, until: L.lb, ready: r3(L.la + LENS.delay + LENS.pop) })),
   };
@@ -1007,6 +1089,17 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
     }
     html.push('    </div>');
   }
+  // 右側步驟清單（m.side）：一張卡＝標題列＋步驟；整段都在（跟著錄影進出場），講到 at 那條亮起（.mside__hi 底色＋字變實），前一條變淡
+  const sdi = m.side ? m.side.items.filter(vis) : [];
+  if (m.side) {
+    const [bx, by, bw, bh] = m.side.box;
+    html.push(`    <div id="msd-${id}" class="clip mside" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}" style="left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px">`);
+    html.push(`      <div class="mside__bar">${esc(m.side.title)}</div>`);
+    html.push('      <div class="mside__list">');
+    m.side.items.forEach((x, k) => html.push(`        <div id="msdi-${id}-${k + 1}" class="mside__item"><i id="msdh-${id}-${k + 1}" class="mside__hi"></i><span class="mside__num">${k + 1}</span><span class="mside__txt">${esc(x.text)}</span></div>`));
+    html.push('      </div>');
+    html.push('    </div>');
+  }
   for (const L of m.lenses) {
     if (L.la >= lim - 1e-6) continue;
     const [left, top, ow, oh] = L.outer;
@@ -1044,6 +1137,17 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
     else if (ext === 'slide') { tl.push(`tl.fromTo('${layer}', { x: 0 }, { x: -${CW}, duration: ${EXIT.slide}, ease, immediateRender: false }, ${sh(it.end - EXIT.slide)});`); pipOut(); }
     else if (ext === 'zoom') { tl.push(`tl.fromTo('${layer}', { opacity: 1, scale: 1 }, { opacity: 0, scale: 0.96, duration: ${EXIT.zoom}, ease: 'power2.in', immediateRender: false }, ${sh(it.end - EXIT.zoom)});`); pipOut(); }
   }
+
+  // --- 右側步驟清單：亮起／變淡（第一個補間 immediateRender:false，之前照 CSS 的淡色）---
+  sdi.forEach((x, k) => {
+    const it1 = `#msdi-${id}-${k + 1}`, hi = `#msdh-${id}-${k + 1}`, nx = sdi[k + 1];
+    tl.push(`tl.fromTo('${it1}', { opacity: ${SIDE.dim} }, { opacity: 1, duration: ${SIDE.hi}, ease: 'sine.out', immediateRender: false }, ${sh(x.at)});`);
+    tl.push(`tl.fromTo('${hi}', { opacity: 0 }, { opacity: 1, duration: ${SIDE.hi}, ease: 'sine.out', immediateRender: false }, ${sh(x.at)});`);
+    if (nx) {
+      tl.push(`tl.fromTo('${it1}', { opacity: 1 }, { opacity: ${SIDE.done}, duration: ${SIDE.hi}, ease: 'sine.in', immediateRender: false }, ${sh(nx.at)});`);
+      tl.push(`tl.fromTo('${hi}', { opacity: 1 }, { opacity: 0, duration: ${SIDE.hi}, ease: 'sine.in', immediateRender: false }, ${sh(nx.at)});`);
+    }
+  });
 
   // --- 動態 v2：面板從小窗長出（從講者進來的 fade 才長；slide／zoom／cut 照舊）、標註焦點（§7）---
   const v2 = [];

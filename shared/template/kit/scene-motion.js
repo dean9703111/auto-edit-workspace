@@ -1,7 +1,7 @@
 /* ==========================================================================
    動畫情境庫 動態 API（scene-motion.js）— window.SceneMotion
    定調（v2，specs/010-motion-v2/design-system.md §0、§3）：動態的單位是「拍」——每個綁句點一拍：進場（≤ 0.6s、錯拍）→ 強調（0.2s，過衝或光）
-   → 其他元素退焦 → 一顆音效；拍與拍之間由微動撐場（背景慢拉、光暈、漂浮、虛線流動），任何一秒都有東西在動，但同一時間只有一個焦點。
+   → 其他元素退焦 → 一顆音效；拍與拍之間由微動撐場（光暈、浮塵、虛線流動、圖示呼吸；卡片和焦點落定後不漂浮），任何一秒都有東西在動，但同一時間只有一個焦點。
    曲線統一：進場 expo.out、強調 back.out、移動 power3.inOut、轉場 expo.inOut、退場 power2.in（比進場快）。過衝只用在強調拍。
    v1 的 in／out／rise／reveal 等仍可用（舊模板與第一層字卡），新寫的情境動畫用下面「v2」那一節。
 
@@ -98,16 +98,18 @@
      P.ripple(sel, at, {rings, from, to, dur})  漣漪：從元素中心擴散 rings（2）圈，大小 from（0.9）→to（2.1）倍，0.9s
      P.comet(path, at, {dur, ease, r, keepDash})  彗星描線：描線＋前端發光頭（半徑 r＝9u）沿路徑走，到站 0.3s 淡掉；0.8s power2.inOut
      P.flow(sel, at, {speed, until})  虛線流動：stroke-dashoffset 等速往前（speed 24u／s）到 until（預設段尾）；dasharray 由 CSS 給
-     P.idle(sel, at, {y, x, scale, period, xperiod, phase, ramp, until})  微動：正弦漂浮（y 4u、x 0、period 3.2s）或呼吸（scale 比例），
-                                     頭尾 ramp（0.8s）漸入漸出；寫 CSS translate／scale，不干擾進場位移。同一元素只掛一個；字不單獨 idle
+     P.idle(sel, at, {scale, period, phase, ramp, until})  微動：呼吸（scale 比例，例 0.04＝±4 %；period 3.2s），頭尾 ramp（0.8s）漸入漸出；
+                                     寫 CSS scale，不干擾進場位移。只給圖示、進度頭、數字；同一元素只掛一個。不做漂浮（卡片、焦點落定後不動）：
+                                     y、x 不動作，沒寫 scale 就整個不做
      P.spot(group, active, at, {scale, lift, dim, done, dur})  焦點 v2：active 放大 scale（1.07）＋抬起 lift（−10u）＋亮框發光（自動插 .sc-spot），
                                      其他壓暗到 dim（0.42）縮到 0.96；active＝null 回均衡、'none'＝預覽態（全部壓暗）；done＝走過的（0.92、不縮）。
                                      group 只放已經進場的元素；照時間先後寫（上一個 spot 還在轉場就接在它後面）；新進場的元素 0.6s 後才 spot
      P.cam(sel, at, {to, k, scale, x, y, dur, ease})  鏡頭：容器推拉搖（x、y 用 u），或 {to: 焦點元素, k: 0.12}＝往焦點帶 k 比例；1.0s power3.inOut。
+                                     底版不動：有底色、框線或陰影的容器（主卡、視窗）不推（推了會撞右上角的角標），只推沒有底的內容群組。
                                      dur ≥ 2s 的慢推算微動；回正寫 P.cam(sel, at, {x: 0, y: 0, scale: 1})。
                                      直式舞台縮放（STAGED）時 {to} 不往焦點帶，以容器上緣中點為原點推近（主卡推近 1.04 仍在畫面裡）
      P.grow(sel, at, {from, dur, ease})  長出：卡片從區域 from（預設 'pip'，或 [x, y, w, h]）長成自己的大小，0.8s expo.out；卡片要固定寬高
-     P.ambient(D)                    背景環境層：.sc-surface-fs 加兩顆光暈球與浮塵、整段慢拉 1.06→1。P.end() 自動呼叫；root 寫 data-ambient="off" 關掉
+     P.ambient(D)                    背景環境層：.sc-surface-fs 加兩顆光暈球與浮塵（不縮放：04 的 root 就是 .sc-surface-fs，一縮放主卡就跟著動）。P.end() 自動呼叫；root 或 host 寫 data-ambient="off" 關掉（子母畫面的段 build 自動關）
      P.sfx(name, ref, off)           音效拍點：回傳 P.at(ref, off) 的秒數，並登記 {name, ref, off, t}（P.sfxCues、window.SceneMotion.sfx[comp id]）；
                                      ref 寫成字串字面值（例 const T1 = P.sfx('success', '#38@兩支')），build 靜態解析出 <audio>（motion.md §3）
      P.prev()                        前一段是什麼：'speaker'｜'fullscreen'｜'pip'（data-prev → __cues.segs[id].prev；單獨開檔＝'speaker'）。
@@ -119,7 +121,7 @@
          P.MORPH 0.7／P.ZOOM 2.4（鏡頭推進）／P.COUNT 1.2／P.BAR 0.8
          P.BEAT 0.15（外殼 → 內容）／P.READ 1.2（問句可讀後再停）／P.HOLD_END 1.5（最後完整內容最少停留）
 
-   整數 px：SceneMotion(tl, root?) 會在字型載入後（傳 root 時只量 root 內的元素）把 .sc-lt__card、.sc-chtag__name、頭銜、[data-snap-width] 的寬度用右內距補成偶數整數 px
+   整數 px：SceneMotion(tl, root?) 會在字型載入後（傳 root 時只量 root 內的元素）把 .sc-lt__card、.sc-chtag__name、.sc-sectag、頭銜、[data-snap-width] 的寬度用右內距補成偶數整數 px
    （max-content 的字寬是小數，卡的右緣／右錨定角標的左緣會落在半像素）。v1 class 不受影響。
 
    seek-safe 的細節：同一元素第一次被 tween 的屬性用 immediateRender:true（進場前就是初始狀態），
@@ -142,7 +144,7 @@
   // v2 整數 px：字寬是小數，width:max-content 的卡會讓「右緣」（左錨定）或「左緣」（右錨定／置中）落在半像素，直邊與框線發糊。
   // 字型載入後把 v2 元件的寬度補成偶數整數 px（偶數 → 置中時左右緣也是整數）。只動 v2 class 與標了 data-snap-width 的元素；
   // document.fonts.ready 的回呼在 render／audit／shots 等它之前就先執行，seek 前版面已定。
-  var SNAP_SEL = '.sc-lt__metaitem > span, .sc-lt__card, .sc-chtag__name, [data-snap-width]';
+  var SNAP_SEL = '.sc-lt__metaitem > span, .sc-lt__card, .sc-chtag__name, .sc-sectag, [data-snap-width]';
   // 每個範圍只量一次：傳了 root 就只量 root 內的元素（子合成陸續掛上，各自量自己的卡）；
   // 沒傳 root 時範圍是整份 document，只跑一次，和原本的全域旗標行為相同。
   var snapped = new WeakSet();
@@ -770,19 +772,23 @@
       });
       return P;
     };
-    // 微動：正弦漂浮（x／y 用 u、scale 比例、period 秒），頭尾 ramp 秒漸入漸出；寫 CSS translate／scale
-    P.idle = function (sel, at, o) {
+    // 正弦微動（period 秒，頭尾 ramp 秒漸入漸出）：move＝寫 CSS translate（x／y 用 u，只給背景光暈），否則寫 scale（呼吸）
+    var wave = function (els, at, o, move) {
       var until = o && o.until != null ? o.until : P.dur(), per = opt(o, 'period', 3.2);
-      q(sel).forEach(function (el, i) {
-        var len = Math.max(0.2, until - at), ramp = Math.min(opt(o, 'ramp', 0.8), len / 2);
-        var ph = opt(o, 'phase', 0) + i * 1.3, X = opt(o, 'x', 0) * U, Y = opt(o, 'y', 4) * U, S = opt(o, 'scale', 0), PR = opt(o, 'xperiod', per * 1.37);
+      var X = opt(o, 'x', 0) * U, Y = opt(o, 'y', 0) * U, S = opt(o, 'scale', 0), PR = opt(o, 'xperiod', per * 1.37);
+      els.forEach(function (el, i) {
+        var len = Math.max(0.2, until - at), ramp = Math.min(opt(o, 'ramp', 0.8), len / 2), ph = opt(o, 'phase', 0) + i * 1.3;
         fn(el, at, len, function (t, p) {
           var s = p * len, env = Math.max(0, Math.min(1, s / ramp, (len - s) / ramp));
-          var y = Y * Math.sin(2 * Math.PI * s / per + ph) * env, x = X * Math.sin(2 * Math.PI * s / PR + ph * 0.7) * env;
-          t.style.translate = (Math.round(x * 100) / 100) + 'px ' + (Math.round(y * 100) / 100) + 'px';
-          if (S) t.style.scale = String(Math.round((1 + S * Math.sin(2 * Math.PI * s / per + ph) * env) * 10000) / 10000);
+          if (move) t.style.translate = (Math.round(X * Math.sin(2 * Math.PI * s / PR + ph * 0.7) * env * 100) / 100) + 'px ' + (Math.round(Y * Math.sin(2 * Math.PI * s / per + ph) * env * 100) / 100) + 'px';
+          else t.style.scale = String(Math.round((1 + S * Math.sin(2 * Math.PI * s / per + ph) * env) * 10000) / 10000);
         });
       });
+    };
+    // 微動：呼吸（scale 比例）。不做漂浮：卡片、焦點落定後還上下飄，看起來在晃（使用者：「出現的動畫窗都會輕微晃動」）；
+    //   舊檔寫的 y、x 不動作，沒寫 scale 就整個不做
+    P.idle = function (sel, at, o) {
+      if (opt(o, 'scale', 0)) wave(q(sel), at, o, false);
       return P;
     };
     // 焦點 v2：active 放大＋抬起（lift u）＋亮框發光，其他壓暗縮小；null＝回均衡，'none'＝預覽態（全部壓暗）；
@@ -811,10 +817,18 @@
       return P;
     };
     // 鏡頭：容器的推拉搖（x、y 用 u，scale 比例），或 {to: 目標元素, k}＝往那個元素帶 k 比例；dur ≥ 2s 的慢推算微動
+    // 底版（有底色、框線或陰影的容器：主卡、視窗）不推：推了底版跟著動、撞到右上角的小節角標（使用者：「底版沒有固定會跟著一起移動，甚至還撞到右上角的標題」）
+    var isBoard = function (el) {
+      if (!el || el.nodeType !== 1 || typeof getComputedStyle !== 'function') return false;
+      var cs = getComputedStyle(el), bg = cs.backgroundColor || '';
+      return (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(bg)) || (cs.backgroundImage && cs.backgroundImage !== 'none')
+        || parseFloat(cs.borderTopWidth) > 0 || (cs.boxShadow && cs.boxShadow !== 'none');
+    };
     P.cam = function (sel, at, o) {
       var dur = opt(o, 'dur', V2.MOVE);
       if (dur >= 2) CALL.role = 'micro';
       q(sel).forEach(function (el) {
+        if (isBoard(el)) return;
         var cur = camState.get(el) || { x: 0, y: 0, s: 1 }, s = opt(o, 'scale', 1), x = opt(o, 'x', 0) * U, y = opt(o, 'y', 0) * U;
         // 直式舞台：只推近、不往焦點帶，原點放在容器上緣中點（主卡頂在舞台窗頂 y 130＝直式 unsafe 線，往上長會進平台介面；下面離講者面板還有 29–40px）
         if (o && o.to && STAGED) { x = 0; y = 0; }
@@ -900,19 +914,19 @@
       mv(q(sel), at, { opacity: 0, scale: opt(o, 'from', 0.82), y: opt(o, 'dy', 28) * U }, { opacity: opt(o, 'to', 1), scale: 1, y: 0 }, opt(o, 'dur', 0.55), opt(o, 'ease', 'back.out(1.6)'), opt(o, 'stagger', 0));
       return P;
     };
-    // 背景環境層（L0）：.sc-surface-fs 加兩顆光暈球與浮塵、整段慢拉 1.06→1；P.end() 自動呼叫；root 寫 data-ambient="off" 關掉
+    // 背景環境層（L0）：.sc-surface-fs 加兩顆光暈球與浮塵（不慢拉：主卡常在 .sc-surface-fs 裡，縮放會讓底版跟著動、撞到右上角的小節角標）；P.end() 自動呼叫；root 或 host 寫 data-ambient="off" 關掉（子母畫面的段 build 自動關）
     var ambientDone = false;
     P.ambient = function (D) {
       if (ambientDone || !root || !root.querySelector) return P;
       ambientDone = true;
-      if (root.getAttribute('data-ambient') === 'off') return P;
+      // 子母畫面的段：build 在 host 寫 data-ambient="off"（講者小窗旁邊的底圖一直慢拉、光暈漂移，看起來像在呼吸）
+      if (root.getAttribute('data-ambient') === 'off' || (root.closest && root.closest('[data-ambient="off"]'))) return P;
       var sf = root.querySelector('.sc-surface-fs'); if (!sf) return P;
       D = D || P.dur(); if (!(D > 0)) return P;
       var a = mk(sf, 'sc-amb sc-amb--a'), b = mk(sf, 'sc-amb sc-amb--b'), dust = mk(sf, 'sc-dust');
       sf.appendChild(a); sf.appendChild(b); sf.appendChild(dust);
-      mv([sf], 0, { scale: 1.06, transformOrigin: '60% 40%' }, { scale: 1, transformOrigin: '60% 40%', force3D: false }, D, V2.EASE.idle, 0);
-      P.idle([a], 0, { until: D, x: 90, y: 60, period: 13, ramp: 1.2 });
-      P.idle([b], 0, { until: D, x: 70, y: 80, period: 17, phase: 2, ramp: 1.2 });
+      wave([a], 0, { until: D, x: 90, y: 60, period: 13, ramp: 1.2 }, true);
+      wave([b], 0, { until: D, x: 70, y: 80, period: 17, phase: 2, ramp: 1.2 }, true);
       mv([dust], 0, { y: 0 }, { y: -Math.min(120, D * 6) * U }, D, 'none', 0);
       return P;
     };

@@ -1,6 +1,7 @@
 // 兩種預覽
 //   SimPreview     播 rough.mp4，用 WebAudio 增益、黑色遮罩、CSS transform 即時模擬 cuts（播放時跳過）／音量（含範圍音量）／淡入淡出／dip／punch，
-//                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲；音效照檢查報告的時間點播 shared/sfx 的 wav；
+//                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲，位置和成片同一個可見區（橫式 contain＝上方 1920×940，字幕帶空出來）；
+//                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去成片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
 //                  全部聲音最後經過 AnalyserNode 給音量表
 //   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整成片；時間是成片時間）
 // 兩者對外都用 rough.mp4 的秒數（app.t）。
@@ -95,7 +96,8 @@ export class SimPreview {
     const txt = cue ? cue.text : '';
     const span = this.el.caption.firstElementChild || this.el.caption;
     if (span.textContent !== txt) { span.textContent = txt; this.el.caption.classList.toggle('off', !txt); }
-    this.tickMedia(t, fx.audio);
+    const mediaOn = this.tickMedia(t, fx.audio);
+    this.tickHint(t, mediaOn || inCut);
     this.tickSfx(t);
     this.lastT = t;
   }
@@ -131,9 +133,9 @@ export class SimPreview {
     for (const it of A.itemsView) if (it.type === 'media' && t >= it.start && t < it.end) { active = it; break; }
     for (const [id, m] of this.mediaEls) if (!active || active.id !== id) { m.wrap.style.opacity = '0'; if (m.el.tagName === 'VIDEO' && !m.el.paused) m.el.pause(); }
     const pip = this.el.pip;
-    if (!active) { pip.style.display = 'none'; return; }
+    if (!active) { pip.style.display = 'none'; return false; }
     const seg = A.mediaSeg(active.id);
-    if (!seg || !seg.url) { pip.style.display = 'none'; return; }
+    if (!seg || !seg.url) { pip.style.display = 'none'; return false; }
     let m = this.mediaEls.get(active.id);
     if (!m) m = this.makeMedia(active.id, seg);
     const enter = active.enter || 'fade', exit = active.exit || 'fade';
@@ -147,9 +149,11 @@ export class SimPreview {
       const k = de / MEDIA_TRANS;
       if (exit === 'fade') op = Math.min(op, k); else if (exit === 'slide') tf = `translateX(${-(1 - k) * 100}%)`; else if (exit === 'zoom') { op = Math.min(op, k); tf = `scale(${0.85 + 0.15 * k})`; }
     }
+    const showPip = seg.pip !== false && !A.voiceOnly.some(([a, b]) => t >= a && t < b);
     m.wrap.style.opacity = String(op);
     m.wrap.style.transform = tf;
     m.el.style.objectFit = seg.fit === 'cover' ? 'cover' : 'contain';
+    this.placeMedia(m.el, seg.fit === 'cover' ? 'cover' : 'contain', showPip, seg.side);
     if (m.el.tagName === 'VIDEO') {
       const want = (active.in || 0) + di * (active.speed || 1);
       if (Math.abs(m.el.currentTime - want) > (this.playing ? 0.35 : 0.04)) m.el.currentTime = Math.max(0, want);
@@ -166,7 +170,6 @@ export class SimPreview {
         if (node) { node.gain.setTargetAtTime(gain, this.audio.ctx.currentTime, 0.015); m.el.muted = false; } else m.el.muted = true;
       } else { m.el.muted = vol == null; m.el.volume = clamp(gain, 0, 1); }
     }
-    const showPip = seg.pip !== false && !A.voiceOnly.some(([a, b]) => t >= a && t < b);
     if (showPip) {
       pip.style.display = 'block';
       pip.style.opacity = String(op);
@@ -180,6 +183,27 @@ export class SimPreview {
         g.filter = 'none';
       }
     } else pip.style.display = 'none';
+    return true;
+  }
+  // 插入素材的可見區＝成片的（/api/state canvas.media，lib/media.mjs mediaFrame 的 view；直式有講者面板時用 panel）
+  placeMedia(el, fit, panel, side = false) {
+    const c = this.app.canvas?.() || {}, V = (side && c.media?.side?.[fit]) || c.media?.[panel ? 'panel' : 'full']?.[fit];
+    const W = c.W || 1920, H = c.H || 1080, [x, y, w, h] = Array.isArray(V) ? V : [0, 0, W, H];
+    const css = `position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%;object-fit:${fit};`;
+    if (el.style.cssText !== css) el.style.cssText = css;
+  }
+  // 只有聲音的地方：底片是黑的，卡片和情境動畫只在成片預覽畫 → 在中間寫是哪一段
+  tickHint(t, covered) {
+    const A = this.app, el = this.el.hint;
+    if (!el) return;
+    let txt = '';
+    if (!covered && A.voiceOnly.some(([a, b]) => t >= a && t < b)) {
+      let it = null;
+      for (const x of A.itemsView) if (x.type !== 'media' && t >= x.start && t < (x.vend ?? x.end) && (!it || x.start >= it.start)) it = x;
+      txt = it ? `${it.id}　${it.label || ''}\n這段只有聲音，畫面是卡片或情境動畫 → 切到「成片預覽」看` : '這段只有聲音（沒有講者畫面）';
+    }
+    if (el.textContent !== txt) { el.textContent = txt; el.style.whiteSpace = 'pre-line'; }
+    el.hidden = !txt;
   }
   makeMedia(id, seg) {
     const wrap = document.createElement('div');
@@ -187,11 +211,8 @@ export class SimPreview {
     const el = document.createElement(seg.kind === 'image' ? 'img' : 'video');
     el.src = seg.url;
     if (el.tagName === 'VIDEO') { el.muted = true; el.playsInline = true; el.preload = 'auto'; }
-    el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
-    const lab = document.createElement('div');
-    lab.className = 'lab';
-    lab.textContent = `${id} 插入素材（示意）`;
-    wrap.append(el, lab);
+    this.placeMedia(el, seg.fit === 'cover' ? 'cover' : 'contain', true, seg.side);
+    wrap.append(el);
     this.el.media.append(wrap);
     const m = { wrap, el };
     this.mediaEls.set(id, m);

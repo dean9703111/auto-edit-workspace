@@ -31,7 +31,9 @@ export const DEFAULT_TEMPLATE = path.resolve(HERE, '..', '..');
 export const LOOK_VER = 1;
 export const LM_VER = 1;
 export const LUT_REF = 0.8;
-export const LOOK_LIMITS = { color: [0, 1], slim: [0, 1.2], step: 0.05 };
+export const LOOK_LIMITS = { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], step: 0.05 };
+// 要做臉部底片（rough-look.mp4）：瘦臉或美顏任一個開
+export const faceOn = (L) => L.slim > 0 || L.beauty > 0;
 export const H_TAB = [-0.10, 0.10, 0.25, 0.40, 0.55, 0.65, 0.75, 0.85, 0.90, 0.95, 1.00, 1.10];
 export const IN_TAB = [0.00, 0.75, 1.05, 1.15, 1.30, 1.65, 1.60, 1.45, 1.35, 1.20, 0.70, 0.70].map((v) => v / 100);
 export const UP_TAB = [0.00, 0.00, 0.15, 0.50, 1.05, 1.30, 1.50, 1.85, 2.00, 2.05, 2.15, 2.15].map((v) => v / 100);
@@ -74,32 +76,34 @@ export function readKitLook(templateDir = DEFAULT_TEMPLATE) {
   let j;
   try { j = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { throw new Error(`kit/look.json 讀不到：${e.message} → 從 git 還原 shared/template/kit/look.json`); }
   if (!isObj(j)) throw new Error('kit/look.json 要是物件 { "color", "slim", "lut" } → 從 git 還原 shared/template/kit/look.json');
-  for (const k of Object.keys(j)) if (!['color', 'slim', 'lut'].includes(k)) throw new Error(`kit/look.json 不能有「${k}」→ 只能寫 color、slim、lut`);
+  for (const k of Object.keys(j)) if (!['color', 'slim', 'beauty', 'lut'].includes(k)) throw new Error(`kit/look.json 不能有「${k}」→ 只能寫 color、slim、beauty、lut`);
+  if ('beauty' in j && (!num(j.beauty) || j.beauty < 0 || j.beauty > 1)) throw new Error(`kit/look.json 的 beauty 要是 0–1 的數字，現在是 ${JSON.stringify(j.beauty)} → 改成 0–1（預設 0＝不美顏；要美顏建議 0.5），或刪掉這個欄位`);
   if (!num(j.color) || j.color < 0 || j.color > 1) throw new Error(`kit/look.json 的 color 要是 0–1 的數字，現在是 ${JSON.stringify(j.color)} → 改成 0–1（預設 0＝不調光；要調光建議 0.8），或從 git 還原 shared/template/kit/look.json`);
   if (!num(j.slim) || j.slim < 0 || j.slim > 1.2) throw new Error(`kit/look.json 的 slim 要是 0–1.2 的數字，現在是 ${JSON.stringify(j.slim)} → 改成 0–1.2（預設 0＝不瘦臉；要瘦臉建議 0.6），或從 git 還原 shared/template/kit/look.json`);
   if (typeof j.lut !== 'string' || !j.lut) throw new Error('kit/look.json 的 lut 要是 kit/ 底下的 .cube 路徑，例如 "look/jianying-smart.cube" → 從 git 還原 shared/template/kit/look.json');
   const lutFile = path.join(templateDir, 'kit', j.lut);
-  return { color: r2(j.color), slim: r2(j.slim), lut: j.lut, lutFile };
+  return { color: r2(j.color), slim: r2(j.slim), beauty: r2(j.beauty ?? 0), lut: j.lut, lutFile };
 }
 
 export function validateLook(v) {
   if (v === undefined || v === false) return [];
   if (!isObj(v)) return ['plan.json 的 look 要是物件或 false → 例如 "look": { "color": 0.8, "slim": 0.6 }；要用預設就把 look 整個拿掉'];
   const out = [];
-  for (const k of Object.keys(v)) if (!['color', 'slim'].includes(k)) out.push(`look 不能有「${k}」→ 只能寫 color、slim`);
+  for (const k of Object.keys(v)) if (!['color', 'slim', 'beauty'].includes(k)) out.push(`look 不能有「${k}」→ 只能寫 color、slim、beauty`);
   if ('color' in v && (!num(v.color) || v.color < 0 || v.color > 1)) out.push(`look.color 要是 0–1 的數字（0＝不調光），現在是 ${JSON.stringify(v.color)}`);
   if ('slim' in v && (!num(v.slim) || v.slim < 0 || v.slim > 1.2)) out.push(`look.slim 要是 0–1.2 的數字（0＝不瘦臉；超過 1.2 脖子與領口會被拉彎），現在是 ${JSON.stringify(v.slim)}`);
+  if ('beauty' in v && (!num(v.beauty) || v.beauty < 0 || v.beauty > 1)) out.push(`look.beauty 要是 0–1 的數字（0＝不美顏；磨皮、提亮、淡化黑眼圈），現在是 ${JSON.stringify(v.beauty)}`);
   return out;
 }
 
 export function resolveLook({ plan, templateDir = DEFAULT_TEMPLATE } = {}) {
   const kit = readKitLook(templateDir);
   const v = plan?.look;
-  const base = { lutFile: kit.lutFile, lutRel: kit.lut, kit: { color: kit.color, slim: kit.slim } };
-  if (v === false) return { ...base, color: 0, slim: 0, source: 'off' };
-  if (!isObj(v)) return { ...base, color: kit.color, slim: kit.slim, source: 'kit' };
+  const base = { lutFile: kit.lutFile, lutRel: kit.lut, kit: { color: kit.color, slim: kit.slim, beauty: kit.beauty } };
+  if (v === false) return { ...base, color: 0, slim: 0, beauty: 0, source: 'off' };
+  if (!isObj(v)) return { ...base, color: kit.color, slim: kit.slim, beauty: kit.beauty, source: 'kit' };
   const ok = (x, hi) => num(x) && x >= 0 && x <= hi;
-  return { ...base, color: ok(v.color, 1) ? r2(v.color) : kit.color, slim: ok(v.slim, 1.2) ? r2(v.slim) : kit.slim, source: 'plan' };
+  return { ...base, color: ok(v.color, 1) ? r2(v.color) : kit.color, slim: ok(v.slim, 1.2) ? r2(v.slim) : kit.slim, beauty: ok(v.beauty, 1) ? r2(v.beauty) : kit.beauty, source: 'plan' };
 }
 const srcLabel = (L) => (L.source === 'kit' ? 'kit/look.json' : 'plan.json 的 look');
 
@@ -236,12 +240,12 @@ export function landmarksFresh(st, P, mSha) {
   const L = st.landmarks;
   return !!L && sameStat(L, statOf(P.landmarks)) && sameStat(L.rough, statOf(P.rough)) && L.modelSha256 === mSha && L.lmVer === LM_VER;
 }
-export function footageFresh(st, P, mSha, slim) {
+export function footageFresh(st, P, mSha, slim, beauty = 0) {
   const F = st.footage;
   return landmarksFresh(st, P, mSha) && !!F && sameStat(F, statOf(P.footage)) && sameStat(F.rough, statOf(P.rough))
-    && sameStat(F.landmarks, statOf(P.landmarks)) && r2(F.slim) === r2(slim) && F.lookVer === LOOK_VER;
+    && sameStat(F.landmarks, statOf(P.landmarks)) && r2(F.slim) === r2(slim) && r2(F.beauty ?? 0) === r2(beauty) && F.lookVer === LOOK_VER;
 }
-export function staleReason(st, P, mSha, slim) {
+export function staleReason(st, P, mSha, slim, beauty = 0) {
   if (!st.landmarks && !st.footage) return '還沒跑過';
   const rough = statOf(P.rough);
   if ((st.landmarks && !sameStat(st.landmarks.rough, rough)) || (st.footage && !sameStat(st.footage.rough, rough))) return 'rough.mp4 換過（剪乾淨重做了）';
@@ -250,6 +254,7 @@ export function staleReason(st, P, mSha, slim) {
   if (st.landmarks.modelSha256 !== mSha) return '臉部偵測模型換過';
   if (!st.footage) return '瘦臉底片還沒做';
   if (r2(st.footage.slim) !== r2(slim)) return `瘦臉強度 ${fmtNum(st.footage.slim)} → ${fmtNum(slim)}`;
+  if (r2(st.footage.beauty ?? 0) !== r2(beauty)) return `美顏強度 ${fmtNum(st.footage.beauty ?? 0)} → ${fmtNum(beauty)}`;
   if (!sameStat(st.footage, statOf(P.footage)) || !sameStat(st.footage.landmarks, statOf(P.landmarks))) return 'work/rough-look.mp4 不見了或被改過';
   if (st.footage.lookVer !== LOOK_VER) return `look.mjs 版本更新（LOOK_VER ${st.footage.lookVer} → ${LOOK_VER}）`;
   return null;
@@ -297,9 +302,9 @@ export function projectLabel(projectDir, templateDir = DEFAULT_TEMPLATE) {
 function decide({ projectDir, plan, templateDir, probe = {} }) {
   const L = resolveLook({ plan, templateDir });
   const P = statePaths(projectDir), st = readState(projectDir), proj = projectLabel(projectDir, templateDir);
-  const base = { L, P, st, proj, footage: P.rough, slimApplied: 0 };
-  if (L.color === 0 && L.slim === 0) return { ...base, row: 1 };
-  if (L.slim === 0) return { ...base, row: 2 };
+  const base = { L, P, st, proj, footage: P.rough, slimApplied: 0, beautyApplied: 0 };
+  if (L.color === 0 && !faceOn(L)) return { ...base, row: 1 };
+  if (!faceOn(L)) return { ...base, row: 2 };
   const statusCmd = `node shared/template/tools/look.mjs status --project ${projArg(proj)}`;
   // 指令一律放在 → 後面、行尾，整段可以直接複製執行（審查 C-02）
   if (isRunning(st)) {
@@ -317,7 +322,7 @@ function decide({ projectDir, plan, templateDir, probe = {} }) {
       : `⚠ 講者瘦臉略過：偵測率 ${Math.round((sum.rate || 0) * 100)}%（< ${Math.round(RATE_OFF * 100)}%），只調光 → 看 work/look-preview.jpg；確定不要瘦臉就在 plan.json 寫 "look": { "slim": 0 }`;
     return { ...base, row: 4, warn };
   }
-  if (footageFresh(st, P, mSha, L.slim)) return { ...base, row: 5, footage: P.footage, slimApplied: L.slim };
+  if (footageFresh(st, P, mSha, L.slim, L.beauty)) return { ...base, row: 5, footage: P.footage, slimApplied: L.slim, beautyApplied: L.beauty };
   const assets = probe.assets ?? assetsStatus(vendorOf(templateDir));
   const chromeOk = probe.chrome ?? chromeCandidates().length > 0;
   if (!assets.ok) {
@@ -325,7 +330,7 @@ function decide({ projectDir, plan, templateDir, probe = {} }) {
     return { ...base, row: 6, warn: `⚠ 講者瘦臉略過：找不到 shared/template/vendor/mediapipe/${f}，只調光 → node shared/template/tools/look.mjs ensure` };
   }
   if (!chromeOk) return { ...base, row: 6, warn: '⚠ 講者瘦臉略過：找不到 HyperFrames 的 Chrome，只調光 → npx hyperframes browser ensure' };
-  const reason = staleReason(st, P, mSha, L.slim) || '還沒跑過';
+  const reason = staleReason(st, P, mSha, L.slim, L.beauty) || '還沒跑過';
   // 預估看 landmark 快取（只改 slim 時只重做變形）；超過 2 分鐘直接給 --background 的指令（審查 C-06、C-02）
   let est = null;
   try { const v = probeVideo(P.rough); est = estimateMinutes({ frames: v.frames, width: v.width, height: v.height, detect: !landmarksFresh(st, P, mSha) }); } catch { /* 沒有 rough.mp4 時不預估 */ }
@@ -348,18 +353,18 @@ export function ensureLook({ projectDir, plan = {}, log = () => {}, templateDir 
   if (errs.length && strict) throw new Error(errs[0]);
   const d = decide({ projectDir, plan, templateDir, probe });
   const { L, P } = d;
-  if (d.row === 1) return { footage: P.rough, lut: null, key: null, report: [colorLine(L), `講者瘦臉：關（${offLabel(L)}）`] };
+  if (d.row === 1) return { footage: P.rough, lut: null, key: null, report: [colorLine(L), `講者瘦臉：關、美顏：關（${offLabel(L)}）`] };
   if (d.error && strict) throw new Error(d.error);
   const lut = ensureBlendedLut({ projectDir, lutFile: L.lutFile, color: L.color, log });
   const report = [colorLine(L)];
-  if (d.row === 2) report.push(`講者瘦臉：關（${offLabel(L)}）`);
+  if (d.row === 2) report.push(`講者瘦臉：關、美顏：關（${offLabel(L)}）`);
   else if (d.row === 5) {
     const s = d.st.landmarks?.summary || {};
-    report.push(`講者瘦臉：${fmtNum(L.slim)}（work/rough-look.mp4；偵測率 ${pct(s.rate || 0)}、臉寬中位數 ${Math.round(s.medianFaceWidth || 0)} px）`);
+    report.push(`講者瘦臉：${L.slim > 0 ? fmtNum(L.slim) : '關'}、美顏：${L.beauty > 0 ? fmtNum(L.beauty) : '關'}（work/rough-look.mp4；偵測率 ${pct(s.rate || 0)}、臉寬中位數 ${Math.round(s.medianFaceWidth || 0)} px）`);
   } else report.push(d.warn);
-  const footage = d.footage, slim = d.slimApplied;
-  const key = L.color > 0 || slim > 0
-    ? { v: LOOK_VER, color: L.color, ...(L.color > 0 ? { lut: fileSha256(L.lutFile).slice(0, 12) } : {}), slim, footage: path.basename(footage) }
+  const footage = d.footage, slim = d.slimApplied, beauty = d.beautyApplied;
+  const key = L.color > 0 || slim > 0 || beauty > 0
+    ? { v: LOOK_VER, color: L.color, ...(L.color > 0 ? { lut: fileSha256(L.lutFile).slice(0, 12) } : {}), slim, ...(beauty > 0 ? { beauty } : {}), footage: path.basename(footage) }
     : null;
   return { footage, lut, key, report };
 }
@@ -556,6 +561,109 @@ export function warpPlane(buf, geom, F, scale = 1) {
   }
 }
 
+// ---------- 美顏（磨皮、膚色提亮、淡化黑眼圈）----------
+// 只動臉：臉型輪廓（OVAL）裡、扣掉眼睛、眉毛、嘴巴（橢圓），邊緣羽化；眼下另一組橢圓。瘦臉變形之前做（遮罩對原本的 landmark）。
+// 磨皮＝保邊平滑：盒狀模糊兩次（≈ 高斯）後，和原值差越小（膚質起伏）權重越大、差大（五官、髮絲邊緣）幾乎不動。
+// 數字是 2026-11-03 對 esim-ep2（臉寬 ≈ 254 px）看單格前後對照定的：b＝1 時磨皮 85%、提亮 +7、眼下 +9 並把色偏拉回中性 35%。
+export const BEAUTY = { radius: 0.022, sigma: 9, feather: 0.05, mix: 0.85, lift: 7, under: 9, chroma: 0.35 };
+const ellipses = (lm, fw) => {
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const eye = (a, b) => ({ c: mid(lm[a], lm[b]), w: norm(sub(lm[a], lm[b])) });
+  const L = eye(33, 133), R = eye(362, 263);
+  const brow = (o, m) => ({ c: [lm[m][0] + (lm[m][0] - lm[o][0]) * 0.3, lm[m][1] + (lm[m][1] - lm[o][1]) * 0.3], rx: fw * 0.15, ry: fw * 0.05 });
+  const mouthC = mid(mid(lm[61], lm[291]), mid(lm[0], lm[17]));
+  return {
+    excl: [{ c: L.c, rx: L.w * 0.85, ry: L.w * 0.5 }, { c: R.c, rx: R.w * 0.85, ry: R.w * 0.5 }, brow(70, 105), brow(300, 334),
+      { c: mouthC, rx: norm(sub(lm[61], lm[291])) * 0.68, ry: Math.max(norm(sub(lm[0], lm[17])) * 0.72, fw * 0.06) }],
+    under: [{ c: [L.c[0], L.c[1] + L.w * 0.6], rx: L.w * 0.75, ry: L.w * 0.3 }, { c: [R.c[0], R.c[1] + R.w * 0.6], rx: R.w * 0.75, ry: R.w * 0.3 }],
+  };
+};
+// 盒狀模糊（可分離、邊緣夾住），就地寫回 a；tmp 是同大小的暫存
+function boxBlur(a, w, h, r, tmp) {
+  if (r < 1) return;
+  const n = 2 * r + 1;
+  for (let y = 0; y < h; y++) {
+    const o = y * w; let acc = 0;
+    for (let k = -r; k <= r; k++) acc += a[o + Math.min(w - 1, Math.max(0, k))];
+    for (let x = 0; x < w; x++) { tmp[o + x] = acc / n; acc += a[o + Math.min(w - 1, x + r + 1)] - a[o + Math.max(0, x - r)]; }
+  }
+  for (let x = 0; x < w; x++) {
+    let acc = 0;
+    for (let k = -r; k <= r; k++) acc += tmp[Math.min(h - 1, Math.max(0, k)) * w + x];
+    for (let y = 0; y < h; y++) { a[y * w + x] = acc / n; acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x]; }
+  }
+}
+// 遮罩（給 w×h 的畫面；chroma 平面傳 scale 0.5 的 landmark）→ { x0, y0, bw, bh, m（臉）, u（眼下）, fw }
+export function beautyMasks(lm, w, h) {
+  const fw = faceWidth(lm);
+  if (!(fw > 8)) return null;
+  const oval = OVAL.map((i) => lm[i]), pad = Math.ceil(fw * (BEAUTY.feather + BEAUTY.radius) * 2) + 2;
+  const xs = oval.map((p) => p[0]), ys = oval.map((p) => p[1]);
+  const x0 = Math.max(0, Math.floor(Math.min(...xs)) - pad), x1 = Math.min(w, Math.ceil(Math.max(...xs)) + pad);
+  const y0 = Math.max(0, Math.floor(Math.min(...ys)) - pad), y1 = Math.min(h, Math.ceil(Math.max(...ys)) + pad);
+  const bw = x1 - x0, bh = y1 - y0;
+  if (bw < 4 || bh < 4) return null;
+  const m = new Float32Array(bw * bh), u = new Float32Array(bw * bh), tmp = new Float32Array(bw * bh);
+  const { excl, under } = ellipses(lm, fw);
+  const inE = (e, x, y) => ((x - e.c[0]) / e.rx) ** 2 + ((y - e.c[1]) / e.ry) ** 2 <= 1;
+  for (let y = 0; y < bh; y++) {
+    const Y = y0 + y + 0.5, xsct = [];
+    for (let i = 0; i < oval.length; i++) {
+      const a = oval[i], b = oval[(i + 1) % oval.length];
+      if ((a[1] <= Y) !== (b[1] <= Y)) xsct.push(a[0] + ((Y - a[1]) / (b[1] - a[1])) * (b[0] - a[0]));
+    }
+    xsct.sort((p, q) => p - q);
+    for (let k = 0; k + 1 < xsct.length; k += 2) {
+      for (let x = Math.max(0, Math.ceil(xsct[k] - x0 - 0.5)); x < Math.min(bw, Math.floor(xsct[k + 1] - x0 + 0.5)); x++) {
+        const X = x0 + x + 0.5;
+        if (!excl.some((e) => inE(e, X, Y))) m[y * bw + x] = 1;
+        if (under.some((e) => inE(e, X, Y))) u[y * bw + x] = 1;
+      }
+    }
+  }
+  const rf = Math.max(1, Math.round(fw * BEAUTY.feather));
+  boxBlur(m, bw, bh, rf, tmp); boxBlur(m, bw, bh, rf, tmp);
+  boxBlur(u, bw, bh, rf, tmp); boxBlur(u, bw, bh, rf, tmp);
+  return { x0, y0, bw, bh, m, u, fw };
+}
+// 亮度（或 RGB 的單一色版）：磨皮＋提亮＋眼下提亮。geom 同 warpPlane（w、h、ch、offset、stride）
+export function beautyPlane(buf, geom, M, b, c = 0) {
+  if (!M || !(b > 0)) return;
+  const { w, ch = 1, offset = 0 } = geom, stride = geom.stride || w * ch;
+  const { x0, y0, bw, bh, m, u, fw } = M;
+  const v = new Float32Array(bw * bh), tmp = new Float32Array(bw * bh);
+  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) v[y * bw + x] = buf[offset + (y0 + y) * stride + (x0 + x) * ch + c];
+  const blur = Float32Array.from(v), r = Math.max(1, Math.round(fw * BEAUTY.radius));
+  boxBlur(blur, bw, bh, r, tmp); boxBlur(blur, bw, bh, r, tmp);
+  const k2 = 1 / (2 * BEAUTY.sigma * BEAUTY.sigma);
+  for (let i = 0; i < v.length; i++) {
+    if (m[i] <= 0.002 && u[i] <= 0.002) continue;
+    const y = v[i], d = blur[i] - y, room = 1 - y / 255;
+    const out = y + b * m[i] * (BEAUTY.mix * Math.exp(-d * d * k2) * d + BEAUTY.lift * room) + b * u[i] * m[i] * BEAUTY.under * room;
+    buf[offset + (y0 + Math.floor(i / bw)) * stride + (x0 + (i % bw)) * ch + c] = Math.max(0, Math.min(255, out + 0.5));
+  }
+}
+// 色度（U 或 V）：眼下的色偏往中性（128）拉
+export function beautyChroma(buf, geom, M, b) {
+  if (!M || !(b > 0)) return;
+  const { w, offset = 0 } = geom, stride = geom.stride || w;
+  const { x0, y0, bw, bh, m, u } = M;
+  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+    const k = b * u[y * bw + x] * m[y * bw + x] * BEAUTY.chroma;
+    if (k <= 0.002) continue;
+    const o = offset + (y0 + y) * stride + x0 + x;
+    buf[o] = buf[o] + (128 - buf[o]) * k + 0.5;
+  }
+}
+// 一格 YUV420（瘦臉之前呼叫）：lm＝這一格的 landmark（亮度平面座標）、lmHalf＝同一格縮一半（色度平面）
+export function beautyFrame(cur, W, H, lm, lmHalf, b) {
+  const cw = W >> 1, chh = H >> 1;
+  beautyPlane(cur, { w: W, h: H }, beautyMasks(lm, W, H), b);
+  const Mc = beautyMasks(lmHalf, cw, chh);
+  beautyChroma(cur, { w: cw, offset: W * H }, Mc, b);
+  beautyChroma(cur, { w: cw, offset: W * H + cw * chh }, Mc, b);
+}
+
 // ---------- 讀 landmark（contracts/look.md §6.3） ----------
 
 export function rampWeights(raw, F = FADE_FRAMES) {
@@ -629,7 +737,7 @@ export function loadTrack(src, { lookScale = 1 } = {}) {
 // ---------- 瘦臉底片（contracts/look.md §5.4、§6.1） ----------
 
 const tailStr = (s, n = 300) => String(s ?? '').trim().slice(-n);
-export function renderLookFootage({ projectDir, track, slim, onProgress = () => {}, signal } = {}) {
+export function renderLookFootage({ projectDir, track, slim, beauty = 0, onProgress = () => {}, signal } = {}) {
   const P = statePaths(projectDir), V = probeVideo(P.rough), S = lookSize(V.width, V.height);
   const pix = ['yuv420p', 'yuvj420p'].includes(V.pixFmt) ? V.pixFmt : 'yuv420p';
   const W = S.w, H = S.h, cw = W >> 1, chh = H >> 1, FS = W * H + 2 * cw * chh;
@@ -661,8 +769,9 @@ export function renderLookFootage({ projectDir, track, slim, onProgress = () => 
       while (p < chunk.length) {
         const k = Math.min(FS - off, chunk.length - p); chunk.copy(cur, off, p, p + k); off += k; p += k;
         if (off < FS) break;
-        const s = slim * track.weight(n), lm = s > 0 ? track.lm(n, lookScale) : null;
-        if (lm) {
+        const s = slim * track.weight(n), bt = beauty * track.weight(n), lm = s > 0 || bt > 0 ? track.lm(n, lookScale) : null;
+        if (lm && bt > 0) beautyFrame(cur, W, H, lm, track.lm(n, lookScale / 2), bt);   // 美顏在變形之前（遮罩對原本的臉）
+        if (lm && s > 0) {
           const F = field(lm, s, W, H);
           if (F) {
             warpPlane(cur, { w: W, h: H, ch: 1, offset: 0 }, F, 1);
@@ -753,7 +862,7 @@ function line(c, x0, y0, x1, y1, rgb, wdt = 2) {
 function polyline(c, pts, rgb) { for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; line(c, a[0], a[1], b[0], b[1], rgb); } }
 
 // 臉部特寫：from rgb 全圖（W×H），以臉中心、邊長 2.4 × 臉寬，縮成 size；slim > 0 先變形
-export function faceCrop(rgb, W, H, lm, s, size = 360, { lines = false } = {}) {
+export function faceCrop(rgb, W, H, lm, s, size = 360, { lines = false, beauty = 0 } = {}) {
   const fw = faceWidth(lm), [cx, cy] = faceCenter(lm), side = Math.max(8, 2.4 * fw);
   const m = Math.ceil(1.8 * fw);
   const rx = Math.max(0, Math.floor(cx - m)), ry = Math.max(0, Math.floor(cy - m)), rw = Math.min(W, Math.ceil(cx + m)) - rx, rh = Math.min(H, Math.ceil(cy + m)) - ry;
@@ -761,6 +870,7 @@ export function faceCrop(rgb, W, H, lm, s, size = 360, { lines = false } = {}) {
   for (let y = 0; y < rh; y++) rgb.copy(sub0, y * rw * 3, ((ry + y) * W + rx) * 3, ((ry + y) * W + rx + rw) * 3);
   const local = []; for (const i of POINTS) local[i] = [lm[i][0] - rx, lm[i][1] - ry];
   let cp = null;
+  if (beauty > 0) { const M = beautyMasks(local, rw, rh); for (let c = 0; c < 3; c++) beautyPlane(sub0, { w: rw, h: rh, ch: 3 }, M, beauty, c); }   // 預覽用 RGB 三個色版各做一次（不拉色度）
   if (s > 0) { const F = field(local, s, rw, rh); warpPlane(sub0, { w: rw, h: rh, ch: 3 }, F, 1); cp = controlPoints(local, s); }
   const out = resample(sub0, rw, rh, cx - side / 2 - rx, cy - side / 2 - ry, side, { w: size, h: size, data: Buffer.alloc(size * size * 3) });
   if (lines) {
@@ -823,12 +933,13 @@ export function lookPreview({ projectDir, templateDir = DEFAULT_TEMPLATE, plan =
     const orig = grabRgb(P.rough, { at: t });
     const graded = lut ? grabRgb(P.rough, { at: t, lut }) : Buffer.from(orig);
     const lm = pk.ok && track ? track.lm(pk.i, 1) : null, s = slimOn && lm ? L.slim * track.weight(pk.i) : 0;
-    const applied = Buffer.from(graded);
+    const applied = Buffer.from(graded), bt = lm && L.beauty > 0 && lms?.summary?.slimOk !== false ? L.beauty * track.weight(pk.i) : 0;
+    if (lm && bt > 0) { const M = beautyMasks(lm, V.width, V.height); for (let ch = 0; ch < 3; ch++) beautyPlane(applied, { w: V.width, h: V.height, ch: 3 }, M, bt, ch); }
     if (lm && s > 0) warpPlane(applied, { w: V.width, h: V.height, ch: 3 }, field(lm, s, V.width, V.height), 1);
     const panel = (buf) => { const o = { w: tw, h: th, data: Buffer.alloc(tw * th * 3) }; resampleRect(buf, V.width, V.height, o); return o; };
     blit(c, panel(orig), gap + (pw - tw) / 2 | 0, y0 + bar + ((ph - th) / 2 | 0));
     blit(c, panel(applied), gap * 2 + pw + ((pw - tw) / 2 | 0), y0 + bar + ((ph - th) / 2 | 0));
-    if (lm) blit(c, faceCrop(graded, V.width, V.height, lm, s, fz, { lines: true }), gap * 3 + pw * 2, y0 + bar);
+    if (lm) blit(c, faceCrop(graded, V.width, V.height, lm, s, fz, { lines: true, beauty: bt }), gap * 3 + pw * 2, y0 + bar);
     else fillRect(c, gap * 3 + pw * 2, y0 + bar, fz, ph, [40, 20, 20]);
   });
   writeJpg(c, P.preview, 2);
@@ -843,7 +954,7 @@ export function lookPreview({ projectDir, templateDir = DEFAULT_TEMPLATE, plan =
     return { file: P.preview, lines, warnings };
   }
   lines.push(`講者對照圖：work/look-preview.jpg（${picks.length} 列：${head}）`);
-  lines.push(`  欄：原圖｜套用後（調光 ${fmtNum(L.color)}＋瘦臉 ${slimOn ? fmtNum(L.slim) : '0'}）｜臉部放大＋輪廓（綠＝原本、紅＝套用後）`);
+  lines.push(`  欄：原圖｜套用後（調光 ${fmtNum(L.color)}＋瘦臉 ${slimOn ? fmtNum(L.slim) : '0'}＋美顏 ${L.beauty > 0 && lms?.summary?.slimOk !== false ? fmtNum(L.beauty) : '0'}）｜臉部放大＋輪廓（綠＝原本、紅＝套用後）`);
   const sum = lms.summary || {};
   lines.push(`偵測率：${pct(sum.rate || 0)}（${sum.detected}／${track.n - (sum.black || 0)} 格；全黑 ${sum.black || 0} 格不算）`);
   const gaps = []; let a = -1;
@@ -884,7 +995,7 @@ function resampleRect(src, sw, sh, out) {
 
 // ---------- 剪輯台：單格前後對照（contracts/look.md §7.3） ----------
 
-export function faceImage({ projectDir, t = 0, slim = 0, cache = {} }) {
+export function faceImage({ projectDir, t = 0, slim = 0, beauty = 0, cache = {} }) {
   const P = statePaths(projectDir);
   const st = statOf(P.landmarks);
   const proj = projectLabel(projectDir);
@@ -904,6 +1015,6 @@ export function faceImage({ projectDir, t = 0, slim = 0, cache = {} }) {
     if (cache.frames.size >= 4) cache.frames.delete(cache.frames.keys().next().value);
     cache.frames.set(i, grabRgb(P.rough, { at: i / V.fpsExact }));
   }
-  const s = Math.max(0, Math.min(1.2, Number(slim) || 0)) * track.weight(i);
-  return jpgBuffer(faceCrop(cache.frames.get(i), V.width, V.height, lm, s, 360), 3);
+  const s = Math.max(0, Math.min(1.2, Number(slim) || 0)) * track.weight(i), bt = Math.max(0, Math.min(1, Number(beauty) || 0)) * track.weight(i);
+  return jpgBuffer(faceCrop(cache.frames.get(i), V.width, V.height, lm, s, 360, { beauty: bt }), 3);
 }

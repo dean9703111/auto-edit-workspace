@@ -481,6 +481,24 @@ test('只有聲音：沒蓋住 0.3 s ⚠、1.2 s ✖；報告行寫 ⚠／✖；
   assert.deepEqual(jsonTop(res).voiceUncovered.map((g) => [g.start, g.end, g.level]), [[25, 25.3, 'warn'], [28.8, 30, 'error']]);
 });
 
+test('全寬版型：整段只有聲音的全畫面段 host 寫 data-wide、報告註明；04a 沒寫 visual ⚠、visual 要是畫廊元件；有小窗的段 host 寫 data-ambient="off"', () => {
+  const go = (visual) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes: [
+    { id: 's01', scene: 'fs-list', from: '#1', to: '#2e', slots: { title: 'A', items: ['一', '二', '三'] } },
+    { id: 's02', scene: 'fs-list', from: 20, to: 25, slots: { title: 'B', items: ['一', '二', '三'] } },
+    { id: 's03', scene: 'fs-list', from: 25, to: 30, slots: { title: 'C', items: ['一', '二', '三'], visual } },
+  ] }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), voiceOnly: [[20, 30]] });
+  const res = go('laptop');
+  assert.deepEqual(res.errors, []);
+  assert.deepEqual(['s01', 's02', 's03'].map((id) => !!byId(res, id).wide), [false, true, true], '有講者小窗的不算全寬');
+  assert.ok(res.warnings.some((w) => w.startsWith('[s02 fs-list] 全寬（沒有子母畫面小窗）的清單右半邊會空 → slots 加 "visual"')), res.warnings.join('\n'));
+  assert.ok(!res.warnings.some((w) => w.startsWith('[s03 fs-list] 全寬')), '寫了主視覺就不提醒');
+  assert.match(formatReport(res), /s02｜[^\n]*全寬版型（主卡 1680、內容區 1676×580/);
+  const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip, badges: res.badges });
+  assert.match(html, /id="el-s01"[^>]*style="[^"]*" data-ambient="off"><\/div>/, '子母畫面的段關掉背景環境（光暈漂移、底圖慢拉）');
+  assert.match(html, /id="el-s02"[^>]*style="[^"]*" data-wide><\/div>/);
+  assert.ok(go('robot').errors.some((e) => e.includes('「robot」不是畫廊的插圖元件')));
+});
+
 test('子母畫面進場／出場＋章節墊底：透明卡→04a＝fly；04a→04a＝none；04a→章節（相隔 0.5 s）＝墊底、fade 0.5；章節→04a（相隔 1 s）＝章節墊底、fade', () => {
   const res = run([
     { id: 's01', scene: 'concept', from: '#1', to: '#2e', slots: { text: '一' } },
@@ -508,7 +526,7 @@ test('子母畫面進場／出場＋章節墊底：透明卡→04a＝fly；04a�
   assert.deepEqual(jsonTop(res).chapters.map((c) => [c.id, c.cue, c.start, c.end, c.placement]), [['c1', 8, 25.5, 28, 'cover']]);
 });
 
-test('擦入擦出：只在只有聲音的區間、media↔動畫幕；in 0.2 → 不擦出＋note；圖片可以；相鄰 media 疊化 0.47 s', () => {
+test('擦入擦出：media↔動畫幕（只有聲音或有講者小窗都擦）；in 0.2 → 動畫多留 0.45 s 蓋住錄影開頭再擦出；圖片可以；相鄰 media 疊化 0.47 s；章節不擦', () => {
   const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-wipe-'));
   for (const f of ['assets/images/a.png', 'assets/images/b.png', 'assets/screen/v.mp4']) { fs.mkdirSync(path.dirname(path.join(pdir, f)), { recursive: true }); fs.writeFileSync(path.join(pdir, f), ''); }
   const probe = (f) => (f.endsWith('.mp4') ? { width: 1920, height: 1080, duration: 30, hasAudio: false } : { width: 1920, height: 1080 });
@@ -526,16 +544,18 @@ test('擦入擦出：只在只有聲音的區間、media↔動畫幕；in 0.2 �
   assert.match(rep, /從 m1 擦入 0\.45s（m1 錄影多播 0\.50s）/);
   assert.match(rep, /擦出到 m2 0\.45s（m2 錄影提早 0\.50s 開始）/);
   assert.deepEqual(jsonItems(a).find((x) => x.id === 'f1').out.wipe, { in: true, out: true, preroll: 0, postroll: 0 });
+  // in 太小（錄影不能提早）：動畫停在完成態多留 0.45 s，蓋在錄影開頭上擦出；不算重疊
   const b = go(base(0.2));
-  assert.equal(byId(b, 'f1').wipeOut, undefined);
-  assert.match(formatReport(b), /不擦出：m2 的 in 只有 0\.20s，提早不了 0\.5s → in 改 ≥ 0\.5 才有擦出（現在硬切）/);
+  assert.deepEqual(b.errors, []);
+  assert.deepEqual([byId(b, 'f1').wipeOut, byId(b, 'f1').end, byId(b, 'm2').preroll], [true, 25.45, undefined]);
+  assert.match(formatReport(b), /擦出到 m2 0\.45s（m2 的 in 只有 0\.20s 不能提早 → 停在完成態蓋住錄影開頭 0\.45s 再擦開）/);
   // 相鄰兩段 media：疊化，前一段墊在底下 0.47 s，不算整張幕重疊
   const c = go([{ id: 'm1', type: 'media', src: 'assets/images/a.png', from: 10, to: 20 }, { id: 'm3', type: 'media', src: 'assets/images/b.png', from: 20, to: 30 }]);
   assert.deepEqual(c.errors, []);
   assert.deepEqual([byId(c, 'm3').xfade, byId(c, 'm1').end, byId(c, 'm1').wipeOut, byId(c, 'm3').wipeIn], [0.47, 20.47, undefined, undefined]);
-  // 章節不擦；講者段（只有聲音以外）不擦
+  // 講者段（有子母畫面小窗）也擦；章節不擦
   const d = go([{ id: 'm1', type: 'media', src: 'assets/images/a.png', from: 4, to: 8 }, { id: 'f1', type: 'fx', fx: 29, bg: 'dark', from: 8, to: 9.5, vars: { number: '1' } }]);
-  assert.equal(byId(d, 'f1').wipeIn, undefined);
+  assert.equal(byId(d, 'f1').wipeIn, true);
   fs.rmSync(pdir, { recursive: true });
 });
 
@@ -652,7 +672,7 @@ test('常駐章節角標（F1）：02 段起點→下一章；子母畫面／全
   assert.ok(run(scenes, { chapterBadge: 'yes' }).errors.includes('chapterBadge 只能是 true 或 false（不寫＝true：章節角標自動常駐右上角），現在是 "yes" → 不要常駐角標就寫 false，否則刪掉這個欄位'));
 });
 
-test('小節角標（sections）：章號＋目前小節的矮膠囊、全幕也露出；講到那句換名稱；格式錯 ✖、太長／第一章之前 ⚠；講稿有 ### 沒寫 sections → 印可貼的建議', () => {
+test('小節角標（sections）：每個小節一顆章號＋小節名膠囊（寬度跟著字）、全幕也露出；講到那句換一顆；格式錯 ✖、太長／第一章之前 ⚠；講稿有 ### 沒寫 sections → 印可貼的建議', () => {
   const scenes = [
     { id: 'c01', scene: 'chapter-tag', from: '#2', to: '#3e', slots: { num: '01', name: '痛點' } },
     { id: 's02', scene: 'fs-list', from: '#4', to: '#5e', slots: { title: '清單', items: ['一', '二', '三'] } },
@@ -665,23 +685,84 @@ test('小節角標（sections）：章號＋目前小節的矮膠囊、全幕也
   assert.deepEqual(b.show, [[b.start, b.end]], '全幕清單期間不藏（沒有 sections 時會藏，見上一個測試）');
   const cap = buildCaptions(cues, { duration: VD });
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: cap, pip: res.globals.pip, badges: res.badges });
-  assert.match(html, /<div id="chb-1" class="sc-sectag" data-chapter-badge="[\d.–]+" style="right:96px;top:56px;z-index:55;opacity:0">/);
-  assert.match(html, /<span id="chb-1-n1" class="sc-sectag__name">痛點<\/span><span id="chb-1-n2" class="sc-sectag__name">第一節<\/span><span id="chb-1-n3" class="sc-sectag__name">第二節<\/span>/);
-  assert.ok(html.includes("tl.set('#chb-1-n1', { opacity: 1 }, 0);") && html.includes("tl.set('#chb-1-n2', { opacity: 0 }, 0);"), '第一個名稱（章名）從頭就在');
-  assert.ok(html.includes(`tl.fromTo('#chb-1-n1', { opacity: 1 }, { opacity: 0, duration: 0.2, ease: 'sine.in', immediateRender: false }, ${cueStart(4)});`));
-  assert.ok(html.includes(`tl.fromTo('#chb-1-n2', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', immediateRender: false }, ${r3(cueStart(4) + 0.1)});`));
+  // 一章一個外框（露出／隱藏），每個小節一顆膠囊（寬度跟著自己的字）；講到下一節：舊的擦掉 0.25 秒、新的接著擦開
+  assert.match(html, /<div id="chb-1" class="sc-secwrap" data-chapter-badge="[\d.–]+" style="right:96px;top:56px;z-index:55;opacity:0">/);
+  assert.ok(html.includes('<div id="chb-1-n1" class="sc-sectag"><span class="sc-sectag__num">01</span><span class="sc-sectag__name">痛點</span></div>'), '章名那顆在最前面');
+  assert.ok(html.includes('<div id="chb-1-n3" class="sc-sectag"><span class="sc-sectag__num">01</span><span class="sc-sectag__name">第二節</span></div>'));
+  assert.ok(html.includes(`P.wipe('#chb-1-n1', ${b.start}, { dir: 'right', dur: 0.35 });`) && html.includes(`P.pop('#chb-1-n1 .sc-sectag__num', ${r3(b.start + 0.12)}, { from: 0.4, dy: 0 });`), '章節起點：第一顆擦開、號碼彈出');
+  assert.ok(html.includes(`P.wipeOut('#chb-1-n1', ${cueStart(4)}, { dir: 'right', dur: 0.25 });`));
+  assert.ok(html.includes(`P.wipe('#chb-1-n2', ${r3(cueStart(4) + 0.25)}, { dir: 'right', dur: 0.35 });`));
+  const iIn = html.indexOf("P.wipe('#chb-1-n3'"), iLast = html.indexOf(`P.wipeOut('#chb-1-n3', ${r3(b.end - 0.3)}, { dir: 'right' });`);
+  assert.ok(iIn >= 0 && iLast > iIn, '章節結束擦掉最後一顆，排在它的擦開之後（同一元素第一個 clipPath 補間先套用初始狀態）');
+  assert.ok(!/P\.wipe(Out)?\('#chb-1',/.test(html), '外框不擦（只管露出／隱藏）');
   // 格式與提醒
   assert.ok(run(scenes, { sections: '#4' }).errors.some((e) => e.startsWith('sections 要寫成陣列')));
   assert.ok(run(scenes, { sections: [{ at: '#4@字幕', name: '甲' }] }).errors.some((e) => e.startsWith('sections[0].at：只寫 "#N"')));
   assert.ok(run(scenes, { sections: [{ at: '#6', name: '甲' }, { at: '#4', name: '乙' }] }).errors.some((e) => e.startsWith('sections[1].at：#4 不在前一個小節之後')));
-  assert.ok(run(scenes, { sections: [{ at: '#4', name: '一二三四五六七八九十一二三四五六七' }] }).warnings.some((w) => w.includes('17 字，超過 16 字')));
+  assert.ok(run(scenes, { sections: [{ at: '#4', name: '一二三四五六七八九十一二三四五六七' }] }).warnings.some((w) => w.includes('17 字，超過 12 字')));
   assert.ok(run(scenes, { sections: [{ at: '#1', name: '開場' }] }).warnings.some((w) => w.startsWith('sections[0]（#1「開場」）不在任何一章裡')));
   // 建議：講稿 ### 底下第一句對字幕；第一章之前的不列
   const pd = fs.mkdtempSync(path.join(os.tmpdir(), 'sec-'));
   fs.writeFileSync(path.join(pd, '講稿.md'), '## 開場\n\n### 開頭\n\n第 1 句字幕內容\n\n## 痛點\n\n第 2 句字幕內容\n\n### 第一節\n\n第 4 句字幕內容\n\n### 第二節\n\n```\n不是口播\n```\n第 6 句字幕內容\n');
   const sug = resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pd });
-  assert.ok(sug.warnings.includes('講稿有 2 個小節（###），plan.json 沒有 sections，觀眾只看得到章名 → 第一層加 "sections": [{"at":"#4","name":"第一節"},{"at":"#6","name":"第二節"}]（name 超過 16 字的自己縮短）'), sug.warnings.join('\n'));
+  assert.ok(sug.warnings.includes('講稿有 2 個小節（###），plan.json 沒有 sections，觀眾只看得到章名 → 第一層加 "sections": [{"at":"#4","name":"第一節"},{"at":"#6","name":"第二節"}]（name 超過 12 字的自己縮短）'), sug.warnings.join('\n'));
   fs.rmSync(pd, { recursive: true });
+});
+
+test('小節角標在橫式錄影段：放不下就貼錄影畫面右上角（離右／上緣 16）、段落結束滑回；直式窄錄影放旁邊空白處；STEP 和小節名重複 ⚠ 不畫', () => {
+  const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-secspot-'));
+  fs.mkdirSync(path.join(pdir, 'assets/screen'), { recursive: true });
+  fs.writeFileSync(path.join(pdir, 'assets/screen/v.mp4'), '');
+  let dims = { width: 1920, height: 1080 };
+  const probe = () => ({ ...dims, duration: 30, hasAudio: false });
+  const scenes = [
+    { id: 'c01', scene: 'chapter-tag', from: '#2', to: '#3e', slots: { num: '01', name: '痛點' } },
+    { id: 'm1', type: 'media', src: 'assets/screen/v.mp4', from: '#4', to: '#5e', steps: [{ at: '#4', text: '設定資料夾' }] },
+  ];
+  const go = () => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes, sections: [{ at: '#4', name: 'STEP 1｜設定資料夾' }] }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pdir, probe });
+  const res = go();
+  assert.deepEqual(res.errors, []);
+  const m1 = byId(res, 'm1');
+  // 1920×1080 contain 在 1920×940 裡：寬 1671、左 125 → 右緣 1796 − 16 = 1780；上緣 0 → 16
+  assert.deepEqual(res.badges[0].spots, [{ id: 'm1', a: m1.start, z: m1.end, dx: 1780 - 1824, dy: 16 - 56 }]);
+  assert.ok(m1.warnings.some((w) => w.includes('steps[0]「設定資料夾」和右上角的小節角標「STEP 1｜設定資料夾」重複')), m1.warnings.join('\n'));
+  assert.equal(m1.media.steps.capsule, null, '重複的 STEP 膠囊不畫');
+  const cap = buildCaptions(cues, { duration: VD });
+  const { html } = buildMain({ items: res.items, videoDur: VD, captions: cap, pip: res.globals.pip, badges: res.badges });
+  assert.ok(html.includes(`tl.fromTo('#chb-1', { x: 0, y: 0 }, { x: -44, y: -40, duration: 0.35, ease: 'sine.inOut', immediateRender: false }, ${m1.start});`), '錄影段開始滑過去');
+  assert.ok(html.includes(`tl.fromTo('#chb-1', { x: -44, y: -40 }, { x: 0, y: 0, duration: 0.35, ease: 'sine.inOut', immediateRender: false }, ${m1.end});`), '錄影段結束滑回');
+  // 直式手機畫面（1080×2410）：只有 421 寬、在畫面中間 → 角標放右邊空白處（平常的位置），不移
+  dims = { width: 1080, height: 2410 };
+  assert.equal(go().badges[0].spots, undefined);
+  fs.rmSync(pdir, { recursive: true });
+});
+
+test('右側步驟清單（錄影段 side）：直式錄影靠左、清單卡在右邊（有小窗時在小窗上方）、講到那條亮起；直式錄影沒寫 side ⚠；條數太多 ✖', () => {
+  const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-side-'));
+  fs.mkdirSync(path.join(pdir, 'assets/images'), { recursive: true });
+  fs.writeFileSync(path.join(pdir, 'assets/images/p.png'), '');
+  const probe = () => ({ width: 1080, height: 2410 });
+  const go = (extra, voiceOnly = []) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes: [{ id: 'm1', type: 'media', src: 'assets/images/p.png', from: '#4', to: '#6e', ...extra }] }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pdir, probe, voiceOnly });
+  const side = { title: '配對手機', items: [{ at: '#4', text: '打開 App' }, { at: '#5', text: '掃 QR Code' }] };
+  const a = go({ side });
+  assert.deepEqual(a.errors, []);
+  const m1 = byId(a, 'm1');
+  // 1080×2410 放進左邊 [120, 0, 720, 940]：421×940、左 270；兩條、有講者小窗 → 卡高 112＋200＋64＝376，在 y 160–560 置中
+  assert.deepEqual([m1.media.geo.left, m1.media.geo.width, m1.media.geo.height], [270, 421, 940]);
+  assert.deepEqual(m1.media.side.box, [840, 172, 960, 376]);
+  assert.deepEqual(m1.media.side.items.map((x) => x.text), ['打開 App', '掃 QR Code']);
+  const cap = buildCaptions(cues, { duration: VD });
+  const { html } = buildMain({ items: a.items, videoDur: VD, captions: cap, pip: a.globals.pip, badges: a.badges });
+  assert.ok(html.includes('<div id="msd-m1" class="clip mside"') && html.includes('<span class="mside__txt">掃 QR Code</span>'));
+  assert.ok(html.includes(`tl.fromTo('#msdi-m1-2', { opacity: 0.4 }, { opacity: 1, duration: 0.3, ease: 'sine.out', immediateRender: false }, ${cueStart(5)});`), '講到第二條亮起');
+  assert.ok(html.includes(`tl.fromTo('#msdi-m1-1', { opacity: 1 }, { opacity: 0.7, duration: 0.3, ease: 'sine.in', immediateRender: false }, ${cueStart(5)});`), '前一條變淡');
+  // 只有聲音（沒有小窗）：卡在 y 160–880 置中
+  assert.deepEqual(byId(go({ side }, [[0, VD]]), 'm1').media.side.box, [840, 332, 960, 376]);
+  // 沒寫 side：⚠ 提醒；有小窗時三條放不下 ✖
+  assert.ok(byId(go({}), 'm1').warnings.some((w) => w.includes('直式錄影（1080×2410）在橫式影片只佔中間一條')));
+  const c = go({ side: { title: '配對手機', items: [{ at: '#4', text: '一' }, { at: '#5', text: '二' }, { at: '#6', text: '三' }] } });
+  assert.ok(c.errors.some((x) => x.includes('side 有 3 條放不下（有講者小窗，清單在小窗上方，最多 2 條）')), c.errors.join('\n'));
+  fs.rmSync(pdir, { recursive: true });
 });
 
 // 範例專案第一次試剪（2026-10-31，projects/example/work.trial1）的固定檔：plan.json（sha1 931c64f3…）、rough.srt、transcript.json、3 支情境動畫

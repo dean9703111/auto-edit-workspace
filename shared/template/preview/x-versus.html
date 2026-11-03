@@ -145,14 +145,13 @@
     P.drift('#xvs-hb', 1.5, { dx: 24 });
     P.icon('#xvs-icob', 1.5 + P.BEAT);
 
-    // 拍 3 第 1 列（T1）：整列彈出 → ＋0.15 兩條同時長、兩個數字同時跑（0.65 秒）→ ＋0.8 贏的數字重拍；＋0.8 漂浮到下一拍前
+    // 拍 3 第 1 列（T1）：整列彈出 → ＋0.15 兩條同時長、兩個數字同時跑（0.65 秒）→ ＋0.8 贏的數字重拍
     P.pop('#xvs-r1', T1, { from: 0.9, dy: 28 });
     P.bar('#xvs-ba1', T1 + P.BEAT, { from: 0, to: R[0].a, dur: 0.65 });
     P.bar('#xvs-bb1', T1 + P.BEAT, { from: 0, to: R[0].b, dur: 0.65 });
     P.count('#xvs-na1', T1 + P.BEAT, { from: 0, to: DATA[0].a, dur: 0.65 });
     P.count('#xvs-nb1', T1 + P.BEAT, { from: 0, to: DATA[0].b, dur: 0.65 });
     P.punch('#xvs-r1 .xvs-num.xvs-win', T1 + 0.8, { scale: 1.12 });
-    P.idle('#xvs-r1', T1 + 0.8, { y: 3, period: 3.2, until: T2 - 0.1 });
     // 拍 4 第 2 列（T2）：同拍 3；第 1 列退後（預覽態：亮度 0.6、縮小 0.96）
     P.spot('#xvs-r1', 'none', T2, { dim: 0.6 });
     P.pop('#xvs-r2', T2, { from: 0.9, dy: 28 });
@@ -161,8 +160,7 @@
     P.count('#xvs-na2', T2 + P.BEAT, { from: 0, to: DATA[1].a, dur: 0.65 });
     P.count('#xvs-nb2', T2 + P.BEAT, { from: 0, to: DATA[1].b, dur: 0.65 });
     P.punch('#xvs-r2 .xvs-num.xvs-win', T2 + 0.8, { scale: 1.12 });
-    P.idle('#xvs-r2', T2 + 0.8, { y: 3, period: 3.2, until: T3 - 0.1 });
-    // 拍 5 第 3 列（T3）：同拍 4（2 列時刪掉這一組 9 行）
+    // 拍 5 第 3 列（T3）：同拍 4（2 列時刪掉這一組 8 行）
     P.spot('#xvs-r2', 'none', T3, { dim: 0.6 });
     P.pop('#xvs-r3', T3, { from: 0.9, dy: 28 });
     P.bar('#xvs-ba3', T3 + P.BEAT, { from: 0, to: R[2].a, dur: 0.65 });
@@ -170,7 +168,6 @@
     P.count('#xvs-na3', T3 + P.BEAT, { from: 0, to: DATA[2].a, dur: 0.65 });
     P.count('#xvs-nb3', T3 + P.BEAT, { from: 0, to: DATA[2].b, dur: 0.65 });
     P.punch('#xvs-r3 .xvs-num.xvs-win', T3 + 0.8, { scale: 1.12 });
-    P.idle('#xvs-r3', T3 + 0.8, { y: 3, period: 3.2, until: WIN - 0.1 });
 
     // 拍 6 結論（WIN）：各列退後（0.6）；贏家名稱螢光筆＋重拍、底色亮起，＋0.2 光澤掃過
     P.spot('.xvs-row', 'none', WIN, { dim: 0.6 });
@@ -178,9 +175,8 @@
     P.marker('.xvs-champ .xvs-hname', WIN);
     P.punch('.xvs-champ .xvs-hname', WIN, { scale: 1.12 });
     P.sheen('.xvs-champ .xvs-tint', WIN + 0.2);
-    // 拍 7（WIN + 0.6）：贏家標頭聚焦（放大抬起發光、輸家壓暗縮小）；＋0.6 漂浮
+    // 拍 7（WIN + 0.6）：贏家標頭聚焦（放大抬起發光、輸家壓暗縮小）
     P.spot(HEADS, '.xvs-champ', WIN + 0.6, { scale: 1.04, lift: -10 });
-    P.idle('.xvs-champ', WIN + 1.2, { y: 4, period: 2.8 });
 
     // 收：講完結論 2.6 秒回均衡（標頭回原大小、各列亮回；贏家底色留著），完成態停到段尾
     const TR = WIN + 2.6;

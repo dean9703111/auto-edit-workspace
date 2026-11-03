@@ -7,18 +7,21 @@
 ## 重點
 
 - 指令都是白話文：「剪乾淨」「做成片」「配螢幕錄影」「s05 往左移」「s12 重新設計」「可以了，輸出成片」「輸出剪映素材」
-- 18 種情境模板、17 支情境動畫範例、40 種字卡動態、9 個音效
+- 18 種情境模板、17 支情境動畫範例、示意動畫（線條插圖照口播演出具體動作）、40 種字卡動態、9 個音效
 - 橫式長片（1920×1080）與直式短影片（1080×1920，Shorts、Reels、抖音）
-- 風格包：主色、背景圖、亮色／暗色主題；講者調光、瘦臉（預設關閉）
-- 網頁版剪輯台可以微調字幕、音量、素材起訖
+- 風格包：主色、背景圖、亮色／暗色主題；講者調光、瘦臉、美顏（預設關閉，臉部偵測在本機做）
+- 網頁版剪輯台：裁剪、音量、轉場、字幕，卡片上的字在成片預覽即時改；構圖台拖框決定畫面放大
+- 修改單：在剪輯台點一段、勾「以圖像展示為主」「更有質感」這類標籤，複製一行指令交給 AI 重做；改完標 ✓、一鍵看結果
 - 影片的轉檔、轉字幕、render 都在使用者自己的電腦上做；支援 macOS 與 Windows
 - 需要：Node.js 22 以上、ffmpeg、whisper.cpp、auto-editor、HyperFrames（版本固定在 package.json；AI 會照手冊幫忙安裝）
 
 ## 文件
 
-- [README](https://github.com/dean9703111/auto-edit-workspace/blob/main/README.md)：功能、安裝、開始使用、換風格、常見問題
+- [README](https://github.com/dean9703111/auto-edit-workspace/blob/main/README.md)：開始使用、能做什麼、剪輯台與修改單、換風格、常見問題
 - [AGENTS.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/AGENTS.md)：AI Agent 的守則、停點、規則
 - [PROMPTS.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/PROMPTS.md)：可以直接貼的提示詞
+- [CONTENTS.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/CONTENTS.md)：模板、工具、文件總覽
+- [EDITOR.md](https://github.com/dean9703111/auto-edit-workspace/blob/main/shared/template/EDITOR.md)：剪輯台、構圖台、修改單怎麼用
 - [情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)：18 種情境模板與情境動畫的即時預覽
 - [字卡動態](https://deanlin.net/auto-edit-workspace/shared/template/fx/)：40 種文字動態預覽
 

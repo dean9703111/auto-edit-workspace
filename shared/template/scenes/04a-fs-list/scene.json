@@ -17,7 +17,8 @@
     "items": {
       "label": "項目", "type": "list", "min": 3, "maxItems": 4, "required": true,
       "item": { "text": { "type": "rich", "max": 18 }, "icon": { "type": "icon" } }
-    }
+    },
+    "visual": { "label": "主視覺（全寬才顯示）", "type": "illus" }
   },
   "beats": {},
   "lists": {

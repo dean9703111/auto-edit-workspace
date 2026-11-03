@@ -1,6 +1,6 @@
 # 派情境動畫子代理的派工訊息（主代理用）
 
-時機：停點 ③ 通過、正式 plan.json 已登記每段情境動畫（`"type": "custom"`、`src`、`layout`）、build 過一次之後（剛複製、還沒改的範例 build 只 ⚠「還是範例原文」，不擋）。子代理改完自己的 x 檔跑 `audit --only` 不用重 build：新加的 `P.at('#N@詞')` 由 audit 用 `build --check` 現算的秒數量、截圖（`--shots`），不用等主代理 build。
+時機：停點 ③ 通過、正式 plan.json 已登記每段情境動畫（`"type": "custom"`、`src`、`layout`）、build 過一次之後（照抄的範例 build 會 ✖：id 還是範例名、綁句是畫廊示範的句號 → 先改名四處（auto-edit-motion 步驟 3），`P.at` 暫填這段範圍內的句號（不帶 @詞），build 過了再派；內容由子代理照分鏡重寫）。子代理改完自己的 x 檔跑 `audit --only` 不用重 build：新加的 `P.at('#N@詞')` 由 audit 用 `build --check` 現算的秒數量、截圖（`--shots`），不用等主代理 build。
 
 - 2 段以上、而且有能派子代理的工具：**一段一個子代理，同一則回覆一次全部派出**（平行跑；一段一段派會慢好幾倍）。派完等全部回來，再照 AGENTS.md「子代理分工」第 2 條收件、整合。
 - 每段把字幕與確認過的動畫分鏡原文貼進派工訊息，子代理就不用自己讀 rough.srt、storyboard.md。

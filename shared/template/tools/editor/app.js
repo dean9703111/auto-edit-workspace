@@ -4,7 +4,7 @@ import {
   fmt, fmtTC, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss,
 } from './model.mjs';
 import { applyCueOp, remapPlan, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
-import { visibleLen, lineLens, splitItem, joinItem, parseAttrs, tailWithoutAt, findSceneDef, findFxDef } from './text.mjs';
+import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef } from './text.mjs';
 import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
 import { SimPreview, PlayerPreview } from './preview.js';
 
@@ -28,7 +28,7 @@ const app = {
   plan0: null, cues0: [], scenes: [], cues: [], srtOps: [],
   edit: defaultEdit(), savedEdit: defaultEdit(), base: null, sfxMemory: {},
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
-  report: null, reportReady: false, items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], pieces: [], points: [],
+  report: null, reportReady: false, auditIssues: null, requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], pieces: [], points: [],
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
@@ -37,7 +37,8 @@ const app = {
   canvas() { return this.server?.canvas || { format: 'landscape', W: 1920, H: 1080, maxChars: RULES.capMax }; },
 };
 window.__editor = app;
-const capMax = () => app.canvas().maxChars;   // 除錯與實測用
+const capMax = () => app.canvas().maxChars;
+let rqLoaded = false;   // 除錯與實測用
 
 // ---------- 小工具 ----------
 async function api(method, url, body) {
@@ -286,7 +287,7 @@ app.select = (sel, { lane = null } = {}) => {
   app.selection = sel;
   if (lane) app.selLane = lane;
   if (sel && sel.kind !== 'range') app.sel = { a: null, b: null };
-  renderInspector(); renderHeads(); renderCapButtons(); renderStatus();
+  renderInspector(); renderHeads(); renderCapButtons(); renderStatus(); renderRequests();
   timeline.invalidate();
 };
 
@@ -676,6 +677,9 @@ async function loadState({ keep = null } = {}) {
   if (s.report.ready) applyReport(s.report); else { app.itemsHint = '檢查中…（第一次可能要幾秒）'; fetchReport(); }
   changed({ inspector: true });
   renderMode();
+  // 修改單：第一次載入讀這個專案存在瀏覽器的清單與開關；之後重新載入（AI 改了 plan.json）只重畫
+  if (!rqLoaded) { rqLoaded = true; rqLoad(); let o = false; try { o = localStorage.getItem('editor-requests-open') === '1'; } catch { /* 預設收起 */ } setRequestsOpen(o); }
+  else renderRequests();
   if (!app.peaks) fetchPeaks();
   loadThumbs();
   sim.preloadSfx?.(s.schema?.sounds || []);
@@ -783,7 +787,7 @@ async function save({ auto = false } = {}) {
   const body = { base: { ...app.base }, edit: editForSave() };
   if (Object.keys(segments).length) body.segments = segments;
   if (app.srtOps.length) body.srt = { ops: app.srtOps };
-  if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim) } : null;
+  if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}) } : null;   // 美顏 0＝關，不寫
   if (app.theme !== app.savedTheme) body.theme = app.theme;
   app.busy = true;
   setSaveState('busy', '儲存中…');
@@ -839,11 +843,11 @@ async function save({ auto = false } = {}) {
     const id = textChanged[0];
     const it = app.itemsView.find((x) => x.id === id);
     toast('卡片文字改了：自動重新產生，好了會切到成片預覽', 'ok', 3000);
-    runBuild({ focus: it ? it.start + 0.4 : null, focusId: id });
+    runBuild({ focus: it ? it.start + 0.4 : null, focusId: id, audit: textChanged });
   }
   return true;
 }
-async function runBuild({ focus = null, focusId = null } = {}) {
+async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
   if (app.busy || app.building) return;
   if (isDirty() && !(await save({ auto: true }))) return;
   app.building = true;
@@ -855,18 +859,21 @@ async function runBuild({ focus = null, focusId = null } = {}) {
     const last = String(s.data?.log || '').trim().split('\n').pop() || '';
     tt.set(`重新產生中…（${Math.round((performance.now() - t0) / 1000)} 秒）${last ? `　${last.slice(0, 40)}` : ''}`);
   }, 800);
-  const r = await api('POST', '/api/build', {});
+  const r = await api('POST', '/api/build', audit.length ? { audit } : {});
   clearInterval(poll);
   tt.close();
   app.building = false;
   const d = r.data || {};
+  app.auditIssues = d.audit || null;
   const iss = d.issues || { errors: [], warnings: [] };
   $('#logText').textContent = d.log || d.message || '';
   $('#logIssues').innerHTML = issueItems(iss.errors, iss.warnings, 30);
   await loadState({ keep: isDirty() ? keepState() : null });
   if (r.ok && d.ok) {
     $('#logTitle').textContent = '✓ 重新產生好了'; $('#logSub').textContent = `花了 ${Math.round(d.seconds || 0)} 秒。`; $('#logWrap').open = false;
-    toast(`重新產生好了（${Math.round(d.seconds || 0)} 秒）${focusId ? `，切到成片預覽看 ${focusId}` : ''}`, 'ok', 3500, { actions: [['訊息', () => $('#dlgLog').showModal()]] });
+    const au = d.audit;
+    if (au?.errors.length) { renderCheck(); openIssues(); toast(`重新產生好了，但 ${au.ids.join('、')} 改字後版面有 ${au.errors.length} 個錯誤（左下角檢查清單）：改短或改回原本的字`, 'err', 8000); }
+    else toast(`重新產生好了（${Math.round(d.seconds || 0)} 秒）${au ? `，${au.ids.join('、')} 版面${au.warnings.length ? `有 ${au.warnings.length} 個提醒` : '沒問題'}` : ''}${focusId ? `，切到成片預覽看 ${focusId}` : ''}`, 'ok', 3500, { actions: [['訊息', () => $('#dlgLog').showModal()]] });
     if (focus != null) {
       if (app.server.preview.player.available) { await setMode('player', { focus }); app.seek(focus); if (focusId) app.select({ kind: segType(sceneById(focusId)) === 'media' ? 'media' : 'item', id: focusId }); }
       else toast('找不到 HyperFrames 播放器，沒辦法切到成片預覽（只能用即時模擬）', 'warn', 5000);
@@ -891,7 +898,8 @@ async function pollVersion() {
   if (!r.ok || !r.data) { setSaveState('error', '連不到剪輯台'); return; }
   const v = r.data;
   const pv = app.server.preview;
-  if (pv.built !== v.built || pv.stale !== v.stale) { pv.built = v.built; pv.stale = v.stale; pv.builtMtime = v.builtMtime; renderMode(); }
+  if (pv.built !== v.built || pv.stale !== v.stale || pv.builtMtime !== v.builtMtime) { pv.built = v.built; pv.stale = v.stale; pv.builtMtime = v.builtMtime; renderMode(); }
+  if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); }
   const changedOut = (v.plan.hash && app.base && v.plan.hash !== app.base.hash) || ((v.srt?.hash ?? null) !== (app.base?.srtHash ?? null));
   const key = `${v.plan.hash}|${v.srt?.hash}`;
   if (changedOut && !$('#dlgConflict').open && app.noticed !== key) {
@@ -916,8 +924,9 @@ function renderTimes() {
 function renderPlay() { const p = engine().playing || !!app.shuttle; const b = $('#btnPlay'); b.textContent = p ? '❚❚' : '▶'; b.setAttribute('aria-label', p ? '暫停' : '播放'); }
 function renderStatus() {
   const rep = app.report;
-  const errs = app.saveErrors ? app.saveErrors.length : rep?.issues?.errors?.length || 0;
-  const warns = app.saveErrors ? 0 : rep?.issues?.warnings?.length || 0;
+  const au = app.saveErrors ? null : app.auditIssues;
+  const errs = app.saveErrors ? app.saveErrors.length : (rep?.issues?.errors?.length || 0) + (au?.errors.length || 0);
+  const warns = app.saveErrors ? 0 : (rep?.issues?.warnings?.length || 0) + (au?.warnings.length || 0);
   $('#stIssues .e').textContent = `✖ ${errs}`; $('#stIssues .e').classList.toggle('has', !!errs);
   $('#stIssues .w').textContent = `⚠ ${warns}`; $('#stIssues .w').classList.toggle('has', !!warns);
   const vu = app.voiceUncovered.length;
@@ -1045,6 +1054,12 @@ function renderCheck() {
       : `<span class="ok-ink">✓ 通過</span>：${(d.items || []).length} 段、${warnings.length} 個提醒${Number.isFinite(d.outputDur) ? `；成片 ${fmt(d.outputDur, 1)}` : ''}。點一則跳到那一段。`;
     else sum.innerHTML = `<b class="warn-ink">${rep.fallback ? '簡易檢查' : '讀不到檢查報告'}</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
   }
+  // 剛在剪輯台改字的段：重新產生後量的版面（audit），放最前面
+  const au = app.saveErrors ? null : app.auditIssues;
+  if (au && (au.errors.length || au.warnings.length)) {
+    errors = [...au.errors, ...errors]; warnings = [...au.warnings, ...warnings];
+    sum.innerHTML = `<b class="${au.errors.length ? 'err-ink' : 'warn-ink'}">剛改字的 ${esc(au.ids.join('、'))} 版面有 ${au.errors.length + au.warnings.length} 個問題</b>：改短一點或改回原本的字；要重新排版請寫進修改單給 AI。<br>${sum.innerHTML}`;
+  }
   list.innerHTML = issueItems(errors, warnings) || (rep?.data ? '<li class="mute">沒有任何錯誤或提醒</li>' : '');
   renderStatus();
 }
@@ -1056,14 +1071,10 @@ function renderMode() {
   pbtn.classList.toggle('is-disabled', !avail || !built);
   pbtn.dataset.tip = !avail ? `成片預覽不能用：${pv?.player?.reason || ''}（已退回即時模擬）` : !built ? '還沒有成片：先按「重新產生」' : '播上一次「重新產生」的完整成片（資訊卡、字幕、音效都有）';
   for (const b of $$('.seg button')) b.classList.toggle('on', b.dataset.mode === app.mode);
-  const badge = $('#modeBadge'), note = $('#modeNote');
+  const note = $('#modeNote');
   if (app.mode === 'player') {
-    badge.className = 'mode-badge is-player';
-    badge.textContent = `成片預覽（HyperFrames ${pv?.player?.version || ''}）${pv?.stale ? '・舊版' : ''}`;
     note.innerHTML = `<b>成片預覽</b>：上一次重新產生的完整成片。${pv?.stale ? '<span class="warn-ink">⚠ 之後又改過，按「重新產生」更新。</span>' : ''}`;
   } else {
-    badge.className = 'mode-badge is-sim';
-    badge.textContent = '即時模擬（rough.mp4＋目前設定）';
     note.innerHTML = `<b>即時模擬</b>：粗剪＋你現在的設定（含音效、音量）；卡片要「重新產生」後在成片預覽看。${!avail ? `<span class="mute">（找不到 HyperFrames 播放器，只能用即時模擬）</span>` : ''}`;
   }
 }
@@ -1080,20 +1091,24 @@ function inspTheme() {
   </section>`;
 }
 
-// ---------- 講者（調光、瘦臉；contracts/look.md §7）----------
-const lookKit = () => app.server?.look?.kit || { color: 0.8, slim: 0.6 };
+// ---------- 講者（調光、瘦臉、美顏；contracts/look.md §7）----------
+const lookKit = () => ({ beauty: 0, ...(app.server?.look?.kit || { color: 0.8, slim: 0.6 }) });
+const LOOK_ON = { color: 0.8, slim: 0.6, beauty: 0.5 };   // 「打開」時沒有上一次的值、kit 也是 0 → 用這個
 // plan.json 的 look → 剪輯台的值（null＝沒寫，用 kit 預設；false＝兩個都 0）
 function normLook(v) {
   if (v === undefined || v === null) return null;
-  if (v === false) return { color: 0, slim: 0 };
+  if (v === false) return { color: 0, slim: 0, beauty: 0 };
   if (!isObj(v)) return null;
   const k = lookKit();
-  return { color: Number.isFinite(v.color) ? v.color : k.color, slim: Number.isFinite(v.slim) ? v.slim : k.slim };
+  return { color: Number.isFinite(v.color) ? v.color : k.color, slim: Number.isFinite(v.slim) ? v.slim : k.slim, beauty: Number.isFinite(v.beauty) ? v.beauty : (k.beauty || 0) };
 }
 const lookEff = () => app.look || { ...lookKit() };
 const lookOut = (k, v) => (k === 'color' ? (v > 0 ? `${Number(v).toFixed(2)}（剪映 ${Math.round(v * 100)}）` : '關') : (v > 0 ? Number(v).toFixed(2) : '關'));
 function updateLookCss() { app.lookCss = lookCss(lookEff().color, app.server?.look?.baked?.color ?? 0); }
 let faceTimer = null;
+// 前／後對照圖：面板重畫時先放上一次拿到的圖（格子固定大小、不會先縮再撐開），新圖到了再換
+const faceShown = { before: { url: '', src: '' }, after: { url: '', src: '' } };
+const faceSrc = (k) => (faceShown[k].src ? ` src="${faceShown[k].src}"` : '');
 function refreshFaces(delay = 300) {
   clearTimeout(faceTimer);
   faceTimer = setTimeout(() => {
@@ -1101,18 +1116,26 @@ function refreshFaces(delay = 300) {
     if (!box || app.selection) return;
     const lm = app.server?.look?.landmarks;
     if (!lm?.ready || lm.slimOk === false) return;
-    const t = r3(app.t), s = r2(lookEff().slim);
+    const t = r3(app.t), e = lookEff(), s = r2(e.slim), bt = r2(e.beauty || 0);
     for (const img of box.querySelectorAll('img')) {
-      const slim = img.dataset.k === 'after' ? s : 0;
-      const url = `/api/look/face?t=${t}&slim=${slim}`;
-      if (img.dataset.url === url) continue;
-      img.dataset.url = url;
-      // 拿到圖才顯示那一格（沒拿到時不留破圖示）；這一格沒有臉就只印一行原因
-      const fig = img.closest('figure');
+      const k = img.dataset.k, after = k === 'after';
+      const url = `/api/look/face?t=${t}&slim=${after ? s : 0}${after && bt > 0 ? `&beauty=${bt}` : ''}`;
+      if (faceShown[k].url === url) continue;
+      faceShown[k].url = url;
+      // 格子一直在（固定大小）；新圖到了才換掉舊圖；這一格沒有臉就印一行原因、留著舊圖
       fetch(url).then(async (r) => {
-        if (r.ok) { const u = URL.createObjectURL(await r.blob()); if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src); img.src = u; fig.classList.add('ok'); box.querySelector('.look-msg').textContent = ''; }
-        else { const j = await r.json().catch(() => ({})); fig.classList.remove('ok'); box.querySelector('.look-msg').textContent = j.message || '這一格看不到臉'; }
-      }).catch(() => { fig.classList.remove('ok'); });
+        if (faceShown[k].url !== url) return;   // 已經有更新的請求
+        if (r.ok) {
+          const u = URL.createObjectURL(await r.blob());
+          if (faceShown[k].src) URL.revokeObjectURL(faceShown[k].src);
+          faceShown[k].src = u;
+          const cur = $('#lookFaces');
+          const el = cur?.querySelector(`img[data-k="${k}"]`);
+          if (el) el.src = u;
+          const msg = cur?.querySelector('.look-msg');
+          if (msg) msg.textContent = '';
+        } else { const j = await r.json().catch(() => ({})); const msg = $('#lookFaces .look-msg'); if (msg) msg.textContent = j.message || '這一格看不到臉'; }
+      }).catch(() => {});
     }
     for (const img of box.querySelectorAll('img')) img.style.filter = app.lookCss;
   }, delay);
@@ -1121,7 +1144,7 @@ function inspLook() {
   const L = app.server?.look;
   if (!L) return '';
   if (L.error) return `<section class="ip-sec"><h3>講者</h3><p class="ip-warn">${esc(L.error)}</p></section>`;
-  const e = lookEff(), lim = L.limits || { color: [0, 1], slim: [0, 1.2], step: 0.05 }, kit = lookKit();
+  const e = { beauty: 0, ...lookEff() }, lim = { beauty: [0, 1], ...(L.limits || { color: [0, 1], slim: [0, 1.2], step: 0.05 }) }, kit = lookKit();
   const row = (k, label, max, tip) => `<div class="ip-slider wide" data-tip="${esc(tip)}"><label>${label}</label><input type="range" data-f="look.${k}" min="0" max="${max}" step="${lim.step}" value="${e[k]}"><output data-out="look.${k}" class="${e[k] !== kit[k] ? 'changed' : ''}">${lookOut(k, e[k])}</output></div>`;
   const lm = L.landmarks || {};
   // 略過瘦臉（small／noface／rate）時只印一行原因，不放前後對照（重跑也一樣會略過）
@@ -1132,12 +1155,13 @@ function inspLook() {
   };
   const faces = !lm.ready ? '<p class="ip-note">瘦臉的前後對照要先偵測臉部：請 AI 跑 look.mjs run。</p>'
     : lm.slimOk === false ? `<p class="ip-note">${esc(skip[lm.reason] || '這支略過瘦臉，成片只調光。')}</p>`
-      : `<div id="lookFaces" class="look-faces"><figure><img data-k="before" alt="原本"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="瘦臉後"><figcaption>後（瘦臉 ${lookOut('slim', e.slim)}）</figcaption></figure><p class="look-msg ip-note"></p></div>`;
+      : `<div id="lookFaces" class="look-faces"><figure><img data-k="before" alt="原本"${faceSrc('before')}><figcaption>前</figcaption></figure><figure><img data-k="after" alt="瘦臉後"${faceSrc('after')}><figcaption>後（瘦臉 ${lookOut('slim', e.slim)}${e.beauty > 0 ? `、美顏 ${lookOut('slim', e.beauty)}` : ''}）</figcaption></figure><p class="look-msg ip-note"></p></div>`;
   setTimeout(() => refreshFaces(0), 0);
   return `<section class="ip-sec"><h3>講者</h3>
     ${row('color', '調光', lim.color[1], '亮一點、膚色紅潤一點（剪映「智能調色」）；拖的時候畫面馬上變，是近似效果，成片會更準')}
     ${row('slim', '瘦臉', lim.slim[1], '臉頰到下巴的輪廓往內收；改了要按「重新產生」才會套進成片（長片第一次要幾分鐘）')}
-    <div class="ip-btns"><button class="small" data-act="lookOn" data-k="color">調光${e.color > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="slim">瘦臉${e.slim > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookReset"${app.look ? '' : ' disabled'} data-tip="回到每支影片共用的設定（shared/template/kit/look.json：調光 ${kit.color}、瘦臉 ${kit.slim}）">恢復預設</button></div>
+    ${row('beauty', '美顏', lim.beauty[1], '磨皮、膚色提亮、淡化黑眼圈，越往右越明顯（0＝關）；和瘦臉一起做進底片，改了要按「重新產生」才會套進成片；即時模擬看不到，看下面「後」那張臉')}
+    <div class="ip-btns"><button class="small" data-act="lookOn" data-k="color">調光${e.color > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="slim">瘦臉${e.slim > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="beauty">美顏${e.beauty > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookReset"${app.look ? '' : ' disabled'} data-tip="回到每支影片共用的設定（shared/template/kit/look.json：調光 ${kit.color}、瘦臉 ${kit.slim}、美顏 ${kit.beauty}）">恢復預設</button></div>
     ${faces}
     ${(L.lines || []).map((l) => `<p class="ip-note">${esc(l)}</p>`).join('')}
   </section>`;
@@ -1244,13 +1268,14 @@ function inspItem(it, sc) {
   return `<section class="ip-sec">
     <div class="ip-row"><span class="k">時間</span><span class="v tcv">${it ? `${fmtTC(it.start)} – ${fmtTC(it.end)}` : '—'}</span></div>
     <div class="ip-row"><span class="k">plan.json</span><span class="v"><code>${esc(fmtTime(sc.from ?? sc.at))}</code> → <code>${esc(fmtTime(sc.to ?? (sc.duration != null ? `+${sc.duration} 秒` : '預設長度')))}</code></span></div>
-    <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button>${pv?.player?.available && pv?.built ? '<button class="small ghost" data-act="playerItem">在成片預覽看</button>' : ''}</div>
+    <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button>${pv?.player?.available && pv?.built ? '<button class="small ghost" data-act="playerItem">在成片預覽看</button>' : ''}<button class="small ghost" data-act="rqOpen" data-tip="換動畫、加字、重新排版：寫進右側修改單給 AI">✎ 寫進修改單</button></div>
   </section>
   <section class="ip-sec"><h3>文字${def ? `（${esc(def.zh)}）` : ''}</h3>${type === 'custom' ? '<p class="ip-note">自訂動畫的文字寫在它自己的 HTML 裡，請 AI 改。</p>' : textFields(sc, def, type)}
-    <p class="ip-note">${type === 'scene' ? '<code>**詞**</code> 套主色、<code>//</code> 換行（只有標「可強調」的欄位）。' : ''}${type !== 'custom' ? '存檔後會自動重新產生，切到成片預覽看結果。' : ''}時間、版型、位置請跟 AI 說。</p>
+    <p class="ip-note">${type === 'scene' ? '<code>**詞**</code> 套主色、<code>//</code> 換行（只有標「可強調」的欄位）。' : ''}${type !== 'custom' ? '切到成片預覽，打字時畫面上的字會跟著換（還沒有動畫）；存檔後自動重新產生、量版面，字太長擠到或超出會紅字列在左下角檢查清單。清單只能刪項目。' : ''}要加項目、換動畫、重新排版：寫進右側修改單給 AI。</p>
   </section>
   ${sfxSection(it, sc)}`;
 }
+// 只准改短或改錯字：上限＝min(模板上限, 原本字數)；加字請寫進修改單（server/write.mjs 也會擋）
 function cnt(v, decl) {
   const n = visibleLen(v);
   const max = decl?.max;
@@ -1270,6 +1295,7 @@ function textInput(path, v, decl, label) {
     ${long ? `<textarea rows="2" data-path='${p}' data-decl='${esc(JSON.stringify(decl || {}))}'>${esc(v)}</textarea>` : `<input data-path='${p}' data-decl='${esc(JSON.stringify(decl || {}))}' value="${esc(v)}">`}</div>`;
 }
 const isTextDecl = (d) => !d || !d.type || d.type === 'text' || d.type === 'rich';
+const savedAt = (id, path) => path.reduce((x, k) => (x == null ? x : x[k]), savedSceneById(id));
 function textFields(sc, def, type) {
   if (type === 'fx') {
     const vars = sc.vars || {};
@@ -1298,7 +1324,7 @@ function listField(k, arr, decl, label) {
   const itemDecl = decl?.item || { text: { type: 'text' } };
   const fkeys = Object.keys(itemDecl);
   const textKeys = fkeys.filter((f) => isTextDecl(itemDecl[f]));
-  const min = decl?.min ?? 1, max = decl?.maxItems ?? arr.length;
+  const min = decl?.min ?? 1;
   const rows = arr.map((it, i) => {
     let cols = '', meta = '';
     if (typeof it === 'string') {
@@ -1307,24 +1333,25 @@ function listField(k, arr, decl, label) {
       cols = (fkeys.length >= 2 ? fkeys : [fkeys[0]]).filter((f) => isTextDecl(itemDecl[f])).map((f, j) => {
         const idx = fkeys.indexOf(f);
         const val = sp.cols[idx] ?? (fkeys.length >= 2 ? '' : sp.cols[0]);
-        const c = cnt(val, itemDecl[f]);
-        return `<input data-list='${esc(JSON.stringify({ k, i, col: idx, nf: fkeys.length }))}' data-decl='${esc(JSON.stringify(itemDecl[f] || {}))}' value="${esc(val)}" placeholder="${esc(itemDecl[f]?.label || f)}" aria-label="${esc(`${label} 第 ${i + 1} 項`)}"><div class="cnt${c.over ? ' over' : ''}" data-cnt='${esc(JSON.stringify({ k, i, col: idx }))}'>${c.txt}</div>`;
+        const od = itemDecl[f];
+        const c = cnt(val, od);
+        return `<input data-list='${esc(JSON.stringify({ k, i, col: idx, nf: fkeys.length }))}' data-decl='${esc(JSON.stringify(od || {}))}' value="${esc(val)}" placeholder="${esc(itemDecl[f]?.label || f)}" aria-label="${esc(`${label} 第 ${i + 1} 項`)}"><div class="cnt${c.over ? ' over' : ''}" data-cnt='${esc(JSON.stringify({ k, i, col: idx }))}'>${c.txt}</div>`;
       }).join('');
       meta = Object.entries(a).map(([x, y]) => `<span class="chip-t">${esc(x)}＝${esc(y)}</span>`).join('');
     } else if (isObj(it)) {
       cols = textKeys.filter((f) => f in it || itemDecl[f]?.required).map((f) => {
         const val = String(it[f] ?? '');
-        const c = cnt(val, itemDecl[f]);
-        return `<input data-path='${esc(JSON.stringify(['slots', k, i, f]))}' data-decl='${esc(JSON.stringify(itemDecl[f] || {}))}' value="${esc(val)}" placeholder="${esc(itemDecl[f]?.label || f)}" aria-label="${esc(`${label} 第 ${i + 1} 項`)}"><div class="cnt${c.over ? ' over' : ''}" data-cnt='${esc(JSON.stringify(['slots', k, i, f]))}'>${c.txt}</div>`;
+        const od = itemDecl[f];
+        const c = cnt(val, od);
+        return `<input data-path='${esc(JSON.stringify(['slots', k, i, f]))}' data-decl='${esc(JSON.stringify(od || {}))}' value="${esc(val)}" placeholder="${esc(itemDecl[f]?.label || f)}" aria-label="${esc(`${label} 第 ${i + 1} 項`)}"><div class="cnt${c.over ? ' over' : ''}" data-cnt='${esc(JSON.stringify(['slots', k, i, f]))}'>${c.txt}</div>`;
       }).join('');
       meta = Object.entries(it).filter(([x]) => !textKeys.includes(x)).map(([x, y]) => `<span class="chip-t">${esc(x)}＝${esc(typeof y === 'string' ? y : JSON.stringify(y))}</span>`).join('');
     }
     return `<div class="list-item"><span class="no">${i + 1}</span><div class="cols">${cols}${meta ? `<div class="chips meta">${meta}</div>` : ''}</div>
       <button class="small ghost${arr.length <= min ? ' is-disabled' : ''}" data-act="listDel" data-k="${esc(k)}" data-i="${i}" data-why="${arr.length <= min ? `至少要 ${min} 項` : ''}" data-tip="刪除這一項${arr.length <= min ? `（至少要 ${min} 項）` : ''}" aria-label="刪除第 ${i + 1} 項">✕</button></div>`;
   }).join('');
-  return `<div class="field"><div class="fl"><span>${esc(label)}</span><span class="cnt">${arr.length} 項（${min}–${max === Infinity ? '不限' : max}）</span></div>
-    <div class="list-items">${rows}</div>
-    <div class="ip-btns"><button class="small${arr.length >= max ? ' is-disabled' : ''}" data-act="listAdd" data-k="${esc(k)}" data-why="${arr.length >= max ? `最多 ${max} 項` : ''}">＋ 新增一項</button></div></div>`;
+  return `<div class="field"><div class="fl"><span>${esc(label)}</span><span class="cnt">${arr.length} 項（至少 ${min} 項）</span></div>
+    <div class="list-items">${rows}</div></div>`;
 }
 function inspMedia(it, sc) {
   if (!sc) return '';
@@ -1337,7 +1364,7 @@ function inspMedia(it, sc) {
   const opt = (v) => TRANS.map(([k, l]) => `<option value="${k}"${(v ?? 'fade') === k ? ' selected' : ''}>${l}${k === 'fade' && v == null ? '（預設）' : ''}</option>`).join('');
   return `<section class="ip-sec">
     <div class="ip-row"><span class="k">素材</span><span class="v" style="word-break:break-all">${esc(sc.src || '（沒有寫 src）')}<span class="dim">　${isImg ? '圖片' : `影片${srcDur ? ` ${fmtSec(srcDur)}` : ''}`}</span></span></div>
-    <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button></div>
+    <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button><button class="small ghost" data-act="rqOpen" data-tip="換錄影、加標註、推近、改成動畫：寫進右側修改單給 AI">✎ 寫進修改單</button></div>
   </section>
   <section class="ip-sec"><h3>時間（拖時間軸上的左右邊緣也可以）</h3>
     <div class="ip-row"><span class="k">起點</span><span class="v"><code>${esc(fmtTime(sc.from))}</code>　<span class="tcv">${it ? fmtTC(it.start) : ''}</span></span></div>
@@ -1404,6 +1431,28 @@ function setPath(obj, path, v) {
   cur[path[path.length - 1]] = v;
   return o;
 }
+// 邊打字邊看：成片預覽（播放器 iframe）裡這段的舊字直接換成新字（靜態：逐字動畫、精確版面要存檔後重新產生）。
+//   froms＝畫面上可能的舊字（上一次打的、上次存檔的）；找最深一層字剛好相同的元素換掉，播放頭不在這段就跳到完成態
+const livePlain = (s) => richPlain(s).replace(/\s+/g, '');
+function livePatch(id, froms, to, rich) {
+  if (app.mode !== 'player' || !player.ready) return;
+  let host = null;
+  try { host = player.p?.iframeElement?.contentDocument?.getElementById(`el-${id}`) || null; } catch { /* 不同源時讀不到 */ }
+  if (!host) return;
+  for (const from of froms) {
+    const want = typeof from === 'string' ? livePlain(from) : '';
+    if (!want) continue;
+    const hits = [...host.querySelectorAll('*')].filter((e) => livePlain(e.textContent) === want && ![...e.children].some((c) => livePlain(c.textContent) === want));
+    if (!hits.length) continue;
+    for (const e of hits) {
+      if (rich) e.innerHTML = esc(to).replace(/\*\*(.+?)\*\*/g, '<span class="sc-kw">$1</span>').replace(/(?<!:)\/\//g, '<br>');
+      else e.textContent = to;
+    }
+    const it = app.itemsView.find((x) => x.id === id);
+    if (it && (app.t < it.start || app.t > it.end)) app.seek(Math.max(it.start, it.end - 0.6));
+    return;
+  }
+}
 function onInspInput(e) {
   const el = e.target;
   const s = app.selection;
@@ -1411,7 +1460,7 @@ function onInspInput(e) {
   const num = Number(el.value);
   const outEl = (k) => $(`#inspBody [data-out="${k}"]`);
   if (f?.startsWith('vol.')) { const k = f.slice(4); mutate(() => { app.edit.volume[k] = num; }, { coalesce: f }); outEl(f).textContent = fmtDb(num); outEl(f).classList.toggle('changed', num !== 0); app.loud = null; return; }
-  if (f === 'look.color' || f === 'look.slim') {
+  if (f === 'look.color' || f === 'look.slim' || f === 'look.beauty') {
     const k = f.slice(5);
     mutate(() => { app.look = { ...lookEff(), [k]: r2(num) }; }, { coalesce: f });
     outEl(f).textContent = lookOut(k, num); outEl(f).classList.toggle('changed', r2(num) !== lookKit()[k]);
@@ -1433,9 +1482,12 @@ function onInspInput(e) {
     const path = JSON.parse(el.dataset.path);
     const sc = sceneById(s.id);
     const top = path[0];
+    const prev = path.reduce((x, k) => (x == null ? x : x[k]), sc);
     const next = setPath(sc[top] || {}, path.slice(1), el.value);
     setSeg(s.id, { [top]: next }, { coalesce: `txt-${s.id}-${el.dataset.path}` });
-    const c = cnt(el.value, JSON.parse(el.dataset.decl || '{}'));
+    const decl = JSON.parse(el.dataset.decl || '{}');
+    livePatch(s.id, [prev, savedAt(s.id, path)], el.value, decl.type === 'rich');
+    const c = cnt(el.value, decl);
     const ce = el.nextElementSibling?.classList.contains('cnt') ? el.nextElementSibling : el.closest('.field')?.querySelector('.fl .cnt');
     if (ce) { ce.textContent = c.txt; ce.classList.toggle('over', c.over); }
     return;
@@ -1447,10 +1499,13 @@ function onInspInput(e) {
     const sp = splitItem(arr[L.i], L.nf);
     const cols = sp.cols.slice();
     while (cols.length <= L.col) cols.push('');
+    const prev = cols[L.col];
     cols[L.col] = el.value;
     arr[L.i] = joinItem(L.nf >= 2 ? cols : [cols[0]], sp.tail);
     setSeg(s.id, { slots: { ...sc.slots, [L.k]: arr } }, { coalesce: `txt-${s.id}-${L.k}-${L.i}-${L.col}` });
-    const c = cnt(el.value, JSON.parse(el.dataset.decl || '{}'));
+    const decl = JSON.parse(el.dataset.decl || '{}'), saved = savedAt(s.id, ['slots', L.k, L.i]);
+    livePatch(s.id, [prev, typeof saved === 'string' ? splitItem(saved, L.nf).cols[L.col] : null], el.value, decl.type === 'rich');
+    const c = cnt(el.value, decl);
     const ce = el.nextElementSibling;
     if (ce?.classList.contains('cnt')) { ce.textContent = c.txt; ce.classList.toggle('over', c.over); }
   }
@@ -1472,7 +1527,7 @@ function onInspChange(e) {
     const p = app.points.find((q) => Math.abs(q.at - (s.kind === 'join' ? s.id : app.edit.cuts[s.id]?.[0])) < 1e-6);
     if (p) setJoin(p, 'dip', Number(el.value) || DIP_DEFAULT);
   } else if (el.id === 'capText' || el.dataset.path || el.dataset.list) renderCapButtons();
-  if (f === 'look.slim' || f === 'look.color') { renderInspector(); refreshFaces(0); }
+  if (f === 'look.slim' || f === 'look.color' || f === 'look.beauty') { renderInspector(); refreshFaces(0); }
   if (el.type === 'range') el.blur();
 }
 function onInspClick(e) {
@@ -1483,10 +1538,11 @@ function onInspClick(e) {
   const it = s ? app.itemsView.find((x) => x.id === s.id) : null;
   switch (act) {
     case 'loud': return normalizeVoice();
+    case 'rqOpen': setRequestsOpen(true); setTimeout(() => $('#rqNote')?.focus(), 20); return;
     case 'lookOn': {
       const k = b.dataset.k, cur = lookEff();
       if (cur[k] > 0) { app.lookPrev[k] = cur[k]; mutate(() => { app.look = { ...cur, [k]: 0 }; }, { inspector: true }); }
-      else mutate(() => { app.look = { ...cur, [k]: app.lookPrev[k] || lookKit()[k] || (k === 'color' ? 0.8 : 0.6) }; }, { inspector: true });
+      else mutate(() => { app.look = { ...cur, [k]: app.lookPrev[k] || lookKit()[k] || LOOK_ON[k] }; }, { inspector: true });
       return refreshFaces(0);
     }
     case 'lookReset': mutate(() => { app.look = null; }, { inspector: true }); return refreshFaces(0);
@@ -1507,7 +1563,6 @@ function onInspClick(e) {
     case 'sfxMute': return toggleSfxMute(s.id);
     case 'selItem': { const sc = sceneById(b.dataset.id); return app.select({ kind: segType(sc) === 'media' ? 'media' : 'item', id: b.dataset.id }); }
     case 'mediaVolOn': { const sc = sceneById(s.id); return setSeg(s.id, { volume: sc.volume == null ? 0 : null }, { inspector: true }); }
-    case 'listAdd': return listAdd(b.dataset.k);
     case 'listDel': return listDel(b.dataset.k, Number(b.dataset.i));
     case 'cutSel': return deleteSelection();
     case 'playSel': return s.kind === 'piece' ? (() => { const p = app.pieces.find((q) => q.key === s.id); playFrom(p.a, p.b); })() : playFrom(app.sel.a, app.sel.b);
@@ -1518,21 +1573,6 @@ function onInspClick(e) {
     case 'gainPlay': { const g = app.edit.gains[s.id]; return playFrom(g.from, g.to); }
     default:
   }
-}
-function listAdd(k) {
-  const s = app.selection, sc = sceneById(s.id);
-  const arr = clone(sc.slots[k]);
-  const last = arr[arr.length - 1];
-  let item;
-  if (typeof last === 'string') { const sp = splitItem(last, 1); item = `新項目${tailWithoutAt(sp.tail)}`; }
-  else if (isObj(last)) {
-    const decl = findSceneDef(app.server?.schema?.scenes, sc.scene)?.slots?.[k]?.item || {};
-    item = {};
-    for (const [kk, vv] of Object.entries(last)) { if (kk === 'at') continue; item[kk] = isTextDecl(decl[kk]) && typeof vv === 'string' ? '新項目' : vv; }
-  } else item = '新項目';
-  arr.push(item);
-  setSeg(s.id, { slots: { ...sc.slots, [k]: arr } }, { inspector: true });
-  setTimeout(() => { const ins = $$('#inspBody .list-items input'); ins[ins.length - 1]?.focus(); ins[ins.length - 1]?.select(); }, 20);
 }
 function listDel(k, i) {
   const s = app.selection, sc = sceneById(s.id);
@@ -1923,7 +1963,7 @@ function replaceAll() {
 }
 
 // ---------- 元件 ----------
-const sim = new SimPreview({ root: $('#sim'), video: $('#simVideo'), black: $('#simBlack'), caption: $('#simCaption'), capLayer: $('#simCapLayer'), cutBadge: $('#simCutBadge'), media: $('#simMedia'), pip: $('#simPip') }, app);
+const sim = new SimPreview({ root: $('#sim'), video: $('#simVideo'), black: $('#simBlack'), caption: $('#simCaption'), capLayer: $('#simCapLayer'), cutBadge: $('#simCutBadge'), hint: $('#simHint'), media: $('#simMedia'), pip: $('#simPip') }, app);
 const player = new PlayerPreview($('#playerHost'), app);
 const timeline = new Timeline($('#tlCanvas'), $('#tlTip'), app);
 Object.assign(app, { timeline, sim, player, applyReport: (r) => { applyReport(r); changed({ inspector: true }); }, save, runBuild, splitMain, splitCue, insertCue, mergeCue, deleteCue, setCue, toggleSfxMute, normalizeVoice, deleteSelection, undo, redo, openCapEditor, closeCapEditor, setMode, recompute, changed });
@@ -2069,6 +2109,199 @@ document.addEventListener('pointerover', (e) => {
 document.addEventListener('pointerdown', () => { clearTimeout(tipTimer); $('#tipBox').hidden = true; tipEl = null; });
 
 // 鍵盤
+// ---------- 修改單（右側抽屜）：選段 → 點想怎麼改、寫描述（直接存）→ 累積多段 → 複製一行指令給 AI（待改的完整內容存 work/feedback/editor-requests.md）----------
+// 剪輯台只能改字、刪清單項目；要加項目、換動畫、重新排版都寫在這裡，AI 照「照剪輯台修改單改」直接改（每段一個子代理）
+// 一段一筆 { id, tags, note, t（最後改的時間）, done?: { round, note } }：有勾或有描述才算一筆；改了就變回待改
+const RQ_TAGS = {
+  anim: ['流程更細節', '以圖像展示為主', '文字少一點', '畫出關係（箭頭、引線）', '換一種動畫', '動作慢一點', '跟講的話對齊', '更有質感'],
+  media: ['標註更清楚', '推近到操作區', '加步驟清單', '換成動畫', '換一段錄影', '跟講的話對齊'],
+};
+const rqKey = () => `editor-requests:${app.server?.project?.dir || ''}`;
+const rqKind = (sc) => (segType(sc) === 'media' ? 'media' : 'anim');
+let rqClearArm = false, rqMarks = '';
+function rqLoad() {
+  try { const v = JSON.parse(localStorage.getItem(rqKey()) || '[]'); app.requests = Array.isArray(v) ? v.filter((x) => isObj(x) && x.id) : []; } catch { app.requests = []; }
+}
+function rqStore() { try { localStorage.setItem(rqKey(), JSON.stringify(app.requests)); } catch { /* 無痕視窗：只留在這個分頁 */ } }
+function rqSegOf(sel) { return sel && (sel.kind === 'item' || sel.kind === 'media' || sel.kind === 'sfx') ? sel.id : null; }
+// 一段的資訊：名稱、動畫是什麼、成片時間、plan.json 的起訖、對應字幕
+function rqInfo(id) {
+  const it = app.itemsView.find((x) => x.id === id), sc = sceneById(id);
+  if (!sc) return null;
+  const type = segType(sc);
+  const def = type === 'scene' ? findSceneDef(app.server?.schema?.scenes, sc.scene) : type === 'fx' ? findFxDef(app.server?.schema?.fx, sc.fx) : null;
+  const what = type === 'scene' ? `資訊卡 ${sc.scene}${def?.zh ? `（${def.zh}）` : ''}`
+    : type === 'fx' ? `字卡動態 ${sc.fx}${def?.zh ? `（${def.zh}）` : ''}`
+    : type === 'custom' ? `自訂動畫${sc.layout ? `（${sc.layout}）` : ''}`
+    : `${app.mediaSeg(id)?.kind === 'image' ? '圖片' : '螢幕錄影'} ${String(sc.src || '').split('/').pop()}`;
+  // 修改單寫從工作區根目錄起算的路徑（AI 在根目錄執行，不用猜相對誰）：custom 的 src 相對 work/hyperframes，media 的 src 相對專案
+  const pd = app.server?.project?.dir || '';
+  const file = !sc.src ? null : type === 'custom' ? `${pd}/work/hyperframes/${sc.src}` : type === 'media' ? `${pd}/${sc.src}` : null;
+  const subs = it ? app.cues.filter((c) => c.end > it.start + 0.05 && c.start < it.end - 0.05) : [];
+  return { id, it, sc, type, label: it?.label || '', what, file, out: it ? [outOf(it.start, app.edit.cuts), outOf(it.end, app.edit.cuts)] : null,
+    span: `${fmtTime(sc.from ?? sc.at)} → ${fmtTime(sc.to ?? (sc.duration != null ? `+${sc.duration} 秒` : '預設長度'))}`, subs };
+}
+const rqMs = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;   // 分:秒.十分之一（給 AI 看，不用格數）
+const rqTime = (inf) => (inf.out ? `${rqMs(inf.out[0])}–${rqMs(inf.out[1])}` : '—');
+// 已送出＝這段在 editor-requests.md 裡，而且複製之後沒再改過
+const rqSent = (r) => { const q = app.server?.requests; return !r.done && !!q && q.ids.includes(r.id) && q.at > (r.t || 0); };
+// 改完了沒：伺服器讀 r<N>.md「改了哪幾段」（比 editor-requests.md 新的才算）；送出後沒再改過的段才算數。
+// 記在瀏覽器（r.done）：下次複製只送待改的，修改單檔換掉了也還記得哪些改完
+function rqSync() {
+  const q = app.server?.requests;
+  if (!q) return;
+  let ch = false;
+  for (const r of app.requests) {
+    const d = rqSent(r) ? q.done[r.id] : null;
+    if (d) { r.done = { round: d.round, note: d.note }; ch = true; }
+  }
+  if (ch) rqStore();
+}
+const rqPending = () => app.requests.filter((r) => !r.done);
+// 時間軸標記（timeline.js 畫）：✎ 待改、✓ 已改完
+app.rqMark = (id) => { const r = app.requests.find((x) => x.id === id); return r ? (r.done ? 'done' : 'todo') : null; };
+// 直接存：點標籤或打字就寫進清單；勾選和描述都清空就拿掉；改過的已改完段變回待改
+function rqEdit(id, fn) {
+  let r = app.requests.find((x) => x.id === id);
+  const made = !r;
+  if (made) { r = { id, tags: [], note: '' }; app.requests.push(r); }
+  fn(r); r.t = Date.now(); delete r.done;
+  if (!r.tags.length && !r.note.trim()) app.requests = app.requests.filter((x) => x !== r);
+  else if (made) toast(`${id} 加進修改單（待改 ${rqPending().length} 段）`, 'ok', 1800);
+  rqStore();
+}
+function rqStateHtml(id) {
+  const r = app.requests.find((x) => x.id === id);
+  if (!r) return '<p class="ip-note">點一個想怎麼改、或寫描述，就會存進修改單（不用按儲存）。</p>';
+  const del = `<button class="small ghost" data-rq="del" data-id="${esc(id)}">拿掉這段</button>`;
+  if (r.done) return `<div class="rq-state done"><div><span class="rq-done">✓ 已改完（${esc(r.done.round)}）</span><div class="what">${esc(r.done.note)}</div><p class="ip-note">再點標籤或改描述＝變回待改，下次複製會再送。</p></div>
+    <div class="ip-btns"><button class="small primary" data-rq="result" data-id="${esc(id)}">▶ 看結果</button>${del}</div></div>`;
+  return `<div class="rq-state"><span class="ip-note">${rqSent(r) ? '已送出，等 AI 改' : '待改：已存進修改單'}</span>${del}</div>`;
+}
+function rqTopHtml(id) {
+  const inf = id ? rqInfo(id) : null;
+  if (!inf) return '<p class="ip-note">在時間軸點一段動畫或螢幕錄影，在這裡點想怎麼改、或自己寫（直接存）；可以累積很多段，最後一起複製給 AI。</p>';
+  const on = app.requests.find((x) => x.id === id)?.tags || [];
+  return `<div class="rq-seg"><div class="t">${esc(inf.id)}　${esc(inf.label)}</div><div class="m">${esc(inf.what)}<br>成片 ${rqTime(inf)}</div></div>
+    ${inf.subs.length ? `<ul class="rq-subs">${inf.subs.map((c) => `<li><span class="n">#${c.n}</span>${esc(c.text)}</li>`).join('')}</ul>` : '<p class="ip-note">這段時間沒有字幕</p>'}
+    <div class="rq-tags" role="group" aria-label="想怎麼改">${RQ_TAGS[rqKind(inf.sc)].map((t) => `<button class="toggle small${on.includes(t) ? ' on' : ''}" data-rq="tag" data-t="${esc(t)}" aria-pressed="${on.includes(t)}">${esc(t)}</button>`).join('')}</div>
+    <textarea id="rqNote" rows="4" placeholder="自己描述（選填）：例如「三個步驟改成手機畫面一步步亮起」">${esc(app.requests.find((x) => x.id === id)?.note || '')}</textarea>
+    <div id="rqState">${rqStateHtml(id)}</div>`;
+}
+function rqListsHtml(cur) {
+  const pend = rqPending(), done = app.requests.filter((r) => r.done);
+  const lab = (r) => { const i = rqInfo(r.id); return i ? esc(i.label) : '<span class="gone">plan.json 裡找不到這段</span>'; };
+  const go = (r) => `<button class="small ghost" data-rq="go" data-id="${esc(r.id)}" data-tip="跳到這段">↗</button>`;
+  const del = (r) => `<button class="small ghost" data-rq="del" data-id="${esc(r.id)}" data-tip="從修改單拿掉" aria-label="拿掉 ${esc(r.id)}">✕</button>`;
+  const pi = pend.map((r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${rqSent(r) ? '<span class="rq-sent" data-tip="已複製給 AI，等它改完">已送出</span>' : ''}${go(r)}${del(r)}</div>
+    ${r.tags.length ? `<div class="chips">${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`).join('');
+  const di = done.map((r) => `<li class="rq-item done${r.id === cur ? ' cur' : ''}"><div class="h"><b>✓ ${esc(r.id)}</b><span class="lab">${lab(r)}</span><span class="rq-done">${esc(r.done.round)}</span>
+    <button class="small primary" data-rq="result" data-id="${esc(r.id)}" data-tip="切到成片預覽，跳到這段開頭">▶ 看結果</button>${del(r)}</div><div class="what" data-tip="${esc(r.done.note)}">${esc(r.done.note)}</div></li>`).join('');
+  return `<section class="ip-sec"><h3>待改（${pend.length}）</h3>${pi ? `<ul class="rq-list">${pi}</ul>` : `<p class="ip-note">${done.length ? '都改完了' : '還沒有'}</p>`}</section>`
+    + (di ? `<section class="ip-sec"><h3>已改完（${done.length}）</h3><ul class="rq-list">${di}</ul></section>` : '');
+}
+function renderRequests() {
+  rqSync();
+  const pend = rqPending();
+  $('#rqCount').textContent = pend.length ? String(pend.length) : '';
+  const marks = app.requests.map((r) => `${r.id}${r.done ? '✓' : '✎'}`).join();
+  if (marks !== rqMarks) { rqMarks = marks; timeline.invalidate(); }
+  const open = !$('#requests').hidden;
+  $('#btnRequests').setAttribute('aria-pressed', String(open));
+  if (!open) return;
+  const id = rqSegOf(app.selection), top = $('#rqTop');
+  // 正在打描述：不重畫輸入框（會丟游標、打斷注音），只更新狀態列
+  if (document.activeElement?.id === 'rqNote' && top.dataset.id === (id || '')) $('#rqState').innerHTML = rqStateHtml(id);
+  else { top.dataset.id = id || ''; top.innerHTML = rqTopHtml(id); }
+  $('#rqLists').innerHTML = rqListsHtml(id);
+  $('#rqFoot').innerHTML = `<button class="primary${pend.length ? '' : ' is-disabled'}" data-rq="copy" data-why="${app.requests.length ? '沒有待改的段（已改完的不會再送）' : '修改單是空的'}">複製給 AI（${pend.length} 段待改）</button>
+    <p class="ip-note">只送待改的段。複製的是一行指令；完整內容存在 ${esc(app.server?.project?.dir || '')}/work/feedback/editor-requests.md，AI 會讀這個檔。</p>
+    ${app.requests.length ? `<button class="small ghost" data-rq="clear">${rqClearArm ? '再按一次清空' : '清空修改單'}</button>` : ''}`;
+}
+// 複製給 AI 的只有這一行（待改的完整內容存在 editor-requests.md，AI 讀檔）
+const rqCommand = () => `照剪輯台修改單改這 ${rqPending().length} 段（${app.server?.project?.dir || ''}/work/feedback/editor-requests.md）：直接做，不用先出提案；每段派一個子代理平行改，全部回來後 build、audit，停在停點 ④。`;
+function rqMarkdown() {
+  const now = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  const stamp = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}`;
+  const L = ['# 剪輯台修改單', '', rqCommand(), '',
+    `（${stamp} 從剪輯台複製）`];
+  rqPending().forEach((r, k) => {
+    const i = rqInfo(r.id);
+    L.push('', `## ${k + 1}. ${r.id}${i?.label ? `　${i.label}` : ''}`);
+    if (!i) { L.push('- plan.json 裡找不到這段（可能被改名或刪掉了）'); }
+    else L.push(`- 動畫：${i.what}`, ...(i.file ? [`- 檔案：${i.file}`] : []), `- 成片時間：${rqTime(i)}（${app.server?.project?.dir || ''}/work/hyperframes/plan.json：${i.span}）`);
+    if (r.tags.length) L.push(`- 要改：${r.tags.join('、')}`);
+    if (r.note.trim()) L.push(`- 描述：${r.note.trim().replace(/\s*\n\s*/g, '／')}`);
+    if (i?.subs.length) { L.push('- 對應字幕：'); for (const c of i.subs) L.push(`  - #${c.n} ${c.text}`); }
+  });
+  return L.join('\n') + '\n';
+}
+// 先存檔（完整修改單），存成功才複製那一行指令：存失敗時剪貼簿不會指到舊檔
+async function rqCopy() {
+  const n = rqPending().length;
+  const r = await api('POST', '/api/requests', { markdown: rqMarkdown() });
+  const saved = r.ok ? r.data?.file : null;
+  if (!saved) { toast(`修改單存檔失敗：${r.data?.message || r.status}`, 'err', 7000); return; }
+  const cmd = rqCommand();
+  let copied = false;
+  try { await navigator.clipboard.writeText(cmd); copied = true; } catch {
+    const ta = document.createElement('textarea'); ta.value = cmd; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+    try { copied = document.execCommand('copy'); } catch { copied = false; }
+    ta.remove();
+  }
+  if (copied) toast(`${n} 段存到 ${saved}，指令已複製 → 貼給 AI`, 'ok', 6000);
+  else toast(`${n} 段存到 ${saved}，但沒辦法寫進剪貼簿 → 跟 AI 說「照剪輯台修改單改」`, 'warn', 7000);
+}
+function onRqClick(e) {
+  const b = e.target.closest('[data-rq]');
+  if (!b) return;
+  if (b.classList.contains('is-disabled')) { if (b.dataset.why) toast(b.dataset.why, 'warn', 3000); return; }
+  const act = b.dataset.rq;
+  if (act !== 'clear') rqClearArm = false;
+  if (act === 'tag') {
+    const id = $('#rqTop').dataset.id, t = b.dataset.t;
+    if (!id) return;
+    rqEdit(id, (r) => { r.tags = r.tags.includes(t) ? r.tags.filter((x) => x !== t) : [...r.tags, t]; });
+    renderRequests();
+    return;
+  }
+  if (act === 'del') { app.requests = app.requests.filter((x) => x.id !== b.dataset.id); rqStore(); renderRequests(); return; }
+  if (act === 'go') {
+    const it = app.itemsView.find((x) => x.id === b.dataset.id);
+    if (!it) { toast('plan.json 裡找不到這段', 'warn'); return; }
+    app.select({ kind: it.type === 'media' ? 'media' : 'item', id: it.id }); app.seek(it.start + 0.05);
+    return;
+  }
+  if (act === 'result') {
+    const it = app.itemsView.find((x) => x.id === b.dataset.id);
+    if (!it) { toast('plan.json 裡找不到這段', 'warn'); return; }
+    app.select({ kind: it.type === 'media' ? 'media' : 'item', id: it.id });
+    return setMode('player', { focus: it.start + 0.05 });
+  }
+  if (act === 'copy') return rqCopy();
+  if (act === 'clear') {
+    if (!rqClearArm) { rqClearArm = true; renderRequests(); return; }
+    rqClearArm = false; app.requests = []; rqStore(); renderRequests();
+  }
+}
+function setRequestsOpen(open) {
+  $('#requests').hidden = !open;
+  $('#workspace').classList.toggle('with-rq', open);
+  try { localStorage.setItem('editor-requests-open', open ? '1' : '0'); } catch { /* 只是記住開關 */ }
+  renderRequests();
+}
+$('#rqBody').addEventListener('click', onRqClick);
+$('#rqFoot').addEventListener('click', onRqClick);
+$('#rqBody').addEventListener('input', (e) => {
+  const id = $('#rqTop').dataset.id;
+  if (e.target.id !== 'rqNote' || !id) return;
+  rqEdit(id, (r) => { r.note = e.target.value; });
+  renderRequests();
+});
+$('#btnRequests').addEventListener('click', () => setRequestsOpen($('#requests').hidden));
+$('#btnRqClose').addEventListener('click', () => setRequestsOpen(false));
+
 document.addEventListener('keydown', (e) => {
   const tag = e.target.tagName;
   const typing = tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && !['range', 'checkbox'].includes(e.target.type));
