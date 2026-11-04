@@ -1,10 +1,10 @@
-// 剪輯台的寫入規則（純函式，沒有 I/O）：驗證存檔內容、只改允許的欄位、保留 plan.json 與 rough.srt 原本的排版
+// 剪輯的寫入規則（純函式，沒有 I/O）：驗證存檔內容、只改允許的欄位、保留 plan.json 與 rough.srt 原本的排版
 //
 //   sanitizeEdit(edit, { videoDur })                  → { edit, errors }
 //   sanitizeSegments(segments, plan, ctx)             → { updates: [[id, set, del]], memory, errors }
 //   applySave(planText, body, ctx)                     → { text, srtText, plan, edit, cues, memory, errors }（要寫的新內容；null＝不用寫）
 //   sanitizeLook(v)                                    → { look, errors }（第一層 look：講者調光與瘦臉；null＝恢復預設）
-//   sanitizeFrame(v, { W, H })                         → { frame, errors }（第一層 frame：構圖台的裁切框；null＝不裁切）
+//   sanitizeFrame(v, { W, H })                         → { frame, errors }（第一層 frame：構圖的裁切框；null＝不裁切）
 //   remapToFrame(rect, from, to, { W, H }, kind)       → 換框時 speakerBox（'box'）／pipCrop（'rect'）換算成新框裡同一塊畫面
 //   sanitizeTheme(v)                                   → { theme, errors }（第一層 theme："light"｜"dark"；null＝拿掉＝亮色；specs/010-motion-v2/design-system.md §10）
 //   parseSrtBlocks(text) / writeSrt(srtText, cues)     → rough.srt 讀寫（保留 CRLF／LF、BOM；沒改的句子原封不動）
@@ -23,7 +23,7 @@ export const LIMITS = Object.freeze({
   segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'anchor'], segScene: ['slots'], segFx: ['vars'],
   bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme', 'frame'],
   themes: ['light', 'dark'],
-  frame: { maxZoom: 2, upscaleWarn: 3.5, edge: 40 },   // 構圖台：最多放大 2 倍；來源像素放大超過 3.5 倍會變軟；講者動作範圍離邊 < 40px＝切到手勢
+  frame: { maxZoom: 2, upscaleWarn: 3.5, edge: 40 },   // 構圖：最多放大 2 倍；來源像素放大超過 3.5 倍會變軟；講者動作範圍離邊 < 40px＝切到手勢
   srt: RULES,
 });
 
@@ -118,7 +118,7 @@ export function sanitizeEdit(edit, { videoDur = null } = {}) {
   return { edit: out, errors };
 }
 
-// ---------- 時間（只認剪輯台會寫的寫法：#N、#Ne、#N±秒、秒數）----------
+// ---------- 時間（只認剪輯會寫的寫法：#N、#Ne、#N±秒、秒數）----------
 
 export function resolveTime(v, cues) {
   if (isNum(v)) return v;
@@ -139,14 +139,14 @@ const isTextDecl = (d) => !d || !d.type || TEXT_TYPES.has(d.type);
 function checkList(where, o, n, def, errors) {
   if (!Array.isArray(n)) { errors.push(`${where} 要維持清單（陣列）`); return; }
   const min = def?.min ?? (def ? 0 : Math.min(1, o.length));
-  if (n.length > o.length) { errors.push(`${where} 有 ${n.length} 項，比原本多（原本 ${o.length} 項）→ 剪輯台不能加項目，要加請寫進修改單給 AI`); return; }
+  if (n.length > o.length) { errors.push(`${where} 有 ${n.length} 項，比原本多（原本 ${o.length} 項）→ 剪輯不能加項目，要加請寫進修改單給 AI`); return; }
   if (n.length < min) errors.push(`${where} 有 ${n.length} 項，至少要 ${min} 項`);
   const objs = o.filter(isObj);
   const itemDef = def?.item || null;
   const textKey = (k) => (itemDef ? itemDef[k] && isTextDecl(itemDef[k]) : k !== 'icon' && k !== 'at');
   const keyUnion = new Set(objs.flatMap((x) => Object.keys(x)));
   const valuesOf = (k) => new Set(objs.filter((x) => k in x).map((x) => JSON.stringify(x[k])));
-  // 字串項目「文字 ｜icon=x at=#3」：｜後面的屬性只能沿用原本出現過的值（圖示、時間不能在剪輯台改）
+  // 字串項目「文字 ｜icon=x at=#3」：｜後面的屬性只能沿用原本出現過的值（圖示、時間不能在剪輯改）
   const strAttrs = o.filter((x) => typeof x === 'string').map((x) => parseAttrs(splitItem(x).tail));
   const attrValues = (k) => new Set(strAttrs.filter((a) => k in a).map((a) => a[k]));
   n.forEach((it, i) => {
@@ -154,14 +154,14 @@ function checkList(where, o, n, def, errors) {
     if (typeof it === 'string') {
       if (objs.length && !o.some((x) => typeof x === 'string')) { errors.push(`${w} 要維持原本的格式（物件）`); return; }
       for (const [k, v] of Object.entries(parseAttrs(splitItem(it).tail))) {
-        if (!attrValues(k).has(v)) errors.push(`${w} 的「${k}=${v}」不是原本就有的值 → 剪輯台只改文字，圖示和時間請 AI 改`);
+        if (!attrValues(k).has(v)) errors.push(`${w} 的「${k}=${v}」不是原本就有的值 → 剪輯只改文字，圖示和時間請 AI 改`);
       }
       return;
     }
     if (!isObj(it)) { errors.push(`${w} 要是文字或物件`); return; }
     if (!objs.length) { errors.push(`${w} 要維持原本的格式（文字）`); return; }
     for (const [k, v] of Object.entries(it)) {
-      if (!keyUnion.has(k)) { errors.push(`${w} 不能新增「${k}」→ 剪輯台只改文字，結構請 AI 改`); continue; }
+      if (!keyUnion.has(k)) { errors.push(`${w} 不能新增「${k}」→ 剪輯只改文字，結構請 AI 改`); continue; }
       if (textKey(k)) { if (typeof v !== 'string') errors.push(`${w} 的 ${k} 要是文字`); continue; }
       if (!valuesOf(k).has(JSON.stringify(v))) errors.push(`${w} 的「${k}」不是文字，只能沿用原本的值（例如圖示）`);
     }
@@ -173,7 +173,7 @@ export function checkSlots(id, orig = {}, next, sceneDef) {
   const where = `段 ${id} 的 slots`;
   if (!isObj(next)) return [`${where} 要是物件`];
   const ko = Object.keys(orig).sort(), kn = Object.keys(next).sort();
-  if (!same(ko, kn)) return [`${where} 的欄位不能增減（原本：${ko.join('、') || '無'}；送來：${kn.join('、') || '無'}）→ 剪輯台只改文字，要加欄位請 AI 改`];
+  if (!same(ko, kn)) return [`${where} 的欄位不能增減（原本：${ko.join('、') || '無'}；送來：${kn.join('、') || '無'}）→ 剪輯只改文字，要加欄位請 AI 改`];
   for (const k of ko) {
     const o = orig[k], n = next[k], def = sceneDef?.slots?.[k];
     if (same(o, n)) continue;
@@ -184,11 +184,11 @@ export function checkSlots(id, orig = {}, next, sceneDef) {
       if (!isObj(n) || !same(Object.keys(o).sort(), Object.keys(n).sort())) { errors.push(`${where}.${k} 要維持原本的欄位（${Object.keys(o).join('、')}）`); continue; }
       for (const kk of Object.keys(o)) {
         if (kk === 'text' || kk === 'value') { if (typeof n[kk] !== 'string') errors.push(`${where}.${k}.${kk} 要是文字`); }
-        else if (!same(o[kk], n[kk])) errors.push(`${where}.${k}.${kk} 不是文字，剪輯台不能改 → 請 AI 改`);
+        else if (!same(o[kk], n[kk])) errors.push(`${where}.${k}.${kk} 不是文字，剪輯不能改 → 請 AI 改`);
       }
       continue;
     }
-    errors.push(`${where}.${k} 不是文字（${def?.type || typeof o}），剪輯台不能改 → 請 AI 改`);
+    errors.push(`${where}.${k} 不是文字（${def?.type || typeof o}），剪輯不能改 → 請 AI 改`);
   }
   return errors;
 }
@@ -197,13 +197,13 @@ export function checkVars(id, orig = {}, next, fxDef) {
   const where = `段 ${id} 的 vars`;
   if (!isObj(next)) return [`${where} 要是物件`];
   const ko = Object.keys(orig).sort(), kn = Object.keys(next).sort();
-  if (!same(ko, kn)) return [`${where} 的欄位不能增減（原本：${ko.join('、') || '無'}；送來：${kn.join('、') || '無'}）→ 剪輯台只改文字，要加欄位請 AI 改`];
+  if (!same(ko, kn)) return [`${where} 的欄位不能增減（原本：${ko.join('、') || '無'}；送來：${kn.join('、') || '無'}）→ 剪輯只改文字，要加欄位請 AI 改`];
   const errors = [];
   for (const k of ko) {
     const def = fxDef?.vars?.find((v) => v.id === k);
     const text = def ? def.type === 'string' : typeof orig[k] === 'string' && !['accent', 'bg'].includes(k);
     if (text) { if (typeof next[k] !== 'string') errors.push(`${where}.${k} 要是文字`); }
-    else if (!same(orig[k], next[k])) errors.push(`${where}.${k} 不是文字（${def?.type || typeof orig[k]}），剪輯台不能改 → 請 AI 改`);
+    else if (!same(orig[k], next[k])) errors.push(`${where}.${k} 不是文字（${def?.type || typeof orig[k]}），剪輯不能改 → 請 AI 改`);
   }
   return errors;
 }
@@ -227,7 +227,7 @@ export function sanitizeSegments(segments, plan, ctx = {}) {
     if (!isObj(v)) { errors.push(`段 ${id} 要是物件`); continue; }
     const set = {}, del = [];
     for (const [k, val] of Object.entries(v)) {
-      if (!allowed.includes(k)) { errors.push(`段 ${id}（${type}）不能改「${k}」→ 剪輯台只能改 ${allowed.join('、')}，其他欄位請 AI 改`); continue; }
+      if (!allowed.includes(k)) { errors.push(`段 ${id}（${type}）不能改「${k}」→ 剪輯只能改 ${allowed.join('、')}，其他欄位請 AI 改`); continue; }
       if (k === 'sfxVolume') {
         if (val === null || val === 0) del.push('sfxVolume');
         else if (!isNum(val) || val < LIMITS.volume[0] || val > LIMITS.volume[1]) errors.push(`段 ${id} 的 sfxVolume 要是 −60～+12 的 dB 數字，現在是 ${JSON.stringify(val)}`);
@@ -380,7 +380,7 @@ export function sanitizeTheme(v) {
 // 構圖裁切 frame＝[x, y, w, h]（畫布座標，cv＝{ W, H }）或 null（不裁切）：寬高比和畫布一樣（差 1% 內）、整個在畫布裡、最多放大 maxZoom 倍；整個畫面＝null
 export function sanitizeFrame(v, cv) {
   if (v === null) return { frame: null, errors: [] };
-  if (!cv) return { frame: undefined, errors: ['不知道畫布尺寸，不能存 frame → 重新載入構圖台'] };
+  if (!cv) return { frame: undefined, errors: ['不知道畫布尺寸，不能存 frame → 重新載入構圖'] };
   const { W, H } = cv;
   if (!Array.isArray(v) || v.length !== 4 || !v.every(isNum)) return { frame: undefined, errors: [`frame 要是 [x, y, w, h]（${W}×${H} 座標）或 null（不裁切），現在是 ${JSON.stringify(v)}`] };
   const [x, y, w, h] = v.map((n) => Math.round(n));
@@ -496,7 +496,7 @@ function withEdit(plan, edit) {
 export function applySave(planText, body, ctx = {}) {
   if (!isObj(body)) return { errors: ['要送 JSON 物件 → { "base": {…}, "edit": {…}, "segments": {…}, "srt": { "ops": […] } }'] };
   const errors = [];
-  for (const k of Object.keys(body)) if (!LIMITS.bodyKeys.includes(k)) errors.push(`剪輯台只能寫 plan.json 的 edit、段落的允許欄位與字幕，不能寫「${k}」→ 其他欄位請 AI 改 plan.json`);
+  for (const k of Object.keys(body)) if (!LIMITS.bodyKeys.includes(k)) errors.push(`剪輯只能寫 plan.json 的 edit、段落的允許欄位與字幕，不能寫「${k}」→ 其他欄位請 AI 改 plan.json`);
   let plan;
   try { plan = JSON.parse(planText); } catch (e) { return { errors: [`plan.json 不是合法的 JSON：${e.message} → 請 AI 先修好 plan.json 再存`] }; }
   if (!isObj(plan)) return { errors: ['plan.json 最外層要是物件 → 請 AI 檢查 plan.json'] };
@@ -530,7 +530,7 @@ export function applySave(planText, body, ctx = {}) {
     if (!isObj(body.media)) errors.push('media 要是物件 → { "m01": { "enter": "fade" } }');
     else {
       const mediaIds = new Set((planR.scenes || []).filter((s) => isObj(s) && s.type === 'media').map((s) => String(s.id)));
-      for (const id of Object.keys(body.media)) if (!mediaIds.has(id)) errors.push(`找不到 media 段「${id}」→ 剪輯台只能改 plan.json 裡 type: "media" 的段（現有：${[...mediaIds].join('、') || '沒有'}）`);
+      for (const id of Object.keys(body.media)) if (!mediaIds.has(id)) errors.push(`找不到 media 段「${id}」→ 剪輯只能改 plan.json 裡 type: "media" 的段（現有：${[...mediaIds].join('、') || '沒有'}）`);
       segments = { ...body.media, ...(isObj(segments) ? segments : {}) };
     }
   }
@@ -589,7 +589,7 @@ export function applySave(planText, body, ctx = {}) {
       return o;
     }) };
   }
-  // plan.json：有變的段（剪輯台改的＋句號重新對應的）才重寫
+  // plan.json：有變的段（剪輯改的＋句號重新對應的）才重寫
   const segIdx = (next.scenes || []).map((seg, i) => (same(seg, plan.scenes?.[i]) ? -1 : i)).filter((i) => i >= 0);
   let text = null;
   if (edit || segIdx.length || look !== undefined || theme !== undefined || frame !== undefined) {

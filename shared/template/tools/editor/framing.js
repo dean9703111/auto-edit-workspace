@@ -1,4 +1,4 @@
-// 構圖台：在沒裁切的 work/rough.mp4 上拖一個鎖定比例（橫式 16:9、直式 9:16）的框，存成 plan.json 的 frame（畫布座標）。
+// 構圖：在沒裁切的 work/rough.mp4 上拖一個鎖定比例（橫式 16:9、直式 9:16）的框，存成 plan.json 的 frame（畫布座標）。
 // 右邊即時畫出裁切後的樣子＋字幕、下方字卡、子母畫面小窗的位置；直式畫頭頂範圍與下巴上限。
 // 分析（講者動作範圍、黑邊、建議的框）來自 GET /api/framing（qc.mjs framing 同一套）；存檔走 POST /api/save { base, frame, look }。
 // 下面一起決定講者調光、瘦臉（plan.json 的 look；打開瘦臉才偵測臉：POST /api/look/run，GET /api/look/status 看進度），
@@ -13,6 +13,8 @@ let D = null;        // /api/framing 的回應
 let F = null;        // 目前的框 { x, y, w }（h 由比例算）
 let saved = null;    // plan.json 現在的 frame（null＝不裁切）
 let drag = null;
+let lastPreview = 0;
+let framingImageTimer = null;
 let look = { color: 0, slim: 0, beauty: 0 }, savedLook = { color: 0, slim: 0, beauty: 0 }, lookPrev = {}, poll = null, faceTimer = null;
 const r2 = (v) => Math.round(Number(v) * 100) / 100;
 const sameLook = (a, b) => r2(a.color) === r2(b.color) && r2(a.slim) === r2(b.slim) && r2(a.beauty) === r2(b.beauty);
@@ -120,6 +122,16 @@ function drawPreview() {
     ctx.drawImage(v, (F.x - ox) / s, (F.y - oy) / s, F.w / s, hOf(F.w) / s, 0, 0, cw, ch);
     ctx.filter = 'none';
   }
+  if (v.videoWidth) {
+    const elapsed = performance.now() - lastPreview;
+    if (!window.framingImage || elapsed >= 180) {
+      clearTimeout(framingImageTimer); framingImageTimer = null;
+      lastPreview = performance.now(); window.framingImage = cv.toDataURL('image/jpeg', .8);
+      window.dispatchEvent(new Event('framing-preview'));
+    } else if (framingImageTimer === null) {
+      framingImageTimer = setTimeout(() => { framingImageTimer = null; drawPreview(); }, 181 - elapsed);
+    }
+  }
   const k = cw / W(), C = D.canvas;
   const rect = (r, style, dash, label, fill) => {
     const [x1, y1, x2, y2] = r.map((n) => n * k);
@@ -169,17 +181,20 @@ function facts() {
     return li;
   }));
   $('note').textContent = D.plan.speakerBox
-    ? '已經量過講者框：存檔時 speakerBox 會跟著新的框換算，不用重量。存好後回剪輯台按「重新產生」看成片。'
+    ? '已經量過講者框：儲存時會跟著新的框換算，不用重量。儲存後會自動更新剪輯預覽。'
     : '存好後跟 AI 說「調好了」；不想調就說「用建議的」。';
 }
 
 function dirty() {
-  const d = !sameFrame(F, saved || fullFrame()) || !sameLook(look, savedLook);
+  if (!F) return;
+  const d = !D.plan.exists || !sameFrame(F, saved || fullFrame()) || !sameLook(look, savedLook) || !!window.designWorkbench?.dirty;
   const s = $('saveState');
   s.dataset.state = d ? 'dirty' : 'saved';
-  s.querySelector('.txt').textContent = d ? (D.plan.exists || saved ? '還沒存' : '還沒存（plan.json 會新建）') : saved ? '已存' : '不裁切（plan.json 沒寫 frame）';
-  $('btnSave').disabled = !d;
+  s.querySelector('.txt').textContent = d ? '尚未儲存' : saved ? '已儲存' : '已儲存 · 不裁切';
+  $('btnSave').disabled = !d || !!window.designWorkbench?.busy;
 }
+window.addEventListener('design-state', dirty);
+window.addEventListener('framing-preview-request', () => { lastPreview = 0; drawPreview(); });
 
 // ---------- 拖曳 ----------
 function toCanvas(e) {
@@ -241,11 +256,13 @@ async function save() {
   const frame = isFull(F) ? null : asArr(F);
   let r, j;
   try {
+    await window.designWorkbench?.flush();
     const body = { base: { hash: D.plan.hash }, frame };
+    if (window.designWorkbench?.saveId) body.designId = window.designWorkbench.saveId;
     if (!sameLook(look, savedLook)) body.look = { color: r2(look.color), slim: r2(look.slim), ...(look.beauty > 0 ? { beauty: r2(look.beauty) } : {}) };
-    r = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    r = await fetch('/api/framing/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     j = await r.json().catch(() => null);
-  } catch (e) { j = { message: `連不到剪輯台：${e.message}` }; }
+  } catch (e) { j = { message: `連不到剪輯：${e.message}` }; }
   if (!r?.ok) {
     $('saveState').dataset.state = 'error';
     $('saveState').querySelector('.txt').textContent = r?.status === 409 ? 'plan.json 被改過' : '沒有存';
@@ -254,15 +271,38 @@ async function save() {
     $('btnSave').disabled = false;
     return false;
   }
-  const lookChanged = !sameLook(look, savedLook);
+  if (j.design) window.designWorkbench?.accept(j.design);
   if (j.look) D.look = j.look;
   savedLook = { ...look };
   Object.assign(D.plan, { exists: j.plan.exists, hash: j.plan.hash, frame: j.plan.frame, speakerBox: j.plan.speakerBox });
   saved = j.plan.frame ? fromArr(j.plan.frame) : null;
-  msg.textContent = [j.wrote?.plan ? `已存進 plan.json：${frame ? `"frame": [${frame.join(', ')}]` : '不裁切（拿掉 frame）'}${lookChanged ? `、"look": { "color": ${r2(look.color)}, "slim": ${r2(look.slim)}${look.beauty > 0 ? `, "beauty": ${r2(look.beauty)}` : ''} }` : ''}` : '沒有變，不用存', ...(j.notes || [])].join('\n');
+  msg.textContent = j.design ? '構圖、主色與背景已儲存並套用。' : j.wrote?.plan ? '構圖設定已儲存。' : '設定沒有變更。';
+  if (j.notes?.length) msg.textContent += '\n講者框已跟著構圖調整，不用重新標記。';
+  if (j.framingUpdate?.running) {
+    msg.textContent += '\n正在自動更新剪輯預覽，完成後會直接套用，可以離開這一頁。';
+    watchPreview();
+  }
   render();
   renderLook();
   return true;
+}
+
+let previewTimer = null;
+function watchPreview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/version'), j = await r.json();
+      const update = j.framingUpdate;
+      if (!r.ok || !update) throw new Error('讀不到預覽更新狀態');
+      if (update.running) { watchPreview(); return; }
+      $('msg').className = update.ok ? 'fr-msg' : 'fr-msg err';
+      $('msg').textContent = update.ok ? '已儲存，剪輯預覽已自動更新。' : `構圖已儲存，但${update.message || '預覽更新失敗，請在剪輯按「重新產生」查看訊息'}`;
+    } catch (e) {
+      $('msg').className = 'fr-msg err';
+      $('msg').textContent = `構圖已儲存，但讀不到預覽更新狀態：${e.message}。請回剪輯查看。`;
+    }
+  }, 1000);
 }
 
 // ---------- 講者調光、瘦臉 ----------
@@ -286,7 +326,7 @@ function renderLook() {
   if (S.running) note = `正在${S.line}（在背景跑，可以繼續拖框；好了下面會出現前後對照）`;
   else if (needDetect) note = `瘦臉、美顏要先偵測整支影片的臉，長片要十幾分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
   else if (faceOn(look) && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，成片只調光。';
-  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。改了強度存檔後，請 AI 重跑 look.mjs run 更新底片。';
+  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。已有成片時，儲存會自動更新底片與剪輯預覽。';
   $('lookNote').textContent = note;
   $('btnDetect').hidden = !needDetect || !!S.running;
   const showFaces = faceOn(look) && lm.ready && lm.slimOk !== false;
@@ -350,15 +390,22 @@ function refNote(t) {
     ? `已設${t != null ? `（${mmss(t)} 那一格）` : ''}：情境庫、風格預覽頁的講者用這張。換一格再按一次就更新。`
     : '還沒設：情境庫、風格預覽頁的講者是示範人物。選一格你自己的畫面（裁切、調光後的樣子）存起來，之後挑動畫和風格看到的就是你。';
 }
-$('btnRef').addEventListener('click', async () => {
+async function captureReference() {
   $('btnRef').disabled = true;
   const t = $('video').currentTime || 0;
-  const r = await fetch('/api/refframe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t, frame: isFull(F) ? null : asArr(F), color: r2(look.color) }) });
-  const j = await r.json().catch(() => ({}));
-  $('btnRef').disabled = false;
-  if (!r.ok) { $('msg').className = 'fr-msg err'; $('msg').textContent = j.message || `預覽參考圖沒有存（HTTP ${r.status}）`; return; }
-  D.ref = j.ref;
-  refNote(t);
-});
+  try {
+    const r = await fetch('/api/refframe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t, frame: isFull(F) ? null : asArr(F), color: r2(look.color) }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.message || `預覽參考圖沒有存（HTTP ${r.status}）`);
+    D.ref = j.ref;
+    refNote(t);
+    return true;
+  } catch (e) {
+    $('msg').className = 'fr-msg err';
+    $('msg').textContent = e.message;
+    return false;
+  } finally { $('btnRef').disabled = false; }
+}
+$('btnRef').addEventListener('click', captureReference);
 
-load().catch((e) => { $('loading').textContent = `構圖台載入失敗：${e.message}`; });
+load().catch((e) => { $('loading').textContent = `構圖載入失敗：${e.message}`; });

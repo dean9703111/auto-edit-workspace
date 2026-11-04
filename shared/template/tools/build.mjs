@@ -53,6 +53,7 @@ import { ensureLook, lookCheck } from './lib/look.mjs';
 import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
+import { appliedDesign } from './lib/project-design.mjs';
 
 export { probeDuration, encodeFootage };
 
@@ -673,7 +674,9 @@ export function build(flags, { log = console.log } = {}) {
   const bgOne = fs.existsSync(path.join(P.templateDir, 'bg.jpg'));
   // 風格包（plan.json "style"）：包裡有的檔先用，沒有的退回 shared/template/ 目前那一份
   const pack = res.style ? packDir(P.templateDir, res.style) : null;
-  const srcOf = (f) => (pack && fs.existsSync(path.join(pack, f)) ? path.join(pack, f) : path.join(P.templateDir, f));
+  const localDesign = appliedDesign(P.project);
+  const srcOf = (f) => (localDesign && fs.existsSync(path.join(localDesign.dir, f)) ? path.join(localDesign.dir, f) : pack && fs.existsSync(path.join(pack, f)) ? path.join(pack, f) : path.join(P.templateDir, f));
+  if (localDesign) log(`本集風格：work/design/drafts/${localDesign.id}（主色 ${localDesign.color}）`);
   const has = (f) => fs.existsSync(srcOf(f));
   // 暗色（plan.json "theme": "dark"）先用 bg-*-dark.jpg；沒有那張就退回亮色那張並 ⚠
   const dark = res.theme === 'dark';
@@ -748,7 +751,7 @@ export function build(flags, { log = console.log } = {}) {
   let kitN = copyDir(path.join(P.templateDir, 'kit'), path.join(P.out, 'kit'), [...kitSkip, ...PACK_KIT]);
   // 主色與外框：風格包的（沒有就 shared/template/kit/ 的）；比內容，換包時同樣大小的 brand.css 也會換
   for (const f of PACK_KIT) {
-    const src = pack && fs.existsSync(path.join(pack, f)) ? path.join(pack, f) : path.join(P.templateDir, 'kit', f);
+    const src = localDesign && fs.existsSync(path.join(localDesign.dir, f)) ? path.join(localDesign.dir, f) : pack && fs.existsSync(path.join(pack, f)) ? path.join(pack, f) : path.join(P.templateDir, 'kit', f);
     if (fs.existsSync(src) && copyIfDiff(src, path.join(P.out, 'kit', f))) kitN++;
   }
   if (fs.existsSync(P.sfx)) for (const f of fs.readdirSync(P.sfx).filter((x) => x.endsWith('.wav'))) copyIfChanged(path.join(P.sfx, f), path.join(P.out, 'assets', 'sfx', f));

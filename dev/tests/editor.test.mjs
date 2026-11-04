@@ -1,4 +1,4 @@
-// 剪輯台 editor.mjs：讀狀態、只寫允許的欄位、拒絕其他欄位、修改時間衝突、Range、port 被佔用、背景執行與關閉；
+// 剪輯 editor.mjs：讀狀態、只寫允許的欄位、拒絕其他欄位、修改時間衝突、Range、port 被佔用、背景執行與關閉；
 // v2：字幕增刪與句號重新對應（plan.json＋rough.srt 一起寫）、rough.srt 衝突、gains／sfxVolume／音效靜音還原、media 拖曳欄位、卡片文字、響度與縮圖
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -84,7 +84,7 @@ test('讀狀態：專案、plan、影片資訊、字幕、剪接點、media 段�
   assert.ok(fs.existsSync(path.join(out, '.editor', 'waveform.json')), '波形要快取在 work/hyperframes/.editor/');
   const page = await get('/');
   assert.equal(page.status, 200);
-  assert.match(await page.text(), /剪輯台/);
+  assert.match(await page.text(), /剪輯/);
 });
 
 test('只寫允許的欄位：edit 補齊預設、cuts 排序合併、joins 去掉 none；media 段只改 enter／exit／volume；其他文字原封不動', async () => {
@@ -140,7 +140,7 @@ test('拒絕其他欄位：plan 的其他 key、edit／joins 的未知欄位、�
     assert.match(j.message, re);
   }
   assert.equal(planNow(), before);
-  // 不是剪輯台頁面送的（不是 JSON、別的網站、別的 Host）
+  // 不是剪輯頁面送的（不是 JSON、別的網站、別的 Host）
   const r1 = await fetch(new URL('/api/save', url), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{}' });
   assert.equal(r1.status, 403);
   const r2 = await post('/api/save', { base: b, edit: {} }, { Origin: 'http://evil.example' });
@@ -166,7 +166,7 @@ test('修改時間衝突：plan.json 在打開之後被改過就回 409、不覆
   // 只送 mtime（舊的）也要擋
   const r2 = await post('/api/save', { base: { mtime: old.mtime }, edit: { fadeOut: 1 } });
   assert.equal(r2.status, 409);
-  // 重新載入後再存：AI 的修改和剪輯台的設定都在
+  // 重新載入後再存：AI 的修改和剪輯的設定都在
   const r3 = await post('/api/save', { base: await base(), edit: { fadeOut: 1 } });
   assert.equal(r3.status, 200);
   const p = JSON.parse(planNow());
@@ -232,22 +232,22 @@ test('CLI：非互動 shell 自動轉背景、印出網址；--status 查得到�
   const run = (...extra) => spawnSync(process.execPath, [...args, ...extra], { cwd: root, encoding: 'utf8', timeout: 30000 });
   const r = run();
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  const m = r.stdout.match(/剪輯台：(http:\/\/127\.0\.0\.1:(\d+)\/)/);
+  const m = r.stdout.match(/剪輯：(http:\/\/127\.0\.0\.1:(\d+)\/)/);
   assert.ok(m, r.stdout);
   assert.match(r.stdout, /已在背景執行.*--stop --project projects\/EP2/);
   const u = m[1];
   try {
     assert.equal((await fetch(new URL('/api/ping', u))).status, 200);
     const st = run('--status');
-    assert.match(st.stdout, new RegExp(`剪輯台開著：${u.replace(/[.]/g, '\\.')}`));
+    assert.match(st.stdout, new RegExp(`剪輯開著：${u.replace(/[.]/g, '\\.')}`));
     const again = run();
-    assert.match(again.stdout, /剪輯台已經開著/);
+    assert.match(again.stdout, /剪輯已經開著/);
   } finally {
     const stop = run('--stop');
-    assert.match(stop.stdout, /已關閉剪輯台/);
+    assert.match(stop.stdout, /已關閉剪輯/);
   }
   await assert.rejects(fetch(new URL('/api/ping', u), { signal: AbortSignal.timeout(1000) }));
-  assert.match(run('--status').stdout, /剪輯台沒有開/);
+  assert.match(run('--status').stdout, /剪輯沒有開/);
   assert.ok(!fs.existsSync(path.join(proj2, 'work', 'hyperframes', '.editor', 'server.json')));
 });
 
@@ -441,7 +441,7 @@ test('卡片文字：slots／vars 只改文字（可以加字）；欄位增減�
   const b2 = await base2();
   const cases = [
     [{ s01: { slots: { text: 'a', tag: '新欄位' } } }, /欄位不能增減/],
-    [{ s02: { slots: { title: 'x', items: ['1', '2', '3', '4'] } } }, /有 4 項，比原本多（原本 3 項）→ 剪輯台不能加項目/],
+    [{ s02: { slots: { title: 'x', items: ['1', '2', '3', '4'] } } }, /有 4 項，比原本多（原本 3 項）→ 剪輯不能加項目/],
     [{ s02: { slots: { title: 'x', items: ['1'] } } }, /有 1 項，至少要 2 項/],
     [{ s02: { slots: { title: 'x', items: ['一', { text: '二', at: '#1' }, '三 ｜at=#4+0.2'] } } }, /「at」不是文字，只能沿用原本的值/],
     [{ s02: { slots: { title: 'x', items: ['一', { text: '二', at: '#4' }, '三 ｜at=#1'] } } }, /「at=#1」不是原本就有的值/],
@@ -465,10 +465,10 @@ test('修改單：/api/requests 整份覆寫 work/feedback/editor-requests.md（
   let r = await post2('/api/requests', { markdown: '  ' });
   assert.equal(r.status, 400);
   assert.match((await r.json()).message, /修改單是空的/);
-  r = await post2('/api/requests', { markdown: '# 剪輯台修改單\n\n## 1. s01' });
+  r = await post2('/api/requests', { markdown: '# 剪輯修改單\n\n## 1. s01' });
   assert.equal(r.status, 200, await r.clone().text());
   assert.match((await r.json()).file, /work\/feedback\/editor-requests\.md$/);
-  assert.equal(fs.readFileSync(f, 'utf8'), '# 剪輯台修改單\n\n## 1. s01\n');
+  assert.equal(fs.readFileSync(f, 'utf8'), '# 剪輯修改單\n\n## 1. s01\n');
   r = await post2('/api/requests', { markdown: '第二次\n' });
   assert.equal(r.status, 200);
   assert.equal(fs.readFileSync(f, 'utf8'), '第二次\n');
@@ -485,7 +485,7 @@ test('修改單改完了沒（requestsInfo）：比修改單新的 r<N>.md「改
   assert.equal(E.requestsInfo(dir), null, '還沒有修改單');
   const put = (f, text, sec) => { const p = path.join(fb, f); fs.writeFileSync(p, text); const t = new Date(Date.UTC(2026, 10, 3, 12, 0, sec)); fs.utimesSync(p, t, t); };
   put('r3.md', '## 改了哪幾段\n- s03：舊的一輪\n', 0);
-  put('editor-requests.md', '# 剪輯台修改單\n\n## 1. x05　custom x-a.html\n- 要改：更有質感\n\n## 2. s03　07 重點字卡\n', 10);
+  put('editor-requests.md', '# 剪輯修改單\n\n## 1. x05　custom x-a.html\n- 要改：更有質感\n\n## 2. s03　07 重點字卡\n', 10);
   put('r4.md', '# 回饋 r4\n\n## 分類\n- s03：個案\n\n## 改了哪幾段\n- x05：補方案拍、刪漂浮\n- 其他：plan.json 沒改\n- m09：不在修改單\n\n## 驗證\n- s03：audit 0 ✖\n', 20);
   const q = E.requestsInfo(dir);
   assert.deepEqual(q.ids, ['x05', 's03']);
@@ -613,7 +613,7 @@ test('主題（010 §10）：存 theme 插入／原地換／拿掉、選亮又�
   assert.equal(planNow(), orig);
 });
 
-test('字幕預覽（F8）：頁面直接載 kit/captions.css、字幕放在畫布大小的圖層，剪輯台不自己寫字幕的數字', async () => {
+test('字幕預覽（F8）：頁面直接載 kit/captions.css、字幕放在畫布大小的圖層，剪輯不自己寫字幕的數字', async () => {
   const page = await (await get('/')).text();
   assert.match(page, /<link rel="stylesheet" href="\/kit\/captions\.css">/);
   assert.match(page, /<div id="simCapLayer" class="cap-layer"><div id="simCaption" class="cg off"><span><\/span><\/div><\/div>/);
@@ -621,7 +621,7 @@ test('字幕預覽（F8）：頁面直接載 kit/captions.css、字幕放在畫�
   assert.equal(css.status, 200);
   assert.match(await css.text(), /\.cg > span \{[^}]*font-size: 76px/);
   const ed = await (await get('/editor/editor.css')).text();
-  assert.ok(!/\.cg[^{]*\{[^}]*(font-size|bottom|padding)/.test(ed), '剪輯台的 css 不能另外寫字幕的字級、位置、內距');
+  assert.ok(!/\.cg[^{]*\{[^}]*(font-size|bottom|padding)/.test(ed), '剪輯的 css 不能另外寫字幕的字級、位置、內距');
   assert.ok(!ed.includes('.sim-caption'));
   assert.match(ed, /\.cap-layer \{[^}]*width: calc\(var\(--cw\) \* 1px\); height: calc\(var\(--ch\) \* 1px\)/);
 });
@@ -710,8 +710,8 @@ test('講者：/api/look/face 沒有 landmark 回 nolandmarks；有就回 360×3
   fs.rmSync(f);
 });
 
-// ---------- 構圖台（停點 ②、之後在剪輯台改構圖）----------
-test('構圖台：sanitizeFrame（比例、出界、最多 2 倍、整個畫面＝null）；remapToFrame 換框來回不變、pipCrop 出界交回 auto', async () => {
+// ---------- 構圖（停點 ②、之後在剪輯改構圖）----------
+test('構圖：sanitizeFrame（比例、出界、最多 2 倍、整個畫面＝null）；remapToFrame 換框來回不變、pipCrop 出界交回 auto', async () => {
   const Wm = await imp('editor/server/write.mjs'), cv = { W: 1920, H: 1080 };
   assert.deepEqual(Wm.sanitizeFrame([182, 144, 1664, 936], cv), { frame: [182, 144, 1664, 936], errors: [] });
   assert.deepEqual(Wm.sanitizeFrame([0, 0, 1920, 1080], cv), { frame: null, errors: [] });
@@ -727,7 +727,7 @@ test('構圖台：sanitizeFrame（比例、出界、最多 2 倍、整個畫面�
   assert.deepEqual(Wm.remapToFrame([800, 400, 432, 324], null, F, cv, 'rect'), [713, 295, 498, 374]);
 });
 
-test('構圖台（server）：/framing 頁、沒裁切的 /media/source.mp4、/api/framing 分析；還沒有 plan.json 時只存 frame 會新建；換框時 speakerBox 跟著換算；舊的 hash 409、比例不對 400', async () => {
+test('構圖（server）：/framing 頁、沒裁切的 /media/source.mp4、/api/framing 分析；還沒有 plan.json 時只存 frame 會新建；換框時 speakerBox 跟著換算；舊的 hash 409、比例不對 400', async () => {
   const dir = path.join(root, 'projects', '構圖'), w = path.join(dir, 'work'), plan = path.join(w, 'hyperframes', 'plan.json');
   fs.mkdirSync(w, { recursive: true });
   const v = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=30', '-t', '4', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', path.join(w, 'rough.mp4')]);
@@ -736,7 +736,7 @@ test('構圖台（server）：/framing 頁、沒裁切的 /media/source.mp4、/a
   try {
     const u = (p) => new URL(p, ed4.url);
     const save = (body) => fetch(u('/api/save'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    assert.match(await (await fetch(u('/framing'))).text(), /<title>構圖台<\/title>/);
+    assert.match(await (await fetch(u('/framing'))).text(), /<title>構圖<\/title>/);
     assert.equal((await fetch(u('/media/source.mp4'))).status, 200);
     const a = await (await fetch(u('/api/framing'))).json();
     assert.deepEqual([a.canvas.format, a.canvas.W, a.canvas.H, a.srcSize[0], a.plan.exists, a.limits.maxZoom], ['landscape', 1920, 1080, 320, false, 2], JSON.stringify(a).slice(0, 300));
@@ -764,7 +764,7 @@ test('構圖台（server）：/framing 頁、沒裁切的 /media/source.mp4、/a
   } finally { await ed4.close(); }
 });
 
-test('構圖台（server）：一起存講者調光瘦臉（look，還沒有 plan.json 也行）；瘦臉關著不能偵測；/api/look/status；用這一格當預覽參考圖（裁切、縮放到畫布）', async () => {
+test('構圖（server）：一起存講者調光瘦臉（look，還沒有 plan.json 也行）；瘦臉關著不能偵測；/api/look/status；用這一格當預覽參考圖（裁切、縮放到畫布）', async () => {
   const dir = path.join(root, 'projects', '構圖二'), w = path.join(dir, 'work'), plan = path.join(w, 'hyperframes', 'plan.json');
   const prev = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-editor-prev-'));
   fs.mkdirSync(w, { recursive: true });

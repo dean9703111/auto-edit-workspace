@@ -1,4 +1,4 @@
-// 剪輯台主程式：載入狀態、以選取為中心的屬性面板、時間軸操作（裁剪、分割、音量線、字幕）、復原、儲存、重新產生、鍵盤
+// 剪輯主程式：載入狀態、以選取為中心的屬性面板、時間軸操作（裁剪、分割、音量線、字幕）、復原、儲存、重新產生、鍵盤
 import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
   fmt, fmtTC, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss,
@@ -48,7 +48,7 @@ async function api(method, url, body) {
     try { data = await r.json(); } catch { data = null; }
     return { ok: r.ok, status: r.status, data };
   } catch {
-    return { ok: false, status: 0, data: { message: '連不到剪輯台（可能已經關掉了）→ 請 AI 重新啟動剪輯台後重新整理頁面' } };
+    return { ok: false, status: 0, data: { message: '連不到剪輯（可能已經關掉了）→ 請 AI 重新啟動剪輯後重新整理頁面' } };
   }
 }
 function toast(msg, kind = 'ok', ms = 3200, { busy = false, actions = [] } = {}) {
@@ -614,9 +614,9 @@ async function setMode(m, { focus = null } = {}) {
 async function loadState({ keep = null } = {}) {
   const r = await api('GET', '/api/state');
   if (!r.ok || !r.data) {
-    setSaveState('error', '連不到剪輯台');
+    setSaveState('error', '連不到剪輯');
     $('#stageEmpty').hidden = false;
-    $('#stageEmpty').innerHTML = `<div><b>連不到剪輯台</b>${esc(r.data?.message || '')}</div>`;
+    $('#stageEmpty').innerHTML = `<div><b>連不到剪輯</b>${esc(r.data?.message || '')}</div>`;
     return false;
   }
   const s = r.data;
@@ -656,7 +656,7 @@ async function loadState({ keep = null } = {}) {
       app.scenes[i] = o;
     }
   } else { app.undoStack = []; app.redoStack = []; app.splits = []; }
-  document.title = `剪輯台｜${s.project.name}`;
+  document.title = `剪輯｜${s.project.name}`;
   $('#projName').textContent = `${s.project.dir}　·　${s.plan.file.split('/').slice(-3).join('/')}`;
   $('#studioCmd').textContent = s.commands.studio;
   if (s.video) {
@@ -667,7 +667,7 @@ async function loadState({ keep = null } = {}) {
     $('#stageEmpty').hidden = false;
     $('#stageEmpty').innerHTML = `<div><b>還沒有影片可以剪</b>${esc(s.videoError || '')}</div>`;
   }
-  if (!s.plan.exists) banner(`找不到 <code>${esc(s.plan.file)}</code>：剪輯台存檔會寫進它 → 請 AI 先完成分鏡、寫好 plan.json，再重新整理這一頁。現在可以先看影片，但不能儲存。`, 'error');
+  if (!s.plan.exists) banner(`找不到 <code>${esc(s.plan.file)}</code>：剪輯存檔會寫進它 → 請 AI 先完成分鏡、寫好 plan.json，再重新整理這一頁。現在可以先看影片，但不能儲存。`, 'error');
   else if (s.plan.error) banner(`${esc(s.plan.error)} → 請 AI 修好 plan.json 再重新整理。`, 'error');
   else if (s.schema?.error) banner(esc(s.schema.error), '');
   else if (!keep) banner('');
@@ -888,30 +888,54 @@ async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
 }
 function keepState() {
   const { raw } = segmentDiff();
-  return { edit: clone(app.edit), segs: raw, ops: clone(app.srtOps), srtHash: app.base?.srtHash ?? null, look: clone(app.look), theme: app.theme };
+  return { edit: clone(app.edit), segs: raw, ops: clone(app.srtOps), srtHash: app.base?.srtHash ?? null,
+    ...(!same(app.look, app.savedLook) ? { look: clone(app.look) } : {}),
+    ...(app.theme !== app.savedTheme ? { theme: app.theme } : {}) };
 }
 
 // 外部改了 plan.json／rough.srt（通常是 AI）
 async function pollVersion() {
-  if (app.busy || app.building || !app.server) return;
-  const r = await api('GET', '/api/version');
-  if (!r.ok || !r.data) { setSaveState('error', '連不到剪輯台'); return; }
-  const v = r.data;
-  const pv = app.server.preview;
-  if (pv.built !== v.built || pv.stale !== v.stale || pv.builtMtime !== v.builtMtime) { pv.built = v.built; pv.stale = v.stale; pv.builtMtime = v.builtMtime; renderMode(); }
-  if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); }
-  const changedOut = (v.plan.hash && app.base && v.plan.hash !== app.base.hash) || ((v.srt?.hash ?? null) !== (app.base?.srtHash ?? null));
-  const key = `${v.plan.hash}|${v.srt?.hash}`;
-  if (changedOut && !$('#dlgConflict').open && app.noticed !== key) {
-    if (!isDirty()) { await loadState(); toast('plan.json／字幕有更新（可能是 AI 改的），已重新載入', 'ok', 4500); }
-    else {
-      banner('plan.json 或字幕剛被改過（可能是 AI 改的），而你有還沒存的調整。', 'error', [
-        ['重新載入，保留我的調整', async () => { banner(''); await loadState({ keep: keepState() }); toast('已載入最新的檔案，你的調整還在，記得再按一次儲存', 'warn', 5000); }, 'small primary'],
-        ['重新載入，放棄我的調整', async () => { banner(''); await loadState(); }, 'small'],
-      ]);
-      app.noticed = key;
+  if (app.busy || app.building || app.pollingVersion || !app.server) return;
+  app.pollingVersion = true;
+  try {
+    const r = await api('GET', '/api/version');
+    if (!r.ok || !r.data) { setSaveState('error', '連不到剪輯'); return; }
+    const v = r.data;
+    const pv = app.server.preview;
+    const rebuilt = v.built && pv.builtMtime !== v.builtMtime;
+    if (pv.built !== v.built || pv.stale !== v.stale || pv.builtMtime !== v.builtMtime) { pv.built = v.built; pv.stale = v.stale; pv.builtMtime = v.builtMtime; renderMode(); }
+    if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); }
+    const changedOut = (v.plan.hash && app.base && v.plan.hash !== app.base.hash) || ((v.srt?.hash ?? null) !== (app.base?.srtHash ?? null));
+    const framing = v.framingUpdate;
+    const fromFraming = framing?.hash === v.plan.hash && (v.srt?.hash ?? null) === (app.base?.srtHash ?? null);
+    const key = `${v.plan.hash}|${v.srt?.hash}`;
+    if (changedOut && !$('#dlgConflict').open && app.noticed !== key) {
+      if (fromFraming) { await loadState({ keep: isDirty() ? keepState() : null }); toast('已套用構圖設定', 'ok', 2600); }
+      else if (!isDirty()) { await loadState(); toast('plan.json／字幕有更新（可能是 AI 改的），已重新載入', 'ok', 4500); }
+      else {
+        banner('plan.json 或字幕剛被改過（可能是 AI 改的），而你有還沒存的調整。', 'error', [
+          ['重新載入，保留我的調整', async () => { banner(''); await loadState({ keep: keepState() }); toast('已載入最新的檔案，你的調整還在，記得再按一次儲存', 'warn', 5000); }, 'small primary'],
+          ['重新載入，放棄我的調整', async () => { banner(''); await loadState(); }, 'small'],
+        ]);
+        app.noticed = key;
+      }
     }
-  }
+    if (framing?.running && !app.framingToast) app.framingToast = toast('構圖已儲存，正在更新預覽…', 'ok', 0, { busy: true });
+    if (framing && !framing.running) {
+      app.framingToast?.close(); app.framingToast = null;
+      if (framing.finishedAt && app.framingFinished !== framing.finishedAt) {
+        app.framingFinished = framing.finishedAt;
+        toast(framing.ok ? '構圖已套用，預覽已更新' : framing.message || '構圖已儲存，但預覽更新失敗，請按「重新產生」查看訊息', framing.ok ? 'ok' : 'err', 6000);
+      }
+    }
+    if (rebuilt && (!changedOut || fromFraming || !isDirty())) {
+      await loadState({ keep: isDirty() ? keepState() : null });
+      if (app.mode === 'player') {
+        try { await player.mount(`${app.server.preview.composition}?v=${Math.floor(app.server.preview.builtMtime || 0)}`); player.seek(app.t); }
+        catch { setMode('sim'); }
+      } else sim.seek(app.t);
+    }
+  } finally { app.pollingVersion = false; }
 }
 
 // ---------- 畫面：時間、狀態列、軌頭 ----------
@@ -1045,7 +1069,7 @@ function renderCheck() {
   const rep = app.report;
   const sum = $('#checkSummary'), list = $('#checkList');
   let errors = [], warnings = [];
-  if (app.saveErrors) { errors = app.saveErrors; sum.innerHTML = '<b class="err-ink">沒有存成功</b>：剪輯台送出的設定有問題（通常是數字超出範圍或字幕重疊）。'; }
+  if (app.saveErrors) { errors = app.saveErrors; sum.innerHTML = '<b class="err-ink">沒有存成功</b>：剪輯送出的設定有問題（通常是數字超出範圍或字幕重疊）。'; }
   else if (!rep) sum.innerHTML = '<span class="mute">檢查中…</span>';
   else {
     errors = rep.issues?.errors || []; warnings = rep.issues?.warnings || [];
@@ -1054,7 +1078,7 @@ function renderCheck() {
       : `<span class="ok-ink">✓ 通過</span>：${(d.items || []).length} 段、${warnings.length} 個提醒${Number.isFinite(d.outputDur) ? `；成片 ${fmt(d.outputDur, 1)}` : ''}。點一則跳到那一段。`;
     else sum.innerHTML = `<b class="warn-ink">${rep.fallback ? '簡易檢查' : '讀不到檢查報告'}</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
   }
-  // 剛在剪輯台改字的段：重新產生後量的版面（audit），放最前面
+  // 剛在剪輯改字的段：重新產生後量的版面（audit），放最前面
   const au = app.saveErrors ? null : app.auditIssues;
   if (au && (au.errors.length || au.warnings.length)) {
     errors = [...au.errors, ...errors]; warnings = [...au.warnings, ...warnings];
@@ -1094,7 +1118,7 @@ function inspTheme() {
 // ---------- 講者（調光、瘦臉、美顏；contracts/look.md §7）----------
 const lookKit = () => ({ beauty: 0, ...(app.server?.look?.kit || { color: 0.8, slim: 0.6 }) });
 const LOOK_ON = { color: 0.8, slim: 0.6, beauty: 0.5 };   // 「打開」時沒有上一次的值、kit 也是 0 → 用這個
-// plan.json 的 look → 剪輯台的值（null＝沒寫，用 kit 預設；false＝兩個都 0）
+// plan.json 的 look → 剪輯的值（null＝沒寫，用 kit 預設；false＝兩個都 0）
 function normLook(v) {
   if (v === undefined || v === null) return null;
   if (v === false) return { color: 0, slim: 0, beauty: 0 };
@@ -1628,7 +1652,7 @@ function deleteSelection() {
     case 'gain': mutate(() => { app.edit.gains.splice(s.id, 1); }); return app.select(null);
     case 'sfx': return toggleSfxMute(s.id);
     case 'join': { const p = app.points.find((q) => Math.abs(q.at - s.id) < 1e-6); if (p) setJoin(p, 'none'); return; }
-    case 'media': case 'item': toast('剪輯台不刪卡片和插入素材 → 要拿掉請跟 AI 說；只想暫時不要它的聲音，可以把音效或原聲靜音', 'warn', 4500); return;
+    case 'media': case 'item': toast('剪輯不刪卡片和插入素材 → 要拿掉請跟 AI 說；只想暫時不要它的聲音，可以把音效或原聲靜音', 'warn', 4500); return;
     default:
   }
 }
@@ -2110,7 +2134,7 @@ document.addEventListener('pointerdown', () => { clearTimeout(tipTimer); $('#tip
 
 // 鍵盤
 // ---------- 修改單（右側抽屜）：選段 → 點想怎麼改、寫描述（直接存）→ 累積多段 → 複製一行指令給 AI（待改的完整內容存 work/feedback/editor-requests.md）----------
-// 剪輯台只能改字、刪清單項目；要加項目、換動畫、重新排版都寫在這裡，AI 照「照剪輯台修改單改」直接改（每段一個子代理）
+// 剪輯只能改字、刪清單項目；要加項目、換動畫、重新排版都寫在這裡，AI 照「照剪輯修改單改」直接改（每段一個子代理）
 // 一段一筆 { id, tags, note, t（最後改的時間）, done?: { round, note } }：有勾或有描述才算一筆；改了就變回待改
 const RQ_TAGS = {
   anim: ['流程更細節', '以圖像展示為主', '文字少一點', '畫出關係（箭頭、引線）', '換一種動畫', '動作慢一點', '跟講的話對齊', '更有質感'],
@@ -2219,13 +2243,13 @@ function renderRequests() {
     ${app.requests.length ? `<button class="small ghost" data-rq="clear">${rqClearArm ? '再按一次清空' : '清空修改單'}</button>` : ''}`;
 }
 // 複製給 AI 的只有這一行（待改的完整內容存在 editor-requests.md，AI 讀檔）
-const rqCommand = () => `照剪輯台修改單改這 ${rqPending().length} 段（${app.server?.project?.dir || ''}/work/feedback/editor-requests.md）：直接做，不用先出提案；每段派一個子代理平行改，全部回來後 build、audit，停在停點 ④。`;
+const rqCommand = () => `照剪輯修改單改這 ${rqPending().length} 段（${app.server?.project?.dir || ''}/work/feedback/editor-requests.md）：直接做，不用先出提案；每段派一個子代理平行改，全部回來後 build、audit，停在停點 ④。`;
 function rqMarkdown() {
   const now = new Date();
   const p2 = (n) => String(n).padStart(2, '0');
   const stamp = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}`;
-  const L = ['# 剪輯台修改單', '', rqCommand(), '',
-    `（${stamp} 從剪輯台複製）`];
+  const L = ['# 剪輯修改單', '', rqCommand(), '',
+    `（${stamp} 從剪輯複製）`];
   rqPending().forEach((r, k) => {
     const i = rqInfo(r.id);
     L.push('', `## ${k + 1}. ${r.id}${i?.label ? `　${i.label}` : ''}`);
@@ -2251,7 +2275,7 @@ async function rqCopy() {
     ta.remove();
   }
   if (copied) toast(`${n} 段存到 ${saved}，指令已複製 → 貼給 AI`, 'ok', 6000);
-  else toast(`${n} 段存到 ${saved}，但沒辦法寫進剪貼簿 → 跟 AI 說「照剪輯台修改單改」`, 'warn', 7000);
+  else toast(`${n} 段存到 ${saved}，但沒辦法寫進剪貼簿 → 跟 AI 說「照剪輯修改單改」`, 'warn', 7000);
 }
 function onRqClick(e) {
   const b = e.target.closest('[data-rq]');

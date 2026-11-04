@@ -1,4 +1,4 @@
-// 動畫文字（slots／vars）的共用小工具（純函式；剪輯台頁面與 server 共用）
+// 動畫文字（slots／vars）的共用小工具（純函式；剪輯頁面與 server 共用）
 //
 //   visibleLen(s)               字數：全形 1、半形 0.5，「**」與「//」不算（跟 build.mjs 一樣）
 //   splitItem(s, nFields)       清單項目字串「文字 / 文字 ｜icon=x at=#3」→ { cols, tail }（tail 原樣保留，含前面的空白與｜）

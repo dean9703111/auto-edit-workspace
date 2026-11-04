@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>構圖台</title>
+<title>構圖</title>
 <link rel="icon" href="/editor/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/kit/fonts.css">
 <link rel="stylesheet" href="/kit/brand.css">
 <link rel="stylesheet" href="/editor/editor.css">
+<link rel="stylesheet" href="/editor/design.css">
 <style>
   body.framing { display: flex; flex-direction: column; min-height: 100%; height: auto; }
   .fr-main { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 16px; padding: 16px; align-items: start; }
@@ -53,14 +54,14 @@
   <div class="brandmark">
     <span class="logo" aria-hidden="true">構</span>
     <div class="titles">
-      <h1>構圖台</h1>
+      <h1>構圖</h1>
       <div class="sub" id="projName">載入中…</div>
     </div>
   </div>
   <div class="save-state" id="saveState" data-state="loading" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
   <div class="actions">
-    <a href="/" class="ghost" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">← 回剪輯台</a>
-    <button id="btnSave" class="primary" disabled title="寫進 plan.json 的 frame 和 look（⌘／Ctrl＋S）">儲存</button>
+    <a href="/" class="ghost" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">← 回剪輯</a>
+    <button id="btnSave" class="primary" disabled title="儲存構圖並套用已確認的主色與背景（⌘／Ctrl＋S）">儲存並套用</button>
   </div>
 </header>
 
@@ -89,9 +90,11 @@
       <button id="btnSaved">回到存檔的框</button>
     </div>
     <div class="fr-ref">
+      <a href="#design" class="ghost">↓ 看動畫與背景</a>
       <button id="btnRef" title="把現在這一格（裁切、調光後的樣子）存成情境庫、風格預覽頁的講者畫面">用這一格當預覽參考圖</button>
       <p class="fr-note" id="refNote"></p>
     </div>
+    <p class="fr-note">下方動畫會跟著目前的框與播放畫面更新，不必另開分頁。</p>
   </section>
 
   <section class="fr-panel">
@@ -113,6 +116,65 @@
   </section>
 </main>
 
+<section class="design-workbench" id="design" aria-labelledby="designTitle">
+  <header class="design-heading">
+    <div><span class="design-eyebrow">全畫面 · 側邊欄 · 章節</span><h2 id="designTitle">背景與動畫預覽</h2><p>選圖替換，立即看效果。</p></div>
+    <span id="designState" class="design-badge" role="status">正在載入…</span>
+    <button id="retryDesign" hidden>重新連接</button>
+  </header>
+  <div class="design-layout">
+    <aside class="design-controls" aria-label="主色與背景設定">
+      <section class="design-control-section">
+        <h3><span>01</span> 主色</h3>
+        <div class="design-color-row"><input id="brandColor" type="color" value="#F6630F" aria-label="選擇主色"><input id="brandHex" type="text" value="#F6630F" maxlength="7" aria-label="主色色碼" spellcheck="false"></div>
+        <div class="design-swatches" aria-label="常用主色">
+          <button data-brand="#F6630F" style="--swatch:#F6630F" aria-label="橘色"></button><button data-brand="#2678DD" style="--swatch:#2678DD" aria-label="藍色"></button><button data-brand="#21845B" style="--swatch:#21845B" aria-label="綠色"></button><button data-brand="#A15CBB" style="--swatch:#A15CBB" aria-label="紫色"></button><button data-brand="#C39B47" style="--swatch:#C39B47" aria-label="金色"></button>
+        </div>
+      </section>
+      <section class="design-control-section">
+        <h3><span>02</span> 背景</h3>
+        <div class="design-kinds" role="group" aria-label="背景用途"><button data-kind="fs" aria-pressed="true">全畫面</button><button data-kind="side" aria-pressed="false">側邊欄</button><button data-kind="ch" aria-pressed="false">章節</button></div>
+        <div class="design-bg-preview design-bg-sample" role="img" aria-label="目前背景">
+          <div class="design-bg-image"><img id="designBg" alt="" hidden><span id="designBgEmpty">沿用目前底色</span></div>
+          <div id="designBgComposite" class="design-bg-composite" hidden></div>
+        </div>
+        <p id="designKindNote" class="design-note">全畫面資訊卡與情境動畫共用這張背景。</p>
+        <label class="design-upload" for="backgroundUpload" role="button" tabindex="0" aria-label="拖入或選擇背景圖片"><b>拖入背景圖，或點選上傳</b><span>JPG、PNG、WebP · 每次一張 · 12 MB 以內</span><span class="design-drop-hint" aria-hidden="true">放開即可上傳</span></label>
+        <input id="backgroundUpload" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <div id="designResults">
+          <div class="design-choice-head"><span id="designRequestStatus" role="status"></span><button id="refreshDesignCandidates" class="ghost small">載入圖片</button></div>
+          <div id="designCandidates" class="design-candidates" aria-label="選圖替換目前背景"></div>
+        </div>
+      </section>
+      <section class="design-control-section">
+        <h3><span>03</span> 用 AI 生成背景</h3>
+        <label class="design-reference" for="referenceUpload" role="button" tabindex="0" aria-label="拖入或選擇設計參考圖"><img id="designRef" alt="AI 風格參考圖" hidden><span><b id="designRefName">拖入參考圖，或點選上傳</b><small>選填；網頁版 AI 請另附圖</small><small class="design-drop-hint" aria-hidden="true">放開即可上傳</small></span></label>
+        <input id="referenceUpload" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <button id="removeDesignRef" class="ghost small" hidden>移除參考圖</button>
+        <label class="design-label" for="designDirection">設計風格</label>
+        <select id="designDirection"><option value="auto">依參考圖與描述</option><option value="technical">科技線稿</option><option value="editorial">編輯平面</option><option value="paper">紙雕拼貼</option><option value="geometric3d">幾何 3D</option><option value="photo">自然實景</option></select>
+        <label class="design-label" for="designDescription">補充描述（選填）</label>
+        <textarea id="designDescription" rows="2" maxlength="1500" placeholder="例如：沿用參考圖的線條、材質與造型"></textarea>
+        <button id="copyDesignPrompt" class="primary design-generate">複製生圖指令</button>
+        <p class="design-note">依指定風格生成 3 組、共 9 張，存檔後回來選圖。</p>
+        <details id="designPromptDetails" hidden><summary>指令與儲存位置</summary><p id="designRequestPath" class="design-path"></p><textarea id="designPrompt" readonly rows="6" aria-label="已儲存的生圖指令"></textarea></details>
+      </section>
+      <p id="designError" class="design-error" role="alert"></p>
+      <button id="discardDesign" class="ghost small" hidden>還原已套用的設定</button>
+      <p class="design-note">預覽滿意後，按「儲存並套用」。</p>
+    </aside>
+    <div class="design-gallery">
+      <div class="design-gallery-head"><div><h3>動畫套用預覽</h3><p>預設完成畫面，滑入循環播放；點擊放大。</p></div><a href="/gallery/" target="_blank" rel="noopener">完整情境庫 ↗</a></div>
+      <div class="design-filters" role="group" aria-label="動畫類型"><button data-category="all" aria-pressed="true">全部</button><button data-category="custom" aria-pressed="false">情境動畫</button><button data-category="layout" aria-pressed="false">版型</button><button data-category="text" aria-pressed="false">字卡</button></div>
+      <div id="designPreviews" class="design-preview-grid"><p class="design-note">正在載入動畫…</p></div>
+      <button id="showAllPreviews" class="design-more" hidden>展開所有動畫</button>
+    </div>
+  </div>
+</section>
+
+<dialog id="designDialog" class="design-dialog"><header><h2 id="designDialogTitle">動畫預覽</h2><button id="closeDesignDialog" aria-label="關閉動畫預覽">✕</button></header><div id="designDialogStage"></div><button id="replayDesign">重播動畫</button></dialog>
+
 <script type="module" src="/editor/framing.js"></script>
+<script type="module" src="/editor/design.js"></script>
 </body>
 </html>
