@@ -1385,7 +1385,7 @@ function inspMedia(it, sc) {
   const srcDur = m?.info?.dur;
   const len = it ? it.end - it.start : null;
   const used = it && !isImg ? (sc.in || 0) + len * (sc.speed || 1) : null;
-  const opt = (v) => TRANS.map(([k, l]) => `<option value="${k}"${(v ?? 'fade') === k ? ' selected' : ''}>${l}${k === 'fade' && v == null ? '（預設）' : ''}</option>`).join('');
+  const opt = (v, more = []) => [...TRANS, ...more].map(([k, l]) => `<option value="${k}"${(v ?? 'fade') === k ? ' selected' : ''}>${l}${k === 'fade' && v == null ? '（預設）' : ''}</option>`).join('');
   return `<section class="ip-sec">
     <div class="ip-row"><span class="k">素材</span><span class="v" style="word-break:break-all">${esc(sc.src || '（沒有寫 src）')}<span class="dim">　${isImg ? '圖片' : `影片${srcDur ? ` ${fmtSec(srcDur)}` : ''}`}</span></span></div>
     <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button><button class="small ghost" data-act="rqOpen" data-tip="換錄影、加標註、推近、改成動畫：寫進右側修改單給 AI">✎ 寫進修改單</button></div>
@@ -1403,7 +1403,7 @@ function inspMedia(it, sc) {
     ${vol != null ? sliderRow('原聲音量', 'mediaVol', vol, { out: fmtDb(vol) }) : ''}
   </section>`}
   <section class="ip-sec"><h3>進場／出場</h3>
-    <div class="ip-row"><label>進場</label><select data-f="enter">${opt(sc.enter)}</select></div>
+    <div class="ip-row"><label>進場</label><select data-f="enter">${opt(sc.enter, isImg ? [['tape', '紙膠帶貼上']] : [])}</select></div>
     <div class="ip-row"><label>出場</label><select data-f="exit">${opt(sc.exit)}</select></div>
   </section>
   ${sfxSection(it, sc)}

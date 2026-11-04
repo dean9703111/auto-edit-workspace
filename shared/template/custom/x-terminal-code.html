@@ -1,0 +1,122 @@
+<!-- 預設拍型：H 提示詞（BEATS.md §3 H；x-terminal 的變體：程式碼逐字打出 → 講到哪幾行就標哪幾行 → 執行結果） -->
+<!doctype html>
+<!--
+  x-terminal-code：一小段程式碼（第二層 custom，layout: "fullscreen"；x-terminal 的變體）
+
+  【適用的口播】
+  講一小段程式在做什麼（≤ 6 行）：「這段程式先把逐字稿讀進來，接著每找到一段重講就剪掉，最後執行，12 段重講一次剪完」。
+  深色編輯器視窗（左邊行號）：程式碼逐字打出（關鍵字、函式、字串各有顏色）→ 講到某件事，那幾行底下亮起一條標示帶（左邊主色線）→
+  講到「執行」，底部結果列印出綠色勾；音效 success。
+
+  【不要用在哪裡】
+  - 終端機指令與輸出：用 x-terminal。
+  - 超過 6 行、或要觀眾逐字看懂：只挑重點 6 行；整份程式碼用螢幕錄影。
+  - 不是程式碼的提示詞：用 x-prompt。
+
+  【要改的地方】
+  1. 文字：檔名 #xtc-file（≤ 16 個半形字）、程式碼 #xtc-code（≤ 6 行、每行 ≤ 38 個半形字寬，中文算 2；行與行用 <br>，縮排用 &nbsp;&nbsp;）、結果列 #xtc-res（≤ 16 字）。
+     上色：關鍵字包 <span class="xtc-kw">、函式名 <span class="xtc-fn">、字串 <span class="xtc-str">、註解 <span class="xtc-cm">（其他是預設字色）。
+     行號 #xtc-gut 的數字跟著行數改（一行一個數字，用 <br> 隔開）。
+  2. 標示帶：#xtc-h1、#xtc-h2 的 top 與 height（top＝32＋64 ×（第幾行 − 1），height＝64 × 行數），現在 h1 標第 2 行、h2 標第 3–5 行。
+  3. 圖示：檔名前的 #xtc-tico（file-code），不用改。
+  4. 綁句：<script> 開頭 TYPE、H1、H2、RUN（見【綁句欄位】），P.sfx 的句號跟著 RUN 改。
+  5. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+  沒有「執行」那一句：刪掉 #xtc-out、RUN、P.sfx 和「拍 4」那 2 行。
+
+  【綁句欄位】
+  TYPE = P.at('#332', 0.45)：開始介紹這段程式那一句，開口後 0.45 秒開始打字（整段固定 3 秒打完）。
+  H1 = P.at('#333@讀進來')、H2 = P.at('#334@剪掉')：講到那幾行在做的事的時刻，那幾行的標示帶由左往右亮起（前一條淡掉）。
+  RUN = P.at('#335@執行')：講到「執行」的時刻，結果列由左往右印出；音效 success。
+  詞在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#333')。
+  「@詞」要寫成字串字面值（P.at('#334@剪掉')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#334@剪掉', 0.3)。
+  audit 會比對：這一拍出現的字在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  TYPE ≥ 1.6（視窗 0.3 秒長出、0.5 秒起檔名逐字、1.0 秒行號出現）
+  H1 ≥ TYPE + 4.2（打字 3 秒＋停 1.2 秒）
+  H2 ≥ H1 + 2.5；RUN ≥ H2 + 2.5
+  D ≥ RUN + 2.8（結果列 0.5 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：視窗進場看 script 的 ENTER；離場由 build 處理。編輯器視窗 left 120、top 194、1180×624（右緣 1300，底 818），標題列 88；亮色暗色主題都是深色（--v2-term*）。
+  程式區高 448（上下內距 32、6 行 × 64）：左邊行號欄 96 寬（數字靠右），程式碼從 left 128 開始，字 40、等寬（.sc-mono）、行高固定 64，
+  所以第 n 行的 top＝32＋64 ×（n − 1），標示帶照這個算。結果列在程式區下面，高 88、上緣一條分隔線。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-terminal-code 程式碼打字</title></head>
+<body>
+<template id="x-terminal-code-template">
+  <style>
+    #x-terminal-code { position: absolute; inset: 0; }
+    #x-terminal-code .fill { position: absolute; inset: 0; }
+    /* 編輯器視窗：左 120、頂 194、1180×624（右緣 1300、底 818）；亮色暗色主題都是深色 */
+    #x-terminal-code #xtc-win { position: absolute; left: 120px; top: 194px; width: 1180px; height: 624px; box-sizing: border-box; overflow: hidden;
+                                border-radius: 24px; background: var(--v2-term); color: var(--v2-term-ink); box-shadow: var(--v2-card-shadow); }
+    #x-terminal-code #xtc-bar { height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 14px;
+                                background: var(--v2-term-bar); color: var(--v2-term-mute); white-space: nowrap; }
+    #x-terminal-code .xtc-dot { width: 18px; height: 18px; border-radius: 9px; background: var(--v2-term-mute); flex: none; }
+    #x-terminal-code #xtc-tico { --d: 48px; --i: 32px; margin-left: 16px; color: var(--v2-term-mute); }
+    /* 程式區：高 448；行號欄 96、程式碼從 128 開始；行高固定 64 */
+    #x-terminal-code #xtc-body { position: relative; height: 448px; }
+    #x-terminal-code .xtc-hl { position: absolute; left: 0; width: 1180px; box-sizing: border-box; border-left: 8px solid var(--v2-term-kw); background: var(--v2-term-bar); }
+    #x-terminal-code #xtc-h1 { top: 96px; height: 64px; }
+    #x-terminal-code #xtc-h2 { top: 160px; height: 192px; }
+    #x-terminal-code #xtc-gut { position: absolute; left: 0; top: 32px; width: 96px; text-align: right; line-height: 64px; color: var(--v2-term-mute); }
+    #x-terminal-code #xtc-code { position: absolute; left: 128px; top: 32px; line-height: 64px; white-space: nowrap; }
+    #x-terminal-code .xtc-kw { color: var(--v2-term-kw); }
+    #x-terminal-code .xtc-fn { color: var(--v2-term-fn); }
+    #x-terminal-code .xtc-str { color: var(--v2-term-str); }
+    #x-terminal-code .xtc-cm { color: var(--v2-term-mute); }
+    /* 結果列：程式區下面，高 88 */
+    #x-terminal-code #xtc-out { height: 88px; box-sizing: border-box; padding: 0 48px; border-top: 2px solid var(--v2-term-bar);
+                                display: flex; align-items: center; gap: 16px; color: var(--v2-term-ok); white-space: nowrap; }
+  </style>
+  <div id="x-terminal-code" data-composition-id="x-terminal-code" data-width="1920" data-height="1080" data-duration="15"
+       data-cues-sample='{"start":0,"D":15,"cues":{"332":[1.6,6.0],"333":[6.2,8.6],"334":[8.8,11.4],"335":[11.6,14.2]},"refs":{"#333@讀進來":6.4,"#334@剪掉":9.2,"#335@執行":12.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xtc-win">
+      <div id="xtc-bar"><i class="xtc-dot"></i><i class="xtc-dot"></i><i class="xtc-dot"></i><span id="xtc-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M10 12.5 8 15l2 2.5" /> <path d="m14 12.5 2 2.5-2 2.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /> </svg></span><span id="xtc-file" class="sc-t40 sc-w700 sc-mono sc-opt">cut-retakes.mjs</span></div>
+      <div id="xtc-body">
+        <i id="xtc-h1" class="xtc-hl" data-layout-allow-overlap></i>
+        <i id="xtc-h2" class="xtc-hl" data-layout-allow-overlap></i>
+        <div id="xtc-gut" class="sc-t40 sc-w500 sc-mono">1<br>2<br>3<br>4<br>5<br>6</div>
+        <div id="xtc-code" class="sc-t40 sc-w500 sc-mono"><span class="xtc-cm">// 找出重講，剪掉前面那次</span><br><span class="xtc-kw">const</span> words = <span class="xtc-fn">load</span>(<span class="xtc-str">'words.json'</span>);<br><span class="xtc-kw">for</span> (<span class="xtc-kw">const</span> ng <span class="xtc-kw">of</span> <span class="xtc-fn">findRetakes</span>(words)) {<br>&nbsp;&nbsp;<span class="xtc-fn">cut</span>(ng.start, ng.end);<br>}<br><span class="xtc-fn">save</span>(<span class="xtc-str">'rough.mp4'</span>);</div>
+      </div>
+      <div id="xtc-out" class="sc-t40 sc-w700 sc-mono"><span>✓</span><span id="xtc-res">已剪掉 12 段重講（0.8 秒）</span></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-terminal-code'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), H2 = P.at('#334@剪掉'), RUN = P.at('#335@執行');   // 打字／兩段標示／執行
+    P.sfx('success', '#335@執行');                     // 執行結果一顆 success（句號和 RUN 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 拍 0 開場：視窗進場（看 ENTER）→ 檔名圖示描線、檔名逐字 → 1.0 行號出現
+    if (ENTER === 'grow') P.grow('#xtc-win', 0.3);
+    else { P.wipe('#xtc-win', 0, { dir: 'up', dur: 0.8 }); P.pop('#xtc-win', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xtc-tico', 0.5);
+    P.chars('#xtc-file', 0.62, { stagger: 0.03 });
+    P.in('#xtc-gut', 1.0, { dur: 0.3 });
+    // 拍 1 打字：整段程式碼逐字打出（固定 3 秒，換行與上色原樣保留）
+    P.type('#xtc-code', TYPE, { dur: 3.0 });
+    // 拍 2–3 標示：那幾行底下的標示帶由左往右亮起，前一條淡掉
+    P.wipe('#xtc-h1', H1, { dir: 'left', dur: 0.4 });
+    P.out('#xtc-h1', H2, { dur: 0.3 });
+    P.wipe('#xtc-h2', H2, { dir: 'left', dur: 0.4 });
+    // 拍 4 執行：結果列由左往右印出（音效 success 見上面 P.sfx）
+    P.wipe('#xtc-out', RUN, { dir: 'left', dur: 0.4 });
+    P.punch('#xtc-res', RUN + 0.4, { scale: 1.04 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-terminal-code'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

@@ -6,7 +6,7 @@
   【適用的口播】
   在講「同一個量在 3–6 個時間點的變化」，最後點出現在的值，例如「開台第一個月 200 人訂閱，半年後 2 千，今年破兩萬」
   「每集的剪輯時間從 6 小時一路降到 40 分鐘」。
-  講到第一個值時，基線描出來、時間標籤落下、長條由左到右每 0.3 秒長一根；最後的值前 1.2 秒，提示框彈出開始數、趨勢線帶著發光頭沿柱頂描過去，
+  講到第一個值時，基線描出來、時間標籤落下、長條由左到右每 0.3 秒長一根；講到轉折的原因時（選用「標註」拍，例「9 月開始做 Shorts 之後」），從那一組起的區段淡淡填色（左邊一條事件虛線）、標籤彈出；最後的值前 1.2 秒，提示框彈出開始數、趨勢線帶著發光頭沿柱頂描過去，
   講到最後的值那一刻剛好數到（重拍、端點漣漪、單位畫螢光筆、最後一根換主色、音效）；講結論時標題列右端的膠囊彈出、提示框退焦（選用）；最後全部亮回。
 
   【不要用在哪裡】
@@ -16,9 +16,11 @@
   - 超過 6 個時間點：只留頭、尾和 2–3 個轉折點。
 
   【要改的地方】
-  1. 文字：標題列（≤ 10 字）；提示框的單位 #xtr-unit（≤ 3 字）；結論膠囊 #xtr-pill（≤ 8 字，選用：不要就刪掉那個 div 和 script 裡標「選用」的地方）。
+  1. 文字：標題列（≤ 10 字）；提示框的單位 #xtr-unit（≤ 3 字）；結論膠囊 #xtr-pill（≤ 8 字，選用：不要就刪掉那個 div 和 script 裡標「選用」的地方）；
+     標註標籤 #xtr-note（≤ 6 字，例「開始做 Shorts」；選用，刪法見【綁句欄位】TN）。
   2. 數字：只改 <script> 開頭 DATA 那一行：[[時間標籤, 數字], …]，3–6 組，時間標籤 ≤ 3 字（例「1 月」「2024」），數字是 ≤ 999999 的整數。
      柱的位置、高度、趨勢線、提示框的位置與寬度都由程式算，不用改 CSS。
+     標註從第幾組開始：下一行 NOTE（1 起算＝DATA 的第幾組；要 ≥ 3，前兩組左邊放不下標籤）；事件線畫在那一組和前一組中間，標籤貼在線的左邊。
   3. 圖示：標題列的 #xtr-bico（上升用 trending-up、下降用 trending-down）。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
      一個字都不改：svg 裡面 <polyline>、<line> 的 points、x、y 是形狀本身的座標，拿掉就畫不出來；
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
@@ -27,17 +29,21 @@
 
   【綁句欄位】
   T1 = P.at('#151@200')：講到第一個值的時刻，基線描出、時間標籤落下，柱子開始一根一根長（每根晚 0.3 秒、長 0.5 秒）。
-  T2 = P.at('#152@兩萬')：講到最後的值的時刻，提示框剛好數到最後的值（提早 1.2 秒彈出開始數，趨勢線同時描過去）；重拍、漣漪，音效 impact。
-  T3 = P.at('#153@翻')（選用）：講到結論的時刻，膠囊彈出、提示框退焦；音效 impact。沒有結論句：刪掉 const T3 那一行、它後面的 P.sfx、
+  TN = P.at('#152@Shorts')（選用）：講到轉折原因的時刻，從 NOTE 那一組到最右邊的區段淡淡填色（左邊框是事件虛線，由左往右擦開）、標籤彈出逐字。
+  沒有轉折句：刪掉 const TN 那一行、const NOTE 那一行、#xtr-band、#xtr-note 兩個元素、「標註位置」那 4 行和「拍 1b」那 3 行。
+  T2 = P.at('#153@兩萬')：講到最後的值的時刻，提示框剛好數到最後的值（提早 1.2 秒彈出開始數，趨勢線同時描過去）；重拍、漣漪，音效 impact。
+  T3 = P.at('#154@翻')（選用）：講到結論的時刻，膠囊彈出、提示框退焦；音效 impact。沒有結論句：刪掉 const T3 那一行、它後面的 P.sfx、
   「拍 4」那 4 行，收的 TR 改成 T2 + 2.0，再刪掉收的 P.spot 與 P.dim 兩行。
-  值在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#152')。
-  「@詞」要寫成字串字面值（P.at('#152@兩萬')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#152@兩萬', 0.3)。
+  值在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#153')。
+  「@詞」要寫成字串字面值（P.at('#153@兩萬')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#153@兩萬', 0.3)。
   T2 和 T1 的距離要夠所有柱子長完、停 1.2 秒、再留 1.2 秒給數字：T2 ≥ T1 + 0.3 × 柱數 + 2.8（5 根＝4.3 秒、6 根＝4.6 秒）。
-  audit 會比對：這一拍出現的字（時間標籤、膠囊）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+  有標註拍時改成：TN ≥ T1 + 0.3 × 柱數 + 1.6（柱子長完再停 1.2 秒），T2 ≥ TN + 3.6（標註動 1.2 秒、停 1.2 秒，再留 1.2 秒給數字）。
+  audit 會比對：這一拍出現的字（時間標籤、標註標籤、膠囊）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
 
   【D 下限】
   T1 ≥ 1.5（主卡 0.3 秒長出、0.5 秒起標題逐字、圖示描線）
   T2 ≥ T1 + 4.3（5 根柱；一般是 T1 + 0.3 × 柱數 + 2.8：3 根 3.7、4 根 4.0、6 根 4.6）
+  有標註拍：TN ≥ T1 + 3.1（5 根柱；一般是 T1 + 0.3 × 柱數 + 1.6），T2 ≥ TN + 3.6
   T3 ≥ T2 + 2.5（最後一根換主色忙到 T2 + 0.5，停 1.2 秒；相鄰兩拍至少 2.5 秒）
   D ≥ T3 + 4.6（T3 ＋ 2 秒回均衡、0.6 秒動完＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；沒有 T3 時 D ≥ T2 + 4.0；D＝plan.json 這段的長度）
   結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
@@ -49,7 +55,8 @@
   以下是圖表區座標（由 DATA 算，不用改）：基線 y 424、x 0–1064。柱寬 112，第一根 left 40、最後一根 left 912（6 組時 41／911），中間等距（程式算）；最高的柱 280 px，最矮 16 px。
   每根柱是一個轉了 −90 度的量條（.xtr-col 以「柱底中點」為軸轉正，裡面的 .xtr-fill 用 P.bar 由柱底往上長）。
   時間標籤 40 字、在柱下 top 440（離基線 16，底貼圖表區底）。提示框高 112（數字 52 字＋單位 40 字，左右內距 28），寬跟著數字與單位（程式算），放在最後一根上方、右緣 ≤ 1064（圖表區右緣），
-  且高過它覆蓋到的柱子與趨勢線 32 px。趨勢線端點小圓 24×24。結論膠囊 .sc-pill 在標題列右端（margin-left: auto；聚焦抬起 8 px 仍在標題列裡，不壓圖表）。
+  且高過它覆蓋到的柱子與趨勢線 32 px。趨勢線端點小圓 24×24。
+  標註：區段 #xtr-band 從事件線到圖表區右緣、top 24 到基線，左邊框 4 px 主色虛線＝事件線（x＝NOTE 那一組和前一組的中間）；標籤 #xtr-note 高 88、top 24、右緣離事件線 16（不量字寬，用 CSS right 貼齊）。結論膠囊 .sc-pill 在標題列右端（margin-left: auto；聚焦抬起 8 px 仍在標題列裡，不壓圖表）。
 -->
 <!-- 靈感（只借技法，不含程式與素材；同一份清單在 NOTICE.md）：annacher-433425（AnnaCher___，https://x.com/AnnaCher___/status/2103571096549433425）折線自己畫出＋停在最後一點的提示框；nummanali-340931（nummanali，https://x.com/nummanali/status/2103565570310340931）長條一路長到最後的值；twoclipping-747965（twoclipping，https://x.com/twoclipping/status/2105927781678747965）數字計數＋描線 -->
 <html lang="zh-Hant">
@@ -63,7 +70,7 @@
     #x-trend #xtr-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-trend #xtr-card .sc-wcard__bar { height: 128px; padding: 20px 56px; display: flex; align-items: center; gap: 24px; }
     /* 標題列底是主色：圖示圓反過來用標題字色當底 */
-    #x-trend #xtr-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--sc-fs-bar); }
+    #x-trend #xtr-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--brand); }   /* 不用 --sc-fs-bar：暗色主題它是漸層，當字色無效、圖示會變白 */
     #x-trend #xtr-body { position: relative; width: 1176px; height: 580px; }
     /* 圖表區：1064×496 一個元件，位置由 #xtr-body 的 data-layout 排（kit/scene-layout.js），不寫 left／top；裡面的座標＝圖表區座標 */
     #x-trend #xtr-chart { position: absolute; width: 1064px; height: 496px; }
@@ -78,6 +85,10 @@
     #x-trend .xtr-fill { position: absolute; inset: 0; border-radius: 0 8px 8px 0; background: var(--sc-fs-node-line); }
     #x-trend #xtr-hl { position: absolute; inset: 0; border-radius: 0 8px 8px 0; background: var(--brand); }
     #x-trend .xtr-lab { position: absolute; top: 440px; width: 160px; text-align: center; white-space: nowrap; }
+    /* 標註：區段淡填色（在柱子下面，左邊框＝事件虛線）、標籤（主色膠囊；right 由程式算） */
+    #x-trend #xtr-band { position: absolute; top: 24px; height: 400px; box-sizing: border-box; border-left: 4px dashed var(--brand); background: var(--v2-node-tint); }
+    #x-trend #xtr-note { position: absolute; top: 24px; height: 88px; box-sizing: border-box; padding: 0 28px; border-radius: 44px;
+                         background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; white-space: nowrap; }
     /* 趨勢線端點：24×24 小圓（left／top 由程式算） */
     #x-trend #xtr-end { position: absolute; width: 24px; height: 24px; box-sizing: border-box; border: 4px solid var(--brand); border-radius: 12px; background: var(--sc-fs-card); }
     /* 提示框：高 112，寬與 left／top 由程式算（數字寬照最後的值的位數，單位每字 40） */
@@ -87,19 +98,21 @@
     /* 結論膠囊：標題列右端（不壓到圖表；標題列的主色底上用深色膠囊） */
     #x-trend #xtr-pill { margin-left: auto; }
   </style>
-  <div id="x-trend" data-composition-id="x-trend" data-width="1920" data-height="1080" data-duration="13.5"
-       data-cues-sample='{"start":0,"D":13.5,"cues":{"151":[1.6,5.8],"152":[5.9,8.5],"153":[8.6,13]},"refs":{"#151@200":1.8,"#152@兩萬":6.2,"#153@翻":8.8}}'>
+  <div id="x-trend" data-composition-id="x-trend" data-width="1920" data-height="1080" data-duration="16"
+       data-cues-sample='{"start":0,"D":16,"cues":{"151":[1.6,4.6],"152":[4.7,8.2],"153":[8.3,10.8],"154":[10.9,15.4]},"refs":{"#151@200":1.8,"#152@Shorts":5.0,"#153@兩萬":8.6,"#154@翻":11.2}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xtr-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span id="xtr-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><span class="sc-opt">訂閱人數</span><div id="xtr-pill" class="sc-pill" data-snap-width><span class="sc-opt">一年翻 100 倍</span></div></div>
       <div id="xtr-body" data-layout="col">
         <div id="xtr-chart" data-slot>
           <svg id="xtr-axis-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg"><line id="xtr-axis" x1="0" y1="424" x2="1064" y2="424" /></svg>
+          <i id="xtr-band" data-layout-allow-overlap></i>
           <div id="xtr-plot"></div>
           <svg id="xtr-line-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg">
             <polyline id="xtr-line" points="0,0 0,0" />
           </svg>
           <i id="xtr-end"></i>
+          <div id="xtr-note" class="sc-t40 sc-w700"><span class="sc-opt">開始做 Shorts</span></div>
           <div id="xtr-tip"><span id="xtr-num" class="sc-t52 sc-w900">0</span><span id="xtr-unit" class="sc-t40 sc-w700 sc-opt">人</span></div>
         </div>
       </div>
@@ -112,12 +125,14 @@
     const P = SceneMotion(tl, document.getElementById('x-trend'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#151@200'), T2 = P.at('#152@兩萬');   // 講到第一個值／最後的值的時刻
-    P.sfx('impact', '#152@兩萬');                         // 最後的值落定一顆音效（句號和上一行一樣；第一個值那一拍不配）
-    const T3 = P.at('#153@翻');                           // 選用：講到結論的時刻（沒有結論句的刪法見檔頭【綁句欄位】）
-    P.sfx('impact', '#153@翻');                           // 選用：結論膠囊一顆音效（句號和上一行一樣）
+    const T1 = P.at('#151@200'), T2 = P.at('#153@兩萬');   // 講到第一個值／最後的值的時刻
+    P.sfx('impact', '#153@兩萬');                         // 最後的值落定一顆音效（句號和上一行一樣；第一個值那一拍不配）
+    const TN = P.at('#152@Shorts');                       // 選用：講到轉折原因的時刻（沒有轉折句的刪法見檔頭【綁句欄位】）
+    const T3 = P.at('#154@翻');                           // 選用：講到結論的時刻（沒有結論句的刪法見檔頭【綁句欄位】）
+    P.sfx('impact', '#154@翻');                           // 選用：結論膠囊一顆音效（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const DATA = [ ['1 月', 200], ['3 月', 900], ['6 月', 2000], ['9 月', 8000], ['12 月', 20000] ];   // 只改這一行：[時間標籤, 數字]，3–6 組
+    const NOTE = 4;                                       // 選用：標註從第幾組開始（1 起算，≥ 3；這裡＝「9 月」）
 
     // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，不量版面，每次載入結果相同；圖表區本身的位置由 data-layout 排）──
     // 柱：寬 112、最高 280、最矮 16，底貼基線 y 424；第一根 left 40 起、最後一根 left 912 止，等距（除不盡的餘數兩邊平分）
@@ -150,6 +165,10 @@
     var tip = document.getElementById('xtr-tip');
     tip.style.width = tipW + 'px'; tip.style.left = tipL + 'px'; tip.style.top = Math.max(0, minTop - 32 - 112) + 'px';
     document.getElementById('xtr-num').style.width = numW + 'px';
+    // 標註位置：事件線（區段的左邊框）在 NOTE 那一組和前一組中間；區段從線到圖表區右緣；標籤右緣離線 16（選用，刪法見檔頭）
+    var rx = x0 + (NOTE - 1) * step - Math.round((step - 112) / 2);
+    var band = document.getElementById('xtr-band'); band.style.left = rx + 'px'; band.style.width = (1064 - rx) + 'px';
+    document.getElementById('xtr-note').style.right = (1064 - rx + 16) + 'px';
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮、標題圖示描線
     if (ENTER === 'grow') P.grow('#xtr-card', 0.3);
@@ -166,6 +185,11 @@
     P.bar('#xtr-f3', T1 + 1.1, { dur: 0.5, ease: P.V2.EASE.in });
     P.bar('#xtr-f4', T1 + 1.4, { dur: 0.5, ease: P.V2.EASE.in });
     P.bar('#xtr-f5', T1 + 1.7, { dur: 0.5, ease: P.V2.EASE.in });
+
+    // 拍 1b（選用）講到轉折原因：區段（左邊是事件虛線）由左往右擦開 → ＋0.3 標籤彈出、逐字
+    P.wipe('#xtr-band', TN, { dir: 'left', dur: 0.6 });
+    P.pop('#xtr-note', TN + 0.3, { from: 0.8, dy: 0 });
+    P.chars('#xtr-note .sc-opt', TN + 0.4);
 
     // 拍 2 最後的值前 1.2 秒：提示框彈出開始數（同時趨勢線帶著發光頭沿柱頂描過去）→ ＋0.15 單位逐字落下 → 到點前 0.2 秒端點小圓彈出
     P.pop('#xtr-tip', T2 - 1.2);

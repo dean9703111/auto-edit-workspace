@@ -1,0 +1,142 @@
+<!-- 預設拍型：D 清單（BEATS.md §3 D；環形圖註解：一個主題的 3–5 個面向排成一圈，講到哪個面向那一段描成主色、編號彈出、右邊那一列寫出來） -->
+<!doctype html>
+<!--
+  x-ring-facets：一個主題分成幾個面向的環形圖（第二層 custom，layout: "fullscreen"；x-ring 的變體）
+
+  【適用的口播】
+  在講「一件事由 3–5 個面向組成、缺一不可」：「一支好影片要顧到四件事：內容、剪輯、聲音和畫面」。
+  左邊一個切成幾段的圓環（中間寫主題），右邊一張編號清單；講到哪個面向，環上那一段從灰色描成主色、段上的編號圓彈出，右邊那一列寫出來並聚焦；
+  講到總結那一句，全部亮回。
+
+  【不要用在哪裡】
+  - 一個比例、百分比（87% 剪掉）：用 x-ring。
+  - 面向有先後順序、做完一個才做下一個：用 x-process 或 x-process-loop。
+  - 超過 5 個面向：拆兩段，或用 04a。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、環中間的主題 #xrf-topic（≤ 4 字，可用 <br> 斷成兩行，每行 ≤ 4 字）、每一列的 .xrf-name（≤ 5 字）與 .xrf-desc（≤ 10 字，選填）。
+  2. 段數：照右邊清單的列數自動切（3–5 段），不用改；列順序＝環上從 12 點鐘順時針的順序。這支沒有圖示（編號就是圖示）。
+  3. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】）。
+  4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+  面向是 3 個：刪掉 #xrf-r4、script 開頭的「, T4 = P.at(…)」與「第 4 個面向」那 1 行；5 個：照第 4 列複製一列（id 改 5），script 照樣加 T5 與一行 facet(5, T5)。
+
+  【綁句欄位】
+  T1 = P.at('#272@內容')、T2 = P.at('#273@剪輯')、T3 = P.at('#274@聲音')、T4 = P.at('#275@畫面')：講到那個面向的時刻，那一段描成主色、編號彈出、那一列寫出來，0.5 秒後聚焦。
+  ALL = P.at('#276')：講到總結那一句，全部亮回、主題漣漪。沒有這句：改成 const ALL = T4 + 2.0;。
+  面向名在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#273')。
+  「@詞」要寫成字串字面值（P.at('#273@剪輯')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#273@剪輯', 0.3)。
+  相鄰兩個面向至少差 2.5 秒（描段 0.6 秒、編號彈出、列逐字、0.5 秒聚焦，再停 ≥ 1.2 秒）。
+  audit 會比對：這一拍出現的字（面向名、說明）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.2（主卡 0.3 秒長出、0.5 秒起標題逐字、1.0 秒灰環錯拍描出、1.5 秒主題逐字）
+  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5；T4 ≥ T3 + 2.5；ALL ≥ T4 + 2.5
+  D ≥ ALL + 2.6（回均衡 0.6 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
+  #xrf-body 是 data-layout="row" data-gap="xl"（kit/scene-layout.js）：左邊圓環 440×440、右邊清單（列 500×112，data-layout="col" data-gap="sm"），整組置中，不寫 left／top。
+  環半徑 180、線寬 56，段與段之間空 8°；編號圓 56 在每段的正中；環段、編號位置都由 script 照列數算。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-ring-facets 環形圖註解</title></head>
+<body>
+<template id="x-ring-facets-template">
+  <style>
+    #x-ring-facets { position: absolute; inset: 0; }
+    #x-ring-facets .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-ring-facets #xrf-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-ring-facets #xrf-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    #x-ring-facets #xrf-body { position: relative; width: 1176px; height: 580px; }
+    /* 圓環：440×440；灰段＋主色段（script 算 path）；中間主題 */
+    #x-ring-facets #xrf-dial { position: absolute; width: 440px; height: 440px; }
+    #x-ring-facets #xrf-svg { position: absolute; left: 0; top: 0; width: 440px; height: 440px; overflow: visible; }
+    #x-ring-facets .xrf-seg { fill: none; stroke: var(--sc-fs-node-line); stroke-width: 56px; }
+    #x-ring-facets .xrf-on { fill: none; stroke: var(--brand); stroke-width: 56px; }
+    #x-ring-facets #xrf-topic { position: absolute; left: 100px; top: 140px; width: 240px; height: 160px; display: flex; align-items: center; justify-content: center;
+                                text-align: center; color: var(--sc-fs-ink); }
+    #x-ring-facets .xrf-bal { position: absolute; width: 56px; height: 56px; box-sizing: border-box; border-radius: 28px; border: 6px solid var(--v2-node);
+                              background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; justify-content: center; }
+    /* 清單：列 500×112，編號＋名稱＋說明 */
+    #x-ring-facets .xrf-row { position: absolute; width: 500px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line); border-radius: 16px;
+                              background: var(--v2-node); color: var(--sc-fs-ink); display: flex; align-items: center; gap: 20px; padding: 0 28px; white-space: nowrap; }
+    #x-ring-facets .xrf-num { width: 56px; height: 56px; flex: none; border-radius: 28px; background: var(--brand); color: var(--brand-ink);
+                              display: flex; align-items: center; justify-content: center; }
+    #x-ring-facets .xrf-name { position: relative; }
+    #x-ring-facets .xrf-desc { position: relative; }
+  </style>
+  <div id="x-ring-facets" data-composition-id="x-ring-facets" data-width="1920" data-height="1080" data-duration="15.4"
+       data-cues-sample='{"start":0,"D":15.4,"cues":{"272":[2.2,4.6],"273":[4.8,7.2],"274":[7.3,9.7],"275":[9.8,12.2],"276":[12.5,14.9]},"refs":{"#272@內容":2.4,"#273@剪輯":5.0,"#274@聲音":7.5,"#275@畫面":10.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrf-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">好影片的四個面向</span></div>
+      <div id="xrf-body" data-layout="row" data-gap="xl">
+        <div id="xrf-dial" data-slot>
+          <svg id="xrf-svg" viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div id="xrf-topic" class="sc-t52 sc-w900 sc-opt">好影片</div>
+        </div>
+        <div id="xrf-list" data-slot data-layout="col" data-gap="sm">
+          <div id="xrf-r1" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">1</span><span id="xrf-n1" class="xrf-name sc-t52 sc-w900 sc-opt">內容</span><span id="xrf-d1" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">值得看完</span></div>
+          <div id="xrf-r2" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">2</span><span id="xrf-n2" class="xrf-name sc-t52 sc-w900 sc-opt">剪輯</span><span id="xrf-d2" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">節奏不拖</span></div>
+          <div id="xrf-r3" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">3</span><span id="xrf-n3" class="xrf-name sc-t52 sc-w900 sc-opt">聲音</span><span id="xrf-d3" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">清楚不吵</span></div>
+          <div id="xrf-r4" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">4</span><span id="xrf-n4" class="xrf-name sc-t52 sc-w900 sc-opt">畫面</span><span id="xrf-d4" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">穩定明亮</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-ring-facets'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#272@內容'), T2 = P.at('#273@剪輯'), T3 = P.at('#274@聲音'), T4 = P.at('#275@畫面');   // 講到每個面向的時刻
+    const ALL = P.at('#276');                          // 講到總結那一句（沒有這句見檔頭【綁句欄位】）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 0. 環段與編號：照清單列數切（12 點鐘順時針、段間空 8°；以下都不用改，載入時算一次）
+    const NS = 'http://www.w3.org/2000/svg', SVG = $q('#xrf-svg')[0], DIAL = $q('#xrf-dial')[0];
+    const ROWS = $q('#x-ring-facets .xrf-row'), N = ROWS.length, CX = 220, CY = 220, RR = 180, GAP = 8;
+    const at = function (deg) { const a = deg * Math.PI / 180; return [CX + RR * Math.sin(a), CY - RR * Math.cos(a)].map(function (v) { return Math.round(v * 10) / 10; }); };
+    ROWS.forEach(function (row, i) {
+      const a0 = i * 360 / N + GAP / 2, a1 = (i + 1) * 360 / N - GAP / 2, p0 = at(a0), p1 = at(a1), big = a1 - a0 > 180 ? 1 : 0;
+      const d = 'M' + p0.join(' ') + ' A' + RR + ' ' + RR + ' 0 ' + big + ' 1 ' + p1.join(' ');
+      ['xrf-seg', 'xrf-on'].forEach(function (cls) { const p = document.createElementNS(NS, 'path'); p.setAttribute('class', cls); p.setAttribute('d', d); p.setAttribute('id', (cls === 'xrf-on' ? 'xrf-on' : 'xrf-sg') + (i + 1)); SVG.appendChild(p); });
+      const m = at((a0 + a1) / 2), b = document.createElement('b');
+      b.className = 'xrf-bal sc-t40 sc-w900'; b.id = 'xrf-b' + (i + 1); b.textContent = String(i + 1); b.setAttribute('data-layout-allow-overlap', '');
+      b.style.left = Math.round(m[0] - 28) + 'px'; b.style.top = Math.round(m[1] - 28) + 'px'; DIAL.appendChild(b);
+    });
+    const LIST = ROWS.map(function (r) { return '#' + r.id; }).join(', ');
+    const UPTO = function (k) { return ROWS.slice(0, k).map(function (r) { return '#' + r.id; }).join(', '); };   // 已經出現的列（還沒講到的列不參與聚焦）
+    const facet = function (k, t) {   // 一個面向一拍：那一段描成主色 → 編號圓彈出 → 那一列彈出、名稱與說明逐字 → ＋0.5 聚焦
+      P.stroke('#xrf-on' + k, t, { dur: 0.6 });
+      P.pop('#xrf-b' + k, t + 0.3, { from: 0.4, dy: 0 });
+      P.pop('#xrf-r' + k, t, { from: 0.94, dy: 20 });  P.chars('#xrf-n' + k, t + 0.12);  P.chars('#xrf-d' + k, t + 0.3);
+      P.spot(UPTO(k), '#xrf-r' + k, t + 0.5, { scale: 1.03, lift: -4, dim: 0.55 });
+    };
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮 → 1.0 灰環一段一段描出 → 1.5 主題逐字
+    if (ENTER === 'grow') P.grow('#xrf-card', 0.3);
+    else { P.wipe('#xrf-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xrf-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xrf-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.stroke('#x-ring-facets .xrf-seg', 1.0, { dur: 0.35, stagger: 0.1 });
+    P.chars('#xrf-topic', 1.5);
+    // 拍 1–4 每個面向（3 個時刪掉第 4 行，5 個時照樣加一行 facet(5, T5)）
+    facet(1, T1);
+    facet(2, T2);
+    facet(3, T3);
+    facet(4, T4);   // 第 4 個面向
+    // 收：總結那一句 → 回均衡（清單全部亮回），主題漣漪，完成態停到段尾
+    P.spot(LIST, null, ALL, { dur: 0.6 });
+    P.ripple('#xrf-topic', ALL, { from: 0.8, to: 1.4 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-ring-facets'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

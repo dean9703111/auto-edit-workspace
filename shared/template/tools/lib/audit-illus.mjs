@@ -9,7 +9,7 @@
 // 量版面時 .il>svg 的描邊外擴 2 px（illus.css 的 overflow: visible、描邊 4 px 一半在 viewBox 外）：audit-page.mjs 量 rect 時已加上 IL_STROKE
 import { fmtT } from './audit-rules.mjs';
 
-export const ILLUS_BUILTIN = ['phone', 'tripod', 'phoneTripod', 'laptop', 'monitor', 'cloud', 'personBust', 'personTop', 'desk', 'cone',
+export const ILLUS_BUILTIN = ['phone', 'tripod', 'phoneTripod', 'laptop', 'monitor', 'cloud', 'personBust', 'pgPerson', 'personTop', 'desk', 'stage', 'cone',
   'waveform', 'progress', 'energy', 'fileVideo', 'window', 'searchBar', 'badge', 'recPill', 'stopwatch', 'bookmark'];
 export const IL_STROKE = 2;              // 描邊外擴（契約 §5.5）
 export const LABEL_MAX = 10;             // 示意動畫的字只當標籤（ep2 hyperframes-overlay design-rules.md:9）

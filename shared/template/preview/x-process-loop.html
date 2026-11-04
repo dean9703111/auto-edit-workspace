@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-process-loop 流程：循環｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-process-loop.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-process-loop { position: absolute; inset: 0; }
+    #x-process-loop .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-process-loop #xprl-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-process-loop #xprl-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-process-loop #xprl-body { position: relative; width: 1176px; height: 580px; }
+    /* 弧線、箭頭、虛線圓圈：一層和內容區一樣大的 svg（座標＝內容區座標），path 由 script 算 */
+    #x-process-loop #xprl-lines { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
+    #x-process-loop .xprl-arc { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    #x-process-loop .xprl-zap { fill: none; stroke: none; }   /* 最後那圈光的路徑：不畫線，只看得到 P.comet 的發光頭 */
+    #x-process-loop .xprl-track { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-linecap: round; stroke-dasharray: 2 14; }
+    /* 站：300×112，圖示在左、站名在右；位置由 script 寫 left／top */
+    #x-process-loop .xprl-node { position: absolute; width: 300px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                                 border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
+                                 display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-process-loop .xprl-node .sc-icon { --d: 64px; --i: 36px; position: relative; }
+    #x-process-loop .xprl-node .xprl-name { position: relative; }
+    #x-process-loop .xprl-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
+    /* 中間主題：340×112 主色膠囊 */
+    #x-process-loop #xprl-hub { position: absolute; left: 418px; top: 234px; width: 340px; height: 112px; box-sizing: border-box; border-radius: 56px;
+                                background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-process-loop #xprl-hub .sc-icon { --d: 64px; --i: 36px; position: relative; background: var(--brand-ink); color: var(--brand); }
+    #x-process-loop #xprl-hub-text { position: relative; }
+  </style>
+  <div id="x-process-loop" data-composition-id="x-process-loop" data-width="1920" data-height="1080" data-duration="18.8"
+       data-cues-sample='{"start":0,"D":18.8,"cues":{"222":[3.2,5.7],"223":[6,8.5],"224":[8.8,11.3],"225":[11.6,14]},"refs":{"#222@拍片":3.2,"#223@上片":6,"#224@看數據":8.8,"#225@改腳本":11.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xprl-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">每週的迭代</span></div>
+      <div id="xprl-body" data-layout="free">
+        <svg id="xprl-lines" xmlns="http://www.w3.org/2000/svg" data-layout-ignore></svg>
+        <div id="xprl-hub" data-slot><span id="xprl-hico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /> </svg></span><span id="xprl-hub-text" class="sc-t52 sc-w900 sc-opt">每週一輪</span></div>
+        <div id="xprl-n1" class="xprl-node" data-slot><i id="xprl-now1" class="xprl-now"></i>
+          <span id="xprl-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt">拍片</span></div>
+        <div id="xprl-n2" class="xprl-node" data-slot><i id="xprl-now2" class="xprl-now"></i>
+          <span id="xprl-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt">上片</span></div>
+        <div id="xprl-n3" class="xprl-node" data-slot><i id="xprl-now3" class="xprl-now"></i>
+          <span id="xprl-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt">看數據</span></div>
+        <div id="xprl-n4" class="xprl-node" data-slot><i id="xprl-now4" class="xprl-now"></i>
+          <span id="xprl-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m18 5-2.414-2.414A2 2 0 0 0 14.172 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2" /> <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /> <path d="M8 18h1" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt">改腳本</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-process-loop'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#222@拍片'), T2 = P.at('#223@上片'), T3 = P.at('#224@看數據'), T4 = P.at('#225@改腳本');   // 講到每一站站名的時刻
+
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const ALL = '#xprl-n1, #xprl-n2, #xprl-n3, #xprl-n4';   // 四站（3 站時拿掉 n4）
+
+    // 0. 版面（以下都不用改）：站排在橢圓上（從正上方順時針），弧線沿橢圓在兩站外框外開始、結束；只在載入時算一次，每次結果相同
+    const NS = 'http://www.w3.org/2000/svg', SVG = $q('#xprl-lines')[0];
+    const NODES = $q('#x-process-loop .xprl-node'), N = NODES.length, CX = 588, CY = 290, RX = 390, RY = 180, PAD = 18;
+    const ang = function (k) { return -Math.PI / 2 + k * 2 * Math.PI / N; };
+    const pt = function (a) { return [CX + RX * Math.cos(a), CY + RY * Math.sin(a)]; };
+    const box = NODES.map(function (el, k) {
+      const c = pt(ang(k)), w = el.offsetWidth, h = el.offsetHeight, x = Math.round(c[0] - w / 2), y = Math.round(c[1] - h / 2);
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+      return [x - PAD, y - PAD, x + w + PAD, y + h + PAD];
+    });
+    const inside = function (p, b) { return p[0] > b[0] && p[0] < b[2] && p[1] > b[1] && p[1] < b[3]; };
+    const mkPath = function (cls, d, id) { const e = document.createElementNS(NS, 'path'); e.setAttribute('class', cls); e.setAttribute('d', d); if (id) e.setAttribute('id', id); SVG.appendChild(e); return e; };
+    const ring = [];
+    for (let i = 0; i <= 120; i++) ring.push(pt(i * Math.PI / 60).map(Math.round).join(' '));
+    mkPath('xprl-track', 'M' + ring.join(' L') + ' Z');
+    NODES.forEach(function (el, k) {   // 弧 k：第 k 站 → 下一站（最後一段接回第一站），id＝xprl-a<k+1>，箭頭 xprl-a<k+1>-head
+      const j = (k + 1) % N, pts = [];
+      for (let s = 0; s <= 90; s++) { const p = pt(ang(k) + (2 * Math.PI / N) * s / 90); if (!inside(p, box[k]) && !inside(p, box[j])) pts.push(p); }
+      const e = pts[pts.length - 1], b = pts[pts.length - 3], t = Math.atan2(e[1] - b[1], e[0] - b[0]);
+      const hd = [t + 2.6, t - 2.6].map(function (u) { return [e[0] + 18 * Math.cos(u), e[1] + 18 * Math.sin(u)].map(Math.round).join(' '); });
+      mkPath('xprl-arc', 'M' + pts.map(function (p) { return p.map(Math.round).join(' '); }).join(' L'), 'xprl-a' + (k + 1));
+      mkPath('xprl-arc', 'M' + hd[0] + ' L' + e.map(Math.round).join(' ') + ' L' + hd[1], 'xprl-a' + (k + 1) + '-head');
+      mkPath('xprl-zap', 'M' + pts.map(function (p) { return p.map(Math.round).join(' '); }).join(' L'), 'xprl-z' + (k + 1));   // 最後那圈光的路徑（不畫線）
+    });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xprl-card', 0.3);
+    else { P.wipe('#xprl-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xprl-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xprl-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 骨架：四站錯拍彈出（間隔 0.12），＋0.15 圖示描線 → 中間主題彈出
+    P.pop(ALL, 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
+    P.icon('#xprl-ico1, #xprl-ico2, #xprl-ico3, #xprl-ico4', 1.15, { stagger: 0.12 });
+    P.pop('#xprl-hub', 1.4, { from: 0.7, dy: 0 });
+    P.icon('#xprl-hico', 1.5);
+    // 拍 2 預告：虛線圓圈淡入、一直往前流
+    P.in('.xprl-track', 2.1);
+    P.flow('.xprl-track', 2.1);
+    // 拍 3 等待：預覽態（四站壓暗縮小）
+    P.spot(ALL, 'none', 2.0, { dim: 0.45, dur: 0.6 });
+
+    // 拍 4 第 1 站：聚焦（放大抬起發光、其他壓暗）、底色亮起、圖示漣漪
+    P.spot(ALL, '#xprl-n1', T1, { scale: 1.06, lift: -8 });
+    P.in('#xprl-now1', T1);
+    P.ripple('#xprl-ico1', T1 + 0.05, { to: 2.4 });
+    // 拍 5 第 2 站：提早 0.85 秒弧線帶發光頭從上一站繞過來、箭頭跟著描；上一站變「走過」
+    P.comet('#xprl-a1', T2 - 0.85, { dur: 0.75 });  P.stroke('#xprl-a1-head', T2 - 0.12, { dur: 0.2 });
+    P.spot(ALL, '#xprl-n2', T2, { scale: 1.06, lift: -8, done: '#xprl-n1' });
+    P.out('#xprl-now1', T2);  P.in('#xprl-now2', T2);
+    P.ripple('#xprl-ico2', T2 + 0.05, { to: 2.4 });
+    // 拍 6 第 3 站：同拍 5
+    P.comet('#xprl-a2', T3 - 0.85, { dur: 0.75 });  P.stroke('#xprl-a2-head', T3 - 0.12, { dur: 0.2 });
+    P.spot(ALL, '#xprl-n3', T3, { scale: 1.06, lift: -8, done: '#xprl-n1, #xprl-n2' });
+    P.out('#xprl-now2', T3);  P.in('#xprl-now3', T3);
+    P.ripple('#xprl-ico3', T3 + 0.05, { to: 2.4 });
+    // 拍 7 第 4 站：同拍 5（3 站時刪掉這一組 5 行，收尾的 T4 改 T3、now4 改 now3、a4 改 a3、z 的 4 改 3）
+    P.comet('#xprl-a3', T4 - 0.85, { dur: 0.75 });  P.stroke('#xprl-a3-head', T4 - 0.12, { dur: 0.2 });
+    P.spot(ALL, '#xprl-n4', T4, { scale: 1.06, lift: -8, done: '#xprl-n1, #xprl-n2, #xprl-n3' });
+    P.out('#xprl-now3', T4);  P.in('#xprl-now4', T4);
+    P.ripple('#xprl-ico4', T4 + 0.05, { to: 2.4 });
+
+    // 收：最後一站講完 2.6 秒回均衡，最後一段箭頭接回第一站、中間主題漣漪；接著光沿整圈跑一次（每段 0.3 秒接力），完成態停到段尾
+    const TR = T4 + 2.6;
+    P.spot(ALL, null, TR, { dur: 0.6 });
+    P.out('#xprl-now4', TR);
+    P.comet('#xprl-a4', TR, { dur: 0.75 });  P.stroke('#xprl-a4-head', TR + 0.63, { dur: 0.2 });
+    P.ripple('#xprl-hico', TR + 0.75, { to: 2 });
+    $q('#xprl-lines .xprl-zap').forEach(function (z, i) { P.comet(z, TR + 0.9 + i * 0.3, { dur: 0.3, ease: 'none' }); });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-process-loop'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-process-loop";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

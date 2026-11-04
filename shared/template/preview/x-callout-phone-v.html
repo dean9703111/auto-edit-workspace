@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-callout-phone 手機與功能膠囊｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-callout-phone.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-callout-phone { position: absolute; inset: 0; }
+    #x-callout-phone .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-callout-phone #xcph-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-callout-phone #xcph-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-callout-phone #xcph-body { position: relative; width: 1176px; height: 580px; }
+    /* 手機＋背後的同心圓（以手機外框中心置中；位置由 data-layout 排，不寫 left／top） */
+    #x-callout-phone #xcph-objwrap { position: absolute; width: 200px; height: 416px; }
+    #x-callout-phone .xcph-ring { position: absolute; box-sizing: border-box; border: 4px dashed var(--v2-line); border-radius: 50%; background: var(--v2-node-tint); }
+    #x-callout-phone #xcph-r1 { left: -20px; top: 88px; width: 240px; height: 240px; }
+    #x-callout-phone #xcph-r2 { left: -80px; top: 28px; width: 360px; height: 360px; opacity: 0.7; }
+    #x-callout-phone #xcph-r3 { left: -140px; top: -32px; width: 480px; height: 480px; opacity: 0.45; }
+    #x-callout-phone #xcph-obj { position: absolute; left: 0; top: 0; width: 200px; height: 416px; }
+    /* 功能膠囊：416×112、圓角 56，圖示＋名稱，疊在同心圓上面（z-index 2）；位置由 data-layout 排（左欄 t1、t3，右欄 t2、t4） */
+    #x-callout-phone .xcph-tag { position: absolute; z-index: 2; width: 416px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line);
+                                 border-radius: 56px; background: var(--v2-node); color: var(--sc-fs-ink);
+                                 display: flex; align-items: center; gap: 16px; padding: 0 28px; white-space: nowrap; }
+    #x-callout-phone .xcph-tag .sc-icon { --d: 64px; --i: 36px; position: relative; }
+    #x-callout-phone .xcph-tag .xcph-name { position: relative; }
+  </style>
+  <div id="x-callout-phone" data-composition-id="x-callout-phone" data-width="1920" data-height="1080" data-duration="15"
+       data-cues-sample='{"start":0,"D":15,"cues":{"232":[1.9,4.3],"233":[4.4,6.8],"234":[6.9,9.3],"235":[9.4,11.8],"236":[12.2,14.6]},"refs":{"#232@下載":2.1,"#233@不用換卡":4.6,"#234@安卓":7.1,"#235@加值":9.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcph-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">旅遊 eSIM 怎麼用</span></div>
+      <div id="xcph-body" data-layout="row" data-gap="md">
+        <div id="xcph-left" data-slot data-layout="col" data-gap="lg">
+          <div id="xcph-t1" class="xcph-tag" data-slot>
+            <span id="xcph-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /> </svg></span><span id="xcph-n1" class="xcph-name sc-t52 sc-w900 sc-opt">下載就能用</span></div>
+          <div id="xcph-t3" class="xcph-tag" data-slot>
+            <span id="xcph-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span id="xcph-n3" class="xcph-name sc-t52 sc-w900 sc-opt">安卓也能用</span></div>
+        </div>
+        <div id="xcph-objwrap" data-slot>
+          <i id="xcph-r3" class="xcph-ring" data-layout-allow-overlap></i><i id="xcph-r2" class="xcph-ring" data-layout-allow-overlap></i><i id="xcph-r1" class="xcph-ring" data-layout-allow-overlap></i>
+          <div id="xcph-obj" data-illus="phone" data-orient="portrait" data-screen="blank"></div>
+        </div>
+        <div id="xcph-right" data-slot data-layout="col" data-gap="lg">
+          <div id="xcph-t2" class="xcph-tag" data-slot>
+            <span id="xcph-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 6 9 17l-5-5" /> </svg></span><span id="xcph-n2" class="xcph-name sc-t52 sc-w900 sc-opt">不用換卡</span></div>
+          <div id="xcph-t4" class="xcph-tag" data-slot>
+            <span id="xcph-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span><span id="xcph-n4" class="xcph-name sc-t52 sc-w900 sc-opt">隨時加值</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    ILLUS.mount(document.getElementById('x-callout-phone'));   // 第一行：手機插圖先掛成 SVG，之後建的動畫才抓得到 .il-check
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-callout-phone'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#232@下載'), T2 = P.at('#233@不用換卡'), T3 = P.at('#234@安卓'), T4 = P.at('#235@加值');   // 講到每個功能的時刻
+    const ALL = P.at('#236');                        // 講到總結那一句（沒有這句見檔頭【綁句欄位】）
+    P.sfx('success', '#236');                        // 總結手機打勾那一拍（句號和上一行一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const TAGS = '#xcph-t1, #xcph-t2, #xcph-t3, #xcph-t4';   // 全部膠囊（收尾用；少的選不到，不用改）
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮 → 1.0 手機彈出 → 1.2 起同心圓由內往外錯拍淡入，之後一直慢慢呼吸
+    if (ENTER === 'grow') P.grow('#xcph-card', 0.3);
+    else { P.wipe('#xcph-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcph-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xcph-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop('#xcph-obj', 1.0, { from: 0.7 });
+    P.pop('#xcph-r1, #xcph-r2, #xcph-r3', 1.2, { stagger: 0.15, from: 0.6, dy: 0 });
+    P.idle('#xcph-r1', 1.9, { y: 0, scale: 0.03 });  P.idle('#xcph-r2', 2.2, { y: 0, scale: 0.03 });  P.idle('#xcph-r3', 2.5, { y: 0, scale: 0.03 });
+    // 拍 1 第 1 個功能：手機送出一圈漣漪 → 膠囊彈出、＋0.12 字逐字、＋0.15 圖示描線 → ＋0.6 聚焦
+    P.ripple('#xcph-obj', T1, { to: 1.8 });
+    P.pop('#xcph-t1', T1, { from: 0.6, dy: 0 });  P.chars('#xcph-n1', T1 + 0.12);  P.icon('#xcph-ico1', T1 + 0.15);
+    P.spot('#xcph-t1', '#xcph-t1', T1 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    // 拍 2 第 2 個功能：同拍 1
+    P.ripple('#xcph-obj', T2, { to: 1.8 });
+    P.pop('#xcph-t2', T2, { from: 0.6, dy: 0 });  P.chars('#xcph-n2', T2 + 0.12);  P.icon('#xcph-ico2', T2 + 0.15);
+    P.spot('#xcph-t1, #xcph-t2', '#xcph-t2', T2 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    // 第 3 個功能（只有 2 個功能時刪掉這 3 行）
+    P.ripple('#xcph-obj', T3, { to: 1.8 });
+    P.pop('#xcph-t3', T3, { from: 0.6, dy: 0 });  P.chars('#xcph-n3', T3 + 0.12);  P.icon('#xcph-ico3', T3 + 0.15);
+    P.spot('#xcph-t1, #xcph-t2, #xcph-t3', '#xcph-t3', T3 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    // 第 4 個功能（3 個以下時刪掉這 3 行）
+    P.ripple('#xcph-obj', T4, { to: 1.8 });
+    P.pop('#xcph-t4', T4, { from: 0.6, dy: 0 });  P.chars('#xcph-n4', T4 + 0.12);  P.icon('#xcph-ico4', T4 + 0.15);
+    P.spot('#xcph-t1, #xcph-t2, #xcph-t3, #xcph-t4', '#xcph-t4', T4 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    // 收：總結那一句 → 回均衡（膠囊全部亮回），手機畫面打勾、漣漪，完成態停到段尾
+    P.spot(TAGS, null, ALL, { dur: 0.6 });
+    P.in('#xcph-obj .il-check', ALL + 0.1);
+    P.ripple('#xcph-obj', ALL + 0.15, { to: 1.8 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-callout-phone'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-callout-phone";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

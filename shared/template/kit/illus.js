@@ -46,7 +46,7 @@
  *      主體 --il-body、內層/螢幕 --il-inner、描邊與白字 --il-line、次要線與字 --il-sub、
  *      重點 --il-accent（＝主色 --brand；下文寫「黃」的都是它）、主色底上的符號 --il-on-accent（＝--brand-ink）、
  *      紅 --il-warn（＝--sc-warn）、綠 --il-good（＝--sc-good）、personBust tone b 的衣服 --il-alt。
- *    亮色主題元件本體仍是深色（深色實心＋白描邊）；暗色主題換成石墨色系。
+ *    亮色主題是白板線稿（白底＋墨線＋主色點綴）；暗色主題是黑板（石墨底＋淺色線）。
  *    要改某個子元素的顏色：el.setAttribute('fill', 'var(--il-warn)')（屬性，不寫色碼；整段都是這個色）。
  *    要隨時間變色（例：電量格變紅）不要補間顏色，畫兩組狀態群組、用 opacity 交叉淡化，任意 seek 才一樣。
  *
@@ -76,8 +76,14 @@
  *  monitor(opts)      同 laptop                                                    360×300
  *  cloud(opts)        arrow: none*|up|down          .il-arrow（黃箭頭；none 時 opacity:0 仍存在）  220×150
  *  personBust(opts)   tone: a*|b                    .il-head .il-talk（三條黃弧，預設 opacity:0）  160×170
+ *  pgPerson(opts)     pose: stand*|walk|point   tone: a*|b|accent
+ *                     全身象形人（頭、軀幹、手、腳，都是圓角線稿）；.il-head .il-torso .il-arms .il-legs、
+ *                     .il-hi（主色版軀幹，預設 opacity:0；要「其中幾個人換主色」用 opacity 淡入，任意 seek 一樣）
+ *                     walk＝邁步；point＝右手往右指。站在地面線上：插圖底＝腳底                          120×284
  *  personTop()        .il-head、.il-face（俯視人：肩膀橢圓＋正中頭圓＋黃色小三角＝面朝方向，預設朝下；要轉向用 CSS rotate 90 度倍數）  110×72
  *  desk()             .il-desk（桌面）.il-laptop（桌上俯視筆電）                    320×150
+ *  stage()            .il-top（頂面）.il-front（正面，主色）.il-side（右側面）      960×180
+ *                     2.5D 地台（斜投影的一塊厚板）：裝置的底邊站在頂面中線（插圖高的 1/3）上，字可以疊在正面（下面 60）上
  *  cone(opts)         angle: 50*（度） len: 300*（px） fill: false*|true
  *                     .il-cone。頂點在左邊中點、朝右張開；用 CSS rotate(90deg 倍數) 轉向。
  *                     viewBox 寬 = len+4、高 = 2·len·sin(angle/2)+4（依 opts 自動算）
@@ -369,6 +375,29 @@
     s += G('il-talk', arcs, { off: true });
     return SVG('personBust', 160, 170, s);
   }
+  // 全身象形人：頭、軀幹、雙手、雙腳都是圓角線稿；照「頭 → 軀幹 → 手 → 腳」的順序畫（P.draw 照文件順序一筆一筆畫）
+  function pgPerson(o) {
+    o = o || {};
+    var pose = o.pose || 'stand', cloth = o.tone === 'b' ? PURPLE : o.tone === 'accent' ? YEL : INNER;
+    var rot = function (deg, x, y) { return deg ? 'rotate(' + deg + ' ' + x + ' ' + y + ')' : null; };
+    var aL = pose === 'walk' ? 18 : 0, aR = pose === 'walk' ? -18 : pose === 'point' ? -100 : 0, lg = pose === 'walk' ? 14 : 0;
+    var torso = 'M30,80 Q30,64 46,64 L74,64 Q90,64 90,80 L90,160 Q90,170 80,170 L40,170 Q30,170 30,160 Z';
+    var s = C(60, 32, 26, { 'class': 'il-head', fill: BODY, s: 4 });
+    s += P(torso, { 'class': 'il-torso', fill: cloth, s: 4 });
+    s += G('il-hi', P(torso, { fill: YEL, s: 4 }) + C(60, 32, 26, { fill: BODY, s: 4 }), { off: true });
+    s += G('il-arms', R(12, 70, 16, 86, 8, { fill: BODY, s: 4, transform: rot(aL, 20, 78) }) +
+      R(92, 70, 16, 86, 8, { fill: BODY, s: 4, transform: rot(aR, 100, 78) }));
+    s += G('il-legs', R(36, 168, 20, 112, 10, { fill: BODY, s: 4, transform: rot(lg, 46, 172) }) +
+      R(64, 168, 20, 112, 10, { fill: BODY, s: 4, transform: rot(-lg, 74, 172) }));
+    return SVG('pgPerson', 120, 284, s);
+  }
+  // 2.5D 地台：斜投影的厚板（頂面往右上斜 80、厚 60），頂面白底墨線、正面主色、側面淡主色
+  function stage() {
+    var s = P('M80,2 L958,2 L880,118 L2,118 Z', { 'class': 'il-top', fill: BODY, s: 4 });
+    s += P('M880,118 L958,2 L958,62 L880,178 Z', { 'class': 'il-side', fill: INNER, s: 4 });
+    s += P('M2,118 L880,118 L880,178 L2,178 Z', { 'class': 'il-front', fill: YEL, s: 4 });
+    return SVG('stage', 960, 180, s);
+  }
   function personTop() {
     // 俯視：肩膀橢圓、頭圓疊在正中央，下方小三角＝面朝方向（預設朝下／朝鏡頭）
     var s = E('ellipse', { cx: 55, cy: 34, rx: 51, ry: 22, fill: INNER, s: 4 });
@@ -549,7 +578,7 @@
   /* ---------- 註冊 / mount ---------- */
   var COMP = {
     phone: phone, tripod: tripod, phoneTripod: phoneTripod, laptop: laptop, monitor: monitor,
-    cloud: cloud, personBust: personBust, personTop: personTop, desk: desk, cone: cone,
+    cloud: cloud, personBust: personBust, pgPerson: pgPerson, personTop: personTop, desk: desk, stage: stage, cone: cone,
     waveform: waveform, progress: progress, energy: energy, fileVideo: fileVideo, window: windowC,
     searchBar: searchBar, badge: badge, recPill: recPill, stopwatch: stopwatch, bookmark: bookmark
   };

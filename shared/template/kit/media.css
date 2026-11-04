@@ -4,6 +4,10 @@
 /* 整層：不計時的外框，進出場只動它（opacity／x／scale）；裡面的底、錄影、紅框各自計時 */
 .mlayer { position: absolute; inset: 0; transform-origin: 50% 50%; }
 .mbg { position: absolute; inset: 0; background: #000; }   /* 錄影、圖片四周一律黑底，不放主題背景圖 */
+/* enter "tape"（015）：例外，底是全幕的主題背景，圖片加紙白邊與落影，兩條紙膠帶貼在兩個上角（--v2-tape 和 P.tape 同一組） */
+.mbg--paper { background: var(--sc-fs-bg) var(--sc-fs-pattern) no-repeat 0 0 / 1920px 1080px; }
+.mimg--paper { box-shadow: 0 0 0 12px var(--v2-node), var(--v2-card-shadow); }
+.mtape { position: absolute; width: 132px; height: 40px; box-sizing: border-box; background: var(--v2-tape); border: 1px solid var(--v2-tape-line); box-shadow: var(--v2-tape-shadow); }
 /* 面板：錄影可見區大小的外框（動態 v2 由 P.grow 從小窗長出）；stage 在裡面用 left／top 抵回畫面座標 */
 .mgrow { position: absolute; }
 /* 標註的焦點容器（P.dim 壓暗只動它） */

@@ -717,8 +717,8 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     if (!b || a.holdFor === b.id) continue;
     a.fadeOut = false; b.fadeIn = false;
     if (b.start > a.end) a.end = b.start;
-    // 後面的素材用 slide／zoom 進場：前一段要墊在底下直到進場完成，不然中間會露出講者
-    if (b.type === 'media' && ['slide', 'zoom'].includes(b.media.enter)) a.end = Math.max(a.end, r3(b.start + ENTER[b.media.enter]));
+    // 後面的素材用 slide／zoom／tape 進場：前一段要墊在底下直到進場完成，不然中間會露出講者
+    if (b.type === 'media' && ['slide', 'zoom', 'tape'].includes(b.media.enter)) a.end = Math.max(a.end, r3(b.start + ENTER[b.media.enter]));
     a.seamTo = b.id;
     // 相鄰兩段 media（進場是預設的 fade）：後一段疊化 0.47 s，前一段墊在下面；子母畫面在接縫接續
     if (a.type === 'media' && b.type === 'media' && b.media.enter === 'fade') {
@@ -993,7 +993,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         const [a, b] = x.start < md.start || (x.start === md.start && x.idx < md.idx) ? [x, md] : [md, x];
         if (b.start >= a.end - 1e-6 || overlapSeen.has(`${a.id}|${b.id}`)) continue;
         // slide／zoom 進場、疊化、章節墊底：前一段刻意墊在底下，容許那一段重疊
-        const allow = a.holdFor === b.id ? FADE : b.xfade && a.seamTo === b.id ? b.xfade : a.wipeLate && a.seamTo === b.id ? WIPE : b.type === 'media' && ['slide', 'zoom'].includes(b.enterFx) ? ENTER[b.enterFx] : 0;
+        const allow = a.holdFor === b.id ? FADE : b.xfade && a.seamTo === b.id ? b.xfade : a.wipeLate && a.seamTo === b.id ? WIPE : b.type === 'media' && ['slide', 'zoom', 'tape'].includes(b.enterFx) ? ENTER[b.enterFx] : 0;
         const ov = r3(Math.min(a.end, b.end) - b.start);
         if (ov > allow + 0.1) {
           overlapSeen.add(`${a.id}|${b.id}`);

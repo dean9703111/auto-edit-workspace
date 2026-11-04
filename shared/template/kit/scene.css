@@ -856,6 +856,27 @@ body, #root {
   /* 轉場色帶 */
   --v2-tx-a:         var(--brand);
   --v2-tx-b:         #141414;
+  /* 015：馬克筆（P.draw）、紙飛機（P.fly）、紙膠帶（P.tape）、聲紋（P.wave）、終端機 */
+  --v2-pen-body:     #FFFFFF;
+  --v2-pen-ink:      #141414;
+  --v2-pen-cap:      var(--brand);
+  --v2-pen-shadow:   drop-shadow(8px 14px 8px rgba(20, 20, 20, 0.20));
+  --v2-fly:          #FFFFFF;
+  --v2-fly-line:     #141414;
+  --v2-fly-fold:     var(--brand);
+  --v2-fly-trail:    color-mix(in srgb, var(--brand) 75%, transparent);
+  --v2-tape:         color-mix(in srgb, color-mix(in srgb, var(--brand) 22%, #FFF4E2) 88%, transparent);
+  --v2-tape-line:    rgba(20, 20, 20, 0.12);
+  --v2-tape-shadow:  0 2px 6px rgba(20, 20, 20, 0.10);
+  --v2-wave:         var(--brand);
+  --v2-term:         #17191E;
+  --v2-term-bar:     #24272E;
+  --v2-term-ink:     #E9E6E1;
+  --v2-term-mute:    rgba(233, 230, 225, 0.55);
+  --v2-term-ok:      #5CC08A;
+  --v2-term-kw:      color-mix(in srgb, var(--brand) 70%, #FFFFFF);
+  --v2-term-str:     #9CD3A8;
+  --v2-term-fn:      #8FB8F0;
 }
 :root[data-theme="dark"] {
   --v2-ink:          #F3EFEA;
@@ -922,6 +943,16 @@ body, #root {
   --sc-ch-sub-line:  rgba(255, 255, 255, 0.34);
   --v2-marker-blend: screen;
   --sc-lift:         0 40px 80px -24px rgba(0, 0, 0, 0.8);
+  --v2-pen-body:     #E9E4DE;
+  --v2-pen-ink:      #121418;
+  --v2-pen-shadow:   drop-shadow(8px 14px 10px rgba(0, 0, 0, 0.55));
+  --v2-fly:          #F3EFEA;
+  --v2-fly-line:     #121418;
+  --v2-tape:         rgba(255, 255, 255, 0.20);
+  --v2-tape-line:    rgba(255, 255, 255, 0.14);
+  --v2-tape-shadow:  0 2px 6px rgba(0, 0, 0, 0.35);
+  --v2-term:         #0B0C0F;
+  --v2-term-bar:     #1A1C21;
 }
 
 /* v2 全畫面主卡：卡片有景深（落影）＋暗色玻璃層 */
@@ -956,6 +987,27 @@ body, #root {
             letter-spacing: 0.06em; white-space: nowrap; pointer-events: none; opacity: 0;
             -webkit-mask-image: var(--v2-stamp-ink); mask-image: var(--v2-stamp-ink); -webkit-mask-size: var(--v2-stamp-ink-size); mask-size: var(--v2-stamp-ink-size);
             -webkit-mask-composite: source-in; mask-composite: intersect; }
+
+/* 015 馬克筆（P.draw 自動插；筆尖在 .sc-pen 的 0,0） */
+.sc-pen { position: absolute; width: 0; height: 0; z-index: 60; pointer-events: none; filter: var(--v2-pen-shadow); }
+.sc-pen > svg { position: absolute; left: -14px; top: -158px; overflow: visible; }
+.sc-pen__body { fill: var(--v2-pen-body); stroke: var(--v2-pen-ink); stroke-width: 3; }
+.sc-pen__cap { fill: var(--v2-pen-cap); }
+.sc-pen__ink, .sc-pen__nib { fill: var(--v2-pen-ink); }
+/* 015 紙飛機（P.fly 自動插在線所在的 svg） */
+.sc-fly__wing { fill: var(--v2-fly); stroke: var(--v2-fly-line); stroke-width: 2; stroke-linejoin: round; }
+.sc-fly__fold { fill: var(--v2-fly-fold); }
+.sc-fly__trail { fill: none; stroke: var(--v2-fly-trail); stroke-width: 4; stroke-linecap: round; }
+/* 015 紙膠帶（P.tape 自動插在卡片上兩角；用 rotate 屬性，不和 GSAP 的 transform 打架） */
+.sc-tape { position: absolute; top: -20px; width: 116px; height: 36px; background: var(--v2-tape); border: 1px solid var(--v2-tape-line); box-shadow: var(--v2-tape-shadow);
+           opacity: 0; pointer-events: none; clip-path: polygon(0 12%, 5% 0, 95% 0, 100% 12%, 97% 50%, 100% 88%, 95% 100%, 5% 100%, 0 88%, 3% 50%); }
+.sc-tape--l { left: -34px; rotate: -34deg; }
+.sc-tape--r { right: -34px; rotate: 34deg; }
+/* 015 聲紋（P.wave；容器要給高度） */
+.sc-wave { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.sc-wave__bar { flex: none; width: 8px; height: 100%; border-radius: 4px; background: var(--v2-wave); scale: 1 0.14; }
+/* 015 等寬字（終端機、程式碼） */
+.sc-mono { font-family: var(--font-mono); font-variant-ligatures: none; }
 
 /* 轉場色帶（build 的全畫面擦入；002 用） */
 .v2-tx { position: absolute; top: 0; height: 1080px; z-index: 35; pointer-events: none; }

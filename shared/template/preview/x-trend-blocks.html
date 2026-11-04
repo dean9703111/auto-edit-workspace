@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-trend-blocks 方塊堆疊｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-trend-blocks.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-trend-blocks { position: absolute; inset: 0; }
+    #x-trend-blocks .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-trend-blocks #xtrb-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-trend-blocks #xtrb-card .sc-wcard__bar { height: 128px; padding: 20px 56px; display: flex; align-items: center; gap: 24px; }
+    #x-trend-blocks #xtrb-body { position: relative; width: 1176px; height: 580px; }
+    /* 圖例：標題列右端的膠囊，前面一顆小方塊 */
+    #x-trend-blocks #xtrb-key { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    #x-trend-blocks #xtrb-key::before { display: none; }   /* 膠囊預設的圓點拿掉：前面已經有小方塊 */
+    #x-trend-blocks #xtrb-kb { width: 32px; height: 32px; border-radius: 6px; background: var(--brand); flex: none; }
+    /* 圖表區 1064×496（位置由 data-layout 排）；裡面的座標＝圖表區座標 */
+    #x-trend-blocks #xtrb-chart { position: absolute; width: 1064px; height: 496px; }
+    #x-trend-blocks #xtrb-axis-svg { position: absolute; left: 0; top: 0; width: 1064px; height: 496px; }
+    #x-trend-blocks #xtrb-axis { stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; }
+    #x-trend-blocks #xtrb-plot { position: absolute; left: 0; top: 0; width: 1064px; height: 496px; }
+    /* 方塊：60×60、圓角 12；一般是灰色（和 x-trend 的長條同色），最後一疊是主色 */
+    #x-trend-blocks .xtrb-b { position: absolute; width: 60px; height: 60px; border-radius: 12px; background: var(--sc-fs-node-line); }
+    #x-trend-blocks .xtrb-hot { background: var(--brand); }
+    #x-trend-blocks .xtrb-v { position: absolute; width: 200px; height: 64px; display: flex; align-items: baseline; justify-content: center; gap: 6px;
+                              color: var(--sc-fs-ink); white-space: nowrap; }
+    #x-trend-blocks .xtrb-v--hot { color: var(--brand); }
+    #x-trend-blocks .xtrb-lab { position: absolute; top: 440px; width: 200px; text-align: center; white-space: nowrap; }
+  </style>
+  <div id="x-trend-blocks" data-composition-id="x-trend-blocks" data-width="1920" data-height="1080" data-duration="13.2"
+       data-cues-sample='{"start":0,"D":13.2,"cues":{"282":[2.0,4.3],"283":[4.4,6.8],"284":[6.9,9.2],"285":[9.3,12.6]},"refs":{"#282@8":2.2,"#283@6":4.7,"#284@4":7.2,"#285@2":9.8}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xtrb-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">每集剪輯時間</span><div id="xtrb-key" class="sc-pill" data-snap-width><i id="xtrb-kb"></i><span class="sc-opt">＝ 1 小時</span></div></div>
+      <div id="xtrb-body" data-layout="col">
+        <div id="xtrb-chart" data-slot>
+          <svg id="xtrb-axis-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg"><line id="xtrb-axis" x1="0" y1="424" x2="1064" y2="424" /></svg>
+          <div id="xtrb-plot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-trend-blocks'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#282@8'), T2 = P.at('#283@6'), T3 = P.at('#284@4'), T4 = P.at('#285@2');   // 講到每一組數字的時刻
+    P.sfx('impact', '#285@2');                         // 最後一組落定一顆音效（句號和 T4 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const DATA = [ ['第 1 集', 8], ['第 5 集', 6], ['第 10 集', 4], ['現在', 2] ];   // 只改這一行：[時間標籤, 格數 1–10]，3–5 組
+    const UNIT = '小時';                                 // 數字後面的單位（≤ 2 字）
+
+    // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，每次載入結果相同）──
+    // 每一疊寬 128，第一疊 left 40、最後一疊 left 896，等距；第 i 格在第 floor(i/2) 層、左右第 i%2 格，一層高 68，最下層 top 356
+    var n = DATA.length, step = Math.floor(856 / (n - 1)), plot = document.getElementById('xtrb-plot');
+    DATA.forEach(function (d, k) {
+      var left = 40 + k * step, v = Math.max(1, Math.min(10, Math.round(d[1]))), rows = Math.ceil(v / 2), hot = k === n - 1;
+      for (var i = 0; i < v; i++) {
+        var b = document.createElement('i');
+        b.className = 'xtrb-b xtrb-s' + k + (hot ? ' xtrb-hot' : '');
+        b.style.left = (left + (i % 2) * 68) + 'px'; b.style.top = (356 - Math.floor(i / 2) * 68) + 'px';
+        plot.appendChild(b);
+      }
+      var val = document.createElement('div');
+      val.id = 'xtrb-v' + k; val.className = 'xtrb-v' + (hot ? ' xtrb-v--hot' : '');
+      val.style.left = (left + 64 - 100) + 'px'; val.style.top = (356 - (rows - 1) * 68 - 12 - 64) + 'px';
+      val.innerHTML = '<span id="xtrb-n' + k + '" class="sc-t52 sc-w900">0</span><span id="xtrb-u' + k + '" class="sc-t40 sc-w700">' + UNIT + '</span>';
+      var lab = document.createElement('div');
+      lab.id = 'xtrb-l' + k; lab.className = 'xtrb-lab sc-t40 sc-w700 sc-gray'; lab.style.left = (left + 64 - 100) + 'px'; lab.textContent = d[0];
+      plot.appendChild(val); plot.appendChild(lab);
+    });
+    const stack = function (k, t) {   // 一組一拍：那一疊由下往上一格一格掉下來疊好（每格晚 0.06 秒），數字同時從 0 數到格數
+      const v = Math.max(1, Math.min(10, Math.round(DATA[k][1])));
+      P.pop('.xtrb-s' + k, t, { from: 0.9, dy: -90, dur: 0.4, stagger: 0.06, ease: 'back.out(1.2)' });
+      P.pop('#xtrb-v' + k, t, { from: 0.8, dy: 0, dur: 0.4 });
+      P.count('#xtrb-n' + k, t, { from: 0, to: v, dur: 0.06 * (v - 1) + 0.4 });
+    };
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字、0.55 圖例彈出（跟著主卡）→ 1.2 基線描出、時間標籤一起落下
+    if (ENTER === 'grow') P.grow('#xtrb-card', 0.3);
+    else { P.wipe('#xtrb-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xtrb-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xtrb-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop('#xtrb-key', 0.55, { from: 0.7, dy: 0 });
+    P.stroke('#xtrb-axis', 1.2, { dur: 0.6 });
+    P.chars('.xtrb-lab', 1.2, { mode: 'drop' });
+    // 拍 1–4 每一組（3 組時刪掉第 4 組那行，5 組時照樣加一行 stack(4, T5)）
+    stack(0, T1);
+    stack(1, T2);
+    stack(2, T3);
+    stack(3, T4);   // 第 4 組
+    // 收：最後一組落定（數完那一刻）重拍；數字慢呼吸，完成態停到段尾
+    const LAST = '#xtrb-v' + (n - 1), TE = T4 + 0.06 * (Math.max(1, Math.min(10, Math.round(DATA[n - 1][1]))) - 1) + 0.4;
+    P.punch(LAST, TE, { scale: 1.15 });
+    P.idle(LAST, TE + 1.0, { y: 0, scale: 0.04, period: 1.8 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-trend-blocks'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-trend-blocks";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

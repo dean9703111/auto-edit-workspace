@@ -46,7 +46,7 @@ Windows（PowerShell）：Copy-Item shared\template\custom\<範例>.html project
 | 分鏡表「情境判定」那段寫的「SITUATIONS §3 哪一列」 | `shared/template/SITUATIONS.md` §3 那一列的「首選」與「動態（build 自動做／custom 範例）」欄寫的 `x-*.html`（用 `grep -n` 找那一列，不要整節讀） |
 | §3 沒有對到的情境 | USAGE-reference.md R7.5 的表（每支範例的適用口播、要改的欄位） |
 
-17 支範例（`shared/template/custom/`）：
+34 支範例（`shared/template/custom/`）。下表是基本 17 支；分鏡表寫了表外的變體（電路板、循環、手機膠囊、零件圖、人群、新聞快訊、終端機…）就照它寫的檔名複製：
 
 | 口播在講 | 範例 |
 |---|---|

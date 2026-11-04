@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-architecture-send 紙飛機傳出去｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-architecture-send.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-architecture-send { position: absolute; inset: 0; }
+    #x-architecture-send .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-architecture-send #xars-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-architecture-send #xars-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; }
+    #x-architecture-send #xars-done { margin-left: auto; }
+    #x-architecture-send #xars-body { position: relative; width: 1176px; height: 580px; }
+    /* 寄件端：300×300；飛行區 220 寬（空的）；位置由 data-layout 排 */
+    #x-architecture-send #xars-air { position: absolute; width: 220px; height: 300px; }
+    #x-architecture-send #xars-me { position: absolute; width: 300px; height: 300px; box-sizing: border-box;
+                                    border: 4px solid var(--brand); border-radius: 28px; background: var(--v2-node); color: var(--sc-fs-ink);
+                                    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; white-space: nowrap; }
+    #x-architecture-send #xars-meico { --d: 128px; --i: 64px; background: var(--brand); color: var(--brand-ink); }
+    /* 收件人：440×128，由 #xars-list 的 data-layout="col" 排 */
+    #x-architecture-send #xars-list { position: absolute; }
+    #x-architecture-send .xars-row { position: absolute; width: 440px; height: 128px; box-sizing: border-box; padding: 0 28px;
+                                     border: 4px solid var(--v2-node-line); border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
+                                     display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-architecture-send .xars-row .xars-u { --d: 72px; --i: 40px; background: var(--sc-fs-tint); color: var(--brand); flex: none; }
+    #x-architecture-send .xars-name { position: relative; }
+    #x-architecture-send .xars-k { --d: 64px; --i: 40px; margin-left: auto; background: var(--sc-good); color: var(--sc-on-good); flex: none; }
+    /* 飛行路線：整個內容區大小，疊在最上面；線本體由 P.fly 藏起來，只留尾跡 */
+    #x-architecture-send #xars-sky { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
+    #x-architecture-send .xars-path { fill: none; stroke: none; }
+  </style>
+  <div id="x-architecture-send" data-composition-id="x-architecture-send" data-width="1920" data-height="1080" data-duration="15.4"
+       data-cues-sample='{"start":0,"D":15.4,"cues":{"302":[2.8,6.0],"303":[6.1,9.2],"304":[9.3,12.4],"305":[12.5,15.2]},"refs":{"#302@客戶":3.0,"#303@主管":6.2,"#304@字幕師":9.4,"#305@都收到":12.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xars-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">成片連結傳出去</span><div id="xars-done" class="sc-pill" data-snap-width><span class="sc-opt">都收到</span></div></div>
+      <div id="xars-body" data-layout="row" data-gap="lg">
+        <div id="xars-me" data-slot><span id="xars-meico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M7 3v18" /> <path d="M3 7.5h4" /> <path d="M3 12h18" /> <path d="M3 16.5h4" /> <path d="M17 3v18" /> <path d="M17 7.5h4" /> <path d="M17 16.5h4" /> </svg></span><span id="xars-mename" class="sc-t52 sc-w900 sc-opt">成片</span></div>
+        <i id="xars-air" data-slot></i>
+        <div id="xars-list" data-slot data-layout="col" data-gap="md">
+        <div id="xars-r1" class="xars-row" data-slot><span id="xars-u1" class="xars-u sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span><span class="xars-name sc-t52 sc-w900 sc-opt">客戶</span><span id="xars-k1" class="xars-k sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span></div>
+        <div id="xars-r2" class="xars-row" data-slot><span id="xars-u2" class="xars-u sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span><span class="xars-name sc-t52 sc-w900 sc-opt">主管</span><span id="xars-k2" class="xars-k sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span></div>
+        <div id="xars-r3" class="xars-row" data-slot><span id="xars-u3" class="xars-u sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span><span class="xars-name sc-t52 sc-w900 sc-opt">字幕師</span><span id="xars-k3" class="xars-k sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span></div>
+        </div>
+        <svg id="xars-sky" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg" data-layout-ignore><path id="xars-p1" class="xars-path" d="" /><path id="xars-p2" class="xars-path" d="" /><path id="xars-p3" class="xars-path" d="" /></svg>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-architecture-send'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const S1 = P.at('#302@客戶'), S2 = P.at('#303@主管'), S3 = P.at('#304@字幕師');   // 講到每個收件人的時刻
+    const ALL = P.at('#305@都收到');                   // 講到「都收到」（沒有這句的刪法見檔頭【綁句欄位】）
+    P.sfx('success', '#305@都收到');                   // 結論一顆 success（句號和 ALL 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 0. 飛行弧線：從寄件端右緣到每一列左緣（各離 16）。位置由 data-layout 排好（SceneMotion 建立時），這裡只讀內容區座標；載入時算一次，不進 timeline
+    const BODY = $q('#xars-body')[0], ROWS = $q('#x-architecture-send .xars-row');
+    const pos = function (el) { let x = 0, y = 0; for (let e = el; e && e !== BODY; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x, y]; };
+    const me = $q('#xars-me')[0], mp = pos(me), x1 = mp[0] + me.offsetWidth + 16, y1 = mp[1] + Math.round(me.offsetHeight / 2);
+    ROWS.forEach(function (r, i) {
+      const p = $q('#xars-p' + (i + 1))[0]; if (!p) return;
+      const rp = pos(r), x2 = rp[0] - 16, y2 = rp[1] + Math.round(r.offsetHeight / 2), dx = x2 - x1, top = Math.min(y1, y2) - 140;
+      p.setAttribute('d', 'M' + x1 + ' ' + y1 + ' C' + Math.round(x1 + dx * 0.35) + ' ' + top + ' ' + Math.round(x2 - dx * 0.3) + ' ' + (y2 - 40) + ' ' + x2 + ' ' + y2);
+    });
+    const LIST = ROWS.map(function (r) { return '#' + r.id; }).join(', ');
+    const ME = '#xars-meico';
+    const send = function (t, row, path, check, done) {   // 一個收件人：寄件端漣漪、紙飛機沿 path 起飛 → ＋1.0 到站：row 聚焦（done＝收過的列變「走過」）、勾勾彈出描線
+      P.ripple(ME, t, { to: 1.8 });
+      P.fly(path, t, { dur: 1.0, size: 44 });
+      P.spot(LIST, row, t + 1.0, done ? { scale: 1.04, lift: -6, done: done } : { scale: 1.04, lift: -6 });
+      P.pop(check, t + 1.0, { from: 0.4, dy: 0 });
+      P.icon(check, t + 1.1);
+    };
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字 → 1.0 寄件端彈出 → 1.3 收件人錯拍彈出（勾勾還沒出現）→ 圖示描線 → 2.0 收件人退成預覽態
+    if (ENTER === 'grow') P.grow('#xars-card', 0.3);
+    else { P.wipe('#xars-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xars-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xars-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop('#xars-me', 1.0, { from: 0.7, dy: 40 });
+    P.icon('#xars-meico', 1.15);
+    P.pop(LIST, 1.3, { stagger: 0.12, from: 0.8, dy: 30 });
+    P.icon('#xars-u1, #xars-u2, #xars-u3', 1.45, { stagger: 0.12 });
+    P.spot(LIST, 'none', 2.0, { dim: 0.5, dur: 0.6 });
+    // 拍 1–3 每個收件人一架紙飛機：send(時刻, 那一列, 飛行路線, 勾勾, 收過的列)（2 個收件人時刪掉第 3 行）
+    send(S1, '#xars-r1', '#xars-p1', '#xars-k1');
+    send(S2, '#xars-r2', '#xars-p2', '#xars-k2', '#xars-r1');
+    send(S3, '#xars-r3', '#xars-p3', '#xars-k3', '#xars-r1, #xars-r2');   // 第 3 個收件人
+    // 收：講到「都收到」→ 全部亮回、結論膠囊彈出（音效 success 見上面 P.sfx；膠囊不拆字，audit 才認得「都收到」是這一句講的）
+    P.spot(LIST, null, ALL, { dur: 0.6 });
+    P.pop('#xars-done', ALL, { from: 0.7, dy: 0 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-architecture-send'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-architecture-send";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

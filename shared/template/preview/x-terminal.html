@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-terminal 終端機跑指令｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-terminal.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-terminal { position: absolute; inset: 0; }
+    #x-terminal .fill { position: absolute; inset: 0; }
+    /* 終端機視窗：左 120、頂 222、1180×568（右緣 1300、底 790）；亮色暗色主題都是深色 */
+    #x-terminal #xterm-win { position: absolute; left: 120px; top: 222px; width: 1180px; height: 568px; box-sizing: border-box; overflow: hidden;
+                             border-radius: 24px; background: var(--v2-term); color: var(--v2-term-ink); box-shadow: var(--v2-card-shadow); }
+    #x-terminal #xterm-bar { height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 14px;
+                             background: var(--v2-term-bar); color: var(--v2-term-mute); white-space: nowrap; }
+    #x-terminal .xterm-dot { width: 18px; height: 18px; border-radius: 9px; background: var(--v2-term-mute); flex: none; }
+    #x-terminal #xterm-tico { --d: 48px; --i: 32px; margin-left: 16px; color: var(--v2-term-mute); }
+    #x-terminal #xterm-body { position: relative; height: 480px; }
+    /* 每一行：高 80、top＝40＋80 × 行號 */
+    #x-terminal .xterm-ln { position: absolute; left: 48px; height: 80px; display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-terminal #xterm-l1 { top: 40px; }
+    #x-terminal #xterm-o1 { top: 120px; }
+    #x-terminal #xterm-o2 { top: 200px; }
+    #x-terminal #xterm-wl, #x-terminal #xterm-done { top: 280px; }
+    #x-terminal #xterm-l5 { top: 360px; }
+    #x-terminal .xterm-path { color: var(--v2-term-fn); }
+    #x-terminal .xterm-ps { color: var(--v2-term-kw); }
+    #x-terminal .xterm-flag { color: var(--v2-term-mute); }
+    #x-terminal .xterm-ok { color: var(--v2-term-ok); }
+    #x-terminal #xterm-done { color: var(--v2-term-ok); }
+    #x-terminal #xterm-wait { color: var(--v2-term-mute); }
+    /* 轉圈：缺口圈（P.spin 轉整個 svg） */
+    #x-terminal #xterm-spin { width: 48px; height: 48px; flex: none; }
+    #x-terminal .xterm-arc { fill: none; stroke: var(--v2-term-kw); stroke-width: 6px; stroke-linecap: round; stroke-dasharray: 80 44; }
+    /* 新提示字元後面的方塊游標（用字元，寬度跟著字） */
+    #x-terminal #xterm-caret { color: var(--v2-term-ink); }
+  </style>
+  <div id="x-terminal" data-composition-id="x-terminal" data-width="1920" data-height="1080" data-duration="15"
+       data-cues-sample='{"start":0,"D":15,"cues":{"322":[1.6,5.6],"323":[6.0,8.6],"324":[8.8,11.4],"325":[11.5,14.2]},"refs":{"#323@重講":6.6,"#324@字幕":9.2,"#325@完成":12.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xterm-win">
+      <div id="xterm-bar"><i class="xterm-dot"></i><i class="xterm-dot"></i><i class="xterm-dot"></i><span id="xterm-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m7 11 2-2-2-2" /> <path d="M11 13h4" /> <rect width="18" height="18" x="3" y="3" rx="2" ry="2" /> </svg></span><span id="xterm-title" class="sc-t40 sc-w700 sc-mono sc-opt">auto-edit — zsh</span></div>
+      <div id="xterm-body">
+        <div id="xterm-l1" class="xterm-ln sc-t52 sc-w700 sc-mono"><span class="xterm-path">~/影片</span><span class="xterm-ps">$</span><span id="xterm-cmd">node media.mjs rough <span class="xterm-flag">ep2</span></span></div>
+        <div id="xterm-o1" class="xterm-ln sc-t52 sc-w500 sc-mono"><span class="xterm-ok">✓</span><span>找到 12 段重講</span></div>
+        <div id="xterm-o2" class="xterm-ln sc-t52 sc-w500 sc-mono"><span class="xterm-ok">✓</span><span>字幕 86 則對好時間</span></div>
+        <div id="xterm-wl" class="xterm-ln sc-t52 sc-w500 sc-mono"><svg id="xterm-spin" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle class="xterm-arc" cx="24" cy="24" r="19" /></svg><span id="xterm-wait">處理中…</span></div>
+        <div id="xterm-done" class="xterm-ln sc-t52 sc-w900 sc-mono" data-layout-allow-overlap><span>✓</span><span>完成 rough.mp4（42 秒）</span></div>
+        <div id="xterm-l5" class="xterm-ln sc-t52 sc-w700 sc-mono"><span class="xterm-path">~/影片</span><span class="xterm-ps">$</span><span id="xterm-caret">▋</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-terminal'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const RUN = P.at('#322', 0.45), STEP1 = P.at('#323@重講'), STEP2 = P.at('#324@字幕'), DONE = P.at('#325@完成');   // 打指令／兩個步驟／完成
+    P.sfx('success', '#325@完成');                     // 完成一顆 success（句號和 DONE 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 拍 0 開場：視窗進場（看 ENTER）→ 標題圖示描線、標題逐字 → 1.0 第一個提示字元出現
+    if (ENTER === 'grow') P.grow('#xterm-win', 0.3);
+    else { P.wipe('#xterm-win', 0, { dir: 'up', dur: 0.8 }); P.pop('#xterm-win', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xterm-tico', 0.5);
+    P.chars('#xterm-title', 0.62, { stagger: 0.03 });
+    P.in('#xterm-l1', 1.0, { dur: 0.2 });
+    // 拍 1 打指令：固定 2.4 秒打完 → ＋2.7 轉圈那一行出現、開始轉（轉到 DONE）
+    P.type('#xterm-cmd', RUN, { dur: 2.4 });
+    P.in('#xterm-wl', RUN + 2.7, { dur: 0.2 });
+    P.spin('#xterm-spin', RUN + 2.7, { until: DONE });
+    // 拍 2–3 每個步驟：那一行輸出由左往右印出
+    P.wipe('#xterm-o1', STEP1, { dir: 'left', dur: 0.35 });
+    P.wipe('#xterm-o2', STEP2, { dir: 'left', dur: 0.35 });   // 第 2 行輸出
+    // 拍 4 完成：轉圈那一行換成綠色完成行（印出＋重拍）→ ＋0.5 新的提示字元與方塊游標
+    P.out('#xterm-wl', DONE, { dur: 0.15 });
+    P.wipe('#xterm-done', DONE, { dir: 'left', dur: 0.35 });
+    P.punch('#xterm-done', DONE + 0.35, { scale: 1.04 });
+    P.in('#xterm-l5', DONE + 0.5, { dur: 0.2 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-terminal'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-terminal";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

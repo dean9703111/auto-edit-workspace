@@ -143,7 +143,7 @@ export class SimPreview {
     let op = 1, tf = '';
     if (di < MEDIA_TRANS && enter !== 'cut') {
       const k = di / MEDIA_TRANS;
-      if (enter === 'fade') op = k; else if (enter === 'slide') tf = `translateX(${(1 - k) * 100}%)`; else if (enter === 'zoom') { op = k; tf = `scale(${0.85 + 0.15 * k})`; }
+      if (enter === 'fade') op = k; else if (enter === 'slide') tf = `translateX(${(1 - k) * 100}%)`; else if (enter === 'zoom') { op = k; tf = `scale(${0.85 + 0.15 * k})`; } else if (enter === 'tape') { op = Math.min(1, k * 2); tf = `scale(${1.05 - 0.05 * k}) rotate(${3 * (1 - k)}deg)`; }
     }
     if (de < MEDIA_TRANS && exit !== 'cut') {
       const k = de / MEDIA_TRANS;

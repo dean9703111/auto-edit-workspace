@@ -72,7 +72,7 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 
 流程有六種停點：① 剪輯清單、② 構圖、③ 分鏡表、④ Studio 預覽；需要自己調整時開 ⑤ 剪輯台，換共用背景時看 ⑥ 背景預覽。AI 會告訴你這一步要看什麼、回什麼；例如構圖調好後按「儲存並套用」，再回「調好了」。
 
-畫面會長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看（本機打開 `shared/template/index.html` 也可以，建議用 Chrome 或 Edge）：18 種情境模板、17 支情境動畫範例、示意動畫、40 種字卡動態。頁面上方可以切換風格包和亮色／暗色，還沒開始剪就能比較。
+畫面會長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看（本機打開 `shared/template/index.html` 也可以，建議用 Chrome 或 Edge）：18 種情境模板、34 支情境動畫範例、示意動畫、40 種字卡動態。頁面上方可以切換風格包和亮色／暗色，還沒開始剪就能比較。
 
 ## 不滿意就改
 

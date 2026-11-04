@@ -1,0 +1,149 @@
+<!-- 預設拍型：C 對比（BEATS.md §3 C；亂 → 一鍵歸位：散落的視窗與通知，講到工具時全部收進同一個視窗排整齊） -->
+<!doctype html>
+<!--
+  x-ui-mock-tidy：散落的視窗一鍵歸位（第二層 custom，layout: "fullscreen"；x-ui-mock 的變體）
+
+  【適用的口播】
+  在講「本來要開很多軟體、通知一直跳，換成一個工具之後全部在同一個地方」：
+  「剪一支片要開剪輯軟體、字幕工具、音效庫、雲端硬碟，通知還一直跳；交給 Auto Edit 一鍵歸位，全部都在同一個地方」。
+  開場 4 個小視窗歪歪斜斜疊在一起 → 講到「通知」時 3 則通知一則一則跳出來 → 講到工具時通知消掉、大視窗從下擦開、4 個小視窗飛進去排成 2×2 →
+  講到結果時大視窗標題列右端的「全部歸位」勾勾彈出。
+
+  【不要用在哪裡】
+  - 要示範一個按鈕怎麼按：用 x-ui-mock。
+  - 有螢幕錄影：用 media 段。
+  - 前後兩種做法並排比較：用 x-before-after 或 x-versus。
+
+  【要改的地方】
+  1. 文字：4 個小視窗的名稱 .xuit-name（≤ 4 字）、3 則通知 .xuit-ntext（≤ 5 字）、大視窗標題 #xuit-ftitle（≤ 12 字）、完成標籤 #xuit-dtext（≤ 4 字）。
+  2. 圖示：小視窗裡的 #xuit-i1–i4（剪輯 scissors、字幕 captions、音效 music、雲端 cloud）、通知的 #xuit-b1–b3（bell）、完成的 #xuit-ok（circle-check）。
+     到 kit/icons.json 找名稱，把 svg 原文整段貼上；一個字都不改（<rect> 的 width、height 是形狀本身的尺寸，拿掉就畫不出來）。
+  3. 綁句：<script> 開頭 MESS、TIDY、DONE 的句號與詞（見【綁句欄位】），下面三行 P.sfx 的句號跟著改成一樣。
+  4. 位置：散落的位置寫在 CSS（#xuit-w1–w4、#xuit-n1–n3 的 left／top／rotate），排整齊的位置寫在 script 的 GRID，通常不用改。
+
+  【綁句欄位】
+  MESS = P.at('#292@通知')：講到「很亂」的時刻（通知、一直跳），3 則通知每 0.35 秒跳一則，鈴鐺描線；音效 alert。
+  TIDY = P.at('#293@一鍵')：講到工具或「一鍵」的時刻，通知消掉、大視窗擦開、4 個小視窗依序飛進去轉正排成 2×2；音效 shine。
+  DONE = P.at('#294@同一個')：講到結果的時刻，完成標籤彈出、勾描線、大視窗掃一道光；音效 success。
+  詞在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#293')。
+  「@詞」要寫成字串字面值（P.at('#293@一鍵')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#293@一鍵', 0.3)。
+  工具名是英文（Auto Edit）時綁它前後的中文詞比較準（「交給」「一鍵」）。
+  audit 會比對：這一拍出現的字在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  MESS ≥ 3.0（0.5 秒起 4 個小視窗每 0.2 秒彈出一個、圖示描線，1.8 秒動完，停 1.2 秒）
+  TIDY ≥ MESS + 2.9（3 則通知跳完、鈴鐺描完 1.6 秒，停 1.2 秒）
+  DONE ≥ TIDY + 2.5（小視窗飛完 1.1 秒，停 1.2 秒）
+  D ≥ DONE + 3.0（完成標籤 0.8 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：沒有主卡，0.5 秒起小視窗直接彈出；離場由 build 處理。全部在 x 120–1300、y 150–850 裡（右下子母畫面 x 1424 起）。
+  小視窗 380×250（標題列 64、內容區放一個 112 的圖示圓），散落時各自轉 −6°～5°、互相疊住是刻意的（data-layout-allow-overlap）；
+  通知 360×96，疊在小視窗上；大視窗 #xuit-frame left 120、top 150、1180×700（標題列 88）。
+  排整齊後小視窗變 534×250，2×2：(160, 278)、(726, 278)、(160, 560)、(726, 560)，間距 32、離大視窗邊 40。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-ui-mock-tidy 一鍵歸位</title></head>
+<body>
+<template id="x-ui-mock-tidy-template">
+  <style>
+    #x-ui-mock-tidy { position: absolute; inset: 0; }
+    #x-ui-mock-tidy .fill { position: absolute; inset: 0; }
+    /* 大視窗：left 120、top 150、1180×700；歸位前看不到 */
+    #x-ui-mock-tidy #xuit-frame { position: absolute; left: 120px; top: 150px; width: 1180px; height: 700px; box-sizing: border-box; overflow: hidden;
+                                  border: 2px solid var(--sc-fs-card-line); border-radius: 24px; background: var(--sc-fs-card); }
+    #x-ui-mock-tidy #xuit-fbar { height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 16px;
+                                 background: var(--sc-fs-head); color: var(--sc-fs-head-ink); white-space: nowrap; }
+    #x-ui-mock-tidy .xuit-dot { width: 16px; height: 16px; border-radius: 8px; background: var(--sc-fs-mute); flex: none; }
+    #x-ui-mock-tidy #xuit-ftitle { margin-left: 16px; }
+    #x-ui-mock-tidy #xuit-done { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    #x-ui-mock-tidy #xuit-ok { --d: 56px; --i: 36px; background: var(--sc-good); color: var(--sc-on-good); }
+    /* 小視窗：外層管位置與轉角（P.morph），內層管進場（P.pop） */
+    #x-ui-mock-tidy .xuit-w { position: absolute; width: 380px; height: 250px; }
+    #x-ui-mock-tidy #xuit-w1 { left: 170px; top: 232px; transform: rotate(-6deg); }
+    #x-ui-mock-tidy #xuit-w2 { left: 600px; top: 202px; transform: rotate(4deg); }
+    #x-ui-mock-tidy #xuit-w3 { left: 260px; top: 532px; transform: rotate(5deg); }
+    #x-ui-mock-tidy #xuit-w4 { left: 760px; top: 482px; transform: rotate(-5deg); }
+    #x-ui-mock-tidy .xuit-in { position: absolute; inset: 0; box-sizing: border-box; overflow: hidden; border: 2px solid var(--sc-fs-card-line); border-radius: 20px;
+                               background: var(--sc-fs-card); box-shadow: var(--v2-card-shadow); }
+    #x-ui-mock-tidy .xuit-bar { height: 64px; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; gap: 10px;
+                                background: var(--sc-fs-head); color: var(--sc-fs-head-ink); white-space: nowrap; }
+    #x-ui-mock-tidy .xuit-bar .xuit-dot { width: 12px; height: 12px; border-radius: 6px; }
+    #x-ui-mock-tidy .xuit-name { margin-left: 8px; }
+    #x-ui-mock-tidy .xuit-body { height: 186px; display: flex; align-items: center; justify-content: center; }
+    #x-ui-mock-tidy .xuit-body .sc-icon { --d: 112px; --i: 56px; background: var(--sc-fs-tint); color: var(--brand); }
+    /* 通知：360×96，警示色鈴鐺 */
+    #x-ui-mock-tidy .xuit-n { position: absolute; width: 360px; height: 96px; box-sizing: border-box; padding: 0 24px; border: 4px solid var(--sc-warn); border-radius: 20px;
+                              background: var(--sc-fs-card); color: var(--sc-fs-ink); display: flex; align-items: center; gap: 20px; white-space: nowrap; box-shadow: var(--v2-card-shadow); }
+    #x-ui-mock-tidy #xuit-n1 { left: 880px; top: 262px; transform: rotate(3deg); }
+    #x-ui-mock-tidy #xuit-n2 { left: 140px; top: 452px; transform: rotate(-3deg); }
+    #x-ui-mock-tidy #xuit-n3 { left: 620px; top: 700px; transform: rotate(2deg); }
+    #x-ui-mock-tidy .xuit-n .sc-icon { --d: 64px; --i: 36px; background: var(--sc-warn); color: var(--sc-on-warn); flex: none; }
+  </style>
+  <div id="x-ui-mock-tidy" data-composition-id="x-ui-mock-tidy" data-width="1920" data-height="1080" data-duration="12"
+       data-cues-sample='{"start":0,"D":12,"cues":{"292":[3.0,5.6],"293":[5.8,8.2],"294":[8.4,11.2]},"refs":{"#292@通知":3.2,"#293@一鍵":6.1,"#294@同一個":8.8}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xuit-frame" data-layout-allow-overlap>
+      <div id="xuit-fbar"><i class="xuit-dot"></i><i class="xuit-dot"></i><i class="xuit-dot"></i><span id="xuit-ftitle" class="sc-t40 sc-w900 sc-opt">Auto Edit 工作台</span>
+        <div id="xuit-done"><span id="xuit-ok" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span><span id="xuit-dtext" class="sc-t40 sc-w900 sc-opt">全部歸位</span></div>
+      </div>
+    </div>
+    <div id="xuit-w1" class="xuit-w" data-layout-allow-overlap><div class="xuit-in"><div class="xuit-bar"><i class="xuit-dot"></i><i class="xuit-dot"></i><i class="xuit-dot"></i><span class="xuit-name sc-t40 sc-w700 sc-opt">剪輯</span></div>
+      <div class="xuit-body"><span id="xuit-i1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span></div></div></div>
+    <div id="xuit-w2" class="xuit-w" data-layout-allow-overlap><div class="xuit-in"><div class="xuit-bar"><i class="xuit-dot"></i><i class="xuit-dot"></i><i class="xuit-dot"></i><span class="xuit-name sc-t40 sc-w700 sc-opt">字幕</span></div>
+      <div class="xuit-body"><span id="xuit-i2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="14" x="3" y="5" rx="2" ry="2" /> <path d="M7 15h4M15 15h2M7 11h2M13 11h4" /> </svg></span></div></div></div>
+    <div id="xuit-w3" class="xuit-w" data-layout-allow-overlap><div class="xuit-in"><div class="xuit-bar"><i class="xuit-dot"></i><i class="xuit-dot"></i><i class="xuit-dot"></i><span class="xuit-name sc-t40 sc-w700 sc-opt">音效</span></div>
+      <div class="xuit-body"><span id="xuit-i3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M9 18V5l12-2v13" /> <circle cx="6" cy="18" r="3" /> <circle cx="18" cy="16" r="3" /> </svg></span></div></div></div>
+    <div id="xuit-w4" class="xuit-w" data-layout-allow-overlap><div class="xuit-in"><div class="xuit-bar"><i class="xuit-dot"></i><i class="xuit-dot"></i><i class="xuit-dot"></i><span class="xuit-name sc-t40 sc-w700 sc-opt">雲端</span></div>
+      <div class="xuit-body"><span id="xuit-i4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /> </svg></span></div></div></div>
+    <div id="xuit-n1" class="xuit-n" data-layout-allow-overlap><span id="xuit-b1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /> <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /> </svg></span><span class="xuit-ntext sc-t40 sc-w700 sc-opt">匯出失敗</span></div>
+    <div id="xuit-n2" class="xuit-n" data-layout-allow-overlap><span id="xuit-b2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /> <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /> </svg></span><span class="xuit-ntext sc-t40 sc-w700 sc-opt">3 則新訊息</span></div>
+    <div id="xuit-n3" class="xuit-n" data-layout-allow-overlap><span id="xuit-b3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /> <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /> </svg></span><span class="xuit-ntext sc-t40 sc-w700 sc-opt">空間快滿了</span></div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-ui-mock-tidy'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const MESS = P.at('#292@通知'), TIDY = P.at('#293@一鍵'), DONE = P.at('#294@同一個');   // 很亂／一鍵歸位／結果
+    P.sfx('alert', '#292@通知');                       // 通知跳出來（句號和 MESS 一樣）
+    P.sfx('shine', '#293@一鍵');                       // 歸位（句號和 TIDY 一樣）
+    P.sfx('success', '#294@同一個');                   // 完成（句號和 DONE 一樣）
+    // 小視窗散落的位置與轉角（和 CSS 一樣）→ 排整齊的位置（2×2，寬 534）
+    const MESSY = [ { left: 170, top: 232, rotation: -6 }, { left: 600, top: 202, rotation: 4 }, { left: 260, top: 532, rotation: 5 }, { left: 760, top: 482, rotation: -5 } ];
+    const GRID = [ { left: 160, top: 278 }, { left: 726, top: 278 }, { left: 160, top: 560 }, { left: 726, top: 560 } ];
+    const fly = function (k, t) {   // 第 k 個小視窗（1 起算）飛進大視窗、轉正、變寬
+      const a = MESSY[k - 1], b = GRID[k - 1];
+      P.morph('#xuit-w' + k, t, { left: b.left, top: b.top, width: 534, rotation: 0 }, { from: { left: a.left, top: a.top, width: 380, rotation: a.rotation }, dur: 0.7, ease: 'back.out(1.1)' });
+    };
+
+    // 拍 0 開場：4 個小視窗每 0.2 秒彈出一個（歪的、疊在一起）→ 圖示跟著描線
+    P.pop('#x-ui-mock-tidy .xuit-in', 0.5, { stagger: 0.2, from: 0.8, dy: 40 });
+    P.icon('#xuit-i1, #xuit-i2, #xuit-i3, #xuit-i4', 0.7, { stagger: 0.2 });
+    // 拍 1 很亂：3 則通知每 0.35 秒跳一則（彈得比較大力），鈴鐺描線
+    P.pop('#xuit-n1, #xuit-n2, #xuit-n3', MESS, { stagger: 0.35, from: 0.6, dy: 0, ease: 'back.out(2.4)' });
+    P.icon('#xuit-b1, #xuit-b2, #xuit-b3', MESS + 0.15, { stagger: 0.35 });
+    // 拍 2 一鍵歸位：通知消掉 → 大視窗由下擦開、標題逐字 → 小視窗每 0.08 秒一個飛進去轉正
+    P.out('#xuit-n1, #xuit-n2, #xuit-n3', TIDY, { stagger: 0.06 });
+    P.in('#xuit-frame', TIDY, { dur: 0.15 });   // 歸位前大視窗完全看不到（只靠擦開的 clip 遮住，audit 會當它在）
+    P.wipe('#xuit-frame', TIDY, { dir: 'up', dur: 0.6 });
+    P.chars('#xuit-ftitle', TIDY + 0.2);
+    fly(1, TIDY + 0.15);
+    fly(2, TIDY + 0.23);
+    fly(3, TIDY + 0.31);
+    fly(4, TIDY + 0.39);
+    // 拍 3 結果：完成標籤彈出、勾描線 → 大視窗掃一道光
+    P.pop('#xuit-done', DONE, { from: 0.7, dy: 0 });
+    P.icon('#xuit-ok', DONE + 0.15);
+    P.sheen('#xuit-frame', DONE + 0.3);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-ui-mock-tidy'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

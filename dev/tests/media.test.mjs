@@ -134,6 +134,26 @@ test('cut 穿過 media 段：錄影也跳過同一段（data-media-start 跳）�
   assert.ok(!left.some((f) => f.endsWith('.mp4') || f === 'm01-l1'), `沒用到的錄影與放大鏡逐幀要清掉：${left.join(', ')}`);
 });
 
+test('015 enter: "tape"：圖片縮小貼在全幕背景上（紙白邊、兩條膠帶），面板落下貼平；只給圖片、fit contain、只能當進場', () => {
+  writePlan([{ id: 'm03', type: 'media', src: IMG, from: 7, to: 13, enter: 'tape' }]);
+  const r = build();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const h = read('index.html');
+  assert.match(h, /<div id="mbg-m03" class="clip mbg mbg--paper"/);
+  assert.match(h, /<img id="mi-m03" class="clip mimg mimg--paper"/);
+  const g = h.match(/<div id="mgr-m03" class="mgrow" style="left:(\d+)px;top:(\d+)px;width:(\d+)px;height:(\d+)px"/).slice(1).map(Number);
+  assert.ok(g[0] >= 200 && g[1] >= 90 && g[0] + g[2] <= 1720 && g[1] + g[3] <= 880, `縮小到 TAPE.view 裡：${g}`);
+  assert.equal((h.match(/class="mtape"/g) || []).length, 2, '兩條膠帶');
+  assert.match(h, new RegExp(`<i id="mtp-m03-1" class="mtape" style="left:${g[0] - 36}px;top:${g[1] - 20}px;rotate:-34deg"`));
+  assert.match(h, /tl\.fromTo\('#mgr-m03', \{ scale: 1\.05, rotation: 3 \}, \{ scale: 1, rotation: 0, duration: 0\.35/);
+  assert.match(h, /tl\.fromTo\('#mtp-m03-2', \{ opacity: 0, scale: 1\.4 \}, \{ opacity: 1, scale: 1, duration: 0\.15, ease: 'power2\.out' \}, 7\.45\);/);
+  for (const [seg, re] of [[{ src: REC, enter: 'tape' }, /enter "tape"（紙膠帶貼上）只給圖片用/], [{ src: IMG, enter: 'tape', fit: 'cover' }, /enter "tape" 要配 fit "contain"/], [{ src: IMG, exit: 'tape' }, /exit 只能是 "cut"、"fade"、"slide"、"zoom"/]]) {
+    writePlan([{ id: 'm04', type: 'media', from: 7, to: 13, ...seg }]);
+    const c = build('--check');
+    assert.match(c.stdout + c.stderr, re);
+  }
+});
+
 test('out：速度＝(out−in)÷段長，段 ≤ 3 秒可快轉到 64 倍；hold：整段定格成一張圖（不慢推、標註照常）', () => {
   const m = (o) => ({ id: 'm01', type: 'media', src: REC, from: 7, to: 13, ...o });
   writePlan([m({ in: 1, out: 4 })]);

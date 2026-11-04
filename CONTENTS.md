@@ -12,8 +12,8 @@
 | 項目 | 數量 | 位置 | 怎麼用 |
 |---|---|---|---|
 | 情境模板 | 18 個 | `shared/template/scenes/` | 版面 9 個（章節轉場、章節角標、半版側邊欄、全畫面 4 種、兩側、講者介紹），下方字卡 7 個（一般、重點、步驟、問答、小技巧、總結、金句），條列 2 個。AI 只要填文字、圖示和要對齊的字幕句；圖示會自動「描出來」 |
-| 情境動畫範例 | 17 支（流程、比喻、前後對比、數值變化、警告、提示詞、介面示意、架構、分支、分層、清單打勾、時間軸、雙邊比較、主體標註、趨勢、比例環、痛點與解法） | `shared/template/custom/x-*.html` | 口播在講一個抽象的結構（流程、對比、比例…）時，AI 挑一支改成這一集的動畫，不用從零寫。畫面主角是圖，字只當標籤；動畫用 `P.at('#N@詞')` 綁到講到的那個詞，不用手算秒數 |
-| 示意動畫 | 1 支骨架＋2 個範例（`x-scene`、`x-scene-example-rec`、`x-scene-example-outline`） | `shared/template/custom/` | 口播在講看得見的東西在動（手機掃碼、資料夾刪檔、人走過去），而且沒有對得上的錄影時，AI 用線條插圖照講到的順序演出來；只有聲音的段落也靠它蓋住 |
+| 情境動畫範例 | 34 支（流程、比喻、前後對比、數值變化、警告、提示詞、介面示意、架構、分支、分層、清單打勾、時間軸、雙邊比較、主體標註、趨勢、比例環、痛點與解法，加上變體：電路板、循環、手機功能膠囊、零件圖、AI 逐條完成、台座、環形圖註解、方塊堆疊、一鍵歸位、紙飛機傳出去、問 AI、終端機、程式碼、人群比例、兩排人比快慢、地台裝置接力、新聞快訊） | `shared/template/custom/x-*.html` | 口播在講一個抽象的結構（流程、對比、比例…）時，AI 挑一支改成這一集的動畫，不用從零寫。畫面主角是圖，字只當標籤；動畫用 `P.at('#N@詞')` 綁到講到的那個詞，不用手算秒數 |
+| 示意動畫 | 1 支骨架＋2 個範例（`x-scene`、`x-scene-example-rec`、`x-scene-example-outline`）；插圖畫廊 22 個元件（白板線稿，暗色主題是黑板） | `shared/template/custom/`、`shared/template/kit/illus-gallery.jpg` | 口播在講看得見的東西在動（手機掃碼、資料夾刪檔、人走過去），而且沒有對得上的錄影時，AI 用線條插圖照講到的順序演出來（馬克筆一筆一筆畫出）；只有聲音的段落也靠它蓋住 |
 | 字卡動態 | 40 種 | `shared/template/fx/` | 打開 `shared/template/fx/index.html` 看效果，分鏡寫編號就能用 |
 | 動畫原始檔 | 18 情境＋40 字卡動態都是 HTML（HyperFrames） | `shared/template/scenes/<編號-key>/template.html`＋`scene.json`、`shared/template/fx/effects/fx-NN-*.html` | AI 直接讀、改、換；`fx/renders/` 和 `gallery/` 只是預覽用的影片和圖。要改模板先看 `shared/template/USAGE-reference.md` R14 |
 | 風格包 | 2 包：「預設」（橘色 `#F6630F`、米白線稿）、「藍圖」（藍色 `#2563EB`、網格製圖線稿，示範用），亮色、暗色背景都有 | `shared/template/styles/<名稱>/` | 一包＝主色＋子母畫面外框＋背景圖。情境庫上方的「風格」可以直接預覽 |
@@ -21,7 +21,7 @@
 | 背景圖 | 亮色 3 張（全畫面 `bg-fs.jpg`、側邊欄 `bg-side.jpg`、章節轉場 `bg-ch.jpg`）＋暗色 3 張（`bg-*-dark.jpg`） | `shared/template/` | 說「換背景」，AI 縮放你給的圖，或用 Codex／HTML 產生，先給你看預覽再換 |
 | 講者調光、瘦臉、美顏 | 選用，預設關閉；建議值調光 0.8、瘦臉 0.6、美顏 0.5 | `shared/template/kit/look.json`（工具 `look.mjs`） | 構圖台、剪輯台都有開關和強度滑桿。臉部偵測在本機做、不上傳 |
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
-| 字型 | 2 套（Noto Sans TC、Google Sans Flex） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
+| 字型 | 3 套（Noto Sans TC、Google Sans Flex、等寬的 JetBrains Mono） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
 | 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處） | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
 | 範例專案 | 原始口播 1 支、講稿、場地照；直式版 1 支 | `projects/example/`、`projects/example-portrait/` | 第一次照著做就有成片 |
 

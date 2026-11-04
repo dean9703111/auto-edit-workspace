@@ -1,0 +1,147 @@
+<!-- 預設拍型：E 數字（BEATS.md §3 E；x-trend 的變體：長條換成一格一格疊上去的方塊，講到哪一組就疊哪一疊） -->
+<!doctype html>
+<!--
+  x-trend-blocks：方塊堆疊的趨勢（第二層 custom，layout: "fullscreen"；x-trend 的變體）
+
+  【適用的口播】
+  在講「同一個量在 3–5 個時間點的變化」，而且數字小、數得出來（1–10 個單位），想讓觀眾「看到份量」：
+  「第 1 集我剪了 8 個小時，第 5 集 6 小時，第 10 集 4 小時，現在只要 2 小時」「一週從 1 支片做到 10 支」。
+  標題列右端先出現圖例（1 格＝多少）；講到每一組的數字時，那一疊方塊由下往上一格一格掉下來疊好、上面的數字跟著數到；
+  最後一組是主色、落定時重拍＋音效。
+
+  【不要用在哪裡】
+  - 數字大（幾百、幾萬）或要看精確比例：用 x-trend（長條＋趨勢線）。
+  - 只有兩組：用 x-numbers、x-versus 或 x-before-after。
+  - 超過 5 組：只留頭、尾和 1–2 個轉折點。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）；圖例 #xtrb-key 的「＝ 1 小時」（≤ 6 字）；單位 #xtrb-u0 … 由 DATA 的單位帶出，不用改 HTML。
+  2. 數字：只改 <script> 開頭 DATA 那一行：[[時間標籤, 格數], …]，3–5 組，時間標籤 ≤ 4 字，格數是 1–10 的整數（一格代表多少寫在圖例）；
+     UNIT 那一行是數字後面的單位（≤ 2 字）。方塊、數字、標籤的位置都由程式算，不用改 CSS。這支沒有圖示（方塊就是圖示）。
+  3. 綁句：<script> 開頭 T1–T4 的句號與詞（見【綁句欄位】）；最後一組那行 P.sfx 的句號跟著 T4 改。
+  4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+  只有 3 組：DATA 刪一組、刪掉 const T4 那一段（「, T4 = P.at(…)」）和「第 4 組」那 1 行，最後一組的 P.sfx 句號改成 T3 的；5 組：DATA 加一組，照樣加 T5 和一行 stack(4, T5)（stack 的第一個數字從 0 起算）。
+
+  【綁句欄位】
+  T1 = P.at('#282@8')、T2 = P.at('#283@6')、T3 = P.at('#284@4')、T4 = P.at('#285@2')：講到那一組數字的時刻，那一疊方塊開始掉、數字開始數（數到時方塊剛好疊完）。
+  數字在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#283')。
+  「@詞」要寫成字串字面值（P.at('#283@6')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#283@6', 0.3)。
+  相鄰兩組至少差 2.4 秒（10 格疊完約 1 秒，再停 ≥ 1.2 秒）。
+  audit 會比對：這一拍出現的字在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.0（主卡 0.3 秒長出、0.5 秒起標題逐字、0.55 秒圖例彈出、1.2 秒基線描出與時間標籤落下）
+  T2 ≥ T1 + 2.4；T3 ≥ T2 + 2.4；T4 ≥ T3 + 2.4
+  D ≥ T4 + 3.2（疊完約 1 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
+  圖表區 #xtrb-chart 1064×496 由 #xtrb-body 的 data-layout="col" 放在內容區正中，不寫 left／top。以下是圖表區座標（由 DATA 算，不用改）：
+  基線 y 424；每一疊寬 128（兩格並排：方塊 60×60、間距 8），一層高 68，最多 5 層（10 格）；第一疊 left 40、最後一疊 left 896，中間等距。
+  數字（52 字＋單位 40 字）在那一疊最上層之上 12；時間標籤 40 字在基線下 top 440。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-trend-blocks 方塊堆疊</title></head>
+<body>
+<template id="x-trend-blocks-template">
+  <style>
+    #x-trend-blocks { position: absolute; inset: 0; }
+    #x-trend-blocks .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-trend-blocks #xtrb-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-trend-blocks #xtrb-card .sc-wcard__bar { height: 128px; padding: 20px 56px; display: flex; align-items: center; gap: 24px; }
+    #x-trend-blocks #xtrb-body { position: relative; width: 1176px; height: 580px; }
+    /* 圖例：標題列右端的膠囊，前面一顆小方塊 */
+    #x-trend-blocks #xtrb-key { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    #x-trend-blocks #xtrb-key::before { display: none; }   /* 膠囊預設的圓點拿掉：前面已經有小方塊 */
+    #x-trend-blocks #xtrb-kb { width: 32px; height: 32px; border-radius: 6px; background: var(--brand); flex: none; }
+    /* 圖表區 1064×496（位置由 data-layout 排）；裡面的座標＝圖表區座標 */
+    #x-trend-blocks #xtrb-chart { position: absolute; width: 1064px; height: 496px; }
+    #x-trend-blocks #xtrb-axis-svg { position: absolute; left: 0; top: 0; width: 1064px; height: 496px; }
+    #x-trend-blocks #xtrb-axis { stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; }
+    #x-trend-blocks #xtrb-plot { position: absolute; left: 0; top: 0; width: 1064px; height: 496px; }
+    /* 方塊：60×60、圓角 12；一般是灰色（和 x-trend 的長條同色），最後一疊是主色 */
+    #x-trend-blocks .xtrb-b { position: absolute; width: 60px; height: 60px; border-radius: 12px; background: var(--sc-fs-node-line); }
+    #x-trend-blocks .xtrb-hot { background: var(--brand); }
+    #x-trend-blocks .xtrb-v { position: absolute; width: 200px; height: 64px; display: flex; align-items: baseline; justify-content: center; gap: 6px;
+                              color: var(--sc-fs-ink); white-space: nowrap; }
+    #x-trend-blocks .xtrb-v--hot { color: var(--brand); }
+    #x-trend-blocks .xtrb-lab { position: absolute; top: 440px; width: 200px; text-align: center; white-space: nowrap; }
+  </style>
+  <div id="x-trend-blocks" data-composition-id="x-trend-blocks" data-width="1920" data-height="1080" data-duration="13.2"
+       data-cues-sample='{"start":0,"D":13.2,"cues":{"282":[2.0,4.3],"283":[4.4,6.8],"284":[6.9,9.2],"285":[9.3,12.6]},"refs":{"#282@8":2.2,"#283@6":4.7,"#284@4":7.2,"#285@2":9.8}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xtrb-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">每集剪輯時間</span><div id="xtrb-key" class="sc-pill" data-snap-width><i id="xtrb-kb"></i><span class="sc-opt">＝ 1 小時</span></div></div>
+      <div id="xtrb-body" data-layout="col">
+        <div id="xtrb-chart" data-slot>
+          <svg id="xtrb-axis-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg"><line id="xtrb-axis" x1="0" y1="424" x2="1064" y2="424" /></svg>
+          <div id="xtrb-plot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-trend-blocks'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#282@8'), T2 = P.at('#283@6'), T3 = P.at('#284@4'), T4 = P.at('#285@2');   // 講到每一組數字的時刻
+    P.sfx('impact', '#285@2');                         // 最後一組落定一顆音效（句號和 T4 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const DATA = [ ['第 1 集', 8], ['第 5 集', 6], ['第 10 集', 4], ['現在', 2] ];   // 只改這一行：[時間標籤, 格數 1–10]，3–5 組
+    const UNIT = '小時';                                 // 數字後面的單位（≤ 2 字）
+
+    // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，每次載入結果相同）──
+    // 每一疊寬 128，第一疊 left 40、最後一疊 left 896，等距；第 i 格在第 floor(i/2) 層、左右第 i%2 格，一層高 68，最下層 top 356
+    var n = DATA.length, step = Math.floor(856 / (n - 1)), plot = document.getElementById('xtrb-plot');
+    DATA.forEach(function (d, k) {
+      var left = 40 + k * step, v = Math.max(1, Math.min(10, Math.round(d[1]))), rows = Math.ceil(v / 2), hot = k === n - 1;
+      for (var i = 0; i < v; i++) {
+        var b = document.createElement('i');
+        b.className = 'xtrb-b xtrb-s' + k + (hot ? ' xtrb-hot' : '');
+        b.style.left = (left + (i % 2) * 68) + 'px'; b.style.top = (356 - Math.floor(i / 2) * 68) + 'px';
+        plot.appendChild(b);
+      }
+      var val = document.createElement('div');
+      val.id = 'xtrb-v' + k; val.className = 'xtrb-v' + (hot ? ' xtrb-v--hot' : '');
+      val.style.left = (left + 64 - 100) + 'px'; val.style.top = (356 - (rows - 1) * 68 - 12 - 64) + 'px';
+      val.innerHTML = '<span id="xtrb-n' + k + '" class="sc-t52 sc-w900">0</span><span id="xtrb-u' + k + '" class="sc-t40 sc-w700">' + UNIT + '</span>';
+      var lab = document.createElement('div');
+      lab.id = 'xtrb-l' + k; lab.className = 'xtrb-lab sc-t40 sc-w700 sc-gray'; lab.style.left = (left + 64 - 100) + 'px'; lab.textContent = d[0];
+      plot.appendChild(val); plot.appendChild(lab);
+    });
+    const stack = function (k, t) {   // 一組一拍：那一疊由下往上一格一格掉下來疊好（每格晚 0.06 秒），數字同時從 0 數到格數
+      const v = Math.max(1, Math.min(10, Math.round(DATA[k][1])));
+      P.pop('.xtrb-s' + k, t, { from: 0.9, dy: -90, dur: 0.4, stagger: 0.06, ease: 'back.out(1.2)' });
+      P.pop('#xtrb-v' + k, t, { from: 0.8, dy: 0, dur: 0.4 });
+      P.count('#xtrb-n' + k, t, { from: 0, to: v, dur: 0.06 * (v - 1) + 0.4 });
+    };
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字、0.55 圖例彈出（跟著主卡）→ 1.2 基線描出、時間標籤一起落下
+    if (ENTER === 'grow') P.grow('#xtrb-card', 0.3);
+    else { P.wipe('#xtrb-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xtrb-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xtrb-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop('#xtrb-key', 0.55, { from: 0.7, dy: 0 });
+    P.stroke('#xtrb-axis', 1.2, { dur: 0.6 });
+    P.chars('.xtrb-lab', 1.2, { mode: 'drop' });
+    // 拍 1–4 每一組（3 組時刪掉第 4 組那行，5 組時照樣加一行 stack(4, T5)）
+    stack(0, T1);
+    stack(1, T2);
+    stack(2, T3);
+    stack(3, T4);   // 第 4 組
+    // 收：最後一組落定（數完那一刻）重拍；數字慢呼吸，完成態停到段尾
+    const LAST = '#xtrb-v' + (n - 1), TE = T4 + 0.06 * (Math.max(1, Math.min(10, Math.round(DATA[n - 1][1]))) - 1) + 0.4;
+    P.punch(LAST, TE, { scale: 1.15 });
+    P.idle(LAST, TE + 1.0, { y: 0, scale: 0.04, period: 1.8 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-trend-blocks'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

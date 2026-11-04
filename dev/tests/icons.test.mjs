@@ -89,9 +89,10 @@ test('scene-motion.js 有 P.stroke／P.icon／P.check 與常數', () => {
 });
 
 // 第二層範例（custom/x-*.html）貼的圖示：svg 原文（拿掉 class／width／height）都能在 kit/icons.json 找到（spec 003 FR-073）
-test('custom 範例的 .sc-icon 都是 icons.json 的原文（x-checklist、x-scene 系列刻意沒有圖示）', () => {
+test('custom 範例的 .sc-icon 都是 icons.json 的原文（x-checklist、x-scene 系列與 015 的插圖／方塊／小人範例刻意沒有圖示）', () => {
   // x-checklist：勾就是圖示；x-scene 系列：主角是 kit/illus.js 的插圖元件。examples.test 也檢查它們檔頭寫「這支沒有圖示」
-  const NOICON = new Set(['x-checklist.html', 'x-scene.html', 'x-scene-example-rec.html', 'x-scene-example-outline.html']);
+  const NOICON = new Set(['x-checklist.html', 'x-scene.html', 'x-scene-example-rec.html', 'x-scene-example-outline.html',
+    'x-callout-parts.html', 'x-checklist-ai.html', 'x-ring-facets.html', 'x-trend-blocks.html', 'x-crowd.html', 'x-desk.html']);   // 015：主角是插圖、圈圈、方塊或小人
   const dir = path.join(TEMPLATE, 'custom');
   const raw = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'icons.json'), 'utf8'));
   const norm = (s) => s.replace(/\s+/g, '').replace(/class="[^"]*"/g, '').replace(/(width|height)="[^"]*"/g, '');

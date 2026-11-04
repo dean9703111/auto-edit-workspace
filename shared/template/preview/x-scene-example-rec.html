@@ -40,27 +40,34 @@
     #x-scene-example-rec #xscr-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
     #x-scene-example-rec #xscr-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
     #x-scene-example-rec #xscr-stage { position: relative; width: 1176px; height: 580px; }
+    /* 地面線（選用）：和內容區一樣大的 svg，線的位置由程式量 xscr-stand 元件的腳底算；data-stops 的站點是程式加的 circle */
+    #x-scene-example-rec .xscr-floor { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
+    #x-scene-example-rec .xscr-floor path { fill: none; stroke: var(--il-line); stroke-width: 4px; stroke-linecap: round; }
+    #x-scene-example-rec .xscr-floor circle { fill: var(--v2-node); stroke: var(--il-line); stroke-width: 4px; }
+    #x-scene-example-rec .xscr-route path { stroke: var(--brand); stroke-width: 10px; }   /* 路線圖：地面線 class 加 xscr-route＝主色粗線＋站點 */
+    #x-scene-example-rec .xscr-route circle { stroke: var(--brand); stroke-width: 6px; }
+    /* 目前位置標記（選用）：沿地面線滑到聚焦的元件下面 */
+    #x-scene-example-rec .xscr-here { position: absolute; left: 0; top: 0; width: 40px; height: 40px; box-sizing: border-box; border-radius: 50%; background: var(--v2-ink); border: 8px solid var(--brand); opacity: 0; }
     /* 元件：插圖＋下面的標籤（xscr-side＝標籤在右邊）；位置由 xscr-stage 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
     #x-scene-example-rec .xscr-it { position: absolute; display: flex; flex-direction: column; align-items: center; gap: var(--sc-gap-sm); white-space: nowrap; }
     #x-scene-example-rec .xscr-side { flex-direction: row; gap: var(--sc-gap-sm); }
     #x-scene-example-rec .xscr-lbl { display: block; font-size: 32px; line-height: 40px; }   /* 標籤 32px：退到 0.96 時仍 ≥ 30px */
+    #x-scene-example-rec .xscr-wv { width: 216px; height: 88px; }   /* 聲紋（選用）：P.wave 自動插跳動的條 */
   </style>
   <div id="x-scene-example-rec" data-composition-id="x-scene-example-rec" data-width="1920" data-height="1080" data-duration="23"
        data-cues-sample='{"start":0,"D":23,"cues":{"192":[2.5,5],"193":[5.5,8],"194":[8.5,11],"195":[11.5,14],"196":[14.5,17],"197":[17.5,20]},"refs":{"#192@腳架":3.4,"#193@試錄":6.2,"#194@走到":9,"#195@播放":12,"#196@聲音":15.4,"#197@符合":18.1}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xscr-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">開拍前先試錄</span></div>
-      <div id="xscr-stage" data-layout="row" data-gap="lg">
+      <div id="xscr-stage" data-layout="row" data-gap="xxl">
+        <svg id="xscr-floor" class="xscr-floor" data-layout-ignore xmlns="http://www.w3.org/2000/svg"><path d=""/></svg>
         <!-- ══ DATA 1：元件清單（一個元件一行；只改這裡）══ -->
-        <div id="xscr-desk-set" data-slot data-layout="col" data-gap="none">
-          <div id="xscr-person" class="xscr-it xscr-pre" data-slot><div data-illus="personBust" data-tone="a" style="width:200px;height:212px"></div></div>
-          <div id="xscr-desk" class="xscr-it xscr-pre" data-slot><div data-illus="desk" style="width:400px;height:184px"></div></div>
-        </div>
-        <div id="xscr-phone" class="xscr-it" data-slot><div data-illus="phoneTripod" data-orient="landscape" data-screen="blank" style="width:320px;height:370px"></div><b class="xscr-lbl sc-w700">手機</b></div>
+        <div id="xscr-person" class="xscr-it xscr-pre xscr-stand" data-slot><div data-illus="pgPerson" style="width:160px;height:378px"></div><b class="xscr-lbl sc-w700">我</b></div>
+        <div id="xscr-phone" class="xscr-it xscr-stand" data-slot><div data-illus="phoneTripod" data-orient="landscape" data-screen="blank" style="width:330px;height:380px"></div><b class="xscr-lbl sc-w700">手機</b></div>
         <div id="xscr-right" data-slot data-layout="col" data-gap="md">
-          <div id="xscr-pill" class="xscr-it" data-slot><div data-illus="recPill" style="width:216px;height:64px"></div></div>
-          <div id="xscr-wave" class="xscr-it" data-slot><div data-illus="waveform" data-bars="20" data-seed="3" data-color="yellow" style="width:216px;height:88px"></div><b class="xscr-lbl sc-w700">聲音</b></div>
-          <div id="xscr-ok" class="xscr-it xscr-side" data-slot><div data-illus="badge" data-kind="check" style="width:80px;height:80px"></div><b class="xscr-lbl sc-w700">符合需求</b></div>
+          <div id="xscr-pill" class="xscr-it" data-slot><div data-illus="recPill" style="width:232px;height:70px"></div></div>
+          <div id="xscr-wave" class="xscr-it" data-slot><div class="xscr-wv"></div><b class="xscr-lbl sc-w700">聲音</b></div>
+          <div id="xscr-ok" class="xscr-it xscr-side" data-slot><div data-illus="badge" data-kind="check" style="width:88px;height:88px"></div><b class="xscr-lbl sc-w700">符合需求</b></div>
         </div>
         <!-- ══ DATA 1 到這裡 ══ -->
       </div>
@@ -87,7 +94,7 @@
       [T2, { state: ['xscr-phone', 'blank', 'rec'], in: ['xscr-pill'], count: ['#xscr-pill .il-time', 0, 5, '00:0'], focus: 'xscr-phone' }],
       [T3, { move: ['xscr-person', 'xscr-phone', 'left'], focus: 'xscr-person' }],
       [T4, { state: ['xscr-phone', 'rec', 'play'], focus: 'xscr-phone' }],
-      [T5, { in: ['xscr-wave'], focus: 'xscr-wave' }],
+      [T5, { in: ['xscr-wave'], wave: 'xscr-wave', focus: 'xscr-wave' }],
       [T6, { check: 'xscr-ok', focus: 'xscr-ok' }],
     ];
     // ══ DATA 2 到這裡；下面不用改 ══
@@ -95,33 +102,60 @@
     const ROOT = document.getElementById('x-scene-example-rec');
     const R = P.region('panelTop');   // 主卡＝全畫面主卡區（design-system §2；直式由 window.__regions 蓋過）
     const CARD = document.getElementById('xscr-card');
-    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; CARD.style.width = R[2] + 'px';
+    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; if (!CARD.hasAttribute('data-wide')) CARD.style.width = R[2] + 'px';   // 全寬版型：kit 已把主卡拉到 1680，不要蓋回去
     const sel = function (id) { return '#' + id; };
     const stateSel = function (s) { return !s || s === 'blank' ? null : s === 'video' ? '.il-content' : '.il-' + s; };   // 狀態名 → 狀態群組
     // 位置由 data-layout 排好（kit/scene-layout.js；ILLUS.mount 之後自動跑一次），這裡只讀
     const L = window.SceneLayout, moved = {};
     const illusOf = function (el) { return el.querySelector('[data-illus], [data-illus-src]') || el; };
+    const DRAW = 0.7;   // 一個插圖元件畫出來的秒數（馬克筆照筆順一筆一筆畫，P.draw）
+    const drawn = function (s) { return !!ROOT.querySelector(s + ' .il'); };   // 插圖元件用畫的；不是插圖（聲紋、自己的 HTML）用彈出
+    const lblAt = function (s, at) { if (ROOT.querySelector(s + ' .xscr-lbl')) P.chars(s + ' .xscr-lbl', at, { stagger: 0.035 }); };
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     if (ENTER === 'grow') P.grow('#xscr-card', 0.3);
     else { P.wipe('#xscr-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xscr-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xscr-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
-    // 拍 1 場景骨架：一開始就在的元件（class 有 xscr-pre）錯拍彈出
-    P.pop('#x-scene-example-rec .xscr-pre', 1.0, { stagger: 0.12, from: 0.9, dy: 20 });
+    // 拍 1 場景骨架：地面線（畫在 xscr-stand 元件的腳底；data-stops＝每個元件下面一個站點）→ 一開始就在的元件（xscr-pre）一筆一筆畫出
+    const FLOOR = ROOT.querySelector('.xscr-floor'), STANDS = Array.prototype.slice.call(ROOT.querySelectorAll('.xscr-stand'));
+    const HERE = ROOT.querySelector('.xscr-here');   // 目前位置標記（選用）：聚焦到站在地上的元件時，沿地面線滑到它下面
+    let fx0 = 0, fx1 = 1, here = -1;
+    if (FLOOR && STANDS.length) {
+      const st = FLOOR.parentNode, route = FLOOR.classList.contains('xscr-route');   // 路線圖：線畫在標籤下面（物件、站名、站點由上往下）；地面線：畫在插圖的腳底
+      const bs = STANDS.map(function (el) { return L.box(illusOf(el), st); });
+      const y = Math.max.apply(null, STANDS.map(function (el, i) { const b = route ? L.box(el, st) : bs[i]; return b[1] + b[3] + (route ? 36 : 0); }));
+      fx0 = Math.max(24, Math.min.apply(null, bs.map(function (b) { return b[0]; })) - 48); fx1 = Math.min(st.offsetWidth - 24, Math.max.apply(null, bs.map(function (b) { return b[0] + b[2]; })) + 48);
+      FLOOR.querySelector('path').setAttribute('d', 'M' + fx0 + ' ' + y + ' L' + fx1 + ' ' + y);
+      if (FLOOR.hasAttribute('data-stops')) bs.forEach(function (b) {
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', Math.round(b[0] + b[2] / 2)); c.setAttribute('cy', y); c.setAttribute('r', 12); FLOOR.appendChild(c);
+      });
+      if (HERE) { HERE.style.left = Math.round(fx0 - HERE.offsetWidth / 2) + 'px'; HERE.style.top = Math.round(y - HERE.offsetHeight / 2) + 'px'; }
+    } else if (FLOOR) FLOOR.remove();   // 沒有站在地上的元件：不畫地面線
+    if (HERE && FLOOR && STANDS.length) P.pop(HERE, 1.2, { from: 0.4, dy: 0 });   // 標記和路線一起出現在起點
+    const hereTo = function (id, at) {   // 標記沿線滑到這個元件下面
+      const el = document.getElementById(id);
+      if (!HERE || STANDS.indexOf(el) < 0) return;
+      const b = L.box(illusOf(el), FLOOR.parentNode), to = (b[0] + b[2] / 2 - fx0) / (fx1 - fx0);
+      P.along(HERE, '#' + FLOOR.id + ' path', at, { from: Math.max(0, here), to: to, dur: 0.8 });
+      here = to;
+    };
+    const PRE = Array.prototype.map.call(ROOT.querySelectorAll('.xscr-pre'), function (el) { return '#' + el.id; });
+    P.draw('#xscr-floor, #x-scene-example-rec .xscr-pre .il', 1.2, { dur: 0.8 });   // 同一支筆：先地面線、再場景骨架（文件順序）
+    PRE.forEach(function (s) { if (!drawn(s)) P.pop(s, 1.2, { from: 0.9, dy: 20 }); lblAt(s, 1.6); });
 
-    // 每一拍：進場 → 換狀態／移動／數字 → 連接線 → 結果 → 聚焦（同一時間只有一個焦點）
-    const entered = [], dimmed = [];
-    Array.prototype.forEach.call(ROOT.querySelectorAll('.xscr-pre'), function (el) { entered.push('#' + el.id); });   // 場景骨架也可以被聚焦、移動
+    // 每一拍：畫出來（或彈出）→ 換狀態／移動／數字／聲紋 → 連接線 → 結果 → 聚焦（同一時間只有一個焦點）
+    const entered = PRE.slice(), dimmed = [];   // 場景骨架也可以被聚焦、移動
     let spotted = false;
     BEATS.forEach(function (b, k) {
-      const t = b[0], o = b[1], next = k + 1 < BEATS.length ? BEATS[k + 1][0] : t + 2.0;
-      const ins = (o.in || []).map(sel);
-      if (ins.length) {
-        P.pop(ins.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
-        ins.forEach(function (s, i) { if (ROOT.querySelector(s + ' .xscr-lbl')) P.chars(s + ' .xscr-lbl', t + 0.14 + i * 0.12, { stagger: 0.035 }); });
-        ins.forEach(function (s) { if (entered.indexOf(s) < 0) entered.push(s); });
-      }
+      const t = b[0], o = b[1];
+      const ins = (o.in || []).map(sel), drw = ins.filter(drawn), pops = ins.filter(function (s) { return !drawn(s); });
+      const lines = o.line ? $q(sel(o.line) + ', ' + sel(o.line) + '-head') : [];   // 先有節點再畫線：同一支筆畫完這拍的元件，接著畫連接線與箭頭（0.35 秒）
+      const strokes = drw.map(function (s) { return ROOT.querySelector(s + ' .il'); }).concat(lines);
+      if (strokes.length) P.draw(strokes, t, { dur: DRAW * drw.length + (lines.length ? 0.35 : 0) });
+      if (pops.length) P.pop(pops.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
+      ins.forEach(function (s, i) { lblAt(s, t + 0.3 + i * 0.3); if (entered.indexOf(s) < 0) entered.push(s); });
       if (o.state) {
         const s = sel(o.state[0]), a = stateSel(o.state[1]), z = stateSel(o.state[2]);
         if (a && z) P.swap(s + ' ' + a, s + ' ' + z, t + 0.15);
@@ -139,19 +173,20 @@
         moved[o.move[0]] = to;
       }
       if (o.count) P.count(o.count[0], t + 0.2, { from: o.count[1], to: o.count[2], dur: 1.2, prefix: o.count[3] || '' });
-      if (o.line) P.stroke(sel(o.line), t + 0.7, { dur: 0.5 });   // 先有節點再畫線：這一拍的元件彈出（0.55 秒）之後才描
+      if (o.wave) P.wave(sel(o.wave) + ' .xscr-wv', t + 0.2);   // 聲紋從這拍跳到段尾
       if (o.check) {
         const s = sel(o.check);
         P.pop(s, t, { from: 0.6, dy: 0 });
-        if (ROOT.querySelector(s + ' .xscr-lbl')) P.chars(s + ' .xscr-lbl', t + 0.14, { stagger: 0.035 });
+        lblAt(s, t + 0.14);
         P.check(s + ' .il', t + 0.3);
         if (entered.indexOf(s) < 0) entered.push(s);
       }
       (o.dim || []).forEach(function (id) { P.dim(sel(id), t, { to: 0.6 }); if (dimmed.indexOf(sel(id)) < 0) dimmed.push(sel(id)); });
       if (o.focus) {
-        const f = sel(o.focus), fresh = (o.in || []).indexOf(o.focus) >= 0 || o.check === o.focus;
-        const at = t + (fresh ? 0.6 : 0.1);
-        P.spot(entered.join(', '), f, at, { scale: 1.05, lift: -8 });
+        const f = sel(o.focus), fresh = ins.indexOf(f) >= 0 || o.check === o.focus;
+        const at = t + (fresh && drw.indexOf(f) < 0 ? 0.6 : 0.1);   // 畫出來的元件一開始畫就聚焦（不放大、不上移，筆尖才對得準）；彈出的等彈完
+        P.spot(entered.join(', '), f, at, { scale: 1, lift: 0 });
+        hereTo(o.focus, at);
         spotted = true;
       }
     });

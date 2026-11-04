@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-crowd 人群比例｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-crowd.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-crowd { position: absolute; inset: 0; }
+    #x-crowd .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-crowd #xcrd-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-crowd #xcrd-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; }
+    #x-crowd #xcrd-pill { margin-left: auto; }
+    #x-crowd #xcrd-body { position: relative; width: 1176px; height: 580px; }
+    /* 人群：5 欄 × 2 排 */
+    #x-crowd #xcrd-grid { position: absolute; width: 688px; height: 508px; display: grid; grid-template-columns: repeat(5, 112px); column-gap: 32px; row-gap: 20px; }
+    #x-crowd .xcrd-p { position: relative; width: 112px; height: 244px; }
+    /* 數字欄：上總數、下主色的那幾個 */
+    #x-crowd #xcrd-stat { position: absolute; width: 312px; height: 508px; display: flex; flex-direction: column; justify-content: center; gap: 40px; }
+    #x-crowd .xcrd-s { position: relative; color: var(--sc-fs-ink); white-space: nowrap; }
+    #x-crowd .xcrd-num { display: flex; align-items: baseline; gap: 12px; }
+    #x-crowd #xcrd-b .xcrd-num { color: var(--brand); }
+  </style>
+  <div id="x-crowd" data-composition-id="x-crowd" data-width="1920" data-height="1080" data-duration="11.8"
+       data-cues-sample='{"start":0,"D":11.8,"cues":{"342":[1.5,4.0],"343":[4.2,6.8],"344":[7.0,10.6]},"refs":{"#342@10":1.8,"#343@7":4.6,"#344@開頭":7.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcrd-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">點進來的 10 個人</span><div id="xcrd-pill" class="sc-pill" data-snap-width><span class="sc-opt">開頭先抓住人</span></div></div>
+      <div id="xcrd-body" data-layout="row" data-gap="lg">
+        <div id="xcrd-grid" data-slot>
+          <div id="xcrd-p1" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p2" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p3" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p4" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p5" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p6" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p7" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p8" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p9" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p10" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+        </div>
+        <div id="xcrd-stat" data-slot>
+          <div id="xcrd-a" class="xcrd-s"><div class="xcrd-num"><span id="xcrd-na" class="sc-t112 sc-w900">0</span><span class="sc-t52 sc-w900">人</span></div><div id="xcrd-la" class="sc-t40 sc-w700 sc-gray sc-opt">點進來看</div></div>
+          <div id="xcrd-b" class="xcrd-s"><div class="xcrd-num"><span id="xcrd-nb" class="sc-t112 sc-w900">0</span><span class="sc-t52 sc-w900">人</span></div><div id="xcrd-lb" class="sc-t40 sc-w700 sc-opt">30 秒內就滑走</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    ILLUS.mount(document.getElementById('x-crowd'));   // 第一行：小人先掛成 SVG，之後建的動畫才抓得到 .il-hi
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-crowd'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#342@10'), T2 = P.at('#343@7');    // 講到總數／講到那幾個
+    P.sfx('impact', '#343@7');                         // 那幾個換色一顆 impact（句號和 T2 一樣）
+    const T3 = P.at('#344@開頭');                      // 選用：講到結論（沒有結論句的刪法見檔頭【綁句欄位】）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const HOT = 7;                                     // 換主色的人數＝class 有 xcrd-hot 的人數
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字
+    if (ENTER === 'grow') P.grow('#xcrd-card', 0.3);
+    else { P.wipe('#xcrd-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcrd-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xcrd-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 總數：10 個小人每 0.08 秒彈出一個 → 右上數字從 0 數到 10、說明逐字
+    P.pop('#x-crowd .xcrd-p', T1, { stagger: 0.08, from: 0.5, dy: 30, dur: 0.5 });
+    P.pop('#xcrd-a', T1, { from: 0.9, dy: 20 });
+    P.count('#xcrd-na', T1, { from: 0, to: 10, dur: 0.9 });
+    P.chars('#xcrd-la', T1 + 0.15);
+    // 拍 2 那幾個：那幾個人的身體每 0.08 秒換主色一個、其他人淡下去 → 右下主色數字數到 HOT、說明逐字
+    P.in('#x-crowd .xcrd-hot .il-hi', T2, { stagger: 0.08, dur: 0.3 });
+    P.dim('#x-crowd .xcrd-p:not(.xcrd-hot)', T2, { to: 0.35 });
+    P.pop('#xcrd-b', T2, { from: 0.9, dy: 20 });
+    P.count('#xcrd-nb', T2, { from: 0, to: HOT, dur: 0.9 });
+    P.chars('#xcrd-lb', T2 + 0.15);
+    // 拍 3（選用）結論：膠囊彈出、字逐字落下
+    P.pop('#xcrd-pill', T3, { from: 0.7, dy: 0 });
+    P.chars('#xcrd-pill .sc-opt', T3 + 0.12, { mode: 'drop' });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-crowd'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-crowd";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

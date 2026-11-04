@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-news 新聞快訊｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-news.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-news { position: absolute; inset: 0; }
+    #x-news .fill { position: absolute; inset: 0; }
+    /* 第一列：快訊標籤＋標題條 */
+    #x-news #xnews-tag { position: absolute; left: 120px; top: 160px; width: 232px; height: 100px; box-sizing: border-box; border-radius: 20px 0 0 20px;
+                         background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; justify-content: center; gap: 12px; white-space: nowrap; }
+    #x-news #xnews-tag .sc-icon { --d: 56px; --i: 32px; position: relative; background: var(--brand-ink); color: var(--brand); }
+    #x-news #xnews-head { position: absolute; left: 352px; top: 160px; width: 948px; height: 100px; box-sizing: border-box; padding: 0 40px; border-radius: 0 20px 20px 0;
+                          background: var(--v2-ink); color: var(--v2-node); display: flex; align-items: center; white-space: nowrap; }
+    /* 中間兩張卡：白底細框，翻起來的軸是底邊 */
+    #x-news .xnews-card { position: absolute; top: 300px; height: 400px; box-sizing: border-box; padding: 40px 48px; border: 4px solid var(--v2-node-line); border-radius: 24px;
+                          background: var(--v2-node); color: var(--sc-fs-ink); box-shadow: var(--v2-card-shadow); }
+    #x-news #xnews-big { left: 120px; width: 560px; padding: 40px 72px; display: flex; flex-direction: column; justify-content: center; gap: 8px; white-space: nowrap; }
+    #x-news #xnews-nrow { display: flex; align-items: baseline; gap: 12px; color: var(--brand); }
+    #x-news #xnews-trend { left: 712px; width: 588px; display: flex; flex-direction: column; gap: 24px; }
+    #x-news #xnews-rhead { height: 72px; display: flex; align-items: center; gap: 16px; white-space: nowrap; }
+    #x-news #xnews-rhead .sc-icon { --d: 64px; --i: 36px; position: relative; }
+    #x-news #xnews-rv { margin-left: auto; color: var(--brand); }
+    #x-news #xnews-chart { display: block; width: 484px; height: 210px; overflow: visible; }
+    #x-news #xnews-line { fill: none; stroke: var(--brand); stroke-width: 8px; stroke-linecap: round; stroke-linejoin: round; }
+    #x-news #xnews-area { fill: var(--v2-node-tint); stroke: none; }
+    #x-news #xnews-base { fill: none; stroke: var(--v2-line); stroke-width: 4px; }
+    #x-news #xnews-dot { fill: var(--brand); stroke: var(--v2-node); stroke-width: 6px; }
+    /* 來源列：淡主色底、寬照字 */
+    #x-news #xnews-src { position: absolute; left: 120px; top: 740px; width: max-content; height: 96px; box-sizing: border-box; padding: 0 32px; border-radius: 16px;
+                         background: var(--v2-node-tint); color: var(--sc-fs-ink); display: flex; align-items: center; white-space: nowrap; }
+  </style>
+  <div id="x-news" data-composition-id="x-news" data-width="1920" data-height="1080" data-duration="11.6"
+       data-cues-sample='{"start":0,"D":11.6,"cues":{"372":[2.2,5.0],"373":[5.1,8.4],"374":[8.5,11.4]},"refs":{"#372@兩倍":2.4,"#373@半年":5.2,"#374@官方":8.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xnews-tag"><span id="xnews-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /> <path d="M18 14h-8" /> <path d="M15 18h-5" /> <path d="M10 6h8v4h-8V6Z" /> </svg></span><b class="sc-t52 sc-w900 sc-opt">快訊</b></div>
+    <div id="xnews-head" data-layout-allow-slack><b id="xnews-htext" class="sc-t52 sc-w900 sc-opt">YouTube 公布 Shorts 數據</b></div>
+    <div id="xnews-big" class="xnews-card" data-layout-allow-slack>
+      <b id="xnews-bl" class="sc-t40 sc-w700 sc-gray sc-opt">Shorts 觀看次數</b>
+      <div id="xnews-nrow"><b id="xnews-num" class="sc-t150 sc-w900">0</b><b id="xnews-unit" class="sc-t72 sc-w900 sc-opt">倍</b></div>
+      <b id="xnews-bs" class="sc-t40 sc-w700 sc-opt">比去年同期</b>
+    </div>
+    <div id="xnews-trend" class="xnews-card">
+      <div id="xnews-rhead"><span id="xnews-rico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><b id="xnews-rl" class="sc-t40 sc-w700 sc-opt">近 6 個月</b><b id="xnews-rv" class="sc-t52 sc-w900 sc-opt">+120%</b></div>
+      <svg id="xnews-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 508 220">
+        <path id="xnews-base" d="M8 216 L500 216" />
+        <path id="xnews-area" d="M8 196 L100 170 L190 176 L280 120 L370 96 L500 24 L500 220 L8 220 Z" />
+        <path id="xnews-line" d="M8 196 L100 170 L190 176 L280 120 L370 96 L500 24" />
+        <circle id="xnews-dot" cx="500" cy="24" r="14" />
+      </svg>
+    </div>
+    <div id="xnews-src" data-snap-width><b id="xnews-stext" class="sc-t40 sc-w700 sc-opt">資料來源：YouTube 官方部落格（2026 年 10 月）</b></div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-news'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#372@兩倍'), T2 = P.at('#373@半年'), T3 = P.at('#374@官方');   // 大數字／變化／出處
+    P.sfx('impact', '#372@兩倍');                                                 // 大數字翻起來一顆 impact（句號和 T1 一樣）
+
+    // 拍 0 開場：快訊標籤翻起來 → 標題條由左擦開 → 標題逐字
+    P.hinge('#xnews-tag', 0.5);
+    P.icon('#xnews-tico', 0.65);
+    P.wipe('#xnews-head', 0.7, { dir: 'left', dur: 0.5 });
+    P.chars('#xnews-htext', 0.9, { stagger: 0.03 });
+    // 拍 1 大數字：卡從平躺翻起來 → 數字數上去
+    P.hinge('#xnews-big', T1);
+    P.count('#xnews-num', T1 + 0.2, { from: 0, to: 2, dur: 0.8 });
+    // 拍 2 變化：走勢卡翻起來 → 折線畫上去、面淡入 → 終點圓與漲幅彈出
+    P.hinge('#xnews-trend', T2);
+    P.icon('#xnews-rico', T2 + 0.15);
+    P.stroke('#xnews-line', T2 + 0.4, { dur: 1.0 });
+    P.in('#xnews-area', T2 + 0.4, { dur: 1.0 });
+    P.pop('#xnews-dot, #xnews-rv', T2 + 1.4, { from: 0.5, dy: 0 });
+    // 拍 3 出處：來源列由左擦開
+    P.wipe('#xnews-src', T3, { dir: 'left', dur: 0.5 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-news'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-news";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

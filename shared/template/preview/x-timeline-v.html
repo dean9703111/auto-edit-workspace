@@ -46,11 +46,11 @@
     /* 橫軸在最下層、進度條疊在上面、圓點再疊上去；兩層 svg 都是整個內容區大小（座標＝內容區座標；位置由 script 讀排好的點算） */
     #x-timeline #xtl-track { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
     #x-timeline #xtl-dots { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
-    #x-timeline #xtl-axis { stroke: var(--sc-fs-line); stroke-width: 8px; stroke-linecap: round; }
-    #x-timeline #xtl-fill { position: absolute; height: 8px; border-radius: 4px; background: var(--brand); }
-    /* 空心點：r 14、框 6；實心點：r 9 的粗描邊（18）描完就是填滿的圓，蓋住空心點的框 */
-    #x-timeline .xtl-dot { fill: var(--sc-fs-card); stroke: var(--sc-fs-line); stroke-width: 6px; }
-    #x-timeline .xtl-don { fill: none; stroke: var(--brand); stroke-width: 18px; }
+    #x-timeline #xtl-axis { stroke: var(--sc-fs-line); stroke-width: 14px; stroke-linecap: round; }
+    #x-timeline #xtl-fill { position: absolute; height: 14px; border-radius: 7px; background: var(--brand); }
+    /* 站點：空心 r 18、灰框 8；走過＝同位置描一圈主色框（P.stroke 畫圈），蓋住灰框 */
+    #x-timeline .xtl-dot { fill: var(--sc-fs-card); stroke: var(--sc-fs-line); stroke-width: 8px; }
+    #x-timeline .xtl-don { fill: none; stroke: var(--brand); stroke-width: 8px; }
     /* 點：卡片＋說明一欄，中間空 --sc-gap-lg＋--sc-gap-md 給橫軸；4 點寬 248、3 點（沒有 #xtl-p4）寬 320；位置由 #xtl-body 的 data-layout 排，不寫 left／top */
     #x-timeline .xtl-pt { position: absolute; width: 248px; display: flex; flex-direction: column; gap: calc(var(--sc-gap-lg) + var(--sc-gap-md)); }
     #x-timeline #xtl-body:not(:has(#xtl-p4)) .xtl-pt { width: 320px; }
@@ -60,8 +60,8 @@
                             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; white-space: nowrap; }
     #x-timeline .xtl-node .sc-icon { --d: 88px; --i: 48px; position: relative; }
     #x-timeline .xtl-node .xtl-lab { position: relative; }
-    /* 進度頭：圓點跟著進度條走到每一點（目前這一點的主色亮框由 P.spot 自動加） */
-    #x-timeline #xtl-head { position: absolute; width: 24px; height: 24px; border-radius: 12px; background: var(--brand); }
+    /* 目前位置點：沿路線滑到每一站（P.along），停在站點上；目前這一站站名牌的主色亮框由 P.spot 自動加 */
+    #x-timeline #xtl-head { position: absolute; width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; background: var(--v2-ink); border: 8px solid var(--brand); }
     /* 說明：軸下方置中一行（最多兩行，高固定 144，四個點一樣高才排得齊），和卡片同寬 */
     #x-timeline .xtl-cap { position: relative; height: 144px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }
   </style>
@@ -75,18 +75,18 @@
           <line id="xtl-axis" />
         </svg>
         <div id="xtl-fill"></div>
-        <i id="xtl-head" data-layout-allow-overlap></i>
         <svg id="xtl-dots" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
           <!-- cx、cy 由 script 讀排好的點填（不用改）；每個點兩個圓：空心 .xtl-dot、講到時填滿的 .xtl-don -->
-          <circle id="xtl-dot1" class="xtl-dot" r="14" />
-          <circle id="xtl-dot2" class="xtl-dot" r="14" />
-          <circle id="xtl-dot3" class="xtl-dot" r="14" />
-          <circle id="xtl-dot4" class="xtl-dot" r="14" />
-          <circle id="xtl-don1" class="xtl-don" r="9" />
-          <circle id="xtl-don2" class="xtl-don" r="9" />
-          <circle id="xtl-don3" class="xtl-don" r="9" />
-          <circle id="xtl-don4" class="xtl-don" r="9" />
+          <circle id="xtl-dot1" class="xtl-dot" r="18" />
+          <circle id="xtl-dot2" class="xtl-dot" r="18" />
+          <circle id="xtl-dot3" class="xtl-dot" r="18" />
+          <circle id="xtl-dot4" class="xtl-dot" r="18" />
+          <circle id="xtl-don1" class="xtl-don" r="18" />
+          <circle id="xtl-don2" class="xtl-don" r="18" />
+          <circle id="xtl-don3" class="xtl-don" r="18" />
+          <circle id="xtl-don4" class="xtl-don" r="18" />
         </svg>
+        <i id="xtl-head" data-layout-allow-overlap></i>   <!-- 目前位置點疊在站點上面 -->
         <div id="xtl-p1" class="xtl-pt" data-slot>
           <div id="xtl-n1" class="xtl-node">
             <span id="xtl-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path d="m6.2 5.3 3.1 3.9" /> <path d="m12.4 3.4 3.1 4" /> <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2019</span></div>
@@ -127,12 +127,11 @@
     const AX0 = PT[0][0], AX1 = PT[N - 1][0] + PT[N - 1][2];        // 橫軸：第一點左緣到最後一點右緣
     const AY = Math.round((L.box($q('#xtl-n1')[0], BODY)[1] + $q('#xtl-n1')[0].offsetHeight + L.box($q('#xtl-c1')[0], BODY)[1]) / 2);   // 橫軸 y：卡片底和說明頂的正中
     const F = X.map(function (x) { return (x - AX0) / (AX1 - AX0); });   // 進度條走到每一點的比例
-    const HX = X.map(function (x) { return x - 12; });              // 進度頭走到每一點的 left（頭寬 24）
     const ALL = N === 3 ? '#xtl-n1, #xtl-n2, #xtl-n3' : '#xtl-n1, #xtl-n2, #xtl-n3, #xtl-n4';
     const AXIS = $q('#xtl-axis')[0], FILL = $q('#xtl-fill')[0], HEAD = $q('#xtl-head')[0];
     AXIS.setAttribute('x1', String(AX0)); AXIS.setAttribute('x2', String(AX1)); AXIS.setAttribute('y1', String(AY)); AXIS.setAttribute('y2', String(AY));
-    FILL.style.left = AX0 + 'px'; FILL.style.width = (AX1 - AX0) + 'px'; FILL.style.top = (AY - 4) + 'px';
-    HEAD.style.left = (AX0 - 12) + 'px'; HEAD.style.top = (AY - 12) + 'px';
+    FILL.style.left = AX0 + 'px'; FILL.style.width = (AX1 - AX0) + 'px'; FILL.style.top = (AY - 7) + 'px';
+    HEAD.style.left = (AX0 - 22) + 'px'; HEAD.style.top = (AY - 22) + 'px';   // 目前位置點的起點：路線左端（寬 44）
     X.forEach(function (x, i) {
       $q('#xtl-dot' + (i + 1) + ', #xtl-don' + (i + 1)).forEach(function (el) { el.setAttribute('cx', String(x)); el.setAttribute('cy', String(AY)); });
     });
@@ -141,34 +140,34 @@
     if (ENTER === 'grow') P.grow('#xtl-card', 0.3);
     else { P.wipe('#xtl-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xtl-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xtl-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
-    // 拍 1 骨架：橫軸由左往右帶著發光頭畫出，空心點跟著彗星經過描出來（先看到有幾個點）
+    // 拍 1 骨架：路線由左往右帶著發光頭畫出，空心站點跟著彗星經過描出來（先看到有幾站）
     P.comet('#xtl-axis', 1.2, { dur: 0.8 });
     P.stroke('.xtl-dot', 1.35, { stagger: 0.17, dur: 0.25 });
-    // 拍 2 準備：軸的左端彈出進度頭（第 1 點前 1.1 秒）
+    // 拍 2 準備：路線左端彈出目前位置點（第 1 站前 1.1 秒）
     P.pop('#xtl-head', T1 - 1.1, { from: 0.2, dy: 0 });
 
-    // 拍 3 第 1 點：進度推進（提早 0.5 出發、講到時到點）→ 點填滿、進度頭漣漪、站卡從軸上彈起 → ＋0.14 說明逐字 → ＋0.18 圖示描線
+    // 拍 3 第 1 站：目前位置點沿路線滑過去、走過的路線變主色（提早 0.5 出發、講到時到站）→ 站點描主色圈、漣漪、站名牌從路線上彈起 → ＋0.14 說明逐字 → ＋0.18 圖示描線
     //   → ＋0.6 聚焦（站卡放大抬起、主色亮框；前一點的站卡壓暗、說明退焦）
     P.bar('#xtl-fill', T1 - 0.5, { from: 0, to: F[0], dur: 0.5, ease: P.V2.EASE.move });
-    P.morph('#xtl-head', T1 - 0.5, { left: HX[0] }, { from: { left: AX0 - 12 }, dur: 0.5, ease: P.V2.EASE.move });
+    P.along('#xtl-head', '#xtl-axis', T1 - 0.5, { from: 0, to: F[0], dur: 0.5 });
     P.stroke('#xtl-don1', T1, { dur: 0.3 });  P.ripple('#xtl-head', T1);
     P.pop('#xtl-n1', T1, { from: 0.82, dy: 60 });  P.chars('#xtl-c1', T1 + 0.14);  P.icon('#xtl-ico1', T1 + 0.18);
     P.spot('#xtl-n1', '#xtl-n1', T1 + 0.6, { scale: 1.06, lift: -10 });
     // 拍 4 第 2 點：同拍 3
     P.bar('#xtl-fill', T2 - 0.5, { from: F[0], to: F[1], dur: 0.5, ease: P.V2.EASE.move });
-    P.morph('#xtl-head', T2 - 0.5, { left: HX[1] }, { from: { left: HX[0] }, dur: 0.5, ease: P.V2.EASE.move });
+    P.along('#xtl-head', '#xtl-axis', T2 - 0.5, { from: F[0], to: F[1], dur: 0.5 });
     P.stroke('#xtl-don2', T2, { dur: 0.3 });  P.ripple('#xtl-head', T2);
     P.pop('#xtl-n2', T2, { from: 0.82, dy: 60 });  P.chars('#xtl-c2', T2 + 0.14);  P.icon('#xtl-ico2', T2 + 0.18);
     P.spot('#xtl-n1, #xtl-n2', '#xtl-n2', T2 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c1', T2 + 0.6, { to: 0.5 });
     // 拍 5 第 3 點：同拍 3
     P.bar('#xtl-fill', T3 - 0.5, { from: F[1], to: F[2], dur: 0.5, ease: P.V2.EASE.move });
-    P.morph('#xtl-head', T3 - 0.5, { left: HX[2] }, { from: { left: HX[1] }, dur: 0.5, ease: P.V2.EASE.move });
+    P.along('#xtl-head', '#xtl-axis', T3 - 0.5, { from: F[1], to: F[2], dur: 0.5 });
     P.stroke('#xtl-don3', T3, { dur: 0.3 });  P.ripple('#xtl-head', T3);
     P.pop('#xtl-n3', T3, { from: 0.82, dy: 60 });  P.chars('#xtl-c3', T3 + 0.14);  P.icon('#xtl-ico3', T3 + 0.18);
     P.spot('#xtl-n1, #xtl-n2, #xtl-n3', '#xtl-n3', T3 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c2', T3 + 0.6, { to: 0.5 });
     // 拍 6 第 4 點：同拍 3（3 點時刪掉這 5 行，收尾的 T4 改 T3）
     P.bar('#xtl-fill', T4 - 0.5, { from: F[2], to: F[3], dur: 0.5, ease: P.V2.EASE.move });
-    P.morph('#xtl-head', T4 - 0.5, { left: HX[3] }, { from: { left: HX[2] }, dur: 0.5, ease: P.V2.EASE.move });
+    P.along('#xtl-head', '#xtl-axis', T4 - 0.5, { from: F[2], to: F[3], dur: 0.5 });
     P.stroke('#xtl-don4', T4, { dur: 0.3 });  P.ripple('#xtl-head', T4);
     P.pop('#xtl-n4', T4, { from: 0.82, dy: 60 });  P.chars('#xtl-c4', T4 + 0.14);  P.icon('#xtl-ico4', T4 + 0.18);
     P.spot('#xtl-n1, #xtl-n2, #xtl-n3, #xtl-n4', '#xtl-n4', T4 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c3', T4 + 0.6, { to: 0.5 });

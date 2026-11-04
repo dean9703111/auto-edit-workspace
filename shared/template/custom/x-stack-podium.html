@@ -1,0 +1,135 @@
+<!-- 預設拍型：D 清單（BEATS.md §3 D；台座：一層一拍＝從平躺翻起來疊上去，越上層越窄，講到「合起來」最上層變主色） -->
+<!doctype html>
+<!--
+  x-stack-podium：一層一層翻起來疊成台座（第二層 custom，layout: "fullscreen"；x-stack 的變體）
+
+  【適用的口播】
+  在講「由下往上、越往上越接近目標」的組成：3–4 層、從底層講起，例如「做頻道最底層是穩定的器材，上面是剪輯流程，再上面是內容企劃，最上面才是個人品牌」。
+  畫面先畫出地面線；講到哪一層，那一層以底邊為軸從平躺翻起來、疊到上一層上面（越上層越窄，像頒獎台、金字塔），圖示描線、名稱逐字浮出，
+  0.6 秒後聚焦；講到「合起來…」時全部亮回、最上層換成主色（終點）。
+
+  【不要用在哪裡】
+  - 每層要配一句說明：用 x-stack（台座的層只放名稱）。
+  - 各層沒有「越上面越接近目標」的意思、只是技術架構：用 x-stack。
+  - 口播從最上層往下講：用 13 標題條列或 04a。超過 4 層：拆兩段。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）；每層 .xstp-name 名稱（≤ 5 字；最上層 ≤ 4 字）。放不下就縮文案，不縮字。
+  2. 圖示：每層的 .sc-icon（#xstp-ico1–4）。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
+  4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+  層數是 3：刪掉 #xstp-l4（整個 div）、script 開頭的「, T4 = P.at(…)」、「第 4 層」那 2 行，收尾的 l4 改 l3（top3 也是），LAYERS 拿掉 l4；寬度照 CSS 的 l1–l3 不用改。
+
+  【綁句欄位】
+  T1 = P.at('#262@器材')、T2 = P.at('#263@剪輯')、T3 = P.at('#264@企劃')、T4 = P.at('#265@品牌')：講到那一層名稱的時刻，那一層翻起來，0.6 秒後聚焦。
+  ALL = P.at('#266')：講到「合起來就是…」那一句，全部亮回、最上層換主色、配一顆 success。沒有這句：改成 const ALL = T4 + 2.0;，P.sfx 那行刪掉。
+  名稱在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#263')。
+  「@詞」要寫成字串字面值（P.at('#263@剪輯')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#263@剪輯', 0.3)。
+  相鄰兩層至少差 2.5 秒（翻起來 0.6 秒、名稱逐字、0.6 秒聚焦，再停 ≥ 1.2 秒）。
+  audit 會比對：這一拍出現的字（層名）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 1.8（主卡 0.3 秒長出、0.5 秒起標題逐字、地面線 1.0 秒起描 0.7 秒）
+  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5；T4 ≥ T3 + 2.5；ALL ≥ T4 + 2.5
+  D ≥ ALL + 2.6（回均衡 0.6 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 140、寬 1180（右緣 1300），標題列 128、內容區 1176×580（卡底 852）。
+  層高 118，寬由下往上 960／800／640／480（越上層越窄），圖示 72＋名稱（52 字）置中；由 #xstp-body 的 data-layout="col" data-gap="none" 排（緊貼成一座台、中線對齊、整組置中），
+  HTML 由上往下寫（l4 … l1），不寫 left／top。地面線比最底層左右各多 48，由 script 貼在 l1 底下（讀排好的位置）。翻起來的軸是每層的底邊。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-stack-podium 台座堆疊</title></head>
+<body>
+<template id="x-stack-podium-template">
+  <style>
+    #x-stack-podium { position: absolute; inset: 0; }
+    #x-stack-podium .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 140、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 852） */
+    #x-stack-podium #xstp-card { position: absolute; left: 120px; top: 140px; width: 1180px; }
+    #x-stack-podium #xstp-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-stack-podium #xstp-body { position: relative; width: 1176px; height: 580px; }
+    /* 地面線：script 貼在最底層下面，左右各多 48 */
+    #x-stack-podium #xstp-base { position: absolute; width: 1056px; height: 8px; }
+    #x-stack-podium #xstp-base svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    #x-stack-podium #xstp-ground { fill: none; stroke: var(--sc-fs-ink); stroke-width: 6px; stroke-linecap: round; }
+    /* 層：高 118、寬由下往上遞減；上緣多一條淡色（台階的頂面） */
+    #x-stack-podium .xstp-layer { position: absolute; height: 118px; box-sizing: border-box; border: 4px solid var(--sc-fs-ink); border-top-width: 10px;
+                                  border-radius: 12px; background: var(--v2-node); color: var(--sc-fs-ink);
+                                  display: flex; align-items: center; justify-content: center; gap: 24px; white-space: nowrap; }
+    #x-stack-podium #xstp-l1 { width: 960px; }
+    #x-stack-podium #xstp-l2 { width: 800px; }
+    #x-stack-podium #xstp-l3 { width: 640px; }
+    #x-stack-podium #xstp-l4 { width: 480px; }
+    #x-stack-podium .xstp-layer .sc-icon { --d: 72px; --i: 40px; position: relative; }
+    #x-stack-podium .xstp-name { position: relative; }
+    /* 終點：最上層換主色（疊一層主色底，ALL 時淡入） */
+    #x-stack-podium .xstp-top { position: absolute; inset: 0; border-radius: 4px; background: var(--brand); }
+  </style>
+  <div id="x-stack-podium" data-composition-id="x-stack-podium" data-width="1920" data-height="1080" data-duration="15"
+       data-cues-sample='{"start":0,"D":15,"cues":{"262":[1.8,4.1],"263":[4.3,6.8],"264":[6.9,9.3],"265":[9.4,11.8],"266":[12.1,14.5]},"refs":{"#262@器材":2.0,"#263@剪輯":4.5,"#264@企劃":7.0,"#265@品牌":9.5}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xstp-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">做頻道的四層台階</span></div>
+      <div id="xstp-body" data-layout="col" data-gap="none">
+        <!-- 由上往下寫：l4 最上層 … l1 最底層（第 1 個講到）；地面線不參與排版（沒有 data-slot） -->
+        <div id="xstp-l4" class="xstp-layer" data-slot><i id="xstp-top4" class="xstp-top" data-layout-allow-overlap></i>
+          <span id="xstp-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /> <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /> <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" /> <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /> </svg></span><span id="xstp-n4" class="xstp-name sc-t52 sc-w900 sc-opt">個人品牌</span></div>
+        <div id="xstp-l3" class="xstp-layer" data-slot>
+          <span id="xstp-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" /> <path d="M9 18h6" /> <path d="M10 22h4" /> </svg></span><span id="xstp-n3" class="xstp-name sc-t52 sc-w900 sc-opt">內容企劃</span></div>
+        <div id="xstp-l2" class="xstp-layer" data-slot>
+          <span id="xstp-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span id="xstp-n2" class="xstp-name sc-t52 sc-w900 sc-opt">剪輯流程</span></div>
+        <div id="xstp-l1" class="xstp-layer" data-slot>
+          <span id="xstp-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /> <circle cx="12" cy="13" r="3" /> </svg></span><span id="xstp-n1" class="xstp-name sc-t52 sc-w900 sc-opt">穩定器材</span></div>
+        <div id="xstp-base"><svg viewBox="0 0 1056 8" xmlns="http://www.w3.org/2000/svg"><line id="xstp-ground" x1="3" y1="4" x2="1053" y2="4" /></svg></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-stack-podium'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#262@器材'), T2 = P.at('#263@剪輯'), T3 = P.at('#264@企劃'), T4 = P.at('#265@品牌');   // 由下往上講到每一層名稱的時刻
+    const ALL = P.at('#266');                          // 講到「合起來就是…」那一句（沒有這句見檔頭【綁句欄位】）
+    P.sfx('success', '#266');                          // 最上層換主色那一拍（句號和 ALL 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const LAYERS = '#xstp-l1, #xstp-l2, #xstp-l3, #xstp-l4';
+    // 地面線貼在最底層 l1 下面、左右各多 48（層的位置由 data-layout 排好，這裡只讀；載入時算一次，不用改）
+    const L1 = document.getElementById('xstp-l1'), BASE = document.getElementById('xstp-base');
+    BASE.style.left = Math.round(L1.offsetLeft + L1.offsetWidth / 2 - 528) + 'px'; BASE.style.top = (L1.offsetTop + L1.offsetHeight + 4) + 'px';
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；1.0 秒起地面線描出
+    if (ENTER === 'grow') P.grow('#xstp-card', 0.3);
+    else { P.wipe('#xstp-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xstp-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xstp-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.stroke('#xstp-ground', 1.0);
+    // 拍 1 第 1 層：以底邊為軸從平躺翻起來（0.6 秒）→ ＋0.2 圖示描線、＋0.25 名稱逐字 → ＋0.6 聚焦
+    P.hinge('#xstp-l1', T1);  P.icon('#xstp-ico1', T1 + 0.2);  P.chars('#xstp-n1', T1 + 0.25);
+    P.spot('#xstp-l1', '#xstp-l1', T1 + 0.6, { scale: 1.02, lift: 0, dim: 0.6 });
+    // 拍 2 第 2 層：同拍 1；聚焦移到這一層（下面的層壓暗）
+    P.hinge('#xstp-l2', T2);  P.icon('#xstp-ico2', T2 + 0.2);  P.chars('#xstp-n2', T2 + 0.25);
+    P.spot('#xstp-l1, #xstp-l2', '#xstp-l2', T2 + 0.6, { scale: 1.02, lift: 0, dim: 0.6 });
+    // 拍 3 第 3 層：同拍 2
+    P.hinge('#xstp-l3', T3);  P.icon('#xstp-ico3', T3 + 0.2);  P.chars('#xstp-n3', T3 + 0.25);
+    P.spot('#xstp-l1, #xstp-l2, #xstp-l3', '#xstp-l3', T3 + 0.6, { scale: 1.02, lift: 0, dim: 0.6 });
+    // 拍 4 第 4 層：同拍 2（3 層時刪掉這 2 行，見檔頭）
+    P.hinge('#xstp-l4', T4);  P.icon('#xstp-ico4', T4 + 0.2);  P.chars('#xstp-n4', T4 + 0.25);
+    P.spot(LAYERS, '#xstp-l4', T4 + 0.6, { scale: 1.02, lift: 0, dim: 0.6 });
+    // 收：講到「合起來」→ 回均衡（全部亮回），最上層換主色（終點）＋漣漪，完成態停到段尾
+    P.spot(LAYERS, null, ALL, { dur: 0.6 });
+    P.in('#xstp-top4', ALL);
+    P.ripple('#xstp-ico4', ALL + 0.1, { to: 2.2 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-stack-podium'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

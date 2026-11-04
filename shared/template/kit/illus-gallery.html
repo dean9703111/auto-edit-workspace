@@ -49,7 +49,7 @@
     // 兩欄外框：左亮右暗；欄高由 iframe 回報
     document.body.className = 'wrap';
     document.body.innerHTML =
-      '<header><h1>示意插圖元件 illus（20 個）</h1>' +
+      '<header><h1>示意插圖元件 illus（21 個）</h1>' +
       '<p>用法：<code>&lt;div data-illus="phone" data-screen="rec" style="width:120px;height:250px"&gt;&lt;/div&gt;</code>（尺寸寫在外層，下面每格的寬＝建議尺寸）；' +
       '子元素用 class 抓（<code>.il-rec</code>）。左欄亮色主題、右欄暗色主題（<code>&lt;html data-theme="dark"&gt;</code>）；「黃」＝主色 <code>--brand</code>。' +
       '畫廊沒有的物件照 <code>kit/illus-style.md</code> 自己畫。</p></header>' +
@@ -90,10 +90,16 @@
   add('personBust', { tone: 'a' }, 160);
   add('personBust', { tone: 'b' }, 160);
   add('personBust', { tone: 'a' }, 160, 'talk');
+  grp('pgPerson', '120×284 · .il-head .il-torso .il-arms .il-legs .il-hi（主色軀幹，預設 opacity 0）');
+  ['stand', 'walk', 'point'].forEach(function (p) { add('pgPerson', { pose: p }, 120); });
+  add('pgPerson', { tone: 'b' }, 120);
+  add('pgPerson', { tone: 'accent' }, 120);
   grp('personTop', '110×72 · .il-head .il-face（俯視；黃三角＝面朝方向，用 CSS rotate 90° 倍數轉）');
   add('personTop', {}, 110);
   grp('desk', '320×150 · .il-desk .il-laptop');
   add('desk', {}, 320);
+  grp('stage', '960×180 · .il-top .il-front（主色，可疊字）.il-side（2.5D 地台）');
+  add('stage', {}, 480);
   grp('cone', '寬 len+4 · .il-cone（頂點在左、朝右張開）');
   add('cone', { angle: 50, len: 300, fill: false }, 304);
   add('cone', { angle: 80, len: 220, fill: true }, 224);

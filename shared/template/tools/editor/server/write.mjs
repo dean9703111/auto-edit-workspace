@@ -244,7 +244,8 @@ export function sanitizeSegments(segments, plan, ctx = {}) {
           }
         } else errors.push(`段 ${id} 的 sfx 只能設成 null（靜音）或 { "restore": true }（還原 AI 原本寫的音效）`);
       } else if (k === 'enter' || k === 'exit') {
-        if (!LIMITS.enterExit.includes(val)) errors.push(`段 ${id} 的 ${k} 要是 ${LIMITS.enterExit.join('、')}，現在是 ${JSON.stringify(val)}`);
+        const ok = k === 'enter' ? [...LIMITS.enterExit, 'tape'] : LIMITS.enterExit;   // tape＝圖片紙膠帶貼上，只能當進場（015）
+        if (!ok.includes(val)) errors.push(`段 ${id} 的 ${k} 要是 ${ok.join('、')}，現在是 ${JSON.stringify(val)}`);
         else set[k] = val;
       } else if (k === 'volume') {
         if (val === null) set.volume = null;

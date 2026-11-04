@@ -958,7 +958,7 @@ test('分鏡對齊：beatFindings ✖ 缺拍／多出來的 P.at／語彙不存�
 // ---------- 011 示意動畫（audit-illus.mjs、分鏡的段起點／八欄／插圖清單；cli-003 §2.3d 補充、§2.3e） ----------
 const IL = await imp('lib/audit-illus.mjs');
 
-test('011：ILLUS_BUILTIN＝kit/illus.js 的 20 個元件；illusOf 讀 data-illus／data-illus-src／ILLUS.register', () => {
+test('011：ILLUS_BUILTIN＝kit/illus.js 的 22 個元件；illusOf 讀 data-illus／data-illus-src／ILLUS.register', () => {
   const js = fs.readFileSync(path.join(TEMPLATE, 'kit', 'illus.js'), 'utf8');
   const comp = js.match(/var COMP = \{([\s\S]*?)\};/)[1].match(/(\w+):/g).map((x) => x.slice(0, -1));
   assert.deepEqual(IL.ILLUS_BUILTIN, comp);

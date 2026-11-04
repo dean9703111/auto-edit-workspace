@@ -28,6 +28,15 @@
   - `x-versus.html`：n01ennn-597182（N01ennn，https://x.com/N01ennn/status/2108520767092597182）；dys-hay-749645（Dys_hay，https://x.com/Dys_hay/status/2103819139307749645）；threeaus-886343（threeaus，https://x.com/threeaus/status/2105152377057886343）
   - `x-ring.html`：0xnicc0-516612（0xnicc0，https://x.com/0xnicc0/status/2107217691505516612）；twoclipping-747965（twoclipping，https://x.com/twoclipping/status/2105927781678747965）；dys-hay-749645（Dys_hay，https://x.com/Dys_hay/status/2103819139307749645）
 
+### 情境動畫範例的靈感來源（015）
+
+- 檔案：`shared/template/custom/` 的 x-process-trace、x-process-loop、x-callout-phone、x-callout-parts、x-checklist-ai、x-stack-podium、x-ring-facets、x-trend-blocks、x-ui-mock-tidy、x-architecture-send、x-prompt-chat、x-terminal、x-terminal-code、x-crowd、x-crowd-queue、x-desk、x-news，以及 x-scene 家族、x-timeline、x-trend、x-prompt 的新外觀；`kit/scene-motion.js` 的 P.draw、P.along、P.fly、P.tape、P.hinge、P.wave、P.spin；`kit/illus.js` 的 pgPerson、stage；media 段的 `enter: "tape"`
+- 說明：和 008 一樣只借技法（畫風、動作與版面的構想），程式、文案、配色都是作者自己寫的，改成本專案的線稿與主色 token；沒有複製來源的程式碼、圖檔或文案。這些檔案和其他 custom 範例一樣以 CC BY 4.0 釋出
+- 來源：
+  - lemo-opuscar（LemoLab，MIT License）：https://github.com/lemomo-ai/lemo-opuscar 的風格範例
+  - video-shotcraft（Vincentwei1021，Apache License 2.0）：https://github.com/Vincentwei1021/video-shotcraft 的鏡頭卡
+  - 每個選中的範例落在哪個檔：`specs/015-scene-styles/brief.md`「定案」表
+
 ## 第三方素材
 
 ### Noto Sans TC
@@ -43,6 +52,13 @@
 - 檔案：`shared/template/kit/fonts/GoogleSansFlex-VF.woff2`
 - 授權：SIL Open Font License 1.1，全文見 `shared/template/kit/fonts/OFL-GoogleSansFlex.txt`
 - 版權：Copyright 2015 The Google Sans Flex Authors (https://github.com/googlefonts/googlesans-flex)
+- 說明：字型只轉成 woff2 格式，沒有修改字形設計。不得單獨販售這個字型
+
+### JetBrains Mono
+
+- 檔案：`shared/template/kit/fonts/JetBrainsMono-VF.woff2`（終端機、程式碼畫面的等寬字）
+- 授權：SIL Open Font License 1.1，全文見 `shared/template/kit/fonts/OFL-JetBrainsMono.txt`
+- 版權：Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
 - 說明：字型只轉成 woff2 格式，沒有修改字形設計。不得單獨販售這個字型
 
 ### lucide 圖示

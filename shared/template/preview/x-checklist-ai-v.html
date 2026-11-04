@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-checklist-ai AI 逐條完成｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-checklist-ai.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-checklist-ai { position: absolute; inset: 0; }
+    #x-checklist-ai .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300，避開右下子母畫面）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-checklist-ai #xcai-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-checklist-ai #xcai-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-checklist-ai #xcai-body { position: relative; width: 1176px; height: 580px; }
+    /* 列：1080×80、圓角 20（聚焦時的亮框跟著圓角）；空框和項目字同一列，聚焦放大抬起時一起動；位置由 #xcai-body 的 data-layout 排，不寫 left／top */
+    #x-checklist-ai .xcai-row { position: absolute; width: 1080px; height: 80px; box-sizing: border-box; border-radius: 20px;
+                             display: flex; align-items: center; gap: 32px; padding: 0 28px; color: var(--sc-fs-ink); white-space: nowrap; }
+    /* 目前這一項的淡色底（P.in／P.out 換列），在列的最底層 */
+    #x-checklist-ai .xcai-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
+    #x-checklist-ai .xcai-box { position: relative; flex: none; width: 56px; height: 56px; }
+    #x-checklist-ai .xcai-box svg { position: absolute; left: 0; top: 0; width: 56px; height: 56px; }
+    #x-checklist-ai .xcai-t { position: relative; flex: 1; }
+    #x-checklist-ai .xcai-res { position: relative; color: var(--brand); }
+    /* 狀態圈：等待＝灰色虛線圈；轉圈＝主色的缺口圈（P.spin 轉 svg）；完成＝主色圈＋勾 */
+    #x-checklist-ai .xcai-wait { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-dasharray: 4 8; }
+    #x-checklist-ai .xcai-arc { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-dasharray: 90 48; }
+    #x-checklist-ai .xcai-sqon { fill: none; stroke: var(--brand); stroke-width: 6px; }
+    #x-checklist-ai .xcai-tick { fill: none; stroke: var(--brand); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 進度區：1064×72（清單最後一格，位置由 data-layout 排）；軌道 800×24、計數靠右（寬 224，數字寬度固定） */
+    #x-checklist-ai #xcai-prog { position: absolute; width: 1064px; height: 72px; }
+    #x-checklist-ai #xcai-track { position: absolute; left: 0; top: 24px; width: 800px; height: 24px; border-radius: 12px; background: var(--sc-fs-node-line); }
+    #x-checklist-ai #xcai-fill { position: absolute; inset: 0; border-radius: 12px; background: var(--brand); }
+    #x-checklist-ai #xcai-fillok { position: absolute; inset: 0; border-radius: 12px; background: var(--sc-good); }
+    #x-checklist-ai #xcai-n { position: absolute; right: 0; top: 0; width: 224px; text-align: right; white-space: nowrap; }
+  </style>
+  <div id="x-checklist-ai" data-composition-id="x-checklist-ai" data-width="1920" data-height="1080" data-duration="15.5"
+       data-cues-sample='{"start":0,"D":15.5,"cues":{"252":[2.3,4.8],"253":[4.9,7.3],"254":[7.4,9.8],"255":[9.9,12.4],"256":[12.7,15.2]},"refs":{"#252@逐字稿":2.6,"#253@重講":5.1,"#254@剪輯清單":7.6,"#255@字幕":10.1}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcai-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">AI 幫我剪片</span></div>
+      <div id="xcai-body" data-layout="col" data-gap="md">
+        <!-- 每一列：淡色底（.xcai-now）＋狀態圈（等待虛線圈 xcai-w、轉圈 xcai-s、完成圈 xcai-on＋勾 xcai-k）＋項目字＋右邊結果；svg 座標每列都一樣 -->
+        <div id="xcai-r1" class="xcai-row" data-slot><i id="xcai-now1" class="xcai-now"></i>
+          <i class="xcai-box"><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-w1" class="xcai-wait" cx="28" cy="28" r="24" /></svg><svg id="xcai-s1" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle class="xcai-arc" cx="28" cy="28" r="22" /></svg><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-on1" class="xcai-sqon" cx="28" cy="28" r="25" /><path id="xcai-k1" class="xcai-tick" d="M16 29 L25 38 L41 20" /></svg></i>
+          <span id="xcai-t1" class="xcai-t sc-t52 sc-w900 sc-opt">讀完逐字稿</span><span id="xcai-res1" class="xcai-res sc-t52 sc-w900 sc-opt">3,214 字</span></div>
+        <div id="xcai-r2" class="xcai-row" data-slot><i id="xcai-now2" class="xcai-now"></i>
+          <i class="xcai-box"><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-w2" class="xcai-wait" cx="28" cy="28" r="24" /></svg><svg id="xcai-s2" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle class="xcai-arc" cx="28" cy="28" r="22" /></svg><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-on2" class="xcai-sqon" cx="28" cy="28" r="25" /><path id="xcai-k2" class="xcai-tick" d="M16 29 L25 38 L41 20" /></svg></i>
+          <span id="xcai-t2" class="xcai-t sc-t52 sc-w900 sc-opt">找出重講</span><span id="xcai-res2" class="xcai-res sc-t52 sc-w900 sc-opt">12 處</span></div>
+        <div id="xcai-r3" class="xcai-row" data-slot><i id="xcai-now3" class="xcai-now"></i>
+          <i class="xcai-box"><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-w3" class="xcai-wait" cx="28" cy="28" r="24" /></svg><svg id="xcai-s3" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle class="xcai-arc" cx="28" cy="28" r="22" /></svg><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-on3" class="xcai-sqon" cx="28" cy="28" r="25" /><path id="xcai-k3" class="xcai-tick" d="M16 29 L25 38 L41 20" /></svg></i>
+          <span id="xcai-t3" class="xcai-t sc-t52 sc-w900 sc-opt">列剪輯清單</span><span id="xcai-res3" class="xcai-res sc-t52 sc-w900 sc-opt">24 刀</span></div>
+        <div id="xcai-r4" class="xcai-row" data-slot><i id="xcai-now4" class="xcai-now"></i>
+          <i class="xcai-box"><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-w4" class="xcai-wait" cx="28" cy="28" r="24" /></svg><svg id="xcai-s4" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle class="xcai-arc" cx="28" cy="28" r="22" /></svg><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-on4" class="xcai-sqon" cx="28" cy="28" r="25" /><path id="xcai-k4" class="xcai-tick" d="M16 29 L25 38 L41 20" /></svg></i>
+          <span id="xcai-t4" class="xcai-t sc-t52 sc-w900 sc-opt">產生字幕</span><span id="xcai-res4" class="xcai-res sc-t52 sc-w900 sc-opt">186 則</span></div>
+        <div id="xcai-prog" data-slot>
+          <div id="xcai-track"><i id="xcai-fill"></i><i id="xcai-fillok"></i></div>
+          <span id="xcai-n" class="sc-t52 sc-w900">0 / 4</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-checklist-ai'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#252@逐字稿'), T2 = P.at('#253@重講'), T3 = P.at('#254@剪輯清單'), T4 = P.at('#255@字幕');   // 講到每一項項目詞的時刻
+    const ALL = P.at('#256');                          // 講到「全部好了」那一句（沒有這句見檔頭【綁句欄位】）
+    P.sfx('success', '#256');                          // 完成音（句號和 ALL 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const ROWS = '#xcai-r1, #xcai-r2, #xcai-r3, #xcai-r4';   // 全部的列（3 項時拿掉 r4）
+    const N = $q('#x-checklist-ai .xcai-row').length;    // 幾項＝上面 HTML 的列數，不用改
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xcai-card', 0.3);
+    else { P.wipe('#xcai-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcai-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xcai-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 待辦清單：四列錯拍上浮（項目字和等待圈一起出來），進度區淡入；1.6 秒第 1 列開始轉
+    P.pop(ROWS, 1.0, { stagger: 0.15, from: 0.96, dy: 24 });
+    P.in('#xcai-prog', 0.55);   // 進度條跟著主卡出現（和四列錯開，同一秒不超過 2 個新元素）
+    P.in('#xcai-s1', 1.6, { dur: 0.2 });  P.spin('#xcai-s1', 1.6, { until: T1 });
+
+    // 拍 2 第 1 項：圈圈停下、換成主色圈＋勾 → ＋0.15 結果逐字跳出 → ＋0.3 計數 +1、進度條前進一格、下一列開始轉；這一列聚焦（淡色底，其他壓暗 0.6）
+    P.out('#xcai-s1', T1, { dur: 0.15 });  P.out('#xcai-w1', T1, { dur: 0.15 });
+    P.stroke('#xcai-on1, #xcai-k1', T1, { dur: 0.4 });  P.chars('#xcai-res1', T1 + 0.15);
+    P.in('#xcai-s2', T1 + 0.3, { dur: 0.2 });  P.spin('#xcai-s2', T1 + 0.3, { until: T2 });
+    P.count('#xcai-n', T1 + 0.3, { from: 0, to: 1, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xcai-fill', T1 + 0.3, { from: 0, to: 1 / N, dur: 0.6 });
+    P.spot(ROWS, '#xcai-r1', T1, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.in('#xcai-now1', T1);
+    // 拍 3 第 2 項：同拍 2；淡色底從上一項移過來
+    P.out('#xcai-s2', T2, { dur: 0.15 });  P.out('#xcai-w2', T2, { dur: 0.15 });
+    P.stroke('#xcai-on2, #xcai-k2', T2, { dur: 0.4 });  P.chars('#xcai-res2', T2 + 0.15);
+    P.in('#xcai-s3', T2 + 0.3, { dur: 0.2 });  P.spin('#xcai-s3', T2 + 0.3, { until: T3 });
+    P.count('#xcai-n', T2 + 0.3, { from: 1, to: 2, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xcai-fill', T2 + 0.3, { from: 1 / N, to: 2 / N, dur: 0.6 });
+    P.spot(ROWS, '#xcai-r2', T2, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xcai-now1', T2);  P.in('#xcai-now2', T2);
+    // 拍 4 第 3 項：同拍 3
+    P.out('#xcai-s3', T3, { dur: 0.15 });  P.out('#xcai-w3', T3, { dur: 0.15 });
+    P.stroke('#xcai-on3, #xcai-k3', T3, { dur: 0.4 });  P.chars('#xcai-res3', T3 + 0.15);
+    P.in('#xcai-s4', T3 + 0.3, { dur: 0.2 });  P.spin('#xcai-s4', T3 + 0.3, { until: T4 });
+    P.count('#xcai-n', T3 + 0.3, { from: 2, to: 3, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xcai-fill', T3 + 0.3, { from: 2 / N, to: 3 / N, dur: 0.6 });
+    P.spot(ROWS, '#xcai-r3', T3, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xcai-now2', T3);  P.in('#xcai-now3', T3);
+    // 拍 5 第 4 項：同拍 3（3 項時刪掉這 6 行，見檔頭；第 3 項那組的 until 改成 ALL）
+    P.out('#xcai-s4', T4, { dur: 0.15 });  P.out('#xcai-w4', T4, { dur: 0.15 });
+    P.stroke('#xcai-on4, #xcai-k4', T4, { dur: 0.4 });  P.chars('#xcai-res4', T4 + 0.15);
+    P.count('#xcai-n', T4 + 0.3, { from: 3, to: 4, dur: 0.4, suffix: ' / ' + N });
+    P.bar('#xcai-fill', T4 + 0.3, { from: 3 / N, to: 4 / N, dur: 0.6 });
+    P.spot(ROWS, '#xcai-r4', T4, { scale: 1.03, lift: -8, dim: 0.6 });
+    P.out('#xcai-now3', T4);  P.in('#xcai-now4', T4);
+
+    // 收：講到「全部好了」→ 回均衡（全部亮回、淡色底收掉）＋完成色疊在進度條上淡入；完成態停到段尾
+    P.spot(ROWS, null, ALL, { dur: 0.6 });
+    P.out('#xcai-now4', ALL);
+    P.in('#xcai-fillok', ALL);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-checklist-ai'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-checklist-ai";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

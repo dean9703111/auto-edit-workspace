@@ -1,0 +1,146 @@
+<!-- 預設拍型：A 流程（BEATS.md §3 A；2.5D 地台：三個裝置站在一塊厚板上，檔案沿地上的虛線一站一站走過去，鏡頭跟著） -->
+<!doctype html>
+<!--
+  x-desk：裝置之間的接力（第二層 custom，layout: "fullscreen"）
+
+  【適用的口播】
+  在講「一個東西從這台裝置到那台裝置」的流程，三站、每站一句話：「手機拍完，自動上傳到雲端，回家在電腦上直接剪」。
+  三個裝置（手機、雲端、電腦）站在一塊 2.5D 地台上，站名寫在地台正面；講到第一站，手機螢幕打勾、檔案從手機腳邊冒出來 →
+  講到第二站，檔案沿地上的虛線走到雲端、雲端的上傳箭頭亮起 → 講到第三站，檔案走到電腦、電腦螢幕出現播放鍵；鏡頭一路跟著那一站，講完回正。
+
+  【不要用在哪裡】
+  - 站不是看得見的裝置（是步驟、概念）：用 x-process（或 x-process-trace 講訊號）。
+  - 一個東西傳給好幾個人：用 x-architecture-send。
+  - 超過 3 站：拆兩段。
+
+  【要改的地方】
+  這支沒有圖示：主角是插圖元件（地台 stage、三個裝置、檔案 fileVideo）。
+  1. 文字：標題列（≤ 10 字）、地台正面的三個站名 .xdsk-name（≤ 3 字）。
+  2. 裝置：#xdsk-s1／s2／s3 的 data-illus 與 data-*（照 kit/illus-gallery.jpg；寬高照畫廊比例，高 ≤ 250，底邊對齊 y 405＝站在地台頂面中線）。
+     換成別的裝置時，script 裡「拍 1–3」換狀態的那一行（.il-check、.il-arrow、.il-play）改成新裝置有的狀態 class。
+  3. 綁句：<script> 開頭 T1–T3 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 T3 改。
+  4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+
+  【綁句欄位】
+  T1 = P.at('#362@手機')、T2 = P.at('#363@雲端')、T3 = P.at('#364@電腦')：講到那一站的時刻，鏡頭帶過去（0.8 秒）；
+  T1 手機螢幕打勾、0.4 秒後檔案冒出來；T2、T3 檔案沿虛線走 1.2 秒到那一站，到了那一站換狀態（雲端箭頭、電腦播放鍵）；音效 success 在 T3。
+  站名在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#363')。
+  「@詞」要寫成字串字面值（P.at('#363@雲端')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#363@雲端', 0.3)。
+  audit 會比對：這一拍出現的字在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 3.0（主卡 0.3 秒長出、1.0 秒地台畫出、1.6 秒三個裝置畫出、2.2 秒虛線畫出）
+  T2 ≥ T1 + 2.4（鏡頭 0.8 秒、檔案冒出到 +0.9 秒，停 1.2 秒）
+  T3 ≥ T2 + 2.6（走 1.2 秒、換狀態 0.2 秒，停 1.2 秒）
+  D ≥ T3 + 5.4（走到並換狀態 1.4 秒＋停 1.2 秒＋鏡頭回正 0.8 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
+  地台 #xdsk-stage 1056×198（left 60、top 340）：頂面 y 340–470、正面 y 470–538（主色，站名寫在這裡）。
+  三站的中心 x 是 230／590／950：手機 120×250、電腦 300×250 底邊站在 y 405；雲端 240×164 浮在上面（top 60），一條虛線柱子接到地上。
+  地上的路是兩條虛線（#xdsk-r1 手機 → 雲端、#xdsk-r2 雲端 → 電腦，y 430 附近的小弧），檔案 64×77 沿著走（P.along）。
+  這是 2.5D 的擺法，座標寫在 CSS（路的 svg 用 viewBox 對齊內容區座標）；#xdsk-world 是鏡頭（P.cam 推它，主卡不動；放大 1.04、往那一站帶 0.08，再大會被主卡裁掉）。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-desk 地台上的裝置接力</title></head>
+<body>
+<template id="x-desk-template">
+  <style>
+    #x-desk { position: absolute; inset: 0; }
+    #x-desk .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-desk #xdsk-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-desk #xdsk-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-desk #xdsk-body { position: relative; width: 1176px; height: 580px; }
+    #x-desk #xdsk-world { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; }
+    /* 地台、路、裝置、檔案：2.5D 擺法，座標寫死（見檔頭【版面】） */
+    #x-desk #xdsk-stage { position: absolute; left: 60px; top: 340px; width: 1056px; height: 198px; }
+    #x-desk #xdsk-roads { position: absolute; left: 200px; top: 220px; width: 800px; height: 260px; overflow: visible; }
+    #x-desk .xdsk-road { fill: none; stroke: var(--v2-mute); stroke-width: 8px; stroke-linecap: round; stroke-dasharray: 2 18; }
+    #x-desk .xdsk-pole { fill: none; stroke: var(--v2-line); stroke-width: 4px; stroke-dasharray: 8 10; }
+    #x-desk .xdsk-shadow { fill: var(--v2-node-tint); }
+    #x-desk #xdsk-s1 { position: absolute; left: 170px; top: 155px; width: 120px; height: 250px; }
+    #x-desk #xdsk-s2 { position: absolute; left: 470px; top: 60px; width: 240px; height: 164px; }
+    #x-desk #xdsk-s3 { position: absolute; left: 800px; top: 155px; width: 300px; height: 250px; }
+    #x-desk #xdsk-file { position: absolute; left: 198px; top: 392px; width: 64px; height: 77px; }
+    /* 站名：寫在地台正面（主色）上，主色上的字色 */
+    #x-desk .xdsk-name { position: absolute; top: 474px; width: 200px; text-align: center; color: var(--brand-ink); white-space: nowrap; }
+    #x-desk #xdsk-n1 { left: 130px; }
+    #x-desk #xdsk-n2 { left: 490px; }
+    #x-desk #xdsk-n3 { left: 850px; }
+  </style>
+  <div id="x-desk" data-composition-id="x-desk" data-width="1920" data-height="1080" data-duration="14.6"
+       data-cues-sample='{"start":0,"D":14.6,"cues":{"362":[2.8,5.6],"363":[5.7,8.2],"364":[8.3,13.6]},"refs":{"#362@手機":3.0,"#363@雲端":6.0,"#364@電腦":9.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xdsk-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">拍完到剪輯</span></div>
+      <div id="xdsk-body">
+        <div id="xdsk-world">
+          <div id="xdsk-stage" data-illus="stage"></div>
+          <svg id="xdsk-roads" xmlns="http://www.w3.org/2000/svg" viewBox="200 220 800 260">
+            <ellipse class="xdsk-shadow" cx="590" cy="410" rx="64" ry="14" />
+            <path id="xdsk-pole" class="xdsk-pole" d="M590 232 L590 404" />
+            <path id="xdsk-r1" class="xdsk-road" d="M230 430 C330 462 490 462 590 430" />
+            <path id="xdsk-r2" class="xdsk-road" d="M590 430 C690 398 850 398 950 430" />
+          </svg>
+          <div id="xdsk-s1" data-illus="phone" data-orient="portrait" data-screen="blank"></div>
+          <div id="xdsk-s2" data-illus="cloud" data-arrow="none"></div>
+          <div id="xdsk-s3" data-illus="monitor" data-screen="blank"></div>
+          <div id="xdsk-file" data-illus="fileVideo"></div>
+          <b id="xdsk-n1" class="xdsk-name sc-t40 sc-w900 sc-opt">手機</b>
+          <b id="xdsk-n2" class="xdsk-name sc-t40 sc-w900 sc-opt">雲端</b>
+          <b id="xdsk-n3" class="xdsk-name sc-t40 sc-w900 sc-opt">電腦</b>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    ILLUS.mount(document.getElementById('x-desk'));   // 第一行：地台、裝置、檔案先掛成 SVG，P.draw 才抓得到每一筆
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-desk'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#362@手機'), T2 = P.at('#363@雲端'), T3 = P.at('#364@電腦');   // 講到每一站的時刻
+    P.sfx('success', '#364@電腦');                                               // 最後一站一顆 success（句號和 T3 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const CAM = '#xdsk-world';                                  // 鏡頭推這一層（主卡不動）
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字 → 地台畫出 → 三個裝置畫出、站名彈出 → 地上的虛線畫出、往前流
+    if (ENTER === 'grow') P.grow('#xdsk-card', 0.3);
+    else { P.wipe('#xdsk-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xdsk-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xdsk-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.draw('#xdsk-stage', 1.0, { dur: 0.6 });
+    P.draw('#xdsk-s1, #xdsk-s2, #xdsk-s3', 1.6, { dur: 0.8 });
+    P.pop('#xdsk-n1, #xdsk-n2, #xdsk-n3', 1.6, { stagger: 0.15, from: 0.8, dy: 0 });
+    P.draw('#xdsk-pole, #xdsk-r1, #xdsk-r2', 2.2, { dur: 0.5, pen: false });
+    P.in('.xdsk-shadow', 2.2);
+    P.flow('#xdsk-r1, #xdsk-r2', 2.7);
+
+    // 拍 1 第 1 站：鏡頭帶到手機 → 螢幕打勾 → 檔案從腳邊冒出來
+    P.cam(CAM, T1, { to: '#xdsk-s1', k: 0.08, scale: 1.04, dur: 0.8 });
+    P.in('#xdsk-s1 .il-check', T1 + 0.2, { dur: 0.3 });
+    P.pop('#xdsk-file', T1 + 0.4, { from: 0.5, dy: 20 });
+    // 拍 2 第 2 站：鏡頭帶到雲端 → 檔案沿虛線走過去 → 上傳箭頭亮起
+    P.cam(CAM, T2, { to: '#xdsk-s2', k: 0.08, scale: 1.04, dur: 0.8 });
+    P.along('#xdsk-file', '#xdsk-r1', T2, { dur: 1.2 });
+    P.in('#xdsk-s2 .il-arrow', T2 + 1.2, { dur: 0.2 });
+    P.ripple('#xdsk-n2', T2 + 1.2, { to: 1.6 });
+    // 拍 3 第 3 站：鏡頭帶到電腦 → 檔案走過去 → 螢幕出現播放鍵
+    P.cam(CAM, T3, { to: '#xdsk-s3', k: 0.08, scale: 1.04, dur: 0.8 });
+    P.along('#xdsk-file', '#xdsk-r2', T3, { dur: 1.2 });
+    P.in('#xdsk-s3 .il-play', T3 + 1.2, { dur: 0.2 });
+    P.ripple('#xdsk-n3', T3 + 1.2, { to: 1.6 });
+
+    // 收：最後一站講完 2.6 秒，鏡頭回正，完成態停到段尾
+    P.cam(CAM, T3 + 2.6, { x: 0, y: 0, scale: 1, dur: 0.8 });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-desk'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

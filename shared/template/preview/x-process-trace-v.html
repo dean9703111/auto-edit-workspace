@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-process-trace 流程：電路板｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-process-trace.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-process-trace { position: absolute; inset: 0; }
+    #x-process-trace .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-process-trace #xprt-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-process-trace #xprt-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-process-trace #xprt-body { position: relative; width: 1176px; height: 580px; display: flex; justify-content: center; align-items: center; }
+    /* 走線：data-links 產生（.sc-link 主色 6px）；這裡改成 8px、直角接頭；焊點是 script 加的 circle */
+    #x-process-trace #xprt-lines { position: absolute; }
+    #x-process-trace #xprt-lines .sc-link { stroke-width: 8px; stroke-linecap: butt; stroke-linejoin: miter; }
+    #x-process-trace .xprt-pad { fill: var(--v2-node); stroke: var(--brand); stroke-width: 6px; }
+    /* 虛線預告層：script 從每條走線複製一份，講到之前一直往前流（還沒通電的走線） */
+    #x-process-trace .xprt-ghost { fill: none; stroke: var(--v2-line); stroke-width: 6px; stroke-dasharray: 2 14; stroke-linecap: round; }
+    /* 晶片：寬 272、高 216，深色方塊＋上下針腳（虛線框）；單數站下面、雙數站上面各空一站高＋--sc-gap-md（上下錯落） */
+    #x-process-trace .xprt-node { position: relative; flex: none; width: 272px; height: 216px; box-sizing: border-box; border-radius: 16px;
+                                  background: var(--v2-ink); color: var(--v2-node);
+                                  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
+    #x-process-trace .xprt-node .sc-icon { --d: 88px; --i: 52px; position: relative; }
+    #x-process-trace .xprt-node .xprt-name { position: relative; }
+    #x-process-trace .xprt-node:nth-of-type(odd) { margin-bottom: calc(216px + var(--sc-gap-md)); }
+    #x-process-trace .xprt-node:nth-of-type(even) { margin-top: calc(216px + var(--sc-gap-md)); }
+    #x-process-trace .xprt-pins { position: absolute; left: 48px; right: 48px; top: -14px; bottom: -14px; border-top: 10px dashed var(--v2-mute); border-bottom: 10px dashed var(--v2-mute); }
+    /* 指示燈：灰燈常駐，亮燈（主色）講到時淡入；now＝目前這一站整顆晶片變主色（下一站亮起時淡掉） */
+    #x-process-trace .xprt-led { position: absolute; right: 20px; top: 20px; width: 20px; height: 20px; border-radius: 10px; background: var(--v2-mute); }
+    #x-process-trace .xprt-led i { position: absolute; inset: 0; border-radius: 10px; background: var(--brand); }
+    #x-process-trace .xprt-now { position: absolute; inset: 0; border-radius: 16px; background: var(--brand); }
+  </style>
+  <div id="x-process-trace" data-composition-id="x-process-trace" data-width="1920" data-height="1080" data-duration="17.6"
+       data-cues-sample='{"start":0,"D":17.6,"cues":{"212":[3.2,5.7],"213":[6,8.5],"214":[8.8,11.3],"215":[11.6,14]},"refs":{"#212@麥克風":3.2,"#213@錄音介面":6,"#214@電腦":8.8,"#215@剪輯軟體":11.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xprt-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">聲音怎麼進剪輯</span></div>
+      <div id="xprt-body" data-layout="free">
+        <svg id="xprt-lines" data-links="xprt-n1-xprt-n2 xprt-n2-xprt-n3 xprt-n3-xprt-n4" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="xprt-n1" class="xprt-node" data-slot><i class="xprt-pins" data-layout-allow-overlap></i><i id="xprt-now1" class="xprt-now"></i><i class="xprt-led"><i id="xprt-led1"></i></i>
+          <span id="xprt-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /> <path d="M19 10v2a7 7 0 0 1-14 0v-2" /> <line x1="12" x2="12" y1="19" y2="22" /> </svg></span><span class="xprt-name sc-t52 sc-w900 sc-opt">麥克風</span></div>
+        <div id="xprt-n2" class="xprt-node" data-slot><i class="xprt-pins" data-layout-allow-overlap></i><i id="xprt-now2" class="xprt-now"></i><i class="xprt-led"><i id="xprt-led2"></i></i>
+          <span id="xprt-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M2 10v3" /> <path d="M6 6v11" /> <path d="M10 3v18" /> <path d="M14 8v7" /> <path d="M18 5v13" /> <path d="M22 10v3" /> </svg></span><span class="xprt-name sc-t52 sc-w900 sc-opt">錄音介面</span></div>
+        <div id="xprt-n3" class="xprt-node" data-slot><i class="xprt-pins" data-layout-allow-overlap></i><i id="xprt-now3" class="xprt-now"></i><i class="xprt-led"><i id="xprt-led3"></i></i>
+          <span id="xprt-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16" /> </svg></span><span class="xprt-name sc-t52 sc-w900 sc-opt">電腦</span></div>
+        <div id="xprt-n4" class="xprt-node" data-slot><i class="xprt-pins" data-layout-allow-overlap></i><i id="xprt-now4" class="xprt-now"></i><i class="xprt-led"><i id="xprt-led4"></i></i>
+          <span id="xprt-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span class="xprt-name sc-t52 sc-w900 sc-opt">剪輯軟體</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-process-trace'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#212@麥克風'), T2 = P.at('#213@錄音介面'), T3 = P.at('#214@電腦'), T4 = P.at('#215@剪輯軟體');   // 講到每一站站名的時刻
+
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const ALL = '#xprt-n1, #xprt-n2, #xprt-n3, #xprt-n4';   // 四站（3 站時拿掉 n4）
+
+    // 0. 每條走線（data-links 產生的）：複製虛線預告層、最後那道光的光跡層，兩端加焊點（只在載入時建 DOM，每次結果相同）
+    const NS = 'http://www.w3.org/2000/svg';
+    $q('#xprt-lines .sc-link').forEach(function (p) {
+      const g = p.cloneNode(false); g.removeAttribute('id'); g.removeAttribute('data-link'); g.setAttribute('class', 'xprt-ghost'); p.parentNode.insertBefore(g, p.parentNode.firstChild);
+      const z = p.cloneNode(false); z.removeAttribute('data-link'); z.setAttribute('id', p.id + '-zap'); z.setAttribute('class', 'sc-link xprt-zap'); p.parentNode.appendChild(z);
+      [0, p.getTotalLength()].forEach(function (len) {
+        const pt = p.getPointAtLength(len), c = document.createElementNS(NS, 'circle');
+        c.setAttribute('class', 'xprt-pad'); c.setAttribute('cx', Math.round(pt.x)); c.setAttribute('cy', Math.round(pt.y)); c.setAttribute('r', 9); p.parentNode.appendChild(c);
+      });
+    });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
+    if (ENTER === 'grow') P.grow('#xprt-card', 0.3);
+    else { P.wipe('#xprt-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xprt-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xprt-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 骨架：四顆晶片錯拍彈出（間隔 0.12），＋0.15 圖示描線
+    P.pop(ALL, 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
+    P.icon('#xprt-ico1, #xprt-ico2, #xprt-ico3, #xprt-ico4', 1.15, { stagger: 0.12 });
+    // 拍 2 預告：還沒通電的虛線走線淡入、一直往前流；焊點跟著出現
+    P.in('.xprt-ghost, .xprt-pad', 1.5, { stagger: 0.05 });
+    P.flow('.xprt-ghost', 1.5);
+    // 拍 3 等待：預覽態（四顆壓暗縮小）＋鏡頭慢推，推到第 1 站前 0.2 秒
+    P.spot(ALL, 'none', 2.0, { dim: 0.45, dur: 0.6 });
+    P.cam('#xprt-card', 2.0, { scale: 1.03, dur: T1 - 2.2 });
+
+    // 拍 4 第 1 站：鏡頭帶過去、聚焦、晶片變主色、指示燈亮、漣漪
+    P.cam('#xprt-card', T1 - 0.2, { to: '#xprt-n1', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xprt-n1', T1, { scale: 1.08, lift: -12 });
+    P.in('#xprt-now1, #xprt-led1', T1);
+    P.ripple('#xprt-ico1', T1 + 0.05, { to: 2.4 });
+    // 拍 5 第 2 站：提早 0.85 秒訊號帶發光頭沿走線跑過來（id＝<上一站>-<這一站>）；上一站變「走過」（主色退掉、指示燈留著）
+    P.comet('#xprt-n1-xprt-n2', T2 - 0.85, { dur: 0.75 });
+    P.cam('#xprt-card', T2 - 0.2, { to: '#xprt-n2', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xprt-n2', T2, { scale: 1.08, lift: -12, done: '#xprt-n1' });
+    P.out('#xprt-now1', T2);  P.in('#xprt-now2, #xprt-led2', T2);
+    P.ripple('#xprt-ico2', T2 + 0.05, { to: 2.4 });
+    // 拍 6 第 3 站：同拍 5
+    P.comet('#xprt-n2-xprt-n3', T3 - 0.85, { dur: 0.75 });
+    P.cam('#xprt-card', T3 - 0.2, { to: '#xprt-n3', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xprt-n3', T3, { scale: 1.08, lift: -12, done: '#xprt-n1, #xprt-n2' });
+    P.out('#xprt-now2', T3);  P.in('#xprt-now3, #xprt-led3', T3);
+    P.ripple('#xprt-ico3', T3 + 0.05, { to: 2.4 });
+    // 拍 7 第 4 站：同拍 5（3 站時刪掉這一組 5 行，收尾的 T4 改 T3、now4 改 now3）
+    P.comet('#xprt-n3-xprt-n4', T4 - 0.85, { dur: 0.75 });
+    P.cam('#xprt-card', T4 - 0.2, { to: '#xprt-n4', k: 0.12, scale: 1.04, dur: 0.9 });
+    P.spot(ALL, '#xprt-n4', T4, { scale: 1.08, lift: -12, done: '#xprt-n1, #xprt-n2, #xprt-n3' });
+    P.out('#xprt-now3', T4);  P.in('#xprt-now4, #xprt-led4', T4);
+    P.ripple('#xprt-ico4', T4 + 0.05, { to: 2.4 });
+
+    // 收：最後一站講完 2.6 秒回均衡（全部亮回、鏡頭回正），同時一道光從第一站沿全部走線跑到最後一站（每段 0.3 秒接力）
+    const TR = T4 + 2.6;
+    P.spot(ALL, null, TR, { dur: 0.6 });
+    P.out('#xprt-now4', TR);
+    P.cam('#xprt-card', TR, { x: 0, y: 0, scale: 1, dur: 0.6 });
+    $q('#xprt-lines .xprt-zap').forEach(function (z, i) { P.comet(z, TR + i * 0.3, { dur: 0.3, ease: 'none' }); });
+
+    P.end();                                         // 長度＝plan.json 這段的長度
+    window.__timelines['x-process-trace'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-process-trace";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

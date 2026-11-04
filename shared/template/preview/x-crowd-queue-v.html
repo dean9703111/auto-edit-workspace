@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-crowd-queue 兩排人比快慢｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-crowd-queue.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-crowd-queue { position: absolute; inset: 0; }
+    #x-crowd-queue .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-crowd-queue #xcq-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-crowd-queue #xcq-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; }
+    #x-crowd-queue #xcq-pill { margin-left: auto; }
+    #x-crowd-queue #xcq-body { position: relative; width: 1176px; height: 580px; }
+    /* 跑道：1080×240，左邊名稱欄、右邊跑道 */
+    #x-crowd-queue .xcq-lane { position: absolute; width: 1080px; height: 240px; box-sizing: border-box; padding: 0 24px; border: 4px solid var(--v2-node-line);
+                               border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink); display: flex; align-items: center; gap: 24px; }
+    #x-crowd-queue .xcq-lab { position: relative; width: 168px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 0; white-space: nowrap; }
+    #x-crowd-queue .xcq-lab .sc-icon { --d: 56px; --i: 32px; position: relative; }
+    #x-crowd-queue .xcq-name { position: relative; }
+    #x-crowd-queue .xcq-time { position: relative; }
+    #x-crowd-queue #xcq-tb { color: var(--brand); }
+    /* 跑道：832 寬；地面虛線、終點旗、隊伍（5 人）、看不見的路線 */
+    #x-crowd-queue .xcq-track { position: relative; width: 832px; height: 232px; flex: none; }
+    #x-crowd-queue .xcq-ground { position: absolute; left: 0; right: 0; bottom: 12px; height: 0; border-top: 4px dashed var(--v2-line); }
+    #x-crowd-queue .xcq-flag { --d: 64px; --i: 36px; position: absolute; right: 0; bottom: 16px; background: var(--brand); color: var(--brand-ink); }
+    #x-crowd-queue .xcq-q { position: absolute; left: 0; bottom: 16px; width: 520px; height: 210px; display: flex; gap: 20px; }
+    #x-crowd-queue .xcq-p { position: relative; width: 88px; height: 210px; flex: none; }
+    #x-crowd-queue .xcq-route { position: absolute; left: 0; top: 0; width: 832px; height: 232px; overflow: visible; }
+    #x-crowd-queue .xcq-route path { fill: none; stroke: none; }
+  </style>
+  <div id="x-crowd-queue" data-composition-id="x-crowd-queue" data-width="1920" data-height="1080" data-duration="12.6"
+       data-cues-sample='{"start":0,"D":12.6,"cues":{"352":[2.6,6.3],"353":[6.4,9.3],"354":[9.4,12.4]},"refs":{"#352@手動":2.8,"#353@自動":6.6,"#354@快":9.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcq-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">剪 5 支影片要多久</span><div id="xcq-pill" class="sc-pill" data-snap-width><span class="sc-opt">快 5 倍</span></div></div>
+      <div id="xcq-body" data-layout="col" data-gap="md">
+        <!-- ══ 上排：慢的方法（一次走一個） ══ -->
+        <div id="xcq-la" class="xcq-lane" data-slot data-layout-allow-slack>
+          <div class="xcq-lab">
+            <span id="xcq-ia" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" /> <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" /> <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" /> <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /> </svg></span>
+            <b class="xcq-name sc-t52 sc-w900 sc-opt">手動剪</b>
+            <b id="xcq-ta" class="xcq-time sc-t40 sc-w700 sc-gray sc-opt">5 天</b>
+          </div>
+          <div id="xcq-ka" class="xcq-track">
+            <i class="xcq-ground"></i>
+            <span id="xcq-fa" class="xcq-flag sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /> <line x1="4" x2="4" y1="22" y2="15" /> </svg></span>
+            <div id="xcq-qa" class="xcq-q">
+              <div id="xcq-a5" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div id="xcq-a4" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div id="xcq-a3" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div id="xcq-a2" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div id="xcq-a1" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+            </div>
+            <svg class="xcq-route" xmlns="http://www.w3.org/2000/svg"><path id="xcq-ra" d="M0 0" /></svg>
+          </div>
+        </div>
+        <!-- ══ 下排：快的方法（整排一起走） ══ -->
+        <div id="xcq-lb" class="xcq-lane" data-slot data-layout-allow-slack>
+          <div class="xcq-lab">
+            <span id="xcq-ib" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span>
+            <b class="xcq-name sc-t52 sc-w900 sc-opt">自動剪</b>
+            <b id="xcq-tb" class="xcq-time sc-t40 sc-w900 sc-opt">1 天</b>
+          </div>
+          <div id="xcq-kb" class="xcq-track">
+            <i class="xcq-ground"></i>
+            <span id="xcq-fb" class="xcq-flag sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /> <line x1="4" x2="4" y1="22" y2="15" /> </svg></span>
+            <div id="xcq-qb" class="xcq-q">
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+            </div>
+            <svg class="xcq-route" xmlns="http://www.w3.org/2000/svg"><path id="xcq-rb" d="M0 0" /></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    ILLUS.mount(document.getElementById('x-crowd-queue'));   // 第一行：小人先掛成 SVG，之後建的動畫才抓得到 .il-hi
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-crowd-queue'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#352@手動'), T2 = P.at('#353@自動');   // 講到慢的方法／講到快的方法
+    P.sfx('success', '#353@自動');                         // 整排走到終點一顆 success（句號和 T2 一樣）
+    const T3 = P.at('#354@快');                            // 選用：講到結論（沒有結論句的刪法見檔頭【綁句欄位】）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const LANES = '#xcq-la, #xcq-lb';
+
+    // 0. 路線（以下都不用改）：上排＝最前面那個人的中心走到終點旗左邊；下排＝整排的中心走到整排右緣貼著終點旗左邊 24
+    const route = function (path, el, track) {
+      const flag = track.querySelector('.xcq-flag'), q = el.parentElement.classList.contains('xcq-q') ? el.parentElement : null;
+      const x0 = (q ? q.offsetLeft : 0) + el.offsetLeft + el.offsetWidth / 2, y = (q ? q.offsetTop : 0) + el.offsetTop + el.offsetHeight / 2;
+      const x1 = flag.offsetLeft - 24 - el.offsetWidth / 2;
+      $q(path)[0].setAttribute('d', 'M' + Math.round(x0) + ' ' + Math.round(y) + ' L' + Math.round(x1) + ' ' + Math.round(y));
+    };
+    route('#xcq-ra', $q('#xcq-a1')[0], $q('#xcq-ka')[0]);
+    route('#xcq-rb', $q('#xcq-qb')[0], $q('#xcq-kb')[0]);
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字 → 兩條跑道彈出 → 小人錯拍彈出 → 圖示描線
+    if (ENTER === 'grow') P.grow('#xcq-card', 0.3);
+    else { P.wipe('#xcq-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcq-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xcq-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop(LANES, 1.0, { stagger: 0.15, from: 0.9, dy: 30 });
+    P.pop('#x-crowd-queue .xcq-p', 1.5, { stagger: 0.05, from: 0.5, dy: 30, dur: 0.5 });
+    P.icon('#xcq-ia, #xcq-ib, #xcq-fa, #xcq-fb', 1.65, { stagger: 0.06 });
+    P.spot(LANES, 'none', 2.2, { dim: 0.55, dur: 0.6 });
+
+    // 拍 1 慢的方法：上排亮起 → 最前面的人慢慢走到終點 → 旗子漣漪、時間彈出
+    P.spot(LANES, '#xcq-la', T1, { scale: 1.01, lift: 0 });
+    P.along('#xcq-a1', '#xcq-ra', T1, { dur: 2.0, ease: 'none' });
+    P.ripple('#xcq-fa', T1 + 2.0, { to: 2.2 });
+    P.pop('#xcq-ta', T1 + 2.0, { from: 0.6, dy: 0 });
+    // 拍 2 快的方法：下排亮起 → 整排一起走到終點 → 身體換主色、旗子漣漪、時間彈出
+    P.spot(LANES, '#xcq-lb', T2, { scale: 1.01, lift: 0, done: '#xcq-la' });
+    P.along('#xcq-qb', '#xcq-rb', T2, { dur: 0.9 });
+    P.in('#xcq-qb .il-hi', T2 + 0.9, { stagger: 0.05, dur: 0.3 });
+    P.ripple('#xcq-fb', T2 + 0.9, { to: 2.2 });
+    P.pop('#xcq-tb', T2 + 0.9, { from: 0.6, dy: 0 });
+    // 拍 3（選用）結論：膠囊彈出，焦點留在下排、上排淡下去
+    P.pop('#xcq-pill', T3, { from: 0.7, dy: 0 });
+    P.spot(LANES, '#xcq-lb', T3, { scale: 1.01, lift: 0, dim: 0.45 });
+
+    P.end();                                               // 長度＝plan.json 這段的長度
+    window.__timelines['x-crowd-queue'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-crowd-queue";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!-- 預設拍型：C 對比（BEATS.md §3 C；兩排人比快慢：慢的那排一次只走一個，快的那排整隊一起走到終點） -->
+<!doctype html>
+<!--
+  x-crowd-queue：兩個方法比快慢（第二層 custom，layout: "fullscreen"；x-crowd 的變體）
+
+  【適用的口播】
+  在比兩個方法誰比較快、而且「量」看得到：「手動剪要一支一支排隊，五天才剪完；自動剪整批一起跑，一天就好，快了五倍」。
+  上下兩條跑道，各排 5 個象形小人（＝5 件要處理的事），右端是終點旗；講到慢的方法，那排最前面的人慢慢走到終點、跑道左邊亮出時間 →
+  講到快的方法，整排一起走到終點、身體換主色、亮出時間 → 講到結論，標題列右端的膠囊彈出、焦點留在快的那條。
+
+  【不要用在哪裡】
+  - 只是「幾個人裡有幾個」的比例：用 x-crowd。
+  - 比的是兩組數字、沒有排隊的意思：用 04e 或 x-trend-blocks。
+  - 超過兩個方法：拆兩段，或用 04a 清單。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、兩條跑道的名稱 .xcq-name（≤ 3 字）與時間 .xcq-time（≤ 4 字，口播講到的那個數）、結論膠囊 #xcq-pill（≤ 8 字，選用）。
+  2. 圖示：兩條跑道左邊的 .sc-icon（慢＝hand、快＝zap）、終點旗 flag。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
+     一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
+     圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
+  3. 綁句：<script> 開頭 T1、T2、T3 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 T2 改。
+  4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+  每排固定 5 個人（不用改）；小人是 kit/illus.js 的 pgPerson（data-pose="walk" 走路的姿勢），script 第一行的 ILLUS.mount 不要動。
+
+  【綁句欄位】
+  T1 = P.at('#352@手動')：講到慢的方法的時刻，上排焦點亮起，排最前面的人用 2.0 秒慢慢走到終點；走到時終點旗漣漪、跑道左邊的時間彈出。
+  T2 = P.at('#353@自動')：講到快的方法的時刻，下排焦點亮起，整排 0.9 秒一起走到終點、身體換主色、時間彈出；音效 success。
+  T3 = P.at('#354@快')（選用）：講到結論的時刻，膠囊彈出、焦點留在下排（上排淡下去）。沒有結論句：刪掉 #xcq-pill、const T3 那一行和「拍 3」那 2 行。
+  方法名在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#353')。
+  「@詞」要寫成字串字面值（P.at('#353@自動')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#353@自動', 0.3)。
+  audit 會比對：這一拍出現的字在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.6（主卡 0.3 秒長出、1.0 秒兩條跑道彈出、1.3 秒小人錯拍彈出、1.6 秒圖示描線）
+  T2 ≥ T1 + 3.8（走 2.0 秒、時間彈出 0.5 秒，停 1.2 秒）
+  T3 ≥ T2 + 2.8（走 0.9 秒、換色與時間 0.6 秒，停 1.2 秒）
+  D ≥ T3 + 3.0（膠囊與焦點 0.8 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒，留 0.2 秒餘裕；沒有 T3 時 D ≥ T2 + 3.4；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
+  #xcq-body 是 data-layout="col" data-gap="md"：兩條跑道各 1080×240（上慢、下快），整組置中。
+  跑道裡左邊名稱欄 168 寬（圖示 56、名稱、時間由上往下），右邊跑道 832 寬：小人每人 88×210、間距 20，站在虛線地面上；終點旗 64 在最右邊。
+  走路的路線由 script 照排好的位置算（看不見的 svg 線，P.along 沿它走），不寫座標。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-crowd-queue 兩排人比快慢</title></head>
+<body>
+<template id="x-crowd-queue-template">
+  <style>
+    #x-crowd-queue { position: absolute; inset: 0; }
+    #x-crowd-queue .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-crowd-queue #xcq-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-crowd-queue #xcq-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; }
+    #x-crowd-queue #xcq-pill { margin-left: auto; }
+    #x-crowd-queue #xcq-body { position: relative; width: 1176px; height: 580px; }
+    /* 跑道：1080×240，左邊名稱欄、右邊跑道 */
+    #x-crowd-queue .xcq-lane { position: absolute; width: 1080px; height: 240px; box-sizing: border-box; padding: 0 24px; border: 4px solid var(--v2-node-line);
+                               border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink); display: flex; align-items: center; gap: 24px; }
+    #x-crowd-queue .xcq-lab { position: relative; width: 168px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 0; white-space: nowrap; }
+    #x-crowd-queue .xcq-lab .sc-icon { --d: 56px; --i: 32px; position: relative; }
+    #x-crowd-queue .xcq-name { position: relative; }
+    #x-crowd-queue .xcq-time { position: relative; }
+    #x-crowd-queue #xcq-tb { color: var(--brand); }
+    /* 跑道：832 寬；地面虛線、終點旗、隊伍（5 人）、看不見的路線 */
+    #x-crowd-queue .xcq-track { position: relative; width: 832px; height: 232px; flex: none; }
+    #x-crowd-queue .xcq-ground { position: absolute; left: 0; right: 0; bottom: 12px; height: 0; border-top: 4px dashed var(--v2-line); }
+    #x-crowd-queue .xcq-flag { --d: 64px; --i: 36px; position: absolute; right: 0; bottom: 16px; background: var(--brand); color: var(--brand-ink); }
+    #x-crowd-queue .xcq-q { position: absolute; left: 0; bottom: 16px; width: 520px; height: 210px; display: flex; gap: 20px; }
+    #x-crowd-queue .xcq-p { position: relative; width: 88px; height: 210px; flex: none; }
+    #x-crowd-queue .xcq-route { position: absolute; left: 0; top: 0; width: 832px; height: 232px; overflow: visible; }
+    #x-crowd-queue .xcq-route path { fill: none; stroke: none; }
+  </style>
+  <div id="x-crowd-queue" data-composition-id="x-crowd-queue" data-width="1920" data-height="1080" data-duration="12.6"
+       data-cues-sample='{"start":0,"D":12.6,"cues":{"352":[2.6,6.3],"353":[6.4,9.3],"354":[9.4,12.4]},"refs":{"#352@手動":2.8,"#353@自動":6.6,"#354@快":9.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcq-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">剪 5 支影片要多久</span><div id="xcq-pill" class="sc-pill" data-snap-width><span class="sc-opt">快 5 倍</span></div></div>
+      <div id="xcq-body" data-layout="col" data-gap="md">
+        <!-- ══ 上排：慢的方法（一次走一個） ══ -->
+        <div id="xcq-la" class="xcq-lane" data-slot data-layout-allow-slack>
+          <div class="xcq-lab">
+            <span id="xcq-ia" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" /> <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" /> <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" /> <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /> </svg></span>
+            <b class="xcq-name sc-t52 sc-w900 sc-opt">手動剪</b>
+            <b id="xcq-ta" class="xcq-time sc-t40 sc-w700 sc-gray sc-opt">5 天</b>
+          </div>
+          <div id="xcq-ka" class="xcq-track">
+            <i class="xcq-ground"></i>
+            <span id="xcq-fa" class="xcq-flag sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /> <line x1="4" x2="4" y1="22" y2="15" /> </svg></span>
+            <div id="xcq-qa" class="xcq-q">
+              <div id="xcq-a5" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div id="xcq-a4" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div id="xcq-a3" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div id="xcq-a2" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div id="xcq-a1" class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+            </div>
+            <svg class="xcq-route" xmlns="http://www.w3.org/2000/svg"><path id="xcq-ra" d="M0 0" /></svg>
+          </div>
+        </div>
+        <!-- ══ 下排：快的方法（整排一起走） ══ -->
+        <div id="xcq-lb" class="xcq-lane" data-slot data-layout-allow-slack>
+          <div class="xcq-lab">
+            <span id="xcq-ib" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span>
+            <b class="xcq-name sc-t52 sc-w900 sc-opt">自動剪</b>
+            <b id="xcq-tb" class="xcq-time sc-t40 sc-w900 sc-opt">1 天</b>
+          </div>
+          <div id="xcq-kb" class="xcq-track">
+            <i class="xcq-ground"></i>
+            <span id="xcq-fb" class="xcq-flag sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /> <line x1="4" x2="4" y1="22" y2="15" /> </svg></span>
+            <div id="xcq-qb" class="xcq-q">
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+              <div class="xcq-p"><div data-illus="pgPerson" data-pose="walk" style="width:88px;height:210px"></div></div>
+            </div>
+            <svg class="xcq-route" xmlns="http://www.w3.org/2000/svg"><path id="xcq-rb" d="M0 0" /></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    ILLUS.mount(document.getElementById('x-crowd-queue'));   // 第一行：小人先掛成 SVG，之後建的動畫才抓得到 .il-hi
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-crowd-queue'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#352@手動'), T2 = P.at('#353@自動');   // 講到慢的方法／講到快的方法
+    P.sfx('success', '#353@自動');                         // 整排走到終點一顆 success（句號和 T2 一樣）
+    const T3 = P.at('#354@快');                            // 選用：講到結論（沒有結論句的刪法見檔頭【綁句欄位】）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const LANES = '#xcq-la, #xcq-lb';
+
+    // 0. 路線（以下都不用改）：上排＝最前面那個人的中心走到終點旗左邊；下排＝整排的中心走到整排右緣貼著終點旗左邊 24
+    const route = function (path, el, track) {
+      const flag = track.querySelector('.xcq-flag'), q = el.parentElement.classList.contains('xcq-q') ? el.parentElement : null;
+      const x0 = (q ? q.offsetLeft : 0) + el.offsetLeft + el.offsetWidth / 2, y = (q ? q.offsetTop : 0) + el.offsetTop + el.offsetHeight / 2;
+      const x1 = flag.offsetLeft - 24 - el.offsetWidth / 2;
+      $q(path)[0].setAttribute('d', 'M' + Math.round(x0) + ' ' + Math.round(y) + ' L' + Math.round(x1) + ' ' + Math.round(y));
+    };
+    route('#xcq-ra', $q('#xcq-a1')[0], $q('#xcq-ka')[0]);
+    route('#xcq-rb', $q('#xcq-qb')[0], $q('#xcq-kb')[0]);
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字 → 兩條跑道彈出 → 小人錯拍彈出 → 圖示描線
+    if (ENTER === 'grow') P.grow('#xcq-card', 0.3);
+    else { P.wipe('#xcq-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcq-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xcq-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop(LANES, 1.0, { stagger: 0.15, from: 0.9, dy: 30 });
+    P.pop('#x-crowd-queue .xcq-p', 1.5, { stagger: 0.05, from: 0.5, dy: 30, dur: 0.5 });
+    P.icon('#xcq-ia, #xcq-ib, #xcq-fa, #xcq-fb', 1.65, { stagger: 0.06 });
+    P.spot(LANES, 'none', 2.2, { dim: 0.55, dur: 0.6 });
+
+    // 拍 1 慢的方法：上排亮起 → 最前面的人慢慢走到終點 → 旗子漣漪、時間彈出
+    P.spot(LANES, '#xcq-la', T1, { scale: 1.01, lift: 0 });
+    P.along('#xcq-a1', '#xcq-ra', T1, { dur: 2.0, ease: 'none' });
+    P.ripple('#xcq-fa', T1 + 2.0, { to: 2.2 });
+    P.pop('#xcq-ta', T1 + 2.0, { from: 0.6, dy: 0 });
+    // 拍 2 快的方法：下排亮起 → 整排一起走到終點 → 身體換主色、旗子漣漪、時間彈出
+    P.spot(LANES, '#xcq-lb', T2, { scale: 1.01, lift: 0, done: '#xcq-la' });
+    P.along('#xcq-qb', '#xcq-rb', T2, { dur: 0.9 });
+    P.in('#xcq-qb .il-hi', T2 + 0.9, { stagger: 0.05, dur: 0.3 });
+    P.ripple('#xcq-fb', T2 + 0.9, { to: 2.2 });
+    P.pop('#xcq-tb', T2 + 0.9, { from: 0.6, dy: 0 });
+    // 拍 3（選用）結論：膠囊彈出，焦點留在下排、上排淡下去
+    P.pop('#xcq-pill', T3, { from: 0.7, dy: 0 });
+    P.spot(LANES, '#xcq-lb', T3, { scale: 1.01, lift: 0, dim: 0.45 });
+
+    P.end();                                               // 長度＝plan.json 這段的長度
+    window.__timelines['x-crowd-queue'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

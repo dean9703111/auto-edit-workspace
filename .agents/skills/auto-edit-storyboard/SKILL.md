@@ -95,6 +95,12 @@ node shared/template/tools/build.mjs --list
 | 同一個量在 3–6 個時間點的變化 | `x-trend` |
 | 一個比例或一段時間＋起點與結論 | `x-ring` |
 | 兩個選項在 2–3 個面向上比，都有數字 | `x-versus` |
+| 一個 App 或產品的 2–4 個功能／一個物件的部位 | `x-callout-phone`／`x-callout-parts` |
+| 交給 AI 或工具跑的 2–4 項工作 | `x-checklist-ai` |
+| 幾個人裡有幾個／兩個方法比快慢 | `x-crowd`／`x-crowd-queue` |
+| 一件事由 3–5 個面向組成 | `x-ring-facets` |
+| 轉述新聞、公告、官方數據 | `x-news` |
+| 其他變體（電路板、循環、台座、方塊、傳出去、裝置接力、一鍵歸位、問 AI、終端機、程式碼） | SITUATIONS.md §3 對應那一列 |
 
 章節角標不用另排（build 自動常駐）；講稿有 `###` 小節時，把 `--check` ⚠ 印的 `sections` 整段貼進 plan.json 第一層（名稱太長照 ⚠ 縮短），右上角就會顯示目前在講哪一節；沒有 01 的短片，在章節起點放一段 02（≥ 3.5 秒，R2.2），build 會在那裡自動掃過一次色帶。金句先放候選表讓使用者勾（style.md「字卡文字」），不直接上。資訊卡照 style.md「字卡文字」，有圖示欄位就配（寫進本集圖示表）。
 判定表填完，照 `shared/template/SITUATIONS.md` §6 整集看一次：開場三拍、前後呼應、判決句（蓋章）。口播本來就沒有的不硬湊；有排的在判定表那一段的「首選」寫清楚（例：`x-checklist-2（呼應 s04）`）。

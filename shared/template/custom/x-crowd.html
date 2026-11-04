@@ -1,0 +1,128 @@
+<!-- 預設拍型：E 數字（BEATS.md §3 E；象形人群：一格一格出現，講到比例時其中幾個人換主色） -->
+<!doctype html>
+<!--
+  x-crowd：10 個人裡有幾個（第二層 custom，layout: "fullscreen"）
+
+  【適用的口播】
+  講一個「幾個人裡有幾個」的比例，想讓觀眾看到人：「10 個點進來的觀眾，有 7 個看不到 30 秒就滑走了」「每 10 個人只有 1 個會留言」。
+  左邊 10 個象形小人排成兩排；講到總數，小人一個一個彈出、右上的數字數到 10 →
+  講到那幾個，那幾個人的身體換成主色、其他人淡下去，右下的主色數字數到那個數、音效 impact → 講到結論，標題列右端的膠囊彈出（選用）。
+
+  【不要用在哪裡】
+  - 比例是百分比、沒有「人」的意思：用 x-ring 或 fx 29。
+  - 兩群人比快慢（排隊）：用 x-crowd-queue。
+  - 超過 10 個人：改成「每 10 個人裡有幾個」來講。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、總數的說明 #xcrd-la（≤ 7 字）、那幾個的說明 #xcrd-lb（≤ 7 字）、結論膠囊 #xcrd-pill（≤ 8 字，選用）。
+  2. 數字：總數固定 10 個人（2 排 × 5）；「那幾個」是 class 有 xcrd-hot 的人（現在是第 4–10 個＝7 個），要幾個就給幾個人加 xcrd-hot，
+     script 的 HOT 那一行改成同一個數字。這支沒有圖示（小人就是圖示）。
+  3. 綁句：<script> 開頭 T1、T2、T3 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 T2 改。
+  4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+
+  【綁句欄位】
+  T1 = P.at('#342@10')：講到總數的時刻，10 個小人每 0.08 秒彈出一個、右上數字從 0 數到 10。
+  T2 = P.at('#343@7')：講到那幾個的時刻，那幾個人的身體每 0.08 秒換成主色一個、其他人淡到 0.35、右下主色數字從 0 數到 HOT；音效 impact。
+  T3 = P.at('#344@開頭')（選用）：講到結論的時刻，膠囊彈出、字逐字落下。沒有結論句：刪掉 #xcrd-pill、const T3 那一行和「拍 3」那 2 行。
+  數字在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#343')。
+  「@詞」要寫成字串字面值（P.at('#343@7')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#343@7', 0.3)。
+  audit 會比對：這一拍出現的字在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 1.5（主卡 0.3 秒長出、0.5 秒起標題逐字）
+  T2 ≥ T1 + 2.6（10 個人彈完 1.3 秒，停 1.2 秒）
+  T3 ≥ T2 + 2.6（換色 1.3 秒，停 1.2 秒）
+  D ≥ T3 + 2.8（膠囊 0.8 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；沒有 T3 時 D ≥ T2 + 3.4；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
+  #xcrd-body 是 data-layout="row" data-gap="lg"：左邊人群 688×508（CSS grid 5 欄 × 2 排，每人 112×244、欄距 32、排距 20），右邊數字欄 312×508（上：總數，下：主色的那幾個）。
+  小人是 kit/illus.js 的 pgPerson（.il-hi＝主色軀幹，預設看不到）；script 第一行的 ILLUS.mount 不要動。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-crowd 人群比例</title></head>
+<body>
+<template id="x-crowd-template">
+  <style>
+    #x-crowd { position: absolute; inset: 0; }
+    #x-crowd .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-crowd #xcrd-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-crowd #xcrd-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; }
+    #x-crowd #xcrd-pill { margin-left: auto; }
+    #x-crowd #xcrd-body { position: relative; width: 1176px; height: 580px; }
+    /* 人群：5 欄 × 2 排 */
+    #x-crowd #xcrd-grid { position: absolute; width: 688px; height: 508px; display: grid; grid-template-columns: repeat(5, 112px); column-gap: 32px; row-gap: 20px; }
+    #x-crowd .xcrd-p { position: relative; width: 112px; height: 244px; }
+    /* 數字欄：上總數、下主色的那幾個 */
+    #x-crowd #xcrd-stat { position: absolute; width: 312px; height: 508px; display: flex; flex-direction: column; justify-content: center; gap: 40px; }
+    #x-crowd .xcrd-s { position: relative; color: var(--sc-fs-ink); white-space: nowrap; }
+    #x-crowd .xcrd-num { display: flex; align-items: baseline; gap: 12px; }
+    #x-crowd #xcrd-b .xcrd-num { color: var(--brand); }
+  </style>
+  <div id="x-crowd" data-composition-id="x-crowd" data-width="1920" data-height="1080" data-duration="11.8"
+       data-cues-sample='{"start":0,"D":11.8,"cues":{"342":[1.5,4.0],"343":[4.2,6.8],"344":[7.0,10.6]},"refs":{"#342@10":1.8,"#343@7":4.6,"#344@開頭":7.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcrd-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">點進來的 10 個人</span><div id="xcrd-pill" class="sc-pill" data-snap-width><span class="sc-opt">開頭先抓住人</span></div></div>
+      <div id="xcrd-body" data-layout="row" data-gap="lg">
+        <div id="xcrd-grid" data-slot>
+          <div id="xcrd-p1" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p2" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p3" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p4" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p5" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p6" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p7" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p8" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p9" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p10" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+        </div>
+        <div id="xcrd-stat" data-slot>
+          <div id="xcrd-a" class="xcrd-s"><div class="xcrd-num"><span id="xcrd-na" class="sc-t112 sc-w900">0</span><span class="sc-t52 sc-w900">人</span></div><div id="xcrd-la" class="sc-t40 sc-w700 sc-gray sc-opt">點進來看</div></div>
+          <div id="xcrd-b" class="xcrd-s"><div class="xcrd-num"><span id="xcrd-nb" class="sc-t112 sc-w900">0</span><span class="sc-t52 sc-w900">人</span></div><div id="xcrd-lb" class="sc-t40 sc-w700 sc-opt">30 秒內就滑走</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    ILLUS.mount(document.getElementById('x-crowd'));   // 第一行：小人先掛成 SVG，之後建的動畫才抓得到 .il-hi
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-crowd'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#342@10'), T2 = P.at('#343@7');    // 講到總數／講到那幾個
+    P.sfx('impact', '#343@7');                         // 那幾個換色一顆 impact（句號和 T2 一樣）
+    const T3 = P.at('#344@開頭');                      // 選用：講到結論（沒有結論句的刪法見檔頭【綁句欄位】）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const HOT = 7;                                     // 換主色的人數＝class 有 xcrd-hot 的人數
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字
+    if (ENTER === 'grow') P.grow('#xcrd-card', 0.3);
+    else { P.wipe('#xcrd-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcrd-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xcrd-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
+    // 拍 1 總數：10 個小人每 0.08 秒彈出一個 → 右上數字從 0 數到 10、說明逐字
+    P.pop('#x-crowd .xcrd-p', T1, { stagger: 0.08, from: 0.5, dy: 30, dur: 0.5 });
+    P.pop('#xcrd-a', T1, { from: 0.9, dy: 20 });
+    P.count('#xcrd-na', T1, { from: 0, to: 10, dur: 0.9 });
+    P.chars('#xcrd-la', T1 + 0.15);
+    // 拍 2 那幾個：那幾個人的身體每 0.08 秒換主色一個、其他人淡下去 → 右下主色數字數到 HOT、說明逐字
+    P.in('#x-crowd .xcrd-hot .il-hi', T2, { stagger: 0.08, dur: 0.3 });
+    P.dim('#x-crowd .xcrd-p:not(.xcrd-hot)', T2, { to: 0.35 });
+    P.pop('#xcrd-b', T2, { from: 0.9, dy: 20 });
+    P.count('#xcrd-nb', T2, { from: 0, to: HOT, dur: 0.9 });
+    P.chars('#xcrd-lb', T2 + 0.15);
+    // 拍 3（選用）結論：膠囊彈出、字逐字落下
+    P.pop('#xcrd-pill', T3, { from: 0.7, dy: 0 });
+    P.chars('#xcrd-pill .sc-opt', T3 + 0.12, { mode: 'drop' });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-crowd'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

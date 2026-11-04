@@ -408,7 +408,7 @@ test('P.type：cps、caret:false、空白跟著下一個字、只有空白的文
 });
 
 // ---------- 動態 v2（specs/010-motion-v2/design-system.md §11；specs/contracts/motion.md） ----------
-const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'cam', 'grow', 'ambient', 'sfx'];
+const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'cam', 'grow', 'ambient', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'sfx'];
 
 test('v2：原語清單、開頭註解、時間與曲線表、區域、u', () => {
   const { P } = mk();
@@ -527,6 +527,13 @@ const V2_FIX = {
   spot: `<div class="t-spot t-box" id="t-s1" style="left:40px;top:500px"></div><div class="t-spot t-box" id="t-s2" style="left:280px;top:500px"></div><div class="t-spot t-box" id="t-s3" style="left:520px;top:500px"></div>`,
   cam: `<div id="t-cam" style="left:800px;top:480px;width:500px;height:300px"><div id="t-camtarget" class="t-box" style="left:380px;top:200px"></div></div>`,
   grow: `<div id="t-grow" class="t-box" style="left:1360px;top:300px;width:300px;height:160px"></div>`,
+  draw: `<svg id="t-draw" style="left:40px;top:820px;width:240px;height:200px" viewBox="0 0 240 200"><rect x="20" y="20" width="200" height="120" rx="12" fill="#fff" stroke="#141414" stroke-width="4"/><path d="M40 170 L200 170" fill="none" stroke="#e06020" stroke-width="6" stroke-linecap="round"/><circle cx="120" cy="80" r="20" fill="#e06020"/><text x="120" y="192" text-anchor="middle" font-size="18">標籤</text></svg>`,
+  along: `<svg style="left:340px;top:820px;width:300px;height:160px" viewBox="0 0 300 160"><path id="t-alongpath" d="M10 150 L150 20 L290 150" fill="none" stroke="#333" stroke-width="3"/></svg><div id="t-along" style="left:330px;top:950px;width:40px;height:40px;border-radius:50%;background:#e06020"></div>`,
+  fly: `<svg style="left:700px;top:820px;width:360px;height:160px;overflow:visible" viewBox="0 0 360 160"><path id="t-fly" d="M10 140 C 120 20, 240 20, 350 120" fill="none" stroke="#333" stroke-width="3"/></svg>`,
+  tape: `<div id="t-tape" class="t-box" style="left:1120px;top:880px;width:220px;height:130px"></div>`,
+  hinge: `<div id="t-hinge" class="t-box" style="left:1400px;top:760px;width:220px;height:70px"></div>`,
+  wave: `<div id="t-wv" style="left:1400px;top:860px;width:260px;height:90px"></div>`,
+  spin: `<div id="t-spin" style="left:1720px;top:880px;width:60px;height:60px;border-radius:50%;border:6px solid #ddd;border-top-color:#e06020"></div>`,
 };
 const V2_CODE = `
     P.chars('#t-chars', 0.5); P.chars('#t-charpop', 0.7, { mode: 'pop' }); P.chars('#t-chardrop', 0.9, { mode: 'drop' });
@@ -546,6 +553,13 @@ const V2_CODE = `
     P.pop('.t-spot', 0.5, { stagger: 0.12 }); P.spot('.t-spot', 'none', 1.5); P.spot('.t-spot', '#t-s1', 2.0); P.spot('.t-spot', '#t-s2', 3.0, { done: '#t-s1' }); P.spot('.t-spot', null, 4.0);
     P.cam('#t-cam', 2.8, { to: '#t-camtarget', k: 0.12, scale: 1.04 }); P.cam('#t-cam', 4.2, { x: 0, y: 0, scale: 1 });
     P.grow('#t-grow', 0.3);
+    P.draw('#t-draw', 0.6);
+    P.along('#t-along', '#t-alongpath', 1.2); P.along('#t-along', '#t-alongpath', 3.0, { from: 1, to: 0.5 });
+    P.fly('#t-fly', 1.0);
+    P.tape('#t-tape', 2.0);
+    P.hinge('#t-hinge', 1.4);
+    P.wave('#t-wv', 0.5, { until: 4 });
+    P.spin('#t-spin', 0.5, { until: 4 });
     P.sfx('click', '#1');
     P.end();`;
 
@@ -582,6 +596,7 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
           const host = el.closest('svg') && el.tagName !== 'svg' ? el.closest('svg') : el;
           for (const n of [host, ...host.querySelectorAll('*')]) { const cs = getComputedStyle(n); parts.push(keys.map((p) => cs[p]).join('|') + '|' + (n.getAttribute('transform') || '') + '|' + (n.textContent || '').length); } }
         out[k] = parts.join(';'); }
+      out.pen = [...document.querySelectorAll('.sc-pen')].map((n) => n.style.left + n.style.top + n.style.opacity).join(';');
       out.ambient = [...document.querySelectorAll('.sc-surface-fs, .sc-surface-fs *')].map((n) => { const cs = getComputedStyle(n); return cs.transform + cs.translate + cs.opacity; }).join(';');
       return out; })()`);
     const times = [0, 0.6, 1.1, 1.7, 2.3, 2.6, 3.1, 3.9, 4.6, 5.9];
@@ -590,9 +605,9 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
       const A = {}, B2 = {};
       for (const t of times) { await S.seek(t); A[t] = { st: await stateOf() }; }
       for (const t of shuffled) { await S.seek(t); B2[t] = { st: await stateOf() }; }
-      for (const k of [...Object.keys(V2_FIX), 'ambient']) for (const t of times) assert.equal(B2[t].st[k], A[t].st[k], `P.${k}：${t}s 亂序 seek 和照順序不同`);
+      for (const k of [...Object.keys(V2_FIX), 'pen', 'ambient']) for (const t of times) assert.equal(B2[t].st[k], A[t].st[k], `P.${k}：${t}s 亂序 seek 和照順序不同`);
       // 原語真的有動：完成態和起點不同；ambient 有加光暈與浮塵；彗星頭起點在線頭
-      for (const k of [...Object.keys(V2_FIX), 'ambient']) assert.ok(times.some((t) => A[t].st[k] !== A[0].st[k]), `P.${k} 看起來沒有動`);
+      for (const k of [...Object.keys(V2_FIX), 'pen', 'ambient']) assert.ok(times.some((t) => A[t].st[k] !== A[0].st[k]), `P.${k} 看起來沒有動`);
       assert.equal(await S.evaluate(`document.querySelectorAll('.sc-surface-fs .sc-amb').length`), 2);
       assert.equal(await S.evaluate(`document.querySelectorAll('[data-sc-ch]').length`), 10);
       assert.deepEqual(await S.evaluate(`(window.SceneMotion.sfx['x-v2'] || window.SceneMotion.sfx['?']).map((x) => [x.name, x.ref, x.t])`), [['click', '#1', 2]]);

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-terminal-code 程式碼打字｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-terminal-code.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-terminal-code { position: absolute; inset: 0; }
+    #x-terminal-code .fill { position: absolute; inset: 0; }
+    /* 編輯器視窗：左 120、頂 194、1180×624（右緣 1300、底 818）；亮色暗色主題都是深色 */
+    #x-terminal-code #xtc-win { position: absolute; left: 120px; top: 194px; width: 1180px; height: 624px; box-sizing: border-box; overflow: hidden;
+                                border-radius: 24px; background: var(--v2-term); color: var(--v2-term-ink); box-shadow: var(--v2-card-shadow); }
+    #x-terminal-code #xtc-bar { height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 14px;
+                                background: var(--v2-term-bar); color: var(--v2-term-mute); white-space: nowrap; }
+    #x-terminal-code .xtc-dot { width: 18px; height: 18px; border-radius: 9px; background: var(--v2-term-mute); flex: none; }
+    #x-terminal-code #xtc-tico { --d: 48px; --i: 32px; margin-left: 16px; color: var(--v2-term-mute); }
+    /* 程式區：高 448；行號欄 96、程式碼從 128 開始；行高固定 64 */
+    #x-terminal-code #xtc-body { position: relative; height: 448px; }
+    #x-terminal-code .xtc-hl { position: absolute; left: 0; width: 1180px; box-sizing: border-box; border-left: 8px solid var(--v2-term-kw); background: var(--v2-term-bar); }
+    #x-terminal-code #xtc-h1 { top: 96px; height: 64px; }
+    #x-terminal-code #xtc-h2 { top: 160px; height: 192px; }
+    #x-terminal-code #xtc-gut { position: absolute; left: 0; top: 32px; width: 96px; text-align: right; line-height: 64px; color: var(--v2-term-mute); }
+    #x-terminal-code #xtc-code { position: absolute; left: 128px; top: 32px; line-height: 64px; white-space: nowrap; }
+    #x-terminal-code .xtc-kw { color: var(--v2-term-kw); }
+    #x-terminal-code .xtc-fn { color: var(--v2-term-fn); }
+    #x-terminal-code .xtc-str { color: var(--v2-term-str); }
+    #x-terminal-code .xtc-cm { color: var(--v2-term-mute); }
+    /* 結果列：程式區下面，高 88 */
+    #x-terminal-code #xtc-out { height: 88px; box-sizing: border-box; padding: 0 48px; border-top: 2px solid var(--v2-term-bar);
+                                display: flex; align-items: center; gap: 16px; color: var(--v2-term-ok); white-space: nowrap; }
+  </style>
+  <div id="x-terminal-code" data-composition-id="x-terminal-code" data-width="1920" data-height="1080" data-duration="15"
+       data-cues-sample='{"start":0,"D":15,"cues":{"332":[1.6,6.0],"333":[6.2,8.6],"334":[8.8,11.4],"335":[11.6,14.2]},"refs":{"#333@讀進來":6.4,"#334@剪掉":9.2,"#335@執行":12.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xtc-win">
+      <div id="xtc-bar"><i class="xtc-dot"></i><i class="xtc-dot"></i><i class="xtc-dot"></i><span id="xtc-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M10 12.5 8 15l2 2.5" /> <path d="m14 12.5 2 2.5-2 2.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /> </svg></span><span id="xtc-file" class="sc-t40 sc-w700 sc-mono sc-opt">cut-retakes.mjs</span></div>
+      <div id="xtc-body">
+        <i id="xtc-h1" class="xtc-hl" data-layout-allow-overlap></i>
+        <i id="xtc-h2" class="xtc-hl" data-layout-allow-overlap></i>
+        <div id="xtc-gut" class="sc-t40 sc-w500 sc-mono">1<br>2<br>3<br>4<br>5<br>6</div>
+        <div id="xtc-code" class="sc-t40 sc-w500 sc-mono"><span class="xtc-cm">// 找出重講，剪掉前面那次</span><br><span class="xtc-kw">const</span> words = <span class="xtc-fn">load</span>(<span class="xtc-str">'words.json'</span>);<br><span class="xtc-kw">for</span> (<span class="xtc-kw">const</span> ng <span class="xtc-kw">of</span> <span class="xtc-fn">findRetakes</span>(words)) {<br>&nbsp;&nbsp;<span class="xtc-fn">cut</span>(ng.start, ng.end);<br>}<br><span class="xtc-fn">save</span>(<span class="xtc-str">'rough.mp4'</span>);</div>
+      </div>
+      <div id="xtc-out" class="sc-t40 sc-w700 sc-mono"><span>✓</span><span id="xtc-res">已剪掉 12 段重講（0.8 秒）</span></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-terminal-code'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), H2 = P.at('#334@剪掉'), RUN = P.at('#335@執行');   // 打字／兩段標示／執行
+    P.sfx('success', '#335@執行');                     // 執行結果一顆 success（句號和 RUN 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 拍 0 開場：視窗進場（看 ENTER）→ 檔名圖示描線、檔名逐字 → 1.0 行號出現
+    if (ENTER === 'grow') P.grow('#xtc-win', 0.3);
+    else { P.wipe('#xtc-win', 0, { dir: 'up', dur: 0.8 }); P.pop('#xtc-win', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xtc-tico', 0.5);
+    P.chars('#xtc-file', 0.62, { stagger: 0.03 });
+    P.in('#xtc-gut', 1.0, { dur: 0.3 });
+    // 拍 1 打字：整段程式碼逐字打出（固定 3 秒，換行與上色原樣保留）
+    P.type('#xtc-code', TYPE, { dur: 3.0 });
+    // 拍 2–3 標示：那幾行底下的標示帶由左往右亮起，前一條淡掉
+    P.wipe('#xtc-h1', H1, { dir: 'left', dur: 0.4 });
+    P.out('#xtc-h1', H2, { dur: 0.3 });
+    P.wipe('#xtc-h2', H2, { dir: 'left', dur: 0.4 });
+    // 拍 4 執行：結果列由左往右印出（音效 success 見上面 P.sfx）
+    P.wipe('#xtc-out', RUN, { dir: 'left', dur: 0.4 });
+    P.punch('#xtc-res', RUN + 0.4, { scale: 1.04 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-terminal-code'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-terminal-code";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

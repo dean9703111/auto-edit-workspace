@@ -1,0 +1,129 @@
+<!-- 預設拍型：H 提示詞（BEATS.md §3 H；終端機：打指令 → 轉圈 → 輸出逐行印出 → 完成） -->
+<!doctype html>
+<!--
+  x-terminal：終端機跑一行指令（第二層 custom，layout: "fullscreen"；從 x-prompt 的「指令」變體搬出來）
+
+  【適用的口播】
+  講「打一行指令，它就自己跑完」：「在終端機打 node media.mjs rough ep2，它會先找出重講的段落，再把字幕對好時間，跑完就有初剪了」。
+  深色終端機視窗：指令逐字打出 → 底下開始轉圈「處理中」→ 講到每個步驟，那一行輸出由左往右印出（綠色勾）→ 講到「完成」，轉圈換成綠色完成行、出現新的提示字元；音效 success。
+  終端機不管亮色暗色主題都是深色（--v2-term*）。
+
+  【不要用在哪裡】
+  - 只秀一行指令、不演執行過程：用 x-prompt 的「指令」變體。
+  - 要看程式碼內容：用 x-terminal-code。
+  - 有真的螢幕錄影：用 media 段。
+
+  【要改的地方】
+  1. 文字：視窗標題 #xterm-title（≤ 20 個半形字）、提示字元的路徑 .xterm-path（≤ 8 字）、指令 #xterm-cmd（整行連路徑和 $ ≤ 32 個半形字寬，中文算 2；要淡色的參數包在 <span class="xterm-flag">）、
+     兩行輸出 #xterm-o1、#xterm-o2 的字（「✓ 」後面 ≤ 14 字）、完成行 #xterm-done（≤ 16 字）、處理中 #xterm-wait（≤ 8 字）。
+  2. 圖示：視窗標題列的 #xterm-tico（square-terminal），不用改。
+  3. 綁句：<script> 開頭 RUN、STEP1、STEP2、DONE（見【綁句欄位】），P.sfx 的句號跟著 DONE 改。
+  4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+  只有一行輸出：刪掉 #xterm-o2、STEP2 和「第 2 行輸出」那 1 行。
+
+  【綁句欄位】
+  RUN = P.at('#322', 0.45)：開始唸指令那一句，開口後 0.45 秒開始打字（固定 2.4 秒打完，指令再長也一樣）；打完 0.3 秒後開始轉圈。
+  STEP1 = P.at('#323@重講')、STEP2 = P.at('#324@字幕')：講到每個步驟的時刻，那一行輸出由左往右印出。
+  DONE = P.at('#325@完成')：講到「完成」的時刻，轉圈那一行換成綠色完成行、0.5 秒後新的提示字元出現；音效 success。
+  詞在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#323')。
+  「@詞」要寫成字串字面值（P.at('#323@重講')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#323@重講', 0.3)。
+  audit 會比對：這一拍出現的字在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  RUN ≥ 1.5（視窗 0.3 秒長出、0.5 秒起標題逐字、1.0 秒第一個提示字元出現）
+  STEP1 ≥ RUN + 4.3（打字 2.4 秒、0.3 秒後轉圈出現，再停 1.2 秒）
+  STEP2 ≥ STEP1 + 2.5；DONE ≥ STEP2 + 2.5
+  D ≥ DONE + 2.8（完成行＋新提示字元 0.8 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：視窗進場看 script 的 ENTER；離場由 build 處理。終端機視窗 left 120、top 222、1180×568（右緣 1300，底 790），標題列 88。
+  內容區上下內距 40、左右 48；每一行高 80（字 52、等寬字 .sc-mono），一共 5 行：第 1 行指令、第 2–3 行輸出、第 4 行轉圈／完成（同一行，先後出現）、第 5 行新的提示字元。
+  每一行的 top 寫在 CSS（40＋80 × 行號），不用 data-layout（終端機是固定行高的格子）。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-terminal 終端機跑指令</title></head>
+<body>
+<template id="x-terminal-template">
+  <style>
+    #x-terminal { position: absolute; inset: 0; }
+    #x-terminal .fill { position: absolute; inset: 0; }
+    /* 終端機視窗：左 120、頂 222、1180×568（右緣 1300、底 790）；亮色暗色主題都是深色 */
+    #x-terminal #xterm-win { position: absolute; left: 120px; top: 222px; width: 1180px; height: 568px; box-sizing: border-box; overflow: hidden;
+                             border-radius: 24px; background: var(--v2-term); color: var(--v2-term-ink); box-shadow: var(--v2-card-shadow); }
+    #x-terminal #xterm-bar { height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 14px;
+                             background: var(--v2-term-bar); color: var(--v2-term-mute); white-space: nowrap; }
+    #x-terminal .xterm-dot { width: 18px; height: 18px; border-radius: 9px; background: var(--v2-term-mute); flex: none; }
+    #x-terminal #xterm-tico { --d: 48px; --i: 32px; margin-left: 16px; color: var(--v2-term-mute); }
+    #x-terminal #xterm-body { position: relative; height: 480px; }
+    /* 每一行：高 80、top＝40＋80 × 行號 */
+    #x-terminal .xterm-ln { position: absolute; left: 48px; height: 80px; display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-terminal #xterm-l1 { top: 40px; }
+    #x-terminal #xterm-o1 { top: 120px; }
+    #x-terminal #xterm-o2 { top: 200px; }
+    #x-terminal #xterm-wl, #x-terminal #xterm-done { top: 280px; }
+    #x-terminal #xterm-l5 { top: 360px; }
+    #x-terminal .xterm-path { color: var(--v2-term-fn); }
+    #x-terminal .xterm-ps { color: var(--v2-term-kw); }
+    #x-terminal .xterm-flag { color: var(--v2-term-mute); }
+    #x-terminal .xterm-ok { color: var(--v2-term-ok); }
+    #x-terminal #xterm-done { color: var(--v2-term-ok); }
+    #x-terminal #xterm-wait { color: var(--v2-term-mute); }
+    /* 轉圈：缺口圈（P.spin 轉整個 svg） */
+    #x-terminal #xterm-spin { width: 48px; height: 48px; flex: none; }
+    #x-terminal .xterm-arc { fill: none; stroke: var(--v2-term-kw); stroke-width: 6px; stroke-linecap: round; stroke-dasharray: 80 44; }
+    /* 新提示字元後面的方塊游標（用字元，寬度跟著字） */
+    #x-terminal #xterm-caret { color: var(--v2-term-ink); }
+  </style>
+  <div id="x-terminal" data-composition-id="x-terminal" data-width="1920" data-height="1080" data-duration="15"
+       data-cues-sample='{"start":0,"D":15,"cues":{"322":[1.6,5.6],"323":[6.0,8.6],"324":[8.8,11.4],"325":[11.5,14.2]},"refs":{"#323@重講":6.6,"#324@字幕":9.2,"#325@完成":12.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xterm-win">
+      <div id="xterm-bar"><i class="xterm-dot"></i><i class="xterm-dot"></i><i class="xterm-dot"></i><span id="xterm-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m7 11 2-2-2-2" /> <path d="M11 13h4" /> <rect width="18" height="18" x="3" y="3" rx="2" ry="2" /> </svg></span><span id="xterm-title" class="sc-t40 sc-w700 sc-mono sc-opt">auto-edit — zsh</span></div>
+      <div id="xterm-body">
+        <div id="xterm-l1" class="xterm-ln sc-t52 sc-w700 sc-mono"><span class="xterm-path">~/影片</span><span class="xterm-ps">$</span><span id="xterm-cmd">node media.mjs rough <span class="xterm-flag">ep2</span></span></div>
+        <div id="xterm-o1" class="xterm-ln sc-t52 sc-w500 sc-mono"><span class="xterm-ok">✓</span><span>找到 12 段重講</span></div>
+        <div id="xterm-o2" class="xterm-ln sc-t52 sc-w500 sc-mono"><span class="xterm-ok">✓</span><span>字幕 86 則對好時間</span></div>
+        <div id="xterm-wl" class="xterm-ln sc-t52 sc-w500 sc-mono"><svg id="xterm-spin" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle class="xterm-arc" cx="24" cy="24" r="19" /></svg><span id="xterm-wait">處理中…</span></div>
+        <div id="xterm-done" class="xterm-ln sc-t52 sc-w900 sc-mono" data-layout-allow-overlap><span>✓</span><span>完成 rough.mp4（42 秒）</span></div>
+        <div id="xterm-l5" class="xterm-ln sc-t52 sc-w700 sc-mono"><span class="xterm-path">~/影片</span><span class="xterm-ps">$</span><span id="xterm-caret">▋</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-terminal'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const RUN = P.at('#322', 0.45), STEP1 = P.at('#323@重講'), STEP2 = P.at('#324@字幕'), DONE = P.at('#325@完成');   // 打指令／兩個步驟／完成
+    P.sfx('success', '#325@完成');                     // 完成一顆 success（句號和 DONE 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 拍 0 開場：視窗進場（看 ENTER）→ 標題圖示描線、標題逐字 → 1.0 第一個提示字元出現
+    if (ENTER === 'grow') P.grow('#xterm-win', 0.3);
+    else { P.wipe('#xterm-win', 0, { dir: 'up', dur: 0.8 }); P.pop('#xterm-win', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xterm-tico', 0.5);
+    P.chars('#xterm-title', 0.62, { stagger: 0.03 });
+    P.in('#xterm-l1', 1.0, { dur: 0.2 });
+    // 拍 1 打指令：固定 2.4 秒打完 → ＋2.7 轉圈那一行出現、開始轉（轉到 DONE）
+    P.type('#xterm-cmd', RUN, { dur: 2.4 });
+    P.in('#xterm-wl', RUN + 2.7, { dur: 0.2 });
+    P.spin('#xterm-spin', RUN + 2.7, { until: DONE });
+    // 拍 2–3 每個步驟：那一行輸出由左往右印出
+    P.wipe('#xterm-o1', STEP1, { dir: 'left', dur: 0.35 });
+    P.wipe('#xterm-o2', STEP2, { dir: 'left', dur: 0.35 });   // 第 2 行輸出
+    // 拍 4 完成：轉圈那一行換成綠色完成行（印出＋重拍）→ ＋0.5 新的提示字元與方塊游標
+    P.out('#xterm-wl', DONE, { dur: 0.15 });
+    P.wipe('#xterm-done', DONE, { dir: 'left', dur: 0.35 });
+    P.punch('#xterm-done', DONE + 0.35, { scale: 1.04 });
+    P.in('#xterm-l5', DONE + 0.5, { dur: 0.2 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-terminal'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

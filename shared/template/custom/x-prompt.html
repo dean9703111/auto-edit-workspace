@@ -1,13 +1,14 @@
-<!-- 預設拍型：H 提示詞（BEATS.md §3 H；框 → 打字 → 講到的關鍵詞變色 → 提醒） -->
+<!-- 預設拍型：H 提示詞（BEATS.md §3 H；輸入膠囊 → 打字 → 講到的關鍵詞變色 → 提醒） -->
 <!doctype html>
 <!--
-  x-prompt：提示詞逐字打出＋關鍵詞變色（第二層 custom，layout: "fullscreen"）
+  x-prompt：提示詞在輸入膠囊裡逐字打出＋關鍵詞變色（第二層 custom，layout: "fullscreen"）
 
   【適用的口播】
   唸出或展示一段要貼給 AI 的提示詞（去掉空白後 ≤ 49 字），接著點名其中 1–2 個關鍵詞：
   「我是這樣下提示詞的：幫我把 NG 段落整理成表格，附上時間碼……重點是表格和時間碼。」最後一句提醒。
   講到哪個關鍵詞，那個詞從墨色變成主色（同一時間只有一個詞是主色；講完回均衡時兩個都是主色）。
-  變體：一行終端機指令、一個網址（見下面變體表）。
+  提示詞框是聊天軟體的輸入膠囊（大圓角、右下角主色送出鈕）。變體：一行終端機指令、一個網址（見下面變體表）；
+  要演「送出 → AI 回覆」用 x-prompt-chat，終端機畫面用 x-terminal。
 
   【不要用在哪裡】
   - 提示詞去掉空白後 ≥ 50 字：畫面放不下也讀不完，只上字幕，畫面用螢幕錄影。
@@ -15,10 +16,10 @@
   - 只講一個名詞或一句重點：用 06 概念字卡或 07 重點字卡。
 
   【要改的地方】
-  1. 文字：標題列（≤ 10 字）、提示詞 #xprompt-text（每行 ≤ 18 字、≤ 3 行，用 <br> 斷在語意處；不要放 emoji）、
+  1. 文字：標題列（≤ 10 字）、提示詞 #xprompt-text（每行 ≤ 17 字、≤ 3 行，用 <br> 斷在語意處；不要放 emoji）、
      兩個關鍵詞（包在 <span class="xprompt-k"> 裡；同一個 span 最後面放變色層 <i class="xprompt-c sc-kw" data-t="關鍵詞"></i>，data-t 和關鍵詞一字不差）、
      底下提醒膠囊（≤ 10 字）。放不下就縮文案，不縮字。
-  2. 圖示：標題列 #xprompt-bico（message-square-text）、提醒 #xprompt-nico（lock）。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
+  2. 圖示：標題列 #xprompt-bico（message-square-text）、提醒 #xprompt-nico（lock）；送出鈕 #xprompt-send（arrow-up）不用改。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
      一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
   3. 綁句：<script> 開頭 TYPE、K1、K2、NOTE（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。plan.json 那段的 to 要涵蓋 NOTE 那一句。
@@ -27,7 +28,7 @@
 
   | 變體 | 改什麼 |
   |---|---|
-  | 指令 | 標題列圖示換 square-terminal；#xprompt-text 改成一行 <span class="sc-kw">$</span> npm install hyperframes（不加 <br>）；只留一個關鍵詞時刪 #xprompt-k2 的變色層、K2 與「拍 4」那 3 行，後面的 K2 改 K1；沒有提醒照上一段刪 |
+  | 指令 | 標題列圖示換 square-terminal；刪掉送出鈕 #xprompt-send 與「P.icon('#xprompt-send'」那行；#xprompt-text 改成一行 <span class="sc-kw">$</span> npm install hyperframes（不加 <br>）；只留一個關鍵詞時刪 #xprompt-k2 的變色層、K2 與「拍 4」那 3 行，後面的 K2 改 K1；沒有提醒照上一段刪 |
   | 網址 | 標題列圖示換 globe；一行、不拆，≤ 34 個半形字（52 px 英數約 29 px 寬，放不下 audit 會報撐破）；不需要關鍵詞變色就把兩個變色層和 K1、K2 那幾行都刪掉，提醒照留（NOTE ≥ TYPE + 字數 ÷ 8.5 + 1.2） |
 
   【綁句欄位】
@@ -50,7 +51,7 @@
   fullscreen：主卡進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。主卡 left 120、top 169、寬 1180（右緣 1300），標題列 128（左右內距 --sc-pad-card）、內容區 1176×520（卡高 652，
   在內容區 y 120–870 垂直置中）。位置由 kit/scene-layout.js 排（shared/style.md「版面」），不寫 left／top：內容區 #xprompt-body 是 data-layout="col" data-justify="start" data-gap="md"：
   提示詞框、提醒膠囊由上往下、左邊對齊、貼左內距 --sc-pad-card，整組上下置中（內距 ≥ 48／40）。
-  提示詞框高 288（3 行 × 72＋上下內距 64＋框 8；1–2 行時框高不變），寬隨最長那行（≤ 1064）。
+  提示詞框（輸入膠囊）高 288（3 行 × 72＋上下內距 64＋框 8；1–2 行時框高不變），圓角 40，寬隨最長那行（≤ 1080；右內距 136 留給 80 的送出鈕）。
   打字前框的大小就是打完的樣子（未打的字隱形佔位），不會跳。關鍵詞只變字色、不加色帶也不加底線：變色層是疊在關鍵詞上、同位置的主色字（用 data-t 畫，打字不會算到它）。
   提醒膠囊高 112、寬跟著字。
 -->
@@ -65,12 +66,13 @@
     #x-prompt #xprompt-card { position: absolute; left: 120px; top: 169px; width: 1180px; }
     #x-prompt #xprompt-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; gap: 24px; }
     /* 標題列底是主色：圖示圓反過來用標題字色當底 */
-    #x-prompt #xprompt-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--sc-fs-bar); }
+    #x-prompt #xprompt-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--brand); }   /* 不用 --sc-fs-bar：暗色主題它是漸層，當字色無效、圖示會變白 */
     /* 內容區：data-layout="col" data-justify="start"（kit/scene-layout.js）：框和膠囊靠左對齊、貼左內距、整組上下置中，不寫 left／top */
     #x-prompt #xprompt-body { position: relative; width: 1176px; height: 520px; }
-    /* 提示詞框：寬隨最長那行、高固定 288（3 行） */
-    #x-prompt #xprompt-box { position: absolute; width: max-content; max-width: 1064px; height: 288px; box-sizing: border-box;
-                             padding: 32px 40px; border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node); color: var(--sc-fs-ink); }
+    /* 提示詞框＝輸入膠囊：寬隨最長那行、高固定 288（3 行）、圓角 40；右內距 136 留給右下角的送出鈕 */
+    #x-prompt #xprompt-box { position: absolute; width: max-content; max-width: 1080px; height: 288px; box-sizing: border-box;
+                             padding: 32px 136px 32px 44px; border: 4px solid var(--v2-node-line); border-radius: 40px; background: var(--v2-node); color: var(--sc-fs-ink); }
+    #x-prompt #xprompt-send { --d: 80px; --i: 40px; position: absolute; right: 24px; bottom: 24px; background: var(--brand); color: var(--brand-ink); }
     #x-prompt #xprompt-text { white-space: nowrap; }
     /* 關鍵詞：inline-block 讓變色層和原字同一個行盒；變色層＝同位置的主色字（::before 畫 data-t，不是文字節點，打字不會算到） */
     #x-prompt .xprompt-k { position: relative; display: inline-block; }
@@ -89,6 +91,7 @@
       <div class="sc-wcard__bar"><span id="xprompt-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> <path d="M13 8H7" /> <path d="M17 12H7" /> </svg></span><span class="sc-opt">我的提示詞</span></div>
       <div id="xprompt-body" data-layout="col" data-justify="start" data-gap="md">
         <div id="xprompt-box" data-slot data-snap-width>
+          <span id="xprompt-send" class="sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m5 12 7-7 7 7" /> <path d="M12 19V5" /> </svg></span>
           <div id="xprompt-text" class="sc-t52 sc-w700">幫我把這支影片的 NG 段落<br>整理成<span id="xprompt-k1" class="xprompt-k">表格<i id="xprompt-c1" class="xprompt-c sc-kw" data-t="表格" data-layout-allow-overlap></i></span>，附上<span id="xprompt-k2" class="xprompt-k">時間碼<i id="xprompt-c2" class="xprompt-c sc-kw" data-t="時間碼" data-layout-allow-overlap></i></span><br>和剪掉的原因。</div>
         </div>
         <div id="xprompt-note" data-slot data-snap-width><span id="xprompt-nico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 10 0v4" /> </svg></span><span id="xprompt-ntext" class="sc-t52 sc-w900 sc-opt">貼之前先刪掉個資</span></div>
@@ -112,8 +115,9 @@
     else { P.wipe('#xprompt-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xprompt-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.icon('#xprompt-bico', 0.5);
     P.chars('#xprompt-card .sc-wcard__bar .sc-opt', 0.62, { stagger: 0.035 });
-    // 拍 1 輸入框：提示詞框由左擦開（框的大小已經是打完的樣子，游標停在第一個字前面）
+    // 拍 1 輸入膠囊：由左擦開（框的大小已經是打完的樣子，游標停在第一個字前面），送出鈕箭頭描出
     P.wipe('#xprompt-box', 1.0, { dir: 'left', dur: 0.5 });
+    P.icon('#xprompt-send', 1.2, { dur: 0.3 });   // 送出鈕的箭頭描出來
 
     // 拍 2 打字：逐字打出（8.5 字／秒、等速），打完游標消失
     P.type('#xprompt-text', TYPE);

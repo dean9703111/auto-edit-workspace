@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-ring-facets 環形圖註解｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-ring-facets.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-ring-facets { position: absolute; inset: 0; }
+    #x-ring-facets .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-ring-facets #xrf-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-ring-facets #xrf-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
+    #x-ring-facets #xrf-body { position: relative; width: 1176px; height: 580px; }
+    /* 圓環：440×440；灰段＋主色段（script 算 path）；中間主題 */
+    #x-ring-facets #xrf-dial { position: absolute; width: 440px; height: 440px; }
+    #x-ring-facets #xrf-svg { position: absolute; left: 0; top: 0; width: 440px; height: 440px; overflow: visible; }
+    #x-ring-facets .xrf-seg { fill: none; stroke: var(--sc-fs-node-line); stroke-width: 56px; }
+    #x-ring-facets .xrf-on { fill: none; stroke: var(--brand); stroke-width: 56px; }
+    #x-ring-facets #xrf-topic { position: absolute; left: 100px; top: 140px; width: 240px; height: 160px; display: flex; align-items: center; justify-content: center;
+                                text-align: center; color: var(--sc-fs-ink); }
+    #x-ring-facets .xrf-bal { position: absolute; width: 56px; height: 56px; box-sizing: border-box; border-radius: 28px; border: 6px solid var(--v2-node);
+                              background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; justify-content: center; }
+    /* 清單：列 500×112，編號＋名稱＋說明 */
+    #x-ring-facets .xrf-row { position: absolute; width: 500px; height: 112px; box-sizing: border-box; border: 4px solid var(--v2-node-line); border-radius: 16px;
+                              background: var(--v2-node); color: var(--sc-fs-ink); display: flex; align-items: center; gap: 20px; padding: 0 28px; white-space: nowrap; }
+    #x-ring-facets .xrf-num { width: 56px; height: 56px; flex: none; border-radius: 28px; background: var(--brand); color: var(--brand-ink);
+                              display: flex; align-items: center; justify-content: center; }
+    #x-ring-facets .xrf-name { position: relative; }
+    #x-ring-facets .xrf-desc { position: relative; }
+  </style>
+  <div id="x-ring-facets" data-composition-id="x-ring-facets" data-width="1920" data-height="1080" data-duration="15.4"
+       data-cues-sample='{"start":0,"D":15.4,"cues":{"272":[2.2,4.6],"273":[4.8,7.2],"274":[7.3,9.7],"275":[9.8,12.2],"276":[12.5,14.9]},"refs":{"#272@內容":2.4,"#273@剪輯":5.0,"#274@聲音":7.5,"#275@畫面":10.0}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrf-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">好影片的四個面向</span></div>
+      <div id="xrf-body" data-layout="row" data-gap="xl">
+        <div id="xrf-dial" data-slot>
+          <svg id="xrf-svg" viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div id="xrf-topic" class="sc-t52 sc-w900 sc-opt">好影片</div>
+        </div>
+        <div id="xrf-list" data-slot data-layout="col" data-gap="sm">
+          <div id="xrf-r1" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">1</span><span id="xrf-n1" class="xrf-name sc-t52 sc-w900 sc-opt">內容</span><span id="xrf-d1" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">值得看完</span></div>
+          <div id="xrf-r2" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">2</span><span id="xrf-n2" class="xrf-name sc-t52 sc-w900 sc-opt">剪輯</span><span id="xrf-d2" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">節奏不拖</span></div>
+          <div id="xrf-r3" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">3</span><span id="xrf-n3" class="xrf-name sc-t52 sc-w900 sc-opt">聲音</span><span id="xrf-d3" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">清楚不吵</span></div>
+          <div id="xrf-r4" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">4</span><span id="xrf-n4" class="xrf-name sc-t52 sc-w900 sc-opt">畫面</span><span id="xrf-d4" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">穩定明亮</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-ring-facets'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#272@內容'), T2 = P.at('#273@剪輯'), T3 = P.at('#274@聲音'), T4 = P.at('#275@畫面');   // 講到每個面向的時刻
+    const ALL = P.at('#276');                          // 講到總結那一句（沒有這句見檔頭【綁句欄位】）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 0. 環段與編號：照清單列數切（12 點鐘順時針、段間空 8°；以下都不用改，載入時算一次）
+    const NS = 'http://www.w3.org/2000/svg', SVG = $q('#xrf-svg')[0], DIAL = $q('#xrf-dial')[0];
+    const ROWS = $q('#x-ring-facets .xrf-row'), N = ROWS.length, CX = 220, CY = 220, RR = 180, GAP = 8;
+    const at = function (deg) { const a = deg * Math.PI / 180; return [CX + RR * Math.sin(a), CY - RR * Math.cos(a)].map(function (v) { return Math.round(v * 10) / 10; }); };
+    ROWS.forEach(function (row, i) {
+      const a0 = i * 360 / N + GAP / 2, a1 = (i + 1) * 360 / N - GAP / 2, p0 = at(a0), p1 = at(a1), big = a1 - a0 > 180 ? 1 : 0;
+      const d = 'M' + p0.join(' ') + ' A' + RR + ' ' + RR + ' 0 ' + big + ' 1 ' + p1.join(' ');
+      ['xrf-seg', 'xrf-on'].forEach(function (cls) { const p = document.createElementNS(NS, 'path'); p.setAttribute('class', cls); p.setAttribute('d', d); p.setAttribute('id', (cls === 'xrf-on' ? 'xrf-on' : 'xrf-sg') + (i + 1)); SVG.appendChild(p); });
+      const m = at((a0 + a1) / 2), b = document.createElement('b');
+      b.className = 'xrf-bal sc-t40 sc-w900'; b.id = 'xrf-b' + (i + 1); b.textContent = String(i + 1); b.setAttribute('data-layout-allow-overlap', '');
+      b.style.left = Math.round(m[0] - 28) + 'px'; b.style.top = Math.round(m[1] - 28) + 'px'; DIAL.appendChild(b);
+    });
+    const LIST = ROWS.map(function (r) { return '#' + r.id; }).join(', ');
+    const UPTO = function (k) { return ROWS.slice(0, k).map(function (r) { return '#' + r.id; }).join(', '); };   // 已經出現的列（還沒講到的列不參與聚焦）
+    const facet = function (k, t) {   // 一個面向一拍：那一段描成主色 → 編號圓彈出 → 那一列彈出、名稱與說明逐字 → ＋0.5 聚焦
+      P.stroke('#xrf-on' + k, t, { dur: 0.6 });
+      P.pop('#xrf-b' + k, t + 0.3, { from: 0.4, dy: 0 });
+      P.pop('#xrf-r' + k, t, { from: 0.94, dy: 20 });  P.chars('#xrf-n' + k, t + 0.12);  P.chars('#xrf-d' + k, t + 0.3);
+      P.spot(UPTO(k), '#xrf-r' + k, t + 0.5, { scale: 1.03, lift: -4, dim: 0.55 });
+    };
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮 → 1.0 灰環一段一段描出 → 1.5 主題逐字
+    if (ENTER === 'grow') P.grow('#xrf-card', 0.3);
+    else { P.wipe('#xrf-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xrf-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xrf-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.stroke('#x-ring-facets .xrf-seg', 1.0, { dur: 0.35, stagger: 0.1 });
+    P.chars('#xrf-topic', 1.5);
+    // 拍 1–4 每個面向（3 個時刪掉第 4 行，5 個時照樣加一行 facet(5, T5)）
+    facet(1, T1);
+    facet(2, T2);
+    facet(3, T3);
+    facet(4, T4);   // 第 4 個面向
+    // 收：總結那一句 → 回均衡（清單全部亮回），主題漣漪，完成態停到段尾
+    P.spot(LIST, null, ALL, { dur: 0.6 });
+    P.ripple('#xrf-topic', ALL, { from: 0.8, to: 1.4 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-ring-facets'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-ring-facets";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

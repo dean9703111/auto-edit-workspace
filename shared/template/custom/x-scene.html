@@ -1,11 +1,12 @@
-<!-- 預設拍型：S 示意（BEATS.md §5；場景骨架 → 物件逐個進 → 狀態切換 → 結果；主角是插圖元件 kit/illus.js） -->
+<!-- 預設拍型：S 示意（BEATS.md §5；場景骨架 → 物件逐個畫出 → 狀態切換 → 結果；主角是白板線稿插圖 kit/illus.js） -->
 <!doctype html>
 <!--
-  x-scene：示意動畫骨架（第二層 custom，layout: "fullscreen"）——插圖元件照拍一個一個出來、換狀態、得到結果
+  x-scene：示意動畫骨架（第二層 custom，layout: "fullscreen"）——白板畫風：插圖元件照拍被馬克筆一筆一筆畫出來、換狀態、得到結果
 
   【適用的口播】
   在描述具體的動作、物件或過程：「拍完先從手機上傳到雲端，再下載到電腦打開播放」「把手機架上腳架試錄一小段」「走到手機旁邊按播放」。
-  畫面的主角是線條插圖（shared/template/kit/illus-gallery.jpg 的元件：手機、腳架、電腦、雲端、人、徽章…），字只當標籤。
+  畫面的主角是線條插圖（shared/template/kit/illus-gallery.jpg 的元件：手機、腳架、電腦、雲端、人、徽章…），白底墨線＋主色點綴，字只當標籤。
+  範例：x-scene-example-rec（地面線＋人走過去＋聲紋）、x-scene-example-outline（路線圖＋目前位置）。
 
   【不要用在哪裡】
   - 只有名詞、沒有動作：用 12 關鍵詞或 x-callout。
@@ -23,16 +24,23 @@
      - 狀態：螢幕元件的 data-screen 寫「一開始」的狀態（通常 blank），要換的狀態寫在 DATA 2 的 state。
      - 位置：交給 xsc-stage 的 data-layout（kit/scene-layout.js）：row＝一列等距、底對齊（標籤在同一條線；要插圖中線對齊寫 data-align="middle"）、整組在內容區置中；放第二列的元件加 data-row="2"。
        幾個元件要疊成一組（人站在桌子後面、右邊一欄小元件）：外面包 <div id="xsc-<組名>" data-slot data-layout="col" data-gap="none｜md">…</div>，組裡的元件一樣寫 data-slot。
-     - 標籤 ≤ 10 字；不要標籤就刪掉 <b>…</b>。標籤放右邊：class 加 xsc-side。一開始就在的場景（桌子、地板）class 加 xsc-pre。
+     - 標籤 ≤ 10 字；不要標籤就刪掉 <b>…</b>。標籤放右邊：class 加 xsc-side。一開始就在的場景（桌子、人）class 加 xsc-pre（拍 1 先畫好）。
+     - 同一個畫面只用一種視角：正面（phone、phoneTripod、laptop、monitor、personBust、pgPerson）或俯視（desk、personTop、cone），不要混。
+     - 地面線（選用）：站在地上的元件（pgPerson、phoneTripod、monitor）class 加 xsc-stand，線自動畫在它們的腳底（拍 1 和場景骨架一起畫）；
+       這些元件都要有標籤（標籤同一條線，腳底才會在同一條線上）。不要地面線：不寫 xsc-stand（xsc-floor 那行留著不用刪）。
+       路線圖（本集大綱、幾個階段）：xsc-floor 的 class 加 xsc-route、寫 data-stops，再把 xsc-here 那行的註解拿掉：主色粗線畫在標籤下面、每站一個站點，
+       聚焦到哪一站，目前位置點就沿線滑過去（範例 x-scene-example-outline）。
+     - 聲紋（選用）：<div id="xsc-wave" class="xsc-it" data-slot><div class="xsc-wv"></div><b class="xsc-lbl sc-w700">聲音</b></div>，拍裡寫 wave。
      - 連接線：xsc-lines 的 data-links 寫「元件id>元件id」（有箭頭；沒箭頭寫 元件id-元件id），空白隔開；線自動畫在兩個元件外框邊之間（水平線在兩個插圖高度重疊段的正中），id＝<元件id>-<元件id>（DATA 2 的 line 照寫）。
   2. DATA 2 拍（<script> 開頭，一拍一行）：照分鏡一拍一列。
      const T<k> = P.at('#N@詞');   P.sfx('<音效>', '#N@詞');   ← 句號與詞照分鏡「講到」欄，P.sfx 和它同一個句號
      音效照分鏡「音效拍點」欄：骨架每拍都不配；分鏡寫 success（結果徽章那拍）或 alert（壞事那拍）才自己在那一拍加 P.sfx('success', …)，沒寫就不要加。
      BEATS 每一列 [T<k>, { … }]，{ } 裡寫這一拍做什麼（只寫用到的）：
-       in: ['xsc-a']               物件彈出（＋0.14 標籤逐字上浮）          state: ['xsc-a', 'blank', 'rec']  ＋0.15 換狀態（淡出舊的、淡入新的、漣漪）
-       line: 'xsc-a-xsc-b'         ＋0.7 描連接線（元件進場完才描）          move: ['xsc-a', 'xsc-b', 'left']  走到 xsc-b 的左邊（right＝右邊；1 秒）
+       in: ['xsc-a']               插圖被馬克筆畫出來（0.7 秒；不是插圖的彈出）＋0.3 標籤逐字上浮    state: ['xsc-a', 'blank', 'rec']  ＋0.15 換狀態（淡出舊的、淡入新的、漣漪）
+       line: 'xsc-a-xsc-b'         元件畫完接著畫連接線與箭頭（0.35 秒）     move: ['xsc-a', 'xsc-b', 'left']  走到 xsc-b 的左邊（right＝右邊；1 秒）
+       wave: 'xsc-wave'            ＋0.2 聲紋開始跳動，跳到段尾（元件裡要有 .xsc-wv）
        check: 'xsc-ok'             結果徽章彈出、＋0.3 描圈打勾             count: ['#xsc-a .il-time', 0, 5, '00:0']  數字滾動
-       focus: 'xsc-a'              聚焦（其他壓暗；新進場的 0.6 秒後）       dim: ['xsc-a']                  退焦（沒有聚焦的段用）
+       focus: 'xsc-a'              聚焦（其他壓暗；畫出來的一開始畫就聚焦、彈出的 0.6 秒後）＋目前位置點滑過去（有 xsc-here 時）   dim: ['xsc-a']   退焦（沒有聚焦的段用）
      狀態名：blank（沒有畫面）、video、play、rec、check、warn、shorts、qr、app；自己畫的元件寫它的狀態群組名（.il-<狀態> 的 <狀態>）。
   開場：ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；標題列（≤ 10 字）在 #xsc-card 的 .sc-wcard__bar。
 
@@ -44,8 +52,8 @@
   audit 會比對：這一拍出現的字（標籤）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
 
   【D 下限】
-  T1 ≥ 2.0（主卡 0.3 秒長出、0.5 標題逐字上浮、1.0 場景骨架）
-  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5；T4 ≥ T3 + 2.5；T5 ≥ T4 + 2.5（每拍：彈出 0.55＋描線＋聚焦，停 ≥ 1.2 秒）
+  T1 ≥ 2.0（主卡 0.3 秒長出、0.5 標題逐字上浮、1.2 地面線與場景骨架畫出 0.8 秒）
+  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5；T4 ≥ T3 + 2.5；T5 ≥ T4 + 2.5（每拍：畫出 0.7＋描線 0.35＋聚焦，停 ≥ 1.2 秒；一拍畫兩個元件＝再加 0.7）
   D ≥ T5 + 4.6（最後一拍講完 2 秒回均衡＋0.6 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
   結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
 
@@ -54,6 +62,7 @@
   標題列 128（左右內距 --sc-pad-card）、內容區 xsc-stage 1176×580（卡底 858，在字幕區 y 920 之上）。
   元件位置由 data-layout="row" data-gap="xl" 排（kit/scene-layout.js，shared/style.md「版面」）：第一列等距 96、底對齊（標籤同一條線），第二列（data-row="2"，結果徽章）在下面 48，整組在內容區置中、內距 ≥ 48／40。
   連接線由 data-links 自動畫在元件外框邊之間（水平線在兩個插圖高度重疊段的正中；端點離外框 12px、箭頭 16px；不要線就整個 data-links 留空）；元件換大小或換順序，線跟著移，不用改座標。
+  地面線、路線圖、站點、目前位置點的座標也由程式量元件算（xsc-floor 是和內容區一樣大的 svg），不用寫。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-scene 示意動畫骨架</title></head>
@@ -67,10 +76,19 @@
     #x-scene #xsc-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
     #x-scene #xsc-stage { position: relative; width: 1176px; height: 580px; }
     /* 連接線：xsc-lines 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link） */
+    /* 地面線（選用）：和內容區一樣大的 svg，線的位置由程式量 xsc-stand 元件的腳底算；data-stops 的站點是程式加的 circle */
+    #x-scene .xsc-floor { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
+    #x-scene .xsc-floor path { fill: none; stroke: var(--il-line); stroke-width: 4px; stroke-linecap: round; }
+    #x-scene .xsc-floor circle { fill: var(--v2-node); stroke: var(--il-line); stroke-width: 4px; }
+    #x-scene .xsc-route path { stroke: var(--brand); stroke-width: 10px; }   /* 路線圖：地面線 class 加 xsc-route＝主色粗線＋站點 */
+    #x-scene .xsc-route circle { stroke: var(--brand); stroke-width: 6px; }
+    /* 目前位置標記（選用）：沿地面線滑到聚焦的元件下面 */
+    #x-scene .xsc-here { position: absolute; left: 0; top: 0; width: 40px; height: 40px; box-sizing: border-box; border-radius: 50%; background: var(--v2-ink); border: 8px solid var(--brand); opacity: 0; }
     /* 元件：插圖＋下面的標籤（xsc-side＝標籤在右邊）；位置由 xsc-stage 的 data-layout 排（kit/scene-layout.js），不寫 left／top */
     #x-scene .xsc-it { position: absolute; display: flex; flex-direction: column; align-items: center; gap: var(--sc-gap-sm); white-space: nowrap; }
     #x-scene .xsc-side { flex-direction: row; gap: var(--sc-gap-sm); }
     #x-scene .xsc-lbl { display: block; font-size: 32px; line-height: 40px; }   /* 標籤 32px：退到 0.96 時仍 ≥ 30px */
+    #x-scene .xsc-wv { width: 216px; height: 88px; }   /* 聲紋（選用）：P.wave 自動插跳動的條 */
   </style>
   <div id="x-scene" data-composition-id="x-scene" data-width="1920" data-height="1080" data-duration="19.5"
        data-cues-sample='{"start":0,"D":19.5,"cues":{"182":[2.5,5],"183":[5.4,7.9],"184":[8.3,10.8],"185":[11.2,13.7],"186":[14.1,16.6]},"refs":{"#182@手機":2.9,"#183@雲端":5.8,"#184@電腦":9,"#185@播放":11.8,"#186@沒問題":14.6}}'>
@@ -78,6 +96,8 @@
     <div id="xsc-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">以前的傳檔流程</span></div>
       <div id="xsc-stage" data-layout="row" data-gap="xl">
+        <svg id="xsc-floor" class="xsc-floor" data-layout-ignore xmlns="http://www.w3.org/2000/svg"><path d=""/></svg>
+        <!-- <div class="xsc-here" data-layout-ignore></div> -->
         <svg id="xsc-lines" data-links="xsc-phone>xsc-cloud xsc-cloud>xsc-laptop" xmlns="http://www.w3.org/2000/svg"></svg>
         <!-- ══ DATA 1：元件清單（一個元件一行；只改這裡）══ -->
         <div id="xsc-phone" class="xsc-it" data-slot><div data-illus="phone" data-orient="landscape" data-screen="video" style="width:296px;height:148px"></div><b class="xsc-lbl sc-w700">手機</b></div>
@@ -121,27 +141,54 @@
     // 位置由 data-layout 排好（kit/scene-layout.js；ILLUS.mount 之後自動跑一次），這裡只讀
     const L = window.SceneLayout, moved = {};
     const illusOf = function (el) { return el.querySelector('[data-illus], [data-illus-src]') || el; };
+    const DRAW = 0.7;   // 一個插圖元件畫出來的秒數（馬克筆照筆順一筆一筆畫，P.draw）
+    const drawn = function (s) { return !!ROOT.querySelector(s + ' .il'); };   // 插圖元件用畫的；不是插圖（聲紋、自己的 HTML）用彈出
+    const lblAt = function (s, at) { if (ROOT.querySelector(s + ' .xsc-lbl')) P.chars(s + ' .xsc-lbl', at, { stagger: 0.035 }); };
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     if (ENTER === 'grow') P.grow('#xsc-card', 0.3);
     else { P.wipe('#xsc-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xsc-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xsc-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
-    // 拍 1 場景骨架：一開始就在的元件（class 有 xsc-pre）錯拍彈出
-    P.pop('#x-scene .xsc-pre', 1.0, { stagger: 0.12, from: 0.9, dy: 20 });
+    // 拍 1 場景骨架：地面線（畫在 xsc-stand 元件的腳底；data-stops＝每個元件下面一個站點）→ 一開始就在的元件（xsc-pre）一筆一筆畫出
+    const FLOOR = ROOT.querySelector('.xsc-floor'), STANDS = Array.prototype.slice.call(ROOT.querySelectorAll('.xsc-stand'));
+    const HERE = ROOT.querySelector('.xsc-here');   // 目前位置標記（選用）：聚焦到站在地上的元件時，沿地面線滑到它下面
+    let fx0 = 0, fx1 = 1, here = -1;
+    if (FLOOR && STANDS.length) {
+      const st = FLOOR.parentNode, route = FLOOR.classList.contains('xsc-route');   // 路線圖：線畫在標籤下面（物件、站名、站點由上往下）；地面線：畫在插圖的腳底
+      const bs = STANDS.map(function (el) { return L.box(illusOf(el), st); });
+      const y = Math.max.apply(null, STANDS.map(function (el, i) { const b = route ? L.box(el, st) : bs[i]; return b[1] + b[3] + (route ? 36 : 0); }));
+      fx0 = Math.max(24, Math.min.apply(null, bs.map(function (b) { return b[0]; })) - 48); fx1 = Math.min(st.offsetWidth - 24, Math.max.apply(null, bs.map(function (b) { return b[0] + b[2]; })) + 48);
+      FLOOR.querySelector('path').setAttribute('d', 'M' + fx0 + ' ' + y + ' L' + fx1 + ' ' + y);
+      if (FLOOR.hasAttribute('data-stops')) bs.forEach(function (b) {
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', Math.round(b[0] + b[2] / 2)); c.setAttribute('cy', y); c.setAttribute('r', 12); FLOOR.appendChild(c);
+      });
+      if (HERE) { HERE.style.left = Math.round(fx0 - HERE.offsetWidth / 2) + 'px'; HERE.style.top = Math.round(y - HERE.offsetHeight / 2) + 'px'; }
+    } else if (FLOOR) FLOOR.remove();   // 沒有站在地上的元件：不畫地面線
+    if (HERE && FLOOR && STANDS.length) P.pop(HERE, 1.2, { from: 0.4, dy: 0 });   // 標記和路線一起出現在起點
+    const hereTo = function (id, at) {   // 標記沿線滑到這個元件下面
+      const el = document.getElementById(id);
+      if (!HERE || STANDS.indexOf(el) < 0) return;
+      const b = L.box(illusOf(el), FLOOR.parentNode), to = (b[0] + b[2] / 2 - fx0) / (fx1 - fx0);
+      P.along(HERE, '#' + FLOOR.id + ' path', at, { from: Math.max(0, here), to: to, dur: 0.8 });
+      here = to;
+    };
+    const PRE = Array.prototype.map.call(ROOT.querySelectorAll('.xsc-pre'), function (el) { return '#' + el.id; });
+    P.draw('#xsc-floor, #x-scene .xsc-pre .il', 1.2, { dur: 0.8 });   // 同一支筆：先地面線、再場景骨架（文件順序）
+    PRE.forEach(function (s) { if (!drawn(s)) P.pop(s, 1.2, { from: 0.9, dy: 20 }); lblAt(s, 1.6); });
 
-    // 每一拍：進場 → 換狀態／移動／數字 → 連接線 → 結果 → 聚焦（同一時間只有一個焦點）
-    const entered = [], dimmed = [];
-    Array.prototype.forEach.call(ROOT.querySelectorAll('.xsc-pre'), function (el) { entered.push('#' + el.id); });   // 場景骨架也可以被聚焦、移動
+    // 每一拍：畫出來（或彈出）→ 換狀態／移動／數字／聲紋 → 連接線 → 結果 → 聚焦（同一時間只有一個焦點）
+    const entered = PRE.slice(), dimmed = [];   // 場景骨架也可以被聚焦、移動
     let spotted = false;
     BEATS.forEach(function (b, k) {
-      const t = b[0], o = b[1], next = k + 1 < BEATS.length ? BEATS[k + 1][0] : t + 2.0;
-      const ins = (o.in || []).map(sel);
-      if (ins.length) {
-        P.pop(ins.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
-        ins.forEach(function (s, i) { if (ROOT.querySelector(s + ' .xsc-lbl')) P.chars(s + ' .xsc-lbl', t + 0.14 + i * 0.12, { stagger: 0.035 }); });
-        ins.forEach(function (s) { if (entered.indexOf(s) < 0) entered.push(s); });
-      }
+      const t = b[0], o = b[1];
+      const ins = (o.in || []).map(sel), drw = ins.filter(drawn), pops = ins.filter(function (s) { return !drawn(s); });
+      const lines = o.line ? $q(sel(o.line) + ', ' + sel(o.line) + '-head') : [];   // 先有節點再畫線：同一支筆畫完這拍的元件，接著畫連接線與箭頭（0.5 秒）
+      const strokes = drw.map(function (s) { return ROOT.querySelector(s + ' .il'); }).concat(lines);
+      if (strokes.length) P.draw(strokes, t, { dur: DRAW * drw.length + (lines.length ? 0.35 : 0) });
+      if (pops.length) P.pop(pops.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
+      ins.forEach(function (s, i) { lblAt(s, t + 0.3 + i * 0.3); if (entered.indexOf(s) < 0) entered.push(s); });
       if (o.state) {
         const s = sel(o.state[0]), a = stateSel(o.state[1]), z = stateSel(o.state[2]);
         if (a && z) P.swap(s + ' ' + a, s + ' ' + z, t + 0.15);
@@ -159,19 +206,20 @@
         moved[o.move[0]] = to;
       }
       if (o.count) P.count(o.count[0], t + 0.2, { from: o.count[1], to: o.count[2], dur: 1.2, prefix: o.count[3] || '' });
-      if (o.line) P.stroke(sel(o.line), t + 0.7, { dur: 0.5 });   // 先有節點再畫線：這一拍的元件彈出（0.55 秒）之後才描
+      if (o.wave) P.wave(sel(o.wave) + ' .xsc-wv', t + 0.2);   // 聲紋從這拍跳到段尾
       if (o.check) {
         const s = sel(o.check);
         P.pop(s, t, { from: 0.6, dy: 0 });
-        if (ROOT.querySelector(s + ' .xsc-lbl')) P.chars(s + ' .xsc-lbl', t + 0.14, { stagger: 0.035 });
+        lblAt(s, t + 0.14);
         P.check(s + ' .il', t + 0.3);
         if (entered.indexOf(s) < 0) entered.push(s);
       }
       (o.dim || []).forEach(function (id) { P.dim(sel(id), t, { to: 0.6 }); if (dimmed.indexOf(sel(id)) < 0) dimmed.push(sel(id)); });
       if (o.focus) {
-        const f = sel(o.focus), fresh = (o.in || []).indexOf(o.focus) >= 0 || o.check === o.focus;
-        const at = t + (fresh ? 0.6 : 0.1);
-        P.spot(entered.join(', '), f, at, { scale: 1.05, lift: -8 });
+        const f = sel(o.focus), fresh = ins.indexOf(f) >= 0 || o.check === o.focus;
+        const at = t + (fresh && drw.indexOf(f) < 0 ? 0.6 : 0.1);   // 畫出來的元件一開始畫就聚焦（不放大、不上移，筆尖才對得準）；彈出的等彈完
+        P.spot(entered.join(', '), f, at, { scale: 1, lift: 0 });
+        hereTo(o.focus, at);
         spotted = true;
       }
     });

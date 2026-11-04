@@ -1,6 +1,6 @@
 # 示意插圖的畫法（illus-style）
 
-畫廊（`kit/illus-gallery.html`、`kit/illus-gallery.jpg`）沒有的物件，照這份畫成一個 SVG 檔，和內建的 20 個元件同一個樣子。規則從 `kit/illus.js` 的通則來；標「lint」的項目 `lintIllusSvg` 會檢查。
+畫廊（`kit/illus-gallery.html`、`kit/illus-gallery.jpg`）沒有的物件，照這份畫成一個 SVG 檔，和內建的 22 個元件同一個樣子。規則從 `kit/illus.js` 的通則來；標「lint」的項目 `lintIllusSvg` 會檢查。
 
 ## 1. 先判斷要不要畫
 
@@ -33,7 +33,7 @@
 | 圓角 | 外框 `rx` 8–16；內層、螢幕 4–8 | |
 | 顏色 | `fill`／`stroke` 只寫 `none` 或下表的 `var(--il-*)`；不寫色碼、`rgb()`、色名 | ✔ |
 | 用色 | 主體＝`--il-body` 實心＋`--il-line` 4 px 描邊；內層＝`--il-inner`（不描邊或 3 px）；重點（主色）一個元件只用一處 | |
-| 細長零件 | 天線、支架、把手畫成有 `--il-body` 填色的窄形狀（polygon、rect）再描邊，不要只畫一條 `--il-line` 線：亮色主題的底是淺色，單獨一條白線會看不見 | |
+| 細長零件 | 天線、支架、把手畫成有 `--il-body` 填色的窄形狀（polygon、rect）再描邊，不要只畫一條 `--il-line` 線：插圖疊在實拍或深色底上時，單獨一條線會不見 | |
 | 狀態 | 要變化的部分包成 `<g class="il-<狀態>" style="opacity:0">`，預設 opacity 0；底圖畫「沒有狀態」的樣子 | ✔ |
 | id | 不寫 `id`（同一個元件會掛好幾次）；要抓的部分用 `class="il-<名稱>"` | ✔ |
 | 事件、外部引用 | 不寫 `on*`、`href`、`filter=`、`mask=`、`clip-path=` | ✔ |
@@ -43,7 +43,7 @@
 
 | token | 用在 |
 |---|---|
-| `--il-body` | 主體實心（深色） |
+| `--il-body` | 主體填色（亮色主題＝白，像白板上的線稿；暗色主題＝石墨，像黑板） |
 | `--il-inner` | 內層、螢幕、面板 |
 | `--il-line` | 描邊 |
 | `--il-sub` | 次要線（散熱孔、內容線） |

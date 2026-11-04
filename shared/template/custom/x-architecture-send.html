@@ -1,0 +1,147 @@
+<!-- 預設拍型：A 流程（BEATS.md §3 A；x-architecture 的變體：一個寄件端、三個收件人，講到誰紙飛機就飛向誰、到站打勾） -->
+<!doctype html>
+<!--
+  x-architecture-send：紙飛機傳出去（第二層 custom，layout: "fullscreen"；x-architecture 的變體）
+
+  【適用的口播】
+  講「把一樣東西傳給好幾個人／地方」：「剪好之後，把連結傳給客戶、主管和字幕師，三個人都收到就能開始審」。
+  左邊寄件端（圖示＋名稱），右邊 3 個收件人先排好（預覽態）；講到哪個收件人，一架紙飛機從寄件端沿弧線飛過去（身後留虛線尾跡），
+  到站那一刻那一列聚焦、右端勾勾彈出；講到「都收到」，全部亮回、標題列右端的結論膠囊彈出、音效 success。
+
+  【不要用在哪裡】
+  - 資料經過／不經過某個中繼：用 x-architecture。
+  - 一個來源分成幾條路、要比較哪條好：用 x-branch。
+  - 有先後步驟：用 x-process。
+
+  【要改的地方】
+  1. 文字：標題列（≤ 10 字）、結論膠囊 #xars-done（≤ 6 字，用口播講到的那幾個字）、寄件端名稱 #xars-mename（≤ 4 字）、3 個收件人 .xars-name（≤ 4 字）。
+  2. 圖示：寄件端 #xars-meico（film）、收件人 #xars-u1–u3（user）、勾勾 #xars-k1–k3（circle-check）。到 kit/icons.json 找名稱，把 svg 原文整段貼上；
+     一個字都不改（<rect> 的 width、height 是形狀本身的尺寸，拿掉就畫不出來）。
+  3. 綁句：<script> 開頭 S1–S3、ALL 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 ALL 改。
+  4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
+  只有 2 個收件人：刪掉 #xars-r3、#xars-p3（那條 path）、S3 和「第 3 個收件人」那 1 行，列的位置不用改（script 照列數重算）。
+
+  【綁句欄位】
+  S1 = P.at('#302@客戶')、S2 = P.at('#303@主管')、S3 = P.at('#304@字幕師')：講到那個收件人的時刻，寄件端圖示漣漪、紙飛機起飛（飛 1.0 秒）；
+  到站（＋1.0）那一列聚焦、勾勾彈出描線，前面收過的列變「走過」。
+  ALL = P.at('#305@都收到')：講到「都收到」的時刻，全部亮回、結論膠囊彈出、音效 success。沒有這句：刪掉 ALL、P.sfx 和「收」那 2 行。
+  收件人名稱在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#303')。
+  「@詞」要寫成字串字面值（P.at('#303@主管')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#303@主管', 0.3)。
+  三個收件人在同一句（「傳給客戶、主管和字幕師」）也照樣各綁各的詞，相鄰兩個至少差 3.2 秒；太近就綁下一句講到他的地方，或用 P.at('#302@主管', 3.2)。
+  audit 會比對：這一拍出現的字在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  S1 ≥ 2.8（主卡 0.3 秒長出、1.0 秒寄件端、1.3 秒收件人錯拍彈出、2.0 秒預覽態）
+  S2 ≥ S1 + 3.2；S3 ≥ S2 + 3.2（飛 1.0 秒、到站聚焦與勾勾描線 0.9 秒、停 1.2 秒，留 0.1 秒餘裕）
+  ALL ≥ S3 + 3.2
+  D ≥ ALL + 2.8（膠囊 0.8 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
+  內容區 #xars-body 是 data-layout="row" data-gap="lg"（kit/scene-layout.js）：寄件端 300×300、飛行區 #xars-air 220 寬（空的，留給紙飛機飛）、
+  收件人清單 #xars-list（data-layout="col" data-gap="md"，每列 440×128），整組置中、垂直中線對齊，不寫 left／top。
+  飛行路線 #xars-p1–p3 是 #xars-sky（整個內容區大小的 svg，疊在最上面）裡的弧線，script 照排好的寄件端右緣與收件人左緣算（各離 16），不用改。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-architecture-send 紙飛機傳出去</title></head>
+<body>
+<template id="x-architecture-send-template">
+  <style>
+    #x-architecture-send { position: absolute; inset: 0; }
+    #x-architecture-send .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-architecture-send #xars-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-architecture-send #xars-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; }
+    #x-architecture-send #xars-done { margin-left: auto; }
+    #x-architecture-send #xars-body { position: relative; width: 1176px; height: 580px; }
+    /* 寄件端：300×300；飛行區 220 寬（空的）；位置由 data-layout 排 */
+    #x-architecture-send #xars-air { position: absolute; width: 220px; height: 300px; }
+    #x-architecture-send #xars-me { position: absolute; width: 300px; height: 300px; box-sizing: border-box;
+                                    border: 4px solid var(--brand); border-radius: 28px; background: var(--v2-node); color: var(--sc-fs-ink);
+                                    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; white-space: nowrap; }
+    #x-architecture-send #xars-meico { --d: 128px; --i: 64px; background: var(--brand); color: var(--brand-ink); }
+    /* 收件人：440×128，由 #xars-list 的 data-layout="col" 排 */
+    #x-architecture-send #xars-list { position: absolute; }
+    #x-architecture-send .xars-row { position: absolute; width: 440px; height: 128px; box-sizing: border-box; padding: 0 28px;
+                                     border: 4px solid var(--v2-node-line); border-radius: 24px; background: var(--v2-node); color: var(--sc-fs-ink);
+                                     display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+    #x-architecture-send .xars-row .xars-u { --d: 72px; --i: 40px; background: var(--sc-fs-tint); color: var(--brand); flex: none; }
+    #x-architecture-send .xars-name { position: relative; }
+    #x-architecture-send .xars-k { --d: 64px; --i: 40px; margin-left: auto; background: var(--sc-good); color: var(--sc-on-good); flex: none; }
+    /* 飛行路線：整個內容區大小，疊在最上面；線本體由 P.fly 藏起來，只留尾跡 */
+    #x-architecture-send #xars-sky { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
+    #x-architecture-send .xars-path { fill: none; stroke: none; }
+  </style>
+  <div id="x-architecture-send" data-composition-id="x-architecture-send" data-width="1920" data-height="1080" data-duration="15.4"
+       data-cues-sample='{"start":0,"D":15.4,"cues":{"302":[2.8,6.0],"303":[6.1,9.2],"304":[9.3,12.4],"305":[12.5,15.2]},"refs":{"#302@客戶":3.0,"#303@主管":6.2,"#304@字幕師":9.4,"#305@都收到":12.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xars-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">成片連結傳出去</span><div id="xars-done" class="sc-pill" data-snap-width><span class="sc-opt">都收到</span></div></div>
+      <div id="xars-body" data-layout="row" data-gap="lg">
+        <div id="xars-me" data-slot><span id="xars-meico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M7 3v18" /> <path d="M3 7.5h4" /> <path d="M3 12h18" /> <path d="M3 16.5h4" /> <path d="M17 3v18" /> <path d="M17 7.5h4" /> <path d="M17 16.5h4" /> </svg></span><span id="xars-mename" class="sc-t52 sc-w900 sc-opt">成片</span></div>
+        <i id="xars-air" data-slot></i>
+        <div id="xars-list" data-slot data-layout="col" data-gap="md">
+        <div id="xars-r1" class="xars-row" data-slot><span id="xars-u1" class="xars-u sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span><span class="xars-name sc-t52 sc-w900 sc-opt">客戶</span><span id="xars-k1" class="xars-k sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span></div>
+        <div id="xars-r2" class="xars-row" data-slot><span id="xars-u2" class="xars-u sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span><span class="xars-name sc-t52 sc-w900 sc-opt">主管</span><span id="xars-k2" class="xars-k sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span></div>
+        <div id="xars-r3" class="xars-row" data-slot><span id="xars-u3" class="xars-u sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span><span class="xars-name sc-t52 sc-w900 sc-opt">字幕師</span><span id="xars-k3" class="xars-k sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span></div>
+        </div>
+        <svg id="xars-sky" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg" data-layout-ignore><path id="xars-p1" class="xars-path" d="" /><path id="xars-p2" class="xars-path" d="" /><path id="xars-p3" class="xars-path" d="" /></svg>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-architecture-send'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const S1 = P.at('#302@客戶'), S2 = P.at('#303@主管'), S3 = P.at('#304@字幕師');   // 講到每個收件人的時刻
+    const ALL = P.at('#305@都收到');                   // 講到「都收到」（沒有這句的刪法見檔頭【綁句欄位】）
+    P.sfx('success', '#305@都收到');                   // 結論一顆 success（句號和 ALL 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 0. 飛行弧線：從寄件端右緣到每一列左緣（各離 16）。位置由 data-layout 排好（SceneMotion 建立時），這裡只讀內容區座標；載入時算一次，不進 timeline
+    const BODY = $q('#xars-body')[0], ROWS = $q('#x-architecture-send .xars-row');
+    const pos = function (el) { let x = 0, y = 0; for (let e = el; e && e !== BODY; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x, y]; };
+    const me = $q('#xars-me')[0], mp = pos(me), x1 = mp[0] + me.offsetWidth + 16, y1 = mp[1] + Math.round(me.offsetHeight / 2);
+    ROWS.forEach(function (r, i) {
+      const p = $q('#xars-p' + (i + 1))[0]; if (!p) return;
+      const rp = pos(r), x2 = rp[0] - 16, y2 = rp[1] + Math.round(r.offsetHeight / 2), dx = x2 - x1, top = Math.min(y1, y2) - 140;
+      p.setAttribute('d', 'M' + x1 + ' ' + y1 + ' C' + Math.round(x1 + dx * 0.35) + ' ' + top + ' ' + Math.round(x2 - dx * 0.3) + ' ' + (y2 - 40) + ' ' + x2 + ' ' + y2);
+    });
+    const LIST = ROWS.map(function (r) { return '#' + r.id; }).join(', ');
+    const ME = '#xars-meico';
+    const send = function (t, row, path, check, done) {   // 一個收件人：寄件端漣漪、紙飛機沿 path 起飛 → ＋1.0 到站：row 聚焦（done＝收過的列變「走過」）、勾勾彈出描線
+      P.ripple(ME, t, { to: 1.8 });
+      P.fly(path, t, { dur: 1.0, size: 44 });
+      P.spot(LIST, row, t + 1.0, done ? { scale: 1.04, lift: -6, done: done } : { scale: 1.04, lift: -6 });
+      P.pop(check, t + 1.0, { from: 0.4, dy: 0 });
+      P.icon(check, t + 1.1);
+    };
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字 → 1.0 寄件端彈出 → 1.3 收件人錯拍彈出（勾勾還沒出現）→ 圖示描線 → 2.0 收件人退成預覽態
+    if (ENTER === 'grow') P.grow('#xars-card', 0.3);
+    else { P.wipe('#xars-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xars-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xars-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop('#xars-me', 1.0, { from: 0.7, dy: 40 });
+    P.icon('#xars-meico', 1.15);
+    P.pop(LIST, 1.3, { stagger: 0.12, from: 0.8, dy: 30 });
+    P.icon('#xars-u1, #xars-u2, #xars-u3', 1.45, { stagger: 0.12 });
+    P.spot(LIST, 'none', 2.0, { dim: 0.5, dur: 0.6 });
+    // 拍 1–3 每個收件人一架紙飛機：send(時刻, 那一列, 飛行路線, 勾勾, 收過的列)（2 個收件人時刪掉第 3 行）
+    send(S1, '#xars-r1', '#xars-p1', '#xars-k1');
+    send(S2, '#xars-r2', '#xars-p2', '#xars-k2', '#xars-r1');
+    send(S3, '#xars-r3', '#xars-p3', '#xars-k3', '#xars-r1, #xars-r2');   // 第 3 個收件人
+    // 收：講到「都收到」→ 全部亮回、結論膠囊彈出（音效 success 見上面 P.sfx；膠囊不拆字，audit 才認得「都收到」是這一句講的）
+    P.spot(LIST, null, ALL, { dur: 0.6 });
+    P.pop('#xars-done', ALL, { from: 0.7, dy: 0 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-architecture-send'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

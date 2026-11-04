@@ -110,6 +110,21 @@
                                      直式舞台縮放（STAGED）時 {to} 不往焦點帶，以容器上緣中點為原點推近（主卡推近 1.04 仍在畫面裡）
      P.grow(sel, at, {from, dur, ease})  長出：卡片從區域 from（預設 'pip'，或 [x, y, w, h]）長成自己的大小，0.8s expo.out；卡片要固定寬高
      P.ambient(D)                    背景環境層：.sc-surface-fs 加兩顆光暈球與浮塵（不縮放：04 的 root 就是 .sc-surface-fs，一縮放主卡就跟著動）。P.end() 自動呼叫；root 或 host 寫 data-ambient="off" 關掉（子母畫面的段 build 自動關）
+     ── 015（specs/015-scene-styles/brief.md）白板、傳送、紙膠帶、聲紋、載入 ──
+     P.draw(sel, at, {dur, pen})     馬克筆畫出：sel（插圖容器、svg 或單一形狀）裡的每一筆照文件順序依序畫出，筆尖（自動插 .sc-pen）跟著線頭走，
+                                     畫完 0.25s 內抬筆離開；有填色的形狀在自己那一筆畫完後 0.25s 補上填色，只有填色的形狀輪到時淡入，<text> 最後淡入。
+                                     狀態群組（style="opacity:0"）裡的形狀不畫。dur 預設依總線長 0.6–1.6s；pen: false＝不顯示筆。
+                                     插圖用 P.draw 進場就不要再 P.pop 同一個元件（畫出來就是進場）
+     P.along(sel, path, at, {dur, from, to, ease})  沿線移動：元素中心沿 path（svg 線；data-links 產生的線也行）從線長比例 from 走到 to
+                                     （預設 0→1、1.0s power3.inOut），寫 CSS translate、停在終點；再走下一段就再呼叫一次，from 寫上一次的 to
+     P.fly(path, at, {dur, size})    紙飛機：沿線飛過去（1.1s power2.inOut），身後留虛線尾跡（線本體藏起來，尾跡留在畫面上），到站 0.3s 淡掉
+     P.tape(sel, at, {rot, dur})     紙膠帶：卡片從 1.05 倍、多轉 3° 落到 rot（−2°）貼平（0.35s），接著兩條膠帶（自動插 .sc-tape）依序啪地貼上兩個上角；
+                                     卡片不要 overflow:hidden（膠帶要露出卡外）
+     P.hinge(sel, at, {from, origin, dur, stagger})  翻起來：元件以底邊為軸從平躺（rotationX −90°）翻起站好（0.6s back.out，透視 900）；
+                                     origin 預設 '50% 100%'（底邊），翻下來寫 {from: 90, origin: '50% 0%'}（頂邊）。台座、新聞卡用
+     P.wave(sel, at, {until, amp, bars})  聲紋：容器裡的 .sc-wave__bar（沒有就自動插 bars 根，預設照容器寬每 14px 一根）跟著時間起伏到 until（預設段尾），
+                                     頭尾 0.3s 漸入漸出、固定種子（任何時間點畫面一樣）；amp 0–1 調幅度
+     P.spin(sel, at, {until, period})  載入圈：等速轉（period 0.9s 一圈）到 until（預設段尾）；之後接 P.out 收掉、換成勾
      P.sfx(name, ref, off)           音效拍點：回傳 P.at(ref, off) 的秒數，並登記 {name, ref, off, t}（P.sfxCues、window.SceneMotion.sfx[comp id]）；
                                      ref 寫成字串字面值（例 const T1 = P.sfx('success', '#38@兩支')），build 靜態解析出 <audio>（motion.md §3）
      P.prev()                        前一段是什麼：'speaker'｜'fullscreen'｜'pip'（data-prev → __cues.segs[id].prev；單獨開檔＝'speaker'）。
@@ -249,7 +264,7 @@
   // 具名區域的橫式預設 [x, y, w, h]（design-system.md §2）；直式由 009 的 canvas.mjs 注入 window.__regions 蓋過
   var REGIONS = { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972] };
   var CALLS = { n: 0 };
-  var ROLE = { idle: 'micro', flow: 'micro', ambient: 'micro', end: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent', stamp: 'accent' };
+  var ROLE = { idle: 'micro', flow: 'micro', ambient: 'micro', end: 'micro', wave: 'micro', spin: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent', stamp: 'accent' };
   var registerType = function () {
     if (typeof gsap === 'undefined' || gsap.plugins.scType) return;
     gsap.registerPlugin({
@@ -761,6 +776,201 @@
           t.style.opacity = String(after > 0 ? Math.max(0, 1 - after) : 1);
         });
       });
+      return P;
+    };
+    // ── 015 白板、傳送、紙膠帶、聲紋、載入（specs/015-scene-styles/brief.md）──
+    // 量測一律用版面盒（offset 鏈）＋ svg 的 getCTM（形狀 → 自己的 svg 視口，含 viewBox 縮放、不含 CSS transform）：
+    //   進場的縮放、位移不影響量測，任何時間 seek 算出來都一樣
+    var svgOrigin = function (svg) {
+      var par = svg.parentElement, b = boxOf(par, root);
+      var pr = par.getBoundingClientRect(), sr = svg.getBoundingClientRect(), k = pr.width > 0 ? par.offsetWidth / pr.width : 1;
+      return { x: b.x + (sr.left - pr.left) * k, y: b.y + (sr.top - pr.top) * k };
+    };
+    var ptOf = function (shape, len, o0, m0) {   // m0：事先量好的 getCTM()（畫的時候才呼叫要傳；見 P.along）
+      var p = shape.getPointAtLength(len), m = m0 || shape.getCTM(), o = o0 || svgOrigin(shape.ownerSVGElement);
+      return { x: o.x + m.a * p.x + m.c * p.y + m.e, y: o.y + m.b * p.x + m.d * p.y + m.f };
+    };
+    var ctmScale = function (shape) { var m = shape.getCTM(); return m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1; };
+    // 形狀「實際」的線長：non-scaling-stroke 的虛線以 svg 視口計（實測：外層 CSS 縮放不影響），其他以使用者單位計
+    var dashLen = function (shape) {
+      var L = shape.getTotalLength();
+      return shape.getAttribute('vector-effect') === 'non-scaling-stroke' || getComputedStyle(shape).vectorEffect === 'non-scaling-stroke' ? L * ctmScale(shape) : L;
+    };
+    var hiddenIn = function (el, stop) {   // 狀態群組（style="opacity:0"）裡的形狀：不畫，不分時間
+      for (var n = el; n && n !== stop; n = n.parentNode) if (n.style && n.style.opacity === '0') return true;
+      return false;
+    };
+    var PEN_SVG = '<svg viewBox="-14 -158 64 172" width="64" height="172" aria-hidden="true"><g transform="rotate(28)">' +
+      '<path class="sc-pen__nib" d="M0 0 L-7 -16 L7 -16 Z"/><rect class="sc-pen__ink" x="-9" y="-30" width="18" height="16" rx="3"/>' +
+      '<rect class="sc-pen__body" x="-13" y="-128" width="26" height="100" rx="7"/><rect class="sc-pen__cap" x="-13" y="-80" width="26" height="12"/>' +
+      '<rect class="sc-pen__cap" x="-13" y="-140" width="26" height="16" rx="6"/></g></svg>';
+    var penFor = function () {
+      var p = mk(root, 'sc-pen', 'div'); p.innerHTML = PEN_SVG; root.appendChild(p);
+      p.style.left = '0px'; p.style.top = '0px'; p.style.opacity = '0';
+      return p;
+    };
+    // 馬克筆畫出：sel 裡的每一筆（svg 形狀；sel 是容器就取裡面的形狀，照文件順序）依序畫出，筆尖跟著線頭；
+    //   有填色的形狀在自己那一筆畫完後 0.25s 補上填色；只有填色沒有描邊的形狀在輪到時淡入；<text> 在最後淡入。
+    //   dur 預設依總線長（0.6–1.6s）；pen: false＝不顯示筆
+    P.draw = function (sel, at, o) {
+      var list = [];
+      q(sel).forEach(function (el) {
+        var shapes = el.namespaceURI === 'http://www.w3.org/2000/svg' && el.tagName.toLowerCase() !== 'svg' && el.tagName.toLowerCase() !== 'g' ? [el] : shapesIn(el);
+        shapes.forEach(function (s) { if (!hiddenIn(s, el) && list.indexOf(s) < 0) list.push(s); });
+        Array.prototype.slice.call(el.querySelectorAll ? el.querySelectorAll('text') : []).forEach(function (t) { if (!hiddenIn(t, el)) list.push(t); });
+      });
+      if (!list.length) return P;
+      var orgs = new Map();
+      var segs = list.map(function (s) {
+        var tag = s.tagName.toLowerCase(), cs = getComputedStyle(s);
+        var stroked = tag !== 'text' && cs.stroke && cs.stroke !== 'none' && parseFloat(cs.strokeWidth) > 0;
+        var filled = tag === 'text' || (cs.fill && cs.fill !== 'none' && parseFloat(cs.fillOpacity) > 0);
+        var L = stroked ? Math.ceil(dashLen(s)) : 0, sv = s.ownerSVGElement;   // 取整數：GSAP 的起點值會被四捨五入，小數線長在亂序 seek 時差一點
+        if (sv && !orgs.has(sv)) orgs.set(sv, svgOrigin(sv));   // 呼叫當下量好（之後的進場轉動、縮放不影響）
+        return { s: s, tag: tag, stroked: stroked, filled: filled, L: L, Lu: stroked ? s.getTotalLength() : 0, w: stroked ? Math.max(L, 30) : 30 };
+      });
+      var total = segs.reduce(function (a, g) { return a + g.w; }, 0);
+      var dur = opt(o, 'dur', Math.max(0.6, Math.min(1.6, 0.4 + total / 1800)));
+      var t = at, Ez = gsap.parseEase('power1.inOut');
+      segs.forEach(function (g) {
+        g.t = t; g.d = dur * g.w / total; t += g.d;
+        if (g.stroked) {
+          // 輪到之前整個藏起來（round 線頭在零長度虛線上會留一個圓點，P.stroke 同一招）
+          tl.fromTo(g.s, { opacity: 0 }, { opacity: 1, duration: 0.001, ease: 'none', immediateRender: first('opacity', g.s) }, g.t);
+          tl.fromTo(g.s, { strokeDasharray: g.L + ' ' + (g.L + 1), strokeDashoffset: g.L },
+            { strokeDasharray: g.L + ' ' + (g.L + 1), strokeDashoffset: 0, autoRound: false, duration: g.d, ease: 'power1.inOut',
+              immediateRender: firstAll(['strokeDasharray', 'strokeDashoffset'], g.s) }, g.t);
+          tl.set(g.s, { strokeDasharray: 'none' }, g.t + g.d);
+        }
+        if (g.filled) {
+          var prop = g.tag === 'text' ? 'opacity' : 'fillOpacity', base = g.tag === 'text' ? 1 : (parseFloat(getComputedStyle(g.s).fillOpacity) || 1);
+          var ft = g.stroked ? g.t + g.d : g.t, fd = g.stroked ? 0.25 : Math.max(0.12, g.d);
+          var a = {}, b = { duration: fd, ease: 'power1.out', immediateRender: first(prop, g.s) }; a[prop] = 0; b[prop] = base;
+          tl.fromTo(g.s, a, b, ft);
+        }
+      });
+      if (o && o.pen === false) return P;
+      var pen = penFor(), end = t, hop = 0.18;
+      segs.forEach(function (g) {   // 每一筆的筆尖位置在呼叫當下先算好路徑上的點（填色形狀＝中心點）
+        var org = orgs.get(g.s.ownerSVGElement);
+        if (g.stroked) { g.pts = []; for (var k = 0; k <= 48; k++) g.pts.push(ptOf(g.s, g.Lu * k / 48, org)); return; }
+        var bb = g.s.getBBox(), m = g.s.getCTM(), cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
+        g.pts = [{ x: org.x + m.a * cx + m.c * cy + m.e, y: org.y + m.b * cx + m.d * cy + m.f }];
+      });
+      var pos = function (g, u) {   // u：這一筆的進度 0–1（和描線同一條 power1.inOut）
+        if (g.pts.length === 1) return g.pts[0];
+        var f = Ez(u) * (g.pts.length - 1), i = Math.min(g.pts.length - 2, Math.floor(f)), r = f - i, a = g.pts[i], b = g.pts[i + 1];
+        return { x: a.x + (b.x - a.x) * r, y: a.y + (b.y - a.y) * r };
+      };
+      fn(pen, at - hop, end - at + hop + 0.25, function (el, p) {
+        var s = (at - hop) + p * (end - at + hop + 0.25);
+        if (p <= 0 || p >= 1) { el.style.opacity = '0'; el.style.left = '0px'; el.style.top = '0px'; return; }
+        var g = segs[0], u = 0;
+        for (var i = 0; i < segs.length; i++) { if (s >= segs[i].t) { g = segs[i]; u = Math.min(1, (s - g.t) / Math.max(1e-6, g.d)); } }
+        var pt = s < at ? pos(segs[0], 0) : pos(g, u);
+        var fadeIn = Math.min(1, (s - (at - hop)) / hop), fadeOut = Math.max(0, Math.min(1, (end + 0.25 - s) / 0.2));
+        var lift = s > end ? (s - end) * 120 : (s < at ? (at - s) * 120 : 0);
+        el.style.left = r2(pt.x + lift * 0.5) + 'px'; el.style.top = r2(pt.y - lift) + 'px';
+        el.style.opacity = String(r2(Math.min(fadeIn, fadeOut)));
+      });
+      return P;
+    };
+    // 沿線移動：元素的中心沿 path（svg 形狀；data-links 的線也行）從 o.from 走到 o.to（線長比例 0–1，預設 0→1）；
+    //   寫 CSS translate（不干擾進場的 transform），走完停在終點；之後要再走一段就再呼叫一次（from 寫上一次的 to）
+    //   位置、svg 原點、線的矩陣都在呼叫當下量好：HyperFrames snapshot／render 跳到這段時，先畫時間軸、後顯示這段，
+    //   畫的當下還是 display:none（外框 0、getCTM 不含 viewBox），在那時才量會把元素推走（亂序 seek 和照順序的不同）
+    P.along = function (sel, path, at, o) {
+      var pth = q(path)[0];
+      if (!pth || !pth.getTotalLength) throw new Error('P.along 的第二個參數要是一條 svg 線（path／line／polyline…）：' + path);
+      var dur = opt(o, 'dur', 1.0), f0 = opt(o, 'from', 0), f1 = opt(o, 'to', 1), Ez = gsap.parseEase(opt(o, 'ease', V2.EASE.move));
+      var L = pth.getTotalLength();
+      q(sel).forEach(function (el) {
+        var b = boxOf(el, root), cx = b.x + b.w / 2, cy = b.y + b.h / 2, org = svgOrigin(pth.ownerSVGElement), m = pth.getCTM();
+        fn(el, at, dur, function (t, p) {
+          var pt = ptOf(pth, (f0 + (f1 - f0) * Ez(Math.max(0, Math.min(1, p)))) * L, org, m);
+          t.style.translate = r2(pt.x - cx) + 'px ' + r2(pt.y - cy) + 'px';
+        });
+      });
+      return P;
+    };
+    // 紙飛機：沿線飛過去，身後留下虛線尾跡（尾跡停在畫面上），到站 0.3s 淡掉；sel＝線（和 P.comet 一樣）
+    P.fly = function (sel, at, o) {
+      var dur = opt(o, 'dur', 1.1), Ez = gsap.parseEase(opt(o, 'ease', 'power2.inOut')), tail = 0.3, sz = opt(o, 'size', 30) * U;
+      q(sel).forEach(function (path) {
+        var svg = path.ownerSVGElement, ns = 'http://www.w3.org/2000/svg', doc = svg.ownerDocument, L = null;
+        var trail = path.cloneNode(false); trail.removeAttribute('id'); trail.setAttribute('class', 'sc-fly__trail'); trail.setAttribute('aria-hidden', 'true');
+        path.parentNode.insertBefore(trail, path); path.style.visibility = 'hidden';
+        var g = doc.createElementNS(ns, 'g'); g.setAttribute('class', 'sc-fly'); g.setAttribute('aria-hidden', 'true');
+        var k = sz / 30;
+        g.innerHTML = '<g transform="scale(' + r2(k) + ')"><path class="sc-fly__wing" d="M16 0 L-14 -12 L-6 0 L-14 12 Z"/><path class="sc-fly__fold" d="M16 0 L-6 0 L-10 7 Z"/></g>';
+        svg.appendChild(g);
+        var dash = 10 * U, gap = 12 * U;
+        fn(g, at, dur + tail, function (t, p) {
+          if (L == null) L = path.getTotalLength();
+          var s = Math.min(1, p * (dur + tail) / dur), e = Ez(s), d = e * L;
+          var parts = [], acc = 0;
+          while (acc + dash < d) { parts.push(dash, gap); acc += dash + gap; }
+          parts.push(Math.max(0, d - acc), L + 1);
+          trail.style.strokeDasharray = p <= 0 ? '0 ' + (L + 1) : parts.map(r2).join(' ');
+          trail.style.opacity = p <= 0 ? '0' : '1';   // 起飛前連線頭的圓點都不留
+          if (p <= 0) { t.style.opacity = '0'; t.removeAttribute('transform'); return; }
+          var a = path.getPointAtLength(Math.max(0, d - 1)), b2 = path.getPointAtLength(Math.min(L, d + 1)), pt = path.getPointAtLength(d);
+          var ang = Math.atan2(b2.y - a.y, b2.x - a.x) * 180 / Math.PI;
+          t.setAttribute('transform', 'translate(' + r2(pt.x) + ' ' + r2(pt.y) + ') rotate(' + r2(ang) + ')');
+          var after = (p * (dur + tail) - dur) / tail;
+          t.style.opacity = String(after > 0 ? Math.max(0, 1 - after) : 1);
+        });
+      });
+      return P;
+    };
+    // 紙膠帶：卡片從 1.05 倍、多轉 3° 落到 rot（−2°）貼平，0.35s 後兩條膠帶依序啪地貼上兩個上角（自動插 .sc-tape）；
+    //   卡片要能露出角落（不要 overflow:hidden）
+    P.tape = function (sel, at, o) {
+      var rot = opt(o, 'rot', -2), dur = opt(o, 'dur', 0.35);
+      q(sel).forEach(function (el) {
+        relPos(el); el.setAttribute('data-layout-allow-overlap', '');
+        mv([el], at, { opacity: 0, scale: 1.05, rotation: rot + 3 }, { opacity: 1, scale: 1, rotation: rot }, dur, 'power3.out', 0);
+        ['l', 'r'].forEach(function (side, i) {
+          var tp = el.querySelector(':scope > .sc-tape--' + side);
+          if (!tp) { tp = mk(el, 'sc-tape sc-tape--' + side); tp.setAttribute('data-layout-allow-overlap', ''); el.appendChild(tp); }
+          mv([tp], at + dur - 0.05 + i * 0.12, { opacity: 0, scale: 1.45 }, { opacity: 1, scale: 1 }, 0.16, 'power4.in', 0);
+        });
+      });
+      return P;
+    };
+    // 翻起來：以底邊（origin）為軸從 from 度翻到 0（透視 900）；transform-origin 寫在元素 style（載入時，不進 timeline）
+    P.hinge = function (sel, at, o) {
+      var list = q(sel), org = opt(o, 'origin', '50% 100%');
+      list.forEach(function (el) { el.style.transformOrigin = org; });
+      mv(list, at, { opacity: 0, rotationX: opt(o, 'from', -90), transformPerspective: 900 }, { opacity: 1, rotationX: 0, transformPerspective: 900 },
+        opt(o, 'dur', 0.6), 'back.out(1.3)', opt(o, 'stagger', 0));
+      return P;
+    };
+    // 聲紋：sel 是容器，裡面的 .sc-wave__bar 跟著時間起伏（沒有就自動插 o.bars 根，預設照容器寬每 14px 一根）；固定種子的正弦疊加，
+    //   任何時間點畫面一樣；頭尾 0.3s 漸入漸出；until 之後回到靜止（扁平的短條）
+    P.wave = function (sel, at, o) {
+      var until = o && o.until != null ? o.until : P.dur(), amp = opt(o, 'amp', 1);
+      q(sel).forEach(function (el) {
+        var bars = Array.prototype.slice.call(el.querySelectorAll('.sc-wave__bar'));
+        var n = opt(o, 'bars', Math.max(6, Math.floor((el.offsetWidth + 6) / 14)));   // 預設照容器寬：每根 8px＋間距 6px
+        if (!bars.length) { for (var i = 0; i < n; i++) { var b = mk(el, 'sc-wave__bar'); el.appendChild(b); bars.push(b); } }
+        el.classList.add('sc-wave');
+        var len = Math.max(0.2, until - at), ramp = Math.min(0.3, len / 2);
+        fn(el, at, len, function (t, p) {
+          var s = p * len, env = p <= 0 || p >= 1 ? 0 : Math.max(0, Math.min(1, s / ramp, (len - s) / ramp));
+          bars.forEach(function (bar, k) {
+            var c = Math.abs(k - (bars.length - 1) / 2) / Math.max(1, (bars.length - 1) / 2), shape = 1 - 0.55 * c * c;
+            var v = 0.5 + 0.28 * Math.sin(s * 9.1 + k * 1.7) + 0.22 * Math.sin(s * 15.3 + k * 2.9 + 1.3);
+            bar.style.scale = '1 ' + r2(0.14 + 0.86 * amp * shape * Math.max(0, Math.min(1, v)) * env);
+          });
+        });
+      });
+      return P;
+    };
+    // 載入圈：等速轉（period 秒一圈，預設 0.9）到 until（預設段尾）；之後通常接 P.out 收掉、換成勾
+    P.spin = function (sel, at, o) {
+      var until = o && o.until != null ? o.until : P.dur(), per = opt(o, 'period', 0.9), len = Math.max(0.1, until - at);
+      mv(q(sel), at, { rotation: 0 }, { rotation: r2(360 * len / per) }, len, 'none', 0);
       return P;
     };
     // 虛線流動：stroke-dasharray 由 CSS 決定，dashoffset 等速往前（speed u／s，預設 24）；容器不要位移

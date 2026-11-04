@@ -1,5 +1,5 @@
 // 示意插圖元件（kit/illus.js、illus.css）與風格檢查（tools/lib/illus-lint.mjs）：node --test dev/tests/illus.test.mjs
-//   - Node（vm）：20 個內建元件都產生 SVG、子元素 class 與狀態、只用 --il-* token、描邊 non-scaling、register 的規則
+//   - Node（vm）：21 個內建元件都產生 SVG、子元素 class 與狀態、只用 --il-* token、描邊 non-scaling、register 的規則
 //   - lint：kit/illus-style.md 的範例要過；三個不合格樣本各自抓到該抓的規則
 //   - 瀏覽器（HyperFrames 的 Chrome；沒有就略過）：真的載 scene.css＋theme.css＋brand.css＋illus.css 掛載，
 //     兩個主題讀到的 fill／stroke 不同、主色跟著 --brand、data-illus-src 同步掛上、mount 不重掛
@@ -29,8 +29,10 @@ const COMPONENTS = {
   monitor: [{}, [360, 300], ['il-screen', ...LAPTOP_STATES]],
   cloud: [{}, [220, 150], ['il-arrow']],
   personBust: [{}, [160, 170], ['il-head', 'il-talk']],
+  pgPerson: [{}, [120, 284], ['il-head', 'il-torso', 'il-hi', 'il-arms', 'il-legs']],
   personTop: [{}, [110, 72], ['il-head', 'il-face']],
   desk: [{}, [320, 150], ['il-desk', 'il-laptop']],
+  stage: [{}, [960, 180], ['il-top', 'il-front', 'il-side']],
   cone: [{}, [304, 2 * 300 * Math.sin(25 * Math.PI / 180) + 4], ['il-cone']],
   waveform: [{}, [360, 90], ['il-bar']],
   progress: [{}, [320, 28], ['il-track', 'il-fill']],
@@ -57,7 +59,7 @@ const classesOf = (svg) => new Set([...svg.matchAll(/class="([^"]+)"/g)].flatMap
 const groupOf = (svg, cls) => (svg.match(new RegExp(`<g class="${cls}"[^>]*>`)) || [null])[0];
 const cssTokens = (block) => new Set([...block.matchAll(/(--il-[\w-]+)\s*:/g)].map((m) => m[1]));
 
-test('20 個內建元件：都產生 SVG、viewBox＝建議尺寸、子元素 class 都在', () => {
+test('21 個內建元件：都產生 SVG、viewBox＝建議尺寸、子元素 class 都在', () => {
   const I = load();
   const fns = Object.keys(I).filter((k) => typeof I[k] === 'function' && !['mount', 'register', 'textWidth'].includes(k));
   assert.deepEqual(fns.sort(), [...NAMES].sort(), '元件清單和契約不同（新增元件要一起改 specs/contracts/illus.md 與本測試）');
@@ -259,7 +261,7 @@ ${cells}
     // 來源 token 的計算值（illus.css 接到哪個 token，就該讀到一樣的顏色）
     var probe = document.createElement('i'); document.body.appendChild(probe);
     o.tok = {};
-    ['--sc-card-solid', '--sc-plate', '--sc-ink', '--v2-ink', '--brand', '--brand-ink', '--sc-warn', '--sc-good'].forEach(function (t) { probe.style.color = 'var(' + t + ')'; o.tok[t] = getComputedStyle(probe).color; });
+    ['--sc-card-solid', '--sc-plate', '--sc-ink', '--v2-ink', '--v2-node', '--brand', '--brand-ink', '--sc-warn', '--sc-good'].forEach(function (t) { probe.style.color = 'var(' + t + ')'; o.tok[t] = getComputedStyle(probe).color; });
     probe.remove();
     return o;
   };
@@ -300,11 +302,12 @@ ${cells}
       else assert.notEqual(out.light[n].paint, out.dark[n].paint, `${n} 兩個主題的 fill／stroke 一樣`);
     }
     const L = out.light, D = out.dark;
-    // 亮色：主體＝--sc-card-solid、內層＝--sc-plate、描邊＝--sc-ink；暗色：主體＝--sc-card-solid（暗色值）、描邊＝--v2-ink、內層自己的石墨色
-    assert.deepEqual([L.body, L.inner, L.line], [L.tok['--sc-card-solid'], L.tok['--sc-plate'], L.tok['--sc-ink']], '亮色主體／內層／描邊要接到 scene.css／theme.css 的 token');
+    // 015 白板線稿：亮色主體＝--v2-node（白）、描邊＝--v2-ink（墨）、內層＝淡主色；暗色（黑板）：主體＝--sc-card-solid（暗色值）、描邊＝--v2-ink、內層自己的石墨色
+    assert.deepEqual([L.body, L.line], [L.tok['--v2-node'], L.tok['--v2-ink']], '亮色主體／描邊要接到 --v2-node／--v2-ink');
+    assert.notEqual(L.inner, L.body, '亮色內層（淡主色）要和主體分得出來');
     assert.deepEqual([D.body, D.line, D.inner], [D.tok['--sc-card-solid'], D.tok['--v2-ink'], 'rgb(38, 42, 51)'], '暗色主體／描邊要接到暗色 token，內層是 illus.css 的 #262A33');
     const lum = (rgb) => { const [r, g, b] = rgb.match(/\d+/g).map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
-    assert.ok(lum(L.body) < 0.15 && lum(L.inner) < 0.2 && lum(L.line) > 0.9, `亮色主題元件本體仍是深色、描邊白（${L.body}、${L.inner}、${L.line}）`);
+    assert.ok(lum(L.body) > 0.9 && lum(L.inner) > 0.8 && lum(L.line) < 0.15, `亮色主題是白板線稿：白底、淡內層、墨線（${L.body}、${L.inner}、${L.line}）`);
     assert.ok(lum(D.body) < 0.15 && lum(D.line) > 0.85, `暗色主題：深色本體、淺描邊（${D.body}、${D.line}）`);
     for (const [th, o] of [['light', L], ['dark', D]]) {
       assert.equal(o.accent, o.tok['--brand'], `${th}：重點色要是 --brand`);

@@ -1,3 +1,4 @@
 @font-face { font-family: "Noto Sans TC"; src: url("fonts/NotoSansTC-VF.woff2") format("woff2"); font-weight: 100 900; font-display: block; }
 @font-face { font-family: "Google Sans Flex"; src: url("fonts/GoogleSansFlex-VF.woff2") format("woff2"); font-weight: 100 1000; font-display: block; }
-:root { --font-cjk: "Noto Sans TC", sans-serif; --cap-font: "Google Sans Flex", "Noto Sans TC", sans-serif; }
+@font-face { font-family: "JetBrains Mono"; src: url("fonts/JetBrainsMono-VF.woff2") format("woff2"); font-weight: 100 800; font-display: block; }
+:root { --font-cjk: "Noto Sans TC", sans-serif; --cap-font: "Google Sans Flex", "Noto Sans TC", sans-serif; --font-mono: "JetBrains Mono", "Noto Sans TC", monospace; }

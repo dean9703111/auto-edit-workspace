@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-prompt-chat 問 AI 一句｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-prompt-chat.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-prompt-chat { position: absolute; inset: 0; }
+    #x-prompt-chat .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-prompt-chat #xpch-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-prompt-chat #xpch-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; gap: 24px; }
+    #x-prompt-chat #xpch-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--brand); }
+    #x-prompt-chat #xpch-body { position: relative; width: 1176px; height: 580px; }
+    /* 三列：都是 1064 寬，位置由 data-layout 排 */
+    #x-prompt-chat #xpch-urow { position: absolute; width: 1064px; height: 104px; }
+    #x-prompt-chat #xpch-airow { position: absolute; width: 1064px; height: 176px; display: flex; align-items: center; gap: 24px; }
+    /* 使用者泡泡：靠右、主色底，右下角是尖角 */
+    #x-prompt-chat #xpch-user { position: absolute; right: 0; top: 0; width: max-content; box-sizing: border-box; padding: 24px 36px;
+                                border-radius: 36px 36px 8px 36px; background: var(--brand); color: var(--brand-ink); white-space: nowrap; }
+    /* AI：頭像＋泡泡（左上是尖角） */
+    #x-prompt-chat #xpch-ai { --d: 88px; --i: 48px; flex: none; background: var(--sc-fs-tint); color: var(--brand); }
+    #x-prompt-chat #xpch-say { position: relative; flex: none; }
+    #x-prompt-chat #xpch-dots { position: absolute; left: 0; top: 0; bottom: 0; margin: auto 0; width: 168px; height: 96px; box-sizing: border-box; border-radius: 8px 36px 36px 36px;
+                                background: var(--v2-node-tint); display: flex; align-items: center; justify-content: center; gap: 16px; }
+    #x-prompt-chat .xpch-dot { width: 18px; height: 18px; border-radius: 9px; background: var(--sc-fs-mute); }
+    #x-prompt-chat #xpch-bub { position: relative; width: max-content; box-sizing: border-box; padding: 24px 36px;
+                               border: 4px solid var(--v2-node-line); border-radius: 8px 36px 36px 36px; background: var(--v2-node); color: var(--sc-fs-ink); }
+    #x-prompt-chat #xpch-reply { white-space: nowrap; }
+    /* 輸入膠囊：底部，右下角主色送出鈕 */
+    #x-prompt-chat #xpch-box { position: absolute; width: 1064px; height: 112px; box-sizing: border-box; padding: 0 120px 0 44px;
+                               border: 4px solid var(--v2-node-line); border-radius: 56px; background: var(--v2-node); color: var(--sc-fs-ink);
+                               display: flex; align-items: center; white-space: nowrap; }
+    #x-prompt-chat #xpch-send { --d: 80px; --i: 40px; position: absolute; right: 12px; top: 12px; background: var(--brand); color: var(--brand-ink); }
+    #x-prompt-chat #xpch-sky { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
+    #x-prompt-chat #xpch-path { fill: none; stroke: none; }
+  </style>
+  <div id="x-prompt-chat" data-composition-id="x-prompt-chat" data-width="1920" data-height="1080" data-duration="14.6"
+       data-cues-sample='{"start":0,"D":14.6,"cues":{"312":[1.6,4.4],"313":[4.6,7.9],"314":[8.0,13.0]},"refs":{"#313@送出":5.1,"#314@可以":8.2}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xpch-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span id="xpch-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> </svg></span><span class="sc-opt">問 AI 一句</span></div>
+      <div id="xpch-body" data-layout="col" data-justify="start" data-gap="lg">
+        <div id="xpch-urow" data-slot><div id="xpch-user" class="sc-t40 sc-w700 sc-opt" data-snap-width>這段可以剪掉嗎？</div></div>
+        <div id="xpch-airow" data-slot><span id="xpch-ai" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span>
+          <div id="xpch-say"><div id="xpch-bub" data-snap-width><div id="xpch-reply" class="sc-t40 sc-w700">可以，這段你重講了兩次，<br>保留第二次比較順就好。</div></div>
+            <div id="xpch-dots" data-layout-allow-overlap><i id="xpch-d1" class="xpch-dot"></i><i id="xpch-d2" class="xpch-dot"></i><i id="xpch-d3" class="xpch-dot"></i></div></div></div>
+        <div id="xpch-box" data-slot data-layout-allow-slack>
+          <span id="xpch-ask" class="sc-t40 sc-w700">這段可以剪掉嗎？</span>
+          <span id="xpch-send" class="sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m5 12 7-7 7 7" /> <path d="M12 19V5" /> </svg></span>
+        </div>
+        <svg id="xpch-sky" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg" data-layout-ignore><path id="xpch-path" d="" /></svg>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-prompt-chat'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const TYPE = P.at('#312', 0.45), SEND = P.at('#313@送出'), REPLY = P.at('#314@可以');   // 開始打字／送出／AI 回答
+    P.sfx('ding', '#314@可以');                        // AI 回答一顆 ding（句號和 REPLY 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 0. 紙飛機路線：從送出鈕中心飛到使用者泡泡下緣（位置由 data-layout 排好，這裡只讀內容區座標；載入時算一次，不進 timeline）
+    const BODY = $q('#xpch-body')[0];
+    const pos = function (el) { let x = 0, y = 0; for (let e = el; e && e !== BODY; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x, y]; };
+    const SB = $q('#xpch-send')[0], UB = $q('#xpch-user')[0], sp = pos(SB), up = pos(UB);
+    const sx = sp[0] + 40, sy = sp[1] + 40, ux = up[0] + UB.offsetWidth - 60, uy = up[1] + UB.offsetHeight + 12;
+    $q('#xpch-path')[0].setAttribute('d', 'M' + sx + ' ' + sy + ' C' + (sx + 50) + ' ' + (sy - 120) + ' ' + (ux + 60) + ' ' + (uy + 80) + ' ' + ux + ' ' + uy);
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題圖示描線、標題逐字 → 1.0 輸入膠囊由左擦開、送出鈕箭頭描出 → 1.3 AI 頭像彈出
+    if (ENTER === 'grow') P.grow('#xpch-card', 0.3);
+    else { P.wipe('#xpch-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xpch-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xpch-bico', 0.5);
+    P.chars('#xpch-card .sc-wcard__bar .sc-opt', 0.62, { stagger: 0.035 });
+    P.wipe('#xpch-box', 1.0, { dir: 'left', dur: 0.5 });
+    P.icon('#xpch-send', 1.2, { dur: 0.3 });
+    P.pop('#xpch-ai', 1.3, { from: 0.6, dy: 0 });
+    P.icon('#xpch-ai', 1.45);
+    // 拍 1 打字：問題在輸入膠囊裡逐字打出（8.5 字／秒）
+    P.type('#xpch-ask', TYPE);
+    // 拍 2 送出：送出鈕漣漪、紙飛機飛上去、問題從膠囊消失 → ＋0.6 主色泡泡彈出、＋0.9 尾跡淡掉 → ＋1.2「輸入中」三個點彈出、輪流跳到 REPLY
+    P.ripple('#xpch-send', SEND, { to: 1.8 });
+    P.fly('#xpch-path', SEND, { dur: 0.6, size: 36 });
+    P.out('#xpch-ask', SEND, { dur: 0.2 });
+    P.pop('#xpch-user', SEND + 0.6, { from: 0.7, dy: 30 });
+    P.out('#xpch-sky', SEND + 0.9, { dur: 0.4 });   // 紙飛機的虛線尾跡淡掉（聊天畫面不留線）
+    P.pop('#xpch-dots', SEND + 1.2, { from: 0.6, dy: 0 });
+    P.idle('#xpch-d1', SEND + 1.2, { scale: 0.35, period: 0.9, phase: 0, ramp: 0.2, until: REPLY });
+    P.idle('#xpch-d2', SEND + 1.2, { scale: 0.35, period: 0.9, phase: 0.3, ramp: 0.2, until: REPLY });
+    P.idle('#xpch-d3', SEND + 1.2, { scale: 0.35, period: 0.9, phase: 0.6, ramp: 0.2, until: REPLY });
+    // 拍 3 回答：三個點收掉 → AI 泡泡彈出（框的大小已經是打完的樣子）、回答逐字打出
+    P.out('#xpch-dots', REPLY, { dur: 0.2 });
+    P.pop('#xpch-bub', REPLY, { from: 0.85, dy: 20 });
+    P.type('#xpch-reply', REPLY + 0.2);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-prompt-chat'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-prompt-chat";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

@@ -624,6 +624,36 @@
         <div class="limits"><span>版面：子母畫面</span><span>3–4 站</span><span>站名 ≤ 4 字</span><span>綁句 T1–T4</span></div>
       </div>
     </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-process-trace.html" loading="lazy" title="x-process-trace 流程：電路板 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-process-trace.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-process-trace 流程：電路板"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>流程：電路板</h3><code>x-process-trace</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>訊號、資料、聲音一路經過幾個裝置，3–4 站（「聲音從麥克風進錄音介面，再進電腦，最後到剪輯軟體」）</dd>
+          <dt>不要用在</dt><dd class="avoid">一般的工作步驟（用 x-process）；資料分岔、回傳（用 x-architecture）；超過 4 站</dd>
+          <dt>畫面上</dt><dd>晶片上下錯落 → 講到一站，訊號帶著發光頭沿直角走線跑過去、晶片變主色、指示燈亮 → 最後一道光跑完全程</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–4 站</span><span>站名 ≤ 4 字</span><span>綁句 T1–T4</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-process-loop.html" loading="lazy" title="x-process-loop 流程：循環 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-process-loop.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-process-loop 流程：循環"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>流程：循環</h3><code>x-process-loop</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>做完最後一步又回到第一步，3–4 站（「拍片、上片、看數據、改腳本，改完再拍下一支」）</dd>
+          <dt>不要用在</dt><dd class="avoid">做完就結束的步驟（用 x-process）；一個中心分出幾個面向（用 x-ring-facets）；超過 4 站</dd>
+          <dt>畫面上</dt><dd>站排成一圈、中間是循環的名字 → 講到一站，弧線箭頭帶著發光頭繞過去、那一站亮起 → 最後一段接回第一站、光繞一圈</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–4 站</span><span>站名 ≤ 3 字、中間 ≤ 4 字</span><span>綁句 T1–T4</span></div>
+      </div>
+    </article>
 
     <article class="card">
       <div class="pv">
@@ -704,6 +734,51 @@
         <div class="limits"><span>版面：子母畫面</span><span>每行 ≤ 18 字、≤ 3 行</span><span>提醒 ≤ 10 字</span><span>綁句 TYPE／K1／K2／NOTE</span></div>
       </div>
     </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-prompt-chat.html" loading="lazy" title="x-prompt-chat 問 AI 一句 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-prompt-chat.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-prompt-chat 問 AI 一句"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>問 AI 一句</h3><code>x-prompt-chat</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>演一次「問 AI → AI 回答」（「我問它這段可以剪掉嗎，它馬上回我可以，保留第二次就好」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只展示提示詞（用 x-prompt）；終端機指令（用 x-terminal）；多輪對話</dd>
+          <dt>畫面上</dt><dd>輸入膠囊逐字打出問題 → 送出時紙飛機飛上去、變成主色泡泡 → AI 三個點跳動 → 回答泡泡彈出、逐字打出</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>一問一答</span><span>問題 ≤ 16 字、回答 ≤ 2 行</span><span>綁句 TYPE／SEND／REPLY</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-terminal.html" loading="lazy" title="x-terminal 終端機跑指令 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-terminal.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-terminal 終端機跑指令"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>終端機跑指令</h3><code>x-terminal</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>打一行指令，它就自己跑完（「打 node media.mjs rough ep2，它先找出重講，再對好字幕，跑完就有初剪」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只秀一行指令（用 x-prompt 的指令變體）；要看程式碼（用 x-terminal-code）；有螢幕錄影（用 media 段）</dd>
+          <dt>畫面上</dt><dd>深色終端機：指令逐字打出 → 轉圈「處理中」→ 講到每個步驟，那一行輸出印出 → 完成行與新的提示字元</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2 個步驟</span><span>指令 ≤ 32 個半形字寬、輸出 ≤ 14 字</span><span>綁句 RUN／STEP1／STEP2／DONE</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-terminal-code.html" loading="lazy" title="x-terminal-code 程式碼打字 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-terminal-code.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-terminal-code 程式碼打字"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>程式碼打字</h3><code>x-terminal-code</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>講一小段程式在做什麼（≤ 6 行）（「先讀逐字稿，每找到一段重講就剪掉，最後執行」）</dd>
+          <dt>不要用在</dt><dd class="avoid">終端機指令與輸出（用 x-terminal）；超過 6 行或要逐字看懂（用螢幕錄影）；提示詞（用 x-prompt）</dd>
+          <dt>畫面上</dt><dd>深色編輯器：程式碼逐字打出（關鍵字各有顏色）→ 講到某件事，那幾行亮起標示帶 → 執行時結果列印出綠色勾</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>≤ 6 行</span><span>每行 ≤ 38 個半形字寬</span><span>綁句 TYPE／H1／H2／RUN</span></div>
+      </div>
+    </article>
 
     <article class="card">
       <div class="pv">
@@ -720,6 +795,21 @@
         <div class="limits"><span>版面：子母畫面</span><span>按鈕 ≤ 4 字</span><span>通知 ≤ 8 字</span><span>綁句 ZOOM／CLICK／RESULT</span><span>plan.json 寫 clicks</span></div>
       </div>
     </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-ui-mock-tidy.html" loading="lazy" title="x-ui-mock-tidy 一鍵歸位 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-ui-mock-tidy.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-ui-mock-tidy 一鍵歸位"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>一鍵歸位</h3><code>x-ui-mock-tidy</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>本來要開很多軟體、通知一直跳，換成一個工具後全部在同一個地方</dd>
+          <dt>不要用在</dt><dd class="avoid">示範一個按鈕怎麼按（用 x-ui-mock）；有螢幕錄影（用 media 段）；兩種做法並排比較（用 x-before-after）</dd>
+          <dt>畫面上</dt><dd>4 個小視窗歪斜疊著 → 通知一則一則跳出 → 講到工具，大視窗擦開、小視窗飛進去排成 2×2 → 「全部歸位」勾勾彈出</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>4 個視窗、3 則通知</span><span>視窗名 ≤ 4 字、通知 ≤ 5 字</span><span>綁句 MESS／TIDY／DONE</span></div>
+      </div>
+    </article>
 
     <article class="card">
       <div class="pv">
@@ -734,6 +824,21 @@
           <dt>畫面上</dt><dd>兩個裝置和雲端先出現 → 直連的路描出來 → 三個檔案沿路走過去 → 雲端被劃掉、出現結論</dd>
         </dl>
         <div class="limits"><span>版面：子母畫面</span><span>裝置 ≤ 4 字</span><span>結論 ≤ 6 字</span><span>綁句 PATH／FLOW／CUT</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-architecture-send.html" loading="lazy" title="x-architecture-send 紙飛機傳出去 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-architecture-send.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-architecture-send 紙飛機傳出去"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>紙飛機傳出去</h3><code>x-architecture-send</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>把一樣東西傳給好幾個人（「把連結傳給客戶、主管和字幕師，三個人都收到就能開始審」）</dd>
+          <dt>不要用在</dt><dd class="avoid">資料經過或不經過中繼（用 x-architecture）；一分多比較哪條好（用 x-branch）；有先後步驟（用 x-process）</dd>
+          <dt>畫面上</dt><dd>寄件端＋3 個收件人 → 講到一個收件人，紙飛機沿弧線飛過去、留下虛線尾跡、那一列打勾 → 都收到時結論膠囊彈出</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3 個收件人</span><span>名稱 ≤ 4 字、結論 ≤ 6 字</span><span>綁句 S1–S3／ALL</span></div>
       </div>
     </article>
 
@@ -769,6 +874,21 @@
         <div class="limits"><span>版面：子母畫面</span><span>3–4 層</span><span>名稱 ≤ 6 字、說明 ≤ 12 字</span><span>綁句 T1–T4／ALL</span></div>
       </div>
     </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-stack-podium.html" loading="lazy" title="x-stack-podium 台座堆疊 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-stack-podium.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-stack-podium 台座堆疊"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>台座堆疊</h3><code>x-stack-podium</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>由下往上、越上面越接近目標的組成，3–4 層、從底層講起（「器材、剪輯流程、內容企劃，最上面才是個人品牌」）</dd>
+          <dt>不要用在</dt><dd class="avoid">每層要配一句說明（用 x-stack）；從最上層往下講（用 13 或 04a）；超過 4 層</dd>
+          <dt>畫面上</dt><dd>講到一層，那一層從平躺翻起來疊上去（越上層越窄）→ 合起來時最上層換主色</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–4 層</span><span>名稱 ≤ 5 字（最上層 ≤ 4 字）</span><span>綁句 T1–T4／ALL</span></div>
+      </div>
+    </article>
 
     <article class="card">
       <div class="pv">
@@ -785,6 +905,21 @@
         <div class="limits"><span>版面：子母畫面</span><span>2–4 項</span><span>每項 ≤ 14 字</span><span>沒有圖示（勾就是圖示）</span><span>綁句 T1–T4／ALL</span></div>
       </div>
     </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-checklist-ai.html" loading="lazy" title="x-checklist-ai AI 逐條完成 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-checklist-ai.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-checklist-ai AI 逐條完成"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>AI 逐條完成</h3><code>x-checklist-ai</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>交給 AI（或工具）跑的一串工作，2–4 項、每項有結果（「先讀逐字稿、找出重講、列剪輯清單，最後產生字幕」）</dd>
+          <dt>不要用在</dt><dd class="avoid">人自己要做的準備（用 x-checklist）；有先後的流程（用 x-process）；超過 4 項</dd>
+          <dt>畫面上</dt><dd>每一列的圈圈在轉 → 講到一項，圈圈換成打勾、右邊跳出結果、下一列開始轉；進度條跟著前進 → 全部完成換完成色</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2–4 項</span><span>每項 ≤ 10 字、結果 ≤ 6 字</span><span>沒有圖示（勾就是圖示）</span><span>綁句 T1–T4／ALL</span></div>
+      </div>
+    </article>
 
     <article class="card">
       <div class="pv">
@@ -799,6 +934,36 @@
           <dt>畫面上</dt><dd>中央主體圖示圓 → 講到哪個詞，四角之一的標籤浮出、引線描到主體、主色框移過去；講到總結框全部拿掉</dd>
         </dl>
         <div class="limits"><span>版面：子母畫面</span><span>2–4 個標籤</span><span>標籤 ≤ 4 字</span><span>綁句 T1–T4／ALL</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-callout-phone.html" loading="lazy" title="x-callout-phone 手機與功能膠囊 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-callout-phone.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-callout-phone 手機與功能膠囊"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>手機與功能膠囊</h3><code>x-callout-phone</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一個 App 或產品的 2–4 個功能（「下載就能用、不用換卡、安卓也能用，還能隨時加值」）</dd>
+          <dt>不要用在</dt><dd class="avoid">主體不是手機（用 x-callout）；講的是部位（用 x-callout-parts）；超過 4 個功能</dd>
+          <dt>畫面上</dt><dd>手機在中間、背後同心圓 → 講到一個功能，手機送出漣漪、那顆膠囊從旁邊彈出並聚焦 → 總結時全部亮回、手機打勾</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2–4 個功能</span><span>膠囊 ≤ 5 字</span><span>綁句 T1–T4／ALL</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-callout-parts.html" loading="lazy" title="x-callout-parts 零件圖 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-callout-parts.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-callout-parts 零件圖"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>零件圖</h3><code>x-callout-parts</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>拆解一個看得見的物件由哪幾個部分組成（「這套拍片架從上到下是鏡頭、手機、雲台和三腳架」）</dd>
+          <dt>不要用在</dt><dd class="avoid">講的是特色、毛病（用 x-callout 或 x-callout-phone）；超過 4 個零件</dd>
+          <dt>畫面上</dt><dd>主體像畫藍圖一樣被畫出來、零件表用紙膠帶貼上 → 講到一個零件，編號圓彈出、引線指到那個部位、零件表那一列亮起</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2–4 個零件</span><span>零件名 ≤ 4 字</span><span>沒有圖示（主體是插圖）</span><span>綁句 T1–T4／ALL</span></div>
       </div>
     </article>
 
@@ -831,6 +996,21 @@
           <dt>畫面上</dt><dd>講到第一個值，長條逐根長出 → 講到最後的值，最後一根換主色、趨勢線描出、提示框數到那個值；結論膠囊（選用）</dd>
         </dl>
         <div class="limits"><span>版面：子母畫面</span><span>3–6 組數字</span><span>數字 ≤ 999999</span><span>綁句 T1–T3</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-trend-blocks.html" loading="lazy" title="x-trend-blocks 方塊堆疊 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-trend-blocks.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-trend-blocks 方塊堆疊"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>方塊堆疊</h3><code>x-trend-blocks</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>同一個量在 3–5 個時間點的變化，數字小、數得出來（「第 1 集剪 8 小時，第 10 集 4 小時，現在只要 2 小時」）</dd>
+          <dt>不要用在</dt><dd class="avoid">數字大或要看精確比例（用 x-trend）；只有兩組（用 x-numbers）；超過 5 組</dd>
+          <dt>畫面上</dt><dd>圖例先出現（1 格＝多少）→ 講到一組，方塊一格一格掉下來疊好、數字數到 → 最後一組主色、重拍</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–5 組</span><span>每組 1–10 格、標籤 ≤ 4 字</span><span>沒有圖示</span><span>綁句 T1–T4</span></div>
       </div>
     </article>
 
@@ -928,6 +1108,81 @@
           <dt>畫面上</dt><dd>講到起點，右上那列出現 → 講到數字，主色弧從 12 點鐘走到那個比例、數字同步跑 → 講到結論，右下那列出現、箭頭描下來</dd>
         </dl>
         <div class="limits"><span>版面：子母畫面</span><span>百分比／計時／倒數</span><span>右側兩列 ≤ 8 字</span><span>綁句 R1／ARC／R2</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-ring-facets.html" loading="lazy" title="x-ring-facets 環形圖註解 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-ring-facets.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-ring-facets 環形圖註解"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>環形圖註解</h3><code>x-ring-facets</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一件事由 3–5 個面向組成、缺一不可（「一支好影片要顧到內容、剪輯、聲音和畫面」）</dd>
+          <dt>不要用在</dt><dd class="avoid">一個比例、百分比（用 x-ring）；面向有先後（用 x-process-loop）；超過 5 個</dd>
+          <dt>畫面上</dt><dd>切成幾段的圓環＋右邊編號清單 → 講到一個面向，那一段描成主色、編號圓彈出、清單那一列寫出來並聚焦</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–5 個面向</span><span>名稱 ≤ 5 字、中間 ≤ 4 字</span><span>沒有圖示</span><span>綁句 T1–T4／ALL</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-crowd.html" loading="lazy" title="x-crowd 人群比例 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-crowd.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-crowd 人群比例"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>人群比例</h3><code>x-crowd</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>「幾個人裡有幾個」的比例，想讓觀眾看到人（「10 個點進來的觀眾，有 7 個看不到 30 秒就滑走」）</dd>
+          <dt>不要用在</dt><dd class="avoid">百分比、沒有「人」的意思（用 x-ring）；兩群人比快慢（用 x-crowd-queue）；超過 10 個人</dd>
+          <dt>畫面上</dt><dd>10 個象形小人一個一個彈出、數字數到 10 → 講到那幾個，身體換主色、其他人淡下去 → 結論膠囊</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>固定 10 人</span><span>說明 ≤ 7 字、膠囊 ≤ 8 字</span><span>沒有圖示（小人就是圖示）</span><span>綁句 T1–T3</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-crowd-queue.html" loading="lazy" title="x-crowd-queue 兩排人比快慢 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-crowd-queue.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-crowd-queue 兩排人比快慢"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>兩排人比快慢</h3><code>x-crowd-queue</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>比兩個方法誰比較快、量看得到（「手動剪一支一支排隊要 5 天，自動剪整批一起跑 1 天就好」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只是比例（用 x-crowd）；比兩組數字、沒有排隊的意思（用 04e 或 x-trend-blocks）；超過兩個方法</dd>
+          <dt>畫面上</dt><dd>兩條跑道各 5 個小人 → 講到慢的，最前面的人慢慢走到終點 → 講到快的，整排一起走到終點、換主色 → 結論膠囊</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>兩個方法</span><span>名稱 ≤ 3 字、時間 ≤ 4 字</span><span>綁句 T1–T3</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-desk.html" loading="lazy" title="x-desk 地台上的裝置接力 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-desk.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-desk 地台上的裝置接力"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>地台上的裝置接力</h3><code>x-desk</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一個東西從這台裝置到那台裝置，三站（「手機拍完，自動上傳到雲端，回家在電腦上直接剪」）</dd>
+          <dt>不要用在</dt><dd class="avoid">站不是看得見的裝置（用 x-process）；一個東西傳給好幾個人（用 x-architecture-send）；超過 3 站</dd>
+          <dt>畫面上</dt><dd>2.5D 地台上站著手機、雲端、電腦 → 講到一站，鏡頭帶過去、檔案沿地上的虛線走到那一站、那一站換狀態</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3 站</span><span>站名 ≤ 3 字</span><span>沒有圖示（裝置是插圖）</span><span>綁句 T1–T3</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-news.html" loading="lazy" title="x-news 新聞快訊 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-news.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-news 新聞快訊"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>新聞快訊</h3><code>x-news</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>轉述一則新聞、公告、官方數據，有一個大數字和一段變化</dd>
+          <dt>不要用在</dt><dd class="avoid">自己的經驗或頻道數字（用 x-numbers、x-trend）；數字超過兩個</dd>
+          <dt>畫面上</dt><dd>快訊標籤翻起來、標題條擦開 → 講到數字，大數字卡翻起來數上去 → 講到變化，走勢卡畫線 → 講到出處，來源列擦開</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>1 個數字＋1 條走勢</span><span>標題 ≤ 14 字、來源 ≤ 24 字</span><span>綁句 T1–T3</span></div>
       </div>
     </article>
 

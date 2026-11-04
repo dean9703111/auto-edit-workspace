@@ -95,7 +95,7 @@
 
 ### A 流程
 
-3–4 站、有先後的動作。情境：`x-process`、`x-branch`、`x-architecture`、04c。
+3–4 站、有先後的動作。情境：`x-process`、`x-process-trace`（電路板）、`x-process-loop`（循環）、`x-branch`、`x-architecture`、`x-architecture-send`（傳給好幾個人）、`x-desk`（裝置接力）、04c。
 
 | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
 |---|---|---|---|---|---|
@@ -121,7 +121,7 @@
 
 ### C 對比
 
-以前 vs 現在、A vs B。情境：`x-before-after`、`x-versus`、`x-fix`、04b。
+以前 vs 現在、A vs B。情境：`x-before-after`、`x-versus`、`x-fix`、`x-ui-mock-tidy`（亂 → 一鍵歸位）、`x-crowd-queue`（兩排人比快慢）、04b。
 
 | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
 |---|---|---|---|---|---|
@@ -136,7 +136,7 @@
 
 ### D 清單
 
-3–5 條並列重點。情境：`x-checklist`、`x-warnings`、`x-callout`、`x-stack`、04a、04d。
+3–5 條並列重點。情境：`x-checklist`、`x-checklist-ai`、`x-warnings`、`x-callout`、`x-callout-phone`、`x-callout-parts`、`x-stack`、`x-stack-podium`、`x-ring-facets`、04a、04d。
 
 | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
 |---|---|---|---|---|---|
@@ -152,7 +152,7 @@
 
 ### E 數字
 
-1–2 個數字、比例、金額。情境：`x-numbers`、`x-trend`、`x-ring`。
+1–2 個數字、比例、金額。情境：`x-numbers`、`x-trend`、`x-trend-blocks`（方塊）、`x-ring`、`x-crowd`（人群比例）、`x-news`（新聞快訊）。
 
 | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
 |---|---|---|---|---|---|
@@ -194,7 +194,7 @@
 
 ### H 提示詞
 
-一段提示詞、指令或網址，講到其中 1–2 個關鍵詞。情境：`x-prompt`。
+一段提示詞、指令或網址，講到其中 1–2 個關鍵詞。情境：`x-prompt`、`x-prompt-chat`（一問一答）、`x-terminal`（指令跑完）、`x-terminal-code`（程式碼）。
 
 | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
 |---|---|---|---|---|---|

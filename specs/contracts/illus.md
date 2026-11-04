@@ -3,13 +3,13 @@
 - **擁有者**：011 示意動畫第一棒（搬庫）。**照它做**：003（`custom/x-scene.html` 骨架載入與 mount、audit 的元件白名單與 illus-lint 接線）、002（主合成 `index.html` 與 `--gallery` 預覽頁加 `kit/illus.css`／`kit/illus.js`、`media.mjs illus-lint`）、001（storyboard 的「素材清單」、motion 的「缺的先造」、BEATS／SITUATIONS 的示意動畫列）。
 - **版本**：1（2026-10-31）。來源：作者 agent-skills repo `video/surfshark_esim/esim_backup/hyperframes/shared/illus.js`（esim ep2，68 份複本 md5 相同）。幾何、class、opts 原樣搬：把 token 換回原色碼後，73 組 opts 的輸出和來源逐字相同（只換顏色與字型）。
 - 元件清單、子元素 class 由 `dev/tests/illus.test.mjs` 逐項檢查；新增或改名元件要一起改這份與測試。
-- 數量：**20 個元件**（`COMP` 登記的函式）＋ 8 種螢幕狀態（video／play／rec／check／warn／shorts／qr／app）。brief 寫的「28 個」是這兩個數字加起來。
+- 數量：**22 個元件**（`COMP` 登記的函式）＋ 8 種螢幕狀態（video／play／rec／check／warn／shorts／qr／app）。brief 寫的「28 個」是當時的 20 個元件加 8 種狀態（015 加了 pgPerson、stage）。
 
 ## 1. 檔案
 
 | 檔 | 內容 |
 |---|---|
-| `shared/template/kit/illus.js` | 純 script（不是 module、零相依）。`window.ILLUS`：20 個元件函式、`mount`、`register`、`textWidth` |
+| `shared/template/kit/illus.js` | 純 script（不是 module、零相依）。`window.ILLUS`：22 個元件函式、`mount`、`register`、`textWidth` |
 | `shared/template/kit/illus.css` | `.il` 容器樣式＋`--il-*` 顏色 token（亮：`:root`；暗：`:root[data-theme="dark"]`） |
 | `shared/template/kit/illus-gallery.html` | 畫廊：兩欄 iframe（本檔 `?theme=light`／`?theme=dark`），每個元件、每個狀態一格，格下標 `data-*` 寫法 |
 | `shared/template/kit/illus-gallery.jpg` | 畫廊截圖（1920 寬；截圖當下的主色）。重截：`node dev/tools/illus-gallery-shot.mjs` |
@@ -31,8 +31,10 @@ opts 寫成 HTML 屬性時是 `data-<opt>`（數字、布林自動轉型）。�
 | `monitor` | 同 laptop | 同 laptop | 360×300 | 同 laptop |
 | `cloud` | `arrow`: none*／up／down | `.il-arrow`（none 時 opacity 0 仍在） | 220×150 | body＋line 4；箭頭 accent |
 | `personBust` | `tone`: a*／b | `.il-head` `.il-talk`（三條弧，預設 opacity 0） | 160×170 | body＋line；衣服 inner（a）／alt（b）；說話弧 accent |
+| `pgPerson` | `pose: stand*\|walk\|point`、`tone: a*\|b\|accent` | `.il-head` `.il-torso` `.il-arms` `.il-legs` `.il-hi`（主色軀幹，預設 opacity 0） | 120×284 | body＋line；torso inner／alt／accent（015） |
 | `personTop` | — | `.il-head` `.il-face`（面朝方向） | 110×72 | inner／body＋line；face accent |
 | `desk` | — | `.il-desk` `.il-laptop` | 320×150 | inner／body＋line；內容線 sub |
+| `stage` | — | `.il-top`（頂面）`.il-front`（正面）`.il-side`（右側面） | 960×180 | 頂面 body＋line 4；正面 accent；側面 inner（015：2.5D 地台，x-desk 用） |
 | `cone` | `angle`: 50*（度）；`len`: 300*；`fill`: false*／true | `.il-cone`（頂點在左、朝右） | 寬 len+4、高 2·len·sin(angle/2)+4（預設 304×257.6） | accent 虛線；fill＝accent-soft（兩個主題相同） |
 | `waveform` | `bars`: 28*；`seed`: 1*；`color`: white*／yellow（＝主色）／red | `.il-bar`（scaleY，transform-box 已設） | 360×90 | 柱 line／accent／warn＋body 2 px 描邊 |
 | `progress` | — | `.il-track` `.il-fill`（scaleX，origin 左） | 320×28 | track inner＋line 2；fill accent |
@@ -75,7 +77,7 @@ illus.js 的 `fill`／`stroke` 屬性只寫 `var(--il-*)` 或 `none`（Chrome �
 |---|---|
 | `ILLUS.<元件>(opts)` | 回傳 SVG 字串（用法二） |
 | `ILLUS.mount(root = document, { force })` | 把 root **底下**（不含 root 自己）還沒掛過的 `[data-illus]`／`[data-illus-src]` 換成 SVG、加 class `il`。**已經掛過的跳過**（和 ep2 不同：ep2 每次重畫）——同一份文件有好幾個子合成，重掛會把別段已綁好 tween 的子元素換掉。`{force:true}` 才重畫（動畫狀態重置）。illus.js 載入時自動跑一次 `ILLUS.mount()` |
-| `ILLUS.register(name, fn)` | 加專案元件：`name` 符合 `/^[a-z][A-Za-z0-9]*$/`，不能是 20 個內建元件或 `mount`／`register`／`textWidth`（丟錯）；同名的專案元件可以重新登記。之後 `data-illus="<name>"`、`ILLUS.<name>(o)` 都能用 |
+| `ILLUS.register(name, fn)` | 加專案元件：`name` 符合 `/^[a-z][A-Za-z0-9]*$/`，不能是 21 個內建元件或 `mount`／`register`／`textWidth`（丟錯）；同名的專案元件可以重新登記。之後 `data-illus="<name>"`、`ILLUS.<name>(o)` 都能用 |
 | `data-illus-src="illus-local/<name>.svg"` | mount 時**同步** XMLHttpRequest 讀檔、去掉 `<?xml?>`／DOCTYPE 後放進元素。路徑相對文件（主合成 `index.html`＝`work/hyperframes/`）。同一網址只讀一次。讀不到 → `console.error('[ILLUS] 讀不到 data-illus-src=…')` 一次、元素留空並標成掛過。audit 現在把它列成 ⚠「頁面 JS 錯誤」（`scriptErrors` 只把 `composition script error:` 算 ✖）；要升成 ✖ 由 003 在 `scriptErrors` 認 `[ILLUS]` 開頭。不丟例外：丟了整段時間軸都建不起來 |
 | `ILLUS.textWidth(str, size)` | 估字寬（searchBar 游標） |
 
@@ -95,7 +97,7 @@ brief 給的兩條路：(a) build 前先 inline、(b) mount 時 fetch 再補畫�
 3. 子元素用 `#<root id> .il-<名稱>` 或 `#<元件 id> .il-<名稱>` 選；元件容器要有 id 才能被 audit 量到（R7 的規則照舊），SVG 裡沒有 id。
 4. 狀態切換只動 opacity（`P.in`／`P.out`／`P.swap`）。`setAttribute('fill', 'var(--il-warn)')` 是靜態換色（整段都是那個色）；要隨時間變色就畫兩組狀態群組交叉淡化，不補間顏色（R7.3「不要用 GSAP 補間顏色」）。
 5. audit 量版面時元件容器是一般的絕對定位元素；`.il>svg` 是 `overflow:visible`，描邊一半會超出 viewBox 2 px，容器邊緣量測要留 2 px。
-6. 白名單：分鏡「插圖元件」欄的名稱要在 §2 的 20 個，或是 `register` 過的名稱，或 `illus-local/*.svg` 有檔。
+6. 白名單：分鏡「插圖元件」欄的名稱要在 §2 的 21 個，或是 `register` 過的名稱，或 `illus-local/*.svg` 有檔。
 7. 讀不到的 `data-illus-src` 目前在 audit 是 ⚠（見 §4）；建議 003 把 `[ILLUS]` 開頭的頁面錯誤升成那一段的 ✖。
 
 ## 6. `lintIllusSvg(svgText, { name, size, states })`
@@ -133,7 +135,7 @@ node shared/template/tools/media.mjs illus-lint --project projects/<專案> [--n
 | `size`／`states` | 從 `work/storyboard.md` 的插圖清單讀：`#### 插圖清單 <段 id>`（舊名「素材清單」也認：表前最近的標題或上一行有這四個字）底下、表頭有「元件」「來源」兩欄的表。「來源」含「新建」的列：名稱＝「規格：`<name>`」（沒寫就取「元件」欄開頭的英文名）、尺寸＝「尺寸」後第一個 `W×H`、狀態＝「狀態」後到「描述」前，去掉括號說明、`.il-` 前綴，以 `／`、`、`、逗號、空白分開。「來源」含「畫廊」的列：`data-illus="…"` 與其他 `data-*`（拼圖用） |
 | 讀不到規格 | 這個檔只跑不需要 `size`／`states` 的規則，另加 ⚠（插圖清單沒有這一列，或這一列沒寫尺寸） |
 | 插圖清單列了新建 SVG、沒有檔 | ✖ `[插圖清單] 新建 SVG「<name>」還沒有檔` |
-| 畫廊列的名稱不是 20 個內建元件 | ⚠（拼圖時發現） |
+| 畫廊列的名稱不是 21 個內建元件 | ⚠（拼圖時發現） |
 | 輸出 | `illus-local：N 個 SVG（…）` 或 `illus-local：無`；每則 `✖／⚠ [illus-local/<檔>] <msg> → <fix>`（✖ 先、⚠ 後）；沒有任何 finding 的檔 `✓ illus-local/<檔>`；最後一行 `通過：…` 或 `未通過：N 個錯誤（✖），M 個提醒（⚠）…`。訊息只指到 `shared/`，不指到 `specs/` |
 | 結束碼 | 有 ✖ 為 1，否則 0（沒有 illus-local 也是 0） |
 | 拼圖 `work/插圖清單.jpg` | 預設產生（`--no-sheet` 略過；沒有任何元件就不拼）。插圖清單用到的畫廊元件（同一組 `data-*` 只一格）＋`illus-local` 每個 SVG（插圖清單寫了狀態的，每個狀態多一格、打開那個 `.il-<狀態>`）；1:1 px、每格標名稱與來源（`畫廊 data-illus=…`／`新建 illus-local/<檔>`）；上一列亮色（底 #FEF7F3）、下一列暗色（`data-theme="dark"`、底 #1A191C），和畫廊同底色。寬 1920、高＝排版算出的兩列高。做法同 `dev/tools/illus-gallery-shot.mjs`：Node 內建 http 送頁（`kit/` 取自模板、`illus-local/` 取自專案）、HyperFrames 的 chrome-headless-shell `--screenshot`、ffmpeg 轉 jpg。找不到 Chrome → ⚠ 不拼（不影響結束碼） |

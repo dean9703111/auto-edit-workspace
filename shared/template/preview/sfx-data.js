@@ -1,6 +1,6 @@
 // build.mjs --gallery 產生，不要手改
 window.__SFX_DATA = {
-  "generated": "2026-11-03T12:15:08.632Z",
+  "generated": "2026-11-04T15:29:06.457Z",
   "sounds": {
     "ding": {
       "kind": "sfx",

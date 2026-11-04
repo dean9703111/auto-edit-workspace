@@ -29,6 +29,18 @@ const EXAMPLES = {
   // 011 示意動畫（x-scene 骨架與兩段參考；主角是 kit/illus.js 的插圖元件，不放 .sc-icon）
   'x-scene': { pre: 'xsc', range: [181, 186], noIcon: true }, 'x-scene-example-rec': { pre: 'xscr', range: [191, 197], noIcon: true },
   'x-scene-example-outline': { pre: 'xsco', range: [201, 207], noIcon: true },
+  // 015 換畫風與新情境（specs/015-scene-styles/brief.md）
+  'x-process-trace': { pre: 'xprt', range: [211, 215] }, 'x-process-loop': { pre: 'xprl', range: [221, 225] },
+  'x-callout-phone': { pre: 'xcph', range: [231, 236] }, 'x-callout-parts': { pre: 'xcpa', range: [241, 246], noIcon: true },
+  'x-checklist-ai': { pre: 'xcai', range: [251, 256], noIcon: true }, 'x-stack-podium': { pre: 'xstp', range: [261, 266] },
+  'x-ring-facets': { pre: 'xrf', range: [271, 276], noIcon: true }, 'x-trend-blocks': { pre: 'xtrb', range: [281, 285], noIcon: true },
+  'x-ui-mock-tidy': { pre: 'xuit', range: [291, 295], card: 'xuit-frame' }, 'x-architecture-send': { pre: 'xars', range: [301, 307] },
+  'x-prompt-chat': { pre: 'xpch', range: [311, 315] }, 'x-terminal': { pre: 'xterm', range: [321, 325], card: 'xterm-win' },
+  'x-terminal-code': { pre: 'xtc', range: [331, 335], card: 'xtc-win' },
+  'x-crowd': { pre: 'xcrd', range: [341, 345], noIcon: true },
+  'x-crowd-queue': { pre: 'xcq', range: [351, 355] },
+  'x-desk': { pre: 'xdsk', range: [361, 366], noIcon: true },
+  'x-news': { pre: 'xnews', range: [371, 375], card: 'xnews-head' },
 };
 const COUNT = Object.keys(EXAMPLES).length;
 const HEAD = ['適用的口播', '不要用在哪裡', '要改的地方', '綁句欄位', 'D 下限', '版面'];
@@ -154,7 +166,7 @@ for (const [id, { pre, range, card, noIcon }] of Object.entries(EXAMPLES)) {
     // 每個 P.xxx(sel, at …) 的 at：數字、拍點常數或「常數 ± 數字／P.BEAT」
     const beats = constsOf(p);
     const ats = [];
-    for (const m of p.code.matchAll(/\bP\.(?!at\b|end\b|dur\b|focus\b|swap\b|axis\b|sfx\b|spot\b)(\w+)\(\s*'[^']*'\s*,\s*([^,){]+)/g)) {
+    for (const m of p.code.matchAll(/\bP\.(?!at\b|end\b|dur\b|focus\b|swap\b|axis\b|sfx\b|spot\b|along\b)(\w+)\(\s*'[^']*'\s*,\s*([^,){]+)/g)) {
       const v = Function(...Object.keys(beats), 'P', `return ${m[2]}`)(...Object.values(beats), PCONST);
       assert.ok(Number.isFinite(v), `看不懂時間「${m[2]}」`);
       ats.push(v);
@@ -196,6 +208,16 @@ for (const [id, { pre, range, card, noIcon }] of Object.entries(EXAMPLES)) {
     }
   });
 }
+
+test(`${COUNT} 支的 <title> 說明互不相同（audit 的 templateFor 靠它找範例原檔，撞名會拿錯範本比【D 下限】）`, () => {
+  const seen = new Map();
+  for (const id of Object.keys(EXAMPLES)) {
+    const d = (fs.readFileSync(path.join(CUSTOM, `${id}.html`), 'utf8').match(/<title>\s*x-[\w-]+\s+([^<]+?)\s*<\/title>/) || [])[1];
+    assert.ok(d, `${id} 沒有 <title>x-名稱 說明</title>`);
+    assert.ok(!seen.has(d), `${id} 和 ${seen.get(d)} 的 <title> 說明都是「${d}」`);
+    seen.set(d, id);
+  }
+});
 
 test(`${COUNT} 支的句號區段互不重疊`, () => {
   const rs = Object.values(EXAMPLES).map((x) => x.range).sort((a, b) => a[0] - b[0]);

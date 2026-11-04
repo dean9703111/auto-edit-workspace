@@ -43,12 +43,13 @@
     #x-prompt #xprompt-card { position: absolute; left: 120px; top: 169px; width: 1180px; }
     #x-prompt #xprompt-card .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); display: flex; align-items: center; gap: 24px; }
     /* 標題列底是主色：圖示圓反過來用標題字色當底 */
-    #x-prompt #xprompt-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--sc-fs-bar); }
+    #x-prompt #xprompt-bico { --d: 72px; --i: 40px; background: var(--sc-fs-bar-ink); color: var(--brand); }   /* 不用 --sc-fs-bar：暗色主題它是漸層，當字色無效、圖示會變白 */
     /* 內容區：data-layout="col" data-justify="start"（kit/scene-layout.js）：框和膠囊靠左對齊、貼左內距、整組上下置中，不寫 left／top */
     #x-prompt #xprompt-body { position: relative; width: 1176px; height: 520px; }
-    /* 提示詞框：寬隨最長那行、高固定 288（3 行） */
-    #x-prompt #xprompt-box { position: absolute; width: max-content; max-width: 1064px; height: 288px; box-sizing: border-box;
-                             padding: 32px 40px; border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node); color: var(--sc-fs-ink); }
+    /* 提示詞框＝輸入膠囊：寬隨最長那行、高固定 288（3 行）、圓角 40；右內距 136 留給右下角的送出鈕 */
+    #x-prompt #xprompt-box { position: absolute; width: max-content; max-width: 1080px; height: 288px; box-sizing: border-box;
+                             padding: 32px 136px 32px 44px; border: 4px solid var(--v2-node-line); border-radius: 40px; background: var(--v2-node); color: var(--sc-fs-ink); }
+    #x-prompt #xprompt-send { --d: 80px; --i: 40px; position: absolute; right: 24px; bottom: 24px; background: var(--brand); color: var(--brand-ink); }
     #x-prompt #xprompt-text { white-space: nowrap; }
     /* 關鍵詞：inline-block 讓變色層和原字同一個行盒；變色層＝同位置的主色字（::before 畫 data-t，不是文字節點，打字不會算到） */
     #x-prompt .xprompt-k { position: relative; display: inline-block; }
@@ -67,6 +68,7 @@
       <div class="sc-wcard__bar"><span id="xprompt-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> <path d="M13 8H7" /> <path d="M17 12H7" /> </svg></span><span class="sc-opt">我的提示詞</span></div>
       <div id="xprompt-body" data-layout="col" data-justify="start" data-gap="md">
         <div id="xprompt-box" data-slot data-snap-width>
+          <span id="xprompt-send" class="sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m5 12 7-7 7 7" /> <path d="M12 19V5" /> </svg></span>
           <div id="xprompt-text" class="sc-t52 sc-w700">幫我把這支影片的 NG 段落<br>整理成<span id="xprompt-k1" class="xprompt-k">表格<i id="xprompt-c1" class="xprompt-c sc-kw" data-t="表格" data-layout-allow-overlap></i></span>，附上<span id="xprompt-k2" class="xprompt-k">時間碼<i id="xprompt-c2" class="xprompt-c sc-kw" data-t="時間碼" data-layout-allow-overlap></i></span><br>和剪掉的原因。</div>
         </div>
         <div id="xprompt-note" data-slot data-snap-width><span id="xprompt-nico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 10 0v4" /> </svg></span><span id="xprompt-ntext" class="sc-t52 sc-w900 sc-opt">貼之前先刪掉個資</span></div>
@@ -90,8 +92,9 @@
     else { P.wipe('#xprompt-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xprompt-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.icon('#xprompt-bico', 0.5);
     P.chars('#xprompt-card .sc-wcard__bar .sc-opt', 0.62, { stagger: 0.035 });
-    // 拍 1 輸入框：提示詞框由左擦開（框的大小已經是打完的樣子，游標停在第一個字前面）
+    // 拍 1 輸入膠囊：由左擦開（框的大小已經是打完的樣子，游標停在第一個字前面），送出鈕箭頭描出
     P.wipe('#xprompt-box', 1.0, { dir: 'left', dur: 0.5 });
+    P.icon('#xprompt-send', 1.2, { dur: 0.3 });   // 送出鈕的箭頭描出來
 
     // 拍 2 打字：逐字打出（8.5 字／秒、等速），打完游標消失
     P.type('#xprompt-text', TYPE);

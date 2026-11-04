@@ -28,7 +28,8 @@ import { CANVAS } from './canvas.mjs';
 export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'note'];
 export const MEDIA_DIRS = ['assets/screen/', 'assets/images/'];
 export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom'];
-export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5 };
+export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5, tape: 0.6 };
+export const ENTER_ONLY = ['tape'];   // 只能當進場：圖片縮小貼在全幕背景上，落下貼平、兩條紙膠帶貼上兩個上角（015）
 export const EXIT = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.4 };
 // contain：放在字幕帶上方（y 0–940，和作者錄影段「可見區不碰字幕帶」同理）；cover：鋪滿 1920×1080
 export const VIEW = { contain: [0, 0, 1920, 940], cover: [0, 0, 1920, 1080] };
@@ -78,6 +79,8 @@ const CALLOUT = { gap: 56, gapV: 40, h: 96, padL: 14, padR: 32, padPlain: 32, ic
 const SPOT = { alpha: 0.35, pad: 8, rx: 12, fade: 0.4 };
 // 右側步驟清單（seg.side）：錄影放左邊 view（x 120、寬 720，置中），清單卡 x 840、寬 960，在 y 160–880（有講者小窗：160–560）裡垂直置中
 // （使用者：「直式的可以靠左，右邊用動畫講解不是更好？」）
+// enter "tape"：截圖縮小放在這一區（上面留給膠帶、下面不碰字幕帶），紙白邊 12、膠帶 132×40
+export const TAPE = { view: [200, 90, 1520, 790], w: 132, out: 36, up: 20, drop: 0.35, gap: 0.1, dur: 0.15 };
 export const SIDE = { view: [120, 0, 720, 940], x: 840, w: 960, top: 160, bottom: 880, pipBottom: 560, bar: 112, row: 100, pad: 32, maxItems: 5, title: 12, text: 14, gap: 0.8, hi: 0.3, dim: 0.4, done: 0.7 };
 const STEP = { left: 48, top: 40, inset: 32, h: 80, extra: 118, maxLen: 12, in: 0.5, inX: -24, swOut: 0.25, swIn: 0.35, swDelay: 0.1, swReady: 0.45, carry: 0.1 };
 const ARROW = { gap: 9, lens: [120, 96], head: 22, halfW: 2, sample: 2, fade: 0.5, slide: 12, dflt: 3, max: 1, pad: 4, ring: 2 };
@@ -108,7 +111,7 @@ export const MEDIA_FIELDS = [
   ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方，空白處是主題深底或 bg.jpg；cover＝鋪滿畫面'],
   ['pip', 'true／false', 'true', '右下角子母畫面露臉；只有聲音的區間自動不放'],
   ['volume', 'null 或 −60～+12（dB）', 'null', 'null＝素材靜音；寫數字＝保留素材原聲'],
-  ['enter／exit', TRANSITIONS.map((x) => `"${x}"`).join('／'), '"fade"', '進場／出場；接在別的整張幕後面時 fade 自動變 cut'],
+  ['enter／exit', TRANSITIONS.map((x) => `"${x}"`).join('／') + '（enter 另有 "tape"）', '"fade"', '進場／出場；接在別的整張幕後面時 fade 自動變 cut；"tape"＝圖片縮小貼在全幕背景上、紙膠帶貼兩角（只給圖片、fit "contain"、橫式）'],
   ['moves', '[{ "at", "to": [x,y,w,h] 或 "full", "dur" }]', '—', '運鏡：推近到框、"full" 拉回全景；dur 預設 1 秒。圖片沒寫 moves 時自動慢推（"kenburns": false 關掉）'],
   ['marks', '[{ "at", "until", "box": [x,y,w,h], "path": [{ "at", "box", "dur" }] }]', '—', '紅框：實線 4px、描線進場；同時最多 2 個（callouts 的框也算）、停留 < 0.5s 的拿掉、最後一框多停 1s；until 不寫＝到段尾。path＝錄影捲動時框跟著移（dur 預設 0.4 秒）'],
   ['lens', '[{ "at", "until", "box": [x,y,w,h], "zoom" }]', '—', '放大鏡：從框的位置彈出到畫面中央偏上，zoom 預設 2（1.2–4）；至少 1.2 秒，until 不寫＝at＋3 秒'],
@@ -335,7 +338,10 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
   }
   for (const k of ['enter', 'exit']) {
     if (seg[k] == null) continue;
-    if (!TRANSITIONS.includes(seg[k])) err(`${k} 只能是 ${TRANSITIONS.map((x) => `"${x}"`).join('、')}，現在是 ${JSON.stringify(seg[k])}`);
+    const ok = k === 'enter' ? [...TRANSITIONS, ...ENTER_ONLY] : TRANSITIONS;
+    if (!ok.includes(seg[k])) err(`${k} 只能是 ${ok.map((x) => `"${x}"`).join('、')}，現在是 ${JSON.stringify(seg[k])}`);
+    else if (seg[k] === 'tape' && kind !== 'image') err('enter "tape"（紙膠帶貼上）只給圖片用 → 錄影改 "zoom" 或 "fade"');
+    else if (seg[k] === 'tape' && m.fit === 'cover') err('enter "tape" 要配 fit "contain"（截圖縮小貼在背景上；cover 鋪滿畫面沒地方貼）→ 拿掉 fit 或換 enter');
     else m[k] = seg[k];
   }
   if (seg.kenburns != null) {
@@ -382,6 +388,11 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
         F = m.frame = { ...F, view: { contain: SIDE.view, cover: SIDE.view }, focus: SIDE.view, avoid: [...(F.avoid || []), { box: [box[0], box[1], box[0] + box[2], box[1] + box[3]], why: '壓到右側步驟清單' }] };
       }
     }
+  } else if (it.enterFx === 'tape' && F.format === 'portrait') {
+    warn('enter "tape" 只在橫式用（直式畫面太窄，縮小貼上看不清楚）→ 這段改用 "zoom" 進場');
+    it.enterFx = 'zoom';
+  } else if (it.enterFx === 'tape') {
+    F = m.frame = { ...F, view: { ...F.view, contain: TAPE.view }, focus: TAPE.view };
   } else if (F.format !== 'portrait' && m.fit !== 'cover' && W / H < 0.8) {
     warn(`直式錄影（${W}×${H}）在橫式影片只佔中間一條、兩邊空著 → 加 "side": { "title": "…", "items": [{ "at": "#N@詞", "text": "…" }] }：錄影靠左、右邊列步驟，講到哪一條亮哪一條`);
   }
@@ -1025,7 +1036,8 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   const style = `left:${G.left}px;top:${G.top}px;width:${G.width}px;height:${G.height}px`;
   // 直式：畫面座標的層（.mstage／.mmarks／.mann／.mlreg）寬高吃 --cw／--ch（kit/media.css 預設 1920×1080）
   html.push(`  <div id="el-${id}" class="mlayer" style="z-index:${it.z}${port ? `;--cw:${CW}px;--ch:${CH}px` : ''}">`);
-  html.push(`    <div id="mbg-${id}" class="clip mbg" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}"></div>`);
+  const taped = it.enterFx === 'tape';
+  html.push(`    <div id="mbg-${id}" class="clip mbg${taped ? ' mbg--paper' : ''}" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}"></div>`);
   // 面板：不計時的外框，大小＝錄影可見區（P.grow 從小窗長成它）；運鏡層放在裡面、位移抵回去，座標還是畫面座標
   html.push(`    <div id="mgr-${id}" class="mgrow" style="${style}" data-layout-allow-overflow>`);
   html.push(`    <div id="mst-${id}" class="mstage" style="left:${-G.left}px;top:${-G.top}px" data-layout-allow-overflow>`);
@@ -1047,8 +1059,10 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
              data-track-index="${nextTrack()}"${attrs} playsinline style="${style}"></video>`);
     });
   } else {
-    html.push(`      <img id="mi-${id}" class="clip mimg" src="${base}${m.asset}" alt="" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}" style="${style}">`);
+    html.push(`      <img id="mi-${id}" class="clip mimg${taped ? ' mimg--paper' : ''}" src="${base}${m.asset}" alt="" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}" style="${style}">`);
   }
+  // 紙膠帶：貼在圖片兩個上角（stage 座標，跟著運鏡一起動）；不計時，進場時彈上去
+  if (taped) [[G.left - TAPE.out, -34], [G.left + G.width + TAPE.out - TAPE.w, 34]].forEach(([x, r], k) => html.push(`      <i id="mtp-${id}-${k + 1}" class="mtape" style="left:${Math.round(x)}px;top:${Math.round(G.top - TAPE.up)}px;rotate:${r}deg" data-layout-allow-overlap></i>`));
   if (m.marks.length) {
     html.push(`      <svg id="mmk-${id}" class="clip mmarks" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}" viewBox="${vb}" data-layout-allow-overlap>`);
     for (const mk of m.marks) html.push(`        <g id="fo-${mk.id}"><rect id="${mk.id}" class="mmark" x="${mk.rect[0]}" y="${mk.rect[1]}" width="${mk.rect[2]}" height="${mk.rect[3]}" rx="${mk.rx}" pathLength="1" style="stroke-width:${mk.sw}px"/></g>`);
@@ -1125,6 +1139,12 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   if (ent === 'fade') tl.push(`tl.fromTo('${both}', { opacity: 0 }, { opacity: 1, duration: ${ENTER.fade}, ease: 'sine.out' }, ${sh(s)});`);
   else if (ent === 'slide') {
     tl.push(`tl.fromTo('${layer}', { x: ${CW} }, { x: 0, duration: ${ENTER.slide}, ease }, ${sh(s)});`);
+    if (pipSel) tl.push(`tl.fromTo('${pipSel}', { opacity: 0 }, { opacity: 1, duration: ${ENTER.fade}, ease: 'sine.out' }, ${sh(s)});`);
+  } else if (ent === 'tape') {
+    // 整層 0.2 秒淡入；面板從 1.05 倍、多轉 3° 落下貼平（0.35 秒）；兩條膠帶依序啪地貼上
+    tl.push(`tl.fromTo('${layer}', { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'sine.out' }, ${sh(s)});`);
+    tl.push(`tl.fromTo('#mgr-${id}', { scale: 1.05, rotation: 3 }, { scale: 1, rotation: 0, duration: ${TAPE.drop}, ease: 'power3.out' }, ${sh(s)});`);
+    [1, 2].forEach((k) => tl.push(`tl.fromTo('#mtp-${id}-${k}', { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: ${TAPE.dur}, ease: 'power2.out' }, ${sh(s + TAPE.drop + (k - 1) * TAPE.gap)});`));
     if (pipSel) tl.push(`tl.fromTo('${pipSel}', { opacity: 0 }, { opacity: 1, duration: ${ENTER.fade}, ease: 'sine.out' }, ${sh(s)});`);
   } else if (ent === 'zoom') {
     tl.push(`tl.fromTo('${layer}', { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: ${ENTER.zoom}, ease: 'power2.out' }, ${sh(s)});`);
