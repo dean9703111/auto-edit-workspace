@@ -19,7 +19,7 @@
   <a href="https://deanlin.net/auto-edit-workspace/shared/template/">情境庫</a> ·
   <a href="https://deanlin.net/auto-edit-workspace/shared/template/fx/">字卡動態</a> ·
   <a href="PROMPTS.md">提示詞</a> ·
-  <a href="shared/template/EDITOR.md">剪輯台</a> ·
+  <a href="shared/template/EDITOR.md">剪輯與構圖</a> ·
   <a href="#常見問題">常見問題</a>
 </p>
 
@@ -27,7 +27,7 @@
 
 Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區開源免費，轉檔、轉字幕、render 都在你自己的電腦上做。
 
-> **English** — An open-source AI video editing workspace for talking-head videos. Drop in your footage, voice-over, screen recordings and images, then tell your AI agent (Claude Code, Codex, MiniMax Code or Cursor) in plain language to "cut it clean" or "make the final cut": it removes flubbed takes, aligns subtitles to your script, adds info cards, scene animations and sound effects, and renders an MP4 (or CapCut-ready layers). A browser-based editor lets you trim, fix subtitles and card text, and queue redo requests for the agent. Built on [HyperFrames](https://github.com/heygen-com/hyperframes); docs are in Traditional Chinese.
+> **English** — An open-source AI video editing workspace for talking-head videos. Drop in your footage, voice-over, screen recordings and images, then tell your AI agent (Claude Code, Codex, MiniMax Code or Cursor) in plain language to "cut it clean" or "make the final cut": it removes flubbed takes, aligns subtitles to your script, adds info cards, scene animations and sound effects, and renders an MP4 (or CapCut-ready layers). A browser-based editor lets you trim, fix subtitles and card text, and queue redo requests for the agent. The framing page previews your footage in animations, with custom colors, uploaded backgrounds and AI-generated background options applied per project. Built on [HyperFrames](https://github.com/heygen-com/hyperframes); docs are in Traditional Chinese.
 
 影片教學「AI 自動剪輯 EP1」：待補
 
@@ -39,11 +39,16 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 | 能做什麼 | [你說一句，AI 做一段](#你說一句ai-做一段)・[不滿意就改](#不滿意就改) |
 | 背後怎麼運作 | [AI 判斷，程式計算](#ai-判斷程式計算) |
 | 剪自己的影片 | [開自己的專案](#開自己的專案)・[錄影前檢查](#錄影前檢查)・[設定講者](#設定講者) |
-| 換風格、帶去剪映 | [換成自己的風格](#換成自己的風格)・[搭配剪映](#搭配剪映選用) |
+| 先看畫面、換風格 | [構圖：用自己的畫面看動畫](#構圖用自己的畫面看動畫)・[換成自己的風格](#換成自己的風格) |
+| 帶去剪映 | [搭配剪映](#搭配剪映選用) |
 | 卡住了 | [常見問題](#常見問題)・[PROMPTS.md「卡住的時候」](PROMPTS.md) |
 | 每個檔案在做什麼 | [CONTENTS.md](CONTENTS.md)（模板、工具、文件總覽） |
 
 ## 四步開始
+
+<p align="center"><a href="dev/site/guides/workflow.svg"><picture><source media="(max-width: 600px)" srcset="dev/site/guides/workflow-mobile.svg"><img src="dev/site/guides/workflow.svg" alt="從素材到成片：放素材 → 剪乾淨 → 構圖與風格 → 確認分鏡 → 預覽與修改 → 輸出與驗收；圖中標出每一步要看的停點" width="1000"></picture></a></p>
+
+先看這張流程圖：你準備素材，AI 剪片；做到剪輯清單、構圖、分鏡、預覽時，停下來讓你確認。點圖可放大。
 
 1. **取得工作區**，三種方式挑一種：
    - 會用終端機：`git clone https://github.com/dean9703111/auto-edit-workspace.git`
@@ -65,7 +70,7 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 | 「可以了，輸出成片」 | 輸出 `final.mp4`，附上驗收截圖 |
 | 「輸出剪映素材」 | 拆成主軌、透明背景的動畫片段和字幕檔，帶去剪映繼續剪 |
 
-做到重要的地方 AI 會停下來給你看，一共六個停點：① 剪輯清單、② 構圖、③ 分鏡表、④ Studio 預覽、⑤ 剪輯台、⑥ 換背景的預覽。你說「可以」它才往下。
+流程有六種停點：① 剪輯清單、② 構圖、③ 分鏡表、④ Studio 預覽；需要自己調整時開 ⑤ 剪輯台，換共用背景時看 ⑥ 背景預覽。AI 會告訴你這一步要看什麼、回什麼；例如構圖調好後按「儲存並套用」，再回「調好了」。
 
 畫面會長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看（本機打開 `shared/template/index.html` 也可以，建議用 Chrome 或 Edge）：18 種情境模板、17 支情境動畫範例、示意動畫、40 種字卡動態。頁面上方可以切換風格包和亮色／暗色，還沒開始剪就能比較。
 
@@ -90,20 +95,43 @@ AI 先做一版，你有三種改法：
 | 音效、配樂 | 「s08 不要音效」「結尾加配樂」 | 音效只從內建的音效庫挑；超過一分鐘沒有音效時 AI 會補上；要不要片尾配樂，分鏡表會問你 |
 | 講者畫面 | 「這集要調光、瘦臉」「這集要美顏」 | 預設關閉，每次停下來的回報都會寫現在開了沒；見[講者調光、瘦臉、美顏](#講者調光瘦臉美顏選用) |
 | 主色、背景、亮暗 | 「這集換暗色」「換成藍圖風格」 | 見[換成自己的風格](#換成自己的風格) |
-| 橫式／直式 | 「做成直式短影片」 | 長片用橫式；Shorts、Reels、抖音用直式，字幕和版面自動換 |
+| 橫式／直式 | 「做成直式短影片」 | 直拍素材可做 Shorts、Reels、抖音，字幕和版面用直式規格；目前不支援橫拍轉直式 |
 
-### 剪輯台
+### 剪輯：字幕、音量、卡片自己調
 
 <p align="center"><img src="dev/site/editor.jpg" alt="剪輯台：左邊預覽、中間屬性、右邊修改單，下方時間軸" width="800"></p>
 
-說「打開剪輯台」，AI 會給你一個本機網址，在瀏覽器裡自己調，存檔後寫回這一集的設定：
+說「打開剪輯台」，AI 會給你一個本機網址，在瀏覽器裡自己調，存檔後寫回這一集的設定。現在介面名稱是「剪輯」與「構圖」，原本的提示詞照樣能用：
 
 - **時間軸**：主軌、字幕、動畫、插入素材、人聲波形、音效各一軌。拖邊緣裁剪、切掉一段、調每一軌的音量、加淡入淡出和轉場。
 - **字幕**：改錯字、拆句、合併、拖時間；你改過的字幕 AI 不會再改回去。
 - **卡片上的字**：點一張資訊卡就能改字，切到「成片預覽」打字時畫面上的字跟著換；存檔後自動重新產生、量版面，字擠到或超出會列在檢查清單。
-- **構圖、講者**：上方「構圖」另開構圖台拖框；講者的調光、瘦臉、美顏可以開關、調強度。
+- **構圖、講者**：上方「構圖」另開一頁，拖框、調光、選主色和背景，用自己的畫面預覽動畫；講者的瘦臉、美顏也能開關、調強度。
 
 細節在 [EDITOR.md](shared/template/EDITOR.md)。
+
+### 構圖：用自己的畫面看動畫
+
+說「做成片」到停點 ②，或在「剪輯」上方按「構圖」，就能在同一頁調整畫面與這一集的風格：
+
+<p align="center"><a href="dev/site/guides/framing.jpg"><img src="dev/site/guides/framing.jpg" alt="構圖介面實際截圖：1 左側拖框決定講者大小與位置；2 右側看字幕、字卡與講者的相對位置；3 頁首儲存並套用" width="1000"></a></p>
+
+**看圖操作：① 左邊拖框 → ② 右邊看版面 → ③ 儲存並套用。** 介面截圖使用內建示範講者，點圖可放大。
+
+1. **拖框、調講者**：決定放大多少、講者放哪裡；旁邊看套上字幕與字卡的位置，也能開調光、瘦臉、美顏。
+2. **選主色、換背景**：選色或輸入色碼。全畫面、側邊欄、章節各有一張背景，可以拖入或點選上傳 JPG、PNG、WebP，每張 12 MB 以內。
+3. **用自己的畫面看動畫**：目前播放頭的畫面連同裁切、調光，直接放進下方的動畫預覽。先看六個範例，也能篩選情境動畫、版型、字卡，展開全部或點開大預覽。滑鼠移入循環播放，移開回到內容出齊的畫面；還沒儲存也能比較。
+4. **滿意後按「儲存並套用」**：確認構圖、主色和背景。已有成片時，工具會自動更新底片與剪輯預覽；還沒有成片就先存設定，接著做分鏡與動畫。
+
+<p align="center"><a href="dev/site/guides/design.jpg"><img src="dev/site/guides/design.jpg" alt="背景與動畫預覽介面實際截圖：1 左側選主色、背景用途或準備 AI 生圖指令；2 右側用同一個講者畫面比較多種情境動畫" width="1000"></a></p>
+
+**往下看：① 左邊換色、換圖 → ② 右邊比較動畫。** 滑鼠移入會播放，點開可放大；這一步先看效果，最後回頁首按「儲存並套用」。
+
+想請 AI 畫背景：選主色、放參考圖（選用）、選設計風格並補描述，按「複製生圖指令」貼給 AI。AI 依指令產生 **A／B／C 三組、每組三種用途，共 9 張背景**。回構圖頁選「全畫面／側邊欄／章節」，各自挑原本背景或 A／B／C，也能混搭；新圖會在切回頁面時載入，或按「載入圖片」。最後一樣按「儲存並套用」。
+
+<p align="center"><a href="dev/site/guides/background-flow.svg"><picture><source media="(max-width: 600px)" srcset="dev/site/guides/background-flow-mobile.svg"><img src="dev/site/guides/background-flow.svg" alt="AI 背景選圖流程：主色、參考圖與描述交給 AI，產生 A、B、C 三組共九張圖，再按全畫面、側邊欄、章節各自選圖混搭，最後儲存並套用；小圖為流程示意" width="1000"></picture></a></p>
+
+這些設定只套用這一集，原素材、共用模板和歷次草稿都會保留。頁面的按鈕會準備生圖指令，圖片由你使用的 AI 工具產生。
 
 ### 修改單：勾給 AI 重做
 
@@ -136,7 +164,7 @@ flowchart LR
 | 階段 | AI Agent 判斷 | 程式計算 | 停下來給你看 |
 |---|---|---|---|
 | 剪乾淨 | 看重講候選和講稿外的話，決定哪些列進剪輯清單 | 主軌轉檔、whisper 詞級逐字稿、對講稿找重講並列出章節起點（`media.mjs ng-scan`）、NG 對齊停頓並產生 auto-editor 指令（`ng-snap`）、初剪驗證（`verify-rough`）、字幕照講稿斷句對時（`srt-align`） | ① 剪輯清單 |
-| 構圖 | 在構圖台拖框，決定畫面放大多少、講者放哪裡；同一頁開關調光、瘦臉、美顏 | 量講者動作範圍、算建議的框（`qc.mjs framing`）、臉部偵測與瘦臉美顏底片（`look.mjs`） | ② 構圖 |
+| 構圖 | 拖框決定講者位置，調光、選主色與背景，用自己的畫面看動畫後儲存並套用 | 量講者動作範圍、算建議的框（`qc.mjs framing`）、臉部偵測與瘦臉美顏底片（`look.mjs`）、保存並套用本集風格 | ② 構圖 |
 | 分鏡 | 每段先問四題（有沒有對得上的錄影、有沒有看得見的東西在動、是不是抽象的結構、是不是只有一句重點），決定用錄影、示意動畫、情境動畫還是字卡，再寫卡片上的字 | 檢查字數上限、版面、文字出現時間對不對得上講到的詞（`build.mjs --check`），截出每段的完成態（`qc.mjs storyboard`） | ③ 分鏡表 |
 | 定稿 | 照你的意見、修改單改指定的段落 | 組成 HyperFrames 專案、音效對準畫面事件、人聲調到 −14 LUFS（`build.mjs`）；量文字撐破、被裁、擋臉（`audit.mjs`）；每段留版本（`versions.mjs`） | ④ Studio 預覽、⑤ 剪輯台 |
 | 輸出 | 看觀影總表判斷哪裡怪 | render、檢查格式、長度、響度、黑畫面、畫面凍結（`qc.mjs final`）；選用：拆成剪映素材（`capcut.mjs`） | — |
@@ -214,7 +242,9 @@ AI 剪得再好，也救不回糊掉的畫面和聽不清楚的聲音。開錄�
 
 ## 換成自己的風格
 
-主色、子母畫面外框、背景圖打包成一個「風格包」，內建「預設」（橘色）和示範用的「藍圖」（藍色），亮色、暗色都有。不用改程式：
+**只想調這一集**，先在[構圖頁](#構圖用自己的畫面看動畫)選主色、上傳背景，或複製指令請 AI 生圖，選好再按「儲存並套用」。同頁就能看動畫效果。
+
+**想讓之後每一集共用一套**，可以把主色、子母畫面外框、背景圖做成風格包。內建「預設」（橘色）和示範用的「藍圖」（藍色），亮色、暗色都有，不用改程式：
 
 | 想做的事 | 跟 AI 說 | 會發生什麼 |
 |---|---|---|
@@ -270,6 +300,14 @@ Skill 文件寫的參數名稱，可能和你裝的版本不同。以 `auto-edit
 ### 修改單送出後，怎麼知道 AI 改好了
 
 AI 改完會寫一份回饋紀錄（`work/feedback/r<N>.md`），剪輯台讀到就把那段移到「已改完」、標 ✓，列出 AI 做了什麼。按「▶ 看結果」切到成片預覽、跳到那段。重新整理剪輯台的頁面就會更新。
+
+### 構圖頁選了背景，為什麼成片還沒變
+
+選色、換圖時先更新同頁動畫預覽。確認後按頁首的「儲存並套用」，才會套用到這一集；已有成片會自動更新剪輯預覽，沒有成片則留給後續製作使用。AI 生圖完成後，切回頁面或按「載入圖片」，選好圖再儲存。
+
+### 更新工具後，構圖動畫載不出來
+
+請 AI 重新開啟剪輯：`node shared/template/tools/editor.mjs --project projects/<專案>`。工具會檢查後端版本，需要時以原本的 port 重啟。回構圖頁按「重新連接」可保留拖好的框；舊頁面沒有這個按鈕時，重新整理頁面。
 
 ### Windows 可以用嗎
 
