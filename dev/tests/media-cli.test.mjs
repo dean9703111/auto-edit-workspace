@@ -171,6 +171,22 @@ test('cuts.md：兩張表用表頭辨認、四種時間寫法、待確認的列�
   assert.match(parseCutsMd('| 時間碼 | 內容 | 原因 |\n|---|---|---|\n| 1:03– | x | y |').errors[0], /NG 第 1 列的時間碼「1:03–」看不懂 → 寫成 1:03\.00–1:05\.80/);
 });
 
+test('cuts.md「剪」欄（016）：[x] 剪、[ ] 不剪，待確認只是提醒；setCutChecks 只改那一格，舊格式自動在最前面加欄', async () => {
+  const { parseCutsMd, setCutChecks } = await import(MEDIA);
+  const md = ['## NG', '', '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|',
+    '| [x] | 0:10.00–0:11.00 | a\\|b | 重講 | — |', '| [ ] | 0:20.00–0:21.00 | 不剪 | 卡住 | — |', '| [x] | 0:30.00–0:31.00 | 不確定 | 講稿外 | 可能是 whisper 補的 |', '', '## 需要你決定', '', '- 無', ''].join('\n');
+  const j = parseCutsMd(md);
+  assert.equal(j.hasCutCol, true);
+  assert.deepEqual(j.ng.map((r) => [r.row, r.cut, r.pending, r.text, r.reason]), [[1, true, false, 'a|b', '重講'], [2, false, false, '不剪', '卡住'], [3, true, true, '不確定', '講稿外']]);
+  const next = setCutChecks(md, { 1: false, 2: true });
+  const before = md.split('\n');
+  assert.deepEqual(next.split('\n').filter((l, i) => l !== before[i]), ['| [ ] | 0:10.00–0:11.00 | a\\|b | 重講 | — |', '| [x] | 0:20.00–0:21.00 | 不剪 | 卡住 | — |']);
+  assert.deepEqual(parseCutsMd(next).ng.map((r) => r.cut), [false, true, true]);
+  // 舊格式：沒指定的列照原本（待確認的不剪）；CRLF 照留
+  const old = '| 時間碼 | 內容 | 原因 | 待確認 |\r\n|---|---|---|---|\r\n| 0:10.00–0:11.00 | x | y | |\r\n| 0:50.00–0:51.00 | z | w | 重複？ |\r\n';
+  assert.equal(setCutChecks(old, { 1: false }), '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |\r\n| --- | --- | --- | --- | --- |\r\n| [ ] | 0:10.00–0:11.00 | x | y |  |\r\n| [ ] | 0:50.00–0:51.00 | z | w | 重複？ |\r\n');
+});
+
 // v1：30fps；停頓 10.0–12.667、20–23、37.3–41.0（章節 1 前）、59–59.9（章節 2 前，太短）
 const V1 = { version: '1', source: 'a.mp4', chunks: [[0, 300, 1], [300, 380, 99999], [380, 600, 1], [600, 690, 99999], [690, 1119, 1], [1119, 1230, 99999], [1230, 1770, 1], [1770, 1797, 99999], [1797, 2000, 1]] };
 const CUTS_MD = ['| 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|', '| 0:10.20–0:20.30 | 我們先來看 | 講錯重來 | |', '| 0:30.00–0:31.00 | 這個 | 卡住 | |', '| 0:50.00–0:51.00 | 重複？ | 不確定 | 重複？ |', '',
@@ -207,6 +223,23 @@ test('ng-snap：NG 吸附停頓、找不到停頓用原值 ⚠、章節保留 3 
   assert.match(bad.stderr, /--margin 要寫成秒數加 sec，例如 0\.15sec/);
   fs.rmSync(path.join(p, 'work', 'cuts.md'));
   assert.match(node(MEDIA, ['ng-snap', '--v1', v1], 'pn').stderr, /找不到 projects\/pn\/work\/cuts\.md → 先照「剪乾淨」第 4 步/);
+});
+
+test('ng-snap（016）：有「剪」欄時只剪 [x]，沒勾的列不剪也不 ⚠，待確認但有勾的照剪', () => {
+  const p = mkProj('pcut');
+  clip(path.join(p, 'assets', 'camera', 'a.mp4'), 1);
+  fs.writeFileSync(path.join(p, 'work', 'cuts.md'), ['| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|',
+    '| [x] | 0:10.20–0:20.30 | 我們先來看 | 講錯重來 | — |', '| [ ] | 0:30.00–0:31.00 | 這個 | 卡住 | — |', '| [x] | 0:50.00–0:51.00 | 重複？ | 不確定 | 重複？ |'].join('\n'));
+  const v1 = path.join(root, 'pcut.v1.json');
+  fs.writeFileSync(v1, JSON.stringify(V1));
+  const r = node(MEDIA, ['ng-snap', '--v1', v1], 'pcut');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const cmd = r.stdout.split('\n').find((l) => l.startsWith('auto-editor '));
+  assert.match(cmd, /--cut-out "10sec,23sec" --cut-out "50sec,51sec"/);
+  assert.doesNotMatch(cmd, /30sec/);
+  assert.match(r.stdout, /NG：cuts\.md 3 列 → 剪 2 段（1 列沒勾不剪）/);
+  assert.match(r.stdout, /2 {3}0:30\.00–0:31\.00\s+—\s+沒勾，不剪/);
+  assert.doesNotMatch(r.stdout, /標了待確認/);
 });
 
 test('ng-snap：NG 連下一句開頭一起剪、吃掉章節的停頓 → 這章不保留並 ⚠；終點落在章節停頓裡 → 吸到停頓起點；多支主軌沒接 → ✖', async () => {

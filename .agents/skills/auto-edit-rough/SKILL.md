@@ -10,7 +10,7 @@ version: 0.1.0
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
-| `assets/camera/`、`assets/voice/` | 步驟 1–5 | `work/main.mp4`、`work/cuts.md`（多支主軌另有順序表） | NG 表表頭四欄、時間碼是 `work/main.mp4` 的 `起–迄` | ① 剪輯清單 |
+| `assets/camera/`、`assets/voice/` | 步驟 1–5 | `work/main.mp4`、`work/cuts.md`（多支主軌另有順序表）、剪輯清單網址 | NG 表表頭五欄（第一欄「剪」）、時間碼是 `work/main.mp4` 的 `起–迄` | ① 剪輯清單 |
 | ① 通過 | 步驟 6–8 | `work/rough.mp4`、`work/rough.srt`、`work/cutpoints.json` | 見各步「完成判準」 | — |
 
 指令都在工作區根目錄執行。`<專案>` 換成資料夾名稱；`<主軌>`＝`projects/<專案>/work/main.mp4`（步驟 1 產生）。
@@ -58,7 +58,7 @@ npx hyperframes transcribe "<主軌>" -d projects/<專案>/work --model small --
 node shared/template/tools/media.mjs ng-scan --project projects/<專案>
 ```
 
-它把詞級逐字稿對到講稿：講到後面又跳回前面重講的，前一次列成 NG 候選（留最後一次）；講稿找不到的話列「講稿外」；沒講稿時比相鄰句。印的 NG 表照抄進 cuts.md，「講稿外」逐條看：是講到一半卡住、自言自語的才加進 NG 表，拿不準就放「待確認」。講稿每一行的開口時間在 `work/ng-scan.md`，要查某句在哪就查它，不要自己寫程式比對逐字稿。
+它把詞級逐字稿對到講稿：講到後面又跳回前面重講的，前一次列成 NG 候選（留最後一次）；講稿找不到的話列「講稿外」；沒講稿時比相鄰句。印的 NG 表照抄進 cuts.md（「剪」欄一律 `[x]`，不想剪的由使用者在剪輯清單頁取消），「講稿外」逐條看：是講到一半卡住、自言自語的才加進 NG 表（「剪」也寫 `[x]`），拿不準就在「待確認」寫原因。講稿每一行的開口時間在 `work/ng-scan.md`，要查某句在哪就查它，不要自己寫程式比對逐字稿。
 完成判準：每段 NG 有原片時間碼、內容、原因；拿不準的，「待確認」欄寫原因。
 常見錯誤：自己寫腳本、拿音軌驗證逐字稿 → 停，照 AGENTS.md「剪乾淨時不要做的事」，ng-scan 的表就是依據；印 `⚠ work/transcript.json 只到 …` → 步驟 7 已經把它換成 rough.mp4 的了，回到步驟 2 重轉再跑。
 
@@ -71,16 +71,17 @@ node shared/template/tools/media.mjs ng-scan --project projects/<專案>
 完成判準：cuts.md 有章節空檔表，表頭 `| 章節 | 第一句 | 時間碼 |`；時間碼是 ng-scan 印的原值。
 常見錯誤：時間碼寫成 rough.mp4 的秒數 → 一律寫 `work/main.mp4` 的秒數；自己用詞級時間推開口點 → 不用，照抄；印「找不到 → 聽 main.mp4 補」→ 那一章在 `work/ng-scan.md` 找前後行的時間，寫進「需要你決定」。
 
-**5. 寫 `work/cuts.md`，先預跑一次 ng-snap，然後停點 ①**（表格範本在 `references/ng-rules.md`）
+**5. 寫 `work/cuts.md`，先預跑一次 ng-snap，開剪輯清單頁，然後停點 ①**（表格範本在 `references/ng-rules.md`）
 
 ```
 node shared/template/tools/media.mjs ng-snap --project projects/<專案>
+node shared/template/tools/editor.mjs --project projects/<專案>
 ```
 
-完成判準：cuts.md 存在、NG 表表頭逐字 `| 時間碼 | 內容 | 原因 | 待確認 |`；ng-snap 印的 ⚠「原始停頓只有 Ns」抄進 cuts.md 最後的「需要你決定」；「需要你決定」一項都沒有才寫一行「無」，有項目就不寫「無」。
-常見錯誤：ng-snap 表格內容欄寫「終點落在後一次開口（m:ss.ss）之前的停頓末端，後一次完整保留」→ 是安全的，不用標待確認；`✖ work/cuts.md 裡找不到 NG 表` → 表頭照抄範本；`✖ … 時間碼「…」看不懂` → 寫成 `1:03.00–1:05.80`。
+完成判準：cuts.md 存在、NG 表表頭逐字 `| 剪 | 時間碼 | 內容 | 原因 | 待確認 |`、每列「剪」是 `[x]`；editor.mjs 印出「剪輯清單：<網址>」，停點那一行的網址照抄它；ng-snap 印的 ⚠「原始停頓只有 Ns」抄進 cuts.md 最後的「需要你決定」；「需要你決定」一項都沒有才寫一行「無」，有項目就不寫「無」。
+常見錯誤：ng-snap 表格內容欄寫「終點落在後一次開口（m:ss.ss）之前的停頓末端，後一次完整保留」→ 是安全的，不用標待確認；`✖ work/cuts.md 裡找不到 NG 表` → 表頭照抄範本；`✖ … 時間碼「…」看不懂` → 寫成 `1:03.00–1:05.80`；editor.mjs 印 `✖ 剪輯沒有啟動成功` → 照退路表，停點那一行的網址改寫 `work/cuts.md`。
 
-**6. ① 通過後：NG 對齊停頓、預演、輸出初剪**（使用者改過 cuts.md 就先重新讀檔）
+**6. ① 通過後：NG 對齊停頓、預演、輸出初剪**（先重新讀 cuts.md：使用者在剪輯清單頁取消的列「剪」是 `[ ]`，ng-snap 不剪）
 
 ```
 node shared/template/tools/media.mjs ng-snap --project projects/<專案>
@@ -130,20 +131,22 @@ node shared/template/tools/media.mjs screen-sync --project projects/<專案>
 ## 停點
 
 ```
-⏸ 停點 ① 剪輯清單｜請看：work/cuts.md｜請回：「可以」或要改的列
+⏸ 停點 ① 剪輯清單｜請看：<剪輯清單網址>｜請回：勾好後說「可以」，或要改的列
 ```
+
+剪輯清單頁（`/cuts`）每列可以試聽，勾＝剪、取消＝保留，勾了就存回 cuts.md 的「剪」欄；cuts.md 改了頁面會自己更新。
 
 | 使用者回 | 做什麼 |
 |---|---|
-| 「可以」「清單沒問題，繼續」 | 停點紀錄加「通過」→ 步驟 6 |
-| 「第 3 列不要剪」這類指名修改 | 改 cuts.md → 重貼停點 ①（紀錄寫「修改後重停」） |
+| 「可以」「清單沒問題，繼續」 | 停點紀錄加「通過」→ 步驟 6（以 cuts.md 的「剪」欄為準） |
+| 「第 3 列不要剪」這類指名修改 | 把那一列的「剪」改成 `[ ]`（要剪改 `[x]`；改時間碼就改那一格）→ 重貼停點 ①（紀錄寫「修改後重停」） |
 | 改主軌順序（「聲音檔放最前面」） | 步驟 1 加 `--order "檔名1,檔名2"` 重接 → 步驟 2–5 重做 → 重貼停點 ①（紀錄寫「修改後重停」） |
 | 有補錄要插進旁白中間（「录音3 取代中間音檔裡那一小段」） | 檔名後加 `@起-迄` 只取一段，同一支可切成前後兩段：`--order "a.mp4,旁白.mp3@0-577.7,補錄.aac@2.1-32.4,旁白.mp3@603.4-,b.mp4"`（起訖照逐字稿找那幾句的位置）→ 步驟 2–5 重做 |
 | 「改好了」 | 重新讀 cuts.md，以檔案為準 → 步驟 6 |
 
 ## 自我核對
 
-- [ ] cuts.md 每列都有原因，拿不準的寫在「待確認」
+- [ ] cuts.md 每列都有原因、「剪」是 `[x]`，拿不準的寫在「待確認」
 - [ ] 多支主軌的順序在停點 ① 問過
 - [ ] rough.mp4 長度＝auto-editor 統計；verify-rough 印 ✓
 - [ ] rough.srt 是 srt-align 產生的：每則一個完整語句、最多 18 字（直式 10 字）、沒有「，」「。」、繁體、中英之間半形空格
@@ -161,6 +164,7 @@ node shared/template/tools/media.mjs screen-sync --project projects/<專案>
 | `找不到 work/cuts.v1.json → 先跑 ng-snap 印的第 3 行…`（verify-rough） | 照 → 跑 ng-snap 印的第 3 行，再跑 verify-rough | 停下來回報 |
 | `✖ 沒有 work/transcript.json，也沒有 work/rough.srt → 先轉逐字稿：…`、`✖ work/transcript.json 比 work/rough.mp4 舊…` | 照 → 跑它附的轉錄指令（步驟 7 第 1 行），再從第 2 行開始 | 停下來回報：指令、錯誤原文、已經試過什麼 |
 | `⚠ 沒有 work/transcript.json：時間是整則按字數比例估的 → 寫回後要跑 … snap-srt …` | 照 → 跑 `node shared/template/tools/media.mjs snap-srt --project projects/<專案> --dry-run`，表合理再去掉 `--dry-run`（只跑一次） | 回報寫「字幕時間是 snap-srt 對的」 |
+| `✖ 剪輯沒有啟動成功`（editor.mjs） | 讀它印的 log 最後幾行；停點那一行的網址改寫 `work/cuts.md`，請使用者直接改「剪」欄 | 照樣停點 ①，回報附 log 原文 |
 | 工具呼叫 12 次還沒寫出 cuts.md | 停下來回報進度與卡住的點 | — |
 
 ## 工具呼叫預算

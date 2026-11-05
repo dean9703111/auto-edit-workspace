@@ -14,6 +14,8 @@
 
 使用者說「打開剪輯台」時，是停點 ⑤（`AGENTS.md`「停點總表」）；流程照 `.agents/skills/auto-edit-review/SKILL.md` 流程 C。給網址時回覆最後一行照停點 ⑤ 的固定格式。
 
+停點 ①（剪輯清單）也用剪輯台：寫好 `work/cuts.md` 後啟動，把印出的「剪輯清單」網址（`…/cuts`）給使用者，最後一行照停點 ① 的固定格式（`.agents/skills/auto-edit-rough/SKILL.md` 步驟 5）。剪輯清單頁只要有 `work/cuts.md`（試聽要 `work/main.mp4`），只寫 cuts.md NG 表的「剪」欄（`[x]` 剪、`[ ]` 不剪；舊格式沒有這一欄就加在最前面）；cuts.md 被 AI 改過會擋下存檔並重新載入；有 `work/rough.mp4` 之後只能看。
+
 停點 ②（構圖）也用剪輯台：啟動後印的「構圖台」網址（`…/framing`）給使用者，最後一行照停點 ② 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 2）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
 
 開之前要有：
@@ -39,6 +41,7 @@ node shared/template/tools/editor.mjs --project projects/example
 
   ```
   剪輯：http://127.0.0.1:4400/
+  剪輯清單：http://127.0.0.1:4400/cuts
   構圖：http://127.0.0.1:4400/framing
   專案：projects/example
   已在背景執行（log：projects/example/work/hyperframes/.editor/editor.log）。關閉：node shared/template/tools/editor.mjs --stop --project projects/example
@@ -158,6 +161,14 @@ node shared/template/tools/editor.mjs --project projects/example
 ### 怎麼打開
 
 跟 AI 說「打開剪輯台」。AI 會給你一個網址（像 `http://127.0.0.1:4400/`），用 **Chrome 或 Edge** 打開。調好按「儲存」，回到 AI 那邊說「調好了」。第一次打開會有一張簡短的操作提示。
+
+### 剪輯清單（要剪哪幾段）
+
+剪乾淨列好清單後，AI 會給你網址最後是 `/cuts` 的那一個。每一列是一段 AI 認為要剪掉的地方（重講、卡住），附時間、內容和原因：
+
+- 按 **▶** 聽那一段，前後會多播一點，紅色是會剪掉的部分。
+- **勾＝剪掉，取消＝保留**，一勾就存檔，不用按儲存。黃色的列是 AI 不確定的，建議先聽再決定。
+- 下面的「需要你決定」請在對話裡回覆 AI。勾好回到對話說「可以」。
 
 ### 畫面
 

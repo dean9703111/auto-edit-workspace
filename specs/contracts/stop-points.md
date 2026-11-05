@@ -8,7 +8,7 @@
 
 | 停點 | 在哪一步 | 停之前一定要完成（完成判準） | 給使用者看什麼 | 使用者決定什麼 | 決定寫回哪裡 |
 |---|---|---|---|---|---|
-| ① 剪輯清單 | `auto-edit-rough` 步驟 5（現行 AGENTS.md 剪乾淨 4） | `work/cuts.md` 存在；NG 表表頭逐字 `\| 時間碼 \| 內容 \| 原因 \| 待確認 \|`，時間碼寫原片秒數的 `起–迄`；多支主軌時有「主軌順序」表；講稿有 `##`／`###` 章節時有章節空檔表，表頭含「章節」「第一句」「時間碼」三欄（G01；002 的 ng-snap／cutpoints 用表頭辨認這兩張表，`specs/002-pipeline-timing/spec.md` FR-001） | `work/cuts.md` | 剪哪些 NG、主軌接的順序、章節空檔不足的處理 | `work/cuts.md`（主軌順序另由 `media.mjs main` 寫 `work/main.json`） |
+| ① 剪輯清單 | `auto-edit-rough` 步驟 5（現行 AGENTS.md 剪乾淨 4） | `work/cuts.md` 存在；NG 表表頭逐字 `\| 剪 \| 時間碼 \| 內容 \| 原因 \| 待確認 \|`（「剪」欄 AI 一律寫 `[x]`，016）；`editor.mjs` 印出剪輯清單網址；時間碼寫原片秒數的 `起–迄`；多支主軌時有「主軌順序」表；講稿有 `##`／`###` 章節時有章節空檔表，表頭含「章節」「第一句」「時間碼」三欄（G01；002 的 ng-snap／cutpoints 用表頭辨認這兩張表，`specs/002-pipeline-timing/spec.md` FR-001） | 剪輯清單網址（`editor.mjs` 的 `/cuts`：每列可試聽，勾＝剪） | 剪哪些 NG、主軌接的順序、章節空檔不足的處理 | `work/cuts.md` 的「剪」欄（網頁勾選即存）；主軌順序另由 `media.mjs main` 寫 `work/main.json` |
 | ② 構圖倍率 | `auto-edit-storyboard` 步驟 1（現行 AGENTS.md:82-88） | `work/構圖預覽.jpg`、`work/構圖預覽-套卡.jpg` 存在；`qc.mjs framing` 印的倍率表原文已貼進回覆 | 兩張圖＋倍率表＋一句建議 | 用哪個倍率 | `work/hyperframes/plan.json` 第一層 `frame`（1.0 倍不寫） |
 | ③ 分鏡表 | `auto-edit-storyboard` 步驟 6（現行 AGENTS.md:98-105） | `work/storyboard.md` 有：speakerBox、本集圖示表、總覽表、每段一節＋截圖、「需要我決定的事」（含金句候選表，G22）；草稿 plan.json `--check` 0 個 ✖ | `work/storyboard.md`＋`work/storyboard-preview/` | 每段版面、文字、金句上不上 | `work/storyboard.md` → 正式 `work/hyperframes/plan.json` |
 | ④ Studio 預覽 | `auto-edit-review` 流程 A、B 的最後一步（現行 AGENTS.md:106） | build 0 個 ✖；有情境動畫時 `audit.mjs` 0 個 ✖；`snapshot --review` 每段 PASS／FAIL 表已列；Studio 網址可開（`npx hyperframes preview --status`） | Studio 網址＋要使用者確認的卡＋「請看字幕有沒有對到嘴」 | 要改哪裡，或可以輸出 | `work/hyperframes/plan.json`、`work/回饋/r<N>.md`（G10） |
@@ -29,7 +29,7 @@
 
 | 停點 | 最後一行 |
 |---|---|
-| ① | `⏸ 停點 ① 剪輯清單｜請看：work/cuts.md｜請回：「可以」或要改的列` |
+| ① | `⏸ 停點 ① 剪輯清單｜請看：<剪輯清單網址>｜請回：勾好後說「可以」，或要改的列` |
 | ② | `⏸ 停點 ② 構圖倍率｜請看：work/構圖預覽.jpg、work/構圖預覽-套卡.jpg｜請回：倍率（1.0／1.15／1.3）` |
 | ③ | `⏸ 停點 ③ 分鏡表｜請看：work/storyboard.md｜請回：「可以」或要改的地方` |
 | ④ | `⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出成片」` |
@@ -39,7 +39,7 @@
 
 - 停點 ③ 的那一行和憲法 V 的範例逐字相同。
 - ③ 改版是停點 ③ 的變體（停點仍是六個）：停點 ④ 之後指名一段重新設計時用；好幾段一起改寫成「（s08 v2、s12 v2）」、請看列出每一份 分鏡.md。`versions.mjs new` 會印出填好的這一行。停點紀錄的停點欄寫 `③ 分鏡表（s12 v2）`，status.mjs 照括號裡的段與版本給下一步。
-- 路徑一律相對專案資料夾 `projects/<專案>/`（① ② ③），網址照工具印出的原文（④ ⑤），⑥ 的暫存資料夾寫完整路徑。
+- 路徑一律相對專案資料夾 `projects/<專案>/`（③），網址照工具印出的原文（① ② ④ ⑤；① 是 `editor.mjs` 印的「剪輯清單：」那一個），⑥ 的暫存資料夾寫完整路徑。
 - ⏸ 那一行之後不能再有任何文字。
 
 ### 2.2 整則回覆的骨架（≤ 15 行，憲法 III.5）
@@ -60,7 +60,7 @@ work/cuts.md（NG 4 列、待確認 1 列）
 work/transcript.json（142 句）
 要你決定：第 5 列「我們先看…」逐字稿和講稿對不上，標了待確認。
 驗證：ffprobe 原始長度 107.567s
-⏸ 停點 ① 剪輯清單｜請看：work/cuts.md｜請回：「可以」或要改的列
+⏸ 停點 ① 剪輯清單｜請看：<剪輯清單網址>｜請回：勾好後說「可以」，或要改的列
 ```
 
 ## 3. 使用者的回覆 → AI 做什麼
@@ -70,7 +70,7 @@ work/transcript.json（142 句）
 | 停點 | 使用者回 | AI 做什麼 |
 |---|---|---|
 | ① | 「可以」「清單沒問題，繼續」 | 停點紀錄寫「通過」→ rough 步驟 5 |
-| ① | 「第 3 列不要剪」這類指名修改 | 改 `work/cuts.md` → 重貼停點 ①（紀錄寫「修改後重停」） |
+| ① | 「第 3 列不要剪」這類指名修改 | 把 `work/cuts.md` 那一列的「剪」改成 `[ ]` → 重貼停點 ①（紀錄寫「修改後重停」；網頁會自己更新） |
 | ① | 「改好了」（自己改了 cuts.md） | 重新讀 `work/cuts.md`，以檔案為準 → rough 步驟 5 |
 | ② | 倍率數字（例「1.15」） | 把那一列的 `frame` 寫進 plan.json（1.0 不寫）→ storyboard 步驟 2 |
 | ③ | 「可以」「照你的規劃，開始製作」 | 重新讀 `work/storyboard.md` → 寫正式 plan.json；超過字數上限或違反規則的地方先列給使用者、不自己改（現行 AGENTS.md:105）→ 派情境動畫（`auto-edit-motion`）→ review 流程 A |
@@ -120,7 +120,7 @@ work/transcript.json（142 句）
 
 | 停點 | 略過時採用 |
 |---|---|
-| ① | 照 `work/cuts.md` 原樣剪；「待確認」的列**不剪** |
+| ① | 照 `work/cuts.md` 原樣剪；「待確認」有寫字的列先把「剪」改成 `[ ]`，**不剪** |
 | ② | `qc.mjs framing` 印的「建議」倍率（004 加這一欄，見 spec「請 004 加」）；沒有建議欄時用 1.0 |
 | ③ | 草稿就是定稿；金句候選表沒勾的**不上** |
 | ④ | 直接 `auto-edit-deliver` |

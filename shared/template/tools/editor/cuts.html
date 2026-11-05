@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>剪輯清單</title>
+<link rel="icon" href="/editor/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/kit/fonts.css">
+<link rel="stylesheet" href="/kit/brand.css">
+<link rel="stylesheet" href="/editor/editor.css">
+<style>
+  body.cuts { display: block; height: auto; min-height: 100vh; overflow: auto; }
+  .ct-main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 16px; padding: 16px; align-items: start; }
+  .ct-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
+  .ct-col, #sections { display: grid; gap: 16px; align-content: start; min-width: 0; }
+  #sections:empty { display: none; }
+  .ct-panel h2 { margin: 0; font-size: 15px; }
+  .ct-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+  .ct-summary { font-size: 13px; color: var(--mute); font-family: var(--mono); }
+  .ct-hint { margin: 6px 0 12px; font-size: 13px; color: var(--mute); }
+  .ct-banner { margin: 0 0 12px; padding: 9px 12px; border-radius: 6px; font-size: 13px; background: var(--card2); border: 1px solid var(--line2); }
+  .ct-banner.err { border-color: var(--warn); color: var(--warn-kw); }
+  .ct-empty { padding: 28px 8px; text-align: center; color: var(--mute); }
+  .ct-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .ct-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); transition: opacity .12s, border-color .12s; }
+  .ct-row.playing { border-color: var(--accent); }
+  .ct-row.off { opacity: .62; }
+  .ct-row.off .ct-text { text-decoration: line-through; text-decoration-color: var(--dim); }
+  .ct-check { display: grid; place-items: center; width: 30px; height: 30px; cursor: pointer; }
+  .ct-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--warn); cursor: pointer; }
+  .ct-check input:disabled { cursor: not-allowed; }
+  .ct-play { width: 30px; height: 30px; padding: 0; border-radius: 50%; font-size: 12px; line-height: 1; }
+  .ct-row.playing .ct-play { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .ct-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 12px; color: var(--mute); }
+  .ct-num { color: var(--dim); }
+  .ct-time { font-family: var(--mono); color: var(--ink); }
+  .ct-dur { font-family: var(--mono); }
+  .ct-tag { margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: color-mix(in srgb, var(--warn) 26%, transparent); color: var(--warn-kw); }
+  .ct-row.off .ct-tag { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good-kw); }
+  .ct-text { margin-top: 3px; font-size: 15px; overflow-wrap: anywhere; }
+  .ct-reason { margin-top: 2px; font-size: 13px; color: var(--mute); overflow-wrap: anywhere; }
+  .ct-note { margin-top: 6px; padding: 5px 9px; border-radius: 6px; font-size: 12.5px; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); color: var(--ink); overflow-wrap: anywhere; }
+  .ct-sec h3 { margin: 0 0 8px; font-size: 14px; }
+  .ct-sec.decide { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .ct-sec .ct-hint { margin-top: 0; }
+  .ct-md { font-size: 13px; color: var(--mute); overflow-wrap: anywhere; }
+  .ct-md p, .ct-md ul, .ct-md ol { margin: 0 0 8px; }
+  .ct-md ul, .ct-md ol { padding-left: 20px; }
+  .ct-md li + li { margin-top: 3px; }
+  .ct-md code { font-family: var(--mono); font-size: 12px; background: var(--plate); padding: 0 4px; border-radius: 3px; }
+  .ct-md strong { color: var(--ink); }
+  .ct-tablewrap { overflow-x: auto; margin: 0 0 8px; }
+  .ct-md table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .ct-md th, .ct-md td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .ct-md th { color: var(--dim); font-weight: 400; }
+  .ct-md td { color: var(--ink); }
+  .ct-next { padding: 12px 14px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); font-size: 14px; }
+  .ct-next b { color: var(--accent-text); }
+  .ct-player { position: sticky; top: 12px; }
+  .ct-player h2 { margin: 0 0 8px; font-size: 13px; color: var(--mute); font-weight: 700; }
+  .ct-player video { display: block; width: 100%; max-height: 52vh; background: #000; border-radius: 6px; }
+  .ct-bar { position: relative; height: 12px; margin-top: 10px; border-radius: 6px; background: var(--plate); overflow: hidden; }
+  .ct-bar .ng { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--warn) 70%, transparent); }
+  .ct-bar .head { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
+  .ct-legend { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .ct-now { margin: 8px 0 0; font-size: 13px; color: var(--mute); min-height: 1.5em; }
+  .ct-now b { color: var(--ink); }
+  @media (max-width: 860px) {
+    .ct-main { grid-template-columns: 1fr; }
+    .ct-player { position: static; order: -1; }
+    }
+</style>
+</head>
+<body class="cuts">
+<header class="topbar">
+  <div class="brandmark">
+    <span class="logo" aria-hidden="true">剪</span>
+    <div class="titles">
+      <h1>剪輯清單</h1>
+      <div class="sub" id="projName">載入中…</div>
+    </div>
+  </div>
+  <div class="save-state" id="saveState" data-state="busy" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
+</header>
+
+<main class="ct-main">
+  <div class="ct-col">
+    <section class="ct-panel" aria-labelledby="listTitle">
+      <div class="ct-head">
+        <h2 id="listTitle">要剪掉的地方（NG）</h2>
+        <span class="ct-summary" id="summary"></span>
+      </div>
+      <p class="ct-hint" id="hint">勾選＝剪掉，不想剪的就取消勾選，會直接存回 work/cuts.md。按 ▶ 可以聽那一段（前後各多 1 秒）。</p>
+      <div id="banner"></div>
+      <ol class="ct-rows" id="rows"></ol>
+      <div class="ct-empty" id="empty" hidden></div>
+    </section>
+    <div id="sections"></div>
+    <div class="ct-next" id="next" hidden></div>
+  </div>
+
+  <aside class="ct-panel ct-player" aria-label="試聽">
+    <h2>試聽（work/main.mp4）</h2>
+    <video id="video" playsinline preload="metadata"></video>
+    <div class="ct-bar" aria-hidden="true"><div class="ng" id="barNg"></div><div class="head" id="barHead"></div></div>
+    <div class="ct-legend" aria-hidden="true"><span id="barA"></span><span>紅色＝會剪掉的部分</span><span id="barB"></span></div>
+    <p class="ct-now" id="now" role="status">按任一列的 ▶ 試聽</p>
+  </aside>
+</main>
+
+<script type="module" src="/editor/cuts.js"></script>
+</body>
+</html>

@@ -22,7 +22,7 @@
  *   node shared/template/tools/media.mjs ng-scan --project projects/<專案>
  *       找 NG（剪乾淨第 3–4 步）：讀 work/transcript.json（main.mp4 的詞級逐字稿），用講稿裡只出現一次的四字組當錨點對位置；
  *       講到講稿後面又跳回前面（接著往下講 ≥ 6 字）＝重講 → 前一次列成 NG 候選（留最後一次）；講稿找不到的話列「講稿外」；
- *       沒講稿時比相鄰句（停頓切句）。印 cuts.md 的 NG 表與章節空檔表（照抄），講稿每一行的開口時間寫 work/ng-scan.md。
+ *       沒講稿時比相鄰句（停頓切句）。印 cuts.md 的 NG 表（「剪」欄都是 [x]）與章節空檔表（照抄），講稿每一行的開口時間寫 work/ng-scan.md。
  *   node shared/template/tools/media.mjs snap-srt --project projects/<專案> [--dry-run] [--below <dB>]
  *       把 work/rough.srt 每則字幕的起點對齊到實際開口的時間（逐字稿的時間碼只有整句，常比嘴巴早 1 秒左右）：
  *       用 ffmpeg 把 work/rough.mp4 的聲音解出來算能量包絡，門檻取這支音軌自己的「說話音量」與「底噪」之間（相對值，不寫死 dB；
@@ -36,7 +36,7 @@
  *       每章第一句前保留 3 秒停頓（--add-in），印出三行可以直接複製的 auto-editor 指令：--preview、輸出 work/rough.mp4、--export v1 -o work/cuts.v1.json。
  *       邊錄邊講的螢幕錄影（main.json kind "screen"）只剪 NG、停頓保留（停頓時畫面常在操作；整段 --add-in，扣掉 NG）。
  *       主軌有兩支以上、有 講稿.md、還沒初剪時，用 work/transcript.json 比對每支講的是講稿第幾行，順序和講稿不同就 ⚠ 並印建議的 --order。
- *       「待確認」欄有寫字的列不剪。原始停頓不到 3 秒的章節會 ⚠。除了下面說的自動轉 main.mp4，不寫 work/.cache/ 以外的檔。
+ *       NG 表有「剪」欄時只剪勾了 [x] 的列（剪輯清單頁 editor.mjs /cuts 寫的）；沒有「剪」欄（舊格式）時「待確認」欄有寫字的列不剪。原始停頓不到 3 秒的章節會 ⚠。除了下面說的自動轉 main.mp4，不寫 work/.cache/ 以外的檔。
  *       --src 不寫：用 work/main.mp4；還沒有、且只有一支真人錄影時，先自動跑 main 轉出 work/main.mp4（會寫 work/main.mp4、work/main.json）；
  *       --v1：用現成的 auto-editor --export v1 結果（不跑 auto-editor）。
  *       章節開口：先找包含表上時間的停頓；沒有就往後 6 秒內找第一個停頓的終點（再沒有才看表上時間前 0.6 秒內）。
@@ -45,7 +45,7 @@
  *       原片不黑 → ✖ 並印重做的指令（結束碼 1）；原片也黑（或專案有只有聲音的素材）→ ✓ 列出區間。不寫檔。
  *   node shared/template/tools/media.mjs cutpoints --project projects/<專案> [--dry-run]
  *       讀 work/cuts.v1.json（auto-editor --export v1）與 work/rough.mp4 的 fps，算出每個剪接點在 rough.mp4 的秒數，
- *       和 work/cuts.md 的 NG 重疊的標 ng、其他標 pause，寫 work/cutpoints.json（舊檔內容不同時先備份成 .bak-<時間戳>）。
+ *       和 work/cuts.md 要剪的 NG 重疊的標 ng、其他標 pause，寫 work/cutpoints.json（舊檔內容不同時先備份成 .bak-<時間戳>）。
  *   node shared/template/tools/media.mjs screen-sync --project projects/<專案> [--write-plan] [--dry-run]
  *       邊錄邊講的螢幕錄影：讀 work/main.json（kind "screen"）與 work/cuts.v1.json，算出初剪後每段保留下來的片段
  *       在 rough.mp4 的起訖與錄影本身的秒數（in），寫 work/screen-sync.json（media 段 sync01、sync02…：畫面蓋回主軌、和聲音同步）。
@@ -617,15 +617,19 @@ const isRow = (l) => /^\s*\|.*\|\s*$/.test(l ?? '');
 const isSepRow = (l) => /^\s*\|?(\s*:?-{3,}:?\s*\|)+\s*(:?-{3,}:?\s*)?\|?\s*$/.test(l ?? '');
 const cells = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split(/(?<!\\)\|/).map((c) => c.replace(/\\\|/g, '|').trim());
 const isPending = (v) => v != null && !['', '—', '–', '-', '否', '無'].includes(String(v).trim());
+// NG 表的「剪」欄（剪輯清單頁的勾選）：[x] 剪、[ ] 不剪
+const isChecked = (v) => /^(\[\s*[xX✓✔]\s*\]|[xX✓✔✅])$/.test(String(v ?? '').trim());
 
-// → { ng: [{ row, start, end, text, pending, raw }], chapters: [{ row, title, first, t }], hasNg, hasChapters, errors }
+// → { ng: [{ row, line, start, end, text, reason, pending, raw, cut, cutCol }], chapters: [{ row, title, first, t }], hasNg, hasChapters, hasCutCol, ngTables, errors }
+// cut：有「剪」欄時看勾選；沒有「剪」欄（舊格式）時＝「待確認」欄沒寫字。ngTables：[{ head, iCut, lines }]（行號從 0 起，setCutChecks 用）
 export function parseCutsMd(text) {
   const lines = String(text).replace(/^﻿/, '').split(/\r?\n/);
-  const out = { ng: [], chapters: [], hasNg: false, hasChapters: false, errors: [] };
+  const out = { ng: [], chapters: [], hasNg: false, hasChapters: false, hasCutCol: false, ngTables: [], errors: [] };
   let fence = false;
   for (let i = 0; i < lines.length; i++) {
     if (/^\s*(```|~~~)/.test(lines[i])) { fence = !fence; continue; }
     if (fence || !isRow(lines[i]) || !isSepRow(lines[i + 1])) continue;
+    const at = i;
     const head = cells(lines[i]).map((h) => h.replace(/\s+/g, ''));
     const rows = [];
     let j = i + 2;
@@ -635,13 +639,17 @@ export function parseCutsMd(text) {
     const iT = col('時間碼'), iR = col('原因'), iCh = col('章節'), iF = col('第一句');
     if (iT >= 0 && iR >= 0) {
       out.hasNg = true;
-      const iC = col('內容'), iP = col('待確認');
-      for (const r of rows) {
-        const n = out.ng.length + 1;
+      const iC = col('內容'), iP = col('待確認'), iCut = head.indexOf('剪');
+      if (iCut >= 0) out.hasCutCol = true;
+      out.ngTables.push({ head: at, iCut, lines: rows.map((_, k) => at + 2 + k) });
+      rows.forEach((r, k) => {
+        const n = out.ng.length + 1, line = at + 2 + k;
         const range = parseRange(r[iT]);
-        if (!range || !(range[0] < range[1])) { out.errors.push(`cuts.md NG 第 ${n} 列的時間碼「${r[iT] ?? ''}」看不懂 → 寫成 1:03.00–1:05.80（原片的起–迄）`); out.ng.push({ row: n, bad: true }); continue; }
-        out.ng.push({ row: n, start: range[0], end: range[1], text: iC >= 0 ? r[iC] ?? '' : '', pending: iP >= 0 && isPending(r[iP]), raw: iP >= 0 ? r[iP] ?? '' : '' });
-      }
+        if (!range || !(range[0] < range[1])) { out.errors.push(`cuts.md NG 第 ${n} 列的時間碼「${r[iT] ?? ''}」看不懂 → 寫成 1:03.00–1:05.80（原片的起–迄）`); out.ng.push({ row: n, line, bad: true }); return; }
+        const pending = iP >= 0 && isPending(r[iP]);
+        out.ng.push({ row: n, line, start: range[0], end: range[1], text: iC >= 0 ? r[iC] ?? '' : '', reason: r[iR] ?? '', pending, raw: iP >= 0 ? r[iP] ?? '' : '',
+          cut: iCut >= 0 ? isChecked(r[iCut]) : !pending, cutCol: iCut >= 0 });
+      });
     } else if (iCh >= 0 && iF >= 0 && iT >= 0) {
       out.hasChapters = true;
       for (const r of rows) {
@@ -654,6 +662,37 @@ export function parseCutsMd(text) {
   }
   out.ng = out.ng.filter((r) => !r.bad);
   return out;
+}
+
+// 剪輯清單頁勾選後寫回 cuts.md：checks＝{ NG 列號: true／false }，只改那幾列的「剪」欄，其他字不動。
+// 沒有「剪」欄（舊格式）就在最前面加一欄，沒指定的列照原本會不會剪填 [x]／[ ]。
+export function setCutChecks(text, checks) {
+  const src = String(text);
+  const bom = src.startsWith('﻿') ? '﻿' : '';
+  const eol = /\r\n/.test(src) ? '\r\n' : '\n';
+  const lines = src.replace(/^﻿/, '').split(/\r?\n/);
+  const cm = parseCutsMd(src);
+  const byLine = new Map(cm.ng.map((r) => [r.line, r]));
+  const fmt = (cs) => `| ${cs.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ')} |`;
+  const mark = (on) => (on ? '[x]' : '[ ]');
+  const want = (r) => (r && Object.hasOwn(checks, r.row) ? !!checks[r.row] : r ? r.cut : true);
+  for (const t of cm.ngTables) {
+    if (t.iCut < 0) {
+      lines[t.head] = fmt(['剪', ...cells(lines[t.head])]);
+      lines[t.head + 1] = fmt(['---', ...cells(lines[t.head + 1])]);
+      for (const li of t.lines) lines[li] = fmt([mark(want(byLine.get(li))), ...cells(lines[li])]);
+      continue;
+    }
+    for (const li of t.lines) {
+      const r = byLine.get(li);
+      if (!r || !Object.hasOwn(checks, r.row)) continue;
+      const cs = cells(lines[li]);
+      while (cs.length <= t.iCut) cs.push('');
+      cs[t.iCut] = mark(checks[r.row]);
+      lines[li] = fmt(cs);
+    }
+  }
+  return bom + lines.join(eol);
 }
 
 // auto-editor --export v1：{ "version": "1", "source", "chunks": [[起始幀, 結束幀, 速度]] }（沒有 timebase，fps 由呼叫端給）
@@ -685,7 +724,7 @@ export function snapNg(rows, sil, win = CUT.ngWin, chapterSil = []) {
   };
   const chOf = (s) => chapterSil.find((c) => c && c[0] === s[0] && c[1] === s[1]);
   return rows.map((r) => {
-    if (r.pending) return { ...r, skip: true };
+    if (r.cut != null ? !r.cut : r.pending) return { ...r, skip: true };
     const sa = near(r.start, 0), sb = near(r.end, 1);
     const ch = sb && chOf(sb);
     const toChapter = !!(ch && r.end >= sb[0] - 1e-9 && r.end <= sb[1] + 1e-9);
@@ -940,10 +979,10 @@ export function ngScan(P, { log = console.log } = {}) {
   }
   log(`逐字稿 ${words.length} 個詞${sc ? `；講稿 ${sc.lines.length} 行，對到 ${r.anchors} 個錨點（講稿裡只出現一次的四字組）；每一行的開口時間寫在 work/ng-scan.md` : '；沒有講稿：只比相鄰句'}`);
   log('');
-  log(`NG 候選 ${r.ng.length} 列（${sc ? '講到講稿後面又跳回前面＝重講，留最後一次' : '相鄰句很像，留後面那句'}；照抄進 cuts.md 的 NG 表，拿不準的寫「待確認」）：`);
-  log('| 時間碼 | 內容 | 原因 | 待確認 |');
-  log('|---|---|---|---|');
-  for (const g of r.ng) log(`| ${fmtC(g.start)}–${fmtC(g.end)} | ${g.text} | ${g.line ? `講稿第 ${g.line} 行在 ${fmtC(g.again)} 又講一次，留後面那次` : `${fmtC(g.again)} 又講一次，留後面那次`} | ${g.cross != null ? `跨過換檔點 ${fmtC(g.cross)}：換檔處逐字稿時間常不準、下一支開頭可能還有試講 → 請聽 ${fmtC(g.cross)} 之後確認從哪裡重講（終點改到那裡）` : '—'} |`);
+  log(`NG 候選 ${r.ng.length} 列（${sc ? '講到講稿後面又跳回前面＝重講，留最後一次' : '相鄰句很像，留後面那句'}；照抄進 cuts.md 的 NG 表，「剪」欄一律 [x]，拿不準的在「待確認」寫原因）：`);
+  log('| 剪 | 時間碼 | 內容 | 原因 | 待確認 |');
+  log('|---|---|---|---|---|');
+  for (const g of r.ng) log(`| [x] | ${fmtC(g.start)}–${fmtC(g.end)} | ${g.text} | ${g.line ? `講稿第 ${g.line} 行在 ${fmtC(g.again)} 又講一次，留後面那次` : `${fmtC(g.again)} 又講一次，留後面那次`} | ${g.cross != null ? `跨過換檔點 ${fmtC(g.cross)}：換檔處逐字稿時間常不準、下一支開頭可能還有試講 → 請聽 ${fmtC(g.cross)} 之後確認從哪裡重講（終點改到那裡）` : '—'} |`);
   if (r.outside.length) {
     log('');
     log(`講稿外 ${r.outside.length} 處（講稿找不到的話：口誤、自言自語、臨場加的話，或 whisper 聽錯；聽了再決定，不確定就不剪）：`);
@@ -1009,7 +1048,7 @@ export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1
   log(`原片：${srcRel}（${fps}fps，${fmtC(info.duration ?? 0)}）；靜音判斷：${v1 ? `--v1 ${posixRel(v1File)}` : `auto-editor --edit "${edit}" --margin ${margin}（快取 work/.cache/ng-snap.v1.json）`}`);
   if (cm.hasNg) {
     const pend = snapped.filter((r) => r.skip).length;
-    log(''); log(`NG：cuts.md ${snapped.length} 列 → 剪 ${cutOut.length} 段${pend ? `（${pend} 列待確認不剪）` : ''}`);
+    log(''); log(`NG：cuts.md ${snapped.length} 列 → 剪 ${cutOut.length} 段${pend ? `（${pend} 列${cm.hasCutCol ? '沒勾' : '待確認'}不剪）` : ''}`);
     log('  列  原始時間碼            對齊停頓後            內容');
     for (const r of snapped) {
       const orig = `${fmtC(r.start)}–${fmtC(r.end)}`;
@@ -1017,9 +1056,9 @@ export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1
       const missWhat = r.missStart && r.missEnd ? '前後 1.0s 內沒有停頓，用原值' : r.missStart ? '起點前後 1.0s 內沒有停頓，起點用原值' : r.missEnd ? '終點前後 1.0s 內沒有停頓，終點用原值' : '';
       // 終點往後延到停頓末端：講清楚後一次（重講）從那裡才開口、不會被剪到（Sonnet 實測會把這種列誤標待確認）
       const later = !r.skip && !missWhat && !r.toChapter && r.b > r.end + 0.3 ? `；終點落在後一次開口（${fmtC(r.b)}）之前的停頓末端，後一次完整保留` : '';
-      const note = r.skip ? '待確認，不剪' : missWhat ? `⚠ ${missWhat}` : r.toChapter ? '終點停在章節停頓前' : String(r.text).slice(0, 14) + later;
+      const note = r.skip ? (r.cutCol ? '沒勾，不剪' : '待確認，不剪') : missWhat ? `⚠ ${missWhat}` : r.toChapter ? '終點停在章節停頓前' : String(r.text).slice(0, 14) + later;
       log(`  ${String(r.row).padEnd(3)} ${orig.padEnd(20)} ${after.padEnd(21)} ${note}`);
-      if (r.skip) warnings.push(`⚠ cuts.md NG 第 ${r.row} 列標了待確認（「${r.raw}」），不放進指令 → 使用者確認後把「待確認」欄清空再跑一次`);
+      if (r.skip && !r.cutCol) warnings.push(`⚠ cuts.md NG 第 ${r.row} 列標了待確認（「${r.raw}」），不放進指令 → 使用者確認後把「待確認」欄清空再跑一次`);
       else if (missWhat) warnings.push(`⚠ NG 第 ${r.row} 列（${orig}）${missWhat} → 播 ${srcRel} 的 ${fmtT(Math.max(0, r.start - 1))}–${fmtT(r.end + 1)} 聽一下，切到字就把 cuts.md 的時間碼往停頓移`);
     }
   }
@@ -1111,7 +1150,7 @@ export function cutpoints(P, { dryRun = false, log = console.log, now = new Date
   const fps = info.fps || 30;
   const cutsFile = path.join(work, 'cuts.md');
   const cm = fs.existsSync(cutsFile) ? parseCutsMd(fs.readFileSync(cutsFile, 'utf8')) : null;
-  const ng = cm ? cm.ng.filter((r) => !r.pending) : [];
+  const ng = cm ? cm.ng.filter((r) => r.cut) : [];
   const res = cutpointsFromV1(v1, fps, ng);
   if (res.errors.length) throw new Error(res.errors[0]);
   log(`讀 ${posix(path.relative(P.project, v1File))}（${v1.chunks.length} 段）；fps ${fps}（work/rough.mp4）；${cm?.hasNg ? `NG 範圍讀 work/cuts.md（${cm.ng.length} 列）` : 'work/cuts.md 沒有 NG 表'}`);

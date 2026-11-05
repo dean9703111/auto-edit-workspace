@@ -3,6 +3,7 @@
  * 剪輯：在瀏覽器裡裁剪、調聲音、改字幕和卡片文字、設轉場，存回 plan.json／rough.srt（給使用者與 AI 的說明：shared/template/EDITOR.md）
  *
  *   node shared/template/tools/editor.mjs --project projects/<專案>   啟動並印出網址（只綁 127.0.0.1；預設 port 4400，被佔用就往後找）
+ *                                      同一個服務有三頁：剪輯 /、剪輯清單 /cuts（停點 ①）、構圖 /framing（停點 ②）
  *                                      非互動的 shell（AI 執行）會自己轉到背景：印出網址就結束，不用加 & 或 nohup；
  *                                      在終端機裡執行則留在前景，按 Ctrl+C 關閉
  *   node shared/template/tools/editor.mjs --status [--project …]   查剪輯開著沒、網址是什麼
@@ -15,6 +16,7 @@
  * 選項：--port 4400、--open（順便開瀏覽器）、--foreground（一律前景）、--background（一律背景）；測試用：--template <shared/template 資料夾>
  * 剪輯只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／anchor、任何段的 sfxVolume 與 sfx: null、
  * slots／vars 的文字值、第一層的 look（講者調光與瘦臉）、theme 與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
+ * 剪輯清單頁只寫 work/cuts.md NG 表的「剪」欄（[x]／[ ]；沒有這一欄就加在最前面），有 work/rough.mp4 之後只能看。
  * 存檔前比對 plan.json 與 rough.srt，被別人（AI）改過就兩個都不寫。構圖在還沒有 plan.json 時（停點 ②）只存 frame，會先建一個 { "version": 1 }（直式加 format）。
  * --project 的找法和 build.mjs 一樣。需要 Node 22 以上、ffmpeg／ffprobe。
  */
@@ -32,6 +34,7 @@ import { footageVf, lut3dFilter } from './lib/ff.mjs';
 import { CANVAS } from './lib/canvas.mjs';
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 import { mediaFrame, SIDE } from './lib/media.mjs';
+import { cutsState, saveCuts } from './editor/server/cuts.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, subtitles };
@@ -59,7 +62,7 @@ const posix = (p) => p.split(path.sep).join('/');
 
 // 只在啟動時記下已載入的後端版本；重複開啟時不沿用載著舊程式的服務。
 export function editorRevision() {
-  const files = [fileURLToPath(import.meta.url), BUILD, LOOK, path.join(HERE, 'brand.mjs'), path.join(HERE, 'caps.mjs'),
+  const files = [fileURLToPath(import.meta.url), BUILD, LOOK, path.join(HERE, 'brand.mjs'), path.join(HERE, 'caps.mjs'), path.join(HERE, 'media.mjs'),
     ...['lib', 'editor/server'].flatMap((dir) => fs.readdirSync(path.join(HERE, dir)).filter((f) => f.endsWith('.mjs')).sort().map((f) => path.join(HERE, dir, f))),
     path.join(UI_DIR, 'subtitles.mjs'), path.join(UI_DIR, 'text.mjs')];
   const hash = crypto.createHash('sha256');
@@ -982,6 +985,9 @@ async function handle(ctx, req, res) {
       }
       return sendJson(res, status, result);
     }
+    if (p === '/api/cuts/save') {
+      try { return sendJson(res, 200, saveCuts(ctx, body)); } catch (e) { return sendJson(res, e.status || 400, { message: e.message, ...(e.extra || {}) }); }
+    }
     if (p === '/api/save') { const [s, o] = await doSave(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/refframe') { const [s, o] = await doRefFrame(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/look/run') { const [s, o] = await doLookRun(ctx); return sendJson(res, s, o); }
@@ -1004,6 +1010,8 @@ async function handle(ctx, req, res) {
   if (p === '/api/requests/status') return sendJson(res, 200, { requests: requestsInfo(P.project) });
   if (p === '/api/design/request/status') return sendJson(res, 200, designRequestStatus(ctx));
   if (p === '/framing' || p === '/framing.html') return sendFile(req, res, path.join(UI_DIR, 'framing.html'));
+  if (p === '/cuts' || p === '/cuts.html') return sendFile(req, res, path.join(UI_DIR, 'cuts.html'));
+  if (p === '/api/cuts') return sendJson(res, 200, cutsState(ctx));
   if (p === '/api/design') {
     const format = canvasInfo(P.project, readPlan(P.plan).data).format;
     return sendJson(res, 200, { ...designState(ctx), format, previews: designPreviews(ctx, format) });
@@ -1077,6 +1085,11 @@ async function handle(ctx, req, res) {
     // 構圖：沒裁切的初剪（build 編碼過的底片已經照 frame 裁過）
     const f = path.join(P.project, 'work', 'rough.mp4');
     return statOf(f) ? sendFile(req, res, f, { type: 'video/mp4' }) : sendText(res, 404, '找不到 work/rough.mp4');
+  }
+  if (p === '/media/main.mp4') {
+    // 剪輯清單頁試聽：剪乾淨步驟 1 的主軌（時間和 cuts.md 的時間碼一樣）
+    const f = path.join(P.project, 'work', 'main.mp4');
+    return statOf(f) ? sendFile(req, res, f, { type: 'video/mp4' }) : sendText(res, 404, '找不到 work/main.mp4');
   }
   if (p === '/media/rough.mp4') {
     const f = pickVideo(P);
@@ -1225,6 +1238,7 @@ async function cli() {
   }
   if (running) {
     console.log(`剪輯已經開著：${running.url}`);
+    console.log(`剪輯清單：${new URL('cuts', running.url).href}`);
     console.log(`構圖：${new URL('framing', running.url).href}`);
     console.log(`專案：${rel(P.project)}（要重開先關掉：${stopCmd}）`);
     if (flags.open) openBrowser(running.url);
@@ -1247,6 +1261,7 @@ async function cli() {
       const s = readJson(stateFile);
       if (s?.pid === child.pid && s.url) {
         console.log(`剪輯：${s.url}`);
+        console.log(`剪輯清單：${new URL('cuts', s.url).href}`);
         console.log(`構圖：${new URL('framing', s.url).href}`);
         console.log(`專案：${rel(P.project)}`);
         console.log(`已在背景執行（log：${rel(logFile)}）。關閉：${stopCmd}`);
@@ -1267,6 +1282,7 @@ async function cli() {
   process.on('SIGTERM', shutdown);
   if (ed.port !== (flags.port ?? DEFAULT_PORT)) console.log(`port ${flags.port ?? DEFAULT_PORT} 被佔用，改用 ${ed.port}`);
   console.log(`剪輯：${ed.url}`);
+  console.log(`剪輯清單：${new URL('cuts', ed.url).href}`);
   console.log(`構圖：${new URL('framing', ed.url).href}`);
   console.log(`專案：${rel(P.project)}`);
   console.log(ed.ctx.player.available ? `成片預覽：HyperFrames 播放器 ${ed.ctx.player.version ?? ''}` : `成片預覽：不能用（${ed.ctx.player.reason}），只有即時模擬`);
