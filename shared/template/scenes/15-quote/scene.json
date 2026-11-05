@@ -5,7 +5,7 @@
   "aliases": ["金句", "金句卡", "名言", "核心價值"],
   "family": "lower-third",
   "portrait": "move",
-  "when": "口播丟出一句金句、核心價值或反差翻轉句，讓觀眾截圖帶走",
+  "when": "講解丟出一句金句、核心價值或反差翻轉句，讓觀眾截圖帶走",
   "avoid": "普通說明句（改一般字卡），或超過兩行的長句",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
   "surface": null,

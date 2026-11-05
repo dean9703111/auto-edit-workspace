@@ -28,7 +28,7 @@ ls -l：-rw-r--r--  1 me  staff  6120 11  2 14:31 x-process.html
 綁句：#18、#18@逐字稿、#20
 build --check：x01 custom 0:40.00–0:54.50（14.5s）綁句 3 個（#18、#18@逐字稿、#20）
 audit --only x01：✖ 0、⚠ 1
-  ⚠ [x01] .x-process-note 離右下角小窗 12px → 刻意的，小窗在這段是關的
+  ⚠ [x01] .x-process-note 離右下角小視窗 12px → 刻意的，小視窗在這段是關的
 留著的 ⚠ 與理由：上面那一個，這段 layout 是 fullscreen、pip 關閉
 我沒有改的東西：plan.json、rough.srt、storyboard.md、shared/
 ```

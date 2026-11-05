@@ -1,6 +1,6 @@
 ---
 name: auto-edit-setup
-description: 檢測並安裝這個工作區要用的工具（git、Node.js 22、ffmpeg／ffprobe、whisper-cli、auto-editor、根目錄 npm install 的 HyperFrames、hyperframes 與 auto-editor 兩組外部 Skill、9 支 auto-edit Skill），最後探測生圖能力。當使用者說「幫我檢測環境」「檢測環境」「安裝環境」「裝工具」「Skills 看不到 auto-edit」時使用。已經在剪片、只是某個剪片指令報錯時不要用（看那個階段 Skill 的退路表）。
+description: 檢測並安裝這個工作區要用的工具（git、Node.js 22、ffmpeg／ffprobe、whisper-cli、auto-editor、根目錄 npm install 的 HyperFrames、hyperframes 與 auto-editor 兩組外部 Skill、9 支 auto-edit Skill），最後探測生圖能力。當使用者說「幫我檢測環境」「檢測環境」「安裝環境」「裝工具」「Skills 看不到 auto-edit」時使用。已經在剪片、只是某個剪片指令出錯時不要用（看那個階段 Skill 的退路表）。
 version: 0.1.0
 ---
 # 環境準備

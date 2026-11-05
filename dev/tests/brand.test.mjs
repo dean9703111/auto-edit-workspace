@@ -62,7 +62,7 @@ test('暗色主題跟著主色算（design-system §10）：標題列、錯位�
   }
 });
 
-test('brand.css 只改 3 個變數，註解不動；格式被改過就報錯', () => {
+test('brand.css 只改 3 個變數，註解不動；格式被改過就出錯', () => {
   const css = fs.readFileSync(path.join(KIT, 'brand.css'), 'utf8');
   const out = rewriteBrandCss(css, brandColors('#1B7F4B'));
   assert.match(out, /--brand:\s+#1B7F4B;/);

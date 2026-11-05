@@ -604,7 +604,7 @@ export function busySpans(motion, { hold = false } = {}) {
   return out;
 }
 
-// ctx＝{ item, fadeOut }；回傳 { findings, notes }，時間一律換成成片秒數（item.start ＋ 段內秒數）
+// ctx＝{ item, fadeOut }；回傳 { findings, notes }，時間一律換成完成影片秒數（item.start ＋ 段內秒數）
 export function judgeMotion(motion, ctx) {
   const findings = [], notes = [];
   const it = ctx.item;
@@ -701,7 +701,7 @@ export function stillTimes(motion, item) {
     .sort((a, b) => a - b).map((t) => ({ t, kind: 'still' }));
 }
 
-// ====================== 003 P2：畫面沒有變化（口播在講、畫面不動） ======================
+// ====================== 003 P2：畫面沒有變化（講解在講、畫面不動） ======================
 
 export const STATIC_MAX = 6, STATIC_CUE_MIN = 0.3;   // 連續 > 6s 沒有任何補間；字幕句和這段重疊 ≥ 0.3s 才算「在講」
 // 忙碌段（任何補間：進場、點亮、焦點切換、描線、數字變化、位移）以外 > STATIC_MAX 秒的空檔（0 到第一個動作、最後一個動作到結束或淡出也算），
@@ -723,7 +723,7 @@ export function staticFindings(motion, { item, cuesOut = [] } = {}) {
     const pick = (inside.length ? inside : cs).reduce((p, c) => (Math.abs(c.start - mid) < Math.abs(p.start - mid) ? c : p));
     const span = cs.length > 1 ? `#${cs[0].n}–#${cs[cs.length - 1].n}` : `#${cs[0].n}`;
     out.push({ id: item.id, label: item.label, level: 'warn', rule: 'static', el: null, t: r3(A), kind: 'motion',
-      msg: `畫面沒有變化：${item.id} 在 ${fmtT(A)}–${fmtT(B)} 畫面 ${(b - a).toFixed(1)}s 沒有變化（口播 ${span} 在講；上限 ${STATIC_MAX}s）`,
+      msg: `畫面沒有變化：${item.id} 在 ${fmtT(A)}–${fmtT(B)} 畫面 ${(b - a).toFixed(1)}s 沒有變化（講解 ${span} 在講；上限 ${STATIC_MAX}s）`,
       fix: `補一拍綁 P.at('#${pick.n}@詞')（詞換成 #${pick.n} 講到的站名、項目、數字，讓那一刻有東西出現、亮起或換數字），或在 #${pick.n} 拆成兩段`,
       data: { from: r3(A), to: r3(B), q: r3(b - a), cues: cs.map((c) => c.n), pick: pick.n } });
   }
@@ -825,7 +825,7 @@ export function atConsts(html) {
   return out;
 }
 
-// 【D 下限】只驗兩種：拍點常數的秒數照 P.at 的算法（cuesOut＝build --check 的成片秒數字幕），D＝plan.json 這段的長度
+// 【D 下限】只驗兩種：拍點常數的秒數照 P.at 的算法（cuesOut＝build --check 的完成影片秒數字幕），D＝plan.json 這段的長度
 //   第一拍（「T1 ≥ 3.1」）不夠 ✖：開場的主卡、骨架還沒做完，站就先出來（其他規則都量不到開場）
 //   段長（「D ≥ T4 + 5.2」）不夠 ⚠：回均衡這類排在最後一拍之後的動作會落到段外（最後一幕太短只量段內）
 //   拍距（「T2 ≥ T1 + 3.0」）不驗：完成態停太短量的是實際的靜止時間，比檔頭的算式準
@@ -883,7 +883,7 @@ export function floorFindings({ item, html = '', cuesOut = [], file = '', tpl = 
   return out;
 }
 
-// motion（collectMotionInPage）＋ cuesOut（build --check 的成片秒數字幕，有 text）→ ⚠ cue-text
+// motion（collectMotionInPage）＋ cuesOut（build --check 的完成影片秒數字幕，有 text）→ ⚠ cue-text
 // 每個 P.at('#N')／P.at('#N@詞') 拍點：拍點後 CUE_WIN 秒內從看不見變看得見的字（站名、項目；audit-page 的 up／say），數字與英文整個詞、中文取 2–4 字，
 // 有一個字在第 N 句講到就過；都沒有、而這段的另一句 #M 有 → 一拍報一則「在 #M 才講到」（取句號離 N 最近的）；都找不到不報
 export function cueTextFindings(motion, { item, cuesOut = [], names = {} } = {}) {

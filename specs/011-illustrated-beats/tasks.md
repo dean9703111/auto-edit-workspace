@@ -14,7 +14,7 @@
 - [x] **T103** 掛載點（補充需求 1）：`ILLUS.register(name, fn)`（名稱 camelCase，不能蓋內建元件與方法）；`data-illus-src="illus-local/<name>.svg"`（路徑相對主合成 index.html，專案元件放 `work/hyperframes/illus-local/`）。選「mount 時同步讀檔」：理由與實測在契約 §4（promise 版 HyperFrames 不等；build inline 要改寫工人的 x 檔）。
   - 驗證：臨時 HyperFrames 專案（runtime 0.8.223）子合成裡 `data-illus-src` 的 `.il-led` 在 script 執行時已存在；6 個時間點亂序／順序 seek 的 opacity 相同；`hyperframes snapshot` 兩組 PNG md5 逐張相同；errors、cueErrors 都是空的。
 - [x] **T104** `ILLUS.mount` 改成「掛過的跳過、`{force:true}` 才重畫」：同一份文件有多個子合成，ep2 的「每次重畫」會把別段已綁 tween 的子元素換掉。讀不到的 `data-illus-src` 只報一次 `console.error`。
-- [x] **T105** 畫廊 `kit/illus-gallery.html`：兩欄 iframe（本檔 `?theme=light`／`?theme=dark`，主題開關和成片一樣在 `<html data-theme>`），20 個元件、77 格（每個螢幕狀態、opts 變體與 4 個「中途狀態」示範），每格標 `data-*` 寫法、每組標建議尺寸與子元素 class。file:// 直接開也能看。
+- [x] **T105** 畫廊 `kit/illus-gallery.html`：兩欄 iframe（本檔 `?theme=light`／`?theme=dark`，主題開關和完成影片一樣在 `<html data-theme>`），20 個元件、77 格（每個螢幕狀態、opts 變體與 4 個「中途狀態」示範），每格標 `data-*` 寫法、每組標建議尺寸與子元素 class。file:// 直接開也能看。
 - [x] **T106** 截圖 `kit/illus-gallery.jpg`：1920×10876、1.66 MB。重截用 `node dev/tools/illus-gallery-shot.mjs`（HyperFrames 的 chrome-headless-shell `--dump-dom` 量高度 → `--screenshot` → ffmpeg 轉 jpg；dev/README 已加一列）。
 - [x] **T107** 風格契約 `kit/illus-style.md`（補充需求 2）：素材判定順序、檔案與掛載、規則表（標出 lint 會查的項目）、10 個 token 的用途、router 220×120 範例（狀態 `.il-led`、`.il-warn`）、lint 的呼叫方式。看 HyperFrames 實際截圖後加了一條「細長零件畫成有填色的窄形狀」（亮色主題的淺底上，單獨一條白線會看不見；router 的天線從 line 改成 polygon）。
 - [x] **T108** `tools/lib/illus-lint.mjs`（補充需求 3）：純函式 `lintIllusSvg(svgText, { name, size, states })`，回傳 audit 格式的 finding；規則表在契約 §6。零相依（自帶極簡 XML 樹，處理描邊寬從 `<g>` 繼承）。
@@ -52,7 +52,7 @@
   - T113c：`tools/lib/audit-illus.mjs`（新）＋`audit-page.mjs`（`.il>svg` 外擴 2 px、目標標 `il`／`line`）＋`audit-beats.mjs`（8 欄表頭、段起點列、`#### 插圖清單`（舊名素材清單也認）、語彙 46 個含「游標移動 → P.morph」、回均衡也接受 `P.dim`）＋`audit.mjs` 接線。新規則：✖ illus-name／illus-src／beats-illus／illus-list、`[ILLUS] 讀不到` 升成那一段的 ✖；⚠ illus-label（> 10 字）、illus-align（完成態中線差 1–8 px）、illus-blink（亮滅 > 1 次）、illus-line-first（元件還在進場就描線）。契約 `specs/contracts/cli-003.md` §2.3d 補、§2.3e 新。
   - 測試：audit.test 加 6 個「011：」測試；icons.test 的不放圖示名單加 x-scene 三支；docs-allow.json 拿掉三條 T12。
 - 003 → 001（T114d 寫進 `shared/style.md`「示意動畫」節；audit 量不到的硬規則，出處是 `~/Documents/external_project/agent-skills/.agents/skills/hyperframes-overlay/references/` 的檔名:行號）：
-  1. 疊加層的元素一律深色實心底；強調靠框色、字色，不靠亮色填滿（剪映導出後亮色底邊緣會浮白暈）（pitfalls.md:222、231）。
+  1. 疊加層的元素一律深色實心底；強調靠框色、字色，不靠亮色填滿（剪映輸出後亮色底邊緣會浮白暈）（pitfalls.md:222、231）。
   2. 後出現的元素不擠壓既有元素：最終版面先排好，之後才出現的打勾框一開始就是空框佔位（design-rules.md:58；casebook.md:487）。
   3. 會放大（scale > 1）的元素，用放大後的尺寸預留位置，鄰居的間距從預留盒量（pitfalls.md:361）。
   4. 經過或圍繞元件的線離元件 ≥ 16 px；連接兩個區塊的箭頭兩端貼齊區塊邊（design-rules.md:96）。
@@ -60,8 +60,8 @@
   6. 不用乘號「×」（字身偏小、浮在上面）（design-rules.md:20）。
   7. 不要先掛空底板再等內容：有底色或框的容器跟著內容一起進（pitfalls.md:149–153）。
   8. 一幕 3–5 個重點，只往上加或局部變化；抖動／閃紅／脈衝每幕最多一次（design-rules.md:50）。
-  9. 同一件事只說一次：裝置的狀態畫在它自己的螢幕或路徑上，不再加一行提示字；口播沒講的裝飾不加（design-rules.md:99；casebook.md:507）。
-  10. 畫面文案忠於口播，不自編數字或引言（motion-recipes.md:75）。
+  9. 同一件事只說一次：裝置的狀態畫在它自己的螢幕或路徑上，不再加一行提示字；講解沒講的裝飾不加（design-rules.md:99；casebook.md:507）。
+  10. 畫面文案忠於講解，不自編數字或引言（motion-recipes.md:75）。
   11. 示意 UI 先給完整畫面 0.8–1.5 秒讓觀眾定位，再推近重點（design-rules.md:97）。
   12. 運鏡先數次數：一段裡慢推 ≤ 2 次、每次 ≥ 2 秒、不先拉遠再推近（casebook.md:513）。
   - 已由 audit 量的（不用再寫成文字規則，style.md 一句帶過即可）：標籤 ≤ 10 字（design-rules.md:9）、同列同中線（design-rules.md:87）、不閃爍（casebook.md:486）、先有節點再畫線（design-rules.md:11；motion-recipes.md:156）、描邊外擴 2 px；完成態、段尾停留、字幕區、子母畫面原本就量。
@@ -83,7 +83,7 @@
 - [ ] **T114a** `auto-edit-storyboard` 步驟 5 之後加「素材清單」：每段示意動畫（x-scene）在動畫分鏡表下面一張素材清單表（brief 補充節的三欄表＋三種來源的判定順序，原文抄 `kit/illus-style.md` §1），停點 ③ 和分鏡一起確認；分鏡表表頭加「插圖元件（狀態）」「位置」兩欄（只有示意動畫段要填）。
 - [ ] **T114b** `auto-edit-motion` 加「示意動畫」分支：步驟＝讀確認過的分鏡＋素材清單 → 缺的先造（派素材工人或自己畫，照 `kit/illus-style.md`）→ `media.mjs illus-lint` 0 ✖ → 看 `work/素材清單.jpg` → 從 `custom/x-scene.html` 骨架照拍組裝（參考 `x-scene-example-rec.html`、`x-scene-example-outline.html`）→ 三關自驗。
 - [ ] **T114c** 素材工人派工模板 `.agents/skills/auto-edit-motion/references/illus-worker.md`：prompt＝`kit/illus-style.md` 全文＋素材清單那一列＋畫廊最像的 2 個元件原始碼（從 `kit/illus.js` 抄）＋驗收（lint 0 ✖、尺寸、狀態群組）＋回報格式（≤ 10 行）。
-- [ ] **T114d** `BEATS.md` 加「§5 示意動畫」（拍型 S：場景骨架 → 物件逐個進 → 狀態切換 → 結果；元件清單怎麼寫）、`SITUATIONS.md` §3 加「示意動畫」列（口播在描述具體動作／物件／流程時首選；例：手機、電腦、雲端、人走動、時間流逝）、`style.md` 加「示意動畫」節（硬規則等 003 T113d 的清單）、USAGE.md 2.3 分鏡表格式加兩欄、AGENTS.md「剪好看」第 2 步補一句「示意動畫先判定素材（畫廊／圖示／新建 SVG）」。`docs.test` 全綠。
+- [ ] **T114d** `BEATS.md` 加「§5 示意動畫」（拍型 S：場景骨架 → 物件逐個進 → 狀態切換 → 結果；元件清單怎麼寫）、`SITUATIONS.md` §3 加「示意動畫」列（講解在描述具體動作／物件／流程時首選；例：手機、電腦、雲端、人走動、時間流逝）、`style.md` 加「示意動畫」節（硬規則等 003 T113d 的清單）、USAGE.md 2.3 分鏡表格式加兩欄、AGENTS.md「剪好看」第 2 步補一句「示意動畫先判定素材（畫廊／圖示／新建 SVG）」。`docs.test` 全綠。
 - [ ] **T114e** 等 W1–W4 回報後回填 BEATS §3（W4 的 G 比喻／H 提示詞／I 介面操作三個拍型草案；W1–W3 的照回報）、SITUATIONS §3 動態欄、USAGE-reference R7.5 三支描述、x-prompt 音效欄。
 
 ### 基準測試（三條線都交件、check-all 綠之後；主代理派 Sonnet 工人）

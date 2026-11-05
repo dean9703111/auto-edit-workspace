@@ -12,7 +12,7 @@
 //   illusListFindings({ item, list, html, local }) → ✖ 來源不是三種之一、「畫廊」的元件畫廊沒有、「新建 SVG」還沒畫（illus-local/ 沒有那個檔）
 //   beatFindings 另外反向比：檔裡有聚焦、退焦、呼吸、鏡頭的 P.*，分鏡表一拍都沒寫 → ⚠ 分鏡沒寫的動作（多半是範例沒改到的殘留）
 //   sheetPlanFindings({ item, sheet, cues, tplRules }) → [{ msg, fix }]  build --check 用（停點 ③ 前，還沒有動畫檔可量）：
-//     拍序和口播相反、拍落在段尾淡出之後、照範例檔頭【D 下限】第一拍離段起點／相鄰兩拍／最後一拍到段尾放不下（差 > PLAN_TOL 才報）；都是 ⚠
+//     拍序和講解相反、拍落在段尾淡出之後、照範例檔頭【D 下限】第一拍離段起點／相鄰兩拍／最後一拍到段尾放不下（差 > PLAN_TOL 才報）；都是 ⚠
 import { parseTime, cueSeconds } from './time.mjs';
 import { fmtT } from './audit-rules.mjs';
 import { ILLUS_BUILTIN, illusOf } from './audit-illus.mjs';
@@ -36,7 +36,7 @@ export const VOCAB = [
 ].map(([kind, name, prim]) => ({ kind, name, prim }));
 // 拍型表的縮寫：「開場（依前段）」＝從講者來的色帶擦開＋子母畫面飛入＋長出，或從全畫面來的換卡不換景（§14.2）
 export const VOCAB_EXTRA = [{ kind: '轉場', name: '開場', prim: 'build' }];
-// 拿掉的動作：舊分鏡寫了不報錯（漂浮：使用者 11-03「出現的動畫窗都會輕微晃動」，kit 的 P.idle 不再位移）
+// 拿掉的動作：舊分鏡寫了不出錯（漂浮：使用者 11-03「出現的動畫窗都會輕微晃動」，kit 的 P.idle 不再位移）
 export const VOCAB_RETIRED = { 漂浮: 'idle' };
 const BY_NAME = new Map([...VOCAB, ...VOCAB_EXTRA].map((v) => [v.name, v]));
 // 「對應」欄第一個 P.* 以外也算做到的寫法（⚠ 用了沒做的動作時一起找）：沒有聚焦組的段，回均衡＝P.dim(…, {to: 1})；聚焦組裡的退焦＝P.spot 的預覽態或 dim
@@ -149,7 +149,7 @@ export function noSheetFinding(item, file) {
     fix: `照 shared/template/BEATS.md §3 這個情境的預設拍型，在 storyboard.md 這段底下寫一張表，表頭固定「| ${BEAT_HEADER.join(' | ')} |」，給人在停點 ③ 確認後再做動畫` };
 }
 
-// sheet＝parseBeatSheets 的一段；marks＝collectMotionInPage 的 marks（段內秒數）；cuesOut＝build --check 的成片秒數字幕；html＝x-*.html 原文
+// sheet＝parseBeatSheets 的一段；marks＝collectMotionInPage 的 marks（段內秒數）；cuesOut＝build --check 的完成影片秒數字幕；html＝x-*.html 原文
 export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '', file = '', local = [] }) {
   const out = [];
   const base = { id: item.id, label: item.label, kind: 'beats', el: null };
@@ -237,7 +237,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
   return out;
 }
 
-// build --check（停點 ③ 前）：分鏡表本身排不排得下。cues＝成片秒數字幕；item＝{ id, where, start, D }；tplRules＝範例原檔的 floorRules（沒有就只比拍序）
+// build --check（停點 ③ 前）：分鏡表本身排不排得下。cues＝完成影片秒數字幕；item＝{ id, where, start, D }；tplRules＝範例原檔的 floorRules（沒有就只比拍序）
 //   拍序：各拍綁句的時間要照表的順序（同一個句號的「＋秒數」拍跟著上一拍）；倒過來＝分鏡寫錯詞或排錯順序
 //   【D 下限】：每個句號取最早那一拍當一拍（「段起點」那一拍是開場，不算）；第一拍 ≥ 開場下限、相鄰兩拍 ≥ 範例最小拍距、最後一拍到段尾 ≥ 段長下限的秒數
 //   分鏡停點 ③ 之後可能過期（剪輯台重對句號），所以只報 ⚠、不擋 build
@@ -260,8 +260,8 @@ export function sheetPlanFindings({ item, sheet, cues = [], tplRules = [] }) {
   for (let i = 1; i < xs.length; i++) {
     const a = xs[i - 1], b = xs[i];
     if (a.ref === b.ref || b.t >= a.t - 0.05) continue;
-    out.push({ msg: `拍序和口播相反：第 ${b.beat} 拍 ${b.ref}（${fmt(b.t)}）比上一拍第 ${a.beat} 拍 ${a.ref}（${fmt(a.t)}）早講到`,
-      fix: '照口播順序重排這兩拍（拍號、畫面、動態一起換），或改綁真正講到的那個詞' });
+    out.push({ msg: `拍序和講解相反：第 ${b.beat} 拍 ${b.ref}（${fmt(b.t)}）比上一拍第 ${a.beat} 拍 ${a.ref}（${fmt(a.t)}）早講到`,
+      fix: '照講解順序重排這兩拍（拍號、畫面、動態一起換），或改綁真正講到的那個詞' });
   }
   // 落在段尾淡出（最後 0.5 秒）之後的拍：播出時看不到（「收」那一拍寫「＋2.5」最常見）
   for (const x of xs) {

@@ -2,7 +2,7 @@
 
 9 個音效：取自 CC0（公眾領域）素材，或 AI 生成並以 CC0 釋出；可以放進自己的影片、改編、商用，不用標示出處。
 片尾配樂 `bgm-cylinder-five.wav` 是 CC BY 4.0：預設不配，plan.json 的 outro 寫 "music": "bgm-cylinder-five" 才會用；用到的影片要在說明欄標示「Music: "Cylinder Five" by Chris Zabriskie (http://chriszabriskie.com/cylinders/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)」。
-逐檔的下載網址、sha256、處理方式、峰值秒數與響度在 `sources.json`；每顆在成片裡的大小（相對人聲的 dB）與使用時機在 `shared/template/kit/sfx.json`。
+逐檔的下載網址、sha256、處理方式、峰值秒數與響度在 `sources.json`；每顆在完成影片裡的大小（相對人聲的 dB）與使用時機在 `shared/template/kit/sfx.json`。
 
 | 檔名 | 聽起來像 | 用在哪 | 來源 | 授權 |
 |---|---|---|---|---|

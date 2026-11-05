@@ -9,7 +9,7 @@
 
 - 下面的指令都是 PowerShell 語法。MiniMax Code 在 Windows 預設用 PowerShell 執行指令。Windows PowerShell 5.1 不支援 `&&`、`||`，多個指令用 `;` 或換行分開。
 - 如果你的 shell 是 Git Bash：不要把指令包進 `powershell -Command '...'`，下面的指令有單引號和 `$`，會被 bash 弄壞。改成先把那段指令存成暫存檔再執行：`cat > /tmp/step.ps1 <<'EOF'`，下一行起貼上指令，最後一行寫 `EOF`；接著執行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File /tmp/step.ps1`。
-- 你的每個指令都是一個新的程序，看不到剛裝好的工具。所以 W3–W8 都用「完整路徑」或「重跑檢測」驗證，全部裝完再請使用者重開一次（W9）。
+- 你的每個指令都是一個新的處理程序，看不到剛裝好的工具。所以 W3–W8 都用「完整路徑」或「重跑檢測」驗證，全部裝完再請使用者重開一次（W9）。
 - 參數裡有逗號時要加引號（例如 `'stream=width,height'`），不然 PowerShell 會把它拆成好幾個參數。
 - winget 執行前，先跟使用者說：「等一下可能跳出『是否允許此 App 變更你的裝置？』，請按『是』。」視窗可能藏在工作列，盾牌圖示在閃就點開它。
 - winget 說 `Found an existing package already installed` 或 `No available upgrade found`，代表已經裝過，直接做驗證。

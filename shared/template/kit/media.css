@@ -8,7 +8,7 @@
 .mbg--paper { background: var(--sc-fs-bg) var(--sc-fs-pattern) no-repeat 0 0 / 1920px 1080px; }
 .mimg--paper { box-shadow: 0 0 0 12px var(--v2-node), var(--v2-card-shadow); }
 .mtape { position: absolute; width: 132px; height: 40px; box-sizing: border-box; background: var(--v2-tape); border: 1px solid var(--v2-tape-line); box-shadow: var(--v2-tape-shadow); }
-/* 面板：錄影可見區大小的外框（動態 v2 由 P.grow 從小窗長出）；stage 在裡面用 left／top 抵回畫面座標 */
+/* 面板：錄影可見區大小的外框（動態 v2 由 P.grow 從小視窗長出）；stage 在裡面用 left／top 抵回畫面座標 */
 .mgrow { position: absolute; }
 /* 標註的焦點容器（P.dim 壓暗只動它） */
 .mfo { position: absolute; inset: 0; pointer-events: none; }

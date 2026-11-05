@@ -323,7 +323,7 @@ ${cells}
     assert.equal(out.forced, true, '{force:true} 要重畫');
     assert.equal(out.reg, true, 'register 的元件與後插入的 data-illus 要掛得上');
     // 讀不到的檔：載入時報一次；之後 mount() 不重報，{force:true} 重試再報一次
-    assert.equal(out.errs.length, 2, `只有讀不到的那個檔要報錯：${JSON.stringify(out.errs)}`);
+    assert.equal(out.errs.length, 2, `只有讀不到的那個檔要出錯：${JSON.stringify(out.errs)}`);
     for (const e of out.errs) assert.match(e, /\[ILLUS\] 讀不到 data-illus-src="illus-local\/nope\.svg"/);
   } finally {
     server.close();

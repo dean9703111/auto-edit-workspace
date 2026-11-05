@@ -170,7 +170,7 @@ export function isBlackRgba(buf, w, h) {
 
 const MIME = { '.mjs': 'text/javascript', '.js': 'text/javascript', '.wasm': 'application/wasm', '.task': 'application/octet-stream' };
 
-// 程序被砍（逾時、Ctrl+C）時 close() 沒機會刪暫存 profile：開新的之前，清掉超過 1 天的舊 look-lm-*（只動自己的前綴；審查 C-13）
+// 處理程序被砍（逾時、Ctrl+C）時 close() 沒機會刪暫存 profile：開新的之前，清掉超過 1 天的舊 look-lm-*（只動自己的前綴；審查 C-13）
 export function sweepStaleProfiles(dir = os.tmpdir(), maxAgeMs = 24 * 3600 * 1000, now = Date.now()) {
   let n = 0;
   let names = [];
@@ -178,7 +178,7 @@ export function sweepStaleProfiles(dir = os.tmpdir(), maxAgeMs = 24 * 3600 * 100
   for (const name of names) {
     if (!name.startsWith('look-lm-')) continue;
     const p = path.join(dir, name);
-    try { if (fs.statSync(p).isDirectory() && now - fs.statSync(p).mtimeMs > maxAgeMs) { fs.rmSync(p, { recursive: true, force: true }); n++; } } catch { /* 別的程序正在用或已經刪了 */ }
+    try { if (fs.statSync(p).isDirectory() && now - fs.statSync(p).mtimeMs > maxAgeMs) { fs.rmSync(p, { recursive: true, force: true }); n++; } } catch { /* 別的處理程序正在用或已經刪了 */ }
   }
   return n;
 }

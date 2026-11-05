@@ -75,19 +75,19 @@ test('CSS 範圍：每個選擇器加前綴，:has(a, b) 內的逗號不切，@ 
   assert.throws(() => scopeCss('@media (max-width: 1px) { .a { color: red; } }', '#c'), /@ 規則/);
 });
 
-test('字數超過上限報錯（不縮字），訊息寫明欄位與上限', () => {
+test('字數超過上限出錯（不縮字），訊息寫明欄位與上限', () => {
   const sc = scene('concept');
   const text = '這是一段超過二十四個字的字卡正文用來測試字數上限有沒有被擋下來';
   assert.ok(visibleLen(text) > 24);
   const r = resolveScene({ scene: sc, seg: { id: 's01', slots: { text } }, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: 6 });
   assert.equal(r.errors.length, 1);
   assert.match(r.errors[0], /\[s01 concept\] slots\.text（正文）.*上限 24/);
-  // 半形 0.5：40 個英文字母＝20 字，不報錯
+  // 半形 0.5：40 個英文字母＝20 字，不出錯
   const r2 = resolveScene({ scene: sc, seg: { id: 's01', slots: { text: 'a'.repeat(40) } }, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: 6 });
   assert.deepEqual(r2.errors, []);
 });
 
-test('清單項數、必填、圖示不存在都報錯', () => {
+test('清單項數、必填、圖示不存在都出錯', () => {
   const r = resolveScene({ scene: scene('fs-flow'), seg: { id: 's02', slots: { title: '流程', nodes: ['甲 ｜icon=no-such-icon', '乙 ｜icon=folder'] } }, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: 6 });
   const all = r.errors.join('\n');
   assert.match(all, /至少 3 項，現在 2 項/);
@@ -125,7 +125,7 @@ test('beats／清單 at：#Ne 與 +x 換成相對本段起點的秒數', () => {
   assert.match(bad.errors.join('\n'), /不能寫絕對秒數/);
 });
 
-test('時間點太晚（完成態停不到 0.6 秒）報錯並給出 to 要延到哪裡', () => {
+test('時間點太晚（完成態停不到 0.6 秒）出錯並給出 to 要延到哪裡', () => {
   const cues = parseSrt(makeSrt());
   const r = resolveScene({ scene: scene('steps'), cues, icons: L.icons, consts: L.consts, t0: cueStart(1), D: 5.5, seg: { id: 's01', slots: { steps: ['一', { text: '二', at: '#2+1.5' }] } } });
   assert.match(r.errors.join('\n'), /晚於 D−0\.3−0\.6 = .*把 to 往後延到至少第/, 'D−P.OUT−0.6：P.OUT 讀 kit 的常數（v2 是 0.3）');

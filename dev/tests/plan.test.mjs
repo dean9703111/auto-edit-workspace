@@ -82,7 +82,7 @@ test('相接的下方字卡：前一張的結尾改成後一張起點＋0.4（�
   assert.equal(byId(res2, 's01').end, cueEnd(3));
 });
 
-test('音效：3 秒內只留第一個，被拿掉的列進警告；起點＝事件時間−峰值＋1 幀', () => {
+test('音效：3 秒內只留第一個，被拿掉的列進警告；起點＝事件時間−峰值＋1 格', () => {
   const res = runF([
     { id: 's01', scene: 'keywords', from: 5.5, to: 9.5, slots: { items: ['一', '二'] } },
     { id: 's02', scene: 'key-point', from: '#3', to: '#4e', slots: { key: '二' } },
@@ -189,7 +189,7 @@ test('錯誤訊息寫明段落、欄位、怎麼改', () => {
   assert.match(all, /from／to 不能寫「\+3」.*"duration": 3/);
 });
 
-test('時間超過影片長度：起點報錯、結尾截短', () => {
+test('時間超過影片長度：起點出錯、結尾截短', () => {
   const res = run([{ id: 's01', scene: 'concept', from: 45, slots: { text: '一' } }, { id: 's02', scene: 'concept', from: 40, to: 50, slots: { text: '二' } }]);
   assert.match(res.errors.join('\n'), /起點 45s 超過影片長度 44s/);
   const r2 = run([{ id: 's02', scene: 'concept', from: 40, to: 50, slots: { text: '二' } }]);
@@ -458,7 +458,7 @@ test('continuous：沒有畫面的區間、講者閃一下 ⚠（附 to）；0.0
   assert.ok(c.warnings.some((w) => w.startsWith('沒有畫面的區間共 1 段、21.00s → 照 style.md「連續覆蓋」')));
   assert.ok(!c.warnings.some((w) => /只露臉|開場前 30 秒/.test(w)));
   const rep = formatReport(c, { videoDur: VD });
-  assert.match(rep, /\n節奏：continuous（連續覆蓋：每段口播都要有畫面；要留露臉空檔就在 plan\.json 寫 "rhythm": "spaced"）\n沒有畫面的區間（> 1\.0s）：0:21\.50–0:42\.50（21\.00s）；共 21\.00s，佔口播 50\.6%/);
+  assert.match(rep, /\n節奏：continuous（連續覆蓋：每段講解都要有畫面；要留露臉空檔就在 plan\.json 寫 "rhythm": "spaced"）\n沒有畫面的區間（> 1\.0s）：0:21\.50–0:42\.50（21\.00s）；共 21\.00s，佔講解 50\.6%/);
   const s = run(scenes, { rhythm: 'spaced' });
   assert.ok(s.warnings.some((w) => /\[s02 concept\] 和前一段 s01 之間只露臉 0\.5s/.test(w)));
   assert.ok(s.warnings.some((w) => /開場前 30 秒已經有 3 張/.test(w)));
@@ -481,7 +481,7 @@ test('只有聲音：沒蓋住 0.3 s ⚠、1.2 s ✖；報告行寫 ⚠／✖；
   assert.deepEqual(jsonTop(res).voiceUncovered.map((g) => [g.start, g.end, g.level]), [[25, 25.3, 'warn'], [28.8, 30, 'error']]);
 });
 
-test('全寬版型：整段只有聲音的全畫面段 host 寫 data-wide、報告註明；04a 沒寫 visual ⚠、visual 要是畫廊元件；有小窗的段 host 寫 data-ambient="off"', () => {
+test('全寬版型：整段只有聲音的全畫面段 host 寫 data-wide、報告註明；04a 沒寫 visual ⚠、visual 要是畫廊元件；有小視窗的段 host 寫 data-ambient="off"', () => {
   const go = (visual) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes: [
     { id: 's01', scene: 'fs-list', from: '#1', to: '#2e', slots: { title: 'A', items: ['一', '二', '三'] } },
     { id: 's02', scene: 'fs-list', from: 20, to: 25, slots: { title: 'B', items: ['一', '二', '三'] } },
@@ -489,8 +489,8 @@ test('全寬版型：整段只有聲音的全畫面段 host 寫 data-wide、報�
   ] }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), voiceOnly: [[20, 30]] });
   const res = go('laptop');
   assert.deepEqual(res.errors, []);
-  assert.deepEqual(['s01', 's02', 's03'].map((id) => !!byId(res, id).wide), [false, true, true], '有講者小窗的不算全寬');
-  assert.ok(res.warnings.some((w) => w.startsWith('[s02 fs-list] 全寬（沒有子母畫面小窗）的清單右半邊會空 → slots 加 "visual"')), res.warnings.join('\n'));
+  assert.deepEqual(['s01', 's02', 's03'].map((id) => !!byId(res, id).wide), [false, true, true], '有講者小視窗的不算全寬');
+  assert.ok(res.warnings.some((w) => w.startsWith('[s02 fs-list] 全寬（沒有子母畫面小視窗）的清單右半邊會空 → slots 加 "visual"')), res.warnings.join('\n'));
   assert.ok(!res.warnings.some((w) => w.startsWith('[s03 fs-list] 全寬')), '寫了主視覺就不提醒');
   assert.match(formatReport(res), /s02｜[^\n]*全寬版型（主卡 1680、內容區 1676×580/);
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip, badges: res.badges });
@@ -526,7 +526,7 @@ test('子母畫面進場／出場＋章節墊底：透明卡→04a＝fly；04a�
   assert.deepEqual(jsonTop(res).chapters.map((c) => [c.id, c.cue, c.start, c.end, c.placement]), [['c1', 8, 25.5, 28, 'cover']]);
 });
 
-test('擦入擦出：media↔動畫幕（只有聲音或有講者小窗都擦）；in 0.2 → 動畫多留 0.45 s 蓋住錄影開頭再擦出；圖片可以；相鄰 media 疊化 0.47 s；章節不擦', () => {
+test('擦入擦出：media↔動畫幕（只有聲音或有講者小視窗都擦）；in 0.2 → 動畫多留 0.45 s 蓋住錄影開頭再擦出；圖片可以；相鄰 media 疊化 0.47 s；章節不擦', () => {
   const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-wipe-'));
   for (const f of ['assets/images/a.png', 'assets/images/b.png', 'assets/screen/v.mp4']) { fs.mkdirSync(path.dirname(path.join(pdir, f)), { recursive: true }); fs.writeFileSync(path.join(pdir, f), ''); }
   const probe = (f) => (f.endsWith('.mp4') ? { width: 1920, height: 1080, duration: 30, hasAudio: false } : { width: 1920, height: 1080 });
@@ -553,7 +553,7 @@ test('擦入擦出：media↔動畫幕（只有聲音或有講者小窗都擦）
   const c = go([{ id: 'm1', type: 'media', src: 'assets/images/a.png', from: 10, to: 20 }, { id: 'm3', type: 'media', src: 'assets/images/b.png', from: 20, to: 30 }]);
   assert.deepEqual(c.errors, []);
   assert.deepEqual([byId(c, 'm3').xfade, byId(c, 'm1').end, byId(c, 'm1').wipeOut, byId(c, 'm3').wipeIn], [0.47, 20.47, undefined, undefined]);
-  // 講者段（有子母畫面小窗）也擦；章節不擦
+  // 講者段（有子母畫面小視窗）也擦；章節不擦
   const d = go([{ id: 'm1', type: 'media', src: 'assets/images/a.png', from: 4, to: 8 }, { id: 'f1', type: 'fx', fx: 29, bg: 'dark', from: 8, to: 9.5, vars: { number: '1' } }]);
   assert.equal(byId(d, 'f1').wipeIn, true);
   fs.rmSync(pdir, { recursive: true });
@@ -703,7 +703,7 @@ test('小節角標（sections）：每個小節一顆章號＋小節名膠囊（
   assert.ok(run(scenes, { sections: [{ at: '#1', name: '開場' }] }).warnings.some((w) => w.startsWith('sections[0]（#1「開場」）不在任何一章裡')));
   // 建議：講稿 ### 底下第一句對字幕；第一章之前的不列
   const pd = fs.mkdtempSync(path.join(os.tmpdir(), 'sec-'));
-  fs.writeFileSync(path.join(pd, '講稿.md'), '## 開場\n\n### 開頭\n\n第 1 句字幕內容\n\n## 痛點\n\n第 2 句字幕內容\n\n### 第一節\n\n第 4 句字幕內容\n\n### 第二節\n\n```\n不是口播\n```\n第 6 句字幕內容\n');
+  fs.writeFileSync(path.join(pd, '講稿.md'), '## 開場\n\n### 開頭\n\n第 1 句字幕內容\n\n## 痛點\n\n第 2 句字幕內容\n\n### 第一節\n\n第 4 句字幕內容\n\n### 第二節\n\n```\n不是講解\n```\n第 6 句字幕內容\n');
   const sug = resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pd });
   assert.ok(sug.warnings.includes('講稿有 2 個小節（###），plan.json 沒有 sections，觀眾只看得到章名 → 第一層加 "sections": [{"at":"#4","name":"第一節"},{"at":"#6","name":"第二節"}]（name 超過 12 字的自己縮短）'), sug.warnings.join('\n'));
   fs.rmSync(pd, { recursive: true });
@@ -737,7 +737,7 @@ test('小節角標在橫式錄影段：放不下就貼錄影畫面右上角（�
   fs.rmSync(pdir, { recursive: true });
 });
 
-test('右側步驟清單（錄影段 side）：直式錄影靠左、清單卡在右邊（有小窗時在小窗上方）、講到那條亮起；直式錄影沒寫 side ⚠；條數太多 ✖', () => {
+test('右側步驟清單（錄影段 side）：直式錄影靠左、清單卡在右邊（有小視窗時在小視窗上方）、講到那條亮起；直式錄影沒寫 side ⚠；條數太多 ✖', () => {
   const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-side-'));
   fs.mkdirSync(path.join(pdir, 'assets/images'), { recursive: true });
   fs.writeFileSync(path.join(pdir, 'assets/images/p.png'), '');
@@ -747,7 +747,7 @@ test('右側步驟清單（錄影段 side）：直式錄影靠左、清單卡在
   const a = go({ side });
   assert.deepEqual(a.errors, []);
   const m1 = byId(a, 'm1');
-  // 1080×2410 放進左邊 [120, 0, 720, 940]：421×940、左 270；兩條、有講者小窗 → 卡高 112＋200＋64＝376，在 y 160–560 置中
+  // 1080×2410 放進左邊 [120, 0, 720, 940]：421×940、左 270；兩條、有講者小視窗 → 卡高 112＋200＋64＝376，在 y 160–560 置中
   assert.deepEqual([m1.media.geo.left, m1.media.geo.width, m1.media.geo.height], [270, 421, 940]);
   assert.deepEqual(m1.media.side.box, [840, 172, 960, 376]);
   assert.deepEqual(m1.media.side.items.map((x) => x.text), ['打開 App', '掃 QR Code']);
@@ -756,12 +756,12 @@ test('右側步驟清單（錄影段 side）：直式錄影靠左、清單卡在
   assert.ok(html.includes('<div id="msd-m1" class="clip mside"') && html.includes('<span class="mside__txt">掃 QR Code</span>'));
   assert.ok(html.includes(`tl.fromTo('#msdi-m1-2', { opacity: 0.4 }, { opacity: 1, duration: 0.3, ease: 'sine.out', immediateRender: false }, ${cueStart(5)});`), '講到第二條亮起');
   assert.ok(html.includes(`tl.fromTo('#msdi-m1-1', { opacity: 1 }, { opacity: 0.7, duration: 0.3, ease: 'sine.in', immediateRender: false }, ${cueStart(5)});`), '前一條變淡');
-  // 只有聲音（沒有小窗）：卡在 y 160–880 置中
+  // 只有聲音（沒有小視窗）：卡在 y 160–880 置中
   assert.deepEqual(byId(go({ side }, [[0, VD]]), 'm1').media.side.box, [840, 332, 960, 376]);
-  // 沒寫 side：⚠ 提醒；有小窗時三條放不下 ✖
+  // 沒寫 side：⚠ 提醒；有小視窗時三條放不下 ✖
   assert.ok(byId(go({}), 'm1').warnings.some((w) => w.includes('直式錄影（1080×2410）在橫式影片只佔中間一條')));
   const c = go({ side: { title: '配對手機', items: [{ at: '#4', text: '一' }, { at: '#5', text: '二' }, { at: '#6', text: '三' }] } });
-  assert.ok(c.errors.some((x) => x.includes('side 有 3 條放不下（有講者小窗，清單在小窗上方，最多 2 條）')), c.errors.join('\n'));
+  assert.ok(c.errors.some((x) => x.includes('side 有 3 條放不下（有講者小視窗，清單在小視窗上方，最多 2 條）')), c.errors.join('\n'));
   fs.rmSync(pdir, { recursive: true });
 });
 

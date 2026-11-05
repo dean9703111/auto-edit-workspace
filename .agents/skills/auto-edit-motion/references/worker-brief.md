@@ -20,7 +20,7 @@
   node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id> --shots
   （--shots 把中點、靜止、完成態各存一張截圖到 work/audit-shots/，你看不到 snapshot，用它看自己那段）
 只讀這些：auto-edit-motion 步驟 1–7；USAGE-reference.md R7.2、R7.3、R7.6；shared/template/BEATS.md 這段情境的拍型（示意動畫加 §5）
-注意：拍的先後照口播的詞序（範例分鏡的拍序只是範例）；根元素的 data-cues-sample 只給畫廊預覽用，不用改
+注意：拍的先後照講解的詞序（範例分鏡的拍序只是範例）；根元素的 data-cues-sample 只給畫廊預覽用，不用改
 這段的字幕（句號：文字）：
 #<N> <字幕原文>
 #<N+1> <字幕原文>

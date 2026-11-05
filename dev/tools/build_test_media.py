@@ -1,9 +1,9 @@
 """產生 MiniMax 集的測試素材（彩排用，正式拍攝換成實拍畫面）。
 
 輸出（都在 video/minimax/素材/ 底下）：
-  workspace/projects/測試/assets/camera/test-raw.mp4   macOS 語音合成的測試口播，刻意放 NG 重講、低音量自言自語、長停頓
+  workspace/projects/測試/assets/camera/test-raw.mp4   macOS 語音合成的測試講解，刻意放 NG 重講、低音量自言自語、長停頓
   workspace/projects/測試/場地照-測試.jpg   固定機位示意圖（講者剪影在右側）
-  workspace/projects/測試/講稿.md   從 projects/example/講稿.md 複製（測試口播照這份念）
+  workspace/projects/測試/講稿.md   從 projects/example/講稿.md 複製（測試講解照這份念）
   （測試專案獨立一個資料夾，不跟範例專案混在一起；projects/ 底下除了範例都在 .gitignore 裡，不會被發布）
   驗收/答案卷.md                  每段的原始時間碼與「應保留／應剪掉」，用來驗收 AI 初剪
                                   （放在 workspace 外面，避免 AI 讀到答案）

@@ -195,7 +195,7 @@ function makePreview(P, flags, id, dir, log) {
   if (!j) return fail(`build --check 沒有輸出（${tail(c.stderr, 160)}）`, again);
   if (!j.ok) return fail(`plan.json 有 ✖（${(j.errors || [])[0] ?? '?'}）`, `照 build.mjs --check 的 → 修好，${again}`);
   const o = (j.items || []).find((x) => x.id === id)?.out;
-  if (!o || !Number.isFinite(o.start)) return fail('--check 找不到這段在成片的時間', again);
+  if (!o || !Number.isFinite(o.start)) return fail('--check 找不到這段在完成影片的時間', again);
   const t0 = r2(o.start), len = r2(Math.max(0.5, Math.min(o.end - o.start + PREVIEW.tail, (j.outputDur ?? Infinity) - o.start)));
   const b = build(['--test', `${t0},${len}`]);
   if (b.status !== 0) return fail(`build 失敗（${firstErr(b)}）`, `照 build 印的 → 修好，${again}`);

@@ -170,7 +170,7 @@ const RUNNING_PHASES = ['locate', 'detect', 'render', 'preview'];
 
 function cmdClear({ P, out }) {
   const S = statePaths(P.project), st = readState(P.project);
-  if (isRunning(st)) { out(`✖ 正在跑（pid ${st.run.pid}）→ 等它跑完或結束那個程序再 clear`); return 1; }
+  if (isRunning(st)) { out(`✖ 正在跑（pid ${st.run.pid}）→ 等它跑完或結束那個處理程序再 clear`); return 1; }
   const gone = [];
   for (const [f, name] of [[S.landmarks, 'work/face-landmarks.json'], [S.footage, 'work/rough-look.mp4'], [S.preview, 'work/look-preview.jpg']]) {
     if (fs.existsSync(f)) { fs.rmSync(f, { force: true }); gone.push(name); }
@@ -222,7 +222,7 @@ async function cmdRun({ P, templateDir, flags, out, argv }) {
   }
   if (flags.background && !child) return runBackground({ P, proj, S, V, out, argv, every: flags.every || 1, templateDir, force: !!flags.force });
 
-  // 前景（或背景子程序）
+  // 前景（或背景子處理程序）
   fs.mkdirSync(S.dir, { recursive: true });
   const logFd = child ? null : fs.openSync(S.log, 'w');
   const say = (l) => { out(l); if (logFd != null) fs.writeSync(logFd, l + '\n'); };
@@ -396,7 +396,7 @@ async function runBackground({ P, proj, S, V, out, argv, every, templateDir, for
   }
   let tail = '';
   try { tail = fs.readFileSync(S.log, 'utf8').trim().split('\n').slice(-8).join('\n'); } catch { /* */ }
-  out(`✖ 背景程序沒有啟動成功（原因看下面 log 的最後幾行；第二次失敗就停下來回報）→ 改在前景跑：node shared/template/tools/look.mjs run --project ${projArg(proj)}`);
+  out(`✖ 背景處理程序沒有啟動成功（原因看下面 log 的最後幾行；第二次失敗就停下來回報）→ 改在前景跑：node shared/template/tools/look.mjs run --project ${projArg(proj)}`);
   out(tail || '（log 是空的）');
   return 1;
 }

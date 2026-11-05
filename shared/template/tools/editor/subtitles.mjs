@@ -199,7 +199,7 @@ export function applyCueOp(cues, op, { videoDur = null } = {}) {
 export function remapRef(ref, op, cues) {
   if (!STRUCT.has(op.op)) return ref;
   const idx = cues.findIndex((c) => c.n === ref.n);
-  if (idx < 0) return ref;                     // 本來就對不到的句號：不動（build 會報錯）
+  if (idx < 0) return ref;                     // 本來就對不到的句號：不動（build 會出錯）
   if (ref.kw != null) return remapKwRef(ref, op, cues, idx);
   const at = (i, end = ref.end, off = ref.off) => ({ n: i + 1, end, off });
   if (op.op === 'split') {

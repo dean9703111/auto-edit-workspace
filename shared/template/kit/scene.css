@@ -1,6 +1,6 @@
 /* ==========================================================================
    動畫情境庫 設計系統（scene.css）— 可換主題的共用元件
-   本檔只放 token 預設值（頻道預設 channel）、字體與可組裝的元件，不寫死任何顏色；
+   本檔只放 token 預設值（頻道預設 channel）、字型與可組裝的元件，不寫死任何顏色；
    所有顏色讀 --sc-* token。token 與主題契約見 references/theming.md；
    主題＝assets/themes/<name>/theme.css（只覆寫 :root token＋少量裝飾），載入順序：scene.css → scene-theme.css。
    各段只在自己 index.html 的 <style> 寫「位置」（position/left/top/bottom）與少量覆寫，不改本檔。
@@ -103,7 +103,7 @@
 
 
 /* --------------------------------------------------------------------------
-   字體：由 kit/fonts.css 提供（Noto Sans TC 可變字型，隨包附、離線可用），這裡只透過 --font-cjk 引用。
+   字型：由 kit/fonts.css 提供（Noto Sans TC 可變字型，隨包附、離線可用），這裡只透過 --font-cjk 引用。
    -------------------------------------------------------------------------- */
 :root {
   /* 間距 token（012 版面系統；kit/scene-layout.js 讀；直式一樣）：位置、尺寸、間距都是 8 的倍數 */

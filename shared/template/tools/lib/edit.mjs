@@ -1,12 +1,12 @@
-// plan.json 第一層 edit（剪輯台寫的設定）：檢查、正規化、rough.mp4 秒數 ↔ 成片秒數的對應
+// plan.json 第一層 edit（剪輯台寫的設定）：檢查、正規化、rough.mp4 秒數 ↔ 完成影片秒數的對應
 //
 //   normalizeEdit(edit, { videoDur, cutpoints }) → { edit, errors, warnings, active }
 //     edit＝{ cuts:[[a,b]…]（排序合併後）, fadeIn, fadeOut, volume:{ voice, sfx, media }, gains:[{ from, to, db }], joins:[{ at, type, dur }] }
 //     active＝有任何會改變輸出的設定（沒有 edit、或全是預設值時 false → 輸出和沒寫 edit 一模一樣）
 //   timeMap(cuts, videoDur) → { cuts, keep, outDur, identity, map(t), unmapStart(o), unmapEnd(o), joinsOut }
-//     map：rough 秒數 → 成片秒數（落在 cut 裡的點收到 cut 的起點）
-//     unmapStart／unmapEnd：成片秒數 → rough 秒數（剛好在接點上時：Start 取接點後、End 取接點前）
-//   remapCues(cues, tm) → 成片時間的字幕（整句被剪掉的長度變 0，字幕產生器會略過）
+//     map：rough 秒數 → 完成影片秒數（落在 cut 裡的點收到 cut 的起點）
+//     unmapStart／unmapEnd：完成影片秒數 → rough 秒數（剛好在接點上時：Start 取接點後、End 取接點前）
+//   remapCues(cues, tm) → 完成影片時間的字幕（整句被剪掉的長度變 0，字幕產生器會略過）
 //   dB(x) → 線性增益
 
 import { r3 } from './time.mjs';
@@ -68,7 +68,7 @@ export function normalizeEdit(edit, { videoDur, cutpoints = [] } = {}) {
     if (!isNum(edit[k]) || edit[k] < 0 || edit[k] > 10) { err(`${k} 要是 0–10 的秒數，現在是 ${JSON.stringify(edit[k])}`); continue; }
     out[k] = r3(edit[k]);
   }
-  if (outDur != null && out.fadeIn + out.fadeOut > outDur) err(`fadeIn＋fadeOut（${r3(out.fadeIn + out.fadeOut)}s）比成片長度 ${outDur}s 還長 → 縮短淡入淡出`);
+  if (outDur != null && out.fadeIn + out.fadeOut > outDur) err(`fadeIn＋fadeOut（${r3(out.fadeIn + out.fadeOut)}s）比完成影片長度 ${outDur}s 還長 → 縮短淡入淡出`);
 
   // --- 音量 ---
   if (edit.volume != null) {
@@ -142,7 +142,7 @@ export function timeMap(cuts = [], videoDur = Infinity) {
   let t = 0;
   for (const [a, b] of cuts) { if (a > t) keep.push([t, a]); t = Math.max(t, b); }
   if (t < videoDur) keep.push([t, videoDur]);
-  // 每個保留段在成片的起點
+  // 每個保留段在完成影片的起點
   let acc = 0;
   const segs = keep.map(([a, b]) => { const s = { a, b, o: acc }; acc += b - a; return s; });
   const outDur = r3(acc);
@@ -162,7 +162,7 @@ export function timeMap(cuts = [], videoDur = Infinity) {
     const last = segs[segs.length - 1];
     return last ? r3(last.b) : r3(o);
   };
-  // 成片裡的接點（cut 收起來的位置；片頭片尾的 cut 只是裁掉，不算接點）
+  // 完成影片裡的接點（cut 收起來的位置；片頭片尾的 cut 只是裁掉，不算接點）
   const joinsOut = cuts.filter(([a, b]) => a > 1e-6 && b < videoDur - 1e-6).map(([a]) => map(a));
   return {
     cuts, keep, outDur, identity: !cuts.length, map, joinsOut,
@@ -175,7 +175,7 @@ export function remapCues(cues, tm) {
   return cues.map((c) => ({ ...c, start: tm.map(c.start), end: tm.map(c.end) }));
 }
 
-// 成片區間 [s, e] 在接點（cut 收起來的位置）切開 → [{ s, e, ms }]（ms＝這一塊在 rough.mp4 的起點）
+// 完成影片區間 [s, e] 在接點（cut 收起來的位置）切開 → [{ s, e, ms }]（ms＝這一塊在 rough.mp4 的起點）
 export function splitAtJoins(s, e, tm, extra = []) {
   const pts = [...new Set([...tm.joinsOut, ...extra])].filter((p) => p > s + 1e-6 && p < e - 1e-6).sort((a, b) => a - b);
   const bounds = [s, ...pts, e];

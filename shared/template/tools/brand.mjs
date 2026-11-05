@@ -450,7 +450,7 @@ async function packCli(cmd, args) {
     const r = usePack(templateDir, name, { force: !!o.force });
     console.log(`換成風格包「${name}」（原本：${r.from ?? '不屬於任何包'}）：${r.changed.length ? r.changed.map((f) => `shared/template/${f}`).join('、') : '檔案都一樣，沒有變'}`);
     if (r.noDark.length) console.log(`⚠ 這包沒有暗色背景（${r.noDark.join('、')}），shared/template/ 留著原本的；暗色主題的集數背景會對不上主色 → 補進 shared/template/${STYLES_DIR}/${name}/ 再 use 一次`);
-    console.log('接著重跑 node shared/template/tools/build.mjs，成片就會換；預覽頁 shared/template/index.html 重新整理即可');
+    console.log('接著重跑 node shared/template/tools/build.mjs，完成影片就會換；預覽頁 shared/template/index.html 重新整理即可');
     return 0;
   }
   const r = makePack(templateDir, name, { color: o.color ?? null, bg: o.bg ?? null, note: o.note ?? '', kitDir });
@@ -564,7 +564,7 @@ async function cli() {
   if (d.barInk < 3) console.log(`⚠ 暗色主題標題列的白字對比只有 ${d.barInk}（大字要 ≥ 3）：主色太亮，暗色主題的標題看不清楚 → 換深一點的主色，或這支影片用亮色主題`);
   if (c.reddish) console.log('⚠ 主色是紅色系：會和警示紅（踩雷、注意）撞色，觀眾分不出哪個是警告。建議換別的顏色');
   if (frame) console.log('已重畫 kit/pip-frame.png（子母畫面外框）與 kit/pip-frame-v.png（直式講者面板分隔線）');
-  console.log('接著重跑 node shared/template/tools/build.mjs，成片就會換色；預覽頁 shared/template/index.html 重新整理即可');
+  console.log('接著重跑 node shared/template/tools/build.mjs，完成影片就會換色；預覽頁 shared/template/index.html 重新整理即可');
   return 0;
 }
 

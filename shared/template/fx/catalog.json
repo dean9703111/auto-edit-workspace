@@ -271,8 +271,8 @@
       "bg": "accent",
       "portrait": "band",
       "animText": "跑馬看板・限時・新發售・（各行不同詞）",
-      "spec": "4–5 行橫帶，字體、字級、速度、方向各不同地疊加捲動",
-      "desc": "多行字體、字級、速度、方向各異的跑馬燈",
+      "spec": "4–5 行橫帶，字型、字級、速度、方向各不同地疊加捲動",
+      "desc": "多行字型、字級、速度、方向各異的跑馬燈",
       "when": "公告、限時、促銷，多個標語同時出現",
       "sfx": null,
       "done": "timeline"
@@ -637,8 +637,8 @@
       "bg": "light",
       "portrait": "ok",
       "animText": "圖紋遮罩",
-      "spec": "文字當作窗口（background-clip: text），內部為主色與黑色斜紋持續流動",
-      "desc": "文字當窗口，內部斜紋持續流動",
+      "spec": "文字當作鏤空窗（background-clip: text），內部為主色與黑色斜紋持續流動",
+      "desc": "文字當鏤空窗，內部斜紋持續流動",
       "when": "流行、祭典、活潑的主題字",
       "sfx": null,
       "done": "timeline"

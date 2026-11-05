@@ -25,7 +25,7 @@
     <button id="btnRedo" class="icon ghost" data-tip="重做（⌘／Ctrl＋Shift＋Z）" aria-label="重做" disabled>↷</button>
     <span class="sep"></span>
     <button id="btnSave" class="primary" data-tip="寫進 plan.json 和字幕檔（⌘／Ctrl＋S）" disabled>儲存</button>
-    <button id="btnBuild" data-tip="跑 build.mjs，更新成片預覽（沒存的會先存）">重新產生</button>
+    <button id="btnBuild" data-tip="跑 build.mjs，更新完成影片預覽（沒存的會先存）">重新產生</button>
     <button id="btnRequests" class="toggle" aria-pressed="false" data-tip="修改單：選一段動畫或錄影，在右側寫想怎麼改（換動畫、流程更細、以圖為主…），累積好複製給 AI">修改單 <span class="rq-count" id="rqCount"></span></button>
     <a id="btnFraming" class="ghost" href="/framing" target="_blank" rel="noopener" data-tip="構圖：拖框調整講者的裁切與縮放（另開分頁）" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">構圖</a>
     <button id="btnHelp" class="icon ghost" data-tip="操作說明與快捷鍵（?）" aria-label="說明">?</button>
@@ -38,8 +38,8 @@
   <section class="viewer">
     <div class="viewer-bar">
       <div class="seg" role="tablist" aria-label="預覽模式">
-        <button data-mode="sim" class="on" role="tab" data-tip="播粗剪影片＋你現在的設定（還沒存也看得到）">即時模擬</button>
-        <button data-mode="player" role="tab">成片預覽</button>
+        <button data-mode="sim" class="on" role="tab" data-tip="播初剪影片＋你現在的設定（還沒存也看得到）">即時模擬</button>
+        <button data-mode="player" role="tab">完成影片預覽</button>
       </div>
       <div class="mode-note" id="modeNote"></div>
       <div class="view-toggles">
@@ -85,7 +85,7 @@
         <button id="tc" class="tc" data-tip="目前位置（時:分:秒:格）。點一下輸入時間跳過去">00:00:00:00</button>
         <input id="tcInput" class="tc tc-input" hidden aria-label="跳到時間" placeholder="00:00:12:00 或 1:23">
         <span class="tc-dur">／<span id="tcDur">00:00:00:00</span></span>
-        <span class="tc-out" data-tip="扣掉剪掉的範圍之後，在成片裡的位置與總長">成片 <b id="tcOut">00:00:00:00</b>／<span id="tcOutDur">—</span></span>
+        <span class="tc-out" data-tip="扣掉剪掉的範圍之後，在完成影片裡的位置與總長">完成影片 <b id="tcOut">00:00:00:00</b>／<span id="tcOutDur">—</span></span>
         <span class="rate" id="rate" hidden></span>
       </div>
       <div class="inout">
@@ -208,9 +208,9 @@
       <ol class="plain">
         <li>點時間軸上的東西（字幕、卡片、插入素材、剪接點、音效），右邊「屬性」就會顯示能改的地方；什麼都沒選＝整支影片的設定。</li>
         <li>改好按「儲存」寫進 <code>plan.json</code>（字幕寫進 <code>work/rough.srt</code>）。</li>
-        <li>講者調光、瘦臉：點時間軸空白處，右邊「屬性」最上面的「講者」。調光拖了馬上看得到；瘦臉看下面的前後兩張臉，按「重新產生」才會套進成片。</li>
-        <li>改了卡片文字，存檔後會自動重新產生，完成後切到「成片預覽」停在那一段。</li>
-        <li>在「構圖」儲存後，已有成片會自動更新，完成後這一頁直接套用新預覽，尚未儲存的調整會保留。</li>
+        <li>講者調光、瘦臉：點時間軸空白處，右邊「屬性」最上面的「講者」。調光拖了馬上看得到；瘦臉看下面的前後兩張臉，按「重新產生」才會套進完成影片。</li>
+        <li>改了卡片文字，存檔後會自動重新產生，完成後切到「完成影片預覽」停在那一段。</li>
+        <li>在「構圖」儲存後，已有完成影片會自動更新，完成後這一頁直接套用新預覽，尚未儲存的調整會保留。</li>
         <li>調好回到 AI 那邊說「調好了」。</li>
       </ol>
       <h3>時間軸（由上到下＝畫面疊放順序）</h3>

@@ -58,7 +58,7 @@
       </div>
     </div>
   </div>
-  <div class="cg" id="cap"><span>錄這段口播的時候，我犯了不少錯</span></div>
+  <div class="cg" id="cap"><span>錄這段講解的時候，我犯了不少錯</span></div>
 </div>
 <script>
 window.__PREVIEW = {"key":"fs-list","duration":6,"cues":[]};
@@ -93,7 +93,7 @@ window.__PREVIEW = {"key":"fs-list","duration":6,"cues":[]};
     // 回均衡：最後一條講完 2 秒（不晚於段尾前 1.6 秒）全部亮回
     const endAt = Math.min(rowAt[rowAt.length - 1] + 2.0, D - 1.6);
     if (rowAt.length > 1 && endAt > rowAt[rowAt.length - 1] + 0.6) for (let i = 1; i < rowAt.length; i++) P.dim('#pv-fRow' + i, endAt, { to: 1 });
-    // 主視覺（全寬才看得到）：標題後彈出，每講到一項輕輕重拍一下（跟著口播動）
+    // 主視覺（全寬才看得到）：標題後彈出，每講到一項輕輕重拍一下（跟著講解動）
     P.pop('#pv-fVis > [data-illus]', 0.6, { from: 0.8, dy: 28 });
     for (let i = 0; i < rowAt.length; i++) P.punch('#pv-fVis > [data-illus]', rowAt[i] + 0.1, { scale: 1.05 });
     tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);

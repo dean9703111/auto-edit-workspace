@@ -1,5 +1,5 @@
 // 剪輯的時間換算與 edit 處理（純函式，沒有 DOM）
-// 所有時間都是 rough.mp4 的秒數（剪之前），「成片時間」＝扣掉前面 cuts 之後的秒數。
+// 所有時間都是 rough.mp4 的秒數（剪之前），「完成影片時間」＝扣掉前面 cuts 之後的秒數。
 
 export const r3 = (n) => Math.round(n * 1000) / 1000;
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -43,7 +43,7 @@ export function normEdit(e) {
 
 export const cutTotal = (cuts) => cuts.reduce((s, [a, b]) => s + (b - a), 0);
 
-// rough → 成片
+// rough → 完成影片
 export function outOf(t, cuts) {
   let o = t;
   for (const [a, b] of cuts) {
@@ -52,7 +52,7 @@ export function outOf(t, cuts) {
   }
   return o;
 }
-// 成片 → rough（落在剪接處時回傳剪掉範圍的終點）
+// 完成影片 → rough（落在剪接處時回傳剪掉範圍的終點）
 export function roughOf(o, cuts) {
   let r = o;
   for (const [a, b] of cuts) {
@@ -126,7 +126,7 @@ export function cleanJoins(edit, cutpoints, dur = null) {
   return edit;
 }
 
-// 某個成片時間點的效果：黑色遮罩、聲音包絡、放大倍率
+// 某個完成影片時間點的效果：黑色遮罩、聲音包絡、放大倍率
 export function effectsAt(o, ctx) {
   const { edit, outDur, joinOuts } = ctx;
   let black = 0, audio = 1, scale = 1;
@@ -143,7 +143,7 @@ export function effectsAt(o, ctx) {
   return { black, audio, scale };
 }
 
-// 把剪接點換成成片時間（effectsAt 用）：每個 join 記住下一個剪接點在哪（punch 放大到那裡結束）
+// 把剪接點換成完成影片時間（effectsAt 用）：每個 join 記住下一個剪接點在哪（punch 放大到那裡結束）
 export function joinOutTimes(edit, points, outDur) {
   const outs = points.map((p) => ({ p, o: outOf(p.at, edit.cuts) }));
   const res = [];

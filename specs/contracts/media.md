@@ -3,7 +3,7 @@
 - **擁有者**：004 media-annotations-qc（`shared/template/tools/lib/media.mjs`、`kit/media.css`）。
 - **照它做**：002（`lib/plan.mjs` 呼叫驗證、`build.mjs --list` 印欄位表、`--check --json` 帶標註時間）、001（USAGE §5、R2.5、style.md「螢幕錄影與圖片」）、006（剪輯台存檔時原樣保留這些欄位）。
 - **版本**：v1（2026-10-31）。本文件的欄位名、函式簽名、訊息開頭字串改動要先改這份，再改程式。
-- **時間**：本文件的「秒」除非特別寫明，都是**成片秒數**（`resolvePlan` 的 `it.start`／`it.end` 那條時間軸；沒有 `edit.cuts` 時等於 `rough.mp4` 秒數）。
+- **時間**：本文件的「秒」除非特別寫明，都是**完成影片秒數**（`resolvePlan` 的 `it.start`／`it.end` 那條時間軸；沒有 `edit.cuts` 時等於 `rough.mp4` 秒數）。
 
 ---
 
@@ -189,7 +189,7 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 |---|---|---|
 | A0 | ✖ | `${k} 要寫成陣列（[{ … }, { … }]）`（k＝moves marks lens callouts spot steps arrows，沿用 `:100`） |
 | C1 | ✖ | `callouts[i].text 要寫 1–12 字的說明（名詞或一句重點），現在是 ${JSON} → 補上畫面上要強調的名詞或動作` |
-| C2 | ✖ | `callouts[i].text「${text}」有 ${n} 字（上限 12）→ 縮成名詞或一句重點，細節交給口播` |
+| C2 | ✖ | `callouts[i].text「${text}」有 ${n} 字（上限 12）→ 縮成名詞或一句重點，細節交給講解` |
 | C3 | ✖ | `callouts[i].icon：找不到圖示「${v}」（kit/icons.json；相近：${a}、${b}、${c}）→ 改成相近的名稱，或拿掉 icon` |
 | C4 | ✖ | `callouts[i].side 只能是 "right"、"left"、"top"、"bottom"（不寫＝自動挑放得下的那一邊），現在是 ${JSON} → 改成這四個之一，或刪掉 side` |
 | C5 | ✖ | `callouts[i].quick 只能寫 true（框、線、卡一起淡入 0.25 秒，給短句用）或 false → 改成 true 或 false（不加引號）` |
@@ -251,8 +251,8 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 
 | 參數 | 內容 |
 |---|---|
-| `it` | plan.mjs 的 item：`it.media`（`checkMediaSeg` 的回傳）、`it.seg`、`it.id`、`it.start`／`it.end`（成片秒）、`it.rough0`（選填，現行就有） |
-| `ctx.cues` | 成片秒數的字幕（和現在傳給 `resolveMedia` 的同一份） |
+| `it` | plan.mjs 的 item：`it.media`（`checkMediaSeg` 的回傳）、`it.seg`、`it.id`、`it.start`／`it.end`（完成影片秒）、`it.rough0`（選填，現行就有） |
+| `ctx.cues` | 完成影片秒數的字幕（和現在傳給 `resolveMedia` 的同一份） |
 | `ctx.tm` | `timeMap`（現行就有） |
 | `ctx.pipAt` | `(t) → boolean`，這段在 `t` 有沒有子母畫面（現行就有） |
 | `ctx.icons` | `loadIcons()` 的 `{ names, get(name) }`（**新**；plan.mjs 的 `resolvePlan` 已經有 `icons`） |
@@ -267,7 +267,7 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 ```js
 {
   summary: '運鏡 1、紅框 1（跟捲動 2 次）、標註 2、聚光燈 1、STEP 2（第 3–4 步）、箭頭 1、放大鏡 1；有標註，不做慢推',
-  json: {   // 全部成片秒數、r3；每個鍵都在，沒有就是 []；i＝plan.json 裡的原始索引（被拿掉的不列，所以 i 可能跳號）
+  json: {   // 全部完成影片秒數、r3；每個鍵都在，沒有就是 []；i＝plan.json 裡的原始索引（被拿掉的不列，所以 i 可能跳號）
     marks:    [ { i: 0, at: 63.2, until: 66.0, ready: 63.6, path: [ { k: 0, at: 64.5, ready: 64.9 } ] } ],
     callouts: [ { i: 0, at: 63.2, until: 66.5, ready: 64.05, side: 'left', text: '打開 API 設定' } ],
     spot:     [ { i: 0, at: 63.2, until: 66.5, ready: 63.6 } ],
@@ -376,7 +376,7 @@ CSS（`kit/media.css` 新增；顏色一律用 kit 變數，不寫死色碼，`#
 ## 7. `--check` 與 `--check --json`（002 實作，欄位由這裡定）
 
 - `--check` 報告 media 那一列括號裡的「運鏡 N、紅框 N、放大鏡 N」換成 `validateMedia` 回傳的 `summary`（原文見 §4.1）。
-- `--check --json` 的 `items[]` 每段多一個 `out` 物件（**成片秒數**；現有的 `start`／`end` 仍是 `rough.mp4` 秒數，剪輯台用）：
+- `--check --json` 的 `items[]` 每段多一個 `out` 物件（**完成影片秒數**；現有的 `start`／`end` 仍是 `rough.mp4` 秒數，剪輯台用）：
 
 ```json
 "out": { "start": 61.9, "end": 70.2,
@@ -387,7 +387,7 @@ CSS（`kit/media.css` 新增；顏色一律用 kit 變數，不寫死色碼，`#
 | 欄位 | 誰有 | 內容 |
 |---|---|---|
 | `out.start`／`out.end` | 每段 | `it.start`／`it.end`（畫面上實際的起迄，含自動延長） |
-| `out.lists` | 有條列的 scene（`it.resolved.listTimes` 非空） | 每條進場的成片秒數＝`it.start + listTimes[key][i]`，所有 key 攤平、依時間排序 |
+| `out.lists` | 有條列的 scene（`it.resolved.listTimes` 非空） | 每條進場的完成影片秒數＝`it.start + listTimes[key][i]`，所有 key 攤平、依時間排序 |
 | `out.annotations` | media 段 | `validateMedia` 回傳的 `json` |
 
 `qc.mjs storyboard`、`qc.mjs observe` 只讀 `out`，不自己換算 cuts。正式欄位表由 002 併進 `contracts/check-json.md`。
@@ -398,5 +398,5 @@ CSS（`kit/media.css` 新增；顏色一律用 kit 變數，不寫死色碼，`#
 
 1. 沒用新欄位的 plan.json：`--check` 報告、`index.html`、`--check --json` 的既有欄位逐字不變（`out` 是新增欄位）。
 2. 002 換成 `validateMedia` 之前：`resolveMedia` 別名照跑，新欄位會驗證、會產生畫面，但 STEP 編號每段從 1 開始、不接續，`--check` 報告看不到標註摘要。
-3. 002 在 `jsonItems` 加 `out` 之前：`qc.mjs storyboard` 用 `start`／`end` 推算成片秒數、每段只截一張；`qc.mjs observe` 格子的段 id 用同一個推算（`contracts/cli-004.md` §2.2 過渡列）。
+3. 002 在 `jsonItems` 加 `out` 之前：`qc.mjs storyboard` 用 `start`／`end` 推算完成影片秒數、每段只截一張；`qc.mjs observe` 格子的段 id 用同一個推算（`contracts/cli-004.md` §2.2 過渡列）。
 4. 剪輯台（006）改 media 段的 `from`／`to`／`in`／`anchor`／`enter`／`exit`／`volume` 時，`callouts`／`spot`／`steps`／`arrows`／`marks[].path` 原樣保留；`+秒` 寫法的時間跟著段起點走，`#N` 寫法跟著字幕走。

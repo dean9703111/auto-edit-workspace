@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * 品質檢查工具：成片驗收、講者動作範圍圖、構圖預覽、分鏡截圖、觀影總表（零依賴，只用 Node 22 與 ffmpeg／ffprobe；分鏡截圖與觀影總表另用 HyperFrames 的 Chrome）
+ * 品質檢查工具：完成影片驗收、講者動作範圍圖、構圖預覽、分鏡截圖、觀影總表（零依賴，只用 Node 22 與 ffmpeg／ffprobe；分鏡截圖與觀影總表另用 HyperFrames 的 Chrome）
  *
  *   node shared/template/tools/qc.mjs final --project projects/<專案> [--file <mp4>] [--json]
- *       成片驗收（預設檔案 output/final.mp4）。除了尺寸、30fps、音軌、長度，還抓「四項全過、內容卻壞」的問題：
+ *       完成影片驗收（預設檔案 output/final.mp4）。除了尺寸、30fps、音軌、長度，還抓「四項全過、內容卻壞」的問題：
  *         響度（整合響度 −15.5～−12.5 LUFS、true peak ≤ −1.0 dBTP）、畫面凍結（≥ 3 秒，章節轉場本來就靜止，已排除）、
  *         黑畫面（≥ 0.5 秒）、長時間沒聲音（≥ 4 秒）。凍結／黑畫面／無聲的時間會對到 plan.json 的段落 id。
- *         子母畫面段沒有講者小窗（rough.mp4 全黑、專案又沒有聲音素材＝初剪壞了）是 ✖（直式叫「上下分割段沒有講者面板」，判準相同）。
- *         字幕（F8，照作者剪映）：抽 5 則中文字幕，量底板 y 956–1074 ± 4（build 好的頁面）與字高 71 ± 3（成片的白字），
+ *         子母畫面段沒有講者小視窗（rough.mp4 全黑、專案又沒有聲音素材＝初剪壞了）是 ✖（直式叫「上下分割段沒有講者面板」，判準相同）。
+ *         字幕（F8，照作者剪映）：抽 5 則中文字幕，量底板 y 956–1074 ± 4（build 好的頁面）與字高 71 ± 3（完成影片的白字），
  *         不合是 ⚠；字幕含「，」「。」、一則不到 0.6 秒也是 ⚠。直式：尺寸要 1080×1920、底板照 lib/canvas.mjs 的 caption.box（y 1291–1409）。
  *       另存總覽圖 output/qc/qc-sheet.jpg（每 10 秒一格，最上面標主題 theme: light／dark），給人或 AI 快速掃一眼；
  *         直式每格 9:16，格上疊 unsafe[]（平台介面區）的紅色半透明框。
@@ -18,7 +18,7 @@
  *         work/場地照-動作範圍.jpg   疊影（平均）＋動作範圍上色＋青色建議框＋每 100px 座標格線
  *         work/場地照-8格.jpg        8 格總表（每格標時間）
  *       不是畫布尺寸（橫式 1920×1080、直式 1080×1920）的影片先等比放大（不足的邊補黑），圖上的座標直接就是 speakerBox 的座標。
- *       plan.json 有 frame（構圖裁切）時，先照 frame 裁切放大再量，座標就是裁切後成片上的座標。
+ *       plan.json 有 frame（構圖裁切）時，先照 frame 裁切放大再量，座標就是裁切後完成影片上的座標。
  *   node shared/template/tools/qc.mjs framing --project projects/<專案> [--file <mp4>] [--zooms 1,1.15,1.3]
  *       構圖預覽：量講者動作範圍、偵測四周黑邊，算出每個放大倍率的 16:9 裁切框（頭頂上方留 120px、講者水平置中），
  *       存 work/構圖預覽.jpg（每個倍率一格，橘框是講者動作範圍）並印出每個倍率的 frame 與會不會切到手勢。
@@ -39,8 +39,8 @@
  *       觀影總表：從 output/final.mp4（或 --file 指定的測試片段）每 0.5 秒抽一格，拼成 work/observe/sheet-NN.jpg
  *       （6×8 格＝24 秒，每格下面印「時間｜段 id｜字幕」）；列出 ≥ 8 秒幾乎不變的靜止區間；
  *       每個段落起點與終點各做一條「前 0.5 秒到後 0.2 秒、每 0.1 秒一格」的接縫條帶 work/observe/seam-NN.jpg；
- *       拍點表 work/observe/beat-NN.jpg：和 storyboard 同一套取樣時刻（抽屜、焦點抬起、完成態、條列、標註），從成片抽格；
- *       索引在 work/observe/index.md（「小窗」欄：子母畫面段有沒有講者小窗）。--offset＝這個檔的第 0 秒是成片第幾秒（測試片段寫 build --test 的起點）。
+ *       拍點表 work/observe/beat-NN.jpg：和 storyboard 同一套取樣時刻（抽屜、焦點抬起、完成態、條列、標註），從完成影片抽格；
+ *       索引在 work/observe/index.md（「小視窗」欄：子母畫面段有沒有講者小視窗）。--offset＝這個檔的第 0 秒是完成影片第幾秒（測試片段寫 build --test 的起點）。
  *       排版用 HyperFrames 的 Chrome（中文字），找不到會 ✖。直式格子是 9:16（總表 8×6 格＝24 秒、拍點 6 欄）。
  *
  * --project：專案資料夾（projects/example，或只寫名稱 example）。測試用：--template <shared/template 資料夾>、--chrome <Chrome 執行檔>
@@ -134,11 +134,11 @@ export function parseLoudness(stderr) {
   return { i: i ? num(i[1]) : null, tp: p ? num(p[1]) : null, found: !!(i || p) };
 }
 
-// ---------- 純函式：成片時間 ↔ rough.mp4 時間（cuts）、對到段落 ----------
+// ---------- 純函式：完成影片時間 ↔ rough.mp4 時間（cuts）、對到段落 ----------
 
 const sortCuts = (cuts) => (cuts || []).filter((c) => Array.isArray(c) && c.length === 2).map(([a, b]) => [Number(a), Number(b)]).sort((x, y) => x[0] - y[0]);
 
-// 成片第 o 秒 → rough.mp4 第幾秒（cuts 是 rough 時間）
+// 完成影片第 o 秒 → rough.mp4 第幾秒（cuts 是 rough 時間）
 export function finalToRough(o, cuts) {
   let acc = 0;
   for (const [a, b] of sortCuts(cuts)) {
@@ -147,7 +147,7 @@ export function finalToRough(o, cuts) {
   return r3(o + acc);
 }
 
-// rough.mp4 第 t 秒 → 成片第幾秒（落在被剪掉的區間時，對到剪接點）
+// rough.mp4 第 t 秒 → 完成影片第幾秒（落在被剪掉的區間時，對到剪接點）
 export function roughToFinal(t, cuts) {
   let acc = 0;
   for (const [a, b] of sortCuts(cuts)) {
@@ -173,7 +173,7 @@ export function subtractRanges([a, b], holes) {
   return pieces.map(([x, y]) => [r3(x), r3(y)]);
 }
 
-// ---------- 子母畫面段的講者小窗（F2）----------
+// ---------- 子母畫面段的講者小視窗（F2）----------
 
 // plan.json 的 scenes（讀不到就空陣列；格式錯誤由 build --check 報）
 // 版式（009 FR-003）：--format > plan.json > 開工決策表 > 主軌；canvas＝lib/canvas.mjs 的畫布設定，line＝每個指令第一行印的「版式：…」
@@ -184,14 +184,14 @@ export function formatOf(P, flags = {}) {
   return { ...r, canvas: canvasOf(r.format), line: formatLine(r) };
 }
 
-// 直式的「講者小窗」叫「講者面板」、「子母畫面段」叫「上下分割段」（FR-090、FR-042），判準相同
-export const panelWords = (portrait) => (portrait ? { win: '講者面板', seg: '上下分割段' } : { win: '講者小窗', seg: '子母畫面段' });
+// 直式的「講者小視窗」叫「講者面板」、「子母畫面段」叫「上下分割段」（FR-090、FR-042），判準相同
+export const panelWords = (portrait) => (portrait ? { win: '講者面板', seg: '上下分割段' } : { win: '講者小視窗', seg: '子母畫面段' });
 
 export function planScenes(P) {
   try { const j = JSON.parse(fs.readFileSync(P.plan, 'utf8')); return Array.isArray(j.scenes) ? j.scenes : []; } catch { return []; }
 }
 
-// 照 plan.mjs 的規則，這段應該有講者小窗嗎：全畫面家族（04）、layout "fullscreen" 的 custom、media；plan 寫 pip: false 的不算
+// 照 plan.mjs 的規則，這段應該有講者小視窗嗎：全畫面家族（04）、layout "fullscreen" 的 custom、media；plan 寫 pip: false 的不算
 export function wantsPip(it, seg = {}) {
   if (seg.pip === false) return false;
   return (it.type === 'scene' && it.family === 'fullscreen') || (it.type === 'custom' && !!it.opaque) || it.type === 'media';
@@ -199,8 +199,8 @@ export function wantsPip(it, seg = {}) {
 
 const pipKind = (it) => (it.type === 'scene' ? String(it.label || '').replace(/^\S+\s+/, '') : it.type === 'custom' ? `全畫面情境動畫（${it.key ?? it.label}）` : `插入素材（${it.key ?? it.src ?? ''}）`);
 
-// 每個應該有小窗的段：小窗看得到講者的區間、缺哪裡（成片秒數；缺口 < 0.3 秒不算）。
-// black＝rough.mp4 全黑的區間（成片秒數）：小窗開著、底片卻是黑的，也算沒有講者
+// 每個應該有小視窗的段：小視窗看得到講者的區間、缺哪裡（完成影片秒數；缺口 < 0.3 秒不算）。
+// black＝rough.mp4 全黑的區間（完成影片秒數）：小視窗開著、底片卻是黑的，也算沒有講者
 export function pipCoverage(items, scenes = [], black = []) {
   const byId = new Map(scenes.map((g) => [g.id, g]));
   return (items || []).filter((it) => it.out && wantsPip(it, byId.get(it.id))).map((it) => {
@@ -222,8 +222,8 @@ export function mergeRanges(ranges, gap = 0.1) {
   return out;
 }
 
-// 應該有小窗卻沒有、缺口落在 rough.mp4 的全黑區間，而專案沒有只有聲音的素材 → 初剪壞了（✖ 訊息）
-// 全黑區間：--check --json 的 roughBlack（002：沒有聲音素材時 voiceOnly 是空的、小窗照開）；舊版沒有這欄時用 voiceOnly（小窗被拿掉）
+// 應該有小視窗卻沒有、缺口落在 rough.mp4 的全黑區間，而專案沒有只有聲音的素材 → 初剪壞了（✖ 訊息）
+// 全黑區間：--check --json 的 roughBlack（002：沒有聲音素材時 voiceOnly 是空的、小視窗照開）；舊版沒有這欄時用 voiceOnly（小視窗被拿掉）
 export function pipMissing({ items, scenes = [], voiceOnly = [], roughBlack = [], cuts = [], hasVoice = false, project, portrait = false }) {
   if (hasVoice) return [];
   const { win } = panelWords(portrait);
@@ -244,13 +244,13 @@ export const isChapterItem = (it) => it?.type === 'scene' && /^01(\s|$)/.test(St
 
 // 段落顯示名：scene → "s03 全畫面流程"（拿掉 label 開頭的情境編號）；media → "m01 螢幕錄影"／"m01 圖片"
 export function itemName(it) {
-  if (!it) return '主軌口播';
+  if (!it) return '主軌講解';
   if (it.type === 'media') return `${it.id} ${it.kind === 'image' ? '圖片' : '螢幕錄影'}`;
   const name = String(it.label || '').replace(/^\S+\s+/, '');
   return `${it.id}${name ? ` ${name}` : ''}`;
 }
 
-// 成片的 [a, b] 對到哪一段：換成 rough 時間後，取重疊最多的段落；沒有重疊回 null
+// 完成影片的 [a, b] 對到哪一段：換成 rough 時間後，取重疊最多的段落；沒有重疊回 null
 export function locateItem([a, b], items, cuts = []) {
   const ra = finalToRough(a, cuts), rb = finalToRough(b, cuts);
   let best = null, bestOv = 0;
@@ -263,7 +263,7 @@ export function locateItem([a, b], items, cuts = []) {
   return best;
 }
 
-// 章節轉場本來就靜止：凍結區間扣掉章節段（成片時間軸）；剩下 ≥ minDur 的才算
+// 章節轉場本來就靜止：凍結區間扣掉章節段（完成影片時間軸）；剩下 ≥ minDur 的才算
 export function freezeIssues(freezes, items, cuts = [], minDur = LIMITS.freeze) {
   const holes = (items || []).filter(isChapterItem).map((it) => [roughToFinal(it.start, cuts) - 0.15, roughToFinal(it.shownEnd ?? it.end, cuts) + 0.15]);
   const out = [];
@@ -352,7 +352,7 @@ export function captionSamples(cues, n = CAPTION.samples) {
   return [...new Set(pick)].map((c) => ({ n: c.n, text: c.text, at: r3((c.start + c.end) / 2) }));
 }
 
-// 成片一格（rgb24 1920×W）在底板裡的白字：min(r,g,b) ≥ 150 的像素一列 ≥ 2 個＝有字（底板把畫面壓到 ≤ 30%，畫面再白也到不了 150）
+// 完成影片一格（rgb24 1920×W）在底板裡的白字：min(r,g,b) ≥ 150 的像素一列 ≥ 2 個＝有字（底板把畫面壓到 ≤ 30%，畫面再白也到不了 150）
 export function inkRows(rgb, W, H, plate, white = CAPTION.white) {
   const y0 = Math.max(0, Math.round(plate.top)), y1 = Math.min(H, Math.round(plate.bottom));
   const x0 = Math.max(0, Math.round(plate.left)), x1 = Math.min(W, Math.round(plate.right));
@@ -379,7 +379,7 @@ export function captionStyleChecks(m, C = CAPTION) {
   const bad = s.filter((x) => Math.abs(x.top - C.top) > C.tol || Math.abs(x.bottom - C.bottom) > C.tol || x.ink == null || Math.abs(x.ink - C.ink) > C.inkTol);
   if (!bad.length) return [{ level: 'ok', text: `字幕樣式照剪映（F8）：底板 y ${C.top}–${C.bottom}、字高 ${C.ink}（量 ${s.length} 則：${fmtNs(s)}）` }];
   const x = bad[0];
-  return [{ level: 'warn', text: `字幕樣式和剪映（F8）不同：${fmtNs(bad)} 共 ${bad.length}／${s.length} 則；#${x.n}「${String(x.text).slice(0, 12)}」底板 y ${Math.round(x.top)}–${Math.round(x.bottom)}、字高 ${x.ink ?? '量不到'}（要 y ${C.top}–${C.bottom} ± ${C.tol}、字高 ${C.ink} ± ${C.inkTol}）→ 成片是 kit/captions.css 改版前 render 的就重新 build、render；重 render 還是這樣，回報維護者（shared/ 不要自己改）` }];
+  return [{ level: 'warn', text: `字幕樣式和剪映（F8）不同：${fmtNs(bad)} 共 ${bad.length}／${s.length} 則；#${x.n}「${String(x.text).slice(0, 12)}」底板 y ${Math.round(x.top)}–${Math.round(x.bottom)}、字高 ${x.ink ?? '量不到'}（要 y ${C.top}–${C.bottom} ± ${C.tol}、字高 ${C.ink} ± ${C.inkTol}）→ 完成影片是 kit/captions.css 改版前 render 的就重新 build、render；重 render 還是這樣，回報維護者（shared/ 不要自己改）` }];
 }
 
 // 字幕文字（F8 第 4 點）：含「，」「。」→ ⚠；一則不到 0.6 秒 → ⚠（剪映最短 0.73 秒）
@@ -404,7 +404,7 @@ function captionInPage() {
   return null;
 }
 
-// 底板位置從 build 好的頁面量（HyperFrames runtime＋同一個 seek），字高從成片那一格的白字量
+// 底板位置從 build 好的頁面量（HyperFrames runtime＋同一個 seek），字高從完成影片那一格的白字量
 export async function measureCaptions(P, flags, file, cues, cv = null) {
   if (!cues?.length) return null;
   const W = cv?.W ?? 1920, H = cv?.H ?? 1080;
@@ -492,17 +492,17 @@ export function makeQcSheet(file, dur, outFile, theme = 'light', cv = null) {
 
 export async function finalCheck(P, flags) {
   const file = flags.file ? path.resolve(flags.file) : path.join(P.project, 'output', 'final.mp4');
-  if (!fs.existsSync(file)) throw new Error(`找不到成片 ${rel(file)} → 先 render（USAGE.md 2.7），或用 --file 指定 mp4`);
+  if (!fs.existsSync(file)) throw new Error(`找不到完成影片 ${rel(file)} → 先 render（USAGE.md 2.7），或用 --file 指定 mp4`);
   const info = probeMedia(file);
   if (!info.hasVideo) throw new Error(`${rel(file)} 沒有影像 → 檔案壞了或不是影片`);
   const dur = info.duration;
   const fmt = formatOf(P, flags), cv = fmt.canvas, portrait = cv.format === 'portrait';
   const exp = expectedFromBuild(P, flags);
   const det = detect(file, dur, info.hasAudio);
-  // 子母畫面段沒有講者小窗（F2）：專案沒有只有聲音的素材時才判（有的話，全黑本來就是旁白區間）
+  // 子母畫面段沒有講者小視窗（F2）：專案沒有只有聲音的素材時才判（有的話，全黑本來就是旁白區間）
   const pipMiss = exp.voiceOnly && !hasVoiceSource(P.project)
     ? pipMissing({ items: exp.items, scenes: planScenes(P), voiceOnly: exp.voiceOnly, roughBlack: exp.roughBlack, cuts: exp.cuts, project: `projects/${path.basename(P.project)}`, portrait }) : null;
-  // 字幕（F8）：rough.srt 換成成片秒數；量樣式要 build 好的頁面與 Chrome
+  // 字幕（F8）：rough.srt 換成完成影片秒數；量樣式要 build 好的頁面與 Chrome
   const cues = P.srt && fs.existsSync(P.srt) ? cuesToOut(parseSrt(fs.readFileSync(P.srt, 'utf8')), exp.cuts || []) : [];
   const captionStyle = await measureCaptions(P, flags, file, cues, cv);
   const theme = themeOf(P);
@@ -520,7 +520,7 @@ const ICON = { ok: '✔', warn: '⚠', error: '✖' };
 
 function printFinal(P, r) {
   if (r.fmt) console.log(r.fmt.line);
-  console.log(`專案：${rel(P.project)}\n成片：${rel(r.file)}\n`);
+  console.log(`專案：${rel(P.project)}\n完成影片：${rel(r.file)}\n`);
   for (const c of r.checks) console.log(`${ICON[c.level]} ${c.text}`);
   if (r.sheet) console.log(`\n→ 總覽圖 ${rel(r.sheet.file)}（${r.sheet.count} 格，每 ${LIMITS.sheetStep} 秒一格，主題 ${r.sheet.theme}；打開掃一眼有沒有掉圖、卡住${r.sheet.unsafe ? '；直式每格 9:16，紅色半透明框是平台介面區（canvas unsafe），字幕、卡片字、角標不該進去' : ''}）`);
   console.log(`\n${r.errors ? `✖ ${r.errors} 項錯誤` : '✔ 沒有錯誤'}${r.warnings ? `、⚠ ${r.warnings} 項提醒` : ''}${r.errors ? ' → 先修好再交付' : r.warnings ? ' → 逐項確認是不是刻意的' : ' → 可以交付'}`);
@@ -539,7 +539,7 @@ function frame1080(file, at, frame = null, lut = null, W = 1920, H = 1080) {
   return r.stdout;
 }
 
-// 抽格要跟成片一樣套講者 look（006 的 ensureLook，不 strict）：有 work/rough-look.mp4 就用它，沒有就退回 rough.mp4 並帶回 ⚠；
+// 抽格要跟完成影片一樣套講者 look（006 的 ensureLook，不 strict）：有 work/rough-look.mp4 就用它，沒有就退回 rough.mp4 並帶回 ⚠；
 // plan.json 的 look 是 false、或用 --file 指定影片時不套
 function lookFor(P, flags, src) {
   if (flags.file) return { src, lut: null, line: null, warns: [] };
@@ -677,7 +677,7 @@ export function contentBox(mean, w = 1920, h = 1080, th = 18) {
   return [x1, y1, x2, y2];
 }
 
-// 每個放大倍率的 16:9 裁切框：寬取 16 的倍數；講者水平置中；頭頂上方留 head px（成片座標）；夾在內容範圍裡
+// 每個放大倍率的 16:9 裁切框：寬取 16 的倍數；講者水平置中；頭頂上方留 head px（完成影片座標）；夾在內容範圍裡
 export function framingCandidates(motion, content, zooms = [1, 1.15, 1.3], head = 120) {
   const [bx1, by1, bx2, by2] = motion, cx = (bx1 + bx2) / 2;
   const cw = content[2] - content[0], ch = content[3] - content[1];
@@ -820,8 +820,8 @@ function printSpeaker(P, r) {
   console.log(`專案：${rel(P.project)}\n來源：${rel(r.src)}（${r.srcSize[0]}×${r.srcSize[1]}${r.scaled ? ` → 已等比放大成 ${r.W}×${r.H}，圖上座標可直接寫進 speakerBox` : ''}）`);
   if (r.look?.line) console.log(r.look.line);
   for (const w of r.look?.warns || []) console.log(w);
-  if (r.frame) console.log(`構圖裁切：照 plan.json 的 frame [${r.frame.join(', ')}] 裁切放大後量（座標是成片上的座標）`);
-  console.log(`抽幀時間：${r.times.map(fmtT).join('、')}\n`);
+  if (r.frame) console.log(`構圖裁切：照 plan.json 的 frame [${r.frame.join(', ')}] 裁切放大後量（座標是完成影片上的座標）`);
+  console.log(`抽格時間：${r.times.map(fmtT).join('、')}\n`);
   console.log(`→ ${rel(r.mapFile)}：疊影圖。橘色是動作掃過的地方，黃線每 100px 一條（粗線每 500px），數字是 ${r.W}×${r.H} 的座標`);
   console.log(`→ ${rel(r.sheetFile)}：8 格總表，看每個時間點講者的姿勢`);
   if (r.suggest) console.log(`\n偵測到的動作範圍 [${r.bbox.join(', ')}]，外擴 40px 的青色建議框 speakerBox ≈ [${r.suggest.join(', ')}]（只是參考，一定要自己看圖）`);
@@ -845,7 +845,7 @@ export function checkJsonOf(P, flags) {
   return j ? { json: j } : { error: tail(r.stderr, 200), stderr: r.stderr };
 }
 
-// items[].out（成片秒數，contracts/check-json.md §3.1）；002 還沒加的時候用 start／end＋cuts 推算（每段只有起迄）
+// items[].out（完成影片秒數，contracts/check-json.md §3.1）；002 還沒加的時候用 start／end＋cuts 推算（每段只有起迄）
 export function outOf(items, cuts = []) {
   let fallback = false;
   const list = (items || []).map((it) => {
@@ -861,7 +861,7 @@ export function outOf(items, cuts = []) {
 export const SHOT = { tail: 0.6, listGap: 0.1, listReady: 0.9, listWin: 0.3, settle: 0.1, join: 0.05, ann: 0.1, annUntil: 0.35, merge: 0.3, short: 0.7, startPad: 0.1, endPad: 0.05, drawer: 0.3 };
 const ANN_ORDER = ['marks', 'callouts', 'spot', 'steps', 'arrows', 'lens'];
 
-// 一段的動畫時間軸（成片秒數 [[起, 迄, 種類, 字]]）→ 連續在動的區塊 [{ s, e, enter }]
+// 一段的動畫時間軸（完成影片秒數 [[起, 迄, 種類, 字]]）→ 連續在動的區塊 [{ s, e, enter }]
 // 種類：'enter'（淡入、遮罩揭開、長出）｜'drawer'（抽屜抽出，也算進場）｜'focus'（焦點抬起）｜'refocus'（其他焦點變化：壓暗、回均衡、鏡頭）｜'exit'｜'change'；
 // 微動（kit 標 role: 'micro' 的漂浮、虛線流動、背景慢拉）在頁面裡就濾掉了。相隔 ≤ 0.05 秒的併成一塊；比整段還長的（循環動畫）不算
 const isEnter = (k) => k === 'enter' || k === 'drawer';
@@ -1035,8 +1035,8 @@ function fxLabels(P, items, motion, warnings) {
   return labels;
 }
 
-// 每段的動畫時間軸（成片秒數）：用 003 audit 的同一個瀏覽器工作階段（HyperFrames runtime＋同一個 seek）
-// → Map(id → [[起, 迄, 種類]])；時間軸有 'done' 標記的另記在 .labels（Map(id → 成片秒)）
+// 每段的動畫時間軸（完成影片秒數）：用 003 audit 的同一個瀏覽器工作階段（HyperFrames runtime＋同一個 seek）
+// → Map(id → [[起, 迄, 種類]])；時間軸有 'done' 標記的另記在 .labels（Map(id → 完成影片秒)）
 export async function shotMotion(P, segs, flags = {}) {
   const S = await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file });
   const out = new Map(), labels = new Map();
@@ -1067,7 +1067,7 @@ export async function storyboardRun(P, flags) {
   if (!c.json) throw new Error(`build --check --json 沒有輸出 JSON：${c.error} → 先單獨跑 node shared/template/tools/build.mjs --project ${pj} --check 看錯誤`);
   const j = c.json;
   const fmt = formatOf(P, flags), portrait = fmt.format === 'portrait';
-  // 子母畫面段沒有講者小窗（F2）：初剪壞了就先別截，截到的都是錯的（--check 的「只有聲音的區間沒有畫面」多半也是同一個原因，所以先報這個）
+  // 子母畫面段沒有講者小視窗（F2）：初剪壞了就先別截，截到的都是錯的（--check 的「只有聲音的區間沒有畫面」多半也是同一個原因，所以先報這個）
   if (!hasVoiceSource(P.project)) {
     const miss = pipMissing({ items: j.items, scenes: planScenes(P), voiceOnly: j.voiceOnly, roughBlack: j.roughBlack, cuts: j.edit?.cuts || [], project: pj, portrait });
     if (miss.length) throw new Error(miss.map((m) => m.msg).join('\n✖ '));
@@ -1125,7 +1125,7 @@ export const SMALL_MEDIA = { scale: 0.6, dur: 3 };
 export function smallMediaWarnings(segs) {
   return (segs || []).filter((g) => { const v = g.annotations?.view; return v && v.scale < SMALL_MEDIA.scale && !v.moves && !v.lens && g.end - g.start > SMALL_MEDIA.dur; })
     .map((g) => g.annotations.view.landscape
-      ? `${g.id} 的錄影只有原尺寸 ${Math.round(g.annotations.view.scale * 100)} %，介面字會太小 → 口播唸到畫面上的字（版號、路徑、網址、按鈕名）那句加放大鏡 lens 或 moves 推近；沒唸字就不用`
+      ? `${g.id} 的錄影只有原尺寸 ${Math.round(g.annotations.view.scale * 100)} %，介面字會太小 → 講解唸到畫面上的字（版號、路徑、網址、按鈕名）那句加放大鏡 lens 或 moves 推近；沒唸字就不用`
       : `${g.id} 的錄影在直式只有原尺寸 ${Math.round(g.annotations.view.scale * 100)} %，介面字會太小 → 加 moves 推近到操作區`);
 }
 
@@ -1155,7 +1155,7 @@ export function observeTimes(from, to, step = OBS.step) {
   return ts;
 }
 
-// rough.srt 的字幕 → 成片秒數（落在 cuts 裡的整句拿掉）
+// rough.srt 的字幕 → 完成影片秒數（落在 cuts 裡的整句拿掉）
 export function cuesToOut(cues, cuts = []) {
   return cues.map((c) => ({ ...c, start: roughToFinal(c.start, cuts), end: roughToFinal(c.end, cuts) })).filter((c) => c.end - c.start > 0.05);
 }
@@ -1197,7 +1197,7 @@ export function seamList(segs, from, to) {
   return out.filter((s) => s.at >= from + OBS.seamBefore - 1e-6 && s.at <= to - OBS.seamAfter + 1e-6).map((s, k) => ({ n: k + 1, ...s }));
 }
 
-// t（成片秒）在哪一張總表的第幾列第幾格
+// t（完成影片秒）在哪一張總表的第幾列第幾格
 export function sheetCell(t, from, L = OBS) {
   const per = L.cols * L.rows * L.step, row = L.cols * L.step;
   const d = t - from, m = d - Math.floor(d / per + 1e-9) * per;
@@ -1223,17 +1223,17 @@ export async function observeRun(P, flags) {
   const pj = `projects/${path.basename(P.project)}`;
   const finalDefault = path.join(P.project, 'output', 'final.mp4');
   const file = flags.file ? path.resolve(flags.file) : finalDefault;
-  if (!fs.existsSync(file)) throw new Error(`找不到成片 ${rel(file)} → 先 render（USAGE.md 2.7），或用 --file 指定 mp4`);
+  if (!fs.existsSync(file)) throw new Error(`找不到完成影片 ${rel(file)} → 先 render（USAGE.md 2.7），或用 --file 指定 mp4`);
   const info = probeMedia(file);
   if (!info.hasVideo || !info.duration) throw new Error(`${rel(file)} 沒有影像 → 檔案壞了或不是影片`);
   const warnings = [];
   const offset = flags.offset != null ? Number(flags.offset) : 0;
   if (!Number.isFinite(offset) || offset < 0) throw new Error(`--offset 要是 ≥ 0 的秒數，現在是「${flags.offset}」→ 寫 build --test 的起點秒數，例如 --offset 41`);
-  if (flags.file && path.resolve(flags.file) !== path.resolve(finalDefault) && flags.offset == null) warnings.push('沒寫 --offset：當成從成片 0 秒開始；測試片段要加 --offset <build --test 的起點>');
+  if (flags.file && path.resolve(flags.file) !== path.resolve(finalDefault) && flags.offset == null) warnings.push('沒寫 --offset：當成從完成影片 0 秒開始；測試片段要加 --offset <build --test 的起點>');
   const from = flags.from != null ? Number(flags.from) : offset;
   const to = flags.to != null ? Number(flags.to) : r3(offset + info.duration);
   if (!(Number.isFinite(from) && Number.isFinite(to) && from >= offset - 1e-6 && from < to && to <= offset + info.duration + 1e-6)) {
-    throw new Error(`--from／--to 要是成片秒數，而且 ${r3(offset)} ≤ from < to ≤ ${r3(offset + info.duration)}（現在 from=${flags.from ?? from}、to=${flags.to ?? to}）→ 改成 ${r3(offset)}–${r3(offset + info.duration)} 之間、from < to 的成片秒數`);
+    throw new Error(`--from／--to 要是完成影片秒數，而且 ${r3(offset)} ≤ from < to ≤ ${r3(offset + info.duration)}（現在 from=${flags.from ?? from}、to=${flags.to ?? to}）→ 改成 ${r3(offset)}–${r3(offset + info.duration)} 之間、from < to 的完成影片秒數`);
   }
   const chrome = findChrome({ chrome: flags.chrome });
   const fmt = formatOf(P, flags), L = obsLayout(fmt.canvas), words = panelWords(fmt.format === 'portrait');
@@ -1255,7 +1255,7 @@ export async function observeRun(P, flags) {
   // 測試片段（build --test 起點＝--offset）不含起點在它之前的段：格子不標它，免得「畫面和段落對不上」
   if (offset > 0) for (const g of segs.filter((x) => x.start < offset - 1e-6 && x.end > from)) warnings.push(`${g.id} 在 ${fmtT(g.start)} 就開始了，測試片段不含這段：格子不標它（要看這段，build --test 的起點改成 ${r3(g.start)}）`);
   if (offset > 0) segs = segs.filter((x) => x.start >= offset - 1e-6);
-  // 子母畫面段有沒有講者小窗（用 --check --json 判，不看圖）
+  // 子母畫面段有沒有講者小視窗（用 --check --json 判，不看圖）
   const blackOut = hasVoiceSource(P.project) ? [] : mergeRanges(c.json?.roughBlack?.length ? c.json.roughBlack : c.json?.voiceOnly || []).map(([a, b]) => [roughToFinal(a, cuts), roughToFinal(b, cuts)]);
   const pips = c.json?.items?.length ? pipCoverage(c.json.items, planScenes(P), blackOut).filter((x) => x.end > from && x.start < to && x.start >= offset - 1e-6) : [];
   for (const x of pips.filter((y) => y.state !== '有')) warnings.push(`${x.id} 是${x.kind}${x.state === '無' ? `卻沒有${words.win}` : `，${words.win}在 ${fmtT(x.gaps[0][0])} 就沒了`} → 跑 node shared/template/tools/qc.mjs final --project ${pj} 看原因`);
@@ -1332,7 +1332,7 @@ export async function observeRun(P, flags) {
     seamFiles.push(jpg);
   }
 
-  // 5. 拍點表：和 storyboard 同一套取樣時刻（抽屜抽出後 0.3 秒、焦點抬起後、完成態、條列每組、錄影標註到位），從成片抽格
+  // 5. 拍點表：和 storyboard 同一套取樣時刻（抽屜抽出後 0.3 秒、焦點抬起後、完成態、條列每組、錄影標註到位），從完成影片抽格
   const beats = [], beatFiles = [];
   if (segs.length) {
     let motion = null;
@@ -1352,7 +1352,7 @@ export async function observeRun(P, flags) {
     for (let s0 = 0, k = 1; s0 < beats.length; s0 += L.beatsPer, k++) {
       const group = beats.slice(s0, s0 + L.beatsPer), rows = Math.ceil(group.length / L.beatCols), H = OBS.title + rows * (bh + 52);
       const cells = group.map((b) => `<div class="bc"><img src="b${String(b.n).padStart(3, '0')}.jpg"><div class="lab"><b>${fmtT2(b.at)}</b>｜<i>${escH(b.id)}</i>｜${escH(b.why)}</div></div>`).join('');
-      const html = obsPage(fontsCss, 1920, H, `<div class="bar">拍點表 ${nn(k)}｜${escH(name)}｜和 storyboard 同一套取樣時刻，從成片抽格</div><div class="bgrid">${cells}</div>`, extra);
+      const html = obsPage(fontsCss, 1920, H, `<div class="bar">拍點表 ${nn(k)}｜${escH(name)}｜和 storyboard 同一套取樣時刻，從完成影片抽格</div><div class="bgrid">${cells}</div>`, extra);
       const hf = path.join(tiles, `beat-${nn(k)}.html`), png = path.join(tiles, `beat-${nn(k)}.png`), jpg = path.join(dir, `beat-${nn(k)}.jpg`);
       fs.writeFileSync(hf, html);
       try { htmlShot({ chrome, file: hf, out: png, width: 1920, height: H }); } catch (e) { throw new Error(`Chrome 排版失敗（beat-${nn(k)}）：${e.message} → 重跑一次；還是失敗就加 --from／--to 縮小範圍`); }
@@ -1366,7 +1366,7 @@ export async function observeRun(P, flags) {
   // 6. index.md
   const now = new Date(), stamp = `${now.getFullYear()}-${nn(now.getMonth() + 1)}-${nn(now.getDate())} ${nn(now.getHours())}:${nn(now.getMinutes())}`;
   const md = [`# 觀影總表（qc.mjs observe）`, '', `來源：${rel(file)}｜範圍 ${fmtT(from)}–${fmtT(to)}｜每 ${OBS.step} 秒一格｜產生時間 ${stamp}`, '', '## 總表', '',
-    `| 檔案 | 範圍 | 格數 | 第 r 列第 c 格的時間 | ${fmt.format === 'portrait' ? '講者面板（上下分割段）' : '小窗（子母畫面段）'} |`, '|---|---|---|---|---|',
+    `| 檔案 | 範圍 | 格數 | 第 r 列第 c 格的時間 | ${fmt.format === 'portrait' ? '講者面板（上下分割段）' : '小視窗（子母畫面段）'} |`, '|---|---|---|---|---|',
     ...sheets.map((s) => {
       const p = pips.filter((x) => x.end > s.from && x.start < s.to).map((x) => `${x.id} ${x.state === '部分' ? `部分（${fmtT(x.gaps[0][0])} 起沒有）` : x.state}`);
       return `| ${path.basename(s.file)} | ${fmtT(s.from)}–${fmtT(s.to)} | ${s.cells} | ${fmtT(s.from)} ＋ ((r−1)×${L.cols} ＋ (c−1))×${OBS.step} 秒 | ${p.join('、') || '—'} |`;
@@ -1408,7 +1408,7 @@ function printObserve(P, r) {
     console.log(`→ ${path.join(rel(path.dirname(r.beatFiles[0])), g[0])}${g.length > 1 ? ` … ${g[g.length - 1]}` : ''}（${r.beats.length} 個拍點：抽屜抽出後 ${SHOT.drawer} 秒、焦點抬起後、完成態、條列每組、錄影標註到位；和 storyboard 同一套時刻）`);
   }
   console.log(`→ ${rel(r.index)}（總表索引、靜止區間、拍點、接縫清單）`);
-  if (r.static.length) for (const s of r.static) console.log(`⚠ 靜止 ${fmtT(s.from)}–${fmtT(s.to)}（${r1(s.to - s.from)} 秒）｜${s.id ?? '—'}｜${s.cue ?? '（無字幕）'} → 對照口播決定要不要補畫面（換段、加標註或情境動畫）；刻意留白就不用理它`);
+  if (r.static.length) for (const s of r.static) console.log(`⚠ 靜止 ${fmtT(s.from)}–${fmtT(s.to)}（${r1(s.to - s.from)} 秒）｜${s.id ?? '—'}｜${s.cue ?? '（無字幕）'} → 對照講解決定要不要補畫面（換段、加標註或情境動畫）；刻意留白就不用理它`);
   else console.log(`✔ 沒有 ≥ ${OBS.still} 秒幾乎不變的區間`);
   console.log('下一步：逐張看 sheet-NN.jpg、beat-NN.jpg 與 seam-NN.jpg；有問題照「[P0] 0:41.2（s05） 問題｜證據（sheet-02.jpg 第 3 列第 5 格）｜修法」回報');
 }

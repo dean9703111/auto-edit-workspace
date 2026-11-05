@@ -174,7 +174,7 @@ test('修改時間衝突：plan.json 在打開之後被改過就回 409、不覆
   assert.equal(p.edit.fadeOut, 1);
 });
 
-test('Range：影片可以分段讀（206／416）、ETag；只開放素材資料夾；成片預覽的路徑不能跳出 work/hyperframes', async () => {
+test('Range：影片可以分段讀（206／416）、ETag；只開放素材資料夾；完成影片預覽的路徑不能跳出 work/hyperframes', async () => {
   const size = fs.statSync(path.join(work, 'rough.mp4')).size;
   const r = await get('/media/rough.mp4', { Range: 'bytes=0-99' });
   assert.equal(r.status, 206);

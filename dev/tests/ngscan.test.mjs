@@ -61,7 +61,7 @@ test('ng-scan：沒講稿 → 相鄰幾句很像的前一句列 NG', () => {
   assert.equal(r.ng[0].text, '今天要分享一個超好用的工具');
 });
 
-test('scriptChapters：## 是章節、### 不算；``` 區塊裡的行不算口播，章節第一句照算', () => {
+test('scriptChapters：## 是章節、### 不算；``` 區塊裡的行不算講解，章節第一句照算', () => {
   const md = ['# 標題', '', '## 開場', '', '大家好', '', '### 痛點', '第一句', '', '```bash', 'curl -o- https://x.sh | bash', '## 不是章節', '```', '', '## 結語', '', '謝謝收看'].join('\n');
   const c = M.scriptChapters(md);
   assert.deepEqual(c.lines, ['大家好', '第一句', '謝謝收看']);

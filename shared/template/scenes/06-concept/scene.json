@@ -5,7 +5,7 @@
   "aliases": ["概念字卡", "名詞卡", "一般字卡"],
   "family": "lower-third",
   "portrait": "move",
-  "when": "口播帶出一個名詞或一句定義，只需要一張下方字卡讓觀眾記住它",
+  "when": "講解帶出一個名詞或一句定義，只需要一張下方字卡讓觀眾記住它",
   "avoid": "同時有三個以上名詞（改關鍵詞條列），或需要停一拍再揭曉的問答（改 QA 字卡）",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
   "surface": null,

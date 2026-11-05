@@ -221,7 +221,7 @@
   }
 
   var done = new WeakSet();
-  // 全寬版型（旁白段：整段沒有講者小窗的全畫面段）：build 在 host 寫 data-wide。主卡（寬 1180 的 .sc-wcard）拉寬 500 → 1680（右緣 1800）；
+  // 全寬版型（旁白段：整段沒有講者小視窗的全畫面段）：build 在 host 寫 data-wide。主卡（寬 1180 的 .sc-wcard）拉寬 500 → 1680（右緣 1800）；
   // 卡裡的內容區（寬 ≈ 1176 的直接子元素）有 data-layout（free 以外）就一起加寬，由 SceneLayout 照新寬度重排（連接線跟著）；
   // free 或沒有 data-layout 的寬度不變、往右 250 置中（作者寫的座標照用）；row 的站距 xl 改 xxl；寫了 data-wide-keep 的不動（04a 清單：右邊放主視覺）；
   // 不是 .sc-wcard 的 1180 面板（介面模擬視窗）整塊置中。

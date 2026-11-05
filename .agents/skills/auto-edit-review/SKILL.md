@@ -1,6 +1,6 @@
 ---
 name: auto-edit-review
-description: 分鏡表確認後的定稿與審查：build、audit、snapshot 抽查、開 Studio 給使用者看；使用者在 Studio 看完給修改時開回饋輪 rN（先備份 plan.json、記原話與分類、改到的段存版本）；要一段重新設計時先出分鏡提案（work/versions/<段>/v<N>/）給使用者確認再做；退回某一版；使用者說「打開剪輯台」「調好了」時開關剪輯台。當分鏡表剛確認完，或使用者說「s05 的金句卡往左移」「這張卡…」「s12 的動畫想更完善」「s12 重新設計」「s12 用 v1」「打開剪輯台」「調好了」「照修改單改」時使用。還沒有確認分鏡表時不要用（改用 auto-edit-storyboard）；要輸出成片時不要用（改用 auto-edit-deliver）。
+description: 分鏡表確認後的定稿與審查：build、audit、snapshot 抽查、開 Studio 給使用者看；使用者在 Studio 看完給修改時開回饋輪 rN（先備份 plan.json、記原話與分類、改到的段存版本）；要一段重新設計時先出分鏡提案（work/versions/<段>/v<N>/）給使用者確認再做；退回某一版；使用者說「打開剪輯台」「調好了」時開關剪輯台。當分鏡表剛確認完，或使用者說「s05 的金句卡往左移」「這張卡…」「s12 的動畫想更完善」「s12 重新設計」「s12 用 v1」「打開剪輯台」「調好了」「照修改單改」時使用。還沒有確認分鏡表時不要用（改用 auto-edit-storyboard）；要輸出完成影片時不要用（改用 auto-edit-deliver）。
 version: 0.1.0
 ---
 # 定稿、審查、回饋輪、剪輯台
@@ -133,7 +133,7 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 
 ```
 ⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/versions/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍
-⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出成片」
+⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」
 ⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」
 ```
 
@@ -142,7 +142,7 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 | ④、⑤ | 「s05 的金句卡往左移」這類修改／「照修改單改」 | 流程 B／流程 F → 重貼停點 ④ |
 | ④ | 「s12 的動畫想更完善」「s12 重新設計」／「s12 用 v1」 | D1 → 停點 ③（<段> v<N>）／流程 E → 停點 ④ |
 | ③（<段> v<N>） | 「可以」／要改的拍 | D2 → D3 → 停點 ④／改那份分鏡.md → 重貼停點 ③ |
-| ④ | 「可以了，輸出成片」／「打開剪輯台」 | 交 `auto-edit-deliver`／流程 C |
+| ④ | 「可以了，輸出完成影片」／「打開剪輯台」 | 交 `auto-edit-deliver`／流程 C |
 | ⑤ | 「調好了」 | 重新讀 plan.json 與 rough.srt → 流程 A → 停點 ④ |
 
 ## 自我核對

@@ -26,7 +26,7 @@
   </div>
   <script src="fx-kit.js"></script>
   <script>
-    /* 14 Marquee Board：4–5 行橫帶，字體、字級、速度、方向各不同；色塊行與透明行交錯；位移＝整數個重複單元 */
+    /* 14 Marquee Board：4–5 行橫帶，字型、字級、速度、方向各不同；色塊行與透明行交錯；位移＝整數個重複單元 */
     const v = window.__hyperframes.getVariables();
     const stage = document.querySelector('.fx-stage');
     const { D } = FXKit.setup(stage, v, 6);
@@ -36,7 +36,7 @@
 
     const items = FXKit.list(v.items);
     const rows = (items.length ? items : [v.text]).slice(0, 5);
-    // 每行樣式：字體、字重、寬度係數（等寬字比估算寬）、速度（px/s）、方向（-1 向左）、高度占比
+    // 每行樣式：字型、字重、寬度係數（等寬字比估算寬）、速度（px/s）、方向（-1 向左）、高度占比
     const STYLES = [
       { ff: '"Noto Sans TC"', fw: 900, wk: 1,    speed: 480, dir: -1, h: 1.15 },
       { ff: '"Noto Serif TC"', fw: 700, wk: 1,   speed: 340, dir: 1,  h: 0.85 },

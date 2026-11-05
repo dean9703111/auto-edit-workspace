@@ -31,7 +31,7 @@
 | `lowerThird` | `{ left: 120, bottom: 220, rect: [120,536,1020,860] }` | `{ left: 60, bottom: 680, rect: [60,880,940,1240] }` | scenes `@style-portrait`、FOOTPRINT |
 | `centerCard` | `{ rect: [510,536,1410,860] }` | `{ left: 60, right: 140, rect: [60,880,940,1240] }` | 11、15 |
 | `badge` | `{ rect: [1200,56,1824,168], side: 'right', dx: 16 }` | `{ rect: [60,250,684,362], side: 'left', dx: -16 }` | 常駐章節角標、02 |
-| `pip` | `{ box: [1424,594,432,324], zone: [1424,581,1888,951], aspect: 4/3, frame: 'kit/pip-frame.png' }` | `{ box: [0,900,1080,1020], zone: [0,900,1080,1920], aspect: 1080/1020, frame: 'kit/pip-frame-v.png', face: [940,1280] }`（直式成片的分割線是 CSS，§6） | main、plan、media、qc、剪輯台 |
+| `pip` | `{ box: [1424,594,432,324], zone: [1424,581,1888,951], aspect: 4/3, frame: 'kit/pip-frame.png' }` | `{ box: [0,900,1080,1020], zone: [0,900,1080,1920], aspect: 1080/1020, frame: 'kit/pip-frame-v.png', face: [940,1280] }`（直式完成影片的分割線是 CSS，§6） | main、plan、media、qc、剪輯台 |
 | `stage.fs` | `null` | `{ window: [120,130,1300,880], to: [40,240], scale: 0.8475 }` | 04 家族、custom fullscreen |
 | `stage.fx` | `null` | `{ opaque: { top: 416, scale: 0.5625 }, clear: { top: 766, scale: 0.5625 } }` | fx |
 | `stage.ch` | `null` | `{ window: [160,260,1760,870], scale: 0.625, centerY: 860 }` | 01 章節 |
@@ -95,7 +95,7 @@
 
 ## 6. 講者面板（直式 `pip`）
 
-- 本體＝`pip.box`（上下分割的下半 1080×1020），`overflow: hidden`；分割線是 main 畫的一條 6 px 主色線（`<div>`，`top: 897px`、`background: var(--brand)`，換主色自動跟著變）。成片**不用** `kit/pip-frame-v.png`：那張（004 的 brand.mjs 產生，1080×1920 透明、y 897–903 主色線）只給 brand 預留與剪輯台（006）顯示用；`pip.frame` 指向它。
+- 本體＝`pip.box`（上下分割的下半 1080×1020），`overflow: hidden`；分割線是 main 畫的一條 6 px 主色線（`<div>`，`top: 897px`、`background: var(--brand)`，換主色自動跟著變）。完成影片**不用** `kit/pip-frame-v.png`：那張（004 的 brand.mjs 產生，1080×1920 透明、y 897–903 主色線）只給 brand 預留與剪輯台（006）顯示用；`pip.frame` 指向它。
 - 飛入起點（FLY）讀 `pip.box`；裁切寬高比 `pip.aspect`；`pipCrop: "auto"` 讓頭頂落在面板頂端下 40 px、裁切寬 clamp(講者框寬 × 1.3, 540, 1080)。
 - 臉的估計位置（speakerBox 上緣＋框高 30 %）超出 `pip.face` y 940–1280 → ⚠ 附 `pipCrop` 建議值。
 

@@ -16,7 +16,7 @@
 | `sideShift` | | 0–960（px） | 480 | 03 側邊欄時講者右移多少（直式沒有 03，寫了 ⚠ 沒作用） | AI | R4 | 現行 |
 | `pipCrop` | | `"auto"`／`[x, y, w, h]` | `"auto"` | 子母畫面裁切哪一塊（也是 PiP 飛入的起始框，spec FR-023）。直式＝講者面板（1080×1020）裁哪一塊，寬高比 1080:1020，`"auto"` 讓頭頂落在面板頂端下 40 px（009 FR-040） | AI | R4 | 現行 |
 | `avoid` | | 情境 key 陣列 | `[]` | 使用者說不要用的情境 | AI | USAGE 3.2 | 現行 |
-| `rhythm` | | `"continuous"`／`"spaced"` | `"continuous"` | 卡片節奏：`continuous`＝從頭到尾每段口播都有畫面（style.md「連續覆蓋」），報「沒有畫面的區間」與「講者會閃一下」；`spaced`＝要留露臉空檔，改報「開場前 30 秒最多一張」「露臉 < 3 s」 | AI（使用者明說要留空檔時才寫 `spaced`） | spec FR-015–FR-016 | **新（002）** |
+| `rhythm` | | `"continuous"`／`"spaced"` | `"continuous"` | 卡片節奏：`continuous`＝從頭到尾每段講解都有畫面（style.md「連續覆蓋」），報「沒有畫面的區間」與「講者會閃一下」；`spaced`＝要留露臉空檔，改報「開場前 30 秒最多一張」「露臉 < 3 s」 | AI（使用者明說要留空檔時才寫 `spaced`） | spec FR-015–FR-016 | **新（002）** |
 | `outro` | | 物件（§1.1） | 不配樂 | 結尾配樂 | AI（使用者要片尾配樂時） | `contracts/sfx.md` §6 | **新（002＋005）** |
 | `chapterBadge` | | `true`／`false` | `true` | 章節角標常駐右上角：章節起點（01 結束，或沒有 01 時的獨立 02 段起點）到下一章／outro；子母畫面、全幕時淡出。`false`＝關掉（回到 02 段只顯示那幾秒、`chtag` 附件照舊） | AI（使用者說不要角標時才寫 `false`） | `contracts/check-json.md` §2.5 | **新（002 round 2，F1）** |
 | `check` | | `{ "textSync": false }` | 不寫＝全部檢查 | 只給示意／預覽用的 plan 關掉 `--check` 的規則；目前只有 `textSync`（「文字對時」）。正式 `work/hyperframes/plan.json` 寫了 build 會 ⚠；格式錯 ✖ | 工具（004 `qc.mjs framing --cards` 的示意 plan）；AI 不寫 | `contracts/check-json.md` §2.6 | **新（002 round 2b）** |
@@ -118,6 +118,6 @@ const KEYS = {
 | 章節置中、前後墊底 | 空檔長度、相鄰段相隔 ≤ 1.0 s | FR-006、FR-008 |
 | 章節期間字幕清空 | 章節的 2.5 s | FR-007 |
 | 轉場語彙（色帶擦開／收回、換卡不換景、章節色塊、講者慢推） | 前後段的不透明、相接、家族（plan.mjs `assignTransitions`）；結果在 `out.tx.in`／`out.tx.out` | design-system §5、§7 |
-| 前一段是什麼 `prev`（模板與情境動畫選進場） | `fullscreen`＝前一段也是全畫面、同背景（`tx.in` 是 `swap`：換卡不換景）；`pip`＝前一段是別的不透明幕直接接上（插入素材、不透明字卡動態、章節：小窗已在）；其他＝`speaker`（前面露講者：色帶擦開，卡從小窗長出 `P.grow`）。build 寫在三個地方：每個 host 的 `data-prev`、情境子合成 root 的 `data-prev`、`window.__cues.segs[id].prev`（custom 段）；結果在 `out.tx.prev`。custom 的 `const ENTER` 預設讀它，手寫值優先 | 第二段 B（003 的 04 家族） |
+| 前一段是什麼 `prev`（模板與情境動畫選進場） | `fullscreen`＝前一段也是全畫面、同背景（`tx.in` 是 `swap`：換卡不換景）；`pip`＝前一段是別的不透明幕直接接上（插入素材、不透明字卡動態、章節：小視窗已在）；其他＝`speaker`（前面露講者：色帶擦開，卡從小視窗長出 `P.grow`）。build 寫在三個地方：每個 host 的 `data-prev`、情境子合成 root 的 `data-prev`、`window.__cues.segs[id].prev`（custom 段）；結果在 `out.tx.prev`。custom 的 `const ENTER` 預設讀它，手寫值優先 | 第二段 B（003 的 04 家族） |
 
 不加開關欄位（憲法 VIII）；作者要例外時再開欄位，先改本表。

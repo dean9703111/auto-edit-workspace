@@ -9,7 +9,7 @@
 
 | 名詞 | 定義 |
 |---|---|
-| 成片秒數 | 有 `edit.cuts` 時剪完之後的秒數（`plan.mjs` 內部用的時間；`--check` 文字報告的時間） |
+| 完成影片秒數 | 有 `edit.cuts` 時剪完之後的秒數（`plan.mjs` 內部用的時間；`--check` 文字報告的時間） |
 | 段 | plan.json `scenes[]` 裡一個 `type: "custom"` 的項目；用它的 `id` 稱呼（例 `x01`） |
 | host | 主合成裡掛子合成的那個 `<div id="el-<段 id>" data-composition-src="compositions/x-….html" data-start data-duration>`（`lib/main.mjs:78-79`） |
 | 段起點 `start` | host 的 `data-start`（同一份 HTML 的時間基準） |
@@ -28,7 +28,7 @@ build（含 `--test` 產生的 `compositions/test-clip.html`）在 plan 有 cust
 | 鍵 | 型別 | 意思 |
 |---|---|---|
 | `v` | `1` | 本契約版本 |
-| `cues` | `{ "<句號>": [起, 迄] }` | 全片每一句字幕（`work/rough.srt` 的句號）的時間，**和 host `data-start` 同一基準**（`index.html`＝成片秒數；`test-clip.html`＝成片秒數 − 片段起點）。整句被 `edit.cuts` 剪掉的句子起迄相同 |
+| `cues` | `{ "<句號>": [起, 迄] }` | 全片每一句字幕（`work/rough.srt` 的句號）的時間，**和 host `data-start` 同一基準**（`index.html`＝完成影片秒數；`test-clip.html`＝完成影片秒數 − 片段起點）。整句被 `edit.cuts` 剪掉的句子起迄相同 |
 | `segs` | `{ "<段 id>": { comp, start, D, refs } }` | 每個 custom 段一筆 |
 | `segs[id].comp` | 字串 | 子合成的 `data-composition-id`（`readCustom` 讀到的，`lib/assemble.mjs`） |
 | `segs[id].start`、`D` | 數字 | §1 的段起點、段長（r3） |

@@ -1,6 +1,6 @@
 // audit.mjs 在瀏覽器裡跑的量測（零依賴）：這個檔的函式會被 toString() 送進頁面執行，不能用到函式外的任何變數。
 //
-//   pageSeekSource(t)            → 一段 JS：用 HyperFrames runtime 的 __player.renderSeek 跳到第 t 秒，等字型與兩幀
+//   pageSeekSource(t)            → 一段 JS：用 HyperFrames runtime 的 __player.renderSeek 跳到第 t 秒，等字型與兩格
 //   pageMeasureSource(opts)      → 一段 JS：量 #<hostId> 底下每個元素，回傳原始量測（判定在 audit-rules.mjs 做）
 //     opts＝{ hostId, W, H, unstage }（unstage：009 直式舞台縮放的段，先拿掉 stage transform 再量，見 unstageInPage）
 //     回傳 { host: { start, duration, visible }, els: [ … ], moving: N }，els 每一項：

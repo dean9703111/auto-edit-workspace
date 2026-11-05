@@ -1,6 +1,6 @@
 <!-- 預設拍型：D 清單（BEATS.md §3 D；全畫面） -->
 <!-- @style -->
-/* 全畫面清單：背景（root 的 .sc-surface-fs）＋主卡外框＋標題列第一幀就在，內容從 0.5s 起。
+/* 全畫面清單：背景（root 的 .sc-surface-fs）＋主卡外框＋標題列第一格就在，內容從 0.5s 起。
    主卡左 120、頂 150、寬 1180（右緣 1300，不進子母畫面禁入區 x 1344–1888、y 617–951；右上 x 1344–1856、y 150–262 留給附件章節角標）。
    標題列高 128（64／900，左右內距 --sc-pad-card）；內容區 #wBody 1176×580（卡內框 2）→ 卡底 862（≤ 870）。
    排法（kit/scene-layout.js）：#wBody data-layout="col"、列距 --sc-gap-lg；每列是 data-slot，寬＝內容區扣左右 --sc-pad-card（文字靠左、和標題同一條左緣），
@@ -10,8 +10,8 @@
 #wCard .sc-wcard__bar { height: 128px; padding: 20px var(--sc-pad-card); }
 #wBody { width: 1176px; height: 580px; }
 #wBody > .sc-row { width: calc(100% - 2 * var(--sc-pad-card)); }
-/* 全寬版型（只有聲音、沒有子母畫面小窗：build 在 host 寫 data-wide，kit 把主卡拉到 1680）：清單留在左邊 1176（data-wide-keep），
-   右邊 500 放主視覺 #fVis（slots.visual＝畫廊插圖元件，380×380 置中）；有小窗時不顯示 */
+/* 全寬版型（只有聲音、沒有子母畫面小視窗：build 在 host 寫 data-wide，kit 把主卡拉到 1680）：清單留在左邊 1176（data-wide-keep），
+   右邊 500 放主視覺 #fVis（slots.visual＝畫廊插圖元件，380×380 置中）；有小視窗時不顯示 */
 #fVis { position: absolute; left: 1176px; top: 128px; width: 500px; height: 580px; display: none; place-items: center; }
 [data-wide] #fVis { display: grid; }
 #fVis > [data-illus] { width: 380px; height: 380px; }
@@ -40,7 +40,7 @@ for (let i = 1; i < rowAt.length; i++) P.dim('#fRow' + i, rowAt[i], { to: 0.6 })
 // 回均衡：最後一條講完 2 秒（不晚於段尾前 1.6 秒）全部亮回
 const endAt = Math.min(rowAt[rowAt.length - 1] + 2.0, D - 1.6);
 if (rowAt.length > 1 && endAt > rowAt[rowAt.length - 1] + 0.6) for (let i = 1; i < rowAt.length; i++) P.dim('#fRow' + i, endAt, { to: 1 });
-// 主視覺（全寬才看得到）：標題後彈出，每講到一項輕輕重拍一下（跟著口播動）
+// 主視覺（全寬才看得到）：標題後彈出，每講到一項輕輕重拍一下（跟著講解動）
 {{#visual}}
 P.pop('#fVis > [data-illus]', 0.6, { from: 0.8, dy: 28 });
 for (let i = 0; i < rowAt.length; i++) P.punch('#fVis > [data-illus]', rowAt[i] + 0.1, { scale: 1.05 });

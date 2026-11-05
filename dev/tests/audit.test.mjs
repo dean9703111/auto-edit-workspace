@@ -838,7 +838,7 @@ test('staticFindings：連續 > 6s 沒有任何補間、那段有字幕句在講
   const f = R.staticFindings(mo, { item: it, cuesOut: cues });
   assert.equal(f.length, 1);
   assert.deepEqual([f[0].level, f[0].rule, f[0].t], ['warn', 'static', 78.5]);
-  assert.equal(f[0].msg, '畫面沒有變化：x05 在 1:18.50–1:28.50 畫面 10.0s 沒有變化（口播 #37–#40 在講；上限 6s）');
+  assert.equal(f[0].msg, '畫面沒有變化：x05 在 1:18.50–1:28.50 畫面 10.0s 沒有變化（講解 #37–#40 在講；上限 6s）');
   assert.equal(f[0].fix, "補一拍綁 P.at('#39@詞')（詞換成 #39 講到的站名、項目、數字，讓那一刻有東西出現、亮起或換數字），或在 #39 拆成兩段");
   assert.deepEqual(f[0].data.cues, [37, 38, 39, 40]);
   // 段尾：最後一個動作到淡出開始 > 6s 也算（D 27、淡出 26.5、最後動作 20 結束 → 6.5s）
@@ -1067,14 +1067,14 @@ test('分鏡沒寫的動作：檔裡有 P.spot／P.dim／P.idle／P.cam，分鏡
   assert.deepEqual(run('—', 'P.pop(); P.spot(); P.idle(); P.end();'), [], '動態欄整欄都是 — 不反向比');
 });
 
-test('sheetPlanFindings（build --check）：拍序和口播相反；照範例【D 下限】第一拍、相鄰兩拍、最後一拍到段尾；差 ≤ 0.3s 不報', () => {
+test('sheetPlanFindings（build --check）：拍序和講解相反；照範例【D 下限】第一拍、相鄰兩拍、最後一拍到段尾；差 ≤ 0.3s 不報', () => {
   const H = BT.BEAT_HEADER;
   const sheet = (rows) => BT.parseBeatSheets(`#### 動畫分鏡 x05\n\n| ${H.join(' | ')} |\n|---|---|---|---|---|---|\n${rows.map((r) => `| ${r} | — | 彈出 | — | — |`).join('\n')}\n`).get('x05');
   const it = { id: 'x05', where: '[x05 custom]', start: 70, end: 85, D: 15 };
   const tpl = R.floorRules('<!--\n  【D 下限】\n  T1 ≥ 2.0（主卡）\n  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5\n  D ≥ T3 + 4.6\n  【版面】\n-->');
   // 拍序：#40 寫在 #38 前面
   const rev = BT.sheetPlanFindings({ item: it, sheet: sheet(['1 | `#35`', '2 | `#40`', '3 | `#38@兩支`']), cues: bCues });
-  assert.deepEqual(rev.map((f) => f.msg.slice(0, 7)), ['拍序和口播相反']);
+  assert.deepEqual(rev.map((f) => f.msg.slice(0, 7)), ['拍序和講解相反']);
   assert.match(rev[0].msg, /第 3 拍 #38@兩支（1:19\.54）比上一拍第 2 拍 #40（1:23\.50）早講到/);
   // 照範例：第一拍 #35 在 2.17s ≥ 2.0；#35→#38 6.33s；#38 同句號的 ＋1.2 不算另一拍；#40 到段尾 15 − 13.5 = 1.5 < 4.6 → 報段尾
   const ok = BT.sheetPlanFindings({ item: it, sheet: sheet(['1 | `#35`', '2 | `#38`', '2b | `#38`＋1.2', '3 | `#40`']), cues: bCues, tplRules: tpl });

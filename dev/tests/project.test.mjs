@@ -1,4 +1,4 @@
-// 專案資料夾：--project 解析、預設路徑、成片資料夾、測試片段的 render 指令
+// 專案資料夾：--project 解析、預設路徑、完成影片資料夾、測試片段的 render 指令
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -45,7 +45,7 @@ test('--project 可以寫路徑或只寫名稱；目前資料夾在專案裡就�
   fs.rmSync(ep2, { recursive: true });
 });
 
-test('--list 不需要專案（projects/ 有好幾個也不報錯）', () => {
+test('--list 不需要專案（projects/ 有好幾個也不出錯）', () => {
   fs.mkdirSync(path.join(root, 'projects', 'EP3'), { recursive: true });
   const r = spawnSync(process.execPath, [BUILD, '--template', tpl, '--list'], { encoding: 'utf8', cwd: root });
   assert.equal(r.status, 0, r.stderr);

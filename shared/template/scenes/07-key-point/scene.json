@@ -5,7 +5,7 @@
   "aliases": ["重點", "重點卡", "重點字卡", "警示字卡"],
   "family": "lower-third",
   "portrait": "move",
-  "when": "口播講到一句必須記住的重點；語氣 warn＝千萬不要／踩雷／注意，good＝解法",
+  "when": "講解講到一句必須記住的重點；語氣 warn＝千萬不要／踩雷／注意，good＝解法",
   "avoid": "一次出現兩個以上重點（拆兩段），或只是帶出名詞（改一般字卡）",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
   "surface": null,

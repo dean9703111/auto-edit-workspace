@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 剪映素材：把成片拆成「主軌＋每段一支透明 MOV＋字幕 SRT」，放進 projects/<專案>/output/capcut/，在剪映（CapCut）照清單排回時間軸
+// 剪映素材：把完成影片拆成「主軌＋每段一支透明 MOV＋字幕 SRT」，放進 projects/<專案>/output/capcut/，在剪映（CapCut）照清單排回時間軸
 //   build.mjs --capcut 產生合成（compositions/capcut-*.html、capcut.json、capcut.srt）→ 這支逐支 render、寫清單
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,9 +19,9 @@ const HELP = `剪映素材（主軌＋每段一支透明 MOV＋字幕 SRT；要 
   node shared/template/tools/capcut.mjs --project projects/<專案> --dry-run     只產生合成和清單，不 render（先看會出幾支、多長）
 
 選項：--only s05,s12（只做這幾段，不做主軌）、--no-main（不做主軌）、--force（已經做過、沒變的也重做）
-每段 .mov 是 ProRes 4444（有透明通道，帶這段的音效）：疊加卡只有卡片；子母畫面、全幕、半畫面整格都有（含講者小窗）。
+每段 .mov 是 ProRes 4444（有透明通道，帶這段的音效）：疊加卡只有卡片；子母畫面、全幕、半畫面整格都有（含講者小視窗）。
 主軌.mp4 是講者畫面＋人聲＋片尾配樂（調光、瘦臉、剪輯台的跳接放大與過黑都在裡面）；沒有字卡、字幕、段落音效。
-字幕.srt 是成片畫面上實際顯示的字幕（剪映：文本 → 本地字幕 → 匯入）。章節角標不輸出（剪映用文字貼）。`;
+字幕.srt 是完成影片畫面上實際顯示的字幕（剪映：文本 → 本地字幕 → 匯入）。章節角標不輸出（剪映用文字貼）。`;
 
 const VALUE_FLAGS = ['project', 'only', 'template'];
 const BOOL_FLAGS = ['background', 'dry-run', 'no-main', 'force', 'help'];
@@ -55,12 +55,12 @@ const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8'))
 export function listMd(cc, { files, project }) {
   const L = [];
   L.push(`# 剪映素材清單（${project}）`, '');
-  L.push(`成片長度 ${mmss(cc.duration)}，${cc.format === 'portrait' ? '直式 1080×1920' : '橫式 1920×1080'}、30fps。`, '');
+  L.push(`完成影片長度 ${mmss(cc.duration)}，${cc.format === 'portrait' ? '直式 1080×1920' : '橫式 1920×1080'}、30fps。`, '');
   L.push('## 怎麼排', '');
   L.push('1. 新草稿的比例照上面的版式；把 `主軌.mp4` 拖到主軌道，從 0 秒開始。');
   L.push('2. 每支 `.mov` 拖到主軌道上面的畫中畫軌道，起點對齊下表的「放在」（檔名也寫了起點，例 `0m31.68s`＝0 分 31.68 秒）。');
   L.push('3. 文本 → 本地字幕 → 匯入 `字幕.srt`，再套你的字幕樣式。');
-  L.push('4. `.mov` 有透明通道：疊加卡只有卡片；子母畫面、全幕、半畫面整格都有畫面（講者小窗在裡面），蓋住主軌是對的。每支都帶自己那段的音效，不要可以在剪映把那支的音量關掉。', '');
+  L.push('4. `.mov` 有透明通道：疊加卡只有卡片；子母畫面、全幕、半畫面整格都有畫面（講者小視窗在裡面），蓋住主軌是對的。每支都帶自己那段的音效，不要可以在剪映把那支的音量關掉。', '');
   L.push('## 檔案', '');
   L.push('| 檔名 | 放在 | 長度 | 版面 | 內容 | 音效 |');
   L.push('|---|---|---|---|---|---|');

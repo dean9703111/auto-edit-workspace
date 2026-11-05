@@ -6,14 +6,14 @@
 //               字卡動態）host 帶 stageTransform 的 CSS transform＋data-layout-allow-overflow，下面墊一層整張畫布的純色底（#bd-<id>，
 //               同起迄、同進退場）；疊加情境與 overlay 情境動畫 host 1080×1920；講者面板 pip.box（上緣 6px 主色線）；角標左上；色帶掃過 1080 寬
 //     items     resolvePlan().items（起點排序；已有 compId／file／start／end／fade 資訊；media 段由 lib/media.mjs 產生）
-//     videoDur  成片長度（有 edit.cuts 時已扣掉剪掉的範圍）
+//     videoDur  完成影片長度（有 edit.cuts 時已扣掉剪掉的範圍）
 //     footage／editFx  resolvePlan() 的同名欄位（沒有 edit 時是 null，輸出和舊版逐位元組相同）
 //     captions  { compId, file }
 //     pip       pipGeometry() 結果
 //     test      { t0, len }：產生測試片段（root 長度＝len，底片 data-media-start＝t0，全部平移 −t0）
-//     cues      成片秒數的字幕（resolvePlan().cuesOut）：有 custom 段時注入 window.__cues（specs/contracts/cues.md §2）
-//     outro     { file, at, dur }：結尾配樂（build 用 renderBgmClip 做好的 wav；at 是成片秒數）
-//     badges    resolvePlan().badges：常駐章節角標 [{ k, num, name, start, end, show: [[s, e]] }]（成片秒數；plan.json "chapterBadge": false 時是空陣列）
+//     cues      完成影片秒數的字幕（resolvePlan().cuesOut）：有 custom 段時注入 window.__cues（specs/contracts/cues.md §2）
+//     outro     { file, at, dur }：結尾配樂（build 用 renderBgmClip 做好的 wav；at 是完成影片秒數）
+//     badges    resolvePlan().badges：常駐章節角標 [{ k, num, name, start, end, show: [[s, e]] }]（完成影片秒數；plan.json "chapterBadge": false 時是空陣列）
 //               02 章節角標段（it.noHost）不放 host，只留音效
 //   v2 轉場（specs/010-motion-v2/design-system.md §5、§7；用哪一種看 plan.mjs 的 it.txIn／it.txOut）：
 //     wipe   色帶帶路擦開：主色帶 150、墨色細帶 48 由右往左 0.62s（expo.inOut），新的幕緊跟細帶右緣（host clip-path）；講者 0.75s 飛進子母畫面、0.62s 外框彈出
@@ -218,7 +218,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
     if (it.type === 'scene') return it.scene.portrait === 'stage' ? stageTransform(it.key === 'chapter' ? 'ch' : 'fs', C) : null;
     return it.type === 'custom' && it.opaque ? stageTransform('fs', C) : null;
   };
-  // 全寬版型：橫式、不透明的全畫面段（04 家族、custom fullscreen）整段沒有子母畫面小窗（只有聲音的區間）→ 主卡拉到 1680（kit/scene-motion.js widen）
+  // 全寬版型：橫式、不透明的全畫面段（04 家族、custom fullscreen）整段沒有子母畫面小視窗（只有聲音的區間）→ 主卡拉到 1680（kit/scene-motion.js widen）
   const wideOf = (it, pieces) => !portrait && it.opaque && !pieces.length && (it.type === 'custom' || (it.type === 'scene' && it.scene?.family === 'fullscreen'));
   for (const it of list) {
     if (it.noHost) continue;
@@ -254,7 +254,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
       if (bd) hosts.push(`  <div id="bd-${it.id}" class="clip" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-track-index="${track++}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:${it.type === 'fx' ? FX_BG[it.bg] : it.key === 'chapter' ? 'var(--sc-ch-bg)' : 'var(--sc-fs-bg)'};z-index:${it.z - 1}"></div>`);
       const [hw, hh] = portrait && !st ? [W, H] : [1920, 1080];
       hosts.push(`  <div id="el-${it.id}" data-composition-id="${it.compId}" data-composition-src="${it.file}"${varAttr}
-       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"${pieces.length ? ' data-ambient="off"' : wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 子母畫面的段不要背景環境（kit P.ambient）；沒有小窗的全畫面段用全寬版型（kit widen）
+       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"${pieces.length ? ' data-ambient="off"' : wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 子母畫面的段不要背景環境（kit P.ambient）；沒有小視窗的全畫面段用全寬版型（kit widen）
       if (swapOut > 0) {
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: 'inset(0px 0px 0px 0px)' }, { clipPath: '${SWAP_KEEP}', duration: 0.001, ease: 'none', immediateRender: false }, ${n3(it.e)});`);
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: '${SWAP_KEEP}' }, { clipPath: '${SWAP_GONE}', duration: ${swapOut}, ease: 'power2.in', immediateRender: false }, ${n3(it.e + 0.001)});`);
@@ -421,7 +421,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=${W}, height=${H}">
-  <title>${segCut ? `剪映素材 ${cut.id}（${t0}s 起 ${DUR}s）` : mainCut ? '剪映主軌' : test ? `測試片段 ${t0}s 起 ${DUR}s` : '成片'}</title>
+  <title>${segCut ? `剪映素材 ${cut.id}（${t0}s 起 ${DUR}s）` : mainCut ? '剪映主軌' : test ? `測試片段 ${t0}s 起 ${DUR}s` : '完成影片'}</title>
   <script src="${base}kit/gsap.min.js"></script>
 ${KIT_LINKS.map((l) => `  <link rel="stylesheet" href="${base}${l}">`).join('\n')}${needCss ? `\n  <link rel="stylesheet" href="${base}kit/media.css">` : ''}
 ${cueScript}${portrait ? `  ${regionsScript(C)}\n` : ''}  <script src="${base}kit/scene-motion.js"></script>
@@ -483,7 +483,7 @@ ${badgeEls.length ? "  const P = SceneMotion(tl, document.getElementById('chb'))
 
 export function buildPreview({ scene, parts, D, sub, pipStyle, cues = [], wide = false }) {
   const opaque = ['fullscreen', 'chapter'].includes(scene.family);
-  const pip = scene.family === 'fullscreen' && !wide;   // wide：全寬版型示意（只有聲音的段：沒有講者小窗、主卡 1680）
+  const pip = scene.family === 'fullscreen' && !wide;   // wide：全寬版型示意（只有聲音的段：沒有講者小視窗、主卡 1680）
   const side = scene.key === 'side-panel';
   const tl = [];
   if (opaque) {

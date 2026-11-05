@@ -41,7 +41,7 @@ work/rough.mp4 ──(look.mjs run：Chrome＋MediaPipe 偵測)──► work/fa
 | `lut` | 字串 | 相對 `shared/template/kit/` 的路徑 | 調光用的 3D LUT | 04 §6.2 |
 
 - 只有這三個欄位；多的欄位 `readKitLook()` 丟錯：`kit/look.json 不能有「x」→ 只能寫 color、slim、lut`。
-- `kit/look/*.cube` 一律代表 **color = 0.8** 時的效果（`LUT_REF`，§8）：`jianying-smart.cube` 是拿剪映智能調色 0.8＋美白 0.3 的成片擬合的（04 §2.2、§5）。
+- `kit/look/*.cube` 一律代表 **color = 0.8** 時的效果（`LUT_REF`，§8）：`jianying-smart.cube` 是拿剪映智能調色 0.8＋美白 0.3 的完成影片擬合的（04 §2.2、§5）。
 
 ### 2.2 `plan.json` 第一層的 `look`（個別專案覆寫）
 

@@ -33,7 +33,7 @@ before(() => {
   sfxDir = path.join(dir, 'sfx');
   fs.mkdirSync(sfxDir);
   for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(sfxDir, `${n}.wav`));
-  // 44 秒的小影片（25fps、關鍵幀稀疏），build 會重新編碼成 30fps、每秒一個關鍵幀
+  // 44 秒的小影片（25fps、關鍵影格稀疏），build 會重新編碼成 30fps、每秒一個關鍵影格
   const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=25', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
     '-t', '44', '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '250', '-c:a', 'aac', '-shortest', path.join(work, 'rough.mp4')]);
   assert.equal(r.status, 0, String(r.stderr));
@@ -65,12 +65,12 @@ test('產生專案：CRLF 字幕、底片重新編碼、kit／音效／字卡動
   assert.equal((cap.match(/class="cg"/g) || []).length, 12, 'CRLF 的 12 句都要讀到');
   assert.match(cap, /id="cg-1" style="opacity:0;visibility:hidden"><span>第 1 句字幕內容<\/span>/);
   assert.match(cap, /data-layout-allow-caption-zone/);
-  // 重新編碼：30fps、每秒一個關鍵幀
+  // 重新編碼：30fps、每秒一個關鍵影格
   const p = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v', '-show_entries', 'stream=r_frame_rate', '-of', 'csv=p=0', path.join(out, 'assets', 'rough.mp4')], { encoding: 'utf8' });
   assert.equal(p.stdout.trim(), '30/1');
   const k = spawnSync('ffprobe', ['-v', 'error', '-skip_frame', 'nokey', '-select_streams', 'v', '-show_entries', 'frame=pts_time', '-of', 'csv=p=0', path.join(out, 'assets', 'rough.mp4')], { encoding: 'utf8' });
   const keys = k.stdout.trim().split('\n').map(Number);
-  assert.ok(keys.length >= 43, `關鍵幀太少：${keys.length}`);
+  assert.ok(keys.length >= 43, `關鍵影格太少：${keys.length}`);
   // root 長度＝底片長度往下對齊 1/30
   assert.match(read('index.html'), /data-composition-id="main" data-start="0" data-duration="44"/);
   assert.match(r.stdout, /s02｜03 半版側邊欄｜/);
@@ -180,7 +180,7 @@ test('--gallery 產生 18 頁預覽＋04 家族 4 頁全寬示意（獨立頁，
   const r = runGallery(tdir);
   assert.deepEqual(r.problems, []);
   assert.equal(r.made.filter((f) => f.endsWith('.html')).length, 22);
-  // 全寬示意：沒有講者小窗、#scene 寫 data-wide；04a 放主視覺（筆電）並先掛插圖元件
+  // 全寬示意：沒有講者小視窗、#scene 寫 data-wide；04a 放主視覺（筆電）並先掛插圖元件
   const wide = fs.readFileSync(path.join(tdir, 'preview', '04a-fs-list-wide.html'), 'utf8');
   assert.match(wide, /<div id="scene" data-wide>/);
   assert.doesNotMatch(wide, /<div id="pip">/);
@@ -631,7 +631,7 @@ test('--capcut：每段一支透明底合成（沒有字幕、主軌聲音；半
   const s02 = read('compositions/capcut-s02.html');
   assert.match(s02, /<video id="rough" [^>]*data-media-start="15"[^>]*\n\s+data-track-index="0" muted/, '半畫面段帶底片，但靜音');
   assert.doesNotMatch(s02, /data-has-audio/);
-  assert.match(read('compositions/capcut-s03.html'), /<video id="pipv-s03"/, '子母畫面段帶講者小窗');
+  assert.match(read('compositions/capcut-s03.html'), /<video id="pipv-s03"/, '子母畫面段帶講者小視窗');
   const main = read('compositions/capcut-main.html');
   assert.match(main, /<video id="rough" [^>]*data-has-audio="true"/);
   assert.doesNotMatch(main, /el-s0\d|el-captions|id="sfx-/);

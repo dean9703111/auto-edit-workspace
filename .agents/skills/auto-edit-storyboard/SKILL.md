@@ -1,6 +1,6 @@
 ---
 name: auto-edit-storyboard
-description: 剪好看的前半：講者調光瘦臉、構圖台拖框（停點 ②）、量講者框、配螢幕錄影、挑情境、寫草稿 plan.json 與分鏡表 work/storyboard.md（附每段截圖與金句候選）。當使用者說「剪好看」「做成片」「包裝成成片」「列分鏡表」時使用。還沒有 work/rough.mp4 時不要用（改用 auto-edit-rough）；分鏡表已經確認、要做動畫或看 Studio 時不要用（改用 auto-edit-motion、auto-edit-review）。
+description: 剪好看的前半：講者調光瘦臉、構圖台拖框（停點 ②）、量講者框、配螢幕錄影、挑情境、寫草稿 plan.json 與分鏡表 work/storyboard.md（附每段截圖與金句候選）。當使用者說「剪好看」「做出完成影片」「包裝成完成影片」「列分鏡表」時使用。還沒有 work/rough.mp4 時不要用（改用 auto-edit-rough）；分鏡表已經確認、要做動畫或看 Studio 時不要用（改用 auto-edit-motion、auto-edit-review）。
 version: 0.1.0
 ---
 # 剪好看（前半）：構圖到分鏡表
@@ -68,7 +68,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 | 條件（看得到的事實） | 做什麼 |
 |---|---|
 | `assets/screen/` 或 `assets/images/` 有檔案 | 照 `auto-edit-screen` 做（2 支以上可以派 explore 子代理，選用），結果寫進分鏡表的 media 列 |
-| `--check` 印「只有聲音」的區間 | 同上；那個區間一定要被 media 段或不透明的全幕蓋住。素材裡找不到對得上口播的錄影或圖片時，照步驟 5 做情境判定，改做不透明的全幕情境動畫（介面操作用 `x-ui-mock`；只有聲音的區間沒有講者小窗，全畫面的段自動換全寬版型，照 `shared/style.md`「全寬」設計：04a 清單寫 `slots.visual` 主視覺），分鏡表那一列寫「沒有對應素材，改做動畫」 |
+| `--check` 印「只有聲音」的區間 | 同上；那個區間一定要被 media 段或不透明的全幕蓋住。素材裡找不到對得上講解的錄影或圖片時，照步驟 5 做情境判定，改做不透明的全幕情境動畫（介面操作用 `x-ui-mock`；只有聲音的區間沒有講者小視窗，全畫面的段自動換全寬版型，照 `shared/style.md`「全寬」設計：04a 清單寫 `slots.visual` 主視覺），分鏡表那一列寫「沒有對應素材，改做動畫」 |
 | 都沒有 | 跳過 |
 
 完成判準：每個「只有聲音」的區間在分鏡表都有一列寫用哪一段蓋住。
@@ -80,7 +80,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 node shared/template/tools/build.mjs --list
 ```
 
-先填情境判定表（storyboard.md 的「情境判定」節，表頭照 `references/storyboard-template.md`），一段一列：口播在講什麼 → `shared/template/SITUATIONS.md` §1 第 1 步的四題（只讀那幾行）定大類 → §3 哪一列 → 首選 → 為什麼不是動畫。第 ② 題（口播裡有看得見的東西在動：裝置、人、檔案、畫面、時間）是「是」就做示意動畫 `x-scene`，畫法先查 `shared/template/BEATS.md` §5.4，句型像流程、條列也一樣。§3 是一張大表，只讀對得上的那一列：先 `grep -n '^| ' shared/template/SITUATIONS.md | cut -d'|' -f1,2` 看每列第一欄「句子長這樣」，挑到再讀那一行整列，不要整節讀。
+先填情境判定表（storyboard.md 的「情境判定」節，表頭照 `references/storyboard-template.md`），一段一列：講解在講什麼 → `shared/template/SITUATIONS.md` §1 第 1 步的四題（只讀那幾行）定大類 → §3 哪一列 → 首選 → 為什麼不是動畫。第 ② 題（講解裡有看得見的東西在動：裝置、人、檔案、畫面、時間）是「是」就做示意動畫 `x-scene`，畫法先查 `shared/template/BEATS.md` §5.4，句型像流程、條列也一樣。§3 是一張大表，只讀對得上的那一列：先 `grep -n '^| ' shared/template/SITUATIONS.md | cut -d'|' -f1,2` 看每列第一欄「句子長這樣」，挑到再讀那一行整列，不要整節讀。
 規則：首選欄是情境動畫就做動畫（從哪支範例改看 §3 的「動態」欄）；只有不符合 style.md「情境動畫優先」三條判準才退到字卡，「為什麼不是動畫」寫不符合哪一條。
 **快速初稿**（只有使用者說「快速初稿」「先出初稿」「動畫之後再做」才用，回報第一行寫「快速初稿」）：判定表照填、首選照寫；首選是情境動畫的段，plan.json 先放 §3「次選」欄的卡（只有聲音的區間放不透明的全畫面卡），「為什麼不是動畫」寫「快速初稿，待做 x-<名稱>」，先不寫動畫分鏡。停點 ④ 回報列「待做動畫：<段> x-<名稱>、…」；使用者說「s05 做動畫」「動畫都做」就走改版（`node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段,段>`，2 段以上平行派子代理）。連續 2 段以上都是 06／07／12／13 字卡，就回頭查 §3 有沒有動畫列。列點、數字先對這張（§3 都有那一列）：
 
@@ -103,7 +103,7 @@ node shared/template/tools/build.mjs --list
 | 其他變體（電路板、循環、台座、方塊、傳出去、裝置接力、一鍵歸位、問 AI、終端機、程式碼） | SITUATIONS.md §3 對應那一列 |
 
 章節角標不用另排（build 自動常駐）；講稿有 `###` 小節時，把 `--check` ⚠ 印的 `sections` 整段貼進 plan.json 第一層（名稱太長照 ⚠ 縮短），右上角就會顯示目前在講哪一節；沒有 01 的短片，在章節起點放一段 02（≥ 3.5 秒，R2.2），build 會在那裡自動掃過一次色帶。金句先放候選表讓使用者勾（style.md「字卡文字」），不直接上。資訊卡照 style.md「字卡文字」，有圖示欄位就配（寫進本集圖示表）。
-判定表填完，照 `shared/template/SITUATIONS.md` §6 整集看一次：開場三拍、前後呼應、判決句（蓋章）。口播本來就沒有的不硬湊；有排的在判定表那一段的「首選」寫清楚（例：`x-checklist-2（呼應 s04）`）。
+判定表填完，照 `shared/template/SITUATIONS.md` §6 整集看一次：開場三拍、前後呼應、判決句（蓋章）。講解本來就沒有的不硬湊；有排的在判定表那一段的「首選」寫清楚（例：`x-checklist-2（呼應 s04）`）。
 判定表之後寫動畫分鏡（情境動畫 `x-*`、04 家族的段；06／07／12／13 字卡不用）：看 §3 那一列的「拍型」，從 `shared/template/BEATS.md` §3 只讀那個拍型的小節（`### A 流程`…`### I 介面操作`，用 `grep -n '^### ' shared/template/BEATS.md` 找行號），抄那個拍型的整張表到那一段底下（標題 `#### 動畫分鏡 <段 id>`，表頭照抄），只填講到的 `#N@詞` 和畫面上的字；動態欄只用語彙表的名稱，不自己加拍、刪拍（BEATS.md §1）。拍型「待定」的照 BEATS.md §4 排，並列進「需要我決定的事」。
 示意動畫（拍型 S、`x-scene`）的段多做兩件事（BEATS.md §5）：分鏡表用八欄表頭（後面加「插圖元件（狀態）」「位置」），「位置」寫排法 `<區域>｜<排法> <第幾個>`（例 `panelTop｜row 1／3`），不寫像素（`shared/style.md`「版面」）；表下面寫 `#### 插圖清單 <段 id>`，表頭 `| 元件 | 來源 | 怎麼來 |`，每個元件照這個順序選來源，前一種能用就不要往下（`shared/template/kit/illus-style.md` §1）：1. 畫廊裡有 → 直接用 `data-illus="<元件名>"`（畫廊每格下面有寫法）。2. lucide 圖示（`kit/icons.json`）單個或 2–3 個組合放進卡片、膠囊能表達 → 用圖示。3. 都不行 → 照 `shared/template/kit/illus-style.md` 新畫一個 SVG。相片、背景、質感圖不走這條；示意插圖一律是向量線條。畫廊先打開 `shared/template/kit/illus-gallery.jpg` 看；「新建 SVG」列的「怎麼來」寫 `規格：<名稱>，建議尺寸 <寬>×<高>，狀態 <a>／<b>；描述：…`。插圖清單和分鏡在停點 ③ 一起確認。
 完成判準：判定表每段一列、每欄都有值；首選是情境動畫的段不是 custom 時，「為什麼不是動畫」寫的是三條判準之一；每段都有版面（疊加／半畫面／子母畫面／全幕之一；直式只用疊加／上下分割／全幕，不挑 03、05）、情境 key；主句 8–14 字（style.md「字卡文字」，build 不檢查，自己數：全形 1、半形 0.5）；每段情境動畫都有一張動畫分鏡，表頭和 BEATS.md 一字不差。
@@ -118,8 +118,8 @@ node shared/template/tools/qc.mjs storyboard --project projects/<專案>
 ```
 
 草稿 plan.json：直式時第一層先寫 `"format": "portrait"`；有 `work/screen-sync.json`（邊錄邊講的螢幕錄影）就先跑 `node shared/template/tools/media.mjs screen-sync --project projects/<專案> --write-plan`，sync 段照錄影原本的時間對好，不用再配也不要改 `in`；段的 `from` 綁這段第一句；卡片主文字、每條項目、每個動畫站綁講到那個詞的 `#N@詞`（USAGE.md 3.4；哪個欄位改哪個時間點見 USAGE-reference.md R2.8，例：07 的 `key` 寫 `beats.keyAt`、清單寫 `slots.items[i].at`）。例：07 重點字卡寫 `"slots": { "key": "一鍵同步" }, "beats": { "keyAt": "#12@同步" }`，不是綁句首的 `#12`。情境動畫段：從 `shared/template/custom/` 複製最接近的範例成 `compositions/x-<名稱>.html` 登記進草稿（`"type": "custom"`），範例原文 build 只 ⚠「還沒做」、不擋，截圖是範例的樣子，要做的內容寫在動畫分鏡。`--check` 的 ✖ 全部修掉才 build。段尾完成態不到 1.5 秒（印「最後一幕太短」）時，先把這段的 `to` 往後延（不超過下一段起點、最多 0.5 秒）再跑一次；延了還不夠，才列進「需要我決定的事」。`qc.mjs storyboard` 自己算每段的完成態（條列逐條換的每次一張、錄影段每個標註到位一張），最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每段「截圖觀察」上面，**只貼這一次印出來的那幾行**（同一段張數變了，工具會清掉舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」）；每張後面的「為什麼」（完成態、第 N 條、…到位、整段都在動）照 USAGE.md 2.3 讀；截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard，還是一樣就在「需要我決定的事」列出段號和秒數。不要自己算秒數跑 `snapshot --at`。照 `references/storyboard-template.md` 寫 `work/storyboard.md`；「音效」欄寫 `預設`、`無`、換的名稱（例 `shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`。拿不定版面的段落：先把第一個方案的圖改名成 `s05-A.png`，改 plan.json、build、再跑一次 storyboard 得到 `s05.png`，兩張並排請使用者選。
-完成判準：`--check` 的「文字對時」0 個 ✖，⚠ 也照改（不改的在該段「截圖觀察」寫理由）；沒有「#N@詞 有 N 個用字數比例估」的 ⚠；情境動畫段的「動畫分鏡：」⚠（拍序和口播相反、拍在段尾淡出之後、照範例檔頭【D 下限】放不下）照 → 改分鏡表，不改的在那段「需要我決定的事」寫理由；`--check --json` 每個子母畫面段的 `pip` 不是空的；storyboard.md 有 speakerBox、本集圖示表、總覽表（含「章」欄）、情境判定表、每段一節＋截圖＋截圖觀察、需要我決定的事（含金句候選表；`sparkle`、`shine`、`thunder` 超過 style.md「音效」每集上限時列出來讓使用者挑；結尾要不要配樂 `outro` 列一題）；`--check` 報告「沒有畫面的區間」是「無」，或每段都寫了理由；沒有「音效稀疏」⚠（照它括號裡列的段，在情境動畫的結果／壞事那拍或錄影段補 success／alert）。
-常見錯誤：印 `✖ s21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough …`（或 `--check --json` 子母畫面段的 `pip` 是空的）→ 不是版面的問題，不要改 plan.json；照 → 重做初剪（`auto-edit-rough` 步驟 6），再 build、再截圖；`qc.mjs storyboard` 印 `✖ plan.json 在上次 build 之後改過` → 先 build 再截圖；印 ✖ 找不到 Chrome → `npx hyperframes browser ensure` 再跑一次。
+完成判準：`--check` 的「文字對時」0 個 ✖，⚠ 也照改（不改的在該段「截圖觀察」寫理由）；沒有「#N@詞 有 N 個用字數比例估」的 ⚠；情境動畫段的「動畫分鏡：」⚠（拍序和講解相反、拍在段尾淡出之後、照範例檔頭【D 下限】放不下）照 → 改分鏡表，不改的在那段「需要我決定的事」寫理由；`--check --json` 每個子母畫面段的 `pip` 不是空的；storyboard.md 有 speakerBox、本集圖示表、總覽表（含「章」欄）、情境判定表、每段一節＋截圖＋截圖觀察、需要我決定的事（含金句候選表；`sparkle`、`shine`、`thunder` 超過 style.md「音效」每集上限時列出來讓使用者挑；結尾要不要配樂 `outro` 列一題）；`--check` 報告「沒有畫面的區間」是「無」，或每段都寫了理由；沒有「音效稀疏」⚠（照它括號裡列的段，在情境動畫的結果／壞事那拍或錄影段補 success／alert）。
+常見錯誤：印 `✖ s21 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough …`（或 `--check --json` 子母畫面段的 `pip` 是空的）→ 不是版面的問題，不要改 plan.json；照 → 重做初剪（`auto-edit-rough` 步驟 6），再 build、再截圖；`qc.mjs storyboard` 印 `✖ plan.json 在上次 build 之後改過` → 先 build 再截圖；印 ✖ 找不到 Chrome → `npx hyperframes browser ensure` 再跑一次。
 
 **7. ③ 通過：寫正式 plan.json**
 

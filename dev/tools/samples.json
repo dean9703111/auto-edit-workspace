@@ -20,7 +20,7 @@
   },
   "fs-list": {
     "title": "AI 找得出的 NG",
-    "sub": "錄這段口播的時候，我犯了不少錯",
+    "sub": "錄這段講解的時候，我犯了不少錯",
     "slots": {
       "title": "AI 找得出的 NG",
       "items": ["講錯重來：只留最後一次 ｜icon=repeat", "卡詞：講到一半停下 ｜icon=pause", "長停頓：交給 **auto-editor** ｜icon=timer"]
@@ -40,11 +40,11 @@
     }
   },
   "fs-flow": {
-    "title": "從原始口播到成片",
+    "title": "從原始講解到完成影片",
     "sub": "先轉逐字稿，AI 再找出 NG",
     "slots": {
-      "title": "從原始口播到成片",
-      "nodes": ["轉逐字稿 ｜icon=file-text", "列剪輯清單 ｜icon=list-checks", "初剪 ｜icon=scissors", "包裝成片 ｜icon=clapperboard"],
+      "title": "從原始講解到完成影片",
+      "nodes": ["轉逐字稿 ｜icon=file-text", "列剪輯清單 ｜icon=list-checks", "初剪 ｜icon=scissors", "包裝影片 ｜icon=clapperboard"],
       "current": "2"
     }
   },
@@ -61,7 +61,7 @@
     "title": "工作區範本裡有什麼",
     "sub": "剪輯要用到的檔案，我做成了範本",
     "slots": {
-      "cards": ["原始口播 ｜icon=video", "講稿 ｜icon=file-text", "場地照 ｜icon=camera", "音效 ｜icon=volume-2"]
+      "cards": ["原始講解 ｜icon=video", "講稿 ｜icon=file-text", "場地照 ｜icon=camera", "音效 ｜icon=volume-2"]
     }
   },
   "concept": {

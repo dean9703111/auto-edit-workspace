@@ -3,7 +3,7 @@
 <!--
   x-architecture-send：紙飛機傳出去（第二層 custom，layout: "fullscreen"；x-architecture 的變體）
 
-  【適用的口播】
+  【適用的講解】
   講「把一樣東西傳給好幾個人／地方」：「剪好之後，把連結傳給客戶、主管和字幕師，三個人都收到就能開始審」。
   左邊寄件端（圖示＋名稱），右邊 3 個收件人先排好（預覽態）；講到哪個收件人，一架紙飛機從寄件端沿弧線飛過去（身後留虛線尾跡），
   到站那一刻那一列聚焦、右端勾勾彈出；講到「都收到」，全部亮回、標題列右端的結論膠囊彈出、音效 success。
@@ -14,7 +14,7 @@
   - 有先後步驟：用 x-process。
 
   【要改的地方】
-  1. 文字：標題列（≤ 10 字）、結論膠囊 #xars-done（≤ 6 字，用口播講到的那幾個字）、寄件端名稱 #xars-mename（≤ 4 字）、3 個收件人 .xars-name（≤ 4 字）。
+  1. 文字：標題列（≤ 10 字）、結論膠囊 #xars-done（≤ 6 字，用講解講到的那幾個字）、寄件端名稱 #xars-mename（≤ 4 字）、3 個收件人 .xars-name（≤ 4 字）。
   2. 圖示：寄件端 #xars-meico（film）、收件人 #xars-u1–u3（user）、勾勾 #xars-k1–k3（circle-check）。到 kit/icons.json 找名稱，把 svg 原文整段貼上；
      一個字都不改（<rect> 的 width、height 是形狀本身的尺寸，拿掉就畫不出來）。
   3. 綁句：<script> 開頭 S1–S3、ALL 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 ALL 改。
@@ -77,9 +77,9 @@
        data-cues-sample='{"start":0,"D":15.4,"cues":{"302":[2.8,6.0],"303":[6.1,9.2],"304":[9.3,12.4],"305":[12.5,15.2]},"refs":{"#302@客戶":3.0,"#303@主管":6.2,"#304@字幕師":9.4,"#305@都收到":12.6}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xars-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">成片連結傳出去</span><div id="xars-done" class="sc-pill" data-snap-width><span class="sc-opt">都收到</span></div></div>
+      <div class="sc-wcard__bar"><span class="sc-opt">完成影片連結傳出去</span><div id="xars-done" class="sc-pill" data-snap-width><span class="sc-opt">都收到</span></div></div>
       <div id="xars-body" data-layout="row" data-gap="lg">
-        <div id="xars-me" data-slot><span id="xars-meico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M7 3v18" /> <path d="M3 7.5h4" /> <path d="M3 12h18" /> <path d="M3 16.5h4" /> <path d="M17 3v18" /> <path d="M17 7.5h4" /> <path d="M17 16.5h4" /> </svg></span><span id="xars-mename" class="sc-t52 sc-w900 sc-opt">成片</span></div>
+        <div id="xars-me" data-slot><span id="xars-meico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M7 3v18" /> <path d="M3 7.5h4" /> <path d="M3 12h18" /> <path d="M3 16.5h4" /> <path d="M17 3v18" /> <path d="M17 7.5h4" /> <path d="M17 16.5h4" /> </svg></span><span id="xars-mename" class="sc-t52 sc-w900 sc-opt">完成影片</span></div>
         <i id="xars-air" data-slot></i>
         <div id="xars-list" data-slot data-layout="col" data-gap="md">
         <div id="xars-r1" class="xars-row" data-slot><span id="xars-u1" class="xars-u sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span><span class="xars-name sc-t52 sc-w900 sc-opt">客戶</span><span id="xars-k1" class="xars-k sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span></div>

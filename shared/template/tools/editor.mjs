@@ -116,7 +116,7 @@ function readSrt(file) {
   return { exists: true, mtime: st.mtimeMs, hash: sha(text), text, eol: P.eol === '\r\n' ? 'CRLF' : 'LF', cues: P.blocks.map(({ n, start, end, text: t }) => ({ n, start, end, text: t })) };
 }
 
-// 播放用的影片：work/hyperframes/assets/rough.mp4（build 重新編碼過，30fps、每秒一個關鍵幀，拖曳比較順）比較新就用它，否則用 work/rough.mp4
+// 播放用的影片：work/hyperframes/assets/rough.mp4（build 重新編碼過，30fps、每秒一個關鍵影格，拖曳比較順）比較新就用它，否則用 work/rough.mp4
 function pickVideo(P) {
   const asset = path.join(P.out, 'assets', 'rough.mp4');
   const a = statOf(asset), w = statOf(P.video);
@@ -228,7 +228,7 @@ async function makeThumbs(file, outFile, dur, dims) {
   return t;
 }
 
-// ---------- 子程序：build.mjs ----------
+// ---------- 子處理程序：build.mjs ----------
 
 function runNode(args, { cwd, onData } = {}) {
   return new Promise((resolve) => {
@@ -261,7 +261,7 @@ export function itemsFromText(text, plan) {
     if (!m || !segs.has(m[1])) continue;
     const seg = segs.get(m[1]);
     const w = (m[5].match(/⚠\s*(\d+)/) || [])[1];
-    // 有 edit.cuts 時表格是成片時間，rough 時間寫在「（rough 0:04.50–0:11.00）」裡；剪輯要的是 rough 時間
+    // 有 edit.cuts 時表格是完成影片時間，rough 時間寫在「（rough 0:04.50–0:11.00）」裡；剪輯要的是 rough 時間
     const rough = l.match(/rough\s*(\d+:\d+(?:\.\d+)?)–(\d+:\d+(?:\.\d+)?)/);
     const [a, b] = rough ? [rough[1], rough[2]] : [m[3], m[4]];
     items.push({ id: m[1], type: seg.type ?? 'scene', label: m[2].trim(), start: sec(a), end: sec(b), warnings: w ? Number(w) : 0, ...(seg.src ? { src: seg.src } : {}) });
@@ -657,7 +657,7 @@ async function doRefFrame(ctx, body) {
 }
 
 // 版式與畫布（009 FR-120）：和 build 同一套判斷（plan.json format > 製作進度.md「版式」> 主軌寬高比）；剪輯只讀，不寫 format
-// media：插入素材的可見區 [x, y, w, h]（lib/media.mjs mediaFrame 的 view；panel＝直式有講者面板），即時模擬照這個放，和成片一樣不壓字幕帶
+// media：插入素材的可見區 [x, y, w, h]（lib/media.mjs mediaFrame 的 view；panel＝直式有講者面板），即時模擬照這個放，和完成影片一樣不壓字幕帶
 export function canvasInfo(projectDir, plan) {
   const r = resolveFormat({ projectDir, plan: isObj(plan) ? plan : null });
   const c = canvasOf(r.format);
@@ -796,7 +796,7 @@ async function doSave(ctx, body, { deferBuild = false } = {}) {
     const hash = nst ? sha(fs.readFileSync(P.plan, 'utf8')) : null;
     if (r.text != null) {
       ctx.framingUpdate = { hash, running: false, ok: null, message: null, finishedAt: null };
-      // 停點 ② 尚未有成片時只存設定；已有成片就自動更新，關閉構圖分頁也會繼續。
+      // 停點 ② 尚未有完成影片時只存設定；已有完成影片就自動更新，關閉構圖分頁也會繼續。
       if (!deferBuild && builtInfo(ctx, readPlan(P.plan)).built) requestFramingBuild(ctx);
     }
     return [200, { ok: true, wrote: { plan: r.text != null, srt: false }, notes: r.notes || [], plan: { exists: !!nst, mtime: nst?.mtimeMs ?? null, hash, frame: Array.isArray(r.plan.frame) ? r.plan.frame : null, speakerBox: r.plan.speakerBox ?? null }, look: lookRunState(ctx), framingUpdate: ctx.framingUpdate }];
@@ -1285,7 +1285,7 @@ async function cli() {
   console.log(`剪輯清單：${new URL('cuts', ed.url).href}`);
   console.log(`構圖：${new URL('framing', ed.url).href}`);
   console.log(`專案：${rel(P.project)}`);
-  console.log(ed.ctx.player.available ? `成片預覽：HyperFrames 播放器 ${ed.ctx.player.version ?? ''}` : `成片預覽：不能用（${ed.ctx.player.reason}），只有即時模擬`);
+  console.log(ed.ctx.player.available ? `完成影片預覽：HyperFrames 播放器 ${ed.ctx.player.version ?? ''}` : `完成影片預覽：不能用（${ed.ctx.player.reason}），只有即時模擬`);
   console.log(process.env.AUTO_EDIT_EDITOR_CHILD ? `背景執行中。關閉：${stopCmd}` : '按 Ctrl+C 關閉');
   if (flags.open) openBrowser(ed.url);
   return null;   // 留著讓 server 繼續跑

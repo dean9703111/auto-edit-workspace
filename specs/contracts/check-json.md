@@ -7,7 +7,7 @@
 
 ## 1. 共通規則
 
-1. **兩種時間基準**。沒有寫「成片」的時間欄位都是 **rough.mp4 秒數**（剪輯台用 rough.mp4 的時間軸；現行慣例，`plan.mjs:595-599`）：起點用 `tm.unmapStart`、迄點用 `tm.unmapEnd` 換回。名稱是 `out`（物件）或 `outStart`／`outEnd`／`len` 的是**成片秒數**（qc 截圖用）。`edit.cuts` 是空的時候兩者相同。
+1. **兩種時間基準**。沒有寫「完成影片」的時間欄位都是 **rough.mp4 秒數**（剪輯台用 rough.mp4 的時間軸；現行慣例，`plan.mjs:595-599`）：起點用 `tm.unmapStart`、迄點用 `tm.unmapEnd` 換回。名稱是 `out`（物件）或 `outStart`／`outEnd`／`len` 的是**完成影片秒數**（qc 截圖用）。`edit.cuts` 是空的時候兩者相同。
 2. 秒數一律四捨五入到 0.001（`r3`）；dB 到 0.1。
 3. 表上「必有」的鍵一定在，沒有資料時是 `[]`、`{}` 或 `null`（照表上寫的空值），消費端不用判斷鍵存不存在。「選填」的鍵只在有值時才出現（現行 `shownEnd` 的做法）。
 4. `errors`、`warnings` 是字串陣列，**不含**開頭的 `✖ `／`⚠ ` 符號（現行，`build.mjs:279-280` 印文字報告時才加）；每則都帶 `→` 後面的改法（憲法 III）。外部函式回傳帶符號的（例：005 `sfxBudget().warnings` 是 `'⚠ …'`），002 推進來之前先去掉符號。
@@ -28,14 +28,14 @@
 | `canvas` | `[W, H]` | 必有（出錯時 `null`） | — | 畫布尺寸：橫式 `[1920, 1080]`、直式 `[1080, 1920]`（`specs/contracts/canvas.md`） | 新（009 FR-006） | 同上 |
 | `formatSource` | `"flag"`／`"plan"`／`"progress"`／`"media"`／`"default"` | 必有（出錯時 `null`） | — | 版式從哪裡來（`default`＝沒有專案資料夾、什麼都讀不到時的橫式） | 新（009 FR-006） | 007 |
 | `versions` | 物件 | 必有 | — | `{ hyperframes: { pinned, installed, ok } }`；`pinned` 是根目錄 package.json 的值、`installed` 是 `node_modules/hyperframes/package.json` 的 `version` 或 `null` | 新（FR-050） | 007 |
-| `videoDur` | 數字 | 必有（出錯時 `null`） | rough | rough.mp4 長度（對齊幀） | 現行 | 004、006 |
-| `outputDur` | 數字 | 必有（出錯時 `null`） | 成片 | 成片長度 | 現行 | 004 final |
+| `videoDur` | 數字 | 必有（出錯時 `null`） | rough | rough.mp4 長度（對齊格） | 現行 | 004、006 |
+| `outputDur` | 數字 | 必有（出錯時 `null`） | 完成影片 | 完成影片長度 | 現行 | 004 final |
 | `voiceOnly` | `[[起, 迄]]` | 必有 | rough | 只有聲音的區間（rough.mp4 全黑）。專案沒有純聲音素材時一律是 `[]`（全黑改列在 `roughBlack`） | 現行 | 006 |
 | `roughBlack` | `[[起, 迄]]` | 必有 | rough | 初剪壞掉的全黑區間：rough.mp4 全黑、但 `素材/聲音/` 是空的而且 `work/main.json` 沒有 `kind: "voice"`；相鄰 ≤ 0.1 s 的黑段併成一段。不是空的時候 `errors` 一定有 §2.4 那則 ✖ | 新（round 2，F2） | 004 qc final |
-| `voiceUncovered` | 物件[]（§2.1） | 必有 | rough＋成片 | 只有聲音、而且沒被 media 段或不透明全畫面蓋住的區間（長度 > 0.1 s 才列，FR-029） | 新 | 006（紅色斜線）、004 |
-| `uncovered` | 物件[]（§2.1） | 必有 | rough＋成片 | 沒有任何卡片、動畫或素材的口播區間（> 1.0 s，FR-011） | 新 | 006（灰色斜線）、004 |
+| `voiceUncovered` | 物件[]（§2.1） | 必有 | rough＋完成影片 | 只有聲音、而且沒被 media 段或不透明全畫面蓋住的區間（長度 > 0.1 s 才列，FR-029） | 新 | 006（紅色斜線）、004 |
+| `uncovered` | 物件[]（§2.1） | 必有 | rough＋完成影片 | 沒有任何卡片、動畫或素材的講解區間（> 1.0 s，FR-011） | 新 | 006（灰色斜線）、004 |
 | `cutpoints` | `[{ at, kind }]` | 必有 | rough | `work/cutpoints.json` 讀進來的剪接點（`kind` 是 `ng`／`pause`） | 現行 | 006 |
-| `chapters` | 物件[]（§2.2） | 必有 | rough＋成片 | 每個章節起點：01 章節轉場，以及（常駐角標開著時）沒有 01 的獨立 02 章節角標段；依起點排序 | 新 | 004、006 |
+| `chapters` | 物件[]（§2.2） | 必有 | rough＋完成影片 | 每個章節起點：01 章節轉場，以及（常駐角標開著時）沒有 01 的獨立 02 章節角標段；依起點排序 | 新 | 004、006 |
 | `items` | 物件[]（§3） | 必有（plan 沒解出時間時 `[]`） | 見 §3 | 每段 | 現行＋新 | 全部 |
 | `sfxCount` | `{ 名稱: 次數 }` | 必有 | — | 全片每種音效的次數（主＋附加；3 秒規則之後；不含配樂）＝005 `sfxBudget().count` | 新（FR-058） | 004、006 |
 | `sfxBudget` | 物件（§2.3） | 必有 | rough | `{ perMinuteAvg, over, dense, loud }`，`sfxBudget()` 的回傳去掉 `count`、`levels`、`warnings`、`lines` | 新（FR-058） | 006 |
@@ -52,8 +52,8 @@
 | 鍵 | 意思 |
 |---|---|
 | `start`／`end` | rough.mp4 秒數 |
-| `outStart`／`outEnd` | 成片秒數 |
-| `len` | 成片秒數的長度（`outEnd − outStart`） |
+| `outStart`／`outEnd` | 完成影片秒數 |
+| `len` | 完成影片秒數的長度（`outEnd − outStart`） |
 | `level` | 只有 `voiceUncovered` 有：`"error"`（> 1.0 s，✖）或 `"warn"`（> 0.1 s，⚠） |
 
 依起點排序；兩個陣列不重疊（`uncovered` 先扣掉只有聲音的區間，FR-011）。
@@ -71,14 +71,14 @@
 | `cue` | 整數 | 綁的句號（plan.json `at`／`from` 的 `#N`） |
 | `title` | 字串 | 章名（slots 的 title，現行 01 的欄位） |
 | `start`／`end` | 數字 | rough.mp4 秒數；`end − start` 是 2.5 s（`scenes/01-chapter/scene.json` `duration.fixed`），不含墊底延長 |
-| `outStart`／`outEnd` | 數字 | 成片秒數 |
-| `gap` | 數字 | 第 `cue` 句前的空檔（成片秒數：前一句結尾到第 `cue` 句起點；第一句時＝它的起點） |
+| `outStart`／`outEnd` | 數字 | 完成影片秒數 |
+| `gap` | 數字 | 第 `cue` 句前的空檔（完成影片秒數：前一句結尾到第 `cue` 句起點；第一句時＝它的起點） |
 | `placement` | `"centered"`／`"flush"`／`"cover"` | 空檔 ≥ 2.8 s 置中；2.0–2.8 s 結尾貼齊第 `cue` 句；< 2.0 s 從第 `cue` 句起點蓋（壓人聲，有 ⚠，FR-005–FR-006） |
 | `captionsClipped` | 整數[] | 因章節被提早收或延後出現的字幕句號（FR-007） |
 | `kind` | `"chapter"`／`"tag"` | `chapter`＝01 章節轉場；`tag`＝沒有 01、由獨立 02 章節角標段開始的章節（round 2，F1）。`tag` 的 `cue`、`gap`、`placement` 是 `null`、`captionsClipped` 是 `[]`，`start`／`end` 是那段 02 的起訖 |
 | `num` | 字串 | 章節號碼（slots 的 `num`） |
 | `badge` | `[[起, 迄]]` | 常駐章節角標實際露出的區間（rough.mp4 秒數；規則見 §2.5）。`plan.json` 寫 `"chapterBadge": false`、或整章都在子母畫面／全幕裡時是 `[]` |
-| `outBadge` | `[[起, 迄]]` | 同上，成片秒數 |
+| `outBadge` | `[[起, 迄]]` | 同上，完成影片秒數 |
 
 ### 2.3 `sfxBudget`
 
@@ -91,7 +91,7 @@
   "loud":  [ { "id": "s05", "name": "chapter", "at": 62.4, "relDb": -1.0 } ] }
 ```
 
-`dense[].from`／`to` 是**成片**的分鐘邊界（`floor(at/60)` 分組，005 定義），不換算。
+`dense[].from`／`to` 是**完成影片**的分鐘邊界（`floor(at/60)` 分組，005 定義），不換算。
 
 ### 2.4 初剪全黑（`roughBlack`，round 2 F2）
 
@@ -117,7 +117,7 @@ work/rough.mp4 在 1:56.14–2:33.51 是全黑，但素材沒有純聲音檔 →
 
 ### 2.6 文字對時（round 2 F4；✖／⚠ 進 `errors`／`warnings`）
 
-**量什麼**：每段主文字欄的「出現秒數」和「講到那幾個字的秒數」（成片秒數）。
+**量什麼**：每段主文字欄的「出現秒數」和「講到那幾個字的秒數」（完成影片秒數）。
 
 | 情境（scene key） | 欄位 → 出現秒數由誰決定（改法寫哪裡） |
 |---|---|
@@ -163,7 +163,7 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 
 尾巴加註：沒有詞級逐字稿 →「（沒有詞級逐字稿，講到的秒數用字數比例估）」；有逐字稿但找不到這個詞 →「（逐字稿裡找不到這個詞，講到的秒數用字數比例估）」。
 
-**`#N@詞` 的真實時間**（`from`／`to`／`at`／`beats`／清單 `at`／custom 的 `P.at`／`clicks`／`outro.from` 都適用）：build 讀 `work/transcript.json`（剪乾淨第 6 步對 rough.mp4 轉的，`[{ text, start, end }]`），**不比 rough.mp4 舊（容許 1 s）、最後一個詞的結尾和 rough.srt 最後一句的結尾差 ≤ 2 s** 才用；有 `edit.cuts` 時詞的時間跟著換成成片秒數。用不到時退回字數比例，整份報告一則 ⚠：
+**`#N@詞` 的真實時間**（`from`／`to`／`at`／`beats`／清單 `at`／custom 的 `P.at`／`clicks`／`outro.from` 都適用）：build 讀 `work/transcript.json`（剪乾淨第 6 步對 rough.mp4 轉的，`[{ text, start, end }]`），**不比 rough.mp4 舊（容許 1 s）、最後一個詞的結尾和 rough.srt 最後一句的結尾差 ≤ 2 s** 才用；有 `edit.cuts` 時詞的時間跟著換成完成影片秒數。用不到時退回字數比例，整份報告一則 ⚠：
 
 ```
 #N@詞 有 2 個用字數比例估（沒有 work/transcript.json（rough.mp4 的詞級逐字稿）），可能差 1 秒：#20@放到電腦、#64@一個小時 → 對 rough.mp4 重轉詞級逐字稿：npx hyperframes transcribe projects/<專案>/work/rough.mp4 -d projects/<專案>/work --model small --language zh --json
@@ -211,9 +211,9 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 | `sfx` | `[{ name, at, volume, db }]` | 必有 | rough | 這段的主音效＋附加音效 | 現行 |
 | `warnings` | 整數 | 必有 | — | 這段的 ⚠ **則數**（文字在第一層 `warnings`） | 現行 |
 | `src`、`enter`、`exit`、`volume`、`kind` | — | 只有 media | — | 現行（`kind` 是 `video`／`image`） | 現行 |
-| `out` | 物件（§3.1） | 必有 | **成片** | 成片秒數的時間資訊 | 新（`contracts/media.md` §7＋本線） |
+| `out` | 物件（§3.1） | 必有 | **完成影片** | 完成影片秒數的時間資訊 | 新（`contracts/media.md` §7＋本線） |
 
-### 3.1 `items[].out`（成片秒數）
+### 3.1 `items[].out`（完成影片秒數）
 
 ```json
 "out": {
@@ -229,14 +229,14 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 | 鍵 | 誰有 | 意思 |
 |---|---|---|
 | `start`／`end` | 每段 | 畫面上實際的起迄（含自動延長、墊底；`it.start`／`it.end`） |
-| `lists` | 有條列的 scene | 每條進場的成片秒數（`it.start + it.resolved.listTimes[key][i]`，所有 key 攤平、依時間排序）；沒有條列時 `[]` |
+| `lists` | 有條列的 scene | 每條進場的完成影片秒數（`it.start + it.resolved.listTimes[key][i]`，所有 key 攤平、依時間排序）；沒有條列時 `[]` |
 | `annotations` | media 段 | 004 `validateMedia()` 回傳的 `json`（`contracts/media.md` §4.1）；不是 media 時 `null` |
 | `pip` | 每段 | 子母畫面片段 `[{ start, end, enter, exit }]`：`enter` 是 `"fly"`／`"fade"`／`"none"`，`exit` 是 `"layer"`／`"fade"`／`"none"`（spec FR-022、FR-026）；沒有子母畫面時 `[]` |
 | `wipe` | 每段 | `{ in, out, preroll, postroll }`：`in`／`out` 布林（這段擦入／擦出，FR-030）；`preroll`／`postroll` 秒數（只有 media 段可能 > 0，FR-032） |
-| `refs` | custom 段 | build 從 `x-*.html` 掃出的 `P.at('…')` 與 `P.sfx('名', '…')` 的 ref 字面值 → 成片秒數（`contracts/cues.md` §2 的 `segs[id].refs`）；不是 custom 時 `{}` |
+| `refs` | custom 段 | build 從 `x-*.html` 掃出的 `P.at('…')` 與 `P.sfx('名', '…')` 的 ref 字面值 → 完成影片秒數（`contracts/cues.md` §2 的 `segs[id].refs`）；不是 custom 時 `{}` |
 | `tx` | 每段 | 轉場語彙（`specs/010-motion-v2/design-system.md` §5）`{ in, out, prev }`（`prev`＝前一段是什麼：`speaker`／`fullscreen`／`pip`，見 `plan-fields.md` §4）。`in`：`band`（疊加卡進場、講者慢推）／`wipe`（色帶帶路擦開＋講者飛進子母畫面）／`swap`（換卡不換景）／`chapter`（主色色塊從左下斜擦）／`side`／`fade`／`media`／`wipeIn`／`cut`／`overlay`；`out`：`band`（收卡、講者推回）／`retract`（色帶反向收、子母畫面淡出）／`swap`（舊卡擦掉）／`cover`／`hold`／`handoff`／`fade`／`media`／`wipeOut`／`side`／`cut`／`overlay`（第二段 B） |
 
-custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` §5）由 build 靜態解析成附加音效：出現在 `items[].sfx`（`sfx-<id>-e<n>` 的 `<audio>`），時間＝ref 的成片秒數＋off − 音效的 peak＋1 格；算進 `sfxCount`、`sfxBudget`（tick、click 以外的算主音效密度），不受主音效 3 秒規則；段的 `sfxExtra: false` 整段關掉、`sfxVolume` 一起調。
+custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` §5）由 build 靜態解析成附加音效：出現在 `items[].sfx`（`sfx-<id>-e<n>` 的 `<audio>`），時間＝ref 的完成影片秒數＋off − 音效的 peak＋1 格；算進 `sfxCount`、`sfxBudget`（tick、click 以外的算主音效密度），不受主音效 3 秒規則；段的 `sfxExtra: false` 整段關掉、`sfxVolume` 一起調。
 
 **qc 截圖時刻**照 `cli-004.md` §2.2 用 `out.start`、`out.end`、`out.lists`、`out.annotations`；本表其他鍵是給剪輯台和除錯用。
 

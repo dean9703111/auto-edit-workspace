@@ -19,7 +19,7 @@ test('每個形狀都帶 class="stroke-draw" pathLength="1"，svg 本身不帶 c
   assert.doesNotMatch(svg.match(/<svg\b[^>]*>/)[0], /\s(class|width|height)=/);
 });
 
-test('非必填的圖示寫 "none" → 不放圖示、不報錯；必填的寫 "none" → 找不到圖示', () => {
+test('非必填的圖示寫 "none" → 不放圖示、不出錯；必填的寫 "none" → 找不到圖示', () => {
   const r = run(scene('concept'), { text: '概念', icon: 'none' });
   assert.deepEqual(r.errors, []);
   assert.equal(r.ctx.icon, '');
@@ -77,7 +77,7 @@ for (const [name, key, slots, expectErr] of limits) {
   test(`有圖示才收緊字數：${name}`, () => {
     const r = run(scene(key), slots);
     assert.deepEqual(r.warnings.filter((w) => w.includes('無法執行')), [], '規則要能執行');
-    if (expectErr) assert.ok(r.errors.length > 0, '應該報錯');
+    if (expectErr) assert.ok(r.errors.length > 0, '應該出錯');
     else assert.deepEqual(r.errors, []);
   });
 }

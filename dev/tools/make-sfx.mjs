@@ -54,7 +54,7 @@ const HELP = `產生 shared/sfx/ 的音效（作者維護用；剪片時不要�
   node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾> [--ref <參考.wav>] [--voice <人聲>] [--src <本機音樂檔>]
   node dev/tools/make-sfx.mjs --write --only <名稱,…> [--src <本機音樂檔>]
 
---candidates  產生候選與 A/B 試聽檔（參考→候選→參考，都調到成片大小）＋ index.html
+--candidates  產生候選與 A/B 試聽檔（參考→候選→參考，都調到完成影片大小）＋ index.html
 --write       把程式裡 CHOICE 選的候選寫進 shared/sfx/、sources.json、kit/sfx.json（peak、volume）、README.md
 --cache       原始下載檔的資料夾（預設系統暫存資料夾的 make-sfx-cache）
 --src         路線 L 的本機音樂檔（bgm-cylinder-five 要給〈Cylinder Five〉的 mp3；會核對 sha256）`;
@@ -779,7 +779,7 @@ async function buildCandidate(name, cand, cacheDir, srcFile = null) {
   return finish(cand.build(ctx), R);
 }
 
-// 調到成片大小：M max（bgm 是 I）＝ −14 ＋ targetDb
+// 調到完成影片大小：M max（bgm 是 I）＝ −14 ＋ targetDb
 function atPlayback(b, name) { const R = RECIPES[name], m = measure(b); const cur = R.measure === 'I' ? m.I : m.mmax; return scale({ L: b.L.slice(), R: b.R.slice() }, dbl(-14 + targetDbOf(name) - cur)); }
 function concat(...parts) { const n = parts.reduce((s, p) => s + len(p), 0), o = stereo(n); let at = 0; for (const p of parts) { o.L.set(p.L, at); o.R.set(p.R, at); at += len(p); } return o; }
 
@@ -825,7 +825,7 @@ async function cmdCandidates(o) {
   sections.sort((a, b) => Object.keys(RECIPES).indexOf(a.name) - Object.keys(RECIPES).indexOf(b.name));
   fs.writeFileSync(path.join(o.out, 'index.html'), indexHtml(sections));
   const one = o.names.length === 1 ? `：${RECIPES[o.names[0]].measure === 'I' ? '整合響度' : 'M max'} ${String((-14 + targetDbOf(o.names[0])).toFixed(1)).replace('-', '−')} LUFS` : '';
-  console.log(`試聽頁：${path.join(o.out, 'index.html')}（A/B 檔都是成片大小${one}）`);
+  console.log(`試聽頁：${path.join(o.out, 'index.html')}（A/B 檔都是完成影片大小${one}）`);
 }
 
 function indexHtml(sections) {
@@ -837,7 +837,7 @@ main{max-width:1100px;margin:0 auto}section{margin:0 0 28px}h2{font-size:17px}.g
 .c{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}.c.on{border-color:var(--acc)}audio{width:100%;height:32px;margin:4px 0}
 .m{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--mut)}`;
   const out = [`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>音效候選試聽</title><style>${css}</style></head><body><main>`,
-    '<h1>音效候選試聽</h1><p class="m">ab-＊＝參考 → 候選 → 參考（都調到成片大小）；voice-＊＝墊在人聲底下。★＝make-sfx.mjs 的 CHOICE。</p>'];
+    '<h1>音效候選試聽</h1><p class="m">ab-＊＝參考 → 候選 → 參考（都調到完成影片大小）；voice-＊＝墊在人聲底下。★＝make-sfx.mjs 的 CHOICE。</p>'];
   for (const s of sections) {
     out.push(`<section><h2>${esc(s.name)}${s.ref ? `｜參考 ${esc(s.ref)}（重心 ${s.refInfo.cent} Hz、${s.refInfo.m.dur} s）` : ''}</h2><div class="grid">`);
     for (const r of s.rows) {
@@ -902,7 +902,7 @@ function writeReadme(sources, kit) {
   const lines = ['# 音效清單', '',
     `${nSfx} 個音效：取自 CC0（公眾領域）素材，或 AI 生成並以 CC0 釋出；可以放進自己的影片、改編、商用，不用標示出處。`,
     ...music.map(([k, v]) => `片尾配樂 \`${k}.wav\` 是 ${by[`${k}.wav`]?.license || '—'}：預設不配，plan.json 的 outro 寫 "music": "${k}" 才會用；用到的影片要在說明欄標示「${v.credit}」。`),
-    '逐檔的下載網址、sha256、處理方式、峰值秒數與響度在 `sources.json`；每顆在成片裡的大小（相對人聲的 dB）與使用時機在 `shared/template/kit/sfx.json`。', '',
+    '逐檔的下載網址、sha256、處理方式、峰值秒數與響度在 `sources.json`；每顆在完成影片裡的大小（相對人聲的 dB）與使用時機在 `shared/template/kit/sfx.json`。', '',
     '| 檔名 | 聽起來像 | 用在哪 | 來源 | 授權 |', '|---|---|---|---|---|'];
   for (const [k, v] of Object.entries(kit)) { const s = by[`${k}.wav`]; lines.push(`| \`${k}.wav\` | ${s?.like || '—'} | ${v.use} | ${srcText(s)} | ${lic(s)} |`); }
   const pend = sources.filter((s) => s.pending_author_check);

@@ -6,7 +6,7 @@
 
 ## esim ep2 當時怎麼做的（磁碟上查證）
 
-來源：`~/Documents/external_project/agent-skills/video/surfshark_esim/esim_backup/hyperframes/`（72 段，render 到 `/Volumes/video/esim-ep2/動畫/`，成片 `/Volumes/video/esim-ep2/esim_ep2.mp4`）；規則在 `~/Documents/external_project/agent-skills/.agents/skills/hyperframes-overlay/`（SKILL.md、references/{worker-brief,design-rules,pitfalls,motion-recipes,casebook}.md）。
+來源：`~/Documents/external_project/agent-skills/video/surfshark_esim/esim_backup/hyperframes/`（72 段，render 到 `/Volumes/video/esim-ep2/動畫/`，完成影片 `/Volumes/video/esim-ep2/esim_ep2.mp4`）；規則在 `~/Documents/external_project/agent-skills/.agents/skills/hyperframes-overlay/`（SKILL.md、references/{worker-brief,design-rules,pitfalls,motion-recipes,casebook}.md）。
 
 三層分工：
 
@@ -14,7 +14,7 @@
 |---|---|---|
 | 腳本（鏡位腳本） | `動畫點位表.md` | 共通規則（版型與安全區依講者位置分三種、視覺硬規則、時間與收尾、驗收五步）＋**每段一節**：版型、概念一句話，然後**逐句**寫「講到 #N → 畫什麼（指名插圖元件與狀態）→ 什麼動態（M.* 名稱）→ 相對秒數 → 位置／尺寸」，段尾怎麼收 |
 | 零件 | `shared/illus.js`＋`illus.css`（556 行、28 個線條插圖元件，每個有狀態子元素：phone／phoneTripod／laptop／monitor／cloud／personBust／personTop／desk／cone／waveform／progress／energy／fileVideo／window／searchBar／badge／recPill／stopwatch／bookmark…；畫廊 `_kit/gallery.png` 深淺兩底）、lucide 121 支圖示、`hf-motion.js`（rise／pop／stamp／slide／draw／fill／accent／outUp／dim／stroke／maskUp／morph／edges／count）、`theme.css` | 弱模型只「選元件、擺位置、綁句號」，不畫圖、不發明動態 |
-| 執行 | 每段一個 `sonnet-mechanic` 工人（**是 Sonnet**），prompt＝worker-brief.md＋點位表那一節＋2–3 段已定稿的參考段；從 init-project 建好的骨架改 `index.html`；驗收五步（precheck 截幀、audit.mjs 版面量測、check、snapshot、shots.mjs 講者合成）；主控不做段、只規劃／驗收／回收回饋 | 作者回饋輪 v1→v9；r7 一次 33 項回饋提煉成「違反任何一條都要重做」的共同規則 |
+| 執行 | 每段一個 `sonnet-mechanic` 工人（**是 Sonnet**），prompt＝worker-brief.md＋點位表那一節＋2–3 段已定稿的參考段；從 init-project 建好的骨架改 `index.html`；驗收五步（precheck 截格、audit.mjs 版面量測、check、snapshot、shots.mjs 講者合成）；主控不做段、只規劃／驗收／回收回饋 | 作者回饋輪 v1→v9；r7 一次 33 項回饋提煉成「違反任何一條都要重做」的共同規則 |
 
 點位表一段的實例（seg03 試錄確認，#9–#14，全畫面＋子母畫面）：
 
@@ -22,11 +22,11 @@
 > A（#9–#11）：#9 面板 A 進場；#10「試錄一小段」：`phoneTripod`（landscape, rec）＋`recPill` 時間 00:00→00:05 跑動，下方一條短短的影片片段條長出來；#11「確認畫面、聲音」：兩列檢查項依序出現並打勾——「畫面」✓ T.at(11)+0.3、「聲音」（`waveform` 小）✓ T.at(11)+1.2，最後一個綠色「符合需求」徽章 T.at(11)+2.2。
 > B（#12–#14）：#12 面板 A 變暗（0.45），面板 B 進場，上方一排 Take 膠囊「第 1 段」「第 2 段」「第 3 段」；#13「跑到手機旁邊播放影片」：俯視小房間——桌子＋`personTop`，人沿虛線走到手機旁（腳印逐個出現 1.2s），彈出正面 `phone` screen=play；#14：兩個檢查「動作」✓「聲音」✓，Take「第 1 段」變綠 ✓。停在完成態到段尾。
 
-成片對應畫面：`scratchpad/w012/sheet-seg03.jpg`（主代理抓的 6 格）。
+完成影片對應畫面：`scratchpad/w012/sheet-seg03.jpg`（主代理抓的 6 格）。
 
 ## 回答使用者的問題
 
-**可以，而且 esim ep2 就是這樣做出來的，執行的是 Sonnet。** 關鍵不是模型，是三件東西同時存在：(1) 腳本具體到「哪個元件、哪個狀態、哪一句的第幾秒、放哪裡」；(2) 零件庫讓工人不用畫圖；(3) 驗收是量出來的（截幀、版面量測、講者合成），加上作者回饋累積成的硬規則。缺任何一個，普通模型就會做出「字卡感」的東西。
+**可以，而且 esim ep2 就是這樣做出來的，執行的是 Sonnet。** 關鍵不是模型，是三件東西同時存在：(1) 腳本具體到「哪個元件、哪個狀態、哪一句的第幾秒、放哪裡」；(2) 零件庫讓工人不用畫圖；(3) 驗收是量出來的（截格、版面量測、講者合成），加上作者回饋累積成的硬規則。缺任何一個，普通模型就會做出「字卡感」的東西。
 
 ## 工作區現況與缺口
 
@@ -42,11 +42,11 @@
 ## 提案：加第三條路「示意動畫」（與字卡、情境模板並存）
 
 1. **零件**：把 `illus.js`／`illus.css` 搬成 `shared/template/kit/illus.js`／`illus.css`（作者自己的程式，直接搬；顏色改吃 brand token，亮／暗兩套底色），`qc.mjs gallery` 或 build `--gallery` 產出畫廊圖給弱模型與使用者看；lucide 圖示已有 icons.json。
-2. **腳本**：動畫分鏡表加兩欄「插圖元件（狀態）」「位置（區域名或 x–y）」；SITUATIONS §3 加「示意動畫」列（口播在描述具體動作／物件／流程時首選，例：手機、電腦、雲端、人走動、時間流逝）；BEATS.md 加「示意動畫拍型」與「元件清單」節；分鏡由弱模型照講稿寫、停點 ③ 人確認（這就是使用者說的「生成前的鏡位腳本」）。
+2. **腳本**：動畫分鏡表加兩欄「插圖元件（狀態）」「位置（區域名或 x–y）」；SITUATIONS §3 加「示意動畫」列（講解在描述具體動作／物件／流程時首選，例：手機、電腦、雲端、人走動、時間流逝）；BEATS.md 加「示意動畫拍型」與「元件清單」節；分鏡由弱模型照講稿寫、停點 ③ 人確認（這就是使用者說的「生成前的鏡位腳本」）。
 3. **執行**：`auto-edit-motion` 加「示意動畫」分支：工人從 `custom/x-scene.html` 骨架（區域、theme、P.*、illus 已載入）照分鏡逐拍組裝；派工 prompt＝BEATS.md 該節＋分鏡表那段＋2 段參考（ep2 seg03、seg13 的做法改寫成 v2 語彙放 `shared/template/custom/x-scene-example-*.html`）。
 4. **驗收**：audit 分鏡對齊（已有）＋ 元件白名單（分鏡表寫的元件要在 illus 清單）＋ qc storyboard 每拍截圖＋ speakerBox 合成檢查（已有 qc speaker）。
 5. **規則**：從 hyperframes-overlay 的 design-rules／pitfalls／casebook 提煉「示意動畫」專屬的硬規則進 style.md 與 USAGE-reference（深色實心底板、字只當標籤 ≤ 10 字、主角是圖、先有節點再畫線、後出現的元素不擠壓既有元素、每幕完成態 ≥ 0.6 s…）。
-6. **基準測試**：`projects/範例` 就是 esim ep2 的前 2.5 分鐘，同一份講稿；ep2 的 seg01–seg13 點位表與成片都在。用 Sonnet 工人照新流程做 s03／x01／x05 對應的三段，和 ep2 的 seg03／seg05／seg09 並排給使用者看，就能判斷「普通模型＋鏡位腳本」有沒有到位。
+6. **基準測試**：`projects/範例` 就是 esim ep2 的前 2.5 分鐘，同一份講稿；ep2 的 seg01–seg13 點位表與完成影片都在。用 Sonnet 工人照新流程做 s03／x01／x05 對應的三段，和 ep2 的 seg03／seg05／seg09 並排給使用者看，就能判斷「普通模型＋鏡位腳本」有沒有到位。
 
 工作量估：零件搬移＋畫廊 0.5 人日（004 或 003）、分鏡表擴欄＋BEATS／SITUATIONS／Skill 0.5 人日（001）、x-scene 骨架＋兩段參考改寫 1 人日（003 或 Opus 工人）、audit 元件白名單 0.2（003）、Sonnet 基準試做三段 0.5。合計約 2.5–3 人日，排在 010 階段 B 的 003 模板交件之後（kit/ 不能同時改）。
 

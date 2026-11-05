@@ -5,7 +5,7 @@
   "aliases": ["標題條列", "條列", "清單字卡"],
   "family": "lower-third",
   "portrait": "move",
-  "when": "標題固定、2–4 個條目依口播逐條替換（同時只看一條）",
+  "when": "標題固定、2–4 個條目依講解逐條替換（同時只看一條）",
   "avoid": "要同時看到全部條目（改全畫面清單或側邊欄），或條目超過四條",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "560", "data-vbal-ignore": "" },
   "surface": null,

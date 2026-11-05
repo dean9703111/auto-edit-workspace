@@ -248,8 +248,8 @@ function indexMd(j) {
     else { L.push('這些區間一定要用 media 段（或不透明的全畫面情境）蓋住，build 才會過：', ''); for (const [a, b] of j.voiceOnly) L.push(`- rough.mp4 ${fmtT(a)}–${fmtT(b)}（${a}–${b}s，${r3(b - a)}s）`); L.push(''); }
   }
   L.push('## 怎麼用', '',
-    '1. 打開每支錄影的 sheet，看每一格在做什麼操作；對照 `work/rough.srt`，找出口播在講那個操作的句子。',
-    '2. 那一格的秒數＝plan.json media 段的 `in`（錄影從這裡開始播）；`from`／`to` 綁口播的句號。錄影比口播慢就用 `speed`（0.5–4）。',
+    '1. 打開每支錄影的 sheet，看每一格在做什麼操作；對照 `work/rough.srt`，找出講解在講那個操作的句子。',
+    '2. 那一格的秒數＝plan.json media 段的 `in`（錄影從這裡開始播）；`from`／`to` 綁講解的句號。錄影比講解慢就用 `speed`（0.5–4）。',
     '3. 要框、要推近、要放大鏡時，用 `node shared/template/tools/media.mjs frame --project <專案> --src <檔案> --at <秒數> --grid` 截格線圖讀座標（素材原尺寸的像素）。',
     '4. 寫法與規則：`shared/template/USAGE.md` 第 5 節。', '');
   return L.join('\n');
@@ -336,7 +336,7 @@ export function joinMain(P, { order = null, log = console.log } = {}) {
     : `${x.file}：${x.ratio > NARR.max ? `聲音幾乎沒停（${Math.round(x.ratio * 100)}%，像背景音樂或系統聲音）` : `聲音只有 ${Math.round(x.ratio * 100)}%`}，當插入素材（要接進主軌就寫進 --order）`);
   const all = [...cams, ...voices, ...screens];
   let list = [...cams, ...voices, ...screens.filter((x) => x.narrated)].sort((a, b) => natural(a.name, b.name));
-  if (!list.length) throw new Error('assets/camera/ 和 assets/voice/ 都是空的，assets/screen/ 也沒有邊錄邊講的錄影：先把口播影片或旁白放進去');
+  if (!list.length) throw new Error('assets/camera/ 和 assets/voice/ 都是空的，assets/screen/ 也沒有邊錄邊講的錄影：先把講解影片或旁白放進去');
   if (order) {
     const want = String(order).split(',').map((s) => s.trim()).filter(Boolean);
     const picked = want.map((raw) => {
@@ -410,7 +410,7 @@ export const SNAP = {
   minSpeech: 0.08,   // 短於這個的聲響（喀嗒、呼吸）不算說話
   early: 0.6,        // 開口點最多比字幕起點早這麼多（字幕偏晚的情況少見）
   late: 1.5,         // 開口點最多比字幕起點晚這麼多（症狀是字幕比嘴巴早約 1 秒；實測偏 1.0 秒再加上起點本來就落在句首前 0.2 秒，會到 1.2 秒，1.2 剛好壓線所以放到 1.5）
-  tolerance: 0.25,   // 差在這以內不動（口播本來就有 0.1–0.2 秒的前導氣聲，不要為了零頭亂動）
+  tolerance: 0.25,   // 差在這以內不動（講解本來就有 0.1–0.2 秒的前導氣聲，不要為了零頭亂動）
   tailSilence: 0.4,  // 結尾拖進靜音超過這個秒數才收
   tailPad: 0.15,     // 收尾時留在說話結束後面的秒數
   minDur: 0.6,       // 每則至少這麼長
@@ -695,7 +695,7 @@ export function setCutChecks(text, checks) {
   return bom + lines.join(eol);
 }
 
-// auto-editor --export v1：{ "version": "1", "source", "chunks": [[起始幀, 結束幀, 速度]] }（沒有 timebase，fps 由呼叫端給）
+// auto-editor --export v1：{ "version": "1", "source", "chunks": [[起始格, 結束格, 速度]] }（沒有 timebase，fps 由呼叫端給）
 export function readV1(file) {
   let j;
   try { j = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { j = null; }
@@ -782,7 +782,7 @@ function mainSource(P, src, { normalize = true, log = console.log } = {}) {
     return joinMain(P, { log }).file;
   }
   if (cams.length + voices.length + screens.length > 1 || screens.length) throw new Error(`assets/camera/ 有 ${cams.length} 支${voices.length ? `、assets/voice/ 有 ${voices.length} 個` : ''}${screens.length ? `、assets/screen/ 有 ${screens.length} 支邊錄邊講的錄影` : ''}、又沒有 work/main.mp4 → 先跑 node shared/template/tools/media.mjs main --project ${posixRel(P.project)}（剪乾淨第 1 步）`);
-  throw new Error(`找不到原片：assets/camera/ 是空的 → 把口播影片放進 ${posixRel(path.join(P.project, 'assets', 'camera'))}/`);
+  throw new Error(`找不到原片：assets/camera/ 是空的 → 把講解影片放進 ${posixRel(path.join(P.project, 'assets', 'camera'))}/`);
 }
 
 function aeSilence(P, src, { edit, margin, log }) {
@@ -850,7 +850,7 @@ export function suggestOrder(rows) {
 export const NGSCAN = { gap: 0.3, backChars: 3, tol: 2, minLen: 0.6, maxBack: 90, confirm: 3, step: 15, redo: 20, outsideGap: 3, charSec: 0.22, similar: 0.5, window: 3 };
 const pairsOf = (t) => { const cs = [...normText(t)], out = []; for (let i = 0; i + 1 < cs.length; i++) out.push(cs[i] + cs[i + 1]); return out; };
 
-// 講稿 → { lines（口播行）, chapters: [{ title, line（第幾行，0 起）}] }（## 是章節；### 是段落標題，不算）
+// 講稿 → { lines（講解行）, chapters: [{ title, line（第幾行，0 起）}] }（## 是章節；### 是段落標題，不算）
 // 一段一段丟給 scriptLines 算行數：``` 區塊與 <!-- --> 註解的狀態要跟整份一起看，所以遇到 ## 才切段
 export function scriptChapters(md) {
   const lines = scriptLines(md), chapters = [];
@@ -1418,7 +1418,7 @@ export const ALIGN = { max: 18, breath: 0.12, short: 4, closeGap: 1.0, minQ: 0.3
 const CJK_PUNCT_DROP = /[，。；：]/;
 const isCjk = (c) => !!c && c.codePointAt(0) >= 0x2e80;
 
-// 講稿.md → 口播行：去掉 # 標題、> 引言、``` 區塊、<!-- --> 註解、含 ` 的說明行、整行括號的舞台指示、分隔線、空行
+// 講稿.md → 講解行：去掉 # 標題、> 引言、``` 區塊、<!-- --> 註解、含 ` 的說明行、整行括號的舞台指示、分隔線、空行
 export function scriptLines(md) {
   const out = [];
   let fence = false, comment = false;
@@ -1736,7 +1736,7 @@ export function srtAlign(P, { dryRun = false, remapPlan = false, max = ALIGN.max
   if (!words) words = oldCues.map((c) => ({ text: c.text, start: c.start, end: c.end }));
   const hasScript = fs.existsSync(scriptFile);
   const lines = hasScript ? scriptLines(fs.readFileSync(scriptFile, 'utf8')).map((text, i) => ({ text, from: i + 1 })) : clausesFromSrt(oldCues);
-  if (!lines.length) throw new Error(hasScript ? '講稿.md 讀不到口播行（# 標題、> 引言、含 ` 的說明行都不算）→ 一句一行寫進講稿.md' : 'work/rough.srt 讀不到任何字幕');
+  if (!lines.length) throw new Error(hasScript ? '講稿.md 讀不到講解行（# 標題、> 引言、含 ` 的說明行都不算）→ 一句一行寫進講稿.md' : 'work/rough.srt 讀不到任何字幕');
   const res = alignCues(lines, words, { max });
   const { info, rows } = res;
   let { cues } = res, pauseNote = null;

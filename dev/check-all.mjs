@@ -31,7 +31,7 @@ const val = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : nu
 const outFile = path.resolve(ROOT, val('--out') || path.join('dev', 'loop', 'last-check.md'));
 
 // 暫存目錄：測試、合成專案、hyperframes render 的暫存（hf-*）都走 os.tmpdir()；有外接硬碟就導過去，免得塞爆系統碟。
-// 優先序：環境變數 AUTO_EDIT_TMP → /Volumes/auto-edit-tmp（作者外接硬碟上的 APFS 映像卷，存在才用）→ 系統預設。子程序（node --test、hyperframes、look）都繼承 TMPDIR。
+// 優先序：環境變數 AUTO_EDIT_TMP → /Volumes/auto-edit-tmp（作者外接硬碟上的 APFS 映像卷，存在才用）→ 系統預設。子處理程序（node --test、hyperframes、look）都繼承 TMPDIR。
 // 外接硬碟是 ExFAT，直接當暫存會被 macOS 寫進 ._* 隱藏檔、弄壞列目錄的測試；所以暫存放在硬碟上的 APFS 稀疏映像（auto-edit-tmp.sparseimage），沒掛載就先掛。
 const extTmp = process.env.AUTO_EDIT_TMP || '/Volumes/auto-edit-tmp';
 const extImg = '/Volumes/video/auto-edit-tmp.sparseimage';
@@ -177,7 +177,7 @@ if (flag('--render')) {
   });
 }
 
-// ---------- 8. qc final（真實專案有成片時） ----------
+// ---------- 8. qc final（真實專案有完成影片時） ----------
 if (real && fs.existsSync(path.join(project, 'output', 'final.mp4'))) {
   step('qc.mjs final（0 ✖）', () => {
     const r = node(path.join(TOOLS, 'qc.mjs'), ['final', ...P]);
@@ -214,7 +214,7 @@ function makeFixture({ portrait = false } = {}) {
   fs.writeFileSync(path.join(work, 'rough.srt'), srt.join('\n'));
   const dur = Math.ceil(t + 1);
   let r = run('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `testsrc=size=${portrait ? '360x640' : '640x360'}:rate=25`, '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=48000', '-t', String(dur), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(work, 'rough.mp4')]);
-  if (r.status !== 0) throw new Error(`ffmpeg 合成口播失敗：${r.stderr}`);
+  if (r.status !== 0) throw new Error(`ffmpeg 合成講解失敗：${r.stderr}`);
   r = run('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30', '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', path.join(project, 'assets', 'screen', '示範.mp4')]);
   if (r.status !== 0) throw new Error(`ffmpeg 合成錄影失敗：${r.stderr}`);
   fs.writeFileSync(path.join(work, 'cutpoints.json'), JSON.stringify({ cuts: [{ at: +(starts[3] + 3.2).toFixed(2), kind: 'pause' }, { at: +(starts[10] + 3.2).toFixed(2), kind: 'ng' }] }, null, 2));

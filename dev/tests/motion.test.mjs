@@ -34,7 +34,7 @@ test('scene-motion：API 與常數存在，開頭 API 註解有記錄', () => {
   }
   assert.ok(MOTION_SRC.includes('P.end()'), '開頭註解沒記錄 P.end()（不帶參數）');
   assert.ok(Array.isArray(P.marks));
-  assert.doesNotMatch(MOTION_SRC, /T\.at\(句號\)/, '舊的「綁口播時傳 T.at(句號)」要刪掉');
+  assert.doesNotMatch(MOTION_SRC, /T\.at\(句號\)/, '舊的「綁講解時傳 T.at(句號)」要刪掉');
   assert.deepEqual([P.MORPH, P.ZOOM, P.COUNT, P.BAR], [0.7, 2.4, 1.2, 0.8]);
   for (const c of ['P.MORPH', 'P.ZOOM', 'P.COUNT', 'P.BAR']) assert.ok(MOTION_SRC.includes(c), `常數註解沒寫 ${c}`);
   for (const k of ['in', 'out', 'swap', 'sideIn', 'sideOut', 'end', 'drift', 'reveal', 'rise', 'maskUp', 'axis', 'stroke', 'icon', 'check']) assert.equal(typeof P[k], 'function', `既有方法 P.${k} 不見了`);
@@ -613,7 +613,7 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
       assert.deepEqual(await S.evaluate(`(window.SceneMotion.sfx['x-v2'] || window.SceneMotion.sfx['?']).map((x) => [x.name, x.ref, x.t])`), [['click', '#1', 2]]);
       assert.deepEqual(await S.cueErrors(), []);
     } finally { await S.close(); }
-    // 逐像素：用 HyperFrames 自己的 snapshot（和成片、examples.test 的亂序截圖同一條路；live 頁面的 CDP 截圖會因合成器快取差 1–14 階）
+    // 逐像素：用 HyperFrames 自己的 snapshot（和完成影片、examples.test 的亂序截圖同一條路；live 頁面的 CDP 截圖會因合成器快取差 1–14 階）
     const crypto = await import('node:crypto');
     const snap = (at, out) => {
       const x = spawnSync('npx', ['hyperframes', 'snapshot', '--at', at.join(','), '--no-end', '-o', out], { cwd: dir, encoding: 'utf8' });

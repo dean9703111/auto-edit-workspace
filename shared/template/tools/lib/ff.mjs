@@ -3,7 +3,7 @@
 //   run(cmd, args, opts)                 → spawnSync 結果（找不到指令時丟出中文錯誤）
 //   probeDuration(file)                  → 秒數
 //   probeMedia(file)                     → { kind:'video'|'image'|'audio', duration, width, height, fps, vfr, hasAudio, hasVideo }
-//   encodeFootage(src, dst, { audioFilter, audioRaw, crop, lut, canvas })  主軌底片：30fps CFR、每秒一個關鍵幀、聲音 AAC（聲音處理見 audio.mjs）；lut＝講者調光的 .cube
+//   encodeFootage(src, dst, { audioFilter, audioRaw, crop, lut, canvas })  主軌底片：30fps CFR、每秒一個關鍵影格、聲音 AAC（聲音處理見 audio.mjs）；lut＝講者調光的 .cube
 //                                        canvas＝lib/canvas.mjs 的 canvasOf(format)（不傳＝橫式，輸出和原本逐位元組相同）
 //   footageVf({ crop, canvas })          → 底片的裁切／縮放濾鏡陣列（frame 寬高比不對時丟出中文錯誤）
 //   filterPath(p)                        → 濾鏡參數裡的路徑（'C\:/x/a.cube'；Windows 的磁碟機冒號要跳脫）
@@ -13,7 +13,7 @@
 //   blackDetect(file, cacheFile, onMiss) → [[起, 迄], …]（全黑＝只有聲音的區間；依檔案大小＋修改時間快取，沒命中時先呼叫 onMiss）
 //   rawFrame(file, { at, width, height })→ Buffer（rgb24；給 contact sheet、格線圖用）
 //   writeJpg(raster, file)               raster＝{ w, h, data }（rgb24）→ JPG
-//   extractFrames({ file, ranges, crop, size, dir, prefix })  逐幀裁切成 JPG（放大鏡用）→ 檔名陣列
+//   extractFrames({ file, ranges, crop, size, dir, prefix })  逐格裁切成 JPG（放大鏡用）→ 檔名陣列
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -103,7 +103,7 @@ export function footageVf({ crop = null, canvas = CANVAS.landscape } = {}) {
   return [`scale=${W}:${H}:force_original_aspect_ratio=increase:flags=lanczos`, `crop=${W}:${H}`];
 }
 
-// 重新編碼：固定 30fps、每秒一個關鍵幀（關鍵幀間隔太大時 seek 會凍結），聲音轉 AAC 讓長度和畫面一致
+// 重新編碼：固定 30fps、每秒一個關鍵影格（關鍵影格間隔太大時 seek 會凍結），聲音轉 AAC 讓長度和畫面一致
 // opts.audioFilter＝聲音濾鏡（例如 loudnorm）；opts.audioRaw＝{ file, rate, channels }：聲音改用處理過的 f32le PCM（build 先把剪接點淡化好）
 // opts.crop＝{ x, y, w, h }（來源影片的像素）：構圖裁切，裁完縮放到畫布 W×H
 // opts.lut＝.cube 路徑：講者調光（已經照強度混好，contracts/look.md §3）；順序 crop → scale → lut3d → fps
@@ -140,7 +140,7 @@ const atempo = (speed) => {
   return f;
 };
 
-// 插入的錄影：macOS 螢幕錄影是 VFR，關鍵幀也稀，和底片一樣轉成 30fps CFR、每秒一個關鍵幀；
+// 插入的錄影：macOS 螢幕錄影是 VFR，關鍵影格也稀，和底片一樣轉成 30fps CFR、每秒一個關鍵影格；
 // speed 直接做進檔案（檔案的第 t 秒＝素材的第 t×speed 秒），播放端只用 data-media-start 跳到要的地方。
 // 畫面超過 3840×2160 等比縮小（座標換算由呼叫端用 scale 處理）。
 export function encodeMedia(src, dst, { speed = 1, keepAudio = false, width, height } = {}) {
@@ -206,7 +206,7 @@ export function writeJpg({ w, h, data }, file, quality = 3) {
   if (r.status !== 0) throw new Error(`寫不出 ${path.basename(file)}：${tail(r.stderr?.toString())}`);
 }
 
-// 放大鏡逐幀：ranges＝[{ at（檔案秒數）, frames（張數）}]，依序抽出、裁 crop＝[x, y, w, h]（檔案像素）、縮成 size＝[w, h]
+// 放大鏡逐格：ranges＝[{ at（檔案秒數）, frames（張數）}]，依序抽出、裁 crop＝[x, y, w, h]（檔案像素）、縮成 size＝[w, h]
 // JPG 不帶 PNG 的 cICP 色彩標記（pitfalls §52：帶了 Chrome 會畫暗一階）
 export function extractFrames({ file, ranges, crop, size, dir, prefix = 'f', image = false }) {
   fs.mkdirSync(dir, { recursive: true });
@@ -219,9 +219,9 @@ export function extractFrames({ file, ranges, crop, size, dir, prefix = 'f', ima
     if (!image && rg.at > 0) args.push('-ss', String(r3(rg.at)));
     args.push('-i', file, '-frames:v', String(image ? 1 : rg.frames), '-vf', vf, '-q:v', '3', pat);
     const r = run('ffmpeg', args);
-    if (r.status !== 0) throw new Error(`放大鏡抽幀失敗（${path.basename(file)}）：${tail(r.stderr)}`);
+    if (r.status !== 0) throw new Error(`放大鏡抽格失敗（${path.basename(file)}）：${tail(r.stderr)}`);
     const got = fs.readdirSync(dir).filter((f) => f.startsWith(`${prefix}${j}-`)).sort();
-    if (!got.length) throw new Error(`放大鏡抽幀失敗（${path.basename(file)} 第 ${r3(rg.at)}s 之後沒有畫面）`);
+    if (!got.length) throw new Error(`放大鏡抽格失敗（${path.basename(file)} 第 ${r3(rg.at)}s 之後沒有畫面）`);
     // 抽到的張數不夠（素材尾巴）：重複最後一張補齊
     for (let k = 0; k < (image ? 1 : rg.frames); k++) names.push(path.join(dir, got[Math.min(k, got.length - 1)]));
   });

@@ -54,7 +54,7 @@ try {
   if (speakerSource === 'live-frame') await side.waitForFunction(() => document.querySelector('#footage img')?.src.startsWith('data:image/jpeg;base64,'));
   await side.waitForFunction(() => { const img = document.querySelector('#footage img'); return img?.complete && img.naturalWidth > 0; });
   const shift = await side.evaluate(() => Number(gsap.getProperty('#footage', 'x')));
-  assert.equal(shift, 480, '講者沿用成片側邊欄的右移位置，避免只露出半邊');
+  assert.equal(shift, 480, '講者沿用完成影片側邊欄的右移位置，避免只露出半邊');
   const sideScreenshot = path.join(dir, '側邊欄完成預覽.png');
   await page.screenshot({ path: sideScreenshot });
   await page.click('.design-bg-enlarge');

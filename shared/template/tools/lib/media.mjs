@@ -5,7 +5,7 @@
 //                                                          段落時間定案後：畫面位置、錄影片段（cut 會切開）、運鏡、紅框（含跟捲動）、放大鏡、
 //                                                          說明卡 callouts、聚光燈 spot、STEP 膠囊 steps、箭頭 arrows（resolveMedia＝過渡期別名）
 //   newStepState()                                         STEP 編號狀態（整份 plan.json 一個）
-//   mediaJobs(it)                                          build 要準備的素材檔（轉檔、複製、放大鏡逐幀）
+//   mediaJobs(it)                                          build 要準備的素材檔（轉檔、複製、放大鏡逐格）
 //   mediaParts(it, { off, lim, base, nextTrack, mediaDb, edit, outDur }) → { html, tl[] }（主合成用；off＝--test 起點）
 //
 //   mediaFrame(canvas, { panel })                          版式的畫面幾何（可見區、標註安全區、避讓區、STEP 位置、放大鏡範圍）；
@@ -13,7 +13,7 @@
 //                                                          直式 panel＝下半有講者面板（pipAt 在段內任一取樣點為真），沒有時用 containFull／coverFull
 //
 // 座標一律是素材本身的像素（media.mjs frame --grid 讀）；畫面上的位置由這裡換算。
-// 錄影 <video> 放在主合成（root），不放子合成（pitfalls §38）；放大鏡用逐幀 JPG 畫進 <canvas>，不用第二個 <video>。
+// 錄影 <video> 放在主合成（root），不放子合成（pitfalls §38）；放大鏡用逐格 JPG 畫進 <canvas>，不用第二個 <video>。
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,7 +42,7 @@ const LENS = { delay: 0.28, pop: 0.6, back: 0.32, fade: 0.1, min: 1.2, zoom: 2, 
 const MOVE = { dur: 1.5, durBig: 2.2, big: 2, warnZoom: 4, max: 2, lead: 0.8, ratio: 1.4 };
 const KB = 1.05;
 const DECLICK = 0.02;
-// 動態 v2（specs/010-motion-v2/design-system.md §5、§7）：從講者進來的錄影面板由小窗位置長出（P.grow，0.3 s 起、kit 預設 0.8 s expo.out）；
+// 動態 v2（specs/010-motion-v2/design-system.md §5、§7）：從講者進來的錄影面板由小視窗位置長出（P.grow，0.3 s 起、kit 預設 0.8 s expo.out）；
 // 標註一個接一個出現時，先出現、還在畫面上的壓暗到 0.5（P.dim 0.4 s），最後一個出現後 2.6 s（或段尾前 1.4 s、最後那個收掉前，取早的）回均衡
 export const GROW = { at: 0.3, from: 'pip' };
 export const FOCUS = { dim: 0.5, dur: 0.4, eq: 2.6, tail: 1.4, out: 0.3 };
@@ -77,7 +77,7 @@ const READ = 1.2, READ_QUICK = 0.8;   // 完整可讀（定案：一般 1.2s、q
 const CALLOUT = { gap: 56, gapV: 40, h: 96, padL: 14, padR: 32, padPlain: 32, icon: 64, iconGap: 20, border: 2, full: 40, half: 24, maxLen: 12,
   edge: 8, lineAt: 0.3, lineDur: 0.25, cardAt: 0.45, cardDur: 0.4, drift: 16, ready: 0.85, quick: 0.25, out: 0.3, elbow: 24, dot: 5 };
 const SPOT = { alpha: 0.35, pad: 8, rx: 12, fade: 0.4 };
-// 右側步驟清單（seg.side）：錄影放左邊 view（x 120、寬 720，置中），清單卡 x 840、寬 960，在 y 160–880（有講者小窗：160–560）裡垂直置中
+// 右側步驟清單（seg.side）：錄影放左邊 view（x 120、寬 720，置中），清單卡 x 840、寬 960，在 y 160–880（有講者小視窗：160–560）裡垂直置中
 // （使用者：「直式的可以靠左，右邊用動畫講解不是更好？」）
 // enter "tape"：截圖縮小放在這一區（上面留給膠帶、下面不碰字幕帶），紙白邊 12、膠帶 132×40
 export const TAPE = { view: [200, 90, 1520, 790], w: 132, out: 36, up: 20, drop: 0.35, gap: 0.1, dur: 0.15 };
@@ -117,7 +117,7 @@ export const MEDIA_FIELDS = [
   ['lens', '[{ "at", "until", "box": [x,y,w,h], "zoom" }]', '—', '放大鏡：從框的位置彈出到畫面中央偏上，zoom 預設 2（1.2–4）；至少 1.2 秒，until 不寫＝at＋3 秒'],
   ['callouts', '[{ "at", "until", "box": [x,y,w,h], "text", "icon", "side", "quick" }]', '—', '標註：紅框＋引線＋說明卡（text 1–12 字、icon 選填）；side 不寫＝自動挑放得下的那邊；完整可讀 ≥ 1.2s（quick ≥ 0.8s）；期間不能有運鏡'],
   ['spot', '[{ "at", "until", "box": [x,y,w,h] }]', '—', '聚光燈：其他地方壓暗 35%，只留框的地方；至少 2 秒、一次一個、不和放大鏡同時'],
-  ['side', '{ "title", "items": [{ "at", "text" }] }', '—', '右側步驟清單（橫式、直式／窄的錄影）：錄影靠左（左邊 720 寬），右邊一張卡＝標題（1–12 字）＋1–5 條步驟（每條 1–14 字），一開始淡淡列著、講到 at 那條亮起；有講者小窗時清單在小窗上方（最多 2 條）'],
+  ['side', '{ "title", "items": [{ "at", "text" }] }', '—', '右側步驟清單（橫式、直式／窄的錄影）：錄影靠左（左邊 720 寬），右邊一張卡＝標題（1–12 字）＋1–5 條步驟（每條 1–14 字），一開始淡淡列著、講到 at 那條亮起；有講者小視窗時清單在小視窗上方（最多 2 條）'],
   ['steps', '[{ "at", "text" }]', '—', 'STEP 膠囊（text 1–12 字）放在錄影可見區左上（離錄影邊 32px）；壓到紅框自動換右上，"stepsSide": "right" 指定右上；號碼自動累加，同字沿用；相鄰兩步 ≥ 1.65 秒'],
   ['arrows', '[{ "at", "until", "to": [x,y], "from" }]', '—', '箭頭：箭尖離 to 9px，from＝箭尾方向（n／ne／e／se／s／sw／w／nw，不寫＝自動）；放不下就拿掉；一次一支、至少 2.2 秒，until 不寫＝at＋3 秒'],
   ['clicks', '["#21@安裝", "+3.2"]', '—', '錄影裡看得到游標按下的時間，一下配一顆 click 附加音效（不受 3 秒規則）；時間寫法同 at，要落在這段裡；"sfxExtra": false 會一起關掉'],
@@ -369,7 +369,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   // 版式：直式時講者面板（下半）在不在決定可見區（FR-080）；橫式＝原本的常數
   const cv = canvas || it.canvas || null;
   let F = m.frame = mediaFrame(cv, { panel: [s, (s + e) / 2, e - 0.01].some((t) => pipAt(t)) });
-  // 右側步驟清單：錄影改放左邊、清單卡的位置（條數決定高度；有講者小窗時在小窗上方）
+  // 右側步驟清單：錄影改放左邊、清單卡的位置（條數決定高度；有講者小視窗時在小視窗上方）
   const sd = seg.side;
   m.side = null;
   if (sd != null) {
@@ -381,7 +381,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     else {
       const pipOn = [s, (s + e) / 2, e - 0.01].some((t) => pipAt(t));
       const bottom = pipOn ? SIDE.pipBottom : SIDE.bottom, h = SIDE.bar + n * SIDE.row + 2 * SIDE.pad;
-      if (h > bottom - SIDE.top) err(`side 有 ${n} 條放不下（${pipOn ? '有講者小窗，清單在小窗上方，' : ''}最多 ${Math.floor((bottom - SIDE.top - SIDE.bar - 2 * SIDE.pad) / SIDE.row)} 條）→ 合併幾條`);
+      if (h > bottom - SIDE.top) err(`side 有 ${n} 條放不下（${pipOn ? '有講者小視窗，清單在小視窗上方，' : ''}最多 ${Math.floor((bottom - SIDE.top - SIDE.bar - 2 * SIDE.pad) / SIDE.row)} 條）→ 合併幾條`);
       else {
         const box = [SIDE.x, Math.round(SIDE.top + (bottom - SIDE.top - h) / 2), SIDE.w, h];
         m.side = { title: '', items: [], box };
@@ -617,7 +617,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     const text = typeof co.text === 'string' ? co.text.trim() : '';
     if (!text || /[\r\n]|(?<!:)\/\//.test(text)) { err(`${what}.text 要寫 1–${CALLOUT.maxLen} 字的說明（名詞或一句重點），現在是 ${JSON.stringify(co.text)} → 補上畫面上要強調的名詞或動作`); return; }
     const len = visibleLen(text);
-    if (len > CALLOUT.maxLen) { err(`${what}.text「${text}」有 ${len} 字（上限 ${CALLOUT.maxLen}）→ 縮成名詞或一句重點，細節交給口播`); return; }
+    if (len > CALLOUT.maxLen) { err(`${what}.text「${text}」有 ${len} 字（上限 ${CALLOUT.maxLen}）→ 縮成名詞或一句重點，細節交給講解`); return; }
     let iconSvg = null;
     if (co.icon != null && co.icon !== 'none') {
       const lib = icons || (iconCache ||= loadIcons(TEMPLATE_DIR));
@@ -709,7 +709,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     }
     const ocx = left + ow / 2, ocy = top + oh / 2;
     const back = { x: +(R[0] + R[2] / 2 - ocx).toFixed(2), y: +(R[1] + R[3] / 2 - ocy).toFixed(2), scaleX: +(R[2] / Cw).toFixed(5), scaleY: +(R[3] / Ch).toFixed(5) };
-    // 逐幀：第 k 張＝成片 la＋k/30 那一格的錄影
+    // 逐格：第 k 張＝完成影片 la＋k/30 那一格的錄影
     const N = Math.max(1, Math.round((lb - la) * FPS));
     const ranges = [];
     if (m.kind === 'video') {
@@ -952,7 +952,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   ].filter(Boolean);
   // 下限：錄影段 ≥ 4 秒（style.md「標註不要密」的平均間距）卻一個標註、運鏡都沒有
   if ((m.kind === 'video' || m.hold != null) && !parts.length && e - s >= 4) {
-    warn(`錄影 ${r3(e - s)}s 沒有任何標註或運鏡 → 口播講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3–4）；真的沒有要指的東西，回報寫保留理由`);
+    warn(`錄影 ${r3(e - s)}s 沒有任何標註或運鏡 → 講解講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3–4）；真的沒有要指的東西，回報寫保留理由`);
   }
   let summary = parts.join('、');
   if (m.kind === 'image' && m.hasAnn && seg.kenburns !== false && !m.cams.length) summary += `${summary ? '；' : ''}有標註，不做慢推`;
@@ -1005,7 +1005,7 @@ export function mediaJobs(it) {
 
 // ---------- 主合成 ----------
 
-// 標註的焦點（§7）：ev＝[{ sel, at, until }]（成片秒）→ [{ sel, at, to }]，照時間排序
+// 標註的焦點（§7）：ev＝[{ sel, at, until }]（完成影片秒）→ [{ sel, at, to }]，照時間排序
 // 後一個出現時，前面出現、還會留 ≥ 0.4 s 的壓暗到 0.5；同一刻一起出現的不互相壓暗；回均衡只對還在畫面上的做
 export function focusPlan(ev, end) {
   const E = [...ev].sort((a, b) => a.at - b.at), out = [], dimmed = new Set();
@@ -1038,7 +1038,7 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   html.push(`  <div id="el-${id}" class="mlayer" style="z-index:${it.z}${port ? `;--cw:${CW}px;--ch:${CH}px` : ''}">`);
   const taped = it.enterFx === 'tape';
   html.push(`    <div id="mbg-${id}" class="clip mbg${taped ? ' mbg--paper' : ''}" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}"></div>`);
-  // 面板：不計時的外框，大小＝錄影可見區（P.grow 從小窗長成它）；運鏡層放在裡面、位移抵回去，座標還是畫面座標
+  // 面板：不計時的外框，大小＝錄影可見區（P.grow 從小視窗長成它）；運鏡層放在裡面、位移抵回去，座標還是畫面座標
   html.push(`    <div id="mgr-${id}" class="mgrow" style="${style}" data-layout-allow-overflow>`);
   html.push(`    <div id="mst-${id}" class="mstage" style="left:${-G.left}px;top:${-G.top}px" data-layout-allow-overflow>`);
   if (m.kind === 'video') {
@@ -1169,7 +1169,7 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
     }
   });
 
-  // --- 動態 v2：面板從小窗長出（從講者進來的 fade 才長；slide／zoom／cut 照舊）、標註焦點（§7）---
+  // --- 動態 v2：面板從小視窗長出（從講者進來的 fade 才長；slide／zoom／cut 照舊）、標註焦點（§7）---
   const v2 = [];
   if (ent === 'fade' && s + GROW.at < lim - 1e-6) v2.push(`M.grow('#mgr-${id}', ${sh(s + GROW.at)}, { from: '${GROW.from}' });`);
   const fev = [

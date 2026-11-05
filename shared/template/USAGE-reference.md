@@ -29,7 +29,7 @@
 
 1. **要不要換版面**：01 章節轉場、03 半版側邊欄、04 全畫面家族、05 兩側。
 2. **選下方字卡**：06 一般、07 重點、08 Step、09 QA、10 Tips、11 總結、15 金句。
-3. **口播正在列舉時才用條列**：12 關鍵詞條列、13 標題條列。
+3. **講解正在列舉時才用條列**：12 關鍵詞條列、13 標題條列。
 4. **只有情緒、沒有資訊時才用字卡動態**（fx）。
 
 理由：版面決定講者會不會被移動或蓋住，要最先定；資訊卡次之；字卡動態只負責情緒，放太多會搶走資訊卡的注意力。
@@ -52,7 +52,7 @@
 | 句子有資訊要看懂：定義、步驟、問答、清單、對照 | 句子是情緒或節奏：一個詞的衝擊、數字跳動、轉場 |
 | 要停留 ≥ 3 秒讓觀眾讀 | 1.5–3 秒一閃而過 |
 
-一段口播字卡動態最多一兩張，而且不和下方字卡同時出現。
+一段講解字卡動態最多一兩張，而且不和下方字卡同時出現。
 
 ---
 
@@ -73,7 +73,7 @@
 - **03 側邊欄**：清單預設在本段第 1.3 秒起、每 0.6 秒一項；第一項不寫 `at`。`sideShift` 見 R4。
 - **04a、04c**：清單在第 0.5 秒起、每 0.35 秒一項。
 - **04b 對照**：單項的 `at` 不生效（整欄一起進），要控制時間改寫 `"beats": { "leftAt": "#12", "rightAt": "#14" }`。
-- **04d 表格**：4 欄時每格 ≤ 4 字、3 欄時每格 ≤ 6 字（超過會報錯）。
+- **04d 表格**：4 欄時每格 ≤ 4 字、3 欄時每格 ≤ 6 字（超過會出錯）。
 - **08 Step**：每步間隔 2.6 秒。**13 標題條列**：每條間隔 2.4 秒。
 - **09 QA**：答案要晚一點出來，寫成物件帶時間：`"a": { "text": "不行，**三道關**都要看", "at": "#14" }`。
 - **14 講者介紹**：`name`、`titles` 的預設值是作者本人，一律照 `shared/style.md` 的「講者」一節換掉；那一節空白就不放 14。
@@ -86,7 +86,7 @@
 - 有圖示的項目（04c、05 必填；03、04a、08、12、13 選填，見 R2.7）：`{ "text": "轉逐字稿", "icon": "file-text", "at": "#8" }`，或字串 `"轉逐字稿 ｜icon=file-text"`。
 - 04d 表格的列：字串用 ` / `（前後有空格）分欄，`"HyperFrames / 字幕與動畫"`；`head` 也是只有一項的清單：`"head": ["工具 / 負責"]`。
 - 一般欄位也可以寫成物件帶時間（09 QA 的答案）。
-- 圖示：同一個物件全集用同一個圖示。常用：文件 `file-text`、清單 `list-checks`、剪輯 `scissors`、影片 `video`、相機 `camera`、AI `bot`、時間 `clock`、存檔 `save`、資料夾 `folder`、Skill `package`、人 `user`、聲音 `volume-2`、成片 `clapperboard`、設定清單 `clipboard-list`。不確定名字時先寫，`--check` 找不到會列出相近名稱。
+- 圖示：同一個物件全集用同一個圖示。常用：文件 `file-text`、清單 `list-checks`、剪輯 `scissors`、影片 `video`、相機 `camera`、AI `bot`、時間 `clock`、存檔 `save`、資料夾 `folder`、Skill `package`、人 `user`、聲音 `volume-2`、完成影片 `clapperboard`、設定清單 `clipboard-list`。不確定名字時先寫，`--check` 找不到會列出相近名稱。
 
 ### R2.4 每一段的全部欄位
 
@@ -154,13 +154,13 @@
 - `moves`／`marks`／`lens`／`callouts`／`spot`／`steps`／`arrows`／`path` 的 `at`／`until`：`"#N"`、`"#Ne"`、`"#N±秒"`、`"+秒"`（本段起點後），不能寫絕對秒數，要落在這段裡。
 - `--check` 的 ✖／⚠ 原文都附「→」改法，照它改就好。
 - 圖層：media 段和全畫面情境一樣是整張幕（z 30）。同一時間只能有一張整張幕（✖）；期間不能出現下方字卡、側邊欄等透明情境（✖）；透明字卡動態可以疊（⚠ 提醒確認）。
-- build 會把錄影轉成 30fps、每秒一個關鍵幀、`speed` 做進檔案（`work/hyperframes/assets/media/`，依素材大小＋修改時間＋設定快取，素材沒變不重轉，沒用到的舊檔自動刪）；放大鏡把那幾秒逐幀裁成 JPG（同一張畫面只存一份）。
+- build 會把錄影轉成 30fps、每秒一個關鍵影格、`speed` 做進檔案（`work/hyperframes/assets/media/`，依素材大小＋修改時間＋設定快取，素材沒變不重轉，沒用到的舊檔自動刪）；放大鏡把那幾秒逐格裁成 JPG（同一張畫面只存一份）。
 
 ### R2.6 `--check --json` 的格式
 
 `node shared/template/tools/build.mjs --project projects/<專案> --check --json`：stdout 只印一個 JSON（出錯也是，`ok: false`、訊息在 `errors`），不寫檔（只會寫偵測快取 `work/hyperframes/.cache/`）。結束碼同 `--check`（有 ✖ 是 1）。**時間都是 `rough.mp4` 的秒數**（`out` 欄位例外，見下）。
 
-除了下表，還有：`planHash`（plan.json 內容的雜湊，qc 用來判斷改過還沒 build）、`rhythm`、`versions`、`uncovered`（沒有畫面的區間）、`voiceUncovered`（只有聲音、沒被蓋住的區間）、`chapters`（每個章節的位置與空檔）、`sfxCount`、`sfxBudget`、`outro`；每段多 `key`、`family`、`layout`（`overlay`／`side`／`pip`／`full`）、`layoutZh`（疊加／半畫面／子母畫面／全幕）、`opaque`，以及 `out`（**成片秒數**的起迄、條列每條進場時間、子母畫面片段、擦入擦出、情境動畫的綁句）。
+除了下表，還有：`planHash`（plan.json 內容的雜湊，qc 用來判斷改過還沒 build）、`rhythm`、`versions`、`uncovered`（沒有畫面的區間）、`voiceUncovered`（只有聲音、沒被蓋住的區間）、`chapters`（每個章節的位置與空檔）、`sfxCount`、`sfxBudget`、`outro`；每段多 `key`、`family`、`layout`（`overlay`／`side`／`pip`／`full`）、`layoutZh`（疊加／半畫面／子母畫面／全幕）、`opaque`，以及 `out`（**完成影片秒數**的起迄、條列每條進場時間、子母畫面片段、擦入擦出、情境動畫的綁句）。
 
 ```json
 { "ok": true, "errors": [], "warnings": ["[s02 concept] …"],
@@ -178,7 +178,7 @@
 
 | 欄位 | 說明 |
 |---|---|
-| `videoDur`／`outputDur` | `rough.mp4` 長度／成片長度（＝`rough.mp4` − cuts） |
+| `videoDur`／`outputDur` | `rough.mp4` 長度／完成影片長度（＝`rough.mp4` − cuts） |
 | `voiceOnly` | `rough.mp4` 全黑（只有聲音）的區間 |
 | `cutpoints` | `work/cutpoints.json` 的剪接點（沒有這個檔就是空陣列） |
 | `items[]` | 每一段：`start`／`end` 是 plan.json 寫的起迄；`shownEnd` 只在畫面上實際停留的時間不同時出現（下方字卡換卡、接不透明幕時自動延長或提早收）；整段被 cuts 剪掉的段不列出 |
@@ -317,7 +317,7 @@
 
 - `"auto"`：以 speakerBox 中心取一個 4:3 的框（高＝max(框高×1.15, 框寬×1.15×3/4)，夾在畫面內）；沒寫 speakerBox 時裁畫面中央、高 66%。有 `frame` 時座標是裁切後的畫面。
 - 也可以直接寫 `[x, y, w, h]`（1920×1080 座標、寬高比 4:3）。snapshot 看到子母畫面裡的講者被切到頭或手時才改。
-- 從講者滿版切到子母畫面時，小窗會從這個裁切框的位置縮到右下角（0.7 秒），所以裁切框要框住臉；`pipCrop` 不寫（`"auto"`）時用 speakerBox 算。
+- 從講者滿版切到子母畫面時，小視窗會從這個裁切框的位置縮到右下角（0.7 秒），所以裁切框要框住臉；`pipCrop` 不寫（`"auto"`）時用 speakerBox 算。
 
 ### R4.6 用 `css` 微調位置
 
@@ -328,7 +328,7 @@
 ```
 
 - 只寫位置（left／right／top／bottom／margin），不改字級、顏色、寬度、內距。
-- id 寫模板裡的原名，build 會自動加前綴與範圍。各情境的主元件 id：06、07、08、11、13、15 是 `#gCard`；09 `#qaCard`；10 `#tipCard`；14 `#spkCard`；12 `#kwList`；02 `#cBadge`；04 家族 `#wCard`；05 `#sCard1`–`#sCard4`；01 `#chGroup`。寫了模板裡沒有的 id 會報錯並列出可用的 id。
+- id 寫模板裡的原名，build 會自動加前綴與範圍。各情境的主元件 id：06、07、08、11、13、15 是 `#gCard`；09 `#qaCard`；10 `#tipCard`；14 `#spkCard`；12 `#kwList`；02 `#cBadge`；04 家族 `#wCard`；05 `#sCard1`–`#sCard4`；01 `#chGroup`。寫了模板裡沒有的 id 會出錯並列出可用的 id。
 - 下方字卡的底一律是 `bottom: 220px`（卡底 y 860），不要往下移進字幕區。
 - 碰撞提醒是用固定範圍算的，移位後提醒不會消失；移完一定要 snapshot 確認，並在回報裡說明「已移位、snapshot 確認沒壓到講者」。
 
@@ -416,7 +416,7 @@
 
 **時間規則**
 
-- 起點＝畫面事件時間 − 音效峰值 ＋ 1 幀（理由：放在句尾的音效會晚 1–3 秒，聽起來像沒對上）。
+- 起點＝畫面事件時間 − 音效峰值 ＋ 1 格（理由：放在句尾的音效會晚 1–3 秒，聽起來像沒對上）。
 - 一張卡最多一個主音效；兩個主音效相距不到 3 秒時只留前一個，被拿掉的會出現在提醒與報告的「音效時間」欄（`（ding 已拿掉）`）。3 秒間隔只比主音效；附加音效和 `click` 不算。
 - 同一段附加音效的起點相距不到 0.2 秒，丟掉後者（也會和主音效比）。
 - `--check` 最後印「音效次數」（有上限的寫 `次數／上限`）與「音效密度」；超過上限、某一分鐘主音效太多會 ⚠（規則照 `shared/style.md`）。
@@ -433,12 +433,12 @@
 |---|---|---|---|
 | 密度 | 照 style.md「字卡文字」；實機操作段往稀的那端 | 整支片不留沒有畫面的空白 | — |
 | 開場 | 預設照 style.md「字卡文字」（開場 30 秒不限張數）；`"rhythm": "spaced"` 時開場張數有上限（02 章節角標也算一張），照 build 印的 ⚠ 改 | 作者定案 | ⚠（只在 `"rhythm": "spaced"`；預設照 style.md 不限） |
-| 露臉 | 預設照 style.md「情境動畫優先」：段與段直接接上，講者露臉靠疊加版面與子母畫面小窗；`"rhythm": "spaced"` 時兩段動畫之間要留露臉空檔（章節轉場後接的那段不算），間隔照 build 印的 ⚠ 改 | 作者定案 | ⚠（只在 `"rhythm": "spaced"`；預設照 style.md 連續覆蓋） |
-| 連續覆蓋 | 預設（`rhythm` 不寫）：每段口播都有畫面 | style.md「節奏」 | 報告「沒有畫面的區間」（> 1 秒）＋⚠ |
+| 露臉 | 預設照 style.md「情境動畫優先」：段與段直接接上，講者露臉靠疊加版面與子母畫面小視窗；`"rhythm": "spaced"` 時兩段動畫之間要留露臉空檔（章節轉場後接的那段不算），間隔照 build 印的 ⚠ 改 | 作者定案 | ⚠（只在 `"rhythm": "spaced"`；預設照 style.md 連續覆蓋） |
+| 連續覆蓋 | 預設（`rhythm` 不寫）：每段講解都有畫面 | style.md「節奏」 | 報告「沒有畫面的區間」（> 1 秒）＋⚠ |
 | 不閃 | 兩段之間空 0.05–1 秒時講者會閃一下，要 0 秒相接 | 同上 | ⚠ |
 | 同情境 | 不連續三段同一情境；同一章裡同一情境最多三次 | 視覺疲乏 | ⚠（連續三段） |
 | 一段一個 | 同一時間只放一個情境（02 章節角標除外） | 兩個強調互搶 | ⚠ |
-| 字卡動態 | 一段口播最多一兩張，不和下方字卡同時出現 | 同上 | ⚠ |
+| 字卡動態 | 一段講解最多一兩張，不和下方字卡同時出現 | 同上 | ⚠ |
 | 停留 | 一般卡 2.5–4 秒以上；重點卡（07）至少 4 秒、停到這個重點講完 | 讀得完 | ✖（段長下限） |
 | 新訊息停留 | 照 style.md「節奏」的完成態停留 | 讀得完 | ⚠（最後內容停得太短）；✖（完成態太短，照 build 的訊息） |
 | 字數 | slots 上限照 `--list`；主句 8–14 字照 `style.md` | 版面放得下；看一眼就懂 | ✖（只檢查 `--list` 上限，8–14 字不檢查） |
@@ -458,7 +458,7 @@
 | `vars.text：fx 29 沒有這個變數（可用：…）` | ✖ | 改成括號裡的欄位（fx 29 是 `label`、`number`、`unit`） |
 | `結尾 …s 超過影片長度 …s，已截短` | ⚠ | 通常可接受（最後一句） |
 | `edit.cuts 幾乎剪掉整支影片（剩 Ns）` | ✖ | 剪輯台的 cuts 秒數不對，請使用者在剪輯台檢查 |
-| `edit.fadeIn＋fadeOut（Ns）比成片長度 Ns 還長` | ✖ | 縮短淡入淡出 |
+| `edit.fadeIn＋fadeOut（Ns）比完成影片長度 Ns 還長` | ✖ | 縮短淡入淡出 |
 | `moves[i].to 要放大 N 倍，畫面會糊 → 框大一點，或改用放大鏡 lens` | ⚠ | 照 `→` 改 |
 | `lens[i] 期間有運鏡，鏡片位置是用 … 那一刻的畫面算的` | ⚠ | 運鏡和放大鏡錯開 |
 | `marks[i] 只停 Ns（< 0.5s，閃一下就不見），已拿掉` | ⚠ | 要留就把 `until` 往後延 |
@@ -470,30 +470,30 @@
 
 ### R7.1 什麼時候用：符合判準的情境做動畫
 
-作者的方向：口播在講一個「情境」時，做動畫比單純的字卡好；要不要做照 `shared/style.md`「情境動畫優先」的三條判準。字卡留給名詞、一句重點和提醒。
+作者的方向：講解在講一個「情境」時，做動畫比單純的字卡好；要不要做照 `shared/style.md`「情境動畫優先」的三條判準。字卡留給名詞、一句重點和提醒。
 
-挑法（口播在講什麼 → 用第一層的哪個情境，還是做情境動畫）在 `shared/template/SITUATIONS.md` §3；要不要做的判準照 `shared/style.md`「情境動畫優先」。
+挑法（講解在講什麼 → 用第一層的哪個情境，還是做情境動畫）在 `shared/template/SITUATIONS.md` §3；要不要做的判準照 `shared/style.md`「情境動畫優先」。
 
 | | 第一層：模板套用 | 第二層：情境動畫 |
 |---|---|---|
 | 是什麼 | 18 情境＋40 字卡動態 | 一支 `work/hyperframes/compositions/x-<名稱>.html`，從 `shared/template/custom/` 的範例改（R7.5） |
 | AI 要做的事 | 在 plan.json 填 `slots`（文字）與綁定的字幕句號 | 改範例的文字、圖示、時間軸，再登記到 plan.json |
 | 版面 | 模板固定，不能改（只能用 `css` 微調位置） | 自己排，遵守 R7.3 骨架、R7.3 的版面原則與 R8 硬規則 |
-| 什麼時候用 | 口播講名詞、一句重點、提醒 | 照 style.md「情境動畫優先」的三條判準 |
+| 什麼時候用 | 講解講名詞、一句重點、提醒 | 照 style.md「情境動畫優先」的三條判準 |
 | 數量 | 依密度（R6） | 照 style.md「情境動畫優先」：符合判準的段都做，段與段直接接上 |
 | plan.json 寫法 | `"scene": "<key>"` 或 `"type": "fx"` | `"type": "custom"`、`"src"`、`"layout"` |
 
-- 分鏡表的「情境」欄寫 `custom（fullscreen）` 或 `custom（overlay）`，再寫從哪一支範例改；「理由」欄寫口播在講哪一種情境。使用者確認分鏡表後才開始做。
+- 分鏡表的「情境」欄寫 `custom（fullscreen）` 或 `custom（overlay）`，再寫從哪一支範例改；「理由」欄寫講解在講哪一種情境。使用者確認分鏡表後才開始做。
 - 每段情境動畫是一支獨立的檔，彼此不相依：分鏡表確認後，可以照 `AGENTS.md`「子代理分工」一段派一個子代理同時做（選用；沒有子代理就照 `.agents/skills/auto-edit-motion/SKILL.md` 一段一段做）。
 - 品質關卡：每一段都要通過 R7.6 的檢查，並看過 snapshot 的中段與完成態，才交給使用者看 Studio。
 - 兩層在同一個主合成裡一起掛：build 依 plan.json 的順序把它們排進時間軸，第二層的子母畫面、淡入淡出也由 build 加。
-- 拿不準的時候：判準照 style.md「情境動畫優先」；口播只是一句話帶過的地方，不要硬做動畫（作者：「影片內容合適時就採納，不合適就不用」）。
+- 拿不準的時候：判準照 style.md「情境動畫優先」；講解只是一句話帶過的地方，不要硬做動畫（作者：「影片內容合適時就採納，不合適就不用」）。
 - 動畫裡畫了游標按下：用 `P.at('#N@詞')` 定那一拍，plan.json 該段的 `clicks` 寫同一個 `#N@詞`（R5.2）。
 
 ### R7.2 檔案與登記
 
 1. 從 `shared/template/custom/` 挑最接近的範例（R7.5），複製到 `work/hyperframes/compositions/x-<名稱>.html`（名稱只用英數與 `-`）。檔名、`data-composition-id`、`<template id>`、`window.__timelines[...]` 四處要一起改成新名稱，所有 id 與 class 的前綴也一起換（例：`xproc-` → `xflow-`）。build 不會碰這個檔。
-2. 檔內 `data-composition-id` 要等於檔名（`x-flow`），script 要登記 `window.__timelines['x-flow']`，`<style>` 要放在 `<template>` 裡；不符合時 `--check` 會報錯。
+2. 檔內 `data-composition-id` 要等於檔名（`x-flow`），script 要登記 `window.__timelines['x-flow']`，`<style>` 要放在 `<template>` 裡；不符合時 `--check` 會出錯。
 3. 在 plan.json 登記：
 
 ```json
@@ -595,7 +595,7 @@
 - 後出現的元素不能擠壓已經在畫面上的元素：最終版面先排好，預留位置。
 - 並排的元素同高、同中線。
 - 一個畫面 3–5 個重點，穩定停留；最後一幕至少停 1.5 秒（`P.HOLD_END`）。
-- 不加口播沒講的裝飾（重複的小卡、分鏡沒寫的掃光與外圈）；光澤掃過、漣漪只用在動畫分鏡寫了的強調拍；截圖與手機畫面一律等比，不擠壓。
+- 不加講解沒講的裝飾（重複的小卡、分鏡沒寫的掃光與外圈）；光澤掃過、漣漪只用在動畫分鏡寫了的強調拍；截圖與手機畫面一律等比，不擠壓。
 
 ### R7.4 怎麼讀 kit 的樣式
 
@@ -609,11 +609,11 @@
 
 ### R7.5 情境動畫範例（`shared/template/custom/`）
 
-34 支情境＋x-scene 骨架與 2 段參考都照 R7.3 骨架、作者的版面原則與 seek 規則驗證過（build --check、audit 0 ✖、亂序 snapshot）。每支檔頭固定 6 小節：適用的口播、不要用在哪裡、要改的地方、綁句欄位、D 下限、版面。
+34 支情境＋x-scene 骨架與 2 段參考都照 R7.3 骨架、作者的版面原則與 seek 規則驗證過（build --check、audit 0 ✖、亂序 snapshot）。每支檔頭固定 6 小節：適用的講解、不要用在哪裡、要改的地方、綁句欄位、D 下限、版面。
 
 綁句：站名、項目、關鍵詞在句中間或句尾時一定用 `P.at('#N@詞')`，不要綁句首（綁句首，字會比講到早 1–3 秒出現）；剛好是那句第一個詞才寫 `P.at('#N')`。audit 的 ⚠ 綁句對不上會給改法。範例的綁句都是 `@詞`（x-prompt 的 TYPE 例外：提示詞一開口就開始打）。
 
-| 口播在講 | 範例檔 | 畫面上發生什麼 | 要改的地方 |
+| 講解在講 | 範例檔 | 畫面上發生什麼 | 要改的地方 |
 |---|---|---|---|
 | 一條有先後的過程，3–4 站、每站一句，站不排成一直線（「先錄影，接著轉逐字稿，再列清單，最後初剪」） | `x-process.html` | 站逐步亮起、曲線連接線描出來，走過的站只換框色、不打勾 | 標題（≤ 10 字）、站名（≤ 4 字）、四個圖示、`T1..T4` 綁的句號；站數不是 4 照檔頭改 |
 | 訊號、資料、聲音一路經過幾個裝置，3–4 站（「聲音從麥克風進錄音介面，再進電腦，最後到剪輯軟體」） | `x-process-trace.html` | 晶片上下錯落 → 講到一站，訊號帶發光頭沿直角走線跑過去、晶片變主色、指示燈亮 → 最後一道光跑完全程 | 標題（≤ 10 字）、站名（≤ 4 字）、圖示、`T1`–`T4` |
@@ -682,25 +682,25 @@
 | 6 | 間距：標題到內容 ≥ 40；文字框內距左右 ≥ max(24, 0.45×字級)、上下 ≥ max(14, 0.28×字級)；line-height ≥ 1.25；框寬用 `max-content` | 卡片擠、右側空白、g／p／y 的下伸部被切（audit 會報：間距不足、內距不足、行高不足、右側空白過多、nowrap 餘裕不足；只量 custom。內距容許 2px：差 ≤ 2px 不報；圓形、≤ 2 字的徽章、kit 元件不量內距；字級 ≥ 100px 的數字不量行高） |
 | 7 | 中文斷行：自己用 `<br>` 斷在語意處，或 `text-wrap: balance`；不能拆的詞包 `<span style="white-space:nowrap">`；標題 nowrap | 「檔／案放進」這種詞中斷行 |
 | 8 | `.fill` 的直接子元素一律 `position: absolute`＋寫死 left／top；最終版面先排好，後出現的元素先預留位置（用 opacity 藏，不用 display:none） | 元素黏在 (0,0)；後進場的元素把既有元素擠走 |
-| 9 | 同一元素第二段 `fromTo` 要 `immediateRender: false`；只用 `SceneMotion` 就不用管 | 第一幀就出現應該稍後才發生的狀態 |
+| 9 | 同一元素第二段 `fromTo` 要 `immediateRender: false`；只用 `SceneMotion` 就不用管 | 第一格就出現應該稍後才發生的狀態 |
 | 10 | 時間軸撐到段尾：結尾寫 `P.end()`（不帶參數＝plan.json 這段的長度） | 最後一段被截掉或沒被取樣 |
 | 11 | 字型只寫 `var(--font-cjk)`、`var(--cap-font)` 或有 `@font-face` 的字型名 | 寫字面字型名，lint 報 error，整段 check 不跑 |
 | 12 | 圖片一律 `object-fit` 等比，不擠壓 | 圖片變形 |
 | 13 | 不做非 90 度的 div 旋轉；fx 03／12／16／33 少用 | 斜邊鋸齒 |
-| 14 | 子合成：style 與 script 放在 `<template>` 裡、id 三處一致、用 `fromTo` 不用 `from`、root 用 id 選擇器 | 沒有樣式；時間軸 45 秒後變靜止幀 |
+| 14 | 子合成：style 與 script 放在 `<template>` 裡、id 三處一致、用 `fromTo` 不用 `from`、root 用 id 選擇器 | 沒有樣式；時間軸 45 秒後變靜止畫面 |
 | 15 | 動作：只用 `shared/template/BEATS.md` 語彙表的具名動作（對應的 `P.*`）；秒數與曲線照 style.md「節奏」（kit 常數）；過衝（彈出、逐字彈出、重拍）只用在強調拍；不旋轉、不大位移飛入；微動只有呼吸（卡片、焦點不漂浮）、同一元素只掛一個、不配音效 | 動態的單位是拍：進場 → 強調 → 其他退焦 → 一顆音效，同一時間只有一個焦點（style.md「動畫視覺」） |
-| 16 | 含 `<video>` 的合成一律用 `npx hyperframes render`，不用其他截圖式 render 工具 | 影片會凍在同一幀，ffprobe 卻全部通過 |
+| 16 | 含 `<video>` 的合成一律用 `npx hyperframes render`，不用其他截圖式 render 工具 | 影片會凍在同一格，ffprobe 卻全部通過 |
 | 17 | 第二層與 `css` 移位不能壓到 speakerBox、不能進子母畫面禁入區（全畫面時 x 1424–1888、y 581–951） | 擋臉；壓到子母畫面（audit 會報：壓到子母畫面 ✖、壓到講者 ⚠） |
 | 18 | custom 的 `P.at('#N')`、`P.at('#N@詞')` 那一拍出現的字（站名、項目），要在 #N 那句講到；站名、項目在句中間或句尾就綁 `P.at('#N@詞')` | 綁句首，字會比講到早 1–3 秒出現（r1 實測）。audit 會報 `⚠ 綁句對不上：「…」在 #M 才講到、不是 #N（…）`（數字、英文整個詞比，中文取 2–4 字；刪除線、底線、位移不算出現；找不到不報）→ 照 → 改成 `P.at('#M@詞')` |
 | 19 | 用 `P.morph` 補間 `strokeDashoffset`／`strokeDasharray` 時，GSAP 當成 px 補、取整數；線條是 `pathLength="1"` 就會整段跳格 → 自己補間的弧、線改用 `pathLength="1000"`，數值放大 1000 倍（x-ring 的寫法） | 弧或線一格一格跳，不是平滑地走 |
 | 20 | 帶虛線（`stroke-dasharray`）的線條放在會位移的容器裡（`P.rise`、`P.drift` 的目標），亂序 seek 截圖會和照順序的不同 → 那個容器改用 `P.in`（只淡入、不位移），線條自己用 `P.stroke` | render 的畫面和預覽、截圖對不上 |
-| 21 | custom 段裡口播在講的時候，畫面不能連續 > 6 秒沒有任何動作（進場、點亮、焦點切換、描線、數字變化、位移都算動作）；在那句補一拍 `P.at('#K@詞')`，或從那句拆成兩段 | 觀眾以為畫面卡住。audit 會報 `⚠ 畫面沒有變化：<段> 在 <t1>–<t2> 畫面 <q>s 沒有變化（口播 #<N>–#<M> 在講；上限 6s）` → 照 → 補一拍或拆段。看時間軸、不看像素：點亮一個小框也算有變化（`qc.mjs observe` 的「靜止區間」看像素，兩者可能不一致） |
+| 21 | custom 段裡講解在講的時候，畫面不能連續 > 6 秒沒有任何動作（進場、點亮、焦點切換、描線、數字變化、位移都算動作）；在那句補一拍 `P.at('#K@詞')`，或從那句拆成兩段 | 觀眾以為畫面卡住。audit 會報 `⚠ 畫面沒有變化：<段> 在 <t1>–<t2> 畫面 <q>s 沒有變化（講解 #<N>–#<M> 在講；上限 6s）` → 照 → 補一拍或拆段。看時間軸、不看像素：點亮一個小框也算有變化（`qc.mjs observe` 的「靜止區間」看像素，兩者可能不一致） |
 
 | audit 抓得到 | audit 抓不到（要看 snapshot） |
 |---|---|
-| 文字撐破有底有框的盒、被會裁切的框切掉、超出畫面、進字幕區、全畫面壓到子母畫面、壓到講者框（面積比例）、字 < 30px、半像素邊、custom 的段長與 script 錯誤；custom 另外量：未定位頂層、標題到內容的間距、區塊重疊（svg 線稿與連接線不算區塊）、文字框內距與行高、右側空白、nowrap 餘裕、垂直平衡、綁句失敗、綁句對不上、畫面沒有變化、分鏡對齊（storyboard.md 的動畫分鏡每一拍 ±0.5 秒內要有 `P.at`、檔裡的 `P.at` 都要在分鏡裡、動態欄只用語彙表名稱、表頭照抄）、節奏（同一秒新元素、間隔、完成態停留、最後一幕；完成態停留量的是兩個 `P.at` 綁句點之間畫面最長的一段靜止，拍前就開始的動作算到它結束為止） | 中文斷在詞中間、對比與底板、字形下伸部離框多近、進場途中的暫態（正在補間的元素不判）、字卡動態與 media 段、畫面內容有沒有對到口播的意思、情境模板的新規則（模板版面固定） |
+| 文字撐破有底有框的盒、被會裁切的框切掉、超出畫面、進字幕區、全畫面壓到子母畫面、壓到講者框（面積比例）、字 < 30px、半像素邊、custom 的段長與 script 錯誤；custom 另外量：未定位頂層、標題到內容的間距、區塊重疊（svg 線稿與連接線不算區塊）、文字框內距與行高、右側空白、nowrap 餘裕、垂直平衡、綁句失敗、綁句對不上、畫面沒有變化、分鏡對齊（storyboard.md 的動畫分鏡每一拍 ±0.5 秒內要有 `P.at`、檔裡的 `P.at` 都要在分鏡裡、動態欄只用語彙表名稱、表頭照抄）、節奏（同一秒新元素、間隔、完成態停留、最後一幕；完成態停留量的是兩個 `P.at` 綁句點之間畫面最長的一段靜止，拍前就開始的動作算到它結束為止） | 中文斷在詞中間、對比與底板、字形下伸部離框多近、進場途中的暫態（正在補間的元素不判）、字卡動態與 media 段、畫面內容有沒有對到講解的意思、情境模板的新規則（模板版面固定） |
 
-build 已經自動處理、不用你做的（知道就好，不要重做）：時間在產生時就換成數字（不會算出 NaN）；底片重新編碼成固定 30fps、每秒一個關鍵幀（關鍵幀太稀時 seek 會凍結）；全畫面相接時接縫不淡；子母畫面用靜音主軌複本＋外框圖、位置和情境庫一致；側邊欄推講者的曲線和面板同步；字幕硬開硬關、同時只顯示一則；音效對準畫面事件、附加音效跟著條列；每個子合成的 id 與 CSS 都加了前綴與範圍。
+build 已經自動處理、不用你做的（知道就好，不要重做）：時間在產生時就換成數字（不會算出 NaN）；底片重新編碼成固定 30fps、每秒一個關鍵影格（關鍵影格太稀時 seek 會凍結）；全畫面相接時接縫不淡；子母畫面用靜音主軌複本＋外框圖、位置和情境庫一致；側邊欄推講者的曲線和面板同步；字幕硬開硬關、同時只顯示一則；音效對準畫面事件、附加音效跟著條列；每個子合成的 id 與 CSS 都加了前綴與範圍。
 
 `check` 可能出現的提醒：
 - `Craft ⚠ line_unread: The film's last line "…" … is on screen 1.69 s …, under the 2.00 s a closing line needs` → 那段最後一項停太短：`to` 往後延，或把最後一項的 `at` 提早。
@@ -740,7 +740,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 4. 主色是紅色系（色相 340°–20°）時警告：會和警示紅（踩雷、注意）撞色。
 5. 重畫 `shared/template/kit/pip-frame.png`（子母畫面外框跟著換色）。
 
-把它印出的對比值與警告原文轉告使用者。紅色系的警告要明講「觀眾會分不出哪個是警告」，建議換色。換完重跑 build（`kit/` 每次 build 都會重新複製，成片才會換色）；預覽頁 `shared/template/index.html` 重新整理就會更新。
+把它印出的對比值與警告原文轉告使用者。紅色系的警告要明講「觀眾會分不出哪個是警告」，建議換色。換完重跑 build（`kit/` 每次 build 都會重新複製，完成影片才會換色）；預覽頁 `shared/template/index.html` 重新整理就會更新。
 
 目前的設定（2026-10-30，PPA 風格）：`--brand: #F6630F`，`--brand-ink` 手動改成 `#FFFFFF`（橘底白字，對比約 3.2，作者指定）。重跑 `brand.mjs` 會把 `--brand-ink` 算回 `#0B1020`；要維持橘底白字，跑完再把這一行改回 `#FFFFFF`。
 
@@ -830,7 +830,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 圖示 | `shared/template/kit/icons.json` | 約 1,550 個 lucide 圖示 | slots 裡寫圖示名（例：`clipboard-list`） |
 | 字型 | `shared/template/kit/fonts/` | Noto Sans TC、Google Sans Flex（OFL） | 已由 `kit/fonts.css` 載入，不用安裝 |
 | 音效 | `shared/sfx/*.wav`＋`shared/template/kit/sfx.json` | 18 個 | build 自動配，見 R5 |
-| 字卡動態預覽影片 | `shared/template/fx/renders/` | 每種效果一支 | 只給畫廊（`fx/index.html`）看，成片不用，改了效果 HTML 也不會跟著變 |
+| 字卡動態預覽影片 | `shared/template/fx/renders/` | 每種效果一支 | 只給畫廊（`fx/index.html`）看，完成影片不用，改了效果 HTML 也不會跟著變 |
 | 音效資料 | `shared/template/preview/sfx-data.js` | 1 個 | `build.mjs --gallery` 產生，畫廊頁與音效總表用 |
 | 主合成產生器 | `shared/template/tools/build.mjs` | 1 支 | 核心第 2 節 |
 | 素材工具 | `shared/template/tools/media.mjs` | 1 支 | `scan`（contact sheet）、`frame --grid`（座標格線圖）、`main`（接主軌）、`ng-snap`／`srt-align`／`cutpoints`（剪乾淨；舊流程 `srt-split`／`snap-srt`）；核心第 5 節 |
@@ -849,8 +849,8 @@ node shared/template/tools/build.mjs --project projects/<專案>
 - 9 支 auto-edit Skill 已經內建在 `.agents/skills/`（`AGENTS.md`「怎麼用這份檔」有對照表）。環境準備的 S4 用 `node setup/install-skills.mjs` 複製到 `.claude/skills/`（Claude Code）與 MiniMax Code 的使用者 Skill 資料夾；改了 `.agents/skills/` 之後重跑一次就會更新，`node setup/install-skills.mjs --check` 只比對不寫檔。
 - Skill 直接引用工作區的 `shared/template/USAGE.md`、`shared/template/USAGE-reference.md` 與 `shared/template/tools/build.mjs`，**不要把模板複製進 Skill**。理由：使用者換過的主色與背景圖都在工作區的 `shared/template/`，複製一份就不會跟著變。
 - 依賴：Node.js ≥ 22、ffmpeg／ffprobe（在 PATH 裡）、`npx hyperframes`（版本照根目錄 `package.json`，`npm install` 安裝）。`build.mjs` 本身零依賴。
-- build 用 `--project projects/<專案>`（或只寫名稱）指定專案；沒寫時，目前資料夾在某個專案裡就用它，`projects/` 只有一個專案就用那個，否則報錯並列出現有專案。路徑旗標（相對目前資料夾，會蓋過專案預設）：`--plan`、`--srt`、`--video`、`--out`、`--sfx`。預設是專案裡的 `work/hyperframes/plan.json`、`work/rough.srt`、`work/rough.mp4`、`work/hyperframes/`，音效是 `shared/sfx/`。
-- 專案結構：`projects/<專案>/講稿.md`、`assets/camera/`（口播主軌）、`assets/screen/`、`assets/images/`（只讀）、`work/`（中間產物）、`output/`（`final.mp4`、`test-clips/`、`qc/`；build 會先建好這三個資料夾）。
+- build 用 `--project projects/<專案>`（或只寫名稱）指定專案；沒寫時，目前資料夾在某個專案裡就用它，`projects/` 只有一個專案就用那個，否則出錯並列出現有專案。路徑旗標（相對目前資料夾，會蓋過專案預設）：`--plan`、`--srt`、`--video`、`--out`、`--sfx`。預設是專案裡的 `work/hyperframes/plan.json`、`work/rough.srt`、`work/rough.mp4`、`work/hyperframes/`，音效是 `shared/sfx/`。
+- 專案結構：`projects/<專案>/講稿.md`、`assets/camera/`（講解主軌）、`assets/screen/`、`assets/images/`（只讀）、`work/`（中間產物）、`output/`（`final.mp4`、`test-clips/`、`qc/`；build 會先建好這三個資料夾）。
 - build 結束碼：有 ✖ 錯誤時是 1，可以拿來判斷要不要往下跑。`--list --json` 印出機器可讀的情境、字卡動態、音效清單與 media 段欄位；`--check --json` 印出機器可讀的檢查報告（R2.6）。
 - 素材：`node shared/template/tools/media.mjs scan|frame|main --project projects/<專案>`（核心第 5 節、AGENTS.md「剪乾淨」）。也是零依賴，只用 ffmpeg／ffprobe。
 
@@ -871,7 +871,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 - **`npx hyperframes doctor`**：列為選用（optional）的項目沒裝可以略過，必要項目（Chrome、ffmpeg）要裝好。
 - **`preview --no-open`**：在非互動 shell 會自己轉到背景，印出網址就結束（核心 2.6）。
 - **Studio 的 `data-hf-id`**：Studio 開過之後，產生檔的每個元素會多一個 `data-hf-id` 屬性，不算手改（核心 2.6）。
-- **底片重新編碼**：build 第一次會把 `work/rough.mp4` 轉成 `work/hyperframes/assets/rough.mp4`（30fps、每秒一個關鍵幀、聲音轉 AAC），之後只有 `work/rough.mp4` 比較新時才重轉。build 會印出兩者長度差，超過 0.1 秒會警告字幕可能對不準。
+- **底片重新編碼**：build 第一次會把 `work/rough.mp4` 轉成 `work/hyperframes/assets/rough.mp4`（30fps、每秒一個關鍵影格、聲音轉 AAC），之後只有 `work/rough.mp4` 比較新時才重轉。build 會印出兩者長度差，超過 0.1 秒會警告字幕可能對不準。
 - **字卡動態 14／27／31／38** 第一次 render 需要網路（R3）。
 - `check`／`snapshot`／`render` 開頭印出 `Not inlining "kit/fonts/NotoSansTC-VF.woff2" (5.2 MB exceeds the 2 MB inline limit)` 是正常的，字型仍會從檔案載入，不用處理。
 - **render 很慢或被中斷**：改用背景執行（核心 2.7）。記憶體 ≤ 8GB 的電腦 HyperFrames 會自動改用單一 worker，會更慢。

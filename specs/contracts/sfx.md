@@ -2,7 +2,7 @@
 
 - **擁有者**：005 sfx。**照它做**：002（`tools/lib/plan.mjs` 的音效政策、`scenes/*/scene.json` 預設、`plan.outro`、`lib/main.mjs` 的配樂 `<audio>`）、004（media 段 `clicks`）、003（`index.html` 音效區）、006（剪輯台音效清單、`look` 快取鍵）、001（文件）。
 - **版本**：1（2026-10-31）。改這份要先改 `specs/005-sfx/spec.md`。
-- 名詞：**人聲**＝build 重新編碼後的主軌，整合響度固定 −14 LUFS（`tools/lib/audio.mjs` 的 `LOUD.I`）。**M max**＝ffmpeg `ebur128` 的 momentary 最大值（音檔前後各補 1 s 靜音再量，跟 `shared/sfx/sources.json` 同一種量法；分析報告 03 §1 驗證過兩者一致）。**dB 相對人聲**＝音效在成片裡的 M max 減人聲整合響度。
+- 名詞：**人聲**＝build 重新編碼後的主軌，整合響度固定 −14 LUFS（`tools/lib/audio.mjs` 的 `LOUD.I`）。**M max**＝ffmpeg `ebur128` 的 momentary 最大值（音檔前後各補 1 s 靜音再量，跟 `shared/sfx/sources.json` 同一種量法；分析報告 03 §1 驗證過兩者一致）。**dB 相對人聲**＝音效在完成影片裡的 M max 減人聲整合響度。
 
 ## 1. `shared/template/kit/sfx.json` schema
 
@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | `kind` | `"sfx"`／`"bgm"` | 是 | `sfx`＝段落音效（可寫在段落 `sfx`、scene.json、fx catalog）；`bgm`＝配樂，只能由 plan.json 第一層 `outro.music` 用 | 002 plan.mjs、006 剪輯台、003 gallery |
 | `zh` | 字串 | 是 | 中文名（`--list`、gallery 顯示） | 002、003 |
-| `use` | 字串 | 是 | 用在哪（情境、口播內容） | 文件、`--list` |
+| `use` | 字串 | 是 | 用在哪（情境、講解內容） | 文件、`--list` |
 | `event` | 字串 | 是 | **時機**：檔案的峰值（`peak`）要對齊畫面上哪一格。寫成「…那一格」 | 文件、分鏡表、情境動畫作者 |
 | `peak` | 數字（秒，≥ 0） | 是 | 檔案裡最大樣本的時間（`kind: "bgm"` 寫 0）。cue 的起播時間＝畫面事件秒數 − `peak` ＋ 1 格（既有公式，plan.mjs `mk()`） | 002 |
 | `volume` | 數字（線性，0 < v ≤ 1） | 是 | 預設音量。**由 `targetDb` 換算**，不手填（§3） | 002 |
@@ -66,7 +66,7 @@
 ```
 sfx：volume = 10 ^ ((−14 + targetDb − 檔案 M max) / 20)
 bgm：volume = 10 ^ ((−14 + targetDb − 檔案整合響度) / 20)
-成片裡某一顆 cue 相對人聲（dB）= targetDb + 20·log10(cue.volume ÷ kit.volume) − edit.volume.voice
+完成影片裡某一顆 cue 相對人聲（dB）= targetDb + 20·log10(cue.volume ÷ kit.volume) − edit.volume.voice
 ```
 
 - `cue.volume` 是 plan.mjs 算完的最終線性音量（已乘 scene.json `extra[].volume`、段落 `sfxVolume`、`edit.volume.sfx`、整支淡入淡出）。
@@ -106,7 +106,7 @@ export const SFX_RULES = { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 
 ```js
 // cues：全部 cue（主＋附加），已扣掉被 3 s 規則拿掉的
 //   [{ id: 's05', name: 'chapter', at: 62.4, volume: 0.891, main: true }]
-// opts：{ voiceDb = 0 /* edit.volume.voice */, outDur /* 成片秒數 */, fmt /* 秒數 → "1:02.40" */ }
+// opts：{ voiceDb = 0 /* edit.volume.voice */, outDur /* 完成影片秒數 */, fmt /* 秒數 → "1:02.40" */ }
 // 回傳：
 {
   count: { pop: 12, tick: 30, chapter: 4 },            // 每種音效的次數（主＋附加）→ --check --json 的 sfxCount
@@ -114,7 +114,7 @@ export const SFX_RULES = { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 
   dense: [{ from: 0, to: 60, n: 4, ids: ['s01', 's02', 's03', 's04'] }],   // 主音效、非 additive，floor(at/60) 分組，n > perMinute
   loud:  [{ id: 's05', name: 'chapter', at: 62.4, relDb: -1.2 }],         // relDb > capDb
   levels: { main: [-12.6, -3.0, -6.2], extra: [-19.6, -16.1] },          // [最小, 最大, 中位]／[最小, 最大]（dB 相對人聲）
-  perMinuteAvg: 1.8,                                                     // 主音效（非 additive）÷ 成片分鐘數
+  perMinuteAvg: 1.8,                                                     // 主音效（非 additive）÷ 完成影片分鐘數
   warnings: ['⚠ …'],                                                      // 原文見 contracts/cli-005.md §3.2；002 推進 resolvePlan 的全域 warnings
   lines: ['音效次數：…', '音效密度：…']                                   // --check 文字報告要印的資訊行
 }
@@ -136,7 +136,7 @@ export const SFX_RULES = { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 
 - 欄位：`"clicks": ["#21@安裝", "+3.20", "#22"]`，可寫在 **media 段**（004 加進 `MEDIA_KEYS`）與 **custom 段**（002 加進 custom 的段落欄位）。
 - 每一項的時間文法＝004 `contracts/media.md` §2.2（media 段所有時間欄位共用）：`"#N"`、`"#Ne"`、`"#N±秒"`、`"#N@詞"`、`"#Ne@詞"`、`"+秒"`（本段起點後；`@詞` 的解析照 002 的 `contracts/cues.md`）。不能寫絕對秒數；要落在本段時間內。custom 段用同一套語法。
 - 語意：每一項＝一顆 `click` 附加音效，畫面事件時間＝該項時間，起播＝事件 − `click.peak` ＋ 1 格。
-- 只在**畫面上看得到游標按下**時寫（錄影用 `media.mjs frame --grid`／contact sheet 確認；情境動畫是自己畫的游標按下那一拍）。口播說「按下去」但畫面沒有點擊，不寫（agent-skills `JY/SKILL.md`「口播說『點擊』不算」）。
+- 只在**畫面上看得到游標按下**時寫（錄影用 `media.mjs frame --grid`／contact sheet 確認；情境動畫是自己畫的游標按下那一拍）。講解說「按下去」但畫面沒有點擊，不寫（agent-skills `JY/SKILL.md`「講解說『點擊』不算」）。
 - 段落寫 `"sfxExtra": false` 時，`clicks` 也一起關掉。
 - 錯誤原文（004、002 共用格式）：`✖ m01 clicks[1]（1:14.80）不在這段 1:01.30–1:14.10 裡 → 改成這段範圍內的句號或 +秒數`；`✖ m01 clicks 要寫成陣列，例如 ["+3.2", "#21@安裝"]`。
 
@@ -159,7 +159,7 @@ export const SFX_RULES = { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3 
 
 ### 6.2 行為（002 照做；005 提供 `renderBgmClip`）
 
-1. `start`＝`from` 句起點（成片秒數），`end`＝成片長度，`span = end − start`；`len`＝配樂檔長度。
+1. `start`＝`from` 句起點（完成影片秒數），`end`＝完成影片長度，`span = end − start`；`len`＝配樂檔長度。
 2. `len ≥ span`：從 `start` 播 `span` 秒。`len < span`：改從 `end − len` 起播（對齊片尾），報告印資訊行（原文 `contracts/cli-005.md` §3.4），不是 ⚠。
 3. 淡入 `min(fadeIn, 播放長度 ÷ 3)`、淡出 `min(max(outro.fadeOut ?? kit.fadeOut, edit.fadeOut), 播放長度 ÷ 3)`。`fadeIn` 3.2 s 出處：agent-skills `JY/SKILL.md` 音效表「淡入 3.2s（config `ending.music_fade_in`）」、esim 草稿 `audioFade.in 3.2`（分析報告 01-timeline）；`fadeOut` 1.85 s 是主代理裁決（002 規格，2026-10-31；取代本契約原本的建議初值 2.0 s）。
 4. 增益＝kit `volume` × 10^(`outro.volume`/20) × 10^(`edit.volume.sfx`/20)，**淡入淡出與增益烤進檔案**：build 呼叫

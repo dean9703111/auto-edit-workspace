@@ -5,7 +5,7 @@
 <title>示意插圖元件 illus 畫廊</title>
 <!-- 查表用：亮色／暗色兩個主題並列，每個元件、每個狀態一格，格子下面是 data-* 寫法。
      直接開這個檔就能看（file:// 也可以）；kit/illus-gallery.jpg 是同一頁的截圖。
-     兩欄各是一個 iframe（本檔加 ?theme=light／?theme=dark），主題開關和成片一樣在 <html data-theme>。 -->
+     兩欄各是一個 iframe（本檔加 ?theme=light／?theme=dark），主題開關和完成影片一樣在 <html data-theme>。 -->
 <script>
   var THEME = (location.search.match(/[?&]theme=(light|dark)/) || [])[1] || null;
   if (THEME === 'dark') document.documentElement.setAttribute('data-theme', 'dark');

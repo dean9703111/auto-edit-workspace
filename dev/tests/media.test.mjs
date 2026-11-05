@@ -37,7 +37,7 @@ before(() => {
   cam('01-開場.mp4', 8, 'testsrc');
   cam('03-結尾.mp4', 6, 'smptebars');
   ff(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=44100', '-t', '4', '-c:a', 'aac', path.join(proj, 'assets', 'voice', '02-旁白.m4a')]);
-  // 螢幕錄影：640×400、25fps、關鍵幀稀疏（build 要轉成 30fps、每秒一個關鍵幀），有聲音
+  // 螢幕錄影：640×400、25fps、關鍵影格稀疏（build 要轉成 30fps、每秒一個關鍵影格），有聲音
   ff(['-f', 'lavfi', '-i', 'testsrc=size=640x400:rate=25', '-f', 'lavfi', '-i', 'sine=frequency=880:sample_rate=48000', '-t', '10', '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '250', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, ...REC.split('/'))]);
   ff(['-f', 'lavfi', '-i', 'color=c=0x3B82F6:s=800x500', '-frames:v', '1', path.join(proj, ...IMG.split('/'))]);
   fs.writeFileSync(path.join(proj, 'work', 'rough.srt'), makeSrt({ n: 5 }));   // #5＝15–18
@@ -78,7 +78,7 @@ test('media 段欄位檢查：src、in＋段長、座標範圍、紅框同時 �
   assert.match(e2, /\[s02 fs-list\] 和 m01 時間重疊 3s：整張幕/);
 });
 
-test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關鍵幀、放在主合成；子母畫面避開只有聲音的區間；紅框、運鏡、放大鏡', () => {
+test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關鍵影格、放在主合成；子母畫面避開只有聲音的區間；紅框、運鏡、放大鏡', () => {
   writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 13, in: 1, volume: -6, sfx: 'impact',
     moves: [{ at: '+0.5', to: [0, 0, 320, 200], dur: 0.6 }, { at: '+3', to: 'full', dur: 0.6 }],
     marks: [{ at: '+1', until: '+2.5', box: [40, 40, 200, 100] }],
@@ -93,7 +93,7 @@ test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關
   const asset = path.join(out, v[1]);
   assert.equal(probe(asset, 'stream=r_frame_rate').split('\n')[0], '30/1');
   const keys = spawnSync('ffprobe', ['-v', 'error', '-skip_frame', 'nokey', '-select_streams', 'v', '-show_entries', 'frame=pts_time', '-of', 'csv=p=0', asset], { encoding: 'utf8' }).stdout.trim().split('\n');
-  assert.ok(keys.length >= 9, `關鍵幀太少：${keys.length}`);
+  assert.ok(keys.length >= 9, `關鍵影格太少：${keys.length}`);
   // 子母畫面：7–8、12–13 兩支（8–12 只有聲音，不放）
   assert.match(html, /<video id="pipv-m01" src="assets\/rough\.mp4" data-start="7" data-duration="1" data-media-start="7"/);
   assert.match(html, /<video id="pipv-m01-2" src="assets\/rough\.mp4" data-start="12" data-duration="1" data-media-start="12"/);
@@ -102,7 +102,7 @@ test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關
   assert.match(html, /tl\.set\('#mmk-m01-1', \{ strokeDasharray: 'none' \}/);
   assert.match(html, /tl\.fromTo\('#mst-m01', \{ x: 0, y: 0, scale: 1 \}, \{ x: -?[\d.]+, y: -?[\d.]+, scale: [\d.]+, duration: 0\.6, ease: 'power2\.inOut', force3D: false \}, 7\.5\);/);
   assert.match(html, /MediaKit\.lens\(tl, '#mlc-m01-l1', '#mlsrc-m01-l1 img', \[[\d,]+\], 11, 1\.5\);/);
-  // 動態 v2：從講者進來（fade）→ 面板外框 mgr 從小窗長出（段起點 +0.3）；運鏡層在外框裡抵回畫面座標
+  // 動態 v2：從講者進來（fade）→ 面板外框 mgr 從小視窗長出（段起點 +0.3）；運鏡層在外框裡抵回畫面座標
   assert.match(html, /<div id="mgr-m01" class="mgrow" style="left:(\d+)px;top:(\d+)px;width:\d+px;height:\d+px" data-layout-allow-overflow>\s+<div id="mst-m01" class="mstage" style="left:-?\1px;top:-?\2px"/);
   assert.match(html, /\{ const M = SceneMotion\(tl, document\.getElementById\('el-m01'\)\);\s+M\.grow\('#mgr-m01', 7\.3, \{ from: 'pip' \}\);/);
   assert.match(html, /<script src="kit\/media\.js"><\/script>/);
@@ -131,7 +131,7 @@ test('cut 穿過 media 段：錄影也跳過同一段（data-media-start 跳）�
   assert.match(h2, /tl\.fromTo\('#el-m02', \{ x: 1920 \}, \{ x: 0, duration: 0\.6, ease \}, 7\);/);
   assert.doesNotMatch(h2, /M\.grow\(/, 'enter: "slide" 照舊，不長出');
   const left = fs.readdirSync(path.join(out, 'assets', 'media'));
-  assert.ok(!left.some((f) => f.endsWith('.mp4') || f === 'm01-l1'), `沒用到的錄影與放大鏡逐幀要清掉：${left.join(', ')}`);
+  assert.ok(!left.some((f) => f.endsWith('.mp4') || f === 'm01-l1'), `沒用到的錄影與放大鏡逐格要清掉：${left.join(', ')}`);
 });
 
 test('015 enter: "tape"：圖片縮小貼在全幕背景上（紙白邊、兩條膠帶），面板落下貼平；只給圖片、fit contain、只能當進場', () => {
@@ -217,14 +217,14 @@ test('work/cutpoints.json 讀進 --check 與 build：joins 對在剪接點或 cu
   assert.deepEqual(j.edit.joins, [{ at: 2, type: 'dip', dur: 0.3 }, { at: 2.5, type: 'none' }, { at: 12, type: 'punch' }]);
   writePlan([m], { edit: { joins: [{ at: 5, type: 'dip' }] } });
   assert.ok(checkJson().j.warnings.some((x) => /edit\.joins\[0\]：at 5s 不在剪接點上（最近的是 8s）/.test(x)));
-  // build：punch 從 12（成片 11.5）放大到片尾，dip 在 cut 收起來的 2 秒
+  // build：punch 從 12（完成影片 11.5）放大到片尾，dip 在 cut 收起來的 2 秒
   writePlan([m], { edit: { cuts: [[2, 2.5]], joins: [{ at: 12, type: 'punch' }, { at: 2, type: 'dip' }] } });
   const r = build();
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const html = read('index.html');
   assert.match(html, /tl\.set\('#footage', \{ scale: 1\.08 \}, 11\.5\);/);
   assert.match(html, /tl\.fromTo\('#edit-dip', \{ opacity: 0 \}, \{ opacity: 1, duration: 0\.15, ease: 'sine\.in', immediateRender: false \}, 1\.85\);/);
-  assert.match(html, /data-composition-id="main" data-start="0" data-duration="17\.5"/, '成片長度＝rough 18 − cuts 0.5');
+  assert.match(html, /data-composition-id="main" data-start="0" data-duration="17\.5"/, '完成影片長度＝rough 18 − cuts 0.5');
   // cutpoints.json 壞掉：⚠ 但照樣能檢查
   fs.writeFileSync(path.join(proj, 'work', 'cutpoints.json'), '{ 壞');
   assert.ok(checkJson().j.warnings.some((x) => /work\/cutpoints\.json 不是合法的 JSON/.test(x)));
@@ -421,7 +421,7 @@ test('標註的 ✖／⚠ 訊息：每則都照契約原文、帶「→」改法
   const e1 = j1.errors.join('\n');
   assert.match(e1, /callouts\[0\] 完整可讀只有 -0\.65s（要 ≥ 1\.2s：卡片在 at＋0\.85s 到位、until 前 0\.3s 開始淡出）→ until 延到 0:09\.85 之後，或寫 "quick": true/);
   assert.match(e1, /callouts\[1\]\.text 要寫 1–12 字的說明（名詞或一句重點），現在是 ""/);
-  assert.match(e1, /callouts\[2\]\.text「這是一段超過十二個字的說明文字喔」有 16 字（上限 12）→ 縮成名詞或一句重點，細節交給口播/);
+  assert.match(e1, /callouts\[2\]\.text「這是一段超過十二個字的說明文字喔」有 16 字（上限 12）→ 縮成名詞或一句重點，細節交給講解/);
   assert.match(e1, /callouts\[3\]\.icon：找不到圖示「settingz」（kit\/icons\.json；相近：settings/);
   assert.match(e1, /callouts\[4\]\.side 只能是 "right"、"left"、"top"、"bottom"/);
   assert.match(e1, /callouts\[5\]\.quick 只能寫 true/);

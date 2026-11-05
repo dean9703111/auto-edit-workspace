@@ -20,7 +20,7 @@
      P.sideIn(sel, at)               側邊欄面板 x −960 → 0，PUSH 0.7s、ease＝P.pushEase
      P.sideOut(sel, at)              側邊欄面板 x 0 → −960，同上
      P.pushEase(p)                   與 tools/side_shift.py 相同的 9 點（steps=8）easeInOutSine 分段線性曲線：
-                                     e_i ＝ −(cos(π·i/8) − 1)/2，i＝0..8，點間線性。剪映只能寫線性關鍵幀，兩邊用同一組點才逐幀一致
+                                     e_i ＝ −(cos(π·i/8) − 1)/2，i＝0..8，點間線性。剪映只能寫線性關鍵影格，兩邊用同一組點才逐格一致
      P.end(dur)                      把時間軸撐到 dur 秒（最後一個 tween 早於段長時必加，pitfalls §41）
      ── 綁句（第二層 custom 用；照 specs/contracts/cues.md v1）──
      P.at(ref, off)                  回傳這一句（或這個詞）在本段的秒數，不建立 tween。ref：'#18'＝那句開頭、'#18e'＝結尾、
@@ -302,7 +302,7 @@
   };
 
   window.SceneMotion = function (tl, root) {
-    // 時間 < 0 一律當 0：GSAP 遇到負的位置會把已經排好的動畫全部往後推（綁句太早時 T - 0.9 這種算式會變負，整段跟口播對不上）
+    // 時間 < 0 一律當 0：GSAP 遇到負的位置會把已經排好的動畫全部往後推（綁句太早時 T - 0.9 這種算式會變負，整段跟講解對不上）
     var TL = tl, at0 = function (t) { return typeof t === 'number' && t < 0 ? 0 : t; };
     // 每個 tween 帶 data：{ sc: 第幾個 P.* 呼叫, role: enter｜focus｜accent｜micro, fn: 方法名 }（audit 用；motion.md §4）
     var CALL = { id: 0, depth: 0, role: null, fn: null };
@@ -652,7 +652,7 @@
 
     P.V2 = V2; P.U = U; P.region = REGION; P.sfxCues = sfxList;
     // 前一段是什麼（002 plan-fields.md §4、cues.md §2 segs[id].prev）：root 的 data-prev → host 的 data-prev → __cues.segs[id].prev → 'speaker'
-    //   'speaker'＝前面露講者（主卡從子母畫面長出）、'fullscreen'＝前一段也是全畫面同背景（換卡不換景）、'pip'＝前一段是別的不透明幕（小窗已在）
+    //   'speaker'＝前面露講者（主卡從子母畫面長出）、'fullscreen'＝前一段也是全畫面同背景（換卡不換景）、'pip'＝前一段是別的不透明幕（小視窗已在）
     P.prev = function () {
       var v = root && root.getAttribute ? root.getAttribute('data-prev') : null;
       if (!v && host && host.getAttribute) v = host.getAttribute('data-prev');
@@ -1129,7 +1129,7 @@
     P.ambient = function (D) {
       if (ambientDone || !root || !root.querySelector) return P;
       ambientDone = true;
-      // 子母畫面的段：build 在 host 寫 data-ambient="off"（講者小窗旁邊的底圖一直慢拉、光暈漂移，看起來像在呼吸）
+      // 子母畫面的段：build 在 host 寫 data-ambient="off"（講者小視窗旁邊的底圖一直慢拉、光暈漂移，看起來像在呼吸）
       if (root.getAttribute('data-ambient') === 'off' || (root.closest && root.closest('[data-ambient="off"]'))) return P;
       var sf = root.querySelector('.sc-surface-fs'); if (!sf) return P;
       D = D || P.dur(); if (!(D > 0)) return P;

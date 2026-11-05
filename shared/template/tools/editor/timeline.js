@@ -238,7 +238,7 @@ export class Timeline {
       });
     }
     if (!anim.length) { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.itemsHint || '沒有資訊卡或字卡動態', PAD + 6, (L.anim[0] + L.anim[1]) / 2); }
-    // 沒有任何卡片、動畫或素材的口播（002 check-json 的 uncovered）：灰色斜線
+    // 沒有任何卡片、動畫或素材的講解（002 check-json 的 uncovered）：灰色斜線
     for (const [a, b] of A.uncovered || []) if (vis(a, b)) hatch(a, b, L.anim[0] + 2, L.anim[1] - 2, 'rgba(160,170,190,0.35)', 8);
 
     // ---- 插入素材 ----

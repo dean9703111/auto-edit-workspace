@@ -5,7 +5,7 @@
   "aliases": ["Tips", "小技巧", "技巧卡", "補充建議"],
   "family": "lower-third",
   "portrait": "move",
-  "when": "口播給一個小技巧或補充建議：一句標題＋一兩行說明",
+  "when": "講解給一個小技巧或補充建議：一句標題＋一兩行說明",
   "avoid": "說明超過兩行（縮文案），或是必須記住的重點（改重點字卡）",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
   "surface": null,

@@ -28,7 +28,7 @@
 
 1. 合成最小專案（照 `worker-brief-custom.md`），`build --check` 0 ✖、`build`、`audit --json` 0 ✖；`layout-*` 規則 0 ⚠（其他 ⚠ 逐條說明）。
 2. 亂序 seek 比對 0 差（順序一次、反序一次，含完成態與每拍後 0.3 s）。
-3. snapshot 每拍後 0.3 s＋完成態，用 Read 看圖：等距、底對齊、置中、連接線端點貼元件邊、沒壓小窗、沒出卡。
+3. snapshot 每拍後 0.3 s＋完成態，用 Read 看圖：等距、底對齊、置中、連接線端點貼元件邊、沒壓小視窗、沒出卡。
 4. `node --test dev/tests/examples.test.mjs`（你的檔那幾項）綠。
 
 ## 回報（≤ 20 行，每支一行）

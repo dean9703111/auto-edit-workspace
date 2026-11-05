@@ -60,7 +60,7 @@
 | 完成態停留 | 新訊息完成態 ≥ 1.2 s，段尾最後一幕 ≥ 1.5 s，中間步驟可 0.6 s |
 | 剪接點聲音 | 先量 RMS（dev 測試），有凹洞才改 0.1 s 交叉淡化 |
 | 音效 | B＋C 三批；新事件 click／sparkle／shine／thunder／chapter／bgm；音量跟剪映但上限人聲下 3 dB；合成音效 CC0 釋出 |
-| 瘦臉調光 | 做；偵測資產下載到 `shared/template/vendor/mediapipe/`；預設 color 0.8、slim 0.6；成片 bake 進底片；設定在 `kit/look.json`＋`plan.look`；大眼、磨皮下一階段 |
+| 瘦臉調光 | 做；偵測資產下載到 `shared/template/vendor/mediapipe/`；預設 color 0.8、slim 0.6；完成影片 bake 進底片；設定在 `kit/look.json`＋`plan.look`；大眼、磨皮下一階段 |
 | hyperframes 版本 | 根目錄 `package.json` 釘 0.8.221，setup 加 `npm install` |
 | 跨集學習（G23） | 這次不做 |
 | spec-kit | `.specify/`、`specs/` 進 git；AGENTS.md 資料夾表加一列「作者維護用，剪片時不要讀」 |
@@ -108,7 +108,7 @@
 | `ng-snap` 的靜音來源 | 用 auto-editor 的判定（不重用 snap-srt 的包絡） |
 | 講者閃現門檻 | 1.0 s（同一個空檔只報一次） |
 | 結尾淡出預設 | 1.85 s（01 §2.8 實測；005 的 2.0 s 改成 1.85） |
-| check-json 兩套時間基準 | 接受：`start`／`end`＝rough.mp4 秒、`out.*`＝成片秒；006 的剪輯台「只有聲音未蓋住」讀 `voiceUncovered[]`，「沒有畫面」讀 `uncovered[]` |
+| check-json 兩套時間基準 | 接受：`start`／`end`＝rough.mp4 秒、`out.*`＝完成影片秒；006 的剪輯台「只有聲音未蓋住」讀 `voiceUncovered[]`，「沒有畫面」讀 `uncovered[]` |
 | `tools/lib/custom-preview.mjs`（003） | 003 擁有；002 在 build.mjs 的 `runGallery` 加一行呼叫 `buildCustomPreview`（003 在回報給出 import 行） |
 | audit 新規則的等級 | 第一輪只有三個 ✖（未定位頂層、標題壓內容、綁句失敗），其餘版面與節奏規則 ⚠ |
 | stagger 門檻 vs 條列間隔 | audit ⚠ 門檻 < 0.12 s（TR v3）；文件建議值 0.15 s（兩個數字角色不同，文件要寫明） |

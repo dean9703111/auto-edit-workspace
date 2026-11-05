@@ -21,7 +21,7 @@
  *   --format landscape|portrait（或 橫式|直式）：蓋過版式（預設照 plan.json "format" > work/製作進度.md 開工決策表「版式」> 主軌寬高比；lib/canvas.mjs）
  *
  * --project：專案資料夾（projects/example，或只寫名稱 example）。沒寫時：目前資料夾在某個專案裡就用它；
- *   projects/ 底下只有一個專案就用那個；都不是就報錯並列出現有專案。
+ *   projects/ 底下只有一個專案就用那個；都不是就出錯並列出現有專案。
  * 路徑旗標（選填，相對目前資料夾，會蓋過 --project 的預設）：--plan --srt --video --out --sfx；測試用：--template <shared/template 資料夾>
  * 需要 Node 22 以上、ffmpeg／ffprobe（npx hyperframes doctor 會檢查）。
  * 也會讀：work/cutpoints.json（剪接點，edit.joins 對照用，重新編碼底片時也在這些點做微淡化）；rough.mp4 全黑的區間＝只有聲音（ffmpeg blackdetect，快取在 work/hyperframes/.cache/）。
@@ -312,7 +312,7 @@ export function runGallery(templateDir, { only = null } = {}) {
     sfxScenes[scene.key] = { zh: scene.zh, no: scene.num, main: sc.main ? { sound: sc.main.name, at: sc.main.rel } : null, extra: sc.extra.map((c) => ({ sound: c.name, at: c.rel })) };
     fs.writeFileSync(file, buildPreview({ scene, parts, D, sub: scene.sample?.sub, pipStyle, cues }));
     made.push(file);
-    // 全寬版型示意（只有聲音的段沒有講者小窗：主卡 1680）：04 家族各一張 <編號>-<key>-wide.html；有主視覺欄位的（04a）放筆電
+    // 全寬版型示意（只有聲音的段沒有講者小視窗：主卡 1680）：04 家族各一張 <編號>-<key>-wide.html；有主視覺欄位的（04a）放筆電
     if (scene.family === 'fullscreen') {
       const wseg = { ...seg, slots: { ...seg.slots, ...(scene.slots?.visual ? { visual: 'laptop' } : {}) } };
       const w = resolveScene({ scene, seg: wseg, cues: [], icons: lib.icons, consts: lib.consts, t0: 0, D, where: `[預覽 ${scene.key} 全寬]` });
@@ -436,7 +436,7 @@ export function hasVoiceSource(projectDir) {
   try { return (JSON.parse(fs.readFileSync(path.join(projectDir, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice' || c.kind === 'screen'); } catch { return false; }
 }
 
-// rough.mp4 有全黑區間、專案卻沒有只有聲音的素材 → 初剪壞了（auto-editor 剪手機原檔的已知問題），不能當成「只有聲音」默默拿掉小窗
+// rough.mp4 有全黑區間、專案卻沒有只有聲音的素材 → 初剪壞了（auto-editor 剪手機原檔的已知問題），不能當成「只有聲音」默默拿掉小視窗
 // → { voiceOnly（給 resolvePlan 用）, black（併好的全黑區間）, errors }；相鄰 ≤ 0.1 秒的黑段併成一段
 export function roughBlackCheck(projectDir, voiceOnly, projectRel = 'projects/<專案>') {
   if (!projectDir || !voiceOnly?.length || !fs.existsSync(path.join(projectDir, 'assets')) || hasVoiceSource(projectDir)) return { voiceOnly: voiceOnly || [], black: [], errors: [] };
@@ -463,7 +463,7 @@ const fromRoot = (P, p) => { const r = path.relative(realish(P.root), realish(p)
 // 訊息裡的專案寫法：在 projects/ 底下就寫 projects/<名稱>（工具從別處 symlink 過來時 root 對不到，也照樣好讀）
 export const projectLabel = (P, dir) => (path.basename(path.dirname(dir)) === 'projects' ? `projects/${path.basename(dir)}` : fromRoot(P, dir));
 
-// 插入素材：轉檔（30fps CFR、每秒一個關鍵幀、speed 做進檔案）／複製圖片／放大鏡逐幀；簽章沒變就不重做，沒用到的舊檔刪掉
+// 插入素材：轉檔（30fps CFR、每秒一個關鍵影格、speed 做進檔案）／複製圖片／放大鏡逐格；簽章沒變就不重做，沒用到的舊檔刪掉
 function prepareMedia(items, out, log) {
   const dir = path.join(out, 'assets', 'media');
   const idxFile = path.join(dir, 'index.json');
@@ -482,7 +482,7 @@ function prepareMedia(items, out, log) {
     if (!next[name]) {
       if (idx[name]?.key !== key || !fs.existsSync(abs)) {
         if (main.type === 'video') {
-          log(`轉檔 ${it.media.src} → ${main.rel}（30fps、每秒一個關鍵幀${main.speed !== 1 ? `、×${main.speed}` : ''}）…`);
+          log(`轉檔 ${it.media.src} → ${main.rel}（30fps、每秒一個關鍵影格${main.speed !== 1 ? `、×${main.speed}` : ''}）…`);
           encodeMedia(it.media.abs, abs, { speed: main.speed, keepAudio: main.keepAudio, width: main.w, height: main.h });
         } else if (main.type === 'still') {
           log(`定格 ${it.media.src} 第 ${main.at}s → ${main.rel}`);
@@ -617,7 +617,7 @@ export function build(flags, { log = console.log } = {}) {
   let encoded = false, audioInfo = null;
   if (look) for (const l of look.report) log(l);
   if (!fresh) {
-    log(`重新編碼底片 → ${rel(assetVideo)}（30fps、每秒一個關鍵幀${audioOpts.loudnorm ? '、人聲調到 −14 LUFS' : ''}${audioOpts.declick && cp.list.length ? '、剪接點微淡化' : ''}）…`);
+    log(`重新編碼底片 → ${rel(assetVideo)}（30fps、每秒一個關鍵影格${audioOpts.loudnorm ? '、人聲調到 −14 LUFS' : ''}${audioOpts.declick && cp.list.length ? '、剪接點微淡化' : ''}）…`);
     audioInfo = encodeFootagePolished(footSrc, assetVideo, { cacheDir: path.join(P.out, '.cache'), cutpoints: cp.list.map((c) => c.at), ...audioOpts, crop: frameCrop(plan, footSrc), lut: look?.lut ?? null, canvas: C,
       onMeasure: () => log('量人聲響度（第一次會花一點時間，之後用快取）…') });
     fs.mkdirSync(path.dirname(stampFile), { recursive: true });
@@ -625,7 +625,7 @@ export function build(flags, { log = console.log } = {}) {
     encoded = true;
   } else if (stamp?.info) audioInfo = stamp.info;   // 沒重新編碼：報告用上次的數字
   const rawDur = probeDuration(assetVideo);
-  // 成片長度不超過 rough.mp4：人聲響度標準化（loudnorm）會讓音軌尾巴多約 0.1s，容器長度跟著變長，最後幾格會沒有畫面
+  // 完成影片長度不超過 rough.mp4：人聲響度標準化（loudnorm）會讓音軌尾巴多約 0.1s，容器長度跟著變長，最後幾格會沒有畫面
   const srcDur = fs.existsSync(P.video) ? probeDuration(P.video) : rawDur;
   const videoDur = floorFrame(Math.min(rawDur, srcDur));
   if (encoded) {
@@ -697,7 +697,7 @@ export function build(flags, { log = console.log } = {}) {
   if (dark) log(`主題：暗色（plan.json "theme": "dark"）：背景 ${Object.values(bgMap).filter(Boolean).join('、') || '無'}；主合成與每個子合成的 <html> 加 data-theme="dark"`);
   if (bgMissDark.length && pack) log(`⚠ 暗色背景圖 ${bgMissDark.map((f) => `shared/template/styles/${res.style}/${f}`).join('、')} 不存在，先用亮色那張 → 暗色三張補進這個風格包，或這支改回亮色`);
   else if (bgMissDark.length) log(`⚠ 暗色背景圖 ${bgMissDark.map((f) => `shared/template/${f}`).join('、')} 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/`);
-  // 插入素材的檔（放大鏡的逐幀要先抽好，主合成才知道每一格用哪一張）
+  // 插入素材的檔（放大鏡的逐格要先抽好，主合成才知道每一格用哪一張）
   const mediaN = prepareMedia(res.items, P.out, log);
   // 結尾配樂：量 wav 長度決定起播點，淡入淡出與增益烤進檔案（005 的 renderBgmClip，同參數不重做）
   const clip = outroClipOf(res, P);
@@ -743,7 +743,7 @@ export function build(flags, { log = console.log } = {}) {
     }
   }
 
-  // 寫檔（成片的資料夾先建好，render 的 -o 才寫得進去）
+  // 寫檔（完成影片的資料夾先建好，render 的 -o 才寫得進去）
   fs.mkdirSync(P.out, { recursive: true });
   if (P.project) for (const d of OUTPUT_DIRS) fs.mkdirSync(path.join(P.project, d), { recursive: true });
   // kit 的畫廊與給工人看的風格說明不進專案（illus-gallery.jpg 1.7 MB）；illus.js／illus.css 照常複製
@@ -760,7 +760,7 @@ export function build(flags, { log = console.log } = {}) {
   const generated = new Set();
   for (const [f, c] of files) { W.write(f, c); generated.add(f); }
   W.write('index.html', main.html); generated.add('index.html');
-  // index.html 的修改時間＝最後一次 build：內容沒變也更新時間（剪輯台「成片預覽是舊的」、audit、status、qc 都拿它和 plan.json 比；
+  // index.html 的修改時間＝最後一次 build：內容沒變也更新時間（剪輯台「完成影片預覽是舊的」、audit、status、qc 都拿它和 plan.json 比；
   //   剪輯台存檔時已經重新產生過，再跑 build 不重寫 index.html，舊時間會讓它們誤報「plan.json 比 index.html 新」）
   if (W.res.same.includes('index.html')) { const now = new Date(); fs.utimesSync(path.join(P.out, 'index.html'), now, now); }
   if (test) { W.write(TEST_FILE, test.html); generated.add(TEST_FILE); }

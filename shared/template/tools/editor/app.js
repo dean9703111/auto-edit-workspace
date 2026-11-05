@@ -533,8 +533,8 @@ app.onEnded = () => renderPlay();
 app.onVideoError = (m) => { $('#stageEmpty').hidden = false; $('#stageEmpty').innerHTML = `<div><b>播不了影片</b>${esc(m)}</div>`; };
 app.onPlayerReady = () => { renderMode(); if (app.pendingFocus != null) { player.seek(app.pendingFocus); app.t = app.pendingFocus; app.pendingFocus = null; } };
 app.onPlayerError = (m) => {
-  toast(`成片預覽出錯：${m}`, 'err', 6000);
-  banner(`成片預覽（HyperFrames 播放器）出錯：${esc(m)}。可以先用「即時模擬」，或請 AI 用 Studio 檢查。`, 'error', [['改用即時模擬', () => { banner(''); setMode('sim'); }]]);
+  toast(`完成影片預覽出錯：${m}`, 'err', 6000);
+  banner(`完成影片預覽（HyperFrames 播放器）出錯：${esc(m)}。可以先用「即時模擬」，或請 AI 用 Studio 檢查。`, 'error', [['改用即時模擬', () => { banner(''); setMode('sim'); }]]);
 };
 
 // 音量表
@@ -553,7 +553,7 @@ function drawMeter() {
   if (meterPeak > meterHold || now - holdT > 1200) { meterHold = meterPeak; holdT = now; }
   if (db != null && db > 0) { clipT = now; clipCount++; }
   $('#meterClip').classList.toggle('on', now - clipT < 1500);
-  if (db != null && db > 0 && clipCount > 6 && now - clipToastT > 8000) { clipToastT = now; clipCount = 0; toast('音量超過 0 dB，成片會爆音 → 把人聲或音效調小一點（點時間軸空白處看「整支影片」的音量）', 'warn', 5000); }
+  if (db != null && db > 0 && clipCount > 6 && now - clipToastT > 8000) { clipToastT = now; clipCount = 0; toast('音量超過 0 dB，完成影片會爆音 → 把人聲或音效調小一點（點時間軸空白處看「整支影片」的音量）', 'warn', 5000); }
   const y = (d) => H - 4 - (clamp(d, -48, 6) + 48) / 54 * (H - 8);
   g.clearRect(0, 0, W, H);
   g.fillStyle = '#0B1020'; g.fillRect(0, 0, W, H);
@@ -585,8 +585,8 @@ async function setMode(m, { focus = null } = {}) {
   if (m === app.mode && focus == null) return;
   const pv = app.server?.preview;
   if (m === 'player') {
-    if (!pv?.player?.available) { toast(pv?.player?.reason || '成片預覽不能用', 'warn', 6000); return; }
-    if (!pv.built) { toast('還沒有成片可以預覽 → 先按「重新產生」', 'warn', 5000); return; }
+    if (!pv?.player?.available) { toast(pv?.player?.reason || '完成影片預覽不能用', 'warn', 6000); return; }
+    if (!pv.built) { toast('還沒有完成影片可以預覽 → 先按「重新產生」', 'warn', 5000); return; }
     stopShuttle();
     sim.pause(); sim.hide(true);
     $('#playerHost').hidden = false;
@@ -597,7 +597,7 @@ async function setMode(m, { focus = null } = {}) {
       await player.mount(`${pv.composition}?v=${Math.floor(pv.builtMtime || 0)}`);
       player.seek(focus ?? app.t);
     } catch (err) {
-      toast(`成片預覽載入失敗：${err.message}，改用即時模擬`, 'err', 6000);
+      toast(`完成影片預覽載入失敗：${err.message}，改用即時模擬`, 'err', 6000);
       return setMode('sim');
     }
   } else {
@@ -728,7 +728,7 @@ function applyReport(rep) {
   app.items = (d?.items || rep?.fallback?.items || []).filter((it) => Number.isFinite(it.start) && Number.isFinite(it.end))
     .map((it) => ({ id: it.id, type: it.type || 'scene', label: it.label || '', start: it.start, end: it.end, shownEnd: Number.isFinite(it.shownEnd) ? it.shownEnd : null, src: it.src || null, warnings: it.warnings || 0, sfx: Array.isArray(it.sfx) ? it.sfx : [] }));
   app.voiceOnly = Array.isArray(d?.voiceOnly) ? d.voiceOnly.filter((v) => Array.isArray(v) && v.length === 2) : [];
-  // 002 的 check-json：voiceUncovered＝只有聲音、沒被蓋住（紅色斜線）；uncovered＝沒有任何卡片或素材的口播（灰色斜線）
+  // 002 的 check-json：voiceUncovered＝只有聲音、沒被蓋住（紅色斜線）；uncovered＝沒有任何卡片或素材的講解（灰色斜線）
   const spans = (arr) => (Array.isArray(arr) ? arr.filter((v) => Number.isFinite(v?.start) && Number.isFinite(v?.end) && v.end > v.start).map((v) => [v.start, v.end, v.level || null]) : []);
   app.voiceUncovered = spans(d?.voiceUncovered);
   app.uncovered = spans(d?.uncovered);
@@ -842,7 +842,7 @@ async function save({ auto = false } = {}) {
   if (textChanged.length && !auto && !errs) {
     const id = textChanged[0];
     const it = app.itemsView.find((x) => x.id === id);
-    toast('卡片文字改了：自動重新產生，好了會切到成片預覽', 'ok', 3000);
+    toast('卡片文字改了：自動重新產生，好了會切到完成影片預覽', 'ok', 3000);
     runBuild({ focus: it ? it.start + 0.4 : null, focusId: id, audit: textChanged });
   }
   return true;
@@ -873,10 +873,10 @@ async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
     $('#logTitle').textContent = '✓ 重新產生好了'; $('#logSub').textContent = `花了 ${Math.round(d.seconds || 0)} 秒。`; $('#logWrap').open = false;
     const au = d.audit;
     if (au?.errors.length) { renderCheck(); openIssues(); toast(`重新產生好了，但 ${au.ids.join('、')} 改字後版面有 ${au.errors.length} 個錯誤（左下角檢查清單）：改短或改回原本的字`, 'err', 8000); }
-    else toast(`重新產生好了（${Math.round(d.seconds || 0)} 秒）${au ? `，${au.ids.join('、')} 版面${au.warnings.length ? `有 ${au.warnings.length} 個提醒` : '沒問題'}` : ''}${focusId ? `，切到成片預覽看 ${focusId}` : ''}`, 'ok', 3500, { actions: [['訊息', () => $('#dlgLog').showModal()]] });
+    else toast(`重新產生好了（${Math.round(d.seconds || 0)} 秒）${au ? `，${au.ids.join('、')} 版面${au.warnings.length ? `有 ${au.warnings.length} 個提醒` : '沒問題'}` : ''}${focusId ? `，切到完成影片預覽看 ${focusId}` : ''}`, 'ok', 3500, { actions: [['訊息', () => $('#dlgLog').showModal()]] });
     if (focus != null) {
       if (app.server.preview.player.available) { await setMode('player', { focus }); app.seek(focus); if (focusId) app.select({ kind: segType(sceneById(focusId)) === 'media' ? 'media' : 'item', id: focusId }); }
-      else toast('找不到 HyperFrames 播放器，沒辦法切到成片預覽（只能用即時模擬）', 'warn', 5000);
+      else toast('找不到 HyperFrames 播放器，沒辦法切到完成影片預覽（只能用即時模擬）', 'warn', 5000);
     } else if (app.mode === 'player' && app.server.preview.built) {
       try { await player.mount(`${app.server.preview.composition}?v=${Math.floor(app.server.preview.builtMtime || 0)}`); player.seek(app.t); } catch { setMode('sim'); }
     }
@@ -955,7 +955,7 @@ function renderStatus() {
   $('#stIssues .w').textContent = `⚠ ${warns}`; $('#stIssues .w').classList.toggle('has', !!warns);
   const vu = app.voiceUncovered.length;
   $('#stHint').textContent = vu ? `⚠ ${vu} 段只有聲音、沒被素材蓋住（主軌紅色斜線）` : '';
-  $('#stOut').textContent = `成片 ${fmt(app.outDur, 1)}${app.edit.cuts.length ? `（剪掉 ${fmtSec(cutTotal(app.edit.cuts))}）` : ''}`;
+  $('#stOut').textContent = `完成影片 ${fmt(app.outDur, 1)}${app.edit.cuts.length ? `（剪掉 ${fmtSec(cutTotal(app.edit.cuts))}）` : ''}`;
   $('#stZoom').textContent = `縮放 ${timeline.zoomPct()}%　吸附${app.snapOn ? '開' : '關'}`;
   const s = app.selection;
   $('#stSel').textContent = s ? `已選：${selLabel(s)}` : '';
@@ -1001,7 +1001,7 @@ function renderHeads() {
         <span class="nm">${TRACK_NAMES[k]}<small data-sub></small></span>
         ${k === 'voice' ? '<span class="warnico" data-clipwarn hidden data-tip="">!</span>' : ''}
         ${vol ? `<input class="db" type="number" step="0.5" min="-60" max="12" data-db="${k}" aria-label="${TRACK_NAMES[k]}音量（dB）" data-tip="${TRACK_NAMES[k]}整條軌的音量（dB），−60＝靜音">
-        <button class="mute" data-mute="${k}" data-tip="靜音（M）：這條軌整條不出聲，成片也一樣">M</button>` : ''}
+        <button class="mute" data-mute="${k}" data-tip="靜音（M）：這條軌整條不出聲，完成影片也一樣">M</button>` : ''}
         ${k !== 'anim' ? `<button class="lock" data-lock="${k}" data-tip="鎖定：避免不小心拖到這條軌">🔒</button>` : ''}
       </div>`;
     }).join('');
@@ -1027,7 +1027,7 @@ function renderCapButtons() {
   set('#capMerge', c ? canMerge(app.cues, c.n) : { ok: false, why: '先點一句字幕' });
   set('#capDel', c ? (app.cues.length > 1 ? { ok: true } : { ok: false, why: '只剩一句字幕' }) : { ok: false, why: '先點一句字幕' });
 }
-// 預覽框照畫布：比例（CSS 變數 --cw／--ch）、字幕圖層的位置、即時模擬的講者小窗（直式是下半的講者面板）
+// 預覽框照畫布：比例（CSS 變數 --cw／--ch）、字幕圖層的位置、即時模擬的講者小視窗（直式是下半的講者面板）
 function applyCanvas() {
   const c = app.canvas(), box = $('#stageBox');
   box.style.setProperty('--cw', String(c.W));
@@ -1074,8 +1074,8 @@ function renderCheck() {
   else {
     errors = rep.issues?.errors || []; warnings = rep.issues?.warnings || [];
     const d = rep.data;
-    if (d) sum.innerHTML = errors.length ? `<b class="err-ink">${errors.length} 個錯誤</b>、${warnings.length} 個提醒。錯誤要先改好才能產生成片；點一則跳到那一段。`
-      : `<span class="ok-ink">✓ 通過</span>：${(d.items || []).length} 段、${warnings.length} 個提醒${Number.isFinite(d.outputDur) ? `；成片 ${fmt(d.outputDur, 1)}` : ''}。點一則跳到那一段。`;
+    if (d) sum.innerHTML = errors.length ? `<b class="err-ink">${errors.length} 個錯誤</b>、${warnings.length} 個提醒。錯誤要先改好才能產生完成影片；點一則跳到那一段。`
+      : `<span class="ok-ink">✓ 通過</span>：${(d.items || []).length} 段、${warnings.length} 個提醒${Number.isFinite(d.outputDur) ? `；完成影片 ${fmt(d.outputDur, 1)}` : ''}。點一則跳到那一段。`;
     else sum.innerHTML = `<b class="warn-ink">${rep.fallback ? '簡易檢查' : '讀不到檢查報告'}</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
   }
   // 剛在剪輯改字的段：重新產生後量的版面（audit），放最前面
@@ -1093,25 +1093,25 @@ function renderMode() {
   const avail = !!pv?.player?.available, built = !!pv?.built;
   const pbtn = $('.seg [data-mode="player"]');
   pbtn.classList.toggle('is-disabled', !avail || !built);
-  pbtn.dataset.tip = !avail ? `成片預覽不能用：${pv?.player?.reason || ''}（已退回即時模擬）` : !built ? '還沒有成片：先按「重新產生」' : '播上一次「重新產生」的完整成片（資訊卡、字幕、音效都有）';
+  pbtn.dataset.tip = !avail ? `完成影片預覽不能用：${pv?.player?.reason || ''}（已退回即時模擬）` : !built ? '還沒有完成影片：先按「重新產生」' : '播上一次「重新產生」的完整完成影片（資訊卡、字幕、音效都有）';
   for (const b of $$('.seg button')) b.classList.toggle('on', b.dataset.mode === app.mode);
   const note = $('#modeNote');
   if (app.mode === 'player') {
-    note.innerHTML = `<b>成片預覽</b>：上一次重新產生的完整成片。${pv?.stale ? '<span class="warn-ink">⚠ 之後又改過，按「重新產生」更新。</span>' : ''}`;
+    note.innerHTML = `<b>完成影片預覽</b>：上一次重新產生的完整完成影片。${pv?.stale ? '<span class="warn-ink">⚠ 之後又改過，按「重新產生」更新。</span>' : ''}`;
   } else {
-    note.innerHTML = `<b>即時模擬</b>：粗剪＋你現在的設定（含音效、音量）；卡片要「重新產生」後在成片預覽看。${!avail ? `<span class="mute">（找不到 HyperFrames 播放器，只能用即時模擬）</span>` : ''}`;
+    note.innerHTML = `<b>即時模擬</b>：初剪＋你現在的設定（含音效、音量）；卡片要「重新產生」後在完成影片預覽看。${!avail ? `<span class="mute">（找不到 HyperFrames 播放器，只能用即時模擬）</span>` : ''}`;
   }
 }
 
 // ---------- 主題（亮／暗；plan.json 第一層 "theme"，specs/010-motion-v2/design-system.md §10）----------
-// 不寫＝亮色。成片預覽在切換時直接改播放器 iframe 的 <html data-theme>（build 也是寫在主合成的 <html>），不用重新產生就看得到配色
+// 不寫＝亮色。完成影片預覽在切換時直接改播放器 iframe 的 <html data-theme>（build 也是寫在主合成的 <html>），不用重新產生就看得到配色
 const normTheme = (v) => (v === 'dark' ? 'dark' : 'light');
 function inspTheme() {
   // 用屬性面板的 .seg-btns（不能用 .seg：預覽模式切換會把所有 .seg button 的 on 重設）
   const b = (v, label, tip) => `<button class="${app.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}" aria-pressed="${app.theme === v}" data-tip="${esc(tip)}">${label}</button>`;
   return `<section class="ip-sec"><h3>主題</h3>
     <div class="seg-btns theme-seg" role="group" aria-label="主題">${b('light', '亮', '米白底、白卡（預設）')}${b('dark', '暗', '石墨黑底、玻璃卡')}</div>
-    <p class="ip-note">卡片、全幕和下方字卡的配色。「成片預覽」馬上換色看；存檔後按「重新產生」才會進成片（即時模擬沒有卡片，看不出差別）。</p>
+    <p class="ip-note">卡片、全幕和下方字卡的配色。「完成影片預覽」馬上換色看；存檔後按「重新產生」才會進完成影片（即時模擬沒有卡片，看不出差別）。</p>
   </section>`;
 }
 
@@ -1173,18 +1173,18 @@ function inspLook() {
   const lm = L.landmarks || {};
   // 略過瘦臉（small／noface／rate）時只印一行原因，不放前後對照（重跑也一樣會略過）
   const skip = {
-    small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，成片只調光。`,
+    small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，完成影片只調光。`,
     noface: '抽樣 12 格都沒偵測到臉，這支只調光；確定畫面裡有講者，請 AI 跑 look.mjs run --force。',
-    rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉（不到 80%），自動關掉瘦臉，成片只調光；請 AI 看 work/look-preview.jpg。`,
+    rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉（不到 80%），自動關掉瘦臉，完成影片只調光；請 AI 看 work/look-preview.jpg。`,
   };
   const faces = !lm.ready ? '<p class="ip-note">瘦臉的前後對照要先偵測臉部：請 AI 跑 look.mjs run。</p>'
-    : lm.slimOk === false ? `<p class="ip-note">${esc(skip[lm.reason] || '這支略過瘦臉，成片只調光。')}</p>`
+    : lm.slimOk === false ? `<p class="ip-note">${esc(skip[lm.reason] || '這支略過瘦臉，完成影片只調光。')}</p>`
       : `<div id="lookFaces" class="look-faces"><figure><img data-k="before" alt="原本"${faceSrc('before')}><figcaption>前</figcaption></figure><figure><img data-k="after" alt="瘦臉後"${faceSrc('after')}><figcaption>後（瘦臉 ${lookOut('slim', e.slim)}${e.beauty > 0 ? `、美顏 ${lookOut('slim', e.beauty)}` : ''}）</figcaption></figure><p class="look-msg ip-note"></p></div>`;
   setTimeout(() => refreshFaces(0), 0);
   return `<section class="ip-sec"><h3>講者</h3>
-    ${row('color', '調光', lim.color[1], '亮一點、膚色紅潤一點（剪映「智能調色」）；拖的時候畫面馬上變，是近似效果，成片會更準')}
-    ${row('slim', '瘦臉', lim.slim[1], '臉頰到下巴的輪廓往內收；改了要按「重新產生」才會套進成片（長片第一次要幾分鐘）')}
-    ${row('beauty', '美顏', lim.beauty[1], '磨皮、膚色提亮、淡化黑眼圈，越往右越明顯（0＝關）；和瘦臉一起做進底片，改了要按「重新產生」才會套進成片；即時模擬看不到，看下面「後」那張臉')}
+    ${row('color', '調光', lim.color[1], '亮一點、膚色紅潤一點（剪映「智能調色」）；拖的時候畫面馬上變，是近似效果，完成影片會更準')}
+    ${row('slim', '瘦臉', lim.slim[1], '臉頰到下巴的輪廓往內收；改了要按「重新產生」才會套進完成影片（長片第一次要幾分鐘）')}
+    ${row('beauty', '美顏', lim.beauty[1], '磨皮、膚色提亮、淡化黑眼圈，越往右越明顯（0＝關）；和瘦臉一起做進底片，改了要按「重新產生」才會套進完成影片；即時模擬看不到，看下面「後」那張臉')}
     <div class="ip-btns"><button class="small" data-act="lookOn" data-k="color">調光${e.color > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="slim">瘦臉${e.slim > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="beauty">美顏${e.beauty > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookReset"${app.look ? '' : ' disabled'} data-tip="回到每支影片共用的設定（shared/template/kit/look.json：調光 ${kit.color}、瘦臉 ${kit.slim}、美顏 ${kit.beauty}）">恢復預設</button></div>
     ${faces}
     ${(L.lines || []).map((l) => `<p class="ip-note">${esc(l)}</p>`).join('')}
@@ -1236,10 +1236,10 @@ function inspWhole() {
     ${sliderRow('結尾淡出', 'fadeOut', e.fadeOut, { min: 0, max: 5, step: 0.1, out: e.fadeOut ? `${e.fadeOut.toFixed(1)} 秒` : '不淡', def: 0 })}
   </section>
   <section class="ip-sec"><h3>轉場（${app.points.length} 個剪接點、${e.joins.length} 個有轉場）</h3>
-    <div class="ip-btns"><button class="small" data-act="bulk" data-v="none">全部無</button><button class="small" data-act="bulk" data-v="dip">全部過黑</button><button class="small" data-act="bulk" data-v="alt" data-tip="第 2、4、6… 個剪接點放大：口播跳接時一近一遠">交替放大</button></div>
+    <div class="ip-btns"><button class="small" data-act="bulk" data-v="none">全部無</button><button class="small" data-act="bulk" data-v="dip">全部過黑</button><button class="small" data-act="bulk" data-v="alt" data-tip="第 2、4、6… 個剪接點放大：講解跳接時一近一遠">交替放大</button></div>
     <p class="ip-note">點主軌上緣的菱形可以單獨設定：空心＝無、白＝過黑、黃＝放大。</p>
   </section>
-  <section class="ip-sec"><h3>剪掉的範圍（成片 ${fmt(app.outDur, 1)}）</h3>
+  <section class="ip-sec"><h3>剪掉的範圍（完成影片 ${fmt(app.outDur, 1)}）</h3>
     <ol class="cut-list">${e.cuts.length ? e.cuts.map(([a, b], i) => `<li data-i="${i}"><span class="rng" data-act="gocut" data-i="${i}">${fmtTC(a)} – ${fmtTC(b)}</span><span class="dim">${fmtSec(b - a)}</span><button class="small ghost" data-act="restore" data-i="${i}">恢復</button></li>`).join('') : '<li class="empty">還沒有剪掉任何範圍</li>'}</ol>
   </section>
   <section class="ip-sec"><h3>字幕</h3>
@@ -1292,10 +1292,10 @@ function inspItem(it, sc) {
   return `<section class="ip-sec">
     <div class="ip-row"><span class="k">時間</span><span class="v tcv">${it ? `${fmtTC(it.start)} – ${fmtTC(it.end)}` : '—'}</span></div>
     <div class="ip-row"><span class="k">plan.json</span><span class="v"><code>${esc(fmtTime(sc.from ?? sc.at))}</code> → <code>${esc(fmtTime(sc.to ?? (sc.duration != null ? `+${sc.duration} 秒` : '預設長度')))}</code></span></div>
-    <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button>${pv?.player?.available && pv?.built ? '<button class="small ghost" data-act="playerItem">在成片預覽看</button>' : ''}<button class="small ghost" data-act="rqOpen" data-tip="換動畫、加字、重新排版：寫進右側修改單給 AI">✎ 寫進修改單</button></div>
+    <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button>${pv?.player?.available && pv?.built ? '<button class="small ghost" data-act="playerItem">在完成影片預覽看</button>' : ''}<button class="small ghost" data-act="rqOpen" data-tip="換動畫、加字、重新排版：寫進右側修改單給 AI">✎ 寫進修改單</button></div>
   </section>
   <section class="ip-sec"><h3>文字${def ? `（${esc(def.zh)}）` : ''}</h3>${type === 'custom' ? '<p class="ip-note">自訂動畫的文字寫在它自己的 HTML 裡，請 AI 改。</p>' : textFields(sc, def, type)}
-    <p class="ip-note">${type === 'scene' ? '<code>**詞**</code> 套主色、<code>//</code> 換行（只有標「可強調」的欄位）。' : ''}${type !== 'custom' ? '切到成片預覽，打字時畫面上的字會跟著換（還沒有動畫）；存檔後自動重新產生、量版面，字太長擠到或超出會紅字列在左下角檢查清單。清單只能刪項目。' : ''}要加項目、換動畫、重新排版：寫進右側修改單給 AI。</p>
+    <p class="ip-note">${type === 'scene' ? '<code>**詞**</code> 套主色、<code>//</code> 換行（只有標「可強調」的欄位）。' : ''}${type !== 'custom' ? '切到完成影片預覽，打字時畫面上的字會跟著換（還沒有動畫）；存檔後自動重新產生、量版面，字太長擠到或超出會紅字列在左下角檢查清單。清單只能刪項目。' : ''}要加項目、換動畫、重新排版：寫進右側修改單給 AI。</p>
   </section>
   ${sfxSection(it, sc)}`;
 }
@@ -1433,7 +1433,7 @@ function joinButtons(p) {
   const type = j?.type || 'none';
   return `<div class="seg-btns">${JOIN_TYPES.map(([v, l]) => `<button data-act="join" data-v="${v}" class="${v === type ? 'on' : ''}">${l}</button>`).join('')}</div>
     ${type === 'dip' ? `<div class="ip-row"><label>過黑長度</label><span class="v"><input type="number" data-f="joinDur" min="0.05" max="2" step="0.05" value="${j.dur ?? DIP_DEFAULT}" style="width:80px"> 秒</span></div>` : ''}
-    <p class="ip-note">過黑＝很快變黑再亮（換段落）；放大＝接點後畫面放大 1.08 倍到下一個剪接點（口播跳接常用）。</p>
+    <p class="ip-note">過黑＝很快變黑再亮（換段落）；放大＝接點後畫面放大 1.08 倍到下一個剪接點（講解跳接常用）。</p>
     <div class="ip-btns"><button class="small ghost" data-act="tryJoin">▶ 試看這個接點</button></div>`;
 }
 function inspJoin(p) { return `<section class="ip-sec"><h3>轉場</h3>${joinButtons(p)}</section>`; }
@@ -1455,7 +1455,7 @@ function setPath(obj, path, v) {
   cur[path[path.length - 1]] = v;
   return o;
 }
-// 邊打字邊看：成片預覽（播放器 iframe）裡這段的舊字直接換成新字（靜態：逐字動畫、精確版面要存檔後重新產生）。
+// 邊打字邊看：完成影片預覽（播放器 iframe）裡這段的舊字直接換成新字（靜態：逐字動畫、精確版面要存檔後重新產生）。
 //   froms＝畫面上可能的舊字（上一次打的、上次存檔的）；找最深一層字剛好相同的元素換掉，播放頭不在這段就跳到完成態
 const livePlain = (s) => richPlain(s).replace(/\s+/g, '');
 function livePatch(id, froms, to, rich) {
@@ -2068,7 +2068,7 @@ $('#tlHeads').addEventListener('click', (e) => {
       if (app.trackMuted(k)) app.edit.volume[k] = app.tracks[k].prev ?? 0;
       else { app.tracks[k].prev = app.edit.volume[k]; app.edit.volume[k] = -60; }
     }, { inspector: true });
-    toast(`${TRACK_NAMES[k]}${app.trackMuted(k) ? '已靜音（成片也不會有）' : '取消靜音'}`, 'ok', 1500);
+    toast(`${TRACK_NAMES[k]}${app.trackMuted(k) ? '已靜音（完成影片也不會有）' : '取消靜音'}`, 'ok', 1500);
   } else if (l) { const k = l.dataset.lock; app.tracks[k].lock = !app.tracks[k].lock; renderHeads(); timeline.invalidate(); }
   else { const th = e.target.closest('.th'); if (th && TRACK_NAMES[th.dataset.lane]) { app.selLane = th.dataset.lane; renderHeads(); timeline.invalidate(); } }
 });
@@ -2148,7 +2148,7 @@ function rqLoad() {
 }
 function rqStore() { try { localStorage.setItem(rqKey(), JSON.stringify(app.requests)); } catch { /* 無痕視窗：只留在這個分頁 */ } }
 function rqSegOf(sel) { return sel && (sel.kind === 'item' || sel.kind === 'media' || sel.kind === 'sfx') ? sel.id : null; }
-// 一段的資訊：名稱、動畫是什麼、成片時間、plan.json 的起訖、對應字幕
+// 一段的資訊：名稱、動畫是什麼、完成影片時間、plan.json 的起訖、對應字幕
 function rqInfo(id) {
   const it = app.itemsView.find((x) => x.id === id), sc = sceneById(id);
   if (!sc) return null;
@@ -2217,7 +2217,7 @@ function rqTopHtml(id) {
   const inf = id ? rqInfo(id) : null;
   if (!inf) return '<p class="ip-note">在時間軸點一段動畫或螢幕錄影，在這裡點想怎麼改、或自己寫（直接存）；可以累積很多段，最後一起複製給 AI。</p>';
   const on = app.requests.find((x) => x.id === id)?.tags || [];
-  return `<div class="rq-seg"><div class="t">${esc(inf.id)}　${esc(inf.label)}</div><div class="m">${esc(inf.what)}<br>成片 ${rqTime(inf)}</div></div>
+  return `<div class="rq-seg"><div class="t">${esc(inf.id)}　${esc(inf.label)}</div><div class="m">${esc(inf.what)}<br>完成影片 ${rqTime(inf)}</div></div>
     ${inf.subs.length ? `<ul class="rq-subs">${inf.subs.map((c) => `<li><span class="n">#${c.n}</span>${esc(c.text)}</li>`).join('')}</ul>` : '<p class="ip-note">這段時間沒有字幕</p>'}
     <div class="rq-tags" role="group" aria-label="想怎麼改">${RQ_TAGS[rqKind(inf.sc)].map((t) => `<button class="toggle small${on.includes(t) ? ' on' : ''}" data-rq="tag" data-t="${esc(t)}" aria-pressed="${on.includes(t)}">${esc(t)}</button>`).join('')}</div>
     <textarea id="rqNote" rows="4" placeholder="自己描述（選填）：例如「三個步驟改成手機畫面一步步亮起」">${esc(app.requests.find((x) => x.id === id)?.note || '')}</textarea>
@@ -2232,7 +2232,7 @@ function rqListsHtml(cur) {
   const pi = pend.map((r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${badge(r)}${go(r)}${del(r)}</div>
     ${r.tags.length ? `<div class="chips">${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`).join('');
   const di = done.map((r) => `<li class="rq-item done${r.id === cur ? ' cur' : ''}"><div class="h"><b>✓ ${esc(r.id)}</b><span class="lab">${lab(r)}</span><span class="rq-done">${esc(r.done.round)}</span>
-    <button class="small primary" data-rq="result" data-id="${esc(r.id)}" data-tip="切到成片預覽，跳到這段開頭">▶ 看結果</button>${del(r)}</div><div class="what" data-tip="${esc(r.done.note)}">${esc(r.done.note)}</div></li>`).join('');
+    <button class="small primary" data-rq="result" data-id="${esc(r.id)}" data-tip="切到完成影片預覽，跳到這段開頭">▶ 看結果</button>${del(r)}</div><div class="what" data-tip="${esc(r.done.note)}">${esc(r.done.note)}</div></li>`).join('');
   return `<section class="ip-sec"><h3>待改（${pend.length}）</h3>${pi ? `<ul class="rq-list">${pi}</ul>` : `<p class="ip-note">${done.length ? '都改完了' : '還沒有'}</p>`}</section>`
     + (di ? `<section class="ip-sec"><h3>已改完（${done.length}）</h3><ul class="rq-list">${di}</ul></section>` : '');
 }
@@ -2271,7 +2271,7 @@ function rqMarkdown() {
     const i = rqInfo(r.id);
     L.push('', `## ${k + 1}. ${r.id}${i?.label ? `　${i.label}` : ''}`);
     if (!i) { L.push('- plan.json 裡找不到這段（可能被改名或刪掉了）'); }
-    else L.push(`- 動畫：${i.what}`, ...(i.file ? [`- 檔案：${i.file}`] : []), `- 成片時間：${rqTime(i)}（${app.server?.project?.dir || ''}/work/hyperframes/plan.json：${i.span}）`);
+    else L.push(`- 動畫：${i.what}`, ...(i.file ? [`- 檔案：${i.file}`] : []), `- 完成影片時間：${rqTime(i)}（${app.server?.project?.dir || ''}/work/hyperframes/plan.json：${i.span}）`);
     if (r.tags.length) L.push(`- 要改：${r.tags.join('、')}`);
     if (r.note.trim()) L.push(`- 描述：${r.note.trim().replace(/\s*\n\s*/g, '／')}`);
     if (i?.subs.length) { L.push('- 對應字幕：'); for (const c of i.subs) L.push(`  - #${c.n} ${c.text}`); }

@@ -169,11 +169,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .sim-media { position: absolute; inset: 0; pointer-events: none; }
 .sim-media > * { position: absolute; inset: 0; width: 100%; height: 100%; background: #0A0F1E; opacity: 0; }
 .sim-pip { position: absolute; left: 74.167%; top: 55%; width: 22.5%; height: 30%; border-radius: 4px; border: 2px solid var(--accent); display: none; background: #000; }
-/* 字幕：樣式全部來自 /kit/captions.css（.cg，和成片同一份）；這裡只放一個畫布大小（--cw×--ch）的圖層，由 preview.js 縮到預覽大小 */
+/* 字幕：樣式全部來自 /kit/captions.css（.cg，和完成影片同一份）；這裡只放一個畫布大小（--cw×--ch）的圖層，由 preview.js 縮到預覽大小 */
 .cap-layer { position: absolute; left: 0; top: 0; width: calc(var(--cw) * 1px); height: calc(var(--ch) * 1px); transform-origin: 0 0; pointer-events: none; }
 .cap-layer .cg.off { display: none; }
 .sim-black { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
-/* 只有聲音、沒有插入素材的地方（底片是黑的，畫面是卡片或情境動畫）：說是哪一段、去成片預覽看 */
+/* 只有聲音、沒有插入素材的地方（底片是黑的，畫面是卡片或情境動畫）：說是哪一段、去完成影片預覽看 */
 .sim-hint { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); max-width: 80%; padding: 10px 16px; border-radius: 8px; text-align: center; line-height: 1.6; font-size: 14px; background: rgba(255,255,255,.06); color: var(--mute); border: 1px dashed var(--line2); pointer-events: none; }
 .cut-badge { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); padding: 8px 14px; border-radius: 8px; font-weight: 700; background: color-mix(in srgb, var(--warn) 85%, #000); color: #fff; border: 2px solid #fff; pointer-events: none; }
 .player-host hyperframes-player { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }

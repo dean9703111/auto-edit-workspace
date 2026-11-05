@@ -207,7 +207,7 @@ const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0'
 const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
 const d1 = (v) => n1(r1(v).toFixed(1));
 
-// cues：[{ id, name, at（成片秒數）, volume（最終線性音量）, main（是不是主音效）}]，已扣掉被 3 秒規則拿掉的
+// cues：[{ id, name, at（完成影片秒數）, volume（最終線性音量）, main（是不是主音效）}]，已扣掉被 3 秒規則拿掉的
 export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, gapNote = null } = {}) {
   const R = SFX_RULES;
   const list = (cues || []).filter((c) => c && sfxConf[c.name] && sfxConf[c.name].kind !== 'bgm').sort((a, b) => a.at - b.at);

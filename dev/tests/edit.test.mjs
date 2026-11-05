@@ -1,4 +1,4 @@
-// plan.json 的 edit（剪輯台）：檢查與正規化、rough ↔ 成片時間對應、cuts 讓段落／字幕／音效重新對時間、
+// plan.json 的 edit（剪輯台）：檢查與正規化、rough ↔ 完成影片時間對應、cuts 讓段落／字幕／音效重新對時間、
 // 底片切片（data-media-start、data-fade-*、data-volume）、dip／punch／整支淡入淡出、gains、sfxVolume、--check --json 的時間換回 rough
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -45,7 +45,7 @@ test('normalizeEdit：cuts 排序合併、範圍與型別檢查、joins 對到�
   for (const re of [/edit\.extra：沒有這個欄位/, /cuts\[0\]：\[5, 3\]/, /fadeIn 要是 0–10/, /volume\.voice 要是 −60～\+12/, /volume\.music：沒有這個欄位/, /joins\[0\]\.type 只能是/, /gains\[1\].*和 gains\[0\].*範圍重疊/]) assert.match(all, re);
 });
 
-test('timeMap：rough → 成片（cut 裡的點收到 cut 起點）、成片 → rough（接點上 Start 取後、End 取前）', () => {
+test('timeMap：rough → 完成影片（cut 裡的點收到 cut 起點）、完成影片 → rough（接點上 Start 取後、End 取前）', () => {
   const tm = timeMap([[10, 12], [20, 25]], VD);
   assert.equal(tm.outDur, 37);
   assert.equal(tm.map(5), 5);
@@ -63,7 +63,7 @@ test('timeMap：rough → 成片（cut 裡的點收到 cut 起點）、成片 �
   assert.equal(c.find((x) => x.n === 5).start, cueStart(5) - 2);
 });
 
-test('cuts：段落與字幕重新對時間，整段被剪掉的段拿掉並 ⚠、部分重疊的裁短；成片長度＝rough − cuts', () => {
+test('cuts：段落與字幕重新對時間，整段被剪掉的段拿掉並 ⚠、部分重疊的裁短；完成影片長度＝rough − cuts', () => {
   // #4 是 11.5–14.5；剪掉 11–15 → #4 整句不見
   const res = run([...SCENES, { id: 's03', scene: 'concept', from: '#4', to: '#4e', slots: { text: '整段剪掉' } }], { cuts: [[11, 15]] });
   assert.deepEqual(res.errors, []);
@@ -96,7 +96,7 @@ test('底片切片：cut 的地方換一支 <video>（data-media-start 跳過剪
   assert.match(html, /<video id="rough" src="assets\/rough\.mp4" data-start="0" data-duration="20" data-media-start="0"\s+data-track-index="0" data-has-audio="true" data-fade-out="0\.02" playsinline>/);
   assert.match(html, /<video id="rough-2" src="assets\/rough\.mp4" data-start="20" data-duration="23" data-media-start="21"\s+data-track-index="0" data-has-audio="true" data-fade-in="0\.02" playsinline>/);
   assert.match(html, /data-composition-id="main" data-start="0" data-duration="43"/);
-  // s02（fs-list，有子母畫面）是 18.5–25.0 → 成片 18.5–24.0，cut 收在 20：子母畫面兩支
+  // s02（fs-list，有子母畫面）是 18.5–25.0 → 完成影片 18.5–24.0，cut 收在 20：子母畫面兩支
   assert.match(html, /<video id="pipv-s02" src="assets\/rough\.mp4" data-start="18\.5" data-duration="1\.5" data-media-start="18\.5"/);
   assert.match(html, /<video id="pipv-s02-2" src="assets\/rough\.mp4" data-start="20" data-duration="4" data-media-start="21"/);
   // 幕的進場（v2 色帶擦開）不含子母畫面；cut 切開的第二支接續（enter none、沒有 tween），最後一支在色帶收回時一起淡出（exit layer）
@@ -123,7 +123,7 @@ test('dip／punch／整支淡入淡出／volume／gains：畫面用 GSAP，聲�
   assert.match(html, /tl\.fromTo\('#edit-fade', \{ opacity: 1 \}, \{ opacity: 0, duration: 0\.5, ease: 'none' \}, 0\);/);
   assert.match(html, /tl\.fromTo\('#edit-fade', \{ opacity: 0 \}, \{ opacity: 1, duration: 1, ease: 'none', immediateRender: false \}, 42\);/);
   assert.match(html, /<link rel="stylesheet" href="kit\/media\.css">/);
-  // volume.voice −6 → 0.501；gains 30–32（成片 29–31）再 +9 → +3dB＝1.413，音量不同切開的地方不淡（不然聲音會掉一下）
+  // volume.voice −6 → 0.501；gains 30–32（完成影片 29–31）再 +9 → +3dB＝1.413，音量不同切開的地方不淡（不然聲音會掉一下）
   assert.match(html, /data-volume="0\.501"/);
   assert.match(html, /data-start="29" data-duration="2" data-media-start="30"\s+data-track-index="0" data-has-audio="true" data-volume="1\.413" playsinline/);
   // 音效：總增益 −6dB
@@ -142,7 +142,7 @@ test('sfxVolume：每段的音效音量（主音效＋附加音效），疊在�
   assert.match(bad.errors.join('\n'), /sfxVolume 要是 −60～\+12 的 dB 數字/);
 });
 
-test('成片長度：cuts 不在格上時不會少掉最後一格（rough 已對齊到格，r3 誤差吸收掉）；報告寫 rough − cuts', async () => {
+test('完成影片長度：cuts 不在格上時不會少掉最後一格（rough 已對齊到格，r3 誤差吸收掉）；報告寫 rough − cuts', async () => {
   const { formatReport } = await imp('lib/plan.mjs');
   const res = resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], edit: { cuts: [[1, 2.3]] }, scenes: [] }, cues, videoDur: 44.033, lib: L, outDir: os.tmpdir() });
   assert.equal(res.outDur, 42.733);

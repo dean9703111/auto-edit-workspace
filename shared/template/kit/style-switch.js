@@ -1,4 +1,4 @@
-/* 情境庫預覽頁的風格切換與講者示意圖（只有 preview/*.html 載；成片、Studio 都不載）
+/* 情境庫預覽頁的風格切換與講者示意圖（只有 preview/*.html 載；完成影片、Studio 都不載）
    網址 ?style=<風格包>&theme=dark：換成 ../styles/<風格包>/ 的主色、外框、背景圖，或換暗色主題（講者示意圖也換成暗色版）。
    情境庫 index.html 上方的「風格」「暗色」會改每個 iframe 的網址；沒有這兩個參數時只換講者示意圖（有 speaker-local.jpg 才換）。 */
 (function () {

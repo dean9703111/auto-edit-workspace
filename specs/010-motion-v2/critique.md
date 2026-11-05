@@ -1,6 +1,6 @@
 # 010 動態設計 v2：逐段批評（階段 A）
 
-日期：2026-10-31。對象：`projects/範例/成片/final.mp4`（Sonnet 照現有模板做）。
+日期：2026-10-31。對象：`projects/範例/完成影片/final.mp4`（Sonnet 照現有模板做）。
 證據：主代理的動態條 `scratchpad/motion/*.jpg`；本輪重抽的前／後動態條 `scratchpad/w010/proto/strip-*.jpg`（每 0.15 s 一格）；
 靜止比例用 `ffmpeg freezedetect`（n=0.0015、d=0.5 s，裁掉子母畫面與字幕，只量內容區）。
 

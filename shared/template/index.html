@@ -247,7 +247,7 @@
         <div class="title"><span class="no">01</span><h3>章節轉場</h3><code>chapter</code></div>
         <dl>
           <dt>什麼時候用</dt><dd>每一章開頭（含結語章），用全畫面交代章號與章名</dd>
-          <dt>不要用在</dt><dd class="avoid">章內換小節（改用章節角標），或不想打斷口播的時候</dd>
+          <dt>不要用在</dt><dd class="avoid">章內換小節（改用章節角標），或不想打斷講解的時候</dd>
           <dt>怎麼進場</dt><dd>背景與號卡第一格就在，章名板 0.45 秒、副標 0.6 秒起淡入，字從板子下緣浮出；有圖示時，章名出現後把號卡上方的大圖示描出來，固定 2.5 秒</dd>
         </dl>
         <div class="limits"><span>章名 ≤ 10 字</span><span>副標 ≤ 12 字</span><span>圖示選填</span></div>
@@ -262,7 +262,7 @@
       <div class="body">
         <div class="title"><span class="no">02</span><h3>章節角標</h3><code>chapter-tag</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>章節轉場之後的口播段，在右上角提醒觀眾現在在哪一章，也能當附件疊在其他情境上</dd>
+          <dt>什麼時候用</dt><dd>章節轉場之後的講解段，在右上角提醒觀眾現在在哪一章，也能當附件疊在其他情境上</dd>
           <dt>不要用在</dt><dd class="avoid">兩側、半版側邊欄、章節轉場本身</dd>
           <dt>怎麼進場</dt><dd>從右邊滑入 16px，號碼與章名接著淡入，段尾淡出 0.4 秒</dd>
         </dl>
@@ -278,7 +278,7 @@
       <div class="body">
         <div class="title"><span class="no">03</span><h3>半版側邊欄</h3><code>side-panel</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>口播講一個主題加 3–4 個重點，講者往右移，左半邊推入面板列出重點</dd>
+          <dt>什麼時候用</dt><dd>講解講一個主題加 3–4 個重點，講者往右移，左半邊推入面板列出重點</dd>
           <dt>不要用在</dt><dd class="avoid">只有一兩個重點（改用字卡），或需要比較（改用全畫面）</dd>
           <dt>怎麼進場</dt><dd>面板 0.7 秒從左推入，眉標與標題淡入，項目每 0.6 秒一條（有圖示時，每條的圖示跟著描出來），段尾內容先淡出、面板再推回去</dd>
         </dl>
@@ -360,7 +360,7 @@
       <div class="body">
         <div class="title"><span class="no">04</span><h3>全寬：只有聲音的段（4 種）</h3><code>自動</code></div>
         <dl>
-          <dt>什麼時候</dt><dd>旁白段沒有講者小窗，04 家族與全畫面情境動畫自動換成全寬：主卡拉到 1680（右緣 1800），內容照新寬度重排、站距拉開；寫死座標的內容與介面模擬視窗整塊置中</dd>
+          <dt>什麼時候</dt><dd>旁白段沒有講者小視窗，04 家族與全畫面情境動畫自動換成全寬：主卡拉到 1680（右緣 1800），內容照新寬度重排、站距拉開；寫死座標的內容與介面模擬視窗整塊置中</dd>
           <dt>清單要配圖</dt><dd>04a 寫 <code>slots.visual</code>（畫廊插圖元件，例 laptop），右邊放主視覺；沒寫 <code>--check</code> 會 ⚠</dd>
         </dl>
       </div>
@@ -416,7 +416,7 @@
       <div class="body">
         <div class="title"><span class="no">05</span><h3>兩側</h3><code>two-sides</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>口播並列點名剛好四個東西（工具、功能、角色），講者的臉不被擋住</dd>
+          <dt>什麼時候用</dt><dd>講解並列點名剛好四個東西（工具、功能、角色），講者的臉不被擋住</dd>
           <dt>不要用在</dt><dd class="avoid">不是剛好四個（三個以下用字卡或關鍵詞條列，五個以上用全畫面清單）</dd>
           <dt>怎麼進場</dt><dd>左上、左下、右上、右下依序從自己貼的那一側滑入，圖示接著描出來，段尾一起淡出</dd>
         </dl>
@@ -456,7 +456,7 @@
       <div class="body">
         <div class="title"><span class="no">06</span><h3>一般字卡</h3><code>concept</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>口播帶出一個名詞或一句定義，讓觀眾記住它</dd>
+          <dt>什麼時候用</dt><dd>講解帶出一個名詞或一句定義，讓觀眾記住它</dd>
           <dt>不要用在</dt><dd class="avoid">同時有三個以上名詞（改用關鍵詞條列）</dd>
           <dt>怎麼進場</dt><dd>外殼揭開，圖示圓與正文淡入上漂，接著把圖示描出來</dd>
         </dl>
@@ -489,7 +489,7 @@
       <div class="body">
         <div class="title"><span class="no">08</span><h3>Step 字卡</h3><code>steps</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>口播依序講 2–4 個操作步驟，同一個位置一步換一步</dd>
+          <dt>什麼時候用</dt><dd>講解依序講 2–4 個操作步驟，同一個位置一步換一步</dd>
           <dt>不要用在</dt><dd class="avoid">超過四步（改用全畫面流程），或步驟之間沒有順序（改用標題條列）</dd>
           <dt>怎麼進場</dt><dd>外殼揭開，換步驟時舊的往左淡出、新的從右進來，新步驟的圖示接著描出來</dd>
         </dl>
@@ -505,7 +505,7 @@
       <div class="body">
         <div class="title"><span class="no">09</span><h3>問答字卡</h3><code>qa</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>口播先拋一個問題，停一拍再揭曉答案</dd>
+          <dt>什麼時候用</dt><dd>講解先拋一個問題，停一拍再揭曉答案</dd>
           <dt>不要用在</dt><dd class="avoid">問題和答案同一句講完（改用重點字卡）</dd>
           <dt>怎麼進場</dt><dd>外殼揭開、問題淡入，停一拍後答案淡入上漂</dd>
         </dl>
@@ -566,7 +566,7 @@
 
 <!-- ③ 條列 -->
 <section class="block" id="list">
-  <div class="block-head"><h2>③ 條列</h2><p>口播一個一個點名時，讓條目跟著出現</p></div>
+  <div class="block-head"><h2>③ 條列</h2><p>講解一個一個點名時，讓條目跟著出現</p></div>
   <div class="grid">
 
     <article class="card">
@@ -577,7 +577,7 @@
       <div class="body">
         <div class="title"><span class="no">12</span><h3>關鍵詞條列</h3><code>keywords</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>口播連續點名 2–3 個短關鍵詞，在左側直排依序出現</dd>
+          <dt>什麼時候用</dt><dd>講解連續點名 2–3 個短關鍵詞，在左側直排依序出現</dd>
           <dt>不要用在</dt><dd class="avoid">四個以上（拆兩段），或每條還要附說明（改用標題條列）</dd>
           <dt>怎麼進場</dt><dd>逐條從左側滑入 16px 並停住，膠囊裡的圖示接著描出來，段尾一起淡出</dd>
         </dl>
@@ -593,7 +593,7 @@
       <div class="body">
         <div class="title"><span class="no">13</span><h3>標題條列</h3><code>title-list</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>標題固定，2–4 個條目跟著口播逐條替換，同時只看一條</dd>
+          <dt>什麼時候用</dt><dd>標題固定，2–4 個條目跟著講解逐條替換，同時只看一條</dd>
           <dt>不要用在</dt><dd class="avoid">要同時看到全部條目（改用全畫面清單或半版側邊欄）</dd>
           <dt>怎麼進場</dt><dd>外殼揭開，換條時舊的往左淡出、新的從右進來，圖示接著描出來，每條至少停 1.5 秒</dd>
         </dl>
@@ -606,7 +606,7 @@
 
 <!-- ④ 情境動畫（第二層 custom） -->
 <section class="block" id="custom">
-  <div class="block-head"><h2>④ 情境動畫</h2><p>第二層：口播在講一個情境時，從 <code>shared/template/custom/</code> 複製一支改（挑法見 SITUATIONS.md）。每支都用 P.at 綁字幕句，長度跟著 plan.json 的段長</p></div>
+  <div class="block-head"><h2>④ 情境動畫</h2><p>第二層：講解在講一個情境時，從 <code>shared/template/custom/</code> 複製一支改（挑法見 SITUATIONS.md）。每支都用 P.at 綁字幕句，長度跟著 plan.json 的段長</p></div>
   <div class="grid">
 
     <article class="card">
@@ -1038,7 +1038,7 @@
       <div class="body">
         <div class="title"><span class="no">④</span><h3>示意動畫（骨架）</h3><code>x-scene</code></div>
         <dl>
-          <dt>什麼時候用</dt><dd>口播在描述具體的動作、物件或過程（「拍完先上傳雲端，再下載到電腦打開播放」）；畫面主角是線條插圖（kit/illus-gallery.jpg 的元件）</dd>
+          <dt>什麼時候用</dt><dd>講解在描述具體的動作、物件或過程（「拍完先上傳雲端，再下載到電腦打開播放」）；畫面主角是線條插圖（kit/illus-gallery.jpg 的元件）</dd>
           <dt>不要用在</dt><dd class="avoid">只有名詞、沒有動作（用 12 或 x-callout）；抽象步驟、沒有具體物件（用 x-process）；畫廊沒有的物件先照 kit/illus-style.md 畫成 illus-local/*.svg</dd>
           <dt>畫面上</dt><dd>插圖元件照拍一個一個彈出、元件之間描線、螢幕換狀態（錄影 → 播放）、最後結果徽章打勾；同一時間只有一個焦點</dd>
         </dl>
@@ -1201,8 +1201,8 @@
     <a href="fx/index.html"><img src="fx/renders/fx-38-highlight-text.jpg" alt="38 螢光筆劃線" loading="lazy"><span><small>38</small>螢光筆劃線</span></a>
   </div>
   <div class="note">
-    <p>一段口播最多用一兩張字卡動態，而且不要和下方字卡同時出現。</p>
-    <p>字卡動態畫廊顯示的是預設配色，實際成片會換成你的主色。分鏡寫編號就能用，例如「字卡動態 03」。</p>
+    <p>一段講解最多用一兩張字卡動態，而且不要和下方字卡同時出現。</p>
+    <p>字卡動態畫廊顯示的是預設配色，實際完成影片會換成你的主色。分鏡寫編號就能用，例如「字卡動態 03」。</p>
     <a class="btn-fx" href="fx/index.html">打開字卡動態畫廊（40 種）→</a>
   </div>
   <div class="fx-cats">

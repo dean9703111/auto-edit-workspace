@@ -6,7 +6,7 @@
   "family": "chapter",
   "portrait": "stage",
   "when": "每一章開頭（含總結章），用全畫面幕交代章號與章名",
-  "avoid": "章內換小節（改章節角標），或不想打斷口播節奏時",
+  "avoid": "章內換小節（改章節角標），或不想打斷講解節奏時",
   "layout": { "data-layout": "全畫面", "data-pip": "none", "data-top": "0", "data-bottom": "1080" },
   "layoutByProfile": { "yt": { "data-top": "100" } },
   "surface": "ch",

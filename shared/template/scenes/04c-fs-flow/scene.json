@@ -33,12 +33,12 @@
   },
   "rules": [],
   "sample": {
-    "title": "從原始口播到成片",
+    "title": "從原始講解到完成影片",
     "sub": "先轉逐字稿，AI 再找出 NG",
     "duration": 6,
     "slots": {
-      "title": "從原始口播到成片",
-      "nodes": ["轉逐字稿 ｜icon=file-text", "列剪輯清單 ｜icon=list-checks", "初剪 ｜icon=scissors", "包裝成片 ｜icon=clapperboard"],
+      "title": "從原始講解到完成影片",
+      "nodes": ["轉逐字稿 ｜icon=file-text", "列剪輯清單 ｜icon=list-checks", "初剪 ｜icon=scissors", "包裝影片 ｜icon=clapperboard"],
       "current": "2"
     },
     "beats": {}

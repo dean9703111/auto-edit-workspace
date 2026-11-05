@@ -1,6 +1,6 @@
 # 015 示意動畫換畫風與新情境（lemo-opuscar／shotcraft 選片）
 
-來源：作者 2026-11-04 說 `x-scene`、`x-scene-example-rec`、`x-scene-example-outline`「真的很醜」，要從 lemo-opuscar 與 video-shotcraft 找口播適合的案例。選片頁（私人）https://claude.ai/artifact/Pvy66Ys2tFMzVGU9iY1UJo 回了 26 個「要」，並說「如果選中的已經有類似，就進行合併優化，然後要變成適合這個專案的風格」。
+來源：作者 2026-11-04 說 `x-scene`、`x-scene-example-rec`、`x-scene-example-outline`「真的很醜」，要從 lemo-opuscar 與 video-shotcraft 找講解適合的案例。選片頁（私人）https://claude.ai/artifact/Pvy66Ys2tFMzVGU9iY1UJo 回了 26 個「要」，並說「如果選中的已經有類似，就進行合併優化，然後要變成適合這個專案的風格」。
 
 （shotcraft 鏡頭卡移植頁 https://claude.ai/artifact/QH83yQDapQZdqZNaCwUMd2 的決定還沒回；那條線之後用 016。）
 
@@ -15,7 +15,7 @@
 - 顏色只用既有 token：主色 `--brand`（預設橘）、墨 `--v2-ink`、灰 `--v2-mute`、卡白 `--v2-node`、淡主色 `--v2-node-tint`、紅綠 `--sc-warn`／`--sc-good`。lemo 各風格自己的配色（藍綠象形、黑板綠、新聞黃黑）一律換成這組。
 - 線稿為主：背景圖本來就是主色線稿（視窗、手機），插圖改成「白底＋墨線＋主色點綴」後同一個語言。暗色主題＝深底淺線（黑板感），同一套 token 自動切換。
 - 字一律 Noto Sans TC（不引入手寫字型）；終端機與程式碼另加等寬字 JetBrains Mono（OFL）。
-- 主卡（`.sc-wcard`＋主色標題列）、子母畫面小窗、綁句 `P.at('#N@詞')`、一拍一焦點、音效拍點全部照舊。
+- 主卡（`.sc-wcard`＋主色標題列）、子母畫面小視窗、綁句 `P.at('#N@詞')`、一拍一焦點、音效拍點全部照舊。
 - 動作只能用 `kit/scene-motion.js` 的 `P.*`（examples.test 規定），新手法先進 kit 再給範本用。
 
 ## 定案：26 個怎麼處理

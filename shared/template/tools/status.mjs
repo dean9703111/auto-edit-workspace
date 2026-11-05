@@ -75,7 +75,7 @@ export const TIMELINE_FILES = [
   ['work/rough.srt', '字幕'], ['work/cutpoints.json', '剪接點'], ['work/screen-sync.json', '螢幕錄影同步'],
   ['work/rough-look.mp4', '瘦臉底片'], ['work/構圖預覽.jpg', '構圖分析（停點 ②）'], ['work/hyperframes/plan.json', 'plan.json'],
   ['work/storyboard.md', '分鏡表（停點 ③）'], ['work/hyperframes/index.html', 'build'],
-  ['output/test-clips/test-clip.mp4', '測試片段'], ['output/final.mp4', '成片'], ['output/qc/qc-sheet.jpg', '驗收'],
+  ['output/test-clips/test-clip.mp4', '測試片段'], ['output/final.mp4', '完成影片'], ['output/qc/qc-sheet.jpg', '驗收'],
 ];
 const born = (st) => (st.birthtimeMs > 0 && st.birthtimeMs <= st.mtimeMs + 1000 ? st.birthtimeMs : st.mtimeMs);
 const hm = (ms) => { const m = Math.max(0, Math.round(ms / 60000)); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
@@ -155,7 +155,7 @@ export function projectStatus(project) {
   }
 
   const T = [
-    ['S0', () => mains === 0, '開新專案（還沒有主軌素材）', '把口播放進 assets/camera/（有畫面）或 assets/voice/（只有聲音）；邊錄邊講的螢幕錄影放 assets/screen/ 也算；講稿存成 講稿.md', '無', 'assets/camera/ 與 assets/voice/ 都沒有檔，assets/screen/ 也沒有邊錄邊講的錄影'],
+    ['S0', () => mains === 0, '開新專案（還沒有主軌素材）', '把講解放進 assets/camera/（有畫面）或 assets/voice/（只有聲音）；邊錄邊講的螢幕錄影放 assets/screen/ 也算；講稿存成 講稿.md', '無', 'assets/camera/ 與 assets/voice/ 都沒有檔，assets/screen/ 也沒有邊錄邊講的錄影'],
     ['S1', () => mains > 1 && !has(W('main.mp4')), '剪乾淨／接主軌', '列出主軌順序，和剪輯清單一起在停點 ① 確認後跑 media.mjs main', '① 剪輯清單', `主軌有 ${mains} 個檔、沒有 work/main.mp4`],
     ['S2', () => !has(W('cuts.md')), '剪乾淨／轉逐字稿、找 NG', '轉逐字稿（npx hyperframes transcribe … --model small --language zh），找 NG，寫 work/cuts.md', '① 剪輯清單', '沒有 work/cuts.md'],
     ['S3', () => !has(W('rough.mp4')), '剪乾淨／停點 ① 剪輯清單', '使用者確認剪輯清單後跑 media.mjs ng-snap，照它印的指令輸出 rough.mp4', '① 剪輯清單', '有 work/cuts.md、沒有 work/rough.mp4'],
@@ -170,7 +170,7 @@ export function projectStatus(project) {
     ['S11', () => !has(index) || newer(plan, index), '剪好看／build', '跑 build.mjs（有情境動畫先跑 audit.mjs），再 snapshot --review 抽查', '④ Studio 預覽', `${has(index) ? 'plan.json 比 index.html 新' : '沒有 work/hyperframes/index.html'}${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`],
     ['S12', () => !has(finalMp4), '剪好看／停點 ④ Studio 預覽', '開 Studio 給使用者看；使用者說可以後先輸出測試片段，再輸出 output/final.mp4', '④ Studio 預覽', '沒有 output/final.mp4'],
     ['S13', () => !has(sheet) || newer(finalMp4, sheet), '交付／驗收', '跑 qc.mjs final，把輸出和 qc-sheet.jpg 給使用者', '無', has(sheet) ? 'final.mp4 比 qc-sheet.jpg 新' : '沒有 output/qc/qc-sheet.jpg'],
-    ['S14', () => true, '完成', '等使用者的修改要求（改了就從 build 重跑）', '無', '成片與驗收截圖都在'],
+    ['S14', () => true, '完成', '等使用者的修改要求（改了就從 build 重跑）', '無', '完成影片與驗收截圖都在'],
   ];
   const hit = T.find(([, cond]) => cond());
   let [stage, , at, next, nextStop, why] = hit;
@@ -206,7 +206,7 @@ export function projectStatus(project) {
         '① 剪輯清單': '等使用者在剪輯清單頁（editor.mjs 印的「剪輯清單：」網址）勾好後回覆；回覆後先重新讀 cuts.md（只剪「剪」欄是 [x] 的列），跑 media.mjs ng-snap，照它印的指令剪',
         '② 構圖': '等使用者在構圖台拖好框按「儲存」（剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就把 qc.mjs framing 表上 ✔ 那一列的 frame 寫進 plan.json（1.0 倍不寫）。之後跑 qc.mjs speaker 量講者框',
         '③ 分鏡表': '等使用者回覆分鏡表；回覆「可以」或「改好了」後，先重新讀 work/storyboard.md，以檔案為準寫正式 plan.json',
-        '④ Studio 預覽': '等使用者看 Studio；要改就改 plan.json 那一段再 build，說可以就輸出測試片段與成片',
+        '④ Studio 預覽': '等使用者看 Studio；要改就改 plan.json 那一段再 build，說可以就輸出測試片段與完成影片',
         '⑤ 剪輯台': '等使用者在剪輯台調完說「調好了」；之後重新讀 plan.json 與 rough.srt 再 build',
         '⑥ 背景預覽': '等使用者看三張背景圖；說可以才複製進 shared/template/',
       }[w.stop];

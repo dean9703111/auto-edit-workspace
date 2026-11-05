@@ -1,9 +1,9 @@
 // 兩種預覽
 //   SimPreview     播 rough.mp4，用 WebAudio 增益、黑色遮罩、CSS transform 即時模擬 cuts（播放時跳過）／音量（含範圍音量）／淡入淡出／dip／punch，
-//                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲，位置和成片同一個可見區（橫式 contain＝上方 1920×940，字幕帶空出來）；
-//                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去成片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
+//                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲，位置和完成影片同一個可見區（橫式 contain＝上方 1920×940，字幕帶空出來）；
+//                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去完成影片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
 //                  全部聲音最後經過 AnalyserNode 給音量表
-//   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整成片；時間是成片時間）
+//   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整完成影片；時間是完成影片時間）
 // 兩者對外都用 rough.mp4 的秒數（app.t）。
 import { clamp, cutIndexAt, outOf, roughOf, effectsAt, dbToGain, gainAt, MEDIA_TRANS } from './model.mjs';
 
@@ -15,7 +15,7 @@ export class SimPreview {
     this.mediaEls = new Map();
     this.sfxBuf = new Map();      // name → AudioBuffer | Promise | null
     this.lastSkip = 0; this.lastT = 0;
-    // 字幕：直接用 kit/captions.css（成片的樣式與數字），排在畫布大小（app.canvas().W×H）的圖層裡，再整層縮到預覽的大小
+    // 字幕：直接用 kit/captions.css（完成影片的樣式與數字），排在畫布大小（app.canvas().W×H）的圖層裡，再整層縮到預覽的大小
     if (els.capLayer && typeof ResizeObserver === 'function') {
       new ResizeObserver(() => this.fitCaps()).observe(els.capLayer.parentElement);
       this.fitCaps();
@@ -178,21 +178,21 @@ export class SimPreview {
         const cw = pip.width, ch = pip.height, vr = v.videoWidth / v.videoHeight, cr = cw / ch;
         let sw = v.videoWidth, sh = v.videoHeight, sx = 0, sy = 0;
         if (vr > cr) { sw = sh * cr; sx = (v.videoWidth - sw) / 2; } else { sh = sw / cr; sy = (v.videoHeight - sh) / 2; }
-        g.filter = A.lookCss || 'none';   // 講者調光：子母畫面小窗跟大畫面同色
+        g.filter = A.lookCss || 'none';   // 講者調光：子母畫面小視窗跟大畫面同色
         try { g.drawImage(v, sx, sy, sw, sh, 0, 0, cw, ch); } catch { /* 影片還沒準備好 */ }
         g.filter = 'none';
       }
     } else pip.style.display = 'none';
     return true;
   }
-  // 插入素材的可見區＝成片的（/api/state canvas.media，lib/media.mjs mediaFrame 的 view；直式有講者面板時用 panel）
+  // 插入素材的可見區＝完成影片的（/api/state canvas.media，lib/media.mjs mediaFrame 的 view；直式有講者面板時用 panel）
   placeMedia(el, fit, panel, side = false) {
     const c = this.app.canvas?.() || {}, V = (side && c.media?.side?.[fit]) || c.media?.[panel ? 'panel' : 'full']?.[fit];
     const W = c.W || 1920, H = c.H || 1080, [x, y, w, h] = Array.isArray(V) ? V : [0, 0, W, H];
     const css = `position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%;object-fit:${fit};`;
     if (el.style.cssText !== css) el.style.cssText = css;
   }
-  // 只有聲音的地方：底片是黑的，卡片和情境動畫只在成片預覽畫 → 在中間寫是哪一段
+  // 只有聲音的地方：底片是黑的，卡片和情境動畫只在完成影片預覽畫 → 在中間寫是哪一段
   tickHint(t, covered) {
     const A = this.app, el = this.el.hint;
     if (!el) return;
@@ -200,7 +200,7 @@ export class SimPreview {
     if (!covered && A.voiceOnly.some(([a, b]) => t >= a && t < b)) {
       let it = null;
       for (const x of A.itemsView) if (x.type !== 'media' && t >= x.start && t < (x.vend ?? x.end) && (!it || x.start >= it.start)) it = x;
-      txt = it ? `${it.id}　${it.label || ''}\n這段只有聲音，畫面是卡片或情境動畫 → 切到「成片預覽」看` : '這段只有聲音（沒有講者畫面）';
+      txt = it ? `${it.id}　${it.label || ''}\n這段只有聲音，畫面是卡片或情境動畫 → 切到「完成影片預覽」看` : '這段只有聲音（沒有講者畫面）';
     }
     if (el.textContent !== txt) { el.textContent = txt; el.style.whiteSpace = 'pre-line'; }
     el.hidden = !txt;
@@ -241,7 +241,7 @@ export class PlayerPreview {
     this.host = host; this.app = app;
     this.p = null; this.ready = false; this.outT = 0; this._playing = false; this.pendingSeek = null; this.failed = null;
   }
-  // 成片時間 ↔ rough 時間：用 plan.json 目前存的 cuts（plan 在上次 build 之後又改過時，頁面會提醒「成片預覽是舊的」）
+  // 完成影片時間 ↔ rough 時間：用 plan.json 目前存的 cuts（plan 在上次 build 之後又改過時，頁面會提醒「完成影片預覽是舊的」）
   get cuts() { return this.app.savedEdit.cuts; }
   get time() { return roughOf(this.outT, this.cuts); }
   get playing() { return this._playing; }

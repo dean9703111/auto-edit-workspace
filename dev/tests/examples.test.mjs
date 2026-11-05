@@ -43,7 +43,7 @@ const EXAMPLES = {
   'x-news': { pre: 'xnews', range: [371, 375], card: 'xnews-head' },
 };
 const COUNT = Object.keys(EXAMPLES).length;
-const HEAD = ['適用的口播', '不要用在哪裡', '要改的地方', '綁句欄位', 'D 下限', '版面'];
+const HEAD = ['適用的講解', '不要用在哪裡', '要改的地方', '綁句欄位', 'D 下限', '版面'];
 const FOREACH1 = "[ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(";
 const FOREACH2 = "[ 'swap', 'axis', 'focus' ].forEach(";
 const norm = (s) => s.replace(/\s+/g, '').replace(/class="[^"]*"/g, '').replace(/(width|height)="[^"]*"/g, '');

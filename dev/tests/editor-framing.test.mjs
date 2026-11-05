@@ -94,12 +94,12 @@ test('構圖下方直接預覽動畫：未儲存的框即時更新，橫直式�
 });
 after(async () => { await editor?.ctx.framingJob; await editor?.close(); });
 
-test('構圖：沒有成片只存設定；已有成片自動更新；連續儲存採最後一個框；不變、衝突和錯誤皆保留正確狀態', async () => {
+test('構圖：沒有完成影片只存設定；已有完成影片自動更新；連續儲存採最後一個框；不變、衝突和錯誤皆保留正確狀態', async () => {
   let state = await get('/api/state');
   const first = await save({ base: { hash: state.plan.hash }, frame: [160, 90, 1600, 900] });
-  assert.equal(first.framingUpdate.running, false, '分鏡前不產生成片');
+  assert.equal(first.framingUpdate.running, false, '分鏡前不產生完成影片');
   assert.equal(fs.existsSync(path.join(out, 'index.html')), false);
-  // 產生初始成片，後續僅按構圖儲存，不再呼叫 /api/build。
+  // 產生初始完成影片，後續僅按構圖儲存，不再呼叫 /api/build。
   const built = spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--project', project, '--template', TEMPLATE], { cwd: root, encoding: 'utf8' });
   assert.equal(built.status, 0, built.stdout + built.stderr);
   state = await get('/api/state');
@@ -142,7 +142,7 @@ test('構圖：沒有成片只存設定；已有成片自動更新；連續儲�
   fs.writeFileSync(planFile, validPlan);
 });
 
-test('兩個頁面：構圖儲存自動更新成片播放器，保留剪輯未存音量，套用新調光；介面使用「構圖／剪輯」', { timeout: 90000 }, async (t) => {
+test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪輯未存音量，套用新調光；介面使用「構圖／剪輯」', { timeout: 90000 }, async (t) => {
   const chrome = await hasChrome();
   if (!chrome) { t.skip('找不到現有 Chrome'); return; }
   if (!fs.existsSync(path.join(out, 'index.html'))) {

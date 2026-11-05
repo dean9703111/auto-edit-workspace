@@ -20,7 +20,7 @@ const num = (x,y,n) => `<circle cx="${x}" cy="${y}" r="18" fill="${C.orange}"/>$
 const arrow = (x,y,vertical=false) => `<path d="${vertical?`M${x} ${y-13}v26m-7-7 7 7 7-7`:`M${x-13} ${y}h26m-7-7 7 7-7 7`}" fill="none" stroke="${C.orange}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
 function mini(kind,x,y) {
   let b=box(x,y,350,112,'#0B111E',10);
-  if(kind===0) for(let i=0;i<4;i++) b+=box(x+16+i*82,y+16,72,78,'#1B2940',8)+text(x+24+i*82,y+45,['口播','旁白','錄影','圖片'][i],18)+line(x+28+i*82,y+61,x+69+i*82,y+61,C.orange,3)+line(x+28+i*82,y+73,x+58+i*82,y+73,C.muted,2);
+  if(kind===0) for(let i=0;i<4;i++) b+=box(x+16+i*82,y+16,72,78,'#1B2940',8)+text(x+24+i*82,y+45,['講解','旁白','錄影','圖片'][i],18)+line(x+28+i*82,y+61,x+69+i*82,y+61,C.orange,3)+line(x+28+i*82,y+73,x+58+i*82,y+73,C.muted,2);
   if(kind===1) {for(let i=0;i<28;i++){let h=12+(i*17%48); b+=line(x+18+i*11,y+53-h/2,x+18+i*11,y+53+h/2,i>8&&i<15?'#EF7D83':C.orange,5);} b+=box(x+109,y+17,76,70,'none',6,'#EF7D83')+text(x+120,y+101,'NG 剪掉，留下完整一句',16,C.muted);}
   if(kind===2){b+=box(x+15,y+12,155,86,'#293449',5)+box(x+30,y+20,123,69,'none',0,C.orange); b+=`<circle cx="${x+94}" cy="${y+44}" r="13" fill="#C3CEDF"/><path d="M${x+66} ${y+83}q0-32 28-32t28 32" fill="#C3CEDF"/>`; b+=arrow(x+192,y+56)+box(x+216,y+17,113,78,'#EFE8DB',5)+box(x+226,y+30,58,15,C.orange,3)+box(x+297,y+66,23,22,'#354058',3)+text(x+229,y+66,'動畫預覽',14,'#323C4E');}
   if(kind===3){for(let i=0;i<3;i++)b+=box(x+15+i*109,y+15,100,63,i===1?'#F6ECE0':'#26344C',5)+box(x+25+i*109,y+25,45,8,C.orange,2)+line(x+25+i*109,y+49,x+93+i*109,y+49,i===1?'#A8A093':C.muted,3)+text(x+34+i*109,y+100,['s01 開場','s02 流程','s03 重點'][i],15,C.muted);}
@@ -28,9 +28,9 @@ function mini(kind,x,y) {
   if(kind===5){b+=box(x+18,y+16,132,80,'#253950',6)+`<path d="M${x+70} ${y+38}l28 18-28 18z" fill="${C.orange}"/>`+arrow(x+184,y+56)+text(x+216,y+48,'final.mp4',23,C.text,700)+text(x+216,y+77,'也能帶去剪映',17,C.muted);}
   return b;
 }
-const stages=[['放好素材','影片、聲音、錄影、圖片','有講稿也一起放進來'],['剪乾淨','找 NG、縮停頓、上字幕','① 看剪輯清單'],['構圖與風格','拖框、選主色與背景','② 看動畫，儲存並套用'],['確認分鏡','每段要配什麼畫面','③ 看分鏡表與截圖'],['預覽與修改','看成片，說一句話或自己調','④ Studio；需要時開 ⑤ 剪輯'],['輸出與驗收','確認後輸出 MP4','選用：主軌＋透明 MOV＋SRT']];
+const stages=[['放好素材','影片、聲音、錄影、圖片','有講稿也一起放進來'],['剪乾淨','找 NG、縮停頓、上字幕','① 看剪輯清單'],['構圖與風格','拖框、選主色與背景','② 看動畫，儲存並套用'],['確認分鏡','每段要配什麼畫面','③ 看分鏡表與截圖'],['預覽與修改','看完成影片，說一句話或自己調','④ Studio；需要時開 ⑤ 剪輯'],['輸出與驗收','確認後輸出 MP4','選用：主軌＋透明 MOV＋SRT']];
 function workflow(mobile=false){
-  const w=mobile?440:1320,h=mobile?2040:890;let b=text(32,48,'從素材到成片',mobile?31:38,C.text,800)+text(32,82,'先看整體流程，再跟 AI 一步一步做',mobile?19:23,C.muted);
+  const w=mobile?440:1320,h=mobile?2040:890;let b=text(32,48,'從素材到完成影片',mobile?31:38,C.text,800)+text(32,82,'先看整體流程，再跟 AI 一步一步做',mobile?19:23,C.muted);
   stages.forEach(([title,desc,stop],i)=>{const x=mobile?24:32+(i%3)*426,y=mobile?110+i*313:116+Math.floor(i/3)*354;
     b+=box(x,y,392,292)+num(x+33,y+37,String(i+1))+text(x+64,y+46,title,27,C.text,800)+mini(i,x+21,y+64)+text(x+21,y+211,desc,21)+text(x+21,y+253,stop,18,C.green);
     if(mobile&&i<5)b+=arrow(220,y+302,true);
@@ -64,7 +64,16 @@ fs.writeFileSync(path.join(work,'rough.srt'),'1\n00:00:00,100 --> 00:00:03,800\n
 // 輕微平移讓工具能量出動作範圍；示範圖本身不變。
 const result=spawnSync('ffmpeg',['-y','-v','error','-loop','1','-i',path.join(TPL,'preview/speaker.jpg'),'-f','lavfi','-i','anullsrc=r=48000:cl=mono','-t','4','-r','30','-vf','crop=1888:1062:16+12*sin(t*3):9+6*cos(t*3),scale=1920:1080','-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p','-c:a','aac',path.join(work,'rough.mp4')],{encoding:'utf8'});
 if(result.status!==0)throw Error(result.stderr);
-let editor,browser;
+// 剪輯清單（停點 ①）：另一個示範專案，只有 main.mp4 與 cuts.md（還沒初剪，頁面才能勾選）
+const cutsWork=path.join(root,'projects','剪輯清單示範','work');fs.mkdirSync(cutsWork,{recursive:true});
+const cutsVideo=spawnSync('ffmpeg',['-y','-v','error','-loop','1','-i',path.join(TPL,'preview/speaker.jpg'),'-f','lavfi','-i','anullsrc=r=48000:cl=mono','-t','160','-r','10','-vf','scale=960:540','-c:v','libx264','-preset','ultrafast','-tune','stillimage','-pix_fmt','yuv420p','-c:a','aac','-shortest',path.join(cutsWork,'main.mp4')],{encoding:'utf8'});
+if(cutsVideo.status!==0)throw Error(cutsVideo.stderr);
+fs.writeFileSync(path.join(cutsWork,'cuts.md'),['# 剪輯清單','','## NG','','| 剪 | 時間碼 | 內容 | 原因 | 待確認 |','|---|---|---|---|---|',
+  '| [x] | 0:12.40–0:15.10 | 今天要介紹… | 同一句講兩次，留後面那次 | — |',
+  '| [ ] | 1:03.00–1:05.80 | 這個設定要…呃… | 卡住重講 | — |',
+  '| [x] | 2:30.00–2:31.20 | 我們先看… | 逐字稿和講稿對不上 | 講稿沒有這句，可能是 whisper 補的 |','',
+  '## 需要你決定','','- 第 3 列（2:30.00–2:31.20）待確認：講稿沒有這句，可能是 whisper 補的',''].join('\n'));
+let editor,cutsEditor,browser;
 try{
   editor=await startEditor({flags:{project:path.dirname(work),template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
   const framingResponse=await fetch(new URL('/api/framing',editor.url));
@@ -94,9 +103,24 @@ try{
   const design=await page.$eval('#design',e=>{const r=e.getBoundingClientRect();return {x:Math.floor(r.x),y:Math.floor(r.y+scrollY),width:Math.floor(r.width),height:Math.ceil(r.height)};});
   // 取完整設定與前六個動畫，避免截斷操作區。
   await page.screenshot({path:path.join(OUT,'design.jpg'),type:'jpeg',quality:88,clip:design,captureBeyondViewport:true});
-  const dimensions={framing:{width:1600,height:Math.ceil(bounds.bottom+16)},design:{width:design.width,height:design.height}};
+  await page.evaluate(()=>document.querySelectorAll('.docs-marker').forEach(e=>e.remove()));
+  cutsEditor=await startEditor({flags:{project:path.dirname(cutsWork),template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
+  await page.goto(new URL('/cuts',cutsEditor.url).href);await page.waitForSelector('.ct-row',{timeout:15000});
+  await page.waitForFunction(()=>document.querySelector('#video').readyState>=2,{timeout:15000});
+  await page.evaluate(()=>document.fonts.ready);
+  // 第 1 列試聽到「會剪掉的部分」就暫停，截進度條與「正在播」那一刻
+  await page.click('.ct-row[data-row="1"] .ct-play');
+  await page.waitForFunction(()=>document.querySelector('#video').currentTime>13.2,{timeout:15000});
+  await page.evaluate(()=>document.querySelector('#video').pause());
+  await page.mouse.move(0,0);
+  // 番號放在文字後面或區塊右側，不蓋住勾選框與文字
+  const badge=async(selector,n,mode)=>page.$eval(selector,(e,n,mode)=>{const r=mode==='after'?(()=>{const g=document.createRange();g.selectNodeContents(e);return g.getBoundingClientRect();})():e.getBoundingClientRect(),b=document.createElement('span');b.className='docs-marker';b.textContent=n;Object.assign(b.style,{position:'absolute',left:`${(mode==='after'?r.right+10:r.right-46)+scrollX}px`,top:`${r.top+scrollY+(r.height-32)/2}px`,width:'32px',height:'32px',borderRadius:'50%',background:'#FF791F',color:'#090D17',font:'800 20px sans-serif',display:'grid',placeItems:'center',zIndex:99,boxShadow:'0 0 0 3px white'});document.body.append(b);},n,mode);
+  await badge('#listTitle','1','after');await badge('.ct-player h2','2','after');await badge('#next','3','inside');
+  const cutsBottom=await page.$eval('.ct-main',e=>Math.ceil(e.getBoundingClientRect().bottom+scrollY));
+  await page.screenshot({path:path.join(OUT,'cuts.jpg'),type:'jpeg',quality:88,clip:{x:0,y:0,width:1600,height:cutsBottom},captureBeyondViewport:true});
+  const dimensions={cuts:{width:1600,height:cutsBottom},framing:{width:1600,height:Math.ceil(bounds.bottom+16)},design:{width:design.width,height:design.height}};
   fs.writeFileSync(path.join(OUT,'dimensions.json'),JSON.stringify(dimensions,null,2)+'\n');
   console.log(JSON.stringify(dimensions));
-  console.log(`✔ 文件圖解 4 張、介面截圖 2 張：${path.relative(WS,OUT)}`);
+  console.log(`✔ 文件圖解 4 張、介面截圖 3 張：${path.relative(WS,OUT)}`);
   console.log('介面截圖使用內建示範講者；未讀寫使用者專案、共用模板或個人參考圖。');
-}finally{if(browser)await browser.close();if(editor)await editor.close();}
+}finally{if(browser)await browser.close();if(editor)await editor.close();if(cutsEditor)await cutsEditor.close();}

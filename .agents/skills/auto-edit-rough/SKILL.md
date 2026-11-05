@@ -1,6 +1,6 @@
 ---
 name: auto-edit-rough
-description: 把 projects/<專案> 的口播剪成初剪：接主軌、逐字稿、找 NG 列剪輯清單、auto-editor 去停頓、字幕校正拆句與對齊開口、剪接點。當使用者說「剪乾淨」「剪成初剪」「找 NG」時使用。已經有 work/rough.mp4、要做資訊卡或成片時不要用（改用 auto-edit-storyboard）；只改字幕文字或時間時也不要用（改用剪輯台，auto-edit-review 流程 C）。
+description: 把 projects/<專案> 的講解剪成初剪：接主軌、逐字稿、找 NG 列剪輯清單、auto-editor 去停頓、字幕校正拆句與對齊開口、剪接點。當使用者說「剪乾淨」「剪成初剪」「找 NG」時使用。已經有 work/rough.mp4、要做資訊卡或完成影片時不要用（改用 auto-edit-storyboard）；只改字幕文字或時間時也不要用（改用剪輯台，auto-edit-review 流程 C）。
 version: 0.1.0
 ---
 # 剪乾淨（初剪）
@@ -94,7 +94,7 @@ ffprobe -v error -show_entries format=duration -of csv=p=0 projects/<專案>/wor
 node shared/template/tools/media.mjs verify-rough --project projects/<專案>
 ```
 
-三行跑完先跑 verify-rough：它拿 rough.mp4 的黑畫面對照原片同一秒，原片不黑、rough 黑＝初剪壞了（之後子母畫面會沒有講者小窗）。回報附上它印的那一行（✓ 或黑畫面表）。
+三行跑完先跑 verify-rough：它拿 rough.mp4 的黑畫面對照原片同一秒，原片不黑、rough 黑＝初剪壞了（之後子母畫面會沒有講者小視窗）。回報附上它印的那一行（✓ 或黑畫面表）。
 完成判準：ffprobe 的長度和 auto-editor 統計的輸出長度一致；`work/cuts.v1.json` 存在；verify-rough 印 `✓ work/rough.mp4 沒有黑畫面`，或 `✓ 黑畫面 N 段，原片同位置也是黑的（只有聲音的素材配的純黑）：…`。
 常見錯誤：把 ng-snap 印的指令存進變數或拼成字串再執行 → 引號會變成參數的一部分而失敗，整行照抄貼上執行（第 2 行要跑好幾分鐘就背景執行）；印 `✖ work/rough.mp4 有 N 段黑畫面（共 Ns）原片同位置不黑 → 初剪壞了…` → 照它印的 1–4 行重做（剪輯清單不用改），不要自己改 ffmpeg 或 auto-editor 參數；重做後 rough.mp4 長度和原本差超過 0.2 秒 → 第 7 步字幕重轉、重跑 srt-align；講話尾音被切 → ng-snap 加 `--edit "audio:-26dB"`（還切到就 `-30dB`）重跑再預演；小聲自言自語沒剪掉 → `--edit "audio:-16dB"`（AGENTS.md「剪乾淨的數字」）。
 

@@ -45,7 +45,7 @@
 
 ## 保留選項：動畫逐段進剪映（作者 2026-11-01：「第三種最理想，就是一個保留選項」，未排程）
 
-目標：每段動畫輸出成透明 MOV＋導入清單，接 agent-skills `jianying-editing` 的 `import_hf_movs.py`，在剪映裡還能調。現在只有攤平的 `成片/final.mp4` 能進剪映。
+目標：每段動畫輸出成透明 MOV＋導入清單，接 agent-skills `jianying-editing` 的 `import_hf_movs.py`，在剪映裡還能調。現在只有攤平的 `完成影片/final.mp4` 能進剪映。
 
 已確認的事（2026-11-01）：
 
@@ -54,7 +54,7 @@
 - x 檔靠 build 注入的 `window.__cues` 綁句，不能單獨 render → build 要多一個「只有疊加層」的模式（不放 rough.mp4 底片、字幕、背景圖）。
 - `import_hf_movs.py` 只吃橫式 1920×1080（`:467`、`:449`）；直式走 `gen_short_draft.py` 的 `hf_movs`。
 
-開工前要做的比對（還沒做）：兩邊分工。本工作區在 HTML 裡做的講者小窗、字幕、章節角標、轉場、音效、背景圖，剪映 pipeline 由剪映端做（`add_subtitle_track.py`、`pip_transitions.py`、`pip_frames_from_list.py`、音效點位表）→ 逐項決定匯出時拿掉還是保留；導入清單／`footprint.json` 欄位照 agent-skills `hyperframes-overlay` 的 `import-list.mjs`、`footprint.mjs`。
+開工前要做的比對（還沒做）：兩邊分工。本工作區在 HTML 裡做的講者小視窗、字幕、章節角標、轉場、音效、背景圖，剪映 pipeline 由剪映端做（`add_subtitle_track.py`、`pip_transitions.py`、`pip_frames_from_list.py`、音效點位表）→ 逐項決定匯出時拿掉還是保留；導入清單／`footprint.json` 欄位照 agent-skills `hyperframes-overlay` 的 `import-list.mjs`、`footprint.mjs`。
 
 現在不用為它改任何東西；之後改版本機制時別把匯出用不到的東西寫進 x 檔（x 檔維持唯一的動畫原始檔）。
 

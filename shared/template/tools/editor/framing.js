@@ -1,5 +1,5 @@
 // 構圖：在沒裁切的 work/rough.mp4 上拖一個鎖定比例（橫式 16:9、直式 9:16）的框，存成 plan.json 的 frame（畫布座標）。
-// 右邊即時畫出裁切後的樣子＋字幕、下方字卡、子母畫面小窗的位置；直式畫頭頂範圍與下巴上限。
+// 右邊即時畫出裁切後的樣子＋字幕、下方字卡、子母畫面小視窗的位置；直式畫頭頂範圍與下巴上限。
 // 分析（講者動作範圍、黑邊、建議的框）來自 GET /api/framing（qc.mjs framing 同一套）；存檔走 POST /api/save { base, frame, look }。
 // 下面一起決定講者調光、瘦臉（plan.json 的 look；打開瘦臉才偵測臉：POST /api/look/run，GET /api/look/status 看進度），
 // 和「用這一格當預覽參考圖」（POST /api/refframe → shared/template/preview/speaker-local.jpg，情境庫、風格預覽頁的講者改用它）。
@@ -103,10 +103,10 @@ function render() {
   dirty();
 }
 
-// ---------- 右邊：成片看起來 ----------
+// ---------- 右邊：完成影片看起來 ----------
 function legend() {
   const items = [[ORANGE, '講者動作範圍'], ['rgba(255,255,255,0.8)', '字幕'], ['var(--accent)', '下方字卡']];
-  if (!portrait()) items.push(['#3B82F6', '子母畫面小窗']);
+  if (!portrait()) items.push(['#3B82F6', '子母畫面小視窗']);
   else items.push([CYAN, '頭頂要在兩條線之間'], [MAGENTA, '下巴不超過這條線']);
   $('legend').replaceChildren(...items.map(([c, t]) => { const s = document.createElement('span'); s.innerHTML = `<i style="background:${c}"></i>`; s.append(t); return s; }));
 }
@@ -118,7 +118,7 @@ function drawPreview() {
   ctx.fillRect(0, 0, cw, ch);
   if (v.videoWidth) {
     const s = Math.min(W() / v.videoWidth, H() / v.videoHeight), ox = (W() - v.videoWidth * s) / 2, oy = (H() - v.videoHeight * s) / 2;
-    ctx.filter = lookCss(look.color, 0);   // 調光的近似效果（成片照 LUT 會更準）
+    ctx.filter = lookCss(look.color, 0);   // 調光的近似效果（完成影片照 LUT 會更準）
     ctx.drawImage(v, (F.x - ox) / s, (F.y - oy) / s, F.w / s, hOf(F.w) / s, 0, 0, cw, ch);
     ctx.filter = 'none';
   }
@@ -141,7 +141,7 @@ function drawPreview() {
   };
   rect(C.caption, 'rgba(255,255,255,0.8)', null, '字幕', 'rgba(0,0,0,0.45)');
   rect(C.card, ACC(), [6, 4], '下方字卡');
-  if (!portrait()) { const [x, y, w, h] = C.pip; rect([x, y, x + w, y + h], '#3B82F6', [6, 4], '子母畫面小窗'); }
+  if (!portrait()) { const [x, y, w, h] = C.pip; rect([x, y, x + w, y + h], '#3B82F6', [6, 4], '子母畫面小視窗'); }
   else {
     ctx.fillStyle = CYAN; for (const y of C.headTop) ctx.fillRect(0, y * k - 1, cw, 2);
     ctx.fillStyle = MAGENTA; ctx.fillRect(0, C.chinMax * k - 1, cw, 2);
@@ -320,13 +320,13 @@ const lookOut = (k, v) => (v > 0 ? (k === 'color' ? `${v.toFixed(2)}（剪映 ${
 function renderLook() {
   for (const k of ['color', 'slim', 'beauty']) { $(k).value = String(look[k]); $(`${k}On`).checked = look[k] > 0; $(`${k}Out`).textContent = lookOut(k, look[k]); }
   const S = D.look || {}, lm = S.look?.landmarks || {};
-  const skip = { small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，成片只調光。`, noface: '抽樣都沒偵測到臉，這支只調光。', rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉，自動關掉瘦臉，成片只調光。` };
-  let note = '要開就勾選；調光拖滑桿右邊的畫面馬上變（近似效果，成片照 LUT 更準）。';
+  const skip = { small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，完成影片只調光。`, noface: '抽樣都沒偵測到臉，這支只調光。', rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉，自動關掉瘦臉，完成影片只調光。` };
+  let note = '要開就勾選；調光拖滑桿右邊的畫面馬上變（近似效果，完成影片照 LUT 更準）。';
   const needDetect = faceOn(look) && !lm.ready;
   if (S.running) note = `正在${S.line}（在背景跑，可以繼續拖框；好了下面會出現前後對照）`;
   else if (needDetect) note = `瘦臉、美顏要先偵測整支影片的臉，長片要十幾分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
-  else if (faceOn(look) && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，成片只調光。';
-  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。已有成片時，儲存會自動更新底片與剪輯預覽。';
+  else if (faceOn(look) && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，完成影片只調光。';
+  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。已有完成影片時，儲存會自動更新底片與剪輯預覽。';
   $('lookNote').textContent = note;
   $('btnDetect').hidden = !needDetect || !!S.running;
   const showFaces = faceOn(look) && lm.ready && lm.slimOk !== false;

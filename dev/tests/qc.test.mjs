@@ -54,8 +54,8 @@ test('locateItem／itemName：取重疊最多的段落', () => {
   assert.equal(Q.locateItem([12, 15], items).id, 's02');
   assert.equal(Q.itemName(items[1]), 's02 Step 字卡');
   assert.equal(Q.itemName(items[2]), 'm01 螢幕錄影');
-  assert.equal(Q.itemName(null), '主軌口播');
-  // cuts 剪掉前面 2 秒：成片 58–61 ＝ rough 60–63
+  assert.equal(Q.itemName(null), '主軌講解');
+  // cuts 剪掉前面 2 秒：完成影片 58–61 ＝ rough 60–63
   assert.equal(Q.locateItem([58, 61], items, [[0, 2]]).id, 'm01');
 });
 
@@ -169,7 +169,7 @@ test('完成態不早於最後一個進場完成、不晚於被下一段不透�
   assert.deepEqual(Q.lastEnter([[0, 1, 'enter', 'a'], [2, 3, 'change', ''], [1.5, 2.5, 'enter', 'b']]), { end: 2.5, text: 'b' });
 });
 
-test('子母畫面段沒有講者小窗（F2）：哪些段該有、缺口落在 rough 全黑才 ✖、有聲音素材不判、final 的 judge 印 ✖', () => {
+test('子母畫面段沒有講者小視窗（F2）：哪些段該有、缺口落在 rough 全黑才 ✖、有聲音素材不判、final 的 judge 印 ✖', () => {
   const it = (id, type, family, out, extra = {}) => ({ id, type, family, label: type === 'scene' ? '04a 全畫面清單' : 'x', key: 'x-tool-flow.html', opaque: true, out: { start: out[0], end: out[1], pip: out[2] || [] }, ...extra });
   const items = [
     it('s20', 'custom', 'custom', [112, 120.4, [{ start: 112, end: 116.1 }]]),
@@ -184,12 +184,12 @@ test('子母畫面段沒有講者小窗（F2）：哪些段該有、缺口落在
   const voiceOnly = [[116.1, 119.5], [119.53, 153.5]];
   const miss = Q.pipMissing({ items, scenes, voiceOnly, project: 'projects/example' });
   assert.deepEqual(miss.map((m) => m.id), ['s20', 's21', 'm01']);
-  assert.equal(miss[1].msg, 's21 是全畫面清單卻沒有講者小窗：work/rough.mp4 在 1:56.10–2:33.50 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/example 照它印的做');
-  assert.match(miss[0].msg, /^s20 是全畫面情境動畫（x-tool-flow\.html），講者小窗在 1:56\.10 就沒了（段到 2:00\.40）：/);
+  assert.equal(miss[1].msg, 's21 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 1:56.10–2:33.50 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/example 照它印的做');
+  assert.match(miss[0].msg, /^s20 是全畫面情境動畫（x-tool-flow\.html），講者小視窗在 1:56\.10 就沒了（段到 2:00\.40）：/);
   assert.deepEqual(Q.pipMissing({ items, scenes, voiceOnly: [], project: 'p' }), [], '沒有全黑就不是初剪的問題');
   assert.deepEqual(Q.pipMissing({ items, scenes, voiceOnly, hasVoice: true, project: 'p' }), [], '有只有聲音的素材：全黑是旁白區間');
   assert.deepEqual(Q.mergeRanges([[1, 2], [2.05, 3], [5, 6]]), [[1, 3], [5, 6]]);
-  // 002 之後：沒有聲音素材時 voiceOnly 是空的、小窗照開，全黑放在 roughBlack → 小窗開著但底片是黑的，一樣 ✖
+  // 002 之後：沒有聲音素材時 voiceOnly 是空的、小視窗照開，全黑放在 roughBlack → 小視窗開著但底片是黑的，一樣 ✖
   const lit = items.map((x) => (x.out && ['s20', 's21'].includes(x.id) ? { ...x, out: { ...x.out, pip: [{ start: x.out.start, end: x.out.end }] } } : x));
   const miss2 = Q.pipMissing({ items: lit, scenes, voiceOnly: [], roughBlack: [[116.1, 153.5]], project: 'projects/example' });
   assert.deepEqual(miss2.map((m) => m.id), ['s20', 's21', 'm01']);
@@ -197,10 +197,10 @@ test('子母畫面段沒有講者小窗（F2）：哪些段該有、缺口落在
   const v = Q.judge({ ...base, pipMissing: miss });
   assert.equal(v.ok, false);
   assert.deepEqual(v.checks.filter((c) => c.key === 'pip').map((c) => c.level), ['error', 'error', 'error']);
-  assert.equal(Q.judge({ ...base, pipMissing: [] }).checks.find((c) => c.key === 'pip').text, '子母畫面段都有講者小窗');
+  assert.equal(Q.judge({ ...base, pipMissing: [] }).checks.find((c) => c.key === 'pip').text, '子母畫面段都有講者小視窗');
 });
 
-test('outOf：有 items[].out 就用；沒有時用 start／end＋cuts 推算（成片秒數）', () => {
+test('outOf：有 items[].out 就用；沒有時用 start／end＋cuts 推算（完成影片秒數）', () => {
   const a = Q.outOf([{ id: 's01', type: 'scene', start: 10, end: 20, out: { start: 9, end: 19, lists: [10], annotations: null } }], [[2, 3]]);
   assert.equal(a.fallback, false);
   assert.deepEqual([a.list[0].start, a.list[0].lists], [9, [10]]);
@@ -209,7 +209,7 @@ test('outOf：有 items[].out 就用；沒有時用 start／end＋cuts 推算（
   assert.deepEqual([b.list[0].start, b.list[0].end], [9, 20]);
 });
 
-test('observe 的純函式：時間格、格子標籤、字幕換成片秒數、靜止區間、接縫、在哪一格、建議倍率', () => {
+test('observe 的純函式：時間格、格子標籤、字幕換完成影片秒數、靜止區間、接縫、在哪一格、建議倍率', () => {
   assert.deepEqual(Q.observeTimes(10, 12), [10, 10.5, 11, 11.5]);
   const segs = [{ id: 's01', start: 1, end: 7.5 }, { id: 'm01', start: 7.4, end: 14 }];
   const cues = Q.cuesToOut([{ n: 3, start: 8, end: 11, text: '第 3 句' }, { n: 4, start: 20, end: 22, text: '剪掉' }], [[19, 23]]);
@@ -306,7 +306,7 @@ test('observe：每 0.5 秒一格的總表、靜止區間 6–16 秒、接縫條
   assert.equal(j.static[0].id, 's01');
   assert.deepEqual(j.seams.map((s) => [s.at, s.before, s.after]), [[1, null, 's01'], [7.5, 's01', null]]);
   const md = fs.readFileSync(path.join(dir, 'index.md'), 'utf8');
-  assert.match(md, /^\| 檔案 \| 範圍 \| 格數 \| 第 r 列第 c 格的時間 \| 小窗（子母畫面段） \|$/m);
+  assert.match(md, /^\| 檔案 \| 範圍 \| 格數 \| 第 r 列第 c 格的時間 \| 小視窗（子母畫面段） \|$/m);
   assert.match(md, /^\| sheet-01\.jpg \| 0:00\.0–0:22\.0 \| 44 \| 0:00\.0 ＋ \(\(r−1\)×6 ＋ \(c−1\)\)×0\.5 秒 \| — \|$/m);
   assert.match(md, /^\| 0:06\.0–0:16\.0 \| 10\.0 秒 \| s01 \| #2 第 2 句字幕內容 \| sheet-01\.jpg 第 3 列第 1 格起 \|$/m);
   assert.match(md, /^\| 2 \| 0:07\.5 \| s01 → — \| seam-01\.jpg 第 2 列 \|$/m);
@@ -318,20 +318,20 @@ test('observe：每 0.5 秒一格的總表、靜止區間 6–16 秒、接縫條
   assert.equal(fs.readFileSync(path.join(dir, 'notes.txt'), 'utf8'), '我的筆記');
   assert.ok(!fs.existsSync(path.join(dir, 'sheet-09.jpg')), '上次的總表要清掉');
   assert.ok(!fs.existsSync(path.join(dir, '.tiles')));
-  const off = F.qc('observe', '--file', clip, '--offset', '3', '--to', '9');   // 測試片段從成片 3 秒起：s01（1 秒起）不在片段裡
+  const off = F.qc('observe', '--file', clip, '--offset', '3', '--to', '9');   // 測試片段從完成影片 3 秒起：s01（1 秒起）不在片段裡
   assert.equal(off.status, 0, off.stdout + off.stderr);
   assert.match(off.stdout, /⚠ s01 在 0:01\.0 就開始了，測試片段不含這段：格子不標它（要看這段，build --test 的起點改成 1）/);
   fs.rmSync(path.join(F.proj, 'work', 'rough.srt'));
   const t = F.qc('observe', '--file', clip, '--from', '2', '--to', '8');
   assert.equal(t.status, 0, t.stdout + t.stderr);
   assert.match(t.stdout, /⚠ 找不到 work\/rough\.srt：格子不印字幕/);
-  assert.match(t.stdout, /⚠ 沒寫 --offset：當成從成片 0 秒開始/);
+  assert.match(t.stdout, /⚠ 沒寫 --offset：當成從完成影片 0 秒開始/);
   const bad = F.qc('observe', '--file', clip, '--from', '30');
   assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /✖ --from／--to 要是成片秒數，而且 0 ≤ from < to ≤ 22（現在 from=30、to=22）→ 改成 0–22 之間、from < to 的成片秒數/);
+  assert.match(bad.stderr, /✖ --from／--to 要是完成影片秒數，而且 0 ≤ from < to ≤ 22（現在 from=30、to=22）→ 改成 0–22 之間、from < to 的完成影片秒數/);
 });
 
-test('framing／speaker 抽格套 look：kit 預設（調光 LUT＋瘦臉退回 rough.mp4 的 ⚠）與 plan.look false 都不報錯；兩次的預覽圖不同', { timeout: 120000 }, () => {
+test('framing／speaker 抽格套 look：kit 預設（調光 LUT＋瘦臉退回 rough.mp4 的 ⚠）與 plan.look false 都不出錯；兩次的預覽圖不同', { timeout: 120000 }, () => {
   const F = fixture();
   const kit = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'look.json'), 'utf8'));
   const pv = path.join(F.proj, 'work', '構圖預覽.jpg');
@@ -354,7 +354,7 @@ test('framing／speaker 抽格套 look：kit 預設（調光 LUT＋瘦臉退回 
   if (kit.color > 0) assert.ok(!withLook.equals(fs.readFileSync(pv)), '套 LUT 的預覽圖要跟不套的不同');
 });
 
-test('storyboard：rough.mp4 有一段全黑、專案沒有聲音素材 → 子母畫面段沒有小窗 ✖（不用 build、不截圖）；放了聲音素材就不判', { timeout: 120000 }, () => {
+test('storyboard：rough.mp4 有一段全黑、專案沒有聲音素材 → 子母畫面段沒有小視窗 ✖（不用 build、不截圖）；放了聲音素材就不判', { timeout: 120000 }, () => {
   const F = fixture();
   // 0–8 秒有畫面、8–12 秒全黑（聲音正常）
   ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30:d=8', '-f', 'lavfi', '-i', 'color=c=black:s=1280x720:r=30:d=4', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:d=12',
@@ -364,12 +364,12 @@ test('storyboard：rough.mp4 有一段全黑、專案沒有聲音素材 → 子�
     { id: 's02', scene: 'fs-list', from: 8, to: 12, slots: { title: '清單', items: ['第一', '第二', '第三'] } }] }));
   const r = F.qc('storyboard');
   assert.equal(r.status, 1, r.stdout + r.stderr);
-  assert.match(r.stderr, /^✖ s02 是全畫面清單卻沒有講者小窗：work\/rough\.mp4 在 0:08\.\d\d–0:1\d\.\d\d 是全黑（原始素材不是）→ 初剪壞了，跑 node shared\/template\/tools\/media\.mjs verify-rough --project projects\/p1 照它印的做$/m);
+  assert.match(r.stderr, /^✖ s02 是全畫面清單卻沒有講者小視窗：work\/rough\.mp4 在 0:08\.\d\d–0:1\d\.\d\d 是全黑（原始素材不是）→ 初剪壞了，跑 node shared\/template\/tools\/media\.mjs verify-rough --project projects\/p1 照它印的做$/m);
   assert.ok(!fs.existsSync(path.join(F.proj, 'work', 'storyboard-preview')), '✖ 時不截圖');
   fs.mkdirSync(path.join(F.proj, 'assets', 'voice'), { recursive: true });
   fs.writeFileSync(path.join(F.proj, 'assets', 'voice', '旁白.m4a'), '');
   const t = F.qc('storyboard');
-  assert.doesNotMatch(t.stderr, /沒有講者小窗/);
+  assert.doesNotMatch(t.stderr, /沒有講者小視窗/);
   assert.match(t.stderr, /✖ 還沒 build/);
 });
 
@@ -405,7 +405,7 @@ test('storyboard：catalog 的 done 是 "label" 的 fx（27 打字機）截在�
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const [s] = JSON.parse(r.stdout).shots;
   assert.equal(s.why, '完成態（動畫的 done 標記）');
-  // fx-27（D 5、4＋9 字）：0.4 s 起每字 0.1 s → 0.8 s 打完；停 1.05 s → 1.85 s 開始擦。標記要落在中間（成片再加起點 1 s）
+  // fx-27（D 5、4＋9 字）：0.4 s 起每字 0.1 s → 0.8 s 打完；停 1.05 s → 1.85 s 開始擦。標記要落在中間（完成影片再加起點 1 s）
   assert.ok(s.at > 1.8 && s.at < 2.85, `截圖時刻 ${s.at} 不在「打完、還沒擦」的 1.8–2.85 秒之間`);
   assert.ok(fs.existsSync(path.join(F.proj, 'work', 'storyboard-preview', 's01.png')));
 });
@@ -443,7 +443,7 @@ test('字幕樣式（F8，純函式）：取樣只挑中文 ≥ 4 字 ≥ 0.6 �
   assert.match(ok[0].text, /底板 y 956–1074、字高 71（量 2 則：#1、#5）/);
   const old = Q.captionStyleChecks({ samples: [{ n: 1, text: '大家好我是鼎淵', top: 940, bottom: 1020, ink: 50 }] });   // 舊樣式 54px、距底 60
   assert.equal(old[0].level, 'warn');
-  assert.match(old[0].text, /#1「大家好我是鼎淵」底板 y 940–1020、字高 50（要 y 956–1074 ± 4、字高 71 ± 3）→ 成片是 kit\/captions\.css 改版前 render 的就重新 build、render/);
+  assert.match(old[0].text, /#1「大家好我是鼎淵」底板 y 940–1020、字高 50（要 y 956–1074 ± 4、字高 71 ± 3）→ 完成影片是 kit\/captions\.css 改版前 render 的就重新 build、render/);
   assert.match(Q.captionStyleChecks({ error: '還沒 build' })[0].text, /^量不到字幕樣式：還沒 build/);
   const t = Q.captionTextChecks(cues);
   assert.deepEqual(t.map((c) => c.level), ['warn', 'warn']);
@@ -634,7 +634,7 @@ test('直式 framing／speaker（CLI）：第一行印版式；構圖預覽三�
   assert.equal(dims(path.join(F.proj, 'work', '場地照-8格.jpg')), `${4 * 360 + 5 * 10},${2 * (640 + 30) + 3 * 10}`);
 });
 
-test('直式 final（CLI）：1080×1920 成片格式 ✔、qc-sheet 9:16；同一支片在橫式專案 ✖ 尺寸', { timeout: 180000 }, () => {
+test('直式 final（CLI）：1080×1920 完成影片格式 ✔、qc-sheet 9:16；同一支片在橫式專案 ✖ 尺寸', { timeout: 180000 }, () => {
   const F = fixture();
   const final = path.join(F.proj, 'output', 'final.mp4');
   fs.mkdirSync(path.dirname(final), { recursive: true });
@@ -660,7 +660,7 @@ test('直式 storyboard ⚠（FR-082）：橫錄影縮到 < 60 %、沒有 moves�
   assert.deepEqual(Q.smallMediaWarnings([g()]), ['m01 的錄影在直式只有原尺寸 56 %，介面字會太小 → 加 moves 推近到操作區']);
   assert.deepEqual(Q.smallMediaWarnings([g({ annotations: { view: { scale: 0.5625, moves: 1 } } }), g({ end: 13 }), g({ annotations: { view: { scale: 0.84, moves: 0 } } }), g({ annotations: { marks: [] } })]), []);
   // 橫式也看（參考專案：retina 錄影縮到 0.47，介面字 8–10px）；有放大鏡就不提醒
-  assert.match(Q.smallMediaWarnings([g({ annotations: { view: { scale: 0.47, moves: 0, lens: 0, landscape: true } } })])[0], /^m01 的錄影只有原尺寸 47 %，介面字會太小 → 口播唸到畫面上的字/);
+  assert.match(Q.smallMediaWarnings([g({ annotations: { view: { scale: 0.47, moves: 0, lens: 0, landscape: true } } })])[0], /^m01 的錄影只有原尺寸 47 %，介面字會太小 → 講解唸到畫面上的字/);
   assert.deepEqual(Q.smallMediaWarnings([g({ annotations: { view: { scale: 0.47, moves: 0, lens: 1, landscape: true } } })]), []);
   const L = Q.obsLayout(PORT);
   assert.equal(Q.obsLayout(canvasOf('landscape')), Q.OBS);

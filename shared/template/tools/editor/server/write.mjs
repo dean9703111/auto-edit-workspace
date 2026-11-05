@@ -63,7 +63,7 @@ export function sanitizeEdit(edit, { videoDur = null } = {}) {
         else out.cuts.push(c);
       }
       const total = out.cuts.reduce((s, [a, b]) => s + b - a, 0);
-      if (videoDur != null && total > videoDur - 0.5) errors.push('edit.cuts 幾乎把整支影片都剪掉了 → 成片至少要留 0.5 秒');
+      if (videoDur != null && total > videoDur - 0.5) errors.push('edit.cuts 幾乎把整支影片都剪掉了 → 完成影片至少要留 0.5 秒');
     }
   }
   for (const k of ['fadeIn', 'fadeOut']) {

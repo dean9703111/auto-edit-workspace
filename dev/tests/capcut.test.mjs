@@ -22,7 +22,7 @@ test('檔名：序號_段_起點（剪映照檔名排、看得出放哪一秒）
     segs: [{ id: 's01', start: 0, duration: 4.5, layoutZh: '疊加', label: '14 講者介紹', sfx: 1 }, { id: 's03', start: 20, duration: 6, layoutZh: '半畫面', footage: true, label: '03 半版|側邊欄', sfx: 0 }] };
   const md = C.listMd(cc, { project: '範例', files: { main: '主軌.mp4', s01: '01_s01_0m00.00s.mov', s03: '02_s03_0m20.00s.mov' } });
   assert.match(md, /^# 剪映素材清單（範例）/);
-  assert.match(md, /成片長度 2:35.50，橫式 1920×1080、30fps。/);
+  assert.match(md, /完成影片長度 2:35.50，橫式 1920×1080、30fps。/);
   assert.match(md, /\| 主軌\.mp4 \| 0:00\.00 \| 2:35\.50 \| 主軌 \|/);
   assert.match(md, /\| 02_s03_0m20\.00s\.mov \| 0:20\.00 \| 6\.00 秒 \| 半畫面（含講者） \| 03 半版｜側邊欄 \| 無 \|/);
   assert.match(md, /\| 字幕\.srt \|/);

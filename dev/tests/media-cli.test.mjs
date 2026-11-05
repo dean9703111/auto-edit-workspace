@@ -36,7 +36,7 @@ before(() => {
   cam('01-開場.mp4', 8, 'testsrc');
   cam('03-結尾.mp4', 6, 'smptebars');
   ff(['-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=44100', '-t', '4', '-c:a', 'aac', path.join(proj, 'assets', 'voice', '02-旁白.m4a')]);
-  // 螢幕錄影：640×400、25fps、關鍵幀稀疏（build 要轉成 30fps、每秒一個關鍵幀），有聲音
+  // 螢幕錄影：640×400、25fps、關鍵影格稀疏（build 要轉成 30fps、每秒一個關鍵影格），有聲音
   ff(['-f', 'lavfi', '-i', 'testsrc=size=640x400:rate=25', '-f', 'lavfi', '-i', 'sine=frequency=880:sample_rate=48000', '-t', '10', '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '250', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, ...REC.split('/'))]);
   ff(['-f', 'lavfi', '-i', 'color=c=0x3B82F6:s=800x500', '-frames:v', '1', path.join(proj, ...IMG.split('/'))]);
   fs.writeFileSync(path.join(proj, 'work', 'rough.srt'), makeSrt({ n: 5 }));   // #5＝15–18
@@ -99,7 +99,7 @@ test('--check --json：stdout 只有一個 JSON；格式照契約 3.3，時間�
   assert.deepEqual(j.cutpoints, [{ at: 8, kind: 'pause' }, { at: 12, kind: 'ng' }]);
   assert.deepEqual(j.edit.joins, [{ at: 8, type: 'dip', dur: 0.3 }], 'joins 吸附到 cutpoints');
   const s = j.items[0];
-  assert.deepEqual([s.id, s.type, s.start, s.end], ['s01', 'scene', 1, 7.5]);   // rough 秒數（#2e＝7.5；成片是 6.5）
+  assert.deepEqual([s.id, s.type, s.start, s.end], ['s01', 'scene', 1, 7.5]);   // rough 秒數（#2e＝7.5；完成影片是 6.5）
   assert.equal(s.sfx[0].name, 'ding');
   assert.ok(s.sfx[0].volume > 0 && s.sfx[0].db < 0);
   assert.equal(j.paths.project, 'projects/p1');
@@ -395,7 +395,7 @@ test('verify-rough（F2）：rough 黑、原片同一秒不黑 → ✖＋重做�
   assert.ok(q);
 });
 
-test('build --check（F2）：素材沒有純聲音檔、rough.mp4 卻有全黑區間 → ✖ 指向 verify-rough，不當成只有聲音（小窗照放）', () => {
+test('build --check（F2）：素材沒有純聲音檔、rough.mp4 卻有全黑區間 → ✖ 指向 verify-rough，不當成只有聲音（小視窗照放）', () => {
   const p = brokenRough('pb');
   const hf = path.join(p, 'work', 'hyperframes');
   fs.mkdirSync(hf, { recursive: true });
@@ -407,7 +407,7 @@ test('build --check（F2）：素材沒有純聲音檔、rough.mp4 卻有全黑�
   assert.deepEqual(j.errors, ['work/rough.mp4 在 0:02.00–0:04.00 是全黑，但素材沒有純聲音檔 → 初剪壞了：跑 node shared/template/tools/media.mjs verify-rough --project projects/pb']);
   assert.deepEqual(j.voiceOnly, []);
   assert.deepEqual(j.roughBlack, [[2, 4]]);
-  assert.ok(j.items[0].out.pip.length > 0, '小窗照放');
+  assert.ok(j.items[0].out.pip.length > 0, '小視窗照放');
 });
 
 // ---------- F8：srt-align（字幕＝講稿每一行，時間用 transcript.json 全域對齊）----------
