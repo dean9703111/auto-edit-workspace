@@ -53,7 +53,7 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 1. **取得工作區**，三種方式挑一種：
    - 會用終端機：`git clone https://github.com/dean9703111/auto-edit-workspace.git`
    - 在 GitHub 頁面點「Code → Download ZIP」。解壓縮後的資料夾名稱會多一個 `-main`，不影響使用；Windows 要先「解壓縮全部」再打開。
-   - 照影片的做法：打開 MiniMax Code 桌面版，先選 Local，再點 Select folder 選桌面，貼上 [PROMPTS.md](PROMPTS.md) 第 0 步的提示詞，AI 會幫你抓下來（沒裝 git 它會教你裝）。
+   - 照影片的做法：打開 MiniMax Code 桌面版，先選 Local，再點 Select folder 選桌面，貼上 [PROMPTS.md](PROMPTS.md) 第 0 步的提示詞，AI 會幫你抓下來（沒裝 git 它會幫你裝）。
 2. **用你的 Agent 打開工作區**：選看得到 `AGENTS.md` 的那一層。桌面版選這個資料夾；終端機版先 `cd auto-edit-workspace` 再啟動（例如 `claude`、`codex`）。
 3. **說「幫我檢測環境」**：AI 照 [setup/](setup/README.md) 的手冊檢查 git、Node.js、ffmpeg、whisper、auto-editor、HyperFrames 和 9 支 Skill，先列清單問你，同意後一步一步裝好。Mac 和 Windows 都有（Windows 還沒實測，歡迎回報）。
 4. **剪範例**：說「剪乾淨 @projects/example」，接著「做成片」、「可以了，輸出成片」。完整提示詞照 [PROMPTS.md](PROMPTS.md) 的順序貼。
