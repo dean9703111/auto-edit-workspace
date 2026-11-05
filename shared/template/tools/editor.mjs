@@ -7,6 +7,10 @@
  *                                      在終端機裡執行則留在前景，按 Ctrl+C 關閉
  *   node shared/template/tools/editor.mjs --status [--project …]   查剪輯開著沒、網址是什麼
  *   node shared/template/tools/editor.mjs --stop [--project …]     關掉剪輯
+ *   node shared/template/tools/editor.mjs --project … --requests-state generating --request-revision <版本> --ids s01,x02
+ *                                      AI 逐段回報生成狀態；完成用 done（build、audit 後），失敗用 failed --message <原因>
+ *   node shared/template/tools/editor.mjs --project … --design-request <需求 id> --design-state generating
+ *                                      AI 背景生圖狀態；九張存檔後用 done，失敗用 failed --message <原因>，查詢用 --design-state status
  *
  * 選項：--port 4400、--open（順便開瀏覽器）、--foreground（一律前景）、--background（一律背景）；測試用：--template <shared/template 資料夾>
  * 剪輯只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／anchor、任何段的 sfxVolume 與 sfx: null、
@@ -28,7 +32,7 @@ import { footageVf, lut3dFilter } from './lib/ff.mjs';
 import { CANVAS } from './lib/canvas.mjs';
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 import { mediaFrame, SIDE } from './lib/media.mjs';
-import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference } from './editor/server/design.mjs';
+import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, subtitles };
 
@@ -43,7 +47,7 @@ const PEAK_RATE = 100;          // 波形：每秒 100 個峰值
 const PEAK_SR = 8000;           // 算波形時先降到 8 kHz 單聲道
 const TARGET_LUFS = -14;        // 人聲標準化的目標響度
 const THUMB_W = 160, THUMB_H = 90, THUMB_MAX = 400;   // 縮圖條：每格 160×90，一支影片最多 400 格
-const VALUE_FLAGS = ['project', 'port', 'template'];
+const VALUE_FLAGS = ['project', 'port', 'template', 'requests-state', 'request-revision', 'ids', 'message', 'round', 'design-state', 'design-request'];
 const BOOL_FLAGS = ['stop', 'status', 'open', 'foreground', 'background', 'help'];
 
 const r3 = (n) => +Number(n).toFixed(3);
@@ -835,7 +839,11 @@ export function requestsInfo(project) {
   const fb = path.join(project, 'work', 'feedback'), file = path.join(fb, 'editor-requests.md');
   let at;
   try { at = fs.statSync(file).mtimeMs; } catch { return null; }
-  const ids = [...fs.readFileSync(file, 'utf8').matchAll(/^## \d+\. (\S+)/gm)].map((m) => m[1]);
+  const markdown = fs.readFileSync(file, 'utf8');
+  const revision = sha(`${at}:${markdown}`);
+  const ids = [...markdown.matchAll(/^## \d+\. (\S+)/gm)].map((m) => m[1]);
+  const saved = readJson(path.join(fb, 'editor-requests-status.json'));
+  const states = saved?.revision === revision && isObj(saved.states) ? saved.states : {};
   const rounds = fs.readdirSync(fb).filter((f) => /^r\d+\.md$/.test(f)).map((f) => ({ f, t: fs.statSync(path.join(fb, f)).mtimeMs }))
     .filter((x) => x.t > at).sort((a, b) => a.t - b.t);
   const done = {};
@@ -843,7 +851,28 @@ export function requestsInfo(project) {
     const sec = fs.readFileSync(path.join(fb, f), 'utf8').split(/^## 改了哪幾段[ \t]*$/m)[1]?.split(/^## /m)[0] || '';
     for (const m of sec.matchAll(/^- (\S+?)：(.+)$/gm)) if (ids.includes(m[1])) done[m[1]] = { round: f.slice(0, -3), note: m[2].trim() };
   }
-  return { at: Math.round(at), ids, done };
+  // 有明確回報的段以 API 為準，避免回饋紀錄尚在撰寫就提早顯示完成。
+  for (const id of ids) if (Object.hasOwn(states, id)) {
+    if (states[id].state === 'done') done[id] = { round: states[id].round || done[id]?.round || 'AI', note: states[id].message || done[id]?.note || '生成完成，已通過 build、audit' };
+    else delete done[id];
+  }
+  return { at: Math.round(at), revision, ids, done, states };
+}
+
+// AI 明確回報才顯示生成中；版本必填，舊任務不能改到使用者重新複製的修改單。
+export function doRequestsStatus(ctx, body) {
+  const q = requestsInfo(ctx.P.project);
+  if (!q) return [404, { message: '還沒有修改單，請先在剪輯複製給 AI' }];
+  if (body?.revision !== q.revision) return [409, { message: '修改單版本已更新，請重新讀取最新修改單' }];
+  const { state, ids, message = '', round = '' } = body;
+  if (!['generating', 'done', 'failed'].includes(state) || !Array.isArray(ids) || !ids.length || ids.some((id) => typeof id !== 'string' || !q.ids.includes(id))
+    || typeof message !== 'string' || message.length > 2000 || typeof round !== 'string' || round.length > 80) return [400, { message: '請提供有效的 state（generating／done／failed）、修改單段落 ids 與文字訊息' }];
+  const now = Date.now();
+  const states = { ...q.states, ...Object.fromEntries(ids.map((id) => [id, { state, message, round, at: now }])) };
+  const file = path.join(ctx.P.project, 'work', 'feedback', 'editor-requests-status.json');
+  fs.writeFileSync(`${file}.tmp`, JSON.stringify({ revision: q.revision, states }, null, 2) + '\n');
+  fs.renameSync(`${file}.tmp`, file);
+  return [200, { ok: true, requests: requestsInfo(ctx.P.project) }];
 }
 
 export function doRequests(ctx, body) {
@@ -855,7 +884,7 @@ export function doRequests(ctx, body) {
   const file = path.join(dir, 'editor-requests.md');
   fs.writeFileSync(`${file}.tmp`, md.endsWith('\n') ? md : `${md}\n`);
   fs.renameSync(`${file}.tmp`, file);
-  return [200, { ok: true, file: path.relative(ctx.P.root, file).split(path.sep).join('/') }];
+  return [200, { ok: true, file: path.relative(ctx.P.root, file).split(path.sep).join('/'), requests: requestsInfo(ctx.P.project) }];
 }
 
 // 同時有手動產生或連續存構圖時排隊，最後一定用最新設定再產生一次。
@@ -936,6 +965,7 @@ async function handle(ctx, req, res) {
     try { body = await readBody(req, p === '/api/design/upload' ? 18 * 1024 * 1024 : 4 * 1024 * 1024); } catch (e) { return sendJson(res, e.status || 400, { error: 'badbody', message: e.message }); }
     if (p.startsWith('/api/design/')) {
       try {
+        if (p === '/api/design/request/status') return sendJson(res, 200, setDesignRequestStatus(ctx, body));
         const result = p === '/api/design/color' ? setDesignColor(ctx, body) : p === '/api/design/upload' ? await uploadDesign(ctx, body) : p === '/api/design/request' ? prepareDesignRequest(ctx, body) : p === '/api/design/import' ? await importDesignCandidate(ctx, body) : p === '/api/design/original' ? restoreOriginalBackground(ctx, body) : p === '/api/design/discard' ? discardDesign(ctx) : p === '/api/design/reference/remove' ? removeReference(ctx) : null;
         return result ? sendJson(res, 200, result) : sendJson(res, 404, { message: '找不到這個操作' });
       } catch (e) { return sendJson(res, e.status || 400, { message: e.message }); }
@@ -957,6 +987,7 @@ async function handle(ctx, req, res) {
     if (p === '/api/look/run') { const [s, o] = await doLookRun(ctx); return sendJson(res, s, o); }
     if (p === '/api/build') { const [s, o] = await doBuild(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/check') { const rep = await getReport(ctx, { fresh: true }); return sendJson(res, 200, reportOut(rep)); }
     if (p === '/api/shutdown') {
@@ -970,6 +1001,8 @@ async function handle(ctx, req, res) {
   if (!isGet) return sendText(res, 405, '不支援這個方法');
 
   if (p === '/' || p === '/index.html') return sendFile(req, res, path.join(UI_DIR, 'index.html'));
+  if (p === '/api/requests/status') return sendJson(res, 200, { requests: requestsInfo(P.project) });
+  if (p === '/api/design/request/status') return sendJson(res, 200, designRequestStatus(ctx));
   if (p === '/framing' || p === '/framing.html') return sendFile(req, res, path.join(UI_DIR, 'framing.html'));
   if (p === '/api/design') {
     const format = canvasInfo(P.project, readPlan(P.plan).data).format;
@@ -1160,6 +1193,19 @@ async function cli() {
   const stateFile = path.join(P.out, '.editor', 'server.json');
   const self = posix(path.relative(process.cwd(), path.resolve(process.argv[1] || fileURLToPath(import.meta.url))));
   const stopCmd = `node ${self} --stop --project ${rel(P.project)}`;
+  if (flags['design-state']) {
+    try {
+      const result = flags['design-state'] === 'status' ? designRequestStatus({ P }) : setDesignRequestStatus({ P }, { requestId: flags['design-request'], state: flags['design-state'], message: flags.message });
+      console.log(JSON.stringify(result));
+      return 0;
+    } catch (e) { console.error(e.message); return 1; }
+  }
+  if (flags['requests-state']) {
+    if (flags['requests-state'] === 'status') { console.log(JSON.stringify({ requests: requestsInfo(P.project) })); return 0; }
+    const [status, result] = doRequestsStatus({ P }, { state: flags['requests-state'], revision: flags['request-revision'], ids: flags.ids?.split(','), message: flags.message, round: flags.round });
+    console.log(JSON.stringify(result));
+    return status === 200 ? 0 : 1;
+  }
   if (flags.status) {
     const s = await runningEditor(stateFile, P.project);
     console.log(s ? `剪輯開著：${s.url}（專案 ${rel(P.project)}，pid ${s.pid}）` : `剪輯沒有開（專案 ${rel(P.project)}）`);

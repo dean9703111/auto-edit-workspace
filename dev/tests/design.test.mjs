@@ -174,6 +174,45 @@ test('生圖指令：直接生成全部九張並存檔，每類背景可獨立�
   await ok('/api/design/discard', {});
 });
 
+test('生圖狀態：AI 明確回報開始、失敗與完成；缺圖不能完成、舊需求不能更新，CLI 與 API 共用紀錄', async () => {
+  const prepared = await ok('/api/design/request', { description: '生成狀態 API 測試' });
+  const id = prepared.request.id, dir = path.join(work, 'design/requests', id);
+  assert.equal(prepared.request.progress.state, 'waiting');
+  assert.match(prepared.request.prompt, new RegExp(`--design-request ${id} --design-state generating`));
+  assert.match(prepared.request.prompt, /--design-state done/);
+  assert.match(prepared.request.prompt, /--design-state failed --message/);
+  assert.equal((await get('/api/design/request/status')).request.id, id);
+  const update = (body) => post('/api/design/request/status', { requestId: id, ...body });
+  assert.equal((await update({ state: 'done' })).status, 409, '九張尚未存齊');
+  assert.equal((await update({ state: 'unknown' })).status, 400);
+  assert.equal((await update({ state: 'generating', message: {} })).status, 400);
+  await ok('/api/design/request/status', { requestId: id, state: 'generating', message: '正在製作 A 組' });
+  const stored = fs.readFileSync(path.join(dir, 'progress.json'), 'utf8');
+  assert.equal((await update({ state: 'failed', requestId: '../invalid' })).status, 409);
+  assert.equal(fs.readFileSync(path.join(dir, 'progress.json'), 'utf8'), stored);
+  fs.copyFileSync(image, path.join(dir, 'A/bg-fs.png'));
+  const partial = (await get('/api/design')).request;
+  assert.equal(partial.foundCount, 1);
+  assert.equal(partial.progress.state, 'generating');
+  assert.equal((await update({ state: 'done' })).status, 409);
+  await ok('/api/design/request/status', { requestId: id, state: 'failed', message: '生圖工具暫時無法使用' });
+  assert.equal((await get('/api/design')).request.progress.message, '生圖工具暫時無法使用');
+  const cli = spawnSync(process.execPath, [path.join(TEMPLATE, 'tools/editor.mjs'), '--project', project, '--design-request', id, '--design-state', 'generating'], { encoding: 'utf8' });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.equal(JSON.parse(cli.stdout).request.progress.state, 'generating');
+  for (const v of ['A', 'B', 'C']) for (const k of ['fs', 'side', 'ch']) fs.copyFileSync(image, path.join(dir, v, `bg-${k}.png`));
+  const done = await ok('/api/design/request/status', { requestId: id, state: 'done' });
+  assert.equal(done.request.progress.state, 'done');
+  assert.equal(done.request.foundCount, 9);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'progress.json'))).state, 'done', '狀態存檔，重開仍保留');
+  const next = await ok('/api/design/request', { description: '新版背景需求' });
+  assert.notEqual(next.request.id, id);
+  assert.equal((await update({ state: 'generating' })).status, 409);
+  assert.equal((await get('/api/design')).request.progress.state, 'waiting');
+  await ok('/api/design/color', { color: '#765432' });
+  assert.equal((await post('/api/design/request/status', { requestId: next.request.id, state: 'generating' })).status, 409, '換色後不能繼續更新舊需求');
+});
+
 test('同頁 UI：拖拉圖片驗證與儲存、鍵盤選檔、複製提示詞、選擇方案與套用；手機不溢出', { timeout: 90000 }, async (t) => {
   const chrome = await hasChrome(); if (!chrome) { t.skip('沒有現有 Chrome'); return; }
   const { default: puppeteer } = await import('puppeteer-core');
@@ -246,10 +285,24 @@ test('同頁 UI：拖拉圖片驗證與儲存、鍵盤選檔、複製提示詞�
     await page.waitForFunction(() => document.querySelector('#copyDesignPrompt').textContent.includes('已複製') || document.querySelector('#designPromptDetails').open || document.querySelector('#designError').textContent);
     assert.match(await page.$eval('#copyDesignPrompt', (el) => el.textContent), /已複製/, JSON.stringify(await page.evaluate(async () => ({ focused: document.hasFocus(), permission: (await navigator.permissions.query({ name: 'clipboard-write' })).state, status: document.querySelector('#designRequestStatus').textContent, error: document.querySelector('#designError').textContent }))));
     const prepared = (await get('/api/design')).request;
+    assert.equal(prepared.progress.state, 'waiting', '複製不代表 AI 開始生成');
+    assert.match(await page.$eval('#designGenerationStatus', (el) => el.textContent), /已複製，請貼給 AI/);
+    await ok('/api/design/request/status', { requestId: prepared.id, state: 'generating', message: '正在製作 A 組' });
+    await page.waitForFunction(() => document.querySelector('#designGenerationStatus').dataset.state === 'generating');
+    assert.match(await page.$eval('#designGenerationStatus', (el) => el.textContent), /生成中.*0\/9.*正在製作 A 組/);
+    const progressShot = path.join(root, '背景生成中.png');
+    await page.$eval('#designGenerationStatus', (el) => el.scrollIntoView({ block: 'center' }));
+    await page.screenshot({ path: progressShot });
+    console.log(`背景生圖狀態截圖：${progressShot}`);
+    await ok('/api/design/request/status', { requestId: prepared.id, state: 'failed', message: '生圖工具暫時無法使用' });
+    await page.waitForFunction(() => document.querySelector('#designGenerationStatus').dataset.state === 'failed');
+    assert.match(await page.$eval('#designGenerationStatus', (el) => el.textContent), /生成失敗.*生圖工具暫時無法使用/);
+    await ok('/api/design/request/status', { requestId: prepared.id, state: 'generating' });
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), prepared.prompt);
     assert.equal((await get('/api/design')).draft.id, previousDraft);
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#designPrompt').value.length > 0);
+    assert.equal(await page.$eval('#designGenerationStatus', (el) => el.dataset.state), 'generating', '重開頁仍顯示 AI 回報的狀態');
     assert.equal(await page.$eval('#designDescription', (el) => el.value), '以這張參考圖做一套簡潔背景');
     assert.equal(await page.$eval('#designDirection', (el) => el.value), 'paper');
     await page.click('#copyDesignPrompt');
@@ -257,6 +310,9 @@ test('同頁 UI：拖拉圖片驗證與儲存、鍵盤選檔、複製提示詞�
     assert.equal((await get('/api/design')).request.id, prepared.id, '重開頁後再複製也沿用原資料夾');
     const dir = path.join(work, 'design', 'requests', prepared.id);
     for (const v of ['A', 'B', 'C']) for (const k of ['fs', 'side', 'ch']) fs.copyFileSync(image, path.join(dir, v, `bg-${k}.png`));
+    await ok('/api/design/request/status', { requestId: prepared.id, state: 'done' });
+    await page.waitForFunction(() => document.querySelector('#designGenerationStatus').dataset.state === 'done');
+    assert.match(await page.$eval('#designGenerationStatus', (el) => el.textContent), /生成完成.*9\/9/);
     await page.click('[data-kind="side"]');
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await page.waitForFunction(() => !document.querySelector('[data-variant="B"]').disabled);

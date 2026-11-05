@@ -2167,8 +2167,18 @@ function rqInfo(id) {
 }
 const rqMs = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;   // 分:秒.十分之一（給 AI 看，不用格數）
 const rqTime = (inf) => (inf.out ? `${rqMs(inf.out[0])}–${rqMs(inf.out[1])}` : '—');
-// 已送出＝這段在 editor-requests.md 裡，而且複製之後沒再改過
-const rqSent = (r) => { const q = app.server?.requests; return !r.done && !!q && q.ids.includes(r.id) && q.at > (r.t || 0); };
+// 存檔、剪貼簿複製、AI 生成是三件事，只有 API 的回報代表 AI 已開始。
+const rqExported = (r) => { const q = app.server?.requests; return !r.done && !!q && q.ids.includes(r.id) && q.at >= (r.t || 0); };
+const rqProgress = (r) => rqExported(r) ? app.server.requests.states?.[r.id] : null;
+function rqStatus(r) {
+  const p = rqProgress(r);
+  if (p?.state === 'generating') return { label: '生成中', detail: p.message || 'AI 正在生成這一段', cls: 'generating' };
+  if (p?.state === 'failed') return { label: '生成失敗', detail: p.message || '請查看 AI 回報的原因後重試', cls: 'failed' };
+  if (rqExported(r)) return r.copiedRevision === app.server.requests.revision
+    ? { label: '已複製', detail: '已複製，請貼給 AI', cls: '' }
+    : { label: '已存檔', detail: '修改單已存檔，請複製指令貼給 AI', cls: '' };
+  return { label: '', detail: '待改：已存進修改單', cls: '' };
+}
 // 改完了沒：伺服器讀 r<N>.md「改了哪幾段」（比 editor-requests.md 新的才算）；送出後沒再改過的段才算數。
 // 記在瀏覽器（r.done）：下次複製只送待改的，修改單檔換掉了也還記得哪些改完
 function rqSync() {
@@ -2176,7 +2186,7 @@ function rqSync() {
   if (!q) return;
   let ch = false;
   for (const r of app.requests) {
-    const d = rqSent(r) ? q.done[r.id] : null;
+    const d = rqExported(r) ? q.done[r.id] : null;
     if (d) { r.done = { round: d.round, note: d.note }; ch = true; }
   }
   if (ch) rqStore();
@@ -2189,7 +2199,7 @@ function rqEdit(id, fn) {
   let r = app.requests.find((x) => x.id === id);
   const made = !r;
   if (made) { r = { id, tags: [], note: '' }; app.requests.push(r); }
-  fn(r); r.t = Date.now(); delete r.done;
+  fn(r); r.t = Date.now(); delete r.done; delete r.copiedRevision;
   if (!r.tags.length && !r.note.trim()) app.requests = app.requests.filter((x) => x !== r);
   else if (made) toast(`${id} 加進修改單（待改 ${rqPending().length} 段）`, 'ok', 1800);
   rqStore();
@@ -2200,7 +2210,8 @@ function rqStateHtml(id) {
   const del = `<button class="small ghost" data-rq="del" data-id="${esc(id)}">拿掉這段</button>`;
   if (r.done) return `<div class="rq-state done"><div><span class="rq-done">✓ 已改完（${esc(r.done.round)}）</span><div class="what">${esc(r.done.note)}</div><p class="ip-note">再點標籤或改描述＝變回待改，下次複製會再送。</p></div>
     <div class="ip-btns"><button class="small primary" data-rq="result" data-id="${esc(id)}">▶ 看結果</button>${del}</div></div>`;
-  return `<div class="rq-state"><span class="ip-note">${rqSent(r) ? '已送出，等 AI 改' : '待改：已存進修改單'}</span>${del}</div>`;
+  const status = rqStatus(r);
+  return `<div class="rq-state ${status.cls}" role="status"><span class="ip-note">${esc(status.detail)}</span>${del}</div>`;
 }
 function rqTopHtml(id) {
   const inf = id ? rqInfo(id) : null;
@@ -2217,7 +2228,8 @@ function rqListsHtml(cur) {
   const lab = (r) => { const i = rqInfo(r.id); return i ? esc(i.label) : '<span class="gone">plan.json 裡找不到這段</span>'; };
   const go = (r) => `<button class="small ghost" data-rq="go" data-id="${esc(r.id)}" data-tip="跳到這段">↗</button>`;
   const del = (r) => `<button class="small ghost" data-rq="del" data-id="${esc(r.id)}" data-tip="從修改單拿掉" aria-label="拿掉 ${esc(r.id)}">✕</button>`;
-  const pi = pend.map((r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${rqSent(r) ? '<span class="rq-sent" data-tip="已複製給 AI，等它改完">已送出</span>' : ''}${go(r)}${del(r)}</div>
+  const badge = (r) => { const s = rqStatus(r); return s.label ? `<span class="rq-sent ${s.cls}" role="status" data-tip="${esc(s.detail)}">${s.label}</span>` : ''; };
+  const pi = pend.map((r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${badge(r)}${go(r)}${del(r)}</div>
     ${r.tags.length ? `<div class="chips">${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`).join('');
   const di = done.map((r) => `<li class="rq-item done${r.id === cur ? ' cur' : ''}"><div class="h"><b>✓ ${esc(r.id)}</b><span class="lab">${lab(r)}</span><span class="rq-done">${esc(r.done.round)}</span>
     <button class="small primary" data-rq="result" data-id="${esc(r.id)}" data-tip="切到成片預覽，跳到這段開頭">▶ 看結果</button>${del(r)}</div><div class="what" data-tip="${esc(r.done.note)}">${esc(r.done.note)}</div></li>`).join('');
@@ -2239,11 +2251,16 @@ function renderRequests() {
   else { top.dataset.id = id || ''; top.innerHTML = rqTopHtml(id); }
   $('#rqLists').innerHTML = rqListsHtml(id);
   $('#rqFoot').innerHTML = `<button class="primary${pend.length ? '' : ' is-disabled'}" data-rq="copy" data-why="${app.requests.length ? '沒有待改的段（已改完的不會再送）' : '修改單是空的'}">複製給 AI（${pend.length} 段待改）</button>
-    <p class="ip-note">只送待改的段。複製的是一行指令；完整內容存在 ${esc(app.server?.project?.dir || '')}/work/feedback/editor-requests.md，AI 會讀這個檔。</p>
+    <p class="ip-note">複製後請貼給 AI；AI 回報開始後，這段才會顯示「生成中」。完整內容存在 ${esc(app.server?.project?.dir || '')}/work/feedback/editor-requests.md。</p>
     ${app.requests.length ? `<button class="small ghost" data-rq="clear">${rqClearArm ? '再按一次清空' : '清空修改單'}</button>` : ''}`;
 }
 // 複製給 AI 的只有這一行（待改的完整內容存在 editor-requests.md，AI 讀檔）
-const rqCommand = () => `照剪輯修改單改這 ${rqPending().length} 段（${app.server?.project?.dir || ''}/work/feedback/editor-requests.md）：直接做，不用先出提案；每段派一個子代理平行改，全部回來後 build、audit，停在停點 ④。`;
+const rqCommand = (revision, pending = rqPending()) => {
+  const project = app.server?.project?.dir || '';
+  const cli = `node shared/template/tools/editor.mjs --project ${JSON.stringify(project)}`;
+  const progress = `${revision ? '' : `先用 ${cli} --requests-state status 取得這份修改單的 revision；`}開始處理時用 ${cli} --requests-state generating --request-revision ${revision || '<剛讀取的 revision>'} --ids ${pending.map((r) => r.id).join(',')} 回報狀態；build、audit 通過後用同一指令把 generating 換成 done（可加 --round rN --message 描述），失敗則換成 failed --message 原因；逐段回報可調整 --ids，版本衝突就停下重新讀取修改單。`;
+  return `照剪輯修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：直接做，不用先出提案；每段派一個子代理平行改，全部回來後 build、audit，停在停點 ④。${progress}`;
+};
 function rqMarkdown() {
   const now = new Date();
   const p2 = (n) => String(n).padStart(2, '0');
@@ -2264,18 +2281,27 @@ function rqMarkdown() {
 // 先存檔（完整修改單），存成功才複製那一行指令：存失敗時剪貼簿不會指到舊檔
 async function rqCopy() {
   const n = rqPending().length;
+  const submitted = rqPending().map((r) => ({ ...r }));
+  const snapshot = new Map(rqPending().map((r) => [r.id, r.t]));
   const r = await api('POST', '/api/requests', { markdown: rqMarkdown() });
   const saved = r.ok ? r.data?.file : null;
   if (!saved) { toast(`修改單存檔失敗：${r.data?.message || r.status}`, 'err', 7000); return; }
-  const cmd = rqCommand();
+  app.server.requests = r.data.requests;
+  // 複製等待期間若有編輯，保留原本那批的段與版本，不把新需求誤標成已複製。
+  const cmd = rqCommand(r.data.requests.revision, submitted);
   let copied = false;
   try { await navigator.clipboard.writeText(cmd); copied = true; } catch {
     const ta = document.createElement('textarea'); ta.value = cmd; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
     try { copied = document.execCommand('copy'); } catch { copied = false; }
     ta.remove();
   }
-  if (copied) toast(`${n} 段存到 ${saved}，指令已複製 → 貼給 AI`, 'ok', 6000);
+  if (copied) {
+    for (const item of app.requests) if (snapshot.has(item.id) && snapshot.get(item.id) === item.t) item.copiedRevision = r.data.requests.revision;
+    rqStore();
+    toast(`${n} 段存到 ${saved}，指令已複製 → 貼給 AI`, 'ok', 6000);
+  }
   else toast(`${n} 段存到 ${saved}，但沒辦法寫進剪貼簿 → 跟 AI 說「照剪輯修改單改」`, 'warn', 7000);
+  renderRequests();
 }
 function onRqClick(e) {
   const b = e.target.closest('[data-rq]');

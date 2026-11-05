@@ -34,6 +34,12 @@ body.framing > .topbar { position: sticky; top: 0; z-index: 30; }
 .design-bg-enlarge span { position: absolute; right: 6px; bottom: 6px; padding: 4px 7px; border-radius: 3px; background: rgb(0 0 0 / .65); color: #fff; opacity: 0; }
 .design-bg-enlarge:hover span, .design-bg-enlarge:focus-visible span { opacity: 1; }
 .design-note { font-size: 11px; color: var(--mute); line-height: 1.8; margin: 8px 0 0; }
+#designGenerationStatus[data-state="generating"] { color: var(--accent-text); }
+#designGenerationStatus[data-state="generating"]::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 5px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: design-spin 1s linear infinite; }
+#designGenerationStatus[data-state="failed"] { color: var(--warn-kw); }
+#designGenerationStatus[data-state="done"] { color: var(--good-kw); }
+@keyframes design-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #designGenerationStatus::before { animation: none; } }
 .design-upload { display: grid; gap: 5px; text-align: center; padding: 13px 8px; margin-top: 12px; border: 1px dashed var(--line); border-radius: 6px; cursor: pointer; }
 .design-upload:hover, .design-reference:hover { border-color: var(--accent); }
 .design-upload, .design-reference { transition: border-color .15s, background-color .15s; }

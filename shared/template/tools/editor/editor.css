@@ -130,6 +130,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .rq-state.done { align-items: flex-start; flex-direction: column; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--good) 60%, transparent); border-radius: 8px; }
 .rq-state.done .what { margin: 4px 0; color: var(--mute); font-size: 12.5px; word-break: break-word; }
 .rq-sent { font-size: 11.5px; color: var(--mute); border: 1px solid var(--line); border-radius: 9px; padding: 0 6px; white-space: nowrap; }
+.rq-sent.generating { color: var(--accent); border-color: var(--accent); }
+.rq-sent.generating::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 4px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: rq-spin 1s linear infinite; }
+.rq-sent.failed, .rq-state.failed .ip-note { color: var(--warn-kw); }
+@keyframes rq-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rq-sent.generating::before { animation: none; } }
 .rq-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .rq-item { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; }
 .rq-item.cur { border-color: color-mix(in srgb, var(--accent) 70%, transparent); }

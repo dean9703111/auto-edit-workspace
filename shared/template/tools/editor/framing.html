@@ -156,7 +156,7 @@
         <label class="design-label" for="designDescription">補充描述（選填）</label>
         <textarea id="designDescription" rows="2" maxlength="1500" placeholder="例如：沿用參考圖的線條、材質與造型"></textarea>
         <button id="copyDesignPrompt" class="primary design-generate">複製生圖指令</button>
-        <p class="design-note">依指定風格生成 3 組、共 9 張，存檔後回來選圖。</p>
+        <p id="designGenerationStatus" class="design-note" role="status" aria-live="polite">複製指令貼給 AI，依指定風格生成 3 組、共 9 張。</p>
         <details id="designPromptDetails" hidden><summary>指令與儲存位置</summary><p id="designRequestPath" class="design-path"></p><textarea id="designPrompt" readonly rows="6" aria-label="已儲存的生圖指令"></textarea></details>
       </section>
       <p id="designError" class="design-error" role="alert"></p>

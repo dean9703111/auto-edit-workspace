@@ -228,6 +228,8 @@ node shared/template/tools/editor.mjs --project projects/example
 - **用 AI 生成背景**：選主色、放參考圖、選設計風格並補描述，按「複製生圖指令」。可依參考圖／描述，或選科技線稿、編輯平面、紙雕拼貼、幾何 3D、自然實景。A／B／C 在同一套風格中改變結構、造型或材質，各含全畫面、側邊欄、章節，共 9 張；不再以低對比、模糊光暈作預設。沒有指定方向或參考圖時，三組分別採科技線稿、編輯平面、立體幾何。頁面本身不呼叫 AI。剪貼簿不可用時展開指令供手動複製。
 - **對應資料夾**：`work/design/requests/<需求編號>/` 保存 `request.md`、`request.json`、參考圖副本；AI 將三組圖片分別存進 `A/`、`B/`、`C/`，每組各有 `bg-fs.png`、`bg-side.png`、`bg-ch.png`（也接受 JPG／WebP）。原檔與歷次需求保留。
 - 相同設定重複複製沿用原需求資料夾，改主色、參考圖或風格時才建立新一份。重開頁會還原風格描述，已保存的指令仍可查看、複製。
+- **生圖進度**：複製成功只顯示「已複製，請貼給 AI」。AI 按生圖指令回報開始後才顯示「生成中」，並列出已存檔張數；完成顯示「生成完成」，失敗顯示原因。頁面每 2.5 秒自動更新，重開仍保留狀態。剪貼簿失敗時顯示手動複製提示。
+- **生圖狀態 API／CLI**：`GET /api/design/request/status` 讀取目前需求；`POST /api/design/request/status` 傳 `{ "requestId": "需求 id", "state": "generating", "message": "目前進度（選填）" }`。state 可用 `generating`、`done`、`failed`；九張圖未全部存檔時 `done` 回 409，舊需求或已更換的背景設定也回 409。AI 可在根目錄執行 `node shared/template/tools/editor.mjs --project projects/<專案> --design-request <需求 id> --design-state generating`，完成改用 `done`，失敗改用 `failed --message "原因"`；查詢用 `--design-state status`。生圖指令內已附可執行的回報指令；紀錄位於該需求目錄的 `progress.json`。
 - **選圖替換**：背景區選全畫面／側邊欄／章節，再點「原本背景」或 A／B／C 圖片替換、立即預覽。「原本背景」固定保留，尚未生成時也能選；指目前風格包或共用模板的原背景，僅還原該類圖片，保留主色與其他類選圖。三類可分別混搭。切回頁面自動讀取新圖，也可按「載入圖片」。選擇記錄在該需求的 `selection.json`；最後按「儲存並套用」。缺圖或壞圖不取代原背景。
 - **預覽播放**：構圖頁與完整情境庫預設顯示內容出齊、退場前的完成畫面；滑鼠移入時持續循環播放，移開回完成畫面。點擊構圖頁預覽可放大並播放，也可按「重播」。側邊欄使用實際資訊卡、字幕與右移講者的合成預覽。
 - 可移除參考圖、還原已套用的設定。上方「儲存並套用」固定在頁首，捲到動畫區也能直接確認。
@@ -259,10 +261,21 @@ node shared/template/tools/editor.mjs --project projects/example
 1. 在時間軸點一段動畫或螢幕錄影，修改單上方會列出它的 id、動畫是什麼、成片時間和這段的字幕。
 2. 點想怎麼改（例如「流程更細節」「以圖像展示為主」「文字少一點」「換一種動畫」；錄影段是「標註更清楚」「推近到操作區」「換成動畫」…），或在下面自己寫。點了、打了就存進修改單，不用按儲存；標籤和描述都清掉＝拿掉這段。
 3. 換下一段，一直累積；下面的清單分「待改」「已改完」兩組，「↗」跳回那段、「✕」拿掉。時間軸上那段的右端會標 ✎（待改）或 ✓（已改完）。
-4. 按「複製給 AI（N 段待改）」：只送待改的段，存到 `work/feedback/editor-requests.md`，剪貼簿放一行指令（「照剪輯台修改單改這 N 段（檔案路徑）：…」）。貼給 AI，或直接跟 AI 說「照修改單改」。AI 會直接改（每段一個子代理一起做），改好停在 Studio 預覽給你看。送出後清單上那段標「已送出」。
-5. AI 改完（讀 `work/feedback/r<N>.md`「改了哪幾段」），那段移到「已改完」、列出 AI 做了什麼；按「▶ 看結果」切到成片預覽、跳到那段開頭。已改完的段再點標籤或改描述，就變回待改，下次複製會再送。
+4. 按「複製給 AI（N 段待改）」：把待改的段存到 `work/feedback/editor-requests.md`，並複製一行指令。成功後標「已複製」，請貼給 AI；若剪貼簿失敗，只標「已存檔」。複製本身不會啟動 AI。
+5. AI 回報開始後，對應的段才標「生成中」；失敗時標「生成失敗」，提示原因。AI 完成並通過 build、audit 後回報，那段移到「已改完」、列出 AI 做了什麼；按「▶ 看結果」切到成片預覽、跳到那段開頭。尚未使用狀態 API 的舊流程仍讀 `work/feedback/r<N>.md`「改了哪幾段」。已改完的段再點標籤或改描述，就變回待改。
 
 修改單存在這個瀏覽器裡，關掉分頁再打開還在；改完想重寫就按「清空修改單」（要按兩次）。
+
+AI 回報狀態：`GET /api/requests/status` 讀取 `requests.revision`；`POST /api/requests/status` 傳 JSON `{ "revision": "讀到的版本", "ids": ["s01"], "state": "generating" }`。狀態可用 `generating`、`done`、`failed`，可加 `message` 與 `round`；`done` 只在 build、audit 通過後回報。版本不符回 409，整批不寫；不在修改單的 id 或格式錯誤回 400。狀態存於 `work/feedback/editor-requests-status.json`，重新啟動剪輯仍保留；重新複製後舊版本狀態不再套用。
+
+AI 也可從工作區根目錄執行（剪輯未開啟仍可回報，與 API 寫同一份狀態）：
+
+```sh
+node shared/template/tools/editor.mjs --project projects/<專案> --requests-state status
+node shared/template/tools/editor.mjs --project projects/<專案> --requests-state generating --request-revision <revision> --ids s01,x02
+node shared/template/tools/editor.mjs --project projects/<專案> --requests-state done --request-revision <revision> --ids s01 --round r1 --message "已完成修改並通過 build、audit"
+node shared/template/tools/editor.mjs --project projects/<專案> --requests-state failed --request-revision <revision> --ids x02 --message "生成失敗原因"
+```
 
 ### 轉場
 

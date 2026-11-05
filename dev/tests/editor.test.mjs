@@ -493,6 +493,53 @@ test('修改單改完了沒（requestsInfo）：比修改單新的 r<N>.md「改
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('修改單狀態 API：複製僅存檔；AI 逐段回報開始、失敗、完成；版本與段落驗證後整批寫入', async () => {
+  await setup2();
+  const saved = await (await post2('/api/requests', { markdown: '# 修改單\n\n## 1. s01\n\n## 2. x02\n' })).json();
+  const revision = saved.requests.revision;
+  assert.match(revision, /^[a-f0-9]{40}$/);
+  assert.deepEqual(saved.requests.states, {}, '存檔不代表 AI 開始');
+  assert.deepEqual((await (await get2('/api/requests/status')).json()).requests, saved.requests);
+  const update = (body) => post2('/api/requests/status', { revision, ...body });
+  let r = await update({ ids: ['s01'], state: 'generating' });
+  assert.equal(r.status, 200);
+  let q = (await r.json()).requests;
+  assert.equal(q.states.s01.state, 'generating');
+  assert.equal(q.states.x02, undefined, '另一段仍待改');
+  const stateFile = path.join(proj2dir, 'work/feedback/editor-requests-status.json');
+  const before = fs.readFileSync(stateFile, 'utf8');
+  for (const body of [
+    { ids: ['s01'], state: 'generating', revision: 'old' },
+    { ids: ['s01', 'unknown'], state: 'done' },
+    { ids: [], state: 'done' },
+    { ids: ['s01'], state: 'unknown' },
+    { ids: ['s01'], state: 'failed', message: {} },
+  ]) {
+    r = await update(body);
+    assert.equal(r.status, body.revision ? 409 : 400);
+    assert.equal(fs.readFileSync(stateFile, 'utf8'), before, '不合法請求整批不寫');
+  }
+  r = await update({ ids: ['x02'], state: 'failed', message: '動畫檢查未通過' });
+  q = (await r.json()).requests;
+  assert.equal(q.states.x02.message, '動畫檢查未通過');
+  assert.equal(q.states.s01.state, 'generating');
+  // 即使 rN 已先寫了完成紀錄，API 的生成中／失敗仍優先。
+  fs.writeFileSync(path.join(proj2dir, 'work/feedback/r999.md'), '## 改了哪幾段\n- s01：提前寫的紀錄\n- x02：提前寫的紀錄\n');
+  assert.deepEqual(E.requestsInfo(proj2dir).done, {});
+  r = await update({ ids: ['s01'], state: 'done', round: 'r999', message: '已重做並通過 build、audit' });
+  q = (await r.json()).requests;
+  assert.deepEqual(q.done.s01, { round: 'r999', note: '已重做並通過 build、audit' });
+  assert.equal(q.done.x02, undefined);
+  assert.deepEqual(E.requestsInfo(proj2dir), q, '狀態從磁碟讀取，重啟仍保留');
+  const cli = spawnSync(process.execPath, [EDITOR, '--project', proj2dir, '--requests-state', 'generating', '--request-revision', revision, '--ids', 'x02'], { encoding: 'utf8' });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.equal(JSON.parse(cli.stdout).requests.states.x02.state, 'generating');
+  const latest = await (await post2('/api/requests', { markdown: '# 修改單新版\n\n## 1. s01\n' })).json();
+  assert.notEqual(latest.requests.revision, revision);
+  assert.deepEqual(latest.requests.states, {}, '新修改單不沿用舊狀態');
+  assert.equal((await update({ ids: ['s01'], state: 'done' })).status, 409);
+});
+
 test('人聲響度（ebur128，剪掉的範圍不算）與縮圖條（ffmpeg sprite，快取在 .editor/thumbs/）', async () => {
   await setup2(); reset2();
   const r = await post2('/api/loudness', { cuts: [[0, 1]] });

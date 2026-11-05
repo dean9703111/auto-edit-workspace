@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const kindNames = { fs: '全畫面', side: '側邊欄', ch: '章節' };
 const notes = { fs: '全畫面資訊卡與情境動畫共用這張背景。', side: '側邊欄完成預覽 · 背景圖為 960 × 1080。', ch: '章節轉場使用這張背景，保留章名的留白。' };
-let state = null, kind = 'fs', category = 'all', expanded = false, pending = null, reading = false, copiedRequestId = null, mutation = 0;
+let state = null, kind = 'fs', category = 'all', expanded = false, pending = null, reading = false, copiedRequestId = null, copyFailureId = null, refreshing = false, mutation = 0;
 const frames = new Set();
 const observer = new IntersectionObserver((entries) => { for (const e of entries) { e.target.previewVisible = e.isIntersecting; if (!e.isIntersecting) e.target.previewPlaying = false; send(e.target); } }, { rootMargin: '100px' });
 function notify() { window.dispatchEvent(new Event('design-state')); }
@@ -12,6 +12,18 @@ window.designWorkbench = {
   accept: (s) => { mutation++; state = { ...state, ...s }; render(); },
 };
 function error(e) { $('designError').textContent = e.message || String(e); }
+function renderGenerationStatus() {
+  const el = $('designGenerationStatus'), req = state?.request, progress = req?.progress;
+  el.dataset.state = progress?.state || 'waiting';
+  if (!req) { el.textContent = '複製指令貼給 AI，依指定風格生成 3 組、共 9 張。'; return; }
+  const count = `${req.foundCount}/${req.expectedCount} 張已存檔`;
+  if (progress?.state === 'generating') el.textContent = `生成中 · ${count}${progress.message ? ` · ${progress.message}` : ''}`;
+  else if (progress?.state === 'failed') el.textContent = `生成失敗 · ${progress.message || '請查看 AI 回報的原因後重試'}（${count}）`;
+  else if (progress?.state === 'done') el.textContent = `生成完成 · ${count}，請在上方選圖預覽。`;
+  else if (copyFailureId === req.id) el.textContent = '指令已儲存，請手動複製展開的文字貼給 AI。';
+  else if (copiedRequestId === req.id) el.textContent = `已複製，請貼給 AI；AI 回報開始後會顯示「生成中」。${req.foundCount ? `（${count}）` : ''}`;
+  else el.textContent = `指令已儲存，請複製貼給 AI。${req.foundCount ? `（${count}）` : ''}`;
+}
 async function request(url, body) {
   const r = await fetch(url, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const incompatible = r.status === 404 ? '剪輯服務仍是舊版，請重新啟動服務後按「重新連接」。目前的構圖調整會保留。' : '剪輯服務的回應格式不正確，請重新連接後再試。';
@@ -107,6 +119,7 @@ function render() {
   for (const zone of document.querySelectorAll('label[for="backgroundUpload"], label[for="referenceUpload"]')) zone.setAttribute('aria-disabled', String(busy));
   for (const b of document.querySelectorAll('[data-brand]')) b.disabled = busy;
   $('copyDesignPrompt').textContent = copiedRequestId && copiedRequestId === state.request?.id ? '已複製，貼給 AI 生圖' : '複製生圖指令';
+  renderGenerationStatus();
   $('brandColor').value = state.draft.color;
   if (document.activeElement !== $('brandHex')) $('brandHex').value = state.draft.color;
   $('designState').textContent = busy ? '背景處理中' : state.dirty ? '預覽中 · 儲存後套用' : '已套用的風格';
@@ -223,7 +236,7 @@ document.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault
 document.addEventListener('drop', (e) => { if (hasFiles(e)) { e.preventDefault(); error(new Error('請將圖片拖到參考圖或背景上傳區。')); } });
 $('copyDesignPrompt').addEventListener('click', async () => {
   try {
-    copiedRequestId = null;
+    copiedRequestId = null; copyFailureId = null;
     await transact('/api/design/request', { description: $('designDescription').value, direction: $('designDirection').value });
     try {
       await navigator.clipboard.writeText(state.request.prompt);
@@ -232,18 +245,24 @@ $('copyDesignPrompt').addEventListener('click', async () => {
     } catch {
       $('designPromptDetails').open = true;
       $('designPrompt').focus(); $('designPrompt').select();
+      copyFailureId = state.request.id;
       $('designRequestStatus').textContent = '指令已儲存，請手動複製展開的文字。';
     }
+    renderGenerationStatus();
   } catch (e) { error(e); }
 });
 async function refreshCandidates(silent = false) {
-  if (!state?.request || pending || reading) return;
-  const version = mutation;
-  const data = await request('/api/design');
-  if (pending || reading || version !== mutation) return;
-  if (!silent) $('designError').textContent = '';
-  state = { ...state, ...data }; render();
-  if (!silent && !state.request?.candidates.some((c) => c.backgrounds?.[kind]?.ready)) $('designRequestStatus').textContent = '這類背景還沒有生成圖片。';
+  if (!state?.request || pending || reading || refreshing) return;
+  refreshing = true;
+  try {
+    const version = mutation;
+    const data = await request('/api/design');
+    if (pending || reading || version !== mutation) return;
+    if (!silent) $('designError').textContent = '';
+    const next = { ...state, ...data };
+    if (JSON.stringify(next) !== JSON.stringify(state)) { state = next; render(); }
+    if (!silent && !state.request?.candidates.some((c) => c.backgrounds?.[kind]?.ready)) $('designRequestStatus').textContent = '這類背景還沒有生成圖片。';
+  } finally { refreshing = false; }
 }
 $('refreshDesignCandidates').addEventListener('click', () => refreshCandidates().catch(error));
 window.addEventListener('focus', () => refreshCandidates(true).catch(() => {}));
@@ -278,3 +297,4 @@ async function loadDesign() {
 }
 $('retryDesign').addEventListener('click', loadDesign);
 await loadDesign();
+setInterval(() => { if (!document.hidden) refreshCandidates(true).catch(() => {}); }, 2500);

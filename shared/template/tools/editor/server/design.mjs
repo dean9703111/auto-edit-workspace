@@ -182,8 +182,24 @@ function requestState(ctx, id) {
     return { variant, backgrounds, ready: req.targets.every((k) => backgrounds[k].ready), thumb: Object.values(backgrounds).find((b) => b.thumb)?.thumb || null };
   });
   const selected = req.targets.every((k) => selectedByKind[k] && selectedByKind[k] === selectedByKind[req.targets[0]]) ? selectedByKind[req.targets[0]] : null;
+  const reported = read(path.join(req.dir, 'progress.json'));
+  const progress = reported || { state: foundCount === req.targets.length * VARIANTS.length ? 'done' : 'waiting', message: '', at: null };
   return { id, prompt: fs.readFileSync(path.join(req.dir, 'request.md'), 'utf8'), savedTo: path.relative(ctx.P.root, req.dir).split(path.sep).join('/'),
-    description: req.description || '', direction: req.direction || 'auto', scope: 'all', kind: req.targets[0], selected, selectedByKind, foundCount, expectedCount: req.targets.length * VARIANTS.length, candidates };
+    description: req.description || '', direction: req.direction || 'auto', scope: 'all', kind: req.targets[0], selected, selectedByKind, foundCount, expectedCount: req.targets.length * VARIANTS.length, candidates, progress };
+}
+export function designRequestStatus(ctx) { return { request: requestState(ctx, state(ctx).request?.id) }; }
+export function setDesignRequestStatus(ctx, body) {
+  const s = state(ctx), req = requestData(ctx, body.requestId);
+  if (!req || req.id !== s.request?.id) throw fail('背景生圖需求已更新，請重新讀取目前的生圖指令。', 409);
+  if ((req.style || '') !== (plan(ctx).style || '') || req.theme !== (plan(ctx).theme || 'light') || req.color !== descriptor(ctx, s.draft).color
+    || req.spec.reference !== (s.reference?.file || null)) throw fail('背景設定已更換，請重新複製生圖指令。', 409);
+  if (!['generating', 'done', 'failed'].includes(body.state) || (body.message !== undefined && (typeof body.message !== 'string' || body.message.length > 2000))) throw fail('請提供有效的 state（generating／done／failed）與文字訊息。');
+  const current = requestState(ctx, req.id);
+  if (body.state === 'done' && current.foundCount !== current.expectedCount) throw fail(`背景尚未全部存檔（${current.foundCount}/${current.expectedCount} 張），不能回報完成。`, 409);
+  const file = path.join(req.dir, 'progress.json');
+  fs.writeFileSync(file + '.tmp', JSON.stringify({ state: body.state, message: body.message || '', at: Date.now() }, null, 2));
+  fs.renameSync(file + '.tmp', file);
+  return designRequestStatus(ctx);
 }
 const DIRECTIONS = {
   auto: ['依參考圖與描述', ''],
@@ -201,7 +217,7 @@ export function prepareDesignRequest(ctx, body) {
   const direction = Object.hasOwn(DIRECTIONS, body.direction || 'auto') ? body.direction || 'auto' : 'auto';
   const theme = plan(ctx).theme || 'light', style = plan(ctx).style || '';
   const format = resolveFormat({ projectDir: ctx.P.project, plan: plan(ctx) }).format;
-  const spec = { mode: 'generate-all-v3', color, description, direction, theme, style, format, targets, reference: s.reference?.file || null };
+  const spec = { mode: 'generate-all-v4', color, description, direction, theme, style, format, targets, reference: s.reference?.file || null };
   if (JSON.stringify(requestData(ctx, s.request?.id)?.spec) === JSON.stringify(spec)) return designState(ctx);
   const id = randomUUID(), dir = requestDir(ctx, id);
   fs.mkdirSync(dir, { recursive: true });
@@ -214,7 +230,9 @@ export function prepareDesignRequest(ctx, body) {
     ? '以使用者描述與參考圖決定視覺語言，沿用其具體造型、材質、輪廓與配色。A 著重線條結構、B 著重形狀編排、C 著重材質層次，三組都須符合指定風格。'
     : 'A 科技工程線稿（正交網格、精準細線）；B 編輯平面設計（紙感、明確幾何色塊）；C 立體幾何（實體造型、清楚材質與投影）。';
   const prompt = `直接用生圖工具生成並儲存 9 張影片背景：A、B、C 三個可明確區別的設計方向，每組都生成以下三張。\n主色 ${color}；${theme === 'dark' ? '深色' : '亮色'}。${description ? `使用者風格：${description}。` : ''}${format === 'portrait' ? '直式使用，中央取景區保持乾淨。' : ''}\n${visualDirection}\n參考圖：${ref || '無'}${ref ? '；讀取圖片，依其設計語言生成；不要只取顏色。' : ''}\n每組三張保持同一套造型、材質與配色；A/B/C 必須在結構、形狀或材質上有明顯差異，不可只是換色或移動同一片光暈。輪廓、紋理清晰；除非使用者明確要求，不使用失焦、模糊光斑、霧化漸層或泛光作為主要設計。\n${targets.map((k) => `- bg-${k}.png：${KINDS[k].join('×')}；內容安全區：${zones[k]}`).join('\n')}\n圖片不含文字、標誌、卡片。內容安全區維持易讀的單純底面；清晰裝飾安排在區域外，不以整張模糊代替留白。\n儲存至 ${dir} 下的 A/、B/、C/，每個資料夾各三張 PNG。全部生成並存檔後，回報圖片路徑。\n`;
-  fs.writeFileSync(path.join(dir, 'request.md'), prompt);
+  const statusCommand = `node shared/template/tools/editor.mjs --project ${JSON.stringify(path.relative(ctx.P.root, ctx.P.project).split(path.sep).join('/'))} --design-request ${id} --design-state`;
+  const progressPrompt = `\n狀態回報（在工作區根目錄執行）：開始生圖前執行 ${statusCommand} generating；九張圖片全部存檔後執行 ${statusCommand} done；任何生成或存檔失敗，執行 ${statusCommand} failed --message "失敗原因"。生圖途中可用 generating --message "目前進度" 更新說明。需求衝突時停止，重新讀取最新指令，不要把舊任務回報到新需求。\n`;
+  fs.writeFileSync(path.join(dir, 'request.md'), prompt + progressPrompt);
   fs.writeFileSync(path.join(dir, 'request.json'), JSON.stringify({ id, targets, color, theme, style, direction, description, spec, createdAt: Date.now() }, null, 2));
   s.request = { id }; s.job = null; write(ctx, s);
   return designState(ctx);

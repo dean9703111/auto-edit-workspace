@@ -1,0 +1,81 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import puppeteer from 'puppeteer-core';
+import { startEditor } from '../../shared/template/tools/editor.mjs';
+import { findChrome } from '../../shared/template/tools/lib/audit-browser.mjs';
+import { TEMPLATE } from './helpers.mjs';
+
+test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態符合實際動作', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-requests-ui-'));
+  const project = path.join(root, 'projects/example'), work = path.join(project, 'work');
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'shared'));
+  fs.symlinkSync(TEMPLATE, path.join(root, 'shared/template'), 'dir');
+  fs.writeFileSync(path.join(work, 'hyperframes/plan.json'), JSON.stringify({ version: 1, scenes: [
+    { id: 's01', scene: 'concept', from: '#1', to: '#1e', slots: { text: '第一段' } },
+    { id: 's02', scene: 'concept', from: '#2', to: '#2e', slots: { text: '第二段' } },
+  ] }));
+  fs.writeFileSync(path.join(work, 'rough.srt'), '1\n00:00:00,500 --> 00:00:02,500\n第一段字幕\n\n2\n00:00:03,000 --> 00:00:05,000\n第二段字幕\n');
+  const media = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=navy:size=320x180:rate=30', '-t', '6', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(work, 'rough.mp4')]);
+  assert.equal(media.status, 0, String(media.stderr));
+  const editor = await startEditor({ cwd: root, flags: { project, template: path.join(root, 'shared/template') }, port: 0, writeState: false });
+  let browser;
+  try {
+    browser = await puppeteer.launch({ executablePath: findChrome(), headless: true });
+    const page = await browser.newPage(), errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.setViewport({ width: 1800, height: 1000 });
+    await page.evaluateOnNewDocument(() => {
+      localStorage.setItem('editor-requests:projects/example', JSON.stringify(['s01', 's02'].map((id) => ({ id, tags: ['更有質感'], note: '', t: 1 }))));
+      localStorage.setItem('editor-requests-open', '1');
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { window.copiedRequest = text; } } });
+    });
+    await page.goto(editor.url);
+    await page.waitForSelector('[data-rq="copy"]');
+    await page.evaluate(() => { document.querySelector('#coach').hidden = true; });
+    assert.equal(await page.$eval('#rqCount', (el) => el.textContent), '2', await page.evaluate(() => JSON.stringify({ project: window.__editor.server?.project, requests: window.__editor.requests })));
+    assert.equal(await page.$$('.rq-sent').then((x) => x.length), 0);
+    await page.click('[data-rq="copy"]');
+    await page.waitForFunction(() => document.querySelector('.rq-sent')?.textContent === '已複製');
+    assert.match(await page.evaluate(() => window.copiedRequest), /--requests-state generating --request-revision [a-f0-9]{40} --ids s01,s02/);
+    assert.doesNotMatch(await page.$eval('#requests', (el) => el.textContent), /已送出/);
+    let q = (await (await fetch(new URL('/api/requests/status', editor.url))).json()).requests;
+    assert.deepEqual(q.states, {});
+    const update = async (ids, state, message = '') => {
+      const r = await fetch(new URL('/api/requests/status', editor.url), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision: q.revision, ids, state, message, round: 'r1' }) });
+      assert.equal(r.status, 200);
+    };
+    await update(['s01'], 'generating');
+    await page.waitForSelector('.rq-sent.generating');
+    assert.equal(await page.$$('.rq-sent.generating').then((x) => x.length), 1);
+    const screenshot = path.join(root, '生成中.png');
+    await page.screenshot({ path: screenshot });
+    await update(['s01'], 'failed', '動畫檢查未通過');
+    await page.waitForSelector('.rq-sent.failed');
+    await update(['s01'], 'done', '已重做並通過 build、audit');
+    await page.waitForSelector('.rq-item.done');
+    assert.match(await page.$eval('.rq-item.done', (el) => el.textContent), /已重做並通過 build、audit/);
+    // 改了需求後，舊批次的完成／生成狀態不再套到新需求。
+    await page.evaluate(() => window.__editor.select({ kind: 'item', id: 's01' }));
+    await page.waitForSelector('#rqNote');
+    await page.type('#rqNote', '重新調整');
+    await page.waitForFunction(() => document.querySelector('#rqState')?.textContent.includes('待改：已存進修改單'));
+    assert.equal(await page.$$('.rq-item.done').then((x) => x.length), 0);
+    // 剪貼簿失敗時，存檔成功也不能宣稱已複製。
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = async () => { throw new Error('clipboard denied'); };
+      document.execCommand = () => false;
+    });
+    await page.click('[data-rq="copy"]');
+    await page.waitForFunction(() => [...document.querySelectorAll('.rq-sent')].every((el) => el.textContent === '已存檔'));
+    assert.deepEqual(errors, []);
+    console.log(`修改單 UI 截圖：${screenshot}`);
+  } finally {
+    await browser?.close();
+    await editor.close();
+  }
+});
