@@ -739,7 +739,7 @@ export function build(flags, { log = console.log } = {}) {
   if (!flags.force && fs.existsSync(idx)) {
     const cur = fs.readFileSync(idx, 'utf8');
     if (cur !== main.html && !W.isUntouched('index.html', cur)) {
-      throw new Error(`${rel(idx)} 被手改過（可能是 Studio 存檔）：把想要的改動搬進 plan.json（時間、slots、css），再加 --force 重跑；直接覆寫會蓋掉手改`);
+      throw new Error(`${rel(idx)} 被手改過（可能是舊專案在 Studio 存檔）：把想要的改動搬進 plan.json（時間、slots、css），再加 --force 重跑；直接覆寫會蓋掉手改`);
     }
   }
 

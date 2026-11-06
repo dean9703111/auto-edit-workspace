@@ -34,7 +34,7 @@
     "duration": 8,
     "slots": {
       "title": "三道關卡",
-      "items": ["**剪輯清單**：先確認 NG ｜icon=list-checks", "**分鏡表**：先有腳本再動畫 ｜icon=file-text", "**Studio 預覽**：點一下就能改 ｜icon=monitor-play"]
+      "items": ["**剪輯清單**：先確認 NG ｜icon=list-checks", "**分鏡表**：先有腳本再動畫 ｜icon=file-text", "**完成影片預覽**：說一句就能改 ｜icon=monitor-play"]
     },
     "beats": {}
   }

@@ -15,7 +15,7 @@
 2. 完成影片一律用 `build.mjs` 產生，不要從零寫 HyperFrames 的 `index.html`。理由：底片、子母畫面、字幕、音效、淡入淡出的時間都由程式算，手寫一定會漏。
 3. 你要手寫的檔是 `work/hyperframes/plan.json`，以及第二層情境動畫（`compositions/x-*.html`，從範例改）。**講解在講情境（過程、前後對比、數值變化、比喻、因果）時優先做情境動畫**，字卡只放名詞、一句重點和提醒（R7.1）。
 4. 要改任何東西，只改 plan.json，再重跑 build。不要直接改 build 產生的檔（`index.html`、`compositions/sNN-*.html`、`captions.html`、`kit/`）。
-5. 停點照 `AGENTS.md`「停點總表」（①–⑥）：構圖（步驟 2）、分鏡表（步驟 4）、Studio 預覽（步驟 10）都要停下來等使用者確認，最後一行照總表的固定格式。
+5. 停點照 `AGENTS.md`「停點總表」（①–⑥）：構圖（步驟 2）、分鏡表（步驟 4）、完成影片預覽（步驟 10）都要停下來等使用者確認，最後一行照總表的固定格式。
 6. 字級由模板固定，`css` 只能改位置。字放不下就縮文案；使用者要求「字再大一號」也做不到（4.3）。
 7. 「只有聲音」的區間（旁白、`rough.mp4` 全黑的地方）沒有講者，一定要用螢幕錄影或圖片（第 5 節）蓋住，否則 build 報 ✖。
 8. plan.json 的 `edit`、`look`、`sfxVolume` 是使用者在剪輯台調的（第 6 節）。改 plan.json 前先重新讀檔，不要蓋掉；使用者在剪輯台改過的值以他改的為準。
@@ -35,11 +35,11 @@
 | 7 | 產生整個 HyperFrames 專案 | `node shared/template/tools/build.mjs --project projects/<專案>` | | |
 | 8 | HyperFrames 靜態與執行期檢查；有情境動畫時再跑版面量測（✖ 全部修掉） | `cd projects/<專案>/work/hyperframes && npx hyperframes check --caption-zone "x0=0;y0=0.852;x1=1;y1=1;severity=error"`（直式的字幕區不同：照 build 印的那一行跑）；`node shared/template/tools/audit.mjs --project projects/<專案>` | R8、R7.6 | |
 | 9 | 截圖自己看（check 0 issues 不代表版面對） | `cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review` | 2.5 | |
-| 10 | 開 Studio，把網址給使用者 | `cd projects/<專案>/work/hyperframes && npx hyperframes preview --no-open` | 2.6 | **停點 ④** |
+| 10 | 開完成影片預覽，把網址給使用者 | `node shared/template/tools/editor.mjs --project projects/<專案>` | 2.6 | **停點 ④** |
 | 11 | 測試片段（3–5 秒）→ 看觀影總表 → 完整 render | 2.7；`node shared/template/tools/qc.mjs observe --project projects/<專案> --file <測試片段> --offset <起點>` | | |
 | 12 | 觀影總表整片看一遍、驗收，附輸出給使用者 | `node shared/template/tools/qc.mjs observe --project projects/<專案>`；2.8 | `REVIEW.md` | |
 
-理由：改分鏡表只要改一行字，改完成影片要等好幾分鐘 render。所以順序是「分鏡 → 檢查 → 截圖 → Studio → 短片段 → 整支」。
+理由：改分鏡表只要改一行字，改完成影片要等好幾分鐘 render。所以順序是「分鏡 → 檢查 → 截圖 → 完成影片預覽 → 短片段 → 整支」。
 
 使用者說「打開剪輯台」時（任何一步之後都可以），照 `shared/template/EDITOR.md` 開；剪輯台存檔後重跑步驟 6–7，剪輯台寫了哪些欄位見第 6 節。
 
@@ -126,27 +126,21 @@
 - 圖在 `work/hyperframes/.hyperframes/artifacts/snapshots/<一串 id>/`，指令結尾會印出完整路徑。
 - 先看 `review-beats.jpg`：每段至少兩格（檔名 `beat-NN-at-秒數.png`）。段起點後 0.3 秒那格**還在進場動畫中**（字被遮罩切一半、面板還在滑入，都是正常的）；**判斷版面看段中間那格**。再看 `review-seam-NN.jpg`（每個接縫前後 5 格）；`review-phone.jpg` 是手機寬度。
 - 逐張確認：卡片沒擋到講者的臉；文字沒被切掉、沒超出卡片、沒斷在詞中間；字幕在底部、只有一行、中文是黑體；子母畫面裡的講者沒被切到頭；側邊欄期間講者完整在右半邊。
-- `--check` 的「大約會蓋到講者框 N%」：snapshot 看到擋臉，就用 `css` 移位（R4）或換情境。只壓到身體、臉沒擋到，就保留，交 Studio 時點名請使用者確認（靜態照片看不出手勢會比到哪）。
+- `--check` 的「大約會蓋到講者框 N%」：snapshot 看到擋臉，就用 `css` 移位（R4）或換情境。只壓到身體、臉沒擋到，就保留，給使用者看預覽時點名請他確認（靜態照片看不出手勢會比到哪）。
 - 示範影片本身燒了「原始時間 00:xx」黑框和「測試用場地示意圖」黃字，不是版面問題。
 - 要看特定時間：`npx hyperframes snapshot --at 38.5,45.2 --no-end -o ../../output/qc`（另外產生 `contact-sheet.jpg`）。
 
-### 2.6 Studio 預覽與修改
+### 2.6 完成影片預覽與修改
 
-1. `cd projects/<專案>/work/hyperframes && npx hyperframes preview --no-open`。在非互動的 shell 裡它會自己轉到背景，印出網址就結束，不用加 `&` 或 nohup。網址像 `http://localhost:3002/#project/hyperframes`（印成 `127.0.0.1` 也可以）。查狀態 `npx hyperframes preview --status`，關掉 `--stop`。
-2. 給網址時一起說三件事：要使用者確認的卡（例：碰撞 ⚠ 那張）；請他順便看字幕有沒有對到講話（snapshot 檢查不到）；要改哪一段，直接說 Studio 左側 Compositions 或時間軸上的段落編號（例「s05 的金句卡往左移」）就可以。
-3. 使用者直接說段落編號（例「s05 的金句卡」）時，直接改 plan.json 的那個 `id`，不用讀選取。他說「這張卡」「我選的」時，才讀他在 Studio 選到的元素：
-   ```bash
-   cd projects/<專案>/work/hyperframes && npx hyperframes preview --context --json --context-fields selection
-   ```
-   - 看 `selection.compositionPath`：`compositions/s04-quote.html` → plan.json 的 `s04`。點卡片上的字會選到文字區塊（`selector` 像 `.sc-t54`，沒有元素 id），靠檔名找段就夠了。
-   - 回傳 `"code": "no-selection"`：Studio 開著，但沒選到東西。請使用者暫停在那張卡、點卡片上的字再說一次，或告訴你大約第幾秒。
+1. `node shared/template/tools/editor.mjs --project projects/<專案>`。在非互動的 shell 裡它會自己轉到背景，印出網址就結束，不用加 `&` 或 nohup。給使用者它印的「完成影片預覽：」網址（像 `http://127.0.0.1:4400/?view=final`），這個網址會直接開在完成影片預覽。查狀態 `--status`，關掉 `--stop`。
+2. 給網址時一起說三件事：要使用者確認的卡（例：碰撞 ⚠ 那張）；請他順便看字幕有沒有對到講話（snapshot 檢查不到）；要改哪一段，直接說時間軸上的段落編號（例「s05 的金句卡往左移」）就可以。
+3. 使用者直接說段落編號（例「s05 的金句卡」）時，直接改 plan.json 的那個 `id`。他說「這張卡」「我選的」時，請他說段號或大約第幾秒。
    - 使用者說「第 X 秒那張卡」：看 `--check` 報告的「起–迄」欄，X 落在哪一段就是哪一段（例：75 秒 → `s04｜15 金句字卡｜1:13.26–1:18.40`）。
-4. 把要求寫進 plan.json 那一段：文字改 `slots`，時間改 `from`／`to`／`at`，位置改 `css`（R4）。直式專案上半面板的 host 不要在 Studio 裡拖動或改位置（會蓋掉舞台縮放），要改內容去子合成（`compositions/` 裡那段的檔，或 plan.json 那段的 `slots`）。重跑 `--check` 與 build。Studio 會自動重新整理；畫面沒變就手動重新整理。
-5. 改完 3 秒後 grep 一次剛改的文字，確認產生檔裡是新內容（舊版 CLI 的 preview 曾把舊版本寫回檔案）。改到的段在改之前、build 之後各跑一次 `node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>`；使用者沒說怎麼改、只說要更好（「s12 想更完善」「重新設計」），或要退回舊版（「s12 用 v1」），照 AGENTS.md「段落版本與改版」。
-6. build 前不用先關 preview：Studio 會在每個元素加 `data-hf-id`，build 算雜湊時會排除，不算手改。
-7. 產生檔被手改過（使用者可能在 Studio 拖過東西）時，build 會印出下面其中一則。先看改了什麼，把要保留的搬進 plan.json，再 `node shared/template/tools/build.mjs --project projects/<專案> --force`。
+4. 把要求寫進 plan.json 那一段：文字改 `slots`，時間改 `from`／`to`／`at`，位置改 `css`（R4）。重跑 `--check` 與 build。剪輯台的預覽會自動換成新版；畫面沒變就重新整理頁面。
+5. 改到的段在改之前、build 之後各跑一次 `node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>`；使用者沒說怎麼改、只說要更好（「s12 想更完善」「重新設計」），或要退回舊版（「s12 用 v1」），照 AGENTS.md「段落版本與改版」。
+6. 產生檔被手改過（舊專案可能在 Studio 拖過東西）時，build 會印出下面其中一則。先看改了什麼，把要保留的搬進 plan.json，再 `node shared/template/tools/build.mjs --project projects/<專案> --force`。
    - `⚠ 這些檔被手改過，沒有覆寫：… → 把改動搬進 plan.json 後加 --force`
-   - `work/hyperframes/index.html 被手改過（可能是 Studio 存檔）：…再加 --force 重跑`（build 整個停下來）
+   - `work/hyperframes/index.html 被手改過（可能是舊專案在 Studio 存檔）：…再加 --force 重跑`（build 整個停下來）
 
 ### 2.7 render
 
@@ -244,7 +238,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
         "items": [ "轉成 **SRT** 字幕檔", { "text": "AI 檢查錯字", "at": "#19" }, { "text": "專有名詞留英文", "at": "#21" } ] } },
     { "id": "s04", "scene": "quote", "from": "#32", "to": "#33e", "anchor": "踩過的坑",
       "slots": { "text": "把踩過的坑//寫成下一次的文件", "by": "大寶" },
-      "css": "#gCard { left: 120px; right: auto; margin: 0; }", "note": "Studio：擋到手勢，移到左半邊" } ] }
+      "css": "#gCard { left: 120px; right: auto; margin: 0; }", "note": "預覽：擋到手勢，移到左半邊" } ] }
 ```
 
 **JSON 不能有註解，最後一項後面不能有逗號。**欄位只能用下面兩張表與 R2 列的，多寫會出錯。
@@ -383,7 +377,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 只有聲音（rough.mp4 1:03.80–1:14.00，10.2s）：已被 media 段或全畫面蓋住，子母畫面自動不顯示
 ```
 
-- 有 `edit.cuts` 時，表格的「起–迄」是**完成影片**的秒數（Studio、`--test`、使用者說「第 X 秒」都是完成影片秒數），括號裡的 `rough …` 是 `rough.mp4` 的秒數（plan.json、剪輯台用這個）。
+- 有 `edit.cuts` 時，表格的「起–迄」是**完成影片**的秒數（完成影片預覽、`--test`、使用者說「第 X 秒」都是完成影片秒數），括號裡的 `rough …` 是 `rough.mp4` 的秒數（plan.json、剪輯台用這個）。
 - 「只有聲音」那行：沒被蓋住超過 1 秒時寫 `✖ 1:10.00–1:11.20 沒被蓋住`（同時會有一則 ✖，4.2），0.1–1 秒寫 `⚠ 1:10.00–1:10.30 沒被蓋住`。
 
 這份範例的改法：
@@ -394,7 +388,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | 沒有畫面的區間 3 段 | 開頭 0:01.00–0:14.75、結尾 0:55.50–1:13.00 補卡片或情境動畫；中間 0:34.50–0:38.50 把 s03 的 `to` 延到 `"#11"`（s04 的 `from`，0 秒相接） |
 | s02 的 pop 已拿掉 | 只是告知：和 s01 的 chapter 只差 2.4 秒。想留 pop 就在 s01 寫 `"sfx": null` |
 | s03、s05 講者會閃一下 | 照 `→`：s02 的 `to` 改成 `"#8"`、s04 的 `to` 改成 `"#14"`，0 秒相接 |
-| s03 蓋到講者框 29% | 照 2.5：擋到臉就 `css` 移到左邊或換 06／07；臉沒擋到就保留，交 Studio 時點名 |
+| s03 蓋到講者框 29% | 照 2.5：擋到臉就 `css` 移到左邊或換 06／07；臉沒擋到就保留，給使用者看預覽時點名 |
 | s04 右移後超出畫面 | `"sideShift": 0`。講者框左緣 x1＝960，本來就在面板（x 0–960）外 |
 | 講者瘦臉略過：抽樣 12 格都沒偵測到臉 | 合成影片沒有臉，只調光是正常的；真實專案畫面裡明明有講者，才照 `→` 加 `--force` 重跑（第 7 節） |
 | 字幕 #7 超過 18 字 | 在 rough.srt 拆句（2.4），改完重新對 plan.json 的句號 |
@@ -657,7 +651,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 
 - 完成影片長度＝`rough.mp4` − cuts（`--check` 報告最後一行；2.8 驗收用這個數字）。
 - 字幕、資訊卡、音效、media 段全部照剪掉的範圍重新對時間：整段落在剪掉範圍裡的段會被拿掉並 ⚠；部分重疊的段被裁短（報告寫 `cuts 剪掉 Ns`）。插入的錄影也跳過同一段，和講解保持同步。
-- 報告與 Studio、`--test` 的秒數是**完成影片**秒數；plan.json、剪輯台、`--check --json` 是 `rough.mp4` 秒數（報告括號裡有對照）。
+- 報告與完成影片預覽、`--test` 的秒數是**完成影片**秒數；plan.json、剪輯台、`--check --json` 是 `rough.mp4` 秒數（報告括號裡有對照）。
 - 剪掉的地方 build 會在兩側加 0.02 秒的聲音淡入淡出，避免爆音。
 
 ### 6.3 音效音量

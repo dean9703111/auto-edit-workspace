@@ -407,7 +407,7 @@ export function cli(argv = process.argv.slice(2)) {
     if (ids.length !== 1) throw new Error('use 一次只退回一段 → --seg 只寫一個段 id');
     if (!flags.ver) throw new Error('use 要加 --ver（例 --ver v1）→ 先跑 versions.mjs list 看有哪幾版');
     useVersion(P, flags, ids[0], flags.ver, log);
-    log(`→ 下一步：build、audit --only ${ids[0]}，再開 Studio（停點 ④）：`);
+    log(`→ 下一步：build、audit --only ${ids[0]}，再開完成影片預覽（停點 ④）：`);
     log(`node shared/template/tools/build.mjs --project ${pj(P)}`);
     return 0;
   }

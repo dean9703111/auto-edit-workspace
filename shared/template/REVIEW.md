@@ -18,7 +18,7 @@
 | 字被切、撐破 | 文字被切掉、超出卡片、斷在詞中間 | `review-beats.jpg`、`review-phone.jpg`；有 custom 段跑 `node shared/template/tools/audit.mjs --project projects/<專案>` | P0 |
 | 沒有畫面 | 照 style.md「審查門檻」的「沒有畫面」 | `node shared/template/tools/build.mjs --project projects/<專案> --check` 的「沒有畫面的區間」與「只有聲音」那幾行 | P0 |
 | 講者小視窗 | 子母畫面一定有講者小視窗；只有純聲音素材的區間才沒有（AGENTS.md「剪好看」硬規則） | `--check --json` 子母畫面段的 `pip` 不是空的；`review-beats.jpg` 子母畫面段的右下角；`qc.mjs final` 的「沒有講者小視窗」。空的先跑 `media.mjs verify-rough`（初剪全黑段），不要改版面 | P0 |
-| 字幕 | 照 style.md「審查門檻」的「字幕」 | `review-beats.jpg` 底部；`--check` 的「超過 18 字」；對嘴請使用者在 Studio 看 | P0 |
+| 字幕 | 照 style.md「審查門檻」的「字幕」 | `review-beats.jpg` 底部；`--check` 的「超過 18 字」；對嘴請使用者在完成影片預覽看 | P0 |
 | 閃動 | 照 style.md「審查門檻」的「閃動」「講者閃一下」 | `review-seam-NN.jpg`（每個接縫前後幾格）；`--check` 的「講者會閃一下」 | P1 |
 | 停留 | 照 style.md「審查門檻」的「停留」 | `--check` 的「到退場只停」⚠；`qc.mjs storyboard` 的「完成態」截圖；custom 段看 audit 的「完成態停太短」「最後一幕太短」（量的是兩個 `P.at` 綁句點之間畫面最長的一段靜止，拍前就開始的動作算到它結束為止） | P1 |
 | 版面細節（custom） | 照 USAGE-reference.md R8 #6 | audit 的「間距不足」「區塊重疊」「內距不足」「行高不足」「右側空白過多」「nowrap 餘裕不足」；內距差 ≤ 2px 不報、svg 線稿與連接線不算區塊（線壓到字要自己看截圖） | P2 |

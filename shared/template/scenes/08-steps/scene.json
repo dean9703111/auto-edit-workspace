@@ -37,7 +37,7 @@
     "sub": "貼上第一個提示詞",
     "duration": 8,
     "slots": {
-      "steps": ["貼上**第一個提示詞**，裝好工具 ｜icon=terminal", "確認**剪輯清單**再剪 ｜icon=list-checks", "在 **Studio** 預覽後輸出 ｜icon=monitor-play"]
+      "steps": ["貼上**第一個提示詞**，裝好工具 ｜icon=terminal", "確認**剪輯清單**再剪 ｜icon=list-checks", "看完**預覽**再輸出 ｜icon=monitor-play"]
     },
     "beats": {}
   }

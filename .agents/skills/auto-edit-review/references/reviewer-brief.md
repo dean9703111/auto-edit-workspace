@@ -5,7 +5,7 @@
 ## 派工訊息範本（主代理照抄、換掉 <…>）
 
 ```
-你是 verifier。只讀不寫：不改任何檔、不跑 build、不開 Studio、不 render。
+你是 verifier。只讀不寫：不改任何檔、不跑 build、不開剪輯台、不 render。
 專案：projects/<專案>
 看哪些段：<s01–s06>
 截圖在：projects/<專案>/work/hyperframes/.hyperframes/artifacts/snapshots/<id>/

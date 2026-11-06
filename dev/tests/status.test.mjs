@@ -153,3 +153,10 @@ test('--timeline：產物照第一次出現排；停點等待＝待回覆到同�
   assert.match(r.stdout, /停點等待：① 剪輯清單 0:3\d/);
   assert.deepEqual(fs.readdirSync(path.join(p, 'work'), { recursive: true }).sort(), before, '不寫任何檔');
 });
+
+test('018 舊專案停點紀錄的「④ Studio 預覽」照認，印成現在的名稱', () => {
+  const log = ['## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |', '|---|---|---|---|---|', '| 2026-11-01 10:00 | ④ Studio 預覽 | 待回覆 | — | — |', ''].join('\n');
+  const r = readStopLog(log).last.get('④ 完成影片預覽');
+  assert.equal(r.state, '待回覆');
+  assert.equal(r.label, '④ 完成影片預覽');
+});

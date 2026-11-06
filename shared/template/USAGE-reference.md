@@ -9,7 +9,7 @@
 | R1 | 挑情境：判斷順序、不下卡的句子（訊號表在 `SITUATIONS.md`） | 步驟 4 列分鏡表 |
 | R2 | 情境細節、清單寫法、全部欄位、media 段欄位、`--check --json` 格式、文字對時的欄位表（R2.8） | 步驟 4–5、插入螢幕錄影時 |
 | R3 | 字卡動態（fx） | 用到 fx 時 |
-| R4 | 畫面分區、講者位置、底片層、`sideShift`、`pipCrop`、`css` | 步驟 2、5，Studio 要移位時 |
+| R4 | 畫面分區、講者位置、底片層、`sideShift`、`pipCrop`、`css` | 步驟 2、5，預覽後要移位時 |
 | R5 | 字幕與音效（build 自動處理） | 要換或拿掉音效時 |
 | R6 | 密度與節奏、build 檢查哪些 | 步驟 4、6 |
 | R7 | 第二層情境動畫（custom）：骨架、`P.at` 綁句、34 支範例、檢查 | 符合 style.md「情境動畫優先」時 |
@@ -287,7 +287,7 @@
 | 講者位置 | 適合 | 避開或要調整 |
 |---|---|---|
 | 置中 | 全部 18 個 | — |
-| 右側（中心 x > 1060） | 06–10、12、13、14（靠左）、04 家族；03 用 `sideShift: 0` | 11、15 置中會壓到身體：snapshot 看臉，擋到臉就換 06／07 或用 `css` 移到左邊；只壓到身體就保留，交 Studio 時點名請使用者確認（核心 2.5）。05 不用 |
+| 右側（中心 x > 1060） | 06–10、12、13、14（靠左）、04 家族；03 用 `sideShift: 0` | 11、15 置中會壓到身體：snapshot 看臉，擋到臉就換 06／07 或用 `css` 移到左邊；只壓到身體就保留，給使用者看預覽時點名請他確認（核心 2.5）。05 不用 |
 | 左側（中心 x < 860） | 04 家族、02 | 06–15 下方字卡與 12 都靠左，會壓到講者：用 `css` 把卡移到右邊，或改用 04 家族；03 側邊欄蓋住左半邊，不用；05 不用 |
 
 ### R4.3 哪些情境會動到底片層
@@ -485,7 +485,7 @@
 
 - 分鏡表的「情境」欄寫 `custom（fullscreen）` 或 `custom（overlay）`，再寫從哪一支範例改；「理由」欄寫講解在講哪一種情境。使用者確認分鏡表後才開始做。
 - 每段情境動畫是一支獨立的檔，彼此不相依：分鏡表確認後，可以照 `AGENTS.md`「子代理分工」一段派一個子代理同時做（選用；沒有子代理就照 `.agents/skills/auto-edit-motion/SKILL.md` 一段一段做）。
-- 品質關卡：每一段都要通過 R7.6 的檢查，並看過 snapshot 的中段與完成態，才交給使用者看 Studio。
+- 品質關卡：每一段都要通過 R7.6 的檢查，並看過 snapshot 的中段與完成態，才交給使用者看完成影片預覽。
 - 兩層在同一個主合成裡一起掛：build 依 plan.json 的順序把它們排進時間軸，第二層的子母畫面、淡入淡出也由 build 加。
 - 拿不準的時候：判準照 style.md「情境動畫優先」；講解只是一句話帶過的地方，不要硬做動畫（作者：「影片內容合適時就採納，不合適就不用」）。
 - 動畫裡畫了游標按下：用 `P.at('#N@詞')` 定那一拍，plan.json 該段的 `clicks` 寫同一個 `#N@詞`（R5.2）。
@@ -870,7 +870,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 - **auto-editor**：Skill 文件和安裝的版本參數名稱可能不同，以 `auto-editor --help` 為準（實測 29.3.1 要用 `--cut-out`、`--add-in`、`--no-open`；每一段寫一次旗標，同一個旗標後面接兩段會失敗）。剪乾淨的指令由 `media.mjs ng-snap` 印出，不要自己拼。
 - **`npx hyperframes doctor`**：列為選用（optional）的項目沒裝可以略過，必要項目（Chrome、ffmpeg）要裝好。
 - **`preview --no-open`**：在非互動 shell 會自己轉到背景，印出網址就結束（核心 2.6）。
-- **Studio 的 `data-hf-id`**：Studio 開過之後，產生檔的每個元素會多一個 `data-hf-id` 屬性，不算手改（核心 2.6）。
+- **舊專案的 `data-hf-id`**：舊專案開過 Studio 的話，產生檔的每個元素會多一個 `data-hf-id` 屬性，不算手改（build 算雜湊時會排除）。
 - **底片重新編碼**：build 第一次會把 `work/rough.mp4` 轉成 `work/hyperframes/assets/rough.mp4`（30fps、每秒一個關鍵影格、聲音轉 AAC），之後只有 `work/rough.mp4` 比較新時才重轉。build 會印出兩者長度差，超過 0.1 秒會警告字幕可能對不準。
 - **字卡動態 14／27／31／38** 第一次 render 需要網路（R3）。
 - `check`／`snapshot`／`render` 開頭印出 `Not inlining "kit/fonts/NotoSansTC-VF.woff2" (5.2 MB exceeds the 2 MB inline limit)` 是正常的，字型仍會從檔案載入，不用處理。

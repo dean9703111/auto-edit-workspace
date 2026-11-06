@@ -1,6 +1,6 @@
 ---
 name: auto-edit-deliver
-description: 輸出完成影片並驗收：先輸出 3–5 秒測試片段確認有聲音與版面，再在背景 render 整支 output/final.mp4，跑觀影總表與 qc.mjs final，照驗收清單回報。使用者要在剪映（CapCut）自己剪時，另外用 capcut.mjs 輸出主軌＋每段透明 MOV＋字幕 SRT。當使用者在 Studio 預覽之後說「可以了，輸出完成影片」「輸出」「輸出剪映素材」「要用剪映剪」「輸出 mov」時使用。還有要改的地方、還沒看過 Studio 時不要用（改用 auto-edit-review）。
+description: 輸出完成影片並驗收：先輸出 3–5 秒測試片段確認有聲音與版面，再在背景 render 整支 output/final.mp4，跑觀影總表與 qc.mjs final，照驗收清單回報。使用者要在剪映（CapCut）自己剪時，另外用 capcut.mjs 輸出主軌＋每段透明 MOV＋字幕 SRT。當使用者看完完成影片預覽之後說「可以了，輸出完成影片」「輸出」「輸出剪映素材」「要用剪映剪」「輸出 mov」時使用。還有要改的地方、還沒看過完成影片預覽時不要用（改用 auto-edit-review）。
 version: 0.1.0
 ---
 # 輸出完成影片與驗收
@@ -44,7 +44,7 @@ ffprobe -v error -show_entries stream=codec_type -of csv=p=0 projects/<專案>/o
 node shared/template/tools/qc.mjs observe --project projects/<專案> --file projects/<專案>/output/test-clips/test-clip.mp4 --offset <起點>
 ```
 
-完成判準：ffprobe 印出 `video` 與 `audio` 兩行；`work/observe/sheet-01.jpg` 看過，版面和 Studio 一樣。
+完成判準：ffprobe 印出 `video` 與 `audio` 兩行；`work/observe/sheet-01.jpg` 看過，版面和完成影片預覽一樣。
 常見錯誤：`⚠ s04 在 49.5s 就開始了`（build）或 `⚠ s04 在 0:49.5 就開始了，測試片段不含這段`（observe）→ 要看那段，把 `--test` 的起點改成它印的秒數重做；`qc.mjs observe` 印 ✖ 找不到 Chrome → `npx hyperframes browser ensure` 再跑一次。
 
 **3. 整支 render（背景）**

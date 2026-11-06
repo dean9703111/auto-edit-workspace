@@ -104,7 +104,7 @@ test('改版：new 開提案 → 範本沒改不能 accept、提案沒確認不�
   const s = projectStatus(p);
   assert.notEqual(s.stage, 'S10', 'accept 寫的 storyboard.md 不算停點 ③');
   assert.equal(s.at, '改版／s12 v2（分鏡已確認，還沒做完）');
-  assert.equal(s.nextStop, '④ Studio 預覽');
+  assert.equal(s.nextStop, '④ 完成影片預覽');
   assert.throws(() => V.saveSeg(c.P, c.flags, 's12', logTo(c)), /還和 v1 一模一樣：v2 的分鏡還沒做 →/);
   touch(p, 'work/hyperframes/compositions/x-a.html', X1 + '<!-- 蓋章 -->\n');
   const done = V.saveSeg(c.P, c.flags, 's12', logTo(c));

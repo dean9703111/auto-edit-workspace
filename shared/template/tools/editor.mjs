@@ -3,7 +3,7 @@
  * 剪輯：在瀏覽器裡裁剪、調聲音、改字幕和卡片文字、設轉場，存回 plan.json／rough.srt（給使用者與 AI 的說明：shared/template/EDITOR.md）
  *
  *   node shared/template/tools/editor.mjs --project projects/<專案>   啟動並印出網址（只綁 127.0.0.1；預設 port 4400，被佔用就往後找）
- *                                      同一個服務有四頁：剪輯 /、剪輯清單 /cuts（停點 ①）、構圖 /framing（停點 ②）、分鏡表 /storyboard（停點 ③）
+ *                                      同一個服務有四頁：剪輯 /（停點 ⑤；加 ?view=final 直接開在完成影片預覽＝停點 ④）、剪輯清單 /cuts（停點 ①）、構圖 /framing（停點 ②）、分鏡表 /storyboard（停點 ③）
  *                                      非互動的 shell（AI 執行）會自己轉到背景：印出網址就結束，不用加 & 或 nohup；
  *                                      在終端機裡執行則留在前景，按 Ctrl+C 關閉
  *   node shared/template/tools/editor.mjs --status [--project …]   查剪輯開著沒、網址是什麼
@@ -718,7 +718,6 @@ async function getState(ctx) {
     project: { name: path.basename(P.project), dir: rel },
     commands: {
       build: `node shared/template/tools/build.mjs --project ${rel}`,
-      studio: `cd ${rel}/work/hyperframes && npx hyperframes preview --no-open`,
       stop: `node shared/template/tools/editor.mjs --stop --project ${rel}`,
     },
     plan: { exists: plan.exists, file: relRoot(ctx, P.plan), mtime: plan.mtime, hash: plan.hash, error: plan.error, data: plan.data },
@@ -1252,6 +1251,7 @@ async function cli() {
     console.log(`剪輯清單：${new URL('cuts', running.url).href}`);
     console.log(`構圖：${new URL('framing', running.url).href}`);
     console.log(`分鏡表：${new URL('storyboard', running.url).href}`);
+    console.log(`完成影片預覽：${new URL('?view=final', running.url).href}`);
     console.log(`專案：${rel(P.project)}（要重開先關掉：${stopCmd}）`);
     if (flags.open) openBrowser(running.url);
     return 0;
@@ -1276,6 +1276,7 @@ async function cli() {
         console.log(`剪輯清單：${new URL('cuts', s.url).href}`);
         console.log(`構圖：${new URL('framing', s.url).href}`);
         console.log(`分鏡表：${new URL('storyboard', s.url).href}`);
+        console.log(`完成影片預覽：${new URL('?view=final', s.url).href}`);
         console.log(`專案：${rel(P.project)}`);
         console.log(`已在背景執行（log：${rel(logFile)}）。關閉：${stopCmd}`);
         if (flags.open) openBrowser(s.url);
@@ -1298,8 +1299,9 @@ async function cli() {
   console.log(`剪輯清單：${new URL('cuts', ed.url).href}`);
   console.log(`構圖：${new URL('framing', ed.url).href}`);
   console.log(`分鏡表：${new URL('storyboard', ed.url).href}`);
+  console.log(`完成影片預覽：${new URL('?view=final', ed.url).href}`);
   console.log(`專案：${rel(P.project)}`);
-  console.log(ed.ctx.player.available ? `完成影片預覽：HyperFrames 播放器 ${ed.ctx.player.version ?? ''}` : `完成影片預覽：不能用（${ed.ctx.player.reason}），只有即時模擬`);
+  console.log(ed.ctx.player.available ? `播放器：HyperFrames ${ed.ctx.player.version ?? ''}` : `播放器：不能用（${ed.ctx.player.reason}），只有即時模擬`);
   console.log(process.env.AUTO_EDIT_EDITOR_CHILD ? `背景執行中。關閉：${stopCmd}` : '按 Ctrl+C 關閉');
   if (flags.open) openBrowser(ed.url);
   return null;   // 留著讓 server 繼續跑

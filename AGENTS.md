@@ -12,7 +12,7 @@
 | 「剪好看」「做出完成影片」 | `auto-edit-storyboard` |
 | 「配螢幕錄影」 | `auto-edit-screen` |
 | 分鏡表確認後做情境動畫 | `auto-edit-motion` |
-| 定稿、Studio 修改、「打開剪輯台」、「s12 重新設計」「s12 用 v1」、「照修改單改」「照剪輯台修改單改…」 | `auto-edit-review` |
+| 定稿、預覽後的修改、「打開剪輯台」、「s12 重新設計」「s12 用 v1」、「照修改單改」「照剪輯台修改單改…」 | `auto-edit-review` |
 | 「可以了，輸出完成影片」「輸出剪映素材」 | `auto-edit-deliver` |
 | 「換風格」「換主色」「換背景」「換暗色」「有哪些風格」「這集用 XX 風格」「講者設定成…」 | `auto-edit-style` |
 
@@ -99,7 +99,7 @@ projects/<專案>/
 | ① 剪輯清單 | 剪乾淨 4 | 剪輯清單網址（每列可試聽，勾＝剪、取消＝保留，即時存回 `work/cuts.md`） | 「可以」、要改的列、「改好了」 | `work/cuts.md` 的「剪」欄（網頁寫或 AI 照我的話改） |
 | ② 構圖 | 剪好看構圖 | 構圖台網址（在影片上拖框、開關調光瘦臉、選預覽參考圖）、`work/look-preview.jpg` | 「調好了」、「用建議的」 | plan.json `frame`、`look`（構圖台存檔時寫）；預覽參考圖 `shared/template/preview/speaker-local.jpg`（構圖台寫） |
 | ③ 分鏡表 | 剪好看 3；④ 之後的改版 | 分鏡表網址（每段截圖＋可直接改的內容，情境動畫段附動畫分鏡，即時存回 `work/storyboard.md`）；改版看 `work/versions/<段>/v<N>/分鏡.md` | 「可以」、「改好了」、要改的段或拍 | `work/storyboard.md`（網頁寫或 AI 照我的話改）→ 正式 plan.json；情境動畫照確認過的動畫分鏡做；改版由 `versions.mjs accept` 寫回 storyboard.md |
-| ④ Studio 預覽 | 剪好看 5 | Studio 網址 | 要改的段、「可以了，輸出完成影片」 | plan.json、`work/feedback/` |
+| ④ 完成影片預覽 | 剪好看 5 | 完成影片預覽網址（剪輯台直接開在完成影片預覽） | 要改的段、「可以了，輸出完成影片」 | plan.json、`work/feedback/` |
 | ⑤ 剪輯台 | 「打開剪輯台」 | 剪輯台網址 | 「調好了」、「照修改單改」 | 剪輯台自己寫；修改單 `work/feedback/editor-requests.md` |
 | ⑥ 背景預覽 | 換風格 2 | 並排圖、留空區預覽 | 「可以」、「重做」 | `shared/template/bg-*.jpg` |
 
@@ -110,13 +110,13 @@ projects/<專案>/
 ⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」
 ⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方
 ⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/versions/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍
-⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」
+⏸ 停點 ④ 完成影片預覽｜請看：<完成影片預覽網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」
 ⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」
 ⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」
 ```
 
 - 我的回覆對到最近一個「待回覆」的停點。不在停點上時最後一行寫 `→ 下一個停點：<編號> <名稱>（說「<觸發語>」開始）`；安裝清單用 `❓ 請回：「可以開始」或要拿掉的步驟編號`。
-- 「不用停」：這一則訊息啟動的流程 ①–④ 都不停；「跑到停點 N」「做到分鏡表」「做到 Studio」：N 之前不停；下一則沒再說就恢復。⑤、⑥ 不能略過。略過時照樣寫檔、停點紀錄加「略過」，回報加 `⏭ 停點 <編號> 略過：<採用了什麼>`（① 「待確認」欄有寫字的列把「剪」改成 `[ ]`，不剪；② 用 `qc.mjs framing` 表上 ✔ 的建議框，沒有就不裁切；③ 沒勾的金句不上）。
+- 「不用停」：這一則訊息啟動的流程 ①–④ 都不停；「跑到停點 N」「做到分鏡表」「做到預覽」（舊說法「做到 Studio」也算）：N 之前不停；下一則沒再說就恢復。⑤、⑥ 不能略過。略過時照樣寫檔、停點紀錄加「略過」，回報加 `⏭ 停點 <編號> 略過：<採用了什麼>`（① 「待確認」欄有寫字的列把「剪」改成 `[ ]`，不剪；② 用 `qc.mjs framing` 表上 ✔ 的建議框，沒有就不裁切；③ 沒勾的金句不上）。
 
 ## 階段預算
 
@@ -215,7 +215,7 @@ projects/<專案>/
 | 螢幕錄影配對 | 2 支以上 | `explore`（`auto-edit-screen`） | 不寫檔 |
 | 抽查截圖 | 8 段以上 | `verifier`（`auto-edit-review` 的 `references/reviewer-brief.md`） | 不寫檔 |
 
-1. `plan.json`、`work/storyboard.md`、`work/rough.srt` 只有你能寫。子代理只跑 `build.mjs --check` 和 `audit.mjs --only <自己的段>`（加 `--shots` 存截圖自己看）；不跑 build、不開 Studio、不 render，不改 `shared/`、`assets/`。
+1. `plan.json`、`work/storyboard.md`、`work/rough.srt` 只有你能寫。子代理只跑 `build.mjs --check` 和 `audit.mjs --only <自己的段>`（加 `--shots` 存截圖自己看）；不跑 build、不開剪輯台、不 render，不改 `shared/`、`assets/`。
 2. 派工寫清楚目標、負責的檔、要讀哪幾節、驗收條件、回報格式。派工前 build 一次（子代理的 audit 量它）；派出後等子代理回覆或完成通知，不要寫 `sleep` 迴圈去等檔案。收件用 `ls -l` 看時間是剛剛、`grep` 確認真的寫進去了；全部回來才由你跑 `--check`、build、audit、snapshot（中途只有改了 plan.json 才再 build，不要每收一個就 build），audit 有 ✖ 就把原文交回那個子代理。
 
 ## 剪映素材
@@ -237,7 +237,7 @@ projects/<專案>/
 ## 工具注意事項
 
 - `USAGE.md`、`USAGE-reference.md` 是查表用，Skill 會寫做到哪一步查哪一節；完成影片一律用 `build.mjs` 產生，不要從零寫。
-- hyperframes 的指令（`snapshot`、`preview`、`render`）在子殼裡跑：`(cd projects/<專案>/work/hyperframes && npx hyperframes …)`，輸出路徑相對那個資料夾（完成影片是 `../../output/final.mp4`）。版本照根目錄 `package.json`：第一次、或 build 印「⚠ HyperFrames … 不同」時，在根目錄 `npm install`。
+- hyperframes 的指令（`snapshot`、`render`）在子殼裡跑：`(cd projects/<專案>/work/hyperframes && npx hyperframes …)`，輸出路徑相對那個資料夾（完成影片是 `../../output/final.mp4`）。版本照根目錄 `package.json`：第一次、或 build 印「⚠ HyperFrames … 不同」時，在根目錄 `npm install`。
 - 工具印「→ 下一步：<說明>」時，下面那一行（最後一行）就是可直接貼的指令：整行複製、單獨一行執行；說明那一行不是指令。
 - 缺工具照 `setup/` 的手冊裝，不要自己想辦法。轉逐字稿一定帶 `--model small --language zh`（預設 `small.en` 會翻成英文）。
 - 參數名稱以工具的 `--help` 為準（例 auto-editor 是 `--cut-out`，不是 `--cut`）。PowerShell 會把逗號拆開，帶逗號或冒號的參數加引號：`--cut-out "17sec,25sec"`、`--edit "audio:-20dB"`。

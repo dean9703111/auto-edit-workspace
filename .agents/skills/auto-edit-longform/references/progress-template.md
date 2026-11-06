@@ -25,7 +25,7 @@
 | 構圖＋分鏡 | auto-edit-storyboard | ⬜ | 構圖預覽.jpg、storyboard.md、storyboard-preview/ |
 | 螢幕錄影配對 | auto-edit-screen | ⬜ | storyboard.md 的 media 列 |
 | 情境動畫 | auto-edit-motion | ⬜ | work/hyperframes/compositions/x-*.html |
-| 定稿與 Studio | auto-edit-review | ⬜ | work/hyperframes/、feedback/r*.md |
+| 定稿與預覽 | auto-edit-review | ⬜ | work/hyperframes/、feedback/r*.md |
 | 交付 | auto-edit-deliver | ⬜ | output/final.mp4、output/qc/qc-sheet.jpg |
 
 ## 停點紀錄

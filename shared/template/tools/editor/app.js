@@ -534,7 +534,7 @@ app.onVideoError = (m) => { $('#stageEmpty').hidden = false; $('#stageEmpty').in
 app.onPlayerReady = () => { renderMode(); if (app.pendingFocus != null) { player.seek(app.pendingFocus); app.t = app.pendingFocus; app.pendingFocus = null; } };
 app.onPlayerError = (m) => {
   toast(`完成影片預覽出錯：${m}`, 'err', 6000);
-  banner(`完成影片預覽（HyperFrames 播放器）出錯：${esc(m)}。可以先用「即時模擬」，或請 AI 用 Studio 檢查。`, 'error', [['改用即時模擬', () => { banner(''); setMode('sim'); }]]);
+  banner(`完成影片預覽（HyperFrames 播放器）出錯：${esc(m)}。可以先用「即時模擬」；一直出錯就在工作區根目錄跑 npm install，再重開剪輯。`, 'error', [['改用即時模擬', () => { banner(''); setMode('sim'); }]]);
 };
 
 // 音量表
@@ -658,7 +658,6 @@ async function loadState({ keep = null } = {}) {
   } else { app.undoStack = []; app.redoStack = []; app.splits = []; }
   document.title = `剪輯｜${s.project.name}`;
   $('#projName').textContent = `${s.project.dir}　·　${s.plan.file.split('/').slice(-3).join('/')}`;
-  $('#studioCmd').textContent = s.commands.studio;
   if (s.video) {
     $('#stageEmpty').hidden = true;
     sim.load(s.video.url);
@@ -2398,5 +2397,8 @@ window.addEventListener('beforeunload', (e) => { if (isDirty()) { e.preventDefau
   await loadState();
   requestAnimationFrame(frame);
   setInterval(pollVersion, 2500);
-  if (!storage.get(COACH_KEY)) $('#coach').hidden = false;
+  // 停點 ④ 的網址：直接開在完成影片預覽，是來看片的，不跳剪輯教學（還沒 build、沒有播放器時 setMode 會提示原因，留在即時模擬）
+  const viewFinal = new URLSearchParams(location.search).get('view') === 'final';
+  if (viewFinal) await setMode('player');
+  if (!viewFinal && !storage.get(COACH_KEY)) $('#coach').hidden = false;
 })();

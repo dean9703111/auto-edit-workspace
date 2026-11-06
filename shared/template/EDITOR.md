@@ -17,6 +17,8 @@
 停點 ①（剪輯清單）也用剪輯台：寫好 `work/cuts.md` 後啟動，把印出的「剪輯清單」網址（`…/cuts`）給使用者，最後一行照停點 ① 的固定格式（`.agents/skills/auto-edit-rough/SKILL.md` 步驟 5）。剪輯清單頁只要有 `work/cuts.md`（試聽要 `work/main.mp4`），只寫 cuts.md NG 表的「剪」欄（`[x]` 剪、`[ ]` 不剪；舊格式沒有這一欄就加在最前面）；cuts.md 被 AI 改過會擋下存檔並重新載入；有 `work/rough.mp4` 之後只能看。
 
 停點 ③（分鏡表）也用剪輯台：寫好 `work/storyboard.md` 後啟動，把印出的「分鏡表」網址（`…/storyboard`）給使用者，最後一行照停點 ③ 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md`）。分鏡表頁只寫 `work/storyboard.md` 改到的那幾行（欄位內容、表格的格與列、金句勾選 `☑`／`☐`、某一段的原始 Markdown）；表頭和段標題不能直接點來改；檔案被 AI 改過會擋下存檔並重新載入，沒存到的文字留在頁面上；製作進度的「③ 分鏡表」最後一列是「通過」或「略過」之後只能看。
+停點 ④（完成影片預覽）也用剪輯台：build 之後啟動，把印出的「完成影片預覽」網址（`…/?view=final`）給使用者，頁面會直接開在完成影片預覽；還沒 build 或找不到播放器時停在即時模擬並提示原因。
+
 停點 ②（構圖）也用剪輯台：啟動後印的「構圖台」網址（`…/framing`）給使用者，最後一行照停點 ② 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 2）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
 
 開之前要有：
@@ -45,6 +47,7 @@ node shared/template/tools/editor.mjs --project projects/example
   剪輯清單：http://127.0.0.1:4400/cuts
   構圖：http://127.0.0.1:4400/framing
   分鏡表：http://127.0.0.1:4400/storyboard
+  完成影片預覽：http://127.0.0.1:4400/?view=final
   專案：projects/example
   已在背景執行（log：projects/example/work/hyperframes/.editor/editor.log）。關閉：node shared/template/tools/editor.mjs --stop --project projects/example
   ```
@@ -131,7 +134,7 @@ node shared/template/tools/editor.mjs --project projects/example
 - 預覽框是 9:16（`editor.css` 的 `--cw`／`--ch`）；講者框照 1080×1920 的座標畫，安全框照比例畫；即時模擬的講者小視窗是下半的講者面板（`pip.box`），字幕高度照 `caption.bottom`，樣式照樣是 `kit/captions.css`。
 - 字數提醒用 `caption.maxChars`：直式超過 10 字標紅（橫式 18 字）；縮圖條每格 90×160。
 - 剪輯台不寫 `format`；要換版式請 AI 照 AGENTS.md「版式」改。
-- **上半面板的 host 不要在 Studio 移動**：Studio 的 Inspector 顯示的是沒縮放的 1920×1080，拖動會寫 host 的 transform、蓋掉直式的舞台縮放；位置或內容要改，就改子合成（`compositions/…`）或 plan.json 再 build。
+- **上半面板的位置或內容要改**：改子合成（`compositions/…`）或 plan.json 再 build，不要手改 host 的 transform（會蓋掉直式的舞台縮放）。
 
 - 播放器的找法：用工作區 `node_modules/hyperframes` 那一份（根目錄 `package.json` 釘的版本，和 render 同一版），複製到 `work/hyperframes/.editor/player/`；版本換了（升級或降級）會重新複製。不去 npx 快取挑最新版，免得預覽和 render 出來的不一樣。
 - **找不到播放器時自動退回「即時模擬」**：「完成影片預覽」按鈕變灰，滑鼠移上去會寫原因。要恢復：在工作區根目錄跑 `npm install`，再 `--stop` 後重新啟動剪輯台。
@@ -342,4 +345,4 @@ node shared/template/tools/editor.mjs --project projects/<專案> --requests-sta
 
 ### 想改更多？
 
-卡片的版型、位置、時間，插入素材換檔、運鏡、紅框，寫進修改單或直接跟 AI 說（例如「s05 的金句卡往左移」）。想逐格看卡片、或在畫面上點選某張卡請 AI 改，請 AI 開 HyperFrames Studio。
+卡片的版型、位置、時間，插入素材換檔、運鏡、紅框，寫進修改單或直接跟 AI 說（例如「s05 的金句卡往左移」）。

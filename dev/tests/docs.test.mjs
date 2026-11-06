@@ -47,7 +47,7 @@ const STOPS = [
   { n: '①', name: '剪輯清單', skill: 'auto-edit-rough', line: '⏸ 停點 ① 剪輯清單｜請看：<剪輯清單網址>｜請回：勾好後說「可以」，或要改的列' },
   { n: '②', name: '構圖', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」' },
   { n: '③', name: '分鏡表', skill: 'auto-edit-storyboard', line: '⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方' },
-  { n: '④', name: 'Studio 預覽', skill: 'auto-edit-review', line: '⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」' },
+  { n: '④', name: '完成影片預覽', skill: 'auto-edit-review', line: '⏸ 停點 ④ 完成影片預覽｜請看：<完成影片預覽網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」' },
   { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」' },
   { n: '⑥', name: '背景預覽', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」' },
 ];
@@ -178,6 +178,15 @@ test('T7 停點：六行（＋③ 改版）最後一行原文都在 AGENTS.md �
     if (exists(skillMd(s.skill)) && !read(skillMd(s.skill)).includes(s.line)) bad.push(`${skillMd(s.skill)} 少了停點 ${s.n} 的原文`);
   }
   noProblems(bad, '停點最後一行和契約不一致', '逐字照 specs/contracts/stop-points.md §2.1 貼上（<…> 保留原樣）');
+});
+
+// 018：預覽與修改都在剪輯台，Studio 不再出現在給使用者的流程；只留相容舊專案、舊說法的那幾句
+test('018 給使用者的流程不再提 Studio', () => {
+  const bad = [];
+  for (const f of have(['README.md', 'PROMPTS.md', 'dev/site/index.html', ...SKILL_FILES])) {
+    if (/Studio/.test(read(f).replace(/VisualStudio/g, ''))) bad.push(f);
+  }
+  noProblems(bad, '這些檔還提到 Studio', '停點 ④ 是完成影片預覽（editor.mjs 印的網址），改段落說段號或秒數');
 });
 
 test('T8 停點：所有「⏸ 停點」都是六行之一', () => {

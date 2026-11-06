@@ -1,6 +1,6 @@
 ---
 name: auto-edit-storyboard
-description: 剪好看的前半：講者調光瘦臉、構圖台拖框（停點 ②）、量講者框、配螢幕錄影、挑情境、寫草稿 plan.json 與分鏡表 work/storyboard.md（附每段截圖與金句候選）。當使用者說「剪好看」「做出完成影片」「包裝成完成影片」「列分鏡表」時使用。還沒有 work/rough.mp4 時不要用（改用 auto-edit-rough）；分鏡表已經確認、要做動畫或看 Studio 時不要用（改用 auto-edit-motion、auto-edit-review）。
+description: 剪好看的前半：講者調光瘦臉、構圖台拖框（停點 ②）、量講者框、配螢幕錄影、挑情境、寫草稿 plan.json 與分鏡表 work/storyboard.md（附每段截圖與金句候選）。當使用者說「剪好看」「做出完成影片」「包裝成完成影片」「列分鏡表」時使用。還沒有 work/rough.mp4 時不要用（改用 auto-edit-rough）；分鏡表已經確認、要做動畫或看完成影片預覽時不要用（改用 auto-edit-motion、auto-edit-review）。
 version: 0.1.0
 ---
 # 剪好看（前半）：構圖到分鏡表
