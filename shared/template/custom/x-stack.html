@@ -73,17 +73,27 @@
        data-cues-sample='{"start":0,"D":14.9,"cues":{"111":[1.8,4.1],"112":[4.3,6.8],"113":[6.9,9.3],"114":[9.4,11.8],"115":[12.1,14.5]},"refs":{"#111@手機":2.0,"#112@區網":4.5,"#113@控制台":7.0,"#114@剪輯":9.5}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xstk-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">多機錄影工具的架構</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">多機錄影工具的架構</span></div>
       <div id="xstk-body" data-layout="col" data-gap="sm">
         <!-- 由上往下寫：l4 最上層 … l1 最底層（第 1 個講到）；data-layout="col" 照這個順序由上往下排。地基線不參與排版（沒有 data-slot） -->
-        <div id="xstk-l4" class="xstk-layer" data-slot>
-          <span class="xstk-left"><span id="xstk-ico4" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">剪輯流程</span></span><span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt">直接接剪輯軟體</span></div>
-        <div id="xstk-l3" class="xstk-layer" data-slot>
-          <span class="xstk-left"><span id="xstk-ico3" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="20" height="14" x="2" y="3" rx="2" /> <line x1="8" x2="16" y1="21" y2="21" /> <line x1="12" x2="12" y1="17" y2="21" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">控制台</span></span><span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt">電腦上按開始結束</span></div>
-        <div id="xstk-l2" class="xstk-layer" data-slot>
-          <span class="xstk-left"><span id="xstk-ico2" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 20h.01" /> <path d="M2 8.82a15 15 0 0 1 20 0" /> <path d="M5 12.859a10 10 0 0 1 14 0" /> <path d="M8.5 16.429a5 5 0 0 1 7 0" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">區網連線</span></span><span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt">同一個 Wi-Fi 傳檔</span></div>
-        <div id="xstk-l1" class="xstk-layer" data-slot>
-          <span class="xstk-left"><span id="xstk-ico1" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">手機 App</span></span><span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt">負責錄影與回傳</span></div>
+        <!-- @if n>=4 { -->
+        <div id="xstk-l4" class="xstk-layer" data-slot>   <!-- @sub !items.4.desc: <div id="xstk-l4" class="xstk-layer" data-slot data-layout-allow-slack> -->
+          <span class="xstk-left"><span id="xstk-ico4" class="sc-icon sc-icon--72" data-fill="items.4.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt" data-fill="items.4.text">剪輯流程</span></span>
+          <span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt" data-fill="items.4.desc">直接接剪輯軟體</span>   <!-- @if items.4.desc -->
+        </div>
+        <!-- @} -->
+        <div id="xstk-l3" class="xstk-layer" data-slot>   <!-- @sub !items.3.desc: <div id="xstk-l3" class="xstk-layer" data-slot data-layout-allow-slack> -->
+          <span class="xstk-left"><span id="xstk-ico3" class="sc-icon sc-icon--72" data-fill="items.3.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="20" height="14" x="2" y="3" rx="2" /> <line x1="8" x2="16" y1="21" y2="21" /> <line x1="12" x2="12" y1="17" y2="21" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt" data-fill="items.3.text">控制台</span></span>
+          <span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt" data-fill="items.3.desc">電腦上按開始結束</span>   <!-- @if items.3.desc -->
+        </div>
+        <div id="xstk-l2" class="xstk-layer" data-slot>   <!-- @sub !items.2.desc: <div id="xstk-l2" class="xstk-layer" data-slot data-layout-allow-slack> -->
+          <span class="xstk-left"><span id="xstk-ico2" class="sc-icon sc-icon--72" data-fill="items.2.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 20h.01" /> <path d="M2 8.82a15 15 0 0 1 20 0" /> <path d="M5 12.859a10 10 0 0 1 14 0" /> <path d="M8.5 16.429a5 5 0 0 1 7 0" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt" data-fill="items.2.text">區網連線</span></span>
+          <span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt" data-fill="items.2.desc">同一個 Wi-Fi 傳檔</span>   <!-- @if items.2.desc -->
+        </div>
+        <div id="xstk-l1" class="xstk-layer" data-slot>   <!-- @sub !items.1.desc: <div id="xstk-l1" class="xstk-layer" data-slot data-layout-allow-slack> -->
+          <span class="xstk-left"><span id="xstk-ico1" class="sc-icon sc-icon--72" data-fill="items.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt" data-fill="items.1.text">手機 App</span></span>
+          <span class="xstk-desc sc-t40 sc-w500 sc-gray sc-opt" data-fill="items.1.desc">負責錄影與回傳</span>   <!-- @if items.1.desc -->
+        </div>
         <div id="xstk-base"><svg viewBox="0 0 1080 8" xmlns="http://www.w3.org/2000/svg"><line id="xstk-ground" x1="2" y1="4" x2="1078" y2="4" /></svg></div>
       </div>
     </div>
@@ -95,8 +105,8 @@
     const P = SceneMotion(tl, document.getElementById('x-stack'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#111@手機'), T2 = P.at('#112@區網'), T3 = P.at('#113@控制台'), T4 = P.at('#114@剪輯');   // 由下往上講到每一層名稱的時刻
-    const ALL = P.at('#115');                          // 講到「合起來就是…」那一句（沒有這句見檔頭【綁句欄位】）
+    const T1 = P.at('#111@手機'), T2 = P.at('#112@區網'), T3 = P.at('#113@控制台'), T4 = P.at('#114@剪輯');   // 由下往上講到每一層名稱的時刻  // @sub n==3: const T1 = P.at('#111@手機'), T2 = P.at('#112@區網'), T3 = P.at('#113@控制台');
+    const ALL = P.at('#115');                          // 講到「合起來就是…」那一句（沒有這句見檔頭【綁句欄位】）  // @sub !all && n==3: const ALL = T3 + 2.0; @@ !all: const ALL = T4 + 2.0;
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     // 地基線貼在最底層 l1 下面 --sc-gap-sm、左右各多 --sc-gap-sm（層的位置由 data-layout 排好，這裡只讀；載入時算一次，不用改）
     const L1 = document.getElementById('xstk-l1'), BASE = document.getElementById('xstk-base'), G = window.SceneLayout.token('gap-sm');
@@ -109,20 +119,30 @@
     P.stroke('#xstk-ground', 1.0);
 
     // 拍 1 第 1 層：從上方 28u 落下（過衝落地）→ ＋0.12 名稱、＋0.24 說明逐字浮出、＋0.15 圖示描線 → ＋0.6 聚焦（放大抬起發光）
-    P.pop('#xstk-l1', T1, { from: 0.94, dy: -28 });  P.chars('#xstk-l1 .xstk-name', T1 + 0.12);  P.chars('#xstk-l1 .xstk-desc', T1 + 0.24);  P.icon('#xstk-ico1', T1 + 0.15);
+    P.pop('#xstk-l1', T1, { from: 0.94, dy: -28 });  P.chars('#xstk-l1 .xstk-name', T1 + 0.12);
+    P.chars('#xstk-l1 .xstk-desc', T1 + 0.24);   // @if items.1.desc
+    P.icon('#xstk-ico1', T1 + 0.15);
     P.spot('#xstk-l1', '#xstk-l1', T1 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
     // 拍 2 第 2 層：同拍 1；＋0.6 聚焦移到這一層（下面的層壓暗 0.6）
-    P.pop('#xstk-l2', T2, { from: 0.94, dy: -28 });  P.chars('#xstk-l2 .xstk-name', T2 + 0.12);  P.chars('#xstk-l2 .xstk-desc', T2 + 0.24);  P.icon('#xstk-ico2', T2 + 0.15);
+    P.pop('#xstk-l2', T2, { from: 0.94, dy: -28 });  P.chars('#xstk-l2 .xstk-name', T2 + 0.12);
+    P.chars('#xstk-l2 .xstk-desc', T2 + 0.24);   // @if items.2.desc
+    P.icon('#xstk-ico2', T2 + 0.15);
     P.spot('#xstk-l1, #xstk-l2', '#xstk-l2', T2 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
     // 拍 3 第 3 層：同拍 2
-    P.pop('#xstk-l3', T3, { from: 0.94, dy: -28 });  P.chars('#xstk-l3 .xstk-name', T3 + 0.12);  P.chars('#xstk-l3 .xstk-desc', T3 + 0.24);  P.icon('#xstk-ico3', T3 + 0.15);
+    P.pop('#xstk-l3', T3, { from: 0.94, dy: -28 });  P.chars('#xstk-l3 .xstk-name', T3 + 0.12);
+    P.chars('#xstk-l3 .xstk-desc', T3 + 0.24);   // @if items.3.desc
+    P.icon('#xstk-ico3', T3 + 0.15);
     P.spot('#xstk-l1, #xstk-l2, #xstk-l3', '#xstk-l3', T3 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
+    // @if n>=4 {
     // 拍 4 第 4 層：同拍 2（3 層時刪掉這 2 行，見檔頭）
-    P.pop('#xstk-l4', T4, { from: 0.94, dy: -28 });  P.chars('#xstk-l4 .xstk-name', T4 + 0.12);  P.chars('#xstk-l4 .xstk-desc', T4 + 0.24);  P.icon('#xstk-ico4', T4 + 0.15);
+    P.pop('#xstk-l4', T4, { from: 0.94, dy: -28 });  P.chars('#xstk-l4 .xstk-name', T4 + 0.12);
+    P.chars('#xstk-l4 .xstk-desc', T4 + 0.24);   // @if items.4.desc
+    P.icon('#xstk-ico4', T4 + 0.15);
     P.spot('#xstk-l1, #xstk-l2, #xstk-l3, #xstk-l4', '#xstk-l4', T4 + 0.6, { scale: 1.02, lift: -8, dim: 0.6 });
+    // @}
 
     // 收：講到「合起來」→ 回均衡（全部亮回、亮框收掉），完成態停到段尾
-    P.spot('#xstk-l1, #xstk-l2, #xstk-l3, #xstk-l4', null, ALL, { dur: 0.6 });
+    P.spot('#xstk-l1, #xstk-l2, #xstk-l3, #xstk-l4', null, ALL, { dur: 0.6 });  // @sub n==3: P.spot('#xstk-l1, #xstk-l2, #xstk-l3', null, ALL, { dur: 0.6 });
 
     P.end();                                           // 長度＝plan.json 這段的長度
     window.__timelines['x-stack'] = tl;

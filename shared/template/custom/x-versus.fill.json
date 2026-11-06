@@ -1,0 +1,222 @@
+{
+  "template": "x-versus",
+  "prefix": "xvs",
+  "beat": "C",
+  "layout": "fullscreen",
+  "when": "兩個選項在 2–3 個面向上比，每個面向都有數字：蝴蝶長條逐列比、數字同步跑，贏的一邊主色（可選結論，贏家標頭亮起；例：手動剪 180 分鐘、AI 只要 20 分鐘）",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "nameA": {
+      "label": "左邊對手名稱",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "iconA": {
+      "label": "左邊對手圖示",
+      "type": "icon",
+      "required": true
+    },
+    "nameB": {
+      "label": "右邊對手名稱",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "iconB": {
+      "label": "右邊對手圖示",
+      "type": "icon",
+      "required": true
+    },
+    "rows": {
+      "label": "面向（由上往下逐列比）",
+      "type": "list",
+      "min": 2,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "面向名稱（單位寫進去，例「分鐘」「步驟數」「月費」）",
+          "type": "text",
+          "max": 4,
+          "required": true
+        },
+        "a": {
+          "label": "左邊的數字（≤ 4 位數，可以是 0）",
+          "type": "number",
+          "required": true
+        },
+        "b": {
+          "label": "右邊的數字（≤ 4 位數，可以是 0；兩邊差 20 倍以上小的那條只剩 8 px）",
+          "type": "number",
+          "required": true
+        },
+        "win": {
+          "label": "這一列贏的一邊（a＝左、b＝右，用主色）",
+          "type": "enum",
+          "options": [
+            "a",
+            "b"
+          ],
+          "required": true
+        },
+        "at": {
+          "label": "講到這個面向的時間（相鄰兩列至少差 2.5 秒）",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    },
+    "winner": {
+      "label": "結論的贏家（a＝左、b＝右；選填，要和 winAt 一起寫）",
+      "type": "enum",
+      "options": [
+        "a",
+        "b"
+      ],
+      "const": "WINNER"
+    },
+    "winAt": {
+      "label": "講到結論的時間（選填；比最後一列晚 2.5 秒以上；沒有結論句就不寫，最後一列後 2.6 秒回均衡）",
+      "type": "at",
+      "ref": "WIN"
+    }
+  },
+  "sample": {
+    "title": "手動剪 vs AI 剪",
+    "nameA": "手動剪",
+    "iconA": "hand",
+    "nameB": "AI 剪",
+    "iconB": "bot",
+    "rows": [
+      {
+        "text": "分鐘",
+        "a": 180,
+        "b": 20,
+        "win": "b",
+        "at": "#141@分鐘"
+      },
+      {
+        "text": "步驟數",
+        "a": 6,
+        "b": 2,
+        "win": "b",
+        "at": "#142@步驟"
+      },
+      {
+        "text": "月費",
+        "a": 0,
+        "b": 600,
+        "win": "a",
+        "at": "#143@月費"
+      }
+    ],
+    "winner": "b",
+    "winAt": "#144@AI"
+  },
+  "sampleMin": {
+    "title": "兩種做法",
+    "nameA": "舊做法",
+    "iconA": "hourglass",
+    "nameB": "新做法",
+    "iconB": "sparkles",
+    "rows": [
+      {
+        "text": "分鐘",
+        "a": 90,
+        "b": 15,
+        "win": "b",
+        "at": "#141@分鐘"
+      },
+      {
+        "text": "步驟數",
+        "a": 5,
+        "b": 2,
+        "win": "b",
+        "at": "#142@步驟"
+      }
+    ],
+    "winner": "b",
+    "winAt": "#144@AI"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」＋VS 圓",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）；＋0.6 彈出（VS）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "左標頭「{nameA}」＋圖示",
+      "moves": "擦開（左標頭，由左）；滑入（左標頭）；＋0.15 圖示描線",
+      "focus": "左標頭"
+    },
+    {
+      "beat": "2",
+      "at": "段起點＋1.5",
+      "show": "右標頭「{nameB}」＋圖示",
+      "moves": "擦開（右標頭，由右）；滑入（右標頭）；＋0.15 圖示描線",
+      "focus": "右標頭"
+    },
+    {
+      "each": "rows",
+      "to": 1,
+      "beat": 3,
+      "at": "`{at}`",
+      "show": "第 {n} 列「{text}」：左 {a}、右 {b}，兩條同時長",
+      "moves": "彈出（列）；＋0.15 量條（左右兩條）；＋0.15 數字滾動（左右數字）；＋0.8 重拍（贏的數字）",
+      "focus": "第 {n} 列"
+    },
+    {
+      "each": "rows",
+      "from": 2,
+      "beat": 4,
+      "at": "`{at}`",
+      "show": "第 {n} 列「{text}」：左 {a}、右 {b}；前一列退後",
+      "moves": "預覽態（前一列）；彈出（列）；＋0.15 量條（左右兩條）；＋0.15 數字滾動（左右數字）；＋0.8 重拍（贏的數字）",
+      "focus": "第 {n} 列"
+    },
+    {
+      "beat": "結",
+      "if": "winAt && winner",
+      "at": "`{winAt}`",
+      "show": "各列退後；贏家標頭底色亮起、名稱上螢光筆",
+      "moves": "預覽態（各列）；淡入（贏家底色）；螢光筆（贏家名稱）；重拍（贏家名稱）；＋0.2 光澤掃過（贏家底色）",
+      "focus": "贏家標頭",
+      "sfx": "success"
+    },
+    {
+      "beat": "結",
+      "if": "winAt && winner",
+      "at": "`{winAt}`＋0.6",
+      "show": "贏家標頭放大抬起發光、輸家壓暗縮小",
+      "moves": "聚焦（贏家標頭）",
+      "focus": "贏家標頭"
+    },
+    {
+      "beat": "收",
+      "if": "winAt && winner",
+      "at": "`{winAt}`＋2.6",
+      "show": "標頭回原大小、各列亮回；贏家底色留著",
+      "moves": "回均衡",
+      "focus": "整體"
+    },
+    {
+      "beat": "收",
+      "if": "!winAt",
+      "at": "`{last.at}`＋2.6",
+      "show": "各列亮回",
+      "moves": "回均衡",
+      "focus": "整體"
+    }
+  ]
+}

@@ -114,8 +114,9 @@
 
     P.sfx('success', '#144@AI');   // 結論一顆 success（句號和上兩行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const DATA = [ { a: 180, b: 20, win: 'b' }, { a: 6, b: 2, win: 'b' }, { a: 0, b: 600, win: 'a' } ];   // 只改這一行的數字
-    const WINNER = 'b';                                                            // 結論的贏家：'a' 或 'b'
+    // 只改下面 DATA 這一行的數字（2–3 列）
+    const DATA = [ { a: 180, b: 20, win: 'b' }, { a: 6, b: 2, win: 'b' }, { a: 0, b: 600, win: 'a' } ];
+    const WINNER = "b";                                                            // 結論的贏家："a" 或 "b"
     const MAXW = 236;                                                              // 每列較大的數字＝236 px（版面固定，不用改）
     const HEADS = '#xvs-ha, #xvs-hb';
 

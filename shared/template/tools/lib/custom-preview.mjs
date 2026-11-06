@@ -12,13 +12,14 @@
 //   檔名建議 x-<名稱>-v.html（呼叫端決定）。
 
 import { CANVAS, stageTransform } from './canvas.mjs';
+import { stripMarkers } from './custom-fill.mjs';
 
 const FADE = 0.5;
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export function buildCustomPreview({ name, html, pipStyle, kitLinks = [], format = 'landscape' }) {
   if (!/^x-[\w-]+$/.test(String(name || ''))) throw new Error(`預覽頁的名稱要是 x-<名稱>，現在是「${name}」`);
-  const m = String(html).match(new RegExp(`<template id="${name}-template"[^>]*>([\\s\\S]*)</template>`, 'i'));
+  const m = stripMarkers(String(html)).match(new RegExp(`<template id="${name}-template"[^>]*>([\\s\\S]*)</template>`, 'i'));   // 填空標記是給工具看的，預覽頁不用
   if (!m) throw new Error(`custom/${name}.html 沒有 <template id="${name}-template">`);
   const title = (String(html).match(/<title>([^<]*)<\/title>/i) || [])[1] || name;
   const st = pipStyle || { left: 0, top: 0, width: 432, height: 324 };

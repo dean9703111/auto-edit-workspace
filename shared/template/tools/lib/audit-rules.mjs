@@ -73,6 +73,26 @@ export function pickItems(items, { only = null, all = false } = {}) {
   return { list: list.filter((x) => x.type !== 'media' && (named || !x.sample)), skipped, errors };
 }
 
+// --only 的 build --check 怎麼算（平行工人互相不擋）：其他段的 ✖ 不影響指名段的量測，只算個數；指名段自己的 ✖ 與全域的 ✖ 才擋。
+// 沒有 --only：每個 ✖ 都擋。res＝resolvePlan 的結果（allItems 含排不上時間軸的段，it.errors 是那段自己的 ✖）→ { fatal: [訊息], others: 個數, otherIds: [段 id] }
+export function gateCheck(res, only = null) {
+  const errors = res?.errors || [];
+  if (!only || !only.length) return { fatal: [...errors], others: 0, otherIds: [] };
+  const want = new Set(only), of = new Map(), items = res.allItems || res.items || [], known = new Set(items.map((it) => it.id));
+  for (const it of items) {
+    if (want.has(it.id)) continue;
+    for (const e of it.errors || []) of.set(e, it.id ?? '?');
+  }
+  // 不在 it.errors 但寫明是哪一段的（[s14 speaker] … 這種，build 另外查的）：一樣算那一段的
+  for (const e of errors) {
+    const id = String(e).match(/^\[([^\s\]]+)/)?.[1];
+    if (id && known.has(id) && !want.has(id) && !of.has(e)) of.set(e, id);
+  }
+  const fatal = errors.filter((e) => !of.has(e));
+  const hit = errors.filter((e) => of.has(e));
+  return { fatal, others: hit.length, otherIds: [...new Set(hit.map((e) => of.get(e)))] };
+}
+
 // 壓到講者的門檻：custom 與用 css 移位的段要完全避開（R8.17），沒移位的模板照 build 的 15%
 export const speakerWarnOf = (item) => (item.type === 'custom' || (item.seg && item.seg.css) ? SPEAKER_WARN : SPEAKER_WARN_TEMPLATE);
 
@@ -831,6 +851,7 @@ export function atConsts(html) {
 //   拍距（「T2 ≥ T1 + 3.0」）不驗：完成態停太短量的是實際的靜止時間，比檔頭的算式準
 //   用到的名字有一個不是 P.at（3 點版刪掉的 T4、沒用的 ALL）那條就不驗；換了開場，檔頭那一行要改成新的下限
 export const FLOOR_TOL = 0.05;
+export const FLOOR_SOFT = 0.3;   // 第一拍只差這麼一點：開場和第一拍重疊看不出來，⚠ 就好（--check 也是差 > 0.3 才報）
 export function floorFindings({ item, html = '', cuesOut = [], file = '', tpl = '' } = {}) {
   const out = [];
   if (!item || item.type !== 'custom') return out;
@@ -875,7 +896,7 @@ export function floorFindings({ item, html = '', cuesOut = [], file = '', tpl = 
         msg: `段尾不夠：這段長 ${a.toFixed(2)}s，${name} 檔頭【D 下限】要 ${rule}＝${need.toFixed(2)}s（${r.rhs} 在 ${fmtT(item.start + b)}）`,
         fix: `${r.rhs} 改綁早一點的詞，或刪掉最後一拍（分鏡表一起改）；都不行就回報，請主代理把 plan.json 這段的 to 往後延 ≥ ${short.toFixed(2)}s`, data });
     } else if (!r.rhs) {
-      out.push({ ...base, level: 'error', rule: 'floor', t: r3(item.start + a),
+      out.push({ ...base, level: short <= FLOOR_SOFT ? 'warn' : 'error', rule: 'floor', t: r3(item.start + a),
         msg: `開場還沒做完第一拍就到了：${r.lhs} = ${lit(r.lhs)} 在段內 ${a.toFixed(2)}s（${fmtT(item.start + a)}），${name} 檔頭【D 下限】要 ${rule}（差 ${short.toFixed(2)}s）`,
         fix: `把開場（script 裡 ${r.lhs} 之前、寫固定秒數的那幾行）壓到 ${r.lhs} 之前做完，再把檔頭這一行改成新的下限；${short <= 0.5 ? `也可以給 ${r.lhs} 加第二個參數晚 ${short.toFixed(2)}s（還在講到後 0.5s 內）；` : ''}都不行就回報，請主代理把這段的 from 提早 ${short.toFixed(2)}s`, data });
     }

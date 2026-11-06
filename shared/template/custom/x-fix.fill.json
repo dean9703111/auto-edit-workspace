@@ -1,0 +1,178 @@
+{
+  "template": "x-fix",
+  "prefix": "xfix",
+  "beat": "C",
+  "layout": "fullscreen",
+  "when": "先講 2–3 個痛點，接著「所以我…」給一個解法，同一段 20 秒內講完：痛點逐條出現、講到解法前一起被劃掉，箭頭帶到解法卡",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "pains": {
+      "label": "痛點",
+      "type": "list",
+      "min": 2,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "痛點",
+          "type": "text",
+          "max": 7,
+          "required": true
+        },
+        "icon": {
+          "label": "圖示（建議每條同一個：circle-x 或 triangle-alert）",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到這個痛點的時間",
+          "type": "at",
+          "ref": "P{n}",
+          "required": true
+        }
+      }
+    },
+    "sol": {
+      "label": "解法",
+      "type": "text",
+      "max": 6,
+      "required": true
+    },
+    "solIcon": {
+      "label": "解法圖示",
+      "type": "icon",
+      "required": true
+    },
+    "sub": {
+      "label": "解法副句（選填，不寫就沒有這一行）",
+      "type": "text",
+      "max": 8
+    },
+    "fixAt": {
+      "label": "講到解法的時間（解法卡彈出；三條痛點在它前 0.75 秒一起被劃掉）",
+      "type": "at",
+      "ref": "FIX",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "多機錄影的痛點",
+    "pains": [
+      {
+        "text": "啟動不同步",
+        "icon": "circle-x",
+        "at": "#171@不同步"
+      },
+      {
+        "text": "走來走去",
+        "icon": "circle-x",
+        "at": "#172@走來走去"
+      },
+      {
+        "text": "一支一支檢查",
+        "icon": "circle-x",
+        "at": "#173@一支一支"
+      }
+    ],
+    "sol": "電腦一鍵控制",
+    "solIcon": "wrench",
+    "sub": "自己設計一套",
+    "fixAt": "#174@自己"
+  },
+  "sampleMin": {
+    "title": "多機錄影的痛點",
+    "pains": [
+      {
+        "text": "啟動不同步",
+        "icon": "circle-x",
+        "at": "#171@不同步"
+      },
+      {
+        "text": "走來走去",
+        "icon": "circle-x",
+        "at": "#172@走來走去"
+      }
+    ],
+    "sol": "電腦一鍵控制",
+    "solIcon": "wrench",
+    "fixAt": "#174@自己"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "each": "pains",
+      "to": 1,
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "痛點 {n}「{text}」＋警示圖示",
+      "moves": "擦開（痛點 {n}，由左）；滑入；＋0.12 逐字上浮（痛點字）；＋0.15 圖示描線",
+      "focus": "痛點 {n}"
+    },
+    {
+      "each": "pains",
+      "from": 2,
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "痛點 {n}「{text}」＋警示圖示",
+      "moves": "擦開（痛點 {n}，由左）；滑入；＋0.12 逐字上浮（痛點字）；＋0.15 圖示描線；退焦（前一條 → 0.6）",
+      "focus": "痛點 {n}"
+    },
+    {
+      "beat": "劃掉",
+      "at": "`{fixAt}`−0.75",
+      "show": "全部痛點被劃線；痛點欄退焦",
+      "moves": "劃掉（全部痛點）；＋0.35 退焦（痛點欄 → 0.5）",
+      "focus": "劃線處"
+    },
+    {
+      "if": "sub",
+      "beat": "解法",
+      "at": "`{fixAt}`",
+      "show": "箭頭 → 解法卡：圖示＋「{sol}」＋副句「{sub}」",
+      "moves": "彗星描線（箭頭，−0.45）；彈出（解法卡）；＋0.12 逐字落下（解法）；＋0.15 圖示描線；＋0.3 逐字上浮（副句）",
+      "focus": "解法卡",
+      "sfx": "shine"
+    },
+    {
+      "if": "!sub",
+      "beat": "解法",
+      "at": "`{fixAt}`",
+      "show": "箭頭 → 解法卡：圖示＋「{sol}」",
+      "moves": "彗星描線（箭頭，−0.45）；彈出（解法卡）；＋0.12 逐字落下（解法）；＋0.15 圖示描線",
+      "focus": "解法卡",
+      "sfx": "shine"
+    },
+    {
+      "beat": "爆點",
+      "at": "`{fixAt}`＋0.6",
+      "show": "解法字「{sol}」強調、解法卡反光",
+      "moves": "重拍（解法）；螢光筆（解法）；光澤掃過（解法卡）",
+      "focus": "解法字"
+    },
+    {
+      "beat": "聚焦",
+      "at": "`{fixAt}`＋1.2",
+      "show": "解法卡放大抬起、發光",
+      "moves": "聚焦（解法卡）",
+      "focus": "解法卡"
+    },
+    {
+      "beat": "收",
+      "at": "`{fixAt}`＋2.6",
+      "show": "解法卡回原大小；痛點欄回到 0.7；完成態停到段尾",
+      "moves": "回均衡；退焦（痛點欄 → 0.7）",
+      "focus": "整體"
+    }
+  ]
+}

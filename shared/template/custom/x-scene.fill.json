@@ -1,0 +1,99 @@
+{
+  "template": "x-scene",
+  "prefix": "xsc",
+  "beat": "S",
+  "layout": "fullscreen",
+  "generator": "scene",
+  "when": "講解在描述具體的動作、物件或過程（手機、腳架、電腦、雲端、人走動、傳檔），主角是白板線稿插圖；元件和拍都用資料寫",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "以前的傳檔流程",
+    "parts": [
+      {
+        "id": "phone",
+        "illus": "phone",
+        "opts": {
+          "orient": "landscape",
+          "screen": "video"
+        },
+        "label": "手機"
+      },
+      {
+        "id": "cloud",
+        "illus": "cloud",
+        "opts": {
+          "arrow": "up"
+        },
+        "label": "雲端"
+      },
+      {
+        "id": "laptop",
+        "illus": "laptop",
+        "opts": {
+          "screen": "blank"
+        },
+        "label": "電腦"
+      },
+      {
+        "id": "ok",
+        "illus": "badge",
+        "opts": {
+          "kind": "check"
+        },
+        "label": "沒問題",
+        "row": 2,
+        "side": true
+      }
+    ],
+    "links": [
+      "phone>cloud",
+      "cloud>laptop"
+    ],
+    "beats": [
+      {
+        "at": "#182@手機",
+        "in": [
+          "phone"
+        ],
+        "focus": "phone"
+      },
+      {
+        "at": "#183@雲端",
+        "in": [
+          "cloud"
+        ],
+        "line": "phone-cloud",
+        "focus": "cloud"
+      },
+      {
+        "at": "#184@電腦",
+        "in": [
+          "laptop"
+        ],
+        "line": "cloud-laptop",
+        "focus": "laptop"
+      },
+      {
+        "at": "#185@播放",
+        "state": [
+          "laptop",
+          "blank",
+          "play"
+        ],
+        "focus": "laptop"
+      },
+      {
+        "at": "#186@沒問題",
+        "check": "ok",
+        "focus": "ok"
+      }
+    ]
+  }
+}

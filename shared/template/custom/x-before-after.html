@@ -21,7 +21,7 @@
   2. 圖示：#xba-ico1、#xba-ico2 裡的 svg。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
      一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
-  3. 量條：左欄長滿（＝舊做法的量）；右欄 P.bar 的 to ＝ 新 ÷ 舊（這裡 20 ÷ 180 ＝ 0.111，改數字時一起算）。
+  3. 量條：左欄長滿（＝舊做法的量）；右欄 script 的 RATIO（P.bar 的 to）＝ 新 ÷ 舊（這裡 20 ÷ 180 ＝ 0.111，改數字時一起算）。
   4. 綁句：<script> 開頭 BEFORE、PAIN、AFTER、SAVE 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
 
@@ -80,27 +80,27 @@
        data-cues-sample='{"start":0,"D":15,"cues":{"32":[1.6,4.2],"33":[4.3,6.9],"34":[7,9.5],"35":[9.6,14.6]},"refs":{"#32@手動":1.8,"#33@逐句":4.4,"#34@AI":7.1,"#35@省下":9.7}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xba-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">剪一集要多久</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">剪一集要多久</span></div>
       <div id="xba-body" data-layout="row" data-gap="xl">
         <svg id="xba-arrow" data-links="xba-left>xba-right" xmlns="http://www.w3.org/2000/svg"></svg>
         <div id="xba-left" class="xba-col" data-slot>
           <div class="xba-head">
-            <span id="xba-ico1" class="sc-icon sc-icon--88"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /> </svg></span>
-            <span id="xba-lab1" class="xba-lab sc-t52 sc-w900 sc-opt">手動剪輯</span>
+            <span id="xba-ico1" class="sc-icon sc-icon--88" data-fill="beforeIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /> </svg></span>
+            <span id="xba-lab1" class="xba-lab sc-t52 sc-w900 sc-opt" data-fill="beforeLabel">手動剪輯</span>
           </div>
-          <div id="xba-num1" class="xba-num"><span class="xba-v sc-t112 sc-w900">3</span><span class="xba-u sc-t52 sc-w700 sc-opt">小時</span></div>
+          <div id="xba-num1" class="xba-num"><span class="xba-v sc-t112 sc-w900" data-fill="beforeNum">3</span><span class="xba-u sc-t52 sc-w700 sc-opt" data-fill="beforeUnit">小時</span></div>
           <div class="xba-track"><div id="xba-fill1" class="xba-fill"></div></div>
-          <div id="xba-pain" class="xba-note sc-t40 sc-w700 sc-gray sc-opt">逐句剪、反覆預覽</div>
+          <div id="xba-pain" class="xba-note sc-t40 sc-w700 sc-gray sc-opt" data-fill="pain">逐句剪、反覆預覽</div>
         </div>
         <div id="xba-right" class="xba-col" data-slot>
           <div id="xba-in2" class="xba-in">
             <div class="xba-head">
-              <span id="xba-ico2" class="sc-icon sc-icon--88"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span>
-              <span id="xba-lab2" class="xba-lab sc-t52 sc-w900 sc-opt">AI 剪輯</span>
+              <span id="xba-ico2" class="sc-icon sc-icon--88" data-fill="afterIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span>
+              <span id="xba-lab2" class="xba-lab sc-t52 sc-w900 sc-opt" data-fill="afterLabel">AI 剪輯</span>
             </div>
-            <div id="xba-num2" class="xba-num"><span class="xba-v sc-t112 sc-w900 sc-kw">20</span><span class="xba-u sc-t52 sc-w700 sc-opt">分鐘</span></div>
+            <div id="xba-num2" class="xba-num"><span class="xba-v sc-t112 sc-w900 sc-kw" data-fill="afterNum">20</span><span class="xba-u sc-t52 sc-w700 sc-opt" data-fill="afterUnit">分鐘</span></div>
             <div class="xba-track"><div id="xba-fill2" class="xba-fill"></div></div>
-            <div id="xba-gain" class="xba-note sc-t40 sc-w700 sc-gray sc-opt">NG 一次剪掉</div>
+            <div id="xba-gain" class="xba-note sc-t40 sc-w700 sc-gray sc-opt" data-fill="gain">NG 一次剪掉</div>
           </div>
         </div>
       </div>
@@ -138,7 +138,8 @@
     P.pop('#xba-right', AFTER);
     P.chars('#xba-num2', AFTER + 0.15, { mode: 'drop' });
     P.icon('#xba-ico2', AFTER + 0.15);
-    P.bar('#xba-fill2', AFTER + 0.3, { from: 0, to: 0.111, dur: 0.8 });   // 20 ÷ 180
+    const RATIO = 0.111;   // 右欄量條長度＝新 ÷ 舊（兩邊換算成同一個單位，同一把尺）
+    P.bar('#xba-fill2', AFTER + 0.3, { from: 0, to: RATIO, dur: 0.8 });
 
     // 拍 4 講到好處：右欄數字畫螢光筆、光澤掃過右欄、數字重拍（音效 success 見上面 P.sfx）
     P.marker('#xba-num2', SAVE);

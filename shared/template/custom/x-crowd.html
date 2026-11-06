@@ -65,23 +65,25 @@
        data-cues-sample='{"start":0,"D":11.8,"cues":{"342":[1.5,4.0],"343":[4.2,6.8],"344":[7.0,10.6]},"refs":{"#342@10":1.8,"#343@7":4.6,"#344@開頭":7.4}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xcrd-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">點進來的 10 個人</span><div id="xcrd-pill" class="sc-pill" data-snap-width><span class="sc-opt">開頭先抓住人</span></div></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">點進來的 10 個人</span>
+        <div id="xcrd-pill" class="sc-pill" data-snap-width><span class="sc-opt" data-fill="pill">開頭先抓住人</span></div> <!-- @if pill -->
+      </div>
       <div id="xcrd-body" data-layout="row" data-gap="lg">
         <div id="xcrd-grid" data-slot>
           <div id="xcrd-p1" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
-          <div id="xcrd-p2" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
-          <div id="xcrd-p3" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
-          <div id="xcrd-p4" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
-          <div id="xcrd-p5" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
-          <div id="xcrd-p6" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
-          <div id="xcrd-p7" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
-          <div id="xcrd-p8" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
-          <div id="xcrd-p9" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
+          <div id="xcrd-p2" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> <!-- @sub hot>=9: <div id="xcrd-p2" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> -->
+          <div id="xcrd-p3" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> <!-- @sub hot>=8: <div id="xcrd-p3" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> -->
+          <div id="xcrd-p4" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> <!-- @sub hot<7: <div id="xcrd-p4" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> -->
+          <div id="xcrd-p5" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> <!-- @sub hot<6: <div id="xcrd-p5" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> -->
+          <div id="xcrd-p6" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> <!-- @sub hot<5: <div id="xcrd-p6" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> -->
+          <div id="xcrd-p7" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> <!-- @sub hot<4: <div id="xcrd-p7" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> -->
+          <div id="xcrd-p8" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> <!-- @sub hot<3: <div id="xcrd-p8" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> -->
+          <div id="xcrd-p9" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> <!-- @sub hot<2: <div id="xcrd-p9" class="xcrd-p"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div> -->
           <div id="xcrd-p10" class="xcrd-p xcrd-hot"><div data-illus="pgPerson" style="width:112px;height:244px"></div></div>
         </div>
         <div id="xcrd-stat" data-slot>
-          <div id="xcrd-a" class="xcrd-s"><div class="xcrd-num"><span id="xcrd-na" class="sc-t112 sc-w900">0</span><span class="sc-t52 sc-w900">人</span></div><div id="xcrd-la" class="sc-t40 sc-w700 sc-gray sc-opt">點進來看</div></div>
-          <div id="xcrd-b" class="xcrd-s"><div class="xcrd-num"><span id="xcrd-nb" class="sc-t112 sc-w900">0</span><span class="sc-t52 sc-w900">人</span></div><div id="xcrd-lb" class="sc-t40 sc-w700 sc-opt">30 秒內就滑走</div></div>
+          <div id="xcrd-a" class="xcrd-s"><div class="xcrd-num"><span id="xcrd-na" class="sc-t112 sc-w900">0</span><span class="sc-t52 sc-w900">人</span></div><div id="xcrd-la" class="sc-t40 sc-w700 sc-gray sc-opt" data-fill="totalLabel">點進來看</div></div>
+          <div id="xcrd-b" class="xcrd-s"><div class="xcrd-num"><span id="xcrd-nb" class="sc-t112 sc-w900">0</span><span class="sc-t52 sc-w900">人</span></div><div id="xcrd-lb" class="sc-t40 sc-w700 sc-opt" data-fill="hotLabel">30 秒內就滑走</div></div>
         </div>
       </div>
     </div>
@@ -96,7 +98,7 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#342@10'), T2 = P.at('#343@7');    // 講到總數／講到那幾個
     P.sfx('impact', '#343@7');                         // 那幾個換色一顆 impact（句號和 T2 一樣）
-    const T3 = P.at('#344@開頭');                      // 選用：講到結論（沒有結論句的刪法見檔頭【綁句欄位】）
+    const T3 = P.at('#344@開頭');                      // 選用：講到結論（沒有結論句的刪法見檔頭【綁句欄位】）  // @if pill
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const HOT = 7;                                     // 換主色的人數＝class 有 xcrd-hot 的人數
 
@@ -115,9 +117,11 @@
     P.pop('#xcrd-b', T2, { from: 0.9, dy: 20 });
     P.count('#xcrd-nb', T2, { from: 0, to: HOT, dur: 0.9 });
     P.chars('#xcrd-lb', T2 + 0.15);
+    // @if pill {
     // 拍 3（選用）結論：膠囊彈出、字逐字落下
     P.pop('#xcrd-pill', T3, { from: 0.7, dy: 0 });
     P.chars('#xcrd-pill .sc-opt', T3 + 0.12, { mode: 'drop' });
+    // @}
 
     P.end();                                           // 長度＝plan.json 這段的長度
     window.__timelines['x-crowd'] = tl;

@@ -1,0 +1,175 @@
+{
+  "template": "x-numbers",
+  "prefix": "xn",
+  "beat": "E",
+  "layout": "fullscreen",
+  "when": "兩個數字：第一個超過上限、量條軌道撐破，第二個用同一把尺比（例：32 段 NG 超過人工看得完的 20 段，AI 一次剪掉 28 段）",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "topicAt": {
+      "label": "講到主題（數字前面那個詞）的時間；和 atA 至少差 3.3 秒",
+      "type": "at",
+      "ref": "T1",
+      "required": true
+    },
+    "nameA": {
+      "label": "第一張卡名稱（寬 ≤ 4 字）",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "unitA": {
+      "label": "第一張卡單位",
+      "type": "text",
+      "max": 2,
+      "required": true
+    },
+    "iconA": {
+      "label": "第一張卡圖示",
+      "type": "icon",
+      "required": true
+    },
+    "numA": {
+      "label": "第一個數字（2 位數內，要比 limit 大；數字框只有 160 寬，3 位數會蓋到單位）",
+      "type": "number",
+      "const": "NUM_A",
+      "required": true
+    },
+    "limit": {
+      "label": "上限：軌道一開始裝得下的量（比 numA 小；數到這裡軌道撐開、量條變警示色）",
+      "type": "number",
+      "const": "LIMIT",
+      "required": true
+    },
+    "atA": {
+      "label": "講到第一個數字的時間（數字剛好落定）；和 atB 至少差 2.5 秒",
+      "type": "at",
+      "ref": "T2",
+      "required": true
+    },
+    "nameB": {
+      "label": "第二張卡名稱（寬 ≤ 4 字）",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "unitB": {
+      "label": "第二張卡單位",
+      "type": "text",
+      "max": 2,
+      "required": true
+    },
+    "iconB": {
+      "label": "第二張卡圖示",
+      "type": "icon",
+      "required": true
+    },
+    "numB": {
+      "label": "第二個數字（2 位數內，不超過 numA；同一把尺，量條＝numB ÷ numA）",
+      "type": "number",
+      "const": "NUM_B",
+      "required": true
+    },
+    "atB": {
+      "label": "講到第二個數字的時間（數字剛好落定）",
+      "type": "at",
+      "ref": "T3",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "NG 段落清理",
+    "topicAt": "#41@NG",
+    "nameA": "NG 段落",
+    "unitA": "段",
+    "iconA": "circle-alert",
+    "numA": 32,
+    "limit": 20,
+    "atA": "#42@32",
+    "nameB": "剪掉",
+    "unitB": "段",
+    "iconB": "scissors",
+    "numB": 28,
+    "atB": "#43@28"
+  },
+  "sampleMin": {
+    "title": "待辦清單",
+    "topicAt": "#41@NG",
+    "nameA": "待辦",
+    "unitA": "件",
+    "iconA": "list-todo",
+    "numA": 48,
+    "limit": 10,
+    "atA": "#42@32",
+    "nameB": "處理",
+    "unitB": "件",
+    "iconB": "circle-check",
+    "numB": 36,
+    "atB": "#43@28"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "`{topicAt}`",
+      "show": "數字卡「{nameA}」（數字 0）＋單位「{unitA}」＋量條軌道",
+      "moves": "彈出（數字框）；＋0.15 圖示描線；＋0.2 淡入（軌道）；＋0.25 逐字落下（單位）",
+      "focus": "數字框"
+    },
+    {
+      "beat": "2",
+      "at": "`{atA}`（提早 1.2 秒開始數）",
+      "show": "數字開始往上數到 {numA}、量條同速長；數到上限 {limit} 時軌道撐開、量條變警示色",
+      "moves": "數字滾動（1.2 秒）；量條（同步）",
+      "focus": "數字"
+    },
+    {
+      "beat": "3",
+      "at": "`{atA}`",
+      "show": "數字落定在「{numA}」",
+      "moves": "重拍；漣漪（圖示）；＋0.1 螢光筆（單位）",
+      "focus": "數字",
+      "sfx": "impact"
+    },
+    {
+      "beat": "4",
+      "at": "`{atB}`（提早 1.2 秒彈出開始數）",
+      "show": "第二張數字卡「{nameB}」＋單位「{unitB}」，同一把尺數到 {numB}、綠色量條同步長",
+      "moves": "彈出（第二個數字框）；＋0.15 圖示描線；＋0.25 逐字落下（單位）；數字滾動（1.2 秒）；量條（同步）",
+      "focus": "第二個數字"
+    },
+    {
+      "beat": "5",
+      "at": "`{atB}`",
+      "show": "第二個數字落定在「{numB}」",
+      "moves": "重拍；漣漪（圖示）；退焦（第一個數字 → 0.6）",
+      "focus": "第二個數字",
+      "sfx": "impact"
+    },
+    {
+      "beat": "6",
+      "at": "`{atB}`＋0.6",
+      "show": "—",
+      "moves": "聚焦（第二張）",
+      "focus": "第二張"
+    },
+    {
+      "beat": "收",
+      "at": "`{atB}`＋2.0",
+      "show": "兩張數字卡",
+      "moves": "回均衡",
+      "focus": "整體"
+    }
+  ]
+}

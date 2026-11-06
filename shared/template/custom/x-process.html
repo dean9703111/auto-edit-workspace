@@ -74,17 +74,19 @@
        data-cues-sample='{"start":0,"D":17,"cues":{"12":[3.2,5.7],"13":[6,8.5],"14":[8.8,11.3],"15":[11.6,14]},"refs":{"#12@錄影":3.2,"#13@逐字稿":6,"#14@剪輯清單":8.8,"#15@初剪":11.6}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xproc-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">從錄影到初剪</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">從錄影到初剪</span></div>
       <div id="xproc-body" data-layout="free">
-        <svg id="xproc-lines" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3 xproc-n3>xproc-n4" xmlns="http://www.w3.org/2000/svg"></svg>
+        <svg id="xproc-lines" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3 xproc-n3>xproc-n4" xmlns="http://www.w3.org/2000/svg"></svg> <!-- @sub n==3: <svg id="xproc-lines" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3" xmlns="http://www.w3.org/2000/svg"></svg> -->
         <div id="xproc-n1" class="xproc-node" data-slot><i id="xproc-now1" class="xproc-now"></i>
-          <span id="xproc-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">錄影</span></div>
+          <span id="xproc-ico1" class="sc-icon" data-fill="items.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt" data-fill="items.1.text">錄影</span></div>
         <div id="xproc-n2" class="xproc-node" data-slot><i id="xproc-now2" class="xproc-now"></i>
-          <span id="xproc-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">逐字稿</span></div>
+          <span id="xproc-ico2" class="sc-icon" data-fill="items.2.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt" data-fill="items.2.text">逐字稿</span></div>
         <div id="xproc-n3" class="xproc-node" data-slot><i id="xproc-now3" class="xproc-now"></i>
-          <span id="xproc-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">剪輯清單</span></div>
+          <span id="xproc-ico3" class="sc-icon" data-fill="items.3.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt" data-fill="items.3.text">剪輯清單</span></div>
+        <!-- @if n>=4 { -->
         <div id="xproc-n4" class="xproc-node" data-slot><i id="xproc-now4" class="xproc-now"></i>
-          <span id="xproc-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /><path d="M8.12 8.12 12 12" /><path d="M20 4 8.12 15.88" /><circle cx="6" cy="18" r="3" /><path d="M14.8 14.8 20 20" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt">初剪</span></div>
+          <span id="xproc-ico4" class="sc-icon" data-fill="items.4.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /><path d="M8.12 8.12 12 12" /><path d="M20 4 8.12 15.88" /><circle cx="6" cy="18" r="3" /><path d="M14.8 14.8 20 20" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt" data-fill="items.4.text">初剪</span></div>
+        <!-- @} -->
       </div>
     </div>
   </div>
@@ -95,10 +97,10 @@
     const P = SceneMotion(tl, document.getElementById('x-process'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#12@錄影'), T2 = P.at('#13@逐字稿'), T3 = P.at('#14@剪輯清單'), T4 = P.at('#15@初剪');   // 講到每一站站名的時刻
+    const T1 = P.at('#12@錄影'), T2 = P.at('#13@逐字稿'), T3 = P.at('#14@剪輯清單'), T4 = P.at('#15@初剪');   // 講到每一站站名的時刻  // @sub n==3: const T1 = P.at('#12@錄影'), T2 = P.at('#13@逐字稿'), T3 = P.at('#14@剪輯清單');
 
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const ALL = '#xproc-n1, #xproc-n2, #xproc-n3, #xproc-n4';   // 四站（3 站時拿掉 n4）
+    const ALL = '#xproc-n1, #xproc-n2, #xproc-n3, #xproc-n4';   // 四站（3 站時拿掉 n4）  // @sub n==3: const ALL = '#xproc-n1, #xproc-n2, #xproc-n3';
 
     // 0. 每條連接線（data-links 產生的）複製一份虛線預告層（只在載入時建 DOM，每次結果相同）
     $q('#xproc-lines .sc-link').forEach(function (p) {
@@ -111,7 +113,7 @@
     P.chars('#xproc-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     // 拍 1 骨架：四站錯拍彈出（間隔 0.12），＋0.15 圖示描線
     P.pop(ALL, 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
-    P.icon('#xproc-ico1, #xproc-ico2, #xproc-ico3, #xproc-ico4', 1.15, { stagger: 0.12 });
+    P.icon('#xproc-ico1, #xproc-ico2, #xproc-ico3, #xproc-ico4', 1.15, { stagger: 0.12 });  // @sub n==3: P.icon('#xproc-ico1, #xproc-ico2, #xproc-ico3', 1.15, { stagger: 0.12 });
     // 拍 2 預告：站間虛線淡入、一直往前流
     P.in('.xproc-ghost', 1.5, { stagger: 0.1 });
     // 拍 3 等待：預覽態（四站壓暗縮小）＋鏡頭慢推，推到第 1 站前 0.2 秒
@@ -135,17 +137,19 @@
     P.spot(ALL, '#xproc-n3', T3, { scale: 1.08, lift: -12, done: '#xproc-n1, #xproc-n2' });
     P.out('#xproc-now2', T3);  P.in('#xproc-now3', T3);
     P.ripple('#xproc-ico3', T3 + 0.05, { to: 2.4 });
+    // @if n>=4 {
     // 拍 7 第 4 站：同拍 5（3 站時刪掉這一組 5 行，收尾的 T4 改 T3、now4 改 now3）
     P.comet('#xproc-n3-xproc-n4', T4 - 0.85, { dur: 0.75 });
     P.cam('#xproc-card', T4 - 0.2, { to: '#xproc-n4', k: 0.12, scale: 1.04, dur: 0.9 });
     P.spot(ALL, '#xproc-n4', T4, { scale: 1.08, lift: -12, done: '#xproc-n1, #xproc-n2, #xproc-n3' });
     P.out('#xproc-now3', T4);  P.in('#xproc-now4', T4);
     P.ripple('#xproc-ico4', T4 + 0.05, { to: 2.4 });
+    // @}
 
     // 收：最後一站講完 2.6 秒回均衡（全部亮回、鏡頭回正），完成態停到段尾
-    const TR = T4 + 2.6;
+    const TR = T4 + 2.6;  // @sub n==3: const TR = T3 + 2.6;
     P.spot(ALL, null, TR, { dur: 0.6 });
-    P.out('#xproc-now4', TR);
+    P.out('#xproc-now4', TR);  // @sub n==3: P.out('#xproc-now3', TR);
     P.cam('#xproc-card', TR, { x: 0, y: 0, scale: 1, dur: 0.6 });
 
     P.end();                                         // 長度＝plan.json 這段的長度

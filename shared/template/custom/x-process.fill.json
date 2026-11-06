@@ -1,0 +1,121 @@
+{
+  "template": "x-process",
+  "prefix": "xproc",
+  "beat": "A",
+  "layout": "fullscreen",
+  "when": "有先後順序的過程，3–4 站、每站一句話，站和站不在同一條直線（上下錯落），講到一站亮一站",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "items": {
+      "label": "站",
+      "type": "list",
+      "min": 3,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "站名",
+          "type": "text",
+          "max": 4,
+          "required": true
+        },
+        "icon": {
+          "label": "圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到站名的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    }
+  },
+  "sample": {
+    "title": "從錄影到初剪",
+    "items": [
+      {
+        "text": "錄影",
+        "icon": "video",
+        "at": "#12@錄影"
+      },
+      {
+        "text": "逐字稿",
+        "icon": "file-text",
+        "at": "#13@逐字稿"
+      },
+      {
+        "text": "剪輯清單",
+        "icon": "list-checks",
+        "at": "#14@剪輯清單"
+      },
+      {
+        "text": "初剪",
+        "icon": "scissors",
+        "at": "#15@初剪"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋0.7",
+      "show": "全部的站＋圖示",
+      "moves": "錯拍彈出（站）；＋0.15 圖示描線（錯拍）",
+      "focus": "均衡"
+    },
+    {
+      "beat": "2",
+      "at": "段起點＋1.2",
+      "show": "站間虛線",
+      "moves": "淡入（虛線）",
+      "focus": "方向"
+    },
+    {
+      "beat": "3",
+      "at": "段起點＋1.7",
+      "show": "—",
+      "moves": "預覽態；鏡頭慢推",
+      "focus": "整體"
+    },
+    {
+      "each": "items",
+      "to": 1,
+      "beat": 4,
+      "at": "`{at}`",
+      "show": "站 {n}「{text}」亮起",
+      "moves": "鏡頭跟焦點（−0.2）；聚焦；漣漪",
+      "focus": "站 {n}"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "beat": 5,
+      "at": "`{at}`",
+      "show": "連接線接到站 {n}「{text}」",
+      "moves": "彗星描線（−0.85）；鏡頭跟焦點；聚焦；走過（前一站）；漣漪",
+      "focus": "站 {n}"
+    },
+    {
+      "beat": "收",
+      "at": "`{last.at}`＋2.6",
+      "show": "全部站＋實線",
+      "moves": "回均衡；鏡頭回正",
+      "focus": "整體"
+    }
+  ]
+}

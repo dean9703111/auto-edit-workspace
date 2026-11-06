@@ -57,6 +57,6 @@ test('示範：官網組好後頁面只用相對路徑，有接模擬層，工�
   for (const f of ['demo-api.js', 'demo-core.mjs', 'storyboard-md.mjs', 'cuts.js', 'storyboard.js', 'editor.css', 'main.mp4', 'cuts.md', 'storyboard.md', 'options.json']) assert.ok(fs.existsSync(path.join(site, 'demo', f)), f);
   assert.ok(!fs.existsSync(path.join(site, 'shared/template/tools')), 'tools 不上網站');
   const options = JSON.parse(fs.readFileSync(path.join(site, 'demo/options.json'), 'utf8'));
-  for (const i of options.scenes.flatMap((g) => g.items)) assert.ok(fs.existsSync(path.join(site, 'shared/template/preview', i.preview)), `範例 ${i.preview} 不在網站上`);
+  for (const i of options.scenes.flatMap((g) => g.items)) if (i.preview) assert.ok(fs.existsSync(path.join(site, 'shared/template/preview', i.preview)), `範例 ${i.preview} 不在網站上`);
   fs.rmSync(out, { recursive: true, force: true });
 });

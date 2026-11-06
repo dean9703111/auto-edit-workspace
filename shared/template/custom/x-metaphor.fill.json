@@ -1,0 +1,174 @@
+{
+  "template": "x-metaphor",
+  "prefix": "xmeta",
+  "beat": "G",
+  "layout": "fullscreen",
+  "when": "比喻三段式：生活物件 → 技術概念 → 一句結論（＋一句代價／限制）。左邊觀眾熟悉的東西、右邊這集要教的概念，下面兩句是結論與代價，講到哪個哪個就是唯一的焦點",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "leftName": {
+      "label": "左框（生活物件）名稱",
+      "type": "text",
+      "max": 6,
+      "required": true
+    },
+    "leftIcon": {
+      "label": "左框圖示",
+      "type": "icon",
+      "required": true
+    },
+    "rightName": {
+      "label": "右框（技術概念）名稱",
+      "type": "text",
+      "max": 6,
+      "required": true
+    },
+    "rightIcon": {
+      "label": "右框圖示",
+      "type": "icon",
+      "required": true
+    },
+    "sumPre": {
+      "label": "結論句：關鍵詞前面的字（選填；三段合計 ≤ 10 字）",
+      "type": "text",
+      "max": 10
+    },
+    "sumKw": {
+      "label": "結論句的關鍵詞（會掃螢光筆）",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "sumPost": {
+      "label": "結論句：關鍵詞後面的字（選填；三段合計 ≤ 10 字）",
+      "type": "text",
+      "max": 10
+    },
+    "warnBad": {
+      "label": "限制句裡壞的那個詞（會重拍；選填：不寫就沒有最下面的警示條，要寫就連 warnAt 一起寫；限制句合計 ≤ 10 字）",
+      "type": "text",
+      "max": 6
+    },
+    "warnRest": {
+      "label": "限制句：壞的詞後面的字（選填）",
+      "type": "text",
+      "max": 8
+    },
+    "warnIcon": {
+      "label": "警示條圖示（選填，預設 triangle-alert）",
+      "type": "icon"
+    },
+    "leftAt": {
+      "label": "講到生活物件的時間（左框彈出）",
+      "type": "at",
+      "ref": "T1",
+      "required": true
+    },
+    "rightAt": {
+      "label": "講到技術概念的時間（箭頭描過去、右框彈出）",
+      "type": "at",
+      "ref": "T2",
+      "required": true
+    },
+    "sumAt": {
+      "label": "講到結論關鍵詞的時間",
+      "type": "at",
+      "ref": "T3",
+      "required": true
+    },
+    "warnAt": {
+      "label": "講到限制關鍵詞的時間（有 warnBad 才要）",
+      "type": "at",
+      "ref": "T4"
+    }
+  },
+  "sample": {
+    "title": "Skill 的比喻",
+    "leftName": "使用說明書",
+    "leftIcon": "book-open",
+    "rightName": "Skill",
+    "rightIcon": "sparkles",
+    "sumPre": "AI 照",
+    "sumKw": "說明書",
+    "sumPost": "做事",
+    "warnBad": "寫錯",
+    "warnRest": "了，照錯做",
+    "leftAt": "#22@說明書",
+    "rightAt": "#23@Skill",
+    "sumAt": "#24@做事",
+    "warnAt": "#25@寫錯"
+  },
+  "sampleMin": {
+    "title": "Skill 的比喻",
+    "leftName": "使用說明書",
+    "leftIcon": "book-open",
+    "rightName": "Skill",
+    "rightIcon": "sparkles",
+    "sumPre": "AI 照",
+    "sumKw": "說明書",
+    "sumPost": "做事",
+    "leftAt": "#22@說明書",
+    "rightAt": "#23@Skill",
+    "sumAt": "#24@做事"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "`{leftAt}`",
+      "show": "左框：圖示＋「{leftName}」；兩框之間的虛線",
+      "moves": "鏡頭跟焦點（−0.2）；彈出（左框）；＋0.14 逐字上浮（名稱）；＋0.18 圖示描線；＋0.3 淡入（虛線）；＋0.6 聚焦（左框）",
+      "focus": "左框"
+    },
+    {
+      "beat": "2",
+      "at": "`{rightAt}`",
+      "show": "箭頭 → 右框：圖示＋「{rightName}」",
+      "moves": "彗星描線（箭頭，−0.6）；鏡頭跟焦點（−0.2）；彈出（右框）；＋0.05 漣漪（右框圖示）；＋0.14 逐字上浮（名稱）；＋0.18 圖示描線；＋0.6 聚焦（右框）；走過（左框）",
+      "focus": "右框"
+    },
+    {
+      "beat": "3",
+      "at": "`{sumAt}`",
+      "show": "結論句（關鍵詞「{sumKw}」）；兩框收回焦點、退焦",
+      "moves": "鏡頭跟焦點（−0.2）；逐字上浮（結論句）；＋0.5 螢光筆（關鍵詞）；＋0.6 回均衡（兩框）；＋0.6 退焦（兩框與箭頭 → 0.55）",
+      "focus": "結論句"
+    },
+    {
+      "if": "warnBad",
+      "beat": "4",
+      "at": "`{warnAt}`",
+      "show": "警示條：圖示＋限制句（壞的詞「{warnBad}」）",
+      "moves": "彈出（警示條）；＋0.14 逐字上浮（限制句）；＋0.18 圖示描線；＋0.55 重拍（壞的詞）；＋0.6 退焦（結論句 → 0.6）",
+      "focus": "警示條",
+      "sfx": "alert"
+    },
+    {
+      "if": "warnBad",
+      "beat": "收",
+      "at": "`{warnAt}`＋2.6",
+      "show": "全部亮回（完成態停到段尾）",
+      "moves": "回均衡；鏡頭回正",
+      "focus": "整體"
+    },
+    {
+      "if": "!warnBad",
+      "beat": "收",
+      "at": "`{sumAt}`＋2.6",
+      "show": "全部亮回（完成態停到段尾）",
+      "moves": "回均衡；鏡頭回正",
+      "focus": "整體"
+    }
+  ]
+}

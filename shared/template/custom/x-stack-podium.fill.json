@@ -1,0 +1,126 @@
+{
+  "template": "x-stack-podium",
+  "prefix": "xstp",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "由下往上、越往上越接近目標的組成：3–4 層、從底層講起，每層只放名稱，講到哪一層那一層從平躺翻起來疊上去（越上層越窄），講到「合起來」最上層換成主色",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "items": {
+      "label": "層",
+      "type": "list",
+      "min": 3,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "層名（第 1 個講到的放最底層；最上層 ≤ 4 字）",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "icon": {
+          "label": "圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到層名的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    },
+    "all": {
+      "label": "講到「合起來就是…」那一句的時間（選填；沒有就最上層講完 2 秒收，也沒有 success 音效）",
+      "type": "at",
+      "ref": "ALL"
+    }
+  },
+  "sample": {
+    "title": "做頻道的四層台階",
+    "items": [
+      {
+        "text": "穩定器材",
+        "icon": "camera",
+        "at": "#262@器材"
+      },
+      {
+        "text": "剪輯流程",
+        "icon": "scissors",
+        "at": "#263@剪輯"
+      },
+      {
+        "text": "內容企劃",
+        "icon": "lightbulb",
+        "at": "#264@企劃"
+      },
+      {
+        "text": "個人品牌",
+        "icon": "rocket",
+        "at": "#265@品牌"
+      }
+    ],
+    "all": "#266"
+  },
+  "sampleMin": {
+    "title": "做頻道的四層台階",
+    "items": [
+      {
+        "text": "穩定器材",
+        "icon": "camera",
+        "at": "#262@器材"
+      },
+      {
+        "text": "剪輯流程",
+        "icon": "scissors",
+        "at": "#263@剪輯"
+      },
+      {
+        "text": "內容企劃",
+        "icon": "lightbulb",
+        "at": "#264@企劃"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」；地面線",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）；＋1.0 描線（地面線）",
+      "focus": "標題"
+    },
+    {
+      "each": "items",
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "第 {n} 層「{text}」＋圖示（越上層越窄）",
+      "moves": "彈出（層，以底邊為軸翻起）；＋0.2 圖示描線；＋0.25 逐字上浮（名稱）；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 {n} 層"
+    },
+    {
+      "if": "all",
+      "beat": "收",
+      "at": "`{all}`",
+      "show": "全部層亮回；最上層「{last.text}」換成主色（完成態停到段尾）",
+      "moves": "回均衡；淡入（最上層主色底）；＋0.1 漣漪（最上層圖示）",
+      "focus": "整體",
+      "sfx": "success"
+    },
+    {
+      "if": "!all",
+      "beat": "收",
+      "at": "`{last.at}`＋2.0",
+      "show": "全部層亮回；最上層「{last.text}」換成主色（完成態停到段尾）",
+      "moves": "回均衡；淡入（最上層主色底）；＋0.1 漣漪（最上層圖示）",
+      "focus": "整體"
+    }
+  ]
+}

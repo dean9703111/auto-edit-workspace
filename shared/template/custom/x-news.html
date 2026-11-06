@@ -53,15 +53,15 @@
     #x-news { position: absolute; inset: 0; }
     #x-news .fill { position: absolute; inset: 0; }
     /* 第一列：快訊標籤＋標題條 */
-    #x-news #xnews-tag { position: absolute; left: 120px; top: 160px; width: 232px; height: 100px; box-sizing: border-box; border-radius: 20px 0 0 20px;
+    #x-news #xnews-tag { position: absolute; left: 120px; top: 160px; width: 232px; height: 100px; box-sizing: border-box; border-radius: 20px 0 0 20px;  /* @sub !source: #x-news #xnews-tag { position: absolute; left: 120px; top: 225px; width: 232px; height: 100px; box-sizing: border-box; border-radius: 20px 0 0 20px; */
                          background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; justify-content: center; gap: 12px; white-space: nowrap; }
     #x-news #xnews-tag .sc-icon { --d: 56px; --i: 32px; position: relative; background: var(--brand-ink); color: var(--brand); }
-    #x-news #xnews-head { position: absolute; left: 352px; top: 160px; width: 948px; height: 100px; box-sizing: border-box; padding: 0 40px; border-radius: 0 20px 20px 0;
+    #x-news #xnews-head { position: absolute; left: 352px; top: 160px; width: 948px; height: 100px; box-sizing: border-box; padding: 0 40px; border-radius: 0 20px 20px 0;  /* @sub !source: #x-news #xnews-head { position: absolute; left: 352px; top: 225px; width: 948px; height: 100px; box-sizing: border-box; padding: 0 40px; border-radius: 0 20px 20px 0; */
                           background: var(--v2-ink); color: var(--v2-node); display: flex; align-items: center; white-space: nowrap; }
     /* 中間兩張卡：白底細框，翻起來的軸是底邊 */
-    #x-news .xnews-card { position: absolute; top: 300px; height: 400px; box-sizing: border-box; padding: 40px 48px; border: 4px solid var(--v2-node-line); border-radius: 24px;
+    #x-news .xnews-card { position: absolute; top: 300px; height: 400px; box-sizing: border-box; padding: 40px 48px; border: 4px solid var(--v2-node-line); border-radius: 24px;  /* @sub !source: #x-news .xnews-card { position: absolute; top: 365px; height: 400px; box-sizing: border-box; padding: 40px 48px; border: 4px solid var(--v2-node-line); border-radius: 24px; */
                           background: var(--v2-node); color: var(--sc-fs-ink); box-shadow: var(--v2-card-shadow); }
-    #x-news #xnews-big { left: 120px; width: 560px; padding: 40px 72px; display: flex; flex-direction: column; justify-content: center; gap: 8px; white-space: nowrap; }
+    #x-news #xnews-big { left: 120px; width: 560px; padding: 40px 72px; display: flex; flex-direction: column; justify-content: center; gap: 8px; white-space: nowrap; }  /* @sub !trendPts: #x-news #xnews-big { left: 120px; width: 1180px; padding: 40px 72px; display: flex; flex-direction: column; justify-content: center; gap: 8px; white-space: nowrap; } */
     #x-news #xnews-nrow { display: flex; align-items: baseline; gap: 12px; color: var(--brand); }
     #x-news #xnews-trend { left: 712px; width: 588px; display: flex; flex-direction: column; gap: 24px; }
     #x-news #xnews-rhead { height: 72px; display: flex; align-items: center; gap: 16px; white-space: nowrap; }
@@ -79,23 +79,28 @@
   <div id="x-news" data-composition-id="x-news" data-width="1920" data-height="1080" data-duration="11.6"
        data-cues-sample='{"start":0,"D":11.6,"cues":{"372":[2.2,5.0],"373":[5.1,8.4],"374":[8.5,11.4]},"refs":{"#372@兩倍":2.4,"#373@半年":5.2,"#374@官方":8.6}}'>
     <div class="sc-surface-fs fill"></div>
-    <div id="xnews-tag"><span id="xnews-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /> <path d="M18 14h-8" /> <path d="M15 18h-5" /> <path d="M10 6h8v4h-8V6Z" /> </svg></span><b class="sc-t52 sc-w900 sc-opt">快訊</b></div>
-    <div id="xnews-head" data-layout-allow-slack><b id="xnews-htext" class="sc-t52 sc-w900 sc-opt">YouTube 公布 Shorts 數據</b></div>
-    <div id="xnews-big" class="xnews-card" data-layout-allow-slack>
-      <b id="xnews-bl" class="sc-t40 sc-w700 sc-gray sc-opt">Shorts 觀看次數</b>
-      <div id="xnews-nrow"><b id="xnews-num" class="sc-t150 sc-w900">0</b><b id="xnews-unit" class="sc-t72 sc-w900 sc-opt">倍</b></div>
-      <b id="xnews-bs" class="sc-t40 sc-w700 sc-opt">比去年同期</b>
+    <div id="xnews-tag">
+      <span id="xnews-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /> <path d="M18 14h-8" /> <path d="M15 18h-5" /> <path d="M10 6h8v4h-8V6Z" /> </svg></span> <!-- @sub tagIcon: <span id="xnews-tico" class="sc-icon" data-fill="tagIcon"></span> -->
+      <b class="sc-t52 sc-w900 sc-opt" data-fill="tag">快訊</b>
     </div>
+    <div id="xnews-head" data-layout-allow-slack><b id="xnews-htext" class="sc-t52 sc-w900 sc-opt" data-fill="headline">YouTube 公布 Shorts 數據</b></div>
+    <div id="xnews-big" class="xnews-card" data-layout-allow-slack>
+      <b id="xnews-bl" class="sc-t40 sc-w700 sc-gray sc-opt" data-fill="bigLabel">Shorts 觀看次數</b>
+      <div id="xnews-nrow"><b id="xnews-num" class="sc-t150 sc-w900">0</b><b id="xnews-unit" class="sc-t72 sc-w900 sc-opt" data-fill="unit">倍</b></div>
+      <b id="xnews-bs" class="sc-t40 sc-w700 sc-opt" data-fill="bigSub">比去年同期</b>
+    </div>
+    <!-- @if trendPts { -->
     <div id="xnews-trend" class="xnews-card">
-      <div id="xnews-rhead"><span id="xnews-rico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><b id="xnews-rl" class="sc-t40 sc-w700 sc-opt">近 6 個月</b><b id="xnews-rv" class="sc-t52 sc-w900 sc-opt">+120%</b></div>
+      <div id="xnews-rhead"><span id="xnews-rico" class="sc-icon" data-fill="trendIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><b id="xnews-rl" class="sc-t40 sc-w700 sc-opt" data-fill="trendLabel">近 6 個月</b><b id="xnews-rv" class="sc-t52 sc-w900 sc-opt" data-fill="trendValue">+120%</b></div>
       <svg id="xnews-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 508 220">
         <path id="xnews-base" d="M8 216 L500 216" />
-        <path id="xnews-area" d="M8 196 L100 170 L190 176 L280 120 L370 96 L500 24 L500 220 L8 220 Z" />
-        <path id="xnews-line" d="M8 196 L100 170 L190 176 L280 120 L370 96 L500 24" />
-        <circle id="xnews-dot" cx="500" cy="24" r="14" />
+        <path id="xnews-area" d="M8 196 L100 170 L190 176 L280 120 L370 96 L500 24 L500 220 L8 220 Z" /> <!-- @sub always: <path id="xnews-area" d="M8 {{trendPts.1.y}} L100 {{trendPts.2.y}} L190 {{trendPts.3.y}} L280 {{trendPts.4.y}} L370 {{trendPts.5.y}} L500 {{trendPts.6.y}} L500 220 L8 220 Z" /> -->
+        <path id="xnews-line" d="M8 196 L100 170 L190 176 L280 120 L370 96 L500 24" /> <!-- @sub always: <path id="xnews-line" d="M8 {{trendPts.1.y}} L100 {{trendPts.2.y}} L190 {{trendPts.3.y}} L280 {{trendPts.4.y}} L370 {{trendPts.5.y}} L500 {{trendPts.6.y}}" /> -->
+        <circle id="xnews-dot" cx="500" cy="24" r="14" /> <!-- @sub always: <circle id="xnews-dot" cx="500" cy="{{trendPts.6.y}}" r="14" /> -->
       </svg>
     </div>
-    <div id="xnews-src" data-snap-width><b id="xnews-stext" class="sc-t40 sc-w700 sc-opt">資料來源：YouTube 官方部落格（2026 年 10 月）</b></div>
+    <!-- @} -->
+    <div id="xnews-src" data-snap-width><b id="xnews-stext" class="sc-t40 sc-w700 sc-opt" data-fill="source">資料來源：YouTube 官方部落格（2026 年 10 月）</b></div> <!-- @if source -->
   </div>
   <script>
   (function () {
@@ -104,7 +109,7 @@
     const P = SceneMotion(tl, document.getElementById('x-news'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#372@兩倍'), T2 = P.at('#373@半年'), T3 = P.at('#374@官方');   // 大數字／變化／出處
+    const T1 = P.at('#372@兩倍'), T2 = P.at('#373@半年'), T3 = P.at('#374@官方');   // 大數字／變化／出處  // @sub !trendPts && !source: const T1 = P.at('#372@兩倍'); @@ !trendPts: const T1 = P.at('#372@兩倍'), T3 = P.at('#374@官方'); @@ !source: const T1 = P.at('#372@兩倍'), T2 = P.at('#373@半年');
     P.sfx('impact', '#372@兩倍');                                                 // 大數字翻起來一顆 impact（句號和 T1 一樣）
 
     // 拍 0 開場：快訊標籤翻起來 → 標題條由左擦開 → 標題逐字
@@ -114,15 +119,19 @@
     P.chars('#xnews-htext', 0.9, { stagger: 0.03 });
     // 拍 1 大數字：卡從平躺翻起來 → 數字數上去
     P.hinge('#xnews-big', T1);
-    P.count('#xnews-num', T1 + 0.2, { from: 0, to: 2, dur: 0.8 });
+    P.count('#xnews-num', T1 + 0.2, { from: 0, to: 2, dur: 0.8 });  // @sub bigDec: P.count('#xnews-num', T1 + 0.2, { from: 0, to: {{bigNum}}, decimals: {{bigDec}}, dur: 0.8 }); @@ always: P.count('#xnews-num', T1 + 0.2, { from: 0, to: {{bigNum}}, dur: 0.8 });
+    // @if trendPts {
     // 拍 2 變化：走勢卡翻起來 → 折線畫上去、面淡入 → 終點圓與漲幅彈出
     P.hinge('#xnews-trend', T2);
     P.icon('#xnews-rico', T2 + 0.15);
     P.stroke('#xnews-line', T2 + 0.4, { dur: 1.0 });
     P.in('#xnews-area', T2 + 0.4, { dur: 1.0 });
     P.pop('#xnews-dot, #xnews-rv', T2 + 1.4, { from: 0.5, dy: 0 });
+    // @}
+    // @if source {
     // 拍 3 出處：來源列由左擦開
     P.wipe('#xnews-src', T3, { dir: 'left', dur: 0.5 });
+    // @}
 
     P.end();                                           // 長度＝plan.json 這段的長度
     window.__timelines['x-news'] = tl;

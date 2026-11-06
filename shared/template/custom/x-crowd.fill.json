@@ -1,0 +1,106 @@
+{
+  "template": "x-crowd",
+  "prefix": "xcrd",
+  "beat": "E",
+  "layout": "fullscreen",
+  "when": "講「10 個人裡有幾個」的比例，想讓觀眾看到人（10 個點進來的觀眾，有 7 個看不到 30 秒就滑走）：10 個象形小人逐個彈出，講到那幾個時身體換主色、其他人淡下去",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "totalLabel": {
+      "label": "總數（右上，固定 10 人）的說明",
+      "type": "text",
+      "max": 7,
+      "required": true
+    },
+    "hot": {
+      "label": "換主色的人數（1–9；總數固定 10 人）",
+      "type": "enum",
+      "options": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+      "const": "HOT",
+      "required": true
+    },
+    "hotLabel": {
+      "label": "那幾個人（右下主色數字）的說明",
+      "type": "text",
+      "max": 7,
+      "required": true
+    },
+    "pill": {
+      "label": "結論膠囊（選填，標題列右端；不寫就沒有結論那一拍，要寫就連 pillAt 一起寫）",
+      "type": "text",
+      "max": 8
+    },
+    "totalAt": {
+      "label": "講到總數的時間（10 個小人彈出、右上數字數到 10）",
+      "type": "at",
+      "ref": "T1",
+      "required": true
+    },
+    "hotAt": {
+      "label": "講到那幾個的時間（那幾個人換主色、右下數字數到 hot）",
+      "type": "at",
+      "ref": "T2",
+      "required": true
+    },
+    "pillAt": {
+      "label": "講到結論的時間（有 pill 才要）",
+      "type": "at",
+      "ref": "T3"
+    }
+  },
+  "sample": {
+    "title": "點進來的 10 個人",
+    "totalLabel": "點進來看",
+    "hot": 7,
+    "hotLabel": "30 秒內就滑走",
+    "pill": "開頭先抓住人",
+    "totalAt": "#342@10",
+    "hotAt": "#343@7",
+    "pillAt": "#344@開頭"
+  },
+  "sampleMin": {
+    "title": "點進來的 10 個人",
+    "totalLabel": "點進來看",
+    "hot": 1,
+    "hotLabel": "30 秒內就滑走",
+    "totalAt": "#342@10",
+    "hotAt": "#343@7"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "`{totalAt}`",
+      "show": "10 個小人＋右上總數「10 人」＋說明「{totalLabel}」",
+      "moves": "錯拍彈出（小人）；彈出（總數）；數字滾動（總數 0 → 10）；＋0.15 逐字上浮（說明）",
+      "focus": "小人"
+    },
+    {
+      "beat": "2",
+      "at": "`{hotAt}`",
+      "show": "其中 {hot} 個人身體換主色、其他人淡下去；右下主色數字「{hot} 人」＋說明「{hotLabel}」",
+      "moves": "淡入（主色軀幹，錯拍）；退焦（其他人 → 0.35）；彈出（右下數字）；數字滾動（0 → {hot}）；＋0.15 逐字上浮（說明）",
+      "focus": "換主色的人",
+      "sfx": "impact"
+    },
+    {
+      "if": "pill",
+      "beat": "3",
+      "at": "`{pillAt}`",
+      "show": "標題列右端的結論膠囊「{pill}」",
+      "moves": "彈出（膠囊）；＋0.12 逐字落下（膠囊字）",
+      "focus": "膠囊"
+    }
+  ]
+}

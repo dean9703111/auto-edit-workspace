@@ -1,0 +1,207 @@
+{
+  "template": "x-trend",
+  "prefix": "xtr",
+  "beat": "E",
+  "layout": "fullscreen",
+  "when": "同一個量在 3–6 個時間點的變化，最後點出現在的值：長條逐根長出加趨勢線，數字數到最後的值（可選轉折標註、結論膠囊；例：訂閱人數從 200 長到兩萬、每集剪輯時間從 6 小時降到 40 分鐘）",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "icon": {
+      "label": "標題列圖示（上升用 trending-up、下降用 trending-down）",
+      "type": "icon",
+      "required": true
+    },
+    "unit": {
+      "label": "最後的值的單位（例「人」「小時」）",
+      "type": "text",
+      "max": 3,
+      "required": true
+    },
+    "items": {
+      "label": "時間點（由左到右；每根長條一個）",
+      "type": "list",
+      "min": 3,
+      "maxItems": 6,
+      "required": true,
+      "const": "DATA",
+      "toArray": [
+        "text",
+        "value"
+      ],
+      "item": {
+        "text": {
+          "label": "時間標籤（例「1 月」「2024」）",
+          "type": "text",
+          "max": 3,
+          "required": true
+        },
+        "value": {
+          "label": "數字（≤ 999999 的整數）",
+          "type": "number",
+          "required": true
+        }
+      }
+    },
+    "firstAt": {
+      "label": "講到第一個值的時間（基線描出、長條開始長）",
+      "type": "at",
+      "ref": "T1",
+      "required": true
+    },
+    "noteFrom": {
+      "label": "轉折標註從第幾組開始（1 起算，3 到最後一組；選填，要和 noteText、noteAt 一起寫）",
+      "type": "number",
+      "const": "NOTE"
+    },
+    "noteText": {
+      "label": "轉折標註標籤（≤ 6 字，半形算半字，例「開始做 Shorts」；選填）",
+      "type": "text",
+      "max": 6.5
+    },
+    "noteAt": {
+      "label": "講到轉折原因的時間（選填；要比 firstAt 晚 0.3 × 柱數 + 1.6 秒以上，比 lastAt 早 3.6 秒以上）",
+      "type": "at",
+      "ref": "TN"
+    },
+    "lastAt": {
+      "label": "講到最後的值的時間（數字剛好數到；要比 firstAt 晚 0.3 × 柱數 + 2.8 秒以上）",
+      "type": "at",
+      "ref": "T2",
+      "required": true
+    },
+    "pillText": {
+      "label": "結論膠囊（≤ 8 字；標題 10 字時 ≤ 6 字，標題 ≤ 9 字才放得下 8 字；選填，要和 pillAt 一起寫）",
+      "type": "text",
+      "max": 8
+    },
+    "pillAt": {
+      "label": "講到結論的時間（選填；比 lastAt 晚 2.5 秒以上）",
+      "type": "at",
+      "ref": "T3"
+    }
+  },
+  "sample": {
+    "title": "訂閱人數",
+    "icon": "trending-up",
+    "unit": "人",
+    "items": [
+      {
+        "text": "1 月",
+        "value": 200
+      },
+      {
+        "text": "3 月",
+        "value": 900
+      },
+      {
+        "text": "6 月",
+        "value": 2000
+      },
+      {
+        "text": "9 月",
+        "value": 8000
+      },
+      {
+        "text": "12 月",
+        "value": 20000
+      }
+    ],
+    "firstAt": "#151@200",
+    "noteFrom": 4,
+    "noteText": "開始做 Shorts",
+    "noteAt": "#152@Shorts",
+    "lastAt": "#153@兩萬",
+    "pillText": "一年翻 100 倍",
+    "pillAt": "#154@翻"
+  },
+  "sampleMin": {
+    "title": "每集剪輯時間",
+    "icon": "trending-down",
+    "unit": "分鐘",
+    "items": [
+      {
+        "text": "1 集",
+        "value": 360
+      },
+      {
+        "text": "5 集",
+        "value": 180
+      },
+      {
+        "text": "現在",
+        "value": 40
+      }
+    ],
+    "firstAt": "#151@200",
+    "lastAt": "#153@兩萬"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」＋標題列圖示",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）；＋0.65 圖示描線（標題列）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "`{firstAt}`",
+      "show": "基線＋{n} 個時間標籤，長條由左到右一根一根長出",
+      "moves": "描線（基線）；＋0.1 逐字落下（時間標籤）；＋0.2 量條（長條，每 0.3 秒一根）",
+      "focus": "長條"
+    },
+    {
+      "beat": "1b",
+      "if": "noteText && noteAt && noteFrom",
+      "at": "`{noteAt}`",
+      "show": "從第 {noteFrom} 組起的區段淡色填滿（左邊事件虛線）＋標籤「{noteText}」",
+      "moves": "擦開（區段，由左）；＋0.3 彈出（標籤）；＋0.4 逐字上浮（標籤）",
+      "focus": "轉折標註"
+    },
+    {
+      "beat": "2",
+      "at": "`{lastAt}`（提早 1.2 秒開始數）",
+      "show": "提示框（數字 0、單位「{unit}」）＋趨勢線沿柱頂描過去＋端點小圓",
+      "moves": "彈出（提示框）；數字滾動（1.2 秒）；＋0.15 逐字落下（單位）；彗星描線（趨勢線）；彈出（端點，到點前 0.2 秒）",
+      "focus": "提示框"
+    },
+    {
+      "beat": "3",
+      "at": "`{lastAt}`",
+      "show": "數字落定在最後的值「{last.value}」；最後一根換主色",
+      "moves": "重拍；漣漪（端點）；淡入（最後一根的主色層）；＋0.1 螢光筆（單位）",
+      "focus": "數字",
+      "sfx": "impact"
+    },
+    {
+      "beat": "4",
+      "if": "pillText && pillAt",
+      "at": "`{pillAt}`",
+      "show": "標題列右端結論膠囊「{pillText}」；提示框退焦",
+      "moves": "彈出（膠囊）；＋0.12 逐字落下（膠囊字）；退焦（提示框 → 0.6）；＋0.6 聚焦（膠囊）",
+      "focus": "膠囊",
+      "sfx": "impact"
+    },
+    {
+      "beat": "收",
+      "if": "pillText && pillAt",
+      "at": "`{pillAt}`＋2.0",
+      "show": "膠囊亮框收掉、提示框亮回",
+      "moves": "回均衡",
+      "focus": "整體"
+    },
+    {
+      "beat": "收",
+      "if": "!pillAt",
+      "at": "`{lastAt}`＋2.0",
+      "show": "全部（完成態停到段尾）",
+      "moves": "—",
+      "focus": "整體"
+    }
+  ]
+}

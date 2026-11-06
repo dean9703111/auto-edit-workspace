@@ -7,6 +7,12 @@
  *   node shared/template/tools/audit.mjs --project projects/<專案> --only x01,s03 只量這幾段（字卡動態要量就用這個指名）
  *   node shared/template/tools/audit.mjs --project projects/<專案> --json        stdout 只印一個 JSON
  *   node shared/template/tools/audit.mjs --project projects/<專案> --format portrait  照直式量（不寫就照 plan.json 的 format、製作進度.md 的「版式」列、主軌寬高比；第一行印版式與來源）
+ *   node shared/template/tools/audit.mjs --project projects/<專案> --only x03 --shots --sheet  工人自查只跑這一條：這段的 --check 一行、⚠，加量測與截圖拼圖
+ *     --only：其他段的 ✖ 只印一行「其他段有 N 個 ✖（不影響這段）」，只有這段自己的 ✖ 與全域的 ✖ 才量不了（平行工人互相不擋）
+ *     --shots：每個取樣時刻（中點、靜止、完成態）存一張 work/audit-shots/<段 id>-<秒>.jpg（重跑先清掉這段的舊圖）
+ *     --sheet：再把每段的截圖拼成一張 work/audit-shots/sheet-<段 id>.jpg，每格標時間，只印這張的路徑（--sheet 自動開 --shots）
+ *   --jobs N：同時開幾個 Chrome 量（預設 4、最多 8；每 3 段開一個，段少就少開）；順序與結果和 --jobs 1 一樣
+ *   --verbose：多印全表（每段的量測時間與結果）、每張截圖的路徑、節奏備註；預設只印 ✖、⚠ 與統計
  *
  * 先 build（audit 量的是 build 產生的 work/hyperframes/index.html；只改了 custom 檔不用重 build，改了 plan.json 要先 build）。
  * 段落起迄取自 build.mjs --check（完成影片秒數，和完成影片預覽、snapshot 的秒數一樣）。完成態那一刻全部還在動（退場比 0.6 秒長）時，每次往前 0.3 秒找靜止的畫面。
@@ -89,23 +95,24 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build, pathsFrom, projectLabel } from './build.mjs';
-import { findChrome, findRuntime, openSession, freshRefsScript } from './lib/audit-browser.mjs';
-import { pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
+import { findChrome, findRuntime, openSessions, freshRefsScript } from './lib/audit-browser.mjs';
+import { contactSheet, poolOn } from './lib/raster.mjs';
+import { gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
   judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings } from './lib/audit-rules.mjs';
-import { templateFor } from './lib/plan.mjs';
+import { templateFor, formatReport as checkTable } from './lib/plan.mjs';
 import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings } from './lib/audit-beats.mjs';
 import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners } from './lib/audit-illus.mjs';
 import { judgeLayoutRules } from './lib/audit-layout.mjs';
 import { resolveFormat, formatLine, canvasOf } from './lib/canvas.mjs';
 
-const VALUE_FLAGS = ['project', 'only', 'chrome', 'runtime', 'template', 'format'];
+const VALUE_FLAGS = ['project', 'only', 'chrome', 'runtime', 'template', 'format', 'jobs'];
+export const JOBS = { default: 4, max: 8 };
 const rel = (p) => path.relative(process.cwd(), p) || '.';
 const r3 = (n) => Math.round(n * 1000) / 1000;
 
-// --shots（不在 --help：--help 和 specs/contracts/cli-003.md §1 逐字相同）：量的每個取樣時刻（中點、靜止、完成態）各存一張截圖
-// 到 work/audit-shots/<段 id>-<秒>.jpg（子代理看不到 snapshot，用這個看自己那段；改完 x 檔不用 build）。用法寫在 auto-edit-motion 步驟 6、worker-brief
+// --shots：量的每個取樣時刻（中點、靜止、完成態）各存一張截圖到 work/audit-shots/<段 id>-<秒>.jpg（子代理看不到 snapshot，用這個看自己那段；改完 x 檔不用 build）。用法寫在 auto-edit-motion 步驟 6、worker-brief
 export function parseArgs(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
@@ -116,10 +123,17 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['all', 'json', 'help', 'shots'].includes(k)) flags[k] = true;
+    } else if (['all', 'json', 'help', 'shots', 'sheet', 'verbose'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
+}
+
+export function jobsOf(v) {
+  if (v == null) return JOBS.default;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1 || n > JOBS.max) throw new Error(`--jobs 要是 1–${JOBS.max} 的整數，現在是「${v}」→ 改成 1–${JOBS.max}，或不寫（預設 ${JOBS.default}）`);
+  return n;
 }
 
 // custom 檔寫死的長度要等於段長；不等時時間軸不是短了（最後一段沒被取樣）就是多了。結尾寫 P.end()（不帶參數）或用 P.dur() 的檔不檢查（長度自動等於段長）
@@ -166,6 +180,51 @@ export function scriptErrors(errors, items, htmlOf = () => '') {
   return { findings, warnings };
 }
 
+// --only：頁面上其他段的錯誤不算這段的（工人 A 的 x 檔改到一半丟錯，不要讓工人 B 看到）。回傳留下的錯誤與被濾掉的個數
+export function splitPageErrors({ errors = [], cueErrs = [], others = [], htmlOf = () => '' }) {
+  const hit = new Set();
+  const owner = (name) => others.find((x) => x.id === name || x.compId === name);
+  const keepE = errors.filter((e) => {
+    const t = String(e.text);
+    const m = t.match(/composition script error:\s*(\S+)\s/);
+    const it = m && owner(m[1]);
+    const il = !it && illusSrcOwners(t, others, htmlOf);
+    const who = it || (il && il.items.length ? il.items[0] : null);
+    if (who) hit.add(`${who.id}|${t}`);
+    return !who;
+  });
+  const keepC = cueErrs.filter((raw) => {
+    const m = String(raw).match(/^(\S+) P\.(?:at|dur)\(/);
+    const it = m && owner(m[1]);
+    if (it) hit.add(`${it.id}|${raw}`);
+    return !it;
+  });
+  return { errors: keepE, cueErrs: keepC, others: hit.size, otherIds: [...new Set([...hit].map((k) => k.split('|')[0]))] };
+}
+
+const SHOT_KIND = { done: '完成態', still: '靜止', mid: '中點' };
+
+// 一段的截圖拼成一張（每格標時間與取樣種類）：平行工人各寫各的檔
+async function shotSheets(G, P, shots, cv) {
+  const byId = new Map();
+  for (const s of shots) { if (!byId.has(s.id)) byId.set(s.id, []); byId.get(s.id).push(s); }
+  const out = [];
+  const fontsCss = pathToFileURL(path.join(P.templateDir, 'kit', 'fonts.css')).href;
+  for (const [id, list] of byId) {
+    const n = list.length, portrait = cv.H > cv.W;
+    const cols = portrait ? Math.max(4, Math.min(6, n)) : n <= 4 ? 2 : n <= 9 ? 3 : 4;
+    const tw = Math.floor((1920 - (cols - 1) * 8) / cols), th = Math.round((tw * cv.H) / cv.W);
+    const dir = path.dirname(list[0].file);
+    const page = contactSheet({ fontsCss, title: `${id}｜${n} 張（中點、靜止、完成態）`, cols, tile: [tw, th], label: 34, fontSize: 20,
+      cells: list.map((s) => ({ src: pathToFileURL(s.file).href, time: fmtT(s.t), id: null, text: SHOT_KIND[s.kind] || s.kind })) });
+    const hf = path.join(dir, `.sheet-${id}.html`), jpg = path.join(dir, `sheet-${id}.jpg`);
+    fs.writeFileSync(hf, page.html);
+    try { await G.shot({ file: hf, out: jpg, width: page.width, height: page.height, quality: 85 }); } finally { fs.rmSync(hf, { force: true }); }
+    out.push({ id, file: rel(jpg), count: n });
+  }
+  return out;
+}
+
 export async function audit(flags, { log = console.log } = {}) {
   const P = pathsFrom(flags);
   const project = P.project ? projectLabel(P, P.project) : rel(P.out);
@@ -175,20 +234,34 @@ export async function audit(flags, { log = console.log } = {}) {
   try { planJson = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch { planJson = null; }
   const fmt = resolveFormat({ projectDir: P.project, plan: planJson, flag: flags.format });
   const cv = canvasOf(fmt.format), portrait = fmt.format === 'portrait';
-  const report = { ok: false, project, format: fmt.format, canvas: [cv.W, cv.H], errors: [], warnings: [], notes: [], segments: [], findings: [], chrome: null, runtime: null };
+  const only = flags.only ? flags.only.split(',').map((x) => x.trim()).filter(Boolean) : null;
+  const jobs = jobsOf(flags.jobs), wantShots = !!(flags.shots || flags.sheet);
+  const report = { ok: false, project, format: fmt.format, canvas: [cv.W, cv.H], only, errors: [], warnings: [], notes: [], segments: [], findings: [], chrome: null, runtime: null };
   log(formatLine(fmt));
   if (!fs.existsSync(index)) { report.errors.push(`找不到 ${rel(index)} → 先跑 node shared/template/tools/build.mjs --project ${project}`); return report; }
 
   const chk = build({ project: flags.project, template: flags.template, check: true, json: true }, { log: () => {} });
-  if (!chk.ok) {
-    report.errors.push(...chk.json.errors.map((e) => `build --check：${e}`), `build --check 有 ✖ → 先照 → 後面的建議改好 plan.json、重跑 build，再 audit`);
+  // 有 --only：其他段的 ✖ 不擋（平行工人各改各的）；這段自己的 ✖、全域的 ✖ 才量不了
+  const gate = gateCheck(chk.res, only);
+  report.others = { errors: gate.others, ids: gate.otherIds };
+  if (gate.fatal.length) {
+    report.errors.push(...gate.fatal.map((e) => `build --check：${e}`), only
+      ? `--only ${only.join(',')} 量不了（上面是這段或全域的 ✖）→ 照 → 後面的建議改；custom 檔的問題改完直接重跑這條（不用 build），要動 plan.json 的改完重跑 build（子代理交回主代理）`
+      : `build --check 有 ✖ → 先照 → 後面的建議改好 plan.json、重跑 build，再 audit`);
     return report;
   }
   const res = chk.res;
-  const pick = pickItems(res.items, { only: flags.only ? flags.only.split(',') : null, all: !!flags.all });
+  const pick = pickItems(res.items, { only, all: !!flags.all });
   report.errors.push(...pick.errors);
   report.notes.push(...pick.skipped.map((s) => `不量 ${s}`));
   if (pick.errors.length) return report;
+  // 工人只跑這一條：這段在 --check 表上那一行（段長、綁句）與它的 ⚠
+  if (only) {
+    const named = res.items.filter((x) => only.includes(x.id));
+    report.checkRows = named.length ? checkTable({ ...res, items: named }, {}).split('\n').slice(1, 1 + named.length) : [];
+    report.cueTimes = named.map((it) => ({ id: it.id, refs: Object.entries(it.cueRefs || {}).map(([ref, t]) => [ref, Math.round((t - it.start) * 100) / 100]) })).filter((x) => x.refs.length);
+    report.checkWarnings = (res.allItems || res.items).filter((x) => only.includes(x.id)).flatMap((x) => x.warnings || []);
+  }
   if (!pick.list.length) {
     report.ok = true;
     report.notes.push(flags.all ? 'plan.json 沒有可以量的段' : 'plan.json 沒有 custom 段（type: "custom"）→ 要量情境模板加 --all');
@@ -203,13 +276,14 @@ export async function audit(flags, { log = console.log } = {}) {
   const rt = findRuntime({ runtime: flags.runtime });
   report.chrome = chrome;
   report.runtime = rt.version;
+  const nPages = Math.max(1, Math.min(jobs, Math.ceil(pick.list.length / 3)));   // 開一頁要載整支片：段少時不值得多開
   log(`專案：${project}`);
-  log(`量 ${pick.list.length} 段（${flags.only ? `--only ${flags.only}` : flags.all ? '情境模板與 custom' : 'custom'}）；HyperFrames runtime ${rt.version}`);
+  log(`量 ${pick.list.length} 段（${flags.only ? `--only ${flags.only}` : flags.all ? '情境模板與 custom' : 'custom'}）；HyperFrames runtime ${rt.version}${nPages > 1 ? `；${nPages} 個 Chrome 併發` : ''}`);
 
-  const raw = [];
   const segs = new Map(pick.list.map((it) => [it.id, { id: it.id, type: it.type, label: it.label, layout: layoutOf(it), start: it.start, end: it.end, samples: [] }]));
   const fresh = Object.fromEntries(res.items.filter((it) => it.type === 'custom' && it.cueRefs).map((it) => [it.id, it.cueRefs]));
-  const S = await openSession({ dir: P.out, chrome, runtime: rt.file, W: cv.W, H: cv.H, extraHead: freshRefsScript(fresh) });
+  const G = await openSessions({ dir: P.out, chrome, runtime: rt.file, W: cv.W, H: cv.H, extraHead: freshRefsScript(fresh), count: nPages });
+  const S0 = G.sessions[0];
   const plans = new Map();
   // custom 段：先讀時間軸（子合成掛上之後才有；第一次 seek 到第一段的起點），排靜止取樣、之後判節奏
   const motions = new Map();
@@ -217,71 +291,101 @@ export async function audit(flags, { log = console.log } = {}) {
   let cueErrs = [];
   try {
     if (portrait) {
-      const regions = JSON.parse(await S.evaluate('JSON.stringify(window.__regions || null)'));
+      const regions = JSON.parse(await S0.evaluate('JSON.stringify(window.__regions || null)'));
       for (const it of pick.list) plans.set(it.id, portraitPlan(it, cv, regions));
     }
     if (customs.length) {
-      await S.seek(customs[0].start + 0.01);
+      await S0.seek(customs[0].start + 0.01);
       for (const it of customs) {
-        let mo = await S.motion({ hostId: `el-${it.id}`, compId: it.compId });
-        if (!mo) { await S.seek(it.start + 0.01); mo = await S.motion({ hostId: `el-${it.id}`, compId: it.compId }); }
+        let mo = await S0.motion({ hostId: `el-${it.id}`, compId: it.compId });
+        if (!mo) { await S0.seek(it.start + 0.01); mo = await S0.motion({ hostId: `el-${it.id}`, compId: it.compId }); }
         motions.set(it.id, mo);
       }
     }
-  } catch (e) { await S.close(); throw e; }
-  const jobs = pick.list.flatMap((it) => {
+  } catch (e) { await G.close(); throw e; }
+  // 每段一組取樣（同一段都在同一頁量，段內照時間先後）；全部量完照時間排回去，順序和內容都和 --jobs 1 一樣
+  const groups = pick.list.map((it) => {
     const ts = sampleTimes(it);
     const still = it.type === 'custom' ? stillTimes(motions.get(it.id), it) : [];
-    return [...ts.map((s) => ({ it, ...s, floor: ts[0].kind === 'mid' && s.kind === 'done' ? ts[0].t : it.start })), ...still.map((s) => ({ it, ...s, floor: it.start }))];
-  }).sort((a, b) => a.t - b.t);
-  const measureAt = async (t, id) => { const pl = plans.get(id); await S.seek(t); return S.measure({ hostId: `el-${id}`, W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.unstage ? { unstage: true } : {}) }); };
+    return { it, jobs: [...ts.map((s) => ({ it, ...s, floor: ts[0].kind === 'mid' && s.kind === 'done' ? ts[0].t : it.start })), ...still.map((s) => ({ it, ...s, floor: it.start }))].sort((a, b) => a.t - b.t) };
+  });
   // 「有靜止的內容」：背景層（滿版底、側邊欄面板）不算
   const hasStill = (m) => (m.els || []).some((e) => !e.moving && !e.bg && (e.text || e.painted || e.media));
-  try {
-    for (const j of jobs) {
-      let m = await measureAt(j.t, j.it.id);
-      // 完成態那一刻全部都在動（退場動畫比 0.6 秒長，例如 03 側邊欄推回 0.7 秒）：每次往前 0.3 秒找最後一個靜止的畫面，最多退到中點
-      for (let k = 1; j.kind === 'done' && !m.missingHost && (m.els || []).length && !hasStill(m) && k <= 6; k++) {
-        const t = r3(j.t - 0.3 * k);
-        if (t <= j.floor + 0.05) break;
-        const m2 = await measureAt(t, j.it.id);
-        if (hasStill(m2)) { m = m2; j.t = t; }
-      }
-      const seg = segs.get(j.it.id);
-      if (flags.shots) {
-        const f = path.join(P.project || P.out, 'work', 'audit-shots', `${j.it.id}-${j.t.toFixed(2)}.jpg`);
-        fs.mkdirSync(path.dirname(f), { recursive: true });
-        await S.screenshot(f);
-        (report.shots ||= []).push(rel(f));
-      }
-      const still = (m.els || []).filter((e) => !e.moving);
-      seg.samples.push({ t: j.t, kind: j.kind, measured: still.length, moving: (m.els || []).length - still.length });
-      if (!m.missingHost && Math.abs(m.host.start - j.it.start) > 0.02) {
-        raw.push({ id: j.it.id, label: j.it.label, level: 'error', rule: 'stale', el: null, t: j.t, kind: j.kind,
-          msg: `index.html 和 plan.json 對不上：#el-${j.it.id} 在 index.html 從 ${m.host.start}s 開始，plan.json 算出來是 ${j.it.start}s`, fix: `重跑 node shared/template/tools/build.mjs --project ${project}` });
-        continue;
-      }
-      const pl = plans.get(j.it.id);
-      raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), speakerBox: res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
-        W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.geo ? { geo: pl.geo } : {}), ...(pl && pl.stage ? { stage: pl.stage } : {}) }));
-      raw.push(...judgeLayout(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, ...(pl && pl.stage && pl.stage.window ? { contentY: [pl.stage.window[1], pl.stage.window[3]] } : {}) }));
-      // 012 版面：完成態量 data-layout 容器（SceneLayout.measure，版面座標）；有容器時 illus 的手排對齊交給它
-      let lay = null;
-      if (j.kind === 'done' && !m.missingHost) {
-        const js = await S.evaluate(`(() => { const h = document.getElementById(${JSON.stringify(`el-${j.it.id}`)}); return h && window.SceneLayout ? JSON.stringify(window.SceneLayout.measure(h)) : 'null'; })()`);
-        lay = JSON.parse(js || 'null');
-        raw.push(...judgeLayoutRules(lay, { item: j.it, t: j.t }));
-      }
-      raw.push(...judgeIllus(m, { item: j.it, t: j.t, kind: j.kind, hasLayout: !!(lay && lay.containers.length) }));
-      if (j.kind === 'done' && !m.missingHost && !hasStill(m)) {
-        raw.push({ id: j.it.id, label: j.it.label, level: 'warn', rule: 'empty', el: null, t: j.t, kind: j.kind,
-          msg: `完成態沒有量到任何內容（${(m.els || []).length ? '全部還在動畫中' : '畫面上是空的'}）`, fix: `用 npx hyperframes snapshot --at ${j.t} 看這一刻的畫面；內容要在段尾前 0.6 秒停在完成態（R6）` });
-      }
+  const shotsDir = path.join(P.project || P.out, 'work', 'audit-shots');
+  // 重跑時先清掉這幾段的舊截圖（時間變了舊檔不會被蓋掉，工人會看到過期的圖）
+  if (wantShots && fs.existsSync(shotsDir)) {
+    const ids = new Set(pick.list.map((it) => it.id));
+    for (const f of fs.readdirSync(shotsDir)) { const m = f.match(/^(.+)-\d+\.\d\d\.jpg$/); if (m && ids.has(m[1])) fs.rmSync(path.join(shotsDir, f), { force: true }); }
+  }
+  const measureJob = async (S, j) => {
+    const pl = plans.get(j.it.id), seg = segs.get(j.it.id), out = { t0: j.t, shot: null, sample: null, raw: [] };
+    const measureAt = async (t) => { await S.seek(t); return S.measure({ hostId: `el-${j.it.id}`, W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.unstage ? { unstage: true } : {}) }); };
+    let m = await measureAt(j.t), at = j.t;
+    // 完成態那一刻全部都在動（退場動畫比 0.6 秒長，例如 03 側邊欄推回 0.7 秒）：每次往前 0.3 秒找最後一個靜止的畫面，最多退到中點
+    for (let k = 1; j.kind === 'done' && !m.missingHost && (m.els || []).length && !hasStill(m) && k <= 6; k++) {
+      const t = r3(j.t - 0.3 * k);
+      if (t <= j.floor + 0.05) break;
+      const m2 = await measureAt(t);
+      at = t;
+      if (hasStill(m2)) { m = m2; j.t = t; }
     }
-    cueErrs = await S.cueErrors();
-  } finally { await S.close(); }
+    if (wantShots) {
+      if (at !== j.t) await S.seek(j.t);   // 往前找過但都還在動：截回取樣那一刻
+      const f = path.join(shotsDir, `${j.it.id}-${j.t.toFixed(2)}.jpg`);
+      await S.screenshot(f);
+      out.shot = { file: f, id: j.it.id, t: j.t, kind: j.kind };
+    }
+    const still = (m.els || []).filter((e) => !e.moving);
+    out.sample = { t: j.t, kind: j.kind, measured: still.length, moving: (m.els || []).length - still.length };
+    out.id = j.it.id;
+    if (!m.missingHost && Math.abs(m.host.start - j.it.start) > 0.02) {
+      out.raw.push({ id: j.it.id, label: j.it.label, level: 'error', rule: 'stale', el: null, t: j.t, kind: j.kind,
+        msg: `index.html 和 plan.json 對不上：#el-${j.it.id} 在 index.html 從 ${m.host.start}s 開始，plan.json 算出來是 ${j.it.start}s`, fix: `重跑 node shared/template/tools/build.mjs --project ${project}` });
+      return out;
+    }
+    out.raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), speakerBox: res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
+      W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.geo ? { geo: pl.geo } : {}), ...(pl && pl.stage ? { stage: pl.stage } : {}) }));
+    out.raw.push(...judgeLayout(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, ...(pl && pl.stage && pl.stage.window ? { contentY: [pl.stage.window[1], pl.stage.window[3]] } : {}) }));
+    // 012 版面：完成態量 data-layout 容器（SceneLayout.measure，版面座標）；有容器時 illus 的手排對齊交給它
+    let lay = null;
+    if (j.kind === 'done' && !m.missingHost) {
+      const js = await S.evaluate(`(() => { const h = document.getElementById(${JSON.stringify(`el-${j.it.id}`)}); return h && window.SceneLayout ? JSON.stringify(window.SceneLayout.measure(h)) : 'null'; })()`);
+      lay = JSON.parse(js || 'null');
+      out.raw.push(...judgeLayoutRules(lay, { item: j.it, t: j.t }));
+    }
+    out.raw.push(...judgeIllus(m, { item: j.it, t: j.t, kind: j.kind, hasLayout: !!(lay && lay.containers.length) }));
+    if (j.kind === 'done' && !m.missingHost && !hasStill(m)) {
+      out.raw.push({ id: j.it.id, label: j.it.label, level: 'warn', rule: 'empty', el: null, t: j.t, kind: j.kind,
+        msg: `完成態沒有量到任何內容（${(m.els || []).length ? '全部還在動畫中' : '畫面上是空的'}）`, fix: `用 npx hyperframes snapshot --at ${j.t} 看這一刻的畫面；內容要在段尾前 0.6 秒停在完成態（R6）` });
+    }
+    return out;
+  };
+  const raw = [], shots = [];
+  try {
+    const done = await poolOn(G.sessions, groups, async (S, g) => { const out = []; for (const j of g.jobs) out.push(await measureJob(S, j)); return out; });
+    for (const r of done.flat().sort((a, b) => a.t0 - b.t0)) {
+      segs.get(r.id).samples.push(r.sample);
+      raw.push(...r.raw);
+      if (r.shot) shots.push(r.shot);
+    }
+    if (shots.length) report.shots = shots.map((s) => rel(s.file));
+    if (flags.sheet && shots.length) report.sheets = await shotSheets(G, P, shots, cv);
+    cueErrs = [...new Set((await Promise.all(G.sessions.map((S) => S.cueErrors()))).flat().map(String))].sort();
+  } finally { await G.close(); }
   const htmlOf = (it) => { const f = it.file && path.join(P.out, it.file); return f && fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : ''; };
-  const pageErrs = scriptErrors(S.errors, pick.list, htmlOf);
+  // 每頁都會遇到同一批頁面錯誤：去重、照字排，順序才和 --jobs 1 一樣
+  const seenErr = new Set();
+  let pageErrors = G.sessions.flatMap((S) => S.errors).filter((e) => { const k = `${e.text}|${e.url}|${e.line}`; if (seenErr.has(k)) return false; seenErr.add(k); return true; }).sort((a, b) => (String(a.text) < String(b.text) ? -1 : String(a.text) > String(b.text) ? 1 : 0));
+  if (only) {
+    // 有 --only：其他段的頁面錯誤（工人 A 的 x 檔改到一半）不算這段的，併進「其他段有 N 個 ✖」
+    const notMine = res.items.filter((x) => !only.includes(x.id));
+    const sp = splitPageErrors({ errors: pageErrors, cueErrs, others: notMine, htmlOf });
+    pageErrors = sp.errors; cueErrs = sp.cueErrs;
+    // --check 已經算到的段不重複算（同一個綁句錯誤，頁面上也會報一次）
+    const added = sp.otherIds.filter((id) => !report.others.ids.includes(id));
+    report.others = { errors: report.others.errors + added.length, ids: [...report.others.ids, ...added] };
+  }
+  const pageErrs = scriptErrors(pageErrors, pick.list, htmlOf);
   const ilDir = path.join(P.out, 'illus-local');
   const local = fs.existsSync(ilDir) ? fs.readdirSync(ilDir).filter((f) => /^[A-Za-z0-9]+\.svg$/.test(f)).map((f) => f.slice(0, -4)) : [];
   report.warnings.push(...pageErrs.warnings);
@@ -323,26 +427,42 @@ export async function audit(flags, { log = console.log } = {}) {
   return report;
 }
 
-export function formatReport(r) {
+// 預設只印 ✖、⚠ 與統計；verbose 才印全表、每張截圖、節奏備註（長片一段一行也有上百行）
+export function formatReport(r, { verbose = false } = {}) {
   const L = [];
   for (const e of r.errors) L.push(`✖ ${e}`);
-  for (const n of r.notes || []) L.push(n);
+  // 長片一段一行太多：範例原文、節奏沒檢查的段各併成一行
+  const notes = r.notes || [], tempo = /^\S+：(讀不到 window\.__timelines|沒有 P\.at 綁句)/;
+  const samples = verbose ? [] : notes.filter((n) => /^不量 .*還是範例原文/.test(n));
+  const unpaced = verbose ? [] : notes.filter((n) => tempo.test(n));
+  for (const n of notes) if (!samples.includes(n) && !unpaced.includes(n)) L.push(n);
+  if (samples.length) L.push(`不量 ${samples.length} 段（還是範例原文、還沒做）：${samples.map((n) => n.replace(/^不量 (\S+?)（.*$/, '$1')).join('、')}`);
+  if (unpaced.length) L.push(`節奏沒檢查 ${unpaced.length} 段（${unpaced.map((n) => n.split('：')[0]).join('、')}）→ --verbose 看原因`);
+  if (r.others?.errors) L.push(`其他段有 ${r.others.errors} 個 ✖（不影響這段）`);
+  for (const row of r.checkRows || []) L.push(row);
+  for (const c of r.cueTimes || []) L.push(`${c.id} 綁句（段內秒數）：${c.refs.map(([ref, t]) => `${ref} ${t.toFixed(2)}`).join('、')}`);
   for (const w of r.warnings) L.push(`⚠ ${w}`);
+  for (const w of r.checkWarnings || []) L.push(`⚠ ${w}`);
   for (const f of r.findings) L.push(formatFinding(f));
-  if (r.segments.length) {
+  if (r.segments.length && verbose) {
     L.push('', 'id｜情境｜版型｜量測時間｜結果');
     for (const s of r.segments) {
       const times = s.samples.map((x) => `${fmtT(x.t)} ${x.kind === 'done' ? '完成態' : x.kind === 'still' ? '靜止' : '中點'}${x.moving ? `（${x.moving} 個在動畫中，不判）` : ''}`).join('、');
       L.push(`${s.id}｜${s.label}｜${s.layout}｜${times}｜${s.errors || s.warns ? [s.errors ? `✖ ${s.errors}` : '', s.warns ? `⚠ ${s.warns}` : ''].filter(Boolean).join(' ') : '✓'}`);
     }
   }
-  const ne = r.errors.length + r.findings.filter((f) => f.level === 'error').length, nw = r.warnings.length + r.findings.filter((f) => f.level === 'warn').length;
+  const ne = r.errors.length + r.findings.filter((f) => f.level === 'error').length, nw = r.warnings.length + (r.checkWarnings || []).length + r.findings.filter((f) => f.level === 'warn').length;
   if (r.segments.length) {
-    L.push('', ne ? `未通過：${ne} 個錯誤（✖），${nw} 個提醒（⚠）。照 → 後面的改法改 custom 檔（或 plan.json 後重跑 build），再跑一次 audit。` : `通過：${r.segments.length} 段，${nw} 個提醒（⚠）。audit 量的是幾何，最後仍以 snapshot 看圖為準。`);
+    const looks = r.shots?.length ? '' : r.only ? '要看畫面：這條加 --shots --sheet。' : '要看畫面：qc.mjs storyboard --sheet。';
+    L.push('', ne ? `未通過：${ne} 個錯誤（✖），${nw} 個提醒（⚠）。照 → 後面的改法改 custom 檔（或 plan.json 後重跑 build），再跑一次 audit。` : `通過：${r.segments.length} 段，${nw} 個提醒（⚠）。audit 量的是幾何，畫面對不對還要看圖。${looks}`);
     const bad = [...new Set(r.findings.flatMap((f) => f.at || []))].sort((a, b) => a - b).slice(0, 12);
-    if (bad.length) L.push(`看畫面：cd ${r.project}/work/hyperframes && npx hyperframes snapshot --at ${bad.map((t) => r3(t)).join(',')} --no-end -o ../../output/qc`);
+    // 有 --only 的是工人（不能跑 snapshot）：看圖用 --shots --sheet
+    if (bad.length && !r.only && !r.shots?.length) L.push(`看畫面：cd ${r.project}/work/hyperframes && npx hyperframes snapshot --at ${bad.map((t) => r3(t)).join(',')} --no-end -o ../../output/qc`);
   } else if (ne) L.push('', `未通過：${ne} 個錯誤（✖）。`);
-  if (r.shots?.length) L.push('', `截圖 ${r.shots.length} 張（用看圖的工具打開，對照分鏡看每個動作有沒有真的看得到）：`, ...r.shots.map((f) => `  ${f}`));
+  if (r.sheets?.length) {
+    L.push('', `截圖拼成${r.sheets.length === 1 ? '一張' : ` ${r.sheets.length} 張`}（每格標時間；用看圖的工具打開，對照分鏡看每個動作有沒有真的看得到）：`, ...(verbose || r.sheets.length <= 12 ? r.sheets.map((s) => `  ${s.file}（${s.count} 格）`) : [`  ${r.sheets[0].file} …（共 ${r.sheets.length} 張，每段一張 sheet-<段 id>.jpg，都在 ${path.dirname(r.sheets[0].file)}）`]));
+    if (verbose && r.shots?.length) L.push(...r.shots.map((f) => `  ${f}`));
+  } else if (r.shots?.length) L.push('', `截圖 ${r.shots.length} 張（用看圖的工具打開，對照分鏡看每個動作有沒有真的看得到）：`, ...(verbose || r.shots.length <= 12 ? r.shots : [...r.shots.slice(0, 3), `…（共 ${r.shots.length} 張，都在 ${path.dirname(r.shots[0])}；--verbose 全列，或加 --sheet 拼成一張）`]).map((f) => `  ${f}`));
   return L.join('\n');
 }
 
@@ -353,7 +473,7 @@ async function cli() {
   const r = await audit(flags, { log: flags.json ? () => {} : console.log });
   r.elapsed = r3((Date.now() - t0) / 1000);
   if (flags.json) console.log(JSON.stringify(r, null, 2));
-  else console.log(`${formatReport(r)}\n（${r.elapsed}s）`);
+  else console.log(`${formatReport(r, { verbose: !!flags.verbose })}\n（${r.elapsed}s）`);
   return r.ok ? 0 : 1;
 }
 

@@ -62,7 +62,7 @@ test('locateItem／itemName：取重疊最多的段落', () => {
 test('freezeIssues：章節轉場的凍結排除，其餘留下', () => {
   const still = [{ id: 'a', type: 'custom', opaque: true, start: 10, end: 20, out: { pip: [] } }, { id: 'b', type: 'scene', opaque: true, start: 30, end: 40, out: { pip: [{ start: 30, end: 40 }] } }, { id: 'c', type: 'media', opaque: true, start: 50, end: 60, out: { pip: [] } }];
   assert.deepEqual(Q.freezeIssues([[11, 18]], still), [], '沒有小視窗的全畫面段本來就靜止');
-  assert.deepEqual(Q.freezeIssues([[31, 38]], still), [[31, 38]], '有小視窗卻凍住＝講者畫面卡住');
+  assert.deepEqual(Q.freezeIssues([[31, 38]], still), [], '有小視窗的全畫面段也不報：小視窗很小，講者停一下就幾乎不變（講者底片卡住在滿版的地方查得到）');
   assert.deepEqual(Q.freezeIssues([[51, 58]], still), [[51, 58]], '錄影段照查');
   assert.deepEqual(Q.freezeIssues([[0, 5]], items), []);
   assert.deepEqual(Q.freezeIssues([[62, 66]], items), [[62, 66]]);
@@ -323,7 +323,7 @@ test('storyboard：✖ 原文（plan 有 ✖、還沒 build）；build 後截圖
   }
   assert.ok(j.shots.some((s) => s.file === 's01.png'));
   assert.ok(!fs.existsSync(path.join(F.out, '.storyboard-shots')), '暫存截圖要刪掉');
-  const t = F.qc('storyboard');
+  const t = F.qc('storyboard', '--verbose');   // 每張的表與 markdown 要 --verbose（長片不能一段印一堆，見 qc-long.test.mjs）
   // 07 已是 v2 模板（keyAt 抽屜＋逐字彈出）：截在抽屜抽出後 0.3 秒，之後畫面不變 → 併成完成態（時刻規則見「v2 拍點」兩則）
   const s01 = j.shots.find((s) => s.file === 's01.png');
   assert.equal(s01.why, '抽屜抽出後 0.3 秒：「重點在這裡」（完成態）');

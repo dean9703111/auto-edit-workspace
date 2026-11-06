@@ -60,9 +60,9 @@
     #x-terminal .xterm-ln { position: absolute; left: 48px; height: 80px; display: flex; align-items: center; gap: 20px; white-space: nowrap; }
     #x-terminal #xterm-l1 { top: 40px; }
     #x-terminal #xterm-o1 { top: 120px; }
-    #x-terminal #xterm-o2 { top: 200px; }
-    #x-terminal #xterm-wl, #x-terminal #xterm-done { top: 280px; }
-    #x-terminal #xterm-l5 { top: 360px; }
+    #x-terminal #xterm-o2 { top: 200px; }   /* @if n>=2 */
+    #x-terminal #xterm-wl, #x-terminal #xterm-done { top: 280px; }   /* @sub n==1: #x-terminal #xterm-wl, #x-terminal #xterm-done { top: 200px; } */
+    #x-terminal #xterm-l5 { top: 360px; }   /* @sub n==1: #x-terminal #xterm-l5 { top: 280px; } */
     #x-terminal .xterm-path { color: var(--v2-term-fn); }
     #x-terminal .xterm-ps { color: var(--v2-term-kw); }
     #x-terminal .xterm-flag { color: var(--v2-term-mute); }
@@ -79,14 +79,18 @@
        data-cues-sample='{"start":0,"D":15,"cues":{"322":[1.6,5.6],"323":[6.0,8.6],"324":[8.8,11.4],"325":[11.5,14.2]},"refs":{"#323@重講":6.6,"#324@字幕":9.2,"#325@完成":12.0}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xterm-win">
-      <div id="xterm-bar"><i class="xterm-dot"></i><i class="xterm-dot"></i><i class="xterm-dot"></i><span id="xterm-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m7 11 2-2-2-2" /> <path d="M11 13h4" /> <rect width="18" height="18" x="3" y="3" rx="2" ry="2" /> </svg></span><span id="xterm-title" class="sc-t40 sc-w700 sc-mono sc-opt">auto-edit — zsh</span></div>
+      <div id="xterm-bar"><i class="xterm-dot"></i><i class="xterm-dot"></i><i class="xterm-dot"></i><span id="xterm-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m7 11 2-2-2-2" /> <path d="M11 13h4" /> <rect width="18" height="18" x="3" y="3" rx="2" ry="2" /> </svg></span><span id="xterm-title" class="sc-t40 sc-w700 sc-mono sc-opt" data-fill="title">auto-edit — zsh</span></div>
       <div id="xterm-body">
-        <div id="xterm-l1" class="xterm-ln sc-t52 sc-w700 sc-mono"><span class="xterm-path">~/影片</span><span class="xterm-ps">$</span><span id="xterm-cmd">node media.mjs rough <span class="xterm-flag">ep2</span></span></div>
-        <div id="xterm-o1" class="xterm-ln sc-t52 sc-w500 sc-mono"><span class="xterm-ok">✓</span><span>找到 12 段重講</span></div>
-        <div id="xterm-o2" class="xterm-ln sc-t52 sc-w500 sc-mono"><span class="xterm-ok">✓</span><span>字幕 86 則對好時間</span></div>
-        <div id="xterm-wl" class="xterm-ln sc-t52 sc-w500 sc-mono"><svg id="xterm-spin" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle class="xterm-arc" cx="24" cy="24" r="19" /></svg><span id="xterm-wait">處理中…</span></div>
-        <div id="xterm-done" class="xterm-ln sc-t52 sc-w900 sc-mono" data-layout-allow-overlap><span>✓</span><span>完成 rough.mp4（42 秒）</span></div>
-        <div id="xterm-l5" class="xterm-ln sc-t52 sc-w700 sc-mono"><span class="xterm-path">~/影片</span><span class="xterm-ps">$</span><span id="xterm-caret">▋</span></div>
+        <div id="xterm-l1" class="xterm-ln sc-t52 sc-w700 sc-mono"><span class="xterm-path" data-fill="path">~/影片</span><span class="xterm-ps">$</span><span id="xterm-cmd"><span data-fill="cmd">node media.mjs rough</span>
+          <!-- @if flag { -->
+          <span class="xterm-flag" data-fill="flag">ep2</span>
+          <!-- @} -->
+        </span></div>
+        <div id="xterm-o1" class="xterm-ln sc-t52 sc-w500 sc-mono"><span class="xterm-ok">✓</span><span data-fill="outputs.1.text">找到 12 段重講</span></div>
+        <div id="xterm-o2" class="xterm-ln sc-t52 sc-w500 sc-mono"><span class="xterm-ok">✓</span><span data-fill="outputs.2.text">字幕 86 則對好時間</span></div> <!-- @if n>=2 -->
+        <div id="xterm-wl" class="xterm-ln sc-t52 sc-w500 sc-mono"><svg id="xterm-spin" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle class="xterm-arc" cx="24" cy="24" r="19" /></svg><span id="xterm-wait" data-fill="wait">處理中…</span></div> <!-- @sub !wait: <div id="xterm-wl" class="xterm-ln sc-t52 sc-w500 sc-mono"><svg id="xterm-spin" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle class="xterm-arc" cx="24" cy="24" r="19" /></svg><span id="xterm-wait">處理中…</span></div> -->
+        <div id="xterm-done" class="xterm-ln sc-t52 sc-w900 sc-mono" data-layout-allow-overlap><span>✓</span><span data-fill="doneText">完成 rough.mp4（42 秒）</span></div>
+        <div id="xterm-l5" class="xterm-ln sc-t52 sc-w700 sc-mono"><span class="xterm-path" data-fill="path">~/影片</span><span class="xterm-ps">$</span><span id="xterm-caret">▋</span></div>
       </div>
     </div>
   </div>
@@ -97,7 +101,7 @@
     const P = SceneMotion(tl, document.getElementById('x-terminal'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const RUN = P.at('#322', 0.45), STEP1 = P.at('#323@重講'), STEP2 = P.at('#324@字幕'), DONE = P.at('#325@完成');   // 打指令／兩個步驟／完成
+    const RUN = P.at('#322', 0.45), STEP1 = P.at('#323@重講'), STEP2 = P.at('#324@字幕'), DONE = P.at('#325@完成');   // 打指令／兩個步驟／完成  // @sub n==1: const RUN = P.at('#322', 0.45), STEP1 = P.at('#323@重講'), DONE = P.at('#325@完成');
     P.sfx('success', '#325@完成');                     // 完成一顆 success（句號和 DONE 一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
@@ -113,7 +117,7 @@
     P.spin('#xterm-spin', RUN + 2.7, { until: DONE });
     // 拍 2–3 每個步驟：那一行輸出由左往右印出
     P.wipe('#xterm-o1', STEP1, { dir: 'left', dur: 0.35 });
-    P.wipe('#xterm-o2', STEP2, { dir: 'left', dur: 0.35 });   // 第 2 行輸出
+    P.wipe('#xterm-o2', STEP2, { dir: 'left', dur: 0.35 });   // 第 2 行輸出  // @if n>=2
     // 拍 4 完成：轉圈那一行換成綠色完成行（印出＋重拍）→ ＋0.5 新的提示字元與方塊游標
     P.out('#xterm-wl', DONE, { dur: 0.15 });
     P.wipe('#xterm-done', DONE, { dir: 'left', dur: 0.35 });

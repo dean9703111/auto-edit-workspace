@@ -1,0 +1,134 @@
+{
+  "template": "x-process-loop",
+  "prefix": "xprl",
+  "beat": "A",
+  "layout": "fullscreen",
+  "when": "做完最後一步又回到第一步的循環（每週拍片、上片、看數據、改腳本，改完再拍下一支）：3–4 站排成一圈、中間放循環的名字，講到一站亮一站，最後一段接回第一站",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "hub": {
+      "label": "中間主題",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "hubIcon": {
+      "label": "中間主題圖示",
+      "type": "icon",
+      "required": true
+    },
+    "items": {
+      "label": "站",
+      "type": "list",
+      "min": 3,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "站名",
+          "type": "text",
+          "max": 3,
+          "required": true
+        },
+        "icon": {
+          "label": "站圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到站名的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    }
+  },
+  "sample": {
+    "title": "每週的迭代",
+    "hub": "每週一輪",
+    "hubIcon": "refresh-cw",
+    "items": [
+      {
+        "text": "拍片",
+        "icon": "video",
+        "at": "#222@拍片"
+      },
+      {
+        "text": "上片",
+        "icon": "upload",
+        "at": "#223@上片"
+      },
+      {
+        "text": "看數據",
+        "icon": "chart-column",
+        "at": "#224@看數據"
+      },
+      {
+        "text": "改腳本",
+        "icon": "file-pen-line",
+        "at": "#225@改腳本"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋0.7",
+      "show": "全部的站＋圖示；中間主題「{hub}」",
+      "moves": "錯拍彈出（站）；＋0.15 圖示描線（錯拍）；彈出（中間主題，＋0.4）；圖示描線（中間主題）",
+      "focus": "均衡"
+    },
+    {
+      "beat": "2",
+      "at": "段起點＋1.2",
+      "show": "站間的虛線圓圈",
+      "moves": "淡入（虛線圓圈）",
+      "focus": "方向"
+    },
+    {
+      "beat": "3",
+      "at": "段起點＋1.7",
+      "show": "—",
+      "moves": "預覽態（站）",
+      "focus": "整體"
+    },
+    {
+      "each": "items",
+      "to": 1,
+      "beat": 4,
+      "at": "`{at}`",
+      "show": "站 {n}「{text}」亮起",
+      "moves": "聚焦（站 {n}）；淡入（底色）；漣漪（站 {n} 圖示）",
+      "focus": "站 {n}"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "beat": 5,
+      "at": "`{at}`",
+      "show": "弧線帶發光頭從上一站繞到站 {n}「{text}」；站 {n} 亮起",
+      "moves": "彗星描線（弧線，−0.85）；描線（箭頭，−0.12）；聚焦（站 {n}）；走過（前面的站）；淡出（前一站底色）；淡入（底色）；漣漪（站 {n} 圖示）",
+      "focus": "站 {n}"
+    },
+    {
+      "beat": "收",
+      "at": "`{last.at}`＋2.6",
+      "show": "全部的站＋弧線；最後一段弧線接回站 1，光沿整圈跑一次",
+      "moves": "回均衡；淡出（底色）；彗星描線（最後一段弧線接回站 1）；描線（箭頭）；漣漪（中間主題圖示）；＋0.9 彗星描線（光沿整圈跑一次）",
+      "focus": "整體"
+    }
+  ]
+}

@@ -364,7 +364,7 @@ export function resolveScene(opts) {
     seq(beatNames.map((n) => [`beats.${n}`, beats[n]]), '');
     for (const [k, ts] of Object.entries(listTimes)) {
       seq(ts.map((t, i) => [`slots.${k}[${i}].at`, t]), '');
-      if (beatNames.length && ts.length && ts[0] < lastBeat - 1e-6) warn(`slots.${k}[0].at：第 ${ts[0]}s 出現，比 beats.${beatNames[beatNames.length - 1]}（第 ${lastBeat}s）還早，會在標題前冒出來 → 第一項不寫 at（用預設），或寫 "+${lastBeat}" 之後的時間`);
+      if (beatNames.length && ts.length && ts[0] < lastBeat - 1e-6 && !/^\{\{\w+\}\}$/.test(String(scene.lists?.[k]?.at ?? ''))) warn(`slots.${k}[0].at：第 ${ts[0]}s 出現，比 beats.${beatNames[beatNames.length - 1]}（第 ${lastBeat}s）還早，會在標題前冒出來 → 第一項不寫 at（用預設），或寫 "+${lastBeat}" 之後的時間`);
     }
     const limit = r3(D - P.OUT - 0.6);
     const all = [...beatNames.map((n) => [`beats.${n}`, beats[n]]), ...Object.entries(listTimes).flatMap(([k, ts]) => ts.map((t, i) => [`slots.${k}[${i}].at`, t]))];

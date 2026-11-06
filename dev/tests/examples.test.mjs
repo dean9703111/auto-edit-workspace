@@ -10,6 +10,7 @@ import { TEMPLATE, imp, hasChrome } from './helpers.mjs';
 
 const { readCustom } = await imp('lib/assemble.mjs');
 const { buildCustomPreview } = await imp('lib/custom-preview.mjs');
+const { stripMarkers } = await imp('lib/custom-fill.mjs');   // 檔裡的填空標記是給工具看的，這裡看去掉標記後的畫面與程式
 const { textWidth } = await imp('lib/time.mjs');
 const ICONS = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'icons.json'), 'utf8'));
 const CUSTOM = path.join(TEMPLATE, 'custom');
@@ -50,7 +51,7 @@ const norm = (s) => s.replace(/\s+/g, '').replace(/class="[^"]*"/g, '').replace(
 
 function parse(id) {
   const file = path.join(CUSTOM, `${id}.html`);
-  const text = fs.readFileSync(file, 'utf8');
+  const text = stripMarkers(fs.readFileSync(file, 'utf8'));
   const tpl = text.match(/<template[^>]*>([\s\S]*)<\/template>/)[1];
   const css = tpl.match(/<style>([\s\S]*?)<\/style>/)[1];
   const body = tpl.slice(tpl.indexOf('</style>') + 8, tpl.indexOf('<script>'));
@@ -226,7 +227,7 @@ test(`${COUNT} 支的句號區段互不重疊`, () => {
 });
 
 test('x-process：連接線用 data-links（n1>n2>n3>n4，kit/scene-layout.js 畫）、不手寫 path；彗星走產生的線本體（端點的 layout-link 第 7 條在整合測試量）', () => {
-  const html = fs.readFileSync(path.join(CUSTOM, 'x-process.html'), 'utf8');
+  const html = stripMarkers(fs.readFileSync(path.join(CUSTOM, 'x-process.html'), 'utf8'));
   const links = [...html.matchAll(/<svg[^>]*data-links="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(links, ['xproc-n1>xproc-n2 xproc-n2>xproc-n3 xproc-n3>xproc-n4']);
   assert.doesNotMatch(html, /<path id="xproc-c\d"/, '連接線不再手寫 path（舊的 xproc-c1–c3）');

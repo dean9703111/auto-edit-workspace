@@ -75,7 +75,9 @@
        data-cues-sample='{"start":0,"D":16,"cues":{"151":[1.6,4.6],"152":[4.7,8.2],"153":[8.3,10.8],"154":[10.9,15.4]},"refs":{"#151@200":1.8,"#152@Shorts":5.0,"#153@兩萬":8.6,"#154@翻":11.2}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xtr-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span id="xtr-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><span class="sc-opt">訂閱人數</span><div id="xtr-pill" class="sc-pill" data-snap-width><span class="sc-opt">一年翻 100 倍</span></div></div>
+      <div class="sc-wcard__bar"><span id="xtr-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><span class="sc-opt">訂閱人數</span>
+        <div id="xtr-pill" class="sc-pill" data-snap-width><span class="sc-opt">一年翻 100 倍</span></div>
+      </div>
       <div id="xtr-body" data-layout="col">
         <div id="xtr-chart" data-slot>
           <svg id="xtr-axis-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg"><line id="xtr-axis" x1="0" y1="424" x2="1064" y2="424" /></svg>
@@ -104,7 +106,7 @@
     const T3 = P.at('#154@翻');                           // 選用：講到結論的時刻（沒有結論句的刪法見檔頭【綁句欄位】）
     P.sfx('impact', '#154@翻');                           // 選用：結論膠囊一顆音效（句號和上一行一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const DATA = [ ['1 月', 200], ['3 月', 900], ['6 月', 2000], ['9 月', 8000], ['12 月', 20000] ];   // 只改這一行：[時間標籤, 數字]，3–6 組
+    const DATA = [["1 月",200],["3 月",900],["6 月",2000],["9 月",8000],["12 月",20000]];   // 只改這一行：[時間標籤, 數字]，3–6 組
     const NOTE = 4;                                       // 選用：標註從第幾組開始（1 起算，≥ 3；這裡＝「9 月」）
 
     // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，不量版面，每次載入結果相同；圖表區本身的位置由 data-layout 排）──

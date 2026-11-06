@@ -1,0 +1,173 @@
+{
+  "template": "x-ui-mock",
+  "prefix": "xui",
+  "beat": "I",
+  "layout": "fullscreen",
+  "when": "沒有螢幕錄影的介面操作（只有一步）：示意視窗全貌 → 講到畫面，頁面標題聚焦 → 游標移到按鈕按下 → 跳出結果通知；plan.json 這段要另外寫 \"clicks\": [\"<和 clickAt 同一個句號>\"]（點擊音效）",
+  "slots": {
+    "windowTitle": {
+      "label": "視窗標題",
+      "type": "text",
+      "max": 16,
+      "required": true
+    },
+    "nav": {
+      "label": "側欄",
+      "type": "list",
+      "min": 3,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "側欄項目",
+          "type": "text",
+          "max": 4,
+          "required": true
+        }
+      }
+    },
+    "pageTitle": {
+      "label": "頁面標題",
+      "type": "text",
+      "max": 6,
+      "required": true
+    },
+    "button": {
+      "label": "按鈕",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "rows": {
+      "label": "設定列",
+      "type": "list",
+      "min": 3,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "label": {
+          "label": "名稱",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "value": {
+          "label": "值",
+          "type": "text",
+          "max": 5,
+          "required": true
+        }
+      }
+    },
+    "toastIcon": {
+      "label": "結果通知的圖示（例 check）",
+      "type": "icon",
+      "required": true
+    },
+    "toast": {
+      "label": "結果通知",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "zoomAt": {
+      "label": "講到「在哪個畫面」的時間（鏡頭帶到頁面標題、頁面標題聚焦、其他壓暗；＋0.6 游標淡入）",
+      "type": "at",
+      "ref": "ZOOM",
+      "required": true
+    },
+    "clickAt": {
+      "label": "講到按鈕名稱的時間（游標提早 0.6 秒出發、剛好在這一刻按下）。plan.json 這段要另外寫 \"clicks\": [\"<和這裡同一個句號>\"]，工具不會代寫",
+      "type": "at",
+      "ref": "CLICK",
+      "required": true
+    },
+    "resultAt": {
+      "label": "講到結果的時間（通知彈出、勾描線；音效 success）。和 clickAt 至少差 2.5 秒",
+      "type": "at",
+      "ref": "RESULT",
+      "required": true
+    }
+  },
+  "sample": {
+    "windowTitle": "Auto Edit 設定",
+    "nav": [
+      {
+        "text": "匯出"
+      },
+      {
+        "text": "字幕"
+      },
+      {
+        "text": "音效"
+      }
+    ],
+    "pageTitle": "匯出設定",
+    "button": "匯出檔案",
+    "rows": [
+      {
+        "label": "輸出格式",
+        "value": "MP4"
+      },
+      {
+        "label": "解析度",
+        "value": "1920×1080"
+      },
+      {
+        "label": "字幕",
+        "value": "燒進畫面"
+      }
+    ],
+    "toastIcon": "check",
+    "toast": "匯出完成，已存檔",
+    "zoomAt": "#72@匯出設定",
+    "clickAt": "#73@匯出",
+    "resultAt": "#74@完成"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "示意視窗＋視窗標題「{windowTitle}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（視窗標題）",
+      "focus": "視窗標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "介面元件（側欄三項、頁面標題「{pageTitle}」、按鈕「{button}」、三列設定）",
+      "moves": "錯拍彈出（介面元件）",
+      "focus": "均衡（全貌）"
+    },
+    {
+      "beat": "2",
+      "at": "`{zoomAt}`",
+      "show": "頁面標題「{pageTitle}」亮起、其他變暗；游標出現",
+      "moves": "鏡頭跟焦點（−0.2）；聚焦（頁面標題）；＋0.6 淡入（游標）",
+      "focus": "頁面標題"
+    },
+    {
+      "beat": "3",
+      "at": "`{clickAt}`",
+      "show": "游標移到按鈕「{button}」、按下：按鈕亮起放大、擴散漣漪",
+      "moves": "游標移動（−0.6）；鏡頭跟焦點（−0.2）；聚焦（按鈕）；走過（頁面標題）；漣漪（按鈕）",
+      "focus": "按鈕",
+      "sfx": "click（plan.json 這段寫 clicks）"
+    },
+    {
+      "beat": "4",
+      "at": "`{resultAt}`",
+      "show": "結果通知：圖示＋「{toast}」；介面變暗",
+      "moves": "彈出（通知）；＋0.14 逐字上浮（通知字）；＋0.18 圖示描線；＋0.6 退焦（介面 → 0.5）",
+      "focus": "通知",
+      "sfx": "success"
+    },
+    {
+      "beat": "收",
+      "at": "`{resultAt}`＋2.6",
+      "show": "介面亮回、鏡頭回原位",
+      "moves": "回均衡；鏡頭回正",
+      "focus": "整體"
+    }
+  ]
+}

@@ -49,8 +49,10 @@
     /* 程式區：高 448；行號欄 96、程式碼從 128 開始；行高固定 64 */
     #x-terminal-code #xtc-body { position: relative; height: 448px; }
     #x-terminal-code .xtc-hl { position: absolute; left: 0; width: 1180px; box-sizing: border-box; border-left: 8px solid var(--v2-term-kw); background: var(--v2-term-bar); }
-    #x-terminal-code #xtc-h1 { top: 96px; height: 64px; }
-    #x-terminal-code #xtc-h2 { top: 160px; height: 192px; }
+    #x-terminal-code #xtc-h1 { top: 96px; }
+    #x-terminal-code #xtc-h1 { height: 64px; }
+    #x-terminal-code #xtc-h2 { top: 160px; }
+    #x-terminal-code #xtc-h2 { height: 192px; }
     #x-terminal-code #xtc-gut { position: absolute; left: 0; top: 32px; width: 96px; text-align: right; line-height: 64px; color: var(--v2-term-mute); }
     #x-terminal-code #xtc-code { position: absolute; left: 128px; top: 32px; line-height: 64px; white-space: nowrap; }
     #x-terminal-code .xtc-kw { color: var(--v2-term-kw); }
@@ -69,8 +71,21 @@
       <div id="xtc-body">
         <i id="xtc-h1" class="xtc-hl" data-layout-allow-overlap></i>
         <i id="xtc-h2" class="xtc-hl" data-layout-allow-overlap></i>
-        <div id="xtc-gut" class="sc-t40 sc-w500 sc-mono">1<br>2<br>3<br>4<br>5<br>6</div>
-        <div id="xtc-code" class="sc-t40 sc-w500 sc-mono"><span class="xtc-cm">// 找出重講，剪掉前面那次</span><br><span class="xtc-kw">const</span> words = <span class="xtc-fn">load</span>(<span class="xtc-str">'words.json'</span>);<br><span class="xtc-kw">for</span> (<span class="xtc-kw">const</span> ng <span class="xtc-kw">of</span> <span class="xtc-fn">findRetakes</span>(words)) {<br>&nbsp;&nbsp;<span class="xtc-fn">cut</span>(ng.start, ng.end);<br>}<br><span class="xtc-fn">save</span>(<span class="xtc-str">'rough.mp4'</span>);</div>
+        <div id="xtc-gut" class="sc-t40 sc-w500 sc-mono">1
+          <br>2
+          <br>3
+          <br>4
+          <br>5
+          <br>6
+        </div>
+        <div id="xtc-code" class="sc-t40 sc-w500 sc-mono">
+          <span class="xtc-cm">// 找出重講，剪掉前面那次</span>
+          <br><span class="xtc-kw">const</span> words = <span class="xtc-fn">load</span>(<span class="xtc-str">'words.json'</span>);
+          <br><span class="xtc-kw">for</span> (<span class="xtc-kw">const</span> ng <span class="xtc-kw">of</span> <span class="xtc-fn">findRetakes</span>(words)) {
+          <br>&nbsp;&nbsp;<span class="xtc-fn">cut</span>(ng.start, ng.end);
+          <br>}
+          <br><span class="xtc-fn">save</span>(<span class="xtc-str">'rough.mp4'</span>);
+        </div>
       </div>
       <div id="xtc-out" class="sc-t40 sc-w700 sc-mono"><span>✓</span><span id="xtc-res">已剪掉 12 段重講（0.8 秒）</span></div>
     </div>

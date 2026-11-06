@@ -180,7 +180,7 @@ test('CLI：--help、指令名稱、--seg 必填、list --json', () => {
   assert.match(runV('--help').stdout, /versions\.mjs save --project/);
   const bad = runV('redo', '--project', '.');
   assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /沒有「redo」這個指令：只有 save、new、accept、use、list →/);
+  assert.match(bad.stderr, /沒有「redo」這個指令：只有 begin、finish、save、new、accept、use、list →/);
   const p = mk();
   const noSeg = runV('save', '--project', p);
   assert.match(noSeg.stderr, /save 要加 --seg <段 id>/);

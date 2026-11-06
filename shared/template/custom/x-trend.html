@@ -16,9 +16,9 @@
   - 超過 6 個時間點：只留頭、尾和 2–3 個轉折點。
 
   【要改的地方】
-  1. 文字：標題列（≤ 10 字）；提示框的單位 #xtr-unit（≤ 3 字）；結論膠囊 #xtr-pill（≤ 8 字，選用：不要就刪掉那個 div 和 script 裡標「選用」的地方）；
+  1. 文字：標題列（≤ 10 字）；提示框的單位 #xtr-unit（≤ 3 字）；結論膠囊 #xtr-pill（≤ 8 字，標題 10 字時 ≤ 6 字，不然擠出標題列；選用：不要就刪掉那個 div 和 script 裡標「選用」的地方）；
      標註標籤 #xtr-note（≤ 6 字，例「開始做 Shorts」；選用，刪法見【綁句欄位】TN）。
-  2. 數字：只改 <script> 開頭 DATA 那一行：[[時間標籤, 數字], …]，3–6 組，時間標籤 ≤ 3 字（例「1 月」「2024」），數字是 ≤ 999999 的整數。
+  2. 數字：只改 <script> 開頭 DATA 那一行：[["時間標籤", 數字], …]（JSON 寫法，字串用雙引號），3–6 組，時間標籤 ≤ 3 字（例「1 月」「2024」），數字是 ≤ 999999 的整數。
      柱的位置、高度、趨勢線、提示框的位置與寬度都由程式算，不用改 CSS。
      標註從第幾組開始：下一行 NOTE（1 起算＝DATA 的第幾組；要 ≥ 3，前兩組左邊放不下標籤）；事件線畫在那一組和前一組中間，標籤貼在線的左邊。
   3. 圖示：標題列的 #xtr-bico（上升用 trending-up、下降用 trending-down）。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
@@ -102,18 +102,22 @@
        data-cues-sample='{"start":0,"D":16,"cues":{"151":[1.6,4.6],"152":[4.7,8.2],"153":[8.3,10.8],"154":[10.9,15.4]},"refs":{"#151@200":1.8,"#152@Shorts":5.0,"#153@兩萬":8.6,"#154@翻":11.2}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xtr-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span id="xtr-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><span class="sc-opt">訂閱人數</span><div id="xtr-pill" class="sc-pill" data-snap-width><span class="sc-opt">一年翻 100 倍</span></div></div>
+      <div class="sc-wcard__bar"><span id="xtr-bico" class="sc-icon" data-fill="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><span class="sc-opt" data-fill="title">訂閱人數</span>
+        <!-- @if pillText && pillAt { -->
+        <div id="xtr-pill" class="sc-pill" data-snap-width><span class="sc-opt" data-fill="pillText">一年翻 100 倍</span></div>
+        <!-- @} -->
+      </div>
       <div id="xtr-body" data-layout="col">
         <div id="xtr-chart" data-slot>
           <svg id="xtr-axis-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg"><line id="xtr-axis" x1="0" y1="424" x2="1064" y2="424" /></svg>
-          <i id="xtr-band" data-layout-allow-overlap></i>
+          <i id="xtr-band" data-layout-allow-overlap></i> <!-- @if noteText && noteAt && noteFrom -->
           <div id="xtr-plot"></div>
           <svg id="xtr-line-svg" class="xtr-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg">
             <polyline id="xtr-line" points="0,0 0,0" />
           </svg>
           <i id="xtr-end"></i>
-          <div id="xtr-note" class="sc-t40 sc-w700"><span class="sc-opt">開始做 Shorts</span></div>
-          <div id="xtr-tip"><span id="xtr-num" class="sc-t52 sc-w900">0</span><span id="xtr-unit" class="sc-t40 sc-w700 sc-opt">人</span></div>
+          <div id="xtr-note" class="sc-t40 sc-w700"><span class="sc-opt" data-fill="noteText">開始做 Shorts</span></div> <!-- @if noteText && noteAt && noteFrom -->
+          <div id="xtr-tip"><span id="xtr-num" class="sc-t52 sc-w900">0</span><span id="xtr-unit" class="sc-t40 sc-w700 sc-opt" data-fill="unit">人</span></div>
         </div>
       </div>
     </div>
@@ -127,12 +131,12 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#151@200'), T2 = P.at('#153@兩萬');   // 講到第一個值／最後的值的時刻
     P.sfx('impact', '#153@兩萬');                         // 最後的值落定一顆音效（句號和上一行一樣；第一個值那一拍不配）
-    const TN = P.at('#152@Shorts');                       // 選用：講到轉折原因的時刻（沒有轉折句的刪法見檔頭【綁句欄位】）
-    const T3 = P.at('#154@翻');                           // 選用：講到結論的時刻（沒有結論句的刪法見檔頭【綁句欄位】）
-    P.sfx('impact', '#154@翻');                           // 選用：結論膠囊一顆音效（句號和上一行一樣）
+    const TN = P.at('#152@Shorts');                       // 選用：講到轉折原因的時刻（沒有轉折句的刪法見檔頭【綁句欄位】）  // @if noteText && noteAt && noteFrom
+    const T3 = P.at('#154@翻');                           // 選用：講到結論的時刻（沒有結論句的刪法見檔頭【綁句欄位】）  // @if pillText && pillAt
+    P.sfx('impact', '#154@翻');                           // 選用：結論膠囊一顆音效（句號和上一行一樣）  // @if pillText && pillAt
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const DATA = [ ['1 月', 200], ['3 月', 900], ['6 月', 2000], ['9 月', 8000], ['12 月', 20000] ];   // 只改這一行：[時間標籤, 數字]，3–6 組
-    const NOTE = 4;                                       // 選用：標註從第幾組開始（1 起算，≥ 3；這裡＝「9 月」）
+    const DATA = [["1 月",200],["3 月",900],["6 月",2000],["9 月",8000],["12 月",20000]];   // 只改這一行：[時間標籤, 數字]，3–6 組
+    const NOTE = 4;                                       // 選用：標註從第幾組開始（1 起算，≥ 3；這裡＝「9 月」）  // @if noteText && noteAt && noteFrom
 
     // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，不量版面，每次載入結果相同；圖表區本身的位置由 data-layout 排）──
     // 柱：寬 112、最高 280、最矮 16，底貼基線 y 424；第一根 left 40 起、最後一根 left 912 止，等距（除不盡的餘數兩邊平分）
@@ -165,10 +169,12 @@
     var tip = document.getElementById('xtr-tip');
     tip.style.width = tipW + 'px'; tip.style.left = tipL + 'px'; tip.style.top = Math.max(0, minTop - 32 - 112) + 'px';
     document.getElementById('xtr-num').style.width = numW + 'px';
+    // @if noteText && noteAt && noteFrom {
     // 標註位置：事件線（區段的左邊框）在 NOTE 那一組和前一組中間；區段從線到圖表區右緣；標籤右緣離線 16（選用，刪法見檔頭）
     var rx = x0 + (NOTE - 1) * step - Math.round((step - 112) / 2);
     var band = document.getElementById('xtr-band'); band.style.left = rx + 'px'; band.style.width = (1064 - rx) + 'px';
     document.getElementById('xtr-note').style.right = (1064 - rx + 16) + 'px';
+    // @}
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮、標題圖示描線
     if (ENTER === 'grow') P.grow('#xtr-card', 0.3);
@@ -186,10 +192,12 @@
     P.bar('#xtr-f4', T1 + 1.4, { dur: 0.5, ease: P.V2.EASE.in });
     P.bar('#xtr-f5', T1 + 1.7, { dur: 0.5, ease: P.V2.EASE.in });
 
+    // @if noteText && noteAt && noteFrom {
     // 拍 1b（選用）講到轉折原因：區段（左邊是事件虛線）由左往右擦開 → ＋0.3 標籤彈出、逐字
     P.wipe('#xtr-band', TN, { dir: 'left', dur: 0.6 });
     P.pop('#xtr-note', TN + 0.3, { from: 0.8, dy: 0 });
     P.chars('#xtr-note .sc-opt', TN + 0.4);
+    // @}
 
     // 拍 2 最後的值前 1.2 秒：提示框彈出開始數（同時趨勢線帶著發光頭沿柱頂描過去）→ ＋0.15 單位逐字落下 → 到點前 0.2 秒端點小圓彈出
     P.pop('#xtr-tip', T2 - 1.2);
@@ -203,6 +211,7 @@
     P.in('#xtr-hl', T2);
     P.marker('#xtr-unit', T2 + 0.1);
 
+    // @if pillText && pillAt {
     // 拍 4（選用）講到結論：膠囊彈出、字逐字落下，提示框退焦 → ＋0.6 膠囊聚焦
     P.pop('#xtr-pill', T3);
     P.chars('#xtr-pill .sc-opt', T3 + 0.12, { mode: 'drop' });
@@ -213,6 +222,7 @@
     const TR = T3 + 2.0;
     P.spot('#xtr-pill', null, TR, { dur: 0.6 });
     P.dim('#xtr-tip', TR, { to: 1 });
+    // @}
 
     P.end();                                           // 長度＝plan.json 這段的長度
     window.__timelines['x-trend'] = tl;

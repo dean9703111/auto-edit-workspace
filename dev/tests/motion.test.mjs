@@ -46,6 +46,25 @@ test('scene-motion：不加 will-change、不用 Math.random／setTimeout／CSS 
   assert.match(code, /force3D: false/, '鏡頭推進要帶 force3D:false');
 });
 
+test('P.end：沒綁句的收尾太晚就整組往前挪，最後一幕才停得夠；綁了詞的拍不動；不會挪到最後一拍 1 秒內', () => {
+  const starts = (tl) => tl.getChildren(false, true, true).filter((k) => k.totalDuration() > 0).map((k) => Math.round(k.startTime() * 100) / 100);
+  const run = (D, tailAt) => {
+    const { tl, P } = mk();
+    const T = P.at(5);
+    P.bar({ scaleX: 0 }, T, { from: 0, to: 1, dur: 0.2 });       // 綁句的拍
+    P.bar({ scaleX: 0 }, T + tailAt, { from: 0, to: 1, dur: 0.6 });   // 收尾（回均衡）
+    P.end(D);
+    return starts(tl);
+  };
+  assert.deepEqual(run(10, 2), [5, 7], '夠長：不動（7.6 ≤ 10 − 1.5 − 0.75）');
+  assert.deepEqual(run(9.5, 2), [5, 6.65], '不夠：挪到結束在 9.5 − 2.25');
+  assert.deepEqual(run(8.5, 2), [5, 6], '再短：最多挪到最後一拍後 1 秒，綁句的拍不動');
+  const { tl, P } = mk();
+  P.bar({ scaleX: 0 }, 7, { from: 0, to: 1, dur: 0.6 });
+  P.end(8);
+  assert.deepEqual(starts(tl), [7], '整段沒有 P.at：不知道哪裡是收尾，不動');
+});
+
 test('P.count：任意時間點 seek 數字正確（含 suppressEvents、往回 seek、起點之前與之後）', () => {
   for (const suppress of [true, false]) {
     const { tl, P } = mk();

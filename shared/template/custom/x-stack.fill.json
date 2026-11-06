@@ -1,0 +1,214 @@
+{
+  "template": "x-stack",
+  "prefix": "xstk",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "由下往上的組成：3–4 層、從底層講起，每層一個名稱（可附一句說明），講到哪一層那一層從上方落下疊上去，講到「合起來」全部亮回",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "items": {
+      "label": "層",
+      "type": "list",
+      "min": 3,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "層名（第 1 個講到的放最底層）",
+          "type": "text",
+          "max": 6,
+          "required": true
+        },
+        "desc": {
+          "label": "說明（選填）",
+          "type": "text",
+          "max": 12
+        },
+        "icon": {
+          "label": "圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到層名的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    },
+    "all": {
+      "label": "講到「合起來就是…」那一句的時間（選填；沒有就最上層講完 2 秒收）",
+      "type": "at",
+      "ref": "ALL"
+    }
+  },
+  "sample": {
+    "title": "多機錄影工具的架構",
+    "items": [
+      {
+        "text": "手機 App",
+        "desc": "負責錄影與回傳",
+        "icon": "smartphone",
+        "at": "#111@手機"
+      },
+      {
+        "text": "區網連線",
+        "desc": "同一個 Wi-Fi 傳檔",
+        "icon": "wifi",
+        "at": "#112@區網"
+      },
+      {
+        "text": "控制台",
+        "desc": "電腦上按開始結束",
+        "icon": "monitor",
+        "at": "#113@控制台"
+      },
+      {
+        "text": "剪輯流程",
+        "desc": "直接接剪輯軟體",
+        "icon": "scissors",
+        "at": "#114@剪輯"
+      }
+    ],
+    "all": "#115"
+  },
+  "sampleMin": {
+    "title": "多機錄影工具的架構",
+    "items": [
+      {
+        "text": "手機 App",
+        "icon": "smartphone",
+        "at": "#111@手機"
+      },
+      {
+        "text": "區網連線",
+        "icon": "wifi",
+        "at": "#112@區網"
+      },
+      {
+        "text": "控制台",
+        "icon": "monitor",
+        "at": "#113@控制台"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」；地基線",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）；＋1.0 描線（地基線）",
+      "focus": "標題"
+    },
+    {
+      "each": "items",
+      "from": 1,
+      "to": 1,
+      "if": "items.1.desc",
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "最底層（第 1 層）「{text}」＋說明「{desc}」＋圖示",
+      "moves": "彈出（層，從上方落下）；＋0.12 逐字上浮（名稱）；＋0.24 逐字上浮（說明）；＋0.15 圖示描線；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 1 層"
+    },
+    {
+      "each": "items",
+      "from": 1,
+      "to": 1,
+      "if": "!items.1.desc",
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "最底層（第 1 層）「{text}」＋圖示",
+      "moves": "彈出（層，從上方落下）；＋0.12 逐字上浮（名稱）；＋0.15 圖示描線；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 1 層"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "to": 2,
+      "if": "items.2.desc",
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "第 2 層「{text}」＋說明「{desc}」＋圖示",
+      "moves": "彈出（層，從上方落下）；＋0.12 逐字上浮（名稱）；＋0.24 逐字上浮（說明）；＋0.15 圖示描線；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 2 層"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "to": 2,
+      "if": "!items.2.desc",
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "第 2 層「{text}」＋圖示",
+      "moves": "彈出（層，從上方落下）；＋0.12 逐字上浮（名稱）；＋0.15 圖示描線；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 2 層"
+    },
+    {
+      "each": "items",
+      "from": 3,
+      "to": 3,
+      "if": "items.3.desc",
+      "beat": 3,
+      "at": "`{at}`",
+      "show": "第 3 層「{text}」＋說明「{desc}」＋圖示",
+      "moves": "彈出（層，從上方落下）；＋0.12 逐字上浮（名稱）；＋0.24 逐字上浮（說明）；＋0.15 圖示描線；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 3 層"
+    },
+    {
+      "each": "items",
+      "from": 3,
+      "to": 3,
+      "if": "!items.3.desc",
+      "beat": 3,
+      "at": "`{at}`",
+      "show": "第 3 層「{text}」＋圖示",
+      "moves": "彈出（層，從上方落下）；＋0.12 逐字上浮（名稱）；＋0.15 圖示描線；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 3 層"
+    },
+    {
+      "each": "items",
+      "from": 4,
+      "to": 4,
+      "if": "items.4.desc",
+      "beat": 4,
+      "at": "`{at}`",
+      "show": "第 4 層「{text}」＋說明「{desc}」＋圖示",
+      "moves": "彈出（層，從上方落下）；＋0.12 逐字上浮（名稱）；＋0.24 逐字上浮（說明）；＋0.15 圖示描線；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 4 層"
+    },
+    {
+      "each": "items",
+      "from": 4,
+      "to": 4,
+      "if": "!items.4.desc",
+      "beat": 4,
+      "at": "`{at}`",
+      "show": "第 4 層「{text}」＋圖示",
+      "moves": "彈出（層，從上方落下）；＋0.12 逐字上浮（名稱）；＋0.15 圖示描線；＋0.6 聚焦（本層；下面的層退焦 → 0.6）",
+      "focus": "第 4 層"
+    },
+    {
+      "if": "all",
+      "beat": "收",
+      "at": "`{all}`",
+      "show": "全部層（完成態停到段尾）",
+      "moves": "回均衡",
+      "focus": "整體"
+    },
+    {
+      "if": "!all",
+      "beat": "收",
+      "at": "`{last.at}`＋2.0",
+      "show": "全部層（完成態停到段尾）",
+      "moves": "回均衡",
+      "focus": "整體"
+    }
+  ]
+}

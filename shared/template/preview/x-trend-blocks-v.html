@@ -83,8 +83,8 @@
     const T1 = P.at('#282@8'), T2 = P.at('#283@6'), T3 = P.at('#284@4'), T4 = P.at('#285@2');   // 講到每一組數字的時刻
     P.sfx('impact', '#285@2');                         // 最後一組落定一顆音效（句號和 T4 一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const DATA = [ ['第 1 集', 8], ['第 5 集', 6], ['第 10 集', 4], ['現在', 2] ];   // 只改這一行：[時間標籤, 格數 1–10]，3–5 組
-    const UNIT = '小時';                                 // 數字後面的單位（≤ 2 字）
+    const DATA = [["第 1 集",8],["第 5 集",6],["第 10 集",4],["現在",2]];   // 只改這一行：[時間標籤, 格數 1–10]，3–5 組
+    const UNIT = "小時";                                 // 數字後面的單位（≤ 2 字）
 
     // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，每次載入結果相同）──
     // 每一疊寬 128，第一疊 left 40、最後一疊 left 896，等距；第 i 格在第 floor(i/2) 層、左右第 i%2 格，一層高 68，最下層 top 356
@@ -124,8 +124,10 @@
     stack(1, T2);
     stack(2, T3);
     stack(3, T4);   // 第 4 組
+
     // 收：最後一組落定（數完那一刻）重拍；完成態停到段尾
-    const LAST = '#xtrb-v' + (n - 1), TE = T4 + 0.06 * (Math.max(1, Math.min(10, Math.round(DATA[n - 1][1]))) - 1) + 0.4;
+    const TLAST = T4;                                  // 最後一組的時刻
+    const LAST = '#xtrb-v' + (n - 1), TE = TLAST + 0.06 * (Math.max(1, Math.min(10, Math.round(DATA[n - 1][1]))) - 1) + 0.4;
     P.punch(LAST, TE, { scale: 1.15 });
 
     P.end();                                           // 長度＝plan.json 這段的長度

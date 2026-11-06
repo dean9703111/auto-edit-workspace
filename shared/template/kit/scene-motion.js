@@ -328,6 +328,20 @@
     var IN = 0.5, OUT = 0.3, STEP = 0.35, HOLD = 0.6, PUSH = 0.7, SHIFT = 480, SIDE = 960;
     var DRIFT = 16, RISE = 8, AXIS = 12, REVEAL = 0.55, MASK = 0.6, AXIS_DUR = 0.45, AXIS_LAG = 0.1;
     var BEAT = 0.15, READ = 1.2, HOLD_END = 1.5;
+    // 收尾（回均衡這類排在最後一拍之後的動作）太晚、最後一幕停不到 HOLD_END 時，把它們整組往前挪：段長比模板要的短一點時不用每段改 plan.json。
+    // 只動沒有綁字幕的收尾（最後一個 P.at 之後 ≥ 1 秒開始的），綁了詞的拍不動；build 另外加淡出或退場（最長 0.75 秒）
+    var settleTail = function (D) {
+      if (!(D > 0) || !TL.getChildren || !marks.length) return;   // TL＝真的 GSAP 時間軸（tl 是加了標記的包裝）
+      var lastMark = Math.max.apply(null, marks.map(function (m) { return m.t; }));
+      var kids = TL.getChildren(false, true, true), limit = D - HOLD_END - 0.75, floor = lastMark + 1, end = 0;
+      kids.forEach(function (k) { end = Math.max(end, k.startTime() + k.totalDuration()); });
+      if (end <= limit + 1e-6) return;
+      var tail = kids.filter(function (k) { return k.startTime() >= floor - 1e-6 && k.totalDuration() > 0; });
+      if (!tail.length) return;
+      var first = Math.min.apply(null, tail.map(function (k) { return k.startTime(); }));
+      var shift = Math.min(end - limit, first - floor);
+      if (shift > 1e-6) tail.forEach(function (k) { k.startTime(k.startTime() - shift); });
+    };
     var STROKE = 0.7, CHECK_LAG = 0.25;
     var MORPH = 0.7, ZOOM = 2.4, COUNT = 1.2, BAR = 0.8;
     var EASE = 'power2.out';
@@ -445,7 +459,12 @@
       },
       sideIn: function (sel, at) { push(sel, at, -SIDE, 0); return P; },
       sideOut: function (sel, at) { push(sel, at, 0, -SIDE); return P; },
-      end: function (dur) { tl.set({}, {}, dur == null ? P.dur() : dur); return P; },
+      end: function (dur) {
+        var D = dur == null ? P.dur() : dur;
+        settleTail(D);
+        tl.set({}, {}, D);
+        return P;
+      },
 
       // ── v2 進場（§2.1）──
       drift: function (sel, at, o) {

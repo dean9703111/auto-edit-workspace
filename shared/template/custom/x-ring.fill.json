@@ -1,0 +1,167 @@
+{
+  "template": "x-ring",
+  "prefix": "xring",
+  "beat": "E",
+  "layout": "fullscreen",
+  "when": "一個比例或一段時間，前有主題或起點、後有結論或終點：圓環走到數字（百分比、計時、倒數共用；例：32 段 NG 裡 AI 剪掉 87%，從想法到原型只花一小時）",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "startAt": {
+      "label": "講到主題或起點的時間；和 numAt 至少差 3.4 秒",
+      "type": "at",
+      "ref": "R1",
+      "required": true
+    },
+    "startText": {
+      "label": "右上起點列文字",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "startIcon": {
+      "label": "起點列圖示",
+      "type": "icon",
+      "required": true
+    },
+    "unit": {
+      "label": "圓環中央的單位（例「剪掉」「分鐘」「完成度」）",
+      "type": "text",
+      "max": 3,
+      "required": true
+    },
+    "fromValue": {
+      "label": "圓環起點的數字（百分比、計時寫 0；倒數寫起始值）",
+      "type": "number",
+      "const": "RING_FROM",
+      "required": true
+    },
+    "toValue": {
+      "label": "圓環終點的數字（講到時剛好停在這裡；中央最多 4 個字元）",
+      "type": "number",
+      "const": "RING_TO",
+      "required": true
+    },
+    "fullValue": {
+      "label": "一整圈代表多少（百分比 100；一小時計時 60；倒數 10 秒寫 10）",
+      "type": "number",
+      "const": "RING_MAX",
+      "required": true
+    },
+    "suffix": {
+      "label": "數字後面的字（百分比寫 \"%\"；計時、倒數不寫）",
+      "type": "text",
+      "max": 1,
+      "const": "RING_SUFFIX"
+    },
+    "numAt": {
+      "label": "講到數字的時間（數字剛好落定）；和 endAt 至少差 2.5 秒",
+      "type": "at",
+      "ref": "ARC",
+      "required": true
+    },
+    "endText": {
+      "label": "右下終點列文字",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "endIcon": {
+      "label": "終點列圖示",
+      "type": "icon",
+      "required": true
+    },
+    "endAt": {
+      "label": "講到結論或終點的時間",
+      "type": "at",
+      "ref": "R2",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "AI 剪掉多少 NG",
+    "startAt": "#161@32",
+    "startText": "32 段 NG",
+    "startIcon": "scissors",
+    "unit": "剪掉",
+    "fromValue": 0,
+    "toValue": 87,
+    "fullValue": 100,
+    "suffix": "%",
+    "numAt": "#162@87",
+    "endText": "AI 剪掉 28 段",
+    "endIcon": "bot",
+    "endAt": "#163@剪掉"
+  },
+  "sampleMin": {
+    "title": "倒數十秒",
+    "startAt": "#161@32",
+    "startText": "倒數開始",
+    "startIcon": "timer",
+    "unit": "秒",
+    "fromValue": 10,
+    "toValue": 0,
+    "fullValue": 10,
+    "numAt": "#162@87",
+    "endText": "時間到",
+    "endIcon": "hourglass",
+    "endAt": "#163@剪掉"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "`{startAt}`",
+      "show": "起點列「{startText}」＋圖示；圓環（灰軌道、中央起始值）＋單位「{unit}」",
+      "moves": "擦開（起點列，由左）；＋0.15 圖示描線；＋0.25 彈出（圓環）；＋0.3 逐字落下（單位）；＋0.35 淡入（軌道）",
+      "focus": "起點列"
+    },
+    {
+      "beat": "2",
+      "at": "`{numAt}`（提早 1.2 秒開始走）",
+      "show": "主色弧從 12 點鐘方向走、中央數字同步跑到 {toValue}",
+      "moves": "描線（弧）；數字滾動（1.2 秒）",
+      "focus": "圓環"
+    },
+    {
+      "beat": "3",
+      "at": "`{numAt}`",
+      "show": "數字落定在「{toValue}」",
+      "moves": "重拍；漣漪（圓環中央）；＋0.1 螢光筆（單位）",
+      "focus": "數字",
+      "sfx": "impact"
+    },
+    {
+      "beat": "4",
+      "at": "`{endAt}`",
+      "show": "終點列「{endText}」＋向下箭頭；圓環退焦",
+      "moves": "擦開（終點列，由左）；＋0.15 描線（箭頭）；＋0.15 圖示描線；退焦（圓環 → 0.6）",
+      "focus": "終點列",
+      "sfx": "impact"
+    },
+    {
+      "beat": "5",
+      "at": "`{endAt}`＋0.6",
+      "show": "—",
+      "moves": "聚焦（終點列）",
+      "focus": "終點列"
+    },
+    {
+      "beat": "收",
+      "at": "`{endAt}`＋2.0",
+      "show": "圓環亮回、兩列",
+      "moves": "回均衡",
+      "focus": "整體"
+    }
+  ]
+}

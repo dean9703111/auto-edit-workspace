@@ -136,7 +136,7 @@ test('分鏡表：想換成、音效、補充說明新增在第一個小標題�
 test('分鏡表：下拉選單的選項來自工作區現有的情境與音效', async () => {
   fs.writeFileSync(file, MD);
   const { options, previewBase } = await state();
-  assert.deepEqual(options.scenes.map((g) => g.name), ['疊加', '半畫面', '子母畫面', '全幕', '情境動畫']);
+  assert.deepEqual(options.scenes.map((g) => g.name), ['疊加', '半畫面', '子母畫面', '全幕', '情境動畫', '內容設計']);
   const all = options.scenes.flatMap((g) => g.items);
   const key = all.find((i) => i.id === '07');
   assert.equal(key.value, '07 重點字卡');
@@ -145,7 +145,8 @@ test('分鏡表：下拉選單的選項來自工作區現有的情境與音效',
   const proc = all.find((i) => i.id === 'x-process');
   assert.equal(proc.value, 'x-process 流程逐步亮起');
   assert.ok(!all.some((i) => i.id.includes('-example-')), '範例檔不是選項');
-  for (const i of all) assert.ok(fs.existsSync(path.join(TEMPLATE, 'preview', i.preview)), i.preview);
+  assert.equal(all.find((i) => i.id === 'design').preview, null, '內容設計動畫不是模板，沒有預覽');
+  for (const i of all) if (i.preview) assert.ok(fs.existsSync(path.join(TEMPLATE, 'preview', i.preview)), i.preview);
   assert.equal(previewBase, '/gallery/preview/');
   assert.equal((await api(`${previewBase}${key.preview}`)).status, 200);
   assert.deepEqual(options.sfx.slice(0, 2).map((o) => o.value), ['預設', '無']);

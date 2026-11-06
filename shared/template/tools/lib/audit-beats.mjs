@@ -41,7 +41,7 @@ export const VOCAB_EXTRA = [{ kind: '轉場', name: '開場', prim: 'build' }];
 export const VOCAB_RETIRED = { 漂浮: 'idle', 背景環境: 'ambient', 虛線流動: 'flow', 章節色塊擦入: 'wipe' };
 const BY_NAME = new Map([...VOCAB, ...VOCAB_EXTRA].map((v) => [v.name, v]));
 // 「對應」欄第一個 P.* 以外也算做到的寫法（⚠ 用了沒做的動作時一起找）：沒有聚焦組的段，回均衡＝P.dim(…, {to: 1})；聚焦組裡的退焦＝P.spot 的預覽態或 dim
-export const VOCAB_ALT = { 回均衡: ['dim'], 退焦: ['spot'] };
+export const VOCAB_ALT = { 回均衡: ['dim'], 退焦: ['spot'], 描線: ['draw'] };   // 描線：P.stroke 或 P.draw（示意動畫的連接線用 P.draw 同一支筆）
 
 // 反向比對的動作（P.* → 分鏡要寫的名稱）：進場、字、線、強調是範例每拍的細節，分鏡常只寫主要動作，不反向比
 export const UNPLANNED = { spot: '聚焦／預覽態／走過／回均衡', dim: '退焦', idle: '呼吸', cam: '鏡頭慢推／鏡頭跟焦點／鏡頭回正' };
@@ -200,6 +200,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
   for (const m of ms) {
     if (rows.some((x) => Math.abs(x.t - m.t) <= BEAT_TOL + 1e-6)) continue;
     const g = groups.get(m.ref);
+    if (g && g.some((x) => Math.abs(x.t - m.t) <= 1.5 + 1e-6)) continue;   // 同一句同一個詞再晚一點（P.at('#22@發現', 1)、P.sfx 的 off）：是那一拍裡的小動作，不是多出來的拍
     err('beats-extra', m.t, `${name} 的 P.at('${m.ref}')（${fmtT(item.start + m.t)}）不在分鏡表${g ? `（分鏡表的 ${m.ref} 在第 ${g.map((x) => x.beat).join('、')} 拍，差 > ${BEAT_TOL}s）` : ''}`,
       '分鏡表加一拍（寫出講到、出現什麼、動態），或刪掉這個 P.at；分鏡表改過要在停點 ③ 給人重看', { ref: m.ref, t: m.t });
   }
@@ -227,8 +228,9 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
   }
   // 插圖元件欄（示意動畫）：畫廊 20 個、ILLUS.register 過的、work/hyperframes/illus-local/<名稱>.svg 有檔的
   const reg = illusOf(html).registered;
+  const designed = /x-design-/.test(String(file || ''));   // 內容設計動畫的這一欄只是說明（數量、圖示都可以寫），畫錯名字由 illus-name 量 data-illus
   for (const row of sheet.rows) {
-    if (row.illus == null || row.note) continue;
+    if (row.illus == null || row.note || designed) continue;
     for (const n of illusNamesOf(row.illus)) {
       if (ILLUS_BUILTIN.includes(n) || reg.includes(n) || local.includes(n)) continue;
       err('beats-illus', 0, `分鏡第 ${row.beat} 拍的插圖元件「${n}」不在畫廊（shared/template/kit/illus-gallery.jpg 的 20 個）、沒有 ILLUS.register，work/hyperframes/illus-local/ 也沒有 ${n}.svg`,
@@ -243,7 +245,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
 //   【D 下限】：每個句號取最早那一拍當一拍（「段起點」那一拍是開場，不算）；第一拍 ≥ 開場下限、相鄰兩拍 ≥ 範例最小拍距、最後一拍到段尾 ≥ 段長下限的秒數
 //   分鏡停點 ③ 之後可能過期（剪輯台重對句號），所以只報 ⚠、不擋 build
 export const PLAN_TOL = 0.3;
-export function sheetPlanFindings({ item, sheet, cues = [], tplRules = [] }) {
+export function sheetPlanFindings({ item, sheet, cues = [], tplRules = [], endExtra = 0 }) {
   const out = [];
   if (!sheet || !sheet.header || !item) return out;
   const fmt = (t) => fmtT(item.start + t);
@@ -288,7 +290,7 @@ export function sheetPlanFindings({ item, sheet, cues = [], tplRules = [] }) {
     out.push({ msg: `第 ${g[i - 1].beat} 拍（${fmt(g[i - 1].t)}）到第 ${g[i].beat} 拍（${fmt(g[i].t)}）只隔 ${d.toFixed(2)}s，範例檔頭【D 下限】相鄰兩拍至少 ${gapMin}s`,
       fix: '同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）' });
   }
-  const endMin = ends.length ? Math.min(...ends) : null, last = g.reduce((x, y) => (y.t > x.t ? y : x));
+  const endMin = ends.length ? Math.min(...ends) + endExtra : null, last = g.reduce((x, y) => (y.t > x.t ? y : x));
   if (endMin != null && item.D - last.t < endMin - PLAN_TOL) {
     out.push({ msg: `最後一拍 ${last.ref}（${fmt(last.t)}）到段尾只剩 ${Math.max(0, item.D - last.t).toFixed(2)}s，範例檔頭【D 下限】要 ≥ ${endMin}s（回均衡、最後一幕、淡出）`,
       fix: '最後一拍改綁早一點的詞或刪掉；不要把段尾延進下一個話題（shared/template/BEATS.md「段太短」）' });

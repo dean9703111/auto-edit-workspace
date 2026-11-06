@@ -1,0 +1,118 @@
+{
+  "template": "x-trend-blocks",
+  "prefix": "xtrb",
+  "beat": "E",
+  "layout": "fullscreen",
+  "when": "同一個量在 3–5 個時間點的變化，數字小、數得出來（每組 1–10 格）：方塊一疊一疊堆上去，最後一組主色（例：每集剪輯時間從 8 小時降到 2 小時）",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "key": {
+      "label": "圖例：一格代表多少（例「＝ 1 小時」）",
+      "type": "text",
+      "max": 6,
+      "required": true
+    },
+    "unit": {
+      "label": "數字後面的單位",
+      "type": "text",
+      "max": 2,
+      "const": "UNIT",
+      "required": true
+    },
+    "items": {
+      "label": "時間點（由左到右；每組一疊方塊）",
+      "type": "list",
+      "min": 3,
+      "maxItems": 5,
+      "required": true,
+      "const": "DATA",
+      "toArray": [
+        "text",
+        "value"
+      ],
+      "item": {
+        "text": {
+          "label": "時間標籤（例「第 1 集」「現在」）",
+          "type": "text",
+          "max": 4,
+          "required": true
+        },
+        "value": {
+          "label": "格數（1–10 的整數）",
+          "type": "number",
+          "required": true
+        },
+        "at": {
+          "label": "講到這一組數字的時間（相鄰兩組至少差 2.4 秒）",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    }
+  },
+  "sample": {
+    "title": "每集剪輯時間",
+    "key": "＝ 1 小時",
+    "unit": "小時",
+    "items": [
+      {
+        "text": "第 1 集",
+        "value": 8,
+        "at": "#282@8"
+      },
+      {
+        "text": "第 5 集",
+        "value": 6,
+        "at": "#283@6"
+      },
+      {
+        "text": "第 10 集",
+        "value": 4,
+        "at": "#284@4"
+      },
+      {
+        "text": "現在",
+        "value": 2,
+        "at": "#285@2"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」＋圖例「{key}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）；＋0.55 彈出（圖例）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.2",
+      "show": "基線＋{n} 個時間標籤",
+      "moves": "描線（基線）；逐字落下（時間標籤）",
+      "focus": "基線"
+    },
+    {
+      "each": "items",
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "第 {n} 組「{text}」：那一疊方塊由下往上疊好、上面的數字數到 {value}",
+      "moves": "彈出（方塊，一格一格往上疊）；彈出（數字）；數字滾動",
+      "focus": "第 {n} 疊"
+    },
+    {
+      "beat": "收",
+      "at": "`{last.at}`（疊完那一刻）",
+      "show": "最後一組（主色）數字落定",
+      "moves": "重拍（最後一組數字）",
+      "focus": "最後一疊",
+      "sfx": "impact"
+    }
+  ]
+}

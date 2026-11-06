@@ -28,8 +28,8 @@
     }
   },
   "beats": {
-    "leftAt":  { "label": "左欄進場", "default": "0.5" },
-    "rightAt": { "label": "右欄進場", "default": "2.5" }
+    "leftAt":  { "label": "左欄進場（整欄一起進；綁講到左欄的詞：#N@詞）", "default": "0.5" },
+    "rightAt": { "label": "右欄進場（整欄一起進；綁講到右欄的詞：#N@詞）", "default": "2.5" }
   },
   "sfx": {
     "main": null,

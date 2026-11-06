@@ -73,17 +73,19 @@
        data-cues-sample='{"start":0,"D":15,"cues":{"262":[1.8,4.1],"263":[4.3,6.8],"264":[6.9,9.3],"265":[9.4,11.8],"266":[12.1,14.5]},"refs":{"#262@器材":2.0,"#263@剪輯":4.5,"#264@企劃":7.0,"#265@品牌":9.5}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xstp-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">做頻道的四層台階</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">做頻道的四層台階</span></div>
       <div id="xstp-body" data-layout="col" data-gap="none">
         <!-- 由上往下寫：l4 最上層 … l1 最底層（第 1 個講到）；地面線不參與排版（沒有 data-slot） -->
+        <!-- @if n>=4 { -->
         <div id="xstp-l4" class="xstp-layer" data-slot><i id="xstp-top4" class="xstp-top" data-layout-allow-overlap></i>
-          <span id="xstp-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /> <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /> <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" /> <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /> </svg></span><span id="xstp-n4" class="xstp-name sc-t52 sc-w900 sc-opt">個人品牌</span></div>
-        <div id="xstp-l3" class="xstp-layer" data-slot>
-          <span id="xstp-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" /> <path d="M9 18h6" /> <path d="M10 22h4" /> </svg></span><span id="xstp-n3" class="xstp-name sc-t52 sc-w900 sc-opt">內容企劃</span></div>
+          <span id="xstp-ico4" class="sc-icon" data-fill="items.4.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" /> <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" /> <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" /> <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /> </svg></span><span id="xstp-n4" class="xstp-name sc-t52 sc-w900 sc-opt" data-fill="items.4.text">個人品牌</span></div>
+        <!-- @} -->
+        <div id="xstp-l3" class="xstp-layer" data-slot>   <!-- @sub n==3: <div id="xstp-l3" class="xstp-layer" data-slot><i id="xstp-top3" class="xstp-top" data-layout-allow-overlap></i> -->
+          <span id="xstp-ico3" class="sc-icon" data-fill="items.3.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" /> <path d="M9 18h6" /> <path d="M10 22h4" /> </svg></span><span id="xstp-n3" class="xstp-name sc-t52 sc-w900 sc-opt" data-fill="items.3.text">內容企劃</span></div>
         <div id="xstp-l2" class="xstp-layer" data-slot>
-          <span id="xstp-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span id="xstp-n2" class="xstp-name sc-t52 sc-w900 sc-opt">剪輯流程</span></div>
+          <span id="xstp-ico2" class="sc-icon" data-fill="items.2.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span id="xstp-n2" class="xstp-name sc-t52 sc-w900 sc-opt" data-fill="items.2.text">剪輯流程</span></div>
         <div id="xstp-l1" class="xstp-layer" data-slot>
-          <span id="xstp-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /> <circle cx="12" cy="13" r="3" /> </svg></span><span id="xstp-n1" class="xstp-name sc-t52 sc-w900 sc-opt">穩定器材</span></div>
+          <span id="xstp-ico1" class="sc-icon" data-fill="items.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /> <circle cx="12" cy="13" r="3" /> </svg></span><span id="xstp-n1" class="xstp-name sc-t52 sc-w900 sc-opt" data-fill="items.1.text">穩定器材</span></div>
         <div id="xstp-base"><svg viewBox="0 0 1056 8" xmlns="http://www.w3.org/2000/svg"><line id="xstp-ground" x1="3" y1="4" x2="1053" y2="4" /></svg></div>
       </div>
     </div>
@@ -95,11 +97,11 @@
     const P = SceneMotion(tl, document.getElementById('x-stack-podium'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#262@器材'), T2 = P.at('#263@剪輯'), T3 = P.at('#264@企劃'), T4 = P.at('#265@品牌');   // 由下往上講到每一層名稱的時刻
-    const ALL = P.at('#266');                          // 講到「合起來就是…」那一句（沒有這句見檔頭【綁句欄位】）
-    P.sfx('success', '#266');                          // 最上層換主色那一拍（句號和 ALL 一樣）
+    const T1 = P.at('#262@器材'), T2 = P.at('#263@剪輯'), T3 = P.at('#264@企劃'), T4 = P.at('#265@品牌');   // 由下往上講到每一層名稱的時刻  // @sub n==3: const T1 = P.at('#262@器材'), T2 = P.at('#263@剪輯'), T3 = P.at('#264@企劃');
+    const ALL = P.at('#266');                          // 講到「合起來就是…」那一句（沒有這句見檔頭【綁句欄位】）  // @sub !all && n==3: const ALL = T3 + 2.0; @@ !all: const ALL = T4 + 2.0;
+    P.sfx('success', '#266');                          // 最上層換主色那一拍（句號和 ALL 一樣）  // @if all
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const LAYERS = '#xstp-l1, #xstp-l2, #xstp-l3, #xstp-l4';
+    const LAYERS = '#xstp-l1, #xstp-l2, #xstp-l3, #xstp-l4';  // @sub n==3: const LAYERS = '#xstp-l1, #xstp-l2, #xstp-l3';
     // 地面線貼在最底層 l1 下面、左右各多 48（層的位置由 data-layout 排好，這裡只讀；載入時算一次，不用改）
     const L1 = document.getElementById('xstp-l1'), BASE = document.getElementById('xstp-base');
     BASE.style.left = Math.round(L1.offsetLeft + L1.offsetWidth / 2 - 528) + 'px'; BASE.style.top = (L1.offsetTop + L1.offsetHeight + 4) + 'px';
@@ -118,13 +120,15 @@
     // 拍 3 第 3 層：同拍 2
     P.hinge('#xstp-l3', T3);  P.icon('#xstp-ico3', T3 + 0.2);  P.chars('#xstp-n3', T3 + 0.25);
     P.spot('#xstp-l1, #xstp-l2, #xstp-l3', '#xstp-l3', T3 + 0.6, { scale: 1.02, lift: 0, dim: 0.6 });
+    // @if n>=4 {
     // 拍 4 第 4 層：同拍 2（3 層時刪掉這 2 行，見檔頭）
     P.hinge('#xstp-l4', T4);  P.icon('#xstp-ico4', T4 + 0.2);  P.chars('#xstp-n4', T4 + 0.25);
     P.spot(LAYERS, '#xstp-l4', T4 + 0.6, { scale: 1.02, lift: 0, dim: 0.6 });
+    // @}
     // 收：講到「合起來」→ 回均衡（全部亮回），最上層換主色（終點）＋漣漪，完成態停到段尾
     P.spot(LAYERS, null, ALL, { dur: 0.6 });
-    P.in('#xstp-top4', ALL);
-    P.ripple('#xstp-ico4', ALL + 0.1, { to: 2.2 });
+    P.in('#xstp-top4', ALL);  // @sub n==3: P.in('#xstp-top3', ALL);
+    P.ripple('#xstp-ico4', ALL + 0.1, { to: 2.2 });  // @sub n==3: P.ripple('#xstp-ico3', ALL + 0.1, { to: 2.2 });
 
     P.end();                                           // 長度＝plan.json 這段的長度
     window.__timelines['x-stack-podium'] = tl;

@@ -97,6 +97,10 @@
 
     P.sfx('impact', '#42@32'); P.sfx('impact', '#43@28');   // 兩個數字落定各一顆音效（句號和上一行一樣；主題那一拍不配）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const LIMIT = 20;                                    // 上限：軌道一開始裝得下的量（第一個數字要比它大）
+    const NUM_A = 32;                                    // 第一個數字（超過上限，軌道撐開）
+    const NUM_B = 28;                                    // 第二個數字（不超過第一個，同一把尺）
+    const WIDE = 960, W0 = Math.round(WIDE * LIMIT / NUM_A);   // 撐開後的軌道寬固定 960；撐開前＝上限那一段（20 ÷ 32 × 960 ＝ 600）
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
     if (ENTER === 'grow') P.grow('#xn-card', 0.3);
@@ -110,10 +114,10 @@
     P.chars('#xn-unitA', T1 + 0.25, { mode: 'drop' });
 
     // 拍 2 提早 1.2 秒開始數：0 → 20（上限）量條同速長滿；碰到上限那一刻軌道撐開 600 → 960、數字繼續到 32、整條變警示色
-    P.count('#xn-nA', T2 - 1.2, { from: 0, to: 20, dur: 0.7, ease: 'none' });
+    P.count('#xn-nA', T2 - 1.2, { from: 0, to: LIMIT, dur: 0.7, ease: 'none' });
     P.bar('#xn-fillA', T2 - 1.2, { from: 0, to: 1, dur: 0.7, ease: 'none' });
-    P.count('#xn-nA', T2 - 0.5, { from: 20, to: 32, dur: 0.5 });
-    P.morph('#xn-trackA', T2 - 0.5, { width: 960 }, { from: { width: 600 }, dur: 0.5, ease: P.V2.EASE.move });   // 同一根軌道撐開，填充（寬 100%）跟著伸長
+    P.count('#xn-nA', T2 - 0.5, { from: LIMIT, to: NUM_A, dur: 0.5 });
+    P.morph('#xn-trackA', T2 - 0.5, { width: WIDE }, { from: { width: W0 }, dur: 0.5, ease: P.V2.EASE.move });   // 同一根軌道撐開，填充（寬 100%）跟著伸長
     P.in('#xn-overA', T2 - 0.5, { dur: 0.3 });
     // 拍 3 講到「32」數字落定：重拍、圖示漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）
     P.punch('#xn-nA', T2, { scale: 1.12 });
@@ -124,8 +128,8 @@
     P.pop('#xn-cardB', T3 - 1.2);
     P.icon('#xn-icoB', T3 - 1.05);
     P.chars('#xn-unitB', T3 - 0.95, { mode: 'drop' });
-    P.count('#xn-nB', T3 - 1.2, { from: 0, to: 28, dur: 1.2 });
-    P.bar('#xn-fillB', T3 - 1.2, { from: 0, to: 0.875, dur: 1.2, ease: 'power2.out' });   // 28 ÷ 32，和數字同一條曲線
+    P.count('#xn-nB', T3 - 1.2, { from: 0, to: NUM_B, dur: 1.2 });
+    P.bar('#xn-fillB', T3 - 1.2, { from: 0, to: NUM_B / NUM_A, dur: 1.2, ease: 'power2.out' });   // 28 ÷ 32，和數字同一條曲線
     P.punch('#xn-nB', T3, { scale: 1.12 });
     P.ripple('#xn-icoB', T3);
     P.dim('#xn-cardA', T3, { to: 0.6 });

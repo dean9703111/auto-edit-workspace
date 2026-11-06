@@ -88,13 +88,23 @@
        data-cues-sample='{"start":0,"D":17.2,"cues":{"62":[1.6,6.6],"63":[6.9,9.1],"64":[9.4,11.6],"65":[11.9,14.4]},"refs":{"#63@表格":6.9,"#64@時間碼":9.4}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xprompt-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span id="xprompt-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> <path d="M13 8H7" /> <path d="M17 12H7" /> </svg></span><span class="sc-opt">我的提示詞</span></div>
+      <div class="sc-wcard__bar"><span id="xprompt-bico" class="sc-icon" data-fill="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> <path d="M13 8H7" /> <path d="M17 12H7" /> </svg></span><span class="sc-opt" data-fill="title">我的提示詞</span></div>
       <div id="xprompt-body" data-layout="col" data-justify="start" data-gap="md">
         <div id="xprompt-box" data-slot data-snap-width>
           <span id="xprompt-send" class="sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m5 12 7-7 7 7" /> <path d="M12 19V5" /> </svg></span>
-          <div id="xprompt-text" class="sc-t52 sc-w700">幫我把這支影片的 NG 段落<br>整理成<span id="xprompt-k1" class="xprompt-k">表格<i id="xprompt-c1" class="xprompt-c sc-kw" data-t="表格" data-layout-allow-overlap></i></span>，附上<span id="xprompt-k2" class="xprompt-k">時間碼<i id="xprompt-c2" class="xprompt-c sc-kw" data-t="時間碼" data-layout-allow-overlap></i></span><br>和剪掉的原因。</div>
+          <div id="xprompt-text" class="sc-t52 sc-w700">
+            <!-- @if above { -->
+            幫我把這支影片的 NG 段落<br>   <!-- @sub 1: {{above|text}}<br> -->
+            <!-- @} -->
+            整理成<span id="xprompt-k1" class="xprompt-k">表格<i id="xprompt-c1" class="xprompt-c sc-kw" data-t="表格" data-layout-allow-overlap></i></span>，附上<span id="xprompt-k2" class="xprompt-k">時間碼<i id="xprompt-c2" class="xprompt-c sc-kw" data-t="時間碼" data-layout-allow-overlap></i></span>   <!-- @sub 1: {{pre|text}}<span id="xprompt-k1" class="xprompt-k">{{k1|text}}<i id="xprompt-c1" class="xprompt-c sc-kw" data-t="{{k1|text}}" data-layout-allow-overlap></i></span>{{mid|text}}<span id="xprompt-k2" class="xprompt-k">{{k2|text}}<i id="xprompt-c2" class="xprompt-c sc-kw" data-t="{{k2|text}}" data-layout-allow-overlap></i></span>{{post|text}} -->
+            <!-- @if below { -->
+            <br>和剪掉的原因。   <!-- @sub 1: <br>{{below|text}} -->
+            <!-- @} -->
+          </div>
         </div>
-        <div id="xprompt-note" data-slot data-snap-width><span id="xprompt-nico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 10 0v4" /> </svg></span><span id="xprompt-ntext" class="sc-t52 sc-w900 sc-opt">貼之前先刪掉個資</span></div>
+        <!-- @if n>=1 { -->
+        <div id="xprompt-note" data-slot data-snap-width><span id="xprompt-nico" class="sc-icon" data-fill="notes.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /> <path d="M7 11V7a5 5 0 0 1 10 0v4" /> </svg></span><span id="xprompt-ntext" class="sc-t52 sc-w900 sc-opt" data-fill="notes.1.text">貼之前先刪掉個資</span></div>
+        <!-- @} -->
       </div>
     </div>
   </div>
@@ -105,9 +115,9 @@
     const P = SceneMotion(tl, document.getElementById('x-prompt'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const TYPE = P.at('#62', 0.45), K1 = P.at('#63@表格'), K2 = P.at('#64@時間碼'), NOTE = P.at('#65');   // 開始打字／兩個關鍵詞／提醒
+    const TYPE = P.at('#62', 0.45), K1 = P.at('#63@表格'), K2 = P.at('#64@時間碼'), NOTE = P.at('#65');   // 開始打字／兩個關鍵詞／提醒  // @sub n==0: const TYPE = P.at('#62', 0.45), K1 = P.at('#63@表格'), K2 = P.at('#64@時間碼');
 
-    P.sfx('ding', '#65');   // 提醒那一拍一顆 ding（句號和上一行一樣）
+    P.sfx('ding', '#65');   // 提醒那一拍一顆 ding（句號和上一行一樣）  // @if n>=1
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題圖示描線 → 標題逐字上浮
@@ -126,15 +136,17 @@
     // 拍 4 關鍵詞 2：主色移到第二個詞，第一個詞變回墨色（同一時間只有一個焦點）
     P.out('#xprompt-c1', K2, { dur: 0.3 });
     P.in('#xprompt-c2', K2, { dur: 0.3 });
+    // @if n>=1 {
     // 拍 5 提醒：膠囊彈出、＋0.14 提醒字逐字、＋0.18 圖示描線 → ＋0.6 提示詞框退焦
     P.pop('#xprompt-note', NOTE, { from: 0.82, dy: 40 });
     P.chars('#xprompt-ntext', NOTE + 0.14);
     P.icon('#xprompt-nico', NOTE + 0.18);
     P.dim('#xprompt-box', NOTE + 0.6, { to: 0.55 });
+    // @}
 
     // 收：提醒講完 2.6 秒回均衡（提示詞框亮回、兩個關鍵詞都是主色），完成態停到段尾
-    const TR = NOTE + 2.6;
-    P.dim('#xprompt-box', TR, { to: 1, dur: 0.6 });
+    const TR = NOTE + 2.6;  // @sub n==0: const TR = K2 + 2.6;
+    P.dim('#xprompt-box', TR, { to: 1, dur: 0.6 });  // @if n>=1
     P.in('#xprompt-c1', TR, { dur: 0.3 });
 
     P.end();                                           // 長度＝plan.json 這段的長度

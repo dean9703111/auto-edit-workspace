@@ -92,7 +92,7 @@ test('目標是 symlink：✖ 衝突，連結指到的資料夾沒被動', (t) =
 test('原始 frontmatter 有 allowed-tools：驗證失敗、一個檔都沒寫、結束碼 1', (t) => {
   const w = workspace(t);
   const f = path.join(w.ws, '.agents', 'skills', 'auto-edit-rough', 'SKILL.md');
-  fs.writeFileSync(f, fs.readFileSync(f, 'utf8').replace('version: 0.1.0', 'version: 0.1.0\nallowed-tools: Bash'));
+  fs.writeFileSync(f, fs.readFileSync(f, 'utf8').replace(/^version: .*$/m, (l) => `${l}\nallowed-tools: Bash`));
   const r = w.run();
   assert.equal(r.status, 1, `${r.stdout}${r.stderr} → 驗證失敗要結束碼 1`);
   assert.match(r.stderr, /✖ \.agents\/skills\/auto-edit-rough\/SKILL\.md：frontmatter 有不允許的欄位 allowed-tools → 只能用 name／description／version/, '錯誤訊息和 cli-001 §1.2 不同 → 照原文印');

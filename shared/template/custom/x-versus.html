@@ -18,7 +18,7 @@
   1. 文字：標題列（≤ 10 字）、兩個標頭名稱 .xvs-hname（≤ 4 字）、每列面向名稱 .xvs-lab（≤ 4 字，單位寫進去，例「分鐘」「步驟數」「月費」）。
   2. 圖示：兩個標頭的 .sc-icon。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
      一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來。
-  3. 數字：只改 <script> 開頭 DATA 那一行：每列 { a: A 的數字, b: B 的數字, win: 'a' 或 'b' }（數字 ≤ 4 位數）；WINNER 寫結論的贏家 'a' 或 'b'。
+  3. 數字：只改 <script> 開頭 DATA 那一行：每列 { a: A 的數字, b: B 的數字, win: 'a' 或 'b' }（數字 ≤ 4 位數）；WINNER 寫結論的贏家 "a" 或 "b"（雙引號）。
      條的長度、顏色、哪個數字重拍由程式算，不用改 CSS。
   4. 綁句：<script> 開頭 T1–T3、WIN 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
@@ -96,30 +96,32 @@
        data-cues-sample='{"start":0,"D":15.5,"cues":{"141":[2.4,4.9],"142":[5,7.4],"143":[7.5,9.9],"144":[10,13]},"refs":{"#141@分鐘":2.6,"#142@步驟":5.1,"#143@月費":7.6,"#144@AI":10.1}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xvs-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">手動剪 vs AI 剪</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">手動剪 vs AI 剪</span></div>
       <div id="xvs-body" data-layout="col" data-gap="sm">
         <div id="xvs-heads" data-slot data-layout="free">
           <div id="xvs-ha" class="xvs-head" data-slot><i class="xvs-tint"></i>
-            <span id="xvs-icoa" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" /> <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" /> <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" /> <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width>手動剪</span></div>
+            <span id="xvs-icoa" class="sc-icon sc-icon--72" data-fill="iconA"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" /> <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" /> <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" /> <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width data-fill="nameA">手動剪</span></div>
           <div id="xvs-vs" data-slot><span class="sc-t40 sc-w900 sc-opt">VS</span></div>
           <div id="xvs-hb" class="xvs-head" data-slot><i class="xvs-tint"></i>
-            <span id="xvs-icob" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width>AI 剪</span></div>
+            <span id="xvs-icob" class="sc-icon sc-icon--72" data-fill="iconB"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width data-fill="nameB">AI 剪</span></div>
         </div>
         <div id="xvs-r1" class="xvs-row" data-slot data-layout="free">
           <span id="xvs-na1" class="xvs-num xvs-na sc-t52 sc-w900" data-slot>0</span><span id="xvs-wa1" class="xvs-wa" data-slot><i id="xvs-ba1" class="xvs-bar"></i></span>
-          <div id="xvs-l1" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt">分鐘</span></div>
+          <div id="xvs-l1" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt" data-fill="rows.1.text">分鐘</span></div>
           <i id="xvs-bb1" class="xvs-bar xvs-bb" data-slot></i><span id="xvs-nb1" class="xvs-num xvs-nb sc-t52 sc-w900" data-slot>0</span>
         </div>
         <div id="xvs-r2" class="xvs-row" data-slot data-layout="free">
           <span id="xvs-na2" class="xvs-num xvs-na sc-t52 sc-w900" data-slot>0</span><span id="xvs-wa2" class="xvs-wa" data-slot><i id="xvs-ba2" class="xvs-bar"></i></span>
-          <div id="xvs-l2" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt">步驟數</span></div>
+          <div id="xvs-l2" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt" data-fill="rows.2.text">步驟數</span></div>
           <i id="xvs-bb2" class="xvs-bar xvs-bb" data-slot></i><span id="xvs-nb2" class="xvs-num xvs-nb sc-t52 sc-w900" data-slot>0</span>
         </div>
+        <!-- @if n>=3 { -->
         <div id="xvs-r3" class="xvs-row" data-slot data-layout="free">
           <span id="xvs-na3" class="xvs-num xvs-na sc-t52 sc-w900" data-slot>0</span><span id="xvs-wa3" class="xvs-wa" data-slot><i id="xvs-ba3" class="xvs-bar"></i></span>
-          <div id="xvs-l3" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt">月費</span></div>
+          <div id="xvs-l3" class="xvs-lab" data-slot><span class="sc-t52 sc-w900 sc-opt" data-fill="rows.3.text">月費</span></div>
           <i id="xvs-bb3" class="xvs-bar xvs-bb" data-slot></i><span id="xvs-nb3" class="xvs-num xvs-nb sc-t52 sc-w900" data-slot>0</span>
         </div>
+        <!-- @} -->
       </div>
     </div>
   </div>
@@ -130,13 +132,14 @@
     const P = SceneMotion(tl, document.getElementById('x-versus'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#141@分鐘'), T2 = P.at('#142@步驟'), T3 = P.at('#143@月費');   // 講到每一列面向詞的時刻
-    const WIN = P.at('#144@AI');                                                   // 講到結論的時刻（沒有結論句：見檔頭「要改的地方」）
+    const T1 = P.at('#141@分鐘'), T2 = P.at('#142@步驟'), T3 = P.at('#143@月費');   // 講到每一列面向詞的時刻  // @sub n==2: const T1 = P.at('#141@分鐘'), T2 = P.at('#142@步驟');
+    const WIN = P.at('#144@AI');                                                   // 講到結論的時刻（沒有結論句：見檔頭「要改的地方」）  // @if winAt && winner
 
-    P.sfx('success', '#144@AI');   // 結論一顆 success（句號和上兩行一樣）
+    P.sfx('success', '#144@AI');   // 結論一顆 success（句號和上兩行一樣）  // @if winAt && winner
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const DATA = [ { a: 180, b: 20, win: 'b' }, { a: 6, b: 2, win: 'b' }, { a: 0, b: 600, win: 'a' } ];   // 只改這一行的數字
-    const WINNER = 'b';                                                            // 結論的贏家：'a' 或 'b'
+    // 只改下面 DATA 這一行的數字（2–3 列）
+    const DATA = [ { a: 180, b: 20, win: 'b' }, { a: 6, b: 2, win: 'b' }, { a: 0, b: 600, win: 'a' } ];   // @sub n==3: const DATA = [ { a: {{rows.1.a}}, b: {{rows.1.b}}, win: '{{rows.1.win}}' }, { a: {{rows.2.a}}, b: {{rows.2.b}}, win: '{{rows.2.win}}' }, { a: {{rows.3.a}}, b: {{rows.3.b}}, win: '{{rows.3.win}}' } ]; @@ n==2: const DATA = [ { a: {{rows.1.a}}, b: {{rows.1.b}}, win: '{{rows.1.win}}' }, { a: {{rows.2.a}}, b: {{rows.2.b}}, win: '{{rows.2.win}}' } ];
+    const WINNER = "b";                                                            // 結論的贏家："a" 或 "b"  // @if winAt && winner
     const MAXW = 236;                                                              // 每列較大的數字＝236 px（版面固定，不用改）
     const HEADS = '#xvs-ha, #xvs-hb';
 
@@ -153,7 +156,7 @@
         $q('#xvs-b' + s + (i + 1) + ', #xvs-n' + s + (i + 1)).forEach(function (el) { el.classList.add(k); });
       });
     });
-    $q('#xvs-h' + WINNER).forEach(function (el) { el.classList.add('xvs-champ'); });
+    $q('#xvs-h' + WINNER).forEach(function (el) { el.classList.add('xvs-champ'); });   // @if winAt && winner
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮；VS 跟著主卡彈出
     if (ENTER === 'grow') P.grow('#xvs-card', 0.3);
@@ -184,6 +187,7 @@
     P.count('#xvs-na2', T2 + P.BEAT, { from: 0, to: DATA[1].a, dur: 0.65 });
     P.count('#xvs-nb2', T2 + P.BEAT, { from: 0, to: DATA[1].b, dur: 0.65 });
     P.punch('#xvs-r2 .xvs-num.xvs-win', T2 + 0.8, { scale: 1.12 });
+    // @if n>=3 {
     // 拍 5 第 3 列（T3）：同拍 4（2 列時刪掉這一組 8 行）
     P.spot('#xvs-r2', 'none', T3, { dim: 0.6 });
     P.pop('#xvs-r3', T3, { from: 0.9, dy: 28 });
@@ -192,7 +196,9 @@
     P.count('#xvs-na3', T3 + P.BEAT, { from: 0, to: DATA[2].a, dur: 0.65 });
     P.count('#xvs-nb3', T3 + P.BEAT, { from: 0, to: DATA[2].b, dur: 0.65 });
     P.punch('#xvs-r3 .xvs-num.xvs-win', T3 + 0.8, { scale: 1.12 });
+    // @}
 
+    // @if winAt && winner {
     // 拍 6 結論（WIN）：各列退後（0.6）；贏家名稱螢光筆＋重拍、底色亮起，＋0.2 光澤掃過
     P.spot('.xvs-row', 'none', WIN, { dim: 0.6 });
     P.in('.xvs-champ .xvs-tint', WIN);
@@ -201,10 +207,11 @@
     P.sheen('.xvs-champ .xvs-tint', WIN + 0.2);
     // 拍 7（WIN + 0.6）：贏家標頭聚焦（放大抬起發光、輸家壓暗縮小）
     P.spot(HEADS, '.xvs-champ', WIN + 0.6, { scale: 1.04, lift: -10 });
+    // @}
 
     // 收：講完結論 2.6 秒回均衡（標頭回原大小、各列亮回；贏家底色留著），完成態停到段尾
-    const TR = WIN + 2.6;
-    P.spot(HEADS, null, TR, { dur: 0.6 });
+    const TR = WIN + 2.6;   // @sub !winAt && n==3: const TR = T3 + 2.6; @@ !winner && n==3: const TR = T3 + 2.6; @@ !winAt && n==2: const TR = T2 + 2.6; @@ !winner && n==2: const TR = T2 + 2.6;
+    P.spot(HEADS, null, TR, { dur: 0.6 });   // @if winAt && winner
     P.spot('.xvs-row', null, TR, { dur: 0.6 });
 
     P.end();                                                                       // 長度＝plan.json 這段的長度

@@ -1,0 +1,145 @@
+{
+  "template": "x-warnings",
+  "prefix": "xwarn",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "一組 2–3 條警告或注意事項，一條一句（「有三件事要小心：金鑰不要外流、原始檔別覆蓋、成品要自己看過再發」）；講到哪一條，左邊那一條彈出，右邊同一個位置換成那一條的示意（圖示加一句）",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "items": {
+      "label": "警告",
+      "type": "list",
+      "min": 2,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "警告文字（各條字數差 ≤ 1 字，不然短的右邊會空太多）",
+          "type": "text",
+          "max": 8,
+          "required": true
+        },
+        "icon": {
+          "label": "警告的圖示（左邊那一列）",
+          "type": "icon",
+          "required": true
+        },
+        "fig": {
+          "label": "右邊示意",
+          "type": "text",
+          "max": 7,
+          "required": true
+        },
+        "figIcon": {
+          "label": "右邊示意的圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到這一條關鍵詞的時間",
+          "type": "at",
+          "ref": "W{n}",
+          "required": true
+        }
+      }
+    },
+    "all": {
+      "label": "講到「這幾點都要注意」那一句的時間（選填；沒有就最後一條講完 2 秒收）",
+      "type": "at"
+    }
+  },
+  "sample": {
+    "title": "三件要小心的事",
+    "items": [
+      {
+        "text": "金鑰不要外流",
+        "icon": "key-round",
+        "fig": "別貼到網路上",
+        "figIcon": "globe",
+        "at": "#52@金鑰"
+      },
+      {
+        "text": "原始檔別覆蓋",
+        "icon": "file-x",
+        "fig": "先另存一份",
+        "figIcon": "hard-drive",
+        "at": "#53@覆蓋"
+      },
+      {
+        "text": "成品要再看過",
+        "icon": "shield-check",
+        "fig": "看完再發布",
+        "figIcon": "check",
+        "at": "#54@再看"
+      }
+    ]
+  },
+  "sampleMin": {
+    "title": "三件要小心的事",
+    "items": [
+      {
+        "text": "金鑰不要外流",
+        "icon": "key-round",
+        "fig": "別貼到網路上",
+        "figIcon": "globe",
+        "at": "#52@金鑰"
+      },
+      {
+        "text": "原始檔別覆蓋",
+        "icon": "file-x",
+        "fig": "先另存一份",
+        "figIcon": "hard-drive",
+        "at": "#53@覆蓋"
+      }
+    ],
+    "all": "#54"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "each": "items",
+      "to": 1,
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "第 {n} 條「{text}」＋圖示；右邊示意區出現「{fig}」＋圖示",
+      "moves": "彈出（警告列）；＋0.12 逐字上浮（警告字）；＋0.15 圖示描線；彈出（右邊示意區）；＋0.3 圖示描線（示意）；＋0.6 聚焦（警告列）",
+      "focus": "第 {n} 條"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "第 {n} 條「{text}」＋圖示；右邊換成「{fig}」＋圖示",
+      "moves": "彈出（警告列）；＋0.12 逐字上浮（警告字）；＋0.15 圖示描線；淡出（上一張示意）；＋0.1 彈出（這一張示意）；＋0.3 圖示描線（示意）；＋0.6 聚焦（警告列，上一條壓暗）",
+      "focus": "第 {n} 條"
+    },
+    {
+      "if": "all",
+      "beat": "收",
+      "at": "`{all}`",
+      "show": "全部警告列亮回、亮框收掉（右邊停在最後一張）",
+      "moves": "回均衡",
+      "focus": "整體"
+    },
+    {
+      "if": "!all",
+      "beat": "收",
+      "at": "`{last.at}`＋2.0",
+      "show": "全部警告列亮回、亮框收掉（右邊停在最後一張）",
+      "moves": "回均衡",
+      "focus": "整體"
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "template": "x-crowd-queue",
+  "prefix": "xcq",
+  "beat": "C",
+  "layout": "fullscreen",
+  "when": "比兩個方法誰比較快、而且「量」看得到（手動剪一支一支排隊 5 天，自動剪整批一起跑 1 天）：上排慢的方法一次只走一個人，下排快的方法整排一起走到終點",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "slowName": {
+      "label": "上排（慢的方法）名稱",
+      "type": "text",
+      "max": 3,
+      "required": true
+    },
+    "slowIcon": {
+      "label": "上排圖示",
+      "type": "icon",
+      "required": true
+    },
+    "slowTime": {
+      "label": "上排時間（講解講到的那個數，走到終點才彈出）",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "fastName": {
+      "label": "下排（快的方法）名稱",
+      "type": "text",
+      "max": 3,
+      "required": true
+    },
+    "fastIcon": {
+      "label": "下排圖示",
+      "type": "icon",
+      "required": true
+    },
+    "fastTime": {
+      "label": "下排時間（講解講到的那個數，整排走到終點才彈出）",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "flagIcon": {
+      "label": "終點旗圖示（選填，預設 flag）",
+      "type": "icon"
+    },
+    "pill": {
+      "label": "結論膠囊（選填，標題列右端；不寫就沒有結論那一拍，要寫就連 pillAt 一起寫）",
+      "type": "text",
+      "max": 8
+    },
+    "slowAt": {
+      "label": "講到慢的方法的時間（上排亮起、最前面的人開始走）",
+      "type": "at",
+      "ref": "T1",
+      "required": true
+    },
+    "fastAt": {
+      "label": "講到快的方法的時間（下排亮起、整排一起走）",
+      "type": "at",
+      "ref": "T2",
+      "required": true
+    },
+    "pillAt": {
+      "label": "講到結論的時間（有 pill 才要）",
+      "type": "at",
+      "ref": "T3"
+    }
+  },
+  "sample": {
+    "title": "剪 5 支影片要多久",
+    "slowName": "手動剪",
+    "slowIcon": "hand",
+    "slowTime": "5 天",
+    "fastName": "自動剪",
+    "fastIcon": "zap",
+    "fastTime": "1 天",
+    "pill": "快 5 倍",
+    "slowAt": "#352@手動",
+    "fastAt": "#353@自動",
+    "pillAt": "#354@快"
+  },
+  "sampleMin": {
+    "title": "剪 5 支影片要多久",
+    "slowName": "手動剪",
+    "slowIcon": "hand",
+    "slowTime": "5 天",
+    "fastName": "自動剪",
+    "fastIcon": "zap",
+    "fastTime": "1 天",
+    "slowAt": "#352@手動",
+    "fastAt": "#353@自動"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」；兩條跑道（上「{slowName}」、下「{fastName}」）各 5 個小人＋終點旗",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）；＋1.0 錯拍彈出（跑道）；＋1.5 錯拍彈出（小人）；＋1.65 圖示描線；＋2.2 預覽態（兩條跑道）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "`{slowAt}`",
+      "show": "上排亮起，最前面的小人用 2.0 秒慢慢走到終點旗；旗子漣漪、時間「{slowTime}」彈出",
+      "moves": "聚焦（上排）；＋2.0 漣漪（終點旗）；＋2.0 彈出（時間）",
+      "focus": "上排"
+    },
+    {
+      "beat": "2",
+      "at": "`{fastAt}`",
+      "show": "下排亮起，整排小人 0.9 秒一起走到終點旗，身體換主色；旗子漣漪、時間「{fastTime}」彈出",
+      "moves": "聚焦（下排）；走過（上排）；＋0.9 淡入（主色軀幹）；＋0.9 漣漪（終點旗）；＋0.9 彈出（時間）",
+      "focus": "下排",
+      "sfx": "success"
+    },
+    {
+      "if": "pill",
+      "beat": "3",
+      "at": "`{pillAt}`",
+      "show": "標題列右端的結論膠囊「{pill}」；焦點留在下排、上排淡下去",
+      "moves": "彈出（膠囊）；聚焦（下排，上排壓暗到 0.45）",
+      "focus": "下排"
+    }
+  ]
+}

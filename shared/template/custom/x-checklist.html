@@ -79,24 +79,28 @@
        data-cues-sample='{"start":0,"D":15.2,"cues":{"121":[2.0,4.5],"122":[4.6,7.0],"123":[7.1,9.5],"124":[9.6,12.1],"125":[12.4,14.9]},"refs":{"#121@新增專案":2.3,"#122@下載":4.8,"#123@配對手機":7.3,"#124@調整解析度":9.8}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xchk-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">操作前的準備</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">操作前的準備</span></div>
       <div id="xchk-body" data-layout="col" data-gap="md">
         <!-- 每一列：淡色底（.xchk-now）＋空框 svg（空框 xchk-sq、打勾時的主色框 xchk-on、勾 xchk-k）＋項目字；svg 座標每列都一樣 -->
         <div id="xchk-r1" class="xchk-row" data-slot><i id="xchk-now1" class="xchk-now"></i>
           <svg class="xchk-box" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><rect class="xchk-sq" x="2" y="2" width="52" height="52" rx="12" /><rect id="xchk-on1" class="xchk-sqon" x="2" y="2" width="52" height="52" rx="12" /><path id="xchk-k1" class="xchk-tick" d="M14 29 L24 39 L42 18" /></svg>
-          <span id="xchk-t1" class="xchk-t sc-t52 sc-w900 sc-opt">新增專案</span></div>
+          <span id="xchk-t1" class="xchk-t sc-t52 sc-w900 sc-opt" data-fill="items.1.text">新增專案</span></div>
         <div id="xchk-r2" class="xchk-row" data-slot><i id="xchk-now2" class="xchk-now"></i>
           <svg class="xchk-box" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><rect class="xchk-sq" x="2" y="2" width="52" height="52" rx="12" /><rect id="xchk-on2" class="xchk-sqon" x="2" y="2" width="52" height="52" rx="12" /><path id="xchk-k2" class="xchk-tick" d="M14 29 L24 39 L42 18" /></svg>
-          <span id="xchk-t2" class="xchk-t sc-t52 sc-w900 sc-opt">下載 APP</span></div>
+          <span id="xchk-t2" class="xchk-t sc-t52 sc-w900 sc-opt" data-fill="items.2.text">下載 APP</span></div>
+        <!-- @if n>=3 { -->
         <div id="xchk-r3" class="xchk-row" data-slot><i id="xchk-now3" class="xchk-now"></i>
           <svg class="xchk-box" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><rect class="xchk-sq" x="2" y="2" width="52" height="52" rx="12" /><rect id="xchk-on3" class="xchk-sqon" x="2" y="2" width="52" height="52" rx="12" /><path id="xchk-k3" class="xchk-tick" d="M14 29 L24 39 L42 18" /></svg>
-          <span id="xchk-t3" class="xchk-t sc-t52 sc-w900 sc-opt">配對手機</span></div>
+          <span id="xchk-t3" class="xchk-t sc-t52 sc-w900 sc-opt" data-fill="items.3.text">配對手機</span></div>
+        <!-- @} -->
+        <!-- @if n>=4 { -->
         <div id="xchk-r4" class="xchk-row" data-slot><i id="xchk-now4" class="xchk-now"></i>
           <svg class="xchk-box" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><rect class="xchk-sq" x="2" y="2" width="52" height="52" rx="12" /><rect id="xchk-on4" class="xchk-sqon" x="2" y="2" width="52" height="52" rx="12" /><path id="xchk-k4" class="xchk-tick" d="M14 29 L24 39 L42 18" /></svg>
-          <span id="xchk-t4" class="xchk-t sc-t52 sc-w900 sc-opt">調整解析度</span></div>
+          <span id="xchk-t4" class="xchk-t sc-t52 sc-w900 sc-opt" data-fill="items.4.text">調整解析度</span></div>
+        <!-- @} -->
         <div id="xchk-prog" data-slot>
           <div id="xchk-track"><i id="xchk-fill"></i><i id="xchk-fillok"></i></div>
-          <span id="xchk-n" class="sc-t52 sc-w900">0 / 4</span>
+          <span id="xchk-n" class="sc-t52 sc-w900">0 / 4</span> <!-- @sub n==3: <span id="xchk-n" class="sc-t52 sc-w900">0 / 3</span> @@ n==2: <span id="xchk-n" class="sc-t52 sc-w900">0 / 2</span> -->
         </div>
       </div>
     </div>
@@ -108,11 +112,11 @@
     const P = SceneMotion(tl, document.getElementById('x-checklist'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#121@新增專案'), T2 = P.at('#122@下載'), T3 = P.at('#123@配對手機'), T4 = P.at('#124@調整解析度');   // 講到每一項項目詞的時刻
-    const ALL = P.at('#125');                          // 講到「全部好了」那一句（沒有這句見檔頭【綁句欄位】）
-    P.sfx('success', '#125');                          // 完成音（句號和 ALL 一樣）
+    const T1 = P.at('#121@新增專案'), T2 = P.at('#122@下載'), T3 = P.at('#123@配對手機'), T4 = P.at('#124@調整解析度');   // 講到每一項項目詞的時刻  // @sub n==3: const T1 = P.at('#121@新增專案'), T2 = P.at('#122@下載'), T3 = P.at('#123@配對手機'); @@ n==2: const T1 = P.at('#121@新增專案'), T2 = P.at('#122@下載');
+    const ALL = P.at('#125');                          // 講到「全部好了」那一句（沒有這句見檔頭【綁句欄位】）  // @sub !all && n==4: const ALL = P.at('{{items.4.at}}', 2.5); @@ !all && n==3: const ALL = P.at('{{items.3.at}}', 2.5); @@ !all && n==2: const ALL = P.at('{{items.2.at}}', 2.5);
+    P.sfx('success', '#125');                          // 完成音（句號和 ALL 一樣）  // @sub !all && n==4: P.sfx('success', '{{items.4.at}}', 2.5); @@ !all && n==3: P.sfx('success', '{{items.3.at}}', 2.5); @@ !all && n==2: P.sfx('success', '{{items.2.at}}', 2.5);
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const ROWS = '#xchk-r1, #xchk-r2, #xchk-r3, #xchk-r4';   // 全部的列（3 項時拿掉 r4）
+    const ROWS = '#xchk-r1, #xchk-r2, #xchk-r3, #xchk-r4';   // 全部的列（3 項時拿掉 r4）  // @sub n==3: const ROWS = '#xchk-r1, #xchk-r2, #xchk-r3'; @@ n==2: const ROWS = '#xchk-r1, #xchk-r2';
     const N = $q('#x-checklist .xchk-row').length;    // 幾項＝上面 HTML 的列數，不用改
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
@@ -137,6 +141,7 @@
     P.bar('#xchk-fill', T2 + 0.3, { from: 1 / N, to: 2 / N, dur: 0.6 });
     P.spot(ROWS, '#xchk-r2', T2, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xchk-now1', T2);  P.in('#xchk-now2', T2);
+    // @if n>=3 {
     // 拍 4 第 3 項：同拍 3
     P.chars('#xchk-t3', T3);
     P.stroke('#xchk-on3, #xchk-k3', T3 + 0.3, { dur: 0.4 });
@@ -144,6 +149,8 @@
     P.bar('#xchk-fill', T3 + 0.3, { from: 2 / N, to: 3 / N, dur: 0.6 });
     P.spot(ROWS, '#xchk-r3', T3, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xchk-now2', T3);  P.in('#xchk-now3', T3);
+    // @}
+    // @if n>=4 {
     // 拍 5 第 4 項：同拍 3（3 項時刪掉這 6 行，見檔頭）
     P.chars('#xchk-t4', T4);
     P.stroke('#xchk-on4, #xchk-k4', T4 + 0.3, { dur: 0.4 });
@@ -151,10 +158,11 @@
     P.bar('#xchk-fill', T4 + 0.3, { from: 3 / N, to: 4 / N, dur: 0.6 });
     P.spot(ROWS, '#xchk-r4', T4, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xchk-now3', T4);  P.in('#xchk-now4', T4);
+    // @}
 
     // 收：講到「全部好了」→ 回均衡（全部亮回、淡色底收掉）＋完成色疊在進度條上淡入；完成態停到段尾
     P.spot(ROWS, null, ALL, { dur: 0.6 });
-    P.out('#xchk-now4', ALL);
+    P.out('#xchk-now4', ALL);  // @sub n==3: P.out('#xchk-now3', ALL); @@ n==2: P.out('#xchk-now2', ALL);
     P.in('#xchk-fillok', ALL);
 
     P.end();                                           // 長度＝plan.json 這段的長度

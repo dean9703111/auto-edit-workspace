@@ -1,0 +1,231 @@
+{
+  "template": "x-terminal-code",
+  "prefix": "xtc",
+  "beat": "H",
+  "layout": "fullscreen",
+  "when": "講一小段程式（≤ 6 行）在做什麼：深色編輯器，程式碼逐字打出 → 講到哪件事，那幾行底下亮起標示帶（1–2 條）→ 講到「執行」，底部結果列印出綠色勾；每行寫 text（純文字），要上色另寫 html（xtc-kw／xtc-fn／xtc-str／xtc-cm 的 span）",
+  "slots": {
+    "file": {
+      "label": "檔名",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "lines": {
+      "label": "程式碼",
+      "type": "list",
+      "min": 1,
+      "maxItems": 6,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "這一行（純文字；每行 ≤ 38 個半形字寬，中文算 2）",
+          "type": "text",
+          "max": 19,
+          "required": true
+        },
+        "indent": {
+          "label": "縮排幾格（只對 text 有用；一格＝一個半形字寬）",
+          "type": "enum",
+          "options": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        "html": {
+          "label": "這一行要上色時另外寫（畫面照它，不再用 text、indent；原樣放進畫面、不跳脫）：關鍵字包 <span class=\"xtc-kw\">、函式名 <span class=\"xtc-fn\">、字串 <span class=\"xtc-str\">、註解 <span class=\"xtc-cm\">；縮排在開頭寫 &nbsp;&nbsp;；< > & 要寫成 &lt; &gt; &amp;。工具量不出這行的寬度，超出視窗 audit 才會報",
+          "type": "html"
+        }
+      }
+    },
+    "startAt": {
+      "label": "開始介紹這段程式的那一句（開口後 0.45 秒開始打字，固定 3 秒打完）",
+      "type": "at",
+      "ref": "TYPE",
+      "required": true
+    },
+    "bands": {
+      "label": "標示帶（講到哪件事，哪幾行亮起；後一條出現時前一條淡掉；從第幾行加上共幾行不能超過程式碼行數）",
+      "type": "list",
+      "min": 1,
+      "maxItems": 2,
+      "required": true,
+      "item": {
+        "from": {
+          "label": "從第幾行（1–6）",
+          "type": "enum",
+          "options": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "required": true
+        },
+        "count": {
+          "label": "共幾行（1–6）",
+          "type": "enum",
+          "options": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "required": true
+        },
+        "at": {
+          "label": "講到這幾行在做的事的時間",
+          "type": "at",
+          "ref": "H{n}",
+          "required": true
+        }
+      }
+    },
+    "runAt": {
+      "label": "講到「執行」的時間（結果列由左往右印出；音效 success）。沒有這一句就不填，result 也不填",
+      "type": "at",
+      "ref": "RUN"
+    },
+    "result": {
+      "label": "結果列",
+      "type": "text",
+      "max": 16
+    }
+  },
+  "sample": {
+    "file": "cut-retakes.mjs",
+    "lines": [
+      {
+        "text": "// 找出重講，剪掉前面那次",
+        "html": "<span class=\"xtc-cm\">// 找出重講，剪掉前面那次</span>"
+      },
+      {
+        "text": "const words = load('words.json');",
+        "html": "<span class=\"xtc-kw\">const</span> words = <span class=\"xtc-fn\">load</span>(<span class=\"xtc-str\">'words.json'</span>);"
+      },
+      {
+        "text": "for (const ng of findRetakes(words)) {",
+        "html": "<span class=\"xtc-kw\">for</span> (<span class=\"xtc-kw\">const</span> ng <span class=\"xtc-kw\">of</span> <span class=\"xtc-fn\">findRetakes</span>(words)) {"
+      },
+      {
+        "text": "cut(ng.start, ng.end);",
+        "indent": 2,
+        "html": "&nbsp;&nbsp;<span class=\"xtc-fn\">cut</span>(ng.start, ng.end);"
+      },
+      {
+        "text": "}",
+        "html": "}"
+      },
+      {
+        "text": "save('rough.mp4');",
+        "html": "<span class=\"xtc-fn\">save</span>(<span class=\"xtc-str\">'rough.mp4'</span>);"
+      }
+    ],
+    "startAt": "#332",
+    "bands": [
+      {
+        "from": 2,
+        "count": 1,
+        "at": "#333@讀進來"
+      },
+      {
+        "from": 3,
+        "count": 3,
+        "at": "#334@剪掉"
+      }
+    ],
+    "runAt": "#335@執行",
+    "result": "已剪掉 12 段重講（0.8 秒）"
+  },
+  "sampleMin": {
+    "file": "a.mjs",
+    "lines": [
+      {
+        "text": "const a = load(1);"
+      },
+      {
+        "text": "save(a);"
+      }
+    ],
+    "startAt": "#332",
+    "bands": [
+      {
+        "from": 2,
+        "count": 1,
+        "at": "#333@讀進來"
+      }
+    ],
+    "runAt": "#335@執行",
+    "result": "存好了"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "編輯器視窗＋檔名圖示＋檔名「{file}」",
+      "moves": "開場（依前段）；＋0.5 圖示描線（檔名圖示）；＋0.62 逐字上浮（檔名）",
+      "focus": "檔名"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "行號 1–{n}",
+      "moves": "淡入（行號）",
+      "focus": "行號"
+    },
+    {
+      "beat": "2",
+      "at": "`{startAt}`＋0.45",
+      "show": "程式碼 {n} 行逐字打出（固定 3 秒打完）",
+      "moves": "打字（程式碼）",
+      "focus": "正在打的字"
+    },
+    {
+      "each": "bands",
+      "to": 1,
+      "beat": 3,
+      "at": "`{at}`",
+      "show": "第 {from} 行起的 {count} 行底下亮起標示帶",
+      "moves": "擦開（標示帶 1，由左）",
+      "focus": "標示帶 1"
+    },
+    {
+      "each": "bands",
+      "from": 2,
+      "beat": 4,
+      "at": "`{at}`",
+      "show": "標示帶移到第 {from} 行起的 {count} 行；前一條淡掉",
+      "moves": "淡出（標示帶 1）；擦開（標示帶 2，由左）",
+      "focus": "標示帶 2"
+    },
+    {
+      "if": "runAt && bands==1",
+      "beat": "4",
+      "at": "`{runAt}`",
+      "show": "結果列「✓ {result}」由左往右印出",
+      "moves": "擦開（結果列，由左）；＋0.4 重拍（結果文字）",
+      "focus": "結果列",
+      "sfx": "success"
+    },
+    {
+      "if": "runAt && bands==2",
+      "beat": "5",
+      "at": "`{runAt}`",
+      "show": "結果列「✓ {result}」由左往右印出",
+      "moves": "擦開（結果列，由左）；＋0.4 重拍（結果文字）",
+      "focus": "結果列",
+      "sfx": "success"
+    }
+  ]
+}

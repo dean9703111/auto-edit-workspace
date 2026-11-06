@@ -2,7 +2,7 @@
 
 給 `auto-edit-review` 流程 F 用。使用者在剪輯台右側「修改單」選段、點標籤或寫描述，按「複製給 AI」：待改的段存到 `work/feedback/editor-requests.md`（EDITOR.md「修改單」），剪貼簿只放一行指令「照剪輯台修改單改這 N 段（<檔案路徑>）：…」。使用者貼上這行、說「照修改單改」或貼上開頭是「# 剪輯台修改單」的文字，就照這份做。
 
-修改單就是使用者確認過的改法：**直接做**，不開 `versions.mjs new`、不寫分鏡提案、不停停點 ③。這仍是一輪回饋（開 `r<N>`，照 `references/feedback-round.md` 備份、存版本）。
+修改單就是使用者確認過的改法：**直接做**，不開 `versions.mjs new`、不寫分鏡提案、不停停點 ③。這仍是一輪回饋：`versions.mjs begin --seg <段,段> --say "照修改單改"` 開始，全部改完跑 `versions.mjs finish`。
 
 ## 1. 讀修改單
 
@@ -32,27 +32,27 @@
 
 | 這段要改的 | 誰做 |
 |---|---|
-| 情境動畫（`type: "custom"`）的內容 | 一段一個 `worker` 子代理，改自己那支 x 檔 |
-| 資訊卡、字卡要換成情境動畫（「換一種動畫」「以圖像展示為主」） | 你先在 plan.json 把那段改成 `"type": "custom"`、`src`、`layout`，build 一次，再派 `worker` 做新 x 檔 |
-| 資訊卡、字卡只改文字、條目、時間 | 你自己改 plan.json，不用派 |
-| 錄影段的 `marks`、`moves`、`side`、`steps`、換成動畫 | 你自己改 plan.json；換一段錄影可派 `explore` 子代理找（`auto-edit-screen`） |
+| 模板動畫（`template`＋`slots`）的文字、條目、時間 | 你自己改 plan.json，不用派 |
+| 字卡、資訊卡只改文字、條目、時間 | 你自己改 plan.json，不用派 |
+| 字卡、資訊卡、模板動畫要換成別的模板 | 你改 plan.json 那段的 `template`／`scene`＋`slots`（寫法在 `work/分鏡素材/寫法.md`），不用派 |
+| 「換一種動畫」「以圖像展示為主」要專門設計 | 你把那段改成 `"design": true`（拿掉 `template`、`slots`），派設計師（`.agents/skills/auto-edit-motion/references/design-brief.md`）：修改單就是確認過的改法，不用停 ③ |
+| 內容設計動畫的內容；`slots` 做不到的改動 | 一段一個子代理改那支檔，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md` |
+| 錄影段的 `marks`、`moves`、`side`、`steps`、換成動畫 | 你自己改 plan.json；換一段錄影照 `auto-edit-screen` 的筆記挑 |
 
-派工：派之前 build 一次；**同一則回覆一次全部派出**；派工訊息照 `auto-edit-motion` 的派工範本 `worker-brief.md`（AGENTS.md「子代理分工」），把「確認過的動畫分鏡」那節換成：
+**同一則回覆一次全部派出**；派工訊息的「要改什麼」寫：
 
 ```
 修改單（使用者確認過的改法，直接做，不用新分鏡）：
 要改：<標籤>
 描述：<使用者原話>
-現在的動畫分鏡（work/storyboard.md 原文，照上面的改法改）：
-#### 動畫分鏡 <段 id>
-…
+現在的動畫分鏡：照 work/storyboard.md 這段（grep -n -A30 "動畫分鏡 <段 id>" work/storyboard.md），照上面的改法改
 ```
 
-收件、整合照 AGENTS.md「子代理分工」第 2 條。子代理回報的新拍，由你寫回 `work/storyboard.md` 那段的動畫分鏡（下一輪才對得上）。
+收件、整合照 AGENTS.md「子代理分工」第 2 條。
 
 ## 4. 驗收與紀錄
 
-- 全部回來後：`--check`、build、`audit --only <改到的段>`、A3 只看改到的段、`versions.mjs save --seg <改到的段>`（改之後那次）。
-- `work/feedback/r<N>.md`：「原話」寫「照修改單改」＋修改單路徑和段數；「分類」每段一列（個案、改哪段、照哪個標籤或描述）；「改了哪幾段」每段一列，格式固定 `- <段 id>：<做了什麼>`（沒做的寫理由；剪輯台讀這一列，把修改單上那段標「✓ 已改」、可以點「看結果」，所以 id 照修改單的寫、一段一列）；「驗證」貼 build、audit 的結果。
+- 全部回來後跑 `versions.mjs finish`（build、量、存改後版本、寫驗證、記停點 ④），打開它印的圖，只看改到的段。
+- 寫 `work/feedback/r<N>.md`：「分類」每段一列（個案、改哪段、照哪個標籤或描述）；「改了哪幾段」每段一列，格式固定 `- <段 id>：<做了什麼>`（沒做的寫理由；剪輯台讀這一列，把修改單上那段標「✓ 已改」、可以點「看結果」，所以 id 照修改單的寫、一段一列）。
 - 回報（≤ 15 行）每段一行「<段>：<做了什麼>」，加「剪輯台的修改單可以按『清空修改單』」，最後一行是停點 ④。
-- 工具呼叫預算：每段算回饋輪的一項（10 次），情境動畫段另計（一段 18 次）。
+- 工具呼叫預算：每段算回饋輪的一項（6 次），動畫段另計（一段 18 次）。

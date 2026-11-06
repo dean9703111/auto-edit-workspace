@@ -34,7 +34,7 @@ import { SFX_RULES, sfxBudget } from './audio.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
-import { floorRules } from './audit-rules.mjs';
+import { floorRules, atConsts } from './audit-rules.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
 const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'scenes'];
@@ -42,10 +42,10 @@ const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
 const KEYS = {
-  scene: ['id', 'type', 'scene', 'from', 'to', 'duration', 'at', 'anchor', 'slots', 'beats', 'tone', 'sfx', 'sfxExtra', 'css', 'chtag', 'pip', 'sfxVolume', 'note'],
-  fx: ['id', 'type', 'fx', 'from', 'to', 'duration', 'anchor', 'bg', 'vars', 'sfx', 'sfxExtra', 'sfxVolume', 'note'],
-  custom: ['id', 'type', 'src', 'layout', 'from', 'to', 'duration', 'anchor', 'sfx', 'sfxExtra', 'pip', 'sfxVolume', 'clicks', 'note'],
-  media: MEDIA_KEYS,
+  scene: ['id', 'type', 'scene', 'from', 'to', 'duration', 'at', 'anchor', 'slots', 'beats', 'tone', 'sfx', 'sfxExtra', 'css', 'chtag', 'pip', 'sfxVolume', 'note', 'story'],
+  fx: ['id', 'type', 'fx', 'from', 'to', 'duration', 'anchor', 'bg', 'vars', 'sfx', 'sfxExtra', 'sfxVolume', 'note', 'story'],
+  custom: ['id', 'type', 'src', 'template', 'design', 'slots', 'layout', 'from', 'to', 'duration', 'anchor', 'sfx', 'sfxExtra', 'pip', 'sfxVolume', 'clicks', 'note', 'story'],
+  media: [...MEDIA_KEYS, 'story'],
 };
 const DECLICK = 0.02;      // 剪接點兩側的人聲淡入淡出（避免爆音）
 const VOICE_ERR = 1;       // 只有聲音的區間沒被蓋住超過 1 秒就 ✖
@@ -228,11 +228,11 @@ const sfxNames = (conf) => Object.keys(conf).filter((k) => conf[k]?.kind !== 'bg
 const bgmNames = (conf) => Object.keys(conf).filter((k) => conf[k]?.kind === 'bgm');
 
 // ---------- 文字對時（F4）：卡片的主文字出現時間 vs 講到那個詞的時間 ----------
-// 每個情境的主文字欄 → 出現時間由誰決定：'@start'＝段起點（改 from）；其他字串＝beat 名稱（改 beats.<名>）；'[]'＝清單每一項的 at（改 slots.<欄>[i].at）
+// 每個情境的主文字欄 → 出現時間由誰決定：'@start'＝段起點（改 from）；其他字串＝beat 名稱（改 beats.<名>）；'[]'＝清單每一項的 at（改 slots.<欄>[i].at）；'[0]<beat>'＝整欄一起進，看第一項（改 beats.<beat>）
 export const TEXT_BEATS = {
   'side-panel': { title: 'head', items: '[]' },
   'fs-list': { title: '@start', items: '[]' },
-  'fs-compare': { title: '@start', left: '[]', right: '[]' },
+  'fs-compare': { title: '@start', left: '[0]leftAt', right: '[0]rightAt' },   // 整欄一起進：只看第一項，改那一欄的 beat
   'fs-flow': { title: '@start', nodes: '[]' },
   'fs-table': { title: '@start', rows: '[]' },
   'two-sides': { cards: '[]' },
@@ -337,7 +337,11 @@ export function textSyncIssues(it, cues) {
   if (it.type === 'scene' && it.resolved && TEXT_BEATS[it.key]) {
     const ctx = it.resolved.ctx || {}, beats = it.resolved.beats || {}, lists = it.resolved.listTimes || {};
     for (const [f, how] of Object.entries(TEXT_BEATS[it.key])) {
-      if (how === '[]') {
+      if (how.startsWith('[0]')) {
+        const x = Array.isArray(ctx[f]) ? ctx[f][0] : null, beat = how.slice(3);
+        const txt = x?.text_text ?? x?.text ?? Object.values(x || {}).find((v) => typeof v === 'string');
+        if (txt && isNum(lists[f]?.[0])) fields.push({ name: `${f}[0]`, text: txt, at: r3(it.start + lists[f][0]), fix: `beats.${beat}` });
+      } else if (how === '[]') {
         (Array.isArray(ctx[f]) ? ctx[f] : []).forEach((x, i) => {
           const txt = x?.text_text ?? x?.text ?? Object.values(x || {}).find((v) => typeof v === 'string');
           if (txt && isNum(lists[f]?.[i])) fields.push({ name: `${f}[${i}]`, text: txt, at: r3(it.start + lists[f][i]), fix: `slots.${f}[${i}].at` });
@@ -543,7 +547,11 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       const src = String(seg.src ?? '');
       it.key = 'custom'; it.label = `custom ${path.basename(src)}`;
       if (!/^compositions\/x-[\w-]+\.html$/.test(src)) err(`src 要寫成 "compositions/x-<名稱>.html"（第二層動畫放在 work/hyperframes/compositions/），現在是「${src}」`);
-      else {
+      else if (seg.__fillErrors) {
+        // 模板段的 slots 有錯（lib/custom-fill.mjs）：報這些，不用再讀檔
+        seg.__fillErrors.forEach((e) => err(e));
+        it.compId = path.basename(src, '.html'); it.file = src; it.refList = []; it.sfxBeats = [];
+      } else {
         const expect = path.basename(src, '.html');
         const r = readCustom(path.join(outDir, src), expect);
         r.errors.forEach((e) => err(`src（${src}）：${e}`));
@@ -551,7 +559,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         it.refList = r.refs || [];
         it.sfxBeats = r.sfx || [];
         // 剛從 shared/template/custom/ 複製、還沒改的範例：句號是範例的，算得到的照算、算不到的不報 ✖（停點 ③ 前先 build 截圖、派工前 build 一次都要能過）
-        if (untouchedSample(path.join(outDir, src), lib.customDir)) {
+        if (seg.__blank) {
+          it.sample = true;
+          warn(`內容設計動畫還沒做（${src} 是空白畫布）→ 停點 ③ 確認鏡位腳本後照 auto-edit-motion 做`);
+        } else if (untouchedSample(path.join(outDir, src), lib.customDir)) {
           it.sample = true;
           warn(`src（${src}）還是範例原文（還沒做）→ 停點 ③ 確認動畫分鏡後照 auto-edit-motion 改；在那之前畫面是範例、時間不準`);
         }
@@ -876,11 +887,16 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         if (!it.sample && (c.sec < it.start - 0.05 || c.sec > it.end + 0.05)) it.warnings.push(`${it.where} P.at('${ref}') 在 ${fmt(c.sec)}，不在這段 ${fmt(it.start)}–${fmt(it.end)} 裡 → 改綁這段裡的句子，或把 plan.json 這段的 to 延長`);
       }
       // work/storyboard.md 的「#### 動畫分鏡 <段 id>」排不排得下：拍序照講解、範例檔頭【D 下限】（停點 ③ 前就抓，不用等動畫做完）
-      const sheet = beatSheets().get(it.seg?.id);
+      const sheet = beatSheets().get(it.seg?.id) ?? (it.seg?.__sheet ? parseBeatSheets(it.seg.__sheet).get(it.seg.id) : null);
       if (sheet) {
-        let tplRules = [];
-        try { const tpl = templateFor(fs.readFileSync(path.join(outDir, it.file), 'utf8'), lib.customDir); if (tpl) tplRules = floorRules(tpl.html); } catch { /* 檔還沒複製：只比拍序 */ }
-        for (const f of sheetPlanFindings({ item: it, sheet, cues, tplRules })) it.warnings.push(`${it.where} 動畫分鏡：${f.msg} → ${f.fix}`);
+        let tplRules = [], endExtra = 0;
+        try {
+          const html = fs.readFileSync(path.join(outDir, it.file), 'utf8'), tpl = templateFor(html, lib.customDir);
+          if (tpl) tplRules = floorRules(tpl.html);
+          // 沒有「總結那一句」：回均衡排在最後一拍之後（kit 最多提早到 1 秒後），段尾要多留這 1 秒，不然最後一幕停不夠
+          if (tplRules.some((r) => r.lhs === 'D' && r.rhs === 'ALL') && !atConsts(html).ALL) endExtra = 1;
+        } catch { /* 檔還沒複製：只比拍序 */ }
+        for (const f of sheetPlanFindings({ item: it, sheet, cues, tplRules, endExtra })) it.warnings.push(`${it.where} 動畫分鏡：${f.msg} → ${f.fix}`);
       }
     }
   }
@@ -1096,7 +1112,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       if (portrait && fam.some((r) => C.unsafe.some((u) => inter(r, u) > 0))) it.warnings.push(`${it.where} 「${it.scene.zh}」會壓到平台介面的範圍（上 240、下 480、右側按鈕列）→ 用 snapshot 確認，被蓋到就換情境`);
       const area = (speakerBox[2] - speakerBox[0]) * (speakerBox[3] - speakerBox[1]);
       const hit = fam.reduce((s, r) => s + inter(r, speakerBox), 0) / area;
-      if (hit > 0.15) it.warnings.push(`${it.where} 「${it.scene.zh}」大約會蓋到講者框 ${Math.round(hit * 100)}% → 用 snapshot 確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）`);
+      if (hit > 0.15) it.warnings.push(`${it.where} 「${it.scene.zh}」大約會蓋到講者框 ${Math.round(hit * 100)}% → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）`);
     }
   }
 

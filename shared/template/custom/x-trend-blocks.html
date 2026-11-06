@@ -16,11 +16,11 @@
 
   【要改的地方】
   1. 文字：標題列（≤ 10 字）；圖例 #xtrb-key 的「＝ 1 小時」（≤ 6 字）；單位 #xtrb-u0 … 由 DATA 的單位帶出，不用改 HTML。
-  2. 數字：只改 <script> 開頭 DATA 那一行：[[時間標籤, 格數], …]，3–5 組，時間標籤 ≤ 4 字，格數是 1–10 的整數（一格代表多少寫在圖例）；
-     UNIT 那一行是數字後面的單位（≤ 2 字）。方塊、數字、標籤的位置都由程式算，不用改 CSS。這支沒有圖示（方塊就是圖示）。
+  2. 數字：只改 <script> 開頭 DATA 那一行：[["時間標籤", 格數], …]（JSON 寫法，字串用雙引號），3–5 組，時間標籤 ≤ 4 字，格數是 1–10 的整數（一格代表多少寫在圖例）；
+     UNIT 那一行是數字後面的單位（≤ 2 字，也用雙引號）。方塊、數字、標籤的位置都由程式算，不用改 CSS。這支沒有圖示（方塊就是圖示）。
   3. 綁句：<script> 開頭 T1–T4 的句號與詞（見【綁句欄位】）；最後一組那行 P.sfx 的句號跟著 T4 改。
   4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
-  只有 3 組：DATA 刪一組、刪掉 const T4 那一段（「, T4 = P.at(…)」）和「第 4 組」那 1 行，最後一組的 P.sfx 句號改成 T3 的；5 組：DATA 加一組，照樣加 T5 和一行 stack(4, T5)（stack 的第一個數字從 0 起算）。
+  只有 3 組：DATA 刪一組、刪掉 const T4 那一段（「, T4 = P.at(…)」）和「第 4 組」那 1 行，最後一組的 P.sfx 句號與 TLAST（最後一組的時刻）改成 T3 的；5 組：DATA 加一組，照樣加 T5 和一行 stack(4, T5)（stack 的第一個數字從 0 起算），P.sfx 句號與 TLAST 改成 T5 的。
 
   【綁句欄位】
   T1 = P.at('#282@8')、T2 = P.at('#283@6')、T3 = P.at('#284@4')、T4 = P.at('#285@2')：講到那一組數字的時刻，那一疊方塊開始掉、數字開始數（數到時方塊剛好疊完）。
@@ -73,7 +73,7 @@
        data-cues-sample='{"start":0,"D":13.2,"cues":{"282":[2.0,4.3],"283":[4.4,6.8],"284":[6.9,9.2],"285":[9.3,12.6]},"refs":{"#282@8":2.2,"#283@6":4.7,"#284@4":7.2,"#285@2":9.8}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xtrb-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">每集剪輯時間</span><div id="xtrb-key" class="sc-pill" data-snap-width><i id="xtrb-kb"></i><span class="sc-opt">＝ 1 小時</span></div></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">每集剪輯時間</span><div id="xtrb-key" class="sc-pill" data-snap-width><i id="xtrb-kb"></i><span class="sc-opt" data-fill="key">＝ 1 小時</span></div></div>
       <div id="xtrb-body" data-layout="col">
         <div id="xtrb-chart" data-slot>
           <svg id="xtrb-axis-svg" viewBox="0 0 1064 496" xmlns="http://www.w3.org/2000/svg"><line id="xtrb-axis" x1="0" y1="424" x2="1064" y2="424" /></svg>
@@ -89,11 +89,11 @@
     const P = SceneMotion(tl, document.getElementById('x-trend-blocks'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#282@8'), T2 = P.at('#283@6'), T3 = P.at('#284@4'), T4 = P.at('#285@2');   // 講到每一組數字的時刻
-    P.sfx('impact', '#285@2');                         // 最後一組落定一顆音效（句號和 T4 一樣）
+    const T1 = P.at('#282@8'), T2 = P.at('#283@6'), T3 = P.at('#284@4'), T4 = P.at('#285@2');   // 講到每一組數字的時刻  // @sub n==3: const T1 = P.at('#282@8'), T2 = P.at('#283@6'), T3 = P.at('#284@4'); @@ n==5: const T1 = P.at('#282@8'), T2 = P.at('#283@6'), T3 = P.at('#284@4'), T4 = P.at('#285@2'), T5 = P.at('#286@1');
+    P.sfx('impact', '#285@2');                         // 最後一組落定一顆音效（句號和 T4 一樣）  // @sub n==3: P.sfx('impact', '#284@4'); @@ n==5: P.sfx('impact', '#286@1');
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const DATA = [ ['第 1 集', 8], ['第 5 集', 6], ['第 10 集', 4], ['現在', 2] ];   // 只改這一行：[時間標籤, 格數 1–10]，3–5 組
-    const UNIT = '小時';                                 // 數字後面的單位（≤ 2 字）
+    const DATA = [["第 1 集",8],["第 5 集",6],["第 10 集",4],["現在",2]];   // 只改這一行：[時間標籤, 格數 1–10]，3–5 組
+    const UNIT = "小時";                                 // 數字後面的單位（≤ 2 字）
 
     // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，每次載入結果相同）──
     // 每一疊寬 128，第一疊 left 40、最後一疊 left 896，等距；第 i 格在第 floor(i/2) 層、左右第 i%2 格，一層高 68，最下層 top 356
@@ -132,9 +132,11 @@
     stack(0, T1);
     stack(1, T2);
     stack(2, T3);
-    stack(3, T4);   // 第 4 組
+    stack(3, T4);   // 第 4 組  // @if n>=4
+    // @sub n==5: stack(4, T5);
     // 收：最後一組落定（數完那一刻）重拍；完成態停到段尾
-    const LAST = '#xtrb-v' + (n - 1), TE = T4 + 0.06 * (Math.max(1, Math.min(10, Math.round(DATA[n - 1][1]))) - 1) + 0.4;
+    const TLAST = T4;                                  // 最後一組的時刻  // @sub n==3: const TLAST = T3; @@ n==5: const TLAST = T5;
+    const LAST = '#xtrb-v' + (n - 1), TE = TLAST + 0.06 * (Math.max(1, Math.min(10, Math.round(DATA[n - 1][1]))) - 1) + 0.4;
     P.punch(LAST, TE, { scale: 1.15 });
 
     P.end();                                           // 長度＝plan.json 這段的長度

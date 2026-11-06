@@ -1,0 +1,146 @@
+{
+  "template": "x-callout-phone",
+  "prefix": "xcph",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "介紹一個 App 或產品的 2–4 個功能、特色；中間一支手機，講到哪個功能，手機送出一圈漣漪、那個功能的膠囊從旁邊彈出，講到總結那一句手機畫面打勾",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "screen": {
+      "label": "手機一開始的畫面（選填，沒寫＝blank；總結時換成打勾）",
+      "type": "enum",
+      "options": [
+        "blank",
+        "video",
+        "shorts",
+        "qr"
+      ]
+    },
+    "items": {
+      "label": "功能",
+      "type": "list",
+      "min": 2,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "功能名",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "icon": {
+          "label": "圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到功能名的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    },
+    "all": {
+      "label": "講到總結那一句的時間（選填；沒有就最後一個功能講完 2 秒收，也不放完成音）",
+      "type": "at",
+      "ref": "ALL"
+    }
+  },
+  "sample": {
+    "title": "旅遊 eSIM 怎麼用",
+    "screen": "blank",
+    "items": [
+      {
+        "text": "下載就能用",
+        "icon": "upload",
+        "at": "#232@下載"
+      },
+      {
+        "text": "不用換卡",
+        "icon": "check",
+        "at": "#233@不用換卡"
+      },
+      {
+        "text": "安卓也能用",
+        "icon": "smartphone",
+        "at": "#234@安卓"
+      },
+      {
+        "text": "隨時加值",
+        "icon": "zap",
+        "at": "#235@加值"
+      }
+    ],
+    "all": "#236"
+  },
+  "sampleMin": {
+    "title": "旅遊 eSIM 怎麼用",
+    "items": [
+      {
+        "text": "安卓也能用",
+        "icon": "smartphone",
+        "at": "#234@安卓"
+      },
+      {
+        "text": "隨時加值",
+        "icon": "zap",
+        "at": "#235@加值"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "中間一支手機（插圖）",
+      "moves": "彈出（手機）",
+      "focus": "手機"
+    },
+    {
+      "beat": "2",
+      "at": "段起點＋1.2",
+      "show": "手機背後三圈同心圓",
+      "moves": "錯拍彈出（同心圓，由內往外）",
+      "focus": "均衡"
+    },
+    {
+      "each": "items",
+      "beat": 3,
+      "at": "`{at}`",
+      "show": "功能 {n}「{text}」膠囊＋圖示，從手機旁邊彈出",
+      "moves": "漣漪（手機）；彈出（膠囊）；＋0.12 逐字上浮（功能名）；＋0.15 圖示描線；＋0.6 聚焦（膠囊）",
+      "focus": "功能 {n}"
+    },
+    {
+      "if": "all",
+      "beat": "收",
+      "at": "`{all}`",
+      "show": "全部膠囊亮回；手機畫面打勾",
+      "moves": "回均衡；＋0.1 淡入（手機畫面打勾）；＋0.15 漣漪（手機）",
+      "focus": "整體",
+      "sfx": "success"
+    },
+    {
+      "if": "!all",
+      "beat": "收",
+      "at": "`{last.at}`＋2.0",
+      "show": "全部膠囊亮回；手機畫面打勾",
+      "moves": "回均衡；＋0.1 淡入（手機畫面打勾）；＋0.15 漣漪（手機）",
+      "focus": "整體"
+    }
+  ]
+}

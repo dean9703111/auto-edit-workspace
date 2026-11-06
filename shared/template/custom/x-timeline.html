@@ -86,7 +86,7 @@
        data-cues-sample='{"start":0,"D":17.5,"cues":{"131":[2.9,5.9],"132":[6.0,8.9],"133":[9.0,11.9],"134":[12.0,15.0]},"refs":{"#131@2019":3.1,"#132@2022":6.1,"#133@2024":9.1,"#134@今年":12.1}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xtl-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">我的拍片歷程</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">我的拍片歷程</span></div>
       <div id="xtl-body" data-layout="row" data-gap="md">
         <svg id="xtl-track" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg" data-layout-ignore>
           <line id="xtl-axis" />
@@ -97,33 +97,35 @@
           <circle id="xtl-dot1" class="xtl-dot" r="18" />
           <circle id="xtl-dot2" class="xtl-dot" r="18" />
           <circle id="xtl-dot3" class="xtl-dot" r="18" />
-          <circle id="xtl-dot4" class="xtl-dot" r="18" />
+          <circle id="xtl-dot4" class="xtl-dot" r="18" /> <!-- @if n>=4 -->
           <circle id="xtl-don1" class="xtl-don" r="18" />
           <circle id="xtl-don2" class="xtl-don" r="18" />
           <circle id="xtl-don3" class="xtl-don" r="18" />
-          <circle id="xtl-don4" class="xtl-don" r="18" />
+          <circle id="xtl-don4" class="xtl-don" r="18" /> <!-- @if n>=4 -->
         </svg>
         <i id="xtl-head" data-layout-allow-overlap></i>   <!-- 目前位置點疊在站點上面 -->
         <div id="xtl-p1" class="xtl-pt" data-slot>
           <div id="xtl-n1" class="xtl-node">
-            <span id="xtl-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path d="m6.2 5.3 3.1 3.9" /> <path d="m12.4 3.4 3.1 4" /> <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2019</span></div>
-          <div id="xtl-c1" class="xtl-cap sc-t52 sc-w700 sc-opt">開始拍片</div>
+            <span id="xtl-ico1" class="sc-icon" data-fill="items.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /> <path d="m6.2 5.3 3.1 3.9" /> <path d="m12.4 3.4 3.1 4" /> <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt" data-fill="items.1.text">2019</span></div>
+          <div id="xtl-c1" class="xtl-cap sc-t52 sc-w700 sc-opt" data-fill="items.1.desc">開始拍片</div>   <!-- @sub items.1.desc2: <div id="xtl-c1" class="xtl-cap sc-t52 sc-w700 sc-opt">{{items.1.desc|text}}<br>{{items.1.desc2|text}}</div> -->
         </div>
         <div id="xtl-p2" class="xtl-pt" data-slot>
           <div id="xtl-n2" class="xtl-node">
-            <span id="xtl-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2022</span></div>
-          <div id="xtl-c2" class="xtl-cap sc-t52 sc-w700 sc-opt">改用手機</div>
+            <span id="xtl-ico2" class="sc-icon" data-fill="items.2.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt" data-fill="items.2.text">2022</span></div>
+          <div id="xtl-c2" class="xtl-cap sc-t52 sc-w700 sc-opt" data-fill="items.2.desc">改用手機</div>   <!-- @sub items.2.desc2: <div id="xtl-c2" class="xtl-cap sc-t52 sc-w700 sc-opt">{{items.2.desc|text}}<br>{{items.2.desc2|text}}</div> -->
         </div>
         <div id="xtl-p3" class="xtl-pt" data-slot>
           <div id="xtl-n3" class="xtl-node">
-            <span id="xtl-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">2024</span></div>
-          <div id="xtl-c3" class="xtl-cap sc-t52 sc-w700 sc-opt">多機錄影</div>
+            <span id="xtl-ico3" class="sc-icon" data-fill="items.3.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt" data-fill="items.3.text">2024</span></div>
+          <div id="xtl-c3" class="xtl-cap sc-t52 sc-w700 sc-opt" data-fill="items.3.desc">多機錄影</div>   <!-- @sub items.3.desc2: <div id="xtl-c3" class="xtl-cap sc-t52 sc-w700 sc-opt">{{items.3.desc|text}}<br>{{items.3.desc2|text}}</div> -->
         </div>
+        <!-- @if n>=4 { -->
         <div id="xtl-p4" class="xtl-pt" data-slot>
           <div id="xtl-n4" class="xtl-node">
-            <span id="xtl-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt">今年</span></div>
-          <div id="xtl-c4" class="xtl-cap sc-t52 sc-w700 sc-opt">交給 AI</div>
+            <span id="xtl-ico4" class="sc-icon" data-fill="items.4.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span><span class="xtl-lab sc-t72 sc-w900 sc-opt" data-fill="items.4.text">今年</span></div>
+          <div id="xtl-c4" class="xtl-cap sc-t52 sc-w700 sc-opt" data-fill="items.4.desc">交給 AI</div>   <!-- @sub items.4.desc2: <div id="xtl-c4" class="xtl-cap sc-t52 sc-w700 sc-opt">{{items.4.desc|text}}<br>{{items.4.desc2|text}}</div> -->
         </div>
+        <!-- @} -->
       </div>
     </div>
   </div>
@@ -134,7 +136,7 @@
     const P = SceneMotion(tl, document.getElementById('x-timeline'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#131@2019'), T2 = P.at('#132@2022'), T3 = P.at('#133@2024'), T4 = P.at('#134@今年');   // 講到每個時間點的時刻
+    const T1 = P.at('#131@2019'), T2 = P.at('#132@2022'), T3 = P.at('#133@2024'), T4 = P.at('#134@今年');   // 講到每個時間點的時刻  // @sub n==3: const T1 = P.at('#131@2019'), T2 = P.at('#132@2022'), T3 = P.at('#133@2024');
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     // 0. 版面：點（卡片＋說明）由 #xtl-body 的 data-layout 排好（kit/scene-layout.js），這裡只讀，載入時算一次、每次結果相同（以下都不用改）
     const L = window.SceneLayout, BODY = document.getElementById('xtl-body');
@@ -182,15 +184,17 @@
     P.stroke('#xtl-don3', T3, { dur: 0.3 });  P.ripple('#xtl-head', T3);
     P.pop('#xtl-n3', T3, { from: 0.82, dy: 60 });  P.chars('#xtl-c3', T3 + 0.14);  P.icon('#xtl-ico3', T3 + 0.18);
     P.spot('#xtl-n1, #xtl-n2, #xtl-n3', '#xtl-n3', T3 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c2', T3 + 0.6, { to: 0.5 });
+    // @if n>=4 {
     // 拍 6 第 4 點：同拍 3（3 點時刪掉這 5 行，收尾的 T4 改 T3）
     P.bar('#xtl-fill', T4 - 0.5, { from: F[2], to: F[3], dur: 0.5, ease: P.V2.EASE.move });
     P.along('#xtl-head', '#xtl-axis', T4 - 0.5, { from: F[2], to: F[3], dur: 0.5 });
     P.stroke('#xtl-don4', T4, { dur: 0.3 });  P.ripple('#xtl-head', T4);
     P.pop('#xtl-n4', T4, { from: 0.82, dy: 60 });  P.chars('#xtl-c4', T4 + 0.14);  P.icon('#xtl-ico4', T4 + 0.18);
     P.spot('#xtl-n1, #xtl-n2, #xtl-n3, #xtl-n4', '#xtl-n4', T4 + 0.6, { scale: 1.06, lift: -10 });  P.dim('#xtl-c3', T4 + 0.6, { to: 0.5 });
+    // @}
 
     // 收：最後一點講完 2.6 秒回均衡（站卡全部亮回、說明亮回），完成態停到段尾
-    const TR = T4 + 2.6;
+    const TR = T4 + 2.6;  // @sub n==3: const TR = T3 + 2.6;
     P.spot(ALL, null, TR, { dur: 0.6 });
     P.dim('#xtl-c1, #xtl-c2, #xtl-c3', TR, { to: 1 });
 

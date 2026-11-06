@@ -86,7 +86,7 @@
        data-cues-sample='{"start":0,"D":14.6,"cues":{"92":[3.6,6.2],"93":[6.4,9],"94":[9.2,12.6]},"refs":{"#92@長片":3.6,"#93@短影音":6.4,"#94@逐字稿":9.2}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xbr-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">一支錄影三種用途</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">一支錄影三種用途</span></div>
       <div id="xbr-body" data-layout="row" data-gap="xxl">
         <svg id="xbr-lines" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg">
           <!-- 三條曲線（c）與箭頭頭（h）：d 由 script 照版面算（起點框右緣外 12 → 分支左緣外 12），不用手寫 -->
@@ -94,14 +94,14 @@
           <path id="xbr-h1" class="xbr-line" />
           <path id="xbr-c2" class="xbr-line" />
           <path id="xbr-h2" class="xbr-line" />
-          <path id="xbr-c3" class="xbr-line" />
-          <path id="xbr-h3" class="xbr-line" />
+          <path id="xbr-c3" class="xbr-line" />  <!-- @if n>=3 -->
+          <path id="xbr-h3" class="xbr-line" />  <!-- @if n>=3 -->
         </svg>
-        <div id="xbr-root" data-slot><span id="xbr-rico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="sc-t52 sc-w900 sc-opt">一支錄影</span></div>
+        <div id="xbr-root" data-slot><span id="xbr-rico" class="sc-icon" data-fill="rootIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="sc-t52 sc-w900 sc-opt" data-fill="root">一支錄影</span></div>
         <div id="xbr-col" data-slot data-layout="col" data-justify="start" data-gap="md">
-          <div id="xbr-b1" class="xbr-b" data-slot data-snap-width><i id="xbr-now1" class="xbr-now"></i><span id="xbr-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M7 3v18" /> <path d="M3 7.5h4" /> <path d="M3 12h18" /> <path d="M3 16.5h4" /> <path d="M17 3v18" /> <path d="M17 7.5h4" /> <path d="M17 16.5h4" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt">剪成長片</span></div>
-          <div id="xbr-b2" class="xbr-b" data-slot data-snap-width><i id="xbr-now2" class="xbr-now"></i><span id="xbr-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt">剪短影音</span></div>
-          <div id="xbr-b3" class="xbr-b" data-slot data-snap-width><i id="xbr-now3" class="xbr-now"></i><span id="xbr-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt">出逐字稿</span></div>
+          <div id="xbr-b1" class="xbr-b" data-slot data-snap-width><i id="xbr-now1" class="xbr-now"></i><span id="xbr-ico1" class="sc-icon" data-fill="items.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="18" height="18" x="3" y="3" rx="2" /> <path d="M7 3v18" /> <path d="M3 7.5h4" /> <path d="M3 12h18" /> <path d="M3 16.5h4" /> <path d="M17 3v18" /> <path d="M17 7.5h4" /> <path d="M17 16.5h4" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt" data-fill="items.1.text">剪成長片</span></div>
+          <div id="xbr-b2" class="xbr-b" data-slot data-snap-width><i id="xbr-now2" class="xbr-now"></i><span id="xbr-ico2" class="sc-icon" data-fill="items.2.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt" data-fill="items.2.text">剪短影音</span></div>
+          <div id="xbr-b3" class="xbr-b" data-slot data-snap-width><i id="xbr-now3" class="xbr-now"></i><span id="xbr-ico3" class="sc-icon" data-fill="items.3.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /> </svg></span><span class="xbr-txt sc-t52 sc-w900 sc-opt" data-fill="items.3.text">出逐字稿</span></div>  <!-- @if n>=3 -->
         </div>
       </div>
     </div>
@@ -113,10 +113,10 @@
     const P = SceneMotion(tl, document.getElementById('x-branch'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const B1 = P.at('#92@長片'), B2 = P.at('#93@短影音'), B3 = P.at('#94@逐字稿');   // 講到第 1–3 條分支名稱的時刻
+    const B1 = P.at('#92@長片'), B2 = P.at('#93@短影音'), B3 = P.at('#94@逐字稿');   // 講到第 1–3 條分支名稱的時刻  // @sub n==2: const B1 = P.at('#92@長片'), B2 = P.at('#93@短影音');   // 講到第 1–2 條分支名稱的時刻
 
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const ALL = '#xbr-b1, #xbr-b2, #xbr-b3';   // 三條分支（2 條時拿掉 b3）
+    const ALL = '#xbr-b1, #xbr-b2, #xbr-b3';   // 三條分支（2 條時拿掉 b3）  // @sub n==2: const ALL = '#xbr-b1, #xbr-b2';   // 兩條分支
     const MERGE = false;                       // 匯流（2–3 個來源 → 一個結果）改 true，見檔頭變體表
 
     // 0. 曲線與箭頭頭照版面算（kit/scene-layout.js 的 data-links 只有直線／L 形，一分多的曲線在這裡用同一套 token）：
@@ -133,7 +133,7 @@
     });
 
     // 0. 每條曲線複製一份虛線預告層（只在載入時建 DOM，不讀版面量測，每次結果相同）
-    ['#xbr-c1', '#xbr-c2', '#xbr-c3'].forEach(function (id) {
+    ['#xbr-c1', '#xbr-c2', '#xbr-c3'].forEach(function (id) {  // @sub n==2: ['#xbr-c1', '#xbr-c2'].forEach(function (id) {
       var p = $q(id)[0], g = p.cloneNode(false); g.removeAttribute('id'); g.setAttribute('class', 'xbr-ghost'); p.parentNode.insertBefore(g, p.parentNode.firstChild);
     });
 
@@ -142,8 +142,8 @@
     else { P.wipe('#xbr-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xbr-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xbr-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     // 拍 1 骨架：起點與三條分支錯拍彈出（間隔 0.12），＋0.15 圖示描線
-    P.pop('#xbr-root, #xbr-b1, #xbr-b2, #xbr-b3', 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
-    P.icon('#xbr-rico, #xbr-ico1, #xbr-ico2, #xbr-ico3', 1.15, { stagger: 0.12 });
+    P.pop('#xbr-root, #xbr-b1, #xbr-b2, #xbr-b3', 1.0, { stagger: 0.12, from: 0.7, dy: 40 });  // @sub n==2: P.pop('#xbr-root, #xbr-b1, #xbr-b2', 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
+    P.icon('#xbr-rico, #xbr-ico1, #xbr-ico2, #xbr-ico3', 1.15, { stagger: 0.12 });  // @sub n==2: P.icon('#xbr-rico, #xbr-ico1, #xbr-ico2', 1.15, { stagger: 0.12 });
     // 拍 2 預告：起點到每條分支的虛線淡入、一直往前流
     P.in('.xbr-ghost', 1.5, { stagger: 0.1 });
     // 拍 3 等待：預覽態（三條分支壓暗縮小，起點維持亮）＋鏡頭慢推，推到第 1 條前 0.2 秒
@@ -164,6 +164,7 @@
     P.spot(ALL, '#xbr-b2', B2, { scale: 1.06, lift: -12 });
     P.out('#xbr-now1', B2);  P.in('#xbr-now2', B2);
     P.ripple('#xbr-ico2', B2 + 0.05, { to: 2.4 });
+    // @if n>=3 {
     // 拍 6 第 3 條：同拍 5（2 條時刪掉這一組 6 行）
     P.comet('#xbr-c3', B3 - 0.85, { dur: 0.75 });
     P.stroke('#xbr-h3', B3 - 0.12, { dur: 0.15 });
@@ -171,11 +172,12 @@
     P.spot(ALL, '#xbr-b3', B3, { scale: 1.06, lift: -12 });
     P.out('#xbr-now2', B3);  P.in('#xbr-now3', B3);
     P.ripple('#xbr-ico3', B3 + 0.05, { to: 2.4 });
+    // @}
 
     // 收：最後一條講完 2.6 秒回均衡（全部亮回、底色收掉、鏡頭回正），完成態停到段尾
-    const TR = B3 + 2.6;   // 選用：講「三條都可以」那句時改成 const TR = P.at('#95@都可以')
+    const TR = B3 + 2.6;   // 選用：講「三條都可以」那句時改成 const TR = P.at('#95@都可以')  // @sub end: const TR = P.at('{{end}}'); @@ n==2: const TR = B2 + 2.6;
     P.spot(ALL, null, TR, { dur: 0.6 });
-    P.out('#xbr-now3', TR);
+    P.out('#xbr-now3', TR);  // @sub n==2: P.out('#xbr-now2', TR);
     P.cam('#xbr-card', TR, { x: 0, y: 0, scale: 1, dur: 0.6 });
 
     P.end();                                           // 長度＝plan.json 這段的長度

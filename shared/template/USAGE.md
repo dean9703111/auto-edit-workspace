@@ -26,22 +26,19 @@
 
 | # | 做什麼 | 指令 | 查 | 停？ |
 |---|---|---|---|---|
-| 1 | 看 `AGENTS.md`「停點總表」；規則照 `shared/style.md` | — | | |
-| 2 | 先做講者調光＋瘦臉（第 7 節：`look.mjs status` 的「→ 下一步」下面那一行是指令，整行複製執行；跑完看 `work/look-preview.jpg`）；再確認構圖（2.2 第 0 步，構圖台給使用者拖框、寫進 `frame`）；列出字幕每一句的句號與內容；看場地照量 `speakerBox`。有螢幕錄影／圖片，或主軌接過聲音檔（只有聲音的區間）時，掃素材、看 contact sheet（`work/media/index.md` 也會列出只有聲音的區間） | `node shared/template/tools/look.mjs status --project projects/<專案>`；2.2；`node shared/template/tools/qc.mjs framing --project projects/<專案>`；`node shared/template/tools/media.mjs scan --project projects/<專案>` | 第 7 節、R4、第 5 節 | **停點 ②** |
-| 3 | 確認字幕沒有超過 18 字（直式 10 字；剪乾淨已經用 srt-align 排成完整語句） | `node shared/template/tools/build.mjs --project projects/<專案> --check`（暫時的 plan.json，2.4） | | |
-| 4 | 挑情境、配螢幕錄影與圖片，列分鏡表，每段截圖，情境動畫段附動畫分鏡，存成 `work/storyboard.md` | `node shared/template/tools/build.mjs --project projects/<專案> --scaffold`（產生 `work/分鏡素材.md`：字幕編號、章節、情境對照、每種情境的寫法）；`node shared/template/tools/qc.mjs storyboard --project projects/<專案>` | `SITUATIONS.md`、`BEATS.md`、R2、R6、第 5 節 | **停點 ③** |
-| 5 | 寫 `work/hyperframes/plan.json` | — | 第 3 節 | |
-| 6 | 只檢查、不寫檔；✖ 全部修掉，⚠ 照第 4 節處理 | `node shared/template/tools/build.mjs --project projects/<專案> --check` | 第 4 節 | |
-| 7 | 產生整個 HyperFrames 專案 | `node shared/template/tools/build.mjs --project projects/<專案>` | | |
-| 8 | HyperFrames 靜態與執行期檢查；有情境動畫時再跑版面量測（✖ 全部修掉） | `cd projects/<專案>/work/hyperframes && npx hyperframes check --caption-zone "x0=0;y0=0.852;x1=1;y1=1;severity=error"`（直式的字幕區不同：照 build 印的那一行跑）；`node shared/template/tools/audit.mjs --project projects/<專案>` | R8、R7.6 | |
-| 9 | 截圖自己看（check 0 issues 不代表版面對） | `cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review` | 2.5 | |
-| 10 | 開完成影片預覽，把網址給使用者 | `node shared/template/tools/editor.mjs --project projects/<專案>` | 2.6 | **停點 ④** |
-| 11 | 測試片段（3–5 秒）→ 看觀影總表 → 完整 render | 2.7；`node shared/template/tools/qc.mjs observe --project projects/<專案> --file <測試片段> --offset <起點>` | | |
-| 12 | 觀影總表整片看一遍、驗收，附輸出給使用者 | `node shared/template/tools/qc.mjs observe --project projects/<專案>`；2.8 | `REVIEW.md` | |
+| 1 | 調光瘦臉、素材盤點、構圖（只有聲音就跳過構圖） | `look.mjs status`、`media.mjs scan`、`qc.mjs framing`＋`editor.mjs` | 第 7 節、2.2、第 5 節 | **停點 ②** |
+| 2 | 量講者框、產生分鏡素材 | `qc.mjs speaker --write`、`build.mjs --scaffold` | 2.2 | |
+| 3 | 分章寫草稿（一份一個子代理）、合併 | `build.mjs --check-draft work/drafts/chNN.json`、`build.mjs --merge-drafts` | `work/分鏡素材/` | |
+| 4 | 內容設計動畫寫鏡位腳本（一段一個設計師） | `auto-edit-motion` 的 `references/design-brief.md` | style.md「內容設計動畫」 | |
+| 5 | 截圖、產生分鏡表 | `build.mjs --storyboard` | 2.3 | **停點 ③** |
+| 6 | 套回修改；內容設計動畫從空白畫布做 | `build.mjs --apply-storyboard`；`audit.mjs --only <段> --shots --sheet` | | |
+| 7 | build＋量測＋完成態拼圖＋開預覽；背景先 render | `build.mjs --review` | `REVIEW.md`、2.6 | **停點 ④** |
+| 8 | 修改：一輪回饋 | `versions.mjs begin --seg <段> --say "…"`、`versions.mjs finish` | | |
+| 9 | 輸出並驗收 | `deliver.mjs` | 2.7、2.8 | |
 
 理由：改分鏡表只要改一行字，改完成影片要等好幾分鐘 render。所以順序是「分鏡 → 檢查 → 截圖 → 完成影片預覽 → 短片段 → 整支」。
 
-使用者說「打開剪輯台」時（任何一步之後都可以），照 `shared/template/EDITOR.md` 開；剪輯台存檔後重跑步驟 6–7，剪輯台寫了哪些欄位見第 6 節。
+使用者說「打開剪輯台」時（任何一步之後都可以），照 `shared/template/EDITOR.md` 開；剪輯台存檔後重跑 `build.mjs --review`，剪輯台寫了哪些欄位見第 6 節。
 
 ### 2.1 不用 Plan 模式
 
@@ -127,7 +124,7 @@
 - 圖在 `work/hyperframes/.hyperframes/artifacts/snapshots/<一串 id>/`，指令結尾會印出完整路徑。
 - 先看 `review-beats.jpg`：每段至少兩格（檔名 `beat-NN-at-秒數.png`）。段起點後 0.3 秒那格**還在進場動畫中**（字被遮罩切一半、面板還在滑入，都是正常的）；**判斷版面看段中間那格**。再看 `review-seam-NN.jpg`（每個接縫前後 5 格）；`review-phone.jpg` 是手機寬度。
 - 逐張確認：卡片沒擋到講者的臉；文字沒被切掉、沒超出卡片、沒斷在詞中間；字幕在底部、只有一行、中文是黑體；子母畫面裡的講者沒被切到頭；側邊欄期間講者完整在右半邊。
-- `--check` 的「大約會蓋到講者框 N%」：snapshot 看到擋臉，就用 `css` 移位（R4）或換情境。只壓到身體、臉沒擋到，就保留，給使用者看預覽時點名請他確認（靜態照片看不出手勢會比到哪）。
+- `--check` 的「大約會蓋到講者框 N%」：截圖看到擋臉，就用 `css` 移位（R4）或換情境。只壓到身體、臉沒擋到，就保留，給使用者看預覽時點名請他確認（靜態照片看不出手勢會比到哪）。
 - 示範影片本身燒了「原始時間 00:xx」黑框和「測試用場地示意圖」黃字，不是版面問題。
 - 要看特定時間：`npx hyperframes snapshot --at 38.5,45.2 --no-end -o ../../output/qc`（另外產生 `contact-sheet.jpg`）。
 
@@ -138,59 +135,34 @@
 3. 使用者直接說段落編號（例「s05 的金句卡」）時，直接改 plan.json 的那個 `id`。他說「這張卡」「我選的」時，請他說段號或大約第幾秒。
    - 使用者說「第 X 秒那張卡」：看 `--check` 報告的「起–迄」欄，X 落在哪一段就是哪一段（例：75 秒 → `s04｜15 金句字卡｜1:13.26–1:18.40`）。
 4. 把要求寫進 plan.json 那一段：文字改 `slots`，時間改 `from`／`to`／`at`，位置改 `css`（R4）。重跑 `--check` 與 build。剪輯台的預覽會自動換成新版；畫面沒變就重新整理頁面。
-5. 改到的段在改之前、build 之後各跑一次 `node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>`；使用者沒說怎麼改、只說要更好（「s12 想更完善」「重新設計」），或要退回舊版（「s12 用 v1」），照 AGENTS.md「段落版本與改版」。
+5. 回饋輪用 `node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段> --say "原話"` 開始、`versions.mjs finish` 結束，備份與版本都由工具做（只想單獨存一版：`node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>`，平常不用）；使用者沒說怎麼改、只說要更好（「s12 想更完善」「重新設計」），或要退回舊版（「s12 用 v1」），照 AGENTS.md「段落版本與改版」。
 6. 產生檔被手改過（舊專案可能在 Studio 拖過東西）時，build 會印出下面其中一則。先看改了什麼，把要保留的搬進 plan.json，再 `node shared/template/tools/build.mjs --project projects/<專案> --force`。
    - `⚠ 這些檔被手改過，沒有覆寫：… → 把改動搬進 plan.json 後加 --force`
    - `work/hyperframes/index.html 被手改過（可能是舊專案在 Studio 存檔）：…再加 --force 重跑`（build 整個停下來）
 
 ### 2.7 render
 
-測試片段：提示詞有指定位置就照提示詞（例：「第一張資訊卡出現的地方」）；沒指定就挑第一段有子母畫面或側邊欄的；有插入螢幕錄影時，再挑一段有紅框或放大鏡的。起點用 `--check` 報告裡那段的起點秒數（有 `edit.cuts` 時報告是完成影片的秒數，`--test` 也用完成影片的秒數）。
-
 ```bash
-node shared/template/tools/build.mjs --project projects/<專案> --test 41,4
-cd projects/<專案>/work/hyperframes && npx hyperframes render -c compositions/test-clip.html --quality draft -o ../../output/test-clips/test-clip.mp4
+node shared/template/tools/deliver.mjs --project projects/<專案> --said "使用者原話"
 ```
 
-- `--test 起點,秒數` 另外產生 `compositions/test-clip.html`，build 結尾會印出可以直接複製的 render 指令。`render` 沒有時間範圍參數，短片段只能這樣做。
-- 只收「起點落在範圍內」的段。起點更早的段會被略過，build 會印 `⚠ s04 在 49.5s 就開始了，測試片段不含這段（要看完整段，把起點改成 49.5）`。
+一條做完：重新產生 → 4 秒測試片段確認有影音 → 整支（成功才換成 `output/final.mp4`，失敗不動舊檔）→ `qc.mjs final`。時間大約和影片一樣長，工具在背景跑、前景最多等 9 分鐘；結束碼 75 就再跑一次同一條（接著等，不會重跑）。全文 log 在 `work/render.log`。
 
-完整 render（`--quality draft` 只用來測試，交付一律 `looks`）：
-
-```bash
-cd projects/<專案>/work/hyperframes && npx hyperframes render --fps 30 --quality looks --output ../../output/final.mp4
-```
-
-時間大約和影片一樣長（M1 Max 實測：82 秒的影片 75 秒、107 秒的影片 62 秒），較慢的電腦更久。指令有逾時限制、或預估超過 2 分鐘時，改用背景執行並看 log。背景執行一律用 HyperFrames 自己的背景模式：指令前面加環境變數 `HYPERFRAMES_RENDER_DETACHED=1`（`render --help` 沒有列，寫在 HyperFrames 附的 hyperframes-cli Skill）。**不要用 `nohup`、也不要只加 `&`**：render 會盯著啟動它的處理程序，子代理的回合一結束就自己取消，log 最後是 `render_cancelled_parent_exited`。
-
-Mac（zsh／bash）：
-```bash
-cd projects/<專案>/work/hyperframes
-HYPERFRAMES_RENDER_DETACHED=1 npx hyperframes render --fps 30 --quality looks --output ../../output/final.mp4 > ../render.log 2>&1 &
-tail -n 3 ../render.log
-```
-
-Windows（PowerShell）：
-```powershell
-cd projects\<專案>\work\hyperframes
-$env:HYPERFRAMES_RENDER_DETACHED = "1"
-Start-Process -FilePath "npx.cmd" -ArgumentList "hyperframes","render","--fps","30","--quality","looks","--output","../../output/final.mp4" -RedirectStandardOutput "../render.log" -RedirectStandardError "../render.err.log" -WindowStyle Hidden
-Get-Content ..\render.log -Tail 3
-```
-
-每隔一段時間看一次 log；出現 `Render complete` 才算完成。log 停在同一行很久就回報使用者。log 出現 `render_cancelled_parent_exited`：少了 `HYPERFRAMES_RENDER_DETACHED=1`，照上面的指令重跑。
+- `deliver.mjs --prerender`：立刻返回，用低優先權在背景先 render 到 `work/final-prerender.mp4`。`build.mjs --review`、`versions.mjs finish` 會自動開（`--no-prerender` 關）。使用者說「輸出」時內容沒變就直接接手；內容改過就取消重來。存檔不會被擋。
+- `deliver.mjs --cancel`：取消背景輸出和預先 render。
+- 要單獨做測試片段（看某一段 render 出來的樣子）：`build.mjs --test 起點,秒數`，再照 build 印的指令 render。`render` 沒有時間範圍參數，短片段只能這樣做。起點更早的段會被略過，build 會印 `⚠ s04 在 49.5s 就開始了，測試片段不含這段（要看完整段，把起點改成 49.5）`。
 
 ### 2.7b 剪映素材（使用者要求才做）
 
 ```bash
 node shared/template/tools/capcut.mjs --project projects/<專案> --dry-run
 node shared/template/tools/capcut.mjs --project projects/<專案> --background
-node shared/template/tools/capcut.mjs status --project projects/<專案>
+node shared/template/tools/capcut.mjs status --project projects/<專案> --wait
 ```
 
 - 先跑 `build.mjs --capcut`（工具自己跑）：每段一支 `compositions/capcut-<段>.html`（透明底、沒有字幕、角標與主軌聲音；半畫面段連講者一起，因為講者被推到右邊）、一支主軌 `compositions/capcut-main.html`，清單 `work/hyperframes/capcut.json`。
 - 再逐支 render 到 `output/capcut/`：每段 `NN_<段>_<起點>.mov`（`--format mov`＝ProRes 4444、有透明通道、帶那段的音效）、`主軌.mp4`、`字幕.srt`（照畫面上實際顯示的時間）、`清單.md`。合成和底片都沒變的會略過；`--only s05,s12` 只做幾段；`--no-main` 不做主軌。
-- 每段約 30 秒 render、5 秒的段約 30 MB；整集常常超過 5 分鐘，所以用 `--background`，每 30 秒跑一次 `status`。
+- 每段約 30 秒 render、5 秒的段約 30 MB；預設同時 3 支（`--jobs N`）。用 `--background`，再跑 `status --wait`（等到做完或快逾時才印一行，不用輪詢）。
 - 不輸出：章節角標、疊加卡期間講者的慢推（剪映用文字、關鍵影格補）。
 
 ### 2.8 驗收（附輸出給使用者）
@@ -342,7 +314,7 @@ HyperFrames <版本>（package.json 釘 <版本>）
 ⚠ 沒有畫面的區間共 3 段、35.25s → 照 style.md「連續覆蓋」補卡片或情境動畫，或把前一段的 to 延到下一段的 from（0 秒相接）；故意留給講者的就在 plan.json 寫 "rhythm": "spaced"
 ⚠ [s02 concept] 音效 pop（17.623s）和 s01 的音效只差 2.427s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 s01 寫 "sfx": null
 ⚠ [s03 summary] 和前一段 s02 之間只空 0.50s，講者會閃一下 → s02 改 "to": "#8"（0 秒相接），或拉開到 1.0s 以上
-⚠ [s03 summary] 「總結字卡」大約會蓋到講者框 29% → 用 snapshot 確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）
+⚠ [s03 summary] 「總結字卡」大約會蓋到講者框 29% → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）
 ⚠ [s04 side-panel] 講者右移 480 後右緣到 2120，超出畫面 → plan.json 設 "sideShift": 0（講者本來就在面板外），或改用 04a 全畫面清單
 ⚠ [s05 fx 29] 和前一段 s04 之間只空 0.50s，講者會閃一下 → s04 改 "to": "#14"（0 秒相接），或拉開到 1.0s 以上
 ⚠ 講者瘦臉略過：抽樣 12 格都沒偵測到臉 → 這支只調光；確定有講者就跑 node shared/template/tools/look.mjs run --project projects/<專案> --force
@@ -502,11 +474,8 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 
 ### 5.2 配對流程（AI 看圖＋對字幕）
 
-1. 掃素材：
-   ```bash
-   node shared/template/tools/media.mjs scan --project projects/<專案>
-   ```
-   產生 `work/media/index.md`（每個檔的長度、解析度、有沒有聲音、contact sheet 路徑、每一格的秒數，以及 `rough.mp4` 只有聲音的區間）與 `work/media/<檔名>/sheet-NN.jpg`。
+1. 掃素材：`media.mjs prep` 開工時已經做了（要重掃跑 `node shared/template/tools/media.mjs scan --project projects/<專案>`）。
+   產生 `work/media/index.md`（每個檔的長度、解析度、有沒有聲音、contact sheet 路徑、每一格的秒數，以及 `rough.mp4` 只有聲音的區間）、`work/media/<檔名>/sheet-NN.jpg`（影片）和 `work/media/images/sheet-NN.jpg`（圖片，每頁 12 張，每格標檔名）。盤點由子代理做，每支錄影、每批圖片寫一份 `work/media/notes/<檔名>.json`（`auto-edit-screen` 步驟 1）。
 2. 讀 `index.md`，再**打開每一張 sheet 看圖**。每格左上角是「`#格號 分:秒`」（素材本身的時間）；右上角有黃色小方塊的格子＝畫面在這裡變了（切頁、開視窗、跳出選單），操作通常就從這幾格開始。
 3. 對字幕：讀 `work/rough.srt`，找出講解在講哪個操作，對到 sheet 上做那個操作的格子。
    - `from`／`to` 綁講解的句號（`"#20"`、`"#24e"`），跟資訊卡一樣。
@@ -516,9 +485,9 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
    - 講解停在一個結果畫面講好幾句：那幾句拆一段 `"hold": <素材秒數>` 定格（style.md「螢幕錄影與圖片」）。
    - 圖片沒有時間，只要決定綁哪幾句。
    - 只有聲音的區間：`from` 要在區間起點之前（或剛好），`to` 要在區間結尾之後；句子剛好對不上時，`from`／`to` 可以寫秒數（`rough.mp4` 的秒數，`index.md` 有列）。
-4. 寫進分鏡表（2.3 的 media 列）：素材路徑、`in`（哪張 sheet 第幾格）、要做的運鏡／紅框／放大鏡；表下面逐一列出只有聲音的區間由哪一列蓋住。**停，等確認。**
+4. 寫進草稿（`work/drafts/<份>.json`）的 media 段：`src`、`in`、`from`、`to`，`story` 寫為什麼配這段；分鏡表由工具產生。只有聲音的區間每一段都要被 media 或不透明全幕蓋住。
 5. 要框、要推近、要放大鏡的地方，截格線圖讀座標（5.4），寫 plan.json（5.3）。
-6. `--check` → build → snapshot（看有紅框、放大鏡的那幾秒）→ `--test` 挑一段 media 的測試片段。
+6. `build.mjs --review` 的拼圖看有紅框、放大鏡的那幾格；錄影要確認有在動，看 `qc.mjs final` 的「畫面沒動」。
 
 ### 5.3 寫法
 

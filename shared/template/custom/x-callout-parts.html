@@ -81,24 +81,28 @@
        data-cues-sample='{"start":0,"D":15.7,"cues":{"242":[2.5,5.1],"243":[5.2,7.6],"244":[7.7,10.1],"245":[10.2,12.6],"246":[12.9,15.2]},"refs":{"#242@鏡頭":2.7,"#243@手機":5.4,"#244@雲台":7.9,"#245@三腳架":10.4}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xcpa-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">拍片架拆解</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">拍片架拆解</span></div>
       <div id="xcpa-body" data-layout="row" data-gap="xxl">
         <svg id="xcpa-grid" xmlns="http://www.w3.org/2000/svg" data-layout-ignore><defs><pattern id="xcpa-sq" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 L0 0 L0 40" /></pattern></defs><rect width="1176" height="580" fill="url(#xcpa-sq)" /></svg>
         <div id="xcpa-objwrap" data-slot>
-          <div id="xcpa-obj" data-illus="phoneTripod" data-orient="portrait" data-screen="blank"></div>
+          <div id="xcpa-obj" data-illus="phoneTripod" data-orient="portrait" data-screen="blank"></div> <!-- @sub illus: <div id="xcpa-obj" data-illus="{{illus}}" data-orient="portrait" data-screen="blank"></div> -->
           <svg id="xcpa-lines" xmlns="http://www.w3.org/2000/svg" data-layout-ignore></svg>
-          <b class="xcpa-lbl sc-t40 sc-w700 sc-gray sc-opt">手機拍片架</b>
+          <b class="xcpa-lbl sc-t40 sc-w700 sc-gray sc-opt" data-fill="objName">手機拍片架</b>
           <!-- ══ 部位：data-at＝插圖上的位置（左上 0,0、右下 100,100 的百分比）══ -->
-          <i id="xcpa-p1" class="xcpa-pt" data-at="50,3"></i>
-          <i id="xcpa-p2" class="xcpa-pt" data-at="50,35"></i>
-          <i id="xcpa-p3" class="xcpa-pt" data-at="50,73"></i>
-          <i id="xcpa-p4" class="xcpa-pt" data-at="76,92"></i>
+          <i id="xcpa-p1" class="xcpa-pt" data-at="50,3"></i> <!-- @sub always: <i id="xcpa-p1" class="xcpa-pt" data-at="{{items.1.x}},{{items.1.y}}"></i> -->
+          <i id="xcpa-p2" class="xcpa-pt" data-at="50,35"></i> <!-- @sub always: <i id="xcpa-p2" class="xcpa-pt" data-at="{{items.2.x}},{{items.2.y}}"></i> -->
+          <!-- @if n>=3 { -->
+          <i id="xcpa-p3" class="xcpa-pt" data-at="50,73"></i> <!-- @sub always: <i id="xcpa-p3" class="xcpa-pt" data-at="{{items.3.x}},{{items.3.y}}"></i> -->
+          <!-- @} -->
+          <!-- @if n>=4 { -->
+          <i id="xcpa-p4" class="xcpa-pt" data-at="76,92"></i> <!-- @sub always: <i id="xcpa-p4" class="xcpa-pt" data-at="{{items.4.x}},{{items.4.y}}"></i> -->
+          <!-- @} -->
         </div>
         <div id="xcpa-list" data-slot>
-          <div id="xcpa-t1" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">1</span><span id="xcpa-n1" class="xcpa-name sc-t52 sc-w700 sc-opt">鏡頭</span></div>
-          <div id="xcpa-t2" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">2</span><span id="xcpa-n2" class="xcpa-name sc-t52 sc-w700 sc-opt">手機</span></div>
-          <div id="xcpa-t3" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">3</span><span id="xcpa-n3" class="xcpa-name sc-t52 sc-w700 sc-opt">雲台</span></div>
-          <div id="xcpa-t4" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">4</span><span id="xcpa-n4" class="xcpa-name sc-t52 sc-w700 sc-opt">三腳架</span></div>
+          <div id="xcpa-t1" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">1</span><span id="xcpa-n1" class="xcpa-name sc-t52 sc-w700 sc-opt" data-fill="items.1.text">鏡頭</span></div>
+          <div id="xcpa-t2" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">2</span><span id="xcpa-n2" class="xcpa-name sc-t52 sc-w700 sc-opt" data-fill="items.2.text">手機</span></div>
+          <div id="xcpa-t3" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">3</span><span id="xcpa-n3" class="xcpa-name sc-t52 sc-w700 sc-opt" data-fill="items.3.text">雲台</span></div> <!-- @if n>=3 -->
+          <div id="xcpa-t4" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">4</span><span id="xcpa-n4" class="xcpa-name sc-t52 sc-w700 sc-opt" data-fill="items.4.text">三腳架</span></div> <!-- @if n>=4 -->
         </div>
       </div>
     </div>
@@ -111,8 +115,8 @@
     const P = SceneMotion(tl, document.getElementById('x-callout-parts'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#242@鏡頭'), T2 = P.at('#243@手機'), T3 = P.at('#244@雲台'), T4 = P.at('#245@三腳架');   // 講到每個零件的時刻
-    const ALL = P.at('#246');                        // 講到總結那一句（沒有這句見檔頭【綁句欄位】）
+    const T1 = P.at('#242@鏡頭'), T2 = P.at('#243@手機'), T3 = P.at('#244@雲台'), T4 = P.at('#245@三腳架');   // 講到每個零件的時刻  // @sub n==3: const T1 = P.at('#242@鏡頭'), T2 = P.at('#243@手機'), T3 = P.at('#244@雲台'); @@ n==2: const T1 = P.at('#242@鏡頭'), T2 = P.at('#243@手機');
+    const ALL = P.at('#246');                        // 講到總結那一句（沒有這句見檔頭【綁句欄位】）  // @sub !all && n==4: const ALL = T4 + 2.0; @@ !all && n==3: const ALL = T3 + 2.0; @@ !all && n==2: const ALL = T2 + 2.0;
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 0. 部位 → 圓點、引線、編號圓（以下都不用改；載入時算一次，每次結果相同）
@@ -147,8 +151,8 @@
     // 拍 1–4 每個零件：照順序（3 個以下時刪掉多的那行）；＋0.6 聚焦到那一列
     part(1, T1);  P.spot('#xcpa-t1', '#xcpa-t1', T1 + 0.6, { scale: 1.04, lift: 0, dim: 0.5 });
     part(2, T2);  P.spot('#xcpa-t1, #xcpa-t2', '#xcpa-t2', T2 + 0.6, { scale: 1.04, lift: 0, dim: 0.5 });
-    part(3, T3);  P.spot('#xcpa-t1, #xcpa-t2, #xcpa-t3', '#xcpa-t3', T3 + 0.6, { scale: 1.04, lift: 0, dim: 0.5 });
-    part(4, T4);  P.spot('#xcpa-t1, #xcpa-t2, #xcpa-t3, #xcpa-t4', '#xcpa-t4', T4 + 0.6, { scale: 1.04, lift: 0, dim: 0.5 });   // 第 4 個零件
+    part(3, T3);  P.spot('#xcpa-t1, #xcpa-t2, #xcpa-t3', '#xcpa-t3', T3 + 0.6, { scale: 1.04, lift: 0, dim: 0.5 });  // @if n>=3
+    part(4, T4);  P.spot('#xcpa-t1, #xcpa-t2, #xcpa-t3, #xcpa-t4', '#xcpa-t4', T4 + 0.6, { scale: 1.04, lift: 0, dim: 0.5 });   // 第 4 個零件  // @if n>=4
     // 收：總結那一句 → 回均衡（零件表全部亮回），完成態停到段尾
     P.spot('#xcpa-t1, #xcpa-t2, #xcpa-t3, #xcpa-t4', null, ALL, { dur: 0.6 });
 

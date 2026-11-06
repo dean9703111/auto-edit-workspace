@@ -1,0 +1,189 @@
+{
+  "template": "x-ui-mock-tidy",
+  "prefix": "xuit",
+  "beat": "C",
+  "layout": "fullscreen",
+  "when": "講「本來要開很多軟體、通知一直跳，換成一個工具之後全部在同一個地方」：4 個小視窗歪歪斜斜疊著（名稱 2 字最穩）→ 通知一則一則跳出 → 講到工具，通知消掉、大視窗擦開、小視窗飛進去排成 2×2 → 勾勾「全部歸位」",
+  "slots": {
+    "title": {
+      "label": "大視窗標題",
+      "type": "text",
+      "max": 12,
+      "required": true
+    },
+    "windows": {
+      "label": "小視窗",
+      "type": "list",
+      "min": 4,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "name": {
+          "label": "名稱",
+          "type": "text",
+          "max": 4,
+          "required": true
+        },
+        "icon": {
+          "label": "小視窗圖示",
+          "type": "icon",
+          "required": true
+        }
+      }
+    },
+    "notices": {
+      "label": "通知",
+      "type": "list",
+      "min": 1,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "通知文字",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "icon": {
+          "label": "通知圖示（警示色圓底，例 bell）",
+          "type": "icon",
+          "required": true
+        }
+      }
+    },
+    "doneText": {
+      "label": "完成標籤",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "doneIcon": {
+      "label": "完成標籤的圖示（例 circle-check）",
+      "type": "icon",
+      "required": true
+    },
+    "messAt": {
+      "label": "講到「很亂」的時間（通知、一直跳；通知一則一則跳出；音效 alert）",
+      "type": "at",
+      "ref": "MESS",
+      "required": true
+    },
+    "tidyAt": {
+      "label": "講到工具或「一鍵」的時間（通知消掉、大視窗擦開、小視窗飛進去排成 2×2；音效 shine）。和 messAt 至少差 2.9 秒",
+      "type": "at",
+      "ref": "TIDY",
+      "required": true
+    },
+    "doneAt": {
+      "label": "講到結果的時間（完成標籤彈出、大視窗掃一道光；音效 success）。和 tidyAt 至少差 2.5 秒",
+      "type": "at",
+      "ref": "DONE",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "Auto Edit 工作台",
+    "windows": [
+      {
+        "name": "剪輯",
+        "icon": "scissors"
+      },
+      {
+        "name": "字幕",
+        "icon": "captions"
+      },
+      {
+        "name": "音效",
+        "icon": "music"
+      },
+      {
+        "name": "雲端",
+        "icon": "cloud"
+      }
+    ],
+    "notices": [
+      {
+        "text": "匯出失敗",
+        "icon": "bell"
+      },
+      {
+        "text": "3 則新訊息",
+        "icon": "bell"
+      },
+      {
+        "text": "空間快滿了",
+        "icon": "bell"
+      }
+    ],
+    "doneText": "全部歸位",
+    "doneIcon": "circle-check",
+    "messAt": "#292@通知",
+    "tidyAt": "#293@一鍵",
+    "doneAt": "#294@同一個"
+  },
+  "sampleMin": {
+    "title": "Auto Edit 工作台",
+    "windows": [
+      {
+        "name": "剪輯",
+        "icon": "scissors"
+      },
+      {
+        "name": "字幕",
+        "icon": "captions"
+      },
+      {
+        "name": "音效",
+        "icon": "music"
+      },
+      {
+        "name": "雲端",
+        "icon": "cloud"
+      }
+    ],
+    "notices": [
+      {
+        "text": "匯出失敗",
+        "icon": "bell"
+      }
+    ],
+    "doneText": "全部歸位",
+    "doneIcon": "circle-check",
+    "messAt": "#292@通知",
+    "tidyAt": "#293@一鍵",
+    "doneAt": "#294@同一個"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "沒有主卡：4 個小視窗歪歪斜斜疊在一起（「{windows.0.name}」「{windows.1.name}」「{windows.2.name}」「{windows.3.name}」）",
+      "moves": "開場（依前段）；＋0.5 錯拍彈出（小視窗，每 0.2 秒一個）；＋0.7 圖示描線（小視窗圖示，錯拍）",
+      "focus": "小視窗"
+    },
+    {
+      "beat": "1",
+      "at": "`{messAt}`",
+      "show": "{notices.length} 則通知一則一則跳出（第一則「{notices.0.text}」），鈴鐺描線",
+      "moves": "彈出（通知，每 0.35 秒一則）；＋0.15 圖示描線（鈴鐺，錯拍）",
+      "focus": "通知",
+      "sfx": "alert"
+    },
+    {
+      "beat": "2",
+      "at": "`{tidyAt}`",
+      "show": "通知消掉；大視窗「{title}」由下擦開；4 個小視窗每 0.08 秒一個飛進去、轉正、排成 2×2",
+      "moves": "淡出（通知）；擦開（大視窗，由下）；＋0.2 逐字上浮（大視窗標題）；＋0.15 游標移動（小視窗，每 0.08 秒一個）",
+      "focus": "大視窗",
+      "sfx": "shine"
+    },
+    {
+      "beat": "3",
+      "at": "`{doneAt}`",
+      "show": "大視窗標題列右端「✓ {doneText}」彈出、勾描線；大視窗掃一道光",
+      "moves": "彈出（完成標籤）；＋0.15 圖示描線（勾）；＋0.3 光澤掃過（大視窗）",
+      "focus": "完成標籤",
+      "sfx": "success"
+    }
+  ]
+}

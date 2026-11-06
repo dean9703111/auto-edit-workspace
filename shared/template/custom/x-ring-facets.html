@@ -14,7 +14,7 @@
   - 超過 5 個面向：拆兩段，或用 04a。
 
   【要改的地方】
-  1. 文字：標題列（≤ 10 字）、環中間的主題 #xrf-topic（≤ 4 字，可用 <br> 斷成兩行，每行 ≤ 4 字）、每一列的 .xrf-name（≤ 5 字）與 .xrf-desc（≤ 10 字，選填）。
+  1. 文字：標題列（≤ 10 字）、環中間的主題 #xrf-topic（≤ 4 字；要兩行就把兩行包進一個 <span>、中間放 <br>，每行 ≤ 4 字，<br> 直接放在 flex 容器裡不會換行）、每一列的 .xrf-name（≤ 5 字）與 .xrf-desc（選填；列寬放不下兩個都寫滿：名稱字數×52＋說明字數×40 ≤ 344，例名稱 2 字配說明 ≤ 6 字、3 字配 ≤ 4 字）。
   2. 段數：照右邊清單的列數自動切（3–5 段），不用改；列順序＝環上從 12 點鐘順時針的順序。這支沒有圖示（編號就是圖示）。
   3. 綁句：<script> 開頭 T1–T4、ALL 的句號與詞（見【綁句欄位】）。
   4. 開場：<script> 的 ENTER 預設自動判斷，通常不用改；要固定才改成 'grow' 或 'swap'。
@@ -71,17 +71,27 @@
        data-cues-sample='{"start":0,"D":15.4,"cues":{"272":[2.2,4.6],"273":[4.8,7.2],"274":[7.3,9.7],"275":[9.8,12.2],"276":[12.5,14.9]},"refs":{"#272@內容":2.4,"#273@剪輯":5.0,"#274@聲音":7.5,"#275@畫面":10.0}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xrf-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">好影片的四個面向</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">好影片的四個面向</span></div>
       <div id="xrf-body" data-layout="row" data-gap="xl">
         <div id="xrf-dial" data-slot>
           <svg id="xrf-svg" viewBox="0 0 440 440" xmlns="http://www.w3.org/2000/svg"></svg>
-          <div id="xrf-topic" class="sc-t52 sc-w900 sc-opt">好影片</div>
+          <div id="xrf-topic" class="sc-t52 sc-w900 sc-opt" data-fill="topic">好影片</div> <!-- @sub topic2: <div id="xrf-topic" class="sc-t52 sc-w900 sc-opt"><span>{{topic|text}}<br>{{topic2|text}}</span></div> -->
         </div>
         <div id="xrf-list" data-slot data-layout="col" data-gap="sm">
-          <div id="xrf-r1" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">1</span><span id="xrf-n1" class="xrf-name sc-t52 sc-w900 sc-opt">內容</span><span id="xrf-d1" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">值得看完</span></div>
-          <div id="xrf-r2" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">2</span><span id="xrf-n2" class="xrf-name sc-t52 sc-w900 sc-opt">剪輯</span><span id="xrf-d2" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">節奏不拖</span></div>
-          <div id="xrf-r3" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">3</span><span id="xrf-n3" class="xrf-name sc-t52 sc-w900 sc-opt">聲音</span><span id="xrf-d3" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">清楚不吵</span></div>
-          <div id="xrf-r4" class="xrf-row" data-slot><span class="xrf-num sc-t40 sc-w900">4</span><span id="xrf-n4" class="xrf-name sc-t52 sc-w900 sc-opt">畫面</span><span id="xrf-d4" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt">穩定明亮</span></div>
+          <div id="xrf-r1" class="xrf-row" data-slot data-layout-allow-slack><span class="xrf-num sc-t40 sc-w900">1</span><span id="xrf-n1" class="xrf-name sc-t52 sc-w900 sc-opt" data-fill="items.1.text">內容</span>
+            <span id="xrf-d1" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt" data-fill="items.1.desc">值得看完</span> <!-- @if items.1.desc -->
+          </div>
+          <div id="xrf-r2" class="xrf-row" data-slot data-layout-allow-slack><span class="xrf-num sc-t40 sc-w900">2</span><span id="xrf-n2" class="xrf-name sc-t52 sc-w900 sc-opt" data-fill="items.2.text">剪輯</span>
+            <span id="xrf-d2" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt" data-fill="items.2.desc">節奏不拖</span> <!-- @if items.2.desc -->
+          </div>
+          <div id="xrf-r3" class="xrf-row" data-slot data-layout-allow-slack><span class="xrf-num sc-t40 sc-w900">3</span><span id="xrf-n3" class="xrf-name sc-t52 sc-w900 sc-opt" data-fill="items.3.text">聲音</span>
+            <span id="xrf-d3" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt" data-fill="items.3.desc">清楚不吵</span> <!-- @if items.3.desc -->
+          </div>
+          <!-- @if n>=4 { -->
+          <div id="xrf-r4" class="xrf-row" data-slot data-layout-allow-slack><span class="xrf-num sc-t40 sc-w900">4</span><span id="xrf-n4" class="xrf-name sc-t52 sc-w900 sc-opt" data-fill="items.4.text">畫面</span>
+            <span id="xrf-d4" class="xrf-desc sc-t40 sc-w500 sc-gray sc-opt" data-fill="items.4.desc">穩定明亮</span> <!-- @if items.4.desc -->
+          </div>
+          <!-- @} -->
         </div>
       </div>
     </div>
@@ -93,8 +103,8 @@
     const P = SceneMotion(tl, document.getElementById('x-ring-facets'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#272@內容'), T2 = P.at('#273@剪輯'), T3 = P.at('#274@聲音'), T4 = P.at('#275@畫面');   // 講到每個面向的時刻
-    const ALL = P.at('#276');                          // 講到總結那一句（沒有這句見檔頭【綁句欄位】）
+    const T1 = P.at('#272@內容'), T2 = P.at('#273@剪輯'), T3 = P.at('#274@聲音'), T4 = P.at('#275@畫面');   // 講到每個面向的時刻  // @sub n==3: const T1 = P.at('#272@內容'), T2 = P.at('#273@剪輯'), T3 = P.at('#274@聲音');
+    const ALL = P.at('#276');                          // 講到總結那一句（沒有這句見檔頭【綁句欄位】）  // @sub !allAt && n==3: const ALL = T3 + 2.0; @@ !allAt: const ALL = T4 + 2.0;
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 0. 環段與編號：照清單列數切（12 點鐘順時針、段間空 8°；以下都不用改，載入時算一次）
@@ -128,7 +138,7 @@
     facet(1, T1);
     facet(2, T2);
     facet(3, T3);
-    facet(4, T4);   // 第 4 個面向
+    facet(4, T4);   // 第 4 個面向  // @if n>=4
     // 收：總結那一句 → 回均衡（清單全部亮回），主題漣漪，完成態停到段尾
     P.spot(LIST, null, ALL, { dur: 0.6 });
     P.ripple('#xrf-topic', ALL, { from: 0.8, to: 1.4 });

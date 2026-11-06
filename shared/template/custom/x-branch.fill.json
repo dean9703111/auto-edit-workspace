@@ -1,0 +1,143 @@
+{
+  "template": "x-branch",
+  "prefix": "xbr",
+  "beat": "A",
+  "layout": "fullscreen",
+  "when": "一個起點分成 2–3 條路（同一支錄影，可以剪成長片、剪成短影音，或直接出逐字稿）：講到哪一條，實線從起點描過去、那一條亮起；選填 end＝講到「三條都可以」那一句時回均衡",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "root": {
+      "label": "起點",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "rootIcon": {
+      "label": "起點圖示",
+      "type": "icon",
+      "required": true
+    },
+    "items": {
+      "label": "分支",
+      "type": "list",
+      "min": 2,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "分支名稱",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "icon": {
+          "label": "分支圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到這條分支名稱的時間",
+          "type": "at",
+          "ref": "B{n}",
+          "required": true
+        }
+      }
+    },
+    "end": {
+      "label": "選填：講到「都可以」那一句的時間（回均衡綁這句；沒填就在最後一條講完 2.6 秒回均衡）",
+      "type": "at",
+      "ref": "TR"
+    }
+  },
+  "sample": {
+    "title": "一支錄影三種用途",
+    "root": "一支錄影",
+    "rootIcon": "video",
+    "items": [
+      {
+        "text": "剪成長片",
+        "icon": "film",
+        "at": "#92@長片"
+      },
+      {
+        "text": "剪短影音",
+        "icon": "smartphone",
+        "at": "#93@短影音"
+      },
+      {
+        "text": "出逐字稿",
+        "icon": "file-text",
+        "at": "#94@逐字稿"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋0.7",
+      "show": "起點「{root}」＋全部的分支＋圖示",
+      "moves": "錯拍彈出（起點與分支）；＋0.15 圖示描線（錯拍）",
+      "focus": "均衡"
+    },
+    {
+      "beat": "2",
+      "at": "段起點＋1.2",
+      "show": "起點到每條分支的虛線",
+      "moves": "淡入（虛線）",
+      "focus": "方向"
+    },
+    {
+      "beat": "3",
+      "at": "段起點＋1.7",
+      "show": "—",
+      "moves": "預覽態（分支）；鏡頭慢推",
+      "focus": "整體"
+    },
+    {
+      "each": "items",
+      "to": 1,
+      "beat": 4,
+      "at": "`{at}`",
+      "show": "實線從起點描到分支 {n}「{text}」；分支 {n} 亮起",
+      "moves": "彗星描線（連接線，−0.85）；描線（箭頭，−0.12）；鏡頭跟焦點（−0.2）；聚焦（分支 {n}）；淡入（底色）；漣漪（分支 {n} 圖示）",
+      "focus": "分支 {n}"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "beat": 5,
+      "at": "`{at}`",
+      "show": "實線從起點描到分支 {n}「{text}」；分支 {n} 亮起，前面的分支壓暗",
+      "moves": "彗星描線（連接線，−0.85）；描線（箭頭，−0.12）；鏡頭跟焦點（−0.2）；聚焦（分支 {n}）；淡出（前一條底色）；淡入（底色）；漣漪（分支 {n} 圖示）",
+      "focus": "分支 {n}"
+    },
+    {
+      "if": "end",
+      "beat": "收",
+      "at": "`{end}`",
+      "show": "全部分支＋實線",
+      "moves": "回均衡；淡出（底色）；鏡頭回正",
+      "focus": "整體"
+    },
+    {
+      "if": "!end",
+      "beat": "收",
+      "at": "`{last.at}`＋2.6",
+      "show": "全部分支＋實線",
+      "moves": "回均衡；淡出（底色）；鏡頭回正",
+      "focus": "整體"
+    }
+  ]
+}

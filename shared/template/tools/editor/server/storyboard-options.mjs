@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const LAYOUT = { chapter: '全幕', fullscreen: '子母畫面', panel: '半畫面' };
-const GROUPS = ['疊加', '半畫面', '子母畫面', '全幕', '情境動畫'];
-const GROUP_HINT = { 疊加: '講者滿版，卡片疊在上面', 半畫面: '講者在一邊，另一邊是面板', 子母畫面: '資訊占滿畫面，講者在小視窗', 全幕: '整張蓋住，看不到講者', 情境動畫: '會動的圖解，講者在小視窗' };
+const GROUPS = ['疊加', '半畫面', '子母畫面', '全幕', '情境動畫', '內容設計'];
+const GROUP_HINT = { 疊加: '講者滿版，卡片疊在上面', 半畫面: '講者在一邊，另一邊是面板', 子母畫面: '資訊占滿畫面，講者在小視窗', 全幕: '整張蓋住，看不到講者', 情境動畫: '會動的圖解，講者在小視窗', 內容設計: '不套模板，專門為這段內容設計畫面' };
 const HIDDEN_CUSTOM = /-example-/;   // 範例檔，不是可以選的情境
 const CUSTOM_NAME = /^x-[\w-]+$/;
 
@@ -30,6 +30,7 @@ export function storyboardOptions(templateDir, { portrait = false } = {}) {
     const title = NICE_NAME[id] || raw.replace(id, '').trim() || id;
     groups.get('情境動畫').push({ id, value: `${id} ${title}`, label: title, when: '', preview: `${id}.html` });
   }
+  groups.get('內容設計').push({ id: 'design', value: '內容設計動畫', label: '內容設計動畫', when: '不套模板，專門為這段內容設計畫面', preview: null });
   const sfx = readJson(path.join(templateDir, 'kit', 'sfx.json')) || {};
   return {
     scenes: GROUPS.map((name) => ({ name, hint: GROUP_HINT[name], items: groups.get(name) })).filter((g) => g.items.length),

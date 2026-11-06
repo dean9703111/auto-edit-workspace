@@ -9,7 +9,7 @@
  *
  *   data-layout  row（同列等距、底對齊＝有標籤的標籤同一條線、整列水平置中）／col（垂直等距、插圖中線 x 對齊）／
  *                cols-2（兩欄等寬，欄間 gap-lg）／grid-2x2（等寬等高格）／free（不排；audit 照樣量）
- *   data-gap     xxl（160，一對元件要拉開）／xl／lg／md／sm（--sc-gap-*）；none＝0（人站在桌子後面這種疊在一起的）
+ *   data-gap     xxl（160，一對元件要拉開）／xl／lg／md／sm（--sc-gap-*）；none＝0（人站在桌子後面這種疊在一起的）；數字＝px（填資料的 x-scene 依元件寬度算）
  *   data-justify start／center（預設）／end：橫向靠哪邊。最外層群組靠左（右）內距 --sc-pad-card、或置中；col 裡的元件左（右）邊對齊、或插圖中線對齊
  *   data-align   center（預設：群組在內容區上下置中）／top（靠上，上內距 --sc-pad-card-y）／middle（置中＋row 改成插圖中線對齊）
  *   data-row     row 排法的第幾列（列與列之間 gap-lg）
@@ -67,7 +67,7 @@
     }
     return { a: s, l: null };
   };
-  var gapOf = function (c, kind) { var g = c.getAttribute('data-gap') || GAP_DEFAULT[kind] || 'md'; return g === 'none' || g === '0' ? 0 : token('gap-' + g); };
+  var gapOf = function (c, kind) { var g = c.getAttribute('data-gap') || GAP_DEFAULT[kind] || 'md'; return g === 'none' || g === '0' ? 0 : /^\d+$/.test(g) ? Number(g) : token('gap-' + g); };
   var home = new WeakMap();   // helper 排的位置（之後被 P.morph 走位的元件，measure 另外回報排版時的外框）
   var ensurePos = function (el, p) { if (getComputedStyle(el).position === 'static') el.style.position = p; };
 

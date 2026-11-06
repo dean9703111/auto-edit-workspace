@@ -14,6 +14,7 @@ export const ILLUS_BUILTIN = ['phone', 'tripod', 'phoneTripod', 'laptop', 'monit
 export const IL_STROKE = 2;              // 描邊外擴（契約 §5.5）
 export const LABEL_MAX = 10;             // 示意動畫的字只當標籤（ep2 hyperframes-overlay design-rules.md:9）
 export const ALIGN_NEAR = [4, 16];       // 手排（不在 data-layout 裡）的兩個元件中線差 4–16 px ⚠ layout-row-align（012 併進版面規則；design-rules.md:87 同列同中線）
+export const SMALL_LONG = 0.7;          // 插圖群的長邊佔卡片內部 ≥ 70% 就不算太小
 export const SMALL_MIN = 0.5;           // 插圖群外框 < 卡片內部面積 50%：主角不是圖（2026-10-31 參考範例只佔一半，被嫌像字卡）
 export const BLINK_MAX = 1;              // 同一個元素退場後再出現的次數上限（casebook.md:486 依序出現、不明滅閃爍）
 
@@ -87,7 +88,7 @@ export function judgeIllus(meas, ctx) {
   const ilEls = ctx.kind === 'done' ? els.filter((e) => e.il) : [];   // 大小不受漂浮影響：漂浮中的元件也算（只有對齊才排除）
   // x-callout 的主體插圖（#xcall-obj；同一集用兩次時前綴會換，例 #xcsb-obj）四周是用引線接上的標籤（#xcall-t1…）：
   //   主角是「主體＋標籤」這一整組，標籤一起算
-  const objOf = (e) => { const m = /^(xc[a-z]*)-obj$/.exec(e.desc?.id || e.desc?.near || ''); return m ? m[1] : null; };
+  const objOf = (e) => { const m = /^(xc[a-z][a-z0-9]*)-obj$/.exec(e.desc?.id || e.desc?.near || ''); return m ? m[1] : null; };
   const pre = ilEls.map(objOf).find(Boolean);
   const tagRe = pre ? new RegExp('^' + pre + '-t\\d$') : null;
   const all = pre ? [...ilEls, ...els.filter((e) => !e.il && tagRe.test(e.desc?.id || ''))] : ilEls;
@@ -100,7 +101,9 @@ export function judgeIllus(meas, ctx) {
       const titles = els.filter((e) => e.title && inside(card.rect, e.rect) && e.rect[3] <= U[1] + 1);
       const inner = [card.rect[0], Math.max(card.rect[1], ...titles.map((e) => e.rect[3])), card.rect[2], card.rect[3]];
       const k = area(U) / Math.max(1, area(inner));
-      if (k < SMALL_MIN) push('illus-small', card.desc, `插圖太小：主角是圖，插圖群只佔卡片內部 ${Math.round(k * 100)}%（< ${SMALL_MIN * 100}%）`,
+      // 又高又窄的物件（人、直拿的手機）撐不到一半面積：長邊夠長就算主角
+      const longSide = Math.max((U[2] - U[0]) / Math.max(1, inner[2] - inner[0]), (U[3] - U[1]) / Math.max(1, inner[3] - inner[1]));
+      if (k < SMALL_MIN && longSide < SMALL_LONG) push('illus-small', card.desc, `插圖太小：主角是圖，插圖群只佔卡片內部 ${Math.round(k * 100)}%（< ${SMALL_MIN * 100}%）`,
         '放大到卡片內部 70% 高、75% 寬（主角長邊 300–450px、標籤 28–32px），照 shared/style.md「示意動畫」', { ratio: Math.round(k * 1000) / 1000 });
     }
   }

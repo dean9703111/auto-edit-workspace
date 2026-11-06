@@ -84,24 +84,28 @@
        data-cues-sample='{"start":0,"D":15.5,"cues":{"252":[2.3,4.8],"253":[4.9,7.3],"254":[7.4,9.8],"255":[9.9,12.4],"256":[12.7,15.2]},"refs":{"#252@逐字稿":2.6,"#253@重講":5.1,"#254@剪輯清單":7.6,"#255@字幕":10.1}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xcai-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">AI 幫我剪片</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">AI 幫我剪片</span></div>
       <div id="xcai-body" data-layout="col" data-gap="md">
         <!-- 每一列：淡色底（.xcai-now）＋狀態圈（等待虛線圈 xcai-w、轉圈 xcai-s、完成圈 xcai-on＋勾 xcai-k）＋項目字＋右邊結果；svg 座標每列都一樣 -->
         <div id="xcai-r1" class="xcai-row" data-slot><i id="xcai-now1" class="xcai-now"></i>
           <i class="xcai-box"><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-w1" class="xcai-wait" cx="28" cy="28" r="24" /></svg><svg id="xcai-s1" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle class="xcai-arc" cx="28" cy="28" r="22" /></svg><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-on1" class="xcai-sqon" cx="28" cy="28" r="25" /><path id="xcai-k1" class="xcai-tick" d="M16 29 L25 38 L41 20" /></svg></i>
-          <span id="xcai-t1" class="xcai-t sc-t52 sc-w900 sc-opt">讀完逐字稿</span><span id="xcai-res1" class="xcai-res sc-t52 sc-w900 sc-opt">3,214 字</span></div>
+          <span id="xcai-t1" class="xcai-t sc-t52 sc-w900 sc-opt" data-fill="items.1.text">讀完逐字稿</span><span id="xcai-res1" class="xcai-res sc-t52 sc-w900 sc-opt" data-fill="items.1.res">3,214 字</span></div>
         <div id="xcai-r2" class="xcai-row" data-slot><i id="xcai-now2" class="xcai-now"></i>
           <i class="xcai-box"><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-w2" class="xcai-wait" cx="28" cy="28" r="24" /></svg><svg id="xcai-s2" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle class="xcai-arc" cx="28" cy="28" r="22" /></svg><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-on2" class="xcai-sqon" cx="28" cy="28" r="25" /><path id="xcai-k2" class="xcai-tick" d="M16 29 L25 38 L41 20" /></svg></i>
-          <span id="xcai-t2" class="xcai-t sc-t52 sc-w900 sc-opt">找出重講</span><span id="xcai-res2" class="xcai-res sc-t52 sc-w900 sc-opt">12 處</span></div>
+          <span id="xcai-t2" class="xcai-t sc-t52 sc-w900 sc-opt" data-fill="items.2.text">找出重講</span><span id="xcai-res2" class="xcai-res sc-t52 sc-w900 sc-opt" data-fill="items.2.res">12 處</span></div>
+        <!-- @if n>=3 { -->
         <div id="xcai-r3" class="xcai-row" data-slot><i id="xcai-now3" class="xcai-now"></i>
           <i class="xcai-box"><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-w3" class="xcai-wait" cx="28" cy="28" r="24" /></svg><svg id="xcai-s3" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle class="xcai-arc" cx="28" cy="28" r="22" /></svg><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-on3" class="xcai-sqon" cx="28" cy="28" r="25" /><path id="xcai-k3" class="xcai-tick" d="M16 29 L25 38 L41 20" /></svg></i>
-          <span id="xcai-t3" class="xcai-t sc-t52 sc-w900 sc-opt">列剪輯清單</span><span id="xcai-res3" class="xcai-res sc-t52 sc-w900 sc-opt">24 刀</span></div>
+          <span id="xcai-t3" class="xcai-t sc-t52 sc-w900 sc-opt" data-fill="items.3.text">列剪輯清單</span><span id="xcai-res3" class="xcai-res sc-t52 sc-w900 sc-opt" data-fill="items.3.res">24 刀</span></div>
+        <!-- @} -->
+        <!-- @if n>=4 { -->
         <div id="xcai-r4" class="xcai-row" data-slot><i id="xcai-now4" class="xcai-now"></i>
           <i class="xcai-box"><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-w4" class="xcai-wait" cx="28" cy="28" r="24" /></svg><svg id="xcai-s4" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle class="xcai-arc" cx="28" cy="28" r="22" /></svg><svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><circle id="xcai-on4" class="xcai-sqon" cx="28" cy="28" r="25" /><path id="xcai-k4" class="xcai-tick" d="M16 29 L25 38 L41 20" /></svg></i>
-          <span id="xcai-t4" class="xcai-t sc-t52 sc-w900 sc-opt">產生字幕</span><span id="xcai-res4" class="xcai-res sc-t52 sc-w900 sc-opt">186 則</span></div>
+          <span id="xcai-t4" class="xcai-t sc-t52 sc-w900 sc-opt" data-fill="items.4.text">產生字幕</span><span id="xcai-res4" class="xcai-res sc-t52 sc-w900 sc-opt" data-fill="items.4.res">186 則</span></div>
+        <!-- @} -->
         <div id="xcai-prog" data-slot>
           <div id="xcai-track"><i id="xcai-fill"></i><i id="xcai-fillok"></i></div>
-          <span id="xcai-n" class="sc-t52 sc-w900">0 / 4</span>
+          <span id="xcai-n" class="sc-t52 sc-w900">0 / 4</span> <!-- @sub n==3: <span id="xcai-n" class="sc-t52 sc-w900">0 / 3</span> @@ n==2: <span id="xcai-n" class="sc-t52 sc-w900">0 / 2</span> -->
         </div>
       </div>
     </div>
@@ -113,11 +117,11 @@
     const P = SceneMotion(tl, document.getElementById('x-checklist-ai'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#252@逐字稿'), T2 = P.at('#253@重講'), T3 = P.at('#254@剪輯清單'), T4 = P.at('#255@字幕');   // 講到每一項項目詞的時刻
-    const ALL = P.at('#256');                          // 講到「全部好了」那一句（沒有這句見檔頭【綁句欄位】）
-    P.sfx('success', '#256');                          // 完成音（句號和 ALL 一樣）
+    const T1 = P.at('#252@逐字稿'), T2 = P.at('#253@重講'), T3 = P.at('#254@剪輯清單'), T4 = P.at('#255@字幕');   // 講到每一項項目詞的時刻  // @sub n==3: const T1 = P.at('#252@逐字稿'), T2 = P.at('#253@重講'), T3 = P.at('#254@剪輯清單'); @@ n==2: const T1 = P.at('#252@逐字稿'), T2 = P.at('#253@重講');
+    const ALL = P.at('#256');                          // 講到「全部好了」那一句（沒有這句見檔頭【綁句欄位】）  // @sub !all && n==4: const ALL = P.at('{{items.4.at}}', 2.5); @@ !all && n==3: const ALL = P.at('{{items.3.at}}', 2.5); @@ !all && n==2: const ALL = P.at('{{items.2.at}}', 2.5);
+    P.sfx('success', '#256');                          // 完成音（句號和 ALL 一樣）  // @sub !all && n==4: P.sfx('success', '{{items.4.at}}', 2.5); @@ !all && n==3: P.sfx('success', '{{items.3.at}}', 2.5); @@ !all && n==2: P.sfx('success', '{{items.2.at}}', 2.5);
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const ROWS = '#xcai-r1, #xcai-r2, #xcai-r3, #xcai-r4';   // 全部的列（3 項時拿掉 r4）
+    const ROWS = '#xcai-r1, #xcai-r2, #xcai-r3, #xcai-r4';   // 全部的列（3 項時拿掉 r4）  // @sub n==3: const ROWS = '#xcai-r1, #xcai-r2, #xcai-r3'; @@ n==2: const ROWS = '#xcai-r1, #xcai-r2';
     const N = $q('#x-checklist-ai .xcai-row').length;    // 幾項＝上面 HTML 的列數，不用改
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
@@ -140,19 +144,22 @@
     // 拍 3 第 2 項：同拍 2；淡色底從上一項移過來
     P.out('#xcai-s2', T2, { dur: 0.15 });  P.out('#xcai-w2', T2, { dur: 0.15 });
     P.stroke('#xcai-on2, #xcai-k2', T2, { dur: 0.4 });  P.chars('#xcai-res2', T2 + 0.15);
-    P.in('#xcai-s3', T2 + 0.3, { dur: 0.2 });  P.spin('#xcai-s3', T2 + 0.3, { until: T3 });
+    P.in('#xcai-s3', T2 + 0.3, { dur: 0.2 });  P.spin('#xcai-s3', T2 + 0.3, { until: T3 });  // @if n>=3
     P.count('#xcai-n', T2 + 0.3, { from: 1, to: 2, dur: 0.4, suffix: ' / ' + N });
     P.bar('#xcai-fill', T2 + 0.3, { from: 1 / N, to: 2 / N, dur: 0.6 });
     P.spot(ROWS, '#xcai-r2', T2, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xcai-now1', T2);  P.in('#xcai-now2', T2);
+    // @if n>=3 {
     // 拍 4 第 3 項：同拍 3
     P.out('#xcai-s3', T3, { dur: 0.15 });  P.out('#xcai-w3', T3, { dur: 0.15 });
     P.stroke('#xcai-on3, #xcai-k3', T3, { dur: 0.4 });  P.chars('#xcai-res3', T3 + 0.15);
-    P.in('#xcai-s4', T3 + 0.3, { dur: 0.2 });  P.spin('#xcai-s4', T3 + 0.3, { until: T4 });
+    P.in('#xcai-s4', T3 + 0.3, { dur: 0.2 });  P.spin('#xcai-s4', T3 + 0.3, { until: T4 });  // @if n>=4
     P.count('#xcai-n', T3 + 0.3, { from: 2, to: 3, dur: 0.4, suffix: ' / ' + N });
     P.bar('#xcai-fill', T3 + 0.3, { from: 2 / N, to: 3 / N, dur: 0.6 });
     P.spot(ROWS, '#xcai-r3', T3, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xcai-now2', T3);  P.in('#xcai-now3', T3);
+    // @}
+    // @if n>=4 {
     // 拍 5 第 4 項：同拍 3（3 項時刪掉這 6 行，見檔頭；第 3 項那組的 until 改成 ALL）
     P.out('#xcai-s4', T4, { dur: 0.15 });  P.out('#xcai-w4', T4, { dur: 0.15 });
     P.stroke('#xcai-on4, #xcai-k4', T4, { dur: 0.4 });  P.chars('#xcai-res4', T4 + 0.15);
@@ -160,10 +167,11 @@
     P.bar('#xcai-fill', T4 + 0.3, { from: 3 / N, to: 4 / N, dur: 0.6 });
     P.spot(ROWS, '#xcai-r4', T4, { scale: 1.03, lift: -8, dim: 0.6 });
     P.out('#xcai-now3', T4);  P.in('#xcai-now4', T4);
+    // @}
 
     // 收：講到「全部好了」→ 回均衡（全部亮回、淡色底收掉）＋完成色疊在進度條上淡入；完成態停到段尾
     P.spot(ROWS, null, ALL, { dur: 0.6 });
-    P.out('#xcai-now4', ALL);
+    P.out('#xcai-now4', ALL);  // @sub n==3: P.out('#xcai-now3', ALL); @@ n==2: P.out('#xcai-now2', ALL);
     P.in('#xcai-fillok', ALL);
 
     P.end();                                           // 長度＝plan.json 這段的長度

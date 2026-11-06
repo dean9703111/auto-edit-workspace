@@ -1,33 +1,37 @@
-# 派情境動畫子代理的派工訊息（主代理用）
+# 手改動畫：子代理的派工與回報
 
-時機：停點 ③ 通過、正式 plan.json 已登記每段情境動畫（`"type": "custom"`、`src`、`layout`）、build 過一次之後（照抄的範例 build 會 ✖：id 還是範例名、綁句是畫廊示範的句號 → 先改名四處（auto-edit-motion 步驟 3），`P.at` 暫填這段範圍內的句號（不帶 @詞），build 過了再派；內容由子代理照分鏡重寫）。子代理改完自己的 x 檔跑 `audit --only` 不用重 build：新加的 `P.at('#N@詞')` 由 audit 用 `build --check` 現算的秒數量、截圖（`--shots`），不用等主代理 build。
+模板動畫平常填資料就好（改 plan.json 的 `slots`），工具會自己產生。這份只用在兩種情況：使用者要的改動 `slots` 做不到；或修改單要改一段內容設計動畫。
 
-- 2 段以上、而且有能派子代理的工具：**一段一個子代理，同一則回覆一次全部派出**（平行跑；一段一段派會慢好幾倍）。派完等全部回來，再照 AGENTS.md「子代理分工」第 2 條收件、整合。
-- 每段把字幕與確認過的動畫分鏡原文貼進派工訊息，子代理就不用自己讀 rough.srt、storyboard.md。
-- 沒有子代理工具，或只有 1 段：自己照 `auto-edit-motion` 一段一段做。
-- 跨段一致：派工前先寫一段「共用元件規格」貼進每一則（同一種元件的大小、位置、配色，例：手機插圖寬 360、放畫面左側 x 300；進度膠囊列在 y 120、完成綠✓／目前主色／未到灰）。3 段以上在講同一份清單的第 1..N 項時，用同一排進度膠囊、第一格就在原位。參考專案三個子代理把同一個元件做成 126／100／118 px，要整片重修。
+2 段以上、有能派子代理的工具：**一段一個子代理，同一則回覆一次全部派出**，全部回來才由主代理跑 `--review` 或 `versions.mjs finish`。沒有子代理工具才自己一段一段做。
+
+跨段一致：3 段以上在講同一份清單時，派工前先寫一段「共用元件規格」（大小、位置、配色）貼進每一則，不然會做成不同大小，要整片重修。
 
 ## 派工訊息（每段一則，`<…>` 換成實際值）
 
 ```
-你是情境動畫子代理：照 .agents/skills/auto-edit-motion/SKILL.md 做一段情境動畫，做完照 references/worker-report.md 回報（最多 25 行）。
+你負責改一段動畫：<段 id>（<起>–<迄>）。
 專案：projects/<專案>
-段落：<段 id>（<情境>；<起>–<迄>；layout <layout>）
-你只能寫：projects/<專案>/work/hyperframes/compositions/x-<名稱>.html（還沒有就從 shared/template/custom/<範例>.html 複製）
-不能做：改 plan.json、work/rough.srt、work/storyboard.md、shared/、assets/；跑 build（不加 --check）、snapshot、preview、render
-可以跑：
-  node shared/template/tools/build.mjs --check --project projects/<專案>
-  node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id> --shots
-  （--shots 把中點、靜止、完成態各存一張截圖到 work/audit-shots/，你看不到 snapshot，用它看自己那段）
-只讀這些：auto-edit-motion 步驟 1–7；USAGE-reference.md R7.2、R7.3、R7.6；shared/template/BEATS.md 這段情境的拍型（示意動畫加 §5）
-注意：拍的先後照講解的詞序（範例分鏡的拍序只是範例）；根元素的 data-cues-sample 只給畫廊預覽用，不用改
-這段的字幕（句號：文字）：
+你只能寫：projects/<專案>/work/hyperframes/compositions/<檔名>（build 已經產生）
+不能做：改 plan.json、work/rough.srt、work/storyboard.md、shared/、assets/；跑 build、snapshot、render
+寫法：.agents/skills/auto-edit-motion/references/design-brief.md「階段二」的畫布、寫法、時間軸、不能做
+要改什麼：<修改單的標籤與描述，或使用者原話>
+這段的字幕：
 #<N> <字幕原文>
-#<N+1> <字幕原文>
-共用元件規格（每段相同，主代理寫）：
-<元件：大小、位置、配色>
-確認過的動畫分鏡（work/storyboard.md 原文）：
-#### 動畫分鏡 <段 id>
-<整張表原文>
-驗收：build --check 這段 0 個 ✖；audit --only <段 id> 0 個 ✖；打開 --shots 的截圖，對著分鏡一拍一拍看：每個動作真的看得到（移動有位移、狀態換了）、同一個畫面視角一致、字和插圖沒有擠在一角（回報寫你看了哪幾張、看到什麼）
+共用元件規格（有才寫）：<元件：大小、位置、配色>
+驗收（一條指令，內含這段的所有檢查；別段有 ✖ 不影響你）：
+node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id> --shots --sheet
+✖ 全修；⚠ 照 → 改，或回報寫理由。打開它印的 work/audit-shots/sheet-<段 id>.jpg 親眼看：動作看得到、字和插圖沒有擠在一角。子母畫面的小視窗在這張圖是空框，正常。
+```
+
+改過的檔工具不會再覆寫，那段的 `slots` 也不再生效；要回到填資料就刪掉那個檔。
+
+## 回報（最多 25 行）
+
+```
+段落：<段 id>
+檔案：<路徑>
+改了什麼：<一兩句；沒照做的與理由>
+綁句：<P.at 清單，例 #18@剪輯清單、#20>；畫了游標按下時加「clicks：#N@詞」請主代理寫進 plan.json
+audit --only <段 id>：✖ <N>、⚠ <N>；留著的 ⚠ 與理由
+拼圖看到：<一句>
 ```

@@ -1,0 +1,174 @@
+{
+  "template": "x-before-after",
+  "prefix": "xba",
+  "beat": "C",
+  "layout": "fullscreen",
+  "when": "同一件事換個做法，時間／成本／數量差很多（舊做法 3 小時 → 新做法 20 分鐘）：左欄舊做法講到缺點時劃掉，箭頭帶到右欄新做法，兩欄量條用同一把尺",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "beforeLabel": {
+      "label": "左欄（舊做法）名稱",
+      "type": "text",
+      "max": 5,
+      "required": true
+    },
+    "beforeIcon": {
+      "label": "左欄圖示",
+      "type": "icon",
+      "required": true
+    },
+    "beforeNum": {
+      "label": "左欄數字（≤ 3 位）",
+      "type": "text",
+      "max": 1.5,
+      "required": true
+    },
+    "beforeUnit": {
+      "label": "左欄單位",
+      "type": "text",
+      "max": 2,
+      "required": true
+    },
+    "pain": {
+      "label": "舊做法的缺點（講到時被劃掉）",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "afterLabel": {
+      "label": "右欄（新做法）名稱",
+      "type": "text",
+      "max": 5,
+      "required": true
+    },
+    "afterIcon": {
+      "label": "右欄圖示",
+      "type": "icon",
+      "required": true
+    },
+    "afterNum": {
+      "label": "右欄數字（≤ 3 位）",
+      "type": "text",
+      "max": 1.5,
+      "required": true
+    },
+    "afterUnit": {
+      "label": "右欄單位",
+      "type": "text",
+      "max": 2,
+      "required": true
+    },
+    "gain": {
+      "label": "新做法的說明",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "ratio": {
+      "label": "右欄量條長度＝新 ÷ 舊（兩邊先換算成同一個單位：3 小時 vs 20 分鐘 → 20 ÷ 180 ＝ 0.111）",
+      "type": "number",
+      "const": "RATIO",
+      "required": true
+    },
+    "beforeAt": {
+      "label": "講到舊做法的時間（左欄擦開）",
+      "type": "at",
+      "ref": "BEFORE",
+      "required": true
+    },
+    "painAt": {
+      "label": "講到缺點的時間（缺點被劃掉）",
+      "type": "at",
+      "ref": "PAIN",
+      "required": true
+    },
+    "afterAt": {
+      "label": "講到新做法的時間（箭頭走過去、右欄彈出）",
+      "type": "at",
+      "ref": "AFTER",
+      "required": true
+    },
+    "saveAt": {
+      "label": "講到好處的時間（右欄數字強調）",
+      "type": "at",
+      "ref": "SAVE",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "剪一集要多久",
+    "beforeLabel": "手動剪輯",
+    "beforeIcon": "clock",
+    "beforeNum": "3",
+    "beforeUnit": "小時",
+    "pain": "逐句剪、反覆預覽",
+    "afterLabel": "AI 剪輯",
+    "afterIcon": "zap",
+    "afterNum": "20",
+    "afterUnit": "分鐘",
+    "gain": "NG 一次剪掉",
+    "ratio": 0.111,
+    "beforeAt": "#32@手動",
+    "painAt": "#33@逐句",
+    "afterAt": "#34@AI",
+    "saveAt": "#35@省下"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "`{beforeAt}`",
+      "show": "左欄：圖示＋「{beforeLabel}」＋數字「{beforeNum} {beforeUnit}」＋量條長滿（舊做法的量）",
+      "moves": "擦開（左欄，由左）；＋0.1 逐字上浮（名稱、數字）；＋0.15 圖示描線；＋0.3 量條（長滿）",
+      "focus": "左欄"
+    },
+    {
+      "beat": "2",
+      "at": "`{painAt}`",
+      "show": "缺點「{pain}」被劃掉；左欄退焦",
+      "moves": "劃掉（缺點）；＋0.35 退焦（左欄 → 0.5）",
+      "focus": "劃線處",
+      "sfx": "alert"
+    },
+    {
+      "beat": "3",
+      "at": "`{afterAt}`",
+      "show": "箭頭 → 右欄：圖示＋「{afterLabel}」＋數字「{afterNum} {afterUnit}」＋說明「{gain}」＋量條只長一小段（{ratio}，同一把尺）",
+      "moves": "彗星描線（箭頭，−0.6）；彈出（右欄）；＋0.15 逐字落下（數字）；＋0.15 圖示描線；＋0.3 量條（{ratio}）",
+      "focus": "右欄"
+    },
+    {
+      "beat": "4",
+      "at": "`{saveAt}`",
+      "show": "右欄數字「{afterNum} {afterUnit}」強調",
+      "moves": "螢光筆（數字）；＋0.1 光澤掃過（右欄）；＋0.1 重拍（數字）",
+      "focus": "右欄數字",
+      "sfx": "success"
+    },
+    {
+      "beat": "5",
+      "at": "`{saveAt}`＋0.6",
+      "show": "—",
+      "moves": "聚焦（右欄）",
+      "focus": "右欄"
+    },
+    {
+      "beat": "收",
+      "at": "`{saveAt}`＋2.6",
+      "show": "兩欄（左欄維持退焦 0.7）；完成態停到段尾",
+      "moves": "回均衡；退焦（左欄 → 0.7）",
+      "focus": "整體"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # 製作進度：<專案>
 
 <!-- 由 auto-edit-longform 步驟 2 從 .agents/skills/auto-edit-longform/references/progress-template.md 複製。
-     四節的標題不要改：status.mjs 讀「## 停點紀錄」那張表。 -->
+     三節的標題不要改：status.mjs 讀「## 停點紀錄」那張表。 -->
 
 ## 開工決策表
 
@@ -14,19 +14,6 @@
 | 長度（秒） | | `ffprobe -v error -show_entries format=duration -of csv=p=0 "<主軌>"` | 不到 180 秒（3 分鐘）：不用 01 章節轉場 |
 | 有沒有業配段 | | 講稿出現「業配」「贊助」「優惠碼」→「可能有，待確認」；沒講稿寫「未知」 | 有：業配段不放 01 章節轉場 |
 | 構圖 | 待停點 ② | 停點 ② 通過後填（倍率，或「不裁切」） | plan.json `frame` |
-
-## 階段
-
-狀態只用這六個：⬜ 還沒開始、🔄 進行中、⏸ 等使用者、✅ 完成、↩ 退回重做、— 這集不用。
-
-| 階段 | Skill | 狀態 | 產物 |
-|---|---|---|---|
-| 剪乾淨 | auto-edit-rough | ⬜ | work/cuts.md、rough.mp4、rough.srt、cutpoints.json |
-| 構圖＋分鏡 | auto-edit-storyboard | ⬜ | 構圖預覽.jpg、storyboard.md、storyboard-preview/ |
-| 螢幕錄影配對 | auto-edit-screen | ⬜ | storyboard.md 的 media 列 |
-| 情境動畫 | auto-edit-motion | ⬜ | work/hyperframes/compositions/x-*.html |
-| 定稿與預覽 | auto-edit-review | ⬜ | work/hyperframes/、feedback/r*.md |
-| 交付 | auto-edit-deliver | ⬜ | output/final.mp4、output/qc/qc-sheet.jpg |
 
 ## 停點紀錄
 
@@ -50,11 +37,11 @@
 | 有 rough.mp4、沒有 `work/rough.srt` 或沒有 `work/rough.srt.bak-*` | 剪乾淨：字幕 | auto-edit-rough 步驟 7 |
 | 沒有 `work/cutpoints.json` | 剪乾淨：剪接點 | auto-edit-rough 步驟 8 |
 | 沒有 `work/構圖預覽.jpg` | 剪好看：構圖 | auto-edit-storyboard 步驟 1 |
-| 沒有 `work/storyboard.md` | 剪好看：停點 ② 之後 | auto-edit-storyboard 步驟 3 |
+| 沒有 `work/storyboard.md` | 剪好看：停點 ② 之後 | auto-edit-storyboard 步驟 4 |
 | storyboard.md 比 `work/hyperframes/plan.json` 新 | 剪好看：停點 ③ | auto-edit-storyboard（等使用者回 ③） |
 | 沒有 `work/hyperframes/index.html` | 定稿 | auto-edit-review 流程 A |
 | 沒有 `output/final.mp4` | 停點 ④ | auto-edit-review（等使用者回 ④） |
-| 沒有 `output/qc/qc-sheet.jpg` | 交付：驗收 | auto-edit-deliver 步驟 4 |
+| 沒有 `output/qc/qc-sheet.jpg` | 交付：驗收 | auto-edit-deliver 步驟 1 |
 | 其他 | 完成 | 等使用者的修改 |
 
 停點紀錄的格式（時間、停點名稱、四種狀態、只新增不改舊列）照 AGENTS.md「進度與回饋紀錄」。例：

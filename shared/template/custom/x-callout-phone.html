@@ -73,23 +73,27 @@
        data-cues-sample='{"start":0,"D":15,"cues":{"232":[1.9,4.3],"233":[4.4,6.8],"234":[6.9,9.3],"235":[9.4,11.8],"236":[12.2,14.6]},"refs":{"#232@下載":2.1,"#233@不用換卡":4.6,"#234@安卓":7.1,"#235@加值":9.6}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xcph-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">旅遊 eSIM 怎麼用</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">旅遊 eSIM 怎麼用</span></div>
       <div id="xcph-body" data-layout="row" data-gap="md">
         <div id="xcph-left" data-slot data-layout="col" data-gap="lg">
           <div id="xcph-t1" class="xcph-tag" data-slot>
-            <span id="xcph-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /> </svg></span><span id="xcph-n1" class="xcph-name sc-t52 sc-w900 sc-opt">下載就能用</span></div>
+            <span id="xcph-ico1" class="sc-icon" data-fill="items.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /> </svg></span><span id="xcph-n1" class="xcph-name sc-t52 sc-w900 sc-opt" data-fill="items.1.text">下載就能用</span></div>
+          <!-- @if n>=3 { -->
           <div id="xcph-t3" class="xcph-tag" data-slot>
-            <span id="xcph-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span id="xcph-n3" class="xcph-name sc-t52 sc-w900 sc-opt">安卓也能用</span></div>
+            <span id="xcph-ico3" class="sc-icon" data-fill="items.3.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span id="xcph-n3" class="xcph-name sc-t52 sc-w900 sc-opt" data-fill="items.3.text">安卓也能用</span></div>
+          <!-- @} -->
         </div>
         <div id="xcph-objwrap" data-slot>
           <i id="xcph-r3" class="xcph-ring" data-layout-allow-overlap></i><i id="xcph-r2" class="xcph-ring" data-layout-allow-overlap></i><i id="xcph-r1" class="xcph-ring" data-layout-allow-overlap></i>
-          <div id="xcph-obj" data-illus="phone" data-orient="portrait" data-screen="blank"></div>
+          <div id="xcph-obj" data-illus="phone" data-orient="portrait" data-screen="blank"></div> <!-- @sub screen: <div id="xcph-obj" data-illus="phone" data-orient="portrait" data-screen="{{screen}}"></div> -->
         </div>
         <div id="xcph-right" data-slot data-layout="col" data-gap="lg">
           <div id="xcph-t2" class="xcph-tag" data-slot>
-            <span id="xcph-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 6 9 17l-5-5" /> </svg></span><span id="xcph-n2" class="xcph-name sc-t52 sc-w900 sc-opt">不用換卡</span></div>
+            <span id="xcph-ico2" class="sc-icon" data-fill="items.2.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 6 9 17l-5-5" /> </svg></span><span id="xcph-n2" class="xcph-name sc-t52 sc-w900 sc-opt" data-fill="items.2.text">不用換卡</span></div>
+          <!-- @if n>=4 { -->
           <div id="xcph-t4" class="xcph-tag" data-slot>
-            <span id="xcph-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span><span id="xcph-n4" class="xcph-name sc-t52 sc-w900 sc-opt">隨時加值</span></div>
+            <span id="xcph-ico4" class="sc-icon" data-fill="items.4.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span><span id="xcph-n4" class="xcph-name sc-t52 sc-w900 sc-opt" data-fill="items.4.text">隨時加值</span></div>
+          <!-- @} -->
         </div>
       </div>
     </div>
@@ -102,9 +106,9 @@
     const P = SceneMotion(tl, document.getElementById('x-callout-phone'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#232@下載'), T2 = P.at('#233@不用換卡'), T3 = P.at('#234@安卓'), T4 = P.at('#235@加值');   // 講到每個功能的時刻
-    const ALL = P.at('#236');                        // 講到總結那一句（沒有這句見檔頭【綁句欄位】）
-    P.sfx('success', '#236');                        // 總結手機打勾那一拍（句號和上一行一樣）
+    const T1 = P.at('#232@下載'), T2 = P.at('#233@不用換卡'), T3 = P.at('#234@安卓'), T4 = P.at('#235@加值');   // 講到每個功能的時刻  // @sub n==3: const T1 = P.at('#232@下載'), T2 = P.at('#233@不用換卡'), T3 = P.at('#234@安卓'); @@ n==2: const T1 = P.at('#232@下載'), T2 = P.at('#233@不用換卡');
+    const ALL = P.at('#236');                        // 講到總結那一句（沒有這句見檔頭【綁句欄位】）  // @sub !all && n==4: const ALL = T4 + 2.0; @@ !all && n==3: const ALL = T3 + 2.0; @@ !all && n==2: const ALL = T2 + 2.0;
+    P.sfx('success', '#236');                        // 總結手機打勾那一拍（句號和上一行一樣）  // @if all
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const TAGS = '#xcph-t1, #xcph-t2, #xcph-t3, #xcph-t4';   // 全部膠囊（收尾用；少的選不到，不用改）
 
@@ -122,14 +126,18 @@
     P.ripple('#xcph-obj', T2, { to: 1.8 });
     P.pop('#xcph-t2', T2, { from: 0.6, dy: 0 });  P.chars('#xcph-n2', T2 + 0.12);  P.icon('#xcph-ico2', T2 + 0.15);
     P.spot('#xcph-t1, #xcph-t2', '#xcph-t2', T2 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    // @if n>=3 {
     // 第 3 個功能（只有 2 個功能時刪掉這 3 行）
     P.ripple('#xcph-obj', T3, { to: 1.8 });
     P.pop('#xcph-t3', T3, { from: 0.6, dy: 0 });  P.chars('#xcph-n3', T3 + 0.12);  P.icon('#xcph-ico3', T3 + 0.15);
     P.spot('#xcph-t1, #xcph-t2, #xcph-t3', '#xcph-t3', T3 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    // @}
+    // @if n>=4 {
     // 第 4 個功能（3 個以下時刪掉這 3 行）
     P.ripple('#xcph-obj', T4, { to: 1.8 });
     P.pop('#xcph-t4', T4, { from: 0.6, dy: 0 });  P.chars('#xcph-n4', T4 + 0.12);  P.icon('#xcph-ico4', T4 + 0.15);
     P.spot('#xcph-t1, #xcph-t2, #xcph-t3, #xcph-t4', '#xcph-t4', T4 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    // @}
     // 收：總結那一句 → 回均衡（膠囊全部亮回），手機畫面打勾、漣漪，完成態停到段尾
     P.spot(TAGS, null, ALL, { dur: 0.6 });
     P.in('#xcph-obj .il-check', ALL + 0.1);

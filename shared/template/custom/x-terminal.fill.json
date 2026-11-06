@@ -1,0 +1,159 @@
+{
+  "template": "x-terminal",
+  "prefix": "xterm",
+  "beat": "H",
+  "layout": "fullscreen",
+  "when": "講「打一行指令，它就自己跑完」：深色終端機，指令逐字打出（路徑＋指令＋參數合計 ≤ 16 字）→ 轉圈處理中 → 講到每個步驟（1–2 個）印一行輸出 → 講到完成，轉圈換成綠色完成行",
+  "slots": {
+    "title": {
+      "label": "視窗標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "path": {
+      "label": "路徑",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "cmd": {
+      "label": "指令",
+      "type": "text",
+      "max": 12,
+      "required": true
+    },
+    "flag": {
+      "label": "指令參數",
+      "type": "text",
+      "max": 6
+    },
+    "runAt": {
+      "label": "開始唸指令的那一句（開口後 0.45 秒開始打字，固定 2.4 秒打完）",
+      "type": "at",
+      "ref": "RUN",
+      "required": true
+    },
+    "outputs": {
+      "label": "輸出",
+      "type": "list",
+      "min": 1,
+      "maxItems": 2,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "輸出文字",
+          "type": "text",
+          "max": 14,
+          "required": true
+        },
+        "at": {
+          "label": "講到這個步驟的時間（那一行由左往右印出）",
+          "type": "at",
+          "ref": "STEP{n}",
+          "required": true
+        }
+      }
+    },
+    "wait": {
+      "label": "處理中的字",
+      "type": "text",
+      "max": 8
+    },
+    "doneText": {
+      "label": "完成行",
+      "type": "text",
+      "max": 16,
+      "required": true
+    },
+    "doneAt": {
+      "label": "講到完成的時間（轉圈換成完成行、0.5 秒後出現新的提示字元；音效 success）",
+      "type": "at",
+      "ref": "DONE",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "auto-edit — zsh",
+    "path": "~/影片",
+    "cmd": "node media.mjs rough",
+    "flag": "ep2",
+    "runAt": "#322",
+    "outputs": [
+      {
+        "text": "找到 12 段重講",
+        "at": "#323@重講"
+      },
+      {
+        "text": "字幕 86 則對好時間",
+        "at": "#324@字幕"
+      }
+    ],
+    "wait": "處理中…",
+    "doneText": "完成 rough.mp4（42 秒）",
+    "doneAt": "#325@完成"
+  },
+  "sampleMin": {
+    "title": "auto-edit — zsh",
+    "path": "~/影片",
+    "cmd": "node media.mjs rough ep2",
+    "runAt": "#322",
+    "outputs": [
+      {
+        "text": "找到 12 段重講",
+        "at": "#323@重講"
+      }
+    ],
+    "doneText": "完成 rough.mp4（42 秒）",
+    "doneAt": "#325@完成"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "終端機視窗＋標題列圖示＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 圖示描線（標題列）；＋0.62 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "第一個提示字元「{path} $」",
+      "moves": "淡入（提示字元）",
+      "focus": "提示字元"
+    },
+    {
+      "beat": "2",
+      "at": "`{runAt}`＋0.45",
+      "show": "指令逐字打出「{cmd}」（固定 2.4 秒打完）；打完 0.3 秒後底下轉圈「處理中」",
+      "moves": "打字（指令）；＋2.7 淡入（轉圈那一行）",
+      "focus": "正在打的字"
+    },
+    {
+      "each": "outputs",
+      "beat": 3,
+      "at": "`{at}`",
+      "show": "輸出 {n}「✓ {text}」",
+      "moves": "擦開（輸出 {n}，由左）",
+      "focus": "輸出 {n}"
+    },
+    {
+      "if": "n==1",
+      "beat": "4",
+      "at": "`{doneAt}`",
+      "show": "轉圈換成綠色完成行「✓ {doneText}」；＋0.5 新的提示字元",
+      "moves": "淡出（轉圈那一行）；擦開（完成行，由左）；＋0.35 重拍（完成行）；＋0.5 淡入（新提示字元）",
+      "focus": "完成行",
+      "sfx": "success"
+    },
+    {
+      "if": "n==2",
+      "beat": "5",
+      "at": "`{doneAt}`",
+      "show": "轉圈換成綠色完成行「✓ {doneText}」；＋0.5 新的提示字元",
+      "moves": "淡出（轉圈那一行）；擦開（完成行，由左）；＋0.35 重拍（完成行）；＋0.5 淡入（新提示字元）",
+      "focus": "完成行",
+      "sfx": "success"
+    }
+  ]
+}

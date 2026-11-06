@@ -1,0 +1,184 @@
+{
+  "template": "x-architecture",
+  "prefix": "xarch",
+  "beat": "A",
+  "layout": "fullscreen",
+  "when": "講資料在兩個裝置之間怎麼走、不經過某個中繼（手機的照片直接傳到電腦，不經過雲端）：講到「直接」起點亮起、直連線描到終點，傳的東西走過去；講到「不經過」把中繼劃掉、結論膠囊彈出（cut、conclusion、conclusionIcon 三個一起填；沒有這一句就都不填）",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "source": {
+      "label": "起點裝置",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "sourceIcon": {
+      "label": "起點裝置圖示",
+      "type": "icon",
+      "required": true
+    },
+    "target": {
+      "label": "終點裝置",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "targetIcon": {
+      "label": "終點裝置圖示",
+      "type": "icon",
+      "required": true
+    },
+    "relay": {
+      "label": "中繼",
+      "type": "text",
+      "max": 3,
+      "required": true
+    },
+    "relayIcon": {
+      "label": "中繼圖示",
+      "type": "icon",
+      "required": true
+    },
+    "path": {
+      "label": "講到「直接傳」的時間（起點亮起、直連線描到終點）",
+      "type": "at",
+      "ref": "PATH",
+      "required": true
+    },
+    "flow": {
+      "label": "講到傳的東西的時間（三個檔案走過去、終點亮起）",
+      "type": "at",
+      "ref": "FLOW",
+      "required": true
+    },
+    "cut": {
+      "label": "講到「不經過」的時間（中繼被劃掉、結論彈出）。沒有這一句就不填 cut、conclusion、conclusionIcon",
+      "type": "at",
+      "ref": "CUT"
+    },
+    "conclusion": {
+      "label": "結論",
+      "type": "text",
+      "max": 6
+    },
+    "conclusionIcon": {
+      "label": "結論圖示（有 cut 才填）",
+      "type": "icon"
+    }
+  },
+  "sample": {
+    "title": "照片怎麼傳到電腦",
+    "source": "手機",
+    "sourceIcon": "smartphone",
+    "target": "電腦",
+    "targetIcon": "laptop",
+    "relay": "雲端",
+    "relayIcon": "cloud",
+    "path": "#82@直接",
+    "flow": "#83@照片",
+    "cut": "#84@不經過",
+    "conclusion": "不經過雲端",
+    "conclusionIcon": "cloud-off"
+  },
+  "sampleMin": {
+    "title": "照片怎麼傳到電腦",
+    "source": "手機",
+    "sourceIcon": "smartphone",
+    "target": "電腦",
+    "targetIcon": "laptop",
+    "relay": "雲端",
+    "relayIcon": "cloud",
+    "path": "#82@直接",
+    "flow": "#83@照片"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋0.7",
+      "show": "{source}、{target}、{relay} 三個節點＋圖示",
+      "moves": "錯拍彈出（節點）；＋0.15 圖示描線（錯拍）",
+      "focus": "均衡"
+    },
+    {
+      "beat": "2",
+      "at": "段起點＋1.2",
+      "show": "經過{relay}的虛線",
+      "moves": "淡入（虛線）",
+      "focus": "方向"
+    },
+    {
+      "beat": "3",
+      "at": "段起點＋1.7",
+      "show": "—",
+      "moves": "預覽態（{source}、{target}）；退焦（{relay}）；鏡頭慢推",
+      "focus": "整體"
+    },
+    {
+      "beat": "4",
+      "at": "`{path}`",
+      "show": "{source}亮起；直連線帶發光頭描到{target}",
+      "moves": "鏡頭跟焦點（−0.2）；聚焦（{source}）；淡入（底色）；漣漪（{source}圖示）；＋0.1 彗星描線（直連線）",
+      "focus": "{source}"
+    },
+    {
+      "beat": "5",
+      "at": "`{flow}`",
+      "show": "三個檔案沿直連線走到{target}；{target}亮起",
+      "moves": "彗星描線（三個檔案，每 0.3 秒一個）；鏡頭跟焦點（{target}，＋0.2）；＋0.8 聚焦（{target}）；走過（{source}）；淡出（{source}底色）；淡入（{target}底色）；漣漪（{target}圖示）",
+      "focus": "{target}"
+    },
+    {
+      "if": "cut",
+      "beat": "6",
+      "at": "`{cut}`",
+      "show": "{relay}被劃掉；經過{relay}的虛線退焦",
+      "moves": "劃掉（{relay}，−0.2 先亮回來）；退焦（虛線）",
+      "focus": "{relay}",
+      "sfx": "ding"
+    },
+    {
+      "if": "cut",
+      "beat": "7",
+      "at": "`{cut}`＋0.35",
+      "show": "結論膠囊「{conclusion}」＋圖示",
+      "moves": "預覽態（兩個裝置）；淡出（終點底色）；鏡頭跟焦點（−0.2）；彈出（結論膠囊）；＋0.12 逐字落下（結論）；＋0.15 圖示描線",
+      "focus": "結論"
+    },
+    {
+      "if": "cut",
+      "beat": "8",
+      "at": "`{cut}`＋0.95",
+      "show": "—",
+      "moves": "聚焦（結論膠囊）",
+      "focus": "結論"
+    },
+    {
+      "if": "cut",
+      "beat": "收",
+      "at": "`{cut}`＋2.6",
+      "show": "兩個裝置＋結論膠囊（{relay}維持劃掉、虛線維持退焦）",
+      "moves": "回均衡；鏡頭回正",
+      "focus": "整體"
+    },
+    {
+      "if": "!cut",
+      "beat": "收",
+      "at": "`{flow}`＋2.6",
+      "show": "兩個裝置＋直連線",
+      "moves": "回均衡；鏡頭回正",
+      "focus": "整體"
+    }
+  ]
+}

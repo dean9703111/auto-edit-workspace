@@ -117,7 +117,8 @@
     P.pop('#xba-right', AFTER);
     P.chars('#xba-num2', AFTER + 0.15, { mode: 'drop' });
     P.icon('#xba-ico2', AFTER + 0.15);
-    P.bar('#xba-fill2', AFTER + 0.3, { from: 0, to: 0.111, dur: 0.8 });   // 20 ÷ 180
+    const RATIO = 0.111;   // 右欄量條長度＝新 ÷ 舊（兩邊換算成同一個單位，同一把尺）
+    P.bar('#xba-fill2', AFTER + 0.3, { from: 0, to: RATIO, dur: 0.8 });
 
     // 拍 4 講到好處：右欄數字畫螢光筆、光澤掃過右欄、數字重拍（音效 success 見上面 P.sfx）
     P.marker('#xba-num2', SAVE);

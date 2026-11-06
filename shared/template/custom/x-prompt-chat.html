@@ -81,14 +81,14 @@
        data-cues-sample='{"start":0,"D":14.6,"cues":{"312":[1.6,4.4],"313":[4.6,7.9],"314":[8.0,13.0]},"refs":{"#313@送出":5.1,"#314@可以":8.2}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xpch-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span id="xpch-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> </svg></span><span class="sc-opt">問 AI 一句</span></div>
+      <div class="sc-wcard__bar"><span id="xpch-bico" class="sc-icon" data-fill="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> </svg></span><span class="sc-opt" data-fill="title">問 AI 一句</span></div>
       <div id="xpch-body" data-layout="col" data-justify="start" data-gap="lg">
-        <div id="xpch-urow" data-slot><div id="xpch-user" class="sc-t40 sc-w700 sc-opt" data-snap-width>這段可以剪掉嗎？</div></div>
-        <div id="xpch-airow" data-slot><span id="xpch-ai" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span>
-          <div id="xpch-say"><div id="xpch-bub" data-snap-width><div id="xpch-reply" class="sc-t40 sc-w700">可以，這段你重講了兩次，<br>保留第二次比較順就好。</div></div>
+        <div id="xpch-urow" data-slot><div id="xpch-user" class="sc-t40 sc-w700 sc-opt" data-snap-width data-fill="ask">這段可以剪掉嗎？</div></div>
+        <div id="xpch-airow" data-slot><span id="xpch-ai" class="sc-icon" data-fill="aiIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span>
+          <div id="xpch-say"><div id="xpch-bub" data-snap-width><div id="xpch-reply" class="sc-t40 sc-w700">可以，這段你重講了兩次，<br>保留第二次比較順就好。</div></div>   <!-- @sub reply2: <div id="xpch-say"><div id="xpch-bub" data-snap-width><div id="xpch-reply" class="sc-t40 sc-w700">{{reply|text}}<br>{{reply2|text}}</div></div> @@ 1: <div id="xpch-say"><div id="xpch-bub" data-snap-width><div id="xpch-reply" class="sc-t40 sc-w700">{{reply|text}}</div></div> -->
             <div id="xpch-dots" data-layout-allow-overlap><i id="xpch-d1" class="xpch-dot"></i><i id="xpch-d2" class="xpch-dot"></i><i id="xpch-d3" class="xpch-dot"></i></div></div></div>
         <div id="xpch-box" data-slot data-layout-allow-slack>
-          <span id="xpch-ask" class="sc-t40 sc-w700">這段可以剪掉嗎？</span>
+          <span id="xpch-ask" class="sc-t40 sc-w700" data-fill="ask">這段可以剪掉嗎？</span>
           <span id="xpch-send" class="sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m5 12 7-7 7 7" /> <path d="M12 19V5" /> </svg></span>
         </div>
         <svg id="xpch-sky" viewBox="0 0 1176 580" xmlns="http://www.w3.org/2000/svg" data-layout-ignore><path id="xpch-path" d="" /></svg>

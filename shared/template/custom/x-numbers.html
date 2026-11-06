@@ -20,8 +20,9 @@
   2. 圖示：#xn-icoA、#xn-icoB 裡的 svg。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
      一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
-  3. 數字：P.count 的 to（20、32、28）。量條比例：每 1 單位 ＝ 軌道寬 ÷ 上限（這裡 600 ÷ 20 ＝ 30 px），
-     所以撐開後寬度 ＝ 30 × 32 ＝ 960（改 P.morph 的 width 與 #xn-trackB 的寬）、第二條 28 ÷ 32 ＝ 0.875（改 P.bar 的 to）。
+  3. 數字：只改 <script> 開頭 LIMIT（上限）、NUM_A（第一個數字，要比 LIMIT 大）、NUM_B（第二個數字，不超過 NUM_A）三行。
+     量條比例由程式算：撐開後的軌道寬固定 960（＝ #xn-trackB 的寬），每 1 單位 ＝ 960 ÷ NUM_A（這裡 30 px），
+     所以撐開前的軌道寬 ＝ 960 × LIMIT ÷ NUM_A（這裡 600）、第二條 ＝ NUM_B ÷ NUM_A（這裡 0.875）；P.morph、P.bar 不用改。
   4. 綁句：<script> 開頭 T1、T2、T3 的句號與詞（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。
   5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
 
@@ -79,23 +80,23 @@
        data-cues-sample='{"start":0,"D":12.5,"cues":{"41":[1.6,4.4],"42":[4.6,7.4],"43":[7.6,12]},"refs":{"#41@NG":1.8,"#42@32":5.2,"#43@28":7.8}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xn-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">NG 段落清理</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">NG 段落清理</span></div>
       <div id="xn-body" data-layout="col" data-gap="lg">
         <div id="xn-cardA" class="xn-box" data-slot>
           <div class="xn-row">
-            <span id="xn-icoA" class="sc-icon sc-icon--88"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /> </svg></span>
-            <span class="xn-lab sc-t64 sc-w900 sc-opt">NG 段落</span>
+            <span id="xn-icoA" class="sc-icon sc-icon--88" data-fill="iconA"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /> </svg></span>
+            <span class="xn-lab sc-t64 sc-w900 sc-opt" data-fill="nameA">NG 段落</span>
             <span id="xn-nA" class="xn-n sc-t112 sc-w900">0</span>
-            <span id="xn-unitA" class="sc-t72 sc-w700 sc-opt">段</span>
+            <span id="xn-unitA" class="sc-t72 sc-w700 sc-opt" data-fill="unitA">段</span>
           </div>
           <div id="xn-trackA" class="xn-track"><div id="xn-fillA" class="xn-fill"><div id="xn-overA"></div></div></div>
         </div>
         <div id="xn-cardB" class="xn-box" data-slot>
           <div class="xn-row">
-            <span id="xn-icoB" class="sc-icon sc-icon--88"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span>
-            <span class="xn-lab sc-t64 sc-w900 sc-opt">剪掉</span>
+            <span id="xn-icoB" class="sc-icon sc-icon--88" data-fill="iconB"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span>
+            <span class="xn-lab sc-t64 sc-w900 sc-opt" data-fill="nameB">剪掉</span>
             <span id="xn-nB" class="xn-n sc-t112 sc-w900 sc-kw">0</span>
-            <span id="xn-unitB" class="sc-t72 sc-w700 sc-opt">段</span>
+            <span id="xn-unitB" class="sc-t72 sc-w700 sc-opt" data-fill="unitB">段</span>
           </div>
           <div id="xn-trackB" class="xn-track"><div id="xn-fillB" class="xn-fill"></div></div>
         </div>
@@ -113,6 +114,10 @@
 
     P.sfx('impact', '#42@32'); P.sfx('impact', '#43@28');   // 兩個數字落定各一顆音效（句號和上一行一樣；主題那一拍不配）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+    const LIMIT = 20;                                    // 上限：軌道一開始裝得下的量（第一個數字要比它大）
+    const NUM_A = 32;                                    // 第一個數字（超過上限，軌道撐開）
+    const NUM_B = 28;                                    // 第二個數字（不超過第一個，同一把尺）
+    const WIDE = 960, W0 = Math.round(WIDE * LIMIT / NUM_A);   // 撐開後的軌道寬固定 960；撐開前＝上限那一段（20 ÷ 32 × 960 ＝ 600）
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
     if (ENTER === 'grow') P.grow('#xn-card', 0.3);
@@ -126,10 +131,10 @@
     P.chars('#xn-unitA', T1 + 0.25, { mode: 'drop' });
 
     // 拍 2 提早 1.2 秒開始數：0 → 20（上限）量條同速長滿；碰到上限那一刻軌道撐開 600 → 960、數字繼續到 32、整條變警示色
-    P.count('#xn-nA', T2 - 1.2, { from: 0, to: 20, dur: 0.7, ease: 'none' });
+    P.count('#xn-nA', T2 - 1.2, { from: 0, to: LIMIT, dur: 0.7, ease: 'none' });
     P.bar('#xn-fillA', T2 - 1.2, { from: 0, to: 1, dur: 0.7, ease: 'none' });
-    P.count('#xn-nA', T2 - 0.5, { from: 20, to: 32, dur: 0.5 });
-    P.morph('#xn-trackA', T2 - 0.5, { width: 960 }, { from: { width: 600 }, dur: 0.5, ease: P.V2.EASE.move });   // 同一根軌道撐開，填充（寬 100%）跟著伸長
+    P.count('#xn-nA', T2 - 0.5, { from: LIMIT, to: NUM_A, dur: 0.5 });
+    P.morph('#xn-trackA', T2 - 0.5, { width: WIDE }, { from: { width: W0 }, dur: 0.5, ease: P.V2.EASE.move });   // 同一根軌道撐開，填充（寬 100%）跟著伸長
     P.in('#xn-overA', T2 - 0.5, { dur: 0.3 });
     // 拍 3 講到「32」數字落定：重拍、圖示漣漪、單位畫螢光筆（音效 impact 見上面 P.sfx）
     P.punch('#xn-nA', T2, { scale: 1.12 });
@@ -140,8 +145,8 @@
     P.pop('#xn-cardB', T3 - 1.2);
     P.icon('#xn-icoB', T3 - 1.05);
     P.chars('#xn-unitB', T3 - 0.95, { mode: 'drop' });
-    P.count('#xn-nB', T3 - 1.2, { from: 0, to: 28, dur: 1.2 });
-    P.bar('#xn-fillB', T3 - 1.2, { from: 0, to: 0.875, dur: 1.2, ease: 'power2.out' });   // 28 ÷ 32，和數字同一條曲線
+    P.count('#xn-nB', T3 - 1.2, { from: 0, to: NUM_B, dur: 1.2 });
+    P.bar('#xn-fillB', T3 - 1.2, { from: 0, to: NUM_B / NUM_A, dur: 1.2, ease: 'power2.out' });   // 28 ÷ 32，和數字同一條曲線
     P.punch('#xn-nB', T3, { scale: 1.12 });
     P.ripple('#xn-icoB', T3);
     P.dim('#xn-cardA', T3, { to: 0.6 });

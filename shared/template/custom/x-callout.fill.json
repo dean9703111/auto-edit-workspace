@@ -1,0 +1,144 @@
+{
+  "template": "x-callout",
+  "prefix": "xcall",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "一個主體加 2–4 個短名詞（主體的毛病、零件、用途、特徵），一個詞一句或一句裡連講；中央一個大圖示是主體，講到哪個詞，那個標籤貼上來、引線走到主體",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "obj": {
+      "label": "中央主體的圖示",
+      "type": "icon",
+      "required": true
+    },
+    "items": {
+      "label": "標籤",
+      "type": "list",
+      "min": 2,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "標籤名",
+          "type": "text",
+          "max": 4,
+          "required": true
+        },
+        "icon": {
+          "label": "圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到標籤名的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    },
+    "all": {
+      "label": "講到總結那一句的時間（選填；沒有就最後一個標籤講完 2 秒收）",
+      "type": "at",
+      "ref": "ALL"
+    }
+  },
+  "sample": {
+    "title": "錄影常見小毛病",
+    "obj": "smartphone",
+    "items": [
+      {
+        "text": "腳架不穩",
+        "icon": "vibrate",
+        "at": "#101@腳架不穩"
+      },
+      {
+        "text": "衣服太薄",
+        "icon": "shirt",
+        "at": "#102@衣服太薄"
+      },
+      {
+        "text": "收音太遠",
+        "icon": "mic",
+        "at": "#103@收音太遠"
+      },
+      {
+        "text": "背光太暗",
+        "icon": "sun",
+        "at": "#104@背光太暗"
+      }
+    ],
+    "all": "#105"
+  },
+  "sampleMin": {
+    "title": "錄影常見小毛病",
+    "obj": "smartphone",
+    "items": [
+      {
+        "text": "收音太遠",
+        "icon": "mic",
+        "at": "#103@收音太遠"
+      },
+      {
+        "text": "背光太暗",
+        "icon": "sun",
+        "at": "#104@背光太暗"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "中央主體（圖示「{obj}」）",
+      "moves": "彈出（主體）；＋0.15 圖示描線（主體）",
+      "focus": "主體"
+    },
+    {
+      "each": "items",
+      "to": 1,
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "標籤 {n}「{text}」＋圖示；引線從標籤走到主體、端點小圓",
+      "moves": "彈出（標籤）；＋0.12 逐字上浮（標籤字）；＋0.15 圖示描線；＋0.25 彗星描線（引線）；＋0.65 描線（端點）；＋0.6 聚焦（標籤）",
+      "focus": "標籤 {n}"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "beat": 3,
+      "at": "`{at}`",
+      "show": "標籤 {n}「{text}」＋圖示；引線從標籤走到主體、端點小圓",
+      "moves": "彈出（標籤）；＋0.12 逐字上浮（標籤字）；＋0.15 圖示描線；＋0.25 彗星描線（引線）；＋0.65 描線（端點）；＋0.6 聚焦（標籤）；＋0.6 退焦（前一條引線）",
+      "focus": "標籤 {n}"
+    },
+    {
+      "if": "all",
+      "beat": "收",
+      "at": "`{all}`",
+      "show": "全部標籤＋引線",
+      "moves": "回均衡",
+      "focus": "整體"
+    },
+    {
+      "if": "!all",
+      "beat": "收",
+      "at": "`{last.at}`＋2.0",
+      "show": "全部標籤＋引線",
+      "moves": "回均衡",
+      "focus": "整體"
+    }
+  ]
+}

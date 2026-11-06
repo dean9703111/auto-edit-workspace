@@ -1,0 +1,166 @@
+{
+  "template": "x-callout-parts",
+  "prefix": "xcpa",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "拆解一個看得見的物件由哪幾個部位組成（2–4 個零件，講「從上到下是鏡頭、手機、雲台和三腳架」）；左邊主體像藍圖被畫出來，講到哪個零件，編號圓彈出、引線指到主體上那個部位、右邊零件表那一列亮起",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "objName": {
+      "label": "主體名稱",
+      "type": "text",
+      "max": 6,
+      "required": true
+    },
+    "illus": {
+      "label": "主體插圖（選填，沒寫＝phoneTripod 手機加腳架；都是直式）",
+      "type": "enum",
+      "options": [
+        "phoneTripod",
+        "phone",
+        "pgPerson"
+      ]
+    },
+    "items": {
+      "label": "零件",
+      "type": "list",
+      "min": 2,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "零件名",
+          "type": "text",
+          "max": 4,
+          "required": true
+        },
+        "x": {
+          "label": "部位在插圖上的左右位置（0–100，插圖左緣 0、右緣 100）",
+          "type": "number",
+          "required": true
+        },
+        "y": {
+          "label": "部位在插圖上的上下位置（0–100，插圖上緣 0、下緣 100；零件由上到下照順序排）",
+          "type": "number",
+          "required": true
+        },
+        "at": {
+          "label": "講到零件名的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    },
+    "all": {
+      "label": "講到總結那一句的時間（選填；沒有就最後一個零件講完 2 秒收）",
+      "type": "at",
+      "ref": "ALL"
+    }
+  },
+  "sample": {
+    "title": "拍片架拆解",
+    "objName": "手機拍片架",
+    "illus": "phoneTripod",
+    "items": [
+      {
+        "text": "鏡頭",
+        "x": 50,
+        "y": 3,
+        "at": "#242@鏡頭"
+      },
+      {
+        "text": "手機",
+        "x": 50,
+        "y": 35,
+        "at": "#243@手機"
+      },
+      {
+        "text": "雲台",
+        "x": 50,
+        "y": 73,
+        "at": "#244@雲台"
+      },
+      {
+        "text": "三腳架",
+        "x": 76,
+        "y": 92,
+        "at": "#245@三腳架"
+      }
+    ],
+    "all": "#246"
+  },
+  "sampleMin": {
+    "title": "拍片架拆解",
+    "objName": "手機拍片架",
+    "items": [
+      {
+        "text": "雲台",
+        "x": 50,
+        "y": 73,
+        "at": "#244@雲台"
+      },
+      {
+        "text": "三腳架",
+        "x": 76,
+        "y": 92,
+        "at": "#245@三腳架"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "藍圖方格；主體「{objName}」被畫出來；零件表貼上",
+      "moves": "淡入（方格）；描線（主體）；＋0.3 彈出（零件表，紙膠帶貼上）",
+      "focus": "主體"
+    },
+    {
+      "each": "items",
+      "to": 1,
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "零件 {n}「{text}」：主體上 ({x}%, {y}%) 的圓點、引線、編號圓 {n}；零件表第 {n} 列亮起",
+      "moves": "描線（圓點）；＋0.1 描線（引線）；＋0.4 彈出（編號圓）；彈出（零件表那一列）；＋0.12 逐字上浮（零件名）；＋0.6 聚焦（零件表那一列）",
+      "focus": "零件 {n}"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "beat": 3,
+      "at": "`{at}`",
+      "show": "零件 {n}「{text}」：主體上 ({x}%, {y}%) 的圓點、引線、編號圓 {n}；零件表第 {n} 列亮起",
+      "moves": "描線（圓點）；＋0.1 描線（引線）；＋0.4 彈出（編號圓）；彈出（零件表那一列）；＋0.12 逐字上浮（零件名）；＋0.6 聚焦（零件表那一列，其他壓暗）",
+      "focus": "零件 {n}"
+    },
+    {
+      "if": "all",
+      "beat": "收",
+      "at": "`{all}`",
+      "show": "零件表全部",
+      "moves": "回均衡",
+      "focus": "整體"
+    },
+    {
+      "if": "!all",
+      "beat": "收",
+      "at": "`{last.at}`＋2.0",
+      "show": "零件表全部",
+      "moves": "回均衡",
+      "focus": "整體"
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "template": "x-prompt-chat",
+  "prefix": "xpch",
+  "beat": "H",
+  "layout": "fullscreen",
+  "when": "演一次「問 AI 一句、AI 回一句」：輸入膠囊打出問題 → 講到「送出」紙飛機飛上去、問題變成右上角泡泡 → AI「輸入中」→ 講到回答，AI 泡泡彈出、回答逐字打出",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "ask": {
+      "label": "問題（一行）",
+      "type": "text",
+      "max": 16,
+      "required": true
+    },
+    "reply": {
+      "label": "回答第 1 行",
+      "type": "text",
+      "max": 18,
+      "required": true
+    },
+    "reply2": {
+      "label": "回答第 2 行（選填）",
+      "type": "text",
+      "max": 18
+    },
+    "icon": {
+      "label": "標題列圖示",
+      "type": "icon",
+      "required": true
+    },
+    "aiIcon": {
+      "label": "AI 頭像圖示",
+      "type": "icon",
+      "required": true
+    },
+    "typeAt": {
+      "label": "開始唸問題的那一句（開口後 0.45 秒開始打字，每秒 8.5 字）",
+      "type": "at",
+      "ref": "TYPE",
+      "required": true
+    },
+    "sendAt": {
+      "label": "講到「送出」的時間（送出鈕漣漪、紙飛機飛上去）",
+      "type": "at",
+      "ref": "SEND",
+      "required": true
+    },
+    "replyAt": {
+      "label": "開始唸回答的時間（三個點收掉、AI 泡泡彈出、回答逐字打出；音效 ding）",
+      "type": "at",
+      "ref": "REPLY",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "問 AI 一句",
+    "ask": "這段可以剪掉嗎？",
+    "reply": "可以，這段你重講了兩次，",
+    "reply2": "保留第二次比較順就好。",
+    "icon": "message-circle",
+    "aiIcon": "bot",
+    "typeAt": "#312",
+    "sendAt": "#313@送出",
+    "replyAt": "#314@可以"
+  },
+  "sampleMin": {
+    "title": "問 AI 一句",
+    "ask": "這段要剪嗎？",
+    "reply": "可以，保留第二次就好。",
+    "icon": "message-circle",
+    "aiIcon": "bot",
+    "typeAt": "#312",
+    "sendAt": "#313@送出",
+    "replyAt": "#314@可以"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題列圖示＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 圖示描線（標題列）；＋0.62 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "空的輸入膠囊＋送出鈕；AI 頭像",
+      "moves": "擦開（輸入膠囊，由左）；＋0.2 圖示描線（送出鈕）；＋0.3 彈出（AI 頭像）；＋0.45 圖示描線（AI 頭像）",
+      "focus": "輸入膠囊"
+    },
+    {
+      "beat": "2",
+      "at": "`{typeAt}`＋0.45",
+      "show": "問題逐字打出「{ask}」",
+      "moves": "打字",
+      "focus": "正在打的字"
+    },
+    {
+      "beat": "3",
+      "at": "`{sendAt}`",
+      "show": "紙飛機從送出鈕飛到泡泡下緣，問題變成右上角主色泡泡「{ask}」；AI 旁出現「輸入中」三個點",
+      "moves": "漣漪（送出鈕）；淡出（輸入膠囊裡的問題）；＋0.6 彈出（使用者泡泡）；＋1.2 彈出（輸入中三個點）；＋1.2 呼吸（三個點，輪流跳到回答）",
+      "focus": "送出的問題"
+    },
+    {
+      "if": "reply2",
+      "beat": "4",
+      "at": "`{replyAt}`",
+      "show": "AI 泡泡＋回答逐字打出「{reply}／{reply2}」",
+      "moves": "淡出（三個點）；彈出（AI 泡泡）；＋0.2 打字（回答）",
+      "focus": "回答",
+      "sfx": "ding"
+    },
+    {
+      "if": "!reply2",
+      "beat": "4",
+      "at": "`{replyAt}`",
+      "show": "AI 泡泡＋回答逐字打出「{reply}」",
+      "moves": "淡出（三個點）；彈出（AI 泡泡）；＋0.2 打字（回答）",
+      "focus": "回答",
+      "sfx": "ding"
+    }
+  ]
+}

@@ -571,7 +571,7 @@
 - 顏色只用 token（`var(--brand)`、`var(--sc-*)`、`var(--v2-*)`），不寫色碼。理由：使用者換主色、換主題（亮／暗）後，寫死的顏色不會跟著變。陰影、光暈、漸層只能用 `var(--v2-*)`，不寫 `box-shadow`、`filter`、`gradient` 的字面值（R8 #3）。要「亮起來」用 `P.spot`（聚焦），不要用 GSAP 補間顏色。
 - 動畫裡要配音效的拍點寫 `const T = P.sfx('success', '#38@兩支')`（回傳秒數，同時當這一拍的動畫時間；`P.sfx('ding', '#41', 0.2)` 晚 0.2 秒）。音效名、ref 都寫字串字面值，off 寫數字；build 會排成 `<audio>`，算進 `--check` 的音效次數與密度。不要在 plan.json 另外寫這些音效。寫成變數或 `+` 組字串、音效名不在 `kit/sfx.json` 都會 ✖；綁到段外的句子會被拿掉並 ⚠（USAGE.md 4.2）。
 - 動畫照確認過的動畫分鏡一拍一拍做：每一拍一個拍點常數（`const T1 = P.at('#38@兩支')`，分鏡「音效拍點」有寫就用上一條的 `P.sfx`），「動態」欄的每個名稱用 `shared/template/BEATS.md` 語彙表「對應」欄的方法。只用 `SceneMotion` 的方法：
-  - v2：進場 `P.wipe`／`P.drift`／`P.pop`／`P.grow`／`P.slide`／`P.in`；字 `P.chars`／`P.type`／`P.count`；線 `P.stroke`／`P.comet`／`P.icon`／`P.check`／`P.strike`／`P.bar`／`P.flow`；強調 `P.sheen`／`P.marker`／`P.punch`／`P.ripple`／`P.stamp`（蓋章，對象是自己寫的 `<b class="sc-stamp">過時</b>`，和被蓋的元素放在同一層、不要放進它裡面；`{ on: '#被蓋的' }` 落地時讓它退焦）；`P.strike` 加 `{ wave: true }` 是波浪線；焦點 `P.spot`／`P.dim`；鏡頭 `P.cam`；微動 `P.idle`；退場 `P.wipeOut`／`P.slideOut`／`P.out`；拍點音效 `P.sfx`。參數與預設值寫在 `shared/template/kit/scene-motion.js` 開頭的「v2」那一段。
+  - v2：進場 `P.wipe`／`P.drift`／`P.pop`／`P.grow`／`P.slide`／`P.in`；字 `P.chars`／`P.type`／`P.count`；線 `P.stroke`／`P.comet`／`P.icon`／`P.check`／`P.strike`／`P.bar`；強調 `P.sheen`／`P.marker`／`P.punch`／`P.ripple`／`P.stamp`（蓋章，對象是自己寫的 `<b class="sc-stamp">過時</b>`，和被蓋的元素放在同一層、不要放進它裡面；`{ on: '#被蓋的' }` 落地時讓它退焦）；`P.strike` 加 `{ wave: true }` 是波浪線；焦點 `P.spot`／`P.dim`；鏡頭 `P.cam`；微動 `P.idle`；退場 `P.wipeOut`／`P.slideOut`／`P.out`；拍點音效 `P.sfx`。參數與預設值寫在 `shared/template/kit/scene-motion.js` 開頭的「v2」那一段。
   - 舊範例裡的 `P.rise`／`P.reveal`／`P.maskUp`／`P.swap`／`P.axis`／`P.focus`／`P.push`／`P.morph` 還能用；新寫的拍照 BEATS.md。
   - 這些方法會自動處理同一元素第二次補間的 `immediateRender:false`，秒數與曲線是 kit 常數（style.md「節奏」），不要自己填。不要用 GSAP 的 `onUpdate`／`onComplete` 改畫面：HyperFrames 跳到任意時間截圖時不會觸發回呼，畫面會停在錯的狀態。
 
@@ -661,7 +661,7 @@
 ### R7.6 每段情境動畫的檢查
 
 1. `node shared/template/tools/build.mjs --project projects/<專案> --check`：骨架、id、`P.at` 的句號與詞都要過（找不到會 ✖ 並附那一句原文）。
-2. build 之後跑 `node shared/template/tools/audit.mjs --project projects/<專案>`（預設只量情境動畫；`--only x01` 只量一段；`--all` 連情境模板一起量）。它把每一段跳到中點、完成態與每個靜止畫面，量出 ✖ 文字撐破、被裁掉、超出畫面、進字幕區、壓到子母畫面、未定位頂層、標題壓到內容、綁句失敗、分鏡對齊（缺拍、多出來的 `P.at`、動態不在語彙表、表頭不對），以及 ⚠ 沒有動畫分鏡、分鏡用了沒做的動作、間距、重疊、內距、行高、右側空白、垂直平衡、nowrap 餘裕、壓到講者、字太小、半像素邊和節奏（同一秒新元素、間隔、完成態停留、最後一幕）。✖ 全部修掉才往下，⚠ 照 → 改，或在回報裡說明為什麼保留。只改了 custom 檔不用重跑 build；改了 plan.json 要先 build。刻意超出畫面的元素（例：從畫面外推入）標 `data-layout-allow-overflow`，刻意放在字幕帶的標 `data-layout-allow-caption-zone`（和 `hyperframes check` 同一組標記），並在回報寫理由。
+2. build 之後跑 `node shared/template/tools/audit.mjs --project projects/<專案>`（預設只量情境動畫；`--only x01` 只量一段；`--all` 連情境模板一起量；`node shared/template/tools/audit.mjs --project projects/<專案> --json` 給工具讀，stdout 只印一個 JSON）。它把每一段跳到中點、完成態與每個靜止畫面，量出 ✖ 文字撐破、被裁掉、超出畫面、進字幕區、壓到子母畫面、未定位頂層、標題壓到內容、綁句失敗、分鏡對齊（缺拍、多出來的 `P.at`、動態不在語彙表、表頭不對），以及 ⚠ 沒有動畫分鏡、分鏡用了沒做的動作、間距、重疊、內距、行高、右側空白、垂直平衡、nowrap 餘裕、壓到講者、字太小、半像素邊和節奏（同一秒新元素、間隔、完成態停留、最後一幕）。✖ 全部修掉才往下，⚠ 照 → 改，或在回報裡說明為什麼保留。只改了 custom 檔不用重跑 build；改了 plan.json 要先 build。刻意超出畫面的元素（例：從畫面外推入）標 `data-layout-allow-overflow`，刻意放在字幕帶的標 `data-layout-allow-caption-zone`（和 `hyperframes check` 同一組標記），並在回報寫理由。
 3. 亂序截圖：`cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --at <完成態>,<第一拍+1>,<中間拍+1> --no-end -o ../storyboard-preview`，親眼看：線描完閉合、數字對、文字沒撐破、底線在字下面、沒壓到子母畫面和字幕區；三張的內容要和照時間順序截的一樣。
 4. 派給子代理做時，子代理交回：檔案路徑、綁了哪幾句（`P.at` 的句號與詞）、1–3 的結果；主代理整合後再跑一次 1 和 2。audit 有 ✖ 就把那幾行原文交回給寫那支的子代理修。
 - 直式專案 audit 多量三條（數字與改法見 `shared/style.md`「直式」）：✖ `portrait-window`（縮放的段擺位超出舞台窗）、⚠ `portrait-cam`（`P.cam` 推近後切到邊）、⚠ `font`（字級 × 縮放倍率 < 32 px）。
@@ -837,7 +837,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 插入素材與剪輯台效果的樣式 | `shared/template/kit/media.css`、`kit/media.js` | 各 1 個 | build 用到時自動連；紅框、說明卡、聚光燈、STEP、箭頭、放大鏡、dip、淡入淡出 |
 | 換主色工具 | `shared/template/tools/brand.mjs` | 1 支 | 換主色、`bg` 把 HTML 截成背景圖（R9） |
 | 講者調光＋瘦臉 | `shared/template/tools/look.mjs`、`kit/look.json`、`kit/look/*.cube`、`vendor/mediapipe/` | 1 支＋設定 | 核心第 7 節 |
-| 分鏡素材 | `shared/template/tools/build.mjs --scaffold`、`tools/lib/scaffold.mjs` | 1 個旗標 | 排分鏡前產生 `work/分鏡素材.md`：字幕編號、章節、情境對照、每種情境的 plan.json 寫法 |
+| 分鏡素材 | `shared/template/tools/build.mjs --scaffold`、`tools/lib/scaffold.mjs` | 1 個旗標 | 排分鏡前產生 `work/分鏡素材/`（共用、寫法、每章一份）：字幕編號、章節、情境對照、每種情境的 plan.json 寫法 |
 | 進度、能力 | `shared/template/tools/status.mjs`、`caps.mjs` | 各 1 支 | 接手時看做到哪；換風格前看能用哪條生圖路線（R9.3） |
 | 風格規範 | `shared/style.md` | 1 份 | 字幕、節奏、字卡文字、音效、講者資料的唯一來源 |
 

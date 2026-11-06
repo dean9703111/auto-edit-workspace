@@ -1,0 +1,177 @@
+// 情境動畫填資料（lib/custom-fill.mjs）
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { TEMPLATE, imp } from './helpers.mjs';
+
+const F = await imp('lib/custom-fill.mjs');
+const { loadIcons } = await imp('lib/scenes.mjs');
+const CUSTOM = path.join(TEMPLATE, 'custom');
+const icons = loadIcons(TEMPLATE);
+const kitDir = path.join(TEMPLATE, 'kit');
+const read = (n) => fs.readFileSync(path.join(CUSTOM, `${n}.html`), 'utf8');
+
+const spec = F.readFillSpec(CUSTOM, 'x-process');
+const three = { title: '測試流程', items: [{ text: '第一', icon: 'video', at: '#7@第一' }, { text: '第二', icon: 'file', at: '#9' }, { text: '第三', icon: 'scissors', at: '#11' }] };
+
+test('每支有規格的模板：sample 填回去＝模板拿掉標記（標記沒有改到模板）；最少項也產得出來', () => {
+  const specs = F.listFillSpecs(CUSTOM);
+  assert.ok(specs.length >= 2);
+  for (const s of specs) {
+    const html = read(s.template);
+    if (s.generator !== 'scene') {
+      const r = F.fillTemplate({ spec: s, html, id: 'T', slots: s.sample, icons, rename: false, keepIcons: true, kitDir });
+      assert.deepEqual(r.errors, [], s.template);
+      assert.equal(r.html, F.stripMarkers(html), `${s.template}：sample 填回去要和模板一字不差`);
+    }
+    const r = F.fillTemplate({ spec: s, html, id: 'x1', slots: s.sample, icons, kitDir });
+    assert.deepEqual(r.errors, [], s.template);
+    assert.doesNotMatch(r.html, /@if |@sub |data-fill=/, `${s.template} 不留標記`);
+    assert.ok(F.renderSheet(s, s.sample, 'x1'), `${s.template} 有動畫分鏡`);
+  }
+});
+
+test('fillTemplate：項數變少刪掉那一站、句號文字圖示換掉、改名不和別段撞', () => {
+  const r = F.fillTemplate({ spec, html: read('x-process'), id: 'x07', slots: three, icons, kitDir });
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.file, 'compositions/x-process-x07.html');
+  const body = r.html.split('<template')[1];
+  assert.match(body, /id="x-process-x07"/);
+  assert.match(body, /id="x-process-x07-template"|x-process-x07-template/);
+  assert.match(body, /id="xprocx07-n3"/);
+  assert.doesNotMatch(body, /xprocx07-n4/, '第 4 站整組拿掉');
+  assert.doesNotMatch(body, /\bT4\b/);
+  assert.match(body, /const T1 = P\.at\('#7@第一'\)/);
+  assert.match(body, />第一</);
+  assert.match(body, /測試流程/);
+  assert.doesNotMatch(body, /從錄影到初剪|#12@錄影/, '範例的字不留');
+  assert.match(body, /data-links="xprocx07-n1>xprocx07-n2 xprocx07-n2>xprocx07-n3"/);
+  assert.match(body, /const TR = T3 \+ 2\.6/);
+  assert.match(body, /P\.comet\('#xprocx07-n1-xprocx07-n2'/, '連接線的 id 兩段都要換，不然彗星線找不到對象');
+  assert.doesNotMatch(body, /(?<!\w)xproc-/, '不留舊前綴');
+  assert.doesNotMatch(body, /data-cues-sample/);
+});
+
+test('validateSlots：字數、項數、圖示、句號錯都報，訊息有改法', () => {
+  const bad = { title: '這個標題真的已經超過十個字了', items: [{ text: '太長的站名喔', icon: 'nope', at: '12' }] };
+  const e = F.validateSlots(spec, bad, { icons }).join('\n');
+  assert.match(e, /上限 10/);
+  assert.match(e, /至少 3 項/);
+  assert.match(e, /上限 4/);
+  assert.match(e, /找不到圖示/);
+  assert.match(e, /要寫句號/);
+  assert.match(F.validateSlots(spec, { ...three, oops: 1 }, { icons }).join(), /沒有「oops」/);
+});
+
+test('renderSheet：每一項一拍，收尾綁最後一項；表頭是 audit 認得的', () => {
+  const md = F.renderSheet(spec, three, 'x07');
+  assert.match(md, /^#### 動畫分鏡 x07/);
+  assert.match(md, /\| 拍 \| 講到（綁句） \| 畫面上出現什麼 \| 動態（設計系統語彙） \| 焦點 \| 音效拍點 \|/);
+  assert.match(md, /`#7@第一`/);
+  assert.match(md, /`#11`＋2\.6/);
+  assert.equal((md.match(/\| 4 \|/g) || []).length, 1);
+  assert.match(md, /\| 6 \|/, '拍號逐項遞增');
+});
+
+test('x-scene：元件與拍是資料；工具算大小；檢查元件名、參照；分鏡八欄', () => {
+  const s = F.readFillSpec(CUSTOM, 'x-scene');
+  const slots = { title: '上傳', parts: [{ id: 'a', illus: 'phone', opts: { screen: 'video' }, label: '手機' }, { id: 'b', illus: 'cloud', label: '雲端', pre: true }], links: ['a>b'], beats: [{ at: '#3@手機', in: ['a'], focus: 'a' }, { at: '#4@雲端', in: ['b'], line: 'a-b', focus: 'b', sfx: 'success' }] };
+  const r = F.fillTemplate({ spec: s, html: read('x-scene'), id: 'x1', slots, icons, kitDir });
+  assert.deepEqual(r.errors, []);
+  const body = r.html.split('<template')[1];
+  assert.match(body, /id="xscx1-a" class="xscx1-it"/);
+  assert.match(body, /data-illus="phone" data-screen="video" style="width:\d+px;height:\d+px"/);
+  assert.match(body, /class="xscx1-it xscx1-pre"/);
+  assert.match(body, /data-links="xscx1-a>xscx1-b"/);
+  assert.match(body, /const T2 = P\.at\('#4@雲端'\);\s+P\.sfx\('success', '#4@雲端'\)/);
+  assert.match(body, /line: 'xscx1-a-xscx1-b'/);
+  assert.doesNotMatch(body, /以前的傳檔流程|#182@手機/);
+  const sheet = F.renderSheet(s, slots, 'x1');
+  assert.match(sheet, /插圖元件（狀態） \| 位置 \|/);
+  assert.match(sheet, /`phone`（video）/);
+  const bad = F.validateScene({ title: 'x', parts: [{ id: 'a', illus: 'nope' }], beats: [{ at: '12', in: ['z'] }] }, { kitDir, icons });
+  assert.match(bad.join('\n'), /畫廊沒有「nope」/);
+  assert.match(bad.join('\n'), /parts 裡沒有「z」/);
+  assert.match(bad.join('\n'), /要寫句號/);
+});
+
+test('materializeFills：寫檔、slots 改了會更新；手改過的不覆寫；拿掉的段清掉；design 開空白畫布且不覆寫', () => {
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-fill-'));
+  const lib = { customDir: CUSTOM, icons };
+  const seg = () => ({ id: 'x07', type: 'custom', template: 'x-process', slots: JSON.parse(JSON.stringify(three)), from: '#1', to: '#2e' });
+  let plan = { scenes: [seg()] };
+  let r = F.materializeFills({ plan, outDir, lib });
+  assert.deepEqual(r.errors, []);
+  assert.equal(plan.scenes[0].src, 'compositions/x-process-x07.html');
+  assert.equal(plan.scenes[0].layout, 'fullscreen');
+  assert.ok(Object.keys(plan.scenes[0]).includes('src'));
+  assert.ok(!Object.keys(plan.scenes[0]).includes('__sheet'), '內部欄位不可列舉');
+  const f = path.join(outDir, plan.scenes[0].src);
+  assert.match(fs.readFileSync(f, 'utf8'), /測試流程/);
+  plan = { scenes: [{ ...seg(), slots: { ...three, title: '第二版標題' } }] };
+  F.materializeFills({ plan, outDir, lib });
+  assert.match(fs.readFileSync(f, 'utf8'), /第二版標題/, 'slots 改了會更新');
+  fs.writeFileSync(f, `${fs.readFileSync(f, 'utf8')}<!-- 手改 -->`);
+  plan = { scenes: [{ ...seg(), slots: { ...three, title: '第三版標題' } }] };
+  r = F.materializeFills({ plan, outDir, lib });
+  assert.match(r.warnings.join(), /手改過/);
+  assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /第三版標題/);
+  // 錯的 slots：不寫檔，錯誤放在 __fillErrors（plan.mjs 報）
+  const badPlan = { scenes: [{ id: 'x08', type: 'custom', template: 'x-process', slots: { title: 'x' }, from: '#1', to: '#2e' }] };
+  F.materializeFills({ plan: badPlan, outDir, lib });
+  assert.match(badPlan.scenes[0].__fillErrors.join(), /slots\.items/);
+  assert.ok(!fs.existsSync(path.join(outDir, 'compositions/x-process-x08.html')));
+  // design
+  const d = { id: 'd01', type: 'custom', design: true, from: '#1', to: '#2e', story: { idea: '一個構想' } };
+  plan = { scenes: [d] };
+  F.materializeFills({ plan, outDir, lib, prune: true });
+  const df = path.join(outDir, 'compositions/x-design-d01.html');
+  assert.match(fs.readFileSync(df, 'utf8'), /一個構想/);
+  assert.equal(d.__blank, true);
+  assert.match(fs.readFileSync(df, 'utf8'), /data-composition-id="x-design-d01"/);
+  assert.match(fs.readFileSync(df, 'utf8'), /xdd01-idea/);
+  // 還沒做：構想改了就跟著更新，還是空白
+  const d1 = { ...d, story: { idea: '換一個構想' } }; delete d1.src; delete d1.layout;
+  F.materializeFills({ plan: { scenes: [d1] }, outDir, lib });
+  assert.match(fs.readFileSync(df, 'utf8'), /換一個構想/);
+  assert.equal(d1.__blank, true);
+  // 設計師寫到一半、占位還沒刪：不能蓋掉，但還算沒做
+  const half = fs.readFileSync(df, 'utf8').replace('</style>', '/* 寫到一半 */</style>');
+  fs.writeFileSync(df, half);
+  const d1b = { ...d, story: { idea: '第三個構想' } }; delete d1b.src; delete d1b.layout;
+  F.materializeFills({ plan: { scenes: [d1b] }, outDir, lib });
+  assert.equal(fs.readFileSync(df, 'utf8'), half);
+  assert.equal(d1b.__blank, true);
+  // 設計師動手（占位刪掉）：不再是空白，也不覆寫
+  fs.writeFileSync(df, fs.readFileSync(df, 'utf8').replace(/<div id="xdd01-idea"[^\n]*\n/, '<div id="xdd01-main"></div>\n').replace('</style>', '/* 做好了 */</style>'));
+  const d2 = { ...d }; delete d2.src; delete d2.layout;
+  plan = { scenes: [d2] };
+  F.materializeFills({ plan, outDir, lib });
+  assert.equal(d2.__blank, undefined);
+  assert.match(fs.readFileSync(df, 'utf8'), /做好了/);
+  // 拿掉的段：手改過的（x-process-x07）留著，沒手改的清掉
+  assert.ok(fs.existsSync(f));
+});
+
+test('expandIcons：空的 data-icon 填 SVG，填過的不動，找不到回報', () => {
+  const r = F.expandIcons('<span class="sc-icon" data-icon="scissors"></span><i data-icon="nope"></i>', icons);
+  assert.match(r.html, /data-icon="scissors"><svg/);
+  assert.deepEqual(r.missing, ['nope']);
+  assert.equal(F.expandIcons(r.html.replace('<i data-icon="nope"></i>', ''), icons).html, r.html.replace('<i data-icon="nope"></i>', ''), '填過的不動');
+});
+
+test('x-scene：拍裡提到的元件沒寫 in 就自動補；從頭到尾沒提到的放第一拍；隔著別的元件的連接線擋下來', () => {
+  const s = { title: '測試', parts: [{ id: 'a', illus: 'phone' }, { id: 'b', illus: 'phone' }, { id: 'c', illus: 'phone' }, { id: 'd', illus: 'phone' }, { id: 'e', illus: 'phone', pre: true }],
+    beats: [{ at: '#1@手機', state: ['a', 'blank', 'play'], focus: 'a' }, { at: '#2@電腦', line: 'a>b' }, { at: '#3@雲端', in: ['c'], focus: 'c' }] };
+  const n = F.normalizeBeats(s);
+  assert.deepEqual(n.beats[0].in, ['a', 'd'], '第一拍補 a（state、focus 提到），d 從頭到尾沒提到也放第一拍');
+  assert.deepEqual(n.beats[1].in, ['b'], '連接線另一頭');
+  assert.deepEqual(n.beats[2].in, ['c']);
+  assert.deepEqual(s.beats[0].in, undefined, '不改原本的資料');
+  const bad = F.validateScene({ title: '測試', parts: [{ id: 'a', illus: 'phone' }, { id: 'b', illus: 'phone' }, { id: 'c', illus: 'phone' }], links: ['a>c'], beats: [{ at: '#1@手機', in: ['a'] }] }, { kitDir: path.join(TEMPLATE, 'kit') });
+  assert.ok(bad.some((e) => /中間隔著別的元件/.test(e)), bad.join('\n'));
+  const ok = F.validateScene({ title: '測試', parts: [{ id: 'a', illus: 'phone' }, { id: 'b', illus: 'phone' }, { id: 'c', illus: 'phone', row: 2 }], links: ['a>c', 'a>b'], beats: [{ at: '#1@手機', in: ['a'] }] }, { kitDir: path.join(TEMPLATE, 'kit') });
+  assert.deepEqual(ok, []);
+});

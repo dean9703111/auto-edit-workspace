@@ -60,8 +60,10 @@
     /* 程式區：高 448；行號欄 96、程式碼從 128 開始；行高固定 64 */
     #x-terminal-code #xtc-body { position: relative; height: 448px; }
     #x-terminal-code .xtc-hl { position: absolute; left: 0; width: 1180px; box-sizing: border-box; border-left: 8px solid var(--v2-term-kw); background: var(--v2-term-bar); }
-    #x-terminal-code #xtc-h1 { top: 96px; height: 64px; }
-    #x-terminal-code #xtc-h2 { top: 160px; height: 192px; }
+    #x-terminal-code #xtc-h1 { top: 96px; }   /* @sub bands.1.from==1: #x-terminal-code #xtc-h1 { top: 32px; } @@ bands.1.from==3: #x-terminal-code #xtc-h1 { top: 160px; } @@ bands.1.from==4: #x-terminal-code #xtc-h1 { top: 224px; } @@ bands.1.from==5: #x-terminal-code #xtc-h1 { top: 288px; } @@ bands.1.from==6: #x-terminal-code #xtc-h1 { top: 352px; } */
+    #x-terminal-code #xtc-h1 { height: 64px; }   /* @sub bands.1.count==2: #x-terminal-code #xtc-h1 { height: 128px; } @@ bands.1.count==3: #x-terminal-code #xtc-h1 { height: 192px; } @@ bands.1.count==4: #x-terminal-code #xtc-h1 { height: 256px; } @@ bands.1.count==5: #x-terminal-code #xtc-h1 { height: 320px; } @@ bands.1.count==6: #x-terminal-code #xtc-h1 { height: 384px; } */
+    #x-terminal-code #xtc-h2 { top: 160px; }   /* @sub bands.2.from==1: #x-terminal-code #xtc-h2 { top: 32px; } @@ bands.2.from==2: #x-terminal-code #xtc-h2 { top: 96px; } @@ bands.2.from==4: #x-terminal-code #xtc-h2 { top: 224px; } @@ bands.2.from==5: #x-terminal-code #xtc-h2 { top: 288px; } @@ bands.2.from==6: #x-terminal-code #xtc-h2 { top: 352px; } */
+    #x-terminal-code #xtc-h2 { height: 192px; }   /* @sub bands.2.count==1: #x-terminal-code #xtc-h2 { height: 64px; } @@ bands.2.count==2: #x-terminal-code #xtc-h2 { height: 128px; } @@ bands.2.count==4: #x-terminal-code #xtc-h2 { height: 256px; } @@ bands.2.count==5: #x-terminal-code #xtc-h2 { height: 320px; } @@ bands.2.count==6: #x-terminal-code #xtc-h2 { height: 384px; } */
     #x-terminal-code #xtc-gut { position: absolute; left: 0; top: 32px; width: 96px; text-align: right; line-height: 64px; color: var(--v2-term-mute); }
     #x-terminal-code #xtc-code { position: absolute; left: 128px; top: 32px; line-height: 64px; white-space: nowrap; }
     #x-terminal-code .xtc-kw { color: var(--v2-term-kw); }
@@ -76,14 +78,37 @@
        data-cues-sample='{"start":0,"D":15,"cues":{"332":[1.6,6.0],"333":[6.2,8.6],"334":[8.8,11.4],"335":[11.6,14.2]},"refs":{"#333@讀進來":6.4,"#334@剪掉":9.2,"#335@執行":12.0}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xtc-win">
-      <div id="xtc-bar"><i class="xtc-dot"></i><i class="xtc-dot"></i><i class="xtc-dot"></i><span id="xtc-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M10 12.5 8 15l2 2.5" /> <path d="m14 12.5 2 2.5-2 2.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /> </svg></span><span id="xtc-file" class="sc-t40 sc-w700 sc-mono sc-opt">cut-retakes.mjs</span></div>
+      <div id="xtc-bar"><i class="xtc-dot"></i><i class="xtc-dot"></i><i class="xtc-dot"></i><span id="xtc-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M10 12.5 8 15l2 2.5" /> <path d="m14 12.5 2 2.5-2 2.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /> </svg></span><span id="xtc-file" class="sc-t40 sc-w700 sc-mono sc-opt" data-fill="file">cut-retakes.mjs</span></div>
       <div id="xtc-body">
         <i id="xtc-h1" class="xtc-hl" data-layout-allow-overlap></i>
-        <i id="xtc-h2" class="xtc-hl" data-layout-allow-overlap></i>
-        <div id="xtc-gut" class="sc-t40 sc-w500 sc-mono">1<br>2<br>3<br>4<br>5<br>6</div>
-        <div id="xtc-code" class="sc-t40 sc-w500 sc-mono"><span class="xtc-cm">// 找出重講，剪掉前面那次</span><br><span class="xtc-kw">const</span> words = <span class="xtc-fn">load</span>(<span class="xtc-str">'words.json'</span>);<br><span class="xtc-kw">for</span> (<span class="xtc-kw">const</span> ng <span class="xtc-kw">of</span> <span class="xtc-fn">findRetakes</span>(words)) {<br>&nbsp;&nbsp;<span class="xtc-fn">cut</span>(ng.start, ng.end);<br>}<br><span class="xtc-fn">save</span>(<span class="xtc-str">'rough.mp4'</span>);</div>
+        <i id="xtc-h2" class="xtc-hl" data-layout-allow-overlap></i> <!-- @if bands>=2 -->
+        <div id="xtc-gut" class="sc-t40 sc-w500 sc-mono">1
+          <br>2 <!-- @if n>=2 -->
+          <br>3 <!-- @if n>=3 -->
+          <br>4 <!-- @if n>=4 -->
+          <br>5 <!-- @if n>=5 -->
+          <br>6 <!-- @if n>=6 -->
+        </div>
+        <div id="xtc-code" class="sc-t40 sc-w500 sc-mono">
+          <span class="xtc-cm">// 找出重講，剪掉前面那次</span> <!-- @sub lines.1.html: {{lines.1.html}} @@ lines.1.indent: <span style="padding-left: {{lines.1.indent}}ch">{{lines.1.text|text}}</span> @@ always: {{lines.1.text|text}} -->
+          <!-- @if n>=2 { -->
+          <br><span class="xtc-kw">const</span> words = <span class="xtc-fn">load</span>(<span class="xtc-str">'words.json'</span>); <!-- @sub lines.2.html: <br>{{lines.2.html}} @@ lines.2.indent: <br><span style="padding-left: {{lines.2.indent}}ch">{{lines.2.text|text}}</span> @@ always: <br>{{lines.2.text|text}} -->
+          <!-- @} -->
+          <!-- @if n>=3 { -->
+          <br><span class="xtc-kw">for</span> (<span class="xtc-kw">const</span> ng <span class="xtc-kw">of</span> <span class="xtc-fn">findRetakes</span>(words)) { <!-- @sub lines.3.html: <br>{{lines.3.html}} @@ lines.3.indent: <br><span style="padding-left: {{lines.3.indent}}ch">{{lines.3.text|text}}</span> @@ always: <br>{{lines.3.text|text}} -->
+          <!-- @} -->
+          <!-- @if n>=4 { -->
+          <br>&nbsp;&nbsp;<span class="xtc-fn">cut</span>(ng.start, ng.end); <!-- @sub lines.4.html: <br>{{lines.4.html}} @@ lines.4.indent: <br><span style="padding-left: {{lines.4.indent}}ch">{{lines.4.text|text}}</span> @@ always: <br>{{lines.4.text|text}} -->
+          <!-- @} -->
+          <!-- @if n>=5 { -->
+          <br>} <!-- @sub lines.5.html: <br>{{lines.5.html}} @@ lines.5.indent: <br><span style="padding-left: {{lines.5.indent}}ch">{{lines.5.text|text}}</span> @@ always: <br>{{lines.5.text|text}} -->
+          <!-- @} -->
+          <!-- @if n>=6 { -->
+          <br><span class="xtc-fn">save</span>(<span class="xtc-str">'rough.mp4'</span>); <!-- @sub lines.6.html: <br>{{lines.6.html}} @@ lines.6.indent: <br><span style="padding-left: {{lines.6.indent}}ch">{{lines.6.text|text}}</span> @@ always: <br>{{lines.6.text|text}} -->
+          <!-- @} -->
+        </div>
       </div>
-      <div id="xtc-out" class="sc-t40 sc-w700 sc-mono"><span>✓</span><span id="xtc-res">已剪掉 12 段重講（0.8 秒）</span></div>
+      <div id="xtc-out" class="sc-t40 sc-w700 sc-mono"><span>✓</span><span id="xtc-res" data-fill="result">已剪掉 12 段重講（0.8 秒）</span></div> <!-- @if runAt -->
     </div>
   </div>
   <script>
@@ -93,8 +118,8 @@
     const P = SceneMotion(tl, document.getElementById('x-terminal-code'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), H2 = P.at('#334@剪掉'), RUN = P.at('#335@執行');   // 打字／兩段標示／執行
-    P.sfx('success', '#335@執行');                     // 執行結果一顆 success（句號和 RUN 一樣）
+    const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), H2 = P.at('#334@剪掉'), RUN = P.at('#335@執行');   // 打字／兩段標示／執行  // @sub bands==1 && runAt: const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), RUN = P.at('#335@執行'); @@ bands==2 && !runAt: const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), H2 = P.at('#334@剪掉'); @@ bands==1 && !runAt: const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來');
+    P.sfx('success', '#335@執行');                     // 執行結果一顆 success（句號和 RUN 一樣）  // @if runAt
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
 
     // 拍 0 開場：視窗進場（看 ENTER）→ 檔名圖示描線、檔名逐字 → 1.0 行號出現
@@ -107,11 +132,11 @@
     P.type('#xtc-code', TYPE, { dur: 3.0 });
     // 拍 2–3 標示：那幾行底下的標示帶由左往右亮起，前一條淡掉
     P.wipe('#xtc-h1', H1, { dir: 'left', dur: 0.4 });
-    P.out('#xtc-h1', H2, { dur: 0.3 });
-    P.wipe('#xtc-h2', H2, { dir: 'left', dur: 0.4 });
-    // 拍 4 執行：結果列由左往右印出（音效 success 見上面 P.sfx）
-    P.wipe('#xtc-out', RUN, { dir: 'left', dur: 0.4 });
-    P.punch('#xtc-res', RUN + 0.4, { scale: 1.04 });
+    P.out('#xtc-h1', H2, { dur: 0.3 });   // @if bands>=2
+    P.wipe('#xtc-h2', H2, { dir: 'left', dur: 0.4 });   // @if bands>=2
+    // 拍 4 執行：結果列由左往右印出（音效 success 見上面 P.sfx）  // @if runAt
+    P.wipe('#xtc-out', RUN, { dir: 'left', dur: 0.4 });   // @if runAt
+    P.punch('#xtc-res', RUN + 0.4, { scale: 1.04 });   // @if runAt
 
     P.end();                                           // 長度＝plan.json 這段的長度
     window.__timelines['x-terminal-code'] = tl;

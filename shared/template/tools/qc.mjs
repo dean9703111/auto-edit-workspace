@@ -4,12 +4,13 @@
  *
  *   node shared/template/tools/qc.mjs final --project projects/<專案> [--file <mp4>] [--json]
  *       完成影片驗收（預設檔案 output/final.mp4）。除了尺寸、30fps、音軌、長度，還抓「四項全過、內容卻壞」的問題：
- *         響度（整合響度 −15.5～−12.5 LUFS、true peak ≤ −1.0 dBTP）、畫面凍結（≥ 3 秒，章節轉場、沒有講者小視窗的全畫面段本來就靜止，已排除）、
+ *         響度（整合響度 −15.5～−12.5 LUFS、true peak ≤ −1.0 dBTP）、畫面凍結（≥ 3 秒，章節轉場、全畫面段本來就靜止，已排除）、
  *         黑畫面（≥ 0.5 秒）、長時間沒聲音（≥ 4 秒）。凍結／黑畫面／無聲的時間會對到 plan.json 的段落 id。
+ *         聲音還在講、畫面 ≥ 8 秒沒動（⚠，排除同上）；字還沒出現就被下一段蓋住（⚠）：這兩項只出文字，要看畫面用它印的 observe --from --to 只看那段。
  *         子母畫面段沒有講者小視窗（rough.mp4 全黑、專案又沒有聲音素材＝初剪壞了）是 ✖（直式叫「上下分割段沒有講者面板」，判準相同）。
  *         字幕（F8，照作者剪映）：抽 5 則中文字幕，量底板 y 956–1074 ± 4（build 好的頁面）與字高 71 ± 3（完成影片的白字），
  *         不合是 ⚠；字幕含「，」「。」、一則不到 0.6 秒也是 ⚠。直式：尺寸要 1080×1920、底板照 lib/canvas.mjs 的 caption.box（y 1291–1409）。
- *       另存總覽圖 output/qc/qc-sheet.jpg（每 10 秒一格，最上面標主題 theme: light／dark），給人或 AI 快速掃一眼；
+ *       另存總覽圖 output/qc/qc-sheet.jpg（每 10 秒一格，長片拉長間隔到最多 80 格、整片都有；最上面標主題 theme: light／dark），給人或 AI 快速掃一眼；
  *         直式每格 9:16，格上疊 unsafe[]（平台介面區）的紅色半透明框。
  *       預期長度跑 build.mjs --check --json 取得（rough.mp4 − cuts）。
  *       輸出 ✔／⚠／✖；有 ✖ 結束碼是 1，只有 ⚠ 是 0。--json 只印一個 JSON。
@@ -21,6 +22,7 @@
  *       不是畫布尺寸（橫式 1920×1080、直式 1080×1920）的影片先等比放大（不足的邊補黑），圖上的座標直接就是 speakerBox 的座標。
  *       plan.json 有 frame（構圖裁切）時，先照 frame 裁切放大再量，座標就是裁切後完成影片上的座標。
  *   node shared/template/tools/qc.mjs framing --project projects/<專案> [--file <mp4>] [--zooms 1,1.15,1.3]
+ *   node shared/template/tools/qc.mjs framing --project projects/<專案> --write   使用者說「用建議的」：把 ✔ 那一列寫進 plan.json（1.0 倍不寫）
  *       構圖預覽：量講者動作範圍、偵測四周黑邊，算出每個放大倍率的 16:9 裁切框（頭頂上方留 120px、講者水平置中），
  *       存 work/構圖預覽.jpg（每個倍率一格，橘框是講者動作範圍）並印出每個倍率的 frame 與會不會切到手勢。
  *       停點 ② 用剪輯台的構圖台（editor.mjs 印的「構圖台」網址）讓使用者拖框，存檔就寫進 plan.json 的 frame；
@@ -28,15 +30,20 @@
  *       直式：候選是 9:16（1.0＝原畫面），垂直位置讓頭頂落在 y 380–520、下巴 ≤ 860（下巴用 work/face-landmarks.json，沒有就用動作範圍估），
  *       不合的倍率標 ⚠、不當建議。
  *       倍率表的「建議」欄：不切到手勢、來源像素放大 ≤ 3.5 倍的倍率裡最大的（只是建議，倍率由使用者在停點 ② 選）。
- *   node shared/template/tools/qc.mjs storyboard --project projects/<專案> [--json]
+ *   node shared/template/tools/qc.mjs storyboard --project projects/<專案> [--only s05,s12] [--sheet] [--jobs N] [--verbose] [--json]
+ *       --only：只重截這幾段（其他段的截圖不動；其他段的 ✖ 不擋；上次有拼圖就順便重做有動到的頁）。--sheet：另外拼成 work/storyboard-preview/sheet-NN.jpg（每頁 12 張，每格標時間、段 id、為什麼），印頁面清單；
+ *       整支重截沒加 --sheet 時舊頁清掉（不留過期的圖）。
+ *       --jobs：同時幾個截圖行程（預設 4，最多 8；張數少時自動少開）。還是範例原文的 custom 段不截（--only 指名的照截），印一行略過幾段。預設只印 ⚠ 與統計，--verbose 才印每張的表與貼上用的 markdown。
+ *       每段的截圖清單與「為什麼」存在 work/storyboard-preview/shots.json（--json 也有：shots＝這次截的、allShots＝整支）。
  *       分鏡截圖：讀 build.mjs --check --json，每段在完成態截一張（段尾前 0.6 秒；讀動畫時間軸，還在退場或在動就往前）；
  *       動態 v2 的拍點各一張：抽屜抽出後 0.3 秒、焦點抬起後（漂浮、背景慢拉這類微動不算動畫）；
  *       條列逐條換的每組一張（進場動畫重疊的併一張，在那組進場完成後截）、
  *       錄影標註（紅框、標註、聚光燈、STEP、箭頭、放大鏡）每個到位時各一張。
- *       存成 work/storyboard-preview/<段 id>.png（多張時 <段 id>-1.png、-2.png…），並印出可貼進
+ *       存成 work/storyboard-preview/<段 id>.png（多張時 <段 id>-1.png、-2.png…）；--verbose（或 --only）印出可貼進
  *       work/storyboard.md 的 ![s01](storyboard-preview/s01.png) 行。要先 build；plan.json 改過沒 build 會 ✖。
  *       錄影縮到原尺寸 < 60 %（直式只看橫的錄影）、沒有 moves 和 lens、> 3 秒 → ⚠ 介面字太小。
  *   node shared/template/tools/qc.mjs observe --project projects/<專案> [--from 60] [--to 120] [--file <mp4> --offset <秒>] [--json]
+ *       預設不用跑：靜止與被蓋住 qc final 就會列（只出文字），它印的 --from --to 只看有問題的那段。
  *       觀影總表：從 output/final.mp4（或 --file 指定的測試片段）每 0.5 秒抽一格，拼成 work/observe/sheet-NN.jpg
  *       （6×8 格＝24 秒，每格下面印「時間｜段 id｜字幕」）；列出 ≥ 8 秒幾乎不變的靜止區間；
  *       每個段落起點與終點各做一條「前 0.5 秒到後 0.2 秒、每 0.1 秒一格」的接縫條帶 work/observe/seam-NN.jpg；
@@ -44,26 +51,29 @@
  *       索引在 work/observe/index.md（「小視窗」欄：子母畫面段有沒有講者小視窗）。--offset＝這個檔的第 0 秒是完成影片第幾秒（測試片段寫 build --test 的起點）。
  *       排版用 HyperFrames 的 Chrome（中文字），找不到會 ✖。直式格子是 9:16（總表 8×6 格＝24 秒、拍點 6 欄）。
  *
+ * 長片：final 一次解碼算完偵測、靜止與總覽圖；observe 的抽格同時跑 6 個 ffmpeg、排版共用一個 Chrome。
  * --project：專案資料夾（projects/example，或只寫名稱 example）。測試用：--template <shared/template 資料夾>、--chrome <Chrome 執行檔>
  * --format landscape|portrait：蓋過版式（預設 plan.json "format" > 開工決策表「版式」> 主軌寬高比，lib/canvas.mjs）；每個指令第一行印「版式：…」（--json 不印）
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { pathsFrom, hasVoiceSource } from './build.mjs';
+import { pathsFrom, hasVoiceSource, build } from './build.mjs';
 import { run, probeMedia, rawFrame, writeJpg, lut3dFilter, blackDetect } from './lib/ff.mjs';
 import { ensureLook } from './lib/look.mjs';
-import { canvas, fillRect, blit, text, textWidth, htmlShot } from './lib/raster.mjs';
+import { canvas, fillRect, blit, text, contactSheet, spawnAsync, pool } from './lib/raster.mjs';
 import { parseSrt } from './lib/srt.mjs';
-import { findChrome, findRuntime, openSession } from './lib/audit-browser.mjs';
+import { findChrome, findRuntime, openSession, openBrowser } from './lib/audit-browser.mjs';
+import { gateCheck } from './lib/audit-rules.mjs';
 import { hfArgs } from './lib/hf.mjs';
 import { drawGrid } from './media.mjs';
 import { canvasOf, resolveFormat, formatLine } from './lib/canvas.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // Windows 的 npx 是 npx.cmd，要經過 shell 才叫得起來（其他平台不變）
-const VALUE_FLAGS = ['project', 'template', 'file', 'zooms', 'from', 'to', 'offset', 'chrome', 'format'];
+const VALUE_FLAGS = ['project', 'template', 'file', 'zooms', 'from', 'to', 'offset', 'chrome', 'format', 'only', 'jobs'];
 const r1 = (n) => Number(n).toFixed(1);
 const r2 = (n) => Number(n).toFixed(2);
 const r3 = (n) => +Number(n).toFixed(3);
@@ -72,7 +82,15 @@ const rel = (p) => { const r = path.relative(process.cwd(), p); return !r ? '.' 
 const tail = (s, n = 400) => String(s ?? '').trim().slice(-n);
 
 // 判斷門檻
-export const LIMITS = { width: 1920, height: 1080, fps: 30, durTol: 0.1, lufsMin: -15.5, lufsMax: -12.5, tpMax: -1.0, freeze: 3, black: 0.5, silence: 4, sheetStep: 10 };
+export const LIMITS = { width: 1920, height: 1080, fps: 30, durTol: 0.1, lufsMin: -15.5, lufsMax: -12.5, tpMax: -1.0, freeze: 3, black: 0.5, silence: 4, sheetStep: 10, sheetMax: 80 };
+// 併發：--jobs 預設與上限（storyboard 的截圖行程）；ffmpeg 抽格、Chrome 排版同時幾個
+export const JOBS = { default: 4, max: 8, ffmpeg: 6, chrome: 4 };
+export function jobsOf(v) {
+  if (v == null) return JOBS.default;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1 || n > JOBS.max) throw new Error(`--jobs 要是 1–${JOBS.max} 的整數，現在是「${v}」→ 改成 1–${JOBS.max}，或不寫（預設 ${JOBS.default}）`);
+  return n;
+}
 
 export function parseArgs(argv) {
   const [cmd, ...rest] = argv;
@@ -85,7 +103,7 @@ export function parseArgs(argv) {
       const v = inline ?? rest[++i];
       if (v == null) throw new Error(`--${k} 後面要接值 → 在 --${k} 後面補上值（用 --help 看格式）`);
       flags[k] = v;
-    } else if (['json', 'help', 'write', 'force'].includes(k)) flags[k] = true;
+    } else if (['json', 'help', 'write', 'force', 'sheet', 'verbose'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數 → 拿掉它；用 node shared/template/tools/qc.mjs --help 看有哪些參數`);
   }
   return flags;
@@ -264,10 +282,12 @@ export function locateItem([a, b], items, cuts = []) {
   return best;
 }
 
-// 章節轉場、沒有講者小視窗的全畫面段（scene／custom）本來就靜止（模板不做微動）：凍結區間扣掉這些段（完成影片時間軸）；剩下 ≥ minDur 的才算；錄影段照查
-const stillByDesign = (it) => isChapterItem(it) || (it?.opaque && (it.type === 'scene' || it.type === 'custom') && !(it.out?.pip?.length));
+// 章節轉場、全畫面段（scene／custom）本來就靜止（模板不做微動）：凍結區間扣掉這些段（完成影片時間軸）；剩下 ≥ minDur 的才算；錄影段、講者滿版照查
+// 有小視窗的全畫面段也扣：小視窗很小、講者停一下整張畫面就幾乎不變，31 分鐘的片子會報十幾則雜訊。講者底片凍結在滿版的地方查得到
+const stillByDesign = (it) => isChapterItem(it) || (it?.opaque && (it.type === 'scene' || it.type === 'custom'));
+const stillHoles = (items, cuts) => (items || []).filter(stillByDesign).map((it) => [roughToFinal(it.start, cuts) - 0.15, roughToFinal(it.shownEnd ?? it.end, cuts) + 0.15]);
 export function freezeIssues(freezes, items, cuts = [], minDur = LIMITS.freeze) {
-  const holes = (items || []).filter(stillByDesign).map((it) => [roughToFinal(it.start, cuts) - 0.15, roughToFinal(it.shownEnd ?? it.end, cuts) + 0.15]);
+  const holes = stillHoles(items, cuts);
   const out = [];
   for (const fz of freezes) for (const [a, b] of subtractRanges(fz, holes)) if (b - a >= minDur - 1e-6) out.push([a, b]);
   return out;
@@ -336,8 +356,38 @@ export function judge(f) {
   else if (!sl.length) add('silence', 'ok', `沒有 ≥ ${L.silence} 秒的無聲區間`);
   for (const rg of f.hasAudio ? sl : []) add('silence', 'warn', `${rng(rg)} 沒有聲音 ${r1(rg[1] - rg[0])} 秒${where(rg)} → 可能是漏剪的停頓；刻意留白就不用理它`);
 
+  // 靜止與被蓋住（從 observe、storyboard 併過來，只出文字；observe 不跑也抓得到）
+  const peek = (a, b) => `node shared/template/tools/qc.mjs observe --project ${f.project ?? 'projects/<專案>'}${f.fileArg ?? ''} --from ${Math.max(0, Math.floor(a - 1))} --to ${f.dur ? Math.min(Math.ceil(b + 1), Math.floor(f.dur)) : Math.ceil(b + 1)}`;
+  if (Array.isArray(f.stills)) {
+    if (!f.stills.length) add('still', 'ok', `錄影、圖片段沒有聲音還在講、畫面卻 ≥ ${OBS.still} 秒沒動的區間`);
+    for (const s of f.stills.slice(0, STILL_SHOW)) add('still', 'warn', `${rng([s.from, s.to])} 聲音還在講、畫面 ${r1(s.to - s.from)} 秒沒動（${s.id ?? '主軌講解'}${s.cue ? `｜${s.cue}` : ''}）→ 對照講解決定要不要補畫面（換段、加標註或情境動畫），刻意留白就不用理它；要看這段：${peek(s.from, s.to)}`);
+    if (f.stills.length > STILL_SHOW) add('still', 'warn', `還有 ${f.stills.length - STILL_SHOW} 段畫面沒動（${f.stills.slice(STILL_SHOW).map((s) => fmtT(s.from)).join('、')}）→ 同上，--json 的 stills 有全部`);
+  }
+  if (Array.isArray(f.covered)) {
+    if (!f.covered.length) add('covered', 'ok', '沒有字還沒出現就被下一段蓋住');
+    for (const c of f.covered) add('covered', 'warn', `${c.msg}；要看這段：${peek(c.from, c.to)}`);
+  }
+
   const errors = checks.filter((c) => c.level === 'error').length, warnings = checks.filter((c) => c.level === 'warn').length;
   return { checks, errors, warnings, ok: errors === 0 };
+}
+
+// final 只出文字的靜止區間：只看錄影、圖片段（畫面 ≥ 8 秒沒動，多半是素材沒對上講解）。講者畫面上有人在動，門檻附近不穩、15 分鐘片會報 7 段雜訊，凍結另外有 ≥ 3 秒的檢查；
+// 字卡、模板本來就不做微動。扣掉沒有聲音的區間（silencedetect），剩下還 ≥ 8 秒、而且有字幕時超過一半時間有字幕（結尾配樂、片頭不算「在講」）才報 → [{ from, to, id, cue }]（完成影片秒數）
+export const STILL_SHOW = 12;
+export function stillIssues(runs, { items = [], cuts = [], cues = [], silences = [], segs = [], minDur = OBS.still } = {}) {
+  const media = (items || []).filter((it) => (it.type === 'media' || it.key === 'media') && it.start != null && it.end != null).map((it) => [roughToFinal(it.start, cuts), roughToFinal(it.shownEnd ?? it.end, cuts)]);
+  const out = [];
+  for (const run of runs || []) for (const [ma, mb] of media) for (const [a, b] of subtractRanges([Math.max(run[0], ma), Math.min(run[1], mb)], silences || [])) {
+    if (b - a < minDur - 1e-6) continue;
+    if (cues.length) {
+      const spoken = cues.reduce((sum, c) => sum + Math.max(0, Math.min(b, c.end) - Math.max(a, c.start)), 0);
+      if (spoken < (b - a) * 0.5) continue;
+    }
+    const L = cellLabel(a, segs, cues);
+    out.push({ from: a, to: b, id: L.id === '—' ? null : L.id, cue: L.n != null ? `#${L.n} ${L.text}` : null });
+  }
+  return out;
 }
 
 // ---------- 字幕（F8：照作者剪映量的樣式，dev/loop/feedback-r1-user.md「F8」）----------
@@ -407,12 +457,12 @@ function captionInPage() {
 }
 
 // 底板位置從 build 好的頁面量（HyperFrames runtime＋同一個 seek），字高從完成影片那一格的白字量
-export async function measureCaptions(P, flags, file, cues, cv = null) {
+export async function measureCaptions(P, flags, file, cues, cv = null, session = null) {
   if (!cues?.length) return null;
   const W = cv?.W ?? 1920, H = cv?.H ?? 1080;
   if (!fs.existsSync(path.join(P.out, 'index.html'))) return { error: `還沒 build（找不到 work/hyperframes/index.html）→ 先跑 build.mjs 再重跑 qc final` };
-  let S;
-  try { S = await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file, W, H }); } catch (e) { return { error: `開不了 HyperFrames 的 Chrome（${tail(e.message, 160)}）→ 跑 npx hyperframes browser ensure 後重跑` }; }
+  let S = session;
+  try { S ||= await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file, W, H }); } catch (e) { return { error: `開不了 HyperFrames 的 Chrome（${tail(e.message, 160)}）→ 跑 npx hyperframes browser ensure 後重跑` }; }
   const samples = [];
   try {
     for (const c of captionSamples(cues)) {
@@ -424,7 +474,7 @@ export async function measureCaptions(P, flags, file, cues, cv = null) {
       try { ink = inkRows(rawFrame(file, { at: c.at, width: W, height: H }), W, H, box); } catch { /* 抽不到格就當量不到字高 */ }
       samples.push({ n: c.n, text: box.text, at: c.at, top: Math.round(box.top * 10) / 10, bottom: Math.round(box.bottom * 10) / 10, ink: ink?.height ?? null });
     }
-  } finally { await S.close(); }
+  } finally { if (!session) await S.close(); }
   return { samples };
 }
 
@@ -443,30 +493,60 @@ function expectedFromBuild(P, flags) {
   return { expected: j.outputDur, items: j.items || [], cuts: j.edit?.cuts || [], ...black };
 }
 
-function detect(file, dur, hasAudio) {
-  const args = ['-hide_banner', '-nostats', '-i', file, '-vf', `freezedetect=n=-60dB:d=${LIMITS.freeze},blackdetect=d=${LIMITS.black}:pix_th=0.1:pic_th=0.98`];
-  if (hasAudio) args.push('-af', `ebur128=peak=true:framelog=quiet,silencedetect=n=-50dB:d=${LIMITS.silence}`);
-  args.push('-f', 'null', '-');
-  const r = run('ffmpeg', args);
-  if (r.status !== 0) throw new Error(`ffmpeg 分析失敗：${tail(r.stderr)} → 重跑一次；還是失敗就把這行回報`);
-  const err = String(r.stderr);
-  return { freezes: parseFreeze(err, dur), blacks: parseBlack(err), silences: hasAudio ? parseSilence(err, dur) : [], loud: hasAudio ? parseLoudness(err) : null };
+// 凍結與黑畫面用每秒 10 格、一半解析度量（門檻是 3 秒、0.5 秒，不用 30 格全解析；實測 15 分鐘片快 5 倍以上，凍結的起點與全解析相同或差 < 0.1 秒）
+const DETECT_VF = 'fps=10,scale=trunc(iw/4)*2:trunc(ih/4)*2:flags=area';
+
+// 一次解碼算完：凍結、黑畫面、靜止區間的灰階（observe 同一套 96×54、每 0.5 秒）、總覽圖的格子、響度、無聲。
+// 灰階與格子寫暫存檔（Windows 沒有 pipe:3），長片也只解碼一次。sheet＝qcSheetLayout 的結果；gray＝[寬, 高]。
+// fps 用 round=up：第 k 格就是第 k×間隔秒那一格，和 -ss 抽到的一樣（round=down 會晚將近一格，間隔 15 秒就差 15 秒）
+export function analyzeFinal(file, dur, hasAudio, { sheet = null, gray = OBS.gray } = {}) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-qc-'));
+  try {
+    const [gw, gh] = gray, gFile = path.join(tmp, 'gray.raw'), sFile = path.join(tmp, 'sheet.raw');
+    const legs = sheet ? 3 : 2;
+    const graph = [`[0:v]split=${legs}[d][g]${sheet ? '[s]' : ''}`,
+      `[d]${DETECT_VF},freezedetect=n=-60dB:d=${LIMITS.freeze},blackdetect=d=${LIMITS.black}:pix_th=0.1:pic_th=0.98,nullsink`,
+      `[g]fps=${1 / OBS.step}:round=up,scale=${gw}:${gh},format=gray[gray]`,
+      ...(sheet ? [`[s]fps=1/${sheet.step}:round=up,scale=${sheet.cw}:${sheet.ch}:flags=bicubic,format=rgb24[tiles]`] : [])].join(';');
+    const args = ['-y', '-hide_banner', '-nostats', '-i', file, '-filter_complex', graph, '-map', '[gray]', '-f', 'rawvideo', gFile];
+    if (sheet) args.push('-map', '[tiles]', '-f', 'rawvideo', sFile);
+    if (hasAudio) args.push('-map', '0:a:0', '-af', `ebur128=peak=true:framelog=quiet,silencedetect=n=-50dB:d=${LIMITS.silence}`, '-f', 'null', '-');
+    const r = run('ffmpeg', args);
+    if (r.status !== 0) throw new Error(`ffmpeg 分析失敗：${tail(r.stderr)} → 重跑一次；還是失敗就把這行回報`);
+    const err = String(r.stderr);
+    const gb = fs.readFileSync(gFile), grays = [];
+    for (let o = 0; o + gw * gh <= gb.length; o += gw * gh) grays.push(gb.subarray(o, o + gw * gh));
+    const frames = new Map();
+    if (sheet) {
+      const sb = fs.readFileSync(sFile), n = sheet.cw * sheet.ch * 3;
+      sheet.times.forEach((t, k) => { if ((k + 1) * n <= sb.length && Math.abs(t - k * sheet.step) < 1e-6) frames.set(t, sb.subarray(k * n, (k + 1) * n)); });
+    }
+    return { freezes: parseFreeze(err, dur), blacks: parseBlack(err), silences: hasAudio ? parseSilence(err, dur) : [], loud: hasAudio ? parseLoudness(err) : null,
+      statics: staticRuns(grays).map(([a, b]) => [a, Math.min(b, r3(dur))]), frames };
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 
-// 每 10 秒一格（加最後一格），拼成一張，每格標時間
-export function sheetTimes(dur, step = LIMITS.sheetStep) {
+// 每 10 秒一格（加最後一格），拼成一張，每格標時間；長片（> 80 格）拉長間隔到整片都有（以前 13 分鐘之後就沒格子了），間隔取 5 秒的倍數
+export const sheetStepOf = (dur) => (dur / LIMITS.sheetStep <= LIMITS.sheetMax ? LIMITS.sheetStep : Math.ceil(dur / LIMITS.sheetMax / 5) * 5);
+export function sheetTimes(dur, step = sheetStepOf(dur)) {
   const ts = [];
   for (let t = 0; t < dur - 0.05; t += step) ts.push(r3(t));
   const last = r3(Math.max(0, dur - 0.3));
   if (!ts.length) ts.push(0);
   if (last - ts[ts.length - 1] > 3) ts.push(last);
-  return ts.slice(0, 80);
+  return ts;
+}
+
+// 總覽圖的版面：> 40 格改一列 8 格（直式 12 格）、每格小一半，長片的圖才不會太長，看圖工具縮小後還看得出來
+export function qcSheetLayout(dur, cv = null) {
+  const step = sheetStepOf(dur), times = sheetTimes(dur, step), portrait = cv?.format === 'portrait', many = times.length > 40;
+  const [cw, ch, cols] = portrait ? (many ? [135, 240, 12] : [270, 480, 6]) : many ? [240, 135, 8] : [480, 270, 4];
+  return { step, times, cw, ch, cols, portrait };
 }
 
 // 直式（FR-090）：每格 9:16（270×480，一列 6 格），格上疊 canvas.unsafe[]（平台介面區）的紅色半透明框，看字幕、卡片字有沒有進去
-export function makeQcSheet(file, dur, outFile, theme = 'light', cv = null) {
-  const ts = sheetTimes(dur), portrait = cv?.format === 'portrait';
-  const [cw, ch, cols] = portrait ? [270, 480, 6] : [480, 270, 4];
+export function makeQcSheet(file, dur, outFile, theme = 'light', cv = null, { layout = null, frames = null } = {}) {
+  const { step, times: ts, cw, ch, cols, portrait } = layout || qcSheetLayout(dur, cv);
   const gap = 10, bar = 30, head = 44, rows = Math.ceil(ts.length / cols);
   const c = canvas(cols * cw + (cols + 1) * gap, head + rows * (ch + bar) + (rows + 1) * gap, [11, 16, 32]);
   // 最上面標主題（plan.json 的 theme）：亮色、暗色兩版並排比對時分得出來
@@ -474,8 +554,8 @@ export function makeQcSheet(file, dur, outFile, theme = 'light', cv = null) {
   text(c, `theme: ${theme}${portrait ? '  9:16' : ''}`, gap + 4, 8, 4, theme === 'dark' ? [255, 212, 0] : [20, 20, 20]);
   ts.forEach((t, k) => {
     const x = gap + (k % cols) * (cw + gap), y = head + gap + Math.floor(k / cols) * (ch + bar + gap);
-    let data;
-    try { data = rawFrame(file, { at: t, width: cw, height: ch }); } catch { data = Buffer.alloc(cw * ch * 3); }
+    let data = frames?.get(t) ?? null;   // final 一次解碼抽好的格子；沒有的（最後一格）才另外抽
+    try { data ||= rawFrame(file, { at: t, width: cw, height: ch }); } catch { data = Buffer.alloc(cw * ch * 3); }
     blit(c, { w: cw, h: ch, data }, x, y + bar);
     if (portrait) {
       const k = cw / cv.W;
@@ -489,7 +569,7 @@ export function makeQcSheet(file, dur, outFile, theme = 'light', cv = null) {
     text(c, fmtT(t), x + 8, y + 5, 3, [255, 212, 0]);
   });
   writeJpg(c, outFile, 3);
-  return { file: outFile, count: ts.length, times: ts, theme, ...(portrait ? { unsafe: cv.unsafe.length } : {}) };
+  return { file: outFile, count: ts.length, times: ts, step, theme, ...(portrait ? { unsafe: cv.unsafe.length } : {}) };
 }
 
 export async function finalCheck(P, flags) {
@@ -500,19 +580,34 @@ export async function finalCheck(P, flags) {
   const dur = info.duration;
   const fmt = formatOf(P, flags), cv = fmt.canvas, portrait = cv.format === 'portrait';
   const exp = expectedFromBuild(P, flags);
-  const det = detect(file, dur, info.hasAudio);
+  const layout = qcSheetLayout(dur, cv);
+  const det = analyzeFinal(file, dur, info.hasAudio, { sheet: layout, gray: obsLayout(cv).gray });
   // 子母畫面段沒有講者小視窗（F2）：專案沒有只有聲音的素材時才判（有的話，全黑本來就是旁白區間）
   const pipMiss = exp.voiceOnly && !hasVoiceSource(P.project)
     ? pipMissing({ items: exp.items, scenes: planScenes(P), voiceOnly: exp.voiceOnly, roughBlack: exp.roughBlack, cuts: exp.cuts, project: `projects/${path.basename(P.project)}`, portrait }) : null;
   // 字幕（F8）：rough.srt 換成完成影片秒數；量樣式要 build 好的頁面與 Chrome
   const cues = P.srt && fs.existsSync(P.srt) ? cuesToOut(parseSrt(fs.readFileSync(P.srt, 'utf8')), exp.cuts || []) : [];
-  const captionStyle = await measureCaptions(P, flags, file, cues, cv);
+  // 靜止區間（只有聲音還在講才報）與「字還沒出現就被蓋住」：從 observe、storyboard 併過來，只出文字
+  const segs = (exp.items || []).length ? outOf(exp.items, exp.cuts || []).list : [];
+  const stills = stillIssues(det.statics, { items: exp.items || [], cuts: exp.cuts || [], cues, silences: det.silences, segs });
+  // 量字幕樣式、讀動畫時間軸共用一個頁面
+  let S = null, covered = null;
+  if (cues.length || segs.length) { try { if (fs.existsSync(path.join(P.out, 'index.html'))) S = await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file, W: cv.W, H: cv.H }); } catch { S = null; } }
+  let captionStyle = null;
+  try {
+    captionStyle = await measureCaptions(P, flags, file, cues, cv, S);
+    if (S && segs.length) {
+      const warn = [], motion = await shotMotion(P, segs, flags, S);
+      covered = shotPlan(segs, exp.expected ?? Infinity, motion, fxLabels(P, exp.items, motion, warn)).covers.map((c) => ({ id: c.id, by: c.by, msg: c.msg, from: c.from, to: c.to }));
+    }
+  } finally { if (S) await S.close(); }
   const theme = themeOf(P);
-  const facts = { width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, dur, expected: exp.expected ?? null, items: exp.items || [], cuts: exp.cuts || [], pipMissing: pipMiss, cues, captionStyle, theme, canvas: cv, ...det };
+  const { statics, frames, ...measured } = det;
+  const facts = { width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, dur, expected: exp.expected ?? null, items: exp.items || [], cuts: exp.cuts || [], pipMissing: pipMiss, cues, captionStyle, theme, canvas: cv, stills, covered, project: `projects/${path.basename(P.project)}`, fileArg: flags.file ? ` --file ${rel(file)} --offset 0` : '', ...measured };
   const verdict = judge(facts);
   if (exp.error) verdict.checks.splice(2, 0, { key: 'build', level: 'warn', text: `${exp.error} → 時間對不到段落、長度也沒有預期值，先修好專案再重跑 qc` }), verdict.warnings++;
   let sheet = null;
-  try { sheet = makeQcSheet(file, dur, path.join(P.project, 'output', 'qc', 'qc-sheet.jpg'), theme, cv); } catch (e) {
+  try { sheet = makeQcSheet(file, dur, path.join(P.project, 'output', 'qc', 'qc-sheet.jpg'), theme, cv, { layout, frames }); } catch (e) {
     verdict.checks.push({ key: 'sheet', level: 'warn', text: `總覽圖產生失敗：${e.message}` }); verdict.warnings++;
   }
   return { file, fmt, facts, ...verdict, sheet };
@@ -524,7 +619,7 @@ function printFinal(P, r) {
   if (r.fmt) console.log(r.fmt.line);
   console.log(`專案：${rel(P.project)}\n完成影片：${rel(r.file)}\n`);
   for (const c of r.checks) console.log(`${ICON[c.level]} ${c.text}`);
-  if (r.sheet) console.log(`\n→ 總覽圖 ${rel(r.sheet.file)}（${r.sheet.count} 格，每 ${LIMITS.sheetStep} 秒一格，主題 ${r.sheet.theme}；打開掃一眼有沒有掉圖、卡住${r.sheet.unsafe ? '；直式每格 9:16，紅色半透明框是平台介面區（canvas unsafe），字幕、卡片字、角標不該進去' : ''}）`);
+  if (r.sheet) console.log(`\n→ 總覽圖 ${rel(r.sheet.file)}（${r.sheet.count} 格，每 ${r.sheet.step} 秒一格，主題 ${r.sheet.theme}；打開掃一眼有沒有掉圖、卡住${r.sheet.unsafe ? '；直式每格 9:16，紅色半透明框是平台介面區（canvas unsafe），字幕、卡片字、角標不該進去' : ''}）`);
   console.log(`\n${r.errors ? `✖ ${r.errors} 項錯誤` : '✔ 沒有錯誤'}${r.warnings ? `、⚠ ${r.warnings} 項提醒` : ''}${r.errors ? ' → 先修好再交付' : r.warnings ? ' → 逐項確認是不是刻意的' : ' → 可以交付'}`);
 }
 
@@ -818,7 +913,7 @@ function printFraming(P, r) {
   }
   const face = portrait ? '、頭頂／下巴不合' : '', faceOk = portrait ? '、頭頂／下巴在範圍內' : '';
   console.log(sug.none ? `建議：${sug.zoom.toFixed(2)}x（每個倍率都標了切到手勢${face}或放大超過 3.5 倍，選表上最小的；最後由使用者選）` : `建議：${sug.zoom.toFixed(2)}x（不切到手勢${faceOk}、來源像素放大 ≤ 3.5 倍的倍率裡最大的；最後由使用者選）`);
-  console.log(`\n→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就把 ✔ 那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫），之後跑 qc.mjs speaker --write 量講者框`);
+  console.log(`\n→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就跑 qc.mjs framing --write，之後跑 qc.mjs speaker --write 量講者框`);
   console.log(`node shared/template/tools/editor.mjs --project ${rel(P.project)}`);
 }
 
@@ -851,6 +946,20 @@ export function writeSpeakerBox(P, suggest, { force = false } = {}) {
   fs.mkdirSync(path.dirname(P.plan), { recursive: true });
   fs.writeFileSync(P.plan, `${JSON.stringify(plan, null, 2)}\n`);
   return { wrote: true, box: suggest, reason: 'written' };
+}
+
+// 使用者說「用建議的」：把 ✔ 那一列寫進 plan.json 第一層（1.0 倍不寫，已有的 frame 拿掉）
+export function writeFrame(P, r) {
+  const c = r.cands.find((x) => Math.abs(x.zoom - r.suggestion.zoom) < 1e-6);
+  let plan = { version: 1 };
+  if (fs.existsSync(P.plan)) {
+    try { plan = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch (e) { throw new Error(`plan.json 不是合法的 JSON：${e.message} → 修好再跑`); }
+  }
+  const frame = c && c.zoom > 1 ? c.frame : null;
+  if (frame) plan.frame = frame; else delete plan.frame;
+  fs.mkdirSync(path.dirname(P.plan), { recursive: true });
+  fs.writeFileSync(P.plan, `${JSON.stringify(plan, null, 2)}\n`);
+  return { frame, zoom: c?.zoom ?? 1 };
 }
 
 function printSpeakerWrite(P, w) {
@@ -948,10 +1057,12 @@ export function beatShots(g, tw) {
 
 // 每段截哪幾張：一般段是完成態（doneAt）；條列逐條換的每組一張（進場動畫重疊的幾條併一組，在這組進場完成後截）；
 // 錄影標註每個到位 +0.1 秒（相距 < 0.3 秒併成一張，取晚的）。motion＝Map(id → 時間軸)，沒有時用估的（條列進場 0.9 秒）
-export function shotPlan(segs, outputDur = Infinity, motion = null, labels = null) {
-  const shots = [], warnings = [];
+// only＝Set(段 id)：只排這幾段（段 id 不在裡面的照樣算「被蓋住」）。covers＝warnings 裡「被蓋住」的結構版（final 用）
+export function shotPlan(segs, outputDur = Infinity, motion = null, labels = null, only = null) {
+  const shots = [], warnings = [], covers = [];
   const end = Number.isFinite(outputDur) ? outputDur : Infinity;
   for (const g of segs) {
+    if (only && !only.has(g.id)) continue;
     const lo = g.start + SHOT.startPad, hi = Math.min(end - SHOT.endPad, g.end);
     const fit = (t) => r3(Math.min(Math.max(t, lo), Math.max(lo, hi)));
     let list = [];
@@ -1009,13 +1120,15 @@ export function shotPlan(segs, outputDur = Infinity, motion = null, labels = nul
       const need = x.need?.end;
       if (need != null && need > x.at + 1e-6) {
         const what = x.need.label;
-        warnings.push(`${g.id} 的${what}在 ${fmtT2(need)} 才完整出現，但 ${cov.id} 在 ${fmtT2(cov.start)} 就蓋住了，觀眾看不到 → ${g.id} 的那個拍點綁早一點的詞（#N@詞），或 ${cov.id} 的 from 延後到 ${fmtT2(need + SHOT.tail)} 之後`);
+        const msg = `${g.id} 的${what}在 ${fmtT2(need)} 才完整出現，但 ${cov.id} 在 ${fmtT2(cov.start)} 就蓋住了，觀眾看不到 → ${g.id} 的那個拍點綁早一點的詞（#N@詞），或 ${cov.id} 的 from 延後到 ${fmtT2(need + SHOT.tail)} 之後`;
+        warnings.push(msg);
+        covers.push({ id: g.id, by: cov.id, msg, from: r3(cov.start), to: r3(need) });
         x.why = `被 ${cov.id} 蓋住前 0.1 秒（${what}還沒出現）`;
       } else x.why = `被 ${cov.id} 蓋住前 0.1 秒`;
     }
     list.forEach((x, k) => shots.push({ id: g.id, file: list.length === 1 ? `${g.id}.png` : `${g.id}-${k + 1}.png`, at: fit(x.at), why: x.why }));
   }
-  return { shots, warnings };
+  return { shots, warnings, covers };
 }
 
 // 頁面裡：#el-<id> 這段的時間軸 → { start（data-start）, tw: [[起, 迄, 種類]]（段內秒數）}；子合成還沒掛上時 null
@@ -1068,16 +1181,20 @@ function fxLabels(P, items, motion, warnings) {
 
 // 每段的動畫時間軸（完成影片秒數）：用 003 audit 的同一個瀏覽器工作階段（HyperFrames runtime＋同一個 seek）
 // → Map(id → [[起, 迄, 種類]])；時間軸有 'done' 標記的另記在 .labels（Map(id → 完成影片秒)）
-export async function shotMotion(P, segs, flags = {}) {
-  const S = await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file });
+// 頁面 __renderReady 之後子合成都掛上了，直接讀、不用 seek（長片每段省一次 seek）；還沒 ready 才照舊 seek 到那段再讀。session＝共用的頁面（不關它）
+export async function shotMotion(P, segs, flags = {}, session = null) {
+  const S = session || await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file });
   const out = new Map(), labels = new Map();
   out.labels = labels;
+  const src = tweensInPage.toString();
+  const read = (id) => S.evaluate(`(${src})(${JSON.stringify(id)})`);
   try {
+    const ready = await S.evaluate('window.__renderReady === true');
     for (const g of segs) {
-      let r = null;
-      for (const t of [g.start + 0.01, (g.start + g.end) / 2]) {
+      let r = await read(g.id);
+      if (!r && !ready) for (const t of [g.start + 0.01, (g.start + g.end) / 2]) {
         await S.seek(r3(t));
-        r = await S.evaluate(`(${tweensInPage.toString()})(${JSON.stringify(g.id)})`);
+        r = await read(g.id);
         if (r) break;
       }
       if (r) {
@@ -1086,24 +1203,107 @@ export async function shotMotion(P, segs, flags = {}) {
         if (r.done != null) labels.set(g.id, r3(o + r.done));
       }
     }
-  } finally { await S.close(); }
+  } finally { if (!session) await S.close(); }
   return out;
 }
 
-const STALE_RE = /^[A-Za-z0-9]+(?:-\d+)?\.png$/;
+const STALE_RE = /^\w+?(?:-\d+)?\.png$/;
 
+// 這次用的 build --check：和 CLI 同一份結果，另外帶 res（每段自己的 ✖、還是範例原文的段）
+function checkInProcess(P, flags) {
+  try {
+    const r = build({ project: P.project, template: flags.template ? path.resolve(flags.template) : undefined, format: flags.format, check: true, json: true }, { log: () => {} });
+    return { json: r.json, res: r.res };
+  } catch (e) { return { error: tail(e.message, 200) }; }
+}
+
+// 截圖：把時間切成連續的幾塊，一塊一個 hyperframes snapshot 行程（各自開 Chrome，影片抽格也快）。回傳 Map(秒 → PNG 路徑)
+const SNAP = { dir: '.storyboard-shots', perJob: 10 };
+async function snapshotMany(P, times, jobs, pj) {
+  const tmp = path.join(P.out, SNAP.dir);
+  fs.rmSync(tmp, { recursive: true, force: true });
+  const sorted = [...times].sort((a, b) => a - b);
+  const k = Math.max(1, Math.min(jobs, Math.ceil(sorted.length / SNAP.perJob)));
+  const size = Math.ceil(sorted.length / k);
+  const chunks = Array.from({ length: k }, (_, i) => sorted.slice(i * size, (i + 1) * size)).filter((c) => c.length);
+  const once = async (chunk, i) => {
+    const r = await spawnAsync(process.execPath, hfArgs(['snapshot', '--at', chunk.join(','), '--no-end', '--keep', '-o', path.join(SNAP.dir, `p${i}`), '--json']), { cwd: P.out });
+    const text = String(r.stdout);
+    let sj = null;
+    try { sj = JSON.parse(text.slice(text.indexOf('{'))); } catch { /* 下面處理 */ }
+    return r.status === 0 && sj?.frames ? sj.frames : { fail: tail(r.stderr || text, 400) };
+  };
+  const cleanup = () => fs.rmSync(tmp, { recursive: true, force: true });
+  let got;
+  try {
+    got = await pool(chunks, k, async (chunk, i) => {
+      let f = await once(chunk, i);
+      if (f.fail && k > 1) f = await once(chunk, i);   // 同時開好幾個 Chrome、機器忙時偶爾會失敗：這一塊再跑一次
+      if (f.fail) throw new Error(`npx hyperframes snapshot 失敗：${f.fail} → 先跑 cd ${pj}/work/hyperframes && npx hyperframes check 看 runtime 錯誤`);
+      return f;
+    });
+  } catch (e) { cleanup(); throw e; }
+  const frames = got.flat(), out = new Map();
+  for (const t of sorted) {
+    const f = frames.find((x) => Math.abs(Number(x.time) - t) < 0.0005);
+    const png = f && path.resolve(P.out, f.path);
+    if (png && fs.existsSync(png)) out.set(t, png);
+  }
+  return { paths: out, jobs: chunks.length, cleanup };
+}
+
+// 分鏡拼圖：work/storyboard-preview/sheet-NN.jpg，每頁 12 張（直式也是 12 張：一列 6 格 × 2 列），每格標「時間｜段 id｜為什麼」。
+// --only 時只重做有動到的頁（頁面內容變了、或含這次重截的段）；張數變少時多的頁清掉
+export const SHEET = { per: 12, re: /^sheet-\d+\.jpg$/ };
+const sheetPages = (shots) => Array.from({ length: Math.ceil(shots.length / SHEET.per) }, (_, k) => {
+  const list = shots.slice(k * SHEET.per, (k + 1) * SHEET.per);
+  return { n: k + 1, file: `sheet-${nn(k + 1)}.jpg`, ids: [...new Set(list.map((x) => x.id))], shots: list.map((x) => x.file), from: list[0].at, to: list[list.length - 1].at };
+});
+async function storyboardSheets(P, flags, dir, all, { changed = null, prev = null, L }) {
+  const pages = sheetPages(all);
+  const before = new Map((prev?.sheets || []).map((x) => [x.file, x]));
+  const todo = pages.filter((pg) => {
+    if (!changed) return true;
+    const old = before.get(pg.file);
+    return !old || !fs.existsSync(path.join(dir, pg.file)) || old.shots.join() !== pg.shots.join() || pg.ids.some((id) => changed.has(id));
+  });
+  if (todo.length) {
+    const B = await openBrowser({ chrome: findChrome({ chrome: flags.chrome }) });
+    const fontsCss = pathToFileURL(path.join(P.templateDir, 'kit', 'fonts.css')).href, name = path.basename(P.project);
+    const [tw, th] = L.beatTile;
+    try {
+      await pool(todo, JOBS.chrome, async (pg) => {
+        const list = all.slice((pg.n - 1) * SHEET.per, pg.n * SHEET.per);
+        const page = contactSheet({ fontsCss, title: `分鏡拼圖 ${nn(pg.n)}／${nn(pages.length)}｜${name}｜${pg.ids[0]}–${pg.ids[pg.ids.length - 1]}`, cols: L.beatCols, tile: [tw, th],
+          cells: list.map((x) => ({ src: pathToFileURL(path.join(dir, x.file)).href, time: fmtT2(x.at), id: x.id, text: x.why })) });
+        const hf = path.join(dir, `.sheet-${nn(pg.n)}.html`), jpg = path.join(dir, pg.file);
+        fs.writeFileSync(hf, page.html);
+        try { await B.shot({ file: hf, out: jpg, width: page.width, height: page.height, quality: 85 }); } catch (e) { throw new Error(`Chrome 排版失敗（${pg.file}）：${e.message} → 重跑一次；還是失敗就回報這行`); } finally { fs.rmSync(hf, { force: true }); }
+      });
+    } finally { await B.close(); }
+  }
+  const keep = new Set(pages.map((x) => x.file));
+  for (const f of fs.readdirSync(dir)) if (SHEET.re.test(f) && !keep.has(f)) fs.rmSync(path.join(dir, f), { force: true });
+  return { pages, redone: todo.map((x) => x.file) };
+}
+
+// 回傳：{ dir, shots: [{ id, file, at, why, md }]（這次截的）, allShots（整支；--only 時合併上次 shots.json 其他段的）, manifest（shots.json 路徑）, sheets（有 --sheet 才有）, skipped（還是範例原文、沒截的段 id）, warnings, stale, cleared, segs, fmt, only }
 export async function storyboardRun(P, flags) {
   const pj = `projects/${path.basename(P.project)}`;
-  const c = checkJsonOf(P, flags);
+  const c = checkInProcess(P, flags);
   if (!c.json) throw new Error(`build --check --json 沒有輸出 JSON：${c.error} → 先單獨跑 node shared/template/tools/build.mjs --project ${pj} --check 看錯誤`);
   const j = c.json;
   const fmt = formatOf(P, flags), portrait = fmt.format === 'portrait';
+  const only = flags.only ? String(flags.only).split(',').map((x) => x.trim()).filter(Boolean) : null;
+  const jobs = jobsOf(flags.jobs);
   // 子母畫面段沒有講者小視窗（F2）：初剪壞了就先別截，截到的都是錯的（--check 的「只有聲音的區間沒有畫面」多半也是同一個原因，所以先報這個）
   if (!hasVoiceSource(P.project)) {
     const miss = pipMissing({ items: j.items, scenes: planScenes(P), voiceOnly: j.voiceOnly, roughBlack: j.roughBlack, cuts: j.edit?.cuts || [], project: pj, portrait });
     if (miss.length) throw new Error(miss.map((m) => m.msg).join('\n✖ '));
   }
-  if (!j.ok) throw new Error(`plan.json 有 ${(j.errors || []).length} 個 ✖（第一個：${(j.errors || [])[0] ?? '?'}）→ 照 build.mjs --check 的 → 修好，再跑 build、再截圖`);
+  // --only：其他段的 ✖ 不擋（和 audit --only 一樣）
+  const gate = gateCheck(c.res, only);
+  if (gate.fatal.length) throw new Error(`plan.json 有 ${gate.fatal.length} 個 ✖（第一個：${gate.fatal[0] ?? '?'}）→ 照 build.mjs --check 的 → 修好，再跑 build、再截圖`);
   const index = path.join(P.out, 'index.html');
   if (!fs.existsSync(index)) throw new Error(`還沒 build：找不到 ${pj}/work/hyperframes/index.html → 先跑 node shared/template/tools/build.mjs --project ${pj}`);
   const warnings = [];
@@ -1116,39 +1316,63 @@ export async function storyboardRun(P, flags) {
   }
   const { list, fallback } = outOf(j.items, j.edit?.cuts || []);
   if (fallback) warnings.unshift('--check --json 還沒有 items[].out：每段只截一張完成態，條列與錄影標註不分張 → 002 更新 build.mjs 後自動恢復');
-  warnings.push(...smallMediaWarnings(list));
-  let motion = null;
-  if (list.length) {
-    try { motion = await shotMotion(P, list, flags); } catch (e) { warnings.push(`讀不到動畫時間軸（${tail(e.message, 200)}）：完成態用段尾前 ${SHOT.tail} 秒、條列用進場後 ${SHOT.listReady} 秒估 → 截圖停在動畫中途就重跑一次`); }
+  if (only) {
+    const ids0 = list.map((g) => g.id), bad = only.filter((id) => !ids0.includes(id));
+    if (bad.length) throw new Error(`--only 的 ${bad.join('、')} 不在 plan.json（或整段被 edit.cuts 剪掉了）→ 現有：${ids0.slice(0, 30).join('、')}${ids0.length > 30 ? `…共 ${ids0.length} 段` : ''}`);
   }
-  const labels = fxLabels(P, j.items, motion, warnings);
-  const plan = shotPlan(list, j.outputDur ?? Infinity, motion, labels);
+  // 範例原文（剛複製、還沒做）：截到的是範例，沒有意義 → 跳過；--only 指名的照截
+  const skipped = (c.res?.items || []).filter((it) => it.sample && !(only && only.includes(it.id))).map((it) => it.id);
+  const targets = list.filter((g) => (only ? only.includes(g.id) : !skipped.includes(g.id)));
+  const targetIds = new Set(targets.map((g) => g.id));
+  warnings.push(...smallMediaWarnings(targets));
+  let motion = null;
+  if (targets.length) {
+    try { motion = await shotMotion(P, targets, flags); } catch (e) { warnings.push(`讀不到動畫時間軸（${tail(e.message, 200)}）：完成態用段尾前 ${SHOT.tail} 秒、條列用進場後 ${SHOT.listReady} 秒估 → 截圖停在動畫中途就重跑一次`); }
+  }
+  const labels = fxLabels(P, (j.items || []).filter((it) => targetIds.has(it.id)), motion, warnings);
+  // 整支的段都傳進去：沒截的段照樣算「被蓋住」
+  const plan = shotPlan(list, j.outputDur ?? Infinity, motion, labels, targetIds);
   warnings.push(...plan.warnings);
   const shots = plan.shots;
   const dir = path.join(P.project, 'work', 'storyboard-preview');
-  const tmp = path.join(P.out, '.storyboard-shots');
+  let snapJobs = 0;
   if (shots.length) {
-    fs.rmSync(tmp, { recursive: true, force: true });
-    const times = [...new Set(shots.map((s) => s.at))];
-    const r = run(process.execPath, hfArgs(['snapshot', '--at', times.join(','), '--no-end', '--keep', '-o', '.storyboard-shots', '--json']), { cwd: P.out, timeout: 600000 });
-    let sj = null;
-    try { sj = JSON.parse(String(r.stdout).slice(String(r.stdout).indexOf('{'))); } catch { /* 下面處理 */ }
-    if (r.status !== 0 || !sj?.frames) throw new Error(`npx hyperframes snapshot 失敗：${tail(r.stderr || r.stdout, 400)} → 先跑 cd ${pj}/work/hyperframes && npx hyperframes check 看 runtime 錯誤`);
-    const byTime = (t) => sj.frames.find((f) => Math.abs(Number(f.time) - t) < 0.0005);
-    const missing = shots.filter((s) => { const f = byTime(s.at); return !f || !fs.existsSync(path.resolve(P.out, f.path)); });
-    if (missing.length) throw new Error(`snapshot 少了 ${missing.length} 張（${missing.map((s) => fmtT(s.at)).join('、')}）→ 重跑一次；還是少就回報這幾個時間`);
+    const snap = await snapshotMany(P, [...new Set(shots.map((s) => s.at))], jobs, pj);
+    snapJobs = snap.jobs;
+    const missing = shots.filter((s) => !snap.paths.has(s.at));
+    if (missing.length) { snap.cleanup(); throw new Error(`snapshot 少了 ${missing.length} 張（${missing.map((s) => fmtT(s.at)).join('、')}）→ 重跑一次；還是少就回報這幾個時間`); }
     fs.mkdirSync(dir, { recursive: true });
-    for (const s of shots) fs.copyFileSync(path.resolve(P.out, byTime(s.at).path), path.join(dir, s.file));
-    fs.rmSync(tmp, { recursive: true, force: true });
+    for (const s of shots) fs.copyFileSync(snap.paths.get(s.at), path.join(dir, s.file));
+    snap.cleanup();
   }
   const mine = new Set(shots.map((s) => s.file));
-  // 舊截圖：同一段這次張數變了（s20.png ↔ s20-1.png…）→ 這次的取代它，直接清掉；plan.json 已經沒有的段 → ⚠ 留給使用者決定
+  // 舊截圖：同一段這次張數變了（s20.png ↔ s20-1.png…）或這段變回範例原文 → 這次的取代它，直接清掉；plan.json 已經沒有的段 → ⚠ 留給使用者決定。--only 只動指名的段
   const ids = new Set(list.map((g) => g.id)), stale = [], cleared = [];
   for (const f of fs.existsSync(dir) ? fs.readdirSync(dir).filter((x) => STALE_RE.test(x) && !mine.has(x)).sort() : []) {
-    if (ids.has(f.replace(/(?:-\d+)?\.png$/, ''))) { fs.rmSync(path.join(dir, f), { force: true }); cleared.push(f); } else stale.push(f);
+    const id = f.replace(/(?:-\d+)?\.png$/, '');
+    if (!ids.has(id)) stale.push(f);
+    else if (!only || targetIds.has(id)) { fs.rmSync(path.join(dir, f), { force: true }); cleared.push(f); }
   }
   for (const f of stale) warnings.push(`舊截圖 ${f} 不在這次的 plan.json 裡 → 不用就刪掉`);
-  return { dir, shots: shots.map((s) => ({ ...s, md: `![${s.file.replace(/\.png$/, '')}](storyboard-preview/${s.file})` })), warnings, stale, cleared, segs: list.length, fmt };
+  const withMd = (s) => ({ ...s, md: `![${s.file.replace(/\.png$/, '')}](storyboard-preview/${s.file})` });
+  const outShots = shots.map(withMd);
+  // shots.json：整支的截圖清單（--only 合併上次其他段的；拼圖、分鏡表都讀它）
+  const mfFile = path.join(dir, 'shots.json');
+  let prev = null;
+  try { prev = JSON.parse(fs.readFileSync(mfFile, 'utf8')); } catch { /* 第一次 */ }
+  const order = new Map(list.map((g, i) => [g.id, i]));
+  const kept = only ? (prev?.shots || []).filter((s) => !targetIds.has(s.id) && order.has(s.id) && fs.existsSync(path.join(dir, s.file))) : [];
+  const allShots = [...kept, ...outShots].sort((a, b) => order.get(a.id) - order.get(b.id) || a.at - b.at);
+  // 拼圖不留過期的：--only 且上次有拼圖 → 有動到的頁自動重做（不用另外加 --sheet）；整支重截沒加 --sheet → 舊頁清掉
+  let sheets = null;
+  if ((flags.sheet || (only && prev?.sheets?.length)) && allShots.length) sheets = await storyboardSheets(P, flags, dir, allShots, { changed: only ? targetIds : null, prev, L: obsLayout(fmt.canvas) });
+  else if (!only && fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) if (SHEET.re.test(f)) fs.rmSync(path.join(dir, f), { force: true });
+  const pages = sheets ? sheets.pages : [];
+  if (allShots.length) {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(mfFile, `${JSON.stringify({ version: 1, planHash: j.planHash ?? null, shots: allShots, skipped, sheets: pages }, null, 1)}\n`);
+  }
+  return { dir, shots: outShots, allShots, manifest: allShots.length ? mfFile : null, sheets: sheets ? sheets.pages.map((pg) => ({ ...pg, redone: sheets.redone.includes(pg.file) })) : null, skipped, warnings, stale, cleared, segs: list.length, fmt, only, jobs: snapJobs, others: gate.others };
 }
 
 // FR-082（US4-2）：錄影（--check --json 的 annotations.view；直式只有寬 > 高的錄影段才有）縮到原尺寸 < 0.6、沒有 moves 和 lens、> 3 秒 → 介面字太小
@@ -1160,17 +1384,29 @@ export function smallMediaWarnings(segs) {
       : `${g.id} 的錄影在直式只有原尺寸 ${Math.round(g.annotations.view.scale * 100)} %，介面字會太小 → 加 moves 推近到操作區`);
 }
 
-function printStoryboard(P, r) {
+// 預設只印 ✖、⚠ 與統計；每張截圖的表與貼上用的 markdown 加 --verbose（--only 只有幾張，照印）
+function printStoryboard(P, r, { verbose = false } = {}) {
   if (r.fmt) console.log(r.fmt.line);
   console.log(`專案：${rel(P.project)}`);
-  console.log(`截圖：${r.shots.length} 張（${r.segs} 段；條列每組一張、錄影標註每個一張）`);
-  for (const s of r.shots) console.log(`${s.id}｜${fmtT(s.at)}｜${s.why}｜storyboard-preview/${s.file}`);
+  const note = [r.only ? `--only ${r.only.join(',')}` : `${r.segs} 段`, r.jobs > 1 ? `${r.jobs} 個行程併發` : ''].filter(Boolean).join('；');
+  console.log(`截圖：${r.shots.length} 張（${note}${r.only ? '' : '；條列每組一張、錄影標註每個一張'}）`);
+  if (r.skipped?.length) console.log(`略過 ${r.skipped.length} 段（還是範例原文、還沒做）：${r.skipped.join('、')}`);
+  if (r.others) console.log(`其他段有 ${r.others} 個 ✖（不影響這段）`);
+  const full = verbose || !!r.only;
+  if (full) for (const s of r.shots) console.log(`${s.id}｜${fmtT(s.at)}｜${s.why}｜storyboard-preview/${s.file}`);
   for (const w of r.warnings) console.log(`⚠ ${w}`);
   if (r.cleared?.length) console.log(`清掉同一段的舊截圖（這次張數變了）：${r.cleared.join('、')}`);
-  if (!r.shots.length) { console.log('（plan.json 沒有段落，沒有要截的）'); return; }
-  console.log('→ 貼進 work/storyboard.md（每段放在該節「截圖觀察」上面）：');
-  for (const s of r.shots) console.log(s.md);
-  console.log(`✔ ${r.shots.length} 張都存好了：${path.join(rel(r.dir), path.sep)}`);
+  if (!r.shots.length) { console.log(r.skipped?.length ? '（每段都還是範例原文，沒有要截的）' : '（plan.json 沒有段落，沒有要截的）'); return; }
+  if (full) {
+    console.log('→ 貼進 work/storyboard.md（每段放在該節「截圖觀察」上面）：');
+    for (const s of r.shots) console.log(s.md);
+  }
+  if (r.sheets?.length) {
+    const redo = r.sheets.filter((x) => x.redone).map((x) => x.file);
+    console.log(`→ 拼圖 ${r.sheets.length} 頁（每頁 ${SHEET.per} 張，每格標時間、段 id、為什麼）：${path.join(rel(r.dir), r.sheets[0].file)}${r.sheets.length > 1 ? ` … ${r.sheets[r.sheets.length - 1].file}` : ''}${r.only ? `；這次重做 ${redo.join('、') || '（沒有）'}` : ''}`);
+    if (verbose) for (const x of r.sheets) console.log(`  ${x.file}｜${x.ids.join('、')}`);
+  }
+  console.log(`✔ ${r.shots.length} 張都存好了：${path.join(rel(r.dir), path.sep)}${full ? '' : `（每段的截圖、為什麼、貼上用的 markdown 在 ${path.join(rel(r.dir), 'shots.json')}；要印全表加 --verbose）`}`);
 }
 
 // ---------- observe（觀影總表，cli-004 §3）----------
@@ -1294,105 +1530,113 @@ export async function observeRun(P, flags) {
   if (P.srt && fs.existsSync(P.srt)) cues = cuesToOut(parseSrt(fs.readFileSync(P.srt, 'utf8')), cuts);
   else warnings.push('找不到 work/rough.srt：格子不印字幕');
 
-  // 1. 抽格（一次解碼整段）
+  // 1. 抽格＋靜止區間的 96×54 灰階：同一次解碼
   const ts = observeTimes(from, to);
-  const [tw, th] = L.tile;
-  let r = run('ffmpeg', ['-y', '-v', 'error', '-ss', String(r3(from - offset)), '-t', String(r3(to - from)), '-i', file, '-vf', `fps=${1 / OBS.step}:round=down,scale=${tw}:${th}:flags=bicubic`, '-q:v', '4', path.join(tiles, 'c%05d.jpg')]);
+  const [tw, th] = L.tile, [gw, gh] = L.gray;
+  const grayFile = path.join(tiles, 'gray.raw');
+  let r = run('ffmpeg', ['-y', '-v', 'error', '-ss', String(r3(from - offset)), '-t', String(r3(to - from)), '-i', file,
+    '-filter_complex', `[0:v]fps=${1 / OBS.step}:round=up,split=2[a][b];[a]scale=${tw}:${th}:flags=bicubic[t];[b]scale=${gw}:${gh},format=gray[g]`,
+    '-map', '[t]', '-q:v', '4', path.join(tiles, 'c%05d.jpg'), '-map', '[g]', '-f', 'rawvideo', grayFile]);
   if (r.status !== 0) throw new Error(`抽格失敗（${path.basename(file)} ${fmtT(from)}–${fmtT(to)} 秒）：${tail(r.stderr, 400)} → 重跑一次；還是失敗就把這行回報`);
   const tileFiles = fs.readdirSync(tiles).filter((f) => /^c\d+\.jpg$/.test(f)).sort();
-  // 2. 靜止區間（96×54 灰階）
-  const [gw, gh] = L.gray;
-  r = spawnSync('ffmpeg', ['-v', 'error', '-ss', String(r3(from - offset)), '-t', String(r3(to - from)), '-i', file, '-vf', `fps=${1 / OBS.step}:round=down,scale=${gw}:${gh},format=gray`, '-f', 'rawvideo', 'pipe:1'], { maxBuffer: 1 << 30 });
-  if (r.status !== 0) throw new Error(`抽格失敗（${path.basename(file)} ${fmtT(from)}–${fmtT(to)} 秒）：${tail(r.stderr?.toString(), 400)} → 重跑一次；還是失敗就把這行回報`);
-  const grays = [];
-  for (let o = 0; o + gw * gh <= r.stdout.length; o += gw * gh) grays.push(r.stdout.subarray(o, o + gw * gh));
+  // 2. 靜止區間
+  const grayBuf = fs.readFileSync(grayFile), grays = [];
+  for (let o = 0; o + gw * gh <= grayBuf.length; o += gw * gh) grays.push(grayBuf.subarray(o, o + gw * gh));
   const n = Math.min(ts.length, tileFiles.length || ts.length);
   const stat = staticRuns(grays.slice(0, n), { from }).map(([a, b]) => {
     const L = cellLabel(a, segs, cues);
     return { from: a, to: Math.min(b, to), id: L.id === '—' ? null : L.id, cue: L.n != null ? `#${L.n} ${L.text}` : null };
   });
 
-  // 3. 總表（Chrome 排版：中文字幕）
-  const fontsCss = pathToFileURL(path.join(P.templateDir, 'kit', 'fonts.css')).href;
-  const per = L.cols * L.rows, sheets = [];
-  const name = path.basename(P.project);
-  for (let s0 = 0, k = 1; s0 < n; s0 += per, k++) {
-    const idx = Array.from({ length: Math.min(per, n - s0) }, (_, i) => s0 + i);
-    const rows = Math.ceil(idx.length / L.cols), H = OBS.title + rows * (th + OBS.label);
-    const a = ts[idx[0]], b = r3(ts[idx[idx.length - 1]] + OBS.step);
-    const cells = idx.map((i) => {
-      const L = cellLabel(ts[i], segs, cues);
-      return `<div class="cell">${tileFiles[i] ? `<img src="${tileFiles[i]}">` : ''}<div class="lab"><b>${L.time}</b>｜<i>${escH(L.id)}</i>｜${escH(L.text)}</div></div>`;
-    }).join('');
-    const html = obsPage(fontsCss, 1920, H, `<div class="bar">觀影總表 ${nn(k)}｜${fmtT(a)}–${fmtT(b)}｜${escH(name)}｜每格 ${OBS.step} 秒</div><div class="grid">${cells}</div>`, '', L);
-    const hf = path.join(tiles, `sheet-${nn(k)}.html`), png = path.join(tiles, `sheet-${nn(k)}.png`), jpg = path.join(dir, `sheet-${nn(k)}.jpg`);
-    fs.writeFileSync(hf, html);
-    try { htmlShot({ chrome, file: hf, out: png, width: 1920, height: H }); } catch (e) { throw new Error(`Chrome 排版失敗（sheet-${nn(k)}）：${e.message} → 重跑一次；還是失敗就加 --from／--to 縮小範圍`); }
-    r = run('ffmpeg', ['-y', '-v', 'error', '-i', png, '-q:v', '3', jpg]);
-    if (r.status !== 0) throw new Error(`總表轉 JPG 失敗：${tail(r.stderr)} → 重跑一次；還是失敗就把這行回報`);
-    sheets.push({ file: jpg, from: a, to: b, cells: idx.length });
-  }
-
-  // 4. 接縫條帶
-  const seams = segs.length ? seamList(segs, from, to) : [];
-  const seamFiles = [];
-  const [sw, shh] = L.seamTile, seamRow = 30 + shh + 20;
-  const nFrames = Math.round((OBS.seamBefore + OBS.seamAfter) / OBS.seamStep) + 1;
-  for (const sm of seams) {
-    const t0 = Math.max(offset, sm.at - OBS.seamBefore);
-    r = run('ffmpeg', ['-y', '-v', 'error', '-ss', String(r3(t0 - offset)), '-t', String(r3(sm.at + OBS.seamAfter + OBS.seamStep * 1.5 - t0)), '-i', file, '-vf', `fps=${1 / OBS.seamStep}:round=down,scale=${sw}:${shh}`, '-frames:v', String(nFrames), '-q:v', '4', path.join(tiles, `s${String(sm.n).padStart(3, '0')}-%02d.jpg`)]);
-    if (r.status !== 0) throw new Error(`抽格失敗（${path.basename(file)} ${fmtT(t0)}–${fmtT(sm.at + OBS.seamAfter)} 秒）：${tail(r.stderr, 400)} → 重跑一次；還是失敗就把這行回報`);
-    sm.t0 = r3(t0);
-    sm.frames = fs.readdirSync(tiles).filter((f) => f.startsWith(`s${String(sm.n).padStart(3, '0')}-`)).sort();
-  }
-  for (let s0 = 0, k = 1; s0 < seams.length; s0 += OBS.seamsPer, k++) {
-    const group = seams.slice(s0, s0 + OBS.seamsPer);
-    const H = group.length * seamRow;
-    const rowsHtml = group.map((sm) => {
-      const cells = sm.frames.map((f, i) => { const d = r3(sm.t0 + i * OBS.seamStep - sm.at); return `<div class="sc"><img src="${f}"><div class="sl">${d > 0 ? '+' : d < 0 ? '−' : ''}${Math.abs(d).toFixed(1)}</div></div>`; }).join('');
-      return `<div class="row"><div class="st">接縫 ${sm.n}｜${fmtT(sm.at)}｜${escH(sm.before ?? '—')} → ${escH(sm.after ?? '—')}</div><div class="sr">${cells}</div></div>`;
-    }).join('');
-    const extra = `.row{height:${seamRow}px}.st{height:30px;line-height:30px;padding:0 12px;font-size:17px;font-weight:700;color:#FFD400;background:#1E2740}.sr{display:flex;gap:4px;padding-left:2px}.sc{width:${sw}px}.sc img{display:block;width:${sw}px;height:${shh}px}.sl{height:20px;line-height:20px;font-size:14px;text-align:center}`;
-    const html = obsPage(fontsCss, 1920, H, rowsHtml, extra);
-    const hf = path.join(tiles, `seam-${nn(k)}.html`), png = path.join(tiles, `seam-${nn(k)}.png`), jpg = path.join(dir, `seam-${nn(k)}.jpg`);
-    fs.writeFileSync(hf, html);
-    try { htmlShot({ chrome, file: hf, out: png, width: 1920, height: H }); } catch (e) { throw new Error(`Chrome 排版失敗（seam-${nn(k)}）：${e.message} → 重跑一次；還是失敗就加 --from／--to 縮小範圍`); }
-    r = run('ffmpeg', ['-y', '-v', 'error', '-i', png, '-q:v', '3', jpg]);
-    if (r.status !== 0) throw new Error(`接縫條帶轉 JPG 失敗：${tail(r.stderr)} → 重跑一次；還是失敗就把這行回報`);
-    group.forEach((sm, i) => { sm.file = jpg; sm.row = i + 1; });
-    seamFiles.push(jpg);
-  }
-
-  // 5. 拍點表：和 storyboard 同一套取樣時刻（抽屜抽出後 0.3 秒、焦點抬起後、完成態、條列每組、錄影標註到位），從完成影片抽格
-  const beats = [], beatFiles = [];
-  if (segs.length) {
-    let motion = null;
-    if (!fs.existsSync(path.join(P.out, 'index.html'))) warnings.push(`還沒 build（找不到 ${pj}/work/hyperframes/index.html）：拍點用估的（完成態段尾前 ${SHOT.tail} 秒、條列進場後 ${SHOT.listReady} 秒）→ 先跑 build.mjs 再重跑 observe`);
-    else {
-      try { motion = await shotMotion(P, segs, flags); } catch (e) { warnings.push(`讀不到動畫時間軸（${tail(e.message, 200)}）：拍點用估的 → 重跑一次`); }
-    }
-    const plan = shotPlan(segs, c.json?.outputDur ?? Infinity, motion, fxLabels(P, c.json?.items, motion, warnings));
-    for (const w of plan.warnings) warnings.push(w);
-    for (const s of plan.shots) if (s.at >= from - 1e-6 && s.at < to - 1e-6) beats.push({ n: beats.length + 1, id: s.id, at: s.at, why: s.why });
-    const [bw, bh] = L.beatTile;
-    for (const b of beats) {
-      r = run('ffmpeg', ['-y', '-v', 'error', '-ss', String(r3(b.at - offset)), '-i', file, '-frames:v', '1', '-vf', `scale=${bw}:${bh}:flags=bicubic`, '-q:v', '3', path.join(tiles, `b${String(b.n).padStart(3, '0')}.jpg`)]);
-      if (r.status !== 0) throw new Error(`抽格失敗（${path.basename(file)} ${fmtT(b.at)}）：${tail(r.stderr, 400)} → 重跑一次；還是失敗就把這行回報`);
-    }
-    const extra = `.bgrid{display:grid;grid-template-columns:repeat(${L.beatCols},${bw}px);justify-content:space-between}.bc{width:${bw}px;height:${bh + 52}px;overflow:hidden}.bc img{display:block;width:${bw}px;height:${bh}px}.bc .lab{height:52px;font-size:17px;line-height:24px}`;
-    for (let s0 = 0, k = 1; s0 < beats.length; s0 += L.beatsPer, k++) {
-      const group = beats.slice(s0, s0 + L.beatsPer), rows = Math.ceil(group.length / L.beatCols), H = OBS.title + rows * (bh + 52);
-      const cells = group.map((b) => `<div class="bc"><img src="b${String(b.n).padStart(3, '0')}.jpg"><div class="lab"><b>${fmtT2(b.at)}</b>｜<i>${escH(b.id)}</i>｜${escH(b.why)}</div></div>`).join('');
-      const html = obsPage(fontsCss, 1920, H, `<div class="bar">拍點表 ${nn(k)}｜${escH(name)}｜和 storyboard 同一套取樣時刻，從完成影片抽格</div><div class="bgrid">${cells}</div>`, extra);
-      const hf = path.join(tiles, `beat-${nn(k)}.html`), png = path.join(tiles, `beat-${nn(k)}.png`), jpg = path.join(dir, `beat-${nn(k)}.jpg`);
+  // 排版共用一個 Chrome（長片要排上百張，一張冷開一次太慢）；抽格同時跑幾個 ffmpeg
+  const browser = await openBrowser({ chrome });
+  const beats = [], beatFiles = [], seamFiles = [], sheets = [];
+  let seams = [];
+  try {
+    // 3. 總表（Chrome 排版：中文字幕）
+    const fontsCss = pathToFileURL(path.join(P.templateDir, 'kit', 'fonts.css')).href;
+    const per = L.cols * L.rows;
+    const name = path.basename(P.project);
+    const layout = async (kind, k, html, H) => {
+      const hf = path.join(tiles, `${kind}-${nn(k)}.html`), jpg = path.join(dir, `${kind}-${nn(k)}.jpg`);
       fs.writeFileSync(hf, html);
-      try { htmlShot({ chrome, file: hf, out: png, width: 1920, height: H }); } catch (e) { throw new Error(`Chrome 排版失敗（beat-${nn(k)}）：${e.message} → 重跑一次；還是失敗就加 --from／--to 縮小範圍`); }
-      r = run('ffmpeg', ['-y', '-v', 'error', '-i', png, '-q:v', '3', jpg]);
-      if (r.status !== 0) throw new Error(`拍點表轉 JPG 失敗：${tail(r.stderr)} → 重跑一次；還是失敗就把這行回報`);
-      group.forEach((b) => { b.file = jpg; });
-      beatFiles.push(jpg);
+      try { await browser.shot({ file: hf, out: jpg, width: 1920, height: H, quality: 85 }); } catch (e) { throw new Error(`Chrome 排版失敗（${kind}-${nn(k)}）：${e.message} → 重跑一次；還是失敗就加 --from／--to 縮小範圍`); }
+      return jpg;
+    };
+    const sheetPlan = [];
+    for (let s0 = 0, k = 1; s0 < n; s0 += per, k++) sheetPlan.push({ s0, k });
+    const madeSheets = await pool(sheetPlan, JOBS.chrome, async ({ s0, k }) => {
+      const idx = Array.from({ length: Math.min(per, n - s0) }, (_, i) => s0 + i);
+      const rows = Math.ceil(idx.length / L.cols), H = OBS.title + rows * (th + OBS.label);
+      const a = ts[idx[0]], b = r3(ts[idx[idx.length - 1]] + OBS.step);
+      const cells = idx.map((i) => {
+        const L = cellLabel(ts[i], segs, cues);
+        return `<div class="cell">${tileFiles[i] ? `<img src="${tileFiles[i]}">` : ''}<div class="lab"><b>${L.time}</b>｜<i>${escH(L.id)}</i>｜${escH(L.text)}</div></div>`;
+      }).join('');
+      const html = obsPage(fontsCss, 1920, H, `<div class="bar">觀影總表 ${nn(k)}｜${fmtT(a)}–${fmtT(b)}｜${escH(name)}｜每格 ${OBS.step} 秒</div><div class="grid">${cells}</div>`, '', L);
+      return { file: await layout('sheet', k, html, H), from: a, to: b, cells: idx.length };
+    });
+    sheets.push(...madeSheets);
+
+    // 4. 接縫條帶
+    seams = segs.length ? seamList(segs, from, to) : [];
+    const [sw, shh] = L.seamTile, seamRow = 30 + shh + 20;
+    const nFrames = Math.round((OBS.seamBefore + OBS.seamAfter) / OBS.seamStep) + 1;
+    await pool(seams, JOBS.ffmpeg, async (sm) => {
+      const t0 = Math.max(offset, sm.at - OBS.seamBefore);
+      const q = await spawnAsync('ffmpeg', ['-y', '-v', 'error', '-ss', String(r3(t0 - offset)), '-t', String(r3(sm.at + OBS.seamAfter + OBS.seamStep * 1.5 - t0)), '-i', file, '-vf', `fps=${1 / OBS.seamStep}:round=up,scale=${sw}:${shh}`, '-frames:v', String(nFrames), '-q:v', '4', path.join(tiles, `s${String(sm.n).padStart(3, '0')}-%02d.jpg`)]);
+      if (q.status !== 0) throw new Error(`抽格失敗（${path.basename(file)} ${fmtT(t0)}–${fmtT(sm.at + OBS.seamAfter)} 秒）：${tail(q.stderr, 400)} → 重跑一次；還是失敗就把這行回報`);
+      sm.t0 = r3(t0);
+    });
+    const tileNames = fs.readdirSync(tiles);
+    for (const sm of seams) sm.frames = tileNames.filter((f) => f.startsWith(`s${String(sm.n).padStart(3, '0')}-`)).sort();
+    const seamPlan = [];
+    for (let s0 = 0, k = 1; s0 < seams.length; s0 += OBS.seamsPer, k++) seamPlan.push({ group: seams.slice(s0, s0 + OBS.seamsPer), k });
+    const madeSeams = await pool(seamPlan, JOBS.chrome, async ({ group, k }) => {
+      const H = group.length * seamRow;
+      const rowsHtml = group.map((sm) => {
+        const cells = sm.frames.map((f, i) => { const d = r3(sm.t0 + i * OBS.seamStep - sm.at); return `<div class="sc"><img src="${f}"><div class="sl">${d > 0 ? '+' : d < 0 ? '−' : ''}${Math.abs(d).toFixed(1)}</div></div>`; }).join('');
+        return `<div class="row"><div class="st">接縫 ${sm.n}｜${fmtT(sm.at)}｜${escH(sm.before ?? '—')} → ${escH(sm.after ?? '—')}</div><div class="sr">${cells}</div></div>`;
+      }).join('');
+      const extra = `.row{height:${seamRow}px}.st{height:30px;line-height:30px;padding:0 12px;font-size:17px;font-weight:700;color:#FFD400;background:#1E2740}.sr{display:flex;gap:4px;padding-left:2px}.sc{width:${sw}px}.sc img{display:block;width:${sw}px;height:${shh}px}.sl{height:20px;line-height:20px;font-size:14px;text-align:center}`;
+      const html = obsPage(fontsCss, 1920, H, rowsHtml, extra);
+      const jpg = await layout('seam', k, html, H);
+      group.forEach((sm, i) => { sm.file = jpg; sm.row = i + 1; });
+      return jpg;
+    });
+    seamFiles.push(...madeSeams);
+
+    // 5. 拍點表：和 storyboard 同一套取樣時刻（抽屜抽出後 0.3 秒、焦點抬起後、完成態、條列每組、錄影標註到位），從完成影片抽格
+    if (segs.length) {
+      // 只讀範圍裡的段（--from／--to 只看一段時不用讀整片）
+      const inRange = segs.filter((g) => g.end > from && g.start < to), inIds = new Set(inRange.map((g) => g.id));
+      let motion = null;
+      if (!fs.existsSync(path.join(P.out, 'index.html'))) warnings.push(`還沒 build（找不到 ${pj}/work/hyperframes/index.html）：拍點用估的（完成態段尾前 ${SHOT.tail} 秒、條列進場後 ${SHOT.listReady} 秒）→ 先跑 build.mjs 再重跑 observe`);
+      else if (inRange.length) {
+        try { motion = await shotMotion(P, inRange, flags); } catch (e) { warnings.push(`讀不到動畫時間軸（${tail(e.message, 200)}）：拍點用估的 → 重跑一次`); }
+      }
+      const plan = shotPlan(segs, c.json?.outputDur ?? Infinity, motion, fxLabels(P, (c.json?.items || []).filter((it) => inIds.has(it.id)), motion, warnings), inIds);
+      for (const w of plan.warnings) warnings.push(w);
+      for (const s of plan.shots) if (s.at >= from - 1e-6 && s.at < to - 1e-6) beats.push({ n: beats.length + 1, id: s.id, at: s.at, why: s.why });
+      const [bw, bh] = L.beatTile;
+      await pool(beats, JOBS.ffmpeg, async (b) => {
+        const q = await spawnAsync('ffmpeg', ['-y', '-v', 'error', '-ss', String(r3(b.at - offset)), '-i', file, '-frames:v', '1', '-vf', `scale=${bw}:${bh}:flags=bicubic`, '-q:v', '3', path.join(tiles, `b${String(b.n).padStart(3, '0')}.jpg`)]);
+        if (q.status !== 0) throw new Error(`抽格失敗（${path.basename(file)} ${fmtT(b.at)}）：${tail(q.stderr, 400)} → 重跑一次；還是失敗就把這行回報`);
+      });
+      const extra = `.bgrid{display:grid;grid-template-columns:repeat(${L.beatCols},${bw}px);justify-content:space-between}.bc{width:${bw}px;height:${bh + 52}px;overflow:hidden}.bc img{display:block;width:${bw}px;height:${bh}px}.bc .lab{height:52px;font-size:17px;line-height:24px}`;
+      const beatPlan = [];
+      for (let s0 = 0, k = 1; s0 < beats.length; s0 += L.beatsPer, k++) beatPlan.push({ group: beats.slice(s0, s0 + L.beatsPer), k });
+      const madeBeats = await pool(beatPlan, JOBS.chrome, async ({ group, k }) => {
+        const rows = Math.ceil(group.length / L.beatCols), H = OBS.title + rows * (bh + 52);
+        const cells = group.map((b) => `<div class="bc"><img src="b${String(b.n).padStart(3, '0')}.jpg"><div class="lab"><b>${fmtT2(b.at)}</b>｜<i>${escH(b.id)}</i>｜${escH(b.why)}</div></div>`).join('');
+        const html = obsPage(fontsCss, 1920, H, `<div class="bar">拍點表 ${nn(k)}｜${escH(name)}｜和 storyboard 同一套取樣時刻，從完成影片抽格</div><div class="bgrid">${cells}</div>`, extra);
+        const jpg = await layout('beat', k, html, H);
+        group.forEach((b) => { b.file = jpg; });
+        return jpg;
+      });
+      beatFiles.push(...madeBeats);
     }
-  }
+  } finally { await browser.close(); }
 
   // 6. index.md
   const now = new Date(), stamp = `${now.getFullYear()}-${nn(now.getMonth() + 1)}-${nn(now.getDate())} ${nn(now.getHours())}:${nn(now.getMinutes())}`;
@@ -1459,6 +1703,7 @@ export async function cli() {
   const flags = parseArgs(process.argv.slice(2));
   if (flags.help || !flags.cmd || flags.cmd === '--help') { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
   if (!['final', 'speaker', 'framing', 'storyboard', 'observe'].includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 final、speaker、framing、storyboard、observe → 改成這五個之一（用 --help 看用法）`);
+  if (flags.cmd !== 'storyboard') for (const k of ['only', 'sheet', 'jobs']) if (flags[k] != null) throw new Error(`--${k} 只有 storyboard 用 → 拿掉 --${k}（observe 只看一段用 --from／--to）`);
   const P = pathsFrom({ project: flags.project, template: flags.template });
   if (flags.cmd === 'final') {
     const r = await finalCheck(P, flags);
@@ -1468,18 +1713,26 @@ export async function cli() {
         ok: r.ok, errors: r.errors, warnings: r.warnings, file: rel(r.file),
         checks: r.checks, format: { width: f.width, height: f.height, fps: f.fps, hasAudio: f.hasAudio },
         duration: { actual: f.dur, expected: f.expected }, loudness: f.loud ? { lufs: f.loud.i, truePeak: f.loud.tp } : null,
-        freezes: f.freezes, blacks: f.blacks, silences: f.silences, sheet: r.sheet ? rel(r.sheet.file) : null, theme: f.theme,
+        freezes: f.freezes, blacks: f.blacks, silences: f.silences, stills: f.stills, covered: f.covered, sheet: r.sheet ? rel(r.sheet.file) : null, theme: f.theme,
         captions: f.captionStyle?.samples ?? null,
         canvas: { format: f.canvas.format, size: [f.canvas.W, f.canvas.H], source: r.fmt.source },
       }, null, 2));
     } else printFinal(P, r);
     return r.ok ? 0 : 1;
   }
-  if (flags.cmd === 'framing') { printFraming(P, framingPreview(P, flags)); return 0; }
+  if (flags.cmd === 'framing') {
+    const r = framingPreview(P, flags);
+    if (!flags.write) { printFraming(P, r); return 0; }
+    const w = writeFrame(P, r);
+    console.log(w.frame ? `✓ plan.json 的 frame → [${w.frame.join(', ')}]（${w.zoom.toFixed(2)}x；建議倍率）` : '✓ 建議不裁切（1.00x）：plan.json 不寫 frame');
+    return 0;
+  }
   if (flags.cmd === 'storyboard') {
     const r = await storyboardRun(P, flags);
-    if (flags.json) console.log(JSON.stringify({ ok: true, format: r.fmt.format, dir: rel(r.dir), shots: r.shots.map(({ id, file, at, why, md }) => ({ id, file, at, why, md })), warnings: r.warnings, stale: r.stale, cleared: r.cleared }, null, 2));
-    else printStoryboard(P, r);
+    if (flags.json) console.log(JSON.stringify({ ok: true, format: r.fmt.format, dir: rel(r.dir), shots: r.shots.map(({ id, file, at, why, md }) => ({ id, file, at, why, md })), warnings: r.warnings, stale: r.stale, cleared: r.cleared,
+      only: r.only, skipped: r.skipped, others: r.others, manifest: r.manifest ? rel(r.manifest) : null, allShots: r.allShots.map(({ id, file, at, why, md }) => ({ id, file, at, why, md })),
+      sheets: r.sheets ? r.sheets.map((x) => ({ file: x.file, ids: x.ids, shots: x.shots, redone: x.redone })) : null }, null, 2));
+    else printStoryboard(P, r, { verbose: !!flags.verbose });
     return 0;
   }
   if (flags.cmd === 'observe') {

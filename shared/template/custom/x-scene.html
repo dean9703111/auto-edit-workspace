@@ -94,7 +94,7 @@
        data-cues-sample='{"start":0,"D":19.5,"cues":{"182":[2.5,5],"183":[5.4,7.9],"184":[8.3,10.8],"185":[11.2,13.7],"186":[14.1,16.6]},"refs":{"#182@手機":2.9,"#183@雲端":5.8,"#184@電腦":9,"#185@播放":11.8,"#186@沒問題":14.6}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xsc-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">以前的傳檔流程</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">以前的傳檔流程</span></div>
       <div id="xsc-stage" data-layout="row" data-gap="xl">
         <svg id="xsc-floor" class="xsc-floor" data-layout-ignore xmlns="http://www.w3.org/2000/svg"><path d=""/></svg>
         <!-- <div class="xsc-here" data-layout-ignore></div> -->
@@ -188,13 +188,14 @@
       const strokes = drw.map(function (s) { return ROOT.querySelector(s + ' .il'); }).concat(lines);
       if (strokes.length) P.draw(strokes, t, { dur: DRAW * drw.length + (lines.length ? 0.35 : 0) });
       if (pops.length) P.pop(pops.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
-      ins.forEach(function (s, i) { lblAt(s, t + 0.3 + i * 0.3); if (entered.indexOf(s) < 0) entered.push(s); });
+      ins.forEach(function (s, i) { lblAt(s, t + 0.3 + i * 0.5); if (entered.indexOf(s) < 0) entered.push(s); });   // 標籤每 0.5 秒一個（任何 1 秒內新元素 ≤ 2）
+      const stAt = ins.length ? t + 0.3 + ins.length * 0.5 : t + 0.15;   // 這拍有新元件：標籤出完才換狀態，不擠在同一刻
       if (o.state) {
         const s = sel(o.state[0]), a = stateSel(o.state[1]), z = stateSel(o.state[2]);
-        if (a && z) P.swap(s + ' ' + a, s + ' ' + z, t + 0.15);
-        else if (z) P.in(s + ' ' + z, t + 0.15);
-        else if (a) P.out(s + ' ' + a, t + 0.15);
-        P.ripple(s + ' .il', t + 0.2, { to: 1.5 });
+        if (a && z) P.swap(s + ' ' + a, s + ' ' + z, stAt);
+        else if (z) P.in(s + ' ' + z, stAt);
+        else if (a) P.out(s + ' ' + a, stAt);
+        P.ripple(s + ' .il', stAt + 0.05, { to: 1.5 });
       }
       if (o.move) {   // move: [元件, 目標元件, 'left'｜'right']：走到目標插圖的左（右）邊，隔 --sc-gap-md，兩個都有標籤＝插圖底對齊（標籤同一條線），否則插圖中線對齊
         const el = document.getElementById(o.move[0]), tg = document.getElementById(o.move[1]);

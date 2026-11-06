@@ -10,67 +10,56 @@ version: 0.1.0
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
-| `assets/screen/`、`assets/images/`，或 `--check` 印的「只有聲音」區間 | `media.mjs scan`、`media.mjs frame --grid` | 分鏡表 media 列草稿（主代理寫進 storyboard.md） | 每段講解對到同一個操作；「只有聲音」的區間全部蓋住 | 沒有（併進 ③） |
+| `assets/screen/`、`assets/images/`，或「只有聲音」區間 | `media.mjs scan`、`media.mjs frame --at --grid` | `work/media/notes/`、草稿裡的 media 段 | 每段講解對到同一個操作；「只有聲音」的區間全部蓋住 | 沒有（併進 ③） |
 
-做法的唯一定義：USAGE.md 第 5 節，照步驟只讀那一小節（步驟 1–2 讀 5.2、寫法 5.3、步驟 3 讀 5.4、步驟 4 讀 5.5、步驟 5 讀 5.6；邊錄邊講的錄影 5.7），不整節讀；節奏與標註規則：style.md「螢幕錄影與圖片」。
+做法的唯一定義：USAGE.md 第 5 節，要用才讀那一小節（寫法 5.3、座標 5.4、標註 5.5；邊錄邊講的錄影 5.7），不整節讀；節奏與標註規則：style.md「螢幕錄影與圖片」。
 
 ## 開始前
 
 | 條件（看得到的事實） | 做法 |
 |---|---|
-| 當子代理 | 不寫檔，只回報（AGENTS.md「子代理分工」）；派工訊息和本檔衝突時照派工訊息 |
-| 錄影已經接進主軌（`media.mjs scan` 的 index.md 有「已經接進主軌的邊錄邊講錄影」，plan.json 有 `sync01`…） | 那支不用配，sync 段的 `from`／`to`／`in` 不要改；只配其他錄影與圖片，要加紅框、運鏡就寫在 sync 段上（USAGE.md 5.7） |
-| `work/media/index.md` 已經存在、素材沒換 | 跳過步驟 1 |
+| 你是盤點素材的子代理 | 只做步驟 1，只寫自己那份筆記 |
+| 你是配錄影的子代理 | 只寫 `work/media/frames/`，結果回報給主代理寫草稿（AGENTS.md「子代理分工」） |
+| 錄影已經接進主軌（`media.mjs scan` 的 index.md 有「已經接進主軌的邊錄邊講錄影」，plan.json 有 `sync01`…） | 那支不用配，sync 段的 `from`／`to`／`in` 不要改；要加紅框、運鏡就寫在 sync 段上（USAGE.md 5.7） |
+| `work/media/notes/` 已經有這支的筆記、素材沒換 | 跳過步驟 1 |
 
 ## 步驟
 
-**1. 掃素材**
+**1. 盤點：看素材、寫筆記**（不用等使用者；`media.mjs prep` 已經掃好）
 
 ```
 node shared/template/tools/media.mjs scan --project projects/<專案>
 ```
 
-完成判準：`work/media/index.md` 存在，每支錄影有 `work/media/<檔名>/sheet-NN.jpg`；「只有聲音」的區間也列在 index.md。
-常見錯誤：素材檔名有空白、括號 → 指令照 index.md 印的檔名加雙引號。
+每支錄影、每批圖片一個子代理，同一則回覆一次派出。看 `work/media/index.md` 與 sheet（圖片在 `work/media/images/sheet-NN.jpg`），寫 `work/media/notes/<檔名>.json`：
 
-**2. 對字幕配起點**
-
-```
-（不用指令：讀 work/media/index.md 與 sheet-NN.jpg，對照 work/rough.srt）
+```json
+{ "file": "assets/screen/操作A.mp4", "summary": "安裝工具的完整操作", "moments": [ { "from": 3.5, "to": 18, "what": "打開設定頁、建立金鑰", "keywords": ["設定", "金鑰"] } ] }
 ```
 
-每段講解找「錄影裡正在做同一個操作」的那一格，寫素材檔名、`in` 秒數（註明 sheet 第幾格）、理由。
-完成判準：每一列都有素材檔名、`in`、對到的句號（`#N`–`#Me`）、理由。
-常見錯誤：講解和畫面對不上 → 拆段重設 `in`，知道操作在哪裡結束就寫 `out`（速度 build 算），不要讓觀眾看別的畫面聽說明；講解停在一個結果畫面講好幾句 → 那幾句拆一段 `hold` 定格；空等 → 剪掉或拆短段快轉（style.md「螢幕錄影與圖片」）。
+圖片一批一個檔，寫成陣列：`[{ "file": "assets/images/a.png", "what": "…", "keywords": ["…"] }]`。`keywords` 寫講解可能會說的詞，工具用它把素材配到相關的章節。
+完成判準：每支錄影、每批圖片都有筆記；`work/media/index.md` 列的「只有聲音」區間已知道。
+常見錯誤：素材檔名有空白、括號 → 指令照 index.md 印的檔名加雙引號；筆記寫太細 → 一支錄影幾個段落就夠，細節之後看 sheet。
 
-**3. 讀座標**
-
-```
-node shared/template/tools/media.mjs frame --project projects/<專案> --src "assets/screen/<檔名>" --at <秒> --grid
-```
-
-完成判準：每個運鏡 `moves`、紅框 `marks`（含跟捲動的 `path`）、說明卡 `callouts`、聚光燈 `spot`、放大鏡 `lens` 都有素材原尺寸的 `[x, y, w, h]`，箭頭 `arrows` 有 `[x, y]`（目標靠箭尾那一側的邊，USAGE.md 5.4）。
-常見錯誤：用了 1920×1080 的畫面座標 → `--check` 會 ✖「超出素材範圍」，回到這一步用格線圖重讀。
-
-**4. 標註**
+**2. 對字幕配起點**（寫草稿時）
 
 ```
-node shared/template/tools/build.mjs --project projects/<專案> --check
+node shared/template/tools/media.mjs frame --project projects/<專案> --src "assets/screen/<檔名>" --at 12.5,18,24 --grid
 ```
 
-選哪一種照 USAGE.md 5.5 表下的「選哪一種標註」：講「這一塊」用紅框；講「這是什麼／按這個」用說明卡；只看一塊用聚光燈；目標太小用箭頭；字太小用放大鏡；一步一步的操作加 STEP 膠囊。錄影捲動時讓同一個紅框跟著移（`path`）。直式專案：16:9 錄影只有 1080 寬，一定加 `moves` 推近到操作區；手機直式錄影用 `"pip": false`＋`"fit": "cover"` 鋪滿；橫式專案的手機直式錄影寫 `side`（錄影靠左、右邊步驟清單，講到哪條亮哪條；style.md「螢幕錄影與圖片」）。說明卡、聚光燈、箭頭出現的期間不能運鏡：推近要在標註的 `at` 之前結束。數量、停留下限照 style.md「螢幕錄影與圖片」。錄影裡看得到游標按下的地方寫 `"clicks"`（style.md「音效」），講解說「點／按 X」時再加箭頭先指路；講解唸出畫面上的字（版號、路徑、網址、按鈕名）那句加放大鏡或推近；踩坑句、結果句沒有卡片時，`sfx` 寫 `{ "name", "at" }` 落在句尾前。
-完成判準：`--check` 和 media 相關的 ✖ 是 0，也沒有「沒有任何標註或運鏡」的 ⚠（真的沒有要指的東西，回報寫理由）；報告那一列的「運鏡 N、紅框 N、標註 N、STEP N、箭頭 N、放大鏡 N」和你寫的一致。只對好 `in` 不算配完。
-常見錯誤：`marks：… 同時有 N 個紅框` → 位置相近、連續講同一塊的合成一個大框（說明卡的框也算）；`箭頭 0（拿掉 1）` → 照 ⚠ 改 `to` 或 `from`。
+`work/分鏡素材/chNN.md` 會列這一份可能對得上的素材。每段講解找「錄影裡正在做同一個操作」的那一刻，寫素材檔名、`in` 秒數、理由，寫進草稿的 media 段。第 1 行一次截好幾個時間點的座標格線圖，用來讀運鏡、紅框的座標。
+完成判準：每一段都有素材檔名、`in`、對到的句號（`#N`–`#Me`）、理由；`moves`、`marks`、`callouts`、`spot`、`lens` 都有素材原尺寸的 `[x, y, w, h]`，箭頭有 `[x, y]`（USAGE.md 5.4）。
+常見錯誤：講解和畫面對不上 → 拆段重設 `in`，知道操作在哪裡結束就寫 `out`；講解停在一個結果畫面講好幾句 → 那幾句拆一段 `hold` 定格；用了 1920×1080 的畫面座標 → `--check` 會 ✖「超出素材範圍」，用格線圖重讀。
 
-**5. 交回**
+**3. 標註**
 
 ```
-node shared/template/tools/build.mjs --project projects/<專案> --check
+node shared/template/tools/build.mjs --project projects/<專案> --check-draft work/drafts/<chNN>.json
 ```
 
-主代理：把結果寫進 storyboard.md 的 media 列（USAGE.md 2.3）。子代理：照「回報格式」回報，不寫檔。
-完成判準：`--check` 的「只有聲音」那一行寫「已被 media 段或全畫面蓋住」。
-常見錯誤：還有沒蓋住的區間 → 回步驟 2 補一段，或改用不透明的全幕（04 家族）。
+選哪一種照 USAGE.md 5.5 表下的「選哪一種標註」：講「這一塊」用紅框；講「這是什麼／按這個」用說明卡；只看一塊用聚光燈；目標太小用箭頭；字太小用放大鏡；一步一步的操作加 STEP 膠囊。直式專案：16:9 錄影一定加 `moves` 推近到操作區；手機直式錄影用 `"pip": false`＋`"fit": "cover"` 鋪滿；橫式專案的手機直式錄影寫 `side`。說明卡、聚光燈、箭頭出現的期間不能運鏡。數量、停留下限照 style.md「螢幕錄影與圖片」。
+完成判準：和 media 相關的 ✖ 是 0，也沒有「沒有任何標註或運鏡」的 ⚠（真的沒有要指的東西，回報寫理由）。
+常見錯誤：`marks：… 同時有 N 個紅框` → 位置相近、連續講同一塊的合成一個大框；`箭頭 0（拿掉 1）` → 照 ⚠ 改 `to` 或 `from`；還有沒蓋住的「只有聲音」區間 → 回步驟 2 補一段，或改用不透明的全幕。
 
 ## 自我核對
 

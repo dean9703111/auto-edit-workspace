@@ -313,7 +313,7 @@ test('T12 文件裡的指令與檔案都存在', (t) => {
         if (p.includes('<') || exists(p)) continue;
         if (contracts.includes(p) || allowT12.includes(p)) pending.add(p); else bad.push(`${f}:${i + 1} ${p}`);
       }
-      if (skillDir) for (const m of l.matchAll(/references\/([\w.-]+\.md)/g)) if (!exists(`${skillDir}/references/${m[1]}`)) bad.push(`${f}:${i + 1} references/${m[1]}`);
+      if (skillDir) for (const m of l.matchAll(/(\.agents\/skills\/[\w-]+\/)?references\/([\w.-]+\.md)/g)) if (!exists(`${m[1] ? m[1].slice(0, -1) : skillDir}/references/${m[2]}`)) bad.push(`${f}:${i + 1} ${m[0]}`);
     });
   }
   if (pending.size) t.diagnostic(`契約或 docs-allow.json（test: T12）列了、還沒實作的檔（做好後刪掉 allow 那筆）：${[...pending].join('、')}`);
@@ -371,9 +371,7 @@ test('T24 文件引用的工具原文和程式一字不差（第 2 輪對齊）'
   const SKR = skillMd('auto-edit-rough');
   const pairs = [
     [U, '是全黑，但素材沒有純聲音檔 → 初剪壞了：跑 node shared/template/tools/media.mjs verify-rough --project'],
-    [SKR, '✓ work/rough.mp4 沒有黑畫面'],
     [SKR, '原片同位置不黑 → 初剪壞了'],
-    [SKR, '原片同位置也是黑的'],
     [U, 'chtag：不用寫，角標現在自動常駐 → 刪掉 "chtag": true（要舊的附件角標，plan.json 第一層寫 "chapterBadge": false）'],
     [U, 'chapterBadge 只能是 true 或 false（不寫＝true：章節角標自動常駐右上角），現在是 '],
     [U, '個用字數比例估（'],
@@ -383,25 +381,17 @@ test('T24 文件引用的工具原文和程式一字不差（第 2 輪對齊）'
     [U, '（上限：任一分鐘 ≤ '],
     [U, '清掉同一段的舊截圖（這次張數變了）：'],
     [U, '是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project'],
-    [skillMd('auto-edit-storyboard'), '選表上最小的；最後由使用者選）'],
-    [skillMd('auto-edit-motion'), '才講到、不是 #'],
+    [R, '才講到、不是 #'],
     [U, '抽樣 12 格都沒偵測到臉 → 這支只調光；確定有講者就跑 node shared/template/tools/look.mjs run --project'],
     [U, 'build 會停下來：'],
     [U, 'rhythm 只能是 "continuous"（預設，照 style.md 連續覆蓋）或 "spaced"（要留露臉空檔），現在是 '],
     [U, '→ 改成清單裡的名稱（跑 build.mjs --list 看每顆的用途），或寫 null 不放音效'],
     [U, '→ 中間換一段情境動畫（style.md「情境動畫優先」）或別的版面'],
     ['AGENTS.md', '→ 下一步：'],
-    [SKR, '在逐字稿裡對不上，時間用前後句內插：'],
-    [SKR, '：時間是整則按字數比例估的 → 寫回後要跑 node shared/template/tools/media.mjs snap-srt --project'],
-    [SKR, 'work/hyperframes/plan.json 已經用到句號（#N），重新斷句後句號會全部位移 → 加 --remap-plan 再跑一次'],
     [U, '→ 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在剪輯台改'],
     [U, ' → 在剪輯台和前後句合併，或把起迄拉長'],
-    [skillMd('auto-edit-motion'), '找不到對應的 P.at'],
-    [skillMd('auto-edit-motion'), '不在分鏡表'],
     [skillMd('auto-edit-motion'), '不在語彙表'],
-    [skillMd('auto-edit-motion'), '沒有動畫分鏡：'],
     [skillMd('auto-edit-motion'), '分鏡表表頭不對'],
-    [skillMd('auto-edit-motion'), '分鏡用了「'],
     [U, '：音效名與 ref 要寫成字串字面值、off 寫數字（例 P.sfx(\'success\', \'#38@兩支\')、P.sfx(\'ding\', \'#41\', 0.2)；音效名只有小寫英數字與 -），build 才排得出音效 → 不要用變數或 + 組字串'],
     [U, ' 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/'],
     [U, '｜主題：'],
@@ -417,7 +407,7 @@ test('T24 文件引用的工具原文和程式一字不差（第 2 輪對齊）'
 
 // ---------- 010 動態 v2／F8 字幕：三處一致性 ----------
 // 字幕數字：style.md「字幕」＝AGENTS.md「剪乾淨的數字」的字幕列＝kit/captions.css（F8）
-test('T25 字幕數字一致：style.md「字幕」＝AGENTS.md＝kit/captions.css（F8）', (t) => {
+test('T25 字幕數字一致：style.md「字幕」＝kit/captions.css，AGENTS.md 的每則字數也一樣（F8）', (t) => {
   const pick = (text) => {
     const s = String(text || '').replace(/\*\*/g, '');
     const g = (re) => { const m = s.match(re); return m ? Number(m[1]) : null; };
@@ -426,10 +416,8 @@ test('T25 字幕數字一致：style.md「字幕」＝AGENTS.md＝kit/captions.c
   const st = pick(section(read(STYLE), '## 字幕'));
   const ag = pick((section(read('AGENTS.md'), '## 剪乾淨（初剪）') || '').split('\n').filter((l) => /^\| 字幕/.test(l)).join('\n')); // 只看「剪乾淨的數字」（「版式」節的直式表另由 T30 對）
   const bad = [];
-  for (const k of Object.keys(st)) {
-    if (st[k] === null) bad.push(`style.md「字幕」找不到「${k}」`);
-    else if (ag[k] !== st[k]) bad.push(`${k}：style.md ${st[k]}、AGENTS.md ${ag[k] ?? '（沒寫）'}`);
-  }
+  for (const k of Object.keys(st)) if (st[k] === null) bad.push(`style.md「字幕」找不到「${k}」`);
+  if (ag.每則字數 !== st.每則字數) bad.push(`每則字數：style.md ${st.每則字數}、AGENTS.md ${ag.每則字數 ?? '（沒寫）'}`);
   const CSS = 'shared/template/kit/captions.css';
   if (exists(CSS)) {
     const css = read(CSS);
@@ -444,7 +432,7 @@ test('T25 字幕數字一致：style.md「字幕」＝AGENTS.md＝kit/captions.c
     if (c.字級 === 54) t.diagnostic('kit/captions.css 還是 F8 之前的 54 px（002 改完會自動轉成要一致）');
     else for (const k of ['字級', '字重', '底板高', '內距上下', '內距左右', '距畫面底']) if (c[k] !== st[k]) bad.push(`${k}：style.md ${st[k]}、captions.css ${c[k] ?? '（讀不到）'}`);
   }
-  noProblems(bad, '字幕數字三處不一致（F8：style.md 為準）', 'style.md「字幕」、AGENTS.md「剪乾淨的數字」的字幕列、kit/captions.css 改成同一組數字（captions.css 歸 002；底板高＝line-height＋上內距＋下內距）');
+  noProblems(bad, '字幕數字三處不一致（F8：style.md 為準）', 'style.md「字幕」、kit/captions.css 改成同一組數字，AGENTS.md「剪乾淨的數字」的每則字數也要一樣（captions.css 歸 002；底板高＝line-height＋上內距＋下內距）');
 });
 
 // BEATS.md 的動作名稱只能用 010 設計系統 §14.1 的名稱；動畫分鏡的表頭各處一字不差；表裡的動態欄只用語彙表的名稱
@@ -580,7 +568,7 @@ test('T29 版面規則名與屬性值在程式裡、「位置」欄寫排法（0
 });
 
 // 009 直式：AGENTS.md「版式」的直式數字表＝style.md「直式」＝tools/lib/canvas.mjs CANVAS.portrait（FR-155）
-test('T30 直式數字一致：AGENTS.md「版式」＝style.md「直式」＝canvas.mjs（009）', async (t) => {
+test('T30 直式數字一致：style.md「直式」＝canvas.mjs，AGENTS.md 的字幕字數、頭頂也一樣（009）', async (t) => {
   const pick = (s) => {
     s = String(s || '');
     const g = (re) => { const m = s.match(re); return m ? m.slice(1).map(Number) : null; };
@@ -594,13 +582,14 @@ test('T30 直式數字一致：AGENTS.md「版式」＝style.md「直式」＝ca
       頭頂: g(/頭頂(?:落在)?\s*y\s*(\d+)–(\d+)、下巴\s*≤\s*(\d+)/),
     };
   };
-  const ag = pick(section(read('AGENTS.md'), '## 版式（橫式／直式）'));
+  const agents = read('AGENTS.md');
+  const ag = { 字數: (agents.match(/每則最多[^|\n]*?直式\s*(\d+)\s*字/) || []).slice(1).map(Number), 頭頂: pick(agents).頭頂 };
   const st = pick(section(read(STYLE), '## 直式'));
   const bad = [];
   const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   for (const k of Object.keys(st)) {
     if (!st[k]) bad.push(`style.md「直式」找不到「${k}」`);
-    else if (!eq(ag[k], st[k])) bad.push(`${k}：style.md ${st[k]}、AGENTS.md「版式」${ag[k] ?? '（沒寫）'}`);
+    else if (k in ag && !eq(ag[k], st[k])) bad.push(`${k}：style.md ${st[k]}、AGENTS.md ${ag[k]?.length ? ag[k] : '（沒寫）'}`);
   }
   const CV = 'shared/template/tools/lib/canvas.mjs';
   if (exists(CV)) {
@@ -636,5 +625,5 @@ test('T30 直式數字一致：AGENTS.md「版式」＝style.md「直式」＝ca
     const L = CANVAS.landscape.caption;
     if (p.caption.font !== L.font || p.caption.weight !== L.weight) t.diagnostic(`canvas.mjs 直式字幕還是 ${p.caption.font} px／字重 ${p.caption.weight}（決定 2：和橫式同一套 ${L.font} px／${L.weight}；002 改）`);
   }
-  noProblems(bad, '直式數字三處不一致（style.md「直式」為準）', 'AGENTS.md「版式」的直式表、style.md「直式」、tools/lib/canvas.mjs 的 CANVAS.portrait 改成同一組數字（canvas.mjs 歸 002）');
+  noProblems(bad, '直式數字三處不一致（style.md「直式」為準）', 'style.md「直式」、tools/lib/canvas.mjs 的 CANVAS.portrait 改成同一組數字，AGENTS.md 的字幕字數、頭頂也要一樣（canvas.mjs 歸 002）');
 });

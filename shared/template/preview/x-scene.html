@@ -153,13 +153,14 @@
       const strokes = drw.map(function (s) { return ROOT.querySelector(s + ' .il'); }).concat(lines);
       if (strokes.length) P.draw(strokes, t, { dur: DRAW * drw.length + (lines.length ? 0.35 : 0) });
       if (pops.length) P.pop(pops.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
-      ins.forEach(function (s, i) { lblAt(s, t + 0.3 + i * 0.3); if (entered.indexOf(s) < 0) entered.push(s); });
+      ins.forEach(function (s, i) { lblAt(s, t + 0.3 + i * 0.5); if (entered.indexOf(s) < 0) entered.push(s); });   // 標籤每 0.5 秒一個（任何 1 秒內新元素 ≤ 2）
+      const stAt = ins.length ? t + 0.3 + ins.length * 0.5 : t + 0.15;   // 這拍有新元件：標籤出完才換狀態，不擠在同一刻
       if (o.state) {
         const s = sel(o.state[0]), a = stateSel(o.state[1]), z = stateSel(o.state[2]);
-        if (a && z) P.swap(s + ' ' + a, s + ' ' + z, t + 0.15);
-        else if (z) P.in(s + ' ' + z, t + 0.15);
-        else if (a) P.out(s + ' ' + a, t + 0.15);
-        P.ripple(s + ' .il', t + 0.2, { to: 1.5 });
+        if (a && z) P.swap(s + ' ' + a, s + ' ' + z, stAt);
+        else if (z) P.in(s + ' ' + z, stAt);
+        else if (a) P.out(s + ' ' + a, stAt);
+        P.ripple(s + ' .il', stAt + 0.05, { to: 1.5 });
       }
       if (o.move) {   // move: [元件, 目標元件, 'left'｜'right']：走到目標插圖的左（右）邊，隔 --sc-gap-md，兩個都有標籤＝插圖底對齊（標籤同一條線），否則插圖中線對齊
         const el = document.getElementById(o.move[0]), tg = document.getElementById(o.move[1]);

@@ -946,3 +946,12 @@ test('直式（009 FR-060）：fx/catalog.json portrait: "band" 的特效 ⚠「
   assert.deepEqual(band(R(1, 'portrait')), [], 'portrait: "ok" 不報');
   assert.deepEqual(band(R(7)), [], '橫式不報');
 });
+
+test('文字對時：fs-compare 整欄一起進，只看每欄第一項，改 beats（不叫人寫單項 at）', async () => {
+  const { textSyncIssues } = await imp('lib/plan.mjs');
+  const cues = [{ n: 1, start: 0, end: 2, text: '開場白' }, { n: 2, start: 5, end: 8, text: '用手勢控制開始' }, { n: 3, start: 8, end: 11, text: '很難同時啟動' }];
+  const it = { type: 'scene', key: 'fs-compare', id: 's01', start: 0, end: 12, resolved: { ctx: { left: [{ text: '用手勢控制開始' }, { text: '很難同時啟動' }], right: [] }, beats: {}, listTimes: { left: [1, 1] } } };
+  const out = textSyncIssues(it, cues);
+  assert.equal(out.length, 1, JSON.stringify(out));
+  assert.match(out[0].msg, /left\[0\].*→ beats\.leftAt 寫 "#2@/);
+});

@@ -1,0 +1,193 @@
+{
+  "template": "x-prompt",
+  "prefix": "xprompt",
+  "beat": "H",
+  "layout": "fullscreen",
+  "when": "唸出或展示一段要貼給 AI 的提示詞（去掉空白後 ≤ 49 字、最多三行、兩個關鍵詞在同一行）：聊天輸入膠囊逐字打出，講到哪個關鍵詞那個詞從墨色變成主色，最後可接一句提醒",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "above": {
+      "label": "上一行（選填）",
+      "type": "text",
+      "max": 17
+    },
+    "pre": {
+      "label": "關鍵詞前的字（選填）",
+      "type": "text",
+      "max": 17
+    },
+    "k1": {
+      "label": "關鍵詞 1",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "mid": {
+      "label": "兩詞之間的字（選填）",
+      "type": "text",
+      "max": 17
+    },
+    "k2": {
+      "label": "關鍵詞 2",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "post": {
+      "label": "關鍵詞後的字（選填）",
+      "type": "text",
+      "max": 17
+    },
+    "below": {
+      "label": "下一行（選填）",
+      "type": "text",
+      "max": 17
+    },
+    "notes": {
+      "label": "提醒",
+      "type": "list",
+      "min": 0,
+      "maxItems": 1,
+      "item": {
+        "text": {
+          "label": "提醒字",
+          "type": "text",
+          "max": 10,
+          "required": true
+        },
+        "icon": {
+          "label": "圖示",
+          "type": "icon",
+          "required": true
+        },
+        "at": {
+          "label": "講到提醒的時間（提醒膠囊彈出、音效 ding）",
+          "type": "at",
+          "ref": "NOTE",
+          "required": true
+        }
+      }
+    },
+    "icon": {
+      "label": "標題列圖示",
+      "type": "icon",
+      "required": true
+    },
+    "typeAt": {
+      "label": "開始唸提示詞的那一句（開口後 0.45 秒開始打字，每秒 8.5 字）",
+      "type": "at",
+      "ref": "TYPE",
+      "required": true
+    },
+    "k1At": {
+      "label": "講到關鍵詞 1 的時間（那個詞變主色）",
+      "type": "at",
+      "ref": "K1",
+      "required": true
+    },
+    "k2At": {
+      "label": "講到關鍵詞 2 的時間（主色換到這個詞）",
+      "type": "at",
+      "ref": "K2",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "我的提示詞",
+    "above": "幫我把這支影片的 NG 段落",
+    "pre": "整理成",
+    "k1": "表格",
+    "mid": "，附上",
+    "k2": "時間碼",
+    "below": "和剪掉的原因。",
+    "notes": [
+      {
+        "text": "貼之前先刪掉個資",
+        "icon": "lock",
+        "at": "#65"
+      }
+    ],
+    "icon": "message-square-text",
+    "typeAt": "#62",
+    "k1At": "#63@表格",
+    "k2At": "#64@時間碼"
+  },
+  "sampleMin": {
+    "title": "我的提示詞",
+    "pre": "整理成",
+    "k1": "表格",
+    "mid": "，附上",
+    "k2": "時間碼",
+    "icon": "message-square-text",
+    "typeAt": "#62",
+    "k1At": "#63@表格",
+    "k2At": "#64@時間碼"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題列圖示＋標題「{title}」",
+      "moves": "開場（依前段）；＋0.5 圖示描線（標題列）；＋0.62 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "段起點＋1.0",
+      "show": "空的提示詞框（大小已經是打完的樣子）＋送出鈕",
+      "moves": "擦開（提示詞框，由左）；＋0.2 圖示描線（送出鈕）",
+      "focus": "提示詞框"
+    },
+    {
+      "beat": "2",
+      "at": "`{typeAt}`＋0.45",
+      "show": "提示詞逐字打出（關鍵詞「{k1}」「{k2}」；全文見畫面文字）",
+      "moves": "打字",
+      "focus": "正在打的字"
+    },
+    {
+      "beat": "3",
+      "at": "`{k1At}`",
+      "show": "「{k1}」從墨色變主色",
+      "moves": "淡入（關鍵詞 1 的主色字）",
+      "focus": "關鍵詞 1"
+    },
+    {
+      "beat": "4",
+      "at": "`{k2At}`",
+      "show": "「{k2}」變主色、「{k1}」變回墨色",
+      "moves": "淡入（關鍵詞 2 的主色字）；淡出（關鍵詞 1 的主色字）",
+      "focus": "關鍵詞 2"
+    },
+    {
+      "each": "notes",
+      "beat": 5,
+      "at": "`{at}`",
+      "show": "提醒膠囊：圖示＋「{text}」",
+      "moves": "彈出（膠囊）；＋0.14 逐字上浮（提醒字）；＋0.18 圖示描線；＋0.6 退焦（提示詞框 → 0.55）",
+      "focus": "提醒膠囊",
+      "sfx": "ding"
+    },
+    {
+      "if": "n>=1",
+      "beat": "收",
+      "at": "`{last.at}`＋2.6",
+      "show": "提示詞框亮回、兩個關鍵詞都是主色（完成態停到段尾）",
+      "moves": "退焦（提示詞框 → 1，亮回）；淡入（關鍵詞 1 的主色字）",
+      "focus": "整體"
+    },
+    {
+      "if": "n==0",
+      "beat": "收",
+      "at": "`{k2At}`＋2.6",
+      "show": "兩個關鍵詞都是主色（完成態停到段尾）",
+      "moves": "淡入（關鍵詞 1 的主色字）",
+      "focus": "整體"
+    }
+  ]
+}

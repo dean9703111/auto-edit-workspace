@@ -96,7 +96,11 @@
 
     P.sfx('impact', '#162@87'); P.sfx('impact', '#163@剪掉');                     // 數字落定、結論各一顆音效（句號和上一行一樣；主題那一拍不配）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const RING = { from: 0, to: 87, max: 100, suffix: '%' };                       // 只改這一行
+    const RING_FROM = 0;                                                           // 起點
+    const RING_TO = 87;                                                            // 終點
+    const RING_MAX = 100;                                                          // 一整圈代表多少
+    const RING_SUFFIX = "%";                                                       // 數字後面的字（沒有就寫 ""）
+    const RING = { from: RING_FROM, to: RING_TO, max: RING_MAX, suffix: RING_SUFFIX };   // 弧和中央數字的範圍（上面四行是要改的）
     const DASH = 1002;                                                             // 弧的虛線長：比一圈（pathLength 1000）多 2，滿圈時 12 點鐘接縫不留缺口（不用改）
     const OFF0 = DASH * (1 - RING.from / RING.max), OFF1 = DASH * (1 - RING.to / RING.max);   // 弧的起訖（自動算）
 

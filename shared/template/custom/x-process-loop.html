@@ -40,6 +40,7 @@
   站 300×112（圖示在左、站名在右），中心排在內容區正中的橢圓上（半徑 390×180；4 站＝上、右、下、左，3 站＝上、右下、左下），中間主題 340×112 在正中；
   #xprl-body 是 data-layout="free"（排版程式沒有圓形排法），站的位置由 script 照橢圓算好寫進去，不寫 left／top。
   弧線沿同一個橢圓、在兩站外框外 18 開始和結束，箭頭 18；虛線圓圈是整個橢圓。都由 script 算，不寫座標。
+  3 站時橢圓中心下移到 y 336（script 的 CY；用填資料產生 3 站版時自動換成 336）：下排兩站才不和中間主題同一列（audit「同一列沒對齊」✖），整組上下留白也相等；4 站不變。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-process-loop 流程：循環</title></head>
@@ -74,18 +75,20 @@
        data-cues-sample='{"start":0,"D":18.8,"cues":{"222":[3.2,5.7],"223":[6,8.5],"224":[8.8,11.3],"225":[11.6,14]},"refs":{"#222@拍片":3.2,"#223@上片":6,"#224@看數據":8.8,"#225@改腳本":11.6}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xprl-card" class="sc-wcard">
-      <div class="sc-wcard__bar"><span class="sc-opt">每週的迭代</span></div>
+      <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">每週的迭代</span></div>
       <div id="xprl-body" data-layout="free">
         <svg id="xprl-lines" xmlns="http://www.w3.org/2000/svg" data-layout-ignore></svg>
-        <div id="xprl-hub" data-slot><span id="xprl-hico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /> </svg></span><span id="xprl-hub-text" class="sc-t52 sc-w900 sc-opt">每週一輪</span></div>
+        <div id="xprl-hub" data-slot><span id="xprl-hico" class="sc-icon" data-fill="hubIcon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /> </svg></span><span id="xprl-hub-text" class="sc-t52 sc-w900 sc-opt" data-fill="hub">每週一輪</span></div>
         <div id="xprl-n1" class="xprl-node" data-slot><i id="xprl-now1" class="xprl-now"></i>
-          <span id="xprl-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt">拍片</span></div>
+          <span id="xprl-ico1" class="sc-icon" data-fill="items.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /> <rect x="2" y="6" width="14" height="12" rx="2" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt" data-fill="items.1.text">拍片</span></div>
         <div id="xprl-n2" class="xprl-node" data-slot><i id="xprl-now2" class="xprl-now"></i>
-          <span id="xprl-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt">上片</span></div>
+          <span id="xprl-ico2" class="sc-icon" data-fill="items.2.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt" data-fill="items.2.text">上片</span></div>
         <div id="xprl-n3" class="xprl-node" data-slot><i id="xprl-now3" class="xprl-now"></i>
-          <span id="xprl-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt">看數據</span></div>
+          <span id="xprl-ico3" class="sc-icon" data-fill="items.3.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt" data-fill="items.3.text">看數據</span></div>
+        <!-- @if n>=4 { -->
         <div id="xprl-n4" class="xprl-node" data-slot><i id="xprl-now4" class="xprl-now"></i>
-          <span id="xprl-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m18 5-2.414-2.414A2 2 0 0 0 14.172 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2" /> <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /> <path d="M8 18h1" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt">改腳本</span></div>
+          <span id="xprl-ico4" class="sc-icon" data-fill="items.4.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m18 5-2.414-2.414A2 2 0 0 0 14.172 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2" /> <path d="M21.378 12.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /> <path d="M8 18h1" /> </svg></span><span class="xprl-name sc-t52 sc-w900 sc-opt" data-fill="items.4.text">改腳本</span></div>
+        <!-- @} -->
       </div>
     </div>
   </div>
@@ -96,14 +99,14 @@
     const P = SceneMotion(tl, document.getElementById('x-process-loop'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
-    const T1 = P.at('#222@拍片'), T2 = P.at('#223@上片'), T3 = P.at('#224@看數據'), T4 = P.at('#225@改腳本');   // 講到每一站站名的時刻
+    const T1 = P.at('#222@拍片'), T2 = P.at('#223@上片'), T3 = P.at('#224@看數據'), T4 = P.at('#225@改腳本');   // 講到每一站站名的時刻  // @sub n==3: const T1 = P.at('#222@拍片'), T2 = P.at('#223@上片'), T3 = P.at('#224@看數據');   // 講到每一站站名的時刻
 
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
-    const ALL = '#xprl-n1, #xprl-n2, #xprl-n3, #xprl-n4';   // 四站（3 站時拿掉 n4）
+    const ALL = '#xprl-n1, #xprl-n2, #xprl-n3, #xprl-n4';   // 四站（3 站時拿掉 n4）  // @sub n==3: const ALL = '#xprl-n1, #xprl-n2, #xprl-n3';   // 三站
 
     // 0. 版面（以下都不用改）：站排在橢圓上（從正上方順時針），弧線沿橢圓在兩站外框外開始、結束；只在載入時算一次，每次結果相同
     const NS = 'http://www.w3.org/2000/svg', SVG = $q('#xprl-lines')[0];
-    const NODES = $q('#x-process-loop .xprl-node'), N = NODES.length, CX = 588, CY = 290, RX = 390, RY = 180, PAD = 18;
+    const NODES = $q('#x-process-loop .xprl-node'), N = NODES.length, CX = 588, CY = 290, RX = 390, RY = 180, PAD = 18;  // @sub n==3: const NODES = $q('#x-process-loop .xprl-node'), N = NODES.length, CX = 588, CY = 336, RX = 390, RY = 180, PAD = 18;
     const ang = function (k) { return -Math.PI / 2 + k * 2 * Math.PI / N; };
     const pt = function (a) { return [CX + RX * Math.cos(a), CY + RY * Math.sin(a)]; };
     const box = NODES.map(function (el, k) {
@@ -132,7 +135,7 @@
     P.chars('#xprl-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     // 拍 1 骨架：四站錯拍彈出（間隔 0.12），＋0.15 圖示描線 → 中間主題彈出
     P.pop(ALL, 1.0, { stagger: 0.12, from: 0.7, dy: 40 });
-    P.icon('#xprl-ico1, #xprl-ico2, #xprl-ico3, #xprl-ico4', 1.15, { stagger: 0.12 });
+    P.icon('#xprl-ico1, #xprl-ico2, #xprl-ico3, #xprl-ico4', 1.15, { stagger: 0.12 });  // @sub n==3: P.icon('#xprl-ico1, #xprl-ico2, #xprl-ico3', 1.15, { stagger: 0.12 });
     P.pop('#xprl-hub', 1.4, { from: 0.7, dy: 0 });
     P.icon('#xprl-hico', 1.5);
     // 拍 2 預告：虛線圓圈淡入
@@ -154,17 +157,19 @@
     P.spot(ALL, '#xprl-n3', T3, { scale: 1.06, lift: -8, done: '#xprl-n1, #xprl-n2' });
     P.out('#xprl-now2', T3);  P.in('#xprl-now3', T3);
     P.ripple('#xprl-ico3', T3 + 0.05, { to: 2.4 });
+    // @if n>=4 {
     // 拍 7 第 4 站：同拍 5（3 站時刪掉這一組 5 行，收尾的 T4 改 T3、now4 改 now3、a4 改 a3、z 的 4 改 3）
     P.comet('#xprl-a3', T4 - 0.85, { dur: 0.75 });  P.stroke('#xprl-a3-head', T4 - 0.12, { dur: 0.2 });
     P.spot(ALL, '#xprl-n4', T4, { scale: 1.06, lift: -8, done: '#xprl-n1, #xprl-n2, #xprl-n3' });
     P.out('#xprl-now3', T4);  P.in('#xprl-now4', T4);
     P.ripple('#xprl-ico4', T4 + 0.05, { to: 2.4 });
+    // @}
 
     // 收：最後一站講完 2.6 秒回均衡，最後一段箭頭接回第一站、中間主題漣漪；接著光沿整圈跑一次（每段 0.3 秒接力），完成態停到段尾
-    const TR = T4 + 2.6;
+    const TR = T4 + 2.6;  // @sub n==3: const TR = T3 + 2.6;
     P.spot(ALL, null, TR, { dur: 0.6 });
-    P.out('#xprl-now4', TR);
-    P.comet('#xprl-a4', TR, { dur: 0.75 });  P.stroke('#xprl-a4-head', TR + 0.63, { dur: 0.2 });
+    P.out('#xprl-now4', TR);  // @sub n==3: P.out('#xprl-now3', TR);
+    P.comet('#xprl-a4', TR, { dur: 0.75 });  P.stroke('#xprl-a4-head', TR + 0.63, { dur: 0.2 });  // @sub n==3: P.comet('#xprl-a3', TR, { dur: 0.75 });  P.stroke('#xprl-a3-head', TR + 0.63, { dur: 0.2 });
     P.ripple('#xprl-hico', TR + 0.75, { to: 2 });
     $q('#xprl-lines .xprl-zap').forEach(function (z, i) { P.comet(z, TR + 0.9 + i * 0.3, { dur: 0.3, ease: 'none' }); });
 
