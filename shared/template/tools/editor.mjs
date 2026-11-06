@@ -67,7 +67,7 @@ const posix = (p) => p.split(path.sep).join('/');
 export function editorRevision() {
   const files = [fileURLToPath(import.meta.url), BUILD, LOOK, path.join(HERE, 'brand.mjs'), path.join(HERE, 'caps.mjs'), path.join(HERE, 'media.mjs'),
     ...['lib', 'editor/server'].flatMap((dir) => fs.readdirSync(path.join(HERE, dir)).filter((f) => f.endsWith('.mjs')).sort().map((f) => path.join(HERE, dir, f))),
-    path.join(UI_DIR, 'subtitles.mjs'), path.join(UI_DIR, 'text.mjs')];
+    path.join(UI_DIR, 'subtitles.mjs'), path.join(UI_DIR, 'text.mjs'), path.join(UI_DIR, 'storyboard-md.mjs')];
   const hash = crypto.createHash('sha256');
   for (const file of files) hash.update(path.relative(HERE, file)).update(fs.readFileSync(file));
   return hash.digest('hex').slice(0, 16);

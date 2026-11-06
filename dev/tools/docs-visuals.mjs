@@ -68,25 +68,12 @@ if(result.status!==0)throw Error(result.stderr);
 const cutsWork=path.join(root,'projects','剪輯清單示範','work');fs.mkdirSync(cutsWork,{recursive:true});
 const cutsVideo=spawnSync('ffmpeg',['-y','-v','error','-loop','1','-i',path.join(TPL,'preview/speaker.jpg'),'-f','lavfi','-i','anullsrc=r=48000:cl=mono','-t','160','-r','10','-vf','scale=960:540','-c:v','libx264','-preset','ultrafast','-tune','stillimage','-pix_fmt','yuv420p','-c:a','aac','-shortest',path.join(cutsWork,'main.mp4')],{encoding:'utf8'});
 if(cutsVideo.status!==0)throw Error(cutsVideo.stderr);
-fs.writeFileSync(path.join(cutsWork,'cuts.md'),['# 剪輯清單','','## NG','','| 剪 | 時間碼 | 內容 | 原因 | 待確認 |','|---|---|---|---|---|',
-  '| [x] | 0:12.40–0:15.10 | 今天要介紹… | 同一句講兩次，留後面那次 | — |',
-  '| [ ] | 1:03.00–1:05.80 | 這個設定要…呃… | 卡住重講 | — |',
-  '| [x] | 2:30.00–2:31.20 | 我們先看… | 逐字稿和講稿對不上 | 講稿沒有這句，可能是 whisper 補的 |','',
-  '## 需要你決定','','- 第 3 列（2:30.00–2:31.20）待確認：講稿沒有這句，可能是 whisper 補的',''].join('\n'));
+fs.copyFileSync(path.join(WS,'dev/site/demo/cuts.md'),path.join(cutsWork,'cuts.md'));
 // 分鏡表（停點 ③）：另一個示範專案，截圖用內建情境庫的底圖（不讀使用者專案）
 const sbWork=path.join(root,'projects','分鏡表示範','work');fs.mkdirSync(path.join(sbWork,'storyboard-preview'),{recursive:true});
-for(const [from,to] of [['14-speaker','s01'],['04c-fs-flow','x01-1'],['08-steps','x01-2']])fs.copyFileSync(path.join(TPL,'gallery',`${from}.jpg`),path.join(sbWork,'storyboard-preview',`${to}.jpg`));
-const sbBeat=['| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |','|---|---|---|---|---|---|',
-  '| 0 | 段起點 | 主卡＋標題「先做這三步」 | 色帶擦開；＋0.5 逐字上浮（標題） | 標題 | — |',
-  '| 1 | `#6@錄影` | 第 1 站：錄影 | 進度推進；彈出（站卡） | 第 1 站 | — |',
-  '| 2 | `#7@逐字稿` | 第 2 站：轉逐字稿 | 進度推進；彈出（站卡） | 第 2 站 | — |',
-  '| 3 | `#8@初剪` | 第 3 站：初剪 | 進度推進；彈出（站卡） | 第 3 站 | pop |'];
-fs.writeFileSync(path.join(sbWork,'storyboard.md'),['# 分鏡表：示範（草稿）','',
-  '## 總覽','','| 段 | 章 | 句號 | 時間碼 | 版面 | 卡片類型 | 一句話摘要 |','|---|---|---|---|---|---|---|',
-  '| s01 | — | #1–3e | 0:00.00–0:06.20 | 疊加 | 14 講者介紹 | 自我介紹，秀出頭銜 |','| x01 | 01 開始 | #4–9e | 0:06.20–0:21.40 | 子母畫面 | x-process（拍型 A） | 先做這三步：錄影、逐字稿、初剪 |','',
-  '## s01（#1–3e，0:00.00–0:06.20）','','![s01](storyboard-preview/s01.jpg)','','- 起點那句字幕：我是大寶，歡迎來到我的頻道','- 版面：疊加（14 講者介紹）','- 畫面文字：名字「林大寶」＋頭銜「影音創作者」「科技部落客」','- 音效：預設','- 理由：第一次出現講者名字，疊加版面不遮臉','',
-  '## x01（#4–9e，0:06.20–0:21.40）','','![x01-1](storyboard-preview/x01-1.jpg)','![x01-2](storyboard-preview/x01-2.jpg)','','- 起點那句字幕：開始之前先做這三步','- 版面：子母畫面（情境動畫 `x-process`）','- 畫面文字：標題「先做這三步」；站名「錄影」「逐字稿」「初剪」','- 理由：流程有先後，用站點帶著觀眾走','','#### 動畫分鏡 x01','',...sbBeat,'',
-  '## 需要我決定的事','','1. **結尾要不要配樂**：要的話從最後一句開始配','','### 金句候選（勾了才上，每集最多 6 則）','','| 候選 | 句號 | 原句 | 卡上文字（≤ 14 字） | 情緒（正／負／中） | 要不要 ☐ |','|---|---|---|---|---|---|','| 1 | #8 | 先做完初剪再談包裝 | 先初剪再包裝 | 正 | ☑ |','| 2 | #12 | 手動對時間最花力氣 | 對時間最花力氣 | 負 | ☐ |',''].join('\n'));
+const sbMd=fs.readFileSync(path.join(WS,'dev/site/demo/storyboard.md'),'utf8');
+for(const m of sbMd.matchAll(/storyboard-preview\/([^)]+)/g))fs.copyFileSync(path.join(TPL,'gallery',m[1]),path.join(sbWork,'storyboard-preview',m[1]));
+fs.writeFileSync(path.join(sbWork,'storyboard.md'),sbMd);
 let editor,cutsEditor,sbEditor,browser;
 try{
   editor=await startEditor({flags:{project:path.dirname(work),template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});

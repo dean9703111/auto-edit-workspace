@@ -76,13 +76,13 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 
 <p align="center"><a href="dev/site/guides/cuts.jpg"><img src="dev/site/guides/cuts.jpg" alt="剪輯清單介面實際截圖：1 勾選要剪的地方，取消就保留；2 按 ▶ 試聽那一段，紅色是會剪掉的部分；3 回到對話說「可以」" width="1000"></a></p>
 
-**看圖操作：① 勾＝剪、取消＝保留（勾了就存） → ② 按 ▶ 聽那一段，紅色是會剪掉的部分 → ③ 回到對話說「可以」。** 黃色的列是 AI 不確定的，建議先聽再決定。
+**看圖操作：① 勾＝剪、取消＝保留（勾了就存） → ② 按 ▶ 聽那一段，紅色是會剪掉的部分 → ③ 回到對話說「可以」。** 黃色的列是 AI 不確定的，建議先聽再決定。[在官網直接試用這個介面](https://deanlin.net/auto-edit-workspace/demo/cuts.html)。
 
 說「做出完成影片」後，AI 會停在 ③ 分鏡表，一樣給你一個網址。動畫開工之前，每一段要放什麼都能先改：
 
 <p align="center"><a href="dev/site/guides/storyboard.jpg"><img src="dev/site/guides/storyboard.jpg" alt="分鏡表介面實際截圖：1 點文字直接改，離開欄位就存；2 表格可以加減列，也能改整段的原始 Markdown；3 金句打勾才上；4 回到對話說「可以」" width="1000"></a></p>
 
-**看圖操作：① 點文字直接改（離開欄位就存） → ② 表格可以加減列，要大改就開原始 Markdown → ③ 金句打勾才會上 → ④ 回到對話說「可以」。** 內容存回 `work/storyboard.md`，AI 照這份檔製作，也可以用對話叫它改。
+**看圖操作：① 點文字直接改（離開欄位就存） → ② 表格可以加減列，要大改就開原始 Markdown → ③ 金句打勾才會上 → ④ 回到對話說「可以」。** 內容存回 `work/storyboard.md`，AI 照這份檔製作，也可以用對話叫它改。[在官網直接試用這個介面](https://deanlin.net/auto-edit-workspace/demo/storyboard.html)。
 
 畫面會長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看（本機打開 `shared/template/index.html` 也可以，建議用 Chrome 或 Edge）：18 種情境模板、34 支情境動畫範例、示意動畫、40 種字卡動態。頁面上方可以切換風格包和亮色／暗色，還沒開始剪就能比較。
 

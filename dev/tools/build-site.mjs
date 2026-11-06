@@ -27,6 +27,17 @@ const LOCAL = /-local\.jpg$/;
 fs.cpSync(TPL, path.join(out, 'shared', 'template'), { recursive: true, filter: (src) => !SKIP.has(path.relative(TPL, src).split(path.sep)[0]) && !LOCAL.test(src) });
 fs.cpSync(path.join(WS, 'shared', 'sfx'), path.join(out, 'shared', 'sfx'), { recursive: true });
 for (const f of ['NOTICE.md', 'LICENSE']) fs.copyFileSync(path.join(WS, f), path.join(out, f));
+// 示範頁（dev/site/demo/ 的 Markdown 與 API 模擬層已在上面複製）：頁面直接用剪輯服務真正的 HTML、CSS、JS，只把絕對路徑改成官網的相對路徑
+const UI = path.join(TPL, 'tools', 'editor'), DEMO = path.join(out, 'demo');
+for (const f of ['editor.css', 'favicon.svg', 'cuts.js', 'storyboard.js', 'storyboard-md.mjs']) fs.copyFileSync(path.join(UI, f), path.join(DEMO, f));
+for (const page of ['cuts', 'storyboard']) {
+  const html = fs.readFileSync(path.join(UI, `${page}.html`), 'utf8')
+    .replaceAll('"/kit/', '"../shared/template/kit/').replaceAll('"/editor/', '"')
+    .replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta name="robots" content="noindex">')
+    .replace('<script type="module" src="', '<script type="module" src="demo-api.js"></script>\n<script type="module" src="');
+  if (!html.includes('demo-api.js')) fail(`${page}.html 找不到要接模擬層的 script → 確認 shared/template/tools/editor/${page}.html 還是用 <script type="module">`);
+  fs.writeFileSync(path.join(DEMO, `${page}.html`), html);
+}
 fs.writeFileSync(path.join(out, MARK), '');   // GitHub Pages 不跑 Jekyll（底線開頭的檔案才不會被略過）
 
 // SEO：sitemap.xml（網址是 deanlin.net 的正式網址；github.io 會 301 轉過去）。robots.txt 要放在網域根目錄（deanlin.net 那個 repo），這裡不放

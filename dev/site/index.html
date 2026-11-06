@@ -412,6 +412,13 @@
   .guide img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
   .guide figcaption { margin-top: 14px; max-width: 56em; color: var(--muted); font-size: 17px; line-height: 1.85; }
   .guide figcaption b { color: var(--text); }
+  /* 示範頁：桌面可以按鈕換成真正的介面；手機維持截圖（介面是為桌面設計的） */
+  .demo-stage { position: relative; }
+  .demo-try { display: none; position: absolute; left: 50%; top: 96px; transform: translateX(-50%); padding: 16px 28px; border: 0; border-radius: 999px; background: var(--accent); color: #090D17; font: inherit; font-size: 18px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 40px rgba(0, 0, 0, .55); }
+  .demo-try:hover { filter: brightness(1.08); }
+  .demo-try:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+  .demo-frame { display: block; width: 100%; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+  @media (min-width: 1000px) { .demo-try { display: block; } }
   .steps.four { grid-template-columns: repeat(4, 1fr); }
   @media (max-width: 960px) { .steps.four { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 520px) { .steps.four { grid-template-columns: 1fr; } }
@@ -564,13 +571,13 @@
   </ul>
   <h3 class="sub">剪之前，先在網頁勾一次</h3>
   <p>說「剪乾淨」後，AI 會先列出要剪的地方，給你一個網址。每一列可以試聽，不想剪的取消勾選就好，勾了就存；確認後才真的剪。</p>
-  <figure class="guide">
+  <figure class="guide" data-demo="demo/cuts.html" data-demo-h="760" data-demo-name="剪輯清單">
     <a href="guides/cuts.jpg" target="_blank" rel="noopener" aria-label="放大剪輯清單介面截圖"><img src="guides/cuts.jpg" width="1600" height="690" alt="剪輯清單介面實際截圖，數字標記：1 勾選要剪的地方，2 按 ▶ 試聽那一段，3 回到對話說可以" loading="lazy"></a>
     <figcaption><b>① 勾＝剪、取消＝保留 → ② 按 ▶ 試聽，紅色是會剪掉的部分 → ③ 回對話說「可以」。</b>黃色的列是 AI 不確定的，建議先聽。截圖使用內建示範講者，點圖可放大。</figcaption>
   </figure>
   <h3 class="sub">動畫開工前，先在網頁改分鏡</h3>
   <p>說「做出完成影片」後，AI 會先列出每一段要放什麼，給你一個網址。截圖、畫面文字、動畫分鏡都能點了直接改，改完就存；你說可以，AI 才開始做。</p>
-  <figure class="guide">
+  <figure class="guide" data-demo="demo/storyboard.html" data-demo-h="860" data-demo-name="分鏡表">
     <a href="guides/storyboard.jpg" target="_blank" rel="noopener" aria-label="放大分鏡表介面截圖"><img src="guides/storyboard.jpg" width="1600" height="1452" alt="分鏡表介面實際截圖，數字標記：1 點文字直接改，2 表格加減列與原始 Markdown，3 金句打勾才上，4 回到對話說可以" loading="lazy"></a>
     <figcaption><b>① 點文字直接改 → ② 表格可以加減列，要大改就開原始 Markdown → ③ 金句打勾才會上 → ④ 回對話說「可以」。</b>內容存回一份 Markdown，AI 照它製作。截圖使用內建示範畫面，點圖可放大。</figcaption>
   </figure>
@@ -865,6 +872,33 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
       });
     });
   })();
+</script>
+<script>
+  // 示範頁用到才載入，不拖慢首頁；沒有 JS、手機都維持截圖
+  for (const fig of document.querySelectorAll('figure[data-demo]')) {
+    const shot = fig.querySelector('a');
+    const stage = document.createElement('div');
+    stage.className = 'demo-stage';
+    shot.replaceWith(stage);
+    stage.append(shot);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'demo-try';
+    btn.textContent = `▶ 直接試用${fig.dataset.demoName}`;
+    btn.addEventListener('click', () => {
+      const frame = document.createElement('iframe');
+      frame.src = fig.dataset.demo;
+      frame.title = `${fig.dataset.demoName}示範（真正的介面，修改不會存到任何地方）`;
+      frame.className = 'demo-frame';
+      frame.style.height = `${fig.dataset.demoH}px`;
+      stage.replaceChildren(frame);
+      // 換成真正的介面後，說明裡「截圖…點圖可放大」就不適用了
+      const cap = fig.querySelector('figcaption');
+      cap.lastChild.textContent = cap.lastChild.textContent.replace(/截圖使用.*$/, '這是真正的介面，修改只留在你的瀏覽器。');
+      frame.focus();
+    });
+    stage.append(btn);
+  }
 </script>
 </body>
 </html>

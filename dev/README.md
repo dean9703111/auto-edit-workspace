@@ -17,6 +17,7 @@
 | `tools/make-sfx.mjs` | 產生 `shared/sfx/` 的音效（CC0 素材加工或 AI 生成）、A/B 試聽檔、回寫 sources.json 與 `kit/sfx.json`（作者用，只要 Node 與 ffmpeg） | `node dev/tools/make-sfx.mjs --help`；試聽檔一定要寫在工作區外面（`--out`） |
 | `site/index.html`、`tools/build-site.mjs` | 官網首頁；`build-site.mjs` 把首頁、`shared/template/` 情境庫（不含 tools、vendor）、`shared/sfx/`、NOTICE 組成 GitHub Pages 網站，`.github/workflows/pages.yml` 推上 main 時自動部署 | `node dev/tools/build-site.mjs --out <資料夾>`（預設 `_site`，不進版控）；第一次要在 GitHub Settings → Pages 把 Source 選「GitHub Actions」 |
 | `tools/docs-visuals.mjs`、`site/guides/` | README 與官網的流程圖、背景選圖圖解、剪輯清單、構圖、分鏡表與動畫預覽截圖；只在系統暫存建立示範專案，使用內建示範講者 | `node dev/tools/docs-visuals.mjs`（需現有 ffmpeg、HyperFrames Chrome、puppeteer-core）；介面更新後重跑，官網圖片尺寸同步實際輸出 |
+| `site/demo/`、`tools/build-site.mjs` | 官網的可操作示範：頁面直接用 `shared/template/tools/editor/` 真正的 cuts、storyboard 介面，`demo-api.js` 在瀏覽器裡回應 API，示範內容是同資料夾的 Markdown（`docs-visuals.mjs` 也讀它）；`dev/tests/site-demo.test.mjs` 確保和真正的服務一致 | 改介面不用動示範；改 API 回傳格式時測試會失敗，照著改 `demo-core.mjs` |
 | `tools/make_sfx.py` | 已退役，只保留凍結 8 顆音效的處理紀錄；執行會直接結束 | — |
 | `tools/build_test_media.py` | 產生測試用講解與場地照到 `projects/測試/`（作者用，要 Python） | 見檔頭；答案寫在工作區外面的 `<工作區名>-驗收/`，AI 讀不到 |
 
