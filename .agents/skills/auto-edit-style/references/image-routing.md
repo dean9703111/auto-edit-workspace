@@ -29,7 +29,7 @@ Windows（PowerShell）：Copy-Item shared\template\bg-fs.jpg "$TMP\ref.jpg"
 codex exec --skip-git-repo-check -C "$TMP" -s workspace-write -i "$TMP/ref.jpg" < "$TMP/prompt.md"
 ```
 
-`prompt.md` 寫：主色色碼、三張的尺寸與檔名（`raw-fs.png`、`raw-side.png`、`raw-ch.png`）、每張要留空的區域（R9.2 原文照抄）。PowerShell 沒有 `<`，改成 `Get-Content "$TMP\prompt.md" -Raw | codex exec --skip-git-repo-check -C "$TMP" -s workspace-write -i "$TMP\ref.jpg"`。
+`prompt.md` 寫：主色色碼、三張的尺寸與檔名（`raw-fs.png`、`raw-side.png`、`raw-ch.png`）、每張要留空的區域（R9.2 原文照抄）。派工人同時生成（`references/bg-worker.md`）時，每張一份 prompt、只寫自己那張，`-C` 和 prompt 都換成 `$TMP/<種類>`，參考圖仍用 `$TMP/ref.jpg`。PowerShell 沒有 `<`，改成 `Get-Content "$TMP\prompt.md" -Raw | codex exec --skip-git-repo-check -C "$TMP" -s workspace-write -i "$TMP\ref.jpg"`。
 
 ## 3. MiniMax CLI（`mmx`）
 
@@ -39,7 +39,7 @@ mmx image generate --prompt "<side 的提示詞>" --width 960 --height 1080 --n 
 mmx image generate --prompt "<ch 的提示詞>" --width 1920 --height 1080 --n 3 --out-dir "$TMP/mmx" --out-prefix bg-ch --quiet
 ```
 
-每種各出 3 張，挑留空區最乾淨的一張，用第 1 節的指令轉成 `bg-<種類>.jpg`。
+每種各出 3 張，挑留空區最乾淨的一張，用第 1 節的指令轉成 `bg-<種類>.jpg`。三行互不相關，派工人同時跑（`references/bg-worker.md`）。
 
 暗色版（plan.json `"theme": "dark"` 用的 `bg-<種類>-dark.jpg`；HTML 路線還不能做暗色）：fs 的提示詞照抄下面這段（`<主色色碼>` 換掉），side、ch 只換 `--width`、`--out-prefix`；轉檔時檔名寫 `bg-<種類>-dark.jpg`。
 

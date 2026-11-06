@@ -592,7 +592,7 @@ export function motionUnits(motion) {
   }
   return kept;
 }
-// 忙碌段：微動（idle／flow／ambient／慢推，role micro）整段都在跑，不算（完成態停留、最後一幕、畫面沒有變化、靜止取樣都用這個）
+// 忙碌段：微動（idle／flow／慢推，role micro）整段都在跑，不算（完成態停留、最後一幕、畫面沒有變化、靜止取樣都用這個）
 export function busySpans(motion, { hold = false } = {}) {
   const spans = (hold ? holdTweens(motion) : ((motion && motion.tweens) || []).filter((tw) => !isMicro(tw))).map((tw) => [tw.start, tw.end]).sort((a, b) => a[0] - b[0]);
   const out = [];

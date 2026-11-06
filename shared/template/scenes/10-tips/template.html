@@ -30,13 +30,12 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；停留：徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張）；說明 0.5 起逐字上浮（間隔 0.015） */
+/* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張）；說明 0.5 起逐字上浮（間隔 0.015） */
 P.wipe('#tipCard .sc-lt__plate, #tipCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
 P.drift('#tipCard .sc-lt__plate, #tipCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
 P.pop('#tipCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
 {{#icon}}P.pop('#tipCard .sc-sq', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
-P.icon('#tipCard .sc-sq', {{{in}}} + 0.3);
-P.idle('#tipCard .sc-sq', {{{in}}} + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });{{/icon}}
+P.icon('#tipCard .sc-sq', {{{in}}} + 0.3);{{/icon}}
 P.chars('#tipCard .tp-text', {{{in}}} + 0.22);
 {{#desc}}P.chars('#tipCard .tp-desc', {{{in}}} + 0.5, { stagger: 0.015 });{{/desc}}
 {{#exitFade}}P.wipeOut('#tipCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#tipCard', D - 0.8, { dir: 'left' });{{/exitFade}}

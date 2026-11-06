@@ -80,7 +80,7 @@ window.__PREVIEW = {"key":"qa","duration":7,"cues":[{"sound":"ding","at":1.9,"vo
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 7;
-    /* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；停留：徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張）；aAt：問句退焦 0.62 → A 徽章彈入 → 答案逐字彈出（過衝） */
+    /* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張）；aAt：問句退焦 0.62 → A 徽章彈入 → 答案逐字彈出（過衝） */
     P.wipe('#pv-qaCard .sc-lt__plate, #pv-qaCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
     P.drift('#pv-qaCard .sc-lt__plate, #pv-qaCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });
     P.pop('#pv-qaCard .sc-lt__tag', 0 + 0.12, { from: 0.4, dy: 18 });

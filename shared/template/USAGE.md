@@ -29,7 +29,7 @@
 | 1 | 看 `AGENTS.md`「停點總表」；規則照 `shared/style.md` | — | | |
 | 2 | 先做講者調光＋瘦臉（第 7 節：`look.mjs status` 的「→ 下一步」下面那一行是指令，整行複製執行；跑完看 `work/look-preview.jpg`）；再確認構圖（2.2 第 0 步，構圖台給使用者拖框、寫進 `frame`）；列出字幕每一句的句號與內容；看場地照量 `speakerBox`。有螢幕錄影／圖片，或主軌接過聲音檔（只有聲音的區間）時，掃素材、看 contact sheet（`work/media/index.md` 也會列出只有聲音的區間） | `node shared/template/tools/look.mjs status --project projects/<專案>`；2.2；`node shared/template/tools/qc.mjs framing --project projects/<專案>`；`node shared/template/tools/media.mjs scan --project projects/<專案>` | 第 7 節、R4、第 5 節 | **停點 ②** |
 | 3 | 確認字幕沒有超過 18 字（直式 10 字；剪乾淨已經用 srt-align 排成完整語句） | `node shared/template/tools/build.mjs --project projects/<專案> --check`（暫時的 plan.json，2.4） | | |
-| 4 | 挑情境、配螢幕錄影與圖片，列分鏡表，每段截圖，情境動畫段附動畫分鏡，存成 `work/storyboard.md` | `node shared/template/tools/build.mjs --list`；`node shared/template/tools/qc.mjs storyboard --project projects/<專案>` | `SITUATIONS.md`、`BEATS.md`、R2、R6、第 5 節 | **停點 ③** |
+| 4 | 挑情境、配螢幕錄影與圖片，列分鏡表，每段截圖，情境動畫段附動畫分鏡，存成 `work/storyboard.md` | `node shared/template/tools/build.mjs --project projects/<專案> --scaffold`（產生 `work/分鏡素材.md`：字幕編號、章節、情境對照、每種情境的寫法）；`node shared/template/tools/qc.mjs storyboard --project projects/<專案>` | `SITUATIONS.md`、`BEATS.md`、R2、R6、第 5 節 | **停點 ③** |
 | 5 | 寫 `work/hyperframes/plan.json` | — | 第 3 節 | |
 | 6 | 只檢查、不寫檔；✖ 全部修掉，⚠ 照第 4 節處理 | `node shared/template/tools/build.mjs --project projects/<專案> --check` | 第 4 節 | |
 | 7 | 產生整個 HyperFrames 專案 | `node shared/template/tools/build.mjs --project projects/<專案>` | | |
@@ -61,11 +61,12 @@
 1. 場地照：專案資料夾裡檔名有「場地照」的圖（範本附的是 `projects/example/場地照-測試.jpg`），或 Skill 每集自動截的 `work/場地照.jpg`。都沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
 2. 確認是 1920×1080：`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <場地照路徑>`。不是的話，量出來的數字要等比換算（範例的 `示範口播.mp4` 是 640×360，從它截的場地照量出來要乘 3）。講者框整個落在底片尺寸內時，`--check` 會提醒「看起來是用原尺寸截圖的像素量的」並附換算後的框。
 3. 框出講者的頭頂、兩肩、手勢會到的範圍，四邊各外擴 40px，寫成 `[x1, y1, x2, y2]`（左上到右下）。
-4. 場地照只是一張靜止畫面，看不出手勢會比到哪。有 `work/rough.mp4` 之後，一定要再跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案>`，它會產生兩張圖：
+4. 場地照只是一張靜止畫面，看不出手勢會比到哪。有 `work/rough.mp4` 之後，一定要再跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案> --write`（`--write` 把青色建議框寫進 plan.json 的 `speakerBox`，已經有的不覆寫，`--force` 才覆寫），它會產生兩張圖：
+
    - `work/場地照-動作範圍.jpg`：8 張畫面疊在一起，橘色是動作掃過的範圍。格線每 100px 一條、每 500px 一條粗線，數字就是 1920×1080 的座標（不是 1080p 的影片會先等比放大，座標不用再換算）。青色框是自動估的範圍（已外擴 40px），只當參考，桌面倒影會讓它的下緣偏大。
    - `work/場地照-8格.jpg`：8 個時間點的總表，先確認講者整集沒有換位置。
 
-   以這兩張圖讀到的手勢最遠邊緣為準，修正第 3 步的框。
+   建議框只是起點，一定要看一次這兩張圖：手勢的橘色跑出青框，或下緣壓到桌面倒影，就照圖改；看過沒問題就不用再量。
 
 範例（`projects/example/場地照-測試.jpg`）：頭頂 y≈276、雙手與身體 x≈790–1220、桌面 y≈840 → `[750, 236, 1260, 880]`，中心 x≈1005（置中）。中心 x 在 860–1060 算置中，小於 860 在左側，大於 1060 在右側；各位置適合哪些情境見 R4。
 
@@ -82,7 +83,7 @@
 - 每段放截圖：草稿 plan.json build 後跑 `node shared/template/tools/qc.mjs storyboard --project projects/<專案>`，把它最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每一段，下面寫「截圖觀察」（有沒有擋臉、壓手勢、文字問題）。不要自己算秒數跑 `snapshot --at`。
   - 截圖檔名：一段一張是 `s20.png`；一段多張是 `s20-1.png`、`s20-2.png`…（條列分組、錄影標註各一張）。**只貼這一次印出來的那幾行**：同一段張數變了（例：上一版 s20 是三條的清單 `s20-1.png`～`s20-3.png`，這一版改成情境動畫只截 `s20.png`），工具會清掉同一段的舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪。自己改名的方案圖（`s05-A.png`）不會被動到。
   - 每張後面的「為什麼」：`完成態（段尾前 0.6 秒）`／`完成態（退場前 0.1 秒）`／`完成態（動畫停住的最後一刻）`＝這段內容全部出現、還沒退場的那一刻（工具讀動畫時間軸算，03 側邊欄、數字滾動卡會自動往前）；`第 1 條`、`第 2–3 條`＝條列的那一組進場完成之後（進場動畫重疊的幾條算同一組，所以三條可能只有一張）；`…到位`＝錄影標註；`段很短，截中點`；`…（整段都在動，沒有停住的畫面）`＝循環動畫，截圖觀察寫「循環動畫」即可。
-  - 用了動態 v2 原語的段，每個拍點各截一張：`抽屜抽出後 0.3 秒：「<字>」`、`焦點抬起：「<字>」`；最後一拍之後畫面沒再變，就不另截完成態（最後一拍的「為什麼」加 `（完成態）`）。呼吸、光暈這類微動不算動畫。`qc.mjs observe` 另出 `work/observe/beat-NN.jpg`：同一套時刻、從完成影片抽格，對照分鏡截圖看 render 出來的拍點對不對。
+  - 用了動態 v2 原語的段，每個拍點各截一張：`抽屜抽出後 0.3 秒：「<字>」`、`焦點抬起：「<字>」`；最後一拍之後畫面沒再變，就不另截完成態（最後一拍的「為什麼」加 `（完成態）`）。呼吸這類微動不算動畫。`qc.mjs observe` 另出 `work/observe/beat-NN.jpg`：同一套時刻、從完成影片抽格，對照分鏡截圖看 render 出來的拍點對不對。
   - 截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard；還是一樣就在「需要我決定的事」列出段號和秒數，不要自己改秒數跑 `snapshot --at`。
   - 印 `✖ <id> 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…`：不是版面的問題，不要改 plan.json；照 → 跑 `node shared/template/tools/media.mjs verify-rough --project projects/<專案>` 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報（全黑本來就是旁白區間）。
 - 最後一節「需要我決定的事」固定有金句候選表，勾了才上（style.md「字卡文字」）：
@@ -206,7 +207,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | ✖ 一定要修 | 講者小視窗 | 子母畫面段都有講者小視窗；沒有＝`work/rough.mp4` 全黑、素材又沒有純聲音檔（初剪壞了），照 → 跑 `verify-rough` 重做初剪（4.2） |
 | ✖ 一定要修 | 長度 | 和 `--check` 報告的「影片長度」相差 ≤ 0.1 秒（剪輯台剪過時是 `rough.mp4 − cuts`） |
 | ⚠ 逐項確認是不是刻意的 | 響度 | 整合響度 −15.5～−12.5 LUFS、true peak ≤ −1.0 dBTP |
-| ⚠ | 畫面凍結 | ≥ 3 秒（01 章節轉場本來就是靜止的，已排除） |
+| ⚠ | 畫面凍結 | ≥ 3 秒（01 章節轉場、沒有講者小視窗的全畫面段本來就是靜止的，已排除） |
 | ⚠ | 黑畫面 | ≥ 0.5 秒 |
 | ⚠ | 沒有聲音 | ≥ 4 秒（可能是漏剪的停頓） |
 

@@ -8,6 +8,8 @@
  *   node shared/template/tools/build.mjs --project projects/<專案> --check --json
  *                                                     同上，stdout 只印一個 JSON（剪輯台讀；時間都是 rough.mp4 的秒數，格式見 USAGE-reference.md R2.6）
  *   node shared/template/tools/build.mjs --list [--json] 印出 18 情境＋40 字卡動態的 key、何時用、slots 與上限，以及插入素材（type: "media"）的欄位
+ *   node shared/template/tools/build.mjs --project projects/<專案> --scaffold
+ *                                                     產生 work/分鏡素材.md：字幕編號、章節、情境對照、每種情境的 plan.json 寫法（排分鏡前跑；不用 plan.json 有 scenes）
  *   node shared/template/tools/build.mjs --project projects/<專案> --test 41,4
  *                                                     另外產生 compositions/test-clip.html：41 秒起的 4 秒
  *                                                     （再到 work/hyperframes 跑 npx hyperframes render -c compositions/test-clip.html --quality draft）
@@ -54,6 +56,7 @@ import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
+import { renderScaffold } from './lib/scaffold.mjs';
 
 export { probeDuration, encodeFootage };
 
@@ -76,7 +79,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['check', 'list', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut'].includes(k)) flags[k] = true;
+    } else if (['check', 'list', 'scaffold', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -235,6 +238,35 @@ export function listText(lib) {
     '| 欄位 | 值 | 預設 | 說明 |', '|---|---|---|---|');
   for (const r of MEDIA_FIELDS) lines.push(`| ${r[0]} | ${r[1]} | ${r[2]} | ${r[3]} |`);
   return lines.join('\n');
+}
+
+// --scaffold：排分鏡要查的東西收成 work/分鏡素材.md（只讀 plan.json，不改它；lib/scaffold.mjs）
+export function runScaffold(P, flags = {}) {
+  if (!P.project) throw new Error('--scaffold 要指定專案 → 加 --project projects/<專案>');
+  if (!fs.existsSync(P.srt)) throw new Error(`找不到字幕 ${rel(P.srt)} → 先完成「剪乾淨」的字幕步驟（media.mjs srt-align）`);
+  if (!fs.existsSync(P.video)) throw new Error(`找不到影片 ${rel(P.video)} → 先完成「剪乾淨」產生 work/rough.mp4`);
+  const readOpt = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
+  let plan = {};
+  try { plan = JSON.parse(readOpt(P.plan) || '{}'); } catch (e) { throw new Error(`plan.json 不是合法的 JSON：${e.message} → 修好再跑`); }
+  const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
+  const fmt = resolveFormat({ projectDir: P.project, plan, flag: flags.format ?? null });
+  const lib = loadLib(P.templateDir);
+  fs.mkdirSync(path.join(P.out, '.cache'), { recursive: true });
+  const count = (d, re) => { try { return fs.readdirSync(path.join(P.project, 'assets', d)).filter((n) => re.test(n)).length; } catch { return 0; } };
+  const customDir = path.join(P.templateDir, 'custom');
+  const md = renderScaffold({
+    project: rel(P.project), format: { label: `${fmt.format === 'portrait' ? '直式' : '橫式'} ${canvasOf(fmt.format).W}×${canvasOf(fmt.format).H}`, portrait: fmt.format === 'portrait' },
+    videoDur: probeDuration(P.video), cues, scriptMd: readOpt(path.join(P.project, '講稿.md')), plan,
+    scenes: lib.scenes.map((s) => ({ ...s, summary: slotSummary(s) })),
+    customNames: fs.existsSync(customDir) ? fs.readdirSync(customDir).filter((n) => /^x-.*\.html$/.test(n)).map((n) => n.replace(/\.html$/, '')).sort() : [],
+    situationsMd: readOpt(path.join(P.templateDir, 'SITUATIONS.md')), beatsMd: readOpt(path.join(P.templateDir, 'BEATS.md')), styleMd: readOpt(path.join(P.templateDir, '..', 'style.md')),
+    voiceOnly: voiceOnlyOf(P, P.video), assets: { screen: count('screen', /\.(mp4|mov|m4v|webm|mkv)$/i), images: count('images', /\.(jpe?g|png|webp|heic)$/i) },
+  });
+  const file = path.join(P.project, 'work', '分鏡素材.md');
+  fs.writeFileSync(file, md);
+  console.log(`→ ${rel(file)}（${cues.length} 句字幕）：字幕編號、章節、情境對照、每種情境的 plan.json 寫法都在裡面`);
+  console.log(`→ 下一步：照這份填情境判定表、寫草稿 plan.json 的 scenes，寫完跑檢查`);
+  console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --check`);
 }
 
 // --list 的 media 欄位表：lib/media.mjs 的 MEDIA_FIELDS（004 擁有；文字與 --json 共用）
@@ -535,6 +567,7 @@ export function build(flags, { log = console.log } = {}) {
   if (json) log = () => {};
   if (P.project) log(`專案：${rel(P.project)}`);
   const { plan, cues } = loadInputs(P);
+  if (!flags.check && plan.scenes === undefined) throw new Error('plan.json 還沒有 scenes → 先跑 build.mjs --scaffold，照 work/分鏡素材.md 寫段落');
   // 版式（009 FR-003）：--format > plan.json > 開工決策表 > 主軌寬高比；之後的幾何一律讀 canvas
   const fmt = resolveFormat({ projectDir: P.project, plan, flag: flags.format ?? null });
   const C = canvasOf(fmt.format);
@@ -809,6 +842,7 @@ async function cli() {
     for (const e of r.problems) console.log(`✖ ${e}`);
     return r.problems.length ? 1 : 0;
   }
+  if (flags.scaffold) { runScaffold(P, flags); return 0; }
   const r = build(flags);
   if (r.json) console.log(JSON.stringify(r.json, null, 2));
   return r.ok ? 0 : 1;

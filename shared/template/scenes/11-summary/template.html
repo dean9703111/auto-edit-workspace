@@ -23,12 +23,11 @@
   <div class="sc-lt__tag"><span class="sc-lt__tagin">{{tag}}</span></div>
 </div>
 <!-- @timeline -->
-/* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 描圈打勾 → 0.22 字逐字上浮；停留：徽章呼吸；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張） */
+/* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 描圈打勾 → 0.22 字逐字上浮；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張） */
 P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
 P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
 P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
 {{#icon}}P.pop('#gCard .sc-icon', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
-P.check('#gCard .sc-icon', {{{in}}} + 0.3);
-P.idle('#gCard .sc-icon', {{{in}}} + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });{{/icon}}
+P.check('#gCard .sc-icon', {{{in}}} + 0.3);{{/icon}}
 P.chars('#gCard .sm-text', {{{in}}} + 0.22, { stagger: 0.02 });
 {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}

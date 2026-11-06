@@ -4,7 +4,7 @@
  *
  *   node shared/template/tools/qc.mjs final --project projects/<專案> [--file <mp4>] [--json]
  *       完成影片驗收（預設檔案 output/final.mp4）。除了尺寸、30fps、音軌、長度，還抓「四項全過、內容卻壞」的問題：
- *         響度（整合響度 −15.5～−12.5 LUFS、true peak ≤ −1.0 dBTP）、畫面凍結（≥ 3 秒，章節轉場本來就靜止，已排除）、
+ *         響度（整合響度 −15.5～−12.5 LUFS、true peak ≤ −1.0 dBTP）、畫面凍結（≥ 3 秒，章節轉場、沒有講者小視窗的全畫面段本來就靜止，已排除）、
  *         黑畫面（≥ 0.5 秒）、長時間沒聲音（≥ 4 秒）。凍結／黑畫面／無聲的時間會對到 plan.json 的段落 id。
  *         子母畫面段沒有講者小視窗（rough.mp4 全黑、專案又沒有聲音素材＝初剪壞了）是 ✖（直式叫「上下分割段沒有講者面板」，判準相同）。
  *         字幕（F8，照作者剪映）：抽 5 則中文字幕，量底板 y 956–1074 ± 4（build 好的頁面）與字高 71 ± 3（完成影片的白字），
@@ -13,7 +13,8 @@
  *         直式每格 9:16，格上疊 unsafe[]（平台介面區）的紅色半透明框。
  *       預期長度跑 build.mjs --check --json 取得（rough.mp4 − cuts）。
  *       輸出 ✔／⚠／✖；有 ✖ 結束碼是 1，只有 ⚠ 是 0。--json 只印一個 JSON。
- *   node shared/template/tools/qc.mjs speaker --project projects/<專案> [--file <mp4>]
+ *   node shared/template/tools/qc.mjs speaker --project projects/<專案> [--file <mp4>] [--write [--force]]
+ *       --write：把青色建議框寫進 plan.json 的 speakerBox（已經有的不覆寫；--force 才覆寫）
  *       講者動作範圍圖：從 work/rough.mp4 平均抽 8 張，存
  *         work/場地照-動作範圍.jpg   疊影（平均）＋動作範圍上色＋青色建議框＋每 100px 座標格線
  *         work/場地照-8格.jpg        8 格總表（每格標時間）
@@ -84,7 +85,7 @@ export function parseArgs(argv) {
       const v = inline ?? rest[++i];
       if (v == null) throw new Error(`--${k} 後面要接值 → 在 --${k} 後面補上值（用 --help 看格式）`);
       flags[k] = v;
-    } else if (['json', 'help'].includes(k)) flags[k] = true;
+    } else if (['json', 'help', 'write', 'force'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數 → 拿掉它；用 node shared/template/tools/qc.mjs --help 看有哪些參數`);
   }
   return flags;
@@ -263,9 +264,10 @@ export function locateItem([a, b], items, cuts = []) {
   return best;
 }
 
-// 章節轉場本來就靜止：凍結區間扣掉章節段（完成影片時間軸）；剩下 ≥ minDur 的才算
+// 章節轉場、沒有講者小視窗的全畫面段（scene／custom）本來就靜止（模板不做微動）：凍結區間扣掉這些段（完成影片時間軸）；剩下 ≥ minDur 的才算；錄影段照查
+const stillByDesign = (it) => isChapterItem(it) || (it?.opaque && (it.type === 'scene' || it.type === 'custom') && !(it.out?.pip?.length));
 export function freezeIssues(freezes, items, cuts = [], minDur = LIMITS.freeze) {
-  const holes = (items || []).filter(isChapterItem).map((it) => [roughToFinal(it.start, cuts) - 0.15, roughToFinal(it.shownEnd ?? it.end, cuts) + 0.15]);
+  const holes = (items || []).filter(stillByDesign).map((it) => [roughToFinal(it.start, cuts) - 0.15, roughToFinal(it.shownEnd ?? it.end, cuts) + 0.15]);
   const out = [];
   for (const fz of freezes) for (const [a, b] of subtractRanges(fz, holes)) if (b - a >= minDur - 1e-6) out.push([a, b]);
   return out;
@@ -312,7 +314,7 @@ export function judge(f) {
   const rng = ([a, b]) => `${fmtT(a)}–${fmtT(b)}`;
 
   const fz = freezeIssues(f.freezes || [], f.items, f.cuts);
-  if (!fz.length) add('freeze', 'ok', `沒有 ≥ ${L.freeze} 秒的畫面凍結（章節轉場已排除）`);
+  if (!fz.length) add('freeze', 'ok', `沒有 ≥ ${L.freeze} 秒的畫面凍結（章節轉場、無小視窗全畫面段已排除）`);
   for (const rg of fz) add('freeze', 'warn', `${rng(rg)} 畫面凍結 ${r1(rg[1] - rg[0])} 秒${where(rg)} → 看 qc-sheet.jpg 與該段起點截圖；螢幕錄影先確認素材有在動，重 render 該段；多半是 seek 卡住或素材本身靜止`);
 
   if (Array.isArray(f.pipMissing)) {
@@ -573,7 +575,8 @@ function roughBlack(P, raw) {
 
 const lum = (d, i) => (d[i] * 54 + d[i + 1] * 183 + d[i + 2] * 19) >> 8;
 
-// 平均畫面＋動作範圍。回傳 { mean(rgb Buffer), dev(Uint8Array 每像素最大亮度偏差), bbox }
+const MOTION_CORE = 0.1;
+// 平均畫面＋動作範圍。回傳 { mean(rgb Buffer), dev(Uint8Array 每像素最大亮度偏差), bbox, core }
 export function motionStats(frames, w = 1920, h = 1080, { thresh = 40, minPx = 12 } = {}) {
   const n = frames.length, px = w * h;
   const sum = new Uint32Array(px * 3);
@@ -590,7 +593,11 @@ export function motionStats(frames, w = 1920, h = 1080, { thresh = 40, minPx = 1
   let x1 = -1, x2 = -1, y1 = -1, y2 = -1;
   for (let x = 0; x < w; x++) if (cols[x] >= minPx) { if (x1 < 0) x1 = x; x2 = x; }
   for (let y = 0; y < h; y++) if (rows[y] >= minPx) { if (y1 < 0) y1 = y; y2 = y; }
-  return { mean, dev, bbox: x1 < 0 || y1 < 0 ? null : [x1, y1, x2, y2] };
+  // core：主要動作的範圍（每欄、每列的動作像素 ≥ 最多那一欄、那一列的 10%）；桌面反光、倒影、背景物只有零星像素，不會把框撐大。speaker 的建議框用它，framing 的切手勢判斷照舊用 bbox
+  const span = (a, minN) => { let s = -1, e = -1; for (let i = 0; i < a.length; i++) if (a[i] >= minN) { if (s < 0) s = i; e = i; } return [s, e]; };
+  const [cx1, cx2] = span(cols, Math.max(minPx, Math.max(...cols) * MOTION_CORE)), [cy1, cy2] = span(rows, Math.max(minPx, Math.max(...rows) * MOTION_CORE));
+  const core = cx1 < 0 || cy1 < 0 ? null : [cx1, cy1, cx2, cy2];
+  return { mean, dev, bbox: x1 < 0 || y1 < 0 ? null : [x1, y1, x2, y2], core };
 }
 
 export const padBox = (b, pad = 40, w = 1920, h = 1080) => [Math.max(0, b[0] - pad), Math.max(0, b[1] - pad), Math.min(w, b[2] + pad), Math.min(h, b[3] + pad)];
@@ -613,13 +620,13 @@ export function speakerMaps(P, flags) {
   const frames = ts.map((t) => frame1080(src, t, frame, look.lut, W, H));
 
   // 疊影圖：平均畫面；動作範圍上橘色，青色框是動作範圍外擴 40px 的建議框
-  const { mean, dev, bbox } = motionStats(frames, W, H);
+  const { mean, dev, bbox, core } = motionStats(frames, W, H);
   const c = { w: W, h: H, data: Buffer.from(mean) };
   for (let p = 0; p < W * H; p++) {
     const a = Math.min(0.5, Math.max(0, (dev[p] - 25) / 100));
     if (a > 0) for (let k = 0; k < 3; k++) c.data[p * 3 + k] = Math.round(c.data[p * 3 + k] * (1 - a) + [255, 140, 0][k] * a);
   }
-  const suggest = bbox ? padBox(bbox, 40, W, H) : null;
+  const suggest = core ? padBox(core, 40, W, H) : null;
   if (suggest) rectOutline(c, suggest, [0, 229, 255], 3);
   drawGrid(c);
   const mapFile = path.join(P.project, 'work', '場地照-動作範圍.jpg');
@@ -638,7 +645,7 @@ export function speakerMaps(P, flags) {
   });
   const sheetFile = path.join(P.project, 'work', '場地照-8格.jpg');
   writeJpg(s, sheetFile, 3);
-  return { src, srcSize: [info.width, info.height], times: ts, mapFile, sheetFile, bbox, suggest, frame, look, scaled: info.width !== W || info.height !== H, fmt, W, H };
+  return { src, srcSize: [info.width, info.height], times: ts, mapFile, sheetFile, bbox: core, suggest, frame, look, scaled: info.width !== W || info.height !== H, fmt, W, H };
 }
 
 // 最近鄰縮小（總表用，夠看就好）
@@ -811,7 +818,7 @@ function printFraming(P, r) {
   }
   const face = portrait ? '、頭頂／下巴不合' : '', faceOk = portrait ? '、頭頂／下巴在範圍內' : '';
   console.log(sug.none ? `建議：${sug.zoom.toFixed(2)}x（每個倍率都標了切到手勢${face}或放大超過 3.5 倍，選表上最小的；最後由使用者選）` : `建議：${sug.zoom.toFixed(2)}x（不切到手勢${faceOk}、來源像素放大 ≤ 3.5 倍的倍率裡最大的；最後由使用者選）`);
-  console.log(`\n→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就把 ✔ 那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫），之後跑 qc.mjs speaker 量講者框`);
+  console.log(`\n→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就把 ✔ 那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫），之後跑 qc.mjs speaker --write 量講者框`);
   console.log(`node shared/template/tools/editor.mjs --project ${rel(P.project)}`);
 }
 
@@ -830,6 +837,30 @@ function printSpeaker(P, r) {
   console.log('  1. 先看 8 格總表，確認講者位置沒有跳來跳去（有的話取最大範圍）');
   console.log('  2. 再看疊影圖：橘色最遠的手勢邊緣讀出 x1、x2，頭頂讀 y1，桌面或身體下緣讀 y2，四邊各外擴 40px');
   console.log('  3. 寫成 speakerBox: [x1, y1, x2, y2]；和青色建議框差很多時，以你看圖讀的為準');
+}
+
+// qc.mjs speaker --write：把青色建議框寫進 plan.json；已經有 speakerBox 不覆寫（--force 才覆寫）。回傳 { wrote, box, reason }
+export function writeSpeakerBox(P, suggest, { force = false } = {}) {
+  if (!suggest) return { wrote: false, box: null, reason: 'none' };
+  let plan = { version: 1 };
+  if (fs.existsSync(P.plan)) {
+    try { plan = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch (e) { throw new Error(`plan.json 不是合法的 JSON：${e.message} → 修好再跑`); }
+  }
+  if (plan.speakerBox && !force) return { wrote: false, box: plan.speakerBox, reason: 'exists' };
+  plan.speakerBox = suggest;
+  fs.mkdirSync(path.dirname(P.plan), { recursive: true });
+  fs.writeFileSync(P.plan, `${JSON.stringify(plan, null, 2)}\n`);
+  return { wrote: true, box: suggest, reason: 'written' };
+}
+
+function printSpeakerWrite(P, w) {
+  console.log('');
+  if (w.reason === 'none') { console.log('✖ 沒有寫 speakerBox：8 格之間幾乎沒有動作，估不出範圍 → 看 8 格總表手動框，寫進 plan.json 第一層'); return; }
+  if (w.reason === 'exists') console.log(`plan.json 已經有 speakerBox ${JSON.stringify(w.box)}，沒有覆寫（要換成建議框加 --force）`);
+  else console.log(`✔ speakerBox ${JSON.stringify(w.box)} 已寫進 ${rel(P.plan)}`);
+  console.log('這只是起點，一定要看一次疊影圖：手勢的橘色跑出青框，或下緣壓到桌面倒影，就照圖改 plan.json；看過沒問題就不用再量');
+  console.log('→ 下一步：拿分鏡素材（字幕編號、章節、情境對照、plan.json 寫法）');
+  console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --scaffold`);
 }
 
 // ---------- build --check --json（storyboard／observe／final 共用）----------
@@ -1462,7 +1493,9 @@ export async function cli() {
     } else printObserve(P, r);
     return 0;
   }
-  printSpeaker(P, speakerMaps(P, flags));
+  const maps = speakerMaps(P, flags);
+  printSpeaker(P, maps);
+  if (flags.write) { const w = writeSpeakerBox(P, maps.suggest, { force: !!flags.force }); printSpeakerWrite(P, w); return w.reason === 'none' ? 1 : 0; }
   return 0;
 }
 

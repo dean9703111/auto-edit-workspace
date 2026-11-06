@@ -60,6 +60,10 @@ test('locateItem／itemName：取重疊最多的段落', () => {
 });
 
 test('freezeIssues：章節轉場的凍結排除，其餘留下', () => {
+  const still = [{ id: 'a', type: 'custom', opaque: true, start: 10, end: 20, out: { pip: [] } }, { id: 'b', type: 'scene', opaque: true, start: 30, end: 40, out: { pip: [{ start: 30, end: 40 }] } }, { id: 'c', type: 'media', opaque: true, start: 50, end: 60, out: { pip: [] } }];
+  assert.deepEqual(Q.freezeIssues([[11, 18]], still), [], '沒有小視窗的全畫面段本來就靜止');
+  assert.deepEqual(Q.freezeIssues([[31, 38]], still), [[31, 38]], '有小視窗卻凍住＝講者畫面卡住');
+  assert.deepEqual(Q.freezeIssues([[51, 58]], still), [[51, 58]], '錄影段照查');
   assert.deepEqual(Q.freezeIssues([[0, 5]], items), []);
   assert.deepEqual(Q.freezeIssues([[62, 66]], items), [[62, 66]]);
   assert.deepEqual(Q.freezeIssues([[0.5, 4]], items), []);
@@ -250,6 +254,49 @@ function fixture() {
   const build = (...args) => spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), ...args, '--project', 'projects/p1'], { encoding: 'utf8', cwd: root });
   return { root, proj, out, qc, build };
 }
+
+test('motionStats：core 不被零星反光撐大，bbox 照舊包含', () => {
+  const w = 200, h = 100, px = w * h;
+  const a = Buffer.alloc(px * 3, 100), b = Buffer.alloc(px * 3, 100);
+  const paint = (buf, x1, y1, x2, y2) => { for (let y = y1; y < y2; y++) for (let x = x1; x < x2; x++) { const i = (y * w + x) * 3; buf[i] = buf[i + 1] = buf[i + 2] = 255; } };
+  paint(b, 80, 10, 120, 70);       // 講者：大塊動作
+  paint(b, 40, 90, 43, 94);        // 桌面反光：零星幾個像素
+  const { bbox, core } = Q.motionStats([a, b], w, h, { thresh: 40, minPx: 2 });
+  assert.deepEqual(bbox, [40, 10, 119, 93], 'bbox 包含反光');
+  assert.deepEqual(core, [80, 10, 119, 69], 'core 只有講者');
+  assert.equal(Q.motionStats([a, a], w, h).core, null, '沒有動作');
+});
+
+test('speaker --write：建議框寫進 plan.json、保留其他欄位；已有的不覆寫，--force 才覆寫；--check 沒有段落不算錯、build 才擋', { timeout: 120000 }, () => {
+  const F = fixture();
+  const plan = path.join(F.out, 'plan.json'), readPlan = () => JSON.parse(fs.readFileSync(plan, 'utf8'));
+  fs.writeFileSync(plan, JSON.stringify({ version: 1, look: false, frame: [160, 90, 1600, 900] }));
+  let r = F.qc('speaker', '--write');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const box = readPlan().speakerBox;
+  assert.equal(box.length, 4);
+  assert.deepEqual(readPlan().frame, [160, 90, 1600, 900], '其他欄位不動');
+  assert.match(r.stdout, /✔ speakerBox .* 已寫進/);
+  assert.match(r.stdout, /build\.mjs --project projects\/p1 --scaffold$/m);
+  fs.writeFileSync(plan, JSON.stringify({ ...readPlan(), speakerBox: [1, 2, 3, 4] }));
+  r = F.qc('speaker', '--write');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /已經有 speakerBox \[1,2,3,4\]，沒有覆寫/);
+  assert.deepEqual(readPlan().speakerBox, [1, 2, 3, 4]);
+  r = F.qc('speaker', '--write', '--force');
+  assert.deepEqual(readPlan().speakerBox, box);
+  r = F.build('--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /⚠ 還沒排段落（plan\.json 沒有 scenes）/);
+  assert.doesNotMatch(r.stdout, /沒寫 speakerBox/);
+  r = F.build();
+  assert.notEqual(r.status, 0);
+  assert.match(r.stdout + r.stderr, /plan\.json 還沒有 scenes → 先跑 build\.mjs --scaffold/);
+  fs.writeFileSync(plan, JSON.stringify({ version: 1, look: false, scenes: 'x' }));
+  r = F.build('--check');
+  assert.notEqual(r.status, 0);
+  assert.match(r.stdout, /scenes 要寫成陣列/);
+});
 
 test('storyboard：✖ 原文（plan 有 ✖、還沒 build）；build 後截圖存成段 id、印出貼上用的 markdown', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 600000 }, () => {
   const F = fixture();

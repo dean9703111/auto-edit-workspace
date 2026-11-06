@@ -133,10 +133,9 @@
     stack(1, T2);
     stack(2, T3);
     stack(3, T4);   // 第 4 組
-    // 收：最後一組落定（數完那一刻）重拍；數字慢呼吸，完成態停到段尾
+    // 收：最後一組落定（數完那一刻）重拍；完成態停到段尾
     const LAST = '#xtrb-v' + (n - 1), TE = T4 + 0.06 * (Math.max(1, Math.min(10, Math.round(DATA[n - 1][1]))) - 1) + 0.4;
     P.punch(LAST, TE, { scale: 1.15 });
-    P.idle(LAST, TE + 1.0, { y: 0, scale: 0.04, period: 1.8 });
 
     P.end();                                           // 長度＝plan.json 這段的長度
     window.__timelines['x-trend-blocks'] = tl;

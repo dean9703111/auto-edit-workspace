@@ -464,12 +464,14 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const avoid = plan.avoid ?? [];
   if (!Array.isArray(avoid)) errors.push('avoid 要寫成陣列，例如 ["two-sides"]');
   const avoidSet = new Set((Array.isArray(avoid) ? avoid : []).map((a) => findScene(scenes, a)?.key || a));
-  if (!Array.isArray(plan.scenes)) { errors.push('scenes 要寫成陣列'); return { items: [], errors, warnings, globals: {} }; }
+  if (plan.scenes !== undefined && !Array.isArray(plan.scenes)) { errors.push('scenes 要寫成陣列'); return { items: [], errors, warnings, globals: {} }; }
+  // 量完講者框還沒排段落：--check 照樣檢查 frame、speakerBox（build 才要求要有段落）
+  if (plan.scenes === undefined) warnings.push('還沒排段落（plan.json 沒有 scenes）→ 跑 build.mjs --scaffold 拿分鏡素材，照它寫 scenes');
 
   const ids = new Set();
   const customSrc = new Map();
   const fxCount = {};
-  const items = plan.scenes.map((seg, idx) => {
+  const items = (plan.scenes ?? []).map((seg, idx) => {
     const it = { idx, id: seg?.id, seg, errors: [], warnings: [] };
     const where = `[${seg?.id ?? `scenes[${idx}]`}${seg?.scene ? ` ${seg.scene}` : seg?.fx ? ` fx ${seg.fx}` : seg?.type === 'media' ? ' media' : seg?.type === 'custom' ? ' custom' : ''}]`;
     it.where = where;
@@ -1481,7 +1483,7 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
   if (res.sfxBudget) lines.push(...res.sfxBudget.lines);
   // 轉場與主題（design-system.md §5、§10；每段的值在 --check --json 的 items[].out.tx）
   const txCount = (k, v) => res.items.filter((it) => it[k] === v).map((it) => it.id);
-  const txParts = [['txIn', 'wipe', '色帶擦開'], ['txIn', 'swap', '換卡不換景'], ['txOut', 'retract', '色帶收回'], ['txIn', 'band', '疊加卡'], ['txIn', 'chapter', '章節色塊']]
+  const txParts = [['txIn', 'wipe', '色帶擦開'], ['txIn', 'swap', '換卡不換景'], ['txOut', 'retract', '色帶收回'], ['txIn', 'band', '疊加卡'], ['txIn', 'chapter', '章節擦入']]
     .map(([k, v, zh]) => [zh, txCount(k, v)]).filter(([, ids]) => ids.length).map(([zh, ids]) => `${zh} ${ids.length}（${ids.join('、')}）`);
   lines.push(`轉場：${txParts.join('；') || '無'}｜主題：${res.theme === 'dark' ? '暗色（theme: "dark"）' : '亮色'}${res.style ? `｜風格包：${res.style}` : ''}`);
   lines.push(...tail.filter(Boolean));

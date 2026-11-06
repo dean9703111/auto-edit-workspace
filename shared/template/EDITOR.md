@@ -254,6 +254,7 @@ node shared/template/tools/editor.mjs --project projects/example
 - **用 AI 生成背景**：選主色、放參考圖、選設計風格並補描述，按「複製生圖指令」。可依參考圖／描述，或選科技線稿、編輯平面、紙雕拼貼、幾何 3D、自然實景。A／B／C 在同一套風格中改變結構、造型或材質，各含全畫面、側邊欄、章節，共 9 張；不再以低對比、模糊光暈作預設。沒有指定方向或參考圖時，三組分別採科技線稿、編輯平面、立體幾何。頁面本身不呼叫 AI。剪貼簿不可用時展開指令供手動複製。
 - **對應資料夾**：`work/design/requests/<需求編號>/` 儲存 `request.md`、`request.json`、參考圖副本；AI 將三組圖片分別存進 `A/`、`B/`、`C/`，每組各有 `bg-fs.png`、`bg-side.png`、`bg-ch.png`（也接受 JPG／WebP）。原檔與歷次需求保留。
 - 相同設定重複複製沿用原需求資料夾，改主色、參考圖或風格時才建立新一份。重開頁會還原風格描述，已儲存的指令仍可查看、複製。
+- **同時生成**：生圖指令要求 AI 一次派出 3 個子代理，A、B、C 各生成自己那組三張，主代理只收件與回報狀態；同一組由同一個子代理生成，造型才一致。某組失敗只重派那一組；沒有子代理或子代理沒有生圖工具時，才由主代理依序生成。
 - **生圖進度**：複製成功只顯示「已複製，請貼給 AI」。AI 按生圖指令回報開始後才顯示「生成中」，並列出已存檔張數；完成顯示「生成完成」，失敗顯示原因。頁面每 2.5 秒自動更新，重開仍保留狀態。剪貼簿失敗時顯示手動複製提示。
 - **生圖狀態 API／CLI**：`GET /api/design/request/status` 讀取目前需求；`POST /api/design/request/status` 傳 `{ "requestId": "需求 id", "state": "generating", "message": "目前進度（選填）" }`。state 可用 `generating`、`done`、`failed`；九張圖未全部存檔時 `done` 回 409，舊需求或已更換的背景設定也回 409。AI 可在根目錄執行 `node shared/template/tools/editor.mjs --project projects/<專案> --design-request <需求 id> --design-state generating`，完成改用 `done`，失敗改用 `failed --message "原因"`；查詢用 `--design-state status`。生圖指令內已附可執行的回報指令；紀錄位於該需求目錄的 `progress.json`。
 - **選圖替換**：背景區選全畫面／側邊欄／章節，再點「原本背景」或 A／B／C 圖片替換、立即預覽。「原本背景」固定保留，尚未生成時也能選；指目前風格包或共用模板的原背景，僅還原該類圖片，保留主色與其他類選圖。三類可分別混搭。切回頁面自動讀取新圖，也可按「載入圖片」。選擇記錄在該需求的 `selection.json`；最後按「儲存並套用」。缺圖或壞圖不取代原背景。

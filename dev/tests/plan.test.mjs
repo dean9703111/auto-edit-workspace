@@ -481,7 +481,7 @@ test('只有聲音：沒蓋住 0.3 s ⚠、1.2 s ✖；報告行寫 ⚠／✖；
   assert.deepEqual(jsonTop(res).voiceUncovered.map((g) => [g.start, g.end, g.level]), [[25, 25.3, 'warn'], [28.8, 30, 'error']]);
 });
 
-test('全寬版型：整段只有聲音的全畫面段 host 寫 data-wide、報告註明；04a 沒寫 visual ⚠、visual 要是畫廊元件；有小視窗的段 host 寫 data-ambient="off"', () => {
+test('全寬版型：整段只有聲音的全畫面段 host 寫 data-wide、報告註明；04a 沒寫 visual ⚠、visual 要是畫廊元件；不寫背景環境開關', () => {
   const go = (visual) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes: [
     { id: 's01', scene: 'fs-list', from: '#1', to: '#2e', slots: { title: 'A', items: ['一', '二', '三'] } },
     { id: 's02', scene: 'fs-list', from: 20, to: 25, slots: { title: 'B', items: ['一', '二', '三'] } },
@@ -494,7 +494,7 @@ test('全寬版型：整段只有聲音的全畫面段 host 寫 data-wide、報�
   assert.ok(!res.warnings.some((w) => w.startsWith('[s03 fs-list] 全寬')), '寫了主視覺就不提醒');
   assert.match(formatReport(res), /s02｜[^\n]*全寬版型（主卡 1680、內容區 1676×580/);
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip, badges: res.badges });
-  assert.match(html, /id="el-s01"[^>]*style="[^"]*" data-ambient="off"><\/div>/, '子母畫面的段關掉背景環境（光暈漂移、底圖慢拉）');
+  assert.doesNotMatch(html, /data-ambient/, '背景環境已拿掉');
   assert.match(html, /id="el-s02"[^>]*style="[^"]*" data-wide><\/div>/);
   assert.ok(go('robot').errors.some((e) => e.includes('「robot」不是畫廊的插圖元件')));
 });
@@ -837,7 +837,7 @@ test('範例的 13 列（F4 回饋表）：--check 全部 ✖', async () => {
   assert.ok(res.errors.includes('文字對時：s22 的 fx vars.text「1 小時」在 2:08.78 出現，「一個小時」2:12.87（#64）才講到 → from 寫 "#64@一個小時"'), '中文數字＝阿拉伯數字');
 });
 
-test('v2 轉場（design-system §5）：txIn／txOut 分類；換卡不換景（舊的幕多留 0.3 s、z＋1、只留內容區往左擦掉）；章節色塊斜擦；--check 報 items[].out.tx 與「轉場：」一行', async () => {
+test('v2 轉場（design-system §5）：txIn／txOut 分類；換卡不換景（舊的幕多留 0.3 s、z＋1、只留內容區往左擦掉）；章節幕斜擦、不加色塊；--check 報 items[].out.tx 與「轉場：」一行', async () => {
   const { jsonItems, TX_IN, TX_OUT } = await imp('lib/plan.mjs');
   const res = run([
     { id: 's01', scene: 'concept', from: '#1', to: '#3', slots: { text: '甲乙丙丁' } },
@@ -861,7 +861,7 @@ test('v2 轉場（design-system §5）：txIn／txOut 分類；換卡不換景�
   const a02 = byId(res, 'a02');
   const asm = assembleScene({ scene: a02.scene, ctx: a02.resolved.ctx, beats: a02.resolved.beats, id: 'a02', D: a02.D, tone: a02.resolved.tone, exitFade: a02.exitFade, chapter: a02.chapter, prev: a02.prev });
   assert.match(asm.html, /<div id="a02-fs-compare" data-composition-id="a02-fs-compare"[^>]* data-prev="fullscreen">/);
-  assert.match(formatReport(res), /\n轉場：色帶擦開 1（a01）；換卡不換景 1（a02）；色帶收回 1（a02）；疊加卡 2（s01、s02）；章節色塊 1（c01）｜主題：亮色$/m);
+  assert.match(formatReport(res), /\n轉場：色帶擦開 1（a01）；換卡不換景 1（a02）；色帶收回 1（a02）；疊加卡 2（s01、s02）；章節擦入 1（c01）｜主題：亮色$/m);
   const a01 = byId(res, 'a01'), c01 = byId(res, 'c01');
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: buildCaptions(cues, { duration: VD }), pip: res.globals.pip, speakerBox: res.globals.speakerBox });
   // 換卡：a01 的 host 多 0.3 s、z 31；接縫那一刻只留內容區，再 0.3 s power2.in 往左擦掉（之前沒有 clip）
@@ -870,12 +870,9 @@ test('v2 轉場（design-system §5）：txIn／txOut 分類；換卡不換景�
   assert.ok(html.includes(`tl.fromTo('#el-a01', { clipPath: 'inset(0px 0px 0px 0px)' }, { clipPath: 'inset(96px 516px 186px 96px)', duration: 0.001, ease: 'none', immediateRender: false }, ${a01.end});`));
   assert.ok(html.includes(`tl.fromTo('#el-a01', { clipPath: 'inset(96px 516px 186px 96px)' }, { clipPath: 'inset(96px 1824px 186px 96px)', duration: 0.3, ease: 'power2.in', immediateRender: false }, ${r3(a01.end + 0.001)});`));
   assert.doesNotMatch(html, /tl\.fromTo\('#el-a02', \{ (opacity|clipPath: 'inset\(0% 0% 0% 110)/, '換卡的新幕不淡入、不擦開（新卡由段內進場）');
-  // 章節：主色色塊（和章節幕同 z、DOM 在前）從左下斜擦 0.45 s，章節幕晚 0.08 s 跟上，之後色塊藏起來
-  assert.ok(html.indexOf('id="txc-c01"') < html.indexOf('id="el-c01"'));
-  assert.match(html, /<i id="txc-c01" class="v2-tx-ch" style="[^"]*background:var\(--v2-tx-a\);z-index:30;/);
-  assert.ok(html.includes(`tl.fromTo('#txc-c01', { clipPath: 'polygon(0% 100%, 0% 100%, 0% 100%)' }, { clipPath: 'polygon(0% 100%, 0% -100%, 200% 100%)', duration: 0.45, ease: 'expo.inOut' }, ${c01.start});`));
-  assert.ok(html.includes(`tl.fromTo('#el-c01', { clipPath: 'polygon(0% 100%, 0% 100%, 0% 100%)' }, { clipPath: 'polygon(0% 100%, 0% -100%, 200% 100%)', duration: 0.45, ease: 'expo.inOut' }, ${r3(c01.start + 0.08)});`));
-  assert.ok(html.includes(`tl.set('#txc-c01', { opacity: 0 }, ${r3(c01.start + 0.53)});`));
+  // 章節：章節幕直接從左下斜擦 0.45 s，不加主色色塊（換背景會衝突）
+  assert.doesNotMatch(html, /txc-c01|v2-tx-ch/);
+  assert.ok(html.includes(`tl.fromTo('#el-c01', { clipPath: 'polygon(0% 100%, 0% 100%, 0% 100%)' }, { clipPath: 'polygon(0% 100%, 0% -100%, 200% 100%)', duration: 0.45, ease: 'expo.inOut' }, ${c01.start});`));
   // 主時間軸對 host 只動 opacity／clip-path（009 直式的舞台縮放寫在 host 的 CSS transform）
   for (const m of html.matchAll(/tl\.(?:fromTo|to|set)\('(#el-[^']+)'[^;]*;/g)) assert.doesNotMatch(m[0], /\b(x|y|scale|xPercent|yPercent|rotation):/, m[0]);
 });

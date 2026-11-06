@@ -51,6 +51,8 @@ node shared/template/tools/caps.mjs
 
 **3. 生成到暫存資料夾、驗證、預覽 → 停點 ⑥**（每條路的指令在 `references/image-routing.md`）
 
+生圖很久，有能派子代理的工具就照 `references/bg-worker.md` 每張圖派一個工人，同一則回覆一次全部派出；全部回來後由你驗證、出預覽。沒有才自己一張一張做。下面的指令是工人（或你自己）照著跑的。
+
 ```
 node shared/template/tools/brand.mjs bg --html <暫存資料夾>/bg-fs.html --kind fs --out <暫存資料夾>
 ffprobe -v error -show_entries stream=width,height -of csv=p=0 <暫存資料夾>/bg-fs.jpg
@@ -71,7 +73,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 第 1 行把主色、外框、三張背景（暫存資料夾有 `bg-*-dark.jpg` 也一起）存進 `shared/template/styles/<名稱>/`；第 2 行換掉整個工作區（使用者只要這一集就跳過，改照步驟 7 寫 plan.json 的 `style`）。`use` 停下來說「不屬於任何包」→ 先 `brand.mjs pack <舊的名稱>` 把目前的存起來再 use。
 
 完成判準：回報改了哪些檔、走的是哪一條路；有專案時 build 0 個 ✖。
-常見錯誤：使用者說「重做」→ 回步驟 3；同一條路重做 2 次還不行就換下一條路（R9.3）。
+常見錯誤：使用者說「重做」→ 回步驟 3，只重派要重做的那張；同一條路重做 2 次還不行就換下一條路（R9.3）。
 
 **5. 講者調光、瘦臉的預設**（使用者說「以後都要調光」「預設瘦一點」「預設不要調光」時；預設兩個都是 0＝關）
 
@@ -90,7 +92,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 node shared/template/tools/build.mjs --project projects/<專案>
 ```
 
-先重新讀 plan.json（剪輯台可能改過），只改第一層的 `"theme"`：`"dark"`＝暗色（石墨黑底、玻璃卡、主色光暈）；`"light"`＝亮色（預設，不寫也是亮色）。只換顏色 token，版面與動態不變；這一步不改 `shared/`，不用停點 ⑥。
+先重新讀 plan.json（剪輯台可能改過），只改第一層的 `"theme"`：`"dark"`＝暗色（石墨黑底、玻璃卡）；`"light"`＝亮色（預設，不寫也是亮色）。只換顏色 token，版面與動態不變；這一步不改 `shared/`，不用停點 ⑥。
 完成判準：`--check`、build 都 0 個 ✖；回報寫改成哪個主題、改的是哪個 plan.json。
 常見錯誤：寫成 `"theme": "暗"`、或寫進某一段的 scene 裡 → 只能是 `"light"` 或 `"dark"`，寫在 plan.json 第一層。
 
@@ -128,7 +130,7 @@ node shared/template/tools/brand.mjs speaker
 | 使用者回 | 做什麼 |
 |---|---|
 | 「可以」 | 步驟 4 |
-| 「重做」 | 步驟 3；同一條路第 2 次還不行換下一條路 |
+| 「重做」 | 步驟 3（只重派要重做的那張）；同一條路第 2 次還不行換下一條路 |
 
 ## 自我核對
 
@@ -169,3 +171,4 @@ node shared/template/tools/brand.mjs speaker
 ## 什麼時候讀 references/
 
 - `references/image-routing.md`：步驟 3 生成背景圖時才讀。
+- `references/bg-worker.md`：步驟 3 要派工人同時生成時才讀。

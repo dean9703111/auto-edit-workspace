@@ -408,7 +408,7 @@ test('P.type：cps、caret:false、空白跟著下一個字、只有空白的文
 });
 
 // ---------- 動態 v2（specs/010-motion-v2/design-system.md §11；specs/contracts/motion.md） ----------
-const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'cam', 'grow', 'ambient', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'sfx'];
+const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'cam', 'grow', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'sfx'];
 
 test('v2：原語清單、開頭註解、時間與曲線表、區域、u', () => {
   const { P } = mk();
@@ -435,7 +435,7 @@ test('v2：原語清單、開頭註解、時間與曲線表、區域、u', () =>
   assert.match(MOTION_SRC, /定調（v2/, '開頭定調照 design-system.md §0、§3（§13 第一列）');
 });
 
-test('v2：每個 P.* 呼叫的 tween 帶 data { sc, role, fn }；idle／flow／ambient／慢推是 micro；P.sfx 登記並回傳 P.at', () => {
+test('v2：每個 P.* 呼叫的 tween 帶 data { sc, role, fn }；idle／flow／慢推是 micro；P.sfx 登記並回傳 P.at', () => {
   const root = { querySelectorAll: () => [], getAttribute: (k) => (k === 'data-cues-sample' ? '{"start":0,"D":8,"cues":{"3":[2,3.5]},"refs":{"#3@詞":2.6}}' : null) };
   const { tl, P } = mk(root);
   const a = { style: {} }, b = { style: {} };
@@ -597,7 +597,6 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
           for (const n of [host, ...host.querySelectorAll('*')]) { const cs = getComputedStyle(n); parts.push(keys.map((p) => cs[p]).join('|') + '|' + (n.getAttribute('transform') || '') + '|' + (n.textContent || '').length); } }
         out[k] = parts.join(';'); }
       out.pen = [...document.querySelectorAll('.sc-pen')].map((n) => n.style.left + n.style.top + n.style.opacity).join(';');
-      out.ambient = [...document.querySelectorAll('.sc-surface-fs, .sc-surface-fs *')].map((n) => { const cs = getComputedStyle(n); return cs.transform + cs.translate + cs.opacity; }).join(';');
       return out; })()`);
     const times = [0, 0.6, 1.1, 1.7, 2.3, 2.6, 3.1, 3.9, 4.6, 5.9];
     const shuffled = [3.9, 0.6, 5.9, 1.1, 4.6, 0, 2.6, 1.7, 3.1, 2.3];
@@ -605,10 +604,10 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
       const A = {}, B2 = {};
       for (const t of times) { await S.seek(t); A[t] = { st: await stateOf() }; }
       for (const t of shuffled) { await S.seek(t); B2[t] = { st: await stateOf() }; }
-      for (const k of [...Object.keys(V2_FIX), 'pen', 'ambient']) for (const t of times) assert.equal(B2[t].st[k], A[t].st[k], `P.${k}：${t}s 亂序 seek 和照順序不同`);
-      // 原語真的有動：完成態和起點不同；ambient 有加光暈與浮塵；彗星頭起點在線頭
-      for (const k of [...Object.keys(V2_FIX), 'pen', 'ambient']) assert.ok(times.some((t) => A[t].st[k] !== A[0].st[k]), `P.${k} 看起來沒有動`);
-      assert.equal(await S.evaluate(`document.querySelectorAll('.sc-surface-fs .sc-amb').length`), 2);
+      for (const k of [...Object.keys(V2_FIX), 'pen']) for (const t of times) assert.equal(B2[t].st[k], A[t].st[k], `P.${k}：${t}s 亂序 seek 和照順序不同`);
+      // 原語真的有動：完成態和起點不同；背景不加光暈、浮塵；彗星頭起點在線頭
+      for (const k of [...Object.keys(V2_FIX), 'pen']) assert.ok(times.some((t) => A[t].st[k] !== A[0].st[k]), `P.${k} 看起來沒有動`);
+      assert.equal(await S.evaluate(`document.querySelectorAll('.sc-surface-fs .sc-amb, .sc-surface-fs .sc-dust').length`), 0);
       assert.equal(await S.evaluate(`document.querySelectorAll('[data-sc-ch]').length`), 10);
       assert.deepEqual(await S.evaluate(`(window.SceneMotion.sfx['x-v2'] || window.SceneMotion.sfx['?']).map((x) => [x.name, x.ref, x.t])`), [['click', '#1', 2]]);
       assert.deepEqual(await S.cueErrors(), []);

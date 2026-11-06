@@ -132,11 +132,10 @@
     // 拍 5 ＋0.6 第二張聚焦（放大抬起、主色亮框）
     P.spot('#xn-cardB', '#xn-cardB', T3 + 0.6, { scale: 1.03, lift: -8 });
 
-    // 收：講完 2 秒回均衡（第一張亮回、第二張亮框收掉），主數字呼吸；完成態停到段尾
+    // 收：講完 2 秒回均衡（第一張亮回、第二張亮框收掉）；完成態停到段尾
     const TR = T3 + 2.0;
     P.spot('#xn-cardB', null, TR, { dur: 0.6 });
     P.dim('#xn-cardA', TR, { to: 1 });
-    P.idle('#xn-nA', TR, { y: 0, scale: 0.04, period: 1.8 });
 
     P.end();                                         // 長度＝plan.json 這段的長度
     window.__timelines['x-numbers'] = tl;

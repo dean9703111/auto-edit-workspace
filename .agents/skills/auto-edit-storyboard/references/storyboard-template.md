@@ -2,6 +2,14 @@
 
 給 `auto-edit-storyboard` 步驟 6 用。格式的唯一定義是 `shared/template/USAGE.md` 2.3；這裡是可以直接複製、把 `<…>` 換掉的骨架。段落編號用 s01、s02…（media 段用 m01…、情境動畫用 x01…），和 plan.json 的 `id` 一致。
 
+**截圖與分鏡表**
+
+- `qc.mjs storyboard` 自己算每段的完成態（條列逐條換的每次一張、錄影段每個標註到位一張），不要自己算秒數跑 `snapshot --at`。
+- 最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每段「截圖觀察」上面，**只貼這一次印出來的那幾行**（同一段張數變了，工具會清掉舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」）；每張後面的「為什麼」（完成態、第 N 條、…到位、整段都在動）照 USAGE.md 2.3 讀。
+- 截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard，還是一樣就在「需要我決定的事」列出段號和秒數。
+- 照 `references/storyboard-template.md` 寫 `work/storyboard.md`；「音效」欄寫 `預設`、`無`、換的名稱（例 `shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`。
+- 拿不定版面的段落：先把第一個方案的圖改名成 `s05-A.png`，改 plan.json、build、再跑一次 storyboard 得到 `s05.png`，兩張並排請使用者選。
+
 ```markdown
 # 分鏡表：<專案>（草稿）
 

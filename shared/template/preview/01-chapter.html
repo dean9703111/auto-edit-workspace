@@ -33,8 +33,8 @@
   #pv-chapter #pv-chGroup { position: absolute; left: 0; right: 0; top: 510px; margin: 0 auto; display: flex; align-items: flex-start; gap: var(--sc-gap-lg); width: max-content; }
   #pv-chapter #pv-chCol { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
   #pv-chapter #pv-chSub { margin-left: 40px; }
-  #pv-chapter #pv-chIcon { position: absolute; left: 0; top: -220px; width: 180px; height: 180px; color: var(--sc-accent); }
-  #pv-chapter #pv-chIcon svg { display: block; width: 180px; height: 180px; }
+  #pv-chapter #pv-chIcon { position: absolute; left: 0; top: -220px; display: grid; place-items: center; width: 180px; height: 180px; border-radius: 28px; background: var(--sc-chnum-bg); color: var(--sc-chnum-num); box-shadow: inset 0 0 0 2px var(--sc-ch-sub-line); }
+  #pv-chapter #pv-chIcon svg { display: block; width: 112px; height: 112px; }
 </style>
 </head>
 <body>
@@ -77,10 +77,11 @@ window.__PREVIEW = {"key":"chapter","duration":2.5,"cues":[{"sound":"chapter","a
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 2.5;
-    /* v2（shared/template/BEATS.md §2 的動作）：背景第一格就在（build 整幕淡入）；章號 0.1 起重拍進場（1.3 → 1、back.out(2)）→ 標題板由左擦開、0.15 後章名逐字上浮 → 圖示描線 → 副標同樣擦開＋逐字；HF 不淡出 */
+    /* v2（shared/template/BEATS.md §2 的動作）：背景第一格就在（build 整幕淡入）；章號 0.1 起重拍進場（1.3 → 1、back.out(2)）→ 標題板由左擦開、0.15 後章名逐字上浮 → 圖示卡隨章號進場、線條描出 → 副標同樣擦開＋逐字；HF 不淡出 */
     P.pop('#pv-chNum', 0.1, { from: 1.3, dy: 0, ease: 'back.out(2)' });
     P.wipe('#pv-chTitle', 0.45, { dir: 'left', dur: P.V2.SHELL });
     P.chars('#pv-chTitle .sc-opt', 0.45 + 0.15);
+    P.pop('#pv-chIcon', 0.1, { from: 1.3, dy: 0, ease: 'back.out(2)' });
     P.icon('#pv-chIcon', 0.45 + 0.15, { dur: 0.9 });
     P.wipe('#pv-chSub', 0.6, { dir: 'left', dur: P.V2.SHELL });
     P.chars('#pv-chSub .sc-opt', 0.6 + 0.15);

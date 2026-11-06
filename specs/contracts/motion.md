@@ -49,7 +49,7 @@
 
 | 原語 | 選項（預設） | §14.1 語彙 |
 |---|---|---|
-| `P.wipe(sel, at, {dir:'left', dur:0.5, ease, stagger})` | clip 由一側揭開 | 擦開、章節色塊擦入、換卡不換景（新卡，配 `P.pop`） |
+| `P.wipe(sel, at, {dir:'left', dur:0.5, ease, stagger})` | clip 由一側揭開 | 擦開、章節擦入、換卡不換景（新卡，配 `P.pop`） |
 | `P.wipeOut(sel, at, {dir, dur:0.3})` | 反向 | 擦掉 |
 | `P.slide(sel, at, {from:'left', dur})`／`P.slideOut(sel, at, {to, dur:0.28})` | xPercent／yPercent ±100；外層 overflow:hidden | 抽屜抽出／抽屜收回 |
 | `P.pop(sel, at, {from:0.82, dy:28u, to:1, dur, stagger, ease:back.out(1.6)})` | 縮放＋上移＋淡入 | 彈出、錯拍彈出（`stagger`）、章號重拍 |
@@ -70,7 +70,6 @@
 | `P.dim(sel, at, {to:0.6, dur:0.4})` | 記住目前亮度 | 退焦 |
 | `P.cam(sel, at, {to, k, scale, x, y, dur:1.0})` | dur ≥ 2 算微動；009 直式舞台縮放（`window.__regions`＋root 寬 > 高）時 `to` 不帶位移、原點 `50% 0%`，`P.region` 用橫式預設 | 鏡頭慢推、鏡頭跟焦點（`to`＋`k`）、鏡頭回正 |
 | `P.idle(sel, at, {y:4u, x, scale, period:3.2, ramp:0.8, until})` | 寫 CSS `translate`／`scale`；`until` 沒寫才讀 `P.dur()`（情境模板一律寫 `until: D`，模板沒有 cue 表） | 漂浮、呼吸（`scale`） |
-| `P.ambient(D)` | `.sc-surface-fs` 加 `.sc-amb`×2、`.sc-dust`，慢拉 1.06→1；`P.end()` 自動呼叫，root `data-ambient="off"` 關 | 背景環境 |
 | `P.sfx(name, ref, off)` | 見 §5 | （音效拍點欄） |
 
 build 內建（custom 不寫）：講者慢推、色帶擦開、子母畫面飛入、色帶收回（002 的 `.v2-tx`）。換卡不換景：新卡在 custom 寫 `P.wipe`＋`P.pop`，舊卡由 build 補 `P.wipeOut`。給剪片 AI 看的同一張表在 `shared/template/BEATS.md` §2（001 維護；`audit.test` 逐列比對名稱與第一個 `P.*`）。分鏡「動態」欄寫的名稱與上表的對應，在 `tools/lib/audit-beats.mjs` 的 `VOCAB`（45 個＋拍型縮寫「開場」），audit 用它檢查語彙與「分鏡用了沒做的動作」（cli-003 §2.3d）。
@@ -96,7 +95,7 @@ build 內建（custom 不寫）：講者慢推、色帶擦開、子母畫面飛�
 | 003 audit | 見下段 |
 | 004 `qc.mjs observe` 取樣 | `micro`（漂浮、呼吸、虛線流動、背景環境、慢推）不算動態；`fn: 'slide'` 結束後 0.3 s、`fn: 'spot'` 抬起結束後各截一張 |
 
-audit（cli-003 §2.2 末段）：`micro` 不算忙碌段；同一個 `sc` 只算一個新元素；`fn` 是 `wipe`／`slide`／`grow` 算進場、`wipeOut`／`slideOut` 算退場。量版面跳過 `.sc-comet, .sc-ripple, .sc-spot, .sc-sheen, .sc-mk, .sc-strike, .sc-amb, .sc-dust`。
+audit（cli-003 §2.2 末段）：`micro` 不算忙碌段；同一個 `sc` 只算一個新元素；`fn` 是 `wipe`／`slide`／`grow` 算進場、`wipeOut`／`slideOut` 算退場。量版面跳過 `.sc-comet, .sc-ripple, .sc-spot, .sc-sheen, .sc-mk, .sc-strike`。
 
 ## 5. `P.sfx` 登記格式（給 002 在 build 解析成 `<audio>`）
 
@@ -135,8 +134,7 @@ P.sfx('ding', '#41@崩潰', 0.2);              // off＝再往後幾秒（可負
 ## 7. CSS（`kit/scene.css` v2 段）
 
 - token：`--v2-*`（亮：`:root`；暗：`:root[data-theme="dark"]`，含 `--sc-fs-*` 的暗色覆寫）。custom 與模板的陰影、光暈、漸層只能用 `var(--v2-*)`（examples.test 檢查）。`--v2-strike` 預設 `var(--sc-warn, #E5484D)`。
-- 原語自動插的元素：`.sc-mk`、`.sc-ripple`、`.sc-comet__head`／`__halo`、`.sc-spot`、`.sc-sheen`、`.sc-strike`、`.sc-amb`、`.sc-dust`；作者不用寫這些 class。
-- 浮塵：`--v2-dust`／`--v2-dust-2` 是遮罩圖（點的透明度＝濃淡），顏色由 `--v2-dust-ink`（＝`var(--brand)`）／`--v2-dust-2-ink`（暗色白點）上；`.sc-dust::before`、`::after` 各一層。kit 不寫死主色碼，`brand.mjs` 換主色會跟著換。
+- 原語自動插的元素：`.sc-mk`、`.sc-ripple`、`.sc-comet__head`／`__halo`、`.sc-spot`、`.sc-sheen`、`.sc-strike`；作者不用寫這些 class。
 - `.v2-tx`：給 002 build 轉場色帶用。
 
 ## 8. 版面 helper `SceneLayout`（012；`kit/scene-layout.js`）

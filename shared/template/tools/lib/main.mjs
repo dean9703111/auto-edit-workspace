@@ -37,7 +37,7 @@ export const V2TX = {
   wipe: 0.62, bandA: 150, bandB: 48,   // 色帶擦開（expo.inOut）
   retract: 0.5, pipOut: 0.3,           // 色帶收回、子母畫面淡出
   swapOut: 0.3,                        // 換卡不換景：舊卡擦掉（power2.in）
-  chapter: 0.45, chapterLag: 0.08,     // 章節色塊斜擦
+  chapter: 0.45,     // 章節幕斜擦（不加色塊：換背景會衝突）
   fly: 0.75, land: 0.62, pop: 0.35,    // 子母畫面飛入（power3.inOut）、外框淡入
 };
 const SWAP_KEEP = 'inset(96px 516px 186px 96px)', SWAP_GONE = 'inset(96px 1824px 186px 96px)';   // 換卡：只留內容區 x 96–1404、y 96–894，再往左擦掉
@@ -249,12 +249,11 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
       const varAttr = it.type === 'fx' ? `\n       data-variable-values='${attrJson(it.vars)}'` : '';
       // 換卡不換景：舊的幕多留 0.3s、疊在新的幕上面（z＋連鎖深度）擦掉舊卡
       const swapOut = it.txOut === 'swap' && it.fullEnd ? r3(Math.min(V2TX.swapOut, DUR - it.e)) : 0;
-      if (it.txIn === 'chapter' && it.fadeIn) hosts.push(`  <i id="txc-${it.id}" class="v2-tx-ch" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:var(--v2-tx-a);z-index:${it.z};pointer-events:none"></i>`);
       // 直式：舞台縮放的幕下面墊整張畫布的純色底（縮放後露出的頂端；spike D-1：同一張背景圖兩種比例會出現兩次裝飾線，所以不用圖）
       if (bd) hosts.push(`  <div id="bd-${it.id}" class="clip" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-track-index="${track++}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:${it.type === 'fx' ? FX_BG[it.bg] : it.key === 'chapter' ? 'var(--sc-ch-bg)' : 'var(--sc-fs-bg)'};z-index:${it.z - 1}"></div>`);
       const [hw, hh] = portrait && !st ? [W, H] : [1920, 1080];
       hosts.push(`  <div id="el-${it.id}" data-composition-id="${it.compId}" data-composition-src="${it.file}"${varAttr}
-       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"${pieces.length ? ' data-ambient="off"' : wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 子母畫面的段不要背景環境（kit P.ambient）；沒有小視窗的全畫面段用全寬版型（kit widen）
+       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
       if (swapOut > 0) {
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: 'inset(0px 0px 0px 0px)' }, { clipPath: '${SWAP_KEEP}', duration: 0.001, ease: 'none', immediateRender: false }, ${n3(it.e)});`);
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: '${SWAP_KEEP}' }, { clipPath: '${SWAP_GONE}', duration: ${swapOut}, ease: 'power2.in', immediateRender: false }, ${n3(it.e + 0.001)});`);
@@ -286,9 +285,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
         tl.push(`tl.fromTo('${sel}', { clipPath: 'inset(0% 0% 0% ${EDGE}%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: ${V2TX.wipe}, ease: 'expo.inOut' }, ${n3(it.s)});`);
         bandPair(it.s, 'in');
       } else if (it.fadeIn && it.txIn === 'chapter') {
-        tl.push(`tl.fromTo('#txc-${it.id}', { clipPath: '${TRI0}' }, { clipPath: '${TRI1}', duration: ${V2TX.chapter}, ease: 'expo.inOut' }, ${n3(it.s)});`);
-        tl.push(`tl.fromTo('${sel}', { clipPath: '${TRI0}' }, { clipPath: '${TRI1}', duration: ${V2TX.chapter}, ease: 'expo.inOut' }, ${n3(it.s + V2TX.chapterLag)});`);
-        tl.push(`tl.set('#txc-${it.id}', { opacity: 0 }, ${n3(it.s + V2TX.chapterLag + V2TX.chapter)});`);
+        tl.push(`tl.fromTo('${sel}', { clipPath: '${TRI0}' }, { clipPath: '${TRI1}', duration: ${V2TX.chapter}, ease: 'expo.inOut' }, ${n3(it.s)});`);
       } else if (it.fadeIn) tl.push(`tl.fromTo('${sel}', { opacity: 0 }, { opacity: 1, duration: ${FADE}, ease: 'sine.out' }, ${n3(it.s)});`);
       if (it.fadeOut && it.fullEnd && it.txOut === 'retract') {
         const at = Math.max(it.s, it.e - V2TX.retract);

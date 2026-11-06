@@ -128,6 +128,9 @@ test('生圖指令：直接生成全部九張並存檔，每類背景可獨立�
   assert.match(request.prompt, /960×1080/); assert.match(request.prompt, /1920×1080/);
   assert.match(request.prompt, /#21845B/); assert.match(request.prompt, /安靜的紙感/); assert.ok(request.prompt.includes(dir));
   assert.equal(fs.readFileSync(path.join(dir, 'request.md'), 'utf8'), request.prompt);
+  assert.match(request.prompt, /一次派出 3 個子代理，A、B、C 各一個/, '生圖指令要求同時生成');
+  assert.match(request.prompt, /只由主代理執行/, '狀態只有主代理回報');
+  assert.match(request.prompt, /才由主代理自己依序生成/, '沒有子代理或生圖工具時有退路');
   const copiedAgain = await ok('/api/design/request', { description: '安靜的紙感，邊緣有細線' });
   assert.equal(copiedAgain.request.id, request.id);
   assert.ok(fs.readdirSync(dir).some((f) => f.startsWith('reference.')));

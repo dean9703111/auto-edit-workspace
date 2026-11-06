@@ -71,11 +71,12 @@ export function readStopLog(text) {
 // ---------- 時間軸（--timeline）----------
 // 產物照「第一次出現」排（birthtime；檔案系統不給就用修改時間），停點紀錄照表上的時間；
 // 等待＝停點「待回覆」到同一個停點下一列的時間，其餘算 AI 在做事（含 render、轉檔這類等工具跑的時間）
+// 沒記「通過」、後面又有產物的停點：用下一個產物的時間估（estimated），不算進 AI 在做事；後面沒有產物才是「還在等」
 export const TIMELINE_FILES = [
   ['work/main.mp4', '接主軌（剪乾淨開始）'], ['work/cuts.md', '剪輯清單（停點 ①）'], ['work/rough.mp4', '初剪'],
   ['work/rough.srt', '字幕'], ['work/cutpoints.json', '剪接點'], ['work/screen-sync.json', '螢幕錄影同步'],
   ['work/rough-look.mp4', '瘦臉底片'], ['work/構圖預覽.jpg', '構圖分析（停點 ②）'], ['work/hyperframes/plan.json', 'plan.json'],
-  ['work/storyboard.md', '分鏡表（停點 ③）'], ['work/hyperframes/index.html', 'build'],
+  ['work/分鏡素材.md', '開始排分鏡'], ['work/storyboard.md', '分鏡表（停點 ③）'], ['work/hyperframes/index.html', 'build'],
   ['output/test-clips/test-clip.mp4', '測試片段'], ['output/final.mp4', '完成影片'], ['output/qc/qc-sheet.jpg', '驗收'],
 ];
 const born = (st) => (st.birthtimeMs > 0 && st.birthtimeMs <= st.mtimeMs + 1000 ? st.birthtimeMs : st.mtimeMs);
@@ -83,6 +84,8 @@ const hm = (ms) => { const m = Math.max(0, Math.round(ms / 60000)); return `${Ma
 const stamp = (ms) => { const d = new Date(ms), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 const parseStamp = (t) => { const m = /^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})/.exec(String(t || '').trim()); return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : null; };
 
+// 停點紀錄只記到分：停下來前後 2 分鐘內出現的檔是這次停下來之前做的，不算使用者回覆了
+const STOP_SETTLE = 2 * 60 * 1000;
 export function projectTimeline(project) {
   const ev = [];
   const add = (rel, label) => { try { const st = fs.statSync(path.join(project, rel)); ev.push({ t: born(st), last: st.mtimeMs, what: rel, label, kind: 'file' }); } catch { /* 還沒有這個檔 */ } };
@@ -94,6 +97,7 @@ export function projectTimeline(project) {
   } catch { /* 沒有情境動畫 */ }
   // 停點紀錄
   const waits = [];
+  let openStops = false;
   try {
     const sl = readStopLog(fs.readFileSync(path.join(project, 'work', '製作進度.md'), 'utf8'));
     let open = new Map();
@@ -102,15 +106,24 @@ export function projectTimeline(project) {
       if (t == null) continue;
       ev.push({ t, last: t, what: r.label, label: r.state, kind: 'stop' });
       const o = open.get(r.stop);
-      if (o != null && r.state !== '待回覆') { waits.push({ stop: r.label, ms: t - o }); open.delete(r.stop); }
+      if (o != null && r.state !== '待回覆') { waits.push({ stop: r.label, ms: t - o, since: o }); open.delete(r.stop); }
       if (r.state === '待回覆') open.set(r.stop, t);
     }
     for (const [stop, t] of open) waits.push({ stop, ms: null, since: t });
+    openStops = true;
   } catch { /* 沒有製作進度.md */ }
   ev.sort((a, b) => a.t - b.t || (a.kind === 'stop') - (b.kind === 'stop'));
   if (!ev.length) return { events: [], total: 0, wait: 0, work: 0, waits, longest: [] };
+  if (openStops) for (const w of waits) {
+    if (w.ms != null) continue;
+    const next = ev.find((e) => e.kind === 'file' && e.t > w.since + STOP_SETTLE);
+    if (next) { w.ms = next.t - w.since; w.estimated = true; }
+  }
   const total = ev[ev.length - 1].t - ev[0].t, wait = waits.reduce((n, w) => n + (w.ms || 0), 0);
-  const gaps = ev.slice(1).map((e, i) => ({ from: ev[i], to: e, ms: e.t - ev[i].t })).sort((a, b) => b.ms - a.ms).slice(0, 3);
+  // 最久的幾段只算 AI 的時間：扣掉落在等使用者回覆裡的部分
+  const waitRanges = waits.filter((w) => w.ms != null && w.since != null).map((w) => [w.since, w.since + w.ms]);
+  const aiMs = (a, b) => waitRanges.reduce((n, [x, y]) => n - Math.max(0, Math.min(b, y) - Math.max(a, x)), b - a);
+  const gaps = ev.slice(1).map((e, i) => ({ from: ev[i], to: e, ms: aiMs(ev[i].t, e.t) })).filter((g) => g.ms > 0).sort((a, b) => b.ms - a.ms).slice(0, 3);
   return { events: ev, total, wait, work: Math.max(0, total - wait), waits, longest: gaps };
 }
 
@@ -125,7 +138,7 @@ function printTimeline(label, tl) {
     prev = e.t;
   }
   console.log(`總時長 ${hm(tl.total)}；等使用者回覆 ${hm(tl.wait)}；AI 在做事 ${hm(tl.work)}（含等工具跑，例如轉檔、render）`);
-  if (tl.waits.length) console.log(`停點等待：${tl.waits.map((w) => `${w.stop} ${w.ms == null ? '還在等' : hm(w.ms)}`).join('、')}`);
+  if (tl.waits.length) console.log(`停點等待：${tl.waits.map((w) => `${w.stop} ${w.ms == null ? '還在等' : `${w.estimated ? '約 ' : ''}${hm(w.ms)}${w.estimated ? '（沒記「通過」，用下一個產物的時間估）' : ''}`}`).join('、')}`);
   console.log(`最久的幾段：${tl.longest.map((g) => `${g.from.kind === 'stop' ? g.from.what : g.from.what.replace(/^work\/(hyperframes\/)?/, '')} → ${g.to.kind === 'stop' ? g.to.what : g.to.what.replace(/^work\/(hyperframes\/)?/, '')} ${hm(g.ms)}`).join('、')}`);
 }
 
@@ -205,7 +218,7 @@ export function projectStatus(project) {
       const rev = w.stop === '③ 分鏡表' ? [...w.label.matchAll(/([A-Za-z0-9-]+) v(\d+)/g)] : [];
       next = rev.length ? `等使用者看 ${rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`).join('、')}；回覆「可以」後跑 versions.mjs accept --seg ${rev.map((m) => m[1]).join(',')}，再照 auto-edit-motion 做（要改就改那份 分鏡.md 再停一次）` : {
         '① 剪輯清單': '等使用者在剪輯清單頁（editor.mjs 印的「剪輯清單：」網址）勾好後回覆；回覆後先重新讀 cuts.md（只剪「剪」欄是 [x] 的列），跑 media.mjs ng-snap，照它印的指令剪',
-        '② 構圖': '等使用者在構圖台拖好框按「儲存」（剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就把 qc.mjs framing 表上 ✔ 那一列的 frame 寫進 plan.json（1.0 倍不寫）。之後跑 qc.mjs speaker 量講者框',
+        '② 構圖': '等使用者在構圖台拖好框按「儲存」（剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就把 qc.mjs framing 表上 ✔ 那一列的 frame 寫進 plan.json（1.0 倍不寫）。之後跑 qc.mjs speaker --write 量講者框',
         '③ 分鏡表': '等使用者在分鏡表頁（editor.mjs 印的「分鏡表：」網址）改好後回覆；回覆「可以」或「改好了」後，先重新讀 work/storyboard.md；有「想換成」「補充說明」的段先重做、重截、刪掉那兩行再停一次，都沒有才寫正式 plan.json',
         '④ 完成影片預覽': '等使用者看完成影片預覽（editor.mjs 印的「完成影片預覽：」網址）；要改就改 plan.json 那一段再 build，說可以就輸出測試片段與完成影片',
         '⑤ 剪輯台': '等使用者在剪輯台調完說「調好了」；之後重新讀 plan.json 與 rough.srt 再 build',

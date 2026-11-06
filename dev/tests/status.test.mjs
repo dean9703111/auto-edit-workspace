@@ -154,6 +154,26 @@ test('--timeline：產物照第一次出現排；停點等待＝待回覆到同�
   assert.deepEqual(fs.readdirSync(path.join(p, 'work'), { recursive: true }).sort(), before, '不寫任何檔');
 });
 
+test('時間軸：沒記「通過」的停點用下一個產物估等待；停下來前後 2 分鐘內的檔不算回覆；最久的幾段不含等待；後面沒產物才是還在等', async () => {
+  const S = await imp('status.mjs');
+  const p = mk();
+  const at = (sec) => { const d = new Date(Date.now() - sec * 1000), z = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  const log = (sec) => `## 停點紀錄\n\n| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |\n|---|---|---|---|---|\n| ${at(sec)} | ② 構圖 | 待回覆 | | |\n`;
+  touch(p, 'work/cutpoints.json', 'x', 3 * 3600);
+  touch(p, 'work/構圖預覽.jpg', 'x', 2 * 3600 - 30);       // 和停下來同一分鐘：停下來之前做的
+  touch(p, 'work/製作進度.md', log(2 * 3600), 5 * 3600);
+  let tl = S.projectTimeline(p);
+  assert.equal(tl.waits[0].ms, null, '後面沒有產物：還在等');
+  touch(p, 'work/hyperframes/plan.json', '{}', 3600);       // 使用者一小時後存了構圖台
+  tl = S.projectTimeline(p);
+  assert.equal(tl.waits[0].estimated, true);
+  assert.ok(Math.abs(tl.wait - 3600e3) < 120e3, `等待 ${tl.wait}`);
+  assert.equal(tl.work, tl.total - tl.wait);
+  assert.ok(tl.longest.every((g) => g.to.what !== 'work/hyperframes/plan.json'), '等使用者的那一段不算最久');
+  const r = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p, '--timeline'], { encoding: 'utf8' });
+  assert.match(r.stdout, /② 構圖 約 1:0\d（沒記「通過」，用下一個產物的時間估）/);
+});
+
 test('018 舊專案停點紀錄的「④ Studio 預覽」照認，印成現在的名稱', () => {
   const log = ['## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |', '|---|---|---|---|---|', '| 2026-11-01 10:00 | ④ Studio 預覽 | 待回覆 | — | — |', ''].join('\n');
   const r = readStopLog(log).last.get('④ 完成影片預覽');

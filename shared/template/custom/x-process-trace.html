@@ -123,7 +123,6 @@
     P.icon('#xprt-ico1, #xprt-ico2, #xprt-ico3, #xprt-ico4', 1.15, { stagger: 0.12 });
     // 拍 2 預告：還沒通電的虛線走線淡入、一直往前流；焊點跟著出現
     P.in('.xprt-ghost, .xprt-pad', 1.5, { stagger: 0.05 });
-    P.flow('.xprt-ghost', 1.5);
     // 拍 3 等待：預覽態（四顆壓暗縮小）＋鏡頭慢推，推到第 1 站前 0.2 秒
     P.spot(ALL, 'none', 2.0, { dim: 0.45, dur: 0.6 });
     P.cam('#xprt-card', 2.0, { scale: 1.03, dur: T1 - 2.2 });

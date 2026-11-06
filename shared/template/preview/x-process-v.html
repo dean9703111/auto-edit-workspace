@@ -103,7 +103,6 @@
     P.icon('#xproc-ico1, #xproc-ico2, #xproc-ico3, #xproc-ico4', 1.15, { stagger: 0.12 });
     // 拍 2 預告：站間虛線淡入、一直往前流
     P.in('.xproc-ghost', 1.5, { stagger: 0.1 });
-    P.flow('.xproc-ghost', 1.5);
     // 拍 3 等待：預覽態（四站壓暗縮小）＋鏡頭慢推，推到第 1 站前 0.2 秒
     P.spot(ALL, 'none', 2.0, { dim: 0.45, dur: 0.6 });
     P.cam('#xproc-card', 2.0, { scale: 1.03, dur: T1 - 2.2 });

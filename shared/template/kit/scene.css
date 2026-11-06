@@ -449,6 +449,7 @@ body, #root {
   padding-top: 44px;                           /* 標籤行框頂 44（字面頂 44＋9） */
   border-radius: 28px;
   background: var(--sc-chnum-bg);
+  box-shadow: inset 0 0 0 2px var(--sc-ch-sub-line);   /* 和副標斜帶同一條細框：深色背景上也看得到卡緣 */
 }
 .sc-chapnum__label {
   font-size: 34px;
@@ -834,14 +835,6 @@ body, #root {
                      radial-gradient(circle at 55% 70%, transparent 0 2.5px, #000 3.5px), linear-gradient(104deg, #000 0 52%, rgba(0, 0, 0, 0.8) 68%, #000 84%);
   --v2-stamp-ink-size: 37px 41px, 23px 29px, 61px 53px, 100% 100%;
   --v2-sheen:        linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.55) 48%, transparent 76%);
-  --v2-amb-a:        radial-gradient(closest-side, color-mix(in srgb, var(--brand) 22%, transparent), transparent);
-  --v2-amb-b:        radial-gradient(closest-side, rgba(255, 196, 150, 0.50), transparent);
-  --v2-amb-blend:    normal;
-  /* 浮塵：遮罩（黑點的透明度＝點的濃淡），顏色由 --v2-dust-ink 上，brand.mjs 換主色會跟著換 */
-  --v2-dust:         url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1200'><g fill-opacity='.22'><circle cx='212' cy='140' r='2'/><circle cx='540' cy='880' r='3'/><circle cx='860' cy='260' r='2'/><circle cx='1180' cy='1010' r='2'/><circle cx='1490' cy='420' r='3'/><circle cx='1760' cy='760' r='2'/><circle cx='330' cy='620' r='2'/><circle cx='1020' cy='560' r='2'/><circle cx='1640' cy='120' r='2'/><circle cx='720' cy='1120' r='3'/><circle cx='90' cy='980' r='2'/><circle cx='1340' cy='720' r='2'/></g></svg>");
-  --v2-dust-ink:     var(--brand);
-  --v2-dust-2:       none;
-  --v2-dust-2-ink:   transparent;
   /* 下方字卡（疊在實拍上：硬邊錯位底板＋一層很淡的落影；不用發光） */
   --v2-lt-card:      #FFFFFF;
   --v2-lt-ink:       #141414;
@@ -892,13 +885,6 @@ body, #root {
   --v2-comet-halo:   color-mix(in srgb, var(--brand) 45%, transparent);
   --v2-marker:       color-mix(in srgb, var(--brand) 40%, transparent);
   --v2-sheen:        linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.28) 48%, transparent 76%);
-  --v2-amb-a:        radial-gradient(closest-side, color-mix(in srgb, var(--brand) 38%, transparent), transparent);
-  --v2-amb-b:        radial-gradient(closest-side, rgba(90, 150, 210, 0.22), transparent);
-  --v2-amb-blend:    screen;
-  --v2-dust:         url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1200'><g fill-opacity='.45'><circle cx='420' cy='330' r='2'/><circle cx='1270' cy='180' r='2'/><circle cx='1580' cy='980' r='2'/></g></svg>");
-  --v2-dust-ink:     var(--brand);
-  --v2-dust-2:       url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1200'><g fill-opacity='.30'><circle cx='212' cy='140' r='1.5'/><circle cx='540' cy='880' r='2'/><circle cx='860' cy='260' r='1.5'/><circle cx='1180' cy='1010' r='1.5'/><circle cx='1490' cy='420' r='2'/><circle cx='1760' cy='760' r='1.5'/><circle cx='330' cy='620' r='1.5'/><circle cx='1020' cy='560' r='1.5'/><circle cx='1640' cy='120' r='1.5'/><circle cx='720' cy='1120' r='2'/><circle cx='90' cy='980' r='1.5'/><circle cx='1340' cy='720' r='1.5'/></g></svg>");
-  --v2-dust-2-ink:   #FFFFFF;
   --v2-lt-card:      #121418;
   --v2-lt-ink:       #F3EFEA;
   --v2-lt-mute:      rgba(243, 239, 234, 0.70);
@@ -958,16 +944,7 @@ body, #root {
 /* v2 全畫面主卡：卡片有景深（落影）＋暗色玻璃層 */
 .sc-wcard { background: var(--v2-card); border-color: var(--v2-card-line); box-shadow: var(--v2-card-shadow); color: var(--v2-ink); }
 
-/* 背景環境層（P.ambient 自動插） */
 .sc-surface-fs { overflow: hidden; }
-.sc-amb { position: absolute; width: 1100px; height: 1100px; border-radius: 50%; pointer-events: none; mix-blend-mode: var(--v2-amb-blend); }
-.sc-amb--a { left: 980px; top: -420px; background: var(--v2-amb-a); }
-.sc-amb--b { left: -360px; top: 420px; background: var(--v2-amb-b); }
-/* 浮塵容器本身不畫；::before＝主色點、::after＝第二色點（各自一層遮罩，父層不加 mask 才不會互相裁掉） */
-.sc-dust { position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; pointer-events: none; }
-.sc-dust::before, .sc-dust::after { content: ''; position: absolute; left: 0; top: 0; width: 1920px; height: 1200px; }
-.sc-dust::before { background: var(--v2-dust-ink); -webkit-mask: var(--v2-dust) no-repeat 0 0 / 1920px 1200px; mask: var(--v2-dust) no-repeat 0 0 / 1920px 1200px; }
-.sc-dust::after { background: var(--v2-dust-2-ink); -webkit-mask: var(--v2-dust-2) no-repeat 0 0 / 1920px 1200px; mask: var(--v2-dust-2) no-repeat 0 0 / 1920px 1200px; }
 
 /* 原語自動插入的零件 */
 /* 螢光筆：不用負 z-index（HyperFrames lint 會警告），改用混色疊在字上：亮色 multiply、暗色 screen，字仍然清楚 */

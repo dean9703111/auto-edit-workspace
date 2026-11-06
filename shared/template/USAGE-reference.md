@@ -575,7 +575,7 @@
   - 舊範例裡的 `P.rise`／`P.reveal`／`P.maskUp`／`P.swap`／`P.axis`／`P.focus`／`P.push`／`P.morph` 還能用；新寫的拍照 BEATS.md。
   - 這些方法會自動處理同一元素第二次補間的 `immediateRender:false`，秒數與曲線是 kit 常數（style.md「節奏」），不要自己填。不要用 GSAP 的 `onUpdate`／`onComplete` 改畫面：HyperFrames 跳到任意時間截圖時不會觸發回呼，畫面會停在錯的狀態。
 
-- 節奏：任何 1 秒內新出現的元素 ≤ 2 個、兩個之間 ≥ 0.12 秒；新資訊停 ≥ 1.2 秒、最後一幕 ≥ 1.5 秒（style.md「節奏」；audit 會 ⚠）。亮框、同位置換內容、跟著卡片一起出現的子元素不算新元素；逐字出現的一串字、同一個方法一起錯拍的一組各算 1 個；微動（`P.idle`、`P.flow`、背景環境）不算動作，不影響停留。
+- 節奏：任何 1 秒內新出現的元素 ≤ 2 個、兩個之間 ≥ 0.12 秒；新資訊停 ≥ 1.2 秒、最後一幕 ≥ 1.5 秒（style.md「節奏」；audit 會 ⚠）。亮框、同位置換內容、跟著卡片一起出現的子元素不算新元素；逐字出現的一串字、同一個方法一起錯拍的一組各算 1 個；微動（`P.idle`）不算動作，不影響停留。
 
 | 方法 | 做什麼 | 預設 |
 |---|---|---|
@@ -688,7 +688,7 @@
 | 12 | 圖片一律 `object-fit` 等比，不擠壓 | 圖片變形 |
 | 13 | 不做非 90 度的 div 旋轉；fx 03／12／16／33 少用 | 斜邊鋸齒 |
 | 14 | 子合成：style 與 script 放在 `<template>` 裡、id 三處一致、用 `fromTo` 不用 `from`、root 用 id 選擇器 | 沒有樣式；時間軸 45 秒後變靜止畫面 |
-| 15 | 動作：只用 `shared/template/BEATS.md` 語彙表的具名動作（對應的 `P.*`）；秒數與曲線照 style.md「節奏」（kit 常數）；過衝（彈出、逐字彈出、重拍）只用在強調拍；不旋轉、不大位移飛入；微動只有呼吸（卡片、焦點不漂浮）、同一元素只掛一個、不配音效 | 動態的單位是拍：進場 → 強調 → 其他退焦 → 一顆音效，同一時間只有一個焦點（style.md「動畫視覺」） |
+| 15 | 動作：只用 `shared/template/BEATS.md` 語彙表的具名動作（對應的 `P.*`）；秒數與曲線照 style.md「節奏」（kit 常數）；過衝（彈出、逐字彈出、重拍）只用在強調拍；不旋轉、不大位移飛入；不做微動（呼吸只給等待中的狀態、不配音效；卡片、焦點、背景不動） | 動態的單位是拍：進場 → 強調 → 其他退焦 → 一顆音效，同一時間只有一個焦點（style.md「動畫視覺」） |
 | 16 | 含 `<video>` 的合成一律用 `npx hyperframes render`，不用其他截圖式 render 工具 | 影片會凍在同一格，ffprobe 卻全部通過 |
 | 17 | 第二層與 `css` 移位不能壓到 speakerBox、不能進子母畫面禁入區（全畫面時 x 1424–1888、y 581–951） | 擋臉；壓到子母畫面（audit 會報：壓到子母畫面 ✖、壓到講者 ⚠） |
 | 18 | custom 的 `P.at('#N')`、`P.at('#N@詞')` 那一拍出現的字（站名、項目），要在 #N 那句講到；站名、項目在句中間或句尾就綁 `P.at('#N@詞')` | 綁句首，字會比講到早 1–3 秒出現（r1 實測）。audit 會報 `⚠ 綁句對不上：「…」在 #M 才講到、不是 #N（…）`（數字、英文整個詞比，中文取 2–4 字；刪除線、底線、位移不算出現；找不到不報）→ 照 → 改成 `P.at('#M@詞')` |
@@ -780,7 +780,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 要求精準留空、幾何線稿、和主色完全一致 | 直接走 HTML 路線 | — | — |
 
 - HTML 路線：照 R9.4（`brand.mjs bg`，`fs`、`side`、`ch` 各跑一次）；輸出 `bg-<種類>.jpg`、疊上留空區框的 `zones-<種類>.jpg`，三張都在時產生並排的 `preview.jpg`。
-- 每條路的完整指令（Mac／Windows）在 `.agents/skills/auto-edit-style/references/image-routing.md`。
+- 每條路的完整指令（Mac／Windows）在 `.agents/skills/auto-edit-style/references/image-routing.md`；有子代理工具就每張圖一個工人同時生成（同一資料夾的 `bg-worker.md`）。
 - 一律先存在暫存資料夾：尺寸（`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <檔>`）要是 1920×1080、960×1080、1920×1080；留空區（R9.2）沒有裝飾；三張並排圖給使用者看（停點 ⑥），同意後才複製進 `shared/template/`。
 - 同一條路重做 2 次還不行就換下一條；全部不行就只換主色，告訴使用者原因。
 
@@ -837,6 +837,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 插入素材與剪輯台效果的樣式 | `shared/template/kit/media.css`、`kit/media.js` | 各 1 個 | build 用到時自動連；紅框、說明卡、聚光燈、STEP、箭頭、放大鏡、dip、淡入淡出 |
 | 換主色工具 | `shared/template/tools/brand.mjs` | 1 支 | 換主色、`bg` 把 HTML 截成背景圖（R9） |
 | 講者調光＋瘦臉 | `shared/template/tools/look.mjs`、`kit/look.json`、`kit/look/*.cube`、`vendor/mediapipe/` | 1 支＋設定 | 核心第 7 節 |
+| 分鏡素材 | `shared/template/tools/build.mjs --scaffold`、`tools/lib/scaffold.mjs` | 1 個旗標 | 排分鏡前產生 `work/分鏡素材.md`：字幕編號、章節、情境對照、每種情境的 plan.json 寫法 |
 | 進度、能力 | `shared/template/tools/status.mjs`、`caps.mjs` | 各 1 支 | 接手時看做到哪；換風格前看能用哪條生圖路線（R9.3） |
 | 風格規範 | `shared/style.md` | 1 份 | 字幕、節奏、字卡文字、音效、講者資料的唯一來源 |
 

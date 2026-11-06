@@ -182,11 +182,10 @@
     P.dim('#xtr-tip', T3, { to: 0.6 });
     P.spot('#xtr-pill', '#xtr-pill', T3 + 0.6, { scale: 1.06, lift: -8 });
 
-    // 收：講完 2 秒回均衡（膠囊亮框收掉、提示框亮回），主數字呼吸；完成態停到段尾
+    // 收：講完 2 秒回均衡（膠囊亮框收掉、提示框亮回）；完成態停到段尾
     const TR = T3 + 2.0;
     P.spot('#xtr-pill', null, TR, { dur: 0.6 });
     P.dim('#xtr-tip', TR, { to: 1 });
-    P.idle('#xtr-num', TR, { y: 0, scale: 0.04, period: 1.8 });
 
     P.end();                                           // 長度＝plan.json 這段的長度
     window.__timelines['x-trend'] = tl;

@@ -8,10 +8,10 @@
 #chCol { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
 #chSub { margin-left: 40px; }
 {{#icon}}
-/* 有圖示：大型主色線條圖示（180，無底圓、無光暈）放在號卡正上方、左緣對齊號卡，間距 40（icon 頂 = 群組頂 −220）；
+/* 有圖示：圖示卡（180，深底白線、細框，和號卡同一套，任何背景都看得清楚）放在號卡正上方、左緣對齊號卡，間距 40（icon 頂 = 群組頂 −220）；
    整組（圖示 180 ＋ 40 ＋ 號卡 280 = 500）仍置中於 y 540（yt：590）→ course 290–790、yt 340–840（群組頂 510／560） */
-#chIcon { position: absolute; left: 0; top: -220px; width: 180px; height: 180px; color: var(--sc-accent); }
-#chIcon svg { display: block; width: 180px; height: 180px; }
+#chIcon { position: absolute; left: 0; top: -220px; display: grid; place-items: center; width: 180px; height: 180px; border-radius: 28px; background: var(--sc-chnum-bg); color: var(--sc-chnum-num); box-shadow: inset 0 0 0 2px var(--sc-ch-sub-line); }
+#chIcon svg { display: block; width: 112px; height: 112px; }
 {{/icon}}
 <!-- @body -->
 <div id="chGroup" data-layout="free" data-snap-width>
@@ -27,10 +27,11 @@
   </div>
 </div>
 <!-- @timeline -->
-/* v2（shared/template/BEATS.md §2 的動作）：背景第一格就在（build 整幕淡入）；章號 0.1 起重拍進場（1.3 → 1、back.out(2)）→ 標題板由左擦開、0.15 後章名逐字上浮 → 圖示描線 → 副標同樣擦開＋逐字；HF 不淡出 */
+/* v2（shared/template/BEATS.md §2 的動作）：背景第一格就在（build 整幕淡入）；章號 0.1 起重拍進場（1.3 → 1、back.out(2)）→ 標題板由左擦開、0.15 後章名逐字上浮 → 圖示卡隨章號進場、線條描出 → 副標同樣擦開＋逐字；HF 不淡出 */
 P.pop('#chNum', 0.1, { from: 1.3, dy: 0, ease: 'back.out(2)' });
 P.wipe('#chTitle', {{{titleAt}}}, { dir: 'left', dur: P.V2.SHELL });
 P.chars('#chTitle .sc-opt', {{{titleAt}}} + 0.15);
-{{#icon}}P.icon('#chIcon', {{{titleAt}}} + 0.15, { dur: 0.9 });{{/icon}}
+{{#icon}}P.pop('#chIcon', 0.1, { from: 1.3, dy: 0, ease: 'back.out(2)' });
+P.icon('#chIcon', {{{titleAt}}} + 0.15, { dur: 0.9 });{{/icon}}
 {{#sub}}P.wipe('#chSub', {{{subAt}}}, { dir: 'left', dur: P.V2.SHELL });
 P.chars('#chSub .sc-opt', {{{subAt}}} + 0.15);{{/sub}}

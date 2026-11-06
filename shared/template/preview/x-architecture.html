@@ -109,7 +109,6 @@
     P.icon('#xarch-aico, #xarch-bico, #xarch-cico', 1.15, { stagger: 0.12 });
     // 拍 2 預告：經過雲端的兩段虛線淡入、一直往前流
     P.in('.xarch-via', 1.5, { stagger: 0.1 });
-    P.flow('.xarch-via', 1.5);
     // 拍 3 等待：預覽態（兩個裝置壓暗縮小）、雲端退焦＋鏡頭慢推，推到 PATH 前 0.2 秒
     P.spot(DEV, 'none', 2.0, { dim: 0.45, dur: 0.6 });
     P.dim('#xarch-cloud', 2.0, { to: 0.45, dur: 0.6 });

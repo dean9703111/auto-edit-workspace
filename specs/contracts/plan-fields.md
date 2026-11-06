@@ -117,7 +117,7 @@ const KEYS = {
 | 旁白段擦入／擦出 | 接縫在只有聲音的區間內、一邊是 media | FR-030–FR-032 |
 | 章節置中、前後墊底 | 空檔長度、相鄰段相隔 ≤ 1.0 s | FR-006、FR-008 |
 | 章節期間字幕清空 | 章節的 2.5 s | FR-007 |
-| 轉場語彙（色帶擦開／收回、換卡不換景、章節色塊、講者慢推） | 前後段的不透明、相接、家族（plan.mjs `assignTransitions`）；結果在 `out.tx.in`／`out.tx.out` | design-system §5、§7 |
+| 轉場語彙（色帶擦開／收回、換卡不換景、章節擦入、講者慢推） | 前後段的不透明、相接、家族（plan.mjs `assignTransitions`）；結果在 `out.tx.in`／`out.tx.out` | design-system §5、§7 |
 | 前一段是什麼 `prev`（模板與情境動畫選進場） | `fullscreen`＝前一段也是全畫面、同背景（`tx.in` 是 `swap`：換卡不換景）；`pip`＝前一段是別的不透明幕直接接上（插入素材、不透明字卡動態、章節：小視窗已在）；其他＝`speaker`（前面露講者：色帶擦開，卡從小視窗長出 `P.grow`）。build 寫在三個地方：每個 host 的 `data-prev`、情境子合成 root 的 `data-prev`、`window.__cues.segs[id].prev`（custom 段）；結果在 `out.tx.prev`。custom 的 `const ENTER` 預設讀它，手寫值優先 | 第二段 B（003 的 04 家族） |
 
 不加開關欄位（憲法 VIII）；作者要例外時再開欄位，先改本表。

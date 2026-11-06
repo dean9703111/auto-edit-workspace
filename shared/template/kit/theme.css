@@ -58,10 +58,11 @@
   /* 章節轉場、迷你章節卡 */
   --sc-ch-bg:          #0A0F1E;
   --sc-ch-pattern:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><rect x='112' y='0' width='2' height='1080' fill='%23FFFFFF' fill-opacity='.07'/><g fill='%23FFFFFF' fill-opacity='.09'><rect x='56' y='22' width='24' height='18' rx='3'/><rect x='56' y='76' width='16' height='18' rx='3'/><rect x='56' y='130' width='16' height='18' rx='3'/><rect x='56' y='184' width='24' height='18' rx='3'/><rect x='56' y='238' width='16' height='18' rx='3'/><rect x='56' y='292' width='16' height='18' rx='3'/><rect x='56' y='346' width='24' height='18' rx='3'/><rect x='56' y='400' width='16' height='18' rx='3'/><rect x='56' y='454' width='16' height='18' rx='3'/><rect x='56' y='508' width='24' height='18' rx='3'/><rect x='56' y='562' width='16' height='18' rx='3'/><rect x='56' y='616' width='16' height='18' rx='3'/><rect x='56' y='670' width='24' height='18' rx='3'/><rect x='56' y='724' width='16' height='18' rx='3'/><rect x='56' y='778' width='16' height='18' rx='3'/><rect x='56' y='832' width='24' height='18' rx='3'/><rect x='56' y='886' width='16' height='18' rx='3'/><rect x='56' y='940' width='16' height='18' rx='3'/><rect x='56' y='994' width='24' height='18' rx='3'/></g><g fill='%237DB4FF' fill-opacity='.11'><rect x='398' y='20' width='201' height='22' rx='7'/><rect x='322' y='74' width='213' height='22' rx='7'/><rect x='200' y='236' width='100' height='22' rx='7'/><rect x='322' y='236' width='326' height='22' rx='7'/><rect x='956' y='290' width='352' height='22' rx='7'/><rect x='486' y='830' width='326' height='22' rx='7'/><rect x='260' y='992' width='150' height='22' rx='7'/></g><g fill='%23C792EA' fill-opacity='.11'><rect x='200' y='74' width='100' height='22' rx='7'/><rect x='260' y='182' width='163' height='22' rx='7'/><rect x='200' y='776' width='176' height='22' rx='7'/><rect x='260' y='884' width='75' height='22' rx='7'/><rect x='200' y='938' width='176' height='22' rx='7'/></g><g fill='%23FFD400' fill-opacity='.10'><rect x='781' y='182' width='75' height='22' rx='7'/><rect x='733' y='290' width='201' height='22' rx='7'/><rect x='542' y='992' width='201' height='22' rx='7'/></g><g fill='%234ADE9B' fill-opacity='.10'><rect x='200' y='20' width='176' height='22' rx='7'/><rect x='621' y='20' width='188' height='22' rx='7'/><rect x='200' y='128' width='176' height='22' rx='7'/><rect x='200' y='290' width='213' height='22' rx='7'/><rect x='200' y='668' width='88' height='22' rx='7'/><rect x='200' y='830' width='264' height='22' rx='7'/></g><g fill='%23FFFFFF' fill-opacity='.08'><rect x='831' y='20' width='238' height='22' rx='7'/><rect x='445' y='182' width='314' height='22' rx='7'/><rect x='435' y='290' width='276' height='22' rx='7'/><rect x='357' y='884' width='88' height='22' rx='7'/><rect x='432' y='992' width='88' height='22' rx='7'/></g></svg>");
-  --sc-chnum-bg:       var(--brand);
-  --sc-chnum-label:    var(--brand-ink);
-  --sc-chnum-line:     var(--brand-ink);
-  --sc-chnum-num:      var(--brand-ink);
+  /* 章節號卡和圖示不用主色當底：背景圖常常就是主色，疊上去會看不見。深底＋細框在任何背景都看得清楚 */
+  --sc-chnum-bg:       var(--sc-ch-sub-bg);
+  --sc-chnum-label:    var(--sc-ch-sub-ink);
+  --sc-chnum-line:     var(--brand-text);
+  --sc-chnum-num:      var(--sc-ch-sub-ink);
   --sc-ch-title-bg:    #FFFFFF;
   --sc-ch-title-ink:   #0B1020;
   --sc-ch-sub-bg:      #070B14;
@@ -84,21 +85,6 @@
 
 /* 裝飾 1：側邊欄眉標膠囊是主色底，圓點改用膠囊字色（主色圓點會融掉） */
 .sc-side .sc-pill::before { background: var(--sc-side-pill-ink); }
-
-/* 裝飾 2：章節幕右上、左下角的主色斜條（KV2 斜度＝高度×0.2；平行四邊形、硬邊），只在 y 0–220／860–1080，不進中央 y 300–780
-   形狀用 SVG 當遮罩、顏色用 background-color: var(--brand)：data URI 裡沒辦法用 CSS 變數，這樣換主色時斜條才會跟著變。 */
-.sc-surface-ch::before, .sc-surface-ch::after {
-  content: "";
-  position: absolute;
-  width: 640px;
-  height: 220px;
-  background-color: var(--brand);
-  mask-repeat: no-repeat;
-  mask-size: 640px 220px;
-  pointer-events: none;
-}
-.sc-surface-ch::before { right: 0; top: 0; mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='220'><g fill='%23000000'><polygon points='192.0,0 680,0 668.0,60 180,60'/><polygon points='336.0,80 680,80 674.0,110 330,110'/><polygon points='473.2,130 680,130 676.8,146 470,146'/></g></svg>"); }
-.sc-surface-ch::after { left: 0; bottom: 0; mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='220'><g fill='%23000000'><polygon points='-36.8,64 170,64 166.8,80 -40,80'/><polygon points='-34.0,110 310,110 304.0,140 -40,140'/><polygon points='-28.0,160 460,160 448.0,220 -40,220'/></g></svg>"); }
 
 /* ---- 淺色版（2026-10-30 換成 PPA 風格）：全畫面與側邊欄是淺暖底黑字、下方字卡近黑＋暖深灰錯位底板；背景圖 bg-fs／bg-side／bg-ch.jpg 由 Codex 生成 ---- */
 :root {

@@ -200,7 +200,7 @@ export function measureInPage({ hostId, W, H }) {
 
   const all = [host, ...host.querySelectorAll('*')];
   const idx = new Map();
-  const V2_PARTS = '.sc-comet, .sc-ripple, .sc-spot, .sc-sheen, .sc-mk, .sc-strike, .sc-amb, .sc-dust';
+  const V2_PARTS = '.sc-comet, .sc-ripple, .sc-spot, .sc-sheen, .sc-mk, .sc-strike';
   const els = [];
   for (const el of all) {
     if (SKIP.has(el.tagName)) continue;

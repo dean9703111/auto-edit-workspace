@@ -153,11 +153,10 @@
     // 拍 5 ＋0.6 終點列聚焦（放大抬起、主色亮框）
     P.spot('#xring-r2', '#xring-r2', R2 + 0.6, { scale: 1.04, lift: -6 });
 
-    // 收：講完 2 秒回均衡（圓環亮回、終點列亮框收掉），中央數字呼吸；完成態停到段尾
+    // 收：講完 2 秒回均衡（圓環亮回、終點列亮框收掉）；完成態停到段尾
     const TR = R2 + 2.0;
     P.spot('#xring-r2', null, TR, { dur: 0.6 });
     P.dim('#xring-dial', TR, { to: 1 });
-    P.idle('#xring-num', TR, { y: 0, scale: 0.04, period: 1.8 });
 
     P.end();                                                                       // 長度＝plan.json 這段的長度
     window.__timelines['x-ring'] = tl;

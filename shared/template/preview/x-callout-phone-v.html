@@ -96,13 +96,12 @@
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const TAGS = '#xcph-t1, #xcph-t2, #xcph-t3, #xcph-t4';   // 全部膠囊（收尾用；少的選不到，不用改）
 
-    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮 → 1.0 手機彈出 → 1.2 起同心圓由內往外錯拍淡入，之後一直慢慢呼吸
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮 → 1.0 手機彈出 → 1.2 起同心圓由內往外錯拍淡入
     if (ENTER === 'grow') P.grow('#xcph-card', 0.3);
     else { P.wipe('#xcph-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcph-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xcph-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     P.pop('#xcph-obj', 1.0, { from: 0.7 });
     P.pop('#xcph-r1, #xcph-r2, #xcph-r3', 1.2, { stagger: 0.15, from: 0.6, dy: 0 });
-    P.idle('#xcph-r1', 1.9, { y: 0, scale: 0.03 });  P.idle('#xcph-r2', 2.2, { y: 0, scale: 0.03 });  P.idle('#xcph-r3', 2.5, { y: 0, scale: 0.03 });
     // 拍 1 第 1 個功能：手機送出一圈漣漪 → 膠囊彈出、＋0.12 字逐字、＋0.15 圖示描線 → ＋0.6 聚焦
     P.ripple('#xcph-obj', T1, { to: 1.8 });
     P.pop('#xcph-t1', T1, { from: 0.6, dy: 0 });  P.chars('#xcph-n1', T1 + 0.12);  P.icon('#xcph-ico1', T1 + 0.15);

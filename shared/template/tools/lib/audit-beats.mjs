@@ -25,19 +25,20 @@ export const BEAT_TITLE = '#### 動畫分鏡';
 export const VOCAB = [
   ['進場', '擦開', 'wipe'], ['進場', '滑入', 'drift'], ['進場', '彈出', 'pop'], ['進場', '錯拍彈出', 'pop'], ['進場', '長出', 'grow'], ['進場', '抽屜抽出', 'slide'], ['進場', '淡入', 'in'],
   ['字', '逐字上浮', 'chars'], ['字', '逐字彈出', 'chars'], ['字', '逐字落下', 'chars'], ['字', '打字', 'type'], ['字', '數字滾動', 'count'],
-  ['線', '描線', 'stroke'], ['線', '彗星描線', 'comet'], ['線', '圖示描線', 'icon'], ['線', '描圈打勾', 'check'], ['線', '劃掉', 'strike'], ['線', '進度推進', 'bar'], ['線', '量條', 'bar'], ['線', '虛線流動', 'flow'],
+  ['線', '描線', 'stroke'], ['線', '彗星描線', 'comet'], ['線', '圖示描線', 'icon'], ['線', '描圈打勾', 'check'], ['線', '劃掉', 'strike'], ['線', '進度推進', 'bar'], ['線', '量條', 'bar'],
   ['強調', '光澤掃過', 'sheen'], ['強調', '螢光筆', 'marker'], ['強調', '重拍', 'punch'], ['強調', '漣漪', 'ripple'], ['強調', '蓋章', 'stamp'],
   ['焦點', '聚焦', 'spot'], ['焦點', '預覽態', 'spot'], ['焦點', '走過', 'spot'], ['焦點', '退焦', 'dim'], ['焦點', '回均衡', 'spot'],
   ['鏡頭', '鏡頭慢推', 'cam'], ['鏡頭', '鏡頭跟焦點', 'cam'], ['鏡頭', '鏡頭回正', 'cam'],
   ['移動', '游標移動', 'morph'],
-  ['微動', '呼吸', 'idle'], ['微動', '背景環境', 'ambient'],
+  ['微動', '呼吸', 'idle'],
   ['退場', '擦掉', 'wipeOut'], ['退場', '抽屜收回', 'slideOut'], ['退場', '淡出', 'out'],
-  ['轉場', '色帶擦開', 'build'], ['轉場', '子母畫面飛入', 'build'], ['轉場', '色帶收回', 'build'], ['轉場', '換卡不換景', 'wipe'], ['轉場', '章節色塊擦入', 'wipe'], ['轉場', '章號重拍', 'pop'],
+  ['轉場', '色帶擦開', 'build'], ['轉場', '子母畫面飛入', 'build'], ['轉場', '色帶收回', 'build'], ['轉場', '換卡不換景', 'wipe'], ['轉場', '章節擦入', 'wipe'], ['轉場', '章號重拍', 'pop'],
 ].map(([kind, name, prim]) => ({ kind, name, prim }));
 // 拍型表的縮寫：「開場（依前段）」＝從講者來的色帶擦開＋子母畫面飛入＋長出，或從全畫面來的換卡不換景（§14.2）
 export const VOCAB_EXTRA = [{ kind: '轉場', name: '開場', prim: 'build' }];
 // 拿掉的動作：舊分鏡寫了不出錯（漂浮：使用者 11-03「出現的動畫窗都會輕微晃動」，kit 的 P.idle 不再位移）
-export const VOCAB_RETIRED = { 漂浮: 'idle' };
+//   背景環境、虛線流動：使用者 11-06「我不需要這些畫面的微動」；章節色塊擦入：同日拿掉主色色塊
+export const VOCAB_RETIRED = { 漂浮: 'idle', 背景環境: 'ambient', 虛線流動: 'flow', 章節色塊擦入: 'wipe' };
 const BY_NAME = new Map([...VOCAB, ...VOCAB_EXTRA].map((v) => [v.name, v]));
 // 「對應」欄第一個 P.* 以外也算做到的寫法（⚠ 用了沒做的動作時一起找）：沒有聚焦組的段，回均衡＝P.dim(…, {to: 1})；聚焦組裡的退焦＝P.spot 的預覽態或 dim
 export const VOCAB_ALT = { 回均衡: ['dim'], 退焦: ['spot'] };
@@ -206,7 +207,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
   const seen = new Set();
   for (const row of sheet.rows) for (const w of row.moves) {
     const v = BY_NAME.get(w);
-    if (!v || v.prim === 'build' || seen.has(v.name) || (v.prim === 'ambient' && /\bP\.end\(/.test(code))) continue;
+    if (!v || v.prim === 'build' || seen.has(v.name)) continue;
     seen.add(v.name);
     const prims = [v.prim, ...(VOCAB_ALT[v.name] || [])];
     if (!prims.some((p) => new RegExp(`\\bP\\.${p}\\(`).test(code))) warn('beats-prim', 0, `分鏡用了「${w}」，${name} 裡沒有 ${prims.map((p) => `P.${p}(…)`).join('／')}`, `照分鏡在那一拍加 P.${v.prim}(…)（shared/template/BEATS.md §2 的「對應」欄），或把分鏡的動態改成檔裡實際做的動作`, { word: w, prim: v.prim });

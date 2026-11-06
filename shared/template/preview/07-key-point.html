@@ -71,7 +71,6 @@ window.__PREVIEW = {"key":"key-point","duration":5,"cues":[{"sound":"ding","at":
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 5;
     /* 進場（0.6s 內完成，錯拍）：卡片從左擦開＋左移 40 → 0.12 標籤彈出 → 0.18 徽章彈入、0.3 描圈打勾 → 0.22 前句逐字上浮
-       停留：徽章呼吸 4%
        keyAt（講到重點）：前句退焦 0.7 → 重點條從卡片右緣抽出（0.5 expo.out）→ +0.12 字逐字彈出（back.out 過衝）→ +0.55 光澤掃過
        段尾：抽屜收回 0.28、卡片向左擦掉 0.3（退場比進場快）；後面接全畫面時提早 0.5 退完，不被轉場切半張 */
     P.wipe('#pv-kCard', 0, { dir: 'left', dur: P.V2.SHELL });
@@ -79,7 +78,6 @@ window.__PREVIEW = {"key":"key-point","duration":5,"cues":[{"sound":"ding","at":
     P.pop('#pv-kTag', 0 + 0.12, { from: 0.4, dy: 18 });
     P.pop('#pv-kIcon', 0 + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
     P.icon('#pv-kIcon', 0 + 0.3);
-    P.idle('#pv-kIcon', 0 + 1.0, { y: 0, scale: 0.04, period: 1.8, until: D });
     P.chars('#pv-kLead', 0 + 0.22);
     P.dim('#pv-kLead', 0.15, { to: 0.62 });
     P.slide('#pv-kSlab', 0.15, { from: 'left', dur: 0.5 });
