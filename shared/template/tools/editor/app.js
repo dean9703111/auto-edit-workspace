@@ -739,13 +739,67 @@ function applyReport(rep) {
 
 // ---------- 儲存與重新產生 ----------
 function setSaveState(state, text) { const el = $('#saveState'); el.dataset.state = state; el.querySelector('.txt').textContent = text; }
+// ---------- 輸出完成影片（019）：按鈕 → 伺服器跑重新產生、測試片段、整支、驗收；視窗關掉照樣繼續 ----------
+let exportTimer = null;
+function renderExport(s) {
+  const at = s.steps.findIndex((x) => x.id === s.step);
+  const done = !s.running && s.ok === true;
+  $('#exportTitle').textContent = s.running ? '正在輸出完成影片…' : s.canceled ? '已取消輸出' : s.ok ? '✓ 完成影片輸出好了' : s.started ? '✖ 沒有輸出成功' : '輸出完成影片';
+  $('#exportSub').textContent = s.running ? `已經 ${s.seconds} 秒。整支輸出要等幾分鐘，可以關掉這個視窗繼續看別的，按上方按鈕再打開；不要關閉剪輯服務。` : (s.message || '') + (done && s.final?.file ? `檔案在 ${s.final.file}。` : '');
+  $('#exportSteps').innerHTML = s.steps.map((x, i) => {
+    const state = done || (s.started && i < at) ? 'done' : i === at ? (s.running ? 'now' : s.canceled ? 'todo' : 'bad') : 'todo';
+    const mark = { done: '✓', now: '…', bad: '✖', todo: '·' }[state];
+    return `<li class="${state}"><span class="sym">${mark}</span>${esc(x.label)}${x.id === 'render' && state === 'now' && s.percent != null ? `（${s.percent}%）` : ''}</li>`;
+  }).join('');
+  $('#exportIssues').innerHTML = issueItems(s.errors, s.warnings, 30);
+  $('#exportLog').textContent = s.log || '';
+  if (!s.running && s.started && !s.ok && !s.canceled) $('#exportLogWrap').open = true;
+  const video = $('#exportVideo'), sheet = $('#exportSheet');
+  video.hidden = s.running || !s.final?.url; if (s.final?.url) video.href = s.final.url;
+  sheet.hidden = s.running || !s.final?.sheetUrl; if (s.final?.sheetUrl) sheet.href = s.final.sheetUrl;
+  $('#exportCancel').hidden = !s.running;
+  const btn = $('#btnExport');
+  btn.textContent = s.running ? `輸出中${s.step === 'render' && s.percent != null ? ` ${s.percent}%` : '…'}` : '輸出完成影片';
+  btn.classList.toggle('primary', !!s.running);
+}
+async function pollExport() {
+  const r = await api('GET', '/api/export');
+  if (!r.ok || !r.data) { clearInterval(exportTimer); exportTimer = null; app.exporting = false; renderHeader(); return; }
+  const s = r.data;
+  renderExport(s);
+  if (s.running) {
+    if (!app.exporting) { app.exporting = true; renderHeader(); }
+    exportTimer ??= setInterval(pollExport, 1000);
+    return;
+  }
+  clearInterval(exportTimer); exportTimer = null;
+  if (app.exporting) {
+    app.exporting = false;
+    renderHeader();
+    if (!$('#dlgExport').open) toast(s.ok ? '完成影片輸出好了' : s.canceled ? '已取消輸出' : '輸出沒有成功', s.ok ? 'ok' : 'err', s.ok ? 6000 : 8000, { actions: [['看結果', () => $('#dlgExport').showModal()]] });
+  }
+}
+async function startExportFlow() {
+  if (app.exporting) { await pollExport(); $('#dlgExport').showModal(); return; }
+  if (app.busy || app.building) return;
+  if (isDirty() && !(await save({ auto: true }))) return;
+  const r = await api('POST', '/api/export', {});
+  if (!r.ok) { toast(r.data?.message || '不能輸出', 'err', 6000); return; }
+  $('#exportLogWrap').open = false;
+  app.exporting = true;
+  renderHeader();
+  renderExport(r.data);
+  $('#dlgExport').showModal();
+  exportTimer ??= setInterval(pollExport, 1000);
+}
 function renderHeader() {
   const canSave = !!app.server?.plan?.exists && !app.server?.plan?.error;
   const dirty = isDirty();
-  $('#btnSave').disabled = !canSave || !dirty || app.busy;
+  $('#btnSave').disabled = !canSave || !dirty || app.busy || app.exporting;
   $('#btnUndo').disabled = !app.undoStack.length;
   $('#btnRedo').disabled = !app.redoStack.length;
-  $('#btnBuild').disabled = app.busy || app.building || !canSave;
+  $('#btnBuild').disabled = app.busy || app.building || app.exporting || !canSave;
+  $('#btnExport').disabled = !app.exporting && (app.busy || app.building || !canSave);
   if (app.busy || !app.server) return;
   if (!canSave) setSaveState('error', app.server.plan.exists ? 'plan.json 有錯' : '沒有 plan.json');
   else if (dirty) setSaveState('dirty', '有修改還沒儲存');
@@ -2011,6 +2065,10 @@ $('#btnIn').addEventListener('click', setIn);
 $('#btnOut').addEventListener('click', setOut);
 $('#btnSave').addEventListener('click', () => save());
 $('#btnBuild').addEventListener('click', () => runBuild());
+$('#btnExport').addEventListener('click', () => startExportFlow());
+$('#exportClose').addEventListener('click', () => $('#dlgExport').close());
+$('#exportCancel').addEventListener('click', async () => { const r = await api('POST', '/api/export/cancel', {}); if (!r.ok) toast(r.data?.message || '取消失敗', 'err', 5000); await pollExport(); });
+pollExport();
 $('#btnUndo').addEventListener('click', undo);
 $('#btnRedo').addEventListener('click', redo);
 $('#btnHelp').addEventListener('click', () => $('#dlgHelp').showModal());

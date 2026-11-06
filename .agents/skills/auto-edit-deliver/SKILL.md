@@ -22,6 +22,7 @@ version: 0.1.0
 | 停點紀錄 ④ 沒有「通過」 | 改用 `auto-edit-review` |
 | plan.json 比 `work/hyperframes/index.html` 新 | 先 `node shared/template/tools/build.mjs --project projects/<專案>` |
 | 使用者只要剪映素材（不要 final.mp4） | 只做步驟 5 |
+| 停點紀錄 ④ 最後一列是「通過」、原話是「在剪輯台按「輸出完成影片」」，而且 `output/final.mp4` 比 plan.json 新 | 使用者已在剪輯台輸出並驗收（019），不要重做；要看內容才跑步驟 4 |
 
 ## 步驟
 

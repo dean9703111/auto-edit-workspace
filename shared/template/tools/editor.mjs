@@ -37,6 +37,7 @@ import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 import { mediaFrame, SIDE } from './lib/media.mjs';
 import { cutsState, saveCuts } from './editor/server/cuts.mjs';
 import { storyboardState, saveStoryboard, storyboardImage } from './editor/server/storyboard.mjs';
+import { startExport, cancelExport, exportState, exportBusy, exportFile } from './editor/server/export.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, subtitles };
@@ -431,6 +432,7 @@ function makeContext(P) {
     report: null, reportJob: null, peaks: null, peaksJob: null,
     build: { running: false, log: '', code: null, ok: null, startedAt: null, finishedAt: null },
     framingUpdate: null, framingJob: null, framingPending: false,
+    exportJob: null, exportDeps: null,
     onShutdown: null,
   };
 }
@@ -974,6 +976,7 @@ async function handle(ctx, req, res) {
         return result ? sendJson(res, 200, result) : sendJson(res, 404, { message: '找不到這個操作' });
       } catch (e) { return sendJson(res, e.status || 400, { message: e.message }); }
     }
+    if (exportBusy(ctx) && ['/api/save', '/api/build', '/api/framing/save'].includes(p)) return sendJson(res, 409, { error: 'exporting', message: '正在輸出完成影片，等它跑完再存檔或重新產生（也可以先取消輸出）' });
     if (p === '/api/framing/save') {
       const { designId, ...frameBody } = body;
       if (designId && (ctx.designBusy || designState(ctx).draft?.id !== designId)) return sendJson(res, 409, { message: '背景正在更新，請等預覽完成後再儲存。' });
@@ -996,6 +999,12 @@ async function handle(ctx, req, res) {
     if (p === '/api/refframe') { const [s, o] = await doRefFrame(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/look/run') { const [s, o] = await doLookRun(ctx); return sendJson(res, s, o); }
     if (p === '/api/build') { const [s, o] = await doBuild(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/export') {
+      const deps = { build: () => doBuild(ctx), report: () => getReport(ctx, { fresh: true }), requestStates: () => requestsInfo(P.project)?.states, ...(ctx.exportDeps || {}) };
+      const [s, o] = startExport(ctx, deps);
+      return sendJson(res, s, o);
+    }
+    if (p === '/api/export/cancel') { const [s, o] = cancelExport(ctx); return sendJson(res, s, o); }
     if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
@@ -1012,6 +1021,11 @@ async function handle(ctx, req, res) {
 
   if (p === '/' || p === '/index.html') return sendFile(req, res, path.join(UI_DIR, 'index.html'));
   if (p === '/api/requests/status') return sendJson(res, 200, { requests: requestsInfo(P.project) });
+  if (p === '/api/export') return sendJson(res, 200, exportState(ctx));
+  if (p.startsWith('/output/')) {
+    const f = exportFile(ctx, p.slice('/output/'.length));
+    return f && statOf(f) ? sendFile(req, res, f) : sendText(res, 404, '找不到檔案');
+  }
   if (p === '/api/design/request/status') return sendJson(res, 200, designRequestStatus(ctx));
   if (p === '/framing' || p === '/framing.html') return sendFile(req, res, path.join(UI_DIR, 'framing.html'));
   if (p === '/cuts' || p === '/cuts.html') return sendFile(req, res, path.join(UI_DIR, 'cuts.html'));
@@ -1135,12 +1149,13 @@ async function handle(ctx, req, res) {
 
 // 啟動（測試直接呼叫；CLI 也走這裡）→ { url, port, server, ctx, close() }
 // previewDir：預覽參考圖寫到哪（預設 shared/template/preview；測試指到暫存資料夾，不蓋掉使用者的參考圖）
-export async function startEditor({ flags = {}, cwd = process.cwd(), port, writeState = true, previewDir = null } = {}) {
+export async function startEditor({ flags = {}, cwd = process.cwd(), port, writeState = true, previewDir = null, exportDeps = null } = {}) {
   const P = pathsFrom(flags, cwd);
   if (!P.project) throw new Error('要指定專案：加 --project projects/<專案>');
   if (!statOf(UI_DIR)) throw new Error(`找不到剪輯頁面 ${UI_DIR} → 確認 shared/template/tools/editor/ 還在`);
   const ctx = makeContext(P);
   ctx.previewDir = previewDir || path.join(P.templateDir, 'preview');
+  ctx.exportDeps = exportDeps;
   const server = http.createServer((req, res) => {
     handle(ctx, req, res).catch((e) => { if (!res.headersSent) sendJson(res, 500, { error: 'internal', message: e.message }); else res.end(); });
   });
@@ -1158,6 +1173,7 @@ export async function startEditor({ flags = {}, cwd = process.cwd(), port, write
   const close = () => new Promise((resolve) => {
     if (closed) return resolve();
     closed = true;
+    if (exportBusy(ctx)) cancelExport(ctx);
     if (writeState) { const s = readJson(ctx.stateFile); if (s?.pid === process.pid && s?.port === ctx.port) try { fs.unlinkSync(ctx.stateFile); } catch { /* 已經不在 */ } }
     server.close(() => resolve());
     server.closeAllConnections?.();

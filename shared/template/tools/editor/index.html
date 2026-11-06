@@ -26,6 +26,7 @@
     <span class="sep"></span>
     <button id="btnSave" class="primary" data-tip="寫進 plan.json 和字幕檔（⌘／Ctrl＋S）" disabled>儲存</button>
     <button id="btnBuild" data-tip="跑 build.mjs，更新完成影片預覽（沒存的會先存）">重新產生</button>
+    <button id="btnExport" data-tip="輸出 output/final.mp4：先做測試片段確認有聲音，再輸出整支並驗收（沒存的會先存）">輸出完成影片</button>
     <button id="btnRequests" class="toggle" aria-pressed="false" data-tip="修改單：選一段動畫或錄影，在右側寫想怎麼改（換動畫、流程更細、以圖為主…），累積好複製給 AI">修改單 <span class="rq-count" id="rqCount"></span></button>
     <a id="btnFraming" class="ghost" href="/framing" target="_blank" rel="noopener" data-tip="構圖：拖框調整講者的裁切與縮放（另開分頁）" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">構圖</a>
     <button id="btnHelp" class="icon ghost" data-tip="操作說明與快捷鍵（?）" aria-label="說明">?</button>
@@ -198,6 +199,20 @@
   <ul id="logIssues" class="check-list"></ul>
   <details id="logWrap"><summary>完整訊息（log）</summary><pre id="logText"></pre></details>
   <div class="dlg-actions"><button id="logClose" class="primary">關閉</button></div>
+</dialog>
+
+<dialog id="dlgExport" class="dlg wide">
+  <h2 id="exportTitle" tabindex="-1" autofocus>輸出完成影片</h2>
+  <p id="exportSub" class="mute"></p>
+  <ol id="exportSteps" class="export-steps"></ol>
+  <ul id="exportIssues" class="check-list"></ul>
+  <details id="exportLogWrap"><summary>完整訊息（log）</summary><pre id="exportLog"></pre></details>
+  <div class="dlg-actions">
+    <a id="exportSheet" class="ghost" target="_blank" rel="noopener" hidden>看驗收截圖</a>
+    <a id="exportVideo" class="ghost" target="_blank" rel="noopener" hidden>播放完成影片</a>
+    <button id="exportCancel" hidden>取消輸出</button>
+    <button id="exportClose" class="primary">關閉</button>
+  </div>
 </dialog>
 
 <dialog id="dlgHelp" class="dlg wide">

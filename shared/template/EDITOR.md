@@ -157,7 +157,7 @@ node shared/template/tools/editor.mjs --project projects/example
 | 「講者」的臉部對照寫「還沒偵測臉部」 | 跑 `node shared/template/tools/look.mjs run --project projects/<專案>`，跑完重新整理頁面 |
 | `.editor/` 是什麼 | 剪輯台的快取：波形、縮圖、播放器複本、音效靜音前的值（`memory.json`）、狀態檔、log。在 `work/` 底下、不進 git，刪掉會自動重建（刪 `memory.json` 只會讓「取消靜音」改成恢復情境預設音效） |
 
-剪輯台不會 render、不會改 `assets/` 和 `shared/`，也不會改上面表格以外的任何東西。
+除了使用者按「輸出完成影片」（寫 `output/final.mp4`、`output/test-clips/`、`output/qc/`、`work/render.log`，並在 `work/製作進度.md` 的停點紀錄加一列），剪輯台不會 render；也不會改 `assets/` 和 `shared/`，或上面表格以外的任何東西。
 
 ---
 
@@ -317,6 +317,15 @@ node shared/template/tools/editor.mjs --project projects/<專案> --requests-sta
 - **重新產生**：讓完成影片預覽更新成最新的設定（沒存的會先存）。右下角會顯示進度，不會擋住你繼續看。
 - **左下角 ✖／⚠**：檢查結果。點開看清單，點任一則會跳到那一段並選起來。✖ 錯誤要先改好才能產生完成影片；看不懂的直接整段貼給 AI。
 - 如果跳出「檔案被改過了」：表示 AI 剛改了它。按「重新載入，保留我的調整」，再按一次儲存。
+
+### 輸出完成影片
+
+看完完成影片預覽，按上方「輸出完成影片」（沒存的會先存）。它會依序重新產生、做 4 秒測試片段確認有畫面和聲音、輸出整支、跑驗收，順序和判準都和 `auto-edit-deliver` 相同。
+
+- **等待時**：可以關掉視窗繼續看別的，按鈕會顯示進度，點它再打開。輸出中不能存檔或重新產生；不要關閉剪輯服務（關閉會取消輸出）。
+- **取消、失敗**：上一支 `output/final.mp4` 不會被動到；整支是先輸出到 `work/final-rendering.mp4`，成功才換上去。
+- **驗收**：通過會列出 ⚠ 並提供「播放完成影片」「看驗收截圖」；有 ✖ 時影片留著，把 ✖ 貼給 AI 或修改後再輸出。
+- **不做**：`qc.mjs observe` 觀影總表是給 AI 判讀的；想讓 AI 看過再交，改跟 AI 說「可以了，輸出完成影片」。AI 正在照修改單修改時不能輸出。
 
 ### 快捷鍵
 
