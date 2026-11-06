@@ -46,7 +46,7 @@
 ### 2.1 不用 Plan 模式
 
 - 不用 Plan 模式：流程會在停點 ② ③ 自己停。使用者開著 Plan 模式時只能列句號、挑情境；要寫檔（構圖分析、暫時 plan.json、storyboard.md、截圖）時，請他離開 Plan 模式再說一次（不要在 Plan 模式裡硬做）。
-- 分鏡表一律存成 `work/storyboard.md`（格式 2.3），停點 ③ 請使用者看檔案。
+- 分鏡表一律存成 `work/storyboard.md`（格式 2.3），停點 ③ 給使用者 `editor.mjs` 印的分鏡表網址（網頁改的內容存回同一份檔）。
 - 確認之後的順序：重新讀 `work/storyboard.md` → 寫正式 plan.json → `--check`。
 
 ### 2.2 量 `speakerBox`

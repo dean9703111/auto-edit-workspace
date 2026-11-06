@@ -3,7 +3,7 @@
  * 剪輯：在瀏覽器裡裁剪、調聲音、改字幕和卡片文字、設轉場，存回 plan.json／rough.srt（給使用者與 AI 的說明：shared/template/EDITOR.md）
  *
  *   node shared/template/tools/editor.mjs --project projects/<專案>   啟動並印出網址（只綁 127.0.0.1；預設 port 4400，被佔用就往後找）
- *                                      同一個服務有三頁：剪輯 /、剪輯清單 /cuts（停點 ①）、構圖 /framing（停點 ②）
+ *                                      同一個服務有四頁：剪輯 /、剪輯清單 /cuts（停點 ①）、構圖 /framing（停點 ②）、分鏡表 /storyboard（停點 ③）
  *                                      非互動的 shell（AI 執行）會自己轉到背景：印出網址就結束，不用加 & 或 nohup；
  *                                      在終端機裡執行則留在前景，按 Ctrl+C 關閉
  *   node shared/template/tools/editor.mjs --status [--project …]   查剪輯開著沒、網址是什麼
@@ -17,6 +17,7 @@
  * 剪輯只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／anchor、任何段的 sfxVolume 與 sfx: null、
  * slots／vars 的文字值、第一層的 look（講者調光與瘦臉）、theme 與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
  * 剪輯清單頁只寫 work/cuts.md NG 表的「剪」欄（[x]／[ ]；沒有這一欄就加在最前面），有 work/rough.mp4 之後只能看。
+ * 分鏡表頁只寫 work/storyboard.md 改到的那幾行（段落內容、表格的格與列、整段原始 Markdown）；製作進度的停點 ③ 通過之後只能看。
  * 存檔前比對 plan.json 與 rough.srt，被別人（AI）改過就兩個都不寫。構圖在還沒有 plan.json 時（停點 ②）只存 frame，會先建一個 { "version": 1 }（直式加 format）。
  * --project 的找法和 build.mjs 一樣。需要 Node 22 以上、ffmpeg／ffprobe。
  */
@@ -35,6 +36,7 @@ import { CANVAS } from './lib/canvas.mjs';
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 import { mediaFrame, SIDE } from './lib/media.mjs';
 import { cutsState, saveCuts } from './editor/server/cuts.mjs';
+import { storyboardState, saveStoryboard, storyboardImage } from './editor/server/storyboard.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, subtitles };
@@ -988,6 +990,9 @@ async function handle(ctx, req, res) {
     if (p === '/api/cuts/save') {
       try { return sendJson(res, 200, saveCuts(ctx, body)); } catch (e) { return sendJson(res, e.status || 400, { message: e.message, ...(e.extra || {}) }); }
     }
+    if (p === '/api/storyboard/save') {
+      try { return sendJson(res, 200, saveStoryboard(ctx, body)); } catch (e) { return sendJson(res, e.status || 400, { message: e.message, ...(e.extra || {}) }); }
+    }
     if (p === '/api/save') { const [s, o] = await doSave(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/refframe') { const [s, o] = await doRefFrame(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/look/run') { const [s, o] = await doLookRun(ctx); return sendJson(res, s, o); }
@@ -1012,6 +1017,12 @@ async function handle(ctx, req, res) {
   if (p === '/framing' || p === '/framing.html') return sendFile(req, res, path.join(UI_DIR, 'framing.html'));
   if (p === '/cuts' || p === '/cuts.html') return sendFile(req, res, path.join(UI_DIR, 'cuts.html'));
   if (p === '/api/cuts') return sendJson(res, 200, cutsState(ctx));
+  if (p === '/storyboard' || p === '/storyboard.html') return sendFile(req, res, path.join(UI_DIR, 'storyboard.html'));
+  if (p === '/api/storyboard') return sendJson(res, 200, storyboardState(ctx));
+  if (p.startsWith('/storyboard-preview/')) {
+    const f = storyboardImage(ctx, p.slice('/storyboard-preview/'.length));
+    return f ? sendFile(req, res, f) : sendText(res, 404, '找不到這張分鏡截圖');
+  }
   if (p === '/api/design') {
     const format = canvasInfo(P.project, readPlan(P.plan).data).format;
     return sendJson(res, 200, { ...designState(ctx), format, previews: designPreviews(ctx, format) });
@@ -1240,6 +1251,7 @@ async function cli() {
     console.log(`剪輯已經開著：${running.url}`);
     console.log(`剪輯清單：${new URL('cuts', running.url).href}`);
     console.log(`構圖：${new URL('framing', running.url).href}`);
+    console.log(`分鏡表：${new URL('storyboard', running.url).href}`);
     console.log(`專案：${rel(P.project)}（要重開先關掉：${stopCmd}）`);
     if (flags.open) openBrowser(running.url);
     return 0;
@@ -1263,6 +1275,7 @@ async function cli() {
         console.log(`剪輯：${s.url}`);
         console.log(`剪輯清單：${new URL('cuts', s.url).href}`);
         console.log(`構圖：${new URL('framing', s.url).href}`);
+        console.log(`分鏡表：${new URL('storyboard', s.url).href}`);
         console.log(`專案：${rel(P.project)}`);
         console.log(`已在背景執行（log：${rel(logFile)}）。關閉：${stopCmd}`);
         if (flags.open) openBrowser(s.url);
@@ -1284,6 +1297,7 @@ async function cli() {
   console.log(`剪輯：${ed.url}`);
   console.log(`剪輯清單：${new URL('cuts', ed.url).href}`);
   console.log(`構圖：${new URL('framing', ed.url).href}`);
+  console.log(`分鏡表：${new URL('storyboard', ed.url).href}`);
   console.log(`專案：${rel(P.project)}`);
   console.log(ed.ctx.player.available ? `完成影片預覽：HyperFrames 播放器 ${ed.ctx.player.version ?? ''}` : `完成影片預覽：不能用（${ed.ctx.player.reason}），只有即時模擬`);
   console.log(process.env.AUTO_EDIT_EDITOR_CHILD ? `背景執行中。關閉：${stopCmd}` : '按 Ctrl+C 關閉');

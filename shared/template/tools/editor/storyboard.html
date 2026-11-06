@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分鏡表</title>
+<link rel="icon" href="/editor/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/kit/fonts.css">
+<link rel="stylesheet" href="/kit/brand.css">
+<link rel="stylesheet" href="/editor/editor.css">
+<style>
+  body.storyboard { display: block; height: auto; min-height: 100vh; overflow: auto; scroll-padding-top: 12px; }
+  .sb-shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
+  .sb-nav { position: sticky; top: 12px; max-height: calc(100vh - 24px); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .sb-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
+  .sb-navlist { list-style: none; margin: 0; padding: 6px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+  .sb-navlist a { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px; align-items: baseline; padding: 6px 8px; border-radius: 6px; color: var(--mute); text-decoration: none; font-size: 13px; }
+  .sb-navlist a:hover { background: var(--card); color: var(--ink); }
+  .sb-navlist a.on { background: var(--card2); color: var(--ink); }
+  .sb-navlist .sb-navid { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .sb-navlist .sb-navtxt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sb-navlist a.plain { grid-template-columns: minmax(0, 1fr); }
+  .sb-navlist a.decide { color: var(--accent-text); font-weight: 700; }
+  .sb-navgap { height: 1px; margin: 6px 8px; background: var(--line); }
+  .sb-next { padding: 12px 14px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); font-size: 13.5px; line-height: 1.55; flex: none; }
+  .sb-next b { color: var(--accent-text); }
+  .sb-main { display: grid; gap: 16px; min-width: 0; }
+  .sb-intro { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+  .sb-intro p { margin: 0; font-size: 14px; color: var(--mute); }
+  .sb-summary { font-family: var(--mono); font-size: 13px; color: var(--mute); }
+  .sb-banner { margin: 0; padding: 9px 12px; border-radius: 6px; font-size: 13px; background: var(--card2); border: 1px solid var(--line2); overflow-wrap: anywhere; }
+  .sb-banner.err { border-color: var(--warn); color: var(--warn-kw); }
+  .sb-banner blockquote { margin: 6px 0 0; padding: 6px 10px; border-radius: 4px; background: var(--plate); color: var(--ink); user-select: all; }
+  #banner { display: grid; gap: 8px; }
+  #banner:empty { display: none; }
+  .sb-empty { padding: 48px 8px; text-align: center; color: var(--mute); }
+
+  .sb-sec { scroll-margin-top: 12px; }
+  .sb-sechead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 12px; }
+  .sb-sechead h2 { margin: 0; font-size: 16px; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+  .sb-id { font-family: var(--mono); font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--card2); border: 1px solid var(--line2); color: var(--ink); }
+  .sb-chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--plate); color: var(--mute); }
+  .sb-chip.time { font-family: var(--mono); }
+  .sb-rawbtn { margin-left: auto; font-size: 12px; padding: 3px 9px; color: var(--mute); }
+  .sb-sec.decide { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .sb-note { margin: 0 0 10px; font-size: 13px; color: var(--mute); }
+
+  .sb-segbody { display: grid; grid-template-columns: minmax(240px, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .sb-segbody.noshot { grid-template-columns: minmax(0, 1fr); }
+  .sb-shots { display: grid; gap: 8px; min-width: 0; }
+  .sb-shots.many { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sb-shots a { display: block; line-height: 0; }
+  .sb-shots img { display: block; width: 100%; max-height: 360px; object-fit: contain; border-radius: 6px; background: #000; border: 1px solid var(--line); }
+  .sb-noimg { display: grid; place-items: center; min-height: 90px; padding: 8px; border-radius: 6px; border: 1px dashed var(--line2); color: var(--dim); font-size: 12px; text-align: center; line-height: 1.4; }
+  .sb-fields { display: grid; gap: 8px; min-width: 0; font-size: 14px; }
+  .sb-field { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 2px 10px; align-items: baseline; }
+  .sb-field.nolabel { grid-template-columns: minmax(0, 1fr); }
+  .sb-label { font-size: 12.5px; color: var(--dim); }
+  .sb-ordered { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+  .sb-ordered > .sb-mark { font-family: var(--mono); font-size: 12px; color: var(--dim); text-align: right; }
+  .sb-subhead { margin: 0 0 8px; font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .sb-subgroup { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  details.sb-fold > summary { cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--ink); padding: 2px 0; }
+  details.sb-fold[open] > summary { margin-bottom: 10px; }
+  details.sb-fold > summary > span { margin-left: 4px; }
+  details.sb-ref > summary { display: flex; align-items: center; gap: 4px; font-size: 15px; }
+  details.sb-ref > summary::before { content: '▸'; color: var(--dim); }
+  details.sb-ref[open] > summary::before { content: '▾'; }
+  details.sb-ref:not([open]) .sb-rawbtn { display: none; }
+  .sb-lead { display: flex; align-items: center; gap: 12px; }
+  .sb-lead > .sb-fields { flex: 1 1 auto; }
+  .sb-lead .sb-rawbtn { flex: none; }
+  details.sb-ref[open] > summary { margin-bottom: 12px; }
+
+  .sb-edit { min-height: 1.5em; padding: 1px 4px; margin: -1px -4px; border-radius: 4px; outline: 1px solid transparent; overflow-wrap: anywhere; cursor: text; transition: background .1s, outline-color .1s; }
+  .sb-edit[contenteditable]:hover { background: var(--card2); }
+  .sb-edit[contenteditable]:focus { background: var(--card); outline: 2px solid var(--accent); }
+  .sb-edit.empty::before { content: '（空白，點一下填寫）'; color: var(--dim); font-size: 12.5px; }
+  .sb-edit.unsaved { outline: 2px solid var(--warn); }
+  .sb-edit code, .sb-code { font-family: var(--mono); font-size: 12px; background: var(--plate); padding: 0 4px; border-radius: 3px; }
+  .sb-edit strong { color: var(--ink); }
+  .sb-pre { margin: 0 0 8px; padding: 8px 10px; border-radius: 6px; background: var(--plate); font-family: var(--mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  .sb-tablewrap { overflow-x: auto; }
+  .sb-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .sb-table th, .sb-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; min-width: 56px; }
+  .sb-table th { color: var(--dim); font-weight: 400; white-space: nowrap; }
+  .sb-table td.wide { min-width: 170px; }
+  .sb-table td.check { text-align: center; min-width: 40px; }
+  .sb-table td.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+  .sb-table td.act, .sb-table th.act { width: 1%; min-width: 0; padding: 4px; white-space: nowrap; }
+  .sb-del { padding: 2px 7px; font-size: 12px; color: var(--dim); background: transparent; border-color: transparent; opacity: 0; }
+  .sb-table tr:hover .sb-del, .sb-del:focus-visible, .sb-del.armed { opacity: 1; }
+  .sb-del.armed { color: var(--warn-kw); border-color: var(--warn); }
+  .sb-addrow { justify-self: start; margin-top: 8px; padding: 3px 10px; font-size: 12px; color: var(--mute); }
+
+  .sb-rawbox { display: grid; gap: 8px; }
+  .sb-rawbox textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid var(--line2); background: var(--card); color: var(--ink); font-family: var(--mono); font-size: 12.5px; line-height: 1.6; resize: vertical; }
+  .sb-rawbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .sb-rawbar span { font-size: 12.5px; color: var(--mute); margin-right: auto; }
+  .sb-rawbar .primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+  @media (max-width: 960px) {
+    .sb-shell { grid-template-columns: minmax(0, 1fr); }
+    .sb-nav { position: static; max-height: 240px; }
+    .sb-segbody { grid-template-columns: minmax(0, 1fr); }
+    .sb-field { grid-template-columns: minmax(0, 1fr); }
+    .sb-del { opacity: 1; }
+  }
+</style>
+</head>
+<body class="storyboard">
+<header class="topbar">
+  <div class="brandmark">
+    <span class="logo" aria-hidden="true">剪</span>
+    <div class="titles">
+      <h1>分鏡表</h1>
+      <div class="sub" id="projName">載入中…</div>
+    </div>
+  </div>
+  <div class="save-state" id="saveState" data-state="busy" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
+</header>
+
+<div class="sb-shell">
+  <nav class="sb-nav" aria-label="分鏡表目錄">
+    <ul class="sb-panel sb-navlist" id="nav"></ul>
+    <div class="sb-next" id="next" hidden></div>
+  </nav>
+  <main class="sb-main">
+    <div class="sb-panel sb-intro" id="intro" hidden>
+      <p id="hint">點任何文字就能改，離開欄位就存回 work/storyboard.md；按 Enter 也會存，Esc 取消這次修改。</p>
+      <span class="sb-summary" id="summary"></span>
+    </div>
+    <div id="banner"></div>
+    <div class="sb-panel sb-empty" id="empty" hidden></div>
+    <div id="sections" class="sb-main"></div>
+  </main>
+</div>
+
+<script type="module" src="/editor/storyboard.js"></script>
+</body>
+</html>

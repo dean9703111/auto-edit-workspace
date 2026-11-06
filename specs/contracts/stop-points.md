@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|
 | ① 剪輯清單 | `auto-edit-rough` 步驟 5（現行 AGENTS.md 剪乾淨 4） | `work/cuts.md` 存在；NG 表表頭逐字 `\| 剪 \| 時間碼 \| 內容 \| 原因 \| 待確認 \|`（「剪」欄 AI 一律寫 `[x]`，016）；`editor.mjs` 印出剪輯清單網址；時間碼寫原片秒數的 `起–迄`；多支主軌時有「主軌順序」表；講稿有 `##`／`###` 章節時有章節空檔表，表頭含「章節」「第一句」「時間碼」三欄（G01；002 的 ng-snap／cutpoints 用表頭辨認這兩張表，`specs/002-pipeline-timing/spec.md` FR-001） | 剪輯清單網址（`editor.mjs` 的 `/cuts`：每列可試聽，勾＝剪） | 剪哪些 NG、主軌接的順序、章節空檔不足的處理 | `work/cuts.md` 的「剪」欄（網頁勾選即存）；主軌順序另由 `media.mjs main` 寫 `work/main.json` |
 | ② 構圖倍率 | `auto-edit-storyboard` 步驟 1（現行 AGENTS.md:82-88） | `work/構圖預覽.jpg`、`work/構圖預覽-套卡.jpg` 存在；`qc.mjs framing` 印的倍率表原文已貼進回覆 | 兩張圖＋倍率表＋一句建議 | 用哪個倍率 | `work/hyperframes/plan.json` 第一層 `frame`（1.0 倍不寫） |
-| ③ 分鏡表 | `auto-edit-storyboard` 步驟 6（現行 AGENTS.md:98-105） | `work/storyboard.md` 有：speakerBox、本集圖示表、總覽表、每段一節＋截圖、「需要我決定的事」（含金句候選表，G22）；草稿 plan.json `--check` 0 個 ✖ | `work/storyboard.md`＋`work/storyboard-preview/` | 每段版面、文字、金句上不上 | `work/storyboard.md` → 正式 `work/hyperframes/plan.json` |
+| ③ 分鏡表 | `auto-edit-storyboard` 步驟 6（現行 AGENTS.md:98-105） | `work/storyboard.md` 有：speakerBox、本集圖示表、總覽表、每段一節＋截圖、「需要我決定的事」（含金句候選表，G22）；草稿 plan.json `--check` 0 個 ✖；`editor.mjs` 印出分鏡表網址（017） | 分鏡表網址（`work/storyboard.md`＋`work/storyboard-preview/` 的網頁版，可直接改） | 每段版面、文字、金句上不上 | `work/storyboard.md` → 正式 `work/hyperframes/plan.json` |
 | ④ Studio 預覽 | `auto-edit-review` 流程 A、B 的最後一步（現行 AGENTS.md:106） | build 0 個 ✖；有情境動畫時 `audit.mjs` 0 個 ✖；`snapshot --review` 每段 PASS／FAIL 表已列；Studio 網址可開（`npx hyperframes preview --status`） | Studio 網址＋要使用者確認的卡＋「請看字幕有沒有對到嘴」 | 要改哪裡，或可以輸出 | `work/hyperframes/plan.json`、`work/回饋/r<N>.md`（G10） |
 | ⑤ 剪輯台 | 使用者說「打開剪輯台」（`auto-edit-review` 流程 C；現行 AGENTS.md:128） | `node shared/template/tools/editor.mjs --status --project projects/<專案>` 印出網址 | 剪輯台網址 | 裁剪、音量、轉場、字幕、卡片文字 | 剪輯台自己寫 plan.json 的 `edit` 等欄位與 `work/rough.srt`（EDITOR.md §3） |
 | ⑥ 背景預覽 | `auto-edit-style` 步驟 3（現行 AGENTS.md:137） | 三張圖在暫存資料夾、ffprobe 尺寸是 1920×1080／960×1080／1920×1080、留空區預覽圖與三張並排圖都產生了 | 三張並排圖＋留空區預覽圖 | 換不換上 | `shared/template/bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（AGENTS.md 規則 1 的例外） |
@@ -31,7 +31,7 @@
 |---|---|
 | ① | `⏸ 停點 ① 剪輯清單｜請看：<剪輯清單網址>｜請回：勾好後說「可以」，或要改的列` |
 | ② | `⏸ 停點 ② 構圖倍率｜請看：work/構圖預覽.jpg、work/構圖預覽-套卡.jpg｜請回：倍率（1.0／1.15／1.3）` |
-| ③ | `⏸ 停點 ③ 分鏡表｜請看：work/storyboard.md｜請回：「可以」或要改的地方` |
+| ③ | `⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方` |
 | ④ | `⏸ 停點 ④ Studio 預覽｜請看：<Studio 網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」` |
 | ⑤ | `⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」` |
 | ⑥ | `⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」` |

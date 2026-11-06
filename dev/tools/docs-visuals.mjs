@@ -73,7 +73,21 @@ fs.writeFileSync(path.join(cutsWork,'cuts.md'),['# 剪輯清單','','## NG','','
   '| [ ] | 1:03.00–1:05.80 | 這個設定要…呃… | 卡住重講 | — |',
   '| [x] | 2:30.00–2:31.20 | 我們先看… | 逐字稿和講稿對不上 | 講稿沒有這句，可能是 whisper 補的 |','',
   '## 需要你決定','','- 第 3 列（2:30.00–2:31.20）待確認：講稿沒有這句，可能是 whisper 補的',''].join('\n'));
-let editor,cutsEditor,browser;
+// 分鏡表（停點 ③）：另一個示範專案，截圖用內建情境庫的底圖（不讀使用者專案）
+const sbWork=path.join(root,'projects','分鏡表示範','work');fs.mkdirSync(path.join(sbWork,'storyboard-preview'),{recursive:true});
+for(const [from,to] of [['14-speaker','s01'],['04c-fs-flow','x01-1'],['08-steps','x01-2']])fs.copyFileSync(path.join(TPL,'gallery',`${from}.jpg`),path.join(sbWork,'storyboard-preview',`${to}.jpg`));
+const sbBeat=['| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |','|---|---|---|---|---|---|',
+  '| 0 | 段起點 | 主卡＋標題「先做這三步」 | 色帶擦開；＋0.5 逐字上浮（標題） | 標題 | — |',
+  '| 1 | `#6@錄影` | 第 1 站：錄影 | 進度推進；彈出（站卡） | 第 1 站 | — |',
+  '| 2 | `#7@逐字稿` | 第 2 站：轉逐字稿 | 進度推進；彈出（站卡） | 第 2 站 | — |',
+  '| 3 | `#8@初剪` | 第 3 站：初剪 | 進度推進；彈出（站卡） | 第 3 站 | pop |'];
+fs.writeFileSync(path.join(sbWork,'storyboard.md'),['# 分鏡表：示範（草稿）','',
+  '## 總覽','','| 段 | 章 | 句號 | 時間碼 | 版面 | 卡片類型 | 一句話摘要 |','|---|---|---|---|---|---|---|',
+  '| s01 | — | #1–3e | 0:00.00–0:06.20 | 疊加 | 14 講者介紹 | 自我介紹，秀出頭銜 |','| x01 | 01 開始 | #4–9e | 0:06.20–0:21.40 | 子母畫面 | x-process（拍型 A） | 先做這三步：錄影、逐字稿、初剪 |','',
+  '## s01（#1–3e，0:00.00–0:06.20）','','![s01](storyboard-preview/s01.jpg)','','- 起點那句字幕：我是大寶，歡迎來到我的頻道','- 版面：疊加（14 講者介紹）','- 畫面文字：名字「林大寶」＋頭銜「影音創作者」「科技部落客」','- 音效：預設','- 理由：第一次出現講者名字，疊加版面不遮臉','',
+  '## x01（#4–9e，0:06.20–0:21.40）','','![x01-1](storyboard-preview/x01-1.jpg)','![x01-2](storyboard-preview/x01-2.jpg)','','- 起點那句字幕：開始之前先做這三步','- 版面：子母畫面（情境動畫 `x-process`）','- 畫面文字：標題「先做這三步」；站名「錄影」「逐字稿」「初剪」','- 理由：流程有先後，用站點帶著觀眾走','','#### 動畫分鏡 x01','',...sbBeat,'',
+  '## 需要我決定的事','','1. **結尾要不要配樂**：要的話從最後一句開始配','','### 金句候選（勾了才上，每集最多 6 則）','','| 候選 | 句號 | 原句 | 卡上文字（≤ 14 字） | 情緒（正／負／中） | 要不要 ☐ |','|---|---|---|---|---|---|','| 1 | #8 | 先做完初剪再談包裝 | 先初剪再包裝 | 正 | ☑ |','| 2 | #12 | 手動對時間最花力氣 | 對時間最花力氣 | 負 | ☐ |',''].join('\n'));
+let editor,cutsEditor,sbEditor,browser;
 try{
   editor=await startEditor({flags:{project:path.dirname(work),template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
   const framingResponse=await fetch(new URL('/api/framing',editor.url));
@@ -118,9 +132,24 @@ try{
   await badge('#listTitle','1','after');await badge('.ct-player h2','2','after');await badge('#next','3','inside');
   const cutsBottom=await page.$eval('.ct-main',e=>Math.ceil(e.getBoundingClientRect().bottom+scrollY));
   await page.screenshot({path:path.join(OUT,'cuts.jpg'),type:'jpeg',quality:88,clip:{x:0,y:0,width:1600,height:cutsBottom},captureBeyondViewport:true});
-  const dimensions={cuts:{width:1600,height:cutsBottom},framing:{width:1600,height:Math.ceil(bounds.bottom+16)},design:{width:design.width,height:design.height}};
+  await page.evaluate(()=>document.querySelectorAll('.docs-marker').forEach(e=>e.remove()));
+  sbEditor=await startEditor({flags:{project:path.dirname(sbWork),template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
+  await page.goto(new URL('/storyboard',sbEditor.url).href);await page.waitForSelector('#sec-x01 .sb-edit',{timeout:15000});
+  await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>{i.loading='eager';return i.complete?0:new Promise(r=>{i.onload=i.onerror=r;});}));});
+  // 把畫面文字那一格點進編輯中，截到實際的編輯框
+  await page.click('#sec-s01 .sb-field:nth-child(3) .sb-edit');
+  await page.mouse.move(0,0);
+  // 番號貼在區塊右上或左側，不蓋字
+  const pin=async(selector,n,side)=>page.$eval(selector,(e,n,side)=>{const r=e.getBoundingClientRect(),b=document.createElement('span');b.className='docs-marker';b.textContent=n;Object.assign(b.style,{position:'absolute',left:`${(side==='left'?r.left-40:side==='below'?r.left+(r.width-32)/2:r.right+8)+scrollX}px`,top:`${(side==='below'?r.bottom+8:r.top+(r.height-32)/2)+scrollY}px`,width:'32px',height:'32px',borderRadius:'50%',background:'#FF791F',color:'#090D17',font:'800 20px sans-serif',display:'grid',placeItems:'center',zIndex:99,boxShadow:'0 0 0 3px white'});document.body.append(b);},n,side);
+  await pin('#sec-s01 .sb-field:nth-child(3) .sb-label','1','left');
+  await pin('#sec-x01 .sb-addrow','2','right');
+  await pin('td.check input','3','left');
+  await pin('#next','4','below');
+  const sbBottom=await page.$eval('.sb-shell',e=>Math.ceil(e.getBoundingClientRect().bottom+scrollY));
+  await page.screenshot({path:path.join(OUT,'storyboard.jpg'),type:'jpeg',quality:88,clip:{x:0,y:0,width:1600,height:sbBottom},captureBeyondViewport:true});
+  const dimensions={storyboard:{width:1600,height:sbBottom},cuts:{width:1600,height:cutsBottom},framing:{width:1600,height:Math.ceil(bounds.bottom+16)},design:{width:design.width,height:design.height}};
   fs.writeFileSync(path.join(OUT,'dimensions.json'),JSON.stringify(dimensions,null,2)+'\n');
   console.log(JSON.stringify(dimensions));
-  console.log(`✔ 文件圖解 4 張、介面截圖 3 張：${path.relative(WS,OUT)}`);
+  console.log(`✔ 文件圖解 4 張、介面截圖 4 張：${path.relative(WS,OUT)}`);
   console.log('介面截圖使用內建示範講者；未讀寫使用者專案、共用模板或個人參考圖。');
-}finally{if(browser)await browser.close();if(editor)await editor.close();if(cutsEditor)await cutsEditor.close();}
+}finally{if(browser)await browser.close();if(editor)await editor.close();if(cutsEditor)await cutsEditor.close();if(sbEditor)await sbEditor.close();}

@@ -16,6 +16,7 @@
 
 停點 ①（剪輯清單）也用剪輯台：寫好 `work/cuts.md` 後啟動，把印出的「剪輯清單」網址（`…/cuts`）給使用者，最後一行照停點 ① 的固定格式（`.agents/skills/auto-edit-rough/SKILL.md` 步驟 5）。剪輯清單頁只要有 `work/cuts.md`（試聽要 `work/main.mp4`），只寫 cuts.md NG 表的「剪」欄（`[x]` 剪、`[ ]` 不剪；舊格式沒有這一欄就加在最前面）；cuts.md 被 AI 改過會擋下存檔並重新載入；有 `work/rough.mp4` 之後只能看。
 
+停點 ③（分鏡表）也用剪輯台：寫好 `work/storyboard.md` 後啟動，把印出的「分鏡表」網址（`…/storyboard`）給使用者，最後一行照停點 ③ 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md`）。分鏡表頁只寫 `work/storyboard.md` 改到的那幾行（欄位內容、表格的格與列、金句勾選 `☑`／`☐`、某一段的原始 Markdown）；表頭和段標題不能直接點來改；檔案被 AI 改過會擋下存檔並重新載入，沒存到的文字留在頁面上；製作進度的「③ 分鏡表」最後一列是「通過」或「略過」之後只能看。
 停點 ②（構圖）也用剪輯台：啟動後印的「構圖台」網址（`…/framing`）給使用者，最後一行照停點 ② 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 2）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
 
 開之前要有：
@@ -43,6 +44,7 @@ node shared/template/tools/editor.mjs --project projects/example
   剪輯：http://127.0.0.1:4400/
   剪輯清單：http://127.0.0.1:4400/cuts
   構圖：http://127.0.0.1:4400/framing
+  分鏡表：http://127.0.0.1:4400/storyboard
   專案：projects/example
   已在背景執行（log：projects/example/work/hyperframes/.editor/editor.log）。關閉：node shared/template/tools/editor.mjs --stop --project projects/example
   ```
@@ -169,6 +171,15 @@ node shared/template/tools/editor.mjs --project projects/example
 - 按 **▶** 聽那一段，前後會多播一點，紅色是會剪掉的部分。
 - **勾＝剪掉，取消＝保留**，一勾就存檔，不用按儲存。黃色的列是 AI 不確定的，建議先聽再決定。
 - 下面的「需要你決定」請在對話裡回覆 AI。勾好回到對話說「可以」。
+
+### 分鏡表（每段怎麼呈現）
+
+列好分鏡表後，AI 會給你網址最後是 `/storyboard` 的那一個。左邊是每一段的目錄，右邊是每一段的截圖、版面、畫面文字和動畫分鏡：
+
+- **點任何文字就能改**，離開欄位就存，按 Enter 也會存，按 Esc 取消這次修改。內容直接存回 `work/storyboard.md`，不用按儲存。
+- 表格可以按「＋ 加一列」，把滑鼠移到列上按 ✕ 刪掉（要按兩次）。金句候選打勾才會上。
+- 想加減段落、清單，按那一段右上角的「改原始 Markdown」。第一行的標題和動畫分鏡的表頭請保留，工具靠它們找內容。
+- 改好回到對話說「可以」，AI 會重新讀這份內容再開始製作。確認之後這一頁只能看，要改就跟 AI 說段號。
 
 ### 畫面
 
