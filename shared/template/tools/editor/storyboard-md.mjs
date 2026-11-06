@@ -158,26 +158,67 @@ function findBlock(doc, line) {
   return {};
 }
 
-// body 的 op：text 改一行的內容／cell 改一格／addRow 在那一列後面加一列／delRow 刪一列／raw 換掉整段的原始 Markdown
+// 使用者能動的只有畫面上要呈現的文字，其他欄位是工具和 AI 在用的
+const TEXT_LABEL = '畫面文字';
+const TEXT_COLUMN = /^(畫面上出現什麼|卡上文字)|☐/;
+// 段落的選擇與補充說明：想換成＝希望 AI 改用的情境、補充說明＝不滿意時的文字；AI 處理完會刪掉這兩行（auto-edit-storyboard）
+const FIELD_LABELS = { 想換成: 'segment', 音效: 'segment', 補充說明: 'any' };
+
+export const isDecideSection = (s) => /需要.*決定/.test(s.title || '');
+
+// 這一段「第一個小標題之前」的最後一行（新欄位加在這裡）
+function fieldInsertAt(lines, section) {
+  const head = section.blocks.find((b) => b.type === 'heading');
+  let end = head ? head.line : section.end;
+  while (end > section.start + 1 && !lines[end - 1].trim()) end--;
+  return end;
+}
+
+function setField(doc, lines, body) {
+  const label = String(body.label ?? '');
+  const scope = FIELD_LABELS[label];
+  if (!scope) throw fail('這個欄位不能改');
+  const s = doc.sections.find((x) => x.key === body.key);
+  if (!s) throw fail(`找不到「${body.key}」這一段`);
+  if (!s.id && !(scope === 'any' && isDecideSection(s))) throw fail('這一段不能加這個欄位');
+  const value = oneLine(body.value);
+  const found = s.blocks.find((b) => b.type === 'item' && b.label === label);
+  checkExpect(body, found?.value ?? '');
+  const empty = !value || (label === '音效' && value === '預設' && !found);
+  if (found) {
+    if (value) { lines[found.line] = found.prefix + value; return lines; }
+    // 拿掉這一行；前後都是空行就順便收一行
+    const blankAround = !lines[found.line - 1]?.trim() && !lines[found.line + 1]?.trim();
+    lines.splice(blankAround ? found.line - 1 : found.line, blankAround ? 2 : 1);
+    return lines;
+  }
+  if (empty) return lines;
+  const at = fieldInsertAt(lines, s);
+  const row = `- ${label}：${value}`;
+  // 前一行不是清單就空一行，Markdown 才會是新的清單
+  lines.splice(at, 0, ...(LIST.test(lines[at - 1] || '') ? [row] : ['', row]));
+  return lines;
+}
+
+// body 的 op：text 改「畫面文字」那一行／cell 改一格要呈現的文字或金句勾選／field 設定想換成、音效、補充說明
 export function applyStoryboardOp(doc, body) {
   const lines = doc.lines.slice();
   switch (body?.op) {
     case 'text': {
       const line = needInt(body.line, '要改的那行');
       const { block } = findBlock(doc, line);
-      if (block?.type !== 'item' && block?.type !== 'para') throw fail(`第 ${line + 1} 行不能用這個方式改`);
+      if (block?.type !== 'item' || block.label !== TEXT_LABEL) throw fail('只有畫面上要呈現的文字可以改；其他想調整的，寫在這一段的補充說明');
       checkExpect(body, block.value);
-      const value = oneLine(body.text);
-      if (!block.prefix && /^#{1,6}\s/.test(value)) throw fail('標題請用「改原始 Markdown」改');
-      lines[line] = block.prefix + value;
+      lines[line] = block.prefix + oneLine(body.text);
       return lines;
     }
     case 'cell': {
       const line = needInt(body.line, '要改的那列');
       const col = needInt(body.col, '要改的那格');
       const { part, table, row } = findBlock(doc, line);
-      if (part !== 'row') throw fail(part ? '表頭工具會讀，不能在這裡改；真的要改請用「改原始 Markdown」' : `第 ${line + 1} 行不是表格的一列`);
+      if (part !== 'row') throw fail(`第 ${line + 1} 行不是表格的一列`);
       if (col >= table.head.length) throw fail(`這張表只有 ${table.head.length} 欄`);
+      if (!TEXT_COLUMN.test(table.head[col])) throw fail('只有畫面上要呈現的文字可以改；其他想調整的，寫在這一段的補充說明');
       checkExpect(body, row.cells[col] ?? '');
       const value = oneLine(body.text).replace(/\|/g, '\\|');
       let l = lines[line];
@@ -187,32 +228,8 @@ export function applyStoryboardOp(doc, body) {
       lines[line] = `${l.slice(0, a)} ${value} ${l.slice(b)}`;
       return lines;
     }
-    case 'addRow': {
-      const line = needInt(body.line, '要加在哪一列後面');
-      const { part, table } = findBlock(doc, line);
-      if (part !== 'row' && part !== 'sep') throw fail(`第 ${line + 1} 行不是表格的一列`);
-      lines.splice(line + 1, 0, `|${table.head.map(() => '  ').join('|')}|`);
-      return lines;
-    }
-    case 'delRow': {
-      const line = needInt(body.line, '要刪的那列');
-      const { part, row } = findBlock(doc, line);
-      if (part !== 'row') throw fail(`第 ${line + 1} 行不是表格的一列`);
-      checkExpect(body, row.cells.join('｜'));
-      lines.splice(line, 1);
-      return lines;
-    }
-    case 'raw': {
-      const s = doc.sections.find((x) => x.key === body.key);
-      if (!s) throw fail(`找不到「${body.key}」這一段`);
-      const next = String(body.text ?? '').replace(/\r\n/g, '\n').replace(/\s+$/, '').split('\n');
-      if (s.level) {
-        const h = (next.find((l) => l.trim()) || '').match(HEADING);
-        if (h?.[1].length !== s.level || (s.id && h[2].match(SEG_ID)?.[1] !== s.id)) throw fail(`第一行要保留標題（${'#'.repeat(s.level)} ${s.id || s.title}…），工具靠它找這一段`);
-      }
-      lines.splice(s.start, s.end - s.start, ...next);
-      return lines;
-    }
+    case 'field':
+      return setField(doc, lines, body);
     default:
       throw fail('看不懂要改什麼');
   }

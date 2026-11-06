@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { imp } from './helpers.mjs';
+import { TEMPLATE, imp } from './helpers.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DEMO = path.join(ROOT, 'dev', 'site', 'demo');
@@ -36,7 +36,7 @@ test('示範：剪輯清單的狀態和真正的服務一樣；勾選只改那�
 test('示範：分鏡表能被真正的服務解析、沒有警告；表頭和動畫檢查一致；截圖都在情境庫', () => {
   assert.deepEqual(BEAT_HEADERS, [BEAT_HEADER, [...BEAT_HEADER, ...BEAT_HEADER_ILLUS]]);
   const dir = project('storyboard.md');
-  const s = storyboardState({ P: { project: dir } });
+  const s = storyboardState({ P: { project: dir, plan: path.join(dir, 'work', 'plan.json'), templateDir: TEMPLATE } });
   assert.deepEqual(s.warnings, []);
   assert.deepEqual(s.sections.filter((x) => x.id).map((x) => x.id), ['s01', 'x01']);
   for (const m of md('storyboard.md').matchAll(/storyboard-preview\/([^)]+)/g)) assert.ok(fs.existsSync(path.join(ROOT, 'shared/template/gallery', m[1])), m[1]);
@@ -54,7 +54,9 @@ test('示範：官網組好後頁面只用相對路徑，有接模擬層，工�
     assert.ok(html.indexOf('demo-api.js') < html.indexOf(`${page}.js`), '模擬層要先載入');
     for (const m of html.matchAll(/(?:src|href)="([^"#]+)"/g)) assert.ok(fs.existsSync(path.join(site, 'demo', m[1])), `${page}.html 連到的 ${m[1]} 不在網站上`);
   }
-  for (const f of ['demo-api.js', 'demo-core.mjs', 'storyboard-md.mjs', 'cuts.js', 'storyboard.js', 'editor.css', 'main.mp4', 'cuts.md', 'storyboard.md']) assert.ok(fs.existsSync(path.join(site, 'demo', f)), f);
+  for (const f of ['demo-api.js', 'demo-core.mjs', 'storyboard-md.mjs', 'cuts.js', 'storyboard.js', 'editor.css', 'main.mp4', 'cuts.md', 'storyboard.md', 'options.json']) assert.ok(fs.existsSync(path.join(site, 'demo', f)), f);
   assert.ok(!fs.existsSync(path.join(site, 'shared/template/tools')), 'tools 不上網站');
+  const options = JSON.parse(fs.readFileSync(path.join(site, 'demo/options.json'), 'utf8'));
+  for (const i of options.scenes.flatMap((g) => g.items)) assert.ok(fs.existsSync(path.join(site, 'shared/template/preview', i.preview)), `範例 ${i.preview} 不在網站上`);
   fs.rmSync(out, { recursive: true, force: true });
 });

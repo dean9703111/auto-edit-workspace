@@ -98,7 +98,7 @@ projects/<專案>/
 |---|---|---|---|---|
 | ① 剪輯清單 | 剪乾淨 4 | 剪輯清單網址（每列可試聽，勾＝剪、取消＝保留，即時存回 `work/cuts.md`） | 「可以」、要改的列、「改好了」 | `work/cuts.md` 的「剪」欄（網頁寫或 AI 照我的話改） |
 | ② 構圖 | 剪好看構圖 | 構圖台網址（在影片上拖框、開關調光瘦臉、選預覽參考圖）、`work/look-preview.jpg` | 「調好了」、「用建議的」 | plan.json `frame`、`look`（構圖台存檔時寫）；預覽參考圖 `shared/template/preview/speaker-local.jpg`（構圖台寫） |
-| ③ 分鏡表 | 剪好看 3；④ 之後的改版 | 分鏡表網址（每段截圖＋可直接改的內容，情境動畫段附動畫分鏡，即時存回 `work/storyboard.md`）；改版看 `work/versions/<段>/v<N>/分鏡.md` | 「可以」、「改好了」、要改的段或拍 | `work/storyboard.md`（網頁寫或 AI 照我的話改）→ 正式 plan.json；情境動畫照確認過的動畫分鏡做；改版由 `versions.mjs accept` 寫回 storyboard.md |
+| ③ 分鏡表 | 剪好看 3；④ 之後的改版 | 分鏡表網址（每段截圖；我能改畫面文字、選呈現方式與音效、勾金句、寫補充說明，即時存回 `work/storyboard.md`）；改版看 `work/versions/<段>/v<N>/分鏡.md` | 「可以」、「改好了」、要改的段或拍 | `work/storyboard.md`（網頁寫或 AI 照我的話改）→ 正式 plan.json；情境動畫照確認過的動畫分鏡做；改版由 `versions.mjs accept` 寫回 storyboard.md |
 | ④ 完成影片預覽 | 剪好看 5 | 完成影片預覽網址（剪輯台直接開在完成影片預覽） | 要改的段、「可以了，輸出完成影片」 | plan.json、`work/feedback/` |
 | ⑤ 剪輯台 | 「打開剪輯台」 | 剪輯台網址 | 「調好了」、「照修改單改」 | 剪輯台自己寫；修改單 `work/feedback/editor-requests.md` |
 | ⑥ 背景預覽 | 換風格 2 | 並排圖、留空區預覽 | 「可以」、「重做」 | `shared/template/bg-*.jpg` |

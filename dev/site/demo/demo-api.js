@@ -6,13 +6,13 @@ import { BEAT_HEADERS, hashText, cutsDemoState, setDemoCut } from './demo-core.m
 const PAGE = location.pathname.includes('cuts') ? 'cuts' : 'storyboard';
 const FILE = '瀏覽器（示範）';
 const realFetch = window.fetch.bind(window);
-let text = null;
-const ready = realFetch(`${PAGE}.md`).then((r) => r.text()).then((t) => { text = t; });
+let text = null, options = null;
+const ready = Promise.all([realFetch(`${PAGE}.md`).then((r) => r.text()), PAGE === 'storyboard' ? realFetch('options.json').then((r) => r.json()) : null]).then(([t, o]) => { text = t; options = o; });
 
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const imageUrl = (name) => `../shared/template/gallery/${encodeURIComponent(name)}`;
 const base = { project: '示範專案', file: FILE, exists: true, readOnly: false };
-const storyboard = () => ({ ...base, ...storyboardDocState(text, { hash: hashText, imageUrl, beatHeaders: BEAT_HEADERS }) });
+const storyboard = () => ({ ...base, options, previewBase: '../shared/template/preview/', ...storyboardDocState(text, { hash: hashText, imageUrl, beatHeaders: BEAT_HEADERS }) });
 const cuts = () => ({ ...base, hash: hashText(text), video: { url: 'main.mp4' }, ...cutsDemoState(text) });
 
 function saveStoryboard(body) {

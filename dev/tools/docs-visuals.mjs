@@ -123,14 +123,14 @@ try{
   sbEditor=await startEditor({flags:{project:path.dirname(sbWork),template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
   await page.goto(new URL('/storyboard',sbEditor.url).href);await page.waitForSelector('#sec-x01 .sb-edit',{timeout:15000});
   await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>{i.loading='eager';return i.complete?0:new Promise(r=>{i.onload=i.onerror=r;});}));});
-  // 把畫面文字那一格點進編輯中，截到實際的編輯框
-  await page.click('#sec-s01 .sb-field:nth-child(3) .sb-edit');
+  // 把畫面文字點進編輯中，截到實際的編輯框
+  await page.click('#sec-s01 .sb-piece');
   await page.mouse.move(0,0);
-  // 番號貼在區塊右上或左側，不蓋字
+  // 番號貼在區塊旁邊，不蓋字
   const pin=async(selector,n,side)=>page.$eval(selector,(e,n,side)=>{const r=e.getBoundingClientRect(),b=document.createElement('span');b.className='docs-marker';b.textContent=n;Object.assign(b.style,{position:'absolute',left:`${(side==='left'?r.left-40:side==='below'?r.left+(r.width-32)/2:r.right+8)+scrollX}px`,top:`${(side==='below'?r.bottom+8:r.top+(r.height-32)/2)+scrollY}px`,width:'32px',height:'32px',borderRadius:'50%',background:'#FF791F',color:'#090D17',font:'800 20px sans-serif',display:'grid',placeItems:'center',zIndex:99,boxShadow:'0 0 0 3px white'});document.body.append(b);},n,side);
-  await pin('#sec-s01 .sb-field:nth-child(3) .sb-label','1','left');
-  await pin('#sec-x01 .sb-addrow','2','right');
-  await pin('td.check input','3','left');
+  await pin('#sec-s01 .sb-field:nth-child(2) .sb-select a','1','right');
+  await pin('#sec-s01 .sb-field:nth-child(3) .sb-label','2','left');
+  await pin('#sec-s01 .sb-note-box label','3','right');
   await pin('#next','4','below');
   const sbBottom=await page.$eval('.sb-shell',e=>Math.ceil(e.getBoundingClientRect().bottom+scrollY));
   await page.screenshot({path:path.join(OUT,'storyboard.jpg'),type:'jpeg',quality:88,clip:{x:0,y:0,width:1600,height:sbBottom},captureBeyondViewport:true});

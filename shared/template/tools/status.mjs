@@ -206,7 +206,7 @@ export function projectStatus(project) {
       next = rev.length ? `等使用者看 ${rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`).join('、')}；回覆「可以」後跑 versions.mjs accept --seg ${rev.map((m) => m[1]).join(',')}，再照 auto-edit-motion 做（要改就改那份 分鏡.md 再停一次）` : {
         '① 剪輯清單': '等使用者在剪輯清單頁（editor.mjs 印的「剪輯清單：」網址）勾好後回覆；回覆後先重新讀 cuts.md（只剪「剪」欄是 [x] 的列），跑 media.mjs ng-snap，照它印的指令剪',
         '② 構圖': '等使用者在構圖台拖好框按「儲存」（剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就把 qc.mjs framing 表上 ✔ 那一列的 frame 寫進 plan.json（1.0 倍不寫）。之後跑 qc.mjs speaker 量講者框',
-        '③ 分鏡表': '等使用者在分鏡表頁（editor.mjs 印的「分鏡表：」網址）改好後回覆；回覆「可以」或「改好了」後，先重新讀 work/storyboard.md，以檔案為準寫正式 plan.json',
+        '③ 分鏡表': '等使用者在分鏡表頁（editor.mjs 印的「分鏡表：」網址）改好後回覆；回覆「可以」或「改好了」後，先重新讀 work/storyboard.md；有「想換成」「補充說明」的段先重做、重截、刪掉那兩行再停一次，都沒有才寫正式 plan.json',
         '④ 完成影片預覽': '等使用者看完成影片預覽（editor.mjs 印的「完成影片預覽：」網址）；要改就改 plan.json 那一段再 build，說可以就輸出測試片段與完成影片',
         '⑤ 剪輯台': '等使用者在剪輯台調完說「調好了」；之後重新讀 plan.json 與 rough.srt 再 build',
         '⑥ 背景預覽': '等使用者看三張背景圖；說可以才複製進 shared/template/',

@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import { readStopLog } from '../../status.mjs';
 import { BEAT_HEADER, BEAT_HEADER_ILLUS } from '../../lib/audit-beats.mjs';
 import { storyboardDocState, applyStoryboardEdit } from '../storyboard-md.mjs';
+import { storyboardOptions } from './storyboard-options.mjs';
 
 const PREVIEW_DIR = 'storyboard-preview';
 const BEAT_HEADERS = [BEAT_HEADER, [...BEAT_HEADER, ...BEAT_HEADER_ILLUS]];
@@ -26,9 +27,16 @@ export function storyboardLocked(project) {
   return ['通過', '略過'].includes(rows.at(-1)?.state);
 }
 
+// 下拉選單：直式專案拿掉直式不能用的情境
+function optionsOf(ctx) {
+  let portrait = false;
+  try { portrait = JSON.parse(fs.readFileSync(ctx.P.plan, 'utf8')).format === 'portrait'; } catch { /* 還沒有 plan.json */ }
+  return storyboardOptions(ctx.P.templateDir, { portrait });
+}
+
 export function storyboardState(ctx) {
   const f = fileOf(ctx);
-  const base = { project: path.basename(ctx.P.project), file: 'work/storyboard.md', readOnly: storyboardLocked(ctx.P.project) };
+  const base = { project: path.basename(ctx.P.project), file: 'work/storyboard.md', readOnly: storyboardLocked(ctx.P.project), options: optionsOf(ctx), previewBase: '/gallery/preview/' };
   if (!statOf(f)) return { ...base, exists: false, hash: null, sig: null, title: '', sections: [], overview: {}, warnings: [] };
   return { ...base, exists: true, ...storyboardDocState(fs.readFileSync(f, 'utf8'), { hash: sha, imageUrl: imageUrlOf(ctx), beatHeaders: BEAT_HEADERS }) };
 }

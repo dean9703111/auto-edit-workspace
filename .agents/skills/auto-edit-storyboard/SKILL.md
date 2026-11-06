@@ -119,7 +119,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 ```
 
 草稿 plan.json：直式時第一層先寫 `"format": "portrait"`；有 `work/screen-sync.json`（邊錄邊講的螢幕錄影）就先跑 `node shared/template/tools/media.mjs screen-sync --project projects/<專案> --write-plan`，sync 段照錄影原本的時間對好，不用再配也不要改 `in`；段的 `from` 綁這段第一句；卡片主文字、每條項目、每個動畫站綁講到那個詞的 `#N@詞`（USAGE.md 3.4；哪個欄位改哪個時間點見 USAGE-reference.md R2.8，例：07 的 `key` 寫 `beats.keyAt`、清單寫 `slots.items[i].at`）。例：07 重點字卡寫 `"slots": { "key": "一鍵同步" }, "beats": { "keyAt": "#12@同步" }`，不是綁句首的 `#12`。情境動畫段：從 `shared/template/custom/` 複製最接近的範例成 `compositions/x-<名稱>.html` 登記進草稿（`"type": "custom"`），範例原文 build 只 ⚠「還沒做」、不擋，截圖是範例的樣子，要做的內容寫在動畫分鏡。`--check` 的 ✖ 全部修掉才 build。段尾完成態不到 1.5 秒（印「最後一幕太短」）時，先把這段的 `to` 往後延（不超過下一段起點、最多 0.5 秒）再跑一次；延了還不夠，才列進「需要我決定的事」。`qc.mjs storyboard` 自己算每段的完成態（條列逐條換的每次一張、錄影段每個標註到位一張），最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每段「截圖觀察」上面，**只貼這一次印出來的那幾行**（同一段張數變了，工具會清掉舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」）；每張後面的「為什麼」（完成態、第 N 條、…到位、整段都在動）照 USAGE.md 2.3 讀；截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard，還是一樣就在「需要我決定的事」列出段號和秒數。不要自己算秒數跑 `snapshot --at`。照 `references/storyboard-template.md` 寫 `work/storyboard.md`；「音效」欄寫 `預設`、`無`、換的名稱（例 `shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`。拿不定版面的段落：先把第一個方案的圖改名成 `s05-A.png`，改 plan.json、build、再跑一次 storyboard 得到 `s05.png`，兩張並排請使用者選。
-editor.mjs 印的「分鏡表：<網址>」照抄進停點 ③ 那一行；使用者在網頁改的內容直接存回 `work/storyboard.md`（勾選的金句寫 `☑`），這份檔仍是唯一的真相。
+editor.mjs 印的「分鏡表：<網址>」照抄進停點 ③ 那一行。使用者在網頁能改的只有：畫面上的文字、金句勾選（`☑`）、音效，以及兩個要求欄：`- 想換成：<情境>`（下拉選單）、`- 補充說明：<文字>`（不滿意時寫的）。都存回 `work/storyboard.md`，這份檔仍是唯一的真相。
 完成判準：`--check` 的「文字對時」0 個 ✖，⚠ 也照改（不改的在該段「截圖觀察」寫理由）；沒有「#N@詞 有 N 個用字數比例估」的 ⚠；情境動畫段的「動畫分鏡：」⚠（拍序和講解相反、拍在段尾淡出之後、照範例檔頭【D 下限】放不下）照 → 改分鏡表，不改的在那段「需要我決定的事」寫理由；`--check --json` 每個子母畫面段的 `pip` 不是空的；storyboard.md 有 speakerBox、本集圖示表、總覽表（含「章」欄）、情境判定表、每段一節＋截圖＋截圖觀察、需要我決定的事（含金句候選表；`sparkle`、`shine`、`thunder` 超過 style.md「音效」每集上限時列出來讓使用者挑；結尾要不要配樂 `outro` 列一題）；`--check` 報告「沒有畫面的區間」是「無」，或每段都寫了理由；沒有「音效稀疏」⚠（照它括號裡列的段，在情境動畫的結果／壞事那拍或錄影段補 success／alert）。
 常見錯誤：印 `✖ s21 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough …`（或 `--check --json` 子母畫面段的 `pip` 是空的）→ 不是版面的問題，不要改 plan.json；照 → 重做初剪（`auto-edit-rough` 步驟 6），再 build、再截圖；`qc.mjs storyboard` 印 `✖ plan.json 在上次 build 之後改過` → 先 build 再截圖；印 ✖ 找不到 Chrome → `npx hyperframes browser ensure` 再跑一次。
 
@@ -143,7 +143,8 @@ node shared/template/tools/build.mjs --project projects/<專案> --check
 | 停點 | 使用者回 | 做什麼 |
 |---|---|---|
 | ② | 「調好了」；倍率數字（例「1.15」）；說要改調光、瘦臉 | 「調好了」：重新讀 plan.json（構圖台已寫 `frame`、`look`），跑 `look.mjs status` 照「→ 下一步」做（瘦臉還在背景跑就先做不用 build 的步驟）→ 步驟 3。倍率數字：寫 `frame` → 步驟 3。用說的改調光瘦臉：照 USAGE.md 第 7 節寫 plan.json 的 `look`，改了 `slim` 要再跑 `look.mjs run`，只改 `color` 跑 `node shared/template/tools/look.mjs preview --project projects/<專案>` 重畫對照圖 |
-| ③ | 「可以」「改好了」 | 步驟 7（先重新讀檔；停點紀錄加「通過」後網頁變成只能看） |
+| ③ | 「可以」「改好了」，重新讀檔後有「想換成」或「補充說明」 | 照那幾段的要求重做（換情境就照新情境的拍型重寫畫面文字與動畫分鏡）、重截那段、刪掉這兩行；「需要我決定的事」的補充說明照回答處理，一樣刪掉；停點紀錄加「修改後重停」→ 重貼停點 ③ |
+| ③ | 「可以」「改好了」，重新讀檔後這兩欄都沒有 | 步驟 7（停點紀錄加「通過」後網頁變成只能看） |
 | ③ | 「s05 換成側邊欄」這類指名修改 | 改 storyboard.md 那一節＋重截那段（情境換了，照新情境的拍型重寫那段動畫分鏡）→ 重貼停點 ③ |
 | ③ | 改動畫分鏡（「x05 拍 3 不要預覽態」） | 照改那張表 → 重貼停點 ③（動畫在 ③ 之後才做，不用重截） |
 

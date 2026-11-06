@@ -60,12 +60,12 @@ test('分鏡表：還沒有檔案時說還在寫；頁面路由；解析段、�
   assert.equal(sec(s, 'head').blocks[0].value, '講者框 speakerBox＝[1, 2, 3, 4]');
 });
 
-test('分鏡表：改欄位只動那一行、欄名保留；改格子其他格原樣、| 會跳脫；☐ 可勾；表頭與標題不能用這條路改', async () => {
+test('分鏡表：只有畫面文字、畫面上出現什麼、卡上文字、金句勾選能改；其他欄位、表頭、段標題都擋下', async () => {
   fs.writeFileSync(file, MD);
   const s = await state();
-  const item = sec(s, 's01').blocks.find((b) => b.label === '版面');
-  assert.equal((await save({ op: 'text', line: item.line, text: '全幕\n（改了）' })).status, 200);
-  assert.deepEqual(changed(fs.readFileSync(file, 'utf8')), ['- 版面：全幕 （改了）']);
+  const text = sec(s, 's01').blocks.find((b) => b.label === '畫面文字');
+  assert.equal((await save({ op: 'text', line: text.line, text: '名字「王」，綁 `#1@嗨`\n', expect: text.value })).status, 200);
+  assert.deepEqual(changed(fs.readFileSync(file, 'utf8')), ['- 畫面文字：名字「王」，綁 `#1@嗨`']);
 
   fs.writeFileSync(file, MD);
   const beat = sec(s, 'x01').blocks.find((b) => b.type === 'table');
@@ -74,78 +74,124 @@ test('分鏡表：改欄位只動那一行、欄名保留；改格子其他格�
   assert.equal(sec(await state(), 'x01').blocks.find((b) => b.type === 'table').rows[1].cells[2], '書籤 | 雲');
 
   fs.writeFileSync(file, MD);
-  const picks = sec(s, sec(s, 's01') && s.sections.find((x) => x.title === '需要我決定的事').key).blocks.find((b) => b.type === 'table');
+  const decide = s.sections.find((x) => x.title === '需要我決定的事');
+  const picks = decide.blocks.find((b) => b.type === 'table');
   assert.equal((await save({ op: 'cell', line: picks.rows[0].line, col: 5, text: '☑' })).status, 200);
   assert.deepEqual(changed(fs.readFileSync(file, 'utf8')), ['| 1 | #8 | 省時間 | 省時 | 正 | ☑ |']);
 
   fs.writeFileSync(file, MD);
-  assert.equal((await save({ op: 'cell', line: beat.line, col: 0, text: '改' })).status, 400, '表頭');
-  assert.equal((await save({ op: 'text', line: sec(s, 's01').start, text: '改' })).status, 400, '段標題');
-  assert.equal((await save({ op: 'cell', line: beat.rows[0].line, col: 99, text: '改' })).status, 400, '超出欄數');
-  assert.equal((await save({ op: 'nope' })).status, 400);
+  const layout = sec(s, 's01').blocks.find((b) => b.label === '版面');
+  const bad = [
+    [{ op: 'text', line: layout.line, text: '名字「王」' }, '版面'],
+    [{ op: 'text', line: sec(s, 's01').start, text: '改' }, '段標題'],
+    [{ op: 'cell', line: beat.line, col: 0, text: '改' }, '表頭'],
+    [{ op: 'cell', line: beat.rows[0].line, col: 1, text: '改' }, '綁句欄'],
+    [{ op: 'cell', line: beat.rows[0].line, col: 99, text: '改' }, '超出欄數'],
+    [{ op: 'addRow', line: beat.rows[0].line }, '加列已拿掉'],
+    [{ op: 'delRow', line: beat.rows[0].line }, '刪列已拿掉'],
+    [{ op: 'raw', key: 's01', text: sec(s, 's01').raw }, '原始 Markdown 已拿掉'],
+    [{ op: 'field', key: 's01', label: '版面', value: '全幕' }, '不能用 field 改版面'],
+    [{ op: 'field', key: decide.key, label: '想換成', value: '07 重點字卡' }, '決定區不能選情境'],
+    [{ op: 'field', key: sec(s, 'head') ? 'head' : 's01', label: '補充說明', value: '想改' }, '開頭不能寫補充說明'],
+    [{ op: 'nope' }, '看不懂'],
+  ];
+  for (const [op, why] of bad) assert.equal((await save(op)).status, 400, why);
   assert.equal(fs.readFileSync(file, 'utf8'), MD);
 });
 
-test('分鏡表：加列、刪列；原始 Markdown 換整段且第一行標題要保留；改壞動畫分鏡表頭會警告', async () => {
+test('分鏡表：想換成、音效、補充說明新增在第一個小標題之前，清空就拿掉，檔案回到原樣', async () => {
   fs.writeFileSync(file, MD);
-  const s = await state();
-  const beat = sec(s, 'x01').blocks.find((b) => b.type === 'table');
-  const added = await (await save({ op: 'addRow', line: beat.rows[0].line })).json();
-  const rows = sec(added, 'x01').blocks.find((b) => b.type === 'table').rows;
-  assert.equal(rows.length, 3);
-  assert.deepEqual(rows[1].cells, ['', '', '', '', '', '']);
-  assert.equal(sec(await (await save({ op: 'cell', line: rows[1].line, col: 2, text: '新的拍' })).json(), 'x01').blocks.find((b) => b.type === 'table').rows[1].cells[2], '新的拍');
-  const gone = await (await save({ op: 'delRow', line: rows[1].line })).json();
-  assert.equal(sec(gone, 'x01').blocks.find((b) => b.type === 'table').rows.length, 2);
-  assert.equal(fs.readFileSync(file, 'utf8'), MD, '加了又刪回到原樣');
+  // s01 最後是一行「截圖觀察」段落：空一行再加清單
+  await save({ op: 'field', key: 's01', label: '補充說明', value: '不要字卡\n想要動畫' });
+  let t = fs.readFileSync(file, 'utf8');
+  assert.match(t, /截圖觀察：無\n\n- 補充說明：不要字卡 想要動畫\n\n## x01/);
+  assert.equal(sec(await state(), 's01').blocks.find((b) => b.label === '補充說明').value, '不要字卡 想要動畫');
+  await save({ op: 'field', key: 's01', label: '補充說明', value: '' });
+  assert.equal(fs.readFileSync(file, 'utf8'), MD, '清空回到原樣');
 
-  const raw = sec(s, 's01').raw;
-  assert.equal((await save({ op: 'raw', key: 's01', text: raw.replace('## s01', '## s99') })).status, 400);
-  assert.equal((await save({ op: 'raw', key: 's01', text: '- 只有內容' })).status, 400);
-  const ok = await save({ op: 'raw', key: 's01', text: raw.replace('截圖觀察：無', '截圖觀察：無\n\n- 理由：手動加的') });
-  assert.equal(ok.status, 200);
-  const text = fs.readFileSync(file, 'utf8');
-  assert.match(text, /截圖觀察：無\n\n- 理由：手動加的\n\n## x01/);
-  assert.match(text, /## 總覽/);
+  // x01 的欄位在 #### 動畫分鏡 之前
+  await save({ op: 'field', key: 'x01', label: '想換成', value: 'x-process 流程逐步亮起', expect: '' });
+  t = fs.readFileSync(file, 'utf8');
+  assert.match(t, /- 版面：子母畫面\n- 想換成：x-process 流程逐步亮起\n\n#### 動畫分鏡 x01/);
+  await save({ op: 'field', key: 'x01', label: '想換成', value: '07 重點字卡', expect: 'x-process 流程逐步亮起' });
+  assert.match(fs.readFileSync(file, 'utf8'), /- 想換成：07 重點字卡\n/);
+  assert.equal((await save({ op: 'field', key: 'x01', label: '想換成', value: '改', expect: '別的內容' })).status, 409);
+  await save({ op: 'field', key: 'x01', label: '想換成', value: '' });
+  assert.equal(fs.readFileSync(file, 'utf8'), MD);
 
+  // 音效：沒有這行時選預設不寫；選了才寫；選回無照寫
+  await save({ op: 'field', key: 'x01', label: '音效', value: '預設' });
+  assert.equal(fs.readFileSync(file, 'utf8'), MD);
+  await save({ op: 'field', key: 'x01', label: '音效', value: 'shine' });
+  assert.match(fs.readFileSync(file, 'utf8'), /- 音效：shine\n/);
   fs.writeFileSync(file, MD);
-  const bad = await (await save({ op: 'raw', key: 'x01', text: sec(s, 'x01').raw.replace(BEAT, '| 拍 | 綁句 | 畫面 | 動態 | 焦點 | 音效 |') })).json();
-  assert.match(bad.warnings[0], /動畫分鏡 x01 的表頭被改到了/);
+
+  // 需要我決定的事：回答寫在金句候選的小標題之前，表格讀得到
+  const key = (await state()).sections.find((x) => x.title === '需要我決定的事').key;
+  await save({ op: 'field', key, label: '補充說明', value: '要配樂' });
+  assert.match(fs.readFileSync(file, 'utf8'), /1\. \*\*結尾要不要配樂\*\*：要的話寫 outro\n- 補充說明：要配樂\n\n### 金句候選/);
+  assert.equal((await state()).warnings.length, 0);
+});
+
+test('分鏡表：下拉選單的選項來自工作區現有的情境與音效', async () => {
+  fs.writeFileSync(file, MD);
+  const { options, previewBase } = await state();
+  assert.deepEqual(options.scenes.map((g) => g.name), ['疊加', '半畫面', '子母畫面', '全幕', '情境動畫']);
+  const all = options.scenes.flatMap((g) => g.items);
+  const key = all.find((i) => i.id === '07');
+  assert.equal(key.value, '07 重點字卡');
+  assert.ok(key.when);
+  assert.ok(options.scenes.find((g) => g.name === '半畫面').items.some((i) => i.id === '03'));
+  const proc = all.find((i) => i.id === 'x-process');
+  assert.equal(proc.value, 'x-process 流程逐步亮起');
+  assert.ok(!all.some((i) => i.id.includes('-example-')), '範例檔不是選項');
+  for (const i of all) assert.ok(fs.existsSync(path.join(TEMPLATE, 'preview', i.preview)), i.preview);
+  assert.equal(previewBase, '/gallery/preview/');
+  assert.equal((await api(`${previewBase}${key.preview}`)).status, 200);
+  assert.deepEqual(options.sfx.slice(0, 2).map((o) => o.value), ['預設', '無']);
+  assert.ok(options.sfx.some((o) => o.value === 'ding'));
+  assert.ok(!options.sfx.some((o) => o.value.startsWith('bgm')), '配樂不是音效選項');
+  // 直式專案：03、05 不能用
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  fs.writeFileSync(path.join(work, 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, format: 'portrait' }));
+  const portrait = (await state()).options.scenes.flatMap((g) => g.items).map((i) => i.id);
+  assert.ok(!portrait.includes('03') && !portrait.includes('05'));
+  fs.rmSync(path.join(work, 'hyperframes'), { recursive: true, force: true });
 });
 
 test('分鏡表：檔案被改過擋下並回新內容；別的網站送來的擋下；CRLF 與 BOM 保留；停點 ③ 通過後只能看，重開待回覆又能改', async () => {
   fs.writeFileSync(file, MD);
   const s = await state();
-  const line = sec(s, 's01').blocks.find((b) => b.label === '版面').line;
+  const line = sec(s, 's01').blocks.find((b) => b.label === '畫面文字').line;
   fs.appendFileSync(file, '\n- AI 剛改的');
-  const stale = await api('/api/storyboard/save', { hash: s.hash, op: 'text', line, text: '全幕' });
+  const stale = await api('/api/storyboard/save', { hash: s.hash, op: 'text', line, text: '名字「王」' });
   assert.equal(stale.status, 409);
   const body = await stale.json();
   assert.match(body.message, /work\/storyboard\.md 剛被改過/);
   assert.notEqual(body.state.hash, s.hash);
-  assert.ok(!fs.readFileSync(file, 'utf8').includes('全幕'));
-  const blocked = await api('/api/storyboard/save', { hash: body.state.hash, op: 'text', line, text: '全幕' }, { Origin: 'http://evil.example' });
+  assert.ok(!fs.readFileSync(file, 'utf8').includes('名字「王」'));
+  const blocked = await api('/api/storyboard/save', { hash: body.state.hash, op: 'text', line, text: '名字「王」' }, { Origin: 'http://evil.example' });
   assert.equal(blocked.status, 403);
 
-  // 頁面的行號錯開時（hash 是新的、那一行內容不是頁面看到的）不能寫：改格子、改欄位、刪列都一樣
+  // 頁面的行號錯開時（hash 是新的、那一行內容不是頁面看到的）不能寫：改格子、改欄位、補充說明都一樣
   fs.writeFileSync(file, MD);
   const before = fs.readFileSync(file, 'utf8');
   const beat = sec(s, 'x01').blocks.find((b) => b.type === 'table');
-  for (const op of [{ op: 'text', line, text: '全幕', expect: '別的內容' }, { op: 'cell', line: beat.rows[0].line, col: 2, text: '改', expect: '別的內容' }, { op: 'delRow', line: beat.rows[0].line, expect: '別的內容' }]) {
+  for (const op of [{ op: 'text', line, text: '名字「王」', expect: '別的內容' }, { op: 'cell', line: beat.rows[0].line, col: 2, text: '改', expect: '別的內容' }, { op: 'field', key: 's01', label: '補充說明', value: '想改', expect: '別的內容' }]) {
     const moved = await save(op);
     assert.equal(moved.status, 409, op.op);
     assert.ok((await moved.json()).state.hash, '回新內容');
     assert.equal(fs.readFileSync(file, 'utf8'), before);
   }
-  assert.equal((await save({ op: 'text', line, text: '全幕', expect: '疊加（14 講者介紹）' })).status, 200);
+  assert.equal((await save({ op: 'text', line, text: '名字「王」', expect: '名字「林」，綁 `#1@嗨`' })).status, 200);
 
   fs.writeFileSync(file, `﻿${MD.replace(/\n/g, '\r\n')}`);
-  assert.equal((await save({ op: 'text', line, text: '全幕' })).status, 200);
+  assert.equal((await save({ op: 'text', line, text: '名字「王」' })).status, 200);
   const crlf = fs.readFileSync(file, 'utf8');
   assert.ok(crlf.startsWith('﻿'));
   assert.equal(crlf.replace(/\r\n/g, '').length, crlf.replace(/\r?\n/g, '').length);
   assert.ok(!/[^\r]\n/.test(crlf), '換行維持 CRLF');
-  assert.ok(crlf.includes('- 版面：全幕\r\n'));
+  assert.ok(crlf.includes('- 畫面文字：名字「王」\r\n'));
 
   fs.writeFileSync(file, MD);
   const log = (rows) => fs.writeFileSync(path.join(work, '製作進度.md'), ['## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |', '|---|---|---|---|---|', ...rows, ''].join('\n'));
@@ -153,7 +199,7 @@ test('分鏡表：檔案被改過擋下並回新內容；別的網站送來的�
   assert.equal((await state()).readOnly, false);
   log(['| 2026-11-06 10:00 | ③ 分鏡表 | 待回覆 | — | — |', '| 2026-11-06 10:05 | ③ 分鏡表 | 通過 | 「可以」 | plan.json |']);
   assert.equal((await state()).readOnly, true);
-  const locked = await save({ op: 'text', line, text: '全幕' });
+  const locked = await save({ op: 'text', line, text: '名字「王」' });
   assert.equal(locked.status, 409);
   assert.match((await locked.json()).message, /已經確認/);
   assert.equal(fs.readFileSync(file, 'utf8'), MD);
