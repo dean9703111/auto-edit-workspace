@@ -293,7 +293,7 @@ test('--check --json schema 2：必有的鍵與型別；planHash 跟著 plan.jso
   assert.equal(j.outro, null);
   for (const it of j.items) {
     for (const k of ['id', 'type', 'label', 'key', 'family', 'layout', 'layoutZh', 'opaque', 'start', 'end', 'sfx', 'warnings', 'out']) assert.ok(k in it, `${it.id} 少 ${k}`);
-    assert.deepEqual(Object.keys(it.out), ['start', 'end', 'lists', 'annotations', 'pip', 'wipe', 'refs', 'tx', 'wide', 'badgeBox']);
+    assert.deepEqual(Object.keys(it.out), ['start', 'end', 'lists', 'annotations', 'pip', 'pipShift', 'wipe', 'refs', 'tx', 'wide', 'badgeBox']);
   }
   const s02 = j.items.find((x) => x.id === 's02'), s03 = j.items.find((x) => x.id === 's03');
   assert.deepEqual([s02.key, s02.family, s02.layout, s02.layoutZh], ['03-side-panel', 'panel', 'side', '半畫面']);

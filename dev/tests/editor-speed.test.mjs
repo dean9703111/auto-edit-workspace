@@ -202,3 +202,15 @@ test('AI 寫好的變速和轉場：重新載入就看得到（不用先改過�
   assert.match(await page.$eval('#txSec', (n) => n.textContent), /進場.*卡片滑入/);
   assert.deepEqual(errors, []);
 });
+
+test('預覽：子母畫面跟完成影片一樣在錄影裡面', async () => {
+  fs.writeFileSync(planFile(), JSON.stringify({ version: 1, scenes: [{ id: 'm1', type: 'media', src: 'assets/screen/demo.mp4', from: '#2', to: '#6e' }] }));
+  await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__editor?.reportReady && window.__editor.itemsView.some((x) => x.id === 'm1' && x.pipShift), { timeout: 60000 });
+  assert.deepEqual(await page.evaluate(() => window.__editor.itemsView.find((x) => x.id === 'm1').pipShift), [-85, -3], '16:9 錄影');
+  await page.evaluate(() => window.__editor.seek(6));
+  await page.waitForFunction(() => document.querySelector('#simPip').style.display === 'block', { timeout: 5000 });
+  const pos = await page.$eval('#simPip', (n) => [parseFloat(n.style.left), parseFloat(n.style.top)]);
+  assert.ok(Math.abs(pos[0] - (1339 / 1920) * 100) < 0.01 && Math.abs(pos[1] - (591 / 1080) * 100) < 0.01, String(pos));
+  assert.deepEqual(errors, []);
+});

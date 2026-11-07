@@ -104,7 +104,7 @@ test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關
   assert.match(html, /MediaKit\.lens\(tl, '#mlc-m01-l1', '#mlsrc-m01-l1 img', \[[\d,]+\], 11, 1\.5\);/);
   // 動態 v2：從講者進來（fade）→ 面板外框 mgr 從小視窗長出（段起點 +0.3）；運鏡層在外框裡抵回畫面座標
   assert.match(html, /<div id="mgr-m01" class="mgrow" style="left:(\d+)px;top:(\d+)px;width:\d+px;height:\d+px" data-layout-allow-overflow>\s+<div id="mst-m01" class="mstage" style="left:-?\1px;top:-?\2px"/);
-  assert.match(html, /\{ const M = SceneMotion\(tl, document\.getElementById\('el-m01'\)\);\s+M\.grow\('#mgr-m01', 7\.3, \{ from: 'pip' \}\);/);
+  assert.match(html, /\{ const M = SceneMotion\(tl, document\.getElementById\('el-m01'\)\);\s+M\.grow\('#mgr-m01', 7\.3, \{ from: \[1255,591,432,324\] \}\);/);
   assert.match(html, /<script src="kit\/media\.js"><\/script>/);
   const lensDir = path.join(out, 'assets', 'media', 'm01-l1');
   assert.ok(fs.readdirSync(lensDir).filter((f) => f.endsWith('.jpg')).length >= 1);
@@ -112,6 +112,73 @@ test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關
   // 再 build 一次：素材沒變就不重新轉檔
   const again = build();
   assert.doesNotMatch(again.stdout, /轉檔 assets/);
+});
+
+test('子母畫面移進錄影：每種比例外框都離錄影邊 16；只碰到邊邊的留在原位；鋪滿不用移', () => {
+  const { mediaGeometry, pipShift, pipRect } = M;
+  const at = (w, h, fit = 'contain') => pipShift(mediaGeometry({ width: w, height: h }, fit));
+  assert.deepEqual(at(1920, 1080), [-85, -3], '16:9：錄影 x 125–1796、y 0–940');
+  assert.deepEqual(pipRect(at(1920, 1080)), [1339, 591, 432, 324]);
+  assert.deepEqual(at(2560, 1600), [-169, -3], '16:10：錄影 x 208–1712');
+  assert.deepEqual(at(2520, 1080), [0, -61], '比 16:9 更寬：左右滿版、上下有空，只往上移');
+  assert.equal(at(1080, 1920), null, '手機直式：小視窗完全在錄影外面，不擋內容');
+  assert.equal(at(1000, 1000), null, '正方形的圖：小視窗只碰到邊邊，移進去會蓋掉快一半的寬度');
+  assert.equal(at(1920, 376), null, '很扁的橫幅：同理');
+  assert.equal(at(1920, 1080, 'cover'), null, '鋪滿：本來就在裡面');
+  for (const [w, h] of [[1920, 1080], [2560, 1600], [1440, 900], [3452, 2016], [1024, 768], [1250, 1000], [2520, 1080]]) {
+    const G = mediaGeometry({ width: w, height: h }, 'contain'), [x, y, pw, ph] = pipRect(pipShift(G));
+    assert.ok(x - 9 >= G.left && y - 9 >= G.top && x + pw + 9 <= G.left + G.width - 15 && y + ph + 9 <= G.top + G.height - 15, `${w}×${h}：外框要在錄影裡面`);
+  }
+});
+
+test('子母畫面移進錄影：段的位置、回報；從全畫面段接過來滑進去、接回全畫面段滑回來；只有聲音之後接回來不滑', () => {
+  const list = { title: '清單', items: ['一', '二', '三'] };
+  writePlan([
+    { id: 's01', scene: 'fs-list', from: 1, to: 5, slots: list },
+    { id: 'm01', type: 'media', src: REC, from: 5, to: 13, in: 0 },   // 5–8 有講者、8–12 只有聲音、12–13 有講者
+    { id: 's02', scene: 'fs-list', from: 13, to: 17, slots: list },
+  ]);
+  const r = build();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const html = read('index.html');
+  assert.match(html, /<div class="pip" id="pip-m01" data-layout-allow-overflow style="left:1255px;top:591px">/);
+  assert.match(html, /<div class="pip" id="pip-m01-2" data-layout-allow-overflow style="left:1255px;top:591px">/);
+  assert.match(html, /<img id="pipf-m01" class="clip pip-frame"[^>]*style="position:absolute;left:-169px;top:-3px">/);
+  assert.match(html, /<div class="pip" id="pip-s01" data-layout-allow-overflow>/, '全畫面段不動');
+  assert.match(html, /tl\.fromTo\('#pip-m01, #pipf-m01', \{ x: 169, y: 3 \}, \{ x: 0, y: 0, duration: 0\.6, ease: 'power3\.inOut' \}, 5\);/);
+  assert.match(html, /tl\.fromTo\('#pip-s02, #pipf-s02', \{ x: -169, y: -3 \}, \{ x: 0, y: 0, duration: 0\.6, ease: 'power3\.inOut' \}, 13\);/);
+  assert.doesNotMatch(html, /tl\.fromTo\('#pip-m01-2, #pipf-m01-2', \{ x:/, '同一段裡位置一樣');
+  const { j } = checkJson();
+  assert.deepEqual(j.items.find((x) => x.id === 'm01').out.pipShift, [-169, -3]);
+  assert.equal(j.items.find((x) => x.id === 's01').out.pipShift, null);
+});
+
+test('子母畫面移進錄影：從講者飛進來落在新位置；tape、鋪滿、不露臉的段不移', () => {
+  const voice = { id: 'm02', type: 'media', src: REC, from: 8, to: 12, in: 0 };   // 蓋住只有聲音的 8–12，這段沒有小視窗
+  const flyOf = (html) => { const m = html.match(/tl\.fromTo\('#pip-m01', \{ x: (-?[\d.]+), y: (-?[\d.]+), scale: ([\d.]+), transformOrigin: '0 0' \}, \{ x: 0, y: 0, scale: 1,/); assert.ok(m, '要從講者飛進來'); return m.slice(1).map(Number); };
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, fit: 'cover' }, voice]);
+  assert.equal(build().status, 0);
+  const home = flyOf(read('index.html'));
+  assert.doesNotMatch(read('index.html'), /id="pip-m01" data-layout-allow-overflow style=/, 'fit cover：小視窗本來就在錄影裡');
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5 }, voice]);
+  assert.equal(build().status, 0);
+  const moved = flyOf(read('index.html'));
+  assert.deepEqual([+(moved[0] - home[0]).toFixed(3), +(moved[1] - home[1]).toFixed(3), moved[2]], [169, 3, home[2]], '起點照舊對齊講者，終點是新位置');
+  writePlan([{ id: 'm01', type: 'media', src: IMG, from: 5, to: 7.5, enter: 'tape' }, voice]);
+  assert.equal(build().status, 0);
+  assert.doesNotMatch(read('index.html'), /id="pip-m01" data-layout-allow-overflow style=/, 'tape：圖片貼在全幕背景上，小視窗和全畫面段一樣在畫布右下');
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, pip: false }, voice]);
+  assert.equal(checkJson().j.items.find((x) => x.id === 'm01').out.pipShift, null);
+});
+
+test('子母畫面移進錄影：紅框看的是新位置', () => {
+  // REC 640×400 → 畫面 x = 208 + 2.35·x：小視窗（禁入區）移到 x 1255–1719、y 578–948
+  const warnsOf = (box) => {
+    writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, marks: [{ at: '+0.5', until: '+2', box }] }, { id: 'm02', type: 'media', src: REC, from: 8, to: 12, in: 0 }]);
+    return JSON.stringify(checkJson().j);
+  };
+  assert.match(warnsOf([456, 300, 50, 40]), /marks\[0\].*被右下角的子母畫面擋住/, '畫面 x 1280–1397：只有移過來才擋到');
+  assert.doesNotMatch(warnsOf([380, 300, 50, 40]), /被右下角的子母畫面擋住/, '畫面 x 1101–1218：在小視窗左邊，沒擋到');
 });
 
 test('cut 穿過 media 段：錄影也跳過同一段（data-media-start 跳），圖片預設慢推；換掉素材後舊檔清掉', () => {

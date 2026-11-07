@@ -8,6 +8,7 @@
 //   mediaJobs(it)                                          build 要準備的素材檔（轉檔、複製、放大鏡逐格）
 //   mediaParts(it, { off, lim, base, nextTrack, mediaDb, edit, outDur }) → { html, tl[] }（主合成用；off＝--test 起點）
 //
+//   pipShift(G)、pipRect(shift)                             橫式錄影段的子母畫面移進素材右下角（m.pipShift；m.frame.pip 跟著移）
 //   mediaFrame(canvas, { panel })                          版式的畫面幾何（可見區、標註安全區、避讓區、STEP 位置、放大鏡範圍）；
 //                                                          canvas＝lib/canvas.mjs 的 canvasOf(format)（不傳＝橫式，輸出和原本逐位元組相同）；
 //                                                          直式 panel＝下半有講者面板（pipAt 在段內任一取樣點為真），沒有時用 containFull／coverFull
@@ -154,6 +155,21 @@ export function mediaCorner(info, fit = 'contain', { w = 0, h = 80, dflt = [1824
   if (right - w >= R[2] + BADGE_GAP - 1e-6 && LAND.W - R[2] >= w + BADGE_GAP + BADGE_INSET) return { right, top: dflt[1] };
   return { right: Math.min(LAND.W - BADGE_INSET, Math.round(R[2]) - BADGE_INSET), top: Math.max(BADGE_INSET, Math.round(R[1]) + BADGE_INSET) };
 }
+// 橫式錄影段的子母畫面要落在錄影裡面（使用者：「右下的子母畫面要在螢幕錄影範圍內」）：
+//   跨在錄影邊上 → 移進錄影右下角，外框離錄影邊 BADGE_INSET（右緣和小節角標對齊）；回傳 [dx, dy]＝相對畫布右下的位移
+//   只碰到邊邊（手機直式、正方形的圖、很扁的橫幅）→ null：留在原位，移進去反而蓋掉素材一大塊；本來就在裡面（鋪滿）→ null
+const PIP_BODY = [1424, 594, 1856, 918], PIP_RING = 9;   // 本體（canvas.mjs 的 pip.box）；外框比本體多 9 px（brand.mjs drawPipFrame）
+const PIP_KEEP = 0.25;                                   // 小視窗重疊素材不到這個比例算「只碰到邊邊」
+export function pipShift(G) {
+  const R = [G.left, G.top, G.left + G.width, G.top + G.height];
+  const frame = [PIP_BODY[0] - PIP_RING, PIP_BODY[1] - PIP_RING, PIP_BODY[2] + PIP_RING, PIP_BODY[3] + PIP_RING];
+  const overX = Math.min(frame[2], R[2]) - Math.max(frame[0], R[0]), overY = Math.min(frame[3], R[3]) - Math.max(frame[1], R[1]);
+  if (overX < PIP_KEEP * (frame[2] - frame[0]) || overY < PIP_KEEP * (frame[3] - frame[1])) return null;
+  const dx = Math.min(0, Math.round(R[2]) - BADGE_INSET - frame[2]), dy = Math.min(0, Math.round(R[3]) - BADGE_INSET - frame[3]);
+  return dx || dy ? [dx, dy] : null;
+}
+// 小視窗本體在畫布上的位置 [x, y, w, h]（P.grow 從這裡長出來）
+export const pipRect = (shift) => [PIP_BODY[0] + (shift?.[0] || 0), PIP_BODY[1] + (shift?.[1] || 0), PIP_BODY[2] - PIP_BODY[0], PIP_BODY[3] - PIP_BODY[1]];
 // STEP 膠囊和小節角標重複（「設定錄影資料夾」vs「STEP 1｜設定錄影資料夾、新增專案」）：去掉「STEP N」與標點後，一邊包含另一邊
 const stepCore = (s) => String(s).replace(/STEP\s*\d+/gi, '').replace(/[\s｜|、，,。：:．.]/g, '');
 export const dupStep = (text, name) => { const a = stepCore(text), b = stepCore(name); return a.length >= 2 && b.length >= 2 && (a.includes(b) || b.includes(a)); };
@@ -471,6 +487,13 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   }
   // 畫面位置（stage 座標＝沒有運鏡時的畫面座標：橫式 1920×1080、直式 1080×1920）
   const G = m.geo = mediaGeometry(m.info, m.fit, F);
+  // 子母畫面移進錄影裡（右側步驟清單：錄影靠左，小視窗在清單下面；tape：圖片貼在全幕背景上，小視窗和全畫面段一樣在畫布右下）
+  const hasPip = it.pipPieces ? it.pipPieces.length > 0 : [s, (s + e) / 2, e - 0.01].some((t) => pipAt(t));
+  m.pipShift = F.format !== 'portrait' && hasPip && !m.side && it.enterFx !== 'tape' ? pipShift(G) : null;
+  if (m.pipShift) {
+    const [dx, dy] = m.pipShift;
+    F = m.frame = { ...F, pip: [F.pip[0] + dx, F.pip[1] + dy, F.pip[2] + dx, F.pip[3] + dy], lens: { ...F.lens, pipLeft: F.lens.pipLeft + dx } };
+  }
   const [VX, VY, VW, VH] = F.view[m.fit], [FX, FY, FW, FH] = F.focus;
   const toStage = (b) => stageOf(G, b);
 
@@ -1336,7 +1359,7 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
 
   // --- 動態 v2：面板從小視窗長出（從講者進來的 fade 才長；slide／zoom／cut 照舊）、標註焦點（§7）---
   const v2 = [];
-  if (ent === 'fade' && s + GROW.at < lim - 1e-6) v2.push(`M.grow('#mgr-${id}', ${sh(s + GROW.at)}, { from: '${GROW.from}' });`);
+  if (ent === 'fade' && s + GROW.at < lim - 1e-6) v2.push(`M.grow('#mgr-${id}', ${sh(s + GROW.at)}, { from: ${m.pipShift ? JSON.stringify(pipRect(m.pipShift)) : `'${GROW.from}'`} });`);
   const fev = [
     ...m.marks.filter(vis).map((mk) => ({ sel: `#fo-${mk.id}`, at: mk.at, until: mk.until })),
     ...cos.map((c) => ({ sel: `#fo-mc-${id}-${c.k}, #fo-mcc-${id}-${c.k}`, at: c.at, until: c.until })),

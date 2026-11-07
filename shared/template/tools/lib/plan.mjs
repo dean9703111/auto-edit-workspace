@@ -20,7 +20,7 @@
 //   formatReport(result, { videoDur, tail }) → 文字報告（每段一列：id｜情境｜起–迄｜長度｜音效時間｜警告；之後是長度、節奏、沒有畫面的區間、只有聲音、音效次數、轉場與主題）
 //   jsonItems(result)／jsonTop(result, { clip }) → --check --json 的 items 與第一層新欄位（specs/contracts/check-json.md schema 2）
 //   outroClip(outro, len, outDur)／outroLine(outro, clip) → 結尾配樂的起播點與報告行
-//   子母畫面片段 pipPieces[] 帶 enter（fly／fade／none）、exit（layer／fade／none）、exitDur；擦入擦出 wipeIn／wipeOut、preroll／postroll；media 疊化 xfade
+//   子母畫面片段 pipPieces[] 帶 enter（fly／fade／none）、exit（layer／fade／none）、exitDur、slideFrom（接上一段時從哪滑過來）；擦入擦出 wipeIn／wipeOut、preroll／postroll；media 疊化 xfade
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -1418,8 +1418,13 @@ function pipMotion(timed, { tm, voiceOut, punches = [] }) {
     && !punches.some((p) => t >= p.a - 1e-9 && t < p.b);
   for (const { a, p } of all) {
     const pieces = a.pipPieces, last = p === pieces[pieces.length - 1];
-    if (all.some((q) => q.a !== a && near(q.p.e, p.s))) p.enter = 'none';
-    else if (p.s > a.start + 1e-3 && isJoin(p.s)) p.enter = 'none';
+    const before = all.find((q) => q.a !== a && near(q.p.e, p.s));
+    if (before) {
+      p.enter = 'none';
+      // 從上一段接過來：錄影段的小視窗在錄影裡（media.mjs pipShift），位置不同就滑過去（main.mjs）
+      const [x0, y0] = before.a.media?.pipShift || [0, 0], [x1, y1] = a.media?.pipShift || [0, 0];
+      if (x0 !== x1 || y0 !== y1) p.slideFrom = [x0, y0];
+    } else if (p.s > a.start + 1e-3 && isJoin(p.s)) p.enter = 'none';
     else if (p.e - p.s >= PIP_FLY_MIN - 1e-9 && speakerFull(r3(p.s - frame))) p.enter = 'fly';
     else p.enter = 'fade';
     p.exitDur = 0;
@@ -1477,6 +1482,7 @@ export function jsonItems(res) {
         start: r3(it.start), end: r3(it.end), lists,
         annotations: it.type === 'media' ? (it.mediaReport?.json ?? null) : null,
         pip: (it.pipPieces || []).map((p) => ({ start: r3(p.s), end: r3(p.e), enter: p.enter ?? 'fade', exit: p.exit ?? 'layer' })),
+        pipShift: it.media?.pipShift ?? null,
         wipe: { in: !!it.wipeIn, out: !!it.wipeOut, preroll: it.preroll || 0, postroll: it.postroll || 0 },
         refs: it.cueRefs || {},
         tx: { in: it.txIn ?? 'cut', out: it.txOut ?? 'cut', prev: it.prev ?? 'speaker' },

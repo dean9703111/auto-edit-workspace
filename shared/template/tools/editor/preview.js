@@ -178,6 +178,13 @@ export class SimPreview {
     if (showPip) {
       pip.style.display = 'block';
       pip.style.opacity = String(op);
+      // 小視窗的位置和完成影片一樣：橫式錄影段在錄影裡面（lib/media.mjs pipShift）
+      const c = A.canvas?.();
+      if (Array.isArray(c?.pip)) {
+        const [dx, dy] = active.pipShift || [0, 0];
+        pip.style.left = `${((c.pip[0] + dx) / c.W) * 100}%`;
+        pip.style.top = `${((c.pip[1] + dy) / c.H) * 100}%`;
+      }
       const g = pip.getContext('2d'), v = this.v;
       if (v.videoWidth) {
         const cw = pip.width, ch = pip.height, vr = v.videoWidth / v.videoHeight, cr = cw / ch;

@@ -258,7 +258,8 @@ function recompute() {
       o.exitNow = same(sc.exit, sb?.exit) ? it.exit ?? null : sc.exit ?? null;
       Object.assign(o, { in: Number.isFinite(sc.in) ? sc.in : 0, speed: Number.isFinite(sc.speed) ? sc.speed : 1, volume: sc.volume === undefined ? null : sc.volume,
         enter: sc.enter ?? null, exit: sc.exit ?? null, mediaKind: m?.kind || 'video', srcName: String(sc.src || '').split('/').pop(), srcDur: m?.info?.dur ?? null,
-        knots: speedDirty(sc, sb) || !same(sc.from, sb?.from) || !same(sc.to, sb?.to) ? knotsOf(speedModel(sc, o.end - o.start, o.start, null), m?.info?.dur ?? null) : it.out?.annotations?.knots ?? null });
+        knots: speedDirty(sc, sb) || !same(sc.from, sb?.from) || !same(sc.to, sb?.to) ? knotsOf(speedModel(sc, o.end - o.start, o.start, null), m?.info?.dur ?? null) : it.out?.annotations?.knots ?? null,
+        pipShift: it.out?.pipShift ?? null });
     }
     o.inCut = app.edit.cuts.some(([a, b]) => o.start < b && o.end > a);
     o.title = segTitle(sc) || (o.type === 'media' ? o.srcName || o.label : o.label);

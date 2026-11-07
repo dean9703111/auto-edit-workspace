@@ -39,6 +39,7 @@ export const V2TX = {
   swapOut: 0.3,                        // 換卡不換景：舊卡擦掉（power2.in）
   chapter: 0.45,     // 章節幕斜擦（不加色塊：換背景會衝突）
   fly: 0.75, land: 0.62, pop: 0.35,    // 子母畫面飛入（power3.inOut）、外框淡入
+  pipSlide: 0.6,                       // 全畫面段和錄影段相接：小視窗滑進／滑出錄影（power3.inOut）
 };
 const SWAP_KEEP = 'inset(96px 516px 186px 96px)', SWAP_GONE = 'inset(96px 1824px 186px 96px)';   // 換卡：只留內容區 x 96–1404、y 96–894，再往左擦掉
 const TRI0 = 'polygon(0% 100%, 0% 100%, 0% 100%)', TRI1 = 'polygon(0% 100%, 0% -100%, 200% 100%)';   // 從左下角斜擦滿版
@@ -233,7 +234,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
         const s = test ? r3(p.s - t0) : p.s;
         const e = test ? r3(Math.min(p.e - t0, DUR)) : p.e;
         if (s >= DUR - 1e-6 || e - s < 1e-3) continue;
-        pieces.push({ s, d: r3(e - s), ms: p.ms, sfx: pieces.length ? `-${pieces.length + 1}` : '', enter: p.enter ?? 'fade', exit: p.exit ?? 'layer', exitDur: p.exitDur || 0, full: !test || p.e - t0 <= DUR + 1e-6 });
+        pieces.push({ s, d: r3(e - s), ms: p.ms, sfx: pieces.length ? `-${pieces.length + 1}` : '', enter: p.enter ?? 'fade', exit: p.exit ?? 'layer', exitDur: p.exitDur || 0, full: !test || p.e - t0 <= DUR + 1e-6, slideFrom: p.slideFrom || null });
       }
     }
     const ids = (p) => [`#pip-${it.id}${p.sfx}`, `#pipf-${it.id}${p.sfx}`];
@@ -262,14 +263,16 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: '${SWAP_KEEP}' }, { clipPath: '${SWAP_GONE}', duration: ${swapOut}, ease: 'power2.in', immediateRender: false }, ${n3(it.e + 0.001)});`);
       }
     }
+    // 錄影段的小視窗在錄影裡面（media.mjs pipShift）
+    const [sdx, sdy] = (!portrait && it.media?.pipShift) || [0, 0], shifted = !!(sdx || sdy);
     for (const p of pieces) {
       const ps = pip.style, vTrack = track++;
       // 直式的講者面板外框：上緣一條 6px 主色線（CSS，跟著 --brand；不用 png）
       const frame = portrait ? `<div id="pipf-${it.id}${p.sfx}" class="clip pip-frame" data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-track-index="${track++}"
        style="position:absolute;left:${PB[0]}px;top:${PB[1] - 3}px;width:${PB[2]}px;height:6px;background:var(--brand)"></div>`
         : `<img id="pipf-${it.id}${p.sfx}" class="clip pip-frame" src="${base}kit/pip-frame.png" alt=""
-       data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-track-index="${track++}">`;
-      pips.push(`  <div class="pip" id="pip-${it.id}${p.sfx}" data-layout-allow-overflow>
+       data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-track-index="${track++}"${shifted ? ` data-layout-allow-overflow style="position:absolute;left:${sdx}px;top:${sdy}px"` : ''}>`;
+      pips.push(`  <div class="pip" id="pip-${it.id}${p.sfx}" data-layout-allow-overflow${shifted ? ` style="left:${PB[0] + sdx}px;top:${PB[1] + sdy}px"` : ''}>
     <video id="pipv-${it.id}${p.sfx}" src="${base}assets/rough.mp4" data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-media-start="${n3(p.ms)}"
            data-track-index="${vTrack}" muted playsinline style="left:${ps.left}px;top:${ps.top}px;width:${ps.width}px;height:${ps.height}px"></video>
   </div>
@@ -277,10 +280,11 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
       const [P, F] = ids(p);
       if (p.enter === 'fly') {
         // 講者由原位飛進子母畫面（0.75s power3.inOut），0.62s 外框淡入（不縮放）
-        const ff = FLY;
+        const ff = { x: r3(FLY.x - sdx), y: r3(FLY.y - sdy), k: FLY.k };
         tl.push(`tl.fromTo('${P}', { x: ${ff.x}, y: ${ff.y}, scale: ${ff.k}, transformOrigin: '0 0' }, { x: 0, y: 0, scale: 1, duration: ${V2TX.fly}, ease: 'power3.inOut' }, ${n3(p.s)});`);
         tl.push(`tl.fromTo('${F}', { opacity: 0 }, { opacity: 1, duration: ${V2TX.pop}, ease: 'sine.out' }, ${n3(p.s + V2TX.land)});`);
       } else if (p.enter === 'fade') tl.push(`tl.fromTo('${P}, ${F}', { opacity: 0 }, { opacity: 1, duration: ${PIP_FADE}, ease: 'sine.out' }, ${n3(p.s)});`);
+      if (p.slideFrom) tl.push(`tl.fromTo('${P}, ${F}', { x: ${r3(p.slideFrom[0] - sdx)}, y: ${r3(p.slideFrom[1] - sdy)} }, { x: 0, y: 0, duration: ${r3(Math.min(V2TX.pipSlide, p.d))}, ease: 'power3.inOut' }, ${n3(p.s)});`);
       if (p.exit === 'fade' && p.full) tl.push(`tl.fromTo('${P}, ${F}', { opacity: 1 }, { opacity: 0, duration: ${p.exitDur}, ease: 'sine.in', immediateRender: false }, ${n3(Math.max(p.s, p.s + p.d - p.exitDur))});`);
     }
     if (it.opaque && it.type !== 'media') {
