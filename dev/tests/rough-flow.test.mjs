@@ -16,7 +16,8 @@ const F = await import(path.join(TOOLS, 'lib', 'rough-flow.mjs'));
 const hasAe = spawnSync('auto-editor', ['--version'], { encoding: 'utf8' }).status === 0;
 let root, tpl;
 const ff = (args) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
-const cli = (args, project) => spawnSync(process.execPath, [MEDIA, ...args, '--template', tpl, '--project', `projects/${project}`], { encoding: 'utf8', cwd: root });
+// rough 跑完會開預覽（背景處理底片、開剪輯台）：測試不開
+const cli = (args, project) => spawnSync(process.execPath, [MEDIA, ...args, ...(args[0] === 'rough' && !args.includes('--no-editor') ? ['--no-editor'] : []), '--template', tpl, '--project', `projects/${project}`], { encoding: 'utf8', cwd: root });
 const mkProj = (name) => {
   const p = path.join(root, 'projects', name);
   for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(p, 'assets', d), { recursive: true });
@@ -267,7 +268,7 @@ test('prep（--no-editor、假逐字稿）：一條指令到停點 ①；cuts.md
 test('rough：① 通過後一條指令到字幕與剪接點；有講稿換算逐字稿不重轉；紀錄通過、印回報數字；做完再跑要 --again', { skip: !hasAe && '沒有 auto-editor' }, () => {
   const p = path.join(root, 'projects', 'flow');
   assert.ok(fs.existsSync(path.join(p, 'work', 'cuts.md')), '接上一個測試');
-  const r = cli(['rough', '--said', '可以'], 'flow');
+  const r = cli(['rough', '--no-editor', '--said', '可以'], 'flow');
   assert.equal(r.status, 0, r.stdout + r.stderr);
   for (const f of ['rough.mp4', 'cuts.v1.json', 'rough.srt', 'cutpoints.json', 'transcript.json']) assert.ok(fs.existsSync(path.join(p, 'work', f)), f);
   assert.ok(fs.readdirSync(path.join(p, 'work')).some((f) => f.startsWith('rough.srt.align-')), 'status 靠 rough.srt.align-* 知道 srt-align 跑過');
@@ -278,6 +279,7 @@ test('rough：① 通過後一條指令到字幕與剪接點；有講稿換算�
   assert.match(r.stdout, /驗證：work\/rough\.mp4 → [\d.]+s、320×180；verify-rough → ✓/);
   assert.match(r.stdout, /→ 下一步：接著做（有素材先盤點，再到 ② 構圖/);
   assert.match(r.stdout.trim().split('\n').at(-1), /status\.mjs --project/);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(p, 'work', 'hyperframes', 'plan.json'), 'utf8')), { version: 1 }, 'plan.json 先建起來，預覽改的字幕才有地方存');
   assert.match(fs.readFileSync(path.join(p, 'work', '製作進度.md'), 'utf8'), /\| ① 剪輯清單 \| 通過 \| 「可以」 \| work\/cuts\.md \|/);
   // 換算出來的逐字稿：NG 那次的字不見了，重講那次的時間接得上 rough.mp4
   const words = JSON.parse(fs.readFileSync(path.join(p, 'work', 'transcript.json'), 'utf8'));
@@ -291,14 +293,14 @@ test('rough：① 通過後一條指令到字幕與剪接點；有講稿換算�
   assert.ok(cps.some((c) => c.kind === 'ng'), JSON.stringify(cps));
   // 做完再跑：要 --again，不動字幕
   const before = fs.readFileSync(path.join(p, 'work', 'rough.srt'), 'utf8');
-  const guard = cli(['rough'], 'flow');
+  const guard = cli(['rough', '--no-editor'], 'flow');
   assert.equal(guard.status, 1);
   assert.match(guard.stdout, /✖ 初剪已經做完了.*--again/);
   assert.equal(fs.readFileSync(path.join(p, 'work', 'rough.srt'), 'utf8'), before);
   // --again：清單沒變就不重新輸出影片，只重排字幕（舊字幕有備份）
   const mt = fs.statSync(path.join(p, 'work', 'rough.mp4')).mtimeMs;
   const n0 = fs.readdirSync(path.join(p, 'work')).filter((f) => f.startsWith('rough.srt.align-')).length;
-  const again = cli(['rough', '--again'], 'flow');
+  const again = cli(['rough', '--no-editor', '--again'], 'flow');
   assert.equal(again.status, 0, again.stdout + again.stderr);
   assert.match(again.stdout, /參數和清單都沒變，沿用/);
   assert.equal(fs.statSync(path.join(p, 'work', 'rough.mp4')).mtimeMs, mt);
@@ -331,6 +333,59 @@ test('rough：transcript-main.json 不能換算（media.mjs transcribe 直接轉
   assert.match(r.stdout, /✓ 逐字稿：對 rough\.mp4 轉/);
 });
 
+test('rough：剪輯清單頁已經開著（正常流程）→ 一樣印字幕預覽網址，指向同一個剪輯台', { skip: !hasAe && '沒有 auto-editor' }, async (t) => {
+  const p = e2eProject('flowopen');
+  const run = (tool, ...args) => spawnSync(process.execPath, [tool, ...args, '--template', tpl, '--project', 'projects/flowopen'], { encoding: 'utf8', cwd: root });
+  t.after(() => { run(path.join(TOOLS, 'editor.mjs'), '--stop'); });
+  const pr = run(MEDIA, 'prep', '--transcript', writeJson(path.join(root, 'open.json'), e2eWords()));
+  assert.equal(pr.status, 0, pr.stdout + pr.stderr);
+  const cuts = pr.stdout.match(/https?:\/\/\S+\/cuts/)?.[0];
+  assert.ok(cuts, pr.stdout);
+  const r = run(MEDIA, 'rough', '--said', '可以');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const url = r.stdout.match(/字幕預覽：(\S+)/)?.[1];
+  assert.ok(url, r.stdout);
+  assert.equal(new URL('cuts', url).href, cuts, '沿用開著的那一個');
+  const state = await (await fetch(new URL('api/state', url))).json();
+  assert.equal(state.plan.exists, true);
+  assert.ok(state.video?.url);
+  // plan.json 提早建好，下一步還是構圖，也還能產生分鏡素材
+  const st = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', 'projects/flowopen'], { encoding: 'utf8', cwd: root });
+  assert.match(st.stdout, /剪好看／構圖/, st.stdout);
+  const sc = run(path.join(TOOLS, 'build.mjs'), '--scaffold');
+  assert.equal(sc.status, 0, sc.stdout + sc.stderr);
+  assert.ok(fs.existsSync(path.join(p, 'work', '分鏡素材', 'index.json')), sc.stdout);
+  // 底片在背景處理：等它跑完才收拾暫存資料夾
+  const { jobState } = await import(path.join(TOOLS, 'lib', 'job.mjs'));
+  const until = Date.now() + 60000;
+  while (Date.now() < until && jobState(p, 'prepare').state === 'running') await new Promise((ok) => setTimeout(ok, 200));
+  assert.notEqual(jobState(p, 'prepare').state, 'running');
+});
+
+test('rough：直式專案建的 plan.json 帶 format，後面的 build 不會說版式對不上', { skip: !hasAe && '沒有 auto-editor' }, async () => {
+  const p = mkProj('flowportrait');
+  talkClip(path.join(p, 'assets', 'camera', 'a.mp4'), 18, [[1, 4], [4.3, 7.2], [7.8, 9.2], [12.5, 15.4], [15.7, 17.5]], '180x320');
+  fs.writeFileSync(path.join(p, '講稿.md'), SCRIPT);
+  assert.equal(cli(['prep', '--no-editor', '--transcript', writeJson(path.join(root, 'portrait.json'), e2eWords())], 'flowportrait').status, 0);
+  const r = cli(['rough', '--said', '可以'], 'flowportrait');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const plan = JSON.parse(fs.readFileSync(path.join(p, 'work', 'hyperframes', 'plan.json'), 'utf8'));
+  assert.deepEqual(plan, { version: 1, format: 'portrait' });
+  const { formatErrors } = await import(path.join(TOOLS, 'lib', 'canvas.mjs'));
+  assert.match(fs.readFileSync(path.join(p, 'work', '製作進度.md'), 'utf8'), /版式[^\n]*直式/, '開工決策表是直式，才驗得到對不上');
+  assert.deepEqual(formatErrors({ projectDir: p, plan, format: 'portrait', dims: { w: 180, h: 320 } }), []);
+  const st = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', 'projects/flowportrait'], { encoding: 'utf8', cwd: root });
+  assert.doesNotMatch(st.stdout + st.stderr, /沒寫 format/);
+  const sc = spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--scaffold', '--template', tpl, '--project', 'projects/flowportrait'], { encoding: 'utf8', cwd: root });
+  assert.equal(sc.status, 0, sc.stdout + sc.stderr);
+  assert.doesNotMatch(sc.stdout + sc.stderr, /沒寫 format|版式.*對不上/);
+  // --scaffold 也會在背景處理底片：等它跑完才收拾暫存資料夾
+  const { jobState } = await import(path.join(TOOLS, 'lib', 'job.mjs'));
+  const until = Date.now() + 60000;
+  while (Date.now() < until && jobState(p, 'prepare').state === 'running') await new Promise((ok) => setTimeout(ok, 200));
+  assert.notEqual(jobState(p, 'prepare').state, 'running');
+});
+
 test('rough：verify-rough ✖ 就停、印修法與重做指令；不寫字幕與剪接點', { skip: !hasAe && '沒有 auto-editor' }, () => {
   const p = e2eProject('flowbad');
   const tj = writeJson(path.join(root, 'flowbad-words.json'), e2eWords());
@@ -341,7 +396,7 @@ test('rough：verify-rough ✖ 就停、印修法與重做指令；不寫字幕�
   const real = spawnSync('which', ['auto-editor'], { encoding: 'utf8' }).stdout.trim();
   const fake = `#!/bin/sh\nfor a in "$@"; do if [ "$a" = "--export" ]; then exec "${real}" "$@"; fi; done\nout=""\nwhile [ $# -gt 0 ]; do if [ "$1" = "-o" ]; then out="$2"; fi; shift; done\nexec ffmpeg -y -v error -f lavfi -i color=c=black:s=320x180:r=30:d=6 -f lavfi -i "sine=frequency=440:sample_rate=48000:d=6" -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$out"\n`;
   fs.writeFileSync(path.join(bin, 'auto-editor'), fake, { mode: 0o755 });
-  const r = spawnSync(process.execPath, [MEDIA, 'rough', '--template', tpl, '--project', 'projects/flowbad'], { encoding: 'utf8', cwd: root, env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+  const r = spawnSync(process.execPath, [MEDIA, 'rough', '--no-editor', '--template', tpl, '--project', 'projects/flowbad'], { encoding: 'utf8', cwd: root, env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
   assert.equal(r.status, 1, r.stdout + r.stderr);
   assert.match(r.stdout, /✖ work\/rough\.mp4 有 \d+ 段黑畫面.*初剪壞了/);
   assert.match(r.stdout, /1\. node shared\/template\/tools\/media\.mjs main/);

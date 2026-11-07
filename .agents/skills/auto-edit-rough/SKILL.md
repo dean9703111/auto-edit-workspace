@@ -53,6 +53,7 @@ node shared/template/tools/media.mjs rough --project projects/<專案> --said "�
 ```
 
 一條做完：讀 cuts.md、剪掉 NG 與停頓、驗證、對字幕、記剪接點，有邊錄邊講的錄影就同步。以 cuts.md 的「剪」欄為準（使用者在頁面取消的不剪）。
+跑完會印「字幕預覽」網址（瀏覽器看字幕疊在畫面上，使用者可以直接改字）：照抄給使用者，不用等他看完，接著做下一步；使用者改過的字幕以他為準（AGENTS.md 規則 10）。
 完成判準：印「初剪完成」「srt-align」「剪接點」「驗證」四行，verify-rough ✓。
 常見錯誤：⚠ 剪掉比例過高 → 聽開頭，尾音被切就加 `--edit "audio:-26dB"` 再跑（`--again`）；plan.json 已經用 #N 時字幕改動 ✖ → 加 `--remap-plan`。
 
@@ -113,6 +114,7 @@ node shared/template/tools/status.mjs --project projects/<專案>
 srt-align：<統計原文>；⚠：<原文或「無」>
 剪接點 <N> 個：ng <N>、pause <N>
 驗證：work/rough.mp4 → <長度>s、<寬>×<高>；verify-rough → ✓
+字幕預覽：<網址>
 ```
 
 ## 什麼時候讀 references/

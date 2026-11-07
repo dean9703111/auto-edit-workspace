@@ -9,7 +9,7 @@
  *       每步印一行，細節在 work/.jobs/prep-detail.log。再跑一次：沒做完就接著做；cuts.md 還是最新的就不重寫（使用者勾的不會不見），只重開網址。
  *       --order：改主軌順序（重接、重轉、重寫 cuts.md，舊的備份 cuts.md.bak-<時間戳>）；--format：使用者說了「直式」「橫式」才加（開工決策表的版式）；--again：已經有 rough.mp4 時重來（rough.mp4 改名留著）；--skip-stop：使用者說「不用停」（待確認的列不剪、紀錄「略過」）；
  *       --transcript：用現成的詞級逐字稿 [{ text, start, end }]（main.mp4 的秒數），不跑 whisper。結束碼 0 做完、1 失敗、75 還在跑。
- *   node shared/template/tools/media.mjs rough --project projects/<專案> [--edit "audio:-20dB"] [--margin 0.15sec] [--said "<使用者原話>"] [--again] [--remap-plan] [--retranscribe] [--wait <秒>] [--transcript <JSON>]
+ *   node shared/template/tools/media.mjs rough --project projects/<專案> [--edit "audio:-20dB"] [--margin 0.15sec] [--said "<使用者原話>"] [--again] [--remap-plan] [--retranscribe] [--no-editor] [--wait <秒>] [--transcript <JSON>]
  *       ① 通過後一條指令到字幕與剪接點：讀 cuts.md → ng-snap → auto-editor（輸出 rough.mp4 與 --export v1 同時跑）→ verify-rough → 逐字稿 → srt-align → cutpoints → 有邊錄邊講的錄影就 screen-sync。遇第一個 ✖ 就停、印修法；剪掉比例過高會 ⚠。
  *       有講稿：work/transcript-main.json 照 cuts.v1.json 換算成 rough.mp4 時間軸（lib/transcript-map.mjs），不重轉（準確度和重轉一樣）；--retranscribe 才對 rough.mp4 再轉一次；逐字稿是直接轉整支 main.mp4（media.mjs transcribe）時也重轉。沒有講稿：對 rough.mp4 轉。
  *       --said：停點紀錄「通過」那一列的使用者原話；--again：初剪做完之後要重剪（字幕會重排）；參數和清單都沒變就不重新輸出影片。--transcript：用現成的詞級逐字稿（rough.mp4 的秒數）。

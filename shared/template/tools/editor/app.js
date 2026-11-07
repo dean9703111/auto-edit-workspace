@@ -23,6 +23,8 @@ const JOIN_TYPES = [['none', '無'], ['dip', '過黑'], ['punch', '放大']];
 const KIND_ZH = { cut: '你剪掉的範圍', ng: 'NG 重錄（剪乾淨時剪掉）', pause: '停頓（剪乾淨時剪掉）' };
 const TYPE_ZH = { scene: '資訊卡', fx: '字卡動態', custom: '動畫', media: '插入素材' };
 const SEG_KEYS = { common: ['sfxVolume', 'sfx'], media: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'out', 'speed', 'hold', 'retime', 'anchor'], scene: ['slots'], custom: ['slots'], fx: ['vars'] };
+// 初剪預覽：plan.json 在了、還沒排段落。可以看字幕、改字；卡片和動畫要等分鏡
+const roughStage = () => !!app.server?.plan?.exists && !app.server.plan.error && !app.scenes.some(isObj);
 const SPEED_KEYS = ['in', 'out', 'speed', 'hold', 'retime'];   // 畫面速度的欄位：拿掉要明講（寫 null）
 const COACH_KEY = 'auto-edit-editor.coach.v2';
 const COACH_FINAL_KEY = 'auto-edit-editor.coach-final.v1';
@@ -582,7 +584,32 @@ function jumpPoint(dir) {
   if (t != null) { step(0); app.seek(t); timeline.ensureVisible(t); }
 }
 app.onEnded = () => renderPlay();
-app.onVideoError = (m) => { $('#stageEmpty').hidden = false; $('#stageEmpty').innerHTML = `<div><b>播不了影片</b>${esc(m)}</div>`; };
+let videoWait = null;
+app.onVideoError = (m) => {
+  if (videoWait) return;
+  const show = (html) => { $('#stageEmpty').hidden = false; $('#stageEmpty').innerHTML = html; };
+  const check = async () => {
+    const r = await api('GET', '/api/state');
+    const v = r.ok ? r.data?.video : null;
+    // 處理好的版本出來了（網址會變）：換上去，接著看同一個位置
+    if (v?.url && v.url !== app.server?.video?.url) {
+      videoWait = null;
+      app.server.video = v;
+      $('#stageEmpty').hidden = true;
+      sim.load(v.url);
+      app.seek(app.t);
+      return;
+    }
+    if (v?.preparing) {
+      show('<div><b>影片處理中</b>好了會自動接上；字幕可以先改</div>');
+      videoWait = setTimeout(check, 3000);
+      return;
+    }
+    videoWait = null;
+    show(`<div><b>播不了影片</b>${esc(m)}</div>`);
+  };
+  videoWait = setTimeout(check, 0);
+};
 app.onPlayerReady = () => { renderMode(); if (app.pendingFocus != null) { player.seek(app.pendingFocus); app.t = app.pendingFocus; app.pendingFocus = null; } };
 app.onPlayerError = (m) => {
   toast(`完成影片預覽出錯：${m}`, 'err', 6000);
@@ -722,6 +749,7 @@ async function loadState({ keep = null } = {}) {
   }
   if (!s.plan.exists) banner('分鏡還沒做好：現在可以先看影片，但不能儲存。請 AI 先完成分鏡，再重新整理這一頁。', 'error');
   else if (s.plan.error) banner(`分鏡檔有錯：${esc(s.plan.error)} → 請 AI 修好再重新整理。`, 'error');
+  else if (s.video && roughStage()) banner('初剪預覽：字幕已經疊在畫面上，可以邊聽邊看；錯字直接改，存檔就好。卡片和動畫要等分鏡做好才會出現。');
   else if (s.schema?.error) banner(esc(s.schema.error), '');
   else if (!keep) banner('');
   timeline.setDuration(app.dur);
@@ -777,7 +805,11 @@ async function pollThumb(id, n) {
   img.onload = () => { app.thumbs[id] = { img, meta: r.data }; timeline.invalidate(); };
   img.src = r.data.url;
 }
-function applyReport(rep) {
+function applyReport(rep0) {
+  // 初剪預覽：還沒排段落，「沒有畫面」「還沒排段落」這些是之後的事，現在只留跟字幕有關的
+  const rough = roughStage();
+  const onlyCaps = (list) => (list || []).filter((x) => /字幕/.test(String(x)));
+  const rep = rough && rep0?.issues ? { ...rep0, issues: { errors: onlyCaps(rep0.issues.errors), warnings: onlyCaps(rep0.issues.warnings) } } : rep0;
   app.report = rep;
   app.saveErrors = null;
   const d = rep?.data;
@@ -789,9 +821,10 @@ function applyReport(rep) {
   const spans = (arr) => (Array.isArray(arr) ? arr.filter((v) => Number.isFinite(v?.start) && Number.isFinite(v?.end) && v.end > v.start).map((v) => [v.start, v.end, v.level || null]) : []);
   app.voiceUncovered = spans(d?.voiceUncovered);
   app.uncovered = spans(d?.uncovered);
+  if (rough) { app.voiceUncovered = []; app.uncovered = []; }
   if (Array.isArray(d?.cutpoints) && d.cutpoints.length) app.cutpoints = d.cutpoints.filter((c) => Number.isFinite(c?.at)).map((c) => ({ at: c.at, kind: c.kind === 'ng' ? 'ng' : 'pause' }));
   if (!app.dur && d?.videoDur) { app.dur = d.videoDur; timeline.setDuration(app.dur); }
-  app.itemsHint = d || rep?.fallback ? '還沒有資訊卡或字卡動態' : '看不到段落位置：檢查報告讀不到（點左下角的檢查結果）';
+  app.itemsHint = rough ? '分鏡做好後，卡片和動畫會排在這裡' : d || rep?.fallback ? '還沒有資訊卡或字卡動態' : '看不到段落位置：檢查報告讀不到（點左下角的檢查結果）';
   renderCheck();
 }
 
@@ -925,9 +958,9 @@ function renderHeader() {
   $('#btnUndo').disabled = !app.undoStack.length;
   $('#btnRedo').disabled = !app.redoStack.length;
   const buildingHere = app.building || !!app.buildOutside;   // 別的分頁或構圖存檔也在重新產生：這一頁也不能再按
-  $('#btnBuild').disabled = app.busy || buildingHere || app.exporting || !canSave;
+  $('#btnBuild').disabled = app.busy || buildingHere || app.exporting || !canSave || roughStage();
   $('#btnBuild').textContent = buildingHere ? '更新中…' : '重新產生';
-  $('#btnExport').disabled = !app.exporting && (app.busy || buildingHere || !canSave);
+  $('#btnExport').disabled = !app.exporting && (app.busy || buildingHere || !canSave || roughStage());
   // 主要按鈕只有一個：有沒存的修改＝儲存；沒有，看完完成影片的下一步＝輸出
   $('#btnSave').classList.toggle('primary', dirty);
   $('#btnExport').classList.toggle('primary', app.exporting || (!dirty && !!app.server?.preview?.built && app.mode === 'player'));
@@ -2867,14 +2900,15 @@ function currentSeg(t) {
 function renderNow() {
   const seg = currentSeg(app.t);
   const gap = seg ? null : app.uncovered.find(([a, b]) => app.t >= a && app.t < b);
-  const key = seg ? `s:${seg.id}:${seg.title}` : gap ? `g:${gap[0]}` : 'none';
+  const voice = !seg && !gap && app.voiceOnly.some(([a, b]) => app.t >= a && app.t < b);
+  const key = seg ? `s:${seg.id}:${seg.title}` : gap ? `g:${gap[0]}` : voice ? 'voice' : 'none';
   markNowRow();
   if (key === nowKey) return;
   nowKey = key;
   const bar = $('#nowBar');
   if (seg) bar.innerHTML = `<span class="k">現在</span><button class="i small ghost" data-now="go" data-tip="選這段，看能改什麼">${esc(seg.id)}</button><span class="x" title="${esc(seg.title)}">${esc(seg.title)}</span><span class="t">${mmssOf(outOf(seg.start, app.edit.cuts))}–${mmssOf(outOf(seg.end, app.edit.cuts))}</span><button class="small" data-now="req">✎ 這段想改</button>`;
   else if (gap) bar.innerHTML = `<span class="k">現在</span><span class="x">這裡只有講者，沒有卡片</span><span class="t">${mmssOf(outOf(gap[0], app.edit.cuts))}–${mmssOf(outOf(gap[1], app.edit.cuts))}</span><button class="small" data-now="gap">✎ 這裡想加畫面</button>`;
-  else bar.innerHTML = '<span class="k">現在</span><span class="x">這裡只有講者</span>';
+  else bar.innerHTML = `<span class="k">現在</span><span class="x">${voice ? '這裡只有聲音' : '這裡只有講者'}</span>`;
 }
 function markNowRow(force = false) {
   if (app.side !== 'segs' && app.side !== 'cues') return;

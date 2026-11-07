@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { runJob, jobState, STILL_RUNNING } from './job.mjs';
 import { appendStop, progressFile } from './progress.mjs';
 import { hfArgs } from './hf.mjs';
+import { resolveFormat } from './canvas.mjs';
 import { probeMedia, tmpFor, sweepTmp, VIDEO_EXT, IMAGE_EXT } from './ff.mjs';
 import { formatSrt, parseSrt } from './srt.mjs';
 import { spawnP } from './proc.mjs';
@@ -25,6 +26,7 @@ import * as M from '../media.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MEDIA = path.join(HERE, '..', 'media.mjs');
 const EDITOR = path.join(HERE, '..', 'editor.mjs');
+const BUILD = path.join(HERE, '..', 'build.mjs');
 const STOP1 = '① 剪輯清單';
 const CUTS_DRAFT = '<!-- prep 草稿：ng-snap 預跑完才算數 -->';
 const STOP_LINE = (url) => `⏸ 停點 ① 剪輯清單｜請看：${url}｜請回：勾好後說「可以」，或要改的列`;
@@ -320,6 +322,28 @@ function openCutsPage(P, flags, detail) {
   const m = String(r.stdout || '').match(/剪輯清單：(\S+)/);
   if (r.status === 0 && m) return { url: m[1] };
   return { url: null, why: String(r.stderr || r.stdout || r.error?.message || '').trim().split(/\r?\n/).slice(-8).join('\n') };
+}
+
+// 初剪完成就能在瀏覽器看字幕疊在畫面上（不用另外輸出）。
+//   plan.json 先建起來，字幕才有地方存（構圖、--scaffold 本來也會建，這裡只是提早）
+//   底片先在背景處理：auto-editor 的輸出在瀏覽器裡拖到中段常解碼失敗；後面的 build 會直接沿用，不算多做
+function openRoughPreview(P, flags, detail) {
+  const planFile = path.join(P.project, 'work', 'hyperframes', 'plan.json');
+  if (!exists(planFile)) {
+    // 直式要寫 format（和構圖台建 plan.json 時一樣）：開工決策表是直式、plan.json 沒寫，build 會擋
+    const { format } = resolveFormat({ projectDir: P.project });
+    fs.mkdirSync(path.dirname(planFile), { recursive: true });
+    writeAtomic(planFile, `${JSON.stringify({ version: 1, ...(format === 'portrait' ? { format } : {}) }, null, 2)}\n`);
+  }
+  if (flags['no-editor']) return { url: null };
+  const tpl = flags.template ? ['--template', flags.template] : [];
+  const pre = spawnSync(process.execPath, [BUILD, '--project', P.project, '--prepare', ...tpl], { encoding: 'utf8', env: cleanEnv(), cwd: process.cwd(), timeout: 60000 });
+  detail(String(pre.stdout || ''), String(pre.stderr || ''));
+  const r = spawnSync(process.execPath, [EDITOR, '--project', P.project, ...tpl, '--background'], { encoding: 'utf8', env: cleanEnv(), cwd: process.cwd(), timeout: 60000 });
+  detail(String(r.stdout || ''), String(r.stderr || ''));
+  // 正常流程剪輯台早就開著（① 的剪輯清單頁）：那時印的是「剪輯已經開著：」
+  const m = String(r.stdout || '').match(/^剪輯(?:已經開著)?：(\S+)/m);
+  return { url: r.status === 0 && m ? m[1] : null };
 }
 
 // ---------- prep：一條指令到停點 ① ----------
@@ -639,6 +663,8 @@ export async function roughFlow(P, flags = {}) {
   say(`驗證：work/rough.mp4 → ${(roughInfo.duration ?? 0).toFixed(2)}s、${roughInfo.width}×${roughInfo.height}；verify-rough → ${verifyLine}`);
   const others = warns.filter((w) => !(res.warnings || []).includes(w));
   for (const w of others) say(w);
+  const preview = openRoughPreview(P, flags, detail);
+  if (preview.url) say(`字幕預覽：${preview.url}（字幕疊在畫面上，只有聲音的黑屏也看得到；錯字直接改，存檔就好）`);
   // 不用等使用者再說一次：status.mjs 會印下一條（有素材先盤點；主軌沒有真人畫面就跳過構圖）。使用者明說只要「剪乾淨」才停在這裡
   say(`→ 下一步：接著做（有素材先盤點，${clips.some((c) => c.kind === 'camera') ? '再到 ② 構圖' : '主軌沒有真人畫面，不用構圖'}；使用者明說只要「剪乾淨」才停在這裡）`);
   say(`node shared/template/tools/status.mjs --project ${pj}`);

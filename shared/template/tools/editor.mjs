@@ -28,6 +28,7 @@ import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { pathsFrom } from './build.mjs';
+import { jobState } from './lib/job.mjs';
 import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots } from './editor/server/write.mjs';
 import * as subtitles from './editor/subtitles.mjs';
 import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, lookNeedsRun, LOOK_LIMITS, isRunning, ensureBlendedLut, lookNextStep } from './lib/look.mjs';
@@ -714,7 +715,7 @@ async function getState(ctx) {
     try {
       const info = probeVideo(vfile);
       const st = statOf(vfile);
-      video = { ...info, file: relRoot(ctx, vfile), url: `/media/rough.mp4?v=${Math.floor(st.mtimeMs).toString(36)}${st.size.toString(36)}` };
+      video = { ...info, file: relRoot(ctx, vfile), url: `/media/rough.mp4?v=${Math.floor(st.mtimeMs).toString(36)}${st.size.toString(36)}`, preparing: jobState(P.project, 'prepare').state === 'running' };
     } catch (e) { videoError = e.message; }
   } else videoError = `找不到 ${relRoot(ctx, P.video)} → 請 AI 先完成「剪乾淨」，產生 work/rough.mp4`;
   const srt = readSrt(P.srt);
