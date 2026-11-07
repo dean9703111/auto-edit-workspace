@@ -74,7 +74,22 @@ const sbWork=path.join(root,'projects','分鏡表示範','work');fs.mkdirSync(pa
 const sbMd=fs.readFileSync(path.join(WS,'dev/site/demo/storyboard.md'),'utf8');
 for(const m of sbMd.matchAll(/storyboard-preview\/([^)]+)/g))fs.copyFileSync(path.join(TPL,'gallery',m[1]),path.join(sbWork,'storyboard-preview',m[1]));
 fs.writeFileSync(path.join(sbWork,'storyboard.md'),sbMd);
-let editor,cutsEditor,sbEditor,browser;
+// 剪輯台（dev/site/editor.jpg）：範例影片加一支假的操作畫面，選錄影段看畫面速度
+const edWork=path.join(root,'projects','剪輯台示範','work'),edProject=path.dirname(edWork);
+fs.mkdirSync(path.join(edWork,'hyperframes'),{recursive:true});fs.mkdirSync(path.join(edProject,'assets/screen'),{recursive:true});
+const exVideo=path.join(WS,'projects/example/assets/camera/示範口播.mp4');
+const exLines=fs.readFileSync(path.join(WS,'projects/example/講稿.md'),'utf8').split('\n').map(l=>l.trim()).filter(l=>l&&!/^[#>]/.test(l)&&!l.includes('`')).slice(0,40).map(l=>l.replace(/[，。；：]/g,' ').trim().slice(0,18));
+const exDur=Number(spawnSync('ffprobe',['-v','error','-show_entries','format=duration','-of','csv=p=0',exVideo],{encoding:'utf8'}).stdout);
+const clock=t=>{const ms=Math.round(t*1000),p=(n,w=2)=>String(n).padStart(w,'0');return `${p(Math.floor(ms/3600000))}:${p(Math.floor(ms/60000)%60)}:${p(Math.floor(ms/1000)%60)},${p(ms%1000,3)}`;};
+const exStep=(exDur-1)/exLines.length;
+fs.writeFileSync(path.join(edWork,'rough.srt'),exLines.map((l,i)=>`${i+1}\n${clock(0.5+i*exStep)} --> ${clock(0.5+(i+1)*exStep)}\n${l}\n`).join('\n'));
+fs.writeFileSync(path.join(edWork,'hyperframes/plan.json'),JSON.stringify({version:1,look:false,scenes:[
+  {id:'s01',scene:'key-point',from:'#2',to:'#5e',slots:{lead:'先看',key:'這一段'}},
+  {id:'m01',type:'media',src:'assets/screen/操作示範.mp4',from:'#7',to:'#14e',retime:[{at:'+0',src:1},{at:'+6',src:7},{at:'+10',src:23},{at:'+13',src:23}],marks:[{at:'+1',until:'+5',box:[300,190,1500,110]}]},
+  {id:'x01',type:'custom',template:'x-checklist',from:'#17',to:'#24e',slots:{title:'開工前的準備',items:[{text:'放好素材',at:'#18'},{text:'確認講稿',at:'#20'},{text:'說「剪乾淨」',at:'#22'}]}},
+  {id:'s02',scene:'key-point',from:'#27',to:'#30e',slots:{lead:'最後',key:'看一次'}},
+]}));
+let editor,cutsEditor,sbEditor,edEditor,browser;
 try{
   editor=await startEditor({flags:{project:path.dirname(work),template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
   const framingResponse=await fetch(new URL('/api/framing',editor.url));
@@ -121,7 +136,7 @@ try{
   await page.screenshot({path:path.join(OUT,'cuts.jpg'),type:'jpeg',quality:88,clip:{x:0,y:0,width:1600,height:cutsBottom},captureBeyondViewport:true});
   await page.evaluate(()=>document.querySelectorAll('.docs-marker').forEach(e=>e.remove()));
   sbEditor=await startEditor({flags:{project:path.dirname(sbWork),template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
-  await page.goto(new URL('/storyboard',sbEditor.url).href);await page.waitForSelector('#sec-x01 .sb-edit',{timeout:15000});
+  await page.goto(new URL('/storyboard',sbEditor.url).href);await page.waitForSelector('#sec-s01 .sb-piece',{timeout:15000});
   await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>{i.loading='eager';return i.complete?0:new Promise(r=>{i.onload=i.onerror=r;});}));});
   // 把畫面文字點進編輯中，截到實際的編輯框
   await page.click('#sec-s01 .sb-piece');
@@ -134,9 +149,27 @@ try{
   await pin('#next','4','below');
   const sbBottom=await page.$eval('.sb-shell',e=>Math.ceil(e.getBoundingClientRect().bottom+scrollY));
   await page.screenshot({path:path.join(OUT,'storyboard.jpg'),type:'jpeg',quality:88,clip:{x:0,y:0,width:1600,height:sbBottom},captureBeyondViewport:true});
+  // 剪輯台：假的操作畫面（網頁截圖轉成錄影），選錄影段、播放頭停在快轉那一區
+  await page.setViewport({width:1920,height:1080,deviceScaleFactor:1});
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>*{box-sizing:border-box;font-family:system-ui,"PingFang TC",sans-serif}body{margin:0;background:#EEF1F6;color:#1F2937}.top{height:72px;background:#fff;border-bottom:1px solid #D8DEE8;display:flex;align-items:center;padding:0 32px;font-size:26px;font-weight:700}.side{position:absolute;left:0;top:72px;bottom:0;width:260px;background:#fff;border-right:1px solid #D8DEE8;padding:28px;font-size:22px;line-height:2.6}.main{position:absolute;left:300px;top:112px;right:120px}.row{height:110px;background:#fff;border:1px solid #D8DEE8;border-radius:12px;margin-bottom:28px;display:flex;align-items:center;justify-content:space-between;padding:0 36px;font-size:30px}.btn{background:#2563EB;color:#fff;border-radius:10px;padding:14px 30px;font-size:24px;font-weight:700}h1{font-size:40px;margin:0 0 36px}</style><div class="top">工作流程</div><div class="side">總覽<br><b>自動化</b><br>紀錄<br>設定</div><div class="main"><h1>自動化流程</h1><div class="row">每週報表自動寄送<span class="btn">建立</span></div><div class="row">新訂單通知<span class="btn">建立</span></div><div class="row">資料備份<span class="btn">建立</span></div><div class="row">上傳影片<span class="btn">建立</span></div></div>`);
+  const mockPng=path.join(root,'mock.png');await page.screenshot({path:mockPng});
+  const mock=spawnSync('ffmpeg',['-y','-v','error','-loop','1','-i',mockPng,'-t','60','-r','30','-c:v','libx264','-preset','ultrafast','-tune','stillimage','-pix_fmt','yuv420p',path.join(edProject,'assets/screen/操作示範.mp4')],{encoding:'utf8'});
+  if(mock.status!==0)throw Error(mock.stderr);
+  const edVideo=spawnSync('ffmpeg',['-y','-v','error','-i',exVideo,'-vf','scale=1280:720','-c:v','libx264','-preset','ultrafast','-c:a','aac',path.join(edWork,'rough.mp4')],{encoding:'utf8'});
+  if(edVideo.status!==0)throw Error(edVideo.stderr);
+  edEditor=await startEditor({flags:{project:edProject,template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
+  await page.setViewport({width:1600,height:1000,deviceScaleFactor:1.25});
+  await page.evaluateOnNewDocument(()=>{localStorage.setItem('auto-edit-editor.coach.v2','1');localStorage.setItem('auto-edit-editor.coach-final.v1','1');});
+  await page.goto(edEditor.url,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>window.__editor?.reportReady&&window.__editor.itemsView.some(x=>x.id==='m01'&&x.knots),{timeout:90000});
+  await page.evaluate(()=>window.__editor.select({kind:'media',id:'m01'}));
+  await page.click('.side-tabs [data-side="insp"]');await page.waitForSelector('#spStrip');
+  await page.evaluate(()=>{const it=window.__editor.itemsView.find(x=>x.id==='m01');window.__editor.seek(it.start+8);document.getElementById('speedSec').scrollIntoView({block:'center'});});
+  await new Promise(r=>setTimeout(r,1500));
+  await page.screenshot({path:path.join(WS,'dev/site/editor.jpg'),type:'jpeg',quality:88});
   const dimensions={storyboard:{width:1600,height:sbBottom},cuts:{width:1600,height:cutsBottom},framing:{width:1600,height:Math.ceil(bounds.bottom+16)},design:{width:design.width,height:design.height}};
   fs.writeFileSync(path.join(OUT,'dimensions.json'),JSON.stringify(dimensions,null,2)+'\n');
   console.log(JSON.stringify(dimensions));
-  console.log(`✔ 文件圖解 4 張、介面截圖 4 張：${path.relative(WS,OUT)}`);
+  console.log(`✔ 文件圖解 4 張、介面截圖 4 張：${path.relative(WS,OUT)}；剪輯台截圖：dev/site/editor.jpg`);
   console.log('介面截圖使用內建示範講者；未讀寫使用者專案、共用模板或個人參考圖。');
-}finally{if(browser)await browser.close();if(editor)await editor.close();if(cutsEditor)await cutsEditor.close();if(sbEditor)await sbEditor.close();}
+}finally{if(browser)await browser.close();if(editor)await editor.close();if(cutsEditor)await cutsEditor.close();if(sbEditor)await sbEditor.close();if(edEditor)await edEditor.close();}

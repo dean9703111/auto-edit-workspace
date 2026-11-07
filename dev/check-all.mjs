@@ -67,7 +67,8 @@ const noChrome = { ok: true, skip: true, detail: '沒有 chrome-headless-shell �
 if (!flag('--skip-tests')) {
   step('node --test dev/tests/*.test.mjs', () => {
     const files = fs.readdirSync(path.join(ROOT, 'dev', 'tests')).filter((f) => f.endsWith('.test.mjs')).map((f) => path.join('dev', 'tests', f));
-    const r = node('--test', ['--test-reporter=tap', ...files], {});
+    // 全開時機器過載（load 15），等網頁的測試會逾時，也很熱：同時最多跑 3 支
+    const r = node('--test', ['--test-reporter=tap', '--test-concurrency=3', ...files], {});
     const out = r.stdout + r.stderr;
     const pass = /^# pass (\d+)/m.exec(out)?.[1] ?? '?', fail = /^# fail (\d+)/m.exec(out)?.[1] ?? '?';
     const failing = out.split('\n').filter((l) => /^not ok/.test(l)).slice(0, 8).join('\n');

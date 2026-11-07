@@ -39,6 +39,8 @@ export const TOL = 2;               // 一般容許誤差（px），和 hyperfra
 export const TITLE_GAP_MIN = 24, TITLE_GAP_GOAL = 40;   // 標題到內容：< 24 ⚠，目標 40（OV/AW:L77、R8 #6）
 export const NOWRAP_MIN = 7;                            // nowrap 文字到框的餘裕（OV/SKILL.md:132）
 export const SLACK_MAX = 80, CENTER_TOL = 8, STRIP_TOL = 16;   // 右側空白上限（OV/SKILL.md:140）；置中容許、撐滿父層的橫條（初值）
+// 全螢幕段（沒有講者）的內容設計動畫：左右和縮到 87% 的錄影對齊（錄影 x 125–1796、y 0–940），上下 y 112–900（角標底 96 之下、字幕 920 之上）
+export const FULL = { x: [120, 1800], y: [112, 900], top: 40, tall: 640, cx: 960, off: 160, minW: 1100 };
 export const VBAL_MAX = 40, CONTENT_TOP = 120;          // 垂直平衡（OV/AW:L218）；內容區 y 120–870（R4.1）
 export const PAD_X = [24, 0.45], PAD_Y = [14, 0.28];    // 內距門檻 max(24, 0.45×字級)、max(14, 0.28×字級)（R8 #6）
 export const LH_MIN = 1.25, LH_SKIP_FONT = 100;         // 行高 ≥ 1.25×字級（OV/PS:L27）；字級 ≥ 100 的數字不判
@@ -270,8 +272,11 @@ export function judgeSample(meas, ctx) {
     let worst = null;
     for (const d of els) {
       if (d === K || seen.has(d.i) || !(d.painted || d.media) || !still(d) || d.allowOverflow || !(d.clips || []).includes(K.i)) continue;
-      const o = overflowOf(d.rect, [K.clipX ? K.inner[0] : -1e9, K.clipY ? K.inner[1] : -1e9, K.clipX ? K.inner[2] : 1e9, K.clipY ? K.inner[3] : 1e9]);
+      const clipBox = [K.clipX ? K.inner[0] : -1e9, K.clipY ? K.inner[1] : -1e9, K.clipX ? K.inner[2] : 1e9, K.clipY ? K.inner[3] : 1e9];
+      const o = overflowOf(d.rect, clipBox);
       if (!o) continue;
+      // 整個在框外＝藏著等滑進來（P.slide 的抽屜），不是被裁掉一半
+      if (d.rect[2] <= clipBox[0] + 0.5 || d.rect[0] >= clipBox[2] - 0.5 || d.rect[3] <= clipBox[1] + 0.5 || d.rect[1] >= clipBox[3] - 0.5) continue;
       const m = Math.max(...Object.values(o));
       if (!worst || m > worst.m) worst = { d, o, m };
     }
@@ -345,6 +350,17 @@ export function judgeSample(meas, ctx) {
       const left = Math.ceil(r[2] - FS_RIGHT);
       push('error', 'pip', e, `壓到子母畫面：${descText(e.desc)} x ${Math.round(r[0])}–${Math.round(r[2])}、y ${Math.round(r[1])}–${Math.round(r[3])}，進到禁入區 x ${PIP_ZONE[0]}–${PIP_ZONE[2]}、y ${PIP_ZONE[1]}–${PIP_ZONE[3]}`,
         `全畫面主內容右緣 ≤ ${FS_RIGHT}（R7.2）：縮寬或左移 ≥ ${left}px；這段不需要露臉就在 plan.json 寫 "pip": false`, { rect: r });
+    }
+  }
+  // ✖ 壓到右上角的小節角標（全畫面段：角標常駐，內容用滿畫面時最容易撞到）
+  if (ctx.layout === 'fullscreen' && ctx.badgeBox && !ctx.geo && !ST) {
+    const b = ctx.badgeBox;
+    for (const { e, r } of content) {
+      if (!still(e)) continue;
+      const x = intersect(r, b);
+      if (!x || x[2] - x[0] <= 1 || x[3] - x[1] <= 1) continue;
+      push('error', 'badge', e, `壓到右上角的小節角標：${descText(e.desc)} x ${Math.round(r[0])}–${Math.round(r[2])}、y ${Math.round(r[1])}–${Math.round(r[3])}，角標在 x ${Math.round(b[0])}–${Math.round(b[2])}、y ${Math.round(b[1])}–${Math.round(b[3])}`,
+        `往下移到 y ≥ ${Math.ceil(b[3]) + 16}，或往左移到右緣 ≤ ${Math.floor(b[0]) - 16}`, { rect: r, badge: b });
     }
   }
   // ⚠ 壓到講者（透明疊在講者上的版型）
@@ -572,11 +588,21 @@ export function judgeLayout(meas, ctx) {
     const [CT, CB] = ctx.contentY || [CONTENT_TOP, CONTENT_BOTTOM];
     if (U) {
       const up = U[1] - CT, down = CB - U[3], diff = up - down;
-      if (Math.abs(diff) > VBAL_MAX + 1e-6) {
+      // 全螢幕的內容設計動畫：已經撐滿上下（畫布允許 y 40–900，角標左邊可以用到頂）就不算不平衡
+      const filled = ctx.item.wide && ctx.item.seg?.design && U[3] - U[1] >= FULL.tall && U[1] >= FULL.top - 1 && U[3] <= FULL.y[1] + 1;
+      if (!filled && Math.abs(diff) > VBAL_MAX + 1e-6) {
         const k = Math.abs(Math.round((down - up) / 2));
         push('warn', 'vbalance', null, `垂直不平衡：內容 y ${ri(U[1])}–${ri(U[3])}，上留白 ${ri(up)}px、下留白 ${ri(down)}px（內容區 y ${CT}–${CB}，差 ${ri(Math.abs(diff))}px，超過 ${VBAL_MAX}px）`,
           `整組往${diff < 0 ? '下' : '上'}移 ${k}px（每個頂層元素的 top 都 ${diff < 0 ? '+' : '−'}${k}）`, { up: r1(up), down: r1(down) });
       }
+    }
+    // ⚠ 全螢幕的內容設計動畫：沒有講者，畫面可以用滿，還擠在一邊或太小就是沒用到（舊習慣是左邊 1180、右邊留給小視窗）
+    if (U && ctx.kind === 'done' && ctx.item.wide && ctx.item.seg?.design) {
+      const w = U[2] - U[0], off = (U[0] + U[2]) / 2 - FULL.cx;
+      if (Math.abs(off) > FULL.off) push('warn', 'full-side', null, `內容偏${off < 0 ? '左' : '右'}：這段沒有講者，畫面可以用到 x ${FULL.x[0]}–${FULL.x[1]}，內容在 x ${ri(U[0])}–${ri(U[2])}，${off < 0 ? '右' : '左'}邊空著`,
+        '把內容拉開或放大，撐滿整個寬度；不用留小視窗的位置', { box: U });
+      else if (w < FULL.minW) push('warn', 'full-small', null, `內容太小：這段沒有講者，畫面可以用到 x ${FULL.x[0]}–${FULL.x[1]}，內容只佔 ${ri(w)}px 寬`,
+        `主角放大或多放一點對照，內容寬度至少 ${FULL.minW}px`, { box: U });
     }
   }
   return out;
@@ -825,12 +851,15 @@ export function fontShrinkFindings({ item, html = '', tpl = '', file = '' } = {}
 
 // ---------- 範例檔頭【D 下限】 ----------
 // 「T1 ≥ 3.1」「T2 ≥ T1 + 3.0」「D ≥ T4 + 5.2」→ [{ lhs, rhs, k }]（括號裡的說明、「3 點時改看 …」都不算）
+// 最後一拍到段尾：檔頭多半寫 5.2（講完 2.6 秒回均衡…）。P.end 的 settleTail 段太短時會把回均衡往前挪（講完 1 秒＋0.6 秒＋最後一幕 1.5 秒＋淡出 0.75 秒），
+// 所以真正的下限是這個數字；寫太大，寫草稿的人會以為模板放不下，全部退回字卡
+export const FLOOR_TAIL = 3.9;
 export function floorRules(html) {
   const sec = String(html).match(/【D 下限】([\s\S]*?)(?=【|-->)/);
   if (!sec) return [];
   let s = sec[1];
   for (let k = 0; k < 3; k++) s = s.replace(/（[^（）]*）|\([^()]*\)/g, '');
-  return [...s.matchAll(/\b([A-Z][A-Z0-9]*)\s*≥\s*(?:([A-Z][A-Z0-9]*)\s*[+＋]\s*)?(\d+(?:\.\d+)?)/g)].map((m) => ({ lhs: m[1], rhs: m[2] || null, k: Number(m[3]) }));
+  return [...s.matchAll(/\b([A-Z][A-Z0-9]*)\s*≥\s*(?:([A-Z][A-Z0-9]*)\s*[+＋]\s*)?(\d+(?:\.\d+)?)/g)].map((m) => ({ lhs: m[1], rhs: m[2] || null, k: m[1] === 'D' && m[2] ? Math.min(Number(m[3]), FLOOR_TAIL) : Number(m[3]) }));
 }
 
 // script 裡的 const X = P.at('<ref>'[, off])／P.at(<秒>[, off]) → { X: { ref, off } }（只看 <script>，註解不算；檔頭說明裡寫的「<script>」不是 script）

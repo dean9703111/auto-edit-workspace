@@ -70,9 +70,12 @@ export const BG_FILES = { fs: "bg-fs.jpg", side: "bg-side.jpg", ch: "bg-ch.jpg" 
 export function withTheme(html, theme) {
   return theme === 'dark' ? html.replace(/<html\b(?![^>]*\bdata-theme=)/, '<html data-theme="dark"') : html;
 }
+const WIDE_BG = '[data-wide] .sc-surface-fs { background-image: var(--sc-fs-pattern); }';
 export function bgCss(prefix, bg = { fs: "bg.jpg", side: "bg.jpg", ch: "bg.jpg" }) {
   const out = [];
   if (bg.fs) out.push(`.sc-surface-fs { background-image: url("${prefix}${bg.fs}"); background-size: cover; background-position: center; }`);
+  // 全寬段（沒有講者）的內容用滿整個畫面，背景圖右上的裝飾會和內容打架：只留底色
+  if (bg.fs) out.push(WIDE_BG);
   if (bg.ch) out.push(`.sc-surface-ch { background-image: url("${prefix}${bg.ch}"); background-size: cover; background-position: center; }`);
   if (bg.side) out.push(bg.side === "bg.jpg"
     ? `.sc-surface-side { background-image: url("${prefix}bg.jpg"); background-size: 1920px auto; background-position: 0 50%; }`
@@ -157,7 +160,7 @@ ${caps.map((x) => `    <div id="${x.cid}" class="sc-sectag"><span class="sc-sect
 }
 
 // 直式字卡動態的底色（fx/effects/fx-kit.js 的 --fx-bg；accent＝主色）
-const FX_BG = { dark: '#232733', light: '#f3efe6', accent: 'var(--brand)' };
+const FX_BG = { dark: '#232733', light: 'var(--fx-light-bg, #f3efe6)', accent: 'var(--brand)' };
 
 // cut（剪映素材，capcut.mjs）：要和 test 一起給（時間窗）
 //   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、剪輯台過黑／淡入淡出；
@@ -420,6 +423,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
   <meta charset="UTF-8"><meta name="viewport" content="width=${W}, height=${H}">
   <title>${segCut ? `剪映素材 ${cut.id}（${t0}s 起 ${DUR}s）` : mainCut ? '剪映主軌' : test ? `測試片段 ${t0}s 起 ${DUR}s` : '完成影片'}</title>
   <script src="${base}kit/gsap.min.js"></script>
+  <script src="${base}kit/qsmemo.js"></script>
 ${KIT_LINKS.map((l) => `  <link rel="stylesheet" href="${base}${l}">`).join('\n')}${needCss ? `\n  <link rel="stylesheet" href="${base}kit/media.css">` : ''}
 ${cueScript}${portrait ? `  ${regionsScript(C)}\n` : ''}  <script src="${base}kit/scene-motion.js"></script>
   <script src="${base}kit/illus.js"></script>
@@ -517,6 +521,7 @@ ${KIT_LINKS.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
   #cap { z-index: 60; }
   /* 背景圖：各版面先用自己的 ../bg-*.jpg，沒有就用 ../bg.jpg，都沒有只顯示底紋（不必重新產生預覽頁） */
   .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  ${WIDE_BG}
   .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
 ${indent(parts.style, 2)}

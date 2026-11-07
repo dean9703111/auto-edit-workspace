@@ -234,12 +234,12 @@ test('--gallery 直式（009 FR-073）：每支 custom 另出 x-<名稱>-v.html�
 
 test('產生的 index.html：每個 cue 一個 <audio>（主 sfx-<id>、附加 sfx-<id>-e<n>），track-index 不重複', () => {
   // s01、s02 自己寫主音效；s03 換成 09 qa（版型預設只有答案 ding 一顆附加）
-  writePlan([{ ...SCENES[0], sfx: 'ding' }, { ...SCENES[1], sfx: 'impact' }, { id: 's03', scene: 'qa', from: '#9', to: '#10e', slots: { q: '可以直接上傳嗎？', a: '不行' } }, SCENES[3]]);
+  writePlan([{ ...SCENES[0], sfx: 'ding' }, { ...SCENES[1], sfx: 'impact' }, { id: 's03', scene: 'qa', from: '#9', to: '#10e', slots: { q: '可以直接上傳嗎？', a: '不行' } }, { ...SCENES[3], sfx: 'ding' }]);
   assert.equal(node().status, 0);
   const html = read('index.html');
   const audios = [...html.matchAll(/<audio id="([^"]+)"[^>]*data-track-index="(\d+)"/g)];
   const ids = audios.map((m) => m[1]);
-  // s01 concept：主 1；s02 side-panel：主 1；s03 qa：附加 ding 1；s04 fx 29 catalog 預設 ding：主 1
+  // s01 concept：主 1；s02 side-panel：主 1；s03 qa：附加 ding 1；s04 fx 29：主 1（都明寫，每分鐘 2 顆的精簡不動明寫的）
   assert.deepEqual(ids, ['sfx-s01', 'sfx-s02', 'sfx-s03-e1', 'sfx-s04']);
   const tracks = audios.map((m) => m[2]);
   assert.equal(new Set(tracks).size, tracks.length);
@@ -293,7 +293,7 @@ test('--check --json schema 2：必有的鍵與型別；planHash 跟著 plan.jso
   assert.equal(j.outro, null);
   for (const it of j.items) {
     for (const k of ['id', 'type', 'label', 'key', 'family', 'layout', 'layoutZh', 'opaque', 'start', 'end', 'sfx', 'warnings', 'out']) assert.ok(k in it, `${it.id} 少 ${k}`);
-    assert.deepEqual(Object.keys(it.out), ['start', 'end', 'lists', 'annotations', 'pip', 'wipe', 'refs', 'tx']);
+    assert.deepEqual(Object.keys(it.out), ['start', 'end', 'lists', 'annotations', 'pip', 'wipe', 'refs', 'tx', 'wide', 'badgeBox']);
   }
   const s02 = j.items.find((x) => x.id === 's02'), s03 = j.items.find((x) => x.id === 's03');
   assert.deepEqual([s02.key, s02.family, s02.layout, s02.layoutZh], ['03-side-panel', 'panel', 'side', '半畫面']);

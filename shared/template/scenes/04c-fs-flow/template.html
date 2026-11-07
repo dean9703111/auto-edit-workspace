@@ -13,6 +13,11 @@
 .fNode .sc-icon { --d: 192px; --i: 104px; }
 .fNode .sc-t44 { position: absolute; left: -100px; right: -100px; top: calc(100% + var(--sc-gap-md)); line-height: 60px; text-align: center; }
 .fLink { fill: none; stroke: var(--sc-fs-line); stroke-width: 4px; stroke-linecap: round; stroke-linejoin: round; }
+/* 全寬（沒有講者，主卡 1680）：站放大；4 站 4×240＋3×160＝1440 */
+[data-wide] #wBody { height: calc(580px - 76px - var(--sc-gap-md)); margin-bottom: calc(76px + var(--sc-gap-md)); }
+[data-wide] .fNode { width: 240px; height: 240px; }
+[data-wide] .fNode .sc-icon { --d: 240px; --i: 128px; }
+[data-wide] .fNode .sc-t44 { font-size: 56px; line-height: 76px; left: -120px; right: -120px; }
 #wBody[data-current="1"] #fNode1 .sc-icon,
 #wBody[data-current="2"] #fNode2 .sc-icon,
 #wBody[data-current="3"] #fNode3 .sc-icon,

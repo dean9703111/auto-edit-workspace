@@ -7,6 +7,7 @@ import { readStopLog } from '../../status.mjs';
 import { BEAT_HEADER, BEAT_HEADER_ILLUS } from '../../lib/audit-beats.mjs';
 import { storyboardDocState, applyStoryboardEdit } from '../storyboard-md.mjs';
 import { storyboardOptions } from './storyboard-options.mjs';
+import { speakerInfo } from './speaker.mjs';
 
 const PREVIEW_DIR = 'storyboard-preview';
 const BEAT_HEADERS = [BEAT_HEADER, [...BEAT_HEADER, ...BEAT_HEADER_ILLUS]];
@@ -15,8 +16,12 @@ const sha = (s) => crypto.createHash('sha1').update(s).digest('hex');
 const statOf = (f) => { try { return fs.statSync(f); } catch { return null; } };
 const fileOf = (ctx) => path.join(ctx.P.project, 'work', 'storyboard.md');
 const imageUrlOf = (ctx) => (name) => {
-  const st = statOf(path.join(ctx.P.project, 'work', PREVIEW_DIR, name));
-  return st ? `/${PREVIEW_DIR}/${encodeURIComponent(name)}?v=${Math.floor(st.mtimeMs).toString(36)}` : null;
+  // 動畫做完重新截圖後，<段>.png 會變成 <段>-1.png、<段>-2.png…：分鏡表還寫舊檔名時用第一張，不要顯示「截圖還沒產生」
+  for (const f of [name, name.replace(/(\.\w+)$/, '-1$1')]) {
+    const st = statOf(path.join(ctx.P.project, 'work', PREVIEW_DIR, f));
+    if (st) return `/${PREVIEW_DIR}/${encodeURIComponent(f)}?v=${Math.floor(st.mtimeMs).toString(36)}`;
+  }
+  return null;
 };
 
 // 製作進度的停點 ③ 最後一列是「通過」「略過」＝已經照這份寫了正式 plan.json，再改也不會生效；改版（③ 分鏡表（s12 v2））不算
@@ -36,7 +41,7 @@ function optionsOf(ctx) {
 
 export function storyboardState(ctx) {
   const f = fileOf(ctx);
-  const base = { project: path.basename(ctx.P.project), file: 'work/storyboard.md', readOnly: storyboardLocked(ctx.P.project), options: optionsOf(ctx), previewBase: '/gallery/preview/' };
+  const base = { project: path.basename(ctx.P.project), file: 'work/storyboard.md', readOnly: storyboardLocked(ctx.P.project), options: optionsOf(ctx), previewBase: '/gallery/preview/', speaker: speakerInfo(ctx), built: !!(ctx.P.out && statOf(path.join(ctx.P.out, 'index.html'))) };
   if (!statOf(f)) return { ...base, exists: false, hash: null, sig: null, title: '', sections: [], overview: {}, warnings: [] };
   return { ...base, exists: true, ...storyboardDocState(fs.readFileSync(f, 'utf8'), { hash: sha, imageUrl: imageUrlOf(ctx), beatHeaders: BEAT_HEADERS }) };
 }

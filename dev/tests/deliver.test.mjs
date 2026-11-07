@@ -218,6 +218,46 @@ test('流程：失敗都留 → 改法；測試片段沒聲音不 render；整�
   assert.deepEqual(calls, []);
 });
 
+test('流程：內容設計動畫還是空白畫布 → 不 build、不 render、不記 ④，訊息列段號；做完就放行', async () => {
+  fs.writeFileSync(P.plan, JSON.stringify({ version: 1, scenes: [{ id: 'd01', type: 'custom', design: true, from: '#1', to: '#2' }, { id: 's01', scene: 'key-point', from: '#3', to: '#4' }] }));
+  const design = path.join(P.out, 'compositions', 'x-design-d01.html');
+  let job = await deliver(deps());   // 還沒有檔
+  assert.equal(job.ok, false);
+  assert.match(job.message, /內容設計動畫還沒做：d01/);
+  assert.match(job.fix, /design-build\.md/);
+  assert.deepEqual(calls, []);
+  assert.equal(rowsOf().length, 0);
+  fs.writeFileSync(design, '<template id="x"><div data-design-blank="1">占位字</div></template>');
+  calls = [];
+  job = await deliver(deps());       // 空白畫布
+  assert.equal(job.ok, false);
+  assert.deepEqual(calls, []);
+  assert.equal(fs.existsSync(F.final), false);
+  fs.writeFileSync(design, '<template id="x"><div>真的動畫</div></template>');
+  calls = [];
+  job = await deliver(deps());       // 做完了
+  assert.equal(job.ok, true);
+  assert.ok(calls.includes('render'));
+});
+
+test('流程：分鏡表有改動還沒套回 → 不輸出、給 --apply-storyboard；套回後放行；沒有紀錄的舊專案照常', async () => {
+  const { recordStoryboard } = await imp('lib/storyboard-state.mjs');
+  const sb = path.join(P.project, 'work', 'storyboard.md');
+  fs.writeFileSync(sb, '# 分鏡表\n');           // 沒有紀錄（舊專案、沒跑過 --storyboard）：不擋
+  assert.equal(D.deliverBlocker(P), null);
+  recordStoryboard(P, '# 分鏡表\n');
+  assert.equal(D.deliverBlocker(P), null);      // 工具寫的，沒人改過
+  fs.writeFileSync(sb, '# 分鏡表\n使用者改的字\n');
+  const job = await deliver(deps());
+  assert.equal(job.ok, false);
+  assert.match(job.message, /還沒套回/);
+  assert.match(job.fix, /--apply-storyboard/);
+  assert.deepEqual(calls, []);
+  recordStoryboard(P, fs.readFileSync(sb, 'utf8'));   // --apply-storyboard 做的事
+  calls = [];
+  assert.equal((await deliver(deps())).ok, true);
+});
+
 test('流程：整支做好了但 final.mp4 換不過去（被別的程式開著）→ 不白做，留著；再跑一次直接接手', async () => {
   fs.mkdirSync(F.final);   // 用資料夾擋住改名（Windows 上是播放器開著舊檔）
   fs.writeFileSync(path.join(F.final, 'x'), 'x');

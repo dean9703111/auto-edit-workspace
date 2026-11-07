@@ -7,6 +7,7 @@ let state = null;
 let clip = null;        // 正在試聽：{ row, s, e, a, b }
 let saving = Promise.resolve();
 let pendingSaves = 0;
+let offline = false;    // 上一次連不到剪輯台：連上後要重新對一次畫面和檔案
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clock = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
@@ -16,6 +17,13 @@ function setSave(kind, text) {
   const el = $('saveState');
   el.dataset.state = kind;
   el.querySelector('.txt').textContent = text;
+}
+// 存檔失敗的提醒固定在視窗右下角，清單捲到哪都看得到
+function notice(text) {
+  const n = $('notice');
+  if (!n) return;
+  n.hidden = !text;
+  n.textContent = text || '';
 }
 
 // ---------- 少量 Markdown（表格、清單、段落、### 標題）：只用在 cuts.md 的其他段 ----------
@@ -49,6 +57,9 @@ function mdToHtml(md) {
   return out.join('');
 }
 
+// 工具寫給 AI 的提醒：作者只要知道去聽哪裡，不用知道檔案路徑和時間碼要改哪裡
+const plainMd = (md) => String(md).replace(/→ 播 \S+ 的 ([\d:.]+[–-][\d:.]+) 聽一下，切到字就把 cuts\.md 的時間碼往停頓移/g, '→ 按那一列的 ▶ 聽一下（$1）；切到字就跟 AI 說往哪邊移');
+
 // ---------- 畫面 ----------
 function renderSummary() {
   const on = state.ng.filter((r) => r.cut);
@@ -60,9 +71,9 @@ function rowHtml(r) {
   const off = !r.cut;
   return `<li class="ct-row${off ? ' off' : ''}${clip?.row === r.row ? ' playing' : ''}" data-row="${r.row}">
     <label class="ct-check" title="${off ? '保留（不剪）' : '剪掉'}"><input type="checkbox" ${r.cut ? 'checked' : ''} ${state.readOnly ? 'disabled' : ''} aria-label="第 ${r.row} 列要剪"></label>
-    <button class="ct-play" ${state.video ? '' : 'disabled title="還沒有 work/main.mp4"'} aria-label="試聽第 ${r.row} 列">${clip?.row === r.row ? '■' : '▶'}</button>
+    <button class="ct-play" ${state.video ? '' : 'disabled title="還沒有可以試聽的影片"'} aria-label="試聽第 ${r.row} 列">${clip?.row === r.row ? '■' : '▶'}</button>
     <div>
-      <div class="ct-meta"><span class="ct-num">第 ${r.row} 列</span><span class="ct-time">${clock(r.start)}–${clock(r.end)}</span><span class="ct-dur">${(r.end - r.start).toFixed(1)} 秒</span><span class="ct-tag">${off ? '保留' : '剪掉'}</span></div>
+      <div class="ct-meta"><span class="ct-num">第 ${r.row} 列</span><span class="ct-time">${clock(r.start)}–${clock(r.end)}</span><span class="ct-dur">${(r.end - r.start).toFixed(1)} 秒</span><span class="ct-tag">${off ? '保留' : '剪掉'}</span>${state.video ? '<button class="ct-after small" data-tip="聽剪掉之後接起來的樣子（前 2 秒＋後 2 秒）">聽剪完</button>' : ''}</div>
       <div class="ct-text">${esc(r.text) || '<span class="ct-num">（沒有寫內容）</span>'}</div>
       ${r.reason ? `<div class="ct-reason">${esc(r.reason)}</div>` : ''}
       ${r.note ? `<div class="ct-note">⚠ AI 不確定：${esc(r.note)}　建議先試聽</div>` : ''}
@@ -87,24 +98,27 @@ function render() {
   const s = state;
   $('projName').textContent = s.project;
   const banner = [];
-  if (s.readOnly) banner.push('<p class="ct-banner">初剪已經輸出（work/rough.mp4），這份清單現在只能看。要重剪請在對話跟 AI 說。</p>');
+  if (s.readOnly) banner.push('<p class="ct-banner">初剪已經做好，這份清單現在只能看。要重剪請在對話跟 AI 說。</p>');
   if (s.errors?.length) banner.push(`<p class="ct-banner err">${s.errors.map(esc).join('<br>')}</p>`);
   $('banner').innerHTML = banner.join('');
   $('hint').hidden = !s.ng.length || s.readOnly;
   $('rows').innerHTML = s.ng.map(rowHtml).join('');
-  const empty = !s.exists ? 'AI 還在找要剪的地方，清單寫好後這一頁會自動更新。' : !s.ng.length ? '這支影片沒有要剪的 NG（停頓會自動去掉）。' : '';
+  const empty = !s.exists
+    ? (s.readOnly ? '這支影片已經有初剪，沒有留下剪輯清單。要重剪請在對話跟 AI 說。' : 'AI 還在找要剪的地方，清單寫好後這一頁會自動更新。')
+    : !s.ng.length ? '這支影片沒有要剪的 NG（停頓會自動去掉）。' : '';
   $('empty').hidden = !empty;
   $('empty').textContent = empty;
   renderSummary();
+  renderFilter();
   $('sections').innerHTML = (s.sections || []).filter((x) => !x.ng && x.md).map((x) => {
     const decide = x.title.includes('需要你決定');
     const none = decide && /^[-*]\s*無\s*$/.test(x.md);
-    return `<section class="ct-panel ct-sec${decide && !none ? ' decide' : ''}"><h3>${esc(x.title || '其他')}</h3>${decide && !none ? '<p class="ct-hint">這幾項請在對話裡回覆 AI。</p>' : ''}<div class="ct-md">${none ? '<p>沒有要你決定的事。</p>' : mdToHtml(x.md)}</div></section>`;
+    return `<section class="ct-panel ct-sec${decide && !none ? ' decide' : ''}"><h3>${esc(x.title || '其他')}</h3>${decide && !none ? '<p class="ct-hint">這幾項請在對話裡回覆 AI。</p>' : ''}<div class="ct-md">${none ? '<p>沒有要你決定的事。</p>' : mdToHtml(plainMd(x.md))}</div></section>`;
   }).join('');
   const next = $('next');
   next.hidden = !s.exists || s.readOnly;
   next.innerHTML = '勾好後回到對話，跟 AI 說「<b>可以</b>」；也可以直接說要改哪一列。';
-  if (!pendingSaves) setSave('saved', s.readOnly ? '只能看' : s.exists ? `已存到 ${s.file}` : '等 AI 寫清單');
+  if (!pendingSaves) setSave('saved', s.readOnly ? '只能看' : s.exists ? '已自動存檔' : '等 AI 寫清單');
   if (s.video && $('video').dataset.src !== s.video.url) { $('video').src = s.video.url; $('video').dataset.src = s.video.url; }
 }
 
@@ -130,10 +144,16 @@ function toggle(row, on) {
       state = body;
       if (pendingSaves === 1) { state.ng.forEach(syncRow); renderSummary(); }
     } catch {
-      setSave('error', '連不到剪輯服務，請確認還開著');
+      // 沒存到：勾選回到原本的樣子，畫面才和檔案一樣，並且講清楚
+      r.cut = !on;
+      syncRow(r);
+      renderSummary();
+      offline = true;
+      setSave('error', '連不到剪輯台，請確認還開著');
+      notice(`第 ${row} 列沒有存到，勾選已經還原。連上剪輯台後再勾一次。`);
     } finally {
       pendingSaves--;
-      if (!pendingSaves && $('saveState').dataset.state !== 'error') setSave('saved', `已存到 ${state.file}`);
+      if (!pendingSaves && $('saveState').dataset.state !== 'error') setSave('saved', '已自動存檔');
     }
   });
 }
@@ -154,22 +174,25 @@ function drawBar() {
   $('barNg').style.width = `${((clip.e - clip.s) / span) * 100}%`;
   $('barHead').style.left = `${Math.min(100, Math.max(0, ((t - clip.a) / span) * 100))}%`;
   const inNg = t >= clip.s && t < clip.e;
-  $('now').innerHTML = `第 ${clip.row} 列　<b>${clock(t)}</b>　${inNg ? '正在播<b>會剪掉的部分</b>' : t < clip.s ? '前 1 秒' : '後 1 秒'}`;
+  $('now').innerHTML = clip.skip ? `第 ${clip.row} 列　<b>${clock(t)}</b>　聽剪掉之後接起來的樣子` : `第 ${clip.row} 列　<b>${clock(t)}</b>　${inNg ? '正在播<b>會剪掉的部分</b>' : t < clip.s ? '前 1 秒' : '後 1 秒'}`;
 }
 function tick() {
   if (!clip) return;
   if (video.currentTime >= clip.b || video.ended) { drawBar(); stop(); $('now').textContent = '播完了；再按 ▶ 重聽'; return; }
+  // 聽剪完：播到要剪的地方就跳過去，聽接起來順不順
+  if (clip.skip && video.currentTime >= clip.s && video.currentTime < clip.e) video.currentTime = clip.e;
   drawBar();
   requestAnimationFrame(tick);
 }
-async function play(row) {
+async function play(row, { skip = false } = {}) {
   const r = state.ng.find((x) => x.row === row);
   if (!r || !state.video) return;
-  if (clip?.row === row) { stop(); $('now').textContent = '已停止'; return; }
+  if (clip?.row === row && !skip) { stop(); $('now').textContent = '已停止'; return; }
   stop();
   if (video.readyState < 1) await new Promise((ok) => video.addEventListener('loadedmetadata', ok, { once: true }));
   const dur = Number.isFinite(video.duration) ? video.duration : r.end + PAD;
-  clip = { row, s: r.start, e: r.end, a: Math.max(0, r.start - PAD), b: Math.min(dur, r.end + PAD) };
+  const pad = skip ? 2 : PAD;   // 聽剪完多播一點，才聽得出接得順不順
+  clip = { row, skip, s: r.start, e: r.end, a: Math.max(0, r.start - pad), b: Math.min(dur, r.end + pad) };
   $('barA').textContent = clock(clip.a);
   $('barB').textContent = clock(clip.b);
   syncRow(r);
@@ -188,6 +211,27 @@ $('rows').addEventListener('change', (e) => {
 $('rows').addEventListener('click', (e) => {
   const btn = e.target.closest('.ct-play');
   if (btn) play(Number(btn.closest('.ct-row').dataset.row));
+  const after = e.target.closest('.ct-after');
+  if (after) play(Number(after.closest('.ct-row').dataset.row), { skip: true });
+});
+// 只看 AI 不確定的
+let onlyUnsure = false;
+function renderFilter() {
+  const n = state?.ng.filter((r) => r.note).length || 0;
+  const b = $('filterUnsure');
+  if (!b) return;
+  b.hidden = !n;
+  b.textContent = `只看 AI 不確定的（${n}）`;
+  b.setAttribute('aria-pressed', String(onlyUnsure));
+  document.querySelectorAll('.ct-row').forEach((li) => { const r = state.ng.find((x) => x.row === Number(li.dataset.row)); li.hidden = onlyUnsure && !r?.note; });
+}
+$('filterUnsure')?.addEventListener('click', () => { onlyUnsure = !onlyUnsure; renderFilter(); });
+// 空白鍵：暫停、接著播（沒有在試聽時播第一列）
+document.addEventListener('keydown', (e) => {
+  if (e.key !== ' ' || e.target.closest('input, textarea, select, button, a')) return;
+  e.preventDefault();
+  if (!clip) { const first = state?.ng.find((r) => r.cut); if (first) play(first.row); return; }
+  if (video.paused) video.play().catch(() => {}); else video.pause();
 });
 
 // ---------- 載入與同步 ----------
@@ -199,13 +243,16 @@ async function load() {
 async function refresh(first = false) {
   try {
     const next = await load();
-    if (first || !state || (!pendingSaves && (next.hash !== state.hash || next.readOnly !== state.readOnly))) {
+    const back = offline && !pendingSaves;   // 服務回來了：狀態列恢復，畫面照檔案重畫一次
+    if (first || !state || back || (!pendingSaves && (next.hash !== state.hash || next.readOnly !== state.readOnly))) {
       state = next;
       render();
     }
+    if (back) { offline = false; notice(''); }
   } catch (e) {
     if (first) { $('empty').hidden = false; $('empty').textContent = `讀不到剪輯清單：${e.message}`; }
-    setSave('error', '連不到剪輯服務，請確認還開著');
+    offline = true;
+    setSave('error', '連不到剪輯台，請確認還開著');
   }
 }
 refresh(true);

@@ -841,3 +841,31 @@ test('構圖（server）：一起存講者調光瘦臉（look，還沒有 plan.j
     assert.equal((await (await fetch(u('/api/framing'))).json()).ref.exists, true);
   } finally { await ed5.close(); fs.rmSync(prev, { recursive: true, force: true }); }
 });
+
+test('模板動畫的文字：只有畫面上的字能改；圖示、時間、增刪項目都擋；沒有規格不能改', () => {
+  const spec = { template: 'x-callout', slots: { title: { type: 'text', max: 10 }, obj: { type: 'icon' }, items: { type: 'list', item: { text: { type: 'text' }, icon: { type: 'icon' }, at: { type: 'at' } } }, all: { type: 'at' } } };
+  const seg = { id: 'x1', type: 'custom', template: 'x-callout', slots: { title: '多機', obj: 'camera', items: [{ text: '橫拍', icon: 'monitor', at: '#4' }] } };
+  const ok = (over) => E.checkTemplateSlots('x1', seg, { ...seg.slots, ...over }, spec);
+  assert.deepEqual(ok({ title: '改過' }), []);
+  assert.deepEqual(ok({ items: [{ text: '改', icon: 'monitor', at: '#4' }] }), []);
+  assert.match(ok({ obj: 'monitor' })[0], /只能改文字/);
+  assert.match(ok({ items: [{ text: '橫拍', icon: 'x', at: '#4' }] })[0], /只能改文字/);
+  assert.match(ok({ items: [{ text: '橫拍', icon: 'monitor', at: '#9' }] })[0], /只能改文字/);
+  assert.match(ok({ items: [] })[0], /要是文字|只能改文字/);
+  assert.match(ok({ items: [{ text: '橫拍', icon: 'monitor', at: '#4' }, { text: '多', icon: 'monitor', at: '#5' }] })[0], /只能改文字/);
+  assert.match(E.checkTemplateSlots('x1', seg, seg.slots, null)[0], /找不到規格/);
+  // x-scene：標題和元件名稱（巢狀）能改，插圖不能
+  const sceneSpec = { template: 'x-scene', generator: 'scene', slots: { title: { type: 'text' } } };
+  const sc = { id: 'x2', type: 'custom', template: 'x-scene', slots: { title: '標題', parts: [{ id: 'a', illus: 'phone', label: '手機' }, { id: 'b', parts: [{ id: 'c', illus: 'pc', label: '電腦' }] }], links: ['a-b'] } };
+  const next = JSON.parse(JSON.stringify(sc.slots));
+  next.parts[1].parts[0].label = '筆電';
+  assert.deepEqual(E.checkTemplateSlots('x2', sc, next, sceneSpec), []);
+  next.parts[0].illus = 'x';
+  assert.match(E.checkTemplateSlots('x2', sc, next, sceneSpec)[0], /只能改文字/);
+  // 整條存檔路徑：沒有 template 的 custom（AI 手寫的）不能改 slots
+  const r = E.sanitizeSegments({ c1: { slots: {} } }, { scenes: [{ id: 'c1', type: 'custom', src: 'compositions/x.html' }] }, {});
+  assert.match(r.errors[0], /不能改「slots」/);
+  const r2 = E.sanitizeSegments({ x1: { slots: { ...seg.slots, title: '新' } } }, { scenes: [seg] }, { schema: { custom: [spec] } });
+  assert.deepEqual(r2.errors, []);
+  assert.equal(r2.updates[0][1].slots.title, '新');
+});

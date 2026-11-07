@@ -21,6 +21,7 @@
 //   r3(x)                     → 四捨五入到毫秒
 //   floorFrame(x, fps)        → 往下對齊到 1/fps 秒
 
+import { foldZh } from './zh.mjs';
 import { cueByN } from './srt.mjs';
 
 export const FPS = 30;
@@ -69,7 +70,10 @@ export function findKw(text, kw) {
 
 // ---------- 詞級逐字稿（work/transcript.json：[{ text, start, end }]，rough.mp4 秒數）----------
 // cues.words＝詞陣列（和 cues 同一個時間基準）；cues.wordsWhy＝沒有掛上去的原因；cues.approx＝Set，退回字數比例的 #N@詞
-export const normText = (s) => String(s ?? '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+// 只去標點、不折繁簡：要印給人看的文字（和 normText 一個字對一個字）
+export const plainText = (s) => String(s ?? '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
+// 繁簡折成同一種：whisper 有時轉成簡體，「不滿意」和「不满意」要對得上（一個字換一個字，長度不變）
+export const normText = (s) => foldZh(String(s ?? '').normalize('NFKC').toLowerCase()).replace(/[\s\p{P}\p{S}]/gu, '');
 const charCache = new WeakMap();
 function wordChars(words) {
   let out = charCache.get(words);
@@ -98,6 +102,8 @@ export function wordTime(words, c, kw, { end = false, guess = null, pad = 1.5 } 
         let ok = true;
         for (let j = 0; j < len && ok; j++) ok = win[i + j].ch === k[o + j];
         if (!ok) continue;
+        // 逐字稿聽錯時，一整句可能擠在零點幾秒裡，這種時間不能信（一個字不到 0.04 秒，人講不了這麼快），當作找不到，退回字數比例
+        if ((win[i + len - 1].e - win[i].s) / len < 0.04) continue;
         const t = end ? win[i + len - 1].e + (k.length - o - len) * per : win[i].s - o * per;
         const d = guess == null ? 0 : Math.abs(t - guess);
         if (!best || d < best.d - 1e-9) best = { t, d };

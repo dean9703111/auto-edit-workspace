@@ -177,7 +177,7 @@ test('sfxBudget：一分鐘 3 顆主音效 ⚠，tick 不算', () => {
   ];
   const b = A.sfxBudget(cues, CONF, { outDur: 120 });
   assert.deepEqual(b.dense, [{ from: 0, to: 60, n: 3, ids: ['s1', 's2', 's3'] }]);
-  assert.equal(b.warnings[0], '⚠ 音效密度：1 個一分鐘超過 2 顆主音效（0:00–1:00 3 顆；附加音效 tick、click 不算）→ 每分鐘留最重要的 2 顆（chapter、thunder、shine、sparkle、alert、success 先留，ding、impact 先拿掉：那段寫 "sfx": null）');
+  assert.equal(b.warnings[0], '⚠ 音效密度：1 個一分鐘超過 2 顆主音效（0:00–1:00 3 顆：s1、s2、s3；附加音效 tick、click 不算）→ 每分鐘留最重要的 2 顆（chapter、thunder、shine、sparkle、alert、success 先留，ding、impact 先拿掉：那段寫 "sfx": null）');
 });
 
 test('sfxBudget＋報告：chapter 調大 2 dB → 比人聲只小 1 dB，⚠ 音效比例', () => {
@@ -369,7 +369,7 @@ const RMS_PROJECT = process.env.AUTO_EDIT_RMS_PROJECT;
 const rmsDir = RMS_PROJECT ? path.resolve(process.cwd(), RMS_PROJECT) : null;
 const rmsSkip = !RMS_PROJECT ? '沒設 AUTO_EDIT_RMS_PROJECT' : !hasFfmpeg ? '沒有 ffmpeg'
   : !(fs.existsSync(path.join(rmsDir, 'work', 'rough.mp4')) && fs.existsSync(path.join(rmsDir, 'work', 'cutpoints.json')))
-    ? `沒有 ${RMS_PROJECT}/work/rough.mp4 或 work/cutpoints.json（先照 AGENTS.md「剪乾淨」跑到第 7 步）` : false;
+    ? `沒有 ${RMS_PROJECT}/work/rough.mp4 或 work/cutpoints.json（先跑 media.mjs rough）` : false;
 test('剪接點 RMS（真實素材）：現行 15 ms 微淡化 0 個凹洞', { skip: rmsSkip }, (t) => {
   const raw = path.join(tmp(), 'rough.f32');
   ff(['-i', path.join(rmsDir, 'work', 'rough.mp4'), '-vn', '-map', '0:a:0', '-af', 'aresample=48000:first_pts=0', '-ac', '2', '-ar', '48000', '-f', 'f32le', raw]);
@@ -386,4 +386,20 @@ test('剪接點 RMS（真實素材）：現行 15 ms 微淡化 0 個凹洞', { s
   const holes = r.filter((d) => d.hole).length;
   t.diagnostic(`合計：${r.length} 個接點，${holes} 個凹洞（門檻：連續 ≥ 20 ms 低於底噪 −6 dB、而且比處理前低 ≥ 6 dB）`);
   assert.equal(holes, 0);
+});
+
+test('thinMainSfx：每分鐘留 2 顆，優先序 chapter > alert／success > ding；明寫的 sfx、click 不動', () => {
+  const conf = { chapter: {}, alert: {}, success: {}, ding: {}, impact: {}, click: { additive: true } };
+  const it = (id, name, at, seg = {}) => ({ id, sfx: { name, at }, sfxExtra: [], seg });
+  const items = [it('a', 'ding', 1), it('b', 'success', 10), it('c', 'chapter', 20), it('d', 'impact', 30), it('e', 'alert', 40), it('f', 'ding', 70)];
+  items[1].sfxExtra = [{ name: 'click', at: 11, beat: true }, { name: 'ding', at: 12, beat: true }];
+  assert.equal(A.thinMainSfx(items, conf), 4);
+  assert.deepEqual(items.filter((x) => x.sfx).map((x) => x.id), ['c', 'e', 'f'], '留 chapter、alert；下一分鐘的 ding 不受影響');
+  assert.deepEqual(items[1].sfxExtra.map((c) => c.name), ['click'], '附加的 click 留著；P.sfx 的 ding 拿掉');
+  assert.equal(items[0].sfxDropped.name, 'ding');
+  const locked = [it('a', 'ding', 1, { sfx: 'ding' }), it('b', 'ding', 10, { sfx: 'ding' }), it('c', 'ding', 20, { sfx: 'ding' }), it('d', 'success', 30)];
+  assert.equal(A.thinMainSfx(locked, conf), 1, '明寫的都留，只拿掉沒明寫的');
+  assert.equal(locked[3].sfx, null);
+  const quiet = [it('a', 'ding', 1), it('b', 'success', 10)];
+  assert.equal(A.thinMainSfx(quiet, conf), 0);
 });

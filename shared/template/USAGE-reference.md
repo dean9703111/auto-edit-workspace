@@ -68,7 +68,7 @@
 ### R2.2 個別情境補充
 
 - **01 章節轉場**：只寫 `"at": "#N"`（該章第一句），長度固定 2.5 秒，寫 to／duration 會被忽略。前一句結尾到第 N 句起點的空檔 ≥ 2.0 秒時，轉場放在空檔裡、結束在第 N 句起點；空檔 < 2.0 秒（auto-editor 初剪後幾乎都是）時，從第 N 句起點開始蓋 2.5 秒，人聲在下面繼續，報告會寫明是哪一種。結語章的 `sub` 放本集金句，不要只寫「結語」。短片（< 3 分鐘）不建議用：會蓋住講者 2.5 秒，又佔掉開場 30 秒的名額。
-- **章節角標**：會自動常駐右上角：章節開始（01 章節轉場結束；沒有 01 時是 02 章節角標段開始）一直到下一章或片尾配樂，子母畫面、全幕的時候自動淡出（AGENTS.md「剪好看」硬規則）。沒有 01 的短片，02 段照樣寫（它決定章節從哪裡開始、號碼和章名），長度 ≥ 3.5 秒就好；號碼和前一章相同的 02 段不另起一章。`chtag: true` 不用再寫（寫了會 ⚠）。不要常駐角標：plan.json 第一層寫 `"chapterBadge": false`（回到舊的行為：02 段只顯示那幾秒、`chtag` 附件照舊）。
+- **章節角標**：會自動常駐右上角：章節開始（01 章節轉場結束；沒有 01 時是 02 章節角標段開始）一直到下一章或片尾配樂，子母畫面、全幕的時候自動淡出（`auto-edit-storyboard` 硬規則）。沒有 01 的短片，02 段照樣寫（它決定章節從哪裡開始、號碼和章名），長度 ≥ 3.5 秒就好；號碼和前一章相同的 02 段不另起一章。`chtag: true` 不用再寫（寫了會 ⚠）。不要常駐角標：plan.json 第一層寫 `"chapterBadge": false`（回到舊的行為：02 段只顯示那幾秒、`chtag` 附件照舊）。
 - **07 重點字卡**：`key` 有自己的時間點 `beats.keyAt`：`lead`（前句）在段起點先出，`key` 等講到那個詞才揭開（`"beats": { "keyAt": "#20@放到電腦" }`，或寫在 slots：`"key": { "text": "放到電腦才看得出", "at": "#20@放到電腦" }`）；主音效跟著 `keyAt`。
 - **03 側邊欄**：清單預設在本段第 1.3 秒起、每 0.6 秒一項；第一項不寫 `at`。`sideShift` 見 R4。
 - **04a、04c**：清單在第 0.5 秒起、每 0.35 秒一項。
@@ -218,7 +218,7 @@
 
 ### R2.8 文字對時：每個欄位改哪個時間點
 
-卡片主文字、清單每一項、字卡動態的字，出現時間＝講到那個詞的時間（`#N@詞`），差 ≤ 0.5 秒（AGENTS.md「剪好看」硬規則）。`--check` 的「文字對時」會量：差 0.6–1.5 秒 ⚠、超過 1.5 秒 ✖，訊息的 → 會寫好要改哪個欄位、寫什麼（USAGE.md 4.2）。這張表是「欄位 → 出現時間由誰決定」：
+卡片主文字、清單每一項、字卡動態的字，出現時間＝講到那個詞的時間（`#N@詞`），差 ≤ 0.5 秒（`auto-edit-storyboard` 硬規則）。`--check` 的「文字對時」會量：差 0.6–1.5 秒 ⚠、超過 1.5 秒 ✖，訊息的 → 會寫好要改哪個欄位、寫什麼（USAGE.md 4.2）。這張表是「欄位 → 出現時間由誰決定」：
 
 | 情境（scene key） | 欄位 → 出現時間由誰決定（改法寫哪裡） |
 |---|---|
@@ -359,7 +359,7 @@
 
 ### R5.1 字幕（build 自動產生，不用寫）
 
-- 來源：`work/rough.srt`（剪乾淨第 6 步 `media.mjs srt-align` 照講稿排好的完整語句，不要重新轉錄）。
+- 來源：`work/rough.srt`（`media.mjs srt-align` 照講稿排好的完整語句，不要重新轉錄）。
 - 樣式（`shared/style.md`「字幕」，實作在 `shared/template/kit/captions.css`）：英數 Google Sans Flex、中文 Noto Sans TC、字重 400、76px、行高 71、字距 0、白字、黑底 70% 不透明、直角、寬度貼字、底板高 118（內距上 24、下 23、左右 37）、距底 6px（字幕框 y 956–1074）、水平置中、只排一行。
 - 直式（plan.json `"format": "portrait"`）：字級、字重、底板、內距和上面同一套；每則最多 10 字，字幕帶 y 1280–1420（R4.7）。
 - 每則最多 18 字（直式 10 字；全形 1、半形 0.5），超過要在 rough.srt 拆句（核心 2.4）；估寬超過 1840px 也會提醒；含「，」「。」「；」「：」、一則不到 0.6 秒也會提醒（核心 4.2）。
@@ -462,7 +462,7 @@
 | `moves[i].to 要放大 N 倍，畫面會糊 → 框大一點，或改用放大鏡 lens` | ⚠ | 照 `→` 改 |
 | `lens[i] 期間有運鏡，鏡片位置是用 … 那一刻的畫面算的` | ⚠ | 運鏡和放大鏡錯開 |
 | `marks[i] 只停 Ns（< 0.5s，閃一下就不見），已拿掉` | ⚠ | 要留就把 `until` 往後延 |
-| `work/cutpoints.json 不是合法的 JSON` | ⚠ | 照 AGENTS.md「剪乾淨」第 7 步重新產生；不影響 build，只是 `joins` 對不到剪接點 |
+| `work/cutpoints.json 不是合法的 JSON` | ⚠ | 跑 `media.mjs rough --again` 重新產生；不影響 build，只是 `joins` 對不到剪接點 |
 
 ---
 
@@ -853,7 +853,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 - build 用 `--project projects/<專案>`（或只寫名稱）指定專案；沒寫時，目前資料夾在某個專案裡就用它，`projects/` 只有一個專案就用那個，否則出錯並列出現有專案。路徑旗標（相對目前資料夾，會蓋過專案預設）：`--plan`、`--srt`、`--video`、`--out`、`--sfx`。預設是專案裡的 `work/hyperframes/plan.json`、`work/rough.srt`、`work/rough.mp4`、`work/hyperframes/`，音效是 `shared/sfx/`。
 - 專案結構：`projects/<專案>/講稿.md`、`assets/camera/`（講解主軌）、`assets/screen/`、`assets/images/`（只讀）、`work/`（中間產物）、`output/`（`final.mp4`、`test-clips/`、`qc/`；build 會先建好這三個資料夾）。
 - build 結束碼：有 ✖ 錯誤時是 1，可以拿來判斷要不要往下跑。`--list --json` 印出機器可讀的情境、字卡動態、音效清單與 media 段欄位；`--check --json` 印出機器可讀的檢查報告（R2.6）。
-- 素材：`node shared/template/tools/media.mjs scan|frame|main --project projects/<專案>`（核心第 5 節、AGENTS.md「剪乾淨」）。也是零依賴，只用 ffmpeg／ffprobe。
+- 素材：`node shared/template/tools/media.mjs scan|frame|main --project projects/<專案>`（核心第 5 節）。也是零依賴，只用 ffmpeg／ffprobe。
 
 ---
 
@@ -866,6 +866,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 實測平台 | macOS 15.3（M1 Max）。Windows 的指令照官方參數寫，以實際執行結果為準 |
 
 環境的坑：
+- render 報 `VIDEO_SOURCE_UNRENDERABLE`（`assets/rough.mp4` 讀不了）：底片壞了，重新編碼：`node shared/template/tools/build.mjs --project projects/<專案> --reencode`，再跑一次 `deliver.mjs`。
 - **轉逐字稿**：`npx hyperframes transcribe <影片> -d work --model small --language zh`。預設模型 `small.en` 會把中文翻成英文。逐字稿的時間碼可能漂 1 秒左右，處理見核心 4.3。
 - **M1 Max＋macOS 15.3** 轉錄會出錯時，前面加環境變數：`GGML_METAL_BF16_DISABLE=1 npx hyperframes transcribe …`。
 - **auto-editor**：Skill 文件和安裝的版本參數名稱可能不同，以 `auto-editor --help` 為準（實測 29.3.1 要用 `--cut-out`、`--add-in`、`--no-open`；每一段寫一次旗標，同一個旗標後面接兩段會失敗）。剪乾淨的指令由 `media.mjs ng-snap` 印出，不要自己拼。

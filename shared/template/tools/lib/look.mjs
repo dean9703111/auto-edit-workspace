@@ -20,7 +20,7 @@ import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromeCandidates } from './audit-browser.mjs';
-import { lut3dFilter, writeJpg } from './ff.mjs';
+import { lut3dFilter, writeJpg, tmpFor, sweepTmp } from './ff.mjs';
 import { canvas, fillRect, blit, text } from './raster.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -742,7 +742,8 @@ export function renderLookFootage({ projectDir, track, slim, beauty = 0, onProgr
   const pix = ['yuv420p', 'yuvj420p'].includes(V.pixFmt) ? V.pixFmt : 'yuv420p';
   const W = S.w, H = S.h, cw = W >> 1, chh = H >> 1, FS = W * H + 2 * cw * chh;
   const lookScale = W / V.width;
-  const tmp = path.join(P.dir, 'rough-look.tmp.mp4');
+  sweepTmp(P.dir);
+  const tmp = tmpFor(path.join(P.dir, 'rough-look.mp4'));   // 檔名帶 pid：上一次被砍留下的 ffmpeg 還在收尾也不會寫到同一個檔
   fs.mkdirSync(P.dir, { recursive: true });
   const vf = [`fps=${V.fps}`, ...(S.scaled ? [`scale=${W}:${H}:flags=lanczos`] : []), `format=${pix}`].join(',');
   const g = String(Math.max(1, Math.round(V.fpsExact)));

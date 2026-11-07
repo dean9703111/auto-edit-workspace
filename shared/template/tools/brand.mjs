@@ -29,7 +29,7 @@
  *
  * 背景圖（HTML 路線）：node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
  *   用 HyperFrames 的 Chrome 把 HTML 截成 bg-<kind>.jpg，疊留空區框、量留空區乾不乾淨，三張到齊做並排預覽 preview.jpg。
- *   不寫 shared/template/：使用者同意後才複製（AGENTS.md「換風格」）。完整用法：--help
+ *   不寫 shared/template/：使用者同意後才複製（auto-edit-style 步驟 2–4）。完整用法：--help
  */
 import fs from 'node:fs';
 import path from 'node:path';

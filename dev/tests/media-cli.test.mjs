@@ -222,7 +222,7 @@ test('ng-snap：NG 吸附停頓、找不到停頓用原值 ⚠、章節保留 3 
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /--margin 要寫成秒數加 sec，例如 0\.15sec/);
   fs.rmSync(path.join(p, 'work', 'cuts.md'));
-  assert.match(node(MEDIA, ['ng-snap', '--v1', v1], 'pn').stderr, /找不到 projects\/pn\/work\/cuts\.md → 先照「剪乾淨」第 4 步/);
+  assert.match(node(MEDIA, ['ng-snap', '--v1', v1], 'pn').stderr, /找不到 projects\/pn\/work\/cuts\.md → 先跑 node shared\/template\/tools\/media\.mjs prep/);
 });
 
 test('ng-snap（016）：有「剪」欄時只剪 [x]，沒勾的列不剪也不 ⚠，待確認但有勾的照剪', () => {

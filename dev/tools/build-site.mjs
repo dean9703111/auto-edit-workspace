@@ -30,7 +30,7 @@ fs.cpSync(path.join(WS, 'shared', 'sfx'), path.join(out, 'shared', 'sfx'), { rec
 for (const f of ['NOTICE.md', 'LICENSE']) fs.copyFileSync(path.join(WS, f), path.join(out, f));
 // 示範頁（dev/site/demo/ 的 Markdown 與 API 模擬層已在上面複製）：頁面直接用剪輯服務真正的 HTML、CSS、JS，只把絕對路徑改成官網的相對路徑
 const UI = path.join(TPL, 'tools', 'editor'), DEMO = path.join(out, 'demo');
-for (const f of ['editor.css', 'favicon.svg', 'cuts.js', 'storyboard.js', 'storyboard-md.mjs']) fs.copyFileSync(path.join(UI, f), path.join(DEMO, f));
+for (const f of ['editor.css', 'favicon.svg', 'cuts.js', 'storyboard.js', 'storyboard-md.mjs', 'flow.js']) fs.copyFileSync(path.join(UI, f), path.join(DEMO, f));
 fs.writeFileSync(path.join(DEMO, 'options.json'), JSON.stringify(storyboardOptions(TPL)));
 for (const page of ['cuts', 'storyboard']) {
   const html = fs.readFileSync(path.join(UI, `${page}.html`), 'utf8')

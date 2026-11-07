@@ -76,7 +76,7 @@
      P.bar(sel, at, {from, to, dur, ease})  量條長度：scaleX from→to（預設 0→1）、transform-origin 左緣、0.8s power2.out。
                                      to 可以大於 1＝「撐破」軌道（要讓條超出軌道，軌道不能 overflow:hidden）。條的圓角用小值（scaleX 會把圓角拉橫）
      ── v2（design-system.md §11；契約 specs/contracts/motion.md）。位移、振幅用 u（＝畫布短邊／1080，橫式直式都是 1）；字的位移用 em；
-        位置用區域名（P.region(name)：band／panelTop／pip／badge／captions／safe，window.__regions 蓋過橫式預設；
+        位置用區域名（P.region(name)：band／panelTop／pip／badge／captions／safe／full，window.__regions 蓋過橫式預設；
         root 是 1920×1080 的子合成（data-width > data-height）在直式被舞台縮放＝STAGED：座標還是橫式，不讀 window.__regions）。
         新原語用 root.querySelectorAll 選元素，不必加進 $q 包裝清單 ──
      P.chars(sel, at, {mode, stagger, dy, dur})  逐字：拆成 inline-block 的 span[data-sc-ch]（中文一字一格，英文單字、數字整個一格）後錯拍進場。mode 'rise'（上浮 0.6em、0.6s expo.out、間隔 0.03）
@@ -261,7 +261,7 @@
     CLIP: { left: 'inset(-20% 100% -20% -20%)', right: 'inset(-20% -20% -20% 100%)', up: 'inset(100% -20% -20% -20%)', down: 'inset(-20% -20% 100% -20%)', open: 'inset(-20% -20% -20% -20%)' }
   };
   // 具名區域的橫式預設 [x, y, w, h]（design-system.md §2）；直式由 009 的 canvas.mjs 注入 window.__regions 蓋過
-  var REGIONS = { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972] };
+  var REGIONS = { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972], full: [120, 40, 1680, 860] };
   var CALLS = { n: 0 };
   var ROLE = { idle: 'micro', flow: 'micro', end: 'micro', wave: 'micro', spin: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent', stamp: 'accent' };
   var registerType = function () {

@@ -25,7 +25,7 @@ import { splitAtJoins, dB } from './edit.mjs';
 import { visibleLen, nearest, loadIcons } from './scenes.mjs';
 import { CANVAS } from './canvas.mjs';
 
-export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'note'];
+export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'retime', 'redact', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'note'];
 export const MEDIA_DIRS = ['assets/screen/', 'assets/images/'];
 export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom'];
 export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5, tape: 0.6 };
@@ -39,7 +39,7 @@ const MAX_FILE = [3840, 2160];
 const MARK = { pad: 6, sw: 4, draw: 0.4, out: 0.3, min: 0.5, hold: 1, max: 2, rx: 6 };
 const LENS = { delay: 0.28, pop: 0.6, back: 0.32, fade: 0.1, min: 1.2, zoom: 2, maxW: 1600, maxH: 720, cx: 960, cy: 450, border: 3, pad: 10, dflt: 3 };
 // 運鏡節奏（參考專案作者：「跳來跳去，眼睛受不了」→ 改慢推）：推近／拉回 ≥ 1.5 s，倍率 ≥ 2 時 ≥ 2.2 s；一段 ≤ 2 次；第一次離段起點 ≥ 0.8 s（先看全景）；相鄰兩框倍率比 ≤ 1.4
-const MOVE = { dur: 1.5, durBig: 2.2, big: 2, warnZoom: 4, max: 2, lead: 0.8, ratio: 1.4 };
+const MOVE = { dur: 1.5, durBig: 2.2, big: 2, warnZoom: 4, warnPixel: 2.5, max: 2, lead: 0.8, ratio: 1.4 };
 const KB = 1.05;
 const DECLICK = 0.02;
 // 動態 v2（specs/010-motion-v2/design-system.md §5、§7）：從講者進來的錄影面板由小視窗位置長出（P.grow，0.3 s 起、kit 預設 0.8 s expo.out）；
@@ -83,12 +83,13 @@ const SPOT = { alpha: 0.35, pad: 8, rx: 12, fade: 0.4 };
 export const TAPE = { view: [200, 90, 1520, 790], w: 132, out: 36, up: 20, drop: 0.35, gap: 0.1, dur: 0.15 };
 export const SIDE = { view: [120, 0, 720, 940], x: 840, w: 960, top: 160, bottom: 880, pipBottom: 560, bar: 112, row: 100, pad: 32, maxItems: 5, title: 12, text: 14, gap: 0.8, hi: 0.3, dim: 0.4, done: 0.7 };
 const STEP = { left: 48, top: 40, inset: 32, h: 80, extra: 118, maxLen: 12, in: 0.5, inX: -24, swOut: 0.25, swIn: 0.35, swDelay: 0.1, swReady: 0.45, carry: 0.1 };
-const ARROW = { gap: 9, lens: [120, 96], head: 22, halfW: 2, sample: 2, fade: 0.5, slide: 12, dflt: 3, max: 1, pad: 4, ring: 2 };
+const ARROW = { gap: 9, lens: [120, 96], head: 30, halfW: 3.5, sample: 2, fade: 0.5, slide: 12, dflt: 3, max: 1, pad: 4, ring: 2 };
 const PATH = { dur: 0.4, min: 0.2, max: 2 };
 const SIDES = ['right', 'left', 'bottom', 'top'];
 const DIRS = { n: [0, -1], ne: [0.7071, -0.7071], e: [1, 0], se: [0.7071, 0.7071], s: [0, 1], sw: [-0.7071, 0.7071], w: [-1, 0], nw: [-0.7071, -0.7071] };
 const AUTO_DIRS = ['ne', 'nw', 'se', 'sw', 'e', 'w', 'n', 's'];
 const ANN_KEYS = ['callouts', 'spot', 'arrows'];
+const FREEZE_WARN = 15;   // 定格超過幾秒提醒
 const TEMPLATE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 let iconCache = null;
 
@@ -108,7 +109,9 @@ export const MEDIA_FIELDS = [
   ['out', '秒數', '—', '錄影播到第幾秒：speed 自動＝(out−in)÷段長（不用寫 speed）；段 ≤ 3 秒時可到 64 倍（快轉跳過等待）'],
   ['speed', '0.5–4', '1', '播放速度（2＝兩倍速）'],
   ['hold', '秒數', '—', '定格：整段停在錄影第幾秒那一格（in／out／speed 不用寫）；標註、放大鏡、運鏡照常'],
-  ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方，空白處是主題深底或 bg.jpg；cover＝鋪滿畫面'],
+  ['retime', '[{ "at", "src" }]', '—', '同一段裡變速、定格：講到 at 時錄影要在第 src 秒，兩點之間自動算速度，src 一樣＝定格；運鏡、紅框跨整段不會斷。第一點之前、最後一點之後是正常速度（錄影用完就停在最後一格）；不保留原聲。和 in／out／speed／hold 擇一'],
+  ['redact', '[{ "at", "until", "box": [x,y,w,h] }]', '—', '打碼：框裡的東西模糊後燒進影片（金鑰、密碼、個資）；at、until 不寫＝整段。放大鏡也看不到原文；框要蓋住這段時間裡它會出現的所有位置'],
+  ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方（16:9 縮到 87%），四周黑底；cover＝鋪滿畫面'],
   ['pip', 'true／false', 'true', '右下角子母畫面露臉；只有聲音的區間自動不放'],
   ['volume', 'null 或 −60～+12（dB）', 'null', 'null＝素材靜音；寫數字＝保留素材原聲'],
   ['enter／exit', TRANSITIONS.map((x) => `"${x}"`).join('／') + '（enter 另有 "tape"）', '"fade"', '進場／出場；接在別的整張幕後面時 fade 自動變 cut；"tape"＝圖片縮小貼在全幕背景上、紙膠帶貼兩角（只給圖片、fit "contain"、橫式）'],
@@ -336,6 +339,20 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
       Object.assign(m, { hold: r3(seg.hold), in: 0, out: null, speed: 1, volume: null, kenburns: false });
     }
   }
+  // 同一段裡變速、定格：at 要等字幕時間才算得出來，這裡只檢查形狀（validateMedia 算成 m.retime）
+  if (seg.retime != null) {
+    if (kind === 'image') warn('retime：圖片不用變速，已忽略');
+    else if (!Array.isArray(seg.retime) || seg.retime.length < 2 || !seg.retime.every((k) => k && typeof k === 'object' && !Array.isArray(k) && k.at != null && isNum(k.src))) err(`retime 要寫 [{ "at": "#N@詞", "src": 秒數 }, …]，至少 2 點（講到 at 時錄影在第 src 秒），現在是 ${JSON.stringify(seg.retime)}`);
+    else if (['in', 'out', 'speed', 'hold'].some((k) => seg[k] != null)) err('retime 和 in／out／speed／hold 擇一：每個點已經寫了錄影在第幾秒 → 拿掉 in／out／speed／hold');
+    else {
+      const badSrc = seg.retime.find((k) => k.src < 0 || k.src > info.duration + 1e-6);
+      if (badSrc) err(`retime：src ${badSrc.src} 超出錄影長度 ${info.duration}s（要是錄影的第幾秒）`);
+      else {
+        if (seg.volume != null) warn('retime：變速段不保留原聲，volume 已忽略');
+        Object.assign(m, { retimeRaw: seg.retime, in: 0, out: null, speed: 1, volume: null });
+      }
+    }
+  }
   for (const k of ['enter', 'exit']) {
     if (seg[k] == null) continue;
     const ok = k === 'enter' ? [...TRANSITIONS, ...ENTER_ONLY] : TRANSITIONS;
@@ -361,6 +378,62 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
 // ---------- 第二輪：時間定案後 ----------
 
 // 回傳 { summary（--check 報告那一列的括號內文字）, json（--check --json 的 items[].out.annotations）}，契約 specs/contracts/media.md §4.1
+// 「0–5s ×2、5–8s 定格、8–12s ×1」：回報與分鏡表用
+export function retimeText(r) {
+  const t = (v) => String(Math.round(v * 10) / 10);
+  return r.speeds.map((sp, i) => `${t(r.knots[i][0])}–${t(r.knots[i + 1][0])}s ${sp === 0 ? '定格' : `×${sp}`}`).join('、');
+}
+// 段內第幾秒 ↔ 素材第幾秒；圖片沒有
+export function sourceKnots(m, len) {
+  if (m.retime) return m.retime.knots;
+  if (m.hold != null) return [[0, m.hold], [len, m.hold]];
+  if (m.kind !== 'video') return null;
+  return [[0, m.in], [len, r3(m.in + len * m.speed)]];
+}
+
+// 素材帳本：這段用到素材的哪一段 [起, 迄]（秒）。圖片、定格沒有長度，回 null
+function usedRange(it, nextStart) {
+  const m = it.media;
+  if (!m || m.kind !== 'video' || m.hold != null) return null;
+  if (m.retime) { const v = m.retime.knots.map((k) => k[1]); return [Math.min(...v), Math.max(...v)]; }
+  // 疊化時前段會多播一點，那不算「用了」：算到下一段開始
+  const end = nextStart != null ? Math.min(it.end, nextStart) : it.end;
+  const k = sourceKnots(m, r3(end - it.start));
+  return k ? [k[0][1], k[k.length - 1][1]] : null;
+}
+// 同一段素材放了兩次（≥ 1 秒）：items 依起點排序；回傳 [{ it, other, src, from, to }]。圖片：不相鄰的兩段用同一張也算
+export const OVERLAP_MIN = 1;
+export function mediaOverlaps(items) {
+  const list = items.filter((x) => x.type === 'media' && x.media);
+  const out = [];
+  list.forEach((it, i) => {
+    const r = usedRange(it, list[i + 1]?.start);
+    for (let j = 0; j < i; j++) {
+      const o = list[j];
+      if (o.media.src !== it.media.src) continue;
+      if (it.media.kind === 'image' && it.media.hold == null) {
+        if (o.media.kind === 'image' && o.media.hold == null && o.end < it.start - 0.1) { out.push({ it, other: o, src: it.media.src, from: null, to: null }); break; }
+        continue;
+      }
+      const q = usedRange(o, list[j + 1]?.start);
+      if (!r || !q) continue;
+      const a = Math.max(r[0], q[0]), b = Math.min(r[1], q[1]);
+      if (b - a >= OVERLAP_MIN - 1e-6) { out.push({ it, other: o, src: it.media.src, from: r3(a), to: r3(b) }); break; }
+    }
+  });
+  return out;
+}
+const SHOWN_EXT = [...VIDEO_EXT, ...IMAGE_EXT];
+// assets/screen/、assets/images/ 用了幾個、哪些沒用到（--review 印）
+export function assetUsage(projectDir, scenes) {
+  const used = new Set((scenes || []).filter((x) => x?.type === 'media' && x.src).map((x) => String(x.src).replace(/\\/g, '/').replace(/^\.\//, '')));
+  const one = (dir) => {
+    const all = listDir(projectDir, dir).filter((f) => SHOWN_EXT.includes(path.extname(f).toLowerCase()));
+    return { total: all.length, used: all.filter((f) => used.has(f)).length, unused: all.filter((f) => !used.has(f)).map((f) => path.basename(f)) };
+  };
+  return { screen: one('assets/screen/'), images: one('assets/images/') };
+}
+
 export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null, steps: stepState = null, canvas = null, badge = null, err, warn }) {
   const m = it.media, seg = it.seg;
   const s = it.start, e = it.end;
@@ -402,7 +475,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   const toStage = (b) => stageOf(G, b);
 
   // 錄影片段：接點（cut）切開，檔案的第 t 秒＝素材的第 t×speed 秒
-  if (m.kind === 'video') {
+  if (m.kind === 'video' && !m.retimeRaw) {
     const r0 = tm.unmapStart(s);
     const [rs, re] = it.rough0 || [r0, tm.unmapEnd(e)];
     // out：速度由素材起訖與段長算；段 ≤ 3 秒的快轉（跳過等待）可到 64 倍
@@ -464,6 +537,70 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     return ok;
   };
 
+  // --- 同一段裡變速、定格（retime）：檔案就是這一段，長度＝段長，第 t 秒＝照 knots 內插的素材秒數 ---
+  m.retime = null;
+  if (m.kind === 'video' && m.retimeRaw) {
+    const r0 = tm.unmapStart(s);
+    const [, re] = it.rough0 || [r0, tm.unmapEnd(e)];
+    const len = r3(re - r0);
+    const pts = [];
+    let bad = false, clipped = false;
+    m.retimeRaw.forEach((k, i) => {
+      if (clipped) return;
+      const t = tAt(k.at, `retime[${i}].at`);
+      if (t == null) { bad = true; return; }
+      const rel = r3(tm.unmapStart(t) - r0), prev = pts[pts.length - 1];
+      // 段被調短（剪輯台拖邊緣）：相對時間 +秒 超過段尾的點，改成段尾那一格，速度不變
+      if (/^\+/.test(String(k.at)) && t > e + 1e-6 && prev && rel > prev[0]) {
+        pts.push([len, r3(prev[1] + (k.src - prev[1]) * (len - prev[0]) / (rel - prev[0])), i]);
+        clipped = true;
+        return;
+      }
+      if (inSeg(t, `retime[${i}].at`)) pts.push([rel, r3(k.src), i]); else bad = true;
+    });
+    let ok = !bad;
+    for (let i = 1; ok && i < pts.length; i++) {
+      if (pts[i][0] <= pts[i - 1][0] + 0.05) { err(`retime[${pts[i][2]}].at 要比前一點晚 → 照講的順序寫，兩點至少隔 0.1 秒`); ok = false; }
+      else if (pts[i][1] < pts[i - 1][1] - 1e-6) { err(`retime[${pts[i][2]}].src（${pts[i][1]}s）比前一點（${pts[i - 1][1]}s）小：錄影不能倒帶 → src 要一路變大，一樣＝定格`); ok = false; }
+    }
+    if (ok) {
+      const knots = pts.map(([t, src]) => [t, src]);
+      // 第一點之前、最後一點之後：正常速度；素材不夠就停在那一格
+      if (knots[0][0] > 0.01) knots.unshift([0, r3(Math.max(0, knots[0][1] - knots[0][0]))]);
+      const last = knots[knots.length - 1];
+      if (last[0] < len - 0.01) knots.push([len, r3(Math.min(m.info.duration, last[1] + (len - last[0])))]);
+      const speeds = [];
+      for (let i = 1; i < knots.length; i++) {
+        const dt = knots[i][0] - knots[i - 1][0], sp = r3((knots[i][1] - knots[i - 1][1]) / dt);
+        speeds.push(sp);
+        if (sp > 0 && sp < 0.25) err(`retime：第 ${r3(knots[i - 1][0])}–${r3(knots[i][0])} 秒要慢到 ×${sp}（下限 0.25，太慢畫面會一格一格跳）→ src 拉開，或改成定格（src 一樣）`);
+        else if (sp > 64 || (sp > 16 && dt > 3)) err(`retime：第 ${r3(knots[i - 1][0])}–${r3(knots[i][0])} 秒要 ×${sp}（上限 ×16，3 秒內的跳過等待可到 ×64）→ 多留一點時間給這段，或 src 改小`);
+      }
+      m.retime = { knots, speeds, len };
+      m.pieces = splitAtJoins(s, e, tm).map((p) => ({ s: p.s, e: p.e, fms: r3(p.ms - r0) }));
+    } else m.pieces = [];
+  }
+
+  // --- 打碼（redact）：框的座標換成轉出來的檔案尺寸，時間換成檔案的秒數，轉檔時燒進去 ---
+  m.redact = [];
+  if (Array.isArray(seg.redact)) {
+    const r0 = tm.unmapStart(s);
+    const fileAt = (t) => (m.retime ? r3(tm.unmapStart(t) - r0) : r3(m.in / m.speed + (tm.unmapStart(t) - r0)));
+    seg.redact.forEach((rd, i) => {
+      const what = `redact[${i}]`;
+      if (!keysOk(rd, what, ['at', 'until', 'box'])) return;
+      const box = boxOf(rd.box, `${what}.box`);
+      if (!box) return;
+      let at = null, until = null;
+      if (m.kind === 'video' && m.hold == null) {
+        if (rd.at != null) { const t = tAt(rd.at, `${what}.at`); if (t != null && inSeg(t, `${what}.at`)) at = fileAt(t); }
+        if (rd.until != null) { const t = tAt(rd.until, `${what}.until`); if (t != null && inSeg(t, `${what}.until`)) until = fileAt(t); }
+      } else if (rd.at != null || rd.until != null) warn(`${what}：這段畫面不會動，at／until 已忽略（整段都打碼）`);
+      const sx = m.file.sx, sy = m.file.sy;
+      m.redact.push({ i, at, until, box: [box[0] * sx, box[1] * sy, box[2] * sx, box[3] * sy].map((v) => Math.round(v)) });
+    });
+  } else if (seg.redact != null) err('redact 要寫成陣列（[{ "box": [x, y, w, h] }]）');
+
   // --- 右側步驟清單：標題、每一條的字與時間 ---
   if (m.side) {
     if (keysOk(sd, 'side', ['title', 'items'])) {
@@ -519,6 +656,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       const want = Math.min(FW / Wd, FH / Ht);
       if (want < 1) warn(`${what}.to 的框比畫面還大，推不近（已維持原大小）→ 框小一點，或寫 "full"`);
       else if (want > MOVE.warnZoom) warn(`${what}.to 要放大 ${r3(want)} 倍，畫面會糊 → 框大一點，或改用放大鏡 lens`);
+      else if (want * G.kx > MOVE.warnPixel) warn(`${what}.to 放大後素材每個像素變 ${r3(want * G.kx)} 倍（素材 ${W}×${H}，超過 ${MOVE.warnPixel} 倍），字會糊 → 框大一點，或錄影時用更高的解析度`);
     }
     const zoom = Math.max(prev.z, to.z), slow = zoom >= MOVE.big - 1e-6 ? MOVE.durBig : MOVE.dur;
     if (dur == null) dur = slow;
@@ -651,13 +789,16 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     const q = (v) => (one ? Math.round(v) : +v.toFixed(2));
     const rectOf = (box) => { const [X, Y, Wd, Ht] = toStage(box); return [q(X - off), q(Y - off), q(Wd + 2 * off), q(Ht + 2 * off)]; };
     const rect = rectOf(mk.box);
-    const check = (r, t, name) => {
+    const told = new Set();
+    const once = (key, text) => { if (!told.has(key)) { told.add(key); warn(text); } };
+    const check = (r, t, name, when = '') => {
       const scr = toScreen(r, camAt(t));
       const sb = [scr[0], scr[1], scr[0] + scr[2], scr[1] + scr[3]];
-      if (F.pip && pipAt(t) && inter(sb, F.pip) > 0) warn(`${name} 在畫面上會被右下角的子母畫面擋住 → 這段寫 "pip": false，或用 moves 把那一塊推到畫面中間`);
-      else if (sb[3] > F.bottom) warn(`${name} ${F.bottomWhy}（畫面 y > ${F.bottom}）→ 用 moves 把那一塊往上推，或換 fit`);
-      else if (F.top != null && sb[1] < F.top) warn(`${name} 在上方平台介面區（畫面 y < ${F.top}）→ 用 moves 把那一塊往下推，或改 fit "contain"`);
-      if (sb[0] < 0 || sb[2] > F.W || sb[1] < 0) warn(`${name} 有一部分在畫面外（運鏡推太近）→ 調整 moves 或紅框的時間`);
+      if (F.pip && pipAt(t) && inter(sb, F.pip) > 0) once(`${name}p`, `${name}${when} 在畫面上會被右下角的子母畫面擋住 → 這段寫 "pip": false，或用 moves 把那一塊推到畫面中間`);
+      else if (sb[3] > F.bottom) once(`${name}b`, `${name}${when} ${F.bottomWhy}（畫面 y > ${F.bottom}）→ 用 moves 把那一塊往上推，或換 fit`);
+      else if (F.top != null && sb[1] < F.top) once(`${name}t`, `${name}${when} 在上方平台介面區（畫面 y < ${F.top}）→ 用 moves 把那一塊往下推，或改 fit "contain"`);
+      if (sb[2] <= 0 || sb[0] >= F.W || sb[3] <= 0 || sb[1] >= F.H) once(`${name}o`, `${name}${when} 整個跑到畫面外（運鏡把它推出去了，紅框看不到）→ 調整 moves，或紅框的 until 提早到運鏡之前`);
+      else if (sb[0] < 0 || sb[2] > F.W || sb[1] < 0) once(`${name}o`, `${name}${when} 有一部分在畫面外（運鏡推太近）→ 調整 moves 或紅框的時間`);
     };
     check(rect, mk.at, `marks[${mk.i}]`);
     const path = mk.path.map((p) => {
@@ -665,6 +806,12 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       check(r, r3(p.at + p.dur), `marks[${mk.i}].path[${p.k}]`);
       return { k: p.k, at: p.at, dur: p.dur, rect: r };
     });
+    // 全程查：運鏡、跟捲動之後紅框可能被擋或跑出畫面，不是只有出現那一刻（框已經淡出的不算）
+    const rectAt = (t) => { let r = rect; for (const p of path) { if (t < p.at) break; r = t >= p.at + p.dur ? p.rect : r.map((v, j) => v + (p.rect[j] - v) * ((t - p.at) / p.dur)); } return r; };
+    const lastT = mk.until - MARK.out;
+    const times = [...m.cams.filter((c) => c.t0 + c.dur > mk.at && c.t0 + c.dur < lastT).map((c) => c.t0 + c.dur)];
+    for (let t = mk.at + 0.5; t < lastT; t += 0.5) times.push(t);
+    for (const t of times.sort((a, b) => a - b)) check(rectAt(t), t, `marks[${mk.i}]`, ` 在 ${fmt(t)}`);
     return { id: `mmk-${it.id}-${n + 1}`, i: mk.i, at: mk.at, until: mk.until, rect, sw: +(MARK.sw / c.z).toFixed(3), rx: +(MARK.rx / c.z).toFixed(2), path };
   });
 
@@ -823,6 +970,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     const j = lensAt(co.at, co.until);
     if (j >= 0) warn(`${what} 和放大鏡 lens[${m.lenses[j].i}] 同時出現，卡片會被壓暗 → 錯開時間`);
     cutWarn(what, co.at, co.until);
+    if (F.pip && pipOn(co.at, co.until) && inter(bx, F.pip) > 0.3 * (bx[2] - bx[0]) * (bx[3] - bx[1])) warn(`${what} 的框被右下角的子母畫面擋住（卡片指的東西看不到）→ 這段寫 "pip": false，或先用 moves 把那一塊推到畫面中間`);
     const e8 = CALLOUT.edge;
     const R = [bx[0] - e8, bx[1] - e8, bx[2] - bx[0] + 2 * e8, bx[3] - bx[1] + 2 * e8];
     const avoid = [...F.avoid];
@@ -866,6 +1014,8 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     if (offScreen(bx)) { err(`${what}.box 在畫面外（fit "cover" 裁掉了）→ 改 fit "contain"，或框畫面上看得到的地方`); return; }
     cutWarn(what, at, until);
     const hole = [ri(bx[0] - SPOT.pad), ri(bx[1] - SPOT.pad), ri(bx[2] - bx[0] + 2 * SPOT.pad), ri(bx[3] - bx[1] + 2 * SPOT.pad)];
+    const holeBox = xyxy(hole);
+    if (F.pip && pipOn(at, until) && inter(holeBox, F.pip) > 0.3 * hole[2] * hole[3]) warn(`${what} 的亮區被右下角的子母畫面擋住（全畫面變暗卻看不到重點）→ 這段寫 "pip": false，或先用 moves 把那一塊推到畫面中間`);
     m.spots.push({ i, k: m.spots.length + 1, at, until, hole, ready: r3(at + SPOT.fade) });
   });
 
@@ -954,6 +1104,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   if ((m.kind === 'video' || m.hold != null) && !parts.length && e - s >= 4) {
     warn(`錄影 ${r3(e - s)}s 沒有任何標註或運鏡 → 講解講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3–4）；真的沒有要指的東西，回報寫保留理由`);
   }
+  if (m.retime) parts.unshift(`變速 ${retimeText(m.retime)}`);
+  if (m.redact.length) parts.unshift(`打碼 ${m.redact.length} 處`);
+  const frozen = m.hold != null ? r3(e - s) : m.retime ? Math.max(0, ...m.retime.speeds.map((sp, i) => (sp === 0 ? r3(m.retime.knots[i + 1][0] - m.retime.knots[i][0]) : 0))) : 0;
+  if (frozen > FREEZE_WARN) warn(`定格 ${frozen}s（超過 ${FREEZE_WARN} 秒畫面像當掉）→ 中間換標註或運鏡，或講到下一件事就換畫面`);
   let summary = parts.join('、');
   if (m.kind === 'image' && m.hasAnn && seg.kenburns !== false && !m.cams.length) summary += `${summary ? '；' : ''}有標註，不做慢推`;
   const json = {
@@ -964,6 +1118,9 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     side: m.side ? { title: m.side.title, box: m.side.box, items: m.side.items.map((x) => ({ i: x.i, at: x.at, text: x.text })) } : null,
     arrows: m.arrows.map((a) => ({ i: a.i, at: a.at, until: a.until, ready: a.ready, from: a.from })),
     lens: m.lenses.map((L) => ({ i: L.i, at: L.la, until: L.lb, ready: r3(L.la + LENS.delay + LENS.pop) })),
+    redact: m.redact.map((rd) => ({ i: rd.i })),
+    // 段內第幾秒 ↔ 素材第幾秒（剪輯台的即時模擬、面板用；hold、out、speed 都換成這個）
+    knots: sourceKnots(m, r3(e - s)),
   };
   // FR-082：錄影（含定格）畫面縮成原尺寸的幾倍、有幾個運鏡／放大鏡（qc storyboard：< 0.6、沒有 moves 和 lens、> 3 秒 ⚠ 介面字太小）
   // 直式只看橫的錄影；橫式也看（參考專案：3452×2016 的錄影縮到 1609×940，介面字只剩 8–10px，靠放大鏡補）
@@ -983,17 +1140,25 @@ export function mediaJobs(it) {
   const stem = ascii(path.basename(m.src, m.ext));
   const sig = { src: m.abs, size: st.size, mtimeMs: Math.round(st.mtimeMs) };
   const jobs = { main: null, lenses: [] };
+  const redact = (m.redact || []).length ? m.redact.map((rd) => ({ at: rd.at, until: rd.until, box: rd.box })) : null;
+  const red = redact ? { redact } : {};
+  const hdrKey = m.info?.hdr ? { sdr: m.info.hdr } : {};   // HDR 素材轉成 SDR 的版本（舊版沒轉的要重做）
   if (m.hold != null) {
-    const key = { ...sig, hold: m.hold, w: m.file.w, h: m.file.h, v: 1 };
+    const key = { ...sig, hold: m.hold, w: m.file.w, h: m.file.h, ...red, ...hdrKey, v: 1 };
     const h = createHash('sha1').update(JSON.stringify(key)).digest('hex').slice(0, 8);
-    jobs.main = { type: 'still', rel: `assets/media/${stem}-${h}.jpg`, key, at: m.hold, w: m.file.w, h: m.file.h };
+    jobs.main = { type: 'still', rel: `assets/media/${stem}-${h}.jpg`, key, at: m.hold, w: m.file.w, h: m.file.h, redact };
+  } else if (m.retime) {
+    const key = { ...sig, retime: m.retime.knots, w: m.file.w, h: m.file.h, ...red, ...hdrKey, v: 2 };
+    const h = createHash('sha1').update(JSON.stringify(key)).digest('hex').slice(0, 8);
+    jobs.main = { type: 'video', rel: `assets/media/${stem}-${h}.mp4`, key, retime: m.retime, speed: 1, keepAudio: false, w: m.file.w, h: m.file.h, redact };
   } else if (m.kind === 'video') {
-    const key = { ...sig, speed: m.speed, w: m.file.w, h: m.file.h, v: 1 };
+    const key = { ...sig, speed: m.speed, w: m.file.w, h: m.file.h, ...red, ...hdrKey, v: 1 };
     const h = createHash('sha1').update(JSON.stringify(key)).digest('hex').slice(0, 8);
-    jobs.main = { type: 'video', rel: `assets/media/${stem}-${h}.mp4`, key, speed: m.speed, keepAudio: !!m.info.hasAudio, w: m.file.w, h: m.file.h };
+    jobs.main = { type: 'video', rel: `assets/media/${stem}-${h}.mp4`, key, speed: m.speed, keepAudio: !!m.info.hasAudio, w: m.file.w, h: m.file.h, redact };
   } else {
-    const h = createHash('sha1').update(JSON.stringify(sig)).digest('hex').slice(0, 8);
-    jobs.main = { type: 'image', rel: `assets/media/${stem}-${h}${m.ext === '.jpeg' ? '.jpg' : m.ext}`, key: sig };
+    const key = redact ? { ...sig, ...red, v: 1 } : sig;
+    const h = createHash('sha1').update(JSON.stringify(key)).digest('hex').slice(0, 8);
+    jobs.main = { type: 'image', rel: `assets/media/${stem}-${h}${m.ext === '.jpeg' ? '.jpg' : m.ext}`, key, redact };
   }
   m.asset = jobs.main.rel;
   for (const L of m.lenses || []) {
@@ -1193,6 +1358,21 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
     tl.push(`tl.fromTo('#${mk.id}', { strokeDashoffset: 1 }, { strokeDashoffset: 0, autoRound: false, duration: ${MARK.draw}, ease: 'power2.inOut' }, ${sh(mk.at)});`);
     tl.push(`tl.set('#${mk.id}', { strokeDasharray: 'none' }, ${sh(mk.at + MARK.draw)});`);
     tl.push(`tl.fromTo('#${mk.id}', { opacity: 1 }, { opacity: 0, duration: ${MARK.out}, ease: 'sine.in', immediateRender: false }, ${sh(mk.until - MARK.out)});`);
+  }
+
+  // --- 紅框線寬：框在運鏡層裡會跟著放大，反向補間讓畫面上一直是 4px（運鏡是 power2.inOut，線寬照同一條曲線分 8 小段）---
+  for (const mk of m.marks) {
+    for (const mv of m.cams) {
+      const a = Math.max(mv.t0, mk.at), b = Math.min(mv.t0 + mv.dur, mk.until);
+      if (b - a < 1e-3 || mv.from.z === mv.to.z) continue;
+      const swAt = (t) => { const p = Math.min(1, Math.max(0, (t - mv.t0) / mv.dur)), e = p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2; return +(MARK.sw / (mv.from.z + (mv.to.z - mv.from.z) * e)).toFixed(3); };
+      const N = 8, d = (b - a) / N;
+      for (let k = 0; k < N; k++) {
+        const t = a + k * d;
+        if (t >= lim - 1e-6) break;
+        tl.push(`tl.fromTo('#${mk.id}', { strokeWidth: ${swAt(t)} }, { strokeWidth: ${swAt(t + d)}, autoRound: false, duration: ${n3(d)}, ease: 'none', immediateRender: false }, ${sh(t)});`);
+      }
+    }
   }
 
   // --- 紅框跟捲動：同一個 <rect> 補間位置與大小（框在運鏡層裡，有運鏡也貼得住）---

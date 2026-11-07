@@ -97,9 +97,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build, pathsFrom, projectLabel } from './build.mjs';
-import { findChrome, findRuntime, openSessions, freshRefsScript } from './lib/audit-browser.mjs';
+import { findChrome, findRuntime, openSessions, openBrowser, freshRefsScript } from './lib/audit-browser.mjs';
+import { createHash } from 'node:crypto';
+import { groupWarnings, runCount } from './lib/flow.mjs';
 import { contactSheet, poolOn } from './lib/raster.mjs';
-import { gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
+import { FULL, gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
   judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings } from './lib/audit-rules.mjs';
 import { templateFor, formatReport as checkTable } from './lib/plan.mjs';
 import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings } from './lib/audit-beats.mjs';
@@ -123,7 +125,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['all', 'json', 'help', 'shots', 'sheet', 'verbose'].includes(k)) flags[k] = true;
+    } else if (['all', 'json', 'help', 'shots', 'sheet', 'verbose', 'review'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -210,10 +212,21 @@ async function shotSheets(G, P, shots, cv) {
   for (const s of shots) { if (!byId.has(s.id)) byId.set(s.id, []); byId.get(s.id).push(s); }
   const out = [];
   const fontsCss = pathToFileURL(path.join(P.templateDir, 'kit', 'fonts.css')).href;
-  for (const [id, list] of byId) {
+  for (const [id, all] of byId) {
+    // 連續相同的畫面只留一格（靜止取樣常常一模一樣）：看圖的 token 省下來
+    const list = [];
+    let last = null;
+    for (const x of all) {
+      let h = null;
+      try { h = createHash('md5').update(fs.readFileSync(x.file)).digest('hex'); } catch { /* 讀不到就照放 */ }
+      if (h && h === last) continue;
+      last = h;
+      list.push(x);
+    }
     const n = list.length, portrait = cv.H > cv.W;
-    const cols = portrait ? Math.max(4, Math.min(6, n)) : n <= 4 ? 2 : n <= 9 ? 3 : 4;
-    const tw = Math.floor((1920 - (cols - 1) * 8) / cols), th = Math.round((tw * cv.H) / cv.W);
+    // 固定欄寬（和定稿拼圖同級）：格子數少時整張圖就小，不會 2 格也 1920 寬
+    const cols = portrait ? Math.max(4, Math.min(6, n)) : Math.min(4, Math.max(1, n));
+    const tw = portrait ? Math.floor((1920 - (cols - 1) * 8) / cols) : 474, th = Math.round((tw * cv.H) / cv.W);
     const dir = path.dirname(list[0].file);
     const page = contactSheet({ fontsCss, title: `${id}｜${n} 張（中點、靜止、完成態）`, cols, tile: [tw, th], label: 34, fontSize: 20,
       cells: list.map((s) => ({ src: pathToFileURL(s.file).href, time: fmtT(s.t), id: null, text: SHOT_KIND[s.kind] || s.kind })) });
@@ -343,9 +356,9 @@ export async function audit(flags, { log = console.log } = {}) {
         msg: `index.html 和 plan.json 對不上：#el-${j.it.id} 在 index.html 從 ${m.host.start}s 開始，plan.json 算出來是 ${j.it.start}s`, fix: `重跑 node shared/template/tools/build.mjs --project ${project}` });
       return out;
     }
-    out.raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), speakerBox: res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
+    out.raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), badgeBox: pl ? null : j.it.badgeBox ?? null, speakerBox: res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
       W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.geo ? { geo: pl.geo } : {}), ...(pl && pl.stage ? { stage: pl.stage } : {}) }));
-    out.raw.push(...judgeLayout(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, ...(pl && pl.stage && pl.stage.window ? { contentY: [pl.stage.window[1], pl.stage.window[3]] } : {}) }));
+    out.raw.push(...judgeLayout(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, ...(pl && pl.stage && pl.stage.window ? { contentY: [pl.stage.window[1], pl.stage.window[3]] } : j.it.wide && j.it.seg?.design ? { contentY: FULL.y } : {}) }));
     // 012 版面：完成態量 data-layout 容器（SceneLayout.measure，版面座標）；有容器時 illus 的手排對齊交給它
     let lay = null;
     if (j.kind === 'done' && !m.missingHost) {
@@ -369,7 +382,6 @@ export async function audit(flags, { log = console.log } = {}) {
       if (r.shot) shots.push(r.shot);
     }
     if (shots.length) report.shots = shots.map((s) => rel(s.file));
-    if (flags.sheet && shots.length) report.sheets = await shotSheets(G, P, shots, cv);
     cueErrs = [...new Set((await Promise.all(G.sessions.map((S) => S.cueErrors()))).flat().map(String))].sort();
   } finally { await G.close(); }
   const htmlOf = (it) => { const f = it.file && path.join(P.out, it.file); return f && fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : ''; };
@@ -402,7 +414,7 @@ export async function audit(flags, { log = console.log } = {}) {
     motion.push(...cueTextFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [], names: src && fs.existsSync(src) ? atNames(fs.readFileSync(src, 'utf8')) : {} }));
     motion.push(...staticFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [] }));
     // 分鏡對齊：work/storyboard.md 的「#### 動畫分鏡 <段 id>」表和檔裡的 P.at 逐拍比（cli-003 §2.3d）
-    const sheet = sheets.get(it.id), mo = motions.get(it.id), html = htmlOf(it);
+    const sheet = sheets.get(it.id) ?? (it.seg?.__sheet ? parseBeatSheets(it.seg.__sheet).get(it.id) : null), mo = motions.get(it.id), html = htmlOf(it);
     // 範例檔頭【D 下限】：第一拍離段起點、段長；和範例原檔比：下限被改小、字級被縮小
     const tpl = (templateFor(html, path.join(P.templateDir, 'custom')) || {}).html || '';
     motion.push(...floorFindings({ item: it, html, cuesOut: res.cuesOut || [], file: it.file, tpl }));
@@ -424,6 +436,19 @@ export async function audit(flags, { log = console.log } = {}) {
   report.findings = findings;
   report.segments = [...segs.values()].map((s) => ({ ...s, errors: findings.filter((f) => f.id === s.id && f.level === 'error').length, warns: findings.filter((f) => f.id === s.id && f.level === 'warn').length }));
   report.ok = !report.errors.length && !findings.some((f) => f.level === 'error');
+  // 還有 ✖ 就不出拼圖：先修到過，交件前才看圖（一張圖約 2 千 token，每輪都看很貴）
+  if (flags.sheet && shots.length) {
+    if (!report.ok) report.notes.push('還有 ✖：修完再跑一次才出拼圖');
+    else {
+      const B = await openBrowser({ chrome, W: cv.W, H: cv.H });
+      try { report.sheets = await shotSheets(B, P, shots, cv); } finally { await B.close(); }
+    }
+  }
+  // ⚠ 只修一輪：同一段第 2 次起 0 個 ✖ 就可以交件，追 ⚠ 常常越改越多
+  if (only && report.ok && P.out && !flags.review) {   // --review：build --review 只重量變了的段時帶，不算工人交件的次數
+    const nth = Math.max(...only.map((id) => runCount(P, `audit:${id}`)));
+    if (nth >= 2 && findings.length) report.settled = true;
+  }
   return report;
 }
 
@@ -443,7 +468,10 @@ export function formatReport(r, { verbose = false } = {}) {
   for (const c of r.cueTimes || []) L.push(`${c.id} 綁句（段內秒數）：${c.refs.map(([ref, t]) => `${ref} ${t.toFixed(2)}`).join('、')}`);
   for (const w of r.warnings) L.push(`⚠ ${w}`);
   for (const w of r.checkWarnings || []) L.push(`⚠ ${w}`);
-  for (const f of r.findings) L.push(formatFinding(f));
+  const lines = r.findings.map((f) => ({ f, text: formatFinding(f) }));
+  for (const x of lines) if (x.f.level === 'error') L.push(x.text);
+  const warnLines = lines.filter((x) => x.f.level !== 'error').map((x) => x.text.replace(/^\s*⚠\s*/, ''));
+  for (const w of verbose || r.only ? warnLines : groupWarnings(warnLines)) L.push(`⚠ ${w}`);
   if (r.segments.length && verbose) {
     L.push('', 'id｜情境｜版型｜量測時間｜結果');
     for (const s of r.segments) {
@@ -454,7 +482,7 @@ export function formatReport(r, { verbose = false } = {}) {
   const ne = r.errors.length + r.findings.filter((f) => f.level === 'error').length, nw = r.warnings.length + (r.checkWarnings || []).length + r.findings.filter((f) => f.level === 'warn').length;
   if (r.segments.length) {
     const looks = r.shots?.length ? '' : r.only ? '要看畫面：這條加 --shots --sheet。' : '要看畫面：qc.mjs storyboard --sheet。';
-    L.push('', ne ? `未通過：${ne} 個錯誤（✖），${nw} 個提醒（⚠）。照 → 後面的改法改 custom 檔（或 plan.json 後重跑 build），再跑一次 audit。` : `通過：${r.segments.length} 段，${nw} 個提醒（⚠）。audit 量的是幾何，畫面對不對還要看圖。${looks}`);
+    L.push('', ne ? `未通過：${ne} 個錯誤（✖），${nw} 個提醒（⚠）。照 → 後面的改法改 custom 檔（或 plan.json 後重跑 build），再跑一次 audit。` : `通過：${r.segments.length} 段，${nw} 個提醒（⚠）。${r.settled ? '可以交件，⚠ 不用再修。' : ''}audit 量的是幾何，畫面對不對還要看圖。${looks}`);
     const bad = [...new Set(r.findings.flatMap((f) => f.at || []))].sort((a, b) => a - b).slice(0, 12);
     // 有 --only 的是工人（不能跑 snapshot）：看圖用 --shots --sheet
     if (bad.length && !r.only && !r.shots?.length) L.push(`看畫面：cd ${r.project}/work/hyperframes && npx hyperframes snapshot --at ${bad.map((t) => r3(t)).join(',')} --no-end -o ../../output/qc`);

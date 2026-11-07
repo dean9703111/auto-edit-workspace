@@ -1,4 +1,5 @@
-// 剪輯主程式：載入狀態、以選取為中心的屬性面板、時間軸操作（裁剪、分割、音量線、字幕）、復原、儲存、重新產生、鍵盤
+// 剪輯台主程式：載入狀態、以選取為中心的屬性面板、時間軸操作（裁剪、分割、音量線、字幕）、復原、儲存、重新產生、鍵盤
+import { groupIssues, issueId } from './issues.mjs';
 import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
   fmt, fmtTC, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss,
@@ -6,6 +7,8 @@ import {
 import { applyCueOp, remapPlan, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
 import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef } from './text.mjs';
 import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
+import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate, freezeAt, joinAt, isPlain, trimModel } from './speed.mjs';
+import { transitionOf, speedSummary } from './motion.mjs';
 import { SimPreview, PlayerPreview } from './preview.js';
 
 const $ = (s) => document.querySelector(s);
@@ -18,9 +21,11 @@ const r2 = (n) => Math.round(n * 100) / 100;
 const TRANS = [['cut', '直接切'], ['fade', '淡入淡出'], ['slide', '滑入滑出'], ['zoom', '縮放']];
 const JOIN_TYPES = [['none', '無'], ['dip', '過黑'], ['punch', '放大']];
 const KIND_ZH = { cut: '你剪掉的範圍', ng: 'NG 重錄（剪乾淨時剪掉）', pause: '停頓（剪乾淨時剪掉）' };
-const TYPE_ZH = { scene: '資訊卡', fx: '字卡動態', custom: '自訂動畫', media: '插入素材' };
-const SEG_KEYS = { common: ['sfxVolume', 'sfx'], media: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'anchor'], scene: ['slots'], fx: ['vars'] };
+const TYPE_ZH = { scene: '資訊卡', fx: '字卡動態', custom: '動畫', media: '插入素材' };
+const SEG_KEYS = { common: ['sfxVolume', 'sfx'], media: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'out', 'speed', 'hold', 'retime', 'anchor'], scene: ['slots'], custom: ['slots'], fx: ['vars'] };
+const SPEED_KEYS = ['in', 'out', 'speed', 'hold', 'retime'];   // 畫面速度的欄位：拿掉要明講（寫 null）
 const COACH_KEY = 'auto-edit-editor.coach.v2';
+const COACH_FINAL_KEY = 'auto-edit-editor.coach-final.v1';
 
 // ---------- 狀態 ----------
 const app = {
@@ -32,7 +37,7 @@ const app = {
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
-  t: 0, mode: 'sim', stopAt: null, outDur: 0, ver: 0, drawRequested: true, rate: 0, loud: null,
+  side: 'insp', t: 0, mode: 'sim', stopAt: null, outDur: 0, ver: 0, drawRequested: true, rate: 0, loud: null,
   // 畫布（009 FR-120）：/api/state 的 canvas（server 用 lib/canvas.mjs 算）；還沒載入時當橫式
   canvas() { return this.server?.canvas || { format: 'landscape', W: 1920, H: 1080, maxChars: RULES.capMax }; },
 };
@@ -48,7 +53,7 @@ async function api(method, url, body) {
     try { data = await r.json(); } catch { data = null; }
     return { ok: r.ok, status: r.status, data };
   } catch {
-    return { ok: false, status: 0, data: { message: '連不到剪輯（可能已經關掉了）→ 請 AI 重新啟動剪輯後重新整理頁面' } };
+    return { ok: false, status: 0, data: { message: '連不到剪輯台（可能已經關掉了）→ 請 AI 重新啟動剪輯台後重新整理頁面' } };
   }
 }
 function toast(msg, kind = 'ok', ms = 3200, { busy = false, actions = [] } = {}) {
@@ -75,6 +80,18 @@ const storage = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* 私密視窗等：不記也沒關係 */ } },
 };
 const sceneById = (id) => app.scenes.find((s) => isObj(s) && s.id === id) || null;
+// 一段在講什麼：時間軸、段落清單、現在這段都用這一句，不用檔名
+const segTitle = (sc) => String(sc?.story?.say || sc?.story?.idea || '').trim();
+const customDef = (sc) => app.server?.schema?.custom?.find((x) => x.template === sc?.template) || null;
+// 這段是什麼：內容設計動畫、模板動畫：主體四周貼標籤、自訂動畫（AI 手寫的）
+const customKind = (sc) => (sc?.design ? '內容設計動畫' : sc?.template ? `模板動畫：${customDef(sc)?.zh || sc.template}` : '自訂動畫');
+// 時間綁在哪裡的白話：第 12 句、第 12 句結尾、第 12 句講到「手機」
+function refZh(v) {
+  if (typeof v !== 'string') return Number.isFinite(v) ? `${r2(v)} 秒` : '—';
+  const m = /^#(\d+)(e?)(?:@(.+?))?(?:([+-])([\d.]+))?$/.exec(v);
+  if (!m) return v;
+  return `第 ${m[1]} 句${m[2] ? '結尾' : ''}${m[3] ? `講到「${m[3]}」` : ''}${m[4] ? `${m[4] === '+' ? '後' : '前'} ${m[5]} 秒` : ''}`;
+}
 const savedSceneById = (id) => (app.plan0?.scenes || []).find((s) => isObj(s) && s.id === id) || null;
 const segType = (sc) => sc?.type ?? 'scene';
 app.mediaSeg = (id) => app.server?.media.find((m) => m.id === id) || null;
@@ -172,8 +189,34 @@ function restore(s) {
   if (app.selection?.kind === 'cue' && !app.cues.some((c) => c.n === app.selection.id)) app.selection = null;
   changed({ inspector: true });
 }
-function undo() { if (!app.undoStack.length) return; app.redoStack.push(snapshot()); restore(app.undoStack.pop()); toast('已復原', 'ok', 1200); }
-function redo() { if (!app.redoStack.length) return; app.undoStack.push(snapshot()); restore(app.redoStack.pop()); toast('已重做', 'ok', 1200); }
+function undo() { if (!app.undoStack.length || app.busy) return; app.redoStack.push(snapshot()); restore(app.undoStack.pop()); toast('已復原', 'ok', 1200); }
+function redo() { if (!app.redoStack.length || app.busy) return; app.undoStack.push(snapshot()); restore(app.redoStack.pop()); toast('已重做', 'ok', 1200); }
+// 存檔之後還能復原：快照裡的字幕操作是對「上次存檔」算的，存完換成對「這次存檔」的差異。
+// 增刪過字幕的步驟句號對不起來，那一步（和更早的）就回不去了，回傳少了幾步
+function rebaseHistory(cues0) {
+  const diffOps = (cues) => cues.flatMap((c, i) => {
+    const b = cues0[i], op = { op: 'set', n: c.n };
+    if (c.text !== b.text) op.text = c.text;
+    if (c.start !== b.start) op.start = c.start;
+    if (c.end !== b.end) op.end = c.end;
+    return Object.keys(op).length > 2 ? [op] : [];
+  });
+  const rebase = (list) => {
+    const out = [];
+    for (let i = list.length - 1; i >= 0; i--) {
+      const o = JSON.parse(list[i]);
+      if (o.cues.length !== cues0.length || o.cues.some((c, k) => c.n !== cues0[k].n)) break;
+      o.ops = diffOps(o.cues);
+      out.unshift(JSON.stringify(o));
+    }
+    return out;
+  };
+  const undoN = app.undoStack.length;
+  app.undoStack = rebase(app.undoStack);
+  app.redoStack = rebase(app.redoStack);
+  app.lastCoalesce = null;
+  return undoN - app.undoStack.length;
+}
 
 // ---------- 衍生資料（時間軸畫的東西）----------
 function recompute() {
@@ -209,10 +252,14 @@ function recompute() {
     }
     if (o.type === 'media' && sc) {
       const m = app.mediaSeg(o.id);
+      o.enterNow = same(sc.enter, sb?.enter) ? it.enter ?? null : sc.enter ?? null;
+      o.exitNow = same(sc.exit, sb?.exit) ? it.exit ?? null : sc.exit ?? null;
       Object.assign(o, { in: Number.isFinite(sc.in) ? sc.in : 0, speed: Number.isFinite(sc.speed) ? sc.speed : 1, volume: sc.volume === undefined ? null : sc.volume,
-        enter: sc.enter ?? null, exit: sc.exit ?? null, mediaKind: m?.kind || 'video', srcName: String(sc.src || '').split('/').pop(), srcDur: m?.info?.dur ?? null });
+        enter: sc.enter ?? null, exit: sc.exit ?? null, mediaKind: m?.kind || 'video', srcName: String(sc.src || '').split('/').pop(), srcDur: m?.info?.dur ?? null,
+        knots: speedDirty(sc, sb) || !same(sc.from, sb?.from) || !same(sc.to, sb?.to) ? knotsOf(speedModel(sc, o.end - o.start, o.start, null), m?.info?.dur ?? null) : it.out?.annotations?.knots ?? null });
     }
     o.inCut = app.edit.cuts.some(([a, b]) => o.start < b && o.end > a);
+    o.title = segTitle(sc) || (o.type === 'media' ? o.srcName || o.label : o.label);
     list.push(o);
   }
   list.sort((a, b) => a.start - b.start);
@@ -269,6 +316,7 @@ function changed({ inspector = false } = {}) {
   if (app.selection && !selectionExists(app.selection)) app.selection = null;
   renderHeader(); renderTimes(); renderStatus(); renderHeads(); renderCapButtons();
   if (inspector) renderInspector();
+  renderSideSoon();
   timeline.invalidate();
 }
 function selectionExists(s) {
@@ -287,7 +335,7 @@ app.select = (sel, { lane = null } = {}) => {
   app.selection = sel;
   if (lane) app.selLane = lane;
   if (sel && sel.kind !== 'range') app.sel = { a: null, b: null };
-  renderInspector(); renderHeads(); renderCapButtons(); renderStatus(); renderRequests();
+  renderInspector(); renderHeads(); renderCapButtons(); renderStatus(); renderRequests(); renderSideSoon();
   timeline.invalidate();
 };
 
@@ -299,6 +347,10 @@ app.setSelection = (a, b, { live = false } = {}) => {
   if (!live) { renderInspector(); renderStatus(); }
   timeline.invalidate();
 };
+function tipMotion(it) {
+  const tr = transitionOf(it), sp = speedSummary(it.knots);
+  return `${tr.inText || tr.outText ? `\n進場 ${tr.inText || '—'}｜出場 ${tr.outText || '—'}` : ''}${sp ? `\n畫面速度：${sp}` : ''}`;
+}
 const selValid = () => app.sel.a != null && app.sel.b != null && app.sel.b - app.sel.a >= 1 / app.fps - 1e-6;
 function setIn() { const a = frameSnap(app.t); app.setSelection(a, app.sel.b != null && app.sel.b > a ? app.sel.b : null); }
 function setOut() { const b = frameSnap(app.t); app.setSelection(app.sel.a != null && app.sel.a < b ? app.sel.a : null, b); }
@@ -369,7 +421,7 @@ function splitCue() {
   if (doSrtOp({ op: 'split', n: info.cue.n, at: info.at, pos })) {
     const c = app.cues[app.cues.findIndex((q) => q.n === info.cue.n)];
     app.select({ kind: 'cue', id: c.n }, { lane: 'cap' });
-    toast(`已把第 ${info.cue.n} 句在 ${fmtTC(info.at)} 切成兩句，後面的句號都 +1（plan.json 已跟著改）`, 'ok', 4000);
+    toast(`已把第 ${info.cue.n} 句在 ${fmtTC(info.at)} 切成兩句，後面的句號都 +1（卡片的時間已跟著改）`, 'ok', 4000);
   }
 }
 function mergeCue(c = selectedCue()) {
@@ -410,7 +462,7 @@ function deleteCue(c = selectedCue()) {
   const k = app.cues.findIndex((q) => q.n === c.n);
   pendingDelete = c;
   $('#delTitle').textContent = `刪除第 ${c.n} 句字幕`;
-  $('#delMsg').innerHTML = `「${esc(c.text)}」有 plan.json 的時間綁著。刪掉之前，這些時間要改綁到前一句或後一句（不能留下對不到的句號）：`;
+  $('#delMsg').innerHTML = `「${esc(c.text)}」有卡片或素材的時間綁著。刪掉之前，這些時間要改綁到前一句或後一句：`;
   $('#delRefs').innerHTML = refs.map((r) => `<li>· <b>${esc(r.id)}</b>（${esc(r.ref)}）</li>`).join('');
   const prev = app.cues[k - 1], next = app.cues[k + 1];
   $('#delPrev').disabled = !prev; $('#delNext').disabled = !next;
@@ -423,7 +475,7 @@ function finishDelete(c, bind) {
   if (doSrtOp({ op: 'delete', n: c.n, bind })) {
     const nx = app.cues[Math.min(k, app.cues.length - 1)];
     app.select(nx ? { kind: 'cue', id: nx.n } : null, { lane: 'cap' });
-    toast(`已刪除第 ${c.n} 句，後面的句號都 −1（plan.json 已跟著改）`, 'ok', 3500);
+    toast(`已刪除第 ${c.n} 句，後面的句號都 −1（卡片的時間已跟著改）`, 'ok', 3500);
   }
 }
 function setCue(n, patch, { coalesce = null } = {}) {
@@ -534,7 +586,7 @@ app.onVideoError = (m) => { $('#stageEmpty').hidden = false; $('#stageEmpty').in
 app.onPlayerReady = () => { renderMode(); if (app.pendingFocus != null) { player.seek(app.pendingFocus); app.t = app.pendingFocus; app.pendingFocus = null; } };
 app.onPlayerError = (m) => {
   toast(`完成影片預覽出錯：${m}`, 'err', 6000);
-  banner(`完成影片預覽（HyperFrames 播放器）出錯：${esc(m)}。可以先用「即時模擬」；一直出錯就在工作區根目錄跑 npm install，再重開剪輯。`, 'error', [['改用即時模擬', () => { banner(''); setMode('sim'); }]]);
+  banner(`完成影片預覽（HyperFrames 播放器）出錯：${esc(m)}。可以先用「即時模擬」；一直出錯就在工作區根目錄跑 npm install，再重開剪輯台。`, 'error', [['改用即時模擬', () => { banner(''); setMode('sim'); }]]);
 };
 
 // 音量表
@@ -566,7 +618,7 @@ function drawMeter() {
   for (const d of [0, -6, -18]) { g.fillStyle = d === 0 ? '#FF5A5F' : 'rgba(255,255,255,0.55)'; g.fillRect(0, y(d), 5, 1); g.fillRect(W - 5, y(d), 5, 1); g.fillText(String(d), W - 1, y(d) - 6); }
 }
 
-let lastShown = '';
+let lastShown = '', lastStrip = '';
 function frame() {
   const e = engine();
   e.tick();
@@ -577,6 +629,7 @@ function frame() {
   const shown = `${app.t.toFixed(3)}|${e.playing}`;
   if (shown !== lastShown) { lastShown = shown; renderTimes(); renderPlay(); }
   if (app.drawRequested) { app.drawRequested = false; timeline.draw(); }
+  if (shown !== lastStrip) { lastStrip = shown; tickSpeedStrip(); }
   drawMeter();
   requestAnimationFrame(frame);
 }
@@ -614,9 +667,9 @@ async function setMode(m, { focus = null } = {}) {
 async function loadState({ keep = null } = {}) {
   const r = await api('GET', '/api/state');
   if (!r.ok || !r.data) {
-    setSaveState('error', '連不到剪輯');
+    setSaveState('error', '連不到剪輯台');
     $('#stageEmpty').hidden = false;
-    $('#stageEmpty').innerHTML = `<div><b>連不到剪輯</b>${esc(r.data?.message || '')}</div>`;
+    $('#stageEmpty').innerHTML = `<div><b>連不到剪輯台</b>${esc(r.data?.message || '')}</div>`;
     return false;
   }
   const s = r.data;
@@ -656,8 +709,9 @@ async function loadState({ keep = null } = {}) {
       app.scenes[i] = o;
     }
   } else { app.undoStack = []; app.redoStack = []; app.splits = []; }
-  document.title = `剪輯｜${s.project.name}`;
-  $('#projName').textContent = `${s.project.dir}　·　${s.plan.file.split('/').slice(-3).join('/')}`;
+  document.title = `剪輯台｜${s.project.name}`;
+  $('#projName').textContent = s.project.name;
+  $('#projName').title = s.project.dir;
   if (s.video) {
     $('#stageEmpty').hidden = true;
     sim.load(s.video.url);
@@ -666,8 +720,8 @@ async function loadState({ keep = null } = {}) {
     $('#stageEmpty').hidden = false;
     $('#stageEmpty').innerHTML = `<div><b>還沒有影片可以剪</b>${esc(s.videoError || '')}</div>`;
   }
-  if (!s.plan.exists) banner(`找不到 <code>${esc(s.plan.file)}</code>：剪輯存檔會寫進它 → 請 AI 先完成分鏡、寫好 plan.json，再重新整理這一頁。現在可以先看影片，但不能儲存。`, 'error');
-  else if (s.plan.error) banner(`${esc(s.plan.error)} → 請 AI 修好 plan.json 再重新整理。`, 'error');
+  if (!s.plan.exists) banner('分鏡還沒做好：現在可以先看影片，但不能儲存。請 AI 先完成分鏡，再重新整理這一頁。', 'error');
+  else if (s.plan.error) banner(`分鏡檔有錯：${esc(s.plan.error)} → 請 AI 修好再重新整理。`, 'error');
   else if (s.schema?.error) banner(esc(s.schema.error), '');
   else if (!keep) banner('');
   timeline.setDuration(app.dur);
@@ -676,17 +730,21 @@ async function loadState({ keep = null } = {}) {
   if (s.report.ready) applyReport(s.report); else { app.itemsHint = '檢查中…（第一次可能要幾秒）'; fetchReport(); }
   changed({ inspector: true });
   renderMode();
+  renderSpeakerWarn();
+  renderPrerender(s.prerender);
+  syncOutsideBuild(s.build, null);
   // 修改單：第一次載入讀這個專案存在瀏覽器的清單與開關；之後重新載入（AI 改了 plan.json）只重畫
-  if (!rqLoaded) { rqLoaded = true; rqLoad(); let o = false; try { o = localStorage.getItem('editor-requests-open') === '1'; } catch { /* 預設收起 */ } setRequestsOpen(o); }
+  if (!rqLoaded) { rqLoaded = true; rqLoad(); let o = false; try { o = localStorage.getItem('editor-requests-open') === '1'; } catch { /* 預設收起 */ } setSide(o ? 'rq' : 'insp', { open: false }); }
   else renderRequests();
   if (!app.peaks) fetchPeaks();
+  pollExport();   // 順便更新「已輸出過」：內容改過就不算最新
   loadThumbs();
   sim.preloadSfx?.(s.schema?.sounds || []);
   return true;
 }
 async function fetchReport(fresh = false) {
   const r = await api('GET', `/api/report${fresh ? '?fresh=1' : ''}`);
-  if (r.ok && r.data) { applyReport(r.data); changed({ inspector: true }); }
+  if (r.ok && r.data) { applyReport(r.data); changed({ inspector: true }); tryDeepLink(); }
 }
 async function fetchPeaks() {
   app.peaksHint = '波形計算中…';
@@ -725,7 +783,7 @@ function applyReport(rep) {
   const d = rep?.data;
   app.reportReady = !!d;
   app.items = (d?.items || rep?.fallback?.items || []).filter((it) => Number.isFinite(it.start) && Number.isFinite(it.end))
-    .map((it) => ({ id: it.id, type: it.type || 'scene', label: it.label || '', start: it.start, end: it.end, shownEnd: Number.isFinite(it.shownEnd) ? it.shownEnd : null, src: it.src || null, warnings: it.warnings || 0, sfx: Array.isArray(it.sfx) ? it.sfx : [] }));
+    .map((it) => ({ id: it.id, type: it.type || 'scene', label: it.label || '', start: it.start, end: it.end, shownEnd: Number.isFinite(it.shownEnd) ? it.shownEnd : null, src: it.src || null, warnings: it.warnings || 0, sfx: Array.isArray(it.sfx) ? it.sfx : [], out: it.out || null, enter: it.enter ?? null, exit: it.exit ?? null }));   // out、enter、exit：實際的轉場和畫面速度，介面要照這個顯示
   app.voiceOnly = Array.isArray(d?.voiceOnly) ? d.voiceOnly.filter((v) => Array.isArray(v) && v.length === 2) : [];
   // 002 的 check-json：voiceUncovered＝只有聲音、沒被蓋住（紅色斜線）；uncovered＝沒有任何卡片或素材的講解（灰色斜線）
   const spans = (arr) => (Array.isArray(arr) ? arr.filter((v) => Number.isFinite(v?.start) && Number.isFinite(v?.end) && v.end > v.start).map((v) => [v.start, v.end, v.level || null]) : []);
@@ -733,7 +791,7 @@ function applyReport(rep) {
   app.uncovered = spans(d?.uncovered);
   if (Array.isArray(d?.cutpoints) && d.cutpoints.length) app.cutpoints = d.cutpoints.filter((c) => Number.isFinite(c?.at)).map((c) => ({ at: c.at, kind: c.kind === 'ng' ? 'ng' : 'pause' }));
   if (!app.dur && d?.videoDur) { app.dur = d.videoDur; timeline.setDuration(app.dur); }
-  app.itemsHint = d || rep?.fallback ? 'plan.json 裡還沒有資訊卡或字卡動態' : '看不到段落位置：檢查報告讀不到（點左下角的檢查結果）';
+  app.itemsHint = d || rep?.fallback ? '還沒有資訊卡或字卡動態' : '看不到段落位置：檢查報告讀不到（點左下角的檢查結果）';
   renderCheck();
 }
 
@@ -741,11 +799,19 @@ function applyReport(rep) {
 function setSaveState(state, text) { const el = $('#saveState'); el.dataset.state = state; el.querySelector('.txt').textContent = text; }
 // ---------- 輸出完成影片（019）：按鈕 → 伺服器跑重新產生、測試片段、整支、驗收；視窗關掉照樣繼續 ----------
 let exportTimer = null;
+// 長時間的等待一律寫到分：459 秒沒有人算得出來
+const fmtWait = (sec) => { const s = Math.max(0, Math.round(sec || 0)); return s < 60 ? `${s} 秒` : s < 600 ? `${Math.floor(s / 60)} 分 ${s % 60} 秒` : `${Math.round(s / 60)} 分鐘`; };
+const baseTitle = () => `剪輯台｜${app.server?.project?.name ?? ''}`;
+function notifyDone(text) {
+  if (!document.hidden) return;
+  try { if (window.Notification?.permission === 'granted') new Notification(text, { icon: '/editor/favicon.svg' }); } catch { /* 不能通知也沒關係，分頁標題和頁面上都有寫 */ }
+}
 function renderExport(s) {
   const at = s.steps.findIndex((x) => x.id === s.step);
   const done = !s.running && s.ok === true;
   $('#exportTitle').textContent = s.running ? '正在輸出完成影片…' : s.canceled ? '已取消輸出' : s.ok ? '✓ 完成影片輸出好了' : s.started ? '✖ 沒有輸出成功' : '輸出完成影片';
-  $('#exportSub').textContent = s.running ? `已經 ${s.seconds} 秒。整支輸出要等幾分鐘，可以關掉這個視窗繼續看別的，按上方按鈕再打開；不要關閉剪輯服務。` : (s.message || '') + (done && s.final?.file ? `檔案在 ${s.final.file}。` : '');
+  const left = s.eta != null ? `還要約 ${fmtWait(s.eta)}` : `整支大約要片長的 2 倍（這支約 ${fmtWait((app.outDur || 0) * 2)}）`;
+  $('#exportSub').textContent = s.running ? `已經 ${fmtWait(s.seconds)}，${left}。可以關掉這個視窗繼續看別的，按上方按鈕再打開；不要關閉剪輯台。` : (s.message || '') + (done && s.final?.file ? `檔案在專案的 ${s.final.file}。` : '');
   $('#exportSteps').innerHTML = s.steps.map((x, i) => {
     const state = done || (s.started && i < at) ? 'done' : i === at ? (s.running ? 'now' : s.canceled ? 'todo' : 'bad') : 'todo';
     const mark = { done: '✓', now: '…', bad: '✖', todo: '·' }[state];
@@ -755,18 +821,37 @@ function renderExport(s) {
   $('#exportLog').textContent = s.log || '';
   if (!s.running && s.started && !s.ok && !s.canceled) $('#exportLogWrap').open = true;
   const video = $('#exportVideo'), sheet = $('#exportSheet');
+  $('#exportReveal').hidden = s.running || !s.final?.exists;
   video.hidden = s.running || !s.final?.url; if (s.final?.url) video.href = s.final.url;
   sheet.hidden = s.running || !s.final?.sheetUrl; if (s.final?.sheetUrl) sheet.href = s.final.sheetUrl;
   $('#exportCancel').hidden = !s.running;
   const btn = $('#btnExport');
-  btn.textContent = s.running ? `輸出中${s.step === 'render' && s.percent != null ? ` ${s.percent}%` : '…'}` : '輸出完成影片';
-  btn.classList.toggle('primary', !!s.running);
+  const pct = s.step === 'render' && s.percent != null ? ` ${s.percent}%` : '';
+  btn.textContent = s.running ? `輸出中${pct || '…'}` : exportLabel();
+  document.title = s.running ? `輸出中${pct}｜${baseTitle()}` : baseTitle();
+}
+// 按鈕順便講背景先算到哪：算好了按下去只要跑驗收
+function exportLabel() {
+  const pre = app.prerender;
+  if (app.exporting || !pre?.fresh) return '輸出完成影片';
+  return pre.state === 'done' ? '輸出完成影片（已先算好）' : pre.state === 'running' ? `輸出完成影片（背景已算 ${pre.percent ?? 0}%）` : '輸出完成影片';
+}
+function renderPrerender(pre) {
+  const was = app.prerender;
+  app.prerender = pre || { state: 'none' };
+  if (!app.exporting) $('#btnExport').textContent = exportLabel();
+  $('#btnExport').dataset.tip = app.prerender.fresh && app.prerender.state !== 'none'
+    ? '背景已經先在輸出這一版，按下去接著等或直接用；只改幾段會自動補上，改動大（換主題、片長變了…）才要重新輸出'
+    : '輸出完成影片：先做 4 秒測試片段確認有聲音，再輸出整支並驗收（沒存的會先存）';
+  // 存檔讓背景那份白算了（只改幾段不算，會自動補上）：講清楚，不要等到按輸出才發現要從頭等
+  if (was?.fresh && was.state !== 'none' && !app.prerender.fresh) toast('內容改動比較大，背景先算的完成影片不能用了：按「輸出完成影片」時會重新輸出', 'warn', 8000);
 }
 async function pollExport() {
   const r = await api('GET', '/api/export');
   if (!r.ok || !r.data) { clearInterval(exportTimer); exportTimer = null; app.exporting = false; renderHeader(); return; }
   const s = r.data;
   renderExport(s);
+  if (JSON.stringify(s.final ?? null) !== JSON.stringify(app.finalInfo ?? null)) { app.finalInfo = s.final; renderMode(); }
   if (s.running) {
     if (!app.exporting) { app.exporting = true; renderHeader(); }
     exportTimer ??= setInterval(pollExport, 1000);
@@ -777,14 +862,18 @@ async function pollExport() {
     app.exporting = false;
     renderHeader();
     if (!$('#dlgExport').open) toast(s.ok ? '完成影片輸出好了' : s.canceled ? '已取消輸出' : '輸出沒有成功', s.ok ? 'ok' : 'err', s.ok ? 6000 : 8000, { actions: [['看結果', () => $('#dlgExport').showModal()]] });
+    notifyDone(s.ok ? '完成影片輸出好了' : s.canceled ? '已取消輸出' : '完成影片沒有輸出成功');
+    fetchReport();
   }
 }
-async function startExportFlow() {
+async function startExportFlow({ confirmSpeaker = false } = {}) {
   if (app.exporting) { await pollExport(); $('#dlgExport').showModal(); return; }
   if (app.busy || app.building) return;
   if (isDirty() && !(await save({ auto: true }))) return;
-  const r = await api('POST', '/api/export', {});
+  const r = await api('POST', '/api/export', confirmSpeaker ? { confirmSpeaker: true } : {});
+  if (r.status === 409 && r.data?.error === 'speaker') { openSpeakerDialog(r.data.speaker, { exporting: true }); return; }
   if (!r.ok) { toast(r.data?.message || '不能輸出', 'err', 6000); return; }
+  try { if (window.Notification?.permission === 'default') Notification.requestPermission().catch?.(() => {}); } catch { /* 瀏覽器不支援通知 */ }
   $('#exportLogWrap').open = false;
   app.exporting = true;
   renderHeader();
@@ -792,16 +881,58 @@ async function startExportFlow() {
   $('#dlgExport').showModal();
   exportTimer ??= setInterval(pollExport, 1000);
 }
+// ---------- 講者：畫面上還是示範人物時，頂端常駐提醒；輸出前一定跳這張確認卡 ----------
+let speakerForExport = false;
+function renderSpeakerWarn() {
+  const sp = app.server?.speaker, btn = $('#btnSpeakerWarn');
+  btn.hidden = !sp?.needed;
+  if (sp?.needed) btn.dataset.tip = `講者介紹（${sp.segments.join('、')}）現在會顯示示範人物「${sp.demo}」。點這裡填你的姓名與頭銜`;
+}
+function openSpeakerDialog(sp, { exporting = false } = {}) {
+  speakerForExport = exporting;
+  if (sp && app.server) app.server.speaker = sp;
+  const cur = app.server?.speaker || sp;
+  renderSpeakerWarn();
+  $('#spkTitle').textContent = `畫面上的講者是示範人物「${cur.demo}」`;
+  $('#spkMsg').textContent = `講者介紹（${cur.segments.join('、')}）還沒設定你的姓名，${exporting ? '現在輸出，影片裡會寫' : '現在畫面上寫的是'}「${cur.demo}」和「${cur.demoTitles.join('、')}」。`;
+  const shot = $('#spkShot');
+  shot.hidden = !cur.shot;
+  if (cur.shot) shot.src = cur.shot;
+  const L = cur.limits;
+  $('#spkName').placeholder = `最多 ${L.name} 字`;
+  $('#spkTitles').placeholder = `最多 ${L.maxTitles} 個，用頓號分開，每個最多 ${L.titles} 字`;
+  $('#spkErr').hidden = true;
+  $('#spkSave').textContent = exporting ? '存好，繼續輸出' : '存好';
+  const anyway = $('#spkAnyway');
+  anyway.hidden = !exporting;
+  anyway.textContent = `照樣輸出（影片裡是${cur.demo}）`;
+  $('#dlgSpeaker').showModal();
+}
+async function saveSpeakerFromDialog() {
+  const r = await api('POST', '/api/speaker', { name: $('#spkName').value, titles: $('#spkTitles').value });
+  if (!r.ok) { const e = $('#spkErr'); e.textContent = r.data?.message || '沒有存到'; e.hidden = false; return; }
+  app.server.speaker = r.data.speaker;
+  renderSpeakerWarn();
+  $('#dlgSpeaker').close();
+  if (speakerForExport) { startExportFlow(); return; }
+  toast('講者存好了：重新產生後就會換上', 'ok', 4000);
+  if (app.server?.preview?.built) runBuild();
+}
 function renderHeader() {
   const canSave = !!app.server?.plan?.exists && !app.server?.plan?.error;
   const dirty = isDirty();
   $('#btnSave').disabled = !canSave || !dirty || app.busy || app.exporting;
   $('#btnUndo').disabled = !app.undoStack.length;
   $('#btnRedo').disabled = !app.redoStack.length;
-  $('#btnBuild').disabled = app.busy || app.building || app.exporting || !canSave;
-  $('#btnExport').disabled = !app.exporting && (app.busy || app.building || !canSave);
+  const buildingHere = app.building || !!app.buildOutside;   // 別的分頁或構圖存檔也在重新產生：這一頁也不能再按
+  $('#btnBuild').disabled = app.busy || buildingHere || app.exporting || !canSave;
+  $('#btnBuild').textContent = buildingHere ? '更新中…' : '重新產生';
+  $('#btnExport').disabled = !app.exporting && (app.busy || buildingHere || !canSave);
+  // 主要按鈕只有一個：有沒存的修改＝儲存；沒有，看完完成影片的下一步＝輸出
+  $('#btnSave').classList.toggle('primary', dirty);
+  $('#btnExport').classList.toggle('primary', app.exporting || (!dirty && !!app.server?.preview?.built && app.mode === 'player'));
   if (app.busy || !app.server) return;
-  if (!canSave) setSaveState('error', app.server.plan.exists ? 'plan.json 有錯' : '沒有 plan.json');
+  if (!canSave) setSaveState('error', app.server.plan.exists ? '分鏡檔有錯，請 AI 修' : '分鏡還沒做好');
   else if (dirty) setSaveState('dirty', '有修改還沒儲存');
   else setSaveState('saved', '已儲存');
 }
@@ -817,13 +948,13 @@ function segmentDiff() {
     if (!isObj(sc) || !sc.id) return;
     const b = base[i] || {};
     const type = segType(sc);
-    const keys = [...SEG_KEYS.common, ...(type === 'media' ? SEG_KEYS.media : []), ...(type === 'scene' ? SEG_KEYS.scene : []), ...(type === 'fx' ? SEG_KEYS.fx : [])];
+    const keys = [...SEG_KEYS.common, ...(type === 'media' ? SEG_KEYS.media : []), ...(type === 'scene' ? SEG_KEYS.scene : []), ...(type === 'custom' && sc.template ? SEG_KEYS.custom : []), ...(type === 'fx' ? SEG_KEYS.fx : [])];
     const d = {}, rd = {};
     for (const k of keys) {
       if (same(sc[k], b[k])) continue;
       rd[k] = sc[k];
       if (k === 'sfx') d.sfx = sc.sfx === null ? null : { restore: true };
-      else if (sc[k] === undefined) { if (k === 'sfxVolume' || k === 'anchor') d[k] = null; }
+      else if (sc[k] === undefined) { if (k === 'sfxVolume' || k === 'anchor' || SPEED_KEYS.includes(k)) d[k] = null; }
       else d[k] = sc[k];
     }
     if (Object.keys(d).length) out[sc.id] = d;
@@ -833,11 +964,11 @@ function segmentDiff() {
 }
 async function save({ auto = false } = {}) {
   if (app.busy) return false;
-  if (!app.server?.plan?.exists || app.server.plan.error) { toast('plan.json 不存在或有錯，沒辦法存', 'err'); return false; }
+  if (!app.server?.plan?.exists || app.server.plan.error) { toast('分鏡檔不存在或有錯，沒辦法存：請 AI 修好', 'err'); return false; }
   closeCapEditor(true);
   const { segments } = segmentDiff();
   const textChanged = Object.entries(segments).filter(([, d]) => 'slots' in d || 'vars' in d).map(([id]) => id);
-  const body = { base: { ...app.base }, edit: editForSave() };
+  const body = { quick: true, base: { ...app.base }, edit: editForSave() };
   if (Object.keys(segments).length) body.segments = segments;
   if (app.srtOps.length) body.srt = { ops: app.srtOps };
   if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}) } : null;   // 美顏 0＝關，不寫
@@ -851,8 +982,8 @@ async function save({ auto = false } = {}) {
   app.busy = false;
   if (r.status === 409) {
     renderHeader();
-    setSaveState('error', r.data?.file === 'srt' ? '字幕檔被改過' : 'plan.json 被改過');
-    $('#conflictMsg').textContent = r.data?.message || '檔案被改過了';
+    setSaveState('error', r.data?.file === 'srt' ? '字幕檔被改過' : '分鏡被改過');
+    $('#conflictMsg').textContent = '分鏡或字幕在你打開這一頁之後被改過（通常是 AI 剛改的）。為了不蓋掉那些修改，這次沒有存。';
     app.conflictFile = r.data?.file;
     $('#dlgConflict').showModal();
     return false;
@@ -866,6 +997,12 @@ async function save({ auto = false } = {}) {
     return false;
   }
   const d = r.data;
+  // 檢查還沒回來之前，時間軸上的段停在現在算好的位置（不會因為基準換了跳回去）
+  const views = new Map(app.itemsView.map((v) => [v.id, v]));
+  app.items = app.items.map((it) => {
+    const v = views.get(it.id);
+    return v ? { ...it, start: v.start, end: v.end, shownEnd: it.shownEnd != null ? v.vend : null, sfx: (it.sfx || []).map((m) => ({ ...m, at: r3(m.at + (v.ds || 0)) })) } : it;
+  });
   app.base = { mtime: d.plan.mtime, hash: d.plan.hash, srtHash: d.srt?.hash ?? null };
   Object.assign(app.server.plan, { mtime: d.plan.mtime, hash: d.plan.hash, data: d.plan.data });
   app.server.srt = { ...app.server.srt, ...d.srt };
@@ -883,22 +1020,37 @@ async function save({ auto = false } = {}) {
   app.cues = clone(app.cues0);
   app.srtOps = [];
   app.savedSnap = dirtySnap();
-  app.undoStack = []; app.redoStack = [];
+  const lost = rebaseHistory(app.cues0);
   if (app.selection?.kind === 'cue' && !app.cues.some((c) => c.n === app.selection.id)) app.selection = null;
   if (app.server.preview.built) app.server.preview.stale = true;
   if (d.report) applyReport(d.report);
   changed({ inspector: true });
   renderMode();
-  const errs = d.report?.issues?.errors?.length || 0;
-  const what = [d.wrote?.plan && 'plan.json', d.wrote?.srt && '字幕'].filter(Boolean).join('、') || 'plan.json';
-  toast(errs ? `已存到 ${what}，但檢查有 ${errs} 個錯誤（點左下角看）` : `已存到 ${what}`, errs ? 'warn' : 'ok', errs ? 5000 : 2600);
-  if (textChanged.length && !auto && !errs) {
+  toast(lost ? `存好了（增刪字幕之前的 ${lost} 步不能復原了）` : '存好了', 'ok', 2600);
+  if (auto) return true;
+  if (textChanged.length) {
     const id = textChanged[0];
     const it = app.itemsView.find((x) => x.id === id);
     toast('卡片文字改了：自動重新產生，好了會切到完成影片預覽', 'ok', 3000);
     runBuild({ focus: it ? it.start + 0.4 : null, focusId: id, audit: textChanged });
-  }
+  } else checkAfterSave();
   return true;
+}
+// 存檔不等檢查（長片要 9 秒）：背景跑，好了更新左下角，有錯才提醒
+async function checkAfterSave() {
+  const seq = (app.checkSeq = (app.checkSeq || 0) + 1);
+  app.checking = true;
+  renderStatus();
+  const r = await api('GET', '/api/report?fresh=1');
+  if (seq !== app.checkSeq) return;   // 又存了一次：等最新的那次
+  app.checking = false;
+  pollExport();
+  if (r.ok && r.data) {
+    applyReport(r.data);
+    changed({ inspector: false });
+    const errs = r.data.issues?.errors?.length || 0;
+    if (errs) toast(`檢查有 ${errs} 個錯誤（點左下角看）`, 'warn', 5000);
+  } else renderStatus();
 }
 async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
   if (app.busy || app.building) return;
@@ -909,13 +1061,13 @@ async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
   const tt = toast('重新產生中…', 'ok', 0, { busy: true });
   const poll = setInterval(async () => {
     const s = await api('GET', '/api/build');
-    const last = String(s.data?.log || '').trim().split('\n').pop() || '';
-    tt.set(`重新產生中…（${Math.round((performance.now() - t0) / 1000)} 秒）${last ? `　${last.slice(0, 40)}` : ''}`);
+    tt.set(buildProgress(s.data, (performance.now() - t0) / 1000));
   }, 800);
   const r = await api('POST', '/api/build', audit.length ? { audit } : {});
   clearInterval(poll);
   tt.close();
   app.building = false;
+  if (r.status === 409 && r.data?.error === 'busy') { app.buildOutside = true; renderHeader(); toast('已經在更新了，等它跑完', 'warn', 3000); return; }
   const d = r.data || {};
   app.auditIssues = d.audit || null;
   const iss = d.issues || { errors: [], warnings: [] };
@@ -923,10 +1075,10 @@ async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
   $('#logIssues').innerHTML = issueItems(iss.errors, iss.warnings, 30);
   await loadState({ keep: isDirty() ? keepState() : null });
   if (r.ok && d.ok) {
-    $('#logTitle').textContent = '✓ 重新產生好了'; $('#logSub').textContent = `花了 ${Math.round(d.seconds || 0)} 秒。`; $('#logWrap').open = false;
+    $('#logTitle').textContent = '✓ 重新產生好了'; $('#logSub').textContent = `花了 ${fmtWait(d.seconds)}。`; $('#logWrap').open = false;
     const au = d.audit;
     if (au?.errors.length) { renderCheck(); openIssues(); toast(`重新產生好了，但 ${au.ids.join('、')} 改字後版面有 ${au.errors.length} 個錯誤（左下角檢查清單）：改短或改回原本的字`, 'err', 8000); }
-    else toast(`重新產生好了（${Math.round(d.seconds || 0)} 秒）${au ? `，${au.ids.join('、')} 版面${au.warnings.length ? `有 ${au.warnings.length} 個提醒` : '沒問題'}` : ''}${focusId ? `，切到完成影片預覽看 ${focusId}` : ''}`, 'ok', 3500, { actions: [['訊息', () => $('#dlgLog').showModal()]] });
+    else toast(`重新產生好了（${fmtWait(d.seconds)}）${au ? `，${au.ids.join('、')} 版面${au.warnings.length ? `有 ${au.warnings.length} 個提醒` : '沒問題'}` : ''}${focusId ? `，切到完成影片預覽看 ${focusId}` : ''}`, 'ok', 3500, { actions: [['訊息', () => $('#dlgLog').showModal()]] });
     if (focus != null) {
       if (app.server.preview.player.available) { await setMode('player', { focus }); app.seek(focus); if (focusId) app.select({ kind: segType(sceneById(focusId)) === 'media' ? 'media' : 'item', id: focusId }); }
       else toast('找不到 HyperFrames 播放器，沒辦法切到完成影片預覽（只能用即時模擬）', 'warn', 5000);
@@ -939,11 +1091,29 @@ async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
   }
   renderHeader();
 }
+// 重新產生的進度文字：現在做哪一步、已經多久、上次花多久；不把工具的訊息原樣貼給使用者
+function buildProgress(b, seconds) {
+  const lead = `${b?.phase || '重新產生中'}…（已經 ${fmtWait(seconds)}${b?.phase === '重新處理影片底片' && b.slowSeconds ? `，上次花 ${fmtWait(b.slowSeconds)}` : ''}）`;
+  return b?.phase === '重新處理影片底片' && !b.slowSeconds ? `${lead}長片要十幾分鐘` : lead;
+}
 function keepState() {
   const { raw } = segmentDiff();
   return { edit: clone(app.edit), segs: raw, ops: clone(app.srtOps), srtHash: app.base?.srtHash ?? null,
     ...(!same(app.look, app.savedLook) ? { look: clone(app.look) } : {}),
     ...(app.theme !== app.savedTheme ? { theme: app.theme } : {}) };
+}
+
+// 別的地方（構圖存檔、別的分頁）正在重新產生：這一頁的按鈕也要鎖，並講清楚在等什麼、等多久了
+function syncOutsideBuild(b, framing) {
+  const running = !!b?.running && !app.building;
+  if (running !== !!app.buildOutside) { app.buildOutside = running; renderHeader(); }
+  if (!running) {
+    app.outsideToast?.close(); app.outsideToast = null;
+    return;
+  }
+  const lead = framing?.running ? '構圖已儲存，正在更新預覽：' : '正在更新預覽：';
+  app.outsideToast ??= toast(lead, 'ok', 0, { busy: true });
+  app.outsideToast.set(`${lead}${buildProgress(b, b.seconds)}`);
 }
 
 // 外部改了 plan.json／rough.srt（通常是 AI）
@@ -952,41 +1122,45 @@ async function pollVersion() {
   app.pollingVersion = true;
   try {
     const r = await api('GET', '/api/version');
-    if (!r.ok || !r.data) { setSaveState('error', '連不到剪輯'); return; }
+    if (!r.ok || !r.data) { setSaveState('error', '連不到剪輯台'); return; }
     const v = r.data;
     const pv = app.server.preview;
     const rebuilt = v.built && pv.builtMtime !== v.builtMtime;
     if (pv.built !== v.built || pv.stale !== v.stale || pv.builtMtime !== v.builtMtime) { pv.built = v.built; pv.stale = v.stale; pv.builtMtime = v.builtMtime; renderMode(); }
     if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); }
+    renderPrerender(v.prerender);
+    syncOutsideBuild(v.build, v.framingUpdate);
     const changedOut = (v.plan.hash && app.base && v.plan.hash !== app.base.hash) || ((v.srt?.hash ?? null) !== (app.base?.srtHash ?? null));
     const framing = v.framingUpdate;
     const fromFraming = framing?.hash === v.plan.hash && (v.srt?.hash ?? null) === (app.base?.srtHash ?? null);
     const key = `${v.plan.hash}|${v.srt?.hash}`;
     if (changedOut && !$('#dlgConflict').open && app.noticed !== key) {
       if (fromFraming) { await loadState({ keep: isDirty() ? keepState() : null }); toast('已套用構圖設定', 'ok', 2600); }
-      else if (!isDirty()) { await loadState(); toast('plan.json／字幕有更新（可能是 AI 改的），已重新載入', 'ok', 4500); }
+      else if (!isDirty()) { await loadState(); toast('分鏡或字幕有更新（可能是 AI 改的），已重新載入', 'ok', 4500); }
       else {
-        banner('plan.json 或字幕剛被改過（可能是 AI 改的），而你有還沒存的調整。', 'error', [
+        banner('分鏡或字幕剛被改過（可能是 AI 改的），而你有還沒存的調整。', 'error', [
           ['重新載入，保留我的調整', async () => { banner(''); await loadState({ keep: keepState() }); toast('已載入最新的檔案，你的調整還在，記得再按一次儲存', 'warn', 5000); }, 'small primary'],
           ['重新載入，放棄我的調整', async () => { banner(''); await loadState(); }, 'small'],
         ]);
         app.noticed = key;
       }
     }
-    if (framing?.running && !app.framingToast) app.framingToast = toast('構圖已儲存，正在更新預覽…', 'ok', 0, { busy: true });
     if (framing && !framing.running) {
-      app.framingToast?.close(); app.framingToast = null;
       if (framing.finishedAt && app.framingFinished !== framing.finishedAt) {
         app.framingFinished = framing.finishedAt;
         toast(framing.ok ? '構圖已套用，預覽已更新' : framing.message || '構圖已儲存，但預覽更新失敗，請按「重新產生」查看訊息', framing.ok ? 'ok' : 'err', 6000);
       }
     }
+    // 播放器放的不是最新那一版就換上去。比網址，不能只看 builtMtime 有沒有變：
+    // 上面的 loadState 如果剛好在 build 做完時讀到新時間，下一輪就看不出變過，播放器會一直停在舊的
+    const stalePlayer = () => app.mode === 'player' && v.built && !v.build?.running && player.p && player.p.getAttribute('src') !== `${app.server.preview.composition}?v=${Math.floor(app.server.preview.builtMtime || 0)}`;
     if (rebuilt && (!changedOut || fromFraming || !isDirty())) {
       await loadState({ keep: isDirty() ? keepState() : null });
-      if (app.mode === 'player') {
-        try { await player.mount(`${app.server.preview.composition}?v=${Math.floor(app.server.preview.builtMtime || 0)}`); player.seek(app.t); }
-        catch { setMode('sim'); }
-      } else sim.seek(app.t);
+      if (app.mode !== 'player') sim.seek(app.t);
+    }
+    if (stalePlayer() && (!changedOut || fromFraming || !isDirty())) {
+      try { await player.mount(`${app.server.preview.composition}?v=${Math.floor(app.server.preview.builtMtime || 0)}`); player.seek(app.t); }
+      catch { setMode('sim'); }
     }
   } finally { app.pollingVersion = false; }
 }
@@ -997,17 +1171,17 @@ function renderTimes() {
   $('#tcDur').textContent = fmtTC(app.dur);
   $('#tcOut').textContent = cutIndexAt(app.t, app.edit.cuts) >= 0 ? '（剪掉）' : fmtTC(outOf(app.t, app.edit.cuts));
   $('#tcOutDur').textContent = fmtTC(app.outDur);
+  renderNow();
 }
 function renderPlay() { const p = engine().playing || !!app.shuttle; const b = $('#btnPlay'); b.textContent = p ? '❚❚' : '▶'; b.setAttribute('aria-label', p ? '暫停' : '播放'); }
 function renderStatus() {
-  const rep = app.report;
-  const au = app.saveErrors ? null : app.auditIssues;
-  const errs = app.saveErrors ? app.saveErrors.length : (rep?.issues?.errors?.length || 0) + (au?.errors.length || 0);
-  const warns = app.saveErrors ? 0 : (rep?.issues?.warnings?.length || 0) + (au?.warnings.length || 0);
+  const { errors: es, warnings: ws } = currentIssues();
+  const counts = groupIssues(es, ws).counts;
+  const errs = counts.errors, warns = counts.author;   // ⚠＝要作者看的件數（同類合併）；AI 會處理的不算
   $('#stIssues .e').textContent = `✖ ${errs}`; $('#stIssues .e').classList.toggle('has', !!errs);
   $('#stIssues .w').textContent = `⚠ ${warns}`; $('#stIssues .w').classList.toggle('has', !!warns);
   const vu = app.voiceUncovered.length;
-  $('#stHint').textContent = vu ? `⚠ ${vu} 段只有聲音、沒被素材蓋住（主軌紅色斜線）` : '';
+  $('#stHint').textContent = app.checking ? '檢查中…（可以繼續改）' : vu ? `⚠ ${vu} 段只有聲音、沒被素材蓋住（主軌紅色斜線）` : '';
   $('#stOut').textContent = `完成影片 ${fmt(app.outDur, 1)}${app.edit.cuts.length ? `（剪掉 ${fmtSec(cutTotal(app.edit.cuts))}）` : ''}`;
   $('#stZoom').textContent = `縮放 ${timeline.zoomPct()}%　吸附${app.snapOn ? '開' : '關'}`;
   const s = app.selection;
@@ -1023,6 +1197,7 @@ function selLabel(s) {
     case 'join': return '剪接點';
     case 'gain': return '人聲範圍音量';
     case 'sfx': return `${s.id} 的音效`;
+    case 'gap': return '沒有卡片的講解';
     default: return '';
   }
 }
@@ -1046,7 +1221,7 @@ function renderHeads() {
   const el = $('#tlHeads');
   if (!el.dataset.built) {
     el.dataset.built = '1';
-    el.innerHTML = LANES.map(([k, h], i) => {
+    el.innerHTML = (timeline.lanes || LANES).map(([k, h], i) => {
       const hh = h + 1;
       if (k === 'ov' || k === 'ruler') return `<div class="th" style="height:${hh}px" data-lane="${k}">${k === 'ruler' ? '<span class="nm"><small>時間</small></span>' : ''}</div>`;
       const vol = ['media', 'voice', 'sfx'].includes(k);
@@ -1108,33 +1283,49 @@ function renderOverlays() {
   $('#btnSafe').setAttribute('aria-pressed', String(!!app.showSafe));
   $('#btnSpeaker').setAttribute('aria-pressed', String(!!app.showSpeaker));
 }
+// 錯誤一則一則列；提醒照 issues.mjs 歸併成白話，給 AI 的收起來（原文可以整份複製）
+function errorItem(s) {
+  const id = issueId(s);
+  const head = s.replace(/^\[[^\]]*\]\s*/, '');
+  const j = head.indexOf('→');
+  const body = j >= 0 ? `${esc(head.slice(0, j))}<span class="fix">→ ${esc(head.slice(j + 1).trim())}</span>` : esc(head);
+  return `<li class="err"${id ? ` data-id="${esc(id)}"` : ''}><span class="sym">✖</span>${id ? `<b class="chk-id">${esc(id)}</b> ` : ''}${body}</li>`;
+}
+function groupItem(g) {
+  const many = g.ids.length > 1;
+  const one = g.ids.length === 1 ? ` data-id="${esc(g.ids[0])}"` : '';
+  const action = g.action === 'speaker' ? ' data-chk-act="speaker"' : '';
+  const ids = many ? `<div class="chk-ids">${g.ids.slice(0, 80).map((id) => `<button class="chk-seg" data-seg="${esc(id)}">${esc(id)}</button>`).join('')}</div>` : '';
+  return `<li class="warn"${one}${action}><span class="sym">⚠</span><b>${esc(g.title)}</b>${g.hint ? `<div class="chk-hint">${esc(g.hint)}</div>` : ''}${ids}</li>`;
+}
 function issueItems(errors = [], warnings = [], limit = 300) {
-  const one = (s, cls, sym) => {
-    const id = (String(s).match(/^\[([A-Za-z_][\w]*)/) || [])[1];
-    const i = s.indexOf('→');
-    const body = i >= 0 ? `${esc(s.slice(0, i))}<span class="fix">→ ${esc(s.slice(i + 1).trim())}</span>` : esc(s);
-    return `<li class="${cls}"${id ? ` data-id="${esc(id)}"` : ''}><span class="sym">${sym}</span>${body}</li>`;
-  };
-  const all = [...errors.map((s) => one(s, 'err', '✖')), ...warnings.map((s) => one(s, 'warn', '⚠'))];
-  return all.slice(0, limit).join('') + (all.length > limit ? `<li>…還有 ${all.length - limit} 則</li>` : '');
+  const G = groupIssues(errors, warnings);
+  const all = [...G.errors.map(errorItem), ...G.author.map(groupItem)];
+  const ai = G.ai.length ? `<li class="chk-ai"><details><summary>AI 會處理的（${G.counts.ai} 則）</summary><ul class="chk-ailist">${G.ai.map((g) => `<li><b>${esc(g.title)}</b>${g.ids.length ? `<span class="mute">　${esc(g.ids.slice(0, 8).join('、'))}${g.ids.length > 8 ? '…' : ''}</span>` : ''}</li>`).join('')}</ul><button class="small" data-chk-copy>複製原文給 AI</button></details></li>` : '';
+  return all.slice(0, limit).join('') + (all.length > limit ? `<li>…還有 ${all.length - limit} 則</li>` : '') + ai;
+}
+function currentIssues() {
+  const rep = app.report, au = app.saveErrors ? null : app.auditIssues;
+  if (app.saveErrors) return { errors: app.saveErrors, warnings: [] };
+  return { errors: [...(au?.errors || []), ...(rep?.issues?.errors || [])], warnings: [...(au?.warnings || []), ...(rep?.issues?.warnings || [])] };
 }
 function renderCheck() {
   const rep = app.report;
   const sum = $('#checkSummary'), list = $('#checkList');
-  let errors = [], warnings = [];
-  if (app.saveErrors) { errors = app.saveErrors; sum.innerHTML = '<b class="err-ink">沒有存成功</b>：剪輯送出的設定有問題（通常是數字超出範圍或字幕重疊）。'; }
+  const { errors, warnings } = currentIssues();
+  const G = groupIssues(errors, warnings);
+  if (app.saveErrors) sum.innerHTML = '<b class="err-ink">沒有存成功</b>：你的修改還留在頁面上，再按一次「儲存」。';
   else if (!rep) sum.innerHTML = '<span class="mute">檢查中…</span>';
   else {
-    errors = rep.issues?.errors || []; warnings = rep.issues?.warnings || [];
     const d = rep.data;
-    if (d) sum.innerHTML = errors.length ? `<b class="err-ink">${errors.length} 個錯誤</b>、${warnings.length} 個提醒。錯誤要先改好才能產生完成影片；點一則跳到那一段。`
-      : `<span class="ok-ink">✓ 通過</span>：${(d.items || []).length} 段、${warnings.length} 個提醒${Number.isFinite(d.outputDur) ? `；完成影片 ${fmt(d.outputDur, 1)}` : ''}。點一則跳到那一段。`;
+    const look = G.author.length ? `有 ${G.author.length} 件事可以看一下。` : '沒有要你處理的事。';
+    if (d) sum.innerHTML = errors.length ? `<b class="err-ink">${errors.length} 個錯誤</b>要先改好才能產生完成影片；點一則跳到那一段。`
+      : `<span class="ok-ink">✓ 可以輸出</span>：${(d.items || []).length} 段${Number.isFinite(d.outputDur) ? `、完成影片 ${fmt(d.outputDur, 1)}` : ''}。${look}`;
     else sum.innerHTML = `<b class="warn-ink">${rep.fallback ? '簡易檢查' : '讀不到檢查報告'}</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
   }
-  // 剛在剪輯改字的段：重新產生後量的版面（audit），放最前面
+  // 剛在剪輯台改字的段：重新產生後量的版面（audit），放最前面
   const au = app.saveErrors ? null : app.auditIssues;
   if (au && (au.errors.length || au.warnings.length)) {
-    errors = [...au.errors, ...errors]; warnings = [...au.warnings, ...warnings];
     sum.innerHTML = `<b class="${au.errors.length ? 'err-ink' : 'warn-ink'}">剛改字的 ${esc(au.ids.join('、'))} 版面有 ${au.errors.length + au.warnings.length} 個問題</b>：改短一點或改回原本的字；要重新排版請寫進修改單給 AI。<br>${sum.innerHTML}`;
   }
   list.innerHTML = issueItems(errors, warnings) || (rep?.data ? '<li class="mute">沒有任何錯誤或提醒</li>' : '');
@@ -1149,11 +1340,13 @@ function renderMode() {
   pbtn.dataset.tip = !avail ? `完成影片預覽不能用：${pv?.player?.reason || ''}（已退回即時模擬）` : !built ? '還沒有完成影片：先按「重新產生」' : '播上一次「重新產生」的完整完成影片（資訊卡、字幕、音效都有）';
   for (const b of $$('.seg button')) b.classList.toggle('on', b.dataset.mode === app.mode);
   const note = $('#modeNote');
+  const fin = app.finalInfo;
   if (app.mode === 'player') {
-    note.innerHTML = `<b>完成影片預覽</b>：上一次重新產生的完整完成影片。${pv?.stale ? '<span class="warn-ink">⚠ 之後又改過，按「重新產生」更新。</span>' : ''}`;
+    note.innerHTML = `<b>完成影片預覽</b>：${pv?.stale ? '上一次重新產生的樣子。<span class="warn-ink">⚠ 之後又改過，按「重新產生」更新。</span>' : fin?.exists && !fin.stale ? `已輸出過：<a href="${esc(fin.url)}" target="_blank" rel="noopener">播放完成影片</a>。要改的段寫進修改單。` : '看完要改的段寫進修改單；沒問題就按右上的「輸出完成影片」。'}`;
   } else {
     note.innerHTML = `<b>即時模擬</b>：初剪＋你現在的設定（含音效、音量）；卡片要「重新產生」後在完成影片預覽看。${!avail ? `<span class="mute">（找不到 HyperFrames 播放器，只能用即時模擬）</span>` : ''}`;
   }
+  renderHeader();
 }
 
 // ---------- 主題（亮／暗；plan.json 第一層 "theme"，specs/010-motion-v2/design-system.md §10）----------
@@ -1227,10 +1420,10 @@ function inspLook() {
   // 略過瘦臉（small／noface／rate）時只印一行原因，不放前後對照（重跑也一樣會略過）
   const skip = {
     small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，完成影片只調光。`,
-    noface: '抽樣 12 格都沒偵測到臉，這支只調光；確定畫面裡有講者，請 AI 跑 look.mjs run --force。',
+    noface: '抽樣 12 格都沒偵測到臉，這支只調光；確定畫面裡有講者，請 AI 重新偵測臉部。',
     rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉（不到 80%），自動關掉瘦臉，完成影片只調光；請 AI 看 work/look-preview.jpg。`,
   };
-  const faces = !lm.ready ? '<p class="ip-note">瘦臉的前後對照要先偵測臉部：請 AI 跑 look.mjs run。</p>'
+  const faces = !lm.ready ? '<p class="ip-note">要看瘦臉的前後對照，先到「構圖」頁按「偵測臉部」（長片要二、三十分鐘，在背景跑），或請 AI 偵測。</p>'
     : lm.slimOk === false ? `<p class="ip-note">${esc(skip[lm.reason] || '這支略過瘦臉，完成影片只調光。')}</p>`
       : `<div id="lookFaces" class="look-faces"><figure><img data-k="before" alt="原本"${faceSrc('before')}><figcaption>前</figcaption></figure><figure><img data-k="after" alt="瘦臉後"${faceSrc('after')}><figcaption>後（瘦臉 ${lookOut('slim', e.slim)}${e.beauty > 0 ? `、美顏 ${lookOut('slim', e.beauty)}` : ''}）</figcaption></figure><p class="look-msg ip-note"></p></div>`;
   setTimeout(() => refreshFaces(0), 0);
@@ -1238,9 +1431,8 @@ function inspLook() {
     ${row('color', '調光', lim.color[1], '亮一點、膚色紅潤一點（剪映「智能調色」）；拖的時候畫面馬上變，是近似效果，完成影片會更準')}
     ${row('slim', '瘦臉', lim.slim[1], '臉頰到下巴的輪廓往內收；改了要按「重新產生」才會套進完成影片（長片第一次要幾分鐘）')}
     ${row('beauty', '美顏', lim.beauty[1], '磨皮、膚色提亮、淡化黑眼圈，越往右越明顯（0＝關）；和瘦臉一起做進底片，改了要按「重新產生」才會套進完成影片；即時模擬看不到，看下面「後」那張臉')}
-    <div class="ip-btns"><button class="small" data-act="lookOn" data-k="color">調光${e.color > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="slim">瘦臉${e.slim > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="beauty">美顏${e.beauty > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookReset"${app.look ? '' : ' disabled'} data-tip="回到每支影片共用的設定（shared/template/kit/look.json：調光 ${kit.color}、瘦臉 ${kit.slim}、美顏 ${kit.beauty}）">恢復預設</button></div>
+    <div class="ip-btns"><button class="small" data-act="lookOn" data-k="color">調光${e.color > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="slim">瘦臉${e.slim > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookOn" data-k="beauty">美顏${e.beauty > 0 ? '關掉' : '打開'}</button><button class="small" data-act="lookReset"${app.look ? '' : ' disabled'} data-tip="回到每支影片共用的設定（調光 ${kit.color}、瘦臉 ${kit.slim}、美顏 ${kit.beauty}）">恢復預設</button></div>
     ${faces}
-    ${(L.lines || []).map((l) => `<p class="ip-note">${esc(l)}</p>`).join('')}
   </section>`;
 }
 
@@ -1255,7 +1447,7 @@ function renderInspector() {
   else if (s.kind === 'item' || s.kind === 'media') {
     const it = app.itemsView.find((x) => x.id === s.id), sc = sceneById(s.id);
     const type = segType(sc) || it?.type;
-    kind = TYPE_ZH[type] || '段落'; chip = `var(--c-${type})`; title = `${s.id}　${it?.label || ''}`;
+    kind = type === 'custom' ? customKind(sc) : (TYPE_ZH[type] || '段落'); chip = `var(--c-${type})`; title = `${s.id}　${it?.title || ''}`;
     body = type === 'media' ? inspMedia(it, sc) : inspItem(it, sc);
   } else if (s.kind === 'cut') { kind = '剪掉的範圍'; title = rangeTitle(...app.edit.cuts[s.id]); body = inspCut(s.id); }
   else if (s.kind === 'piece') { const p = app.pieces.find((q) => q.key === s.id); kind = '主軌片段'; title = rangeTitle(p.a, p.b); body = inspRange(p.a, p.b, true); }
@@ -1263,6 +1455,7 @@ function renderInspector() {
   else if (s.kind === 'join') { const p = app.points.find((q) => Math.abs(q.at - s.id) < 1e-6); kind = '剪接點（轉場）'; title = `${fmtTC(p.at)}　${KIND_ZH[p.kind]}`; body = inspJoin(p); }
   else if (s.kind === 'gain') { const g = app.edit.gains[s.id]; kind = '人聲範圍音量'; title = rangeTitle(g.from, g.to); body = inspGain(s.id); }
   else if (s.kind === 'sfx') { const it = app.itemsView.find((x) => x.id === s.id); kind = '音效'; title = `${s.id}　${it?.label || ''}`; body = inspSfxOnly(it, sceneById(s.id)); }
+  else if (s.kind === 'gap') { const g = gapInfo(s.id); kind = '沒有卡片的講解'; title = rangeTitle(g.start, g.end); body = `<section class="ip-sec"><p class="ip-note">這段只有講者，沒有卡片或動畫。想加畫面就寫進修改單；留給講者不用管。</p><div class="ip-btns"><button class="small" data-act="gapReq">✎ 這裡想加畫面</button></div></section>`; }
   $('#inspKind').innerHTML = `${chip ? `<span class="chip" style="background:${chip}"></span>` : ''}${esc(kind)}`;
   $('#inspTitle').textContent = title;
   $('#inspBody').innerHTML = body;
@@ -1337,19 +1530,29 @@ function sfxSection(it, sc) {
   </section>`;
 }
 function inspSfxOnly(it, sc) { return `${sfxSection(it, sc)}<section class="ip-sec"><div class="ip-btns"><button class="small" data-act="selItem" data-id="${esc(sc?.id)}">看這段的其他屬性</button></div></section>`; }
+// 這段實際的進場、出場（工具照前後段決定的）
+function transitionRows(it) {
+  const tr = it && transitionOf(it);
+  if (!tr?.inText && !tr?.outText) return '';
+  return `<section class="ip-sec" id="txSec"><h3>進場／出場</h3>
+    <div class="ip-row"><span class="k">進場</span><span class="v">${esc(tr.inText || '—')}</span></div>
+    <div class="ip-row"><span class="k">出場</span><span class="v">${esc(tr.outText || '—')}</span></div>
+    <p class="ip-note">工具照前後段自動決定。想換寫進修改單。</p></section>`;
+}
 function inspItem(it, sc) {
-  if (!sc) return '<p class="ip-note">plan.json 裡找不到這段</p>';
+  if (!sc) return '<p class="ip-note">找不到這段（可能被 AI 改名或刪掉了）</p>';
   const type = segType(sc);
   const def = type === 'scene' ? findSceneDef(app.server?.schema?.scenes, sc.scene) : type === 'fx' ? findFxDef(app.server?.schema?.fx, sc.fx) : null;
   const pv = app.server?.preview;
   return `<section class="ip-sec">
     <div class="ip-row"><span class="k">時間</span><span class="v tcv">${it ? `${fmtTC(it.start)} – ${fmtTC(it.end)}` : '—'}</span></div>
-    <div class="ip-row"><span class="k">plan.json</span><span class="v"><code>${esc(fmtTime(sc.from ?? sc.at))}</code> → <code>${esc(fmtTime(sc.to ?? (sc.duration != null ? `+${sc.duration} 秒` : '預設長度')))}</code></span></div>
+    <div class="ip-row"><span class="k">綁在</span><span class="v">${esc(refZh(sc.from ?? sc.at))} → ${esc(sc.to != null ? refZh(sc.to) : sc.duration != null ? `${sc.duration} 秒後` : '預設長度')}</span></div>
     <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button>${pv?.player?.available && pv?.built ? '<button class="small ghost" data-act="playerItem">在完成影片預覽看</button>' : ''}<button class="small ghost" data-act="rqOpen" data-tip="換動畫、加字、重新排版：寫進右側修改單給 AI">✎ 寫進修改單</button></div>
   </section>
-  <section class="ip-sec"><h3>文字${def ? `（${esc(def.zh)}）` : ''}</h3>${type === 'custom' ? '<p class="ip-note">自訂動畫的文字寫在它自己的 HTML 裡，請 AI 改。</p>' : textFields(sc, def, type)}
-    <p class="ip-note">${type === 'scene' ? '<code>**詞**</code> 套主色、<code>//</code> 換行（只有標「可強調」的欄位）。' : ''}${type !== 'custom' ? '切到完成影片預覽，打字時畫面上的字會跟著換（還沒有動畫）；存檔後自動重新產生、量版面，字太長擠到或超出會紅字列在左下角檢查清單。清單只能刪項目。' : ''}要加項目、換動畫、重新排版：寫進右側修改單給 AI。</p>
+  <section class="ip-sec"><h3>文字${def ? `（${esc(def.zh)}）` : ''}</h3>${type !== 'custom' ? textFields(sc, def, type) : sc.template ? templateFields(sc) : `<p class="ip-note">${sc.design ? '內容設計動畫' : '這段動畫'}的字畫在動畫裡，要改請寫進修改單。</p>`}
+    <p class="ip-note">${type === 'scene' ? '<code>**詞**</code> 套主色、<code>//</code> 換行（只有標「可強調」的欄位）。' : ''}${type !== 'custom' ? '切到完成影片預覽，打字時畫面上的字會跟著換（還沒有動畫）；存檔後自動重新產生、量版面，字太長擠到或超出會紅字列在左下角檢查清單。清單只能刪項目。' : sc.template ? '存檔後自動重新產生、量版面，字太長會紅字列在左下角檢查清單。' : ''}要加項目、換動畫、重新排版：寫進右側修改單給 AI。</p>
   </section>
+  ${transitionRows(it)}
   ${sfxSection(it, sc)}`;
 }
 // 只准改短或改錯字：上限＝min(模板上限, 原本字數)；加字請寫進修改單（server/write.mjs 也會擋）
@@ -1386,7 +1589,7 @@ function textFields(sc, def, type) {
   }
   const slots = sc.slots || {};
   const keys = Object.keys(slots);
-  if (!keys.length) return '<p class="ip-note">這段沒有寫 slots（用模板預設文字）；要改請跟 AI 說。</p>';
+  if (!keys.length) return '<p class="ip-note">這段用模板預設的文字；要改請寫進修改單。</p>';
   return keys.map((k) => {
     const decl = def?.slots?.[k];
     const v = slots[k];
@@ -1396,6 +1599,30 @@ function textFields(sc, def, type) {
     if (Array.isArray(v) && (!decl || decl.type === 'list')) return listField(k, v, decl, label);
     return `<div class="ip-row"><span class="k">${esc(label)}</span><span class="v"><code>${esc(JSON.stringify(v))}</code> <span class="dim">（請 AI 改）</span></span></div>`;
   }).join('');
+}
+// 模板動畫的字（和分鏡表同一份欄位）：只有畫面上的字，圖示、時間不顯示；清單不能增刪
+function templateFields(sc) {
+  const def = customDef(sc), slots = sc.slots || {}, out = [];
+  if (def?.generator === 'scene') {
+    if (typeof slots.title === 'string') out.push(textInput(['slots', 'title'], slots.title, def.slots?.title, def.slots?.title?.label || '標題'));
+    const walk = (parts, base) => (parts || []).forEach((p, i) => {
+      if (Array.isArray(p.parts)) walk(p.parts, [...base, i, 'parts']);
+      else if (typeof p.label === 'string') out.push(textInput([...base, i, 'label'], p.label, null, `元件 ${p.id ?? i + 1}`));
+    });
+    walk(slots.parts, ['slots', 'parts']);
+  } else if (def) {
+    for (const [k, d] of Object.entries(def.slots)) {
+      const v = slots[k];
+      if (d.type === 'list' && Array.isArray(v)) {
+        v.forEach((it, i) => {
+          const lb = `${d.label || k} ${i + 1}`;
+          if (typeof it === 'string') out.push(textInput(['slots', k, i], it, null, lb));
+          else if (isObj(it)) for (const [f, fd] of Object.entries(d.item || {})) if (isTextDecl(fd) && typeof it[f] === 'string' && it[f]) out.push(textInput(['slots', k, i, f], it[f], fd, f === 'text' ? lb : `${lb} ${fd.label || f}`));
+        });
+      } else if (isTextDecl(d) && typeof v === 'string' && v) out.push(textInput(['slots', k], v, d, d.label || k));
+    }
+  }
+  return out.join('') || '<p class="ip-note">這段沒有可以直接改的字；要改請寫進修改單。</p>';
 }
 function listField(k, arr, decl, label) {
   const itemDecl = decl?.item || { text: { type: 'text' } };
@@ -1437,30 +1664,136 @@ function inspMedia(it, sc) {
   const vol = sc.volume === undefined ? null : sc.volume;
   const srcDur = m?.info?.dur;
   const len = it ? it.end - it.start : null;
-  const used = it && !isImg ? (sc.in || 0) + len * (sc.speed || 1) : null;
+  const K = it?.knots?.length >= 2 ? it.knots : null;
+  const used = it && !isImg ? (K ? K[K.length - 1][1] : (sc.in || 0) + len * (sc.speed || 1)) : null;
+  const srcIn = K ? K[0][1] : (sc.in || 0);
+  const speedNote = !K ? `×${sc.speed || 1}` : sc.hold != null ? '定格' : K.length === 2 ? `×${r2((K[1][1] - K[0][1]) / (K[1][0] - K[0][0]))}` : K.slice(1).map((k, i) => { const dt = k[0] - K[i][0], sp = (k[1] - K[i][1]) / dt; return `${r2(dt)} 秒${sp === 0 ? '定格' : ` ×${r2(sp)}`}`; }).join('、');
   const opt = (v, more = []) => [...TRANS, ...more].map(([k, l]) => `<option value="${k}"${(v ?? 'fade') === k ? ' selected' : ''}>${l}${k === 'fade' && v == null ? '（預設）' : ''}</option>`).join('');
   return `<section class="ip-sec">
     <div class="ip-row"><span class="k">素材</span><span class="v" style="word-break:break-all">${esc(sc.src || '（沒有寫 src）')}<span class="dim">　${isImg ? '圖片' : `影片${srcDur ? ` ${fmtSec(srcDur)}` : ''}`}</span></span></div>
     <div class="ip-btns"><button class="small ghost" data-act="playItem">▶ 播這段</button><button class="small ghost" data-act="rqOpen" data-tip="換錄影、加標註、推近、改成動畫：寫進右側修改單給 AI">✎ 寫進修改單</button></div>
   </section>
   <section class="ip-sec"><h3>時間（拖時間軸上的左右邊緣也可以）</h3>
-    <div class="ip-row"><span class="k">起點</span><span class="v"><code>${esc(fmtTime(sc.from))}</code>　<span class="tcv">${it ? fmtTC(it.start) : ''}</span></span></div>
-    <div class="ip-row"><span class="k">終點</span><span class="v"><code>${esc(fmtTime(sc.to ?? (sc.duration != null ? `+${sc.duration} 秒` : '—')))}</code>　<span class="tcv">${it ? fmtTC(it.end) : ''}</span></span></div>
+    <div class="ip-row"><span class="k">起點</span><span class="v"><span class="tcv">${it ? fmtTC(it.start) : ''}</span>　<span class="dim">${esc(refZh(sc.from))}</span></span></div>
+    <div class="ip-row"><span class="k">終點</span><span class="v"><span class="tcv">${it ? fmtTC(it.end) : ''}</span>　<span class="dim">${esc(sc.to != null ? refZh(sc.to) : sc.duration != null ? `${sc.duration} 秒後` : '—')}</span></span></div>
     <div class="ip-row"><span class="k">長度</span><span class="v">${len != null ? fmtSec(len) : '—'}</span></div>
-    ${isImg ? '' : `<div class="ip-row"><label for="mIn">素材入點</label><span class="v"><input id="mIn" type="number" data-f="mediaIn" min="0" step="0.1" value="${r2(sc.in || 0)}" style="width:90px"> 秒<span class="dim">　速度 ×${sc.speed || 1}</span></span></div>
-    ${used != null && srcDur ? `<p class="${used > srcDur + 0.05 ? 'ip-err' : 'ip-note'}">用到素材 ${r2(sc.in || 0)}–${r2(used)} 秒（素材共 ${r2(srcDur)} 秒）${used > srcDur + 0.05 ? ' ✖ 超過素材長度' : ''}</p>` : ''}`}
-    ${sc.anchor ? `<div class="ip-row"><span class="k">anchor</span><span class="v">「${esc(sc.anchor)}」</span></div>` : ''}
+    ${isImg ? '' : `<div class="ip-row"><label for="mIn">素材入點</label><span class="v">${sc.retime || sc.hold != null || sc.out != null ? `${r2(srcIn)} 秒` : `<input id="mIn" type="number" data-f="mediaIn" min="0" step="0.1" value="${r2(sc.in || 0)}" style="width:90px"> 秒`}<span class="dim">　速度 ${esc(speedNote)}</span></span></div>
+    ${used != null && srcDur ? `<p class="${used > srcDur + 0.05 ? 'ip-err' : 'ip-note'}">用到素材 ${r2(srcIn)}–${r2(used)} 秒（素材共 ${r2(srcDur)} 秒）${used > srcDur + 0.05 ? ' ✖ 超過素材長度' : ''}</p>` : ''}`}
   </section>
+  ${isImg || !it ? '' : speedSection(it, sc)}
   ${isImg ? '' : `<section class="ip-sec"><h3>原聲</h3>
-    <div class="ip-btns"><button class="small toggle${vol != null ? ' on' : ''}" data-act="mediaVolOn" aria-pressed="${vol != null}">${vol != null ? '🔈 保留原聲' : '🔇 原聲靜音（按一下保留）'}</button></div>
-    ${vol != null ? sliderRow('原聲音量', 'mediaVol', vol, { out: fmtDb(vol) }) : ''}
+    ${sc.retime || sc.hold != null ? '<p class="ip-note">變速、定格的段不保留原聲。</p>' : `<div class="ip-btns"><button class="small toggle${vol != null ? ' on' : ''}" data-act="mediaVolOn" aria-pressed="${vol != null}">${vol != null ? '🔈 保留原聲' : '🔇 原聲靜音（按一下保留）'}</button></div>
+    ${vol != null ? sliderRow('原聲音量', 'mediaVol', vol, { out: fmtDb(vol) }) : ''}`}
   </section>`}
   <section class="ip-sec"><h3>進場／出場</h3>
     <div class="ip-row"><label>進場</label><select data-f="enter">${opt(sc.enter, isImg ? [['tape', '紙膠帶貼上']] : [])}</select></div>
     <div class="ip-row"><label>出場</label><select data-f="exit">${opt(sc.exit)}</select></div>
+    ${it ? (() => { const tr = transitionOf(it); return `<p class="ip-note" id="txNow">現在實際：${esc(tr.inText)}進場、${esc(tr.outText)}出場（接在別的整張幕後面時，工具會自動調整）。</p>`; })() : ''}
   </section>
-  ${sfxSection(it, sc)}
-  <p class="ip-note">要換素材、運鏡、紅框、放大鏡，請跟 AI 說。</p>`;
+  ${mediaNotes(it, sc)}
+  ${sfxSection(it, sc)}`;
+}
+// ---------- 畫面速度：段內分區，每區一個倍速（editor/speed.mjs）---------- 講話的時間不變，只改畫面走多快
+const speedAt = (at, start) => { const t = noteTime(at, { start }); return t == null ? null : t - start; };
+function speedModel(sc, len, start, knots) { return modelOf(sc, len, { knots, resolveAt: (at) => speedAt(at, start) }); }
+function speedDirty(sc, sb) { return SPEED_KEYS.some((k) => !same(sc[k], sb?.[k])); }
+// 切開的點：前後還是同一個速度時 plan.json 寫不出來（同速就是同一區），先記在這裡，選了速度才真的寫進去
+const speedCuts = {};
+function speedNow(it, sc) {
+  let m = speedModel(sc, it.end - it.start, it.start, it.knots);
+  for (const t of speedCuts[it.id] || []) m = cutAt(m, t) || m;
+  return m;
+}
+// 播放頭在這段裡的段內秒；不在這段就當段起點
+function speedT(it) { return app.t >= it.start && app.t < it.end ? app.t - it.start : 0; }
+function speedSection(it, sc) {
+  const len = it.end - it.start;
+  const model = speedNow(it, sc);
+  const inside = app.t >= it.start && app.t < it.end;
+  const cur = zoneAt(model, speedT(it));
+  const strip = model.zones.map((z) => {
+    const cls = z.rate === 0 ? 'hold' : z.rate > 1 ? 'fast' : z.rate < 1 ? 'slow' : 'plain';
+    return `<button class="sp-zone sp-${cls}" data-act="spZone" data-t="${it.start + z.from}" style="flex:${Math.max(0.01, z.to - z.from)} 1 0" data-tip="${esc(`${fmtSec(z.to - z.from)} ${speedLabel(z.rate)}`)}"><span>${esc(speedLabel(z.rate))}</span></button>`;
+  }).join('');
+  const rates = SPEEDS.map((r) => `<button class="small toggle${cur.rate === r ? ' on' : ''}" data-act="spRate" data-r="${r}" aria-pressed="${cur.rate === r}">${esc(speedLabel(r))}</button>`).join('');
+  const hasNotes = NOTE_KINDS.some(([k]) => Array.isArray(sc[k]) && sc[k].length);
+  return `<section class="ip-sec" id="speedSec"><h3>畫面速度</h3>
+    <div class="sp-strip" id="spStrip" data-start="${it.start}" data-len="${len}">${strip}<i class="sp-head" id="spHead"${inside ? '' : ' hidden'} style="left:${(speedT(it) / len) * 100}%"></i></div>
+    <div class="ip-btns" id="spRates" aria-label="播放頭這一區的速度">${rates}</div>
+    <div class="ip-btns">
+      <button class="small ghost" data-act="spCut" data-tip="在播放頭切開，前後可以用不同速度">✂ 在這裡切開</button>
+      <button class="small ghost" data-act="spFreeze" data-tip="畫面停在播放頭這一格 2 秒">⏸ 定格 2 秒</button>
+      ${model.zones.length > 1 ? '<button class="small ghost" data-act="spJoin" data-tip="拿掉最靠近播放頭的切點">併掉切點</button>' : ''}
+      ${isPlain(model) ? '' : '<button class="small ghost" data-act="spReset">恢復原速</button>'}
+    </div>
+    <p class="ip-note">選的是播放頭所在的那一區。講話的時間不變，只改畫面走多快。${hasNotes ? '變速後看一下紅框、說明卡還對不對得上畫面。' : ''}</p>
+  </section>`;
+}
+function applySpeed(id, next, it, sc) {
+  if (!next) return false;
+  const dur = app.mediaSeg(id)?.info?.dur ?? null;
+  const patch = fieldsOf(next, { dur, oldRetime: sc.retime, resolveAt: (at) => speedAt(at, it.start) });
+  if (patch.retime || patch.hold != null) patch.volume = undefined;   // 變速、定格不保留原聲（不然 --check 會 ⚠）
+  const end = next.start + next.zones.reduce((s, z) => s + (z.to - z.from) * z.rate, 0);
+  if (dur != null && end > dur + 0.05) toast(`素材只到 ${r2(dur)} 秒，用完會停在最後一格`, 'warn', 3500);
+  setSeg(id, patch, { inspector: true });
+  return true;
+}
+function speedAction(act, b, s) {
+  const it = app.itemsView.find((x) => x.id === s.id), sc = sceneById(s.id);
+  if (!it || !sc) return;
+  const model = speedNow(it, sc), t = speedT(it);
+  if (act === 'spZone') { app.seek(Number(b.dataset.t)); return; }
+  if (act === 'spReset') { delete speedCuts[it.id]; applySpeed(s.id, { start: model.start, zones: [{ from: 0, to: it.end - it.start, rate: 1 }] }, it, sc); return; }
+  if (act === 'spRate') { const r = Number(b.dataset.r); if (!applySpeed(s.id, setRate(model, t, r), it, sc)) renderInspector(); return; }
+  if (act === 'spJoin') {
+    const next = joinAt(model, t);
+    if (!next) return;
+    // 併掉的切點如果還沒寫進 plan.json，從暫存拿掉就好
+    const gone = model.zones.slice(1).map((z) => z.from).filter((f) => !next.zones.some((z) => Math.abs(z.from - f) < 1e-3));
+    speedCuts[it.id] = (speedCuts[it.id] || []).filter((c) => !gone.some((f) => Math.abs(f - c) < 1e-3));
+    if (!applySpeed(s.id, next, it, sc) || same(fieldsOf(next), fieldsOf(speedModel(sc, it.end - it.start, it.start, it.knots)))) renderInspector();
+    return;
+  }
+  if (!(app.t >= it.start && app.t < it.end)) { toast('先把播放頭移到這一段裡', 'warn'); return; }
+  const next = act === 'spCut' ? cutAt(model, t) : freezeAt(model, t, 2);
+  if (!next) { toast(act === 'spCut' ? '離切點太近：每一區至少 0.3 秒' : '這一區已經是定格', 'warn'); return; }
+  if (act === 'spCut') { speedCuts[it.id] = [...(speedCuts[it.id] || []), r3(t)]; renderInspector(); return; }
+  applySpeed(s.id, next, it, sc);
+}
+// 播放頭移動時，面板上的速度條跟著走（不用重畫整個面板）
+function tickSpeedStrip() {
+  const strip = document.getElementById('spStrip');
+  if (!strip) return;
+  const start = Number(strip.dataset.start), len = Number(strip.dataset.len), head = document.getElementById('spHead');
+  const inside = app.t >= start && app.t < start + len;
+  if (head) { head.hidden = !inside; if (inside) head.style.left = `${((app.t - start) / len) * 100}%`; }
+  const it = app.selection?.kind === 'media' ? app.itemsView.find((x) => x.id === app.selection.id) : null, sc = it && sceneById(it.id);
+  if (!it || !sc) return;
+  const cur = zoneAt(speedNow(it, sc), inside ? app.t - start : 0);
+  document.querySelectorAll('#spRates button').forEach((x) => { const on = Number(x.dataset.r) === cur.rate; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+}
+
+// 錄影段上有哪些標註：點一則跳到那個時間。這些要在完成影片預覽才看得到；要改寫進修改單
+const NOTE_KINDS = [['moves', '運鏡'], ['marks', '紅框'], ['callouts', '說明卡'], ['steps', '步驟'], ['arrows', '箭頭'], ['lens', '放大鏡'], ['spot', '聚光燈'], ['redact', '打碼']];
+function noteTime(v, it) {
+  if (Number.isFinite(v)) return it.start + v;
+  const rel = /^\+([\d.]+)$/.exec(String(v ?? ''));
+  return rel ? it.start + Number(rel[1]) : v == null ? it.start : refTime(v, app.cues);
+}
+function mediaNotes(it, sc) {
+  if (!it) return '';
+  const rows = [];
+  for (const [k, zh] of NOTE_KINDS) {
+    for (const n of Array.isArray(sc[k]) ? sc[k] : []) {
+      const t = noteTime(n?.at, it);
+      if (t != null) rows.push({ t, zh, text: String(n?.text || n?.label || '').trim() });
+    }
+  }
+  rows.sort((a, b) => a.t - b.t);
+  return `<section class="ip-sec"><h3>標註${rows.length ? `（${rows.length}）` : ''}</h3>
+    ${rows.length ? `<ul class="note-list">${rows.map((r) => `<li><button class="small ghost" data-act="seekAt" data-t="${r.t}"><span class="tcv">${mmssOf(outOf(r.t, app.edit.cuts))}</span> ${esc(r.zh)}${r.text ? `：${esc(r.text)}` : ''}</button></li>`).join('')}</ul>` : '<p class="ip-note">這段沒有紅框、說明卡或運鏡。</p>'}
+    <p class="ip-note">標註在完成影片預覽才看得到。要加或要改標註：寫進修改單。</p></section>`;
 }
 function inspCut(i) {
   const [a, b] = app.edit.cuts[i];
@@ -1616,6 +1949,7 @@ function onInspClick(e) {
   switch (act) {
     case 'loud': return normalizeVoice();
     case 'rqOpen': setRequestsOpen(true); setTimeout(() => $('#rqNote')?.focus(), 20); return;
+    case 'gapReq': setRequestsOpen(true); break;
     case 'lookOn': {
       const k = b.dataset.k, cur = lookEff();
       if (cur[k] > 0) { app.lookPrev[k] = cur[k]; mutate(() => { app.look = { ...cur, [k]: 0 }; }, { inspector: true }); }
@@ -1636,9 +1970,11 @@ function onInspClick(e) {
     case 'capInsBefore': return insertCue('before');
     case 'capPlay': { const c = selectedCue(); if (c) playFrom(c.start, c.end); return; }
     case 'playItem': if (it) playFrom(it.start, it.end); return;
+    case 'seekAt': { const t = Number(b.dataset.t); app.seek(t); timeline.ensureVisible(t, false); if (app.server?.preview?.built && app.mode !== 'player' && app.server.preview.player?.available) setMode('player', { focus: t }); return; }
     case 'playerItem': if (it) setMode('player', { focus: it.start + 0.3 }); return;
     case 'sfxMute': return toggleSfxMute(s.id);
     case 'selItem': { const sc = sceneById(b.dataset.id); return app.select({ kind: segType(sc) === 'media' ? 'media' : 'item', id: b.dataset.id }); }
+    case 'spZone': case 'spRate': case 'spCut': case 'spFreeze': case 'spJoin': case 'spReset': return speedAction(act, b, s);
     case 'mediaVolOn': { const sc = sceneById(s.id); return setSeg(s.id, { volume: sc.volume == null ? 0 : null }, { inspector: true }); }
     case 'listDel': return listDel(b.dataset.k, Number(b.dataset.i));
     case 'cutSel': return deleteSelection();
@@ -1705,7 +2041,7 @@ function deleteSelection() {
     case 'gain': mutate(() => { app.edit.gains.splice(s.id, 1); }); return app.select(null);
     case 'sfx': return toggleSfxMute(s.id);
     case 'join': { const p = app.points.find((q) => Math.abs(q.at - s.id) < 1e-6); if (p) setJoin(p, 'none'); return; }
-    case 'media': case 'item': toast('剪輯不刪卡片和插入素材 → 要拿掉請跟 AI 說；只想暫時不要它的聲音，可以把音效或原聲靜音', 'warn', 4500); return;
+    case 'media': case 'item': toast('剪輯台不刪卡片和插入素材 → 要拿掉請跟 AI 說；只想暫時不要它的聲音，可以把音效或原聲靜音', 'warn', 4500); return;
     default:
   }
 }
@@ -1728,6 +2064,7 @@ app.tlClick = (h, e) => {
     case 'cue': case 'capEdge': return app.select({ kind: 'cue', id: h.cue.n }, { lane });
     case 'gainVol': case 'gainEdge': case 'gainBody': return app.select({ kind: 'gain', id: h.gain }, { lane });
     case 'sfx': return app.select({ kind: 'sfx', id: h.sfx.segId }, { lane });
+    case 'noCard': return app.select({ kind: 'gap', id: gapId(h.span[0]) }, { lane });
     default: return app.select(null, { lane });
   }
 };
@@ -1740,8 +2077,9 @@ app.tlDouble = (h) => {
 app.tlTip = (h) => {
   const lk = app.trackLocked(h.lane) ? '\n🔒 這條軌已鎖定' : '';
   switch (h.kind) {
-    case 'item': return `${h.item.id}｜${TYPE_ZH[h.item.type] || ''} ${h.item.label}\n${fmtTC(h.item.start)} – ${fmtTC(h.item.end)}${h.item.warnings ? `\n⚠ ${h.item.warnings} 個提醒` : ''}\n點一下在右邊改文字`;
-    case 'media': return `${h.item.id}｜${h.item.srcName}\n${fmtTC(h.item.start)} – ${fmtTC(h.item.end)}（${fmtSec(h.item.end - h.item.start)}）\n拖中間移動、拖兩邊裁剪${lk}`;
+    case 'item': return `${h.item.id}｜${h.item.title || ''}\n${h.item.type === 'custom' ? customKind(sceneById(h.item.id)) : TYPE_ZH[h.item.type] || ''}　${fmtTC(h.item.start)} – ${fmtTC(h.item.end)}${tipMotion(h.item)}${h.item.warnings ? `\n⚠ ${h.item.warnings} 個提醒` : ''}\n點一下看這段能改什麼`;
+    case 'noCard': return `這裡只有講者，沒有卡片\n${fmtTC(h.span[0])} – ${fmtTC(h.span[1])}\n點一下可以寫進修改單：這裡想加畫面`;
+    case 'media': return `${h.item.id}｜${h.item.srcName}\n${fmtTC(h.item.start)} – ${fmtTC(h.item.end)}（${fmtSec(h.item.end - h.item.start)}）${tipMotion(h.item)}\n拖中間移動、拖兩邊裁剪${lk}`;
     case 'mediaL': return `拖曳裁剪起點（素材內容不跑）${lk}`;
     case 'mediaR': return `拖曳裁剪終點${lk}`;
     case 'mediaVol': return `原聲音量 ${h.item.volume == null ? '靜音' : fmtDb(h.item.volume)}：上下拖${lk}`;
@@ -1799,6 +2137,9 @@ function dragMedia(h, e0) {
   const srcDur = it.mediaKind === 'image' ? null : it.srcDur;
   const s0 = it.start, e0t = it.end, grab = h.t;
   const isImg = it.mediaKind === 'image';
+  const speedy = sc0.retime != null || sc0.hold != null;   // 有變速、定格：裁剪時畫面內容不跑、每一區的速度不變
+  const model0 = speedy ? speedModel(sc0, e0t - s0, s0, it.knots) : null;
+  const rate0 = model0?.zones[0].rate ?? speed;
   app.gestureBegin();
   app.select({ kind: 'media', id }, { lane: 'media' });
   const refFor = (snap, kindWanted) => (snap && (snap.kind === 'cueStart' || snap.kind === 'cueEnd') ? `#${snap.n}${snap.kind === 'cueEnd' ? 'e' : ''}` : null);
@@ -1808,12 +2149,12 @@ function dragMedia(h, e0) {
       if (mode === 'L') {
         const r = snapT(t, e, { exclude: [s0] });
         ns = r.t;
-        const lo = Math.max(0, isImg ? 0 : s0 - in0 / speed), hi = e0t - 1;
+        const lo = Math.max(0, isImg ? 0 : speedy ? (rate0 > 0 ? s0 - model0.start / rate0 : 0) : s0 - in0 / speed), hi = e0t - 1;
         if (ns < lo || ns > hi) { ns = clamp(ns, lo, hi); timeline.snapLine = null; } else fromRef = refFor(r.snap);
       } else if (mode === 'R') {
         const r = snapT(t, e, { exclude: [e0t] });
         ne = r.t;
-        const hi = Math.min(app.dur, srcDur ? s0 + (srcDur - in0) / speed : Infinity), lo = s0 + 1;
+        const hi = Math.min(app.dur, srcDur && !speedy ? s0 + (srcDur - in0) / speed : Infinity), lo = s0 + 1;
         if (ne < lo || ne > hi) { ne = clamp(ne, lo, hi); timeline.snapLine = null; } else toRef = refFor(r.snap);
       } else {
         const dt = t - grab;
@@ -1835,7 +2176,12 @@ function dragMedia(h, e0) {
         if (toRef && Math.abs((refTime(toRef, app.cues) ?? -1) - ne) < 0.006) sc.to = toRef; else sc.to = ne;
         delete sc.duration;
       } else if (sc.to == null && Number.isFinite(sc.duration)) { sc.to = r2(e0t); delete sc.duration; }
-      if (mode === 'L' && !isImg) sc.in = r2(Math.max(0, in0 + (ns - s0) * speed));
+      let srcFrom = null;
+      if (speedy && mode !== 'M') {
+        const m = trimModel(model0, ns - s0, ne - ns);
+        srcFrom = m.start;
+        for (const [k, v] of Object.entries(fieldsOf(m, { dur: srcDur }))) { if (v === undefined) delete sc[k]; else sc[k] = v; }
+      } else if (mode === 'L' && !isImg) { sc.in = r2(Math.max(0, in0 + (ns - s0) * speed)); srcFrom = sc.in; }
       const i = app.scenes.findIndex((x) => x.id === id);
       app.scenes = app.scenes.slice(); app.scenes[i] = sc;
       recompute();
@@ -1843,7 +2189,7 @@ function dragMedia(h, e0) {
       app.seek(edgeT);
       const d = (ne - ns) - (e0t - s0);
       const lab = mode === 'L' ? `起點 ${fmtTC(ns)}${fromRef ? `（${fromRef}）` : ''}` : mode === 'R' ? `終點 ${fmtTC(ne)}${toRef ? `（${toRef}）` : ''}` : `${fmtTC(ns)} – ${fmtTC(ne)}${fromRef ? `（${fromRef}）` : toRef ? `（${toRef}）` : ''}`;
-      return `${lab}\n長度 ${fmtSec(ne - ns)}${Math.abs(d) > 0.004 ? `（${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(2)} 秒）` : ''}${mode === 'L' && !isImg ? `\n素材從 ${r2(sc.in)} 秒開始` : ''}`;
+      return `${lab}\n長度 ${fmtSec(ne - ns)}${Math.abs(d) > 0.004 ? `（${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(2)} 秒）` : ''}${mode === 'L' && !isImg && srcFrom != null ? `\n素材從 ${r2(srcFrom)} 秒開始` : ''}`;
     },
     up(moved) { app.gestureEnd(moved); },
     cancel() { app.gestureEnd(false); },
@@ -2066,7 +2412,21 @@ $('#btnOut').addEventListener('click', setOut);
 $('#btnSave').addEventListener('click', () => save());
 $('#btnBuild').addEventListener('click', () => runBuild());
 $('#btnExport').addEventListener('click', () => startExportFlow());
+$('#btnSpeakerWarn').addEventListener('click', () => openSpeakerDialog(null));
+$('#spkSave').addEventListener('click', saveSpeakerFromDialog);
+$('#spkAnyway').addEventListener('click', () => { $('#dlgSpeaker').close(); startExportFlow({ confirmSpeaker: true }); });
+$('#spkCancel').addEventListener('click', () => $('#dlgSpeaker').close());
 $('#exportClose').addEventListener('click', () => $('#dlgExport').close());
+for (const sel of ['#logIssues', '#exportIssues']) $(sel).addEventListener('click', (e) => {
+  const dlg = e.target.closest('dialog');
+  if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }
+  if (e.target.closest('summary, .chk-ai')) return;
+  const li = e.target.closest('li'), seg = e.target.closest('[data-seg]');
+  if (li?.dataset.chkAct === 'speaker') { dlg.close(); openSpeakerDialog(null); return; }
+  const id = seg?.dataset.seg || li?.dataset.id;
+  if (id) { dlg.close(); goToSeg(id); }
+});
+$('#exportReveal').addEventListener('click', async () => { const r = await api('POST', '/api/export/reveal', {}); if (!r.ok) toast(r.data?.message || '打不開資料夾', 'err', 5000); });
 $('#exportCancel').addEventListener('click', async () => { const r = await api('POST', '/api/export/cancel', {}); if (!r.ok) toast(r.data?.message || '取消失敗', 'err', 5000); await pollExport(); });
 pollExport();
 $('#btnUndo').addEventListener('click', undo);
@@ -2083,18 +2443,33 @@ capBtn('#capMerge', () => mergeCue());
 capBtn('#capDel', () => deleteCue());
 $('#capFind').addEventListener('click', openFind);
 $('#btnSafe').addEventListener('click', () => { app.showSafe = !app.showSafe; renderOverlays(); });
-$('#btnSpeaker').addEventListener('click', (e) => { if (e.currentTarget.classList.contains('is-disabled')) { toast('plan.json 沒有寫 speakerBox（講者框）', 'warn'); return; } app.showSpeaker = !app.showSpeaker; renderOverlays(); });
+$('#btnSpeaker').addEventListener('click', (e) => { if (e.currentTarget.classList.contains('is-disabled')) { toast('這支還沒量講者框：請 AI 量', 'warn'); return; } app.showSpeaker = !app.showSpeaker; renderOverlays(); });
 $('#btnFull').addEventListener('click', () => { const s = $('#stage'); if (document.fullscreenElement) document.exitFullscreen(); else s.requestFullscreen?.().catch(() => toast('瀏覽器不讓這頁全螢幕', 'warn')); });
 for (const b of $$('.seg button')) b.addEventListener('click', () => { if (b.classList.contains('is-disabled')) { toast(b.dataset.tip, 'warn', 5000); return; } setMode(b.dataset.mode); });
 $('#stIssues').addEventListener('click', () => { const p = $('#issuesPop'); p.hidden = !p.hidden; });
 $('#btnRecheck').addEventListener('click', async () => { app.report = null; app.saveErrors = null; renderCheck(); await fetchReport(true); toast('檢查完了', 'ok', 1500); });
-$('#checkList').addEventListener('click', (e) => {
-  const li = e.target.closest('li[data-id]'); if (!li) return;
-  const it = app.itemsView.find((x) => x.id === li.dataset.id);
-  if (!it) { toast(`時間軸上找不到 ${li.dataset.id}`, 'warn'); return; }
+function goToSeg(id, { close = true } = {}) {
+  const it = app.itemsView.find((x) => x.id === id);
+  if (!it) { toast(`時間軸上找不到 ${id}`, 'warn'); return; }
   app.seek(it.start); timeline.ensureVisible(it.start, false);
   app.select({ kind: it.type === 'media' ? 'media' : 'item', id: it.id });
-  $('#issuesPop').hidden = true;
+  if (close) $('#issuesPop').hidden = true;
+}
+// 複製原文給 AI：作者不用看懂，貼過去 AI 就知道要修什麼
+async function copyIssues() {
+  const { errors, warnings } = currentIssues();
+  const text = `檢查結果（照 → 修，不用問我）：\n${[...errors.map((x) => `✖ ${x}`), ...groupIssues([], warnings).ai.flatMap((g) => g.raw.map((x) => `⚠ ${x}`))].join('\n')}`;
+  try { await navigator.clipboard.writeText(text); toast('已複製，貼給 AI', 'ok', 2500); }
+  catch { toast('瀏覽器不讓複製：請 AI 跑 build.mjs --check 看檢查結果', 'warn', 5000); }
+}
+$('#checkList').addEventListener('click', (e) => {
+  if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }
+  if (e.target.closest('summary, .chk-ai')) return;
+  const seg = e.target.closest('[data-seg]');
+  if (seg) { goToSeg(seg.dataset.seg, { close: false }); return; }
+  const li = e.target.closest('li');
+  if (li?.dataset.chkAct === 'speaker') { $('#issuesPop').hidden = true; openSpeakerDialog(null); return; }
+  if (li?.dataset.id) goToSeg(li.dataset.id);
 });
 document.addEventListener('pointerdown', (e) => { if (!$('#issuesPop').hidden && !e.target.closest('#issuesPop') && !e.target.closest('#stIssues')) $('#issuesPop').hidden = true; });
 $('#conflictKeep').addEventListener('click', async () => { $('#dlgConflict').close(); banner(''); await loadState({ keep: keepState() }); toast('已載入最新的檔案，你的調整還在，再按一次「儲存」', 'warn', 5000); });
@@ -2109,6 +2484,7 @@ $('#findAll').addEventListener('click', replaceAll);
 $('#findClose').addEventListener('click', () => $('#dlgFind').close());
 $('#findList').addEventListener('click', (e) => { const li = e.target.closest('li[data-n]'); if (!li) return; const c = app.cues.find((q) => q.n === Number(li.dataset.n)); if (c) { app.seek(c.start); timeline.ensureVisible(c.start, false); app.select({ kind: 'cue', id: c.n }, { lane: 'cap' }); } });
 $('#coachClose').addEventListener('click', () => { $('#coach').hidden = true; storage.set(COACH_KEY, '1'); });
+$('#coachFinalClose').addEventListener('click', () => { $('#coachFinal').hidden = true; storage.set(COACH_FINAL_KEY, '1'); });
 // 屬性面板
 $('#inspBody').addEventListener('input', onInspInput);
 $('#inspBody').addEventListener('change', onInspChange);
@@ -2156,7 +2532,7 @@ $('#tlHeads').addEventListener('change', (e) => {
 // 時間碼
 $('#tc').addEventListener('click', () => { const i = $('#tcInput'); i.hidden = false; $('#tc').hidden = true; i.value = fmtTC(app.t); i.focus(); i.select(); });
 $('#tcInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { const t = parseTC(e.target.value); if (t == null) toast('看不懂這個時間：寫成 00:01:23:10、1:23 或 83.5', 'warn'); else { step(0); app.seek(t); timeline.ensureVisible(t, false); } e.target.blur(); }
+  if (e.key === 'Enter') { const seg = app.itemsView.find((x) => x.id.toLowerCase() === e.target.value.trim().toLowerCase()); const t = seg ? null : parseTC(e.target.value); if (seg) goToSeg(seg.id); else if (t == null) toast('看不懂：寫時間（1:23、00:01:23:10）或段號（x0410）', 'warn'); else { step(0); app.seek(t); timeline.ensureVisible(t, false); } e.target.blur(); }
   else if (e.key === 'Escape') e.target.blur();
   e.stopPropagation();
 });
@@ -2191,35 +2567,48 @@ document.addEventListener('pointerdown', () => { clearTimeout(tipTimer); $('#tip
 
 // 鍵盤
 // ---------- 修改單（右側抽屜）：選段 → 點想怎麼改、寫描述（直接存）→ 累積多段 → 複製一行指令給 AI（待改的完整內容存 work/feedback/editor-requests.md）----------
-// 剪輯只能改字、刪清單項目；要加項目、換動畫、重新排版都寫在這裡，AI 照「照剪輯修改單改」直接改（每段一個子代理）
+// 剪輯台只能改字、刪清單項目；要加項目、換動畫、重新排版都寫在這裡，AI 照「照剪輯台修改單改」直接改（每段一個子代理）
 // 一段一筆 { id, tags, note, t（最後改的時間）, done?: { round, note } }：有勾或有描述才算一筆；改了就變回待改
 const RQ_TAGS = {
   anim: ['流程更細節', '以圖像展示為主', '文字少一點', '畫出關係（箭頭、引線）', '換一種動畫', '動作慢一點', '跟講的話對齊', '更有質感'],
-  media: ['標註更清楚', '推近到操作區', '加步驟清單', '換成動畫', '換一段錄影', '跟講的話對齊'],
+  media: ['播太快', '播太慢', '標註更清楚', '推近到操作區', '加步驟清單', '換成動畫', '換一段錄影', '跟講的話對齊'],
+  gap: ['加一張字卡', '加一段動畫', '放錄影或圖片'],
 };
 const rqKey = () => `editor-requests:${app.server?.project?.dir || ''}`;
-const rqKind = (sc) => (segType(sc) === 'media' ? 'media' : 'anim');
+const rqKind = (sc) => (!sc ? 'gap' : segType(sc) === 'media' ? 'media' : 'anim');
 let rqClearArm = false, rqMarks = '';
 function rqLoad() {
   try { const v = JSON.parse(localStorage.getItem(rqKey()) || '[]'); app.requests = Array.isArray(v) ? v.filter((x) => isObj(x) && x.id) : []; } catch { app.requests = []; }
 }
 function rqStore() { try { localStorage.setItem(rqKey(), JSON.stringify(app.requests)); } catch { /* 無痕視窗：只留在這個分頁 */ } }
-function rqSegOf(sel) { return sel && (sel.kind === 'item' || sel.kind === 'media' || sel.kind === 'sfx') ? sel.id : null; }
+function rqSegOf(sel) { return sel && (sel.kind === 'item' || sel.kind === 'media' || sel.kind === 'sfx' || sel.kind === 'gap') ? sel.id : null; }
+// 沒有卡片的講解也能寫進修改單：段號用 t＋起點秒數
+const gapId = (t) => `t${Math.floor(t)}`;
+function gapInfo(id) {
+  const at = Number(id.slice(1));
+  const span = app.uncovered.find(([a, b]) => at >= Math.floor(a) && at < b);
+  const start = span ? span[0] : at, end = span ? span[1] : at + 5;
+  return { start, end, subs: app.cues.filter((c) => c.end > start + 0.05 && c.start < end - 0.05) };
+}
 // 一段的資訊：名稱、動畫是什麼、完成影片時間、plan.json 的起訖、對應字幕
 function rqInfo(id) {
   const it = app.itemsView.find((x) => x.id === id), sc = sceneById(id);
+  if (!sc && /^t\d+$/.test(id)) {
+    const g = gapInfo(id);
+    return { id, it: { start: g.start, end: g.end }, sc: null, type: 'gap', gap: true, label: '這裡只有講者，想加畫面', what: '沒有卡片的講解（想加畫面）', file: null, out: [outOf(g.start, app.edit.cuts), outOf(g.end, app.edit.cuts)], span: `${fmtTC(g.start)} → ${fmtTC(g.end)}`, subs: g.subs };
+  }
   if (!sc) return null;
   const type = segType(sc);
   const def = type === 'scene' ? findSceneDef(app.server?.schema?.scenes, sc.scene) : type === 'fx' ? findFxDef(app.server?.schema?.fx, sc.fx) : null;
   const what = type === 'scene' ? `資訊卡 ${sc.scene}${def?.zh ? `（${def.zh}）` : ''}`
     : type === 'fx' ? `字卡動態 ${sc.fx}${def?.zh ? `（${def.zh}）` : ''}`
-    : type === 'custom' ? `自訂動畫${sc.layout ? `（${sc.layout}）` : ''}`
+    : type === 'custom' ? (sc.template ? `模板動畫 ${sc.template}（${customDef(sc)?.zh || ''}）` : customKind(sc))
     : `${app.mediaSeg(id)?.kind === 'image' ? '圖片' : '螢幕錄影'} ${String(sc.src || '').split('/').pop()}`;
   // 修改單寫從工作區根目錄起算的路徑（AI 在根目錄執行，不用猜相對誰）：custom 的 src 相對 work/hyperframes，media 的 src 相對專案
   const pd = app.server?.project?.dir || '';
   const file = !sc.src ? null : type === 'custom' ? `${pd}/work/hyperframes/${sc.src}` : type === 'media' ? `${pd}/${sc.src}` : null;
   const subs = it ? app.cues.filter((c) => c.end > it.start + 0.05 && c.start < it.end - 0.05) : [];
-  return { id, it, sc, type, label: it?.label || '', what, file, out: it ? [outOf(it.start, app.edit.cuts), outOf(it.end, app.edit.cuts)] : null,
+  return { id, it, sc, type, label: it?.title || it?.label || '', what, file, out: it ? [outOf(it.start, app.edit.cuts), outOf(it.end, app.edit.cuts)] : null,
     span: `${fmtTime(sc.from ?? sc.at)} → ${fmtTime(sc.to ?? (sc.duration != null ? `+${sc.duration} 秒` : '預設長度'))}`, subs };
 }
 const rqMs = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;   // 分:秒.十分之一（給 AI 看，不用格數）
@@ -2272,21 +2661,23 @@ function rqStateHtml(id) {
 }
 function rqTopHtml(id) {
   const inf = id ? rqInfo(id) : null;
-  if (!inf) return '<p class="ip-note">在時間軸點一段動畫或螢幕錄影，在這裡點想怎麼改、或自己寫（直接存）；可以累積很多段，最後一起複製給 AI。</p>';
+  if (!inf) return '<p class="ip-note">在時間軸或「段落」分頁點一段，在這裡點想怎麼改、或自己寫（直接存）；可以累積很多段，最後一起複製給 AI。</p>';
   const on = app.requests.find((x) => x.id === id)?.tags || [];
-  return `<div class="rq-seg"><div class="t">${esc(inf.id)}　${esc(inf.label)}</div><div class="m">${esc(inf.what)}<br>完成影片 ${rqTime(inf)}</div></div>
-    ${inf.subs.length ? `<ul class="rq-subs">${inf.subs.map((c) => `<li><span class="n">#${c.n}</span>${esc(c.text)}</li>`).join('')}</ul>` : '<p class="ip-note">這段時間沒有字幕</p>'}
+  // 對應字幕預設收起：選項比字幕重要，小視窗也要一眼看到
+  return `<div class="rq-seg"><div class="t">${esc(inf.id)}　${esc(inf.it?.title || inf.label)}</div><div class="m">${esc(inf.what)}<br>完成影片 ${rqTime(inf)}</div></div>
+    ${inf.subs.length ? `<details class="rq-subwrap"><summary>這段的字幕（${inf.subs.length} 句）</summary><ul class="rq-subs">${inf.subs.map((c) => `<li><span class="n">#${c.n}</span>${esc(c.text)}</li>`).join('')}</ul></details>` : '<p class="ip-note">這段時間沒有字幕</p>'}
     <div class="rq-tags" role="group" aria-label="想怎麼改">${RQ_TAGS[rqKind(inf.sc)].map((t) => `<button class="toggle small${on.includes(t) ? ' on' : ''}" data-rq="tag" data-t="${esc(t)}" aria-pressed="${on.includes(t)}">${esc(t)}</button>`).join('')}</div>
     <textarea id="rqNote" rows="4" placeholder="自己描述（選填）：例如「三個步驟改成手機畫面一步步亮起」">${esc(app.requests.find((x) => x.id === id)?.note || '')}</textarea>
     <div id="rqState">${rqStateHtml(id)}</div>`;
 }
 function rqListsHtml(cur) {
   const pend = rqPending(), done = app.requests.filter((r) => r.done);
-  const lab = (r) => { const i = rqInfo(r.id); return i ? esc(i.label) : '<span class="gone">plan.json 裡找不到這段</span>'; };
+  const lab = (r) => { const i = rqInfo(r.id); return i ? esc(i.label) : '<span class="gone">找不到這段（可能被 AI 改名或刪掉了）</span>'; };
   const go = (r) => `<button class="small ghost" data-rq="go" data-id="${esc(r.id)}" data-tip="跳到這段">↗</button>`;
   const del = (r) => `<button class="small ghost" data-rq="del" data-id="${esc(r.id)}" data-tip="從修改單拿掉" aria-label="拿掉 ${esc(r.id)}">✕</button>`;
   const badge = (r) => { const s = rqStatus(r); return s.label ? `<span class="rq-sent ${s.cls}" role="status" data-tip="${esc(s.detail)}">${s.label}</span>` : ''; };
-  const pi = pend.map((r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${badge(r)}${go(r)}${del(r)}</div>
+  const failedWhy = (r) => { const st = rqStatus(r); return st.cls === 'failed' ? `<div class="what err-ink">${esc(st.detail)}</div>` : ''; };
+  const pi = pend.map((r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${badge(r)}${go(r)}${del(r)}</div>${failedWhy(r)}
     ${r.tags.length ? `<div class="chips">${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`).join('');
   const di = done.map((r) => `<li class="rq-item done${r.id === cur ? ' cur' : ''}"><div class="h"><b>✓ ${esc(r.id)}</b><span class="lab">${lab(r)}</span><span class="rq-done">${esc(r.done.round)}</span>
     <button class="small primary" data-rq="result" data-id="${esc(r.id)}" data-tip="切到完成影片預覽，跳到這段開頭">▶ 看結果</button>${del(r)}</div><div class="what" data-tip="${esc(r.done.note)}">${esc(r.done.note)}</div></li>`).join('');
@@ -2301,6 +2692,8 @@ function renderRequests() {
   if (marks !== rqMarks) { rqMarks = marks; timeline.invalidate(); }
   const open = !$('#requests').hidden;
   $('#btnRequests').setAttribute('aria-pressed', String(open));
+  const tab = $('.side-tabs [data-side="rq"]');
+  tab.textContent = pend.length ? `修改單 ${pend.length}` : '修改單';
   if (!open) return;
   const id = rqSegOf(app.selection), top = $('#rqTop');
   // 正在打描述：不重畫輸入框（會丟游標、打斷注音），只更新狀態列
@@ -2308,7 +2701,7 @@ function renderRequests() {
   else { top.dataset.id = id || ''; top.innerHTML = rqTopHtml(id); }
   $('#rqLists').innerHTML = rqListsHtml(id);
   $('#rqFoot').innerHTML = `<button class="primary${pend.length ? '' : ' is-disabled'}" data-rq="copy" data-why="${app.requests.length ? '沒有待改的段（已改完的不會再送）' : '修改單是空的'}">複製給 AI（${pend.length} 段待改）</button>
-    <p class="ip-note">複製後請貼給 AI；AI 回報開始後，這段才會顯示「生成中」。完整內容存在 ${esc(app.server?.project?.dir || '')}/work/feedback/editor-requests.md。</p>
+    <p class="ip-note" data-tip="完整內容存在 ${esc(app.server?.project?.dir || '')}/work/feedback/editor-requests.md">複製後貼給 AI；AI 開始改之後，這段會顯示「生成中」。</p>
     ${app.requests.length ? `<button class="small ghost" data-rq="clear">${rqClearArm ? '再按一次清空' : '清空修改單'}</button>` : ''}`;
 }
 // 複製給 AI 的只有這一行（待改的完整內容存在 editor-requests.md，AI 讀檔）
@@ -2316,19 +2709,20 @@ const rqCommand = (revision, pending = rqPending()) => {
   const project = app.server?.project?.dir || '';
   const cli = `node shared/template/tools/editor.mjs --project ${JSON.stringify(project)}`;
   const progress = `${revision ? '' : `先用 ${cli} --requests-state status 取得這份修改單的 revision；`}開始處理時用 ${cli} --requests-state generating --request-revision ${revision || '<剛讀取的 revision>'} --ids ${pending.map((r) => r.id).join(',')} 回報狀態；build、audit 通過後用同一指令把 generating 換成 done（可加 --round rN --message 描述），失敗則換成 failed --message 原因；逐段回報可調整 --ids，版本衝突就停下重新讀取修改單。`;
-  return `照剪輯修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：直接做，不用先出提案；每段派一個子代理平行改，全部回來後 build、audit，停在停點 ④。${progress}`;
+  return `照剪輯台修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：直接做，不用先出提案；每段派一個子代理平行改，全部回來後 build、audit，停在停點 ④。${progress}`;
 };
 function rqMarkdown() {
   const now = new Date();
   const p2 = (n) => String(n).padStart(2, '0');
   const stamp = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}`;
-  const L = ['# 剪輯修改單', '', rqCommand(), '',
-    `（${stamp} 從剪輯複製）`];
+  const L = ['# 剪輯台修改單', '', rqCommand(), '',
+    `（${stamp} 從剪輯台複製）`];
   rqPending().forEach((r, k) => {
     const i = rqInfo(r.id);
     L.push('', `## ${k + 1}. ${r.id}${i?.label ? `　${i.label}` : ''}`);
     if (!i) { L.push('- plan.json 裡找不到這段（可能被改名或刪掉了）'); }
     else L.push(`- 動畫：${i.what}`, ...(i.file ? [`- 檔案：${i.file}`] : []), `- 完成影片時間：${rqTime(i)}（${app.server?.project?.dir || ''}/work/hyperframes/plan.json：${i.span}）`);
+    if (i?.gap) L.push('- 這裡現在沒有段落：照時間和字幕新增一段（段號自己取），不是改既有的段；回報狀態時用上面的段號');
     if (r.tags.length) L.push(`- 要改：${r.tags.join('、')}`);
     if (r.note.trim()) L.push(`- 描述：${r.note.trim().replace(/\s*\n\s*/g, '／')}`);
     if (i?.subs.length) { L.push('- 對應字幕：'); for (const c of i.subs) L.push(`  - #${c.n} ${c.text}`); }
@@ -2357,7 +2751,7 @@ async function rqCopy() {
     rqStore();
     toast(`${n} 段存到 ${saved}，指令已複製 → 貼給 AI`, 'ok', 6000);
   }
-  else toast(`${n} 段存到 ${saved}，但沒辦法寫進剪貼簿 → 跟 AI 說「照剪輯修改單改」`, 'warn', 7000);
+  else toast(`${n} 段存到 ${saved}，但沒辦法寫進剪貼簿 → 跟 AI 說「照剪輯台修改單改」`, 'warn', 7000);
   renderRequests();
 }
 function onRqClick(e) {
@@ -2375,14 +2769,16 @@ function onRqClick(e) {
   }
   if (act === 'del') { app.requests = app.requests.filter((x) => x.id !== b.dataset.id); rqStore(); renderRequests(); return; }
   if (act === 'go') {
+    if (/^t\d+$/.test(b.dataset.id) && !sceneById(b.dataset.id)) { const g = gapInfo(b.dataset.id); app.seek(g.start); timeline.ensureVisible(g.start, false); app.select({ kind: 'gap', id: b.dataset.id }); return; }
     const it = app.itemsView.find((x) => x.id === b.dataset.id);
-    if (!it) { toast('plan.json 裡找不到這段', 'warn'); return; }
-    app.select({ kind: it.type === 'media' ? 'media' : 'item', id: it.id }); app.seek(it.start + 0.05);
+    if (!it) { toast('找不到這段（可能被 AI 改名或刪掉了）', 'warn'); return; }
+    app.select({ kind: it.type === 'media' ? 'media' : 'item', id: it.id }); app.seek(it.start + 0.05); timeline.ensureVisible(it.start, false);
     return;
   }
   if (act === 'result') {
+    if (/^t\d+$/.test(b.dataset.id) && !sceneById(b.dataset.id)) return setMode('player', { focus: gapInfo(b.dataset.id).start });
     const it = app.itemsView.find((x) => x.id === b.dataset.id);
-    if (!it) { toast('plan.json 裡找不到這段', 'warn'); return; }
+    if (!it) { toast('找不到這段（可能被 AI 改名或刪掉了）', 'warn'); return; }
     app.select({ kind: it.type === 'media' ? 'media' : 'item', id: it.id });
     return setMode('player', { focus: it.start + 0.05 });
   }
@@ -2392,11 +2788,181 @@ function onRqClick(e) {
     rqClearArm = false; app.requests = []; rqStore(); renderRequests();
   }
 }
-function setRequestsOpen(open) {
-  $('#requests').hidden = !open;
-  $('#workspace').classList.toggle('with-rq', open);
-  try { localStorage.setItem('editor-requests-open', open ? '1' : '0'); } catch { /* 只是記住開關 */ }
+function setRequestsOpen(open) { setSide(open ? 'rq' : 'insp', { open }); }
+// 視窗窄時右側面板變抽屜：平常收起來，影片和時間軸都看得到
+function setDrawer(open) {
+  $('#inspector').classList.toggle('open', open);
+  $('#btnSide').setAttribute('aria-pressed', String(open));
+}
+// 視窗矮時時間軸變薄，把高度留給影片
+function fitLayout() {
+  if (timeline.setCompact(window.innerHeight < 860)) { $('#tlHeads').dataset.built = ''; renderHeads(); timeline.invalidate(); }
+}
+
+// ---------- 右側面板：屬性、段落、字幕、修改單同一欄切換 ----------
+let sideTimer = null;
+function setSide(name, { open = true } = {}) {
+  app.side = name;
+  if (open) setDrawer(true);
+  const panes = { insp: '#sideInsp', segs: '#sideSegs', cues: '#sideCues', rq: '#requests' };
+  for (const [k, sel] of Object.entries(panes)) $(sel).hidden = k !== name;
+  for (const b of $$('.side-tabs [data-side]')) { const on = b.dataset.side === name; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+  try { localStorage.setItem('editor-requests-open', name === 'rq' ? '1' : '0'); } catch { /* 只是記住開關 */ }
   renderRequests();
+  renderSide();
+}
+function renderSideSoon() { if (!sideTimer) sideTimer = setTimeout(() => { sideTimer = null; renderSide(); }, 60); }
+function renderSide() { if (app.side === 'segs') renderSegList(); else if (app.side === 'cues') renderCueList(); }
+const mmssOf = (t) => { const s = Math.max(0, Math.floor(t)), m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
+const parseClock = (q) => { const m = /^(\d+):(\d{1,2})$/.exec(q.trim()); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+const segKind = (it) => (sceneById(it.id)?.design ? 'design' : it.type);
+const isChapter = (sc) => segType(sc) === 'scene' && findSceneDef(app.server?.schema?.scenes, sc.scene)?.key === 'chapter';
+
+function renderSegList() {
+  const q = $('#segSearch').value.trim().toLowerCase(), at = parseClock(q);
+  const sel = rqSegOf(app.selection);
+  const out = [];
+  let shown = 0, lastCh = null;
+  for (const it of app.itemsView) {
+    const sc = sceneById(it.id);
+    const outT = outOf(it.start, app.edit.cuts);
+    if (sc && isChapter(sc)) lastCh = sc.slots?.title ? `${sc.slots.title}${sc.slots.sub ? `　${sc.slots.sub}` : ''}` : it.id;
+    const hit = !q || (at != null ? at >= outT && at < outOf(it.end, app.edit.cuts) : `${it.id} ${it.title} ${segCues(it)}`.toLowerCase().includes(q));
+    if (!hit) continue;
+    if (lastCh && !q) { out.push(`<li class="side-ch">${esc(lastCh)}</li>`); lastCh = null; }
+    const mark = app.rqMark?.(it.id);
+    const isSel = sel === it.id;
+    out.push(`<li class="side-row k-${segKind(it)}${isSel ? ' sel' : ''}" data-seg="${esc(it.id)}"><span class="i">${esc(it.id)}</span><span class="t">${mmssOf(outT)}</span><span class="x">${esc(it.title)}${it.type === 'media' && speedSummary(it.knots) ? `<small class="sp-note">${esc(speedSummary(it.knots))}</small>` : ''}</span><span class="m">${mark === 'todo' ? '✎' : mark === 'done' ? '✓' : it.warnings ? '⚠' : ''}</span>${isSel ? `<div class="side-acts"><button class="small" data-seg-act="insp">看屬性</button><button class="small" data-seg-act="req">✎ 寫進修改單</button>${app.server?.preview?.built ? '<button class="small" data-seg-act="final">在完成影片預覽看</button>' : ''}</div>` : ''}</li>`);
+    shown++;
+  }
+  $('#segList').innerHTML = out.join('') || '<li class="side-ch">沒有符合的段</li>';
+  $('#segCount').textContent = q ? `找到 ${shown} 段` : `${shown} 段`;
+  markNowRow(true);
+}
+const segCues = (it) => app.cues.filter((c) => c.end > it.start + 0.05 && c.start < it.end - 0.05).map((c) => c.text).join(' ');
+
+function renderCueList() {
+  const raw = $('#cueSearch').value.trim(), q = raw.toLowerCase(), n = /^#?(\d+)$/.exec(raw)?.[1];
+  const sel = app.selection?.kind === 'cue' ? app.selection.id : null;
+  const list = app.cues.filter((c) => !q || (n ? c.n === Number(n) : c.text.toLowerCase().includes(q)));
+  const max = capMax();
+  // 正在這一頁改字：不重畫，不然游標會跑掉
+  if (document.activeElement?.classList.contains('cue-edit')) return;
+  $('#cueList').innerHTML = list.map((c) => {
+    const isSel = sel === c.n, over = visibleLen(c.text) > max;
+    return `<li class="side-row cue${isSel ? ' sel' : ''}" data-cue="${c.n}"><span class="i">#${c.n}</span><span class="t">${mmssOf(outOf(c.start, app.edit.cuts))}</span><span class="x${over ? ' over' : ''}">${esc(c.text)}</span>${isSel ? `<input class="cue-edit" value="${esc(c.text)}" aria-label="改第 ${c.n} 句字幕">` : ''}</li>`;
+  }).join('') || '<li class="side-ch">沒有符合的字幕</li>';
+  $('#cueCount').textContent = q ? `找到 ${list.length} 句` : `${list.length} 句`;
+  markNowRow(true);
+}
+
+// ---------- 現在播到哪一段 ----------
+let nowKey = null, nowRowKey = null;
+function currentSeg(t) {
+  // 差一格內也算（跳段時播放頭會對齊到格，可能落在起點前一點）；同類疊在一起時算最後開始的那段
+  const on = app.itemsView.filter((it) => t >= it.start - 0.034 && t < (it.shownEnd ?? it.end));
+  const rank = (it) => (it.type === 'media' ? 0 : it.type === 'custom' ? 1 : it.type === 'scene' ? 2 : 3);
+  return on.sort((a, b) => rank(a) - rank(b) || b.start - a.start)[0] || null;
+}
+function renderNow() {
+  const seg = currentSeg(app.t);
+  const gap = seg ? null : app.uncovered.find(([a, b]) => app.t >= a && app.t < b);
+  const key = seg ? `s:${seg.id}:${seg.title}` : gap ? `g:${gap[0]}` : 'none';
+  markNowRow();
+  if (key === nowKey) return;
+  nowKey = key;
+  const bar = $('#nowBar');
+  if (seg) bar.innerHTML = `<span class="k">現在</span><button class="i small ghost" data-now="go" data-tip="選這段，看能改什麼">${esc(seg.id)}</button><span class="x" title="${esc(seg.title)}">${esc(seg.title)}</span><span class="t">${mmssOf(outOf(seg.start, app.edit.cuts))}–${mmssOf(outOf(seg.end, app.edit.cuts))}</span><button class="small" data-now="req">✎ 這段想改</button>`;
+  else if (gap) bar.innerHTML = `<span class="k">現在</span><span class="x">這裡只有講者，沒有卡片</span><span class="t">${mmssOf(outOf(gap[0], app.edit.cuts))}–${mmssOf(outOf(gap[1], app.edit.cuts))}</span><button class="small" data-now="gap">✎ 這裡想加畫面</button>`;
+  else bar.innerHTML = '<span class="k">現在</span><span class="x">這裡只有講者</span>';
+}
+function markNowRow(force = false) {
+  if (app.side !== 'segs' && app.side !== 'cues') return;
+  const isSeg = app.side === 'segs';
+  const id = isSeg ? currentSeg(app.t)?.id : app.cues.find((c) => app.t >= c.start && app.t < c.end)?.n;
+  const key = `${app.side}:${id}`;
+  if (!force && key === nowRowKey) return;
+  nowRowKey = key;
+  const list = isSeg ? $('#segList') : $('#cueList');
+  list.querySelector('.side-row.now')?.classList.remove('now');
+  if (id == null) return;
+  const row = list.querySelector(isSeg ? `[data-seg="${CSS.escape(String(id))}"]` : `[data-cue="${id}"]`);
+  if (row) { row.classList.add('now'); if (engine().playing || force) row.scrollIntoView({ block: 'nearest' }); }
+}
+function neighborSeg(dir) {
+  const list = app.itemsView;
+  if (!list.length) return;
+  const cur = currentSeg(app.t);
+  const i = cur ? list.indexOf(cur) : list.findIndex((it) => it.start > app.t) - (dir > 0 ? 1 : 0);
+  const next = list[Math.max(0, Math.min(list.length - 1, i + dir))];
+  if (next) goToSeg(next.id);
+}
+$('.side-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-side]'); if (b) setSide(b.dataset.side); });
+$('#btnSide').addEventListener('click', () => setDrawer(!$('#inspector').classList.contains('open')));
+$('#btnSideClose').addEventListener('click', () => setDrawer(false));
+window.addEventListener('resize', fitLayout);
+$('#segSearch').addEventListener('input', renderSegList);
+$('#cueSearch').addEventListener('input', renderCueList);
+for (const id of ['#segSearch', '#cueSearch']) $(id).addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.target.value = ''; renderSide(); e.target.blur(); } if (e.key === 'Enter') { e.preventDefault(); const r = e.target.closest('.side-pane').querySelector('.side-row'); r?.click(); } });
+$('#segList').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-seg]');
+  if (!row) return;
+  const id = row.dataset.seg, act = e.target.closest('[data-seg-act]')?.dataset.segAct;
+  if (act === 'insp') { setSide('insp'); return; }
+  if (act === 'req') { setRequestsOpen(true); return; }
+  const it = app.itemsView.find((x) => x.id === id);
+  if (act === 'final' && it) { setMode('player', { focus: it.start + 0.05 }); return; }
+  goToSeg(id);
+});
+$('#cueList').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-cue]');
+  if (!row || e.target.matches('.cue-edit')) return;
+  const n = Number(row.dataset.cue), c = app.cues.find((x) => x.n === n);
+  if (!c) return;
+  app.seek(c.start); timeline.ensureVisible(c.start, false);
+  app.select({ kind: 'cue', id: n }, { lane: 'cap' });
+  renderCueList();
+  const i = $('#cueList .cue-edit');
+  i?.focus(); i?.setSelectionRange(i.value.length, i.value.length);
+});
+const commitCueEdit = (i) => {
+  const n = Number(i.closest('[data-cue]').dataset.cue), c = app.cues.find((x) => x.n === n);
+  const v = i.value.trim();
+  if (!c || v === c.text) return;
+  if (!v) { i.value = c.text; toast('字幕不能是空的；不要這句請到「屬性」刪除', 'warn'); return; }
+  setCue(n, { text: v });
+};
+$('#cueList').addEventListener('keydown', (e) => {
+  if (!e.target.matches('.cue-edit')) return;
+  if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); commitCueEdit(e.target); e.target.blur(); renderCueList(); }
+  if (e.key === 'Escape') { e.target.blur(); renderCueList(); }
+  e.stopPropagation();
+});
+$('#cueList').addEventListener('focusout', (e) => { if (e.target.matches('.cue-edit')) { commitCueEdit(e.target); renderSideSoon(); } });
+$('#nowBar').addEventListener('click', (e) => {
+  const act = e.target.closest('[data-now]')?.dataset.now;
+  if (!act) return;
+  if (act === 'gap') { const g = app.uncovered.find(([a, b]) => app.t >= a && app.t < b); if (g) app.select({ kind: 'gap', id: gapId(g[0]) }); setRequestsOpen(true); return; }
+  const seg = currentSeg(app.t);
+  if (!seg) return;
+  app.select({ kind: seg.type === 'media' ? 'media' : 'item', id: seg.id });
+  if (act === 'req') setRequestsOpen(true);
+  else if (app.side === 'rq') renderRequests(); else setSide(app.side === 'segs' ? 'segs' : 'insp');
+});
+
+// 分鏡表的「在預覽看」、AI 給的網址：?seg=x0410 或 ?t=12:30 打開就停在那裡
+function tryDeepLink() {
+  const p = new URLSearchParams(location.search), seg = p.get('seg'), t = p.get('t');
+  if (app.deepLinked || (!seg && !t)) return;
+  if (seg) {
+    if (!app.itemsView.some((x) => x.id === seg)) { if (app.reportReady) { app.deepLinked = true; toast(`找不到 ${seg}（可能被 AI 改名或刪掉了）`, 'warn', 5000); } return; }
+    app.deepLinked = true;
+    goToSeg(seg);
+    return;
+  }
+  const at = parseTC(t);
+  app.deepLinked = true;
+  if (at != null) { app.seek(at); timeline.ensureVisible(at, false); }
 }
 $('#rqBody').addEventListener('click', onRqClick);
 $('#rqFoot').addEventListener('click', onRqClick);
@@ -2407,7 +2973,6 @@ $('#rqBody').addEventListener('input', (e) => {
   renderRequests();
 });
 $('#btnRequests').addEventListener('click', () => setRequestsOpen($('#requests').hidden));
-$('#btnRqClose').addEventListener('click', () => setRequestsOpen(false));
 
 document.addEventListener('keydown', (e) => {
   const tag = e.target.tagName;
@@ -2419,7 +2984,7 @@ document.addEventListener('keydown', (e) => {
   if (mod && (k === 'z' || k === 'y') && !typing) { e.preventDefault(); if (k === 'y' || e.shiftKey) redo(); else undo(); return; }
   if (mod && k === 'b' && !typing) { e.preventDefault(); bladeKey(); return; }
   if (typing || mod || e.altKey) return;
-  if (document.querySelector('dialog[open]') || !$('#coach').hidden) return;
+  if (document.querySelector('dialog[open]') || !$('#coach').hidden || !$('#coachFinal').hidden) return;
   switch (k) {
     case ' ': e.preventDefault(); togglePlay(); break;
     case 'k': stopShuttle(); engine().pause(); break;
@@ -2434,6 +2999,8 @@ document.addEventListener('keydown', (e) => {
     case 'v': setTool('select'); break;
     case 'b': bladeKey(); break;
     case 's': toggleSnap(); break;
+    case '[': neighborSeg(-1); break;
+    case ']': neighborSeg(1); break;
     case 'f': $('#btnFull').click(); break;
     case 'Enter': if (selectedCue()) { e.preventDefault(); openCapEditor(selectedCue().n); } break;
     case 'Delete': case 'Backspace': e.preventDefault(); deleteSelection(); break;
@@ -2451,12 +3018,15 @@ window.addEventListener('beforeunload', (e) => { if (isDirty()) { e.preventDefau
 
 // ---------- 開始 ----------
 (async () => {
+  fitLayout();
   renderCheck(); renderMode();
   await loadState();
   requestAnimationFrame(frame);
   setInterval(pollVersion, 2500);
-  // 停點 ④ 的網址：直接開在完成影片預覽，是來看片的，不跳剪輯教學（還沒 build、沒有播放器時 setMode 會提示原因，留在即時模擬）
+  // 停點 ④ 的網址：直接開在完成影片預覽，是來看片的，第一次講看片要做什麼，不跳剪輯台教學（還沒 build、沒有播放器時 setMode 會提示原因，留在即時模擬）
   const viewFinal = new URLSearchParams(location.search).get('view') === 'final';
   if (viewFinal) await setMode('player');
-  if (!viewFinal && !storage.get(COACH_KEY)) $('#coach').hidden = false;
+  if (viewFinal) { if (!storage.get(COACH_FINAL_KEY)) $('#coachFinal').hidden = false; }
+  else if (!storage.get(COACH_KEY)) $('#coach').hidden = false;
+  tryDeepLink();
 })();

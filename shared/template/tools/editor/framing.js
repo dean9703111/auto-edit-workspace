@@ -160,7 +160,7 @@ function facts() {
   const cut = [m0 < L.edge && '左', m1 < L.edge && '上', m2 > W() - L.edge && '右'].filter(Boolean);
   const rows = [
     ['放大', `${z.toFixed(2)} 倍（框 ${F.w}×${hOf(F.w)}，在 ${W()}×${H()} 畫面上的 x ${Math.round(F.x)}、y ${Math.round(F.y)}）`],
-    ['畫質', D.srcSize[0] < W() || z > 1 ? `來源每個像素放大 ${up.toFixed(2)} 倍${up > L.upscaleWarn ? `，超過 ${L.upscaleWarn} 倍會明顯變糊` : ''}` : '原尺寸，不放大', up > L.upscaleWarn],
+    ['畫質', D.srcSize[0] < W() || z > 1 ? `${up > L.upscaleWarn ? '會明顯變糊' : '還清楚'}（每個像素放大 ${up.toFixed(2)} 倍，超過 ${L.upscaleWarn} 倍會變糊）` : '原尺寸，不放大', up > L.upscaleWarn],
     ['手勢', cut.length ? `會切到${cut.join('、')}側的手勢（橘框超出畫面）` : '講者動作範圍都在框裡', cut.length > 0],
   ];
   if (portrait()) {
@@ -181,7 +181,7 @@ function facts() {
     return li;
   }));
   $('note').textContent = D.plan.speakerBox
-    ? '已經量過講者框：儲存時會跟著新的框換算，不用重量。儲存後會自動更新剪輯預覽。'
+    ? '已經量過講者框：儲存時會跟著新的框換算，不用重量。儲存後會自動更新剪輯台預覽。'
     : '存好後跟 AI 說「調好了」；不想調就說「用建議的」。';
 }
 
@@ -262,12 +262,12 @@ async function save() {
     if (!sameLook(look, savedLook)) body.look = { color: r2(look.color), slim: r2(look.slim), ...(look.beauty > 0 ? { beauty: r2(look.beauty) } : {}) };
     r = await fetch('/api/framing/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     j = await r.json().catch(() => null);
-  } catch (e) { j = { message: `連不到剪輯：${e.message}` }; }
+  } catch { j = { message: '連不到剪輯台，這次沒有存：請 AI 重新啟動剪輯台，再按一次「儲存」。你拖好的框還在。' }; }
   if (!r?.ok) {
     $('saveState').dataset.state = 'error';
-    $('saveState').querySelector('.txt').textContent = r?.status === 409 ? 'plan.json 被改過' : '沒有存';
+    $('saveState').querySelector('.txt').textContent = r?.status === 409 ? '被別人改過' : '沒有存';
     msg.className = 'fr-msg err';
-    msg.textContent = `${j?.message || `存檔失敗（HTTP ${r?.status}）`}${r?.status === 409 ? '\n→ 重新整理這一頁拿最新的 plan.json，再存一次' : ''}`;
+    msg.textContent = `${j?.message || `存檔失敗（HTTP ${r?.status}）`}${r?.status === 409 ? '\n→ 重新整理這一頁拿最新的內容，再存一次' : ''}`;
     $('btnSave').disabled = false;
     return false;
   }
@@ -276,10 +276,13 @@ async function save() {
   savedLook = { ...look };
   Object.assign(D.plan, { exists: j.plan.exists, hash: j.plan.hash, frame: j.plan.frame, speakerBox: j.plan.speakerBox });
   saved = j.plan.frame ? fromArr(j.plan.frame) : null;
-  msg.textContent = j.design ? '構圖、主色與背景已儲存並套用。' : j.wrote?.plan ? '構圖設定已儲存。' : '設定沒有變更。';
+  msg.textContent = j.design ? '構圖、主色與背景都存好了。' : j.wrote?.plan ? '構圖設定已儲存。' : '設定沒有變更。';
   if (j.notes?.length) msg.textContent += '\n講者框已跟著構圖調整，不用重新標記。';
   if (j.framingUpdate?.running) {
-    msg.textContent += '\n正在自動更新剪輯預覽，完成後會直接套用，可以離開這一頁。';
+    msg.textContent += '\n正在自動更新剪輯台預覽，完成後會直接套用，可以離開這一頁。';
+    const wait = document.createElement('span');
+    wait.id = 'previewWait';
+    msg.append('\n', wait);
     watchPreview();
   }
   render();
@@ -295,12 +298,17 @@ function watchPreview() {
       const r = await fetch('/api/version'), j = await r.json();
       const update = j.framingUpdate;
       if (!r.ok || !update) throw new Error('讀不到預覽更新狀態');
-      if (update.running) { watchPreview(); return; }
+      if (update.running) {
+        const b = j.build || {}, sec = Math.round(b.seconds || 0), wait = sec < 60 ? `${sec} 秒` : `${Math.floor(sec / 60)} 分鐘`;
+        $('previewWait').textContent = `已經 ${wait}${b.slowSeconds ? `，上次花 ${Math.ceil(b.slowSeconds / 60)} 分鐘` : '，長片要十幾分鐘'}`;
+        watchPreview();
+        return;
+      }
       $('msg').className = update.ok ? 'fr-msg' : 'fr-msg err';
-      $('msg').textContent = update.ok ? '已儲存，剪輯預覽已自動更新。' : `構圖已儲存，但${update.message || '預覽更新失敗，請在剪輯按「重新產生」查看訊息'}`;
-    } catch (e) {
+      $('msg').textContent = update.ok ? '已儲存，剪輯台預覽已自動更新。' : `構圖已儲存，但${update.message || '預覽更新失敗，請在剪輯台按「重新產生」查看訊息'}`;
+    } catch {
       $('msg').className = 'fr-msg err';
-      $('msg').textContent = `構圖已儲存，但讀不到預覽更新狀態：${e.message}。請回剪輯查看。`;
+      $('msg').textContent = '構圖已儲存，但讀不到預覽更新狀態：連不到剪輯台。請 AI 重新啟動後回剪輯台查看。';
     }
   }, 1000);
 }
@@ -324,9 +332,9 @@ function renderLook() {
   let note = '要開就勾選；調光拖滑桿右邊的畫面馬上變（近似效果，完成影片照 LUT 更準）。';
   const needDetect = faceOn(look) && !lm.ready;
   if (S.running) note = `正在${S.line}（在背景跑，可以繼續拖框；好了下面會出現前後對照）`;
-  else if (needDetect) note = `瘦臉、美顏要先偵測整支影片的臉，長片要十幾分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
+  else if (needDetect) note = `瘦臉、美顏要先偵測整支影片的臉，長片要二、三十分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
   else if (faceOn(look) && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，完成影片只調光。';
-  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。已有完成影片時，儲存會自動更新底片與剪輯預覽。';
+  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。已有完成影片時，儲存會自動更新底片與剪輯台預覽。';
   $('lookNote').textContent = note;
   $('btnDetect').hidden = !needDetect || !!S.running;
   const showFaces = faceOn(look) && lm.ready && lm.slimOk !== false;

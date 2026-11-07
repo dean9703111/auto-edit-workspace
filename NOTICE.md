@@ -104,3 +104,7 @@
 - 版權：Copyright 2022–2023 The MediaPipe Authors（Google LLC）
 - 出處：程式庫 https://www.npmjs.com/package/@mediapipe/tasks-vision （1.2.0，原封不動的檔案）；模型 https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
 - 說明：只用來在本機偵測講者的臉部位置（瘦臉），不上傳任何畫面。檔案沒有修改；每個檔的大小與 sha256 在同資料夾的 `manifest.json`。模型的授權寫的是 Google 文件標示的 Apache-2.0，作者 push 前要再對一次 Face Landmarker model card 原文
+
+## 繁簡對照表
+
+`shared/template/tools/lib/zh-table.mjs` 由 ICU（Unicode CLDR 的 Hant-Hans、Hans-Hant 轉換規則）產生，授權為 Unicode License（<https://www.unicode.org/license.txt>）。

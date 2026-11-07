@@ -243,7 +243,7 @@
 ```
 
 - 「插圖元件（狀態）」：這一拍出現或換狀態的元件名稱＋狀態，例 `phoneTripod`（landscape, rec）、`laptop`（play）、`router`（led）。只寫畫廊裡的元件，或插圖清單「新建 SVG」那一列的名稱；用圖示組合的寫在「畫面上出現什麼」，這欄寫「—」。
-- 「位置」：寫 `<區域>｜<排法> <第幾個>`。區域是 `panelTop`（全畫面主卡區）或 `band`（下方字卡帶）；排法是 `row`（第一列）、`row2`（第二列）、`col`、`cols-2`、`grid-2x2`、`free`（`shared/style.md`「版面」）；第幾個寫「第 k 個／這一列共 N 個」。例：`panelTop｜row 1／3`、`panelTop｜row2 1／1`、`panelTop｜cols-2 左`、`band｜free`。不寫像素座標，位置由排版程式算；換狀態的拍寫「同物件」，沒有新元件的拍寫「—」。
+- 「位置」：寫 `<區域>｜<排法> <第幾個>`。區域是 `panelTop`（全畫面主卡區）、`full`（沒有講者的全螢幕：x 120–1800、y 40–900）或 `band`（下方字卡帶）；排法是 `row`（第一列）、`row2`（第二列）、`col`、`cols-2`、`grid-2x2`、`free`（`shared/style.md`「版面」）；第幾個寫「第 k 個／這一列共 N 個」。例：`panelTop｜row 1／3`、`panelTop｜row2 1／1`、`panelTop｜cols-2 左`、`band｜free`。不寫像素座標，位置由排版程式算；換狀態的拍寫「同物件」，沒有新元件的拍寫「—」。
 
 ### 5.2 拍型 S：場景骨架 → 物件逐個進 → 狀態切換 → 結果
 

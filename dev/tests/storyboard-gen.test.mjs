@@ -40,7 +40,7 @@ test('renderStoryboard：網頁讀得懂、每段一節、總覽與判定表齊�
   const ids = st.sections.filter((s) => s.id).map((s) => s.id);
   assert.deepEqual(ids, ['s0101', 'x0102', 'd0103', 'm0104']);
   assert.equal(st.overview.s0101.summary, '在講同步');
-  assert.match(md, /\| s0101 \| 在講同步 \| ④ 重點 \| 07 重點字卡 \| 段長 < 4 秒 \|/);
+  assert.match(md, /\| s0101 \| 在講同步 \| 07 重點字卡 \| 只有一句重點 \|/);
   assert.match(md, /講者框 speakerBox＝\[1,2,3,4\]/);
   assert.match(md, /\| 手機 \| smartphone \|/);
   assert.match(md, /畫面文字：前句「前句」；重點「一鍵同步」/);
@@ -113,4 +113,45 @@ test('parseDesign：概念、畫面、分鏡表', () => {
   assert.match(d.picture, /俯視房間/);
   assert.match(d.sheet, /^#### 動畫分鏡 d0103/);
   assert.equal(G.parseDesign('', 'x').concept, '');
+});
+
+test('需要我決定的事：去重、把 AI 自己能決定的分開、段號句號換成時間；回答會印給 AI', () => {
+  const cues2 = Array.from({ length: 60 }, (_, i) => ({ n: i + 1, start: i * 10, end: i * 10 + 8, text: `第 ${i + 1} 句` }));
+  const raw = [
+    '講者姓名與頭銜還沒給：14 講者卡（#2–#5）沒寫 name、titles，會用 shared/講者.json（目前是示範人物林大寶）。請主代理問使用者要用的姓名與頭銜，不要用預設值上片。',
+    '章節轉場在 #1（全幕 2.5 秒），會蓋住開場的前 2.5 秒。要不要先露臉再轉場，請主代理問使用者。',
+    '講者姓名、頭銜待確認（#27 第一次自我介紹排 14，name、titles 未寫）',
+    '章名：講稿沒有 ## 章名，依共用.md 自取「錄影痛點」；scaffold 原來的「第 2 章」已改掉',
+    '章名自取：多機同步錄影（講稿沒有 ## 章名，待確認）',
+    '章名（講稿沒有 ## 章名，自取）：多機同步錄影',
+    'x-desk 的時間下限放不下 #19–#20，改用 07 字卡；想用 x-desk 要拉長段落，請主代理決定。',
+    '循環素材：#20–#30 與 #10–#20 字幕相同，照同樣排法、未去重',
+    '開場約 16 秒（#4–#6）只有講者沒有畫面，要不要補字卡？',
+    '#47 用 07 重點字卡；想改成金句（15）請告訴我',
+    '開場約 16 秒（#4–#6）只有講者沒有畫面，要不要補字卡？',
+  ];
+  const { ask, ai } = G.tidyDecide(raw, { cues: cues2 });
+  assert.equal(ask.filter((x) => /姓名與頭銜/.test(x)).length, 1, '講者只問一次');
+  assert.match(ask[0], /^講者的姓名與頭銜還沒給/);
+  assert.equal(ask.filter((x) => /章名/.test(x)).length, 1, '章名只問一次');
+  assert.match(ask.find((x) => /章名/.test(x)), /「錄影痛點」、「多機同步錄影」/);
+  assert.equal(ask.filter((x) => /開場約 16 秒/.test(x)).length, 1, '一樣的只留一條，數字不能被當成情境編號拿掉');
+  assert.ok(ask.includes('開場約 16 秒（0:30–0:58）只有講者沒有畫面，要不要補字卡？'), ask.join('\n'));
+  assert.ok(ask.includes('章節轉場在 0:00（全幕 2.5 秒），會蓋住開場的前 2.5 秒。要不要先露臉再轉場'), ask.join('\n'));
+  assert.ok(ask.includes('7:40 用重點字卡；想改成金句請告訴我'), ask.join('\n'));
+  for (const x of ask) assert.doesNotMatch(x, /主代理|scaffold|name、titles|shared\/|#\d|x-[a-z]/, x);
+  assert.equal(ai.length, 2);
+  assert.match(ai[0], /x-desk/);
+  assert.match(ai[1], /循環素材/);
+  // 產生的檔：問作者的是數字清單，給 AI 的另一節，網頁解析得到
+  const md = G.renderStoryboard({ ...ctx(), cues: cues2, merged: { ...ctx().merged, decide: raw } });
+  assert.match(md, /## 需要我決定的事\n\n1\. 講者的姓名與頭銜還沒給/);
+  assert.match(md, /### 給 AI 的備註（不用回答）\n\n- x-desk/);
+  // 回答：套回時不改 plan.json，列給 AI
+  const answered = md.replace('1. 講者的姓名與頭銜還沒給', '1. 講者的姓名與頭銜還沒給').replace(/(1\. 講者的姓名與頭銜還沒給[^\n]*\n)/, '$1   - 回答：鼎淵，工程師\n');
+  const r = G.applyStoryboard(answered, plan, { scenes, specs });
+  assert.equal(r.changed, false);
+  assert.deepEqual(r.answers.map((a) => a.text), ['鼎淵，工程師']);
+  assert.match(r.answers[0].q, /講者的姓名與頭銜/);
+  assert.deepEqual(r.requests, [], '回答不擋通過');
 });

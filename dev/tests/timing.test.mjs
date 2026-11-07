@@ -270,7 +270,7 @@ test('snapCues（純函式）：起點撞到鄰居就退回原值，不重疊；
 test('snap-srt：缺檔、沒有聲音、整段靜音都給 ✖ 風格的中文訊息', () => {
   const none = path.join(root, 'projects', 'empty');
   fs.mkdirSync(path.join(none, 'work'), { recursive: true });
-  assert.throws(() => M.snapSrt(P(none), { log: quiet }), /找不到.*rough\.srt → 先照/);
+  assert.throws(() => M.snapSrt(P(none), { log: quiet }), /找不到.*rough\.srt → 先跑/);
   fs.writeFileSync(path.join(none, 'work', 'rough.srt'), srtOf([[0, 1, 'a']]));
   assert.throws(() => M.snapSrt(P(none), { log: quiet }), /找不到.*rough\.mp4/);
   ff(['-f', 'lavfi', '-i', 'color=c=black:s=160x90:r=10:d=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(none, 'work', 'rough.mp4')]);
@@ -388,4 +388,18 @@ test('attachWords：transcript.json 比 rough.mp4 舊、長度對不上、格式
   const cs = attachWords(parseSrt(srt), { transcript: tj, video });
   const res = resolvePlan({ plan: { version: 1, scenes: [{ id: 's01', scene: 'concept', from: '#1@放到電腦', to: '#1e', slots: { text: '甲乙' } }] }, cues: cs, videoDur: 10, lib: L, outDir: d, projectRel: 'projects/x' });
   assert.ok(res.warnings.includes('#N@詞 有 1 個用字數比例估（work/transcript.json 比 rough.mp4 舊（不是這支初剪轉的）），可能差 1 秒：#1@放到電腦 → 對 rough.mp4 重轉詞級逐字稿：npx hyperframes transcribe projects/x/work/rough.mp4 -d projects/x/work --model small --language zh --json'), JSON.stringify(res.warnings));
+});
+
+test('繁簡：normText 折成同一種、#N@詞 對得上簡體逐字稿；toTrad 處理一字多義', async () => {
+  const { normText } = await import(path.join(TOOLS, 'lib', 'time.mjs'));
+  const Z = await import(path.join(TOOLS, 'lib', 'zh.mjs'));
+  assert.equal(normText('不滿意的資料夾裡'), normText('不满意的资料夹里'));
+  assert.equal([...normText('發髮')].length, 2, '一個字換一個字，位置對照不會歪');
+  for (const [s, t] of [['这只影片的头发很干净', '這隻影片的頭髮很乾淨'], ['只有一只猫', '只有一隻貓'], ['干嘛复制这里的资料', '幹嘛複製這裡的資料'], ['系统关系很复杂', '系統關係很複雜'], ['一公里', '一公里'], ['沉默', '沉默'], ['喂', '喂']]) assert.equal(Z.toTrad(s), t);
+  assert.equal(Z.hasSimplified('我們會'), false);
+  assert.equal(Z.hasSimplified('我们会'), true);
+  const words = [{ text: 'AI剪完如果有', start: 10, end: 11 }, { text: '不满意', start: 11, end: 12 }, { text: '的地方', start: 12, end: 13 }];
+  const { wordTime } = await import(path.join(TOOLS, 'lib', 'time.mjs'));
+  const t = wordTime(words, { start: 10, end: 13, text: 'AI 剪完如果有不滿意的地方' }, '不滿意');
+  assert.ok(Math.abs(t - 11) < 0.05, `簡體逐字稿也找得到：${t}`);
 });

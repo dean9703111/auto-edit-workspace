@@ -155,11 +155,16 @@ export class SimPreview {
     m.el.style.objectFit = seg.fit === 'cover' ? 'cover' : 'contain';
     this.placeMedia(m.el, seg.fit === 'cover' ? 'cover' : 'contain', showPip, seg.side);
     if (m.el.tagName === 'VIDEO') {
-      const want = (active.in || 0) + di * (active.speed || 1);
+      // 段內秒 ↔ 素材秒：變速（retime）、定格（hold）、out 算出來的速度都在 knots 裡
+      const K = active.knots?.length >= 2 ? active.knots : null;
+      let i = 0;
+      if (K) while (i < K.length - 2 && di >= K[i + 1][0]) i++;
+      const rate = K ? (K[i + 1][1] - K[i][1]) / Math.max(1e-6, K[i + 1][0] - K[i][0]) : (active.speed || 1);
+      const want = K ? K[i][1] + (clamp(di, K[i][0], K[i + 1][0]) - K[i][0]) * rate : (active.in || 0) + di * (active.speed || 1);
       if (Math.abs(m.el.currentTime - want) > (this.playing ? 0.35 : 0.04)) m.el.currentTime = Math.max(0, want);
-      m.el.playbackRate = clamp(active.speed || 1, 0.25, 4);
-      if (this.playing && m.el.paused) m.el.play().catch(() => {});
-      if (!this.playing && !m.el.paused) m.el.pause();
+      m.el.playbackRate = clamp(rate || 1, 0.25, 16);
+      if (this.playing && rate > 0 && m.el.paused) m.el.play().catch(() => {});
+      if ((!this.playing || rate === 0) && !m.el.paused) m.el.pause();
       const vol = active.volume;
       const gain = vol == null || A.trackMuted('media') ? 0 : dbToGain(vol) * dbToGain(A.edit.volume.media) * envelope;
       if (this.audio) {

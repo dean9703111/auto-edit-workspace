@@ -478,7 +478,7 @@ test('floorFindings（tpl）：開場、段長下限比範例小或刪掉 → �
   assert.deepEqual(ed(tpl), []);
   assert.deepEqual(ed(head('  T1 ≥ 3.5\n  D ≥ T2 + 5.2')), [], '改大、刪拍距都不報（拍距不驗）');
   assert.deepEqual(ed(head('  T1 ≥ 0.5\n  D ≥ T2 + 5.2')), ['檔頭【D 下限】的開場下限改過：範例是「T1 ≥ 3.1」，x-tl-a.html 改成「T1 ≥ 0.5」']);
-  assert.deepEqual(ed(head('  T2 ≥ T1 + 3.0')), ['檔頭【D 下限】的開場下限改過：範例是「T1 ≥ 3.1」，x-tl-a.html 刪掉了', '檔頭【D 下限】的段長下限改過：範例是「D ≥ T2 + 5.2」，x-tl-a.html 刪掉了']);
+  assert.deepEqual(ed(head('  T2 ≥ T1 + 3.0')), ['檔頭【D 下限】的開場下限改過：範例是「T1 ≥ 3.1」，x-tl-a.html 刪掉了', '檔頭【D 下限】的段長下限改過：範例是「D ≥ T2 + 3.9」，x-tl-a.html 刪掉了']);
   const T = '<style>#x-timeline .xtl-cap { font-size: 52px; }</style><div id="xtl-c1" class="xtl-cap sc-t52"></div><span class="xtl-lab sc-t72 sc-w900">2019</span>';
   assert.deepEqual([...R.fontSizes(T)].map(([k, v]) => `${k}:${v.px}`), ['c1:52', 'lab:72', 'cap:52']);
   const shrink = (html) => R.fontShrinkFindings({ item: it, html, tpl: T, file: 'x-tl-a.html' }).map((f) => f.msg);
@@ -503,7 +503,7 @@ test('floorFindings：檔頭【D 下限】第一拍不夠 ✖、段長不夠 ⚠
   ${consts}
   P.end();
 </script>`;
-  assert.deepEqual(R.floorRules(html('')).map((r) => [r.lhs, r.rhs, r.k]), [['T1', null, 3.1], ['T2', 'T1', 3], ['T3', 'T2', 3], ['T4', 'T3', 3], ['D', 'T4', 5.2]]);
+  assert.deepEqual(R.floorRules(html('')).map((r) => [r.lhs, r.rhs, r.k]), [['T1', null, 3.1], ['T2', 'T1', 3], ['T3', 'T2', 3], ['T4', 'T3', 3], ['D', 'T4', 3.9]]);
   assert.deepEqual(R.atConsts(html("const T1 = P.at('#35@問題', 0.4), T2 = P.at(3.2);")), { T1: { ref: '#35@問題', off: 0.4 }, T2: { ref: 3.2, off: 0 } });
   const cues = [{ n: 35, start: 72.17, end: 75, text: '但我們馬上就會遇到一個問題' }, { n: 38, start: 78.5, end: 81, text: '但如果要用兩支以上的手機' }, { n: 40, start: 83.5, end: 86, text: '時間不同步' }];
   const it = item({ type: 'custom', start: 70, end: 90, D: 20 });
@@ -513,10 +513,10 @@ test('floorFindings：檔頭【D 下限】第一拍不夠 ✖、段長不夠 ⚠
   assert.match(open[0].msg, /開場還沒做完第一拍就到了：T1 = P\.at\('#35'\) 在段內 2\.17s（1:12\.17），x-timeline\.html 檔頭【D 下限】要 T1 ≥ 3\.1（差 0\.93s）/);
   assert.match(open[0].fix, /from 提早 0\.93s/);
   assert.doesNotMatch(open[0].fix, /第二個參數/, '差 > 0.5s 不建議延後綁句');
-  // 4 點：T4 − T3 = 2.0 < 3.0 不報（拍距交給完成態停太短）；D 20 < T4 + 5.2 = 20.7 → ⚠ 段尾不夠
-  const tail = R.floorFindings({ item: it, html: html("const T1 = P.at('#35', 1), T2 = P.at('#38'), T3 = P.at('#40'), T4 = P.at(15.5);"), cuesOut: cues });
-  assert.deepEqual(tail.map((f) => [f.level, f.data.rule]), [['warn', 'D ≥ T4 + 5.2']]);
-  assert.match(tail[0].msg, /段尾不夠：這段長 20\.00s，.*要 D ≥ T4 \+ 5\.2＝20\.70s（T4 在 1:25\.50）/);
+  // 4 點：T4 − T3 不報（拍距交給完成態停太短）；檔頭寫 5.2，settleTail 會把回均衡往前挪，實際下限 3.9：D 20 < T4 + 3.9 = 20.9 → ⚠ 段尾不夠
+  const tail = R.floorFindings({ item: it, html: html("const T1 = P.at('#35', 1), T2 = P.at('#38'), T3 = P.at('#40'), T4 = P.at(17);"), cuesOut: cues });
+  assert.deepEqual(tail.map((f) => [f.level, f.data.rule]), [['warn', 'D ≥ T4 + 3.9']]);
+  assert.match(tail[0].msg, /段尾不夠：這段長 20\.00s，.*要 D ≥ T4 \+ 3\.9＝20\.90s（T4 在 1:27\.00）/);
   assert.deepEqual(R.floorFindings({ item: it, html: '<script>const T1 = P.at(0.5);</script>', cuesOut: cues }), [], '沒有【D 下限】不驗');
 });
 
@@ -1076,10 +1076,10 @@ test('sheetPlanFindings（build --check）：拍序和講解相反；照範例�
   const rev = BT.sheetPlanFindings({ item: it, sheet: sheet(['1 | `#35`', '2 | `#40`', '3 | `#38@兩支`']), cues: bCues });
   assert.deepEqual(rev.map((f) => f.msg.slice(0, 7)), ['拍序和講解相反']);
   assert.match(rev[0].msg, /第 3 拍 #38@兩支（1:19\.54）比上一拍第 2 拍 #40（1:23\.50）早講到/);
-  // 照範例：第一拍 #35 在 2.17s ≥ 2.0；#35→#38 6.33s；#38 同句號的 ＋1.2 不算另一拍；#40 到段尾 15 − 13.5 = 1.5 < 4.6 → 報段尾
+  // 照範例：第一拍 #35 在 2.17s ≥ 2.0；#35→#38 6.33s；#38 同句號的 ＋1.2 不算另一拍；#40 到段尾 15 − 13.5 = 1.5 < 3.9 → 報段尾
   const ok = BT.sheetPlanFindings({ item: it, sheet: sheet(['1 | `#35`', '2 | `#38`', '2b | `#38`＋1.2', '3 | `#40`']), cues: bCues, tplRules: tpl });
   assert.deepEqual(ok.map((f) => f.msg.slice(0, 4)), ['最後一拍']);
-  assert.match(ok[0].msg, /到段尾只剩 1\.50s，範例檔頭【D 下限】要 ≥ 4\.6s/);
+  assert.match(ok[0].msg, /到段尾只剩 1\.50s，範例檔頭【D 下限】要 ≥ 3\.9s/);
   // 第一拍太早、兩拍太近；段起點那一拍不算第一拍
   const it2 = { ...it, start: 71.5, D: 20 };
   const tight = BT.sheetPlanFindings({ item: it2, sheet: sheet(['0 | 段起點 `#35`', '1 | `#38`', '2 | `#40`']), cues: bCues, tplRules: tpl });

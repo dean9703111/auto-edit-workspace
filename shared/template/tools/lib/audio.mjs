@@ -20,7 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { run, probeMedia, encodeFootage } from './ff.mjs';
+import { run, probeMedia, encodeFootage, tmpFor, sweepTmp } from './ff.mjs';
 
 export const LOUD = { I: -14, TP: -1, LRA: 11 };
 export const CUT_FADE = 0.015;      // 剪接點前後各 15 ms（接點處最大跳變比硬切少約九成；30 ms 起接點附近的能量被吃掉過半，實驗見 USAGE.md 2.8；凹洞量測見 specs/005-sfx/research.md）
@@ -161,7 +161,8 @@ export function encodeFootagePolished(src, dst, { cacheDir, cutpoints = [], loud
   let raw = null;
   if (points.length) {
     fs.mkdirSync(cacheDir, { recursive: true });
-    raw = path.join(cacheDir, 'declick.f32');
+    sweepTmp(cacheDir);
+    raw = tmpFor(path.join(cacheDir, 'declick.f32'));   // 檔名帶 pid：同時兩條或上次的 ffmpeg 還在跑，也不會用到同一份聲音
     // aresample first_pts=0：音軌開頭有偏移時補靜音到 0，剪接點的秒數才對得上畫面
     const r = run('ffmpeg', ['-y', '-v', 'error', '-i', src, '-vn', '-map', '0:a:0', '-af', `aresample=${RATE}:first_pts=0`, '-ac', '2', '-ar', String(RATE), '-f', 'f32le', raw]);
     if (r.status !== 0) throw new Error(`ffmpeg 抽出聲音失敗：${String(r.stderr).trim().slice(-300)}`);
@@ -193,7 +194,7 @@ export function audioReportLines(info, { loudnorm = true, declick = true, cutpoi
   } else if (!loudnorm) lines.push('人聲響度：已用 --no-loudnorm 略過');
   if (sfx) lines.push(...sfxLevelLines(sfx, { loudnorm }));
   if (declick && info.cuts) lines.push(`剪接點微淡化：${info.cuts} 個接點，前後各 ${Math.round(info.fade * 1000)} ms`);
-  else if (declick && !cutpointsExist) lines.push('剪接點微淡化：略過（work/cutpoints.json 不存在；只有照 AGENTS.md「剪乾淨」第 7 步存了才會處理）');
+  else if (declick && !cutpointsExist) lines.push('剪接點微淡化：略過（work/cutpoints.json 不存在；跑過 media.mjs rough 或 cutpoints 才會處理）');
   else if (!declick) lines.push('剪接點微淡化：已用 --no-declick 略過');
   for (const n of info.notes) lines.push(`⚠ ${n}`);
   return lines;
@@ -207,8 +208,32 @@ const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0'
 const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
 const d1 = (v) => n1(r1(v).toFixed(1));
 
+// 每分鐘最多 perMinute 顆主音效：照優先序留（KEEP_FIRST；ding、impact 最後），其他拿掉，不用人一段一段改。
+// 使用者在段上明寫的 sfx（it.seg.sfx）和章節音效不動；回傳拿掉幾顆
+export function thinMainSfx(items, sfxConf, perMinute = SFX_RULES.perMinute) {
+  const rank = (n) => { const i = KEEP_FIRST.indexOf(n); return i < 0 ? KEEP_FIRST.length : i; };
+  const byMin = new Map();
+  const add = (it, c, locked) => { const k = Math.floor(c.at / 60); if (!byMin.has(k)) byMin.set(k, []); byMin.get(k).push({ it, c, locked }); };
+  for (const it of items) {
+    if (it.sfx && !sfxConf[it.sfx.name]?.additive) add(it, it.sfx, it.seg?.sfx != null || it.sfx.name === 'chapter');
+    for (const c of it.sfxExtra || []) if (c.beat && !sfxConf[c.name]?.additive) add(it, c, false);
+  }
+  let removed = 0;
+  for (const list of byMin.values()) {
+    if (list.length <= perMinute) continue;
+    const order = [...list].sort((a, b) => Number(b.locked) - Number(a.locked) || rank(a.c.name) - rank(b.c.name) || a.c.at - b.c.at);
+    const keep = new Set(order.slice(0, Math.max(perMinute, order.filter((x) => x.locked).length)));
+    for (const x of list) {
+      if (keep.has(x)) continue;
+      if (x.it.sfx === x.c) { x.it.sfxDropped = x.c; x.it.sfx = null; } else x.it.sfxExtra = x.it.sfxExtra.filter((c) => c !== x.c);
+      removed++;
+    }
+  }
+  return removed;
+}
+
 // cues：[{ id, name, at（完成影片秒數）, volume（最終線性音量）, main（是不是主音效）}]，已扣掉被 3 秒規則拿掉的
-export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, gapNote = null } = {}) {
+export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, gapNote = null, thinned = 0 } = {}) {
   const R = SFX_RULES;
   const list = (cues || []).filter((c) => c && sfxConf[c.name] && sfxConf[c.name].kind !== 'bgm').sort((a, b) => a.at - b.at);
   const count = {};
@@ -254,7 +279,7 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, 
   if (dense.length) {
     const mm = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
     const adds = Object.keys(sfxConf).filter((k) => sfxConf[k].additive);
-    warnings.push(`⚠ 音效密度：${dense.length} 個一分鐘超過 ${R.perMinute} 顆主音效（${dense.map((d) => `${mm(d.from)}–${mm(d.to)} ${d.n} 顆`).join('、')}；附加音效${adds.length ? ` ${adds.join('、')}` : ''} 不算）→ 每分鐘留最重要的 ${R.perMinute} 顆（${KEEP_FIRST.join('、')} 先留，ding、impact 先拿掉：那段寫 "sfx": null）`);
+    warnings.push(`⚠ 音效密度：${dense.length} 個一分鐘超過 ${R.perMinute} 顆主音效（${dense.map((d) => `${mm(d.from)}–${mm(d.to)} ${d.n} 顆：${d.ids.join('、')}`).join('；')}；附加音效${adds.length ? ` ${adds.join('、')}` : ''} 不算）→ 每分鐘留最重要的 ${R.perMinute} 顆（${KEEP_FIRST.join('、')} 先留，ding、impact 先拿掉：那段寫 "sfx": null）`);
   }
   // gapNote(g)：空檔裡可以配音效的段（plan.mjs 給，例「x10、x11、m01」），印在秒數後面，讓人知道去哪一段配
   if (sparse.length) warnings.push(`⚠ 音效稀疏：${sparse.map((g) => { const n = gapNote ? gapNote(g) : ''; return `${fmt(g.from)}–${fmt(g.to)}（${Math.round(g.to - g.from)} 秒${n ? `：${n}` : ''}）`; }).join('、')}沒有主音效 → 在這段裡找踩坑句配 alert、結果句配 success（落在句尾前 0.1–0.2 秒）；情境動畫在那一拍寫 P.sfx('success', '#N@詞')；錄影段寫 "sfx": { "name": "success", "at": "#Ne-0.1" }`);
@@ -264,7 +289,7 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, 
     .map((k) => `${k} ${count[k] || 0}${sfxConf[k].maxPerVideo != null ? `／${sfxConf[k].maxPerVideo}` : ''}`);
   const lines = [
     `音效次數：${cnt.join('、') || '沒有音效'}`,
-    nMain ? `音效密度：主音效平均 ${perMinuteAvg} 顆／分（上限：任一分鐘 ≤ ${R.perMinute} 顆，超過才 ⚠），附加音效 ${nExtra} 顆` : `音效密度：主音效 0 顆，附加音效 ${nExtra} 顆`,
+    nMain ? `音效密度：主音效平均 ${perMinuteAvg} 顆／分（上限：任一分鐘 ≤ ${R.perMinute} 顆，超過才 ⚠），附加音效 ${nExtra} 顆${thinned ? `；每分鐘超過的已自動拿掉 ${thinned} 顆` : ''}` : `音效密度：主音效 0 顆，附加音效 ${nExtra} 顆`,
   ];
   return { count, over, dense, sparse, loud, levels, perMinuteAvg, warnings, lines };
 }

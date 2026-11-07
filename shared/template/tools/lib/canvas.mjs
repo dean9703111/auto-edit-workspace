@@ -8,7 +8,7 @@
 //       { s, tx, ty, rect, css, attr }：css 寫在 host 的 CSS（main 的 GSAP 對 host 只能動 opacity，動 x／y／scale 會蓋掉縮放）；
 //       attr＝"data-layout-allow-overflow"（縮放後的子合成超出畫布，不加 hyperframes check 會報 panel_out_of_canvas）
 //   stagePoint(st, [x, y]) → 子合成座標換成畫布座標（X = tx + x × s、Y = ty + y × s）
-//   regionsOf(canvas) → 具名區域 { band, panelTop, pip, badge, captions, safe[, panelBottom] }，每個 [x, y, w, h]（specs/contracts/motion.md §1）
+//   regionsOf(canvas) → 具名區域 { band, panelTop, pip, badge, captions, safe, full[, panelBottom] }，每個 [x, y, w, h]（specs/contracts/motion.md §1）
 //   regionsScript(canvas) → 直式時給 index.html 的 <script>window.__regions = {…};</script>；橫式回 ''（原語用自己的橫式預設，輸出不變）
 //   resolveFormat({ projectDir, plan, flag, probe }) → { format, source, detail }：--format > plan.json format > 製作進度.md「版式」列 > 主軌寬高比
 //   formatLine(r) → 「版式：直式 1080×1920（來源：plan.json）」（FR-003 指令第一行）
@@ -41,7 +41,7 @@ export const CANVAS = {
     framing: { aspect: 16 / 9, headTop: 120 },
     minTextPx: 30,
     // 具名區域（motion.md §1 的橫式預設，和 kit/scene-motion.js 的 REGIONS 相同）
-    regions: { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972] },
+    regions: { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972], full: [120, 40, 1680, 860] },
   },
   // 直式：spec FR-010 建議初值＋「決定」節（分割線 y 900、角標左上 y 250）；字幕和橫式同一套（決定 2，16:05 改：76 px／字重 400／底板 118），
   // 只差每則 10 字與位置：底板 118 高置中在字幕帶 zone y 1280–1420 裡＝y 1291–1409（臉 940–1280 下面、平台介面 1440 上面）；
@@ -64,7 +64,7 @@ export const CANVAS = {
     framing: { aspect: 9 / 16, headTop: [380, 520], chinMax: 860 },
     minTextPx: 32,
     // 上半資訊面板 1080×900、下半講者面板 1080×1020（決定 1）；band＝lowerThird.rect、badge＝badge.rect、captions＝caption.zone、safe＝textSafe 的外框
-    regions: { band: [60, 880, 880, 360], panelTop: [0, 0, 1080, 900], panelBottom: [0, 900, 1080, 1020], pip: [0, 900, 1080, 1020], badge: [60, 250, 624, 112], captions: [0, 1280, 1080, 140], safe: [60, 240, 960, 1200] },
+    regions: { full: [60, 240, 960, 1020], band: [60, 880, 880, 360], panelTop: [0, 0, 1080, 900], panelBottom: [0, 900, 1080, 1020], pip: [0, 900, 1080, 1020], badge: [60, 250, 624, 112], captions: [0, 1280, 1080, 140], safe: [60, 240, 960, 1200] },
   },
 };
 

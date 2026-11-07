@@ -1,8 +1,23 @@
 // 時間軸（canvas）：照疊放順序由上到下——總覽、時間尺、動畫（資訊卡／字卡動態）、插入素材、主軌畫面、字幕、人聲、音效
 // 這裡只管畫圖、點到什麼（hit test）、吸附；點下去／拖曳要做什麼由 app.js 的 app.tl* 決定。
 import { fmt, fmtTC, fmtSec, fmtDb, clamp, cutIndexAt, joinFor, dbToGain, gainAt } from './model.mjs';
+import { speedLabel } from './speed.mjs';
+import { transitionOf } from './motion.mjs';
+
+// 片段第 t 秒對到素材第幾秒（變速、定格照 knots）
+function srcOf(it, t) {
+  const K = it.knots?.length >= 2 ? it.knots : null;
+  if (!K) return (it.in || 0) + (t - it.start) * (it.speed || 1);
+  const d = t - it.start;
+  let i = 0;
+  while (i < K.length - 2 && d >= K[i + 1][0]) i++;
+  const rate = (K[i + 1][1] - K[i][1]) / Math.max(1e-6, K[i + 1][0] - K[i][0]);
+  return K[i][1] + Math.max(0, d - K[i][0]) * rate;
+}
 
 export const LANES = [['ov', 12], ['ruler', 22], ['anim', 36], ['media', 42], ['main', 46], ['cap', 28], ['voice', 56], ['sfx', 28]];
+// 視窗矮的時候軌道變薄，把高度留給影片（筆電、左右分割視窗）
+export const LANES_COMPACT = [['ov', 10], ['ruler', 18], ['anim', 30], ['media', 24], ['main', 30], ['cap', 22], ['voice', 30], ['sfx', 20]];
 export const TRACK_NAMES = { anim: '動畫', media: '插入素材', main: '主軌畫面', cap: '字幕', voice: '人聲', sfx: '音效' };
 const PAD = 10;
 const MAX_PPS = 600;
@@ -21,10 +36,8 @@ export class Timeline {
     this.off = document.createElement('canvas');
     this.dur = 0; this.pps = 50; this.t0 = 0; this.fitPps = 50;
     this.staticDirty = true; this.drag = null; this.hover = null; this.snapLine = null;
-    this.L = {};
-    let y = 0;
-    for (const [k, h] of LANES) { this.L[k] = [y, y + h]; y += h + 1; }
-    this.totalH = y;
+    this.compact = false;
+    this.layoutLanes();
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(canvas.parentElement);
     canvas.addEventListener('pointerdown', (e) => this.down(e));
@@ -35,6 +48,21 @@ export class Timeline {
     canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.hover = null; this.tip.hidden = true; this.app.requestDraw(); } });
     canvas.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
     this.resize();
+  }
+
+  layoutLanes() {
+    this.lanes = this.compact ? LANES_COMPACT : LANES;
+    this.L = {};
+    let y = 0;
+    for (const [k, h] of this.lanes) { this.L[k] = [y, y + h]; y += h + 1; }
+    this.totalH = y;
+  }
+  setCompact(on) {
+    if (this.compact === on) return false;
+    this.compact = on;
+    this.layoutLanes();
+    this.resize();
+    return true;
   }
 
   // ---------- 座標 ----------
@@ -156,6 +184,14 @@ export class Timeline {
     const font = (px, w = 400) => `${w} ${px}px "Noto Sans TC", system-ui, sans-serif`;
     const clipRect = (x, y, w, h, fn) => { g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); fn(); g.restore(); };
     const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); };
+    // 片段兩端的白色斜角＝有轉場（滑上去的提示寫是哪一種）
+    const txWedge = (xa, xb, y, h, tr) => {
+      const w = Math.min(14, (xb - xa) / 3);
+      if (w < 4) return;
+      g.fillStyle = 'rgba(255,255,255,0.75)';
+      if (tr.showIn) { g.beginPath(); g.moveTo(xa, y); g.lineTo(xa + w, y); g.lineTo(xa, y + h); g.closePath(); g.fill(); }
+      if (tr.showOut) { g.beginPath(); g.moveTo(xb, y); g.lineTo(xb - w, y); g.lineTo(xb, y + h); g.closePath(); g.fill(); }
+    };
     const hatch = (a, b, y0, y1, color, gap = 7) => {
       const xa = Math.max(0, X(a)), xb = Math.min(W, X(b));
       if (xb <= xa) return;
@@ -228,13 +264,14 @@ export class Timeline {
       rr(xa, y, Math.max(3, xb - xa), h, 4); g.fillStyle = col; g.fill();
       g.globalAlpha = 1;
       if (it.textDirty) { g.fillStyle = '#FFD400'; g.beginPath(); g.arc(Math.max(xa + 6, Math.min(xb - 6, xa + 6)), y + 5, 3, 0, Math.PI * 2); g.fill(); }
+      txWedge(xa, xb, y, h, transitionOf(it));
       if (A.isSelected('item', it.id)) { g.strokeStyle = '#fff'; g.lineWidth = 2; rr(xa + 1, y + 1, Math.max(2, xb - xa - 2), h - 2, 3); g.stroke(); }
       if (it.warnings) { g.fillStyle = '#FFD400'; g.fillRect(xa, y + h - 3, Math.max(3, xb - xa), 3); }
       const rq = xb - xa > 22 ? A.rqMark?.(it.id) : null;
       if (rq) rqBadge(xb - 10, y + h / 2, rq);
       if (xb - xa > 26) clipRect(xa + 3, y, xb - xa - 6 - (rq ? 16 : 0), h, () => {
         g.fillStyle = it.type === 'custom' ? '#0B1020' : '#fff'; g.font = font(h > 18 ? 11.5 : 10.5, 700); g.textBaseline = 'middle';
-        g.fillText(`${it.id}　${it.label || ''}`, Math.max(xa, 0) + 6, y + h / 2 + 0.5);
+        g.fillText(`${it.id}　${it.title || it.label || ''}`, Math.max(xa, 0) + 6, y + h / 2 + 0.5);
       });
     }
     if (!anim.length) { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.itemsHint || '沒有資訊卡或字卡動態', PAD + 6, (L.anim[0] + L.anim[1]) / 2); }
@@ -250,6 +287,7 @@ export class Timeline {
       rr(xa, y, Math.max(3, xb - xa), h, 4); g.fillStyle = '#2A1A0E'; g.fill();
       clipRect(xa, y, Math.max(3, xb - xa), h, () => this.drawMediaThumbs(g, it, xa, xb, y, h));
       g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(xa, y, Math.max(3, xb - xa), h);
+      txWedge(xa, xb, y, h, transitionOf(it));
       const sel = A.isSelected('media', it.id);
       g.strokeStyle = sel ? '#fff' : C.media; g.lineWidth = sel ? 2 : 1.5; rr(xa + 0.75, y + 0.75, Math.max(2, xb - xa - 1.5), h - 1.5, 4); g.stroke();
       // 裁剪把手
@@ -318,6 +356,16 @@ export class Timeline {
       for (const xx of [xa, xb]) g.fillRect(Math.round(xx) - (sel ? 1 : 0.5), y0, sel ? 3 : 1.5, y1 - y0);
       if (xb - xa > 46) { g.font = font(10.5, 700); g.fillStyle = '#FF8A8E'; g.textBaseline = 'top'; g.fillText(`✂ ${fmtSec(b - a)}`, xa + 5, L.main[0] + 6); }
     });
+    // 開頭淡入、結尾淡出（照實際秒數畫斜角）
+    {
+      const e = A.edit, [y0, y1] = L.main, h = y1 - y0;
+      const first = e.cuts[0]?.[0] <= 0 ? e.cuts[0][1] : 0;
+      const lastCut = e.cuts[e.cuts.length - 1];
+      const last = lastCut && lastCut[1] >= A.dur - 1e-3 ? lastCut[0] : A.dur;
+      g.fillStyle = 'rgba(0,0,0,0.55)';
+      if (e.fadeIn > 0) { const a = X(first), b = X(first + e.fadeIn); g.beginPath(); g.moveTo(a, y0); g.lineTo(b, y0); g.lineTo(a, y1); g.closePath(); g.fill(); }
+      if (e.fadeOut > 0) { const a = X(last - e.fadeOut), b = X(last); g.beginPath(); g.moveTo(a, y0); g.lineTo(b, y0); g.lineTo(b, y1); g.closePath(); g.fill(); }
+    }
     // 剪接點與轉場（主軌上緣的菱形）
     for (const p of A.points) {
       const x = X(p.at);
@@ -442,7 +490,12 @@ export class Timeline {
 
   drawMainThumbs(g, y, h) {
     const T = this.app.thumbs?.main;
-    if (!T?.img || !T.meta) return;
+    if (!T?.img || !T.meta) {
+      // 第一次開要算縮圖（長片 10–20 秒）：講一聲，不要讓人以為壞了
+      g.font = '400 11.5px "Noto Sans TC", system-ui, sans-serif'; g.fillStyle = C.dim; g.textBaseline = 'middle';
+      g.fillText('縮圖產生中…（第一次開要等一下）', PAD + 6, y + h / 2);
+      return;
+    }
     const { interval, cols, w, h: th, count } = T.meta;
     const tw = (h * w) / th;
     const ta = Math.max(0, this.t0 - 1), tb = Math.min(this.dur, this.t0 + this.span() + 1);
@@ -466,9 +519,23 @@ export class Timeline {
     const tw = (h * w) / th;
     for (let x = Math.max(xa, -tw); x < Math.min(xb, this.cssW + tw); x += tw) {
       const t = this.tOf(x);
-      const src = (it.in || 0) + (t - it.start) * (it.speed || 1);
+      const src = srcOf(it, t);
       const i = clamp(Math.floor(src / interval), 0, count - 1);
       try { g.drawImage(T.img, (i % cols) * w, Math.floor(i / cols) * th, w, th, x, y, tw, h); } catch { /* 圖還沒載好 */ }
+    }
+    // 速度色帶：定格灰、快轉橘、減速藍；原速不畫
+    const K = it.knots?.length >= 2 ? it.knots : null;
+    for (let i = 1; K && i < K.length; i++) {
+      const rate = (K[i][1] - K[i - 1][1]) / Math.max(1e-6, K[i][0] - K[i - 1][0]);
+      if (Math.abs(rate - 1) < 1e-3) continue;
+      g.fillStyle = rate === 0 ? '#9AA0A6' : rate > 1 ? '#F6630F' : '#4C8BF5';
+      const x0 = this.xOf(it.start + K[i - 1][0]), x1 = this.xOf(it.start + K[i][0]);
+      g.fillRect(x0, y + h - 5, Math.max(2, x1 - x0 - 1), 5);
+      if (x1 - x0 > 34) {
+        g.font = '700 10px system-ui'; g.textBaseline = 'bottom'; g.textAlign = 'left'; g.fillStyle = '#fff'; g.shadowColor = '#000'; g.shadowBlur = 3;
+        g.fillText(speedLabel(Math.round(rate * 1000) / 1000), x0 + 3, y + h - 6);
+        g.shadowBlur = 0;
+      }
     }
   }
 
@@ -484,6 +551,11 @@ export class Timeline {
       let best = null;
       for (const it of A.itemsView) if (it.type !== 'media' && t >= it.start - 2 / this.pps && t <= (it.vend ?? it.end) + 2 / this.pps && (Math.min(nRows - 1, it.row || 0) === row || !best)) best = it;
       if (best) { h.kind = 'item'; h.item = best; }
+      else {
+        // 斜線：沒有任何卡片的講解。點得到才能在修改單寫「這裡想加畫面」
+        const span = (A.uncovered || []).find(([a, b]) => t >= a && t < b);
+        if (span) { h.kind = 'noCard'; h.span = span; }
+      }
       return h;
     }
     if (lane === 'media') {

@@ -6,6 +6,7 @@
 //   appendRound(project, { round, file, segs, backup, when })  → 回饋輪加一列
 //   formatStamp(date)                        → 'YYYY-MM-DD HH:MM'
 import fs from 'node:fs';
+import { writeAtomic } from './atomic.mjs';
 import path from 'node:path';
 
 export const FACT_ROWS = ['主軌種類', '版式', '有沒有講稿', '有沒有螢幕錄影／圖片', '長度（秒）', '有沒有業配段', '構圖'];
@@ -46,7 +47,7 @@ export function ensureProgress(project, facts = {}) {
     return { file, created: false };
   }
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, skeleton(project, facts));
+  writeAtomic(file, skeleton(project, facts));
   return { file, created: true };
 }
 
@@ -79,13 +80,13 @@ export function setFact(project, name, value, { onlyEmpty = false } = {}) {
     if (onlyEmpty && cells[iV] && !/^待/.test(cells[iV])) return false;
     cells[iV] = cellOf(value);
     t.lines[i] = `| ${cells.join(' | ')} |`;
-    fs.writeFileSync(file, t.lines.join(t.nl));
+    writeAtomic(file, t.lines.join(t.nl));
     return true;
   }
   const cells = t.cols.map(() => '');
   cells[iK] = name; cells[iV] = cellOf(value);
   t.lines.splice(t.end + 1, 0, `| ${cells.join(' | ')} |`);
-  fs.writeFileSync(file, t.lines.join(t.nl));
+  writeAtomic(file, t.lines.join(t.nl));
   return true;
 }
 
@@ -105,7 +106,7 @@ export function appendStop(project, { stop, state, said = '', back = '', when = 
   if (iBack >= 0 && back) cells[iBack] = cellOf(back);
   const row = `| ${cells.join(' | ')} |`;
   t.lines.splice(t.end + 1, 0, row);
-  fs.writeFileSync(file, t.lines.join(t.nl));
+  writeAtomic(file, t.lines.join(t.nl));
   return row;
 }
 
@@ -117,6 +118,6 @@ export function appendRound(project, { round, file: f = '', segs = '', backup = 
   if (!t) return null;
   const row = `| ${cellOf(round)} | ${formatStamp(when)} | ${cellOf(f)} | ${cellOf(segs)} | ${cellOf(backup)} |`;
   t.lines.splice(t.end + 1, 0, row);
-  fs.writeFileSync(file, t.lines.join(t.nl));
+  writeAtomic(file, t.lines.join(t.nl));
   return row;
 }

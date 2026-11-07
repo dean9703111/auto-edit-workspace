@@ -18,7 +18,7 @@
   color: var(--fx-ink); font-family: "Noto Sans TC", sans-serif; font-weight: 900; line-height: 1; }
 .fx-stage[data-bg="dark"]   { --fx-bg: #232733; --fx-ink: #ffffff; --fx-sub: rgba(255,255,255,0.5);
   --fx-hi: var(--accent); --fx-fill: var(--accent); --fx-on-fill: #14161c; --fx-panel: #14161c; --fx-scrim: none; }
-.fx-stage[data-bg="light"]  { --fx-bg: #f3efe6; --fx-ink: #14161c; --fx-sub: rgba(20,22,28,0.45);
+.fx-stage[data-bg="light"]  { --fx-bg: var(--fx-light-bg, #f3efe6); --fx-ink: #14161c; --fx-sub: rgba(20,22,28,0.45);
   --fx-hi: var(--accent); --fx-fill: var(--accent); --fx-on-fill: #14161c; --fx-panel: #14161c; --fx-scrim: none; }
 .fx-stage[data-bg="accent"] { --fx-bg: var(--accent); --fx-ink: #14161c; --fx-sub: rgba(20,22,28,0.5);
   --fx-hi: #ffffff; --fx-fill: #14161c; --fx-on-fill: #ffffff; --fx-panel: #14161c; --fx-scrim: none; }

@@ -248,7 +248,7 @@ test('prep（--no-editor、假逐字稿）：一條指令到停點 ①；cuts.md
   assert.deepEqual(cm.errors, []);
   assert.deepEqual(cm.ng.map((x) => x.cut), [true]);
   assert.ok(Math.abs(cm.ng[0].start - 7.8) < 0.3 && Math.abs(cm.ng[0].end - 12.5) < 0.3, JSON.stringify(cm.ng[0]));
-  assert.deepEqual(cm.chapters.map((c) => c.title), ['開場', '操作']);
+  assert.deepEqual(cm.chapters.map((c) => c.title), ['操作'], '影片第一句就是章節開頭：不留空檔');
   assert.ok(fs.existsSync(path.join(p, 'work', 'transcript-main.json')));
   assert.ok(fs.existsSync(path.join(p, 'work', 'ng-scan.md')));
   assert.equal(JSON.parse(fs.readFileSync(path.join(p, 'work', '.cache', 'transcript-main-of.json'), 'utf8')).mappable, true);

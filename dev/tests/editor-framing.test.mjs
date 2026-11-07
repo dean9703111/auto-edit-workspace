@@ -62,7 +62,7 @@ test('構圖下方直接預覽動畫：未儲存的框即時更新，橫直式�
     await page.setViewport({ width: 1440, height: 1000 });
     await page.goto(new URL('/framing', editor.url).href);
     await page.waitForSelector('#main:not([hidden])');
-    await page.waitForFunction(() => document.querySelector('#designError').textContent.includes('剪輯服務仍是舊版'));
+    await page.waitForFunction(() => document.querySelector('#designError').textContent.includes('剪輯台仍是舊版'));
     await page.$eval('#zoom', (el) => { el.value = '1.3'; el.dispatchEvent(new Event('input')); });
     oldBackend = false;
     await page.click('#retryDesign');
@@ -142,7 +142,7 @@ test('構圖：沒有完成影片只存設定；已有完成影片自動更新�
   fs.writeFileSync(planFile, validPlan);
 });
 
-test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪輯未存音量，套用新調光；介面使用「構圖／剪輯」', { timeout: 90000 }, async (t) => {
+test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪輯未存音量，套用新調光；介面使用「構圖／剪輯台」', { timeout: 90000 }, async (t) => {
   const chrome = await hasChrome();
   if (!chrome) { t.skip('找不到現有 Chrome'); return; }
   if (!fs.existsSync(path.join(out, 'index.html'))) {
@@ -158,7 +158,7 @@ test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪�
     await page.setViewport({ width: 1440, height: 1000 });
     await page.goto(editor.url);
     await page.waitForFunction(() => window.__editor?.server?.preview?.built);
-    assert.equal(await page.title(), '剪輯｜sync');
+    assert.equal(await page.title(), '剪輯台｜sync');
     await page.evaluate(async () => {
       for (const d of document.querySelectorAll('dialog[open]')) d.close();
       const app = window.__editor;
@@ -177,7 +177,7 @@ test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪�
     await framing.$eval('#zoom', (el) => { el.value = '1.2'; el.dispatchEvent(new Event('input')); });
     await framing.$eval('#color', (el) => { el.value = '0.1'; el.dispatchEvent(new Event('input')); });
     await framing.click('#btnSave');
-    await framing.waitForFunction(() => document.querySelector('#msg').textContent.includes('剪輯預覽已自動更新'), { timeout: 60000 });
+    await framing.waitForFunction(() => document.querySelector('#msg').textContent.includes('剪輯台預覽已自動更新'), { timeout: 60000 });
     const expected = readPlan().frame;
     await page.waitForFunction((frame) => JSON.stringify(window.__editor.plan0.frame) === JSON.stringify(frame) && window.__editor.look?.color === 0.1 && window.__editor.player.ready, { timeout: 15000 }, expected);
     await page.waitForFunction((src) => document.querySelector('hyperframes-player')?.getAttribute('src') !== src, {}, previous);

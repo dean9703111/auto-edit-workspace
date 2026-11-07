@@ -1,5 +1,6 @@
 // 輸出完成影片的共用流程：剪輯台按鈕（editor/server/export.mjs）和 CLI（deliver.mjs）走同一份。零依賴。
 //   重新產生 → 測試片段（4 秒，確認有畫面和聲音）→ 整支 render 到暫存檔 → 成功才換成 output/final.mp4 → qc.mjs final；失敗或取消不動舊檔。
+//   只改了幾段（lib/incremental.mjs 判定是局部改動）：跳過測試片段和整支，只重畫改到的時間窗、接回上一支；不是局部就印一行原因、照常整支。
 //
 //   runDeliver(P, job, deps)        跑上面的流程；進度寫在 job 上（newJob()），deps 可以注入假的 run／build／report 測流程
 //   runPrerender(P, job, deps)      預先 render：低優先權 render 到 work/final-prerender.mp4，旁邊記指紋（work/final-prerender.json）
@@ -12,7 +13,8 @@
 //   cliDeps(P, job, opts)           CLI 用的 build、report（剪輯台用自己的 doBuild、getReport）
 //
 // 檔案：work/final-rendering.mp4（整支暫存）、work/final-prerender.part.mp4（預先 render 暫存）、work/final-fingerprint.json（final.mp4 的指紋）、
-//       work/render.log（render 全文）、work/.jobs/deliver.lock（誰在輸出）、work/.jobs/render-<kind>.json（render 的 pid，收孤兒用）
+//       work/render.log（render 全文）、work/.jobs/deliver.lock（誰在輸出）、work/.jobs/render-<kind>.json（render 的 pid，收孤兒用）、
+//       work/.jobs/final-content.json、prerender-content.json（那支影片當下的內容，增量比對用；沒有就整支）
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,8 +25,12 @@ import { hfArgs, hfLocal } from './hf.mjs';
 import { jobState, clearJob, STILL_RUNNING } from './job.mjs';
 import { appendStop, progressFile } from './progress.mjs';
 import { lookNeedsRun } from './look.mjs';
+import { speakerGate } from './speaker.mjs';
+import { designFileOf, isBlankDesign } from './custom-fill.mjs';
+import { storyboardDirty } from './storyboard-state.mjs';
+import { captureState, readState, writeState, diffStates, renderIncremental, NOT_IN_FINAL } from './incremental.mjs';
 
-const TOOLS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const TOOLS =path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LOG_KEEP = 24000;
 const RENDER_TAIL = 64 * 1024;   // render 的 stdout／stderr 只留尾巴（長片 log 有好幾 MB），全文在 work/render.log
 
@@ -63,6 +69,7 @@ export function deliverPaths(project) {
     tmp: path.join(work, 'final-rendering.mp4'), log: path.join(work, 'render.log'), memo: path.join(work, 'final-fingerprint.json'),
     pre: path.join(work, 'final-prerender.mp4'), prePart: path.join(work, 'final-prerender.part.mp4'), preState: path.join(work, 'final-prerender.json'),
     lock: path.join(work, '.jobs', 'deliver.lock'), renderPid: (kind) => path.join(work, '.jobs', `render-${kind}.json`),
+    finalContent: path.join(work, '.jobs', 'final-content.json'), preContent: path.join(work, '.jobs', 'prerender-content.json'),
   };
 }
 
@@ -73,8 +80,7 @@ export const newJob = () => ({ running: true, step: 'build', percent: null, ok: 
 // 文字檔算內容（build 每次都會更新 index.html 的修改時間）；影片、圖片、音效算大小＋修改時間（長片 rough.mp4 好幾 GB，算內容太慢；重新編碼一定換時間，複製檔 build 不重寫）
 const TEXT_EXT = new Set(['.html', '.css', '.js', '.mjs', '.json', '.srt', '.svg', '.txt', '.cube']);
 const ROOT_FILES = ['index.html', 'hyperframes.json', 'meta.json', 'fx-kit.js'];
-const RENDER_DIRS = ['compositions', 'kit', 'assets'];
-const NOT_IN_FINAL = /^compositions\/(?:test-clip|captions-test|capcut-[^/]+)\.html$/;   // 測試片段、剪映素材的合成不進完成影片
+const RENDER_DIRS = ['compositions', 'kit', 'assets', 'illus-local'];
 
 function listFiles(root, rel = '') {
   let names;
@@ -111,9 +117,12 @@ export function finalIsCurrent(P, fp) {
   return !!(memo && st && memo.fingerprint === fp && memo.size === st.size && memo.mtimeMs === Math.floor(st.mtimeMs));
 }
 
-function writeMemo(P, fp, source) {
+// content：這支影片當下的內容（captureState）：下次改一段時拿來比，判斷能不能只重畫改到的地方
+function writeMemo(P, fp, source, content = null) {
   const F = deliverPaths(P.project), st = statOf(F.final);
-  if (st) writeJson(F.memo, { fingerprint: fp, size: st.size, mtimeMs: Math.floor(st.mtimeMs), source, at: new Date().toISOString() });
+  if (!st) return;
+  writeJson(F.memo, { fingerprint: fp, size: st.size, mtimeMs: Math.floor(st.mtimeMs), source, at: new Date().toISOString() });
+  try { if (content) writeState(F.finalContent, { ...content, fingerprint: fp }); else rm(F.finalContent); } catch { /* 沒有紀錄就是下次整支 */ }
 }
 
 // ---------- 行程 ----------
@@ -240,11 +249,21 @@ function failLine(r) {
   return lastLine(r);
 }
 
+// render 讀不了底片：多半是底片檔壞了（以前中途被砍又重跑），重跑 render 沒有用，要重新編碼
+function footageBroken(r, P) {
+  if (!/VIDEO_SOURCE_UNRENDERABLE[\s\S]{0,200}assets\/rough\.mp4/.test(`${r.stderr || ''}\n${r.stdout || ''}`)) return null;
+  return `底片（work/hyperframes/assets/rough.mp4）讀不了，多半是檔案壞了：跑 node shared/template/tools/build.mjs --project "${path.relative(P.root || process.cwd(), P.project)}" --reencode 重新編碼，再跑一次這條指令`;
+}
+
+// Mac：多個 worker 的截圖直接串給編碼器，不落地（長片每次少寫約 17 GB 暫存；實測成品 md5 相同、速度不變）。
+// Linux 走 BeginFrame 時 HyperFrames 本來就會串流；Windows 沒實測，維持原樣
+const CAPTURE_ENV = process.platform === 'darwin' ? { HF_CAPTURE_PARALLEL_STREAM: 'true' } : {};
+
 // 一次 render：全文 append 到 logFile，stdout／stderr 只留尾巴
-function hfRender(P, run, { args, logFile, title, env, kind, onChunk }) {
+function hfRender(P, run, { args, logFile, title, env, kind, onChunk, cwd = P.out }) {
   try { fs.appendFileSync(logFile, `\n=== ${title}（${new Date().toISOString()}）===\n`); } catch { /* log 寫不進去不影響輸出 */ }
   return run(process.execPath, hfArgs(args), {
-    cwd: P.out, env, tail: RENDER_TAIL, onSpawn: kind ? (pid) => rememberRender(P, kind, pid) : undefined,
+    cwd, env: { ...CAPTURE_ENV, ...env }, tail: RENDER_TAIL, onSpawn: kind ? (pid) => rememberRender(P, kind, pid) : undefined,
     onData: (s) => {
       try { fs.appendFileSync(logFile, s); } catch { /* 同上 */ }
       onChunk?.(s);
@@ -315,7 +334,7 @@ export function prerenderInfo(P) {
 
 function clearPrerenderFiles(P) {
   const F = deliverPaths(P.project);
-  for (const f of [F.pre, F.prePart, F.preState, `${F.preState}.tmp`]) rm(f);
+  for (const f of [F.pre, F.prePart, F.preState, `${F.preState}.tmp`, F.preContent]) rm(f);
   clearJob(P.project, 'prerender');
 }
 
@@ -346,8 +365,67 @@ async function probeStreams(run, file, cwd) {
 }
 const hasAv = (kinds) => kinds.includes('video') && kinds.includes('audio');
 
-// 接手預先 render：指紋相同且做完 → 回傳 true（已經搬成 final.mp4）；指紋相同還在跑 → 等；指紋不同 → 取消舊的，回傳 false
-async function takePrerender(P, job, { fp, run, say, pollMs, onPercent }) {
+// ---------- 增量（lib/incremental.mjs）----------
+
+const contentNow = (P, opts) => captureState(P, { quality: opts.quality, fps: opts.fps, hf: hfLocal()?.version ?? '?' });
+
+// 上一支完成影片能不能當底：指紋紀錄對得上（手動蓋掉就不算）、也有當時的內容紀錄
+function finalCandidate(P, now) {
+  const F = deliverPaths(P.project), memo = readJson(F.memo), st = statOf(F.final), was = readState(F.finalContent);
+  if (!memo || !st || !was || memo.size !== st.size || memo.mtimeMs !== Math.floor(st.mtimeMs) || was.fingerprint !== memo.fingerprint) return null;
+  return { kind: 'final', file: F.final, diff: diffStates(was, now) };
+}
+function preCandidate(P, now, side) {
+  const F = deliverPaths(P.project), st = statOf(F.pre), was = readState(F.preContent);
+  if (side?.state !== 'done' || !st || st.size !== side.size || !was || was.fingerprint !== side.fingerprint) return null;
+  return { kind: 'prerender', file: F.pre, diff: diffStates(was, now) };
+}
+
+// 拿哪一支舊檔來接：要重畫的最少的那支。回傳 { kind, file, diff }；有舊檔但都不是局部改動回 { reason }；沒有舊檔回 null
+function pickBase(P, now, { preSide = readPreState(P) } = {}) {
+  const all = [finalCandidate(P, now), preCandidate(P, now, preSide)].filter(Boolean);
+  if (!all.length) return null;
+  const ok = all.filter((c) => !c.diff.full);
+  if (!ok.length) return { reason: all[0].diff.full };
+  const size = (c) => c.diff.ranges.reduce((n, [a, b]) => n + b - a, 0);
+  return ok.sort((x, y) => size(x) - size(y))[0];
+}
+
+// 還在跑（或做好了）的預先 render，和現在的內容只差局部改動：跑完補上就好，不用丟掉
+export function prerenderCanPatch(P, opts = {}) {
+  const was = readState(deliverPaths(P.project).preContent);
+  if (!was) return false;
+  return !diffStates(was, contentNow(P, { quality: opts.quality || QUALITY, fps: opts.fps || FPS })).full;
+}
+
+// 回傳 null（沒有舊檔、或要整支：原因已經印了）、{ same, pick }（畫面和聲音都沒變）、{ done }（dest 寫好了）
+async function tryIncremental(P, job, { opts, run, say, percent, env, dest, kind, preSide, prefix = '' }) {
+  const F = deliverPaths(P.project);
+  const fp = contentFingerprint(P, opts), content = contentNow(P, opts);
+  const pick = pickBase(P, content, { preSide });
+  if (!pick) return null;
+  if (pick.reason) { say(`${prefix}整支重新輸出：${pick.reason}`); return null; }
+  if (!pick.diff.ranges.length && !pick.diff.audio) return { same: true, pick, fp, content };
+  fs.mkdirSync(path.dirname(F.log), { recursive: true });
+  fs.writeFileSync(F.log, '');
+  job.step = 'render';
+  percent(0);
+  let r;
+  try {
+    r = await renderIncremental({
+      hfDir: P.out, base: pick.file, diff: pick.diff, dest, run, env, quality: opts.quality, fps: opts.fps, onPercent: percent, isCanceled: () => job.canceled,
+      say: (s) => say(`${prefix}${s}`),
+      render: (args, o) => hfRender(P, run, { args, logFile: F.log, title: o.title, env: { ...env, ...o.env }, kind, cwd: o.cwd }),
+    });
+  } catch (e) { if (e.canceled) return null; throw e; }
+  if (kind) rm(F.renderPid(kind));
+  if (r.full) { rm(dest); say(`${prefix}整支重新輸出：${r.full}`); return null; }
+  return { done: true, pick, fp, content };
+}
+
+// 接手預先 render：指紋相同且做完 → 回傳 { content }（已經搬成 final.mp4）；指紋相同還在跑 → 等；
+// 指紋不同還在跑 → 局部改動而且沒有舊的完成影片可以接：等它跑完自己補上；其他取消舊的，回傳 false；做好了但指紋不同 → 留著當增量的底，回傳 false
+async function takePrerender(P, job, { fp, opts, run, say, pollMs, onPercent }) {
   const F = deliverPaths(P.project);
   let waited = false;
   for (;;) {
@@ -356,9 +434,16 @@ async function takePrerender(P, job, { fp, run, say, pollMs, onPercent }) {
     if (info.state === 'none') return false;
     if (info.state === 'running') {
       if (info.fingerprint && info.fingerprint !== fp) {
-        say('內容和預先 render 開始時不一樣：取消舊的，重新輸出');
-        await cancelPrerender(P);
-        return false;
+        const fromFinal = finalCandidate(P, contentNow(P, opts));
+        if ((fromFinal && !fromFinal.diff.full) || !prerenderCanPatch(P, opts)) {
+          say('內容和預先 render 開始時不一樣：取消舊的，重新輸出');
+          await cancelPrerender(P);
+          return false;
+        }
+        if (!waited) { say('預先 render 還在跑：跑完會自動補上這次的改動，接著等它'); waited = true; job.step = 'render'; job.percent = 0; }
+        if (info.percent != null) onPercent(info.percent);
+        await sleep(pollMs);
+        continue;
       }
       if (!waited) { say('預先 render 還在跑、內容沒變：接著等它，不重新開始'); waited = true; job.step = 'render'; job.percent = 0; }
       if (info.percent != null) onPercent(info.percent);
@@ -369,13 +454,15 @@ async function takePrerender(P, job, { fp, run, say, pollMs, onPercent }) {
       const kinds = await probeStreams(run, F.pre, P.root);
       if (job.canceled) return false;
       if (hasAv(kinds)) {
+        const content = readState(F.preContent);
         fs.mkdirSync(path.dirname(F.final), { recursive: true });
         fs.renameSync(F.pre, F.final);
         clearPrerenderFiles(P);
-        return true;
+        return { content };
       }
       say(`預先 render 的檔案不完整（ffprobe 只看到：${kinds.join('、') || '沒有串流'}），重新輸出`);
-    } else if (info.state === 'failed') say(`預先 render 沒有成功（${info.reason || '不明'}），重新輸出`);
+    } else if (info.state === 'done') return false;   // 內容又改過：留著當增量的底（用不上的話，正式 render 前會清掉）
+    else if (info.state === 'failed') say(`預先 render 沒有成功（${info.reason || '不明'}），重新輸出`);
     clearPrerenderFiles(P);
     return false;
   }
@@ -384,6 +471,20 @@ async function takePrerender(P, job, { fp, run, say, pollMs, onPercent }) {
 // ---------- 流程 ----------
 
 // deps：build()、report()（必要）；run、say、said（停點紀錄的原話）、by（lock 名字）、quality、fps、force、renderEnv（render 的環境變數）、pollMs、onPercent
+// 輸出了也是白做的情況（--review 也擋，這裡擋跳過 --review、或在剪輯台直接按輸出）：驗收只看影音，看不出這兩件事
+//   內容設計動畫還是空白畫布：占位字會進成品；分鏡表有改動還沒套回：使用者改的字不會出現在成品
+export function deliverBlocker(P) {
+  const blanks = (readJson(P.plan)?.scenes || []).filter((s) => {
+    if (!s?.design || !s.id) return false;
+    let html = null;
+    try { html = fs.readFileSync(path.join(P.out, designFileOf(s)), 'utf8'); } catch { /* 還沒有檔也算沒做 */ }
+    return isBlankDesign(html);
+  }).map((s) => s.id);
+  if (blanks.length) return { message: `內容設計動畫還沒做：${blanks.join('、')}（畫面還是空白畫布，上面只有占位字）。`, fix: '一段派一個設計師（.agents/skills/auto-edit-motion/references/design-build.md），全部做完再輸出；這段不做動畫就在 plan.json 改用模板或拿掉' };
+  if (storyboardDirty(P)) return { message: '分鏡表（work/storyboard.md）有改動還沒套回 plan.json，現在輸出會漏掉那些改動。', fix: `先跑 node shared/template/tools/build.mjs --project "${path.relative(P.root || process.cwd(), P.project)}" --apply-storyboard，再輸出；確定不要那些改動才用 --storyboard --force 重新產生分鏡表` };
+  return null;
+}
+
 export async function runDeliver(P, job, deps) {
   const F = deliverPaths(P.project);
   const run = deps.run || spawnRunner(job);
@@ -392,13 +493,16 @@ export async function runDeliver(P, job, deps) {
   const addLog = (s) => { job.log = (job.log + s).slice(-LOG_KEEP); };
   const fail = (message, errors = [], fix = '') => { job.ok = false; job.message = message; job.errors = errors; job.fix = fix; };
   const nodeTool = (name, args) => run(process.execPath, [path.join(TOOLS, name), ...args], { cwd: P.root, onData: addLog });
-  const percent = (p) => { job.percent = p; deps.onPercent?.(p); };
+  // pctStart：第一次有百分比的時間，頁面用它算剩餘時間（接手預先 render 時不是從 0 開始）
+  const percent = (p) => { job.percent = p; job.pctStart ??= { t: Date.now(), p }; deps.onPercent?.(p); };
   let holder = null, locked = false;
   try {
     holder = takeLock(P, deps.by || 'cli');
     locked = !holder;
     if (holder) return fail(holder.by === 'editor' ? '剪輯台正在輸出完成影片。' : 'AI 正在背景輸出完成影片。', [], holder.by === 'editor' ? '等它跑完或在剪輯台按取消，再跑一次' : '等它跑完，或跑 deliver.mjs --cancel 再輸出');
     await reapRender(P, 'final');
+    const blocked = deliverBlocker(P);
+    if (blocked) return fail(blocked.message, [], blocked.fix);
 
     job.step = 'build';
     say(`1/4 ${STEPS[0][1]}…`);
@@ -408,15 +512,37 @@ export async function runDeliver(P, job, deps) {
     addLog(built.log || '');
     deps.onBuilt?.(built.log || '');
 
-    let fp = contentFingerprint(P, opts);
+    let fp = contentFingerprint(P, opts), content = null;
     if (!deps.force && finalIsCurrent(P, fp)) {
       job.source = 'same';
       say('output/final.mp4 就是現在的內容，不用重新輸出（要重做加 --force）');
-    } else if (!deps.force && await takePrerender(P, job, { fp, run, say, pollMs: deps.pollMs ?? 2000, onPercent: percent })) {
-      job.source = 'prerender';
-      say('用預先 render 好的完成影片，不用再等一個片長');
+    } else if (!deps.force) {
+      const took = await takePrerender(P, job, { fp, opts, run, say, pollMs: deps.pollMs ?? 2000, onPercent: percent });
+      if (took) {
+        job.source = 'prerender';
+        content = took.content;
+        say('用預先 render 好的完成影片，不用再等一個片長');
+      }
     }
     if (job.canceled) return;
+
+    // 只改了幾段：重畫那幾段、接回上一支（畫面和聲音都沒變就不用動）
+    if (!job.source && !deps.force) {
+      const inc = await tryIncremental(P, job, { opts, run, say, percent, env: deps.renderEnv, dest: F.tmp, kind: 'final', prefix: '3/4 ' });
+      if (job.canceled) return;
+      if (inc?.same && inc.pick.kind === 'final') {
+        job.source = 'same';
+        writeMemo(P, inc.fp, readJson(F.memo)?.source || 'render', inc.content);
+        say('改動不影響畫面和聲音，output/final.mp4 不用重新輸出（要重做加 --force）');
+      } else if (inc?.same || inc?.done) {
+        fp = inc.fp;
+        content = inc.content;
+        fs.mkdirSync(path.dirname(F.final), { recursive: true });
+        fs.renameSync(inc.same ? inc.pick.file : F.tmp, F.final);
+        if (prerenderInfo(P).state !== 'none') await cancelPrerender(P);
+        job.source = inc.same ? 'prerender' : 'incremental';
+      }
+    }
 
     if (!job.source) {
       job.step = 'test';
@@ -426,13 +552,14 @@ export async function runDeliver(P, job, deps) {
       const first = items.find((x) => x.type !== 'media');
       const start = first?.out?.start ?? first?.start ?? 0;   // out.start＝完成影片秒數（有 edit.cuts 時 start 是 rough.mp4 秒數）
       say(`2/4 ${STEPS[1][1]}：${start} 秒起 ${TEST_SECONDS} 秒`);
-      const tested = await nodeTool('build.mjs', ['--project', P.project, '--template', P.templateDir, '--test', `${start},${TEST_SECONDS}`]);
+      let tested;
+      do { tested = await nodeTool('build.mjs', ['--project', P.project, '--template', P.templateDir, '--test', `${start},${TEST_SECONDS}`]); } while (tested.code === STILL_RUNNING);
       if (job.canceled) return;
       if (tested.code !== 0) return fail('測試片段產生失敗：照下面的訊息修改（看不懂就整段貼給 AI）。', [lastLine(tested)], '照訊息改 plan.json，再跑一次這條指令');
       fs.mkdirSync(path.dirname(F.clip), { recursive: true });
-      const clipRender = await hfRender(P, run, { args: ['render', '-c', 'compositions/test-clip.html', '--quality', 'draft', '-o', F.clip], logFile: F.log, title: '測試片段', env: deps.renderEnv, onChunk: addLog });
+      const clipRender = await hfRender(P, run, { args: ['render', '-c', 'compositions/test-clip.html', '--sdr', '--quality', 'draft', '-o', F.clip], logFile: F.log, title: '測試片段', env: deps.renderEnv, onChunk: addLog });
       if (job.canceled) return;
-      if (clipRender.code !== 0) return fail('測試片段輸出失敗：把下面的訊息貼給 AI。', [failLine(clipRender)], `看 ${path.relative(P.root, F.log)} 最後幾行；照 USAGE-reference.md R13 處理後再跑一次`);
+      if (clipRender.code !== 0) return fail('測試片段輸出失敗：把下面的訊息貼給 AI。', [failLine(clipRender)], footageBroken(clipRender, P) || `看 ${path.relative(P.root, F.log)} 最後幾行；照 USAGE-reference.md R13 處理後再跑一次`);
       const kinds = await probeStreams(run, F.clip, P.root);
       if (job.canceled) return;
       if (!hasAv(kinds)) return fail('測試片段沒有畫面或沒有聲音，所以沒有輸出整支：把下面的訊息貼給 AI。', [`ffprobe 只看到：${kinds.join('、') || '沒有串流'}`], '確認 work/rough.mp4 有音軌（ffprobe），修好後再跑一次這條指令');
@@ -440,14 +567,15 @@ export async function runDeliver(P, job, deps) {
       // --force 或接手失敗：這次會 render 正式的，預先 render 的就沒用了（在跑的也會搶 CPU）
       if (prerenderInfo(P).state !== 'none') await cancelPrerender(P);
       fp = contentFingerprint(P, opts);   // 等預先 render 的時候使用者可能又存檔了：記這次真正 render 的內容
+      content = contentNow(P, opts);
       job.step = 'render';
       percent(0);
       say(`3/4 ${STEPS[2][1]}（全文 log：${path.relative(P.root, F.log)}）`);
       const parse = progressParser((p) => percent(p));
-      const rendered = await hfRender(P, run, { args: ['render', '--fps', String(opts.fps), '--quality', opts.quality, '--output', F.tmp], logFile: F.log, title: '整支', env: deps.renderEnv, kind: 'final', onChunk: (s) => { addLog(s); parse(s); } });
+      const rendered = await hfRender(P, run, { args: ['render', '--sdr', '--fps', String(opts.fps), '--quality', opts.quality, '--output', F.tmp], logFile: F.log, title: '整支', env: deps.renderEnv, kind: 'final', onChunk: (s) => { addLog(s); parse(s); } });
       rm(F.renderPid('final'));
       if (job.canceled) return;
-      if (rendered.code !== 0 || !statOf(F.tmp)) return fail('整支輸出失敗，上一支完成影片沒有被動到：把下面的訊息貼給 AI。', [failLine(rendered)], `看 ${path.relative(P.root, F.log)} 最後 20 行；重跑一次這條指令，還是失敗就停下來回報`);
+      if (rendered.code !== 0 || !statOf(F.tmp)) return fail('整支輸出失敗，上一支完成影片沒有被動到：把下面的訊息貼給 AI。', [failLine(rendered)], footageBroken(rendered, P) || `看 ${path.relative(P.root, F.log)} 最後 20 行；重跑一次這條指令，還是失敗就停下來回報`);
       fs.mkdirSync(path.dirname(F.final), { recursive: true });
       try { fs.renameSync(F.tmp, F.final); } catch (e) {
         // 舊檔被別的程式開著（Windows 的播放器）：這一支不能白做，留成預先 render 的成品，再跑一次直接接手
@@ -458,7 +586,7 @@ export async function runDeliver(P, job, deps) {
       job.source = 'render';
     }
     job.percent = 100;
-    if (job.source !== 'same') writeMemo(P, fp, job.source);
+    if (job.source !== 'same') writeMemo(P, fp, job.source, content);
 
     job.step = 'qc';
     say(`4/4 ${STEPS[3][1]}（qc.mjs final）`);
@@ -471,10 +599,13 @@ export async function runDeliver(P, job, deps) {
     const said = (level) => (report.checks || []).filter((c) => c.level === level).map((c) => c.text);
     job.qc = report;
     job.warnings = said('warn');
+    // 驗收只看畫面和聲音，不知道名字對不對：畫面上還是示範人物就講清楚，不能只說「通過」
+    const demo = deps.speakerGate ? deps.speakerGate() : P.templateDir ? speakerGate(P.templateDir, readJson(P.plan)) : null;
+    if (demo?.needed) job.warnings.unshift(`講者介紹還是示範人物「${demo.demo}」（${demo.segments.join('、')}）→ 跟 AI 說姓名與頭銜，或在剪輯頁設定後再輸出一次`);
     if (report.ok === false) return fail('影片輸出好了，但驗收沒過：把下面的 ✖ 貼給 AI，或修改後再輸出一次。', said('error'), '照 ✖ 後面的 → 修好，再跑一次這條指令（內容沒變只會重跑驗收；要重新 render 加 --force）');
     recordStopPassed(P.project, { said: deps.said });
     job.ok = true;
-    job.message = '完成影片輸出好了，驗收也通過了。';
+    job.message = demo?.needed ? `完成影片輸出好了，但講者介紹還是示範人物「${demo.demo}」，上片前要改。` : '完成影片輸出好了，驗收也通過了。';
   } catch (e) {
     if (!job.canceled) fail(`輸出中斷：${e.message}`, [], `看 ${path.relative(P.root, F.log)} 最後幾行；重跑一次這條指令`);
   } finally {
@@ -492,24 +623,74 @@ export async function runPrerender(P, job, deps) {
   const run = deps.run || spawnRunner(job, { nice: PRERENDER.nice });
   const say = deps.say || (() => {});
   const opts = { quality: deps.quality || QUALITY, fps: deps.fps || FPS };
+  const prevSide = readPreState(P);   // 上一次做好的可以當增量的底（下面第一次 save 就會蓋掉）
   let side = { state: 'running', phase: 'build', pid: process.pid, fingerprint: null, percent: null, workers: deps.workers || PRERENDER.workers, startedAt: Date.now() };
   const save = (o) => { side = { ...side, ...o }; try { writeJson(F.preState, side); } catch { /* 下一次再寫 */ } };
   const end = (state, reason, code = 0) => { save({ state, reason, phase: null, finishedAt: Date.now() }); rm(F.prePart); rm(F.renderPid('prerender')); say(`預先 render ${state === 'done' ? '好了' : `沒有做完：${reason}`}`); return code; };
   save({});
   try {
     await reapRender(P, 'prerender');
+    const blocked = deliverBlocker(P);
+    if (blocked) return end('skipped', blocked.message);
     const [, built] = await deps.build();
-    if (!built?.ok) return end('failed', `重新產生沒有成功：${built?.issues?.errors?.[0] || built?.message || '不明'}`, 1);
-    const fp = contentFingerprint(P, opts);
+    if (!built?.ok) return end('failed',`重新產生沒有成功：${built?.issues?.errors?.[0] || built?.message || '不明'}`, 1);
+    let fp = contentFingerprint(P, opts);
     if (finalIsCurrent(P, fp)) return end('skipped', 'output/final.mp4 已經是現在的內容');
+    let content = contentNow(P, opts);
+    const t0 = Date.now();
+    const incEnv = { ...deps.renderEnv, PRODUCER_MAX_WORKERS: String(side.workers) };   // --start/--end 不理 --workers
+    const finishDone = () => {
+      writeState(F.preContent, { ...content, fingerprint: fp });
+      save({ state: 'done', fingerprint: fp, phase: null, percent: 100, size: statOf(F.pre).size, finishedAt: Date.now(), seconds: Math.round((Date.now() - t0) / 1000) });
+      rm(F.renderPid('prerender'));
+      say(`預先 render 好了（${side.seconds} 秒）`);
+      return 0;
+    };
+    // 跑的時候使用者又存檔了（局部改動）：重新產生、把改到的補上；補不了就算了（stale），之後照常重來
+    const catchUp = async () => {
+      for (let round = 0; round < 5; round++) {
+        if (contentFingerprint(P, opts) === fp) return null;
+        const [, again] = await deps.build();
+        if (!again?.ok) return '內容改過了';
+        const fp2 = contentFingerprint(P, opts);
+        if (fp2 === fp) return null;
+        const c2 = contentNow(P, opts), d = diffStates(content, c2);
+        if (d.full) return `內容改過了（${d.full}）`;
+        if (d.ranges.length || d.audio) {
+          save({ phase: 'patch' });
+          const r = await renderIncremental({ hfDir: P.out, base: F.pre, diff: d, dest: F.prePart, run, env: incEnv, quality: opts.quality, fps: opts.fps, say, render: (args, o) => hfRender(P, run, { args, logFile: F.log, title: o.title, env: { ...incEnv, ...o.env }, kind: 'prerender', cwd: o.cwd }) });
+          if (r.full) return `內容改過了（${r.full}）`;
+          fs.renameSync(F.prePart, F.pre);
+        }
+        fp = fp2;
+        content = c2;
+      }
+      return contentFingerprint(P, opts) === fp ? null : '內容一直在改';
+    };
+    save({ fingerprint: fp, phase: 'render', percent: 0 });
+    // 上一支（完成影片或做好的預先 render）只差幾段：補上就好
+    const inc = await tryIncremental(P, job, { opts, run, say, percent: (p) => save({ percent: p }), env: incEnv, dest: F.prePart, kind: 'prerender', preSide: prevSide });
+    if (inc?.same && inc.pick.kind === 'final') {
+      writeMemo(P, inc.fp, readJson(F.memo)?.source || 'render', inc.content);
+      return end('skipped', 'output/final.mp4 已經是現在的內容');
+    }
+    if (inc?.same || inc?.done) {
+      if (inc.done) fs.renameSync(F.prePart, F.pre);
+      fp = inc.fp;
+      content = inc.content;
+      const why = await catchUp();
+      if (why) { rm(F.pre); return end('stale', why); }
+      return finishDone();
+    }
     rm(F.pre);
     rm(F.prePart);
+    writeState(F.preContent, { ...content, fingerprint: fp });
     save({ fingerprint: fp, phase: 'render', percent: 0 });
     fs.mkdirSync(path.dirname(F.log), { recursive: true });
     fs.writeFileSync(F.log, '');
 
     const stallMs = deps.stallMs ?? PRERENDER.stallMs, capFloor = deps.capMs ?? PRERENDER.minCapMs;
-    const t0 = Date.now(), watchMs = deps.watchMs ?? PRERENDER.watchMs;
+    const watchMs = deps.watchMs ?? PRERENDER.watchMs;
     let lastTick = t0, lastWatch = t0, slept = 0, capMs = capFloor, stopped = null;
     const stop = (why) => { if (stopped) return; stopped = why; if (job.child?.pid) killTree(job.child.pid).catch(() => {}); };
     const watch = setInterval(() => {
@@ -517,8 +698,8 @@ export async function runPrerender(P, job, deps) {
       const now = Date.now(), gap = now - lastWatch - watchMs;
       lastWatch = now;
       if (gap > 60_000) { lastTick += gap; slept += gap; }
-      // 使用者存檔或重新產生後，這支就沒用了：立刻收掉，把 CPU 還給預覽
-      try { if (contentFingerprint(P, opts) !== fp) stop('內容改過了'); } catch { /* 下一輪再看 */ }
+      // 使用者存檔或重新產生後：局部改動就跑完再補上（已經 render 的不丟）；不是局部才立刻收掉，把 CPU 還給預覽
+      try { if (contentFingerprint(P, opts) !== fp && diffStates(content, contentNow(P, opts)).full) stop('內容改過了'); } catch { /* 下一輪再看 */ }
       if (now - lastTick > stallMs) stop(`${Math.round(stallMs / 60000)} 分鐘沒有進度`);
       else if (now - t0 - slept > capMs) stop(`超過上限 ${Math.round(capMs / 60000)} 分鐘`);
       else if ((deps.freeBytes ?? freeBytesOf)(P) < PRERENDER.stopFreeBytes) stop(`磁碟只剩不到 ${Math.round(PRERENDER.stopFreeBytes / 1024 ** 3)} GB`);
@@ -529,16 +710,14 @@ export async function runPrerender(P, job, deps) {
     });
     let r;
     try {
-      r = await hfRender(P, run, { args: ['render', '--fps', String(opts.fps), '--quality', opts.quality, '--workers', String(side.workers), '--output', F.prePart], logFile: F.log, title: '預先 render', env: deps.renderEnv, kind: 'prerender', onChunk: (c) => { lastTick = Date.now(); parse(c); } });
+      r = await hfRender(P, run, { args: ['render', '--sdr', '--fps', String(opts.fps), '--quality', opts.quality, '--workers', String(side.workers), '--output', F.prePart], logFile: F.log, title: '預先 render', env: deps.renderEnv, kind: 'prerender', onChunk: (c) => { lastTick = Date.now(); parse(c); } });
     } finally { clearInterval(watch); }
     if (stopped) return end(stopped === '內容改過了' ? 'stale' : 'failed', stopped);
     if (r.code !== 0 || !statOf(F.prePart)) return end('failed', failLine(r), 1);
-    if (contentFingerprint(P, opts) !== fp) return end('stale', '內容改過了');
     fs.renameSync(F.prePart, F.pre);
-    save({ state: 'done', phase: null, percent: 100, size: statOf(F.pre).size, finishedAt: Date.now(), seconds: Math.round((Date.now() - t0) / 1000) });
-    rm(F.renderPid('prerender'));
-    say(`預先 render 好了（${side.seconds} 秒）`);
-    return 0;
+    const why = await catchUp();
+    if (why) { rm(F.pre); return end('stale', why); }
+    return finishDone();
   } catch (e) {
     return end('failed', e.message, 1);
   }

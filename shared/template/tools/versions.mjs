@@ -51,6 +51,8 @@ import { projArg } from './lib/look.mjs';
 import { formatFinding } from './lib/audit-rules.mjs';
 import { appendRound, appendStop, progressFile } from './lib/progress.mjs';
 import { readStopLog } from './status.mjs';
+import { markStoryboardWritten } from './lib/storyboard-state.mjs';
+import { writeAtomic } from './lib/atomic.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const DIR = 'versions';
@@ -164,6 +166,7 @@ function markStoryboard(P, md) {
   const st = readState(P.project);
   st.storyboardMtime = fs.statSync(f).mtimeMs;
   writeState(P.project, st);
+  markStoryboardWritten(P, md);   // 工具自己寫的，不算「有改動還沒套回」
 }
 
 function writeVersionFiles(dir, snap) {
@@ -205,7 +208,7 @@ export function compareClip(a, b, out, labels) {
 
 function makePreview(P, flags, id, dir, log) {
   const extra = flags.template ? ['--template', path.resolve(flags.template)] : [];
-  const build = (args) => spawnSync(process.execPath, [path.join(HERE, 'build.mjs'), '--project', P.project, ...args, ...extra], { encoding: 'utf8', maxBuffer: 1 << 28 });
+  const build = (args) => { let r; do { r = spawnSync(process.execPath, [path.join(HERE, 'build.mjs'), '--project', P.project, ...args, ...extra], { encoding: 'utf8', maxBuffer: 1 << 28 }); } while (r.status === 75); return r; };
   const again = '修好後再跑一次同一行（檔案已經存好，只會補預覽）';
   const fail = (why, fix) => { log(`⚠ ${id} 的預覽沒做：${why} → ${fix}`); return false; };
   const c = build(['--check', '--json']);
@@ -347,7 +350,7 @@ export function useVersion(P, flags, id, ver, log) {
   const i = (plan?.scenes || []).findIndex((s) => s && s.id === id);
   if (i < 0) throw new Error(`plan.json 沒有「${id}」這一段了 → 退回不了；要加回這段，照 v${t.n}/段落.json 手動放進 plan.json 的 scenes`);
   plan.scenes[i] = seg;
-  fs.writeFileSync(P.plan, JSON.stringify(plan, null, 2) + '\n');
+  writeAtomic(P.plan, JSON.stringify(plan, null, 2) + '\n');
   const restored = [];
   for (const f of t.meta.files || []) {
     const src = path.join(t.dir, ...f.store.split('/'));
@@ -683,7 +686,8 @@ const REAL_STEPS = {
   build(P, flags) {
     const extra = flags.template ? ['--template', path.resolve(flags.template)] : [];
     // --table：長片預設把 ⚠ 併起來、最多 40 行；這裡要全部，才挑得出改到的段（digestBuild）
-    const r = spawnSync(process.execPath, [path.join(HERE, 'build.mjs'), '--project', P.project, '--table', ...extra], { encoding: 'utf8', maxBuffer: 1 << 28 });
+    let r;
+    do { r = spawnSync(process.execPath, [path.join(HERE, 'build.mjs'), '--project', P.project, '--table', ...extra], { encoding: 'utf8', maxBuffer: 1 << 28 }); } while (r.status === 75);   // 底片還在編碼：接著等
     return { ok: r.status === 0, out: `${r.stdout || ''}\n${r.stderr || ''}` };
   },
   check(P, flags) {

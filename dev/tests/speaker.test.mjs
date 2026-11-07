@@ -89,3 +89,37 @@ test('brand.mjs speaker：看設定、設定（逗號或「、」分頭銜）、
   assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')), { off: true });
   assert.match(brand(f.kit).stdout, /講者介紹：關閉/);
 });
+
+test('speakerGate：示範人物來自 scene.json 的預設值；只有真的會顯示示範人物才要問', () => {
+  const plan = (scenes) => ({ scenes });
+  const seg = { id: 's1', scene: 'speaker' };
+  // 沒設定：段落沒寫 name → 會顯示示範人物；scene 用編號或別名也算
+  const unset = fakeShared().tpl;
+  fs.symlinkSync(path.join(TEMPLATE, 'scenes'), path.join(unset, 'scenes'), 'dir');
+  const g = S.speakerGate(unset, plan([seg, { id: 's2', scene: '14' }, { id: 's3', scene: '講者介紹', slots: { name: '陳大文' } }, { id: 's4', scene: 'key-point' }]));
+  assert.equal(g.needed, true);
+  assert.equal(g.demo, '林大寶');
+  assert.deepEqual(g.segments, ['s1', 's2']);
+  assert.equal(S.speakerGate(unset, plan([{ id: 's3', scene: '14', slots: { name: '林大寶' } }])).needed, true, '直接寫了示範人物的名字也要問');
+  assert.equal(S.speakerGate(unset, plan([{ id: 's3', scene: '14', slots: { name: '陳大文' } }])).needed, false);
+  assert.equal(S.speakerGate(unset, plan([{ id: 's4', scene: 'key-point' }])).needed, false);
+  assert.equal(S.speakerGate(unset, null).needed, false, '還沒有 plan.json');
+  // 設定好（就算真的叫林大寶）、關閉：都不問（關閉時 --check 會 ✖）
+  const named = fakeShared({ name: '陳大文', titles: ['設計師'] }).tpl;
+  fs.symlinkSync(path.join(TEMPLATE, 'scenes'), path.join(named, 'scenes'), 'dir');
+  assert.equal(S.speakerGate(named, plan([seg])).needed, false);
+  assert.equal(S.speakerGate(named, plan([seg])).name, '陳大文');
+  const off = fakeShared({ off: true }).tpl;
+  fs.symlinkSync(path.join(TEMPLATE, 'scenes'), path.join(off, 'scenes'), 'dir');
+  assert.equal(S.speakerGate(off, plan([seg])).needed, false);
+});
+
+test('saveSpeaker：頓號逗號都能分頭銜、字數照 scene.json、不合就不寫檔', () => {
+  const f = fakeShared();
+  assert.match(S.saveSpeaker(f.tpl, { name: '', titles: '講師' }).errors[0], /姓名沒有寫/);
+  assert.match(S.saveSpeaker(f.tpl, { name: '陳大文', titles: '' }).errors[0], /頭銜至少 1 個/);
+  assert.equal(fs.existsSync(f.file), false);
+  assert.deepEqual(S.saveSpeaker(f.tpl, { name: ' 陳大文 ', titles: '設計師、插畫家, 講師' }).errors, []);
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')), { name: '陳大文', titles: ['設計師', '插畫家', '講師'] });
+  assert.equal(S.readSpeaker(f.tpl).state, 'set');
+});

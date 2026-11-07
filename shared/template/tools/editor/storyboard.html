@@ -9,11 +9,12 @@
 <link rel="stylesheet" href="/kit/brand.css">
 <link rel="stylesheet" href="/editor/editor.css">
 <style>
-  body.storyboard { display: block; height: auto; min-height: 100vh; overflow: auto; scroll-padding-top: 12px; }
+  body.storyboard { display: block; height: auto; min-height: 100vh; overflow: auto; scroll-padding-top: 66px; }
+  body.storyboard .topbar { position: sticky; top: 0; z-index: 20; }
   .sb-shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
-  .sb-nav { position: sticky; top: 12px; max-height: calc(100vh - 24px); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .sb-nav { position: sticky; top: 66px; max-height: calc(100vh - 78px); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   .sb-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
-  .sb-navlist { list-style: none; margin: 0; padding: 6px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+  .sb-navlist { list-style: none; margin: 0; padding: 6px; overflow-y: auto; min-height: 0; flex: 1 1 auto; overscroll-behavior: contain; }
   .sb-navlist a { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px; align-items: baseline; padding: 6px 8px; border-radius: 6px; color: var(--mute); text-decoration: none; font-size: 13px; }
   .sb-navlist a:hover { background: var(--card); color: var(--ink); }
   .sb-navlist a.on { background: var(--card2); color: var(--ink); }
@@ -24,6 +25,36 @@
   .sb-navlist a.ref { font-size: 12.5px; color: var(--dim); }
   .sb-navlist a.changed .sb-navtxt::after, .sb-navlist a.plain.changed::after { content: ' ●'; color: var(--accent); }
   .sb-navgap { height: 1px; margin: 6px 8px; background: var(--line); }
+  .sb-navch > summary { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .sb-navch > summary:hover { background: var(--card); }
+  .sb-chmeta { font-family: var(--mono); font-size: 11.5px; font-weight: 400; color: var(--dim); white-space: nowrap; }
+  .sb-navch ul { list-style: none; margin: 0; padding: 0; }
+  .sb-navlist a.seen .sb-navid { color: var(--good-kw); }
+  .sb-navlist a.kind-design .sb-navtxt { color: var(--accent-text); }
+  .sb-navlist a.seen .sb-navtxt { color: var(--dim); }
+  .sb-tasks { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 100%; margin-top: 8px; }
+  .sb-tasks:empty { display: none; }
+  .sb-task { display: grid; gap: 1px; padding: 6px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--line2); color: var(--ink); font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
+  a.sb-task:hover, button.sb-task:hover { background: var(--card2); }
+  .sb-task b { font-size: 13.5px; }
+  .sb-task span { font-size: 12px; color: var(--mute); }
+  .sb-task.static { cursor: default; }
+  .sb-task.todo { border-color: var(--accent); }
+  .sb-task.todo b { color: var(--accent-text); }
+  .sb-task.ok b { color: var(--good-kw); }
+  .sb-task.over { border-color: var(--warn); }
+  .sb-task.over b { color: var(--warn-kw); }
+  .sb-finder { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; flex: 1 1 100%; margin-top: 10px; }
+  .sb-finder input { flex: 1 1 320px; min-width: 0; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line2); background: var(--card); color: var(--ink); font: inherit; font-size: 14px; }
+  .sb-finder input:focus { outline: 2px solid var(--accent); }
+  .sb-kinds { display: flex; flex-wrap: wrap; gap: 4px; }
+  .sb-kinds button { padding: 3px 9px; font-size: 12.5px; border-radius: 999px; }
+  .sb-kinds button[aria-pressed="true"] { background: var(--card2); border-color: var(--accent); color: var(--ink); font-weight: 700; }
+  .sb-findernote { font-size: 13px; color: var(--mute); }
+  .sb-findernote button { padding: 1px 8px; font-size: 12px; margin-left: 4px; }
+  .sb-idlink { font-family: var(--mono); color: var(--accent-text); }
+  .sb-see { font-size: 12.5px; color: var(--accent-text); white-space: nowrap; }
+  [hidden] { display: none !important; }
   .sb-next { padding: 12px 14px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); font-size: 13.5px; line-height: 1.55; flex: none; }
   .sb-next b { color: var(--accent-text); }
   .sb-main { display: grid; gap: 16px; min-width: 0; }
@@ -37,7 +68,7 @@
   #banner:empty { display: none; }
   .sb-empty { padding: 48px 8px; text-align: center; color: var(--mute); }
 
-  .sb-sec { scroll-margin-top: 12px; }
+  .sb-sec { scroll-margin-top: 66px; }
   .sb-sechead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 12px; }
   .sb-sechead h2 { margin: 0; font-size: 16px; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
   .sb-id { font-family: var(--mono); font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--card2); border: 1px solid var(--line2); color: var(--ink); }
@@ -50,6 +81,9 @@
   .sb-segbody.noshot { grid-template-columns: minmax(0, 1fr); }
   .sb-shots { display: grid; gap: 8px; min-width: 0; }
   .sb-shots.many { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sb-shots.pending { position: relative; }
+  .sb-pending { position: absolute; left: 8px; right: 8px; top: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(11, 16, 32, .92); border: 1px solid var(--accent); color: var(--ink); font-size: 12.5px; line-height: 1.45; font-weight: 700; }
+  .sb-beat { color: var(--ink); }
   .sb-shots a { display: block; line-height: 0; }
   .sb-shots img { display: block; width: 100%; max-height: 360px; object-fit: contain; border-radius: 6px; background: #000; border: 1px solid var(--line); }
   .sb-noimg { display: grid; place-items: center; min-height: 90px; padding: 8px; border-radius: 6px; border: 1px dashed var(--line2); color: var(--dim); font-size: 12px; text-align: center; line-height: 1.4; }
@@ -88,6 +122,20 @@
   .sb-note-box textarea { display: block; width: 100%; box-sizing: border-box; min-height: 60px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line2); background: var(--card); color: var(--ink); font: inherit; font-size: 14px; line-height: 1.6; resize: vertical; }
   .sb-note-box textarea:focus { outline: 2px solid var(--accent); }
   .sb-note-box textarea.has-note { border-color: var(--accent); }
+  .sb-note-box textarea.unsaved, .sb-answer.unsaved { outline: 2px solid var(--warn); }
+  .sb-asks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .sb-ask { padding: 10px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); display: grid; gap: 8px; }
+  .sb-ask.answered { border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+  .sb-ask-q { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 14px; line-height: 1.6; }
+  .sb-ask-mark { font-family: var(--mono); font-size: 12.5px; color: var(--dim); text-align: right; }
+  .sb-ask.answered .sb-ask-mark { color: var(--good-kw); font-weight: 700; }
+  .sb-answer { display: block; width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line2); background: var(--bg3); color: var(--ink); font: inherit; font-size: 14px; line-height: 1.5; resize: none; overflow: hidden; }
+  .sb-answer:focus { outline: 2px solid var(--accent); }
+  .sb-speaker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+  .sb-speaker-msg { flex: 1 1 100%; color: var(--ink); line-height: 1.55; }
+  .sb-speaker label { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+  .sb-speaker input { padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line2); background: var(--card); color: var(--ink); font: inherit; width: 220px; max-width: 100%; }
+  .sb-speaker-err { color: var(--warn-kw); font-weight: 700; }
   .sb-edit { min-height: 1.5em; padding: 1px 4px; margin: -1px -4px; border-radius: 4px; outline: 1px solid transparent; overflow-wrap: anywhere; cursor: text; transition: background .1s, outline-color .1s; }
   .sb-edit[contenteditable] { background: color-mix(in srgb, var(--accent) 14%, var(--card)); box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 70%, transparent); }
   .sb-edit[contenteditable]:hover { background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
@@ -133,15 +181,33 @@
   </nav>
   <main class="sb-main">
     <div class="sb-panel sb-intro" id="intro" hidden>
-      <p id="hint">橘底的文字可以直接改，下拉選單可以換呈現方式；不滿意就寫在每段下面的補充說明。全部自動存回 work/storyboard.md。</p>
+      <p id="hint">橘底的文字可以直接改，下拉選單可以換呈現方式；不滿意就寫在每段下面的補充說明。全部自動存檔。</p>
       <span class="sb-summary" id="summary"></span>
+      <div class="sb-tasks" id="tasks"></div>
+      <div class="sb-finder" id="finder">
+        <input id="finderInput" type="search" autocomplete="off" placeholder="找段號、字幕、畫面文字或時間（例 x0410、手機、12:30）" aria-label="找一段">
+        <div class="sb-kinds" role="group" aria-label="只看哪一種">
+          <button type="button" data-kind-filter="all" aria-pressed="true">全部</button>
+          <button type="button" data-kind-filter="design" aria-pressed="false">內容設計動畫</button>
+          <button type="button" data-kind-filter="anim" aria-pressed="false">模板動畫</button>
+          <button type="button" data-kind-filter="card" aria-pressed="false">字卡</button>
+          <button type="button" data-kind-filter="media" aria-pressed="false">錄影／圖片</button>
+          <button type="button" data-kind-filter="changed" aria-pressed="false">我改過的</button>
+          <button type="button" data-kind-filter="unseen" aria-pressed="false">還沒看的</button>
+        </div>
+        <span class="sb-findernote" id="finderNote" role="status"></span>
+      </div>
     </div>
+    <div id="speakerBox"></div>
     <div id="banner"></div>
     <div class="sb-panel sb-empty" id="empty" hidden></div>
     <div id="sections" class="sb-main"></div>
   </main>
 </div>
 
+<div class="notice" id="notice" role="alert" hidden></div>
+
 <script type="module" src="/editor/storyboard.js"></script>
+<script type="module" src="/editor/flow.js"></script>
 </body>
 </html>

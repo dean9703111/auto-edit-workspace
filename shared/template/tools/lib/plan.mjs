@@ -29,12 +29,13 @@ import { readCustom } from './assemble.mjs';
 import { findCue, norm, cueByN } from './srt.mjs';
 import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTime, textWidth } from './time.mjs';
 import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } from './edit.mjs';
-import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner } from './media.mjs';
-import { SFX_RULES, sfxBudget } from './audio.mjs';
+import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner, mediaOverlaps } from './media.mjs';
+import { SFX_RULES, sfxBudget, thinMainSfx } from './audio.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
 import { floorRules, atConsts } from './audit-rules.mjs';
+import { readScript } from './script-file.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
 const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'scenes'];
@@ -733,6 +734,13 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     // 後面的素材用 slide／zoom／tape 進場：前一段要墊在底下直到進場完成，不然中間會露出講者
     if (b.type === 'media' && ['slide', 'zoom', 'tape'].includes(b.media.enter)) a.end = Math.max(a.end, r3(b.start + ENTER[b.media.enter]));
     a.seamTo = b.id;
+    // 同一支錄影接著播（後段的起點接上前段的終點）：硬接。疊化會有 0.47 秒鬼影，還會多播前段的畫面
+    if (a.type === 'media' && b.type === 'media' && continuesMedia(a, b)) {
+      if (b.media.enter === 'fade') b.media.enter = 'cut';
+      if (a.media.exit === 'fade') a.media.exit = 'cut';
+      a.pipEnd = b.start;
+      b.notes.push(`和 ${a.id} 是同一支錄影接著播：硬接`);
+    }
     // 相鄰兩段 media（進場是預設的 fade）：後一段疊化 0.47 s，前一段墊在下面；子母畫面在接縫接續
     if (a.type === 'media' && b.type === 'media' && b.media.enter === 'fade') {
       b.xfade = XFADE; a.end = Math.max(a.end, r3(b.start + XFADE)); a.pipEnd = b.start;
@@ -839,11 +847,28 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     const [x1, y0] = spot ? [spot.right, spot.top] : [BAD.rect[2], BAD.rect[1]];
     return { box: [x1 - w, y0, x1, y0 + SECTION.h], side: 'right', names };
   };
-  // 橫式錄影段的小節角標位置；跟畫布右上一樣就不用移
+  // 全寬段（沒有講者）的角標放在和錄影段同一個位置：錄影和動畫接來接去，角標才不用滑來滑去。
+  // 位置照這支片最長的橫向錄影算；沒有錄影照 16:9（縮到 87%：1671×940、右緣 1796）
+  let frameCache = null;
+  const frameInfo = () => {
+    if (frameCache) return frameCache;
+    const tally = new Map();
+    for (const x of timed) {
+      const i = x.type === 'media' && x.media?.fit !== 'cover' ? x.media?.info : null;
+      if (!i?.width || i.width / i.height < 1.2 || x.seg?.side) continue;
+      const k = `${i.width}x${i.height}`;
+      tally.set(k, { width: i.width, height: i.height, d: (tally.get(k)?.d || 0) + x.end - x.start });
+    }
+    return (frameCache = [...tally.values()].sort((p, q) => q.d - p.d)[0] || { width: 1920, height: 1080 });
+  };
+  // 橫式的小節角標位置；跟畫布右上一樣就不用移
   function secSpot(it, w) {
-    if (portrait || it.type !== 'media' || !it.media?.info?.width || it.seg?.side) return null;   // 右側步驟清單：錄影靠左，角標留在畫布右上（清單卡頂 ≥ 160）
-    const c = mediaCorner(it.media.info, it.media.fit, { w, h: SECTION.h, dflt: [BAD.rect[2], BAD.rect[1]] });
-    return c.right === BAD.rect[2] && c.top === BAD.rect[1] ? null : c;
+    if (portrait) return null;
+    const opt = { w, h: SECTION.h, dflt: [BAD.rect[2], BAD.rect[1]] };
+    let c = null;
+    if (it.wide) c = mediaCorner(frameInfo(), 'contain', opt);
+    else if (it.type === 'media' && it.media?.info?.width && !it.seg?.side) c = mediaCorner(it.media.info, it.media.fit, opt);   // 右側步驟清單：錄影靠左，角標留在畫布右上（清單卡頂 ≥ 160）
+    return c && !(c.right === BAD.rect[2] && c.top === BAD.rect[1]) ? c : null;
   }
 
   // 章節轉場沒有副標：只剩章號和章名（「結語」兩個字），畫面很空
@@ -899,6 +924,14 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         for (const f of sheetPlanFindings({ item: it, sheet, cues, tplRules, endExtra })) it.warnings.push(`${it.where} 動畫分鏡：${f.msg} → ${f.fix}`);
       }
     }
+  }
+
+  // --- 素材帳本：同一段素材放了兩次 ---
+  for (const o of mediaOverlaps(timed)) {
+    const name = path.basename(o.src), nf = (v) => String(Math.round(v * 10) / 10);
+    o.it.warnings.push(o.from == null
+      ? `${o.it.where} 和 ${o.other.id} 用同一張 ${name}（觀眾會看到同一張圖兩次）→ 故意的就留著，不然換一張`
+      : `${o.it.where} 和 ${o.other.id} 重疊 ${name} ${nf(o.from)}–${nf(o.to)}s（同一段畫面放了兩次）→ 故意重播就留著，不然換一段素材或改 in`);
   }
 
   // --- 音效 ---
@@ -987,6 +1020,8 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       it.sfxDropped = it.sfx; it.sfx = null;
     } else lastSfx = it;
   }
+  // 每分鐘最多 2 顆主音效：工具照優先序留，不用人一段一段寫 "sfx": null
+  const sfxThinned = thinMainSfx(timed, sfxConf);
   // edit：音效總增益＋整支淡入淡出期間跟著變小（音效很短，用起點那一刻的增益）
   if (ne.active && (edit.volume.sfx !== 0 || edit.fadeIn > 0 || edit.fadeOut > 0)) {
     const g = dB(edit.volume.sfx);
@@ -999,7 +1034,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     ...(it.sfxExtra || []).map((c) => ({ id: it.id, name: c.name, at: c.at, volume: c.volume, main: !!c.beat }))].filter(Boolean));
   // 音效稀疏的空檔裡，列出情境動畫與錄影段（這兩種要自己配：動畫寫 P.sfx、錄影寫 sfx；字卡照情境預設）
   const gapNote = (g) => { const ids = timed.filter((x) => (x.type === 'custom' || x.type === 'media') && x.start < g.to && x.end > g.from).map((x) => x.id); return ids.length > 8 ? `${ids.slice(0, 8).join('、')}…等 ${ids.length} 段` : ids.join('、'); };
-  const budget = sfxBudget(budgetCues, sfxConf, { voiceDb: edit.volume?.voice ?? 0, outDur: videoDur, fmt, gapNote });
+  const budget = sfxBudget(budgetCues, sfxConf, { voiceDb: edit.volume?.voice ?? 0, outDur: videoDur, fmt, gapNote, thinned: sfxThinned });
   warnings.push(...budget.warnings.map((w) => w.replace(/^[⚠✖]\s*/, '')));
 
   // --- 插入素材（media）和其他段的關係：和不透明幕一樣是整張幕（z 30），同一時間只能有一張 ---
@@ -1039,7 +1074,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       const fix = syncReady && !timed.some((x) => /^sync\d+$/.test(x.id))
         ? `→ 邊錄邊講的螢幕錄影還沒放進 plan.json：跑 node shared/template/tools/media.mjs screen-sync --project ${projectRel} --write-plan`
         : `→ 跑 node shared/template/tools/media.mjs scan --project ${projectRel}，看 work/media/ 的 contact sheet，配一段螢幕錄影或圖片（"type": "media"，from／to 蓋住這段），或用不透明的全畫面情境蓋住`;
-      if (len > VOICE_ERR) errors.push(`${where} 有 ${len}s 沒有畫面（全黑，講者不在）${fix}`);
+      // 這裡排的是疊在講者上的字卡：沒有講者，底下是黑的。直接講是哪一段，不用去猜
+      const overlays = timed.filter((x) => !x.opaque && x.key !== 'chapter-tag' && x.start < b - 0.05 && x.end > a + 0.05).map((x) => `${x.id}（${x.label || x.key}）`);
+      const swap = overlays.length ? `（${overlays.slice(0, 4).join('、')}${overlays.length > 4 ? ` 等 ${overlays.length} 段` : ''}疊在講者上，這裡沒有講者，要換成全畫面的模板或內容設計動畫）` : '';
+      if (len > VOICE_ERR) errors.push(`${where} 有 ${len}s 沒有畫面（全黑，講者不在）${swap}${fix}`);
       else {
         // 前後有沒有不透明段（A-06）：前面沒有 → 把後一段的 from 提早到區間起點；後面沒有 → 把前一段的 to 延到區間終點
         const before = timed.filter((x) => x.opaque && x.end <= a + 1e-6).pop(), after = timed.find((x) => x.opaque && x.start >= b - 1e-6);
@@ -1208,6 +1246,8 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
 
   // --- 常駐章節角標（F1）：章節起點（01 章節轉場結束；沒有 01 時是獨立 02 段的起點）→ 下一章起點、outro 起點或片尾 ---
   //     子母畫面、全幕（不透明的段）期間淡出 0.3 秒、回到疊加／半畫面再淡入；疊加情境和角標重疊（BADGE.zones）才隱藏
+  // 全畫面段：右上角標的框（audit 量有沒有壓到、設計師的 brief 寫給他看）
+  for (const x of timed) if (x.opaque && x.key !== 'chapter') x.badgeBox = secBadgeFor(x)?.box ?? null;
   const badges = [];
   if (badgeOn) {
     const starts = [];
@@ -1243,9 +1283,14 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       // 小節：從這一章的章節轉場起點（cut）到下一章之間開講的；章節轉場蓋到小節第一句時，從角標起點算
       const subs = sec ? sections.filter((x) => x.at >= c.cut - 1e-6 && x.at < e - 1e-6).map((x) => (x.used = true, { at: r3(Math.max(x.at, s)), name: x.name })) : null;
       // 錄影段：外框移到錄影畫面的右上角（dx、dy＝相對畫布右上的位移）
-      const spots = sec ? timed.filter((x) => x.type === 'media' && x.start < e - 1e-6 && x.end > s + 1e-6).map((x) => ({ x, bx: secBadgeFor(x)?.box }))
+      const spots = sec ? timed.filter((x) => (x.type === 'media' || x.wide) && x.start < e - 1e-6 && x.end > s + 1e-6).map((x) => ({ x, bx: secBadgeFor(x)?.box }))
         .filter(({ bx }) => bx && (bx[2] !== BAD.rect[2] || bx[1] !== BAD.rect[1]))
-        .map(({ x, bx }) => ({ id: x.id, a: r3(x.start), z: r3(x.end), dx: bx[2] - BAD.rect[2], dy: bx[1] - BAD.rect[1] })) : [];
+        .map(({ x, bx }) => ({ id: x.id, a: r3(x.start), z: r3(x.end), dx: bx[2] - BAD.rect[2], dy: bx[1] - BAD.rect[1] }))
+        .reduce((list, p) => {   // 同一個位置、中間只隔不到 1 秒：接起來，角標不要滑出去又滑回來
+          const l = list[list.length - 1];
+          if (l && l.dx === p.dx && l.dy === p.dy && p.a - l.z < 1) l.z = p.z; else list.push({ ...p });
+          return list;
+        }, []) : [];
       badges.push({ id: c.id, k: badges.length + 1, num: c.num, name: c.name, start: s, end: e, hide, show, ...(sweep ? { sweep: true } : {}), ...(sec ? { subs } : {}), ...(spots.length ? { spots } : {}) });
       const entry = chapterList.find((x) => x.id === c.id);
       if (entry) entry.badge = show;
@@ -1255,7 +1300,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     // 講稿有 ### 小節、plan.json 沒寫 sections：印一行可以直接貼的建議（#N 照第一句講解對字幕；第一章之前的不列）
     if (plan.sections === undefined && chs.length && projectDir) {
       let md = '';
-      try { md = fs.readFileSync(path.join(projectDir, '講稿.md'), 'utf8'); } catch { /* 沒有講稿 */ }
+      try { md = readScript(path.join(projectDir, '講稿.md')); } catch { /* 沒有講稿，或編碼不對（prep 已經擋過） */ }
       const first = Math.min(...chs.map((c) => c.cut));
       let from = 0;
       const sug = [];
@@ -1278,7 +1323,13 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     const fix = cues.wordsWhy
       ? `對 rough.mp4 重轉詞級逐字稿：npx hyperframes transcribe ${projectRel}/work/rough.mp4 -d ${projectRel}/work --model small --language zh --json`
       : '詞照字幕原文挑 2–4 個字；逐字稿聽成別的字時換相鄰的詞';
-    warnings.push(`#N@詞 有 ${list.length} 個用字數比例估（${cues.wordsWhy || '詞級逐字稿在那句附近找不到這些詞'}），可能差 1 秒：${list.slice(0, 6).join('、')}${list.length > 6 ? '…' : ''} → ${fix}`);
+    const heard = cues.words?.length ? list.slice(0, 3).map((r) => {
+      const c = cues.find((x) => `#${x.n}` === String(r).replace(/@.*$/, '').replace(/e$/, ''));
+      if (!c) return null;
+      const said = cues.words.filter((w) => w.start < c.end && w.end > c.start).map((w) => w.text ?? w.word ?? '').join('').trim();
+      return said ? `#${c.n} 逐字稿聽成「${said}」` : null;
+    }).filter(Boolean) : [];
+    warnings.push(`#N@詞 有 ${list.length} 個用字數比例估（${cues.wordsWhy || '詞級逐字稿在那句附近找不到這些詞'}），可能差 1 秒：${list.slice(0, 6).join('、')}${list.length > 6 ? '…' : ''}${heard.length ? `（${heard.join('；')}）` : ''} → ${fix}`);
   }
 
   const pip = pipGeometry(pipCrop === 'auto' || errors.some((e) => e.startsWith('pipCrop')) ? 'auto' : pipCrop, speakerBox, portrait ? C : null);
@@ -1303,10 +1354,20 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   };
 }
 
+// 後段接著前段的素材時間往下播（差 ≤ 0.25 秒）
+function continuesMedia(a, b) {
+  const A = a.media, B = b.media;
+  if (A.src !== B.src || !A.info?.duration) return false;
+  const endOf = (it) => { const m = it.media; if (m.hold != null) return m.hold; if (m.retimeRaw) return m.retimeRaw[m.retimeRaw.length - 1].src; if (m.out != null) return m.out; return m.in + (it.end - it.start) * m.speed; };
+  const startOf = (m) => (m.hold != null ? m.hold : m.retimeRaw ? m.retimeRaw[0].src : m.in);
+  return Math.abs(endOf(a) - startOf(B)) <= 0.25;
+}
+
 // 片子沒切開的地方（rough 的秒數不跳）
 function rollRoom(it, side) {
   const m = it.media;
   if (m.kind !== 'video') return ROLL;
+  if (m.retimeRaw) return 0;   // 變速段的檔案就是這一段，前後沒有多的
   const sp = m.speed || 1;
   if (side === 'pre') return r3(m.in / sp);
   return r3((m.info.duration - m.in) / sp - (it.end - it.start));
@@ -1419,6 +1480,7 @@ export function jsonItems(res) {
         wipe: { in: !!it.wipeIn, out: !!it.wipeOut, preroll: it.preroll || 0, postroll: it.postroll || 0 },
         refs: it.cueRefs || {},
         tx: { in: it.txIn ?? 'cut', out: it.txOut ?? 'cut', prev: it.prev ?? 'speaker' },
+        wide: !!it.wide, badgeBox: it.badgeBox ?? null,
       },
     };
   });
@@ -1468,7 +1530,7 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
     if (tm && !tm.identity) notes.push(`rough ${fmt(tm.unmapStart(it.start))}–${fmt(tm.unmapEnd(it.end))}${it.cutTrim ? `，cuts 剪掉 ${it.cutTrim}s` : ''}`);
     if (it.media) {
       const m = it.media;
-      if (m.kind === 'video') notes.push(`素材 ${m.in}s 起${m.speed !== 1 ? ` ×${m.speed}` : ''}${m.volume != null ? `、原聲 ${m.volume}dB` : ''}`);
+      if (m.kind === 'video' && !m.retime) notes.push(`素材 ${m.in}s 起${m.speed !== 1 ? ` ×${m.speed}` : ''}${m.volume != null ? `、原聲 ${m.volume}dB` : ''}`);
       if (m.hold != null) notes.push(`定格 素材第 ${m.hold}s`);
       if (it.mediaReport?.summary) notes.push(it.mediaReport.summary);
       if (it.enterFx && it.enterFx !== 'fade') notes.push(`進場 ${it.enterFx}`);

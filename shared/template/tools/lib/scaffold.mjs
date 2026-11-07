@@ -12,32 +12,34 @@
 //   renderCommon(input)、renderSnippets(input)、renderPart(part, input) → 共用.md、寫法.md、chNN.md
 import { normText, textWidth } from './time.mjs';
 
-export const CHAPTER_MIN_VIDEO = 180;   // 不到 3 分鐘的影片不用 01 章節轉場（AGENTS.md「開工」）
+export const CHAPTER_MIN_VIDEO = 180;   // 不到 3 分鐘的影片不用 01 章節轉場
 const SKIP_LINE = (l) => l.startsWith('>') || l.startsWith('<!--') || l.includes('`') || /^[-*_]{3,}$/.test(l) || /^[（(].*[）)]$/.test(l);
 
 export function scriptOutline(md) {
   const out = [];
-  let fence = false, cur = null;
+  let fence = false, pending = [];   // ## 後面緊接 ### 很常見：兩個標題都從同一句開始
   for (const raw of String(md ?? '').replace(/^﻿/, '').split(/\r?\n/)) {
     const l = raw.trim();
     if (/^(```|~~~)/.test(l)) { fence = !fence; continue; }
     if (fence || !l) continue;
     const m = l.match(/^(##|###)\s+(.+)$/);
-    if (m) { cur = { level: m[1].length, title: m[2].trim(), first: null }; out.push(cur); continue; }
-    if (l.startsWith('#')) { cur = null; continue; }
-    if (cur && cur.first == null && !SKIP_LINE(l)) cur.first = l;
+    if (m) { const h = { level: m[1].length, title: m[2].trim(), first: null }; out.push(h); pending.push(h); continue; }
+    if (l.startsWith('#')) { pending = []; continue; }
+    if (pending.length && !SKIP_LINE(l)) { for (const h of pending) h.first = l; pending = []; }
   }
   return out.filter((x) => x.first);
 }
 
 export function alignOutline(outline, cues) {
-  let from = 0;
+  let from = 0, prev = null;
   const out = [];
   for (const x of outline) {
+    if (prev && prev.first === x.first) { out.push({ ...x, n: prev.n }); continue; }   // 章與第一個小節同一句
     const key = normText(x.first).slice(0, 6);
     const k = key ? cues.findIndex((c, j) => j >= from && normText(c.text).includes(key)) : -1;
     if (k < 0) continue;
     from = k + 1;
+    prev = { first: x.first, n: cues[k].n };
     out.push({ ...x, n: cues[k].n });
   }
   return out;
@@ -63,7 +65,9 @@ export function chapterSegments(chapters, cues, { videoDur = 0, scenes = [] } = 
     if (max != null && textWidth(text) > max) warn.push(`${label}「${text}」${textWidth(text)} 字，上限 ${max} → 自己縮短`);
     return text;
   };
-  const segs = chapters.map((c, i) => {
+  // 影片第一句就是某一章的開頭（## 開場）：不放章節轉場，開場的勾子要先上，不能先來一張「CHAPTER 01」；章號從下一章算起
+  const numbered = chapters.filter((c) => c.n !== cues[0]?.n);
+  const segs = numbered.map((c, i) => {
     const { name, sub } = splitTitle(c.title), id = `c${pad2(i + 1)}`, num = pad2(i + 1);
     if (useCard) {
       const scene = byKey('chapter');
@@ -157,6 +161,8 @@ export const PART_TARGET = 300;   // 沒有章節時，大約每 5 分鐘切一�
 export const DESIGN_EVERY = 120;  // 內容設計動畫：建議每 2 分鐘至少一段（建議初值）
 
 export const designTarget = (seconds) => (seconds < 60 ? 0 : Math.max(1, Math.round(seconds / DESIGN_EVERY)));
+// 上限：一段內容設計動畫比模板多用很多額度（實測 30 分鐘片首讀多 3 萬字、累積多 71 萬字），超過就挑最值得的
+export const designCap = (target) => (target ? Math.max(Math.ceil(target * 1.5), target + 2) : 0);
 
 // 在 [lo, hi] 秒之間找停頓最長的地方切開，回傳切點後第一句的索引
 function bestCut(cues, from, to, lo, hi) {
@@ -177,7 +183,9 @@ export function splitParts({ cues, outline = [], videoDur = 0 }) {
   if (chapters.length) {
     const first = idxOf(chapters[0].n);
     if (first > 0) bounds.push({ a: 0, title: '開場', chapter: null });
-    chapters.forEach((c, i) => bounds.push({ a: idxOf(c.n), title: splitTitle(c.title).name, sub: splitTitle(c.title).sub, chapter: i + 1, chapterN: c.n }));
+    // 第一句就是章節開頭（## 開場）：不放章節轉場，章號從下一章算起
+    const intro = first === 0;
+    chapters.forEach((c, i) => bounds.push({ a: idxOf(c.n), title: splitTitle(c.title).name, sub: splitTitle(c.title).sub, chapter: intro ? (i || null) : i + 1, chapterN: intro && !i ? null : c.n }));
   } else bounds.push({ a: 0, title: '', chapter: null });
   const parts = [];
   bounds.forEach((b, i) => {
@@ -204,17 +212,40 @@ export function splitParts({ cues, outline = [], videoDur = 0 }) {
 
 const notesOf = (notes) => (Array.isArray(notes) ? notes : []);
 
-// 素材筆記裡的關鍵字有出現在這一段字幕的，排前面
-function assetsFor(part, cues, notes) {
-  const text = cues.slice(part.a, part.z + 1).map((c) => c.text).join('');
-  const out = [];
+// 素材候選：筆記裡的關鍵字對到哪一句就列在那一句。少見的詞比常見的詞準；每句、每一份都有配額，錄影和圖片分開算（圖片多的時候錄影才不會被擠掉）
+const normKw = (s) => String(s ?? '').toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, '');
+export const ASSET_QUOTA = { perCue: { video: 2, image: 1 }, perMoment: 2, video: (sec) => Math.max(8, Math.ceil(sec / 30)), image: (sec) => Math.max(6, Math.ceil(sec / 60)) };
+export function assetsFor(part, cues, notes) {
+  const moments = [];
   for (const n of notesOf(notes)) {
     for (const m of (n.moments?.length ? n.moments : [n])) {
-      const hit = (m.keywords || []).filter((k) => k && text.includes(k));
-      if (hit.length) out.push({ file: n.file, from: m.from, to: m.to, what: m.what || n.summary || '', hit });
+      const kws = [...new Set((m.keywords || []).map(normKw).filter(Boolean))];
+      if (kws.length) moments.push({ file: n.file, from: m.from ?? null, to: m.to ?? null, what: m.what || n.what || n.summary || '', kws, kind: String(n.file).startsWith('assets/images/') ? 'image' : 'video' });
     }
   }
-  return out.sort((x, y) => y.hit.length - x.hit.length).slice(0, 12);
+  if (!moments.length) return [];
+  const df = new Map();
+  for (const m of moments) for (const k of m.kws) df.set(k, (df.get(k) || 0) + 1);
+  const hits = [];
+  for (let i = part.a; i <= part.z; i++) {
+    const text = normKw(cues[i].text);
+    moments.forEach((m, order) => {
+      const hit = m.kws.filter((k) => text.includes(k));
+      if (hit.length) hits.push({ n: cues[i].n, m, order, hit, score: hit.reduce((v, k) => v + Math.min(k.length, 4) / Math.sqrt(df.get(k)), 0) });
+    });
+  }
+  hits.sort((a, b) => b.score - a.score || a.n - b.n || a.order - b.order);
+  const quota = { video: ASSET_QUOTA.video(part.seconds ?? 0), image: ASSET_QUOTA.image(part.seconds ?? 0) };
+  const used = new Map(), perCue = new Map(), total = { video: 0, image: 0 }, picked = [];
+  for (const h of hits) {
+    const k = h.m.kind, c = perCue.get(h.n) || { video: 0, image: 0 };
+    if (total[k] >= quota[k] || c[k] >= ASSET_QUOTA.perCue[k] || (used.get(h.m) || 0) >= ASSET_QUOTA.perMoment) continue;
+    total[k]++; c[k]++; perCue.set(h.n, c); used.set(h.m, (used.get(h.m) || 0) + 1);
+    picked.push(h);
+  }
+  const byCue = new Map();
+  for (const h of picked.sort((a, b) => a.n - b.n || (a.m.kind === 'video' ? -1 : 1))) { if (!byCue.has(h.n)) byCue.set(h.n, []); byCue.get(h.n).push(h); }
+  return [...byCue.entries()].map(([n, items]) => ({ n, items }));
 }
 
 // input：{ project, format:{ label, portrait }, videoDur, cues, scriptMd, plan, scenes(含 summary), fillSpecs, situationsMd, beatsMd, styleMd, voiceOnly, assets:{ screen, images }, notes, hasCamera, kinds }
@@ -230,20 +261,33 @@ export function renderCommon(input) {
   L.push(`- 章節：${videoDur >= CHAPTER_MIN_VIDEO ? `滿 ${CHAPTER_MIN_VIDEO} 秒，章節起點用 01 章節轉場（業配段不放）` : `不到 ${CHAPTER_MIN_VIDEO} 秒，不用 01；章節起點放一段 02 章節角標`}；章節角標 build 自動常駐，不用另排；講稿沒有 \`##\` 章名就自己取 ≤ 10 字的章名，寫進 decide`);
   const sp = input.speaker;
   if (input.hasCamera) L.push(sp?.state === 'set' ? `- 講者：${sp.name}（14 講者介紹一集只排一次，只有第一份排；name、titles 不用寫，自動帶入）` : sp?.state === 'off' ? '- 講者：使用者不要講者介紹，不要排 14' : '- 講者：還沒設定。14 講者介紹一集只排一次，只有第一份排；name、titles 不要寫也不要編（設定後自動帶入），在 decide 寫「講者姓名、頭銜待確認」');
-  L.push(`- 素材：螢幕錄影 ${assets.screen} 支、圖片 ${assets.images} 張${assets.screen || assets.images ? '（清單在第 5 節）' : ''}`);
-  L.push(voiceOnly.length ? `- 只有聲音的區間（一定要被 media 段或不透明全幕蓋住）：${voiceOnly.map((r) => { const [a, b] = rangeOf(r); return `${clock(a)}–${clock(b)}`; }).join('、')}` : '- 只有聲音的區間：無', '');
+  L.push(`- 素材：螢幕錄影 ${assets.screen} 支、圖片 ${assets.images} 張${assets.screen || assets.images ? '（第 5 節）' : ''}`);
+  L.push(voiceOnly.length ? `- 只有聲音的區間（一定要被 media 段或不透明全幕蓋住）：${voiceOnly.map((r) => { const [a, b] = rangeOf(r); return `${clock(a)}–${clock(b)}`; }).join('、')}` : '- 只有聲音的區間：無');
+  if (voiceOnly.length && hasCamera) L.push('- 這些區間沒有講者：不能用疊在講者上的字卡（06–15）和疊加的模板，全畫面段自動用全寬版型，內容設計動畫用全螢幕畫布');
+  L.push('');
 
   L.push('## 2. 怎麼選：三條路', '');
-  L.push('1. **有對得上的錄影或圖片** → media 段（第 5 節）。', '2. **內容設計動畫**（第 4 節）：這段值得專門為它設計畫面。', '3. **模板**：字卡與模板動畫，工具直接產出，不用另外做動畫。寫法在 `寫法.md`，**要哪一個就查哪一個，不用整份讀**：`grep -A7 "x-process\\*\\*" work/分鏡素材/寫法.md`（字卡寫 key，例 `key-point`）。', '');
+  L.push('1. **有對得上的錄影或圖片** → media 段（第 5 節）。', '2. **內容設計動畫**（第 4 節）：這段值得專門為它設計畫面。', '3. **模板**：字卡與模板動畫，工具直接產出，不用另外做動畫。寫法在 `寫法.md`，**要哪一個就查哪一個，不用整份讀**：`build.mjs --project <專案> --spec x-process`（字卡寫 key，例 `key-point`）。', '');
   const questions = situationQuestions(situationsMd), rules = animationRules(input.styleMd);
   if (questions.length) L.push('定大類的四題：', '', ...questions, '');
   if (rules.length) L.push('退到字卡只能用這幾條當理由（「字卡比較簡單」「時間不夠」不是理由）：', '', ...rules, '');
 
   L.push('## 3. 情境對照表（句子對到哪一列就用它的「首選」）', '');
   L.push('要看「次選」「不要用在」：讀 `shared/template/SITUATIONS.md` 那一行（第一欄是行號），不用讀別行。', '');
-  L.push('| 行 | 句子長這樣 | 版面 | 首選 | 拍型 |', '|---|---|---|---|---|');
-  for (const r of situationRows(situationsMd)) L.push(`| ${r.line} | ${cell(cut(r.say, 46))} | ${cell(r.layout)} | ${cell(cut(r.first, 34))} | ${cell(r.beat)} |`);
+  L.push('| 行 | 句子長這樣 | 首選 |', '|---|---|---|');
+  for (const r of situationRows(situationsMd)) L.push(`| ${r.line} | ${cell(cut(r.say, 46))} | ${cell(cut(r.first, 34))} |`);
   L.push('');
+  if (voiceOnly.length) {
+    L.push('**沒有講者的句子**（`chNN.md` 開頭有列）不能用下方字卡和 12、13、14，底下是黑的。照這張換：', '');
+    L.push('| 原本想用 | 換成 |', '|---|---|');
+    L.push('| 06 一般字卡（定義、比喻） | `x-metaphor`、`x-callout` |');
+    L.push('| 07 重點字卡、15 金句 | 字卡動態加 `"bg": "light"`（38 螢光筆、03 印章、27 打字機） |');
+    L.push('| 08 Step 字卡 | `x-process`、04c `fs-flow` |');
+    L.push('| 09 QA 字卡 | 字卡動態 26 翻轉卡片加 `"bg": "light"` |');
+    L.push('| 10 Tips、11 總結、13 標題條列 | 04a `fs-list`（寫 `visual`）、`x-checklist` |');
+    L.push('| 12 關鍵詞 | 04a `fs-list`、04b `fs-compare` |');
+    L.push('');
+  }
 
   L.push('## 4. 內容設計動畫（這條路最提升質感，不要只挑模板）', '');
   L.push('不是套模板：這段內容值得專門為它設計一個畫面。**你在這裡只要提名、寫一句話的構想**，之後由設計師子代理專門想鏡位、從空白畫布做出來。', '');
@@ -253,15 +297,12 @@ export function renderCommon(input) {
 
   L.push('## 5. 螢幕錄影、圖片（media）', '');
   L.push('```json', '{"id":"m0301","type":"media","src":"assets/screen/<檔名>","from":"#N","to":"#Me","anchor":"<起點那句的一小段原文>","in":<素材第幾秒>}', '```', '');
-  L.push('運鏡、紅框、說明卡、STEP：`shared/template/USAGE.md` 第 5 節；座標用 `media.mjs frame --at 秒,秒 --grid`。每個 media 段至少一個標註或運鏡。', '');
-  if (notesOf(notes).length) {
-    L.push('素材清單（`work/media/notes/`，看完整內容讀那個檔；要看畫面才開 `work/media/` 的 sheet）：', '', '| 素材 | 秒 | 內容 |', '|---|---|---|');
-    for (const n of notesOf(notes)) {
-      if (n.moments?.length) for (const m of n.moments) L.push(`| ${cell(n.file)} | ${m.from ?? '—'}–${m.to ?? '—'} | ${cell(cut(m.what || '', 60))} |`);
-      else L.push(`| ${cell(n.file)} | — | ${cell(cut(n.what || n.summary || '', 60))} |`);
-    }
-    L.push('');
-  } else if (assets.screen || assets.images) L.push('素材還沒盤點：看 `work/media/index.md` 與 sheet（圖片在 `work/media/images/`）。', '');
+  L.push('變速、定格、紅框、箭頭、運鏡、打碼的寫法：`node shared/template/tools/build.mjs --project projects/<專案> --spec media`。每個 media 段至少一個標註或運鏡。', '');
+  if (assets.screen || assets.images) {
+    L.push('**找素材照這個順序，不用整支看、不用一張一張開：**', '');
+    L.push('1. 這一份可能對得上的素材列在 `chNN.md` 的「素材候選」（關鍵字對到哪一句）。', '2. 錄影的 `in`、`retime` 的 `src`、框都從那支的 `work/media/<檔名>/events.md` 抄：哪一秒切頁、開視窗、哪一塊變了、哪裡在等（可以快轉）、哪裡在捲都列好了。', '3. 候選沒有對到的：總表 `work/media/index.md`；找關鍵字 `grep -l "<詞>" work/media/notes/*.json`；要看畫面才開那支的 sheet（圖片 `work/media/images/`）。', '');
+    if (!notesOf(notes).length) L.push('素材還沒盤點（`work/media/notes/` 是空的）：先照 `auto-edit-screen` 步驟 1 寫筆記。', '');
+  }
 
   L.push('## 6. 時間怎麼寫', '');
   L.push('**秒數 build 自己算，不要查 `transcript.json`、不要自己算秒數。** 寫字幕裡有的詞就好，檢查對不上會告訴你改哪裡。', '');
@@ -270,8 +311,8 @@ export function renderCommon(input) {
 
   L.push('## 7. 草稿格式', '');
   L.push('每一章寫一份 `work/drafts/chNN.json`，`story` 每段都要有（分鏡表由工具從這裡產生，不用另外寫）：', '');
-  L.push('```json', '{"chapter":"03","segments":[{"id":"s0301","scene":"key-point","from":"#N","to":"#Me","anchor":"…","slots":{"key":"…"},"beats":{"keyAt":"#N@詞"},"story":{"say":"講解在講什麼","row":"SITUATIONS 哪一列（題號＋句型）","why":"為什麼這樣呈現","notAnim":"字卡時：不符合哪一條判準；動畫不用寫"}}],"icons":{"剪輯清單":"scissors"},"quotes":[{"n":42,"text":"原句","card":"卡上文字（≤ 14 字）","mood":"正"}],"decide":["拿不定、要使用者決定的事"]}', '```', '');
-  L.push('寫完先驗這一份（不會被別章影響）：`node shared/template/tools/build.mjs --project projects/<專案> --check-draft work/drafts/chNN.json`。✖ 全修，⚠ 照 → 改。', '');
+  L.push('```json', '{"chapter":"03","segments":[{"id":"s0301","scene":"key-point","from":"#N","to":"#Me","anchor":"…","slots":{"key":"…"},"beats":{"keyAt":"#N@詞"},"story":{"say":"講解在講什麼","why":"為什麼這樣呈現"}}],"icons":{"剪輯清單":"scissors"},"quotes":[{"n":42,"text":"原句","card":"卡上文字（≤ 14 字）","mood":"正"}],"decide":["拿不定、要使用者決定的事"]}', '```', '');
+  L.push('寫完先驗這一份（不會被別章影響）：`node shared/template/tools/build.mjs --project projects/<專案> --check-draft chNN`。✖ 全修；⚠ 只修一輪，工具印「可以交件」就停。', '');
   L.push('金句只放 `quotes`，不要直接排成段（使用者勾了才上）。同一個物件全集用同一個圖示：`icons` 寫你用的對應。', '');
 
   L.push('## 8. 這裡沒寫才去查', '');
@@ -287,9 +328,23 @@ export function renderCommon(input) {
 export function renderSnippets(input) {
   const { format, fillSpecs = [] } = input;
   const scenes = (input.scenes || []).filter((s) => !(format?.portrait && s.portrait === 'none'));
-  const L = ['# 字卡與模板動畫的寫法（build.mjs --scaffold 產生）', '', '要哪一個查哪一個：`grep -A7 "<名稱>\\*\\*" work/分鏡素材/寫法.md`（例 `key-point`、`x-process`）。', ''];
+  const L = ['# 字卡與模板動畫的寫法（build.mjs --scaffold 產生）', '', '要哪一個查哪一個：`node shared/template/tools/build.mjs --project projects/<專案> --spec <名稱>`（例 `key-point`、`x-process`）。', ''];
   L.push('段的起訖可以切在句中：`"from": "#14@手機畫面"`、`"to": "#32@遇到"`；`#Ne` 是第 N 句結尾。卡片的 `beats` 綁卡上文字裡最先講到的詞。', '');
-  L.push('圖示名是 lucide 的英文名稱（例 smartphone、laptop、video、cloud、check），寫錯 `--check-draft` 會報；找名稱：`grep -o \'"[a-z0-9-]*phone[a-z0-9-]*":\' shared/template/kit/icons.json`。', '');
+  L.push('**media**：螢幕錄影、圖片。一段講一個操作，至少一個標註或運鏡。時間寫法 `#N`、`#N@詞`、`#Ne`、`+3`（本段起點後 3 秒）。', '');
+  L.push('```json', '{"id":"m0301","type":"media","src":"assets/screen/<檔名>","from":"#20","to":"#26e","anchor":"<起點那句的一小段原文>","in":8}', '```', '');
+  L.push('先看 `work/media/<檔名>/events.md`：哪一秒切頁、開視窗、哪一塊變了（附框和建議的 `in`）、哪裡在等、哪裡在捲都列好了，`in`、`src`、`box` 照表抄。', '');
+  L.push('時間（三選一，都不用自己算速度）：', '');
+  L.push('- 同一段裡有快有慢有停（等待跳過、要點之前放慢、結果畫面停住）：`"retime":[{"at":"#20","src":8},{"at":"#21","src":19},{"at":"#22","src":31},{"at":"#24","src":31},{"at":"#26e","src":38}]`，講到 at 時錄影在第 src 秒，src 一樣＝定格。**不要拆成好幾段**：拆開運鏡和紅框會斷。');
+  L.push('- 整段同一個速度：`"in":8,"out":19`（播完錄影第 8–19 秒）。');
+  L.push('- 整段停在一個畫面講好幾句：`"hold":31`。', '');
+  L.push('要看哪裡（`box` 是素材原尺寸的 `[x,y,w,h]`；事件表沒有的才跑 `media.mjs frame --project projects/<專案> --src "<檔名>" --at 12.5,18 --grid` 讀座標，寫好後加 `--box "x,y,w,h"` 看一次框的東西那一刻真的在畫面上）：', '');
+  L.push('- 講「這一塊」→ 紅框：`"marks":[{"at":"#21","until":"#21e","box":[…]}]`；畫面會捲動時加 `"path":[{"at":"#22","box":[…]}]`。');
+  L.push('- 講「這是什麼、按這個」→ 紅框加說明卡：`"callouts":[{"at":"#21","box":[…],"text":"設定"}]`。');
+  L.push('- 目標很小 → 箭頭：`"arrows":[{"at":"#25","to":[x,y]}]`。字太小 → 放大鏡：`"lens":[{"at":"#26","box":[…],"zoom":2}]`。只看一塊 → 聚光燈：`"spot":[{"at":"#28","until":"#29","box":[…]}]`。');
+  L.push('- 要點之前推近 → 運鏡：`"moves":[{"at":"#20","to":[…]},{"at":"#22","to":"full"}]`；說明卡、聚光燈、箭頭出現的期間不能運鏡。');
+  L.push('- 一步一步的操作 → STEP 膠囊：`"steps":[{"at":"#20","text":"打開設定"}]`。');
+  L.push('- 畫面露出金鑰、密碼、個資 → 打碼：`"redact":[{"box":[…]}]`（模糊燒進影片，框要蓋住那段時間它會出現的所有位置）。', '');
+  L.push('圖示名是 lucide 的英文名稱（例 smartphone、laptop、video、cloud、check），寫錯 `--check-draft` 會報；找名稱：`build.mjs --project <專案> --icons 手機,雲端`。', '');
   L.push('## 字卡與全畫面', '');
   L.push('JSON 是最少要寫的欄位；`<…>` 換成內容，`#N@詞` 換成講到那個詞的句號和字幕原文裡的 2–4 個字。', '');
   for (const s of scenes) {
@@ -385,28 +440,32 @@ export function renderPart(part, input) {
   const L = [];
   L.push(`# ${part.key}｜${part.title}（#${part.firstN}–#${part.lastN}e，${clock(part.start)}–${clock(part.end)}，${(part.seconds / 60).toFixed(1)} 分鐘）`, '');
   L.push(`你負責這一份：寫 \`work/drafts/${part.key}.json\`（格式見 \`共用.md\` 第 7 節）。段 id 開頭用 \`s${part.code}\`、\`x${part.code}\`、\`d${part.code}\`、\`m${part.code}\`，後面接兩位流水號，全片才不會撞號。`, '');
-  if (part.target) L.push(`- **內容設計動畫目標：至少 ${part.target} 段**（\`共用.md\` 第 4 節）。挑這一份裡最值得設計的時刻，不是湊數。`);
+  if (part.target) L.push(`- **內容設計動畫：至少 ${part.target} 段，最多 ${designCap(part.target)} 段**（\`共用.md\` 第 4 節）。挑這一份裡最值得設計的時刻，不是湊數；設計比模板貴很多。`);
   const vo = voiceOnly.map(rangeOf).filter(([a, b]) => b > part.start && a < part.end);
-  if (vo.length) L.push(`- 只有聲音的區間（一定要被 media 段或不透明全幕蓋住）：${vo.map(([a, b]) => { const inside = cues.filter((c) => c.end > a && c.start < b); return `${clock(a)}–${clock(b)}${inside.length ? `（#${inside[0].n}–#${inside[inside.length - 1].n}）` : ''}`; }).join('、')}`);
+  if (vo.length) L.push(`- **沒有講者的句子：${vo.map(([a, b]) => { const inside = cues.filter((c) => c.end > Math.max(a, part.start) && c.start < Math.min(b, part.end)); return inside.length ? `#${inside[0].n}–#${inside[inside.length - 1].n}` : `${clock(a)}–${clock(b)}`; }).join('、')}**。每一句都要被畫面蓋滿：用 media、全畫面模板（04 家族、\`layout\` 是 fullscreen 的 x-\*、有 \`bg\` 的字卡動態）或內容設計動畫（\`layout\` 寫 fullscreen）。字卡 06–15 和疊加的模板不能用，底下是黑的。`);
+  L.push('');
   const hits = assetsFor(part, cues, notes);
   if (hits.length) {
-    L.push('- 可能對得上的素材：');
-    for (const h of hits) L.push(`  - ${h.file}${h.from != null ? ` ${h.from}–${h.to} 秒` : ''}：${cut(h.what, 50)}（字幕有「${h.hit.join('、')}」）`);
+    const nv = hits.reduce((n, h) => n + h.items.filter((x) => x.m.kind === 'video').length, 0), ni = hits.reduce((n, h) => n + h.items.filter((x) => x.m.kind === 'image').length, 0);
+    L.push(`## 素材候選（關鍵字對到的句子：錄影 ${nv} 筆、圖片 ${ni} 筆）`, '', '錄影的 `in`、`retime` 的 `src`、框從 `work/media/<檔名>/events.md` 抄。沒對到不代表沒有，`共用.md` 第 5 節有怎麼找。', '');
+    const label = (x) => `${x.m.file}${x.m.from != null ? ` ${x.m.from}–${x.m.to} 秒` : ''}（${cut(x.m.what, 30)}）`;
+    for (const h of hits) L.push(`- #${h.n}：${h.items.map(label).join('｜')}`);
+    L.push('');
   }
-  L.push('');
   if (part.chapter && part.chapterN) {
     const seg = chapterSegments([{ n: part.chapterN, title: part.sub ? `${part.title}：${part.sub}` : part.title }], cues, { videoDur, scenes });
     const s = { ...seg.segs[0], id: `c${part.code}`, slots: { ...seg.segs[0].slots, num: String(part.chapter).padStart(2, '0') } };
-    L.push('章節段（貼進 segments）：', '', '```json', JSON.stringify(s), '```', '');
+    L.push('章節段（直接貼進 segments，這一章第一段的 `from` 寫同一句；章節空檔工具會處理，不用查）：', '', '```json', JSON.stringify(s), '```', '');
     for (const w of seg.warn) L.push(`- ⚠ ${w}`);
     if (seg.warn.length) L.push('');
   }
   const heads = new Map(outline.map((x) => [x.n, x]));
-  L.push('## 字幕（句號就是 #N）', '', '| #N | 時間 | 字幕 |', '|---|---|---|');
+  // 一句一行、不用表格：長片這份少四分之一，子代理整段對話都帶著它
+  L.push('## 字幕（句號就是 #N，後面是開始時間）', '');
   for (let i = part.a; i <= part.z; i++) {
     const c = cues[i], h = heads.get(c.n);
-    if (h) L.push(`| **${h.level === 2 ? '章' : '小節'}** | | **${cell(h.title)}** |`);
-    L.push(`| #${c.n} | ${clock(c.start)} | ${cell(c.text)} |`);
+    if (h) L.push('', `${h.level === 2 ? '### 章' : '#### 小節'}：${h.title}`);
+    L.push(`#${c.n} ${clock(c.start)} ${c.text}`);
   }
   L.push('');
   return `${L.join('\n')}\n`;

@@ -8,7 +8,7 @@
 | 欄 | 值 | 怎麼看 | 會影響什麼 |
 |---|---|---|---|
 | 主軌種類 | | `ls projects/<專案>/assets/camera projects/<專案>/assets/voice`，加上 `media.mjs main` 印的邊錄邊講螢幕錄影 | 1 支真人錄影＝直接用；其他＝停點 ① 要問順序；邊錄邊講的螢幕錄影只剪 NG、初剪後跑 `screen-sync` |
-| 版式 | | 使用者說「短影片」「直式」「Shorts」「Reels」「抖音」→ 直式；說「長片」「橫式」→ 橫式；都沒說：`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "<主軌>"`，寬 < 高 → 直式（AGENTS.md「版式」） | 寫「直式（理由）」或「橫式（理由）」；直式：畫布 1080×1920、版面只有疊加／上下分割／全幕、字幕每則 10 字、plan.json `"format": "portrait"` |
+| 版式 | | 使用者說「短影片」「直式」「Shorts」「Reels」「抖音」→ 直式；說「長片」「橫式」→ 橫式；都沒說：`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "<主軌>"`，寬 < 高 → 直式（`auto-edit-longform`「版式」） | 寫「直式（理由）」或「橫式（理由）」；直式：畫布 1080×1920、版面只有疊加／上下分割／全幕、字幕每則 10 字、plan.json `"format": "portrait"` |
 | 有沒有講稿 | | `projects/<專案>/講稿.md` 在不在 | 沒有：字幕只轉繁體、補標點；沒有章節空檔表 |
 | 有沒有螢幕錄影／圖片 | | `ls projects/<專案>/assets/screen projects/<專案>/assets/images` | 有：分鏡時跑 `auto-edit-screen` |
 | 長度（秒） | | `ffprobe -v error -show_entries format=duration -of csv=p=0 "<主軌>"` | 不到 180 秒（3 分鐘）：不用 01 章節轉場 |
@@ -44,7 +44,7 @@
 | 沒有 `output/qc/qc-sheet.jpg` | 交付：驗收 | auto-edit-deliver 步驟 1 |
 | 其他 | 完成 | 等使用者的修改 |
 
-停點紀錄的格式（時間、停點名稱、四種狀態、只新增不改舊列）照 AGENTS.md「進度與回饋紀錄」。例：
+停點紀錄的格式（時間、停點名稱、四種狀態、只新增不改舊列）照 AGENTS.md「進度紀錄」。例：
 
 | 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |
 |---|---|---|---|---|

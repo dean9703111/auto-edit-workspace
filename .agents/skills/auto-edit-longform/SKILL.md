@@ -18,7 +18,7 @@ version: 0.2.0
 |---|---|
 | 沒指定專案 | 列出 `projects/` 底下的專案，問要處理哪一個 |
 | `assets/camera/`、`assets/voice/` 都是空的，專案裡有散落的素材 | 先照 `references/sort-assets.md` 分類 |
-| `assets/camera/`、`assets/voice/` 都是空的，也沒有散落的素材 | 照 AGENTS.md「開新專案」第 2 點告訴使用者放什麼，最後一行 `→ 下一步：素材放好後說「剪乾淨」` |
+| `assets/camera/`、`assets/voice/` 都是空的，也沒有散落的素材 | 照 `references/new-project.md` 第 2 點告訴使用者放什麼，最後一行 `→ 下一步：素材放好後說「剪乾淨」` |
 | 使用者只問「做到哪了」 | 步驟 1 回報就好 |
 
 ## 步驟
@@ -29,7 +29,7 @@ version: 0.2.0
 node shared/template/tools/status.mjs --project projects/<專案>
 ```
 
-它印目前階段、該讀哪支 Skill 的第幾步、**完整可貼的下一條指令**，有待回覆停點就印停點那一行。照著做，不用另外查路由。第一次開工：`media.mjs prep` 會自動填開工決策表；使用者說直式時，`prep` 加 `--format portrait`。
+它印目前階段、該讀哪支 Skill 的第幾步、**完整可貼的下一條指令**，有待回覆停點就印停點那一行。照著做，不用另外查路由。第一次開工：`media.mjs prep`（或 `status.mjs --project projects/<專案> --init`）會自動填開工決策表；使用者說直式時，`prep` 加 `--format portrait`。
 完成判準：讀到 `目前在：`、`Skill：`、`→ 下一步：` 或待回覆的停點。
 常見錯誤：印「講者：⚠ 還沒設定」→ 在回報裡問姓名與頭銜（不擋流程，不要自己編）。
 
@@ -54,6 +54,10 @@ status 和實際檔案不符時以產物為準，判斷表在 `references/progre
 
 可以全自動、不用問的：轉逐字稿、`--check`、build、audit、`qc.mjs`、`status.mjs`。一定要停的：AGENTS.md「停點總表」的 ①–⑥。
 
+## 版式（橫式／直式）
+
+開工時決定一次，`media.mjs prep` 寫進開工決策表「版式」：使用者說「短影片」「直式」「Shorts」「Reels」「抖音」→ `prep` 加 `--format portrait`；說「長片」「橫式」或都沒說 → 工具看主軌，寬 < 高才是直式。之後說「改成直式／橫式」就照改 plan.json 第一層的 `"format": "portrait"`（橫式不寫），停點紀錄新增一列；工具第一行會印「版式：…」，和開工決策表不一樣時 `--check` 會 ✖，照 → 改。直式素材做橫式：不支援，告訴使用者；橫式素材做直式：還不支援（`--check` 會 ✖），請使用者提供直拍素材。直式的數字（畫布、版面、字幕、安全區、構圖）看 `shared/style.md`「直式」。
+
 ## 自我核對
 
 - [ ] 專案只有一個、確定了
@@ -71,7 +75,7 @@ status 和實際檔案不符時以產物為準，判斷表在 `references/progre
 
 ## 工具呼叫預算
 
-接手最多 2 次（AGENTS.md「階段預算」）。超過就停下來回報卡在哪；交棒之後照那支 Skill 的預算。
+接手最多 2 次。超過就停下來回報卡在哪；交棒之後照那支 Skill 的預算。
 
 ## 回報格式
 
@@ -84,5 +88,6 @@ status 和實際檔案不符時以產物為準，判斷表在 `references/progre
 
 ## 什麼時候讀 references/
 
+- `references/new-project.md`：使用者說「開一個新專案」，或還沒有任何素材時才讀。
 - `references/sort-assets.md`：使用者說「分類素材」，或素材散落在專案裡時才讀。
 - `references/progress-template.md`：status 和實際檔案不符、要以產物判斷階段時才讀。

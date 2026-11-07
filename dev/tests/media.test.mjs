@@ -272,6 +272,7 @@ test('--list 提到 media 段的欄位；--list --json 有 media.fields', () => 
 // ---------- 004：錄影標註（callouts／spot／steps／arrows／marks.path，契約 specs/contracts/media.md）----------
 
 const MEDIA_LIB = await import(path.join(TOOLS, 'lib', 'media.mjs'));
+const MEDIA_LIB_FRAMES = await import(path.join(TOOLS, 'media.mjs'));
 
 test('標註幾何：§1.1 三組例題、stage 換算、卡片寬度估算', () => {
   const { mediaGeometry, toStage, cardWidth, textPx } = MEDIA_LIB;
@@ -733,4 +734,47 @@ test('kit/media.js 放大鏡：補間目標是 canvas 元素（目標是普通�
   assert.deepEqual([calls[0].from.lensFrame, calls[0].to.lensFrame, calls[0].at], [0, 4, 5]);
   for (const f of [3.5, 0.2, 2.1]) cv.lensFrame = f;   // 亂序 seek：每次都畫那一格的圖
   assert.deepEqual(drawn, [2, 0, 1]);
+});
+
+test('字幕斷行：沒有標點時斷在詞的邊界，不切詞、不切英文、不切引號', async () => {
+  const M2 = await import(path.join(TOOLS, 'media.mjs'));
+  const parts = (text, max = 18) => M2.splitRow({ text, start: 0, end: 5, chars: [], ok: true }, max).map((p) => p.text);
+  for (const [text, bad] of [
+    ['代表 AI 會自己判斷哪些動作需要你的授權並且直接執行其他動作', /動$/],
+    ['你可以看到 AI 已經照剛剛的清單剪掉了六段影片也少了十五秒', /剛$/],
+    ['現在 AI 大幅降低了剪輯的成本和能力門檻只要白話文就能開始', /剪$/],
+    ['然後在「Select folder」選擇「Add new project」這個按鈕', /「$/],
+    ['選我們剛剛下載下來的 auto-edit-workspace 這個資料夾來開始使用', /-$/],
+    ['所以專案裡還有我根據自己習慣設計的 9 支剪片 Skill', /\d$/],
+    ['我最常請 AI 把每一段動畫的最後一格截圖整理成網頁給我看', /每$/],
+    ['其中最重要的是 HyperFrames 跟 auto-editor 這兩個開源工具', /跟$/],
+    ['接著要把我放在 GitHub 上的 AI 剪輯工作流', /GitHub$/],
+  ]) {
+    const got = parts(text);
+    assert.ok(got.length >= 2, text);
+    for (const p of got.slice(0, -1)) assert.doesNotMatch(p, bad, `${text} → ${got.join('／')}`);
+    assert.equal(got.join(''), text);
+  }
+  assert.ok(!/^的/.test(parts('現在 AI 大幅降低了剪輯的成本和能力門檻')[1]), '不要斷成「…剪輯／的成本」');
+  // 標點斷太偏：一邊只有兩個字又放不下另一邊，改斷詞邊界
+  const c = parts('未來，我會分享更多 AI 工具的應用技巧與注意事項');
+  assert.equal(c.length, 2, c.join('／'));
+  assert.ok(c[0].length > 4, c.join('／'));
+});
+
+test('media --help：預設只印指令清單，一條指令的說明另外查（省模型額度）', () => {
+  const h = (...a) => spawnSync(process.execPath, [MEDIA, ...a], { encoding: 'utf8' }).stdout;
+  const short = h('--help'), full = h('--help', '--all');
+  assert.ok(short.length < full.length / 2, `${short.length} vs ${full.length}`);
+  assert.match(short, /media\.mjs srt-align/);
+  assert.match(short, /--help --all/);
+  const one = h('srt-align', '--help');
+  assert.match(one, /srt-align/);
+  assert.doesNotMatch(one, /ng-snap --project/, '只印那一條');
+});
+
+test('frame --box：解析與錯誤訊息', () => {
+  assert.deepEqual(MEDIA_LIB_FRAMES.parseBoxes('10,20,30,40;1,2,3,4'), [[10, 20, 30, 40], [1, 2, 3, 4]]);
+  assert.deepEqual(MEDIA_LIB_FRAMES.parseBoxes(null), []);
+  assert.throws(() => MEDIA_LIB_FRAMES.parseBoxes('10,20,30'), /--box 要寫 "x,y,w,h"/);
 });

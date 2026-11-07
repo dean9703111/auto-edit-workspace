@@ -33,7 +33,7 @@ version: 0.2.0
 node shared/template/tools/build.mjs --project projects/<專案> --review
 ```
 
-一條做完：build、量全部動畫、完成態拼圖、開完成影片預覽、背景先 render（你看預覽時機器順便做，說「輸出」就不用再等）、記停點。**同一則回覆一次打開它印的所有拼圖頁**，只找 FAIL（REVIEW.md §2），不用每段寫 PASS。回覆附上六行、提醒「請看字幕有沒有對到嘴」。
+一條做完：build、量全部動畫、完成態拼圖、開完成影片預覽、背景先 render（你看預覽時機器順便做，說「輸出」就不用再等）、記停點。內容沒變的段沿用上次的量測和截圖（印「沿用上次的量測和截圖：這次重做 N 段」）；kit、模板、底片、plan 共用的欄變了就全部重做，懷疑沒量到加 `--no-reuse`。**同一則回覆一次打開它印的所有拼圖頁**，只找 FAIL（REVIEW.md §2），不用每段寫 PASS。回覆附上六行、提醒「請看字幕有沒有對到嘴」。
 完成判準：印 `audit：✖ 0`、停點 ④ 那一行；拼圖沒有 FAIL，或 FAIL 都修好重跑過。
 常見錯誤：`✖ …` 在內容設計動畫段 → 把那幾行原文交回做那段的子代理；要看全片逐格（使用者要求才做）：`(cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review)`，15 段就 164 格，長片要好幾分鐘。
 
@@ -57,7 +57,7 @@ node shared/template/tools/editor.mjs --status --project projects/<專案>
 
 第 1 行在背景啟動；第 2 行確認網址。使用者說「調好了」：重新讀 plan.json 與 rough.srt → 流程 A（剪輯台增刪字幕時會重對 plan.json 的句號，`work/storyboard.md` 的句號可能過期，以 plan.json 為準）。
 完成判準：`--status` 印出網址；「調好了」之後 `--review` 0 個 ✖。
-常見錯誤：使用者在剪輯台改過的文字、斷句、時間被改回去 → 以剪輯台存的為準（AGENTS.md「剪輯台」）。
+常見錯誤：使用者在剪輯台改過的文字、斷句、時間被改回去 → 以剪輯台存的為準（AGENTS.md 規則 10）。
 
 **D. 改版**（使用者指名一段要重新設計、更完善、換個動畫；步驟在 `references/revise.md`）
 
@@ -65,7 +65,7 @@ node shared/template/tools/editor.mjs --status --project projects/<專案>
 node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段> --note "「使用者原話」"
 ```
 
-提案寫在 `work/versions/<段>/v<N>/分鏡.md`，停點 ③ 確認才動手。**重新設計要回到內容，不是換一支模板**：設計師照 `.agents/skills/auto-edit-motion/references/design-brief.md` 重想這段要傳達什麼。沒指名段（「動畫都更細節一點」）先列出動畫段、每段一句可以改的方向，問要改哪幾段。
+提案寫在 `work/versions/<段>/v<N>/分鏡.md`，停點 ③ 確認才動手。**重新設計要回到內容，不是換一支模板**：設計師照 `.agents/skills/auto-edit-motion/references/design-build.md` 重想這段要傳達什麼。沒指名段（「動畫都更細節一點」）先列出動畫段、每段一句可以改的方向，問要改哪幾段。
 完成判準：分鏡.md 沒有範本那一行「（寫 1–5 條」；回覆最後一行是改版的停點 ③。
 常見錯誤：直接改了 storyboard.md 或 x 檔 → 提案只寫在 v<N>/分鏡.md，使用者說「可以」後才 `accept`。
 
@@ -122,7 +122,7 @@ node shared/template/tools/versions.mjs finish --project projects/<專案>
 
 ## 工具呼叫預算
 
-流程 A 最多 8 次（不含內容設計動畫）；回饋輪每一項最多 6 次；改版開提案到停點 ③ 每段 6 次、確認後到停點 ④ 12 次（不含動畫，AGENTS.md「階段預算」）。超過就停下來回報卡在哪。
+流程 A 最多 8 次（不含內容設計動畫）；回饋輪每一項最多 6 次；改版開提案到停點 ③ 每段 6 次、確認後到停點 ④ 12 次（不含動畫）。超過就停下來回報卡在哪。
 
 ## 回報格式
 

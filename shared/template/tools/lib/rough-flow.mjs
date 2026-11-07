@@ -6,6 +6,7 @@
 //   cutRows(scan)       → ng-scan 的結果 → cuts.md 的 NG 列
 //   cutsMarkdown(...)   → cuts.md 全文
 //   flowCli(cmd, P, flags) → media.mjs 的指令入口
+import { hasSimplified, toTrad } from './zh.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -13,9 +14,11 @@ import { fileURLToPath } from 'node:url';
 import { runJob, jobState, STILL_RUNNING } from './job.mjs';
 import { appendStop, progressFile } from './progress.mjs';
 import { hfArgs } from './hf.mjs';
-import { probeMedia, VIDEO_EXT, IMAGE_EXT } from './ff.mjs';
+import { probeMedia, tmpFor, sweepTmp, VIDEO_EXT, IMAGE_EXT } from './ff.mjs';
 import { formatSrt, parseSrt } from './srt.mjs';
 import { spawnP } from './proc.mjs';
+import { readScript } from './script-file.mjs';
+import { writeAtomic } from './atomic.mjs';
 import { mapWords, keptSegments, wordsToSource } from './transcript-map.mjs';
 import * as M from '../media.mjs';
 
@@ -82,11 +85,19 @@ export async function whisper(P, file, { srt = null, onSpawn = null, dir = path.
   try { j = JSON.parse(String(r.stdout).trim().split(/\r?\n/).pop()); } catch { j = null; }
   if (r.status !== 0 || !j?.ok) {
     if (r.signal === 'SIGTERM' || r.signal === 'SIGKILL') throw new Error('轉逐字稿被中止');
-    const why = j?.error || String(r.stderr).trim().split(/\r?\n/).filter((l) => !l.startsWith('{"type"')).pop() || `結束碼 ${r.status}`;
-    throw new Error(`轉逐字稿失敗：${String(why).slice(0, 300)} → 跑 npx hyperframes doctor 檢查 whisper（第一次會下載模型，要網路）；修好後再跑一次同一條指令，第二次還失敗就停下來回報這段訊息`);
+    const err = j?.error;
+    const why = (typeof err === 'string' ? err : err?.message || (err ? JSON.stringify(err) : '')) || String(r.stderr).trim().split(/\r?\n/).filter((l) => !l.startsWith('{"type"')).pop() || `結束碼 ${r.status}`;
+    throw new Error(`轉逐字稿失敗：${why.slice(0, 300)} → 跑 npx hyperframes doctor 檢查 whisper（第一次會下載模型，要網路）；修好後再跑一次同一條指令，第二次還失敗就停下來回報這段訊息`);
   }
-  const words = parseWords(fs.readFileSync(path.join(dir, 'transcript.json'), 'utf8'), 'work/transcript.json');
+  const wordsFile = path.join(dir, 'transcript.json');
+  const words = parseWords(fs.readFileSync(wordsFile, 'utf8'), 'work/transcript.json');
   if (!words.length) throw new Error(`whisper 在 ${path.basename(file)} 裡聽不到任何字 → 確認素材有聲音、不是靜音檔`);
+  // 同一個模型有時轉成簡體：這裡換回繁體，後面的清單、字幕、#N@詞 都不用再管（srt 也一樣）
+  if (words.some((w) => hasSimplified(w.text))) {
+    for (const w of words) w.text = toTrad(w.text);
+    fs.writeFileSync(wordsFile, JSON.stringify(words, null, 2));
+    if (srt && fs.existsSync(srt)) fs.writeFileSync(srt, toTrad(fs.readFileSync(srt, 'utf8')));
+  }
   return { words, engine: j.engine || 'whisper', model: j.model || 'small', sec: secs(Date.now() - t0) };
 }
 
@@ -197,7 +208,7 @@ export function cutRows({ ng = [], outside = [], script = null }) {
   return rows.sort((a, b) => a.start - b.start);
 }
 
-export function cutsMarkdown({ rows = [], chapters = [], order = null, decide = [] }) {
+export function cutsMarkdown({ rows = [], chapters = [], order = null, decide = [], waits = [] }) {
   const L = ['# 剪輯清單', ''];
   if (order) {
     L.push('## 主軌順序', '', order.note, '', '| 順序 | 檔案 | 長度 | 講到講稿第幾行 | 照講稿建議的順序 |', '|---|---|---|---|---|');
@@ -208,6 +219,11 @@ export function cutsMarkdown({ rows = [], chapters = [], order = null, decide = 
   L.push('## NG', '', '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|');
   for (const r of rows) L.push(`| ${r.cut ? '[x]' : '[ ]'} | ${clock(r.start)}–${clock(r.end)} | ${cell(r.text) || '—'} | ${cell(r.reason)} | ${cell(r.pending) || '—'} |`);
   L.push('');
+  if (waits.length) {
+    L.push('## 等待（邊錄邊講）', '', `畫面在等、也沒人講話的地方。勾了就壓成 ${M.WAIT_KEEP} 秒快轉，那段聲音一起剪掉；預設不勾。`, '', '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|');
+    for (const w of waits) L.push(`| [ ] | ${clock(w.start)}–${clock(w.end)} | ${cell(w.file)} ${w.kind === '畫面在轉' ? '畫面在轉' : w.kind === '靜止' ? '畫面沒動' : '只有小動作（可能在打字）'} | 等待：${(w.end - w.start).toFixed(1)} 秒沒人講話，勾了壓成 ${M.WAIT_KEEP} 秒快轉 | — |`);
+    L.push('');
+  }
   if (chapters.length) {
     L.push('## 章節空檔', '', '| 章節 | 第一句 | 時間碼 |', '|---|---|---|');
     for (const c of chapters) L.push(`| ${cell(c.title)} | ${cell(c.first)} | ${clock(c.t)} |`);
@@ -313,6 +329,7 @@ export async function prepFlow(P, flags = {}) {
   fs.mkdirSync(work, { recursive: true });
   const detail = detailLog(proj, 'prep');
   const cutsFile = path.join(work, 'cuts.md'), mainFile = path.join(work, 'main.mp4'), mainTj = path.join(work, 'transcript-main.json'), roughFile = path.join(work, 'rough.mp4');
+  if (exists(path.join(proj, '講稿.md'))) readScript(path.join(proj, '講稿.md'));   // 編碼不對先擋下來，不要轉完檔、聽完逐字稿才發現
   if (jobState(proj, 'rough').state === 'running') throw new Error(`初剪（media.mjs rough）還在背景跑 → 等它跑完再說：node shared/template/tools/media.mjs rough --project ${pj}`);
   if (exists(roughFile)) {
     if (!flags.again) throw new Error(`work/rough.mp4 已經存在（初剪做過了）→ 先問使用者要不要重剪。只改勾選：改好 work/cuts.md 後跑 node shared/template/tools/media.mjs rough --project ${pj} --again；要重新找 NG 或改主軌順序：node shared/template/tools/media.mjs prep --project ${pj} --again（舊的 rough.mp4 改名留著）`);
@@ -334,7 +351,8 @@ export async function prepFlow(P, flags = {}) {
     joined = true;
     judge = logged.filter((l) => /^assets\/screen\//.test(l));
   }
-  const clips = JSON.parse(fs.readFileSync(path.join(work, 'main.json'), 'utf8')).clips || [];
+  const mainJson = JSON.parse(fs.readFileSync(path.join(work, 'main.json'), 'utf8'));
+  const clips = mainJson.clips || [], mainWarn = mainJson.warnings || [];
   const info = probeMedia(mainFile);
   const kinds = { camera: 0, voice: 0, screen: 0 };
   for (const c of clips) kinds[c.kind] = (kinds[c.kind] || 0) + 1;
@@ -347,7 +365,11 @@ export async function prepFlow(P, flags = {}) {
     const t1 = Date.now();
     try { const j = await M.scan(P, { log: detail }); return { line: M.scanSummary(j, secs(Date.now() - t1)) }; } catch (e) { return { warn: `⚠ 素材掃描失敗（${e.message}）→ 之後跑 node shared/template/tools/media.mjs scan --project ${pj}` }; }
   })() : Promise.resolve(haveMedia ? { line: `${M.scanSummary(JSON.parse(fs.readFileSync(path.join(work, 'media', 'index.json'), 'utf8')))}（沒換，沿用）` } : { line: '素材：assets/screen/、assets/images/ 都是空的' });
-  const level = flags.edit ? { edit: flags.edit, note: null } : M.editForLevel(mainFile);
+  for (const w of mainWarn) say(`⚠ ${w}`);
+  // 全靜音：whisper 會幻聽出一堆字，auto-editor 也剪不出東西，在這裡就講清楚
+  const measured = M.editForLevel(mainFile);
+  if (measured.silent && !flags.transcript) throw new Error(`主軌是靜音（最大音量 ${measured.peak} dB）→ 這個流程靠講話的聲音剪：確認錄影時有收音、素材沒放錯；聲音在別的檔就放 assets/voice/`);
+  const level = flags.edit ? { edit: flags.edit, note: null } : measured;
   if (level.note) say(`✓ ${level.note}`);
   const whisperTask = tjFresh ? null : flags.transcript ? Promise.resolve(useTranscript(P, flags.transcript)) : speechWhisper(P, mainFile, { edit: level.edit, margin: flags.margin ?? M.CUT.margin, v1: flags.v1 ?? null, detail });
   const [tr, sc] = await Promise.allSettled([whisperTask, scanTask]);
@@ -382,15 +404,16 @@ export async function prepFlow(P, flags = {}) {
     const missing = chapters.filter((c) => c.t == null);
     const chOk = chapters.filter((c) => c.t != null);
     const { order: orderTable, extra } = orderInfo(P, { clips, words, lines: scan.script?.lines, explicit: !!order, judge });
-    const pre = [...extra, ...voiceNotice(P, clips), ...missing.map((c) => `章節「${c.title}」第一句「${c.first}」在逐字稿找不到 → 查 work/ng-scan.md 前後行的時間，補進章節空檔表`)];
+    const pre = [...mainWarn, ...extra, ...voiceNotice(P, clips), ...missing.map((c) => `章節「${c.title}」第一句「${c.first}」在逐字稿找不到 → 查 work/ng-scan.md 前後行的時間，補進章節空檔表`)];
     // 先寫表、預跑 ng-snap（它讀 cuts.md），把 ⚠ 寫進「需要你決定」
-    fs.writeFileSync(cutsFile, `${cutsMarkdown({ rows, chapters: chOk, order: orderTable, decide: [] })}${CUTS_DRAFT}\n`);
+    const waits = M.waitRows(P, clips, words);
+    fs.writeFileSync(cutsFile, `${cutsMarkdown({ rows, chapters: chOk, order: orderTable, decide: [], waits })}${CUTS_DRAFT}\n`);
     const snap = M.ngSnap(P, { edit: level.edit, margin: flags.margin ?? M.CUT.margin, v1: flags.v1 ?? null, log: detail });
     const decide = decideList(rows, snap.warnings, pre);
-    fs.writeFileSync(cutsFile, cutsMarkdown({ rows, chapters: chOk, order: orderTable, decide }));
+    writeAtomic(cutsFile, cutsMarkdown({ rows, chapters: chOk, order: orderTable, decide, waits }));
     const real = scan.outside.filter((u) => u.real).length, heard = scan.outside.length - real;
     const pending = rows.filter((r) => r.pending).length;
-    say(`✓ 剪輯清單：work/cuts.md（NG ${rows.length} 列，其中待確認 ${pending} 列${chOk.length ? `；章節 ${chOk.length} 章` : ''}）${scan.script ? `；講稿外 ${real} 處列進清單${heard ? `、${heard} 處字數接近是 whisper 聽錯（沒列，明細 work/ng-scan.md）` : ''}` : '；沒有講稿：相鄰句相似度找的候選，全部待確認'}`);
+    say(`✓ 剪輯清單：work/cuts.md（NG ${rows.length} 列，其中待確認 ${pending} 列${waits.length ? `；邊錄邊講的等待 ${waits.length} 處，預設不勾` : ''}${chOk.length ? `；章節 ${chOk.length} 章` : ''}）${scan.script ? `；講稿外 ${real} 處列進清單${heard ? `、${heard} 處字數接近是 whisper 聽錯（沒列，明細 work/ng-scan.md）` : ''}` : '；沒有講稿：相鄰句相似度找的候選，全部待確認'}`);
   }
 
   // 要使用者決定的事（細節都在 cuts.md）
@@ -405,7 +428,7 @@ export async function prepFlow(P, flags = {}) {
   if (flags['skip-stop']) {
     const text = fs.readFileSync(cutsFile, 'utf8');
     const off = Object.fromEntries(M.parseCutsMd(text).ng.filter((r) => r.pending).map((r) => [r.row, false]));
-    if (Object.keys(off).length) fs.writeFileSync(cutsFile, M.setCutChecks(text, off));
+    if (Object.keys(off).length) writeAtomic(cutsFile, M.setCutChecks(text, off));
     appendStop(proj, { stop: STOP1, state: '略過', said: flags.said ?? '', back: 'work/cuts.md' });
     say(`⏭ 停點 ① 略過：cuts.md 打勾的列照剪，待確認的 ${Object.keys(off).length} 列不剪`);
     say('→ 下一步：輸出初剪、字幕、剪接點');
@@ -435,14 +458,13 @@ function roughKey(snap, edit, margin) {
   return JSON.stringify({ src: path.basename(snap.src), size: st.size, mtimeMs: Math.round(st.mtimeMs), edit, margin, cutOut: snap.cutOut, addIn: snap.addIn });
 }
 
-async function autoEditor(args) {
-  let r = await spawnP('auto-editor', args, { env: cleanEnv(), tail: 4000 });
+async function autoEditor(args, { onSpawn = null } = {}) {
+  let r = await spawnP('auto-editor', args, { env: cleanEnv(), tail: 4000, onSpawn });
   // Windows：裝成 auto-editor.cmd 包裝檔時不帶 shell 會 ENOENT
   if (r.error?.code === 'ENOENT' && process.platform === 'win32') r = await spawnP('auto-editor', args.map((x) => `"${x}"`), { env: cleanEnv(), tail: 4000, shell: true });
   if (r.error?.code === 'ENOENT') throw new Error('找不到 auto-editor → 照 setup/ 的手冊安裝');
   if (r.status !== 0) {
-    const last = String(r.stderr || r.stdout || '').replace(/\x1b\[[0-9;]*m/g, '').trim().split(/\r?\n/).filter(Boolean).pop() || '（沒有訊息）';
-    throw new Error(`auto-editor 失敗（結束碼 ${r.status}）：${last} → 用 auto-editor --help 對一下參數名稱（以安裝的版本為準）；第二次還失敗就停下來回報這段訊息`);
+    throw M.aeFailure(r, '；第二次還失敗就停下來回報這段訊息');
   }
   return r;
 }
@@ -450,13 +472,22 @@ async function autoEditor(args) {
 // 輸出 rough.mp4 和 --export v1 同時跑；都成功才換上正式檔名（中途被砍不會留下半支）
 async function cutRough(P, snap, edit, margin, detail) {
   const work = path.join(P.project, 'work');
-  const tmpMp4 = path.join(work, '.rough.tmp.mp4'), tmpV1 = path.join(work, '.cuts.v1.tmp.json');
+  const tmpMp4 = tmpFor(path.join(work, 'rough.mp4')), tmpV1 = tmpFor(path.join(work, 'cuts.v1.json'));   // 檔名帶 pid：上一次的 auto-editor 還在寫也不會寫到同一個檔
+  sweepTmp(work);
   const base = M.aeArgs({ src: relPath(snap.src), edit, margin, cutOut: snap.cutOut, addIn: snap.addIn });
   detail(`auto-editor ${base.join(' ')}`);
-  await Promise.all([
-    autoEditor([...base, '-o', relPath(tmpMp4), '--no-open', '--progress', 'none']),
-    autoEditor([...base, '--export', 'v1', '-o', relPath(tmpV1), '--progress', 'none']),
-  ]);
+  const kids = [], onSpawn = (c) => kids.push(c);
+  const both = [
+    autoEditor([...base, '-o', relPath(tmpMp4), '--no-open', '--progress', 'none'], { onSpawn }),
+    autoEditor([...base, '--export', 'v1', '-o', relPath(tmpV1), '--progress', 'none'], { onSpawn }),
+  ];
+  try { await Promise.all(both); } catch (e) {
+    // 一支失敗，另一支不能留著繼續跑
+    for (const c of kids) { try { c.kill(); } catch { /* 已經走了 */ } }
+    await Promise.allSettled(both);
+    for (const f of [tmpMp4, tmpV1]) fs.rmSync(f, { force: true });
+    throw e;
+  }
   fs.renameSync(tmpV1, path.join(work, 'cuts.v1.json'));
   fs.renameSync(tmpMp4, path.join(work, 'rough.mp4'));
 }
@@ -551,7 +582,7 @@ export async function roughFlow(P, flags = {}) {
     say(at >= 0 ? lines.slice(at).filter(Boolean).join('\n') : `✖ verify-rough 失敗：${String(verify.stderr).trim().slice(-300)}`);
     try { fs.rmSync(roughKeyFile(work), { force: true }); } catch { /* 下次重剪就好 */ }
     say(`細節：${relPath(detail.file)}`);
-    say('→ 下一步：照上面第 1 步重接主軌後，第 2–4 步可以用這一條');
+    say(/解碼有錯/.test(verifyOut) ? '→ 下一步：重新輸出初剪（紀錄已清掉，這次會真的重剪）' : '→ 下一步：照上面第 1 步重接主軌後，第 2–4 步可以用這一條');
     say(`node shared/template/tools/media.mjs rough --project ${pj} --again`);
     return 1;
   }
@@ -638,7 +669,7 @@ export async function flowCli(cmd, P, flags) {
   };
   // scan、transcribe 只印結果一行：「在背景跑」那行不印
   const log = cmd === 'scan' || cmd === 'transcribe' ? (l) => { if (!/在背景跑，log/.test(l)) console.log(l); } : console.log;
-  const code = await runJob({ project: P.project, name: cmd, run, log, ...(wait != null ? { waitSec: wait } : {}) });
+  const code = await runJob({ project: P.project, name: cmd, run, log, retryFailed: !!flags.again, ...(wait != null ? { waitSec: wait } : {}) });
   if (code === STILL_RUNNING) console.log(sameCommand());
   return code;
 }

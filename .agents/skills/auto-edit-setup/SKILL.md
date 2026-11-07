@@ -20,7 +20,7 @@ version: 0.1.0
 |---|---|
 | 這一輪還沒讀過 `setup/README.md` | 先讀全文 |
 | 使用者只說「Skills 看不到 auto-edit」 | 只做 S4（`node setup/install-skills.mjs`），再跑一次檢測 |
-| 檢測顯示 `restart` | 請使用者重開 MiniMax Code（Mac `M8`、Windows `W9`）；重開後還看不到，就在指令最前面加 PATH 前綴照樣做（Mac：`export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH";`），不要卡在重開 |
+| 檢測顯示 `restart` | 請使用者重開 MiniMax Code（Mac `M8`、Windows `W9`）；重開後還看不到，就在指令最前面加 PATH 前綴照樣做（Mac：`export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin:$PATH";`），不要卡在重開 |
 
 ## 步驟
 
@@ -109,7 +109,7 @@ node shared/template/tools/brand.mjs speaker
 
 ## 工具呼叫預算
 
-同一步失敗 2 次就停（AGENTS.md「階段預算」、`setup/README.md` 原則 8）。
+同一步失敗 2 次就停（`setup/README.md` 原則 8）。
 
 ## 回報格式
 

@@ -31,15 +31,15 @@ version: 0.1.0
 node shared/template/tools/media.mjs scan --project projects/<專案>
 ```
 
-每支錄影、每批圖片一個子代理，同一則回覆一次派出。看 `work/media/index.md` 與 sheet（圖片在 `work/media/images/sheet-NN.jpg`），寫 `work/media/notes/<檔名>.json`：
+每支錄影、每批圖片一個子代理，同一則回覆一次派出。錄影**只讀自己那支的 `work/media/<檔名>/events.md`**（哪一秒切頁、開視窗、哪一塊變了、哪裡在等、哪裡在捲）和 sheet；圖片看 `work/media/images/sheet-NN.jpg`。不用讀 `work/media/index.md`（那是總表）。寫 `work/media/notes/<檔名>.json`：
 
 ```json
 { "file": "assets/screen/操作A.mp4", "summary": "安裝工具的完整操作", "moments": [ { "from": 3.5, "to": 18, "what": "打開設定頁、建立金鑰", "keywords": ["設定", "金鑰"] } ] }
 ```
 
-圖片一批一個檔，寫成陣列：`[{ "file": "assets/images/a.png", "what": "…", "keywords": ["…"] }]`。`keywords` 寫講解可能會說的詞，工具用它把素材配到相關的章節。
+圖片一批一個檔，寫成陣列：`[{ "file": "assets/images/a.png", "what": "…", "keywords": ["…"] }]`。`keywords` 寫講解可能會說的詞，工具用它把素材配到講到那個詞的句子（`work/分鏡素材/chNN.md` 的「素材候選」）。
 完成判準：每支錄影、每批圖片都有筆記；`work/media/index.md` 列的「只有聲音」區間已知道。
-常見錯誤：素材檔名有空白、括號 → 指令照 index.md 印的檔名加雙引號；筆記寫太細 → 一支錄影幾個段落就夠，細節之後看 sheet。
+常見錯誤：素材檔名有空白、括號 → 指令照 index.md 印的檔名加雙引號；筆記寫太細 → 一支錄影幾個段落就夠，細節之後看 events.md。
 
 **2. 對字幕配起點**（寫草稿時）
 
@@ -47,14 +47,24 @@ node shared/template/tools/media.mjs scan --project projects/<專案>
 node shared/template/tools/media.mjs frame --project projects/<專案> --src "assets/screen/<檔名>" --at 12.5,18,24 --grid
 ```
 
-`work/分鏡素材/chNN.md` 會列這一份可能對得上的素材。每段講解找「錄影裡正在做同一個操作」的那一刻，寫素材檔名、`in` 秒數、理由，寫進草稿的 media 段。第 1 行一次截好幾個時間點的座標格線圖，用來讀運鏡、紅框的座標。
-完成判準：每一段都有素材檔名、`in`、對到的句號（`#N`–`#Me`）、理由；`moves`、`marks`、`callouts`、`spot`、`lens` 都有素材原尺寸的 `[x, y, w, h]`，箭頭有 `[x, y]`（USAGE.md 5.4）。
-常見錯誤：講解和畫面對不上 → 拆段重設 `in`，知道操作在哪裡結束就寫 `out`；講解停在一個結果畫面講好幾句 → 那幾句拆一段 `hold` 定格；用了 1920×1080 的畫面座標 → `--check` 會 ✖「超出素材範圍」，用格線圖重讀。
+`work/分鏡素材/chNN.md` 的「素材候選」列這一份哪一句可能對得上哪支素材。每段講解找「錄影裡正在做同一個操作」的那一刻：**先照 `work/media/<檔名>/events.md` 抄**，事件的「建議 in」就是 `in`、`retime` 第一點的 `src`，「框」可以直接當 `box`，等待照表上的 `retime` 寫法壓短。表上沒有的才跑第 1 行，一次截好幾個時間點的座標格線圖讀座標。寫素材檔名、起點、理由，寫進草稿的 media 段。
+完成判準：每一段都有素材檔名、起點（`in` 或 `retime`）、對到的句號（`#N`–`#Me`）、理由；`moves`、`marks`、`callouts`、`spot`、`lens` 都有素材原尺寸的 `[x, y, w, h]`，箭頭有 `[x, y]`（USAGE.md 5.4）。
+畫面和講解的速度對不上時（寫法：`build.mjs --spec media`）：
+
+| 畫面在做什麼 | 寫法 |
+|---|---|
+| 等待（進度條、轉圈、下載、AI 生成） | `retime` 跳過：`[{ "at": "#21", "src": 19 }, { "at": "#21+1", "src": 31 }]` |
+| 要點之前、要看清楚的操作 | `retime` 放慢（×0.5–0.7），同時 `moves` 推近、`marks` 或 `arrows` 指出來 |
+| 停在一個結果畫面講好幾句 | `retime` 裡 `src` 一樣的兩點（整段都停就寫 `hold`） |
+| 整段同一個速度 | `in`、`out` |
+| 露出金鑰、密碼、個資 | `redact` 打碼 |
+
+常見錯誤：同一個操作為了變速拆成好幾段 → 併成一段寫 `retime`，運鏡和紅框才不會斷；講解和畫面對不上 → 重設 `in` 或 `src`；用了 1920×1080 的畫面座標 → `--check` 會 ✖「超出素材範圍」，用格線圖重讀；紅框畫在還沒出現的東西上 → 寫好框之後加 `--box "x,y,w,h"` 截那一刻看一次。
 
 **3. 標註**
 
 ```
-node shared/template/tools/build.mjs --project projects/<專案> --check-draft work/drafts/<chNN>.json
+node shared/template/tools/build.mjs --project projects/<專案> --check-draft <chNN>
 ```
 
 選哪一種照 USAGE.md 5.5 表下的「選哪一種標註」：講「這一塊」用紅框；講「這是什麼／按這個」用說明卡；只看一塊用聚光燈；目標太小用箭頭；字太小用放大鏡；一步一步的操作加 STEP 膠囊。直式專案：16:9 錄影一定加 `moves` 推近到操作區；手機直式錄影用 `"pip": false`＋`"fit": "cover"` 鋪滿；橫式專案的手機直式錄影寫 `side`。說明卡、聚光燈、箭頭出現的期間不能運鏡。數量、停留下限照 style.md「螢幕錄影與圖片」。
@@ -83,11 +93,11 @@ node shared/template/tools/build.mjs --project projects/<專案> --check-draft w
 
 ## 工具呼叫預算
 
-每支錄影最多 6 次（AGENTS.md「階段預算」）。超過就停下來回報卡在哪。
+每支錄影最多 6 次。超過就停下來回報卡在哪。
 
 ## 回報格式
 
-當子代理時最多 25 行；每段一列：
+當子代理時只回一行；每段一列：
 
 ```
 | 句號 | 素材檔名 | in（sheet 第幾格） | speed | 運鏡／紅框／標註／放大鏡座標 | 理由 |

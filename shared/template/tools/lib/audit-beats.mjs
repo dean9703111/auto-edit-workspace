@@ -147,7 +147,9 @@ const closest = (w) => {
 export function noSheetFinding(item, file) {
   return { id: item.id, label: item.label, level: 'warn', rule: 'beats-none', el: null, t: item.start, kind: 'beats',
     msg: `沒有動畫分鏡：work/storyboard.md 沒有「${BEAT_TITLE} ${item.id}」（${file || item.label}）`,
-    fix: `照 shared/template/BEATS.md §3 這個情境的預設拍型，在 storyboard.md 這段底下寫一張表，表頭固定「| ${BEAT_HEADER.join(' | ')} |」，給人在停點 ③ 確認後再做動畫` };
+    fix: /x-design-/.test(String(file || ''))
+      ? `分鏡表是工具從 work/designs/${item.id}.md 產生的：確認那份有寫，再跑 node shared/template/tools/build.mjs --storyboard --only ${item.id}（子代理不能跑，回報主代理）`
+      : `照 shared/template/BEATS.md §3 這個情境的預設拍型，在 storyboard.md 這段底下寫一張表，表頭固定「| ${BEAT_HEADER.join(' | ')} |」，給人在停點 ③ 確認後再做動畫` };
 }
 
 // sheet＝parseBeatSheets 的一段；marks＝collectMotionInPage 的 marks（段內秒數）；cuesOut＝build --check 的完成影片秒數字幕；html＝x-*.html 原文

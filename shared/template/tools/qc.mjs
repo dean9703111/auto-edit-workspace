@@ -61,6 +61,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { pathsFrom, hasVoiceSource, build } from './build.mjs';
+import { writeAtomic } from './lib/atomic.mjs';
 import { run, probeMedia, rawFrame, writeJpg, lut3dFilter, blackDetect } from './lib/ff.mjs';
 import { ensureLook } from './lib/look.mjs';
 import { canvas, fillRect, blit, text, contactSheet, spawnAsync, pool } from './lib/raster.mjs';
@@ -103,7 +104,7 @@ export function parseArgs(argv) {
       const v = inline ?? rest[++i];
       if (v == null) throw new Error(`--${k} 後面要接值 → 在 --${k} 後面補上值（用 --help 看格式）`);
       flags[k] = v;
-    } else if (['json', 'help', 'write', 'force', 'sheet', 'verbose'].includes(k)) flags[k] = true;
+    } else if (['json', 'help', 'write', 'force', 'sheet', 'sample', 'verbose'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數 → 拿掉它；用 node shared/template/tools/qc.mjs --help 看有哪些參數`);
   }
   return flags;
@@ -944,7 +945,7 @@ export function writeSpeakerBox(P, suggest, { force = false } = {}) {
   if (plan.speakerBox && !force) return { wrote: false, box: plan.speakerBox, reason: 'exists' };
   plan.speakerBox = suggest;
   fs.mkdirSync(path.dirname(P.plan), { recursive: true });
-  fs.writeFileSync(P.plan, `${JSON.stringify(plan, null, 2)}\n`);
+  writeAtomic(P.plan, `${JSON.stringify(plan, null, 2)}\n`);
   return { wrote: true, box: suggest, reason: 'written' };
 }
 
@@ -958,7 +959,7 @@ export function writeFrame(P, r) {
   const frame = c && c.zoom > 1 ? c.frame : null;
   if (frame) plan.frame = frame; else delete plan.frame;
   fs.mkdirSync(path.dirname(P.plan), { recursive: true });
-  fs.writeFileSync(P.plan, `${JSON.stringify(plan, null, 2)}\n`);
+  writeAtomic(P.plan, `${JSON.stringify(plan, null, 2)}\n`);
   return { frame, zoom: c?.zoom ?? 1 };
 }
 
@@ -967,7 +968,7 @@ function printSpeakerWrite(P, w) {
   if (w.reason === 'none') { console.log('✖ 沒有寫 speakerBox：8 格之間幾乎沒有動作，估不出範圍 → 看 8 格總表手動框，寫進 plan.json 第一層'); return; }
   if (w.reason === 'exists') console.log(`plan.json 已經有 speakerBox ${JSON.stringify(w.box)}，沒有覆寫（要換成建議框加 --force）`);
   else console.log(`✔ speakerBox ${JSON.stringify(w.box)} 已寫進 ${rel(P.plan)}`);
-  console.log('這只是起點，一定要看一次疊影圖：手勢的橘色跑出青框，或下緣壓到桌面倒影，就照圖改 plan.json；看過沒問題就不用再量');
+  console.log('建議框已經含手勢範圍，不用開圖確認；之後 --review 的拼圖看到卡片擋到手勢或臉，才照 work/場地照-動作範圍.jpg 改 plan.json 的 speakerBox');
   console.log('→ 下一步：拿分鏡素材（字幕編號、章節、情境對照、plan.json 寫法）');
   console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --scaffold`);
 }
@@ -1365,7 +1366,8 @@ export async function storyboardRun(P, flags) {
   const allShots = [...kept, ...outShots].sort((a, b) => order.get(a.id) - order.get(b.id) || a.at - b.at);
   // 拼圖不留過期的：--only 且上次有拼圖 → 有動到的頁自動重做（不用另外加 --sheet）；整支重截沒加 --sheet → 舊頁清掉
   let sheets = null;
-  if ((flags.sheet || (only && prev?.sheets?.length)) && allShots.length) sheets = await storyboardSheets(P, flags, dir, allShots, { changed: only ? targetIds : null, prev, L: obsLayout(fmt.canvas) });
+  const sheetShots = flags.sample ? sampleShots(allShots, planScenes(P)) : allShots;
+  if ((flags.sheet || (only && prev?.sheets?.length)) && allShots.length) sheets = await storyboardSheets(P, flags, dir, sheetShots, { changed: only ? targetIds : null, prev, L: obsLayout(fmt.canvas) });
   else if (!only && fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) if (SHEET.re.test(f)) fs.rmSync(path.join(dir, f), { force: true });
   const pages = sheets ? sheets.pages : [];
   if (allShots.length) {
@@ -1373,6 +1375,21 @@ export async function storyboardRun(P, flags) {
     fs.writeFileSync(mfFile, `${JSON.stringify({ version: 1, planHash: j.planHash ?? null, shots: allShots, skipped, sheets: pages }, null, 1)}\n`);
   }
   return { dir, shots: outShots, allShots, manifest: allShots.length ? mfFile : null, sheets: sheets ? sheets.pages.map((pg) => ({ ...pg, redone: sheets.redone.includes(pg.file) })) : null, skipped, warnings, stale, cleared, segs: list.length, fmt, only, jobs: snapJobs, others: gate.others };
+}
+
+// 定稿只要看「會因段而異」的：內容設計動畫、錄影段每段一格，字卡與模板每一種看一格（版面由工具產生，同一種位置固定）
+export function sampleShots(shots, scenes) {
+  const kindOf = new Map((scenes || []).map((g) => [g.id, g.design ? `design:${g.id}` : g.type === 'media' ? `media:${g.id}` : String(g.template || g.scene || (g.fx != null ? `fx${g.fx}` : g.type || g.id))]));
+  const lastOf = new Map();
+  for (const x of shots) lastOf.set(x.id, x);   // 每段留最後一張（完成態）
+  const seen = new Set(), keep = new Set();
+  for (const x of shots) {
+    const k = kindOf.get(x.id) ?? x.id;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    keep.add(lastOf.get(x.id));
+  }
+  return shots.filter((x) => keep.has(x));
 }
 
 // FR-082（US4-2）：錄影（--check --json 的 annotations.view；直式只有寬 > 高的錄影段才有）縮到原尺寸 < 0.6、沒有 moves 和 lens、> 3 秒 → 介面字太小

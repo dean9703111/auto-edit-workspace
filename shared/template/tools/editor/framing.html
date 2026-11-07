@@ -14,9 +14,11 @@
   .fr-main { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 16px; padding: 16px; align-items: start; }
   .fr-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; }
   .fr-panel h2 { margin: 0 0 8px; font-size: 13px; color: var(--mute); font-weight: 700; }
-  .fr-stage { position: relative; width: 100%; background: #000; border-radius: 6px; overflow: hidden; touch-action: none; user-select: none; }
+  .fr-stage { position: relative; width: 100%; background: #000; border-radius: 6px; overflow: visible; touch-action: none; user-select: none; }
   .fr-stage.portrait { max-width: max(220px, calc((100vh - 270px) * 9 / 16)); margin: 0 auto; }
   .fr-stage video, .fr-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .fr-stage svg { overflow: visible; }
+  .fr-stage video { border-radius: 6px; }
   .fr-stage video { object-fit: contain; }
   .fr-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .fr-box { cursor: move; }
@@ -60,8 +62,7 @@
   </div>
   <div class="save-state" id="saveState" data-state="loading" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
   <div class="actions">
-    <a href="/" class="ghost" style="color: var(--mute); text-decoration: none; padding: 5px 10px;">← 回剪輯</a>
-    <button id="btnSave" class="primary" disabled title="儲存構圖並套用已確認的主色與背景（⌘／Ctrl＋S）">儲存並套用</button>
+    <button id="btnSave" class="primary" disabled title="儲存構圖，並套用確認過的主色與背景（⌘／Ctrl＋S）">儲存</button>
   </div>
 </header>
 
@@ -118,7 +119,7 @@
 
 <section class="design-workbench" id="design" aria-labelledby="designTitle">
   <header class="design-heading">
-    <div><span class="design-eyebrow">全畫面 · 側邊欄 · 章節</span><h2 id="designTitle">背景與動畫預覽</h2><p>選圖替換，立即看效果。</p></div>
+    <div><span class="design-eyebrow">全畫面 · 側邊欄 · 章節</span><h2 id="designTitle">背景與動畫預覽（選用）</h2><p>想換主色或背景才需要動；不換就直接跳過。</p></div>
     <span id="designState" class="design-badge" role="status">正在載入…</span>
     <button id="retryDesign" hidden>重新連接</button>
   </header>
@@ -161,7 +162,7 @@
       </section>
       <p id="designError" class="design-error" role="alert"></p>
       <button id="discardDesign" class="ghost small" hidden>還原已套用的設定</button>
-      <p class="design-note">預覽滿意後，按「儲存並套用」。</p>
+      <p class="design-note">預覽滿意後，按右上的「儲存」。</p>
     </aside>
     <div class="design-gallery">
       <div class="design-gallery-head"><div><h3>動畫套用預覽</h3><p>預設完成畫面，滑入循環播放；點擊放大。</p></div><a href="/gallery/" target="_blank" rel="noopener">完整情境庫 ↗</a></div>
@@ -176,5 +177,6 @@
 
 <script type="module" src="/editor/framing.js"></script>
 <script type="module" src="/editor/design.js"></script>
+<script type="module" src="/editor/flow.js"></script>
 </body>
 </html>

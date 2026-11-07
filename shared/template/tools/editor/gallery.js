@@ -23,7 +23,7 @@
   bar.append(back, title, note);
   document.body.prepend(bar);
   const home = document.querySelector('[data-home]');
-  if (home) { home.href = '/'; home.textContent = '← 剪輯'; }
+  if (home) { home.href = '/'; home.textContent = '← 剪輯台'; }
 
   const pick = document.getElementById('stylePick');
   if (pick && [...pick.options].some((o) => o.value === config.style)) {

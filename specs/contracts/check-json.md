@@ -235,6 +235,8 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 | `wipe` | 每段 | `{ in, out, preroll, postroll }`：`in`／`out` 布林（這段擦入／擦出，FR-030）；`preroll`／`postroll` 秒數（只有 media 段可能 > 0，FR-032） |
 | `refs` | custom 段 | build 從 `x-*.html` 掃出的 `P.at('…')` 與 `P.sfx('名', '…')` 的 ref 字面值 → 完成影片秒數（`contracts/cues.md` §2 的 `segs[id].refs`）；不是 custom 時 `{}` |
 | `tx` | 每段 | 轉場語彙（`specs/010-motion-v2/design-system.md` §5）`{ in, out, prev }`（`prev`＝前一段是什麼：`speaker`／`fullscreen`／`pip`，見 `plan-fields.md` §4）。`in`：`band`（疊加卡進場、講者慢推）／`wipe`（色帶帶路擦開＋講者飛進子母畫面）／`swap`（換卡不換景）／`chapter`（主色色塊從左下斜擦）／`side`／`fade`／`media`／`wipeIn`／`cut`／`overlay`；`out`：`band`（收卡、講者推回）／`retract`（色帶反向收、子母畫面淡出）／`swap`（舊卡擦掉）／`cover`／`hold`／`handoff`／`fade`／`media`／`wipeOut`／`side`／`cut`／`overlay`（第二段 B） |
+| `wide` | 每段 | 布林：全寬版型（沒有講者的全畫面段：主卡 1680、背景只留底色；內容設計動畫用全螢幕畫布） |
+| `badgeBox` | 全畫面段 | 右上角小節角標的框 `[x0, y0, x1, y1]`，沒有小節（`sections`）時 `null` |
 
 custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` §5）由 build 靜態解析成附加音效：出現在 `items[].sfx`（`sfx-<id>-e<n>` 的 `<audio>`），時間＝ref 的完成影片秒數＋off − 音效的 peak＋1 格；算進 `sfxCount`、`sfxBudget`（tick、click 以外的算主音效密度），不受主音效 3 秒規則；段的 `sfxExtra: false` 整段關掉、`sfxVolume` 一起調。
 
@@ -295,6 +297,7 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
 | 2 | 2026-10-31（第二段 A） | 加 `theme`（`rhythm` 後面）。加欄位不升 schema |
 | 2 | 2026-10-31（第二段 B） | `items[].out` 加 `tx`（`refs` 後面）；custom 段的 `P.sfx` 進 `items[].sfx`、`sfxCount`、`sfxBudget`。加欄位不升 schema |
 | 2 | 2026-10-31（009 直式） | 加 `format`、`canvas`、`formatSource`（`theme` 後面）；`items[].layoutZh` 直式多「上下分割」。`errors` 多版式一致性 ✖（`canvas.mjs` 的 `formatErrors`：plan.json 和開工決策表不同、開工決策表直式但 plan.json 沒寫、主軌直拍但版式橫式、直式專案給橫式素材）。加欄位不升 schema |
+| 2 | 2026-11-07（沒有講者的全螢幕） | `items[].out` 加 `wide`、`badgeBox`（`tx` 後面）。加欄位不升 schema |
 
 ## 7. 測試（002 的 `dev/tests/build.test.mjs`）
 

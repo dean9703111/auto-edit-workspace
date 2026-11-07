@@ -35,7 +35,7 @@
 | 模板動畫（`template`＋`slots`）的文字、條目、時間 | 你自己改 plan.json，不用派 |
 | 字卡、資訊卡只改文字、條目、時間 | 你自己改 plan.json，不用派 |
 | 字卡、資訊卡、模板動畫要換成別的模板 | 你改 plan.json 那段的 `template`／`scene`＋`slots`（寫法在 `work/分鏡素材/寫法.md`），不用派 |
-| 「換一種動畫」「以圖像展示為主」要專門設計 | 你把那段改成 `"design": true`（拿掉 `template`、`slots`），派設計師（`.agents/skills/auto-edit-motion/references/design-brief.md`）：修改單就是確認過的改法，不用停 ③ |
+| 「換一種動畫」「以圖像展示為主」要專門設計 | 你把那段改成 `"design": true`（拿掉 `template`、`slots`），派設計師（`.agents/skills/auto-edit-motion/references/design-build.md`）：修改單就是確認過的改法，不用停 ③ |
 | 內容設計動畫的內容；`slots` 做不到的改動 | 一段一個子代理改那支檔，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md` |
 | 錄影段的 `marks`、`moves`、`side`、`steps`、換成動畫 | 你自己改 plan.json；換一段錄影照 `auto-edit-screen` 的筆記挑 |
 
@@ -45,7 +45,7 @@
 修改單（使用者確認過的改法，直接做，不用新分鏡）：
 要改：<標籤>
 描述：<使用者原話>
-現在的動畫分鏡：照 work/storyboard.md 這段（grep -n -A30 "動畫分鏡 <段 id>" work/storyboard.md），照上面的改法改
+現在的動畫分鏡：照 work/storyboard.md 這段（grep -n -A30 "動畫分鏡 <段 id>" projects/<專案>/work/storyboard.md），照上面的改法改
 ```
 
 收件、整合照 AGENTS.md「子代理分工」第 2 條。

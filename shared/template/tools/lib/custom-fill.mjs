@@ -30,6 +30,7 @@ import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { textWidth } from './time.mjs';
 import { BEAT_HEADER, BEAT_HEADER_ILLUS } from './audit-beats.mjs';
+import { rewriteIfSame, withLock } from './atomic.mjs';
 
 const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 16);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -574,7 +575,8 @@ const blankShape = (html) => String(html).replace(/(<[a-zA-Z][^<>]*\sdata-design
 function blankFor(customDir, seg) {
   const html = fs.readFileSync(path.join(customDir, '_blank.html'), 'utf8');
   const idea = String(seg.story?.idea || '內容設計動畫（製作中）');
-  return html
+  // 疊在講者上的（layout: "overlay"）不要底圖
+  return (seg.layout === 'overlay' ? html.replace(/\s*<div class="sc-surface-fs fill"><\/div>/, '') : html)
     .replace('內容設計動畫（製作中）', esc(idea))
     .replace(/x-design/g, `x-design-${seg.id}`)
     .replace(/(?<![\w-])xd-/g, `xd${seg.id}-`);
@@ -651,7 +653,8 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
     try { cur = fs.readFileSync(abs, 'utf8'); } catch { cur = null; }
     if (isBlankDesign(cur)) {
       // 只有整個檔還是空白（只差構想文字）才更新；設計師寫到一半、占位還沒刪的檔絕對不能蓋（別段的 audit 也會跑到這裡）
-      if (cur == null || (cur !== blank && blankShape(cur) === blankShape(blank))) { fs.writeFileSync(abs, blank); written.push(file); }
+      if (cur == null) { fs.writeFileSync(abs, blank); written.push(file); }
+      else if (cur !== blank && blankShape(cur) === blankShape(blank) && rewriteIfSame(abs, cur, blank)) written.push(file);   // 設計師可能剛好在存：內容變了就不寫
       Object.defineProperty(seg, '__blank', { value: true, enumerable: false, configurable: true });
     }
     live.add(file);
@@ -665,7 +668,7 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
     if (!cur.includes('data-icon="')) continue;
     const r = expandIcons(cur, lib.icons);
     for (const m of r.missing) errors.push(`[${seg.id} custom] 找不到圖示「${m}」（kit/icons.json）→ 換一個名稱`);
-    if (r.html !== cur) fs.writeFileSync(abs, r.html);
+    if (r.html !== cur) rewriteIfSame(abs, cur, r.html);   // 每條 --check 都會跑到別段的檔，那段的子代理可能剛好在存：內容變了就不寫，下次再展開
   }
   if (prune) {
     for (const [file, h] of Object.entries(cache)) {
@@ -676,17 +679,19 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
     }
   }
   if (segs.length || Object.keys(cache).length) {
-    // 平行的子代理都會跑 --check：內容沒變不寫，要寫就先寫暫存檔再換名，別人才不會讀到寫一半的檔、以為檔案被手改過
-    let old = null;
-    try { old = fs.readFileSync(cacheFile, 'utf8'); } catch { old = null; }
-    if (!prune && old) { try { cache = { ...JSON.parse(old), ...cache }; } catch { /* 壞檔就用這次的 */ } }   // 別的子代理剛寫的不要蓋掉
-    const next = JSON.stringify(cache, null, 2);
-    if (old !== next) {
-      fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
-      const tmp = `${cacheFile}.${process.pid}.tmp`;
-      fs.writeFileSync(tmp, next);
-      fs.renameSync(tmp, cacheFile);
-    }
+    // 平行的子代理都會跑 --check：讀、併、寫要鎖起來（不鎖會掉別人剛寫的，那段之後就被當成手改過的檔）；內容沒變不寫，要寫就先寫暫存檔再換名，別人才不會讀到寫一半的檔
+    fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+    withLock(`${cacheFile}.lock`, () => {
+      let old = null;
+      try { old = fs.readFileSync(cacheFile, 'utf8'); } catch { old = null; }
+      if (!prune && old) { try { cache = { ...JSON.parse(old), ...cache }; } catch { /* 壞檔就用這次的 */ } }   // 別的子代理剛寫的不要蓋掉
+      const next = JSON.stringify(cache, null, 2);
+      if (old !== next) {
+        const tmp = `${cacheFile}.${process.pid}.tmp`;
+        fs.writeFileSync(tmp, next);
+        fs.renameSync(tmp, cacheFile);
+      }
+    });
   }
   return { errors, warnings, written };
 }

@@ -14,8 +14,8 @@
  *                                      AI 背景生圖狀態；九張存檔後用 done，失敗用 failed --message <原因>，查詢用 --design-state status
  *
  * 選項：--port 4400、--open（順便開瀏覽器）、--foreground（一律前景）、--background（一律背景）；測試用：--template <shared/template 資料夾>
- * 剪輯只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／anchor、任何段的 sfxVolume 與 sfx: null、
- * slots／vars 的文字值、第一層的 look（講者調光與瘦臉）、theme 與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
+ * 剪輯只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／out（只能拿掉）／speed／hold／retime／anchor、任何段的 sfxVolume 與 sfx: null、
+ * slots／vars 的文字值（含模板動畫的 slots）、第一層的 look（講者調光與瘦臉）、theme 與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
  * 剪輯清單頁只寫 work/cuts.md NG 表的「剪」欄（[x]／[ ]；沒有這一欄就加在最前面），有 work/rough.mp4 之後只能看。
  * 分鏡表頁只寫 work/storyboard.md 改到的那幾行（段落內容、表格的格與列、整段原始 Markdown）；製作進度的停點 ③ 通過之後只能看。
  * 存檔前比對 plan.json 與 rough.srt，被別人（AI）改過就兩個都不寫。構圖在還沒有 plan.json 時（停點 ②）只存 frame，會先建一個 { "version": 1 }（直式加 format）。
@@ -28,7 +28,7 @@ import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { pathsFrom } from './build.mjs';
-import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars } from './editor/server/write.mjs';
+import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots } from './editor/server/write.mjs';
 import * as subtitles from './editor/subtitles.mjs';
 import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, lookNeedsRun, LOOK_LIMITS, isRunning, ensureBlendedLut, lookNextStep } from './lib/look.mjs';
 import { footageVf, lut3dFilter } from './lib/ff.mjs';
@@ -37,10 +37,14 @@ import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 import { mediaFrame, SIDE } from './lib/media.mjs';
 import { cutsState, saveCuts } from './editor/server/cuts.mjs';
 import { storyboardState, saveStoryboard, storyboardImage } from './editor/server/storyboard.mjs';
-import { startExport, cancelExport, exportState, exportBusy, exportFile } from './editor/server/export.mjs';
+import { startExport, cancelExport, exportState, exportBusy, exportFile, prerenderState, revealFinal } from './editor/server/export.mjs';
+import { speakerInfo, doSpeakerSave } from './editor/server/speaker.mjs';
+import { flowState } from './editor/server/flow.mjs';
+import { storyboardOptions } from './editor/server/storyboard-options.mjs';
+import { listFillSpecs } from './lib/custom-fill.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
 
-export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, subtitles };
+export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, subtitles };
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.join(HERE, 'editor');
@@ -500,6 +504,14 @@ async function getPeaks(ctx) {
   return res;
 }
 
+// 模板動畫的欄位（custom/*.fill.json）與白話名稱：屬性面板依它列文字欄位、修改單和段落清單用名稱
+function customSchema(P) {
+  try {
+    const names = new Map(storyboardOptions(P.templateDir).scenes.flatMap((g) => g.items).map((i) => [i.id, i.label]));
+    return listFillSpecs(path.join(P.templateDir, 'custom')).map((f) => ({ template: f.template, generator: f.generator || null, slots: f.slots || {}, zh: names.get(f.template) || f.template }));
+  } catch { return []; }
+}
+
 // 情境與字卡動態的欄位定義（build.mjs --list --json）：屬性面板依它列文字欄位與字數上限
 async function getSchema(ctx) {
   const P = ctx.P;
@@ -515,7 +527,8 @@ async function getSchema(ctx) {
       fx: (j.fx || []).map((x) => ({ no: x.no, id: x.id, zh: x.zh, vars: x.vars || [] })),
       // 配樂（kind: "bgm"，例如 bgm-cylinder-five）不是音效，不列進音效清單
       sounds: Object.entries(j.sounds || {}).filter(([, v]) => v?.kind !== 'bgm').map(([k]) => k),
-    } : { key, error: `讀不到 build.mjs --list --json（${(r.stderr || r.stdout).trim().slice(0, 200)}）→ 卡片文字欄位先用 plan.json 原本有的欄位`, scenes: [], fx: [], sounds: [] };
+      custom: customSchema(P),
+    } : { key, error: `讀不到 build.mjs --list --json（${(r.stderr || r.stdout).trim().slice(0, 200)}）→ 卡片文字欄位先用 plan.json 原本有的欄位`, scenes: [], fx: [], sounds: [], custom: customSchema(P) };
     ctx.schema = data;
     return data;
   });
@@ -730,11 +743,13 @@ async function getState(ctx) {
     media, video, videoError, captions: srt.cues,
     cutpoints: readCutpoints(ctx.cutpointsFile),
     sfxMemory: readMemory(ctx),
-    schema: schema ? { scenes: schema.scenes, fx: schema.fx, sounds: schema.sounds, error: schema.error } : null,
+    schema: schema ? { scenes: schema.scenes, fx: schema.fx, sounds: schema.sounds, custom: schema.custom || [], error: schema.error } : null,
     report: rep ? { ready: true, data: rep.report, fallback: rep.fallback ?? null, error: rep.error, issues: rep.issues, log: rep.log ?? null } : { ready: false },
     requests: requestsInfo(P.project),
+    speaker: speakerInfo(ctx, plan.data),
     preview: { player: { available: ctx.player.available, version: ctx.player.version ?? null, reason: ctx.player.reason ?? null }, composition: '/composition/index.html', ...builtInfo(ctx, plan) },
-    build: { running: ctx.build.running },
+    build: buildBrief(ctx),
+    prerender: prerenderState(ctx),
     limits: LIMITS,
     targetLufs: TARGET_LUFS,
   };
@@ -742,7 +757,9 @@ async function getState(ctx) {
 
 const reportOut = (rep) => ({ ready: true, data: rep.report, fallback: rep.fallback ?? null, error: rep.error, issues: rep.issues, log: rep.log ?? null });
 
-async function doSave(ctx, body, { deferBuild = false } = {}) {
+async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
+  // quick：寫完檔就回，檢查（長片要 9 秒）由頁面另外要；不帶 quick（AI、測試）照舊附上檢查結果
+  const { quick = false, ...body } = isObj(rawBody) ? rawBody : { body: rawBody };
   const P = ctx.P;
   const st = statOf(P.plan);
   // 構圖在停點 ②（分鏡表之前，還沒有 plan.json）只存 frame：先建一個只有 version（直式加 format）的 plan.json
@@ -804,10 +821,10 @@ async function doSave(ctx, body, { deferBuild = false } = {}) {
     }
     return [200, { ok: true, wrote: { plan: r.text != null, srt: false }, notes: r.notes || [], plan: { exists: !!nst, mtime: nst?.mtimeMs ?? null, hash, frame: Array.isArray(r.plan.frame) ? r.plan.frame : null, speakerBox: r.plan.speakerBox ?? null }, look: lookRunState(ctx), framingUpdate: ctx.framingUpdate }];
   }
-  const rep = await getReport(ctx, { fresh: true });
+  const rep = quick ? null : await getReport(ctx, { fresh: true });
   return [200, { ok: true, look: lookState(ctx, r.plan), wrote: { plan: r.text != null, srt: r.srtText != null }, plan: { mtime: nst.mtimeMs, hash: sha(fs.readFileSync(P.plan, 'utf8')), data: r.plan },
     srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: r.notes || [], edit: r.edit ?? r.plan.edit ?? null, anchors: r.anchors || [], sfxMemory: r.memory || {},
-    report: reportOut(rep) }];
+    ...(rep ? { report: reportOut(rep) } : {}) }];
 }
 
 async function doLoudness(ctx, body) {
@@ -914,6 +931,21 @@ function requestFramingBuild(ctx) {
   });
 }
 
+// 給頁面看的重新產生狀態：現在在做哪一步（白話）、已經多久、上次重新處理底片花多久（這台電腦、這支影片的實際值，沒有就不寫）
+const BUILD_PHASES = [[/偵測臉部|套用瘦臉|look\.mjs/, '偵測臉部、套用瘦臉'], [/量人聲響度|重新編碼底片/, '重新處理影片底片']];
+const buildTimesFile = (ctx) => path.join(ctx.editorDir, 'build-times.json');
+function buildBrief(ctx) {
+  const b = ctx.build, log = String(b.log || '');
+  // 從最後一行往回找：現在做到的那一步
+  const phase = b.running ? (log.split('\n').reverse().map((l) => BUILD_PHASES.find(([re]) => re.test(l))?.[1]).find(Boolean) || '產生預覽') : null;
+  return { running: !!b.running, seconds: b.startedAt ? r3(((b.finishedAt || Date.now()) - b.startedAt) / 1000) : 0, phase, slowSeconds: readJson(buildTimesFile(ctx))?.encodeSeconds ?? null };
+}
+function rememberBuildTime(ctx) {
+  const b = ctx.build;
+  if (!b.ok || !/重新編碼底片/.test(String(b.log || ''))) return;
+  try { fs.writeFileSync(buildTimesFile(ctx), `${JSON.stringify({ encodeSeconds: Math.round((b.finishedAt - b.startedAt) / 1000) })}\n`); } catch { /* 只是給下次估時間用 */ }
+}
+
 async function doBuild(ctx, body = {}) {
   if (ctx.build.running) return [409, { error: 'busy', message: '已經在重新產生了，等它跑完' }];
   const P = ctx.P;
@@ -930,7 +962,8 @@ async function doBuild(ctx, body = {}) {
       return [200, { ok: false, code: lr.code, log: ctx.build.log, issues: issuesFromText(ctx.build.log), seconds: r3((ctx.build.finishedAt - ctx.build.startedAt) / 1000) }];
     }
   }
-  const r = await runNode([BUILD, '--project', P.project, '--template', P.templateDir], { cwd: P.root, onData: (s) => { ctx.build.log += s; } });
+  let r;
+  do { r = await runNode([BUILD, '--project', P.project, '--template', P.templateDir], { cwd: P.root, onData: (s) => { ctx.build.log += s; } }); } while (r.code === 75);   // 底片還在編碼：接著等
   const issues = issuesFromText(ctx.build.log);
   let audit = null;
   if (r.code === 0 && auditIds.length) {
@@ -941,6 +974,7 @@ async function doBuild(ctx, body = {}) {
     issues.errors.push(...audit.errors); issues.warnings.push(...audit.warnings);
   }
   Object.assign(ctx.build, { running: false, code: r.code, ok: r.code === 0, finishedAt: Date.now() });
+  rememberBuildTime(ctx);
   ctx.report = null;
   ctx.player = preparePlayer(ctx);
   return [200, { ok: ctx.build.ok, code: r.code, log: ctx.build.log, issues, audit, seconds: r3((ctx.build.finishedAt - ctx.build.startedAt) / 1000) }];
@@ -1000,11 +1034,13 @@ async function handle(ctx, req, res) {
     if (p === '/api/look/run') { const [s, o] = await doLookRun(ctx); return sendJson(res, s, o); }
     if (p === '/api/build') { const [s, o] = await doBuild(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/export') {
-      const deps = { build: () => doBuild(ctx), report: () => getReport(ctx, { fresh: true }), requestStates: () => requestsInfo(P.project)?.states, ...(ctx.exportDeps || {}) };
-      const [s, o] = startExport(ctx, deps);
+      const deps = { build: () => doBuild(ctx), report: () => getReport(ctx, { fresh: true }), requestStates: () => requestsInfo(P.project)?.states, speakerGate: () => speakerInfo(ctx), ...(ctx.exportDeps || {}) };
+      const [s, o] = startExport(ctx, deps, body);
       return sendJson(res, s, o);
     }
     if (p === '/api/export/cancel') { const [s, o] = cancelExport(ctx); return sendJson(res, s, o); }
+    if (p === '/api/export/reveal') { const [s, o] = revealFinal(ctx, ctx.exportDeps?.reveal ? { spawnFn: ctx.exportDeps.reveal } : {}); return sendJson(res, s, o); }
+    if (p === '/api/speaker') { const [s, o] = doSpeakerSave(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
@@ -1022,6 +1058,8 @@ async function handle(ctx, req, res) {
   if (p === '/' || p === '/index.html') return sendFile(req, res, path.join(UI_DIR, 'index.html'));
   if (p === '/api/requests/status') return sendJson(res, 200, { requests: requestsInfo(P.project) });
   if (p === '/api/export') return sendJson(res, 200, exportState(ctx));
+  if (p === '/api/speaker') return sendJson(res, 200, speakerInfo(ctx));
+  if (p === '/api/flow') return sendJson(res, 200, flowState(ctx));
   if (p.startsWith('/output/')) {
     const f = exportFile(ctx, p.slice('/output/'.length));
     return f && statOf(f) ? sendFile(req, res, f) : sendText(res, 404, '找不到檔案');
@@ -1094,9 +1132,9 @@ async function handle(ctx, req, res) {
   }
   if (p === '/api/version') {
     const plan = readPlan(P.plan), srt = readSrt(P.srt);
-    return sendJson(res, 200, { plan: { exists: plan.exists, mtime: plan.mtime, hash: plan.hash }, srt: { exists: srt.exists, hash: srt.hash }, ...builtInfo(ctx, plan), build: { running: ctx.build.running }, framingUpdate: ctx.framingUpdate, requests: requestsInfo(P.project) });
+    return sendJson(res, 200, { plan: { exists: plan.exists, mtime: plan.mtime, hash: plan.hash }, srt: { exists: srt.exists, hash: srt.hash }, ...builtInfo(ctx, plan), build: buildBrief(ctx), framingUpdate: ctx.framingUpdate, requests: requestsInfo(P.project), prerender: prerenderState(ctx) });
   }
-  if (p === '/api/build') return sendJson(res, 200, { ...ctx.build, seconds: ctx.build.startedAt ? r3(((ctx.build.finishedAt || Date.now()) - ctx.build.startedAt) / 1000) : 0 });
+  if (p === '/api/build') return sendJson(res, 200, { ...ctx.build, ...buildBrief(ctx) });
   if (p.startsWith('/editor/')) {
     const f = safeJoin(UI_DIR, p.slice('/editor/'.length));
     return f ? sendFile(req, res, f) : sendText(res, 404, '找不到檔案');
@@ -1149,13 +1187,14 @@ async function handle(ctx, req, res) {
 
 // 啟動（測試直接呼叫；CLI 也走這裡）→ { url, port, server, ctx, close() }
 // previewDir：預覽參考圖寫到哪（預設 shared/template/preview；測試指到暫存資料夾，不蓋掉使用者的參考圖）
-export async function startEditor({ flags = {}, cwd = process.cwd(), port, writeState = true, previewDir = null, exportDeps = null } = {}) {
+export async function startEditor({ flags = {}, cwd = process.cwd(), port, writeState = true, previewDir = null, exportDeps = null, speakerTemplate = null } = {}) {
   const P = pathsFrom(flags, cwd);
   if (!P.project) throw new Error('要指定專案：加 --project projects/<專案>');
   if (!statOf(UI_DIR)) throw new Error(`找不到剪輯頁面 ${UI_DIR} → 確認 shared/template/tools/editor/ 還在`);
   const ctx = makeContext(P);
   ctx.previewDir = previewDir || path.join(P.templateDir, 'preview');
   ctx.exportDeps = exportDeps;
+  ctx.speakerTemplate = speakerTemplate;   // 測試指到暫存的 shared/template，不動真的 shared/講者.json
   const server = http.createServer((req, res) => {
     handle(ctx, req, res).catch((e) => { if (!res.headersSent) sendJson(res, 500, { error: 'internal', message: e.message }); else res.end(); });
   });

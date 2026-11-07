@@ -8,10 +8,15 @@
 //   applySpeaker(scenes, sp)          → 設定好時把 14 的 name／titles、15 的 by 預設值換成講者資料（不改原物件）
 //   speakerIssues(sp, res)            → { errors, warnings }：plan 裡的 14 講者介紹對照講者資料
 //   validateSpeaker({ name, short, titles }) → 錯誤訊息陣列（字數上限照 14 講者介紹、15 金句的 scene.json）
+//   speakerGate(templateDir, plan)    → { needed, demo, segments, state, … }：這份 plan 輸出後，畫面上會不會是示範人物（輸出前的確認用）
+//   saveSpeaker(templateDir, input)   → { errors, file }：寫 shared/講者.json（剪輯頁輸出前的確認、分鏡表頂端的提醒用；brand.mjs speaker 同一份格式）
 //   SET_CMD                           → 設定講者的指令（提醒訊息共用）
+//
+// 示範人物「林大寶」只有一個來源：scenes/14-speaker/scene.json 的 slots.name.default、slots.titles.default（情境庫預覽用）。
+// shared/講者.json 不存在、段落也沒寫 slots.name 時，14 講者介紹就用這組預設值，所以真實影片會出現別人的名字：輸出前一定要問過使用者。
 import fs from 'node:fs';
 import path from 'node:path';
-import { visibleLen } from './scenes.mjs';
+import { visibleLen, loadScenes, findScene } from './scenes.mjs';
 
 export const SPEAKER_FILE = '講者.json';
 export const SPEAKER_EXAMPLE = '講者.example.json';
@@ -52,6 +57,35 @@ export function applySpeaker(scenes, sp) {
     if (s.key === 'quote' && s.slots?.by) return { ...s, slots: { ...s.slots, by: { ...s.slots.by, default: sp.short } } };
     return s;
   });
+}
+
+// 這份 plan 輸出後，畫面上會不會是示範人物：段落沒寫 name 且還沒設定講者，或 name 直接寫了示範人物而講者資料沒設定
+export function speakerGate(templateDir, plan, sp = readSpeaker(templateDir)) {
+  let scenes = [];
+  try { scenes = loadScenes(templateDir); } catch { /* 模板讀不到：當成沒有講者段，由 build 報錯 */ }
+  const def = scenes.find((s) => s.key === 'speaker');
+  const demo = def?.slots?.name?.default ?? null;
+  const segs = (Array.isArray(plan?.scenes) ? plan.scenes : []).filter((s) => s && s.scene != null && findScene(scenes, s.scene)?.key === 'speaker');
+  const shown = segs.filter((s) => {
+    const name = typeof s.slots?.name === 'string' ? s.slots.name.trim() : '';
+    return name ? name === demo && sp.state !== 'set' : sp.state === 'unset';
+  });
+  return {
+    needed: shown.length > 0, state: sp.state, demo, demoTitles: def?.slots?.titles?.default ?? [], segments: shown.map((s) => s.id),
+    name: sp.state === 'set' ? sp.name : null, titles: sp.state === 'set' ? sp.titles : [], limits: LIMITS,
+  };
+}
+
+export function saveSpeaker(templateDir, { name, titles, short } = {}) {
+  const list = Array.isArray(titles) ? titles : String(titles ?? '').split(/[,，、]/);
+  const data = { name: String(name ?? '').trim(), titles: list.map((t) => String(t).trim()).filter(Boolean) };
+  if (short != null && String(short).trim()) data.short = String(short).trim();
+  const errors = validateSpeaker(data);
+  if (errors.length) return { errors, file: null };
+  const file = speakerFile(templateDir);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+  return { errors: [], file };
 }
 
 export function speakerIssues(sp, res) {

@@ -19,7 +19,7 @@ version: 0.2.0
 | 條件（看得到的事實） | 做法 |
 |---|---|
 | 主代理，分鏡確認了 | 步驟 1 派工 |
-| 你是設計師子代理 | 照派工訊息，讀 `references/design-brief.md` 那個階段 |
+| 你是設計師子代理 | 照派工訊息，讀 `references/design-script.md`（寫腳本）或 `references/design-build.md`（做動畫） |
 | 分鏡沒有 `#### 動畫分鏡 <段>` | 不要自己編：交回主代理（`auto-edit-storyboard` 步驟 6），使用者確認後再做 |
 | 使用者要改模板動畫的文字、站數 | 改 plan.json 的 `slots`，不用動 HTML |
 | 使用者要模板動畫做不到的改動（修改單、指定動作） | 步驟 3 |
@@ -32,7 +32,7 @@ version: 0.2.0
 ls projects/<專案>/work/briefs/
 ```
 
-一段一個子代理，同一則回覆一次全部派出；段數多時一次最多 8 個，回來再派下一批。派工訊息照 `references/design-brief.md`，階段二。沒有能派子代理的工具才自己一段一段做。新畫 SVG 的：先把所有新畫的元件同時派工人畫完（`references/illus-worker.md`），回來再派動畫。
+一段一個子代理，同一則回覆一次全部派出；段數多時一次最多 4 個，回來再派下一批。派工訊息照 `references/design-build.md`。沒有能派子代理的工具才自己一段一段做。新畫 SVG 的：先把所有新畫的元件同時派工人畫完（`references/illus-worker.md`），回來再派動畫。
 完成判準：每個 `design: true` 的段都派了。
 常見錯誤：一段一段派 → 慢好幾倍，要同一則回覆一次派出。
 
@@ -76,14 +76,14 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段> --
 
 ## 工具呼叫預算
 
-每段鏡位腳本 6 次、做動畫 18 次（AGENTS.md「階段預算」）。超過就停下來，把卡住的 ✖ 原文交回主代理。
+每段鏡位腳本 6 次、做動畫 18 次。超過就停下來，把卡住的 ✖ 原文交回主代理。
 
 ## 回報格式
 
-子代理照 `references/design-brief.md` 最後一行（最多 10 行）。主代理：`內容設計動畫 <N> 段做好了；audit ✖ 0、⚠ <N>`，接停點 ④。
+子代理只回一行。主代理：`內容設計動畫 <N> 段做好了；audit ✖ 0、⚠ <N>`，接停點 ④。
 
 ## 什麼時候讀 references/
 
-- `references/design-brief.md`：派設計師、或你就是設計師時才讀。
+- `references/design-script.md`、`references/design-build.md`：你就是設計師時才讀（主代理派工不用讀，工具會印派工訊息）。
 - `references/illus-worker.md`：要新畫線稿元件時才讀。
 - `references/worker-brief.md`：要手改動畫（步驟 3）時才讀。

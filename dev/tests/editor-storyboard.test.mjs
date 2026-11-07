@@ -131,6 +131,18 @@ test('分鏡表：想換成、音效、補充說明新增在第一個小標題�
   await save({ op: 'field', key, label: '補充說明', value: '要配樂' });
   assert.match(fs.readFileSync(file, 'utf8'), /1\. \*\*結尾要不要配樂\*\*：要的話寫 outro\n- 補充說明：要配樂\n\n### 金句候選/);
   assert.equal((await state()).warnings.length, 0);
+  fs.writeFileSync(file, MD);
+
+  // 逐項回答：寫在那一項底下；改寫、清空；別的行不能回答；內容對不上不寫
+  const line = MD.split('\n').findIndex((l) => l.startsWith('1. **結尾要不要配樂'));
+  assert.equal((await save({ op: 'answer', line, text: '要配樂', expect: '' })).status, 200);
+  assert.match(fs.readFileSync(file, 'utf8'), /要的話寫 outro\n {3}- 回答：要配樂\n\n### 金句候選/);
+  assert.equal((await save({ op: 'answer', line, text: '不要了', expect: '別的' })).status, 409);
+  assert.equal((await save({ op: 'answer', line, text: '不要了', expect: '要配樂' })).status, 200);
+  assert.match(fs.readFileSync(file, 'utf8'), /- 回答：不要了\n/);
+  assert.equal((await save({ op: 'answer', line, text: '', expect: '不要了' })).status, 200);
+  assert.equal(fs.readFileSync(file, 'utf8'), MD);
+  assert.equal((await save({ op: 'answer', line: 2, text: 'x' })).status, 400);
 });
 
 test('分鏡表：下拉選單的選項來自工作區現有的情境與音效', async () => {

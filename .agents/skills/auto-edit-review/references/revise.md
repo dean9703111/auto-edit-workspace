@@ -2,7 +2,7 @@
 
 使用者指名一段要重新設計、更完善、換個動畫時照這份做。沒指名段（「動畫都更細節一點」）先列出動畫段、每段一句可以改的方向，問要改哪幾段，可以一次 `--seg s08,s12`。
 
-**重新設計要回到內容，不是換一支模板**：想清楚這段要傳達什麼，再想畫面（`.agents/skills/auto-edit-motion/references/design-brief.md`）。使用者想要的是更貼合內容的動畫。
+**重新設計要回到內容，不是換一支模板**：想清楚這段要傳達什麼，再想畫面（`.agents/skills/auto-edit-motion/references/design-build.md`）。使用者想要的是更貼合內容的動畫。
 
 ## 1. 開提案 → 停點 ③
 
@@ -19,7 +19,7 @@ node shared/template/tools/versions.mjs new --project projects/<專案> --seg <�
 node shared/template/tools/versions.mjs accept --project projects/<專案> --seg <段> --say "使用者原話"
 ```
 
-記 ③ 通過，分鏡寫回 `work/storyboard.md`。內容設計動畫：派設計師照 `.agents/skills/auto-edit-motion/references/design-brief.md` 階段二做（`x-design-<段>.html` 已經有就接著改，要全新設計就清空畫面重做）；這段原本是模板、要改成內容設計：plan.json 那段拿掉 `template`、`slots`，加 `"design": true`。模板動畫：改 plan.json 的 `slots`。字卡段：照分鏡改 plan.json 那段。使用者要改分鏡的拍：改那份分鏡.md、重貼停點 ③，不要 accept。
+記 ③ 通過，分鏡寫回 `work/storyboard.md`。內容設計動畫：派設計師照 `.agents/skills/auto-edit-motion/references/design-build.md`做（`x-design-<段>.html` 已經有就接著改，要全新設計就清空畫面重做）；這段原本是模板、要改成內容設計：plan.json 那段拿掉 `template`、`slots`，加 `"design": true`。模板動畫：改 plan.json 的 `slots`。字卡段：照分鏡改 plan.json 那段。使用者要改分鏡的拍：改那份分鏡.md、重貼停點 ③，不要 accept。
 
 ## 3. 做完 → 停點 ④
 

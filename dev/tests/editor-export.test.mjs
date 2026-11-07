@@ -34,7 +34,7 @@ function fakeRun(overrides = {}) {
 }
 const start = async (overrides, extra = {}) => {
   editor = await startEditor({
-    flags: { project, template: TEMPLATE }, cwd: root, port: 0, writeState: false,
+    flags: { project, template: TEMPLATE }, cwd: root, port: 0, writeState: false, speakerTemplate: path.join(root, 'shared', 'template'),
     exportDeps: { build: async () => { calls.push('build'); return [200, { ok: true, log: '' }]; }, report: async () => ({ report: { items: [{ type: 'media', start: 1 }, { type: 'scene', start: 12.5 }] } }), run: fakeRun(overrides), ...extra },
   });
 };
@@ -218,4 +218,114 @@ test('按輸出：AI 正在背景輸出（deliver.mjs）→ 擋下；它結束�
   await new Promise((res) => { worker.on('exit', res); worker.kill('SIGKILL'); });
   assert.equal((await post('/api/export')).status, 200);
   assert.equal((await finished()).ok, true);
+});
+
+test('輸出前確認講者：畫面上還是示範人物就擋下來，照樣輸出時結果會講清楚；存好姓名後不再問', async () => {
+  fs.writeFileSync(path.join(project, 'work', 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, scenes: [{ id: 's0101', scene: 'speaker', from: '#2', to: '#5' }] }));
+  await start();
+  const info = await (await fetch(new URL('/api/speaker', editor.url))).json();
+  assert.equal(info.needed, true);
+  assert.equal(info.demo, '林大寶');
+  assert.deepEqual(info.segments, ['s0101']);
+
+  const blocked = await post('/api/export');
+  assert.equal(blocked.status, 409);
+  const body = await blocked.json();
+  assert.equal(body.error, 'speaker');
+  assert.equal(body.speaker.demo, '林大寶');
+  assert.deepEqual(calls, [], '還沒確認，什麼都不跑');
+
+  // 按「照樣輸出」：可以輸出，但不能只說驗收通過
+  assert.equal((await post('/api/export', { confirmSpeaker: true })).status, 200);
+  const done = await finished();
+  assert.equal(done.ok, true);
+  assert.match(done.message, /講者介紹還是示範人物「林大寶」/);
+  assert.match(done.warnings[0], /^講者介紹還是示範人物「林大寶」（s0101）/);
+
+  // 字數不對：擋下、不寫檔；存好之後就不再問
+  const file = path.join(root, 'shared', '講者.json');
+  const bad = await post('/api/speaker', { name: '一二三四五六', titles: '講師' });
+  assert.equal(bad.status, 400);
+  assert.match((await bad.json()).message, /最多 5 字/);
+  assert.equal(fs.existsSync(file), false);
+  const ok = await post('/api/speaker', { name: '鼎淵', titles: '工程師、講師' });
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).speaker.needed, false);
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { name: '鼎淵', titles: ['工程師', '講師'] });
+  assert.equal((await post('/api/export')).status, 200);
+  const again = await finished();
+  assert.equal(again.ok, true);
+  assert.equal(again.message, '完成影片輸出好了，驗收也通過了。');
+  assert.ok(!again.warnings.some((w) => /示範人物/.test(w)));
+});
+
+test('輸出前確認講者：段落自己寫了姓名、或沒有講者段，都不問', async () => {
+  fs.writeFileSync(path.join(project, 'work', 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, scenes: [{ id: 's0101', scene: '14', slots: { name: '鼎淵' } }, { id: 's0102', scene: 'key-point' }] }));
+  await start();
+  assert.equal((await (await fetch(new URL('/api/speaker', editor.url))).json()).needed, false);
+  assert.equal((await post('/api/export')).status, 200);
+  await finished();
+});
+
+test('剩餘時間：走到 1% 之後才估，照到目前的速度算；接手預先 render 不是從 0 開始也對', async () => {
+  let release, etaAtZero, mid;
+  const hold = new Promise((r) => { release = r; });
+  await start({ render: async (args, opts) => {
+    etaAtZero = (await state()).eta;
+    opts.onData?.('Rendering 30%\n');
+    await new Promise((r) => setTimeout(r, 200));
+    mid = await state();
+    await hold;
+    fs.writeFileSync(args[args.indexOf('--output') + 1], 'v');
+    return { code: 0, stdout: '', stderr: '' };
+  } });
+  await post('/api/export');
+  await new Promise((r) => setTimeout(r, 900));
+  release();
+  const done = await finished();
+  assert.equal(etaAtZero, null, '還沒有進度：不能估');
+  assert.equal(mid.step, 'render');
+  assert.ok(mid.eta >= 0 && mid.eta < 60, `30% 花不到 1 秒，剩 70% 不會超過一分鐘，得到 ${mid.eta}`);
+  assert.equal(done.eta, null, '做完就沒有剩餘時間');
+  assert.equal(done.final.file, 'output/final.mp4', '路徑從專案算起，使用者看得懂');
+});
+
+test('在資料夾中顯示：打開 output/final.mp4 所在的地方；還沒有檔案就說沒有', async () => {
+  const calls2 = [];
+  await start({}, { reveal: (cmd, args) => { calls2.push([cmd, args]); return { on() {}, unref() {} }; } });
+  const none = await post('/api/export/reveal');
+  assert.equal(none.status, 404);
+  assert.deepEqual(calls2, []);
+  fs.writeFileSync(finalFile(), 'x');
+  assert.equal((await post('/api/export/reveal')).status, 200);
+  assert.equal(calls2.length, 1);
+  assert.ok(calls2[0][1].join(' ').includes(process.platform === 'linux' ? 'output' : 'final.mp4'));
+});
+
+test('背景先算的完成影片：頁面看得到狀態；開始之後 plan.json 改過就標成不能用', async () => {
+  await start();
+  const version = async () => (await (await fetch(new URL('/api/version', editor.url))).json()).prerender;
+  assert.deepEqual(await version(), { state: 'none' });
+  const F = D.deliverPaths(project);
+  fs.mkdirSync(path.dirname(F.pre), { recursive: true });
+  fs.writeFileSync(F.pre, 'video');
+  fs.writeFileSync(F.preState, JSON.stringify({ state: 'done', fingerprint: 'x', percent: 100, size: 5, startedAt: Date.now() + 5000, finishedAt: Date.now() }));
+  assert.deepEqual(await version(), { state: 'done', percent: 100, fresh: true });
+  fs.writeFileSync(F.preState, JSON.stringify({ state: 'done', fingerprint: 'x', percent: 100, size: 5, startedAt: Date.now() - 60000, finishedAt: Date.now() }));
+  assert.equal((await version()).fresh, false, 'plan.json 比它新：這份不能用');
+});
+
+test('重新產生的狀態：寫白話的步驟與耗時；重新處理底片的耗時留給下次估', async () => {
+  fs.mkdirSync(path.join(project, 'work', 'hyperframes', '.editor'), { recursive: true });
+  await start();
+  const brief = async () => (await (await fetch(new URL('/api/version', editor.url))).json()).build;
+  assert.deepEqual(await brief(), { running: false, seconds: 0, phase: null, slowSeconds: null });
+  editor.ctx.build = { running: true, log: '版式：橫式\n重新編碼底片 → assets/rough.mp4…\n量人聲響度（第一次會花一點時間，之後用快取）…\n', startedAt: Date.now() - 65000 };
+  const b = await brief();
+  assert.equal(b.running, true);
+  assert.equal(b.phase, '重新處理影片底片');
+  assert.ok(b.seconds >= 65);
+  editor.ctx.build.log += '講者瘦臉：先偵測臉部、套用瘦臉（look.mjs run）…\n';
+  assert.equal((await brief()).phase, '偵測臉部、套用瘦臉');
+  editor.ctx.build = { running: false, log: '', startedAt: 0 };
 });

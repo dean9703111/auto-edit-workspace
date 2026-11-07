@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/editor/editor.css">
 <style>
   body.cuts { display: block; height: auto; min-height: 100vh; overflow: auto; }
+  body.cuts .topbar { position: sticky; top: 0; z-index: 20; }
   .ct-main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr); gap: 16px; padding: 16px; align-items: start; }
   .ct-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
   .ct-col, #sections { display: grid; gap: 16px; align-content: start; min-width: 0; }
@@ -56,7 +57,7 @@
   .ct-md td { color: var(--ink); }
   .ct-next { padding: 12px 14px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); font-size: 14px; }
   .ct-next b { color: var(--accent-text); }
-  .ct-player { position: sticky; top: 12px; }
+  .ct-player { position: sticky; top: 66px; }
   .ct-player h2 { margin: 0 0 8px; font-size: 13px; color: var(--mute); font-weight: 700; }
   .ct-player video { display: block; width: 100%; max-height: 52vh; background: #000; border-radius: 6px; }
   .ct-bar { position: relative; height: 12px; margin-top: 10px; border-radius: 6px; background: var(--plate); overflow: hidden; }
@@ -65,6 +66,10 @@
   .ct-legend { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--dim); }
   .ct-now { margin: 8px 0 0; font-size: 13px; color: var(--mute); min-height: 1.5em; }
   .ct-now b { color: var(--ink); }
+  #filterUnsure { margin-top: 8px; }
+  #filterUnsure[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); font-weight: 700; }
+  .ct-after { margin-left: auto; padding: 1px 8px; font-size: 12px; }
+  .ct-row[hidden] { display: none; }
   @media (max-width: 860px) {
     .ct-main { grid-template-columns: 1fr; }
     .ct-player { position: static; order: -1; }
@@ -90,7 +95,8 @@
         <h2 id="listTitle">要剪掉的地方（NG）</h2>
         <span class="ct-summary" id="summary"></span>
       </div>
-      <p class="ct-hint" id="hint">勾選＝剪掉，不想剪的就取消勾選，會直接存回 work/cuts.md。按 ▶ 可以聽那一段（前後各多 1 秒）。</p>
+      <button class="small" id="filterUnsure" aria-pressed="false" hidden></button>
+      <p class="ct-hint" id="hint">勾選＝剪掉，不想剪的就取消勾選，會自動存檔。按 ▶ 可以聽那一段（前後各多 1 秒）。</p>
       <div id="banner"></div>
       <ol class="ct-rows" id="rows"></ol>
       <div class="ct-empty" id="empty" hidden></div>
@@ -100,7 +106,7 @@
   </div>
 
   <aside class="ct-panel ct-player" aria-label="試聽">
-    <h2>試聽（work/main.mp4）</h2>
+    <h2>試聽</h2>
     <video id="video" playsinline preload="metadata"></video>
     <div class="ct-bar" aria-hidden="true"><div class="ng" id="barNg"></div><div class="head" id="barHead"></div></div>
     <div class="ct-legend" aria-hidden="true"><span id="barA"></span><span>紅色＝會剪掉的部分</span><span id="barB"></span></div>
@@ -108,6 +114,9 @@
   </aside>
 </main>
 
+<div class="notice" id="notice" role="alert" hidden></div>
+
 <script type="module" src="/editor/cuts.js"></script>
+<script type="module" src="/editor/flow.js"></script>
 </body>
 </html>

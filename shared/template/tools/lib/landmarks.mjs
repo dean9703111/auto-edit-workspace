@@ -170,7 +170,10 @@ export function isBlackRgba(buf, w, h) {
 
 const MIME = { '.mjs': 'text/javascript', '.js': 'text/javascript', '.wasm': 'application/wasm', '.task': 'application/octet-stream' };
 
+const isAlive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
+
 // 處理程序被砍（逾時、Ctrl+C）時 close() 沒機會刪暫存 profile：開新的之前，清掉超過 1 天的舊 look-lm-*（只動自己的前綴；審查 C-13）
+// Chrome 不會跟著走（爸爸被 SIGKILL 它也不知道）：profile 裡記著誰開的（owner.json），主人不在了就把那個 Chrome 收掉、profile 刪掉
 export function sweepStaleProfiles(dir = os.tmpdir(), maxAgeMs = 24 * 3600 * 1000, now = Date.now()) {
   let n = 0;
   let names = [];
@@ -178,6 +181,14 @@ export function sweepStaleProfiles(dir = os.tmpdir(), maxAgeMs = 24 * 3600 * 100
   for (const name of names) {
     if (!name.startsWith('look-lm-')) continue;
     const p = path.join(dir, name);
+    let owner = null;
+    try { owner = JSON.parse(fs.readFileSync(path.join(p, 'owner.json'), 'utf8')); } catch { /* 沒有紀錄（舊版或還在啟動）：只看時間 */ }
+    if (owner?.parent && !isAlive(owner.parent)) {
+      const cmd = owner.chrome ? spawnSync('ps', ['-o', 'command=', '-p', String(owner.chrome)], { encoding: 'utf8' }).stdout || '' : '';
+      if (cmd.includes(name)) { try { process.kill(owner.chrome, 'SIGTERM'); } catch { /* 已經走了 */ } }
+      try { fs.rmSync(p, { recursive: true, force: true }); n++; } catch { /* Chrome 還沒走完，下次再刪 */ }
+      continue;
+    }
     try { if (fs.statSync(p).isDirectory() && now - fs.statSync(p).mtimeMs > maxAgeMs) { fs.rmSync(p, { recursive: true, force: true }); n++; } } catch { /* 別的處理程序正在用或已經刪了 */ }
   }
   return n;
@@ -230,6 +241,7 @@ export async function openDetector({ vendorDir, chrome, log = () => {} } = {}) {
   };
   try {
     const l = await launchChrome(exe, userDir);
+    try { fs.writeFileSync(path.join(userDir, 'owner.json'), JSON.stringify({ parent: process.pid, chrome: l.cp.pid })); } catch { /* 只是保險 */ }
     proc = l.cp;
     cdp = await cdpClient(l.ws);
     const { targetId } = await cdp.send('Target.createTarget', { url: 'about:blank' });

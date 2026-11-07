@@ -232,7 +232,8 @@ async function main() {
 
   // 1. build --capcut（失敗就停：plan.json 有 ✖）
   console.log('產生剪映素材的合成（build.mjs --capcut）…');
-  const b = spawnSync(process.execPath, [path.join(HERE, 'build.mjs'), '--project', P.project, '--capcut', ...(flags.template ? ['--template', flags.template] : [])], { encoding: 'utf8' });
+  let b;
+  do { b = spawnSync(process.execPath, [path.join(HERE, 'build.mjs'), '--project', P.project, '--capcut', ...(flags.template ? ['--template', flags.template] : [])], { encoding: 'utf8' }); } while (b.status === STILL_RUNNING);
   const blines = String(b.stdout || '').split('\n');
   for (const l of blines) if (/^(✖|產生：|風格包：|主題：)/.test(l)) console.log(`  ${l}`);
   if (b.status !== 0) { console.log(String(b.stderr || '').trim()); console.log('✖ build 沒過，沒有產生剪映素材 → 照上面 ✖ 的 → 改 plan.json，再跑一次這個指令'); return 1; }

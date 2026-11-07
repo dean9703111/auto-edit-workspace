@@ -240,6 +240,7 @@
         if (lay && lay !== 'free') {
           k.style.width = (w + WIDE.add) + 'px';
           if (lay === 'row' && (k.getAttribute('data-gap') || 'xl') === 'xl') k.setAttribute('data-gap', 'xxl');   // 站距拉開（96 → 160）
+          if (k.hasAttribute('data-wide-justify')) k.setAttribute('data-justify', k.getAttribute('data-wide-justify'));   // 版型指定全寬時的對齊（例：x-prompt 整組置中）
           Array.prototype.forEach.call(k.querySelectorAll(':scope > svg'), function (g) { if (Math.abs(g.getBoundingClientRect().width - w) < 2 || g.getAttribute('width') == String(w)) { g.style.width = (w + WIDE.add) + 'px'; } });
         } else k.style.marginLeft = (WIDE.add / 2) + 'px';
       });
@@ -247,7 +248,15 @@
     // 不是主卡的同尺寸面板（例：x-ui-mock 的視窗，裡面是寫死座標的介面與游標）：寬度不動，整塊往右 250 置中
     Array.prototype.forEach.call(root.querySelectorAll(':scope > *, :scope > .fill > *'), function (el) {
       if (el.classList.contains('sc-wcard') || el.hasAttribute('data-wide-keep') || getComputedStyle(el).position !== 'absolute') return;
-      if (Math.abs(el.offsetLeft - 120) <= 8 && Math.abs(el.offsetWidth - WIDE.card) <= 8) el.style.left = (el.offsetLeft + WIDE.add / 2) + 'px';
+      if (Math.abs(el.offsetLeft - 120) > 8 || Math.abs(el.offsetWidth - WIDE.card) > 8) return;
+      // data-wide-zoom：整塊放大置中（寫死座標的介面模擬視窗）；zoom 連 left、top 一起乘，所以換算回放大前的數字
+      var z = parseFloat(el.getAttribute('data-wide-zoom'));
+      if (z > 1) {
+        var w = el.offsetWidth, h = el.offsetHeight;
+        el.style.zoom = z;
+        el.style.left = ((1920 - w * z) / 2 / z) + 'px';
+        el.style.top = ((506 - h * z / 2) / z) + 'px';
+      } else el.style.left = (el.offsetLeft + WIDE.add / 2) + 'px';
     });
   }
 

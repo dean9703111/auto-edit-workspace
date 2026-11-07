@@ -153,7 +153,7 @@ node shared/template/tools/brand.mjs speaker
 
 ## 工具呼叫預算
 
-最多 15 次（AGENTS.md「階段預算」）。超過就停下來回報卡在哪。
+最多 15 次。超過就停下來回報卡在哪。
 
 ## 回報格式
 

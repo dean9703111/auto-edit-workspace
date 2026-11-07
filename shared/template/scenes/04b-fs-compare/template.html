@@ -19,6 +19,12 @@
 .fHIcon svg { display: block; width: 56px; height: 56px; }
 .fItem { display: flex; align-items: center; gap: var(--sc-gap-md); white-space: nowrap; }
 .fLine { flex: none; width: 2px; background: var(--sc-fs-line); opacity: 0.4; }
+/* 全寬（沒有講者，主卡 1680）：兩欄各約 790，字放大撐住版面 */
+[data-wide] .fHead .sc-t72, [data-wide] .fHead.sc-t72 { font-size: 88px; line-height: 120px; }
+[data-wide] .fHIcon, [data-wide] .fHIcon svg { width: 72px; height: 72px; }
+[data-wide] .fItem .sc-t44 { font-size: 56px; line-height: 76px; }
+[data-wide] .fCol:first-child { padding-right: var(--sc-gap-xl); }
+[data-wide] .fCol:last-child { padding-left: var(--sc-gap-xl); }
 <!-- @body -->
 <div id="wCard" class="sc-wcard">
   <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>

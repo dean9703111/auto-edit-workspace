@@ -325,7 +325,9 @@ test('音效：07 key-point 依 tone 選 ding／alert／success', () => {
     { id: 's03', scene: 'key-point', tone: 'good', from: '#7', duration: 5, slots: { key: '三' } },
   ]);
   assert.deepEqual(res.errors, []);
-  assert.deepEqual(['s01', 's02', 's03'].map((id) => byId(res, id).sfx.name), ['ding', 'alert', 'success']);
+  assert.deepEqual(['s01', 's02', 's03'].map((id) => { const it = byId(res, id); return (it.sfx || it.sfxDropped).name; }), ['ding', 'alert', 'success']);
+  assert.equal(byId(res, 's01').sfx, null, '同一分鐘超過 2 顆：ding 先拿掉');
+  assert.equal(byId(res, 's02').sfx.name, 'alert');
 });
 
 test('音效：side-panel 3 項（測試預設）→ 主 impact＋附加 click 3 顆，時間 1.3＋i×0.6', () => {

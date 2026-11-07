@@ -354,7 +354,7 @@ export function markStop(project, { stop, state, said = '', back = '' }) {
   if (!STOP_STATES.includes(state)) throw new Error(`沒有「${state}」這個狀態 → 只有 ${STOP_STATES.join('、')}`);
   const name = normalizeStop(stop);
   const row = appendStop(project, { stop: name, state, said: String(said ?? '').trim().replace(/^「([\s\S]*)」$/, '$1'), back });
-  // ② 通過：開工決策表的「構圖」跟著填（AGENTS.md「開工」）
+  // ② 通過：開工決策表的「構圖」跟著填
   if (name === '② 構圖' && ['通過', '略過'].includes(state)) {
     let plan = null;
     try { plan = JSON.parse(fs.readFileSync(path.join(project, 'work', 'hyperframes', 'plan.json'), 'utf8')); } catch { /* 還沒有 plan.json：不裁切 */ }
@@ -423,14 +423,14 @@ export function projectStatus(project) {
   const s9 = camera && !logged('② 構圖') && !boxed && !pack
     ? { at: '剪好看／停點 ② 構圖（構圖台還沒給使用者看）', skill: 'auto-edit-storyboard 步驟 3', next: '開構圖台、記停點 ②，把構圖台網址、work/look-preview.jpg（有的話）和 qc.mjs framing 印的「建議：…」那一行貼給使用者，停下來（依序跑下面 2 行）', stop: '② 構圖', cmds: [editor, mark('② 構圖', '待回覆')] }
     : camera && !boxed
-      ? { at: '剪好看／② 通過，量講者框', skill: 'auto-edit-storyboard 步驟 4', next: '量講者框，再產生分鏡素材（依序跑下面 2 行；--write 之後看一次 work/場地照-動作範圍.jpg）', stop: '③ 分鏡表', cmds: [speaker, scaffold] }
+      ? { at: '剪好看／② 通過，量講者框', skill: 'auto-edit-storyboard 步驟 4', next: '量講者框，再產生分鏡素材（依序跑下面 2 行）', stop: '③ 分鏡表', cmds: [speaker, scaffold] }
       : !pack
         ? { at: camera ? '剪好看／產生分鏡素材' : '剪好看／產生分鏡素材（沒有講者：跳過 ② 構圖和講者框）', skill: 'auto-edit-storyboard 步驟 4', next: '產生 work/分鏡素材/（共用.md、寫法.md、每章一份 chNN.md）', stop: '③ 分鏡表', cmds: [scaffold] }
         : draftMissing.length
           ? { at: `剪好看／寫分鏡草稿（還缺 ${list8(draftMissing)}）`, skill: 'auto-edit-storyboard 步驟 5', next: `${partKeys.length > 1 ? '一份派一個子代理寫 work/drafts/<份>.json，同一則回覆一次派出（派工：auto-edit-storyboard 的 references/chapter-worker.md）' : '照 work/分鏡素材/ 的 共用.md 和那一份寫 work/drafts/<份>.json'}；還缺 ${list8(draftMissing)}。全部寫好才跑下一行合併`, stop: '③ 分鏡表', cmds: [merge] }
           : !merged
             ? { at: '剪好看／合併分鏡草稿', skill: 'auto-edit-storyboard 步驟 5', next: '合併 work/drafts/ 成 plan.json 的 scenes', stop: '③ 分鏡表', cmds: [merge] }
-            : { at: '剪好看／產生分鏡表', skill: designMissing.length ? 'auto-edit-storyboard 步驟 6–7' : 'auto-edit-storyboard 步驟 7', next: designMissing.length ? `內容設計動畫一段派一個設計師子代理寫鏡位腳本，同一則回覆一次派出（派工：auto-edit-motion 的 references/design-brief.md「階段一」）：${list8(designMissing)}；全部回來才跑下一行（build、截圖、產生分鏡表、停在停點 ③）` : '截圖、產生分鏡表、開分鏡表頁、記停點 ③，一條指令做完', stop: '③ 分鏡表', cmds: [storyCmd] };
+            : { at: '剪好看／產生分鏡表', skill: designMissing.length ? 'auto-edit-storyboard 步驟 6–7' : 'auto-edit-storyboard 步驟 7', next: designMissing.length ? `內容設計動畫一段派一個設計師子代理寫鏡位腳本，同一則回覆一次派出（派工：auto-edit-motion 的 references/design-script.md）：${list8(designMissing)}；全部回來才跑下一行（build、截圖、產生分鏡表、停在停點 ③）` : '截圖、產生分鏡表、開分鏡表頁、記停點 ③，一條指令做完', stop: '③ 分鏡表', cmds: [storyCmd] };
 
   // 停點 ③：確認了就套回 plan.json；還沒給使用者看就產生分鏡表（--storyboard 會記 ③ 待回覆）
   const s10 = passed('③ 分鏡表')
@@ -453,7 +453,7 @@ export function projectStatus(project) {
   const invNext = `素材盤點：每支錄影、每批圖片派一個子代理寫 work/media/notes/<檔名>.json（auto-edit-screen 步驟 1）${scanned ? '' : '；先跑下一行產生素材清單與 contact sheet'}。還缺 ${inv.length} 個：${inv.slice(0, 8).join('、')}${inv.length > 8 ? '…' : ''}`;
 
   const T = [
-    ['S0', () => mains === 0, '開新專案（還沒有主軌素材）', 'AGENTS.md「開新專案」', '把講解放進 assets/camera/（有畫面）或 assets/voice/（只有聲音）；邊錄邊講的螢幕錄影放 assets/screen/ 也算；講稿存成 講稿.md', '無', 'assets/camera/ 與 assets/voice/ 都沒有檔，assets/screen/ 也沒有邊錄邊講的錄影', []],
+    ['S0', () => mains === 0, '開新專案（還沒有主軌素材）', 'auto-edit-longform 的 references/new-project.md', '把講解放進 assets/camera/（有畫面）或 assets/voice/（只有聲音）；邊錄邊講的螢幕錄影放 assets/screen/ 也算；講稿存成 講稿.md', '無', 'assets/camera/ 與 assets/voice/ 都沒有檔，assets/screen/ 也沒有邊錄邊講的錄影', []],
     // 一律先接主軌才能到 ①（多支主軌的順序在 ① 一起問，改了順序再重接）；prep 一條指令做到 ①（會記 ① 待回覆）
     ['S1', () => !has(W('main.mp4')) && !has(W('cuts.md')) && !has(W('rough.mp4')), '剪乾淨／接主軌', 'auto-edit-rough 步驟 1', `接主軌、轉逐字稿、找 NG、寫 work/cuts.md、開剪輯清單頁、記停點 ①，一條指令做完（${bgNote}）`, '① 剪輯清單', `主軌有 ${mains} 個檔、沒有 work/main.mp4`, [prep]],
     ['S2', () => !has(W('cuts.md')), '剪乾淨／轉逐字稿、找 NG', 'auto-edit-rough 步驟 1', `轉逐字稿、找 NG、寫 work/cuts.md、開剪輯清單頁、記停點 ①，一條指令做完（${bgNote}）`, '① 剪輯清單', '沒有 work/cuts.md', [prep]],
@@ -484,7 +484,7 @@ export function projectStatus(project) {
   if (['S11', 'S12'].includes(stage) && motion.length && !passed('④ 完成影片預覽')) {
     at = `剪好看／做動畫（還沒做：${list8(motion)}）`;
     skill = 'auto-edit-motion 步驟 1–2';
-    next = `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（派工照 auto-edit-motion 的 references/design-brief.md「階段二」）；全部回來才跑下一行`;
+    next = `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（派工照 auto-edit-motion 的 references/design-build.md）；全部回來才跑下一行`;
     nextStop = '④ 完成影片預覽';
     cmds = [review];
     ev.push(`plan.json 的 ${list8(motion)} 動畫還沒做（x 檔不在、還是範例原文，或內容設計動畫還是占位）`);

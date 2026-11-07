@@ -14,7 +14,7 @@
  *   node shared/template/tools/build.mjs --project projects/<專案> --merge-drafts   合併 work/drafts/ch*.json 成 plan.json 的 scenes，寫內容設計動畫的派工資料（work/briefs/）
  *   node shared/template/tools/build.mjs --project projects/<專案> --storyboard [--only s05,s12]   build＋截圖＋產生 work/storyboard.md，停在停點 ③
  *   node shared/template/tools/build.mjs --project projects/<專案> --apply-storyboard [--said "使用者原話"]   把網頁改的字、音效、金句套回 plan.json，記 ③ 通過
- *   node shared/template/tools/build.mjs --project projects/<專案> --review   build＋audit＋完成態拼圖，背景先 render，停在停點 ④
+ *   node shared/template/tools/build.mjs --project projects/<專案> --review   build＋audit＋完成態拼圖，背景先 render，停在停點 ④（內容沒變的段沿用上次的量測和截圖；--no-reuse 全部重做）
  *   --table：--check、build 印完整的逐段表（超過 30 段預設省略）
  *   node shared/template/tools/build.mjs --project projects/<專案> --test 41,4
  *                                                     另外產生 compositions/test-clip.html：41 秒起的 4 秒
@@ -23,8 +23,14 @@
  *                                                     另外產生剪映素材的合成：每段一支 compositions/capcut-<段>.html（透明底、沒有字幕與主軌聲音）
  *                                                     和主軌 compositions/capcut-main.html，清單寫 work/hyperframes/capcut.json（render 交給 capcut.mjs）
  *   node shared/template/tools/build.mjs --force      覆寫手改過的產生檔
+ *   node shared/template/tools/build.mjs --project projects/<專案> --reencode   底片（assets/rough.mp4）壞了：重新編碼
+ *   底片要重新編碼時走背景工作（work/.jobs/prepare.*，同時只有一條在寫）：前景最多等 --wait <秒>（預設 540），超過結束碼 75，再跑一次同一條會接著等
  *   node shared/template/tools/build.mjs --no-loudnorm  重新編碼底片時不做人聲響度標準化（預設調到 −14 LUFS、true peak ≤ −1 dBTP）
  *   node shared/template/tools/build.mjs --no-declick   重新編碼底片時不在剪接點（work/cutpoints.json）做 15 ms 微淡化
+ *   node shared/template/tools/build.mjs --project projects/<專案> --spec key-point   查一項字卡或模板的寫法（欄位、限制、時間下限）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --icons 手機,雲端    查圖示名稱
+ *   node shared/template/tools/build.mjs --project projects/<專案> --words 28-41       看這幾句的字幕與逐字稿（挑 @詞 用）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --show s05,x03      只看這幾段的 plan（不用整份讀 plan.json）
  *   node shared/template/tools/build.mjs --gallery    （作者用）重新產生 shared/template/preview/*.html（情境動畫另出直式 x-<名稱>-v.html，和直式講者示意 speaker-v.jpg、speaker-v-dark.jpg）
  *   --format landscape|portrait（或 橫式|直式）：蓋過版式（預設照 plan.json "format" > work/製作進度.md 開工決策表「版式」> 主軌寬高比；lib/canvas.mjs）
  *
@@ -51,7 +57,7 @@ import { assembleScene, sceneParts, hashOf, verifyHash } from './lib/assemble.mj
 import { buildCaptions, captionWarnings } from './lib/captions.mjs';
 import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
 import { buildMain, buildPreview, KIT_LINKS, withTheme } from './lib/main.mjs';
-import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, blackDetect, extractFrames, rawFrame, writeJpg, transcriptFresh } from './lib/ff.mjs';
+import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, encodeRetime, redactImage, blackDetect, extractFrames, rawFrame, writeJpg, transcriptFresh } from './lib/ff.mjs';
 import { hfShim } from './lib/hf.mjs';
 import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
@@ -62,8 +68,8 @@ import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
-import { runScaffold, checkDraft, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings } from './lib/flow.mjs';
-import { jobState, runJob } from './lib/job.mjs';
+import { runScaffold, checkDraft, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd } from './lib/flow.mjs';
+import { jobState, runJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
 import { materializeFills } from './lib/custom-fill.mjs';
 
 export { probeDuration, encodeFootage };
@@ -75,7 +81,7 @@ const customPreview = fs.existsSync(CUSTOM_PREVIEW) ? await import(pathToFileURL
 const TEST_FILE = 'compositions/test-clip.html';
 const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
 const OUTPUT_DIRS = ['output', path.join('output', 'test-clips'), path.join('output', 'qc')];
-const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'said'];
+const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'said', 'spec', 'icons', 'words', 'show', 'wait'];
 
 export function parseArgs(argv) {
   const flags = {};
@@ -87,7 +93,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'no-prerender', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut'].includes(k)) flags[k] = true;
+    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -388,12 +394,12 @@ export function attachWords(cues, { transcript, video = null } = {}) {
 }
 
 function loadInputs(P) {
-  if (!fs.existsSync(P.plan)) throw new Error(`找不到 ${rel(P.plan)} → 先照「剪好看」第 3 步寫草稿 plan.json（格式見 shared/template/USAGE.md 3.2）`);
+  if (!fs.existsSync(P.plan)) throw new Error(`找不到 ${rel(P.plan)} → 先跑 build.mjs --scaffold 拿分鏡素材、寫草稿，再 --merge-drafts（格式見 shared/template/USAGE.md 3.2）`);
   let plan;
   try { plan = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch (e) { throw new Error(`${rel(P.plan)} 不是合法的 JSON：${e.message}（JSON 不能有註解、最後一項後面不能有逗號）`); }
   if (!fs.existsSync(P.srt)) throw new Error(`找不到字幕 ${rel(P.srt)}`);
   const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
-  if (!cues.length) throw new Error(`${rel(P.srt)} 讀不到任何字幕句（格式要是 SRT）→ 照「剪乾淨」第 6 步重新產生 work/rough.srt`);
+  if (!cues.length) throw new Error(`${rel(P.srt)} 讀不到任何字幕句（格式要是 SRT）→ 跑 media.mjs rough --again 重新產生 work/rough.srt`);
   attachWords(cues, { transcript: path.join(path.dirname(P.srt), 'transcript.json'), video: P.video });
   return { plan, cues };
 }
@@ -407,13 +413,24 @@ function printIssues(res, log, flags = {}) {
   for (const w of long ? warns.slice(0, MAX_WARN) : warns) log(`⚠ ${w}`);
   if (long && warns.length > MAX_WARN) log(`（還有 ${warns.length - MAX_WARN} 個 ⚠，加 --table 看全部）`);
 }
+// 子母畫面一行：不用為了這件事跑 --check --json（長片 15 萬字）
+export function pipLine(items = []) {
+  const want = items.filter((it) => it.pip);
+  if (!want.length) return null;
+  const empty = want.filter((it) => !it.pipPieces?.length && !it.pipNote);
+  return empty.length
+    ? `⚠ 子母畫面的講者小視窗是空的：${empty.map((it) => it.id).join('、')} → 先跑 media.mjs verify-rough，不要改版面繞過去`
+    : `子母畫面的講者小視窗：${want.length} 段都有`;
+}
+
 function reportText(res, opts, flags = {}) {
-  const text = formatReport(res, opts);
+  const pip = pipLine(res.items);
+  const text = [formatReport(res, opts), ...(pip ? [pip] : [])].join('\n');
   if (!(res.items?.length > LONG_PLAN) || flags.table) return text;
   const ids = new Set(res.items.map((it) => it.id));
   const lines = text.split('\n');
-  const kept = lines.filter((l, i) => { if (i === 0) return false; const m = l.match(/^([^｜]+)｜/); return !(m && ids.has(m[1]) && !/｜⚠ \d/.test(l)); });
-  return [`（逐段表省略 ${res.items.length} 段，只留有 ⚠ 的；要看全部加 --table）`, ...kept].join('\n');
+  const kept = lines.filter((l, i) => { if (i === 0) return false; const m = l.match(/^([^｜]+)｜/); return !(m && ids.has(m[1])); });
+  return [`（逐段表省略 ${res.items.length} 段，⚠ 都在上面；要看全部加 --table，只看一段用 --show <段>）`, ...kept].join('\n');
 }
 
 // 剪接點：剪乾淨第 7 步存的 work/cutpoints.json（edit.joins 要對到這些點）
@@ -444,9 +461,9 @@ export function readCutpoints(P) {
   try {
     const j = JSON.parse(fs.readFileSync(file, 'utf8'));
     const list = (Array.isArray(j?.cuts) ? j.cuts : []).filter((c) => c && Number.isFinite(c.at)).map((c) => ({ at: +Number(c.at).toFixed(3), kind: c.kind === 'ng' ? 'ng' : 'pause' })).sort((a, b) => a.at - b.at);
-    return { list, warnings: Array.isArray(j?.cuts) ? [] : ['work/cutpoints.json 沒有 "cuts" 陣列 → 格式是 { "cuts": [ { "at": 12.34, "kind": "ng" } ] }（AGENTS.md「剪乾淨」第 7 步）'] };
+    return { list, warnings: Array.isArray(j?.cuts) ? [] : ['work/cutpoints.json 沒有 "cuts" 陣列 → 格式是 { "cuts": [ { "at": 12.34, "kind": "ng" } ] }（`media.mjs cutpoints`）'] };
   } catch (e) {
-    return { list: [], warnings: [`work/cutpoints.json 不是合法的 JSON：${e.message} → 照 AGENTS.md「剪乾淨」第 7 步重新產生`] };
+    return { list: [], warnings: [`work/cutpoints.json 不是合法的 JSON：${e.message} → 跑 media.mjs cutpoints 重新產生`] };
   }
 }
 
@@ -507,14 +524,17 @@ function prepareMedia(items, out, log) {
     if (!next[name]) {
       if (idx[name]?.key !== key || !fs.existsSync(abs)) {
         if (main.type === 'video') {
-          log(`轉檔 ${it.media.src} → ${main.rel}（30fps、每秒一個關鍵影格${main.speed !== 1 ? `、×${main.speed}` : ''}）…`);
-          encodeMedia(it.media.abs, abs, { speed: main.speed, keepAudio: main.keepAudio, width: main.w, height: main.h });
+          log(`轉檔 ${it.media.src} → ${main.rel}（30fps、每秒一個關鍵影格${main.retime ? '、變速' : main.speed !== 1 ? `、×${main.speed}` : ''}${main.redact ? '、打碼' : ''}）…`);
+          if (main.retime) encodeRetime(it.media.abs, abs, { knots: main.retime.knots, width: main.w, height: main.h, redact: main.redact });
+          else encodeMedia(it.media.abs, abs, { speed: main.speed, keepAudio: main.keepAudio, width: main.w, height: main.h, redact: main.redact });
         } else if (main.type === 'still') {
           log(`定格 ${it.media.src} 第 ${main.at}s → ${main.rel}`);
-          writeJpg({ w: main.w, h: main.h, data: rawFrame(it.media.abs, { at: main.at, width: main.w, height: main.h }) }, abs, 2);
+          writeJpg({ w: main.w, h: main.h, data: rawFrame(it.media.abs, { at: main.at, width: main.w, height: main.h, hdr: it.media.info?.hdr ?? null }) }, abs, 2);
+          if (main.redact) redactImage(abs, main.redact, main.w, main.h);
         } else {
           fs.mkdirSync(dir, { recursive: true });
           fs.copyFileSync(it.media.abs, abs);
+          if (main.redact) redactImage(abs, main.redact, it.media.file.w, it.media.file.h);
         }
         made++;
       }
@@ -554,7 +574,7 @@ function prepareMedia(items, out, log) {
   return made;
 }
 
-export function build(flags, { log = console.log } = {}) {
+export function build(flags, { log = console.log, delegateEncode = false } = {}) {
   const P = pathsFrom(flags);
   const json = !!(flags.check && flags.json);
   if (json) log = () => {};
@@ -594,8 +614,11 @@ export function build(flags, { log = console.log } = {}) {
   const stampFile = path.join(P.out, '.cache', 'footage-audio.json');
   const stamp = readStamp(stampFile);
   const wantKey = fs.existsSync(footSrc) ? audioKey({ src: footSrc, cutpoints: cp.list.map((c) => c.at), ...audioOpts, frame: plan.frame ?? null, look: look?.key ?? null, format: C.format }) : null;
-  const fresh = fs.existsSync(assetVideo) && (!fs.existsSync(footSrc) || (fs.statSync(assetVideo).mtimeMs >= fs.statSync(footSrc).mtimeMs && stampMatches(stamp, wantKey)));
+  // 戳記也記底片本身的大小與時間：對不上（被別的行程寫過）就重新編碼。舊專案的戳記沒有這一欄，照舊算數
+  const assetSame = (st) => { if (!st?.asset) return true; const a = fs.statSync(assetVideo); return a.size === st.asset.size && Math.abs(a.mtimeMs - st.asset.mtimeMs) < 2; };
+  const fresh = !flags.reencode && fs.existsSync(assetVideo) && (!fs.existsSync(footSrc) || (fs.statSync(assetVideo).mtimeMs >= fs.statSync(footSrc).mtimeMs && stampMatches(stamp, wantKey) && assetSame(stamp)));
   if (!fresh && !fs.existsSync(P.video)) throw new Error(`找不到影片 ${rel(P.video)}`);
+  if (!fresh && delegateEncode) return { ok: false, needEncode: true };   // cli 走背景工作（同時只有一條在寫、前景等太久結束碼 75）
   const projectDir = mediaRoot(P);
   const projectRel = projectDir ? projectLabel(P, projectDir) : 'projects/<專案>';
   const ctx = (videoDur, voiceOnly) => ({ plan, cues, videoDur, lib, outDir: P.out, sfxDir: P.sfx, projectDir, voiceOnly, cutpoints: cp.list, projectRel, canvas: C });
@@ -656,10 +679,10 @@ export function build(flags, { log = console.log } = {}) {
     audioInfo = encodeFootagePolished(footSrc, assetVideo, { cacheDir: path.join(P.out, '.cache'), cutpoints: cp.list.map((c) => c.at), ...audioOpts, crop: frameCrop(plan, footSrc), lut: look?.lut ?? null, canvas: C,
       onMeasure: () => log('量人聲響度（第一次會花一點時間，之後用快取）…') });
     fs.mkdirSync(path.dirname(stampFile), { recursive: true });
-    fs.writeFileSync(stampFile, JSON.stringify({ key: wantKey, info: audioInfo }, null, 2) + '\n');
+    const assetSt = fs.statSync(assetVideo);
+    fs.writeFileSync(stampFile, JSON.stringify({ key: wantKey, info: audioInfo, asset: { size: assetSt.size, mtimeMs: assetSt.mtimeMs } }, null, 2) + '\n');
     encoded = true;
   } else if (stamp?.info) audioInfo = stamp.info;   // 沒重新編碼：報告用上次的數字
-  if (flags.prepare) { log('底片處理好了'); return { ok: true }; }
   const rawDur = probeDuration(assetVideo);
   // 完成影片長度不超過 rough.mp4：人聲響度標準化（loudnorm）會讓音軌尾巴多約 0.1s，容器長度跟著變長，最後幾格會沒有畫面
   const srcDur = fs.existsSync(P.video) ? probeDuration(P.video) : rawDur;
@@ -668,6 +691,7 @@ export function build(flags, { log = console.log } = {}) {
     const drift = r3(rawDur - srcDur);
     log(`底片長度：原檔 ${r3(srcDur)}s → 重新編碼 ${r3(rawDur)}s（差 ${drift}s）${Math.abs(drift) > 0.1 ? ' ⚠ 差超過 0.1s，字幕可能對不準' : ''}`);
   }
+  if (flags.prepare) { log('底片處理好了'); return { ok: true }; }
   const rb = roughBlackCheck(projectDir, voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log), projectRel);
   const res = resolvePlan(ctx(videoDur, rb.voiceOnly));
   const spk = speakerIssues(speaker, res);
@@ -847,14 +871,41 @@ async function cli() {
   }
   if (flags.template) P.templateArg = ['--template', flags.template];
   if (flags.scaffold) { runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }); return 0; }
+  if (flags.spec) return specCmd(P, flags.spec);
+  if (flags.icons) return iconsCmd(flags.icons, { loadLib, templateDir: P.templateDir });
+  if (flags.words) return wordsCmd(P, flags.words);
+  if (flags.show) return showCmd(P, flags.show);
   if (flags['check-draft']) return checkDraft(P, flags['check-draft']);
-  if (flags['merge-drafts']) return mergeDrafts(P);
+  if (flags['merge-drafts']) return mergeDrafts(P, flags);
   if (flags.storyboard) return storyboardCmd(P, flags, { loadLib });
   if (flags['apply-storyboard']) return applyCmd(P, flags, { loadLib });
   if (flags.review) return reviewCmd(P, flags);
   // 底片先在背景處理（--scaffold 會自動開）；同一支正在跑就等它，不要重複編碼
   if (flags.prepare) return runJob({ project: P.project, name: 'prepare', argv: process.argv.slice(1), waitSec: 0, again: true, log: () => {}, run: async () => (build(flags).ok ? 0 : 1) });
-  const r = build(flags);
+  return buildCli(flags, P);
+}
+
+// 真的產生檔案的 build：底片要重新編碼時交給背景工作 prepare，同一個專案同時只有一條在寫，shell 逾時也不會留下寫到一半的檔。--check 不編碼，直接跑
+async function buildCli(flags, P) {
+  const viaJob = !!P.project && !flags.check && !isJobChild('prepare');
+  const waitSec = flags.wait != null ? Number(flags.wait) : DEFAULT_WAIT;
+  if (!(waitSec >= 0)) throw new Error(`--wait 要是秒數，現在是「${flags.wait}」`);
+  const argv = [fileURLToPath(import.meta.url), '--project', P.project, '--prepare',
+    ...['template', 'format', 'plan', 'srt', 'video', 'out', 'sfx'].flatMap((k) => (flags[k] ? [`--${k}`, flags[k]] : [])),
+    ...['no-loudnorm', 'no-declick', 'reencode'].filter((k) => flags[k]).map((k) => `--${k}`)];
+  const job = async () => {
+    const code = await runJob({ project: P.project, name: 'prepare', argv, again: true, waitSec, log: console.log, run: () => 1 });
+    if (code === STILL_RUNNING) console.log(`node ${rel(fileURLToPath(import.meta.url))} ${process.argv.slice(2).map((a) => (/^[\w./:@=-]+$/.test(a) ? a : `"${a}"`)).join(' ')}`);
+    return code;
+  };
+  // 別條指令開的還在跑：接著等（失敗也沒關係，下面會照現在的 plan 重新判斷）
+  if (viaJob && jobState(P.project, 'prepare').state === 'running' && await job() === STILL_RUNNING) return STILL_RUNNING;
+  let r = build(flags, { delegateEncode: viaJob });
+  if (r.needEncode) {
+    const code = await job();
+    if (code !== 0) return code;
+    r = build({ ...flags, reencode: false });
+  }
   if (r.json) console.log(JSON.stringify(r.json, null, 2));
   return r.ok ? 0 : 1;
 }

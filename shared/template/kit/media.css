@@ -30,9 +30,9 @@
 .mcbox { fill: none; stroke: var(--sc-warn); stroke-width: 4px; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
 .mclead path { fill: none; stroke: var(--sc-warn); stroke-width: 3px; stroke-dasharray: 1; stroke-dashoffset: 1; }
 .mclead circle { fill: var(--sc-warn); opacity: 0; }
-/* 箭頭：箭身 4px＋三角形箭頭，警示紅 */
+/* 箭頭：箭身 7px＋三角形箭頭，警示紅 */
 .marrow { opacity: 0; }
-.marrow line { stroke: var(--sc-warn); stroke-width: 4px; }
+.marrow line { stroke: var(--sc-warn); stroke-width: 7px; stroke-linecap: round; }
 .marrow polygon { fill: var(--sc-warn); }
 /* 卡片層：說明卡（高 96、字 40px、可配圖示圓）與左上角 STEP 膠囊 */
 .mcards { position: absolute; inset: 0; pointer-events: none; }

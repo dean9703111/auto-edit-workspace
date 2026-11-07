@@ -2,7 +2,7 @@
 //
 //   run(cmd, args, opts)                 → spawnSync 結果（找不到指令時丟出中文錯誤）
 //   probeDuration(file)                  → 秒數
-//   probeMedia(file)                     → { kind:'video'|'image'|'audio', duration, width, height, fps, vfr, hasAudio, hasVideo }
+//   probeMedia(file)                     → { kind:'video'|'image'|'audio', duration, width, height, fps, vfr, hasAudio, hasVideo, audioCount }；width、height 是顯示方向（手機直拍的旋轉標記已算進去，ffmpeg 解碼時也會自動轉正）
 //   encodeFootage(src, dst, { audioFilter, audioRaw, crop, lut, canvas })  主軌底片：30fps CFR、每秒一個關鍵影格、聲音 AAC（聲音處理見 audio.mjs）；lut＝講者調光的 .cube
 //                                        canvas＝lib/canvas.mjs 的 canvasOf(format)（不傳＝橫式，輸出和原本逐位元組相同）
 //   footageVf({ crop, canvas })          → 底片的裁切／縮放濾鏡陣列（frame 寬高比不對時丟出中文錯誤）
@@ -19,11 +19,34 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { CANVAS } from './canvas.mjs';
+import { hdrKind, hdrCube } from './hdr.mjs';
 
 export const VIDEO_EXT = ['.mp4', '.mov', '.m4v', '.webm'];
 export const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 export const AUDIO_EXT = ['.m4a', '.mp3', '.wav', '.aac', '.flac', '.ogg', '.opus'];
 const r3 = (n) => +Number(n).toFixed(3);
+const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
+
+// 暫存檔名帶 pid：中途被砍又重跑時，舊的 ffmpeg 還在寫也不會和新的寫同一個檔（同一個檔兩邊一起寫，影片會壞，ffmpeg 不會報錯）
+export function tmpFor(dst, pid = process.pid) { const ext = path.extname(dst); return path.join(path.dirname(dst), `.${path.basename(dst, ext)}.${pid}.tmp${ext}`); }
+// 清掉主人已經不在的暫存檔（.名稱.<pid>.tmp.副檔名）
+export function sweepTmp(dir) {
+  let names;
+  try { names = fs.readdirSync(dir); } catch { return 0; }
+  let n = 0;
+  for (const name of names) {
+    const m = name.match(/^\..+\.(\d+)\.tmp(?:\.[^.]+)?$/);
+    if (!m || alive(Number(m[1]))) continue;
+    try { fs.rmSync(path.join(dir, name), { force: true }); n++; } catch { /* 下次再清 */ }
+  }
+  return n;
+}
+// ffmpeg stderr 裡的解碼／解封裝錯誤（影片壞了或不完整）：結束碼還是 0，只有這裡看得到。只看 [元件 @ …] 開頭的行，檔名裡有這些字不算
+const DECODE_ERR = /Invalid NAL unit size|Error splitting the input|missing picture in access unit|Packet corrupt|corrupt input packet|partial file|[Ee]rror while decoding|decode_slice_header error|channel element \S+ (?:duplicate|is not allocated)|Reserved bit set|Invalid data found when processing input/;
+export function decodeIssues(stderr) {
+  const lines = String(stderr).split(/\r?\n/).map((l) => l.trim()).filter((l) => l.startsWith('[') && DECODE_ERR.test(l));
+  return { count: lines.length, sample: lines[0]?.slice(0, 160) ?? null };
+}
 
 export function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 30, ...opts });
@@ -65,7 +88,7 @@ const rate = (s) => { const [a, b] = String(s || '0/1').split('/').map(Number); 
 
 export function probeMedia(file) {
   const ext = path.extname(file).toLowerCase();
-  const r = run('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,codec_name,width,height,r_frame_rate,avg_frame_rate,duration:stream_disposition=attached_pic', '-of', 'json', file]);
+  const r = run('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,codec_name,width,height,r_frame_rate,avg_frame_rate,duration,color_transfer:stream_disposition=attached_pic:stream_tags=rotate:stream_side_data=rotation', '-of', 'json', file]);
   if (r.status !== 0) throw new Error(`ffprobe 讀不到 ${path.basename(file)}：${tail(r.stderr, 200)}（檔案壞了，或不是影片／圖片）`);
   let j;
   try { j = JSON.parse(r.stdout); } catch { throw new Error(`ffprobe 讀不到 ${path.basename(file)} 的資訊`); }
@@ -74,13 +97,15 @@ export function probeMedia(file) {
   const a = streams.find((s) => s.codec_type === 'audio');
   const image = IMAGE_EXT.includes(ext);
   const duration = Number(j.format?.duration);
+  // 手機直拍常是 1920×1080＋旋轉標記：顯示出來是直的，ffmpeg 解碼也會轉正，寬高要跟著換（和 canvas.mjs 的 probeDims 同一套）
+  const rot = v ? Math.abs(Number(v.side_data_list?.find((d) => d.rotation != null)?.rotation ?? v.tags?.rotate ?? 0)) % 180 : 0;
   const out = {
     kind: image ? 'image' : v ? 'video' : a ? 'audio' : 'unknown',
     duration: image ? null : Number.isFinite(duration) ? r3(duration) : null,
-    width: v?.width ?? null, height: v?.height ?? null,
+    width: (rot === 90 ? v?.height : v?.width) ?? null, height: (rot === 90 ? v?.width : v?.height) ?? null,
     fps: v && !image ? r3(rate(v.avg_frame_rate) || rate(v.r_frame_rate)) : null,
     vfr: !!(v && !image && Math.abs(rate(v.avg_frame_rate) - rate(v.r_frame_rate)) > 0.01),
-    hasAudio: !!a && !image, hasVideo: !!v,
+    hasAudio: !!a && !image, hasVideo: !!v, audioCount: image ? 0 : streams.filter((s) => s.codec_type === 'audio').length, hdr: v && !image ? hdrKind(v.color_transfer) : null,
   };
   return out;
 }
@@ -108,18 +133,50 @@ export function footageVf({ crop = null, canvas = CANVAS.landscape } = {}) {
 // opts.crop＝{ x, y, w, h }（來源影片的像素）：構圖裁切，裁完縮放到畫布 W×H
 // opts.lut＝.cube 路徑：講者調光（已經照強度混好，contracts/look.md §3）；順序 crop → scale → lut3d → fps
 // opts.canvas＝畫布（specs/009-vertical FR-100）：不傳＝橫式
+// 沒有裁切、調光，而且來源已經是底片規格（畫布大小、30fps CFR、yuv420p 的 H.264、關鍵影格夠密、不是 HDR）時畫面直接沿用，只處理聲音：
+// 少一代壓縮，長片省幾分鐘。不符合就照常重新編碼（回傳 false）
+export const COPY_MAX_GOP = 1.5;   // 秒；關鍵影格再疏 seek 會凍結
+export function footageCopyable(src, canvas = CANVAS.landscape) {
+  const r = run('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=codec_name,pix_fmt,width,height,r_frame_rate,avg_frame_rate,color_transfer,color_range,sample_aspect_ratio,start_pts:stream_side_data=rotation:stream_tags=rotate', '-of', 'json', src]);
+  if (r.status !== 0) return false;
+  let v;
+  try { v = JSON.parse(r.stdout).streams?.[0]; } catch { return false; }
+  if (!v || v.codec_name !== 'h264' || v.pix_fmt !== 'yuv420p' || v.width !== canvas.W || v.height !== canvas.H) return false;
+  if (rate(v.r_frame_rate) !== 30 || rate(v.avg_frame_rate) !== 30 || Number(v.start_pts) !== 0) return false;
+  if (hdrKind(v.color_transfer) || v.color_range === 'pc' || (v.sample_aspect_ratio && !['1:1', '0:1', 'N/A'].includes(v.sample_aspect_ratio))) return false;
+  if (v.side_data_list?.some((d) => d.rotation) || Number(v.tags?.rotate || 0)) return false;
+  const p = run('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'packet=pts_time,flags', '-of', 'csv=p=0', src], { maxBuffer: 1 << 30 });
+  if (p.status !== 0) return false;
+  let last = null, n = 0;
+  for (const l of String(p.stdout).split('\n')) {
+    const [t, flags] = l.trim().split(',');
+    if (!flags?.includes('K')) continue;
+    const at = Number(t);
+    if (last != null && at - last > COPY_MAX_GOP) return false;
+    last = at;
+    n++;
+  }
+  return n > 0;
+}
+
 export function encodeFootage(src, dst, { audioFilter = null, audioRaw = null, crop = null, lut = null, canvas = CANVAS.landscape } = {}) {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   const args = ['-y', '-v', 'error', '-i', src];
   if (audioRaw) args.push('-f', 'f32le', '-ar', String(audioRaw.rate), '-ac', String(audioRaw.channels), '-i', audioRaw.file, '-map', '0:v:0', '-map', '1:a:0');
-  const vf = footageVf({ crop, canvas });
-  if (lut) vf.push(lut3dFilter(lut));
-  vf.push('fps=30');
-  args.push('-vf', vf.join(','), '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p');
+  if (!crop && !lut && footageCopyable(src, canvas)) args.push('-c:v', 'copy');
+  else {
+    const vf = footageVf({ crop, canvas });
+    if (lut) vf.push(lut3dFilter(lut));
+    vf.push('fps=30');
+    args.push('-vf', vf.join(','), '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p');
+  }
   if (audioFilter) args.push('-af', audioFilter);
-  args.push('-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', dst);
+  sweepTmp(path.dirname(dst));
+  const tmp = tmpFor(dst);   // 寫完才換上：中途被砍、兩條 build 同時跑都不會寫壞正式檔
+  args.push('-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', tmp);
   const r = run('ffmpeg', args);
-  if (r.status !== 0) throw new Error(`ffmpeg 重新編碼失敗：${String(r.stderr).trim().slice(0, 400)}`);
+  if (r.status !== 0) { fs.rmSync(tmp, { force: true }); throw new Error(`ffmpeg 重新編碼失敗：${String(r.stderr).trim().slice(0, 400)}`); }
+  fs.renameSync(tmp, dst);
 }
 
 // 濾鏡圖裡的路徑：ffmpeg 先拆濾鏡圖（'…' 裡面原樣），再拆選項（\: → :），所以 C:\x\a.cube 要寫成 'C\:/x/a.cube'
@@ -129,6 +186,8 @@ export function filterPath(p) {
   return `'${abs.replace(/:/g, '\\:')}'`;
 }
 export const lut3dFilter = (file) => `lut3d=file=${filterPath(file)}:interp=tetrahedral`;
+// HDR（iPhone 的 HLG 等）轉 SDR BT.709：接在解碼之後，出來就是一般的 yuv420p BT.709（lib/hdr.mjs）
+export const sdrChain = (kind) => `scale=in_color_matrix=bt2020:flags=accurate_rnd+full_chroma_int,format=gbrp16le,${lut3dFilter(hdrCube(kind))},scale=out_color_matrix=bt709:out_range=tv:flags=accurate_rnd+full_chroma_int,format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv`;
 
 // atempo 一次只能 0.5–2 倍，超過就串起來
 const atempo = (speed) => {
@@ -143,14 +202,27 @@ const atempo = (speed) => {
 // 插入的錄影：macOS 螢幕錄影是 VFR，關鍵影格也稀，和底片一樣轉成 30fps CFR、每秒一個關鍵影格；
 // speed 直接做進檔案（檔案的第 t 秒＝素材的第 t×speed 秒），播放端只用 data-media-start 跳到要的地方。
 // 畫面超過 3840×2160 等比縮小（座標換算由呼叫端用 scale 處理）。
-export function encodeMedia(src, dst, { speed = 1, keepAudio = false, width, height } = {}) {
+export function redactImage(file, boxes, W, H) {
+  const f = redactFilter(boxes, '0:v', W, H);
+  const tmp = `${file}.tmp${path.extname(file)}`;
+  const r = run('ffmpeg', ['-y', '-v', 'error', '-i', file, '-filter_complex', f.filter, '-map', `[${f.out}]`, '-frames:v', '1', '-update', '1', '-q:v', '2', tmp]);
+  if (r.status !== 0) throw new Error(`ffmpeg 打碼失敗（${path.basename(file)}）：${tail(r.stderr)}`);
+  fs.renameSync(tmp, file);
+}
+
+export function encodeMedia(src, dst, { speed = 1, keepAudio = false, width, height, redact = null } = {}) {
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   const vf = [];
+  const hdr = probeMedia(src).hdr;
+  if (hdr) vf.push(sdrChain(hdr));
   if (Math.abs(speed - 1) > 1e-9) vf.push(`setpts=PTS/${speed}`);
   vf.push('fps=30');
   if (width && height) vf.push(`scale=${width}:${height}:flags=lanczos`);
   vf.push('format=yuv420p');
-  const args = ['-y', '-v', 'error', '-i', src, '-map', '0:v:0', '-vf', vf.join(','), '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+  const video = redact?.length
+    ? (() => { const f = redactFilter(redact, 'base', width, height); return ['-filter_complex', `[0:v:0]${vf.join(',')}[base];${f.filter}`, '-map', `[${f.out}]`]; })()
+    : ['-map', '0:v:0', '-vf', vf.join(',')];
+  const args = ['-y', '-v', 'error', '-i', src, ...video, '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
     '-g', '30', '-keyint_min', '30', '-sc_threshold', '0'];
   if (keepAudio) {
     args.push('-map', '0:a:0?');
@@ -158,9 +230,64 @@ export function encodeMedia(src, dst, { speed = 1, keepAudio = false, width, hei
     if (af.length) args.push('-af', af.join(','));
     args.push('-c:a', 'aac', '-b:a', '192k', '-ar', '48000');
   } else args.push('-an');
-  args.push('-movflags', '+faststart', dst);
+  sweepTmp(path.dirname(dst));
+  const tmp = tmpFor(dst);
+  args.push('-movflags', '+faststart', tmp);
   const r = run('ffmpeg', args);
-  if (r.status !== 0) throw new Error(`ffmpeg 轉檔失敗（${path.basename(src)}）：${tail(r.stderr)}`);
+  if (r.status !== 0) { fs.rmSync(tmp, { force: true }); throw new Error(`ffmpeg 轉檔失敗（${path.basename(src)}）：${tail(r.stderr)}`); }
+  fs.renameSync(tmp, dst);
+}
+
+// 同一段裡變速、定格（media 的 retime）：knots＝[[段內秒, 素材秒], …]，產出的檔案長度＝段長（只轉用到的區間），之後當一般錄影放。
+// 先轉固定 30fps（VFR 素材才取得到任何一秒的畫面），每一小段 trim＋setpts，src 一樣的用最後一格補滿。不保留原聲
+export function retimeFilter(knots, offset = 0, fps = 30) {
+  const n = knots.length - 1;
+  const r = (v) => Number(v.toFixed(6));
+  const parts = [`[0:v]fps=${fps},split=${n}${Array.from({ length: n }, (_, i) => `[a${i}]`).join('')}`];
+  for (let i = 0; i < n; i++) {
+    const [t0, s0] = knots[i], [t1, s1] = knots[i + 1];
+    const dt = t1 - t0, a = r(Math.max(0, s0 - offset));
+    if (s1 - s0 < 1e-6) parts.push(`[a${i}]trim=start=${a}:duration=${r(2 / fps)},select='eq(n,0)',setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${r(dt + 1)},trim=duration=${r(dt)},setpts=PTS-STARTPTS[v${i}]`);   // 只留第一格：留到第二格的話，定格結束接下一段會倒退一格
+    else parts.push(`[a${i}]trim=start=${a}:end=${r(s1 - offset)},setpts=(PTS-STARTPTS)*${r(dt / (s1 - s0))}[v${i}]`);
+  }
+  parts.push(`${Array.from({ length: n }, (_, i) => `[v${i}]`).join('')}concat=n=${n}:v=1:a=0[rt]`);
+  return parts.join(';');
+}
+
+// 打碼：框裡先縮到很小再放大（不管字多大都讀不出來），疊回原位；有 at／until 只在那段時間疊。stream 是輸入串流名稱，回傳 { filter, out }
+export function redactFilter(boxes, stream, W, H) {
+  const parts = [];
+  let cur = stream;
+  boxes.forEach((rd, i) => {
+    const pad = 4;
+    const x = Math.max(0, rd.box[0] - pad), y = Math.max(0, rd.box[1] - pad);
+    const w = Math.min(W - x, rd.box[2] + 2 * pad) & ~1, h = Math.min(H - y, rd.box[3] + 2 * pad) & ~1;
+    const sw = Math.max(2, Math.round(w / 24)), sh = Math.max(2, Math.round(h / 24));
+    const on = rd.at != null || rd.until != null ? `:enable='between(t,${rd.at ?? 0},${rd.until ?? 86400})'` : '';
+    parts.push(`[${cur}]split[rb${i}][rc${i}];[rc${i}]crop=${w}:${h}:${x}:${y},scale=${sw}:${sh}:flags=area,scale=${w}:${h}:flags=bilinear[rd${i}];[rb${i}][rd${i}]overlay=${x}:${y}${on}[ro${i}]`);
+    cur = `ro${i}`;
+  });
+  return { filter: parts.join(';'), out: cur };
+}
+
+export function encodeRetime(src, dst, { knots, width, height, redact = null } = {}) {
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  const len = knots[knots.length - 1][0];
+  const lo = Math.min(...knots.map((k) => k[1])), hi = Math.max(...knots.map((k) => k[1]));
+  const offset = Math.max(0, lo - 1);   // 只解用到的區間
+  const hdr = probeMedia(src).hdr;
+  const graph = [hdr ? retimeFilter(knots, offset).replace('[0:v]', `[0:v]${sdrChain(hdr)},`) : retimeFilter(knots, offset)];
+  const W = width, H = height;
+  graph.push(`[rt]tpad=stop_mode=clone:stop_duration=1,fps=30${W && H ? `,scale=${W}:${H}:flags=lanczos` : ''},format=yuv420p[base]`);
+  let out = 'base';
+  if (redact?.length) { const f = redactFilter(redact, out, W, H); graph.push(f.filter); out = f.out; }
+  sweepTmp(path.dirname(dst));
+  const tmp = tmpFor(dst);
+  const args = ['-y', '-v', 'error', '-ss', String(offset), '-t', String(hi - offset + 1.5), '-i', src, '-filter_complex', graph.join(';'), '-map', `[${out}]`, '-t', String(len), '-fps_mode', 'cfr',
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', '30', '-keyint_min', '30', '-sc_threshold', '0', '-an', '-movflags', '+faststart', tmp];
+  const r = run('ffmpeg', args);
+  if (r.status !== 0) { fs.rmSync(tmp, { force: true }); throw new Error(`ffmpeg 變速失敗（${path.basename(src)}）：${tail(r.stderr)}`); }
+  fs.renameSync(tmp, dst);
 }
 
 // 全黑偵測：門檻很嚴，只抓「聲音檔配的合成純黑」（真人錄影再暗也不會整格 99.8% 的像素都是黑）
@@ -187,11 +314,12 @@ export function blackDetect(file, cacheFile = null, onMiss = null) {
 }
 
 // 一格畫面 → rgb24 Buffer（width／height 給了就縮放成那個大小）
-export function rawFrame(file, { at = 0, width, height } = {}) {
+export function rawFrame(file, { at = 0, width, height, hdr = null } = {}) {
   const args = ['-v', 'error'];
   if (at > 0) args.push('-ss', String(at));
   args.push('-i', file, '-frames:v', '1');
-  if (width && height) args.push('-vf', `scale=${width}:${height}:flags=bicubic`);
+  const vf = [...(hdr ? [sdrChain(hdr)] : []), ...(width && height ? [`scale=${width}:${height}:flags=bicubic`] : [])];
+  if (vf.length) args.push('-vf', vf.join(','));
   args.push('-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1');
   const r = spawnSync('ffmpeg', args, { maxBuffer: 1 << 30 });
   if (r.error) throw r.error.code === 'ENOENT' ? new Error('找不到 ffmpeg：先跑 npx hyperframes doctor') : r.error;

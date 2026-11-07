@@ -3,8 +3,9 @@
 //   textFields(seg, { scenes, specs })        → 這段「畫面文字」的欄位清單 [{ path, label, value }]，順序固定
 //   renderSection(seg, ctx)                   → 一段（### <id>｜…）
 //   renderStoryboard(ctx)                     → 整份 markdown
-//   applyStoryboard(md, plan, { scenes, specs, cues }) → { plan, changes, requests, unmatched, changed }
-import { parseStoryboard } from '../editor/storyboard-md.mjs';
+//   tidyDecide(list, { cues })                → { ask, ai }：「需要我決定的事」去重、白話；ask 問作者，ai 是 AI 自己能決定的
+//   applyStoryboard(md, plan, { scenes, specs, cues }) → { plan, changes, requests, unmatched, answers, changed }
+import { parseStoryboard, isDecideSection } from '../editor/storyboard-md.mjs';
 import { renderSheet } from './custom-fill.mjs';
 
 const clock = (t) => { if (t == null) return '—'; const r = Math.round(t * 100) / 100, m = Math.floor(r / 60); return `${m}:${(r - m * 60).toFixed(2).padStart(5, '0')}`; };
@@ -32,6 +33,22 @@ function declFields(prefix, label, d, value, out) {
 }
 
 // 畫面上看得到的字。順序固定，使用者改完靠順序對回 plan.json
+// 分鏡表每段一行：素材怎麼用（8→19s ×1.52、定格、變速；運鏡 1、紅框 2、打碼 1）
+function mediaUse(seg, item) {
+  const a = item?.out?.annotations;
+  const K = a?.knots;
+  const r = (v) => Math.round(v * 100) / 100;
+  let use = seg.in != null ? ` 從 ${seg.in} 秒` : '';
+  if (K?.length >= 2) {
+    if (seg.hold != null) use = `：定格在第 ${seg.hold} 秒`;
+    else if (K.length === 2) { const sp = r((K[1][1] - K[0][1]) / Math.max(1e-6, K[1][0] - K[0][0])); use = `：第 ${r(K[0][1])}→${r(K[1][1])} 秒${sp !== 1 ? ` ×${sp}` : ''}`; }
+    else use = `：第 ${r(K[0][1])}→${r(K[K.length - 1][1])} 秒，變速 ${K.slice(1).map((k, i) => { const sp = r((k[1] - K[i][1]) / Math.max(1e-6, k[0] - K[i][0])); return sp === 0 ? '定格' : `×${sp}`; }).join('→')}`;
+  }
+  const n = (x) => (Array.isArray(x) ? x.length : 0);
+  const marks = [[n(seg.moves), '運鏡'], [n(seg.marks) + n(seg.callouts), '紅框'], [n(seg.arrows), '箭頭'], [n(seg.lens), '放大鏡'], [n(seg.spot), '聚光燈'], [n(seg.redact), '打碼']].filter(([c]) => c).map(([c, w]) => `${w} ${c}`);
+  return `${use}${marks.length ? `（${marks.join('、')}）` : ''}`;
+}
+
 export function textFields(seg, { scenes = [], specs = new Map() } = {}) {
   const out = [];
   if (seg?.type === 'media') return out;
@@ -91,7 +108,7 @@ export function renderSection(seg, ctx) {
   L.push(`- 版面：${layoutOf(item)}（${cardLabel(seg, item)}）`);
   const fields = textFields(seg, { scenes, specs });
   if (fields.length) L.push(`- 畫面文字：${fields.map((f) => `${f.label}「${quote(f.value)}」`).join('；')}`);
-  if (seg.type === 'media' && seg.src) L.push(`- 素材：\`${seg.src}\`${seg.in != null ? ` 從 ${seg.in} 秒` : ''}`);
+  if (seg.type === 'media' && seg.src) L.push(`- 素材：\`${seg.src}\`${mediaUse(seg, item)}`);
   L.push(`- 音效：${sfxText(seg)}`);
   const design = seg.design ? designs.get(seg.id) : null;
   if (seg.design) {
@@ -121,6 +138,50 @@ const FOUR_LAYOUTS = `| 版面 | 畫面長什麼樣 | 用在 |
 | 子母畫面 | 資訊卡占滿畫面、講者縮到右下角小視窗 | 04 家族、media、custom fullscreen |
 | 全幕 | 不透明整張蓋住、沒有小視窗 | 01、字卡動態 bg dark／light／accent |`;
 
+// 「需要我決定的事」是分章草稿各寫各的合起來的：同一件事問很多次，也混了寫給主代理的話（24 條裡講者問 6 次、章名問 5 次）。
+// 這裡整理成給作者看的短清單：問作者的（ask）去重、把段號和句號換成時間與白話；AI 自己能決定的（ai）另外放，作者不用回答。
+const TO_AI = /請主代理(?:決定|處理)|主代理決定|要對稱就告訴我|^(?:循環|重複)|是.*的重(?:複|講)|第二段.*是第一段的重複|測試(?:素材|循環)|未去重|不完全對稱/;
+const IS_SPEAKER = /(姓名|頭銜|name|titles).{0,12}(待確認|沒給|沒寫|未寫|還沒|沒有)|(待確認|沒給).{0,12}(姓名|頭銜)|講者[：:]\s*(?:還沒|本章未|待確認)/;
+const IS_CHAPTER = /章名/;
+const NO_PREFIX = /^(?:\*\*)?(?:\d+\.\s*)?/;
+const plainRefs = (text, cues = []) => {
+  const at = (n, end) => { const c = cues.find((x) => x.n === Number(n)); return c ? clock(end ? c.end : c.start).replace(/\.\d+$/, '') : null; };
+  return String(text)
+    .replace(/#(\d+)e?\s*[–-]\s*#?(\d+)e?/g, (m, a, b) => (at(a) && at(b, true) ? `${at(a)}–${at(b, true)}` : m))
+    .replace(/#(\d+)(e?)(?![\d@])/g, (m, n, e) => at(n, !!e) || m)
+    .replace(/\bn=(\d+)/g, (m, n) => at(n) || m);
+};
+const plainWords = (text) => String(text)
+  .replace(/請主代理問使用者[^。；]*[。；]?/g, '').replace(/，?請主代理問使用者/g, '').replace(/，?請主代理[^。；]*/g, '')
+  .replace(/(?<![:\d.])\d{2}[a-d]?\s+(?=(?:章節|下方|重點|一般|標題|講者|金句|關鍵|兩側|半版|全畫面|字卡|Step|QA|Tips|總結))/g, '')
+  .replace(/(金句|字卡)（\d{2}）/g, '$1').replace(/\s*\bx-[a-z][a-z-]*/g, '模板動畫').replace(/用 (?=重點字卡|一般字卡|標題條列|字卡)/g, '用')
+  .replace(/（?name、titles[^）。；]*）?/g, '').replace(/（ch\d+\.md[^）]*）/g, '').replace(/shared\/講者\.json/g, '講者設定')
+  .replace(/\s+([，。；：])/g, '$1').replace(/^[，。；：\s]+|[，；：\s]+$/g, '').trim();
+export function tidyDecide(list, { cues = [] } = {}) {
+  const ask = [], ai = [], chapters = new Set();
+  let speaker = false, chapterAt = -1;
+  const seen = new Set();
+  for (const raw of list) {
+    const d = String(raw ?? '').replace(NO_PREFIX, '').replace(/\*\*/g, '').trim();
+    if (!d || seen.has(d)) continue;
+    seen.add(d);
+    if (IS_CHAPTER.test(d) && /自取|取自|待確認|請確認|沒有 ## 章名/.test(d)) {
+      if (chapterAt < 0) { chapterAt = ask.length; ask.push(null); }
+      for (const m of d.matchAll(/「([^」]{1,16})」/g)) if (!/^第\s*\d+\s*章$/.test(m[1])) chapters.add(m[1]);
+      const tail = /(?:自取|取)[：:]\s*([^（(，。；]{2,16})/.exec(d) || /^章名[：:]\s*([^（(，。；]{2,16})(?=（)/.exec(d);
+      if (tail && !/講稿|待確認/.test(tail[1])) chapters.add(tail[1].trim());
+    } else if (IS_SPEAKER.test(d)) {
+      if (!speaker) { speaker = true; ask.unshift('講者的姓名與頭銜還沒給：跟我說你要用的姓名和頭銜（現在畫面上是示範人物，每一集都會用同一組）'); if (chapterAt >= 0) chapterAt++; }
+    } else if (TO_AI.test(d)) ai.push(plainRefs(d, cues));
+    else {
+      const t = plainWords(plainRefs(d, cues));
+      if (t && !ask.includes(t)) ask.push(t);
+    }
+  }
+  if (chapterAt >= 0) ask[chapterAt] = `這幾章的章名是 AI 取的，要改就告訴我${chapters.size ? `：${[...chapters].map((c) => `「${c}」`).join('、')}` : ''}`;
+  return { ask, ai };
+}
+
 export function renderStoryboard(ctx) {
   const { project, plan, items = new Map(), merged = {}, parts = [], voiceOnly = [], designs = new Map() } = ctx;
   const segs = (plan.scenes || []).slice();
@@ -139,12 +200,8 @@ export function renderStoryboard(ctx) {
     L.push(`| ${s.id} | ${cell(chapterOf(s))} | ${cell(cueRange(s, it))} | ${clock(it?.start)}–${clock(it?.end)} | ${layoutOf(it)} | ${cell(cardLabel(s, it))} | ${cell(s.story?.say || s.story?.idea || '—')} |`);
   }
   L.push('');
-  L.push('## 情境判定', '', '| 段 | 講解在講什麼 | SITUATIONS §3 哪一列 | 首選 | 為什麼不是動畫 |', '|---|---|---|---|---|');
-  for (const s of segs) {
-    const it = items.get(s.id);
-    const isAnim = s.type === 'custom';
-    L.push(`| ${s.id} | ${cell(s.story?.say || '—')} | ${cell(s.story?.row || (s.design ? '內容設計' : '—'))} | ${cell(cardLabel(s, it))} | ${isAnim || s.type === 'media' ? '—（做動畫）'.replace('—（做動畫）', s.type === 'media' ? '—（有素材）' : '—（做動畫）') : cell(s.story?.notAnim || '首選是字卡')} |`);
-  }
+  L.push('## 情境判定', '', '| 段 | 講解在講什麼 | 首選 | 為什麼這樣呈現 |', '|---|---|---|---|');
+  for (const s of segs) L.push(`| ${s.id} | ${cell(s.story?.say || '—')} | ${cell(cardLabel(s, items.get(s.id)))} | ${cell(s.story?.why || '—')} |`);
   L.push('');
   const designCount = segs.filter((s) => s.design).length;
   if (designCount) {
@@ -162,10 +219,15 @@ export function renderStoryboard(ctx) {
     L.push('');
   }
   L.push('## 需要我決定的事', '');
-  const decide = [...(merged.decide || [])];
-  if (!plan.outro) decide.push('結尾要不要配樂：要的話告訴我從哪一句起');
-  decide.forEach((d, i) => L.push(`${i + 1}. ${cell(d)}`));
+  const { ask, ai } = tidyDecide(merged.decide || [], { cues: ctx.cues });
+  if (!plan.outro) ask.push('結尾要不要配樂：要的話告訴我從哪一句起');
+  ask.forEach((d, i) => L.push(`${i + 1}. ${cell(d)}`));
   L.push('');
+  if (ai.length) {
+    L.push('### 給 AI 的備註（不用回答）', '');
+    ai.forEach((d) => L.push(`- ${cell(d)}`));
+    L.push('');
+  }
   L.push('### 金句候選（勾了才上，每集最多 6 則）', '', '| 候選 | 句號 | 原句 | 卡上文字（≤ 14 字） | 情緒（正／負／中） | 要不要 ☐ |', '|---|---|---|---|---|---|');
   (merged.quotes || []).forEach((q, i) => {
     const on = segs.some((s) => s.id === `q${String(i + 1).padStart(2, '0')}`);
@@ -182,7 +244,17 @@ export function applyStoryboard(md, plan, { scenes = [], specs = new Map() } = {
   const doc = parseStoryboard(md);
   const next = JSON.parse(JSON.stringify(plan));
   const byId = new Map((next.scenes || []).map((s) => [s.id, s]));
-  const changes = [], requests = [], unmatched = [];
+  const changes = [], requests = [], unmatched = [], answers = [];
+  // 作者在「需要我決定的事」的回答：不改 plan.json，印給 AI 照做
+  for (const sec of doc.sections) {
+    if (sec.id || !isDecideSection(sec)) continue;
+    let q = null;
+    for (const b of sec.blocks) {
+      if (b.type === 'heading') q = null;
+      else if (b.type === 'item' && b.ordered) q = [b.label, b.value].filter(Boolean).join('：');
+      else if (b.type === 'item' && (b.label === '回答' || b.label === '補充說明') && String(b.value).trim()) answers.push({ q: b.label === '回答' ? q : null, text: String(b.value).trim() });
+    }
+  }
   for (const sec of doc.sections) {
     if (!sec.id) continue;
     const seg = byId.get(sec.id);
@@ -242,7 +314,7 @@ export function applyStoryboard(md, plan, { scenes = [], specs = new Map() } = {
   }
   const cueOf = (s) => Number(String(s.from || s.at || '').match(/^#(\d+)/)?.[1] ?? 0);
   next.scenes = (next.scenes || []).map((s, i) => [s, i]).sort((a, b) => cueOf(a[0]) - cueOf(b[0]) || a[1] - b[1]).map(([s]) => s);
-  return { plan: next, changes, requests, unmatched, changed: changes.length > 0 };
+  return { plan: next, changes, requests, unmatched, answers, changed: changes.length > 0 };
 }
 
 // 鏡位腳本檔 work/designs/<id>.md：第一段「概念：」「畫面：」，後面一張 #### 動畫分鏡 表

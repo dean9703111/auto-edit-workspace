@@ -103,7 +103,7 @@ function overviewOf(sections) {
       if (b.type !== 'table' || !b.head.includes('一句話摘要')) continue;
       const at = (name) => b.head.indexOf(name);
       for (const r of b.rows) {
-        out[r.cells[at('段')]] = { time: r.cells[at('時間碼')] || '', layout: r.cells[at('版面')] || '', card: r.cells[at('卡片類型')] || '', summary: r.cells[at('一句話摘要')] || '' };
+        out[r.cells[at('段')]] = { time: r.cells[at('時間碼')] || '', layout: r.cells[at('版面')] || '', card: r.cells[at('卡片類型')] || '', summary: r.cells[at('一句話摘要')] || '', chapter: at('章') >= 0 ? r.cells[at('章')] || '' : '' };
       }
     }
   }
@@ -200,7 +200,23 @@ function setField(doc, lines, body) {
   return lines;
 }
 
-// body 的 op：text 改「畫面文字」那一行／cell 改一格要呈現的文字或金句勾選／field 設定想換成、音效、補充說明
+// 「需要我決定的事」的一項（數字清單）底下的回答：`   - 回答：…`，空的就拿掉那一行
+const ANSWER = /^\s+-\s*回答：(.*)$/;
+function setAnswer(doc, lines, body) {
+  const line = needInt(body.line, '要回答的那行');
+  const s = doc.sections.find((x) => isDecideSection(x) && x.blocks.some((b) => b.line === line));
+  const q = s?.blocks.find((b) => b.line === line);
+  if (q?.type !== 'item' || !q.ordered) throw fail('只有「需要我決定的事」的項目可以回答');
+  const has = ANSWER.exec(lines[line + 1] || '');
+  checkExpect(body, has ? has[1] : '');
+  const value = oneLine(body.text);
+  if (has && value) lines[line + 1] = `   - 回答：${value}`;
+  else if (has) lines.splice(line + 1, 1);
+  else if (value) lines.splice(line + 1, 0, `   - 回答：${value}`);
+  return lines;
+}
+
+// body 的 op：text 改「畫面文字」那一行／cell 改一格要呈現的文字或金句勾選／field 設定想換成、音效、補充說明／answer 回答「需要我決定的事」的一項
 export function applyStoryboardOp(doc, body) {
   const lines = doc.lines.slice();
   switch (body?.op) {
@@ -230,6 +246,8 @@ export function applyStoryboardOp(doc, body) {
     }
     case 'field':
       return setField(doc, lines, body);
+    case 'answer':
+      return setAnswer(doc, lines, body);
     default:
       throw fail('看不懂要改什麼');
   }

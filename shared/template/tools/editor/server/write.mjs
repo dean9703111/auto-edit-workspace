@@ -12,6 +12,7 @@
 import { replay, parseRef, refTime, RULES } from '../subtitles.mjs';
 import { visibleLen, richPlain, splitItem, parseAttrs, findSceneDef, findFxDef } from '../text.mjs';
 import { LOOK_LIMITS } from '../../lib/look.mjs';
+import { textFields } from '../../lib/storyboard-gen.mjs';
 
 export { visibleLen, richPlain };
 
@@ -20,7 +21,7 @@ export const LIMITS = Object.freeze({
   joinTypes: ['none', 'dip', 'punch'], enterExit: ['cut', 'fade', 'slide', 'zoom'],
   editKeys: ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins'], volumeKeys: ['voice', 'sfx', 'media'],
   joinKeys: ['at', 'type', 'dur'], gainKeys: ['from', 'to', 'db'],
-  segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'anchor'], segScene: ['slots'], segFx: ['vars'],
+  segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'out', 'speed', 'hold', 'retime', 'anchor'], segScene: ['slots'], segFx: ['vars'],
   bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme', 'frame'],
   themes: ['light', 'dark'],
   frame: { maxZoom: 2, upscaleWarn: 3.5, edge: 40 },   // 構圖：最多放大 2 倍；來源像素放大超過 3.5 倍會變軟；講者動作範圍離邊 < 40px＝切到手勢
@@ -193,6 +194,25 @@ export function checkSlots(id, orig = {}, next, sceneDef) {
   return errors;
 }
 
+// 模板動畫（type custom＋template）的文字：只有畫面上的字可以改（照 fill.json，和分鏡表同一份欄位），圖示、時間、結構都不能動
+export function checkTemplateSlots(id, seg, next, spec) {
+  const where = `段 ${id} 的 slots`;
+  if (!isObj(next)) return [`${where} 要是物件`];
+  if (!spec) return [`段 ${id}（模板 ${seg.template}）找不到規格 → 文字請 AI 改`];
+  const expected = JSON.parse(JSON.stringify(seg.slots || {}));
+  const errors = [];
+  for (const f of textFields(seg, { specs: new Map([[seg.template, spec]]) })) {
+    const p = f.path.slice(1);
+    const val = p.reduce((v, k) => (v == null ? v : v[k]), next);
+    if (typeof val !== 'string') { errors.push(`${where}.${p.join('.')} 要是文字`); continue; }
+    let v = expected;
+    for (const k of p.slice(0, -1)) v = v[k];
+    v[p[p.length - 1]] = val;
+  }
+  if (!errors.length && !same(expected, next)) errors.push(`${where} 只能改文字 → 結構、圖示和時間請寫進修改單給 AI`);
+  return errors;
+}
+
 export function checkVars(id, orig = {}, next, fxDef) {
   const where = `段 ${id} 的 vars`;
   if (!isObj(next)) return [`${where} 要是物件`];
@@ -223,7 +243,7 @@ export function sanitizeSegments(segments, plan, ctx = {}) {
     const seg = byId.get(id);
     if (!seg) { errors.push(`找不到段「${id}」→ plan.json 裡沒有這個 id`); continue; }
     const type = seg.type ?? 'scene';
-    const allowed = [...LIMITS.segCommon, ...(type === 'media' ? LIMITS.segMedia : []), ...(type === 'scene' ? LIMITS.segScene : []), ...(type === 'fx' ? LIMITS.segFx : [])];
+    const allowed = [...LIMITS.segCommon, ...(type === 'media' ? LIMITS.segMedia : []), ...(type === 'scene' || (type === 'custom' && seg.template) ? LIMITS.segScene : []), ...(type === 'fx' ? LIMITS.segFx : [])];
     if (!isObj(v)) { errors.push(`段 ${id} 要是物件`); continue; }
     const set = {}, del = [];
     for (const [k, val] of Object.entries(v)) {
@@ -263,25 +283,47 @@ export function sanitizeSegments(segments, plan, ctx = {}) {
           else set[k] = val;
         } else errors.push(`段 ${id} 的 ${k} 要是 "#N"、"#Ne"、"#N+秒"、"#N@詞" 或秒數，現在是 ${JSON.stringify(val)}`);
       } else if (k === 'in') {
-        if (!isNum(val) || val < 0) errors.push(`段 ${id} 的 in 要是 0 以上的秒數，現在是 ${JSON.stringify(val)}`);
+        if (val === null) del.push('in');
+        else if (!isNum(val) || val < 0) errors.push(`段 ${id} 的 in 要是 0 以上的秒數，現在是 ${JSON.stringify(val)}`);
         else set.in = r2(val);
+      } else if (k === 'out') {
+        if (val === null) del.push('out');
+        else errors.push(`段 ${id} 的 out 只能拿掉（null）：剪輯台用 speed、hold、retime 表示速度`);
+      } else if (k === 'speed') {
+        if (val === null) del.push('speed');
+        else if (!isNum(val) || val < 0.5 || val > 4) errors.push(`段 ${id} 的 speed 要是 0.5–4，現在是 ${JSON.stringify(val)}`);
+        else set.speed = val;
+      } else if (k === 'hold') {
+        const srcDur = ctx.mediaDur?.(seg.src);
+        if (val === null) del.push('hold');
+        else if (!isNum(val) || val < 0 || (srcDur != null && val > srcDur + 0.05)) errors.push(`段 ${id} 的 hold 要是素材裡的秒數，現在是 ${JSON.stringify(val)}`);
+        else set.hold = val;
+      } else if (k === 'retime') {
+        if (val === null) { del.push('retime'); continue; }
+        const srcDur = ctx.mediaDur?.(seg.src);
+        const okShape = Array.isArray(val) && val.length >= 2 && val.every((p) => isObj(p) && (typeof p.at === 'string' || isNum(p.at)) && isNum(p.src) && p.src >= 0);
+        if (!okShape) errors.push(`段 ${id} 的 retime 要是 [{ "at": "+秒" 或 "#N@詞", "src": 秒數 }, …]，至少 2 點`);
+        else if (val.some((p, i) => i > 0 && p.src < val[i - 1].src - 1e-6)) errors.push(`段 ${id} 的 retime：錄影不能倒帶，src 要一路變大`);
+        else if (srcDur != null && val.some((p) => p.src > srcDur + 0.05)) errors.push(`段 ${id} 的 retime：超過素材長度 ${r2(srcDur)} 秒`);
+        else set.retime = val;
       } else if (k === 'anchor') {
         if (val === null) del.push('anchor');
         else if (typeof val !== 'string' || !val.trim() || val.length > 40) errors.push(`段 ${id} 的 anchor 要是 1–40 字的文字，或 null（拿掉）`);
         else set.anchor = val;
       } else if (k === 'slots') {
-        const e = checkSlots(id, seg.slots || {}, val, findSceneDef(ctx.schema?.scenes, seg.scene));
+        const e = type === 'custom' ? checkTemplateSlots(id, seg, val, ctx.schema?.custom?.find((x) => x.template === seg.template)) : checkSlots(id, seg.slots || {}, val, findSceneDef(ctx.schema?.scenes, seg.scene));
         if (e.length) errors.push(...e); else set.slots = val;
       } else if (k === 'vars') {
         const e = checkVars(id, seg.vars || {}, val, findFxDef(ctx.schema?.fx, seg.fx));
         if (e.length) errors.push(...e); else set.vars = val;
       }
     }
-    // media：改了 from／to／in 就檢查段長與素材長度
-    if (type === 'media' && ('from' in set || 'to' in set || 'in' in set)) {
+    // media：改了 from／to／in／速度就檢查段長與素材長度
+    if (type === 'media' && ['from', 'to', 'in', 'speed', 'hold', 'retime'].some((k) => k in set)) {
       if ('to' in set && 'duration' in seg) del.push('duration');
       const next = { ...seg, ...set };
-      if (del.includes('duration')) delete next.duration;
+      for (const k of del) delete next[k];
+      if (next.retime != null && ['in', 'out', 'speed', 'hold'].some((k) => next[k] != null)) errors.push(`段 ${id}：retime 和 in／out／speed／hold 擇一`);
       const rg = segRange(next, cues);
       if (rg) {
         const len = rg[1] - rg[0];
@@ -289,7 +331,8 @@ export function sanitizeSegments(segments, plan, ctx = {}) {
         const srcDur = ctx.mediaDur?.(seg.src);
         const speed = isNum(next.speed) ? next.speed : 1;
         const start = isNum(next.in) ? next.in : 0;
-        if (srcDur != null && start + len * speed > srcDur + 0.05) errors.push(`段 ${id}：素材從 ${r2(start)} 秒開始播 ${r2(len)} 秒${speed !== 1 ? `（×${speed}）` : ''}，超過素材長度 ${r2(srcDur)} 秒 → 縮短這段或把起點往前`);
+        // retime、hold 的素材位置已經在上面檢查過（素材不夠就停在最後一格）
+        if (next.retime == null && next.hold == null && srcDur != null && start + len * speed > srcDur + 0.05) errors.push(`段 ${id}：素材從 ${r2(start)} 秒開始播 ${r2(len)} 秒${speed !== 1 ? `（×${speed}）` : ''}，超過素材長度 ${r2(srcDur)} 秒 → 縮短這段或把起點往前`);
         if (start < 0) errors.push(`段 ${id} 的 in 不能小於 0`);
       }
     }

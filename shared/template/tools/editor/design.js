@@ -26,7 +26,7 @@ function renderGenerationStatus() {
 }
 async function request(url, body) {
   const r = await fetch(url, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const incompatible = r.status === 404 ? '剪輯服務仍是舊版，請重新啟動服務後按「重新連接」。目前的構圖調整會保留。' : '剪輯服務的回應格式不正確，請重新連接後再試。';
+  const incompatible = r.status === 404 ? '剪輯台仍是舊版，請重新啟動服務後按「重新連接」。目前的構圖調整會保留。' : '剪輯台的回應格式不正確，請重新連接後再試。';
   if (!r.headers.get('content-type')?.includes('application/json')) throw new Error(incompatible);
   let data;
   try { data = await r.json(); } catch { throw new Error(incompatible); }

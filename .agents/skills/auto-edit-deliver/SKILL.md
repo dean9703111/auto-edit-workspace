@@ -31,7 +31,7 @@ version: 0.2.0
 node shared/template/tools/deliver.mjs --project projects/<專案> --said "使用者原話"
 ```
 
-一條做完：重新產生 → 4 秒測試片段確認有影音 → 整支（`--quality looks`，成功才換成 `output/final.mp4`，失敗不動舊檔）→ `qc.mjs final`。停點 ④ 時已經在背景先 render 的，內容沒變就直接接手，只跑驗收；內容改過就取消舊的重來。打開 `output/qc/qc-sheet.jpg` 掃一眼。`qc.mjs final` 有 ⚠ 想看那一段：`node shared/template/tools/qc.mjs observe --project projects/<專案> --from <秒> --to <秒>`。
+一條做完：重新產生 → 4 秒測試片段確認有影音 → 整支（`--quality looks`，成功才換成 `output/final.mp4`，失敗不動舊檔）→ `qc.mjs final`。停點 ④ 時已經在背景先 render 的，內容沒變就直接接手，只跑驗收。上一支（完成影片或背景先 render 的）只差幾段時，工具只重畫改到的時間窗、接回去（印「只重畫改到的 N 秒」，通常不到一分鐘）；不是局部改動印一行「整支重新輸出：原因」再整支（`--force` 也是整支），都不用另外下指令。打開 `output/qc/qc-sheet.jpg` 掃一眼。`qc.mjs final` 有 ⚠ 想看那一段：`node shared/template/tools/qc.mjs observe --project projects/<專案> --from <秒> --to <秒>`。
 完成判準：印 `✔ 完成影片`；驗收 0 個 ✖（包括沒有「沒有講者小視窗」的 ✖）；每個 ⚠ 寫「刻意」或「要修」。
 常見錯誤：✖ 長度不符 → plan.json 比 index.html 新，再跑一次；`✖ s21 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…` → 不要交、不要改 plan.json，照 → 跑 `verify-rough` 重做初剪。
 
@@ -66,7 +66,7 @@ node shared/template/tools/capcut.mjs status --project projects/<專案> --wait
 
 ## 工具呼叫預算
 
-最多 4 次（AGENTS.md「階段預算」）；超過等待上限再跑同一條不算。超過就停下來回報卡在哪。
+最多 4 次；超過等待上限再跑同一條不算。超過就停下來回報卡在哪。
 
 ## 回報格式
 

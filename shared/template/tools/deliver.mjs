@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { pathsFrom } from './build.mjs';
 import { runJob, jobState, clearJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
 import {
-  runDeliver, runPrerender, cancelPrerender, prerenderInfo, prerenderBlocked, contentFingerprint, finalIsCurrent, lockHolder, killTree, reapRender,
+  runDeliver, runPrerender, cancelPrerender, prerenderInfo, prerenderBlocked, prerenderCanPatch, contentFingerprint, finalIsCurrent, lockHolder, killTree, reapRender,
   cliDeps, newJob, deliverPaths, QUALITY, FPS, PRERENDER,
 } from './lib/deliver.mjs';
 
@@ -25,7 +25,8 @@ const HELP = `輸出完成影片（一條指令跑完測試片段、整支、驗
 等待：前景最多等 ${DEFAULT_WAIT} 秒（--wait <秒> 可改）；超過時背景繼續，再跑一次同一條指令會接著等，不會重跑。進度每 10% 一行，render 全文在 work/render.log。
 選項： --quality looks（預設）； --fps 30（預設）； --force（內容沒變也重新 render）； --said "<使用者原話>"（寫進停點紀錄）
 預先 render：--workers <N>（預設 ${PRERENDER.workers}）。內容的指紋（plan.json、rough.srt、合成、kit、assets）相同且做完 → 直接搬成 final.mp4、跑驗收；
-相同還在跑 → 接著等；不同 → 取消重來。使用者存檔後它會自己收掉（剪輯台照常存檔，不會被擋）；再下一次 --prerender 才重開。失敗不影響正式輸出。
+相同還在跑 → 接著等；只改了幾段 → 跑完自動補上；其他改動 → 取消重來（kit、片長、字幕樣式、版式、主題這類改動使用者存檔後它會自己收掉，再下一次 --prerender 才重開）。失敗不影響正式輸出。
+只改了幾段時，輸出和預先 render 都只重畫改到的時間窗、接回上一支（通常不到一分鐘）；不是局部改動就印一行原因、整支重新 render。--force 一律整支。
 記憶體 8 GB 以下、磁碟剩不到 20 GB 不跑。`;
 
 const VALUE_FLAGS = ['project', 'template', 'quality', 'fps', 'wait', 'workers', 'said'];
@@ -61,7 +62,7 @@ const BUILD_LINE = /^(?:人聲響度|音效比例|剪接點微淡化|講者調�
 export const buildSummary = (log) => String(log).split(/\r?\n/).filter((l) => BUILD_LINE.test(l));
 
 const noMark = (s) => String(s).replace(/^✖\s*/, '');
-const SOURCE = { render: '這次 render', prerender: '預先 render（沒有重新 render）', same: '上次輸出的（內容沒變，沒有重新 render）' };
+const SOURCE = { render: '這次 render', incremental: '只重畫改到的地方，接回上一支', prerender: '預先 render（沒有重新 render）', same: '上次輸出的（內容沒變，沒有重新 render）' };
 
 export function finishLines(P, job, fileStat) {
   const F = deliverPaths(P.project), L = [''];
@@ -124,16 +125,17 @@ export async function startPrerender(P, flags, { log = console.log, argv = proce
   const info = prerenderInfo(P);
   if (info.state === 'running') {
     if (!info.fingerprint || info.fingerprint === fp) { log(`預先 render 已經在跑了${info.percent != null ? `（${info.percent}%）` : ''}，內容沒變，不用重開`); return 0; }
+    if (prerenderCanPatch(P, opts)) { log(`預先 render 還在跑${info.percent != null ? `（${info.percent}%）` : ''}：只改了幾段，跑完會自動補上，不用重開`); return 0; }
     const { survivors } = await cancelPrerender(P);
     log(`內容改過了：取消舊的預先 render${survivors.length ? `（⚠ ${survivors.length} 個行程收不掉：${survivors.join('、')}）` : ''}，重新開始`);
-  } else if (info.state === 'done' && info.fingerprint === fp) { log('預先 render 已經做好了，輸出時直接用'); return 0; } else {
-    // 上一次留下的狀態（失敗、內容改過）：清掉重來
+  } else if (info.state === 'done' && info.fingerprint === fp) { log('預先 render 已經做好了，輸出時直接用'); return 0; } else if (info.state !== 'done' || !prerenderCanPatch(P, opts)) {
+    // 上一次留下的狀態（失敗、內容改過）：清掉重來；做好了而且只差幾段就留著，下面補上
     await cancelPrerender(P);
   }
   clearJob(P.project, 'prerender');
   await runJob({ project: P.project, name: 'prerender', argv, waitSec: 0, log, run: () => 0 });
   log(`✔ 在背景預先 render（低優先權、${flags.workers || PRERENDER.workers} 個 worker，全文 log：${relTo(deliverPaths(P.project).log)}）`);
-  log('→ 不用等它，照常停在停點 ④。使用者說「輸出」時跑 deliver.mjs 就會接手；內容改過會自動取消重來');
+  log('→ 不用等它，照常停在停點 ④。使用者說「輸出」時跑 deliver.mjs 就會接手；只改幾段會自動補上，其他改動會自動取消重來');
   return 0;
 }
 
@@ -179,7 +181,7 @@ async function main() {
     if (st.state === 'done' && st.reported === false && !finalIsCurrent(P, contentFingerprint(P, { quality: flags.quality || QUALITY, fps: flags.fps ? Number(flags.fps) : FPS }))) clearJob(P.project, 'deliver');
   }
   const waitSec = flags.wait != null ? Number(flags.wait) : DEFAULT_WAIT;
-  const code = await runJob({ project: P.project, name, run: () => deliverChild(P, flags), waitSec });
+  const code = await runJob({ project: P.project, name, run: () => deliverChild(P, flags), waitSec, retryFailed: !!flags.force });
   if (code === STILL_RUNNING) {
     if (waitSec <= 0) console.log('→ 下一步：再跑一次同一條指令會接著等，不會重跑');   // job.mjs 等過才印這一行
     console.log(`node ${relTo(SELF)} ${process.argv.slice(2).map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ')}`);

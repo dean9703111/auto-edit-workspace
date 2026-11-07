@@ -16,6 +16,24 @@ version: 0.2.0
 
 **先記住三條**：查規格先看 `work/分鏡素材/`，沒有才照它最後一節讀那幾行，不要整份讀 USAGE、SITUATIONS、BEATS。秒數 build 自己算，寫 `#N@詞` 就好，不要查 `transcript.json`、不要寫 script。分鏡表由工具產生，不要手寫。
 
+## 畫面的三條路與硬規則
+
+省下來的時間都花在第 2 條。
+
+| 路 | 什麼時候 | 怎麼做 |
+|---|---|---|
+| 1. 錄影、圖片 | 有對得上講解的素材 | media 段（`auto-edit-screen`） |
+| 2. **內容設計動畫** | 故事、比喻、因果轉折、抽象道理、最想讓人記住的畫面。**每 2 分鐘至少 1 段（建議初值）** | 設計師子代理從內容出發：先寫鏡位腳本，③ 確認後從空白畫布做。**不參考、不複製模板畫面** |
+| 3. 模板 | 條列、流程、數字、字卡 | plan.json 寫 `template`／`scene`＋`slots`，工具直接產出，不用改 HTML、不用工人 |
+
+- 構圖定之前不做分鏡；卡片和字幕不擋臉和手勢；「只有聲音」的區間一定被 media 段或不透明全幕蓋住（找不到對得上的素材，就做不透明的全幕動畫）。
+- 章節角標由 build 自動常駐；沒有 01 的短片，章節起點是那一章的 02 段；講稿有 `###` 小節由 `--merge-drafts` 自動寫 `sections`。
+- 子母畫面一定有講者小視窗；只有純聲音素材的區間才沒有，那些全畫面段 build 自動換全寬版型（沒有講者的句子列在 `chNN.md` 開頭，不能放字卡 06–15）。`--check` 印子母畫面的 `pip` 有空的，先跑 `media.mjs verify-rough`，不要改版面繞過去。
+- 卡片主文字、每條項目、每個動畫站的出現時間＝講到那個詞的時間：綁 `#N@詞`，差 ≤ 0.5 秒；`--check` 的「文字對時」✖ 全修、⚠ 逐項說明。
+- 音效只用 `shared/sfx/`，不下載素材、不登入第三方服務；回報貼 build 印的「人聲響度…」「音效比例…」「剪接點微淡化…」「講者調光…」「講者瘦臉…」「結尾配樂…」六行（`--review` 會印），「音效稀疏」⚠ 照它列的段補到沒有。
+- 調光由 build 套；瘦臉要跑 `look.mjs run`。
+- 構圖：構圖台拖框，最多放大 2 倍；建議框＝1.0／1.15／1.3 裡不切到手勢、每個像素放大 ≤ 3.5 倍的最大的；直式另看頭頂 y 380–520、下巴 ≤ 860。
+
 ## 開始前
 
 | 條件（看得到的事實） | 做法 |
@@ -44,7 +62,7 @@ node shared/template/tools/look.mjs status --project projects/<專案>
 node shared/template/tools/media.mjs scan --project projects/<專案>
 ```
 
-`media.mjs prep` 跑過就已經有 `work/media/index.md`，不用重掃。每支錄影、每批圖片（12 張一頁）派一個子代理看 sheet、寫筆記 `work/media/notes/<檔名>.json`，同一則回覆一次派出（`auto-edit-screen` 步驟 1）。之後分章寫草稿時就知道素材能配哪裡，不用再看一次。
+`media.mjs prep` 跑過就已經有 `work/media/index.md`，不用重掃。每支錄影、每批圖片（12 張一頁）派一個子代理看那支的 `work/media/<檔名>/events.md` 和 sheet、寫筆記 `work/media/notes/<檔名>.json`，同一則回覆一次派出（`auto-edit-screen` 步驟 1）。之後分章寫草稿時就知道素材能配哪裡，不用再看一次。
 完成判準：每支錄影、每批圖片都有筆記。
 常見錯誤：沒有子代理 → 自己一支一支寫；素材很多就先寫跟講稿有關的。
 
@@ -66,7 +84,7 @@ node shared/template/tools/qc.mjs speaker --project projects/<專案> --write
 node shared/template/tools/build.mjs --project projects/<專案> --scaffold
 ```
 
-「調好了」：構圖台已寫好 `frame`，不要再改；「用建議的」：先跑 `node shared/template/tools/qc.mjs framing --project projects/<專案> --write`。第 1 行把建議框寫進 `speakerBox`：**一定要看一次** `work/場地照-動作範圍.jpg`，手勢的橘色跑出青框、或下緣壓到桌面倒影，就照圖改（USAGE.md 2.2）。第 2 行產生 `work/分鏡素材/`，順便在背景先處理底片。
+「調好了」：構圖台已寫好 `frame`，不要再改；「用建議的」：先跑 `node shared/template/tools/qc.mjs framing --project projects/<專案> --write`。第 1 行把建議框寫進 `speakerBox`（已含手勢範圍，不用開圖確認）；之後拼圖看到卡片擋到手勢或臉，才照 `work/場地照-動作範圍.jpg` 改（USAGE.md 2.2）。第 2 行產生 `work/分鏡素材/`，順便在背景先處理底片。
 完成判準：plan.json 有 `speakerBox`；`work/分鏡素材/共用.md` 存在。
 常見錯誤：`8 格之間幾乎沒有動作` → 講者沒入鏡或只有聲音：只有聲音就跳過 speaker；有人就看 8 格總表手動框。
 
@@ -76,7 +94,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --scaffold
 node shared/template/tools/build.mjs --project projects/<專案> --merge-drafts
 ```
 
-`--scaffold` 切了幾份就派幾個子代理（派工照 `references/chapter-worker.md`），**同一則回覆一次全部派出**，超過 8 份分批；只有 1 份就自己寫。子代理各寫 `work/drafts/chNN.json`、各自驗過。全部回來才跑上面這條合併。整集看一次：開場三拍、前後呼應、判決句（`SITUATIONS.md` §6），要改就改那一份草稿再合併。
+影片 5 分鐘以上先派一個導演寫視覺語言（`references/director.md`），回來再派分章。`--scaffold` 切了幾份就派幾個子代理（派工照 `references/chapter-worker.md`），**同一則回覆一次全部派出**，一次最多 4 個，超過就分批；只有 1 份就自己寫。子代理各寫 `work/drafts/chNN.json`、各自驗過。全部回來才跑上面這條合併。整集看一次：開場三拍、前後呼應、判決句（`SITUATIONS.md` §6），要改就改那一份草稿再合併。
 完成判準：`--merge-drafts` 印「通過」；內容設計動畫達到建議數量（每 2 分鐘至少 1 段，品質靠這些段），不夠就回頭請那幾章提名。
 常見錯誤：`✖ …` → 照 → 改那一份 `work/drafts/chNN.json`，再合併；不要直接改 plan.json 的 scenes，下次合併會蓋掉。
 
@@ -86,7 +104,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --merge-drafts
 ls projects/<專案>/work/briefs/
 ```
 
-每段派一個設計師子代理，同一則回覆一次全部派出（派工照 `.agents/skills/auto-edit-motion/references/design-brief.md`「階段一」）。他們從內容出發寫 `work/designs/<段>.md`：這段真正要傳達什麼、用什麼畫面、每句話對應什麼。**這不是套模板**，不要叫他們參考模板。
+每段派一個設計師子代理，同一則回覆一次全部派出（派工照 `.agents/skills/auto-edit-motion/references/design-script.md`「」）。他們從內容出發寫 `work/designs/<段>.md`：這段真正要傳達什麼、用什麼畫面、每句話對應什麼。**這不是套模板**，不要叫他們參考模板。
 完成判準：每個提名的段都有 `work/designs/<段>.md`，表頭一字不差。
 常見錯誤：概念讀起來像「標題＋幾條文字」→ 退回：那是模板的事，要有具體的場景或比喻。
 
@@ -126,7 +144,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --apply-storybo
 
 ## 自我核對
 
-- [ ] 停點 ② 之前沒寫分鏡；`frame` 寫對（1.0 倍不寫）；speakerBox 看過疊影圖
+- [ ] 停點 ② 之前沒寫分鏡；`frame` 寫對（1.0 倍不寫）；plan.json 有 speakerBox
 - [ ] 只有聲音的區間都被蓋住；子母畫面段的 `pip` 都不是空的
 - [ ] 內容設計動畫有達到建議數量，提名的是真的值得設計的時刻
 - [ ] 模板動畫段都是填資料（`template`＋`slots`），沒有手改 HTML
@@ -147,7 +165,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --apply-storybo
 
 ## 工具呼叫預算
 
-到停點 ② 最多 6 次；② 之後：量講者框 3 次、每份草稿 15 次（子代理）、主代理合併到停點 ③ 10 次、每段鏡位腳本 6 次（子代理）（AGENTS.md「階段預算」）。超過就停下來回報卡在哪。
+到停點 ② 最多 6 次；② 之後：量講者框 3 次、每份草稿 15 次（子代理）、主代理合併到停點 ③ 10 次、每段鏡位腳本 6 次（子代理）。超過就停下來回報卡在哪。
 
 ## 回報格式
 
@@ -165,4 +183,5 @@ node shared/template/tools/build.mjs --project projects/<專案> --apply-storybo
 
 ## 什麼時候讀 references/
 
-- `references/chapter-worker.md`：步驟 5 派分章草稿時才讀。
+- `references/director.md`：你是導演時才讀。
+- `references/chapter-worker.md`：你是寫分章草稿的子代理時才讀（主代理派工不用讀，工具會印派工訊息）。

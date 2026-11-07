@@ -23,7 +23,7 @@
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
 | 字型 | 3 套（Noto Sans TC、Google Sans Flex、等寬的 JetBrains Mono） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
 | 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處） | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
-| 範例專案 | 原始講解 1 支、講稿、場地照；直式版 1 支 | `projects/example/`、`projects/example-portrait/` | 第一次照著做就有完成影片 |
+| 範例專案 | 原始講解 1 支、講稿、場地照 | `projects/example/`（`projects/` 底下只有它進版控，其他專案都不進） | 第一次照著做就有完成影片 |
 
 ## 工具
 
@@ -32,7 +32,7 @@
 | 工具 | 做什麼 |
 |---|---|
 | `build.mjs` 完成影片產生器 | 一個指令組好字幕、資訊卡、情境動畫、子母畫面、音效；人聲自動調到 YouTube 的響度標準（−14 LUFS），剪接點自動消爆音。`--check` 檢查字數、版面、文字出現時間對不對得上講到的詞。排分鏡的流程也在這裡：`--scaffold` 切章、`--merge-drafts` 合併草稿、`--storyboard` 產生分鏡表、`--apply-storyboard` 套回修改、`--review` 定稿 |
-| `media.mjs` 素材 | `prep` 一條做到剪輯清單、`rough` 一條做到初剪與字幕（長片在背景跑）；裡面的單獨指令：把多支影片、錄音接成主軌（補錄可以只取一段插進旁白中間）；`ng-scan` 把逐字稿對到講稿，列出重講的地方和章節起點；`ng-snap` 把 NG 對齊停頓並印出 auto-editor 指令；`srt-align` 把字幕照講稿排成完整語句並對好時間（舊流程 `srt-split`、`snap-srt`）；`cutpoints` 算剪接點；掃描螢幕錄影與圖片，產生縮圖總表讓 AI 配對、讀座標 |
+| `media.mjs` 素材 | `prep` 一條做到剪輯清單、`rough` 一條做到初剪與字幕（長片在背景跑）；裡面的單獨指令：把多支影片、錄音接成主軌（補錄可以只取一段插進旁白中間）；`ng-scan` 把逐字稿對到講稿，列出重講的地方和章節起點；`ng-snap` 把 NG 對齊停頓並印出 auto-editor 指令；`srt-align` 把字幕照講稿排成完整語句並對好時間（舊流程 `srt-split`、`snap-srt`）；`cutpoints` 算剪接點；`scan` 掃描螢幕錄影與圖片：每支錄影一份事件表（切頁、開視窗、等待、捲動，`work/media/<檔名>/events.md`）和縮圖總表，讓 AI 配對、讀座標 |
 | `status.mjs` 進度 | 換 session 說「繼續」時看做到哪、下一步；`--timeline` 列出時間花在哪 |
 | `caps.mjs` 能力 | 這台電腦能用哪些生圖與影片工具（只檢查、不安裝） |
 | `audit.mjs` 版面量測 | 在瀏覽器裡把每段動畫跳到中點與完成態，量出文字撐破、被裁掉、壓到字幕或子母畫面、擋到講者；`--shots` 存截圖 |
