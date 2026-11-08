@@ -15,6 +15,10 @@
  *   node shared/template/tools/build.mjs --project projects/<專案> --storyboard [--only s05,s12]   build＋截圖＋產生 work/storyboard.md，停在停點 ③
  *   node shared/template/tools/build.mjs --project projects/<專案> --apply-storyboard [--said "使用者原話"]   把網頁改的字、音效、金句套回 plan.json，記 ③ 通過
  *   node shared/template/tools/build.mjs --project projects/<專案> --review   build＋audit＋完成態拼圖，背景先 render，停在停點 ④（內容沒變的段沿用上次的量測和截圖；--no-reuse 全部重做）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --autofix [--only s05,s12]
+ *                                                     工具知道答案的 ⚠／✖ 自動改進 plan.json（文字對時、小重疊、清單第一項比標題早、≤ 3 秒的空檔、停留太短、音效太密；
+ *                                                     一處一處試、重跑檢查，沒有變好就退回；改之前備份 plan.json.bak-autofix-<時間>）。--merge-drafts、--apply-storyboard 會自動跑；
+ *                                                     回饋輪只修自己這輪改的段：加 --only（別段是使用者在剪輯台改過的，不能動）。--keep-sfx s05：這幾段的音效不拿掉
  *   --table：--check、build 印完整的逐段表（超過 30 段預設省略）
  *   node shared/template/tools/build.mjs --project projects/<專案> --test 41,4
  *                                                     另外產生 compositions/test-clip.html：41 秒起的 4 秒
@@ -58,6 +62,7 @@ import { buildCaptions, captionWarnings } from './lib/captions.mjs';
 import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
 import { buildMain, buildPreview, KIT_LINKS, withTheme } from './lib/main.mjs';
 import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, encodeRetime, redactImage, blackDetect, extractFrames, rawFrame, writeJpg, transcriptFresh } from './lib/ff.mjs';
+import { speechPauses } from './lib/speech.mjs';
 import { hfShim } from './lib/hf.mjs';
 import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
@@ -68,7 +73,9 @@ import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
-import { runScaffold, checkDraft, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd } from './lib/flow.mjs';
+import { runScaffold, checkDraft, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan } from './lib/flow.mjs';
+import { autofixPlan, summaryLines } from './lib/autofix.mjs';
+import { writeAtomic } from './lib/atomic.mjs';
 import { jobState, runJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
 import { materializeFills } from './lib/custom-fill.mjs';
 
@@ -81,7 +88,7 @@ const customPreview = fs.existsSync(CUSTOM_PREVIEW) ? await import(pathToFileURL
 const TEST_FILE = 'compositions/test-clip.html';
 const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
 const OUTPUT_DIRS = ['output', path.join('output', 'test-clips'), path.join('output', 'qc')];
-const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'said', 'spec', 'icons', 'words', 'show', 'wait'];
+const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx'];
 
 export function parseArgs(argv) {
   const flags = {};
@@ -93,7 +100,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut'].includes(k)) flags[k] = true;
+    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'autofix'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -381,6 +388,7 @@ export function runGallery(templateDir, { only = null } = {}) {
 // 不比 rough.mp4 舊、最後一個詞和 rough.srt 最後一句差 ≤ 2 秒才掛上 cues.words（#N@詞 用真實時間）；否則記原因在 cues.wordsWhy
 export function attachWords(cues, { transcript, video = null } = {}) {
   cues.approx = new Set();
+  cues.voiceMoved = new Set();
   if (!transcript || !fs.existsSync(transcript)) { cues.wordsWhy = '沒有 work/transcript.json（rough.mp4 的詞級逐字稿）'; return cues; }
   let words;
   try { words = JSON.parse(fs.readFileSync(transcript, 'utf8')); } catch { cues.wordsWhy = 'work/transcript.json 不是合法的 JSON'; return cues; }
@@ -401,6 +409,8 @@ function loadInputs(P) {
   const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
   if (!cues.length) throw new Error(`${rel(P.srt)} 讀不到任何字幕句（格式要是 SRT）→ 跑 media.mjs rough --again 重新產生 work/rough.srt`);
   attachWords(cues, { transcript: path.join(path.dirname(P.srt), 'transcript.json'), video: P.video });
+  // 說話中的停頓（rough.mp4 量一次、快取）：#N@詞 落在停頓裡就對到開口（lib/time.mjs）
+  if (P.video && fs.existsSync(P.video)) { const sp = speechPauses(P.video, path.join(P.out, '.cache', 'speech-pauses.json')); if (sp) cues.pauses = sp.pauses; }
   return { plan, cues };
 }
 
@@ -574,7 +584,62 @@ function prepareMedia(items, out, log) {
   return made;
 }
 
-export function build(flags, { log = console.log, delegateEncode = false } = {}) {
+// --autofix：同一份輸入（影片長度、只有聲音的區間、版式、字幕）反覆檢查改過的 plan，不寫檔。
+// 情境動畫段（模板填好的、內容設計動畫）由 materializeFills 補在段上的 src、layout 與標記照段 id 帶過去；#N@詞 用字數估的清單每次重算
+function checkerOf({ base, filled, speaker, cues }) {
+  const fill = new Map((filled.scenes || []).filter((s) => s?.type === 'custom' && s.id).map((s) => [s.id, s]));
+  return (pl) => {
+    const plan = structuredClone(pl);
+    for (const s of plan.scenes || []) {
+      const f = s?.type === 'custom' ? fill.get(s.id) : null;
+      if (!f) continue;
+      if (f.src !== undefined) s.src = f.src;
+      if (s.layout == null && f.layout != null) s.layout = f.layout;
+      for (const k of ['__fillErrors', '__sheet', '__blank']) if (f[k] !== undefined) Object.defineProperty(s, k, { value: f[k], enumerable: false, configurable: true });
+    }
+    cues.approx = new Set();
+    cues.voiceMoved = new Set();
+    const res = resolvePlan({ ...base, plan });
+    const spk = speakerIssues(speaker, res);
+    return { errors: [...spk.errors, ...res.errors], warnings: [...spk.warnings, ...res.warnings], res };
+  };
+}
+
+// --autofix：lib/autofix.mjs 的機械修法寫回 plan.json（只有真的改了才備份、寫檔）。
+// 寫回之前 plan.json 被別人改過（剪輯台剛好存檔）就不寫：不能蓋掉使用者的修改
+// --autofix --json：不寫檔，stdout 印 { fixes, plan }（--check-draft 用：草稿先在暫存檔修掉，只回報剩下要自己改的）
+export function autofixCmd(P, flags, { log = console.log } = {}) {
+  if (flags.json) { const out = log; log = () => {}; const r = autofixDry(P, flags); out(JSON.stringify(r)); return r.error ? 1 : 0; }
+  const raw = fs.readFileSync(P.plan, 'utf8');
+  let plan;
+  try { plan = JSON.parse(raw); } catch (e) { log(`✖ ${rel(P.plan)} 不是合法的 JSON：${e.message} → 修好再跑`); return 1; }
+  if (!Array.isArray(plan.scenes) || !plan.scenes.length) { log('自動修正：plan.json 還沒有段落，略過'); return 0; }
+  const list = (v) => (v ? String(v).split(',').map((s) => s.trim()).filter(Boolean) : null);
+  const { check } = build({ ...flags, check: true, json: false }, { log: () => {}, resolver: true });
+  const out = autofixPlan(plan, check, { only: list(flags.only), keepSfx: list(flags['keep-sfx']) || [] });
+  for (const l of summaryLines(out.fixes)) log(l);
+  if (!out.fixes.length) return 0;
+  if (fs.readFileSync(P.plan, 'utf8') !== raw) { log('⚠ plan.json 在自動修正途中被改過（剪輯台存檔？），這次沒有寫回 → 再跑一次 build.mjs --autofix'); return 1; }
+  const indent = (raw.match(/\n([ \t]+)"/) || [])[1] || '  ';
+  const nl = raw.includes('\r\n') ? '\r\n' : '\n';
+  const bak = backupPlan(P.plan, 'autofix');
+  writeAtomic(P.plan, `${JSON.stringify(out.plan, null, indent).replace(/\n/g, nl)}${nl}`);
+  log(`（改之前的 plan.json 備份在 ${rel(bak)}）`);
+  return 0;
+}
+
+function autofixDry(P, flags) {
+  let plan;
+  try { plan = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch (e) { return { error: e.message, fixes: [] }; }
+  if (!Array.isArray(plan.scenes) || !plan.scenes.length) return { fixes: [], plan };
+  const list = (v) => (v ? String(v).split(',').map((s) => s.trim()).filter(Boolean) : null);
+  const { check } = build({ ...flags, check: true, json: false }, { log: () => {}, resolver: true });
+  const out = autofixPlan(plan, check, { only: list(flags.only), keepSfx: list(flags['keep-sfx']) || [] });
+  return { fixes: out.fixes, plan: out.plan };
+}
+
+// resolver：--check 準備好輸入後不檢查，改回傳 check(plan)（lib/autofix.mjs 反覆驗證改過的 plan 用；不寫檔）
+export function build(flags, { log = console.log, delegateEncode = false, resolver = false } = {}) {
   const P = pathsFrom(flags);
   const json = !!(flags.check && flags.json);
   if (json) log = () => {};
@@ -630,6 +695,7 @@ export function build(flags, { log = console.log, delegateEncode = false } = {})
     const videoDur = floorFrame(src === P.video || !fs.existsSync(P.video) ? probeDuration(src) : Math.min(probeDuration(src), probeDuration(P.video)));
     const rb = roughBlackCheck(projectDir, voiceOnlyOf(P, fs.existsSync(P.video) ? P.video : assetVideo, log), projectRel);
     const voiceOnly = rb.voiceOnly;
+    if (resolver) return { P, check: checkerOf({ base: ctx(videoDur, voiceOnly), filled: plan, speaker, cues }) };
     const res = resolvePlan(ctx(videoDur, voiceOnly));
     const spk = speakerIssues(speaker, res);
     res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res), ...spk.errors);
@@ -875,6 +941,7 @@ async function cli() {
   if (flags.icons) return iconsCmd(flags.icons, { loadLib, templateDir: P.templateDir });
   if (flags.words) return wordsCmd(P, flags.words);
   if (flags.show) return showCmd(P, flags.show);
+  if (flags.autofix) return autofixCmd(P, flags);
   if (flags['check-draft']) return checkDraft(P, flags['check-draft']);
   if (flags['merge-drafts']) return mergeDrafts(P, flags);
   if (flags.storyboard) return storyboardCmd(P, flags, { loadLib });

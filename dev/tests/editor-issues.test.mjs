@@ -1,4 +1,4 @@
-// 檢查結果的白話與歸併（editor/issues.mjs）：作者看白話、同類合併；AI 會處理的另外放；原文一個字都不能丟
+// 檢查結果的白話與歸併（editor/issues.mjs）：作者看白話、同類合併；給 AI 的細節另外放；原文一個字都不能丟
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TOOLS } from './helpers.mjs';

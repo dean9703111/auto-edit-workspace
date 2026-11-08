@@ -15,6 +15,10 @@
 //                              approx＝退回字數比例的原因）
 //   wordTime(words, cue, kw, { end, guess })  → 秒數 | null（詞級逐字稿裡、這句前後 1.5 秒內，kw 第一個字的起點／最後一個字的結尾；去掉空白標點、不分大小寫逐字連續比對；
 //                              整個詞找不到時找詞裡最長的一段（≥ 2 字）再推回詞頭；有幾個符合取最接近 guess 的）
+//   onVoice(sec, cue, pauses, { end })  → 秒數 | null：詞的起點落在這句裡的停頓（0.15–2 秒）中＝那一刻沒在說話 → 停頓結束（開口）；
+//                              詞的結尾落在停頓裡 → 停頓開始。pauses＝cues.pauses（build 用 ffmpeg 從 rough.mp4 量的 [起, 迄]，lib/ff.mjs speechPauses）
+//   voicedAt(frac, cue, pauses) → 秒數 | null：用字數估的位置（frac＝詞前面的字數 ÷ 全句字數）只分給這句裡有在說話的時間（跳過停頓）
+//   cueSeconds 有 cues.pauses 時兩個都用：真實時間落在停頓裡就對到開口（記在 cues.voiceMoved），字數估的照說話時間分
 //   normText(s)               → 去掉空白、標點、符號，轉小寫（NFKC）
 //   findKw(text, kw)          → { i, len } | null（字元位置；先精確、再不分大小寫、再忽略空白）
 //   textWidth(s)              → 字數（全形 1、半形 0.5，不四捨五入）
@@ -114,6 +118,27 @@ export function wordTime(words, c, kw, { end = false, guess = null, pad = 1.5 } 
   return null;
 }
 
+const PAUSE_IN = [0.15, 2.0], PAUSE_EDGE = 0.05, PAUSE_NEAR = 0.3;
+export function onVoice(sec, c, pauses, { end = false } = {}) {
+  if (!Array.isArray(pauses) || !c) return null;
+  const g = pauses.find(([a, b]) => b - a >= PAUSE_IN[0] && b - a <= PAUSE_IN[1] && sec > a + PAUSE_EDGE && sec < b - PAUSE_EDGE
+    && a >= c.start - PAUSE_NEAR && b <= c.end + PAUSE_NEAR);
+  return g ? r3(end ? g[0] : g[1]) : null;
+}
+export function voicedAt(frac, c, pauses) {
+  if (!Array.isArray(pauses) || !c || !(c.end > c.start)) return null;
+  let voiced = [[c.start, c.end]];
+  for (const [a, b] of pauses) {
+    if (b <= c.start || a >= c.end) continue;
+    voiced = voiced.flatMap(([x, y]) => (b <= x || a >= y ? [[x, y]] : [[x, Math.max(x, a)], [Math.min(y, b), y]].filter(([p, q]) => q - p > 1e-3)));
+  }
+  const V = voiced.reduce((s, [x, y]) => s + y - x, 0);
+  if (V < 0.3 * (c.end - c.start)) return null;   // 量到的停頓佔掉大半句：不可信，照舊用整句
+  let need = Math.min(1, Math.max(0, frac)) * V;
+  for (const [x, y] of voiced) { if (need <= y - x + 1e-9) return r3(x + need); need -= y - x; }
+  return r3(voiced[voiced.length - 1][1]);
+}
+
 export function cueSeconds(t, cues) {
   const c = cueByN(cues, t.n);
   if (!c) {
@@ -127,11 +152,16 @@ export function cueSeconds(t, cues) {
     const total = textWidth(c.text);
     const at = textWidth(c.text.slice(0, hit.i + (t.end ? hit.len : 0)));
     const prop = c.start + (total > 0 ? at / total : 0) * (c.end - c.start);
-    let sec = prop, approx = null;
+    let sec = prop, approx = null, real = null;
     if (cues.words?.length) {
-      const real = wordTime(cues.words, c, word, { end: t.end, guess: prop });
+      real = wordTime(cues.words, c, word, { end: t.end, guess: prop });
       if (real != null) sec = real; else approx = '詞級逐字稿在這句附近找不到這個詞';
     } else if (cues.wordsWhy) approx = cues.wordsWhy;
+    if (cues.pauses) {
+      // 那一刻沒在說話（逐字稿的時間常常早一點、落在前一個停頓裡）→ 對到開口；字數估的只分給有在說話的時間
+      if (real == null) { const v = voicedAt(total > 0 ? at / total : 0, c, cues.pauses); if (v != null) sec = v; }
+      else { const v = onVoice(sec, c, cues.pauses, { end: t.end }); if (v != null) { sec = v; cues.voiceMoved?.add(`#${t.n}${t.end ? 'e' : ''}@${word}`); } }
+    }
     if (approx && cues.approx) cues.approx.add(`#${t.n}${t.end ? 'e' : ''}@${word}`);
     return { sec: r3(sec + off), word, ...(approx ? { approx } : {}) };
   }

@@ -41,7 +41,8 @@
  *   示意元件讀不到 data-illus-src 的檔不在 work/hyperframes/illus-local/、data-illus 不是畫廊的 20 個元件也沒 ILLUS.register（畫面上是空的）
  * ⚠ 提醒
  *   壓到講者       透明版型（layout: "overlay"、下方字卡等）的內容蓋到 plan.json 的 speakerBox（面積比例；custom 與用 css 移位的段 ≥ 2%、
- *                  沒移位的模板 ≥ 15%，和 build 的碰撞提醒同門檻；03 側邊欄期間講者框加上 sideShift）
+ *                  沒移位的模板 ≥ 40%；不管哪種段，蓋到臉的位置（框上緣往下約三成的中間，lib/audit-rules.mjs faceZone）≥ 5% 也報；
+ *                  和 build 的碰撞提醒同門檻；03 側邊欄期間講者框加上 sideShift）
  *   字太小         文字 < 30px（直式：縮放的段 字級 × 縮放倍率 < 32px，全畫面 custom 是 0.8475；不縮放的段 < 32px）
  *   半像素邊       有底或有框的元素邊緣離整數 px ≥ 0.2（直邊與框線會糊，R8.4）
  *   段長不符       custom 檔寫死的 data-duration／const D 和 --check 報告的段長不同（結尾用 P.end() 不帶參數就不檢查）

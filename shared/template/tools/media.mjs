@@ -112,6 +112,8 @@ import { writeAtomic } from './lib/atomic.mjs';
 import { screenEvents, eventsMd, waitsInMain } from './lib/events.mjs';
 import { lintIllusSvg } from './lib/illus-lint.mjs';
 import { KIT_LINKS } from './lib/main.mjs';
+import { SPEECH, ENV, envelope, pickThreshold, speechFromEnvelope } from './lib/speech.mjs';
+export { ENV, envelope, pickThreshold, speechFromEnvelope };
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 
 const VALUE_FLAGS = ['project', 'template', 'src', 'at', 'box', 'order', 'below', 'edit', 'margin', 'v1', 'max', 'file', 'wait', 'said', 'transcript', 'format'];
@@ -776,8 +778,8 @@ export function joinMain(P, { order = null, log = console.log } = {}) {
 
 // 對齊參數（理由見 USAGE.md 3.4／AGENTS.md「剪乾淨」第 6 步；調整請連同 timing.test.mjs 一起看）
 export const SNAP = {
-  minSilence: 0.15,  // 短於這個的空檔算咬字間隙，不當成停頓（中文字與字之間常有 0.05–0.1 秒的低能量；實測 0.1 會把一句話切成碎片）
-  minSpeech: 0.08,   // 短於這個的聲響（喀嗒、呼吸）不算說話
+  minSilence: SPEECH.minSilence,  // 短於這個的空檔算咬字間隙，不當成停頓（lib/speech.mjs，理由寫在那裡）
+  minSpeech: SPEECH.minSpeech,    // 短於這個的聲響（喀嗒、呼吸）不算說話
   early: 0.6,        // 開口點最多比字幕起點早這麼多（字幕偏晚的情況少見）
   late: 1.5,         // 開口點最多比字幕起點晚這麼多（症狀是字幕比嘴巴早約 1 秒；實測偏 1.0 秒再加上起點本來就落在句首前 0.2 秒，會到 1.2 秒，1.2 剛好壓線所以放到 1.5）
   tolerance: 0.25,   // 差在這以內不動（講解本來就有 0.1–0.2 秒的前導氣聲，不要為了零頭亂動）
@@ -787,53 +789,7 @@ export const SNAP = {
   lead: 0.03,        // 開口點往前留一點（輕子音的能量低於門檻，會晚一點點才算開口）
 };
 
-// 音軌的能量包絡：ffmpeg 解成 16kHz 單聲道，每 10ms 算一次 20ms 視窗的 RMS（dB，滿刻度 0）→ { db: Float32Array, hop: 0.01 }
-export const ENV = { rate: 16000, hop: 0.01, win: 0.02 };
-export function envelope(file) {
-  const r = spawnSync('ffmpeg', ['-v', 'error', '-i', file, '-vn', '-ac', '1', '-ar', String(ENV.rate), '-f', 's16le', 'pipe:1'], { maxBuffer: 1 << 30 });
-  if (r.error) throw r.error.code === 'ENOENT' ? new Error('找不到 ffmpeg：先跑 npx hyperframes doctor 安裝，或確認 ffmpeg 在 PATH 裡') : r.error;
-  if (r.status !== 0) throw new Error(`ffmpeg 解不出 ${path.basename(file)} 的聲音：${String(r.stderr).trim().slice(-300)}`);
-  const buf = r.stdout, n = Math.floor(buf.length / 2);
-  const hop = Math.round(ENV.rate * ENV.hop), win = Math.round(ENV.rate * ENV.win);
-  const frames = Math.max(0, Math.floor((n - win) / hop) + 1);
-  const db = new Float32Array(frames);
-  for (let i = 0; i < frames; i++) {
-    let sum = 0;
-    for (let k = i * hop, e = k + win; k < e; k++) { const v = buf.readInt16LE(k * 2) / 32768; sum += v * v; }
-    db[i] = Math.max(-100, 10 * Math.log10(sum / win + 1e-12));
-  }
-  return { db, hop: ENV.hop };
-}
-
-// 門檻：相對這支音軌自己的音量算——說話音量（第 95 百分位）與底噪（第 10 百分位）之間，從底噪往上 30%，
-// 再夾在「說話音量 −40～−15 dB」之間（底噪是數位靜音時不會低到抓到氣音，底噪很吵時不會高到切掉小聲的字）。
-// below 有給就改成「說話音量 − below dB」（手動微調用）
-export function pickThreshold(db, below = null) {
-  const sorted = Float32Array.from(db).sort();
-  const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
-  const level = q(0.95), floor = q(0.10);
-  if (below != null) return { level, floor, threshold: r3(level - below) };
-  if (level - floor < 15) throw new Error(`整支音軌的最大聲與底噪只差 ${r3(level - floor)} dB，分不出哪裡在說話（常見原因：整段都有背景音樂或持續噪音）→ 字幕時間請手動校正，或用 --below <dB> 手動指定門檻`);
-  return { level, floor, threshold: r3(Math.min(level - 15, Math.max(level - 40, floor + 0.3 * (level - floor)))) };
-}
-
-// 能量包絡 → 說話區間 [[起, 迄], …]（秒）。空檔短於 minSilence 的接起來（字與字之間的低能量），聲響短於 minSpeech 的丟掉
-export function speechFromEnvelope(env, threshold, { minSilence = SNAP.minSilence, minSpeech = SNAP.minSpeech } = {}) {
-  const { db, hop } = env;
-  const raw = [];
-  let st = null;
-  for (let i = 0; i < db.length; i++) {
-    if (db[i] > threshold) { if (st == null) st = i; }
-    else if (st != null) { raw.push([st * hop, i * hop]); st = null; }
-  }
-  if (st != null) raw.push([st * hop, db.length * hop]);
-  const merged = [];
-  for (const seg of raw) {
-    const last = merged[merged.length - 1];
-    if (last && seg[0] - last[1] < minSilence) last[1] = seg[1]; else merged.push([...seg]);
-  }
-  return merged.filter(([x, y]) => y - x >= minSpeech).map(([x, y]) => [r3(x), r3(y)]);
-}
+// 能量包絡、門檻、說話區間（envelope、pickThreshold、speechFromEnvelope、ENV）搬到 lib/speech.mjs，build 的 #N@詞 對準開口也用同一套；這裡照舊匯出
 
 // 純函式：cues ＋ 說話區間 → 新的 cues ＋ 調整表（測試直接餵合成資料）
 //   cues：[{ n, start, end, text }]；speech：[[起, 迄], …]（照時間排序）

@@ -23,6 +23,7 @@ import { captureState, reviewHashes } from './incremental.mjs';
 import { parseBeatSheets, parseIllusLists } from './audit-beats.mjs';
 import { formatFinding } from './audit-rules.mjs';
 import { hfLocal } from './hf.mjs';
+import { KINDS as FIX_KINDS } from './autofix.mjs';
 
 const TOOLS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rel = (p) => path.relative(process.cwd(), p).split(path.sep).join('/') || '.';
@@ -31,6 +32,16 @@ const readJson = (f, d = null) => { try { return JSON.parse(fs.readFileSync(f, '
 const tool = (name, args, opts = {}) => spawnSync(process.execPath, [path.join(TOOLS, name), ...args], { encoding: 'utf8', maxBuffer: 1 << 28, ...opts });
 // 真的產生檔案的 build：底片要重新編碼時走背景工作，等太久結束碼 75（再跑一次會接著等，不會重跑）
 const buildTool = (args) => { let r; do { r = tool('build.mjs', args); } while (r.status === 75); return r; };
+// 產生的階段（合併草稿、分鏡表套回）寫完 plan.json 就跑 build.mjs --autofix：工具知道答案的 ⚠／✖ 先修掉（lib/autofix.mjs），
+// 不用留給使用者在剪輯台看到；剪輯台的更新預覽不跑（使用者改的時間要算數）。跑不完不擋流程，印一行就好。回傳 plan.json 有沒有改
+function autofixStep(P, extra = []) {
+  const before = readOpt(P.plan);
+  const r = tool('build.mjs', ['--project', P.project, '--autofix', ...extra, ...(P.templateArg || [])]);
+  const out = (r.stdout || '').trim();
+  if (out) console.log(out);
+  if (r.status !== 0 && !out) console.log(`⚠ 自動修正沒有跑完（${(r.stderr || '').trim().split('\n').pop() || `結束碼 ${r.status}`}）→ 不影響這一步；之後可以再跑 build.mjs --project ${rel(P.project)} --autofix`);
+  return readOpt(P.plan) !== before;
+}
 const clock = (t) => { const m = Math.floor(t / 60); return `${m}:${String(Math.floor(t - m * 60)).padStart(2, '0')}`; };
 const cueOf = (s) => Number(String(s?.from || s?.at || '').match(/^#(\d+)/)?.[1] ?? 0);
 
@@ -264,6 +275,10 @@ export function checkDraft(P, file) {
   const tmp = path.join(P.out, '.cache', `draft-${path.basename(abs)}`);
   fs.mkdirSync(path.dirname(tmp), { recursive: true });
   fs.writeFileSync(tmp, JSON.stringify({ ...base, scenes: segs, sections: undefined }));
+  // 合併時工具會自動修的（文字對時、小重疊、≤ 3 秒的空檔…，lib/autofix.mjs）先在暫存檔修掉，只回報剩下要自己改的；草稿本身不動
+  let autoFixed = [];
+  const fx = tool('build.mjs', ['--project', P.project, '--plan', tmp, '--autofix', '--json', ...(P.templateArg || [])]);
+  try { const o = JSON.parse(fx.stdout); if (o.fixes?.length && o.plan) { autoFixed = o.fixes; fs.writeFileSync(tmp, JSON.stringify(o.plan)); } } catch { /* 修不了就照原樣檢查 */ }
   const r = tool('build.mjs', ['--project', P.project, '--plan', tmp, '--check', '--json', ...(P.templateArg || [])]);
   let j;
   try { j = JSON.parse(r.stdout); } catch { console.log(`✖ 檢查沒有跑完：${(r.stderr || r.stdout).trim().split('\n').slice(-2).join(' ')}`); return 1; }
@@ -271,11 +286,11 @@ export function checkDraft(P, file) {
   const mine = (m) => { const x = String(m).match(/^\[([\w-]+)/); return !x || ids.has(x[1]); };
   // 只留這一份自己要處理的：全片才看得出來的（空檔、音效密度）、主代理處理的（小節合併時寫、字幕到剪輯台改、設計師之後做）不算
   const skip = /沒有畫面的區間|音效稀疏|音效密度|還沒排段落|只有聲音的區間|講稿有 \d+ 個小節|字幕不到|內容設計動畫還沒做|還沒設定講者|前的空檔只有/;
-  const covers = (m) => { const x = String(m).match(/大約會蓋到講者框 (\d+)%/); return x && Number(x[1]) < 40; };
+  const covers = (m) => { const x = String(m).match(/大約會蓋到講者框 (\d+)%/); return x && Number(x[1]) < 40 && !String(m).includes('臉'); };
   const parts = readJson(path.join(packDir(P), 'index.json'))?.parts || [];
   const part = parts.find((p) => p.key === path.basename(abs, '.json'));
   const errors = j.errors.filter((m) => mine(m) && !skip.test(m));
-  const warns = j.warnings.filter((m) => mine(m) && !skip.test(m) && !covers(m));   // 蓋到講者 < 40%：--storyboard 的截圖才看得出擋到哪
+  const warns = j.warnings.filter((m) => mine(m) && !skip.test(m) && !covers(m));   // 蓋到講者 < 40% 又沒碰到臉：--storyboard 的截圖才看得出擋到哪
   if (part) {
     const missing = segs.filter((s) => !s.story?.say).map((s) => s.id);
     if (missing.length) warns.unshift(`這幾段沒有 story.say（分鏡表要用）：${missing.join('、')}`);
@@ -302,6 +317,11 @@ export function checkDraft(P, file) {
   }
   for (const m of errors) console.log(`✖ ${m}`);
   for (const m of warns) console.log(`⚠ ${m}`);
+  if (autoFixed.length) {
+    const n = {};
+    for (const f of autoFixed) n[f.kind] = (n[f.kind] || 0) + 1;
+    console.log(`合併時工具會自動修 ${autoFixed.length} 處（${Object.entries(n).map(([k, v]) => `${FIX_KINDS[k] || k} ${v}`).join('、')}），草稿不用改`);
+  }
   const nth = runCount(P, `draft:${path.basename(abs)}`);
   console.log(errors.length ? `未通過：${errors.length} 個 ✖、${warns.length} 個 ⚠` : `通過：${segs.length} 段，${warns.length} 個 ⚠${nth >= 2 && warns.length ? '。可以交件，⚠ 不用再修' : ''}`);
   return errors.length ? 1 : 0;
@@ -350,9 +370,9 @@ function writeBriefs(P, plan, cues) {
 // ---------- --merge-drafts ----------
 
 const backupStamp = (d = new Date()) => { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
-function backupPlan(file) {
-  let b = `${file}.bak-merge-${backupStamp()}`;
-  for (let k = 2; fs.existsSync(b); k++) b = `${file}.bak-merge-${backupStamp()}-${k}`;
+export function backupPlan(file, tag = 'merge') {
+  let b = `${file}.bak-${tag}-${backupStamp()}`;
+  for (let k = 2; fs.existsSync(b); k++) b = `${file}.bak-${tag}-${backupStamp()}-${k}`;
   fs.copyFileSync(file, b);
   return b;
 }
@@ -406,6 +426,7 @@ export function mergeDrafts(P, flags = {}) {
   const planNext = `${JSON.stringify(plan, null, 2)}\n`;
   if (planText.trim() && planText !== planNext) backupPlan(P.plan);
   writeAtomic(P.plan, planNext);
+  if (autofixStep(P)) plan = readJson(P.plan) || plan;
   fs.writeFileSync(mergedFile, `${JSON.stringify({ icons, quotes, decide, scenesHash: sha(JSON.stringify(plan.scenes)) }, null, 2)}\n`);
   const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
   const designs = writeBriefs(P, plan, cues);
@@ -532,11 +553,17 @@ export function applyCmd(P, flags, { loadLib }) {
   if (r.changed) {
     fs.copyFileSync(P.plan, `${P.plan}.bak-storyboard`);
     writeAtomic(P.plan, `${JSON.stringify(r.plan, null, 2)}\n`);
-    // 接下來設計師要跑 audit（子代理不跑 build）：這裡先 build，他們才量得到最新的 index.html
-    if (!r.requests.length) buildTool(['--project', P.project, ...(P.templateArg || [])]);
   }
   for (const c of r.changes) console.log(`改：${c}`);
-  if (!r.changes.length) console.log('分鏡表沒有改到文字、音效或金句，plan.json 不用動');
+  if (!r.changes.length) console.log('分鏡表沒有改到文字、音效或金句');
+  // 定稿（沒有要求要改的段）：工具知道答案的 ⚠ 自動修掉；使用者在分鏡表改過音效的段，音效不動
+  let fixed = false;
+  if (!r.requests.length) {
+    const keep = [...new Set(r.changes.filter((c) => /^\S+ 音效：/.test(c)).map((c) => c.split(' ')[0]))];
+    fixed = autofixStep(P, keep.length ? ['--keep-sfx', keep.join(',')] : []);
+  }
+  // 接下來設計師要跑 audit（子代理不跑 build）：這裡先 build，他們才量得到最新的 index.html
+  if ((r.changed || fixed) && !r.requests.length) buildTool(['--project', P.project, ...(P.templateArg || [])]);
   for (const u of r.unmatched) console.log(`⚠ ${u}`);
   for (const a of r.answers || []) console.log(`作者回答${a.q ? `（${a.q}）` : ''}：${a.text} → 照做（章名、講者、配樂寫進 plan.json 或 brand.mjs speaker）`);
   recordStoryboard(P, fs.readFileSync(file, 'utf8'));
@@ -550,8 +577,9 @@ export function applyCmd(P, flags, { loadLib }) {
   }
   appendStop(P.project, { stop: '③ 分鏡表', state: '通過', said: flags.said || '', back: 'plan.json' });
   const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
-  const designs = writeBriefs(P, r.plan, cues);
-  const todo = designs.filter((d) => isBlankDesign(readOpt(path.join(P.out, designFileOf(r.plan.scenes.find((x) => x.id === d.id))))));
+  const planNow = fixed ? readJson(P.plan) || r.plan : r.plan;
+  const designs = writeBriefs(P, planNow, cues);
+  const todo = designs.filter((d) => isBlankDesign(readOpt(path.join(P.out, designFileOf(planNow.scenes.find((x) => x.id === d.id))))));
   if (todo.length) {
     console.log(`→ 下一步：內容設計動畫一段派一個設計師做動畫，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息照抄，換掉 <段>：`);
     console.log(`  你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。`);

@@ -1,7 +1,7 @@
 // 檢查結果的白話與歸併（純函式，沒有 DOM）：工具的訊息是寫給 AI 修的（有指令、有欄位名），給作者看的要分開。
 //   groupIssues(errors, warnings) → { errors: [...], author: [群組], ai: [群組], counts }
 //   群組：{ key, level, title, hint, ids: [段號], raw: [原文], action }
-//   author＝作者要看一眼或能自己改的；ai＝AI 會處理、作者不用懂的（一樣留著原文，可以整份複製給 AI）
+//   author＝作者要看一眼或能自己改的；ai＝給 AI 的技術細節、作者不用懂的（工具改得好的產生時已經改掉；一樣留著原文，可以整份複製給 AI）
 
 const RULES = [
   { key: 'speaker', re: /示範人物/, who: 'author', action: 'speaker', title: () => '講者介紹還是示範人物', hint: '填你的姓名和頭銜，影片裡才不會是別人的名字' },

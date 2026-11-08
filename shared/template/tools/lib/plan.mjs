@@ -27,14 +27,14 @@ import path from 'node:path';
 import { findScene, suggestScenes, resolveScene } from './scenes.mjs';
 import { readCustom } from './assemble.mjs';
 import { findCue, norm, cueByN } from './srt.mjs';
-import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTime, textWidth } from './time.mjs';
+import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTime, textWidth, onVoice, voicedAt } from './time.mjs';
 import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } from './edit.mjs';
 import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner, mediaOverlaps } from './media.mjs';
 import { SFX_RULES, sfxBudget, thinMainSfx } from './audio.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
-import { floorRules, atConsts } from './audit-rules.mjs';
+import { floorRules, atConsts, faceZone, coverWarn, FACE_WARN } from './audit-rules.mjs';
 import { readScript } from './script-file.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
@@ -324,10 +324,11 @@ export function spokenAt(text, cues, { near, from = -Infinity, to = Infinity } =
   const kw = m.raw.slice(a, z + [...m.raw.slice(z)][0].length).trim();
   const real = wordTime(cues.words, c, kw);
   let sec = real;
+  // 和 cueSeconds 同一套：落在停頓裡對到開口，字數估的只分給有在說話的時間（cues.pauses，lib/time.mjs）
   if (sec == null) {
-    const total = textWidth(c.text);
-    sec = r3(c.start + (total > 0 ? textWidth(c.text.slice(0, a)) / total : 0) * (c.end - c.start));
-  }
+    const total = textWidth(c.text), frac = total > 0 ? textWidth(c.text.slice(0, a)) / total : 0;
+    sec = (cues.pauses && voicedAt(frac, c, cues.pauses)) ?? r3(c.start + frac * (c.end - c.start));
+  } else if (cues.pauses) sec = onVoice(sec, c, cues.pauses) ?? sec;
   return { n: c.n, kw, sec, real: real != null };
 }
 
@@ -363,7 +364,7 @@ export function textSyncIssues(it, cues) {
     const head = `${it.id} 的${fd.fx ? ' fx ' : ' '}${fd.name}「${plainText(fd.text).trim()}」在 ${fmt(fd.at)} 出現`;
     const body = diff < 0 ? `「${s.kw}」${fmt(s.sec)}（#${s.n}）才講到` : `「${s.kw}」${fmt(s.sec)}（#${s.n}）就講到了，晚了 ${Math.abs(diff).toFixed(2)}s`;
     const msg = `${head}，${body} → ${fd.fix} 寫 "#${s.n}@${s.kw}"${s.real ? '' : cues.words?.length ? '（逐字稿裡找不到這個詞，講到的秒數用字數比例估）' : '（沒有詞級逐字稿，講到的秒數用字數比例估）'}`;
-    out.push({ level: Math.abs(diff) > TEXT_SYNC.error + 1e-9 ? 'error' : 'warn', msg, field: fd.name, shown: fd.at, spoken: s.sec, n: s.n, kw: s.kw, diff });
+    out.push({ level: Math.abs(diff) > TEXT_SYNC.error + 1e-9 ? 'error' : 'warn', msg, field: fd.name, fix: fd.fix, shown: fd.at, spoken: s.sec, n: s.n, kw: s.kw, real: s.real, diff });
   }
   return out;
 }
@@ -440,7 +441,9 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     cues = remapCues(cues, tm);
     // 詞級逐字稿跟著換成完成影片秒數（落在剪掉範圍裡的詞拿掉）
     if (roughCues.words) cues.words = roughCues.words.filter((w) => !tm.cuts.some(([a, b]) => w.start >= a - 1e-6 && w.end <= b + 1e-6)).map((w) => ({ ...w, start: tm.map(w.start), end: tm.map(w.end) }));
-    cues.wordsWhy = roughCues.wordsWhy; cues.approx = roughCues.approx;
+    cues.wordsWhy = roughCues.wordsWhy; cues.approx = roughCues.approx; cues.voiceMoved = roughCues.voiceMoved;
+    // 停頓也換成完成影片秒數（剪掉的部分縮掉）
+    if (roughCues.pauses) cues.pauses = roughCues.pauses.map(([a, b]) => [tm.map(a), tm.map(b)]).filter(([a, b]) => b - a > 0.05);
     // rough 長度已對齊到格；cuts 是毫秒，r3 的誤差不能讓完成影片少掉最後一格
     videoDur = floorFrame(tm.outDur + 0.001);
   }
@@ -1148,9 +1151,12 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       const fam = it.scene ? (FOOT[it.key] || FOOT[it.scene.family]) : null;
       if (!fam) continue;
       if (portrait && fam.some((r) => C.unsafe.some((u) => inter(r, u) > 0))) it.warnings.push(`${it.where} 「${it.scene.zh}」會壓到平台介面的範圍（上 240、下 480、右側按鈕列）→ 用 snapshot 確認，被蓋到就換情境`);
+      // 模板固定的版位只壓到講者框下半身（身體）不報；蓋到臉的位置、或蓋住講者框四成以上（手勢多半會被擋）才報（門檻和 audit 的「壓到講者」一樣）
       const area = (speakerBox[2] - speakerBox[0]) * (speakerBox[3] - speakerBox[1]);
       const hit = fam.reduce((s, r) => s + inter(r, speakerBox), 0) / area;
-      if (hit > 0.15) it.warnings.push(`${it.where} 「${it.scene.zh}」大約會蓋到講者框 ${Math.round(hit * 100)}% → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）`);
+      const fz = faceZone(speakerBox), fzArea = (fz[2] - fz[0]) * (fz[3] - fz[1]);
+      const face = fzArea > 0 ? fam.reduce((s, r) => s + inter(r, fz), 0) / fzArea : 0;
+      if (coverWarn(hit, face)) it.warnings.push(`${it.where} 「${it.scene.zh}」大約會蓋到講者框 ${Math.round(hit * 100)}%${face >= FACE_WARN ? `，臉的位置也蓋到 ${Math.round(face * 100)}%` : '（超過四成，手勢多半會被擋）'} → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）`);
     }
   }
 
@@ -1348,7 +1354,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   return {
     items: timed, allItems: items, errors: [...errors, ...all], warnings: [...warnings, ...items.flatMap((x) => x.warnings)],
     globals: { speakerBox, sideShift, pipCrop, pip },
-    edit, editActive: ne.active, tm, outDur: videoDur, roughDur, cuesOut: cues, voiceOnly, voiceOut, voiceGaps, footage, editFx, cutpoints,
+    edit, editActive: ne.active, tm, outDur: videoDur, roughDur, cuesOut: cues, voiceOnly, voiceOut, voiceGaps, footage, editFx, cutpoints, voiceMoved: [...(cues.voiceMoved || [])],
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro,
     chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
   };
@@ -1564,6 +1570,8 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
     const gap = (res.voiceGaps || []).filter((g) => g.start < (res.tm ? res.tm.map(b) : b) && g.end > (res.tm ? res.tm.map(a) : a));
     lines.push(`只有聲音（rough.mp4 ${fmt(a)}–${fmt(b)}，${r3(b - a)}s）：${gap.length ? `${gap.map((g) => `${g.level === 'error' ? '✖' : '⚠'} ${fmt(g.start)}–${fmt(g.end)}`).join('、')} 沒被蓋住` : '已被 media 段或全畫面蓋住，子母畫面自動不顯示'}`);
   }
+  // 只是告知（不用改）：逐字稿給的時間落在停頓裡的 #N@詞，已經對到開口（lib/time.mjs onVoice）
+  if (res.voiceMoved?.length) lines.push(`綁詞對準開口：${res.voiceMoved.length} 個 #N@詞 原本落在停頓裡（那一刻沒在說話），已移到開口那一刻：${res.voiceMoved.slice(0, 6).join('、')}${res.voiceMoved.length > 6 ? '…' : ''}`);
   if (res.sfxBudget) lines.push(...res.sfxBudget.lines);
   // 轉場與主題（design-system.md §5、§10；每段的值在 --check --json 的 items[].out.tx）
   const txCount = (k, v) => res.items.filter((it) => it[k] === v).map((it) => it.id);

@@ -218,8 +218,13 @@ function autosave() {
 function flushNow() { if (isDirty() && !drag && !saving && !window.designWorkbench?.busy) { clearTimeout(saveTimer); save(); } }
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushNow(); });
 window.addEventListener('pagehide', flushNow);
-// 存檔用 keepalive：送出去之後才換頁、關頁也會存好，不用問。上一次沒存成功（連不到、被改過）才問
-window.addEventListener('beforeunload', (e) => { flushNow(); if (saveFail && isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+// 存檔用 keepalive：送出去之後才換頁、關頁也會存好，不用問。上一次沒存成功（連不到、被改過）才問；
+// 存檔途中又拖了一下：最後那一下還沒送出去（要等這一輪回來才能送），關頁會丟掉，也要問
+window.addEventListener('beforeunload', (e) => {
+  flushNow();
+  const unsent = !!saving && isDirty() && frameSig() !== sentSig;
+  if ((saveFail && isDirty()) || unsent) { e.preventDefault(); e.returnValue = ''; }
+});
 window.addEventListener('design-state', dirty);
 window.addEventListener('framing-preview-request', () => { lastPreview = 0; drawPreview(); });
 
@@ -281,8 +286,12 @@ function save() {
   saving = saveOnce().finally(() => { saving = null; dirty(); });
   return saving;
 }
+// 正在存的是哪個框和調光：存檔途中又動了，關頁時才知道最後那一下沒送出去（背景設計有自己的忙碌狀態，不算在這裡）
+const frameSig = () => JSON.stringify([asArr(F), look]);
+let sentSig = null;
 async function saveOnce() {
   const msg = $('msg'), state = $('saveState');
+  sentSig = frameSig();
   state.dataset.state = 'busy'; state.querySelector('.txt').textContent = '儲存中…';
   const frame = isFull(F) ? null : asArr(F), lookNow = { ...look };
   let r, j;

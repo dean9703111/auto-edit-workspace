@@ -384,3 +384,202 @@ test('重新載入途中又改了：修改不會消失；復原遇到一時失�
   await until(() => !fs.readFileSync(srtFile(), 'utf8').includes(long));
   assert.deepEqual(errors, []);
 });
+
+// ---------- 第二輪審查（F1–F7）----------
+const srtText = () => fs.readFileSync(srtFile(), 'utf8');
+const state = async () => (await fetch(new URL('/api/state', editor.url))).json();
+const holdNext = async (pathname) => {
+  await page.setRequestInterception(true);
+  const box = { req: null };
+  box.on = (req) => { if (new URL(req.url()).pathname === pathname && req.method() === 'POST' && !box.req) { box.req = req; return; } req.continue(); };
+  page.on('request', box.on);
+  box.done = async () => { if (!box.on) return; page.off('request', box.on); box.on = null; await page.setRequestInterception(false); };
+  holds.push(box);
+  return box;
+};
+const holds = [];
+const test2 = (name, fn) => test(name, async (t) => { try { await fn(t); } finally { await releaseHolds(); } });
+const releaseHolds = async () => { for (const b of holds.splice(0)) { try { await b.req?.continue(); } catch { /* 已經處理過 */ } await b.done(); } };
+
+test2('構圖頁剛存過、剪輯台馬上改：不會卡在「儲存中…」，兩邊的修改都在，之後照常自動存', async () => {
+  await open();
+  const h = await holdNext('/api/save');
+  await setCue(4, '第四句構圖');
+  assert.equal(await until(() => !!h.req), true, '有送出存檔');
+  // 剪輯台的存檔還沒到伺服器：構圖頁先存了框（同一個服務）
+  const fr = await post('/api/framing/save', { base: { hash: (await state()).plan.hash }, frame: [160, 90, 1600, 900], update: false });
+  assert.equal(fr.status, 200, await fr.clone().text());
+  await h.req.continue();
+  assert.equal(await until(() => /第四句構圖/.test(srtText())), true, '剪輯台的修改存進去');
+  assert.deepEqual(readPlan().frame, [160, 90, 1600, 900], '構圖的框還在');
+  await saved();
+  assert.equal(await page.evaluate(() => window.__editor.busy), false, '沒有卡在存檔中');
+  await h.done();
+  await setCue(4, '第四句再改');
+  assert.equal(await until(() => /第四句再改/.test(srtText())), true, '之後照常自動存');
+  await saved();
+  assert.equal((await state()).unsaved, null, '頁面還開著：沒有留下要問的那一筆');
+  assert.deepEqual(errors, []);
+});
+
+test2('屬性面板正在打字、AI 改了同一格：欄位換成 AI 的字，接著打不會把舊字蓋回去', async () => {
+  await open();
+  await page.evaluate(() => window.__editor.select({ kind: 'item', id: 's0101' }));
+  await page.click('.side-tabs [data-side="insp"]');
+  const sel = '#inspBody [data-path=\'["slots","text"]\']';
+  await page.waitForSelector(sel);
+  await page.click(sel);
+  await page.keyboard.press('End');
+  await page.keyboard.type('甲');
+  assert.equal(await until(() => /甲$/.test(readPlan().scenes[0].slots.text)), true, '打字就存');
+  await saved();
+  assert.equal(await page.evaluate(() => document.activeElement?.dataset?.path), '["slots","text"]', '游標還在欄位裡');
+  const p = readPlan();
+  p.scenes[0].slots.text = 'AI 改的第一段';
+  fs.writeFileSync(planFile(), JSON.stringify(p));
+  await page.waitForFunction((s) => document.querySelector(s)?.value === 'AI 改的第一段', { timeout: 10000 }, sel);
+  assert.notEqual(await page.evaluate(() => document.activeElement?.dataset?.path), '["slots","text"]', '離開了舊內容的欄位');
+  await page.keyboard.type('乙');
+  await sleep(1600);
+  assert.equal(readPlan().scenes[0].slots.text, 'AI 改的第一段', '舊字沒有被寫回去');
+  await saved();
+  assert.deepEqual(errors, []);
+});
+
+test2('關頁時正在存的那一筆被擋下來：伺服器替它留著，下次打開問要不要套回去；頁面還開著的自己處理、不留', async () => {
+  await open();
+  const before = await state();
+  // 已經關掉的頁面送來的最後一筆（keepalive）：送到時檔案已經被改過 → 擋下來，留著
+  const r = await post('/api/save', { quick: true, base: { hash: 'old', srtHash: before.srt.hash }, saveId: 'closed-1', keep: { edit: {}, segs: { s0101: { slots: { text: '關頁前改的' } } }, ops: [], srtHash: before.srt.hash } });
+  assert.equal(r.status, 409);
+  assert.equal((await r.json()).stashed, true);
+  assert.equal((await state()).unsaved?.id, 'closed-1');
+  // 下次打開：問要不要套回去，套回去就存好，伺服器那份丟掉
+  await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => /上次關掉這一頁時/.test(document.querySelector('#banner').textContent), { timeout: 30000 });
+  assert.match(await page.$eval('#banner', (n) => n.textContent), /s0101/);
+  await page.click('#banner button.primary');
+  assert.equal(await until(() => readPlan().scenes[0].slots.text === '關頁前改的'), true, '套回去也存好了');
+  await saved();
+  let still = 'x';
+  for (let i = 0; i < 50 && still; i++) { still = (await state()).unsaved; if (still) await sleep(100); }
+  assert.equal(still, null, '問過就不再問');
+  // 頁面還開著時被擋（AI 剛改了檔案）：頁面自己處理，伺服器不留
+  const h = await holdNext('/api/save');
+  await setCue(6, '第六句被擋');
+  assert.equal(await until(() => !!h.req), true);
+  const p = readPlan(); p.rhythm = 'spaced'; fs.writeFileSync(planFile(), JSON.stringify(p));
+  await h.req.continue();
+  await page.waitForFunction(() => document.querySelector('#dlgConflict').open, { timeout: 10000 });
+  let left = 'x';
+  for (let i = 0; i < 50 && left; i++) { left = (await state()).unsaved; if (left) await sleep(100); }
+  assert.equal(left, null, '頁面還開著：不留');
+  await page.click('#conflictKeep');
+  assert.equal(await until(() => /第六句被擋/.test(srtText())), true, '保留自己的調整後存進去');
+  assert.equal(readPlan().rhythm, 'spaced', 'AI 的修改還在');
+  await h.done();
+  await saved();
+  assert.deepEqual(errors, []);
+});
+
+test2('按復原、等伺服器回應的那一下又改：先不收（不會被洗掉），復原完成後照常', async () => {
+  await open();
+  await setCue(3, '第三句復原測試');
+  assert.equal(await until(() => /第三句復原測試/.test(srtText())), true);
+  await saved();
+  const h = await holdNext('/api/restore');
+  const undoing = page.evaluate(() => window.__editor.undo());
+  assert.equal(await until(() => !!h.req), true, '復原要換檔案');
+  assert.equal(await page.evaluate(() => window.__editor.historyBusy), true);
+  assert.equal(await setCue(5, '復原途中改的'), false, '復原途中先不收新的修改');
+  await h.req.continue();
+  await undoing;
+  assert.equal(await until(() => !/第三句復原測試/.test(srtText())), true, '復原完成');
+  assert.equal(await page.evaluate(() => window.__editor.historyBusy), false);
+  assert.doesNotMatch(srtText(), /復原途中改的/);
+  await h.done();
+  await saved();
+  await setCue(5, '復原後改的');
+  assert.equal(await until(() => /復原後改的/.test(srtText())), true, '復原完再改就收');
+  await saved();
+  assert.deepEqual(errors, []);
+});
+
+test2('/api/restore：換檔案的同時 AI 寫了檔，不蓋掉（換檔前再比對一次）', async () => {
+  await open();
+  const a = await state();
+  await setCue(7, '第七句');
+  assert.equal(await until(() => /第七句/.test(srtText())), true);
+  await saved();
+  const b = await state();
+  const orig = fs.writeFileSync;
+  const ai = JSON.stringify({ ...readPlan(), rhythm: 'spaced', note: 'AI 剛寫的' });
+  fs.writeFileSync = function (f, ...rest) {
+    const out = orig.call(fs, f, ...rest);
+    if (String(f).endsWith('.tmp')) { fs.writeFileSync = orig; orig.call(fs, planFile(), ai); }   // 寫暫存檔的這一下 AI 改了 plan.json
+    return out;
+  };
+  let r;
+  try { r = await post('/api/restore', { base: { hash: b.plan.hash, srtHash: b.srt.hash }, to: { hash: a.plan.hash, srtHash: a.srt.hash } }); } finally { fs.writeFileSync = orig; }
+  assert.equal(r.status, 409, await r.clone().text());
+  assert.equal(fs.readFileSync(planFile(), 'utf8'), ai, 'AI 的修改沒被蓋掉');
+  assert.match(srtText(), /第七句/, '字幕也沒換');
+  assert.deepEqual(fs.readdirSync(path.dirname(planFile())).filter((f) => f.endsWith('.tmp')), [], '暫存檔清掉了');
+  assert.deepEqual(fs.readdirSync(work).filter((f) => f.endsWith('.tmp')), []);
+  await page.waitForFunction(() => window.__editor.server?.plan?.data?.note === 'AI 剛寫的', { timeout: 10000 });
+  await saved();
+  assert.deepEqual(errors, []);
+});
+
+test2('改完字卡不到一秒就按「更新預覽」：那一段也會量版面；只拿掉量過的', async () => {
+  await open();
+  await page.evaluate(() => window.__editor.select({ kind: 'item', id: 's0101' }));
+  await page.click('.side-tabs [data-side="insp"]');
+  const sel = '#inspBody [data-path=\'["slots","text"]\']';
+  await page.waitForSelector(sel);
+  await page.setRequestInterception(true);
+  let buildBody = null;
+  const onReq = (req) => {
+    if (new URL(req.url()).pathname === '/api/build' && req.method() === 'POST') {
+      buildBody = JSON.parse(req.postData() || '{}');
+      req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, code: 0, log: '', issues: { errors: [], warnings: [] }, audit: { ids: buildBody.audit || [], errors: [], warnings: [] }, seconds: 0.1 }) });
+      return;
+    }
+    req.continue();
+  };
+  page.on('request', onReq);
+  holds.push({ req: null, done: async () => { page.off('request', onReq); await page.setRequestInterception(false); } });
+  await page.click(sel);
+  await page.keyboard.press('End');
+  await page.keyboard.type('丙');
+  await page.click('#btnBuild');   // 停手不到一秒（自動存檔還沒跑）
+  assert.equal(await until(() => !!buildBody, 15000), true, '有更新預覽');
+  assert.deepEqual(buildBody.audit, ['s0101'], '剛改的那段也量');
+  assert.match(readPlan().scenes[0].slots.text, /丙$/, '先存好才更新');
+  await page.waitForFunction(() => window.__editor.pendingAudit.size === 0 && !window.__editor.building, { timeout: 15000 });   // 量過的拿掉
+  page.off('request', onReq);
+  await page.setRequestInterception(false);
+  await saved();
+  assert.deepEqual(errors, []);
+});
+
+test2('同一筆存檔送了兩次（關頁時瀏覽器先算失敗、頁面又補送）：第二次回「存好了」，不會留下要問的那一筆、字幕也不會重複改', async () => {
+  await open();
+  const st = await state();
+  const ops = [{ op: 'set', n: 10, text: '第十句重送' }];
+  const body = { quick: true, base: { hash: st.plan.hash, srtHash: st.srt.hash }, srt: { ops }, saveId: 'dup-1', keep: { edit: {}, segs: {}, ops, srtHash: st.srt.hash } };
+  const a = await post('/api/save', body);
+  assert.equal(a.status, 200, await a.clone().text());
+  const b = await post('/api/save', { ...body, saveId: 'dup-2' });
+  assert.equal(b.status, 200, await b.clone().text());
+  assert.equal((await b.json()).duplicate, true);
+  assert.equal((await state()).unsaved, null, '不會留下要問的那一筆');
+  assert.equal((srtText().match(/第十句重送/g) || []).length, 1);
+  // 真的被別人改過的還是擋（內容不一樣）
+  const c = await post('/api/save', { ...body, srt: { ops: [{ op: 'set', n: 10, text: '第十句別的' }] }, saveId: 'dup-3', keep: { edit: {}, segs: {}, ops: [{ op: 'set', n: 10, text: '第十句別的' }], srtHash: st.srt.hash } });
+  assert.equal(c.status, 409);
+  await post('/api/unsaved', { clear: 'dup-3' });
+  await page.waitForFunction(() => window.__editor.cues.find((x) => x.n === 10)?.text === '第十句重送', { timeout: 10000 });
+  await saved();
+  assert.deepEqual(errors, []);
+});

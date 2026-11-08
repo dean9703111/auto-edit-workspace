@@ -78,7 +78,7 @@ node shared/template/tools/versions.mjs finish --project projects/<專案>
 
 不確定有哪幾版先跑 `versions.mjs list --project projects/<專案> --seg <段>`（「上一版」＝標「← 目前」的前一版）；use 會先把現在的樣子存起來再換回去。
 完成判準：工具印「退回 v1」；`finish` 0 個 ✖。
-常見錯誤：印 `⚠ 字幕在 v1 之後改過` → 看 `finish` 的「文字對時」，✖ 照 → 改那段的 `#N@詞`。
+常見錯誤：印 `⚠ 字幕在 v1 之後改過` → 看 `finish` 的「文字對時」，先跑 `node shared/template/tools/build.mjs --project projects/<專案> --autofix --only <段>` 讓工具照 → 改，剩下的 ✖ 再手改那段的 `#N@詞`。
 
 ## 停點
 
@@ -114,7 +114,7 @@ node shared/template/tools/versions.mjs finish --project projects/<專案>
 | 預覽網址打不開、`✖ 剪輯沒有啟動成功` | `editor.mjs --status`，沒開就重開；還是不行讀它印的 log 最後幾行 | 停下來回報 log 原文 |
 | 完成影片預覽按鈕是灰的 | 看按鈕提示：還沒 build 就跑 build；找不到播放器就在根目錄 `npm install`，再 `--stop` 後重開 | 停下來回報 |
 | audit `✖ … 綁句失敗`、`未定位頂層`、`標題壓到內容` | 把那幾行原文交回做那段的子代理；模板動畫就是 slots 字太多，縮文案 | 停下來回報 |
-| `✖ 文字對時：… 才講到 → beats.keyAt 寫 "#20@到電腦"` | 照 → 改 plan.json，一則一則改完再跑；⚠ 也照改（USAGE-reference.md R2.8） | 停下來回報那幾則原文 |
+| `✖ 文字對時：… 才講到 → beats.keyAt 寫 "#20@到電腦"` | 先跑 `node shared/template/tools/build.mjs --project projects/<專案> --autofix --only <這輪改的段>`（工具照 → 自動改，改不好會退回；一定要加 `--only`：別段是使用者在剪輯台改過的，不能動），剩下的照 → 一則一則改；⚠ 也照改（USAGE-reference.md R2.8） | 停下來回報那幾則原文 |
 | `✖ work/rough.mp4 在 … 是全黑，但素材沒有純聲音檔 → 初剪壞了…` | 不要改 plan.json 繞過；照訊息跑 `verify-rough`，照它印的重做初剪 | 停下來回報 |
 | `⚠ build 會停下來：瘦臉底片不是最新的（…）→ 先跑 … look.mjs run …` | 照它的 → 跑 `look.mjs`，再跑一次 | 停下來回報 |
 | `✖ <段> 的 v<N> 分鏡還在等使用者確認 → …` | 使用者已經說「可以」就照 → 跑 accept；不改了就照 → 跑 use | 停下來回報 |

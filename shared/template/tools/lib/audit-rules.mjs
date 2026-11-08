@@ -32,7 +32,8 @@ export { PIP_ZONE };                // 子母畫面外框禁入區（lib/media.m
 export const DONE_BEFORE = 0.6;     // 完成態＝段尾前 0.6 秒（完成態至少停 0.6s，USAGE 4.2）
 export const MIN_FONT = 30;         // 字太小的門檻（R8.5 的下限是正文 52、標籤 38；30 以下一定看不清）
 export const SPEAKER_WARN = 0.02;   // custom 與用 css 移過位的段：蓋到講者框 ≥ 2% 就提醒（四邊已外擴 40px，碰到邊不算；R8.17）
-export const SPEAKER_WARN_TEMPLATE = 0.15;   // 沒移位的情境模板：和 build --check 的碰撞提醒同一個門檻（R4.1）
+export const SPEAKER_WARN_TEMPLATE = 0.4;    // 沒移位的情境模板：蓋到講者框 ≥ 40%（手勢多半會被擋）才提醒；和 build --check 的碰撞提醒同一個門檻（R4.1）
+export const FACE_WARN = 0.05;      // 不管哪種段：蓋到臉的位置（faceZone）≥ 5% 就提醒。模板固定的版位只壓到講者框下半身（身體）不報
 export const SUBPIXEL = 0.2;        // 邊緣離整數 px ≥ 0.2 才算半像素（0.05 這種量測尾數不會糊）
 export const TOL = 2;               // 一般容許誤差（px），和 hyperframes check 的預設 tolerance 相同
 // 003 版面（R8 #6、OV＝作者 overlay 規範）與節奏（style.md〈節奏〉、TR/v3）；標「初值」的是本線訂的、可依實測調
@@ -153,6 +154,16 @@ export function overflowOf(a, b, tol = TOL, tolY = tol) {
   return Object.keys(o).length ? o : null;
 }
 export function shiftBox(box, dx) { return box ? [box[0] + dx, box[1], box[2] + dx, box[3]] : null; }
+// 臉的位置（估）：speakerBox＝頭、身體、手勢外擴 pad；頭頂＝上緣＋pad，下巴≈頭頂＋內框高 30%（qc.mjs framing 沒有 landmark 時同一個估法），
+// 左右以框的中線為準各一個頭高，四邊再外擴 pad（同 speakerBox 的口徑）
+export function faceZone(box, pad = 40) {
+  if (!box) return null;
+  const [x1, y1, x2, y2] = box;
+  const top = y1 + pad, chin = top + 0.3 * Math.max(0, y2 - pad - top), head = chin - top, cx = (x1 + x2) / 2;
+  return [Math.max(x1, cx - head - pad), y1, Math.min(x2, cx + head + pad), Math.min(y2, chin + pad)];
+}
+// 蓋到講者要不要提醒：ratio＝蓋到講者框的比例、face＝蓋到臉的位置的比例、th＝講者框的門檻（模板 SPEAKER_WARN_TEMPLATE、custom 與 css 移位 SPEAKER_WARN）
+export const coverWarn = (ratio, face, th = SPEAKER_WARN_TEMPLATE) => ratio >= th - 1e-9 || face >= FACE_WARN - 1e-9;
 // 一組矩形的聯集落在 box 裡的面積比例（4px 格點取樣；矩形最多幾十個，夠快也夠準）
 export function coverRatio(rects, box, step = 4) {
   if (!box || !rects.length) return 0;
@@ -367,8 +378,8 @@ export function judgeSample(meas, ctx) {
   if (ctx.layout === 'overlay' && ctx.speakerBox) {
     const box = shiftBox(ctx.speakerBox, ctx.item.side ? ctx.sideShift || 0 : 0);
     const rs = content.filter(({ e }) => still(e)).map(({ r }) => r);
-    const ratio = coverRatio(rs, box);
-    if (ratio >= (ctx.speakerWarn ?? SPEAKER_WARN)) {
+    const ratio = coverRatio(rs, box), face = coverRatio(rs, faceZone(box));
+    if (coverWarn(ratio, face, ctx.speakerWarn ?? SPEAKER_WARN)) {
       // 依最外層的區塊分組（清單裡的每一項都算在清單上），面積大的在前
       const rootOf = (e) => { let x = e; while (x.parent >= 0 && byI.get(x.parent)) x = byI.get(x.parent); return x; };
       const groups = new Map();
@@ -381,8 +392,8 @@ export function judgeSample(meas, ctx) {
       }
       const top = [...groups.entries()].sort((a, b) => b[1] - a[1]).map(([g]) => g);
       const who = top.slice(0, 2).map((g) => descText(boxDesc(g.desc))).join('、');
-      push('warn', 'speaker', top[0], `壓到講者：內容蓋到講者框 ${Math.round(ratio * 100)}%（speakerBox ${JSON.stringify(box)}${ctx.item.side ? `，已加 sideShift ${ctx.sideShift}` : ''}）；主要是 ${who}`,
-        `移到講者框外（例：右緣 ≤ ${box[0]}，或左緣 ≥ ${box[2]}）；用 snapshot 看有沒有擋到臉與手勢，擋到就移位或改 layout: "fullscreen"，只壓到身體就保留、給使用者看預覽時點名`, { ratio: r3(ratio), box });
+      push('warn', 'speaker', top[0], `壓到講者：內容蓋到講者框 ${Math.round(ratio * 100)}%${face >= FACE_WARN ? `、臉的位置 ${Math.round(face * 100)}%` : ''}（speakerBox ${JSON.stringify(box)}${ctx.item.side ? `，已加 sideShift ${ctx.sideShift}` : ''}）；主要是 ${who}`,
+        `移到講者框外（例：右緣 ≤ ${box[0]}，或左緣 ≥ ${box[2]}）；用 snapshot 看有沒有擋到臉與手勢，擋到就移位或改 layout: "fullscreen"，只壓到身體就保留、給使用者看預覽時點名`, { ratio: r3(ratio), face: r3(face), box });
     }
   }
   // ⚠ 字太小

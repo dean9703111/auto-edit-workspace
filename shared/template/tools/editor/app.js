@@ -162,7 +162,10 @@ function normalize() {
   app.edit.gains = app.edit.gains.filter((g) => g.to - g.from >= 0.05).sort((a, b) => a.from - b.from);
   app.splits = [...new Set(app.splits.map(r3))].filter((t) => t > 0.001 && t < app.dur - 0.001 && cutIndexAt(t, app.edit.cuts) < 0 && !app.edit.cuts.some(([a, b]) => Math.abs(t - a) < 0.01 || Math.abs(t - b) < 0.01)).sort((a, b) => a - b);
 }
+// 復原、重做正在換檔案（等伺服器那一下）：先不收新的修改，不然回應到了會被換掉、重做也拿不回來
+const historyBlocked = () => { if (!app.historyBusy) return false; toast('正在復原，等一下再改', 'warn', 1500); return true; };
 function mutate(fn, { coalesce = null, inspector = false } = {}) {
+  if (historyBlocked()) return false;
   const before = snapshot();
   const now = performance.now();
   const merge = coalesce && app.lastCoalesce?.key === coalesce && now - app.lastCoalesce.t < 1500;
@@ -201,14 +204,18 @@ const sameBase = (a, b) => !!a && !!b && a.hash === b.hash && (a.srtHash ?? null
 async function stepHistory(from, to, done) {
   await savePromise;
   if (!from().length) return;
+  if (app.gesture) { toast('放開滑鼠再復原', 'warn', 2000); return; }
   const target = from().pop(), o = JSON.parse(target);
-  const here = snapshot();
+  let here = snapshot();
   if (!sameBase(o.base, app.base)) {
     clearTimeout(saveTimer);
     app.busy = true;
+    app.historyBusy = true;
     setSaveState('busy', '復原中…');
-    const r = await api('POST', '/api/restore', { base: app.base, to: o.base });
-    app.busy = false;
+    let r;
+    try { r = await api('POST', '/api/restore', { base: app.base, to: o.base }); } finally { app.busy = false; app.historyBusy = false; }
+    // 等回應時還是動到了（例如中文選字剛好送出）：算進「回到這裡」，重做拿得回來，不會憑空不見
+    here = snapshot();
     if (!r.ok) {
       // 檔案被別人改過、或版本已經不在：這一步（和更早的）回不去。其他（輸出中、一時連不到）等一下還能再按
       if (r.status === 410 || r.data?.error === 'conflict') from().length = 0;
@@ -719,14 +726,16 @@ async function setMode(m, { focus = null } = {}) {
 
 // ---------- 載入 ----------
 // keep：回應到了才算（等回應的時候可能又改了東西），回傳要保留的調整或 null
-async function loadState({ keep = null } = {}) {
+// waitSave：平常要等存檔做完再讀；存檔自己要重新載入（構圖頁剛存過）時不能等自己，不然會一直卡在「儲存中…」
+// framing：只是構圖頁存了框和調光，字幕和字卡的字沒變：正在打的欄位不用關
+async function loadState({ keep = null, waitSave = true, framing = false } = {}) {
   // 存檔途中讀到的是舊內容：等存完；等回應時又存了一次就再讀一次
   let r = null;
   for (let i = 0; i < 6; i++) {
-    await savePromise;
+    if (waitSave) await savePromise;
     const seq = app.saveSeq;
     r = await api('GET', '/api/state');
-    if (seq === app.saveSeq && !app.busy) break;
+    if (seq === app.saveSeq && (!waitSave || !app.busy)) break;
   }
   if (!r.ok || !r.data) {
     setSaveState('error', '連不到剪輯台');
@@ -738,13 +747,17 @@ async function loadState({ keep = null } = {}) {
   const prevVideo = app.server?.video?.url;
   // 檔案沒變（只是更新預覽、重新讀一次）：復原清單留著；檔案被別人改過：舊快照對不上，不能再回去
   const sameFiles = sameBase(app.base, { hash: s.plan.hash, srtHash: s.srt?.hash ?? null });
-  const kept = keep ? keep() : null;
-  // 檔案被別人改過：正在打的欄位是舊內容，不能接著寫回去；正在拖的也一樣
+  // 檔案被別人改過：正在打的欄位是舊內容，不能接著寫回去（下一個字會把整格舊字蓋回去）；正在拖的也一樣。
+  // 先離開欄位再算要保留的調整：中文選字在離開時才送出，那個字也要算進去
   if (!sameFiles && app.base) {
-    closeCapEditor(false);
-    if (document.activeElement?.matches?.('.cue-edit, #capText')) document.activeElement.blur();
+    if (!framing) {
+      closeCapEditor(false);
+      const a = document.activeElement;
+      if (a?.matches?.('.cue-edit, #capText') || typingInInspector()) a.blur();
+    }
     app.gesture = null;
   }
+  const kept = keep ? keep() : null;
   app.saveBlocked = false;
   app.server = s;
   app.base = { mtime: s.plan.mtime, hash: s.plan.hash, srtHash: s.srt?.hash ?? null };
@@ -764,23 +777,7 @@ async function loadState({ keep = null } = {}) {
   app.cues = clone(app.cues0);
   app.srtOps = [];
   app.savedSnap = dirtySnap();
-  if (kept) {
-    // 保留使用者的調整：edit 只蓋使用者改過的那幾項（別的是 AI 剛改的，要留著）；字幕操作在字幕沒被改過時重播；段落欄位照 id 套回去
-    app.edit = normEdit({ ...app.savedEdit, ...kept.edit });
-    if ('look' in kept) app.look = kept.look;
-    if ('theme' in kept) app.theme = kept.theme;
-    if (kept.ops?.length && kept.srtHash === app.base.srtHash) {
-      const rr = replay(app.cues0, { scenes: app.scenes }, kept.ops, { videoDur: app.dur });
-      if (!rr.errors.length) { app.cues = rr.cues; app.scenes = rr.plan.scenes; app.srtOps = kept.ops; } else toast(`字幕的修改套不上最新的檔案，已放棄：${rr.errors[0]}`, 'warn', 6000);
-    } else if (kept.ops?.length) toast('字幕檔被改過，你還沒存的字幕修改已放棄（要重做）', 'warn', 6000);
-    for (const [id, patch] of Object.entries(kept.segs || {})) {
-      const i = app.scenes.findIndex((x) => isObj(x) && x.id === id);
-      if (i < 0) continue;
-      const o = { ...app.scenes[i] };
-      for (const [k, v] of Object.entries(patch)) { if (v === undefined) delete o[k]; else o[k] = v; }
-      app.scenes[i] = o;
-    }
-  }
+  if (kept) applyKept(kept);
   if (!sameFiles) { app.undoStack = []; app.redoStack = []; if (!kept) app.splits = []; }
   document.title = `剪輯台｜${s.project.name}`;
   $('#projName').textContent = s.project.name;
@@ -795,7 +792,7 @@ async function loadState({ keep = null } = {}) {
   }
   if (!s.plan.exists) banner('分鏡還沒做好：現在可以先看影片，但改了存不起來。請 AI 先完成分鏡，再重新整理這一頁。', 'error');
   else if (s.plan.error) banner(`分鏡檔有錯：${esc(s.plan.error)} → 請 AI 修好再重新整理。`, 'error');
-  else if (s.video && roughStage()) banner('初剪預覽：字幕已經疊在畫面上，一邊聽一邊看。看到錯字，點右邊那一句直接改，會自動存。字卡和動畫要等分鏡做好才會出現。');
+  else if (s.video && roughStage()) renderRoughBanner();
   else if (s.schema?.error) banner(esc(s.schema.error), '');
   else if (!kept) banner('');
   timeline.setDuration(app.dur);
@@ -816,8 +813,47 @@ async function loadState({ keep = null } = {}) {
   pollExport();   // 順便更新「已輸出過」：內容改過就不算最新
   loadThumbs();
   sim.preloadSfx?.(s.schema?.sounds || []);
+  offerUnsaved(s.unsaved);
   return true;
 }
+// 拿掉的欄位在記憶體裡是 undefined，送到伺服器存著要換成記號（JSON 沒有 undefined）
+const DEL = { $del: 1 };
+const isDel = (v) => isObj(v) && v.$del === 1 && Object.keys(v).length === 1;
+const keepForWire = (k) => ({ ...k, segs: Object.fromEntries(Object.entries(k.segs || {}).map(([id, p]) => [id, Object.fromEntries(Object.entries(p).map(([f, v]) => [f, v === undefined ? DEL : v]))])) });
+// 保留使用者的調整：edit 只蓋使用者改過的那幾項（別的是 AI 剛改的，要留著）；字幕操作在字幕沒被改過時重播；段落欄位照 id 套回去
+function applyKept(kept) {
+  app.edit = normEdit({ ...app.savedEdit, ...(kept.edit || {}) });
+  if ('look' in kept) app.look = kept.look;
+  if ('theme' in kept) app.theme = kept.theme;
+  if (kept.ops?.length && kept.srtHash === app.base.srtHash) {
+    const rr = replay(app.cues0, { scenes: app.scenes }, kept.ops, { videoDur: app.dur });
+    if (!rr.errors.length) { app.cues = rr.cues; app.scenes = rr.plan.scenes; app.srtOps = kept.ops; } else toast(`字幕的修改套不上最新的檔案，已放棄：${rr.errors[0]}`, 'warn', 6000);
+  } else if (kept.ops?.length) toast('字幕檔被改過，那次沒存的字幕修改套不回去（要重做）', 'warn', 6000);
+  for (const [id, patch] of Object.entries(kept.segs || {})) {
+    const i = app.scenes.findIndex((x) => isObj(x) && x.id === id);
+    if (i < 0 || !isObj(patch)) continue;
+    const o = { ...app.scenes[i] };
+    for (const [k, v] of Object.entries(patch)) { if (v === undefined || isDel(v)) delete o[k]; else o[k] = v; }
+    app.scenes[i] = o;
+  }
+}
+// 上次關頁時正在存的那一筆被擋下來（檔案剛好被 AI 或構圖頁改過、正在輸出）：伺服器替關掉的頁面留著，這裡問要不要套回去
+const UNSAVED_WHY = { conflict: '那時分鏡或字幕剛好被改過（可能是 AI 或構圖頁）', exporting: '那時正在輸出完成影片', invalid: '那次的修改有問題，伺服器沒有收' };
+const unsavedSkip = new Set();
+const forgetUnsaved = (id) => { unsavedSkip.add(id); api('POST', '/api/unsaved', { clear: id }); };
+function offerUnsaved(u) {
+  if (!u?.id || !isObj(u.keep) || unsavedSkip.has(u.id) || !app.server?.plan?.exists || app.server.plan.error) return;
+  const when = new Date(u.at || Date.now());
+  const segs = Object.keys(u.keep.segs || {}), ops = u.keep.ops?.length || 0;
+  const what = [segs.length ? `${segs.slice(0, 4).join('、')}${segs.length > 4 ? ` 等 ${segs.length} 段` : ''}` : '', ops ? `${ops} 處字幕` : '', Object.keys(u.keep.edit || {}).length || 'look' in u.keep || 'theme' in u.keep ? '剪輯設定' : ''].filter(Boolean).join('、');
+  // 不管套不套，伺服器那份都丟掉：套回去之後修改在這一頁上，照一般的自動存檔走（關頁沒存到會問）
+  const done = () => { forgetUnsaved(u.id); banner(''); if (app.server?.video && roughStage()) renderRoughBanner(); };
+  banner(`上次關掉這一頁時，最後一次修改沒存進去（${when.getMonth() + 1}/${when.getDate()} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}${what ? `，${esc(what)}` : ''}）：${UNSAVED_WHY[u.reason] || '那次沒存成功'}。要套回去嗎？`, 'error', [
+    ['套回去（會自動存）', () => { done(); applyKept(u.keep); changed({ inspector: true }); toast('已套回去，會自動存', 'ok', 4000); }, 'small primary'],
+    ['不要', done, 'small'],
+  ]);
+}
+function renderRoughBanner() { banner('初剪預覽：字幕已經疊在畫面上，一邊聽一邊看。看到錯字，點右邊那一句直接改，會自動存。字卡和動畫要等分鏡做好才會出現。'); }
 async function fetchReport(fresh = false) {
   const r = await api('GET', `/api/report${fresh ? '?fresh=1' : ''}`);
   if (r.ok && r.data) { applyReport(r.data); changed({ inspector: true }); tryDeepLink(); }
@@ -1116,26 +1152,36 @@ async function save({ notify = false } = {}) {
   savePromise = job.catch(() => {});
   return job;
 }
-async function saveOnce({ notify }) {
+let saveIds = 0;
+async function saveOnce({ notify, retry = 0 }) {
   const { segments } = segmentDiff();
   const textChanged = Object.entries(segments).filter(([, d]) => 'slots' in d || 'vars' in d).map(([id]) => id);
-  const body = { quick: true, base: { ...app.base }, edit: editForSave() };
+  const saveId = `${Date.now().toString(36)}-${++saveIds}-${Math.random().toString(36).slice(2, 8)}`;
+  const body = { quick: true, base: { ...app.base }, edit: editForSave(), saveId };
   if (Object.keys(segments).length) body.segments = segments;
   if (app.srtOps.length) body.srt = { ops: app.srtOps };
   if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}) } : null;   // 美顏 0＝關，不寫
   if (app.theme !== app.savedTheme) body.theme = app.theme;
   const sentSnap = dirtySnap(), sentOps = app.srtOps.length;
   app.busy = true;
+  app.inFlight = true;
   app.opsInFlight = sentOps;
   setSaveState('busy', '儲存中…');
   renderHeader();
-  // keepalive：送出去之後才關頁或換頁，這次存檔照樣會完成（瀏覽器限 64 KB，太大的就算了，關頁時會問）
-  app.sentSafe = new Blob([JSON.stringify(body)]).size < 60000;
+  // keepalive：送出去之後才關頁或換頁，這次存檔照樣會完成（瀏覽器限 64 KB）。連同這次改了什麼（keep）一起送：
+  // 萬一頁面關掉之後才被擋下來（檔案剛好被改過、正在輸出），伺服器替它留著，下次打開問要不要套回去。太大的不送，關頁時會問
+  const wire = { ...body, keep: keepForWire(keepState()) };
+  app.sentSafe = new Blob([JSON.stringify(wire)]).size < 60000;
   app.sentSnap = sentSnap;
-  const r = await api('POST', '/api/save', body, { keepalive: app.sentSafe });
-  app.busy = false;
+  const r = await api('POST', '/api/save', app.sentSafe ? wire : body, { keepalive: app.sentSafe });
+  app.inFlight = false;
   app.opsInFlight = 0;
+  // 被擋下來（409）要先問清楚是誰改的：這段期間還算存檔中，自動存檔、檢查版本不能插進來
+  const settle = () => { app.busy = false; };
+  if (!(r.status === 409 && r.data?.error === 'conflict')) settle();
   app.saveOffline = r.status === 0;
+  // 頁面還開著，自己會處理：伺服器替關掉的頁面留的那份用不到（重新載入時也別拿來問）
+  if (r.data?.stashed) forgetUnsaved(saveId);
   if (r.status === 0) {
     // 連不到服務：修改還在頁面上，連回來自動補存
     setSaveState('error', '連不到剪輯台，修改還留在這一頁');
@@ -1149,13 +1195,19 @@ async function saveOnce({ notify }) {
     return false;
   }
   if (r.status === 409) {
-    // 是構圖頁剛存的（同一個服務，只動構圖）：不是別人改的，載入新的、保留手上的修改，自動再存
-    const ver = await api('GET', '/api/version');
-    const fr = ver.data?.framingUpdate;
-    if (ver.ok && fr?.hash && fr.hash === ver.data.plan?.hash && (ver.data.srt?.hash ?? null) === (app.base?.srtHash ?? null)) {
-      await loadState({ keep: keepState });
-      return false;
-    }
+    // 是構圖頁剛存的（同一個服務，只動構圖）：不是別人改的，載入新的、保留手上的修改，馬上再存一次。
+    // 載入不能等「這一輪存檔做完」（loadState 平常會等），等的就是自己，會一直卡在「儲存中…」
+    try {
+      const ver = await api('GET', '/api/version');
+      const fr = ver.data?.framingUpdate;
+      if (ver.ok && fr?.hash && fr.hash === ver.data.plan?.hash && (ver.data.srt?.hash ?? null) === (app.base?.srtHash ?? null)) {
+        const loaded = await loadState({ keep: keepState, waitSave: false, framing: true });
+        settle();
+        if (loaded && isDirty() && retry < 2) return saveOnce({ notify, retry: retry + 1 });
+        renderHeader();
+        return loaded && !isDirty();
+      }
+    } finally { settle(); }
     app.saveBlocked = true;
     renderHeader();
     setSaveState('error', r.data?.file === 'srt' ? '字幕檔被改過，這次沒有存' : '分鏡被改過，這次沒有存');
@@ -1210,15 +1262,18 @@ async function checkAfterSave() {
     if (errs) toast(`檢查有 ${errs} 個錯誤（點左下角看）`, 'warn', 5000);
   } else renderStatus();
 }
-// 按「更新預覽」：改過字的段做完會量版面，播放頭帶到第一段
-function buildFromButton() {
-  const ids = [...app.pendingAudit], it = ids.length ? app.itemsView.find((x) => x.id === ids[0]) : null;
-  return runBuild({ focus: it ? it.start + 0.4 : null, focusId: it?.id ?? null, audit: ids });
-}
-async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
+// 按「更新預覽」：改過字的段做完會量版面，播放頭帶到第一段。
+// 要量哪幾段等存完再算：改完字不到一秒就按，那一段是這次存檔才記上的，不能漏掉
+function buildFromButton() { return runBuild({ fromButton: true }); }
+async function runBuild({ focus = null, focusId = null, audit = [], fromButton = false } = {}) {
   if (app.building) return;
   await savePromise;
   if (isDirty() && !(await save())) return;
+  if (fromButton) {
+    audit = [...app.pendingAudit];
+    const it = audit.length ? app.itemsView.find((x) => x.id === audit[0]) : null;
+    focus = it ? it.start + 0.4 : null; focusId = it?.id ?? null;
+  }
   app.building = true;
   renderHeader();
   const t0 = performance.now();
@@ -1239,7 +1294,7 @@ async function runBuild({ focus = null, focusId = null, audit = [] } = {}) {
   $('#logIssues').innerHTML = issueItems(iss.errors, iss.warnings, 30);
   await loadState({ keep: keepIfDirty });
   if (r.ok && d.ok) {
-    app.pendingAudit.clear();
+    for (const id of audit) app.pendingAudit.delete(id);   // 只拿掉這次量過的：更新途中又改字的段，留到下一次
     $('#logTitle').textContent = '✓ 預覽更新好了'; $('#logSub').textContent = `花了 ${fmtWait(d.seconds)}。`; $('#logWrap').open = false;
     const au = d.audit;
     if (au?.errors.length) { renderCheck(); openIssues(); toast(`預覽更新好了，但 ${au.ids.join('、')} 改字後版面有 ${au.errors.length} 個錯誤（「檢查」分頁）：改短或改回原本的字`, 'err', 8000); }
@@ -1306,7 +1361,7 @@ async function pollVersion() {
     const fromFraming = framing?.hash === v.plan.hash && (v.srt?.hash ?? null) === (app.base?.srtHash ?? null);
     const key = `${v.plan.hash}|${v.srt?.hash}`;
     if (changedOut && !$('#dlgConflict').open && app.noticed !== key) {
-      if (fromFraming) { await loadState({ keep: keepIfDirty }); toast('已套用構圖設定', 'ok', 2600); }
+      if (fromFraming) { await loadState({ keep: keepIfDirty, framing: true }); toast('已套用構圖設定', 'ok', 2600); }
       else if (!isDirty()) { await loadState(); toast('分鏡或字幕有更新（可能是 AI 改的），已重新載入', 'ok', 4500); }
       else {
         banner('分鏡或字幕剛被改過（可能是 AI 改的），而你有還沒存的調整。', 'error', [
@@ -1358,7 +1413,7 @@ function renderPlay() { const p = engine().playing || !!app.shuttle; const b = $
 function renderStatus() {
   const { errors: es, warnings: ws } = currentIssues();
   const counts = groupIssues(es, ws).counts;
-  const errs = counts.errors, warns = counts.author;   // ⚠＝要作者看的件數（同類合併）；AI 會處理的不算
+  const errs = counts.errors, warns = counts.author;   // ⚠＝要作者看的件數（同類合併）；給 AI 的細節不算
   $('#stIssues .e').textContent = `✖ ${errs}`; $('#stIssues .e').classList.toggle('has', !!errs);
   $('#stIssues .w').textContent = `⚠ ${warns}`; $('#stIssues .w').classList.toggle('has', !!warns);
   const vu = app.voiceUncovered.length;
@@ -1482,7 +1537,7 @@ function groupItem(g) {
 function issueItems(errors = [], warnings = [], limit = 300) {
   const G = groupIssues(errors, warnings);
   const all = [...G.errors.map(errorItem), ...G.author.map(groupItem)];
-  const ai = G.ai.length ? `<li class="chk-ai"><details><summary>AI 會處理的（${G.counts.ai} 則）</summary><ul class="chk-ailist">${G.ai.map((g) => `<li><b>${esc(g.title)}</b>${g.ids.length ? `<span class="mute">　${esc(g.ids.slice(0, 8).join('、'))}${g.ids.length > 8 ? '…' : ''}</span>` : ''}</li>`).join('')}</ul><button class="small" data-chk-copy>複製原文給 AI</button></details></li>` : '';
+  const ai = G.ai.length ? `<li class="chk-ai"><details><summary>給 AI 的細節（${G.counts.ai} 則）</summary><ul class="chk-ailist">${G.ai.map((g) => `<li><b>${esc(g.title)}</b>${g.ids.length ? `<span class="mute">　${esc(g.ids.slice(0, 8).join('、'))}${g.ids.length > 8 ? '…' : ''}</span>` : ''}</li>`).join('')}</ul><button class="small" data-chk-copy>複製原文給 AI</button></details></li>` : '';
   return all.slice(0, limit).join('') + (all.length > limit ? `<li>…還有 ${all.length - limit} 則</li>` : '') + ai;
 }
 function currentIssues() {
@@ -1495,7 +1550,7 @@ function renderCheck() {
   const sum = $('#checkSummary'), list = $('#checkList');
   const { errors, warnings } = currentIssues();
   const G = groupIssues(errors, warnings);
-  // 給段落清單和時間軸用：只標作者要看的（AI 會處理的不標）
+  // 給段落清單和時間軸用：只標作者要看的（給 AI 的細節不標）
   app.authorFlags = new Set([...G.errors.map(issueId).filter(Boolean), ...G.author.flatMap((g) => g.ids)]);
   if (app.saveErrors) sum.innerHTML = '<b class="err-ink">沒有存成功</b>：你的修改還留在頁面上，改好下面的問題就會自動存。';
   else if (!rep) sum.innerHTML = '<span class="mute">檢查中…</span>';
@@ -2314,6 +2369,7 @@ app.tlDown = (h, e) => {
   if (app.tool === 'split') return null;
   const editKinds = ['mediaL', 'mediaR', 'media', 'mediaVol', 'head', 'tail', 'cutEdge', 'capEdge', 'gainVol', 'gainEdge', 'voiceVol', 'sfx'];
   if (editKinds.includes(h.kind) && app.trackLocked(lane)) { return { move: () => null, up: (moved) => { if (moved) lockedToast(lane); } }; }
+  if (editKinds.includes(h.kind) && app.historyBusy) { historyBlocked(); return { move: () => null, up: () => {} }; }
   switch (h.kind) {
     case 'mediaL': case 'mediaR': case 'media': return dragMedia(h, e);
     case 'mediaVol': return dragMediaVol(h);
@@ -3263,7 +3319,7 @@ window.addEventListener('pagehide', flushNow);
 window.addEventListener('beforeunload', (e) => {
   flushNow();
   // 最新的修改已經送出去（keepalive），換頁、關頁都會存好，不用問。只有真的存不到才問
-  const sent = app.busy && app.sentSafe && dirtySnap() === app.sentSnap && !app.saveOffline && !app.saveErrors;
+  const sent = app.inFlight && app.sentSafe && dirtySnap() === app.sentSnap && !app.saveOffline && !app.saveErrors;
   if (isDirty() && !sent) { e.preventDefault(); e.returnValue = ''; }
 });
 

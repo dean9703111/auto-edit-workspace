@@ -750,6 +750,7 @@ async function getState(ctx) {
     schema: schema ? { scenes: schema.scenes, fx: schema.fx, sounds: schema.sounds, custom: schema.custom || [], error: schema.error } : null,
     report: rep ? { ready: true, data: rep.report, fallback: rep.fallback ?? null, error: rep.error, issues: rep.issues, log: rep.log ?? null } : { ready: false },
     requests: requestsInfo(P.project),
+    unsaved: readUnsaved(ctx).at(-1) ?? null,
     speaker: speakerInfo(ctx, plan.data),
     preview: { player: { available: ctx.player.available, version: ctx.player.version ?? null, reason: ctx.player.reason ?? null }, composition: '/composition/index.html', ...builtInfo(ctx, plan) },
     build: buildBrief(ctx),
@@ -763,7 +764,9 @@ const reportOut = (rep) => ({ ready: true, data: rep.report, fallback: rep.fallb
 
 async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   // quick：寫完檔就回，檢查（長片要 9 秒）由頁面另外要；不帶 quick（AI、測試）照舊附上檢查結果
-  const { quick = false, ...body } = isObj(rawBody) ? rawBody : { body: rawBody };
+  // keep／saveId：剪輯台每次存檔附上「這次改了什麼」，被擋下來時替可能已經關掉的頁面留著（見 stashUnsaved）
+  const { quick = false, keep = null, saveId = null, ...body } = isObj(rawBody) ? rawBody : { body: rawBody };
+  const reject = (status, out, reason) => (stashUnsaved(ctx, { saveId, keep, base: body?.base }, reason) ? [status, { ...out, stashed: true }] : [status, out]);
   const P = ctx.P;
   const st = statOf(P.plan);
   // 構圖在停點 ②（分鏡表之前，還沒有 plan.json）只存 frame：先建一個只有 version（直式加 format）的 plan.json
@@ -774,17 +777,22 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   const text = st ? fs.readFileSync(P.plan, 'utf8') : JSON.stringify({ version: 1, ...(cv.format === 'portrait' ? { format: 'portrait' } : {}) }, null, 2) + '\n';
   const base = isObj(body?.base) ? body.base : {};
   const hash = st ? sha(text) : null;
+  // 同一筆存檔送了兩次（關頁時瀏覽器先把第一次算失敗、頁面又補送一次；或一時連不到後重送）：第一次已經存好了，不是別人改的
+  const sig = frameOnly ? null : sha(JSON.stringify([base.hash ?? null, base.srtHash ?? null, body.edit ?? null, body.segments ?? null, body.srt ?? null, body.look ?? null, body.theme ?? null]));
+  const duplicate = () => !!sig && !!st && (ctx.recentSaves || []).includes(sig);
   const planConflict = (h, m) => (!st ? base.hash != null : base.hash != null ? base.hash !== h : base.mtime == null || base.mtime !== m);
+  if (planConflict(hash, st?.mtimeMs) && duplicate()) return [200, savedNow(ctx)];
   if (planConflict(hash, st?.mtimeMs)) {
-    return [409, { error: 'conflict', file: 'plan', mtime: st.mtimeMs, hash,
-      message: 'plan.json 在你打開剪輯之後被改過（通常是 AI 剛改了它）。為了不蓋掉那些修改，這次 plan.json 和字幕都沒有存 → 按「重新載入」拿最新的 plan.json，再存一次' }];
+    return reject(409, { error: 'conflict', file: 'plan', mtime: st?.mtimeMs ?? null, hash,
+      message: 'plan.json 在你打開剪輯之後被改過（通常是 AI 剛改了它）。為了不蓋掉那些修改，這次 plan.json 和字幕都沒有存 → 按「重新載入」拿最新的 plan.json，再存一次' }, 'conflict');
   }
   const srt = readSrt(P.srt);
   const wantSrt = Array.isArray(body?.srt?.ops) && body.srt.ops.length > 0;
   const srtConflict = (h) => ('srtHash' in base || wantSrt) && (base.srtHash ?? null) !== (h ?? null);
+  if (srtConflict(srt.hash) && duplicate()) return [200, savedNow(ctx)];
   if (srtConflict(srt.hash)) {
-    return [409, { error: 'conflict', file: 'srt', hash: srt.hash,
-      message: 'work/rough.srt（字幕）在你打開剪輯之後被改過（通常是 AI 剛改了字幕）。為了不蓋掉那些修改，這次 plan.json 和字幕都沒有存 → 按「重新載入」拿最新的字幕，再存一次（還沒存的字幕修改要重做）' }];
+    return reject(409, { error: 'conflict', file: 'srt', hash: srt.hash,
+      message: 'work/rough.srt（字幕）在你打開剪輯之後被改過（通常是 AI 剛改了字幕）。為了不蓋掉那些修改，這次 plan.json 和字幕都沒有存 → 按「重新載入」拿最新的字幕，再存一次（還沒存的字幕修改要重做）' }, 'conflict');
   }
   let videoDur = null;
   try { const v = pickVideo(P); if (v) videoDur = probeVideo(v)?.dur ?? null; } catch { videoDur = null; }
@@ -799,7 +807,7 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
     else { const d0 = readPlan(P.plan).data; frameOrigin = isObj(d0) ? { frame: d0.frame ?? null, speakerBox: d0.speakerBox ?? null, pipCrop: d0.pipCrop ?? null } : null; }
   }
   const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory, canvas: cv, frameOrigin });
-  if (r.errors.length) return [400, { error: 'invalid', errors: r.errors, message: r.errors.join('\n') }];
+  if (r.errors.length) return reject(400, { error: 'invalid', errors: r.errors, message: r.errors.join('\n') }, 'invalid');
   // plan.json 與 rough.srt 一起寫：兩個都先寫暫存檔；rename 之前再比對一次，任一個被改過就兩個都不寫
   const writes = [];
   if (r.text != null) writes.push([P.plan, r.text]);
@@ -811,7 +819,7 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
     const st2 = statOf(P.plan), now = st2 ? fs.readFileSync(P.plan, 'utf8') : null, srt2 = readSrt(P.srt);
     if ((now == null ? null : sha(now)) !== hash || (srt2.hash ?? null) !== (srt.hash ?? null)) {
       for (const [tmp] of tmps) try { fs.unlinkSync(tmp); } catch { /* 已經不在 */ }
-      return [409, { error: 'conflict', file: (now == null ? null : sha(now)) !== hash ? 'plan' : 'srt', mtime: st2?.mtimeMs, message: '存檔的同時 plan.json 或字幕被改過了，這次兩個都沒有存 → 按「重新載入」再存一次' }];
+      return reject(409, { error: 'conflict', file: (now == null ? null : sha(now)) !== hash ? 'plan' : 'srt', mtime: st2?.mtimeMs, message: '存檔的同時 plan.json 或字幕被改過了，這次兩個都沒有存 → 按「重新載入」再存一次' }, 'conflict');
     }
     for (const [tmp, f] of tmps) fs.renameSync(tmp, f);
   } catch (e) {
@@ -838,10 +846,50 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
     }
     return [200, { ok: true, wrote: { plan: r.text != null, srt: false }, notes: r.notes || [], plan: { exists: !!nst, mtime: nst?.mtimeMs ?? null, hash, frame: Array.isArray(r.plan.frame) ? r.plan.frame : null, speakerBox: r.plan.speakerBox ?? null }, look: lookRunState(ctx), framingUpdate: ctx.framingUpdate }];
   }
+  if (sig) ctx.recentSaves = [...(ctx.recentSaves || []).filter((x) => x !== sig), sig].slice(-8);
   const rep = quick ? null : await getReport(ctx, { fresh: true });
   return [200, { ok: true, look: lookState(ctx, r.plan), wrote: { plan: r.text != null, srt: r.srtText != null }, plan: { mtime: nst.mtimeMs, hash: sha(fs.readFileSync(P.plan, 'utf8')), data: r.plan },
     srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: r.notes || [], edit: r.edit ?? r.plan.edit ?? null, anchors: r.anchors || [], sfxMemory: r.memory || {},
     ...(rep ? { report: reportOut(rep) } : {}) }];
+}
+
+// 重送的那一筆：照現在的檔案回「存好了」（和一般存檔回的一樣，頁面拿來當新的基準）
+function savedNow(ctx) {
+  const P = ctx.P, text = fs.readFileSync(P.plan, 'utf8'), nst = statOf(P.plan), nsrt = readSrt(P.srt);
+  let plan;
+  try { plan = JSON.parse(text); } catch { plan = readPlan(P.plan).data; }
+  return { ok: true, duplicate: true, look: lookState(ctx, plan), wrote: { plan: false, srt: false }, plan: { mtime: nst.mtimeMs, hash: sha(text), data: plan },
+    srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: [], edit: plan.edit ?? null, anchors: [], sfxMemory: readMemory(ctx) };
+}
+
+// 關頁時正在存的那一筆被擋下來（檔案剛好被 AI 或構圖頁改過、正在輸出、內容有錯）：頁面可能已經不在了，
+// 替它留著（work/hyperframes/.editor/unsaved.json，最多 5 筆），下次打開剪輯台問要不要套回去。頁面還開著的會馬上叫我們丟掉
+const UNSAVED_MAX = 5;
+const unsavedFile = (ctx) => path.join(ctx.editorDir, 'unsaved.json');
+export function readUnsaved(ctx) {
+  const j = readJson(unsavedFile(ctx));
+  return Array.isArray(j?.items) ? j.items.filter((x) => isObj(x) && typeof x.id === 'string' && isObj(x.keep)) : [];
+}
+function writeUnsaved(ctx, items) {
+  try {
+    if (!items.length) { fs.rmSync(unsavedFile(ctx), { force: true }); return; }
+    fs.mkdirSync(ctx.editorDir, { recursive: true });
+    const tmp = `${unsavedFile(ctx)}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify({ items }, null, 2) + '\n');
+    fs.renameSync(tmp, unsavedFile(ctx));
+  } catch { /* 留不住只影響「關頁的同時被擋下來」這種少見情況 */ }
+}
+function stashUnsaved(ctx, { saveId, keep, base } = {}, reason) {
+  if (!isObj(keep) || typeof saveId !== 'string' || !/^[\w.-]{1,80}$/.test(saveId)) return false;
+  if (JSON.stringify(keep).length > 2 * 1024 * 1024) return false;
+  const items = readUnsaved(ctx).filter((x) => x.id !== saveId);
+  items.push({ id: saveId, at: Date.now(), reason, base: isObj(base) ? base : null, keep });
+  writeUnsaved(ctx, items.slice(-UNSAVED_MAX));
+  return true;
+}
+function clearUnsaved(ctx, id) {
+  const items = readUnsaved(ctx), rest = items.filter((x) => x.id !== id);
+  if (rest.length !== items.length) writeUnsaved(ctx, rest);
 }
 
 // 這個 session 存過的檔案版本（plan.json＋rough.srt）：復原、重做要回到某一次存檔前的樣子時用。只在記憶體，服務重開就沒了
@@ -873,6 +921,12 @@ export function doRestore(ctx, body) {
   const tmps = [];
   try {
     for (const [f, t] of writes) { const tmp = `${f}.editor-${process.pid}.tmp`; fs.writeFileSync(tmp, t); tmps.push([tmp, f]); }
+    // 換檔之前再比對一次：寫暫存檔的這一下 AI 剛好改了檔案，就不能蓋掉（和存檔一樣）
+    const now = statOf(P.plan) ? fs.readFileSync(P.plan, 'utf8') : null, srt2 = readSrt(P.srt);
+    if ((now == null ? null : sha(now)) !== hash || (srt2.hash ?? null) !== (srt.hash ?? null)) {
+      for (const [tmp] of tmps) try { fs.unlinkSync(tmp); } catch { /* 已經不在 */ }
+      return [409, { error: 'conflict', file: (now == null ? null : sha(now)) !== hash ? 'plan' : 'srt', message: '檔案剛被改過（通常是 AI），這一步不能復原了' }];
+    }
     for (const [tmp, f] of tmps) fs.renameSync(tmp, f);
   } catch (e) {
     for (const [tmp] of tmps) try { fs.unlinkSync(tmp); } catch { /* 已經不在 */ }
@@ -1069,7 +1123,15 @@ async function handle(ctx, req, res) {
         return result ? sendJson(res, 200, result) : sendJson(res, 404, { message: '找不到這個操作' });
       } catch (e) { return sendJson(res, e.status || 400, { message: e.message }); }
     }
-    if (exportBusy(ctx) && ['/api/save', '/api/restore', '/api/build', '/api/framing/save', '/api/framing/update'].includes(p)) return sendJson(res, 409, { error: 'exporting', message: '正在輸出完成影片，等它跑完再存檔或更新預覽（也可以先取消輸出）' });
+    if (exportBusy(ctx) && ['/api/save', '/api/restore', '/api/build', '/api/framing/save', '/api/framing/update'].includes(p)) {
+      const out = { error: 'exporting', message: '正在輸出完成影片，等它跑完再存檔或更新預覽（也可以先取消輸出）' };
+      if (p === '/api/save' && isObj(body) && stashUnsaved(ctx, body, 'exporting')) out.stashed = true;
+      return sendJson(res, 409, out);
+    }
+    if (p === '/api/unsaved') {
+      if (typeof body?.clear === 'string') clearUnsaved(ctx, body.clear);
+      return sendJson(res, 200, { ok: true, unsaved: readUnsaved(ctx).at(-1) ?? null });
+    }
     if (p === '/api/framing/save') {
       const { designId, update = true, ...frameBody } = body;
       if (designId && (ctx.designBusy || designState(ctx).draft?.id !== designId)) return sendJson(res, 409, { error: 'designbusy', message: '背景正在更新，請等預覽完成後再存。' });

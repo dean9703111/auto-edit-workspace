@@ -361,3 +361,47 @@ test('構圖頁：框被 AI 改過不會被舊的蓋回去；只有別的欄位�
     assert.deepEqual(errors, []);
   } finally { await browser.close(); await ed.close(); }
 });
+
+test('構圖頁：存檔途中又拖了一下就關頁會問（最後那一下還沒送出去）；送出去後沒再動就不問', { timeout: 120000 }, async (t) => {
+  const chrome = await hasChrome();
+  if (!chrome) { t.skip('找不到現有 Chrome'); return; }
+  const dir = path.join(root, 'projects', 'unsent');
+  const work = path.join(dir, 'work');
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  fs.writeFileSync(path.join(work, 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, frame: [240, 135, 1440, 810] }));
+  fs.writeFileSync(path.join(work, 'rough.srt'), '1\n00:00:00,100 --> 00:00:01,900\n第一句\n');
+  fs.copyFileSync(path.join(project, 'work', 'rough.mp4'), path.join(work, 'rough.mp4'));
+  const ed = await startEditor({ flags: { project: dir, template: TEMPLATE }, cwd: root, port: 0, writeState: false, previewDir: path.join(root, 'preview') });
+  const until = async (fn, ms = 10000) => { const end = Date.now() + ms; while (Date.now() < end) { if (fn()) return true; await new Promise((r) => setTimeout(r, 80)); } return !!fn(); };
+  const { default: puppeteer } = await import('puppeteer-core');
+  const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage();
+    const errors = [], dialogs = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('dialog', (d) => { dialogs.push(d.type()); d.accept(); });
+    await page.setViewport({ width: 1440, height: 900 });
+    const open = async () => { await page.goto(new URL('/framing', ed.url).href); await page.waitForSelector('#main:not([hidden])', { timeout: 60000 }); };
+    const zoom = (v) => page.$eval('#zoom', (el, x) => { el.value = x; el.dispatchEvent(new Event('input')); }, v);
+    await page.setRequestInterception(true);
+    let held = null;
+    page.on('request', (req) => { if (new URL(req.url()).pathname === '/api/framing/save' && !held) { held = req; return; } req.continue(); });
+    // 送出去了、沒再動：換頁不問（keepalive 會存好）
+    await open();
+    await page.mouse.click(700, 20);   // 瀏覽器要有使用者操作過才會跳 beforeunload
+    await zoom('1.4');
+    assert.equal(await until(() => !!held), true, '自動存檔送出去了');
+    await page.goto(new URL('/cuts', ed.url).href, { waitUntil: 'domcontentloaded' }).catch(() => {});
+    assert.deepEqual(dialogs, [], '最新的已經送出去：不用問');
+    // 存檔途中又拖了一下：最後那一下還沒送出去，關頁要問
+    held = null;
+    await open();
+    await page.mouse.click(700, 20);
+    await zoom('1.55');   // 上一頁那次 keepalive 已經存好 1.4 了，這次換別的值
+    assert.equal(await until(() => !!held), true, '自動存檔送出去了');
+    await zoom('1.8');
+    await page.goto(new URL('/cuts', ed.url).href, { waitUntil: 'domcontentloaded' }).catch(() => {});
+    assert.deepEqual(dialogs, ['beforeunload'], '最後那一下沒送出去：要問');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); await ed.close(); }
+});
