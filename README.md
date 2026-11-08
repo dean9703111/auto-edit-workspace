@@ -143,7 +143,7 @@ AI 先做一版，你有三種改法：
 
 想請 AI 畫背景：選主色、放參考圖（選用）、選設計風格並補描述，按「複製生圖指令」貼給 AI。AI 依指令產生 **A／B／C 三組、每組三種用途，共 9 張背景**。回構圖頁選「全畫面／側邊欄／章節」，各自挑原本背景或 A／B／C，也能混搭；新圖會在切回頁面時載入，或按「載入圖片」。選了就自動套用。
 
-<p align="center"><a href="dev/site/guides/background-flow.svg"><picture><source media="(max-width: 600px)" srcset="dev/site/guides/background-flow-mobile.svg"><img src="dev/site/guides/background-flow.svg" alt="AI 背景選圖流程：主色、參考圖與描述交給 AI，產生 A、B、C 三組共九張圖，再按全畫面、側邊欄、章節各自選圖混搭，最後儲存並套用；小圖為流程示意" width="1000"></picture></a></p>
+<p align="center"><a href="dev/site/guides/background-flow.svg"><picture><source media="(max-width: 600px)" srcset="dev/site/guides/background-flow-mobile.svg"><img src="dev/site/guides/background-flow.svg" alt="AI 背景選圖流程：主色、參考圖與描述交給 AI，產生 A、B、C 三組共九張圖，再按全畫面、側邊欄、章節各自選圖混搭，選了就自動套用；小圖為流程示意" width="1000"></picture></a></p>
 
 這些設定只套用這一集，原素材、共用模板和歷次草稿都會保留。頁面的按鈕會準備生圖指令，圖片由你使用的 AI 工具產生。
 

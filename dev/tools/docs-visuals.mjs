@@ -28,7 +28,7 @@ function mini(kind,x,y) {
   if(kind===5){b+=box(x+18,y+16,132,80,'#253950',6)+`<path d="M${x+70} ${y+38}l28 18-28 18z" fill="${C.orange}"/>`+arrow(x+184,y+56)+text(x+216,y+48,'final.mp4',23,C.text,700)+text(x+216,y+77,'也能帶去剪映',17,C.muted);}
   return b;
 }
-const stages=[['放好素材','影片、聲音、錄影、圖片','有講稿也一起放進來'],['剪乾淨','找 NG、縮停頓、上字幕','① 看剪輯清單'],['構圖與風格','拖框、選主色與背景','② 看動畫，儲存並套用'],['確認分鏡','每段要配什麼畫面','③ 看分鏡表與截圖'],['預覽與修改','看完成影片，說一句話或自己調','④ 完成影片預覽；需要時開 ⑤ 剪輯'],['輸出與驗收','確認後輸出 MP4','選用：主軌＋透明 MOV＋SRT']];
+const stages=[['放好素材','影片、聲音、錄影、圖片','有講稿也一起放進來'],['剪乾淨','找 NG、縮停頓、上字幕','① 看剪輯清單'],['構圖與風格','拖框、選主色與背景','② 看動畫，會自動存'],['確認分鏡','每段要配什麼畫面','③ 看分鏡表與截圖'],['預覽與修改','看完成影片，說一句話或自己調','④ 完成影片預覽；需要時開 ⑤ 剪輯'],['輸出與驗收','確認後輸出 MP4','選用：主軌＋透明 MOV＋SRT']];
 function workflow(mobile=false){
   const w=mobile?440:1320,h=mobile?2040:890;let b=text(32,48,'從素材到完成影片',mobile?31:38,C.text,800)+text(32,82,'先看整體流程，再跟 AI 一步一步做',mobile?19:23,C.muted);
   stages.forEach(([title,desc,stop],i)=>{const x=mobile?24:32+(i%3)*426,y=mobile?110+i*313:116+Math.floor(i/3)*354;
@@ -51,10 +51,10 @@ function backgrounds(mobile=false){
   b+=text(x2+23,y2+399,'每組改變結構、造型或材質',18,C.muted);
   b+=box(x3,y3,mobile?392:370,372)+num(x3+32,y3+33,'3')+text(x3+61,y3+42,'各選各的，可以混搭',24,C.text,800);
   [['全畫面','A',0],['側邊欄','B',1],['章節','C',2]].forEach(([label,v,i])=>{b+=pattern(x3+22,y3+68+i*67,92,54,i)+text(x3+130,y3+103+i*67,`${label} → 選 ${v}`,22);});
-  b+=box(x3+22,y3+284,mobile?348:326,55,C.orange,8)+text(x3+73,y3+320,'儲存並套用',24,C.bg,800);
+  b+=box(x3+22,y3+284,mobile?348:326,55,C.orange,8)+text(x3+73,y3+320,'選了就自動套用',24,C.bg,800);
   if(mobile){b+=arrow(220,y1+255,true)+arrow(220,y2+443,true);}else b+=arrow(399,238)+arrow(890,238);
-  if(!mobile)b+=box(32,588,1256,84,'#15251F',12,'#365C49')+text(57,623,'先在同頁動畫看效果，滿意再套用這一集。',24,C.green,700)+text(57,653,'原本背景也能選回來；這裡的小圖是選圖邏輯示意，實際圖片由 AI 依需求生成。',19,C.muted);
-  return svg(w,h,'複製設計指令給 AI，生成三組九張背景，按用途混搭再儲存並套用',b);
+  if(!mobile)b+=box(32,588,1256,84,'#15251F',12,'#365C49')+text(57,623,'選了就自動套用這一集，同頁動畫馬上看到效果。',24,C.green,700)+text(57,653,'原本背景也能選回來；這裡的小圖是選圖邏輯示意，實際圖片由 AI 依需求生成。',19,C.muted);
+  return svg(w,h,'複製設計指令給 AI，生成三組九張背景，按用途混搭，選了就自動套用',b);
 }
 for(const [name,body] of [['workflow.svg',workflow()],['workflow-mobile.svg',workflow(true)],['background-flow.svg',backgrounds()],['background-flow-mobile.svg',backgrounds(true)]])fs.writeFileSync(path.join(OUT,name),body);
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'auto-edit-docs-'));
