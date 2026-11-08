@@ -9,6 +9,13 @@ export const DIP_DEFAULT = 0.3;
 export const MEDIA_TRANS = 0.5;       // 即時模擬裡 media 進出場的長度（示意）
 
 export const TC_FPS = 30;              // 時間碼 HH:MM:SS:FF 用 30fps
+// 精修用的時間：分:秒:格（1:23:10；一小時以上 1:02:03:10）。平常看分秒用 fmt
+export function fmtFine(t) {
+  const f = Math.round(Math.max(0, t || 0) * TC_FPS);
+  const s = Math.floor(f / TC_FPS), m = Math.floor(s / 60), h = Math.floor(m / 60);
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `${h ? `${h}:${p2(m % 60)}` : m}:${p2(s % 60)}:${p2(f % TC_FPS)}`;
+}
 export function defaultEdit() {
   return { cuts: [], fadeIn: 0, fadeOut: 0, volume: { voice: 0, sfx: 0, media: 0 }, gains: [], joins: [] };
 }
@@ -68,11 +75,11 @@ export function cutIndexAt(t, cuts) {
 
 export function fmt(t, digits = 2) {
   if (t == null || !Number.isFinite(t)) return '—';
-  const neg = t < 0;
-  t = Math.abs(t);
+  const neg = t < 0, k = 10 ** digits;
+  t = Math.round(Math.abs(t) * k) / k;   // 先進位再拆，才不會出現 0:60
   const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60;
   const s = (t % 60).toFixed(digits).padStart(digits ? digits + 3 : 2, '0');
-  return `${neg ? '−' : ''}${h ? `${h}:${String(m).padStart(2, '0')}` : String(m).padStart(2, '0')}:${s}`;
+  return `${neg ? '−' : ''}${h ? `${h}:${String(m).padStart(2, '0')}` : String(m)}:${s}`;
 }
 // 時間碼 HH:MM:SS:FF（30fps）
 export function fmtTC(t, fps = TC_FPS) {

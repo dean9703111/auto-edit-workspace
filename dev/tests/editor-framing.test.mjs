@@ -65,6 +65,7 @@ test('構圖下方直接預覽動畫：未儲存的框即時更新，橫直式�
     await page.waitForFunction(() => document.querySelector('#designError').textContent.includes('剪輯台仍是舊版'));
     await page.$eval('#zoom', (el) => { el.value = '1.3'; el.dispatchEvent(new Event('input')); });
     oldBackend = false;
+    await page.evaluate(() => { document.querySelector('#designWrap').open = true; });
     await page.click('#retryDesign');
     await page.waitForSelector('#designPreviews iframe');
     assert.equal(await page.$eval('#zoom', (el) => el.value), '1.3', '重新連接不丟失未儲存的構圖');
@@ -142,7 +143,7 @@ test('構圖：沒有完成影片只存設定；已有完成影片自動更新�
   fs.writeFileSync(planFile, validPlan);
 });
 
-test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪輯未存音量，套用新調光；介面使用「構圖／剪輯台」', { timeout: 90000 }, async (t) => {
+test('兩個頁面：構圖自動存檔不帶起更新，按「更新預覽」才更新完成影片播放器；保留剪輯的音量，套用新調光；介面使用「構圖／剪輯台」', { timeout: 90000 }, async (t) => {
   const chrome = await hasChrome();
   if (!chrome) { t.skip('找不到現有 Chrome'); return; }
   if (!fs.existsSync(path.join(out, 'index.html'))) {
@@ -167,6 +168,7 @@ test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪�
       app.changed({ inspector: true });
     });
     await page.waitForFunction(() => window.__editor.player.ready);
+    await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved', { timeout: 15000 });
     const previous = await page.$eval('hyperframes-player', (el) => el.getAttribute('src'));
     const framing = await browser.newPage();
     framing.on('pageerror', (e) => errors.push(e.message));
@@ -176,13 +178,15 @@ test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪�
     assert.equal(await framing.title(), '構圖');
     await framing.$eval('#zoom', (el) => { el.value = '1.2'; el.dispatchEvent(new Event('input')); });
     await framing.$eval('#color', (el) => { el.value = '0.1'; el.dispatchEvent(new Event('input')); });
-    await framing.click('#btnSave');
-    await framing.waitForFunction(() => document.querySelector('#msg').textContent.includes('剪輯台預覽已自動更新'), { timeout: 60000 });
+    // 不按任何按鈕就存好；底片要重新處理很久，所以不會自己開始更新，等使用者按
+    await framing.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved' && !document.querySelector('#updateBar').hidden, { timeout: 20000 });
+    assert.equal((await (await fetch(new URL('/api/version', editor.url))).json()).build.running, false);
+    await framing.click('#btnUpdate');
+    await framing.waitForFunction(() => document.querySelector('#msg').textContent.includes('預覽更新好了'), { timeout: 60000 });
     const expected = readPlan().frame;
     await page.waitForFunction((frame) => JSON.stringify(window.__editor.plan0.frame) === JSON.stringify(frame) && window.__editor.look?.color === 0.1 && window.__editor.player.ready, { timeout: 15000 }, expected);
     await page.waitForFunction((src) => document.querySelector('hyperframes-player')?.getAttribute('src') !== src, {}, previous);
-    assert.equal(await page.evaluate(() => window.__editor.edit.volume.voice), -4, '未存的音量仍保留');
-    assert.equal(await page.$eval('#btnSave', (el) => el.disabled), false);
+    assert.equal(await page.evaluate(() => window.__editor.edit.volume.voice), -4, '剪輯台改的音量還在');
     assert.equal(await page.$eval('#dlgConflict', (el) => el.open), false);
     assert.equal(await page.evaluate(() => window.__editor.mode), 'player');
     await framing.screenshot({ path: path.join(root, '構圖.png') });
@@ -190,4 +194,170 @@ test('兩個頁面：構圖儲存自動更新完成影片播放器，保留剪�
     assert.deepEqual(errors, []);
     t.diagnostic(`互動驗證截圖：${root}/構圖.png、${root}/剪輯.png`);
   } finally { await browser.close(); }
+});
+
+test('構圖頁自動存檔：還沒決定過就先存建議的框；拖了就存、不帶起更新；選原畫面重開還是原畫面；分鏡之後沒寫 frame 不會被寫入', { timeout: 120000 }, async (t) => {
+  const chrome = await hasChrome();
+  if (!chrome) { t.skip('找不到現有 Chrome'); return; }
+  const dir = path.join(root, 'projects', 'auto');
+  const work = path.join(dir, 'work');
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  const plan = path.join(work, 'hyperframes', 'plan.json');
+  fs.writeFileSync(plan, JSON.stringify({ version: 1 }));
+  fs.writeFileSync(path.join(work, 'rough.srt'), '1\n00:00:00,100 --> 00:00:01,900\n第一句\n');
+  fs.copyFileSync(path.join(project, 'work', 'rough.mp4'), path.join(work, 'rough.mp4'));
+  const ed = await startEditor({ flags: { project: dir, template: TEMPLATE }, cwd: root, port: 0, writeState: false, previewDir: path.join(root, 'preview') });
+  const read = () => JSON.parse(fs.readFileSync(plan, 'utf8'));
+  const until = async (fn, ms = 10000) => { const end = Date.now() + ms; while (Date.now() < end) { if (fn()) return true; await new Promise((r) => setTimeout(r, 80)); } return !!fn(); };
+  const { default: puppeteer } = await import('puppeteer-core');
+  const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.setViewport({ width: 1440, height: 900 });
+    const open = async () => { await page.goto(new URL('/framing', ed.url).href); await page.waitForSelector('#main:not([hidden])', { timeout: 60000 }); };
+    await open();
+    assert.equal(await page.$('#btnSave'), null, '沒有儲存按鈕');
+    assert.match(await page.$eval('#next', (n) => n.textContent), /調好了/);
+    // 看到的就是建議的框：不用動就存好（使用者直接說「調好了」，完成影片就是看到的樣子）
+    const suggestion = (await (await fetch(new URL('/api/framing', ed.url))).json()).suggestion.frame;
+    assert.equal(await until(() => JSON.stringify(read().frame ?? null) === JSON.stringify(suggestion?.[2] >= 1920 ? null : suggestion)), true, `plan.json 的 frame：${JSON.stringify(read().frame)}，建議：${JSON.stringify(suggestion)}`);
+    await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved');
+    // 拖放大：自動存，不會自己開始更新預覽
+    await page.$eval('#zoom', (el) => { el.value = '1.5'; el.dispatchEvent(new Event('input')); });
+    assert.equal(await until(() => read().frame?.[2] === 1280), true, `放大後 ${JSON.stringify(read().frame)}`);
+    await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved');
+    // 選原畫面：拿掉 frame；重開頁面還是原畫面，不會又套回建議的框
+    await page.click('#btnFull');
+    assert.equal(await until(() => !('frame' in read())), true);
+    await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved');
+    await open();
+    await new Promise((r) => setTimeout(r, 1500));
+    assert.equal('frame' in read(), false, '決定過不裁切：不再寫入建議的框');
+    assert.equal(await page.$eval('#zoomOut', (n) => n.textContent), '1.00×');
+    // 切走分頁：不等一秒就存
+    await page.$eval('#zoom', (el) => { el.value = '1.25'; el.dispatchEvent(new Event('input')); });
+    await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
+    assert.equal(await until(() => Array.isArray(read().frame), 700), true, '切走就存');
+    await page.evaluate(() => { delete document.hidden; });
+    await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved');
+    // 已有段落、沒寫 frame（早就決定不裁切的舊專案）：只是打開看，不能寫檔
+    const old = path.join(root, 'projects', 'old');
+    fs.mkdirSync(path.join(old, 'work', 'hyperframes'), { recursive: true });
+    const oldPlan = path.join(old, 'work', 'hyperframes', 'plan.json');
+    const text = JSON.stringify({ version: 1, scenes: [{ id: 's01', scene: 'concept', from: '#1', to: '#1e', slots: { text: '字' } }] });
+    fs.writeFileSync(oldPlan, text);
+    fs.writeFileSync(path.join(old, 'work', 'rough.srt'), '1\n00:00:00,100 --> 00:00:01,900\n第一句\n');
+    fs.copyFileSync(path.join(project, 'work', 'rough.mp4'), path.join(old, 'work', 'rough.mp4'));
+    const ed2 = await startEditor({ flags: { project: old, template: TEMPLATE }, cwd: root, port: 0, writeState: false, previewDir: path.join(root, 'preview') });
+    try {
+      await page.goto(new URL('/framing', ed2.url).href);
+      await page.waitForSelector('#main:not([hidden])', { timeout: 60000 });
+      await new Promise((r) => setTimeout(r, 1800));
+      assert.equal(fs.readFileSync(oldPlan, 'utf8'), text, '只是打開看，不寫檔');
+    } finally { await ed2.close(); }
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); await ed.close(); }
+});
+
+test('/api/framing/save 帶 update:false 不更新預覽；/api/framing/update 才更新', async () => {
+  const state = await get('/api/state');
+  if (!state.preview.built) return;   // 前面的測試已經 build 過
+  const r = await fetch(new URL('/api/framing/save', editor.url), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base: { hash: state.plan.hash }, frame: [160, 90, 1600, 900], update: false }) });
+  assert.equal(r.status, 200);
+  const j = await r.json();
+  assert.equal(j.framingUpdate.running, false);
+  assert.equal(j.preview.stale, true);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal((await get('/api/version')).build.running, false, '沒有帶起更新');
+  const u = await fetch(new URL('/api/framing/update', editor.url), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  assert.equal(u.status, 200);
+  const done = await waitForUpdate();
+  assert.equal(done.framingUpdate.ok, true, editor.ctx.build.log);
+  assert.equal(done.stale, false);
+});
+
+test('構圖連續存：講者框、pipCrop 從這一輪開始時的值換算，拖來拖去再改回去不會縮小；AI 改過就重新算', async () => {
+  const dir = path.join(root, 'projects', 'origin');
+  const work = path.join(dir, 'work');
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  const plan = path.join(work, 'hyperframes', 'plan.json');
+  const SB = [600, 200, 1400, 1000], PC = [500, 100, 400, 800];
+  fs.writeFileSync(plan, JSON.stringify({ version: 1, speakerBox: SB, pipCrop: PC }));
+  fs.writeFileSync(path.join(work, 'rough.srt'), '1\n00:00:00,100 --> 00:00:01,900\n第一句\n');
+  fs.copyFileSync(path.join(project, 'work', 'rough.mp4'), path.join(work, 'rough.mp4'));
+  const ed = await startEditor({ flags: { project: dir, template: TEMPLATE }, cwd: root, port: 0, writeState: false, previewDir: path.join(root, 'preview') });
+  const read = () => JSON.parse(fs.readFileSync(plan, 'utf8'));
+  const go = async (frame) => { const st = await (await fetch(new URL('/api/framing', ed.url))).json(); const r = await fetch(new URL('/api/framing/save', ed.url), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base: { hash: st.plan.hash }, frame, update: false }) }); assert.equal(r.status, 200, await r.clone().text()); return r.json(); };
+  try {
+    await go([320, 180, 1280, 720]);
+    assert.notDeepEqual(read().speakerBox, SB, '放大：跟著換算');
+    assert.equal(read().pipCrop, 'auto', '出界了：先交回 auto');
+    await go([240, 135, 1440, 810]);
+    await go(null);
+    assert.deepEqual(read().speakerBox, SB, '改回原畫面：回到原本的值，沒有縮小');
+    assert.deepEqual(read().pipCrop, PC, '手調的 pipCrop 也回來了');
+    // AI 重新量了講者框：這一輪要重算，從新的值換算
+    const p = read(); p.speakerBox = [700, 300, 1300, 900]; fs.writeFileSync(plan, JSON.stringify(p));
+    await go([320, 180, 1280, 720]);
+    await go(null);
+    assert.deepEqual(read().speakerBox, [700, 300, 1300, 900]);
+  } finally { await ed.close(); }
+});
+
+test('構圖頁：框被 AI 改過不會被舊的蓋回去；只有別的欄位被改就照存；連不到時狀態留著、不會每秒重送，關頁才問', { timeout: 120000 }, async (t) => {
+  const chrome = await hasChrome();
+  if (!chrome) { t.skip('找不到現有 Chrome'); return; }
+  const dir = path.join(root, 'projects', 'conflict');
+  const work = path.join(dir, 'work');
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  const plan = path.join(work, 'hyperframes', 'plan.json');
+  fs.writeFileSync(plan, JSON.stringify({ version: 1, frame: [240, 135, 1440, 810] }));
+  fs.writeFileSync(path.join(work, 'rough.srt'), '1\n00:00:00,100 --> 00:00:01,900\n第一句\n');
+  fs.copyFileSync(path.join(project, 'work', 'rough.mp4'), path.join(work, 'rough.mp4'));
+  const ed = await startEditor({ flags: { project: dir, template: TEMPLATE }, cwd: root, port: 0, writeState: false, previewDir: path.join(root, 'preview') });
+  const read = () => JSON.parse(fs.readFileSync(plan, 'utf8'));
+  const until = async (fn, ms = 10000) => { const end = Date.now() + ms; while (Date.now() < end) { if (fn()) return true; await new Promise((r) => setTimeout(r, 80)); } return !!fn(); };
+  const { default: puppeteer } = await import('puppeteer-core');
+  const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
+  try {
+    const page = await browser.newPage();
+    const errors = [], dialogs = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('dialog', (d) => { dialogs.push(d.type()); d.accept(); });
+    await page.setViewport({ width: 1440, height: 900 });
+    const open = async () => { await page.goto(new URL('/framing', ed.url).href); await page.waitForSelector('#main:not([hidden])', { timeout: 60000 }); };
+    await open();
+    // 只是別的欄位被改（通常是剪輯台自動存）：照存
+    let p = read(); p.rhythm = 'spaced'; fs.writeFileSync(plan, JSON.stringify(p));
+    await page.$eval('#zoom', (el) => { el.value = '1.5'; el.dispatchEvent(new Event('input')); });
+    assert.equal(await until(() => read().frame?.[2] === 1280), true, '別的欄位被改：框照存');
+    assert.equal(read().rhythm, 'spaced', '別的欄位還在');
+    await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved');
+    // 框本身被 AI 改了：不蓋回去，換成 AI 的，講一聲
+    p = read(); p.frame = [160, 90, 1600, 900]; fs.writeFileSync(plan, JSON.stringify(p));
+    await page.$eval('#zoom', (el) => { el.value = '1.8'; el.dispatchEvent(new Event('input')); });
+    await page.waitForFunction(() => /被改過/.test(document.querySelector('#msg').textContent), { timeout: 10000 });
+    assert.deepEqual(read().frame, [160, 90, 1600, 900], 'AI 的框沒被蓋掉');
+    assert.equal(await page.$eval('#zoomOut', (n) => n.textContent), '1.20×', '頁面換成最新的框');
+    // 連不到：狀態留著、不會每秒重送
+    await open();
+    await page.setRequestInterception(true);
+    let tried = 0;
+    const onReq = (req) => { if (new URL(req.url()).pathname === '/api/framing/save') { tried++; req.abort(); return; } req.continue(); };
+    page.on('request', onReq);
+    await page.mouse.click(700, 20);   // 瀏覽器要有使用者操作過才會跳 beforeunload
+    await page.$eval('#zoom', (el) => { el.value = '1.4'; el.dispatchEvent(new Event('input')); });
+    await page.waitForFunction(() => /連不到剪輯台/.test(document.querySelector('#saveState').textContent), { timeout: 8000 });
+    const n0 = tried;
+    await new Promise((r) => setTimeout(r, 2500));
+    assert.equal(tried, n0, '不會每秒重送');
+    assert.match(await page.$eval('#saveState', (n) => n.textContent), /連不到剪輯台/, '狀態留著');
+    await page.goto(new URL('/cuts', ed.url).href, { waitUntil: 'domcontentloaded' }).catch(() => {});
+    assert.deepEqual(dialogs, ['beforeunload'], '存不到才問');
+    page.off('request', onReq);
+    await page.setRequestInterception(false);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); await ed.close(); }
 });

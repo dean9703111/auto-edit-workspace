@@ -45,10 +45,10 @@ const have = (list) => list.filter(exists);
 // ---------- 停點（specs/contracts/stop-points.md §2.1；執行期的真相是 AGENTS.md「停點總表」） ----------
 const STOPS = [
   { n: '①', name: '剪輯清單', skill: 'auto-edit-rough', line: '⏸ 停點 ① 剪輯清單｜請看：<剪輯清單網址>｜請回：勾好後說「可以」，或要改的列' },
-  { n: '②', name: '構圖', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」' },
+  { n: '②', name: '構圖', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框說「調好了」（會自動存），或說「用建議的」' },
   { n: '③', name: '分鏡表', skill: 'auto-edit-storyboard', line: '⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方' },
   { n: '④', name: '完成影片預覽', skill: 'auto-edit-review', line: '⏸ 停點 ④ 完成影片預覽｜請看：<完成影片預覽網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」' },
-  { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」' },
+  { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完說「調好了」（會自動存）' },
   { n: '⑥', name: '背景預覽', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」' },
 ];
 // 停點 ③ 的改版變體（014；停點仍是六個，stop-points.md §2.1 最後一列）

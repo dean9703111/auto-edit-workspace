@@ -106,10 +106,12 @@ try{
   // 番號只用於文件截圖，介面與專案設定不變。
   const mark=async(selector,n)=>page.$eval(selector,(e,n)=>{const r=e.getBoundingClientRect(),b=document.createElement('span');b.textContent=n;Object.assign(b.style,{position:'absolute',left:`${r.left+scrollX+8}px`,top:`${r.top+scrollY+8}px`,width:'32px',height:'32px',borderRadius:'50%',background:'#FF791F',color:'#090D17',font:'800 20px sans-serif',display:'grid',placeItems:'center',zIndex:99,boxShadow:'0 0 0 3px white'});b.className='docs-marker';document.body.append(b);},n);
   await mark('#stage','1');await mark('#preview','2');
-  await page.$eval('#btnSave',e=>{const r=e.getBoundingClientRect(),b=document.createElement('span');b.textContent='3';Object.assign(b.style,{position:'absolute',left:`${r.left+scrollX-42}px`,top:`${r.top+scrollY}px`,width:'32px',height:'32px',borderRadius:'50%',background:'#FF791F',color:'#090D17',font:'800 20px sans-serif',display:'grid',placeItems:'center',zIndex:99,boxShadow:'0 0 0 3px white'});b.className='docs-marker';document.body.append(b);});
+  await page.waitForFunction(()=>document.querySelector('#saveState').dataset.state==='saved',{timeout:15000});
+  await page.$eval('#next',e=>{const r=e.getBoundingClientRect(),b=document.createElement('span');b.textContent='3';Object.assign(b.style,{position:'absolute',left:`${r.right+scrollX+6}px`,top:`${r.top+scrollY}px`,width:'32px',height:'32px',borderRadius:'50%',background:'#FF791F',color:'#090D17',font:'800 20px sans-serif',display:'grid',placeItems:'center',zIndex:99,boxShadow:'0 0 0 3px white'});b.className='docs-marker';document.body.append(b);});
   const bounds=await page.$eval('#main',e=>{const r=e.getBoundingClientRect();return {bottom:r.bottom+scrollY};});
   await page.screenshot({path:path.join(OUT,'framing.jpg'),type:'jpeg',quality:88,clip:{x:0,y:0,width:1600,height:Math.ceil(bounds.bottom+16)}});
   await page.evaluate(()=>document.querySelectorAll('.docs-marker').forEach(e=>e.remove()));
+  await page.evaluate(()=>{document.querySelector('#designWrap').open=true;});
   await page.click('[data-category="custom"]');await page.waitForSelector('#designPreviews iframe');
   for(const frame of page.frames().filter(f=>f.url().includes('/gallery/preview/')))await frame.waitForFunction(()=>window.gsap,{timeout:15000}).catch(()=>{});
   await page.$eval('#design',e=>e.scrollIntoView());
@@ -131,7 +133,7 @@ try{
   await page.mouse.move(0,0);
   // 番號放在文字後面或區塊右側，不蓋住勾選框與文字
   const badge=async(selector,n,mode)=>page.$eval(selector,(e,n,mode)=>{const r=mode==='after'?(()=>{const g=document.createRange();g.selectNodeContents(e);return g.getBoundingClientRect();})():e.getBoundingClientRect(),b=document.createElement('span');b.className='docs-marker';b.textContent=n;Object.assign(b.style,{position:'absolute',left:`${(mode==='after'?r.right+10:r.right-46)+scrollX}px`,top:`${r.top+scrollY+(r.height-32)/2}px`,width:'32px',height:'32px',borderRadius:'50%',background:'#FF791F',color:'#090D17',font:'800 20px sans-serif',display:'grid',placeItems:'center',zIndex:99,boxShadow:'0 0 0 3px white'});document.body.append(b);},n,mode);
-  await badge('#listTitle','1','after');await badge('.ct-player h2','2','after');await badge('#next','3','inside');
+  await badge('#listTitle','1','after');await badge('.ct-player h2','2','after');await badge('#next','3','after');
   const cutsBottom=await page.$eval('.ct-main',e=>Math.ceil(e.getBoundingClientRect().bottom+scrollY));
   await page.screenshot({path:path.join(OUT,'cuts.jpg'),type:'jpeg',quality:88,clip:{x:0,y:0,width:1600,height:cutsBottom},captureBeyondViewport:true});
   await page.evaluate(()=>document.querySelectorAll('.docs-marker').forEach(e=>e.remove()));
@@ -159,7 +161,7 @@ try{
   if(edVideo.status!==0)throw Error(edVideo.stderr);
   edEditor=await startEditor({flags:{project:edProject,template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
   await page.setViewport({width:1600,height:1000,deviceScaleFactor:1.25});
-  await page.evaluateOnNewDocument(()=>{localStorage.setItem('auto-edit-editor.coach.v2','1');localStorage.setItem('auto-edit-editor.coach-final.v1','1');});
+  await page.evaluateOnNewDocument(()=>{for(const k of ['coach.v2','coach-final.v1','coach-rough.v1'])localStorage.setItem(`auto-edit-editor.${k}`,'1');});
   await page.goto(edEditor.url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.__editor?.reportReady&&window.__editor.itemsView.some(x=>x.id==='m01'&&x.knots),{timeout:90000});
   await page.evaluate(()=>window.__editor.select({kind:'media',id:'m01'}));

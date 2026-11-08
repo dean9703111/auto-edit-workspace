@@ -664,7 +664,7 @@ export async function roughFlow(P, flags = {}) {
   const others = warns.filter((w) => !(res.warnings || []).includes(w));
   for (const w of others) say(w);
   const preview = openRoughPreview(P, flags, detail);
-  if (preview.url) say(`字幕預覽：${preview.url}（字幕疊在畫面上，只有聲音的黑屏也看得到；錯字直接改，存檔就好）`);
+  if (preview.url) say(`字幕預覽：${preview.url}（字幕疊在畫面上，只有聲音的黑屏也看得到；錯字直接改，會自動存）`);
   // 不用等使用者再說一次：status.mjs 會印下一條（有素材先盤點；主軌沒有真人畫面就跳過構圖）。使用者明說只要「剪乾淨」才停在這裡
   say(`→ 下一步：接著做（有素材先盤點，${clips.some((c) => c.kind === 'camera') ? '再到 ② 構圖' : '主軌沒有真人畫面，不用構圖'}；使用者明說只要「剪乾淨」才停在這裡）`);
   say(`node shared/template/tools/status.mjs --project ${pj}`);

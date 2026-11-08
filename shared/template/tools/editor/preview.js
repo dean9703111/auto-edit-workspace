@@ -1,5 +1,5 @@
 // 兩種預覽
-//   SimPreview     播 rough.mp4，用 WebAudio 增益、黑色遮罩、CSS transform 即時模擬 cuts（播放時跳過）／音量（含範圍音量）／淡入淡出／dip／punch，
+//   SimPreview     「快速試聽」：播 rough.mp4，用 WebAudio 增益、黑色遮罩、CSS transform 即時模擬 cuts（播放時跳過）／音量（含範圍音量）／淡入淡出／dip／punch，
 //                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲，位置和完成影片同一個可見區（橫式 contain＝上方 1920×940，字幕帶空出來）；
 //                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去完成影片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
 //                  全部聲音最後經過 AnalyserNode 給音量表
@@ -204,17 +204,19 @@ export class SimPreview {
     const css = `position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%;object-fit:${fit};`;
     if (el.style.cssText !== css) el.style.cssText = css;
   }
-  // 只有聲音的地方：底片是黑的，卡片和情境動畫只在完成影片預覽畫 → 在中間寫是哪一段
+  // 字卡和動畫只在完成影片預覽畫：只有聲音的地方（底片是黑的）在中間寫是哪一段；有講者的地方在角落講一聲，不然選到動畫卻看不到，會以為壞了
   tickHint(t, covered) {
     const A = this.app, el = this.el.hint;
     if (!el) return;
+    let it = null;
+    for (const x of A.itemsView) if (x.type !== 'media' && t >= x.start && t < (x.vend ?? x.end) && (!it || x.start >= it.start)) it = x;
+    const voice = !covered && A.voiceOnly.some(([a, b]) => t >= a && t < b);
+    const where = A.server?.preview?.built ? '切到「完成影片預覽」看' : '按「更新預覽」後在完成影片預覽看';
     let txt = '';
-    if (!covered && A.voiceOnly.some(([a, b]) => t >= a && t < b)) {
-      let it = null;
-      for (const x of A.itemsView) if (x.type !== 'media' && t >= x.start && t < (x.vend ?? x.end) && (!it || x.start >= it.start)) it = x;
-      txt = it ? `${it.id}　${it.label || ''}\n這段只有聲音，畫面是卡片或情境動畫 → 切到「完成影片預覽」看` : '這段只有聲音（沒有講者畫面）';
-    }
+    if (voice) txt = it ? `${it.title || it.label || it.id}\n這段的畫面是字卡或動畫 → ${where}` : '這段只有聲音（沒有講者畫面）';
+    else if (it && !covered) txt = `這裡有${it.type === 'custom' ? '動畫' : '字卡'}，快速試聽看不到 → ${where}`;
     if (el.textContent !== txt) { el.textContent = txt; el.style.whiteSpace = 'pre-line'; }
+    el.classList.toggle('corner', !voice);
     el.hidden = !txt;
   }
   makeMedia(id, seg) {

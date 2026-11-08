@@ -18,6 +18,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewport({ width: 1440, height: 1000 });
   await page.goto(new URL('/framing', base).href);
+  await page.evaluate(() => { document.querySelector('#designWrap').open = true; });
   await page.waitForSelector('#main:not([hidden])', { timeout: 60000 });
   await page.waitForFunction(() => !!window.framingImage || !!document.querySelector('#video')?.error);
   const speakerSource = await page.evaluate(() => window.framingImage ? 'live-frame' : 'saved-reference');

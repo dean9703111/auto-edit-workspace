@@ -394,12 +394,12 @@ test('有停點在等：重貼 AGENTS.md 那一行；剪輯台開著填網址、
   assert.deepEqual(projectStatus(p).waiting, ['① 剪輯清單']);
   // ② 有 look-preview.jpg 才列
   touch(p, 'work/製作進度.md', STOP_TABLE(`| ${at} | ② 構圖 | 待回覆 | — | — |`));
-  assert.match(projectStatus(p).stopLine, /^⏸ 停點 ② 構圖｜請看：<構圖台網址>｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」$/);
+  assert.match(projectStatus(p).stopLine, /^⏸ 停點 ② 構圖｜請看：<構圖台網址>｜請回：拖好框說「調好了」（會自動存），或說「用建議的」$/);
   touch(p, 'work/look-preview.jpg');
   assert.match(projectStatus(p).stopLine, /^⏸ 停點 ② 構圖｜請看：<構圖台網址>、work\/look-preview\.jpg｜請回：/);
   for (const [row, re] of [['③ 分鏡表', /^⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方$/],
     ['④ 完成影片預覽', /^⏸ 停點 ④ 完成影片預覽｜請看：<完成影片預覽網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」$/],
-    ['⑤ 剪輯台', /^⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完按「儲存」後說「調好了」$/],
+    ['⑤ 剪輯台', /^⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完說「調好了」（會自動存）$/],
     ['⑥ 背景預覽', /^⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>\/preview\.jpg、<暫存資料夾>\/zones-fs\.jpg｜請回：「可以」或「重做」$/],
     ['③ 分鏡表（s12 v2）', /^⏸ 停點 ③ 分鏡表（s12 v2）｜請看：work\/versions\/s12\/v2\/分鏡\.md｜請回：「可以」或要改的拍$/]]) {
     touch(p, 'work/製作進度.md', STOP_TABLE(`| ${at} | ${row} | 待回覆 | — | — |`));

@@ -8,10 +8,13 @@ const WIDE_COL = /畫面上出現什麼|動態|怎麼來|講解在講什麼|一�
 const TEXT_COL = /^(畫面上出現什麼|卡上文字)/;
 const QUOTED = /(「[^」]*」)/;
 const OWN_ROW = new Set(['版面', '想換成', '音效', '補充說明']);   // 這幾個欄位有自己的控制項，不當一般文字列
-const SHOWN_LABEL = { 起點那句字幕: '從這句開始', 概念: '概念', 畫面: '畫面', 素材: '素材', 理由: '為什麼這樣做' };   // 給使用者看的欄位（白話名稱）；其他收進「AI 的備註」
+const SHOWN_LABEL = { 起點那句字幕: '從這句開始', 概念: '概念', 畫面: '畫面', 素材: '素材' };   // 給使用者看的欄位（白話名稱）；其他（包括「理由」，常常是 AI 排版的考量）收進「AI 的備註」
 const NOT_DONE = /還沒有畫面/;                    // 「截圖觀察」寫這句＝內容設計動畫還沒做，截圖只是占位
 const BEAT_COLS = /^(拍|講到|畫面上出現什麼)/;   // 動畫分鏡只顯示這三欄，其他欄給工具和 AI 用，一樣留在檔案裡
 const HIDDEN_GROUP = /^插圖清單/;                // 給 AI 畫圖用的清單，不顯示
+const GRID_FROM = 8;                             // 幾段以上預設開總覽（短片一路捲下去就看完了）
+// 寫給做動畫的 AI 看的座標、尺寸（括號裡有數字的）：留在檔案裡，畫面上不顯示
+const humanText = (s) => String(s ?? '').replace(/[（(][^（）()]*\d[^（）()]*[）)]/g, '').replace(/\s{2,}/g, ' ').trim();
 
 let state = null;
 let saving = Promise.resolve();
@@ -23,6 +26,7 @@ const timers = new Map();     // 打字中的欄位 → 自動存的計時器
 const failed = new Map();     // 沒存到的欄位（欄位代號 → { value, kind }）：文字留在欄位裡，重畫後放回去，連上服務後補存
 let offline = false;          // 上一次連不到剪輯台
 let composing = false;        // 中文輸入法選字中：這時不存、不重畫
+const view = { mode: null, key: null };   // 總覽 grid、單段 one、逐段捲動 list；mode 第一次載入照段數決定
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const inline = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -48,7 +52,7 @@ function friendlyFixed(p) {
   // 欄位代號（cards、lead）、綁句（綁 `#3@YouTube`）是工具在用的：不顯示，但存檔時原樣組回去；字數上限留著
   const limit = p.match(/各?\s*\d+\s*字以內|上限\s*\d+/)?.[0];
   if (/`|#\d|綁/.test(p)) return limit ? `<span class="sb-limit">${esc(limit.replace(/\s+/g, ' '))}</span>` : '';
-  const text = p.replace(/[A-Za-z_][\w-]*/g, '').trim();
+  const text = humanText(p).replace(/[A-Za-z_][\w-]*/g, '').trim();
   return /[\u4e00-\u9fff]/.test(text) ? inline(text) : ' ';
 }
 
@@ -57,7 +61,7 @@ const quoteKind = (t, before) => (/講到\s*$/.test(before) ? 'speech' : /圖示
 
 // beat＝動畫分鏡的一格：沒有引號的是動畫描述（不是畫面上的字），不標橘底，想改寫在這段的補充說明
 function textField(value, attrs, label, { beat = false } = {}) {
-  if (beat && !QUOTED.test(value)) return `<div class="sb-read sb-beat">${inline(value)}</div>`;
+  if (beat && (!QUOTED.test(value) || !canEdit())) return `<div class="sb-read sb-beat">${inline(humanText(value))}</div>`;
   if (!canEdit() || !QUOTED.test(value)) return editable(value, attrs, label);
   const list = value.split(QUOTED).filter((p) => p !== '');
   const parts = list.map((p, i) => {
@@ -95,7 +99,7 @@ function tableHtml(t) {
 function readRow(b, n) {
   const shown = SHOWN_LABEL[b.label] || b.label;
   const label = b.label ? `<span class="sb-label">${inline(shown)}</span>` : '';
-  const row = `<div class="sb-field${b.label ? '' : ' nolabel'}">${label}<div class="sb-read">${inline(b.value)}</div></div>`;
+  const row = `<div class="sb-field${b.label ? '' : ' nolabel'}">${label}<div class="sb-read">${inline(SHOWN_LABEL[b.label] ? humanText(b.value) : b.value)}</div></div>`;
   return b.ordered ? `<div class="sb-ordered"><span class="sb-mark">${n}.</span>${row}</div>` : row;
 }
 
@@ -133,6 +137,8 @@ function sceneSelect(s) {
   const cur = currentScene(s), wish = fieldOf(s, '想換成')?.value || '';
   const chosen = allScenes().find((i) => i.value === wish) || cur;
   const here = state.overview[s.id]?.card || fieldOf(s, '版面')?.value || '';
+  // 只能看的時候不要放選單：看起來能選，其實不能
+  if (!canEdit()) return `<div class="sb-field"><span class="sb-label">呈現方式</span><div class="sb-read">${esc(chosen?.label || wish || here || '—')}</div></div>`;
   const groups = (state.options?.scenes || []).map((g) => `<optgroup label="${esc(`${g.name}：${g.hint}`)}">${g.items.map((i) => `<option value="${esc(i.value)}" ${i === chosen ? 'selected' : ''}>${esc(i.label)}${i === cur ? '（目前）' : ''}</option>`).join('')}</optgroup>`).join('');
   const unknown = !chosen ? `<option value="" selected>${esc(wish || here || '目前的呈現方式')}</option>` : '';
   const when = chosen?.when ? `<span class="sb-hint">${esc(chosen.when)}</span>` : '';
@@ -144,6 +150,7 @@ function sceneSelect(s) {
 function sfxSelect(s) {
   const cur = fieldOf(s, '音效')?.value || '預設';
   const list = state.options?.sfx || [];
+  if (!canEdit()) return `<div class="sb-field"><span class="sb-label">音效</span><div class="sb-read">${esc(list.find((o) => o.value === cur)?.label || cur)}</div></div>`;
   const known = list.some((o) => o.value === cur);
   const opts = (known ? '' : `<option value="${esc(cur)}" selected>${esc(cur)}</option>`) + list.map((o) => `<option value="${esc(o.value)}" ${o.value === cur ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
   return `<div class="sb-field"><span class="sb-label">音效</span><div class="sb-select"><select data-sfx="${esc(s.key)}" data-raw="${esc(fieldOf(s, '音效')?.value || '')}" ${canEdit() ? '' : 'disabled'} aria-label="${esc(s.id)} 的音效">${opts}</select></div></div>`;
@@ -173,11 +180,12 @@ function foldHtml(key, label, open, body, cls = 'sb-fold') {
 
 function segHtml(s) {
   const o = state.overview[s.id] || {};
-  const time = (s.title.match(/\d+:\d{2}(?:\.\d+)?[–-]\d+:\d{2}(?:\.\d+)?/) || [o.time || ''])[0];
+  const time = (s.title.match(/\d+:\d{2}(?:\.\d+)?[–-]\d+:\d{2}(?:\.\d+)?/) || [o.time || ''])[0].replace(/\.\d+/g, '');
   const name = o.summary || s.title.replace(s.id, '').replace(/^[\s｜|]+/, '');
   const scene = currentScene(s);
   const see = state.built ? `<a class="sb-see" href="/?view=final&seg=${encodeURIComponent(s.id)}" target="_blank" rel="noopener">在預覽看 ↗</a>` : '';
-  const head = `<div class="sb-sechead"><span class="sb-id">${esc(s.id)}</span><h2>${inline(name)}</h2>${scene ? `<span class="sb-chip">${esc(scene.label)}</span>` : ''}${time ? `<span class="sb-chip time">${esc(time)}</span>` : ''}${see}</div>`;
+  // 主標是在講什麼；段號放最後，跟 AI 說要改哪段時才用得到
+  const head = `<div class="sb-sechead"><h2>${inline(name)}</h2>${time ? `<span class="sb-chip time">${esc(time)}</span>` : ''}${scene ? `<span class="sb-chip">${esc(scene.label)}</span>` : ''}<span class="sb-id">${esc(s.id)}</span>${see}</div>`;
   const [first, ...rest] = groupsOf(s.blocks);
   const shots = first.blocks.filter((b) => b.type === 'image');
   const rows = first.blocks.filter((b) => b.type !== 'image');
@@ -187,10 +195,12 @@ function segHtml(s) {
   const notDone = NOT_DONE.test(observed?.value || '');
   const design = by('概念').length > 0;
   const backstage = rows.filter((b) => (b.type === 'item' || b.type === 'para') && !SHOWN_LABEL[b.label] && !OWN_ROW.has(b.label) && b.label !== '畫面文字' && !(b === observed && (notDone || /^無$/.test(b.value))));
-  const fields = blocksHtml(by('起點那句字幕')) + sceneSelect(s) + blocksHtml(by('概念')) + blocksHtml(by('畫面')) + blocksHtml(by('畫面文字')) + blocksHtml(by('素材')) + sfxSelect(s) + blocksHtml(by('理由'));
-  const shotBox = shots.length ? `<div class="sb-shots${shots.length > 1 ? ' many' : ''}${notDone ? ' pending' : ''}">${shots.map(shotHtml).join('')}${notDone ? '<span class="sb-pending">動畫還沒做：這張只是占位，動畫會照下面的鏡位腳本做</span>' : ''}</div>` : '';
+  const fields = blocksHtml(by('起點那句字幕')) + sceneSelect(s) + blocksHtml(by('概念')) + blocksHtml(by('畫面')) + blocksHtml(by('畫面文字')) + blocksHtml(by('素材')) + sfxSelect(s);
+  const shotBox = shots.length ? `<div class="sb-shots${shots.length > 1 ? ' many' : ''}${notDone ? ' pending' : ''}">${shots.map(shotHtml).join('')}${notDone ? '<span class="sb-pending">動畫還沒做：這張只是占位，你確認後 AI 才會做</span>' : ''}</div>` : '';
   const body = `<div class="sb-segbody${shots.length ? '' : ' noshot'}">${shotBox}<div class="sb-fields">${fields}</div></div>`;
-  const subs = rest.filter((g) => !HIDDEN_GROUP.test(g.heading.text)).map((g) => `<div class="sb-subgroup">${foldHtml(`${s.key}:${g.heading.text}`, design ? '鏡位腳本' : g.heading.text.replace(/\s+\S+$/, ''), true, blocksHtml(g.blocks))}</div>`).join('');
+  // 鏡位腳本是給做動畫的 AI 看的細節，預設收起：看概念和畫面就夠判斷，想改細節再打開
+  const beatCount = (g) => g.blocks.find((b) => b.type === 'table')?.rows.length || 0;
+  const subs = rest.filter((g) => !HIDDEN_GROUP.test(g.heading.text)).map((g) => `<div class="sb-subgroup">${foldHtml(`${s.key}:${g.heading.text}`, `${design ? '鏡位腳本' : g.heading.text.replace(/\s+\S+$/, '')}${beatCount(g) ? `（${beatCount(g)} 拍）` : ''}：給 AI 的細節，想看再打開`, false, blocksHtml(g.blocks))}</div>`).join('');
   const notes = backstage.length ? `<div class="sb-subgroup">${foldHtml(`${s.key}:notes`, 'AI 的備註', false, `<div class="sb-fields">${blocksHtml(backstage)}</div>`)}</div>` : '';
   const note = design
     ? noteBox(s, '這段動畫想怎麼改？', '例如：第 3 拍不要飛來飛去，改成兩個畫面並排。你說「可以」之後 AI 會照這裡重寫鏡位腳本。')
@@ -199,6 +209,10 @@ function segHtml(s) {
 }
 
 const isDecide = (s) => /需要.*決定/.test(s.title);
+// 這些不是要決定的事，是待補的素材和提醒：不算進「要你決定」，收在一起
+const isNoteAsk = (q) => /^\s*(\*\*)?補錄[：:]|待補/.test(q);
+const askText = (b) => [b.label, b.value].filter(Boolean).join('：');
+const sectionTitle = (s) => (isDecide(s) ? (canEdit() ? '要你決定的事' : '當時的決定與提醒') : s.title);
 
 // 一項一張卡：問題＋自己的回答欄，回答了就打勾；有多少沒回答一眼看得出來
 const answerOf = (blocks, i) => { const b = blocks[i + 1]; return b?.type === 'item' && !b.ordered && b.label === '回答' ? b.value : ''; };
@@ -206,16 +220,17 @@ const askList = (s) => groupsOf(s.blocks)[0].blocks.map((b, i, all) => ({ b, ans
 function askHtml(s) {
   const list = askList(s);
   if (!list.length) return '<p class="sb-note">目前沒有要你決定的事。</p>';
-  return `<ol class="sb-asks">${list.map(({ b, answer }, i) => {
-    const q = [b.label, b.value].filter(Boolean).join('：');
-    return `<li class="sb-ask${answer ? ' answered' : ''}"><div class="sb-ask-q"><span class="sb-ask-mark" aria-hidden="true">${answer ? '✓' : i + 1}</span><span>${inline(q)}</span></div>${canEdit() || answer
-      ? `<textarea class="sb-answer" rows="1" data-q="${i}" data-line="${b.line}" data-raw="${esc(answer)}" aria-label="回答第 ${i + 1} 項" placeholder="${canEdit() ? '在這裡回答；也可以在對話裡回覆 AI' : ''}" ${canEdit() ? '' : 'readonly'}>${esc(answer)}</textarea>` : ''}</li>`;
-  }).join('')}</ol>`;
+  const item = ({ b, answer, i }) => `<li class="sb-ask${answer ? ' answered' : ''}"><div class="sb-ask-q"><span class="sb-ask-mark" aria-hidden="true">${answer ? '✓' : i + 1}</span><span>${inline(askText(b))}</span></div>${canEdit() || answer
+    ? `<textarea class="sb-answer" rows="1" data-q="${i}" data-line="${b.line}" data-raw="${esc(answer)}" aria-label="回答第 ${i + 1} 項" placeholder="${canEdit() ? '在這裡回答；也可以在對話裡回覆 AI' : ''}" ${canEdit() ? '' : 'readonly'}>${esc(answer)}</textarea>` : ''}</li>`;
+  const all = list.map((x, i) => ({ ...x, i })), asks = all.filter((x) => !isNoteAsk(askText(x.b))), notes = all.filter((x) => isNoteAsk(askText(x.b)));
+  const main = asks.length ? `<ol class="sb-asks">${asks.map(item).join('')}</ol>` : '<p class="sb-note">目前沒有要你決定的事。</p>';
+  const rest = notes.length ? foldHtml(`${s.key}:asknotes`, `待補的素材和提醒（${notes.length} 件，不用回答也可以往下做）`, false, `<ol class="sb-asks">${notes.map(item).join('')}</ol>`, 'sb-asknotes') : '';
+  return main + rest;
 }
 
 function otherHtml(s) {
   const decide = isDecide(s);
-  const title = s.title || '開頭說明';
+  const title = sectionTitle(s) || '開頭說明';
   const inner = `<div class="sb-fields">${blocksHtml(s.blocks)}</div>`;
   if (decide) {
     const [first, ...rest] = groupsOf(s.blocks);
@@ -231,21 +246,23 @@ function otherHtml(s) {
   return `<section class="sb-panel sb-sec" id="sec-${esc(s.key)}">${foldHtml(s.key, title, false, inner, 'sb-fold sb-ref')}</section>`;
 }
 
+// 給人看的名詞只有三個：動畫（內容設計動畫、模板動畫）、字卡、素材（錄影、圖片）
 const kindOf = (s) => {
   const c = `${state.overview[s.id]?.card || ''} ${fieldOf(s, '版面')?.value || ''}`;
-  return /內容設計/.test(c) ? 'design' : /模板動畫|x-[a-z]/.test(c) ? 'anim' : /螢幕錄影|圖片/.test(c) ? 'media' : 'card';
+  return /內容設計|模板動畫|x-[a-z]/.test(c) ? 'anim' : /螢幕錄影|圖片/.test(c) ? 'media' : 'card';
 };
+const KIND_ZH = { anim: '動畫', media: '素材', card: '字卡' };
 const hasWish = (s) => !!(fieldOf(s, '想換成') || fieldOf(s, '補充說明'));
 const mmss = (t) => String(t || '').split(/[–-]/)[0].replace(/\.\d+$/, '');
 
 function renderNav() {
   const s = state.sections;
   const seg = s.filter((x) => x.id);
-  const plain = (x, cls = '') => `<li><a class="plain ${cls}" href="#sec-${esc(x.key)}">${esc(x.title || '開頭說明')}</a></li>`;
+  const plain = (x, cls = '') => `<li><a class="plain ${cls}" href="#sec-${esc(x.key)}">${esc(sectionTitle(x) || '開頭說明')}</a></li>`;
   const marked = (x) => (hasWish(x) ? ' changed' : '');
   const row = (x) => {
     const o = state.overview[x.id] || {};
-    return `<li data-nav="${esc(x.id)}"><a class="${marked(x)} kind-${kindOf(x)}${reading.seen.has(x.id) ? ' seen' : ''}" href="#sec-${esc(x.key)}" title="${esc(`${mmss(o.time)}　${o.summary || x.title}`)}"><span class="sb-navid">${esc(x.id)}</span><span class="sb-navtxt">${esc(o.summary || x.title.replace(x.id, ''))}</span></a></li>`;
+    return `<li data-nav="${esc(x.id)}"><a class="${marked(x)} kind-${kindOf(x)}${reading.seen.has(x.id) ? ' seen' : ''}" href="#sec-${esc(x.key)}" title="${esc(`${mmss(o.time)}　${o.summary || x.title}　${x.id}`)}"><span class="sb-navid">${esc(mmss(o.time) || x.id)}</span><span class="sb-navtxt">${esc(o.summary || x.title.replace(x.id, ''))}</span></a></li>`;
   };
   // 照章分組：長片 150 多段一路平鋪找不到，目前這一章打開，其他收起來
   const chapters = [];
@@ -288,17 +305,19 @@ function renderTasks() {
   if (seg.length < 2) { box.innerHTML = ''; return; }
   const out = [];
   const sec = state.sections.find(isDecide);
-  const asks = sec ? askList(sec) : [];
-  if (asks.length) {
+  const all = sec ? askList(sec) : [], asks = all.filter((a) => !isNoteAsk(askText(a.b))), notes = all.length - asks.length;
+  // 已經確認（只能看）：沒有要做的事了，不放待辦
+  if (asks.length && canEdit()) {
     const left = asks.filter((a) => !a.answer).length;
     out.push(`<a class="sb-task${left ? ' todo' : ' ok'}" href="#sec-${esc(sec.key)}"><b>${left ? `要你決定 ${left} 件` : '要決定的事都回答了'}</b><span>共 ${asks.length} 件</span></a>`);
   }
-  const q = quotesInfo();
+  if (notes && canEdit()) out.push(`<a class="sb-task" href="#sec-${esc(sec.key)}"><b>待補的素材和提醒 ${notes} 件</b><span>不用回答也可以往下做</span></a>`);
+  const q = canEdit() ? quotesInfo() : null;
   if (q) out.push(`<a class="sb-task${q.on > q.max ? ' over' : ''}" href="#sec-${esc(sec.key)}" data-to-quotes><b>金句 ${q.on}／最多 ${q.max}</b><span>${q.on > q.max ? `多了 ${q.on - q.max} 則，AI 只會上 ${q.max} 則` : `${q.total} 則候選`}</span></a>`);
-  const wish = seg.filter(hasWish);
+  const wish = canEdit() ? seg.filter(hasWish) : [];
   if (wish.length) out.push(`<button class="sb-task" type="button" data-next-wish><b>你改了 ${wish.length} 段</b><span>點一下看下一段</span></button>`);
   const seenN = seg.filter((x) => reading.seen.has(x.id)).length;
-  out.push(`<span class="sb-task static"><b>看過 ${seenN}／${seg.length}</b><span>${seenN >= seg.length ? '都看完了' : '只是提醒，不用全部看'}</span></span>`);
+  if (canEdit()) out.push(`<span class="sb-task static"><b>看過 ${seenN}／${seg.length}</b><span>${seenN >= seg.length ? '都看完了' : '只是提醒，不用全部看'}</span></span>`);
   if (reading.last && document.getElementById(`sec-${reading.last}`) && !box.dataset.resumed && !location.hash) out.push(`<a class="sb-task" href="#sec-${esc(reading.last)}" data-resume><b>接著看 ${esc(reading.last)}</b><span>上次看到這裡</span></a>`);
   box.innerHTML = out.join('');
 }
@@ -322,6 +341,7 @@ function markSeen(id) {
     reading.last = id;
     reading.seen.add(id);
     document.querySelector(`#nav li[data-nav="${CSS.escape(id)}"] > a`)?.classList.add('seen');
+    document.querySelector(`.sb-card[data-id="${CSS.escape(id)}"]`)?.classList.add('seen');
     try { localStorage.setItem(`sb-seen:${state.project}`, JSON.stringify([...reading.seen])); localStorage.setItem(`sb-last:${state.project}`, id); } catch { /* 同上 */ }
     renderTasks();
   }, 700);
@@ -341,18 +361,88 @@ function matches(s) {
   if (at != null) { const [a, b] = spanOf(s); return a != null && b != null && at >= a && at < b + 1; }
   return q.split(/\s+/).every((w) => textOf(s).includes(w));
 }
+// ---------- 總覽、單段、逐段 ----------
+const firstShot = (s) => groupsOf(s.blocks)[0].blocks.find((b) => b.type === 'image');
+function cardHtml(s) {
+  const o = state.overview[s.id] || {}, shot = firstShot(s);
+  const pending = NOT_DONE.test(groupsOf(s.blocks)[0].blocks.find((b) => b.label === '截圖觀察')?.value || '');
+  const say = o.summary || s.title.replace(s.id, '').replace(/^[\s｜|]+/, '');
+  const portrait = state.format === 'portrait';
+  const flag = hasWish(s) ? '<span class="flag wish">你改過</span>' : pending ? '<span class="flag">動畫還沒做</span>' : '';
+  return `<a class="sb-card${reading.seen.has(s.id) ? ' seen' : ''}${portrait ? ' portrait' : ''}" href="#sec-${esc(s.key)}" data-id="${esc(s.id)}" title="${esc(`${say}（${s.id}）`)}"><div class="thumb">${shot?.url ? `<img src="${esc(shot.url)}" alt="" loading="lazy">` : '<span>還沒有截圖</span>'}${flag}</div><div class="txt"><div class="say">${inline(say)}</div><div class="meta"><span>${esc(mmss(o.time))}　${KIND_ZH[kindOf(s)]}</span><span>${esc(s.id)}</span></div></div></a>`;
+}
+function renderGrid() {
+  const seg = state.sections.filter((x) => x.id);
+  const groups = [];
+  for (const s of seg) {
+    const name = state.overview[s.id]?.chapter || '';
+    if (!groups.length || groups.at(-1).name !== name) groups.push({ name, list: [] });
+    groups.at(-1).list.push(s);
+  }
+  const named = groups.length > 1 && groups.every((g) => g.name && g.name !== '—');
+  $('grid').innerHTML = groups.map((g) => `<section class="sb-gridsec">${named ? `<h2 class="sb-gridch">${esc(g.name)}<small>${esc(mmss(state.overview[g.list[0].id]?.time))}・${g.list.length} 段</small></h2>` : ''}<div class="sb-cards">${g.list.map(cardHtml).join('')}</div></section>`).join('');
+}
+const segList = () => state.sections.filter((x) => x.id && (!finderActive() || matches(x)));
+const finderActive = () => !!finder.query.trim() || finder.kind !== 'all';
+function setView(mode, key = null) {
+  view.mode = mode;
+  view.key = key;
+  applyFinder();
+  renderViews();
+}
+function renderViews() {
+  const seg = state.sections.filter((x) => x.id);
+  $('views').hidden = seg.length < GRID_FROM;
+  document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === (view.mode === 'list' ? 'list' : 'grid'))));
+  $('grid').hidden = view.mode !== 'grid' || !seg.length;
+  $('oneBar').hidden = view.mode !== 'one';
+  $('hint').dataset.base ??= $('hint').textContent;
+  $('hint').textContent = `${view.mode === 'grid' ? '點一張看那一段。' : ''}${$('hint').dataset.base}`;
+  // 單段看的時候：畫面留給這一段，上面的搜尋和任務列先收起來
+  $('intro').hidden = !state.exists || !seg.length || view.mode === 'one';
+  if (view.mode === 'one') {
+    const list = segList(), i = list.findIndex((x) => x.key === view.key);
+    $('onePos').textContent = i >= 0 ? `第 ${i + 1}／${list.length} 段` : '';
+    document.querySelector('[data-one="prev"]').disabled = i <= 0;
+    document.querySelector('[data-one="next"]').disabled = i < 0 || i >= list.length - 1;
+  }
+}
+function openOne(key) {
+  const s = state.sections.find((x) => x.key === key);
+  if (!s) return;
+  setView('one', key);
+  window.scrollTo({ top: 0 });
+  if (s.id) markSeen(s.id);
+}
+// 總覽、單段看的時候，連到一段（目錄、任務列、總覽的卡片、網址）＝打開那一段；連到要決定的事＝回總覽再捲過去
+function goSection(key) {
+  const s = state.sections.find((x) => x.key === key);
+  if (!s) return false;
+  if (view.mode === 'list') return false;
+  if (s.id) { openOne(key); return true; }
+  if (view.mode === 'one') setView('grid');
+  const el = document.getElementById(`sec-${key}`);
+  if (el) { const fold = el.querySelector(':scope > details[data-fold]'); if (fold) fold.open = true; el.scrollIntoView({ block: 'start' }); }
+  return true;
+}
 function applyFinder() {
-  const active = !!finder.query.trim() || finder.kind !== 'all';
+  const active = finderActive();
   let hits = 0;
   for (const s of state.sections) {
     const el = document.getElementById(`sec-${s.key}`);
     if (!el) continue;
-    const show = !active || matches(s);
-    el.hidden = !show;
+    // 單段看的時候，那一段不套篩選（「還沒看的」看了就不算了，不能看到一半變空白）
+    const show = !active || matches(s) || (view.mode === 'one' && s.key === view.key);
+    // 總覽：每一段都收進卡片，「總覽」那張表也不用了。單段：只放那一段
+    const inView = view.mode === 'list' ? true : view.mode === 'one' ? s.key === view.key : !s.id && s.title !== '總覽';
+    el.hidden = !show || !inView;
     if (show && s.id) hits++;
     const li = s.id && document.querySelector(`#nav li[data-nav="${CSS.escape(s.id)}"]`);
     if (li) li.hidden = !show;
+    const card = s.id && document.querySelector(`.sb-card[data-id="${CSS.escape(s.id)}"]`);
+    if (card) card.hidden = !show;
   }
+  document.querySelectorAll('.sb-gridsec').forEach((g) => { g.hidden = !g.querySelector('.sb-card:not([hidden])'); });
   if (active) document.querySelectorAll('#nav details.sb-navch').forEach((d) => { d.open = !!d.querySelector('li[data-nav]:not([hidden])'); d.closest('.sb-navch-wrap').hidden = !d.open; });
   else document.querySelectorAll('#nav .sb-navch-wrap').forEach((w) => { w.hidden = false; });
   const note = $('finderNote');
@@ -367,7 +457,8 @@ function resetFinder() {
 
 function renderBanner() {
   const out = [];
-  if (state.readOnly) out.push('<p class="sb-banner">分鏡表已經確認，這一頁現在只能看。要改請在對話跟 AI 說段號，例如「s12 重新設計」，或到完成影片頁寫修改單。</p>');
+  const eg = state.sections.find((x) => x.id)?.id || 's12';
+  if (state.readOnly) out.push(`<p class="sb-banner">分鏡表已經確認，這一頁現在只能看。要改請在對話跟 AI 說段號，例如「${esc(eg)} 重新設計」，或到完成影片預覽寫修改單。</p>`);
   for (const w of state.warnings || []) out.push(`<p class="sb-banner err">⚠ ${esc(w)}</p>`);
   $('banner').innerHTML = out.join('');
   renderSpeaker();
@@ -382,7 +473,7 @@ function renderSpeaker() {
   if (box.firstElementChild) return;
   const L = sp.limits || {};
   box.innerHTML = `<form class="sb-banner err sb-speaker" data-speaker-form>
-    <div class="sb-speaker-msg"><b>畫面上的講者是示範人物「${esc(sp.demo)}」</b>：講者介紹（${esc((sp.segments || []).join('、'))}）還沒設定你的姓名。存好後每一集都會用這組資料；截圖要等 AI 重新產生才會換。</div>
+    <div class="sb-speaker-msg"><b>畫面上的講者是示範人物「${esc(sp.demo)}」</b>：講者介紹（${esc((sp.segments || []).join('、'))}）還沒設定你的姓名。存好後每一集都會用這組資料；截圖要等 AI 更新才會換。</div>
     <label>姓名 <input name="name" autocomplete="off" placeholder="最多 ${esc(L.name)} 字"></label>
     <label>頭銜 <input name="titles" autocomplete="off" placeholder="最多 ${esc(L.maxTitles)} 個，用頓號分開"></label>
     <button type="submit" class="primary">存好</button>
@@ -453,15 +544,22 @@ function render() {
   // 閱讀順序：總覽（收起來，當索引）→ 每一段 → 要決定的事 → 參考資料（檔案裡的順序不動）
   const rank = (s) => (s.title === '總覽' ? -1 : s.id ? 0 : isDecide(s) ? 1 : 2);
   $('sections').innerHTML = [...state.sections].sort((a, b) => rank(a) - rank(b)).map((s) => (s.id ? segHtml(s) : otherHtml(s))).join('');
+  // 第一次載入：段多的開總覽；網址指到某一段就直接打開
+  const segs = state.sections.filter((x) => x.id);
+  if (view.mode === null && state.sections.length) view.mode = segs.length >= GRID_FROM ? 'grid' : 'list';
+  if (view.mode === 'one' && !segs.some((x) => x.key === view.key)) view.mode = 'grid';
   renderBanner();
   renderNav();
   renderSummary();
   const next = $('next');
   next.hidden = !state.exists || state.readOnly;
-  next.innerHTML = '都看完後回到對話，跟 AI 說「<b>可以</b>」。有選「想換成」或寫補充說明的段，AI 會先重做再給你確認。';
+  next.innerHTML = '看完回對話說「<b>可以</b>」';
+  next.title = '看完回到對話，跟 AI 說「可以」。有換呈現方式或寫補充說明的段，AI 會先重做再給你確認';
   restoreFailed();
   loadReading();
+  renderGrid();
   applyFinder();
+  renderViews();
   renderTasks();
   if (!pendingSaves && !failed.size) setSave('saved', savedText());
 }
@@ -678,7 +776,7 @@ $('notice')?.addEventListener('click', (e) => {
   if (e.target.closest('[data-notice-retry]')) retryFailed();
   if (e.target.closest('[data-notice-go]')) {
     const f = [...failed.values()][0];
-    if (f?.sec) document.getElementById(f.sec)?.scrollIntoView({ block: 'start' });
+    if (f?.sec && !goSection(f.sec.replace(/^sec-/, ''))) document.getElementById(f.sec)?.scrollIntoView({ block: 'start' });
   }
 });
 $('speakerBox')?.addEventListener('submit', async (e) => {
@@ -723,9 +821,32 @@ function watchSections() {
 $('nav').addEventListener('click', (e) => {
   const a = e.target.closest('a[href^="#"]');
   const sec = a && document.getElementById(a.getAttribute('href').slice(1));
-  if (sec?.hidden) resetFinder();   // 目錄點的段被篩掉了：先清掉篩選才跳得過去
+  if (sec?.hidden && view.mode === 'list') resetFinder();   // 目錄點的段被篩掉了：先清掉篩選才跳得過去
   const fold = sec?.querySelector(':scope > details[data-fold]');
   if (fold) fold.open = true;
+});
+// 總覽、單段看的時候，連到一段＝打開那一段（目錄、任務列、卡片都走這裡）
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href^="#sec-"]');
+  if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey) return;
+  if (goSection(a.getAttribute('href').slice(5))) e.preventDefault();
+});
+$('views')?.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-view]');
+  if (b) { setView(b.dataset.view); window.scrollTo({ top: 0 }); }
+});
+function stepOne(d) {
+  const list = segList(), i = list.findIndex((x) => x.key === view.key), next = list[i + d];
+  if (next) openOne(next.key);
+}
+$('oneBar')?.addEventListener('click', (e) => {
+  const act = e.target.closest('[data-one]')?.dataset.one;
+  if (act === 'back') {
+    const key = view.key;
+    setView('grid');
+    document.querySelector(`.sb-card[href="#sec-${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'center' });
+  } else if (act === 'prev') stepOne(-1);
+  else if (act === 'next') stepOne(1);
 });
 $('finderInput')?.addEventListener('input', (e) => { finder.query = e.target.value; applyFinder(); });
 $('finderInput')?.addEventListener('keydown', (e) => {
@@ -751,15 +872,26 @@ $('tasks')?.addEventListener('click', (e) => {
   if (e.target.closest('[data-next-wish]')) {
     resetFinder();
     const list = state.sections.filter((x) => x.id && hasWish(x));
+    if (view.mode !== 'list') {
+      const at = list.findIndex((x) => x.key === view.key);
+      const after = list[at + 1] || list[0];
+      if (after) openOne(after.key);
+      return;
+    }
     const y = window.scrollY + 80;
     const after = list.find((x) => document.getElementById(`sec-${x.key}`).offsetTop > y) || list[0];
     if (after) document.getElementById(`sec-${after.key}`).scrollIntoView({ block: 'start' });
   }
 });
-// 「/」跳到搜尋（在欄位裡打字時不算）
+// 「/」跳到搜尋；單段看的時候 [ ] 換上一段、下一段，Esc 回總覽（在欄位裡打字時不算）
 document.addEventListener('keydown', (e) => {
-  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
+  if (e.metaKey || e.ctrlKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
+  if (view.mode === 'one' && e.key === '[') { e.preventDefault(); stepOne(-1); return; }
+  if (view.mode === 'one' && e.key === ']') { e.preventDefault(); stepOne(1); return; }
+  if (view.mode === 'one' && e.key === 'Escape') { e.preventDefault(); setView('grid'); return; }
+  if (e.key !== '/') return;
   e.preventDefault();
+  if (view.mode === 'one') setView('grid');
   $('finderInput')?.focus();
 });
 // 破圖（截圖被 qc.mjs storyboard 換掉的瞬間）改顯示提示
@@ -780,7 +912,12 @@ async function load() {
 async function refresh(first = false) {
   try {
     const next = await load();
-    if (first || !state) { state = next; render(); if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView(); return; }
+    if (first || !state) {
+      state = next;
+      render();
+      if (location.hash) { const key = location.hash.replace(/^#sec-/, ''); if (!goSection(key)) document.getElementById(location.hash.slice(1))?.scrollIntoView(); }
+      return;
+    }
     // 服務回來了：沒存到的補存，狀態列也要恢復，不然會一直寫連不到
     if (offline) {
       offline = false;

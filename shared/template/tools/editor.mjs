@@ -472,7 +472,7 @@ async function getReport(ctx, { fresh = false } = {}) {
     const items = itemsFromText(r.stdout, readPlan(P.plan).data);
     return {
       key, report: null, fallback: items.length ? { items } : null, log: text.trim().slice(-4000), issues: issuesFromText(text),
-      error: 'build.mjs --check --json 沒有回傳報告（build.mjs 可能還沒更新到支援 --json，或檢查途中出錯）→ 段落位置暫時看不到；按「重新產生」看完整訊息，或請 AI 跑 build',
+      error: 'build.mjs --check --json 沒有回傳報告（build.mjs 可能還沒更新到支援 --json，或檢查途中出錯）→ 段落位置暫時看不到；按「更新預覽」看完整訊息，或請 AI 跑 build',
     };
   })();
   ctx.reportJob = { key, promise };
@@ -701,7 +701,10 @@ async function getFraming(ctx) {
   const c = canvasOf(cv.format);
   return [200, { ...ctx.framing.data, canvas: { format: cv.format, source: cv.source, W: c.W, H: c.H, caption: c.caption.box, card: c.lowerThird.rect, pip: c.pip.box, safe: c.regions.safe, headTop: c.framing.headTop, chinMax: c.framing.chinMax ?? null },
     video: { url: `/media/source.mp4?v=${Math.floor(st.mtimeMs).toString(36)}${st.size.toString(36)}` }, limits: LIMITS.frame,
-    plan: { exists: plan.exists, hash: plan.hash, mtime: plan.mtime, error: plan.error, frame: Array.isArray(plan.data?.frame) ? plan.data.frame : null, speakerBox: plan.data?.speakerBox ?? null },
+    plan: { exists: plan.exists, hash: plan.hash, mtime: plan.mtime, error: plan.error, frame: Array.isArray(plan.data?.frame) ? plan.data.frame : null, speakerBox: plan.data?.speakerBox ?? null,
+      // 還沒決定過構圖（分鏡之前、沒存過）：頁面先把建議的框存起來，使用者看到什麼就是什麼
+      decided: Array.isArray(plan.data?.frame) || !!statOf(framingDecidedFile(ctx)) || (Array.isArray(plan.data?.scenes) && plan.data.scenes.length > 0) },
+    preview: builtInfo(ctx, plan),
     look: lookRunState(ctx), ref: refInfo(ctx, cv.format),
     project: { name: path.basename(P.project) } }];
 }
@@ -789,7 +792,13 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   const memory = readMemory(ctx);
   const durCache = new Map();
   const mediaDur = (src) => { if (!durCache.has(src)) durCache.set(src, mediaInfo(ctx, src)?.dur ?? null); return durCache.get(src); };
-  const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory, canvas: cv });
+  // 構圖連續存：plan.json 從上一次構圖存檔之後沒被別人動過，就還是這一輪調框。換算一律從這一輪開始時的 speakerBox、pipCrop 算
+  let frameOrigin = null;
+  if (frameOnly && st) {
+    if (ctx.frameSession?.hash === hash) frameOrigin = ctx.frameSession.origin;
+    else { const d0 = readPlan(P.plan).data; frameOrigin = isObj(d0) ? { frame: d0.frame ?? null, speakerBox: d0.speakerBox ?? null, pipCrop: d0.pipCrop ?? null } : null; }
+  }
+  const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory, canvas: cv, frameOrigin });
   if (r.errors.length) return [400, { error: 'invalid', errors: r.errors, message: r.errors.join('\n') }];
   // plan.json 與 rough.srt 一起寫：兩個都先寫暫存檔；rename 之前再比對一次，任一個被改過就兩個都不寫
   const writes = [];
@@ -813,11 +822,18 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
     try { fs.mkdirSync(ctx.editorDir, { recursive: true }); fs.writeFileSync(ctx.memoryFile, JSON.stringify({ sfx: r.memory || {} }, null, 2) + '\n'); } catch { /* 記不住只影響「還原音效」 */ }
   }
   const nst = statOf(P.plan), nsrt = readSrt(P.srt);
+  // 自動存檔之後還要能復原：存檔前後的檔案都記著（/api/restore）
+  if (st) rememberVersion(ctx, hash, srt.hash, text, srt.text);
+  if (nst) { const after = fs.readFileSync(P.plan, 'utf8'); rememberVersion(ctx, sha(after), nsrt.hash, after, nsrt.text); }
   if (frameOnly) {
     const hash = nst ? sha(fs.readFileSync(P.plan, 'utf8')) : null;
+    if (frameOrigin) ctx.frameSession = { hash, origin: frameOrigin };
+    // 使用者決定過構圖了（包括選「原畫面」）：之後打開頁面不再套建議的框
+    try { fs.mkdirSync(ctx.editorDir, { recursive: true }); fs.writeFileSync(framingDecidedFile(ctx), `${Date.now()}\n`); } catch { /* 記不住只影響下次打開時的預設框 */ }
     if (r.text != null) {
-      ctx.framingUpdate = { hash, running: false, ok: null, message: null, finishedAt: null };
-      // 停點 ② 尚未有完成影片時只存設定；已有完成影片就自動更新，關閉構圖分頁也會繼續。
+      // running 照實寫：更新預覽跑到一半又存了一次框，頁面要繼續等，不能當成結束了
+      ctx.framingUpdate = { hash, running: !!ctx.framingJob, ok: null, message: null, finishedAt: null };
+      // 構圖頁自動存檔不帶起更新（deferBuild）：底片重新編碼很久，等使用者按「更新預覽」。AI 或沒帶 update:false 的呼叫照舊自動更新
       if (!deferBuild && builtInfo(ctx, readPlan(P.plan)).built) requestFramingBuild(ctx);
     }
     return [200, { ok: true, wrote: { plan: r.text != null, srt: false }, notes: r.notes || [], plan: { exists: !!nst, mtime: nst?.mtimeMs ?? null, hash, frame: Array.isArray(r.plan.frame) ? r.plan.frame : null, speakerBox: r.plan.speakerBox ?? null }, look: lookRunState(ctx), framingUpdate: ctx.framingUpdate }];
@@ -826,6 +842,47 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   return [200, { ok: true, look: lookState(ctx, r.plan), wrote: { plan: r.text != null, srt: r.srtText != null }, plan: { mtime: nst.mtimeMs, hash: sha(fs.readFileSync(P.plan, 'utf8')), data: r.plan },
     srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: r.notes || [], edit: r.edit ?? r.plan.edit ?? null, anchors: r.anchors || [], sfxMemory: r.memory || {},
     ...(rep ? { report: reportOut(rep) } : {}) }];
+}
+
+// 這個 session 存過的檔案版本（plan.json＋rough.srt）：復原、重做要回到某一次存檔前的樣子時用。只在記憶體，服務重開就沒了
+const VERSION_BYTES = 80 * 1024 * 1024;
+const versionKey = (planHash, srtHash) => `${planHash}|${srtHash ?? ''}`;
+function rememberVersion(ctx, planHash, srtHash, plan, srt) {
+  const key = versionKey(planHash, srtHash), V = (ctx.versions ??= new Map());
+  V.delete(key);
+  V.set(key, { plan, srt: srt ?? null });
+  let total = 0;
+  for (const v of V.values()) total += v.plan.length + (v.srt?.length || 0);
+  for (const [k, v] of V) {
+    if (total <= VERSION_BYTES || V.size <= 2) break;
+    total -= v.plan.length + (v.srt?.length || 0);
+    V.delete(k);
+  }
+}
+// 把檔案換回存過的版本：現在的檔案要和頁面認知的一樣（base），不然就是有人（AI）改過，不能蓋掉
+export function doRestore(ctx, body) {
+  const P = ctx.P, base = isObj(body?.base) ? body.base : {}, to = isObj(body?.to) ? body.to : {};
+  const st = statOf(P.plan);
+  if (!st) return [404, { error: 'noplan', message: '找不到 plan.json' }];
+  const text = fs.readFileSync(P.plan, 'utf8'), hash = sha(text), srt = readSrt(P.srt);
+  if (base.hash !== hash || (base.srtHash ?? null) !== (srt.hash ?? null)) return [409, { error: 'conflict', file: base.hash !== hash ? 'plan' : 'srt', message: '檔案剛被改過（通常是 AI），這一步不能復原了' }];
+  const v = ctx.versions?.get(versionKey(to.hash, to.srtHash));
+  if (!v) return [410, { error: 'gone', message: '更早的步驟回不去了（剪輯台重開過，或改動太多）' }];
+  rememberVersion(ctx, hash, srt.hash, text, srt.text);
+  const writes = [[P.plan, v.plan], ...(v.srt != null && v.srt !== srt.text ? [[P.srt, v.srt]] : [])];
+  const tmps = [];
+  try {
+    for (const [f, t] of writes) { const tmp = `${f}.editor-${process.pid}.tmp`; fs.writeFileSync(tmp, t); tmps.push([tmp, f]); }
+    for (const [tmp, f] of tmps) fs.renameSync(tmp, f);
+  } catch (e) {
+    for (const [tmp] of tmps) try { fs.unlinkSync(tmp); } catch { /* 已經不在 */ }
+    throw e;
+  }
+  ctx.report = null;
+  const nst = statOf(P.plan), nsrt = readSrt(P.srt);
+  let plan;
+  try { plan = JSON.parse(v.plan); } catch { plan = readPlan(P.plan).data; }
+  return [200, { ok: true, look: lookState(ctx, plan), plan: { mtime: nst.mtimeMs, hash: sha(v.plan), data: plan }, srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, edit: plan.edit ?? null, sfxMemory: readMemory(ctx) }];
 }
 
 async function doLoudness(ctx, body) {
@@ -921,7 +978,7 @@ function requestFramingBuild(ctx) {
       while (ctx.build.running) await sleep(250);
       ctx.framingPending = false;
       const [, result] = await doBuild(ctx);
-      Object.assign(ctx.framingUpdate, { ok: result.ok, message: result.ok ? null : result.message || '預覽更新失敗，請在剪輯按「重新產生」查看訊息', finishedAt: Date.now() });
+      Object.assign(ctx.framingUpdate, { ok: result.ok, message: result.ok ? null : result.message || '預覽更新失敗，請在剪輯台按「更新預覽」查看訊息', finishedAt: Date.now() });
     }
   })().catch((e) => {
     Object.assign(ctx.build, { running: false, ok: false, finishedAt: Date.now() });
@@ -935,6 +992,7 @@ function requestFramingBuild(ctx) {
 // 給頁面看的重新產生狀態：現在在做哪一步（白話）、已經多久、上次重新處理底片花多久（這台電腦、這支影片的實際值，沒有就不寫）
 const BUILD_PHASES = [[/偵測臉部|套用瘦臉|look\.mjs/, '偵測臉部、套用瘦臉'], [/量人聲響度|重新編碼底片/, '重新處理影片底片']];
 const buildTimesFile = (ctx) => path.join(ctx.editorDir, 'build-times.json');
+const framingDecidedFile = (ctx) => path.join(ctx.editorDir, 'framing-decided');
 function buildBrief(ctx) {
   const b = ctx.build, log = String(b.log || '');
   // 從最後一行往回找：現在做到的那一步
@@ -948,7 +1006,7 @@ function rememberBuildTime(ctx) {
 }
 
 async function doBuild(ctx, body = {}) {
-  if (ctx.build.running) return [409, { error: 'busy', message: '已經在重新產生了，等它跑完' }];
+  if (ctx.build.running) return [409, { error: 'busy', message: '已經在更新預覽了，等它跑完' }];
   const P = ctx.P;
   const ids0 = new Set(((readPlan(P.plan).data || {}).scenes || []).filter(isObj).map((x) => String(x.id)));
   const auditIds = (Array.isArray(body?.audit) ? body.audit : []).map(String).filter((x) => ids0.has(x)).slice(0, 12);
@@ -1011,18 +1069,28 @@ async function handle(ctx, req, res) {
         return result ? sendJson(res, 200, result) : sendJson(res, 404, { message: '找不到這個操作' });
       } catch (e) { return sendJson(res, e.status || 400, { message: e.message }); }
     }
-    if (exportBusy(ctx) && ['/api/save', '/api/build', '/api/framing/save'].includes(p)) return sendJson(res, 409, { error: 'exporting', message: '正在輸出完成影片，等它跑完再存檔或重新產生（也可以先取消輸出）' });
+    if (exportBusy(ctx) && ['/api/save', '/api/restore', '/api/build', '/api/framing/save', '/api/framing/update'].includes(p)) return sendJson(res, 409, { error: 'exporting', message: '正在輸出完成影片，等它跑完再存檔或更新預覽（也可以先取消輸出）' });
     if (p === '/api/framing/save') {
-      const { designId, ...frameBody } = body;
-      if (designId && (ctx.designBusy || designState(ctx).draft?.id !== designId)) return sendJson(res, 409, { message: '背景正在更新，請等預覽完成後再儲存。' });
-      const [status, result] = await doSave(ctx, frameBody, { deferBuild: !!designId });
+      const { designId, update = true, ...frameBody } = body;
+      if (designId && (ctx.designBusy || designState(ctx).draft?.id !== designId)) return sendJson(res, 409, { error: 'designbusy', message: '背景正在更新，請等預覽完成後再存。' });
+      const [status, result] = await doSave(ctx, frameBody, { deferBuild: !!designId || !update });
       if (status === 200 && designId) {
         result.design = applyDesign(ctx, designId);
-        ctx.framingUpdate = { hash: result.plan.hash, running: false, ok: null, message: null, finishedAt: null };
-        if (builtInfo(ctx, readPlan(P.plan)).built) requestFramingBuild(ctx);
+        ctx.framingUpdate = { hash: result.plan.hash, running: !!ctx.framingJob, ok: null, message: null, finishedAt: null };
+        if (update && builtInfo(ctx, readPlan(P.plan)).built) requestFramingBuild(ctx);
         result.framingUpdate = ctx.framingUpdate;
       }
+      if (status === 200) result.preview = builtInfo(ctx, readPlan(P.plan));
       return sendJson(res, status, result);
+    }
+    // 構圖頁的「更新預覽」：自動存檔不會帶起更新，要使用者按了才跑（底片重新編碼很久）
+    if (p === '/api/framing/update') {
+      const plan = readPlan(P.plan);
+      if (!builtInfo(ctx, plan).built) return sendJson(res, 409, { message: '還沒有完成影片，不用更新' });
+      // hash 留著上一次構圖存檔的值：這裡不算改檔，不能把別人（AI）的修改蓋章成構圖改的
+      ctx.framingUpdate = { hash: ctx.framingUpdate?.hash ?? null, running: false, ok: null, message: null, finishedAt: null };
+      requestFramingBuild(ctx);
+      return sendJson(res, 200, { ok: true, framingUpdate: ctx.framingUpdate });
     }
     if (p === '/api/cuts/save') {
       try { return sendJson(res, 200, saveCuts(ctx, body)); } catch (e) { return sendJson(res, e.status || 400, { message: e.message, ...(e.extra || {}) }); }
@@ -1031,6 +1099,7 @@ async function handle(ctx, req, res) {
       try { return sendJson(res, 200, saveStoryboard(ctx, body)); } catch (e) { return sendJson(res, e.status || 400, { message: e.message, ...(e.extra || {}) }); }
     }
     if (p === '/api/save') { const [s, o] = await doSave(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/restore') { const [s, o] = doRestore(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/refframe') { const [s, o] = await doRefFrame(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/look/run') { const [s, o] = await doLookRun(ctx); return sendJson(res, s, o); }
     if (p === '/api/build') { const [s, o] = await doBuild(ctx, body); return sendJson(res, s, o); }

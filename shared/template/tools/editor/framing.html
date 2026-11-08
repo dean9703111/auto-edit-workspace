@@ -44,7 +44,18 @@
   .fr-msg.err { color: var(--warn-kw); }
   .fr-loading { padding: 48px 16px; text-align: center; color: var(--mute); }
   .fr-sec { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
-  .fr-lk { display: grid; grid-template-columns: auto 2.5em 1fr 7.5em; gap: 10px; align-items: center; margin-top: 8px; }
+  details.fr-sec > summary { cursor: pointer; font-size: 13.5px; color: var(--ink); padding: 2px 0; }
+  details.fr-sec[open] > summary { margin-bottom: 8px; }
+  .fr-update { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); font-size: 13px; }
+  .fr-update p { margin: 0; flex: 1 1 200px; }
+  .design-wrap { margin: 0 16px 40px; }
+  .design-wrap > summary { cursor: pointer; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg2); font-size: 14px; color: var(--ink); }
+  .design-wrap > summary:hover { border-color: var(--line2); }
+  .design-wrap[open] > summary { margin-bottom: 4px; }
+  .design-wrap .design-workbench { margin-left: 0; margin-right: 0; }
+  .fr-lk { display: grid; grid-template-columns: 5em 1fr 3.5em; gap: 10px; align-items: center; margin-top: 8px; }
+  .fr-lk label { display: flex; align-items: center; gap: 6px; min-height: 28px; cursor: pointer; }
+  .fr-lk input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
   .fr-lk output { font-family: var(--mono); font-size: 12px; text-align: right; }
   .fr-ref { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
   .fr-ref .fr-note { margin: 0; }
@@ -61,16 +72,14 @@
     </div>
   </div>
   <div class="save-state" id="saveState" data-state="loading" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
-  <div class="actions">
-    <button id="btnSave" class="primary" disabled title="儲存構圖，並套用確認過的主色與背景（⌘／Ctrl＋S）">儲存</button>
-  </div>
+  <div class="next-step" id="next">調好後回對話說「<b>調好了</b>」</div>
 </header>
 
 <div id="loading" class="fr-loading">量講者動作範圍中（第一次約 5–15 秒）…</div>
 
 <main class="fr-main" id="main" hidden>
   <section class="fr-panel">
-    <h2>拖曳框移動、拖四個角縮放（鎖定比例）；方向鍵微調，按住 Shift 移動 20px</h2>
+    <h2>拖框移動，拖四個角縮放；方向鍵可以微調（按住 Shift 走快一點）</h2>
     <div class="fr-stage" id="stage" tabindex="0" aria-label="構圖框">
       <video id="video" muted playsinline preload="auto"></video>
       <svg id="overlay" aria-hidden="true"></svg>
@@ -82,20 +91,14 @@
     </div>
     <label class="fr-zoom">
       <span>放大</span>
-      <input id="zoom" type="range" min="1" max="2" step="0.01" value="1">
+      <input id="zoom" type="range" min="1" max="2" step="0.01" value="1" aria-label="放大倍率">
       <output id="zoomOut">1.00×</output>
     </label>
     <div class="fr-presets">
       <button id="btnSuggest" title="不切到手勢、不會太糊的倍率裡最大的">建議的框</button>
       <button id="btnFull">原畫面（不裁切）</button>
-      <button id="btnSaved">回到存檔的框</button>
     </div>
-    <div class="fr-ref">
-      <a href="#design" class="ghost">↓ 看動畫與背景</a>
-      <button id="btnRef" title="把現在這一格（裁切、調光後的樣子）存成情境庫、風格預覽頁的講者畫面">用這一格當預覽參考圖</button>
-      <p class="fr-note" id="refNote"></p>
-    </div>
-    <p class="fr-note">下方動畫會跟著目前的框與播放畫面更新，不必另開分頁。</p>
+    <div class="fr-legend" id="stageLegend"></div>
   </section>
 
   <section class="fr-panel">
@@ -103,23 +106,30 @@
     <canvas id="preview" class="fr-preview"></canvas>
     <div class="fr-legend" id="legend"></div>
     <ul class="fr-facts" id="facts"></ul>
-    <div class="fr-sec">
-      <h2>講者調光、瘦臉、美顏（預設關閉）</h2>
-      <label class="fr-lk"><input type="checkbox" id="colorOn"><span>調光</span><input id="color" type="range" min="0" max="1" step="0.05" value="0"><output id="colorOut">關</output></label>
-      <label class="fr-lk"><input type="checkbox" id="slimOn"><span>瘦臉</span><input id="slim" type="range" min="0" max="1.2" step="0.05" value="0"><output id="slimOut">關</output></label>
-      <label class="fr-lk" title="磨皮、膚色提亮、淡化黑眼圈（只動臉，眼睛、眉毛、嘴巴不動）"><input type="checkbox" id="beautyOn"><span>美顏</span><input id="beauty" type="range" min="0" max="1" step="0.05" value="0"><output id="beautyOut">關</output></label>
-      <p class="fr-note" id="lookNote"></p>
-      <button id="btnDetect" hidden>偵測臉部（會先儲存）</button>
-      <div id="faces" class="look-faces" hidden><figure><img data-k="before" alt="原本"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="套用後"><figcaption>後</figcaption></figure><p class="look-msg fr-note"></p></div>
-    </div>
-    <p class="fr-note" id="note"></p>
+    <div class="fr-update" id="updateBar" hidden><p>已經有完成影片了。新的構圖要更新預覽才看得到（長片要十幾分鐘）。</p><button id="btnUpdate" class="primary small">更新預覽</button></div>
     <p class="fr-msg" id="msg" role="status"></p>
+    <details class="fr-sec" id="lookSec">
+      <summary id="lookSummary">講者調光、瘦臉、美顏（選用）</summary>
+      <div class="fr-lk"><label><input type="checkbox" id="colorOn" aria-label="調光開關">調光</label><input id="color" type="range" min="0" max="1" step="0.05" value="0" aria-label="調光強度"><output id="colorOut">關</output></div>
+      <div class="fr-lk"><label><input type="checkbox" id="slimOn" aria-label="瘦臉開關">瘦臉</label><input id="slim" type="range" min="0" max="1.2" step="0.05" value="0" aria-label="瘦臉強度"><output id="slimOut">關</output></div>
+      <div class="fr-lk" title="磨皮、膚色提亮、淡化黑眼圈（只動臉，眼睛、眉毛、嘴巴不動）"><label><input type="checkbox" id="beautyOn" aria-label="美顏開關">美顏</label><input id="beauty" type="range" min="0" max="1" step="0.05" value="0" aria-label="美顏強度"><output id="beautyOut">關</output></div>
+      <p class="fr-note" id="lookNote"></p>
+      <button id="btnDetect" hidden>偵測臉部</button>
+      <div id="faces" class="look-faces" hidden><figure><img data-k="before" alt="原本"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="套用後"><figcaption>後</figcaption></figure><p class="look-msg fr-note"></p></div>
+    </details>
+    <details class="fr-sec" id="refSec">
+      <summary>情境庫裡的講者換成你（選用）</summary>
+      <div class="fr-ref"><button id="btnRef" title="把現在這一格（裁切、調光後的樣子）存成情境庫、風格預覽頁的講者畫面">用這一格當預覽參考圖</button><p class="fr-note" id="refNote"></p></div>
+    </details>
+    <p class="fr-note" id="note"></p>
   </section>
 </main>
 
+<details class="design-wrap" id="designWrap">
+<summary>想換主色、背景，或看動畫套上去的樣子？（選用，不換就跳過）</summary>
 <section class="design-workbench" id="design" aria-labelledby="designTitle">
   <header class="design-heading">
-    <div><span class="design-eyebrow">全畫面 · 側邊欄 · 章節</span><h2 id="designTitle">背景與動畫預覽（選用）</h2><p>想換主色或背景才需要動；不換就直接跳過。</p></div>
+    <div><span class="design-eyebrow">全畫面 · 側邊欄 · 章節</span><h2 id="designTitle">背景與動畫預覽</h2><p>下面的動畫會跟著你拖的框和播放畫面更新。選了就會自動套用。</p></div>
     <span id="designState" class="design-badge" role="status">正在載入…</span>
     <button id="retryDesign" hidden>重新連接</button>
   </header>
@@ -162,7 +172,7 @@
       </section>
       <p id="designError" class="design-error" role="alert"></p>
       <button id="discardDesign" class="ghost small" hidden>還原已套用的設定</button>
-      <p class="design-note">預覽滿意後，按右上的「儲存」。</p>
+      <p class="design-note">選了就會自動套用。</p>
     </aside>
     <div class="design-gallery">
       <div class="design-gallery-head"><div><h3>動畫套用預覽</h3><p>預設完成畫面，滑入循環播放；點擊放大。</p></div><a href="/gallery/" target="_blank" rel="noopener">完整情境庫 ↗</a></div>
@@ -172,6 +182,7 @@
     </div>
   </div>
 </section>
+</details>
 
 <dialog id="designDialog" class="design-dialog"><header><h2 id="designDialogTitle">動畫預覽</h2><button id="closeDesignDialog" aria-label="關閉動畫預覽">✕</button></header><div id="designDialogStage"></div><button id="replayDesign">重播動畫</button></dialog>
 

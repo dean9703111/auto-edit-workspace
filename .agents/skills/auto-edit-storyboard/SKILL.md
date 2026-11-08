@@ -131,7 +131,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --apply-storybo
 ## 停點
 
 ```
-⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」
+⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框說「調好了」（會自動存），或說「用建議的」
 ⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方
 ```
 

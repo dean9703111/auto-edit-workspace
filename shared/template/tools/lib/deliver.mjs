@@ -34,7 +34,7 @@ const TOOLS =path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LOG_KEEP = 24000;
 const RENDER_TAIL = 64 * 1024;   // render 的 stdout／stderr 只留尾巴（長片 log 有好幾 MB），全文在 work/render.log
 
-export const STEPS = [['build', '重新產生'], ['test', '測試片段（確認有聲音）'], ['render', '輸出整支影片'], ['qc', '驗收']];
+export const STEPS = [['build', '更新預覽'], ['test', '測試片段（確認有聲音）'], ['render', '輸出整支影片'], ['qc', '驗收']];
 export const TEST_SECONDS = 4;
 export const QUALITY = 'looks';
 export const FPS = 30;
@@ -508,7 +508,7 @@ export async function runDeliver(P, job, deps) {
     say(`1/4 ${STEPS[0][1]}…`);
     const [, built] = await deps.build();
     if (job.canceled) return;
-    if (!built?.ok) return fail('重新產生沒有成功：照下面的訊息修改（看不懂就整段貼給 AI）。', built?.issues?.errors?.length ? built.issues.errors : [built?.message || '重新產生失敗'], '照 ✖ 後面的建議改 plan.json，再跑一次這條指令');
+    if (!built?.ok) return fail('預覽沒有更新成功：照下面的訊息修改（看不懂就整段貼給 AI）。', built?.issues?.errors?.length ? built.issues.errors : [built?.message || '預覽更新失敗'], '照 ✖ 後面的建議改 plan.json，再跑一次這條指令');
     addLog(built.log || '');
     deps.onBuilt?.(built.log || '');
 

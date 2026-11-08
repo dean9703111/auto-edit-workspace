@@ -25,7 +25,7 @@
  *   node shared/template/tools/qc.mjs framing --project projects/<專案> --write   使用者說「用建議的」：把 ✔ 那一列寫進 plan.json（1.0 倍不寫）
  *       構圖預覽：量講者動作範圍、偵測四周黑邊，算出每個放大倍率的 16:9 裁切框（頭頂上方留 120px、講者水平置中），
  *       存 work/構圖預覽.jpg（每個倍率一格，橘框是講者動作範圍）並印出每個倍率的 frame 與會不會切到手勢。
- *       停點 ② 用剪輯台的構圖台（editor.mjs 印的「構圖台」網址）讓使用者拖框，存檔就寫進 plan.json 的 frame；
+ *       停點 ② 用剪輯台的構圖台（editor.mjs 印的「構圖台」網址）讓使用者拖框，拖好就自動寫進 plan.json 的 frame；
  *       使用者說「用建議的」就把建議那一列的 frame 寫進 plan.json 第一層（1.0 倍不寫）。之後再跑 speaker 量講者框。
  *       直式：候選是 9:16（1.0＝原畫面），垂直位置讓頭頂落在 y 380–520、下巴 ≤ 860（下巴用 work/face-landmarks.json，沒有就用動作範圍估），
  *       不合的倍率標 ⚠、不當建議。

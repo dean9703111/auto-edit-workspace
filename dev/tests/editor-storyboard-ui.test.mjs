@@ -165,8 +165,14 @@ test('分鏡表：內容設計動畫的概念直接看得到，占位圖標「�
   assert.match(text, /概念\s*兩個小毛病藏在影片裡/);
   assert.match(text, /畫面\s*勾被擦掉，毛病跳出來/);
   assert.match(await page.$eval('#sec-d01 .sb-pending', (n) => n.textContent), /動畫還沒做/);
-  assert.match(await page.$eval('#sec-d01 details[data-fold$="動畫分鏡 d01"] summary', (n) => n.textContent), /鏡位腳本/);
-  assert.equal(await page.$('#sec-d01 details[data-fold$=":notes"]'), null, '截圖觀察不用放進 AI 的備註');
+  // 鏡位腳本是給 AI 的細節：預設收起，summary 講有幾拍
+  assert.equal(await page.$eval('#sec-d01 details[data-fold$="動畫分鏡 d01"]', (d) => d.open), false);
+  assert.match(await page.$eval('#sec-d01 details[data-fold$="動畫分鏡 d01"] summary', (n) => n.textContent), /鏡位腳本（2 拍）/);
+  await page.click('#sec-d01 details[data-fold$="動畫分鏡 d01"] summary');
+  // 「理由」常常是 AI 排版的考量，收進 AI 的備註；截圖觀察不用放進去
+  const notes = await page.$eval('#sec-d01 details[data-fold$=":notes"]', (n) => n.textContent);
+  assert.match(notes, /落差是情緒高點/);
+  assert.doesNotMatch(notes, /截圖觀察/);
   // 橘底只有畫面上的字
   assert.deepEqual(await page.$$eval('#sec-d01 .sb-table .sb-piece, #sec-d01 .sb-table .sb-edit', (a) => a.map((e) => e.textContent)), ['腳架晃']);
   const row = await page.$eval('#sec-d01 .sb-table tbody tr:nth-child(2)', (n) => n.innerText);
@@ -271,8 +277,7 @@ test('分鏡表（長）：目錄照章分組；任務列數得對；搜尋段�
   assert.equal(await page.$$eval('.sb-sec:not([hidden])', (a) => a.length) > 5, true);
   // 篩選
   const only = async (k) => { await page.click(`[data-kind-filter="${k}"]`); await sleep(80); return page.$$eval('.sb-sec:not([hidden])', (a) => a.map((x) => x.id)); };
-  assert.deepEqual(await only('design'), ['sec-d0103']);
-  assert.deepEqual(await only('anim'), ['sec-x0102']);
+  assert.deepEqual(await only('anim'), ['sec-x0102', 'sec-d0103'], '內容設計動畫和模板動畫都是「動畫」');
   assert.deepEqual(await only('media'), ['sec-m0104']);
   assert.deepEqual(await only('card'), ['sec-c01', 'sec-s0101']);
   assert.deepEqual(await only('changed'), []);
@@ -320,4 +325,76 @@ test('剪輯清單：聽剪完會跳過要剪的部分；只看 AI 不確定的�
     assert.ok(!after.some((x) => x > 3.2 && x < 4.8), `跳過要剪的部分（聽到 ${after.filter((x) => x > 3 && x < 5).slice(0, 4)}）`);
   }
   await fs.promises.rm(path.join(work, 'main.mp4'));
+});
+
+test('分鏡表（長片總覽）：8 段以上先看縮圖總覽；點一張看那一段，上一段下一段；搜尋篩卡片；鏡位腳本不顯示座標；決定和提醒分開', async () => {
+  const seg = (i) => {
+    const id = `s0${i}`, t = `0:${String(i * 5).padStart(2, '0')}.00`, e = `0:${String(i * 5 + 5).padStart(2, '0')}.00`;
+    return [`### ${id}｜#1｜${t}–${e}`, '', `- 起點那句字幕：第 ${i} 段的字幕`, '- 版面：疊加（07 重點字卡）', `- 畫面：左邊一個人（x 80–480、y 340–500）站著`, `- 理由：視覺語言建議 x-process`, '', `![${id}](storyboard-preview/${id}.png)`, ''];
+  };
+  const list = Array.from({ length: 10 }, (_, i) => i + 1);
+  const md = ['# 分鏡表：demo（草稿）', '', '## 總覽', '', '| 段 | 章 | 句號 | 時間碼 | 版面 | 卡片類型 | 一句話摘要 |', '|---|---|---|---|---|---|---|',
+    ...list.map((i) => `| s0${i} | 第 ${i > 5 ? 2 : 1} 章 | #1 | 0:${String(i * 5).padStart(2, '0')}.00–0:${String(i * 5 + 5).padStart(2, '0')}.00 | 疊加 | ${i === 3 ? '內容設計動畫' : '07 重點字卡'} | 第 ${i} 段在講什麼 |`), '', '## 分段', '',
+    ...list.flatMap(seg), '## 需要我決定的事', '', '1. 片頭要不要配樂', '2. 補錄：登入後的畫面，2:12–2:19', '3. 部落格連結待補', ''].join('\n');
+  fs.writeFileSync(file, md);
+  await fs.promises.rm(path.join(work, '製作進度.md'), { force: true });
+  await page.goto(new URL('/storyboard', editor.url).href, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => { try { localStorage.clear(); } catch { /* 沒有也沒關係 */ } });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.sb-card');
+  assert.equal(await page.$$eval('.sb-card', (a) => a.length), 10);
+  assert.equal(await page.$$eval('.sb-sec[id^="sec-s0"]:not([hidden])', (a) => a.length), 0, '總覽時不展開每一段');
+  assert.deepEqual(await page.$$eval('.sb-gridch', (a) => a.map((x) => x.firstChild.textContent)), ['第 1 章', '第 2 章']);
+  const card = await page.$eval('.sb-card[data-id="s03"]', (n) => n.innerText.replace(/\s+/g, ' '));
+  assert.match(card, /第 3 段在講什麼 0:15 動畫 s03/);
+  assert.match(await page.$eval('#next', (n) => n.textContent), /可以/);
+  // 決定和提醒分開，人稱一致
+  const tasks = await page.$eval('#tasks', (n) => n.innerText.replace(/\s+/g, ' '));
+  assert.match(tasks, /要你決定 1 件/);
+  assert.match(tasks, /待補的素材和提醒 2 件/);
+  // 搜尋篩卡片
+  await page.type('#finderInput', 's07');
+  await page.waitForFunction(() => document.querySelectorAll('.sb-card:not([hidden])').length === 1);
+  await page.$eval('#finderInput', (i) => { i.value = ''; i.dispatchEvent(new Event('input')); });
+  await page.click('[data-kind-filter="anim"]');
+  await page.waitForFunction(() => document.querySelectorAll('.sb-card:not([hidden])').length === 1);
+  await page.click('[data-kind-filter="all"]');
+  // 點一張：只放那一段；有上一段、下一段
+  await page.click('.sb-card[data-id="s03"]');
+  await page.waitForSelector('#sec-s03:not([hidden])');
+  assert.equal(await page.$$eval('.sb-sec[id^="sec-s0"]:not([hidden])', (a) => a.length), 1);
+  assert.equal(await page.$eval('#grid', (n) => n.hidden), true);
+  assert.match(await page.$eval('#onePos', (n) => n.textContent), /第 3／10 段/);
+  // 座標和 AI 的考量不顯示，檔案裡還在
+  const text = await page.$eval('#sec-s03 .sb-segbody', (n) => n.innerText);
+  assert.match(text, /左邊一個人 ?站著/);
+  assert.doesNotMatch(text, /x 80|y 340|x-process/);
+  assert.match(fs.readFileSync(file, 'utf8'), /x 80–480/);
+  await page.click('[data-one="next"]');
+  await page.waitForSelector('#sec-s04:not([hidden])');
+  await page.keyboard.press('[');
+  await page.waitForSelector('#sec-s03:not([hidden])');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.querySelector('#grid').hidden);
+  // 目錄點一段＝打開那一段；逐段捲動還在
+  await page.click('#nav li[data-nav="s01"] a');
+  await page.waitForSelector('#sec-s01:not([hidden])');
+  await page.click('[data-one="back"]');
+  await page.click('[data-view="list"]');
+  assert.equal(await page.$$eval('.sb-sec[id^="sec-s0"]:not([hidden])', (a) => a.length), 10);
+  // 重新載入內容（AI 改檔）不會跳回去
+  fs.writeFileSync(file, md.replace('第 1 段在講什麼', '第一段改了'));
+  await page.waitForFunction(() => /第一段改了/.test(document.querySelector('#sec-s01 h2')?.textContent || ''), { timeout: 10000 });
+  assert.equal(await page.$$eval('.sb-sec[id^="sec-s0"]:not([hidden])', (a) => a.length), 10);
+  // 只能看的時候：沒有待辦、沒有選單、例句是真的段號
+  fs.writeFileSync(path.join(work, '製作進度.md'), ['# 製作進度', '', '## 開工決策表', '', '| 欄 | 值 |', '|---|---|', '| 主軌種類 | 只有真人 |', '', '## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 決定寫回 |', '|---|---|---|---|---|', '| 2026-07-01 10:00 | ③ 分鏡表 | 通過 | 可以 | plan.json |', ''].join('\n'));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.sb-card');
+  assert.equal(await page.$eval('#saveState', (n) => n.textContent.trim()), '只能看');
+  assert.doesNotMatch(await page.$eval('#tasks', (n) => n.innerText), /要你決定|待補|金句|看過/, '已經確認：沒有待辦（「接著看」可以留著）');
+  assert.equal(await page.$$eval('.sb-sec select', (a) => a.length), 0, '不放看起來能選的選單');
+  assert.match(await page.$eval('#banner', (n) => n.textContent), /「s01 重新設計」/);
+  assert.equal(await page.$eval('#next', (n) => n.hidden), true);
+  assert.match(await page.$eval('#nav a.decide', (n) => n.textContent), /當時的決定與提醒/);
+  await fs.promises.rm(path.join(work, '製作進度.md'));
 });

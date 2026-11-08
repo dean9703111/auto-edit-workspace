@@ -122,7 +122,7 @@ function render() {
   renderGenerationStatus();
   $('brandColor').value = state.draft.color;
   if (document.activeElement !== $('brandHex')) $('brandHex').value = state.draft.color;
-  $('designState').textContent = busy ? '背景處理中' : state.dirty ? '預覽中 · 儲存後套用' : '已套用的風格';
+  $('designState').textContent = busy ? '背景處理中' : state.dirty ? '自動套用中…' : '已套用的風格';
   $('designState').dataset.dirty = String(!!state.dirty);
   const bg = state.backgrounds.find((b) => b.kind === kind);
   renderBackgroundPreview();
@@ -287,6 +287,8 @@ async function loadDesign() {
     }
     $('designError').textContent = '';
     $('retryDesign').hidden = true;
+    // 用過這一區（有生圖需求）或網址指到這裡：直接打開，不用再找
+    if (state.request || location.hash === '#design') $('designWrap').open = true;
     render(); renderPreviews();
     window.dispatchEvent(new Event('framing-preview-request'));
   } catch (e) {

@@ -36,19 +36,34 @@ before(async () => {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('dialog', (d) => d.accept());
   await page.setViewport({ width: 1440, height: 900 });
-  await page.evaluateOnNewDocument(() => { localStorage.setItem('auto-edit-editor.coach.v2', '1'); localStorage.setItem('auto-edit-editor.coach-final.v1', '1'); });
+  await page.evaluateOnNewDocument(() => { for (const k of ['coach.v2', 'coach-final.v1', 'coach-rough.v1']) localStorage.setItem(`auto-edit-editor.${k}`, '1'); });
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.reportReady, { timeout: 60000 });
 });
 after(async () => { await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
 
-test('初剪預覽：提示不是錯誤；黑屏標成只有聲音；字幕疊在黑屏上；沒有「沒有畫面」的 ✖；還不能產生和輸出', async () => {
+test('初剪預覽：提示不是錯誤；開在字幕分頁；流程列標字幕預覽；黑屏標成只有聲音；字幕疊在黑屏上；沒有「沒有畫面」的 ✖；還不能更新預覽和輸出，也講得出為什麼', async () => {
   const banner = await page.$eval('#banner', (b) => ({ text: b.textContent, cls: b.className, hidden: b.hidden }));
   assert.equal(banner.hidden, false);
   assert.match(banner.text, /初剪預覽/);
   assert.doesNotMatch(banner.cls, /error/);
   assert.equal(await page.$eval('#saveState', (n) => n.dataset.state === 'error'), false);
-  assert.deepEqual(await page.evaluate(() => [document.querySelector('#btnBuild').disabled, document.querySelector('#btnExport').disabled]), [true, true]);
+  // 不能按的按鈕講得出原因（用 is-disabled，滑鼠移上去、點了都會講）
+  for (const id of ['#btnBuild', '#btnExport']) {
+    const b = await page.$eval(id, (n) => ({ off: n.classList.contains('is-disabled'), why: n.dataset.why }));
+    assert.equal(b.off, true, id);
+    assert.match(b.why, /分鏡做好/, id);
+  }
+  // 是來校字幕的：開在字幕分頁，不是主題和調光
+  assert.equal(await page.$eval('.side-tabs [data-side="cues"]', (n) => n.classList.contains('on')), true);
+  assert.equal(await page.$eval('#sideCues', (n) => n.hidden), false);
+  await page.waitForSelector('#cueList [data-cue="1"]');
+  assert.match(await page.$eval('#sideCues .side-hint', (n) => n.textContent), /點一句就能改字/);
+  assert.doesNotMatch(await page.$eval('#modeNote', (n) => n.textContent), /更新預覽|重新產生/, '現在按不了的按鈕不要叫人按');
+  // 流程列：這一頁是字幕預覽，不是 ④ 完成影片
+  await page.waitForSelector('#flowbar .fb-step');
+  await page.waitForFunction(() => /字幕預覽/.test(document.querySelector('#flowbar .fb-step.on')?.textContent || ''), { timeout: 15000 });
+  assert.match(await page.$eval('#next', (n) => n.textContent), /不用回報/);
   const rep = await page.evaluate(() => ({ voice: window.__editor.voiceOnly, gaps: window.__editor.voiceUncovered.length, none: window.__editor.uncovered.length, errs: window.__editor.report.issues.errors }));
   assert.ok(rep.voice.length >= 1 && rep.voice[0][0] < 9, JSON.stringify(rep.voice));
   assert.deepEqual([rep.gaps, rep.none, rep.errs], [0, 0, []], '之後才要處理的事現在不要報');
@@ -61,7 +76,7 @@ test('初剪預覽：提示不是錯誤；黑屏標成只有聲音；字幕疊�
   assert.deepEqual(errors, []);
 });
 
-test('初剪預覽：改字幕可以存，寫回 rough.srt，plan.json 還是沒有段落', async () => {
+test('初剪預覽：改字幕自動存，寫回 rough.srt，plan.json 還是沒有段落', async () => {
   await page.click('.side-tabs [data-side="cues"]');
   await page.waitForSelector('#cueList [data-cue="6"]', { visible: true });
   // 清單隨時可能重畫（換分頁、檢查結果回來）：找到就點，中間不留空檔；正在改字時不會重畫
@@ -70,8 +85,6 @@ test('初剪預覽：改字幕可以存，寫回 rough.srt，plan.json 還是沒
   await page.waitForFunction(() => document.activeElement?.classList.contains('cue-edit'));
   await page.keyboard.type('改');
   await page.keyboard.press('Enter');
-  await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'dirty');
-  await page.keyboard.down('Meta'); await page.keyboard.press('s'); await page.keyboard.up('Meta');
   const until = Date.now() + 15000;
   while (Date.now() < until && !/第 6 句字幕改/.test(fs.readFileSync(srtFile(), 'utf8'))) await sleep(100);
   assert.match(fs.readFileSync(srtFile(), 'utf8'), /第 6 句字幕改/);

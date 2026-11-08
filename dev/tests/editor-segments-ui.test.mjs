@@ -52,7 +52,7 @@ test('段落分頁：照章分組、顯示摘要與時間；搜尋段號、文�
   assert.equal(await page.$eval('#segCount', (n) => n.textContent), '4 段');
   assert.match(await page.$eval('#segList .side-ch', (n) => n.textContent), /第一章/);
   const row = await page.$eval('[data-seg="x0102"]', (n) => n.innerText.replace(/\s+/g, ' '));
-  assert.match(row, /x0102 .*多機拍攝的三個用途/);
+  assert.match(row, /多機拍攝的三個用途 x0102/, '主標是在講什麼，段號放後面');
   assert.doesNotMatch(row, /\.html|custom/, '不是檔名');
   const search = async (q) => { await page.$eval('#segSearch', (i) => { i.value = ''; i.focus(); }); await page.keyboard.type(q); await sleep(60); return page.$$eval('#segList [data-seg]', (a) => a.map((x) => x.dataset.seg)); };
   assert.deepEqual(await search('x0102'), ['x0102']);
@@ -144,25 +144,24 @@ test('模板動畫：屬性面板可以改畫面上的字，圖示和時間不�
   await page.evaluate(() => { window.__editor.select({ kind: 'item', id: 'x0102' }); });
   await page.click('.side-tabs [data-side="insp"]');
   await page.waitForSelector('#inspBody [data-path]');
-  assert.match(await page.$eval('#inspKind', (n) => n.textContent), /模板動畫：主體四周貼標籤/);
-  assert.match(await page.$eval('#inspTitle', (n) => n.textContent), /x0102　多機拍攝的三個用途/);
+  assert.match(await page.$eval('#inspKind', (n) => n.textContent), /動畫：主體四周貼標籤.*x0102/);
+  assert.equal(await page.$eval('#inspTitle', (n) => n.textContent), '多機拍攝的三個用途');
   const fields = await page.$$eval('#inspBody [data-path]', (a) => a.map((i) => [JSON.parse(i.dataset.path).join('.'), i.value]));
   assert.deepEqual(fields, [['slots.title', '多機'], ['slots.items.0.text', '橫拍'], ['slots.items.1.text', '直拍']]);
   assert.doesNotMatch(await page.$eval('#inspBody', (n) => n.innerText), /monitor|#4@|plan\.json|\.html/);
   await page.click('#inspBody [data-path=\'["slots","items",0,"text"]\']');
   await page.keyboard.press('End');
   await page.keyboard.type('片');
-  await sleep(100);
-  await page.evaluate(() => window.__editor.save?.());
-  await page.keyboard.down('Meta'); await page.keyboard.press('s'); await page.keyboard.up('Meta');
+  // 不按任何按鈕就存好；打字的欄位不會被重畫（游標還在）
   const until = Date.now() + 15000;
   let saved;
   while (Date.now() < until) { saved = JSON.parse(fs.readFileSync(plan, 'utf8')).scenes.find((s) => s.id === 'x0102'); if (saved.slots.items[0].text === '橫拍片') break; await sleep(200); }
   assert.deepEqual(saved.slots, { title: '多機', obj: 'camera', items: [{ text: '橫拍片', icon: 'monitor', at: '#4@第' }, { text: '直拍', icon: 'smartphone', at: '#5@第' }] });
+  assert.equal(await page.evaluate(() => document.activeElement?.dataset?.path), '["slots","items",0,"text"]', '存檔不會把正在打字的欄位弄不見');
   // 內容設計動畫：不能直接改
   await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved', { timeout: 20000 });
   await page.evaluate(() => window.__editor.select({ kind: 'item', id: 'd0104' }));
-  await page.waitForFunction(() => /內容設計動畫/.test(document.querySelector('#inspKind').textContent));
+  await page.waitForFunction(() => /動畫（為這段設計）/.test(document.querySelector('#inspKind').textContent));
   assert.match(await page.$eval('#inspBody', (n) => n.innerText), /字畫在動畫裡，要改請寫進修改單/);
   fs.writeFileSync(plan, JSON.stringify({ version: 1, scenes: SEGS }));
 });
@@ -194,7 +193,7 @@ test('錄影段：列出標註、點了跳時間；修改單有太快、太慢',
   assert.deepEqual(errors, []);
 });
 
-test('存檔：不用等檢查（頁面馬上可以繼續改）；存完還能復原、重做，復原後是沒存的狀態，再存就寫回去', async () => {
+test('自動存檔：不用按就寫回去、不用等檢查；存完還能復原、重做，檔案跟著回去；連增刪字幕也復原得了', async () => {
   const plan = path.join(work, 'hyperframes', 'plan.json');
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.itemsView?.length >= 3 && window.__editor.reportReady, { timeout: 30000 });
@@ -205,32 +204,46 @@ test('存檔：不用等檢查（頁面馬上可以繼續改）；存完還能�
     t.focus(); t.value = b; t.dispatchEvent(new Event('input', { bubbles: true })); t.dispatchEvent(new Event('change', { bubbles: true })); t.blur();
   }, n, text);
   const state = () => page.evaluate(() => ({ save: document.querySelector('#saveState').dataset.state, undo: !document.querySelector('#btnUndo').disabled, redo: !document.querySelector('#btnRedo').disabled, text: window.__editor.cues.find((c) => c.n === 2).text }));
+  const fileHas = async (re, want = true) => { const until = Date.now() + 8000; while (Date.now() < until && re.test(fs.readFileSync(srtFile, 'utf8')) !== want) await sleep(80); return re.test(fs.readFileSync(srtFile, 'utf8')); };
   const original = (await state()).text;
-  await editCue(2, '第二句改過');
-  await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'dirty');
   const t0 = Date.now();
-  await page.keyboard.down('Meta'); await page.keyboard.press('s'); await page.keyboard.up('Meta');
+  await editCue(2, '第二句改過');
+  assert.equal(await fileHas(/第二句改過/), true, '不用按就存好');
+  assert.ok(Date.now() - t0 < 4000, `自動存檔要很快，花了 ${Date.now() - t0} ms`);
   await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved', { timeout: 15000 });
-  assert.ok(Date.now() - t0 < 3000, `存檔要很快回來，花了 ${Date.now() - t0} ms`);
-  assert.match(fs.readFileSync(srtFile, 'utf8'), /第二句改過/);
   let s = await state();
   assert.equal(s.undo, true, '存完還能復原');
-  // 復原：回到舊字、變成沒存；再存就寫回檔案
+  // 復原：字回去，檔案也回去
   await page.click('#btnUndo');
   await page.waitForFunction((x) => window.__editor.cues.find((c) => c.n === 2).text === x, {}, original);
+  assert.equal(await fileHas(/第二句改過/, false), false);
   s = await state();
-  assert.equal(s.save, 'dirty');
   assert.equal(s.redo, true);
   await page.click('#btnRedo');
   await page.waitForFunction(() => window.__editor.cues.find((c) => c.n === 2).text === '第二句改過');
-  assert.equal((await state()).save, 'saved', '重做回到存檔的樣子＝沒有修改');
+  assert.equal(await fileHas(/第二句改過/), true, '重做：檔案也跟著回來');
   await page.click('#btnUndo');
-  await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'dirty');
-  await page.keyboard.down('Meta'); await page.keyboard.press('s'); await page.keyboard.up('Meta');
-  await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved', { timeout: 15000 });
+  await page.waitForFunction((x) => window.__editor.cues.find((c) => c.n === 2).text === x, {}, original);
+  assert.equal(await fileHas(/第二句改過/, false), false);
+  // 刪一句字幕（句號都變了）：存好之後還是復原得了，綁在後面句子的段也跟著回來
+  const scene = () => JSON.parse(fs.readFileSync(plan, 'utf8')).scenes.find((x) => x.id === 's0103');
+  const from0 = scene().from;
+  assert.equal(from0, '#8');
+  await page.evaluate(() => { const A = window.__editor; A.deleteCue(A.cues.find((c) => c.n === 7)); });
+  assert.equal(await fileHas(/第 7 句字幕/, false), false, '刪掉的字幕存進檔案');
   const until = Date.now() + 5000;
-  while (Date.now() < until && /第二句改過/.test(fs.readFileSync(srtFile, 'utf8'))) await sleep(100);
-  assert.doesNotMatch(fs.readFileSync(srtFile, 'utf8'), /第二句改過/);
+  while (Date.now() < until && scene().from === from0) await sleep(80);
+  assert.equal(scene().from, '#7', '後面的句號跟著 −1');
+  await page.waitForFunction(() => document.querySelector('#saveState').dataset.state === 'saved', { timeout: 15000 });
+  await page.click('#btnUndo');
+  await page.waitForFunction(() => window.__editor.cues.length === 10, { timeout: 8000 });
+  assert.equal(await fileHas(/第 7 句字幕/), true, '復原：字幕回到檔案');
+  assert.equal(scene().from, '#8', '復原：段的句號也回去');
+  await page.click('#btnRedo');
+  await page.waitForFunction(() => window.__editor.cues.length === 9, { timeout: 8000 });
+  assert.equal(await fileHas(/第 7 句字幕/, false), false, '重做：又刪掉');
+  await page.click('#btnUndo');
+  await page.waitForFunction(() => window.__editor.cues.length === 10, { timeout: 8000 });
   assert.ok(JSON.parse(fs.readFileSync(plan, 'utf8')).scenes.length >= 3);
   // 背景檢查跑完不會蓋掉正在改的東西
   await page.waitForFunction(() => !window.__editor.checking, { timeout: 30000 });
@@ -246,11 +259,11 @@ test('小視窗：不用捲整頁，影片、播放控制、時間軸都在視�
     const m = await page.evaluate(() => {
       const r = (s) => document.querySelector(s).getBoundingClientRect();
       const inside = (s) => { const x = r(s); return x.top >= 0 && x.bottom <= innerHeight + 0.5 && x.left >= 0 && x.right <= innerWidth + 0.5 && x.height > 0; };
-      return { scrollH: document.documentElement.scrollHeight, inner: innerHeight, overX: document.documentElement.scrollWidth - innerWidth, stage: inside('#stageBox'), stageH: r('#stageBox').height, play: inside('#btnPlay'), tc: inside('#tc'), tl: inside('#tl'), status: inside('.statusbar'), save: inside('#btnSave'), exp: inside('#btnExport') };
+      return { scrollH: document.documentElement.scrollHeight, inner: innerHeight, overX: document.documentElement.scrollWidth - innerWidth, stage: inside('#stageBox'), stageH: r('#stageBox').height, play: inside('#btnPlay'), tc: inside('#tc'), tl: inside('#tl'), status: inside('.statusbar'), exp: inside('#btnExport') };
     });
     assert.equal(m.scrollH, m.inner, `${w}×${h} 不能變成整頁捲動`);
     assert.equal(m.overX, 0, `${w}×${h} 不能左右捲`);
-    for (const k of ['stage', 'play', 'tc', 'tl', 'status', 'save', 'exp']) assert.equal(m[k], true, `${w}×${h} 的 ${k} 要在視窗裡`);
+    for (const k of ['stage', 'play', 'tc', 'tl', 'status', 'exp']) assert.equal(m[k], true, `${w}×${h} 的 ${k} 要在視窗裡`);
     assert.ok(m.stageH >= 130, `${w}×${h} 影片太小（${m.stageH}px）`);
   }
   // 720 寬：右側面板收起來，要看才打開；可以收回去

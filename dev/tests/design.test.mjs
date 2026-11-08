@@ -225,7 +225,7 @@ test('同頁 UI：拖拉圖片驗證與儲存、鍵盤選檔、複製提示詞�
     const page = await browser.newPage(), errors = []; page.on('pageerror', (e) => errors.push(e.message));
     let uploads = 0;
     page.on('request', (req) => { if (new URL(req.url()).pathname === '/api/design/upload' && req.method() === 'POST') uploads++; });
-    await page.setViewport({ width: 1440, height: 1000 }); await page.goto(new URL('/framing', editor.url).href);
+    await page.setViewport({ width: 1440, height: 1000 }); await page.goto(new URL('/framing', editor.url).href); await page.evaluate(() => { document.querySelector('#designWrap').open = true; });
     await page.waitForSelector('#designPreviews iframe');
     assert.ok(await page.$('[data-variant="original"]'), '原本背景固定列在選項中');
     await page.click('[data-category="custom"]');
@@ -340,8 +340,11 @@ test('同頁 UI：拖拉圖片驗證與儲存、鍵盤選檔、複製提示詞�
     await page.$eval('.design-bg-preview', (el) => el.scrollIntoView({ block: 'center' }));
     await page.screenshot({ path: path.join(root, '背景與動畫-桌面.png') });
     await page.click('#designPreviews .design-preview-stage button'); await page.waitForSelector('#designDialog[open]'); await page.click('#closeDesignDialog');
-    await page.$eval('#btnSave', (el) => el.scrollIntoView()); await page.click('#btnSave');
-    await page.waitForFunction(() => !window.designWorkbench.dirty && document.querySelector('#msg').textContent.includes('自動更新'), { timeout: 25000 });
+    // 選了就自動套用；已有完成影片時要按「更新預覽」才會做進去
+    await page.waitForFunction(() => !window.designWorkbench.dirty && document.querySelector('#saveState').dataset.state === 'saved', { timeout: 25000 });
+    await page.waitForFunction(() => !document.querySelector('#updateBar').hidden, { timeout: 25000 });
+    await page.$eval('#btnUpdate', (el) => el.scrollIntoView({ block: 'center' })); await page.click('#btnUpdate');
+    await page.waitForFunction(() => /正在更新預覽|預覽更新好了/.test(document.querySelector('#msg').textContent), { timeout: 25000 });
     await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('permission denied'); } } }));
     await page.click('#copyDesignPrompt');
     await page.waitForFunction(() => document.querySelector('#designPromptDetails').open && document.querySelector('#designRequestStatus').textContent.includes('手動複製'));

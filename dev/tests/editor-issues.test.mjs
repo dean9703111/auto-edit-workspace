@@ -32,11 +32,11 @@ test('歸併：75 則變成幾件作者看得懂的事，AI 的另外放，原�
   assert.deepEqual(G.author.map((g) => g.key), ['speaker', 'empty', 'cover', 'hold', 'short-cap']);
   assert.equal(G.counts.author, 5);
   const by = Object.fromEntries(G.author.map((g) => [g.key, g]));
-  assert.equal(by.cover.title, '45 段卡片可能蓋到講者');
+  assert.equal(by.cover.title, '45 段字卡可能蓋到講者');
   assert.equal(by.cover.ids.length, 45);
   assert.equal(by.speaker.title, '講者介紹還是示範人物');
   assert.equal(by.speaker.action, 'speaker');
-  assert.equal(by.empty.title, '有些地方只有講者、沒有卡片（10 段、58.08 秒）');
+  assert.equal(by.empty.title, '有些地方只有講者、沒有字卡（10 段、58.08 秒）');
   assert.equal(by.hold.title, '2 段的字停留太短');
   assert.equal(by['short-cap'].raw.length, 2);
   assert.deepEqual(G.ai.map((g) => g.key).sort(), ['beat', 'chapter', 'sfx-few', 'sfx-many', 'sfx-near', 'timing', 'word'].sort());

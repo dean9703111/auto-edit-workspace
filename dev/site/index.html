@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI 自動剪輯工作區：用白話文剪片、上字幕、加動畫｜auto-edit-workspace</title>
-<meta name="description" content="開源的 AI 自動剪輯工作區。放好影片、聲音、圖片，跟 Claude Code、Codex、MiniMax Code、Cursor 說「剪乾淨」「做出完成影片」，就能剪掉 NG、上字幕、加資訊卡與動畫、配音效。同頁構圖、換背景、預覽動畫，輸出 MP4 或剪映素材。">
+<meta name="description" content="開源的 AI 自動剪輯工作區。放好影片、聲音、圖片，跟 Claude Code、Codex、MiniMax Code、Cursor 說「剪乾淨」「做出完成影片」，就能剪掉 NG、上字幕、加字卡與動畫、配音效。同頁構圖、換背景、預覽動畫，輸出 MP4 或剪映素材。">
 <meta name="author" content="林鼎淵（Dean Lin）">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#070B14">
@@ -16,14 +16,14 @@
 <meta property="og:locale" content="zh_TW">
 <meta property="og:url" content="https://deanlin.net/auto-edit-workspace/">
 <meta property="og:title" content="AI 自動剪輯工作區：用白話文剪片、上字幕、加動畫">
-<meta property="og:description" content="放好素材，跟 AI 說「剪乾淨」「做出完成影片」：剪掉 NG、照講稿上字幕、加資訊卡和情境動畫、配音效。同頁構圖、換背景、看動畫，滿意再套用。開源免費。">
+<meta property="og:description" content="放好素材，跟 AI 說「剪乾淨」「做出完成影片」：剪掉 NG、照講稿上字幕、加字卡和情境動畫、配音效。同頁構圖、換背景、看動畫，滿意再套用。開源免費。">
 <meta property="og:image" content="https://deanlin.net/auto-edit-workspace/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="auto-edit-workspace：放好素材，用白話文剪影片">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="AI 自動剪輯工作區：用白話文剪片、上字幕、加動畫">
-<meta name="twitter:description" content="放好素材，跟 AI 說「剪乾淨」「做出完成影片」，剪 NG、字幕、資訊卡、情境動畫、音效一次做好。同頁構圖、換背景、看動畫。開源免費。">
+<meta name="twitter:description" content="放好素材，跟 AI 說「剪乾淨」「做出完成影片」，剪 NG、字幕、字卡、情境動畫、音效一次做好。同頁構圖、換背景、看動畫。開源免費。">
 <meta name="twitter:image" content="https://deanlin.net/auto-edit-workspace/og-image.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F6630F'/%3E%3Cpath d='M25 19l21 13-21 13z' fill='%23fff'/%3E%3C/svg%3E">
 <script type="application/ld+json">
@@ -47,7 +47,7 @@
    "name": "auto-edit-workspace",
    "alternateName": "AI 自動剪輯工作區",
    "url": "https://deanlin.net/auto-edit-workspace/",
-   "description": "開源的 AI 自動剪輯工作區：放好影片、聲音、圖片，用白話文跟 AI Agent 說「剪乾淨」「做出完成影片」，就能剪掉 NG、上字幕、加資訊卡與情境動畫、配音效，輸出 MP4 或剪映素材。",
+   "description": "開源的 AI 自動剪輯工作區：放好影片、聲音、圖片，用白話文跟 AI Agent 說「剪乾淨」「做出完成影片」，就能剪掉 NG、上字幕、加字卡與情境動畫、配音效，輸出 MP4 或剪映素材。",
    "applicationCategory": "MultimediaApplication",
    "applicationSubCategory": "AI 影片剪輯",
    "operatingSystem": "macOS, Windows",
@@ -72,7 +72,7 @@
     "網頁版剪輯台：裁剪、音量、轉場、字幕、卡片文字即時改；螢幕錄影可以自己快轉、減速、定格",
     "螢幕錄影分析：自動找出切頁、開視窗、等待、捲動，AI 加紅框、箭頭、放大、打碼；講者小視窗自動放進錄影範圍內",
     "只有開頭結尾露臉也可以：沒有講者的段自動用全螢幕，和縮到 87% 的錄影對齊",
-    "構圖頁：拖框、選主色、上傳背景，用自己的畫面預覽動畫，儲存後自動更新剪輯預覽",
+    "構圖頁：拖框、選主色、上傳背景，用自己的畫面預覽動畫，全部自動存",
     "AI 背景設計：複製生圖指令，A／B／C 三組背景依全畫面、側邊欄、章節各自選圖，套用本集風格",
     "修改單：勾選想怎麼改，一行指令交給 AI 重做，改完標示可一鍵查看",
     "輸出 MP4 或剪映素材（透明 MOV＋SRT）"
@@ -125,7 +125,7 @@
      "name": "auto-edit-workspace 是什麼？",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "一個開源的 AI 自動剪輯工作區。把講解影片、旁白、螢幕錄影、圖片放進資料夾，用白話文跟 AI Agent 說「剪乾淨」「做出完成影片」，就會剪掉講錯的地方、照講稿上字幕、加資訊卡和情境動畫、配音效，輸出 MP4。"
+      "text": "一個開源的 AI 自動剪輯工作區。把講解影片、旁白、螢幕錄影、圖片放進資料夾，用白話文跟 AI Agent 說「剪乾淨」「做出完成影片」，就會剪掉講錯的地方、照講稿上字幕、加字卡和情境動畫、配音效，輸出 MP4。"
      }
     },
     {
@@ -146,10 +146,10 @@
     },
     {
      "@type": "Question",
-     "name": "構圖與背景改好後，還要重新產生嗎？",
+     "name": "構圖與背景改好後，要按儲存嗎？",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "在構圖頁按「儲存並套用」即可。已有完成影片時會自動更新底片與剪輯預覽；還沒有完成影片就先儲存設定，後續製作會使用。只選色或換圖時先更新同頁預覽，儲存後才套用這一集。"
+      "text": "不用，都會自動存，也馬上套用到這一集。還沒有完成影片時，後續製作會直接使用；已有完成影片時，頁面會出現「更新預覽」，按了才重新處理底片（長片要十幾分鐘）。"
      }
     },
     {
@@ -157,7 +157,7 @@
      "name": "背景一定要自己準備嗎？",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "不用。有圖可以在構圖頁直接上傳；沒有就選主色、設計風格和描述，按「複製生圖指令」貼給 AI，產生 A／B／C 三組、共 9 張背景。回構圖頁分別挑全畫面、側邊欄、章節的圖，看過動畫效果後按「儲存並套用」。頁面會準備指令，生圖由你使用的 AI 工具完成。"
+      "text": "不用。有圖可以在構圖頁直接上傳；沒有就選主色、設計風格和描述，按「複製生圖指令」貼給 AI，產生 A／B／C 三組、共 9 張背景。回構圖頁分別挑全畫面、側邊欄、章節的圖，同頁看動畫效果，選了就自動套用。頁面會準備指令，生圖由你使用的 AI 工具完成。"
      }
     },
     {
@@ -314,7 +314,7 @@
   .logo { font-weight: 900; font-size: 19px; color: var(--text); text-decoration: none; white-space: nowrap; }
   .logo span { color: var(--accent-text); }
   .nav ul { display: flex; gap: 18px; margin: 0 0 0 auto; padding: 0; list-style: none; }
-  .nav ul a { color: var(--muted); text-decoration: none; font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .nav ul a { display: inline-block; padding: 4px 0; color: var(--muted); text-decoration: none; font-weight: 700; font-size: 16px; white-space: nowrap; }
   .nav ul a:hover { color: var(--text); }
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px; font-weight: 900; font-size: 16px; text-decoration: none; white-space: nowrap; border: 1px solid var(--line); color: var(--text); background: var(--card); }
   .btn:hover { border-color: var(--accent); }
@@ -526,15 +526,9 @@
     <ul>
       <li><a href="#use">怎麼用</a></li>
       <li><a href="#scenes">情境動畫</a></li>
-      <li><a href="#fix">剪輯與修改單</a></li>
-      <li><a href="#how">運作方式</a></li>
-      <li><a href="#style">換風格</a></li>
-      <li><a href="#capcut">搭配剪映</a></li>
-      <li><a href="#agents">支援的 Agent</a></li>
       <li><a href="#start">開始使用</a></li>
       <li><a href="#faq">常見問題</a></li>
       <li><a href="shared/template/index.html">情境庫</a></li>
-      <li><a href="shared/template/fx/index.html">字卡動態</a></li>
     </ul>
     <a class="btn" href="https://github.com/dean9703111/auto-edit-workspace">GitHub ↗</a>
   </div>
@@ -546,7 +540,7 @@
     <h1><span class="l1">放好素材，</span><span class="l2">用白話文剪影片</span></h1>
     <div class="hero-body">
       <div>
-        <p class="lead">影片、聲音、圖片放進資料夾，跟 AI 說<b>「剪乾淨」「做出完成影片」</b>，它就幫你剪掉講錯的地方、上字幕、加資訊卡和動畫、配音效。每一步都停下來給你看；不滿意就<b>說一句話、在剪輯台自己調，或勾在修改單上交給 AI 重做</b>。</p>
+        <p class="lead">影片、聲音、圖片放進資料夾，跟 AI 說<b>「剪乾淨」「做出完成影片」</b>，它就幫你剪掉講錯的地方、上字幕、加字卡和動畫、配音效。每一步都停下來給你看；不滿意就<b>說一句話、在剪輯台自己調，或勾在修改單上交給 AI 重做</b>。</p>
         <div class="cta">
           <a class="btn primary big" href="#start">開始使用</a>
           <a class="btn big" href="shared/template/index.html">看完整情境庫 →</a>
@@ -606,13 +600,13 @@
   <h3 class="sub">剪之前，先在網頁勾一次</h3>
   <p>說「剪乾淨」後，AI 會先列出要剪的地方，給你一個網址。每一列可以試聽，不想剪的取消勾選就好，勾了就存；確認後才真的剪。</p>
   <figure class="guide" data-demo="demo/cuts.html" data-demo-h="760" data-demo-name="剪輯清單">
-    <a href="guides/cuts.jpg" target="_blank" rel="noopener" aria-label="放大剪輯清單介面截圖"><img src="guides/cuts.jpg" width="1600" height="751" alt="剪輯清單介面實際截圖，數字標記：1 勾選要剪的地方，2 按 ▶ 試聽那一段，3 回到對話說可以" loading="lazy"></a>
+    <a href="guides/cuts.jpg" target="_blank" rel="noopener" aria-label="放大剪輯清單介面截圖"><img src="guides/cuts.jpg" width="1600" height="690" alt="剪輯清單介面實際截圖，數字標記：1 勾選要剪的地方，2 按 ▶ 試聽那一段，3 回到對話說可以" loading="lazy"></a>
     <figcaption><b>① 勾＝剪、取消＝保留 → ② 按 ▶ 試聽，紅色是會剪掉的部分 → ③ 回對話說「可以」。</b>黃色的列是 AI 不確定的，建議先聽。截圖使用內建示範講者，點圖可放大。</figcaption>
   </figure>
   <h3 class="sub">動畫開工前，先在網頁改分鏡</h3>
   <p>說「做出完成影片」後，AI 會先列出每一段要放什麼，給你一個網址。畫面上的字可以直接改，呈現方式用下拉選單選，整段不滿意就寫一句補充說明，不用懂任何格式；你說可以，AI 才開始做。</p>
   <figure class="guide" data-demo="demo/storyboard.html" data-demo-h="860" data-demo-name="分鏡表">
-    <a href="guides/storyboard.jpg" target="_blank" rel="noopener" aria-label="放大分鏡表介面截圖"><img src="guides/storyboard.jpg" width="1600" height="1804" alt="分鏡表介面實際截圖，數字標記：1 下拉選單換呈現方式，2 橘底的字直接改，3 不滿意就寫補充說明，4 回到對話說可以" loading="lazy"></a>
+    <a href="guides/storyboard.jpg" target="_blank" rel="noopener" aria-label="放大分鏡表介面截圖"><img src="guides/storyboard.jpg" width="1600" height="1696" alt="分鏡表介面實際截圖，數字標記：1 下拉選單換呈現方式，2 橘底的字直接改，3 不滿意就寫補充說明，4 回到對話說可以" loading="lazy"></a>
     <figcaption><b>① 下拉選單換呈現方式（可以先看範例） → ② 橘底的字直接改 → ③ 不滿意就寫補充說明 → ④ 回對話說「可以」。</b>內容存回一份 Markdown，AI 照它製作。截圖使用內建示範畫面，點圖可放大。</figcaption>
   </figure>
 </section>
@@ -697,7 +691,7 @@
   <h3 class="sub">一句話就能改的地方</h3>
   <div class="tunes">
     <div class="tune"><q>第 3 列不要剪</q><h3>哪些地方要剪</h3><p>剪輯清單網頁逐條列出要剪的句子和原因，每列可以試聽；不想剪的取消勾選，你確認後才剪。</p></div>
-    <div class="tune"><q>調好了</q><h3>畫面放大</h3><p>在「構圖」拖框決定放大多少、講者放哪裡；同頁看字幕、字卡與動畫，儲存後自動更新剪輯預覽。</p></div>
+    <div class="tune"><q>調好了</q><h3>畫面放大</h3><p>在「構圖」拖框決定放大多少、講者放哪裡；同頁看字幕、字卡與動畫，拖好就自動存。</p></div>
     <div class="tune"><q>s05 往左移</q><h3>某一段的卡片</h3><p>移位置、改字、換情境，只動那一段，改前改後都存版本。</p></div>
     <div class="tune"><q>s12 重新設計</q><h3>某一段的動畫</h3><p>先出新的動畫分鏡給你確認；不喜歡可以退回舊版，還有左右對照影片。</p></div>
     <div class="tune"><q>s08 不要音效</q><h3>音效、配樂</h3><p>從內建音效庫挑，關掉某一段、調音量、片尾加配樂；一分鐘以上沒音效會自動補。</p></div>
@@ -753,7 +747,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
 
   <ol class="steps">
     <li><h3>剪乾淨</h3><p>逐字稿對講稿找重講、初剪、照講稿對字幕</p><span class="stop">停點 ① 剪輯清單</span></li>
-    <li><h3>構圖</h3><p>拖框、調光、選主色與背景，用自己的畫面預覽動畫，滿意後儲存並套用</p><span class="stop">停點 ② 構圖</span></li>
+    <li><h3>構圖</h3><p>拖框、調光、選主色與背景，用自己的畫面預覽動畫，全部自動存</p><span class="stop">停點 ② 構圖</span></li>
     <li><h3>分鏡</h3><p>每段先判斷畫不畫得出來，再寫情境、版面、動畫分鏡和截圖</p><span class="stop">停點 ③ 分鏡表</span></li>
     <li><h3>定稿</h3><p>組成 HyperFrames 專案、量版面、完成影片預覽</p><span class="stop">停點 ④ 預覽 · ⑤ 剪輯台</span></li>
     <li><h3>輸出</h3><p>render 成 final.mp4，附驗收截圖與觀影總表</p><span class="stop">交片</span></li>
@@ -764,21 +758,21 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
   <div class="head">
     <p class="kicker">05 · 換風格</p>
     <h2>把自己的畫面，<br>放進動畫裡看</h2>
-    <p>在「構圖」同一頁拖框、調光、選主色與背景，下方動畫直接套入目前播放頭的畫面。先看效果，滿意再按「儲存並套用」；這一集就用你選的風格。</p>
+    <p>在「構圖」同一頁拖框、調光、選主色與背景，下方動畫直接套入目前播放頭的畫面。選了就自動存，這一集就用你選的風格；調好回對話說「調好了」。</p>
   </div>
   <ol class="steps four" aria-label="構圖與背景設計流程">
     <li><h3>調整構圖</h3><p>在影片上拖框，決定講者的位置和大小，同頁開關調光、瘦臉、美顏。</p></li>
     <li><h3>選色、換背景</h3><p>選主色或輸入色碼。全畫面、側邊欄、章節各有一張背景，拖入或點選上傳即可替換。</p></li>
     <li><h3>看動畫效果</h3><p>用自己的畫面看情境動畫、版型與字卡。移入循環播放，移開看完成畫面；點開可放大看。</p></li>
-    <li><h3>儲存並套用</h3><p>確認這一集的構圖、主色和背景。已有完成影片會自動更新剪輯預覽，還沒做出完成影片就先存設定。</p></li>
+    <li><h3>不用按儲存</h3><p>構圖、主色和背景都會自動存。已有完成影片時，按「更新預覽」才會做進去；還沒做出完成影片就不用管。</p></li>
   </ol>
   <figure class="guide">
-    <a href="guides/framing.jpg" target="_blank" rel="noopener" aria-label="放大構圖介面截圖"><img src="guides/framing.jpg" width="1600" height="881" alt="構圖介面實際截圖，數字標記：1 左邊拖框，2 右邊看字幕與字卡位置，3 頁首儲存並套用" loading="lazy"></a>
-    <figcaption><b>① 左邊拖框 → ② 右邊看版面 → ③ 儲存並套用。</b>下方還能繼續換主色、換背景、看動畫。截圖使用內建示範講者，點圖可放大。</figcaption>
+    <a href="guides/framing.jpg" target="_blank" rel="noopener" aria-label="放大構圖介面截圖"><img src="guides/framing.jpg" width="1600" height="811" alt="構圖介面實際截圖，數字標記：1 左邊拖框，2 右邊看字幕與字卡位置，3 頁首儲存並套用" loading="lazy"></a>
+    <figcaption><b>① 左邊拖框 → ② 右邊看版面 → ③ 頁首寫著「已自動存檔」和下一步。</b>下方還能繼續換主色、換背景、看動畫。截圖使用內建示範講者，點圖可放大。</figcaption>
   </figure>
   <figure class="guide">
     <a href="guides/design.jpg" target="_blank" rel="noopener" aria-label="放大背景與動畫預覽介面截圖"><img src="guides/design.jpg" width="1568" height="1550" alt="背景與動畫預覽介面實際截圖：1 左側選主色、背景與 AI 設計方向，2 右側用同一個講者畫面比較情境動畫" loading="lazy"></a>
-    <figcaption><b>① 左邊換色、換圖 → ② 右邊比較動畫。</b>滑鼠移入會播放，點開可放大；先看效果，最後回頁首按「儲存並套用」。</figcaption>
+    <figcaption><b>① 左邊換色、換圖 → ② 右邊比較動畫。</b>滑鼠移入會播放，點開可放大；選了就自動套用。</figcaption>
   </figure>
   <h3 class="sub">背景，也能請 AI 幫你畫</h3>
   <p>放參考圖、選設計風格，或寫下想要的畫面，按「複製生圖指令」貼給 AI。會產生 A／B／C 三組，每組都有全畫面、側邊欄、章節三張背景，共 9 張。回到構圖頁，三種用途各自挑原本背景或 A／B／C，能混搭，也能隨時比較。</p>
@@ -791,8 +785,8 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
   <ul class="rows">
     <li><b>有自己的圖片</b><span>直接拖入或點選上傳 JPG、PNG、WebP，每張 12 MB 以內，自動裁切成對應的背景。</span></li>
     <li><b>想請 AI 設計</b><span>參考圖可選填，風格可選科技線稿、編輯平面、紙雕拼貼、幾何 3D、自然實景，也能自己描述。按鈕準備指令，圖片交給你使用的 AI 工具產生。</span></li>
-    <li><b>圖片生成後</b><span>切回構圖頁會載入新圖，也能按「載入圖片」。各自選好全畫面、側邊欄、章節，再按頁首的「儲存並套用」。</span></li>
-    <li><b>只套用這一集</b><span>原素材、共用模板和歷次草稿保留；想換回原本背景，選回來再儲存即可。</span></li>
+    <li><b>圖片生成後</b><span>切回構圖頁會載入新圖，也能按「載入圖片」。各自選好全畫面、側邊欄、章節就好，會自動套用。</span></li>
+    <li><b>只套用這一集</b><span>原素材、共用模板和歷次草稿保留；想換回原本背景，選回來即可。</span></li>
   </ul>
   <div class="head">
     <h3 class="sub">常用的搭配，存成風格包</h3>
@@ -853,7 +847,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <p>工具缺什麼，AI 會照手冊幫你裝，Mac 和 Windows 都有。內建一個範例專案，第一次照著做就有完成影片。</p>
   </div>
   <ol class="start">
-    <li><h3>下載工作區</h3><p><code>git clone https://github.com/dean9703111/auto-edit-workspace.git</code>，或在 GitHub 點「Code → Download ZIP」。</p></li>
+    <li><h3>下載工作區</h3><p>到 <a href="https://github.com/dean9703111/auto-edit-workspace">GitHub</a> 點「Code → Download ZIP」，解壓縮就好。會用 Git 的話也可以 <code>git clone https://github.com/dean9703111/auto-edit-workspace.git</code>。</p></li>
     <li><h3>用你的 Agent 打開資料夾</h3><p>選看得到 <code>AGENTS.md</code> 的那一層，Agent 才讀得到守則。</p></li>
     <li><h3>檢測環境</h3><p>說 <span class="say">「幫我檢測環境」</span>。AI 會先列出要裝的工具（git、Node.js、ffmpeg、whisper、auto-editor、HyperFrames）問你，同意後一步一步裝好。</p></li>
     <li><h3>開始剪</h3><p>說 <span class="say">「剪乾淨 @projects/example」</span>，接著是 <span class="say">「做出完成影片」</span>、<span class="say">「可以了，輸出完成影片」</span>。每到停點 AI 會停下來等你決定。完整提示詞在 <a href="https://github.com/dean9703111/auto-edit-workspace/blob/main/PROMPTS.md">PROMPTS.md</a>。</p></li>
@@ -867,11 +861,11 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <p>第一次用之前大家最常問的幾件事。</p>
   </div>
   <div class="faq">
-    <details><summary><h3>auto-edit-workspace 是什麼？</h3></summary><p>一個開源的 AI 自動剪輯工作區。把講解影片、旁白、螢幕錄影、圖片放進資料夾，用白話文跟 AI Agent 說「剪乾淨」「做出完成影片」，就會剪掉講錯的地方、照講稿上字幕、加資訊卡和情境動畫、配音效，輸出 MP4。</p></details>
+    <details><summary><h3>auto-edit-workspace 是什麼？</h3></summary><p>一個開源的 AI 自動剪輯工作區。把講解影片、旁白、螢幕錄影、圖片放進資料夾，用白話文跟 AI Agent 說「剪乾淨」「做出完成影片」，就會剪掉講錯的地方、照講稿上字幕、加字卡和情境動畫、配音效，輸出 MP4。</p></details>
     <details><summary><h3>需要會剪輯或寫程式嗎？</h3></summary><p>不用。所有操作都是跟 AI 用一句話說，例如「剪乾淨」「s05 往左移」「可以了，輸出完成影片」。AI 做到重要的地方會停下來給你看，你同意才往下。字幕、音量、卡片上的字也可以在網頁版剪輯台自己調。</p></details>
     <details><summary><h3>說不清楚要怎麼改，怎麼辦？</h3></summary><p>打開剪輯台的修改單，在時間軸點那一段，勾「以圖像展示為主」「畫出關係」「更有質感」這類標籤，或寫一句描述，再複製一行指令貼給 AI。AI 每段派一個子代理一起改，改完那段標 ✓、列出做了什麼，按「看結果」就跳過去。</p></details>
-    <details><summary><h3>背景一定要自己準備嗎？</h3></summary><p>不用。有圖可以在構圖頁直接上傳；沒有就選主色、設計風格和描述，按「複製生圖指令」貼給 AI，產生 A／B／C 三組、共 9 張背景。回構圖頁分別挑全畫面、側邊欄、章節的圖，看過動畫效果後按「儲存並套用」。頁面會準備指令，生圖由你使用的 AI 工具完成。</p></details>
-    <details><summary><h3>構圖與背景改好後，還要重新產生嗎？</h3></summary><p>在構圖頁按「儲存並套用」即可。已有完成影片時會自動更新底片與剪輯預覽；還沒有完成影片就先儲存設定，後續製作會使用。只選色或換圖時先更新同頁預覽，儲存後才套用這一集。</p></details>
+    <details><summary><h3>背景一定要自己準備嗎？</h3></summary><p>不用。有圖可以在構圖頁直接上傳；沒有就選主色、設計風格和描述，按「複製生圖指令」貼給 AI，產生 A／B／C 三組、共 9 張背景。回構圖頁分別挑全畫面、側邊欄、章節的圖，同頁看動畫效果，選了就自動套用。頁面會準備指令，生圖由你使用的 AI 工具完成。</p></details>
+    <details><summary><h3>構圖與背景改好後，要按儲存嗎？</h3></summary><p>不用，都會自動存，也馬上套用到這一集。還沒有完成影片時，後續製作會直接使用；已有完成影片時，頁面會出現「更新預覽」，按了才重新處理底片（長片要十幾分鐘）。</p></details>
     <details><summary><h3>要付費嗎？</h3></summary><p>工作區本身免費開源（程式碼 MIT 授權），用到的 ffmpeg、whisper、auto-editor、HyperFrames 也都免費。AI Agent 與選用的生圖服務，依你使用的方案計費。</p></details>
     <details><summary><h3>支援哪些 AI Agent？</h3></summary><p>Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor，以及其他能在你的電腦上執行指令、讀寫檔案、會讀 AGENTS.md 的 Agent。ChatGPT 網頁版不能在電腦上執行指令，要用 Codex。</p></details>
     <details><summary><h3>可以剪直式短影片嗎？</h3></summary><p>可以，請準備直拍素材，並說「做成直式短影片」。畫布是 1080×1920，字幕、版面、卡片位置都用直式規格，適合 YouTube Shorts、Instagram Reels、抖音；目前還不支援把橫拍素材改成直式。</p></details>

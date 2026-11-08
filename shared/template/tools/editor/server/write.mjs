@@ -611,16 +611,18 @@ export function applySave(planText, body, ctx = {}) {
   let speakerBox, pipCrop;
   if (frame !== undefined) {
     next = withTop(next, 'frame', frame);
-    const old = Array.isArray(plan.frame) ? plan.frame : null;
-    if (Array.isArray(plan.speakerBox) && plan.speakerBox.length === 4 && plan.speakerBox.every(isNum)) {
-      speakerBox = remapToFrame(plan.speakerBox, old, frame, ctx.canvas, 'box');
+    // 從這一輪開始調框時的值換算（ctx.frameOrigin）：構圖頁自動存檔會存很多次，一次一次疊著算，夾到畫面邊的講者框回不來
+    const from = ctx.frameOrigin || plan;
+    const old = Array.isArray(from.frame) ? from.frame : null;
+    if (Array.isArray(from.speakerBox) && from.speakerBox.length === 4 && from.speakerBox.every(isNum)) {
+      speakerBox = remapToFrame(from.speakerBox, old, frame, ctx.canvas, 'box');
       if (same(speakerBox, plan.speakerBox)) speakerBox = undefined;
-      else { next = withTop(next, 'speakerBox', speakerBox); notes.push(`speakerBox 跟著新的框換算：[${plan.speakerBox.join(', ')}] → [${speakerBox.join(', ')}]`); }
+      else { next = withTop(next, 'speakerBox', speakerBox); notes.push(`speakerBox 跟著新的框換算：[${from.speakerBox.join(', ')}] → [${speakerBox.join(', ')}]`); }
     }
-    if (Array.isArray(plan.pipCrop) && plan.pipCrop.length === 4 && plan.pipCrop.every(isNum)) {
-      pipCrop = remapToFrame(plan.pipCrop, old, frame, ctx.canvas, 'rect');
+    if (Array.isArray(from.pipCrop) && from.pipCrop.length === 4 && from.pipCrop.every(isNum)) {
+      pipCrop = remapToFrame(from.pipCrop, old, frame, ctx.canvas, 'rect');
       if (same(pipCrop, plan.pipCrop)) pipCrop = undefined;
-      else { next = withTop(next, 'pipCrop', pipCrop); notes.push(pipCrop === 'auto' ? 'pipCrop 換算後超出畫面，改回 "auto"（用 speakerBox 算）' : `pipCrop 跟著新的框換算：[${plan.pipCrop.join(', ')}] → [${pipCrop.join(', ')}]`); }
+      else { next = withTop(next, 'pipCrop', pipCrop); notes.push(pipCrop === 'auto' ? 'pipCrop 換算後超出畫面，改回 "auto"（用 speakerBox 算）' : `pipCrop 跟著新的框換算：[${from.pipCrop.join(', ')}] → [${pipCrop.join(', ')}]`); }
     }
   }
   const changed = s.updates.filter(([, set, del]) => Object.keys(set).length || del.length);

@@ -10,7 +10,7 @@ let pendingSaves = 0;
 let offline = false;    // 上一次連不到剪輯台：連上後要重新對一次畫面和檔案
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const clock = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+const clock = (t) => { const k = Math.round(t * 10) / 10; return `${Math.floor(k / 60)}:${(k % 60).toFixed(1).padStart(4, '0')}`; };
 const inline = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
 function setSave(kind, text) {
@@ -58,7 +58,8 @@ function mdToHtml(md) {
 }
 
 // 工具寫給 AI 的提醒：作者只要知道去聽哪裡，不用知道檔案路徑和時間碼要改哪裡
-const plainMd = (md) => String(md).replace(/→ 播 \S+ 的 ([\d:.]+[–-][\d:.]+) 聽一下，切到字就把 cuts\.md 的時間碼往停頓移/g, '→ 按那一列的 ▶ 聽一下（$1）；切到字就跟 AI 說往哪邊移');
+const plainWord = (s) => String(s).replace(/\s*whisper\s*/gi, '語音辨識');
+const plainMd = (md) => plainWord(md).replace(/→ 播 \S+ 的 ([\d:.]+[–-][\d:.]+) 聽一下，切到字就把 cuts\.md 的時間碼往停頓移/g, '→ 按那一列的 ▶ 聽一下（$1）；切到字就跟 AI 說往哪邊移');
 
 // ---------- 畫面 ----------
 function renderSummary() {
@@ -73,10 +74,10 @@ function rowHtml(r) {
     <label class="ct-check" title="${off ? '保留（不剪）' : '剪掉'}"><input type="checkbox" ${r.cut ? 'checked' : ''} ${state.readOnly ? 'disabled' : ''} aria-label="第 ${r.row} 列要剪"></label>
     <button class="ct-play" ${state.video ? '' : 'disabled title="還沒有可以試聽的影片"'} aria-label="試聽第 ${r.row} 列">${clip?.row === r.row ? '■' : '▶'}</button>
     <div>
-      <div class="ct-meta"><span class="ct-num">第 ${r.row} 列</span><span class="ct-time">${clock(r.start)}–${clock(r.end)}</span><span class="ct-dur">${(r.end - r.start).toFixed(1)} 秒</span><span class="ct-tag">${off ? '保留' : '剪掉'}</span>${state.video ? '<button class="ct-after small" data-tip="聽剪掉之後接起來的樣子（前 2 秒＋後 2 秒）">聽剪完</button>' : ''}</div>
+      <div class="ct-meta"><span class="ct-num">第 ${r.row} 列</span><span class="ct-time">${clock(r.start)}–${clock(r.end)}</span><span class="ct-dur">${(r.end - r.start).toFixed(1)} 秒</span><span class="ct-tag">${off ? '保留' : '剪掉'}</span>${state.video ? '<button class="ct-after small" title="跳過這一段，只播前 2 秒＋後 2 秒，聽剪掉之後順不順">聽接起來</button>' : ''}</div>
       <div class="ct-text">${esc(r.text) || '<span class="ct-num">（沒有寫內容）</span>'}</div>
-      ${r.reason ? `<div class="ct-reason">${esc(r.reason)}</div>` : ''}
-      ${r.note ? `<div class="ct-note">⚠ AI 不確定：${esc(r.note)}　建議先試聽</div>` : ''}
+      ${r.reason ? `<div class="ct-reason">${esc(plainWord(r.reason))}</div>` : ''}
+      ${r.note ? `<div class="ct-note">⚠ AI 不確定：${esc(plainWord(r.note))}　建議先試聽</div>` : ''}
     </div>
   </li>`;
 }
@@ -110,14 +111,18 @@ function render() {
   $('empty').textContent = empty;
   renderSummary();
   renderFilter();
-  $('sections').innerHTML = (s.sections || []).filter((x) => !x.ng && x.md).map((x) => {
+  // 要你決定的事放在清單前面：長片不用捲到底才看到；沒有要決定的就不佔位子
+  const secHtml = (x) => {
     const decide = x.title.includes('需要你決定');
-    const none = decide && /^[-*]\s*無\s*$/.test(x.md);
-    return `<section class="ct-panel ct-sec${decide && !none ? ' decide' : ''}"><h3>${esc(x.title || '其他')}</h3>${decide && !none ? '<p class="ct-hint">這幾項請在對話裡回覆 AI。</p>' : ''}<div class="ct-md">${none ? '<p>沒有要你決定的事。</p>' : mdToHtml(plainMd(x.md))}</div></section>`;
-  }).join('');
+    return `<section class="ct-panel ct-sec${decide ? ' decide' : ''}"><h3>${esc(x.title || '其他')}</h3>${decide ? '<p class="ct-hint">勾選下面的清單就能決定；想改時間或有別的想法，回對話跟 AI 說。</p>' : ''}<div class="ct-md">${mdToHtml(plainMd(x.md))}</div></section>`;
+  };
+  const list = (s.sections || []).filter((x) => !x.ng && x.md && !(x.title.includes('需要你決定') && /^[-*]\s*無\s*$/.test(x.md)));
+  $('decide').innerHTML = list.filter((x) => x.title.includes('需要你決定')).map(secHtml).join('');
+  $('sections').innerHTML = list.filter((x) => !x.title.includes('需要你決定')).map(secHtml).join('');
   const next = $('next');
   next.hidden = !s.exists || s.readOnly;
-  next.innerHTML = '勾好後回到對話，跟 AI 說「<b>可以</b>」；也可以直接說要改哪一列。';
+  next.innerHTML = '勾好後回對話說「<b>可以</b>」';
+  next.title = '勾好後回到對話，跟 AI 說「可以」；也可以直接說要改哪一列';
   if (!pendingSaves) setSave('saved', s.readOnly ? '只能看' : s.exists ? '已自動存檔' : '等 AI 寫清單');
   if (s.video && $('video').dataset.src !== s.video.url) { $('video').src = s.video.url; $('video').dataset.src = s.video.url; }
 }

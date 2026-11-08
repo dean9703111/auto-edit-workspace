@@ -25,8 +25,9 @@
   .ct-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   .ct-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); transition: opacity .12s, border-color .12s; }
   .ct-row.playing { border-color: var(--accent); }
-  .ct-row.off { opacity: .62; }
-  .ct-row.off .ct-text { text-decoration: line-through; text-decoration-color: var(--dim); }
+  /* 保留的列：字劃掉就看得出來，不要整列變淡（時間和原因要看得清楚） */
+  .ct-row.off { background: transparent; }
+  .ct-row.off .ct-text { text-decoration: line-through; text-decoration-color: var(--mute); color: var(--mute); }
   .ct-check { display: grid; place-items: center; width: 30px; height: 30px; cursor: pointer; }
   .ct-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--warn); cursor: pointer; }
   .ct-check input:disabled { cursor: not-allowed; }
@@ -36,7 +37,7 @@
   .ct-num { color: var(--dim); }
   .ct-time { font-family: var(--mono); color: var(--ink); }
   .ct-dur { font-family: var(--mono); }
-  .ct-tag { margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: color-mix(in srgb, var(--warn) 26%, transparent); color: var(--warn-kw); }
+  .ct-tag { margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: color-mix(in srgb, var(--warn) 26%, transparent); color: var(--warn-kw); }
   .ct-row.off .ct-tag { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good-kw); }
   .ct-text { margin-top: 3px; font-size: 15px; overflow-wrap: anywhere; }
   .ct-reason { margin-top: 2px; font-size: 13px; color: var(--mute); overflow-wrap: anywhere; }
@@ -55,15 +56,13 @@
   .ct-md th, .ct-md td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
   .ct-md th { color: var(--dim); font-weight: 400; }
   .ct-md td { color: var(--ink); }
-  .ct-next { padding: 12px 14px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); font-size: 14px; }
-  .ct-next b { color: var(--accent-text); }
   .ct-player { position: sticky; top: 66px; }
   .ct-player h2 { margin: 0 0 8px; font-size: 13px; color: var(--mute); font-weight: 700; }
   .ct-player video { display: block; width: 100%; max-height: 52vh; background: #000; border-radius: 6px; }
   .ct-bar { position: relative; height: 12px; margin-top: 10px; border-radius: 6px; background: var(--plate); overflow: hidden; }
   .ct-bar .ng { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--warn) 70%, transparent); }
   .ct-bar .head { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
-  .ct-legend { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .ct-legend { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-family: var(--mono); font-size: 12px; color: var(--mute); }
   .ct-now { margin: 8px 0 0; font-size: 13px; color: var(--mute); min-height: 1.5em; }
   .ct-now b { color: var(--ink); }
   #filterUnsure { margin-top: 8px; }
@@ -86,23 +85,24 @@
     </div>
   </div>
   <div class="save-state" id="saveState" data-state="busy" role="status"><span class="dot"></span><span class="txt">載入中…</span></div>
+  <div class="next-step" id="next" hidden></div>
 </header>
 
 <main class="ct-main">
   <div class="ct-col">
+    <div id="decide"></div>
     <section class="ct-panel" aria-labelledby="listTitle">
       <div class="ct-head">
         <h2 id="listTitle">要剪掉的地方（NG）</h2>
         <span class="ct-summary" id="summary"></span>
       </div>
       <button class="small" id="filterUnsure" aria-pressed="false" hidden></button>
-      <p class="ct-hint" id="hint">勾選＝剪掉，不想剪的就取消勾選，會自動存檔。按 ▶ 可以聽那一段（前後各多 1 秒）。</p>
+      <p class="ct-hint" id="hint">勾選＝剪掉，不想剪的就取消勾選，會自動存檔。按 ▶ 聽那一段；按「聽接起來」聽剪掉之後順不順。</p>
       <div id="banner"></div>
       <ol class="ct-rows" id="rows"></ol>
       <div class="ct-empty" id="empty" hidden></div>
     </section>
     <div id="sections"></div>
-    <div class="ct-next" id="next" hidden></div>
   </div>
 
   <aside class="ct-panel ct-player" aria-label="試聽">

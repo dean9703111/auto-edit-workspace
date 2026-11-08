@@ -21,5 +21,6 @@ export function flowState(ctx) {
   const out = steps.map(({ stop, skip, ...s }) => ({ ...s, state: stateOf(log.last?.get(stop)), said: log.last?.get(stop)?.state ?? null }));
   const lastRow = log.rows?.at(-1);
   const waiting = lastRow && stateOf(lastRow) === 'waiting' ? steps.find((s) => s.stop === lastRow.stop)?.id ?? null : null;
-  return { steps: out, waiting };
+  // ⑤ 剪輯台不在流程列上，頁面的「下一步」還是要知道現在等的是它
+  return { steps: out, waiting, stop: lastRow && stateOf(lastRow) === 'waiting' ? lastRow.stop : null };
 }

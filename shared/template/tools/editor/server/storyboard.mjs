@@ -41,7 +41,9 @@ function optionsOf(ctx) {
 
 export function storyboardState(ctx) {
   const f = fileOf(ctx);
-  const base = { project: path.basename(ctx.P.project), file: 'work/storyboard.md', readOnly: storyboardLocked(ctx.P.project), options: optionsOf(ctx), previewBase: '/gallery/preview/', speaker: speakerInfo(ctx), built: !!(ctx.P.out && statOf(path.join(ctx.P.out, 'index.html'))) };
+  let format = 'landscape';
+  try { if (JSON.parse(fs.readFileSync(ctx.P.plan, 'utf8')).format === 'portrait') format = 'portrait'; } catch { /* 還沒有 plan.json */ }
+  const base = { project: path.basename(ctx.P.project), format, file: 'work/storyboard.md', readOnly: storyboardLocked(ctx.P.project), options: optionsOf(ctx), previewBase: '/gallery/preview/', speaker: speakerInfo(ctx), built: !!(ctx.P.out && statOf(path.join(ctx.P.out, 'index.html'))) };
   if (!statOf(f)) return { ...base, exists: false, hash: null, sig: null, title: '', sections: [], overview: {}, warnings: [] };
   return { ...base, exists: true, ...storyboardDocState(fs.readFileSync(f, 'utf8'), { hash: sha, imageUrl: imageUrlOf(ctx), beatHeaders: BEAT_HEADERS }) };
 }

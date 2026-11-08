@@ -15,10 +15,12 @@ function srcOf(it, t) {
   return K[i][1] + Math.max(0, d - K[i][0]) * rate;
 }
 
-export const LANES = [['ov', 12], ['ruler', 22], ['anim', 36], ['media', 42], ['main', 46], ['cap', 28], ['voice', 56], ['sfx', 28]];
+export const LANES = [['ov', 12], ['ruler', 22], ['anim', 36], ['media', 34], ['main', 38], ['cap', 26], ['voice', 44], ['sfx', 24]];
 // 視窗矮的時候軌道變薄，把高度留給影片（筆電、左右分割視窗）
-export const LANES_COMPACT = [['ov', 10], ['ruler', 18], ['anim', 30], ['media', 24], ['main', 30], ['cap', 22], ['voice', 30], ['sfx', 20]];
-export const TRACK_NAMES = { anim: '動畫', media: '插入素材', main: '主軌畫面', cap: '字幕', voice: '人聲', sfx: '音效' };
+export const LANES_COMPACT = [['ov', 10], ['ruler', 18], ['anim', 28], ['media', 24], ['main', 28], ['cap', 22], ['voice', 28], ['sfx', 20]];
+export const TRACK_NAMES = { anim: '字卡／動畫', media: '素材', main: '主軌畫面', cap: '字幕', voice: '人聲', sfx: '音效' };
+const DEFAULT_SPAN = 180;   // 打開時一屏看幾秒：長片整支擠在一屏，字都看不到，也點不準（要看整支按「看整支」）
+const REVEAL_SPAN = 60;     // 從清單、搜尋、檢查結果跳到某一段時，放大到前後各留約 30 秒
 const PAD = 10;
 const MAX_PPS = 600;
 const C = {
@@ -36,7 +38,7 @@ export class Timeline {
     this.off = document.createElement('canvas');
     this.dur = 0; this.pps = 50; this.t0 = 0; this.fitPps = 50;
     this.staticDirty = true; this.drag = null; this.hover = null; this.snapLine = null;
-    this.compact = false;
+    this.compact = false; this.scale = 1;
     this.layoutLanes();
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(canvas.parentElement);
@@ -51,7 +53,9 @@ export class Timeline {
   }
 
   layoutLanes() {
-    this.lanes = this.compact ? LANES_COMPACT : LANES;
+    const base = this.compact ? LANES_COMPACT : LANES;
+    // 使用者拖分隔線調大小：總覽和時間尺不變，軌道照比例
+    this.lanes = this.scale === 1 ? base : base.map(([k, h]) => [k, k === 'ov' || k === 'ruler' ? h : Math.max(16, Math.round(h * this.scale))]);
     this.L = {};
     let y = 0;
     for (const [k, h] of this.lanes) { this.L[k] = [y, y + h]; y += h + 1; }
@@ -60,6 +64,14 @@ export class Timeline {
   setCompact(on) {
     if (this.compact === on) return false;
     this.compact = on;
+    this.layoutLanes();
+    this.resize();
+    return true;
+  }
+  setScale(s) {
+    const v = clamp(Math.round(s * 100) / 100, 0.5, 2.2);
+    if (v === this.scale) return false;
+    this.scale = v;
     this.layoutLanes();
     this.resize();
     return true;
@@ -82,7 +94,8 @@ export class Timeline {
   setDuration(d) {
     this.dur = d || 0;
     this.fitPps = this.dur > 0 ? (this.cssW - PAD * 2) / this.dur : 50;
-    if (this.pps < this.fitPps || !this._init) { this.pps = this.fitPps; this.t0 = 0; this._init = true; }
+    if (!this._init && this.dur > 0) { this.pps = Math.max(this.fitPps, (this.cssW - PAD * 2) / DEFAULT_SPAN); this.t0 = 0; this._init = true; }
+    else if (this.pps < this.fitPps) { this.pps = this.fitPps; this.t0 = 0; }
     this.clampView();
     this.invalidate();
   }
@@ -106,6 +119,17 @@ export class Timeline {
   ensureVisible(t, page = true) {
     const s = this.span();
     if (t < this.t0 || t > this.t0 + s) { this.t0 = page ? t - s * 0.1 : t - s / 2; this.clampView(); this.invalidate(); }
+  }
+  // 從清單跳到一段或一句：一屏太寬就放大到看得清楚，再把它放到中間
+  reveal(a, b = a) {
+    const want = Math.max(REVEAL_SPAN, (b - a) + 30);
+    if (this.span() > want * 1.5) this.pps = clamp((this.cssW - PAD * 2) / want, this.fitPps, Math.max(this.fitPps, MAX_PPS));
+    const s = this.span(), m = (a + b) / 2;
+    if (a < this.t0 || b > this.t0 + s || this.pps !== this._revealPps) this.t0 = m - s / 2;
+    this._revealPps = this.pps;
+    this.clampView();
+    this.invalidate();
+    this.app.onZoom?.();
   }
   invalidate() { this.staticDirty = true; this.app.requestDraw(); }
   laneAt(y) { for (const [k] of LANES) if (y >= this.L[k][0] && y <= this.L[k][1]) return k; return null; }
@@ -159,7 +183,7 @@ export class Timeline {
       const x = Math.round(this.xOf(this.snapLine.t)) + 0.5;
       g.strokeStyle = '#FFD400'; g.lineWidth = 1; g.setLineDash([4, 3]);
       g.beginPath(); g.moveTo(x, L.ruler[0]); g.lineTo(x, this.cssH); g.stroke(); g.setLineDash([]);
-      g.font = '700 10px "Noto Sans TC", system-ui, sans-serif'; g.textBaseline = 'top';
+      g.font = '700 11px "Noto Sans TC", system-ui, sans-serif'; g.textBaseline = 'top';
       const lab = { cueStart: `#${this.snapLine.n} 開頭`, cueEnd: `#${this.snapLine.n} 結尾`, play: '播放頭', cut: '剪接', point: '剪接點', item: '段落邊緣', split: '分割點' }[this.snapLine.kind] || '吸附';
       const w = g.measureText(lab).width + 8;
       g.fillStyle = '#FFD400'; g.fillRect(x + 2, L.ruler[0] + 1, w, 13);
@@ -230,7 +254,7 @@ export class Timeline {
     const minor = step / (step >= 60 ? 6 : step === 15 ? 3 : step < 1 ? 2 : 5);
     g.fillStyle = C.dim;
     for (let t = Math.floor(this.t0 / minor) * minor; t <= t1; t += minor) { const x = X(t); if (x >= 0) g.fillRect(Math.round(x), L.ruler[1] - 4, 1, 4); }
-    g.font = font(10.5); g.textBaseline = 'top';
+    g.font = font(11); g.textBaseline = 'top';
     for (let t = Math.floor(this.t0 / step) * step; t <= t1; t += step) {
       const x = X(t); if (x < 0) continue;
       g.fillStyle = C.mute; g.fillRect(Math.round(x), L.ruler[0] + 3, 1, L.ruler[1] - L.ruler[0] - 3);
@@ -266,15 +290,16 @@ export class Timeline {
       if (it.textDirty) { g.fillStyle = '#FFD400'; g.beginPath(); g.arc(Math.max(xa + 6, Math.min(xb - 6, xa + 6)), y + 5, 3, 0, Math.PI * 2); g.fill(); }
       txWedge(xa, xb, y, h, transitionOf(it));
       if (A.isSelected('item', it.id)) { g.strokeStyle = '#fff'; g.lineWidth = 2; rr(xa + 1, y + 1, Math.max(2, xb - xa - 2), h - 2, 3); g.stroke(); }
-      if (it.warnings) { g.fillStyle = '#FFD400'; g.fillRect(xa, y + h - 3, Math.max(3, xb - xa), 3); }
+      if (A.authorFlags?.has(it.id)) { g.fillStyle = '#FFD400'; g.fillRect(xa, y + h - 3, Math.max(3, xb - xa), 3); }
       const rq = xb - xa > 22 ? A.rqMark?.(it.id) : null;
       if (rq) rqBadge(xb - 10, y + h / 2, rq);
-      if (xb - xa > 26) clipRect(xa + 3, y, xb - xa - 6 - (rq ? 16 : 0), h, () => {
-        g.fillStyle = it.type === 'custom' ? '#0B1020' : '#fff'; g.font = font(h > 18 ? 11.5 : 10.5, 700); g.textBaseline = 'middle';
-        g.fillText(`${it.id}　${it.title || it.label || ''}`, Math.max(xa, 0) + 6, y + h / 2 + 0.5);
+      // 段上寫在講什麼；放不下兩個字就不寫（切成「每」「x03」看不懂），滑上去有提示
+      if (xb - xa > 34) clipRect(xa + 3, y, xb - xa - 6 - (rq ? 16 : 0), h, () => {
+        g.fillStyle = it.type === 'custom' ? '#0B1020' : '#fff'; g.font = font(h > 18 ? 12 : 11, 700); g.textBaseline = 'middle';
+        g.fillText(it.title || it.label || '', Math.max(xa, 0) + 6, y + h / 2 + 0.5);
       });
     }
-    if (!anim.length) { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.itemsHint || '沒有資訊卡或字卡動態', PAD + 6, (L.anim[0] + L.anim[1]) / 2); }
+    if (!anim.length) { g.font = font(12); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.itemsHint || '沒有字卡或動畫', PAD + 6, (L.anim[0] + L.anim[1]) / 2); }
     // 沒有任何卡片、動畫或素材的講解（002 check-json 的 uncovered）：灰色斜線
     for (const [a, b] of A.uncovered || []) if (vis(a, b)) hatch(a, b, L.anim[0] + 2, L.anim[1] - 2, 'rgba(160,170,190,0.35)', 8);
 
@@ -298,9 +323,9 @@ export class Timeline {
       const rq = xb - xa > 22 ? A.rqMark?.(it.id) : null;
       if (rq) rqBadge(xb - 11, y + 10, rq);
       if (xb - xa > 40) clipRect(xa + 6, y, xb - xa - 12 - (rq ? 16 : 0), h, () => {
-        g.font = font(10.5, 700); g.textBaseline = 'top'; g.fillStyle = '#fff';
+        g.font = font(11, 700); g.textBaseline = 'top'; g.fillStyle = '#fff';
         g.shadowColor = '#000'; g.shadowBlur = 3;
-        g.fillText(`${it.id}　${it.srcName || ''}`, xa + 8, y + 3);
+        g.fillText(it.title || it.srcName || '', xa + 8, y + 3);
         g.shadowBlur = 0;
       });
       // 原聲音量線
@@ -310,7 +335,7 @@ export class Timeline {
         g.strokeStyle = vol == null ? 'rgba(255,255,255,0.45)' : C.band; g.lineWidth = 1.5;
         if (vol == null) g.setLineDash([4, 4]);
         g.beginPath(); g.moveTo(xa + 5, yy); g.lineTo(xb - 5, yy); g.stroke(); g.setLineDash([]);
-        if (xb - xa > 70) { g.font = font(10, 700); g.textBaseline = 'bottom'; g.fillStyle = vol == null ? C.mute : C.band; g.fillText(vol == null ? '原聲：靜音' : `原聲 ${fmtDb(vol)}`, xb - 82, yy - 2); }
+        if (xb - xa > 70) { g.font = font(11, 700); g.textBaseline = 'bottom'; g.fillStyle = vol == null ? C.mute : C.band; g.fillText(vol == null ? '原聲：靜音' : `原聲 ${fmtDb(vol)}`, xb - 82, yy - 2); }
       }
       if (it.inCut) hatch(it.start, it.end, y, y + h, 'rgba(255,90,95,0.35)', 6);
     }
@@ -323,15 +348,15 @@ export class Timeline {
       const xa = X(0), xb = X(this.dur);
       clipRect(Math.max(0, xa), y, Math.min(W, xb) - Math.max(0, xa), h, () => this.drawMainThumbs(g, y, h));
       g.fillStyle = 'rgba(7,11,20,0.25)'; g.fillRect(Math.max(0, xa), y, Math.min(W, xb) - Math.max(0, xa), h);
+      // 只有聲音：是正常狀態，只壓暗、寫字，不畫斜線。斜線留給要處理的（下面的紅色）
       for (const [a, b] of A.voiceOnly) if (vis(a, b)) {
         g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(X(a), y, X(b) - X(a), h);
-        hatch(a, b, y, y + h, C.voice, 8);
-        if (X(b) - X(a) > 70) { g.font = font(10.5, 700); g.fillStyle = 'rgba(255,255,255,0.8)'; g.textBaseline = 'bottom'; g.fillText('只有聲音', X(a) + 5, y + h - 3); }
+        if (X(b) - X(a) > 70) { g.font = font(11, 700); g.fillStyle = 'rgba(255,255,255,0.8)'; g.textBaseline = 'bottom'; g.fillText('只有聲音', Math.max(X(a), 0) + 5, y + h - 3); }
       }
       // 只有聲音、沒被素材蓋住（002 check-json 的 voiceUncovered）：紅色斜線
       for (const [a, b] of A.voiceUncovered || []) if (vis(a, b)) {
         hatch(a, b, y, y + h, 'rgba(255,90,95,0.85)', 5);
-        if (X(b) - X(a) > 90) { g.font = font(10.5, 700); g.fillStyle = '#FF8A8E'; g.textBaseline = 'top'; g.fillText('沒被蓋住', X(a) + 5, y + 3); }
+        if (X(b) - X(a) > 90) { g.font = font(11, 700); g.fillStyle = '#FF8A8E'; g.textBaseline = 'top'; g.fillText('沒被蓋住', X(a) + 5, y + 3); }
       }
       // 片段（分割點、剪掉的範圍隔開）
       for (const p of A.pieces) {
@@ -354,7 +379,7 @@ export class Timeline {
       const sel = A.isSelected('cut', i);
       g.fillStyle = sel ? '#FFFFFF' : C.cutLine;
       for (const xx of [xa, xb]) g.fillRect(Math.round(xx) - (sel ? 1 : 0.5), y0, sel ? 3 : 1.5, y1 - y0);
-      if (xb - xa > 46) { g.font = font(10.5, 700); g.fillStyle = '#FF8A8E'; g.textBaseline = 'top'; g.fillText(`✂ ${fmtSec(b - a)}`, xa + 5, L.main[0] + 6); }
+      if (xb - xa > 46) { g.font = font(11, 700); g.fillStyle = '#FF8A8E'; g.textBaseline = 'top'; g.fillText(`✂ ${fmtSec(b - a)}`, xa + 5, L.main[0] + 6); }
     });
     // 開頭淡入、結尾淡出（照實際秒數畫斜角）
     {
@@ -395,7 +420,8 @@ export class Timeline {
         if (sel) { g.strokeStyle = '#FFD400'; g.lineWidth = 1.5; g.stroke(); }
         const long = c.len > 18;
         if (long) { g.fillStyle = '#FFD400'; g.fillRect(xa + 1, y + h - 2, Math.max(2, xb - xa - 2), 2); }
-        if (xb - xa > 18) clipRect(xa + 3, y, xb - xa - 6, h, () => {
+        // 放不下幾個字就不寫（只露一個字看不懂），滑上去有整句
+        if (xb - xa > 44) clipRect(xa + 3, y, xb - xa - 6, h, () => {
           g.fillStyle = dead ? 'rgba(255,255,255,0.35)' : sel ? '#fff' : C.mute; g.textBaseline = 'middle';
           g.fillText(`${long ? '⚠ ' : ''}${c.text}`, xa + 5, y + h / 2 + 0.5);
         });
@@ -447,9 +473,9 @@ export class Timeline {
         g.fillStyle = sel ? 'rgba(255,212,0,0.18)' : 'rgba(255,212,0,0.08)'; g.fillRect(ga, y0 + 2, gb - ga, y1 - y0 - 4);
         g.strokeStyle = C.band; g.lineWidth = sel ? 2.5 : 2; g.beginPath(); g.moveTo(ga, yg); g.lineTo(gb, yg); g.stroke();
         g.fillStyle = C.band; for (const xx of [ga, gb]) { g.beginPath(); g.arc(xx, yg, 3.5, 0, Math.PI * 2); g.fill(); }
-        if (gb - ga > 50) { g.font = font(10.5, 700); g.textBaseline = 'bottom'; g.fillText(fmtDb(gg.db), ga + 5, yg - 3); }
+        if (gb - ga > 50) { g.font = font(11, 700); g.textBaseline = 'bottom'; g.fillText(fmtDb(gg.db), ga + 5, yg - 3); }
       }
-      if (Math.abs(base) > 0.05 && X(this.dur) - xs > 80) { g.font = font(10.5, 700); g.textBaseline = 'bottom'; g.fillStyle = C.bandDim; g.fillText(`人聲 ${fmtDb(base)}`, Math.max(xs, 0) + 6, yBase - 2); }
+      if (Math.abs(base) > 0.05 && X(this.dur) - xs > 80) { g.font = font(11, 700); g.textBaseline = 'bottom'; g.fillStyle = C.bandDim; g.fillText(`人聲 ${fmtDb(base)}`, Math.max(xs, 0) + 6, yBase - 2); }
     }
 
     // ---- 選取範圍（主軌、字幕、人聲）----
@@ -457,7 +483,7 @@ export class Timeline {
       const xa = X(s.a), xb = X(s.b), y0 = L.main[0], y1 = L.voice[1];
       g.fillStyle = C.sel; g.fillRect(xa, y0, xb - xa, y1 - y0);
       g.fillStyle = C.selLine; g.fillRect(Math.round(xa) - 1, y0, 2, y1 - y0); g.fillRect(Math.round(xb) - 1, y0, 2, y1 - y0);
-      g.font = font(10, 700); g.textBaseline = 'top';
+      g.font = font(11, 700); g.textBaseline = 'top';
       g.fillRect(xa, y0, 14, 13); g.fillRect(xb - 14, y0, 14, 13);
       g.fillStyle = '#0B1020'; g.fillText('入', xa + 2, y0 + 1); g.fillText('出', xb - 12, y0 + 1);
     }
@@ -479,7 +505,7 @@ export class Timeline {
         // 音量條（0 dB 在中間偏上）
         if (!m.muted && m.db != null) { const k = clamp((m.db + 40) / 52, 0, 1); g.fillStyle = C.sfx; g.fillRect(x + 2, y + h - 2 - k * (h - 4), 3, k * (h - 4)); }
         if (w > 20) clipRect(x + 6, y, w - 8, h, () => {
-          g.font = font(10, 700); g.textBaseline = 'middle'; g.fillStyle = m.muted ? C.dim : '#fff';
+          g.font = font(11, 700); g.textBaseline = 'middle'; g.fillStyle = m.muted ? C.dim : '#fff';
           g.fillText(m.muted ? `🔇 ${m.name}` : m.name, x + 7, y + h / 2 + 0.5);
         });
         if (m.muted) { g.strokeStyle = 'rgba(255,90,95,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x + 2, y + h - 2); g.lineTo(x + w - 2, y + 2); g.stroke(); }
@@ -532,7 +558,7 @@ export class Timeline {
       const x0 = this.xOf(it.start + K[i - 1][0]), x1 = this.xOf(it.start + K[i][0]);
       g.fillRect(x0, y + h - 5, Math.max(2, x1 - x0 - 1), 5);
       if (x1 - x0 > 34) {
-        g.font = '700 10px system-ui'; g.textBaseline = 'bottom'; g.textAlign = 'left'; g.fillStyle = '#fff'; g.shadowColor = '#000'; g.shadowBlur = 3;
+        g.font = '700 11px system-ui'; g.textBaseline = 'bottom'; g.textAlign = 'left'; g.fillStyle = '#fff'; g.shadowColor = '#000'; g.shadowBlur = 3;
         g.fillText(speedLabel(Math.round(rate * 1000) / 1000), x0 + 3, y + h - 6);
         g.shadowBlur = 0;
       }

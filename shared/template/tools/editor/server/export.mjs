@@ -45,7 +45,7 @@ export function exportState(ctx) {
 
 export function startExport(ctx, deps, body = {}) {
   if (exportBusy(ctx)) return [409, { error: 'busy', message: '已經在輸出了，等它跑完' }];
-  if (ctx.build?.running) return [409, { error: 'building', message: '正在重新產生，等它跑完再輸出' }];
+  if (ctx.build?.running) return [409, { error: 'building', message: '正在更新預覽，等它跑完再輸出' }];
   if (!statOf(ctx.P.plan)) return [400, { error: 'noplan', message: '還沒有 plan.json，不能輸出 → 請 AI 先做到分鏡表確認' }];
   // 畫面上還是示範人物：先問過使用者（頁面跳確認卡；按「照樣輸出」才帶 confirmSpeaker）
   const gate = deps.speakerGate?.();

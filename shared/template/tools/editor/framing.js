@@ -1,4 +1,4 @@
-// 構圖：在沒裁切的 work/rough.mp4 上拖一個鎖定比例（橫式 16:9、直式 9:16）的框，存成 plan.json 的 frame（畫布座標）。
+// 構圖：在沒裁切的 work/rough.mp4 上拖一個鎖定比例（橫式 16:9、直式 9:16）的框，自動存成 plan.json 的 frame（畫布座標）。
 // 右邊即時畫出裁切後的樣子＋字幕、下方字卡、子母畫面小視窗的位置；直式畫頭頂範圍與下巴上限。
 // 分析（講者動作範圍、黑邊、建議的框）來自 GET /api/framing（qc.mjs framing 同一套）；存檔走 POST /api/save { base, frame, look }。
 // 下面一起決定講者調光、瘦臉（plan.json 的 look；打開瘦臉才偵測臉：POST /api/look/run，GET /api/look/status 看進度），
@@ -6,7 +6,8 @@
 import { lookCss } from './model.mjs';
 const $ = (id) => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
-const ORANGE = '#FF8C00', CYAN = '#00E5FF', MAGENTA = '#FF40C8';
+// 講者動作範圍用黃色：框是主色（常常是橘色），兩個都橘的話分不出來
+const ORANGE = '#FFD400', CYAN = '#00E5FF', MAGENTA = '#FF40C8';
 const ACC = () => getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#FFD400';
 
 let D = null;        // /api/framing 的回應
@@ -16,6 +17,9 @@ let drag = null;
 let lastPreview = 0;
 let framingImageTimer = null;
 let look = { color: 0, slim: 0, beauty: 0 }, savedLook = { color: 0, slim: 0, beauty: 0 }, lookPrev = {}, poll = null, faceTimer = null;
+const AUTOSAVE_MS = 1000;   // 停手多久就自動存
+let touched = false, saveTimer = null, saving = null;   // touched：使用者動過（打開頁面還沒動，只是顯示，不寫檔；沒決定過構圖時例外，見 load）
+let saveFail = null;   // 上一次沒存成功：{ sig（那時候的內容）}。沒再改就不重送（連不到另外等 5 秒重試），狀態也留著
 const r2 = (v) => Math.round(Number(v) * 100) / 100;
 const sameLook = (a, b) => r2(a.color) === r2(b.color) && r2(a.slim) === r2(b.slim) && r2(a.beauty) === r2(b.beauty);
 const faceOn = (l) => l.slim > 0 || l.beauty > 0;   // 瘦臉或美顏要偵測臉部、做底片
@@ -47,7 +51,10 @@ async function load() {
   if (!r.ok || !j) { $('loading').textContent = j?.message || `讀不到構圖分析（HTTP ${r.status}）`; return; }
   D = j;
   saved = D.plan.frame ? fromArr(D.plan.frame) : null;
-  F = clampFrame(saved || fromArr(D.suggestion.frame));
+  // 決定過「不裁切」的留在原畫面。還沒決定過：一開始就是建議的框，也馬上存起來，使用者看到什麼完成影片就是什麼
+  F = clampFrame(saved || (D.plan.decided ? fullFrame() : fromArr(D.suggestion.frame)));
+  touched = !D.plan.decided && !D.plan.error;
+  if (D.plan.error) { $('msg').className = 'fr-msg err'; $('msg').textContent = `分鏡檔有錯，這裡改的存不進去：${D.plan.error}\n→ 請 AI 修好再重新整理這一頁`; }
   $('projName').textContent = `${D.project.name}｜${portrait() ? '直式 9:16' : '橫式 16:9'}（${W()}×${H()}）`;
   $('stage').classList.toggle('portrait', portrait());
   $('stage').style.aspectRatio = `${W()} / ${H()}`;
@@ -66,6 +73,7 @@ async function load() {
   initLook();
   refNote();
   legend();
+  renderUpdate();
   $('loading').hidden = true;
   $('main').hidden = false;
   render();
@@ -105,10 +113,13 @@ function render() {
 
 // ---------- 右邊：完成影片看起來 ----------
 function legend() {
+  const chip = ([c, t]) => { const s = document.createElement('span'); s.innerHTML = `<i style="background:${c}"></i>`; s.append(t); return s; };
+  const [cx1, cy1, cx2, cy2] = bounds(), bars = cx1 > 0 || cy1 > 0 || cx2 < W() || cy2 < H();
+  $('stageLegend').replaceChildren(...[[ACC(), '裁切框（框外會切掉）'], [ORANGE, '講者動作範圍（虛線，不要切到）'], ...(bars ? [['rgba(255,255,255,0.6)', '影片實際範圍（外面是黑邊）']] : [])].map(chip));
   const items = [[ORANGE, '講者動作範圍'], ['rgba(255,255,255,0.8)', '字幕'], ['var(--accent)', '下方字卡']];
   if (!portrait()) items.push(['#3B82F6', '子母畫面小視窗']);
   else items.push([CYAN, '頭頂要在兩條線之間'], [MAGENTA, '下巴不超過這條線']);
-  $('legend').replaceChildren(...items.map(([c, t]) => { const s = document.createElement('span'); s.innerHTML = `<i style="background:${c}"></i>`; s.append(t); return s; }));
+  $('legend').replaceChildren(...items.map(chip));
 }
 function toOut(x, y) { const k = W() / F.w; return [(x - F.x) * k, (y - F.y) * k]; }
 function drawPreview() {
@@ -118,7 +129,7 @@ function drawPreview() {
   ctx.fillRect(0, 0, cw, ch);
   if (v.videoWidth) {
     const s = Math.min(W() / v.videoWidth, H() / v.videoHeight), ox = (W() - v.videoWidth * s) / 2, oy = (H() - v.videoHeight * s) / 2;
-    ctx.filter = lookCss(look.color, 0);   // 調光的近似效果（完成影片照 LUT 會更準）
+    ctx.filter = lookCss(look.color, 0);   // 調光的近似效果（完成影片會更準）
     ctx.drawImage(v, (F.x - ox) / s, (F.y - oy) / s, F.w / s, hOf(F.w) / s, 0, 0, cw, ch);
     ctx.filter = 'none';
   }
@@ -159,18 +170,18 @@ function facts() {
   const [m0, m1] = toOut(D.motion[0], D.motion[1]), [m2] = toOut(D.motion[2], D.motion[3]);
   const cut = [m0 < L.edge && '左', m1 < L.edge && '上', m2 > W() - L.edge && '右'].filter(Boolean);
   const rows = [
-    ['放大', `${z.toFixed(2)} 倍（框 ${F.w}×${hOf(F.w)}，在 ${W()}×${H()} 畫面上的 x ${Math.round(F.x)}、y ${Math.round(F.y)}）`],
-    ['畫質', D.srcSize[0] < W() || z > 1 ? `${up > L.upscaleWarn ? '會明顯變糊' : '還清楚'}（每個像素放大 ${up.toFixed(2)} 倍，超過 ${L.upscaleWarn} 倍會變糊）` : '原尺寸，不放大', up > L.upscaleWarn],
-    ['手勢', cut.length ? `會切到${cut.join('、')}側的手勢（橘框超出畫面）` : '講者動作範圍都在框裡', cut.length > 0],
+    ['放大', isFull(F) ? '不放大（原畫面）' : `${z.toFixed(2)} 倍`],
+    ['畫質', up > L.upscaleWarn ? '會明顯變糊，框拉大一點' : '清楚', up > L.upscaleWarn],
+    ['手勢', cut.length ? `會切到${cut.join('、')}側的手勢（黃色虛線超出框外）` : '都在框裡', cut.length > 0],
   ];
   if (portrait()) {
     const C = D.canvas, chinY = D.chin ?? D.motion[1] + 0.3 * (D.motion[3] - D.motion[1]);
     const head = Math.round(toOut(0, D.motion[1])[1]), chin = Math.round(toOut(0, chinY)[1]);
-    rows.push(['頭頂', `y ${head}（要在 ${C.headTop[0]}–${C.headTop[1]}）`, head < C.headTop[0] || head > C.headTop[1]]);
-    rows.push(['下巴', `y ${chin}（要 ≤ ${C.chinMax}${D.chin == null ? '，用動作範圍估的' : ''}）`, chin > C.chinMax]);
+    rows.push(['頭頂', head < C.headTop[0] ? '太靠上，框往上移' : head > C.headTop[1] ? '太靠下，框往下移' : '在兩條藍線之間', head < C.headTop[0] || head > C.headTop[1]]);
+    rows.push(['下巴', chin > C.chinMax ? '太低了，會擋到字卡，框往下移' : `沒超過粉紅線${D.chin == null ? '（用動作範圍估的）' : ''}`, chin > C.chinMax]);
   }
   const sugZ = D.suggestion.zoom;
-  rows.push(['建議', `${sugZ.toFixed(2)} 倍${D.suggestion.none ? '（每個倍率都有問題，先選最小的）' : '（不切到手勢、不會太糊的倍率裡最大的）'}`]);
+  rows.push(['建議', `${sugZ.toFixed(2)} 倍${D.suggestion.none ? '（每個倍率都有問題，先選最小的）' : '（不切到手勢、也不會糊）'}`]);
   $('facts').replaceChildren(...rows.map(([k, v, bad]) => {
     const li = document.createElement('li');
     li.innerHTML = '<span class="k"></span><span class="v"></span>';
@@ -180,19 +191,35 @@ function facts() {
     if (bad != null) vv.className = `v ${bad ? 'bad' : 'ok'}`;
     return li;
   }));
-  $('note').textContent = D.plan.speakerBox
-    ? '已經量過講者框：儲存時會跟著新的框換算，不用重量。儲存後會自動更新剪輯台預覽。'
-    : '存好後跟 AI 說「調好了」；不想調就說「用建議的」。';
 }
 
+// 要不要存：使用者動過才算（打開頁面時框和存檔不一樣，可能只是黑邊換算出來的差別，不寫檔）
+const isDirty = () => !!F && !D.plan.error && ((touched && ((!D.plan.exists && !isFull(F)) || !sameFrame(F, saved || fullFrame()) || !sameLook(look, savedLook))) || !!window.designWorkbench?.dirty);
+const sigNow = () => JSON.stringify([asArr(F), look, !!window.designWorkbench?.dirty]);
 function dirty() {
-  if (!F) return;
-  const d = !D.plan.exists || !sameFrame(F, saved || fullFrame()) || !sameLook(look, savedLook) || !!window.designWorkbench?.dirty;
+  if (!F || saving) return;
+  const d = isDirty();
   const s = $('saveState');
+  if (saveFail) {
+    if (d && saveFail.sig === sigNow()) return;   // 沒再改：錯誤訊息留著，不要每秒重送
+    saveFail = null;
+  }
   s.dataset.state = d ? 'dirty' : 'saved';
-  s.querySelector('.txt').textContent = d ? '尚未儲存' : saved ? '已儲存' : '已儲存 · 不裁切';
-  $('btnSave').disabled = !d || !!window.designWorkbench?.busy;
+  s.querySelector('.txt').textContent = d ? '自動存檔中…' : saved ? '已自動存檔' : '已自動存檔 · 不裁切';
+  if (d) scheduleSave();
 }
+function scheduleSave(delay = AUTOSAVE_MS) { clearTimeout(saveTimer); saveTimer = setTimeout(autosave, delay); }
+function autosave() {
+  if (!isDirty()) return;
+  if (drag || saving || window.designWorkbench?.busy) { scheduleSave(400); return; }
+  save();
+}
+// 切回對話、關分頁：馬上存，不等那一秒
+function flushNow() { if (isDirty() && !drag && !saving && !window.designWorkbench?.busy) { clearTimeout(saveTimer); save(); } }
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushNow(); });
+window.addEventListener('pagehide', flushNow);
+// 存檔用 keepalive：送出去之後才換頁、關頁也會存好，不用問。上一次沒存成功（連不到、被改過）才問
+window.addEventListener('beforeunload', (e) => { flushNow(); if (saveFail && isDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('design-state', dirty);
 window.addEventListener('framing-preview-request', () => { lastPreview = 0; drawPreview(); });
 
@@ -207,6 +234,7 @@ $('overlay').addEventListener('pointerdown', (e) => {
   if (k) drag = { mode: 'resize', ax: k.includes('w') ? F.x + F.w : F.x, ay: k.includes('n') ? F.y + h : F.y, k };
   else if (p.x >= F.x && p.x <= F.x + F.w && p.y >= F.y && p.y <= F.y + h) drag = { mode: 'move', dx: p.x - F.x, dy: p.y - F.y };
   else return;
+  touched = true;
   $('overlay').setPointerCapture(e.pointerId);
   $('stage').focus();
   e.preventDefault();
@@ -227,12 +255,14 @@ for (const ev of ['pointerup', 'pointercancel']) $('overlay').addEventListener(e
 $('stage').addEventListener('keydown', (e) => {
   const d = e.shiftKey ? 20 : 4, mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
   if (!mv || !F) return;
+  touched = true;
   F = clampFrame({ x: F.x + mv[0], y: F.y + mv[1], w: F.w });
   render();
   e.preventDefault();
 });
 $('zoom').addEventListener('input', () => {
   const w = Math.round(W() / Number($('zoom').value) / STEP()) * STEP(), cx = F.x + F.w / 2, cy = F.y + hOf(F.w) / 2;
+  touched = true;
   F = clampFrame({ x: cx - w / 2, y: cy - hOf(w) / 2, w });
   render();
 });
@@ -243,52 +273,106 @@ $('btnPlay').addEventListener('click', () => { const v = $('video'); if (v.pause
 $('seek').addEventListener('input', () => { $('video').currentTime = Number($('seek').value); });
 
 // ---------- 按鈕與存檔 ----------
-$('btnSuggest').addEventListener('click', () => { F = clampFrame(fromArr(D.suggestion.frame)); render(); });
-$('btnFull').addEventListener('click', () => { F = clampFrame({ ...fullFrame(), x: bounds()[0], y: bounds()[1], w: maxW() }); render(); });
-$('btnSaved').addEventListener('click', () => { F = clampFrame(saved || fullFrame()); render(); });
-document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (!$('btnSave').disabled) save(); } });
-$('btnSave').addEventListener('click', save);
+$('btnSuggest').addEventListener('click', () => { touched = true; F = clampFrame(fromArr(D.suggestion.frame)); render(); });
+$('btnFull').addEventListener('click', () => { touched = true; F = clampFrame({ ...fullFrame(), x: bounds()[0], y: bounds()[1], w: maxW() }); render(); });
+document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); clearTimeout(saveTimer); if (isDirty() && !saving) save(); } });
 
-async function save() {
-  $('btnSave').disabled = true;
-  const msg = $('msg');
-  msg.className = 'fr-msg'; msg.textContent = '儲存中…';
-  const frame = isFull(F) ? null : asArr(F);
+function save() {
+  saving = saveOnce().finally(() => { saving = null; dirty(); });
+  return saving;
+}
+async function saveOnce() {
+  const msg = $('msg'), state = $('saveState');
+  state.dataset.state = 'busy'; state.querySelector('.txt').textContent = '儲存中…';
+  const frame = isFull(F) ? null : asArr(F), lookNow = { ...look };
   let r, j;
   try {
     await window.designWorkbench?.flush();
-    const body = { base: { hash: D.plan.hash }, frame };
+    const body = { base: { hash: D.plan.hash }, frame, update: false };   // 自動存檔不帶起更新預覽：底片重新編碼很久，等使用者按
     if (window.designWorkbench?.saveId) body.designId = window.designWorkbench.saveId;
     if (!sameLook(look, savedLook)) body.look = { color: r2(look.color), slim: r2(look.slim), ...(look.beauty > 0 ? { beauty: r2(look.beauty) } : {}) };
-    r = await fetch('/api/framing/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const post = () => fetch('/api/framing/save', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    r = await post();
     j = await r.json().catch(() => null);
-  } catch { j = { message: '連不到剪輯台，這次沒有存：請 AI 重新啟動剪輯台，再按一次「儲存」。你拖好的框還在。' }; }
+    // plan.json 剛被改過：通常是剪輯台自動存，構圖只動 frame 和 look，不會蓋掉別的，拿最新的版本號再存一次。
+    // 但如果被改的就是框或調光（AI 寫的），不能用舊的蓋回去：換成最新的，講一聲
+    if (r.status === 409 && j?.error === 'conflict') {
+      const now = await fetch('/api/framing').then((x) => x.json());
+      if (JSON.stringify(now.plan.frame ?? null) !== JSON.stringify(D.plan.frame ?? null) || !sameLook(lookOf(now), savedLook)) { adoptRemote(now); return false; }
+      body.base = { hash: now.plan.hash };
+      r = await post();
+      j = await r.json().catch(() => null);
+    }
+  } catch { j = { message: '連不到剪輯台，這次沒有存。你拖好的框還在，連上後會自動補存。' }; }
   if (!r?.ok) {
-    $('saveState').dataset.state = 'error';
-    $('saveState').querySelector('.txt').textContent = r?.status === 409 ? '被別人改過' : '沒有存';
+    if (j?.error === 'designbusy') { scheduleSave(800); return false; }   // 背景還在處理：等一下再存，不用講
+    saveFail = { sig: sigNow() };
+    state.dataset.state = 'error';
+    if (j?.error === 'exporting') {
+      state.dataset.state = 'dirty';
+      state.querySelector('.txt').textContent = '輸出完會自動存';
+      scheduleSave(5000);
+      return false;
+    }
+    state.querySelector('.txt').textContent = !r ? '連不到剪輯台，修改還留在這一頁' : r.status === 409 ? '被別人改過，這次沒有存' : '沒有存';
     msg.className = 'fr-msg err';
-    msg.textContent = `${j?.message || `存檔失敗（HTTP ${r?.status}）`}${r?.status === 409 ? '\n→ 重新整理這一頁拿最新的內容，再存一次' : ''}`;
-    $('btnSave').disabled = false;
+    msg.textContent = `${j?.message || `存檔失敗（HTTP ${r?.status}）`}${r?.status === 409 ? '\n→ 重新整理這一頁拿最新的內容（你剛拖的框要重拖）' : ''}`;
+    if (!r) scheduleSave(5000);   // 連回來自動補存
     return false;
   }
+  saveFail = null;
+  msg.className = 'fr-msg'; msg.textContent = '';
   if (j.design) window.designWorkbench?.accept(j.design);
   if (j.look) D.look = j.look;
-  savedLook = { ...look };
-  Object.assign(D.plan, { exists: j.plan.exists, hash: j.plan.hash, frame: j.plan.frame, speakerBox: j.plan.speakerBox });
+  savedLook = lookNow;
+  Object.assign(D.plan, { exists: j.plan.exists, hash: j.plan.hash, frame: j.plan.frame, speakerBox: j.plan.speakerBox, decided: true });
+  if (j.preview) D.preview = j.preview;
   saved = j.plan.frame ? fromArr(j.plan.frame) : null;
-  msg.textContent = j.design ? '構圖、主色與背景都存好了。' : j.wrote?.plan ? '構圖設定已儲存。' : '設定沒有變更。';
-  if (j.notes?.length) msg.textContent += '\n講者框已跟著構圖調整，不用重新標記。';
-  if (j.framingUpdate?.running) {
-    msg.textContent += '\n正在自動更新剪輯台預覽，完成後會直接套用，可以離開這一頁。';
-    const wait = document.createElement('span');
-    wait.id = 'previewWait';
-    msg.append('\n', wait);
-    watchPreview();
-  }
+  state.dataset.state = 'saved';
+  renderUpdate();
   render();
   renderLook();
   return true;
 }
+
+// 框或調光被別人（AI）改過：換成最新的，手上這次沒存的不要了
+const lookOf = (d) => { const e = d.look?.look?.effective || d.look?.look?.kit || {}; return { color: r2(e.color || 0), slim: r2(e.slim || 0), beauty: r2(e.beauty || 0) }; };
+function adoptRemote(now) {
+  Object.assign(D.plan, now.plan);
+  D.look = now.look;
+  saved = now.plan.frame ? fromArr(now.plan.frame) : null;
+  F = clampFrame(saved || fullFrame());
+  touched = false;
+  saveFail = null;
+  initLook();
+  const msg = $('msg');
+  msg.className = 'fr-msg err';
+  msg.textContent = '構圖剛被改過（通常是 AI），這裡已經換成最新的框和調光；你剛才那一下沒有存，要的話再調一次。';
+  $('saveState').dataset.state = 'saved';
+  render();
+}
+
+// 已經有完成影片：新的構圖要更新預覽才看得到。看要不要按，不自動跑（底片重新編碼很久）
+function renderUpdate() { $('updateBar').hidden = !(D.preview?.built && D.preview?.stale) || !!previewTimer; }
+$('btnUpdate').addEventListener('click', async () => {
+  $('btnUpdate').disabled = true;
+  if (saving) await saving;
+  if (isDirty() && !(await save())) { $('btnUpdate').disabled = false; return; }
+  const msg = $('msg');
+  let r, j;
+  try {
+    r = await fetch('/api/framing/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    j = await r.json().catch(() => null);
+  } catch { j = { message: '連不到剪輯台，預覽沒有更新' }; }
+  $('btnUpdate').disabled = false;
+  if (!r?.ok) { msg.className = 'fr-msg err'; msg.textContent = j?.message || `沒有開始更新（HTTP ${r?.status}）`; return; }
+  msg.className = 'fr-msg'; msg.textContent = '正在更新預覽，好了會直接套用，可以離開這一頁。';
+  const wait = document.createElement('span');
+  wait.id = 'previewWait';
+  msg.append('\n', wait);
+  watchPreview();
+  renderUpdate();
+});
 
 let previewTimer = null;
 function watchPreview() {
@@ -304,11 +388,15 @@ function watchPreview() {
         watchPreview();
         return;
       }
+      previewTimer = null;
+      D.preview = { built: j.built, stale: j.stale };   // 更新途中又拖了框的話，還是舊的，按鈕要留著
+      renderUpdate();
       $('msg').className = update.ok ? 'fr-msg' : 'fr-msg err';
-      $('msg').textContent = update.ok ? '已儲存，剪輯台預覽已自動更新。' : `構圖已儲存，但${update.message || '預覽更新失敗，請在剪輯台按「重新產生」查看訊息'}`;
+      $('msg').textContent = update.ok ? '預覽更新好了。' : `構圖存好了，但${update.message || '預覽更新失敗，請在剪輯台按「更新預覽」查看訊息'}`;
     } catch {
+      previewTimer = null;
       $('msg').className = 'fr-msg err';
-      $('msg').textContent = '構圖已儲存，但讀不到預覽更新狀態：連不到剪輯台。請 AI 重新啟動後回剪輯台查看。';
+      $('msg').textContent = '構圖存好了，但讀不到預覽更新狀態：連不到剪輯台。請 AI 重新啟動後回剪輯台查看。';
     }
   }, 1000);
 }
@@ -324,17 +412,19 @@ function initLook() {
   renderLook();
   if (D.look?.running) startPoll();
 }
-const lookOut = (k, v) => (v > 0 ? (k === 'color' ? `${v.toFixed(2)}（剪映 ${Math.round(v * 100)}）` : v.toFixed(2)) : '關');
+const lookOut = (k, v) => (v > 0 ? v.toFixed(2) : '關');
 function renderLook() {
   for (const k of ['color', 'slim', 'beauty']) { $(k).value = String(look[k]); $(`${k}On`).checked = look[k] > 0; $(`${k}Out`).textContent = lookOut(k, look[k]); }
   const S = D.look || {}, lm = S.look?.landmarks || {};
   const skip = { small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，完成影片只調光。`, noface: '抽樣都沒偵測到臉，這支只調光。', rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉，自動關掉瘦臉，完成影片只調光。` };
-  let note = '要開就勾選；調光拖滑桿右邊的畫面馬上變（近似效果，完成影片照 LUT 更準）。';
+  let note = '要開就勾選。調光拖滑桿，上面的畫面馬上變（近似效果，完成影片會更準）。';
+  const on = [look.color > 0 && '調光', look.slim > 0 && '瘦臉', look.beauty > 0 && '美顏'].filter(Boolean);
+  $('lookSummary').textContent = `講者調光、瘦臉、美顏：${on.length ? on.join('、') : '都關'}`;
   const needDetect = faceOn(look) && !lm.ready;
   if (S.running) note = `正在${S.line}（在背景跑，可以繼續拖框；好了下面會出現前後對照）`;
   else if (needDetect) note = `瘦臉、美顏要先偵測整支影片的臉，長片要二、三十分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
   else if (faceOn(look) && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，完成影片只調光。';
-  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。已有完成影片時，儲存會自動更新底片與剪輯台預覽。';
+  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。';
   $('lookNote').textContent = note;
   $('btnDetect').hidden = !needDetect || !!S.running;
   const showFaces = faceOn(look) && lm.ready && lm.slimOk !== false;
@@ -361,7 +451,7 @@ function refreshFaces(delay = 300) {
     }
   }, delay);
 }
-function setLook(k, v) { look = { ...look, [k]: r2(v) }; renderLook(); }
+function setLook(k, v) { touched = true; look = { ...look, [k]: r2(v) }; renderLook(); }
 for (const k of ['color', 'slim', 'beauty']) {
   $(k).addEventListener('input', () => setLook(k, Number($(k).value)));
   $(`${k}On`).addEventListener('change', () => {
@@ -381,7 +471,8 @@ function startPoll() {
 }
 $('btnDetect').addEventListener('click', async () => {
   $('btnDetect').disabled = true;
-  if (!$('btnSave').disabled && !(await save())) { $('btnDetect').disabled = false; return; }
+  if (saving) await saving;
+  if (isDirty() && !(await save())) { $('btnDetect').disabled = false; return; }
   const r = await fetch('/api/look/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
   const j = await r.json().catch(() => ({}));
   $('btnDetect').disabled = false;
@@ -417,3 +508,4 @@ async function captureReference() {
 $('btnRef').addEventListener('click', captureReference);
 
 load().catch((e) => { $('loading').textContent = `構圖載入失敗：${e.message}`; });
+$('designWrap').addEventListener('toggle', () => { if ($('designWrap').open) { lastPreview = 0; drawPreview(); } });

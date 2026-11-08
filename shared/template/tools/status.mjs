@@ -550,8 +550,8 @@ export function projectStatus(project) {
         },
         '② 構圖': {
           skill: 'auto-edit-storyboard 步驟 3–4', urlKey: 'framing',
-          next: '等使用者在構圖台拖好框按「儲存」（剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就跑 qc.mjs framing --write。之後跑 qc.mjs speaker --write 量講者框',
-          line: () => `⏸ 停點 ② 構圖｜請看：${u('framing', '構圖台網址')}${look}｜請回：拖好框按「儲存」後說「調好了」，或說「用建議的」`,
+          next: '等使用者在構圖台拖好框（自動存，剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就跑 qc.mjs framing --write。之後跑 qc.mjs speaker --write 量講者框',
+          line: () => `⏸ 停點 ② 構圖｜請看：${u('framing', '構圖台網址')}${look}｜請回：拖好框說「調好了」（會自動存），或說「用建議的」`,
           after: [{ when: '回覆「調好了」', cmds: [mark(w.stop, '通過', SAID), speaker, scaffold] }, { when: '回覆「用建議的」', cmds: [`${TOOLS}/qc.mjs framing --project ${A} --write`, mark(w.stop, '通過', SAID), speaker, scaffold] }],
         },
         '③ 分鏡表': {
@@ -569,7 +569,7 @@ export function projectStatus(project) {
         '⑤ 剪輯台': {
           skill: 'auto-edit-review 流程 C', urlKey: 'main',
           next: '等使用者在剪輯台調完說「調好了」；之後重新讀 plan.json 與 rough.srt 再定稿',
-          line: () => `⏸ 停點 ⑤ 剪輯台｜請看：${u('main', '剪輯台網址')}｜請回：調完按「儲存」後說「調好了」`,
+          line: () => `⏸ 停點 ⑤ 剪輯台｜請看：${u('main', '剪輯台網址')}｜請回：調完說「調好了」（會自動存）`,
           after: [{ when: '回覆「調好了」（先重新讀 plan.json 與 rough.srt）', cmds: [mark(w.stop, '通過', SAID), review] }, { when: '「照修改單改」（讀 work/feedback/editor-requests.md）', cmds: [begin] }],
         },
         '⑥ 背景預覽': {
