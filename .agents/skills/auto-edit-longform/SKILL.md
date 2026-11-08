@@ -82,7 +82,7 @@ status 和實際檔案不符時以產物為準，判斷表在 `references/progre
 ```
 專案：projects/<專案>
 目前在：<status 原文>
-下一步：<status 原文>
+下一步：<status 原文，但停點那一行不放這裡>
 <最後一行：停點原文，或 → 下一個停點：…>
 ```
 

@@ -127,7 +127,7 @@ node shared/template/tools/versions.mjs finish --project projects/<專案>
 ## 回報格式
 
 ```
-（停點 ④）預覽好了：<N> 段；audit ✖ 0、⚠ <N>（⚠ 逐項：改了／保留的理由）
+預覽好了：<N> 段；audit ✖ 0、⚠ <N>（⚠ 逐項：改了／保留的理由）
 人聲響度 …、音效比例 …、剪接點微淡化 …、講者調光 …、講者瘦臉 …、結尾配樂 …（--review 印的六行）
 拼圖：<FAIL 的段與問題；沒有寫「沒有 FAIL」>
 背景已經開始 render，說「輸出」就不用再等。請看字幕有沒有對到嘴。

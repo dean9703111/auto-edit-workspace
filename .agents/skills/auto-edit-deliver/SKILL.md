@@ -75,7 +75,7 @@ node shared/template/tools/capcut.mjs status --project projects/<專案> --wait
 驗證：<deliver.mjs 印的格式一行>
 qc final：<✔／⚠／✖ 原文，每項一行>
 ⚠ 說明：<每個 ⚠ 一行：刻意／要修＋理由>
-人聲響度 …、剪接點微淡化 …、音效比例 …、講者調光 …、講者瘦臉 …、結尾配樂 …（build 原文）
+人聲響度 …、剪接點微淡化 …、音效比例 …、講者調光 …、講者瘦臉 …、結尾配樂 …（build 原文；和停點 ④ 報過的一樣就省略這行，不確定就照貼）
 output/qc/qc-sheet.jpg
 → 完成
 ```
