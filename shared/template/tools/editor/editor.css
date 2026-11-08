@@ -140,7 +140,7 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .side-acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .side-row.cue { grid-template-columns: 44px minmax(0, 1fr); }
 .side-row.cue .x { white-space: normal; }
-.side-row.cue input { grid-column: 1 / -1; width: 100%; margin-top: 4px; font-size: 14px; }
+.side-row.cue .cue-edit { width: 100%; margin: -3px 0; padding: 2px 6px; font-size: 13px; }
 .side-row.cue .over { color: var(--warn-kw); font-weight: 700; }
 .note-list { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; }
 .note-list button { width: 100%; text-align: left; white-space: normal; font-size: 12.5px; }
@@ -362,7 +362,7 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .check-list li .fix { color: var(--good-kw); }
 .check-list .chk-id { font-family: var(--mono); font-size: 12px; }
 .check-list .chk-hint { color: var(--mute); margin: 2px 0 0 18px; }
-.check-list li[data-chk-act] { cursor: pointer; }
+.check-list li[data-chk-act], .check-list li[data-chk-cue] { cursor: pointer; }
 .chk-ids { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0 18px; }
 button.chk-seg { padding: 2px 7px; font-size: 12px; font-family: var(--mono); border-radius: 5px; min-height: 24px; }
 .check-list li.chk-ai { background: transparent; border: 0; padding: 4px 0 0; }

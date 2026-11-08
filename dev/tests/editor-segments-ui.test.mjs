@@ -79,9 +79,17 @@ test('字幕分頁：全部列得出來、搜尋、點一句就能直接改字',
   await page.click('[data-cue="6"]');
   await page.waitForSelector('[data-cue="6"] .cue-edit');
   await page.waitForFunction(() => document.activeElement?.classList.contains('cue-edit'));
+  assert.equal(await page.$('[data-cue="6"] .x'), null, '點了就是那一行變成輸入框，不多一行');
   await page.keyboard.type('改');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.__editor.cues.find((c) => c.n === 6).text.endsWith('手機改'));
+  assert.equal(await page.$('#cueList .cue-edit'), null, 'Enter 之後離開編輯');
+  assert.match(await page.$eval('[data-cue="6"] .x', (n) => n.textContent), /手機改$/);
+  // 點進去再點別處：一樣離開編輯
+  await page.click('[data-cue="6"]');
+  await page.waitForFunction(() => document.activeElement?.classList.contains('cue-edit'));
+  await page.click('#cueCount');
+  await page.waitForFunction(() => !document.querySelector('#cueList .cue-edit'));
   assert.equal(await page.$eval('#saveState', (n) => n.dataset.state), 'dirty', '和別的編輯一樣要存檔');
   await page.$eval('#cueSearch', (i) => { i.value = ''; i.dispatchEvent(new Event('input')); });
   await page.keyboard.down('Meta'); await page.keyboard.press('z'); await page.keyboard.up('Meta');

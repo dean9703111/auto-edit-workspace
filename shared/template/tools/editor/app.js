@@ -1534,7 +1534,10 @@ function groupItem(g) {
   const one = g.ids.length === 1 ? ` data-id="${esc(g.ids[0])}"` : '';
   const action = g.action === 'speaker' ? ' data-chk-act="speaker"' : '';
   const ids = many ? `<div class="chk-ids">${g.ids.slice(0, 80).map((id) => `<button class="chk-seg" data-seg="${esc(id)}">${esc(id)}</button>`).join('')}</div>` : '';
-  return `<li class="warn"${one}${action}><span class="sym">⚠</span><b>${esc(g.title)}</b>${g.hint ? `<div class="chk-hint">${esc(g.hint)}</div>` : ''}${ids}</li>`;
+  // 字幕的問題：列出是哪幾句，點了跳過去（只有一句時整列都能點）
+  const cue1 = g.cues?.length === 1 ? ` data-chk-cue="${g.cues[0]}"` : '';
+  const cues = g.cues?.length ? `<div class="chk-ids">${g.cues.slice(0, 80).map((n) => `<button class="chk-seg" data-chk-cue="${n}">#${n}</button>`).join('')}</div>` : '';
+  return `<li class="warn"${one}${action}${cue1}><span class="sym">⚠</span><b>${esc(g.title)}</b>${g.hint ? `<div class="chk-hint">${esc(g.hint)}</div>` : ''}${ids}${cues}</li>`;
 }
 function issueItems(errors = [], warnings = [], limit = 300) {
   const G = groupIssues(errors, warnings);
@@ -1558,9 +1561,11 @@ function renderCheck() {
   else if (!rep) sum.innerHTML = '<span class="mute">檢查中…</span>';
   else {
     const d = rep.data;
-    const look = G.author.length ? `有 ${G.author.length} 件事可以看一下。` : '沒有要你處理的事。';
+    const look = G.author.length ? `有 ${G.author.length} 件事可以看一下（不改也能輸出）。` : '沒有要你處理的事。';
+    // 初剪還沒排段落：不寫「0 段」
+    const facts = [(d.items || []).length ? `${d.items.length} 段` : '', Number.isFinite(d.outputDur) ? `完成影片 ${fmt(d.outputDur, 0)}` : ''].filter(Boolean).join('、');
     if (d) sum.innerHTML = errors.length ? `<b class="err-ink">${errors.length} 個錯誤</b>要先改好才能更新預覽；點一則跳到那一段。`
-      : `<span class="ok-ink">✓ 可以輸出</span>：${(d.items || []).length} 段${Number.isFinite(d.outputDur) ? `、完成影片 ${fmt(d.outputDur, 0)}` : ''}。${look}`;
+      : `<span class="ok-ink">✓ 可以輸出</span>${facts ? `：${facts}` : ''}。${look}`;
     else sum.innerHTML = `<b class="warn-ink">${rep.fallback ? '簡易檢查' : '讀不到檢查報告'}</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
   }
   // 剛在剪輯台改字的段：重新產生後量的版面（audit），放最前面
@@ -1570,8 +1575,9 @@ function renderCheck() {
   }
   list.innerHTML = issueItems(errors, warnings) || (rep?.data ? '<li class="mute">沒有任何錯誤或提醒</li>' : '');
   renderStatus();
-  const n = errors.length + G.author.length, tab = $('.side-tabs [data-side="issues"]');
-  tab.textContent = n ? `檢查 ${n}` : '檢查';
+  // 分頁上分清楚：✖＝要先改才能輸出，⚠＝看一下就好
+  const tab = $('.side-tabs [data-side="issues"]');
+  tab.textContent = errors.length ? `檢查 ✖${errors.length}` : G.author.length ? `檢查 ⚠${G.author.length}` : '檢查';
   timeline.invalidate();
 }
 function openIssues() { setSide('issues'); }
@@ -2722,6 +2728,14 @@ function goToSeg(id, { show = false } = {}) {
   const pv = app.server?.preview;
   if (show && app.mode !== 'player' && pv?.built && pv?.player?.available) setMode('player', { focus: it.start + 0.3 });
 }
+// 從檢查結果點字幕句號：跳到那一句、選起來，打開「屬性」（合併、拉長都在那裡）
+function goToCue(n) {
+  const c = app.cues.find((x) => x.n === n);
+  if (!c) { toast(`找不到第 ${n} 句字幕（可能已經改過，按「重新檢查」）`, 'warn'); return; }
+  app.seek(c.start); timeline.reveal(c.start, c.end);
+  app.select({ kind: 'cue', id: n }, { lane: 'cap' });
+  setSide('insp');
+}
 // 複製原文給 AI：作者不用看懂，貼過去 AI 就知道要修什麼
 async function copyIssues() {
   const { errors, warnings } = currentIssues();
@@ -2732,6 +2746,8 @@ async function copyIssues() {
 $('#checkList').addEventListener('click', (e) => {
   if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }
   if (e.target.closest('summary, .chk-ai')) return;
+  const cue = e.target.closest('[data-chk-cue]');
+  if (cue) { goToCue(Number(cue.dataset.chkCue)); return; }
   const seg = e.target.closest('[data-seg]');
   if (seg) { goToSeg(seg.dataset.seg, { show: true }); return; }
   const li = e.target.closest('li');
@@ -3136,6 +3152,7 @@ function renderSegList() {
 }
 const segCues = (it) => app.cues.filter((c) => c.end > it.start + 0.05 && c.start < it.end - 0.05).map((c) => c.text).join(' ');
 
+let cueEditing = null;   // 字幕分頁正在改哪一句（點那句才進去，離開輸入框就清掉）
 function renderCueList() {
   const raw = $('#cueSearch').value.trim(), q = raw.toLowerCase(), n = /^#?(\d+)$/.exec(raw)?.[1];
   const sel = app.selection?.kind === 'cue' ? app.selection.id : null;
@@ -3143,9 +3160,11 @@ function renderCueList() {
   const max = capMax();
   // 正在這一頁改字：不重畫，不然游標會跑掉
   if (document.activeElement?.classList.contains('cue-edit')) return;
+  // 正在改的那一句：字原地換成輸入框（不多一行）；離開就換回字
   $('#cueList').innerHTML = list.map((c) => {
     const isSel = sel === c.n, over = visibleLen(c.text) > max;
-    return `<li class="side-row cue${isSel ? ' sel' : ''}" data-cue="${c.n}"><span class="t">${mmssOf(outOf(c.start, app.edit.cuts))}</span><span class="x${over ? ' over' : ''}">${esc(c.text)}</span>${isSel ? `<input class="cue-edit" value="${esc(c.text)}" data-orig="${esc(c.text)}" aria-label="改第 ${c.n} 句字幕">` : ''}</li>`;
+    const text = cueEditing === c.n ? `<input class="cue-edit${over ? ' over' : ''}" value="${esc(c.text)}" data-orig="${esc(c.text)}" aria-label="改第 ${c.n} 句字幕">` : `<span class="x${over ? ' over' : ''}">${esc(c.text)}</span>`;
+    return `<li class="side-row cue${isSel ? ' sel' : ''}" data-cue="${c.n}"><span class="t">${mmssOf(outOf(c.start, app.edit.cuts))}</span>${text}</li>`;
   }).join('') || '<li class="side-ch">沒有符合的字幕</li>';
   $('#cueCount').textContent = q ? `找到 ${list.length} 句` : `${list.length} 句`;
   markNowRow(true);
@@ -3217,6 +3236,7 @@ $('#cueList').addEventListener('click', (e) => {
   if (!c) return;
   app.seek(c.start); timeline.reveal(c.start, c.end);
   app.select({ kind: 'cue', id: n }, { lane: 'cap' });
+  cueEditing = n;
   renderCueList();
   const i = $('#cueList .cue-edit');
   i?.focus(); i?.setSelectionRange(i.value.length, i.value.length);
@@ -3236,6 +3256,7 @@ $('#cueList').addEventListener('focusout', (e) => {
   if (!e.target.matches('.cue-edit')) return;
   const i = e.target;
   if (!i.value.trim()) { i.value = i.dataset.orig; liveCue(i); toast('字幕不能是空的，已經回到原本的字；不要這句請到「屬性」刪除', 'warn'); }
+  cueEditing = null;   // 點別處、Enter、Esc 都會走到這裡：離開編輯，那句換回一般的字
   renderSideSoon();
 });
 $('#nowBar').addEventListener('click', (e) => {

@@ -39,6 +39,9 @@ test('歸併：75 則變成幾件作者看得懂的事，AI 的另外放，原�
   assert.equal(by.empty.title, '有些地方只有講者、沒有字卡（10 段、58.08 秒）');
   assert.equal(by.hold.title, '2 段的字停留太短');
   assert.equal(by['short-cap'].raw.length, 2);
+  assert.deepEqual(by['short-cap'].cues, [15], '要說是哪一句，作者才點得過去');
+  assert.equal(by['short-cap'].title, '1 句字幕太短，會閃一下就沒了');
+  assert.equal(groupIssues([], ['字幕不到 0.6 秒：#1、#2、#3、#4、#5、#6、#7、#8 等 12 則 → 合併']).author[0].title, '12 句字幕太短，會閃一下就沒了', '列不完的照「等 N 則」算');
   assert.deepEqual(G.ai.map((g) => g.key).sort(), ['beat', 'chapter', 'sfx-few', 'sfx-many', 'sfx-near', 'timing', 'word'].sort());
   const raw = [...G.author, ...G.ai].flatMap((g) => g.raw);
   assert.equal(raw.length, WARN.length, '原文不能丟（要複製給 AI）');
