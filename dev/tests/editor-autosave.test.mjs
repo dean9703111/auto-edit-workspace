@@ -583,3 +583,38 @@ test2('同一筆存檔送了兩次（關頁時瀏覽器先算失敗、頁面又�
   await saved();
   assert.deepEqual(errors, []);
 });
+
+test2('工具更新後還沒重開的剪輯（舊版服務不認得 saveId、keep，會整筆拒收）：頁面不帶這兩個欄位，照常存得進去', async () => {
+  const bodies = [];
+  let oldServer = false;
+  await page.setRequestInterception(true);
+  const onReq = async (req) => {
+    const u = new URL(req.url());
+    if (oldServer && u.pathname === '/api/state' && req.method() === 'GET') {
+      const s = await (await fetch(new URL(u.pathname + u.search, editor.url))).json();
+      delete s.unsaved;   // 舊版服務的狀態沒有這一欄
+      return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(s) });
+    }
+    if (u.pathname === '/api/save' && req.method() === 'POST') {
+      const b = JSON.parse(req.postData() || '{}');
+      bodies.push(b);
+      if (oldServer && ('saveId' in b || 'keep' in b)) return req.respond({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'invalid', message: '剪輯只能寫 plan.json 的 edit、段落的允許欄位與字幕，不能寫「keep」' }) });
+    }
+    return req.continue();
+  };
+  page.on('request', onReq);
+  holds.push({ req: null, done: async () => { page.off('request', onReq); await page.setRequestInterception(false); } });
+  await open();
+  await setCue(8, '第八句新服務');
+  assert.equal(await until(() => /第八句新服務/.test(srtText())), true);
+  await saved();
+  assert.ok(bodies.at(-1)?.saveId && bodies.at(-1)?.keep, '新版服務：帶著，關頁後才被擋的那一筆留得住');
+  oldServer = true;
+  await open();
+  bodies.length = 0;
+  await setCue(8, '第八句舊服務');
+  assert.equal(await until(() => /第八句舊服務/.test(srtText())), true, '存得進去');
+  await saved();
+  assert.ok(bodies.length >= 1 && bodies.every((b) => !('saveId' in b) && !('keep' in b)), JSON.stringify(bodies.map((b) => Object.keys(b))));
+  assert.deepEqual(errors, []);
+});

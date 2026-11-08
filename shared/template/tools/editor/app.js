@@ -37,7 +37,7 @@ const CHECK_MS = 4000;      // 存檔後多久跑檢查（長片一次要 9 秒�
 const app = {
   server: null, dur: 0, fps: 30,
   plan0: null, cues0: [], scenes: [], cues: [], srtOps: [],
-  edit: defaultEdit(), savedEdit: defaultEdit(), base: null, sfxMemory: {},
+  edit: defaultEdit(), savedEdit: defaultEdit(), base: null, sfxMemory: {}, canStash: false,
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
   report: null, reportReady: false, auditIssues: null, requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], pieces: [], points: [],
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
@@ -813,6 +813,8 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   pollExport();   // 順便更新「已輸出過」：內容改過就不算最新
   loadThumbs();
   sim.preloadSfx?.(s.schema?.sounds || []);
+  // 工具更新後還沒重開的剪輯（舊版服務）狀態裡沒有 unsaved，也不認得存檔的 saveId、keep（會整筆拒收）：這時就不帶
+  app.canStash = 'unsaved' in s;
   offerUnsaved(s.unsaved);
   return true;
 }
@@ -1157,7 +1159,7 @@ async function saveOnce({ notify, retry = 0 }) {
   const { segments } = segmentDiff();
   const textChanged = Object.entries(segments).filter(([, d]) => 'slots' in d || 'vars' in d).map(([id]) => id);
   const saveId = `${Date.now().toString(36)}-${++saveIds}-${Math.random().toString(36).slice(2, 8)}`;
-  const body = { quick: true, base: { ...app.base }, edit: editForSave(), saveId };
+  const body = { quick: true, base: { ...app.base }, edit: editForSave(), ...(app.canStash ? { saveId } : {}) };
   if (Object.keys(segments).length) body.segments = segments;
   if (app.srtOps.length) body.srt = { ops: app.srtOps };
   if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}) } : null;   // 美顏 0＝關，不寫
@@ -1170,7 +1172,7 @@ async function saveOnce({ notify, retry = 0 }) {
   renderHeader();
   // keepalive：送出去之後才關頁或換頁，這次存檔照樣會完成（瀏覽器限 64 KB）。連同這次改了什麼（keep）一起送：
   // 萬一頁面關掉之後才被擋下來（檔案剛好被改過、正在輸出），伺服器替它留著，下次打開問要不要套回去。太大的不送，關頁時會問
-  const wire = { ...body, keep: keepForWire(keepState()) };
+  const wire = app.canStash ? { ...body, keep: keepForWire(keepState()) } : body;
   app.sentSafe = new Blob([JSON.stringify(wire)]).size < 60000;
   app.sentSnap = sentSnap;
   const r = await api('POST', '/api/save', app.sentSafe ? wire : body, { keepalive: app.sentSafe });
