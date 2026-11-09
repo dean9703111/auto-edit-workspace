@@ -88,6 +88,9 @@
      P.pop(sel, at, {from, dy, to, dur, stagger, ease})  彈出：縮放 from（0.82）→1＋上移 dy（28u）＋淡入到 to（1），back.out(1.6) 過衝落地
      P.punch(sel, at, {scale, dur})  重拍：0.12s 放大到 scale（1.06）再 0.45s 回彈（不和 spot／cam 用在同一元素）
      P.dim(sel, at, {to, dur})       退焦：亮度到 to（0.6），0.4s sine.inOut；{to: 1} 回來（記住目前亮度）
+     P.rack(group, active, at, {blur, dim, dur})  換焦點（柔焦）：一組裡 active 變清楚，其他變模糊（blur 6u）＋稍淡（dim 0.75），0.45s sine.inOut；
+                                     active＝null 全部回清楚。寫 CSS filter（blur＋opacity()），不動元素自己的 opacity：可以和 P.spot／P.dim 疊；
+                                     清楚時 filter 是 none。只在拍點變、拍與拍之間不動；照時間先後寫（上一次還在轉場就接在它後面）
      P.marker(sel, at, {dur})        螢光筆：字後 40% 高的主色帶由左掃過（自動插 .sc-mk）
      P.strike(sel, at, {dim, dur, wave})  劃掉：一條線由左劃過文字（自動插 .sc-strike，0.35s）不擦回；劃完文字壓暗到 dim（0.5；false＝不壓暗）。
                                      wave: true＝手寫波浪線（0.45s）：劃掉人的建議、舊習慣用波浪；數字、價格用直線
@@ -263,7 +266,7 @@
   // 具名區域的橫式預設 [x, y, w, h]（design-system.md §2）；直式由 009 的 canvas.mjs 注入 window.__regions 蓋過
   var REGIONS = { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972], full: [120, 40, 1680, 860] };
   var CALLS = { n: 0 };
-  var ROLE = { idle: 'micro', flow: 'micro', end: 'micro', wave: 'micro', spin: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent', stamp: 'accent' };
+  var ROLE = { idle: 'micro', flow: 'micro', end: 'micro', wave: 'micro', spin: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', rack: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent', stamp: 'accent' };
   var registerType = function () {
     if (typeof gsap === 'undefined' || gsap.plugins.scType) return;
     gsap.registerPlugin({
@@ -660,7 +663,7 @@
       if (!R) throw new Error('沒有這個區域：' + name + '（可用 ' + Object.keys(REGIONS).join('／') + '）');
       return R;
     };
-    var spotState = new Map(), camState = new Map(), dimState = new Map();
+    var spotState = new Map(), camState = new Map(), dimState = new Map(), rackState = new Map();
     var sfxList = [];
     (window.SceneMotion.sfx = window.SceneMotion.sfx || {})[comp || '?'] = sfxList;
     var dirClip = function (d) {
@@ -1133,6 +1136,27 @@
         var cur = dimState.has(el) ? dimState.get(el) : 1, to = opt(o, 'to', 0.6);
         mv([el], at, { opacity: cur }, { opacity: to }, opt(o, 'dur', 0.4), 'sine.inOut', 0);
         dimState.set(el, to);
+      });
+      return P;
+    };
+    // 換焦點（柔焦）：active 清楚、其他模糊＋稍淡。寫 filter（blur＋opacity()），不碰元素自己的 opacity（P.spot／P.dim 記的亮度不受影響）；
+    //   清楚＝filter none（不留濾鏡圖層）。記住每個元素目前的狀態，只在拍點補間，已經是目標狀態的元素不加補間（拍與拍之間不動）
+    var rackCss = function (b, d) { return b < 0.01 && d > 0.999 ? 'none' : 'blur(' + r2(b) + 'px) opacity(' + r3(d) + ')'; };
+    P.rack = function (group, active, at, o) {
+      var items = q(group), act = active == null ? null : q(active)[0];
+      if (active != null && (!act || items.indexOf(act) < 0)) throw new Error('P.rack：active 要是 group 裡的元素（' + (act ? nameOf(act) : String(active)) + '）→ 改成那一組其中一個，或寫 null（全部回清楚）');
+      var blur = opt(o, 'blur', 6) * U, dim = opt(o, 'dim', 0.75), dur = opt(o, 'dur', 0.45), Ez = gsap.parseEase('sine.inOut');
+      items.forEach(function (el) {
+        var cur = rackState.get(el) || { b: 0, d: 1, t: -1, t0: -1 }, a = at;
+        if (a < cur.t - 0.001) {
+          if (a < cur.t0 - 0.001) throw new Error('P.rack 要照時間先後寫：' + nameOf(el) + ' 在 ' + r3(cur.t0) + 's 已經換過焦點，這一行是 ' + r3(a) + 's → 把這一行移到後面，或把時間改晚');
+          a = cur.t;   // 上一次還在轉場（兩拍太近）：接在它後面
+        }
+        var tg = act === null || el === act ? { b: 0, d: 1 } : { b: blur, d: dim };
+        if (Math.abs(tg.b - cur.b) < 0.001 && Math.abs(tg.d - cur.d) < 0.001) return;
+        var f0 = cur;
+        fn(el, a, dur, function (t, p) { var e = Ez(p); t.style.filter = rackCss(f0.b + (tg.b - f0.b) * e, f0.d + (tg.d - f0.d) * e); });
+        rackState.set(el, { b: tg.b, d: tg.d, t: a + dur, t0: a });
       });
       return P;
     };

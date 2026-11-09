@@ -175,6 +175,7 @@ test('顯示：AI 寫的變速和轉場都讀得出來', async () => {
   assert.deepEqual([transitionOf(media).inText, transitionOf(media).outText, transitionOf(media).showIn, transitionOf(media).showOut], ['直接切', '淡出', false, true], '接在別的幕後面工具把淡入改成直接切：照實際的顯示');
   assert.equal(transitionOf({ type: 'media', enter: 'fade', exit: 'fade', out: { wipe: { in: true, out: false } } }).inText, '擦入');
   assert.equal(transitionOf(media, { enter: 'zoom' }).inText, '縮放', '使用者剛改、還沒存的值優先');
+  assert.deepEqual([transitionOf(media, { enter: 'whip', exit: 'whip' }).inText, transitionOf(media, { exit: 'whip' }).outText, transitionOf(media, { enter: 'tilt' }).inText], ['甩鏡', '甩鏡', '斜躺擺平']);
 });
 
 test('AI 寫好的變速和轉場：重新載入就看得到（不用先改過）；預覽照變速走', async () => {
@@ -192,6 +193,9 @@ test('AI 寫好的變速和轉場：重新載入就看得到（不用先改過�
   await page.waitForSelector('#spStrip');
   assert.deepEqual((await zones()).slice(0, 2), ['定格', '×2']);
   assert.match(await page.$eval('#txNow', (n) => n.textContent), /進場.*出場/);
+  // 進場可以選甩鏡、斜躺擺平（錄影沒有紙膠帶）；出場只有甩鏡（斜躺擺平只能當進場）
+  assert.deepEqual(await page.$$eval('select[data-f="enter"] option', (o) => o.map((x) => x.value)), ['cut', 'fade', 'slide', 'zoom', 'whip', 'tilt']);
+  assert.deepEqual(await page.$$eval('select[data-f="exit"] option', (o) => o.map((x) => x.value)), ['cut', 'fade', 'slide', 'zoom', 'whip']);
   await page.click('.side-tabs [data-side="segs"]');
   await page.waitForSelector('.sp-note');
   assert.match(await page.$eval('.sp-note', (n) => n.textContent), /定格/);

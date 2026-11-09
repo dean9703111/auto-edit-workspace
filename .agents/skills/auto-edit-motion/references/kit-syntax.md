@@ -2,7 +2,7 @@
 
 給手改模板動畫（`x-<模板>-<段>.html`）用，以及對照 `shared/template/BEATS.md` §2 語彙表「對應」欄的 `P.*`。內容設計動畫（`x-design-<段>.html`）照 hyperframes skill 直接寫 GSAP，不用這份；要用也可以，兩種寫法可以混在同一個檔。
 
-不用去讀 `kit/scene-motion.js`。`sel` 是選擇器字串，`at` 是段內秒數（`const T1 = P.at('#13@跑到')`），大括號都是選填。
+不用去讀 `kit/scene-motion.js`。`sel` 是選擇器字串，`at` 是段內秒數（`const T1 = P.at('#13@跑到')`），大括號都是選填。`sel` 不要從最外層的 id 開始（`'#x-crowd-s05 .xcrd-p'`）：完成影片裡最外層的 id 會被拿掉，pop、dim、rack、spot 這類找不到元素，audit 會 ✖；寫 class（`'.xcrd-p'`）或元素自己的 id。
 
 | 動態 | 寫法 |
 |---|---|
@@ -24,6 +24,7 @@
 | 蓋章 | `P.stamp(sel, at, {on})`：印章 `class="sc-stamp"`，on 是被蓋的元素，兩者是兄弟 |
 | 聚焦、回均衡、預覽態 | `P.spot(ALL, sel, at, {scale, lift, dim, done})`、`P.spot(ALL, null, at)`、`P.spot(ALL, 'none', at)`（ALL 是選擇器字串，只放已經進場的元素；新進場的元素 0.6 秒後才聚焦） |
 | 退焦 | `P.dim(sel, at, {to})`（`{to: 1}` 回來） |
+| 換焦點（柔焦） | `P.rack(ALL, sel, at, {blur, dim})`：sel 變清楚、ALL 裡其他的模糊（blur 6）稍淡（dim 0.75），0.45 秒；`P.rack(ALL, null, at)` 全部回清楚。一拍寫一行，照時間先後寫；同一組要輪流放大改用聚焦 |
 | 鏡頭 | 慢推 `P.cam('#xd<段 id>-group', T1 + 1.7, {scale: 1.04})`；跟焦點 `P.cam('#xd<段 id>-group', T3 - 0.2, {to: '#xd<段 id>-s3', k: 0.12})`；回正 `P.cam('#xd<段 id>-group', T5, {x: 0, y: 0, scale: 1})`。sel 只能是沒有底色、框線、陰影的群組 |
 | 游標移動 | `P.morph(sel, at, {left, top}, {from: {left, top}, dur})`（一定要帶 from，下一次的 from＝這次的終點）；沿線走 `P.along(sel, 線, at, {from, to, dur})` |
 | 換插圖狀態 | `P.swap('#a .il-qr', '#a .il-content', T1)`（class 是 `.il-<狀態>`，video 是 `.il-content`） |

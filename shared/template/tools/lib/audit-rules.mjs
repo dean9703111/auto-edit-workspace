@@ -10,6 +10,7 @@
 //   judgeMotion(motion, ctx)          → { findings, notes }  同一秒新元素、間隔、完成態停留、最後一幕、拍在段尾之後（motion＝collectMotionInPage 的結果）
 //   floorFindings({ item, html, cuesOut, file, tpl }) → findings[]  custom 檔頭【D 下限】的第一拍與段長；tpl＝範例原檔：這兩種下限被改小或刪掉 ⚠
 //   fontShrinkFindings({ item, html, tpl, file }) → findings[]  字級比範例小 ⚠（元素用 id／class 去掉前綴對回範例）
+//   rootSelectorFindings({ item, html, file }) → findings[]  P.* 的選擇器從最外層 id 開始（'#x-rack .card'）✖：build 後最外層的 id 被拿掉，kit 找不到元素
 //   stillTimes(motion, item)          → [{ t, kind: 'still' }]  每個 ≥ 0.4 秒的靜止區間取中點（每段最多 8 個）
 //   cueFindings(errors, items)        → { findings, warnings }  window.__cueErrors → 綁句失敗 ✖
 //   formatFinding(f)／fmtT(t)／descText(desc)
@@ -861,6 +862,43 @@ export function fontShrinkFindings({ item, html = '', tpl = '', file = '' } = {}
     out.push({ id: item.id, label: item.label, kind: 'motion', el: null, level: 'warn', rule: 'font-shrink', t: null,
       msg: `字級比範例小：${file || item.label} 的 ${x.own} 是 ${x.px}px，範例是 ${y.px}px`,
       fix: '字級改回範例；字放不下就縮短文案（只留關鍵詞）或加寬容器，不要縮字級', data: { key, px: x.px, tpl: y.px } });
+  }
+  return out;
+}
+
+// ---------- P.* 的選擇器不能從最外層 id 開始 ----------
+// HyperFrames 0.9 把子合成插進完成影片時，最外層那個 <div id="x-…" data-composition-id> 的 id 會被拿掉（換成宿主 el-<段>）。
+// CSS、動畫檔自己的 document.querySelector*、GSAP 字串都會被 HyperFrames 換到宿主，照樣找得到（舊原語 P.in／P.stroke… 走 GSAP，也找得到，
+// 而且留著 #<最外層 id> 才不會選到同一支範例在另一段的元素）；
+// v2 原語用 root.querySelectorAll 直接查（KIT_ROOT_QUERY）→ '#x-rack .card' 找不到：pop／dim 這類靜靜沒有動畫，
+// rack／spot 這類會丟錯、整段動畫消失（2026-11-09 在 snapshot 實測）。只擋這幾個，改法是拿掉開頭的 #<最外層 id>（root 底下查，不會跨段）
+export const KIT_ROOT_QUERY = new Set(['chars', 'marker', 'strike', 'stamp', 'punch', 'ripple', 'comet', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'flow', 'idle', 'spot', 'cam', 'grow', 'sheen', 'wipe', 'wipeOut', 'slide', 'slideOut', 'dim', 'rack', 'pop']);
+export function rootSelectorFindings({ item, html = '', file = '' } = {}) {
+  const out = [];
+  if (!item || !html) return out;
+  const roots = [...String(html).matchAll(/<[a-z][^>]*\bid="([^"]+)"[^>]*\bdata-composition-id=|<[a-z][^>]*\bdata-composition-id="[^"]*"[^>]*\bid="([^"]+)"/g)].map((m) => m[1] || m[2]);
+  if (!roots.length) return out;
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const bad = new RegExp(`(?:^|,)\\s*#(${roots.map(esc).join('|')})(?=[\\s>+~.:\\[])`);
+  const seen = new Set();
+  for (const sc of String(html).replace(/<!--[\s\S]*?-->/g, '').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) {
+    const code = sc[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+    const consts = {};
+    for (const m of code.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(['"`])([^'"`\n]*)\2/g)) consts[m[1]] = m[3];
+    for (const m of code.matchAll(/\bP\.([A-Za-z]+)\(([^;\n]*)/g)) {
+      if (!KIT_ROOT_QUERY.has(m[1])) continue;
+      const strs = [...m[2].matchAll(/(['"`])([^'"`\n]*)\1/g)].map((x) => x[2]);
+      for (const id of m[2].match(/\b[A-Za-z_$][\w$]*\b/g) || []) if (id in consts) strs.push(consts[id]);
+      const hit = strs.find((x) => bad.test(x));
+      if (!hit) continue;
+      const root = hit.match(bad)[1], key = `${m[1]}|${hit}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const fixed = hit.split(',').map((x) => x.trim().replace(new RegExp(`^#${esc(root)}\\s*>?\\s*`), '')).join(', ');
+      out.push({ id: item.id, label: item.label, kind: 'motion', el: null, level: 'error', rule: 'root-selector', t: null,
+        msg: `${file || item.label} 的 P.${m[1]} 選擇器 '${hit}' 從最外層的 #${root} 開始：完成影片裡最外層的 id 會被拿掉，P.* 找不到元素（沒有動畫；P.rack、P.spot 會讓整段動畫消失）`,
+        fix: `拿掉開頭的 #${root}，寫 '${fixed}'（P.${m[1]} 只在這支動畫裡面找，不會選到別段）或元素自己的 id`, data: { method: m[1], selector: hit, root } });
+    }
   }
   return out;
 }

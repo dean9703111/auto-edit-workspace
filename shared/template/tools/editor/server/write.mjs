@@ -18,7 +18,7 @@ export { visibleLen, richPlain };
 
 export const LIMITS = Object.freeze({
   volume: [-60, 12], fade: [0, 10], dipDur: [0.05, 2], speed: [0.5, 4], minMedia: 1, capMax: 18,
-  joinTypes: ['none', 'dip', 'punch'], enterExit: ['cut', 'fade', 'slide', 'zoom'],
+  joinTypes: ['none', 'dip', 'punch'], enterExit: ['cut', 'fade', 'slide', 'zoom', 'whip'],
   editKeys: ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins'], volumeKeys: ['voice', 'sfx', 'media'],
   joinKeys: ['at', 'type', 'dur'], gainKeys: ['from', 'to', 'db'],
   segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'out', 'speed', 'hold', 'retime', 'anchor'], segScene: ['slots'], segFx: ['vars'],
@@ -264,7 +264,7 @@ export function sanitizeSegments(segments, plan, ctx = {}) {
           }
         } else errors.push(`段 ${id} 的 sfx 只能設成 null（靜音）或 { "restore": true }（還原 AI 原本寫的音效）`);
       } else if (k === 'enter' || k === 'exit') {
-        const ok = k === 'enter' ? [...LIMITS.enterExit, 'tape'] : LIMITS.enterExit;   // tape＝圖片紙膠帶貼上，只能當進場（015）
+        const ok = k === 'enter' ? [...LIMITS.enterExit, 'tape', 'tilt'] : LIMITS.enterExit;   // tape＝圖片紙膠帶貼上、tilt＝斜躺擺平，只能當進場（015）
         if (!ok.includes(val)) errors.push(`段 ${id} 的 ${k} 要是 ${ok.join('、')}，現在是 ${JSON.stringify(val)}`);
         else set[k] = val;
       } else if (k === 'volume') {

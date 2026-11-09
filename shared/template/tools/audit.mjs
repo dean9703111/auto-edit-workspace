@@ -103,7 +103,7 @@ import { createHash } from 'node:crypto';
 import { groupWarnings, runCount } from './lib/flow.mjs';
 import { contactSheet, poolOn } from './lib/raster.mjs';
 import { FULL, gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
-  judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings } from './lib/audit-rules.mjs';
+  judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings, rootSelectorFindings } from './lib/audit-rules.mjs';
 import { templateFor, formatReport as checkTable } from './lib/plan.mjs';
 import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings, pickBeatSheet } from './lib/audit-beats.mjs';
 import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners } from './lib/audit-illus.mjs';
@@ -428,6 +428,7 @@ export async function audit(flags, { log = console.log } = {}) {
     const tpl = (templateFor(html, path.join(P.templateDir, 'custom')) || {}).html || '';
     motion.push(...floorFindings({ item: it, html, cuesOut: res.cuesOut || [], file: it.file, tpl }));
     motion.push(...fontShrinkFindings({ item: it, html, tpl, file: it.file }));
+    motion.push(...rootSelectorFindings({ item: it, html, file: it.file }));
     if (!sheet) motion.push(noSheetFinding(it, it.file));
     else if (mo) motion.push(...beatFindings({ item: it, sheet, marks: mo.marks || [], cuesOut: res.cuesOut || [], html, file: it.file, local }));
     // 011 示意動畫：元件名與 illus-local 檔、閃爍、先有節點再畫線

@@ -107,13 +107,13 @@
     else { P.wipe('#xcrd-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcrd-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xcrd-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
     // 拍 1 總數：10 個小人每 0.08 秒彈出一個 → 右上數字從 0 數到 10、說明逐字
-    P.pop('#x-crowd .xcrd-p', T1, { stagger: 0.08, from: 0.5, dy: 30, dur: 0.5 });
+    P.pop('.xcrd-p', T1, { stagger: 0.08, from: 0.5, dy: 30, dur: 0.5 });
     P.pop('#xcrd-a', T1, { from: 0.9, dy: 20 });
     P.count('#xcrd-na', T1, { from: 0, to: 10, dur: 0.9 });
     P.chars('#xcrd-la', T1 + 0.15);
     // 拍 2 那幾個：那幾個人的身體每 0.08 秒換主色一個、其他人淡下去 → 右下主色數字數到 HOT、說明逐字
     P.in('#x-crowd .xcrd-hot .il-hi', T2, { stagger: 0.08, dur: 0.3 });
-    P.dim('#x-crowd .xcrd-p:not(.xcrd-hot)', T2, { to: 0.35 });
+    P.dim('.xcrd-p:not(.xcrd-hot)', T2, { to: 0.35 });
     P.pop('#xcrd-b', T2, { from: 0.9, dy: 20 });
     P.count('#xcrd-nb', T2, { from: 0, to: HOT, dur: 0.9 });
     P.chars('#xcrd-lb', T2 + 0.15);

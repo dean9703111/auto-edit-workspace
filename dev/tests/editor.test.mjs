@@ -130,7 +130,8 @@ test('拒絕其他欄位：plan 的其他 key、edit／joins 的未知欄位、�
     [{ base: b, edit: { fadeIn: -1 } }, /fadeIn 要是 0–10 的秒數/],
     [{ base: b, edit: { cuts: [[3, 2]] } }, /終點要大於起點/],
     [{ base: b, media: { m01: { src: 'assets/images/x.png' } } }, /不能改「src」/],
-    [{ base: b, media: { m01: { enter: 'spin' } } }, /enter 要是 cut、fade、slide、zoom/],
+    [{ base: b, media: { m01: { enter: 'spin' } } }, /enter 要是 cut、fade、slide、zoom、whip、tape、tilt，現在是 "spin"/],
+    [{ base: b, media: { m01: { exit: 'tilt' } } }, /exit 要是 cut、fade、slide、zoom、whip，現在是 "tilt"/],
     [{ base: b, media: { s01: { enter: 'fade' } } }, /找不到 media 段「s01」/],
   ];
   for (const [body, re] of cases) {

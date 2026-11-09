@@ -167,14 +167,15 @@ const FX_BG = { dark: '#232733', light: 'var(--fx-light-bg, #f3efe6)', accent: '
 //   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、剪輯台過黑／淡入淡出；
 //                                      keepFootage＝側邊欄段（講者被推到右邊）連底片一起放（靜音），剪映疊上去才對得起來
 //   { kind: 'main' }                  主軌：只有底片＋人聲＋剪輯台（跳接放大、過黑、淡入淡出）＋片尾配樂；沒有情境、字幕、角標、段落音效
-export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, badges = [], canvas = null, cut = null }) {
+export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, badges = [], canvas = null, cut = null, moods = [], zooms = null }) {
   const C = canvas || CANVAS.landscape, portrait = C.format === 'portrait', W = C.W, H = C.H;
   const segCut = cut?.kind === 'seg', mainCut = cut?.kind === 'main';
   if (cut) {
     items = segCut ? items.filter((it) => it.id === cut.id) : [];
     badges = [];
     captions = null;
-    if (segCut) { outro = null; editFx = editFx && { ...editFx, punches: [], dips: [], fadeIn: 0, fadeOut: 0 }; }
+    if (segCut) { outro = null; editFx = editFx && { ...editFx, punches: [], dips: [], fadeIn: 0, fadeOut: 0 }; zooms = null; }
+    moods = [];
   }
   const compName = segCut ? `capcut-${cut.id}` : mainCut ? 'capcut-main' : test ? 'test-clip' : 'main';
   const PB = C.pip.box;   // 子母畫面本體（橫式 1424,594、432×324）／講者面板（直式 0,900、1080×1020）
@@ -367,9 +368,30 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
     }
     if (fades) overlays.push('  <div id="edit-fade"></div>');
   }
+  // 情緒點的講者爆衝推近（plan.json moods[].zoom）：0.2 秒推到 1.25 倍，停到句尾直接切回（punch 放大中的回到 1.08）
+  if (zooms?.list?.length) {
+    let n = 0;
+    for (const z of zooms.list) {
+      const a = r3(z.a - t0), b = r3(z.b - t0);
+      if (b <= 0 || a >= DUR) continue;
+      if (a >= 0) tl.push(`tl.fromTo('#footage', { scale: ${z.base} }, { scale: ${z.scale}, duration: ${n3(z.dur)}, ease: 'expo.out', immediateRender: false }, ${n3(a)});`);
+      else tl.push(`tl.set('#footage', { scale: ${z.scale} }, 0);`);
+      if (b < DUR) tl.push(`tl.set('#footage', { scale: ${z.base} }, ${n3(b)});`);
+      n++;
+    }
+    if (n && !footCss) footCss = `    #footage { transform-origin: ${zooms.origin}; }\n`;
+  }
   const needCss = hasMedia || overlays.length > 0;
 
   const sfx = [];
+  // 情緒點的音效（plan.json moods）：不屬於任何一段，id 用 sfx-mood<N>
+  for (const m of moods) {
+    const c = m.sfx;
+    if (!c) continue;
+    const at = r3(c.at - t0);
+    if (at < 0 || at >= DUR) continue;
+    sfx.push(`  <audio id="sfx-mood${m.i + 1}" src="${base}assets/sfx/${c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.volume}"></audio>`);
+  }
   for (const it of items) {
     const cues = [[`sfx-${it.id}`, it.sfx], ...(it.sfxExtra || []).map((c, n) => [`sfx-${it.id}-e${n + 1}`, c])];
     for (const [id, c] of cues) {

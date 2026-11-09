@@ -202,30 +202,32 @@ export function audioReportLines(info, { loudnorm = true, declick = true, cutpoi
 
 // ---------- 音效政策（specs/contracts/sfx.md §4；訊息原文 specs/contracts/cli-005.md §3）----------
 export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3, sparseSec: 60 });
-const SWAP = { thunder: 'alert', sparkle: 'ding', shine: 'ding' };              // 超過每集上限時建議換成誰
+export const SFX_SWAP = Object.freeze({ thunder: 'alert', sparkle: 'ding', shine: 'ding' });   // 超過每集上限時換成誰（情緒點自動換；其他段建議換）
+const SWAP = SFX_SWAP;
 export const KEEP_FIRST = ['chapter', 'thunder', 'shine', 'sparkle', 'alert', 'success'];   // lib/autofix.mjs 拿掉太密的音效也照這個優先序
 const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;   // 和 plan.mjs 的 fmt 相同
 const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
 const d1 = (v) => n1(r1(v).toFixed(1));
 
-// 每分鐘最多 perMinute 顆主音效：照優先序留（KEEP_FIRST；ding、impact 最後），其他拿掉，不用人一段一段改。
-// 使用者在段上明寫的 sfx（it.seg.sfx）和章節音效不動；回傳拿掉幾顆
+// 每分鐘最多 perMinute 顆主音效：照優先序留，其他拿掉，不用人一段一段改。
+// 使用者在段上明寫的 sfx（it.seg.sfx）和章節音效不動；再來是情緒點（plan.json moods，it.type 'mood'：金句、反轉 ＞ 痛點、解法 ＞ 落定），
+// 最後是模板預設和情境動畫的 P.sfx 拍點（照 KEEP_FIRST；ding、impact 先拿）。拿掉的情緒點標 it.sfxThinned；回傳拿掉幾顆
 export function thinMainSfx(items, sfxConf, perMinute = SFX_RULES.perMinute) {
   const rank = (n) => { const i = KEEP_FIRST.indexOf(n); return i < 0 ? KEEP_FIRST.length : i; };
   const byMin = new Map();
-  const add = (it, c, locked) => { const k = Math.floor(c.at / 60); if (!byMin.has(k)) byMin.set(k, []); byMin.get(k).push({ it, c, locked }); };
+  const add = (it, c, locked, prio) => { const k = Math.floor(c.at / 60); if (!byMin.has(k)) byMin.set(k, []); byMin.get(k).push({ it, c, locked, prio }); };
   for (const it of items) {
-    if (it.sfx && !sfxConf[it.sfx.name]?.additive) add(it, it.sfx, it.seg?.sfx != null || it.sfx.name === 'chapter');
-    for (const c of it.sfxExtra || []) if (c.beat && !sfxConf[c.name]?.additive) add(it, c, false);
+    if (it.sfx && !sfxConf[it.sfx.name]?.additive) add(it, it.sfx, it.seg?.sfx != null || it.sfx.name === 'chapter', it.type === 'mood' ? 10 + (it.mood?.rank ?? 0) : 0);
+    for (const c of it.sfxExtra || []) if (c.beat && !sfxConf[c.name]?.additive) add(it, c, false, 0);
   }
   let removed = 0;
   for (const list of byMin.values()) {
     if (list.length <= perMinute) continue;
-    const order = [...list].sort((a, b) => Number(b.locked) - Number(a.locked) || rank(a.c.name) - rank(b.c.name) || a.c.at - b.c.at);
+    const order = [...list].sort((a, b) => Number(b.locked) - Number(a.locked) || b.prio - a.prio || rank(a.c.name) - rank(b.c.name) || a.c.at - b.c.at);
     const keep = new Set(order.slice(0, Math.max(perMinute, order.filter((x) => x.locked).length)));
     for (const x of list) {
       if (keep.has(x)) continue;
-      if (x.it.sfx === x.c) { x.it.sfxDropped = x.c; x.it.sfx = null; } else x.it.sfxExtra = x.it.sfxExtra.filter((c) => c !== x.c);
+      if (x.it.sfx === x.c) { x.it.sfxDropped = x.c; x.it.sfx = null; if (x.it.type === 'mood') x.it.sfxThinned = true; } else x.it.sfxExtra = x.it.sfxExtra.filter((c) => c !== x.c);
       removed++;
     }
   }
@@ -233,7 +235,7 @@ export function thinMainSfx(items, sfxConf, perMinute = SFX_RULES.perMinute) {
 }
 
 // cues：[{ id, name, at（完成影片秒數）, volume（最終線性音量）, main（是不是主音效）}]，已扣掉被 3 秒規則拿掉的
-export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, gapNote = null, thinned = 0 } = {}) {
+export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, gapNote = null, thinned = 0, moods = false } = {}) {
   const R = SFX_RULES;
   const list = (cues || []).filter((c) => c && sfxConf[c.name] && sfxConf[c.name].kind !== 'bgm').sort((a, b) => a.at - b.at);
   const count = {};
@@ -282,7 +284,7 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, 
     warnings.push(`⚠ 音效密度：${dense.length} 個一分鐘超過 ${R.perMinute} 顆主音效（${dense.map((d) => `${mm(d.from)}–${mm(d.to)} ${d.n} 顆：${d.ids.join('、')}`).join('；')}；附加音效${adds.length ? ` ${adds.join('、')}` : ''} 不算）→ 每分鐘留最重要的 ${R.perMinute} 顆（${KEEP_FIRST.join('、')} 先留，ding、impact 先拿掉：那段寫 "sfx": null）`);
   }
   // gapNote(g)：空檔裡可以配音效的段（plan.mjs 給，例「x10、x11、m01」），印在秒數後面，讓人知道去哪一段配
-  if (sparse.length) warnings.push(`⚠ 音效稀疏：${sparse.map((g) => { const n = gapNote ? gapNote(g) : ''; return `${fmt(g.from)}–${fmt(g.to)}（${Math.round(g.to - g.from)} 秒${n ? `：${n}` : ''}）`; }).join('、')}沒有主音效 → 在這段裡找踩坑句配 alert、結果句配 success（落在句尾前 0.1–0.2 秒）；情境動畫在那一拍寫 P.sfx('success', '#N@詞')；錄影段寫 "sfx": { "name": "success", "at": "#Ne-0.1" }`);
+  if (sparse.length) warnings.push(`⚠ 音效稀疏：${sparse.map((g) => { const n = gapNote ? gapNote(g) : ''; return `${fmt(g.from)}–${fmt(g.to)}（${Math.round(g.to - g.from)} 秒${n ? `：${n}` : ''}）`; }).join('、')}沒有主音效 → ${moods ? '在這段裡挑一句情緒最強的，plan.json 的 moods 加一個點（例 { "at": "#N@詞", "kind": "pain" }；類別 pain 痛點、win 解法、turn 反轉、land 落定、quote 金句），或在分鏡表的「情緒點」加一列' : `在這段裡找踩坑句配 alert、結果句配 success（落在句尾前 0.1–0.2 秒）；情境動畫在那一拍寫 P.sfx('success', '#N@詞')；錄影段寫 "sfx": { "name": "success", "at": "#Ne-0.1" }`}`);
   const loudLine = loudWarning(loud);
   if (loudLine) warnings.push(loudLine);
   const cnt = Object.keys(sfxConf).filter((k) => sfxConf[k].kind !== 'bgm' && ((count[k] || 0) > 0 || sfxConf[k].maxPerVideo != null))

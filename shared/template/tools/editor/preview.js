@@ -140,18 +140,22 @@ export class SimPreview {
     if (!m) m = this.makeMedia(active.id, seg);
     const enter = active.enter || 'fade', exit = active.exit || 'fade';
     const di = t - active.start, de = active.end - t;
-    let op = 1, tf = '';
+    let op = 1, tf = '', fl = '';
+    // 甩鏡（whip）：橫向甩過＋拉長＋模糊，越靠近接縫越快越糊（示意）
+    const whip = (k, dir) => { tf = `translateX(${dir * (1 - k) ** 3 * 100}%) scaleX(${1 + 0.15 * (1 - k)})`; fl = `blur(${Math.round(24 * (1 - k))}px)`; };
     if (di < MEDIA_TRANS && enter !== 'cut') {
       const k = di / MEDIA_TRANS;
       if (enter === 'fade') op = k; else if (enter === 'slide') tf = `translateX(${(1 - k) * 100}%)`; else if (enter === 'zoom') { op = k; tf = `scale(${0.85 + 0.15 * k})`; } else if (enter === 'tape') { op = Math.min(1, k * 2); tf = `scale(${1.05 - 0.05 * k}) rotate(${3 * (1 - k)}deg)`; }
+      else if (enter === 'whip') whip(k, 1); else if (enter === 'tilt') { op = Math.min(1, k * 2); tf = `perspective(1800px) rotateX(${22 * (1 - k)}deg) rotateY(${-8 * (1 - k)}deg) scale(${0.94 + 0.06 * k})`; }
     }
     if (de < MEDIA_TRANS && exit !== 'cut') {
       const k = de / MEDIA_TRANS;
-      if (exit === 'fade') op = Math.min(op, k); else if (exit === 'slide') tf = `translateX(${-(1 - k) * 100}%)`; else if (exit === 'zoom') { op = Math.min(op, k); tf = `scale(${0.85 + 0.15 * k})`; }
+      if (exit === 'fade') op = Math.min(op, k); else if (exit === 'slide') tf = `translateX(${-(1 - k) * 100}%)`; else if (exit === 'zoom') { op = Math.min(op, k); tf = `scale(${0.85 + 0.15 * k})`; } else if (exit === 'whip') whip(k, -1);
     }
     const showPip = seg.pip !== false && !A.voiceOnly.some(([a, b]) => t >= a && t < b);
     m.wrap.style.opacity = String(op);
     m.wrap.style.transform = tf;
+    m.wrap.style.filter = fl;
     m.el.style.objectFit = seg.fit === 'cover' ? 'cover' : 'contain';
     this.placeMedia(m.el, seg.fit === 'cover' ? 'cover' : 'contain', showPip, seg.side);
     if (m.el.tagName === 'VIDEO') {

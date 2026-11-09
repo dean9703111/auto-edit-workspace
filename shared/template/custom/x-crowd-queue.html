@@ -152,7 +152,7 @@
     else { P.wipe('#xcq-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcq-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xcq-card .sc-wcard__bar > .sc-opt', 0.5, { stagger: 0.035 });
     P.pop(LANES, 1.0, { stagger: 0.15, from: 0.9, dy: 30 });
-    P.pop('#x-crowd-queue .xcq-p', 1.5, { stagger: 0.05, from: 0.5, dy: 30, dur: 0.5 });
+    P.pop('.xcq-p', 1.5, { stagger: 0.05, from: 0.5, dy: 30, dur: 0.5 });
     P.icon('#xcq-ia, #xcq-ib, #xcq-fa, #xcq-fb', 1.65, { stagger: 0.06 });
     P.spot(LANES, 'none', 2.2, { dim: 0.55, dur: 0.6 });
 

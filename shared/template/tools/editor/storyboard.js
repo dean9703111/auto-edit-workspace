@@ -306,6 +306,39 @@ function quotesInfo() {
   const head = sec.blocks.filter((b) => b.type === 'heading').map((b) => b.text).find((t) => /金句/.test(t)) || '';
   return { on: pick.rows.filter((r) => CHECKED.test(r.cells[col] ?? '')).length, total: pick.rows.length, max: Number((/最多\s*(\d+)\s*則/.exec(head) || [])[1]) || 6 };
 }
+// 情緒點（表頭有「綁在」「情緒」）：分鏡表頁首畫一條情緒曲線
+const MOOD_STYLE = { 金句: ['#E8B400', 5], 反轉: ['#B57EDC', 4], 痛點: ['#E5484D', 3], 解法: ['#30A46C', 3], 落定: ['#F76B15', 2] };
+const clockSec = (v) => { const m = /(\d+):(\d+(?:\.\d+)?)/.exec(String(v || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+function moodInfo() {
+  const sec = state.sections.find(isDecide);
+  const t = sec?.blocks.find((b) => b.type === 'table' && b.head.includes('綁在') && b.head.includes('情緒'));
+  if (!t) return null;
+  const col = (h) => t.head.findIndex((x) => x === h || x.startsWith(h));
+  const iAt = col('綁在'), iT = col('時間碼'), iK = col('情緒'), iS = col('音效'), iZ = col('推近'), iOn = t.head.findIndex((h) => h.includes('☐'));
+  const rows = t.rows.map((r) => ({ at: r.cells[iAt] || '', t: clockSec(r.cells[iT]), kind: String(r.cells[iK] || '').trim(), sound: r.cells[iS] || '', zoom: /推近/.test(r.cells[iZ] || ''), on: CHECKED.test(r.cells[iOn] ?? '') }));
+  return { sec, rows, on: rows.filter((r) => r.on).length, total: rows.length };
+}
+function renderMoodStrip() {
+  const box = $('moodStrip');
+  if (!box) return;
+  const mi = state?.exists ? moodInfo() : null;
+  if (!mi || !mi.rows.length) { box.hidden = true; box.innerHTML = ''; return; }
+  // 片長：總覽表最後一段的結束時間（沒有就用最後一個情緒點＋5 秒）
+  const ov = state.sections.find((x) => x.title === '總覽')?.blocks.find((b) => b.type === 'table');
+  const iTc = ov ? ov.head.indexOf('時間碼') : -1;
+  const ends = iTc >= 0 ? ov.rows.map((r) => clockSec(String(r.cells[iTc] || '').split(/[–-]/).pop())).filter((x) => x != null) : [];
+  const dur = Math.max(10, ...ends, ...mi.rows.map((r) => (r.t ?? 0) + 5));
+  const W = 1000, X = (t) => 16 + (t / dur) * (W - 32), Y = (k) => 62 - (MOOD_STYLE[k]?.[1] ?? 2) * 10;
+  const pts = mi.rows.filter((r) => r.t != null);
+  const line = pts.filter((r) => r.on).map((r) => `${X(r.t).toFixed(1)},${Y(r.kind)}`).join(' ');
+  const ticks = [];
+  for (let m = 0; m * 60 <= dur; m += dur > 900 ? 5 : dur > 300 ? 2 : 1) ticks.push(`<text class="mtick" x="${X(m * 60).toFixed(1)}" y="74" text-anchor="middle">${m}:00</text>`);
+  const dots = pts.map((r) => `<circle class="${r.on ? '' : 'off'}" cx="${X(r.t).toFixed(1)}" cy="${Y(r.kind)}" r="${r.zoom ? 6.5 : 5}" fill="${MOOD_STYLE[r.kind]?.[0] || '#888'}" stroke="${MOOD_STYLE[r.kind]?.[0] || '#888'}" data-to-moods><title>${esc(`${r.kind}｜${r.at}｜${r.sound}${r.zoom ? '｜推近' : ''}${r.on ? '' : '（沒勾）'}`)}</title></circle>`).join('');
+  box.hidden = false;
+  box.innerHTML = `<h3>情緒曲線：☑ ${mi.on}／${mi.total} 個情緒點（越高越強；大圈＝講者推近；點一下到勾選表）</h3>
+    <svg viewBox="0 0 ${W} 78" preserveAspectRatio="none" role="img" aria-label="情緒曲線，${mi.on} 個情緒點出聲"><line class="maxis" x1="16" x2="${W - 16}" y1="62" y2="62"/>${line ? `<polyline class="mline" points="${line}"/>` : ''}${dots}${ticks.join('')}</svg>
+    <div class="mlegend">${Object.entries(MOOD_STYLE).map(([k, [c]]) => `<span><i style="background:${c}"></i>${k}</span>`).join('')}</div>`;
+}
 function renderTasks() {
   const box = $('tasks');
   if (!box || !state?.exists) { if (box) box.innerHTML = ''; return; }
@@ -323,6 +356,8 @@ function renderTasks() {
   const dz = canEdit() ? designInfo() : null;
   if (dz) out.push(`<a class="sb-task" href="#sec-${esc(sec.key)}" data-to-designs><b>內容設計動畫 ${dz.on}／${dz.total} 段</b><span>${dz.on ? '勾了的會從空白畫布設計，要多花時間' : '都沒勾：全部照現在的版面，最快'}</span></a>`);
   const q = canEdit() ? quotesInfo() : null;
+  const mo = canEdit() ? moodInfo() : null;
+  if (mo) out.push(`<a class="sb-task" href="#sec-${esc(sec.key)}" data-to-moods><b>情緒點 ${mo.on}／${mo.total} 個</b><span>☑ 的出聲；取消勾＝不要那個音效</span></a>`);
   if (q) out.push(`<a class="sb-task${q.on > q.max ? ' over' : ''}" href="#sec-${esc(sec.key)}" data-to-quotes><b>金句 ${q.on}／最多 ${q.max}</b><span>${q.on > q.max ? `多了 ${q.on - q.max} 則，AI 只會上 ${q.max} 則` : `${q.total} 則候選`}</span></a>`);
   const wish = canEdit() ? seg.filter(hasWish) : [];
   if (wish.length) out.push(`<button class="sb-task" type="button" data-next-wish><b>你改了 ${wish.length} 段</b><span>點一下看下一段</span></button>`);
@@ -330,6 +365,7 @@ function renderTasks() {
   if (canEdit()) out.push(`<span class="sb-task static"><b>看過 ${seenN}／${seg.length}</b><span>${seenN >= seg.length ? '都看完了' : '只是提醒，不用全部看'}</span></span>`);
   if (reading.last && document.getElementById(`sec-${reading.last}`) && !box.dataset.resumed && !location.hash) out.push(`<a class="sb-task" href="#sec-${esc(reading.last)}" data-resume><b>接著看 ${esc(reading.last)}</b><span>上次看到這裡</span></a>`);
   box.innerHTML = out.join('');
+  renderMoodStrip();
 }
 
 // ---------- 找段、篩選、看過哪些（每個專案各記一份，只在這個瀏覽器）----------
@@ -871,16 +907,19 @@ $('finder')?.addEventListener('click', (e) => {
   if (k) { finder.kind = k.dataset.kindFilter; applyFinder(); window.scrollTo({ top: 0 }); }
   if (e.target.closest('[data-finder-clear]')) resetFinder();
 });
+function jumpToTable(e) {
+  // 「需要我決定的事」裡有三張勾選表：照表頭找（內容設計動畫候選有「構想」，金句有「卡上文字」，情緒點有「綁在」）
+  const jump = e.target.closest('[data-to-quotes], [data-to-designs], [data-to-moods]');
+  if (!jump) return;
+  e.preventDefault();
+  resetFinder();
+  const want = jump.matches('[data-to-designs]') ? '構想' : jump.matches('[data-to-moods]') ? '綁在' : '卡上文字';
+  [...document.querySelectorAll('.sb-sec.decide .sb-table')].find((t) => [...t.querySelectorAll('th')].some((th) => th.textContent.startsWith(want)))?.scrollIntoView({ block: 'center' });
+}
+$('moodStrip')?.addEventListener('click', jumpToTable);
 $('tasks')?.addEventListener('click', (e) => {
   if (e.target.closest('[data-resume]')) { $('tasks').dataset.resumed = '1'; resetFinder(); }
-  // 「需要我決定的事」裡有兩張勾選表：照表頭找（內容設計動畫候選有「構想」，金句有「卡上文字」）
-  const jump = e.target.closest('[data-to-quotes], [data-to-designs]');
-  if (jump) {
-    e.preventDefault();
-    resetFinder();
-    const want = jump.matches('[data-to-designs]') ? '構想' : '卡上文字';
-    [...document.querySelectorAll('.sb-sec.decide .sb-table')].find((t) => [...t.querySelectorAll('th')].some((th) => th.textContent.startsWith(want)))?.scrollIntoView({ block: 'center' });
-  }
+  if (e.target.closest('[data-to-quotes], [data-to-designs], [data-to-moods]')) { jumpToTable(e); return; }
   if (e.target.closest('a[href^="#"]')) resetFinder();
   if (e.target.closest('[data-next-wish]')) {
     resetFinder();

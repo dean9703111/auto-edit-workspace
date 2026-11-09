@@ -18,7 +18,7 @@ const clone = (o) => (o === undefined ? undefined : JSON.parse(JSON.stringify(o)
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
 const r2 = (n) => Math.round(n * 100) / 100;
-const TRANS = [['cut', '直接切'], ['fade', '淡入淡出'], ['slide', '滑入滑出'], ['zoom', '縮放']];
+const TRANS = [['cut', '直接切'], ['fade', '淡入淡出'], ['slide', '滑入滑出'], ['zoom', '縮放'], ['whip', '甩鏡']];
 const JOIN_TYPES = [['none', '無'], ['dip', '過黑'], ['punch', '放大']];
 const KIND_ZH = { cut: '你剪掉的範圍', ng: 'NG 重錄（剪乾淨時剪掉）', pause: '停頓（剪乾淨時剪掉）' };
 // 給人看的名詞只有三個：字卡（模板版面）、動畫、素材（錄影、圖片）。修改單給 AI 的那一行才寫內部名稱（rqInfo 的 what）
@@ -39,7 +39,7 @@ const app = {
   plan0: null, cues0: [], scenes: [], cues: [], srtOps: [],
   edit: defaultEdit(), savedEdit: defaultEdit(), base: null, sfxMemory: {}, canStash: false,
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
-  report: null, reportReady: false, auditIssues: null, requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], pieces: [], points: [],
+  report: null, reportReady: false, auditIssues: null, requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
@@ -344,6 +344,7 @@ function typingInInspector() {
 }
 function changed({ inspector = false } = {}) {
   recompute();
+  if (timeline.setAnimRows(app.animRows)) rebuildHeads();
   updateLookCss();
   if (app.selection && !selectionExists(app.selection)) app.selection = null;
   renderHeader(); renderTimes(); renderStatus(); renderHeads(); renderCapButtons();
@@ -904,6 +905,8 @@ function applyReport(rep0) {
   app.items = (d?.items || rep?.fallback?.items || []).filter((it) => Number.isFinite(it.start) && Number.isFinite(it.end))
     .map((it) => ({ id: it.id, type: it.type || 'scene', label: it.label || '', start: it.start, end: it.end, shownEnd: Number.isFinite(it.shownEnd) ? it.shownEnd : null, src: it.src || null, warnings: it.warnings || 0, sfx: Array.isArray(it.sfx) ? it.sfx : [], out: it.out || null, enter: it.enter ?? null, exit: it.exit ?? null }));   // out、enter、exit：實際的轉場和畫面速度，介面要照這個顯示
   app.voiceOnly = Array.isArray(d?.voiceOnly) ? d.voiceOnly.filter((v) => Array.isArray(v) && v.length === 2) : [];
+  // 情緒點（plan.json moods，023）：音效軌上看得到，改在分鏡表或跟 AI 說（不屬於任何一段，這裡不拖不靜音）
+  app.moodView = Array.isArray(d?.moods) ? d.moods.filter((m) => Number.isFinite(m?.at)).map((m) => ({ ...m, zh: MOOD_ZH[m.kind] || m.kind })) : [];
   // 002 的 check-json：voiceUncovered＝只有聲音、沒被蓋住（紅色斜線）；uncovered＝沒有任何卡片或素材的講解（灰色斜線）
   const spans = (arr) => (Array.isArray(arr) ? arr.filter((v) => Number.isFinite(v?.start) && Number.isFinite(v?.end) && v.end > v.start).map((v) => [v.start, v.end, v.level || null]) : []);
   app.voiceUncovered = spans(d?.voiceUncovered);
@@ -1961,7 +1964,7 @@ function inspMedia(it, sc) {
     ${vol != null ? sliderRow('原聲音量', 'mediaVol', vol, { out: fmtDb(vol) }) : ''}`}
   </section>`}
   <section class="ip-sec"><h3>進場／出場</h3>
-    <div class="ip-row"><label>進場</label><select aria-label="進場" data-f="enter">${opt(sc.enter, isImg ? [['tape', '紙膠帶貼上']] : [])}</select></div>
+    <div class="ip-row"><label>進場</label><select aria-label="進場" data-f="enter">${opt(sc.enter, [...(isImg ? [['tape', '紙膠帶貼上']] : []), ...(sc.fit === 'cover' ? [] : [['tilt', '斜躺擺平']])])}</select></div>
     <div class="ip-row"><label>出場</label><select aria-label="出場" data-f="exit">${opt(sc.exit)}</select></div>
     ${it ? (() => { const tr = transitionOf(it); return `<p class="ip-note" id="txNow">現在實際：${esc(tr.inText)}進場、${esc(tr.outText)}出場（接在別的整張幕後面時，工具會自動調整）。</p>`; })() : ''}
   </section>
@@ -2117,26 +2120,32 @@ function setPath(obj, path, v) {
   return o;
 }
 // 邊打字邊看：完成影片預覽（播放器 iframe）裡這段的舊字直接換成新字（靜態：逐字動畫、精確版面要存檔後重新產生）。
-//   froms＝畫面上可能的舊字（上一次打的、上次存檔的）；找最深一層字剛好相同的元素換掉，播放頭不在這段就跳到完成態
+//   找的順序：這個欄位上次換過的元素（清空再打也找得到）→ 效果標了 data-live="<變數>" 的那一格（數字滾輪這種一位一格的，整格換成字）
+//   → froms（畫面上可能的舊字：上一次打的、上次存檔的）最深一層字剛好相同的元素，不找 data-live 格子裡面（「1」會對到滾輪的一格）。
+//   播放頭不在這段就跳到完成態
 const livePlain = (s) => richPlain(s).replace(/\s+/g, '');
-function livePatch(id, froms, to, rich) {
+function livePatch(id, froms, to, rich, path = []) {
   if (app.mode !== 'player' || !player.ready) return;
   let host = null;
   try { host = player.p?.iframeElement?.contentDocument?.getElementById(`el-${id}`) || null; } catch { /* 不同源時讀不到 */ }
   if (!host) return;
+  const key = JSON.stringify(path), field = path[0] === 'vars' && path.length === 2 ? String(path[1]) : '';
+  let hits = path.length ? [...host.querySelectorAll(`[data-live-key="${CSS.escape(key)}"]`)] : [];
+  if (!hits.length && field) hits = [...host.querySelectorAll(`[data-live="${CSS.escape(field)}"]`)];
   for (const from of froms) {
+    if (hits.length) break;
     const want = typeof from === 'string' ? livePlain(from) : '';
     if (!want) continue;
-    const hits = [...host.querySelectorAll('*')].filter((e) => livePlain(e.textContent) === want && ![...e.children].some((c) => livePlain(c.textContent) === want));
-    if (!hits.length) continue;
-    for (const e of hits) {
-      if (rich) e.innerHTML = esc(to).replace(/\*\*(.+?)\*\*/g, '<span class="sc-kw">$1</span>').replace(/(?<!:)\/\//g, '<br>');
-      else e.textContent = to;
-    }
-    const it = app.itemsView.find((x) => x.id === id);
-    if (it && (app.t < it.start || app.t > it.end)) app.seek(Math.max(it.start, it.end - 0.6));
-    return;
+    hits = [...host.querySelectorAll('*')].filter((e) => !e.closest('[data-live]') && livePlain(e.textContent) === want && ![...e.children].some((c) => livePlain(c.textContent) === want));
   }
+  if (!hits.length) return;
+  for (const e of hits) {
+    if (path.length) e.dataset.liveKey = key;
+    if (rich) e.innerHTML = esc(to).replace(/\*\*(.+?)\*\*/g, '<span class="sc-kw">$1</span>').replace(/(?<!:)\/\//g, '<br>');
+    else e.textContent = to;
+  }
+  const it = app.itemsView.find((x) => x.id === id);
+  if (it && (app.t < it.start || app.t > it.end)) app.seek(Math.max(it.start, it.end - 0.6));
 }
 function onInspInput(e) {
   const el = e.target;
@@ -2171,7 +2180,7 @@ function onInspInput(e) {
     const next = setPath(sc[top] || {}, path.slice(1), el.value);
     setSeg(s.id, { [top]: next }, { coalesce: `txt-${s.id}-${el.dataset.path}` });
     const decl = JSON.parse(el.dataset.decl || '{}');
-    livePatch(s.id, [prev, savedAt(s.id, path)], el.value, decl.type === 'rich');
+    livePatch(s.id, [prev, savedAt(s.id, path)], el.value, decl.type === 'rich', path);
     const c = cnt(el.value, decl);
     const ce = el.nextElementSibling?.classList.contains('cnt') ? el.nextElementSibling : el.closest('.field')?.querySelector('.fl .cnt');
     if (ce) { ce.textContent = c.txt; ce.classList.toggle('over', c.over); }
@@ -2189,7 +2198,7 @@ function onInspInput(e) {
     arr[L.i] = joinItem(L.nf >= 2 ? cols : [cols[0]], sp.tail);
     setSeg(s.id, { slots: { ...sc.slots, [L.k]: arr } }, { coalesce: `txt-${s.id}-${L.k}-${L.i}-${L.col}` });
     const decl = JSON.parse(el.dataset.decl || '{}'), saved = savedAt(s.id, ['slots', L.k, L.i]);
-    livePatch(s.id, [prev, typeof saved === 'string' ? splitItem(saved, L.nf).cols[L.col] : null], el.value, decl.type === 'rich');
+    livePatch(s.id, [prev, typeof saved === 'string' ? splitItem(saved, L.nf).cols[L.col] : null], el.value, decl.type === 'rich', ['slots', L.k, L.i, L.col]);
     const c = cnt(el.value, decl);
     const ce = el.nextElementSibling;
     if (ce?.classList.contains('cnt')) { ce.textContent = c.txt; ce.classList.toggle('over', c.over); }
@@ -2349,6 +2358,7 @@ app.tlDouble = (h) => {
   else if (h.kind === 'sfx') toggleSfxMute(h.sfx.segId);
   else if (h.kind === 'item' || h.kind === 'media') { const it = h.item; app.seek(it.start); }
 };
+const MOOD_ZH = { quote: '金句', turn: '反轉', pain: '痛點', win: '解法', land: '落定' };
 app.tlTip = (h) => {
   const lk = app.trackLocked(h.lane) ? '\n這條軌已鎖定' : '';
   switch (h.kind) {
@@ -2371,6 +2381,7 @@ app.tlTip = (h) => {
     case 'gainEdge': return `拖曳調整範圍${lk}`;
     case 'voiceVol': return `人聲音量 ${fmtDb(app.edit.volume.voice)}：上下拖整條${selValid() && h.t >= app.sel.a && h.t <= app.sel.b ? '\n（在選取範圍裡拖＝只調這一段）' : ''}${lk}`;
     case 'voiceBody': return '拖曳選一段範圍（剪掉或單獨調音量）';
+    case 'mood': return `情緒點：${h.mood.zh}${h.mood.sfx ? `　音效「${h.mood.sfx}」` : h.mood.off ? '（不出聲）' : `（讓位給更強的音效${h.mood.dropped ? `，原本是 ${h.mood.dropped}` : ''}）`}${h.mood.zoom ? '　講者推近' : ''}\n要改：分鏡表的「情緒點」勾選表，或跟 AI 說（寫進修改單）`;
     case 'sfx': return `${h.sfx.segId} 的${h.sfx.main ? '主' : '附加'}音效「${h.sfx.name}」${h.sfx.muted ? '（靜音）' : h.sfx.db != null ? ` ${fmtDb(r2(h.sfx.db))}` : ''}\n上下拖調這段音量、雙擊靜音${lk}`;
     default: return null;
   }

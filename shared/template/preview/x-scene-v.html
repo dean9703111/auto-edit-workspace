@@ -143,7 +143,7 @@
       here = to;
     };
     const PRE = Array.prototype.map.call(ROOT.querySelectorAll('.xsc-pre'), function (el) { return '#' + el.id; });
-    P.draw('#xsc-floor, #x-scene .xsc-pre .il', 1.2, { dur: 0.8 });   // 同一支筆：先地面線、再場景骨架（文件順序）
+    P.draw('#xsc-floor, .xsc-pre .il', 1.2, { dur: 0.8 });   // 同一支筆：先地面線、再場景骨架（文件順序）
     PRE.forEach(function (s) { if (!drawn(s)) P.pop(s, 1.2, { from: 0.9, dy: 20 }); lblAt(s, 1.6); });
 
     // 每一拍：畫出來（或彈出）→ 換狀態／移動／數字／聲紋 → 連接線 → 結果 → 聚焦（同一時間只有一個焦點）

@@ -281,7 +281,7 @@ test('--check --json schema 2：必有的鍵與型別；planHash 跟著 plan.jso
   const r = node('--check', '--json');
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'edit', 'paths']);
+  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'moods', 'edit', 'paths']);
   assert.equal(j.schema, 2);
   assert.equal(j.theme, 'light');
   assert.match(j.planHash, /^[0-9a-f]{8}$/);
@@ -291,6 +291,7 @@ test('--check --json schema 2：必有的鍵與型別；planHash 跟著 plan.jso
   assert.deepEqual(Object.keys(j.sfxBudget), ['perMinuteAvg', 'over', 'dense', 'loud']);
   assert.equal(j.sfxCount.ding, 1);   // 只有 s04 fx 29 的 catalog 預設 ding（版型預設 2026-11-02 起不配）
   assert.equal(j.outro, null);
+  assert.deepEqual(j.moods, [], '沒寫 moods＝空陣列');
   for (const it of j.items) {
     for (const k of ['id', 'type', 'label', 'key', 'family', 'layout', 'layoutZh', 'opaque', 'start', 'end', 'sfx', 'warnings', 'out']) assert.ok(k in it, `${it.id} 少 ${k}`);
     assert.deepEqual(Object.keys(it.out), ['start', 'end', 'lists', 'annotations', 'pip', 'pipShift', 'wipe', 'refs', 'tx', 'wide', 'badgeBox']);
@@ -312,7 +313,7 @@ test('--check --json 出錯時（plan.json 不存在）也印齊 schema 2 的鍵
   const r = spawnSync(process.execPath, [BUILD, '--template', TEMPLATE, '--plan', path.join(dir, 'nope.json'), '--srt', path.join(work, 'rough.srt'), '--video', path.join(work, 'rough.mp4'), '--out', out, '--check', '--json'], { encoding: 'utf8' });
   assert.equal(r.status, 1);
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'edit', 'paths']);
+  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'moods', 'edit', 'paths']);
   assert.equal(j.ok, false);
 });
 

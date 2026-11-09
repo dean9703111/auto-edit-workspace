@@ -28,10 +28,17 @@ import { CANVAS } from './canvas.mjs';
 
 export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'retime', 'redact', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'note'];
 export const MEDIA_DIRS = ['assets/screen/', 'assets/images/'];
-export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom'];
-export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5, tape: 0.6 };
-export const ENTER_ONLY = ['tape'];   // 只能當進場：圖片縮小貼在全幕背景上，落下貼平、兩條紙膠帶貼上兩個上角（015）
-export const EXIT = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.4 };
+export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom', 'whip'];
+export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5, whip: 0.3, tape: 0.6, tilt: 0.65 };
+// 只能當進場：tape＝圖片縮小貼在全幕背景上，落下貼平、兩條紙膠帶貼上兩個上角（015）；tilt＝面板從透視斜躺擺平
+export const ENTER_ONLY = ['tape', 'tilt'];
+export const EXIT = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.4, whip: 0.3 };
+// whip（甩鏡）：整層橫向甩進／甩出畫布寬（進場從右邊來、出場往左邊走），水平拉長 1.15 倍＋模糊 24px 在最快的那幾格，
+//   進場 expo.out 減速、出場 expo.in 加速（模糊跟著速度：越快越糊）；只用 transform＋filter，不配音效
+export const WHIP = { stretch: 1.15, blur: 24 };
+// tilt（斜躺擺平）：整層 0.25 秒淡入；面板（#mgr）以底邊為軸從透視斜躺（rotateX 22°、rotateY −8°、下沉 40、0.94 倍）擺平，
+//   0.65 秒 power3.out；透視 1800px 放在整層上、消失點對準面板中心，擺平後回到 2D（不留 3D 圖層）
+export const TILT = { rx: 22, ry: -8, dy: 40, scale: 0.94, fade: 0.25, persp: 1800 };
 // contain：放在字幕帶上方（y 0–940，和作者錄影段「可見區不碰字幕帶」同理）；cover：鋪滿 1920×1080
 export const VIEW = { contain: [0, 0, 1920, 940], cover: [0, 0, 1920, 1080] };
 export const PIP_ZONE = [1424, 581, 1888, 951];   // 子母畫面外框禁入區 x1, y1, x2, y2
@@ -115,7 +122,7 @@ export const MEDIA_FIELDS = [
   ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方（16:9 縮到 87%），四周黑底；cover＝鋪滿畫面'],
   ['pip', 'true／false', 'true', '右下角子母畫面露臉；只有聲音的區間自動不放'],
   ['volume', 'null 或 −60～+12（dB）', 'null', 'null＝素材靜音；寫數字＝保留素材原聲'],
-  ['enter／exit', TRANSITIONS.map((x) => `"${x}"`).join('／') + '（enter 另有 "tape"）', '"fade"', '進場／出場；接在別的整張幕後面時 fade 自動變 cut；"tape"＝圖片縮小貼在全幕背景上、紙膠帶貼兩角（只給圖片、fit "contain"、橫式）'],
+  ['enter／exit', TRANSITIONS.map((x) => `"${x}"`).join('／') + '（enter 另有 "tape"／"tilt"）', '"fade"', '進場／出場；接在別的整張幕後面時 fade 自動變 cut；"whip"＝0.3 秒橫向甩進／甩出（有水平動態模糊）；"tape"＝圖片縮小貼在全幕背景上、紙膠帶貼兩角（只給圖片、fit "contain"、橫式）；"tilt"＝面板從透視斜躺擺平（錄影、圖片都可以，fit "contain"，直式也可以）'],
   ['moves', '[{ "at", "to": [x,y,w,h] 或 "full", "dur" }]', '—', '運鏡：推近到框、"full" 拉回全景；dur 預設 1 秒。圖片沒寫 moves 時自動慢推（"kenburns": false 關掉）'],
   ['marks', '[{ "at", "until", "box": [x,y,w,h], "path": [{ "at", "box", "dur" }] }]', '—', '紅框：實線 4px、描線進場；同時最多 2 個（callouts 的框也算）、停留 < 0.5s 的拿掉、最後一框多停 1s；until 不寫＝到段尾。path＝錄影捲動時框跟著移（dur 預設 0.4 秒）'],
   ['lens', '[{ "at", "until", "box": [x,y,w,h], "zoom" }]', '—', '放大鏡：從框的位置彈出到畫面中央偏上，zoom 預設 2（1.2–4）；至少 1.2 秒，until 不寫＝at＋3 秒'],
@@ -375,6 +382,7 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
     if (!ok.includes(seg[k])) err(`${k} 只能是 ${ok.map((x) => `"${x}"`).join('、')}，現在是 ${JSON.stringify(seg[k])}`);
     else if (seg[k] === 'tape' && kind !== 'image') err('enter "tape"（紙膠帶貼上）只給圖片用 → 錄影改 "zoom" 或 "fade"');
     else if (seg[k] === 'tape' && m.fit === 'cover') err('enter "tape" 要配 fit "contain"（截圖縮小貼在背景上；cover 鋪滿畫面沒地方貼）→ 拿掉 fit 或換 enter');
+    else if (seg[k] === 'tilt' && m.fit === 'cover') err('enter "tilt"（斜躺擺平）要配 fit "contain"（斜躺的是一塊面板；cover 鋪滿畫面，斜躺時四邊會露出黑底）→ 拿掉 fit 或換 enter');
     else m[k] = seg[k];
   }
   if (seg.kenburns != null) {
@@ -1223,7 +1231,9 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   const html = [];
   const style = `left:${G.left}px;top:${G.top}px;width:${G.width}px;height:${G.height}px`;
   // 直式：畫面座標的層（.mstage／.mmarks／.mann／.mlreg）寬高吃 --cw／--ch（kit/media.css 預設 1920×1080）
-  html.push(`  <div id="el-${id}" class="mlayer" style="z-index:${it.z}${port ? `;--cw:${CW}px;--ch:${CH}px` : ''}">`);
+  // tilt：透視放在整層上、消失點對準面板中心（面板擺平後是 2D，不留 3D 圖層）
+  const persp = it.enterFx === 'tilt' ? `;perspective:${TILT.persp}px;perspective-origin:${Math.round(G.left + G.width / 2)}px ${Math.round(G.top + G.height / 2)}px` : '';
+  html.push(`  <div id="el-${id}" class="mlayer" style="z-index:${it.z}${port ? `;--cw:${CW}px;--ch:${CH}px` : ''}${persp}">`);
   const taped = it.enterFx === 'tape';
   html.push(`    <div id="mbg-${id}" class="clip mbg${taped ? ' mbg--paper' : ''}" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}"></div>`);
   // 面板：不計時的外框，大小＝錄影可見區（P.grow 從小視窗長成它）；運鏡層放在裡面、位移抵回去，座標還是畫面座標
@@ -1337,6 +1347,16 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   } else if (ent === 'zoom') {
     tl.push(`tl.fromTo('${layer}', { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: ${ENTER.zoom}, ease: 'power2.out' }, ${sh(s)});`);
     if (pipSel) tl.push(`tl.fromTo('${pipSel}', { opacity: 0 }, { opacity: 1, duration: ${ENTER.fade}, ease: 'sine.out' }, ${sh(s)});`);
+  } else if (ent === 'whip') {
+    // 甩進：整層從右邊一個畫布寬甩進來，拉長＋模糊在最快的頭幾格（expo.out），到位後拿掉 filter
+    tl.push(`tl.fromTo('${layer}', { x: ${CW}, scaleX: ${WHIP.stretch}, filter: 'blur(${WHIP.blur}px)' }, { x: 0, scaleX: 1, filter: 'blur(0px)', duration: ${ENTER.whip}, ease: 'expo.out' }, ${sh(s)});`);
+    tl.push(`tl.set('${layer}', { filter: 'none' }, ${sh(s + ENTER.whip)});`);
+    if (pipSel) tl.push(`tl.fromTo('${pipSel}', { opacity: 0 }, { opacity: 1, duration: ${ENTER.whip}, ease: 'sine.out' }, ${sh(s)});`);
+  } else if (ent === 'tilt') {
+    // 斜躺擺平：整層 0.25 秒淡入；面板以底邊為軸從斜躺擺平（force3D:false：擺平後回到 2D）
+    tl.push(`tl.fromTo('${layer}', { opacity: 0 }, { opacity: 1, duration: ${TILT.fade}, ease: 'sine.out' }, ${sh(s)});`);
+    tl.push(`tl.fromTo('#mgr-${id}', { rotationX: ${TILT.rx}, rotationY: ${TILT.ry}, y: ${TILT.dy}, scale: ${TILT.scale}, transformOrigin: '50% 100%' }, { rotationX: 0, rotationY: 0, y: 0, scale: 1, transformOrigin: '50% 100%', duration: ${ENTER.tilt}, ease: 'power3.out', force3D: false }, ${sh(s)});`);
+    if (pipSel) tl.push(`tl.fromTo('${pipSel}', { opacity: 0 }, { opacity: 1, duration: ${ENTER.fade}, ease: 'sine.out' }, ${sh(s)});`);
   }
   if (fullEnd) {
     // 出場一律 immediateRender:false（同一個屬性進場時已經補間過，見 pitfalls §22）
@@ -1344,6 +1364,8 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
     if (ext === 'fade') tl.push(`tl.fromTo('${both}', { opacity: 1 }, { opacity: 0, duration: ${EXIT.fade}, ease: 'sine.in', immediateRender: false }, ${sh(it.end - EXIT.fade)});`);
     else if (ext === 'slide') { tl.push(`tl.fromTo('${layer}', { x: 0 }, { x: -${CW}, duration: ${EXIT.slide}, ease, immediateRender: false }, ${sh(it.end - EXIT.slide)});`); pipOut(); }
     else if (ext === 'zoom') { tl.push(`tl.fromTo('${layer}', { opacity: 1, scale: 1 }, { opacity: 0, scale: 0.96, duration: ${EXIT.zoom}, ease: 'power2.in', immediateRender: false }, ${sh(it.end - EXIT.zoom)});`); pipOut(); }
+    // 甩出：往左甩一個畫布寬，越後面越快、越糊（expo.in），露出底下的講者
+    else if (ext === 'whip') { tl.push(`tl.fromTo('${layer}', { x: 0, scaleX: 1, filter: 'blur(0px)' }, { x: -${CW}, scaleX: ${WHIP.stretch}, filter: 'blur(${WHIP.blur}px)', duration: ${EXIT.whip}, ease: 'expo.in', immediateRender: false }, ${sh(it.end - EXIT.whip)});`); pipOut(); }
   }
 
   // --- 右側步驟清單：亮起／變淡（第一個補間 immediateRender:false，之前照 CSS 的淡色）---

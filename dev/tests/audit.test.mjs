@@ -940,8 +940,8 @@ test('分鏡對齊：parseBeatSheets／movesOf／refsOf 讀原型分鏡表的寫
   assert.deepEqual(x.rows.map((r) => r.refs), [[{ ref: '#35', off: 0 }], [{ ref: '#35', off: 0.7 }], [{ ref: '#38@兩支', off: -0.75 }], [{ ref: '#41@崩潰', off: 0 }], []]);
   assert.deepEqual(x.rows.map((r) => r.moves), [['換卡不換景', '逐字上浮', '背景環境'], ['錯拍彈出', '圖示描線'], ['彗星描線', '鏡頭跟焦點', '聚焦', '漣漪'], [], []]);
   assert.equal(x.rows[4].note, true);
-  // 語彙：43 個（011 加游標移動、013 加蓋章；拿掉講者慢推、漂浮、虛線流動、背景環境），和給 AI 查的 shared/template/BEATS.md §2 逐列相同（名稱、「對應」欄第一個 P.*；沒寫 P.* 的是 build 內建）
-  assert.equal(BT.VOCAB.length, 43);
+  // 語彙：44 個（011 加游標移動、013 加蓋章、11-09 加換焦點；拿掉講者慢推、漂浮、虛線流動、背景環境），和給 AI 查的 shared/template/BEATS.md §2 逐列相同（名稱、「對應」欄第一個 P.*；沒寫 P.* 的是 build 內建）
+  assert.equal(BT.VOCAB.length, 44);
   const beatsMd = fs.readFileSync(path.join(TEMPLATE, 'BEATS.md'), 'utf8').split(/^## 2\./m)[1].split(/^## 3\./m)[0];
   const table = [...beatsMd.matchAll(/^\| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|/gm)].map((m) => [m[2].trim(), m[4].trim()]).filter(([n]) => n !== '名稱' && !/^-+$/.test(n));
   assert.deepEqual(table.map(([n, c]) => [n, (c.match(/P\.(\w+)/) || [])[1] || 'build']), BT.VOCAB.map((v) => [v.name, v.prim]));
@@ -1104,6 +1104,11 @@ test('分鏡沒寫的動作：檔裡有 P.spot／P.dim／P.idle／P.cam，分鏡
   assert.deepEqual(run('彈出（主體）；聚焦（主體）；漂浮（主體）', 'P.pop(); P.spot(); P.idle(); P.end();'), []);
   assert.deepEqual(run('彈出（主體）', '// P.cam(…) 註解不算\nP.pop(); P.cam(); P.end();'), ['cam']);
   assert.deepEqual(run('—', 'P.pop(); P.spot(); P.idle(); P.end();'), [], '動態欄整欄都是 — 不反向比');
+  // 換焦點（P.rack）：分鏡寫了就不報；檔裡有、分鏡沒寫 → 報 rack；分鏡寫了、檔裡沒有 → ⚠ beats-prim
+  assert.deepEqual(run('彈出（主體）；換焦點（主體）', 'P.pop(); P.rack(); P.end();'), []);
+  assert.deepEqual(run('彈出（主體）', 'P.pop(); P.rack(); P.end();'), ['rack']);
+  const prim = BT.beatFindings({ item: bItem, sheet: sheet('彈出（主體）；換焦點（主體）'), marks: [], cuesOut: bCues, html: 'P.pop(); P.end();', file: 'x-callout.html' }).filter((f) => f.rule === 'beats-prim');
+  assert.deepEqual(prim.map((f) => `${f.data.word}:${f.data.prim}`), ['換焦點:rack']);
 });
 
 test('sheetPlanFindings（build --check）：拍序和講解相反；照範例【D 下限】第一拍、相鄰兩拍、最後一拍到段尾；差 ≤ 0.3s 不報', () => {
@@ -1241,4 +1246,32 @@ test('022 pickBeatSheet：storyboard 的表為準；內容設計動畫的 design
   const only = BT.pickBeatSheet('d1', { sheets: new Map(), design: { text: dz, newer: false } });
   assert.equal(only.sheet.rows.length, 2, 'storyboard 沒有這張表就用 designs');
   assert.equal(BT.pickBeatSheet('d1', { sheets: new Map() }).sheet, null);
+});
+
+test('P.* 的選擇器從最外層 id 開始 ✖（完成影片裡最外層 id 被拿掉，root.querySelectorAll 找不到）；走 GSAP 的舊原語、註解、tl.to 不算；範例全部乾淨', () => {
+  const item = { id: 'x01', label: 'x-rack' };
+  const html = `<div id="x-rack" data-composition-id="x-rack"><div id="xr-1" class="card"></div></div><script>
+    const ALL = '#x-rack .card';
+    P.rack(ALL, '#xr-1', 1.5);                 // 透過常數
+    P.pop('#xr-1, #x-rack > .b', 1);            // 選擇器清單的第二個
+    P.dim('#x-rack .card', 2); P.dim('#x-rack .card', 3);   // 同一個寫法只報一次
+    P.in('#x-rack .card', 1);                   // 走 GSAP，找得到（留著最外層 id 才不會選到別段）
+    tl.to('#x-rack .card', { opacity: 0 }, 1);  // GSAP 字串，找得到
+    // P.spot('#x-rack .card', 1);
+    P.pop('#x-racks .z', 1);                    // 不是最外層 id
+  </script>`;
+  const f = R.rootSelectorFindings({ item, html, file: 'x-rack.html' });
+  assert.deepEqual(f.map((x) => [x.level, x.rule, x.data.method, x.data.selector]), [
+    ['error', 'root-selector', 'rack', '#x-rack .card'], ['error', 'root-selector', 'pop', '#xr-1, #x-rack > .b'], ['error', 'root-selector', 'dim', '#x-rack .card']]);
+  assert.match(f[1].fix, /拿掉開頭的 #x-rack，寫 '#xr-1, \.b'/);
+  // KIT_ROOT_QUERY 要和 kit 一致：用 q()（root.querySelectorAll）查的 P.* 方法
+  const kit = fs.readFileSync(path.join(TEMPLATE, 'kit', 'scene-motion.js'), 'utf8');
+  const defs = [...kit.matchAll(/\bP\.([a-zA-Z]+)\s*=\s*function\s*\([^)]*\)\s*\{/g)].map((m) => ({ name: m[1], at: m.index }));
+  const usesQ = defs.filter((d, i) => /\bq\(/.test(kit.slice(d.at, i + 1 < defs.length ? defs[i + 1].at : kit.length))).map((d) => d.name).sort();
+  assert.deepEqual([...R.KIT_ROOT_QUERY].sort(), usesQ);
+  // 範例（複製到專案的起點）不能有這種寫法
+  const dir = path.join(TEMPLATE, 'custom');
+  for (const n of fs.readdirSync(dir).filter((x) => x.endsWith('.html'))) {
+    assert.deepEqual(R.rootSelectorFindings({ item: { id: n, label: n }, html: fs.readFileSync(path.join(dir, n), 'utf8'), file: n }).map((x) => x.msg), [], n);
+  }
 });
