@@ -3,8 +3,8 @@ import { speedLabel } from './speed.mjs';
 
 const IN = { band: '卡片滑入', wipe: '色帶擦開', swap: '換卡（背景不動）', chapter: '色塊擦入', side: '側邊推入', fade: '淡入', wipeIn: '擦入', cut: '直接切', overlay: '動畫自己進場' };
 const OUT = { band: '卡片收回', retract: '色帶收回', swap: '舊卡擦掉', cover: '停著，被下一段蓋過', hold: '墊在下一段底下', handoff: '直接換下一張卡', fade: '淡出', wipeOut: '擦出', side: '側邊收回', cut: '直接切', overlay: '動畫自己退場' };
-const MEDIA_IN = { cut: '直接切', fade: '淡入', slide: '滑入', zoom: '縮放', tape: '紙膠帶貼上' };
-const MEDIA_OUT = { cut: '直接切', fade: '淡出', slide: '滑出', zoom: '縮放' };
+const MEDIA_IN = { cut: '直接切', fade: '淡入', slide: '滑入', zoom: '縮放', whip: '甩鏡', tape: '紙膠帶貼上', tilt: '斜躺擺平' };
+const MEDIA_OUT = { cut: '直接切', fade: '淡出', slide: '滑出', zoom: '縮放', whip: '甩鏡' };
 // 這些沒有看得到的動作：時間軸不畫
 const QUIET = new Set(['cut', 'cover', 'hold', 'overlay', 'handoff']);
 

@@ -30,7 +30,8 @@ import { findCue, norm, cueByN } from './srt.mjs';
 import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTime, textWidth, onVoice, voicedAt } from './time.mjs';
 import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } from './edit.mjs';
 import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner, mediaOverlaps } from './media.mjs';
-import { SFX_RULES, sfxBudget, thinMainSfx } from './audio.mjs';
+import { SFX_RULES, SFX_SWAP, sfxBudget, thinMainSfx } from './audio.mjs';
+import { validateMoods, moodCues, zoomSpans, MOOD_KINDS } from './moods.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
@@ -38,7 +39,7 @@ import { floorRules, atConsts, faceZone, coverWarn, FACE_WARN } from './audit-ru
 import { readScript } from './script-file.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
-const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'scenes'];
+const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'moods', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
@@ -411,6 +412,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   if (!plan || typeof plan !== 'object' || Array.isArray(plan)) return { items: [], errors: ['plan.json 要是一個物件 { "version": 1, "scenes": [...] }'], warnings, globals: {} };
   for (const k of Object.keys(plan)) if (!TOP_KEYS.includes(k)) errors.push(`plan.json 第一層沒有「${k}」這個欄位（可用：${TOP_KEYS.join('、')}）`);
   if (plan.version !== 1) errors.push(`version 要寫 1（現在是 ${JSON.stringify(plan.version)}）`);
+  errors.push(...validateMoods(plan.moods, lib.sfx || {}));
   // 版式（009）：build 照 --format > plan.json > 開工決策表 > 主軌 決定後傳 canvas 進來；沒傳就看 plan.json
   if (plan.format !== undefined && !FORMATS.includes(plan.format)) errors.push(`format 只能是 "landscape" 或 "portrait"（現在是 ${JSON.stringify(plan.format)}）→ 直式寫 "portrait"，橫式刪掉這個欄位`);
   const C = canvas || canvasOf(FORMATS.includes(plan.format) ? plan.format : 'landscape');
@@ -739,8 +741,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     if (!b || a.holdFor === b.id) continue;
     a.fadeOut = false; b.fadeIn = false;
     if (b.start > a.end) a.end = b.start;
-    // 後面的素材用 slide／zoom／tape 進場：前一段要墊在底下直到進場完成，不然中間會露出講者
-    if (b.type === 'media' && ['slide', 'zoom', 'tape'].includes(b.media.enter)) a.end = Math.max(a.end, r3(b.start + ENTER[b.media.enter]));
+    // 後面的素材用 slide／zoom／whip／tape／tilt 進場：前一段要墊在底下直到進場完成，不然中間會露出講者；
+    //   小視窗在接縫交棒（不然墊底那 0.3–0.65 秒會同時有兩個小視窗）
+    //   前一段是從錄影擦入的幕（z 31）時，素材提到同一層：同 z 照 DOM 先後疊，後面的在上（不然進場那幾格被幕蓋住、看起來像直接出現）
+    if (b.type === 'media' && ['slide', 'zoom', 'whip', 'tape', 'tilt'].includes(b.media.enter)) { a.end = Math.max(a.end, r3(b.start + ENTER[b.media.enter])); a.pipEnd = b.start; if (b.z < a.z) b.z = a.z; }
     a.seamTo = b.id;
     // 同一支錄影接著播（後段的起點接上前段的終點）：硬接。疊化會有 0.47 秒鬼影，還會多播前段的畫面
     if (a.type === 'media' && b.type === 'media' && continuesMedia(a, b)) {
@@ -1020,29 +1024,75 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       for (const c of [it.sfx, ...it.sfxExtra]) if (c) c.volume = r3(Math.min(3.98, c.volume * g));
     }
   }
-  let lastSfx = null;
-  // 3 秒規則只管主音效；additive（click）疊在別的聲音上，不算
-  for (const it of [...timed].filter((x) => x.sfx && !sfxConf[x.sfx.name]?.additive).sort((a, b) => a.sfx.at - b.sfx.at)) {
-    if (lastSfx && it.sfx.at - lastSfx.sfx.at < SFX_GAP) {
-      it.warnings.push(`${it.where} 音效 ${it.sfx.name}（${it.sfx.at}s）和 ${lastSfx.id} 的音效只差 ${r3(it.sfx.at - lastSfx.sfx.at)}s（< ${SFX_GAP}s），已拿掉（只保留前一個） → 想留這顆，就在 ${lastSfx.id} 寫 "sfx": null`);
-      it.sfxDropped = it.sfx; it.sfx = null;
-    } else lastSfx = it;
+  // --- 情緒點（moods，specs/023）：音效照講者的情緒，峰值對齊詞的開口 ---
+  const moodRes = moodCues(Array.isArray(plan.moods) && !validateMoods(plan.moods, sfxConf).length ? plan.moods : [], { cues, sfxConf, videoDur, frame });
+  errors.push(...moodRes.errors);
+  const moodItems = moodRes.list.map((x) => ({ id: `mood${x.i + 1}`, where: x.where, type: 'mood', mood: x, sfx: x.sfx, sfxExtra: [], warnings: [], errors: [], seg: {} }));
+  const moodNotes = [];
+  // 模板的預設音效：那一分鐘有情緒點的音效就讓位（段上明寫的 sfx、章節音效、附加音效不動）
+  let sfxYielded = 0;
+  const moodMins = new Set(moodItems.filter((m) => m.sfx).map((m) => Math.floor(m.sfx.at / 60)));
+  if (moodMins.size) {
+    for (const it of timed) {
+      if (!it.sfx || it.seg.sfx !== undefined || it.sfx.name === 'chapter' || sfxConf[it.sfx.name]?.additive) continue;
+      if (moodMins.has(Math.floor(it.sfx.at / 60))) { it.sfxDropped = it.sfx; it.sfxYield = true; it.sfx = null; sfxYielded++; }
+    }
   }
-  // 每分鐘最多 2 顆主音效：工具照優先序留，不用人一段一段寫 "sfx": null
-  const sfxThinned = thinMainSfx(timed, sfxConf);
+  // 3 秒規則只管主音效；additive（click）疊在別的聲音上，不算。
+  // 優先序：段上明寫的 sfx、章節 ＞ 情緒點（金句、反轉 ＞ 痛點、解法 ＞ 落定）＞ 模板預設；同一級留前一個
+  const sfxPrio = (x) => (x.type === 'mood' ? 10 + x.mood.rank : x.seg?.sfx != null || x.sfx?.name === 'chapter' ? 100 : 0);
+  const kept = [];
+  for (const it of [...timed, ...moodItems].filter((x) => x.sfx && !sfxConf[x.sfx.name]?.additive).sort((a, b) => a.sfx.at - b.sfx.at)) {
+    const near = kept.filter((k) => it.sfx.at - k.sfx.at < SFX_GAP);
+    if (!near.length) { kept.push(it); continue; }
+    if (near.every((k) => sfxPrio(k) < sfxPrio(it))) {
+      for (const k of near) {
+        if (k.type === 'mood') moodNotes.push(`${k.where} 的音效讓給 ${it.where}（相距不到 ${SFX_GAP} 秒，留情緒比較強的）`);
+        else if (it.type !== 'mood') k.warnings.push(`${k.where} 音效 ${k.sfx.name}（${k.sfx.at}s）和 ${it.id} 明寫的音效只差 ${r3(it.sfx.at - k.sfx.at)}s（< ${SFX_GAP}s），已拿掉（段上明寫的優先）`);
+        else sfxYielded++;
+        k.sfxDropped = k.sfx; k.sfx = null; kept.splice(kept.indexOf(k), 1);
+      }
+      kept.push(it);
+      continue;
+    }
+    const last = near[near.length - 1];
+    if (it.type === 'mood') {
+      if (last.type === 'mood') moodNotes.push(`${it.where} 的音效讓給 ${last.where}（相距不到 ${SFX_GAP} 秒）`);
+      else it.warnings.push(`${it.where} 的音效和 ${last.id} 明寫的音效只差 ${r3(it.sfx.at - last.sfx.at)}s（< ${SFX_GAP}s），已拿掉 → 想留情緒點，就把 ${last.id} 的 sfx 拿掉；不然這個情緒點寫 "sfx": null`);
+    } else if (last.type === 'mood') sfxYielded++;
+    else it.warnings.push(`${it.where} 音效 ${it.sfx.name}（${it.sfx.at}s）和 ${last.id} 的音效只差 ${r3(it.sfx.at - last.sfx.at)}s（< ${SFX_GAP}s），已拿掉（只保留前一個） → 想留這顆，就在 ${last.id} 寫 "sfx": null`);
+    it.sfxDropped = it.sfx; it.sfx = null;
+  }
+  // 每分鐘最多 2 顆主音效：工具照優先序留（情緒點照強弱），不用人一段一段寫 "sfx": null
+  const sfxThinned = thinMainSfx([...timed, ...moodItems], sfxConf);
+  for (const m of moodItems) if (m.sfxThinned) moodNotes.push(`${m.where} 的音效被每分鐘 ${SFX_RULES.perMinute} 顆的上限拿掉（那一分鐘有更強的）`);
+  // 每集上限（sparkle 6、shine 3、thunder 3）：情緒點超過的，從後面的開始換成替代音效（shine、sparkle → ding；thunder → alert）
+  const cnt = {};
+  for (const x of [...timed, ...moodItems]) if (x.sfx) cnt[x.sfx.name] = (cnt[x.sfx.name] || 0) + 1;
+  for (const m of [...moodItems].filter((x) => x.sfx).sort((a, b) => b.sfx.at - a.sfx.at)) {
+    const n = m.sfx.name, max = sfxConf[n]?.maxPerVideo, to = SFX_SWAP[n];
+    if (max == null || !(cnt[n] > max) || !to || !sfxConf[to]) continue;
+    cnt[n]--; cnt[to] = (cnt[to] || 0) + 1;
+    m.sfx = { ...m.sfx, name: to, at: r3(Math.max(0, m.sfx.event - (sfxConf[to].peak || 0) + frame)), volume: sfxConf[to].volume ?? 0.5 };
+    moodNotes.push(`${m.where} 的 ${n} 超過每集 ${max} 次，換成 ${to}`);
+  }
   // edit：音效總增益＋整支淡入淡出期間跟著變小（音效很短，用起點那一刻的增益）
   if (ne.active && (edit.volume.sfx !== 0 || edit.fadeIn > 0 || edit.fadeOut > 0)) {
     const g = dB(edit.volume.sfx);
     const env = (t) => Math.max(0, Math.min(1, edit.fadeIn > 0 ? t / edit.fadeIn : 1, edit.fadeOut > 0 ? (videoDur - t) / edit.fadeOut : 1));
     const adj = (c) => { if (c) c.volume = r3(Math.min(3.98, c.volume * g * env(c.at))); };
-    for (const it of timed) { adj(it.sfx); (it.sfxExtra || []).forEach(adj); }
+    for (const it of [...timed, ...moodItems]) { adj(it.sfx); (it.sfxExtra || []).forEach(adj); }
   }
   // 音效政策：每集上限、每分鐘密度、和人聲的比例（005 的 sfxBudget；訊息原文 contracts/cli-005.md §3）
-  const budgetCues = timed.flatMap((it) => [it.sfx && { id: it.id, name: it.sfx.name, at: it.sfx.at, volume: it.sfx.volume, main: true },
+  const budgetCues = [...timed, ...moodItems].flatMap((it) => [it.sfx && { id: it.id, name: it.sfx.name, at: it.sfx.at, volume: it.sfx.volume, main: true },
     ...(it.sfxExtra || []).map((c) => ({ id: it.id, name: c.name, at: c.at, volume: c.volume, main: !!c.beat }))].filter(Boolean));
   // 音效稀疏的空檔裡，列出情境動畫與錄影段（這兩種要自己配：動畫寫 P.sfx、錄影寫 sfx；字卡照情境預設）
   const gapNote = (g) => { const ids = timed.filter((x) => (x.type === 'custom' || x.type === 'media') && x.start < g.to && x.end > g.from).map((x) => x.id); return ids.length > 8 ? `${ids.slice(0, 8).join('、')}…等 ${ids.length} 段` : ids.join('、'); };
-  const budget = sfxBudget(budgetCues, sfxConf, { voiceDb: edit.volume?.voice ?? 0, outDur: videoDur, fmt, gapNote, thinned: sfxThinned });
+  const budget = sfxBudget(budgetCues, sfxConf, { voiceDb: edit.volume?.voice ?? 0, outDur: videoDur, fmt, gapNote, thinned: sfxThinned, moods: Array.isArray(plan.moods) });
+  if (Array.isArray(plan.moods)) {
+    const withSfx = moodItems.filter((m) => m.sfx).length;
+    budget.lines.push(`情緒點：${moodItems.length} 個（音效 ${withSfx} 顆${moodItems.length - withSfx ? `、不出聲 ${moodItems.length - withSfx} 個` : ''}；模板預設音效讓位 ${sfxYielded} 顆）${moodNotes.length ? `；${moodNotes.slice(0, 4).join('；')}${moodNotes.length > 4 ? `…等 ${moodNotes.length} 則` : ''}` : ''}`);
+  }
   warnings.push(...budget.warnings.map((w) => w.replace(/^[⚠✖]\s*/, '')));
 
   // --- 插入素材（media）和其他段的關係：和不透明幕一樣是整張幕（z 30），同一時間只能有一張 ---
@@ -1054,7 +1104,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         const [a, b] = x.start < md.start || (x.start === md.start && x.idx < md.idx) ? [x, md] : [md, x];
         if (b.start >= a.end - 1e-6 || overlapSeen.has(`${a.id}|${b.id}`)) continue;
         // slide／zoom 進場、疊化、章節墊底：前一段刻意墊在底下，容許那一段重疊
-        const allow = a.holdFor === b.id ? FADE : b.xfade && a.seamTo === b.id ? b.xfade : a.wipeLate && a.seamTo === b.id ? WIPE : b.type === 'media' && ['slide', 'zoom', 'tape'].includes(b.enterFx) ? ENTER[b.enterFx] : 0;
+        const allow = a.holdFor === b.id ? FADE : b.xfade && a.seamTo === b.id ? b.xfade : a.wipeLate && a.seamTo === b.id ? WIPE : b.type === 'media' && ['slide', 'zoom', 'whip', 'tape', 'tilt'].includes(b.enterFx) ? ENTER[b.enterFx] : 0;
         const ov = r3(Math.min(a.end, b.end) - b.start);
         if (ov > allow + 0.1) {
           overlapSeen.add(`${a.id}|${b.id}`);
@@ -1204,6 +1254,25 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     const box = speakerBox;
     const origin = box ? `${Math.round((box[0] + box[2]) / 2)}px ${Math.round(box[1] + (box[3] - box[1]) * 0.3)}px` : portrait ? `${C.W / 2}px ${Math.round(C.H * 0.37)}px` : '960px 400px';
     editFx = { fadeIn: edit.fadeIn, fadeOut: edit.fadeOut, dips, punches, scale: PUNCH, origin, mediaDb: edit.volume.media };
+  }
+
+  // --- 情緒點的講者爆衝推近（moods[].zoom，specs/023）：詞開口 0.2 秒推到 1.25 倍，停到句尾（遇到接點、整張幕提早收）---
+  let zooms = null;
+  if (moodItems.some((m) => m.mood.zoom)) {
+    const covers = (x, t) => (x.opaque || x.side) && x.start <= t + 1e-9 && t < x.end - 1e-9;
+    const speakerVisible = (t) => t >= 0 && !timed.some((x) => covers(x, t)) && !voiceOut.some(([s0, e0]) => t >= s0 - 1e-9 && t < e0);
+    const blockedUntil = (a, b) => {
+      const starts = [...timed.filter((x) => (x.opaque || x.side) && x.start > a + 1e-6 && x.start < b).map((x) => x.start), ...voiceOut.map(([s0]) => s0).filter((s0) => s0 > a + 1e-6 && s0 < b)];
+      return starts.length ? Math.min(...starts) : null;
+    };
+    const cutPts = [...new Set([...tm.joinsOut, ...cutpoints.map((c) => c.at).filter((x) => Number.isFinite(x)).map(mapAbs), ...(edit.joins || []).map((j) => tm.map(j.at))])]
+      .filter((p) => p > 0 && p < videoDur).sort((p, q) => p - q);
+    const zr = zoomSpans(moodItems.map((m) => m.mood), { cues, cutPoints: cutPts, videoDur, speakerVisible, blockedUntil });
+    const box = speakerBox;
+    const origin = box ? `${Math.round((box[0] + box[2]) / 2)}px ${Math.round(box[1] + (box[3] - box[1]) * 0.3)}px` : portrait ? `${C.W / 2}px ${Math.round(C.H * 0.37)}px` : '960px 400px';
+    const punches = editFx?.punches || [];
+    zooms = { origin, list: zr.zooms.map((z) => ({ ...z, base: punches.some((p) => z.a >= p.a - 1e-9 && z.a < p.b) ? PUNCH : 1 })) };
+    budget.lines.push(`講者爆衝推近：${zr.zooms.length} 次${zr.zooms.length ? `（${zr.zooms.map((z) => fmt(z.a)).join('、')}）` : ''}${zr.notes.length ? `；${zr.notes.slice(0, 3).join('；')}${zr.notes.length > 3 ? `…等 ${zr.notes.length} 則` : ''}` : ''}`);
   }
 
   // --- 文字對時（F4）：卡片主文字的出現時間 vs 講到那個詞的時間 ---
@@ -1357,9 +1426,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
 
   const all = items.flatMap((x) => x.errors);
   return {
-    items: timed, allItems: items, errors: [...errors, ...all], warnings: [...warnings, ...items.flatMap((x) => x.warnings)],
+    items: timed, allItems: items, errors: [...errors, ...all], warnings: [...warnings, ...items.flatMap((x) => x.warnings), ...moodItems.flatMap((x) => x.warnings)],
     globals: { speakerBox, sideShift, pipCrop, pip },
     edit, editActive: ne.active, tm, outDur: videoDur, roughDur, cuesOut: cues, voiceOnly, voiceOut, voiceGaps, footage, editFx, cutpoints, voiceMoved: [...(cues.voiceMoved || [])],
+    moods: moodItems.map((m) => ({ i: m.mood.i, kind: m.mood.kind, event: m.mood.event, zoom: m.mood.zoom, sfx: m.sfx, dropped: m.sfxDropped?.name ?? null, off: m.mood.sfxOff })), zooms,
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro,
     chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
   };
@@ -1436,7 +1506,8 @@ function pipMotion(timed, { tm, voiceOut, punches = [] }) {
       const [x0, y0] = before.a.media?.pipShift || [0, 0], [x1, y1] = a.media?.pipShift || [0, 0];
       if (x0 !== x1 || y0 !== y1) p.slideFrom = [x0, y0];
     } else if (p.s > a.start + 1e-3 && isJoin(p.s)) p.enter = 'none';
-    else if (p.e - p.s >= PIP_FLY_MIN - 1e-9 && speakerFull(r3(p.s - frame))) p.enter = 'fly';
+    // 甩鏡、斜躺擺平進場的錄影段：小視窗原地淡入（講者整張飛過去會蓋住進場）
+    else if (p.e - p.s >= PIP_FLY_MIN - 1e-9 && speakerFull(r3(p.s - frame)) && !(near(p.s, a.start) && ['whip', 'tilt'].includes(a.enterFx))) p.enter = 'fly';
     else p.enter = 'fade';
     p.exitDur = 0;
     if (all.some((q) => q.a !== a && near(q.p.s, p.e))) p.exit = 'none';
@@ -1524,6 +1595,9 @@ export function jsonTop(res, { clip = null } = {}) {
       loud: b.loud.map((x) => ({ ...x, at: back(x.at) })),
     } : { perMinuteAvg: 0, over: [], dense: [], loud: [] },
     outro: res.outro?.music && clip ? { music: res.outro.music, start: back(clip.at), dur: clip.dur, aligned: clip.aligned } : null,
+    // 情緒點（plan.json moods，023）：i＝moods 的第幾個；at＝rough.mp4 秒數；sfx＝最後出聲的音效（被取捨拿掉的是 null，dropped 寫原本那顆）
+    moods: (res.moods || []).map((m) => ({ i: m.i, kind: m.kind, at: back(m.event), outAt: r3(m.event), sfx: m.sfx?.name ?? null, dropped: m.sfx ? null : m.dropped, off: !!m.off,
+      zoom: !!(res.zooms?.list || []).find((z) => z.i === m.i) })),
   };
 }
 

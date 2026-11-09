@@ -12,6 +12,7 @@
 //   designTargetOf(n)、designEligible(seg)  → 寫好草稿後照實際段數算：約三成的段（media、章節段不算）
 //   renderCommon(input)、renderSnippets(input)、renderPart(part, input) → 共用.md、寫法.md、chNN.md
 import { normText, textWidth } from './time.mjs';
+import { moodCandidates, moodTarget, MOOD_KINDS } from './moods.mjs';
 
 export const CHAPTER_MIN_VIDEO = 180;   // 不到 3 分鐘的影片不用 01 章節轉場
 const SKIP_LINE = (l) => l.startsWith('>') || l.startsWith('<!--') || l.includes('`') || /^[-*_]{3,}$/.test(l) || /^[（(].*[）)]$/.test(l);
@@ -315,15 +316,16 @@ export function renderCommon(input) {
 
   L.push('## 7. 草稿格式', '');
   L.push('每一章寫一份 `work/drafts/chNN.json`，`story` 每段都要有（分鏡表由工具從這裡產生，不用另外寫）：', '');
-  L.push('```json', '{"chapter":"03","segments":[{"id":"s0301","scene":"key-point","from":"#N","to":"#Me","anchor":"…","slots":{"key":"…"},"beats":{"keyAt":"#N@詞"},"story":{"say":"講解在講什麼","why":"為什麼這樣呈現"}}],"icons":{"剪輯清單":"scissors"},"quotes":[{"n":42,"text":"原句","card":"卡上文字（≤ 14 字）","mood":"正"}],"decide":["拿不定、要使用者決定的事"]}', '```', '');
+  L.push('```json', '{"chapter":"03","segments":[{"id":"s0301","scene":"key-point","from":"#N","to":"#Me","anchor":"…","slots":{"key":"…"},"beats":{"keyAt":"#N@詞"},"story":{"say":"講解在講什麼","why":"為什麼這樣呈現"}}],"icons":{"剪輯清單":"scissors"},"quotes":[{"n":42,"text":"原句","card":"卡上文字（≤ 14 字）","mood":"正"}],"moods":[{"at":"#N@詞","kind":"pain"},{"at":"#M@詞","kind":"turn","zoom":true}],"decide":["拿不定、要使用者決定的事"]}', '```', '');
   L.push('骨架第一次填：Read 一次整份、填好用 Write 一次寫回（`auto` 格和其他欄位原樣保留）。`chNN.md` 有「章節段」就原樣貼進 segments 最前面（大綱不寫它；之後再跑 `--outline` 會洗掉，要重貼）。', '寫完先驗這一份（不會被別章影響）：`node shared/template/tools/build.mjs --project projects/<專案> --check-draft chNN`。之後只用 Edit 改它點名的那幾格。✖ 全修。⚠ 只修一輪：照 → 用 Edit 改那幾格（不要整份重寫），再跑同一條檢查一次就停，留下的 ⚠ 寫進 decide 或回報。印「通過」或「可以交件」都算過關。同一個 ✖ 改 2 次還在，停下來回報指令和 ✖ 原文。', '');
   L.push('金句只放 `quotes`（每份最多 2 則，挑最像翻轉句的），不要排成 15 金句字卡段（使用者勾了才上）；那幾句照常排在一般的段裡，和 quotes 重複沒關係。`mood` 寫 正、負、中 其中一個。同一個物件全集用同一個圖示：`icons` 寫你用的對應；圖示名寫錯 `--check-draft` 會列最接近的，不用先確認。', '');
+  L.push(`**情緒點寫 \`moods\`**：音效照講者的情緒放，不照模板。挑講者情緒最強的那個詞，寫 \`{ "at": "#N@詞", "kind": "…" }\`，\`kind\` 只有五種：${Object.entries(MOOD_KINDS).map(([k, v]) => `\`${k}\` ${v.zh}（${v.sound}）`).join('、')}。約每分鐘 1 個（\`chNN.md\` 寫了這一份要幾個），工具會照強弱取捨、對齊詞的開口、把同一分鐘模板的預設音效拿掉，你不用算秒數也不用管上限。金句、反轉、數字落定那一下可以加 \`"zoom": true\`（講者畫面爆衝推近，約每分鐘最多 1 次），只在講者露臉的時候有效。`, '');
 
   L.push('## 8. 這裡沒寫才去查', '');
   L.push('| 要查什麼 | 去哪裡 |', '|---|---|');
   const six = String(situationsMd ?? '').split(/\r?\n/).findIndex((l) => /^## 6\b|^## 6\./.test(l));
   if (six >= 0) L.push(`| 整集看一次（開場三拍、前後呼應、判決句） | \`shared/template/SITUATIONS.md\` 第 ${six + 1} 行起 |`);
-  L.push('| 結尾配樂、節奏、調光這些第一層欄位（outro、rhythm、look） | 不在草稿寫（合併只收 segments、icons、quotes、decide）；要配就寫進 decide，主代理處理 |', '| 版面、字數、音效的規則 | `shared/style.md` 對應那一節 |', '');
+  L.push('| 結尾配樂、節奏、調光這些第一層欄位（outro、rhythm、look） | 不在草稿寫（合併只收 segments、icons、quotes、moods、decide）；要配就寫進 decide，主代理處理 |', '| 版面、字數、音效的規則 | `shared/style.md` 對應那一節 |', '');
   void beatsMd;
   return `${L.join('\n')}\n`;
 }
@@ -463,6 +465,14 @@ export function renderPart(part, input) {
     for (const w of seg.warn) L.push(`- ⚠ ${w}`);
     if (seg.warn.length) L.push('');
   }
+  // 情緒點候選（關鍵詞挑的提示）：挑不挑、標哪一類由寫草稿的人判斷
+  const mt = moodTarget(part.seconds);
+  const cand = moodCandidates(cues.slice(part.a, part.z + 1));
+  L.push(`## 情緒點（\`moods\`：這一份約 ${mt.target} 個，最多 ${mt.cap} 個；推近最多 ${mt.zoomCap} 次）`, '');
+  L.push(cand.length ? '關鍵詞對到的句子（只是提示：沒對到的情緒一樣可以標，對到但情緒不強的不用標）：' : '關鍵詞沒有對到句子：照講者語氣挑最強的那幾個詞。', '');
+  for (const x of cand.slice(0, 15)) L.push(`- #${x.n} ${MOOD_KINDS[x.kind].zh}「${x.word}」：${cut(x.text, 28)}`);
+  if (cand.length > 15) L.push(`- …還有 ${cand.length - 15} 句`);
+  L.push('');
   const heads = new Map(outline.map((x) => [x.n, x]));
   // 一句一行、不用表格：長片這份少四分之一，子代理整段對話都帶著它
   L.push('## 字幕（句號就是 #N，後面是開始時間）', '');

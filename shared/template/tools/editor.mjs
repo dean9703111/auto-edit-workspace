@@ -430,7 +430,7 @@ function makeContext(P) {
   return {
     P, work, editorDir: path.join(P.out, '.editor'),
     cutpointsFile: path.join(work, 'cutpoints.json'), mainJson: path.join(work, 'main.json'),
-    stateFile: path.join(P.out, '.editor', 'server.json'), memoryFile: path.join(P.out, '.editor', 'memory.json'),
+    stateFile: path.join(P.out, '.editor', 'server.json'), memoryFile: path.join(P.out, '.editor', 'memory.json'), hiddenFile: path.join(P.out, '.editor', 'hidden-checks.json'),
     schema: null, schemaJob: null, thumbs: new Map(), loud: new Map(),
     token: crypto.randomBytes(16).toString('hex'),
     port: null, url: null, player: { available: false, reason: '還沒檢查' },
@@ -734,6 +734,7 @@ async function getState(ctx) {
   const schema = ctx.schema ?? await getSchema(ctx).catch(() => null);
   return {
     app: { port: ctx.port, url: ctx.url },
+    hiddenChecks: readHidden(ctx),
     project: { name: path.basename(P.project), dir: rel },
     commands: {
       build: `node shared/template/tools/build.mjs --project ${rel}`,
@@ -956,6 +957,28 @@ async function doLoudness(ctx, body) {
   }
 }
 
+// 改字後要量版面的段：plan.json 裡還在的、最多 12 段。字卡動態是刻意飛出畫面、裁一半、縮成小字的特效（版面由模板的 FXKit.fitSize 保證）、
+// 插入素材不是版面：和 audit 的 pickItems 一樣不量（以前改了數字卡的字會量出「文字被 .fx-29-win 裁掉」這類誤判：滾輪本來就只露一格）
+export function auditTargets(plan, ids) {
+  const segs = (isObj(plan) && Array.isArray(plan.scenes) ? plan.scenes : []).filter(isObj);
+  const ok = new Set(segs.filter((x) => !['fx', 'media'].includes(x.type)).map((x) => String(x.id)));
+  return [...new Set((Array.isArray(ids) ? ids : []).map(String))].filter((x) => ok.has(x)).slice(0, 12);
+}
+
+// 檢查分頁「判斷錯了，隱藏」：作者藏起來的那幾則（editor/issues.mjs 的 hideKey）。只影響剪輯台顯示，不改檢查本身
+const HIDDEN_MAX = 300;
+export function readHidden(ctx) {
+  const d = readJson(ctx.hiddenFile);
+  return Array.isArray(d?.keys) ? d.keys.filter((k) => typeof k === 'string').slice(0, HIDDEN_MAX) : [];
+}
+export function saveHidden(ctx, body) {
+  if (!Array.isArray(body?.keys) || !body.keys.every((k) => typeof k === 'string' && k.length <= 300)) return [400, { message: 'keys 要是字串陣列' }];
+  const keys = [...new Set(body.keys)].slice(0, HIDDEN_MAX);
+  fs.mkdirSync(path.dirname(ctx.hiddenFile), { recursive: true });
+  fs.writeFileSync(ctx.hiddenFile, JSON.stringify({ keys, updatedAt: new Date().toISOString() }, null, 2) + '\n');
+  return [200, { keys }];
+}
+
 // 剪輯改了卡片文字的段：build 成功後跑 audit --only 量版面，✖／⚠ 併進 issues（剪輯檢查清單標紅）
 export function auditIssues(json) {
   const errors = [], warnings = [];
@@ -1062,8 +1085,7 @@ function rememberBuildTime(ctx) {
 async function doBuild(ctx, body = {}) {
   if (ctx.build.running) return [409, { error: 'busy', message: '已經在更新預覽了，等它跑完' }];
   const P = ctx.P;
-  const ids0 = new Set(((readPlan(P.plan).data || {}).scenes || []).filter(isObj).map((x) => String(x.id)));
-  const auditIds = (Array.isArray(body?.audit) ? body.audit : []).map(String).filter((x) => ids0.has(x)).slice(0, 12);
+  const auditIds = auditTargets(readPlan(P.plan).data, body?.audit);
   ctx.build = { running: true, log: '', code: null, ok: null, startedAt: Date.now(), finishedAt: null };
   // 瘦臉底片過期而且能跑：先跑 look.mjs run（偵測臉部＋套用瘦臉），成功才 build（contracts/cli-006.md §6）
   const planData = readPlan(P.plan).data;
@@ -1177,6 +1199,7 @@ async function handle(ctx, req, res) {
     if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/check') { const rep = await getReport(ctx, { fresh: true }); return sendJson(res, 200, reportOut(rep)); }
+    if (p === '/api/check/hidden') { const [s, o] = saveHidden(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/shutdown') {
       if (req.headers['x-editor-token'] !== ctx.token) return sendJson(res, 403, { error: 'forbidden', message: 'token 不對' });
       sendJson(res, 200, { ok: true });

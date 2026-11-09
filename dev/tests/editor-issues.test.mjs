@@ -5,7 +5,7 @@ import { TOOLS } from './helpers.mjs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const { groupIssues, issueId, issueText } = await import(pathToFileURL(path.join(TOOLS, 'editor', 'issues.mjs')).href);
+const { groupIssues, issueId, issueText, hideKey, plainText, splitHidden } = await import(pathToFileURL(path.join(TOOLS, 'editor', 'issues.mjs')).href);
 
 // 實際跑長片（156 段）印的訊息
 const WARN = [
@@ -61,4 +61,19 @@ test('認不得的訊息：不亂歸類，放給 AI，文字拿掉修法', () =>
   const G = groupIssues([], ['全新的提醒 12 → 修法', '全新的提醒 34 → 修法', '另一種提醒']);
   assert.equal(G.author.length, 0);
   assert.deepEqual(G.ai.map((g) => [g.title, g.raw.length]), [['全新的提醒 12', 2], ['另一種提醒', 1]]);
+});
+
+test('判斷錯了可以隱藏：同一類（只差數字）一起藏、改字後數字變了也還藏著；藏起來的不算數、可以還原；版面訊息拿掉 CSS 選擇器', () => {
+  const reel = (d, px) => `[s0115] 版面：文字被容器 #root .fx-29-win「0123456789…」裁掉：#root .fx-29-it「${d}」 超出上邊 ${px}px → 容器的高度加到 ≥ 1653px（或拿掉固定 height）；不要縮字級（R8.5）`;
+  const errs = [reel(0, 1366.4), reel(1, 1076.8), reel(2, 794.4), '[s0201] 版面：文字撐破容器 #root .card「很長的標題」 超出右邊 40px → 寬度加到 ≥ 600px'];
+  assert.equal(hideKey(reel(0, 1366.4)), hideKey(reel(7, 12.5)), '只差數字＝同一則');
+  assert.notEqual(hideKey(reel(0, 1)), hideKey(errs[3]));
+  const sp = splitHidden(errs, ['[s0115] 版面：字太小'], new Set([hideKey(errs[0])]));
+  assert.deepEqual(sp.errors, [errs[3]]);
+  assert.deepEqual(sp.warnings, ['[s0115] 版面：字太小']);
+  assert.deepEqual(sp.hidden.map((h) => [h.level, h.id, h.n]), [['error', 's0115', 3]]);
+  assert.equal(sp.hidden[0].text, '版面：文字被容器「0123456789…」裁掉：「0」超出上邊 1366.4px');
+  assert.equal(splitHidden(errs, [], new Set()).errors.length, 4, '沒藏的照舊');
+  assert.equal(plainText('內容被裁掉：#root .fx-stage「斜向」（1920×1080）裡的 #root .fx-12-band.fx-12-dark「斜向」 超出左邊 38px'), '內容被裁掉：「斜向」（1920×1080）裡的「斜向」超出左邊 38px');
+  assert.equal(plainText('字幕 #12@跑到 太短'), '字幕 #12@跑到 太短', '句號不是選擇器');
 });

@@ -725,7 +725,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
         videoDur, outputDur: res.outDur ?? videoDur,
         voiceOnly, roughBlack: rb.black, voiceUncovered: top.voiceUncovered, uncovered: top.uncovered, cutpoints: cp.list, chapters: top.chapters,
         items: res.tm ? jsonItems(res) : [],
-        sfxCount: top.sfxCount, sfxBudget: top.sfxBudget, outro: top.outro,
+        sfxCount: top.sfxCount, sfxBudget: top.sfxBudget, outro: top.outro, moods: top.moods ?? [],
         edit: res.edit ?? DEFAULT_EDIT(),
         paths: { project: projectDir ? projectLabel(P, projectDir) : null, video: fromRoot(P, fs.existsSync(P.video) ? P.video : src), plan: fromRoot(P, P.plan), out: fromRoot(P, P.out) },
       };
@@ -840,7 +840,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     const r = renderBgmClip(path.join(P.sfx, `${res.outro.music}.wav`), path.join(P.out, 'assets'), { from: clip.from, dur: clip.dur, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, gain: clip.gain });
     outro = { file: posix(path.relative(P.out, r.file)), at: clip.at, dur: r.dur };
   }
-  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, badges: res.badges || [], canvas: C };
+  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null };
   const main = buildMain({ ...mainOpts, captions: cap });
   let test = null;
   if (flags.test) {
@@ -997,7 +997,7 @@ export function errorJson(message) {
     versions: { hyperframes: { pinned: null, installed: null, ok: false } },
     videoDur: null, outputDur: null, voiceOnly: [], roughBlack: [], voiceUncovered: [], uncovered: [], cutpoints: [],
     chapters: [], items: [], sfxCount: {}, sfxBudget: { perMinuteAvg: 0, over: [], dense: [], loud: [] },
-    outro: null, edit: null, paths: {} };
+    outro: null, moods: [], edit: null, paths: {} };
 }
 
 // 結尾配樂的起播點：量 shared/sfx/<music>.wav 的長度（一次 ffprobe）

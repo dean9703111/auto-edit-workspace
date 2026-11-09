@@ -6,8 +6,11 @@
 //   tidyDecide(list, { cues })                → { ask, ai }：「需要我決定的事」去重、白話；ask 問作者，ai 是 AI 自己能決定的
 //   applyStoryboard(md, plan, { scenes, specs, cues }) → { plan, changes, requests, unmatched, answers, designs（這次勾成內容設計動畫的段）, changed }
 //   isDesignPick(seg)、toDesign(seg)          → 內容設計動畫候選（story.designIdea）；勾了就換成 design 段
+//   moodRows(ctx)                             → 分鏡表「情緒點」表的每一列（候選＝_merged.json 的 moods，☑＝plan.json 有）
 import { parseStoryboard, isDecideSection } from '../editor/storyboard-md.mjs';
 import { renderSheet } from './custom-fill.mjs';
+import { MOOD_KINDS, insertMoods } from './moods.mjs';
+import { parseTime, cueSeconds } from './time.mjs';
 
 const clock = (t) => { if (t == null) return '—'; const r = Math.round(t * 100) / 100, m = Math.floor(r / 60); return `${m}:${(r - m * 60).toFixed(2).padStart(5, '0')}`; };
 const cell = (s) => String(s ?? '').replace(/\|/g, '｜').replace(/\s*\r?\n\s*/g, ' ').trim();
@@ -274,6 +277,12 @@ export function renderStoryboard(ctx) {
     }
     L.push('', `${designPlanLine(dp)}；要更快就取消勾，要更多就勾上（${DESIGN_PAR} 段一批，每批約 ${DESIGN_MIN} 分鐘）`, '');
   }
+  const mr = moodRows(ctx);
+  if (mr.length) {
+    L.push(`### ${MOOD_HEAD}`, '', '| 點 | 綁在 | 時間碼 | 情緒 | 音效 | 推近 | 要不要 ☐ |', '|---|---|---|---|---|---|---|');
+    mr.forEach((m, i) => L.push(`| ${i + 1} | ${cell(m.at)} | ${clock(m.t)} | ${MOOD_KINDS[m.kind]?.zh || cell(m.kind)} | ${cell(m.sound)} | ${m.zoom === 'lost' ? '推不到（講者被蓋住或同一分鐘已推近）' : m.zoom ? '推近' : '—'} | ${m.on ? '☑' : '☐'} |`));
+    L.push('', `☑ ${mr.filter((m) => m.on).length} 個／共 ${mr.length} 個；音效照情緒配（${Object.values(MOOD_KINDS).map((v) => `${v.zh} ${v.sound}`).join('、')}），同一分鐘模板的預設音效會讓位`, '');
+  }
   L.push('### 金句候選（勾了才上，每集最多 6 則）', '', '| 候選 | 句號 | 原句 | 卡上文字（≤ 14 字） | 情緒（正／負／中） | 要不要 ☐ |', '|---|---|---|---|---|---|');
   (merged.quotes || []).forEach((q, i) => {
     const on = segs.some((s) => s.id === `q${String(i + 1).padStart(2, '0')}`);
@@ -284,6 +293,32 @@ export function renderStoryboard(ctx) {
 }
 
 const SFX_RE = /^(.+)$/;
+const MOOD_HEAD = '情緒點（音效照講者的情緒放；☑ 的點出聲，「推近」那幾個講者畫面同時爆衝推近；取消勾＝這個點不要）';
+const ZH_KIND = Object.fromEntries(Object.entries(MOOD_KINDS).map(([k, v]) => [v.zh, k]));
+
+// 情緒點表的列：候選（_merged.json 的 moods；沒有就用 plan.json 的）＋這次 plan.json 有沒有（☑）＋ --check --json 算出來的音效
+export function moodRows(ctx) {
+  const { plan = {}, merged = {}, cues = [], moodTimes = [] } = ctx;
+  const inPlan = Array.isArray(plan.moods) ? plan.moods : [];
+  const pool = Array.isArray(merged.moods) && merged.moods.length ? merged.moods : inPlan;
+  const rows = [];
+  const seen = new Set();
+  for (const m of [...pool, ...inPlan]) {
+    if (!m || typeof m.at !== 'string' || seen.has(m.at)) continue;
+    seen.add(m.at);
+    const k = inPlan.findIndex((x) => x?.at === m.at);
+    const cur = k >= 0 ? inPlan[k] : m;
+    const jt = k >= 0 ? moodTimes.find((x) => x.i === k) : null;
+    let t = jt?.at ?? null;
+    if (t == null) { const pt = parseTime(m.at); if (pt.kind === 'cue') { const c = cueSeconds(pt, cues); if (!c.error) t = c.sec; } }
+    const sound = !jt ? (cur.sfx === null ? '不出聲' : cur.sfx || MOOD_KINDS[cur.kind]?.sound || '—') : jt.sfx || (jt.off ? '不出聲' : `讓位（${jt.dropped || MOOD_KINDS[cur.kind]?.sound || '—'}）`);
+    // 寫了 zoom 但 build 推不到（講者被整張幕蓋住、同一分鐘已經推近、太靠近接點）→ 照實寫，不要讓人以為有推
+    const zoom = cur.zoom === true ? (jt && !jt.zoom ? 'lost' : true) : false;
+    rows.push({ at: m.at, kind: cur.kind, t, sound, zoom, on: k >= 0 });
+  }
+  const nOf = (a) => Number(String(a).match(/^#(\d+)/)?.[1] ?? 0);
+  return rows.sort((a, b) => nOf(a.at) - nOf(b.at));
+}
 
 // 把網頁改到的東西套回 plan.json。回傳改了什麼；「想換成」「補充說明」不自動做，列出來給 AI
 export function applyStoryboard(md, plan, { scenes = [], specs = new Map() } = {}) {
@@ -378,9 +413,32 @@ export function applyStoryboard(md, plan, { scenes = [], specs = new Map() } = {
       }
     }
   }
+  // 情緒點：☑ 的留在 plan.json 的 moods、取消的拿掉（候選留在 _merged.json，之後勾回來找得到）
+  for (const sec of doc.sections) {
+    for (const b of sec.blocks) {
+      if (b.type !== 'table' || !b.head.includes('綁在') || !b.head.includes('情緒')) continue;
+      const iAt = b.head.indexOf('綁在'), iKind = b.head.indexOf('情緒'), iZoom = b.head.indexOf('推近'), iOn = b.head.findIndex((h) => h.includes('☐'));
+      const was = Array.isArray(next.moods) ? next.moods : [];
+      const out = [];
+      for (const r of b.rows) {
+        const at = String(r.cells[iAt] || '').replace(/`/g, '').trim(), on = /☑/.test(r.cells[iOn] || '');
+        if (!at.startsWith('#')) continue;
+        const old = was.find((x) => x?.at === at);
+        if (on) {
+          const kind = ZH_KIND[String(r.cells[iKind] || '').trim()] || old?.kind;
+          if (!kind) { unmatched.push(`情緒點 ${at}：看不懂情緒「${r.cells[iKind]}」→ 請 AI 照 plan.json 的 moods 手動改`); continue; }
+          out.push(old ? { ...old, kind } : { at, kind, ...(/推近|推不到/.test(r.cells[iZoom] || '') ? { zoom: true } : {}) });
+          if (!old) changes.push(`情緒點：加回 ${at}（${String(r.cells[iKind]).trim()}）`);
+        } else if (old) changes.push(`情緒點：取消 ${at}（${MOOD_KINDS[old.kind]?.zh || old.kind}）`);
+      }
+      const nOf = (m) => Number(String(m.at).match(/^#(\d+)/)?.[1] ?? 0);
+      out.sort((x, y) => nOf(x) - nOf(y));
+      if (JSON.stringify(out) !== JSON.stringify(was)) next.moods = out;
+    }
+  }
   const cueOf = (s) => Number(String(s.from || s.at || '').match(/^#(\d+)/)?.[1] ?? 0);
   next.scenes = (next.scenes || []).map((s, i) => [s, i]).sort((a, b) => cueOf(a[0]) - cueOf(b[0]) || a[1] - b[1]).map(([s]) => s);
-  return { plan: next, changes, requests, unmatched, answers, designs, changed: changes.length > 0 };
+  return { plan: Array.isArray(next.moods) ? insertMoods(next, next.moods) : next, changes, requests, unmatched, answers, designs, changed: changes.length > 0 };
 }
 
 // 鏡位腳本檔 work/designs/<id>.md：第一段「概念：」「畫面：」，後面一張 #### 動畫分鏡 表

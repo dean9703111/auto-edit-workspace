@@ -110,7 +110,7 @@
     };
 
     // 拍 0 開場：4 個小視窗每 0.2 秒彈出一個（歪的、疊在一起）→ 圖示跟著描線
-    P.pop('#x-ui-mock-tidy .xuit-in', 0.5, { stagger: 0.2, from: 0.8, dy: 40 });
+    P.pop('.xuit-in', 0.5, { stagger: 0.2, from: 0.8, dy: 40 });
     P.icon('#xuit-i1, #xuit-i2, #xuit-i3, #xuit-i4', 0.7, { stagger: 0.2 });
     // 拍 1 很亂：3 則通知每 0.35 秒跳一則（彈得比較大力），鈴鐺描線
     P.pop('#xuit-n1, #xuit-n2, #xuit-n3', MESS, { stagger: 0.35, from: 0.6, dy: 0, ease: 'back.out(2.4)' });

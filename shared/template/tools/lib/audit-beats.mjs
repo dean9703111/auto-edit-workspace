@@ -27,7 +27,7 @@ export const VOCAB = [
   ['字', '逐字上浮', 'chars'], ['字', '逐字彈出', 'chars'], ['字', '逐字落下', 'chars'], ['字', '打字', 'type'], ['字', '數字滾動', 'count'],
   ['線', '描線', 'stroke'], ['線', '彗星描線', 'comet'], ['線', '圖示描線', 'icon'], ['線', '描圈打勾', 'check'], ['線', '劃掉', 'strike'], ['線', '進度推進', 'bar'], ['線', '量條', 'bar'],
   ['強調', '光澤掃過', 'sheen'], ['強調', '螢光筆', 'marker'], ['強調', '重拍', 'punch'], ['強調', '漣漪', 'ripple'], ['強調', '蓋章', 'stamp'],
-  ['焦點', '聚焦', 'spot'], ['焦點', '預覽態', 'spot'], ['焦點', '走過', 'spot'], ['焦點', '退焦', 'dim'], ['焦點', '回均衡', 'spot'],
+  ['焦點', '聚焦', 'spot'], ['焦點', '預覽態', 'spot'], ['焦點', '走過', 'spot'], ['焦點', '退焦', 'dim'], ['焦點', '回均衡', 'spot'], ['焦點', '換焦點', 'rack'],
   ['鏡頭', '鏡頭慢推', 'cam'], ['鏡頭', '鏡頭跟焦點', 'cam'], ['鏡頭', '鏡頭回正', 'cam'],
   ['移動', '游標移動', 'morph'],
   ['微動', '呼吸', 'idle'],
@@ -44,7 +44,7 @@ const BY_NAME = new Map([...VOCAB, ...VOCAB_EXTRA].map((v) => [v.name, v]));
 export const VOCAB_ALT = { 回均衡: ['dim'], 退焦: ['spot'], 描線: ['draw'] };   // 描線：P.stroke 或 P.draw（示意動畫的連接線用 P.draw 同一支筆）
 
 // 反向比對的動作（P.* → 分鏡要寫的名稱）：進場、字、線、強調是範例每拍的細節，分鏡常只寫主要動作，不反向比
-export const UNPLANNED = { spot: '聚焦／預覽態／走過／回均衡', dim: '退焦', idle: '呼吸', cam: '鏡頭慢推／鏡頭跟焦點／鏡頭回正' };
+export const UNPLANNED = { spot: '聚焦／預覽態／走過／回均衡', dim: '退焦', rack: '換焦點', idle: '呼吸', cam: '鏡頭慢推／鏡頭跟焦點／鏡頭回正' };
 
 const cells = (line) => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
 const norm = (s) => s.replace(/（[^（）]*）|\([^()]*\)/g, '').replace(/\s+/g, '');   // 「焦點（觀眾看哪）」這種補充說明不算錯

@@ -1,5 +1,5 @@
 // 剪輯台主程式：載入狀態、以選取為中心的屬性面板、時間軸操作（裁剪、分割、音量線、字幕）、復原、自動存檔、更新預覽、鍵盤
-import { groupIssues, issueId } from './issues.mjs';
+import { groupIssues, issueId, hideKey, plainText, splitHidden } from './issues.mjs';
 import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
   fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss,
@@ -18,7 +18,7 @@ const clone = (o) => (o === undefined ? undefined : JSON.parse(JSON.stringify(o)
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
 const r2 = (n) => Math.round(n * 100) / 100;
-const TRANS = [['cut', '直接切'], ['fade', '淡入淡出'], ['slide', '滑入滑出'], ['zoom', '縮放']];
+const TRANS = [['cut', '直接切'], ['fade', '淡入淡出'], ['slide', '滑入滑出'], ['zoom', '縮放'], ['whip', '甩鏡']];
 const JOIN_TYPES = [['none', '無'], ['dip', '過黑'], ['punch', '放大']];
 const KIND_ZH = { cut: '你剪掉的範圍', ng: 'NG 重錄（剪乾淨時剪掉）', pause: '停頓（剪乾淨時剪掉）' };
 // 給人看的名詞只有三個：字卡（模板版面）、動畫、素材（錄影、圖片）。修改單給 AI 的那一行才寫內部名稱（rqInfo 的 what）
@@ -39,7 +39,7 @@ const app = {
   plan0: null, cues0: [], scenes: [], cues: [], srtOps: [],
   edit: defaultEdit(), savedEdit: defaultEdit(), base: null, sfxMemory: {}, canStash: false,
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
-  report: null, reportReady: false, auditIssues: null, requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], pieces: [], points: [],
+  report: null, reportReady: false, auditIssues: null, hiddenChecks: new Set(), requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
@@ -344,6 +344,7 @@ function typingInInspector() {
 }
 function changed({ inspector = false } = {}) {
   recompute();
+  if (timeline.setAnimRows(app.animRows)) rebuildHeads();
   updateLookCss();
   if (app.selection && !selectionExists(app.selection)) app.selection = null;
   renderHeader(); renderTimes(); renderStatus(); renderHeads(); renderCapButtons();
@@ -761,6 +762,7 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   const kept = keep ? keep() : null;
   app.saveBlocked = false;
   app.server = s;
+  app.hiddenChecks = new Set(Array.isArray(s.hiddenChecks) ? s.hiddenChecks : []);
   app.base = { mtime: s.plan.mtime, hash: s.plan.hash, srtHash: s.srt?.hash ?? null };
   app.fps = s.video?.fps || 30;
   app.dur = s.video?.dur || 0;
@@ -904,6 +906,8 @@ function applyReport(rep0) {
   app.items = (d?.items || rep?.fallback?.items || []).filter((it) => Number.isFinite(it.start) && Number.isFinite(it.end))
     .map((it) => ({ id: it.id, type: it.type || 'scene', label: it.label || '', start: it.start, end: it.end, shownEnd: Number.isFinite(it.shownEnd) ? it.shownEnd : null, src: it.src || null, warnings: it.warnings || 0, sfx: Array.isArray(it.sfx) ? it.sfx : [], out: it.out || null, enter: it.enter ?? null, exit: it.exit ?? null }));   // out、enter、exit：實際的轉場和畫面速度，介面要照這個顯示
   app.voiceOnly = Array.isArray(d?.voiceOnly) ? d.voiceOnly.filter((v) => Array.isArray(v) && v.length === 2) : [];
+  // 情緒點（plan.json moods，023）：音效軌上看得到，改在分鏡表或跟 AI 說（不屬於任何一段，這裡不拖不靜音）
+  app.moodView = Array.isArray(d?.moods) ? d.moods.filter((m) => Number.isFinite(m?.at)).map((m) => ({ ...m, zh: MOOD_ZH[m.kind] || m.kind })) : [];
   // 002 的 check-json：voiceUncovered＝只有聲音、沒被蓋住（紅色斜線）；uncovered＝沒有任何卡片或素材的講解（灰色斜線）
   const spans = (arr) => (Array.isArray(arr) ? arr.filter((v) => Number.isFinite(v?.start) && Number.isFinite(v?.end) && v.end > v.start).map((v) => [v.start, v.end, v.level || null]) : []);
   app.voiceUncovered = spans(d?.voiceUncovered);
@@ -1350,7 +1354,8 @@ async function runBuild({ focus = null, focusId = null, audit = [], fromButton =
     for (const id of audit) app.pendingAudit.delete(id);   // 只拿掉這次量過的：更新途中又改字的段，留到下一次
     $('#logTitle').textContent = '✓ 預覽更新好了'; $('#logSub').textContent = `花了 ${fmtWait(d.seconds)}。`; $('#logWrap').open = false;
     const au = d.audit;
-    if (au?.errors.length) { renderCheck(); openIssues(); toast(`預覽更新好了，但 ${au.ids.join('、')} 改字後版面有 ${au.errors.length} 個錯誤（「檢查」分頁）：改短或改回原本的字`, 'err', 8000); }
+    const auErr = au ? splitHidden(au.errors, [], app.hiddenChecks).errors : [];
+    if (auErr.length) { renderCheck(); openIssues(); toast(`預覽更新好了，但 ${au.ids.join('、')} 改字後版面有 ${auErr.length} 個錯誤（「檢查」分頁）：改短或改回原本的字`, 'err', 8000); }
     else toast(`預覽更新好了（${fmtWait(d.seconds)}）${au ? `，${au.ids.join('、')} 版面${au.warnings.length ? `有 ${au.warnings.length} 個提醒` : '沒問題'}` : ''}${focusId ? `，切到完成影片預覽看 ${focusId}` : ''}`, 'ok', 3500, { actions: [['訊息', () => $('#dlgLog').showModal()]] });
     if (focus != null) {
       if (app.server.preview.player.available) { await setMode('player', { focus }); app.seek(focus); if (focusId) app.select({ kind: segType(sceneById(focusId)) === 'media' ? 'media' : 'item', id: focusId }); }
@@ -1573,14 +1578,19 @@ function renderOverlays() {
   $('#btnSpeaker').setAttribute('aria-pressed', String(!!app.showSpeaker));
 }
 // 錯誤一則一則列；提醒照 issues.mjs 歸併成白話，給 AI 的收起來（原文可以整份複製）
-function errorItem(s) {
+const hideBtn = (raws) => `<button class="small chk-hide" data-chk-hide="${esc(JSON.stringify([...new Set(raws.map(hideKey))]))}" title="藏起來、不算進錯誤和提醒數；下面「已隱藏」可以還原">判斷錯了，隱藏</button>`;
+function errorItem(s, { hide = false } = {}) {
   const id = issueId(s);
   const head = s.replace(/^\[[^\]]*\]\s*/, '');
   const j = head.indexOf('→');
-  const body = j >= 0 ? `${esc(head.slice(0, j))}<span class="fix">→ ${esc(head.slice(j + 1).trim())}</span>` : esc(head);
-  return `<li class="err"${id ? ` data-id="${esc(id)}"` : ''}><span class="sym">✖</span>${id ? `<b class="chk-id">${esc(id)}</b> ` : ''}${body}</li>`;
+  // 版面檢查（改字後量的）：問題寫白話（拿掉 CSS 選擇器），改法是寫給 AI 的，收起來
+  const layout = /^版面/.test(head);
+  const what = layout ? plainText(j >= 0 ? head.slice(0, j) : head).trim() : (j >= 0 ? head.slice(0, j) : head);
+  const fix = j >= 0 ? head.slice(j + 1).trim() : '';
+  const body = !fix ? esc(what) : layout ? `${esc(what)}<details class="chk-fix"><summary>給 AI 的改法</summary><span class="fix">${esc(fix)}</span></details>` : `${esc(what)}<span class="fix">→ ${esc(fix)}</span>`;
+  return `<li class="err"${id ? ` data-id="${esc(id)}"` : ''}><span class="sym">✖</span>${id ? `<b class="chk-id">${esc(id)}</b> ` : ''}${body}${hide ? hideBtn([s]) : ''}</li>`;
 }
-function groupItem(g) {
+function groupItem(g, { hide = false } = {}) {
   const many = g.ids.length > 1;
   const one = g.ids.length === 1 ? ` data-id="${esc(g.ids[0])}"` : '';
   const action = g.action === 'speaker' ? ' data-chk-act="speaker"' : '';
@@ -1588,23 +1598,38 @@ function groupItem(g) {
   // 字幕的問題：列出是哪幾句，點了跳過去（只有一句時整列都能點）
   const cue1 = g.cues?.length === 1 ? ` data-chk-cue="${g.cues[0]}"` : '';
   const cues = g.cues?.length ? `<div class="chk-ids">${g.cues.slice(0, 80).map((n) => `<button class="chk-seg" data-chk-cue="${n}">#${n}</button>`).join('')}</div>` : '';
-  return `<li class="warn"${one}${action}${cue1}><span class="sym">⚠</span><b>${esc(g.title)}</b>${g.hint ? `<div class="chk-hint">${esc(g.hint)}</div>` : ''}${ids}${cues}</li>`;
+  return `<li class="warn"${one}${action}${cue1}><span class="sym">⚠</span><b>${esc(g.title)}</b>${g.hint ? `<div class="chk-hint">${esc(g.hint)}</div>` : ''}${ids}${cues}${hide ? hideBtn(g.raw) : ''}</li>`;
 }
-function issueItems(errors = [], warnings = [], limit = 300) {
+function issueItems(errors = [], warnings = [], limit = 300, { hide = false } = {}) {
   const G = groupIssues(errors, warnings);
-  const all = [...G.errors.map(errorItem), ...G.author.map(groupItem)];
+  const all = [...G.errors.map((s) => errorItem(s, { hide })), ...G.author.map((g) => groupItem(g, { hide }))];
   const ai = G.ai.length ? `<li class="chk-ai"><details><summary>給 AI 的細節（${G.counts.ai} 則）</summary><ul class="chk-ailist">${G.ai.map((g) => `<li><b>${esc(g.title)}</b>${g.ids.length ? `<span class="mute">　${esc(g.ids.slice(0, 8).join('、'))}${g.ids.length > 8 ? '…' : ''}</span>` : ''}</li>`).join('')}</ul><button class="small" data-chk-copy>複製原文給 AI</button></details></li>` : '';
   return all.slice(0, limit).join('') + (all.length > limit ? `<li>…還有 ${all.length - limit} 則</li>` : '') + ai;
 }
+// 作者按「判斷錯了，隱藏」的不算進錯誤、提醒數（hidden 另外列，可以還原）；存檔失敗的錯誤不能藏
 function currentIssues() {
   const rep = app.report, au = app.saveErrors ? null : app.auditIssues;
-  if (app.saveErrors) return { errors: app.saveErrors, warnings: [] };
-  return { errors: [...(au?.errors || []), ...(rep?.issues?.errors || [])], warnings: [...(au?.warnings || []), ...(rep?.issues?.warnings || [])] };
+  if (app.saveErrors) return { errors: app.saveErrors, warnings: [], hidden: [] };
+  return splitHidden([...(au?.errors || []), ...(rep?.issues?.errors || [])], [...(au?.warnings || []), ...(rep?.issues?.warnings || [])], app.hiddenChecks);
+}
+function hiddenItems(hidden) {
+  if (!hidden?.length) return '';
+  const n = hidden.reduce((t, h) => t + h.n, 0);
+  return `<li class="chk-hidden"><details><summary>已隱藏 ${n} 則（你判斷是錯的）</summary><ul class="chk-hiddenlist">${hidden.map((h) => `<li><span class="mute">${h.level === 'error' ? '✖' : '⚠'}</span> ${h.id ? `<b>${esc(h.id)}</b> ` : ''}${esc(h.text)}${h.n > 1 ? `<span class="mute">（同類 ${h.n} 則）</span>` : ''} <button class="small" data-chk-unhide="${esc(h.key)}">還原</button></li>`).join('')}</ul></details></li>`;
+}
+async function setHidden(keys, on) {
+  const next = new Set(app.hiddenChecks);
+  for (const k of keys) { if (on) next.add(k); else next.delete(k); }
+  app.hiddenChecks = next;
+  renderCheck();
+  const r = await api('POST', '/api/check/hidden', { keys: [...next] });
+  if (!r.ok) toast(`沒存到：${r.data?.message || '連不到剪輯台'}（重新整理後會再出現）`, 'warn', 5000);
+  else toast(on ? '已隱藏，不算進錯誤數；在「已隱藏」裡可以還原' : '已還原', 'ok', 3000);
 }
 function renderCheck() {
   const rep = app.report;
   const sum = $('#checkSummary'), list = $('#checkList');
-  const { errors, warnings } = currentIssues();
+  const { errors, warnings, hidden } = currentIssues();
   const G = groupIssues(errors, warnings);
   // 給段落清單和時間軸用：只標作者要看的（給 AI 的細節不標）
   app.authorFlags = new Set([...G.errors.map(issueId).filter(Boolean), ...G.author.flatMap((g) => g.ids)]);
@@ -1620,11 +1645,12 @@ function renderCheck() {
     else sum.innerHTML = `<b class="warn-ink">${rep.fallback ? '簡易檢查' : '讀不到檢查報告'}</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
   }
   // 剛在剪輯台改字的段：重新產生後量的版面（audit），放最前面
-  const au = app.saveErrors ? null : app.auditIssues;
+  const au0 = app.saveErrors ? null : app.auditIssues;
+  const au = au0 && { ids: au0.ids, ...splitHidden(au0.errors, au0.warnings, app.hiddenChecks) };
   if (au && (au.errors.length || au.warnings.length)) {
     sum.innerHTML = `<b class="${au.errors.length ? 'err-ink' : 'warn-ink'}">剛改字的 ${esc(au.ids.join('、'))} 版面有 ${au.errors.length + au.warnings.length} 個問題</b>：改短一點或改回原本的字；要重新排版請寫進修改單給 AI。<br>${sum.innerHTML}`;
   }
-  list.innerHTML = issueItems(errors, warnings) || (rep?.data ? '<li class="mute">沒有任何錯誤或提醒</li>' : '');
+  list.innerHTML = (issueItems(errors, warnings, 300, { hide: !app.saveErrors }) || (rep?.data ? '<li class="mute">沒有任何錯誤或提醒</li>' : '')) + hiddenItems(hidden);
   renderStatus();
   // 分頁上分清楚：✖＝要先改才能輸出，⚠＝看一下就好
   const tab = $('.side-tabs [data-side="issues"]');
@@ -2009,7 +2035,7 @@ function inspMedia(it, sc) {
     ${vol != null ? sliderRow('原聲音量', 'mediaVol', vol, { out: fmtDb(vol) }) : ''}`}
   </section>`}
   <section class="ip-sec"><h3>進場／出場</h3>
-    <div class="ip-row"><label>進場</label><select aria-label="進場" data-f="enter">${opt(sc.enter, isImg ? [['tape', '紙膠帶貼上']] : [])}</select></div>
+    <div class="ip-row"><label>進場</label><select aria-label="進場" data-f="enter">${opt(sc.enter, [...(isImg ? [['tape', '紙膠帶貼上']] : []), ...(sc.fit === 'cover' ? [] : [['tilt', '斜躺擺平']])])}</select></div>
     <div class="ip-row"><label>出場</label><select aria-label="出場" data-f="exit">${opt(sc.exit)}</select></div>
     ${it ? (() => { const tr = transitionOf(it); return `<p class="ip-note" id="txNow">現在實際：${esc(tr.inText)}進場、${esc(tr.outText)}出場（接在別的整張幕後面時，工具會自動調整）。</p>`; })() : ''}
   </section>
@@ -2165,26 +2191,32 @@ function setPath(obj, path, v) {
   return o;
 }
 // 邊打字邊看：完成影片預覽（播放器 iframe）裡這段的舊字直接換成新字（靜態：逐字動畫、精確版面要存檔後重新產生）。
-//   froms＝畫面上可能的舊字（上一次打的、上次存檔的）；找最深一層字剛好相同的元素換掉，播放頭不在這段就跳到完成態
+//   找的順序：這個欄位上次換過的元素（清空再打也找得到）→ 效果標了 data-live="<變數>" 的那一格（數字滾輪這種一位一格的，整格換成字）
+//   → froms（畫面上可能的舊字：上一次打的、上次存檔的）最深一層字剛好相同的元素，不找 data-live 格子裡面（「1」會對到滾輪的一格）。
+//   播放頭不在這段就跳到完成態
 const livePlain = (s) => richPlain(s).replace(/\s+/g, '');
-function livePatch(id, froms, to, rich) {
+function livePatch(id, froms, to, rich, path = []) {
   if (app.mode !== 'player' || !player.ready) return;
   let host = null;
   try { host = player.p?.iframeElement?.contentDocument?.getElementById(`el-${id}`) || null; } catch { /* 不同源時讀不到 */ }
   if (!host) return;
+  const key = JSON.stringify(path), field = path[0] === 'vars' && path.length === 2 ? String(path[1]) : '';
+  let hits = path.length ? [...host.querySelectorAll(`[data-live-key="${CSS.escape(key)}"]`)] : [];
+  if (!hits.length && field) hits = [...host.querySelectorAll(`[data-live="${CSS.escape(field)}"]`)];
   for (const from of froms) {
+    if (hits.length) break;
     const want = typeof from === 'string' ? livePlain(from) : '';
     if (!want) continue;
-    const hits = [...host.querySelectorAll('*')].filter((e) => livePlain(e.textContent) === want && ![...e.children].some((c) => livePlain(c.textContent) === want));
-    if (!hits.length) continue;
-    for (const e of hits) {
-      if (rich) e.innerHTML = esc(to).replace(/\*\*(.+?)\*\*/g, '<span class="sc-kw">$1</span>').replace(/(?<!:)\/\//g, '<br>');
-      else e.textContent = to;
-    }
-    const it = app.itemsView.find((x) => x.id === id);
-    if (it && (app.t < it.start || app.t > it.end)) app.seek(Math.max(it.start, it.end - 0.6));
-    return;
+    hits = [...host.querySelectorAll('*')].filter((e) => !e.closest('[data-live]') && livePlain(e.textContent) === want && ![...e.children].some((c) => livePlain(c.textContent) === want));
   }
+  if (!hits.length) return;
+  for (const e of hits) {
+    if (path.length) e.dataset.liveKey = key;
+    if (rich) e.innerHTML = esc(to).replace(/\*\*(.+?)\*\*/g, '<span class="sc-kw">$1</span>').replace(/(?<!:)\/\//g, '<br>');
+    else e.textContent = to;
+  }
+  const it = app.itemsView.find((x) => x.id === id);
+  if (it && (app.t < it.start || app.t > it.end)) app.seek(Math.max(it.start, it.end - 0.6));
 }
 function onInspInput(e) {
   const el = e.target;
@@ -2219,7 +2251,7 @@ function onInspInput(e) {
     const next = setPath(sc[top] || {}, path.slice(1), el.value);
     setSeg(s.id, { [top]: next }, { coalesce: `txt-${s.id}-${el.dataset.path}` });
     const decl = JSON.parse(el.dataset.decl || '{}');
-    livePatch(s.id, [prev, savedAt(s.id, path)], el.value, decl.type === 'rich');
+    livePatch(s.id, [prev, savedAt(s.id, path)], el.value, decl.type === 'rich', path);
     const c = cnt(el.value, decl);
     const ce = el.nextElementSibling?.classList.contains('cnt') ? el.nextElementSibling : el.closest('.field')?.querySelector('.fl .cnt');
     if (ce) { ce.textContent = c.txt; ce.classList.toggle('over', c.over); }
@@ -2237,7 +2269,7 @@ function onInspInput(e) {
     arr[L.i] = joinItem(L.nf >= 2 ? cols : [cols[0]], sp.tail);
     setSeg(s.id, { slots: { ...sc.slots, [L.k]: arr } }, { coalesce: `txt-${s.id}-${L.k}-${L.i}-${L.col}` });
     const decl = JSON.parse(el.dataset.decl || '{}'), saved = savedAt(s.id, ['slots', L.k, L.i]);
-    livePatch(s.id, [prev, typeof saved === 'string' ? splitItem(saved, L.nf).cols[L.col] : null], el.value, decl.type === 'rich');
+    livePatch(s.id, [prev, typeof saved === 'string' ? splitItem(saved, L.nf).cols[L.col] : null], el.value, decl.type === 'rich', ['slots', L.k, L.i, L.col]);
     const c = cnt(el.value, decl);
     const ce = el.nextElementSibling;
     if (ce?.classList.contains('cnt')) { ce.textContent = c.txt; ce.classList.toggle('over', c.over); }
@@ -2397,6 +2429,7 @@ app.tlDouble = (h) => {
   else if (h.kind === 'sfx') toggleSfxMute(h.sfx.segId);
   else if (h.kind === 'item' || h.kind === 'media') { const it = h.item; app.seek(it.start); }
 };
+const MOOD_ZH = { quote: '金句', turn: '反轉', pain: '痛點', win: '解法', land: '落定' };
 app.tlTip = (h) => {
   const lk = app.trackLocked(h.lane) ? '\n這條軌已鎖定' : '';
   switch (h.kind) {
@@ -2419,6 +2452,7 @@ app.tlTip = (h) => {
     case 'gainEdge': return `拖曳調整範圍${lk}`;
     case 'voiceVol': return `人聲音量 ${fmtDb(app.edit.volume.voice)}：上下拖整條${selValid() && h.t >= app.sel.a && h.t <= app.sel.b ? '\n（在選取範圍裡拖＝只調這一段）' : ''}${lk}`;
     case 'voiceBody': return '拖曳選一段範圍（剪掉或單獨調音量）';
+    case 'mood': return `情緒點：${h.mood.zh}${h.mood.sfx ? `　音效「${h.mood.sfx}」` : h.mood.off ? '（不出聲）' : `（讓位給更強的音效${h.mood.dropped ? `，原本是 ${h.mood.dropped}` : ''}）`}${h.mood.zoom ? '　講者推近' : ''}\n要改：分鏡表的「情緒點」勾選表，或跟 AI 說（寫進修改單）`;
     case 'sfx': return `${h.sfx.segId} 的${h.sfx.main ? '主' : '附加'}音效「${h.sfx.name}」${h.sfx.muted ? '（靜音）' : h.sfx.db != null ? ` ${fmtDb(r2(h.sfx.db))}` : ''}\n上下拖調這段音量、雙擊靜音${lk}`;
     default: return null;
   }
@@ -2802,6 +2836,10 @@ async function copyIssues() {
   catch { toast('瀏覽器不讓複製：請 AI 跑 build.mjs --check 看檢查結果', 'warn', 5000); }
 }
 $('#checkList').addEventListener('click', (e) => {
+  const hb = e.target.closest('[data-chk-hide]');
+  if (hb) { setHidden(JSON.parse(hb.dataset.chkHide), true); return; }
+  const ub = e.target.closest('[data-chk-unhide]');
+  if (ub) { setHidden([ub.dataset.chkUnhide], false); return; }
   if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }
   if (e.target.closest('summary, .chk-ai')) return;
   const cue = e.target.closest('[data-chk-cue]');

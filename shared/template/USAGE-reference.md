@@ -136,7 +136,7 @@
 | `fit` | 選填 | `"contain"`、`"cover"` | `"contain"` | contain：整張放進 1920×940（字幕帶上方）置中，空白處是黑底；cover：鋪滿 1920×1080 |
 | `pip` | 選填 | `true`、`false` | `true` | 右下角子母畫面；只有聲音的區間自動不放 |
 | `volume` | 選填 | `null` 或 −60～+12（dB） | `null` | `null`＝靜音；數字＝保留素材原聲（素材沒有聲音時 ⚠ 並忽略），疊在 `edit.volume.media` 上 |
-| `enter`／`exit` | 選填 | `"cut"`、`"fade"`、`"slide"`、`"zoom"`；`enter` 另有 `"tape"` | `"fade"` | 進場 0.5／0.5／0.6／0.5 秒、出場 0.5／0.5／0.6／0.4 秒；接在另一張整張幕後面時 `fade` 自動變 `cut`；`"tape"`（0.6 秒）＝圖片縮小貼在全幕背景上：紙白邊、面板落下貼平、兩條紙膠帶貼在兩個上角（只給圖片、`fit` `"contain"`、橫式；直式自動改 `"zoom"`） |
+| `enter`／`exit` | 選填 | `"cut"`、`"fade"`、`"slide"`、`"zoom"`、`"whip"`；`enter` 另有 `"tape"`、`"tilt"` | `"fade"` | 進場 0.5／0.5／0.6／0.5／0.3 秒、出場 0.5／0.5／0.6／0.4／0.3 秒；接在另一張整張幕後面時 `fade` 自動變 `cut`（其他照做，前一段墊在底下到進場做完）；`"whip"`＝甩鏡：整層從右邊甩進、往左邊甩出，拉長＋模糊在最快的那幾格（錄影、圖片、直式都可以；不配音效）；`"tape"`（0.6 秒）＝圖片縮小貼在全幕背景上：紙白邊、面板落下貼平、兩條紙膠帶貼在兩個上角（只給圖片、`fit` `"contain"`、橫式；直式自動改 `"zoom"`）；`"tilt"`（0.65 秒）＝斜躺擺平：整層 0.25 秒淡入，面板以底邊為軸從透視斜躺（往後倒 22°、側轉 8°）擺平（錄影、圖片、直式都可以；要 `fit` `"contain"`，`"cover"` ✖） |
 | `kenburns` | 選填 | `true`、`false` | 圖片 `true`、錄影 `false`；有 `callouts`／`spot`／`arrows` 時 `false` | 沒寫 `moves` 時整段慢推 1.00→1.05；有標註時寫 `true` 會 ⚠ 並忽略 |
 | `moves` | 選填 | `[{ "at", "to": [x,y,w,h] 或 "full", "dur" }]` | | 運鏡；`dur` 0.2–5，預設 1；不能重疊 |
 | `marks` | 選填 | `[{ "at", "until", "box": [x,y,w,h], "path": [{ "at", "box", "dur" }] }]` | | 紅框；`until` 不寫＝到段尾；同時 ≤ 2（callouts 的框也算）；`path` 讓框跟著錄影捲動，`dur` 0.2–2，預設 0.4 |
@@ -571,7 +571,7 @@
 - 顏色只用 token（`var(--brand)`、`var(--sc-*)`、`var(--v2-*)`），不寫色碼。理由：使用者換主色、換主題（亮／暗）後，寫死的顏色不會跟著變。陰影、光暈、漸層只能用 `var(--v2-*)`，不寫 `box-shadow`、`filter`、`gradient` 的字面值（R8 #3）。要「亮起來」用 `P.spot`（聚焦），不要用 GSAP 補間顏色。
 - 動畫裡要配音效的拍點寫 `const T = P.sfx('success', '#38@兩支')`（回傳秒數，同時當這一拍的動畫時間；`P.sfx('ding', '#41', 0.2)` 晚 0.2 秒）。音效名、ref 都寫字串字面值，off 寫數字；build 會排成 `<audio>`，算進 `--check` 的音效次數與密度。不要在 plan.json 另外寫這些音效。寫成變數或 `+` 組字串、音效名不在 `kit/sfx.json` 都會 ✖；綁到段外的句子會被拿掉並 ⚠（USAGE.md 4.2）。
 - 動畫照確認過的動畫分鏡一拍一拍做：每一拍一個拍點常數（`const T1 = P.at('#38@兩支')`，分鏡「音效拍點」有寫就用上一條的 `P.sfx`），「動態」欄的每個名稱用 `shared/template/BEATS.md` 語彙表「對應」欄的方法。只用 `SceneMotion` 的方法：
-  - v2：進場 `P.wipe`／`P.drift`／`P.pop`／`P.grow`／`P.slide`／`P.in`；字 `P.chars`／`P.type`／`P.count`；線 `P.stroke`／`P.comet`／`P.icon`／`P.check`／`P.strike`／`P.bar`；強調 `P.sheen`／`P.marker`／`P.punch`／`P.ripple`／`P.stamp`（蓋章，對象是自己寫的 `<b class="sc-stamp">過時</b>`，和被蓋的元素放在同一層、不要放進它裡面；`{ on: '#被蓋的' }` 落地時讓它退焦）；`P.strike` 加 `{ wave: true }` 是波浪線；焦點 `P.spot`／`P.dim`；鏡頭 `P.cam`；微動 `P.idle`；退場 `P.wipeOut`／`P.slideOut`／`P.out`；拍點音效 `P.sfx`。參數與預設值寫在 `shared/template/kit/scene-motion.js` 開頭的「v2」那一段。
+  - v2：進場 `P.wipe`／`P.drift`／`P.pop`／`P.grow`／`P.slide`／`P.in`；字 `P.chars`／`P.type`／`P.count`；線 `P.stroke`／`P.comet`／`P.icon`／`P.check`／`P.strike`／`P.bar`；強調 `P.sheen`／`P.marker`／`P.punch`／`P.ripple`／`P.stamp`（蓋章，對象是自己寫的 `<b class="sc-stamp">過時</b>`，和被蓋的元素放在同一層、不要放進它裡面；`{ on: '#被蓋的' }` 落地時讓它退焦）；`P.strike` 加 `{ wave: true }` 是波浪線；焦點 `P.spot`／`P.dim`／`P.rack`（換焦點：講到的那個清楚、同組其他模糊稍淡）；鏡頭 `P.cam`；微動 `P.idle`；退場 `P.wipeOut`／`P.slideOut`／`P.out`；拍點音效 `P.sfx`。參數與預設值寫在 `shared/template/kit/scene-motion.js` 開頭的「v2」那一段。
   - 舊範例裡的 `P.rise`／`P.reveal`／`P.maskUp`／`P.swap`／`P.axis`／`P.focus`／`P.push`／`P.morph` 還能用；新寫的拍照 BEATS.md。
   - 這些方法會自動處理同一元素第二次補間的 `immediateRender:false`，秒數與曲線是 kit 常數（style.md「節奏」），不要自己填。不要用 GSAP 的 `onUpdate`／`onComplete` 改畫面：HyperFrames 跳到任意時間截圖時不會觸發回呼，畫面會停在錯的狀態。
 

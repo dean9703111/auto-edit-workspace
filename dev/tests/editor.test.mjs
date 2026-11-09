@@ -130,7 +130,8 @@ test('拒絕其他欄位：plan 的其他 key、edit／joins 的未知欄位、�
     [{ base: b, edit: { fadeIn: -1 } }, /fadeIn 要是 0–10 的秒數/],
     [{ base: b, edit: { cuts: [[3, 2]] } }, /終點要大於起點/],
     [{ base: b, media: { m01: { src: 'assets/images/x.png' } } }, /不能改「src」/],
-    [{ base: b, media: { m01: { enter: 'spin' } } }, /enter 要是 cut、fade、slide、zoom/],
+    [{ base: b, media: { m01: { enter: 'spin' } } }, /enter 要是 cut、fade、slide、zoom、whip、tape、tilt，現在是 "spin"/],
+    [{ base: b, media: { m01: { exit: 'tilt' } } }, /exit 要是 cut、fade、slide、zoom、whip，現在是 "tilt"/],
     [{ base: b, media: { s01: { enter: 'fade' } } }, /找不到 media 段「s01」/],
   ];
   for (const [body, re] of cases) {
@@ -457,6 +458,21 @@ test('卡片文字：slots／vars 只改文字（可以加字）；欄位增減�
     assert.match((await r.json()).message, re);
   }
   assert.equal(fs.readFileSync(plan2File, 'utf8'), before);
+});
+
+test('改字後量版面：字卡動態、插入素材不量（和 audit 一樣；數字卡滾輪只露一格會被當成字被切掉）；檢查「判斷錯了，隱藏」存在 .editor/hidden-checks.json、/api/state 帶回來', async () => {
+  const plan = { scenes: [{ id: 's01', scene: 'concept' }, { id: 's02', type: 'fx', fx: 29 }, { id: 'm01', type: 'media' }, { id: 'x01', type: 'custom' }] };
+  assert.deepEqual(E.auditTargets(plan, ['s01', 's02', 'm01', 'x01', 'x01', 'zz']), ['s01', 'x01']);
+  assert.deepEqual(E.auditTargets(null, ['s01']), []);
+  assert.deepEqual((await (await get('/api/state')).json()).hiddenChecks, []);
+  let r = await post('/api/check/hidden', { keys: ['s02｜版面：文字被容器「#…」裁掉', 'b', 'b'] });
+  assert.equal(r.status, 200);
+  assert.deepEqual((await r.json()).keys, ['s02｜版面：文字被容器「#…」裁掉', 'b']);
+  assert.deepEqual((await (await get('/api/state')).json()).hiddenChecks, ['s02｜版面：文字被容器「#…」裁掉', 'b']);
+  assert.ok(fs.existsSync(path.join(out, '.editor', 'hidden-checks.json')));
+  assert.equal((await post('/api/check/hidden', { keys: 'x' })).status, 400);
+  assert.equal((await post('/api/check/hidden', { keys: [] })).status, 200);
+  assert.deepEqual((await (await get('/api/state')).json()).hiddenChecks, []);
 });
 
 test('修改單：/api/requests 整份覆寫 work/feedback/editor-requests.md（空的擋下）；改字後的 audit 結果變成 [id] 開頭的檢查清單', async () => {

@@ -323,6 +323,36 @@ test('P.spot：上一個焦點還在轉場就接到下一拍 → 接在它後面
   assert.throws(() => P.spot(g, g[0], 1), /P\.spot 要照時間先後寫：#a 在 2\.5s/);
 });
 
+test('P.rack：active 清楚、其他模糊＋稍淡（filter，不動 opacity）；只在拍點變、清楚時 none；亂序 seek 一致；接在轉場後面、倒著寫丟錯', () => {
+  const scene = () => {
+    const { tl, P } = mk(); const g = ['a', 'b', 'c'].map((id) => ({ id, opacity: 1, style: {} }));
+    P.rack(g, g[0], 1); P.rack(g, g[1], 3); P.rack(g, null, 5); P.end(7);
+    return { tl, P, g };
+  };
+  const T = [0, 1.2, 1.45, 2, 3.2, 4, 5.2, 6, 7];
+  const seq = scene(), want = {};
+  for (const t of T) { seek(seq.tl, t, true); want[t] = seq.g.map((x) => x.style.filter); }
+  assert.deepEqual(want[0], ['none', 'none', 'none'], '第一拍之前全部清楚、沒有濾鏡');
+  assert.deepEqual(want[2], ['none', 'blur(6px) opacity(0.75)', 'blur(6px) opacity(0.75)'], '0.45 秒換好，之後停住');
+  assert.deepEqual(want[4], ['blur(6px) opacity(0.75)', 'none', 'blur(6px) opacity(0.75)']);
+  assert.deepEqual(want[6], ['none', 'none', 'none'], 'null＝全部回清楚');
+  assert.notDeepEqual(want[1.2], want[2], '轉場中是中間值');
+  assert.ok(seq.g.every((x) => x.opacity === 1), '不動元素自己的 opacity（P.spot／P.dim 記的亮度不受影響）');
+  const s2 = scene();
+  for (const t of [6, 0, 3.2, 7, 1.2, 4, 2, 5.2, 1.45, 0]) { seek(s2.tl, t, true); assert.deepEqual(s2.g.map((x) => x.style.filter), want[t], `t=${t}`); }
+  // 只在拍點補間：c 在第 2 拍不變（一直模糊）→ 不加補間；拍與拍之間沒有補間
+  const kids = seq.tl.getChildren(true, true, false).filter((k) => k.data?.fn === 'rack');
+  assert.equal(kids.length, 6, '第 1 拍 b、c；第 2 拍 a、b；回清楚 a、c');
+  assert.ok(kids.every((k) => k.data.role === 'focus' && Math.abs(k.duration() - 0.45) < 1e-9));
+  // 兩拍太近：接在上一次後面；倒著寫丟錯；active 不在組裡丟錯
+  const { tl, P } = mk(); const g = ['x', 'y'].map((id) => ({ id, style: {} }));
+  P.rack(g, g[0], 2); P.rack(g, g[1], 2.2, { blur: 4, dim: 0.6 }); P.end(4);
+  seek(tl, 2.45, true); assert.equal(g[1].style.filter, 'blur(6px) opacity(0.75)', 'y 在 2.45 還是模糊（第二拍從 2.45 開始）');
+  seek(tl, 3.5, true); assert.deepEqual(g.map((x) => x.style.filter), ['blur(4px) opacity(0.6)', 'none']);
+  assert.throws(() => P.rack(g, g[0], 1), (e) => e.message === 'P.rack 要照時間先後寫：#x 在 2.2s 已經換過焦點，這一行是 1s → 把這一行移到後面，或把時間改晚');
+  assert.throws(() => P.rack(g, { id: 'z', style: {} }, 5), (e) => e.message === 'P.rack：active 要是 group 裡的元素（#z）→ 改成那一組其中一個，或寫 null（全部回清楚）');
+});
+
 // ---------- P.type：DOM shim（只實作 spec FR-019 的 API）----------
 function makeDom() {
   const doc = {};
@@ -427,7 +457,7 @@ test('P.type：cps、caret:false、空白跟著下一個字、只有空白的文
 });
 
 // ---------- 動態 v2（specs/010-motion-v2/design-system.md §11；specs/contracts/motion.md） ----------
-const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'cam', 'grow', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'sfx'];
+const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'rack', 'cam', 'grow', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'sfx'];
 
 test('v2：原語清單、開頭註解、時間與曲線表、區域、u', () => {
   const { P } = mk();
@@ -543,6 +573,7 @@ const V2_FIX = {
   comet: `<svg style="left:40px;top:380px;width:600px;height:80px;overflow:visible" viewBox="0 0 600 80"><path id="t-comet" d="M10 40 C 200 0, 400 80, 590 40" fill="none" stroke="#e06020" stroke-width="6"/></svg>`,
   flow: `<svg style="left:700px;top:380px;width:400px;height:40px" viewBox="0 0 400 40"><line id="t-flow" x1="0" y1="20" x2="400" y2="20" stroke="#333" stroke-width="4" stroke-dasharray="12 12"/></svg>`,
   idle: `<div id="t-idle" class="t-box" style="left:1160px;top:140px"></div>`,
+  rack: `<div class="t-rack t-box" id="t-r1" style="left:1400px;top:40px"></div><div class="t-rack t-box" id="t-r2" style="left:1640px;top:40px"></div>`,
   spot: `<div class="t-spot t-box" id="t-s1" style="left:40px;top:500px"></div><div class="t-spot t-box" id="t-s2" style="left:280px;top:500px"></div><div class="t-spot t-box" id="t-s3" style="left:520px;top:500px"></div>`,
   cam: `<div id="t-cam" style="left:800px;top:480px;width:500px;height:300px"><div id="t-camtarget" class="t-box" style="left:380px;top:200px"></div></div>`,
   grow: `<div id="t-grow" class="t-box" style="left:1360px;top:300px;width:300px;height:160px"></div>`,
@@ -570,6 +601,7 @@ const V2_CODE = `
     P.flow('#t-flow', 0.5);
     P.idle('#t-idle', 1.0, { y: 6, scale: 0.05 });
     P.pop('.t-spot', 0.5, { stagger: 0.12 }); P.spot('.t-spot', 'none', 1.5); P.spot('.t-spot', '#t-s1', 2.0); P.spot('.t-spot', '#t-s2', 3.0, { done: '#t-s1' }); P.spot('.t-spot', null, 4.0);
+    P.rack('.t-rack', '#t-r1', 1.0); P.rack('.t-rack', '#t-r2', 2.4); P.rack('.t-rack', null, 4.0);
     P.cam('#t-cam', 2.8, { to: '#t-camtarget', k: 0.12, scale: 1.04 }); P.cam('#t-cam', 4.2, { x: 0, y: 0, scale: 1 });
     P.grow('#t-grow', 0.3);
     P.draw('#t-draw', 0.6);
@@ -609,7 +641,7 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
     const ids = Object.fromEntries(Object.entries(V2_FIX).map(([k, h]) => [k, [...h.matchAll(/id="(t-[\w-]+)"/g)].map((m) => m[1])]));
     // 每區的狀態：區內每個元素（含原語自動插的零件）的計算樣式與 transform 屬性
     const stateOf = () => S.evaluate(`(() => { const ids = ${JSON.stringify(ids)}; const out = {};
-      const keys = ['opacity', 'transform', 'clipPath', 'translate', 'scale', 'strokeDashoffset', 'strokeDasharray', 'visibility'];
+      const keys = ['opacity', 'transform', 'clipPath', 'translate', 'scale', 'strokeDashoffset', 'strokeDasharray', 'visibility', 'filter'];
       for (const [k, list] of Object.entries(ids)) { const parts = [];
         for (const id of list) { const el = document.getElementById(id); if (!el) { parts.push(id + ':missing'); continue; }
           const host = el.closest('svg') && el.tagName !== 'svg' ? el.closest('svg') : el;

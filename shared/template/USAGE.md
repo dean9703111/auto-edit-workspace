@@ -87,6 +87,7 @@
   - 用了動態 v2 原語的段，每個拍點各截一張：`抽屜抽出後 0.3 秒：「<字>」`、`焦點抬起：「<字>」`；最後一拍之後畫面沒再變，就不另截完成態（最後一拍的「為什麼」加 `（完成態）`）。呼吸這類微動不算動畫。`qc.mjs observe` 另出 `work/observe/beat-NN.jpg`：同一套時刻、從完成影片抽格，對照分鏡截圖看 render 出來的拍點對不對。
   - 截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 `node shared/template/tools/build.mjs --project projects/<專案> --storyboard --only <段>`；還是一樣就在回報裡列出段號和秒數，不要自己改秒數跑 `snapshot --at`。
   - 印 `✖ <id> 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…`：不是版面的問題，不要改 plan.json；照 → 跑 `node shared/template/tools/media.mjs verify-rough --project projects/<專案>` 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報（全黑本來就是旁白區間）。
+- 「需要我決定的事」前面有情緒點表（`| 點 | 綁在 | 時間碼 | 情緒 | 音效 | 推近 | 要不要 ☐ |`），☑ 的點出聲、取消勾＝這個點不要；分鏡表頁上方畫成情緒曲線。
 - 最後一節「需要我決定的事」固定有金句候選表，勾了才上（style.md「字卡文字」）：
 
   | 候選 | 句號 | 原句 | 卡上文字（≤ 14 字） | 情緒（正／負／中） | 要不要 ☐ |
@@ -225,6 +226,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `theme` | | `"light"`（預設，不寫）或 `"dark"` | 主題：暗色時 build 換 `bg-*-dark.jpg`、所有合成 `<html data-theme="dark">`；只換顏色 token，版面與動態不變。剪輯台可以切；AI 只在使用者明說「暗色」時寫（`auto-edit-style` 步驟 6） |
 | `style` | | 風格包名稱，例 `"藍圖"` | 這一集用 `shared/template/styles/<名稱>/` 的主色、子母畫面外框、背景圖（亮暗都看包裡的；包裡沒有的檔用 `shared/template/` 目前的）。不寫＝工作區目前的。名稱照 `brand.mjs list`；AI 只在使用者說「這集用 XX 風格」時寫（`auto-edit-style` 步驟 7） |
 | `edit` | | 物件 | 剪輯台寫的設定（裁剪、淡入淡出、音量、轉場），AI 不主動寫（第 6 節） |
+| `moods` | 建議 | 陣列 | 情緒點（style.md「音效」）：`[{ "at": "#12@千萬不要", "kind": "pain" }]`。`kind` 只能是 `quote`（金句）、`turn`（反轉）、`pain`（痛點）、`win`（解法）、`land`（落定），各配一顆音效、峰值對齊 `@詞` 的開口；`"sfx": null`＝不出聲、`"sfx": "ding"`＝換一顆；`"zoom": true`＝講者畫面同時爆衝推近（每分鐘最多 1 次）。分章草稿寫、`--merge-drafts` 收進來；停點 ③ 分鏡表「情緒點」勾選表改 |
 | `scenes` | ✓ | 陣列 | 每一段一個物件，依時間順序寫 |
 
 ### 3.3 每一段的常用欄位
@@ -511,7 +513,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `fit` | `"contain"` | `contain`＝整張看得到，放在字幕帶上方（y 0–940），空白處是黑底；`cover`＝鋪滿 1920×1080，多的裁掉 |
 | `pip` | `true` | 右下角子母畫面露臉（橫式會自動移進素材右下角，不用寫座標）；只有聲音的區間自動不放。`false`＝整段不露臉 |
 | `volume` | `null` | `null`＝素材靜音；寫 dB 數字（−60～+12）＝保留素材原聲 |
-| `enter`／`exit` | `"fade"` | `"cut"`、`"fade"`、`"slide"`（從右滑入、往左滑出）、`"zoom"` |
+| `enter`／`exit` | `"fade"` | `"cut"`、`"fade"`、`"slide"`（從右滑入、往左滑出）、`"zoom"`、`"whip"`（甩鏡：0.3 秒從右甩進、往左甩出，有動態模糊）；只能寫在 `enter`：`"tilt"`（斜躺擺平：面板從透視斜躺 0.65 秒擺平，錄影、圖片都可以，要 `fit` `"contain"`）、`"tape"`（紙膠帶貼上：只給圖片）。挑哪一種照 `shared/style.md`「螢幕錄影與圖片」 |
 | `moves`／`marks`／`lens` | — | 運鏡、紅框（含跟捲動 `path`）、放大鏡（5.5） |
 | `callouts`／`spot`／`steps`／`arrows` | — | 說明卡、聚光燈、STEP 膠囊、箭頭（5.5） |
 | `kenburns` | 圖片 `true` | 圖片沒寫 `moves`、也沒有 `callouts`／`spot`／`arrows` 時整段慢推 1.00→1.05；`false` 關掉 |

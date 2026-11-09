@@ -14,7 +14,7 @@
     /* 29 Odometer */
     .fx-29-row { display: flex; align-items: center; justify-content: center; white-space: nowrap; }
     .fx-29-label, .fx-29-unit { color: var(--fx-ink); text-shadow: var(--fx-scrim); }
-    .fx-29-digits { display: flex; align-items: center; color: var(--fx-hi); font-variant-numeric: tabular-nums; }
+    .fx-29-digits { display: flex; align-items: center; color: var(--fx-hi); font-variant-numeric: tabular-nums; text-shadow: var(--fx-scrim); }
     .fx-29-win { position: relative; flex: none; overflow: hidden;
       -webkit-mask-image: linear-gradient(transparent, #000 9%, #000 91%, transparent);
       mask-image: linear-gradient(transparent, #000 9%, #000 91%, transparent); }
@@ -24,12 +24,13 @@
   </style>
   <div id="root" data-composition-id="fx-29-odometer" data-width="1920" data-height="1080" data-duration="4">
     <div class="fx-stage">
-      <div class="fx-safe"><div class="fx-29-row"><div class="fx-29-label"></div><div class="fx-29-digits"></div><div class="fx-29-unit"></div></div></div>
+      <div class="fx-safe"><div class="fx-29-row"><div class="fx-29-label" data-live="label"></div><div class="fx-29-digits" data-live="number"></div><div class="fx-29-unit" data-live="unit"></div></div></div>
     </div>
   </div>
   <script src="fx-kit.js"></script>
   <script>
-    /* 29 Odometer：左側固定標籤、右側單位（選填）；數值 v 從 0 減速數到目標，每位數滾輪位置是 v 的純函數（真實里程表進位）；停留後 v 快速倒數回 0 */
+    /* 29 Odometer：左側固定標籤、右側單位（選填）；數值 v 從 0 減速數到目標，每位數滾輪位置是 v 的純函數（真實里程表進位）；
+       停在目標值到最後，整排淡出（不倒數回 0：影片裡會變成「只花 0 小時」）。data-live 給剪輯台邊打字邊看用 */
     const v = window.__hyperframes.getVariables();
     const stage = document.querySelector('.fx-stage');
     const label = document.querySelector('.fx-29-label');
@@ -94,14 +95,14 @@
     }
 
     const roll = Math.max(0.5, Math.min(1.8, (D - 1.0) * 0.5));
-    const back = 0.5;
-    const hold = Math.max(0, D - 0.3 - roll - back - 0.3);
+    const out = 0.35;
     const p = { v: 0 };
     render(0);
+    const row = document.querySelector('.fx-29-row');
     const tl = gsap.timeline({ paused: true });
     tl.fromTo(p, { v: 0 }, { v: target, duration: roll, ease: 'power2.out', onUpdate: () => render(p.v) }, 0.3)
-      .fromTo(p, { v: target }, { v: 0, duration: back, ease: 'power2.inOut', immediateRender: false, onUpdate: () => render(p.v) },
-        0.3 + roll + hold);
+      .fromTo(row, { opacity: 1, y: 0 }, { opacity: 0, y: -24, duration: out, ease: 'power2.in', immediateRender: false },
+        Math.max(0.3 + roll + 0.3, D - out - 0.05));
     window.__timelines['fx-29-odometer'] = tl;
   </script>
 </template>

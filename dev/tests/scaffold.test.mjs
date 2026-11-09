@@ -469,3 +469,51 @@ test('022 --outline 認得字卡動態：fx 沒有範例 JSON，照「vars：…
     { type: 'fx', fx: 23, from: '#N', to: '#Me', vars: { text: '<動畫文字>', items: '<四個面的詞（用 | 分隔）>' } });
   assert.equal(snippetOf({ name: '07 key-point', text: '**07 key-point**：…' }), null);
 });
+
+test('023 情緒點：chNN.md 列候選與數量；--check-draft 數量、推近次數 ⚠、詞對不到 ✖；--merge-drafts 寫進 plan.json 的 moods（scenes 前面）', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-moods-'));
+  fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
+  const tpl = path.join(root, 'shared', 'template');
+  fs.symlinkSync(TEMPLATE, tpl, 'dir');
+  fs.symlinkSync(path.join(WORKSPACE, 'shared', 'style.md'), path.join(root, 'shared', 'style.md'));
+  for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
+  const proj = path.join(root, 'projects', 'm');
+  fs.mkdirSync(path.join(proj, 'work', 'hyperframes'), { recursive: true });
+  fs.mkdirSync(path.join(proj, 'assets', 'camera'), { recursive: true });
+  const ff = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '110', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, 'work', 'rough.mp4')], { encoding: 'utf8' });
+  assert.equal(ff.status, 0, ff.stderr);
+  const srt = makeSrt({ n: 30 }).replace('第 5 句字幕內容', '千萬不要這樣做').replace('第 12 句字幕內容', '結果竟然成功了');
+  fs.writeFileSync(path.join(proj, 'work', 'rough.srt'), srt);
+  fs.writeFileSync(path.join(proj, 'work', 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, look: false }));
+  const run = (...a) => spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), ...a, '--template', tpl, '--project', 'projects/m'], { cwd: root, encoding: 'utf8', timeout: 120000 });
+
+  let r = run('--scaffold');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const md = fs.readFileSync(path.join(proj, 'work', '分鏡素材', 'ch01.md'), 'utf8');
+  assert.match(md, /## 情緒點（`moods`：這一份約 2 個，最多 4 個；推近最多 1 次）/);
+  assert.match(md, /- #5 痛點「千萬不要」：千萬不要這樣做/);
+  assert.match(md, /- #12 反轉「竟然」/);
+  assert.match(fs.readFileSync(path.join(proj, 'work', '分鏡素材', '共用.md'), 'utf8'), /\*\*情緒點寫 `moods`\*\*/);
+
+  const seg = (id, a, z) => ({ id, scene: 'key-point', from: `#${a}`, to: `#${z}e`, slots: { key: '重點' }, story: { say: '講重點', why: '測試' } });
+  const draft = { chapter: '01', segments: [seg('s0101', 1, 8), seg('s0102', 9, 16), seg('s0103', 17, 24), seg('s0104', 25, 30)], icons: {}, quotes: [], moods: [], decide: [] };
+  const write = () => fs.writeFileSync(path.join(proj, 'work', 'drafts', 'ch01.json'), JSON.stringify(draft));
+  fs.mkdirSync(path.join(proj, 'work', 'drafts'), { recursive: true });
+  write();
+  r = run('--check-draft', 'ch01');
+  assert.match(r.stdout, /⚠ 情緒點 0 個，這一份約 2 個/);
+  draft.moods = [{ at: '#12@竟然', kind: 'turn', zoom: true }, { at: '#5@千萬不要', kind: 'pain', zoom: true }, { at: '#20@不存在', kind: 'land' }];
+  write();
+  r = run('--check-draft', 'ch01');
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stdout, /✖ moods\[2\].*找不到詞「不存在」/);
+  assert.match(r.stdout, /⚠ 推近（zoom）2 次，這一份最多 1 次/);
+  draft.moods.pop();
+  write();
+  r = run('--merge-drafts', '--no-storyboard');
+  assert.match(r.stdout, /情緒點 2 個（金句 0、反轉 1、痛點 1、解法 0、落定 0；推近 2 次）/);
+  const plan = JSON.parse(fs.readFileSync(path.join(proj, 'work', 'hyperframes', 'plan.json'), 'utf8'));
+  assert.deepEqual(plan.moods.map((m) => m.at), ['#5@千萬不要', '#12@竟然'], '照句號排');
+  const keys = Object.keys(plan);
+  assert.equal(keys.indexOf('moods'), keys.indexOf('scenes') - 1, 'moods 放在 scenes 前面');
+});

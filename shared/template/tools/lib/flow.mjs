@@ -26,6 +26,7 @@ import { formatFinding } from './audit-rules.mjs';
 import { hfLocal } from './hf.mjs';
 import { KINDS as FIX_KINDS } from './autofix.mjs';
 import { spokenAt } from './plan.mjs';
+import { moodTarget, MOOD_KINDS, insertMoods } from './moods.mjs';
 
 const TOOLS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rel = (p) => path.relative(process.cwd(), p).split(path.sep).join('/') || '.';
@@ -474,14 +475,14 @@ export function outlineCmd(P, file) {
     return seg;
   });
   const draft = { chapter: prev.chapter || key.replace(/^ch/, ''), ...prev, segments: draftSegs };
-  for (const k of ['icons', 'quotes', 'decide']) if (!draft[k]) draft[k] = k === 'icons' ? {} : [];
+  for (const k of ['icons', 'quotes', 'moods', 'decide']) if (!draft[k]) draft[k] = k === 'icons' ? {} : [];
   fs.mkdirSync(draftsDir(P), { recursive: true });
   writeAtomic(out, `${JSON.stringify(draft, null, 2)}\n`);
   const holes = placeholders(draftSegs);
   const autos = draftSegs.reduce((n, sg) => { let k = 0; eachField(sg, (o, kk, x) => { if (x === AUTO) k++; }); return n + k; }, 0);
   console.log(`草稿骨架：${rel(out)}（${draftSegs.length} 段，要填 ${holes.length} 格；起訖、anchor、欄位都寫好了，${autos} 格時間寫 auto 由工具對${old.size ? '，填過的段留著' : ''}）`);
   if (hints.length) { console.log('模板動畫的拍綁哪幾句（照這個挑詞就不用算秒數）：'); for (const h of hints) console.log(`  ${h}`); }
-  console.log(`→ 下一步：只改 ${rel(out)} 裡的 <…>（畫面上的字，<> 裡是字數上限）、#N@詞（講到那個東西的詞）；寫 auto 的時間不用動（工具照卡上的字找講到的地方），why 已經寫了模板用途、要改再改；金句寫 quotes、拿不定寫 decide。改完驗：`);
+  console.log(`→ 下一步：只改 ${rel(out)} 裡的 <…>（畫面上的字，<> 裡是字數上限）、#N@詞（講到那個東西的詞）；寫 auto 的時間不用動（工具照卡上的字找講到的地方），why 已經寫了模板用途、要改再改；金句寫 quotes、情緒點寫 moods（chNN.md 寫了要幾個）、拿不定寫 decide。改完驗：`);
   console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --check-draft ${key}`);
   return 0;
 }
@@ -543,7 +544,7 @@ export function checkDraft(P, file) {
   const base = readJson(P.plan, { version: 1 });
   const tmp = path.join(P.out, '.cache', `draft-${path.basename(abs)}`);
   fs.mkdirSync(path.dirname(tmp), { recursive: true });
-  fs.writeFileSync(tmp, JSON.stringify({ ...base, scenes: segs, sections: undefined }));
+  fs.writeFileSync(tmp, JSON.stringify({ ...base, scenes: segs, sections: undefined, moods: Array.isArray(draft.moods) ? draft.moods : undefined }));
   // 合併時工具會自動修的（文字對時、小重疊、≤ 3 秒的空檔…，lib/autofix.mjs）先在暫存檔修掉，只回報剩下要自己改的；草稿本身不動
   let autoFixed = [];
   const fx = tool('build.mjs', ['--project', P.project, '--plan', tmp, '--autofix', '--json', ...(P.templateArg || [])]);
@@ -569,6 +570,15 @@ export function checkDraft(P, file) {
     if (target && designs > cap) warns.unshift(`內容設計動畫候選 ${designs} 段，這一份 ${eligible} 段最多 ${cap} 段 → 留最值得的 ${cap} 段，其他拿掉 story.designIdea`);
     if (target && designs < target) warns.unshift(`內容設計動畫候選 ${designs} 段，這一份 ${eligible} 段的三成約 ${target} 段 → 挑最值得設計的時刻，在那段的 story 寫 designIdea、designWhy（共用.md 第 4 節）；真的沒有就在 decide 寫原因`);
     for (const s of segs) { const n = cueOf(s); if (n && (n < part.firstN || n > part.lastN)) warns.push(`${s.id} 的起點 #${n} 不在這一份的範圍（#${part.firstN}–#${part.lastN}）`); }
+    // 情緒點（moods）：數量、範圍、推近次數；欄位與詞對不對得上由 build --check 報（moods[i]…）
+    const mt = moodTarget(part.seconds ?? (part.end - part.start));
+    const moods = Array.isArray(draft.moods) ? draft.moods : [];
+    if (draft.moods !== undefined && !Array.isArray(draft.moods)) errors.push('moods 要是陣列，例 "moods": [{ "at": "#12@千萬不要", "kind": "pain" }]');
+    else if (moods.length < mt.low) warns.push(`情緒點 ${moods.length} 個，這一份約 ${mt.target} 個 → 從 chNN.md 的「情緒點」候選挑講者情緒最強的詞，寫進 moods（{ "at": "#N@詞", "kind": "${Object.keys(MOOD_KINDS).join('／')}" }）；真的沒有就在 decide 寫原因`);
+    else if (moods.length > mt.cap) warns.push(`情緒點 ${moods.length} 個，這一份最多 ${mt.cap} 個 → 留情緒最強的，其他拿掉（太多會一直有音效）`);
+    for (const [i, m] of moods.entries()) { const n = Number(String(m?.at ?? '').match(/^#(\d+)/)?.[1]); if (n && (n < part.firstN || n > part.lastN)) warns.push(`moods[${i}] 的 #${n} 不在這一份的範圍（#${part.firstN}–#${part.lastN}）`); }
+    const zs = moods.filter((m) => m?.zoom === true).length;
+    if (zs > mt.zoomCap) warns.push(`推近（zoom）${zs} 次，這一份最多 ${mt.zoomCap} 次 → 只留金句、反轉最強的那幾個`);
     const tags = segs.filter((s) => s.scene === 'chapter-tag').map((s) => (j.items || []).find((x) => x.id === s.id)).filter(Boolean);
     for (const u of j.uncovered || []) {
       const [a, b] = Array.isArray(u) ? u : [u.from ?? u.start, u.to ?? u.end];
@@ -702,7 +712,8 @@ export function mergeDrafts(P, flags = {}, deps = {}) {
   if (!files.length) { console.log(`✖ ${rel(dir)} 沒有草稿（chNN.json）→ 先照 work/分鏡素材/ 寫`); return 1; }
   const parts = readJson(path.join(packDir(P), 'index.json'))?.parts || [];
   const missing = parts.map((p) => p.key).filter((k) => !files.includes(`${k}.json`));
-  const segs = [], ends = [], icons = {}, quotes = [], decide = [], problems = [], warns = [];
+  const segs = [], ends = [], icons = {}, quotes = [], moods = [], decide = [], problems = [], warns = [];
+  let hasMoods = false;
   let cuesMemo = null;
   const mergeCues = () => (cuesMemo ||= parseSrt(fs.readFileSync(P.srt, 'utf8')));
   for (const f of files) {
@@ -718,6 +729,7 @@ export function mergeDrafts(P, flags = {}, deps = {}) {
     if (last) ends.push(last);
     for (const [k, v] of Object.entries(d.icons || {})) { if (icons[k] && icons[k] !== v) warns.push(`圖示不一致：「${k}」有 ${icons[k]} 和 ${v} → 全集用同一個（這次用 ${icons[k]}）`); else icons[k] = v; }
     quotes.push(...(d.quotes || []));
+    if (Array.isArray(d.moods)) { hasMoods = true; moods.push(...d.moods); }
     decide.push(...(d.decide || []));
   }
   const seen = new Set();
@@ -751,11 +763,17 @@ export function mergeDrafts(P, flags = {}, deps = {}) {
   if (syncSegs.length) console.log(`邊錄邊講的螢幕錄影 ${syncSegs.length} 段（work/screen-sync.json）一起放進 plan.json`);
   const idx = readJson(path.join(packDir(P), 'index.json'));
   if (idx?.sections?.length && plan.sections === undefined) plan.sections = idx.sections;
+  // 情緒點：各份的 moods 照句號排好，整份換掉（分鏡表停點 ③ 改的是 plan.json；再合併會蓋掉，和 scenes 一樣）
+  if (hasMoods) {
+    const nOf = (m) => Number(String(m?.at ?? '').match(/^#(\d+)/)?.[1] ?? 0);
+    const sorted = [...moods].sort((a, b) => nOf(a) - nOf(b));
+    plan = insertMoods(plan, sorted);
+  }
   const planNext = `${JSON.stringify(plan, null, 2)}\n`;
   if (planText.trim() && planText !== planNext) backupPlan(P.plan);
   writeAtomic(P.plan, planNext);
   if (autofixStep(P)) plan = readJson(P.plan) || plan;
-  fs.writeFileSync(mergedFile, `${JSON.stringify({ icons, quotes, decide, scenesHash: sha(JSON.stringify(plan.scenes)) }, null, 2)}\n`);
+  fs.writeFileSync(mergedFile, `${JSON.stringify({ icons, quotes, ...(hasMoods ? { moods: [...moods].sort((a, b) => Number(String(a?.at ?? '').match(/^#(\\d+)/)?.[1] ?? 0) - Number(String(b?.at ?? '').match(/^#(\\d+)/)?.[1] ?? 0)) } : {}), decide, scenesHash: sha(JSON.stringify(plan.scenes)) }, null, 2)}\n`);
   const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
   const designs = writeBriefs(P, plan, cues);
   for (const w of new Set(warns)) console.log(`⚠ ${w}`);
@@ -769,6 +787,7 @@ export function mergeDrafts(P, flags = {}, deps = {}) {
   const cap = designCap(target);
   const picks = (plan.scenes || []).filter(isDesignPick).length + designs.length;
   console.log(`合併：${segs.length} 段（${files.length} 份）；內容設計動畫候選 ${picks} 段（停點 ③ 勾了才做）${designs.length ? `，其中 ${designs.length} 段已經指定要做` : ''}${picks < target ? `（⚠ 約三成的段是 ${target} 個候選）` : ''}${picks > cap ? `（⚠ 上限 ${cap} 段 → 留最值得的，其他在草稿拿掉 designIdea 再合併）` : ''}`);
+  if (hasMoods) console.log(`情緒點 ${moods.length} 個（${Object.entries(MOOD_KINDS).map(([k, v]) => `${v.zh} ${moods.filter((m) => m?.kind === k).length}`).join('、')}；推近 ${moods.filter((m) => m?.zoom === true).length} 次）`);
   if (summary) console.log(summary);
   if (r.status !== 0) { console.log('→ 下一步：照 ✖ 改（改那一份 work/drafts/chNN.json，再合併一次）'); console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --merge-drafts`); return 1; }
   const todo = designs.filter((d) => !fs.existsSync(path.join(designsDir(P), `${d.id}.md`)));
@@ -812,7 +831,7 @@ function genContext(P, plan, j, shotsList, lib) {
   const merged = readJson(path.join(draftsDir(P), '_merged.json'), {});
   const parts = readJson(path.join(packDir(P), 'index.json'))?.parts || [];
   return {
-    project: path.basename(P.project), plan, merged, parts, cues, shots,
+    project: path.basename(P.project), plan, merged, parts, cues, shots, moodTimes: j.moods || [],
     items: new Map((j.items || []).map((x) => [x.id, x])), voiceOnly: j.voiceOnly || [],
     scenes: lib.scenes, specs: new Map(listFillSpecs(lib.customDir).map((f) => [f.template, f])), designs: loadDesigns(P, plan),
   };

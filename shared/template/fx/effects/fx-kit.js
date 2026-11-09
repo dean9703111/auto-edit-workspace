@@ -90,11 +90,12 @@
   }
 
   // 宿主（data-composition-src 那個 div）的 data-duration 就是這張字卡的播放長度；
-  // render／snapshot 編譯後宿主屬性會改名成 data-composition-file，兩個都要認。
-  // 找不到時用效果自己的預設週期
+  // render／snapshot 編譯後宿主屬性會改名成 data-composition-file，兩個都要認；
+  // 剪輯台的完成影片預覽（HyperFrames 0.9 播放器）把 data-duration 改名成 data-hf-authored-duration，也要認
+  // （只認舊名時預覽裡每張字卡都當預設長度：數字卡 5 秒的段 3.2 秒就倒數回 0）。找不到時用效果自己的預設週期
   function slotDuration(el, fallback) {
     const host = el.closest('[data-composition-src], [data-composition-file]');
-    const d = parseFloat(host && host.getAttribute('data-duration'));
+    const d = parseFloat(host && (host.getAttribute('data-duration') || host.getAttribute('data-hf-authored-duration')));
     return d > 0 ? d : fallback;
   }
 

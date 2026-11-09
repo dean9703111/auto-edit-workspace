@@ -436,10 +436,10 @@ test('storyboard：03 側邊欄截在退場前、fx 29 截在數字停住時；�
   const r = F.qc('storyboard', '--json');
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
-  // 03：內容在 D − P.PUSH − P.OUT 開始淡出（kit 常數，template.html 第 50 行）→ 截在它前 0.1 秒；fx 29（4 秒）：7.8–9.3 滾到 29，10.7 開始滾回 0 → 10.6
+  // 03：內容在 D − P.PUSH − P.OUT 開始淡出（kit 常數，template.html 第 50 行）→ 截在它前 0.1 秒；fx 29（4 秒）：7.8–9.3 滾到 29、停住，11.1（段尾前 0.4 秒）整排開始淡出 → 10.9
   const kit = fs.readFileSync(path.join(TEMPLATE, 'kit', 'scene-motion.js'), 'utf8');
   const K = (name) => Number(kit.match(new RegExp(`[\\s,]${name} = ([0-9.]+)`))[1]);
-  assert.deepEqual(j.shots.map((x) => [x.file, x.at]), [['s01.png', +(7 - K('PUSH') - K('OUT') - 0.1).toFixed(3)], ['s02.png', 10.6]]);
+  assert.deepEqual(j.shots.map((x) => [x.file, x.at]), [['s01.png', +(7 - K('PUSH') - K('OUT') - 0.1).toFixed(3)], ['s02.png', 10.9]]);
   assert.deepEqual(j.cleared, ['s01-1.png', 's01-2.png']);
   assert.deepEqual(j.stale, ['s09.png']);
   assert.ok(!fs.existsSync(path.join(dir, 's01-1.png')) && fs.existsSync(path.join(dir, 's09.png')));

@@ -23,9 +23,10 @@
 | `look` | | `false`／`{ "color", "slim" }` | 用 `kit/look.json` | 講者調光與瘦臉 | 剪輯台（AI 只在使用者明說時寫） | `contracts/look.md` §2.2 | **新（006）** |
 | `theme` | | `"light"`／`"dark"` | `"light"` | 主題（`specs/010-motion-v2/design-system.md` §10）：`dark`＝build 改用 `shared/template/bg-{fs,side,ch}-dark.jpg`（缺哪張就退回亮色那張並 ⚠），主合成、測試片段與 build 產生的每個子合成（情境、字卡動態、字幕）的 `<html>` 加 `data-theme="dark"`；配色由 `kit/scene.css` 的 `:root[data-theme="dark"]` 換 token。情境動畫 `x-*.html` 不是 build 產生的，跟著主合成走（同一份 document）。其他值 ✖ | 剪輯台（006 的亮／暗切換）；AI 只在使用者明說時寫 | `contracts/check-json.md` §2 `theme` | **新（002 第二段 A）** |
 | `edit` | | 物件（§1.2） | 全部 0／空 | 剪輯台的裁剪、淡入淡出、音量、轉場 | 剪輯台（AI 不主動寫） | `lib/edit.mjs`、EDITOR.md | 現行 |
+| `moods` | | 陣列（`{ at, kind, sfx?, zoom? }`） | 沒有情緒點 | 情緒點：音效照講者的情緒放（`kind`：quote／turn／pain／win／land），模板預設音效那一分鐘有情緒點就讓位；`zoom: true`＝講者爆衝推近 1.25 倍 | AI（分章草稿）；停點 ③ 情緒點表 | `lib/moods.mjs`、style.md「音效」 | **新（023）** |
 | `scenes` | ✓ | 陣列 | — | 每一段，依時間順序 | AI；剪輯台改部分欄位（§3） | 本檔 §2 | 現行 |
 
-`TOP_KEYS` 改成：`['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'check', 'look', 'theme', 'edit', 'scenes']`。
+`TOP_KEYS` 改成：`['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'moods', 'scenes']`（`sections`、`style`、`moods` 是之後加的）。
 
 ### 1.1 `outro`
 

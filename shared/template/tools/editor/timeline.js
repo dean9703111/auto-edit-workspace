@@ -29,6 +29,7 @@ const C = {
   play: '#FFD400', voice: 'rgba(255,255,255,0.22)', band: '#FFD400', bandDim: 'rgba(255,212,0,0.55)',
   scene: '#3B82F6', fx: '#C792EA', custom: '#2FB36B', media: '#FF8A3D', cap: '#1E2740', capSel: '#2B3A63', sfx: '#4ADE9B',
 };
+const MOOD_COL = { quote: '#FFD400', turn: '#C792EA', pain: '#FF5A5F', win: '#4ADE9B', land: '#FF8A3D' };   // 情緒點（023）
 const DB_TOP = 12, DB_BOT = -30;     // 音量線的上下界（−30 以下畫在底線，標「靜音」）
 
 export class Timeline {
@@ -38,7 +39,7 @@ export class Timeline {
     this.off = document.createElement('canvas');
     this.dur = 0; this.pps = 50; this.t0 = 0; this.fitPps = 50;
     this.staticDirty = true; this.drag = null; this.hover = null; this.snapLine = null;
-    this.compact = false; this.scale = 1;
+    this.compact = false; this.scale = 1; this.animRows = 1;
     this.layoutLanes();
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(canvas.parentElement);
@@ -55,7 +56,9 @@ export class Timeline {
   layoutLanes() {
     const base = this.compact ? LANES_COMPACT : LANES;
     // 使用者拖分隔線調大小：總覽和時間尺不變，軌道照比例
-    this.lanes = this.scale === 1 ? base : base.map(([k, h]) => [k, k === 'ov' || k === 'ruler' ? h : Math.max(16, Math.round(h * this.scale))]);
+    const lanes = this.scale === 1 ? base : base.map(([k, h]) => [k, k === 'ov' || k === 'ruler' ? h : Math.max(16, Math.round(h * this.scale))]);
+    // 字卡重疊時分排：每排固定高（和只有一排時一樣），軌道照排數長高，不把每排壓扁
+    this.lanes = lanes.map(([k, h]) => [k, k === 'anim' ? h + (this.animRows - 1) * (h - 4) : h]);
     this.L = {};
     let y = 0;
     for (const [k, h] of this.lanes) { this.L[k] = [y, y + h]; y += h + 1; }
@@ -64,6 +67,14 @@ export class Timeline {
   setCompact(on) {
     if (this.compact === on) return false;
     this.compact = on;
+    this.layoutLanes();
+    this.resize();
+    return true;
+  }
+  setAnimRows(n) {
+    const v = clamp(n || 1, 1, 3);
+    if (v === this.animRows) return false;
+    this.animRows = v;
     this.layoutLanes();
     this.resize();
     return true;
@@ -510,6 +521,17 @@ export class Timeline {
         });
         if (m.muted) { g.strokeStyle = 'rgba(255,90,95,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x + 2, y + h - 2); g.lineTo(x + w - 2, y + 2); g.stroke(); }
       }
+      // 情緒點（plan.json moods）：菱形＋類別，出聲的實心、讓位或不出聲的空心；講者推近的外圈加一圈
+      for (const m of A.moodView || []) {
+        if (!vis(m.at - 1, m.at + 1)) continue;
+        any = true;
+        const x = X(m.at), cy = y + h / 2, r = Math.min(7, h / 2 - 1), col = MOOD_COL[m.kind] || C.sfx;
+        g.beginPath(); g.moveTo(x, cy - r); g.lineTo(x + r, cy); g.lineTo(x, cy + r); g.lineTo(x - r, cy); g.closePath();
+        g.fillStyle = m.sfx ? col : 'rgba(0,0,0,0)'; g.fill();
+        g.strokeStyle = col; g.lineWidth = 1.5; g.stroke();
+        if (m.zoom) { g.beginPath(); g.arc(x, cy, r + 3, 0, Math.PI * 2); g.strokeStyle = col; g.lineWidth = 1; g.stroke(); }
+        if (this.pps > 25) { g.font = font(10.5, 700); g.textBaseline = 'middle'; g.fillStyle = m.sfx ? col : C.dim; g.fillText(m.zh || '', x + r + 4, cy + 0.5); }
+      }
       if (!any && !A.sfxView.length) { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.reportReady ? '沒有音效' : '音效位置：檢查報告出來後才看得到', PAD + 6, (y0 + y1) / 2); }
     }
   }
@@ -658,7 +680,8 @@ export class Timeline {
         const xa = this.xOf(m.at), w = Math.max(12, Math.min(70, 0.6 * this.pps));
         if (x >= xa - 3 && x <= xa + w + 3) { const d = Math.abs(x - xa); if (d < bd) { bd = d; best = m; } }
       }
-      if (best) { h.kind = 'sfx'; h.sfx = best; }
+      if (best) { h.kind = 'sfx'; h.sfx = best; return h; }
+      for (const m of A.moodView || []) if (Math.abs(this.xOf(m.at) - x) <= 8) { h.kind = 'mood'; h.mood = m; break; }
       return h;
     }
     return h;

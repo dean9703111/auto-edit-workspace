@@ -39,6 +39,7 @@
 | `items` | 物件[]（§3） | 必有（plan 沒解出時間時 `[]`） | 見 §3 | 每段 | 現行＋新 | 全部 |
 | `sfxCount` | `{ 名稱: 次數 }` | 必有 | — | 全片每種音效的次數（主＋附加；3 秒規則之後；不含配樂）＝005 `sfxBudget().count` | 新（FR-058） | 004、006 |
 | `sfxBudget` | 物件（§2.3） | 必有 | rough | `{ perMinuteAvg, over, dense, loud }`，`sfxBudget()` 的回傳去掉 `count`、`levels`、`warnings`、`lines` | 新（FR-058） | 006 |
+| `moods` | 物件[] | 必有（沒有情緒點＝`[]`） | rough | 情緒點（plan.json `moods`，023）：`{ i, kind, at, outAt, sfx, dropped, off, zoom }`；`i`＝moods 的第幾個、`at`＝rough.mp4 秒數（詞的開口）、`outAt`＝完成影片秒數、`sfx`＝最後出聲的音效（取捨拿掉＝`null`，`dropped` 寫原本那顆）、`off`＝寫了 `"sfx": null`、`zoom`＝這個點有推近 | 新（023） | 剪輯台音效軌、分鏡表情緒點表 |
 | `outro` | 物件或 `null` | 必有 | rough | `{ music, start, dur, aligned }`；沒寫 `outro` 或 `music: null` 時 `null`（`cli-005.md` §3.5） | 新（FR-054） | 004 final、006 |
 | `edit` | 物件 | 必有（出錯時 `null`） | rough | 正規化後的 `edit`（`normalizeEdit`，`edit.mjs`） | 現行 | 006 |
 | `paths` | `{ project, video, plan, out }` | 必有（出錯時 `{}`） | — | 相對工作區根目錄的路徑 | 現行 | 004、006 |

@@ -26,6 +26,7 @@ node shared/template/tools/versions.mjs save --project projects/<專案> --seg <
 | 指名一段、一張卡、一個時間，有具體改法（「s05 往左移」「1:20 那張字太多」） | 個案 | 只改那一段的 plan.json |
 | 指名一段動畫裡的東西，有具體改法（「s12 的箭頭慢一點」「手機畫大一點」），plan.json 改不到（內容設計動畫、模板 `slots` 做不到） | 個案 | 一段派一個子代理照 `.agents/skills/auto-edit-motion/references/worker-brief.md` 改那支動畫檔（內容設計動畫它會先載入 hyperframes skill），同一則回覆一次派出，全部回來才 `finish`；主代理不自己改動畫檔 |
 | 指名一段，只說要更好、沒說怎麼改（「s12 的動畫想更完善」「s12 重新設計」「換個動畫」） | 個案（改版） | 先出分鏡提案、停點 ③（`references/revise.md`）；rN.md 的改法寫「改版 s12 v2」 |
+| 指名一個時間的音效或講者推近（「1:20 那聲太吵」「講到竟然要有音效」「這句講者推近」） | 個案 | `build.mjs --check` 的音效報告看那一顆是誰放的：「情緒點」那一行列的 → 改 plan.json 第一層 `moods`（不要＝刪那一項、換聲音＝`"sfx": "<名稱>"`、要推近＝`"zoom": true`、要新加＝`{ "at": "#N@詞", "kind": "<五類>" }`，style.md「情緒點」）；段上的 → 改那一段的 `sfx` |
 | 「s12 用 v1」「退回上一版」 | 個案（退回） | SKILL.md 流程 E；rN.md 的改法寫「退回 v1」 |
 | 「以後」「每次」「都」「全部的 X」 | 規則 | 這一集照做；在 rN.md「建議改規則」寫一條，**不改** `shared/`、AGENTS.md（AGENTS.md 規則 1） |
 | 「這張卡」「我選的」 | 個案 | 請使用者說段號或大約第幾秒，再照 `--check` 報告的「起–迄」找段（USAGE.md 2.6） |

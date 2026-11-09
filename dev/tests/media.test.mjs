@@ -221,6 +221,59 @@ test('015 enter: "tape"：圖片縮小貼在全幕背景上（紙白邊、兩條
   }
 });
 
+test('enter／exit "whip"：0.3 秒橫向甩進（右邊來、expo.out）、甩出（往左、expo.in），拉長＋模糊；到位拿掉 filter；不長出、不配音效', () => {
+  writePlan([{ id: 'm05', type: 'media', src: REC, from: 5, to: 13, in: 0, enter: 'whip', exit: 'whip' }]);
+  const r = build();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const h = read('index.html');
+  assert.match(h, /tl\.fromTo\('#el-m05', \{ x: 1920, scaleX: 1\.15, filter: 'blur\(24px\)' \}, \{ x: 0, scaleX: 1, filter: 'blur\(0px\)', duration: 0\.3, ease: 'expo\.out' \}, 5\);/);
+  assert.match(h, /tl\.set\('#el-m05', \{ filter: 'none' \}, 5\.3\);/);
+  assert.match(h, /tl\.fromTo\('#el-m05', \{ x: 0, scaleX: 1, filter: 'blur\(0px\)' \}, \{ x: -1920, scaleX: 1\.15, filter: 'blur\(24px\)', duration: 0\.3, ease: 'expo\.in', immediateRender: false \}, 12\.7\);/);
+  assert.doesNotMatch(h, /M\.grow\('#mgr-m05'/, 'whip 不從小視窗長出');
+  assert.match(h, /tl\.fromTo\('#pip-m05, #pipf-m05', \{ opacity: 0 \}, \{ opacity: 1, duration: 0\.4, ease: 'sine\.out' \}, 5\);/, '小視窗原地淡入');
+  assert.doesNotMatch(h, /tl\.fromTo\('#pip-m05', \{ x: /, '講者不整張飛過去（會蓋住甩鏡）');
+  assert.doesNotMatch(h, /id="sfx-m05"/, '切到錄影不配音效');
+  assert.match(r.stdout, /m05｜media 操作示範\.mp4｜0:05\.00–0:13\.00｜8s｜—/);
+  // 前一段是不透明幕：墊在底下直到甩進完成（不露出講者），不報重疊；小視窗在接縫交棒、滑進錄影裡（不會同時有兩個）
+  writePlan([{ id: 's01', scene: 'fs-list', from: 1, to: 5, slots: { title: '清單', items: ['一', '二', '三'] } }, { id: 'm05', type: 'media', src: REC, from: 5, to: 13, in: 0, enter: 'whip' }]);
+  const { r: c, j } = checkJson();
+  assert.equal(c.status, 0, c.stdout + c.stderr);
+  assert.equal(j.items.find((x) => x.id === 's01').out.end, 5.3);
+  assert.equal(j.items.find((x) => x.id === 's01').out.pip.at(-1).end, 5);
+  assert.deepEqual(j.errors, []);
+  assert.equal(build().status, 0);
+  assert.match(read('index.html'), /tl\.fromTo\('#pip-m05, #pipf-m05', \{ x: 169, y: 3 \}, \{ x: 0, y: 0, duration: 0\.6, ease: 'power3\.inOut' \}, 5\);/);
+  // 錄影 → 從錄影擦入的幕（z 31）→ 甩進的錄影：錄影提到同一層、排在幕後面（進場那幾格不被幕蓋住）；再擦入的幕一樣是 31、排在更後面
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 0.5, to: 2.5, in: 0 }, { id: 's02', scene: 'fs-list', from: 2.5, to: 6.5, slots: { title: '清單', items: ['一', '二', '三'] } },
+    { id: 'm03', type: 'media', src: REC, from: 6.5, to: 9, in: 3, enter: 'whip' }, { id: 's04', scene: 'fs-list', from: 9, to: 13, slots: { title: '再一張', items: ['一', '二', '三'] } }]);
+  const bz = build();
+  assert.equal(bz.status, 0, bz.stdout + bz.stderr);
+  const hz = read('index.html'), z = (id) => Number(hz.match(new RegExp(`id="el-${id}"[^>]*?z-index:(\\d+)`, 's'))[1]);
+  assert.deepEqual(['m01', 's02', 'm03', 's04'].map(z), [30, 31, 31, 31]);
+  assert.ok(hz.indexOf('id="el-s02"') < hz.indexOf('id="el-m03"') && hz.indexOf('id="el-m03"') < hz.indexOf('id="el-s04"'), '同一層照時間先後排，後面的在上');
+});
+
+test('enter "tilt"：面板從透視斜躺擺平（錄影、圖片都可以）；只能當進場、要 fit contain', () => {
+  writePlan([{ id: 'm06', type: 'media', src: REC, from: 5, to: 13, in: 0, enter: 'tilt' }]);
+  const r = build();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const h = read('index.html');
+  const g = h.match(/<div id="mgr-m06" class="mgrow" style="left:(\d+)px;top:(\d+)px;width:(\d+)px;height:(\d+)px"/).slice(1).map(Number);
+  assert.match(h, new RegExp(`<div id="el-m06" class="mlayer" style="z-index:\\d+;perspective:1800px;perspective-origin:${Math.round(g[0] + g[2] / 2)}px ${Math.round(g[1] + g[3] / 2)}px">`), '透視在整層、消失點對準面板中心');
+  assert.match(h, /tl\.fromTo\('#el-m06', \{ opacity: 0 \}, \{ opacity: 1, duration: 0\.25, ease: 'sine\.out' \}, 5\);/);
+  assert.match(h, /tl\.fromTo\('#mgr-m06', \{ rotationX: 22, rotationY: -8, y: 40, scale: 0\.94, transformOrigin: '50% 100%' \}, \{ rotationX: 0, rotationY: 0, y: 0, scale: 1, transformOrigin: '50% 100%', duration: 0\.65, ease: 'power3\.out', force3D: false \}, 5\);/);
+  assert.doesNotMatch(h, /M\.grow\('#mgr-m06'/);
+  assert.doesNotMatch(h, /tl\.fromTo\('#pip-m06', \{ x: /, '小視窗原地淡入，講者不整張飛過去（會蓋住斜躺）');
+  writePlan([{ id: 'm07', type: 'media', src: IMG, from: 7, to: 13, enter: 'tilt' }]);
+  assert.equal(build('--check').status, 0, '圖片也可以');
+  for (const [seg, re] of [[{ src: IMG, enter: 'tilt', fit: 'cover' }, /enter "tilt"（斜躺擺平）要配 fit "contain"（斜躺的是一塊面板；cover 鋪滿畫面，斜躺時四邊會露出黑底）→ 拿掉 fit 或換 enter/], [{ src: REC, exit: 'tilt' }, /exit 只能是 "cut"、"fade"、"slide"、"zoom"、"whip"，現在是 "tilt"/], [{ src: REC, enter: 'spin' }, /enter 只能是 "cut"、"fade"、"slide"、"zoom"、"whip"、"tape"、"tilt"/]]) {
+    writePlan([{ id: 'm08', type: 'media', from: 7, to: 13, ...seg }]);
+    const c = build('--check');
+    assert.equal(c.status, 1, c.stdout + c.stderr);
+    assert.match(c.stdout + c.stderr, re);
+  }
+});
+
 test('out：速度＝(out−in)÷段長，段 ≤ 3 秒可快轉到 64 倍；hold：整段定格成一張圖（不慢推、標註照常）', () => {
   const m = (o) => ({ id: 'm01', type: 'media', src: REC, from: 7, to: 13, ...o });
   writePlan([m({ in: 1, out: 4 })]);
@@ -796,6 +849,10 @@ test('直式：16:9 與 9:16 錄影放進上半資訊面板（y 240–900）；�
   assert.doesNotMatch(html.html, /1920 1080/);
   assert.match(html.html, /class="msteps" style="left:60px;top:260px"/);
   assert.ok(html.tl.some((x) => /\{ x: 1080 \}, \{ x: 0/.test(x)) && html.tl.some((x) => /x: -1080/.test(x)));
+  // 直式也能甩鏡（畫布寬 1080）、斜躺擺平（消失點對準上半的面板中心 540, 570）
+  const wt = mediaParts({ ...a.it, enterFx: 'tilt', exitFx: 'whip', pipIds: [] }, { nextTrack: (() => { let n = 10; return () => n++; })() });
+  assert.match(wt.html, /class="mlayer" style="z-index:20;--cw:1080px;--ch:1920px;perspective:1800px;perspective-origin:540px 570px"/);
+  assert.ok(wt.tl.some((x) => /tl\.fromTo\('#mgr-v01', \{ rotationX: 22/.test(x)) && wt.tl.some((x) => /\{ x: -1080, scaleX: 1\.15, filter: 'blur\(24px\)'/.test(x)));
   // 9:16 錄影、沒有講者面板（pip: false）：可見區伸到字幕區上方（y 1260），右側平台按鈕區要避開
   const b = run({ id: 'v02', type: 'media', src: 'assets/screen/直錄.mp4', pip: false,
     callouts: [{ at: '+0.5', until: '+3', box: [250, 500, 100, 60], text: '這一格', side: 'right' }] }, { panel: false });

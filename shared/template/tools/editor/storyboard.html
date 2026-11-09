@@ -34,6 +34,17 @@
   .sb-navlist a.seen .sb-navtxt { color: var(--dim); }
   .sb-tasks { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 100%; margin-top: 8px; }
   .sb-tasks:empty { display: none; }
+  /* 情緒曲線（023）：整支片的情緒點，高度＝情緒強弱；☑ 的連成一條線，取消勾的空心 */
+  .sb-moods { flex: 1 1 100%; margin-top: 10px; display: grid; gap: 4px; }
+  .sb-moods h3 { margin: 0; font-size: 13px; color: var(--mute); font-weight: 700; }
+  .sb-moods svg { display: block; width: 100%; height: 76px; }
+  .sb-moods .mline { fill: none; stroke: var(--mute); stroke-width: 1.5; stroke-linejoin: round; opacity: .7; }
+  .sb-moods .maxis { stroke: var(--line2); stroke-width: 1; }
+  .sb-moods .mtick { fill: var(--dim); font: 11px var(--mono); }
+  .sb-moods circle { cursor: pointer; stroke-width: 2; }
+  .sb-moods circle.off { fill: transparent !important; opacity: .55; }
+  .sb-moods .mlegend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--mute); }
+  .sb-moods .mlegend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
   .sb-task { display: grid; gap: 1px; padding: 6px 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--line2); color: var(--ink); font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
   a.sb-task:hover, button.sb-task:hover { background: var(--card2); }
   .sb-task b { font-size: 13.5px; }
@@ -207,6 +218,7 @@
       <div class="sb-views" id="views" role="group" aria-label="怎麼看" hidden><button type="button" data-view="grid" aria-pressed="true">總覽</button><button type="button" data-view="list" aria-pressed="false">逐段捲動</button></div>
       <span class="sb-summary" id="summary"></span>
       <div class="sb-tasks" id="tasks"></div>
+      <div class="sb-moods" id="moodStrip" hidden></div>
       <div class="sb-finder" id="finder">
         <input id="finderInput" type="search" autocomplete="off" placeholder="找段號、字幕、畫面文字或時間（例 x0410、手機、12:30）" aria-label="找一段">
         <div class="sb-kinds" role="group" aria-label="只看哪一種">
