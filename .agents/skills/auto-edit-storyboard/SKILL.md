@@ -132,8 +132,11 @@ node shared/template/tools/build.mjs --project projects/<專案> --apply-storybo
 ## 停點
 
 ```
-⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框說「調好了」（會自動存），或說「用建議的」
-⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方
+⏸ 停點 ② 構圖｜請看 <構圖台網址> 和 work/look-preview.jpg
+請回：拖好框說「調好了」（會自動存），或說「用建議的」
+
+⏸ 停點 ③ 分鏡表｜請看 <分鏡表網址>
+請回：改好後說「可以」，或要改的地方
 ```
 
 ② 沒有 `work/look-preview.jpg`（沒開調光瘦臉）時，把「、work/look-preview.jpg」拿掉，其他字不動。

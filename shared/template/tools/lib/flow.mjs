@@ -873,7 +873,7 @@ export function storyboardCmd(P, flags, { loadLib }) {
   if (ideas.length) console.log(`內容設計動畫概念（回報給使用者）：\n  ${ideas.slice(0, 40).join('\n  ')}`);
   const dp = designPlan(plan.scenes, { items: ctx.items, partOf: chapterOfFn(ctx.parts) });
   if (dp.cands.length) console.log(`內容設計動畫候選 ${dp.cands.length} 段，${designPlanLine(dp)}（回報給使用者這一句：在分鏡表「需要我決定的事」取消勾就照現在的版面）：\n  ${dp.cands.slice(0, 40).map((c) => `${dp.on.has(c.id) ? '☑' : '☐'} ${c.id}：${String(plan.scenes.find((s) => s.id === c.id).story.designIdea).slice(0, 40)}`).join('\n  ')}`);
-  console.log(`⏸ 停點 ③ 分鏡表｜請看：${url}｜請回：改好後說「可以」，或要改的地方`);
+  console.log(`⏸ 停點 ③ 分鏡表｜請看 ${url}\n請回：改好後說「可以」，或要改的地方`);
   return 0;
 }
 
@@ -1151,7 +1151,7 @@ export async function reviewCmd(P, flags) {
   // 使用者看預覽的時候先把整支 render 起來（低優先權），說「輸出」就不用再等一個片長
   // 預覽只是把 HTML 疊在影片上，不用 render；使用者說「輸出」才 render（要先在背景算才加 --prerender）
   if (fs.existsSync(path.join(TOOLS, 'deliver.mjs')) && flags.prerender) tool('deliver.mjs', ['--project', P.project, '--prerender', ...(P.templateArg || [])], { timeout: 15000 });
-  console.log(`⏸ 停點 ④ 完成影片預覽｜請看：${url}｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」`);
+  console.log(`⏸ 停點 ④ 完成影片預覽｜請看 ${url}\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」`);
   return 0;
 }
 

@@ -240,7 +240,7 @@ test('prep（--no-editor、假逐字稿）：一條指令到停點 ①；cuts.md
   const r = cli(['prep', '--no-editor', '--transcript', tj], 'flow');
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const out = r.stdout.trim().split('\n');
-  assert.equal(out.at(-1), '⏸ 停點 ① 剪輯清單｜請看：work/cuts.md｜請回：勾好後說「可以」，或要改的列');
+  assert.equal(out.slice(-2).join('\n'), '⏸ 停點 ① 剪輯清單｜請看 work/cuts.md\n請回：勾好後說「可以」，或要改的列');
   assert.match(r.stdout, /✓ 主軌：work\/main\.mp4（真人 1 支/);
   assert.match(r.stdout, /✓ 剪輯清單：work\/cuts\.md（NG 1 列/);
   assert.ok(out.length <= 15, `輸出太多（${out.length} 行）：\n${r.stdout}`);
@@ -532,7 +532,7 @@ test('prep：開剪輯清單頁（真的啟動 editor.mjs）→ 停點那一行�
   const r = cli(['prep', '--transcript', writeJson(path.join(root, 'page.json'), e2eWords())], 'flowpage');
   try {
     assert.equal(r.status, 0, r.stdout + r.stderr);
-    assert.match(r.stdout.trim().split('\n').at(-1), /^⏸ 停點 ① 剪輯清單｜請看：http:\/\/127\.0\.0\.1:\d+\/cuts｜請回：勾好後說「可以」，或要改的列$/);
+    assert.match(r.stdout.trim().split('\n').slice(-2).join('\n'), /^⏸ 停點 ① 剪輯清單｜請看 http:\/\/127\.0\.0\.1:\d+\/cuts\n請回：勾好後說「可以」，或要改的列$/);
   } finally {
     spawnSync(process.execPath, [path.join(TOOLS, 'editor.mjs'), '--stop', '--template', tpl, '--project', 'projects/flowpage'], { encoding: 'utf8', cwd: root });
   }

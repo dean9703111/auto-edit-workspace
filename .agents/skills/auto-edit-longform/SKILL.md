@@ -29,17 +29,17 @@ version: 0.2.0
 node shared/template/tools/status.mjs --project projects/<專案>
 ```
 
-它印目前階段、該讀哪支 Skill 的第幾步、**完整可貼的下一條指令**，有待回覆停點就印停點那一行。照著做，不用另外查路由。第一次開工：`media.mjs prep`（或 `status.mjs --project projects/<專案> --init`）會自動填開工決策表；使用者說直式時，`prep` 加 `--format portrait`。
+它印目前階段、該讀哪支 Skill 的第幾步、**完整可貼的下一條指令**，有待回覆停點就印停點那兩行。照著做，不用另外查路由。第一次開工：`media.mjs prep`（或 `status.mjs --project projects/<專案> --init`）會自動填開工決策表；使用者說直式時，`prep` 加 `--format portrait`。
 完成判準：讀到 `目前在：`、`Skill：`、`→ 下一步：` 或待回覆的停點。
 常見錯誤：印「講者：⚠ 還沒設定」→ 在回報裡問姓名與頭銜（不擋流程，不要自己編）。
 
 **2. 有待回覆的停點**
 
 ```
-（不用指令：重貼 status 印的那個停點的最後一行）
+（不用指令：重貼 status 印的那個停點的最後兩行）
 ```
 
-完成判準：回覆最後一行＝AGENTS.md「停點總表」那個停點的原文。
+完成判準：回覆最後兩行＝AGENTS.md「停點總表」那個停點的原文。
 常見錯誤：使用者這句話其實就是在回覆那個停點 → 照那支 Skill「停點」表做，不要重貼。
 
 **3. 交棒**
@@ -82,8 +82,8 @@ status 和實際檔案不符時以產物為準，判斷表在 `references/progre
 ```
 專案：projects/<專案>
 目前在：<status 原文>
-下一步：<status 原文，但停點那一行不放這裡>
-<最後一行：停點原文，或 → 下一個停點：…>
+下一步：<status 原文，但停點那兩行不放這裡>
+<最後：停點原文（兩行），或一行 → 下一個停點：…>
 ```
 
 ## 什麼時候讀 references/

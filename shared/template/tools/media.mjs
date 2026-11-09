@@ -4,7 +4,7 @@
  *
  * 剪乾淨兩條指令（到停點 ① 一條、① 通過後一條；都在背景跑，前景最多等 9 分鐘，還沒好就印「再跑一次」）：
  *   node shared/template/tools/media.mjs prep --project projects/<專案> [--order a,b,…] [--format portrait|landscape] [--again] [--skip-stop] [--no-editor] [--wait <秒>] [--transcript <JSON>]
- *       一條指令到停點 ①：開工決策表 → main → 轉逐字稿＋掃素材（同時跑）→ ng-scan → 工具自己寫 work/cuts.md → ng-snap 預跑（⚠ 寫進「需要你決定」）→ 開剪輯台 → 停點紀錄 → 印停點那一行。
+ *       一條指令到停點 ①：開工決策表 → main → 轉逐字稿＋掃素材（同時跑）→ ng-scan → 工具自己寫 work/cuts.md → ng-snap 預跑（⚠ 寫進「需要你決定」）→ 開剪輯台 → 停點紀錄 → 印停點那兩行。
  *       轉逐字稿：停頓先剪掉再轉（whisper 碰到長停頓會把後面那句的時間攤進停頓），詞的時間換回 main.mp4，寫 work/transcript-main.json 與 work/transcript.json。
  *       每步印一行，細節在 work/.jobs/prep-detail.log。再跑一次：沒做完就接著做；cuts.md 還是最新的就不重寫（使用者勾的不會不見），只重開網址。
  *       --order：改主軌順序（重接、重轉、重寫 cuts.md，舊的備份 cuts.md.bak-<時間戳>）；--format：使用者說了「直式」「橫式」才加（開工決策表的版式）；--again：已經有 rough.mp4 時重來（rough.mp4 改名留著）；--skip-stop：使用者說「不用停」（待確認的列不剪、紀錄「略過」）；

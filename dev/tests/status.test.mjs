@@ -87,7 +87,7 @@ test('停點紀錄：同一停點以最後一列為準；待回覆的停點蓋�
   const lines = r.stdout.trim().split('\n').filter((l) => !l.startsWith('講者：'));
   assert.deepEqual(lines.slice(0, 8).map((l) => l.split('：')[0]), ['版式', '專案', '目前在', 'Skill', '下一個停點', '待回覆停點', '下一輪回饋編號', '依據']);
   assert.match(lines[0], /^版式：橫式 1920×1080（來源：/);
-  assert.ok(lines.includes('⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方'), '重貼停點那一行（照 AGENTS.md）');
+  assert.ok(r.stdout.includes('⏸ 停點 ③ 分鏡表｜請看 <分鏡表網址>\n請回：改好後說「可以」，或要改的地方\n'), '重貼停點那兩行（照 AGENTS.md）');
   assert.match(lines.at(-1), /editor\.mjs --project /, '剪輯台沒開：最後一行是開剪輯台的指令');
   const j = JSON.parse(spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p, '--json'], { encoding: 'utf8' }).stdout);
   assert.deepEqual(Object.keys(j), ['project', 'stage', 'at', 'skill', 'next', 'cmd', 'cmds', 'nextStop', 'waiting', 'stopLine', 'after', 'needEditor', 'round', 'job', 'camera', 'feedback', 'evidence', 'format', 'formatSource', 'speaker']);
@@ -370,7 +370,7 @@ test('有停點在等：重貼 AGENTS.md 那一行；剪輯台開著填網址、
   const at = '2026-11-02 10:00';
   touch(p, 'work/製作進度.md', STOP_TABLE(`| ${at} | ① 剪輯清單 | 待回覆 | — | — |`));
   let s = projectStatus(p);
-  assert.equal(s.stopLine, '⏸ 停點 ① 剪輯清單｜請看：<剪輯清單網址>｜請回：勾好後說「可以」，或要改的列');
+  assert.equal(s.stopLine, '⏸ 停點 ① 剪輯清單｜請看 <剪輯清單網址>\n請回：勾好後說「可以」，或要改的列');
   assert.equal(s.needEditor, true);
   assert.match(s.cmd, /editor\.mjs --project /);
   let L = actionLines(s);
@@ -382,7 +382,7 @@ test('有停點在等：重貼 AGENTS.md 那一行；剪輯台開著填網址、
   assert.equal(editorUrls(p).final, 'http://127.0.0.1:4412/?view=final');
   s = projectStatus(p);
   assert.equal(s.needEditor, false);
-  assert.equal(s.stopLine, '⏸ 停點 ① 剪輯清單｜請看：http://127.0.0.1:4412/cuts｜請回：勾好後說「可以」，或要改的列');
+  assert.equal(s.stopLine, '⏸ 停點 ① 剪輯清單｜請看 http://127.0.0.1:4412/cuts\n請回：勾好後說「可以」，或要改的列');
   L = actionLines(s);
   assert.equal(L.at(-1), s.stopLine);
   assert.match(L.at(-2), /^→ 下一步：等使用者回覆/);
@@ -394,14 +394,14 @@ test('有停點在等：重貼 AGENTS.md 那一行；剪輯台開著填網址、
   assert.deepEqual(projectStatus(p).waiting, ['① 剪輯清單']);
   // ② 有 look-preview.jpg 才列
   touch(p, 'work/製作進度.md', STOP_TABLE(`| ${at} | ② 構圖 | 待回覆 | — | — |`));
-  assert.match(projectStatus(p).stopLine, /^⏸ 停點 ② 構圖｜請看：<構圖台網址>｜請回：拖好框說「調好了」（會自動存），或說「用建議的」$/);
+  assert.match(projectStatus(p).stopLine, /^⏸ 停點 ② 構圖｜請看 <構圖台網址>\n請回：拖好框說「調好了」（會自動存），或說「用建議的」$/);
   touch(p, 'work/look-preview.jpg');
-  assert.match(projectStatus(p).stopLine, /^⏸ 停點 ② 構圖｜請看：<構圖台網址>、work\/look-preview\.jpg｜請回：/);
-  for (const [row, re] of [['③ 分鏡表', /^⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方$/],
-    ['④ 完成影片預覽', /^⏸ 停點 ④ 完成影片預覽｜請看：<完成影片預覽網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」$/],
-    ['⑤ 剪輯台', /^⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完說「調好了」（會自動存）$/],
-    ['⑥ 背景預覽', /^⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>\/preview\.jpg、<暫存資料夾>\/zones-fs\.jpg｜請回：「可以」或「重做」$/],
-    ['③ 分鏡表（s12 v2）', /^⏸ 停點 ③ 分鏡表（s12 v2）｜請看：work\/versions\/s12\/v2\/分鏡\.md｜請回：「可以」或要改的拍$/]]) {
+  assert.match(projectStatus(p).stopLine, /^⏸ 停點 ② 構圖｜請看 <構圖台網址> 和 work\/look-preview\.jpg\n請回：/);
+  for (const [row, re] of [['③ 分鏡表', /^⏸ 停點 ③ 分鏡表｜請看 <分鏡表網址>\n請回：改好後說「可以」，或要改的地方$/],
+    ['④ 完成影片預覽', /^⏸ 停點 ④ 完成影片預覽｜請看 <完成影片預覽網址>\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」$/],
+    ['⑤ 剪輯台', /^⏸ 停點 ⑤ 剪輯台｜請看 <剪輯台網址>\n請回：調完說「調好了」（會自動存）$/],
+    ['⑥ 背景預覽', /^⏸ 停點 ⑥ 背景預覽｜請看 <暫存資料夾>\/preview\.jpg 和 <暫存資料夾>\/zones-fs\.jpg\n請回：「可以」或「重做」$/],
+    ['③ 分鏡表（s12 v2）', /^⏸ 停點 ③ 分鏡表（s12 v2）｜請看 work\/versions\/s12\/v2\/分鏡\.md\n請回：「可以」或要改的拍$/]]) {
     touch(p, 'work/製作進度.md', STOP_TABLE(`| ${at} | ${row} | 待回覆 | — | — |`));
     assert.match(projectStatus(p).stopLine, re);
   }

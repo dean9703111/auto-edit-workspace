@@ -347,7 +347,7 @@ test('finish：build → audit 改到的段 → 存版本 → r<N>.md → ④ �
   assert.match(out, /audit --only s05,s12：✖ 0、⚠ 0/);
   assert.match(out, /錄影段（audit 不量）：s15 截 0:13\.50/);
   assert.match(out, /版本：s05 v1 → v2；s15 v1 → v2；s12 v1 → v2/);
-  assert.equal(log.at(-1), '⏸ 停點 ④ 完成影片預覽｜請看：http://127.0.0.1:4400/?view=final｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」');
+  assert.equal(log.at(-1), '⏸ 停點 ④ 完成影片預覽｜請看 http://127.0.0.1:4400/?view=final\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」');
   assert.match(log.at(-2), /^→ 下一步：看上面那張截圖/);
   // 版本
   assert.equal(JSON.parse(read(p, 'work/versions/s05/v2/.meta.json')).kind, 'r1 改之後');
@@ -643,9 +643,10 @@ test('CLI：new 印記停點的指令和停點 ③；accept 自己記通過（�
   const n = RUN('new', '--project', p, '--seg', 's12', '--no-preview', '--note', '「重新設計」');
   assert.equal(n.status, 0, n.stderr);
   let L = n.stdout.trim().split('\n');
-  assert.match(L.at(-3), /^→ 下一步：改每份 分鏡\.md/);
-  assert.equal(L.at(-2), `node shared/template/tools/status.mjs --project ${p} --mark "③ 分鏡表（s12 v2）" --state 待回覆 --back "work/versions/s12/v2/分鏡.md"`);
-  assert.match(L.at(-1), /^⏸ 停點 ③ 分鏡表（s12 v2）｜請看：.*分鏡\.md｜請回：「可以」或要改的拍$/);
+  assert.match(L.at(-4), /^→ 下一步：改每份 分鏡\.md/);
+  assert.equal(L.at(-3), `node shared/template/tools/status.mjs --project ${p} --mark "③ 分鏡表（s12 v2）" --state 待回覆 --back "work/versions/s12/v2/分鏡.md"`);
+  assert.match(L.at(-2), /^⏸ 停點 ③ 分鏡表（s12 v2）｜請看 \S*分鏡\.md$/);
+  assert.equal(L.at(-1), '請回：「可以」或要改的拍');
   const mark = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p, '--mark', '③ 分鏡表（s12 v2）', '--state', '待回覆', '--back', 'work/versions/s12/v2/分鏡.md'], { encoding: 'utf8' });
   assert.equal(mark.status, 0, mark.stderr);
   assert.deepEqual(projectStatus(p).waiting, ['③ 分鏡表（s12 v2）']);

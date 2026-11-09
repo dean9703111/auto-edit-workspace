@@ -29,7 +29,7 @@ const EDITOR = path.join(HERE, '..', 'editor.mjs');
 const BUILD = path.join(HERE, '..', 'build.mjs');
 const STOP1 = '① 剪輯清單';
 const CUTS_DRAFT = '<!-- prep 草稿：ng-snap 預跑完才算數 -->';
-const STOP_LINE = (url) => `⏸ 停點 ① 剪輯清單｜請看：${url}｜請回：勾好後說「可以」，或要改的列`;
+const STOP_LINE = (url) => `⏸ 停點 ① 剪輯清單｜請看 ${url}\n請回：勾好後說「可以」，或要改的列`;
 export const ROUGH_WARN = { pause: 0.35, total: 0.6 };   // 停頓剪掉超過（扣掉 NG 後的）35%、或整支剪掉超過 60% → ⚠
 const SPEECH_RATE = 16000;
 const MIN_SPEECH = 0.2;   // 靜音判斷把超過 80% 都當靜音（錄得太小聲、門檻不對）：不要只拿剩下的去轉

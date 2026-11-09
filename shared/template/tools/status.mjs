@@ -15,7 +15,7 @@
  *         講者：⚠ …                 （只有 shared/講者.json 還沒設定或格式不對時才印：提醒設定講者資料，lib/speaker.mjs）
  *       最後幾行是要做的事：
  *         沒有停點在等：「→ 下一步：<說明>」，下面每一行都是可以整行複製執行的指令（好幾行就依序跑）；這一步是 AI 自己做的事（寫分鏡表）就沒有指令
- *         有停點在等：「使用者回覆「…」：」和回覆後要跑的指令（縮排兩格），最後一行是 AGENTS.md 格式的「⏸ 停點 …」；
+ *         有停點在等：「使用者回覆「…」：」和回覆後要跑的指令（縮排兩格），最後兩行是 AGENTS.md 格式的「⏸ 停點 …」「請回：…」；
  *                     網址要剪輯台：開著就直接填好，沒開就先印「⏸ 停點 …<網址>…」，再印「→ 下一步」和開剪輯台的指令
  *   node shared/template/tools/status.mjs --project projects/<專案> --mark "<停點>" --state <待回覆|通過|修改後重停|略過> [--said "使用者原話"] [--back "寫回哪裡"] [--json]
  *       work/製作進度.md 的停點紀錄加一列（時間工具蓋、只新增不改舊列），印那一列。<停點> 可以寫「② 構圖」「②」「構圖」「③ 分鏡表（s12 v2）」。
@@ -445,7 +445,7 @@ export function projectStatus(project) {
   // 定稿（--review：build、audit、完成態拼圖、開預覽、記 ④ 待回覆），或（④ 通過）輸出
   const s12 = passed('④ 完成影片預覽')
     ? { at: '輸出／④ 通過', skill: 'auto-edit-deliver', next: `輸出完成影片：測試片段、整支 render、驗收，一條指令做完（${bgNote}）`, stop: '無', cmds: [deliver] }
-    : { at: '剪好看／定稿，停點 ④ 完成影片預覽', skill: 'auto-edit-review A1–A4', next: 'build、audit、完成態拼圖、開完成影片預覽、記停點 ④，一條指令做完；有 ✖ 照 → 改了再跑一次。之後打開它印的拼圖，只找 FAIL（REVIEW.md §2），都修好才把停點那一行貼給使用者', stop: '④ 完成影片預覽', cmds: [review] };
+    : { at: '剪好看／定稿，停點 ④ 完成影片預覽', skill: 'auto-edit-review A1–A4', next: 'build、audit、完成態拼圖、開完成影片預覽、記停點 ④，一條指令做完；有 ✖ 照 → 改了再跑一次。之後打開它印的拼圖，只找 FAIL（REVIEW.md §2），都修好才把停點那兩行貼給使用者', stop: '④ 完成影片預覽', cmds: [review] };
 
   // 素材盤點（排在 ② 之前：看素材是機器和子代理的事，不用等使用者）
   const inv = !has(story) ? inventoryTodo(project) : [];
@@ -538,51 +538,51 @@ export function projectStatus(project) {
     cmds = [];
     const rev = w.stop === '③ 分鏡表' ? [...w.label.matchAll(/([A-Za-z0-9-]+) v(\d+)/g)] : [];
     const urls = editorUrls(project);
-    const look = has(W('look-preview.jpg')) ? '、work/look-preview.jpg' : '';
+    const look = has(W('look-preview.jpg')) ? ' 和 work/look-preview.jpg' : '';
     const u = (k, zh) => urls?.[k] ?? `<${zh}>`;
     const redo = () => mark(w.stop, '修改後重停', SAID);
     if (rev.length) {
       const ids = rev.map((m) => m[1]).join(',');
       skill = 'auto-edit-review D1–D2';
       next = `等使用者看 ${rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`).join('、')}；回覆「可以」後跑 versions.mjs accept --seg ${ids}，再照 auto-edit-motion 做（要改就改那份 分鏡.md 再停一次）`;
-      stopLine = `⏸ 停點 ${w.label}｜請看：${rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`).join('、')}｜請回：「可以」或要改的拍`;
+      stopLine = `⏸ 停點 ${w.label}｜請看 ${rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`).join(' 和 ')}\n請回：「可以」或要改的拍`;
       after = [{ when: '回覆「可以」', cmds: [`${TOOLS}/versions.mjs accept --project ${A} --seg ${ids} --say "<使用者原話>"`] }, { when: '要改的拍：改那份 分鏡.md，重貼停點', cmds: [mark(w.label, '修改後重停', SAID)] }];
     } else {
       const table = {
         '① 剪輯清單': {
           skill: 'auto-edit-rough 步驟 1–2', urlKey: 'cuts',
           next: '等使用者在剪輯清單頁（editor.mjs 印的「剪輯清單：」網址）勾好後回覆；回覆後先重新讀 cuts.md（只剪「剪」欄是 [x] 的列），再輸出初剪',
-          line: () => `⏸ 停點 ① 剪輯清單｜請看：${u('cuts', '剪輯清單網址')}｜請回：勾好後說「可以」，或要改的列`,
+          line: () => `⏸ 停點 ① 剪輯清單｜請看 ${u('cuts', '剪輯清單網址')}\n請回：勾好後說「可以」，或要改的列`,
           after: [{ when: '回覆「可以」「改好了」（工具照 cuts.md 的「剪」欄剪，會記 ① 通過）', cmds: [`${rough}${SAID}`] }, { when: '指名要改的列：改 work/cuts.md 那一列的「剪」，重貼停點（改主軌順序、補錄照 auto-edit-rough「停點」那張表）', cmds: [redo()] }],
         },
         '② 構圖': {
           skill: 'auto-edit-storyboard 步驟 3–4', urlKey: 'framing',
           next: '等使用者在構圖台拖好框（自動存，剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就跑 qc.mjs framing --write。之後跑 qc.mjs speaker --write 量講者框',
-          line: () => `⏸ 停點 ② 構圖｜請看：${u('framing', '構圖台網址')}${look}｜請回：拖好框說「調好了」（會自動存），或說「用建議的」`,
+          line: () => `⏸ 停點 ② 構圖｜請看 ${u('framing', '構圖台網址')}${look}\n請回：拖好框說「調好了」（會自動存），或說「用建議的」`,
           after: [{ when: '回覆「調好了」', cmds: [mark(w.stop, '通過', SAID), speaker, scaffold] }, { when: '回覆「用建議的」', cmds: [`${TOOLS}/qc.mjs framing --project ${A} --write`, mark(w.stop, '通過', SAID), speaker, scaffold] }],
         },
         '③ 分鏡表': {
           skill: 'auto-edit-storyboard 步驟 7–8', urlKey: 'storyboard',
           next: '等使用者在分鏡表頁（editor.mjs 印的「分鏡表：」網址）改好後回覆；回覆「可以」或「改好了」就跑 --apply-storyboard：有「想換成」「補充說明」的段照它印的重做、重截再停一次，都沒有才記 ③ 通過',
-          line: () => `⏸ 停點 ③ 分鏡表｜請看：${u('storyboard', '分鏡表網址')}｜請回：改好後說「可以」，或要改的地方`,
+          line: () => `⏸ 停點 ③ 分鏡表｜請看 ${u('storyboard', '分鏡表網址')}\n請回：改好後說「可以」，或要改的地方`,
           after: [{ when: '回覆「可以」「改好了」（工具讀 work/storyboard.md：有「想換成」「補充說明」就印要求、照它印的改；沒有才套回 plan.json、記 ③ 通過）', cmds: [`${apply}${SAID}`] }, { when: '指名要改（「s05 換成側邊欄」）：改 plan.json 那段，重截那幾段、重貼停點', cmds: [`${storyCmd} --only <段 id>`] }],
         },
         '④ 完成影片預覽': {
           skill: 'auto-edit-review 流程 A、B', urlKey: 'final',
           next: '等使用者看完成影片預覽（editor.mjs 印的「完成影片預覽：」網址）；要改就開一輪回饋，說可以就輸出完成影片',
-          line: () => `⏸ 停點 ④ 完成影片預覽｜請看：${u('final', '完成影片預覽網址')}｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」`,
+          line: () => `⏸ 停點 ④ 完成影片預覽｜請看 ${u('final', '完成影片預覽網址')}\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」`,
           after: [{ when: '回覆「可以了，輸出完成影片」（deliver 會記 ④ 通過）', cmds: [`${deliver} --said "<使用者原話>"`] }, { when: '指名段＋具體改法（「s05 往左移」「照修改單改」）', cmds: [begin] }, { when: '指名段但只說要更好（「s12 重新設計」）', cmds: [begin, `${TOOLS}/versions.mjs new --project ${A} --seg <段 id> --note "<使用者原話>"`] }, { when: '「s12 用 v1」「退回上一版」', cmds: [begin, `${TOOLS}/versions.mjs use --project ${A} --seg <段 id> --ver v<N>`, finish] }],
         },
         '⑤ 剪輯台': {
           skill: 'auto-edit-review 流程 C', urlKey: 'main',
           next: '等使用者在剪輯台調完說「調好了」；之後重新讀 plan.json 與 rough.srt 再定稿',
-          line: () => `⏸ 停點 ⑤ 剪輯台｜請看：${u('main', '剪輯台網址')}｜請回：調完說「調好了」（會自動存）`,
+          line: () => `⏸ 停點 ⑤ 剪輯台｜請看 ${u('main', '剪輯台網址')}\n請回：調完說「調好了」（會自動存）`,
           after: [{ when: '回覆「調好了」（先重新讀 plan.json 與 rough.srt）', cmds: [mark(w.stop, '通過', SAID), review] }, { when: '「照修改單改」（讀 work/feedback/editor-requests.md）', cmds: [begin] }],
         },
         '⑥ 背景預覽': {
           skill: 'auto-edit-style 步驟 2–4', urlKey: null,
           next: '等使用者看三張背景圖；說可以才複製進 shared/template/',
-          line: () => '⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」',
+          line: () => '⏸ 停點 ⑥ 背景預覽｜請看 <暫存資料夾>/preview.jpg 和 <暫存資料夾>/zones-fs.jpg\n請回：「可以」或「重做」',
           after: [{ when: '回覆「可以」（再照 auto-edit-style 把圖放進 shared/template/）', cmds: [mark(w.stop, '通過', SAID)] }],
         },
       }[w.stop];
@@ -598,15 +598,15 @@ export function projectStatus(project) {
   return { project, stage, at, skill, next, cmd: cmds[0] ?? null, cmds, nextStop, waiting, stopLine, after, needEditor, round: round ? `r${round.n}` : null, job: job?.name ?? null, camera, feedback: `r${nextRound(project)}`, evidence: ev };
 }
 
-// 預設輸出的最後幾行：要做的事（→ 下一步＋指令；有停點在等時，回覆後要跑的指令＋停點那一行）
+// 預設輸出的最後幾行：要做的事（→ 下一步＋指令；有停點在等時，回覆後要跑的指令＋停點那兩行）
 export function actionLines(s) {
   if (!s.stopLine) {
     return [`→ 下一步：${s.next}`, ...s.cmds];
   }
   const L = [];
   for (const a of s.after) { L.push(`使用者${a.when}：`); for (const c of a.cmds) L.push(`  ${c}`); }
-  if (s.needEditor) return [...L, s.stopLine, '→ 下一步：剪輯台沒開：跑下一行拿網址，把上面那行的 <…網址> 換成它印的，貼給使用者（回覆最後一行是那個停點），然後等回覆', ...s.cmds];
-  return [...L, '→ 下一步：等使用者回覆；回覆最後一行照抄下一行（這行不是指令）', s.stopLine];
+  if (s.needEditor) return [...L, s.stopLine, '→ 下一步：剪輯台沒開：跑下一行拿網址，把上面那兩行的 <…網址> 換成它印的，貼給使用者（回覆最後兩行是那個停點），然後等回覆', ...s.cmds];
+  return [...L, '→ 下一步：等使用者回覆；回覆最後兩行照抄下面兩行（這行不是指令）', s.stopLine];
 }
 
 const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'back', 'format'];

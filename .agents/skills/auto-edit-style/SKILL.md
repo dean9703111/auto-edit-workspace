@@ -124,7 +124,8 @@ node shared/template/tools/brand.mjs speaker
 ## 停點
 
 ```
-⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」
+⏸ 停點 ⑥ 背景預覽｜請看 <暫存資料夾>/preview.jpg 和 <暫存資料夾>/zones-fs.jpg
+請回：「可以」或「重做」
 ```
 
 停點 ⑥ 不能略過：背景圖放進 `shared/` 一定要使用者同意（AGENTS.md 規則 1）。暫存資料夾寫完整路徑。

@@ -11,7 +11,7 @@ node shared/template/tools/versions.mjs begin --project projects/<專案> --seg 
 node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段> --note "「使用者原話」"
 ```
 
-工具先把現在的樣子存成 v<舊>（不 render；audit 拼圖比動畫新就附成 `v<舊>/預覽.jpg`），再開 `work/versions/<段>/v<N>/分鏡.md`。改那份分鏡.md：「這版要改什麼」寫 1–5 條（和 v<舊> 差在哪、為什麼；有 `v<舊>/預覽.jpg` 先看）；「## 分鏡」改那一節（動畫分鏡表頭照抄 BEATS.md §1、動態只用 §2 語彙表的名稱）。記 `status.mjs --mark "③ 分鏡表（<段> v<N>）" --state 待回覆`，最後一行照抄工具印的停點行。
+工具先把現在的樣子存成 v<舊>（不 render；audit 拼圖比動畫新就附成 `v<舊>/預覽.jpg`），再開 `work/versions/<段>/v<N>/分鏡.md`。改那份分鏡.md：「這版要改什麼」寫 1–5 條（和 v<舊> 差在哪、為什麼；有 `v<舊>/預覽.jpg` 先看）；「## 分鏡」改那一節（動畫分鏡表頭照抄 BEATS.md §1、動態只用 §2 語彙表的名稱）。記 `status.mjs --mark "③ 分鏡表（<段> v<N>）" --state 待回覆`，最後兩行照抄工具印的停點那兩行。
 
 ## 2. 使用者說「可以」→ 做動畫
 

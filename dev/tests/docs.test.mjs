@@ -44,16 +44,16 @@ const have = (list) => list.filter(exists);
 
 // ---------- 停點（specs/contracts/stop-points.md §2.1；執行期的真相是 AGENTS.md「停點總表」） ----------
 const STOPS = [
-  { n: '①', name: '剪輯清單', skill: 'auto-edit-rough', line: '⏸ 停點 ① 剪輯清單｜請看：<剪輯清單網址>｜請回：勾好後說「可以」，或要改的列' },
-  { n: '②', name: '構圖', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖｜請看：<構圖台網址>、work/look-preview.jpg｜請回：拖好框說「調好了」（會自動存），或說「用建議的」' },
-  { n: '③', name: '分鏡表', skill: 'auto-edit-storyboard', line: '⏸ 停點 ③ 分鏡表｜請看：<分鏡表網址>｜請回：改好後說「可以」，或要改的地方' },
-  { n: '④', name: '完成影片預覽', skill: 'auto-edit-review', line: '⏸ 停點 ④ 完成影片預覽｜請看：<完成影片預覽網址>｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」' },
-  { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看：<剪輯台網址>｜請回：調完說「調好了」（會自動存）' },
-  { n: '⑥', name: '背景預覽', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」' },
+  { n: '①', name: '剪輯清單', skill: 'auto-edit-rough', line: '⏸ 停點 ① 剪輯清單｜請看 <剪輯清單網址>\n請回：勾好後說「可以」，或要改的列' },
+  { n: '②', name: '構圖', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖｜請看 <構圖台網址> 和 work/look-preview.jpg\n請回：拖好框說「調好了」（會自動存），或說「用建議的」' },
+  { n: '③', name: '分鏡表', skill: 'auto-edit-storyboard', line: '⏸ 停點 ③ 分鏡表｜請看 <分鏡表網址>\n請回：改好後說「可以」，或要改的地方' },
+  { n: '④', name: '完成影片預覽', skill: 'auto-edit-review', line: '⏸ 停點 ④ 完成影片預覽｜請看 <完成影片預覽網址>\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」' },
+  { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看 <剪輯台網址>\n請回：調完說「調好了」（會自動存）' },
+  { n: '⑥', name: '背景預覽', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 背景預覽｜請看 <暫存資料夾>/preview.jpg 和 <暫存資料夾>/zones-fs.jpg\n請回：「可以」或「重做」' },
 ];
 // 停點 ③ 的改版變體（014；停點仍是六個，stop-points.md §2.1 最後一列）
 const STOP_VARIANTS = [
-  { n: '③ 改版', skill: 'auto-edit-review', line: '⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看：work/versions/<段>/v<N>/分鏡.md｜請回：「可以」或要改的拍' },
+  { n: '③ 改版', skill: 'auto-edit-review', line: '⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看 work/versions/<段>/v<N>/分鏡.md\n請回：「可以」或要改的拍' },
 ];
 
 // ---------- 小工具 ----------
@@ -170,14 +170,14 @@ test('T6 停點：AGENTS.md「停點總表」恰好 6 列、①–⑥', () => {
   check(JSON.stringify(rows) === JSON.stringify(want), `停點總表第一張表的第一欄是 ${JSON.stringify(rows)}，要是 ${JSON.stringify(want)} → 照 stop-points.md §1，只有六列`);
 });
 
-test('T7 停點：六行（＋③ 改版）最後一行原文都在 AGENTS.md 與對應的 SKILL.md', () => {
+test('T7 停點：六個（＋③ 改版）最後兩行原文都在 AGENTS.md 與對應的 SKILL.md', () => {
   const agents = read('AGENTS.md');
   const bad = [];
   for (const s of [...STOPS, ...STOP_VARIANTS]) {
     if (!agents.includes(s.line)) bad.push(`AGENTS.md 少了停點 ${s.n} 的原文`);
     if (exists(skillMd(s.skill)) && !read(skillMd(s.skill)).includes(s.line)) bad.push(`${skillMd(s.skill)} 少了停點 ${s.n} 的原文`);
   }
-  noProblems(bad, '停點最後一行和契約不一致', '逐字照 specs/contracts/stop-points.md §2.1 貼上（<…> 保留原樣）');
+  noProblems(bad, '停點最後兩行和契約不一致', '逐字照 specs/contracts/stop-points.md §2.1 貼上（<…> 保留原樣）');
 });
 
 // 018：預覽與修改都在剪輯台，Studio 不再出現在給使用者的流程；只留相容舊專案、舊說法的那幾句
@@ -189,8 +189,8 @@ test('018 給使用者的流程不再提 Studio', () => {
   noProblems(bad, '這些檔還提到 Studio', '停點 ④ 是完成影片預覽（editor.mjs 印的網址），改段落說段號或秒數');
 });
 
-test('T8 停點：所有「⏸ 停點」都是六行之一', () => {
-  const allowed = new Set([...STOPS, ...STOP_VARIANTS].map((s) => s.line));
+test('T8 停點：所有「⏸ 停點」都是六個停點的第一行之一', () => {
+  const allowed = new Set([...STOPS, ...STOP_VARIANTS].map((s) => s.line.split('\n')[0]));
   const bad = [];
   for (const f of have(['AGENTS.md', U, R, ...SKILL_FILES])) {
     lines(f).forEach((l, i) => {

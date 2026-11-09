@@ -12,16 +12,16 @@
 
 ### 1. 什麼時候開
 
-使用者說「打開剪輯台」時，是停點 ⑤（`AGENTS.md`「停點總表」）；流程照 `.agents/skills/auto-edit-review/SKILL.md` 流程 C。給網址時回覆最後一行照停點 ⑤ 的固定格式。
+使用者說「打開剪輯台」時，是停點 ⑤（`AGENTS.md`「停點總表」）；流程照 `.agents/skills/auto-edit-review/SKILL.md` 流程 C。給網址時回覆最後兩行照停點 ⑤ 的固定格式。
 
-停點 ①（剪輯清單）也用剪輯台：寫好 `work/cuts.md` 後啟動，把印出的「剪輯清單」網址（`…/cuts`）給使用者，最後一行照停點 ① 的固定格式（`.agents/skills/auto-edit-rough/SKILL.md` 步驟 5）。剪輯清單頁只要有 `work/cuts.md`（試聽要 `work/main.mp4`），只寫 cuts.md NG 表的「剪」欄（`[x]` 剪、`[ ]` 不剪；舊格式沒有這一欄就加在最前面）；cuts.md 被 AI 改過會擋下存檔並重新載入；有 `work/rough.mp4` 之後只能看。
+停點 ①（剪輯清單）也用剪輯台：寫好 `work/cuts.md` 後啟動，把印出的「剪輯清單」網址（`…/cuts`）給使用者，最後兩行照停點 ① 的固定格式（`.agents/skills/auto-edit-rough/SKILL.md` 步驟 5）。剪輯清單頁只要有 `work/cuts.md`（試聽要 `work/main.mp4`），只寫 cuts.md NG 表的「剪」欄（`[x]` 剪、`[ ]` 不剪；舊格式沒有這一欄就加在最前面）；cuts.md 被 AI 改過會擋下存檔並重新載入；有 `work/rough.mp4` 之後只能看。
 
 初剪完成（`media.mjs rough`）也用剪輯台：工具會建好只有 `version` 的 plan.json、在背景處理底片、開好剪輯台，印出「字幕預覽」網址，照抄給使用者就好，這不是停點，不用等他看完。還沒排段落時頁面顯示「初剪預覽」，可以看字幕、改字（自動存），「更新預覽」「輸出完成影片」先停用。
 
-停點 ③（分鏡表）也用剪輯台：寫好 `work/storyboard.md` 後啟動，把印出的「分鏡表」網址（`…/storyboard`）給使用者，最後一行照停點 ③ 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md`）。分鏡表頁只寫 `work/storyboard.md` 改到的那幾行：畫面文字「」裡的字、動畫分鏡「畫面上出現什麼」裡「」內的字、金句的卡上文字與勾選（`☑`／`☐`）、`- 音效：`、要求欄 `- 想換成：`、`- 補充說明：`，以及「需要我決定的事」每一項底下的 `   - 回答：`（`--apply-storyboard` 會印「作者回答」，照做）；其他欄位、表頭、段標題都不能改。檔案被 AI 改過會擋下存檔並重新載入，沒存到的文字留在頁面上；製作進度的「③ 分鏡表」最後一列是「通過」或「略過」之後只能看。使用者說「可以」後，有要求欄的段要先重做再停一次（`auto-edit-storyboard`「停點」）。
+停點 ③（分鏡表）也用剪輯台：寫好 `work/storyboard.md` 後啟動，把印出的「分鏡表」網址（`…/storyboard`）給使用者，最後兩行照停點 ③ 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md`）。分鏡表頁只寫 `work/storyboard.md` 改到的那幾行：畫面文字「」裡的字、動畫分鏡「畫面上出現什麼」裡「」內的字、金句的卡上文字與勾選（`☑`／`☐`）、`- 音效：`、要求欄 `- 想換成：`、`- 補充說明：`，以及「需要我決定的事」每一項底下的 `   - 回答：`（`--apply-storyboard` 會印「作者回答」，照做）；其他欄位、表頭、段標題都不能改。檔案被 AI 改過會擋下存檔並重新載入，沒存到的文字留在頁面上；製作進度的「③ 分鏡表」最後一列是「通過」或「略過」之後只能看。使用者說「可以」後，有要求欄的段要先重做再停一次（`auto-edit-storyboard`「停點」）。
 停點 ④（完成影片預覽）也用剪輯台：`build.mjs --review`、`versions.mjs finish` 已經開好剪輯台，停點 ④ 那一行的網址就是完成影片預覽（`…/?view=final`），不用再跑 `editor.mjs`；打不開才跑 `editor.mjs --status`。頁面會直接開在完成影片預覽；還沒 build 或找不到播放器時停在快速試聽並提示原因。不帶參數的網址也一樣：有成品就開完成影片預覽，`?view=sim` 才開快速試聽。
 
-停點 ②（構圖）也用剪輯台：啟動後印的「構圖台」網址（`…/framing`）給使用者，最後一行照停點 ② 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 2）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
+停點 ②（構圖）也用剪輯台：啟動後印的「構圖台」網址（`…/framing`）給使用者，最後兩行照停點 ② 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 2）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
 
 開之前要有：
 
@@ -123,7 +123,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 ### 6. 使用者說「調好了」之後
 
 1. 直接跑 `node shared/template/tools/build.mjs --project projects/<專案> --review`（`auto-edit-review` 流程 A：build、audit、完成態拼圖）。它會讀剪輯台存的最新檔，不用先整份重讀 `plan.json`、`rough.srt`；之後要改哪一段，再用 `node shared/template/tools/build.mjs --project projects/<專案> --show <段>` 讀那一段。有 ✖ 就照 → 後面的建議修好再跑。
-2. 不要關剪輯台：停點 ④ 的網址就是它。回覆最後一行照 `--review` 印的停點 ④；使用者說可以才照 `auto-edit-deliver` 輸出。有裁剪時，完成影片長度＝初剪長度 − 剪掉的範圍。
+2. 不要關剪輯台：停點 ④ 的網址就是它。回覆最後兩行照 `--review` 印的停點 ④；使用者說可以才照 `auto-edit-deliver` 輸出。有裁剪時，完成影片長度＝初剪長度 − 剪掉的範圍。
 
 ### 7. 兩種預覽與自動降級
 

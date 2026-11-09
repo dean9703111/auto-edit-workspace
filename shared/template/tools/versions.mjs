@@ -936,7 +936,7 @@ export function finishRound(P, flags = {}, log = console.log, steps = {}) {
   setRound(project, { ...round, segs: ids, open: false, finished: now(), rows: Object.fromEntries(Object.entries(auto).filter(([, v]) => v != null)) });
   const url = S.editor(P, flags);
   if (!url) notes.push(`⚠ 剪輯台沒開起來，拿不到完成影片預覽網址 → 跑 node shared/template/tools/editor.mjs --project ${pj(P)}，把它印的「完成影片預覽：」網址填進停點那一行`);
-  const stopLine = `⏸ 停點 ④ 完成影片預覽｜請看：${url || '<完成影片預覽網址>'}｜請回：${STOP4_ASK}`;
+  const stopLine = `⏸ 停點 ④ 完成影片預覽｜請看 ${url || '<完成影片預覽網址>'}\n請回：${STOP4_ASK}`;
   if (flags.prerender) S.prerender(P, flags);
 
   // 印
@@ -958,7 +958,7 @@ export function finishRound(P, flags = {}, log = console.log, steps = {}) {
   if (shot) log(`要看的截圖：${rel(shot)}（由左到右、由上到下：${counts}）`);
   else if (looseShots.length) { log('要看的截圖：'); for (const f of looseShots) log(`  ${f}`); }
   else log('要看的截圖：沒有（這輪沒有畫面上的段）');
-  log('→ 下一步：看上面那張截圖（字有沒有擋臉、壓字幕、跑版）；不對就改了再跑一次 finish；對了回覆最後一行照抄下一行（這行不是指令）');
+  log('→ 下一步：看上面那張截圖（字有沒有擋臉、壓字幕、跑版）；不對就改了再跑一次 finish；對了回覆最後兩行照抄下面兩行（這行不是指令）');
   log(stopLine);
   return report;
 }
@@ -1015,9 +1015,9 @@ export function cli(argv = process.argv.slice(2)) {
   if (flags.cmd === 'new') {
     const r = ids.map((id) => newProposal(P, flags, id, log, flags.note || null));
     const label = `③ 分鏡表（${r.map((x) => `${x.id} v${x.n}`).join('、')}）`;
-    log('→ 下一步：改每份 分鏡.md 的「這版要改什麼」和「## 分鏡」（動畫分鏡表頭照抄、動態只用 BEATS.md 語彙），改好跑下一行記停點；回覆最後一行照抄最後一行');
+    log('→ 下一步：改每份 分鏡.md 的「這版要改什麼」和「## 分鏡」（動畫分鏡表頭照抄、動態只用 BEATS.md 語彙），改好跑下一行記停點；回覆最後兩行照抄最後兩行');
     log(`node shared/template/tools/status.mjs --project ${pj(P)} --mark "${label}" --state 待回覆 --back "${r.map((x) => `work/versions/${x.id}/v${x.n}/分鏡.md`).join('、')}"`);
-    log(`⏸ 停點 ${label}｜請看：${r.map((x) => rel(x.file)).join('、')}｜請回：「可以」或要改的拍`);
+    log(`⏸ 停點 ${label}｜請看 ${r.map((x) => rel(x.file)).join(' 和 ')}\n請回：「可以」或要改的拍`);
     return 0;
   }
   if (flags.cmd === 'accept') {
