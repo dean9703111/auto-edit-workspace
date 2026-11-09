@@ -57,7 +57,7 @@
    - 寫好 `frame` 之後才做下面的步驟（場地照的座標要換算：`(x − frame.x) × 1920 ÷ frame.w`；`qc.mjs speaker` 會自動照 `frame` 裁切後再量）。
 第 1–3 步是手動框講者，只有第 4 步的 `qc.mjs speaker` 印「8 格之間幾乎沒有動作」時才做；平常直接做第 4 步。
 
-1. 場地照：專案資料夾裡檔名有「場地照」的圖（範本附的是 `projects/example/場地照-測試.jpg`）。沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
+1. 場地照：專案資料夾裡檔名有「場地照」的圖。沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
 2. 確認是 1920×1080：`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <場地照路徑>`。不是的話，量出來的數字要等比換算（範例的 `示範口播.mp4` 是 640×360，從它截的場地照量出來要乘 3）。講者框整個落在底片尺寸內時，`--check` 會提醒「看起來是用原尺寸截圖的像素量的」並附換算後的框。
 3. 框出講者的頭頂、兩肩、手勢會到的範圍，四邊各外擴 40px，寫成 `[x1, y1, x2, y2]`（左上到右下）。
 4. 場地照只是一張靜止畫面，看不出手勢會比到哪。有 `work/rough.mp4` 之後，一定要跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案> --write`（`--write` 把青色建議框寫進 plan.json 的 `speakerBox`，已經有的不覆寫，`--force` 才覆寫），它會產生兩張圖：
@@ -67,7 +67,7 @@
 
    建議框已經含手勢範圍（動作範圍外擴 40px），不用每次開圖；`--review` 的拼圖看到卡片擋到手勢或臉、或桌面倒影讓下緣明顯偏大時，才看這兩張圖照著改。
 
-範例（`projects/example/場地照-測試.jpg`）：頭頂 y≈276、雙手與身體 x≈790–1220、桌面 y≈840 → `[750, 236, 1260, 880]`，中心 x≈1005（置中）。中心 x 在 860–1060 算置中，小於 860 在左側，大於 1060 在右側；各位置適合哪些情境見 R4。
+範例（講者坐在桌前、畫面置中）：頭頂 y≈276、雙手與身體 x≈790–1220、桌面 y≈840 → `[750, 236, 1260, 880]`，中心 x≈1005（置中）。中心 x 在 860–1060 算置中，小於 860 在左側，大於 1060 在右側；各位置適合哪些情境見 R4。
 
 ### 2.3 分鏡表格式（`work/storyboard.md`）
 
