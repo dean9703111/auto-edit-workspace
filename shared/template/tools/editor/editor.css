@@ -453,6 +453,32 @@ ul.plain b, ol.plain b { color: var(--ink); }
 .export-steps .now .sym { color: var(--accent-text); }
 .export-steps .bad .sym { color: var(--warn-kw); }
 .export-steps .todo { color: var(--mute); }
+.dlg-actions .grow { flex: 1; }
+/* 開始前的選擇：一個選項一張卡，選到的亮主色 */
+.export-setup { display: grid; gap: 14px; margin: 12px 0 4px; }
+.export-choice { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.export-choice legend { font-size: 13px; color: var(--mute); margin-bottom: 6px; padding: 0; }
+.export-choice .opt { position: relative; display: grid; gap: 3px; padding: 10px 12px 10px 36px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; cursor: pointer; }
+.export-choice .opt:hover { border-color: rgba(255,255,255,.4); }
+.export-choice .opt input { position: absolute; left: 12px; top: 12px; margin: 0; width: 16px; height: 16px; accent-color: var(--accent); }
+.export-choice .opt b { font-size: 15px; }
+.export-choice .opt span { font-size: 12.5px; color: var(--mute); }
+.export-choice .opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+.export-choice .opt:has(input:focus-visible) { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.export-note:empty { display: none; }
+.export-note { margin: 0; font-size: 12.5px; }
+@media (max-width: 640px) { .export-choice { grid-template-columns: 1fr; } }
+/* 輸出中：整體進度條 */
+.export-progress { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; }
+.export-bar { flex: 1; height: 10px; background: var(--plate); border-radius: 999px; overflow: hidden; }
+.export-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .6s ease; }
+.export-progress b { min-width: 3.2em; text-align: right; font-size: 18px; font-variant-numeric: tabular-nums; }
+/* 輸出好了：檔案在哪 */
+.export-result { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; padding: 12px 14px; background: color-mix(in srgb, var(--good-kw) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--good-kw) 45%, transparent); border-radius: 8px; }
+.export-result .ico { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--good-kw); color: #0B1020; font-weight: 800; flex: none; }
+.export-result > div:last-child { display: grid; gap: 2px; min-width: 0; }
+.export-result b { font-family: var(--mono); font-size: 14px; overflow-wrap: anywhere; }
+.export-result span { font-size: 12.5px; }
 
 /* 視窗小的時候：影片和時間軸一定都看得到（不改成整頁捲動）。右側面板先變窄，再窄就變抽屜 */
 .side-toggle, .side-close { display: none; }

@@ -926,14 +926,55 @@ function notifyDone(text) {
   if (!document.hidden) return;
   try { if (window.Notification?.permission === 'granted') new Notification(text, { icon: '/editor/favicon.svg' }); } catch { /* 不能通知也沒關係，分頁標題和頁面上都有寫 */ }
 }
+const fmtSize = (b) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} GB` : `${Math.max(1, Math.round(b / 1024 ** 2))} MB`);
+const optText = (o) => (o ? `${o.resolution === '4k' ? '4K' : '1080p'}、${o.captions === 'off' ? '字幕不燒進影片（另存 output/final.srt）' : '字幕燒進影片'}` : '');
+// 視窗三個樣子：開始前選畫素與字幕（setup）→ 輸出中看整體進度 → 輸出好了引導打開資料夾
 function renderExport(s) {
+  const setup = !!app.exportSetup && !s.running;
   const at = s.steps.findIndex((x) => x.id === s.step);
   const done = !s.running && s.ok === true;
+  $('#exportSetup').hidden = !setup;
+  $('#exportProgress').hidden = !s.running;
+  $('#exportResult').hidden = setup || !done || !s.final?.exists;
+  $('#exportSteps').hidden = setup;
+  $('#exportIssues').hidden = setup;
+  $('#exportLogWrap').hidden = setup || !s.started;
+  $('#exportStart').hidden = !setup;
+  $('#exportClose').textContent = setup ? '取消' : '關閉';
+  $('#exportClose').classList.toggle('primary', !setup && !done);
+  $('#exportCancel').hidden = !s.running;
+  // 輸出好了：主要動作是打開資料夾（檔案在哪），播放、驗收截圖放旁邊
+  const ok = done && !!s.final?.exists && !setup;
+  $('#exportReveal').hidden = !ok;
+  $('#exportVideo').hidden = !ok || !s.final?.url;
+  $('#exportSheet').hidden = !ok || !s.final?.sheetUrl;
+  app.finalLinks = { video: s.final?.url || null, sheet: s.final?.sheetUrl || null };
+  if (setup) {
+    const c = app.canvas(), portrait = c.format === 'portrait';
+    $('#exportTitle').textContent = '輸出完成影片';
+    $('#exRes1080').textContent = `1080p（${portrait ? '1080×1920' : '1920×1080'}）`;
+    $('#exRes4k').textContent = `4K（${portrait ? '2160×3840' : '3840×2160'}）`;
+    const opts = exportChoice();
+    const plain = opts.resolution === '1080p' && opts.captions === 'burn';
+    $('#exportSub').textContent = plain && app.outDur > 0 ? `先做 4 秒測試片段確認有聲音，再輸出整支並驗收；整支大約要片長的 2 倍（這支約 ${fmtWait(app.outDur * 2)}）。` : '先做 4 秒測試片段確認有聲音，再輸出整支並驗收。';
+    const pre = app.prerender;
+    $('#exportSetupNote').textContent = opts.resolution === '4k' ? '4K 要整支重新輸出，時間會比 1080p 久好幾倍，磁碟也要留比較多暫存空間（不夠會先告訴你）。'
+      : !plain && pre?.fresh && pre.state !== 'none' ? '背景先算好的是 1080p、字幕燒進影片；選了別的就要整支重新輸出。' : '';
+    return;
+  }
+  const pct = s.overall ?? 0;
   $('#exportTitle').textContent = s.running ? '正在輸出完成影片…' : s.canceled ? '已取消輸出' : s.ok ? '✓ 完成影片輸出好了' : s.started ? '✖ 沒有輸出成功' : '輸出完成影片';
-  const left = s.eta != null ? `還要約 ${fmtWait(s.eta)}` : `整支大約要片長的 2 倍（這支約 ${fmtWait((app.outDur || 0) * 2)}）`;
+  $('#exportBarFill').style.width = `${pct}%`;
+  $('#exportPct').textContent = `${pct}%`;
+  $('.export-bar').setAttribute('aria-valuenow', String(pct));
+  const left = s.eta != null ? `還要約 ${fmtWait(s.eta)}` : s.options?.resolution === '4k' ? '4K 會比 1080p 久好幾倍' : `整支大約要片長的 2 倍（這支約 ${fmtWait((app.outDur || 0) * 2)}）`;
   // 標題已經寫「完成影片輸出好了」：下面那行不再重複（伺服器的訊息給 AI 讀，開頭照樣有）
-  const msg = done ? (s.message || '').replace(/^完成影片輸出好了[，,]\s*(但)?/, '') : s.message || '';
-  $('#exportSub').textContent = s.running ? `已經 ${fmtWait(s.seconds)}，${left}。可以關掉這個視窗繼續看別的，按上方按鈕再打開；不要關閉剪輯台。` : msg + (done && s.final?.file ? `檔案在專案的 ${s.final.file}。` : '');
+  const msg = done ? (s.message || '').replace(/^完成影片輸出好了[，,]\s*(但)?/, '').replace(/（[^（）]*）$/, '') : s.message || '';
+  $('#exportSub').textContent = s.running ? `${s.options ? `${optText(s.options)}。` : ''}已經 ${fmtWait(s.seconds)}，${left}。可以關掉這個視窗繼續看別的，按上方按鈕再打開；不要關閉剪輯台。` : msg;
+  if (ok) {
+    $('#exportFile').textContent = s.final.file;
+    $('#exportFileMeta').textContent = [s.final.size ? fmtSize(s.final.size) : '', optText(s.options)].filter(Boolean).join('｜');
+  }
   $('#exportSteps').innerHTML = s.steps.map((x, i) => {
     const state = done || (s.started && i < at) ? 'done' : i === at ? (s.running ? 'now' : s.canceled ? 'todo' : 'bad') : 'todo';
     const mark = { done: '✓', now: '…', bad: '✖', todo: '·' }[state];
@@ -942,15 +983,12 @@ function renderExport(s) {
   $('#exportIssues').innerHTML = issueItems(s.errors, s.warnings, 30);
   $('#exportLog').textContent = s.log || '';
   if (!s.running && s.started && !s.ok && !s.canceled) $('#exportLogWrap').open = true;
-  const video = $('#exportVideo'), sheet = $('#exportSheet');
-  $('#exportReveal').hidden = s.running || !s.final?.exists;
-  video.hidden = s.running || !s.final?.url; if (s.final?.url) video.href = s.final.url;
-  sheet.hidden = s.running || !s.final?.sheetUrl; if (s.final?.sheetUrl) sheet.href = s.final.sheetUrl;
-  $('#exportCancel').hidden = !s.running;
   const btn = $('#btnExport');
-  const pct = s.step === 'render' && s.percent != null ? ` ${s.percent}%` : '';
-  btn.textContent = s.running ? `輸出中${pct || '…'}` : exportLabel();
-  document.title = s.running ? `輸出中${pct}｜${baseTitle()}` : baseTitle();
+  btn.textContent = s.running ? `輸出中 ${pct}%` : exportLabel();
+  document.title = s.running ? `輸出中 ${pct}%｜${baseTitle()}` : baseTitle();
+}
+function exportChoice() {
+  return { resolution: $('input[name="exRes"]:checked')?.value || '1080p', captions: $('input[name="exCaps"]:checked')?.value || 'burn' };
 }
 // 按鈕順便講背景先算到哪：算好了按下去只要跑驗收
 function exportLabel() {
@@ -989,20 +1027,30 @@ async function pollExport() {
     fetchReport();
   }
 }
-async function startExportFlow({ confirmSpeaker = false } = {}) {
+// 按「輸出完成影片」：輸出中就打開進度；不然先打開選擇（畫素、字幕），按「開始輸出」才真的開始
+async function startExportFlow() {
   if (app.exporting) { await pollExport(); $('#dlgExport').showModal(); return; }
   if (app.building) return;
+  app.exportSetup = true;
+  const r = await api('GET', '/api/export');
+  renderExport(r.ok && r.data ? r.data : { steps: [], running: false });
+  if (!$('#dlgExport').open) $('#dlgExport').showModal();
+  $('#exportStart').focus();
+}
+async function beginExport({ confirmSpeaker = false } = {}) {
+  if (app.exporting || app.building) return;
   await savePromise;
   if (isDirty() && !(await save())) return;
-  const r = await api('POST', '/api/export', confirmSpeaker ? { confirmSpeaker: true } : {});
-  if (r.status === 409 && r.data?.error === 'speaker') { openSpeakerDialog(r.data.speaker, { exporting: true }); return; }
+  const r = await api('POST', '/api/export', { ...exportChoice(), ...(confirmSpeaker ? { confirmSpeaker: true } : {}) });
+  if (r.status === 409 && r.data?.error === 'speaker') { $('#dlgExport').close(); openSpeakerDialog(r.data.speaker, { exporting: true }); return; }
   if (!r.ok) { toast(r.data?.message || '不能輸出', 'err', 6000); return; }
+  app.exportSetup = false;
   try { if (window.Notification?.permission === 'default') Notification.requestPermission().catch?.(() => {}); } catch { /* 瀏覽器不支援通知 */ }
   $('#exportLogWrap').open = false;
   app.exporting = true;
   renderHeader();
   renderExport(r.data);
-  $('#dlgExport').showModal();
+  if (!$('#dlgExport').open) $('#dlgExport').showModal();
   exportTimer ??= setInterval(pollExport, 1000);
 }
 // ---------- 講者：畫面上還是示範人物時，頂端常駐提醒；輸出前一定跳這張確認卡 ----------
@@ -1038,7 +1086,7 @@ async function saveSpeakerFromDialog() {
   app.server.speaker = r.data.speaker;
   renderSpeakerWarn();
   $('#dlgSpeaker').close();
-  if (speakerForExport) { startExportFlow(); return; }
+  if (speakerForExport) { beginExport(); return; }
   toast('講者存好了：更新預覽後就會換上', 'ok', 4000);
   if (app.server?.preview?.built) runBuild();
 }
@@ -2691,9 +2739,14 @@ capBtn('#btnBuild', buildFromButton);
 capBtn('#btnExport', () => startExportFlow());
 $('#btnSpeakerWarn').addEventListener('click', () => openSpeakerDialog(null));
 $('#spkSave').addEventListener('click', saveSpeakerFromDialog);
-$('#spkAnyway').addEventListener('click', () => { $('#dlgSpeaker').close(); startExportFlow({ confirmSpeaker: true }); });
+$('#spkAnyway').addEventListener('click', () => { $('#dlgSpeaker').close(); beginExport({ confirmSpeaker: true }); });
 $('#spkCancel').addEventListener('click', () => $('#dlgSpeaker').close());
 $('#exportClose').addEventListener('click', () => $('#dlgExport').close());
+$('#dlgExport').addEventListener('close', () => { app.exportSetup = false; });
+$('#exportStart').addEventListener('click', () => beginExport());
+for (const el of document.querySelectorAll('#exportSetup input')) el.addEventListener('change', () => renderExport({ steps: [], running: false }));
+$('#exportVideo').addEventListener('click', () => { if (app.finalLinks?.video) window.open(app.finalLinks.video, '_blank', 'noopener'); });
+$('#exportSheet').addEventListener('click', () => { if (app.finalLinks?.sheet) window.open(app.finalLinks.sheet, '_blank', 'noopener'); });
 for (const sel of ['#logIssues', '#exportIssues']) $(sel).addEventListener('click', (e) => {
   const dlg = e.target.closest('dialog');
   if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }

@@ -1,6 +1,9 @@
 // 輸出完成影片的共用流程：剪輯台按鈕（editor/server/export.mjs）和 CLI（deliver.mjs）走同一份。零依賴。
 //   重新產生 → 測試片段（4 秒，確認有畫面和聲音）→ 整支 render 到暫存檔 → 成功才換成 output/final.mp4 → qc.mjs final；失敗或取消不動舊檔。
 //   只改了幾段（lib/incremental.mjs 判定是局部改動）：跳過測試片段和整支，只重畫改到的時間窗、接回上一支；不是局部就印一行原因、照常整支。
+//   畫素與字幕（剪輯台的輸出選項、deliver.mjs --resolution 4k／--no-captions）：預設 1080p＋燒字幕；選了別的就不接手預先 render、不走增量，整支重新輸出。
+//     4K：hyperframes render --resolution landscape-4k／portrait-4k（Chrome 用 2 倍 DPR 畫，不是放大）；不燒字幕：render 另外產生的 compositions/final-nocaps.html，
+//     字幕另存 output/final.srt（build.mjs --nocaps 照畫面上實際顯示的時間寫）
 //
 //   runDeliver(P, job, deps)        跑上面的流程；進度寫在 job 上（newJob()），deps 可以注入假的 run／build／report 測流程
 //   runPrerender(P, job, deps)      預先 render：低優先權 render 到 work/final-prerender.mp4，旁邊記指紋（work/final-prerender.json）
@@ -29,6 +32,7 @@ import { speakerGate } from './speaker.mjs';
 import { designFileOf, isBlankDesign } from './custom-fill.mjs';
 import { storyboardDirty } from './storyboard-state.mjs';
 import { captureState, readState, writeState, diffStates, renderIncremental, NOT_IN_FINAL } from './incremental.mjs';
+import { resolveFormat } from './canvas.mjs';
 
 const TOOLS =path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LOG_KEEP = 24000;
@@ -38,6 +42,13 @@ export const STEPS = [['build', '更新預覽'], ['test', '測試片段（確認
 export const TEST_SECONDS = 4;
 export const QUALITY = 'looks';
 export const FPS = 30;
+// 輸出選項（剪輯台的選擇、deliver.mjs 的參數）：第一個是預設
+export const RESOLUTIONS = ['1080p', '4k'];
+export const CAPTIONS = ['burn', 'off'];
+export const NOCAPS = { comp: 'compositions/final-nocaps.html', srt: 'final-nocaps.srt' };   // build.mjs --nocaps 產生在 work/hyperframes/
+const FRAME_4K_BYTES = 1.2 * 1024 ** 2;   // 4K 一格的影格暫存（1080p 實測約 300 KB，4 倍像素）
+export const isPlain = (o = {}) => (o.resolution || RESOLUTIONS[0]) === RESOLUTIONS[0] && (o.captions || CAPTIONS[0]) === CAPTIONS[0];
+export const optionsLabel = (o = {}) => `${(o.resolution || RESOLUTIONS[0]) === '4k' ? '4K' : '1080p'}、${(o.captions || CAPTIONS[0]) === 'off' ? '不燒字幕，另存 output/final.srt' : '字幕燒進影片'}`;
 export const PRERENDER = {
   workers: 2,                  // 2 個和 5 個差不多快、CPU 少一成多、成品的影音 md5 相同（deliver.mjs 檔頭有實測數字）
   nice: 10,                    // 低優先權：使用者在看預覽時讓路（Windows 略過）
@@ -55,6 +66,7 @@ const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); }
 const rm = (f) => { try { fs.rmSync(f, { force: true }); } catch { /* 下次會覆寫 */ } };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sha1 = (b) => createHash('sha1').update(b).digest('hex');
+const gb = (b) => (b / 1024 ** 3).toFixed(1);
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 function writeJson(f, o) {
   fs.mkdirSync(path.dirname(f), { recursive: true });
@@ -66,7 +78,7 @@ export function deliverPaths(project) {
   const work = path.join(project, 'work'), output = path.join(project, 'output');
   return {
     final: path.join(output, 'final.mp4'), sheet: path.join(output, 'qc', 'qc-sheet.jpg'), clip: path.join(output, 'test-clips', 'test-clip.mp4'),
-    tmp: path.join(work, 'final-rendering.mp4'), log: path.join(work, 'render.log'), memo: path.join(work, 'final-fingerprint.json'),
+    srt: path.join(output, 'final.srt'), tmp: path.join(work, 'final-rendering.mp4'), log: path.join(work, 'render.log'), memo: path.join(work, 'final-fingerprint.json'),
     pre: path.join(work, 'final-prerender.mp4'), prePart: path.join(work, 'final-prerender.part.mp4'), preState: path.join(work, 'final-prerender.json'),
     lock: path.join(work, '.jobs', 'deliver.lock'), renderPid: (kind) => path.join(work, '.jobs', `render-${kind}.json`),
     finalContent: path.join(work, '.jobs', 'final-content.json'), preContent: path.join(work, '.jobs', 'prerender-content.json'),
@@ -96,7 +108,7 @@ function listFiles(root, rel = '') {
   return out;
 }
 
-export function contentFingerprint(P, { quality = QUALITY, fps = FPS } = {}) {
+export function contentFingerprint(P, { quality = QUALITY, fps = FPS, resolution = RESOLUTIONS[0], captions = CAPTIONS[0] } = {}) {
   const h = createHash('sha1');
   const add = (name, file) => {
     const st = statOf(file);
@@ -104,7 +116,8 @@ export function contentFingerprint(P, { quality = QUALITY, fps = FPS } = {}) {
     const text = TEXT_EXT.has(path.extname(file).toLowerCase()) && st.size < 16 * 1024 * 1024;
     h.update(`${name}:${text ? sha1(fs.readFileSync(file)) : `${st.size}:${Math.floor(st.mtimeMs)}`}\n`);
   };
-  h.update(`v1 quality=${quality} fps=${fps} hf=${hfLocal()?.version ?? '?'}\n`);
+  // 預設的畫素與字幕不寫進去：舊的 final.mp4、預先 render 的指紋照樣對得上
+  h.update(`v1 quality=${quality} fps=${fps} hf=${hfLocal()?.version ?? '?'}${isPlain({ resolution, captions }) ? '' : ` res=${resolution} caps=${captions}`}\n`);
   add('plan.json', P.plan);
   add('rough.srt', P.srt);
   for (const f of ROOT_FILES) add(f, path.join(P.out, f));
@@ -489,7 +502,9 @@ export async function runDeliver(P, job, deps) {
   const F = deliverPaths(P.project);
   const run = deps.run || spawnRunner(job);
   const say = deps.say || (() => {});
-  const opts = { quality: deps.quality || QUALITY, fps: deps.fps || FPS };
+  const opts = { quality: deps.quality || QUALITY, fps: deps.fps || FPS, resolution: deps.resolution || RESOLUTIONS[0], captions: deps.captions || CAPTIONS[0] };
+  const plain = isPlain(opts), nocaps = opts.captions === 'off', is4k = opts.resolution === '4k';
+  job.options = { resolution: opts.resolution, captions: opts.captions };
   const addLog = (s) => { job.log = (job.log + s).slice(-LOG_KEEP); };
   const fail = (message, errors = [], fix = '') => { job.ok = false; job.message = message; job.errors = errors; job.fix = fix; };
   const nodeTool = (name, args) => run(process.execPath, [path.join(TOOLS, name), ...args], { cwd: P.root, onData: addLog });
@@ -516,7 +531,7 @@ export async function runDeliver(P, job, deps) {
     if (!deps.force && finalIsCurrent(P, fp)) {
       job.source = 'same';
       say('output/final.mp4 就是現在的內容，不用重新輸出（要重做加 --force）');
-    } else if (!deps.force) {
+    } else if (!deps.force && plain) {   // 預先 render 都是 1080p＋燒字幕
       const took = await takePrerender(P, job, { fp, opts, run, say, pollMs: deps.pollMs ?? 2000, onPercent: percent });
       if (took) {
         job.source = 'prerender';
@@ -526,8 +541,8 @@ export async function runDeliver(P, job, deps) {
     }
     if (job.canceled) return;
 
-    // 只改了幾段：重畫那幾段、接回上一支（畫面和聲音都沒變就不用動）
-    if (!job.source && !deps.force) {
+    // 只改了幾段：重畫那幾段、接回上一支（畫面和聲音都沒變就不用動）；只接 1080p＋燒字幕的舊檔
+    if (!job.source && !deps.force && plain) {
       const inc = await tryIncremental(P, job, { opts, run, say, percent, env: deps.renderEnv, dest: F.tmp, kind: 'final', prefix: '3/4 ' });
       if (job.canceled) return;
       if (inc?.same && inc.pick.kind === 'final') {
@@ -548,12 +563,19 @@ export async function runDeliver(P, job, deps) {
       job.step = 'test';
       fs.mkdirSync(path.dirname(F.log), { recursive: true });
       fs.writeFileSync(F.log, '');
-      const items = (await deps.report())?.report?.items || [];
+      const rep = (await deps.report())?.report || {};
+      const items = rep.items || [];
+      // 4K 的影格暫存是 1080p 的 4 倍：磁碟不夠就不開始（30 分鐘約 64 GB）
+      const filmDur = rep.outputDur ?? rep.videoDur;
+      if (is4k && Number.isFinite(filmDur)) {
+        const need = filmDur * opts.fps * FRAME_4K_BYTES + PRERENDER.stopFreeBytes, free = freeBytesOf(P);
+        if (free != null && free < need) return fail(`磁碟剩 ${gb(free)} GB，輸出 4K 大約要 ${gb(need)} GB 暫存空間。`, [], '清出磁碟空間，或改輸出 1080p');
+      }
       const first = items.find((x) => x.type !== 'media');
       const start = first?.out?.start ?? first?.start ?? 0;   // out.start＝完成影片秒數（有 edit.cuts 時 start 是 rough.mp4 秒數）
       say(`2/4 ${STEPS[1][1]}：${start} 秒起 ${TEST_SECONDS} 秒`);
       let tested;
-      do { tested = await nodeTool('build.mjs', ['--project', P.project, '--template', P.templateDir, '--test', `${start},${TEST_SECONDS}`]); } while (tested.code === STILL_RUNNING);
+      do { tested = await nodeTool('build.mjs', ['--project', P.project, '--template', P.templateDir, '--test', `${start},${TEST_SECONDS}`, ...(nocaps ? ['--nocaps'] : [])]); } while (tested.code === STILL_RUNNING);
       if (job.canceled) return;
       if (tested.code !== 0) return fail('測試片段產生失敗：照下面的訊息修改（看不懂就整段貼給 AI）。', [lastLine(tested)], '照訊息改 plan.json，再跑一次這條指令');
       fs.mkdirSync(path.dirname(F.clip), { recursive: true });
@@ -570,9 +592,10 @@ export async function runDeliver(P, job, deps) {
       content = contentNow(P, opts);
       job.step = 'render';
       percent(0);
-      say(`3/4 ${STEPS[2][1]}（全文 log：${path.relative(P.root, F.log)}）`);
+      say(`3/4 ${STEPS[2][1]}${plain ? '' : `：${optionsLabel(opts)}`}（全文 log：${path.relative(P.root, F.log)}）`);
       const parse = progressParser((p) => percent(p));
-      const rendered = await hfRender(P, run, { args: ['render', '--sdr', '--fps', String(opts.fps), '--quality', opts.quality, '--output', F.tmp], logFile: F.log, title: '整支', env: deps.renderEnv, kind: 'final', onChunk: (s) => { addLog(s); parse(s); } });
+      const resArg = is4k ? ['--resolution', resolveFormat({ projectDir: P.project, plan: readJson(P.plan) }).format === 'portrait' ? 'portrait-4k' : 'landscape-4k'] : [];
+      const rendered = await hfRender(P, run, { args: ['render', ...(nocaps ? ['-c', NOCAPS.comp] : []), '--sdr', '--fps', String(opts.fps), '--quality', opts.quality, ...resArg, '--output', F.tmp], logFile: F.log, title: '整支', env: deps.renderEnv, kind: 'final', onChunk: (s) => { addLog(s); parse(s); } });
       rm(F.renderPid('final'));
       if (job.canceled) return;
       if (rendered.code !== 0 || !statOf(F.tmp)) return fail('整支輸出失敗，上一支完成影片沒有被動到：把下面的訊息貼給 AI。', [failLine(rendered)], footageBroken(rendered, P) || `看 ${path.relative(P.root, F.log)} 最後 20 行；重跑一次這條指令，還是失敗就停下來回報`);
@@ -586,11 +609,15 @@ export async function runDeliver(P, job, deps) {
       job.source = 'render';
     }
     job.percent = 100;
-    if (job.source !== 'same') writeMemo(P, fp, job.source, content);
+    // 不是 1080p＋燒字幕的不留內容紀錄：下次改一段時不能拿它當增量的底（畫素、字幕對不上）
+    if (job.source !== 'same') writeMemo(P, fp, job.source, plain ? content : null);
+    if (nocaps) {
+      try { fs.copyFileSync(path.join(P.out, NOCAPS.srt), F.srt); } catch (e) { return fail('影片輸出好了，但字幕檔沒有存成功。', [e.message], '再跑一次（內容沒變不會重新 render）'); }
+    }
 
     job.step = 'qc';
     say(`4/4 ${STEPS[3][1]}（qc.mjs final）`);
-    const qc = await nodeTool('qc.mjs', ['final', '--project', P.project, '--json']);
+    const qc = await nodeTool('qc.mjs', ['final', '--project', P.project, '--json', ...(is4k ? ['--scale', '2'] : []), ...(nocaps ? ['--no-captions'] : [])]);
     if (job.canceled) return;
     let report = null;
     try { report = JSON.parse(qc.stdout); } catch { /* 下面當成驗收沒有跑完 */ }
@@ -606,6 +633,7 @@ export async function runDeliver(P, job, deps) {
     recordStopPassed(P.project, { said: deps.said });
     job.ok = true;
     job.message = demo?.needed ? `完成影片輸出好了，但講者介紹還是示範人物「${demo.demo}」，上片前要改。` : '完成影片輸出好了，驗收也通過了。';
+    if (!plain) job.message += `（${optionsLabel(opts)}）`;
   } catch (e) {
     if (!job.canceled) fail(`輸出中斷：${e.message}`, [], `看 ${path.relative(P.root, F.log)} 最後幾行；重跑一次這條指令`);
   } finally {

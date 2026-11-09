@@ -26,6 +26,9 @@
  *   node shared/template/tools/build.mjs --project projects/<專案> --test 41,4
  *                                                     另外產生 compositions/test-clip.html：41 秒起的 4 秒
  *                                                     （再到 work/hyperframes 跑 npx hyperframes render -c compositions/test-clip.html --quality draft）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --test 41,4 --nocaps
+ *                                                     再產生 compositions/final-nocaps.html（整支、不燒字幕）和 final-nocaps.srt（畫面上實際顯示的時間）：
+ *                                                     deliver.mjs --no-captions 用（render -c compositions/final-nocaps.html）
  *   node shared/template/tools/build.mjs --project projects/<專案> --capcut
  *                                                     另外產生剪映素材的合成：每段一支 compositions/capcut-<段>.html（透明底、沒有字幕與主軌聲音）
  *                                                     和主軌 compositions/capcut-main.html，清單寫 work/hyperframes/capcut.json（render 交給 capcut.mjs）
@@ -89,6 +92,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CUSTOM_PREVIEW = path.join(HERE, 'lib', 'custom-preview.mjs');
 const customPreview = fs.existsSync(CUSTOM_PREVIEW) ? await import(pathToFileURL(CUSTOM_PREVIEW).href) : null;
 const TEST_FILE = 'compositions/test-clip.html';
+const NOCAPS_FILE = 'compositions/final-nocaps.html', NOCAPS_SRT = 'final-nocaps.srt';
+// 字幕照畫面上實際顯示的時間（切開的區段各一則）寫成 SRT：剪映素材、不燒字幕的完成影片共用
+const captionSrt = (captions) => { let n = 0; return formatSrt(captions.items.flatMap((c) => c.spans.map(([a, b]) => ({ n: ++n, start: a, end: b, text: c.text })))); };
 const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
 const OUTPUT_DIRS = ['output', path.join('output', 'test-clips'), path.join('output', 'qc')];
 const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'outline', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx'];
@@ -103,7 +109,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'autofix'].includes(k)) flags[k] = true;
+    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'nocaps', 'autofix'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -294,9 +300,7 @@ function capcutParts(res, { mainOpts, outDur, captions, format }) {
   }
   const mm = buildMain({ ...mainOpts, test: { t0: 0, len: outDur }, cut: { kind: 'main' } });
   comps.push({ file: 'compositions/capcut-main.html', html: mm.html });
-  let n = 0;
-  const srt = formatSrt(captions.items.flatMap((c) => c.spans.map(([a, b]) => ({ n: ++n, start: a, end: b, text: c.text }))));
-  return { comps, segs, main: { file: 'compositions/capcut-main.html', duration: mm.duration }, srt };
+  return { comps, segs, main: { file: 'compositions/capcut-main.html', duration: mm.duration }, srt: captionSrt(captions) };
 }
 
 // ---------- --gallery ----------
@@ -849,6 +853,8 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     test = buildMain({ ...mainOpts, captions: capT, test: { t0, len } });
     test.t0 = t0;
   }
+  // 不燒字幕的完成影片（--nocaps，deliver.mjs --no-captions）：整支、拿掉字幕層；放 compositions/ 底下（根目錄會變第二個 root），路徑同測試片段
+  const nocaps = flags.nocaps ? buildMain({ ...mainOpts, captions: null, test: { t0: 0, len: outDur } }) : null;
   // 剪映素材（--capcut）：每段一支透明底的合成（時間窗＝那一段），加一支主軌；render 交給 capcut.mjs
   const capcut = flags.capcut ? capcutParts(res, { mainOpts, outDur, captions: cap, format: C.format }) : null;
   if (capcut) for (const c of capcut.comps) files.push([c.file, c.html]);
@@ -857,6 +863,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     for (const e of files) if (e[0].endsWith('.html')) e[1] = withTheme(e[1], 'dark');
     main.html = withTheme(main.html, 'dark');
     if (test) test.html = withTheme(test.html, 'dark');
+    if (nocaps) nocaps.html = withTheme(nocaps.html, 'dark');
   }
   const projectJson = fs.readFileSync(path.join(HERE, 'project', 'hyperframes.json'), 'utf8');
   files.push(['hyperframes.json', projectJson]);
@@ -894,6 +901,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   //   剪輯台存檔時已經重新產生過，再跑 build 不重寫 index.html，舊時間會讓它們誤報「plan.json 比 index.html 新」）
   if (W.res.same.includes('index.html')) { const now = new Date(); fs.utimesSync(path.join(P.out, 'index.html'), now, now); }
   if (test) { W.write(TEST_FILE, test.html); generated.add(TEST_FILE); }
+  if (nocaps) { W.write(NOCAPS_FILE, nocaps.html); generated.add(NOCAPS_FILE); fs.writeFileSync(path.join(P.out, NOCAPS_SRT), captionSrt(cap)); }
   if (capcut) {
     fs.writeFileSync(path.join(P.out, 'capcut.json'), JSON.stringify({ v: 1, planHash, format: C.format, duration: outDur, segs: capcut.segs, main: capcut.main }, null, 2) + '\n');
     fs.writeFileSync(path.join(P.out, 'capcut.srt'), capcut.srt);
@@ -901,7 +909,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   // 舊的產生檔（plan 拿掉的段）：沒被手改才刪
   const removed = [];
   for (const f of Object.keys(manifest.files)) {
-    if (generated.has(f) || [TEST_FILE, 'compositions/captions-test.html'].includes(f) || CAPCUT_RE.test(f)) continue;
+    if (generated.has(f) || [TEST_FILE, NOCAPS_FILE, 'compositions/captions-test.html'].includes(f) || CAPCUT_RE.test(f)) continue;
     const abs = path.join(P.out, f);
     if (!fs.existsSync(abs)) { delete manifest.files[f]; continue; }
     if (W.isUntouched(f, fs.readFileSync(abs, 'utf8'))) { fs.unlinkSync(abs); delete manifest.files[f]; removed.push(f); }

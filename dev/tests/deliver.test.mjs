@@ -125,6 +125,63 @@ test('指紋：plan.json、字幕、合成、kit、assets（大小或時間）�
 
 // ---------- 進度與 log ----------
 
+test('指紋：預設的畫素與字幕不改指紋（舊的 final.mp4 照樣對得上）；4K、不燒字幕各自不同', () => {
+  const a = D.contentFingerprint(P);
+  assert.equal(D.contentFingerprint(P, { resolution: '1080p', captions: 'burn' }), a);
+  const k4 = D.contentFingerprint(P, { resolution: '4k' }), off = D.contentFingerprint(P, { captions: 'off' });
+  assert.notEqual(k4, a);
+  assert.notEqual(off, a);
+  assert.notEqual(k4, off);
+  // 不燒字幕的合成和字幕檔是輸出時另外產生的，不算內容變了
+  fs.writeFileSync(path.join(P.out, 'compositions', 'final-nocaps.html'), '<html>nocaps</html>');
+  assert.equal(D.contentFingerprint(P), a);
+});
+
+test('選項：4K＋不燒字幕 → 測試片段那次 build 加 --nocaps、render 不燒字幕的合成＋--resolution、字幕另存 final.srt、驗收帶 --scale 2 --no-captions；不留增量的底', async () => {
+  let testArgs, renderArgs, qcArgs;
+  const job = await deliver(deps({
+    testBuild: (args) => { testArgs = args; fs.writeFileSync(path.join(P.out, 'final-nocaps.srt'), '1\n00:00:00,000 --> 00:00:01,000\n字幕\n'); return { code: 0, stdout: '', stderr: '' }; },
+    render: (args) => { renderArgs = args; fs.writeFileSync(args[args.indexOf('--output') + 1], 'new-video'); return { code: 0, stdout: '', stderr: '' }; },
+    qc: (args) => { qcArgs = args; return { code: 0, stdout: JSON.stringify({ ok: true, errors: 0, warnings: 0, checks: [] }), stderr: '' }; },
+  }, { resolution: '4k', captions: 'off' }));
+  assert.equal(job.ok, true, job.message);
+  assert.ok(testArgs.includes('--nocaps'));
+  assert.equal(renderArgs[renderArgs.indexOf('render') + 1], '-c');
+  assert.equal(renderArgs[renderArgs.indexOf('-c') + 1], 'compositions/final-nocaps.html');
+  assert.equal(renderArgs[renderArgs.indexOf('--resolution') + 1], 'landscape-4k');
+  assert.ok(qcArgs.includes('--no-captions'));
+  assert.equal(qcArgs[qcArgs.indexOf('--scale') + 1], '2');
+  assert.match(fs.readFileSync(path.join(P.project, 'output', 'final.srt'), 'utf8'), /字幕/);
+  assert.deepEqual(job.options, { resolution: '4k', captions: 'off' });
+  assert.match(job.message, /（4K、不燒字幕，另存 output\/final\.srt）$/);
+  assert.ok(!fs.existsSync(F.finalContent), '4K／不燒字幕的成品不能當下次增量的底');
+  assert.ok(D.finalIsCurrent(P, D.contentFingerprint(P, { resolution: '4k', captions: 'off' })));
+  assert.ok(!D.finalIsCurrent(P, D.contentFingerprint(P)), '換回預設要重新輸出');
+});
+
+test('選項：預設 → 不加 --nocaps、--resolution、--scale；4K 磁碟不夠就不開始', async () => {
+  let renderArgs, qcArgs;
+  const job = await deliver(deps({
+    render: (args) => { renderArgs = args; fs.writeFileSync(args[args.indexOf('--output') + 1], 'new-video'); return { code: 0, stdout: '', stderr: '' }; },
+    qc: (args) => { qcArgs = args; return { code: 0, stdout: JSON.stringify({ ok: true, errors: 0, warnings: 0, checks: [] }), stderr: '' }; },
+  }));
+  assert.equal(job.ok, true, job.message);
+  for (const a of ['-c', '--resolution']) assert.ok(!renderArgs.includes(a), a);
+  for (const a of ['--scale', '--no-captions']) assert.ok(!qcArgs.includes(a), a);
+  calls = [];
+  const big = await deliver(deps({}, { force: true, resolution: '4k', report: async () => ({ report: { outputDur: 1e9, items: [] } }) }));
+  assert.equal(big.ok, false);
+  assert.match(big.message, /^磁碟剩 [\d.]+ GB，輸出 4K 大約要 [\d.]+ GB 暫存空間。$/);
+  assert.ok(!calls.includes('render'));
+});
+
+test('參數：--resolution 4k／4K、--no-captions；其他畫素 → 改法；--prerender 不能加', () => {
+  assert.equal(CLI.parseDeliverArgs(['--resolution', '4K']).resolution, '4k');
+  assert.equal(CLI.parseDeliverArgs(['--no-captions'])['no-captions'], true);
+  assert.throws(() => CLI.parseDeliverArgs(['--resolution', '720p']), /--resolution 只能是 1080p、4k/);
+  assert.throws(() => CLI.parseDeliverArgs(['--prerender', '--no-captions']), /預先 render 只做 1080p＋燒字幕/);
+});
+
 test('進度：認 @hf-progress 和進度條，一塊一塊來也行、只往上走，[INFO] 裡的 % 不算', () => {
   const got = [];
   const parse = D.progressParser((p, frames) => got.push([p, frames]));

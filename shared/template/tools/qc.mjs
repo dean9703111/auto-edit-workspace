@@ -2,7 +2,8 @@
 /**
  * 品質檢查工具：完成影片驗收、講者動作範圍圖、構圖預覽、分鏡截圖、觀影總表（零依賴，只用 Node 22 與 ffmpeg／ffprobe；分鏡截圖與觀影總表另用 HyperFrames 的 Chrome）
  *
- *   node shared/template/tools/qc.mjs final --project projects/<專案> [--file <mp4>] [--json]
+ *   node shared/template/tools/qc.mjs final --project projects/<專案> [--file <mp4>] [--json] [--scale 2] [--no-captions]
+ *       --scale 2：4K 輸出（尺寸要畫布的 2 倍）；--no-captions：字幕沒有燒進影片，不量字幕樣式（文字規則照判，字幕檔一樣用）。deliver.mjs 照輸出選項自己帶。
  *       完成影片驗收（預設檔案 output/final.mp4）。除了尺寸、30fps、音軌、長度，還抓「四項全過、內容卻壞」的問題：
  *         響度（整合響度 −15.5～−12.5 LUFS、true peak ≤ −1.0 dBTP）、畫面凍結（≥ 3 秒，章節轉場、全畫面段本來就靜止，已排除）、
  *         黑畫面（≥ 0.5 秒）、長時間沒聲音（≥ 4 秒）。凍結／黑畫面／無聲的時間會對到 plan.json 的段落 id。
@@ -74,7 +75,7 @@ import { canvasOf, resolveFormat, formatLine } from './lib/canvas.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // Windows 的 npx 是 npx.cmd，要經過 shell 才叫得起來（其他平台不變）
-const VALUE_FLAGS = ['project', 'template', 'file', 'zooms', 'from', 'to', 'offset', 'chrome', 'format', 'only', 'jobs'];
+const VALUE_FLAGS = ['project', 'template', 'file', 'zooms', 'from', 'to', 'offset', 'chrome', 'format', 'only', 'jobs', 'scale'];
 const r1 = (n) => Number(n).toFixed(1);
 const r2 = (n) => Number(n).toFixed(2);
 const r3 = (n) => +Number(n).toFixed(3);
@@ -104,7 +105,7 @@ export function parseArgs(argv) {
       const v = inline ?? rest[++i];
       if (v == null) throw new Error(`--${k} 後面要接值 → 在 --${k} 後面補上值（用 --help 看格式）`);
       flags[k] = v;
-    } else if (['json', 'help', 'write', 'force', 'sheet', 'sample', 'verbose'].includes(k)) flags[k] = true;
+    } else if (['json', 'help', 'write', 'force', 'sheet', 'sample', 'verbose', 'no-captions'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數 → 拿掉它；用 node shared/template/tools/qc.mjs --help 看有哪些參數`);
   }
   return flags;
@@ -304,7 +305,8 @@ export function judge(f) {
 
   const bad = [];
   // 尺寸照版式（FR-090）：f.canvas＝lib/canvas.mjs 的畫布（沒給就是橫式 1920×1080）
-  const W = f.canvas?.W ?? L.width, H = f.canvas?.H ?? L.height;
+  // scale：4K 輸出是畫布的 2 倍（deliver.mjs 的輸出選項）
+  const sc = f.scale || 1, W = (f.canvas?.W ?? L.width) * sc, H = (f.canvas?.H ?? L.height) * sc;
   if (f.width !== W || f.height !== H) bad.push(`尺寸 ${f.width}×${f.height}（要 ${W}×${H}）`);
   if (!Number.isFinite(f.fps) || Math.abs(f.fps - L.fps) > 0.05 || f.vfr) bad.push(`影格率 ${f.fps}fps${f.vfr ? '（變動影格率）' : ''}（要固定 ${L.fps}fps）`);
   if (!f.hasAudio) bad.push('沒有音軌');
@@ -596,7 +598,7 @@ export async function finalCheck(P, flags) {
   if (cues.length || segs.length) { try { if (fs.existsSync(path.join(P.out, 'index.html'))) S = await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file, W: cv.W, H: cv.H }); } catch { S = null; } }
   let captionStyle = null;
   try {
-    captionStyle = await measureCaptions(P, flags, file, cues, cv, S);
+    if (!flags['no-captions']) captionStyle = await measureCaptions(P, flags, file, cues, cv, S);
     if (S && segs.length) {
       const warn = [], motion = await shotMotion(P, segs, flags, S);
       covered = shotPlan(segs, exp.expected ?? Infinity, motion, fxLabels(P, exp.items, motion, warn)).covers.map((c) => ({ id: c.id, by: c.by, msg: c.msg, from: c.from, to: c.to }));
@@ -604,7 +606,7 @@ export async function finalCheck(P, flags) {
   } finally { if (S) await S.close(); }
   const theme = themeOf(P);
   const { statics, frames, ...measured } = det;
-  const facts = { width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, dur, expected: exp.expected ?? null, items: exp.items || [], cuts: exp.cuts || [], pipMissing: pipMiss, cues, captionStyle, theme, canvas: cv, stills, covered, project: `projects/${path.basename(P.project)}`, fileArg: flags.file ? ` --file ${rel(file)} --offset 0` : '', ...measured };
+  const facts = { scale: Number(flags.scale) || 1, width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, dur, expected: exp.expected ?? null, items: exp.items || [], cuts: exp.cuts || [], pipMissing: pipMiss, cues, captionStyle, theme, canvas: cv, stills, covered, project: `projects/${path.basename(P.project)}`, fileArg: flags.file ? ` --file ${rel(file)} --offset 0` : '', ...measured };
   const verdict = judge(facts);
   if (exp.error) verdict.checks.splice(2, 0, { key: 'build', level: 'warn', text: `${exp.error} → 時間對不到段落、長度也沒有預期值，先修好專案再重跑 qc` }), verdict.warnings++;
   let sheet = null;

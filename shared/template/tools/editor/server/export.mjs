@@ -4,9 +4,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { STEPS, runDeliver, spawnRunner, killTree, newJob, lockHolder, deliverPaths, prerenderInfo, prerenderCanPatch } from '../../lib/deliver.mjs';
+import { STEPS, RESOLUTIONS, CAPTIONS, runDeliver, spawnRunner, killTree, newJob, lockHolder, deliverPaths, prerenderInfo, prerenderCanPatch } from '../../lib/deliver.mjs';
 
 const LOG_TAIL = 6000;
+// 整體百分比：四步各佔多少（整支影片佔大部分）；沒有百分比的步驟照經過的時間慢慢往上（est 秒走到約 63%，最多 90%），換到下一步就跳到下一步的起點
+const WEIGHT = { build: 10, test: 5, render: 80, qc: 5 };
+const EST = { build: 60, test: 20, qc: 30 };
 
 const statOf = (f) => { try { return fs.statSync(f); } catch { return null; } };
 const finalPath = (P) => deliverPaths(P.project).final;
@@ -20,7 +23,7 @@ function finalInfo(ctx) {
   const P = ctx.P, st = statOf(finalPath(P)), sheet = statOf(sheetPath(P)), plan = statOf(P.plan);
   if (!st) return { exists: false };
   return {
-    exists: true, file: path.relative(P.project, finalPath(P)).split(path.sep).join('/'), url: `/output/final.mp4?v=${tag(st)}`,
+    exists: true, file: path.relative(P.project, finalPath(P)).split(path.sep).join('/'), url: `/output/final.mp4?v=${tag(st)}`, size: st.size,
     sheetUrl: sheet ? `/output/qc-sheet.jpg?v=${tag(sheet)}` : null, stale: !!(plan && plan.mtimeMs > st.mtimeMs + 1),
   };
 }
@@ -33,10 +36,23 @@ function etaSeconds(j) {
   return moved >= 1 ? Math.max(1, Math.round(((Date.now() - s.t) / 1000 / moved) * (100 - j.percent))) : null;
 }
 
+// 整體百分比（四步合起來）；只往上走
+export function overallPercent(j, now = Date.now()) {
+  if (!j) return null;
+  if (!j.running) return j.ok ? 100 : j.overall ?? 0;
+  if (j.step !== j.seenStep) { j.seenStep = j.step; j.stepAt = now; }
+  let done = 0;
+  for (const [id] of STEPS) { if (id === j.step) break; done += WEIGHT[id]; }
+  const frac = j.step === 'render' ? (j.percent ?? 0) / 100 : Math.min(0.9, 1 - Math.exp(-((now - j.stepAt) / 1000) / EST[j.step]));
+  j.overall = Math.max(j.overall ?? 0, Math.min(99, Math.floor(done + WEIGHT[j.step] * frac)));
+  return j.overall;
+}
+
 export function exportState(ctx) {
   const j = ctx.exportJob;
   const now = j?.finishedAt || Date.now();
   return {
+    overall: overallPercent(j), options: j?.options ?? null, choices: { resolution: RESOLUTIONS, captions: CAPTIONS },
     running: !!j?.running, started: !!j, step: j?.step ?? null, steps: STEPS.map(([id, label]) => ({ id, label })), eta: etaSeconds(j),
     percent: j?.percent ?? null, ok: j?.ok ?? null, canceled: !!j?.canceled, message: j?.message ?? '', errors: j?.errors ?? [], warnings: j?.warnings ?? [],
     log: (j?.log ?? '').slice(-LOG_TAIL), seconds: j ? Math.round((now - j.startedAt) / 1000) : 0, final: finalInfo(ctx),
@@ -53,11 +69,14 @@ export function startExport(ctx, deps, body = {}) {
   if (Object.values(deps.requestStates?.() || {}).some((s) => s?.state === 'generating')) return [409, { error: 'generating', message: 'AI 正在照修改單修改，等它改完再輸出' }];
   const other = lockHolder(ctx.P);
   if (other && other.pid !== process.pid) return [409, { error: 'busy', message: 'AI 正在背景輸出完成影片，等它跑完（或請 AI 取消）再按' }];
+  // 畫素與字幕：頁面選的（不認得的值當成沒選，用預設）
+  const resolution = RESOLUTIONS.includes(body?.resolution) ? body.resolution : RESOLUTIONS[0];
+  const captions = CAPTIONS.includes(body?.captions) ? body.captions : CAPTIONS[0];
   const job = newJob();
   ctx.exportJob = job;
   const log = (s) => { job.log = (job.log + s).slice(-LOG_TAIL * 4); };
   job.done = runDeliver(ctx.P, job, {
-    run: spawnRunner(job), ...deps, by: 'editor', said: '在剪輯台按「輸出完成影片」', say: (s) => log(`${s}\n`),
+    run: spawnRunner(job), ...deps, resolution, captions, by: 'editor', said: '在剪輯台按「輸出完成影片」', say: (s) => log(`${s}\n`),
   }).finally(() => { ctx.report = null; });
   return [200, exportState(ctx)];
 }

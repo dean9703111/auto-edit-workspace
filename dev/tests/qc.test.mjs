@@ -80,6 +80,9 @@ test('judge：全過、ok 為 true', () => {
 
 test('judge：格式與長度是 ✖，其餘是 ⚠', () => {
   assert.equal(Q.judge({ ...base, width: 1280, height: 720 }).errors, 1);
+  // 4K 輸出（deliver.mjs --resolution 4k 帶 --scale 2）：尺寸要畫布的 2 倍
+  assert.equal(Q.judge({ ...base, width: 3840, height: 2160, scale: 2 }).errors, 0);
+  assert.equal(Q.judge({ ...base, width: 3840, height: 2160 }).errors, 1);
   assert.equal(Q.judge({ ...base, hasAudio: false }).errors, 1);
   assert.equal(Q.judge({ ...base, dur: 24.5 }).errors, 1);
   assert.equal(Q.judge({ ...base, dur: 24.08 }).errors, 0);

@@ -213,15 +213,41 @@
 <dialog id="dlgExport" class="dlg wide">
   <h2 id="exportTitle" tabindex="-1" autofocus>輸出完成影片</h2>
   <p id="exportSub" class="mute"></p>
+  <!-- 開始前：選畫素與字幕（預設 1080p、燒進影片） -->
+  <div id="exportSetup" class="export-setup" hidden>
+    <fieldset class="export-choice">
+      <legend>畫素</legend>
+      <label class="opt"><input type="radio" name="exRes" value="1080p" checked><b id="exRes1080">1080p</b><span>一般上片用，輸出最快</span></label>
+      <label class="opt"><input type="radio" name="exRes" value="4k"><b id="exRes4k">4K</b><span>字和線條更銳利；輸出時間和檔案大小都多好幾倍</span></label>
+    </fieldset>
+    <fieldset class="export-choice">
+      <legend>字幕</legend>
+      <label class="opt"><input type="radio" name="exCaps" value="burn" checked><b>燒進影片</b><span>字幕直接畫在影片上</span></label>
+      <label class="opt"><input type="radio" name="exCaps" value="off"><b>不燒進影片</b><span>另存字幕檔 output/final.srt，上傳 YouTube 時當 CC 字幕</span></label>
+    </fieldset>
+    <p id="exportSetupNote" class="mute export-note"></p>
+  </div>
+  <!-- 輸出中：整體進度 -->
+  <div id="exportProgress" class="export-progress" hidden>
+    <div class="export-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i id="exportBarFill"></i></div>
+    <b id="exportPct">0%</b>
+  </div>
+  <!-- 輸出好了：檔案在哪 -->
+  <div id="exportResult" class="export-result" hidden>
+    <div class="ico">✓</div>
+    <div><b id="exportFile">output/final.mp4</b><span id="exportFileMeta" class="mute"></span></div>
+  </div>
   <ol id="exportSteps" class="export-steps"></ol>
   <ul id="exportIssues" class="check-list"></ul>
   <details id="exportLogWrap"><summary>完整訊息（log）</summary><pre id="exportLog"></pre></details>
   <div class="dlg-actions">
-    <button id="exportReveal" hidden>在資料夾中顯示</button>
-    <a id="exportSheet" class="ghost" target="_blank" rel="noopener" hidden>看驗收截圖</a>
-    <a id="exportVideo" class="ghost" target="_blank" rel="noopener" hidden>播放完成影片</a>
+    <button id="exportVideo" hidden>播放完成影片</button>
+    <button id="exportSheet" hidden>看驗收截圖</button>
+    <span class="grow"></span>
     <button id="exportCancel" hidden>取消輸出</button>
-    <button id="exportClose" class="primary">關閉</button>
+    <button id="exportClose">關閉</button>
+    <button id="exportStart" class="primary" hidden>開始輸出</button>
+    <button id="exportReveal" class="primary" hidden>打開資料夾</button>
   </div>
 </dialog>
 

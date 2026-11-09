@@ -30,7 +30,7 @@ const sha = (b) => createHash('sha1').update(b).digest('hex').slice(0, 16);
 const TEXT_EXT = new Set(['.html', '.css', '.js', '.mjs', '.json', '.srt', '.svg', '.txt', '.cube']);
 const ROOT_FILES = ['hyperframes.json', 'meta.json', 'fx-kit.js'];
 const RENDER_DIRS = ['compositions', 'kit', 'assets', 'illus-local'];
-export const NOT_IN_FINAL = /^compositions\/(?:test-clip|captions-test|capcut-[^/]+|inc-audio)\.html$/;   // 測試片段、剪映素材、重混聲音的合成不進完成影片
+export const NOT_IN_FINAL = /^compositions\/(?:test-clip|captions-test|capcut-[^/]+|inc-audio|final-nocaps)\.html$/;   // 測試片段、剪映素材、重混聲音、不燒字幕的合成不進完成影片的指紋
 const statOf = (f) => { try { return fs.statSync(f); } catch { return null; } };
 const r3 = (x) => +Number(x).toFixed(3);
 

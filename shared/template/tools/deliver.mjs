@@ -12,7 +12,7 @@ import { pathsFrom } from './build.mjs';
 import { runJob, jobState, clearJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
 import {
   runDeliver, runPrerender, cancelPrerender, prerenderInfo, prerenderBlocked, prerenderCanPatch, contentFingerprint, finalIsCurrent, lockHolder, killTree, reapRender,
-  cliDeps, newJob, deliverPaths, QUALITY, FPS, PRERENDER,
+  cliDeps, newJob, deliverPaths, QUALITY, FPS, PRERENDER, RESOLUTIONS,
 } from './lib/deliver.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
@@ -24,13 +24,15 @@ const HELP = `輸出完成影片（一條指令跑完測試片段、整支、驗
 
 等待：前景最多等 ${DEFAULT_WAIT} 秒（--wait <秒> 可改）；超過時背景繼續，再跑一次同一條指令會接著等，不會重跑。進度每 10% 一行，render 全文在 work/render.log。
 選項： --quality looks（預設）； --fps 30（預設）； --force（內容沒變也重新 render）； --said "<使用者原話>"（寫進停點紀錄）
+畫素與字幕（使用者指定才加；預設 1080p、字幕燒進影片）： --resolution 4k（畫面更銳利，輸出時間和檔案大小都多好幾倍，磁碟要夠放影格暫存）；
+  --no-captions（字幕不燒進影片，另存 output/final.srt）。加了這兩個就不接手預先 render、不走只重畫幾段，整支重新輸出。
 預先 render：--workers <N>（預設 ${PRERENDER.workers}）。內容的指紋（plan.json、rough.srt、合成、kit、assets）相同且做完 → 直接搬成 final.mp4、跑驗收；
 相同還在跑 → 接著等；只改了幾段 → 跑完自動補上；其他改動 → 取消重來（kit、片長、字幕樣式、版式、主題這類改動使用者存檔後它會自己收掉，再下一次 --prerender 才重開）。失敗不影響正式輸出。
 只改了幾段時，輸出和預先 render 都只重畫改到的時間窗、接回上一支（通常不到一分鐘）；不是局部改動就印一行原因、整支重新 render。--force 一律整支。
 記憶體 8 GB 以下、磁碟剩不到 20 GB 不跑。`;
 
-const VALUE_FLAGS = ['project', 'template', 'quality', 'fps', 'wait', 'workers', 'said'];
-const BOOL_FLAGS = ['prerender', 'cancel', 'force', 'help'];
+const VALUE_FLAGS = ['project', 'template', 'quality', 'fps', 'wait', 'workers', 'said', 'resolution'];
+const BOOL_FLAGS = ['prerender', 'cancel', 'force', 'help', 'no-captions'];
 const QUALITIES = ['draft', 'looks', 'delivery', 'standard', 'high'];
 
 export function parseDeliverArgs(argv) {
@@ -48,6 +50,9 @@ export function parseDeliverArgs(argv) {
   }
   for (const k of ['wait', 'workers', 'fps']) if (flags[k] != null && !/^\d+$/.test(String(flags[k]))) throw new Error(`--${k} 要寫數字，現在是「${flags[k]}」→ 例：--${k} ${k === 'wait' ? 300 : k === 'fps' ? 30 : 2}`);
   if (flags.quality != null && !QUALITIES.includes(flags.quality)) throw new Error(`--quality 只能是 ${QUALITIES.join('、')}，現在是「${flags.quality}」→ 交付一律用 looks`);
+  if (flags.resolution != null && !RESOLUTIONS.includes(String(flags.resolution).toLowerCase())) throw new Error(`--resolution 只能是 ${RESOLUTIONS.join('、')}，現在是「${flags.resolution}」`);
+  if (flags.resolution) flags.resolution = String(flags.resolution).toLowerCase();
+  if (flags.prerender && (flags.resolution || flags['no-captions'])) throw new Error('預先 render 只做 1080p＋燒字幕：--prerender 不能加 --resolution、--no-captions');
   if (flags.prerender && flags.cancel) throw new Error('--prerender 和 --cancel 只能選一個 → 看用法：node shared/template/tools/deliver.mjs --help');
   return flags;
 }
@@ -94,7 +99,7 @@ async function deliverChild(P, flags) {
   const t0 = Date.now();
   await runDeliver(P, job, {
     ...deps, say, by: 'cli', force: !!flags.force, said: flags.said || '輸出完成影片（deliver.mjs）',
-    quality: flags.quality, fps: flags.fps ? Number(flags.fps) : undefined,
+    quality: flags.quality, fps: flags.fps ? Number(flags.fps) : undefined, resolution: flags.resolution, captions: flags['no-captions'] ? 'off' : undefined,
     renderEnv: { HYPERFRAMES_RENDER_DETACHED: '1' },    // 工作行程的爸爸（前景那條指令）會先結束；不加這個 render 會自己取消（render_cancelled_parent_exited）
     onBuilt: (log) => { for (const l of buildSummary(log)) say(l); },
     onPercent: (p) => {
@@ -178,7 +183,7 @@ async function main() {
     if (holder?.by === 'editor') { console.log('✖ 剪輯台正在輸出完成影片 → 等它跑完或在剪輯台按取消，再跑一次這條指令'); return 1; }
     // 上次做完、結果沒印出來（等的那條指令被砍了），之後內容又改過：那個結果過期了，重新輸出，不要把舊的成功印出來
     const st = jobState(P.project, 'deliver');
-    if (st.state === 'done' && st.reported === false && !finalIsCurrent(P, contentFingerprint(P, { quality: flags.quality || QUALITY, fps: flags.fps ? Number(flags.fps) : FPS }))) clearJob(P.project, 'deliver');
+    if (st.state === 'done' && st.reported === false && !finalIsCurrent(P, contentFingerprint(P, { quality: flags.quality || QUALITY, fps: flags.fps ? Number(flags.fps) : FPS, resolution: flags.resolution, captions: flags['no-captions'] ? 'off' : undefined }))) clearJob(P.project, 'deliver');
   }
   const waitSec = flags.wait != null ? Number(flags.wait) : DEFAULT_WAIT;
   const code = await runJob({ project: P.project, name, run: () => deliverChild(P, flags), waitSec, retryFailed: !!flags.force });

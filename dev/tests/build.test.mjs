@@ -157,6 +157,16 @@ test('--test 產生 compositions/test-clip.html（不放專案根目錄，免得
   assert.doesNotMatch(t, /el-s01|el-s03|el-s04/, '片段外的段不放進來');
   assert.match(read('compositions/captions-test.html'), /data-composition-id="captions-test"/);
   assert.match(r.stdout, /render -c compositions\/test-clip\.html --quality draft/);
+  assert.ok(!fs.existsSync(path.join(out, 'compositions', 'final-nocaps.html')), '沒加 --nocaps 不產生');
+  // --nocaps（deliver.mjs --no-captions）：整支、沒有字幕層；字幕照畫面上的時間另存 SRT；index.html 照樣有字幕
+  const nc = node('--test', '15,6', '--nocaps');
+  assert.equal(nc.status, 0, nc.stdout + nc.stderr);
+  const n = read('compositions/final-nocaps.html');
+  assert.match(n, /data-start="0" data-duration="[\d.]+"/);
+  assert.equal(n.match(/data-duration="([\d.]+)"/)[1], read('index.html').match(/data-composition-id="main" data-start="0" data-duration="([\d.]+)"/)[1], '長度和整支一樣');
+  assert.doesNotMatch(n, /el-captions/);
+  assert.match(read('index.html'), /el-captions/);
+  assert.match(read('final-nocaps.srt'), /^1\n\d\d:\d\d:\d\d,\d{3} --> /);
   const bad = node('--test', '15');
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /--test 要寫成「起點,秒數」/);

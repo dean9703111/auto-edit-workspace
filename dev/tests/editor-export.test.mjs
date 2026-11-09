@@ -329,3 +329,41 @@ test('重新產生的狀態：寫白話的步驟與耗時；重新處理底片�
   assert.equal((await brief()).phase, '偵測臉部、套用瘦臉');
   editor.ctx.build = { running: false, log: '', startedAt: 0 };
 });
+
+test('輸出選項：頁面選的畫素與字幕傳給流程（render 加 --resolution、用不燒字幕的合成）；看不懂的值用預設；整體百分比只往上、做完 100', async () => {
+  let renderArgs;
+  await start({
+    testBuild: () => { fs.writeFileSync(path.join(project, 'work', 'hyperframes', 'final-nocaps.srt'), '1\n00:00:00,000 --> 00:00:01,000\n字幕\n'); return { code: 0, stdout: '', stderr: '' }; },
+    render: (args) => { renderArgs = args; fs.writeFileSync(args[args.indexOf('--output') + 1], 'new-video'); return { code: 0, stdout: '', stderr: '' }; },
+  });
+  assert.equal((await post('/api/export', { resolution: '4k', captions: 'off' })).status, 200);
+  const s = await finished();
+  assert.equal(s.ok, true, s.message);
+  assert.deepEqual(s.options, { resolution: '4k', captions: 'off' });
+  assert.equal(s.overall, 100);
+  assert.ok(renderArgs.includes('--resolution') && renderArgs.includes('compositions/final-nocaps.html'));
+  assert.ok(fs.existsSync(path.join(project, 'output', 'final.srt')));
+  assert.ok(s.final.size > 0);
+  await editor.close(); editor = null;
+  await start();
+  assert.equal((await post('/api/export', { resolution: '8k', captions: 'maybe' })).status, 200);
+  assert.deepEqual((await finished()).options, { resolution: '1080p', captions: 'burn' });
+});
+
+test('整體百分比：四步照比重，render 那一步照它的 %，沒有 % 的步驟照時間慢慢上去但不超過那一步；只往上', async () => {
+  const { overallPercent } = await imp('editor/server/export.mjs');
+  const t0 = 1_000_000;
+  const j = { running: true, step: 'build', percent: null };
+  assert.equal(overallPercent(j, t0), 0);
+  const b = overallPercent(j, t0 + 600_000);
+  assert.ok(b > 0 && b <= 9, `更新預覽很久也不超過 10%：${b}`);
+  j.step = 'render'; j.percent = 50;
+  assert.equal(overallPercent(j, t0 + 600_001), 55);
+  j.percent = 10;   // 換底片重算之類讓 % 變小：整體不倒退
+  assert.equal(overallPercent(j, t0 + 600_002), 55);
+  j.step = 'qc';
+  assert.equal(overallPercent(j, t0 + 600_003), 95);
+  j.running = false; j.ok = true;
+  assert.equal(overallPercent(j), 100);
+  assert.equal(overallPercent(null), null);
+});
