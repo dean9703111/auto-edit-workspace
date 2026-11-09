@@ -38,7 +38,7 @@
  *   綁句失敗       custom 的 P.at 找不到句子、詞或這段的 cue 表
  *   拍在段尾之後   custom 的 P.at 落在淡出（沒有淡出就是段尾）之後，播出時看不到
  *   開場來不及     custom 檔頭【D 下限】的第一拍下限（例 T1 ≥ 3.1）不成立：開場的主卡、骨架還沒做完，站就先出來（換了開場就把檔頭那一行改成新的下限）
- *   示意元件讀不到 data-illus-src 的檔不在 work/hyperframes/illus-local/、data-illus 不是畫廊的 20 個元件也沒 ILLUS.register（畫面上是空的）
+ *   示意元件讀不到 data-illus-src 的檔不在 work/hyperframes/illus-local/、data-illus 不是畫廊的 22 個元件也沒 ILLUS.register（畫面上是空的）
  * ⚠ 提醒
  *   壓到講者       透明版型（layout: "overlay"、下方字卡等）的內容蓋到 plan.json 的 speakerBox（面積比例；custom 與用 css 移位的段 ≥ 2%、
  *                  沒移位的模板 ≥ 40%；不管哪種段，蓋到臉的位置（框上緣往下約三成的中間，lib/audit-rules.mjs faceZone）≥ 5% 也報；
@@ -84,7 +84,7 @@
  *   缺拍           分鏡某一拍的綁句（#N@詞＋偏移；同一個句號的幾拍算一組）±0.5 秒內沒有 P.at（「段起點 #N」那一拍是開場，不用 P.at）
  *   多出來的 P.at  檔裡用句號的 P.at 不在分鏡任何一拍 ±0.5 秒內
  *   語彙不存在     「動態」欄的動作不在 shared/template/BEATS.md §2 的 47 個名稱裡（括號裡的對象與參數、＋0.15 這類時間、「同拍 N」不算）
- *   插圖元件不存在 示意動畫的「插圖元件（狀態）」欄不是畫廊的 20 個、沒有 ILLUS.register、illus-local/ 也沒有那個 svg
+ *   插圖元件不存在 示意動畫的「插圖元件（狀態）」欄不是畫廊的 22 個、沒有 ILLUS.register、illus-local/ 也沒有那個 svg
  *   插圖清單不對   「#### 插圖清單 <段 id>」的來源不是畫廊／圖示組合／新建 SVG、寫畫廊但畫廊沒有、新建 SVG 還沒畫（illus-local/ 沒有檔）
  *   分鏡綁句算不出 分鏡的 #N@詞 在這段字幕裡找不到
  * v2 微動（漂浮、呼吸、虛線流動、背景環境、慢推）不算「動作」：完成態停留、最後一幕、畫面沒有變化、靜止取樣都排除；
@@ -105,7 +105,7 @@ import { contactSheet, poolOn } from './lib/raster.mjs';
 import { FULL, gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
   judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings } from './lib/audit-rules.mjs';
 import { templateFor, formatReport as checkTable } from './lib/plan.mjs';
-import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings } from './lib/audit-beats.mjs';
+import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings, pickBeatSheet } from './lib/audit-beats.mjs';
 import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners } from './lib/audit-illus.mjs';
 import { judgeLayoutRules } from './lib/audit-layout.mjs';
 import { resolveFormat, formatLine, canvasOf } from './lib/canvas.mjs';
@@ -370,7 +370,7 @@ export async function audit(flags, { log = console.log } = {}) {
     out.raw.push(...judgeIllus(m, { item: j.it, t: j.t, kind: j.kind, hasLayout: !!(lay && lay.containers.length) }));
     if (j.kind === 'done' && !m.missingHost && !hasStill(m)) {
       out.raw.push({ id: j.it.id, label: j.it.label, level: 'warn', rule: 'empty', el: null, t: j.t, kind: j.kind,
-        msg: `完成態沒有量到任何內容（${(m.els || []).length ? '全部還在動畫中' : '畫面上是空的'}）`, fix: `用 npx hyperframes snapshot --at ${j.t} 看這一刻的畫面；內容要在段尾前 0.6 秒停在完成態（R6）` });
+        msg: `完成態沒有量到任何內容（${(m.els || []).length ? '全部還在動畫中' : '畫面上是空的'}）`, fix: `這條加 --shots --sheet 看 ${j.t} 秒那一格；內容要在段尾前 0.6 秒停在完成態（R6）` });
     }
     return out;
   };
@@ -408,6 +408,12 @@ export async function audit(flags, { log = console.log } = {}) {
   const sbFile = path.join(path.dirname(P.out), 'storyboard.md');
   const sbText = fs.existsSync(sbFile) ? fs.readFileSync(sbFile, 'utf8') : '';
   const sheets = parseBeatSheets(sbText), lists = parseIllusLists(sbText);
+  // 內容設計動畫的鏡位腳本 work/designs/<段>.md：③ 勾選後才寫（分鏡表還沒有這張表），或改動畫時設計師改了拍（比 storyboard.md 新）就用它
+  const sbTime = sbText ? fs.statSync(sbFile).mtimeMs : 0;
+  const designOf = (it) => {
+    const f = it.seg?.design && path.join(path.dirname(P.out), 'designs', `${it.id}.md`);
+    return f && fs.existsSync(f) ? { text: fs.readFileSync(f, 'utf8'), newer: fs.statSync(f).mtimeMs > sbTime } : null;
+  };
   for (const it of customs) {
     const r = judgeMotion(motions.get(it.id), { item: it, fadeOut: !!it.fadeOut });
     motion.push(...r.findings);
@@ -415,7 +421,9 @@ export async function audit(flags, { log = console.log } = {}) {
     motion.push(...cueTextFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [], names: src && fs.existsSync(src) ? atNames(fs.readFileSync(src, 'utf8')) : {} }));
     motion.push(...staticFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [] }));
     // 分鏡對齊：work/storyboard.md 的「#### 動畫分鏡 <段 id>」表和檔裡的 P.at 逐拍比（cli-003 §2.3d）
-    const sheet = sheets.get(it.id) ?? (it.seg?.__sheet ? parseBeatSheets(it.seg.__sheet).get(it.id) : null), mo = motions.get(it.id), html = htmlOf(it);
+    const own = it.seg?.__sheet ? parseBeatSheets(it.seg.__sheet) : new Map();
+    const bs = pickBeatSheet(it.id, { sheets: sheets.has(it.id) ? sheets : own, lists, design: designOf(it) });
+    const sheet = bs.sheet, mo = motions.get(it.id), html = htmlOf(it);
     // 範例檔頭【D 下限】：第一拍離段起點、段長；和範例原檔比：下限被改小、字級被縮小
     const tpl = (templateFor(html, path.join(P.templateDir, 'custom')) || {}).html || '';
     motion.push(...floorFindings({ item: it, html, cuesOut: res.cuesOut || [], file: it.file, tpl }));
@@ -424,7 +432,7 @@ export async function audit(flags, { log = console.log } = {}) {
     else if (mo) motion.push(...beatFindings({ item: it, sheet, marks: mo.marks || [], cuesOut: res.cuesOut || [], html, file: it.file, local }));
     // 011 示意動畫：元件名與 illus-local 檔、閃爍、先有節點再畫線
     motion.push(...illusNameFindings({ item: it, html, file: it.file, local }));
-    if (lists.has(it.id)) motion.push(...illusListFindings({ item: it, list: lists.get(it.id), html, local }));
+    if (bs.list) motion.push(...illusListFindings({ item: it, list: bs.list, html, local }));
     motion.push(...illusMotionFindings(mo, { item: it }));
     report.notes.push(...r.notes);
     const seg = segs.get(it.id);

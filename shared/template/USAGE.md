@@ -5,20 +5,20 @@
 **路徑**：一支影片＝一個專案資料夾 `projects/<專案>/`（例：`projects/example/`）。本文提到的 `work/`、`output/`、`assets/`、`講稿.md`、場地照都在專案資料夾裡；`shared/`（模板、音效、`style.md`）是每集共用的。指令裡的 `<專案>` 換成這次的專案名稱。
 
 - **查表用**：`AGENTS.md` 與 `.agents/skills/` 的 Skill 會寫做到哪一步查哪一節，不用從頭讀到尾。
-- `shared/template/USAGE-reference.md` 是參考：挑情境、講者位置與 `css`、字幕與音效、密度、第二層 custom、硬規則、換主色。照第 2 節 SOP 的「查」欄，做到那一步再讀那一節（標題是 `## R1`–`## R14`，可以直接搜尋）。
+- `shared/template/USAGE-reference.md` 是參考：挑情境、講者位置與 `css`、字幕與音效、密度、第二層 custom、硬規則、換主色。本文或 Skill 寫到 `R<N>` 時才讀那一節（`grep -n "^## R<N>" shared/template/USAGE-reference.md` 找標題，小節用 `### R<N>.<M>`），沒寫到就不讀。
 - **情境與字卡動態的清單、slots 上限、預設長度，一律跑 `node shared/template/tools/build.mjs --list` 看**。不要憑記憶，也不要從其他文件抄。`--list` 只印出、不寫檔；不能跑指令時，讀 `shared/template/scenes/*/scene.json` 與 `shared/template/fx/catalog.json`（同一份資料）。
 - 本文的欄位名稱與錯誤訊息都取自 `shared/template/tools/build.mjs`。工具的輸出和本文不一致時，以工具為準（`--help`、`--list`）。
 
 ## 1. 先記住這幾條
 
-1. 版型只從素材包挑：18 個情境模板＋40 種字卡動態，以及 `shared/template/custom/` 的情境動畫範例。不從零設計卡片。
+1. 版型只從素材包挑：18 個情境模板＋40 種字卡動態＋模板動畫（`x-*`，填 slots，寫法 `build.mjs --spec <模板>`）。不從零設計卡片；只有停點 ③ 勾了的內容設計動畫由設計師從空白畫布做。
 2. 完成影片一律用 `build.mjs` 產生，不要從零寫 HyperFrames 的 `index.html`。理由：底片、子母畫面、字幕、音效、淡入淡出的時間都由程式算，手寫一定會漏。
-3. 你要手寫的檔是 `work/hyperframes/plan.json`，以及第二層情境動畫（`compositions/x-*.html`，從範例改）。**講解在講情境（過程、前後對比、數值變化、比喻、因果）時優先做情境動畫**，字卡只放名詞、一句重點和提醒（R7.1）。
+3. 你要寫的是分章草稿（`work/drafts/<份>.json`），`work/hyperframes/plan.json` 由工具產生：`--merge-drafts` 合併草稿，`--apply-storyboard` 套回停點 ③ 的修改。之後只改要改的那一段（先用 `build.mjs --show <段>` 讀）。情境動畫有兩種：模板動畫在草稿寫 `template`＋`slots`，build 自動產生 HTML，不用手寫；內容設計動畫只做停點 ③ 勾了的段，由設計師子代理做（`auto-edit-motion`），主代理不寫 `compositions/x-*.html`。**講解在講情境（過程、前後對比、數值變化、比喻、因果）時優先做情境動畫**，字卡只放名詞、一句重點和提醒（R7.1）。
 4. 要改任何東西，只改 plan.json，再重跑 build。不要直接改 build 產生的檔（`index.html`、`compositions/sNN-*.html`、`captions.html`、`kit/`）。
-5. 停點照 `AGENTS.md`「停點總表」（①–⑥）：構圖（步驟 2）、分鏡表（步驟 4）、完成影片預覽（步驟 10）都要停下來等使用者確認，最後一行照總表的固定格式。
+5. 停點照 `AGENTS.md`「停點總表」（①–⑥）：構圖（第 1 步）、分鏡表（第 5 步）、完成影片預覽（第 7 步）都要停下來等使用者確認，最後一行照總表的固定格式。
 6. 字級由模板固定，`css` 只能改位置。字放不下就縮文案；使用者要求「字再大一號」也做不到（4.3）。
-7. 「只有聲音」的區間（旁白、`rough.mp4` 全黑的地方）沒有講者，一定要用螢幕錄影或圖片（第 5 節）蓋住，否則 build 報 ✖。
-8. plan.json 的 `edit`、`look`、`sfxVolume` 是使用者在剪輯台調的（第 6 節）。改 plan.json 前先重新讀檔，不要蓋掉；使用者在剪輯台改過的值以他改的為準。
+7. 「只有聲音」的區間（旁白、`rough.mp4` 全黑的地方）沒有講者，要用螢幕錄影、圖片（第 5 節）或不透明的全畫面模板、內容設計動畫蓋住，否則 build 報 ✖。沒有對得上的素材不要硬配，改成全畫面情境動畫。
+8. plan.json 的 `edit`、`look`、`sfxVolume` 是使用者在剪輯台調的（第 6 節）。改 plan.json 前先重新讀要改的那一段（段落用 `build.mjs --show <段>`），不要整份讀、不要蓋掉；使用者在剪輯台改過的值以他改的為準。
 
 ## 2. 工作流程（SOP）
 
@@ -28,23 +28,23 @@
 |---|---|---|---|---|
 | 1 | 調光瘦臉、素材盤點、構圖（只有聲音就跳過構圖） | `look.mjs status`、`media.mjs scan`、`qc.mjs framing`＋`editor.mjs` | 第 7 節、2.2、第 5 節 | **停點 ②** |
 | 2 | 量講者框、產生分鏡素材 | `qc.mjs speaker --write`、`build.mjs --scaffold` | 2.2 | |
-| 3 | 分章寫草稿（一份一個子代理）、合併 | `build.mjs --check-draft work/drafts/chNN.json`、`build.mjs --merge-drafts` | `work/分鏡素材/` | |
-| 4 | 內容設計動畫寫鏡位腳本（一段一個設計師） | `auto-edit-motion` 的 `references/design-script.md`、`design-build.md` | style.md「內容設計動畫」 | |
-| 5 | 截圖、產生分鏡表 | `build.mjs --storyboard` | 2.3 | **停點 ③** |
-| 6 | 套回修改；內容設計動畫從空白畫布做 | `build.mjs --apply-storyboard`；`audit.mjs --only <段> --shots --sheet` | | |
-| 7 | build＋量測＋完成態拼圖＋開預覽；背景先 render | `build.mjs --review` | `REVIEW.md`、2.6 | **停點 ④** |
-| 8 | 修改：一輪回饋 | `versions.mjs begin --seg <段> --say "…"`、`versions.mjs finish` | | |
+| 3 | 分章寫草稿（一份一個子代理：大綱 → 骨架）、合併（通過就接著做第 5 步） | `build.mjs --outline chNN`、`build.mjs --check-draft chNN`、`build.mjs --merge-drafts` | `work/分鏡素材/` | |
+| 4 | （只有事先指定要做的內容設計動畫）寫鏡位腳本；其他值得設計的段在草稿標候選，③ 勾了才做 | `auto-edit-motion` 的 `references/design-script.md` | style.md「內容設計動畫」 | |
+| 5 | 截圖、產生分鏡表（內容設計動畫候選有預估時間、預算內預設勾） | `build.mjs --storyboard`（`--merge-drafts` 已經接著做了就跳過） | 2.3 | **停點 ③** |
+| 6 | 套回修改；勾了的內容設計動畫：設計師寫鏡位腳本、從空白畫布做；等設計師時看進度 | `build.mjs --apply-storyboard`；`audit.mjs --only <段> --shots --sheet`；`build.mjs --design-status` | | |
+| 7 | build＋量測＋完成態拼圖＋開預覽（不 render） | `build.mjs --review` | `REVIEW.md`、2.6 | **停點 ④** |
+| 8 | 修改：一輪回饋（不 render，看完成影片預覽與拼圖） | `versions.mjs begin --seg <段> --say "…"`、`versions.mjs finish` | | |
 | 9 | 輸出並驗收 | `deliver.mjs` | 2.7、2.8 | |
 
 理由：改分鏡表只要改一行字，改完成影片要等好幾分鐘 render。所以順序是「分鏡 → 檢查 → 截圖 → 完成影片預覽 → 短片段 → 整支」。
 
-使用者說「打開剪輯台」時（任何一步之後都可以），照 `shared/template/EDITOR.md` 開；剪輯台存檔後重跑 `build.mjs --review`，剪輯台寫了哪些欄位見第 6 節。
+使用者說「打開剪輯台」時（任何一步之後都可以），照 `shared/template/EDITOR.md` 開；使用者說「調好了」後重跑 `build.mjs --review`，剪輯台寫了哪些欄位見第 6 節。
 
 ### 2.1 不用 Plan 模式
 
-- 不用 Plan 模式：流程會在停點 ② ③ 自己停。使用者開著 Plan 模式時只能列句號、挑情境；要寫檔（構圖分析、暫時 plan.json、storyboard.md、截圖）時，請他離開 Plan 模式再說一次（不要在 Plan 模式裡硬做）。
+- 不用 Plan 模式：流程會在停點 ② ③ 自己停。使用者開著 Plan 模式時只能列句號、挑情境；要寫檔（構圖分析、草稿、分鏡表、截圖）時，請他離開 Plan 模式再說一次（不要在 Plan 模式裡硬做）。
 - 分鏡表一律存成 `work/storyboard.md`（格式 2.3），停點 ③ 給使用者 `editor.mjs` 印的分鏡表網址（網頁改的內容存回同一份檔；「想換成」「補充說明」兩欄要先照做再停一次）。
-- 確認之後的順序：重新讀 `work/storyboard.md` → 寫正式 plan.json → `--check`。
+- 確認之後跑 `node shared/template/tools/build.mjs --project projects/<專案> --apply-storyboard --said "使用者原話"`，工具把網頁的修改套回 plan.json。不要照 storyboard.md 手寫 plan.json。
 
 ### 2.2 量 `speakerBox`
 
@@ -52,13 +52,15 @@
    - 接著開剪輯台（`node shared/template/tools/editor.mjs --project projects/<專案>`），把它印的「構圖台」網址給使用者：在沒裁切的 `work/rough.mp4` 上拖一個鎖定比例的框（最多放大 2 倍），右邊即時顯示裁切後套上字幕、下方字卡、子母畫面小視窗的樣子；切到手勢、每個像素放大超過 3.5 倍、直式頭頂／下巴不在範圍會標紅。拖好就自動寫進 plan.json 的 `frame`（還沒有 plan.json 會新建；打開頁面就把建議的框存起來，所以使用者沒動框直接說「調好了」，用的就是建議的框）。這一步要在列分鏡表之前做（`EDITOR.md`「構圖台」）。
    - 看預覽圖判斷：四周有多餘的外框（黑邊、櫃子、大片空牆、桌面倒影）讓構圖鬆散時，建議放大；講者的手勢會被切到、或原片解析度低（每個像素放大超過 3.5 倍會明顯變軟）時，倍率往小選。
    - 每個倍率都會切到手勢或放大超過 3.5 倍時，「建議」是表上倍率最小的那一列（有黑邊時表上最小的是 1.13x 這類，不是 1.00x；1.00x 會露出黑邊）。
-   - 把構圖台網址與建議倍率給使用者，**停下來等確認**。使用者說「調好了」：構圖台已經寫好 `frame`，重新讀 plan.json；說「用建議的」：把表上 ✔ 那一列寫進 plan.json 第一層：`"frame": [x, y, w, h]`（1.0 倍不用寫）。之後在構圖台換框，已經量好的 `speakerBox` 會跟著換算，不用重量。build 重新編碼底片時會照它裁切放大回 1920×1080，子母畫面、碰撞檢查都以裁切後的畫面為準。
+   - 把構圖台網址與建議倍率給使用者，**停下來等確認**。使用者說「調好了」：構圖台已經寫好 `frame`，不用再改；說「用建議的」：跑 `node shared/template/tools/qc.mjs framing --project projects/<專案> --write`（把表上 ✔ 那一列寫進 plan.json 第一層的 `frame`，1.0 倍不寫），不要手寫。之後在構圖台換框，已經量好的 `speakerBox` 會跟著換算，不用重量。build 重新編碼底片時會照它裁切放大回 1920×1080，子母畫面、碰撞檢查都以裁切後的畫面為準。
    - 直式（plan.json `"format": "portrait"`）：預覽圖是直的、裁切框是 9:16，倍率一樣 1.0／1.15／1.3；另看講者頭頂有沒有落在 y 380–520、下巴 ≤ 860（`shared/style.md`「直式」）。
    - 寫好 `frame` 之後才做下面的步驟（場地照的座標要換算：`(x − frame.x) × 1920 ÷ frame.w`；`qc.mjs speaker` 會自動照 `frame` 裁切後再量）。
-1. 場地照：專案資料夾裡檔名有「場地照」的圖（範本附的是 `projects/example/場地照-測試.jpg`），或 Skill 每集自動截的 `work/場地照.jpg`。都沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
+第 1–3 步是手動框講者，只有第 4 步的 `qc.mjs speaker` 印「8 格之間幾乎沒有動作」時才做；平常直接做第 4 步。
+
+1. 場地照：專案資料夾裡檔名有「場地照」的圖（範本附的是 `projects/example/場地照-測試.jpg`）。沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
 2. 確認是 1920×1080：`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <場地照路徑>`。不是的話，量出來的數字要等比換算（範例的 `示範口播.mp4` 是 640×360，從它截的場地照量出來要乘 3）。講者框整個落在底片尺寸內時，`--check` 會提醒「看起來是用原尺寸截圖的像素量的」並附換算後的框。
 3. 框出講者的頭頂、兩肩、手勢會到的範圍，四邊各外擴 40px，寫成 `[x1, y1, x2, y2]`（左上到右下）。
-4. 場地照只是一張靜止畫面，看不出手勢會比到哪。有 `work/rough.mp4` 之後，一定要再跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案> --write`（`--write` 把青色建議框寫進 plan.json 的 `speakerBox`，已經有的不覆寫，`--force` 才覆寫），它會產生兩張圖：
+4. 場地照只是一張靜止畫面，看不出手勢會比到哪。有 `work/rough.mp4` 之後，一定要跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案> --write`（`--write` 把青色建議框寫進 plan.json 的 `speakerBox`，已經有的不覆寫，`--force` 才覆寫），它會產生兩張圖：
 
    - `work/場地照-動作範圍.jpg`：8 張畫面疊在一起，橘色是動作掃過的範圍。格線每 100px 一條、每 500px 一條粗線，數字就是 1920×1080 的座標（不是 1080p 的影片會先等比放大，座標不用再換算）。青色框是自動估的範圍（已外擴 40px），只當參考，桌面倒影會讓它的下緣偏大。
    - `work/場地照-8格.jpg`：8 個時間點的總表，先確認講者整集沒有換位置。
@@ -69,49 +71,35 @@
 
 ### 2.3 分鏡表格式（`work/storyboard.md`）
 
+分鏡表由 `build.mjs --storyboard` 產生（`--merge-drafts` 通過會接著產生），不要手寫、不要手改：手改過，下一次 `--storyboard` 會 ✖。使用者在分鏡表網頁改的內容會存回這份檔。實際格式以工具產生的檔為準，這一節只說明欄位，讓你看得懂。
+
 | 段 id | 句號（起–迄） | 時間碼 | 字幕（起點那句） | 版面 | 情境 | 畫面文字（slots） | 音效 | 理由 |
 |---|---|---|---|---|---|---|---|---|
 | s02 | #11–#13e | 0:25.83–0:33.44 | 千萬不要小看這份紀錄 | 疊加 | 07 key-point（warn） | lead「少了這份文件」／key「場佈多花半小時」 | 預設 | 「千萬不要」＋負面後果 → 警示重點 |
 | m01 | #20–#24e | 1:02.10–1:15.40 | 接下來打開設定頁 | 子母畫面 | media 螢幕錄影 | `assets/screen/操作示範.mp4` 從 12.5s（sheet-01 #7）；#21 推近左側選單、紅框「設定」；#23 拉回全景 | 預設 | 1:03–1:14 只有聲音；sheet #7–#10 正在開設定頁，和講解同一個操作 |
 
-- 開頭寫兩行：「講者框 speakerBox＝[x1, y1, x2, y2]（看哪張場地照估的）」、「本集圖示表」（同一個物件全集用同一個圖示）；再附四種版面的對照表（`shared/template/SITUATIONS.md` §2）與總覽表（段落編號、章、句號、時間碼、版面、卡片類型、一句話摘要）。「章」寫這段屬於哪一章（`01 痛點`；第一章之前寫 `—`），章節起點是 01 段，沒有 01 的短片用 02 段；章節角標由 build 自動常駐，不用另排。
+- 開頭有兩行：「講者框 speakerBox＝[x1, y1, x2, y2]」、「本集圖示表」（同一個物件全集用同一個圖示）；接著是四種版面的對照表（`shared/template/SITUATIONS.md` §2）與總覽表（段落編號、章、句號、時間碼、版面、卡片類型、一句話摘要）。「章」是這段屬於哪一章（`01 痛點`；第一章之前寫 `—`），章節起點是 01 段，沒有 01 的短片用 02 段；章節角標由 build 自動常駐，不用另排。
 - 總覽表後面是「情境判定」表（工具從草稿的 `story.say`、`story.why` 產生）：`| 段 | 講解在講什麼 | 首選 | 為什麼這樣呈現 |`。首選是情境動畫就做動畫；退到字卡時 `why` 寫不符合 style.md「情境動畫優先」的哪一條。
 - 「版面」欄只用四個名稱：疊加、半畫面、子母畫面、全幕（SITUATIONS.md §2）。
-- 每段放截圖：草稿 plan.json build 後跑 `node shared/template/tools/qc.mjs storyboard --project projects/<專案>`，把它最後印的 `![s01](storyboard-preview/s01.png)` 那幾行照順序貼進每一段，下面寫「截圖觀察」（有沒有擋臉、壓手勢、文字問題）。不要自己算秒數跑 `snapshot --at`。
-  - 截圖檔名：一段一張是 `s20.png`；一段多張是 `s20-1.png`、`s20-2.png`…（條列分組、錄影標註各一張）。**只貼這一次印出來的那幾行**：同一段張數變了（例：上一版 s20 是三條的清單 `s20-1.png`～`s20-3.png`，這一版改成情境動畫只截 `s20.png`），工具會清掉同一段的舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪。自己改名的方案圖（`s05-A.png`）不會被動到。
-  - 每張後面的「為什麼」：`完成態（段尾前 0.6 秒）`／`完成態（退場前 0.1 秒）`／`完成態（動畫停住的最後一刻）`＝這段內容全部出現、還沒退場的那一刻（工具讀動畫時間軸算，03 側邊欄、數字滾動卡會自動往前）；`第 1 條`、`第 2–3 條`＝條列的那一組進場完成之後（進場動畫重疊的幾條算同一組，所以三條可能只有一張）；`…到位`＝錄影標註；`段很短，截中點`；`…（整段都在動，沒有停住的畫面）`＝循環動畫，截圖觀察寫「循環動畫」即可。
+- 截圖：`--storyboard` 會跑 `qc.mjs storyboard`，把每段的截圖放進那一段，「截圖觀察」那一行也由工具寫；不用另外跑、不用貼。不要自己算秒數跑 `snapshot --at`。
+  - 截圖檔名：一段一張是 `s20.png`；一段多張是 `s20-1.png`、`s20-2.png`…（條列分組、錄影標註各一張）。同一段張數變了（例：上一版 s20 是三條的清單 `s20-1.png`～`s20-3.png`，這一版改成情境動畫只截 `s20.png`），工具會清掉同一段的舊檔並印「清掉同一段的舊截圖（這次張數變了）：…」；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪。自己改名的方案圖（`s05-A.png`）不會被動到。
+  - 每張後面的「為什麼」：`完成態（段尾前 0.6 秒）`／`完成態（退場前 0.1 秒）`／`完成態（動畫停住的最後一刻）`＝這段內容全部出現、還沒退場的那一刻（工具讀動畫時間軸算，03 側邊欄、數字滾動卡會自動往前）；`第 1 條`、`第 2–3 條`＝條列的那一組進場完成之後（進場動畫重疊的幾條算同一組，所以三條可能只有一張）；`…到位`＝錄影標註；`段很短，截中點`；`…（整段都在動，沒有停住的畫面）`＝循環動畫。
   - 用了動態 v2 原語的段，每個拍點各截一張：`抽屜抽出後 0.3 秒：「<字>」`、`焦點抬起：「<字>」`；最後一拍之後畫面沒再變，就不另截完成態（最後一拍的「為什麼」加 `（完成態）`）。呼吸這類微動不算動畫。`qc.mjs observe` 另出 `work/observe/beat-NN.jpg`：同一套時刻、從完成影片抽格，對照分鏡截圖看 render 出來的拍點對不對。
-  - 截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 storyboard；還是一樣就在「需要我決定的事」列出段號和秒數，不要自己改秒數跑 `snapshot --at`。
+  - 截圖停在動畫中途（字半透明、卡片在飛）→ 重跑一次 `node shared/template/tools/build.mjs --project projects/<專案> --storyboard --only <段>`；還是一樣就在回報裡列出段號和秒數，不要自己改秒數跑 `snapshot --at`。
   - 印 `✖ <id> 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…`：不是版面的問題，不要改 plan.json；照 → 跑 `node shared/template/tools/media.mjs verify-rough --project projects/<專案>` 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報（全黑本來就是旁白區間）。
 - 最後一節「需要我決定的事」固定有金句候選表，勾了才上（style.md「字卡文字」）：
 
   | 候選 | 句號 | 原句 | 卡上文字（≤ 14 字） | 情緒（正／負／中） | 要不要 ☐ |
   |---|---|---|---|---|---|
-- 圖示先行：情境有圖示欄位（R2.7）就配圖示，寫在「畫面文字」欄（例：`items「剪乾淨｜scissors」「剪好看｜sparkles」`）；清單的圖示每一項都配，或全部不配。
-- 插入素材的列（第 5 節）：「情境」寫 `media 螢幕錄影` 或 `media 圖片`；「畫面文字」寫素材路徑、起點秒數（`in`，註明看的是哪張 sheet 的第幾格）、要做的運鏡／紅框／放大鏡；「理由」寫講解和畫面對上的地方。只有聲音的區間要在表下面列出來，逐一寫用哪一列蓋住。
-- 「音效」欄寫 `預設`、`無`（`"sfx": null`）、換成某個名稱（例：`shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`（音效清單見 R5.2）。`sparkle`、`shine`、`thunder` 超過 style.md 的每集上限時，列進「需要我決定的事」讓使用者挑；結尾要不要配樂（`outro`）也列一題。
-- 時間碼抄 rough.srt 那幾句的起點與結尾；「字幕」欄抄起點那句的原文，之後當 `anchor` 用。
-- 動畫分鏡：情境動畫的段（`x-*`、04 家族）在那段「截圖觀察」下面加一張；字卡（06／07／12／13）不用。標題寫 `#### 動畫分鏡 <段 id>`，表頭照抄、一個字都不能改（audit 會讀這張表）：
-
-  ```
-  #### 動畫分鏡 x05
-
-  | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
-  |---|---|---|---|---|---|
-  | 0 | 段起點 | 主卡＋標題「多機錄影的難題」 | 換卡不換景；＋0.5 逐字上浮（標題） | 標題 | — |
-  | 4 | `#38@兩支` | 站 1 亮起 | 鏡頭跟焦點（−0.2）；聚焦（站 1）；漣漪（站 1 圖示） | 站 1 | — |
-  | 收 | `#44@確認`＋2.6 | 四站＋三條實線 | 回均衡；鏡頭回正 | 整體 | — |
-  ```
-
-  - 怎麼寫：查 `SITUATIONS.md` §3 那一列的「拍型」→ 從 `shared/template/BEATS.md` §3 抄那個拍型的整張表 → `#__` 換成講到的 `#N@詞`、`____` 換成畫面上的字（完整例子與規則在 BEATS.md §1）。
-  - 「動態」欄只寫 BEATS.md 語彙表的名稱（括號寫對象）；「講到」欄每一拍之後就是 x-*.html 裡同一個 `P.at`（同句號、同詞）。
-  - 拍數、動作、焦點由使用者在停點 ③ 改；AI 不自己加拍、刪拍。某段情境在停點 ③ 被換掉時，只重寫那一段的動畫分鏡。
-  - 示意動畫（`x-scene`）的段：表頭多兩欄 `| 插圖元件（狀態） | 位置 |`（接在「音效拍點」後面；其他情境還是六欄），表下面再加 `#### 插圖清單 <段 id>`（表頭 `| 元件 | 來源 | 怎麼來 |`，來源只有畫廊、圖示組合、新建 SVG）。「位置」寫排法 `<區域>｜<排法> <第幾個>`（例 `panelTop｜row 1／3`），不寫像素（`shared/style.md`「版面」）。兩欄與插圖清單的寫法照 BEATS.md §5。
-- 提示詞指定的欄位名稱不同時，用提示詞的名稱，但上表的資訊都要有。第二層 custom 的寫法見 R7。
+- 圖示先行：情境有圖示欄位（R2.7）就在草稿配圖示，「畫面文字」欄會顯示（例：`items「剪乾淨｜scissors」「剪好看｜sparkles」`）；清單的圖示每一項都配，或全部不配。
+- 插入素材的列（第 5 節）：「情境」是 `media 螢幕錄影` 或 `media 圖片`；「畫面文字」是素材路徑、起點秒數（`in`）、要做的運鏡／紅框／放大鏡；「理由」是講解和畫面對上的地方。只有聲音的區間列在「只有聲音的區間」表，寫用哪一段蓋住。
+- 「音效」欄：`預設`、`無`（`"sfx": null`）、換成某個名稱（例：`shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`（音效清單見 R5.2）。`sparkle`、`shine`、`thunder` 超過 style.md 的每集上限時，寫進草稿的 `decide`，會列進「需要我決定的事」讓使用者挑；結尾要不要配樂（`outro`）也列一題。
+- 時間碼是那幾句在 rough.srt 的起點與結尾；「字幕」欄是起點那句的原文（草稿的 `anchor`）。
+- 內容設計動畫的段：工具把設計師的鏡位腳本（`work/designs/<段>.md` 的 `#### 動畫分鏡 <段 id>` 表，表頭 `| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |`，audit 會讀這張表）放進那一段。模板動畫的拍由模板內建，不寫動畫分鏡、不寫插圖清單；鏡位腳本的寫法只給設計師看（`auto-edit-motion` 的 `references/design-script.md`）。
 
 ### 2.4 先處理字幕長度
 
-`media.mjs rough` 已經用 `node shared/template/tools/media.mjs srt-align --project projects/<專案>` 排成完整語句（超過 18 字的已經拆開；直式是 10 字）。寫 plan.json 之前再確認一次：用暫時的 plan.json `{ "version": 1, "speakerBox": [960, 260, 1640, 1020], "scenes": [] }` 跑 `--check`，還有超過 18 字的字幕會印出來：
+`media.mjs rough` 已經用 `node shared/template/tools/media.mjs srt-align --project projects/<專案>` 排成完整語句（超過 18 字的已經拆開；直式是 10 字）。字幕長度不用另外查：`--merge-drafts`、`--storyboard` 跑的檢查會印還超過 18 字的字幕。不要用暫時的 plan.json 去跑 `--check`，會蓋掉構圖台寫好的 `frame` 和量好的 `speakerBox`。印出來長這樣：
 
 ```
 ⚠ 字幕 #12「提醒我桌子、椅子、電腦、提詞器、攝影機」19 字，超過 18 字 → 在 rough.srt 拆成兩則（斷在標點處）
@@ -130,12 +118,12 @@
 
 ### 2.6 完成影片預覽與修改
 
-1. `node shared/template/tools/editor.mjs --project projects/<專案>`。在非互動的 shell 裡它會自己轉到背景，印出網址就結束，不用加 `&` 或 nohup。給使用者它印的「完成影片預覽：」網址（像 `http://127.0.0.1:4400/?view=final`），這個網址會直接開在完成影片預覽。查狀態 `--status`，關掉 `--stop`。
+1. `build.mjs --review` 已經開好剪輯台，停點 ④ 那一行的網址就是完成影片預覽（像 `http://127.0.0.1:4400/?view=final`），不用再跑 `editor.mjs`。打不開才跑 `node shared/template/tools/editor.mjs --project projects/<專案> --status` 看狀態（它在非互動的 shell 裡會自己轉到背景，不用加 `&` 或 nohup；關掉用 `--stop`）。
 2. 給網址時一起說三件事：要使用者確認的卡（例：碰撞 ⚠ 那張）；請他順便看字幕有沒有對到講話（snapshot 檢查不到）；要改哪一段，直接說時間軸上的段落編號（例「s05 的金句卡往左移」）就可以。
 3. 使用者直接說段落編號（例「s05 的金句卡」）時，直接改 plan.json 的那個 `id`。他說「這張卡」「我選的」時，請他說段號或大約第幾秒。
    - 使用者說「第 X 秒那張卡」：看 `--check` 報告的「起–迄」欄，X 落在哪一段就是哪一段（例：75 秒 → `s04｜15 金句字卡｜1:13.26–1:18.40`）。
-4. 把要求寫進 plan.json 那一段：文字改 `slots`，時間改 `from`／`to`／`at`，位置改 `css`（R4）。重跑 `--check` 與 build。剪輯台的預覽會自動換成新版；畫面沒變就重新整理頁面。
-5. 回饋輪用 `node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段> --say "原話"` 開始、`versions.mjs finish` 結束，備份與版本都由工具做（只想單獨存一版：`node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>`，平常不用）；使用者沒說怎麼改、只說要更好（「s12 想更完善」「重新設計」），或要退回舊版（「s12 用 v1」），照 AGENTS.md「段落版本與改版」。
+4. 先跑 `node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段> --say "原話"`（備份、存改前版本，印那一段的原文），再改那一段：文字改 `slots`，時間改 `from`／`to`／`at`，位置改 `css`（R4）。改完跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`（build、量、存版本一次做完），不用另外跑 `--check`、build。剪輯台的預覽會自動換成新版；畫面沒變就重新整理頁面。只想單獨存一版：`node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>`，平常不用。
+5. 使用者沒說怎麼改、只說要更好（「s12 想更完善」「重新設計」），照 `auto-edit-review` 流程 D（改版）；要退回舊版（「s12 用 v1」），照流程 E（退回）。
 6. 產生檔被手改過（舊專案可能在 Studio 拖過東西）時，build 會印出下面其中一則。先看改了什麼，把要保留的搬進 plan.json，再 `node shared/template/tools/build.mjs --project projects/<專案> --force`。
    - `⚠ 這些檔被手改過，沒有覆寫：… → 把改動搬進 plan.json 後加 --force`
    - `work/hyperframes/index.html 被手改過（可能是舊專案在 Studio 存檔）：…再加 --force 重跑`（build 整個停下來）
@@ -148,9 +136,9 @@ node shared/template/tools/deliver.mjs --project projects/<專案> --said "使�
 
 一條做完：重新產生 → 4 秒測試片段確認有影音 → 整支（成功才換成 `output/final.mp4`，失敗不動舊檔）→ `qc.mjs final`。第一次整支的時間大約和影片一樣長；上一支只差幾段時只重畫改到的時間窗、接回去（通常不到一分鐘；印「只重畫改到的 N 秒」，指令一樣）。不是局部改動（kit、片長、字幕樣式、底片、版式、主題，或改到超過片長四成）會印一行「整支重新輸出：原因」再整支；`--force` 一律整支。工具在背景跑、前景最多等 9 分鐘；結束碼 75 就再跑一次同一條（接著等，不會重跑）。全文 log 在 `work/render.log`。
 
-- `deliver.mjs --prerender`：立刻返回，用低優先權在背景先 render 到 `work/final-prerender.mp4`。`build.mjs --review`、`versions.mjs finish` 會自動開（`--no-prerender` 關）。使用者說「輸出」時內容沒變就直接接手；只改了幾段就跑完補上（已經 render 的不丟）；不是局部改動才取消重來。存檔不會被擋。
+- `deliver.mjs --prerender`：立刻返回，用低優先權在背景先 render 到 `work/final-prerender.mp4`。`build.mjs --review`、`versions.mjs finish` 加 `--prerender` 才開（預設不開：預覽不用 render）。使用者說「輸出」時內容沒變就直接接手；只改了幾段就跑完補上（已經 render 的不丟）；不是局部改動才取消重來。存檔不會被擋。
 - `deliver.mjs --cancel`：取消背景輸出和預先 render。
-- 要單獨做測試片段（看某一段 render 出來的樣子）：`build.mjs --test 起點,秒數`，再照 build 印的指令 render。`render` 沒有時間範圍參數，短片段只能這樣做。起點更早的段會被略過，build 會印 `⚠ s04 在 49.5s 就開始了，測試片段不含這段（要看完整段，把起點改成 49.5）`。
+- 單獨做測試片段（使用者要看某一段 render 出來的樣子才做；平常看完成影片預覽，回饋輪也不 render）：`build.mjs --test 起點,秒數`，再照 build 印的指令 render。`render` 沒有時間範圍參數，短片段只能這樣做。起點更早的段會被略過，build 會印 `⚠ s04 在 49.5s 就開始了，測試片段不含這段（要看完整段，把起點改成 49.5）`。
 
 ### 2.7b 剪映素材（使用者要求才做）
 
@@ -167,11 +155,13 @@ node shared/template/tools/capcut.mjs status --project projects/<專案> --wait
 
 ### 2.8 驗收（附輸出給使用者）
 
+`deliver.mjs` 已經跑過 `qc.mjs final`，這一節是讀它的輸出，把輸出附給使用者。只有要單獨重驗才跑：
+
 ```bash
 node shared/template/tools/qc.mjs final --project projects/<專案>
 ```
 
-把輸出附給使用者。它檢查的項目：
+它檢查的項目：
 
 | 等級 | 項目 | 標準 |
 |---|---|---|
@@ -185,7 +175,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 - ⚠ 會標出時間和段落，例：`⚠ 1:02.3–1:06.0 畫面凍結 3.7 秒（m01 螢幕錄影） → 看 qc-sheet.jpg 與該段起點截圖；…`。有 ✖ 時結束碼是 1；`--json` 給機器讀。
 - 再打開 `output/qc/qc-sheet.jpg`（每 10 秒一格）掃一眼，有沒有掉圖、卡片破版、錄影卡住。理由：格式和長度全過，內容仍可能掉圖或卡住，作者踩過。
-- 有插入螢幕錄影時，再截一張錄影段落（`ffmpeg -v error -y -ss <秒數> -i projects/<專案>/output/final.mp4 -frames:v 1 projects/<專案>/output/qc/check-<秒數>s.jpg`），確認紅框框在對的地方。
+- 有插入螢幕錄影，而且 qc final 對錄影段有 ⚠、或 `qc-sheet.jpg` 看不出紅框位置時，才截那一格（`ffmpeg -v error -y -ss <秒數> -i projects/<專案>/output/final.mp4 -frames:v 1 projects/<專案>/output/qc/check-<秒數>s.jpg`），確認紅框框在對的地方。
 
 聲音由 build 處理，回報時把 build 印的這三行貼給使用者：
 - 人聲響度：重新編碼底片時，人聲調到 −14 LUFS、true peak ≤ −1 dBTP（YouTube 播放的基準），報告印 `人聲響度 −21.9 LUFS → −13.9 LUFS（true peak −7.1）`。量測結果有快取，素材沒變就不重量。完成影片的整體響度會落在 −14 ±1.5，因為音效、插入素材的聲音和結尾配樂也混在裡面。
@@ -396,7 +386,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時」→ 這只給示意／預覽用的 plan；正式 plan.json 刪掉 check，照 --check 的「文字對時」改時間` | ⚠ | `check` 是工具做示意圖用的，正式 plan.json 不要寫；刪掉後照「文字對時」改時間。格式錯（`check 要是物件…`、`check 沒有「x」這個欄位…`、`check.textSync 只能是 true 或 false…`）是 ✖，照 → 刪掉 |
 | ng-snap 表格內容欄：`…；終點落在後一次開口（m:ss.ss）之前的停頓末端，後一次完整保留` | 資訊 | NG 終點往後延到停頓末端，後一次講的完整保留，是安全的；不用標「待確認」 |
 | `<id> 的「…」在 m:ss.ss 才完整出現，但 <id> 在 m:ss.ss 就蓋住了，觀眾看不到 → <id> 的那個拍點綁早一點的詞（#N@詞），或 <id> 的 from 延後到 … 之後`（`qc.mjs storyboard`） | ⚠ | 照 →：那個拍點綁早一點的詞，或把蓋住它的子母畫面／全幕段 `from` 延後 |
-| `讀不到動畫時間軸（…）：完成態用段尾前 0.6 秒、條列用進場後 0.9 秒估 → 截圖停在動畫中途就重跑一次`（`qc.mjs storyboard`） | ⚠ | 截圖停在動畫中途就重跑一次 `qc.mjs storyboard`；還是一樣就列進分鏡表「需要我決定的事」 |
+| `讀不到動畫時間軸（…）：完成態用段尾前 0.6 秒、條列用進場後 0.9 秒估 → 截圖停在動畫中途就重跑一次`（`qc.mjs storyboard`） | ⚠ | 截圖停在動畫中途就重跑一次 `build.mjs --storyboard --only <段>`；還是一樣就在回報裡列出段號和秒數 |
 | `<id> 的 fx 時間軸沒有 'done' 標記：完成態照段尾前 0.6 秒截 → 截到動畫中途就回報 003`（`qc.mjs storyboard`） | ⚠ | 看那張截圖；停在動畫中途就在回報裡寫段號與 fx 編號（模板問題，不要自己改秒數） |
 | `[s07 key-point] 連續 5 段都是下方字卡（s03、s04、s05、s06、s07）→ 中間換一段情境動畫（style.md「情境動畫優先」）或別的版面` | ⚠ | 回頭查 SITUATIONS.md §3 有沒有動畫列，中間換一段 |
 | `build 會停下來：瘦臉底片不是最新的（…）→ 先跑 node shared/template/tools/look.mjs run --project …` | ⚠（`--check` 只提醒；build 會 ✖ 停下來） | 看到這則先照它的 → 跑 `look.mjs`，再 build |
@@ -438,7 +428,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `look.slim 要是 0–1.2 的數字…` 這類 `look…` 開頭的訊息 | ✖ | 照訊息改 plan.json 的 `look`（只能寫 `color`、`slim`、`beauty`） |
 | `✖ s21 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 1:56.14–2:33.51 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/<專案> 照它印的做`（`qc.mjs storyboard`、`qc.mjs final`；另一種是「講者小視窗在 m:ss.ss 就沒了（段到 …）」） | ✖ | 不是版面的問題，不要改 plan.json；照 → 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報 |
 | `⚠ <id> 是全畫面清單卻沒有講者小視窗 → 跑 node shared/template/tools/qc.mjs final --project … 看原因`（`qc.mjs observe`；`work/observe/index.md` 總表的「小視窗（子母畫面段）」欄是 `無`／`部分（m:ss.s 起沒有）`） | ⚠ | 照 → 跑 `qc.mjs final` 看原因，再照上一列做 |
-| `清掉同一段的舊截圖（這次張數變了）：…`（`qc.mjs storyboard`） | 資訊 | 只貼這一次印出來的截圖行；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪 |
+| `清掉同一段的舊截圖（這次張數變了）：…`（`qc.mjs storyboard`） | 資訊 | 不用處理；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪 |
 | `⚠ <id> 在 m:ss.s 就開始了，測試片段不含這段：格子不標它（要看這段，build --test 的起點改成 …）`（`qc.mjs observe --offset`） | ⚠ | 要看那段，把 `build --test` 的起點改成它印的秒數 |
 
 其他訊息照 `→` 改；其餘訊息、密度規則與 build 檢查哪些，見 R6。
@@ -470,7 +460,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | 講解在講操作：「打開設定頁」「點右上角」「貼上提示詞」 | 錄影裡沒有講解講到的東西（觀眾會找不到重點） |
 | 講解在講一張圖：架構圖、結果截圖、網頁 | 同一張圖已經有資訊卡在講 |
 
-- 一段講解配一段錄影：從講到那個操作的句子開始，講完就回到講者。連續講好幾個步驟時，接成幾段 media（每段各自的 `in`），中間不用回講者。
+- 一段講解配一段錄影：從講到那個操作的句子開始，講完就回到講者。連續講好幾個不同的操作時，一個操作一段 media（每段各自的 `in`），中間不用回講者；同一個操作要變速、定格用 `retime`，不要拆段。
 - media 段期間不能放下方字卡、側邊欄（會被素材蓋住，build ✖）；要強調畫面上的東西，用紅框、說明卡、聚光燈、箭頭、放大鏡（5.5）。字卡動態（`bg: "none"`）可以疊，但要用 snapshot 確認沒擋到錄影在講的地方。
 - 字卡密度在錄影段往稀的那端（`shared/style.md`「螢幕錄影與圖片」）。
 
@@ -479,16 +469,15 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 1. 掃素材：`media.mjs prep` 開工時已經做了（要重掃跑 `node shared/template/tools/media.mjs scan --project projects/<專案>`）。
    產生 `work/media/index.md`（總表：每個檔的長度、解析度、有沒有聲音、細節在哪，以及 `rough.mp4` 只有聲音的區間）、每支錄影一份 `work/media/<檔名>/events.md`（**事件**：哪一秒切頁、開視窗、哪一塊變了，附框和建議的 `in`；**等待**：可以快轉的區間，附 `retime` 寫法；**捲動**；contact sheet 每一格的秒數）、`work/media/<檔名>/sheet-NN.jpg`（影片，在事件之後取格）和 `work/media/images/sheet-NN.jpg`（圖片，每頁 12 張，每格標檔名）。盤點由子代理做，每支錄影、每批圖片寫一份 `work/media/notes/<檔名>.json`（`auto-edit-screen` 步驟 1）。
 2. 讀那支的 `events.md`，要看畫面才開 sheet。每格左上角是「`#格號 分:秒`」（素材本身的時間）；右上角有黃色小方塊的格子＝事件剛發生完（切頁、開視窗、跳出選單），操作通常就從這幾格開始。
-3. 對字幕：讀 `work/rough.srt`（或 `chNN.md` 的「素材候選」），找出講解在講哪個操作，對到 `events.md` 上那個事件。
+3. 對字幕：看 `work/分鏡素材/chNN.md`（素材候選和字幕都在裡面，不用讀整份 `rough.srt`），找出講解在講哪個操作，對到 `events.md` 上那個事件。
    - `from`／`to` 綁講解的句號（`"#20"`、`"#24e"`），跟資訊卡一樣。
    - `in`＝素材從第幾秒開始播：取那個操作開始那格的秒數，再往前 0.5–1 秒（讓觀眾先看到操作前的畫面）。
-   - 一段 media 對 1–4 句。知道操作在素材的哪裡開始、哪裡結束時，寫 `in` 和 `out`，速度 build 自己算（`out` 和 `speed` 擇一）；中間有空等、要放慢或要停住就寫 `retime`（5.3），同一段裡變速，不要拆段。
-   - 播到第 k 句時，畫面是素材的第 `in ＋ (第 k 句起點 − from 的秒數) × speed` 秒。用這個式子檢查後面幾句講的操作有沒有對上；對不上就從那句起拆成下一段 media、重新設 `in`／`out`（有游標、打字的畫面不要超過 1.5 倍）。
-   - 講解停在一個結果畫面講好幾句：那幾句拆一段 `"hold": <素材秒數>` 定格（style.md「螢幕錄影與圖片」）。
+   - 知道操作在素材的哪裡開始、哪裡結束時，寫 `in` 和 `out`，速度 build 自己算（`out` 和 `speed` 擇一）。
+   - 播到第 k 句時，畫面是素材的第 `in ＋ (第 k 句起點 − from 的秒數) × speed` 秒。用這個式子檢查後面幾句講的操作有沒有對上。講解和畫面對不上、中間要等、要停在結果畫面講好幾句，都在同一段寫 `retime`（5.3），不要拆段（有游標、打字的畫面不要超過 1.5 倍）。只有講解換到另一個操作才開下一段 media。
    - 圖片沒有時間，只要決定綁哪幾句。
    - 只有聲音的區間：`from` 要在區間起點之前（或剛好），`to` 要在區間結尾之後；句子剛好對不上時，`from`／`to` 可以寫秒數（`rough.mp4` 的秒數，`index.md` 有列）。
 4. 寫進草稿（`work/drafts/<份>.json`）的 media 段：`src`、`in`、`from`、`to`，`story` 寫為什麼配這段；分鏡表由工具產生。只有聲音的區間每一段都要被 media 或不透明全幕蓋住。
-5. 要框、要推近、要放大鏡的地方，截格線圖讀座標（5.4），寫 plan.json（5.3）。
+5. 要框、要推近、要放大鏡的地方，截格線圖讀座標（5.4），寫進草稿那一段（5.3）。
 6. `build.mjs --review` 的拼圖看有紅框、放大鏡的那幾格；錄影要確認有在動，看 `qc.mjs final` 的「畫面沒動」。
 
 ### 5.3 寫法
@@ -507,7 +496,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
   "spot": [ { "at": "#28", "until": "#29", "box": [820, 260, 600, 420] } ] }
 ```
 
-（標註出現期間不能運鏡：範例的推近在 `#21` 前結束、拉回全景在說明卡退場後的 `#22`。說明卡停得夠不夠久、有沒有和運鏡重疊，寫完跑 `--check` 看。）
+（標註出現期間不能運鏡：範例的推近在 `#21` 前結束、拉回全景在說明卡退場後的 `#22`。說明卡停得夠不夠久、有沒有和運鏡重疊，寫完跑 `build.mjs --check-draft work/drafts/<份>.json` 看。）
 
 | 欄位 | 預設 | 說明 |
 |---|---|---|
@@ -552,7 +541,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 |---|---|---|
 | 運鏡 `moves` | `{ "at": "#21", "to": [x, y, w, h] }`；拉回全景 `"to": "full"` | 推近到框剛好塞滿畫面（字幕帶上方）。推近超過 4 倍會糊（⚠，改用放大鏡）；兩次運鏡不能重疊（✖）；`dur` 0.2–5，預設 1.5 秒（倍率 ≥ 2 時 2.2 秒），寫得比預設短 ⚠；一段超過 2 次、第一次在段起點 0.8 秒內、兩框倍率差超過 1.4 倍都 ⚠。講完那一塊就 `"full"` 拉回 |
 | 紅框 `marks` | `{ "at": "#21", "until": "#22e", "box": [x, y, w, h] }`；`until` 不寫＝到段尾。錄影捲動時加 `"path": [{ "at": "#22", "box": [x, y, w, h], "dur": 0.6 }]` | 實線 4px 警示紅、描線 0.4 秒進場、0.3 秒淡出；跟著運鏡一起動（線寬自動維持 4px）。同時最多 2 個，說明卡的框也算（✖）；停不到 0.5 秒的拿掉（⚠）；最後一個框自動多停 1 秒；被子母畫面擋住、壓到字幕區、運鏡後跑出畫面會 ⚠（出現到消失全程都查）。`path` 每一步把同一個框移到新位置：要等框描完（`at` 後 0.4 秒）才能動、淡出前要到位（✖）；`dur` 0.2–2，預設 0.4 |
-| 說明卡 `callouts` | `{ "at": "#21", "until": "#22e", "box": [x, y, w, h], "text": "打開 API 設定", "icon": "settings" }`；選填 `"side"`、`"quick": true` | 紅框＋引線＋說明卡。`text` 最多 12 字（✖）；`icon` 從 `kit/icons.json` 挑；`side` 不寫＝依序試右、左、下、上，自動挑放得下的那邊；寫了但放不下 ✖，訊息會告訴你改哪一邊。完整可讀一般至少 1.2 秒（`until − at ≥ 2.35` 秒）、`quick` 至少 0.8 秒（≥ 1.35 秒）（✖）。期間不能有運鏡（✖） |
+| 說明卡 `callouts` | `{ "at": "#21", "until": "#22e", "box": [x, y, w, h], "text": "打開 API 設定", "icon": "settings" }`；選填 `"side"`、`"quick": true` | 紅框＋引線＋說明卡。`text` 最多 12 字（✖）；`icon` 名稱用 `build.mjs --icons <關鍵字>` 查（不要打開 `kit/icons.json`）；`side` 不寫＝依序試右、左、下、上，自動挑放得下的那邊；寫了但放不下 ✖，訊息會告訴你改哪一邊。完整可讀一般至少 1.2 秒（`until − at ≥ 2.35` 秒）、`quick` 至少 0.8 秒（≥ 1.35 秒）（✖）。期間不能有運鏡（✖） |
 | 聚光燈 `spot` | `{ "at": "#21", "until": "#22e", "box": [x, y, w, h] }`；`until` 不寫＝到段尾 | 其他地方壓暗 35%，只留框的地方（外擴 8px、圓角）；淡入淡出各 0.4 秒。至少 2 秒、一次一個、不和放大鏡同時（✖）；期間不能有運鏡（✖） |
 | STEP 膠囊 `steps` | `[{ "at": "#20", "text": "新增專案" }, { "at": "#23", "text": "連接 Gmail" }]` | 錄影可見區左上角（離錄影邊 32px）「STEP N＋這一步在做什麼」；壓到紅框自動換右上（`stepsSide` 指定）。`text` 最多 12 字；依時間排、相鄰兩步至少 1.65 秒、最後一步離段尾至少 1.65 秒（✖）。號碼 build 自己算：全片接著數，和前面同字的沿用號碼；下一段接著同一步時第一步寫同樣的字、`at` 寫 `"+0"`，膠囊不會重播。壓到其他標註會 ⚠ |
 | 箭頭 `arrows` | `{ "at": "#24", "to": [x, y] }`；選填 `"until"`（預設 `at` 後 3 秒）、`"from": "ne"`（箭尾方向） | 指小按鈕、小圖示。箭尖離 `to` 9px，箭身 120px（放不下用 96px）；`from` 不寫＝依序試 ne、nw、se、sw、e、w、n、s，挑第一個不壓到字、卡片、膠囊、紅框線、子母畫面的方向；寫了但放不下 ✖ 並建議方向；全部放不下就拿掉（⚠）。至少 2.2 秒、一次一支（✖）；放大鏡期間自動拿掉（⚠）；期間不能有運鏡（✖） |
@@ -585,7 +574,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 | `media.mjs ng-snap` | 錄影那幾段整段 `--add-in`（扣掉 NG）：只剪 NG、停頓保留，畫面才不會亂跳；有講稿時照講稿比對主軌順序 | 順序 ⚠ 放進停點 ① |
 | `media.mjs prep` | 畫面在等、又沒人講話 ≥ 3 秒的地方列進 `cuts.md` 的「等待」表（預設不勾；和 NG 列一樣在剪輯清單頁勾） | 停點 ① 給使用者看；勾了就壓成 1.5 秒快轉，那段聲音一起剪掉 |
 | `media.mjs screen-sync` | 照 `work/cuts.v1.json` 算初剪後每段對到錄影的哪一秒，寫 `work/screen-sync.json`（`sync01`、`sync02`…，NG 剪掉的地方切成兩段；勾了的等待多一段 `retime` 快轉，前後硬接） | 初剪、cutpoints 之後跑 |
-| `media.mjs screen-sync --write-plan` | 把 sync 段放進 plan.json（先備份 `plan.json.sync-<時間>`；舊的 sync 段整批換掉，其他段不動） | 寫好草稿 plan.json 再跑；初剪重做過要再跑一次 |
+| `media.mjs screen-sync --write-plan` | 把 sync 段放進 plan.json（先備份 `plan.json.sync-<時間>`；舊的 sync 段整批換掉，其他段不動） | `--merge-drafts` 會自己放，平常不用跑；初剪重做過、沒有重新合併時才跑 |
 
 - sync 段就是一般的 media 段：可以加 `moves`、`callouts`、`clicks`（5.5），`from`／`to`／`in` 不要改，改了畫面就對不上聲音。
 - 兩段 sync 相接時 build 自動疊化 0.47 秒（NG 剪接點不會硬跳）。

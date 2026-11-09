@@ -18,7 +18,7 @@ version: 0.2.0
 |---|---|
 | 沒指定專案 | 列出 `projects/` 底下的專案，問要處理哪一個 |
 | `assets/camera/`、`assets/voice/` 都是空的，專案裡有散落的素材 | 先照 `references/sort-assets.md` 分類 |
-| `assets/camera/`、`assets/voice/` 都是空的，也沒有散落的素材 | 照 `references/new-project.md` 第 2 點告訴使用者放什麼，最後一行 `→ 下一步：素材放好後說「剪乾淨」` |
+| 專案裡沒有散落的素材，步驟 1 的 `status.mjs` 印「開新專案（還沒有主軌素材）」（`assets/screen/` 有邊錄邊講的錄影就不會印，照常往下做） | 照 `references/new-project.md` 第 2 點告訴使用者放什麼，最後一行 `→ 下一步：素材放好後說「剪乾淨」` |
 | 使用者只問「做到哪了」 | 步驟 1 回報就好 |
 
 ## 步驟
@@ -56,7 +56,7 @@ status 和實際檔案不符時以產物為準，判斷表在 `references/progre
 
 ## 版式（橫式／直式）
 
-開工時決定一次，`media.mjs prep` 寫進開工決策表「版式」：使用者說「短影片」「直式」「Shorts」「Reels」「抖音」→ `prep` 加 `--format portrait`；說「長片」「橫式」或都沒說 → 工具看主軌，寬 < 高才是直式。之後說「改成直式／橫式」就照改 plan.json 第一層的 `"format": "portrait"`（橫式不寫），停點紀錄新增一列；工具第一行會印「版式：…」，和開工決策表不一樣時 `--check` 會 ✖，照 → 改。直式素材做橫式：不支援，告訴使用者；橫式素材做直式：還不支援（`--check` 會 ✖），請使用者提供直拍素材。直式的數字（畫布、版面、字幕、安全區、構圖）看 `shared/style.md`「直式」。
+開工時決定一次，`media.mjs prep` 寫進開工決策表「版式」：使用者說「短影片」「直式」「Shorts」「Reels」「抖音」→ `prep` 加 `--format portrait`；說「長片」「橫式」或都沒說 → 工具看主軌，寬 < 高才是直式。之後說「改成直式」：先在 `work/hyperframes/plan.json` 第一層加 `"format": "portrait"`（還沒有 plan.json 就跳過），再跑 `node shared/template/tools/status.mjs --project projects/<專案> --init --format portrait` 改開工決策表的版式。改橫式：刪掉 plan.json 的 `format`，`--init` 改加 `--format landscape`。不用記停點紀錄。`--check` 說兩邊版式不一樣時，照這兩步補齊，不要把 plan.json 改回原本的版式。直式素材做橫式：不支援，告訴使用者；橫式素材做直式：還不支援（`--check` 會 ✖），請使用者提供直拍素材。直式的數字（畫布、版面、字幕、安全區、構圖）看 `shared/style.md`「直式」。
 
 ## 自我核對
 

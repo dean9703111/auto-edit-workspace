@@ -281,11 +281,11 @@ test('--merge-drafts 寫完 plan.json 自動修，合併紀錄記修過的版本
   const drafts = path.join(proj, 'work', 'drafts');
   fs.mkdirSync(drafts, { recursive: true });
   fs.writeFileSync(path.join(drafts, 'ch01.json'), JSON.stringify({ segments: FLASH }));
-  let r = tool(['--project', proj, '--merge-drafts']);
+  let r = tool(['--project', proj, '--merge-drafts', '--no-storyboard']);
   assert.match(r.stdout, /自動修好 1 處：空檔 1/, r.stdout + r.stderr);
   assert.equal(JSON.parse(fs.readFileSync(planFile(), 'utf8')).scenes[0].to, '#3');
   fs.writeFileSync(path.join(drafts, 'ch01.json'), JSON.stringify({ segments: [FLASH[0], { ...FLASH[1], slots: { text: '草稿改過的字' } }] }));
-  r = tool(['--project', proj, '--merge-drafts']);
+  r = tool(['--project', proj, '--merge-drafts', '--no-storyboard']);
   assert.doesNotMatch(r.stdout, /上次合併之後改過/, r.stdout);
   assert.equal(JSON.parse(fs.readFileSync(planFile(), 'utf8')).scenes[1].slots.text, '草稿改過的字');
 });

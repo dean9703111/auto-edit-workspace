@@ -31,6 +31,7 @@ import { createHash } from 'node:crypto';
 import { textWidth } from './time.mjs';
 import { BEAT_HEADER, BEAT_HEADER_ILLUS } from './audit-beats.mjs';
 import { rewriteIfSame, withLock } from './atomic.mjs';
+import { iconHint } from './icon-alias.mjs';
 
 const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 16);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -87,7 +88,7 @@ export function validateSlots(spec, slots, { icons } = {}) {
       else if (d.min != null && num < d.min) errors.push(`${label}：最小 ${d.min}，現在是 ${v}`);
       else if (d.max != null && num > d.max) errors.push(`${label}：最大 ${d.max}，現在是 ${v}`);
     } else if (t === 'icon') {
-      if (icons && !icons.get(String(v))) errors.push(`${label}：找不到圖示「${v}」（kit/icons.json）`);
+      if (icons && !icons.get(String(v))) errors.push(`${label}：找不到圖示「${v}」（kit/icons.json；${iconHint(v, icons.names || [])}）`);
     } else if (t === 'at') {
       if (typeof v !== 'string' || !/^#\d+/.test(v)) errors.push(`${label}：要寫句號（#N、#N@詞），現在是「${v}」`);
     } else if (t === 'enum') {
@@ -305,8 +306,8 @@ export function validateScene(slots, { kitDir, icons, outDir } = {}) {
     if (ids.has(p.id)) errors.push(`parts：id「${p.id}」重複`);
     ids.add(p.id);
     if (p.label && textWidth(p.label) > 10) errors.push(`parts.${p.id} 的標籤「${p.label}」${textWidth(p.label)} 字，上限 10`);
-    if (p.illus && names && !names.includes(p.illus)) errors.push(`parts.${p.id}：畫廊沒有「${p.illus}」（可用：${names.join('、')}）→ 用圖示（icon）或新畫一個 SVG（src: "illus-local/<名稱>.svg"）`);
-    if (p.icon && icons && !icons.get(String(p.icon))) errors.push(`parts.${p.id}：找不到圖示「${p.icon}」（kit/icons.json）`);
+    if (p.illus && names && !names.includes(p.illus)) errors.push(`parts.${p.id}：畫廊沒有「${p.illus}」（可用：${names.join('、')}）→ 改用圖示（icon；查名稱：node shared/template/tools/build.mjs --project projects/<專案> --icons <中文名稱>）`);
+    if (p.icon && icons && !icons.get(String(p.icon))) errors.push(`parts.${p.id}：找不到圖示「${p.icon}」（kit/icons.json；${iconHint(p.icon, icons.names || [])}）`);
     if (p.src && outDir && !fs.existsSync(path.join(outDir, p.src))) errors.push(`parts.${p.id}：找不到 ${p.src} → 先照 shared/template/kit/illus-style.md 畫好放在 work/hyperframes/illus-local/`);
     if (!p.illus && !p.icon && !p.src && !p.wave) errors.push(`parts.${p.id}：要有 illus、icon、src 或 wave 其中一個`);
   }
@@ -667,7 +668,7 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
     try { cur = fs.readFileSync(abs, 'utf8'); } catch { continue; }
     if (!cur.includes('data-icon="')) continue;
     const r = expandIcons(cur, lib.icons);
-    for (const m of r.missing) errors.push(`[${seg.id} custom] 找不到圖示「${m}」（kit/icons.json）→ 換一個名稱`);
+    for (const m of r.missing) errors.push(`[${seg.id} custom] 找不到圖示「${m}」（kit/icons.json；${iconHint(m, lib.icons?.names || [])}）→ 換一個名稱；查名稱：node shared/template/tools/build.mjs --project ${path.relative(process.cwd(), path.resolve(outDir, '..', '..')) || '.'} --icons ${m}`);
     if (r.html !== cur) rewriteIfSame(abs, cur, r.html);   // 每條 --check 都會跑到別段的檔，那段的子代理可能剛好在存：內容變了就不寫，下次再展開
   }
   if (prune) {

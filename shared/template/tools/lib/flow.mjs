@@ -5,12 +5,13 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseSrt } from './srt.mjs';
-import { textWidth } from './time.mjs';
+import { textWidth, parseTime, cueSeconds } from './time.mjs';
+import { ICON_ALIAS } from './icon-alias.mjs';
 import { probeDuration } from './ff.mjs';
 import { canvasOf, resolveFormat } from './canvas.mjs';
-import { alignOutline, scriptOutline, splitParts, renderCommon, renderSnippets, renderPart, designTarget, designCap, DESIGN_EVERY } from './scaffold.mjs';
+import { alignOutline, scriptOutline, splitParts, renderCommon, renderSnippets, renderPart, designTarget, designTargetOf, designEligible, designCap } from './scaffold.mjs';
 import { listFillSpecs, designFileOf, illusNames, isBlankDesign } from './custom-fill.mjs';
-import { renderStoryboard, renderSection, applyStoryboard, parseDesign } from './storyboard-gen.mjs';
+import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn } from './storyboard-gen.mjs';
 import { appendStop } from './progress.mjs';
 import { jobState } from './job.mjs';
 import { assetUsage } from './media.mjs';
@@ -24,6 +25,7 @@ import { parseBeatSheets, parseIllusLists } from './audit-beats.mjs';
 import { formatFinding } from './audit-rules.mjs';
 import { hfLocal } from './hf.mjs';
 import { KINDS as FIX_KINDS } from './autofix.mjs';
+import { spokenAt } from './plan.mjs';
 
 const TOOLS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rel = (p) => path.relative(process.cwd(), p).split(path.sep).join('/') || '.';
@@ -161,9 +163,9 @@ export function runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }) {
   startPrepare(P, flags);
   const target = designTarget(videoDur);
   console.log(`→ ${rel(dir)}/：共用.md、寫法.md＋${parts.length} 份（${parts.map((p) => `${p.key} ${clock(p.seconds)}`).join('、')}）；${cues.length} 句字幕`);
-  console.log(`內容設計動畫目標：全片至少 ${target} 段（每 ${DESIGN_EVERY / 60} 分鐘 1 段）；底片在背景預先處理`);
+  console.log(`內容設計動畫候選：約三成的段（全片估計 ${target} 段左右；先照常套模板，停點 ③ 使用者勾了才做）；底片在背景預先處理`);
   if (videoDur >= 300 && !fs.existsSync(path.join(dir, '視覺語言.md'))) {
-    console.log(`→ 先派一個導演寫 ${rel(dir)}/視覺語言.md（全片共用的視覺主題、指定哪幾段做內容設計動畫，上限 ${designCap(target)} 段）；派工訊息照抄：`);
+    console.log(`→ 先派一個導演寫 ${rel(dir)}/視覺語言.md（全片共用的視覺主題、挑哪幾段當內容設計動畫候選，上限 ${designCap(target)} 段）；派工訊息照抄：`);
     console.log(`  你是這集的導演，負責 ${rel(P.project)} 的視覺語言。照 .agents/skills/auto-edit-storyboard/references/director.md 做。`);
     console.log('→ 回來之後：');
   }
@@ -190,9 +192,15 @@ export function specEntries(md) {
   return out.map((x) => ({ name: x.name, text: x.lines.join('\n').trim() }));
 }
 
+// --spec key-point,x-scene：一次查好幾個（逗號隔開），不用一個跑一次
 export function specCmd(P, name) {
   const md = readOpt(path.join(packDir(P), '寫法.md'));
   if (!md) { console.log(`✖ 還沒有 ${rel(packDir(P))}/寫法.md → 先跑 node shared/template/tools/build.mjs --project ${rel(P.project)} --scaffold`); return 1; }
+  const names = String(name).split(/[,，、]/).map((x) => x.trim()).filter(Boolean);
+  if (names.length > 1) return names.map((n, i) => { if (i) console.log(''); return specOne(md, n); }).some(Boolean) ? 1 : 0;
+  return specOne(md, name);
+}
+function specOne(md, name) {
   const list = specEntries(md), q = String(name).trim().toLowerCase();
   const exact = list.filter((x) => x.name.toLowerCase().split(/\s+/).includes(q) || x.name.toLowerCase() === q);
   const hits = exact.length ? exact : list.filter((x) => x.text.split('\n')[0].toLowerCase().includes(q));
@@ -203,7 +211,6 @@ export function specCmd(P, name) {
 }
 
 // 常用詞對 lucide 名稱：圖示有 1,500 多個，不要整份印
-const ICON_ALIAS = { 手機: 'smartphone', 電腦: 'laptop', 筆電: 'laptop', 螢幕: 'monitor', 雲端: 'cloud', 雲: 'cloud', 影片: 'video', 攝影機: 'video', 相機: 'camera', 字幕: 'captions', 聲音: 'volume', 音效: 'volume', 麥克風: 'mic', 剪刀: 'scissors', 剪輯: 'scissors', 資料夾: 'folder', 檔案: 'file', 下載: 'download', 上傳: 'upload', 設定: 'settings', 安裝: 'download', 鎖: 'lock', 權限: 'shield', 保護: 'shield', 打勾: 'check', 勾: 'check', 完成: 'circle-check', 警告: 'triangle-alert', 注意: 'triangle-alert', 時間: 'clock', 計時: 'timer', 人: 'user', 使用者: 'user', 團隊: 'users', 星: 'star', 重點: 'star', 燈泡: 'lightbulb', 想法: 'lightbulb', 搜尋: 'search', 連結: 'link', 網頁: 'globe', 程式: 'code', 終端機: 'terminal', 書: 'book', 說明書: 'book-open', 筆記: 'notebook', 清單: 'list-checks', 播放: 'play', 暫停: 'pause', 電池: 'battery', 額度: 'gauge', 速度: 'gauge', 機器人: 'bot', AI: 'bot', 畫面: 'image', 圖片: 'image', 訊息: 'message-circle', 聊天: 'message-circle', 錢: 'wallet', 目標: 'target', 火箭: 'rocket', 工具: 'wrench', 垃圾桶: 'trash-2', 刪除: 'trash-2', 複製: 'copy', 分享: 'share-2', 按讚: 'thumbs-up' };
 
 export function iconsCmd(words, { loadLib, templateDir }) {
   const names = loadLib(templateDir).icons.names;
@@ -246,6 +253,227 @@ export function showCmd(P, id) {
   return 0;
 }
 
+// ---------- --outline：先寫分段大綱（一段一行），工具檢查段長、相鄰模板、接縫、候選數量，再產生要填的草稿骨架 ----------
+// 大綱 work/drafts/<份>.outline.md：每段一行「id | from | to | 模板 | 在講什麼 | 候選構想（沒有寫 —）」
+// 拆兩步是為了讓寫草稿的模型只做判斷：先定段落和模板（工具馬上說放不放得下），再填畫面上的字；欄位、起訖、anchor 都由工具寫好
+export function parseOutline(md) {
+  const rows = [];
+  for (const l of String(md).split('\n')) {
+    if (!l.includes('|')) continue;
+    const c = l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((x) => x.trim());
+    if (c.length < 4 || /^:?-+:?$/.test(c[0]) || /^(id|段)$/i.test(c[0])) continue;
+    rows.push({ id: c[0], from: c[1], to: c[2], tpl: c[3], say: c[4] || '', idea: /^(—|-|–|無)?$/.test(c[5] || '') ? '' : c[5] });
+  }
+  return rows;
+}
+function findSpec(list, q) {
+  const s = String(q).trim().toLowerCase().replace(/^custom\s+/, '');
+  return list.find((x) => { const n = x.name.toLowerCase(); return n === s || n.split(/\s+/).includes(s) || n.startsWith(`${s} `); }) || null;
+}
+// 這一條的範例 JSON；字卡動態（fx）沒有範例，照第一行的「vars：名稱（說明）、…」組一個
+export const snippetOf = (entry) => {
+  const m = entry.text.match(/```json\n([\s\S]*?)\n```/);
+  if (m) { try { return JSON.parse(m[1]); } catch { return null; } }
+  const fx = entry.name.match(/^fx (\d+)/), vars = entry.text.split('\n')[0].match(/vars[：:]\s*(.+)$/);
+  if (!fx) return null;
+  const v = {};
+  for (const x of (vars?.[1] || '').split('、')) { const k = x.match(/^\s*([A-Za-z]+)（(.*)）\s*$/); if (k) v[k[1]] = `<${k[2]}>`; }
+  return { type: 'fx', fx: Number(fx[1]), from: '#N', to: '#Me', vars: v };
+};
+// 這個模板最短要幾秒：字卡看第一行的「最短／固定 N 秒」；模板動畫照「時間下限」和最少的項目數估
+export function floorsOf(entry) {
+  const f = entry.text.match(/時間下限[^：\n]*：([^\n]+)/);
+  if (!f) return null;
+  const num = (re) => Number(f[1].match(re)?.[1] ?? 0);
+  return { open: num(/第一拍離段頭 ≥ (\d+(?:\.\d+)?)/), gap: num(/拍與拍 ≥ (\d+(?:\.\d+)?)/), end: num(/最後一拍到段尾 ≥ (\d+(?:\.\d+)?)/) };
+}
+export function minSecondsOf(entry, snip) {
+  const m = entry.text.split('\n')[0].match(/(?:最短|固定) (\d+(?:\.\d+)?) 秒/);
+  if (m) return Number(m[1]);
+  const f = floorsOf(entry);
+  if (!f) return 0;
+  const n = Math.max(1, Object.values(snip?.slots || {}).find(Array.isArray)?.length || 1);
+  return Math.round((f.open + f.end + f.gap * (n - 1)) * 10) / 10;
+}
+// 拍可以綁的句子：第一拍離段頭、最後一拍到段尾的下限換成句號範圍，寫草稿的人挑詞時不用算秒數
+export function beatWindow(cues, a, z, f) {
+  if (!f || !(f.open || f.end)) return null;
+  const lo = a + f.open - 0.3, hi = z - f.end + 0.3;
+  const max = hi > lo ? 1 + Math.floor((hi - lo) / (f.gap || 2.5) + 1e-6) : 0;   // 照拍距最多放幾拍
+  const ok = cues.filter((c) => c.start >= lo && c.start <= hi);   // 那句一開口就已經離段頭夠遠、也還沒進段尾
+  if (ok.length) { const z2 = ok[ok.length - 1]; return { first: ok[0].n, last: z2.n, lastHead: z2.end > hi + 0.3, max }; }
+  const span = cues.filter((c) => c.end > lo && c.start < hi);       // 段很短：只有某句的中段落在範圍裡
+  return span.length ? { first: span[0].n, last: span[span.length - 1].n, mid: true, max: 1 } : { first: null, last: null, max: 0 };
+}
+// 還沒填的佔位：<…>、#N、#Me、#N@詞（骨架和範例都用這幾種）
+export function placeholders(segs) {
+  const out = [];
+  const walk = (v, where) => {
+    if (typeof v === 'string') { if (/^<[^<>]*>$/.test(v.trim()) || /^#(N|Me)(@詞)?$/.test(v.trim())) out.push(`${where}（${v}）`); return; }
+    if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${where}[${i}]`));
+    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, where ? `${where}.${k}` : k);
+  };
+  for (const s of segs || []) walk(Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'id')), s.id || '?');
+  return out;
+}
+// ---------- 工具代填（FR-105～107）：at:auto 照卡上的字在字幕找講到的詞；中文圖示換英文；why 預設模板用途 ----------
+const AUTO = 'auto';
+const str = (v) => (typeof v === 'string' && v.trim() && !/^<[^<>]*>$/.test(v.trim()) ? v : null);
+const AT_KEY = /^at$|At$/, AT_ALIAS = { fix: 'sol' };
+// 這一格的時間跟著哪幾個字：項目自己的 text／label／title；x-scene 的拍＝這拍新出現的那個元件的標籤；beats.<欄位>At＝slots.<欄位>（或 <欄位>Text、<欄位>Head）
+export function autoSource(seg, obj, key, { raw = false } = {}) {
+  const val = (v) => (raw ? (typeof v === 'string' && v.trim() ? v : null) : str(v));
+  const slots = seg.slots || {};
+  if (key === 'at') {
+    for (const k of ['text', 'label', 'title', 'name']) if (val(obj[k])) return obj[k];
+    const one = Array.isArray(obj.in) && obj.in.length === 1 ? obj.in[0] : null;
+    const part = one && (slots.parts || []).find((x) => x && x.id === one);
+    return part ? val(part.label) : null;
+  }
+  const base = key.slice(0, -2), names = [base, `${base}Text`, `${base}Head`, AT_ALIAS[base]].filter(Boolean);
+  for (const o of obj === seg.beats ? [slots] : [obj, slots]) {
+    for (const k of names) if (val(o[k])) return o[k];
+    if (Array.isArray(o[base]) && val(o[base][0]?.text)) return o[base][0].text;
+  }
+  return null;
+}
+function eachField(seg, fn) {
+  const walk = (v, where) => {
+    if (Array.isArray(v)) { v.forEach((x, i) => (x && typeof x === 'object' ? walk(x, `${where}[${i}]`) : null)); return; }
+    for (const [k, x] of Object.entries(v)) {
+      if (x && typeof x === 'object') walk(x, where ? `${where}.${k}` : k);
+      else fn(v, k, x, where ? `${where}.${k}` : k);
+    }
+  };
+  for (const [k, x] of Object.entries(seg)) if (k !== 'story' && x && typeof x === 'object') walk(x, k);
+}
+// 骨架：有字可以對的時間格寫 auto（模型不用挑詞）
+export function markAuto(seg) {
+  let n = 0;
+  eachField(seg, (obj, k, x) => { if (AT_KEY.test(k) && x === '#N@詞' && autoSource(seg, obj, k, { raw: true })) { obj[k] = AUTO; n++; } });
+  return n;
+}
+const cueN = (ref) => Number(String(ref ?? '').match(/^#(\d+)/)?.[1]);
+// --check-draft、--merge-drafts：auto → #N@詞（只在這段的句號範圍找）；中文圖示 → 英文。回傳 { filled, icons, failed }
+// 只收有把握的：卡上的字在這段的字幕裡講得到（2 字的卡整個對到、3 字以上至少連續 3 字），而且比上一格晚（項目照講的順序出現、不會兩拍同時）。
+// 改寫過的字對不到就交回給寫草稿的人挑詞（2026-11-09 實測：放寬到 2 字、可以往回找會有 1/3 差 2–5 秒、兩拍撞在同一個詞）
+function findSpoken(text, cues, a, z, after) {
+  const len = [...String(text).replace(/\s+/g, '')].length;
+  const hit = spokenAt(text, cues, { near: after, from: a.start - 0.01, to: z.start + 0.01, minMatch: Math.min(3, Math.max(2, len)) });
+  return hit && hit.sec > after + 0.3 ? hit : null;
+}
+export function resolveAuto(segs, cues) {
+  const filled = [], icons = [], failed = [];
+  const secOf = (ref) => { const p = parseTime(ref); if (p.error || p.kind !== 'cue') return null; const r = cueSeconds(p, cues); return r.error ? null : r.sec; };
+  for (const seg of segs || []) {
+    const a = cues.find((c) => c.n === cueN(seg.from ?? seg.at)), z = cues.find((c) => c.n === cueN(seg.to)) || a;
+    let after = (a?.start ?? 0) - 1;
+    const order = [];   // 這段的時間格照順序：{ where, ref }（ref＝null 是對不到的）
+    eachField(seg, (obj, k, x, where) => {
+      if (typeof x === 'string' && /^(icon|obj)$|Icon$/.test(k) && /[\u4e00-\u9fff]/.test(x) && ICON_ALIAS[x.trim()]) {
+        obj[k] = ICON_ALIAS[x.trim()]; icons.push(`圖示「${x.trim()}」→ ${obj[k]}`); return;
+      }
+      if (!AT_KEY.test(k) || typeof x !== 'string') return;
+      if (x !== AUTO) { const t = secOf(x); if (t != null) after = Math.max(after, t); order.push({ where, ref: x }); return; }   // 自己寫的詞：後面的格接在它後面
+      const text = autoSource(seg, obj, k);
+      const hit = text && a ? findSpoken(text, cues, a, z, after) : null;
+      if (hit) { obj[k] = `#${hit.n}@${hit.kw}`; after = hit.sec; filled.push(`${seg.id}.${where}`); order.push({ where, ref: obj[k] }); }
+      else order.push({ where, ref: null, text });
+    });
+    // 對不到的一次全列：寫的詞要落在前一格和後一格之間，順序才不會倒
+    order.forEach((o, i) => {
+      if (o.ref) return;
+      const prev = order.slice(0, i).reverse().find((x) => x.ref), next = order.slice(i + 1).find((x) => x.ref);
+      const span = prev && next ? `，要在 ${prev.ref} 和 ${next.ref} 之間` : next ? `，要比下一格 ${next.ref} 早` : prev ? `，要比上一格 ${prev.ref} 晚` : '';
+      failed.push(`${seg.id}.${o.where}：${o.text ? `「${o.text}」在這段（${seg.from ?? seg.at}–${seg.to ?? ''}）的字幕裡對不到、或比上一格早` : '旁邊沒有字可以對'} → 改寫成 #N@詞（講到它的那句字幕裡連續 2–4 個字${span}；不合適就把相鄰那格也自己寫）`);
+    });
+  }
+  return { filled, icons, failed };
+}
+// 這個模板的用途（寫法.md 那一條第一行冒號後、第一個句點或分號前）：骨架的 story.why 預設值
+export const purposeOf = (entry) => String(entry?.text || '').split('\n')[0].replace(/^\*\*[^*]+\*\*(（[^）]*）)?[：:]\s*/, '').split(/[；。]/)[0].trim().slice(0, 40);
+
+const OVERLAP_OK = ['chapter-tag'];   // 章節角標可以和別段重疊：不算接縫、不算相鄰重複（講者介紹不行，會報「一段只放一個情境」）
+export function outlineCmd(P, file) {
+  const key = String(file).replace(/\.outline\.md$|\.json$/, '').split('/').pop();
+  const src = [path.resolve(String(file)), path.join(draftsDir(P), `${key}.outline.md`)].find((x) => { try { return fs.statSync(x).isFile() && x.endsWith('.outline.md'); } catch { return false; } });
+  if (!src) { console.log(`✖ 找不到大綱 → 寫到 ${rel(draftsDir(P))}/${key}.outline.md（每段一行：id | from | to | 模板 | 在講什麼 | 候選構想），再跑這條`); return 1; }
+  const md = readOpt(path.join(packDir(P), '寫法.md'));
+  if (!md) { console.log(`✖ 還沒有 ${rel(packDir(P))}/寫法.md → 先跑 node shared/template/tools/build.mjs --project ${rel(P.project)} --scaffold`); return 1; }
+  const rows = parseOutline(fs.readFileSync(src, 'utf8'));
+  if (!rows.length) { console.log(`✖ ${rel(src)} 沒有讀到任何一行（格式：id | from | to | 模板 | 在講什麼 | 候選構想）`); return 1; }
+  const list = specEntries(md), cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
+  const part = (readJson(path.join(packDir(P), 'index.json'))?.parts || []).find((p) => p.key === key);
+  const secOf = (ref) => { const p = parseTime(ref); if (p.error || p.kind !== 'cue') return null; const r = cueSeconds(p, cues); return r.error ? null : r.sec; };
+  const errors = [], warns = [], hints = [], ids = new Set();
+  const segs = rows.map((r) => {
+    const entry = findSpec(list, r.tpl), snip = entry && snippetOf(entry);
+    if (!entry || !snip) { errors.push(`${r.id}：不認得模板「${r.tpl}」→ 寫寫法.md 裡的名稱（例 key-point、x-scene、fx 29、media）`); return null; }
+    if (ids.has(r.id)) errors.push(`${r.id}：id 重複`);
+    ids.add(r.id);
+    const a = secOf(r.from), z = secOf(r.to);
+    if (a == null || z == null) { errors.push(`${r.id}：起訖「${r.from}」–「${r.to}」看不懂或字幕沒有那句 → 寫 #N、#Ne、#N@詞`); return null; }
+    const n = Number(String(r.from).match(/^#(\d+)/)?.[1]);
+    if (part && (n < part.firstN || n > part.lastN)) errors.push(`${r.id}：起點 #${n} 不在這一份的範圍（#${part.firstN}–#${part.lastN}）`);
+    const kind = snip.scene || snip.template || (snip.type === 'media' ? 'media' : entry.name);
+    const need = minSecondsOf(entry, snip), D = Math.round((z - a) * 10) / 10;
+    if (D <= 0) errors.push(`${r.id}：結尾 ${r.to} 不在起點 ${r.from} 之後`);
+    else if (need && D < need - 0.05) warns.push(`${r.id}（${entry.name}）只有 ${D} 秒，至少要 ${need} 秒 → 併進前後一句，或換一個短一點的模板`);
+    const f = floorsOf(entry), win = D > 0 ? beatWindow(cues, a, z, f) : null;
+    if (win && !win.first) warns.push(`${r.id}（${entry.name}）放不下任何一拍 → 併進前後一句，或換字卡`);
+    else if (win) {
+      const where = win.mid ? `#${win.first} 講到一半之後的詞` : `#${win.first}–#${win.last}${win.lastHead ? `（#${win.last} 只用前半句）` : ''}的詞`;
+      hints.push(`${r.id}：拍綁在 ${where}，最多 ${win.max} 拍（第一拍離段頭 ≥ ${f.open} 秒、最後一拍到段尾 ≥ ${f.end} 秒、拍與拍 ≥ ${f.gap} 秒；項目比拍多就幾項併一拍）`);
+    }
+    return { r, entry, snip, kind, a, z };
+  });
+  const ok = segs.filter(Boolean);
+  const main = ok.filter((s) => !OVERLAP_OK.includes(s.kind));
+  for (let i = 1; i < main.length; i++) {
+    const p = main[i - 1], s = main[i];
+    if (s.kind === p.kind && s.kind !== 'media') warns.push(`${s.r.id} 和前一段 ${p.r.id} 都用 ${s.entry.name} → 換一個模板或併成一段`);
+    const gap = Math.round((s.a - p.z) * 10) / 10;   // 比實際秒數：#5e 接 #6 算接上
+    if (gap > 0.5) warns.push(`${p.r.id} 結尾（${p.r.to}）到 ${s.r.id} 起點（${s.r.from}）空了 ${gap} 秒 → 前一段的 to 寫下一段的 from`);
+    else if (gap < -0.5) warns.push(`${p.r.id}（到 ${p.r.to}）和 ${s.r.id}（從 ${s.r.from}）重疊 ${-gap} 秒 → 前一段的 to 寫下一段的 from`);
+  }
+  const tags = ok.filter((s) => s.kind === 'chapter-tag');
+  if (tags.length > 1) warns.push(`章節角標放了 ${tags.length} 段（${tags.map((s) => s.r.id).join('、')}）→ 一章只放第一段；小節名稱 build 會自動換到角標上，不用另排`);
+  const eligible = ok.filter((s) => s.kind !== 'media' && !OVERLAP_OK.includes(s.kind)).length;
+  const picks = ok.filter((s) => s.r.idea).length, target = designTargetOf(eligible), cap = designCap(target);
+  if (target && picks < target) warns.push(`內容設計動畫候選 ${picks} 段，${eligible} 段的三成約 ${target} 段 → 在最值得設計的段寫候選構想`);
+  if (cap && picks > cap) warns.push(`內容設計動畫候選 ${picks} 段，最多 ${cap} 段 → 留最值得的`);
+  for (const m of errors) console.log(`✖ ${m}`);
+  for (const m of warns) console.log(`⚠ ${m}`);
+  if (errors.length) { console.log(`未通過：${errors.length} 個 ✖ → 改 ${rel(src)}，再跑一次`); return 1; }
+  // 產生骨架：已經填過的段（同 id、同模板）留著填好的內容，只更新起訖和在講什麼
+  const out = path.join(draftsDir(P), `${key}.json`);
+  const old = new Map((readJson(out)?.segments || []).map((s) => [s.id, s]));
+  const prev = readJson(out) || {};
+  const anchorOf = (ref) => { const p = parseTime(ref); if (p.kw) return p.kwFull; const c = cues.find((x) => x.n === p.n); return c ? [...c.text].slice(0, 6).join('') : ''; };
+  const draftSegs = ok.map(({ r, entry, snip, kind }) => {
+    const keep = old.get(r.id), same = keep && (keep.scene || keep.template || (keep.type === 'media' ? 'media' : null)) === kind;
+    const seg = { ...JSON.parse(JSON.stringify(snip)), ...(same ? keep : {}), id: r.id };
+    if ('at' in snip && !('from' in snip)) seg.at = r.from; else { seg.from = r.from; seg.to = r.to; }
+    if ('anchor' in seg || 'from' in seg) seg.anchor = anchorOf(r.from);
+    markAuto(seg);
+    const st = same ? keep.story || {} : {};
+    seg.story = { ...st, say: r.say || st.say || '<講解在講什麼>', why: st.why || purposeOf(entry) || '<為什麼這樣呈現>' };
+    if (r.idea) { seg.story.designIdea = r.idea; seg.story.designWhy = st.designWhy || '<為什麼值得設計>'; } else { delete seg.story.designIdea; delete seg.story.designWhy; }
+    return seg;
+  });
+  const draft = { chapter: prev.chapter || key.replace(/^ch/, ''), ...prev, segments: draftSegs };
+  for (const k of ['icons', 'quotes', 'decide']) if (!draft[k]) draft[k] = k === 'icons' ? {} : [];
+  fs.mkdirSync(draftsDir(P), { recursive: true });
+  writeAtomic(out, `${JSON.stringify(draft, null, 2)}\n`);
+  const holes = placeholders(draftSegs);
+  const autos = draftSegs.reduce((n, sg) => { let k = 0; eachField(sg, (o, kk, x) => { if (x === AUTO) k++; }); return n + k; }, 0);
+  console.log(`草稿骨架：${rel(out)}（${draftSegs.length} 段，要填 ${holes.length} 格；起訖、anchor、欄位都寫好了，${autos} 格時間寫 auto 由工具對${old.size ? '，填過的段留著' : ''}）`);
+  if (hints.length) { console.log('模板動畫的拍綁哪幾句（照這個挑詞就不用算秒數）：'); for (const h of hints) console.log(`  ${h}`); }
+  console.log(`→ 下一步：只改 ${rel(out)} 裡的 <…>（畫面上的字，<> 裡是字數上限）、#N@詞（講到那個東西的詞）；寫 auto 的時間不用動（工具照卡上的字找講到的地方），why 已經寫了模板用途、要改再改；金句寫 quotes、拿不定寫 decide。改完驗：`);
+  console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --check-draft ${key}`);
+  return 0;
+}
+
 // ---------- --check-draft：只驗一份草稿，不受別章影響 ----------
 
 // 草稿路徑：照抄文件的 work/drafts/ch01.json、projects/X/work/...、只寫 ch01 都找得到（指令一律在工作區根目錄跑）
@@ -271,6 +499,23 @@ export function checkDraft(P, file) {
   try { draft = JSON.parse(fs.readFileSync(abs, 'utf8')); } catch (e) { console.log(`✖ ${rel(abs)} 不是合法的 JSON：${e.message}（JSON 不能有註解、最後一項後面不能有逗號）`); return 1; }
   const segs = draft.segments;
   if (!Array.isArray(segs)) { console.log(`✖ ${rel(abs)} 沒有 segments 陣列`); return 1; }
+  const holes = placeholders(segs);
+  if (holes.length) {
+    for (const h of holes.slice(0, 15)) console.log(`✖ 還沒填：${h}`);
+    console.log(`未通過：${holes.length} 格還沒填${holes.length > 15 ? `（只列前 15 格）` : ''} → 換成畫面上的字（<> 裡是字數上限）或講到的詞（#N@詞），再跑一次`);
+    return 1;
+  }
+  const au = resolveAuto(segs, parseSrt(fs.readFileSync(P.srt, 'utf8')));
+  if (au.filled.length || au.icons.length) {
+    writeAtomic(abs, `${JSON.stringify(draft, null, 2)}\n`);
+    if (au.filled.length) console.log(`自動補 ${au.filled.length} 格時間（auto → #N@詞，寫回 ${rel(abs)}）`);
+    for (const m of au.icons) console.log(`自動換：${m}`);
+  }
+  if (au.failed.length) {
+    for (const m of au.failed.slice(0, 15)) console.log(`✖ ${m}`);
+    console.log(`未通過：${au.failed.length} 格 auto 對不到字幕 → 照上面改，再跑一次`);
+    return 1;
+  }
   const base = readJson(P.plan, { version: 1 });
   const tmp = path.join(P.out, '.cache', `draft-${path.basename(abs)}`);
   fs.mkdirSync(path.dirname(tmp), { recursive: true });
@@ -294,10 +539,11 @@ export function checkDraft(P, file) {
   if (part) {
     const missing = segs.filter((s) => !s.story?.say).map((s) => s.id);
     if (missing.length) warns.unshift(`這幾段沒有 story.say（分鏡表要用）：${missing.join('、')}`);
-    const designs = segs.filter((s) => s.design).length;
-    const cap = designCap(part.target);
-    if (part.target && designs > cap) warns.unshift(`內容設計動畫 ${designs} 段，這一份最多 ${cap} 段（一段比模板貴很多）→ 留最值得的 ${cap} 段，其他改模板或字卡`);
-    if (part.target && designs < part.target) warns.unshift(`內容設計動畫 ${designs} 段，這一份目標至少 ${part.target} 段 → 挑最值得設計的時刻提名（共用.md 第 4 節）；真的沒有就在 decide 寫原因`);
+    const designs = segs.filter((s) => s.design || isDesignPick(s)).length;
+    const eligible = segs.filter(designEligible).length;
+    const target = part.target ? designTargetOf(eligible) : 0, cap = designCap(target);
+    if (target && designs > cap) warns.unshift(`內容設計動畫候選 ${designs} 段，這一份 ${eligible} 段最多 ${cap} 段 → 留最值得的 ${cap} 段，其他拿掉 story.designIdea`);
+    if (target && designs < target) warns.unshift(`內容設計動畫候選 ${designs} 段，這一份 ${eligible} 段的三成約 ${target} 段 → 挑最值得設計的時刻，在那段的 story 寫 designIdea、designWhy（共用.md 第 4 節）；真的沒有就在 decide 寫原因`);
     for (const s of segs) { const n = cueOf(s); if (n && (n < part.firstN || n > part.lastN)) warns.push(`${s.id} 的起點 #${n} 不在這一份的範圍（#${part.firstN}–#${part.lastN}）`); }
     const tags = segs.filter((s) => s.scene === 'chapter-tag').map((s) => (j.items || []).find((x) => x.id === s.id)).filter(Boolean);
     for (const u of j.uncovered || []) {
@@ -306,13 +552,17 @@ export function checkDraft(P, file) {
       warns.push(`沒有畫面的區間 ${clock(a)}–${clock(b)} → 前一段的 to 寫下一段的 from（0 秒相接），或補一段字卡`);
     }
     // 只看這一份的範圍：草稿只有這一章的段，主軌後面的旁白當然還沒蓋
+    // 邊錄邊講的螢幕錄影（work/screen-sync.json）合併後由 media.mjs screen-sync --write-plan 蓋回，草稿不用排：扣掉那幾段（rough.mp4 秒數）
+    const syncSpans = (readJson(path.join(P.project, 'work', 'screen-sync.json'))?.segments || []).map((x) => [Number(x.from), Number(x.to)]).filter(([x, y]) => y > x);
+    const minus = (span) => subtractSpans(span, syncSpans);
     for (const v of j.voiceUncovered || []) {
       const [a0, b0] = Array.isArray(v) ? v : [v.from ?? v.start, v.to ?? v.end];
-      const a = Math.max(a0, part.start), b = Math.min(b0, part.end);
+      for (const [a, b] of minus([Math.max(a0, part.start), Math.min(b0, part.end)])) {
       if (b - a <= 0.1) continue;
       const over = (j.items || []).filter((x) => !x.opaque && ids.has(x.id) && x.start < b - 0.05 && x.end > a + 0.05).map((x) => x.id);
       const line = `只有聲音的區間 ${clock(a)}–${clock(b)} 沒被蓋住 → ${over.length ? `${over.join('、')} 疊在講者上，這裡沒有講者，換成全畫面模板（共用.md 第 3 節的替換表）或內容設計動畫` : '加 media 段或不透明全幕，或把前一段的 to 接到下一段的 from'}`;
       if (b - a > 1) errors.push(line); else warns.push(line);
+      }
     }
   }
   for (const m of errors) console.log(`✖ ${m}`);
@@ -343,11 +593,20 @@ function canvasNote(seg, item) {
   return `## 畫布：右下有講者小視窗\n\n主內容 x 120–1300、y 150–858。不能碰：小視窗 x 1424–1888、y 581–951；y ≥ 920（字幕）${badge ? `、${badge}` : ''}。`;
 }
 
-function writeBriefs(P, plan, cues) {
-  let items = new Map();
-  try { items = new Map((checkJson(P).items || []).map((x) => [x.id, x])); } catch { /* 算不出來就用字幕估 */ }
-  const segs = (plan.scenes || []).filter((s) => s.design);
+// brief 的字幕：段內的句子寫「從這段起點算的秒數」，設計師不用自己累加句長（累加會漏掉句間停頓，和段長對不上，就會整份重排）
+export function briefCueLines(cues, a, z, t0) {
+  return cues.filter((c) => c.n >= a - 3 && c.n <= z + 2).map((c) => (c.n >= a && c.n <= z
+    ? `#${c.n}（段內 ${Math.max(0, c.start - t0).toFixed(1)}–${(c.end - t0).toFixed(1)} 秒）${c.text}`
+    : `（前後文）#${c.n}（${(c.end - c.start).toFixed(1)} 秒）${c.text}`));
+}
+
+function writeBriefs(P, plan, cues, { items: given = null, onlyMissing = false } = {}) {
+  let segs = (plan.scenes || []).filter((s) => s.design);
+  if (onlyMissing) segs = segs.filter((s) => !fs.existsSync(path.join(briefsDir(P), `${s.id}.md`)));
   if (!segs.length) return [];
+  let items = new Map();
+  if (given) items = new Map(given.map((x) => [x.id, x]));
+  else try { items = new Map((checkJson(P).items || []).map((x) => [x.id, x])); } catch { /* 算不出來就用字幕估 */ }
   fs.mkdirSync(briefsDir(P), { recursive: true });
   fs.mkdirSync(designsDir(P), { recursive: true });
   const ordered = (plan.scenes || []);
@@ -355,16 +614,24 @@ function writeBriefs(P, plan, cues) {
     const a = cueOf(s), z = Number(String(s.to || s.from || '').match(/^#(\d+)/)?.[1] ?? a);
     const idx = ordered.indexOf(s);
     const near = (seg) => (seg ? `${seg.id}（${seg.design ? '內容設計動畫' : seg.template || seg.scene || seg.type}${seg.story?.idea ? `：${seg.story.idea}` : ''}）` : '無');
-    const lines = cues.filter((c) => c.n >= a - 3 && c.n <= z + 2).map((c) => `${c.n >= a && c.n <= z ? '' : '（前後文）'}#${c.n}（${(c.end - c.start).toFixed(1)} 秒）${c.text}`);
     const inside = cues.filter((c) => c.n >= a && c.n <= z);
     const it = items.get(s.id);
     const secs = it?.start != null && it?.end != null ? (it.end - it.start).toFixed(1) : inside.length ? (inside[inside.length - 1].end - inside[0].start).toFixed(1) : '?';
+    const lines = briefCueLines(cues, a, z, it?.start ?? inside[0]?.start ?? 0);
     const vision = readOpt(path.join(packDir(P), '視覺語言.md')).trim();
-    const body = `# ${s.id} 內容設計動畫\n\n段落：${s.from}–${s.to}（#Ne＝第 N 句結尾，#N@詞＝第 N 句講到那個詞；這段 ${secs} 秒）\n構想（提名者寫的，可以推翻）：${s.story?.idea || '—'}\n為什麼值得設計：${s.story?.why || '—'}\n前一段：${near(ordered[idx - 1])}\n後一段：${near(ordered[idx + 1])}\n\n${canvasNote(s, it)}\n\n## 字幕\n\n${lines.join('\n')}\n\n## 音效（音效拍點欄只能寫這些名稱，或 —）\n\n${sfxList(P)}${vision ? `\n\n## 這集的視覺語言（跟著這份走，全片才一致）\n\n${vision.replace(/^#+\s.*\n/, '').trim()}` : ''}\n\n鏡位腳本寫到：work/designs/${s.id}.md\n動畫檔：work/hyperframes/${designFileOf(s)}\n`;
+    const body = `# ${s.id} 內容設計動畫\n\n段落：${s.from}–${s.to}（#Ne＝第 N 句結尾，#N@詞＝第 N 句講到那個詞；這段 ${secs} 秒）\n構想（草稿寫的，可以推翻）：${s.story?.idea || '—'}\n為什麼值得設計：${s.story?.why || '—'}\n前一段：${near(ordered[idx - 1])}\n後一段：${near(ordered[idx + 1])}\n\n${canvasNote(s, it)}\n\n## 字幕（段內秒數＝從這段起點算；這段到 ${secs} 秒）\n\n${lines.join('\n')}\n\n## 音效（音效拍點欄只能寫這些名稱，或 —）\n\n${sfxList(P)}${vision ? `\n\n## 這集的視覺語言（跟著這份走，全片才一致）\n\n${vision.replace(/^#+\s.*\n/, '').trim()}` : ''}\n\n鏡位腳本寫到：work/designs/${s.id}.md\n動畫檔：work/hyperframes/${designFileOf(s)}\n`;
     const f = path.join(briefsDir(P), `${s.id}.md`);
     fs.writeFileSync(f, body);
     return { id: s.id, brief: rel(f) };
   });
+}
+
+// build／--check 用：內容設計動畫段沒有 work/briefs/<段>.md（修改單、改版直接把模板段改成 design: true）就補寫一份，設計師才有畫布和段內秒數
+// items 用 build 剛算好的（jsonItems），不另外跑 --check（避免遞迴）；已經有的 brief 不動
+export function ensureBriefs(P, plan, items) {
+  if (!P?.project || !P.srt || !fs.existsSync(P.srt)) return [];
+  if (!(plan.scenes || []).some((s) => s.design)) return [];
+  try { return writeBriefs(P, plan, parseSrt(fs.readFileSync(P.srt, 'utf8')), { items, onlyMissing: true }); } catch { return []; }
 }
 
 // ---------- --merge-drafts ----------
@@ -377,7 +644,7 @@ export function backupPlan(file, tag = 'merge') {
   return b;
 }
 
-export function mergeDrafts(P, flags = {}) {
+export function mergeDrafts(P, flags = {}, deps = {}) {
   const dir = draftsDir(P);
   let files = [];
   try { files = fs.readdirSync(dir).filter((f) => /^ch\d+\.json$/.test(f)).sort(); } catch { /* 沒有 */ }
@@ -385,9 +652,16 @@ export function mergeDrafts(P, flags = {}) {
   const parts = readJson(path.join(packDir(P), 'index.json'))?.parts || [];
   const missing = parts.map((p) => p.key).filter((k) => !files.includes(`${k}.json`));
   const segs = [], ends = [], icons = {}, quotes = [], decide = [], problems = [], warns = [];
+  let cuesMemo = null;
+  const mergeCues = () => (cuesMemo ||= parseSrt(fs.readFileSync(P.srt, 'utf8')));
   for (const f of files) {
     const d = readJson(path.join(dir, f));
     if (!d || !Array.isArray(d.segments)) { problems.push(`${f} 讀不到 segments → 修好 JSON 再跑`); continue; }
+    const au = resolveAuto(d.segments, mergeCues());
+    if (au.filled.length || au.icons.length) writeAtomic(path.join(dir, f), `${JSON.stringify(d, null, 2)}\n`);
+    if (au.filled.length) warns.push(`${f}：自動補 ${au.filled.length} 格時間（auto → #N@詞）`);
+    for (const m of au.icons) warns.push(`${f}：自動換${m}`);
+    for (const m of au.failed) problems.push(`${f} ${m}`);
     segs.push(...d.segments);
     const last = [...d.segments].sort((x, y) => cueOf(x) - cueOf(y)).pop();
     if (last) ends.push(last);
@@ -420,7 +694,10 @@ export function mergeDrafts(P, flags = {}) {
     console.log('✖ plan.json 的段落在上次合併之後改過（分鏡表套回、剪輯台、回饋輪的改動都只在 plan.json，草稿沒有）→ 再合併會把這些改動蓋掉。要改段落就改 plan.json；確定不要那些改動才加 --force（會先備份）');
     return 1;
   }
-  plan.scenes = segs;
+  // 邊錄邊講的螢幕錄影（work/screen-sync.json，media.mjs screen-sync 算好的 sync01…）：草稿不排，合併時照帶進來，不用另外 --write-plan
+  const syncSegs = (readJson(path.join(P.project, 'work', 'screen-sync.json'))?.segments || []).filter((x) => /^sync\d+$/.test(x?.id || ''));
+  plan.scenes = [...segs.filter((x) => !/^sync\d+$/.test(x?.id || '')), ...syncSegs];
+  if (syncSegs.length) console.log(`邊錄邊講的螢幕錄影 ${syncSegs.length} 段（work/screen-sync.json）一起放進 plan.json`);
   const idx = readJson(path.join(packDir(P), 'index.json'));
   if (idx?.sections?.length && plan.sections === undefined) plan.sections = idx.sections;
   const planNext = `${JSON.stringify(plan, null, 2)}\n`;
@@ -436,10 +713,11 @@ export function mergeDrafts(P, flags = {}) {
   for (const l of lines) if (l.startsWith('✖')) console.log(l);
   const summary = lines.filter((l) => /^(通過|未通過)：/.test(l)).pop();
   const videoDur = idx?.videoDur ?? 0;
-  const target = designTarget(videoDur);
+  const target = videoDur >= 60 ? designTargetOf((plan.scenes || []).filter(designEligible).length) : 0;
   if (joined.length) console.log(`接起分章交界的空檔：${joined.join('、')}`);
   const cap = designCap(target);
-  console.log(`合併：${segs.length} 段（${files.length} 份）；內容設計動畫 ${designs.length} 段${videoDur >= 180 && designs.length < target ? `（⚠ 建議至少 ${target} 段，品質靠這些段）` : ''}${designs.length > cap ? `（⚠ 上限 ${cap} 段：一段設計比模板多用很多額度 → 留最值得的，其他在草稿改模板再合併；使用者要多做才放寬）` : ''}`);
+  const picks = (plan.scenes || []).filter(isDesignPick).length + designs.length;
+  console.log(`合併：${segs.length} 段（${files.length} 份）；內容設計動畫候選 ${picks} 段（停點 ③ 勾了才做）${designs.length ? `，其中 ${designs.length} 段已經指定要做` : ''}${picks < target ? `（⚠ 約三成的段是 ${target} 個候選）` : ''}${picks > cap ? `（⚠ 上限 ${cap} 段 → 留最值得的，其他在草稿拿掉 designIdea 再合併）` : ''}`);
   if (summary) console.log(summary);
   if (r.status !== 0) { console.log('→ 下一步：照 ✖ 改（改那一份 work/drafts/chNN.json，再合併一次）'); console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --merge-drafts`); return 1; }
   const todo = designs.filter((d) => !fs.existsSync(path.join(designsDir(P), `${d.id}.md`)));
@@ -447,6 +725,10 @@ export function mergeDrafts(P, flags = {}) {
     console.log(`→ 下一步：內容設計動畫一段派一個設計師寫鏡位腳本，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息照抄，換掉 <段>：`);
     console.log(`  你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本。`);
     console.log('全部回來後產生分鏡表：');
+  } else if (deps.loadLib && !flags['no-storyboard']) {
+    // 合併過了、沒有要先寫的鏡位腳本：直接接著產生分鏡表（主代理少一個回合；停點 ③ 那一行在最後）
+    console.log('合併通過，接著產生分鏡表（同 --storyboard）：');
+    return storyboardCmd(P, {}, deps);
   } else console.log('→ 下一步：截圖、產生分鏡表，停在停點 ③');
   console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --storyboard`);
   return 0;
@@ -498,7 +780,7 @@ export function storyboardCmd(P, flags, { loadLib }) {
   const only = flags.only ? String(flags.only).split(/[,，]/).map((s) => s.trim()).filter(Boolean) : null;
   const file = sbFile(P);
   if (!only && storyboardDirty(P) && !flags.force) {
-    console.log('✖ work/storyboard.md 在上次產生之後有人改過（網頁或手動）→ 先跑 --apply-storyboard 把改動套回 plan.json；確定不要那些改動才加 --force');
+    console.log('✖ work/storyboard.md 在上次產生之後有人改過（網頁或手動）→ 停點 ③ 還在等使用者回覆：重貼停點 ③ 那一行，等他說「可以」「改好了」再跑 --apply-storyboard（它會把改動套回 plan.json、記 ③ 通過）；使用者確定不要網頁上的改動才加 --force 重產生');
     return 1;
   }
   const b = buildTool(['--project', P.project, ...(P.templateArg || [])]);
@@ -538,6 +820,8 @@ export function storyboardCmd(P, flags, { loadLib }) {
   console.log(`分鏡表：${rel(file)}（${plan.scenes.length} 段，模板 ${plan.scenes.filter((s) => s.template).length}、內容設計動畫 ${designs}；截圖 ${shots.shots?.length ?? 0} 張${shots.sheets?.length ? `，拼圖 ${shots.sheets.length} 頁` : ''}）`);
   const ideas = [...ctx.designs.entries()].map(([id, d]) => `${id}：${String(d.concept || '').slice(0, 40)}`).filter((x) => !x.endsWith('：'));
   if (ideas.length) console.log(`內容設計動畫概念（回報給使用者）：\n  ${ideas.slice(0, 40).join('\n  ')}`);
+  const dp = designPlan(plan.scenes, { items: ctx.items, partOf: chapterOfFn(ctx.parts) });
+  if (dp.cands.length) console.log(`內容設計動畫候選 ${dp.cands.length} 段，${designPlanLine(dp)}（回報給使用者這一句：在分鏡表「需要我決定的事」取消勾就照現在的版面）：\n  ${dp.cands.slice(0, 40).map((c) => `${dp.on.has(c.id) ? '☑' : '☐'} ${c.id}：${String(plan.scenes.find((s) => s.id === c.id).story.designIdea).slice(0, 40)}`).join('\n  ')}`);
   console.log(`⏸ 停點 ③ 分鏡表｜請看：${url}｜請回：改好後說「可以」，或要改的地方`);
   return 0;
 }
@@ -580,12 +864,56 @@ export function applyCmd(P, flags, { loadLib }) {
   const planNow = fixed ? readJson(P.plan) || r.plan : r.plan;
   const designs = writeBriefs(P, planNow, cues);
   const todo = designs.filter((d) => isBlankDesign(readOpt(path.join(P.out, designFileOf(planNow.scenes.find((x) => x.id === d.id))))));
+  // ③ 勾選才改成內容設計動畫的段還沒有鏡位腳本：同一個設計師先寫腳本、接著做動畫（使用者已經在 ③ 決定要做，不再停）
+  const noScript = todo.filter((d) => !fs.existsSync(path.join(designsDir(P), `${d.id}.md`)));
+  const withScript = todo.filter((d) => !noScript.includes(d));
   if (todo.length) {
-    console.log(`→ 下一步：內容設計動畫一段派一個設計師做動畫，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息照抄，換掉 <段>：`);
-    console.log(`  你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。`);
+    console.log(`→ 下一步：內容設計動畫一段派一個設計師，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息照抄，換掉 <段>：`);
+    if (withScript.length) console.log(`  ${noScript.length ? `（${withScript.map((d) => d.id).join('、')}）` : ''}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。`);
+    if (noScript.length) console.log(`  ${withScript.length ? `（${noScript.map((d) => d.id).join('、')}）` : ''}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完接著照 design-build.md 做動畫。`);
     console.log('全部回來後定稿：');
   } else console.log('→ 下一步：定稿，停在停點 ④');
   console.log(`node shared/template/tools/build.mjs ${P2} --review`);
+  return 0;
+}
+
+// ---------- --design-status：內容設計動畫做到哪（主代理等設計師時看；沒進度超過 20 分鐘就重派） ----------
+
+// [x, y] 扣掉 spans 裡每一段，剩下的區間（依序）
+export const subtractSpans = ([x, y], spans = []) => spans.reduce((acc, [p, q]) => acc.flatMap(([u, w]) => (q <= u || p >= w ? [[u, w]] : [[u, Math.min(w, p)], [Math.max(u, q), w]].filter(([m, n]) => n - m > 1e-6))), y > x ? [[x, y]] : []);
+export const DESIGN_STALL_MIN = 20;   // 建議初值：一段約 12 分鐘（shared/style.md），20 分鐘還是空白畫布多半是卡住或被中斷
+export function designStatus(P, now = Date.now()) {
+  const plan = readJson(P.plan);
+  const mt = (f) => (fs.existsSync(f) ? fs.statSync(f).mtimeMs : null);
+  const ago = (t) => (t == null ? null : Math.max(0, Math.round((now - t) / 60000)));
+  return (plan?.scenes || []).filter((s) => s?.design).map((s) => {
+    const html = path.join(P.out, designFileOf(s)), script = path.join(designsDir(P), `${s.id}.md`);
+    const brief = path.join(P.project, 'work', 'briefs', `${s.id}.md`), sheet = path.join(P.project, 'work', 'audit-shots', `sheet-${s.id}.jpg`);
+    const blank = isBlankDesign(readOpt(html)), hasScript = fs.existsSync(script);
+    const last = blank ? Math.max(mt(brief) ?? 0, mt(script) ?? 0) || null : mt(html);
+    const audited = !blank && mt(sheet) != null && mt(sheet) >= mt(html);
+    const state = !blank ? `動畫做了（最後改動 ${ago(last)} 分鐘前）${audited ? '，audit 0 個 ✖ 的拼圖是最新的' : ''}`
+      : hasScript ? `腳本寫好、動畫還沒動手（腳本 ${ago(mt(script))} 分鐘前）` : `還沒動手（派出 ${ago(mt(brief)) ?? '?'} 分鐘）`;
+    // 卡住：空白畫布從派出（或腳本寫好）起 20 分鐘沒動；或動畫做了一半，最後改動 20 分鐘前、之後沒有 audit 過（拼圖比檔舊）
+    const stalled = last != null && ago(last) >= DESIGN_STALL_MIN && (blank || !audited);
+    return { id: s.id, blank, script: hasScript, audited, idle: ago(last), state, stalled };
+  });
+}
+export function designStatusCmd(P) {
+  const list = designStatus(P);
+  if (!list.length) { console.log('沒有內容設計動畫段（plan.json 沒有 "design": true）'); return 0; }
+  console.log(`內容設計動畫 ${list.length} 段：`);
+  for (const d of list) console.log(`  ${d.id}：${d.state}${d.stalled ? `　⚠ 超過 ${DESIGN_STALL_MIN} 分鐘沒進度` : ''}`);
+  const stalled = list.filter((d) => d.stalled);
+  if (stalled.length) {
+    console.log(`→ 下一步：停掉原本負責 ${stalled.map((d) => d.id).join('、')} 的設計師，重派（同一則回覆一次派出，派工訊息照抄，換掉 <段>）：`);
+    const started = stalled.filter((d) => !d.blank), noScript = stalled.filter((d) => d.blank && !d.script), withScript = stalled.filter((d) => d.blank && d.script);
+    const tag = (g) => (stalled.length > g.length ? `（${g.map((d) => d.id).join('、')}）` : '');
+    if (started.length) console.log(`  ${tag(started)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。動畫檔已經有內容：照 .agents/skills/auto-edit-motion/references/design-build.md 用 edit 接著改，不要整份重寫；跑 audit，0 個 ✖ 就交。`);
+    if (withScript.length) console.log(`  ${tag(withScript)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。先 write 骨架就跑 audit，之後只用 edit 補。`);
+    if (noScript.length) console.log(`  ${tag(noScript)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完接著照 design-build.md 做動畫。`);
+  } else if (list.every((d) => d.audited)) console.log(`→ 下一步：全部做好了，定稿：\nnode shared/template/tools/build.mjs --project ${rel(P.project)} --review`);
+  else console.log('→ 下一步：還在做，等設計師回覆（不要用 sleep 迴圈等）');
   return 0;
 }
 
@@ -740,7 +1068,8 @@ export async function reviewCmd(P, flags) {
   const url = startEditor(P, '完成影片預覽') || '（editor.mjs 沒有開起來：跑 node shared/template/tools/editor.mjs ' + P2 + '）';
   appendStop(P.project, { stop: '④ 完成影片預覽', state: '待回覆' });
   // 使用者看預覽的時候先把整支 render 起來（低優先權），說「輸出」就不用再等一個片長
-  if (fs.existsSync(path.join(TOOLS, 'deliver.mjs')) && !flags['no-prerender']) tool('deliver.mjs', ['--project', P.project, '--prerender', ...(P.templateArg || [])], { timeout: 15000 });
+  // 預覽只是把 HTML 疊在影片上，不用 render；使用者說「輸出」才 render（要先在背景算才加 --prerender）
+  if (fs.existsSync(path.join(TOOLS, 'deliver.mjs')) && flags.prerender) tool('deliver.mjs', ['--project', P.project, '--prerender', ...(P.templateArg || [])], { timeout: 15000 });
   console.log(`⏸ 停點 ④ 完成影片預覽｜請看：${url}｜請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」`);
   return 0;
 }

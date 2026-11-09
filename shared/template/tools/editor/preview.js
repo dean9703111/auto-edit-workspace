@@ -275,7 +275,15 @@ export class PlayerPreview {
     });
     p.addEventListener('timeupdate', (e) => { const ct = e.detail?.currentTime; if (Number.isFinite(ct)) this.outT = ct; });
     for (const ev of ['error', 'playbackerror', 'runtimeprotocolerror']) {
-      p.addEventListener(ev, (e) => { this.failed = e.detail?.message || e.detail?.reason || ev; this.app.onPlayerError?.(this.failed); });
+      p.addEventListener(ev, (e) => {
+        const d = e.detail || {}, er = d.error;
+        // playbackerror 的原因在 detail.error（DOMException）：播放被暫停／換時間打斷是正常操作，不算出錯
+        if (er?.name === 'AbortError') return;
+        // 瀏覽器擋住沒點擊就播放的聲音：播放器沒壞，點一下再播（影片那邊播放器自己停了）
+        if (er?.name === 'NotAllowedError') { if (d.source === 'video') this._playing = false; this.app.onPlayerBlocked?.(); return; }
+        this.failed = d.message || d.reason || (er ? `${er.name || 'Error'} ${er.message || ''}`.trim() : ev);
+        this.app.onPlayerError?.(this.failed);
+      });
     }
     this.host.append(p);
     this.p = p;

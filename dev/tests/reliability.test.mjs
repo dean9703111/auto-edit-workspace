@@ -28,7 +28,7 @@ function mergeProject() {
   return { project, plan: path.join(work, 'hyperframes', 'plan.json') };
 }
 const planKey = (f) => JSON.parse(fs.readFileSync(f, 'utf8')).scenes[0].slots.key;
-const merge = (project, ...extra) => tool('build.mjs', ['--project', project, '--merge-drafts', ...extra]);
+const merge = (project, ...extra) => tool('build.mjs', ['--project', project, '--merge-drafts', '--no-storyboard', ...extra]);
 
 test('--merge-drafts：第一次照寫；草稿改了、plan 沒人動過可以再合併；plan 被改過就 ✖ 不蓋，--force 才蓋，每次備份都留著', () => {
   const { project, plan } = mergeProject();

@@ -1,13 +1,13 @@
 // 011 示意動畫（x-scene，kit/illus.js 元件）的 audit 規則（specs/contracts/illus.md §4、§5；cli-003.md §2.3e）
-//   ILLUS_BUILTIN                       kit/illus.js 的 20 個內建元件（dev/tests/audit.test.mjs 對 illus.js 的 COMP 逐項比）
+//   ILLUS_BUILTIN                       kit/illus.js 的 22 個內建元件（dev/tests/audit.test.mjs 對 illus.js 的 COMP 逐項比）
 //   illusOf(html)                       → { used: [data-illus 名], src: [data-illus-src 路徑], registered: [ILLUS.register 名] }
 //   illusNameFindings({ item, html, file, local })  → ✖ 不認得的 data-illus（畫廊沒有、沒 register）、data-illus-src 不在 illus-local/
 //   illusSrcOwners(text, items, htmlOf) → 頁面錯誤「[ILLUS] 讀不到 data-illus-src=…」是哪幾段（scriptErrors 用，升成那一段的 ✖）
-//   judgeIllus(meas, ctx)               → 每個取樣時刻（只量有 .il 元件的段）：⚠ 標籤超過 10 字、⚠ 完成態插圖群太小、
+//   judgeIllus(meas, ctx)               → 每個取樣時刻（只量有 .il 元件的段）：✖ 字壓到插圖、⚠ 標籤超過 10 字、⚠ 完成態插圖群太小、
 //                                         ⚠ layout-row-align（段裡沒有 data-layout 時才量手排的元件；有就交給 audit-layout.mjs）
 //   illusMotionFindings(motion, ctx)    → 時間軸：⚠ 同一個東西亮滅兩次以上（閃爍）、⚠ 連接線在元件還沒進場完就開始描
 // 量版面時 .il>svg 的描邊外擴 2 px（illus.css 的 overflow: visible、描邊 4 px 一半在 viewBox 外）：audit-page.mjs 量 rect 時已加上 IL_STROKE
-import { fmtT } from './audit-rules.mjs';
+import { fmtT, isAnc } from './audit-rules.mjs';
 
 export const ILLUS_BUILTIN = ['phone', 'tripod', 'phoneTripod', 'laptop', 'monitor', 'cloud', 'personBust', 'pgPerson', 'personTop', 'desk', 'stage', 'cone',
   'waveform', 'progress', 'energy', 'fileVideo', 'window', 'searchBar', 'badge', 'recPill', 'stopwatch', 'bookmark'];
@@ -17,6 +17,8 @@ export const ALIGN_NEAR = [4, 16];       // 手排（不在 data-layout 裡）�
 export const SMALL_LONG = 0.7;          // 插圖群的長邊佔卡片內部 ≥ 70% 就不算太小
 export const SMALL_MIN = 0.5;           // 插圖群外框 < 卡片內部面積 50%：主角不是圖（2026-10-31 參考範例只佔一半，被嫌像字卡）
 export const BLINK_MAX = 1;              // 同一個元素退場後再出現的次數上限（casebook.md:486 依序出現、不明滅閃爍）
+export const TEXT_ON_ILLUS = 6;          // 字（有底框就算整個框）和插圖畫出來的範圍交疊超過 6×6 px：字壓在圖上（區塊重疊不量 svg 線稿，這裡補）
+export const ILLUS_SURFACE = ['stage'];  // 本來就拿來放字的表面：地台正面是主色帶，x-desk 的站名就寫在上面
 
 const uniq = (a) => [...new Set(a)];
 const codeOf = (html) => String(html || '').replace(/<!--[\s\S]*?-->/g, '');
@@ -63,8 +65,26 @@ export function judgeIllus(meas, ctx) {
   const out = [];
   if (!meas || meas.missingHost || !meas.illus || !ctx.item) return out;
   const base = { id: ctx.item.id, label: ctx.item.label, t: ctx.t, kind: ctx.kind };
-  const push = (rule, el, msg, fix, data = {}) => out.push({ ...base, level: 'warn', rule, el, msg, fix, data });
+  const push = (rule, el, msg, fix, data = {}, level = 'warn') => out.push({ ...base, level, rule, el, msg, fix, data });
   const els = (meas.els || []).filter((e) => !e.moving && (e.alpha ?? 1) >= 0.05);
+  // ✖ 字壓到插圖：標籤蓋在手機、筆電這些線稿上，字和圖都看不清（區塊重疊把 svg 線稿排除了，量不到這種）
+  //   插圖範圍用 shapeRect（畫出來的形狀，不是整個 svg 框）；字有底框就算整個框，沒有就算字的墨跡
+  const byI = new Map((meas.els || []).map((e) => [e.i, e]));
+  const art = els.filter((e) => e.il && !ILLUS_SURFACE.includes(e.ilName));
+  for (const T of els.filter((e) => e.text && e.chars > 0 && !e.il && !e.allowOverlap)) {
+    const tr = T.painted ? T.rect : T.inkRect || T.textRect;
+    if (!tr) continue;
+    for (const G of art) {
+      if (isAnc(byI, T, G)) continue;
+      const gr = G.shapeRect || G.rect;
+      const w = Math.min(tr[2], gr[2]) - Math.max(tr[0], gr[0]), h = Math.min(tr[3], gr[3]) - Math.max(tr[1], gr[1]);
+      if (w <= TEXT_ON_ILLUS || h <= TEXT_ON_ILLUS) continue;
+      const nm = G.desc.near || G.desc.id || '插圖';
+      push('text-on-illus', T.desc, `字壓到插圖：「${T.desc.text || T.desc.id}」蓋到 ${nm} ${Math.round(w)}×${Math.round(h)}px`,
+        `把字移到插圖旁邊的空位（至少隔 16px），或在講完那一拍後 P.out 收掉；要顯示在螢幕裡的內容改用元件的螢幕狀態（screen=…）。真的要疊（例：貼在螢幕上的提示）就在字的元素加 data-layout-allow-overlap，並在回報寫理由`, { with: G.desc }, 'error');
+      break;
+    }
+  }
   // ⚠ 字只當標籤：標題列以外的字 > 10 字（完整句子交給字幕）
   for (const e of els) {
     if (!e.text || e.title || !(e.chars > LABEL_MAX)) continue;

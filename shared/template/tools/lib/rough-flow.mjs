@@ -576,7 +576,7 @@ export async function roughFlow(P, flags = {}) {
   const v1 = M.readV1(f.v1);
   const fps = roughInfo.fps || 30;
   const st = cutStats(v1, fps, mainInfo.duration ?? 0, roughInfo.duration ?? 0, snap.cutOut);
-  if (st.high) warns.push(`⚠ 剪掉比例過高：${clock(mainInfo.duration ?? 0)} → ${clock(roughInfo.duration ?? 0)}（剪掉 ${Math.round(st.ratio * 100)}%：NG ${Math.round(st.ngSec)}s、停頓 ${Math.round(st.pauseSec)}s）→ 聽 work/rough.mp4 開頭 1 分鐘：尾音或小聲的字被切掉就重跑 node shared/template/tools/media.mjs rough --project ${pj} --edit "audio:-26dB" --again（還切到就 -30dB）；錄影裡本來就有很長的空檔就不用管`);
+  if (st.high) warns.push(`⚠ 剪掉比例過高：${clock(mainInfo.duration ?? 0)} → ${clock(roughInfo.duration ?? 0)}（剪掉 ${Math.round(st.ratio * 100)}%：NG ${Math.round(st.ngSec)}s、停頓 ${Math.round(st.pauseSec)}s）→ 你聽不到聲音，不要自己分析音訊：把這行貼給使用者，請他在字幕預覽聽開頭 1 分鐘，照常往下做；他說尾音或小聲的字被切掉才重跑 node shared/template/tools/media.mjs rough --project ${pj} --edit "audio:-26dB" --again（還切到就 -30dB）；錄影裡本來就有很長的空檔就不用改`);
 
   // 檢查黑畫面、逐字稿（沒講稿或要重轉時）、只有聲音的區間：同時跑
   const hasScript = exists(f.script);

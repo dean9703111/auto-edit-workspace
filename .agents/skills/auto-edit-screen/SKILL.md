@@ -12,20 +12,20 @@ version: 0.1.0
 |---|---|---|---|---|
 | `assets/screen/`、`assets/images/`，或「只有聲音」區間 | `media.mjs scan`、`media.mjs frame --at --grid` | `work/media/notes/`、草稿裡的 media 段 | 每段講解對到同一個操作；「只有聲音」的區間全部蓋住 | 沒有（併進 ③） |
 
-做法的唯一定義：USAGE.md 第 5 節，要用才讀那一小節（寫法 5.3、座標 5.4、標註 5.5；邊錄邊講的錄影 5.7），不整節讀；節奏與標註規則：style.md「螢幕錄影與圖片」。
+寫法照 `node shared/template/tools/build.mjs --project projects/<專案> --spec media`；細節要用才查 USAGE.md 第 5 節那一小節（寫法 5.3、座標 5.4、標註 5.5；邊錄邊講的錄影 5.7），不整節讀；節奏與標註規則：style.md「螢幕錄影與圖片」。
 
 ## 開始前
 
 | 條件（看得到的事實） | 做法 |
 |---|---|
 | 你是盤點素材的子代理 | 只做步驟 1，只寫自己那份筆記 |
-| 你是配錄影的子代理 | 只寫 `work/media/frames/`，結果回報給主代理寫草稿（AGENTS.md「子代理分工」） |
+| 你是寫分章草稿的子代理 | 照步驟 2–3 把 media 段寫進自己那份草稿（`work/drafts/<chNN>.json`），不寫別的檔 |
 | 錄影已經接進主軌（`media.mjs scan` 的 index.md 有「已經接進主軌的邊錄邊講錄影」，plan.json 有 `sync01`…） | 那支不用配，sync 段的 `from`／`to`／`in` 不要改；要加紅框、運鏡就寫在 sync 段上（USAGE.md 5.7） |
 | `work/media/notes/` 已經有這支的筆記、素材沒換 | 跳過步驟 1 |
 
 ## 步驟
 
-**1. 盤點：看素材、寫筆記**（不用等使用者；`media.mjs prep` 已經掃好）
+**1. 盤點：看素材、寫筆記**（不用等使用者。`work/media/index.md` 已經有就不要跑下面這條：`media.mjs prep` 掃過了，重跑會把每支錄影重新分析一次。盤點子代理一律不跑）
 
 ```
 node shared/template/tools/media.mjs scan --project projects/<專案>
@@ -38,7 +38,7 @@ node shared/template/tools/media.mjs scan --project projects/<專案>
 ```
 
 圖片一批一個檔，寫成陣列：`[{ "file": "assets/images/a.png", "what": "…", "keywords": ["…"] }]`。`keywords` 寫講解可能會說的詞，工具用它把素材配到講到那個詞的句子（`work/分鏡素材/chNN.md` 的「素材候選」）。
-完成判準：每支錄影、每批圖片都有筆記；`work/media/index.md` 列的「只有聲音」區間已知道。
+完成判準：每支錄影、每批圖片都有筆記。
 常見錯誤：素材檔名有空白、括號 → 指令照 index.md 印的檔名加雙引號；筆記寫太細 → 一支錄影幾個段落就夠，細節之後看 events.md。
 
 **2. 對字幕配起點**（寫草稿時）
@@ -78,7 +78,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check-draft <
 - [ ] 只有聲音的區間全部蓋住
 - [ ] 錄影段沒放下方資訊卡（style.md「螢幕錄影與圖片」）
 - [ ] 段尾沒露出下一步、沒露出個資；停住的畫面都寫了 `hold`
-- [ ] 當子代理時沒有寫任何檔
+- [ ] 當子代理時只寫自己那份筆記（盤點）或草稿（分章）
 
 ## 退路表
 
@@ -86,7 +86,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check-draft <
 |---|---|---|
 | `src：找不到 assets/screen/… → 檔名要和專案的 assets/ 資料夾裡一模一樣（現有：…）` | 照括號裡的檔名改 | 停下來回報：指令、錯誤原文、已經試過什麼 |
 | `素材 … 長 Ns；從第 Ns 起播 Ns 要用到第 Ns` | `in` 往前、`to` 提早或 `speed` 改小，或拆兩段 | 停下來回報 |
-| `… 超出素材範圍 W×H` | 重跑步驟 3 讀座標 | 停下來回報 |
+| `… 超出素材範圍 W×H` | 重跑步驟 2 的 `media.mjs frame --grid` 讀座標 | 停下來回報 |
 | `只有聲音的區間 …–… 有 Ns 是黑畫面` | 把前一段的 `to` 延到下一段的 `from`（0 秒相接），或加一段 media；沒有對得上講解的錄影或圖片 → 不要硬配，交回主代理把這個區間當一段講解做情境判定（`auto-edit-storyboard` 步驟 5），做成不透明的全幕情境動畫（介面操作用 `x-ui-mock`），回報寫「<區間> 沒有對應素材，改做動畫」 | 停下來回報 |
 | 說明卡、聚光燈、箭頭的 ✖ 寫「期間不能有運鏡」 | 推近的 `dur` 結束時間提早到標註 `at` 之前，或拉回全景改到標註退場之後 | 停下來回報 |
 | 說明卡 ✖ 寫完整可讀不夠、或 `side` 放不下 | `until` 往後延；`side` 照訊息改，或不寫讓 build 自動挑 | 停下來回報 |
@@ -97,12 +97,11 @@ node shared/template/tools/build.mjs --project projects/<專案> --check-draft <
 
 ## 回報格式
 
-當子代理時只回一行；每段一列：
+當子代理時只回一行：盤點是 `<檔名> 筆記 <N> 段`；分章草稿照 `.agents/skills/auto-edit-storyboard/references/chapter-worker.md` 的「回報」。配對結果寫在草稿裡，不貼表。
+
+主代理自己配時：
 
 ```
-| 句號 | 素材檔名 | in（sheet 第幾格） | speed | 運鏡／紅框／標註／放大鏡座標 | 理由 |
-|---|---|---|---|---|---|
-| #20–#24e | assets/screen/操作示範.mp4 | 12.5（sheet-01 #7） | 1 | moves #20+0.5 [0,120,640,360]；callouts #21「設定」[40,200,180,60]；clicks #21@設定 | 講解「打開設定頁」＝sheet #7–#10 |
-只有聲音的區間：全部蓋住（或：還差 1:10.00–1:12.00）
-我沒有改的東西：plan.json、storyboard.md、rough.srt、shared/
+media <N> 段（<素材檔名>…）；只有聲音的區間：全部蓋住（或：還差 1:10.00–1:12.00）
+驗證：--check-draft <chNN> → ✖ 0、⚠ <N>
 ```

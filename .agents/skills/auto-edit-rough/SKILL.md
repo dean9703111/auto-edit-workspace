@@ -21,8 +21,8 @@ NG＝同一句話講了兩次以上，只保留最後一次完整的；講到一
 
 | 剪乾淨的數字 | 值 |
 |---|---|
-| 靜音門檻 | 預設 `-20dB`（很小聲的錄音工具自動降）；尾音被切放寬到 `-26dB`、`-30dB`；自言自語沒剪收緊到 `-16dB` |
-| 字幕 | 一則＝講稿一行（完整語句）；每則最多 18 字（直式 10 字），超過在「、，」處拆；同一口氣的短行併；不顯示「，。；：」，保留「、！？」 |
+| 靜音門檻 | 預設 `-20dB`（很小聲的錄音工具自動降）；尾音被切放寬到 `-26dB`、`-30dB`（使用者說了才改）；自言自語沒剪收緊到 `-16dB`（使用者說了才改） |
+| 字幕 | 講稿一行原則上是一則（完整語句）；每則最多 18 字（直式 10 字），超過在「、，」處拆；同一口氣的短行併（都是 `srt-align` 做，不要自己拆併）；不顯示「，。；：」，保留「、！？」 |
 
 ## 開始前
 
@@ -32,7 +32,7 @@ NG＝同一句話講了兩次以上，只保留最後一次完整的；講到一
 | `work/rough.mp4` 已經存在 | 先問使用者要不要重剪（會蓋掉），要才加 `--again` |
 | 停點紀錄最後一列是「① 剪輯清單｜待回覆」 | 不重做；使用者的回覆照下面「停點」那張表處理 |
 | 使用者說直式、短影片 | `prep` 加 `--format portrait` |
-| 沒有 `講稿.md` | 字幕只轉繁體、補標點，不猜內容（AGENTS.md 規則 4） |
+| 沒有 `講稿.md` | 工具會轉繁體、照標點切成子句；你不用補標點，也不猜內容（AGENTS.md 規則 4） |
 
 ## 步驟
 
@@ -55,7 +55,7 @@ node shared/template/tools/media.mjs rough --project projects/<專案> --said "�
 一條做完：讀 cuts.md、剪掉 NG 與停頓、驗證、對字幕、記剪接點，有邊錄邊講的錄影就同步。以 cuts.md 的「剪」欄為準（使用者在頁面取消的不剪）。
 跑完會印「字幕預覽」網址（瀏覽器看字幕疊在畫面上，使用者可以直接改字）：照抄給使用者，不用等他看完，接著做下一步；使用者改過的字幕以他為準（AGENTS.md 規則 10）。
 完成判準：印「初剪完成」「srt-align」「剪接點」「驗證」四行，verify-rough ✓。
-常見錯誤：⚠ 剪掉比例過高 → 聽開頭，尾音被切就加 `--edit "audio:-26dB"` 再跑（`--again`）；plan.json 已經用 #N 時字幕改動 ✖ → 加 `--remap-plan`。
+常見錯誤：⚠ 剪掉比例過高 → 你聽不到聲音，不要自己分析音訊。把 ⚠ 原文貼給使用者，請他在字幕預覽聽開頭 1 分鐘，照常往下做；使用者說尾音被切，才跑 `node shared/template/tools/media.mjs rough --project projects/<專案> --edit "audio:-26dB" --again`，還切到再改 `-30dB`。plan.json 已經用 #N 時字幕改動 ✖ → 加 `--remap-plan`。
 
 **3. 接下一步**
 
@@ -63,9 +63,9 @@ node shared/template/tools/media.mjs rough --project projects/<專案> --said "�
 node shared/template/tools/status.mjs --project projects/<專案>
 ```
 
-照它印的下一條做，不用等使用者再說一次。使用者明說只要「剪乾淨」才停在這裡回報。
+照它印的下一條做，不用等使用者再說一次。使用者說「剪乾淨」「繼續」也照 status 接著做到停點 ②。只有使用者說「只要剪乾淨」「剪完先停」「先不要剪好看」才停在初剪回報。
 完成判準：交棒給 status 印的那支 Skill，或回報裡寫清楚停在初剪。
-常見錯誤：回報完就停著等「剪好看」→ 不用等，除非使用者明說。
+常見錯誤：回報完就停著等「剪好看」→ 不用等，除非使用者說了上面那三種話。
 
 ## 停點
 
@@ -98,7 +98,7 @@ node shared/template/tools/status.mjs --project projects/<專案>
 | `⏳ … 還在跑` | 再跑一次同一條指令（會接著等） | — |
 | `✖ work/rough.mp4 有 N 段黑畫面（共 Ns）原片同位置不黑 → 初剪壞了…` | 照它印的做，不要自己改 ffmpeg 或 auto-editor 參數 | 停下來回報：指令、錯誤原文、已經試過什麼 |
 | `✖ 剪輯沒有啟動成功`（editor.mjs） | 讀 log 最後幾行；停點那一行的網址改寫 `work/cuts.md`，請使用者直接改「剪」欄 | 照樣停點 ①，回報附 log 原文 |
-| 工具中途 ✖ 又看不懂 | 單獨指令還在（`media.mjs main`、`ng-scan`、`ng-snap`、`srt-align`、`cutpoints`），`--help` 看用法，單獨跑失敗的那一步 | 停下來回報 |
+| 工具中途 ✖ 又看不懂 | 停下來回報指令、✖ 原文、`work/.jobs/<prep 或 rough>-detail.log` 最後 20 行；不要拆開單獨跑 `media.mjs main`、`ng-scan`、`ng-snap`、`srt-align`、`cutpoints` | — |
 | 工具呼叫超過預算 | 停下來回報卡在哪 | — |
 
 ## 工具呼叫預算
@@ -115,7 +115,7 @@ node shared/template/tools/status.mjs --project projects/<專案>
 <停點 ① 那一行原文>
 ```
 
-剪完貼工具印的這五行：
+剪完貼工具印的這五行，最後附初剪的連結（AGENTS.md 規則 6）：
 
 ```
 初剪完成：原始 <長度>s → 初剪 <長度>s，剪掉 <N> 段
@@ -123,6 +123,7 @@ srt-align：<統計原文>；⚠：<原文或「無」>
 剪接點 <N> 個：ng <N>、pause <N>
 驗證：work/rough.mp4 → <長度>s、<寬>×<高>；verify-rough → ✓
 字幕預覽：<網址>
+<deliver-assets><media type="video" src="<工作區的絕對路徑>/projects/<專案>/work/rough.mp4" /></deliver-assets>
 ```
 
 ## 什麼時候讀 references/

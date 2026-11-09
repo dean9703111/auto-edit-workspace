@@ -152,7 +152,7 @@ export function formatErrors({ projectDir = null, plan = null, format = 'landsca
   const m = prog && fs.existsSync(prog) ? fs.readFileSync(prog, 'utf8').match(PROGRESS_RE) : null;
   const progFmt = m ? (m[1] === '直式' ? 'portrait' : 'landscape') : null;
   const pf = plan && FORMATS.includes(plan.format) ? plan.format : null;
-  if (pf && progFmt && pf !== progFmt) out.push(`plan.json 的 format 是 "${pf}"（${ZH[pf]}），work/製作進度.md 開工決策表「版式」是${ZH[progFmt]} → 兩邊改成一樣：plan.json 寫 "format": "${progFmt}"，或開工決策表改成${ZH[pf]}（新增停點紀錄列）`);
+  if (pf && progFmt && pf !== progFmt) out.push(`plan.json 的 format 是 "${pf}"（${ZH[pf]}），work/製作進度.md 開工決策表「版式」是${ZH[progFmt]} → 使用者剛說要改成${ZH[pf]}：跑 node shared/template/tools/status.mjs --project ${path.relative(process.cwd(), projectDir) || projectDir} --init --format ${pf}（改開工決策表，不要手改進度檔）；使用者沒要求改版式才把 plan.json 改回 "format": "${progFmt}"`);
   else if (!pf && progFmt === 'portrait') out.push('work/製作進度.md 開工決策表「版式」是直式，plan.json 沒寫 format → plan.json 第一層加 "format": "portrait"（放在 "version" 後面）');
   if (dims && dims.w < dims.h && format === 'landscape') out.push(`主軌是直的（${dims.w}×${dims.h}），版式是橫式 → plan.json 第一層加 "format": "portrait"；真的要做橫式就換橫拍素材`);
   if (dims && dims.w > dims.h && format === 'portrait') out.push(`直式專案的主軌是橫的（${dims.w}×${dims.h}）→ 請提供直拍素材（寬 < 高）放進 assets/camera/；橫式素材轉直式還不支援（P2）`);

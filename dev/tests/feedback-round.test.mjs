@@ -158,7 +158,7 @@ test('shotSheet：jpg、png 混著拼成一張；一張也可以；直式 6 欄'
 
 // ---------- save 預設不出預覽 ----------
 
-test('save 預設只存檔；--preview 才 render；new、use 自己帶；--no-preview 都不出；存進已確認的提案一定出', () => {
+test('022：save、new、use、存進已確認的提案都只存檔不 render；--preview 才 render；--no-preview 優先', () => {
   const p = mk();
   const c = ctxOf(p);
   // 假專案沒有影片：makePreview 跑了就會印「⚠ s12 的預覽沒做」，用這個判斷有沒有試
@@ -172,22 +172,22 @@ test('save 預設只存檔；--preview 才 render；new、use 自己帶；--no-p
   c.logs.length = 0;
   V.saveSeg(c.P, { preview: true, 'no-preview': true }, 's12', logTo(c));
   assert.equal(tried(), false, '--no-preview 優先');
-  // new：一定要有現在這版的預覽
+  // new：不 render（現在的樣子看 audit 拼圖與完成影片預覽）
   V.newProposal(c.P, {}, 's12', logTo(c));
-  assert.equal(tried(), true, 'new 自己帶預覽');
+  assert.equal(tried(), false, 'new 不 render');
   c.logs.length = 0;
-  // 存進已確認的提案（改版做完）：一定出預覽，才比較得了
+  // 存進已確認的提案（改版做完）：也不 render；要比較影片才加 --preview
   const f = path.join(p, 'work', 'versions', 's12', 'v2', '分鏡.md');
   fs.writeFileSync(f, fs.readFileSync(f, 'utf8').replace(/- （寫 1–5 條.*/, '- 收尾加蓋章'));
   V.acceptProposal(c.P, 's12', logTo(c));
   touch(p, 'work/hyperframes/compositions/x-a.html', `${X1}<!-- 蓋章 -->\n`);
   V.saveSeg(c.P, {}, 's12', logTo(c));
-  assert.equal(tried(), true, '存進提案那一版也試著出預覽');
-  // use：先把現在的樣子存起來（含預覽），和以前一樣
+  assert.equal(tried(), false, '存進提案那一版不 render');
+  // use：先把現在的樣子存起來，不 render
   c.logs.length = 0;
   touch(p, 'work/hyperframes/compositions/x-a.html', `${X1}<!-- 第三版 -->\n`);
   V.useVersion(c.P, {}, 's12', 'v1', logTo(c));
-  assert.equal(tried(), true, 'use 不受影響');
+  assert.equal(tried(), false, 'use 不 render');
   // CLI：--preview 收得到；舊參數 --no-preview 還能用
   const r = RUN('save', '--project', p, '--seg', 's05', '--no-preview');
   assert.equal(r.status, 0, r.stderr);
@@ -332,7 +332,10 @@ test('finish：build → audit 改到的段 → 存版本 → r<N>.md → ④ �
   assert.equal(calls.build, 1);
   assert.deepEqual(calls.audit, [['s05', 's12']], 'audit 只量改到的段，錄影段不送');
   assert.deepEqual(calls.snapshot, [[{ id: 's15', t: 13.5 }]], '錄影段截那段中間（假的 --check：第 4 段 12–15 秒）');
-  assert.equal(calls.prerender, 1, '過了才在背景先 render');
+  assert.equal(calls.prerender, 0, '預設不在背景先 render（預覽不用 render）');
+  const again = stepsOf();
+  V.finishRound(c.P, { prerender: true }, () => {}, again.steps);
+  assert.equal(again.calls.prerender, 1, '加 --prerender 才在背景先 render');
   const out = log.join('\n');
   assert.match(out, /^回饋 r1：s05、s15、s12/);
   assert.match(out, /build：✖ 0、⚠ 0/);

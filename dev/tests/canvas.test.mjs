@@ -172,7 +172,7 @@ test('captionZoneArg（FR-032）、formatErrors（FR-004、決定 5）、字幕�
   prog('直式（短影片）');
   assert.match(formatErrors({ projectDir: d, plan: {}, format: 'portrait' })[0], /^work\/製作進度\.md 開工決策表「版式」是直式，plan\.json 沒寫 format → plan\.json 第一層加 "format": "portrait"/);
   prog('橫式（主軌 1920×1080）');
-  assert.match(formatErrors({ projectDir: d, plan: { format: 'portrait' }, format: 'portrait' })[0], /^plan\.json 的 format 是 "portrait"（直式），work\/製作進度\.md 開工決策表「版式」是橫式 → 兩邊改成一樣/);
+  assert.match(formatErrors({ projectDir: d, plan: { format: 'portrait' }, format: 'portrait' })[0], /^plan\.json 的 format 是 "portrait"（直式），work\/製作進度\.md 開工決策表「版式」是橫式 → 使用者剛說要改成直式：跑 node shared\/template\/tools\/status\.mjs --project .+ --init --format portrait/);
   assert.match(formatErrors({ format: 'landscape', dims: { w: 1080, h: 1920 } })[0], /^主軌是直的（1080×1920），版式是橫式 →/);
   assert.match(formatErrors({ format: 'portrait', dims: { w: 1920, h: 1080 } })[0], /^直式專案的主軌是橫的（1920×1080）→ 請提供直拍素材（寬 < 高）/);
   fs.rmSync(d, { recursive: true, force: true });

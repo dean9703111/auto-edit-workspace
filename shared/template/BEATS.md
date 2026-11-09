@@ -1,12 +1,13 @@
 # 動畫分鏡查表（給 AI 查）
 
-分鏡表（停點 ③）裡，每段情境動畫（`x-*`、04 家族）都要附一張「動畫分鏡」：一拍一列，寫講到哪個詞、畫面上出現什麼、用哪個具名動作、觀眾看哪裡、配哪顆音效。使用者在停點 ③ 確認後，做動畫（`auto-edit-motion`）照表一拍一拍做。字卡（06／07／12／13）不用寫。
+分鏡表（停點 ③）裡，每段情境動畫（`x-*`、04 家族）都有一張「動畫分鏡」：一拍一列，寫講到哪個詞、畫面上出現什麼、用哪個具名動作、觀眾看哪裡、配哪顆音效。字卡（06／07／12／13）沒有。
+這份給寫鏡位腳本的設計師、寫改版分鏡（`work/versions/<段>/v<N>/分鏡.md`）的人查動作名稱（§2）和表頭（§1）。分章草稿只用 §5.4 的表挑 `x-scene` 的元件和拍；畫廊沒有的物件，parts 那一項寫 `icon`（lucide 名稱），不新畫 SVG。`work/storyboard.md` 由 `build.mjs --storyboard` 產生（模板段的動畫分鏡照模板自動寫），不要手改；§3、§4 的拍型是模板內建的拍，只當參考。內容設計動畫（`design: true`）的鏡位腳本照 `auto-edit-motion` 的 `references/design-script.md` 寫，不套 §3–§5 的拍型和位置寫法。
 這份只做查表：秒數與曲線照 `shared/style.md`「節奏」，版面與情境照 `shared/template/SITUATIONS.md`，分鏡表其他欄位照 `shared/template/USAGE.md` 2.3。
 
 ## 1. 怎麼寫一張動畫分鏡（照抄、填空）
 
 1. 查 `SITUATIONS.md` §3 那一列的「拍型」欄（A–I；示意動畫是 S，看本檔 §5）；寫「待定」的看本檔 §4。
-2. 在 `work/storyboard.md` 那一段的「截圖觀察」下面，加標題 `#### 動畫分鏡 <段 id>`（例：`#### 動畫分鏡 x05`），再把本檔 §3 那個拍型的整張表複製過去。表頭照抄，一個字都不能改（audit 會讀這張表）：
+2. 標題寫 `#### 動畫分鏡 <段 id>`（例：`#### 動畫分鏡 x05`），下面貼本檔 §3 那個拍型的整張表。寫在改版的 `work/versions/<段>/v<N>/分鏡.md`，`work/storyboard.md` 不要手改。表頭照抄，一個字都不能改（audit 會讀這張表）：
 
    ```
    | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
@@ -17,7 +18,7 @@
    - 「段起點」照寫，不填句號（那一拍由 build 的轉場做，檔裡不用有那句的 `P.at`）。
    - `#__` 換成句號：`#N`（那句開頭）、`#N@詞`（講到那個詞）、`#Ne`（那句結尾）。站名、項目、數字在句子中間，一定寫 `#N@詞`。
    - `____` 換成畫面上的字（標題、站名、項目、數字），照字幕裡的寫法。
-   - 「開場（依前段）」換成實際那一個：前一段是講者或疊加卡 → `色帶擦開；子母畫面飛入；長出（主卡）`；前一段也是全畫面 → `換卡不換景`。
+   - 「開場（依前段）」換成實際那一個：前一段是講者或疊加卡 → `色帶擦開；子母畫面飛入；長出（主卡）`；前一段也是全畫面 → `換卡不換景`。內容設計動畫的鏡位腳本照寫 `開場（依前段）`，不用換。
    - 「站 k」「第 k 條」「時間點 k」這種一列代表好幾拍的，展開成每站（每條）一列，拍號照順序編。
 4. 「動態」欄只寫 §2 語彙表的「名稱」，括號裡寫對象（例：`聚焦（站 2）`、`逐字上浮（標題）`）；同一拍幾個動作用「；」隔開；`＋0.35`＝綁句點後 0.35 秒，`−0.2`＝綁句點前 0.2 秒。不寫語彙表沒有的動作（「閃一下」「放大很多」這種自由描述）。
 5. 不自己加拍、刪拍、換動作：拍型是預設，要改的是使用者（停點 ③ 他會直接改表）。站數、條數不同時，照拍型寫的範圍增減那幾列（例：A 流程 3–4 站）。
@@ -39,7 +40,7 @@
 
 ## 2. 語彙表（43 個具名動作）
 
-「對應」欄寫 build 自動的（色帶擦開、子母畫面飛入、色帶收回），分鏡照樣寫，程式不用寫。做動畫時每個名稱用「對應」欄的 `P.*`（用法見 `shared/template/USAGE-reference.md` R7.3）。
+「對應」欄寫 build 自動的（色帶擦開、子母畫面飛入、色帶收回），分鏡照樣寫，程式不用寫。做動畫時每個名稱用「對應」欄的 `P.*`，寫法看 `.agents/skills/auto-edit-motion/references/design-build.md` 的語法速查。
 
 | 類 | 名稱 | 一句話效果 | 對應 `P.*`／內建 | 適用情境 |
 |---|---|---|---|---|
@@ -231,7 +232,7 @@
 
 ## 5. 示意動畫（拍型 S）
 
-講解在描述具體的動作、物件或過程（手機架上腳架試錄、檔案從手機傳到雲端、人走到手機旁按播放）時，畫面的主角是線條插圖（`shared/template/kit/illus-gallery.jpg` 的元件），不是卡片上的字。做法：`custom/x-scene.html` 骨架＋插圖元件，照分鏡一拍一拍組裝。
+講解在描述具體的動作、物件或過程（手機架上腳架試錄、檔案從手機傳到雲端、人走到手機旁按播放）時，畫面的主角是線條插圖（`shared/template/kit/illus-gallery.jpg` 的元件），不是卡片上的字。做法：`custom/x-scene.html` 骨架＋插圖元件，照分鏡一拍一拍組裝。內容設計動畫（`design: true`）不套這一節：鏡位腳本照 `auto-edit-motion` 的 `references/design-script.md` 寫（位置欄只寫 `full`、`panelTop`、`overlay`），不用 x-scene 骨架。
 
 ### 5.1 分鏡表多兩欄
 
@@ -273,8 +274,8 @@
 每個元件照這個順序選來源，前一種能用就不要往下（`shared/template/kit/illus-style.md` §1）：
 
 1. 畫廊裡有 → 直接用 `data-illus="<元件名>"`（畫廊每格下面有寫法）。
-2. lucide 圖示（`kit/icons.json`）單個或 2–3 個組合放進卡片、膠囊能表達 → 用圖示（來源寫「圖示組合」）。
-3. 都不行 → 照 `shared/template/kit/illus-style.md` 新畫一個 SVG。
+2. lucide 圖示單個或 2–3 個組合放進卡片、膠囊能表達 → 用圖示（來源寫「圖示組合」；名稱用 `build.mjs --icons` 查）。
+3. 都不行 → 照 `shared/template/kit/illus-style.md` 新畫一個 SVG（只有內容設計動畫能新畫，一段最多一個；`x-scene` 的分章草稿改用圖示）。
 
 相片、背景、質感圖不走這條；示意插圖一律是向量線條。
 
@@ -283,15 +284,15 @@
 | 元件 | 來源 | 怎麼來 |
 |---|---|---|
 | phoneTripod（landscape, rec） | 畫廊 | `data-illus="phoneTripod" data-orient="landscape" data-screen="rec"` |
-| 資料夾＋加號 | 圖示組合 | `icons.json` 的 `folder`＋`plus` 放進一顆膠囊 |
+| 資料夾＋加號 | 圖示組合 | 圖示 `folder`＋`plus` 放進一顆膠囊 |
 | router | 新建 SVG | 規格：router，建議尺寸 220×120，狀態 led／warn；描述：橫式機身＋兩根天線＋前面板三顆燈 |
 
 - 「新建 SVG」那一列的「怎麼來」照這個格式寫（工具會讀）：`規格：<名稱>，建議尺寸 <寬>×<高>，狀態 <a>／<b>；描述：<長什麼樣>`。名稱小寫英文開頭、只用英數；建議尺寸參考畫廊裡大小相近的元件。
-- 停點 ③ 使用者一起確認分鏡和插圖清單；新建的 SVG 在做動畫時才畫（`auto-edit-motion` 示意動畫分支），畫完拼成 `work/插圖清單.jpg` 和畫廊元件並排看。
+- 新建的 SVG 由內容設計動畫的設計師在做動畫時自己畫（`auto-edit-motion` 的 `references/design-build.md`「新畫線稿元件」）。
 
 ### 5.4 常見講解怎麼畫（作者定案過的畫法，先查這張再自己想）
 
-SITUATIONS.md §1 第 ② 題是「是」的段，先在這張找最像的一列，照「畫什麼」挑元件、照「怎麼動」排拍（`x-scene` DATA 2 的鍵：`in`、`state`、`move`、`line`、`count`、`check`、`focus`、`dim`）。元件名與狀態照 `kit/illus-gallery.jpg`；找不到的物件照 5.3 的順序（圖示組合 → 新建 SVG）。
+SITUATIONS.md §1 第 ② 題是「是」的段，先在這張找最像的一列，照「畫什麼」挑元件、照「怎麼動」排拍（`x-scene` DATA 2 的鍵：`in`、`state`、`move`、`line`、`count`、`check`、`focus`、`dim`）。元件名與狀態照 `kit/illus-gallery.jpg`；畫廊沒有的物件，parts 那一項寫 `icon`（lucide 名稱），不新畫 SVG。
 
 | 講解長這樣 | 畫什麼（元件・狀態） | 怎麼動（一拍一個詞） |
 |---|---|---|
@@ -299,14 +300,14 @@ SITUATIONS.md §1 第 ② 題是「是」的段，先在這張找最像的一列
 | 錄完跑到手機旁播放 | 正面：`personBust`、`phoneTripod`（landscape, rec），兩個隔開放 | move 人走到手機旁（綁「手機旁邊」）→ state rec→play → check |
 | 手機畫面太小，放到電腦上才發現問題 | `phone`（landscape, video）→ `monitor`（video），中間箭頭；問題標籤 | in 手機 → in 螢幕＋line → state video→warn → in 問題標籤（各綁那個毛病的詞） |
 | 上傳到雲端、再下載到電腦 | `phoneTripod` → `cloud` → `laptop`（blank）、`fileVideo`、`progress` | in 三站＋line → move 檔案到雲（progress count 0→100）→ move 到電腦 → state blank→play |
-| 以為可以收工，才發現很崩潰 | 前一拍的完成態＋`badge`（check）「收工」 | state check→warn；「崩潰」用判決句蓋章（SITUATIONS.md「判決句」列，`P.stamp`） |
+| 以為可以收工，才發現很崩潰 | 前一拍的完成態＋`badge`（check）「收工」 | state check→warn；「崩潰」這句判決後面接一段 fx 03 印章，或 07 重點字卡 `tone: "warn"`（x-scene 沒有蓋章） |
 | 多機拍攝：一支正面、一支側面 | 俯視：`desk`＋`personTop`（xsc-pre）；手機用 `smartphone` 圖示小卡＋`cone` 視角錐 | in 正面手機＋錐 → in 側面手機＋錐 → focus 兩支輪流（綁「正面」「側面」） |
 | 一支橫拍長片、一支直拍短影音 | `phoneTripod`（landscape, rec）、`phoneTripod`（portrait, rec） | in 兩支 → state 左 rec→video＋focus → state 右 rec→shorts＋focus |
 | 訪談：主持人、來賓各一支手機，切到講話的人 | 兩個 `personBust`（tone a／b）、各一支 `phone`（rec） | in 兩人 → in 兩支手機 → focus 主持人 → focus 來賓（各綁那個詞） |
 | 好幾支手機很難同時開始錄 | 3 支 `phoneTripod`（blank）、各一個 `recPill` | in 三支 → state blank→rec 一支一拍（不同時，看得出時間差）→ check 換成 `badge` warn「不同步」 |
-| 開始時間不同步，後製校正聲音 | 兩條 `waveform`（同 seed，第二條錯開） | in 兩條 → move 第二條對齊第一條 → 「崩潰」判決句蓋章 |
-| 在幾支手機間走來走去、很耗體力 | 俯視：`desk`＋`personTop`、2–3 支 `smartphone` 圖示小卡；`energy` | move 人繞一圈 → 體力格一拍熄一格（BEATS 沒有這個鍵：DATA 2 後面加 `P.out('#xsc-<id> .il-cell:nth-child(k)', T<k>)`） |
-| 上網搜尋很多工具，但都不順手 | `searchBar`、3 個 `window`（搜尋結果） | in 搜尋框（打字）→ in 三個結果 → state 各換 warn →「不順手」判決句蓋章 |
+| 開始時間不同步，後製校正聲音 | 兩條 `waveform`（同 seed，第二條錯開） | in 兩條 → move 第二條對齊第一條；「崩潰」接一段 fx 03 印章，或 07 重點字卡 `tone: "warn"` |
+| 在幾支手機間走來走去、很耗體力 | 俯視：`desk`＋`personTop`、2–3 支 `smartphone` 圖示小卡；`energy` | move 人繞一圈 → focus `energy`（體力條）。要體力格一格一格熄，模板做不到，在停點 ③ 勾成內容設計動畫 |
+| 上網搜尋很多工具，但都不順手 | `searchBar`、3 個 `window`（搜尋結果） | in 搜尋框（打字）→ in 三個結果 → state 各換 warn；「不順手」接一段 fx 03 印章，或 07 重點字卡 `tone: "warn"` |
 | 從想法到做出原型，只花一個小時 | 想法（`lightbulb` 圖示）→ `window`（原型）、`stopwatch`＋`recPill` | in 想法 → line → in 原型 → in 碼錶與 recPill，count 數 recPill 的 `.il-time` 0→60（`['#xsc-<id> .il-time', 0, 60, '']`，標籤寫「分鐘」）（綁「一個小時」） |
 | 一個 App／產品的 2–4 個功能或特色（「下載就能用、不用換卡、兩種系統都能用」） | 不用 `x-scene`：`x-callout`，主體換成 `phone`（portrait，畫面寫那個 App 的狀態），標籤是功能（各配一個 lucide 圖示） | 主體彈出 → 每個功能一拍：標籤彈出、引線接到手機（各綁那個功能的詞）→ 收尾全亮 |
 | 先存起來、這個免費工具幫我省很多時間 | `window`（影片縮圖）＋`bookmark`、`stopwatch` | in 縮圖 → state bookmark 未存→已存（綁「儲存」）→ in 碼錶 |

@@ -299,15 +299,15 @@ function lcsUnits(a, b) {
 // 一個欄位的文字對到哪一句、哪個詞、講到的秒數（完成影片）；找不到回 null（不報）
 // 對到的字至少 TEXT_SYNC.minMatch（3）：中文要連續 3 字以上，英文／數字只算整個 token（「AI」2、「Podcast」7、「1 小時」3）；
 // 取權重最大、一樣大取離出現時間最近的句。2 字的「字幕」「工具」到處都有，不猜
-export function spokenAt(text, cues, { near, from = -Infinity, to = Infinity } = {}) {
+export function spokenAt(text, cues, { near, from = -Infinity, to = Infinity, minMatch = TEXT_SYNC.minMatch } = {}) {
   const f = units(plainText(text));
-  if (f.u.reduce((s, x) => s + x.w, 0) < TEXT_SYNC.minMatch) return null;
+  if (f.u.reduce((s, x) => s + x.w, 0) < minMatch) return null;
   let best = null;
   for (const c of cues) {
     if (c.end - c.start < 1e-6 || c.start < from || c.start > to) continue;
     const g = units(c.text);
     const r = lcsUnits(f.u, g.u);
-    if (r.w < TEXT_SYNC.minMatch) continue;
+    if (r.w < minMatch) continue;
     const d = Math.abs(c.start - near);
     if (!best || r.w > best.r.w || (r.w === best.r.w && d < best.d)) best = { c, g, r, d };
   }
@@ -401,6 +401,11 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     const f = outDir ? path.join(outDir, '..', 'storyboard.md') : null;
     try { sheets = f && fs.existsSync(f) ? parseBeatSheets(fs.readFileSync(f, 'utf8')) : new Map(); } catch { sheets = new Map(); }
     return sheets;
+  };
+  // ③ 勾選後才寫鏡位腳本的內容設計動畫：分鏡表裡沒有，讀 work/designs/<段>.md
+  const designSheetOf = (seg) => {
+    const f = seg?.design && outDir ? path.join(outDir, '..', 'designs', `${seg.id}.md`) : null;
+    try { return f && fs.existsSync(f) ? parseBeatSheets(fs.readFileSync(f, 'utf8')).get(seg.id) ?? null : null; } catch { return null; }
   };
 
   if (!plan || typeof plan !== 'object' || Array.isArray(plan)) return { items: [], errors: ['plan.json 要是一個物件 { "version": 1, "scenes": [...] }'], warnings, globals: {} };
@@ -915,7 +920,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         if (!it.sample && (c.sec < it.start - 0.05 || c.sec > it.end + 0.05)) it.warnings.push(`${it.where} P.at('${ref}') 在 ${fmt(c.sec)}，不在這段 ${fmt(it.start)}–${fmt(it.end)} 裡 → 改綁這段裡的句子，或把 plan.json 這段的 to 延長`);
       }
       // work/storyboard.md 的「#### 動畫分鏡 <段 id>」排不排得下：拍序照講解、範例檔頭【D 下限】（停點 ③ 前就抓，不用等動畫做完）
-      const sheet = beatSheets().get(it.seg?.id) ?? (it.seg?.__sheet ? parseBeatSheets(it.seg.__sheet).get(it.seg.id) : null);
+      const sheet = beatSheets().get(it.seg?.id) ?? (it.seg?.__sheet ? parseBeatSheets(it.seg.__sheet).get(it.seg.id) : null) ?? designSheetOf(it.seg);
       if (sheet) {
         let tplRules = [], endExtra = 0;
         try {
@@ -1128,10 +1133,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       else if (!a.opaque && !b.opaque && a.key !== 'chapter-tag' && b.key !== 'chapter-tag' && a.handoff !== b.id && ov > 0.05) b.warnings.push(`${b.where} 和 ${a.id} 時間重疊 ${ov}s → 一段只放一個情境`);
     }
   }
-  // 同一個情境：custom 看 src（不同的情境動畫不算同一個，B-11 c）
-  const kindOf = (x) => (x.key === 'custom' ? `custom:${x.seg.src}` : x.key);
-  for (let i = 2; i < timed.length; i++) {
-    if (timed[i].key && timed[i].key !== 'media' && kindOf(timed[i]) === kindOf(timed[i - 1]) && kindOf(timed[i]) === kindOf(timed[i - 2])) timed[i].warnings.push(`${timed[i].where} 連續三段都是同一個情境 → 換一個情境或合併`);
+  // 同一個模板：模板動畫看 template，其他 custom 看 src（不同的情境動畫不算同一個，B-11 c）；相鄰兩段就提醒
+  const kindOf = (x) => (x.key === 'custom' ? (x.seg.template ? `tpl:${x.seg.template}` : `custom:${x.seg.src}`) : x.key);
+  for (let i = 1; i < timed.length; i++) {
+    if (timed[i].key && !['media', 'chapter', 'chapter-tag'].includes(timed[i].key) && kindOf(timed[i]) === kindOf(timed[i - 1])) timed[i].warnings.push(`${timed[i].where} 和前一段（${timed[i - 1].id}）用同一個模板 → 換一個模板或併成一段`);
   }
   // 連續 ≥ 5 段同一個版面家族（例：06／07／11 都是下方字卡）：畫面太單調
   const famRun = timed.filter((x) => !['chapter', 'chapter-tag'].includes(x.key));

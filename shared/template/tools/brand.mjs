@@ -348,11 +348,9 @@ async function bgCli(args) {
   const pv = await makePreview(out);
   if (pv.missing.length) { console.log(`還沒做：${pv.missing.join('、')} → 各寫一個 HTML，跑 ${pv.missing.map((k) => `--kind ${k}`).join('、')}（三張都有才產生 preview.jpg）`); return 0; }
   console.log(`→ ${shown(pv.file, root)}（三張並排：上排原圖、下排疊留空區框，1600×720）`);
-  console.log('下一步：把 preview.jpg 給使用者看，停下來等同意；同意後才複製進 shared/template/：');
-  for (const k of ['fs', 'side', 'ch']) {
-    const f = path.join(out, `bg-${k}.jpg`);
-    console.log(process.platform === 'win32' ? `  Windows：Copy-Item "${f}" "shared\\template\\bg-${k}.jpg"` : `  Mac：cp "${f}" "shared/template/bg-${k}.jpg"`);
-  }
+  console.log('下一步：把 preview.jpg 給使用者看，停下來等同意（停點 ⑥）。同意後照 auto-edit-style 步驟 4 存成風格包再套用，不要自己複製進 shared/template/：');
+  console.log(`  node shared/template/tools/brand.mjs pack <包名> --bg "${shown(out, root)}"`);
+  console.log('  node shared/template/tools/brand.mjs use <包名>');
   return 0;
 }
 

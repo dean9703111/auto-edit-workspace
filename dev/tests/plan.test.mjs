@@ -957,3 +957,12 @@ test('文字對時：fs-compare 整欄一起進，只看每欄第一項，改 be
   assert.equal(out.length, 1, JSON.stringify(out));
   assert.match(out[0].msg, /left\[0\].*→ beats\.leftAt 寫 "#2@/);
 });
+
+test('相鄰兩段用同一個模板 ⚠（換一個或併成一段）；不同模板、media 不報', () => {
+  const kp = (id, from, to, key) => ({ id, scene: 'key-point', from, to, slots: { lead: '前句', key } });
+  const same = run([kp('s1', '#1', '#2e', '甲'), kp('s2', '#3', '#4e', '乙')]);
+  assert.ok(byId(same, 's2').warnings.some((w) => /和前一段（s1）用同一個模板/.test(w)), byId(same, 's2').warnings.join('\n'));
+  assert.ok(!byId(same, 's1').warnings.some((w) => /同一個模板/.test(w)));
+  const apart = run([kp('s1', '#1', '#2e', '甲'), { id: 's2', scene: 'concept', from: '#3', to: '#4e', slots: { term: '名詞', desc: '說明' } }, kp('s3', '#5', '#6e', '丙')]);
+  assert.ok(!apart.items.some((it) => it.warnings.some((w) => /同一個模板/.test(w))));
+});

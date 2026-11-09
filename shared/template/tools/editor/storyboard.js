@@ -290,9 +290,17 @@ function renderSummary() {
 }
 
 // ---------- 任務列：這一頁要做的事一眼看完 ----------
+// 內容設計動畫候選（表頭有「構想」）：勾了才做
+function designInfo() {
+  const sec = state.sections.find(isDecide);
+  const pick = sec?.blocks.find((b) => b.type === 'table' && b.head.includes('構想') && b.head.some((h) => h.includes('☐')));
+  if (!pick) return null;
+  const col = pick.head.findIndex((h) => h.includes('☐'));
+  return { on: pick.rows.filter((r) => CHECKED.test(r.cells[col] ?? '')).length, total: pick.rows.length };
+}
 function quotesInfo() {
   const sec = state.sections.find(isDecide);
-  const pick = sec?.blocks.find((b) => b.type === 'table' && b.head.some((h) => h.includes('☐')));
+  const pick = sec?.blocks.find((b) => b.type === 'table' && b.head.some((h) => h.startsWith('卡上文字')) && b.head.some((h) => h.includes('☐')));
   if (!pick) return null;
   const col = pick.head.findIndex((h) => h.includes('☐'));
   const head = sec.blocks.filter((b) => b.type === 'heading').map((b) => b.text).find((t) => /金句/.test(t)) || '';
@@ -312,6 +320,8 @@ function renderTasks() {
     out.push(`<a class="sb-task${left ? ' todo' : ' ok'}" href="#sec-${esc(sec.key)}"><b>${left ? `要你決定 ${left} 件` : '要決定的事都回答了'}</b><span>共 ${asks.length} 件</span></a>`);
   }
   if (notes && canEdit()) out.push(`<a class="sb-task" href="#sec-${esc(sec.key)}"><b>待補的素材和提醒 ${notes} 件</b><span>不用回答也可以往下做</span></a>`);
+  const dz = canEdit() ? designInfo() : null;
+  if (dz) out.push(`<a class="sb-task" href="#sec-${esc(sec.key)}" data-to-designs><b>內容設計動畫 ${dz.on}／${dz.total} 段</b><span>${dz.on ? '勾了的會從空白畫布設計，要多花時間' : '都沒勾：全部照現在的版面，最快'}</span></a>`);
   const q = canEdit() ? quotesInfo() : null;
   if (q) out.push(`<a class="sb-task${q.on > q.max ? ' over' : ''}" href="#sec-${esc(sec.key)}" data-to-quotes><b>金句 ${q.on}／最多 ${q.max}</b><span>${q.on > q.max ? `多了 ${q.on - q.max} 則，AI 只會上 ${q.max} 則` : `${q.total} 則候選`}</span></a>`);
   const wish = canEdit() ? seg.filter(hasWish) : [];
@@ -863,10 +873,13 @@ $('finder')?.addEventListener('click', (e) => {
 });
 $('tasks')?.addEventListener('click', (e) => {
   if (e.target.closest('[data-resume]')) { $('tasks').dataset.resumed = '1'; resetFinder(); }
-  if (e.target.closest('[data-to-quotes]')) {
+  // 「需要我決定的事」裡有兩張勾選表：照表頭找（內容設計動畫候選有「構想」，金句有「卡上文字」）
+  const jump = e.target.closest('[data-to-quotes], [data-to-designs]');
+  if (jump) {
     e.preventDefault();
     resetFinder();
-    document.querySelector('.sb-sec.decide .sb-table')?.scrollIntoView({ block: 'center' });
+    const want = jump.matches('[data-to-designs]') ? '構想' : '卡上文字';
+    [...document.querySelectorAll('.sb-sec.decide .sb-table')].find((t) => [...t.querySelectorAll('th')].some((th) => th.textContent.startsWith(want)))?.scrollIntoView({ block: 'center' });
   }
   if (e.target.closest('a[href^="#"]')) resetFinder();
   if (e.target.closest('[data-next-wish]')) {

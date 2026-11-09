@@ -26,6 +26,7 @@ version: 0.1.0
 | 使用者說「換暗色」「換主題」「改回亮色」 | 只做步驟 6 |
 | 使用者說「有哪些風格」「這集用 XX 風格」「換回預設」 | 只做步驟 7 |
 | 使用者說「做一個風格包」「換成我的風格」 | 步驟 1–4，第 4 步存成新的一包 |
+| 會做到步驟 4（換背景、做風格包） | 開工先跑 `node shared/template/tools/brand.mjs list`，記下 ● 在哪一包；沒有 ● 就先跑 `node shared/template/tools/brand.mjs pack 原本-<YYYYMMDD>` 把目前的存起來，再做步驟 1，步驟 4 的 `use` 才不會卡住 |
 
 ## 步驟
 
@@ -45,9 +46,9 @@ node shared/template/tools/brand.mjs "#RRGGBB"
 node shared/template/tools/caps.mjs
 ```
 
-把能力表貼給使用者，照最後一行「可用的生圖路線」與 R9.3 路由表選第一條可用的路；寫一句選了哪條、為什麼。直式專案先沿用三張橫式背景（取中間），不用另做直式背景。
+把能力表貼給使用者。選路：在 R9.3 路由表找你這個模型那一列（MiniMax Code 是 MiniMax 系列、Claude Code 是 Claude 系列），從第一選擇往右找，第一個出現在 caps.mjs「可用的生圖路線」那一行裡的就用它（那一行的順序不是優先序）；寫一句選了哪條、為什麼。直式專案先沿用三張橫式背景（取中間），不用另做直式背景。
 完成判準：能力表已貼、選了一條路。
-常見錯誤：想幫使用者安裝 codex／mmx 或登入 → 不要，沒裝不裝、沒登入不登入，直接走下一條路（AGENTS.md 規則 3、工具注意事項）；使用者也要換暗色背景（`bg-fs-dark.jpg`、`bg-side-dark.jpg`、`bg-ch-dark.jpg`）→ HTML 路線還不能做暗色，走 mmx（`references/image-routing.md` 第 3 節的暗色提示詞）或使用者的圖，亮、暗各三張一起過停點 ⑥。
+常見錯誤：想幫使用者安裝 codex／mmx 或登入 → 不要，沒裝不裝、沒登入不登入，直接走下一條路（AGENTS.md 規則 3、工具注意事項）；使用者也要換暗色背景（`bg-fs-dark.jpg`、`bg-side-dark.jpg`、`bg-ch-dark.jpg`）→ HTML 路線還不能做暗色，走 mmx（`references/image-routing.md` 第 3 節的暗色提示詞）或使用者的圖，亮、暗各三張一起過停點 ⑥；沒有 mmx 也沒有使用者的圖，亮色三張照常換，暗色沿用目前的，回報寫「暗色背景沒換，要 mmx 或你給圖」。
 
 **3. 生成到暫存資料夾、驗證、預覽 → 停點 ⑥**（每條路的指令在 `references/image-routing.md`）
 
@@ -59,7 +60,7 @@ ffprobe -v error -show_entries stream=width,height -of csv=p=0 <暫存資料夾>
 ```
 
 第 1 行是 HTML 路線（USAGE-reference.md R9.4；`--kind` 依序 `fs`、`side`、`ch` 各跑一次，三張都有才產生 `preview.jpg`）；其他路線照 references 的指令，再用 references 的 ffmpeg 指令產生 `zones-fs.jpg`、`preview.jpg`。`--out` 不能是 `shared/template/` 裡面。
-完成判準：三張尺寸是 `1920,1080`／`960,1080`／`1920,1080`；`zones-fs.jpg`、`preview.jpg` 存在；`brand.mjs bg` 每張都印 `✔ 留空區乾淨`。
+完成判準：三張尺寸是 `1920,1080`／`960,1080`／`1920,1080`；`zones-fs.jpg`、`preview.jpg` 存在；留空區乾淨（HTML 路線看 `brand.mjs bg` 每張印 `✔ 留空區乾淨`；其他路線看 `zones-fs.jpg`、`zones-side.jpg`、`zones-ch.jpg` 的框裡沒有裝飾，references 第 5 節）。
 常見錯誤：尺寸不對 → 用 references 第 1 節的 `scale…crop` 指令裁成對的尺寸。
 
 **4. ⑥ 同意後：存成風格包、套用，重跑 build**
@@ -70,7 +71,8 @@ node shared/template/tools/brand.mjs use <名稱>
 node shared/template/tools/build.mjs --project projects/<專案>
 ```
 
-第 1 行把主色、外框、三張背景（暫存資料夾有 `bg-*-dark.jpg` 也一起）存進 `shared/template/styles/<名稱>/`；第 2 行換掉整個工作區（使用者只要這一集就跳過，改照步驟 7 寫 plan.json 的 `style`）。`use` 停下來說「不屬於任何包」→ 先 `brand.mjs pack <舊的名稱>` 把目前的存起來再 use。
+第 1 行把主色、外框、三張背景（暫存資料夾有 `bg-*-dark.jpg` 也一起）存進 `shared/template/styles/<名稱>/`；第 2 行換掉整個工作區（使用者只要這一集就跳過，改照步驟 7 寫 plan.json 的 `style`）。這兩行就是「同意後放進 shared/template/」，不要另外 cp 背景圖。包名：使用者有說就用；沒說用「<主色名>-<YYYYMMDD>」（例 `綠色-20261109`），回報寫出來。沒換主色就拿掉 `--color`。
+`use` 停下來說「不屬於任何包」：這次跑過步驟 1，開工時 ● 在某一包（或開工時已經先存成 `原本-<YYYYMMDD>`），就加 `--force` 再跑一次 use（只蓋掉這次換主色的半成品）；其他情況先 `brand.mjs pack <新名稱>` 把目前的存起來再 use。
 
 完成判準：回報改了哪些檔、走的是哪一條路；有專案時 build 0 個 ✖。
 常見錯誤：使用者說「重做」→ 回步驟 3，只重派要重做的那張；同一條路重做 2 次還不行就換下一條路（R9.3）。
@@ -106,7 +108,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 
 先跑 list 把清單貼給使用者（內建「預設」橘色、示範「藍圖」藍色；也可以請他打開 `shared/template/index.html`，上方「風格」選單可以直接預覽每一包、亮／暗）。只換這一集：重新讀 plan.json，在第一層寫 `"style": "<名稱>"`（不跑 use）；換回工作區目前的就刪掉 `style`。整個工作區換：跑 use（之後每集都用它）。這一步不用停點 ⑥（風格包已經是使用者同意過的檔）。
 完成判準：只換一集時 build 印 `風格包：<名稱>`；整個換時 list 的 ● 在那一包；build 0 個 ✖。
-常見錯誤：`✖ style：找不到風格包` → 名稱照 list 抄（資料夾名，含中文）；use 說「不屬於任何包」→ 先 pack 存起來，不要直接加 `--force`。
+常見錯誤：`✖ style：找不到風格包` → 名稱照 list 抄（資料夾名，含中文）；use 說「不屬於任何包」→ 先 pack 存起來，不要直接加 `--force`（步驟 4 換過主色的例外寫在步驟 4）。
 
 **8. 講者資料**（使用者說「講者設定成 <姓名>，頭銜 …」「不要講者介紹」，或 `status.mjs`／`--check` 印「還沒設定講者」而使用者給了資料時）
 
@@ -125,7 +127,7 @@ node shared/template/tools/brand.mjs speaker
 ⏸ 停點 ⑥ 背景預覽｜請看：<暫存資料夾>/preview.jpg、<暫存資料夾>/zones-fs.jpg｜請回：「可以」或「重做」
 ```
 
-停點 ⑥ 不能略過：寫 `shared/` 一定要使用者同意（AGENTS.md 規則 1）。暫存資料夾寫完整路徑。
+停點 ⑥ 不能略過：背景圖放進 `shared/` 一定要使用者同意（AGENTS.md 規則 1）。暫存資料夾寫完整路徑。
 
 | 使用者回 | 做什麼 |
 |---|---|
@@ -138,7 +140,7 @@ node shared/template/tools/brand.mjs speaker
 - [ ] 能力表已貼
 - [ ] 沒有安裝工具、沒有幫使用者登入任何服務
 - [ ] 三張圖先在暫存資料夾，尺寸 1920×1080／960×1080／1920×1080
-- [ ] 停點 ⑥ 通過才寫 `shared/`
+- [ ] 背景圖、新的風格包在停點 ⑥ 通過才寫進 `shared/`（步驟 1 換主色、開工時存 `原本-<YYYYMMDD>` 不用等 ⑥）
 - [ ] 只改了 AGENTS.md 規則 1 允許的檔；換主題只改了 plan.json 第一層的 `theme`、單集換風格只改了 `style`
 
 ## 退路表

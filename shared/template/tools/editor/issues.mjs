@@ -7,7 +7,7 @@ const RULES = [
   { key: 'speaker', re: /示範人物/, who: 'author', action: 'speaker', title: () => '講者介紹還是示範人物', hint: '填你的姓名和頭銜，影片裡才不會是別人的名字' },
   { key: 'cover', re: /大約會蓋到講者框/, who: 'author', title: (n) => `${n} 段字卡可能蓋到講者`, hint: '點段號跳過去看有沒有擋到臉或手勢；擋到就寫進修改單，沒擋到不用管' },
   { key: 'empty', re: /沒有畫面的區間/, who: 'author', title: (_, g) => `有些地方只有講者、沒有字卡${(/共\s*\d+\s*段、[\d.]+\s*s/.exec(g.raw[0]) || [''])[0].replace(/^共\s*/, '（').replace(/\s*s$/, ' 秒）')}`, hint: '時間軸「字卡／動畫」那一軌的灰色斜線就是；想補畫面請寫進修改單，留給講者就不用管' },
-  { key: 'short-cap', re: /字幕.*不到\s*[\d.]+\s*秒/, who: 'author', cues: true, title: (_, g) => { const n = Math.max(g.cues.length, ...g.raw.map((s) => Number(/等\s*(\d+)\s*則/.exec(s)?.[1] || 0))); return `${n ? `${n} 句` : '有'}字幕太短，會閃一下就沒了`; }, hint: '點句號跳到那一句，在「屬性」和下一句合併或把時間拉長；不改也能輸出' },
+  { key: 'short-cap', re: /字幕.*不到\s*[\d.]+\s*秒/, who: 'author', cues: true, title: (_, g) => { const n = Math.max(g.cues.length, ...g.raw.map((s) => Number(/等\s*(\d+)\s*則/.exec(s)?.[1] || 0))); return `${n ? `${n} 句` : '有'}字幕太短，會閃一下就沒了`; }, hint: '點句號跳到那一句，在「屬性」和下一句合併或把時間拉長' },
   { key: 'hold', re: /到退場只停/, who: 'author', title: (n) => `${n} 段的字停留太短`, hint: '觀眾可能來不及看完；要拉長請寫進修改單' },
   { key: 'layout', re: /版面|超出|擠到/, who: 'author', title: (n) => `${n} 處版面有問題`, hint: '通常是字太長：改短一點，或寫進修改單請 AI 重排' },
   { key: 'timing', re: /文字對時/, who: 'ai', title: (n) => `${n} 處文字比講到的時間早或晚` },

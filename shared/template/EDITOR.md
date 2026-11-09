@@ -19,7 +19,7 @@
 初剪完成（`media.mjs rough`）也用剪輯台：工具會建好只有 `version` 的 plan.json、在背景處理底片、開好剪輯台，印出「字幕預覽」網址，照抄給使用者就好，這不是停點，不用等他看完。還沒排段落時頁面顯示「初剪預覽」，可以看字幕、改字（自動存），「更新預覽」「輸出完成影片」先停用。
 
 停點 ③（分鏡表）也用剪輯台：寫好 `work/storyboard.md` 後啟動，把印出的「分鏡表」網址（`…/storyboard`）給使用者，最後一行照停點 ③ 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md`）。分鏡表頁只寫 `work/storyboard.md` 改到的那幾行：畫面文字「」裡的字、動畫分鏡「畫面上出現什麼」裡「」內的字、金句的卡上文字與勾選（`☑`／`☐`）、`- 音效：`、要求欄 `- 想換成：`、`- 補充說明：`，以及「需要我決定的事」每一項底下的 `   - 回答：`（`--apply-storyboard` 會印「作者回答」，照做）；其他欄位、表頭、段標題都不能改。檔案被 AI 改過會擋下存檔並重新載入，沒存到的文字留在頁面上；製作進度的「③ 分鏡表」最後一列是「通過」或「略過」之後只能看。使用者說「可以」後，有要求欄的段要先重做再停一次（`auto-edit-storyboard`「停點」）。
-停點 ④（完成影片預覽）也用剪輯台：build 之後啟動，把印出的「完成影片預覽」網址（`…/?view=final`）給使用者，頁面會直接開在完成影片預覽；還沒 build 或找不到播放器時停在快速試聽並提示原因。不帶參數的網址也一樣：有成品就開完成影片預覽，`?view=sim` 才開快速試聽。
+停點 ④（完成影片預覽）也用剪輯台：`build.mjs --review`、`versions.mjs finish` 已經開好剪輯台，停點 ④ 那一行的網址就是完成影片預覽（`…/?view=final`），不用再跑 `editor.mjs`；打不開才跑 `editor.mjs --status`。頁面會直接開在完成影片預覽；還沒 build 或找不到播放器時停在快速試聽並提示原因。不帶參數的網址也一樣：有成品就開完成影片預覽，`?view=sim` 才開快速試聽。
 
 停點 ②（構圖）也用剪輯台：啟動後印的「構圖台」網址（`…/framing`）給使用者，最後一行照停點 ② 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 2）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
 
@@ -38,7 +38,7 @@
 指令一律在工作區根目錄執行：
 
 ```bash
-node shared/template/tools/editor.mjs --project projects/example
+node shared/template/tools/editor.mjs --project projects/<專案>
 ```
 
 - 在非互動的 shell 裡（AI 執行指令就是這種），它會**自己轉到背景**：印出網址就結束，不用加 `&` 或 `nohup`。在終端機裡手動執行則留在前景，按 Ctrl+C 關閉。
@@ -50,8 +50,8 @@ node shared/template/tools/editor.mjs --project projects/example
   構圖：http://127.0.0.1:4400/framing
   分鏡表：http://127.0.0.1:4400/storyboard
   完成影片預覽：http://127.0.0.1:4400/?view=final
-  專案：projects/example
-  已在背景執行（log：projects/example/work/hyperframes/.editor/editor.log）。關閉：node shared/template/tools/editor.mjs --stop --project projects/example
+  專案：projects/<專案>
+  已在背景執行（log：projects/<專案>/work/hyperframes/.editor/editor.log）。關閉：node shared/template/tools/editor.mjs --stop --project projects/<專案>
   ```
 
 - 已經開著且後端版本相同時不開第二個，會印「剪輯已經開著：網址」。程式已更新時會更新服務並以原 port 重新啟動，避免新版頁面連到舊 API。
@@ -60,8 +60,8 @@ node shared/template/tools/editor.mjs --project projects/example
 
 | 要做的事 | 指令 |
 |---|---|
-| 查剪輯台開著沒、網址是什麼 | `node shared/template/tools/editor.mjs --status --project projects/example` |
-| 關掉剪輯台 | `node shared/template/tools/editor.mjs --stop --project projects/example` |
+| 查剪輯台開著沒、網址是什麼 | `node shared/template/tools/editor.mjs --status --project projects/<專案>` |
+| 關掉剪輯台 | `node shared/template/tools/editor.mjs --stop --project projects/<專案>` |
 | 看出了什麼錯 | 讀 `projects/<專案>/work/hyperframes/.editor/editor.log` |
 
 ### 3. 剪輯台會寫哪些欄位
@@ -122,10 +122,8 @@ node shared/template/tools/editor.mjs --project projects/example
 
 ### 6. 使用者說「調好了」之後
 
-1. 重新讀 `plan.json`（`edit`、句號、文字可能都變了）和 `rough.srt`。
-2. 跑 `node shared/template/tools/build.mjs --project projects/example`，有 ✖ 就照 → 後面的建議修好再跑（使用者在頁面按過「更新預覽」而且沒有 ✖，可以略過這步）。
-3. 照 `auto-edit-review` 流程 A 抽查（build、audit、`snapshot --review`），再回到停點 ④；使用者說可以才照 `auto-edit-deliver` 輸出。有裁剪時，完成影片長度＝初剪長度 − 剪掉的範圍。
-4. 關掉剪輯台（`--stop`）。不關也沒關係，下次「打開剪輯台」會沿用同一個。
+1. 直接跑 `node shared/template/tools/build.mjs --project projects/<專案> --review`（`auto-edit-review` 流程 A：build、audit、完成態拼圖）。它會讀剪輯台存的最新檔，不用先整份重讀 `plan.json`、`rough.srt`；之後要改哪一段，再用 `node shared/template/tools/build.mjs --project projects/<專案> --show <段>` 讀那一段。有 ✖ 就照 → 後面的建議修好再跑。
+2. 不要關剪輯台：停點 ④ 的網址就是它。回覆最後一行照 `--review` 印的停點 ④；使用者說可以才照 `auto-edit-deliver` 輸出。有裁剪時，完成影片長度＝初剪長度 − 剪掉的範圍。
 
 ### 7. 兩種預覽與自動降級
 
@@ -191,7 +189,7 @@ node shared/template/tools/editor.mjs --project projects/example
 
 列好分鏡表後，AI 會給你網址最後是 `/storyboard` 的那一個。8 段以上先看**總覽**：每段一張截圖，寫時間和在講什麼，照章分組，一屏看十幾段；點一張打開那一段（有上一段、下一段，按 `[`、`]` 也可以，Esc 回總覽）。想一路捲下去就按「逐段捲動」。
 
-每一段有截圖、呈現方式、畫面文字。動畫段上面先寫概念和畫面，要等你確認才做，那張截圖只是占位，會標「動畫還沒做」；鏡位腳本是給做動畫的 AI 看的細節，預設收起，座標和尺寸不顯示：
+每一段有截圖、呈現方式、畫面文字。每段的截圖就是現在會用的模板畫面；值得專門設計的段會多一行「可以改做內容設計動畫：…」，在「要你決定的事」的「內容設計動畫候選」表打勾才做（每段要多花一些時間），不勾就用截圖上的模板：
 
 - **橘底的字直接改**：那是畫面上會出現的文字，停手就自動存（離開欄位、按 Enter 也會存），按 Esc 取消這次修改。頁首的儲存狀態捲到哪都看得到；沒存到（連不到服務、檔案剛被 AI 改過）時文字留在欄位裡、右下角會提醒，連上後自動補存，還有沒存的字就關分頁會先問。技術細節（綁句、動畫參數、插圖清單）不顯示，一樣留在檔案裡給 AI 用；AI 的備註預設收起來。
 - **呈現方式、音效用下拉選單選**：按「看範例」可以先看長什麼樣子。選了別的呈現方式，截圖還是現在的樣子，AI 會在你說「可以」之後照這個重做那一段。
@@ -334,7 +332,7 @@ AI 寫的、工具自動決定的、你自己改的，都畫在同一個地方�
 
 AI 回報狀態：`GET /api/requests/status` 讀取 `requests.revision`；`POST /api/requests/status` 傳 JSON `{ "revision": "讀到的版本", "ids": ["s01"], "state": "generating" }`。狀態可用 `generating`、`done`、`failed`，可加 `message` 與 `round`；`done` 只在 build、audit 通過後回報。版本不符回 409，整批不寫；不在修改單的 id 或格式錯誤回 400。狀態存於 `work/feedback/editor-requests-status.json`，重新啟動剪輯仍保留；重新複製後舊版本狀態不再套用。
 
-AI 也可從工作區根目錄執行（剪輯未開啟仍可回報，與 API 寫同一份狀態）：
+AI 也可從工作區根目錄執行（剪輯未開啟仍可回報，與 API 寫同一份狀態；什麼時候跑哪一行照 `.agents/skills/auto-edit-review/references/editor-requests.md` 第 5 節）：
 
 ```sh
 node shared/template/tools/editor.mjs --project projects/<專案> --requests-state status
@@ -366,7 +364,7 @@ node shared/template/tools/editor.mjs --project projects/<專案> --requests-sta
 - **講者還是示範人物時會先問**：沒有 `shared/講者.json`、段落也沒寫姓名時，14 講者介紹會顯示 `scenes/14-speaker/scene.json` 的預設值（示範人物林大寶）。頂端會有紅色「⚠ 講者還沒設定」，按輸出會跳確認卡：填姓名與頭銜（寫 `shared/講者.json`，每一集共用）、照樣輸出（結果會寫明影片裡是示範人物），或先不要。分鏡表頂端也能直接填。
 
 - **等待時**：對話框寫已經多久、還要多久（走到 1% 後照實際速度算），按鈕和分頁標題有百分比；可以關掉視窗繼續看別的，點按鈕再打開，輸出好了瀏覽器會通知（要先允許）。輸出中改的東西等輸出完才會存，也不能更新預覽；不要關閉剪輯服務（關閉會取消輸出）。
-- **背景先算**：AI 在停點 ④ 會先在背景輸出，按鈕會寫「背景已算 62%」或「已先算好」；這時按下去不用重等。存檔只改幾段，它跑完會自動補上；改動大（換主題、片長變了…）背景那份才不能用，頁面會提醒，按輸出時才重新算。
+- **背景先算**（要你說「先在背景算」才開）：AI 在背景先輸出時，按鈕會寫「背景已算 62%」或「已先算好」；這時按下去不用重等。存檔只改幾段，它跑完會自動補上；改動大（換主題、片長變了…）背景那份才不能用，頁面會提醒，按輸出時才重新算。
 - **取消、失敗**：上一支 `output/final.mp4` 不會被動到；整支是先輸出到 `work/final-rendering.mp4`，成功才換上去。
 - **驗收**：通過會列出 ⚠ 並提供「在資料夾中顯示」「播放完成影片」「看驗收截圖」；有 ✖ 時影片留著，把 ✖ 貼給 AI 或修改後再輸出。
 - **不做**：`qc.mjs observe` 觀影總表是給 AI 判讀的；想讓 AI 看過再交，改跟 AI 說「可以了，輸出完成影片」。AI 正在照修改單修改時不能輸出。

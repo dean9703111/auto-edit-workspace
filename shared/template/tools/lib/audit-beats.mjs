@@ -7,7 +7,7 @@
 //   beatFindings({ item, sheet, marks, cuesOut, html, file }) → [finding]（✖ 缺拍／多出來的 P.at／語彙不存在；⚠ 用了動作但檔裡沒有那個原語）
 //   noSheetFinding(item)                → ⚠ 沒有動畫分鏡
 //   「講到」欄寫「段起點 #N」的那一拍是隱含的一拍（開場由 ENTER／build 做，不必有 P.at）：#N 在段首 ±0.5 s 內就算對上
-//   示意動畫（x-scene）的分鏡多兩欄「插圖元件（狀態）」「位置」：插圖元件只能是畫廊的 20 個、ILLUS.register 過的、illus-local/ 有檔的（契約 illus.md §5.6）；「—」＝圖示組合，不查
+//   示意動畫（x-scene）的分鏡多兩欄「插圖元件（狀態）」「位置」：插圖元件只能是畫廊的 22 個、ILLUS.register 過的、illus-local/ 有檔的（契約 illus.md §5.6）；「—」＝圖示組合，不查
 //   parseIllusLists(md)                 → Map(段 id → { line, rows: [{ name, source, how, line }] })：「#### 插圖清單 <段 id>」（舊名「素材清單」也認）
 //   illusListFindings({ item, list, html, local }) → ✖ 來源不是三種之一、「畫廊」的元件畫廊沒有、「新建 SVG」還沒畫（illus-local/ 沒有那個檔）
 //   beatFindings 另外反向比：檔裡有聚焦、退焦、呼吸、鏡頭的 P.*，分鏡表一拍都沒寫 → ⚠ 分鏡沒寫的動作（多半是範例沒改到的殘留）
@@ -94,6 +94,15 @@ export function parseBeatSheets(md) {
   return out;
 }
 
+// 這段用哪張動畫分鏡表：storyboard.md 的（使用者確認過、剪輯台改過）為準；內容設計動畫的 work/designs/<段>.md 比 storyboard.md 新
+// （③ 勾了才寫、或改動畫時設計師改了拍）就用它。design＝{ text, newer }；回傳 { sheet, list }
+export function pickBeatSheet(id, { sheets = new Map(), lists = new Map(), design = null } = {}) {
+  const d = design ? { sheet: parseBeatSheets(design.text).get(id) ?? null, list: parseIllusLists(design.text).get(id) ?? null } : { sheet: null, list: null };
+  if (d.sheet) d.sheet.src = `work/designs/${id}.md`;
+  if (design?.newer && d.sheet) return { sheet: d.sheet, list: d.list ?? lists.get(id) ?? null };
+  return { sheet: sheets.get(id) ?? d.sheet, list: lists.get(id) ?? d.list };
+}
+
 // 「插圖元件（狀態）」欄：phoneTripod（rec）、badge（check）；router → 名稱（拿掉括號裡的狀態；— 是沒有）
 export function illusNamesOf(cell) {
   let s = String(cell || '').replace(/`/g, '');
@@ -161,7 +170,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
   const name = file || item.label;
   const okHeader = sheet.header && [BEAT_HEADER, [...BEAT_HEADER, ...BEAT_HEADER_ILLUS]].some((h) => norm(sheet.header.join('|')) === norm(h.join('|')));
   if (!okHeader) {
-    err('beats-header', 0, `分鏡表表頭不對（storyboard.md 第 ${sheet.line} 行「${BEAT_TITLE} ${item.id}」底下）：${sheet.header ? `「| ${sheet.header.join(' | ')} |」` : '標題下面沒有表格'}`,
+    err('beats-header', 0, `分鏡表表頭不對（${sheet.src || 'storyboard.md'} 第 ${sheet.line} 行「${BEAT_TITLE} ${item.id}」底下）：${sheet.header ? `「| ${sheet.header.join(' | ')} |」` : '標題下面沒有表格'}`,
       `表頭固定寫「| ${BEAT_HEADER.join(' | ')} |」（示意動畫段後面再加「 ${BEAT_HEADER_ILLUS.join(' | ')} |」兩欄），標題和表格之間只能有空行`);
     return out;
   }
@@ -183,7 +192,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
     }
     for (const { ref, off } of row.refs) {
       const r = cueSec(ref, off);
-      if (r.error) { err('beats-cue', 0, `分鏡第 ${beat} 拍的綁句 ${lit(ref, off)} 算不出時間：${r.error}`, '改成這段字幕裡真的有的句號與詞（build.mjs --check 的報告列出每段的句子）', { beat, ref }); continue; }
+      if (r.error) { err('beats-cue', 0, `分鏡第 ${beat} 拍的綁句 ${lit(ref, off)} 算不出時間：${r.error}`, '改成這段字幕裡真的有的句號與詞（node shared/template/tools/build.mjs --project projects/<專案> --words <起>-<迄> 看每句的號碼）', { beat, ref }); continue; }
       const x = { beat, ref, off, t: r.t, k, start: row.start };
       rows.push(x);
       if (!groups.has(ref)) groups.set(ref, []);
@@ -228,14 +237,14 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
     warn('beats-unplanned', 0, `${name} 有 P.${p}(…)，分鏡表沒有一拍寫${names}（多半是範例沒改到的殘留）`,
       `照分鏡刪掉這些 P.${p}(…)；要保留就在分鏡表那一拍的「動態」欄寫上（分鏡表改過要在停點 ③ 給人重看）`, { prim: p });
   }
-  // 插圖元件欄（示意動畫）：畫廊 20 個、ILLUS.register 過的、work/hyperframes/illus-local/<名稱>.svg 有檔的
+  // 插圖元件欄（示意動畫）：畫廊 22 個、ILLUS.register 過的、work/hyperframes/illus-local/<名稱>.svg 有檔的
   const reg = illusOf(html).registered;
   const designed = /x-design-/.test(String(file || ''));   // 內容設計動畫的這一欄只是說明（數量、圖示都可以寫），畫錯名字由 illus-name 量 data-illus
   for (const row of sheet.rows) {
     if (row.illus == null || row.note || designed) continue;
     for (const n of illusNamesOf(row.illus)) {
       if (ILLUS_BUILTIN.includes(n) || reg.includes(n) || local.includes(n)) continue;
-      err('beats-illus', 0, `分鏡第 ${row.beat} 拍的插圖元件「${n}」不在畫廊（shared/template/kit/illus-gallery.jpg 的 20 個）、沒有 ILLUS.register，work/hyperframes/illus-local/ 也沒有 ${n}.svg`,
+      err('beats-illus', 0, `分鏡第 ${row.beat} 拍的插圖元件「${n}」不在畫廊（shared/template/kit/illus-gallery.jpg 的 ${ILLUS_BUILTIN.length} 個）、沒有 ILLUS.register，work/hyperframes/illus-local/ 也沒有 ${n}.svg`,
         `改成畫廊的元件名（大小寫照抄，例 phoneTripod），或照 shared/template/kit/illus-style.md 畫好存成 work/hyperframes/illus-local/${n}.svg；圖示（kit/icons.json）寫在「畫面上出現什麼」欄`, { beat: row.beat, name: n });
     }
   }

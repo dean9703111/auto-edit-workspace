@@ -453,7 +453,7 @@ export function customDuration(html) {
 // ====================== 003：custom 的版面規則 ======================
 
 // a 是不是 d 的祖先：用量測端的 anc（中間隔著高 0 的 wrapper 也算得到）；舊資料沒有 anc 時照 parent 鏈
-const isAnc = (byI, a, d) => { if (d && d.anc) return d.anc.includes(a.i); for (let x = d; x && x.parent >= 0; ) { if (x.parent === a.i) return true; x = byI.get(x.parent); } return false; };
+export const isAnc = (byI, a, d) => { if (d && d.anc) return d.anc.includes(a.i); for (let x = d; x && x.parent >= 0; ) { if (x.parent === a.i) return true; x = byI.get(x.parent); } return false; };
 const ancsOf = (byI, e) => (e.anc ? e.anc.map((k) => byI.get(k)).filter(Boolean) : (() => { const out = []; for (let x = byI.get(e.parent); x; x = byI.get(x.parent)) out.push(x); return out; })());
 const clipTo = (byI, e, r) => {
   let v = r;
@@ -988,7 +988,7 @@ export function cueTextFindings(motion, { item, cuesOut = [], names = {} } = {})
     const t = r3(item.start + mk.t);
     out.push({ id: item.id, label: item.label, level: 'warn', rule: 'cue-text', el: best.c.tg.desc, t, kind: 'motion',
       msg: `綁句對不上：「${best.c.raw.slice(0, SAY_MAX)}」在 #${best.q.n} 才講到、不是 #${N}（${name ? `${name} = ` : ''}P.at('${mk.ref}')，${fmtT(t)} 出現；#${best.q.n}「${best.q.text.slice(0, 16)}」）`,
-      fix: `${name ? `${name} 改` : '改成'} P.at('#${best.q.n}@${best.x}')（"@詞" 寫成字串字面值，改完重跑 build；字幕那句真的是別的意思就不用改）`,
+      fix: `${name ? `${name} 改` : '改成'} P.at('#${best.q.n}@${best.x}')（"@詞" 寫成字串字面值，改完重跑這條 audit，不用 build；字幕那句真的是別的意思就不用改）`,
       data: { ref: mk.ref, from: N, to: best.q.n, word: best.x } });
   }
   return out;
@@ -1006,9 +1006,9 @@ export function cueFindings(errors, items) {
     const it = m && (items || []).find((x) => x.type === 'custom' && (x.id === m[1] || x.compId === m[1]));
     if (!it) { warnings.push(`頁面 cue 錯誤：${s}`); continue; }
     const why = m[3].split(' → ')[0];   // 原因原文自帶的 → 改法拿掉，只留 audit 的 fix（一行一個改法）
-    const fix = /^字幕沒有第/.test(why) ? '改成這段範圍內的句號（build.mjs --check 的報告列出每段的句子），改完重跑 build'
-      : /^「@詞」/.test(why) ? "把 ref 寫成字串字面值 P.at('#N@詞')（不要用變數組字串），確認 rough.srt 那一句有這個詞，再跑 build"
-      : '重跑 node shared/template/tools/build.mjs --project projects/<專案>；還是沒有就檢查 plan.json 這段的 src 是不是這支檔';
+    const fix = /^字幕沒有第/.test(why) ? '改成這段範圍內的句號（node shared/template/tools/build.mjs --project projects/<專案> --words <起>-<迄> 看每句的號碼），改完重跑這條 audit'
+      : /^「@詞」/.test(why) ? "把 ref 寫成字串字面值 P.at('#N@詞')（不要用變數組字串），用 --words 確認那一句有這個詞，改完重跑這條 audit"
+      : '重跑 node shared/template/tools/build.mjs --project projects/<專案>（子代理把這行交回主代理）；還是沒有就檢查 plan.json 這段的 src 是不是這支檔';
     findings.push({ id: it.id, label: it.label, level: 'error', rule: 'cue', el: null, at: [], t: null, kind: 'done',
       msg: `綁句失敗：${it.file || it.compId} 的 ${m[2]}：${why}`, fix, data: { call: m[2] } });
   }

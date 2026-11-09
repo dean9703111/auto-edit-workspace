@@ -4,11 +4,20 @@
 
 ## 1. 編號、備份、版本都由工具做
 
-`versions.mjs begin` 算編號、備份 `plan.json.bak-r<N>`、存改前版本、開 `work/feedback/r<N>.md`；`versions.mjs finish` 存改後版本、寫驗證。不用手動複製。
+`versions.mjs begin` 算編號、備份 `plan.json.bak-r<N>`、存改前版本、開 `work/feedback/r<N>.md`；`versions.mjs finish` 存改後版本、填「分類」的改法和「改了哪幾段」、寫驗證。不用手動複製，也不用重寫工具填好的列（太籠統才用 edit 改那一列冒號後面的字）。
 
 要還原這一輪：把 `plan.json.bak-r<N>` 複製回 `plan.json`，再 build。只還原一段：`node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v<N>`（x 檔、svg 一起換回去）。
 
-每段的版本在 `work/versions/<段>/v<N>/`：`段落.json`（plan.json 那一段）、情境動畫的 `x-*.html` 與 svg、`分鏡.md`；`finish --preview` 才有 `預覽.mp4` 和 `比較-v<舊>-v<新>.mp4`（小改預設不 render，省時間）。
+每段的版本在 `work/versions/<段>/v<N>/`：`段落.json`（plan.json 那一段）、動畫的 html（手寫、內容設計、模板動畫都有）與 svg、內容設計動畫的 `鏡位腳本.md`、`分鏡.md`、`預覽.jpg`（audit 拼圖）。預設都不 render。
+
+比較影片（`比較-v<舊>-v<新>.mp4`，左舊右新）要兩版都有 `預覽.mp4`。使用者說修改時就說要比較：`begin`、`finish` 都加 `--preview`。改完才要比較：先跟他說「舊版沒有預覽影片，兩版各要 render 一次（一段約 25 秒）」，他說好再跑下面四行（`use` 印的「→ 下一步」先不用照做，四行跑完、最後一行印「比較：…」就好）：
+
+```
+node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v<舊>
+node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段> --preview
+node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v<新>
+node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段> --preview
+```
 
 ## 2. 規則還是個案
 
@@ -22,7 +31,7 @@
 | 分不出來 | 個案 | 照個案改，rN.md 註明「可能是規則，請確認」 |
 | 一句話可以解成「刪掉」或「避開／挪開」（「擇一即可」「不要重疊」） | 個案 | 先做不刪的那個解讀（挪位置、錯開時間），回報另一種解讀讓使用者選；參考專案曾因刪掉 8 支箭頭白做一輪 |
 
-個案改完再看同型：改的是版面、標註、間距這類「別段也可能一樣」的問題時，跑 `build.mjs --check`、`audit.mjs --all` 找同樣的情況，回報寫「同型 N 段：s08、s14…（這輪沒改，要一起改嗎）」，不要自己全部改（參考專案作者常回「後面的也有一樣問題」）。
+個案改完再看同型：使用者的修改對得到工具的一條 ⚠ 或 ✖（例：「大約會蓋到講者框」、字太多）才找：跑 `node shared/template/tools/build.mjs --project projects/<專案> --check`，在它印的 ⚠ 裡找同一句（`finish` 只印這輪的段，別段只有數量），不跑 `audit.mjs --all`；對不到工具訊息的（往左移、換顏色）不找。找到就回報「同型 N 段：s08、s14…（這輪沒改，要一起改嗎）」，不要自己全部改（參考專案作者常回「後面的也有一樣問題」）。
 
 同一輪有好幾項時的順序：剪接、字幕、音訊先改（動畫綁句的時間會跟著動），再改版面與動畫。
 
@@ -46,7 +55,7 @@
 
 ## 改了哪幾段
 
-- s05：`"css": { "left": "-120px" }`（v1 → v2，比較：work/versions/s05/比較-v1-v2.mp4）
+- s05：`"css": { "left": "-120px" }`（v1 → v2）
 - s09：key「…」→「…」（v1 → v2）
 
 ## 驗證

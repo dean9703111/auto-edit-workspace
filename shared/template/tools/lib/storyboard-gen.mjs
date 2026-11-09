@@ -4,7 +4,8 @@
 //   renderSection(seg, ctx)                   → 一段（### <id>｜…）
 //   renderStoryboard(ctx)                     → 整份 markdown
 //   tidyDecide(list, { cues })                → { ask, ai }：「需要我決定的事」去重、白話；ask 問作者，ai 是 AI 自己能決定的
-//   applyStoryboard(md, plan, { scenes, specs, cues }) → { plan, changes, requests, unmatched, answers, changed }
+//   applyStoryboard(md, plan, { scenes, specs, cues }) → { plan, changes, requests, unmatched, answers, designs（這次勾成內容設計動畫的段）, changed }
+//   isDesignPick(seg)、toDesign(seg)          → 內容設計動畫候選（story.designIdea）；勾了就換成 design 段
 import { parseStoryboard, isDecideSection } from '../editor/storyboard-md.mjs';
 import { renderSheet } from './custom-fill.mjs';
 
@@ -90,6 +91,39 @@ function cardLabel(seg, item) {
 
 const layoutOf = (item) => item?.layoutZh || '—';
 
+// 內容設計動畫候選：草稿照常套模板，另外在 story 寫 designIdea（構想）、designWhy（為什麼值得設計）；③ 勾了才改成內容設計動畫
+export const isDesignPick = (seg) => !seg.design && seg.type !== 'media' && !!String(seg.story?.designIdea || '').trim();
+// 時間成本（建議初值，shared/style.md「內容設計動畫」）：一段約 12 分鐘、同時 4 段；③ 預設勾到預估 ≤ 30 分鐘
+export const DESIGN_MIN = 12, DESIGN_PAR = 4, DESIGN_BUDGET = 30;
+export const designMinutes = (n) => Math.ceil(n / DESIGN_PAR) * DESIGN_MIN;
+// 預設勾哪幾段：各章輪流（章照出現順序），同一章段長的先；加到下一段會超過預算就停。cands＝[{ id, part, secs }]
+export function defaultPicks(cands) {
+  const parts = [];
+  for (const c of cands) { let g = parts.find((x) => x.part === c.part); if (!g) parts.push(g = { part: c.part, list: [] }); g.list.push(c); }
+  for (const g of parts) g.list.sort((a, b) => (b.secs || 0) - (a.secs || 0));
+  const order = [];
+  for (let i = 0; parts.some((g) => g.list[i]); i++) for (const g of parts) if (g.list[i]) order.push(g.list[i].id);
+  const on = new Set();
+  for (const id of order) { if (designMinutes(on.size + 1) > DESIGN_BUDGET) break; on.add(id); }
+  return on;
+}
+export function designPlan(segs, { items = new Map(), partOf = () => '—' } = {}) {
+  const cands = segs.filter(isDesignPick).map((s) => { const it = items.get(s.id); return { id: s.id, part: partOf(s), secs: it ? it.end - it.start : 0 }; });
+  const on = defaultPicks(cands);
+  return { cands, on, minutes: designMinutes(on.size), all: designMinutes(cands.length) };
+}
+export const designPlanLine = (d) => (d.on.size === d.cands.length
+  ? `預設全勾 ${d.on.size} 段（預估 ${d.minutes} 分鐘，${DESIGN_PAR} 段同時做）`
+  : `預設勾 ${d.on.size} 段（預估 ${d.minutes} 分鐘，${DESIGN_PAR} 段同時做）；全勾 ${d.cands.length} 段約 ${d.all} 分鐘`);
+
+const DESIGN_KEEP = ['id', 'from', 'to', 'duration', 'anchor', 'sfx', 'sfxExtra', 'pip', 'sfxVolume', 'note'];
+export function toDesign(seg) {
+  const out = { id: seg.id, type: 'custom', design: true };
+  for (const k of DESIGN_KEEP.slice(1)) if (seg[k] !== undefined) out[k] = seg[k];
+  out.story = { ...(seg.story?.say ? { say: seg.story.say } : {}), idea: seg.story.designIdea, why: seg.story.designWhy || seg.story.why || '' };
+  return out;
+}
+
 // 01 這類只有 at 的段：顯示句號
 function cueRange(seg, item) {
   if (seg.from) return `${seg.from}–${seg.to || ''}`.replace(/–$/, '');
@@ -116,6 +150,7 @@ export function renderSection(seg, ctx) {
     if (design?.picture) L.push(`- 畫面：${cell(design.picture)}`);
   }
   if (seg.story?.why) L.push(`- 理由：${cell(seg.story.why)}`);
+  if (isDesignPick(seg)) L.push(`- 可以改做內容設計動畫：${cell(seg.story.designIdea)}（要做就在「需要我決定的事」的候選表勾這段）`);
   L.push('');
   const pics = shots.get(seg.id) || [];
   for (const p of pics) L.push(p.md || `![${seg.id}](storyboard-preview/${p.file})`);
@@ -182,6 +217,12 @@ export function tidyDecide(list, { cues = [] } = {}) {
   return { ask, ai };
 }
 
+export const chapterOfFn = (parts = []) => (seg) => {
+  const n = Number(String(seg.from || seg.at || '').match(/^#(\d+)/)?.[1]);
+  const p = parts.find((x) => n >= x.firstN && n <= x.lastN);
+  return p ? p.title : '—';
+};
+
 export function renderStoryboard(ctx) {
   const { project, plan, items = new Map(), merged = {}, parts = [], voiceOnly = [], designs = new Map() } = ctx;
   const segs = (plan.scenes || []).slice();
@@ -189,11 +230,7 @@ export function renderStoryboard(ctx) {
   if (plan.speakerBox) L.push(`講者框 speakerBox＝${JSON.stringify(plan.speakerBox)}`, '');
   const icons = Object.entries(merged.icons || {});
   if (icons.length) L.push('## 本集圖示表', '', '| 物件 | 圖示 |', '|---|---|', ...icons.map(([k, v]) => `| ${cell(k)} | ${cell(v)} |`), '');
-  const chapterOf = (seg) => {
-    const n = Number(String(seg.from || seg.at || '').match(/^#(\d+)/)?.[1]);
-    const p = parts.find((x) => n >= x.firstN && n <= x.lastN);
-    return p ? p.title : '—';
-  };
+  const chapterOf = chapterOfFn(parts);
   L.push('## 總覽', '', '| 段 | 章 | 句號 | 時間碼 | 版面 | 卡片類型 | 一句話摘要 |', '|---|---|---|---|---|---|---|');
   for (const s of segs) {
     const it = items.get(s.id);
@@ -227,6 +264,15 @@ export function renderStoryboard(ctx) {
     L.push('### 給 AI 的備註（不用回答）', '');
     ai.forEach((d) => L.push(`- ${cell(d)}`));
     L.push('');
+  }
+  const dp = designPlan(segs, { items, partOf: chapterOf });
+  if (dp.cands.length) {
+    L.push('### 內容設計動畫候選（☑ 的段從空白畫布專門設計；取消勾就照現在的版面）', '', '| 段 | 時間碼 | 現在用 | 構想 | 為什麼值得設計 | 預估 | 要不要 ☐ |', '|---|---|---|---|---|---|---|');
+    for (const c of dp.cands) {
+      const s = segs.find((x) => x.id === c.id), it = items.get(s.id);
+      L.push(`| ${s.id} | ${clock(it?.start)}–${clock(it?.end)} | ${cell(cardLabel(s, it))} | ${cell(s.story.designIdea)} | ${cell(s.story.designWhy || '—')} | ${DESIGN_MIN} 分鐘 | ${dp.on.has(s.id) ? '☑' : '☐'} |`);
+    }
+    L.push('', `${designPlanLine(dp)}；要更快就取消勾，要更多就勾上（${DESIGN_PAR} 段一批，每批約 ${DESIGN_MIN} 分鐘）`, '');
   }
   L.push('### 金句候選（勾了才上，每集最多 6 則）', '', '| 候選 | 句號 | 原句 | 卡上文字（≤ 14 字） | 情緒（正／負／中） | 要不要 ☐ |', '|---|---|---|---|---|---|');
   (merged.quotes || []).forEach((q, i) => {
@@ -312,9 +358,29 @@ export function applyStoryboard(md, plan, { scenes = [], specs = new Map() } = {
       });
     }
   }
+  // 內容設計動畫候選：☑ 的那段改成內容設計動畫（拿掉模板、字卡欄位，構想搬到 story.idea）
+  const designs = [];
+  for (const sec of doc.sections) {
+    for (const b of sec.blocks) {
+      if (b.type !== 'table' || !b.head.includes('構想') || !b.head.some((h) => h.includes('☐'))) continue;
+      const iId = b.head.indexOf('段'), iOn = b.head.findIndex((h) => h.includes('☐'));
+      for (const r of b.rows) {
+        const id = String(r.cells[iId] || '').trim(), on = /☑/.test(r.cells[iOn] || '');
+        const k = next.scenes.findIndex((s) => s.id === id);
+        if (k < 0) continue;
+        const seg = next.scenes[k];
+        if (on && isDesignPick(seg)) {
+          if (!seg.from || !seg.to) { unmatched.push(`${id}：沒有 from／to，改不成內容設計動畫 → 請 AI 先補起訖句`); continue; }
+          next.scenes[k] = toDesign(seg);
+          designs.push(id);
+          changes.push(`${id} 改成內容設計動畫（使用者勾選）`);
+        }
+      }
+    }
+  }
   const cueOf = (s) => Number(String(s.from || s.at || '').match(/^#(\d+)/)?.[1] ?? 0);
   next.scenes = (next.scenes || []).map((s, i) => [s, i]).sort((a, b) => cueOf(a[0]) - cueOf(b[0]) || a[1] - b[1]).map(([s]) => s);
-  return { plan: next, changes, requests, unmatched, answers, changed: changes.length > 0 };
+  return { plan: next, changes, requests, unmatched, answers, designs, changed: changes.length > 0 };
 }
 
 // 鏡位腳本檔 work/designs/<id>.md：第一段「概念：」「畫面：」，後面一張 #### 動畫分鏡 表

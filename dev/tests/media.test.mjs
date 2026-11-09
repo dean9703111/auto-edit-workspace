@@ -666,7 +666,7 @@ test('illus-lint：壞檔抓到（顏色、描邊、<text>；插圖清單的尺�
   has(/^✖ \[illus-local\/bad\.svg\] bad：viewBox 100×100 的比例 1\.00 和建議尺寸 200×100/);
   has(/^✖ \[illus-local\/bad\.svg\] bad：缺狀態群組 <g class="il-on"> → /);
   has(/^✖ \[插圖清單\] 新建 SVG「sdcard」還沒有檔 → .*work\/hyperframes\/illus-local\/sdcard\.svg/);
-  has(/^⚠ \[illus-local\/extra\.svg\] extra：work\/storyboard\.md 的插圖清單沒有這個元件的「新建 SVG」列/);
+  has(/^⚠ \[illus-local\/extra\.svg\] extra：work\/storyboard\.md、work\/designs\/\*\.md 的插圖清單沒有這個元件的「新建 SVG」列/);
   has(/^✓ illus-local\/router\.svg$/);
   assert.ok(lines.findIndex((l) => l.startsWith('⚠')) > lines.findLastIndex((l) => l.startsWith('✖')), '✖ 排在 ⚠ 前面');
   for (const l of lines.filter((x) => /^[✖⚠]/.test(x))) { assert.match(l, / → /, `每則都有改法：${l}`); assert.doesNotMatch(l, /specs\//, `訊息不指到 specs/：${l}`); }

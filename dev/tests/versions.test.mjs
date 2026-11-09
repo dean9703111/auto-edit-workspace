@@ -88,7 +88,7 @@ test('改版：new 開提案 → 範本沒改不能 accept、提案沒確認不�
   const r = V.newProposal(c.P, c.flags, 's12', logTo(c), '「s12 想更完善」');
   assert.equal(r.n, 2, '先存 v1，提案是 v2');
   const md = read(p, 'work/versions/s12/v2/分鏡.md');
-  assert.match(md, /^# s12 v2（改版）\n\n- 提案：.*\n- 原話：「s12 想更完善」\n- 現在的樣子：\[v1\/預覽\.mp4\]/);
+  assert.match(md, /^# s12 v2（改版）\n\n- 提案：.*\n- 原話：「s12 想更完善」\n- 現在的樣子：會動的樣子在完成影片預覽（剪輯台）看 s12 那段/);
   assert.match(md, /## 這版要改什麼\n\n- （寫 1–5 條/);
   assert.equal(V.newProposal(c.P, c.flags, 's12', logTo(c)).reused, true, '提案還在就沿用');
   assert.throws(() => V.acceptProposal(c.P, 's12', logTo(c)), /還是範本那一行 →/);
@@ -139,6 +139,53 @@ test('use：先存現在的樣子，再把 plan.json 那段、x 檔、svg、stor
   const all = V.listAll(c.P);
   assert.deepEqual(all[0].versions.map((v) => [v.v, v.current]), [['v1', true], ['v2', false], ['v3', false]]);
   assert.throws(() => V.useVersion(c.P, c.flags, 's12', 'v3', logTo(c)), /沒有做完的 v3（有：v1、v2）→/);
+  fs.rmSync(p, { recursive: true });
+});
+
+test('022 修改動畫走預覽：design／template 段存動畫檔與鏡位腳本；只改 html 也算改；new／use 不 render、預覽.jpg 用 audit 拼圖；designs 的拍較新就寫回 storyboard', () => {
+  const p = mk(), c = ctx(p);
+  c.flags = {};   // 不加 --no-preview：預設也不能 render
+  const plan = JSON.parse(read(p, 'work/hyperframes/plan.json'));
+  plan.scenes.push({ id: 'd20', design: true, layout: 'fullscreen', from: '#1', to: '#1e' }, { id: 't21', type: 'custom', template: 'x-process', slots: { title: '流程' }, from: '#1', to: '#1e' });
+  touch(p, 'work/hyperframes/plan.json', JSON.stringify(plan, null, 2) + '\n', 60);
+  const D1 = '<template id="x-design-d20"><div data-illus-src="illus-local/router.svg">設計 1</div></template>\n';
+  touch(p, 'work/hyperframes/compositions/x-design-d20.html', D1, 60);
+  touch(p, 'work/hyperframes/compositions/x-process-t21.html', '<template>流程 1</template>', 60);
+  const beat = (what) => ['#### 動畫分鏡 d20', '', '| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |', '|---|---|---|---|---|---|', `| 1 | #1@主持人 | ${what} | 彈出 | 均衡 | tick |`].join('\n');
+  touch(p, 'work/designs/d20.md', `# d20\n\n概念：一\n\n${beat('路由器')}\n`, 90);
+  touch(p, 'work/storyboard.md', SB.replace('## 需要我決定的事', `### d20｜內容設計動畫（全幕）\n- 概念：一\n\n${beat('路由器')}\n\n## 需要我決定的事`), 80);
+  // 1. 存版本：動畫 html、svg、鏡位腳本都在
+  const v1 = V.saveSeg(c.P, c.flags, 'd20', logTo(c));
+  for (const f of ['x-design-d20.html', 'illus-local/router.svg', '鏡位腳本.md']) assert.ok(fs.existsSync(path.join(v1.dir, ...f.split('/'))), f);
+  assert.deepEqual(JSON.parse(read(p, 'work/versions/d20/v1/.meta.json')).files.map((f) => f.rel), ['compositions/x-design-d20.html', 'illus-local/router.svg', '../designs/d20.md']);
+  assert.ok(fs.existsSync(path.join(V.saveSeg(c.P, c.flags, 't21', logTo(c)).dir, 'x-process-t21.html')), '模板動畫的 html 也存');
+  // 2. 只改 html → 算改了（新的一版），不 render
+  touch(p, 'work/hyperframes/compositions/x-design-d20.html', D1.replace('設計 1', '設計 2'), 50);
+  const v2 = V.saveSeg(c.P, c.flags, 'd20', logTo(c));
+  assert.equal(v2.n, 2);
+  assert.equal(v2.previewOk, false, '預設不 render');
+  // 3. new：audit 拼圖比動畫新 → 附成 預覽.jpg；提案連到它；沒有 預覽.mp4
+  touch(p, 'work/audit-shots/sheet-d20.jpg', 'jpg', 10);
+  assert.equal(V.freshSheet(c.P, 'd20'), path.join(p, 'work', 'audit-shots', 'sheet-d20.jpg'));
+  const r = V.newProposal(c.P, c.flags, 'd20', logTo(c), '「d20 重新設計」');
+  assert.equal(r.n, 3);
+  assert.match(read(p, 'work/versions/d20/v3/分鏡.md'), /- 現在的樣子：\[v2\/預覽\.jpg\]\(\.\.\/v2\/預覽\.jpg\)；會動的樣子在完成影片預覽（剪輯台）看 d20 那段/);
+  assert.equal(read(p, 'work/versions/d20/v2/預覽.jpg'), 'jpg');
+  assert.ok(!fs.readdirSync(path.join(p, 'work', 'versions', 'd20'), { recursive: true }).some((f) => String(f).endsWith('.mp4')), '全程沒有 mp4');
+  touch(p, 'work/hyperframes/compositions/x-design-d20.html', D1.replace('設計 1', '設計 3'), 5);
+  assert.equal(V.freshSheet(c.P, 'd20'), null, '動畫比拼圖新：拼圖不算現在的樣子');
+  // 4. 設計師改了 designs/d20.md 的拍 → 寫回 storyboard 那一節；storyboard 比較新就不動
+  touch(p, 'work/designs/d20.md', `# d20\n\n概念：一\n\n${beat('路由器＋手機')}\n`, 1);
+  assert.equal(V.syncDesignSheet(c.P, 'd20'), true);
+  const sb = read(p, 'work/storyboard.md');
+  assert.match(sb, /### d20｜內容設計動畫（全幕）\n- 概念：一\n\n#### 動畫分鏡 d20\n\n\| 拍 [^\n]*\n\|---[^\n]*\n\| 1 \| #1@主持人 \| 路由器＋手機 \| 彈出/);
+  assert.match(sb, /### s12｜x-a（全幕）[\s\S]*兩個面向 \| 彈出/, '別段不動');
+  assert.equal(V.syncDesignSheet(c.P, 'd20'), false, '寫回之後 storyboard 比較新');
+  // 5. use v1：html、鏡位腳本都還原；不 render
+  V.useVersion(c.P, c.flags, 'd20', 'v1', logTo(c));
+  assert.equal(read(p, 'work/hyperframes/compositions/x-design-d20.html'), D1);
+  assert.match(read(p, 'work/designs/d20.md'), /\| 路由器 \|/);
+  assert.ok(!fs.readdirSync(path.join(p, 'work', 'versions', 'd20'), { recursive: true }).some((f) => String(f).endsWith('.mp4')));
   fs.rmSync(p, { recursive: true });
 });
 

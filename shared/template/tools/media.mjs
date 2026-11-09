@@ -86,7 +86,7 @@
  *       work/hyperframes/plan.json 已經用到句號（#N）時拒絕（改到剪輯台分割，剪輯台會一起重對 #N）。
  *   node shared/template/tools/media.mjs illus-lint --project projects/<專案> [--no-sheet]
  *       檢查專案自己畫的示意插圖元件 work/hyperframes/illus-local/*.svg（規則見 shared/template/kit/illus-style.md）：
- *       建議尺寸與狀態從 work/storyboard.md 的插圖清單讀（「新建 SVG」列寫「規格：<name>，建議尺寸 W×H，狀態 a／b」）；
+ *       建議尺寸與狀態從 work/storyboard.md 和 work/designs/*.md 的插圖清單讀（「新建 SVG」列寫「規格：<name>，建議尺寸 W×H，狀態 a／b」）；
  *       讀不到就只查不用尺寸的規則（⚠）；插圖清單列了新建 SVG 卻沒有檔 ✖。有 ✖ 結束碼 1。不改任何 SVG。
  *       順便拼 work/插圖清單.jpg（插圖清單用到的畫廊元件＋illus-local 的新元件，1:1 px，上亮色、下暗色；要 HyperFrames 的 Chrome）；--no-sheet 不拼。
  *
@@ -2594,13 +2594,16 @@ ${cells.map((c) => `<div class="cell" style="left:${c.x}px;top:${c.y}px"><div cl
 // media.mjs illus-lint：每個 illus-local/*.svg 跑 lintIllusSvg（尺寸、狀態照插圖清單）；插圖清單的新建 SVG 沒有檔 ✖；順便拼 work/插圖清單.jpg
 export async function illusLint(P, { sheet = true, log = console.log } = {}) {
   const work = path.join(P.project, 'work'), dir = path.join(work, 'hyperframes', 'illus-local'), sb = path.join(work, 'storyboard.md');
-  const list = readIllusList(fs.existsSync(sb) ? fs.readFileSync(sb, 'utf8') : '');
+  // 插圖清單：分鏡表＋內容設計動畫的鏡位腳本（work/designs/<段>.md；設計師自己新畫的元件寫在那裡）
+  const dsDir = path.join(work, 'designs');
+  const designMd = fs.existsSync(dsDir) ? fs.readdirSync(dsDir).filter((f) => /\.md$/.test(f)).sort().map((f) => fs.readFileSync(path.join(dsDir, f), 'utf8')) : [];
+  const list = readIllusList([fs.existsSync(sb) ? fs.readFileSync(sb, 'utf8') : '', ...designMd].join('\n\n'));
   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /\.svg$/i.test(f) && !f.startsWith('.')).sort() : [];
   const findings = [];
   const add = (level, where, msg, fix) => findings.push({ level, where, msg, fix });
   for (const f of files) {
     const name = f.replace(/\.svg$/i, ''), spec = list.local.get(name);
-    if (!spec?.size) add('warn', `illus-local/${f}`, `${name}：work/storyboard.md 的插圖清單${spec ? '這一列沒寫建議尺寸' : '沒有這個元件的「新建 SVG」列'}，這次只查不用尺寸${spec ? '' : '、狀態'}的規則`, `插圖清單那一列的「怎麼來」寫「規格：${name}，建議尺寸 W×H，狀態 a／b」（shared/template/kit/illus-style.md）`);
+    if (!spec?.size) add('warn', `illus-local/${f}`, `${name}：work/storyboard.md、work/designs/*.md 的插圖清單${spec ? '這一列沒寫建議尺寸' : '沒有這個元件的「新建 SVG」列'}，這次只查不用尺寸${spec ? '' : '、狀態'}的規則`, `插圖清單那一列的「怎麼來」寫「規格：${name}，建議尺寸 W×H，狀態 a／b」（shared/template/kit/illus-style.md）`);
     for (const x of lintIllusSvg(fs.readFileSync(path.join(dir, f), 'utf8'), { name, size: spec?.size || undefined, states: spec?.states || [] })) add(x.level, `illus-local/${f}`, x.msg, x.fix);
   }
   for (const name of list.local.keys()) {

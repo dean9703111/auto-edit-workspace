@@ -25,7 +25,7 @@
 
 1. 一次只做一步。做完、驗證通過、印出進度，才做下一步。
 2. 成功與否看每一步寫的「驗證」，不是看安裝指令有沒有出錯。
-3. 開始前把這一輪要做的步驟一次列給使用者，問一次「可以開始嗎？」。同意後照做，不再逐項問。
+3. 開始前把這一輪要做的步驟一次列給使用者，問一次（最後一行 `❓ 請回：「可以開始」或要拿掉的步驟編號`）。同意後照做，不再逐項問。
 4. 檢測顯示已經有的，不重裝、不升級。
 5. 不用 sudo。要輸入電腦密碼的步驟（Mac 安裝 Homebrew）交給使用者在終端機執行，你等他說「好了」再驗證。Windows 的 winget 由你執行，執行前先提醒使用者等一下跳出視窗要按「是」。
 6. 不改 `projects/*/assets/`、`projects/*/講稿.md`、`shared/`，也不在工作區留下任何檔案（例外：S3 的 `node_modules/`、`package-lock.json`，S4 的 `.claude/skills/auto-edit-*`）。
@@ -86,7 +86,8 @@
     10. 裝本工作區的 9 支 auto-edit Skill：node setup/install-skills.mjs
     11. 請你重開 MiniMax Code，回來再說一次「幫我檢測環境」
     重開後我會接著做：檢查臉部偵測檔（瘦臉用，只檢查不下載）、HyperFrames 自我檢查（第一次會下載它用的瀏覽器，約 200 MB）、確認 auto-editor 能執行、列出專案素材的影片、錄音資訊、最後檢測。
-    過程中 MiniMax Code 會跳出權限詢問，按允許即可。可以開始嗎？
+    過程中 MiniMax Code 會跳出權限詢問，按允許即可。
+    ❓ 請回：「可以開始」或要拿掉的步驟編號
 
 ### 步驟 2：系統工具
 
@@ -98,7 +99,7 @@
 
 ### 步驟 3：共用步驟（Mac、Windows 都一樣）
 
-S1–S9 的指令都可以加 PATH 前綴（Mac：`export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH";`，Windows 見 `windows.md`）。`npx` 一律加 `-y`，第一次才不會停在 `Ok to proceed?` 等輸入。
+S1–S9 的指令都可以加 PATH 前綴（Mac：`export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin:$PATH";`，Windows 見 `windows.md`）。`npx` 一律加 `-y`，第一次才不會停在 `Ok to proceed?` 等輸入。
 
 **S1 安裝 HyperFrames Skill**（`skill_hyperframes` 是 `ok` 就跳過）：`npx -y skills add heygen-com/hyperframes -a minimax-code -g -y`
 驗證：`~/.minimax/skills/hyperframes/SKILL.md` 存在（Windows：`$env:USERPROFILE\.minimax\skills\hyperframes\SKILL.md`）。可能會順便裝進同一個 repo 的其他 Skill，正常。
@@ -121,7 +122,7 @@ S1–S9 的指令都可以加 PATH 前綴（Mac：`export PATH="/opt/homebrew/bi
 **S8 列出專案素材的影片、錄音資訊**（只讀，不改檔）
 
 - Mac：`for f in projects/*/assets/camera/* projects/*/assets/voice/*; do [ -f "$f" ] || continue; echo "== $f"; ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate:format=duration -of default=nw=1 "$f"; done`
-- Windows：`Get-ChildItem 'projects\*\素材\真人錄影','projects\*\素材\聲音' -File -ErrorAction SilentlyContinue | ForEach-Object { '== ' + $_.Name; ffprobe -v error -select_streams v:0 -show_entries 'stream=width,height,r_frame_rate:format=duration' -of default=nw=1 $_.FullName }`
+- Windows：`Get-ChildItem 'projects\*\assets\camera\*','projects\*\assets\voice\*' -File -ErrorAction SilentlyContinue | ForEach-Object { '== ' + $_.Name; ffprobe -v error -select_streams v:0 -show_entries 'stream=width,height,r_frame_rate:format=duration' -of default=nw=1 $_.FullName }`
 
 驗證：每支影片都有 `width`、`height`、`r_frame_rate`、`duration`。整理成「檔名｜長度｜解析度｜影格率」回報，例如 `test-raw.mp4｜1 分 47 秒｜1920×1080｜30 fps`（秒數取整數即可；`30/1` 是 30 fps，`30000/1001` 是 29.97 fps）。不是影片的檔案出錯可以忽略；只有聲音的檔案沒有 `width`、`height`，只回報長度。
 

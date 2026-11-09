@@ -603,7 +603,7 @@
 - `shared/template/kit/theme.css`：顏色 token（`--sc-fs-bg`、`--sc-fs-card`、`--sc-fs-card-line`、`--sc-fs-ink`、`--sc-fs-kw`、`--sc-fs-node`、`--sc-card-solid`、`--sc-ink`、`--sc-mute`、`--sc-warn`、`--sc-good`）與 `kit/brand.css` 的 `--brand`、`--brand-ink`、`--brand-text`。
 - `shared/template/kit/scene.css` 後段「動態 v2」：亮暗主題 token `--v2-*`（亮色在 `:root`、暗色在 `:root[data-theme="dark"]`；例 `--v2-card`、`--v2-card-shadow`、`--v2-ink`、`--v2-mute`、`--v2-node`、`--v2-spot-glow`）。陰影、光暈、漸層只用這組（R8 #3）；換主題時自動跟著換。
 - 最接近的模板當範本：流程看 `shared/template/scenes/04c-fs-flow/template.html`，清單看 `04a-fs-list`。build 產生的 `work/hyperframes/compositions/sNN-*.html` 是完整的子合成實例。
-- 圖示：`shared/template/kit/icons.json` 是 `{ "名稱": "<svg…>" }`，把 svg 原文貼進 `<span class="sc-icon">…</span>`（svg 原文整段貼上、一個字都不改：裡面 `<rect>`、`<line>`、`<circle>` 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；大小由 `.sc-icon` 的 `--i` 決定）。容器進場後把線描出來：`P.rise('#xflow-ico1', 1.0); P.icon('#xflow-ico1', 1.0 + P.BEAT);`（`P.icon` 描容器裡所有的線，形狀沒有 `pathLength` 會自動補）；總結、回顧用 `P.check`（先描圓、0.25 秒後描勾），流程圖的站不打勾。
+- 圖示：寫 `<span class="sc-icon" data-icon="名稱"></span>`，build 會自己把 svg 填進去，不要自己貼 svg、不要跑 node 或 python 撈。名稱用 `node shared/template/tools/build.mjs --project projects/<專案> --icons 手機,雲端` 查（只查名稱；中文查不到就換英文關鍵字），不要打開 `shared/template/kit/icons.json`（一行 586 KB）。大小由 `.sc-icon` 的 `--i` 決定。容器進場後把線描出來：`P.rise('#xflow-ico1', 1.0); P.icon('#xflow-ico1', 1.0 + P.BEAT);`（`P.icon` 描容器裡所有的線，形狀沒有 `pathLength` 會自動補）；總結、回顧用 `P.check`（先描圓、0.25 秒後描勾），流程圖的站不打勾。
 - 版面：`shared/template/kit/scene-layout.js` 照 `data-layout`／`data-gap`／`data-justify`／`data-align`／`data-row`／`data-slot`／`data-links` 排位置、畫連接線（有箭頭時頭是另一條 path `<a>-<b>-head`，`P.stroke`／`P.comet` 描本體 `<a>-<b>`，頭在描到箭尖時淡入；刻意橫過元件的線加 `data-layout-ignore`，audit 不當連接線量）（寫法與規則見 `shared/style.md`「版面」）。`SceneLayout.apply(root)` 在 mount 時自動跑一次（不進 timeline，亂序 seek 不受影響；改了 DOM 要重排寫 `SceneLayout.apply(root, { force: true })`）；`SceneLayout.measure(root)` 給 audit 量版面。相鄰元件照放大 1.1 倍（`SCALE_MAX`）預留，聚焦、過衝不會互碰。間距 token `--sc-grid`、`--sc-pad-card*`、`--sc-gap-*`、`--sc-link-*` 在 `kit/scene.css` 的 `:root`。
 - 字型不用宣告：主合成已載入 `kit/fonts.css`，文字自動用 Noto Sans TC。真的要寫就寫 `font-family: var(--font-cjk)`，不寫字型名。
 
@@ -793,7 +793,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 
    產生 `bg-fs.jpg`（成品）、`zones-fs.jpg`（疊上留空區框：紅＝主卡或文字區、藍＝子母畫面、黃＝字幕帶）、`raw-fs.png`（原始截圖）。
 3. 看指令印的那一行：`✔ 留空區乾淨` 就好；`⚠ 紅框（全畫面主卡）裡有 2.3% 的像素是裝飾` 就把裝飾移到框外，重跑。
-4. 三張都做完會多一張 `preview.jpg`（上排原圖、下排疊框版，1600×720）。把它給使用者看，**停下來等同意**（停點 ⑥）；同意後照指令最後印的 `cp`（Mac）或 `Copy-Item`（Windows）那幾行複製進 `shared/template/`，再重跑 build。
+4. 三張都做完會多一張 `preview.jpg`（上排原圖、下排疊框版，1600×720）。把它給使用者看，**停下來等同意**（停點 ⑥）；同意後照 `auto-edit-style` 步驟 4 存成風格包、套用（`brand.mjs pack`、`brand.mjs use`），再重跑 build；不要照指令最後印的 `cp`／`Copy-Item` 直接複製。
 5. `--out` 不能是 `shared/template/` 裡面（✖）：背景圖一定要經過使用者同意才放進模板。
 
 ---

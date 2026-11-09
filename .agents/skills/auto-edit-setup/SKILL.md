@@ -20,7 +20,8 @@ version: 0.1.0
 |---|---|
 | 這一輪還沒讀過 `setup/README.md` | 先讀全文 |
 | 使用者只說「Skills 看不到 auto-edit」 | 只做 S4（`node setup/install-skills.mjs`），再跑一次檢測 |
-| 檢測顯示 `restart` | 請使用者重開 MiniMax Code（Mac `M8`、Windows `W9`）；重開後還看不到，就在指令最前面加 PATH 前綴照樣做（Mac：`export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -1)/bin:$PATH";`），不要卡在重開 |
+| 檢測顯示 `restart` | 照 `setup/README.md` 步驟 2：先加 PATH 前綴把 S1–S4 做完（前綴照手冊步驟 3 那一行），再請使用者重開 MiniMax Code（Mac `M8`、Windows `W9`），這一輪到這裡結束。重開後還是 `restart`，就整輪加前綴做，總表最後註明「之後的指令要加 PATH 前綴」 |
+| 檢測 JSON 的 `all_ok` 是 `true` | 不用列清單、不用問同意，直接從步驟 3 的 S5 做 |
 
 ## 步驟
 
@@ -50,7 +51,7 @@ Windows（PowerShell）：[Console]::OutputEncoding = [System.Text.Encoding]::UT
 ```
 
 完成判準：再跑一次步驟 0，`todo` 裡那幾項不見了。
-常見錯誤：要輸入電腦密碼（Mac 的 Homebrew）或按系統確認視窗（Windows 的 winget）的步驟 → 請使用者自己做，等他說「好了」再驗證；不要改用系統管理員權限執行。
+常見錯誤：要輸入電腦密碼的步驟（Mac 的 Homebrew）→ 請使用者自己在終端機做，等他說「好了」再驗證。Windows 的 winget 由你執行，執行前先提醒使用者跳出視窗要按「是」。都不要改用系統管理員權限執行。
 
 **3. 共用步驟 S1–S9**（`setup/README.md` 步驟 3）
 
@@ -64,7 +65,7 @@ npx -y hyperframes doctor
 auto-editor --version
 ```
 
-依序是 S1、S2、S3（在工作區根目錄）、S4、S5、S6、S7；S8 列素材、S9 最後檢測照手冊原文。手冊裡的 `npx` 一律加 `-y`，才不會停在 `Ok to proceed?`。
+依序是 S1、S2、S3（在工作區根目錄）、S4、S5、S6、S7；S8 列素材、S9 最後檢測照手冊原文。每一步先看檢測 JSON，那一項是 `ok` 就跳過（手冊每一步括號裡的條件）。手冊裡的 `npx` 一律加 `-y`，才不會停在 `Ok to proceed?`。
 完成判準：S3 之後 `node_modules/hyperframes/package.json` 的 version 和根目錄 `package.json` 釘的一樣；S4 最後一行 `✔ 完成：9 支 × 2 個位置…`；S5 最後一行 `✔ 4 個檔都對`（✖ 不擋其他步驟，照手冊 S5 處理）；S9 的 `all_ok` 是 `true`。
 常見錯誤：`npm install` 在 `setup/` 裡跑 → 一定在工作區根目錄（有 `package.json` 的那層）；S4 印 `✖ 衝突` → 退路表第 3 列。
 
@@ -104,7 +105,7 @@ node shared/template/tools/brand.mjs speaker
 | `npm ERR! code EACCES` | 不要改用系統管理員權限；確認在工作區根目錄、不是系統資料夾 | 停下來回報：指令、錯誤原文、已經試過什麼（`setup/README.md` 原則 8） |
 | `npm ERR! network`、`ETIMEDOUT` | 等 1 分鐘重跑一次 | 停下來回報 |
 | `✖ 衝突 … 這個資料夾不是 install-skills 裝的` | 把那個路徑貼給使用者，問要不要改名或移走；不要自己刪 | — |
-| 檢測項目 `restart` | 請使用者重開 MiniMax Code（`M8`／`W9`），或加 PATH 前綴繼續 | — |
+| 檢測項目 `restart` | 照本檔「開始前」的 `restart` 那一列 | — |
 | 其他症狀 | 查 `setup/troubleshooting.md` | 停下來回報 |
 
 ## 工具呼叫預算

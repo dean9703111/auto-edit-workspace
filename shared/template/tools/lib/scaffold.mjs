@@ -8,7 +8,8 @@
 //   beatIndex(md)                           → BEATS.md 每個拍型的行號範圍
 //   sceneSnippet(scene)                     → 這個情境最少要寫的 plan.json 一段（有 <…> 佔位）
 //   splitParts({ cues, outline, videoDur }) → 章節切成分工單位（沒有 ## 就照時間切；太長的章再切）
-//   designTarget(seconds)                   → 這一段時間建議幾段內容設計動畫
+//   designTarget(seconds)                   → 這一段時間估計幾段內容設計動畫候選（還不知道段數時用）
+//   designTargetOf(n)、designEligible(seg)  → 寫好草稿後照實際段數算：約三成的段（media、章節段不算）
 //   renderCommon(input)、renderSnippets(input)、renderPart(part, input) → 共用.md、寫法.md、chNN.md
 import { normText, textWidth } from './time.mjs';
 
@@ -125,7 +126,7 @@ export function beatIndex(md) {
 
 const holder = (name, d) => {
   if (d.type === 'number') return '01';
-  if (d.type === 'icon') return '<圖示名>';
+  if (d.type === 'icon') return '<英文圖示名，例 smartphone>';
   if (d.type === 'illus') return '<畫廊元件>';
   return d.max != null ? `<≤${d.max} 字>` : `<${d.label || name}>`;
 };
@@ -158,11 +159,14 @@ const rangeOf = (r) => (Array.isArray(r) ? r : [r.start, r.end]);
 
 export const PART_MAX = 480;      // 一個分工單位最長 8 分鐘（一個子代理一次寫得完、又不用太久）
 export const PART_TARGET = 300;   // 沒有章節時，大約每 5 分鐘切一份
-export const DESIGN_EVERY = 120;  // 內容設計動畫：建議每 2 分鐘至少一段（建議初值）
+export const DESIGN_SHARE = 0.3;  // 內容設計動畫候選：約三成的段（其他七成套模板）
+const SEG_SECONDS = 10;           // 估算用：一段平均約 10 秒（--scaffold 還不知道段數）
 
-export const designTarget = (seconds) => (seconds < 60 ? 0 : Math.max(1, Math.round(seconds / DESIGN_EVERY)));
+export const designTarget = (seconds) => (seconds < 60 ? 0 : Math.max(1, Math.round((seconds / SEG_SECONDS) * DESIGN_SHARE)));
+export const designEligible = (s) => s.type !== 'media' && !['chapter-tag', 'speaker'].includes(s.scene);
+export const designTargetOf = (n) => (n < 3 ? 0 : Math.max(1, Math.round(n * DESIGN_SHARE)));
 // 上限：一段內容設計動畫比模板多用很多額度（實測 30 分鐘片首讀多 3 萬字、累積多 71 萬字），超過就挑最值得的
-export const designCap = (target) => (target ? Math.max(Math.ceil(target * 1.5), target + 2) : 0);
+export const designCap = (target) => (target ? target + Math.max(1, Math.round(target / 3)) : 0);
 
 // 在 [lo, hi] 秒之間找停頓最長的地方切開，回傳切點後第一句的索引
 function bestCut(cues, from, to, lo, hi) {
@@ -252,22 +256,22 @@ export function assetsFor(part, cues, notes) {
 export function renderCommon(input) {
   const { project, format, videoDur, cues, plan = {}, situationsMd, beatsMd, voiceOnly = [], assets = { screen: 0, images: 0 }, notes = [], hasCamera = true, kinds = '', parts = [] } = input;
   const L = [];
-  L.push(`# 分鏡素材（共用）：${project}（build.mjs --scaffold 產生，不要手改；字幕改過就重跑）`, '');
+  L.push(`# 分鏡素材（共用）：${project}（build.mjs --scaffold 產生，不要手改；字幕改過、工作區更新過都要重跑）`, '');
   L.push('排分鏡要查的東西都在這份和你那一章的 `chNN.md`。**照這兩份寫，不要整份讀 USAGE／SITUATIONS／BEATS，也不要寫 script 查逐字稿或秒數**；這裡沒寫的才照最後一節找那幾行。', '');
   L.push('## 1. 這支影片', '');
   L.push(`- 版式：${format?.label ?? '—'}；長度 ${clock(videoDur)}（${cues.length} 句字幕），分成 ${parts.length} 份寫`);
   L.push(`- 主軌：${kinds || (hasCamera ? '有講者' : '只有聲音')}${hasCamera ? '' : '。**沒有講者**：沒有疊加、子母畫面，每一段都要有畫面（media 或不透明全幕），全畫面段自動用全寬版型，字卡（06–15）不能用'}`);
   if (hasCamera) L.push(`- 講者框：${plan.speakerBox ? JSON.stringify(plan.speakerBox) : '還沒有 → 先跑 qc.mjs speaker --write'}；構圖：${plan.frame ? JSON.stringify(plan.frame) : '不裁切'}`);
-  L.push(`- 章節：${videoDur >= CHAPTER_MIN_VIDEO ? `滿 ${CHAPTER_MIN_VIDEO} 秒，章節起點用 01 章節轉場（業配段不放）` : `不到 ${CHAPTER_MIN_VIDEO} 秒，不用 01；章節起點放一段 02 章節角標`}；章節角標 build 自動常駐，不用另排；講稿沒有 \`##\` 章名就自己取 ≤ 10 字的章名，寫進 decide`);
+  L.push(`- 章節：${videoDur >= CHAPTER_MIN_VIDEO ? `滿 ${CHAPTER_MIN_VIDEO} 秒，章節起點用 01 章節轉場（業配段不放）` : `不到 ${CHAPTER_MIN_VIDEO} 秒，不用 01；章節第一句放一段 02 章節角標（綁那句到下一句，例 \`#1\`–\`#2e\`）`}；\`chNN.md\` 有「章節段」就照第 7 節貼，不用自己寫。01、02 是情境代號，不是章號（章號寫在章節段的 \`slots.num\`，第一章是 01）；之後角標 build 自動常駐，不用再排；講稿沒有 \`##\` 章名就自己取 ≤ 10 字的章名，寫進 decide`);
   const sp = input.speaker;
-  if (input.hasCamera) L.push(sp?.state === 'set' ? `- 講者：${sp.name}（14 講者介紹一集只排一次，只有第一份排；name、titles 不用寫，自動帶入）` : sp?.state === 'off' ? '- 講者：使用者不要講者介紹，不要排 14' : '- 講者：還沒設定。14 講者介紹一集只排一次，只有第一份排；name、titles 不要寫也不要編（設定後自動帶入），在 decide 寫「講者姓名、頭銜待確認」');
+  if (input.hasCamera) L.push(sp?.state === 'set' ? `- 講者：${sp.name}（14 講者介紹一集只排一次，只有第一份排，綁自我介紹那幾句；name、titles 不用寫，自動帶入）` : sp?.state === 'off' ? '- 講者：使用者不要講者介紹，不要排 14' : '- 講者：還沒設定。14 講者介紹一集只排一次，只有第一份排，綁自我介紹那幾句；name、titles 不要寫也不要編（設定後自動帶入），在 decide 寫「講者姓名、頭銜待確認」');
   L.push(`- 素材：螢幕錄影 ${assets.screen} 支、圖片 ${assets.images} 張${assets.screen || assets.images ? '（第 5 節）' : ''}`);
   L.push(voiceOnly.length ? `- 只有聲音的區間（一定要被 media 段或不透明全幕蓋住）：${voiceOnly.map((r) => { const [a, b] = rangeOf(r); return `${clock(a)}–${clock(b)}`; }).join('、')}` : '- 只有聲音的區間：無');
   if (voiceOnly.length && hasCamera) L.push('- 這些區間沒有講者：不能用疊在講者上的字卡（06–15）和疊加的模板，全畫面段自動用全寬版型，內容設計動畫用全螢幕畫布');
   L.push('');
 
   L.push('## 2. 怎麼選：三條路', '');
-  L.push('1. **有對得上的錄影或圖片** → media 段（第 5 節）。', '2. **內容設計動畫**（第 4 節）：這段值得專門為它設計畫面。', '3. **模板**：字卡與模板動畫，工具直接產出，不用另外做動畫。寫法在 `寫法.md`，**要哪一個就查哪一個，不用整份讀**：`build.mjs --project <專案> --spec x-process`（字卡寫 key，例 `key-point`）。', '');
+  L.push('1. **有對得上的錄影或圖片** → media 段（第 5 節）。', '2. **內容設計動畫**（第 4 節）：這段值得專門為它設計畫面。', '3. **模板**：字卡與模板動畫，工具直接產出，不用另外做動畫。**相鄰兩段不要用同一個模板**（例：兩段 `x-process` 連著），換一個或併成一段。寫法在 `寫法.md`，**要哪一個就查哪一個，不用整份讀**：`build.mjs --project <專案> --spec x-process`（字卡寫 key，例 `key-point`）。', '');
   const questions = situationQuestions(situationsMd), rules = animationRules(input.styleMd);
   if (questions.length) L.push('定大類的四題：', '', ...questions, '');
   if (rules.length) L.push('退到字卡只能用這幾條當理由（「字卡比較簡單」「時間不夠」不是理由）：', '', ...rules, '');
@@ -289,11 +293,11 @@ export function renderCommon(input) {
     L.push('');
   }
 
-  L.push('## 4. 內容設計動畫（這條路最提升質感，不要只挑模板）', '');
-  L.push('不是套模板：這段內容值得專門為它設計一個畫面。**你在這裡只要提名、寫一句話的構想**，之後由設計師子代理專門想鏡位、從空白畫布做出來。', '');
-  L.push('什麼時候提名：親身經驗或小故事、比喻、因果與轉折（以前怎樣、後來發現）、抽象的道理、情緒高點、這集最想讓人記住的畫面。**只是在條列、走流程的段落用模板就好。**判斷方式：把字幕遮起來只看畫面，能不能看懂在講什麼；模板做不到就提名。', '');
-  L.push('```json', '{"id":"d0305","type":"custom","design":true,"from":"#N","to":"#Me","anchor":"<起點那句的一小段原文>","story":{"say":"<講解在講什麼>","idea":"<一句話：畫面上發生什麼事、為什麼這樣畫。不要寫模板名稱>","why":"<為什麼值得設計>"}}', '```', '');
-  L.push(`建議數量：全片每 ${DESIGN_EVERY / 60} 分鐘至少 1 段，每一章 \`chNN.md\` 有寫這章的目標。段長至少 6 秒、講了 2 句以上才放得下。相鄰的內容設計動畫不要用同一種畫面。`, '');
+  L.push('## 4. 內容設計動畫候選（使用者在停點 ③ 勾了才做）', '');
+  L.push('內容設計動畫是設計師子代理從空白畫布專門為一段設計的畫面，質感最好，但一段要多花不少時間，所以**先照常套模板或字卡，再把值得設計的段標成候選**：在那段的 `story` 加 `designIdea`（一句話構想）和 `designWhy`（為什麼值得設計）。使用者在分鏡表勾了，工具才把那段換成內容設計動畫；沒勾就用你寫的模板，所以模板那部分一樣要寫完整。', '');
+  L.push('什麼時候標候選：親身經驗或小故事、比喻、因果與轉折（以前怎樣、後來發現）、抽象的道理、情緒高點、這集最想讓人記住的畫面。**只是在條列、走流程的段落不用標。**判斷方式：把字幕遮起來只看畫面，能不能看懂在講什麼；模板做不到就標。', '');
+  L.push('```json', '{"id":"s0305","scene":"key-point","from":"#N","to":"#Me","anchor":"<起點那句的一小段原文>","slots":{…照模板寫完整…},"story":{"say":"<講解在講什麼>","why":"<為什麼用這個模板>","designIdea":"<一句話：畫面上發生什麼事、為什麼這樣畫。不要寫模板名稱>","designWhy":"<為什麼值得設計>"}}', '```', '');
+  L.push(`建議數量：約三成的段標候選（其他七成套模板；寫了 20 段就標 6 段左右，\`--check-draft\` 照你實際寫的段數算，media、章節角標、講者介紹不算）。段長至少 6 秒、講了 2 句以上才放得下（要有 \`from\`、\`to\`）。相鄰的候選不要用同一種畫面。不要自己寫 \`"design": true\`：那是使用者勾了之後工具換的。`, '');
 
   L.push('## 5. 螢幕錄影、圖片（media）', '');
   L.push('```json', '{"id":"m0301","type":"media","src":"assets/screen/<檔名>","from":"#N","to":"#Me","anchor":"<起點那句的一小段原文>","in":<素材第幾秒>}', '```', '');
@@ -305,21 +309,21 @@ export function renderCommon(input) {
   }
 
   L.push('## 6. 時間怎麼寫', '');
-  L.push('**秒數 build 自己算，不要查 `transcript.json`、不要自己算秒數。** 寫字幕裡有的詞就好，檢查對不上會告訴你改哪裡。', '');
+  L.push('**秒數 build 自己算，不要查 `transcript.json`、不要自己算秒數。** 寫字幕裡有的詞就好，檢查對不上會告訴你改哪裡。', '**模板的「時間下限」（第一拍離段頭、拍與拍、最後一拍到段尾）也不用先算**：照講到的詞綁，`--check-draft` 用實際時間檢查，哪一拍太近、哪段太短會直接說，再照 → 改（同一句的併一拍、少一拍、段頭往前提）。字幕前面的時間只用來看段大概多長。', '');
   L.push('| 寫法 | 意思 |', '|---|---|', '| `#N`／`#Ne` | 第 N 句的起點／結尾 |', '| `#N+0.3`、`#Ne-0.2` | 再加減秒數 |', '| `#N@詞` | 第 N 句裡講到這個詞的時間（卡片主文字、每條項目、動畫站都綁這個） |', '| `+1.2` | 本段起點之後 1.2 秒（只能用在 at、beats） |', '');
-  L.push('段的 `from` 綁這段第一句；JSON 不能有註解、最後一項後面不能有逗號。', '');
+  L.push('段的 `from` 綁這段第一句；JSON 不能有註解、最後一項後面不能有逗號。02 章節角標可以和別段重疊，不用接縫；其他段（含 14 講者介紹）一段接一段，不重疊（這段的 `to` 寫下一段的 `from`）。', '');
 
   L.push('## 7. 草稿格式', '');
   L.push('每一章寫一份 `work/drafts/chNN.json`，`story` 每段都要有（分鏡表由工具從這裡產生，不用另外寫）：', '');
   L.push('```json', '{"chapter":"03","segments":[{"id":"s0301","scene":"key-point","from":"#N","to":"#Me","anchor":"…","slots":{"key":"…"},"beats":{"keyAt":"#N@詞"},"story":{"say":"講解在講什麼","why":"為什麼這樣呈現"}}],"icons":{"剪輯清單":"scissors"},"quotes":[{"n":42,"text":"原句","card":"卡上文字（≤ 14 字）","mood":"正"}],"decide":["拿不定、要使用者決定的事"]}', '```', '');
-  L.push('寫完先驗這一份（不會被別章影響）：`node shared/template/tools/build.mjs --project projects/<專案> --check-draft chNN`。✖ 全修；⚠ 只修一輪，工具印「可以交件」就停。', '');
-  L.push('金句只放 `quotes`，不要直接排成段（使用者勾了才上）。同一個物件全集用同一個圖示：`icons` 寫你用的對應。', '');
+  L.push('骨架第一次填：Read 一次整份、填好用 Write 一次寫回（`auto` 格和其他欄位原樣保留）。`chNN.md` 有「章節段」就原樣貼進 segments 最前面（大綱不寫它；之後再跑 `--outline` 會洗掉，要重貼）。', '寫完先驗這一份（不會被別章影響）：`node shared/template/tools/build.mjs --project projects/<專案> --check-draft chNN`。之後只用 Edit 改它點名的那幾格。✖ 全修。⚠ 只修一輪：照 → 用 Edit 改那幾格（不要整份重寫），再跑同一條檢查一次就停，留下的 ⚠ 寫進 decide 或回報。印「通過」或「可以交件」都算過關。同一個 ✖ 改 2 次還在，停下來回報指令和 ✖ 原文。', '');
+  L.push('金句只放 `quotes`（每份最多 2 則，挑最像翻轉句的），不要排成 15 金句字卡段（使用者勾了才上）；那幾句照常排在一般的段裡，和 quotes 重複沒關係。`mood` 寫 正、負、中 其中一個。同一個物件全集用同一個圖示：`icons` 寫你用的對應；圖示名寫錯 `--check-draft` 會列最接近的，不用先確認。', '');
 
   L.push('## 8. 這裡沒寫才去查', '');
   L.push('| 要查什麼 | 去哪裡 |', '|---|---|');
   const six = String(situationsMd ?? '').split(/\r?\n/).findIndex((l) => /^## 6\b|^## 6\./.test(l));
   if (six >= 0) L.push(`| 整集看一次（開場三拍、前後呼應、判決句） | \`shared/template/SITUATIONS.md\` 第 ${six + 1} 行起 |`);
-  L.push('| 第一層其他欄位（outro、rhythm、look） | `shared/template/USAGE.md` 3.2 |', '| 版面、字數、音效的規則 | `shared/style.md` 對應那一節 |', '');
+  L.push('| 結尾配樂、節奏、調光這些第一層欄位（outro、rhythm、look） | 不在草稿寫（合併只收 segments、icons、quotes、decide）；要配就寫進 decide，主代理處理 |', '| 版面、字數、音效的規則 | `shared/style.md` 對應那一節 |', '');
   void beatsMd;
   return `${L.join('\n')}\n`;
 }
@@ -377,7 +381,7 @@ export function renderSnippets(input) {
     L.push('```json', fillSnippet(f), '```');
     const all = fillSummary(f);
     if (all) L.push(`全部欄位：${all}`);
-    if (f.generator === 'scene' && input.illus?.length) L.push(`畫廊元件（illus）：${input.illus.join('、')}；螢幕類的狀態（opts.screen、state）：blank、video、play、rec、check、warn、shorts、qr、app`);
+    if (f.generator === 'scene' && input.illus?.length) L.push(`畫廊元件（illus）：${input.illus.join('、')}；螢幕類的狀態（opts.screen、state）：blank、video、play、rec、check、warn、shorts、qr、app。畫廊沒有的物件寫 \`icon\`（lucide 名稱，用 \`--icons 甲,乙\` 查），不要新畫 SVG`);
     const floor = floorLine(f.floors);
     if (floor) L.push(floor);
     L.push('');
@@ -399,12 +403,12 @@ export function floorLine(rules) {
   if (gaps.length) { const a = Math.min(...gaps), b = Math.max(...gaps); parts.push(`拍與拍 ≥ ${a === b ? a : `${a}–${b}`} 秒`); }
   if (end) parts.push(`最後一拍到段尾 ≥ ${end} 秒`);
   const total = Math.max(r1((open?.k ?? 0) + gaps.reduce((x, y) => x + y, 0) + end), minD);
-  return parts.length || minD ? `時間下限：${parts.join('、')}${total ? `${parts.length ? '；' : ''}項目全用上時段長至少 ${total} 秒` : ''}` : '';
+  return parts.length || minD ? `時間下限（\`--check-draft\` 會用實際時間算，不用自己算）：${parts.join('、')}${total ? `${parts.length ? '；' : ''}項目全用上時段長至少 ${total} 秒` : ''}` : '';
 }
 
 // 模板動畫的全部欄位（含選填）：寫草稿的人才知道有哪些可以用
 export function fillSummary(f) {
-  if (f.generator === 'scene') return 'title（≤10）；parts 每個 { id, illus|icon|src|wave, opts, label ≤10, row, side, pre, stand, w, h }（也可以 { id, layout, gap, parts: […] } 疊成一組）；links ["a>b", "a-b"]；beats 每拍 { at, in, line, state, move, count, wave, check, focus, dim, sfx }；route（路線圖）';
+  if (f.generator === 'scene') return 'title（≤10）；parts 每個 { id, illus|icon|src|wave, opts, label ≤10, row, side, pre, stand, w, h }（也可以 { id, layout, gap, parts: […] } 疊成一組）；links ["a>b", "a-b"]；beats 每拍 { at, in, line, state, move, count, wave, check, focus, dim, sfx }（state 寫 [元件 id, 原本的狀態, 換成的狀態]，例 ["b","blank","play"]＝b 的螢幕從 blank 換成 play；不換狀態就不寫）；route（路線圖）';
   const limit = (d) => [d.required ? '必填' : '選填', d.max != null ? `≤${d.max}` : '', d.type === 'icon' ? '圖示名' : d.type === 'at' ? '#N@詞' : d.type === 'number' ? '數字' : d.type === 'enum' ? (d.options || []).join('／') : ''].filter(Boolean).join('、');
   return Object.entries(f.slots || {}).map(([k, d]) => {
     if (d.type !== 'list') return `${k}（${d.label ? `${d.label}：` : ''}${limit(d)}）`;
@@ -439,10 +443,10 @@ export function renderPart(part, input) {
   const { cues, videoDur, outline = [], voiceOnly = [], notes = [], scenes = [] } = input;
   const L = [];
   L.push(`# ${part.key}｜${part.title}（#${part.firstN}–#${part.lastN}e，${clock(part.start)}–${clock(part.end)}，${(part.seconds / 60).toFixed(1)} 分鐘）`, '');
-  L.push(`你負責這一份：寫 \`work/drafts/${part.key}.json\`（格式見 \`共用.md\` 第 7 節）。段 id 開頭用 \`s${part.code}\`、\`x${part.code}\`、\`d${part.code}\`、\`m${part.code}\`，後面接兩位流水號，全片才不會撞號。`, '');
-  if (part.target) L.push(`- **內容設計動畫：至少 ${part.target} 段，最多 ${designCap(part.target)} 段**（\`共用.md\` 第 4 節）。挑這一份裡最值得設計的時刻，不是湊數；設計比模板貴很多。`);
+  L.push(`你負責這一份：先寫大綱 \`work/drafts/${part.key}.outline.md\`、跑 \`--outline ${part.key}\` 產生骨架，再填 \`work/drafts/${part.key}.json\`（做法見 chapter-worker.md，格式見 \`共用.md\` 第 7 節）。段 id 開頭用 \`s${part.code}\`、\`x${part.code}\`、\`d${part.code}\`、\`m${part.code}\`，後面接兩位流水號，全片才不會撞號。`, '');
+  if (part.target) L.push(`- **內容設計動畫候選：約三成的段（這一份估計 ${part.target} 段左右；\`--check-draft\` 照實際段數算）**（\`共用.md\` 第 4 節；照常套模板，在 story 加 designIdea、designWhy）。挑這一份裡最值得設計的時刻，不是湊數；使用者在停點 ③ 勾了才做。`);
   const vo = voiceOnly.map(rangeOf).filter(([a, b]) => b > part.start && a < part.end);
-  if (vo.length) L.push(`- **沒有講者的句子：${vo.map(([a, b]) => { const inside = cues.filter((c) => c.end > Math.max(a, part.start) && c.start < Math.min(b, part.end)); return inside.length ? `#${inside[0].n}–#${inside[inside.length - 1].n}` : `${clock(a)}–${clock(b)}`; }).join('、')}**。每一句都要被畫面蓋滿：用 media、全畫面模板（04 家族、\`layout\` 是 fullscreen 的 x-\*、有 \`bg\` 的字卡動態）或內容設計動畫（\`layout\` 寫 fullscreen）。字卡 06–15 和疊加的模板不能用，底下是黑的。`);
+  if (vo.length) L.push(`- **沒有講者的句子：${vo.map(([a, b]) => { const inside = cues.filter((c) => c.end > Math.max(a, part.start) && c.start < Math.min(b, part.end)); return inside.length ? `#${inside[0].n}–#${inside[inside.length - 1].n}` : `${clock(a)}–${clock(b)}`; }).join('、')}**。每一句都要被畫面蓋滿：用 media、全畫面模板（04 家族、\`layout\` 是 fullscreen 的 x-\*、有 \`bg\` 的字卡動態）或內容設計動畫（\`layout\` 寫 fullscreen）。字卡 06–15 和疊加的模板不能用，底下是黑的。有 \`work/screen-sync.json\`（邊錄邊講）時，開始時間落在它某一段 \`from\`–\`to\`（秒）裡的句子由 sync 段蓋，不用排。`);
   L.push('');
   const hits = assetsFor(part, cues, notes);
   if (hits.length) {
@@ -455,7 +459,7 @@ export function renderPart(part, input) {
   if (part.chapter && part.chapterN) {
     const seg = chapterSegments([{ n: part.chapterN, title: part.sub ? `${part.title}：${part.sub}` : part.title }], cues, { videoDur, scenes });
     const s = { ...seg.segs[0], id: `c${part.code}`, slots: { ...seg.segs[0].slots, num: String(part.chapter).padStart(2, '0') } };
-    L.push('章節段（直接貼進 segments，這一章第一段的 `from` 寫同一句；章節空檔工具會處理，不用查）：', '', '```json', JSON.stringify(s), '```', '');
+    L.push('章節段（不寫進大綱；骨架產生後原樣貼進 segments 最前面，之後再跑 `--outline` 會洗掉，要重貼。這一章第一段的 `from` 寫同一句；章節空檔工具會處理，不用查）：', '', '```json', JSON.stringify(s), '```', '');
     for (const w of seg.warn) L.push(`- ⚠ ${w}`);
     if (seg.warn.length) L.push('');
   }

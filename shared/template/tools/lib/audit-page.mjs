@@ -14,7 +14,7 @@
 //         own:[[l,t,r,b]…]（自己的文字行框＋流內的 svg／img＋巢狀框外框；不穿過 absolute 子層）, chars（自己的文字非空白字數）,
 //         ownFont:{ fs, lh }（自己的文字裡字級最大的那一行）, centered, allowOverlap, allowSlack, allowTight, widthShared, parentInnerW, alpha,
 //         shapeRect（svg：裡面形狀的聯集，連接線圖層用它，不用整個 svg 的框）, anc:[所有有記錄的祖先，近的在前],
-//         il（011：kit/illus.js 掛的 .il>svg；rect／shapeRect 已四邊外擴描邊 2px） }
+//         il（011：kit/illus.js 掛的 .il>svg；rect／shapeRect 已四邊外擴描邊 2px）, ilName（那個元件的 data-illus 名） }
 //     另回傳 illus：host 裡 .il 元件的個數（judgeIllus 只量有元件的段）
 //     另回傳 tops：custom root 與 .fill 直接底下的元素 [{ desc, pos, w, h, parent }]（給「未定位頂層」）
 //   collectMotionInPage({ hostId, compId }) → 不 seek，讀 window.__timelines[compId] 的每個 tween：
@@ -253,6 +253,7 @@ export function measureInPage({ hostId, W, H }) {
       desc: { id: el.id || '', cls: clsOf(el), text: (text || (el.id ? '' : (el.textContent || '').replace(/\s+/g, ' ').trim())).slice(0, 10), near: el.id ? '' : nearId(el) },
       rect: grow2(box(r)),
       il,
+      ilName: il ? el.parentElement.getAttribute('data-illus') || '' : '',
       inner: [r2(r.left + bw[0]), r2(r.top + bw[1]), r2(r.right - bw[2]), r2(r.bottom - bw[3])],
       text: !!text && rs.length > 0,
       textRect: rs.length ? union(rs) : null,

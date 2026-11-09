@@ -1,6 +1,6 @@
 ---
 name: auto-edit-deliver
-description: 輸出完成影片並驗收：deliver.mjs 一條指令做完 build、4 秒測試片段確認有聲音、整支 render、qc.mjs final，停點 ④ 已經在背景先 render 的就直接接手。使用者要在剪映（CapCut）自己剪時，另外用 capcut.mjs 輸出主軌＋每段透明 MOV＋字幕 SRT。當使用者看完完成影片預覽之後說「可以了，輸出完成影片」「輸出」「輸出剪映素材」「要用剪映剪」「輸出 mov」時使用。還有要改的地方、還沒看過完成影片預覽時不要用（改用 auto-edit-review）。
+description: 輸出完成影片並驗收：deliver.mjs 一條指令做完 build、4 秒測試片段確認有聲音、整支 render、qc.mjs final，使用者要求先在背景算（--prerender）過的，內容沒變就直接接手。使用者要在剪映（CapCut）自己剪時，另外用 capcut.mjs 輸出主軌＋每段透明 MOV＋字幕 SRT。當使用者看完完成影片預覽之後說「可以了，輸出完成影片」「輸出」「輸出剪映素材」「要用剪映剪」「輸出 mov」時使用。還有要改的地方、還沒看過完成影片預覽時不要用（改用 auto-edit-review）。
 version: 0.2.0
 ---
 # 輸出完成影片與驗收
@@ -31,8 +31,8 @@ version: 0.2.0
 node shared/template/tools/deliver.mjs --project projects/<專案> --said "使用者原話"
 ```
 
-一條做完：重新產生 → 4 秒測試片段確認有影音 → 整支（`--quality looks`，成功才換成 `output/final.mp4`，失敗不動舊檔）→ `qc.mjs final`。停點 ④ 時已經在背景先 render 的，內容沒變就直接接手，只跑驗收。上一支（完成影片或背景先 render 的）只差幾段時，工具只重畫改到的時間窗、接回去（印「只重畫改到的 N 秒」，通常不到一分鐘）；不是局部改動印一行「整支重新輸出：原因」再整支（`--force` 也是整支），都不用另外下指令。打開 `output/qc/qc-sheet.jpg` 掃一眼。`qc.mjs final` 有 ⚠ 想看那一段：`node shared/template/tools/qc.mjs observe --project projects/<專案> --from <秒> --to <秒>`。
-完成判準：印 `✔ 完成影片`；驗收 0 個 ✖（包括沒有「沒有講者小視窗」的 ✖）；每個 ⚠ 寫「刻意」或「要修」。
+一條做完：重新產生 → 4 秒測試片段確認有影音 → 整支（`--quality looks`，成功才換成 `output/final.mp4`，失敗不動舊檔）→ `qc.mjs final`。使用者要求先在背景算（`--prerender`）過的，內容沒變就直接接手，只跑驗收；平常停點 ④ 不 render，沒有這份。上一支（完成影片或背景先 render 的）只差幾段時，工具只重畫改到的時間窗、接回去（印「只重畫改到的 N 秒」，通常不到一分鐘）；不是局部改動印一行「整支重新輸出：原因」再整支（`--force` 也是整支），都不用另外下指令。打開 `output/qc/qc-sheet.jpg` 掃一眼。`qc.mjs final` 有 ⚠ 想看那一段：`node shared/template/tools/qc.mjs observe --project projects/<專案> --from <秒> --to <秒>`。
+完成判準：印 `✔ 完成影片`；驗收 0 個 ✖（包括沒有「沒有講者小視窗」的 ✖）；每個 ⚠ 寫「刻意」或「要修」。標「要修」的不在這一步改：回報列出來，最後一行改寫 `→ 下一個停點：④ 完成影片預覽（說「改 <段>」開始）`；使用者說要改就走 `auto-edit-review` 流程 B，改完再輸出。
 常見錯誤：✖ 長度不符 → plan.json 比 index.html 新，再跑一次；`✖ s21 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…` → 不要交、不要改 plan.json，照 → 跑 `verify-rough` 重做初剪。
 
 **2. 剪映素材（使用者要求才做）**
@@ -51,7 +51,7 @@ node shared/template/tools/capcut.mjs status --project projects/<專案> --wait
 - [ ] 用 `deliver.mjs`，沒有自己拆開 render、輪詢 log
 - [ ] `qc.mjs final` 0 個 ✖，⚠ 逐項說明
 - [ ] 附上 `output/qc/qc-sheet.jpg`
-- [ ] 貼了 build 的六行（人聲響度、音效比例、剪接點微淡化、講者調光、講者瘦臉、結尾配樂；有配樂就把出處那一句提醒使用者貼進說明欄）
+- [ ] build 的六行（人聲響度、音效比例、剪接點微淡化、講者調光、講者瘦臉、結尾配樂）和停點 ④ 報過的不一樣才貼；有配樂就提醒使用者把出處那一句貼進說明欄
 - [ ] 有配樂、有 ⚠ 的地方回報都寫了
 
 ## 退路表
@@ -77,5 +77,5 @@ qc final：<✔／⚠／✖ 原文，每項一行>
 ⚠ 說明：<每個 ⚠ 一行：刻意／要修＋理由>
 人聲響度 …、剪接點微淡化 …、音效比例 …、講者調光 …、講者瘦臉 …、結尾配樂 …（build 原文；和停點 ④ 報過的一樣就省略這行，不確定就照貼）
 output/qc/qc-sheet.jpg
-→ 完成
+→ 完成（有標「要修」的 ⚠ 時改寫：→ 下一個停點：④ 完成影片預覽（說「改 <段>」開始））
 ```

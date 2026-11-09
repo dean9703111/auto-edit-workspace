@@ -10,11 +10,14 @@
  *   node shared/template/tools/build.mjs --list [--json] 印出 18 情境＋40 字卡動態的 key、何時用、slots 與上限，以及插入素材（type: "media"）的欄位
  *   node shared/template/tools/build.mjs --project projects/<專案> --scaffold
  *                                                     產生 work/分鏡素材/（共用.md＋每章 chNN.md）：字幕編號、章節、情境對照、每種情境的寫法；順便在背景預先處理底片
+ *   node shared/template/tools/build.mjs --project projects/<專案> --design-status   內容設計動畫做到哪：每段「還沒動手／腳本寫好／動畫做了、audit 過沒」；空白畫布超過 20 分鐘沒進度就印重派的派工訊息
+ *   node shared/template/tools/build.mjs --project projects/<專案> --outline ch03   讀 work/drafts/ch03.outline.md（一段一行：id | from | to | 模板 | 在講什麼 | 候選構想），檢查段長、相鄰模板、接縫、候選數量，產生要填的草稿骨架 work/drafts/ch03.json（填過的段留著）
  *   node shared/template/tools/build.mjs --project projects/<專案> --check-draft work/drafts/ch03.json   只驗一份草稿（不受別章影響）
- *   node shared/template/tools/build.mjs --project projects/<專案> --merge-drafts   合併 work/drafts/ch*.json 成 plan.json 的 scenes，寫內容設計動畫的派工資料（work/briefs/）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --merge-drafts   合併 work/drafts/ch*.json 成 plan.json 的 scenes，寫內容設計動畫的派工資料（work/briefs/）；
+ *                                                     草稿的 at: auto 用字幕補成 #N@詞、中文圖示換英文；通過又沒有要先寫的鏡位腳本就接著產生分鏡表（同 --storyboard，停在停點 ③；--no-storyboard 不接）
  *   node shared/template/tools/build.mjs --project projects/<專案> --storyboard [--only s05,s12]   build＋截圖＋產生 work/storyboard.md，停在停點 ③
  *   node shared/template/tools/build.mjs --project projects/<專案> --apply-storyboard [--said "使用者原話"]   把網頁改的字、音效、金句套回 plan.json，記 ③ 通過
- *   node shared/template/tools/build.mjs --project projects/<專案> --review   build＋audit＋完成態拼圖，背景先 render，停在停點 ④（內容沒變的段沿用上次的量測和截圖；--no-reuse 全部重做）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --review   build＋audit＋完成態拼圖，停在停點 ④（預覽不 render；內容沒變的段沿用上次的量測和截圖；--no-reuse 全部重做；--prerender 順便在背景先 render）
  *   node shared/template/tools/build.mjs --project projects/<專案> --autofix [--only s05,s12]
  *                                                     工具知道答案的 ⚠／✖ 自動改進 plan.json（文字對時、小重疊、清單第一項比標題早、≤ 3 秒的空檔、停留太短、音效太密；
  *                                                     一處一處試、重跑檢查，沒有變好就退回；改之前備份 plan.json.bak-autofix-<時間>）。--merge-drafts、--apply-storyboard 會自動跑；
@@ -31,7 +34,7 @@
  *   底片要重新編碼時走背景工作（work/.jobs/prepare.*，同時只有一條在寫）：前景最多等 --wait <秒>（預設 540），超過結束碼 75，再跑一次同一條會接著等
  *   node shared/template/tools/build.mjs --no-loudnorm  重新編碼底片時不做人聲響度標準化（預設調到 −14 LUFS、true peak ≤ −1 dBTP）
  *   node shared/template/tools/build.mjs --no-declick   重新編碼底片時不在剪接點（work/cutpoints.json）做 15 ms 微淡化
- *   node shared/template/tools/build.mjs --project projects/<專案> --spec key-point   查一項字卡或模板的寫法（欄位、限制、時間下限）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --spec key-point   查字卡或模板的寫法（欄位、限制、時間下限；一次查好幾個用逗號：--spec key-point,x-scene）
  *   node shared/template/tools/build.mjs --project projects/<專案> --icons 手機,雲端    查圖示名稱
  *   node shared/template/tools/build.mjs --project projects/<專案> --words 28-41       看這幾句的字幕與逐字稿（挑 @詞 用）
  *   node shared/template/tools/build.mjs --project projects/<專案> --show s05,x03      只看這幾段的 plan（不用整份讀 plan.json）
@@ -73,7 +76,7 @@ import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
-import { runScaffold, checkDraft, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan } from './lib/flow.mjs';
+import { runScaffold, checkDraft, outlineCmd, designStatusCmd, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan, ensureBriefs } from './lib/flow.mjs';
 import { autofixPlan, summaryLines } from './lib/autofix.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
 import { jobState, runJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
@@ -88,7 +91,7 @@ const customPreview = fs.existsSync(CUSTOM_PREVIEW) ? await import(pathToFileURL
 const TEST_FILE = 'compositions/test-clip.html';
 const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
 const OUTPUT_DIRS = ['output', path.join('output', 'test-clips'), path.join('output', 'qc')];
-const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx'];
+const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'outline', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx'];
 
 export function parseArgs(argv) {
   const flags = {};
@@ -100,7 +103,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'autofix'].includes(k)) flags[k] = true;
+    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'autofix'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -709,6 +712,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
       res.warnings.push(...lc.warnings);
     }
     const clip = outroClipOf(res, P);
+    if (res.tm) for (const b of ensureBriefs(P, plan, jsonItems(res))) if (!json) log(`補寫 ${b.brief}（${b.id} 是內容設計動畫，還沒有 brief；設計師照它的畫布和段內秒數做）`);
     if (json) {
       const top = res.tm ? jsonTop(res, { clip }) : jsonTop({ theme: res.theme }, {});
       const report = {
@@ -942,8 +946,10 @@ async function cli() {
   if (flags.words) return wordsCmd(P, flags.words);
   if (flags.show) return showCmd(P, flags.show);
   if (flags.autofix) return autofixCmd(P, flags);
+  if (flags.outline) return outlineCmd(P, flags.outline);
+  if (flags['design-status']) return designStatusCmd(P);
   if (flags['check-draft']) return checkDraft(P, flags['check-draft']);
-  if (flags['merge-drafts']) return mergeDrafts(P, flags);
+  if (flags['merge-drafts']) return mergeDrafts(P, flags, { loadLib });
   if (flags.storyboard) return storyboardCmd(P, flags, { loadLib });
   if (flags['apply-storyboard']) return applyCmd(P, flags, { loadLib });
   if (flags.review) return reviewCmd(P, flags);

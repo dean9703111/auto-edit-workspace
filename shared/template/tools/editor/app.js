@@ -643,6 +643,7 @@ app.onVideoError = (m) => {
   videoWait = setTimeout(check, 0);
 };
 app.onPlayerReady = () => { renderMode(); if (app.pendingFocus != null) { player.seek(app.pendingFocus); app.t = app.pendingFocus; app.pendingFocus = null; } };
+app.onPlayerBlocked = () => toast('瀏覽器擋住了自動播放的聲音：在頁面上點一下，再按播放', 'warn', 5000);
 app.onPlayerError = (m) => {
   toast(`完成影片預覽出錯：${m}`, 'err', 6000);
   banner(`完成影片預覽出錯：${esc(m)}。可以先用「快速試聽」；一直出錯就請 AI 檢查播放器（npm install 後重開剪輯台）。`, 'error', [['改用快速試聽', () => { banner(''); setMode('sim'); }]]);
@@ -930,7 +931,9 @@ function renderExport(s) {
   const done = !s.running && s.ok === true;
   $('#exportTitle').textContent = s.running ? '正在輸出完成影片…' : s.canceled ? '已取消輸出' : s.ok ? '✓ 完成影片輸出好了' : s.started ? '✖ 沒有輸出成功' : '輸出完成影片';
   const left = s.eta != null ? `還要約 ${fmtWait(s.eta)}` : `整支大約要片長的 2 倍（這支約 ${fmtWait((app.outDur || 0) * 2)}）`;
-  $('#exportSub').textContent = s.running ? `已經 ${fmtWait(s.seconds)}，${left}。可以關掉這個視窗繼續看別的，按上方按鈕再打開；不要關閉剪輯台。` : (s.message || '') + (done && s.final?.file ? `檔案在專案的 ${s.final.file}。` : '');
+  // 標題已經寫「完成影片輸出好了」：下面那行不再重複（伺服器的訊息給 AI 讀，開頭照樣有）
+  const msg = done ? (s.message || '').replace(/^完成影片輸出好了[，,]\s*(但)?/, '') : s.message || '';
+  $('#exportSub').textContent = s.running ? `已經 ${fmtWait(s.seconds)}，${left}。可以關掉這個視窗繼續看別的，按上方按鈕再打開；不要關閉剪輯台。` : msg + (done && s.final?.file ? `檔案在專案的 ${s.final.file}。` : '');
   $('#exportSteps').innerHTML = s.steps.map((x, i) => {
     const state = done || (s.started && i < at) ? 'done' : i === at ? (s.running ? 'now' : s.canceled ? 'todo' : 'bad') : 'todo';
     const mark = { done: '✓', now: '…', bad: '✖', todo: '·' }[state];
@@ -2695,6 +2698,8 @@ for (const sel of ['#logIssues', '#exportIssues']) $(sel).addEventListener('clic
   const dlg = e.target.closest('dialog');
   if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }
   if (e.target.closest('summary, .chk-ai')) return;
+  const cue = e.target.closest('[data-chk-cue]');
+  if (cue) { dlg.close(); goToCue(Number(cue.dataset.chkCue)); return; }
   const li = e.target.closest('li'), seg = e.target.closest('[data-seg]');
   if (li?.dataset.chkAct === 'speaker') { dlg.close(); openSpeakerDialog(null); return; }
   const id = seg?.dataset.seg || li?.dataset.id;
@@ -2996,7 +3001,7 @@ const rqCommand = (revision, pending = rqPending()) => {
   const project = app.server?.project?.dir || '';
   const cli = `node shared/template/tools/editor.mjs --project ${JSON.stringify(project)}`;
   const progress = `${revision ? '' : `先用 ${cli} --requests-state status 取得這份修改單的 revision；`}開始處理時用 ${cli} --requests-state generating --request-revision ${revision || '<剛讀取的 revision>'} --ids ${pending.map((r) => r.id).join(',')} 回報狀態；build、audit 通過後用同一指令把 generating 換成 done（可加 --round rN --message 描述），失敗則換成 failed --message 原因；逐段回報可調整 --ids，版本衝突就停下重新讀取修改單。`;
-  return `照剪輯台修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：直接做，不用先出提案；每段派一個子代理平行改，全部回來後 build、audit，停在停點 ④。${progress}`;
+  return `照剪輯台修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：照 auto-edit-review 流程 F 做（.agents/skills/auto-edit-review/references/editor-requests.md），不用先出提案，停在停點 ④。${progress}`;
 };
 function rqMarkdown() {
   const now = new Date();

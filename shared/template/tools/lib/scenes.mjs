@@ -15,6 +15,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { parseTime, cueSeconds, r3 } from './time.mjs';
 import { ILLUS_BUILTIN } from './audit-illus.mjs';
+import { iconHint } from './icon-alias.mjs';
 
 // ---------- 載入 ----------
 
@@ -221,7 +222,7 @@ export function resolveScene(opts) {
       // "none"：不放圖示（只有非必填的圖示欄位可以；模板用 {{#icon}}…{{/icon}} 包住圖示）
       if (name === 'none' && !decl.required) { out[key] = ''; return; }
       const svg = icons?.get(name);
-      if (!svg) { err(`${label}：找不到圖示「${value}」（kit/icons.json；相近：${nearest(String(value), icons?.names || []).join('、')}）`); out[key] = ''; }
+      if (!svg) { err(`${label}：找不到圖示「${value}」（kit/icons.json；${iconHint(value, icons?.names || [], nearest)}）`); out[key] = ''; }
       else out[key] = svg;
     } else if (t === 'illus') {
       // 畫廊插圖元件名（kit/illus.js 的 20 個）；模板寫 <div data-illus="{{key}}">，ILLUS.mount 換成 SVG

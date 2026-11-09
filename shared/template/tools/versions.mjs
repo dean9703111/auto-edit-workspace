@@ -7,34 +7,36 @@
  *       開一輪回饋 r<N>（編號＝status.mjs 的「下一輪回饋編號」）：備份 work/hyperframes/plan.json.bak-r<N>、存改之前的版本、建 work/feedback/r<N>.md
  *       （原話、分類、改了哪幾段、驗證四節）、work/製作進度.md 回饋輪加一列（停點 ④ 在等回覆時也記使用者的回覆），最後只印這幾段在 plan.json 的原文與行號，
  *       不用讀整份 plan.json。r<N> 還沒 finish 時再跑一次＝同一輪加段（備份不重做；已經在這一輪的段不重存，只再印一次）。
- *       --preview：改之前的版本也出預覽.mp4（要比較影片才加，一段約 25 秒）。
- *   node shared/template/tools/versions.mjs finish --project projects/<專案> [--preview] [--no-change] [--no-prerender] [--json]
+ *       --preview：改之前的版本也出預覽.mp4（使用者要比較影片才加，一段約 25 秒；平常不 render，看完成影片預覽就好）。
+ *   node shared/template/tools/versions.mjs finish --project projects/<專案> [--preview] [--no-change] [--prerender] [--json]
  *       對這一輪做完：build（只印 ✖、⚠ 和六行摘要；沒改到的段的 ⚠ 只印數量）→ audit --only <改到的段> --shots（錄影段改用 snapshot --at 那段中間）→
  *       存改之後的版本 → 驗證與改法寫進 r<N>.md → 停點紀錄記 ④ 待回覆 → 印改到的段、✖／⚠、要看的那張截圖、停點 ④ 那一行。不跑全片 snapshot。
  *       有 ✖ 就停（結束碼 1，版本和停點都不記），改完再跑一次。finish 之後看截圖不對，改完也是再跑一次（使用者回覆之前都算同一輪）。
- *       --preview：改之後的版本出預覽.mp4，上一版也有預覽時出比較影片。--no-change：確定這輪不用改（不然段都和改之前一樣會 ✖）。
- *       過了之後在背景低優先權先 render 整支（同 build --review；說「輸出」就不用再等一個片長），--no-prerender 不做。
+ *       改到的段存版本時，audit 拼好的完成態圖複製成那一版的 預覽.jpg（不 render）。
+ *       --preview：改之後的版本也出預覽.mp4，上一版也有預覽時出比較影片（使用者要比較影片才加）。--no-change：確定這輪不用改（不然段都和改之前一樣會 ✖）。
+ *       --prerender：過了之後在背景低優先權先 render 整支（預設不做：預覽不用 render，說「輸出」才 render）。
  *
  * ── 版本 ──
  *   node shared/template/tools/versions.mjs save --project projects/<專案> --seg s12[,s08] [--preview]
- *       把這段現在的樣子存成下一版 work/versions/<段>/v<N>/：段落.json（plan.json 那一段）、情境動畫的 x-*.html 與用到的
- *       illus-local/*.svg、分鏡.md（storyboard.md 那一節）。預設只存檔（一段不到 1 秒）。
- *       和某一版一模一樣就不另存（印「沒變」）；有已確認的提案（versions.mjs accept 過）就存進那一版，這時一定出預覽（改版要比較）。
+ *       把這段現在的樣子存成下一版 work/versions/<段>/v<N>/：段落.json（plan.json 那一段）、動畫檔（src，或內容設計動畫的
+ *       x-design-<段>.html、模板動畫的 <模板>-<段>.html）與用到的 illus-local/*.svg、內容設計動畫的 鏡位腳本.md（work/designs/<段>.md）、
+ *       分鏡.md（storyboard.md 那一節）。只存檔、不 render（一段不到 1 秒）。
+ *       和某一版一模一樣就不另存（印「沒變」）；有已確認的提案（versions.mjs accept 過）就存進那一版。
  *       --preview：另外出 預覽.mp4（build --test＋render 這一段，6 秒的段約 25 秒）、預覽.jpg（預覽每 0.5 秒一格，最多 24 格）；
  *       上一個使用中的版本也有預覽時，再出 work/versions/<段>/比較-v<舊>-v<新>.mp4（左舊右新，上方標版本號，聲音用新版）。
  *   node shared/template/tools/versions.mjs new --project projects/<專案> --seg s12[,s08] [--note "使用者原話"]
- *       改版第一步：先 save 現在的樣子（含預覽），再開提案 work/versions/<段>/v<N+1>/分鏡.md（抄 storyboard.md 那一節，等 AI 改），
+ *       改版第一步：先 save 現在的樣子（audit 拼圖比動畫新就附成 預覽.jpg，不 render），再開提案 work/versions/<段>/v<N+1>/分鏡.md（抄 storyboard.md 那一節，等 AI 改），
  *       印出記停點的指令和停點 ③ 那一行。已經有還沒做完的提案就沿用它。
  *   node shared/template/tools/versions.mjs accept --project projects/<專案> --seg s12[,s08] [--say "使用者原話"]
  *       使用者說「可以」之後：把提案 分鏡.md 的「## 分鏡」整節寫回 work/storyboard.md 那一段（audit 照它對拍），停點紀錄記「通過」，印出下一步。
  *   node shared/template/tools/versions.mjs use --project projects/<專案> --seg s12 --ver v1
- *       退回某一版：先 save 現在的樣子（含預覽，不會弄丟），再把那一版的段落、x 檔、svg、分鏡寫回 plan.json、compositions/、
- *       illus-local/、storyboard.md；沒做完的提案標成「放棄」。之後要 build。
+ *       退回某一版：先 save 現在的樣子（不會弄丟），再把那一版的段落、動畫檔、svg、鏡位腳本、分鏡寫回 plan.json、compositions/、
+ *       illus-local/、work/designs/、storyboard.md；沒做完的提案標成「放棄」。之後要 build。
  *   node shared/template/tools/versions.mjs list --project projects/<專案> [--seg s12] [--json]
  *       列出每段的版本、哪一版是目前的（和現在的 plan.json、x 檔一致）、比較影片。
  *
  * --project：同 build.mjs。版本只能用這支工具建、退回，不要手動複製或改 work/versions/ 裡的檔（分鏡.md 的提案除外）。
- * --no-preview：不 build、不 render（舊參數，save 預設就是這樣；new、use 加了也不出預覽）。
+ * --no-preview：不 build、不 render（舊參數，現在每個指令預設就是這樣）。
  * 測試用：--template <shared/template 資料夾>
  */
 import fs from 'node:fs';
@@ -53,6 +55,7 @@ import { appendRound, appendStop, progressFile } from './lib/progress.mjs';
 import { readStopLog } from './status.mjs';
 import { markStoryboardWritten } from './lib/storyboard-state.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
+import { designFileOf, fillFileOf } from './lib/custom-fill.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const DIR = 'versions';
@@ -110,16 +113,23 @@ export function snapshotOf(P, id) {
   const seg = (plan.scenes || []).find((s) => s && s.id === id);
   if (!seg) throw new Error(`plan.json 沒有「${id}」這一段 → 段 id 照 build.mjs --check 報告的第一欄（例 s12）；「1:10 那段」先對照報告的起–迄找 id`);
   const files = [];
-  if (seg.type === 'custom' && seg.src) {
-    const f = path.join(P.out, seg.src);
+  // 動畫檔：手寫的 src；內容設計動畫、模板動畫沒有 src，檔名照工具的規則（build 產生、設計師改的就是這支）
+  const anim = seg.src || (seg.design ? designFileOf(seg) : seg.template ? fillFileOf(seg) : null);
+  if (anim && (seg.type === 'custom' || seg.design || seg.template)) {
+    const f = path.join(P.out, anim);
     if (fs.existsSync(f)) {
       const c = fs.readFileSync(f, 'utf8');
-      files.push({ rel: posix(seg.src), store: path.basename(seg.src), content: c });
+      files.push({ rel: posix(anim), store: path.basename(anim), content: c });
       for (const m of new Set([...c.matchAll(/illus-local\/[^"'`\s)]+?\.svg/g)].map((x) => x[0]))) {
         const s = path.join(P.out, m);
         if (fs.existsSync(s)) files.push({ rel: m, store: m, content: fs.readFileSync(s, 'utf8') });
       }
     }
+  }
+  // 內容設計動畫的鏡位腳本（動畫分鏡表的來源）也一起存，退回時才對得上
+  if (seg.design) {
+    const d = path.join(P.project, 'work', 'designs', `${id}.md`);
+    if (fs.existsSync(d)) files.push({ rel: `../designs/${id}.md`, store: '鏡位腳本.md', content: fs.readFileSync(d, 'utf8') });
   }
   const sb = path.join(P.project, 'work', 'storyboard.md');
   const section = fs.existsSync(sb) ? findSection(fs.readFileSync(sb, 'utf8'), id)?.text ?? null : null;
@@ -167,6 +177,22 @@ function markStoryboard(P, md) {
   st.storyboardMtime = fs.statSync(f).mtimeMs;
   writeState(P.project, st);
   markStoryboardWritten(P, md);   // 工具自己寫的，不算「有改動還沒套回」
+}
+
+// 內容設計動畫：設計師改動畫時改了 work/designs/<段>.md 的拍（比 storyboard.md 新）→ 那張表寫回 storyboard.md 這一節（使用者在剪輯台改過就是 storyboard.md 比較新，不動）
+export function syncDesignSheet(P, id) {
+  const sbFile = path.join(P.project, 'work', 'storyboard.md'), dFile = path.join(P.project, 'work', 'designs', `${id}.md`);
+  if (!fs.existsSync(sbFile) || !fs.existsSync(dFile) || fs.statSync(dFile).mtimeMs <= fs.statSync(sbFile).mtimeMs) return false;
+  const title = `#### 動畫分鏡 ${id}`, d = fs.readFileSync(dFile, 'utf8'), at = d.indexOf(title);
+  if (at < 0) return false;
+  const md = fs.readFileSync(sbFile, 'utf8'), sec = findSection(md, id);
+  if (!sec) return false;
+  const k = sec.text.indexOf(title);
+  const head = (k >= 0 ? sec.text.slice(0, k) : sec.text).replace(/\s+$/, '');
+  const body = `${head}\n\n${d.slice(at).trim()}`;
+  if (body === sec.text) return false;
+  markStoryboard(P, replaceSection(md, id, body));
+  return true;
 }
 
 function writeVersionFiles(dir, snap) {
@@ -239,6 +265,18 @@ function proposalBlock(P, id, vers, snap) {
   return null;
 }
 
+// audit 拼的這段完成態（work/audit-shots/sheet-<段>.jpg）：比這段的動畫檔、plan.json 都新才算現在的樣子
+export function freshSheet(P, id) {
+  const f = path.join(P.project, 'work', 'audit-shots', `sheet-${id}.jpg`);
+  if (!fs.existsSync(f)) return null;
+  const t = fs.statSync(f).mtimeMs;
+  let snap = null;
+  try { snap = snapshotOf(P, id); } catch { return null; }
+  const srcs = snap.files.filter((x) => x.rel.startsWith('compositions/')).map((x) => path.join(P.out, x.rel));
+  for (const x of srcs.length ? srcs : [P.plan]) if (fs.existsSync(x) && fs.statSync(x).mtimeMs > t) return null;
+  return f;
+}
+
 // ---------- save ----------
 export function saveSeg(P, flags, id, log, opt = {}) {
   const snap = snapshotOf(P, id);
@@ -247,8 +285,8 @@ export function saveSeg(P, flags, id, log, opt = {}) {
   const pend = pendingOf(vers);
   const blocked = proposalBlock(P, id, vers, snap);
   if (blocked) throw new Error(blocked);
-  // 預設只存檔；--preview 才 render。new、use 自己帶（opt.preview）；存進已確認的提案＝改版做完，一定要能比較（--no-preview 優先）
-  const wantPreview = !flags['no-preview'] && !!(flags.preview || opt.preview || pend);
+  // 預設只存檔、不 render（看會動的樣子用完成影片預覽，瀏覽器即時播）；使用者要比較影片才加 --preview
+  const wantPreview = !flags['no-preview'] && !!flags.preview;
   let target, created = false;
   if (pend) {
     writeVersionFiles(pend.dir, snap);
@@ -271,6 +309,10 @@ export function saveSeg(P, flags, id, log, opt = {}) {
     created = true;
   }
   log(created ? `${id}：存成 v${target.n}（${rel(target.dir)}/）` : `${id}：沒變，目前就是 v${target.n}（${rel(target.dir)}/）`);
+  // 預覽.jpg：audit 量這段時拼好的完成態（finish、new 傳進來），不用 render
+  if (opt.still && fs.existsSync(opt.still)) {
+    try { fs.copyFileSync(opt.still, path.join(target.dir, '預覽.jpg')); } catch { /* 沒圖照樣存版本 */ }
+  }
   const mp4 = path.join(target.dir, '預覽.mp4');
   let previewOk = fs.existsSync(mp4);
   if (!previewOk && wantPreview) {
@@ -306,12 +348,13 @@ export function newProposal(P, flags, id, log, note = null) {
     log(`${id}：v${pend.n} 的提案已經在了（${pend.meta.state || '提案'}）→ 直接改 ${rel(path.join(pend.dir, '分鏡.md'))}`);
     return { id, n: pend.n, file: path.join(pend.dir, '分鏡.md'), reused: true };
   }
-  const cur = saveSeg(P, flags, id, log, { preview: true });
+  const cur = saveSeg(P, flags, id, log, { still: freshSheet(P, id) });
   const n = Math.max(cur.n, ...listVersions(P.project, id).map((v) => v.n)) + 1;
   const dir = path.join(segDir(P.project, id), `v${n}`);
   const snap = snapshotOf(P, id);
+  const look = ['預覽.mp4', '預覽.jpg'].filter((f) => fs.existsSync(path.join(cur.dir, f))).map((f) => `[v${cur.n}/${f}](../v${cur.n}/${f})`);
   const md = [`# ${id} v${n}（改版）`, '', `- 提案：${now()}`, ...(note ? [`- 原話：${note}`] : []),
-    `- 現在的樣子：[v${cur.n}/預覽.mp4](../v${cur.n}/預覽.mp4)、[v${cur.n}/預覽.jpg](../v${cur.n}/預覽.jpg)`, '',
+    `- 現在的樣子：${look.length ? `${look.join('、')}；` : ''}會動的樣子在完成影片預覽（剪輯台）看 ${id} 那段`, '',
     '## 這版要改什麼', '', `- ${PLACEHOLDER}：和 v${cur.n} 差在哪、為什麼；動態只用 BEATS.md 語彙表的名稱）`, '', sectionBlock(snap)].join('\n');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, '分鏡.md'), md);
@@ -344,7 +387,7 @@ export function useVersion(P, flags, id, ver, log) {
   const t = vers.find((v) => v.n === want && v.complete);
   if (!t) throw new Error(`${id} 沒有做完的 v${Number.isFinite(want) ? want : ver}（有：${vers.filter((v) => v.complete).map((v) => v.name).join('、') || '無'}）→ 先跑 node shared/template/tools/versions.mjs list --project ${pj(P)} --seg ${id} 看有哪幾版`);
   for (const v of vers) if (!v.complete && v.meta.state !== '放棄') { writeJson(path.join(v.dir, META), { ...v.meta, state: '放棄', dropped: now() }); log(`${id}：v${v.n} 的提案標成放棄`); }
-  saveSeg(P, flags, id, log, { preview: true });
+  saveSeg(P, flags, id, log, { still: freshSheet(P, id) });
   const seg = readJson(path.join(t.dir, '段落.json'));
   const plan = readJson(P.plan);
   const i = (plan?.scenes || []).findIndex((s) => s && s.id === id);
@@ -788,6 +831,7 @@ export function finishRound(P, flags = {}, log = console.log, steps = {}) {
   if (blocks.length) return fail(blocks);
   if (!anyChange && !flags['no-change']) return fail([`✖ 這輪的段（${ids.join('、')}）都和改之前一樣 → 還沒改就先改 plan.json 或 x 檔再跑一次；確定不用改就加 --no-change（照樣記錄、停在停點 ④）`]);
   if (anyChange && same.length) notes.push(`⚠ ${same.join('、')} 和改之前一樣：要改的話還沒改到`);
+  for (const s of info) if (s.snap.seg?.design && syncDesignSheet(P, s.id)) notes.push(`${s.id}：work/designs/${s.id}.md 的動畫分鏡寫回 work/storyboard.md 那一節`);
 
   // 1. build
   const b = S.build(P, flags);
@@ -812,7 +856,8 @@ export function finishRound(P, flags = {}, log = console.log, steps = {}) {
 
   // 3. 改之後的版本
   const savedLog = [], joined = (round.say || []).join('；') || null;
-  const saved = new Map(info.map((s) => [s.id, saveSeg(P, flags, s.id, (l) => savedLog.push(l), { kind: `${name} 改之後`, note: joined })]));
+  const sheetOf = (id) => au.sheets.find((f) => path.basename(f) === `sheet-${id}.jpg`) || null;
+  const saved = new Map(info.map((s) => [s.id, saveSeg(P, flags, s.id, (l) => savedLog.push(l), { kind: `${name} 改之後`, note: joined, still: sheetOf(s.id) })]));
   for (const l of savedLog) if (l.startsWith('⚠')) notes.push(l);
 
   // 4. 要看的那張截圖
@@ -889,7 +934,7 @@ export function finishRound(P, flags = {}, log = console.log, steps = {}) {
   const url = S.editor(P, flags);
   if (!url) notes.push(`⚠ 剪輯台沒開起來，拿不到完成影片預覽網址 → 跑 node shared/template/tools/editor.mjs --project ${pj(P)}，把它印的「完成影片預覽：」網址填進停點那一行`);
   const stopLine = `⏸ 停點 ④ 完成影片預覽｜請看：${url || '<完成影片預覽網址>'}｜請回：${STOP4_ASK}`;
-  if (!flags['no-prerender']) S.prerender(P, flags);
+  if (flags.prerender) S.prerender(P, flags);
 
   // 印
   report.ok = true;
@@ -924,7 +969,7 @@ export function parseArgs(argv) {
     const m = a.match(/^--([\w-]+)(?:=(.*))?$/);
     if (!m) throw new Error(`看不懂的參數「${a}」→ 用 --help 看用法`);
     if (VALUE_FLAGS.includes(m[1])) flags[m[1]] = m[2] ?? rest[++i];
-    else if (['json', 'no-preview', 'preview', 'no-change', 'no-prerender', 'help'].includes(m[1])) flags[m[1]] = true;
+    else if (['json', 'no-preview', 'preview', 'no-change', 'prerender', 'no-prerender', 'help'].includes(m[1])) flags[m[1]] = true;
     else throw new Error(`沒有 --${m[1]} 這個參數 → 用 --help 看用法`);
   }
   return flags;
@@ -977,7 +1022,7 @@ export function cli(argv = process.argv.slice(2)) {
     const row = appendStop(P.project, { stop: `③ 分鏡表（${done.map((x) => `${x.id} v${x.n}`).join('、')}）`, state: '通過', said: unquote(flags.say), back: 'work/storyboard.md' });
     log(`停點紀錄：${row}`);
     const round = openRound(P.project);
-    log(`→ 下一步：照 auto-edit-motion 做 ${ids.join('、')}（x 檔已經在就從步驟 4 改；情境換了先改 plan.json 這段的 src、layout）${round ? `，做完跑下一行（build、audit、存版本、比較影片、紀錄都一次做完；這是回饋 r${round.n}）` : '，build、audit --only 都 0 個 ✖ 之後跑下一行'}：`);
+    log(`→ 下一步：照 auto-edit-motion 做 ${ids.join('、')}（x 檔已經在就用 edit 接著改，不要整份重寫；情境換了先改 plan.json 這段的 src、layout）${round ? `，做完跑下一行（build、audit、存版本、紀錄一次做完，不 render；這是回饋 r${round.n}）` : '，build、audit --only 都 0 個 ✖ 之後跑下一行'}：`);
     log(round ? `${TOOL} finish --project ${pj(P)}` : cmdLine('save'));
     return 0;
   }
