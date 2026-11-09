@@ -13,6 +13,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 .claude/
+.playwright-mcp/
 
 # 官網組站的輸出（node dev/tools/build-site.mjs）
 _site/
