@@ -91,9 +91,9 @@
 ## 5. 檢查
 
 ```
-node shared/template/tools/media.mjs illus-lint --project projects/<專案> --no-sheet
+node shared/template/tools/media.mjs illus-lint --project projects/<專案> --only <名稱>
 ```
 
-逐條查 §3 表上打 ✔ 的項目。只看 `[illus-local/<名稱>.svg]` 那幾行（別的檔的 ✖ 不用管）：✖ 全部修掉；⚠ 照它的 → 改，或在 `work/reports/` 寫為什麼保留。尺寸和狀態照 `work/storyboard.md` 的插圖清單查；插圖清單寫在 `work/designs/<段 id>.md` 時工具讀不到，會印「…沒有這個元件的「新建 SVG」列…」的 ⚠，這個 ⚠ 可以留著，自己對一次 viewBox＝`0 0 W H`、每個狀態都有 `<g class="il-<狀態>" style="opacity:0">`。
+逐條查 §3 表上打 ✔ 的項目，`--only` 只查你這個檔：✖ 全部修掉；⚠ 照它的 → 改，或在 `work/reports/` 寫為什麼保留。尺寸和狀態照插圖清單（`work/storyboard.md` 或 `work/designs/<段 id>.md`）那一列查；那一列沒寫建議尺寸時工具印 ⚠、不查尺寸，自己對一次 viewBox＝`0 0 W H`、每個狀態都有 `<g class="il-<狀態>" style="opacity:0">`。
 
-lint 過了還要看圖：設計師看 audit 的拼圖（`work/audit-shots/sheet-<段 id>.jpg`），主代理跑不帶 `--no-sheet` 的 illus-lint 會拼 `work/插圖清單.jpg`。和旁邊的畫廊元件比，線粗、圓角、用色要看起來是同一套。
+lint 過了還要看圖：`--only` 會拼 `work/插圖清單-<名稱>.jpg`（你的元件＋phone、laptop、cloud 三個畫廊元件，1:1 px、上亮下暗）；主代理跑不帶 `--only` 的會拼整份 `work/插圖清單.jpg`。和旁邊的畫廊元件比，線粗、圓角、用色要看起來是同一套。

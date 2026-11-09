@@ -26,7 +26,7 @@ node -e "globalThis.window=globalThis;globalThis.document={querySelectorAll:()=>
 <元件 2 的 SVG>
 
 【驗收】
-1. 跑 node shared/template/tools/media.mjs illus-lint --project projects/<專案> --no-sheet，只看 [illus-local/<名稱>.svg] 那幾行：沒有 ✖；⚠ 照 → 改，或在 work/reports/illus-<名稱>.md 寫保留理由。
+1. 跑 node shared/template/tools/media.mjs illus-lint --project projects/<專案> --only <名稱>（只查這個檔）：沒有 ✖；⚠ 照 → 改，或在 work/reports/illus-<名稱>.md 寫保留理由。
 2. viewBox＝0 0 <寬> <高>（建議尺寸，1 單位＝1 px）。
 3. 規格寫的每個狀態都有 <g class="il-<狀態>" style="opacity:0">，底圖畫「沒有狀態」的樣子。
 4. 不寫 id、不寫字、不用色碼；顏色只用 var(--il-*)。

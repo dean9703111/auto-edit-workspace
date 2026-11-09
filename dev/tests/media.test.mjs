@@ -673,6 +673,19 @@ test('illus-lint：壞檔抓到（顏色、描邊、<text>；插圖清單的尺�
   assert.match(r.stdout, /未通過：\d+ 個錯誤（✖），1 個提醒（⚠）/);
 });
 
+test('023 illus-lint --only：只查自己那個檔（別人的 ✖、別人列了沒畫的都不報）；檔不存在 ✖', () => {
+  const bad = '<svg viewBox="0 0 100 100"><text x="5" y="50">hi</text></svg>';
+  illusProject('il-only', { svgs: { 'router.svg': ROUTER_SVG, 'bad.svg': bad }, storyboard: `${ILLUS_LIST}| 記憶卡 | 新建 SVG | 規格：sdcard，建議尺寸 120×160 |\n` });
+  const r = node(MEDIA, ['illus-lint', '--no-sheet', '--only', 'router'], 'il-only');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /illus-local：1 個 SVG/);
+  assert.match(r.stdout, /✓ illus-local\/router\.svg/);
+  assert.doesNotMatch(r.stdout, /bad\.svg|sdcard/);
+  const r2 = node(MEDIA, ['illus-lint', '--no-sheet', '--only', 'illus-local/nope.svg'], 'il-only');
+  assert.equal(r2.status, 1, r2.stdout + r2.stderr);
+  assert.match(r2.stdout, /✖ 找不到 .*illus-local\/nope\.svg → /);
+});
+
 test('illus-lint：沒有 illus-local、插圖清單也沒有新建 SVG → 印「無」、結束碼 0、不拼圖', () => {
   const work = illusProject('il-none');
   const r = node(MEDIA, ['illus-lint'], 'il-none');
@@ -695,6 +708,15 @@ test('illus-lint：拼 work/插圖清單.jpg（畫廊用到的＋新建的，寬
   // 上半亮、下半暗：各取中間一列最左邊的底色
   const px = (y) => spawnSync('ffmpeg', ['-v', 'error', '-i', jpg, '-vf', `crop=4:4:4:${y}`, '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: 1 << 20 }).stdout[0];
   assert.ok(px(10) > 200 && px(h / 2 + 10) < 60, `亮 ${px(10)}、暗 ${px(h / 2 + 10)}`);
+});
+
+test('023 illus-lint --only 拼 work/插圖清單-<名稱>.jpg（自己的＋三個畫廊比例尺），不動整份的插圖清單.jpg', { skip: !(await hasChrome()) && '沒有 HyperFrames 的 Chrome' }, () => {
+  const work = illusProject('il-only-sheet', { svgs: { 'router.svg': ROUTER_SVG }, storyboard: ILLUS_LIST });
+  const r = node(MEDIA, ['illus-lint', '--only', 'router'], 'il-only-sheet');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.ok(fs.existsSync(path.join(work, '插圖清單-router.jpg')), r.stdout);
+  assert.ok(!fs.existsSync(path.join(work, '插圖清單.jpg')));
+  assert.match(r.stdout, /插圖清單-router\.jpg：.*畫廊 3 個、新建 1 個/);
 });
 
 test('readIllusList：認「#### 插圖清單 <段 id>」與舊名「素材清單」；表頭要有「元件」「來源」；沒有標題的同表頭表不算', async () => {

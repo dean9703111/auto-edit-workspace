@@ -56,6 +56,7 @@ import { readStopLog } from './status.mjs';
 import { markStoryboardWritten } from './lib/storyboard-state.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
 import { designFileOf, fillFileOf } from './lib/custom-fill.mjs';
+import { resetRuns } from './lib/flow.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const DIR = 'versions';
@@ -375,6 +376,7 @@ export function acceptProposal(P, id, log) {
   const sbFile = path.join(P.project, 'work', 'storyboard.md');
   const sb = fs.existsSync(sbFile) ? fs.readFileSync(sbFile, 'utf8') : '';
   markStoryboard(P, replaceSection(sb, id, body));
+  resetRuns(P, [id]);   // 接著派人照新分鏡做：從第 1 次 audit 算起
   writeJson(path.join(pend.dir, META), { ...pend.meta, state: '已確認', accepted: now() });
   log(`${id}：v${pend.n} 的分鏡寫回 work/storyboard.md（### ${id} 那一節）`);
   return { id, n: pend.n };
@@ -577,6 +579,7 @@ export function beginRound(P, flags, ids, sayRaw, log = console.log) {
     } else before[id] = saveSeg(P, flags, id, log, { kind: `${name} 改之前`, note: say || null }).n;
     kept.push(id);
   }
+  resetRuns(P, fresh);   // 這一輪要改的段：改的人從第 1 次 audit 算起
   // r<N>.md（「改了哪幾段」finish 才寫：剪輯台看到那一列就標「已改」）
   const file = feedbackFile(project, n), fileRel = `work/feedback/${name}.md`, bakRel = `work/hyperframes/${path.basename(bak)}`;
   fs.mkdirSync(path.dirname(file), { recursive: true });

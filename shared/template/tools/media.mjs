@@ -84,11 +84,13 @@
  *       work/rough.srt 超過 18 字（全形 1、半形 0.5）的字幕拆成兩則以上：先斷在標點，再斷在空白，都沒有才斷在中間（會 ⚠）；
  *       時間依字數比例分配、首尾相接，句號重新連號。寫回前先備份 work/rough.srt.split-<時間戳>（.bak-<時間戳> 留給 snap-srt，status 靠它判斷 snap-srt 跑過沒有）。
  *       work/hyperframes/plan.json 已經用到句號（#N）時拒絕（改到剪輯台分割，剪輯台會一起重對 #N）。
- *   node shared/template/tools/media.mjs illus-lint --project projects/<專案> [--no-sheet]
+ *   node shared/template/tools/media.mjs illus-lint --project projects/<專案> [--no-sheet] [--only <名稱>]
  *       檢查專案自己畫的示意插圖元件 work/hyperframes/illus-local/*.svg（規則見 shared/template/kit/illus-style.md）：
  *       建議尺寸與狀態從 work/storyboard.md 和 work/designs/*.md 的插圖清單讀（「新建 SVG」列寫「規格：<name>，建議尺寸 W×H，狀態 a／b」）；
  *       讀不到就只查不用尺寸的規則（⚠）；插圖清單列了新建 SVG 卻沒有檔 ✖。有 ✖ 結束碼 1。不改任何 SVG。
  *       順便拼 work/插圖清單.jpg（插圖清單用到的畫廊元件＋illus-local 的新元件，1:1 px，上亮色、下暗色；要 HyperFrames 的 Chrome）；--no-sheet 不拼。
+ *       --only <名稱>：設計師自查自己新畫的那一個（illus-local/<名稱>.svg）：只查這個檔，拼 work/插圖清單-<名稱>.jpg（這個元件＋phone、laptop、cloud 三個畫廊元件並排比對）；
+ *         別人的檔、別段的插圖清單都不看，平行的設計師不會互相蓋掉拼圖。
  *
  * --project：專案資料夾（projects/example，或只寫名稱 example）；沒寫時規則同 build.mjs。測試用：--template <shared/template 資料夾>
  */
@@ -116,7 +118,7 @@ import { SPEECH, ENV, envelope, pickThreshold, speechFromEnvelope } from './lib/
 export { ENV, envelope, pickThreshold, speechFromEnvelope };
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 
-const VALUE_FLAGS = ['project', 'template', 'src', 'at', 'box', 'order', 'below', 'edit', 'margin', 'v1', 'max', 'file', 'wait', 'said', 'transcript', 'format'];
+const VALUE_FLAGS = ['project', 'template', 'src', 'at', 'box', 'order', 'below', 'edit', 'margin', 'v1', 'max', 'file', 'wait', 'said', 'transcript', 'format', 'only'];
 const BOOL_FLAGS = ['all', 'grid', 'help', 'dry-run', 'remap-plan', 'no-sheet', 'write-plan', 'again', 'skip-stop', 'no-editor', 'retranscribe', 'verbose'];
 const r3 = (n) => +Number(n).toFixed(3);
 const rel = (p) => path.relative(process.cwd(), p) || '.';
@@ -2507,7 +2509,7 @@ const IL_SHEET = { W: 1920, PAD: 40, GAP: 48, TOP: 92, LAB: 64, BG: { light: '#F
 const IL_MIME = { '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.otf': 'font/otf', '.json': 'application/json' };
 
 // work/插圖清單.jpg：插圖清單用到的畫廊元件＋illus-local 的新元件，1:1 px、同底色；上一列亮色主題、下一列暗色主題（HyperFrames 的 Chrome 截圖）
-async function illusSheet(P, { list, files, dir }) {
+async function illusSheet(P, { list, files, dir, out = path.join(P.project, 'work', '插圖清單.jpg') }) {
   const warns = [], items = [], seen = new Set();
   const kitDir = path.join(P.templateDir, 'kit');
   const svgOf = illusInNode(kitDir);
@@ -2573,7 +2575,7 @@ ${cells.map((c) => `<div class="cell" style="left:${c.x}px;top:${c.y}px"><div cl
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'illus-sheet-'));
-  const png = path.join(tmp, 'sheet.png'), out = path.join(P.project, 'work', '插圖清單.jpg');
+  const png = path.join(tmp, 'sheet.png');
   try {
     await new Promise((resolve, reject) => {
       const cp = spawn(chrome, ['--headless', '--hide-scrollbars', '--force-device-scale-factor=1', '--no-first-run', `--user-data-dir=${path.join(tmp, 'u')}`,
@@ -2592,13 +2594,23 @@ ${cells.map((c) => `<div class="cell" style="left:${c.x}px;top:${c.y}px"><div cl
 }
 
 // media.mjs illus-lint：每個 illus-local/*.svg 跑 lintIllusSvg（尺寸、狀態照插圖清單）；插圖清單的新建 SVG 沒有檔 ✖；順便拼 work/插圖清單.jpg
-export async function illusLint(P, { sheet = true, log = console.log } = {}) {
+// --only 拼圖的比例尺：線粗、圓角、用色要和這幾個畫廊元件看起來是同一套
+const IL_REF = ['phone', 'laptop', 'cloud'].map((name) => ({ name, attrs: {}, label: `畫廊 ${name}（比對用）` }));
+export async function illusLint(P, { sheet = true, only = null, log = console.log } = {}) {
   const work = path.join(P.project, 'work'), dir = path.join(work, 'hyperframes', 'illus-local'), sb = path.join(work, 'storyboard.md');
   // 插圖清單：分鏡表＋內容設計動畫的鏡位腳本（work/designs/<段>.md；設計師自己新畫的元件寫在那裡）
   const dsDir = path.join(work, 'designs');
   const designMd = fs.existsSync(dsDir) ? fs.readdirSync(dsDir).filter((f) => /\.md$/.test(f)).sort().map((f) => fs.readFileSync(path.join(dsDir, f), 'utf8')) : [];
   const list = readIllusList([fs.existsSync(sb) ? fs.readFileSync(sb, 'utf8') : '', ...designMd].join('\n\n'));
-  const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /\.svg$/i.test(f) && !f.startsWith('.')).sort() : [];
+  let files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /\.svg$/i.test(f) && !f.startsWith('.')).sort() : [];
+  const one = only ? String(only).replace(/^.*illus-local\//, '').replace(/\.svg$/i, '') : null;
+  if (one) {
+    if (!files.includes(`${one}.svg`)) {
+      log(`✖ 找不到 ${rel(path.join(dir, `${one}.svg`))} → 照 shared/template/kit/illus-style.md 畫好存成這個檔，再跑一次（--only 寫檔名，不含 .svg）`);
+      return { ok: false, findings: [], files: [], sheet: null };
+    }
+    files = [`${one}.svg`];
+  }
   const findings = [];
   const add = (level, where, msg, fix) => findings.push({ level, where, msg, fix });
   for (const f of files) {
@@ -2607,15 +2619,18 @@ export async function illusLint(P, { sheet = true, log = console.log } = {}) {
     for (const x of lintIllusSvg(fs.readFileSync(path.join(dir, f), 'utf8'), { name, size: spec?.size || undefined, states: spec?.states || [] })) add(x.level, `illus-local/${f}`, x.msg, x.fix);
   }
   for (const name of list.local.keys()) {
+    if (one && name !== one) continue;
     if (!files.includes(`${name}.svg`)) add('error', '插圖清單', `新建 SVG「${name}」還沒有檔`, `照 shared/template/kit/illus-style.md 畫好，存成 work/hyperframes/illus-local/${name}.svg，再跑一次 illus-lint`);
   }
-  const s = sheet ? await illusSheet(P, { list, files, dir }) : { warns: [], sheet: null };
+  const s = !sheet ? { warns: [], sheet: null }
+    : one ? await illusSheet(P, { list: { ...list, gallery: IL_REF }, files, dir, out: path.join(work, `插圖清單-${one}.jpg`) })
+      : await illusSheet(P, { list, files, dir });
   for (const [where, msg, fix] of s.warns) add('warn', where, msg, fix);
   log(files.length ? `illus-local：${files.length} 個 SVG（${rel(dir)}）` : 'illus-local：無');
   findings.sort((a, b) => (a.level === b.level ? 0 : a.level === 'error' ? -1 : 1));
   for (const x of findings) log(`${x.level === 'error' ? '✖' : '⚠'} [${x.where}] ${x.msg} → ${x.fix}`);
   for (const f of files) if (!findings.some((x) => x.where === `illus-local/${f}`)) log(`✓ illus-local/${f}`);
-  if (s.sheet) log(`插圖清單.jpg：${rel(s.sheet.file)}（${s.sheet.width}×${s.sheet.height}；畫廊 ${s.sheet.gallery} 個、新建 ${s.sheet.local} 個；上亮下暗）→ 打開看線粗、圓角、用色和畫廊元件是不是同一套`);
+  if (s.sheet) log(`${path.basename(s.sheet.file)}：${rel(s.sheet.file)}（${s.sheet.width}×${s.sheet.height}；畫廊 ${s.sheet.gallery} 個、新建 ${s.sheet.local} 個；上亮下暗）→ 打開看線粗、圓角、用色和畫廊元件是不是同一套`);
   const ne = findings.filter((x) => x.level === 'error').length, nw = findings.length - ne;
   log('');
   log(ne ? `未通過：${ne} 個錯誤（✖），${nw} 個提醒（⚠）。照 → 後面的改法改 SVG 或插圖清單，再跑一次 illus-lint。` : `通過：${files.length ? `${files.length} 個 SVG` : '沒有要查的 SVG'}，${nw} 個提醒（⚠）。`);
@@ -2647,7 +2662,7 @@ async function cli() {
   if (flags.cmd === 'cutpoints') { cutpoints(P, { dryRun: !!flags['dry-run'] }); return 0; }
   if (flags.cmd === 'screen-sync') { screenSync(P, { writePlan: !!flags['write-plan'], dryRun: !!flags['dry-run'] }); return 0; }
   if (flags.cmd === 'verify-rough') return verifyRough(P).ok ? 0 : 1;
-  if (flags.cmd === 'illus-lint') return (await illusLint(P, { sheet: !flags['no-sheet'] })).ok ? 0 : 1;
+  if (flags.cmd === 'illus-lint') return (await illusLint(P, { sheet: !flags['no-sheet'], only: flags.only || null })).ok ? 0 : 1;
   const capMax = () => captionMax(P, flags.max);
   if (flags.cmd === 'srt-align') { srtAlign(P, { dryRun: !!flags['dry-run'], remapPlan: !!flags['remap-plan'], max: capMax(), verbose: !!flags.verbose }); return 0; }
   if (flags.cmd === 'srt-split') { srtSplit(P, { max: capMax(), dryRun: !!flags['dry-run'] }); return 0; }

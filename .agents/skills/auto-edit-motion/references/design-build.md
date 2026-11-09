@@ -25,7 +25,7 @@
 |---|---|---|
 | 全螢幕（這段沒有講者） | x 120–1800、y 40–900 | 最外層容器放 x 120–1800、y 112–900：y 112 以上是右上角小節角標那一排（角標座標看 brief「不能碰」那一行）。不用留小視窗，內容撐開整個寬度，主角放大。左右和縮到 87% 的螢幕錄影對齊（錄影 x 125–1796、y 0–940），接到錄影不會跳。底是純色，沒有背景圖 |
 | 右下有講者小視窗 | x 120–1300、y 150–858 | 最外層容器就放這個範圍。小視窗 x 1424–1888、y 581–951 不能碰 |
-| 疊在講者畫面上 | 講者旁邊的空位（brief 沒給座標） | 沒有底圖，內容不要擋臉；audit 報「壓到講者」就照 → 移 |
+| 疊在講者畫面上 | brief 寫的「內容放在…」那一區（講者框外） | 沒有底圖，內容不要擋臉；brief 沒有講者框座標時放講者旁邊的空位，audit 報「壓到講者」就照 → 移 |
 
 三種都一樣：y ≥ 920 是字幕，不能碰。寬 1180 的主卡（`.sc-wcard`）在全螢幕段會自動拉成 1680。
 
@@ -120,7 +120,7 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id>
 
 1. 鏡位腳本的表下面要有 `#### 插圖清單 <段 id>`，新建 SVG 那一列寫 `規格：<名稱>，建議尺寸 <寬>×<高>，狀態 <a>／<b>；描述：…`（格式照 design-script.md）。腳本沒寫就用 edit 補進 `work/designs/<段 id>.md`，尺寸抄上面元件表大小相近的。
 2. 照 `shared/template/kit/illus-style.md` 畫，存成 `work/hyperframes/illus-local/<名稱>.svg`。
-3. 跑 `node shared/template/tools/media.mjs illus-lint --project projects/<專案> --no-sheet`，只看 `[illus-local/<名稱>.svg]` 那幾行：沒有 ✖ 才掛上去（別的檔的 ✖ 不用管）。說「work/storyboard.md 的插圖清單…沒有這個元件」的 ⚠ 可以留著，這時工具不查尺寸和狀態，自己對一次：viewBox＝`0 0 <寬> <高>`、每個狀態都有 `<g class="il-<狀態>" style="opacity:0">`。
+3. 跑 `node shared/template/tools/media.mjs illus-lint --project projects/<專案> --only <名稱>`（只查你這個檔）：0 個 ✖ 才掛上去，⚠ 照 → 改一輪。打開它印的 `work/插圖清單-<名稱>.jpg`，和旁邊三個畫廊元件比線粗、圓角、用色，不像同一套就改一次。
 4. 掛法：`<div data-illus-src="illus-local/<名稱>.svg" style="width:<寬>px;height:<高>px"></div>`（路徑從 `work/hyperframes/` 算），狀態用 `P.in('#… .il-<狀態>', T2)` 打開、`P.out` 關掉。
 
 ## 回報

@@ -492,6 +492,18 @@ export function runCount(P, key) {
   return j[key];
 }
 
+// 換人接手這一段（重派、改版確認、回饋輪開始、③ 勾成內容設計動畫）就歸零：新的人第一次 0 個 ✖ 不該就印「可以交件」
+export function resetRuns(P, ids) {
+  const f = path.join(P.out, '.cache', 'check-runs.json');
+  const j = readJson(f, null);
+  if (!j) return [];
+  const hit = ids.filter((id) => j[`audit:${id}`] != null);
+  if (!hit.length) return [];
+  for (const id of hit) delete j[`audit:${id}`];
+  try { fs.writeFileSync(f, JSON.stringify(j)); } catch { /* 只是提示，不影響檢查 */ }
+  return hit;
+}
+
 export function checkDraft(P, file) {
   const abs = draftPath(P, file);
   if (!abs) { console.log(`✖ 找不到草稿「${file}」→ 寫完存到 ${rel(draftsDir(P))}/<份>.json，再跑這條`); return 1; }
@@ -585,8 +597,16 @@ const sfxList = (P) => {
 };
 
 // 這段的畫布：工具知道有沒有講者，直接寫給設計師，不用他猜
-function canvasNote(seg, item) {
-  if (seg.layout === 'overlay') return '## 畫布：疊在講者畫面上\n\n沒有底圖，講者就是背景，內容不要擋臉。y ≥ 920 是字幕。';
+function canvasNote(seg, item, plan = {}) {
+  if (seg.layout === 'overlay') {
+    const head = '## 畫布：疊在講者畫面上\n\n沒有底圖，講者就是背景，內容不要擋臉。y ≥ 920 是字幕。';
+    const sb = plan.speakerBox;
+    if (!Array.isArray(sb) || sb.length !== 4 || plan.format === 'portrait') return head;
+    // 和 audit「壓到講者」量的是同一個框（內容設計動畫段不是半畫面，不加 sideShift）
+    const [x0, y0, x1, y1] = sb.map(Math.round);
+    const zones = [x0 - 120 >= 300 ? `左邊 x 120–${x0}` : null, 1800 - x1 >= 300 ? `右邊 x ${x1}–1800` : null].filter(Boolean);
+    return `${head}\n\n講者框 x ${x0}–${x1}、y ${y0}–${y1}（audit 照這個框量「壓到講者」）。${zones.length ? `內容放在${zones.join('，或')}，y 40–900。` : '講者框左右都不到 300 寬：內容放小、只壓到身體，不要擋臉。'}`;
+  }
   const it = item?.out || {};
   const badge = it.badgeBox ? `右上角小節角標 x ${Math.round(it.badgeBox[0])}–${Math.round(it.badgeBox[2])}、y ${Math.round(it.badgeBox[1])}–${Math.round(it.badgeBox[3])}` : '';
   if (it.wide) return `## 畫布：全螢幕（這段沒有講者）\n\n內容用滿 x 120–1800、y 40–900，左右和縮到 87% 的螢幕錄影對齊（錄影在 x 125–1796、y 0–940），接到錄影不會跳。不用留小視窗；撐開整個寬度，不要擠在左邊。\n\n不能碰：y ≥ 920（字幕）${badge ? `、${badge}（這個角落空著，別的元素離它至少 16）` : ''}。底是純色，沒有背景圖。`;
@@ -598,6 +618,21 @@ export function briefCueLines(cues, a, z, t0) {
   return cues.filter((c) => c.n >= a - 3 && c.n <= z + 2).map((c) => (c.n >= a && c.n <= z
     ? `#${c.n}（段內 ${Math.max(0, c.start - t0).toFixed(1)}–${(c.end - t0).toFixed(1)} 秒）${c.text}`
     : `（前後文）#${c.n}（${(c.end - c.start).toFixed(1)} 秒）${c.text}`));
+}
+
+// 這段用到的插圖元件：模板段看 slots.parts，內容設計動畫看做好的動畫檔（設計師不能讀別段的檔，brief 直接寫給他，相鄰段才畫得一樣）
+export function illusUsed(P, seg) {
+  const out = [];
+  const name = (n, orient) => (orient ? `${n}（${orient}）` : n);
+  const walk = (parts) => { for (const x of parts || []) { if (Array.isArray(x?.parts)) walk(x.parts); else if (x?.illus) out.push(name(x.illus, x.opts?.orient)); } };
+  walk(seg?.slots?.parts);
+  const html = seg?.design && P?.out ? readOpt(path.join(P.out, designFileOf(seg))) : '';
+  if (html && !isBlankDesign(html)) {
+    for (const m of html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<[^>]*\bdata-illus(?:-src)?="([^"]+)"[^>]*>/g)) {
+      out.push(name(m[1].replace(/^illus-local\//, '').replace(/\.svg$/i, ''), m[0].match(/\bdata-orient="([^"]+)"/)?.[1]));
+    }
+  }
+  return [...new Set(out)];
 }
 
 function writeBriefs(P, plan, cues, { items: given = null, onlyMissing = false } = {}) {
@@ -613,13 +648,17 @@ function writeBriefs(P, plan, cues, { items: given = null, onlyMissing = false }
   return segs.map((s) => {
     const a = cueOf(s), z = Number(String(s.to || s.from || '').match(/^#(\d+)/)?.[1] ?? a);
     const idx = ordered.indexOf(s);
-    const near = (seg) => (seg ? `${seg.id}（${seg.design ? '內容設計動畫' : seg.template || seg.scene || seg.type}${seg.story?.idea ? `：${seg.story.idea}` : ''}）` : '無');
+    const near = (seg) => {
+      if (!seg) return '無';
+      const il = illusUsed(P, seg);
+      return `${seg.id}（${seg.design ? '內容設計動畫' : seg.template || seg.scene || seg.type}${seg.story?.idea ? `：${seg.story.idea}` : ''}）${il.length ? `；插圖：${il.join('、')}（同一個東西用同一個名稱、朝向）` : ''}`;
+    };
     const inside = cues.filter((c) => c.n >= a && c.n <= z);
     const it = items.get(s.id);
     const secs = it?.start != null && it?.end != null ? (it.end - it.start).toFixed(1) : inside.length ? (inside[inside.length - 1].end - inside[0].start).toFixed(1) : '?';
     const lines = briefCueLines(cues, a, z, it?.start ?? inside[0]?.start ?? 0);
     const vision = readOpt(path.join(packDir(P), '視覺語言.md')).trim();
-    const body = `# ${s.id} 內容設計動畫\n\n段落：${s.from}–${s.to}（#Ne＝第 N 句結尾，#N@詞＝第 N 句講到那個詞；這段 ${secs} 秒）\n構想（草稿寫的，可以推翻）：${s.story?.idea || '—'}\n為什麼值得設計：${s.story?.why || '—'}\n前一段：${near(ordered[idx - 1])}\n後一段：${near(ordered[idx + 1])}\n\n${canvasNote(s, it)}\n\n## 字幕（段內秒數＝從這段起點算；這段到 ${secs} 秒）\n\n${lines.join('\n')}\n\n## 音效（音效拍點欄只能寫這些名稱，或 —）\n\n${sfxList(P)}${vision ? `\n\n## 這集的視覺語言（跟著這份走，全片才一致）\n\n${vision.replace(/^#+\s.*\n/, '').trim()}` : ''}\n\n鏡位腳本寫到：work/designs/${s.id}.md\n動畫檔：work/hyperframes/${designFileOf(s)}\n`;
+    const body = `# ${s.id} 內容設計動畫\n\n段落：${s.from}–${s.to}（#Ne＝第 N 句結尾，#N@詞＝第 N 句講到那個詞；這段 ${secs} 秒）\n構想（草稿寫的，可以推翻）：${s.story?.idea || '—'}\n為什麼值得設計：${s.story?.why || '—'}\n前一段：${near(ordered[idx - 1])}\n後一段：${near(ordered[idx + 1])}\n\n${canvasNote(s, it, plan)}\n\n## 字幕（段內秒數＝從這段起點算；這段到 ${secs} 秒）\n\n${lines.join('\n')}\n\n## 音效（音效拍點欄只能寫這些名稱，或 —）\n\n${sfxList(P)}${vision ? `\n\n## 這集的視覺語言（跟著這份走，全片才一致）\n\n${vision.replace(/^#+\s.*\n/, '').trim()}` : ''}\n\n鏡位腳本寫到：work/designs/${s.id}.md\n動畫檔：work/hyperframes/${designFileOf(s)}\n`;
     const f = path.join(briefsDir(P), `${s.id}.md`);
     fs.writeFileSync(f, body);
     return { id: s.id, brief: rel(f) };
@@ -828,6 +867,22 @@ export function storyboardCmd(P, flags, { loadLib }) {
 
 // ---------- --apply-storyboard ----------
 
+// ③ 勾成內容設計動畫的段：storyboard.md 那張「#### 動畫分鏡 <段>」是模板的拍，換成一行指到鏡位腳本
+// （不留標題：留著會被當成一張空表；拿掉後 audit 就照 work/designs/<段>.md 對拍）
+export function dropBeatSheets(md, ids) {
+  if (!ids.length) return md;
+  const want = new Set(ids), lines = md.split('\n'), out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const h = lines[i].match(/^####\s*動畫分鏡\s+([^\s（(]+)/);
+    if (!h || !want.has(h[1])) { out.push(lines[i]); continue; }
+    out.push(`動畫分鏡：改成內容設計動畫，鏡位腳本看 work/designs/${h[1]}.md（設計師寫）`, '');
+    let j = i + 1;
+    while (j < lines.length && !/^#{1,4}\s/.test(lines[j])) j++;
+    i = j - 1;
+  }
+  return out.join('\n');
+}
+
 export function applyCmd(P, flags, { loadLib }) {
   const lib = loadLib(P.templateDir);
   const plan = readJson(P.plan);
@@ -850,6 +905,12 @@ export function applyCmd(P, flags, { loadLib }) {
   if ((r.changed || fixed) && !r.requests.length) buildTool(['--project', P.project, ...(P.templateArg || [])]);
   for (const u of r.unmatched) console.log(`⚠ ${u}`);
   for (const a of r.answers || []) console.log(`作者回答${a.q ? `（${a.q}）` : ''}：${a.text} → 照做（章名、講者、配樂寫進 plan.json 或 brand.mjs speaker）`);
+  if (!r.requests.length) {
+    const fresh = (r.plan.scenes || []).filter((s) => s.design && !fs.existsSync(path.join(designsDir(P), `${s.id}.md`))).map((s) => s.id);
+    const md = fs.readFileSync(file, 'utf8'), next = dropBeatSheets(md, fresh);
+    if (next !== md) writeAtomic(file, next);
+    resetRuns(P, fresh);
+  }
   recordStoryboard(P, fs.readFileSync(file, 'utf8'));
   const P2 = `--project ${rel(P.project)}`;
   if (r.requests.length) {
@@ -906,6 +967,7 @@ export function designStatusCmd(P) {
   for (const d of list) console.log(`  ${d.id}：${d.state}${d.stalled ? `　⚠ 超過 ${DESIGN_STALL_MIN} 分鐘沒進度` : ''}`);
   const stalled = list.filter((d) => d.stalled);
   if (stalled.length) {
+    resetRuns(P, stalled.map((d) => d.id));   // 新派的設計師從第 1 次 audit 算起
     console.log(`→ 下一步：停掉原本負責 ${stalled.map((d) => d.id).join('、')} 的設計師，重派（同一則回覆一次派出，派工訊息照抄，換掉 <段>）：`);
     const started = stalled.filter((d) => !d.blank), noScript = stalled.filter((d) => d.blank && !d.script), withScript = stalled.filter((d) => d.blank && d.script);
     const tag = (g) => (stalled.length > g.length ? `（${g.map((d) => d.id).join('、')}）` : '');

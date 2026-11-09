@@ -243,7 +243,9 @@ test('begin：同一輪分多次接續（備份不重做、已存過的段不重
   const p = mk();
   touch(p, 'work/製作進度.md', ['# 製作進度', '', '## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |', '|---|---|---|---|---|', '| 2026-11-02 10:00 | ④ 完成影片預覽 | 待回覆 | — | — |', '', '## 回饋輪', '', '| 輪 | 時間 | 檔案 | 改了哪幾段 | 備份 |', '|---|---|---|---|---|', ''].join('\n'));
   const c = ctxOf(p);
+  touch(p, 'work/hyperframes/.cache/check-runs.json', JSON.stringify({ 'audit:s05': 4, 'audit:s08': 2 }));
   const a = V.beginRound(c.P, {}, ['s05'], 's05 往左移，以後都放左邊', logTo(c));
+  assert.deepEqual(JSON.parse(read(p, 'work/hyperframes/.cache/check-runs.json')), { 'audit:s08': 2 }, '023：這一輪要改的段 audit 次數歸零');
   assert.equal(a.round, 'r1');
   assert.equal(a.rule, '以後');
   let md = read(p, 'work/feedback/r1.md');

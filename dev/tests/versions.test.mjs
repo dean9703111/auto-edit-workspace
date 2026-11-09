@@ -96,7 +96,10 @@ test('改版：new 開提案 → 範本沒改不能 accept、提案沒確認不�
   assert.deepEqual(V.pendingRevisions(p), [{ id: 's12', v: 2, state: '提案' }]);
   assert.equal(projectStatus(p).at, '改版／s12 v2（分鏡還沒給使用者確認）');
   fs.writeFileSync(path.join(p, 'work', 'versions', 's12', 'v2', '分鏡.md'), md.replace(/- （寫 1–5 條.*/, '- 收尾加蓋章').replace('| 1 | #1@主持人 | 兩個面向 | 彈出 |', '| 1 | #1@主持人 | 兩個面向＋蓋章 | 彈出；蓋章 |'));
+  fs.mkdirSync(path.join(p, 'work', 'hyperframes', '.cache'), { recursive: true });
+  fs.writeFileSync(path.join(p, 'work', 'hyperframes', '.cache', 'check-runs.json'), JSON.stringify({ 'audit:s12': 5 }));
   V.acceptProposal(c.P, 's12', logTo(c));
+  assert.deepEqual(JSON.parse(read(p, 'work/hyperframes/.cache/check-runs.json')), {}, '023：確認改版後接著做的人從第 1 次 audit 算起');
   const sb = read(p, 'work/storyboard.md');
   assert.match(sb, /兩個面向＋蓋章 \| 彈出；蓋章/);
   assert.equal(sb.replace('兩個面向＋蓋章 | 彈出；蓋章', '兩個面向 | 彈出'), SB, 'storyboard.md 只換 s12 那一節');

@@ -329,6 +329,55 @@ test('023 ensureBriefs：內容設計動畫段沒有 brief 才補寫（畫布照
   fs.rmSync(p, { recursive: true, force: true });
 });
 
+test('023 brief：前後段寫出用到的插圖與朝向（模板看 slots.parts、內容設計動畫看做好的檔）；疊加畫布寫講者框與可用範圍', async () => {
+  const F = await imp('lib/flow.mjs');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-brief2-'));
+  const out = path.join(p, 'work', 'hyperframes');
+  fs.mkdirSync(path.join(out, 'compositions'), { recursive: true });
+  const srt = path.join(p, 'work', 'rough.srt');
+  fs.writeFileSync(srt, '1\n00:00:00,000 --> 00:00:03,000\n第一句\n\n2\n00:00:03,000 --> 00:00:08,000\n第二句\n\n3\n00:00:08,000 --> 00:00:12,000\n第三句\n');
+  fs.writeFileSync(path.join(out, 'compositions', 'x-design-d3.html'), '<template><!-- <div data-illus="tripod"></div> --><div data-illus="phone" data-orient="landscape"></div><div data-illus-src="illus-local/router.svg"></div></template>');
+  const plan = { speakerBox: [1180, 120, 1700, 1080], scenes: [
+    { id: 'x1', template: 'x-scene', from: '#1', to: '#1e', slots: { parts: [{ id: 'a', illus: 'phone', opts: { orient: 'landscape' } }, { id: 'g', layout: 'row', parts: [{ id: 'b', illus: 'laptop' }, { id: 'c', icon: 'cloud' }] }] } },
+    { id: 'd2', design: true, layout: 'overlay', from: '#2', to: '#2e' },
+    { id: 'd3', design: true, from: '#3', to: '#3e' }] };
+  const P = { project: p, srt, templateDir: TEMPLATE, out };
+  F.ensureBriefs(P, plan, [{ id: 'd2', start: 3, end: 8, out: {} }, { id: 'd3', start: 8, end: 12, out: { wide: true } }]);
+  const b2 = fs.readFileSync(path.join(p, 'work', 'briefs', 'd2.md'), 'utf8');
+  assert.match(b2, /前一段：x1（x-scene）；插圖：phone（landscape）、laptop（同一個東西用同一個名稱、朝向）/);
+  assert.match(b2, /後一段：d3（內容設計動畫）；插圖：phone（landscape）、router（/);
+  assert.doesNotMatch(b2, /tripod/, '註解裡的不算');
+  assert.match(b2, /## 畫布：疊在講者畫面上[\s\S]*講者框 x 1180–1700、y 120–1080（audit 照這個框量「壓到講者」）。內容放在左邊 x 120–1180，y 40–900。/);
+  const b3 = fs.readFileSync(path.join(p, 'work', 'briefs', 'd3.md'), 'utf8');
+  assert.match(b3, /前一段：d2（內容設計動畫）\n/, '空白或沒做的設計段不寫插圖');
+  fs.rmSync(p, { recursive: true, force: true });
+});
+
+test('023 dropBeatSheets：勾成內容設計動畫的段拿掉模板那張動畫分鏡（換一行指到鏡位腳本），別段不動；audit 讀不到那張表', async () => {
+  const F = await imp('lib/flow.mjs');
+  const { parseBeatSheets } = await imp('lib/audit-beats.mjs');
+  const md = ['### x1｜#1–#2e', '', '截圖觀察：無', '', '#### 動畫分鏡 x1', '', '| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |', '|---|---|---|---|---|---|', '| 0 | 段起點 | 主卡 | 開場 | 標題 | — |', '', '### x2｜#3–#4e', '', '#### 動畫分鏡 x2', '', '| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |', '|---|---|---|---|---|---|', '| 0 | 段起點 | 主卡 | 開場 | 標題 | — |', '', '## 需要我決定的事', ''].join('\n');
+  const next = F.dropBeatSheets(md, ['x1']);
+  assert.ok(parseBeatSheets(md).has('x1'));
+  assert.ok(!parseBeatSheets(next).has('x1'));
+  assert.ok(parseBeatSheets(next).has('x2'));
+  assert.match(next, /截圖觀察：無\n\n動畫分鏡：改成內容設計動畫，鏡位腳本看 work\/designs\/x1\.md（設計師寫）\n\n### x2/);
+  assert.equal(F.dropBeatSheets(md, []), md);
+});
+
+test('023 resetRuns：只清指定段的 audit 次數（換人接手從第 1 次算起），草稿和別段的不動；沒有檔不出錯', async () => {
+  const F = await imp('lib/flow.mjs');
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-runs-'));
+  const P = { out: path.join(p, 'work', 'hyperframes') };
+  assert.deepEqual(F.resetRuns(P, ['d1']), []);
+  F.runCount(P, 'audit:d1'); F.runCount(P, 'audit:d1'); F.runCount(P, 'audit:d2'); F.runCount(P, 'draft:ch01.json');
+  assert.deepEqual(F.resetRuns(P, ['d1', 'd9']), ['d1']);
+  assert.equal(F.runCount(P, 'audit:d1'), 1);
+  assert.equal(F.runCount(P, 'audit:d2'), 2);
+  assert.equal(F.runCount(P, 'draft:ch01.json'), 2);
+  fs.rmSync(p, { recursive: true, force: true });
+});
+
 test('022 --design-status：還沒動手／腳本寫好／動畫做了＋audit 過；空白畫布 20 分鐘沒進度就重派', async () => {
   const F = await imp('lib/flow.mjs');
   const { pathsFrom } = await imp('build.mjs');
@@ -353,8 +402,10 @@ test('022 --design-status：還沒動手／腳本寫好／動畫做了＋audit �
   assert.equal(list[0].state, '還沒動手（派出 30 分鐘）');
   assert.equal(list[1].state, '腳本寫好、動畫還沒動手（腳本 5 分鐘前）');
   assert.equal(list[2].state, '動畫做了（最後改動 3 分鐘前），audit 0 個 ✖ 的拼圖是最新的');
+  put('work/hyperframes/.cache/check-runs.json', JSON.stringify({ 'audit:d1': 3, 'audit:d3': 2 }), 0);
   const r = spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--project', p, '--design-status'], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(p, 'work', 'hyperframes', '.cache', 'check-runs.json'), 'utf8')), { 'audit:d3': 2 }, '023：要重派的段次數歸零，別段不動');
   assert.match(r.stdout, /d1：還沒動手（派出 30 分鐘）　⚠ 超過 20 分鐘沒進度/);
   assert.match(r.stdout, /→ 下一步：停掉原本負責 d1、d4 的設計師，重派[\s\S]*（d4）你是設計師[^\n]*用 edit 接著改，不要整份重寫[\s\S]*（d1）你是設計師[^\n]*先照 \.agents\/skills\/auto-edit-motion\/references\/design-script\.md 寫鏡位腳本/);
   fs.rmSync(p, { recursive: true });
