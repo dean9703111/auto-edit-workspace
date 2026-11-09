@@ -2,6 +2,8 @@
 //   groupIssues(errors, warnings) → { errors: [...], author: [群組], ai: [群組], counts }
 //   群組：{ key, level, title, hint, ids: [段號], cues: [字幕句號], raw: [原文], action }
 //   author＝作者要看一眼或能自己改的；ai＝給 AI 的技術細節、作者不用懂的（工具改得好的產生時已經改掉；一樣留著原文，可以整份複製給 AI）
+//   hideKey(text)／splitHidden(errors, warnings, hidden)：作者覺得判斷錯了按「隱藏」的那幾則（.editor/hidden-checks.json）
+//   plainText(text)：拿掉 CSS 選擇器（版面檢查的「#root .fx-29-win「…」」→「「…」」）
 
 const RULES = [
   { key: 'speaker', re: /示範人物/, who: 'author', action: 'speaker', title: () => '講者介紹還是示範人物', hint: '填你的姓名和頭銜，影片裡才不會是別人的名字' },
@@ -50,4 +52,28 @@ export function groupIssues(errors = [], warnings = []) {
   });
   const a = done(author), b = done(ai);
   return { errors: errors.map(String), author: a, ai: b, counts: { errors: errors.length, author: a.length, ai: b.reduce((t, g) => t + g.raw.length, 0) } };
+}
+
+// 判斷錯了、作者按「隱藏」的：同一類算同一則。數字不算（改字後 px、秒數變了也還是藏著；滾輪 0–9 這種一次藏完）
+export function hideKey(text) {
+  const s = String(text);
+  return `${issueId(s) || ''}｜${issueText(s).replace(/\d+(?:\.\d+)?/g, '#').replace(/\s+/g, ' ')}`.slice(0, 240);
+}
+// 版面檢查的訊息帶 CSS 選擇器（寫給 AI 找元素用）：給作者看時拿掉，只留「」裡的字
+export function plainText(text) {
+  return String(text).replace(/(?:#[A-Za-z][\w-]*\s+)?(?:[.#][A-Za-z_][\w-]*)+\s*(?=「)/g, '').replace(/(\S)\s+「/g, '$1「').replace(/」\s+(?=[\u4e00-\u9fff])/g, '」');
+}
+// 分出藏起來的：回傳沒藏的 errors／warnings，和藏起來的清單（同一個 key 只列一次，n＝幾則）
+export function splitHidden(errors = [], warnings = [], hidden = new Set()) {
+  const out = { errors: [], warnings: [], hidden: [] }, seen = new Map();
+  for (const [level, list] of [['error', errors], ['warn', warnings]]) {
+    for (const raw of list) {
+      const key = hideKey(raw);
+      if (!hidden.has(key)) { (level === 'error' ? out.errors : out.warnings).push(String(raw)); continue; }
+      const h = seen.get(key);
+      if (h) h.n++;
+      else { const x = { key, level, id: issueId(raw), text: plainText(issueText(raw)), n: 1 }; seen.set(key, x); out.hidden.push(x); }
+    }
+  }
+  return out;
 }

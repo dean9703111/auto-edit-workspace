@@ -370,6 +370,15 @@ button.chk-seg { padding: 2px 7px; font-size: 12px; font-family: var(--mono); bo
 .chk-ailist { list-style: none; margin: 6px 0; padding: 0 0 0 16px; display: grid; gap: 3px; font-weight: 400; }
 .chk-ailist li { padding: 0; background: transparent; border: 0; }
 .chk-ailist b { font-weight: 400; }
+/* 判斷錯了，隱藏：每則右下一顆小按鈕；藏起來的收在最下面「已隱藏」，可以還原 */
+.check-list button.chk-hide { display: block; margin: 6px 0 0 18px; padding: 2px 9px; font-size: 12px; min-height: 24px; color: var(--mute); }
+.check-list .chk-fix { margin: 4px 0 0 18px; }
+.check-list .chk-fix summary { cursor: pointer; color: var(--mute); font-size: 12px; }
+.check-list li.chk-hidden { background: transparent; border: 0; padding: 4px 0 0; }
+.chk-hidden summary { cursor: pointer; color: var(--mute); }
+.chk-hiddenlist { list-style: none; margin: 6px 0; padding: 0 0 0 16px; display: grid; gap: 6px; font-weight: 400; color: var(--mute); }
+.chk-hiddenlist li { padding: 0; background: transparent; border: 0; }
+.chk-hiddenlist button { padding: 1px 8px; font-size: 12px; min-height: 22px; }
 .dlg { background: var(--bg2); color: var(--ink); border: 1px solid var(--line2); border-radius: 10px; padding: 18px 22px; width: min(600px, 92vw); max-height: 86vh; overflow: auto; }
 .dlg.wide { width: min(1000px, 94vw); }
 .dlg::backdrop { background: rgba(0, 0, 0, .6); }

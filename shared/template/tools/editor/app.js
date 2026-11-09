@@ -1,5 +1,5 @@
 // 剪輯台主程式：載入狀態、以選取為中心的屬性面板、時間軸操作（裁剪、分割、音量線、字幕）、復原、自動存檔、更新預覽、鍵盤
-import { groupIssues, issueId } from './issues.mjs';
+import { groupIssues, issueId, hideKey, plainText, splitHidden } from './issues.mjs';
 import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
   fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss,
@@ -39,7 +39,7 @@ const app = {
   plan0: null, cues0: [], scenes: [], cues: [], srtOps: [],
   edit: defaultEdit(), savedEdit: defaultEdit(), base: null, sfxMemory: {}, canStash: false,
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
-  report: null, reportReady: false, auditIssues: null, requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
+  report: null, reportReady: false, auditIssues: null, hiddenChecks: new Set(), requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
@@ -762,6 +762,7 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   const kept = keep ? keep() : null;
   app.saveBlocked = false;
   app.server = s;
+  app.hiddenChecks = new Set(Array.isArray(s.hiddenChecks) ? s.hiddenChecks : []);
   app.base = { mtime: s.plan.mtime, hash: s.plan.hash, srtHash: s.srt?.hash ?? null };
   app.fps = s.video?.fps || 30;
   app.dur = s.video?.dur || 0;
@@ -1305,7 +1306,8 @@ async function runBuild({ focus = null, focusId = null, audit = [], fromButton =
     for (const id of audit) app.pendingAudit.delete(id);   // 只拿掉這次量過的：更新途中又改字的段，留到下一次
     $('#logTitle').textContent = '✓ 預覽更新好了'; $('#logSub').textContent = `花了 ${fmtWait(d.seconds)}。`; $('#logWrap').open = false;
     const au = d.audit;
-    if (au?.errors.length) { renderCheck(); openIssues(); toast(`預覽更新好了，但 ${au.ids.join('、')} 改字後版面有 ${au.errors.length} 個錯誤（「檢查」分頁）：改短或改回原本的字`, 'err', 8000); }
+    const auErr = au ? splitHidden(au.errors, [], app.hiddenChecks).errors : [];
+    if (auErr.length) { renderCheck(); openIssues(); toast(`預覽更新好了，但 ${au.ids.join('、')} 改字後版面有 ${auErr.length} 個錯誤（「檢查」分頁）：改短或改回原本的字`, 'err', 8000); }
     else toast(`預覽更新好了（${fmtWait(d.seconds)}）${au ? `，${au.ids.join('、')} 版面${au.warnings.length ? `有 ${au.warnings.length} 個提醒` : '沒問題'}` : ''}${focusId ? `，切到完成影片預覽看 ${focusId}` : ''}`, 'ok', 3500, { actions: [['訊息', () => $('#dlgLog').showModal()]] });
     if (focus != null) {
       if (app.server.preview.player.available) { await setMode('player', { focus }); app.seek(focus); if (focusId) app.select({ kind: segType(sceneById(focusId)) === 'media' ? 'media' : 'item', id: focusId }); }
@@ -1528,14 +1530,19 @@ function renderOverlays() {
   $('#btnSpeaker').setAttribute('aria-pressed', String(!!app.showSpeaker));
 }
 // 錯誤一則一則列；提醒照 issues.mjs 歸併成白話，給 AI 的收起來（原文可以整份複製）
-function errorItem(s) {
+const hideBtn = (raws) => `<button class="small chk-hide" data-chk-hide="${esc(JSON.stringify([...new Set(raws.map(hideKey))]))}" title="藏起來、不算進錯誤和提醒數；下面「已隱藏」可以還原">判斷錯了，隱藏</button>`;
+function errorItem(s, { hide = false } = {}) {
   const id = issueId(s);
   const head = s.replace(/^\[[^\]]*\]\s*/, '');
   const j = head.indexOf('→');
-  const body = j >= 0 ? `${esc(head.slice(0, j))}<span class="fix">→ ${esc(head.slice(j + 1).trim())}</span>` : esc(head);
-  return `<li class="err"${id ? ` data-id="${esc(id)}"` : ''}><span class="sym">✖</span>${id ? `<b class="chk-id">${esc(id)}</b> ` : ''}${body}</li>`;
+  // 版面檢查（改字後量的）：問題寫白話（拿掉 CSS 選擇器），改法是寫給 AI 的，收起來
+  const layout = /^版面/.test(head);
+  const what = layout ? plainText(j >= 0 ? head.slice(0, j) : head).trim() : (j >= 0 ? head.slice(0, j) : head);
+  const fix = j >= 0 ? head.slice(j + 1).trim() : '';
+  const body = !fix ? esc(what) : layout ? `${esc(what)}<details class="chk-fix"><summary>給 AI 的改法</summary><span class="fix">${esc(fix)}</span></details>` : `${esc(what)}<span class="fix">→ ${esc(fix)}</span>`;
+  return `<li class="err"${id ? ` data-id="${esc(id)}"` : ''}><span class="sym">✖</span>${id ? `<b class="chk-id">${esc(id)}</b> ` : ''}${body}${hide ? hideBtn([s]) : ''}</li>`;
 }
-function groupItem(g) {
+function groupItem(g, { hide = false } = {}) {
   const many = g.ids.length > 1;
   const one = g.ids.length === 1 ? ` data-id="${esc(g.ids[0])}"` : '';
   const action = g.action === 'speaker' ? ' data-chk-act="speaker"' : '';
@@ -1543,23 +1550,38 @@ function groupItem(g) {
   // 字幕的問題：列出是哪幾句，點了跳過去（只有一句時整列都能點）
   const cue1 = g.cues?.length === 1 ? ` data-chk-cue="${g.cues[0]}"` : '';
   const cues = g.cues?.length ? `<div class="chk-ids">${g.cues.slice(0, 80).map((n) => `<button class="chk-seg" data-chk-cue="${n}">#${n}</button>`).join('')}</div>` : '';
-  return `<li class="warn"${one}${action}${cue1}><span class="sym">⚠</span><b>${esc(g.title)}</b>${g.hint ? `<div class="chk-hint">${esc(g.hint)}</div>` : ''}${ids}${cues}</li>`;
+  return `<li class="warn"${one}${action}${cue1}><span class="sym">⚠</span><b>${esc(g.title)}</b>${g.hint ? `<div class="chk-hint">${esc(g.hint)}</div>` : ''}${ids}${cues}${hide ? hideBtn(g.raw) : ''}</li>`;
 }
-function issueItems(errors = [], warnings = [], limit = 300) {
+function issueItems(errors = [], warnings = [], limit = 300, { hide = false } = {}) {
   const G = groupIssues(errors, warnings);
-  const all = [...G.errors.map(errorItem), ...G.author.map(groupItem)];
+  const all = [...G.errors.map((s) => errorItem(s, { hide })), ...G.author.map((g) => groupItem(g, { hide }))];
   const ai = G.ai.length ? `<li class="chk-ai"><details><summary>給 AI 的細節（${G.counts.ai} 則）</summary><ul class="chk-ailist">${G.ai.map((g) => `<li><b>${esc(g.title)}</b>${g.ids.length ? `<span class="mute">　${esc(g.ids.slice(0, 8).join('、'))}${g.ids.length > 8 ? '…' : ''}</span>` : ''}</li>`).join('')}</ul><button class="small" data-chk-copy>複製原文給 AI</button></details></li>` : '';
   return all.slice(0, limit).join('') + (all.length > limit ? `<li>…還有 ${all.length - limit} 則</li>` : '') + ai;
 }
+// 作者按「判斷錯了，隱藏」的不算進錯誤、提醒數（hidden 另外列，可以還原）；存檔失敗的錯誤不能藏
 function currentIssues() {
   const rep = app.report, au = app.saveErrors ? null : app.auditIssues;
-  if (app.saveErrors) return { errors: app.saveErrors, warnings: [] };
-  return { errors: [...(au?.errors || []), ...(rep?.issues?.errors || [])], warnings: [...(au?.warnings || []), ...(rep?.issues?.warnings || [])] };
+  if (app.saveErrors) return { errors: app.saveErrors, warnings: [], hidden: [] };
+  return splitHidden([...(au?.errors || []), ...(rep?.issues?.errors || [])], [...(au?.warnings || []), ...(rep?.issues?.warnings || [])], app.hiddenChecks);
+}
+function hiddenItems(hidden) {
+  if (!hidden?.length) return '';
+  const n = hidden.reduce((t, h) => t + h.n, 0);
+  return `<li class="chk-hidden"><details><summary>已隱藏 ${n} 則（你判斷是錯的）</summary><ul class="chk-hiddenlist">${hidden.map((h) => `<li><span class="mute">${h.level === 'error' ? '✖' : '⚠'}</span> ${h.id ? `<b>${esc(h.id)}</b> ` : ''}${esc(h.text)}${h.n > 1 ? `<span class="mute">（同類 ${h.n} 則）</span>` : ''} <button class="small" data-chk-unhide="${esc(h.key)}">還原</button></li>`).join('')}</ul></details></li>`;
+}
+async function setHidden(keys, on) {
+  const next = new Set(app.hiddenChecks);
+  for (const k of keys) { if (on) next.add(k); else next.delete(k); }
+  app.hiddenChecks = next;
+  renderCheck();
+  const r = await api('POST', '/api/check/hidden', { keys: [...next] });
+  if (!r.ok) toast(`沒存到：${r.data?.message || '連不到剪輯台'}（重新整理後會再出現）`, 'warn', 5000);
+  else toast(on ? '已隱藏，不算進錯誤數；在「已隱藏」裡可以還原' : '已還原', 'ok', 3000);
 }
 function renderCheck() {
   const rep = app.report;
   const sum = $('#checkSummary'), list = $('#checkList');
-  const { errors, warnings } = currentIssues();
+  const { errors, warnings, hidden } = currentIssues();
   const G = groupIssues(errors, warnings);
   // 給段落清單和時間軸用：只標作者要看的（給 AI 的細節不標）
   app.authorFlags = new Set([...G.errors.map(issueId).filter(Boolean), ...G.author.flatMap((g) => g.ids)]);
@@ -1575,11 +1597,12 @@ function renderCheck() {
     else sum.innerHTML = `<b class="warn-ink">${rep.fallback ? '簡易檢查' : '讀不到檢查報告'}</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
   }
   // 剛在剪輯台改字的段：重新產生後量的版面（audit），放最前面
-  const au = app.saveErrors ? null : app.auditIssues;
+  const au0 = app.saveErrors ? null : app.auditIssues;
+  const au = au0 && { ids: au0.ids, ...splitHidden(au0.errors, au0.warnings, app.hiddenChecks) };
   if (au && (au.errors.length || au.warnings.length)) {
     sum.innerHTML = `<b class="${au.errors.length ? 'err-ink' : 'warn-ink'}">剛改字的 ${esc(au.ids.join('、'))} 版面有 ${au.errors.length + au.warnings.length} 個問題</b>：改短一點或改回原本的字；要重新排版請寫進修改單給 AI。<br>${sum.innerHTML}`;
   }
-  list.innerHTML = issueItems(errors, warnings) || (rep?.data ? '<li class="mute">沒有任何錯誤或提醒</li>' : '');
+  list.innerHTML = (issueItems(errors, warnings, 300, { hide: !app.saveErrors }) || (rep?.data ? '<li class="mute">沒有任何錯誤或提醒</li>' : '')) + hiddenItems(hidden);
   renderStatus();
   // 分頁上分清楚：✖＝要先改才能輸出，⚠＝看一下就好
   const tab = $('.side-tabs [data-side="issues"]');
@@ -2760,6 +2783,10 @@ async function copyIssues() {
   catch { toast('瀏覽器不讓複製：請 AI 跑 build.mjs --check 看檢查結果', 'warn', 5000); }
 }
 $('#checkList').addEventListener('click', (e) => {
+  const hb = e.target.closest('[data-chk-hide]');
+  if (hb) { setHidden(JSON.parse(hb.dataset.chkHide), true); return; }
+  const ub = e.target.closest('[data-chk-unhide]');
+  if (ub) { setHidden([ub.dataset.chkUnhide], false); return; }
   if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }
   if (e.target.closest('summary, .chk-ai')) return;
   const cue = e.target.closest('[data-chk-cue]');
