@@ -406,6 +406,17 @@ export function outlineCmd(P, file) {
   const part = (readJson(path.join(packDir(P), 'index.json'))?.parts || []).find((p) => p.key === key);
   const secOf = (ref) => { const p = parseTime(ref); if (p.error || p.kind !== 'cue') return null; const r = cueSeconds(p, cues); return r.error ? null : r.sec; };
   const errors = [], warns = [], hints = [], ids = new Set();
+  // 段與段之間的空檔直接接上（每句都要有畫面；常見是 to 寫成「講到第 N 句」）：前一段的 to 改成下一段的 from，段長、拍點都照接好的算。
+  // 邊錄邊講（work/screen-sync.json）蓋住的空檔本來就不排，不接
+  const syncSpans = (readJson(path.join(P.project, 'work', 'screen-sync.json'))?.segments || []).map((x) => [Number(x.from), Number(x.to)]).filter(([x, y]) => y > x);
+  const kindOfRow = (r) => { const e = findSpec(list, r.tpl), s = e && snippetOf(e); return s ? s.scene || s.template || (s.type === 'media' ? 'media' : e.name) : null; };
+  const joined = [], seq = rows.filter((r) => !OVERLAP_OK.includes(kindOfRow(r)));
+  for (let i = 1; i < seq.length; i++) {
+    const p = seq[i - 1], s = seq[i], z = secOf(p.to), a = secOf(s.from);
+    if (z == null || a == null || a - z <= 0.5 || syncSpans.some(([x, y]) => x < a && y > z)) continue;
+    joined.push(`${p.id} ${p.to}→${s.from}`);
+    p.to = s.from;
+  }
   const segs = rows.map((r) => {
     const entry = findSpec(list, r.tpl), snip = entry && snippetOf(entry);
     if (!entry || !snip) { errors.push(`${r.id}：不認得模板「${r.tpl}」→ 寫寫法.md 裡的名稱（例 key-point、x-scene、fx 29、media）`); return null; }
@@ -444,6 +455,7 @@ export function outlineCmd(P, file) {
   if (cap && picks > cap) warns.push(`內容設計動畫候選 ${picks} 段，最多 ${cap} 段 → 留最值得的`);
   for (const m of errors) console.log(`✖ ${m}`);
   for (const m of warns) console.log(`⚠ ${m}`);
+  if (joined.length) console.log(`✓ 段與段之間的空檔自動接上 ${joined.length} 處（前一段的 to 改成下一段的 from；骨架照接好的寫，大綱不用改）：${joined.join('、')}`);
   if (errors.length) { console.log(`未通過：${errors.length} 個 ✖ → 改 ${rel(src)}，再跑一次`); return 1; }
   // 產生骨架：已經填過的段（同 id、同模板）留著填好的內容，只更新起訖和在講什麼
   const out = path.join(draftsDir(P), `${key}.json`);
@@ -761,7 +773,7 @@ export function mergeDrafts(P, flags = {}, deps = {}) {
   if (r.status !== 0) { console.log('→ 下一步：照 ✖ 改（改那一份 work/drafts/chNN.json，再合併一次）'); console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --merge-drafts`); return 1; }
   const todo = designs.filter((d) => !fs.existsSync(path.join(designsDir(P), `${d.id}.md`)));
   if (todo.length) {
-    console.log(`→ 下一步：內容設計動畫一段派一個設計師寫鏡位腳本，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息照抄，換掉 <段>：`);
+    console.log(`→ 下一步：內容設計動畫一段派一個設計師寫鏡位腳本，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息只送下面這一行（換掉 <段>，不要另外加要求）：`);
     console.log(`  你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本。`);
     console.log('全部回來後產生分鏡表：');
   } else if (deps.loadLib && !flags['no-storyboard']) {
@@ -929,9 +941,9 @@ export function applyCmd(P, flags, { loadLib }) {
   const noScript = todo.filter((d) => !fs.existsSync(path.join(designsDir(P), `${d.id}.md`)));
   const withScript = todo.filter((d) => !noScript.includes(d));
   if (todo.length) {
-    console.log(`→ 下一步：內容設計動畫一段派一個設計師，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息照抄，換掉 <段>：`);
-    if (withScript.length) console.log(`  ${noScript.length ? `（${withScript.map((d) => d.id).join('、')}）` : ''}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。`);
-    if (noScript.length) console.log(`  ${withScript.length ? `（${noScript.map((d) => d.id).join('、')}）` : ''}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完接著照 design-build.md 做動畫。`);
+    console.log(`→ 下一步：內容設計動畫一段派一個設計師，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息只送下面這一行（換掉 <段>，不要另外加要求）：`);
+    if (withScript.length) console.log(`  ${noScript.length ? `（${withScript.map((d) => d.id).join('、')}）` : ''}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先載入 hyperframes skill，再照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。`);
+    if (noScript.length) console.log(`  ${withScript.length ? `（${noScript.map((d) => d.id).join('、')}）` : ''}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完載入 hyperframes skill，接著照 design-build.md 做動畫。`);
     console.log('全部回來後定稿：');
   } else console.log('→ 下一步：定稿，停在停點 ④');
   console.log(`node shared/template/tools/build.mjs ${P2} --review`);
@@ -943,18 +955,22 @@ export function applyCmd(P, flags, { loadLib }) {
 // [x, y] 扣掉 spans 裡每一段，剩下的區間（依序）
 export const subtractSpans = ([x, y], spans = []) => spans.reduce((acc, [p, q]) => acc.flatMap(([u, w]) => (q <= u || p >= w ? [[u, w]] : [[u, Math.min(w, p)], [Math.max(u, q), w]].filter(([m, n]) => n - m > 1e-6))), y > x ? [[x, y]] : []);
 export const DESIGN_STALL_MIN = 20;   // 建議初值：一段約 12 分鐘（shared/style.md），20 分鐘還是空白畫布多半是卡住或被中斷
+// 重派時間：--design-status 印「重派」那一刻記下來，之後從重派起算（不然新設計師還沒寫檔，下一次查又被判卡住、叫主代理再停一次）
+const redispatchFile = (P) => path.join(P.out, '.cache', 'design-redispatch.json');
 export function designStatus(P, now = Date.now()) {
   const plan = readJson(P.plan);
+  const sent = readJson(redispatchFile(P), null) || {};
   const mt = (f) => (fs.existsSync(f) ? fs.statSync(f).mtimeMs : null);
   const ago = (t) => (t == null ? null : Math.max(0, Math.round((now - t) / 60000)));
   return (plan?.scenes || []).filter((s) => s?.design).map((s) => {
     const html = path.join(P.out, designFileOf(s)), script = path.join(designsDir(P), `${s.id}.md`);
     const brief = path.join(P.project, 'work', 'briefs', `${s.id}.md`), sheet = path.join(P.project, 'work', 'audit-shots', `sheet-${s.id}.jpg`);
     const blank = isBlankDesign(readOpt(html)), hasScript = fs.existsSync(script);
-    const last = blank ? Math.max(mt(brief) ?? 0, mt(script) ?? 0) || null : mt(html);
+    const re = Number(sent[s.id]) || 0, sentAt = Math.max(mt(brief) ?? 0, re) || null;
+    const last = Math.max(blank ? Math.max(sentAt ?? 0, mt(script) ?? 0) : mt(html) ?? 0, re) || null;
     const audited = !blank && mt(sheet) != null && mt(sheet) >= mt(html);
-    const state = !blank ? `動畫做了（最後改動 ${ago(last)} 分鐘前）${audited ? '，audit 0 個 ✖ 的拼圖是最新的' : ''}`
-      : hasScript ? `腳本寫好、動畫還沒動手（腳本 ${ago(mt(script))} 分鐘前）` : `還沒動手（派出 ${ago(mt(brief)) ?? '?'} 分鐘）`;
+    const state = !blank ? `動畫做了（最後改動 ${ago(mt(html))} 分鐘前）${audited ? '，audit 0 個 ✖ 的拼圖是最新的' : ''}`
+      : hasScript ? `腳本寫好、動畫還沒動手（腳本 ${ago(mt(script))} 分鐘前）` : `還沒動手（${re ? '重派' : '派出'} ${ago(sentAt) ?? '?'} 分鐘）`;
     // 卡住：空白畫布從派出（或腳本寫好）起 20 分鐘沒動；或動畫做了一半，最後改動 20 分鐘前、之後沒有 audit 過（拼圖比檔舊）
     const stalled = last != null && ago(last) >= DESIGN_STALL_MIN && (blank || !audited);
     return { id: s.id, blank, script: hasScript, audited, idle: ago(last), state, stalled };
@@ -968,12 +984,15 @@ export function designStatusCmd(P) {
   const stalled = list.filter((d) => d.stalled);
   if (stalled.length) {
     resetRuns(P, stalled.map((d) => d.id));   // 新派的設計師從第 1 次 audit 算起
-    console.log(`→ 下一步：停掉原本負責 ${stalled.map((d) => d.id).join('、')} 的設計師，重派（同一則回覆一次派出，派工訊息照抄，換掉 <段>）：`);
+    const sent = readJson(redispatchFile(P), null) || {};
+    for (const d of stalled) sent[d.id] = Date.now();
+    try { fs.mkdirSync(path.dirname(redispatchFile(P)), { recursive: true }); fs.writeFileSync(redispatchFile(P), JSON.stringify(sent)); } catch { }
+    console.log(`→ 下一步：停掉原本負責 ${stalled.map((d) => d.id).join('、')} 的設計師，重派（同一則回覆一次派出，派工訊息只送下面這一行，換掉 <段>，不要另外加要求）：`);
     const started = stalled.filter((d) => !d.blank), noScript = stalled.filter((d) => d.blank && !d.script), withScript = stalled.filter((d) => d.blank && d.script);
     const tag = (g) => (stalled.length > g.length ? `（${g.map((d) => d.id).join('、')}）` : '');
-    if (started.length) console.log(`  ${tag(started)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。動畫檔已經有內容：照 .agents/skills/auto-edit-motion/references/design-build.md 用 edit 接著改，不要整份重寫；跑 audit，0 個 ✖ 就交。`);
-    if (withScript.length) console.log(`  ${tag(withScript)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。先 write 骨架就跑 audit，之後只用 edit 補。`);
-    if (noScript.length) console.log(`  ${tag(noScript)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完接著照 design-build.md 做動畫。`);
+    if (started.length) console.log(`  ${tag(started)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。動畫檔已經有內容：先載入 hyperframes skill，照 .agents/skills/auto-edit-motion/references/design-build.md 用 edit 接著改，不要整份重寫；跑 audit，0 個 ✖ 就交。`);
+    if (withScript.length) console.log(`  ${tag(withScript)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先載入 hyperframes skill，再照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。先 write 骨架就跑 audit，之後只用 edit 補。`);
+    if (noScript.length) console.log(`  ${tag(noScript)}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完載入 hyperframes skill，接著照 design-build.md 做動畫。`);
   } else if (list.every((d) => d.audited)) console.log(`→ 下一步：全部做好了，定稿：\nnode shared/template/tools/build.mjs --project ${rel(P.project)} --review`);
   else console.log('→ 下一步：還在做，等設計師回覆（不要用 sleep 迴圈等）');
   return 0;
@@ -1069,7 +1088,7 @@ export async function reviewCmd(P, flags) {
   if (b.status !== 0) { for (const l of bl) if (l.startsWith('✖')) console.log(l); console.log('✖ build 沒過 → 照 ✖ 改 plan.json，再跑一次'); return 1; }
   const blanks = (readJson(P.plan)?.scenes || []).filter((x) => x?.design && isBlankDesign(readOpt(path.join(P.out, designFileOf(x))))).map((x) => x.id);
   if (blanks.length) {
-    console.log(`✖ 內容設計動畫還沒做：${blanks.join('、')} → 一段派一個設計師（.agents/skills/auto-edit-motion/references/design-build.md），全部回來再跑一次`);
+    console.log(`✖ 內容設計動畫還沒做：${blanks.join('、')} → 一段派一個設計師，派工訊息只送 node shared/template/tools/status.mjs ${P2} 印的那一行（先載入 hyperframes skill，再照 design-build.md 做），全部回來再跑一次`);
     console.log(`node shared/template/tools/build.mjs ${P2} --review`);
     return 1;
   }

@@ -484,7 +484,14 @@ export function projectStatus(project) {
   if (['S11', 'S12'].includes(stage) && motion.length && !passed('④ 完成影片預覽')) {
     at = `剪好看／做動畫（還沒做：${list8(motion)}）`;
     skill = 'auto-edit-motion 步驟 1–2';
-    next = `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（派工照 auto-edit-motion 的 references/design-build.md）；全部回來才跑下一行`;
+    // 接手時主代理沒看過 --apply-storyboard 印的派工行：這裡照印同樣的行，不讓主代理自己寫派工訊息
+    const isDz = (id) => planJson?.scenes?.find((s) => s.id === id)?.design, scripted = (id) => fs.existsSync(W(path.join('designs', `${id}.md`)));
+    const dz = motion.filter(isDz), lines = [
+      [dz.filter(scripted), `你是設計師，負責 ${A} 的內容設計動畫 <段>。先載入 hyperframes skill，再照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。`],
+      [dz.filter((id) => !scripted(id)), `你是設計師，負責 ${A} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完載入 hyperframes skill，接著照 design-build.md 做動畫。`],
+      [motion.filter((id) => !isDz(id)), '照 .agents/skills/auto-edit-motion/references/worker-brief.md 改 <段> 的動畫檔。'],
+    ].filter(([ids]) => ids.length).map(([ids, l]) => `（${ids.join('、')}）${l}`);
+    next = `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（一次最多 4 個）；派工訊息只送下面對應的那一行（換掉 <段>，不要另外加要求）：\n  ${lines.join('\n  ')}\n全部回來才跑下一行`;
     nextStop = '④ 完成影片預覽';
     cmds = [review];
     ev.push(`plan.json 的 ${list8(motion)} 動畫還沒做（x 檔不在、還是範例原文，或內容設計動畫還是占位）`);

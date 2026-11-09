@@ -271,7 +271,7 @@ export function renderCommon(input) {
   L.push('');
 
   L.push('## 2. 怎麼選：三條路', '');
-  L.push('1. **有對得上的錄影或圖片** → media 段（第 5 節）。', '2. **內容設計動畫**（第 4 節）：這段值得專門為它設計畫面。', '3. **模板**：字卡與模板動畫，工具直接產出，不用另外做動畫。**相鄰兩段不要用同一個模板**（例：兩段 `x-process` 連著），換一個或併成一段。寫法在 `寫法.md`，**要哪一個就查哪一個，不用整份讀**：`build.mjs --project <專案> --spec x-process`（字卡寫 key，例 `key-point`）。', '');
+  L.push('1. **有對得上的錄影或圖片** → media 段（第 5 節）。', '2. **內容設計動畫**（第 4 節）：這段值得專門為它設計畫面。', '3. **模板**：字卡與模板動畫，工具直接產出，不用另外做動畫。**相鄰兩段不要用同一個模板**（例：兩段 `x-process` 連著），換一個或併成一段。選模板只看第 3 節的對照表；寫法在 `寫法.md`，**寫完大綱、填骨架時才查，要哪一個就查哪一個，不用整份讀**：`build.mjs --project <專案> --spec x-process`（字卡寫 key，例 `key-point`）。', '');
   const questions = situationQuestions(situationsMd), rules = animationRules(input.styleMd);
   if (questions.length) L.push('定大類的四題：', '', ...questions, '');
   if (rules.length) L.push('退到字卡只能用這幾條當理由（「字卡比較簡單」「時間不夠」不是理由）：', '', ...rules, '');

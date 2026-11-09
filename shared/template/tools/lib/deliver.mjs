@@ -480,7 +480,7 @@ export function deliverBlocker(P) {
     try { html = fs.readFileSync(path.join(P.out, designFileOf(s)), 'utf8'); } catch { /* 還沒有檔也算沒做 */ }
     return isBlankDesign(html);
   }).map((s) => s.id);
-  if (blanks.length) return { message: `內容設計動畫還沒做：${blanks.join('、')}（畫面還是空白畫布，上面只有占位字）。`, fix: '一段派一個設計師（.agents/skills/auto-edit-motion/references/design-build.md），全部做完再輸出；這段不做動畫就在 plan.json 改用模板或拿掉' };
+  if (blanks.length) return { message: `內容設計動畫還沒做：${blanks.join('、')}（畫面還是空白畫布，上面只有占位字）。`, fix: `一段派一個設計師，派工訊息只送 node shared/template/tools/status.mjs --project "${path.relative(P.root || process.cwd(), P.project)}" 印的那一行（先載入 hyperframes skill，再照 design-build.md 做），全部做完再輸出；這段不做動畫就在 plan.json 改用模板或拿掉` };
   if (storyboardDirty(P)) return { message: '分鏡表（work/storyboard.md）有改動還沒套回 plan.json，現在輸出會漏掉那些改動。', fix: `先跑 node shared/template/tools/build.mjs --project "${path.relative(P.root || process.cwd(), P.project)}" --apply-storyboard，再輸出；確定不要那些改動才用 --storyboard --force 重新產生分鏡表` };
   return null;
 }

@@ -40,7 +40,7 @@
 
 ## 2. 語彙表（43 個具名動作）
 
-「對應」欄寫 build 自動的（色帶擦開、子母畫面飛入、色帶收回），分鏡照樣寫，程式不用寫。做動畫時每個名稱用「對應」欄的 `P.*`，寫法看 `.agents/skills/auto-edit-motion/references/design-build.md` 的語法速查。
+「對應」欄寫 build 自動的（色帶擦開、子母畫面飛入、色帶收回），分鏡照樣寫，程式不用寫。做動畫時每個名稱用「對應」欄的 `P.*`，寫法看 `.agents/skills/auto-edit-motion/references/kit-syntax.md`（內容設計動畫直接寫 GSAP，這欄只當描述）。
 
 | 類 | 名稱 | 一句話效果 | 對應 `P.*`／內建 | 適用情境 |
 |---|---|---|---|---|

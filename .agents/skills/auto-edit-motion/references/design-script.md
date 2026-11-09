@@ -6,7 +6,7 @@
 
 每段最多 6 次工具呼叫。到第 6 次還沒寫完，就把寫好的部分存檔，只回 `<段> 腳本沒寫完｜卡在：<原因>`。
 
-沒有 `work/briefs/<段 id>.md` 就停手，只回 `<段> 沒有 brief`。只讀 brief（字幕、每句在段內的秒數、音效都在裡面），只寫 `work/designs/<段 id>.md`。線稿元件先看下面的表選；不確定長相就打開一次 `shared/template/kit/illus-gallery.jpg`（一張圖，每格下面有寫法），不要跑程式。整份寫一次就交；要修只用 edit 改那幾格，不要整份重寫（重寫一次和第一次一樣久）。
+沒有 `work/briefs/<段 id>.md` 就停手，只回 `<段> 沒有 brief`。只讀 brief（字幕、每句在段內的秒數、音效都在裡面），只寫 `work/designs/<段 id>.md`。不用知道詞在句子裡的第幾秒，不要開 `transcript*.json`、`rough.srt*`、`plan.json` 去找。線稿元件先看下面的表選；不確定長相就打開一次 `shared/template/kit/illus-gallery.jpg`（一張圖，每格下面有寫法），不要跑程式。整份寫一次就交；要修只用 edit 改那幾格，不要整份重寫（重寫一次和第一次一樣久）。
 
 1. **先想內容，不想版面**：這幾句話到底在說什麼？觀眾該記住什麼？把字幕遮起來，什麼畫面能讓人看懂？brief 的構想可以推翻。brief 寫「全螢幕」的段沒有講者，這個畫面就是觀眾看到的全部，構圖要撐得起整個畫面。
 2. **找一個畫面概念**：一個具體的場景、比喻或對照（人在做什麼、東西怎麼變、前後差在哪）。不要「標題＋幾條文字」，不要流程圖，那是模板的事。字只當標籤，≤ 10 字，完整句子交給字幕。
@@ -85,7 +85,7 @@
 | `stopwatch` | `.il-hand` 指針、`.il-sweep` 外圈 | 220×240 |
 | `bookmark` | saved：false、true | 220×72 |
 
-螢幕的每個狀態都預先畫好了（換狀態直接 `P.swap`）；`pgPerson` 是左右對稱的正面人形，不用翻轉。沒有的物件先找 lucide 圖示，名稱用 `node shared/template/tools/build.mjs --project projects/<專案> --icons 手機,雲端,footprints` 查（只查名稱，不算跑 build；中文查不到就換英文關鍵字）。不要打開 `shared/template/kit/icons.json`，它是一行 586 KB。圖示也不合才新畫，寫進上面的插圖清單。
+螢幕的每個狀態都預先畫好了（做動畫時調 `.il-<狀態>` 的 opacity 切換）；`pgPerson` 是左右對稱的正面人形，不用翻轉。沒有的物件先找 lucide 圖示，名稱用 `node shared/template/tools/build.mjs --project projects/<專案> --icons 手機,雲端,footprints` 查（只查名稱，不算跑 build；中文查不到就換英文關鍵字）。不要打開 `shared/template/kit/icons.json`，它是一行 586 KB。圖示也不合才新畫，寫進上面的插圖清單。
 
 ## 回報
 

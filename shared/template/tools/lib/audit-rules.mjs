@@ -558,11 +558,16 @@ export function judgeLayout(meas, ctx) {
     const C = e.painted ? e : parentPainted(e);
     if (!C || padReported.has(C.i) || C.full || C.bg) continue;
     const bw = bwOf(C);
-    const m = Math.min(e.textRect[0] - (C.rect[0] + bw[0]), (C.rect[2] - bw[2]) - e.textRect[2]);
+    const gl = e.textRect[0] - (C.rect[0] + bw[0]), gr = (C.rect[2] - bw[2]) - e.textRect[2];
+    const m = Math.min(gl, gr);
     if (m < 0 || m >= NOWRAP_MIN - 1e-6) continue;
     const w = Math.ceil(C.rect[2] - C.rect[0] + 2 * (NOWRAP_MIN - m));
+    // 文字靠一邊（左右餘裕差 > 2px）時加寬只會撐大另一邊，餘裕不變（MiniMax 照「加寬」改了三輪，門檻跟著漲）：改叫加那一邊的 padding
+    const side = Math.abs(gl - gr) > 2 ? (gl < gr ? 'left' : 'right') : null;
+    const fix = side ? `${side === 'left' ? '左' : '右'}邊只剩 ${r1(m)}px：padding-${side} 再加 ${Math.ceil(NOWRAP_MIN - m)}px（整數；文字靠${side === 'left' ? '左' : '右'}，加寬框沒有用），或縮短文字；不要縮字級（R8 #5）`
+      : `容器寬度加到 ≥ ${w}px（整數），或縮短文字；不要縮字級（R8 #5）`;
     push('warn', 'nowrap', e.desc, `nowrap 餘裕不足：${descText(e.desc)} 離 ${C === e ? '自己' : descText(boxDesc(C.desc))} 的框只剩 ${r1(m)}px（< ${NOWRAP_MIN}px）`,
-      `容器寬度加到 ≥ ${w}px（整數），或縮短文字；不要縮字級（R8 #5）`, { m: r1(m) });
+      fix, { m: r1(m) });
   }
 
   // ⚠ 右側空白過多（同一欄 left 與寬相同的一起算，取最小）

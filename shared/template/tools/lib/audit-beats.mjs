@@ -217,7 +217,9 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
   }
   const code = String(html).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
   const seen = new Set();
-  for (const row of sheet.rows) for (const w of row.moves) {
+  // 內容設計動畫照 hyperframes skill 直接寫 GSAP：「動態」欄是給人看的描述，不比對檔裡有沒有那個 P.*
+  const gsapDesign = /x-design-/.test(String(file || ''));
+  for (const row of gsapDesign ? [] : sheet.rows) for (const w of row.moves) {
     const v = BY_NAME.get(w);
     if (!v || v.prim === 'build' || seen.has(v.name)) continue;
     seen.add(v.name);

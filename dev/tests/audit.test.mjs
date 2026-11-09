@@ -311,6 +311,10 @@ test('judgeLayout：⚠ nowrap 餘裕不足（< 7px）', () => {
   assert.match(f[0].msg, /nowrap 餘裕不足：#xn-text「不換行」 離 #xn-pill 的框只剩 4px（< 7px）/);
   assert.match(f[0].fix, /寬度加到 ≥ 306px/);
   assert.deepEqual(only(lay([pill, t(110, 390)]), 'nowrap'), []);
+  // 文字靠左（左 6px、右 40px）：加寬沒用，改法要指 padding-left
+  const g = only(lay([pill, t(106, 360)]), 'nowrap');
+  assert.match(g[0].fix, /左邊只剩 6px：padding-left 再加 1px/);
+  assert.doesNotMatch(g[0].fix, /寬度加到/);
 });
 
 test('judgeLayout：⚠ 右側空白過多（> 80px）；同一欄取最小、置中、撐滿父層、data-width-shared 不算', () => {
@@ -682,6 +686,41 @@ test('瀏覽器實量：HyperFrames runtime 載入子合成、renderSeek 到完�
     assert.match(R.judgeMotion(mot, { item: it }).findings.find((x) => x.rule === 'stagger').msg, /#xt-a「上傳雲端」 和 #xt-b 只差 0\.10s/);
     assert.deepEqual(await S.cueErrors(), []);
     assert.equal((await S.measure({ hostId: 'el-nope', W: 1920, H: 1080 })).missingHost, true);
+  } finally { await S.close(); }
+});
+
+test('024 瀏覽器實量：直接寫 GSAP 的 tl.from 算進場；stagger 帶的一組算一個新元素', { skip: !(chrome && runtime) && '找不到 HyperFrames 的 Chrome 或 runtime（先跑 npx hyperframes browser ensure）', timeout: 60000 }, async () => {
+  const dir = tmp('hf-audit-gsap-');
+  fs.mkdirSync(path.join(dir, 'kit'));
+  fs.mkdirSync(path.join(dir, 'compositions'));
+  fs.copyFileSync(path.join(TEMPLATE, 'kit', 'gsap.min.js'), path.join(dir, 'kit', 'gsap.min.js'));
+  fs.writeFileSync(path.join(dir, 'index.html'), `<!doctype html><html><head><meta charset="UTF-8"><script src="kit/gsap.min.js"></script>
+<style>body{margin:0;background:#000}#main-root{position:relative;width:1920px;height:1080px;overflow:hidden}</style></head><body>
+<div id="main-root" data-composition-id="main" data-start="0" data-duration="4" data-width="1920" data-height="1080" data-fps="30">
+  <div id="el-g" data-composition-id="x-g" data-composition-src="compositions/x-g.html" data-start="0" data-duration="4" data-track-index="1" data-width="1920" data-height="1080"></div>
+</div>
+<script>(function(){ window.__timelines = window.__timelines || {}; const tl = gsap.timeline({ paused: true }); tl.set({}, {}, 4); window.__timelines['main'] = tl; })();</script>
+</body></html>`);
+  fs.writeFileSync(path.join(dir, 'compositions', 'x-g.html'), `<!doctype html><html><head><meta charset="UTF-8"></head><body>
+<template id="x-g-template">
+  <div id="x-g" data-composition-id="x-g" data-width="1920" data-height="1080" data-duration="4" style="position:absolute;inset:0">
+    <div class="xg-row" style="position:absolute;left:120px;top:200px;width:300px;height:60px;background:#222">一</div>
+    <div class="xg-row" style="position:absolute;left:120px;top:300px;width:300px;height:60px;background:#222">二</div>
+    <div class="xg-row" style="position:absolute;left:120px;top:400px;width:300px;height:60px;background:#222">三</div>
+    <div id="xg-c" style="position:absolute;left:600px;top:200px;width:300px;height:60px;background:#222">結論</div>
+  </div>
+  <script>(function () { const tl = gsap.timeline({ paused: true });
+    tl.from('#x-g .xg-row', { opacity: 0, y: 20, duration: 0.4, stagger: 0.3 }, 0.5);
+    tl.from('#xg-c', { opacity: 0, duration: 0.4 }, 2.5);
+    tl.set({}, {}, 4); window.__timelines['x-g'] = tl; })();</script>
+</template></body></html>`);
+  const S = await B.openSession({ dir, chrome, runtime });
+  try {
+    const mot = await S.motion({ hostId: 'el-g', compId: 'x-g' });
+    assert.deepEqual(mot.tweens.map((t) => [t.start, t.kind, t.up, t.targets.length]), [[0.5, 'enter', true, 3], [2.5, 'enter', true, 1]], 'tl.from 的 opacity 0 → 本來的樣子算進場');
+    assert.deepEqual(R.motionUnits(mot).map((u) => u.t), [0.5, 2.5], '三列用同一個 tween 錯拍出現，只算一個新元素');
+    const it = { id: 'g1', label: 'custom x-g.html', type: 'custom', compId: 'x-g', start: 0, end: 4, D: 4 };
+    assert.equal(R.judgeMotion(mot, { item: it }).findings.filter((x) => x.rule === 'density').length, 0);
   } finally { await S.close(); }
 });
 

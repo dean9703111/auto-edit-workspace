@@ -382,9 +382,20 @@ export function collectMotionInPage({ hostId, compId }) {
   };
   const num = (v) => (typeof v === 'number' ? v : parseFloat(v));
   const FN_KIND = { wipe: 'enter', slide: 'enter', grow: 'enter', wipeOut: 'exit', slideOut: 'exit' };   // v2 擦開／抽屜（clip 用 −20% 留邊、xPercent 位移，看不出 opacity）
+  // 起點、終點：fromTo 是 startAt → vars；直接寫 GSAP 的 tl.from（內容設計動畫照 hyperframes skill 寫）vars 是起點、終點是元素本來的樣子
+  const endsOf = (tw) => {
+    const v = tw.vars || {};
+    if (!v.runBackwards || v.startAt) return { s0: v.startAt || {}, v1: v };
+    const v1 = {};
+    if ('opacity' in v) v1.opacity = 1;
+    if ('clipPath' in v) v1.clipPath = 'inset(0% 0% 0% 0%)';
+    for (const k of ['scale', 'scaleX', 'scaleY']) if (k in v) v1[k] = 1;
+    if ('strokeDashoffset' in v) v1.strokeDashoffset = 0;
+    return { s0: v, v1 };
+  };
   const classify = (tw, dat) => {
     if (dat && FN_KIND[dat.fn]) return FN_KIND[dat.fn];
-    const v = tw.vars || {}, s0 = v.startAt || {};
+    const { s0, v1: v } = endsOf(tw);
     if ('strokeDashoffset' in v) return 'draw';
     const o0 = num(s0.opacity), o1 = num(v.opacity);
     if (Number.isFinite(o0) && Number.isFinite(o1)) {
@@ -397,6 +408,7 @@ export function collectMotionInPage({ hostId, compId }) {
   const tweens = [];
   let kids = [];
   try { kids = tl.getChildren(true, true, false); } catch { kids = []; }
+  let rawN = 0;
   for (const tw of kids) {
     let s = tw.startTime();
     for (let p = tw.parent; p && p !== tl; p = p.parent) s += p.startTime();
@@ -410,13 +422,15 @@ export function collectMotionInPage({ hostId, compId }) {
     let dat = tw.data;
     for (let p = tw.parent; !(dat && dat.sc) && p && p !== tl; p = p.parent) dat = p.data;
     const kind = classify(tw, dat);
-    const v = tw.vars || {}, o0 = num((v.startAt || {}).opacity), o1 = num(v.opacity);
+    const { s0: start0, v1: v } = endsOf(tw), o0 = num(start0.opacity), o1 = num(v.opacity);
+    // 直接寫的 GSAP tween（沒有 SceneMotion 的 data）：一個 tween＝一次呼叫，stagger 帶的一組只算一個新元素（同 P.* 呼叫）
+    const raw0 = !(dat && (dat.sc || dat.fn || dat.role)) ? `gsap#${rawN++}` : null;
     // 出現、亮起、描線、從 0 長出來算；位移、換數字、淡掉、降亮度、0 → 0（聚焦時沒輪到的亮框）不算
     const sc = (o) => ['scale', 'scaleX', 'scaleY'].map((k) => num(o[k])).filter(Number.isFinite);
-    const sc0 = sc(v.startAt || {}), sc1 = sc(v);
+    const sc0 = sc(start0), sc1 = sc(v);
     const grow = sc0.length > 0 && Math.min(...sc0) <= 0.01 && (!sc1.length || Math.min(...sc1) > 0.01);
     const up = Number.isFinite(o0) && Number.isFinite(o1) ? o1 > o0 + 1e-3 : kind === 'enter' || kind === 'draw' || grow;
-    tweens.push({ start: r3(s), end: r3(e), kind, up, call: dat && dat.sc ? dat.sc : null, role: dat && dat.role ? dat.role : null, fn: dat && dat.fn ? dat.fn : null, targets: targets.map((t) => {
+    tweens.push({ start: r3(s), end: r3(e), kind, up, call: dat && dat.sc ? dat.sc : raw0, role: dat && dat.role ? dat.role : null, fn: dat && dat.fn ? dat.fn : null, targets: targets.map((t) => {
       const svgShape = t instanceof SVGElement && t.tagName.toLowerCase() !== 'svg';
       const emph = !svgShape && emphOf(t);
       return { key: keyOf(t), parentKey: t.parentElement ? keyOf(t.parentElement) : null, desc: descOf(t), chain: chainOf(t), say: sayOf(t, emph),

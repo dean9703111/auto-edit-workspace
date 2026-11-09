@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE, WORKSPACE, makeSrt, imp } from './helpers.mjs';
+import { TOOLS, TEMPLATE, WORKSPACE, makeSrt, cueStart, imp } from './helpers.mjs';
 
 const K = await imp('lib/scaffold.mjs');
 const { parseSrt } = await imp('lib/srt.mjs');
@@ -227,6 +227,16 @@ test('查詢指令：--spec、--icons、--words、--show、第二次 --check-dra
   fs.writeFileSync(path.join(proj, 'work', 'drafts', 'ch01.json'), JSON.stringify(sk));
   assert.equal(run('--outline', 'ch01').status, 0);
   assert.equal(JSON.parse(fs.readFileSync(path.join(proj, 'work', 'drafts', 'ch01.json'), 'utf8')).segments[0].slots.title, '已經填了');
+  // 空檔自動接上：to 寫成「講到第 N 句」（#3＝第 3 句開頭）也行，骨架照接好的寫；邊錄邊講蓋住的空檔不接，照樣 ⚠
+  fs.writeFileSync(ol, 's0101 | #1 | #3 | fs-flow | 流程 | —\nx0102 | #4 | #9 | x-process | 三步 | 人在三站之間跑\nx0103 | #12 | #18e | x-scene | 再三步 | —\n');
+  fs.writeFileSync(path.join(proj, 'work', 'screen-sync.json'), JSON.stringify({ segments: [{ id: 'sync01', from: cueStart(10), to: cueStart(12) }] }));
+  r = run('--outline', 'ch01');
+  assert.equal(r.status, 0, r.stdout);
+  assert.match(r.stdout, /✓ 段與段之間的空檔自動接上 1 處.*：s0101 #3→#4$/m);
+  assert.doesNotMatch(r.stdout, /s0101 結尾.*空了/);
+  assert.match(r.stdout, /⚠ x0102 結尾（#9）到 x0103 起點（#12）空了/, '邊錄邊講蓋住的空檔不接');
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(proj, 'work', 'drafts', 'ch01.json'), 'utf8')).segments.map((x) => [x.id, x.from, x.to]), [['s0101', '#1', '#4'], ['x0102', '#4', '#9'], ['x0103', '#12', '#18e']]);
+  fs.rmSync(path.join(proj, 'work', 'screen-sync.json'));
   fs.writeFileSync(ol, 's0101 | #1 | #2e | 不存在的模板 | 流程 | —\n');
   r = run('--outline', 'ch01');
   assert.equal(r.status, 1);
@@ -408,6 +418,12 @@ test('022 --design-status：還沒動手／腳本寫好／動畫做了＋audit �
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(p, 'work', 'hyperframes', '.cache', 'check-runs.json'), 'utf8')), { 'audit:d3': 2 }, '023：要重派的段次數歸零，別段不動');
   assert.match(r.stdout, /d1：還沒動手（派出 30 分鐘）　⚠ 超過 20 分鐘沒進度/);
   assert.match(r.stdout, /→ 下一步：停掉原本負責 d1、d4 的設計師，重派[\s\S]*（d4）你是設計師[^\n]*用 edit 接著改，不要整份重寫[\s\S]*（d1）你是設計師[^\n]*先照 \.agents\/skills\/auto-edit-motion\/references\/design-script\.md 寫鏡位腳本/);
+  // 023：重派之後從重派起算，新設計師還沒寫檔也不會馬上又被判卡住
+  const again = spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--project', p, '--design-status'], { encoding: 'utf8' });
+  assert.match(again.stdout, /d1：還沒動手（重派 0 分鐘）\n/);
+  assert.match(again.stdout, /d4：動畫做了（最後改動 25 分鐘前）\n/);
+  assert.doesNotMatch(again.stdout, /停掉原本負責/);
+  assert.equal(F.designStatus(pathsFrom({ project: p }), Date.now() + 21 * 60000)[0].stalled, true, '重派後 20 分鐘還是沒動才再判卡住');
   fs.rmSync(p, { recursive: true });
 });
 

@@ -1,6 +1,6 @@
 # 手改動畫：子代理的派工與回報
 
-模板動畫平常填資料就好（改 plan.json 的 `slots`），工具會自己產生。這份只用在兩種情況：使用者要的改動 `slots` 做不到；或修改單要改一段內容設計動畫。
+模板動畫平常填資料就好（改 plan.json 的 `slots`），工具會自己產生。這份只用在兩種情況：使用者要的改動 `slots` 做不到；或要改一段內容設計動畫裡的東西（修改單、停點 ④ 口頭說的都算）。
 
 2 段以上、有能派子代理的工具：**一段一個子代理，同一則回覆一次全部派出**，全部回來才由主代理跑 `--review` 或 `versions.mjs finish`。沒有子代理工具才自己一段一段做。
 
@@ -14,7 +14,7 @@
 你只能寫：projects/<專案>/work/hyperframes/compositions/<檔名>（build 已經產生）、projects/<專案>/work/hyperframes/illus-local/ 底下自己新畫的 SVG、projects/<專案>/work/reports/<段 id>.md；內容設計動畫段另外可以寫 projects/<專案>/work/designs/<段 id>.md（拍變了就改這張動畫分鏡表，audit 照它對）
 不能做：改 plan.json、work/rough.srt、work/storyboard.md、shared/、assets/；跑 build、snapshot、render（查圖示名稱的 build.mjs --icons 可以跑）；讀 shared/template/tools/、shared/template/kit/*.js、USAGE-reference.md、別段的 compositions；用 node 或 python 拆元件、圖示的 SVG（寫 data-illus、data-icon）
 改法：用 edit 改要改的那幾處，不要整份重寫（重寫一次和第一次做一樣久）
-寫法：x-design-<段 id>.html 照 .agents/skills/auto-edit-motion/references/design-build.md 的畫布、寫法、語法速查、不能做、新畫線稿元件。模板檔（x-<模板>-<段 id>.html）沿用檔裡原本的 id 前綴、檔頭【D 下限】和版面範圍，不要改成 x-design 的寫法；語法照 design-build.md 的「語法速查」「不能做」
+寫法：x-design-<段 id>.html 先載入 hyperframes skill，照 .agents/skills/auto-edit-motion/references/design-build.md 用 GSAP 改。模板檔（x-<模板>-<段 id>.html）沿用檔裡原本的 id 前綴、檔頭【D 下限】和版面範圍，不要改成 x-design 的寫法；語法照 .agents/skills/auto-edit-motion/references/kit-syntax.md
 要改什麼：<修改單的標籤與描述，或使用者原話>
 這段的字幕：
 #<N> <字幕原文>

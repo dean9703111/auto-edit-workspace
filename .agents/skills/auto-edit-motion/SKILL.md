@@ -19,7 +19,7 @@ version: 0.2.0
 | 條件（看得到的事實） | 做法 |
 |---|---|
 | 主代理，分鏡確認了 | 步驟 1 派工 |
-| 你是設計師子代理 | 照派工訊息，讀 `references/design-script.md`（寫腳本）或 `references/design-build.md`（做動畫） |
+| 你是設計師子代理 | 照派工訊息：寫腳本讀 `references/design-script.md`；做動畫先載入 `hyperframes` skill，再讀 `references/design-build.md` |
 | `design: true` 的段沒有 `work/designs/<段>.md`（分鏡表裡那段的動畫分鏡可能是勾選前的模板拍，不算） | 派工照 `--apply-storyboard` 印的那一行（先寫腳本、接著做動畫）；那行沒寫就交回主代理 |
 | 使用者要改模板動畫的文字、站數 | 改 plan.json 的 `slots`，不用動 HTML |
 | 使用者要模板動畫做不到的改動（修改單、指定動作） | 步驟 3 |
@@ -32,7 +32,7 @@ version: 0.2.0
 ls projects/<專案>/work/briefs/
 ```
 
-一段一個子代理，同一則回覆一次全部派出；段數多時一次最多 4 個，回來再派下一批。派工訊息照 `--apply-storyboard` 印的（還沒有鏡位腳本的段，同一個設計師先寫腳本再做動畫）。沒有能派子代理的工具才自己一段一段做。要新畫的線稿元件由設計師在同一輪自己畫（一段最多一個），不用另外派工人；只有使用者另外要求畫元件時才照 `references/illus-worker.md` 派。
+一段一個子代理，同一則回覆一次全部派出；段數多時一次最多 4 個，回來再派下一批。派工訊息**只送** `--apply-storyboard` 印的那一行（換掉 `<段>`），不要加要求、範圍、檢查指令或完成判準：設計師要的都在 brief 和文件裡，多加的會蓋過文件（派工訊息優先），把設計師帶去翻原始資料。沒有能派子代理的工具才自己一段一段做。要新畫的線稿元件由設計師在同一輪自己畫（一段最多一個），不用另外派工人；只有使用者另外要求畫元件時才照 `references/illus-worker.md` 派。
 完成判準：每個 `design: true` 的段都派了。
 常見錯誤：一段一段派 → 慢好幾倍，要同一則回覆一次派出。
 
@@ -60,7 +60,7 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段> --
 ## 自我核對
 
 - [ ] 內容設計動畫是從內容想出來的，不是某支模板的變形
-- [ ] 每一拍綁講到那個詞（`#N@詞`），差 ≤ 0.5 秒
+- [ ] 派工訊息是照抄工具印的那一行（綁句、版面、節奏由 audit 量，不寫進派工訊息）
 - [ ] 拼圖親眼看過：動作看得到、構圖有主角、遮住字幕看得懂
 - [ ] brief 前後段寫到的插圖元件，用同一個名稱、同一個朝向（brief 沒寫就不用核對）
 - [ ] 沒有改 plan.json、storyboard.md、shared/（子代理）
@@ -90,3 +90,4 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段> --
 - `references/design-script.md`、`references/design-build.md`：你就是設計師時才讀（主代理派工不用讀，工具會印派工訊息）。
 - `references/illus-worker.md`：使用者另外要求畫線稿元件時才讀（內容設計動畫要的新元件由設計師自己畫）。
 - `references/worker-brief.md`：要手改動畫（步驟 3）時才讀。
+- `references/kit-syntax.md`：手改模板動畫（`x-<模板>-<段>.html`）時才讀；內容設計動畫用 GSAP，不用讀。
