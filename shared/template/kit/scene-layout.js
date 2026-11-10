@@ -49,10 +49,11 @@
     return [a[0] - b[0] - (ref ? ref.clientLeft || 0 : 0), a[1] - b[1] - (ref ? ref.clientTop || 0 : 0), el.offsetWidth, el.offsetHeight];
   };
   var kids = function (c) { return Array.prototype.filter.call(c.children, function (e) { return e.hasAttribute('data-slot') && e.offsetWidth + e.offsetHeight > 0; }); };
-  var anchorOf = function (s) { return s.querySelector(':scope > [data-illus], :scope > [data-illus-src]') || s; };
+  // 錨點：插圖，或標了 data-anchor 的圖示、波形（x-scene 的 icon、wave 元件）
+  var anchorOf = function (s) { return s.querySelector(':scope > [data-illus], :scope > [data-illus-src], :scope > [data-anchor]') || s; };
   // 標籤＝class 有 lbl 的直接子元素（.xsc-lbl），沒有就取第一個有字的（插圖、子元件不算；掛在標籤下面的膠囊跟著標籤走，不另外算）
   var labelOf = function (s, a) {
-    var k = Array.prototype.filter.call(s.children, function (e) { return e !== a && !e.hasAttribute('data-slot') && !e.matches('[data-illus], [data-illus-src]') && (e.textContent || '').trim(); });
+    var k = Array.prototype.filter.call(s.children, function (e) { return e !== a && !e.hasAttribute('data-slot') && !e.matches('[data-illus], [data-illus-src], [data-anchor]') && (e.textContent || '').trim(); });
     return k.filter(function (e) { return typeof e.className === 'string' && /lbl/.test(e.className); })[0] || k[0] || null;
   };
   var isSide = function (e) { var cs = getComputedStyle(e); return /flex/.test(cs.display) && /^row/.test(cs.flexDirection); };

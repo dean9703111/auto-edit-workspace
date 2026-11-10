@@ -54,6 +54,39 @@ test('fillTemplate：項數變少刪掉那一站、句號文字圖示換掉、�
   assert.doesNotMatch(body, /data-cues-sample/);
 });
 
+test('x-folder：TREE 照列寫、沒有的列 T＝-1、開場就在的列綁段頭、註記晚講到換成 N、沒有總結拿掉 ding；每列都要綁句', () => {
+  const s = F.readFillSpec(CUSTOM, 'x-folder');
+  const slots = { title: '自動產生的資料夾', items: [
+    { text: 'example', depth: 0, at: '#183' }, { text: '講稿.md', depth: 1, kind: 'text', at: '#183' },
+    { text: 'work', depth: 1, note: '自動產生', at: '#184@work', noteAt: '#186@自動產生' }, { text: 'output', depth: 1, note: '自動產生', at: '#185@output', noteAt: '#186@自動產生' }] };
+  const r = F.fillTemplate({ spec: s, html: read('x-folder'), id: 'x05', slots, icons, kitDir });
+  assert.deepEqual(r.errors, []);
+  const code = r.html.match(/<script>\s*\(function[\s\S]*?<\/script>/)[0];   // 檔頭說明也寫了「<script>」，要找真正的那一段
+  assert.match(code, /const TREE = \[\["example",0,null,null\],\["講稿\.md",1,"text",null\],\["work",1,null,"自動產生"\],\["output",1,null,"自動產生"\]\];/);
+  assert.match(code, /const T1 = P\.at\('#183'\);\n\s+const T2 = P\.at\('#183'\);\n\s+const T3 = P\.at\('#184@work'\);\n\s+const T4 = P\.at\('#185@output'\);\n\s+const T5 = -1;/);
+  for (const k of [1, 2, 5, 6, 7, 8, 9]) assert.match(code, new RegExp(`const N${k} = -1;`));
+  assert.match(code, /const N3 = P\.at\('#186@自動產生'\);/);
+  assert.match(code, /const N4 = P\.at\('#186@自動產生'\);/);
+  assert.match(code, /const ALL = -1;/);
+  assert.doesNotMatch(code, /P\.sfx\(/, '沒有總結句就沒有 ding');
+  assert.doesNotMatch(code, /#38[2-9]@|#39[01]@/, '範例的句號不留');
+  assert.doesNotMatch(r.html.split('<template')[1], /(?<!\w)xfld-/, '不留舊前綴');
+  const withAll = F.fillTemplate({ spec: s, html: read('x-folder'), id: 'x05', slots: { ...slots, all: '#186@自動產生' }, icons, kitDir });
+  assert.match(withAll.html, /const ALL = P\.at\('#186@自動產生'\);\s+P\.sfx\('ding', '#186@自動產生'\);/);
+  const md = F.renderSheet(s, slots, 'x05');
+  assert.match(md, /\| 1 \| `#183` \| 第 1 列「example」/);
+  assert.match(md, /\| 3 \| `#184@work` \|/);
+  assert.match(md, /\| 註 4 \| `#186@自動產生` \|/);
+  assert.doesNotMatch(md, /`\{at\}`|\{note\}|undefined/);
+  const bad = F.validateSlots(s, { title: '樹', items: [{ text: '這個名稱真的太長了超過十個字', depth: 5, kind: 'pdf' }] }, { icons }).join('\n');
+  assert.match(bad, /items\[0\]\.at：必填/);
+  assert.match(bad, /至少 3 項/);
+  assert.match(bad, /上限 10/);
+  assert.match(bad, /最大 3/);
+  assert.match(bad, /folder／file／text/);
+  assert.match(F.validateSlots(s, { title: '樹', items: Array.from({ length: 10 }, (_, i) => ({ text: `f${i}`, depth: 0 })) }, { icons }).join(), /最多 9 項/);
+});
+
 test('validateSlots：字數、項數、圖示、句號錯都報，訊息有改法', () => {
   const bad = { title: '這個標題真的已經超過十個字了', items: [{ text: '太長的站名喔', icon: 'nope', at: '12' }] };
   const e = F.validateSlots(spec, bad, { icons }).join('\n');
@@ -174,4 +207,25 @@ test('x-scene：拍裡提到的元件沒寫 in 就自動補；從頭到尾沒提
   assert.ok(bad.some((e) => /中間隔著別的元件/.test(e)), bad.join('\n'));
   const ok = F.validateScene({ title: '測試', parts: [{ id: 'a', illus: 'phone' }, { id: 'b', illus: 'phone' }, { id: 'c', illus: 'phone', row: 2 }], links: ['a>c', 'a>b'], beats: [{ at: '#1@手機', in: ['a'] }] }, { kitDir: path.join(TEMPLATE, 'kit') });
   assert.deepEqual(ok, []);
+});
+
+test('024 x-prompt：關鍵詞那一行（pre＋k1＋mid＋k2＋post）加起來超過 17 字 ✖（每格各自沒超過也一樣），說明怎麼改', () => {
+  const spec = JSON.parse(fs.readFileSync(path.join(CUSTOM, 'x-prompt.fill.json'), 'utf8'));
+  const base = { title: '提示詞', k1: '複製', k2: '說明欄', icon: 'notebook-text', typeAt: '#24@提示', k1At: '#26@複製', k2At: '#27@說明' };
+  const long = F.validateSlots(spec, { ...base, pre: '提示詞放在部落格，可以', mid: '，連結在影片的' }, { icons });
+  assert.equal(long.length, 1, long.join('\n'));
+  assert.match(long[0], /關鍵詞那一行.*23 字，上限 17.*移到 above/);
+  assert.deepEqual(F.validateSlots(spec, { ...base, above: '提示詞放在部落格', pre: '可以', mid: '，連結在', post: '裡' }, { icons }), []);
+});
+
+test('024 x-scene：圖示、波形元件標 data-anchor（排版把它們當錨點，有標籤的照樣底對齊）', () => {
+  const html = read('x-scene');
+  const spec = JSON.parse(fs.readFileSync(path.join(CUSTOM, 'x-scene.fill.json'), 'utf8'));
+  const slots = { title: '交給 AI 下載', parts: [{ id: 'a', illus: 'personBust', label: '你' }, { id: 'b', icon: 'git-branch', label: 'Git' }, { id: 'c', wave: true, label: '聲音' }], links: ['a>b'], beats: [{ at: '#1@交給', in: ['a', 'b', 'c'] }] };
+  const r = F.fillTemplate({ spec, html, id: 'x0206', slots, icons, kitDir });
+  assert.deepEqual(r.errors, []);
+  assert.match(r.html, /<span class="sc-icon" data-anchor /);
+  assert.match(r.html, /<div class="xsc\w*-wv" data-anchor><\/div>/, '前綴會換成這一段的（xscx0206-wv）');
+  const layout = fs.readFileSync(path.join(kitDir, 'scene-layout.js'), 'utf8');
+  assert.match(layout, /:scope > \[data-anchor\]/, 'scene-layout.js 的 anchorOf 認得 data-anchor');
 });

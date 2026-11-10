@@ -2,6 +2,10 @@
   "name": "auto-edit-workspace",
   "private": true,
   "description": "AI 剪片工作區：固定 HyperFrames 版本（npm install 後，npx hyperframes 用這一版）",
-  "engines": { "node": ">=22" },
-  "devDependencies": { "hyperframes": "0.9.3" }
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "hyperframes": "0.9.28"
+  }
 }

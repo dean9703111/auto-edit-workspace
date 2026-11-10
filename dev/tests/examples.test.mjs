@@ -42,6 +42,8 @@ const EXAMPLES = {
   'x-crowd-queue': { pre: 'xcq', range: [351, 355] },
   'x-desk': { pre: 'xdsk', range: [361, 366], noIcon: true },
   'x-news': { pre: 'xnews', range: [371, 375], card: 'xnews-head' },
+  // 024 資料夾樹（樹狀目錄一列一列長出來；圖示照種類從 #xfld-stamps 複製，沒有 .sc-icon）
+  'x-folder': { pre: 'xfld', range: [381, 391], noIcon: true },
 };
 const COUNT = Object.keys(EXAMPLES).length;
 const HEAD = ['適用的講解', '不要用在哪裡', '要改的地方', '綁句欄位', 'D 下限', '版面'];

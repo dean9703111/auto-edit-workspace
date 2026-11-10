@@ -106,8 +106,7 @@
 | 工作 | 什麼時候分 | 派工訊息 | 子代理只能寫 |
 |---|---|---|---|
 | 素材盤點 | 每支錄影、每批圖片一個 | `auto-edit-screen` 步驟 1 | `work/media/notes/<檔名>.json`、`work/reports/<檔名>.md` |
-| 導演 | `--scaffold` 印「先派一個導演」時一個，派分章之前 | `auto-edit-storyboard` 的 `references/director.md` | `work/分鏡素材/視覺語言.md`、`work/reports/director.md` |
-| 分章寫草稿 | `--scaffold` 切成 2 份以上 | `auto-edit-storyboard` 的 `references/chapter-worker.md` | `work/drafts/<份>.outline.md`、`work/drafts/<份>.json`、`work/reports/<份>.md` |
+| 分章（語意地圖、草稿） | `--scaffold` 切成 2 份以上：第一回合寫語意地圖；`--map-merge` 印「語意地圖通過」後第二回合寫草稿（能接續同一個子代理就接續）。全片校正（挑 A、統一標法、寫 `視覺語言.md`）是你做，照 `references/director.md` | `auto-edit-storyboard` 的 `references/chapter-worker.md` | `work/drafts/<份>.map.md`、`work/drafts/<份>.outline.md`、`work/drafts/<份>.json`、`work/reports/<份>.md` |
 | 內容設計動畫 | ③ 勾了的段，每段一個（寫鏡位腳本、做動畫、要新畫的元件都是同一個子代理） | `auto-edit-motion` 的 `references/design-script.md`、`references/design-build.md`（做動畫先載入 `hyperframes` skill） | `work/designs/<段>.md`、`compositions/x-design-<段>.html`、`compositions/components/`（registry 裝的）、`illus-local/` 自己新畫的（一段最多 1 個，`media.mjs illus-lint` 0 個 ✖ 才用）、`work/reports/<段>.md` |
 | 新畫線稿元件 | 我另外要求畫元件時，每個元件一個 | `auto-edit-motion` 的 `references/illus-worker.md` | `illus-local/<名稱>.svg`、`work/reports/illus-<名稱>.md` |
 | 錄影的運鏡與標註 | 2 支以上 | `auto-edit-screen` 步驟 2–3 | `work/media/frames/`、`work/reports/<檔名>.md`，結果回報給你寫草稿 |
@@ -115,7 +114,7 @@
 
 `work/reports/` 的檔名照派工訊息寫的；沒寫就用自己的段、份或檔名。
 
-1. `work/hyperframes/plan.json`、`work/storyboard.md`、`work/rough.srt` 只有你能寫。子代理只跑這幾條：`build.mjs --outline`、`--check-draft`（自己那份）、`--spec`、`--icons`（查圖示名稱）、`--words`（看字幕，挑 `@詞`），`audit.mjs --only <自己的段> --shots --sheet`，`media.mjs frame`、`media.mjs illus-lint`，設計師另外可以跑 `npx hyperframes catalog`、`npx hyperframes add`（在子殼裡）。派工訊息照抄工具印的那一行，不要自己加要求。不跑沒有旗標的 build、`--merge-drafts`、`--storyboard`、`--review`，不開剪輯台、不 render，不改 `shared/`、`assets/`。別段有 ✖ 不影響 `--only`。
+1. `work/hyperframes/plan.json`、`work/storyboard.md`、`work/rough.srt` 只有你能寫。子代理只跑這幾條：`build.mjs --map`、`--outline`、`--check-draft`（自己那份）、`--spec`、`--icons`（查圖示名稱）、`--words`（看字幕，挑 `@詞`），`audit.mjs --only <自己的段> --shots --sheet`，`media.mjs frame`、`media.mjs illus-lint`，設計師另外可以跑 `npx hyperframes catalog`、`npx hyperframes add`（在子殼裡）。派工訊息照抄工具印的那一行，不要自己加要求。不跑沒有旗標的 build、`--map-merge`、`--merge-drafts`、`--storyboard`、`--review`，不開剪輯台、不 render，不改 `shared/`、`assets/`。別段有 ✖ 不影響 `--only`。
 2. 派出後等子代理回覆或完成通知，不要寫 `sleep` 迴圈去等檔案。子代理的檔案寫好了但還沒回報，就等它回報再收件，不要停掉它；你不自己寫子代理的檔。全部回來才由你跑 `--merge-drafts` 或 `--review`，不要每收一個就 build；audit 有 ✖ 就把原文交回那個子代理，同一段交回 2 次還有 ✖，就停下來回報給我。
 
 ## 工具注意事項

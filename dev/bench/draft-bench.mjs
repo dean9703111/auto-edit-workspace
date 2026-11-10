@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * 寫草稿的基準測試（specs/022-pipeline-speed FR-109）：同一份分鏡素材，「一次寫整份」和「大綱 → 骨架」各跑 N 次，
+ * 寫草稿的基準測試（specs/022-pipeline-speed FR-109、specs/024-semantic-map）：同一份分鏡素材，「一次寫整份」「大綱 → 骨架」「語意地圖 → 大綱 → 骨架」各跑 N 次，
  * 用 MiniMax（mmx text chat）當弱模型、工具輸出由這支腳本餵回去，比較產出率、時間、token、檢查結果、模板動畫與候選比例。
  *
- *   node dev/bench/draft-bench.mjs --project projects/example [--part ch01] [--runs 3] [--modes one,two]
+ *   node dev/bench/draft-bench.mjs --project projects/example [--part ch01] [--runs 3] [--modes one,two,map]
  *                                  [--parallel 3] [--max-tokens 40000] [--timeout 900] [--fill-batch 6] [--model <id>] [--out <結果.json>] [--dry]
  * --fill-batch N：兩步式的填骨架一次填 N 段（0＝一次填整份）。
+ * map：第一回合寫語意地圖（--map 修一輪）→ 第二回合照地圖寫大綱（只給那幾行能用的模板，不給 65 列對照表）→ 之後和 two 一樣。
+ *      單份基準沒有主代理：地圖照子代理寫的直接用（A 不再全片挑）。多量一欄「一致性」：同一語意的段用最常見那個模板的比例。
  *
  * 專案要先跑過 build.mjs --scaffold（有 work/分鏡素材/）。每次都先把專案複製到暫存（APFS clone，不動原專案）。
  * 每種寫法最多一輪修正（工具有 ✖ 才修），兩種一樣，比較才公平。
@@ -20,7 +22,10 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BUILD = path.join(ROOT, 'shared', 'template', 'tools', 'build.mjs');
-const { specEntries } = await import(path.join(ROOT, 'shared', 'template', 'tools', 'lib', 'flow.mjs'));
+const { specEntries, minOfSpec, fullOfSpec } = await import(path.join(ROOT, 'shared', 'template', 'tools', 'lib', 'flow.mjs'));
+const { parseSrt } = await import(path.join(ROOT, 'shared', 'template', 'tools', 'lib', 'srt.mjs'));
+const { semanticTypes, situationRows } = await import(path.join(ROOT, 'shared', 'template', 'tools', 'lib', 'scaffold.mjs'));
+const { parseMap, checkMap, mapOptions, rowSeconds } = await import(path.join(ROOT, 'shared', 'template', 'tools', 'lib', 'semantic-map.mjs'));
 
 // ---------- 量測（純函式，dev/tests/draft-bench.test.mjs 測） ----------
 const NOT_COUNTED = ['chapter-tag', 'speaker', 'chapter'];
@@ -35,7 +40,27 @@ export function draftMetrics(segs = []) {
   let adjacent = 0;
   for (let i = 1; i < main.length; i++) if (kindOf(main[i]) !== 'media' && kindOf(main[i]) === kindOf(main[i - 1])) adjacent++;
   const r = (x) => (body.length ? Math.round((x / body.length) * 100) / 100 : 0);
-  return { segs: list.length, body: body.length, animRatio: r(anim.length), candRatio: r(cands.length), adjacent };
+  const kinds = new Set(body.filter((s) => !s.design).map(kindOf)).size;   // 模板種類（SC-004：不能比現在少太多）
+  return { segs: list.length, body: body.length, kinds, animRatio: r(anim.length), candRatio: r(cands.length), adjacent };
+}
+// 一致性（specs/024 SC-006）：每段照起點句號找到地圖那一行的語意；同一語意 ≥ 2 段的，用最常見那個模板的段數 ÷ 段數（加權）
+export function semanticConsistency(segs = [], mapRows = []) {
+  const by = new Map();
+  for (const s of segs) {
+    if (s.type === 'media' || NOT_COUNTED.includes(s.scene)) continue;
+    const n = cueOf(s), r = mapRows.find((x) => n >= x.a && n <= x.z);
+    if (!r) continue;
+    if (!by.has(r.sem)) by.set(r.sem, []);
+    by.get(r.sem).push(kindOf(s));
+  }
+  let top = 0, all = 0;
+  for (const ks of by.values()) {
+    if (ks.length < 2) continue;
+    const c = {};
+    for (const k of ks) c[k] = (c[k] || 0) + 1;
+    top += Math.max(...Object.values(c)); all += ks.length;
+  }
+  return all ? Math.round((top / all) * 100) / 100 : null;
 }
 export function parseCheck(out = '') {
   const t = String(out);
@@ -99,11 +124,14 @@ function materials(proj, part) {
   const list = specEntries(howto);
   const menu = list.map((e) => `- ${e.text.split('\n')[0].replace(/\*\*/g, '')}`).join('\n');
   const sec = (n) => common.split(/\n(?=## )/).find((x) => x.startsWith(`## ${n}.`)) || '';
-  return { common, ch, howto, list, menu, sec };
+  const situ = read(path.join(ROOT, 'shared', 'template', 'SITUATIONS.md'));
+  return { common, ch, howto, list, menu, sec, sem: read(path.join(D, '語意.md')), types: semanticTypes(situ), sitRows: situationRows(situ) };
 }
 
 const ONE = '你是分章寫分鏡草稿的子代理。一次寫完整份草稿 work/drafts/<份>.json：每段選模板或字卡、填好欄位（畫面上的字、#N@詞 綁講到的詞、story 的 say、why），約三成的段在 story 寫 designIdea、designWhy 當內容設計動畫候選（照樣先套模板），相鄰兩段不要用同一個模板，金句寫 quotes，拿不定寫 decide。秒數、時間下限、字數之後工具會檢查。只輸出完整 JSON（不要 markdown 圍欄、不要其他文字）。';
 const OUTLINE = '這次只做第一步：分段大綱。每段一行：id | from | to | 模板 | 這段在講什麼（一句話） | 候選構想（值得做內容設計動畫才寫，不是寫 —）。連續講同一件事的幾句併成一段；每段都要有畫面；相鄰兩段不要同一個模板；約三成的段寫候選構想。段長、時間下限、接縫、候選比例都由工具檢查，不用自己算。只輸出這幾行，不要其他文字。';
+const MAP = '你是分章寫分鏡的子代理，這次只做第一回合：語意地圖。照語意.md 寫，一組句子一行：句號範圍 | 語意 | 級 | 在講什麼 | 特徵或 A 的理由。語意只能用語意.md 列的名稱；級寫 A、B 或 C；A 只是提名、要寫理由，不用湊數；連續講同一件事的幾句併成一行（一行大約是一段畫面，通常 2–8 句，不超過 10 句）；行與行接起來、蓋滿這一份。不挑模板。只輸出這幾行，不要其他文字。';
+const OUTLINE_MAP = '第二回合：照語意地圖寫分段大綱。每段一行：id | from | to | 模板 | 這段在講什麼（一句話） | 候選構想。照地圖一行寫一段（太長可以拆兩段，太短的和前後一行併成一段）；模板從那一行列的放得下的名稱裡挑（照抄名稱）；地圖上是 A 的行候選構想寫一句話（畫面上發生什麼事），B、C 寫 —；C 用最便宜的（字卡動態寫 fx 01、fx 03 這類代號，或 12 keywords）或併進前後段；相鄰兩段不要同一個模板。段長、時間下限、接縫都由工具檢查，不用自己算。只輸出這幾行，不要其他文字。';
 const FILL = '第二步：填草稿骨架。段落、模板、起訖、anchor 已經定好，只把 <…>（畫面上的字，<> 裡是字數上限）和 #N@詞（講到那個東西的詞，要是那句字幕裡連續的字）換成真的內容；寫 auto 的時間不用動（卡上的字用字幕原詞，工具會找到講到它的地方；卡上的字是改寫的就直接寫 #N@詞）；why 已經寫了模板用途，要改再改；designWhy 寫為什麼值得設計。金句寫 quotes，拿不定寫 decide。只輸出填好的完整 JSON（不要 markdown 圍欄、不要其他文字）。';
 const FIX = (tool) => `工具檢查的結果如下，照 → 改好 ✖（⚠ 不用管），輸出改好的完整內容（格式和上次一樣，不要其他文字）：\n\n${tool}`;
 
@@ -113,7 +141,7 @@ async function runOne(F, src, mode, i, tmpRoot) {
   if (cp.status !== 0) spawnSync('cp', ['-R', src, proj]);
   const drafts = path.join(proj, 'work', 'drafts');
   fs.mkdirSync(drafts, { recursive: true });
-  for (const f of [`${F.part}.json`, `${F.part}.outline.md`]) if (fs.existsSync(path.join(drafts, f))) fs.renameSync(path.join(drafts, f), path.join(drafts, `${f}.before-bench`));
+  for (const f of [`${F.part}.json`, `${F.part}.outline.md`, `${F.part}.map.md`]) if (fs.existsSync(path.join(drafts, f))) fs.renameSync(path.join(drafts, f), path.join(drafts, `${f}.before-bench`));
   const M = materials(proj, F.part);
   const rec = { mode, run: i, calls: [], secs: 0, input: 0, output: 0, thinking: 0, produced: false, errors: null, warns: null, metrics: null, why: null };
   const call = async (label, messages) => {
@@ -134,6 +162,7 @@ async function runOne(F, src, mode, i, tmpRoot) {
     Object.assign(rec, { errors: c.errors, warns: c.warns });
     const now = JSON.parse(read(draftFile) || 'null') || draft;
     rec.metrics = draftMetrics(now.segments || []);
+    if (rec.mapRows) rec.metrics.consistency = semanticConsistency(now.segments || [], rec.mapRows);
     return rec;
   };
   if (mode === 'one') {
@@ -151,9 +180,29 @@ async function runOne(F, src, mode, i, tmpRoot) {
     }
     return finish(draft);
   }
-  // 兩步：大綱 → --outline（✖／⚠ 修一輪）→ 骨架 → 填 → --check-draft（✖ 修一輪）
+  // 兩步：大綱 → --outline（✖／⚠ 修一輪）→ 骨架 → 填 → --check-draft（✖ 修一輪）；map 先多一回合語意地圖
   const olFile = path.join(drafts, `${F.part}.outline.md`);
-  const om = [{ role: 'user', content: `${OUTLINE}\n\n可以用的模板（名稱照第一個空白前後寫，例 key-point、x-scene、fx 01、media）：\n${M.menu}\n\n===== 共用.md =====\n${M.common}\n\n===== ${F.part}.md（這一份的字幕）=====\n${M.ch}` }];
+  let om;
+  if (mode === 'map') {
+    const mapFile = path.join(drafts, `${F.part}.map.md`);
+    const mm = [{ role: 'user', content: `${MAP}\n\n===== 語意.md =====\n${M.sem}\n\n===== ${F.part}.md（這一份的字幕）=====\n${M.ch}` }];
+    const m1 = await call('語意地圖', mm);
+    if (F.dry) { rec.promptChars = mm[0].content.length; return rec; }
+    if (!m1.ok || !m1.text.includes('|')) return rec;
+    fs.writeFileSync(mapFile, m1.text.trim() + '\n');
+    let mp = build(proj, '--map', F.part);
+    if (mp.status !== 0 || /^⚠/m.test(mp.stdout)) {
+      const m2 = await call('地圖修正', [...mm, { role: 'assistant', content: m1.text }, { role: 'user', content: FIX(mp.stdout) }]);
+      if (m2.ok && m2.text.includes('|')) { fs.writeFileSync(mapFile, m2.text.trim() + '\n'); mp = build(proj, '--map', F.part); }
+    }
+    if (mp.status !== 0) { rec.why = rec.why || `--map 沒過：${mp.stdout.split('\n').filter((l) => l.startsWith('✖')).slice(0, 2).join(' ')}`; return rec; }
+    const rows = checkMap(parseMap(read(mapFile)), { types: M.types }).rows;
+    rec.mapRows = rows.map((r) => ({ a: r.a, z: r.z, sem: r.sem, tier: r.tier }));
+    const cues = parseSrt(read(path.join(proj, 'work', 'rough.srt')));
+    const opts = mapOptions(rows, M.sitRows, M.list.map((e) => e.name), { secsOf: (r) => rowSeconds(r, cues), minOf: (n) => minOfSpec(M.list, n), fullOf: (n) => fullOfSpec(M.list, n) });
+    const common = M.common.split(/\n(?=## )/).filter((x) => !x.startsWith('## 3.')).join('\n');
+    om = [{ role: 'user', content: `${OUTLINE_MAP}\n\n===== 語意地圖（第 3 欄是級）=====\n${read(mapFile)}\n\n===== 每一行可以用的模板 =====\n${opts.join('\n')}\n\n===== 共用.md（第 3 節不用讀）=====\n${common}\n\n===== ${F.part}.md（這一份的字幕）=====\n${M.ch}` }];
+  } else om = [{ role: 'user', content: `${OUTLINE}\n\n可以用的模板（名稱照第一個空白前後寫，例 key-point、x-scene、fx 01、media）：\n${M.menu}\n\n===== 共用.md =====\n${M.common}\n\n===== ${F.part}.md（這一份的字幕）=====\n${M.ch}` }];
   const o1 = await call('大綱', om);
   if (F.dry) { rec.promptChars = om[0].content.length; return rec; }
   if (!o1.ok || !o1.text.includes('|')) return rec;
@@ -216,7 +265,8 @@ export async function main(argv = process.argv.slice(2)) {
   try { materials(src, F.part); } catch (e) { console.log(`✖ ${e.message}`); return 1; }
   if (!F.dry && spawnSync('mmx', ['--version'], { encoding: 'utf8' }).status !== 0) { console.log('✖ 找不到 mmx → 照 mmx-cli 說明安裝並登入（mmx auth login），再跑一次'); return 2; }
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'draft-bench-'));
-  const modes = String(F.modes).split(',').map((x) => x.trim()).filter((x) => ['one', 'two'].includes(x));
+  const modes = String(F.modes).split(',').map((x) => x.trim()).filter((x) => ['one', 'two', 'map'].includes(x));
+  if (modes.includes('map') && !read(path.join(src, 'work', '分鏡素材', '語意.md'))) { console.log(`✖ ${F.project} 的分鏡素材沒有語意.md → 先重跑 build.mjs --project ${F.project} --scaffold`); return 1; }
   const tasks = [];
   for (let i = 1; i <= Number(F.runs); i++) for (const m of modes) tasks.push(() => runOne(F, src, m, i, tmpRoot).catch((e) => ({ mode: m, run: i, produced: false, why: e.message, calls: [] })));
   console.log(`基準測試：${path.relative(ROOT, src) || src} ${F.part}，${modes.join('、')} 各 ${F.runs} 次（同時 ${F.parallel} 個；暫存 ${tmpRoot}）`);
@@ -228,12 +278,13 @@ export async function main(argv = process.argv.slice(2)) {
     const rs = rows.filter((r) => r.mode === m), ok = rs.filter((r) => r.produced);
     const med = (f) => median(ok.map(f));
     return [m, { runs: rs.length, produced: ok.length, secs: med((r) => r.secs), output: med((r) => r.output), thinking: med((r) => r.thinking), calls: med((r) => r.calls.length),
-      errors: med((r) => r.errors), warns: med((r) => r.warns), animRatio: med((r) => r.metrics?.animRatio), candRatio: med((r) => r.metrics?.candRatio), adjacent: med((r) => r.metrics?.adjacent), segs: med((r) => r.metrics?.segs) }];
+      errors: med((r) => r.errors), warns: med((r) => r.warns), animRatio: med((r) => r.metrics?.animRatio), candRatio: med((r) => r.metrics?.candRatio), adjacent: med((r) => r.metrics?.adjacent), segs: med((r) => r.metrics?.segs), kinds: med((r) => r.metrics?.kinds), consistency: med((r) => r.metrics?.consistency) }];
   }));
-  const name = { one: '一次寫整份', two: `大綱 → 骨架${Number(F['fill-batch']) ? `（每批 ${F['fill-batch']} 段）` : ''}` };
-  console.log('\n| 寫法 | 產出 | 秒數 | 輸出 token | 思考 token | 呼叫 | ✖ | ⚠ | 段數 | 模板動畫比例 | 候選比例 | 相鄰同模板 |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|');
-  for (const m of modes) { const s = sum[m]; console.log(`| ${name[m]} | ${s.produced}/${s.runs} | ${s.secs ?? '—'} | ${s.output ?? '—'} | ${s.thinking ?? '—'} | ${s.calls ?? '—'} | ${s.errors ?? '—'} | ${s.warns ?? '—'} | ${s.segs ?? '—'} | ${s.animRatio ?? '—'} | ${s.candRatio ?? '—'} | ${s.adjacent ?? '—'} |`); }
+  const fb = Number(F['fill-batch']) ? `（每批 ${F['fill-batch']} 段）` : '';
+  const name = { one: '一次寫整份', two: `大綱 → 骨架${fb}`, map: `語意地圖 → 大綱 → 骨架${fb}` };
+  console.log('\n| 寫法 | 產出 | 秒數 | 輸出 token | 思考 token | 呼叫 | ✖ | ⚠ | 段數 | 模板種類 | 模板動畫比例 | 候選比例 | 相鄰同模板 | 一致性 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const m of modes) { const s = sum[m]; console.log(`| ${name[m]} | ${s.produced}/${s.runs} | ${s.secs ?? '—'} | ${s.output ?? '—'} | ${s.thinking ?? '—'} | ${s.calls ?? '—'} | ${s.errors ?? '—'} | ${s.warns ?? '—'} | ${s.segs ?? '—'} | ${s.kinds ?? '—'} | ${s.animRatio ?? '—'} | ${s.candRatio ?? '—'} | ${s.adjacent ?? '—'} | ${s.consistency ?? '—'} |`); }
   console.log('（中位數；只算有產出的次數。秒數＝模型時間加總，不含工具）');
   for (const r of rows) if (!r.produced && r.why) console.log(`沒產出：${name[r.mode]} 第 ${r.run} 次：${r.why}`);
   if (F.dry) for (const r of rows) console.log(`提示長度：${name[r.mode]} 第 ${r.run} 次 ${r.promptChars ?? '—'} 字`);

@@ -4,8 +4,29 @@
 //   splitItem(s, nFields)       清單項目字串「文字 / 文字 ｜icon=x at=#3」→ { cols, tail }（tail 原樣保留，含前面的空白與｜）
 //   joinItem(cols, tail)        反過來組回字串
 //   parseAttrs(tail)            「｜icon=x at=#3」→ { icon: 'x', at: '#3' }
+//   toggleEmph(s, a, b)         可強調欄位選了字按「重點」：沒標的包成 **詞**、已經標的拿掉（游標在 **…** 裡、沒選字也拿掉那一個）→ { value, a, b } 或 null（沒事可做）
 
 export const richPlain = (s) => String(s).replace(/\*\*/g, '').replace(/(?<!:)\/\//g, '');
+// 重點的範圍（不含 **）：[[內文起點, 內文終點]…]
+const emphSpans = (s) => { const out = []; const re = /\*\*(.+?)\*\*/g; let m; while ((m = re.exec(s))) out.push([m.index + 2, m.index + 2 + m[1].length]); return out; };
+export function toggleEmph(s, a, b) {
+  const v = String(s ?? '');
+  let x = Math.max(0, Math.min(a, b)), y = Math.min(v.length, Math.max(a, b));
+  const spans = emphSpans(v);
+  // 碰到已經標的那一個（游標在裡面、選到它的字、或連 ** 一起選）→ 拿掉
+  const hit = spans.find(([p, q]) => (x === y ? x >= p && x <= q : x < q + 2 && y > p - 2));
+  if (hit) {
+    const [p, q] = hit;
+    const value = v.slice(0, p - 2) + v.slice(p, q) + v.slice(q + 2);
+    return { value, a: p - 2, b: q - 2 };
+  }
+  if (x === y) return null;
+  // 選到的前後空白不包進去（「 Node.js 」→「 **Node.js** 」）
+  while (x < y && /\s/.test(v[x])) x++;
+  while (y > x && /\s/.test(v[y - 1])) y--;
+  if (x === y || /\*\*|\/\//.test(v.slice(x, y))) return null;
+  return { value: `${v.slice(0, x)}**${v.slice(x, y)}**${v.slice(y)}`, a: x + 2, b: y + 2 };
+}
 export function visibleLen(s) {
   let n = 0;
   for (const ch of richPlain(s)) n += ch.codePointAt(0) >= 0x20 && ch.codePointAt(0) <= 0x7e ? 0.5 : 1;

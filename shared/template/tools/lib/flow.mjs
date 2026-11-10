@@ -9,7 +9,8 @@ import { textWidth, parseTime, cueSeconds } from './time.mjs';
 import { ICON_ALIAS } from './icon-alias.mjs';
 import { probeDuration } from './ff.mjs';
 import { canvasOf, resolveFormat } from './canvas.mjs';
-import { alignOutline, scriptOutline, splitParts, renderCommon, renderSnippets, renderPart, designTarget, designTargetOf, designEligible, designCap } from './scaffold.mjs';
+import { alignOutline, scriptOutline, splitParts, renderCommon, renderSnippets, renderPart, renderSemantic, designTarget, designTargetOf, designEligible, designCap, semanticTypes, situationRows } from './scaffold.mjs';
+import { parseMap, checkMap, mapOptions, mergeMaps, designVsMap, rowSeconds } from './semantic-map.mjs';
 import { listFillSpecs, designFileOf, illusNames, isBlankDesign } from './custom-fill.mjs';
 import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn } from './storyboard-gen.mjs';
 import { appendStop } from './progress.mjs';
@@ -157,25 +158,121 @@ export function runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }) {
   for (const f of fs.readdirSync(dir)) if (/^ch\d+\.md$/.test(f)) fs.unlinkSync(path.join(dir, f));
   fs.writeFileSync(path.join(dir, '共用.md'), renderCommon(input));
   fs.writeFileSync(path.join(dir, '寫法.md'), renderSnippets(input));
+  fs.writeFileSync(path.join(dir, '語意.md'), renderSemantic(input));
   for (const part of parts) fs.writeFileSync(path.join(dir, `${part.key}.md`), renderPart(part, input));
   const sections = outline.filter((x) => x.level === 3).map((x) => ({ at: `#${x.n}`, name: shortSection(x.title) }));
-  fs.writeFileSync(path.join(dir, 'index.json'), `${JSON.stringify({ parts, sections, videoDur, hasCamera }, null, 2)}\n`);
+  // semanticMap：這一包走語意地圖（specs/024：第一回合地圖 → --map-merge 全片校正 → 第二回合草稿）；舊的包沒有這個欄位，照舊直接寫草稿
+  fs.writeFileSync(path.join(dir, 'index.json'), `${JSON.stringify({ parts, sections, videoDur, hasCamera, semanticMap: true }, null, 2)}\n`);
   fs.mkdirSync(draftsDir(P), { recursive: true });
   startPrepare(P, flags);
   const target = designTarget(videoDur);
-  console.log(`→ ${rel(dir)}/：共用.md、寫法.md＋${parts.length} 份（${parts.map((p) => `${p.key} ${clock(p.seconds)}`).join('、')}）；${cues.length} 句字幕`);
-  console.log(`內容設計動畫候選：約三成的段（全片估計 ${target} 段左右；先照常套模板，停點 ③ 使用者勾了才做）；底片在背景預先處理`);
-  if (videoDur >= 300 && !fs.existsSync(path.join(dir, '視覺語言.md'))) {
-    console.log(`→ 先派一個導演寫 ${rel(dir)}/視覺語言.md（全片共用的視覺主題、挑哪幾段當內容設計動畫候選，上限 ${designCap(target)} 段）；派工訊息照抄：`);
-    console.log(`  你是這集的導演，負責 ${rel(P.project)} 的視覺語言。照 .agents/skills/auto-edit-storyboard/references/director.md 做。`);
-    console.log('→ 回來之後：');
-  }
+  console.log(`→ ${rel(dir)}/：共用.md、寫法.md、語意.md＋${parts.length} 份（${parts.map((p) => `${p.key} ${p.chars} 字 ${clock(p.seconds)}`).join('、')}）；${cues.length} 句字幕`);
+  console.log(`內容設計動畫候選：約三成的段（全片估計 ${target} 段左右，最多 ${designCap(target)} 段）：第一回合各份在語意地圖提名 A，主代理全片挑；停點 ③ 使用者勾了才做。底片在背景預先處理`);
   if (parts.length > 1) {
-    console.log(`→ 下一步：一份派一個子代理，同一則回覆一次派出（一次最多 4 個，回來再派下一批）；派工訊息照抄，換掉 <份>：`);
-    console.log(`  你負責 ${rel(P.project)} 的分鏡草稿 <份>（${parts.map((p) => p.key).join('、')}）。照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 做。`);
+    console.log(`→ 下一步（第一回合：語意地圖）：一份派一個子代理，同一則回覆一次派出（一次最多 4 個，回來再派下一批）；派工訊息照抄，換掉 <份>：`);
+    console.log(`  你只負責 ${rel(P.project)} 的分鏡 <份> 這一份（全片 ${parts.length} 份：${parts.map((p) => p.key).join('、')}，其他份有別的子代理，不要碰）第一回合：語意地圖。照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 做。`);
+    console.log('全部回來後合併地圖、全片校正：');
+  } else console.log(`→ 下一步：照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 的第一回合寫 ${rel(draftsDir(P))}/ch01.map.md，寫完合併地圖、全片校正：`);
+  console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --map-merge`);
+}
+
+// ---------- 語意地圖（specs/024）：--map 驗一份、--map-merge 合併＋全片校正 ----------
+
+const mapFile = (P, key) => path.join(draftsDir(P), `${key}.map.md`);
+const mapState = (P) => path.join(draftsDir(P), '_map.json');
+function mapContext(P) {
+  const idx = readJson(path.join(packDir(P), 'index.json'));
+  const md = readOpt(path.join(P.templateDir, 'SITUATIONS.md'));
+  const cues = fs.existsSync(P.srt) ? parseSrt(fs.readFileSync(P.srt, 'utf8')) : [];
+  const syncSpans = (readJson(path.join(P.project, 'work', 'screen-sync.json'))?.segments || []).map((x) => [Number(x.from), Number(x.to)]).filter(([x, y]) => y > x);
+  return { idx, parts: idx?.parts || [], types: semanticTypes(md), sitRows: situationRows(md), cues, syncSpans };
+}
+const mapsHash = (P, parts) => sha(parts.map((p) => readOpt(mapFile(P, p.key))).join('\n---\n'));
+// 全片校正通過了、之後地圖沒再改：第二回合才開始
+// 寫法.md 這個名稱的模板最短要幾秒（和 --outline「只有 N 秒，至少要 M 秒」同一個算法）
+export function minOfSpec(list, name) {
+  const e = list.find((x) => x.name === name);
+  if (!e) return 0;
+  try { return minSecondsOf(e, snippetOf(e)) || 0; } catch { return 0; }
+}
+// 寫法.md 寫的「項目全用上時段長至少 N 秒」
+export function fullOfSpec(list, name) {
+  const t = list.find((x) => x.name === name)?.text || '';
+  return Number(t.match(/項目全用上時段長至少 ([\d.]+) 秒/)?.[1] || 0);
+}
+export function mapPassed(P, parts) {
+  const st = readJson(mapState(P));
+  return !!st?.passed && st.hash === mapsHash(P, parts);
+}
+// 這一份的地圖（第二回合 --outline、--check-draft 對候選用）；沒有地圖就是舊流程
+function mapRowsOf(P, key) {
+  const md = readOpt(mapFile(P, key));
+  if (!md) return null;
+  const { types } = mapContext(P);
+  return checkMap(parseMap(md), { types }).rows;
+}
+
+export function mapCmd(P, key0) {
+  const key = String(key0).replace(/\.map\.md$/, '').split('/').pop();
+  const ctx = mapContext(P);
+  const part = ctx.parts.find((p) => p.key === key);
+  if (!ctx.idx) { console.log(`✖ 還沒有 ${rel(packDir(P))}/index.json → 先跑 node shared/template/tools/build.mjs --project ${rel(P.project)} --scaffold`); return 1; }
+  if (!part) { console.log(`✖ 沒有「${key}」這一份 → 照 ${rel(packDir(P))}/ 的 chNN.md 寫（${ctx.parts.map((p) => p.key).join('、')}）`); return 1; }
+  const md = readOpt(mapFile(P, key));
+  if (!md) { console.log(`✖ 找不到地圖 → 照 ${rel(packDir(P))}/語意.md 寫到 ${rel(mapFile(P, key))}（一組句子一行：句號範圍 | 語意 | 級 | 在講什麼 | 特徵或 A 的理由），再跑這條`); return 1; }
+  const { errors, warns, rows } = checkMap(parseMap(md), { part, cues: ctx.cues, types: ctx.types, syncSpans: ctx.syncSpans });
+  for (const m of errors) console.log(`✖ ${m}`);
+  for (const m of warns) console.log(`⚠ ${m}`);
+  const nth = runCount(P, `map:${key}`);
+  if (errors.length) { console.log(`未通過：${errors.length} 個 ✖、${warns.length} 個 ⚠ → 改 ${rel(mapFile(P, key))}，再跑一次`); return 1; }
+  const n = (t) => rows.filter((r) => r.tier === t).length;
+  console.log(`地圖通過：${rows.length} 行（A ${n('A')}、B ${n('B')}、C ${n('C')}），${warns.length} 個 ⚠${nth >= 2 && warns.length ? '。可以交件，⚠ 不用再修' : ''}`);
+  if (mapPassed(P, ctx.parts)) {
+    console.log('第二回合：每一行可以用的模板（照語意縮好、只列這一行秒數放得下的，名稱直接寫進大綱的模板欄；寫法用 --spec 查，一次查完）：');
+    const list = specEntries(readOpt(path.join(packDir(P), '寫法.md')));
+    for (const l of mapOptions(rows, ctx.sitRows, list.map((e) => e.name), { secsOf: (r) => rowSeconds(r, ctx.cues), minOf: (name) => minOfSpec(list, name), fullOf: (name) => fullOfSpec(list, name) })) console.log(`  ${l}`);
+    console.log(`→ 下一步：照地圖寫大綱 ${rel(draftsDir(P))}/${key}.outline.md（模板從上面挑；地圖上是 A 的段寫候選構想，其他寫 —），再跑：`);
+    console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --outline ${key}`);
+  } else console.log('→ 第一回合完成：照 chapter-worker.md 回報一行，等主代理全片校正後的第二回合（不要先寫大綱）');
+  return 0;
+}
+
+export function mapMergeCmd(P) {
+  const ctx = mapContext(P);
+  if (!ctx.idx) { console.log(`✖ 還沒有 ${rel(packDir(P))}/index.json → 先跑 node shared/template/tools/build.mjs --project ${rel(P.project)} --scaffold`); return 1; }
+  const missing = ctx.parts.filter((p) => !fs.existsSync(mapFile(P, p.key))).map((p) => p.key);
+  if (missing.length) { console.log(`✖ 還沒有地圖：${missing.join('、')} → 等那幾份的子代理寫完（${rel(draftsDir(P))}/<份>.map.md），再跑這條`); return 1; }
+  const rowsByKey = new Map(), bad = [];
+  for (const p of ctx.parts) {
+    const c = checkMap(parseMap(readOpt(mapFile(P, p.key))), { part: p, cues: ctx.cues, types: ctx.types, syncSpans: ctx.syncSpans });
+    for (const m of c.errors) bad.push(`${p.key}：${m}`);
+    rowsByKey.set(p.key, c.rows);
+  }
+  if (bad.length) { for (const m of bad) console.log(`✖ ${m}`); console.log(`未通過：${bad.length} 個 ✖ → 把原文交回那一份的子代理（或自己改那一行），再跑一次`); fs.rmSync(mapState(P), { force: true }); return 1; }
+  const vision = path.join(packDir(P), '視覺語言.md');
+  const m = mergeMaps(ctx.parts, rowsByKey, { videoDur: ctx.idx.videoDur || 0, hasVision: fs.existsSync(vision), visionFile: rel(vision) });
+  const out = path.join(packDir(P), '語意地圖.md');
+  fs.writeFileSync(out, m.md);
+  for (const x of m.errors) console.log(`✖ ${x}`);
+  for (const x of m.warns) console.log(`⚠ ${x}`);
+  const nth = runCount(P, 'map-merge');
+  const head = `${rel(out)}：${m.stats.rows} 行（A ${m.stats.A}、B ${m.stats.B}、C ${m.stats.C}；A 預算約 ${m.stats.target}、最多 ${m.stats.cap}）`;
+  if (m.errors.length) {
+    fs.rmSync(mapState(P), { force: true });
+    console.log(`未通過：${head}`);
+    console.log(`→ 下一步（主代理全片校正，只讀 ${rel(out)}，不讀字幕）：照上面的 ✖ 和那份檔開頭的三件事改各份的地圖、寫視覺語言.md，再跑：`);
+    console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --map-merge`);
+    return 1;
+  }
+  writeAtomic(mapState(P), `${JSON.stringify({ passed: true, at: new Date().toISOString(), hash: mapsHash(P, ctx.parts), ...m.stats }, null, 2)}\n`);
+  console.log(`語意地圖通過：${head}${m.warns.length && nth < 2 ? '。⚠ 看一輪：照 → 改那幾行再跑一次就好' : ''}`);
+  if (ctx.parts.length > 1) {
+    console.log('→ 下一步（第二回合：照地圖寫草稿）：能接續子代理就請第一回合那個子代理接著做，不能就重派；同一則回覆一次派出（一次最多 4 個）；派工訊息照抄，換掉 <份>：');
+    console.log(`  你只負責 ${rel(P.project)} 的分鏡 <份> 這一份（全片 ${ctx.parts.length} 份：${ctx.parts.map((p) => p.key).join('、')}，其他份有別的子代理，不要碰）第二回合：照語意地圖寫草稿。照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 做。`);
     console.log('全部回來後合併：');
-  } else console.log(`→ 下一步：照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 寫 ${rel(draftsDir(P))}/ch01.json，寫完合併：`);
+  } else console.log(`→ 下一步：照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 的第二回合寫 ${rel(draftsDir(P))}/ch01.json，寫完合併：`);
   console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --merge-drafts`);
+  return 0;
 }
 
 // ---------- 查規格（--spec、--icons、--words、--show）：用到才查，不用讀整份文件或原始碼 ----------
@@ -450,10 +547,14 @@ export function outlineCmd(P, file) {
   }
   const tags = ok.filter((s) => s.kind === 'chapter-tag');
   if (tags.length > 1) warns.push(`章節角標放了 ${tags.length} 段（${tags.map((s) => s.r.id).join('、')}）→ 一章只放第一段；小節名稱 build 會自動換到角標上，不用另排`);
-  const eligible = ok.filter((s) => s.kind !== 'media' && !OVERLAP_OK.includes(s.kind)).length;
-  const picks = ok.filter((s) => s.r.idea).length, target = designTargetOf(eligible), cap = designCap(target);
-  if (target && picks < target) warns.push(`內容設計動畫候選 ${picks} 段，${eligible} 段的三成約 ${target} 段 → 在最值得設計的段寫候選構想`);
-  if (cap && picks > cap) warns.push(`內容設計動畫候選 ${picks} 段，最多 ${cap} 段 → 留最值得的`);
+  const mapRows = mapRowsOf(P, key);
+  if (mapRows) warns.push(...designVsMap(ok.map((s) => ({ id: s.r.id, n: Number(String(s.r.from).match(/^#(\d+)/)?.[1] ?? 0), idea: !!s.r.idea })), mapRows));
+  else {
+    const eligible = ok.filter((s) => s.kind !== 'media' && !OVERLAP_OK.includes(s.kind)).length;
+    const picks = ok.filter((s) => s.r.idea).length, target = designTargetOf(eligible), cap = designCap(target);
+    if (target && picks < target) warns.push(`內容設計動畫候選 ${picks} 段，${eligible} 段的三成約 ${target} 段 → 在最值得設計的段寫候選構想`);
+    if (cap && picks > cap) warns.push(`內容設計動畫候選 ${picks} 段，最多 ${cap} 段 → 留最值得的`);
+  }
   for (const m of errors) console.log(`✖ ${m}`);
   for (const m of warns) console.log(`⚠ ${m}`);
   if (joined.length) console.log(`✓ 段與段之間的空檔自動接上 ${joined.length} 處（前一段的 to 改成下一段的 from；骨架照接好的寫，大綱不用改）：${joined.join('、')}`);
@@ -564,11 +665,15 @@ export function checkDraft(P, file) {
   if (part) {
     const missing = segs.filter((s) => !s.story?.say).map((s) => s.id);
     if (missing.length) warns.unshift(`這幾段沒有 story.say（分鏡表要用）：${missing.join('、')}`);
-    const designs = segs.filter((s) => s.design || isDesignPick(s)).length;
-    const eligible = segs.filter(designEligible).length;
-    const target = part.target ? designTargetOf(eligible) : 0, cap = designCap(target);
-    if (target && designs > cap) warns.unshift(`內容設計動畫候選 ${designs} 段，這一份 ${eligible} 段最多 ${cap} 段 → 留最值得的 ${cap} 段，其他拿掉 story.designIdea`);
-    if (target && designs < target) warns.unshift(`內容設計動畫候選 ${designs} 段，這一份 ${eligible} 段的三成約 ${target} 段 → 挑最值得設計的時刻，在那段的 story 寫 designIdea、designWhy（共用.md 第 4 節）；真的沒有就在 decide 寫原因`);
+    const mapRows = mapRowsOf(P, part.key);
+    if (mapRows) warns.unshift(...designVsMap(segs.map((s) => ({ id: s.id, n: cueOf(s), idea: !!(s.design || isDesignPick(s)) })), mapRows));
+    else {
+      const designs = segs.filter((s) => s.design || isDesignPick(s)).length;
+      const eligible = segs.filter(designEligible).length;
+      const target = part.target ? designTargetOf(eligible) : 0, cap = designCap(target);
+      if (target && designs > cap) warns.unshift(`內容設計動畫候選 ${designs} 段，這一份 ${eligible} 段最多 ${cap} 段 → 留最值得的 ${cap} 段，其他拿掉 story.designIdea`);
+      if (target && designs < target) warns.unshift(`內容設計動畫候選 ${designs} 段，這一份 ${eligible} 段的三成約 ${target} 段 → 挑最值得設計的時刻，在那段的 story 寫 designIdea、designWhy（共用.md 第 4 節）；真的沒有就在 decide 寫原因`);
+    }
     for (const s of segs) { const n = cueOf(s); if (n && (n < part.firstN || n > part.lastN)) warns.push(`${s.id} 的起點 #${n} 不在這一份的範圍（#${part.firstN}–#${part.lastN}）`); }
     // 情緒點（moods）：數量、範圍、推近次數；欄位與詞對不對得上由 build --check 報（moods[i]…）
     const mt = moodTarget(part.seconds ?? (part.end - part.start));
@@ -786,7 +891,10 @@ export function mergeDrafts(P, flags = {}, deps = {}) {
   if (joined.length) console.log(`接起分章交界的空檔：${joined.join('、')}`);
   const cap = designCap(target);
   const picks = (plan.scenes || []).filter(isDesignPick).length + designs.length;
-  console.log(`合併：${segs.length} 段（${files.length} 份）；內容設計動畫候選 ${picks} 段（停點 ③ 勾了才做）${designs.length ? `，其中 ${designs.length} 段已經指定要做` : ''}${picks < target ? `（⚠ 約三成的段是 ${target} 個候選）` : ''}${picks > cap ? `（⚠ 上限 ${cap} 段 → 留最值得的，其他在草稿拿掉 designIdea 再合併）` : ''}`);
+  // 走語意地圖的包：候選數量在 --map-merge 全片定過了，這裡只對照地圖上的 A
+  const mapA = idx?.semanticMap && parts.every((p) => fs.existsSync(mapFile(P, p.key))) ? parts.reduce((n, p) => n + (mapRowsOf(P, p.key) || []).filter((r) => r.tier === 'A').length, 0) : null;
+  const note = mapA != null ? `（語意地圖上 A ${mapA} 段）` : `${picks < target ? `（⚠ 約三成的段是 ${target} 個候選）` : ''}${picks > cap ? `（⚠ 上限 ${cap} 段 → 留最值得的，其他在草稿拿掉 designIdea 再合併）` : ''}`;
+  console.log(`合併：${segs.length} 段（${files.length} 份）；內容設計動畫候選 ${picks} 段（停點 ③ 勾了才做）${designs.length ? `，其中 ${designs.length} 段已經指定要做` : ''}${note}`);
   if (hasMoods) console.log(`情緒點 ${moods.length} 個（${Object.entries(MOOD_KINDS).map(([k, v]) => `${v.zh} ${moods.filter((m) => m?.kind === k).length}`).join('、')}；推近 ${moods.filter((m) => m?.zoom === true).length} 次）`);
   if (summary) console.log(summary);
   if (r.status !== 0) { console.log('→ 下一步：照 ✖ 改（改那一份 work/drafts/chNN.json，再合併一次）'); console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --merge-drafts`); return 1; }

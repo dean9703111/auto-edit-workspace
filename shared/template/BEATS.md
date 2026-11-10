@@ -136,7 +136,7 @@
 
 ### D 清單
 
-3–5 條並列重點。情境：`x-checklist`、`x-checklist-ai`、`x-warnings`、`x-callout`、`x-callout-phone`、`x-callout-parts`、`x-stack`、`x-stack-podium`、`x-ring-facets`、04a、04d。
+3–5 條並列重點。情境：`x-checklist`、`x-checklist-ai`、`x-warnings`、`x-callout`、`x-callout-phone`、`x-callout-parts`、`x-folder`（資料夾樹）、`x-stack`、`x-stack-podium`、`x-ring-facets`、04a、04d。
 
 | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
 |---|---|---|---|---|---|

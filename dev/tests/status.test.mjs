@@ -608,3 +608,33 @@ test('--help 印檔頭：有 --mark、--init、--timeline', () => {
   const out = STATUS('--help').stdout;
   for (const s of ['--mark', '--init', '--timeline', '→ 下一步']) assert.ok(out.includes(s), s);
 });
+
+test('024 語意地圖：第一回合缺地圖 → --map-merge；全片校正沒過（沒有 _map.json 或地圖比它新）→ 再跑 --map-merge；過了才寫草稿（第二回合）；舊的包照舊', () => {
+  const p = mk();
+  const st = () => projectStatus(p);
+  const at = '2026-11-02 10:00';
+  touch(p, 'assets/camera/a.mp4');
+  for (const f of ['work/main.mp4', 'work/cuts.md', 'work/rough.mp4', 'work/rough.srt.align-1', 'work/transcript.json', 'work/cutpoints.json', 'work/構圖預覽.jpg']) touch(p, f);
+  touch(p, 'work/rough.srt', '1\n00:00:01,000 --> 00:00:02,000\n短句\n');
+  touch(p, 'work/製作進度.md', STOP_TABLE(`| ${at} | ① 剪輯清單 | 通過 | 「可以」 | work/cuts.md |`, `| ${at} | ② 構圖 | 通過 | 「調好了」 | plan.json |`));
+  touch(p, 'work/hyperframes/plan.json', JSON.stringify({ version: 1, speakerBox: [1, 2, 3, 4] }), 600);
+  touch(p, 'work/分鏡素材/index.json', JSON.stringify({ parts: [{ key: 'ch01' }, { key: 'ch02' }], semanticMap: true }));
+  touch(p, 'work/drafts/ch01.map.md', '#1–#3 | 步驟 | B | x | —', 60);
+  assert.match(st().at, /第一回合：語意地圖（還缺 ch02）/);
+  assert.match(st().next, /chapter-worker\.md 第一回合/);
+  assert.match(st().cmd, /--map-merge$/);
+  touch(p, 'work/drafts/ch02.map.md', '#4–#6 | 步驟 | B | x | —', 60);
+  assert.equal(st().at, '剪好看／全片校正語意地圖');
+  assert.match(st().next, /語意地圖\.md/);
+  touch(p, 'work/drafts/_map.json', JSON.stringify({ passed: true }), 30);
+  assert.match(st().at, /第二回合：寫分鏡草稿（還缺 ch01、ch02）/);
+  assert.match(st().cmd, /--merge-drafts$/);
+  touch(p, 'work/drafts/ch02.map.md', '#4–#6 | 步驟 | A | x | 理由', 0);
+  assert.equal(st().at, '剪好看／全片校正語意地圖', '校正之後又改地圖：再跑一次 --map-merge');
+  touch(p, 'work/drafts/_map.json', JSON.stringify({ passed: true }), 0);
+  touch(p, 'work/drafts/ch01.json', '{}');
+  touch(p, 'work/drafts/ch02.json', '{}');
+  assert.equal(st().at, '剪好看／合併分鏡草稿');
+  touch(p, 'work/分鏡素材/index.json', JSON.stringify({ parts: [{ key: 'ch01' }, { key: 'ch02' }, { key: 'ch03' }] }));
+  assert.match(st().at, /^剪好看／寫分鏡草稿（還缺 ch03）/, '舊的包（沒有 semanticMap）照舊直接寫草稿');
+});

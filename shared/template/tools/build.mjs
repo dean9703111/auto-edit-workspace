@@ -9,7 +9,11 @@
  *                                                     同上，stdout 只印一個 JSON（剪輯台讀；時間都是 rough.mp4 的秒數，格式見 USAGE-reference.md R2.6）
  *   node shared/template/tools/build.mjs --list [--json] 印出 18 情境＋40 字卡動態的 key、何時用、slots 與上限，以及插入素材（type: "media"）的欄位
  *   node shared/template/tools/build.mjs --project projects/<專案> --scaffold
- *                                                     產生 work/分鏡素材/（共用.md＋每章 chNN.md）：字幕編號、章節、情境對照、每種情境的寫法；順便在背景預先處理底片
+ *                                                     產生 work/分鏡素材/（共用.md、語意.md＋每份 chNN.md）：字幕編號、章節、情境對照、每種情境的寫法；順便在背景預先處理底片。
+ *                                                     分份照字數：有 ## 照章切，一份最多約 2,000 字（去標點），不到 600 字的份併到相鄰那份（shared/style.md「分章」）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --map ch03   第一回合：驗 work/drafts/ch03.map.md（語意地圖，一組句子一行：句號範圍 | 語意 | 級 | 在講什麼 | 特徵或 A 的理由）；
+ *                                                     全片校正通過後再跑，印每一行可以用的模板（照語意縮好的）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --map-merge   合併各份地圖成 work/分鏡素材/語意地圖.md，主代理全片校正（A 名單、視覺語言.md、統一標法）；通過才印第二回合的派工
  *   node shared/template/tools/build.mjs --project projects/<專案> --design-status   內容設計動畫做到哪：每段「還沒動手／腳本寫好／動畫做了、audit 過沒」；空白畫布超過 20 分鐘沒進度就印重派的派工訊息
  *   node shared/template/tools/build.mjs --project projects/<專案> --outline ch03   讀 work/drafts/ch03.outline.md（一段一行：id | from | to | 模板 | 在講什麼 | 候選構想），檢查段長、相鄰模板、接縫、候選數量，產生要填的草稿骨架 work/drafts/ch03.json（填過的段留著）
  *   node shared/template/tools/build.mjs --project projects/<專案> --check-draft work/drafts/ch03.json   只驗一份草稿（不受別章影響）
@@ -79,7 +83,7 @@ import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
-import { runScaffold, checkDraft, outlineCmd, designStatusCmd, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan, ensureBriefs } from './lib/flow.mjs';
+import { runScaffold, mapCmd, mapMergeCmd, checkDraft, outlineCmd, designStatusCmd, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan, ensureBriefs } from './lib/flow.mjs';
 import { autofixPlan, summaryLines } from './lib/autofix.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
 import { jobState, runJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
@@ -97,7 +101,7 @@ const NOCAPS_FILE = 'compositions/final-nocaps.html', NOCAPS_SRT = 'final-nocaps
 const captionSrt = (captions) => { let n = 0; return formatSrt(captions.items.flatMap((c) => c.spans.map(([a, b]) => ({ n: ++n, start: a, end: b, text: c.text })))); };
 const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
 const OUTPUT_DIRS = ['output', path.join('output', 'test-clips'), path.join('output', 'qc')];
-const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'outline', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx'];
+const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'outline', 'map', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx'];
 
 export function parseArgs(argv) {
   const flags = {};
@@ -109,7 +113,7 @@ export function parseArgs(argv) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['check', 'list', 'scaffold', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'nocaps', 'autofix'].includes(k)) flags[k] = true;
+    } else if (['check', 'list', 'scaffold', 'map-merge', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'nocaps', 'autofix'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -954,6 +958,8 @@ async function cli() {
   if (flags.words) return wordsCmd(P, flags.words);
   if (flags.show) return showCmd(P, flags.show);
   if (flags.autofix) return autofixCmd(P, flags);
+  if (flags.map) return mapCmd(P, flags.map);
+  if (flags['map-merge']) return mapMergeCmd(P);
   if (flags.outline) return outlineCmd(P, flags.outline);
   if (flags['design-status']) return designStatusCmd(P);
   if (flags['check-draft']) return checkDraft(P, flags['check-draft']);

@@ -92,7 +92,8 @@ test('scene-motion.js 有 P.stroke／P.icon／P.check 與常數', () => {
 test('custom 範例的 .sc-icon 都是 icons.json 的原文（x-checklist、x-scene 系列與 015 的插圖／方塊／小人範例刻意沒有圖示）', () => {
   // x-checklist：勾就是圖示；x-scene 系列：主角是 kit/illus.js 的插圖元件。examples.test 也檢查它們檔頭寫「這支沒有圖示」
   const NOICON = new Set(['x-checklist.html', 'x-scene.html', 'x-scene-example-rec.html', 'x-scene-example-outline.html',
-    'x-callout-parts.html', 'x-checklist-ai.html', 'x-ring-facets.html', 'x-trend-blocks.html', 'x-crowd.html', 'x-desk.html']);   // 015：主角是插圖、圈圈、方塊或小人
+    'x-callout-parts.html', 'x-checklist-ai.html', 'x-ring-facets.html', 'x-trend-blocks.html', 'x-crowd.html', 'x-desk.html',
+    'x-folder.html']);   // 015：主角是插圖、圈圈、方塊或小人；x-folder 的資料夾／檔案圖示照種類從 #xfld-stamps 複製（下一個測試驗原文）
   const dir = path.join(TEMPLATE, 'custom');
   const raw = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'icons.json'), 'utf8'));
   const norm = (s) => s.replace(/\s+/g, '').replace(/class="[^"]*"/g, '').replace(/(width|height)="[^"]*"/g, '');
@@ -106,4 +107,16 @@ test('custom 範例的 .sc-icon 都是 icons.json 的原文（x-checklist、x-sc
     assert.ok(svgs.length >= 1, `${f} 沒有圖示`);
     for (const [, id, svg] of svgs) assert.ok(byNorm.has(norm(svg)), `${f} #${id} 的 svg 不是 icons.json 的原文（到 kit/icons.json 找名稱，原文貼上）`);
   }
+});
+
+test('x-folder 的圖示印章（#xfld-stamps）：每個種類一個、都是 icons.json 的原文，名稱對得上 lucide', () => {
+  const raw = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'icons.json'), 'utf8'));
+  const norm = (s) => s.replace(/\s+/g, '').replace(/class="[^"]*"/g, '').replace(/(width|height)="[^"]*"/g, '');
+  const tpl = fs.readFileSync(path.join(TEMPLATE, 'custom', 'x-folder.html'), 'utf8').match(/<template[^>]*>([\s\S]*)<\/template>/)[1];
+  const stamps = Object.fromEntries([...tpl.matchAll(/<span data-k="([\w-]+)">(<svg[\s\S]*?<\/svg>)<\/span>/g)].map((m) => [m[1], m[2]]));
+  const LUCIDE = { folder: 'folder', 'folder-open': 'folder-open', file: 'file', text: 'file-text', video: 'file-video', audio: 'file-audio', image: 'file-image', code: 'file-code' };
+  assert.deepEqual(Object.keys(stamps).sort(), Object.keys(LUCIDE).sort());
+  for (const [k, name] of Object.entries(LUCIDE)) assert.equal(norm(stamps[k]), norm(raw[name]), `data-k="${k}" 要是 icons.json 的 ${name} 原文`);
+  const kinds = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'custom', 'x-folder.fill.json'), 'utf8')).slots.items.item.kind.options;
+  for (const k of kinds) assert.ok(stamps[k], `fill.json 的種類 ${k} 沒有印章`);
 });

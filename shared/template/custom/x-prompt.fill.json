@@ -4,6 +4,9 @@
   "beat": "H",
   "layout": "fullscreen",
   "when": "唸出或展示一段要貼給 AI 的提示詞（去掉空白後 ≤ 49 字、最多三行、兩個關鍵詞在同一行）：聊天輸入膠囊逐字打出，講到哪個關鍵詞那個詞從墨色變成主色，最後可接一句提醒",
+  "lines": [
+    { "label": "關鍵詞那一行（pre＋k1＋mid＋k2＋post）", "slots": ["pre", "k1", "mid", "k2", "post"], "max": 17, "fix": "關鍵詞前面多的字移到 above、後面的移到 below，或縮短" }
+  ],
   "slots": {
     "title": {
       "label": "標題",

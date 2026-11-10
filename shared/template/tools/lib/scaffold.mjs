@@ -3,11 +3,12 @@
 //   scriptOutline(md)                       → [{ level: 2|3, title, first }]：講稿的 ## 章、### 小節＋底下第一句
 //   alignOutline(outline, cues)             → 每一項加 n（第幾句字幕）；對不到的拿掉
 //   chapterSegments(chapters, cues, { videoDur, scenes }) → 可以直接貼的章節段＋字數過長的提醒
-//   situationRows(md)                       → SITUATIONS.md §3 每列的 { line, say, layout, first, beat }
+//   situationRows(md)                       → SITUATIONS.md §3 每列的 { line, say, layout, first, beat, sem }
+//   semanticTypes(md)                       → SITUATIONS.md §1「語意類型」：[{ name, say, tier }]（語意地圖用，specs/024）
 //   situationQuestions(md)／animationRules(md) → 定大類的四題、情境動畫三條判準
 //   beatIndex(md)                           → BEATS.md 每個拍型的行號範圍
 //   sceneSnippet(scene)                     → 這個情境最少要寫的 plan.json 一段（有 <…> 佔位）
-//   splitParts({ cues, outline, videoDur }) → 章節切成分工單位（沒有 ## 就照時間切；太長的章再切）
+//   splitParts({ cues, outline })           → 章節切成分工單位（照字數：太長的章再切、太小的份併起來）
 //   designTarget(seconds)                   → 這一段時間估計幾段內容設計動畫候選（還不知道段數時用）
 //   designTargetOf(n)、designEligible(seg)  → 寫好草稿後照實際段數算：約三成的段（media、章節段不算）
 //   renderCommon(input)、renderSnippets(input)、renderPart(part, input) → 共用.md、寫法.md、chNN.md
@@ -93,9 +94,23 @@ export function situationRows(md) {
     if (!on || !l.startsWith('| ')) return;
     const cells = l.replace(/^\|\s*/, '').replace(/\s*\|\s*$/, '').split(/\s+\|\s+/);
     if (cells[0] === '句子長這樣') return;
-    rows.push({ line: i + 1, say: cells[0] ?? '', layout: cells[1] ?? '', first: cells[2] ?? '', beat: cells[3] ?? '' });
+    rows.push({ line: i + 1, say: cells[0] ?? '', layout: cells[1] ?? '', first: cells[2] ?? '', beat: cells[3] ?? '', sem: cells[9] ?? '' });
   });
   return rows;
+}
+
+// SITUATIONS.md §1「### 語意類型」那張表：語意地圖的封閉清單（名稱、什麼樣的句子、預設級）
+export function semanticTypes(md) {
+  const lines = String(md ?? '').split(/\r?\n/), out = [];
+  const a = lines.findIndex((l) => /^### 語意類型/.test(l));
+  if (a < 0) return out;
+  for (let i = a + 1; i < lines.length && !/^#{2,3} /.test(lines[i]); i++) {
+    if (!lines[i].startsWith('| ')) continue;
+    const c = lines[i].replace(/^\|\s*/, '').replace(/\s*\|\s*$/, '').split(/\s+\|\s+/);
+    if (c[0] === '語意' || /^-+$/.test(c[0])) continue;
+    out.push({ name: c[0], say: c[1] ?? '', tier: (c[2] ?? 'B').trim() });
+  }
+  return out;
 }
 
 // SITUATIONS.md §1 第 1 步的四題（定大類）
@@ -158,10 +173,12 @@ const clock = (t) => { const r = Math.round(t * 10) / 10, m = Math.floor(r / 60)
 const cell = (s) => String(s).replace(/\|/g, '｜').replace(/\s+/g, ' ').trim();
 const rangeOf = (r) => (Array.isArray(r) ? r : [r.start, r.end]);
 
-export const PART_MAX = 480;      // 一個分工單位最長 8 分鐘（一個子代理一次寫得完、又不用太久）
-export const PART_TARGET = 300;   // 沒有章節時，大約每 5 分鐘切一份
+// 分章（specs/024）：照字數切，不照秒數：子代理要讀懂的是字，語速快慢不該改變一份的份量（數字定義在 shared/style.md「分章」）
+export const PART_CHARS = 2000;      // 一份最多約 2,000 字（去標點、空白）：一個子代理讀得仔細、又不用太久
+export const PART_MIN_CHARS = 600;   // 不到 600 字的份併到相鄰那份（一份就要一個子代理，太小不划算）
 export const DESIGN_SHARE = 0.3;  // 內容設計動畫候選：約三成的段（其他七成套模板）
 const SEG_SECONDS = 10;           // 估算用：一段平均約 10 秒（--scaffold 還不知道段數）
+export const charsOf = (text) => String(text ?? '').replace(/[\s\p{P}\p{S}]/gu, '').length;
 
 export const designTarget = (seconds) => (seconds < 60 ? 0 : Math.max(1, Math.round((seconds / SEG_SECONDS) * DESIGN_SHARE)));
 export const designEligible = (s) => s.type !== 'media' && !['chapter-tag', 'speaker'].includes(s.scene);
@@ -169,18 +186,9 @@ export const designTargetOf = (n) => (n < 3 ? 0 : Math.max(1, Math.round(n * DES
 // 上限：一段內容設計動畫比模板多用很多額度（實測 30 分鐘片首讀多 3 萬字、累積多 71 萬字），超過就挑最值得的
 export const designCap = (target) => (target ? target + Math.max(1, Math.round(target / 3)) : 0);
 
-// 在 [lo, hi] 秒之間找停頓最長的地方切開，回傳切點後第一句的索引
-function bestCut(cues, from, to, lo, hi) {
-  let best = -1, gap = -1;
-  for (let k = from + 1; k <= to; k++) {
-    if (cues[k].start < lo || cues[k].start > hi) continue;
-    const g = cues[k].start - cues[k - 1].end;
-    if (g > gap) { gap = g; best = k; }
-  }
-  return best;
-}
-
-export function splitParts({ cues, outline = [], videoDur = 0 }) {
+// 章節切成分工單位：有 ## 照章切；一份超過 PART_CHARS 字就切成差不多大的幾份，切點先挑小節（###）開頭，沒有才挑停頓最長的地方；
+// 最後把不到 PART_MIN_CHARS 字的份併到相鄰那份（挑併起來比較小的一邊，併完不超過 PART_CHARS）
+export function splitParts({ cues, outline = [] }) {
   if (!cues.length) return [];
   const chapters = outline.filter((x) => x.level === 2);
   const bounds = [];
@@ -192,26 +200,59 @@ export function splitParts({ cues, outline = [], videoDur = 0 }) {
     const intro = first === 0;
     chapters.forEach((c, i) => bounds.push({ a: idxOf(c.n), title: splitTitle(c.title).name, sub: splitTitle(c.title).sub, chapter: intro ? (i || null) : i + 1, chapterN: intro && !i ? null : c.n }));
   } else bounds.push({ a: 0, title: '', chapter: null });
-  const parts = [];
+  const cum = [0];
+  for (const c of cues) cum.push(cum[cum.length - 1] + charsOf(c.text));
+  const span = (a, z) => cum[z + 1] - cum[a];
+  const sectionAt = outline.filter((x) => x.level === 3).map((x) => idxOf(x.n)).filter((k) => k > 0);
+  const cutAt = (a, last) => {
+    const total = span(a, last), goal = total / Math.ceil(total / PART_CHARS);
+    let best = -1, d = Infinity;
+    for (const k of sectionAt) {
+      if (k <= a || k > last) continue;
+      const s = span(a, k - 1);
+      if (s < goal * 0.6 || s > PART_CHARS || Math.abs(s - goal) >= d) continue;
+      d = Math.abs(s - goal); best = k;
+    }
+    if (best > 0) return best;
+    let gap = -1;
+    for (let k = a + 1; k <= last; k++) {
+      const s = span(a, k - 1);
+      if (s < goal - 300 || s > Math.min(PART_CHARS, goal + 300)) continue;
+      const g = cues[k].start - cues[k - 1].end;
+      if (g > gap) { gap = g; best = k; }
+    }
+    return best;
+  };
+  const raw = [];
   bounds.forEach((b, i) => {
     const last = i + 1 < bounds.length ? bounds[i + 1].a - 1 : cues.length - 1;
-    // 太長就再切（章節內的切點挑停頓最長的地方）
     let a = b.a, piece = 1;
-    const maxLen = chapters.length ? PART_MAX : PART_TARGET;
-    while (cues[last].end - cues[a].start > maxLen * (chapters.length ? 1 : 1.3)) {
-      const target = cues[a].start + maxLen * (chapters.length ? 0.75 : 1);
-      const k = bestCut(cues, a, last, target - 60, target + 60);
+    while (span(a, last) > PART_CHARS) {
+      const k = cutAt(a, last);
       if (k < 0) break;
-      parts.push({ ...b, a, z: k - 1, piece: piece++ });
+      raw.push({ ...b, a, z: k - 1, piece: piece++ });
       a = k;
     }
-    parts.push({ ...b, a, z: last, piece: piece > 1 ? piece : 0 });
+    raw.push({ ...b, a, z: last, piece: piece > 1 ? piece : 0 });
   });
-  return parts.map((p, i) => {
+  let list = raw.map((p) => ({
+    a: p.a, z: p.z, chapter: p.chapter ?? null,
+    titles: [p.title ? `${p.title}${p.piece ? `（${p.piece}）` : ''}` : ''],
+    chapters: p.chapter && p.chapterN && p.piece <= 1 ? [{ chapter: p.chapter, chapterN: p.chapterN, title: p.title, sub: p.sub || '' }] : [],
+  }));
+  for (;;) {
+    const i = list.findIndex((p, k) => span(p.a, p.z) < PART_MIN_CHARS && [list[k - 1], list[k + 1]].some((q) => q && span(Math.min(p.a, q.a), Math.max(p.z, q.z)) <= PART_CHARS));
+    if (i < 0) break;
+    const size = (q) => (q ? span(Math.min(list[i].a, q.a), Math.max(list[i].z, q.z)) : Infinity);
+    const j = size(list[i - 1]) <= size(list[i + 1]) ? i - 1 : i + 1;
+    const [x, y] = j < i ? [list[j], list[i]] : [list[i], list[j]];
+    list.splice(Math.min(i, j), 2, { a: x.a, z: y.z, chapter: x.chapter ?? y.chapter, titles: [...x.titles, ...y.titles], chapters: [...x.chapters, ...y.chapters] });
+  }
+  return list.map((p, i) => {
     const key = `ch${String(i + 1).padStart(2, '0')}`;
-    const start = cues[p.a].start, end = cues[p.z].end;
-    const label = p.title ? `${p.title}${p.piece ? `（${p.piece}）` : ''}` : `第 ${i + 1} 份`;
-    return { key, code: String(i + 1).padStart(2, '0'), title: label, chapter: p.chapter, chapterN: p.piece > 1 ? null : p.chapterN ?? null, sub: p.sub || '', firstN: cues[p.a].n, lastN: cues[p.z].n, a: p.a, z: p.z, start, end, seconds: end - start, target: designTarget(end - start) };
+    const start = cues[p.a].start, end = cues[p.z].end, ch = p.chapters[0];
+    const names = p.titles.filter(Boolean);
+    return { key, code: String(i + 1).padStart(2, '0'), title: names.length ? names.join('＋') : `第 ${i + 1} 份`, chapter: ch?.chapter ?? p.chapter, chapterN: ch?.chapterN ?? null, chapters: p.chapters, sub: ch?.sub || '', firstN: cues[p.a].n, lastN: cues[p.z].n, a: p.a, z: p.z, start, end, seconds: end - start, chars: span(p.a, p.z), target: designTarget(end - start) };
   });
 }
 
@@ -298,7 +339,7 @@ export function renderCommon(input) {
   L.push('內容設計動畫是設計師子代理從空白畫布專門為一段設計的畫面，質感最好，但一段要多花不少時間，所以**先照常套模板或字卡，再把值得設計的段標成候選**：在那段的 `story` 加 `designIdea`（一句話構想）和 `designWhy`（為什麼值得設計）。使用者在分鏡表勾了，工具才把那段換成內容設計動畫；沒勾就用你寫的模板，所以模板那部分一樣要寫完整。', '');
   L.push('什麼時候標候選：親身經驗或小故事、比喻、因果與轉折（以前怎樣、後來發現）、抽象的道理、情緒高點、這集最想讓人記住的畫面。**只是在條列、走流程的段落不用標。**判斷方式：把字幕遮起來只看畫面，能不能看懂在講什麼；模板做不到就標。', '');
   L.push('```json', '{"id":"s0305","scene":"key-point","from":"#N","to":"#Me","anchor":"<起點那句的一小段原文>","slots":{…照模板寫完整…},"story":{"say":"<講解在講什麼>","why":"<為什麼用這個模板>","designIdea":"<一句話：畫面上發生什麼事、為什麼這樣畫。不要寫模板名稱>","designWhy":"<為什麼值得設計>"}}', '```', '');
-  L.push(`建議數量：約三成的段標候選（其他七成套模板；寫了 20 段就標 6 段左右，\`--check-draft\` 照你實際寫的段數算，media、章節角標、講者介紹不算）。段長至少 6 秒、講了 2 句以上才放得下（要有 \`from\`、\`to\`）。相鄰的候選不要用同一種畫面。不要自己寫 \`"design": true\`：那是使用者勾了之後工具換的。`, '');
+  L.push(`哪幾段是候選：**照語意地圖上的 A**（第一回合各份提名、主代理全片挑好的，\`work/drafts/<份>.map.md\` 第 3 欄寫 A 的那幾行），不用自己再挑、不用湊數；覺得地圖漏了值得設計的，寫進 decide。段長至少 6 秒、講了 2 句以上才放得下（要有 \`from\`、\`to\`）。相鄰的候選不要用同一種畫面。不要自己寫 \`"design": true\`：那是使用者勾了之後工具換的。`, '');
 
   L.push('## 5. 螢幕錄影、圖片（media）', '');
   L.push('```json', '{"id":"m0301","type":"media","src":"assets/screen/<檔名>","from":"#N","to":"#Me","anchor":"<起點那句的一小段原文>","in":<素材第幾秒>}', '```', '');
@@ -410,6 +451,10 @@ export function floorLine(rules) {
 
 // 模板動畫的全部欄位（含選填）：寫草稿的人才知道有哪些可以用
 export function fillSummary(f) {
+  const lines = (f.lines || []).map((ln) => `；同一行：${(ln.slots || []).join('＋')} 加起來 ≤${ln.max}`).join('');
+  return fillSummaryBody(f) + lines;
+}
+function fillSummaryBody(f) {
   if (f.generator === 'scene') return 'title（≤10）；parts 每個 { id, illus|icon|src|wave, opts, label ≤10, row, side, pre, stand, w, h }（也可以 { id, layout, gap, parts: […] } 疊成一組）；links ["a>b", "a-b"]；beats 每拍 { at, in, line, state, move, count, wave, check, focus, dim, sfx }（state 寫 [元件 id, 原本的狀態, 換成的狀態]，例 ["b","blank","play"]＝b 的螢幕從 blank 換成 play；不換狀態就不寫）；route（路線圖）';
   const limit = (d) => [d.required ? '必填' : '選填', d.max != null ? `≤${d.max}` : '', d.type === 'icon' ? '圖示名' : d.type === 'at' ? '#N@詞' : d.type === 'number' ? '數字' : d.type === 'enum' ? (d.options || []).join('／') : ''].filter(Boolean).join('、');
   return Object.entries(f.slots || {}).map(([k, d]) => {
@@ -441,12 +486,37 @@ export function fillSnippet(f) {
   return JSON.stringify({ id: 'x0301', type: 'custom', template: f.template, from: '#N', to: '#Me', anchor: '<起點那句的一小段原文>', slots });
 }
 
+// 語意.md：第一回合（語意地圖）只要讀這份和自己那份 chNN.md，不讀共用.md、寫法.md
+export function renderSemantic(input) {
+  const { project, situationsMd, videoDur = 0, parts = [] } = input;
+  const types = semanticTypes(situationsMd), target = designTarget(videoDur), cap = designCap(target);
+  const L = [];
+  L.push(`# 語意地圖（第一回合）：${project}（build.mjs --scaffold 產生，不要手改）`, '');
+  L.push('第一回合只做一件事：讀你那份 `chNN.md` 的字幕，把句子分組、標語意和分級，寫成 `work/drafts/<份>.map.md`。**這一回合不挑模板、不讀 `共用.md`、`寫法.md`**：模板第二回合照地圖挑，工具會把每一行能用的模板縮好。', '');
+  L.push('## 1. 分級：力氣花在觀眾注意力最高的地方', '');
+  L.push('| 級 | 是什麼 | 畫面 |', '|---|---|---|');
+  L.push('| A 亮點 | 開場、核心比喻、反轉、親身經歷或小故事、抽象的道理、這集最想讓人記住的畫面、結尾 | 內容設計動畫候選（停點 ③ 使用者勾了才做；第二回合照樣先套模板） |');
+  L.push('| B 結構 | 步驟、流程、列舉、對比、數字、操作這些在講結構的句子 | 照語意套模板或螢幕錄影 |');
+  L.push('| C 串場 | 轉場句、重複說明、小插曲、狀態句 | 最便宜的畫面：字卡動態、12 關鍵詞，或併進前後那一行（整支片不留沒有畫面的空白） |', '');
+  L.push(`A 只是提名：第 5 欄寫一句理由，全片由主代理排序、挑預算內最好的（全片約 ${target} 段、最多 ${cap} 段；你這份的估計寫在 \`chNN.md\` 開頭，不用湊數）。判斷方式：把字幕遮起來只看畫面，模板做不到才提名；只是在條列、走流程的不提名。`, '');
+  L.push('## 2. 語意類型（只能用這幾個名稱）', '');
+  L.push('| 語意 | 什麼樣的句子 | 預設級 |', '|---|---|---|');
+  for (const t of types) L.push(`| ${t.name} | ${cell(t.say)} | ${t.tier} |`);
+  L.push('', '預設級是沒有特別理由時的分級；值得專門設計的任何一型都可以提名 A。金句不進地圖（第二回合寫 `quotes`）。', '');
+  L.push('## 3. 地圖格式', '');
+  L.push('一組句子一行：`句號範圍 | 語意 | 級 | 在講什麼 | 特徵或 A 的理由`', '');
+  L.push('```', '#42–#49 | 步驟 | B | 安裝 MiniMax 的四個動作 | 項目 4', '#57–#68 | 情境／故事 | A | 把下載任務交給 AI，順便講 Git 是什麼 | 第一次看到 AI 代勞，整集的核心體驗', '#69–#71 | 轉場 | C | 下載完成 | —', '```', '');
+  L.push('- 連續講同一件事的幾句併成一行：一行大約就是之後的一段畫面（通常 2–8 句），不要一句一行，也不要超過 10 句或 30 秒（話題換了就換行；`--map` 會 ⚠）。A 不要超過這一份行數的四成。', '- 行與行接起來：下一行從上一行最後一句的下一句開始；第一行從這一份第一句開始、最後一行到這一份最後一句。', '- 特徵只寫工具不知道的：幾個項目、是不是同一個主體（裝置、產品）、有沒有成對的數字；有沒有講者、有沒有素材工具知道，不用寫。', '- 對得上螢幕錄影或圖片（`chNN.md` 的「素材候選」）：語意照內容標（多半是操作），特徵寫「素材：<檔名>」。', '- 有 `work/screen-sync.json`（邊錄邊講）時，落在它的段裡的句子不用寫進地圖。', '');
+  L.push(`寫完驗：\`node shared/template/tools/build.mjs --project ${project} --map <份>\`（${parts.length} 份：${parts.map((p) => p.key).join('、')}）。`, '');
+  return `${L.join('\n')}\n`;
+}
+
 export function renderPart(part, input) {
   const { cues, videoDur, outline = [], voiceOnly = [], notes = [], scenes = [] } = input;
   const L = [];
   L.push(`# ${part.key}｜${part.title}（#${part.firstN}–#${part.lastN}e，${clock(part.start)}–${clock(part.end)}，${(part.seconds / 60).toFixed(1)} 分鐘）`, '');
-  L.push(`你負責這一份：先寫大綱 \`work/drafts/${part.key}.outline.md\`、跑 \`--outline ${part.key}\` 產生骨架，再填 \`work/drafts/${part.key}.json\`（做法見 chapter-worker.md，格式見 \`共用.md\` 第 7 節）。段 id 開頭用 \`s${part.code}\`、\`x${part.code}\`、\`d${part.code}\`、\`m${part.code}\`，後面接兩位流水號，全片才不會撞號。`, '');
-  if (part.target) L.push(`- **內容設計動畫候選：約三成的段（這一份估計 ${part.target} 段左右；\`--check-draft\` 照實際段數算）**（\`共用.md\` 第 4 節；照常套模板，在 story 加 designIdea、designWhy）。挑這一份裡最值得設計的時刻，不是湊數；使用者在停點 ③ 勾了才做。`);
+  L.push(`你負責這一份，分兩回合（做法見 chapter-worker.md）：**第一回合**照 \`語意.md\` 寫語意地圖 \`work/drafts/${part.key}.map.md\`、跑 \`--map ${part.key}\`；**第二回合**（主代理全片校正之後）照地圖寫大綱 \`work/drafts/${part.key}.outline.md\`、跑 \`--outline ${part.key}\` 產生骨架，再填 \`work/drafts/${part.key}.json\`（格式見 \`共用.md\` 第 7 節）。段 id 開頭用 \`s${part.code}\`、\`x${part.code}\`、\`d${part.code}\`、\`m${part.code}\`，後面接兩位流水號，全片才不會撞號。`, '');
+  if (part.target) L.push(`- **內容設計動畫候選**：第一回合在地圖上提名 A（這一份估計 ${part.target} 段左右，附理由；不是湊數），全片由主代理挑；第二回合只在地圖上是 A 的段寫候選構想。使用者在停點 ③ 勾了才做。`);
   const vo = voiceOnly.map(rangeOf).filter(([a, b]) => b > part.start && a < part.end);
   if (vo.length) L.push(`- **沒有講者的句子：${vo.map(([a, b]) => { const inside = cues.filter((c) => c.end > Math.max(a, part.start) && c.start < Math.min(b, part.end)); return inside.length ? `#${inside[0].n}–#${inside[inside.length - 1].n}` : `${clock(a)}–${clock(b)}`; }).join('、')}**。每一句都要被畫面蓋滿：用 media、全畫面模板（04 家族、\`layout\` 是 fullscreen 的 x-\*、有 \`bg\` 的字卡動態）或內容設計動畫（\`layout\` 寫 fullscreen）。字卡 06–15 和疊加的模板不能用，底下是黑的。有 \`work/screen-sync.json\`（邊錄邊講）時，開始時間落在它某一段 \`from\`–\`to\`（秒）裡的句子由 sync 段蓋，不用排。`);
   L.push('');
@@ -458,12 +528,19 @@ export function renderPart(part, input) {
     for (const h of hits) L.push(`- #${h.n}：${h.items.map(label).join('｜')}`);
     L.push('');
   }
-  if (part.chapter && part.chapterN) {
-    const seg = chapterSegments([{ n: part.chapterN, title: part.sub ? `${part.title}：${part.sub}` : part.title }], cues, { videoDur, scenes });
-    const s = { ...seg.segs[0], id: `c${part.code}`, slots: { ...seg.segs[0].slots, num: String(part.chapter).padStart(2, '0') } };
-    L.push('章節段（不寫進大綱；骨架產生後原樣貼進 segments 最前面，之後再跑 `--outline` 會洗掉，要重貼。這一章第一段的 `from` 寫同一句；章節空檔工具會處理，不用查）：', '', '```json', JSON.stringify(s), '```', '');
-    for (const w of seg.warn) L.push(`- ⚠ ${w}`);
-    if (seg.warn.length) L.push('');
+  // 一份可能有好幾章（太小的章併在一起）：每章一段章節段，id 第二段起加 b、c…
+  const chs = part.chapters || (part.chapter && part.chapterN ? [{ chapter: part.chapter, chapterN: part.chapterN, title: part.title, sub: part.sub }] : []);
+  if (chs.length) {
+    L.push(`章節段（不寫進大綱；骨架產生後原樣貼進 segments${chs.length > 1 || chs[0].chapterN !== part.firstN ? '，照句號排在那一章第一段前面' : ' 最前面'}，之後再跑 \`--outline\` 會洗掉，要重貼。那一章第一段的 \`from\` 寫同一句；章節空檔工具會處理，不用查）：`, '', '```json');
+    const warn = [];
+    chs.forEach((c, k) => {
+      const seg = chapterSegments([{ n: c.chapterN, title: c.sub ? `${c.title}：${c.sub}` : c.title }], cues, { videoDur, scenes });
+      L.push(JSON.stringify({ ...seg.segs[0], id: `c${part.code}${k ? String.fromCharCode(97 + k) : ''}`, slots: { ...seg.segs[0].slots, num: String(c.chapter).padStart(2, '0') } }));
+      warn.push(...seg.warn);
+    });
+    L.push('```', '');
+    for (const w of warn) L.push(`- ⚠ ${w}`);
+    if (warn.length) L.push('');
   }
   // 情緒點候選（關鍵詞挑的提示）：挑不挑、標哪一類由寫草稿的人判斷
   const mt = moodTarget(part.seconds);
