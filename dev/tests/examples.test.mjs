@@ -395,7 +395,8 @@ function makeProject(dir, gap = 1.0) {
 const chrome = await hasChrome();
 const md5 = (f) => spawnSync('ffmpeg', ['-v', 'error', '-i', f, '-f', 'md5', '-'], { encoding: 'utf8' }).stdout.trim();
 
-test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build → audit 0 ✖、0 ⚠ → 亂序 snapshot 和照順序的一樣`, { skip: !(ffmpeg && chrome) && '需要 ffmpeg 與 HyperFrames 的 Chrome（npx hyperframes browser ensure）', timeout: 300000 }, async () => {
+// 上限 600 秒：單獨跑約 4 分鐘，跑全套時和其他畫面測試搶 CPU，38 支時到 381 秒；模板每多一支都會再長
+test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build → audit 0 ✖、0 ⚠ → 亂序 snapshot 和照順序的一樣`, { skip: !(ffmpeg && chrome) && '需要 ffmpeg 與 HyperFrames 的 Chrome（npx hyperframes browser ensure）', timeout: 600000 }, async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-examples-'));
   tmps.push(dir);
   const segs = makeProject(dir);
