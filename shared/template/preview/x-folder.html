@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-folder 資料夾樹｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-folder.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-folder { position: absolute; inset: 0; }
+    #x-folder .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 150、寬 1180（右緣 1300）；標題列 128、內容區 1176×580（卡底 862） */
+    #x-folder #xfld-card { position: absolute; left: 120px; top: 150px; width: 1180px; }
+    #x-folder #xfld-card .sc-wcard__bar { height: 128px; padding: 20px 56px; }
+    #x-folder #xfld-body { position: relative; width: 1176px; height: 580px; }
+    /* 圖示印章：script 照種類複製，本身不顯示 */
+    #x-folder #xfld-stamps { display: none; }
+    /* 樹：寬高由 script 算（整數 px），位置由 #xfld-body 的 data-layout 排 */
+    #x-folder #xfld-tree { position: absolute; }
+    #x-folder #xfld-lines { position: absolute; left: 0; top: 0; overflow: visible; }
+    #x-folder .xfld-g { fill: none; stroke: var(--v2-line); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; }
+    /* 一列：高度與縮排由 script 寫（列高照列數、縮排照層數）；一格 .xfld-it 是聚焦的對象，以左緣為原點縮放 */
+    #x-folder .xfld-row { position: relative; display: flex; align-items: center; box-sizing: border-box; white-space: nowrap; }
+    /* 一格高、名稱字級、註記字級、圖示大小由 script 照列數和全寬寫進 --xfld-it／-fs／-nfs／-ic（見檔頭【版面】的表） */
+    #x-folder .xfld-it { position: relative; display: flex; align-items: center; gap: 16px; height: var(--xfld-it, 56px); box-sizing: border-box; padding: 0 16px 0 12px;
+                         border-radius: 14px; color: var(--sc-fs-ink); transform-origin: 0 50%; }
+    #x-folder .xfld-hl { position: absolute; inset: 0; border-radius: 14px; background: var(--v2-node-tint); opacity: 0; }   /* 聚焦時才淡入（P.in） */
+    #x-folder .xfld-icb { position: relative; flex: none; width: var(--xfld-ic, 44px); height: var(--xfld-ic, 44px); }
+    #x-folder .xfld-ic { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+    #x-folder .xfld-ic svg { display: block; width: 100%; height: 100%; }
+    #x-folder .xfld-shut svg { fill: var(--v2-node-line); }
+    #x-folder .xfld-io { display: none; }
+    #x-folder .xfld-opens .xfld-io { display: block; }
+    #x-folder .xfld-isopen .xfld-shut { display: none; }
+    #x-folder .xfld-name { position: relative; font-size: var(--xfld-fs, 44px); line-height: max(var(--xfld-it, 56px), 1.25em); }
+    /* 註記：灰字＋前面一顆灰點（不加框：40 字放進 56 高的列，框會撐破）；跟著那一格一起聚焦、退焦 */
+    #x-folder .xfld-note { position: relative; flex: none; display: flex; align-items: center; gap: 12px; margin-left: 4px; color: var(--sc-fs-mute); font-size: var(--xfld-nfs, 40px); line-height: max(var(--xfld-it, 56px), 1.25em); }
+    #x-folder .xfld-note::before { content: ""; flex: none; width: 12px; height: 12px; border-radius: 6px; background: currentColor; }
+  </style>
+  <div id="x-folder" data-composition-id="x-folder" data-width="1920" data-height="1080" data-duration="27.4"
+       data-cues-sample='{"start":0,"D":27.4,"cues":{"382":[1.6,4.0],"383":[4.1,6.4],"384":[6.5,8.9],"385":[9.0,11.3],"386":[11.4,13.7],"387":[13.8,16.2],"388":[16.3,18.7],"389":[18.8,21.2],"390":[21.3,23.6],"391":[23.8,25.6]},"refs":{"#382@example":1.8,"#383@講稿":4.3,"#384@assets":6.8,"#385@camera":9.3,"#386@voice":11.8,"#387@screen":14.3,"#388@images":16.8,"#389@work":19.3,"#390@output":21.8,"#391@自動產生":24.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xfld-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">專案資料夾</span></div>
+      <div id="xfld-body" data-layout="col">
+        <div id="xfld-tree" data-slot>
+          <svg id="xfld-lines" xmlns="http://www.w3.org/2000/svg" data-layout-ignore></svg>
+        </div>
+      </div>
+    </div>
+    <!-- 圖示印章（kit/icons.json 原文）：data-k＝種類；folder 另有打開的 folder-open -->
+    <div id="xfld-stamps">
+      <span data-k="folder"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /> </svg></span>
+      <span data-k="folder-open"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /> </svg></span>
+      <span data-k="file"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> </svg></span>
+      <span data-k="text"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /> </svg></span>
+      <span data-k="video"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="m10 11 5 3-5 3v-6Z" /> </svg></span>
+      <span data-k="audio"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M17.5 22h.5a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v3" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M2 19a2 2 0 1 1 4 0v1a2 2 0 1 1-4 0v-4a6 6 0 0 1 12 0v4a2 2 0 1 1-4 0v-1a2 2 0 1 1 4 0" /> </svg></span>
+      <span data-k="image"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <circle cx="10" cy="12" r="2" /> <path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22" /> </svg></span>
+      <span data-k="code"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M10 12.5 8 15l2 2.5" /> <path d="m14 12.5 2 2.5-2 2.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /> </svg></span>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const TREE = [["example",0,"folder",null],["講稿.md",1,"text",null],["assets",1,"folder","只能讀"],["camera",2,"folder","真人錄影"],["voice",2,"folder","旁白"],["screen",2,"folder","螢幕錄影"],["images",2,"folder","截圖照片"],["work",1,"folder","自動產生"],["output",1,"folder","自動產生"]];   // 只改這一行：[名稱, 第幾層 0–3, 種類, 註記]，3–9 列
+
+    // 0. 依 TREE 長出每一列（在 SceneMotion 之前：排版要量得到整棵樹的大小；以下都不用改，載入時算一次，每次結果相同）
+    const ROOT = document.getElementById('x-folder'), WIDE = !!ROOT.closest('[data-wide]');
+    const N = TREE.length, ROWH = N >= 9 ? 56 : N === 8 ? 64 : 72;   // 列高：7 列以下 72、8 列 64、9 列 56
+    // [一格高, 名稱字級, 註記字級, 圖示, 每層縮排]：9 列一律縮一級（一格比列高少 8，聚焦放大不壓到上下列）；全寬（沒有講者）放大
+    const S = N >= 9 ? [48, 40, 38, 40, 56] : WIDE ? (N === 8 ? [56, 48, 40, 48, 64] : [64, 52, 44, 52, 72]) : [56, 44, 40, 44, 56];
+    const FS = S[1], NFS = S[2], ICON = S[3], IND = S[4];
+    const TREE_EL = $q('#xfld-tree')[0], STAMPS = $q('#xfld-stamps')[0];
+    ['it', 'fs', 'nfs', 'ic'].forEach(function (k, i) { TREE_EL.style.setProperty('--xfld-' + k, S[i] + 'px'); });
+    const KINDS = ['folder', 'file', 'text', 'video', 'audio', 'image', 'code'];
+    const stamp = function (k) { return (STAMPS.querySelector('[data-k="' + k + '"]') || STAMPS.querySelector('[data-k="file"]')).firstElementChild.cloneNode(true); };
+    const el = function (tag, cls, id) { var e = document.createElement(tag); if (cls) e.className = cls; if (id) e.id = id; return e; };
+    const textW = function (s, fs) { var w = 0; Array.from(String(s)).forEach(function (c) { w += c.charCodeAt(0) < 0x2e80 ? 0.64 : 1; }); return Math.ceil(w * fs); };
+    const ROWS = [];   // 每列：{ d 層, dir 資料夾, note, parent, sib 同一層的上一列 }
+    let minD = 9;
+    TREE.forEach(function (r) { minD = Math.min(minD, Math.max(0, Math.round(Number(r[1]) || 0))); });
+    let W = 0;
+    TREE.forEach(function (r, i) {
+      const k = i + 1, prev = ROWS[i - 1];
+      let d = Math.max(0, Math.round(Number(r[1]) || 0) - minD);
+      d = Math.min(d, prev ? prev.d + 1 : 0, 3);
+      const kind = KINDS.indexOf(r[2]) >= 0 ? r[2] : 'folder', dir = kind === 'folder', note = r[3] == null || r[3] === '' ? null : String(r[3]);
+      let parent = 0, sib = 0;
+      for (let j = i - 1; j >= 0; j--) { if (ROWS[j].d < d) { parent = j + 1; break; } if (ROWS[j].d === d && !sib) sib = j + 1; }
+      ROWS.push({ d: d, dir: dir, note: note, parent: parent, sib: sib });
+      const row = el('div', 'xfld-row' + (dir ? ' xfld-dir' : ''), 'xfld-r' + k);
+      row.style.height = ROWH + 'px'; row.style.paddingLeft = (d * IND) + 'px';
+      const it = el('div', 'xfld-it', 'xfld-it' + k);
+      it.appendChild(el('i', 'xfld-hl', 'xfld-hl' + k));
+      const icb = el('span', 'xfld-icb');
+      const ic = el('span', 'xfld-ic' + (dir ? ' xfld-shut' : ''), 'xfld-ic' + k); ic.appendChild(stamp(kind)); icb.appendChild(ic);
+      if (dir) { const io = el('span', 'xfld-ic xfld-io', 'xfld-io' + k); io.appendChild(stamp('folder-open')); icb.appendChild(io); }
+      it.appendChild(icb);
+      const name = el('span', 'xfld-name ' + (dir ? 'sc-w900' : 'sc-w700'), 'xfld-n' + k); name.textContent = String(r[0]); it.appendChild(name);
+      if (note) { const b = el('span', 'xfld-note sc-w700', 'xfld-b' + k); b.textContent = note; it.appendChild(b); }
+      row.appendChild(it);
+      TREE_EL.appendChild(row);
+      W = Math.max(W, d * IND + 12 + ICON + 16 + textW(r[0], FS) + (note ? 16 + 4 + 12 + 12 + textW(note, NFS) : 0) + 16);
+    });
+    W = Math.ceil(W / 8) * 8;
+    ROWS.forEach(function (r, i) { $q('#xfld-it' + (i + 1))[0].style.width = (W - r.d * IND) + 'px'; });   // 每一格都拉到同一條右緣（像檔案總管的選取列）
+    TREE_EL.style.width = (Math.ceil(W * 1.03 / 8) * 8) + 'px';   // 聚焦放大 1.03 也放得下
+    TREE_EL.style.height = (N * ROWH) + 'px';
+
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-folder'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#382@example');
+    const T2 = P.at('#383@講稿');
+    const T3 = P.at('#384@assets');
+    const T4 = P.at('#385@camera');
+    const T5 = P.at('#386@voice');
+    const T6 = P.at('#387@screen');
+    const T7 = P.at('#388@images');
+    const T8 = P.at('#389@work');
+    const T9 = P.at('#390@output');
+    const N1 = -1;
+    const N2 = -1;
+    const N3 = -1;
+    const N4 = -1;
+    const N5 = -1;
+    const N6 = -1;
+    const N7 = -1;
+    const N8 = P.at('#391@自動產生');
+    const N9 = P.at('#391@自動產生');
+    const ALL = P.at('#391@自動產生');
+    P.sfx('ding', '#391@自動產生');
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 1. 樹狀線、誰在什麼時候出現（以下都不用改）
+    const TS = [T1, T2, T3, T4, T5, T6, T7, T8, T9].slice(0, N), NT = [N1, N2, N3, N4, N5, N6, N7, N8, N9].slice(0, N);
+    const OPEN = TS.map(function (t) { return t < 1.6; });   // 綁在段頭 1.6 秒內的列：開場就一起出現，不聚焦
+    const SVG = $q('#xfld-lines')[0], NSV = 'http://www.w3.org/2000/svg', TW = TREE_EL.offsetWidth, TH = TREE_EL.offsetHeight, R = 10;
+    SVG.setAttribute('width', TW); SVG.setAttribute('height', TH); SVG.setAttribute('viewBox', '0 0 ' + TW + ' ' + TH);
+    const box = function (k) { return SceneLayout.box($q('#xfld-ic' + k)[0].parentNode, TREE_EL); };   // 圖示框在樹裡的 [x, y, w, h]
+    const OPENER = {}, PRE = [], PREOPEN = {};
+    ROWS.forEach(function (r, i) {
+      const k = i + 1;
+      if (OPEN[i]) PRE.push(k);
+      if (!r.parent) return;
+      const pb = box(r.parent), b = box(k), x = pb[0] + pb[2] / 2, y1 = b[1] + b[3] / 2, xe = b[0] - 10;
+      const y0 = r.sib ? box(r.sib)[1] + box(r.sib)[3] / 2 - R : pb[1] + pb[3] + 4;
+      const p = document.createElementNS(NSV, 'path');
+      p.setAttribute('id', 'xfld-l' + k); p.setAttribute('class', 'xfld-g' + (OPEN[i] ? ' xfld-pre-l' : ''));
+      p.setAttribute('d', 'M' + x + ' ' + y0 + ' L' + x + ' ' + (y1 - R) + ' Q' + x + ' ' + y1 + ' ' + (x + R) + ' ' + y1 + ' L' + xe + ' ' + y1);
+      SVG.appendChild(p);
+      const pr = ROWS[r.parent - 1];
+      if (!pr.dir) return;
+      if (OPEN[i]) PREOPEN[r.parent] = true;
+      else if (!OPENER[r.parent] || TS[i] < TS[OPENER[r.parent] - 1]) OPENER[r.parent] = k;
+    });
+    Object.keys(PREOPEN).forEach(function (p) { delete OPENER[p]; });   // 開場就打開的資料夾不用再換
+    ROWS.forEach(function (r, i) {
+      const k = i + 1, row = $q('#xfld-r' + k)[0];
+      if (PREOPEN[k]) row.classList.add('xfld-isopen');
+      if (PREOPEN[k] || OPENER[k]) row.classList.add('xfld-opens');
+      if (OPEN[i]) row.classList.add('xfld-pre');
+      if (r.note && NT[i] >= 0 && Math.abs(NT[i] - TS[i]) >= 0.05) $q('#xfld-b' + k)[0].classList.add('xfld-late');   // 註記晚一點才彈出
+      $q(PREOPEN[k] ? '#xfld-io' + k : '#xfld-ic' + k)[0].classList.add('xfld-on');   // 開場看得到的那個圖示（描線的對象）
+    });
+    const LAST = Math.max.apply(null, [-1].concat(TS));
+    const TALL = ALL >= 0 ? ALL : Math.max(LAST + 1.0, Math.min(LAST + 2.0, P.dur() - 2.6));
+    const EV = [];
+    TS.forEach(function (t, i) { if (!OPEN[i]) EV.push({ t: t, o: 0, k: i + 1 }); });
+    NT.forEach(function (t, i) {
+      if (t < 0 || !ROWS[i].note || Math.abs(t - TS[i]) < 0.05) return;
+      const g = EV.filter(function (e) { return e.o === 1 && Math.abs(e.t - t) < 0.05; })[0];
+      if (g) g.ks.push(i + 1); else EV.push({ t: t, o: 1, ks: [i + 1] });
+    });
+    EV.push({ t: TALL, o: 2 });
+    EV.sort(function (a, b) { return a.t - b.t || a.o - b.o; });
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮 → 1.0 開場就一起出現的列（綁在段頭 1.6 秒內的）每 0.15 秒滑入一列、樹狀線一起長、圖示描線
+    if (ENTER === 'grow') P.grow('#xfld-card', 0.3);
+    else { P.wipe('#xfld-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xfld-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xfld-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.drift('.xfld-pre .xfld-it', 1.0, { dx: -24, stagger: 0.15 });
+    P.stroke('.xfld-pre-l', 0.85, { dur: 0.25, stagger: 0.15 });
+    P.icon('.xfld-pre .xfld-on', 1.1, { dur: 0.45, stagger: 0.15 });
+    P.pop('.xfld-pre .xfld-note:not(.xfld-late)', 1.2, { from: 0.8, dy: 0, dur: 0.45, stagger: 0.15 });
+
+    // 拍 1…N 每一列（照講到的時間先後）：−0.25 上一層資料夾換成打開的圖示（第一個子項目才有）、樹狀線長過去 → 那一列滑入 → ＋0.1 圖示描線
+    //   → ＋0.2 註記彈出（跟著這一列的）→ ＋0.35 聚焦這一格（主色亮框＋淡色底）、其他列退到 0.55
+    // 註記晚一點講到的：回均衡、那幾個註記錯拍 0.12 彈出；收：講到總結（或最後一列講完 2 秒）全部亮回，完成態停到段尾
+    const IN = PRE.slice();
+    let cur = 0, spotT = -1;
+    const items = function () { return IN.map(function (k) { return '#xfld-it' + k; }).join(', '); };
+    const focus = function (k, t) {
+      const at = Math.max(t, spotT + 0.45);
+      P.spot(items(), k ? '#xfld-it' + k : null, at, k ? { scale: 1.03, lift: 0, dim: 0.55, dur: 0.4 } : { dur: 0.6 });
+      if (cur) P.out('#xfld-hl' + cur, at, { dur: 0.4 });
+      if (k) P.in('#xfld-hl' + k, at, { dur: 0.4 });
+      cur = k; spotT = at;
+    };
+    EV.forEach(function (e) {
+      if (e.o === 0) {
+        const k = e.k, r = ROWS[k - 1], t = e.t;
+        if (r.parent && OPENER[r.parent] === k) P.swap('#xfld-ic' + r.parent, '#xfld-io' + r.parent, t - 0.25, { dur: 0.25 });
+        if (r.parent) P.stroke('#xfld-l' + k, t - 0.25, { dur: 0.25 });
+        P.drift('#xfld-it' + k, t, { dx: -24 });
+        P.icon('#xfld-r' + k + ' .xfld-on', t + 0.1, { dur: 0.45 });
+        if (r.note && (NT[k - 1] < 0 || Math.abs(NT[k - 1] - t) < 0.05)) P.pop('#xfld-b' + k, t + 0.2, { from: 0.8, dy: 0, dur: 0.45 });
+        IN.push(k);
+        focus(k, t + 0.35);
+      } else if (e.o === 1) {
+        if (cur) focus(0, e.t);
+        P.pop(e.ks.map(function (k) { return '#xfld-b' + k; }).join(', '), e.t, { from: 0.8, dy: 0, dur: 0.45, stagger: 0.12 });
+      } else if (cur) focus(0, e.t);
+    });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-folder'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-folder";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

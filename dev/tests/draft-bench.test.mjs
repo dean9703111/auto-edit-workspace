@@ -18,8 +18,13 @@ test('draftMetrics：模板動畫比例、候選比例只算非 media、非章�
     { id: 'm1', type: 'media', from: '#7' }, { id: 'm2', type: 'media', from: '#8' },
     { id: 'f1', type: 'fx', fx: 1, from: '#9' }, { id: 'k1', scene: 'key-point', from: '#10' },
   ];
-  assert.deepEqual(B.draftMetrics(segs), { segs: 8, body: 4, animRatio: 0.75, candRatio: 0.25, adjacent: 1 });
-  assert.deepEqual(B.draftMetrics([]), { segs: 0, body: 0, animRatio: 0, candRatio: 0, adjacent: 0 });
+  assert.deepEqual(B.draftMetrics(segs), { segs: 8, body: 4, kinds: 3, animRatio: 0.75, candRatio: 0.25, adjacent: 1 });
+  assert.deepEqual(B.draftMetrics([]), { segs: 0, body: 0, kinds: 0, animRatio: 0, candRatio: 0, adjacent: 0 });
+  // 024 一致性：步驟 3 段（x-process 2、08 1）、列舉 2 段（都是 fs-list）、只有 1 段的數字不算 → (2 + 2) / 5
+  const rows = [{ a: 1, z: 9, sem: '步驟' }, { a: 10, z: 19, sem: '列舉' }, { a: 20, z: 25, sem: '數字' }];
+  const seg2 = [{ template: 'x-process', from: '#1' }, { scene: 'steps', from: '#4' }, { template: 'x-process', from: '#7' }, { scene: 'fs-list', from: '#10' }, { scene: 'fs-list', from: '#15' }, { type: 'fx', fx: 29, from: '#20' }, { type: 'media', from: '#22' }];
+  assert.equal(B.semanticConsistency(seg2, rows), 0.8);
+  assert.equal(B.semanticConsistency(seg2, []), null);
 });
 
 test('parseCheck／jsonFrom／median', () => {

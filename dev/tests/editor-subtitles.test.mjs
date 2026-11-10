@@ -184,3 +184,15 @@ test('清單項目字串：拆欄、保留｜屬性；新增項目不帶 at；�
   for (const ref of ['concept', '一般字卡', '06', 6, '字卡']) assert.equal(T.findSceneDef(scenes, ref)?.key, 'concept', String(ref));
   assert.equal(T.findFxDef([{ no: 29, id: '29' }], '29')?.no, 29);
 });
+
+test('024 剪輯台「重點」：選字包成 **詞**、再按一次（選字、游標在裡面、連 ** 一起選）取消；前後空白不包；沒選字又不在重點裡不動', () => {
+  const r = (s, a, b) => T.toggleEmph(s, a, b);
+  assert.deepEqual(r('Node.js 跑動畫的環境', 0, 7), { value: '**Node.js** 跑動畫的環境', a: 2, b: 9 });
+  assert.deepEqual(r('**Node.js** 跑動畫的環境', 2, 9), { value: 'Node.js 跑動畫的環境', a: 0, b: 7 });
+  assert.deepEqual(r('**Node.js** 跑動畫的環境', 0, 11), { value: 'Node.js 跑動畫的環境', a: 0, b: 7 });
+  assert.deepEqual(r('**Node.js** 跑動畫的環境', 5, 5), { value: 'Node.js 跑動畫的環境', a: 0, b: 7 });
+  assert.deepEqual(r(' Node.js 跑', 0, 9), { value: ' **Node.js** 跑', a: 3, b: 10 });
+  assert.equal(r('Node.js 跑動畫的環境', 3, 3), null);
+  assert.equal(r('上一行//下一行', 0, 8), null, '跨過換行記號不包');
+  assert.equal(T.visibleLen('**Node.js** 跑'), T.visibleLen('Node.js 跑'), '字數不算 **');
+});

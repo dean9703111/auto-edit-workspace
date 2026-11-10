@@ -30,7 +30,7 @@
        這些元件都要有標籤（標籤同一條線，腳底才會在同一條線上）。不要地面線：不寫 xsc-stand（xsc-floor 那行留著不用刪）。
        路線圖（本集大綱、幾個階段）：xsc-floor 的 class 加 xsc-route、寫 data-stops，再把 xsc-here 那行的註解拿掉：主色粗線畫在標籤下面、每站一個站點，
        聚焦到哪一站，目前位置點就沿線滑過去（範例 x-scene-example-outline）。
-     - 聲紋（選用）：<div id="xsc-wave" class="xsc-it" data-slot><div class="xsc-wv"></div><b class="xsc-lbl sc-w700">聲音</b></div>，拍裡寫 wave。
+     - 聲紋（選用）：<div id="xsc-wave" class="xsc-it" data-slot><div class="xsc-wv" data-anchor></div><b class="xsc-lbl sc-w700">聲音</b></div>，拍裡寫 wave。
      - 連接線：xsc-lines 的 data-links 寫「元件id>元件id」（有箭頭；沒箭頭寫 元件id-元件id），空白隔開；線自動畫在兩個元件外框邊之間（水平線在兩個插圖高度重疊段的正中），id＝<元件id>-<元件id>（DATA 2 的 line 照寫）。
   2. DATA 2 拍（<script> 開頭，一拍一行）：照分鏡一拍一列。
      const T<k> = P.at('#N@詞');   P.sfx('<音效>', '#N@詞');   ← 句號與詞照分鏡「講到」欄，P.sfx 和它同一個句號

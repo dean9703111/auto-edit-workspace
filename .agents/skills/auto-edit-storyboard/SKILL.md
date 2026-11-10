@@ -1,6 +1,6 @@
 ---
 name: auto-edit-storyboard
-description: 剪好看的前半：講者調光瘦臉、素材盤點、構圖台拖框（停點 ②）、量講者框、分章寫分鏡草稿（長片一章一個子代理）、標內容設計動畫候選、工具產生分鏡表（停點 ③）。當使用者說「剪好看」「做出完成影片」「包裝成完成影片」「列分鏡表」時使用。還沒有 work/rough.mp4 時不要用（改用 auto-edit-rough）；分鏡表已經確認、要做動畫或看完成影片預覽時不要用（改用 auto-edit-motion、auto-edit-review）。
+description: 剪好看的前半：講者調光瘦臉、素材盤點、構圖台拖框（停點 ②）、量講者框、分章先寫語意地圖再寫分鏡草稿（長片一章一個子代理，主代理全片校正）、標內容設計動畫候選、工具產生分鏡表（停點 ③）。當使用者說「剪好看」「做出完成影片」「包裝成完成影片」「列分鏡表」時使用。還沒有 work/rough.mp4 時不要用（改用 auto-edit-rough）；分鏡表已經確認、要做動畫或看完成影片預覽時不要用（改用 auto-edit-motion、auto-edit-review）。
 version: 0.2.0
 ---
 # 剪好看（前半）：構圖到分鏡表
@@ -31,8 +31,7 @@ version: 0.2.0
 - 子母畫面一定有講者小視窗；只有純聲音素材的區間才沒有，那些全畫面段 build 自動換全寬版型（沒有講者的句子列在 `chNN.md` 開頭，不能放字卡 06–15）。`--check` 印子母畫面的 `pip` 有空的，先跑 `media.mjs verify-rough`，不要改版面繞過去。
 - 卡片主文字、每條項目、每個動畫站的出現時間＝講到那個詞的時間：綁 `#N@詞`，差 ≤ 0.5 秒。`--merge-drafts`、`--apply-storyboard` 寫完 plan.json 會自動跑 `build.mjs --autofix`，把文字對時、小重疊、清單第一項比標題早、≤ 3 秒的空檔、停留太短、音效太密這幾種工具知道答案的 ⚠／✖ 直接改好（印「自動修好 N 處」）；`--check` 剩下的「文字對時」✖ 照 → 改那份草稿；⚠ 不用逐項說明，回報只寫個數。
 - 音效只用 `shared/sfx/`，不下載素材、不登入第三方服務。「音效稀疏」⚠ 和 build 的六行（人聲響度、音效比例…）到停點 ④ 由 `auto-edit-review` 處理，這一階段不補、不貼。
-- 調光由 build 套；瘦臉要跑 `look.mjs run`。
-- 構圖：構圖台拖框，最多放大 2 倍；建議框＝1.0／1.15／1.3 裡不切到手勢、每個像素放大 ≤ 3.5 倍的最大的；直式另看頭頂 y 380–520、下巴 ≤ 860。
+- 調光由 build 套；瘦臉要跑 `look.mjs run`。構圖：構圖台拖框，最多放大 2 倍；建議框＝1.0／1.15／1.3 裡不切到手勢、每個像素放大 ≤ 3.5 倍的最大的；直式另看頭頂 y 380–520、下巴 ≤ 860。
 
 ## 開始前
 
@@ -89,15 +88,16 @@ node shared/template/tools/build.mjs --project projects/<專案> --scaffold
 完成判準：停點紀錄有 ② 通過；plan.json 有 `speakerBox`；`work/分鏡素材/共用.md` 存在。
 常見錯誤：`8 格之間幾乎沒有動作` → 講者沒入鏡或只有聲音：只有聲音就跳過 speaker；有人就看 8 格總表手動框。
 
-**5. 分章寫草稿**
+**5. 分章寫分鏡：語意地圖 → 全片校正 → 草稿**
 
 ```
+node shared/template/tools/build.mjs --project projects/<專案> --map-merge
 node shared/template/tools/build.mjs --project projects/<專案> --merge-drafts
 ```
 
-影片 5 分鐘以上先派一個導演寫視覺語言（`references/director.md`），回來再派分章。`--scaffold` 切了幾份就派幾個子代理（派工照 `references/chapter-worker.md`），**同一則回覆一次全部派出**，一次最多 4 個，超過就分批；只有 1 份就自己寫（一樣照 `references/chapter-worker.md`：先寫大綱跑 `--outline`，再填骨架）。子代理各寫 `work/drafts/chNN.json`、各自驗過。全部回來才跑上面這條合併。合併通過會接著產生分鏡表，最後印停點 ③ 那一行。貼那一行之前整集看一次，只看兩處（`SITUATIONS.md` §6）：第一份草稿開頭幾段的 `story.say` 有沒有開場轉折句、最後一份結尾幾段有沒有回到前面的清單。缺了才改那一份草稿、再跑一次同一條合併，最多一輪。有 `work/screen-sync.json`（邊錄邊講）時，合併會自己把 sync 段放進 plan.json，不用另外跑 `--write-plan`。合併印「派一個設計師寫鏡位腳本」才做步驟 6；印了停點 ③ 那一行就跳過步驟 7。
-完成判準：`--merge-drafts` 0 個 ✖，最後印停點 ③ 那一行（有要先寫的鏡位腳本時改印派工，步驟 6 做完再跑步驟 7）；候選不到三成時，有 `視覺語言.md` 或快速初稿就照現狀、不重派，其他情況在回報列出那幾章。
-常見錯誤：`✖ …` → 照 → 改那一份 `work/drafts/chNN.json`，再合併；不要直接改 plan.json 的 scenes，下次合併會蓋掉。
+第一回合：`--scaffold` 切了幾份就派幾個子代理寫語意地圖（派工照 `references/chapter-worker.md`），**同一則回覆一次全部派出**，一次最多 4 個，超過就分批；只有 1 份就自己寫（子代理用 `--map <份>` 自己驗）。全部回來才跑第 1 行：你是導演，只讀 `work/分鏡素材/語意地圖.md`、不讀字幕，照 `references/director.md` 挑 A、統一標法、寫視覺語言，再跑同一條到印「語意地圖通過」。第二回合：照它印的派工（能接續第一回合的子代理就接續，不能就重派），子代理各寫 `work/drafts/chNN.json`、各自驗過；全部回來才跑第 2 行合併。合併通過會接著產生分鏡表，最後印停點 ③ 那一行。貼那一行之前整集看一次，只看兩處（`SITUATIONS.md` §6）：第一份草稿開頭幾段的 `story.say` 有沒有開場轉折句、最後一份結尾幾段有沒有回到前面的清單。缺了才改那一份草稿、再跑一次同一條合併，最多一輪。有 `work/screen-sync.json`（邊錄邊講）時，合併會自己把 sync 段放進 plan.json，不用另外跑 `--write-plan`。合併印「派一個設計師寫鏡位腳本」才做步驟 6；印了停點 ③ 那一行就跳過步驟 7。
+完成判準：`--map-merge` 印「語意地圖通過」；`--merge-drafts` 0 個 ✖，最後印停點 ③ 那一行（有要先寫的鏡位腳本時改印派工，步驟 6 做完再跑步驟 7）。
+常見錯誤：`--map-merge` 印 `✖ A … 全片最多 N 段` → 你全片排序，把多的在地圖改成 B，不要叫子代理重寫；合併的 `✖ …` → 照 → 改那一份 `work/drafts/chNN.json`，再合併；不要直接改 plan.json 的 scenes，下次合併會蓋掉。
 
 **6. 內容設計動畫：鏡位腳本**（只有 `--merge-drafts` 印「派一個設計師寫鏡位腳本」才做）
 
@@ -152,7 +152,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --apply-storybo
 
 - [ ] 停點 ② 之前沒寫分鏡；② 通過有記；`frame` 寫對（1.0 倍不寫）；plan.json 有 speakerBox
 - [ ] 只有聲音的區間都被蓋住；子母畫面段的 `pip` 都不是空的
-- [ ] 內容設計動畫候選照建議數量（有 `視覺語言.md` 照它、快速初稿不標），標的是真的值得設計的時刻
+- [ ] 內容設計動畫候選＝語意地圖上的 A（`--map-merge` 全片挑過、快速初稿不標），標的是真的值得設計的時刻
 - [ ] 模板動畫段都是填資料（`template`＋`slots`），沒有手改 HTML
 - [ ] `--merge-drafts`、`--storyboard` 都 0 個 ✖
 - [ ] 金句只在候選表，沒有直接排成段
@@ -171,7 +171,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --apply-storybo
 
 ## 工具呼叫預算
 
-到停點 ② 最多 6 次；② 之後：量講者框 4 次、每份草稿 16 次（子代理）、主代理合併到停點 ③ 10 次。派子代理的呼叫不算。超過就停下來回報卡在哪。
+到停點 ② 最多 6 次；② 之後：量講者框 4 次、每份地圖 6 次、每份草稿 16 次（子代理）、主代理全片校正 6 次、合併到停點 ③ 10 次。派子代理的呼叫不算。超過就停下來回報卡在哪。
 
 ## 回報格式
 
@@ -195,5 +195,5 @@ node shared/template/tools/build.mjs --project projects/<專案> --apply-storybo
 
 ## 什麼時候讀 references/
 
-- `references/director.md`：你是導演時才讀。
-- `references/chapter-worker.md`：你是寫分章草稿的子代理時才讀（主代理派工不用讀，工具會印派工訊息）。
+- `references/director.md`：第一回合的地圖全部回來、跑 `--map-merge` 之前讀（主代理當導演）。
+- `references/chapter-worker.md`：你是寫分章地圖或草稿的子代理時才讀（主代理派工不用讀，工具會印派工訊息）。

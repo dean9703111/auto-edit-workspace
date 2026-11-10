@@ -113,6 +113,12 @@ export function validateSlots(spec, slots, { icons } = {}) {
       if (v != null && v !== '') for (const other of d.with || []) if (s[other] == null || s[other] === '') errors.push(`slots.${k} 有寫，slots.${other} 也要寫（兩個一組）`);
     }
   }
+  // lines：排在同一行、不換行的幾格加起來的字數（x-prompt 的 pre＋k1＋mid＋k2＋post：每格各自沒超過，加起來超過框寬就被切掉）
+  for (const ln of spec.lines || []) {
+    const text = (ln.slots || []).map((k) => String(s[k] ?? '')).join('');
+    const w = textWidth(text.replace(/\*\*/g, ''));
+    if (ln.max != null && w > ln.max) errors.push(`${ln.label || (ln.slots || []).join('＋')}「${text}」${w} 字，上限 ${ln.max}（這幾格排在同一行、不換行）→ ${ln.fix || '縮文案，不縮字'}`);
+  }
   return errors;
 }
 
@@ -348,8 +354,9 @@ function scenePartHtml(p, ctx) {
   const row = p.row && p.row !== 1 ? ` data-row="${p.row}"` : '';
   const label = p.label ? `<b class="xsc-lbl sc-w700">${esc(p.label)}</b>` : '';
   let body;
-  if (p.wave) body = '<div class="xsc-wv"></div>';
-  else if (p.icon) body = `<span class="sc-icon" style="--d:${p.w || 128}px;--i:${Math.round((p.w || 128) * 0.56)}px">${ctx.icons?.get(String(p.icon)) || ''}</span>`;
+  // data-anchor：圖示、波形也當排版錨點（kit/scene-layout.js row 底對齊）；不然有標籤的圖示元件被當成「沒標籤」對中線，標籤比旁邊的插圖高（024 試跑 x0206）
+  if (p.wave) body = '<div class="xsc-wv" data-anchor></div>';
+  else if (p.icon) body = `<span class="sc-icon" data-anchor style="--d:${p.w || 128}px;--i:${Math.round((p.w || 128) * 0.56)}px">${ctx.icons?.get(String(p.icon)) || ''}</span>`;
   else {
     const [w, h] = partSize(p, ctx, ctx.kitDir);
     const opts = Object.entries(p.opts || {}).map(([k, v]) => ` data-${k}="${esc(v)}"`).join('');

@@ -404,7 +404,7 @@ export function projectStatus(project) {
   const SAID = ' --said "<使用者原話>"';
 
   // 各階段的指令
-  const prep = tool('media.mjs prep'), rough = tool('media.mjs rough'), editor = tool('editor.mjs'), framing = tool('qc.mjs framing'), speaker = tool('qc.mjs speaker', ' --write'), scaffold = tool('build.mjs', ' --scaffold'), merge = tool('build.mjs', ' --merge-drafts'), storyCmd = tool('build.mjs', ' --storyboard'), apply = tool('build.mjs', ' --apply-storyboard'), review = tool('build.mjs', ' --review'), deliver = tool('deliver.mjs');
+  const prep = tool('media.mjs prep'), rough = tool('media.mjs rough'), editor = tool('editor.mjs'), framing = tool('qc.mjs framing'), speaker = tool('qc.mjs speaker', ' --write'), scaffold = tool('build.mjs', ' --scaffold'), mapMerge = tool('build.mjs', ' --map-merge'), merge = tool('build.mjs', ' --merge-drafts'), storyCmd = tool('build.mjs', ' --storyboard'), apply = tool('build.mjs', ' --apply-storyboard'), review = tool('build.mjs', ' --review'), deliver = tool('deliver.mjs');
   const begin = `${TOOLS}/versions.mjs begin --project ${A} --seg <段 id> --say "<使用者原話>"`, finish = `${TOOLS}/versions.mjs finish --project ${A}`;
   const afterRough = camera ? '② 構圖' : '③ 分鏡表';
   const bgNote = '長片在背景跑；印「再跑一次同一條指令」就再跑同一行，會接著等，不會重跑';
@@ -419,6 +419,11 @@ export function projectStatus(project) {
   const mergedAt = stat(W('drafts', '_merged.json'))?.mtimeMs ?? 0;
   const merged = !!pack && Array.isArray(planJson?.scenes) && planJson.scenes.length > 0 && mergedAt > 0 && partKeys.every((k) => (stat(W('drafts', `${k}.json`))?.mtimeMs ?? Infinity) <= mergedAt + NEWER);
   const designMissing = (planJson?.scenes || []).filter((x) => x?.design && !has(W('designs', `${x.id}.md`))).map((x) => x.id);
+  // 語意地圖（specs/024，index.json 有 semanticMap 的包）：第一回合地圖 → --map-merge 全片校正通過（_map.json 比每份地圖新）→ 第二回合草稿
+  const mapFlow = !!pack?.semanticMap && draftMissing.length > 0;
+  const mapMissing = mapFlow ? partKeys.filter((k) => !has(W('drafts', `${k}.map.md`))) : [];
+  let mapOk = false;
+  try { const st = JSON.parse(fs.readFileSync(W('drafts', '_map.json'), 'utf8')); mapOk = !!st.passed && partKeys.every((k) => (stat(W('drafts', `${k}.map.md`))?.mtimeMs ?? Infinity) <= (stat(W('drafts', '_map.json'))?.mtimeMs ?? 0) + NEWER); } catch { mapOk = false; }
   const list8 = (a) => `${a.slice(0, 8).join('、')}${a.length > 8 ? '…' : ''}`;
   const s9 = camera && !logged('② 構圖') && !boxed && !pack
     ? { at: '剪好看／停點 ② 構圖（構圖台還沒給使用者看）', skill: 'auto-edit-storyboard 步驟 3', next: '開構圖台、記停點 ②，把構圖台網址、work/look-preview.jpg（有的話）和 qc.mjs framing 印的「建議：…」那一行貼給使用者，停下來（依序跑下面 2 行）', stop: '② 構圖', cmds: [editor, mark('② 構圖', '待回覆')] }
@@ -426,8 +431,12 @@ export function projectStatus(project) {
       ? { at: '剪好看／② 通過，量講者框', skill: 'auto-edit-storyboard 步驟 4', next: '量講者框，再產生分鏡素材（依序跑下面 2 行）', stop: '③ 分鏡表', cmds: [speaker, scaffold] }
       : !pack
         ? { at: camera ? '剪好看／產生分鏡素材' : '剪好看／產生分鏡素材（沒有講者：跳過 ② 構圖和講者框）', skill: 'auto-edit-storyboard 步驟 4', next: '產生 work/分鏡素材/（共用.md、寫法.md、每章一份 chNN.md）', stop: '③ 分鏡表', cmds: [scaffold] }
-        : draftMissing.length
-          ? { at: `剪好看／寫分鏡草稿（還缺 ${list8(draftMissing)}）`, skill: 'auto-edit-storyboard 步驟 5', next: `${partKeys.length > 1 ? '一份派一個子代理寫 work/drafts/<份>.json，同一則回覆一次派出（派工：auto-edit-storyboard 的 references/chapter-worker.md）' : '照 work/分鏡素材/ 的 共用.md 和那一份寫 work/drafts/<份>.json'}；還缺 ${list8(draftMissing)}。全部寫好才跑下一行合併`, stop: '③ 分鏡表', cmds: [merge] }
+        : mapFlow && mapMissing.length
+          ? { at: `剪好看／第一回合：語意地圖（還缺 ${list8(mapMissing)}）`, skill: 'auto-edit-storyboard 步驟 5', next: `${partKeys.length > 1 ? '一份派一個子代理寫 work/drafts/<份>.map.md，同一則回覆一次派出（派工：auto-edit-storyboard 的 references/chapter-worker.md 第一回合）' : '照 work/分鏡素材/語意.md 寫 work/drafts/ch01.map.md'}；還缺 ${list8(mapMissing)}。全部寫好才跑下一行（合併地圖、全片校正）`, stop: '③ 分鏡表', cmds: [mapMerge] }
+          : mapFlow && !mapOk
+            ? { at: '剪好看／全片校正語意地圖', skill: 'auto-edit-storyboard 步驟 5（references/director.md）', next: '跑下一行；沒通過就只讀 work/分鏡素材/語意地圖.md，照它開頭的三件事改各份的地圖（挑 A、統一標法）、寫視覺語言.md，再跑一次', stop: '③ 分鏡表', cmds: [mapMerge] }
+            : draftMissing.length
+          ? { at: `剪好看／${mapFlow ? '第二回合：' : ''}寫分鏡草稿（還缺 ${list8(draftMissing)}）`, skill: 'auto-edit-storyboard 步驟 5', next: `${partKeys.length > 1 ? `一份派一個子代理寫 work/drafts/<份>.json，同一則回覆一次派出（派工：auto-edit-storyboard 的 references/chapter-worker.md${mapFlow ? ' 第二回合；能接續第一回合的子代理就接續' : ''}）` : '照 work/分鏡素材/ 的 共用.md 和那一份寫 work/drafts/<份>.json'}；還缺 ${list8(draftMissing)}。全部寫好才跑下一行合併`, stop: '③ 分鏡表', cmds: [merge] }
           : !merged
             ? { at: '剪好看／合併分鏡草稿', skill: 'auto-edit-storyboard 步驟 5', next: '合併 work/drafts/ 成 plan.json 的 scenes', stop: '③ 分鏡表', cmds: [merge] }
             : { at: '剪好看／產生分鏡表', skill: designMissing.length ? 'auto-edit-storyboard 步驟 6–7' : 'auto-edit-storyboard 步驟 7', next: designMissing.length ? `內容設計動畫一段派一個設計師子代理寫鏡位腳本，同一則回覆一次派出（派工：auto-edit-motion 的 references/design-script.md）：${list8(designMissing)}；全部回來才跑下一行（build、截圖、產生分鏡表、停在停點 ③）` : '截圖、產生分鏡表、開分鏡表頁、記停點 ③，一條指令做完', stop: '③ 分鏡表', cmds: [storyCmd] };

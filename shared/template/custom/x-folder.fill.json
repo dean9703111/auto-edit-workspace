@@ -1,0 +1,210 @@
+{
+  "template": "x-folder",
+  "prefix": "xfld",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "帶觀眾走過一個資料夾結構（3–9 列、最多 4 層，例「一支影片一個資料夾，統一放在 projects 底下」「assets 分四類：camera、voice、screen、images」）；像檔案總管的樹狀目錄，講到哪個資料夾、檔案那一列長出來、聚焦，上一層資料夾換成打開的圖示",
+  "slots": {
+    "title": {
+      "label": "標題",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "items": {
+      "label": "樹的每一列（照資料夾由上往下的順序，子項目緊接在它的資料夾下面）",
+      "type": "list",
+      "min": 3,
+      "maxItems": 9,
+      "required": true,
+      "const": "TREE",
+      "toArray": [
+        "text",
+        "depth",
+        "kind",
+        "note"
+      ],
+      "item": {
+        "text": {
+          "label": "資料夾或檔案名稱（照原文，例 projects、講稿.md；半形算半個字）",
+          "type": "text",
+          "max": 10,
+          "required": true
+        },
+        "depth": {
+          "label": "第幾層（0＝最上層；子項目比它的資料夾多 1）",
+          "type": "number",
+          "min": 0,
+          "max": 3,
+          "required": true
+        },
+        "kind": {
+          "label": "種類（選填，沒寫＝folder 資料夾；text 是文件、講稿）",
+          "type": "enum",
+          "options": [
+            "folder",
+            "file",
+            "text",
+            "video",
+            "audio",
+            "image",
+            "code"
+          ]
+        },
+        "note": {
+          "label": "註記膠囊（選填，例「只能讀」「自動產生」）",
+          "type": "text",
+          "max": 5
+        },
+        "at": {
+          "label": "講到這一列名稱的時間（相鄰兩列至少差 2.2 秒；綁在段頭 1.6 秒內的列開場就一起出現、不聚焦：第二段接著上一段的樹時，講過的上層綁這段第一句 #N）",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        },
+        "noteAt": {
+          "label": "註記晚一點才講到的時間（選填：沒寫＝跟著這一列出現；例「這兩個會自動產生」，同一句的幾個註記一起彈出）",
+          "type": "at"
+        }
+      }
+    },
+    "all": {
+      "label": "講到總結那一句的時間（選填；配一顆 ding。沒有就最後一列講完 2 秒回均衡）",
+      "type": "at",
+      "ref": "ALL"
+    }
+  },
+  "sample": {
+    "title": "專案資料夾",
+    "items": [
+      {
+        "text": "example",
+        "depth": 0,
+        "kind": "folder",
+        "at": "#382@example"
+      },
+      {
+        "text": "講稿.md",
+        "depth": 1,
+        "kind": "text",
+        "at": "#383@講稿"
+      },
+      {
+        "text": "assets",
+        "depth": 1,
+        "kind": "folder",
+        "note": "只能讀",
+        "at": "#384@assets"
+      },
+      {
+        "text": "camera",
+        "depth": 2,
+        "kind": "folder",
+        "note": "真人錄影",
+        "at": "#385@camera"
+      },
+      {
+        "text": "voice",
+        "depth": 2,
+        "kind": "folder",
+        "note": "旁白",
+        "at": "#386@voice"
+      },
+      {
+        "text": "screen",
+        "depth": 2,
+        "kind": "folder",
+        "note": "螢幕錄影",
+        "at": "#387@screen"
+      },
+      {
+        "text": "images",
+        "depth": 2,
+        "kind": "folder",
+        "note": "截圖照片",
+        "at": "#388@images"
+      },
+      {
+        "text": "work",
+        "depth": 1,
+        "kind": "folder",
+        "note": "自動產生",
+        "at": "#389@work",
+        "noteAt": "#391@自動產生"
+      },
+      {
+        "text": "output",
+        "depth": 1,
+        "kind": "folder",
+        "note": "自動產生",
+        "at": "#390@output",
+        "noteAt": "#391@自動產生"
+      }
+    ],
+    "all": "#391@自動產生"
+  },
+  "sampleMin": {
+    "title": "專案資料夾",
+    "items": [
+      {
+        "text": "example",
+        "depth": 0,
+        "at": "#382@example"
+      },
+      {
+        "text": "講稿.md",
+        "depth": 1,
+        "kind": "text",
+        "at": "#383@講稿"
+      },
+      {
+        "text": "assets",
+        "depth": 1,
+        "at": "#384@assets"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋標題「{title}」；綁在段頭 1.6 秒內的列 1.0 秒起一起滑入（每 0.15 秒一列，不聚焦）",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "each": "items",
+      "beat": "{n}",
+      "at": "`{at}`",
+      "show": "第 {n} 列「{text}」",
+      "moves": "−0.25 描線（樹狀線）；−0.25 淡出＋淡入（上一層資料夾換成打開的圖示，第一個子項目才有）；滑入（第 {n} 列）；＋0.1 圖示描線；＋0.2 彈出（註記）；＋0.35 聚焦（第 {n} 列，其他退到 0.55）；＋0.35 淡入（淡色底）",
+      "focus": "第 {n} 列"
+    },
+    {
+      "each": "items",
+      "if": "noteAt",
+      "beat": "註 {n}",
+      "at": "`{noteAt}`",
+      "show": "第 {n} 列的註記「{note}」（同一句的註記一起彈出）",
+      "moves": "回均衡；淡出（淡色底）；彈出（註記，錯拍 0.12）",
+      "focus": "註記"
+    },
+    {
+      "if": "all",
+      "beat": "收",
+      "at": "`{all}`",
+      "show": "全部列亮回、淡色底收掉；完成態停到段尾",
+      "moves": "回均衡；淡出（淡色底）",
+      "focus": "整體",
+      "sfx": "ding"
+    },
+    {
+      "if": "!all",
+      "beat": "收",
+      "at": "`{last.at}`＋2.0",
+      "show": "全部列亮回、淡色底收掉；完成態停到段尾（段尾不夠就提早，至少＋1.0）",
+      "moves": "回均衡；淡出（淡色底）",
+      "focus": "整體"
+    }
+  ]
+}

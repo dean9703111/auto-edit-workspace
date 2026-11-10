@@ -295,6 +295,7 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .list-item .cnt.over { color: var(--warn-kw); font-weight: 700; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip-t { font-size: 12px; padding: 0 6px; border-radius: 4px; background: var(--card2); border: 1px solid var(--line); color: var(--mute); }
+.emph-btn { margin-left: 6px; padding: 0 8px; font-weight: 700; color: var(--brand, #F6630F); }
 .seg-btns { display: flex; gap: 4px; }
 .seg-btns button { flex: 1; padding: 4px 6px; font-size: 13px; }
 .seg-btns button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }

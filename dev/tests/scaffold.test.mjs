@@ -52,25 +52,38 @@ test('真的文件：situationRows 行號對得上、四題與三條判準讀得
   assert.ok(K.animationRules(fs.readFileSync(path.join(WORKSPACE, 'shared', 'style.md'), 'utf8')).some((l) => /段長 ≥ 4 秒/.test(l)));
 });
 
-test('splitParts：照章切、太長的章再切、沒有章節約每 5 分鐘一份；每句都在某一份、不重複', () => {
-  // 30 分鐘、900 句（每句 2 秒），每 50 句一個停頓長一點
-  const many = Array.from({ length: 900 }, (_, i) => ({ n: i + 1, start: i * 2 + (Math.floor(i / 50) * 0.5), end: i * 2 + 1.8 + (Math.floor(i / 50) * 0.5), text: `第 ${i + 1} 句` }));
-  const none = K.splitParts({ cues: many, outline: [], videoDur: 1800 });
-  assert.ok(none.length >= 4 && none.length <= 8, `30 分鐘分成 ${none.length} 份`);
-  for (const p of none) assert.ok(p.seconds <= K.PART_TARGET * 1.3 + 120, `${p.key} ${p.seconds}`);
+test('splitParts（024）：照字數切：有 ## 照章切、超過 2,000 字切成差不多大的幾份（切點先挑小節）、不到 600 字併到相鄰那份；每句都在某一份、不重複', () => {
+  // 30 分鐘、900 句（每句 2 秒、10 個字，共 9,000 字），每 50 句一個停頓長一點
+  const many = Array.from({ length: 900 }, (_, i) => ({ n: i + 1, start: i * 2 + (Math.floor(i / 50) * 0.5), end: i * 2 + 1.8 + (Math.floor(i / 50) * 0.5), text: `這是第${String(i + 1).padStart(4, '0')}句字幕` }));
+  assert.equal(K.charsOf('這是，第 1 句！OK'), 7, '去掉標點、空白');
+  const none = K.splitParts({ cues: many, outline: [] });
+  assert.equal(none.length, 5, `9,000 字切 5 份（現在 ${none.length}）`);
+  for (const p of none) assert.ok(p.chars <= K.PART_CHARS && p.chars >= K.PART_MIN_CHARS, `${p.key} ${p.chars} 字`);
+  assert.ok(Math.max(...none.map((p) => p.chars)) - Math.min(...none.map((p) => p.chars)) <= 700, '差不多大');
   let next = 1;
   for (const p of none) { assert.equal(p.firstN, next); next = p.lastN + 1; }
   assert.equal(next, 901, '每句都有人負責');
   const chapters = [{ level: 2, title: '第一章', first: 'x', n: 1 }, { level: 2, title: '第二章：很長的一章', first: 'x', n: 100 }];
-  const parts = K.splitParts({ cues: many, outline: chapters, videoDur: 1800 });
+  const parts = K.splitParts({ cues: many, outline: chapters });
   assert.equal(parts[0].title, '第一章');
-  assert.ok(parts.length > 2, '第二章超過 8 分鐘要再切');
-  assert.ok(parts.slice(1).every((p) => p.seconds <= K.PART_MAX + 120));
+  assert.equal(parts[0].lastN, 99, '第一章 990 字不用切');
+  assert.ok(parts.length > 2, '第二章 8,010 字要再切');
+  assert.ok(parts.every((p) => p.chars <= K.PART_CHARS));
   assert.equal(parts.filter((p) => p.chapterN != null).length, 1, '切開的章只有第一份放章節段；影片第一句就是章節開頭的不放');
   assert.equal(parts[0].chapter, null, '開場的勾子先上，不放章節轉場');
   assert.equal(parts.find((p) => p.chapterN != null).chapter, 1, '章號從下一章算起');
-  const later = K.splitParts({ cues: many, outline: [{ level: 2, title: '第一章', first: 'x', n: 5 }, { level: 2, title: '第二章', first: 'x', n: 100 }], videoDur: 1800 });
-  assert.equal(later.filter((p) => p.chapterN != null).length, 2, '第一句之前有講話：章節照放');
+  // 小節：切點落在最接近目標字數的 ### 開頭
+  const secs = [{ level: 2, title: '第一章', first: 'x', n: 1 }, { level: 3, title: '小節', first: 'x', n: 151 }];
+  const two = K.splitParts({ cues: many.slice(0, 300), outline: secs });
+  assert.deepEqual(two.map((p) => p.firstN), [1, 151], '3,000 字切兩份，切在小節開頭');
+  // 太小的份併起來：開場 40 字、第一章 300 字，併到 600 字以上（第二章 2,660 字先切成兩份，第一份接上），兩章的章節段都留著
+  const later = K.splitParts({ cues: many.slice(0, 300), outline: [{ level: 2, title: '第一章', first: 'x', n: 5 }, { level: 2, title: '第二章', first: 'x', n: 35 }] });
+  assert.equal(later[0].title, '開場＋第一章＋第二章（1）', '開場和第一章都太小：一直併到 600 字以上');
+  assert.deepEqual(later.flatMap((p) => p.chapters.map((c) => c.chapterN)), [5, 35], '第一句之前有講話：章節照放，併在一起的每章都有章節段');
+  assert.ok(later.every((p) => p.chars >= K.PART_MIN_CHARS && p.chars <= K.PART_CHARS));
+  const tiny = K.splitParts({ cues: many.slice(0, 120), outline: [{ level: 2, title: '一', first: 'x', n: 2 }, { level: 2, title: '二', first: 'x', n: 40 }, { level: 2, title: '三', first: 'x', n: 80 }] });
+  assert.equal(tiny.length, 1, '全部加起來不到 2,000 字：併成一份');
+  assert.deepEqual(tiny[0].chapters.map((c) => c.chapterN), [2, 40, 80], '每章的章節段都在');
   assert.equal(K.designTarget(1800), 54, '30 分鐘約 180 段的三成');
   assert.equal(K.designTarget(30), 0);
   assert.equal(K.designTargetOf(20), 6);
@@ -96,7 +109,9 @@ test('--scaffold 端到端：共用、寫法、每份一檔；不改既有 plan.
   const run = (...a) => spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--project', proj, '--scaffold', ...a], { encoding: 'utf8' });
   const r = run();
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.match(r.stdout, /--merge-drafts$/m);
+  assert.match(r.stdout, /--map-merge$/m, '024：第一回合先寫語意地圖，全部回來合併地圖');
+  assert.ok(fs.existsSync(path.join(work, '分鏡素材', '語意.md')));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(work, '分鏡素材', 'index.json'), 'utf8')).semanticMap, true);
   assert.equal(fs.readFileSync(path.join(out, 'plan.json'), 'utf8'), planText, 'plan.json 不動');
   const dir = path.join(work, '分鏡素材');
   const common = fs.readFileSync(path.join(dir, '共用.md'), 'utf8'), snippets = fs.readFileSync(path.join(dir, '寫法.md'), 'utf8');
@@ -161,7 +176,7 @@ test('scriptOutline：## 後面緊接 ###，章和第一個小節都對到同一
   assert.deepEqual(o.map((x) => [x.level, x.title, x.n]), [[2, '第一章', 2], [3, '小節 A', 2], [3, '小節 B', 4], [2, '第二章', 8]]);
 });
 
-test('查詢指令：--spec、--icons、--words、--show、第二次 --check-draft 印可以交件；--scaffold 長片印導演派工', () => {
+test('查詢指令：--spec、--icons、--words、--show、第二次 --check-draft 印可以交件；--scaffold 印第一回合（語意地圖）派工', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-query-'));
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   const tpl = path.join(root, 'shared', 'template');
@@ -179,10 +194,8 @@ test('查詢指令：--spec、--icons、--words、--show、第二次 --check-dra
 
   let r = run('--scaffold');
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.match(r.stdout, /references\/director\.md/, '5 分鐘以上先派導演');
-  fs.writeFileSync(path.join(proj, 'work', '分鏡素材', '視覺語言.md'), '# 視覺語言\n');
-  r = run('--scaffold');
-  assert.doesNotMatch(r.stdout, /references\/director\.md/, '已經有視覺語言就不用再派');
+  assert.doesNotMatch(r.stdout, /references\/director\.md/, '024：不再先派導演（主代理讀合併後的地圖做全片校正）');
+  assert.match(r.stdout, /第一回合寫 .*ch01\.map\.md/, '只有一份：主代理自己寫地圖');
 
   r = run('--spec', 'x-process');
   assert.equal(r.status, 0, r.stdout);
@@ -516,4 +529,115 @@ test('023 情緒點：chNN.md 列候選與數量；--check-draft 數量、推近
   assert.deepEqual(plan.moods.map((m) => m.at), ['#5@千萬不要', '#12@竟然'], '照句號排');
   const keys = Object.keys(plan);
   assert.equal(keys.indexOf('moods'), keys.indexOf('scenes') - 1, 'moods 放在 scenes 前面');
+});
+
+test('024 語意地圖（純函式）：parseMap 認範圍與級；checkMap 擋語意與級、補全名、接縫 ⚠；mapOptions 照語意縮模板；mergeMaps 預算、開場結尾、視覺語言；designVsMap', async () => {
+  const M = await imp('lib/semantic-map.mjs');
+  const md = fs.readFileSync(path.join(TEMPLATE, 'SITUATIONS.md'), 'utf8');
+  const types = K.semanticTypes(md), sit = K.situationRows(md);
+  assert.equal(types.length, 16);
+  const names = new Set(types.map((t) => t.name));
+  for (const r of sit) assert.ok(names.has(r.sem) || /金句/.test(r.sem), `SITUATIONS 第 ${r.line} 行的語意「${r.sem}」不在語意類型裡`);
+  for (const t of types) assert.ok(sit.some((r) => r.sem === t.name), `「${t.name}」沒有對到任何一列`);
+  const rows = M.parseMap('句號範圍 | 語意 | 級 | 在講什麼 | 特徵\n|---|---|---|---|---|\n#1–#3 | 步驟 | B | 裝好 | 項目 3\n| #4-#6e | 定義 | a | 比喻 | 理由：核心 |\n#7 | 轉場 | C | 下一步 | —\n#9–#10 | 亂寫 | Z | x |\n');
+  assert.deepEqual(rows.map((r) => [r.a, r.z, r.tier]), [[1, 3, 'B'], [4, 6, 'A'], [7, 7, 'C'], [9, 10, 'Z']]);
+  const part = { firstN: 1, lastN: 12 };
+  const c = M.checkMap(rows, { part, types });
+  assert.equal(c.errors.length, 2, c.errors.join('\n'));
+  assert.match(c.errors.join('\n'), /語意「亂寫」不在清單裡/);
+  assert.match(c.errors.join('\n'), /級「Z」/);
+  assert.equal(rows[1].sem, '定義／比喻', '半個名稱補成全名');
+  assert.match(c.warns.join('\n'), /#8–#8 不在地圖上/);
+  assert.match(c.warns.join('\n'), /#11–#12 不在地圖上/);
+  const cues = Array.from({ length: 12 }, (_, i) => ({ n: i + 1, start: i * 2, end: i * 2 + 1.8 }));
+  const synced = M.checkMap(M.parseMap('#1–#7 | 步驟 | B | x | —\n#9–#12 | 列舉 | B | y | —'), { part, cues, types, syncSpans: [[13.5, 15]] });
+  assert.deepEqual(synced.warns, [], '邊錄邊講蓋住的句子不用寫進地圖');
+  assert.match(M.checkMap(M.parseMap('#1–#12 | 情境 | A | x |'), { part, types }).warns.join(), /沒寫理由/);
+  const opts = M.mapOptions(c.rows.filter((r) => r.sem !== '亂寫'), sit);
+  assert.match(opts[0], /^#1–#3 步驟 B：08 Step 字卡｜04c 全畫面流程｜情境動畫 x-process\.html$/);
+  assert.match(opts[1], /x-metaphor.*（A：一樣先套模板/);
+  assert.match(opts[2], /^#7–#7 轉場 C：串場用最便宜的/);
+  const specNames = ['media', '01 chapter', '06 concept', '07 key-point', '08 steps', '10 tips', '11 summary', '15 quote', '04c fs-flow', 'fx 01 文字爆發', 'fx 03 印章蓋印', 'fx 29 數字計數', 'x-process', 'x-metaphor', 'x-scene'];
+  assert.match(M.mapOptions(c.rows.slice(0, 1), sit, specNames)[0], /^#1–#3 步驟 B：08 steps｜04c fs-flow｜x-process$/, '有寫法.md 的名稱：印能直接寫進大綱的名稱');
+  assert.deepEqual(M.specKeys('回顧 → 11；金句 → 15', specNames), ['11 summary', '15 quote']);
+  assert.deepEqual(M.specKeys('前一段是模板動畫 → 後面接一段 fx 03 印章', specNames), ['fx 03 印章蓋印']);
+  assert.deepEqual(M.specKeys('media 段（USAGE.md 第 5 節）：運鏡', specNames), ['media']);
+  // 024 MiniMax 試跑：一行塞太多句、A 佔太多 → ⚠
+  const coarse = M.checkMap(M.parseMap('#1–#11 | 步驟 | B | x | —\n#12–#12 | 轉場 | C | y | —'), { part, types });
+  assert.match(coarse.warns.join(), /1 行太長（#1–#11 11 句）/);
+  const cues40 = Array.from({ length: 12 }, (_, i) => ({ n: i + 1, start: i * 4, end: i * 4 + 3.8 }));
+  assert.match(M.checkMap(M.parseMap('#1–#9 | 步驟 | B | x | —\n#10–#12 | 列舉 | B | y | —'), { part, cues: cues40, types }).warns.join(), /#1–#9 9 句／36 秒/, '句數沒超過、秒數超過也算');
+  const manyA = M.checkMap(M.parseMap(['#1–#2', '#3–#4', '#5–#6', '#7–#8', '#9–#10', '#11–#12'].map((x, i) => `${x} | 步驟 | ${i < 3 ? 'A' : 'B'} | x | 理由`).join('\n')), { part, types });
+  assert.match(manyA.warns.join(), /A 有 3 行，占 6 行的 50%/);
+  // 024 試跑：照秒數只列放得下的；最少項目放得下、全部放不下的照列但標出來
+  const mins = { '08 steps': 6, '04c fs-flow': 4, 'x-process': 9 }, fulls = { '04c fs-flow': 7 };
+  const timed = M.mapOptions(c.rows.slice(0, 1), sit, specNames, { secsOf: () => 5.5, minOf: (n) => mins[n] || 0, fullOf: (n) => fulls[n] || 0 })[0];
+  assert.equal(timed, '#1–#3 步驟 B（5.5 秒）：04c fs-flow（項目全用上要 7 秒，這裡只放得下幾項）；放不下：08 steps ≥ 6 秒、x-process ≥ 9 秒（真的要用就和前後一行併成一段）');
+  assert.match(M.mapOptions(c.rows.slice(0, 1), sit, specNames, { secsOf: () => 2, minOf: () => 3 })[0], /這一行太短，這一型的模板都放不下/);
+  const cs = Array.from({ length: 5 }, (_, i) => ({ n: i + 1, start: i * 3, end: i * 3 + 2.5 }));
+  assert.equal(M.rowSeconds({ a: 2, z: 3 }, cs), 6, '到下一句開口（--outline 會接上空檔）');
+  assert.equal(M.rowSeconds({ a: 4, z: 5 }, cs), 5.5, '最後一句到它講完');
+  const voiceOnly = specNames.filter((n) => !/^(06|07|08|10|11|15) /.test(n));
+  assert.match(M.mapOptions(c.rows.slice(0, 1), sit, voiceOnly)[0], /^#1–#3 步驟 B：04c fs-flow｜x-process$/, '版式不能用的字卡不列，也不印原文');
+  // 全片：20 行 → 預算 6、最多 8；超過 ✖，開場、結尾沒有 A ⚠，5 分鐘以上沒有視覺語言 ✖
+  const mk = (a, tier, sem = '步驟') => ({ raw: `#${a}`, a, z: a, sem, tier, say: `第 ${a} 句`, note: tier === 'A' ? '理由' : '' });
+  const parts = [{ key: 'ch01', title: '一', firstN: 1, lastN: 10 }, { key: 'ch02', title: '二', firstN: 11, lastN: 20 }];
+  const by = new Map([['ch01', Array.from({ length: 10 }, (_, i) => mk(i + 1, i >= 3 && i < 8 ? 'A' : 'B'))], ['ch02', Array.from({ length: 10 }, (_, i) => mk(i + 11, i < 4 ? 'A' : i >= 6 ? 'C' : 'B', i >= 6 ? '轉場' : '步驟'))]]);
+  const m = M.mergeMaps(parts, by, { videoDur: 600, hasVision: false });
+  assert.deepEqual([m.stats.target, m.stats.cap, m.stats.A], [6, 8, 9]);
+  assert.match(m.errors.join('\n'), /A 9 段，全片最多 8 段/);
+  assert.match(m.errors.join('\n'), /視覺語言\.md/);
+  assert.match(m.warns.join('\n'), /開場/);
+  assert.match(m.warns.join('\n'), /結尾/);
+  assert.match(m.warns.join('\n'), /連續 4 行都是 C/);
+  assert.match(m.md, /## ch02｜二（#11–#20）\n\n#11–#11 \| 步驟 \| A \| 第 11 句 \| 理由/);
+  assert.equal(M.mergeMaps(parts, by, { videoDur: 120 }).errors.length, 1, '不到 5 分鐘不用視覺語言');
+  const w = M.designVsMap([{ id: 's01', n: 1, idea: false }, { id: 'x02', n: 4, idea: true }, { id: 's03', n: 9, idea: true }], [{ a: 1, z: 3, tier: 'A', say: '開場' }, { a: 4, z: 8, tier: 'A', say: '比喻' }, { a: 9, z: 12, tier: 'B', say: 'x' }]);
+  assert.equal(w.length, 2);
+  assert.match(w[0], /#1–#3 是 A（開場）→ 那一段寫候選構想/);
+  assert.match(w[1], /s03 寫了候選構想，但 #9 在地圖上不是 A/);
+});
+
+test('024 語意地圖端到端：--map 驗一份（第一回合不印模板），--map-merge 未通過不寫 _map.json、通過才印第二回合；之後 --map 印每行的模板，--outline 照地圖對候選', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-semmap-'));
+  const proj = path.join(root, 'p'), work = path.join(proj, 'work');
+  fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
+  fs.writeFileSync(path.join(work, 'rough.srt'), makeSrt({ n: 12 }));
+  fs.mkdirSync(path.join(proj, 'assets', 'camera'), { recursive: true });
+  fs.writeFileSync(path.join(proj, 'assets', 'camera', 'a.mp4'), '');
+  const ff = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=25', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '44', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', path.join(work, 'rough.mp4')]);
+  assert.equal(ff.status, 0, String(ff.stderr));
+  const run = (...a) => spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--project', proj, ...a], { encoding: 'utf8' });
+  let r = run('--scaffold');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /第一回合寫 .*ch01\.map\.md/);
+  r = run('--map', 'ch01');
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /找不到地圖/);
+  fs.mkdirSync(path.join(work, 'drafts'), { recursive: true });
+  const map = path.join(work, 'drafts', 'ch01.map.md');
+  fs.writeFileSync(map, '#1–#4 | 情境／故事 | A | 開場的故事 | 理由：勾子\n#5–#8 | 步驟 | B | 三個步驟 | 項目 3\n#9–#12 | 總結 | B | 回顧 | —\n');
+  r = run('--map', 'ch01');
+  assert.equal(r.status, 0, r.stdout);
+  assert.match(r.stdout, /地圖通過：3 行（A 1、B 2、C 0）/);
+  assert.match(r.stdout, /第一回合完成/);
+  assert.doesNotMatch(r.stdout, /08 Step 字卡/, '全片校正前不印模板');
+  r = run('--map-merge');
+  assert.equal(r.status, 0, r.stdout);
+  assert.match(r.stdout, /語意地圖通過/);
+  assert.match(r.stdout, /--merge-drafts$/m);
+  assert.ok(fs.existsSync(path.join(work, '分鏡素材', '語意地圖.md')));
+  r = run('--map', 'ch01');
+  assert.match(r.stdout, /#5–#8 步驟 B（14 秒）：08 steps｜04c fs-flow｜x-process/, "印秒數和能直接寫進大綱的名稱");
+  assert.match(r.stdout, /--outline ch01$/m);
+  fs.writeFileSync(path.join(work, 'drafts', 'ch01.outline.md'), 's0101 | #1 | #5 | key-point | 開場 | —\ns0102 | #5 | #9 | x-process | 步驟 | 人走過三站\ns0103 | #9 | #12e | key-point | 回顧 | —\n');
+  r = run('--outline', 'ch01');
+  assert.match(r.stdout, /地圖上 #1–#4 是 A（開場的故事）→ 那一段寫候選構想/);
+  assert.match(r.stdout, /s0102 寫了候選構想，但 #5 在地圖上不是 A/);
+  assert.doesNotMatch(r.stdout, /三成約/, '有地圖就不照每份三成算');
+  fs.writeFileSync(map, fs.readFileSync(map, 'utf8').replace('| B | 回顧', '| X | 回顧'));
+  r = run('--map-merge');
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /級「X」/);
+  assert.ok(!fs.existsSync(path.join(work, 'drafts', '_map.json')), '沒通過就拿掉 _map.json：第二回合不能開始');
 });

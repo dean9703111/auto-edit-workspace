@@ -5,7 +5,7 @@ import {
   fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss,
 } from './model.mjs';
 import { applyCueOp, remapPlan, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
-import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef } from './text.mjs';
+import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef, toggleEmph } from './text.mjs';
 import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
 import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate, freezeAt, joinAt, isPlain, trimModel } from './speed.mjs';
 import { transitionOf, speedSummary } from './motion.mjs';
@@ -1915,12 +1915,15 @@ function cnt(v, decl) {
   const txt = `${over ? '✖ ' : ''}${n}${max != null ? `／${max}` : ''} 字${overLine ? `（每行 ≤ ${decl.maxLine}）` : ''}${overLines ? `（最多 ${decl.maxLines} 行）` : ''}`;
   return { over, txt };
 }
+// 可強調欄位的「重點」鈕：選字按它（或 ⌘B／Ctrl+B）包成 **詞**（主色），再按一次取消
+const EMPH_KEY = /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘B' : 'Ctrl+B';
+const emphBtn = () => `<button type="button" class="small ghost emph-btn" data-emph data-tip="選字後按這裡（或 ${EMPH_KEY}）標成重點、變主色；游標放在重點裡再按一次取消">重點</button>`;
 function textInput(path, v, decl, label) {
   const c = cnt(v, decl);
   const rich = decl?.type === 'rich';
   const long = (decl?.max ?? 0) > 16 || String(v).length > 16;
   const p = esc(JSON.stringify(path));
-  return `<div class="field"><div class="fl"><span>${esc(label)}${rich ? ' <span class="chip-t">可強調</span>' : ''}</span><span class="cnt${c.over ? ' over' : ''}" data-cnt='${p}'>${c.txt}</span></div>
+  return `<div class="field"><div class="fl"><span>${esc(label)}${rich ? ` <span class="chip-t">可強調</span>${emphBtn()}` : ''}</span><span class="cnt${c.over ? ' over' : ''}" data-cnt='${p}'>${c.txt}</span></div>
     ${long ? `<textarea rows="2" data-path='${p}' data-decl='${esc(JSON.stringify(decl || {}))}'>${esc(v)}</textarea>` : `<input data-path='${p}' data-decl='${esc(JSON.stringify(decl || {}))}' value="${esc(v)}">`}</div>`;
 }
 const isTextDecl = (d) => !d || !d.type || d.type === 'text' || d.type === 'rich';
@@ -2003,7 +2006,8 @@ function listField(k, arr, decl, label) {
     return `<div class="list-item"><span class="no">${i + 1}</span><div class="cols">${cols}${meta ? `<div class="chips meta">${meta}</div>` : ''}</div>
       <button class="small ghost${arr.length <= min ? ' is-disabled' : ''}" data-act="listDel" data-k="${esc(k)}" data-i="${i}" data-why="${arr.length <= min ? `至少要 ${min} 項` : ''}" data-tip="刪除這一項${arr.length <= min ? `（至少要 ${min} 項）` : ''}" aria-label="刪除第 ${i + 1} 項">✕</button></div>`;
   }).join('');
-  return `<div class="field"><div class="fl"><span>${esc(label)}</span><span class="cnt">${arr.length} 項（至少 ${min} 項）</span></div>
+  const richList = Object.values(itemDecl).some((d) => d?.type === 'rich');
+  return `<div class="field"><div class="fl"><span>${esc(label)}${richList ? ` <span class="chip-t">可強調</span>${emphBtn()}` : ''}</span><span class="cnt">${arr.length} 項（至少 ${min} 項）</span></div>
     <div class="list-items">${rows}</div></div>`;
 }
 function inspMedia(it, sc) {
@@ -2866,6 +2870,31 @@ $('#coachFinalClose').addEventListener('click', () => { $('#coachFinal').hidden 
 $('#coachRoughClose').addEventListener('click', () => { $('#coachRough').hidden = true; storage.set(COACH_ROUGH_KEY, '1'); });
 // 屬性面板
 $('#inspBody').addEventListener('input', onInspInput);
+// 重點（**詞**）：最後一個有焦點的可強調輸入框；按鈕按下去不搶焦點，選取範圍才留得住
+let lastRich = null;
+const isRichInput = (el) => el && /^(INPUT|TEXTAREA)$/.test(el.tagName) && (() => { try { return JSON.parse(el.dataset.decl || '{}').type === 'rich'; } catch { return false; } })();
+function applyEmph(el) {
+  if (!isRichInput(el)) return false;
+  const r = toggleEmph(el.value, el.selectionStart ?? 0, el.selectionEnd ?? 0);
+  if (!r) { toast('先選要標成重點的字（已經是重點的，游標放進去再按一次取消）', 'warn'); return true; }
+  el.value = r.value;
+  el.focus();
+  el.setSelectionRange(r.a, r.b);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  return true;
+}
+$('#inspBody').addEventListener('focusin', (e) => { if (isRichInput(e.target)) lastRich = e.target; });
+$('#inspBody').addEventListener('mousedown', (e) => { if (e.target.closest('[data-emph]')) e.preventDefault(); });
+$('#inspBody').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-emph]');
+  if (!b) return;
+  const field = b.closest('.field');
+  const el = lastRich && field?.contains(lastRich) ? lastRich : field?.querySelector('input[data-decl], textarea[data-decl]');
+  applyEmph(el);
+});
+$('#inspBody').addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'b' && isRichInput(e.target)) { e.preventDefault(); e.stopPropagation(); applyEmph(e.target); }
+});
 $('#inspBody').addEventListener('change', onInspChange);
 $('#inspBody').addEventListener('click', onInspClick);
 $('#inspBody').addEventListener('toggle', (e) => { const k = e.target.dataset?.ipfold; if (k) { app.folds[k] = e.target.open; if (k === 'look' && e.target.open) refreshFaces(0); } }, true);

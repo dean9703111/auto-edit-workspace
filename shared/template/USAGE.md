@@ -28,7 +28,7 @@
 |---|---|---|---|---|
 | 1 | 調光瘦臉、素材盤點、構圖（只有聲音就跳過構圖） | `look.mjs status`、`media.mjs scan`、`qc.mjs framing`＋`editor.mjs` | 第 7 節、2.2、第 5 節 | **停點 ②** |
 | 2 | 量講者框、產生分鏡素材 | `qc.mjs speaker --write`、`build.mjs --scaffold` | 2.2 | |
-| 3 | 分章寫草稿（一份一個子代理：大綱 → 骨架）、合併（通過就接著做第 5 步） | `build.mjs --outline chNN`、`build.mjs --check-draft chNN`、`build.mjs --merge-drafts` | `work/分鏡素材/` | |
+| 3 | 分章寫分鏡（一份一個子代理）：第一回合語意地圖 → 主代理全片校正 → 第二回合草稿（大綱 → 骨架）、合併（通過就接著做第 5 步） | `build.mjs --map chNN`、`build.mjs --map-merge`、`build.mjs --outline chNN`、`build.mjs --check-draft chNN`、`build.mjs --merge-drafts` | `work/分鏡素材/`、style.md「分章」 | |
 | 4 | （只有事先指定要做的內容設計動畫）寫鏡位腳本；其他值得設計的段在草稿標候選，③ 勾了才做 | `auto-edit-motion` 的 `references/design-script.md` | style.md「內容設計動畫」 | |
 | 5 | 截圖、產生分鏡表（內容設計動畫候選有預估時間、預算內預設勾） | `build.mjs --storyboard`（`--merge-drafts` 已經接著做了就跳過） | 2.3 | **停點 ③** |
 | 6 | 套回修改；勾了的內容設計動畫：設計師寫鏡位腳本、從空白畫布做；等設計師時看進度 | `build.mjs --apply-storyboard`；`audit.mjs --only <段> --shots --sheet`；`build.mjs --design-status` | | |
@@ -272,7 +272,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 ### 3.5 卡片文字
 
-- `**詞**` 套主色（一張卡 1–2 個）；`//` 是手動斷行，斷在語意處。兩個都只在 `--list` 標 `rich` 的欄位有效。字數算法：全形 1、半形 0.5，`**` 與 `//` 不算。
+- `**詞**` 套主色（一張卡 1–2 個；清單、條列每項最多 1 個，標那一項最該記住的詞，例 `**Node.js** 跑動畫的環境`；使用者在剪輯台選字按「重點」或 ⌘B／Ctrl+B 可以加、可以取消）；`//` 是手動斷行，斷在語意處。兩個都只在 `--list` 標 `rich` 的欄位有效。字數算法：全形 1、半形 0.5，`**` 與 `//` 不算。
 - 清單項目寫字串（`"初剪：移除多餘"`）或物件（`{ "text": "**Whisper** 轉字幕", "at": "#19" }`）。有圖示、表格的寫法見 R2。
 - **字數有兩道限制**：`--list` 的上限（版面放得下的極限，超過 build 會 ✖）；`style.md` 的「字卡文字 8–14 字」（**build 不檢查，要自己數**）。主句（正文、key、金句）以 8–14 字為準。
 - 文案傾向（具體實例優先、動詞放前面）照 `style.md`「字卡文字」。
