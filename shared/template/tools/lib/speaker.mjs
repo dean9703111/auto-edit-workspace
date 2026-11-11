@@ -1,29 +1,30 @@
-// 講者資料（零依賴）：shared/講者.json＝創作者自己的姓名、頭銜（不進版控；範本 shared/講者.example.json）
+// 講者資料（零依賴）：shared/setting.json 的 speaker＝創作者自己的姓名、頭銜（不進版控；範本 shared/setting.example.json；讀寫走 lib/settings.mjs）
 //
-//   { "name": "林大寶", "short": "大寶", "titles": ["影音創作者", "科技部落客", "線上課程講師"] }   設定好
-//   { "off": true }                                                                              關閉：不放 14 講者介紹
-//   檔案不存在                                                                                   還沒設定：14 用 scene.json 的示範人物，--check 會 ⚠ 提醒
+//   "speaker": { "name": "林大寶", "short": "大寶", "titles": ["影音創作者", "科技部落客", "線上課程講師"] }   設定好
+//   "speaker": { "off": true }                                                                              關閉：不放 14 講者介紹
+//   沒有 speaker（也沒有舊版的 shared/講者.json）                                                             還沒設定：14 用 scene.json 的示範人物，--check 會 ⚠ 提醒
 //
 //   readSpeaker(templateDir)          → { state: 'set'|'off'|'unset'|'bad', name, short, titles, file, error }
 //   applySpeaker(scenes, sp)          → 設定好時把 14 的 name／titles、15 的 by 預設值換成講者資料（不改原物件）
 //   speakerIssues(sp, res)            → { errors, warnings }：plan 裡的 14 講者介紹對照講者資料
 //   validateSpeaker({ name, short, titles }) → 錯誤訊息陣列（字數上限照 14 講者介紹、15 金句的 scene.json）
 //   speakerGate(templateDir, plan)    → { needed, demo, segments, state, … }：這份 plan 輸出後，畫面上會不會是示範人物（輸出前的確認用）
-//   saveSpeaker(templateDir, input)   → { errors, file }：寫 shared/講者.json（剪輯頁輸出前的確認、分鏡表頂端的提醒用；brand.mjs speaker 同一份格式）
+//   saveSpeaker(templateDir, input)   → { errors, file }：寫 shared/setting.json 的 speaker（剪輯頁輸出前的確認、分鏡表頂端的提醒用；brand.mjs speaker 同一份格式）
 //   SET_CMD                           → 設定講者的指令（提醒訊息共用）
 //
 // 示範人物「林大寶」只有一個來源：scenes/14-speaker/scene.json 的 slots.name.default、slots.titles.default（情境庫預覽用）。
-// shared/講者.json 不存在、段落也沒寫 slots.name 時，14 講者介紹就用這組預設值，所以真實影片會出現別人的名字：輸出前一定要問過使用者。
-import fs from 'node:fs';
+// 講者還沒設定、段落也沒寫 slots.name 時，14 講者介紹就用這組預設值，所以真實影片會出現別人的名字：輸出前一定要問過使用者。
 import path from 'node:path';
 import { visibleLen, loadScenes, findScene } from './scenes.mjs';
+import { readSettings, writeSetting, SETTINGS_FILE, SETTINGS_EXAMPLE } from './settings.mjs';
 
-export const SPEAKER_FILE = '講者.json';
-export const SPEAKER_EXAMPLE = '講者.example.json';
+export const SPEAKER_FILE = SETTINGS_FILE;         // 訊息裡印的檔名：shared/setting.json
+export const SPEAKER_EXAMPLE = SETTINGS_EXAMPLE;
 export const SET_CMD = 'node shared/template/tools/brand.mjs speaker --name "<姓名>" --titles "<頭銜1>,<頭銜2>"';
 export const LIMITS = { name: 5, short: 10, titles: 6, maxTitles: 3 };
 
-export const speakerFile = (templateDir) => path.join(path.resolve(templateDir, '..'), SPEAKER_FILE);
+const sharedOf = (templateDir) => path.resolve(templateDir, '..');
+export const speakerFile = (templateDir) => path.join(sharedOf(templateDir), SPEAKER_FILE);
 
 export function validateSpeaker({ name, short, titles }) {
   const e = [];
@@ -39,10 +40,10 @@ export function validateSpeaker({ name, short, titles }) {
 }
 
 export function readSpeaker(templateDir) {
-  const file = speakerFile(templateDir);
-  if (!fs.existsSync(file)) return { state: 'unset', file };
-  let j;
-  try { j = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return { state: 'bad', file, error: `不是合法的 JSON（${e.message}）` }; }
+  const { data, file, error } = readSettings(sharedOf(templateDir));
+  if (error) return { state: 'bad', file, error };
+  const j = data.speaker;
+  if (j === undefined) return { state: 'unset', file };
   if (j && j.off === true) return { state: 'off', file };
   const sp = { name: String(j?.name ?? '').trim(), short: j?.short != null ? String(j.short).trim() : null, titles: Array.isArray(j?.titles) ? j.titles.map((t) => String(t).trim()).filter(Boolean) : [] };
   const errs = validateSpeaker(sp);
@@ -82,10 +83,7 @@ export function saveSpeaker(templateDir, { name, titles, short } = {}) {
   if (short != null && String(short).trim()) data.short = String(short).trim();
   const errors = validateSpeaker(data);
   if (errors.length) return { errors, file: null };
-  const file = speakerFile(templateDir);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
-  return { errors: [], file };
+  try { return { errors: [], file: writeSetting(sharedOf(templateDir), 'speaker', data) }; } catch (e) { return { errors: [e.message], file: null }; }
 }
 
 export function speakerIssues(sp, res) {

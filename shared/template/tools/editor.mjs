@@ -1349,7 +1349,7 @@ export async function startEditor({ flags = {}, cwd = process.cwd(), port, write
   const ctx = makeContext(P);
   ctx.previewDir = previewDir || path.join(P.templateDir, 'preview');
   ctx.exportDeps = exportDeps;
-  ctx.speakerTemplate = speakerTemplate;   // 測試指到暫存的 shared/template，不動真的 shared/講者.json
+  ctx.speakerTemplate = speakerTemplate;   // 測試指到暫存的 shared/template，不動真的 shared/setting.json
   const server = http.createServer((req, res) => {
     handle(ctx, req, res).catch((e) => { if (!res.headersSent) sendJson(res, 500, { error: 'internal', message: e.message }); else res.end(); });
   });

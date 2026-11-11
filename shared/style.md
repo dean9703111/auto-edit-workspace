@@ -20,7 +20,7 @@
 
 ## 講者
 
-14 講者介紹字卡的姓名、頭銜（和 15 金句的出處）放在 `shared/講者.json`：每個人本機各一份、不進版控，更新工作區不會被蓋掉。範本是 `shared/講者.example.json`（示範人物林大寶）。
+14 講者介紹字卡的姓名、頭銜（和 15 金句的出處）放在 `shared/setting.json`：每個人本機各一份、不進版控，更新工作區不會被蓋掉。範本是 `shared/setting.example.json`（示範人物林大寶）。
 
 - 設定：`node shared/template/tools/brand.mjs speaker --name "<姓名>" --titles "<頭銜1>,<頭銜2>"`（姓名最多 5 字；頭銜 1–3 個，每個最多 6 字；`--short` 是金句出處，不給＝姓名）
 - 不放講者介紹：`node shared/template/tools/brand.mjs speaker off`

@@ -675,7 +675,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const versions = { hyperframes: { pinned: hfv.pinned, installed: hfv.installed, ok: hfv.ok } };
   const lib = loadLib(P.templateDir);
   if (!lib.scenes.length) throw new Error(`找不到情境模板：${rel(path.join(P.templateDir, 'scenes'))}`);
-  // 講者資料（shared/講者.json）：14 講者介紹的姓名、頭銜與 15 金句的出處預設值；沒設定就用 scene.json 的示範人物並提醒
+  // 講者資料（shared/setting.json）：14 講者介紹的姓名、頭銜與 15 金句的出處預設值；沒設定就用 scene.json 的示範人物並提醒
   const speaker = readSpeaker(P.templateDir);
   lib.scenes = applySpeaker(lib.scenes, speaker);
   // 情境動畫模板段（template＋slots）：產生 compositions/<模板>-<段>.html，之後和手寫的 x 檔走同一條路（lib/custom-fill.mjs）

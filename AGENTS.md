@@ -35,7 +35,7 @@
 | `projects/<專案>/講稿.md` | 講稿（選用） | 只能讀 |
 | `assets/camera/`、`assets/voice/` | 主軌：真人錄影（有畫面有聲音）、聲音（只有聲音，沒有畫面） | 只能讀，不可覆寫、移動或刪除 |
 | `assets/screen/`、`assets/images/` | 插入用：螢幕錄影（預設靜音；邊錄邊講的接進主軌）、截圖與照片 | 同上 |
-| `work/`（含 `versions/<段>/`） | 中間產物 | AI 可新增、修改 |
+| `work/`（含 `versions/<段>/`） | 中間產物；`work/摘要.md` 是初剪完成後寫的影片摘要（300 字內，生成這一集的背景圖時參考） | AI 可新增、修改 |
 | `work/hyperframes/plan.json` | 完成影片的設定：段落 `scenes`、構圖 `frame`、調光 `look` | 只有主代理能寫；看一段用 `build.mjs --show <段>`，不要整份讀 |
 | `output/` | `final.mp4`、`test-clips/`、`qc/`、`capcut/` | AI 可新增 |
 | `.agents/skills/`、`setup/`、`shared/` | Skill、環境手冊、共用模板與工具、音效（只能從 `shared/sfx/` 挑） | 只能讀（例外見規則 1） |
@@ -47,7 +47,7 @@
 
 ## 規則
 
-1. 不要覆寫、移動或刪除 `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/講者.json`。我確認某條規則以後每一集都照做時，用 `status.mjs --prefs-add` 寫 `shared/偏好.md`（不要手動改這個檔）。我說子代理一次派幾個時，用 `status.mjs --agents` 寫 `shared/設定.json`。構圖台的「用這一格當預覽參考圖」會寫 `shared/template/preview/speaker-local.jpg`（直式 `speaker-v-local.jpg`；不進版控）。要刪除 `work/` 以外的檔案前，先問我。
+1. 不要覆寫、移動或刪除 `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/setting.json`。我確認某條規則以後每一集都照做時，用 `status.mjs --prefs-add` 寫 `shared/偏好.md`（不要手動改這個檔）。我說子代理一次派幾個時，用 `status.mjs --agents` 寫 `shared/setting.json`。構圖台的「用這一格當預覽參考圖」會寫 `shared/template/preview/speaker-local.jpg`（直式 `speaker-v-local.jpg`；不進版控）。要刪除 `work/` 以外的檔案前，先問我。
 2. 停點只有六個，照「停點總表」；停下來時回覆最後兩行照固定格式。我說「不用停」「跑到停點 N」才連跑。
 3. 安裝新工具前，先告訴我指令和用途，等我同意再執行。照 `setup/` 手冊做時，整份清單問一次就好。
 4. 字幕以專案的 `講稿.md` 為準，由 `media.mjs srt-align` 照講稿排、對時間：講稿一行原則上是一則（完整語句），太長、太短由工具拆、併，不要自己拆句或併句。之後要改字（講稿本身的錯字、講稿沒有的 whisper 殘字），就在剪輯台或 `work/rough.srt` 改那一則字幕，只改字、不拆不併；不改 `講稿.md`，也不用重跑 `srt-align`。顯示時去掉「，」「。」「；」「：」，保留「、」「！」「？」；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿時工具會轉繁體、照標點切成子句，你不用補標點，也不要猜內容。

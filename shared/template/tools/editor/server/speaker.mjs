@@ -1,5 +1,5 @@
-// 講者設定（輸出前的確認、分鏡表與剪輯頁的提醒）：畫面上還是示範人物時給使用者填姓名與頭銜，寫 shared/講者.json（brand.mjs speaker 同一份格式）。
-// 測試用 ctx.speakerTemplate 指到暫存的 shared/template，不動真的 shared/講者.json。
+// 講者設定（輸出前的確認、分鏡表與剪輯頁的提醒）：畫面上還是示範人物時給使用者填姓名與頭銜，寫 shared/setting.json（brand.mjs speaker 同一份格式）。
+// 測試用 ctx.speakerTemplate 指到暫存的 shared/template，不動真的 shared/setting.json。
 import fs from 'node:fs';
 import path from 'node:path';
 import { speakerGate, saveSpeaker } from '../../lib/speaker.mjs';

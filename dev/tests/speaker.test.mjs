@@ -1,4 +1,4 @@
-// 講者資料（shared/講者.json）：讀檔三種狀態、套進 14／15 的預設值、--check 的提醒、brand.mjs speaker
+// 講者資料（shared/setting.json）：讀檔三種狀態、套進 14／15 的預設值、--check 的提醒、brand.mjs speaker
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,25 +12,25 @@ const { resolveScene } = await imp('lib/scenes.mjs');
 const L = await lib();
 const scene = (scenes, k) => scenes.find((s) => s.key === k);
 
-// 假的 shared/：<tmp>/shared/template/kit（brand.mjs --kit 用）＋ <tmp>/shared/講者.json
+// 假的 shared/：<tmp>/shared/template/kit（brand.mjs --kit 用）＋ <tmp>/shared/setting.json（data 放在 speaker；字串＝整個檔的原文）
 function fakeShared(data) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'speaker-'));
   const tpl = path.join(dir, 'shared', 'template');
   fs.mkdirSync(path.join(tpl, 'kit'), { recursive: true });
-  if (data !== undefined) fs.writeFileSync(path.join(dir, 'shared', '講者.json'), typeof data === 'string' ? data : JSON.stringify(data));
-  return { tpl, kit: path.join(tpl, 'kit'), file: path.join(dir, 'shared', '講者.json') };
+  if (data !== undefined) fs.writeFileSync(path.join(dir, 'shared', 'setting.json'), typeof data === 'string' ? data : JSON.stringify({ speaker: data }));
+  return { tpl, kit: path.join(tpl, 'kit'), file: path.join(dir, 'shared', 'setting.json'), dir: path.join(dir, 'shared') };
 }
 const brand = (kit, ...args) => spawnSync(process.execPath, [path.join(TOOLS, 'brand.mjs'), 'speaker', ...args, '--kit', kit], { encoding: 'utf8' });
 
-test('模板預設是示範人物（不是作者本人），範本檔和模板一致、講者.json 不進版控', () => {
+test('模板預設是示範人物（不是作者本人），範本檔和模板一致、setting.json 不進版控', () => {
   const sp = scene(L.scenes, 'speaker').slots;
   assert.equal(sp.name.default, '林大寶');
   assert.deepEqual(sp.titles.default, ['影音創作者', '科技部落客', '線上課程講師']);
-  const ex = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'shared', S.SPEAKER_EXAMPLE), 'utf8'));
+  const ex = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'shared', S.SPEAKER_EXAMPLE), 'utf8')).speaker;
   assert.equal(ex.name, sp.name.default);
   assert.deepEqual(ex.titles, sp.titles.default);
   assert.deepEqual(S.validateSpeaker(ex), []);
-  assert.match(fs.readFileSync(path.join(WORKSPACE, '.gitignore'), 'utf8'), /^shared\/講者\.json$/m);
+  assert.match(fs.readFileSync(path.join(WORKSPACE, '.gitignore'), 'utf8'), /^shared\/setting\.json$/m);
   for (const f of ['scenes/14-speaker/scene.json', 'scenes/15-quote/scene.json', 'kit/scene.css']) assert.ok(!/林鼎淵|鼎淵|外商工程師/.test(fs.readFileSync(path.join(TEMPLATE, f), 'utf8')), `${f} 不能有作者本人的資料`);
 });
 
@@ -67,7 +67,7 @@ test('speakerIssues：沒設定 ⚠、關閉 ✖、名字不同 ⚠（來賓）�
   assert.deepEqual(S.speakerIssues({ state: 'unset' }, res({ name: '陳大文' })).warnings, [], '自己寫了 name 就不提醒');
   assert.match(S.speakerIssues({ state: 'off' }, res()).errors[0], /設定成不放講者介紹/);
   const guest = S.speakerIssues({ state: 'set', name: '陳大文' }, res({ name: '李來賓' }));
-  assert.match(guest.warnings[0], /姓名「李來賓」和 shared\/講者\.json 的「陳大文」不同/);
+  assert.match(guest.warnings[0], /姓名「李來賓」和 shared\/setting\.json 的「陳大文」不同/);
   assert.deepEqual(S.speakerIssues({ state: 'set', name: '陳大文' }, res()), { errors: [], warnings: [] });
   assert.equal(S.speakerIssues({ state: 'bad', error: 'x' }, res()).errors.length, 1);
   assert.deepEqual(S.speakerIssues({ state: 'bad', error: 'x' }, { items: [] }).errors, []);
@@ -78,15 +78,15 @@ test('brand.mjs speaker：看設定、設定（逗號或「、」分頭銜）、
   assert.match(brand(f.kit).stdout, /還沒設定講者/);
   const set = brand(f.kit, '--name', '陳大文', '--titles', '設計師、插畫家', '--short', '大文');
   assert.equal(set.status, 0, set.stderr);
-  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')), { name: '陳大文', short: '大文', titles: ['設計師', '插畫家'] });
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')).speaker, { name: '陳大文', short: '大文', titles: ['設計師', '插畫家'] });
   assert.match(brand(f.kit).stdout, /講者：陳大文（金句出處：大文）｜頭銜：設計師、插畫家/);
   assert.equal(brand(f.kit, '--titles', '設計師,插畫家,講師').status, 0, '只改頭銜，姓名與簡稱留著');
-  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')), { name: '陳大文', short: '大文', titles: ['設計師', '插畫家', '講師'] });
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')).speaker, { name: '陳大文', short: '大文', titles: ['設計師', '插畫家', '講師'] });
   const bad = brand(f.kit, '--name', '陳大文', '--titles', '一二三四五六七');
   assert.equal(bad.status, 1);
   assert.match(bad.stderr, /每個最多 6 字/);
   assert.equal(brand(f.kit, 'off').status, 0);
-  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')), { off: true });
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')).speaker, { off: true });
   assert.match(brand(f.kit).stdout, /講者介紹：關閉/);
 });
 
@@ -120,6 +120,31 @@ test('saveSpeaker：頓號逗號都能分頭銜、字數照 scene.json、不合�
   assert.match(S.saveSpeaker(f.tpl, { name: '陳大文', titles: '' }).errors[0], /頭銜至少 1 個/);
   assert.equal(fs.existsSync(f.file), false);
   assert.deepEqual(S.saveSpeaker(f.tpl, { name: ' 陳大文 ', titles: '設計師、插畫家, 講師' }).errors, []);
-  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')), { name: '陳大文', titles: ['設計師', '插畫家', '講師'] });
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')).speaker, { name: '陳大文', titles: ['設計師', '插畫家', '講師'] });
   assert.equal(S.readSpeaker(f.tpl).state, 'set');
+});
+
+test('設定集中在 shared/setting.json：只改一個 key、其他留著；檔案壞了不蓋掉；舊版 shared/講者.json 照樣讀得到，下一次寫設定時搬進來', async () => {
+  const K = await imp('lib/settings.mjs'), A = await imp('lib/agents.mjs');
+  const f = fakeShared({ name: '陳大文', titles: ['設計師'] });
+  assert.equal(A.saveAgentLimit(f.dir, 6).n, 6);
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')), { speaker: { name: '陳大文', titles: ['設計師'] }, agents: 6 }, '寫 agents 不動 speaker');
+  assert.equal(S.saveSpeaker(f.tpl, { name: '李小明', titles: '講師' }).errors.length, 0);
+  assert.deepEqual(JSON.parse(fs.readFileSync(f.file, 'utf8')), { speaker: { name: '李小明', titles: ['講師'] }, agents: 6 }, '寫 speaker 不動 agents');
+  K.writeSetting(f.dir, 'agents', undefined);
+  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(f.file, 'utf8'))), ['speaker'], 'undefined＝拿掉這個設定');
+  // 檔案壞了：讀是 bad，寫會擋下來
+  const bad = fakeShared('{ 壞掉');
+  assert.match(K.readSettings(bad.dir).error, /不是合法的 JSON/);
+  assert.throws(() => A.saveAgentLimit(bad.dir, 6), /修好這個檔再設定/);
+  assert.equal(fs.readFileSync(bad.file, 'utf8'), '{ 壞掉', '不蓋掉使用者的檔');
+  assert.match(S.saveSpeaker(bad.tpl, { name: '李小明', titles: '講師' }).errors[0], /修好這個檔再設定/);
+  // 舊版
+  const old = fakeShared();
+  fs.writeFileSync(path.join(old.dir, '講者.json'), JSON.stringify({ name: '王舊版', titles: ['作者'] }));
+  assert.equal(S.readSpeaker(old.tpl).name, '王舊版', '還沒有 setting.json：讀舊檔');
+  A.saveAgentLimit(old.dir, 3);
+  assert.deepEqual(JSON.parse(fs.readFileSync(old.file, 'utf8')), { speaker: { name: '王舊版', titles: ['作者'] }, agents: 3 }, '寫設定時把舊檔的講者搬進來');
+  fs.writeFileSync(path.join(old.dir, '講者.json'), JSON.stringify({ name: '不該讀', titles: ['x'] }));
+  assert.equal(S.readSpeaker(old.tpl).name, '王舊版', 'setting.json 有 speaker 之後不再讀舊檔');
 });

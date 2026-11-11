@@ -116,6 +116,31 @@ test('生圖風格：參考圖保留設計語言，指定風格有具體差異�
   assert.match(tech.request.prompt, /A 正交網格、B 電路節點、C 等角線框/);
 });
 
+test('影片摘要：有 work/摘要.md 時生圖指令預設帶上，取消勾選就不帶；沒有或格式不對時說明原因', async () => {
+  const file = path.join(work, '摘要.md');
+  const none = await ok('/api/design/request', { description: '摘要測試' });
+  assert.doesNotMatch(none.request.prompt, /這支影片在講/);
+  assert.equal(none.summary.ready, false);
+  assert.match(none.summary.note, /還沒有影片摘要/);
+  fs.writeFileSync(file, '# 影片摘要\n\n用 AI 把重複的工作做成自己的小工具，講給沒有技術背景的上班族聽。\n\n- 痛點：手動整理幾百則留言\n- 解法：隔離環境裡讓 AI 自己跑\n');
+  const used = await ok('/api/design/request', { description: '摘要測試' });
+  assert.notEqual(used.request.id, none.request.id, '摘要出現：重新產生指令');
+  assert.equal(used.summary.ready, true);
+  assert.equal(used.request.useSummary, true);
+  assert.match(used.request.prompt, /這支影片在講（背景的意象、氛圍要呼應它；只取意象，不要畫出文字、人物或具體的介面）：\n用 AI 把重複的工作做成自己的小工具/);
+  assert.match(used.request.prompt, /- 解法：隔離環境裡讓 AI 自己跑/);
+  assert.doesNotMatch(used.request.prompt, /# 影片摘要/, '標題不帶進指令');
+  const off = await ok('/api/design/request', { description: '摘要測試', useSummary: false });
+  assert.equal(off.request.useSummary, false);
+  assert.doesNotMatch(off.request.prompt, /這支影片在講/);
+  fs.writeFileSync(file, '只有一句話，沒有列點');
+  const bad = await ok('/api/design/request', { description: '摘要測試' });
+  assert.equal(bad.summary.ready, false);
+  assert.match(bad.summary.note, /影片摘要格式不對：列點只有 0 個/);
+  assert.doesNotMatch(bad.request.prompt, /這支影片在講/);
+  fs.rmSync(file);
+});
+
 test('生圖指令：直接生成全部九張並存檔，每類背景可獨立選擇與混搭', async () => {
   const old = (await get('/api/design')).draft.id;
   const prepared = await ok('/api/design/request', { scope: 'current', kind: 'fs', description: '安靜的紙感，邊緣有細線' });

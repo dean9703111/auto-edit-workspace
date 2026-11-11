@@ -5,8 +5,8 @@
   "aliases": ["講者", "講師", "講者介紹", "自我介紹"],
   "family": "lower-third",
   "portrait": "move",
-  "when": "講者第一次自我介紹，一集只用一次；name、titles 不寫＝shared/講者.json 的講者資料（還沒設定時是示範人物林大寶，--check 會提醒）",
-  "avoid": "shared/講者.json 設定成不放講者介紹（{ \"off\": true }）、畫面上已經有其他姓名框，或同一集第二次出現",
+  "when": "講者第一次自我介紹，一集只用一次；name、titles 不寫＝shared/setting.json 的講者資料（還沒設定時是示範人物林大寶，--check 會提醒）",
+  "avoid": "shared/setting.json 設定成不放講者介紹（{ \"off\": true }）、畫面上已經有其他姓名框，或同一集第二次出現",
   "layout": { "data-layout": "滿版", "data-backdrop": "none", "data-top": "520", "data-vbal-ignore": "" },
   "surface": null,
   "bindsSrt": true,
@@ -15,8 +15,8 @@
   "tone": true,
   "slots": {
     "tag":    { "label": "標籤", "type": "text", "default": "講師", "max": 4 },
-    "name":   { "label": "姓名", "type": "text", "default": "林大寶", "max": 5, "note": "不填＝shared/講者.json 的 name" },
-    "titles": { "label": "頭銜", "type": "list", "min": 1, "maxItems": 3, "default": ["影音創作者", "科技部落客", "線上課程講師"], "note": "不填＝shared/講者.json 的 titles", "item": { "text": { "label": "頭銜", "type": "text", "required": true, "max": 6 } } }
+    "name":   { "label": "姓名", "type": "text", "default": "林大寶", "max": 5, "note": "不填＝shared/setting.json 的 name" },
+    "titles": { "label": "頭銜", "type": "list", "min": 1, "maxItems": 3, "default": ["影音創作者", "科技部落客", "線上課程講師"], "note": "不填＝shared/setting.json 的 titles", "item": { "text": { "label": "頭銜", "type": "text", "required": true, "max": 6 } } }
   },
   "beats": {
     "in": { "label": "進場", "default": "0" }

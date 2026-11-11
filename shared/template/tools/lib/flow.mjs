@@ -12,7 +12,7 @@ import { canvasOf, resolveFormat } from './canvas.mjs';
 import { alignOutline, scriptOutline, splitParts, renderCommon, renderSnippets, renderPart, renderSemantic, designTarget, designTargetOf, designEligible, designCap, semanticTypes, situationRows } from './scaffold.mjs';
 import { readPrefs } from './prefs.mjs';
 import { agentLimit } from './agents.mjs';
-const agentsOf = (P) => agentLimit(path.resolve(P.templateDir, '..'));   // 子代理一次最多派幾個（shared/設定.json；預設 10）
+const agentsOf = (P) => agentLimit(path.resolve(P.templateDir, '..'));   // 子代理一次最多派幾個（shared/setting.json；預設 10）
 import { parseMap, checkMap, mapOptions, mergeMaps, designVsMap, rowSeconds } from './semantic-map.mjs';
 import { listFillSpecs, designFileOf, illusNames, isBlankDesign } from './custom-fill.mjs';
 import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn } from './storyboard-gen.mjs';

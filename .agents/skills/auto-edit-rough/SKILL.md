@@ -12,6 +12,7 @@ version: 0.2.0
 |---|---|---|---|---|
 | `assets/camera/`、`assets/voice/` | 步驟 1 | `work/main.mp4`、`work/transcript-main.json`、`work/cuts.md`、`work/media/`（有素材時）、剪輯清單網址 | 印出停點 ① 那一行 | ① 剪輯清單 |
 | ① 通過 | 步驟 2 | `work/rough.mp4`、`work/rough.srt`、`work/transcript.json`、`work/cutpoints.json` | 印出驗證那幾行，verify-rough ✓ | — |
+| 初剪完成 | 步驟 3 | `work/摘要.md`（影片摘要，300 字內） | `status.mjs --summary` 印 ✓ | — |
 
 **這兩條指令會在背景跑，長片也不會因為 shell 逾時中斷**：結束碼 75 表示還在跑，再跑一次同一條會接著等，不會重跑。其他步驟（接主軌、轉逐字稿、找 NG、auto-editor、對字幕、剪接點）工具都做了，不要自己拆開跑、不要算秒數、不要拼 auto-editor 指令。
 
@@ -57,7 +58,27 @@ node shared/template/tools/media.mjs rough --project projects/<專案> --said "�
 完成判準：印「初剪完成」「srt-align」「剪接點」「驗證」四行，verify-rough ✓。
 常見錯誤：⚠ 剪掉比例過高 → 你聽不到聲音，不要自己分析音訊。把 ⚠ 原文貼給使用者，請他在字幕預覽聽開頭 1 分鐘，照常往下做；使用者說尾音被切，才跑 `node shared/template/tools/media.mjs rough --project projects/<專案> --edit "audio:-26dB" --again`，還切到再改 `-30dB`。plan.json 已經用 #N 時字幕改動 ✖ → 加 `--remap-plan`。
 
-**3. 接下一步**
+**3. 寫影片摘要**
+
+讀 `work/rough.srt`（有 `講稿.md` 就讀講稿），寫 `projects/<專案>/work/摘要.md`：這支影片在講什麼。之後生成這一集的背景圖時會參考（構圖台「參考這支影片的重點摘要」，預設勾選，使用者可以取消）。
+
+```markdown
+<一到兩句：在講什麼、講給誰聽、語氣（輕鬆、嚴肅、熱血…）>
+
+- <重點>
+- <重點>
+```
+
+300 字內（不算空白和記號），列點 2–6 個。只寫內容和氛圍，不寫模板、版面或畫面指示。沒有講稿時逐字稿會有錯字，照意思寫正確的詞（產品名、人名拿不準就照字幕原文）。寫完驗：
+
+```
+node shared/template/tools/status.mjs --project projects/<專案> --summary
+```
+
+完成判準：印 `✓ 摘要：<N> 字`。✖ 照它說的改，再跑一次。
+常見錯誤：把字幕照抄成一大段 → 只留觀眾最該記住的幾件事；超過 300 字 → 刪次要的列點。
+
+**4. 接下一步**
 
 ```
 node shared/template/tools/status.mjs --project projects/<專案>
@@ -89,6 +110,7 @@ node shared/template/tools/status.mjs --project projects/<專案>
 - [ ] 沒有自己拆開跑工具已經串好的步驟
 - [ ] 多支主軌的順序在停點 ① 問過
 - [ ] verify-rough 印 ✓
+- [ ] `work/摘要.md` 寫了，`status.mjs --summary` 印 ✓
 - [ ] 回報的每一行都是工具印的原文
 - [ ] 沒做波形比對、VAD、拆段重新轉錄（本檔「判準與數字」）
 
@@ -104,7 +126,7 @@ node shared/template/tools/status.mjs --project projects/<專案>
 
 ## 工具呼叫預算
 
-到停點 ① 最多 4 次；① 之後到回報最多 4 次。超過就停下來回報卡在哪。
+到停點 ① 最多 4 次；① 之後到回報最多 7 次（含讀字幕、寫摘要、驗摘要）。超過就停下來回報卡在哪。
 
 ## 回報格式
 
@@ -116,7 +138,7 @@ node shared/template/tools/status.mjs --project projects/<專案>
 <停點 ① 那一行原文>
 ```
 
-剪完貼工具印的這五行，最後附初剪的連結（AGENTS.md 規則 6）：
+剪完貼工具印的這五行和摘要那一行，最後附初剪的連結（AGENTS.md 規則 6）：
 
 ```
 初剪完成：原始 <長度>s → 初剪 <長度>s，剪掉 <N> 段
@@ -124,6 +146,7 @@ srt-align：<統計原文>；⚠：<原文或「無」>
 剪接點 <N> 個：ng <N>、pause <N>
 驗證：work/rough.mp4 → <長度>s、<寬>×<高>；verify-rough → ✓
 字幕預覽：<網址>
+✓ 摘要：<N> 字（<工具原文>）
 <deliver-assets><media type="video" src="<工作區的絕對路徑>/projects/<專案>/work/rough.mp4" /></deliver-assets>
 ```
 

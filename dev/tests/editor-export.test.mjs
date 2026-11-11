@@ -243,7 +243,7 @@ test('輸出前確認講者：畫面上還是示範人物就擋下來，照樣�
   assert.match(done.warnings[0], /^講者介紹還是示範人物「林大寶」（s0101）/);
 
   // 字數不對：擋下、不寫檔；存好之後就不再問
-  const file = path.join(root, 'shared', '講者.json');
+  const file = path.join(root, 'shared', 'setting.json');
   const bad = await post('/api/speaker', { name: '一二三四五六', titles: '講師' });
   assert.equal(bad.status, 400);
   assert.match((await bad.json()).message, /最多 5 字/);
@@ -251,7 +251,7 @@ test('輸出前確認講者：畫面上還是示範人物就擋下來，照樣�
   const ok = await post('/api/speaker', { name: '鼎淵', titles: '工程師、講師' });
   assert.equal(ok.status, 200);
   assert.equal((await ok.json()).speaker.needed, false);
-  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { name: '鼎淵', titles: ['工程師', '講師'] });
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { speaker: { name: '鼎淵', titles: ['工程師', '講師'] } });
   assert.equal((await post('/api/export')).status, 200);
   const again = await finished();
   assert.equal(again.ok, true);

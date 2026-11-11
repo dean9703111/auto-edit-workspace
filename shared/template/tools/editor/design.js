@@ -119,6 +119,13 @@ function render() {
   for (const zone of document.querySelectorAll('label[for="backgroundUpload"], label[for="referenceUpload"]')) zone.setAttribute('aria-disabled', String(busy));
   for (const b of document.querySelectorAll('[data-brand]')) b.disabled = busy;
   $('copyDesignPrompt').textContent = copiedRequestId && copiedRequestId === state.request?.id ? '已複製，貼給 AI 生圖' : '複製生圖指令';
+  // 影片摘要：有就可以勾（預設勾）、看得到內容；沒有就說明原因
+  const sm = state.summary || { ready: false, text: '', note: '' };
+  $('designUseSummary').disabled = busy || !sm.ready;
+  $('designSummaryDetails').hidden = !sm.ready;
+  $('designSummaryText').textContent = sm.text;
+  $('designSummaryNote').hidden = sm.ready || !sm.note;
+  $('designSummaryNote').textContent = sm.note;
   renderGenerationStatus();
   $('brandColor').value = state.draft.color;
   if (document.activeElement !== $('brandHex')) $('brandHex').value = state.draft.color;
@@ -188,7 +195,7 @@ for (const button of document.querySelectorAll('[data-category]')) button.addEve
   for (const b of document.querySelectorAll('[data-category]')) b.setAttribute('aria-pressed', String(b === button)); renderPreviews();
 });
 $('showAllPreviews').addEventListener('click', () => { expanded = !expanded; renderPreviews(); });
-for (const id of ['designDirection', 'designDescription']) $(id).addEventListener('input', () => { copiedRequestId = null; $('copyDesignPrompt').textContent = '複製生圖指令'; });
+for (const id of ['designDirection', 'designDescription', 'designUseSummary']) $(id).addEventListener('input', () => { copiedRequestId = null; $('copyDesignPrompt').textContent = '複製生圖指令'; });
 function dataUrl(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('讀不到圖片，請重新選擇。')); reader.readAsDataURL(file); }); }
 async function uploadFile(file, role) {
   if (!state) throw new Error('設定還在載入，請稍後再上傳。');
@@ -237,7 +244,7 @@ document.addEventListener('drop', (e) => { if (hasFiles(e)) { e.preventDefault()
 $('copyDesignPrompt').addEventListener('click', async () => {
   try {
     copiedRequestId = null; copyFailureId = null;
-    await transact('/api/design/request', { description: $('designDescription').value, direction: $('designDirection').value });
+    await transact('/api/design/request', { description: $('designDescription').value, direction: $('designDirection').value, useSummary: $('designUseSummary').checked });
     try {
       await navigator.clipboard.writeText(state.request.prompt);
       copiedRequestId = state.request.id;
@@ -284,6 +291,7 @@ async function loadDesign() {
     if (state.request) {
       $('designDescription').value = state.request.description;
       $('designDirection').value = state.request.direction || 'auto';
+      $('designUseSummary').checked = state.request.useSummary !== false;
     }
     $('designError').textContent = '';
     $('retryDesign').hidden = true;

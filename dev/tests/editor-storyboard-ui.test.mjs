@@ -130,7 +130,7 @@ test('分鏡表：講者還沒設定時頂端可以直接填，存好就收起�
   await page.$eval('[data-speaker-form] input[name="name"]', (i) => { i.value = '鼎淵'; });
   await page.click('[data-speaker-form] button[type="submit"]');
   await page.waitForFunction(() => !document.querySelector('[data-speaker-form]'));
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, 'shared', '講者.json'), 'utf8')), { name: '鼎淵', titles: ['講師'] });
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, 'shared', 'setting.json'), 'utf8')), { speaker: { name: '鼎淵', titles: ['講師'] } });
 });
 
 test('剪輯清單：頁首固定；連不到服務時勾選還原並提醒，連上後恢復', async () => {

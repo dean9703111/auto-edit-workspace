@@ -12,7 +12,8 @@
  *         待回覆停點：<停點名稱，用「、」接｜無>
  *         下一輪回饋編號：r<N>      （work/feedback/ 的 r*.md、plan.json.bak-r* 的最大編號 ＋ 1）
  *         依據：<判斷用到的檔案與停點紀錄>
- *         講者：⚠ …                 （只有 shared/講者.json 還沒設定或格式不對時才印：提醒設定講者資料，lib/speaker.mjs）
+ *         講者：⚠ …                 （只有 shared/setting.json 還沒設定或格式不對時才印：提醒設定講者資料，lib/speaker.mjs）
+ *         摘要：⚠ …                 （有初剪、還沒寫或格式不對的 work/摘要.md 時才印；不擋流程，lib/summary.mjs）
  *         偏好：…                   （有 shared/偏好.md「照做」的規則、或各專案回饋裡有還沒問過使用者的「以後都…」時才印；見 --prefs）
  *       最後幾行是要做的事：
  *         沒有停點在等：「→ 下一步：<說明>」，下面每一行都是可以整行複製執行的指令（好幾行就依序跑）；這一步是 AI 自己做的事（寫分鏡表）就沒有指令
@@ -34,8 +35,10 @@
  *       使用者說要照做的那幾條寫進 shared/偏好.md「照做」（也可以直接寫一句規則）。之後每一集寫分鏡、改段落前都要讀這個檔。
  *   node shared/template/tools/status.mjs --prefs-skip "a2"      使用者說不要的那幾條記進「不採用」，下次不再問。
  *   node shared/template/tools/status.mjs --prefs-drop "2"       把「照做」的第 2 條拿掉（使用者說不要了）。
+ *   node shared/template/tools/status.mjs --project projects/<專案> --summary
+ *       驗 work/摘要.md（影片摘要：300 字內，一到兩句描述＋2–6 個列點；初剪完成後 AI 寫，生成這一集的背景圖時參考）。印 ✓ 或 ✖ 與怎麼改。
  *   node shared/template/tools/status.mjs --agents 6
- *       子代理一次最多派幾個（1–16，預設 10；不用 --project）：寫進 shared/設定.json，之後工具印的派工那一行都照這個數字。
+ *       子代理一次最多派幾個（1–16，預設 10；不用 --project）：寫進 shared/setting.json，之後工具印的派工那一行都照這個數字。
  *       使用者說「子代理一次派 6 個」「子代理只能開 2 個」時跑；1＝一次只派一個。
  *
  * 判斷依據：work/ 裡各階段產物在不在、修改時間先後（例：storyboard.md 比 plan.json 新＝還在分鏡表；
@@ -59,6 +62,7 @@ import { resolveFormat, formatLine, formatErrors, probeDims, canvasOf } from './
 import { pendingRevisions, storyboardByVersions, nextRound, openRound } from './versions.mjs';
 import { readSpeaker, SET_CMD } from './lib/speaker.mjs';
 import { agentLimit, saveAgentLimit, SETTINGS_FILE } from './lib/agents.mjs';
+import { readSummary, SUMMARY_MAX } from './lib/summary.mjs';
 import { ensureProgress, setFact, appendStop, progressFile, STOP_STATES } from './lib/progress.mjs';
 import { jobState } from './lib/job.mjs';
 import { untouchedSample } from './lib/plan.mjs';
@@ -701,6 +705,7 @@ export function prefsDrop(root, arg) {
   return { gone, prefs };
 }
 
+const SUMMARY_HOW = `讀 work/rough.srt，寫 ${SUMMARY_MAX} 字內的影片摘要（一到兩句描述＋2–6 個列點；格式見 .agents/skills/auto-edit-rough/SKILL.md 步驟 3）`;
 const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'back', 'format', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents'];
 function parseFlags(argv) {
   const flags = {};
@@ -711,6 +716,7 @@ function parseFlags(argv) {
     if (a === '--timeline') { flags.timeline = true; continue; }
     if (a === '--init') { flags.init = true; continue; }
     if (a === '--prefs') { flags.prefs = true; continue; }
+    if (a === '--summary') { flags.summary = true; continue; }
     const m = /^--([\w-]+)(?:=([\s\S]*))?$/.exec(a);
     if (!m || !VALUE_FLAGS.includes(m[1])) throw new Error(`沒有 ${a} 這個參數（用 --help 看用法）`);
     const v = m[2] ?? argv[++i];
@@ -760,6 +766,13 @@ function cli() {
     else printTimeline(label, tl);
     return 0;
   }
+  if (flags.summary) {
+    const sm = readSummary(project);
+    if (sm.state === 'none') { console.log(`✖ 還沒有 ${label}/work/摘要.md → ${SUMMARY_HOW}`); return 1; }
+    if (sm.state === 'bad') { for (const e of sm.errors) console.log(`✖ 摘要：${e}`); return 1; }
+    console.log(`✓ 摘要：${sm.chars} 字（${label}/work/摘要.md；生成這一集的背景圖時會參考，使用者可以在構圖台取消勾選）`);
+    return 0;
+  }
   const s = projectStatus(project);
   let plan = null;
   try { plan = JSON.parse(fs.readFileSync(path.join(project, 'work', 'hyperframes', 'plan.json'), 'utf8')); } catch { plan = null; }
@@ -767,10 +780,13 @@ function cli() {
   const sp = readSpeaker(path.join(root, 'shared', 'template'));
   if (flags.json) { console.log(JSON.stringify({ ...s, project: label, format: fmt.format, formatSource: fmt.source, speaker: sp.state }, null, 2)); return 0; }
   const spLine = sp.state === 'unset' ? `講者：⚠ 還沒設定（14 講者介紹會用示範人物林大寶）→ 跟使用者要姓名與頭銜後跑 ${SET_CMD}；不放講者介紹跑 node shared/template/tools/brand.mjs speaker off`
-    : sp.state === 'bad' ? `講者：⚠ shared/講者.json ${sp.error} → ${SET_CMD}` : null;
+    : sp.state === 'bad' ? `講者：⚠ shared/setting.json ${sp.error} → ${SET_CMD}` : null;
+  const sm = fs.existsSync(path.join(project, 'work', 'rough.srt')) ? readSummary(project) : null;
+  const smLine = sm?.state === 'none' ? `摘要：⚠ 還沒寫 work/摘要.md（生成背景圖時參考）→ ${SUMMARY_HOW}，寫完跑 node shared/template/tools/status.mjs --project ${label} --summary`
+    : sm?.state === 'bad' ? `摘要：⚠ work/摘要.md ${sm.errors[0]}` : null;
   const pf = readPrefs(root), pfPend = pendingPrefs(root, pf).length;
   const pfLine = pfPend ? `偏好：⚠ 有 ${pfPend} 條「以後都…」還沒問使用者（照做 ${pf.keep.length} 條）→ 回報時問他，指令：${PREFS_CMD} --prefs` : pf.keep.length ? `偏好：${pf.keep.length} 條（shared/偏好.md；寫分鏡、改段落前先讀）` : null;
-  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `Skill：${s.skill}`, `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : []), ...(pfLine ? [pfLine] : []), ...actionLines(s)]) console.log(l);
+  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `Skill：${s.skill}`, `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : []), ...(smLine ? [smLine] : []), ...(pfLine ? [pfLine] : []), ...actionLines(s)]) console.log(l);
   return 0;
 }
 

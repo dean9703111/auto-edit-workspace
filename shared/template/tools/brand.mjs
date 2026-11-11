@@ -21,7 +21,7 @@
  *                                      給了就照色碼算 brand.css、畫外框，背景圖從 --bg 資料夾拿 bg-*.jpg（不動 shared/template/ 目前的設定）
  *   單集換包不用這支：plan.json 寫 "style": "<名稱>"
  *
- * 講者資料（shared/講者.json，不進版控；14 講者介紹的姓名、頭銜，15 金句的出處；lib/speaker.mjs）：
+ * 講者資料（shared/setting.json，不進版控；14 講者介紹的姓名、頭銜，15 金句的出處；lib/speaker.mjs）：
  *   brand.mjs speaker                                   看目前的設定
  *   brand.mjs speaker --name "林大寶" --titles "影音創作者,科技部落客" [--short "大寶"]
  *                                                       設定（頭銜 1–3 個，用逗號或「、」分開；--short 是金句出處，不給＝姓名）
@@ -36,7 +36,8 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { listPacks, packsJs, samePack, copyIfDiff, templatePathOf, PACK_KIT, PACK_BG, STYLES_DIR, DEFAULT_PACK } from './lib/styles.mjs';
-import { readSpeaker, validateSpeaker, speakerFile, SPEAKER_FILE, SET_CMD } from './lib/speaker.mjs';
+import { readSpeaker, validateSpeaker, SPEAKER_FILE, SET_CMD } from './lib/speaker.mjs';
+import { writeSetting } from './lib/settings.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEEP = '#0B1020';
@@ -473,9 +474,7 @@ async function packCli(cmd, args) {
 // ---------- 講者資料 ----------
 
 export function writeSpeaker(templateDir, data) {
-  const file = speakerFile(templateDir);
-  fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
-  return file;
+  return writeSetting(path.resolve(templateDir, '..'), 'speaker', data);
 }
 
 function speakerCli(args) {

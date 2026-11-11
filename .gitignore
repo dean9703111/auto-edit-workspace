@@ -3,12 +3,12 @@ projects/*
 !projects/example/
 projects/example/work/
 projects/example/output/
-# 講者資料（創作者自己的姓名、頭銜）：每個人本機各一份，範本是 shared/講者.example.json
+# 工作區設定（講者的姓名與頭銜、子代理一次最多派幾個…都在這一個檔）：每個人本機各一份，範本是 shared/setting.example.json
+shared/setting.json
+# 舊版的講者資料（現在在 setting.json 的 speaker；舊檔還在的話照樣讀得到）
 shared/講者.json
 # 剪輯偏好（創作者確認過每一集都照做的規則，status.mjs --prefs-add 寫的）：每個人本機各一份
 shared/偏好.md
-# 工作區設定（子代理一次最多派幾個，status.mjs --agents 寫的）：每個人本機各一份
-shared/設定.json
 # 構圖台存的預覽參考圖（創作者自己的畫面，情境庫、風格預覽頁的講者改用它）：每個人本機各一份
 shared/template/preview/*-local.jpg
 

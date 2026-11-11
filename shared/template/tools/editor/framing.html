@@ -166,6 +166,9 @@
         <select id="designDirection"><option value="auto">依參考圖與描述</option><option value="technical">科技線稿</option><option value="editorial">編輯平面</option><option value="paper">紙雕拼貼</option><option value="geometric3d">幾何 3D</option><option value="photo">自然實景</option></select>
         <label class="design-label" for="designDescription">補充描述（選填）</label>
         <textarea id="designDescription" rows="2" maxlength="1500" placeholder="例如：沿用參考圖的線條、材質與造型"></textarea>
+        <label class="design-check" for="designUseSummary"><input id="designUseSummary" type="checkbox" checked> <span>參考這支影片的重點摘要</span></label>
+        <details id="designSummaryDetails" class="design-summary" hidden><summary>看摘要內容</summary><p id="designSummaryText"></p></details>
+        <p id="designSummaryNote" class="design-note" hidden></p>
         <button id="copyDesignPrompt" class="primary design-generate">複製生圖指令</button>
         <p id="designGenerationStatus" class="design-note" role="status" aria-live="polite">複製指令貼給 AI，依指定風格生成 3 組、共 9 張。</p>
         <details id="designPromptDetails" hidden><summary>指令與儲存位置</summary><p id="designRequestPath" class="design-path"></p><textarea id="designPrompt" readonly rows="6" aria-label="已儲存的生圖指令"></textarea></details>

@@ -16,7 +16,7 @@
   "slots": {
     "tag":  { "label": "標籤", "type": "text", "default": "金句", "max": 4 },
     "text": { "label": "正文", "type": "rich", "maxLine": 16, "maxLines": 2, "required": true, "max": 32, "note": "最多兩行、每行 ≤ 16，用 // 斷行" },
-    "by":   { "label": "出處", "type": "text", "max": 10, "note": "不填＝shared/講者.json 的 short（沒設定就不顯示出處）" }
+    "by":   { "label": "出處", "type": "text", "max": 10, "note": "不填＝shared/setting.json 的 short（沒設定就不顯示出處）" }
   },
   "beats": {
     "in": { "label": "進場", "default": "0" }

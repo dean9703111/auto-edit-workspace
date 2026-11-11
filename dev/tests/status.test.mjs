@@ -83,7 +83,7 @@ test('停點紀錄：同一停點以最後一列為準；待回覆的停點蓋�
   assert.equal(readStopLog(log).last.get('① 剪輯清單').state, '通過');
   const r = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
-  // 講者那一行看這台機器有沒有 shared/講者.json，不算在內
+  // 講者那一行看這台機器有沒有 shared/setting.json，不算在內
   const lines = r.stdout.trim().split('\n').filter((l) => !l.startsWith('講者：'));
   assert.deepEqual(lines.slice(0, 8).map((l) => l.split('：')[0]), ['版式', '專案', '目前在', 'Skill', '下一個停點', '待回覆停點', '下一輪回饋編號', '依據']);
   assert.match(lines[0], /^版式：橫式 1920×1080（來源：/);
@@ -671,7 +671,7 @@ test('025 跨集偏好：收集各專案 r<N>.md 的「建議改規則」（無�
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-test('子代理一次最多派幾個：shared/設定.json 的 agents（沒有檔、格式不對＝10）；--agents 只收 1–16 的整數，不動檔裡其他設定', async () => {
+test('子代理一次最多派幾個：shared/setting.json 的 agents（沒有檔、格式不對＝10）；--agents 只收 1–16 的整數，不動檔裡其他設定', async () => {
   const A = await imp('lib/agents.mjs');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-agents-'));
   assert.equal(A.agentLimit(dir), 10, '沒有設定檔：預設 10');
@@ -683,4 +683,36 @@ test('子代理一次最多派幾個：shared/設定.json 的 agents（沒有檔
   for (const bad of ['0', '17', '2.5', 'abc']) assert.throws(() => A.saveAgentLimit(dir, bad), /1–16 的整數/);
   assert.equal(A.agentLimit(dir), 6, '寫錯不會蓋掉原本的值');
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('影片摘要 work/摘要.md：300 字內、一到兩句描述＋2–6 個列點；字數不算空白和記號；--summary 驗、status 在有初剪又沒寫時提醒', async () => {
+  const M = await imp('lib/summary.mjs');
+  const p = mk();
+  assert.equal(M.readSummary(p).state, 'none');
+  const good = '# 影片摘要\n\n用 AI 把重複的工作做成小工具，講給上班族聽。\n\n- 痛點：手動整理留言\n- **解法**：隔離環境\n';
+  touch(p, 'work/摘要.md', good);
+  const ok = M.readSummary(p);
+  assert.equal(ok.state, 'ok');
+  assert.equal(ok.text, '用 AI 把重複的工作做成小工具，講給上班族聽。\n- 痛點：手動整理留言\n- **解法**：隔離環境');
+  assert.equal(ok.chars, M.summaryChars('用AI把重複的工作做成小工具，講給上班族聽。痛點：手動整理留言解法：隔離環境'));
+  touch(p, 'work/摘要.md', `# 影片摘要\n\n${'字'.repeat(301)}\n\n- 一\n- 二\n`);
+  assert.match(M.readSummary(p).errors.join(), /最多 300 字/);
+  touch(p, 'work/摘要.md', '- 一\n- 二\n');
+  assert.match(M.readSummary(p).errors.join(), /少了開頭的描述/);
+  touch(p, 'work/摘要.md', `描述\n\n${Array.from({ length: 7 }, (_, i) => `- 第 ${i} 點`).join('\n')}\n`);
+  assert.match(M.readSummary(p).errors.join(), /最多 6 個/);
+  const run = (...a) => spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p, ...a], { encoding: 'utf8' });
+  assert.equal(run('--summary').status, 1);
+  touch(p, 'work/摘要.md', good);
+  const r = run('--summary');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^✓ 摘要：\d+ 字/);
+  // status：沒有初剪不提醒；有初剪、沒摘要才提醒
+  fs.rmSync(path.join(p, 'work', '摘要.md'));
+  assert.doesNotMatch(run().stdout, /^摘要：/m);
+  touch(p, 'work/rough.srt', '1\n00:00:00,000 --> 00:00:01,000\n測試\n');
+  assert.match(run().stdout, /^摘要：⚠ 還沒寫 work\/摘要\.md/m);
+  touch(p, 'work/摘要.md', good);
+  assert.doesNotMatch(run().stdout, /^摘要：/m);
+  fs.rmSync(p, { recursive: true, force: true });
 });

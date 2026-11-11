@@ -6,6 +6,7 @@ import { brandColors, rewriteBrandCss, drawPipFrame, drawPipFrameV } from '../..
 import { packDir, PACK_KIT, PACK_BG, templatePathOf } from '../../lib/styles.mjs';
 import { appliedDesign } from '../../lib/project-design.mjs';
 import { resolveFormat } from '../../lib/canvas.mjs';
+import { readSummary } from '../../lib/summary.mjs';
 
 export const KINDS = { fs: [1920, 1080], side: [960, 1080], ch: [1920, 1080] };
 const ID = /^[a-f0-9-]{36}$/;
@@ -50,10 +51,15 @@ function descriptor(ctx, draft) {
   const color = draft?.color || (fs.existsSync(source(ctx, 'brand.css')) ? fs.readFileSync(source(ctx, 'brand.css'), 'utf8').match(/--brand\s*:\s*(#[\da-f]{6})/i)?.[1] : null) || '#F6630F';
   return { ...draft, color: color.toUpperCase() };
 }
+// 影片摘要（work/摘要.md）：生圖指令預設帶上，使用者可以在頁面取消勾選
+function summaryInfo(ctx) {
+  const sm = readSummary(ctx.P.project);
+  return { ready: sm.state === 'ok', text: sm.state === 'ok' ? sm.text : '', chars: sm.chars, note: sm.state === 'none' ? '還沒有影片摘要（work/摘要.md）：請 AI 先寫，生圖時才能參考。' : sm.state === 'bad' ? `影片摘要格式不對：${sm.errors[0]}` : '' };
+}
 export function designState(ctx) {
   const s = state(ctx), applied = appliedDesign(ctx.P.project);
   const stamp = s.draft?.id || applied?.id || 'base';
-  return { draft: descriptor(ctx, s.draft), applied: applied ? { id: applied.id, color: applied.color } : null,
+  return { summary: summaryInfo(ctx), draft: descriptor(ctx, s.draft), applied: applied ? { id: applied.id, color: applied.color } : null,
     dirty: !!s.draft && s.draft.id !== applied?.id, request: requestState(ctx, s.request?.id), reference: s.reference ? { name: s.reference.name, url: `/design/draft/reference.jpg?v=${s.reference.file}` } : null,
     originals: Object.keys(KINDS).map((kind) => {
       const dark = plan(ctx).theme === 'dark';
@@ -185,7 +191,7 @@ function requestState(ctx, id) {
   const reported = read(path.join(req.dir, 'progress.json'));
   const progress = reported || { state: foundCount === req.targets.length * VARIANTS.length ? 'done' : 'waiting', message: '', at: null };
   return { id, prompt: fs.readFileSync(path.join(req.dir, 'request.md'), 'utf8'), savedTo: path.relative(ctx.P.root, req.dir).split(path.sep).join('/'),
-    description: req.description || '', direction: req.direction || 'auto', scope: 'all', kind: req.targets[0], selected, selectedByKind, foundCount, expectedCount: req.targets.length * VARIANTS.length, candidates, progress };
+    description: req.description || '', direction: req.direction || 'auto', useSummary: req.useSummary !== false, scope: 'all', kind: req.targets[0], selected, selectedByKind, foundCount, expectedCount: req.targets.length * VARIANTS.length, candidates, progress };
 }
 export function designRequestStatus(ctx) { return { request: requestState(ctx, state(ctx).request?.id) }; }
 export function setDesignRequestStatus(ctx, body) {
@@ -217,7 +223,9 @@ export function prepareDesignRequest(ctx, body) {
   const direction = Object.hasOwn(DIRECTIONS, body.direction || 'auto') ? body.direction || 'auto' : 'auto';
   const theme = plan(ctx).theme || 'light', style = plan(ctx).style || '';
   const format = resolveFormat({ projectDir: ctx.P.project, plan: plan(ctx) }).format;
-  const spec = { mode: 'generate-all-v5', color, description, direction, theme, style, format, targets, reference: s.reference?.file || null };
+  const useSummary = body.useSummary !== false, sm = summaryInfo(ctx);   // 預設參考；取消勾選、或還沒有摘要就不帶
+  const summary = useSummary && sm.ready ? sm.text : null;
+  const spec = { mode: 'generate-all-v5', color, description, direction, theme, style, format, targets, reference: s.reference?.file || null, summary };
   if (JSON.stringify(requestData(ctx, s.request?.id)?.spec) === JSON.stringify(spec)) return designState(ctx);
   const id = randomUUID(), dir = requestDir(ctx, id);
   fs.mkdirSync(dir, { recursive: true });
@@ -229,12 +237,12 @@ export function prepareDesignRequest(ctx, body) {
   const visualDirection = direction !== 'auto' ? `指定風格：${DIRECTIONS[direction][0]}。${DIRECTIONS[direction][1]}。` : ref || description
     ? '以使用者描述與參考圖決定視覺語言，沿用其具體造型、材質、輪廓與配色。A 著重線條結構、B 著重形狀編排、C 著重材質層次，三組都須符合指定風格。'
     : 'A 科技工程線稿（正交網格、精準細線）；B 編輯平面設計（紙感、明確幾何色塊）；C 立體幾何（實體造型、清楚材質與投影）。';
-  const prompt = `直接用生圖工具生成並儲存 9 張影片背景：A、B、C 三個可明確區別的設計方向，每組都生成以下三張。\n主色 ${color}；${theme === 'dark' ? '深色' : '亮色'}。${description ? `使用者風格：${description}。` : ''}${format === 'portrait' ? '直式使用，中央取景區保持乾淨。' : ''}\n${visualDirection}\n參考圖：${ref || '無'}${ref ? '；讀取圖片，依其設計語言生成；不要只取顏色。' : ''}\n每組三張保持同一套造型、材質與配色；A/B/C 必須在結構、形狀或材質上有明顯差異，不可只是換色或移動同一片光暈。輪廓、紋理清晰；除非使用者明確要求，不使用失焦、模糊光斑、霧化漸層或泛光作為主要設計。\n${targets.map((k) => `- bg-${k}.png：${KINDS[k].join('×')}；內容安全區：${zones[k]}`).join('\n')}\n圖片不含文字、標誌、卡片。內容安全區維持易讀的單純底面；清晰裝飾安排在區域外，不以整張模糊代替留白。\n儲存至 ${dir} 下的 A/、B/、C/，每個資料夾各三張 PNG。全部生成並存檔後，回報圖片路徑。\n`;
+  const prompt = `直接用生圖工具生成並儲存 9 張影片背景：A、B、C 三個可明確區別的設計方向，每組都生成以下三張。\n主色 ${color}；${theme === 'dark' ? '深色' : '亮色'}。${description ? `使用者風格：${description}。` : ''}${format === 'portrait' ? '直式使用，中央取景區保持乾淨。' : ''}\n${summary ? `這支影片在講（背景的意象、氛圍要呼應它；只取意象，不要畫出文字、人物或具體的介面）：\n${summary}\n` : ''}${visualDirection}\n參考圖：${ref || '無'}${ref ? '；讀取圖片，依其設計語言生成；不要只取顏色。' : ''}\n每組三張保持同一套造型、材質與配色；A/B/C 必須在結構、形狀或材質上有明顯差異，不可只是換色或移動同一片光暈。輪廓、紋理清晰；除非使用者明確要求，不使用失焦、模糊光斑、霧化漸層或泛光作為主要設計。\n${targets.map((k) => `- bg-${k}.png：${KINDS[k].join('×')}；內容安全區：${zones[k]}`).join('\n')}\n圖片不含文字、標誌、卡片。內容安全區維持易讀的單純底面；清晰裝飾安排在區域外，不以整張模糊代替留白。\n儲存至 ${dir} 下的 A/、B/、C/，每個資料夾各三張 PNG。全部生成並存檔後，回報圖片路徑。\n`;
   const statusCommand = `node shared/template/tools/editor.mjs --project ${JSON.stringify(path.relative(ctx.P.root, ctx.P.project).split(path.sep).join('/'))} --design-request ${id} --design-state`;
   const parallelPrompt = `\n執行方式（同時生成，縮短等待）：有能派子代理的工具就用，主代理不生圖。在同一則回覆一次派出 3 個子代理，A、B、C 各一個（同一組三張由同一個子代理生成，造型才會一致）。每個子代理收到上面的完整內容與自己負責哪一組，只生成並寫入自己那組的資料夾（${dir}/<組別>/），不執行狀態回報，完成後回報三張圖片路徑。主代理等完成通知，不寫 sleep 迴圈等檔案；每收到一組就用 generating --message 更新「A 組完成（1/3）」。某組失敗只重派那一組一次，還是失敗才回報 failed 並寫明哪一組。沒有能派子代理的工具，或子代理回報沒有生圖工具時，才由主代理自己依序生成。\n`;
   const progressPrompt = `\n狀態回報（在工作區根目錄執行，只由主代理執行）：開始生圖前執行 ${statusCommand} generating；九張圖片全部存檔後執行 ${statusCommand} done；任何生成或存檔失敗，執行 ${statusCommand} failed --message "失敗原因"。生圖途中可用 generating --message "目前進度" 更新說明。需求衝突時停止，重新讀取最新指令，不要把舊任務回報到新需求。\n`;
   fs.writeFileSync(path.join(dir, 'request.md'), prompt + parallelPrompt + progressPrompt);
-  fs.writeFileSync(path.join(dir, 'request.json'), JSON.stringify({ id, targets, color, theme, style, direction, description, spec, createdAt: Date.now() }, null, 2));
+  fs.writeFileSync(path.join(dir, 'request.json'), JSON.stringify({ id, targets, color, theme, style, direction, description, useSummary, spec, createdAt: Date.now() }, null, 2));
   s.request = { id }; s.job = null; write(ctx, s);
   return designState(ctx);
 }
