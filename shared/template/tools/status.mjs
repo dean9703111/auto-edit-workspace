@@ -13,6 +13,7 @@
  *         下一輪回饋編號：r<N>      （work/feedback/ 的 r*.md、plan.json.bak-r* 的最大編號 ＋ 1）
  *         依據：<判斷用到的檔案與停點紀錄>
  *         講者：⚠ …                 （只有 shared/講者.json 還沒設定或格式不對時才印：提醒設定講者資料，lib/speaker.mjs）
+ *         偏好：…                   （有 shared/偏好.md「照做」的規則、或各專案回饋裡有還沒問過使用者的「以後都…」時才印；見 --prefs）
  *       最後幾行是要做的事：
  *         沒有停點在等：「→ 下一步：<說明>」，下面每一行都是可以整行複製執行的指令（好幾行就依序跑）；這一步是 AI 自己做的事（寫分鏡表）就沒有指令
  *         有停點在等：「使用者回覆「…」：」和回覆後要跑的指令（縮排兩格），最後兩行是 AGENTS.md 格式的「⏸ 停點 …」「請回：…」；
@@ -26,6 +27,13 @@
  *   node shared/template/tools/status.mjs --project projects/<專案> --timeline [--json]
  *       時間軸：各階段產物第一次出現（建立時間）與最後修改的時間，加上 work/製作進度.md 停點紀錄的時間，
  *       算出總時長、等使用者回覆的時間、AI 在做事的時間，和最久的幾段（找「哪裡花最久」用；舊專案也能看）。
+ *   node shared/template/tools/status.mjs --prefs
+ *       跨集偏好（不用 --project）：列出 shared/偏好.md 已經照做的規則，和各專案 work/feedback/r<N>.md「建議改規則」裡還沒問過使用者的（編號 a1、a2…）。
+ *       有還沒問的就照印的 → 做：把那幾條唸給使用者，問哪幾條以後每一集都照做。
+ *   node shared/template/tools/status.mjs --prefs-add "a1,a3"｜"<一句規則>"
+ *       使用者說要照做的那幾條寫進 shared/偏好.md「照做」（也可以直接寫一句規則）。之後每一集寫分鏡、改段落前都要讀這個檔。
+ *   node shared/template/tools/status.mjs --prefs-skip "a2"      使用者說不要的那幾條記進「不採用」，下次不再問。
+ *   node shared/template/tools/status.mjs --prefs-drop "2"       把「照做」的第 2 條拿掉（使用者說不要了）。
  *
  * 判斷依據：work/ 裡各階段產物在不在、修改時間先後（例：storyboard.md 比 plan.json 新＝還在分鏡表；
  * storyboard.md 是 versions.mjs accept／use 寫的不算），以及 work/製作進度.md 的「## 停點紀錄」表（同一個停點以最後一列為準，
@@ -51,6 +59,7 @@ import { ensureProgress, setFact, appendStop, progressFile, STOP_STATES } from '
 import { jobState } from './lib/job.mjs';
 import { untouchedSample } from './lib/plan.mjs';
 import { designFileOf, isBlankDesign } from './lib/custom-fill.mjs';
+import { readPrefs, prefsFile, prefKey } from './lib/prefs.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STOPS = ['① 剪輯清單', '② 構圖', '③ 分鏡表', '④ 完成影片預覽', '⑤ 剪輯台', '⑥ 背景預覽'];
@@ -618,7 +627,77 @@ export function actionLines(s) {
   return [...L, '→ 下一步：等使用者回覆；回覆最後兩行照抄下面兩行（這行不是指令）', s.stopLine];
 }
 
-const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'back', 'format'];
+// ---------- 跨集偏好（025）：各專案回饋輪的「建議改規則」→ 使用者確認 → shared/偏好.md ----------
+export { readPrefs, prefsFile };
+const PREFS_HEAD = ['# 剪輯偏好', '', '使用者說過「以後都…」、而且確認每一集都照做的規則。由 status.mjs --prefs-add 寫，不要手動改別的地方；寫分鏡、改段落前先讀「照做」這一節。', ''];
+function writePrefs(root, prefs) {
+  const row = (x) => `- ${x.text}${x.from ? `（${x.from}）` : ''}`;
+  const L = [...PREFS_HEAD, '## 照做', '', ...(prefs.keep.length ? prefs.keep.map(row) : ['（還沒有）']), '', '## 不採用', '', ...(prefs.skip.length ? prefs.skip.map(row) : ['（還沒有）']), ''];
+  fs.writeFileSync(prefsFile(root), L.join('\n'));
+}
+// 各專案 work/feedback/r<N>.md 的「建議改規則：…」（同一行，或下面接著的「- 」列）；「無」和工具留的提示（原話有…）不算
+export function collectRuleNotes(root) {
+  const out = [], dir = path.join(root, 'projects');
+  let names = [];
+  try { names = fs.readdirSync(dir).sort(); } catch { return out; }
+  for (const name of names) {
+    const fb = path.join(dir, name, 'work', 'feedback');
+    let files = [];
+    try { files = fs.readdirSync(fb).filter((f) => /^r\d+\.md$/.test(f)).sort((a, b) => Number(a.slice(1, -3)) - Number(b.slice(1, -3))); } catch { continue; }
+    for (const f of files) {
+      const ls = fs.readFileSync(path.join(fb, f), 'utf8').split(/\r?\n/);
+      const at = ls.findIndex((l) => /^建議改規則[：:]/.test(l.trim()));
+      if (at < 0) continue;
+      const texts = [ls[at].trim().replace(/^建議改規則[：:]\s*/, '')];
+      for (let i = at + 1; i < ls.length && /^\s*-\s+/.test(ls[i]); i++) texts.push(ls[i].replace(/^\s*-\s+/, ''));
+      for (const t of texts.map((x) => x.trim()).filter((x) => x && x !== '無' && !/^（(原話有|沒有寫)/.test(x))) out.push({ text: t, project: name, round: f.slice(0, -3), from: `projects/${name} ${f.slice(0, -3)}` });
+    }
+  }
+  return out;
+}
+// 還沒問過使用者的：不在「照做」也不在「不採用」，同一句只留第一次出現的
+export function pendingPrefs(root, prefs = readPrefs(root)) {
+  const known = new Set([...prefs.keep, ...prefs.skip].map((x) => prefKey(x.text))), seen = new Set(), out = [];
+  for (const n of collectRuleNotes(root)) { const k = prefKey(n.text); if (!k || known.has(k) || seen.has(k)) continue; seen.add(k); out.push({ ...n, id: `a${out.length + 1}` }); }
+  return out;
+}
+const PREFS_CMD = 'node shared/template/tools/status.mjs';
+export function prefsLines(root) {
+  const prefs = readPrefs(root), pend = pendingPrefs(root, prefs);
+  const L = [`偏好（shared/偏好.md「照做」）：${prefs.keep.length} 條`];
+  prefs.keep.forEach((x, i) => L.push(`  ${i + 1}. ${x.text}${x.from ? `（${x.from}）` : ''}`));
+  L.push(`還沒問過使用者的「以後都…」：${pend.length} 條${pend.length ? '（各專案 work/feedback/ 的「建議改規則」）' : ''}`);
+  for (const x of pend) L.push(`  ${x.id}. ${x.text}（${x.from}）`);
+  if (pend.length) L.push('→ 下一步：把上面這幾條唸給使用者，問哪幾條以後每一集都照做；要照做的跑第一行、不要的跑第二行（編號用逗號隔開，這兩行的編號換成他說的）', `${PREFS_CMD} --prefs-add "${pend.map((x) => x.id).join(',')}"`, `${PREFS_CMD} --prefs-skip "${pend[0].id}"`);
+  return L;
+}
+const today = () => { const d = new Date(), q = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${q(d.getMonth() + 1)}-${q(d.getDate())}`; };
+// what＝'add'｜'skip'；arg＝"a1,a3"（--prefs 印的編號）或一句規則
+export function prefsApply(root, what, arg) {
+  const prefs = readPrefs(root), pend = pendingPrefs(root, prefs), to = what === 'add' ? prefs.keep : prefs.skip;
+  const ids = String(arg ?? '').split(/[,，\s]+/).filter(Boolean);
+  let items;
+  if (ids.length && ids.every((x) => /^a\d+$/i.test(x))) {
+    items = ids.map((id) => { const x = pend.find((p) => p.id === id.toLowerCase()); if (!x) throw new Error(`沒有 ${id} 這一條 → 先跑 ${PREFS_CMD} --prefs 看編號（編號每次重排）`); return { text: x.text, from: `${x.from}，${today()}` }; });
+  } else {
+    const text = String(arg ?? '').trim();
+    if (!text) throw new Error(`要寫編號（a1,a3）或一句規則 → 例 ${PREFS_CMD} --prefs-${what} "a1,a3"`);
+    items = [{ text, from: `使用者說的，${today()}` }];
+  }
+  const added = [];
+  for (const it of items) { if ([...prefs.keep, ...prefs.skip].some((x) => prefKey(x.text) === prefKey(it.text))) continue; to.push(it); added.push(it); }
+  writePrefs(root, prefs);
+  return { added, prefs };
+}
+export function prefsDrop(root, arg) {
+  const prefs = readPrefs(root), n = Number(arg);
+  if (!Number.isInteger(n) || n < 1 || n > prefs.keep.length) throw new Error(`「照做」沒有第 ${arg} 條（現在 ${prefs.keep.length} 條）→ 先跑 ${PREFS_CMD} --prefs 看編號`);
+  const [gone] = prefs.keep.splice(n - 1, 1);
+  writePrefs(root, prefs);
+  return { gone, prefs };
+}
+
+const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'back', 'format', 'prefs-add', 'prefs-skip', 'prefs-drop'];
 function parseFlags(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
@@ -627,6 +706,7 @@ function parseFlags(argv) {
     if (a === '--json') { flags.json = true; continue; }
     if (a === '--timeline') { flags.timeline = true; continue; }
     if (a === '--init') { flags.init = true; continue; }
+    if (a === '--prefs') { flags.prefs = true; continue; }
     const m = /^--([\w-]+)(?:=([\s\S]*))?$/.exec(a);
     if (!m || !VALUE_FLAGS.includes(m[1])) throw new Error(`沒有 ${a} 這個參數（用 --help 看用法）`);
     const v = m[2] ?? argv[++i];
@@ -640,6 +720,16 @@ function cli() {
   const flags = parseFlags(process.argv.slice(2));
   if (flags.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
   const root = path.resolve(HERE, '..', '..', '..');
+  // 跨集偏好：不看專案
+  if (flags['prefs-add'] != null || flags['prefs-skip'] != null) {
+    const what = flags['prefs-add'] != null ? 'add' : 'skip';
+    const r = prefsApply(root, what, flags[`prefs-${what}`]);
+    console.log(r.added.length ? `✓ ${what === 'add' ? '以後每一集都照做' : '不採用、下次不再問'}：${r.added.map((x) => `「${x.text}」`).join('、')}（寫進 shared/偏好.md）` : '這幾條已經記過了，沒有新增');
+    for (const l of prefsLines(root)) console.log(l);
+    return 0;
+  }
+  if (flags['prefs-drop'] != null) { const r = prefsDrop(root, flags['prefs-drop']); console.log(`✓ 拿掉了：「${r.gone.text}」`); for (const l of prefsLines(root)) console.log(l); return 0; }
+  if (flags.prefs) { for (const l of prefsLines(root)) console.log(l); return 0; }
   const project = findProject(flags, root);
   const label = labelOf(project);
   if (flags.mark != null || flags.state != null) {
@@ -672,7 +762,9 @@ function cli() {
   if (flags.json) { console.log(JSON.stringify({ ...s, project: label, format: fmt.format, formatSource: fmt.source, speaker: sp.state }, null, 2)); return 0; }
   const spLine = sp.state === 'unset' ? `講者：⚠ 還沒設定（14 講者介紹會用示範人物林大寶）→ 跟使用者要姓名與頭銜後跑 ${SET_CMD}；不放講者介紹跑 node shared/template/tools/brand.mjs speaker off`
     : sp.state === 'bad' ? `講者：⚠ shared/講者.json ${sp.error} → ${SET_CMD}` : null;
-  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `Skill：${s.skill}`, `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : []), ...actionLines(s)]) console.log(l);
+  const pf = readPrefs(root), pfPend = pendingPrefs(root, pf).length;
+  const pfLine = pfPend ? `偏好：⚠ 有 ${pfPend} 條「以後都…」還沒問使用者（照做 ${pf.keep.length} 條）→ 回報時問他，指令：${PREFS_CMD} --prefs` : pf.keep.length ? `偏好：${pf.keep.length} 條（shared/偏好.md；寫分鏡、改段落前先讀）` : null;
+  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `Skill：${s.skill}`, `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : []), ...(pfLine ? [pfLine] : []), ...actionLines(s)]) console.log(l);
   return 0;
 }
 

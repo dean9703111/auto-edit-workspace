@@ -1,0 +1,129 @@
+{
+  "template": "x-magazine",
+  "prefix": "xmg",
+  "beat": "F",
+  "layout": "overlay",
+  "portrait": "none",
+  "portraitAlt": "15 金句字卡",
+  "matte": true,
+  "when": "講者露臉，講到一個可以當「刊名」的概念詞（品味、風格、效率），後面接著幾個重點：畫面變成雜誌封面，英文刊名的字母一個一個打在講者頭的後面，左側出現封面標題；講者去背後站在刊名前面；一集最多 1 次",
+  "slots": {
+    "mast": {
+      "label": "刊名（英文大寫，≤ 7 個字母，例 TASTE）",
+      "type": "text",
+      "max": 3.5,
+      "required": true
+    },
+    "top1": {
+      "label": "上緣左邊的小字（期別，例 VOL.01）",
+      "type": "text",
+      "max": 5,
+      "required": true
+    },
+    "top2": {
+      "label": "上緣中間的小字（專題名）",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "top3": {
+      "label": "上緣右邊的小字（日期，例 2026 NOV）",
+      "type": "text",
+      "max": 5,
+      "required": true
+    },
+    "items": {
+      "label": "左側封面標題",
+      "type": "list",
+      "min": 1,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "num": {
+          "label": "大數字（≤ 3 個字元）",
+          "type": "text",
+          "max": 1.5,
+          "required": true
+        },
+        "text": {
+          "label": "一行字",
+          "type": "text",
+          "max": 8,
+          "required": true
+        }
+      }
+    },
+    "openAt": {
+      "label": "講到引子的時間（細框、小字出現）",
+      "type": "at",
+      "ref": "OPEN",
+      "required": true
+    },
+    "hitAt": {
+      "label": "講到那個詞的時間（刊名打出來；一定用 @詞，和 openAt 至少差 2 秒）",
+      "type": "at",
+      "ref": "HIT",
+      "required": true
+    },
+    "moreAt": {
+      "label": "講到後面重點的時間（封面標題出現；和 hitAt 至少差 2.2 秒）",
+      "type": "at",
+      "ref": "MORE",
+      "required": true
+    }
+  },
+  "sample": {
+    "mast": "TASTE",
+    "top1": "VOL.01",
+    "top2": "AI 時代特刊",
+    "top3": "2026 NOV",
+    "items": [
+      {
+        "num": "2",
+        "text": "個方法練品味"
+      },
+      {
+        "num": "90",
+        "text": "分的人多做一步"
+      },
+      {
+        "num": "1",
+        "text": "個常見的誤會"
+      }
+    ],
+    "openAt": "#441@相信",
+    "hitAt": "#442@品味",
+    "moreAt": "#443@什麼"
+  },
+  "sheet": [
+    {
+      "beat": "1",
+      "at": "`{openAt}`",
+      "show": "封面細框；上緣小字「{top1}」「{top2}」「{top3}」",
+      "moves": "擦開（細框，由左）；＋0.3 逐字上浮（小字）",
+      "focus": "封面"
+    },
+    {
+      "beat": "2",
+      "at": "`{hitAt}`",
+      "show": "刊名「{mast}」打在講者後面",
+      "moves": "逐字彈出（刊名）",
+      "focus": "刊名",
+      "sfx": "impact"
+    },
+    {
+      "beat": "3",
+      "at": "`{moreAt}`",
+      "show": "左側封面標題 {n} 條；條碼",
+      "moves": "錯拍彈出（封面標題）；＋0.9 擦開（條碼）",
+      "focus": "封面標題"
+    },
+    {
+      "beat": "收",
+      "at": "段尾 −0.3",
+      "show": "—",
+      "moves": "淡出（整組）",
+      "focus": "講者"
+    }
+  ]
+}

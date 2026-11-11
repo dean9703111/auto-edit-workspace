@@ -9,6 +9,7 @@
 | 「剪這支影片」「繼續」「做到哪了」「做直式」 | `auto-edit-longform` |
 | 「開一個新專案 <名稱>」 | `auto-edit-longform` 的 `references/new-project.md` |
 | 「幫我分類 @projects/<專案> 裡的素材」「分類素材」 | `auto-edit-longform` 的 `references/sort-assets.md` |
+| 「從這支長片切短片」「把這集剪成幾支短影片」「切 Shorts」 | `auto-edit-longform` 的 `references/shorts.md` |
 | 「幫我檢測環境」「安裝環境」「裝工具」 | `auto-edit-setup` |
 | 「剪乾淨」 | `auto-edit-rough` |
 | 「剪好看」「做出完成影片」 | 依序 `auto-edit-storyboard` → `auto-edit-motion`（有內容設計動畫）→ `auto-edit-review` → `auto-edit-deliver`；有素材就先 `auto-edit-screen` 盤點 |
@@ -16,11 +17,13 @@
 | 分鏡表確認後做內容設計動畫 | `auto-edit-motion` |
 | 定稿、預覽後的修改、「打開剪輯台」、「s12 重新設計」「s12 用 v1」、「照修改單改」「照剪輯台修改單改…」 | `auto-edit-review` |
 | 「可以了，輸出完成影片」「輸出剪映素材」（使用者也可以在剪輯台按「輸出完成影片」，自己跑完測試片段、整支與驗收；已輸出就不要重做） | `auto-edit-deliver` |
+| 「做封面」「封面圖」「做縮圖」 | `auto-edit-deliver` 的 `references/cover.md` |
 | 「換風格」「換主色」「換背景」「換暗色」「有哪些風格」「這集用 XX 風格」「講者設定成…」 | `auto-edit-style` |
+| 「拆這支參考片」「分析這支影片怎麼剪」（要給影片檔的路徑） | `auto-edit-style` 的 `references/reference-video.md` |
 
-優先序：我當下的話 > 本檔 > `shared/style.md` > `shared/template/USAGE.md` > `USAGE-reference.md`、`SITUATIONS.md`、`REVIEW.md` > Skill；派工時派工訊息 > Skill。
+優先序：我當下的話 > 本檔 > `shared/偏好.md`（有才看：我確認過每一集都照做的規則）> `shared/style.md` > `shared/template/USAGE.md` > `USAGE-reference.md`、`SITUATIONS.md`、`REVIEW.md` > Skill；派工時派工訊息 > Skill。
 
-讀文件：開工只讀本檔和那一步的 Skill；`USAGE*.md`、`SITUATIONS.md`、`BEATS.md`、`style.md`、`EDITOR.md`、`REVIEW.md` 等 Skill 那一步指到才讀，而且只讀指到的那一節（用標題或 `grep -n` 找，不要整份讀）。
+讀文件：開工只讀本檔和那一步的 Skill；`shared/偏好.md` 存在的話，寫分鏡、改段落前先讀它的「照做」那一節（很短）；`USAGE*.md`、`SITUATIONS.md`、`BEATS.md`、`style.md`、`EDITOR.md`、`REVIEW.md` 等 Skill 那一步指到才讀，而且只讀指到的那一節（用標題或 `grep -n` 找，不要整份讀）。
 
 ## 專案
 
@@ -37,13 +40,13 @@
 | `.agents/skills/`、`setup/`、`shared/` | Skill、環境手冊、共用模板與工具、音效（只能從 `shared/sfx/` 挑） | 只能讀（例外見規則 1） |
 | `dev/`、`.specify/`、`specs/` | 作者維護用 | 剪片時不要讀、不要執行；找不到合適的工具時照 `shared/template/USAGE.md`，不要自己另寫腳本 |
 
-**接手**：我說「繼續」或你不確定做到哪時，先跑 `node shared/template/tools/status.mjs --project projects/<專案>`，照它印的「下一步」做（下面那一行就是指令，整行複製執行）；有待回覆停點就重貼那個停點。它印「講者：⚠ 還沒設定」時，在回報裡問我姓名與頭銜（不擋流程，不要自己編）。
+**接手**：我說「繼續」或你不確定做到哪時，先跑 `node shared/template/tools/status.mjs --project projects/<專案>`，照它印的「下一步」做（下面那一行就是指令，整行複製執行）；有待回覆停點就重貼那個停點。它印「講者：⚠ 還沒設定」時，在回報裡問我姓名與頭銜（不擋流程，不要自己編）。它印「偏好：⚠ 有 N 條…還沒問使用者」時，跑 `node shared/template/tools/status.mjs --prefs`，在回報裡把那幾條列給我、問哪幾條以後每一集都照做（不擋流程）；我回答後照它印的 `--prefs-add`、`--prefs-skip` 記下來。我說某一條不要了，跑 `status.mjs --prefs-drop "<第幾條>"`。
 
 **長片是常態**（15–30 分鐘、400–900 句字幕）：能用工具一條做完的不要拆步驟；能同時做的同一則回覆一次派出；長時間的指令工具會背景跑，超過等待上限就再跑一次同一條（會接著等，不會重跑）。
 
 ## 規則
 
-1. 不要覆寫、移動或刪除 `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/講者.json`。構圖台的「用這一格當預覽參考圖」會寫 `shared/template/preview/speaker-local.jpg`（直式 `speaker-v-local.jpg`；不進版控）。要刪除 `work/` 以外的檔案前，先問我。
+1. 不要覆寫、移動或刪除 `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/講者.json`。我確認某條規則以後每一集都照做時，用 `status.mjs --prefs-add` 寫 `shared/偏好.md`（不要手動改這個檔）。構圖台的「用這一格當預覽參考圖」會寫 `shared/template/preview/speaker-local.jpg`（直式 `speaker-v-local.jpg`；不進版控）。要刪除 `work/` 以外的檔案前，先問我。
 2. 停點只有六個，照「停點總表」；停下來時回覆最後兩行照固定格式。我說「不用停」「跑到停點 N」才連跑。
 3. 安裝新工具前，先告訴我指令和用途，等我同意再執行。照 `setup/` 手冊做時，整份清單問一次就好。
 4. 字幕以專案的 `講稿.md` 為準，由 `media.mjs srt-align` 照講稿排、對時間：講稿一行原則上是一則（完整語句），太長、太短由工具拆、併，不要自己拆句或併句。之後要改字（講稿本身的錯字、講稿沒有的 whisper 殘字），就在剪輯台或 `work/rough.srt` 改那一則字幕，只改字、不拆不併；不改 `講稿.md`，也不用重跑 `srt-align`。顯示時去掉「，」「。」「；」「：」，保留「、」「！」「？」；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿時工具會轉繁體、照標點切成子句，你不用補標點，也不要猜內容。
@@ -53,7 +56,7 @@
 8. 每階段的回報最多 15 行；子代理只回一行（細節寫 `work/reports/`）。工具呼叫超過那支 Skill 的「工具呼叫預算」就停下來回報卡在哪；預算只算會動到檔案或要判斷結果的指令，讀文件、印 ⏳ 之後再跑同一條都不算。
 9. 不讀 `shared/template/tools/`、`shared/template/kit/*.js` 的原始碼，也不要整份讀 `work/hyperframes/plan.json`（看一段用 `build.mjs --show <段>`）。訊息看不懂就回報原文。工具說的和你看到的不一樣（例如明明改了 x 檔卻說沒改），停下來把原文和你看到的事實一起回報，不要改別的欄位讓它過。⚠ 只修一輪：照 → 用 edit 改那幾行（不要整份重寫），再跑同一條檢查一次就停，留下的 ⚠ 寫進回報；印「通過」或「可以交件」都算過關。同一個 ✖ 改 2 次還在，停下來回報指令和 ✖ 原文。
 10. 我在剪輯台改過的文字、斷句、時間以我改的為準，不要改回去。改 plan.json 或 rough.srt 之前，先重新讀那一段；剪輯台重對句號後 `work/storyboard.md` 的句號可能過期，以 plan.json 為準。
-11. 回饋裡的「規則」類（「以後都…」）這集照做，只記在 `work/feedback/r<N>.md` 的「建議改規則」，不改 `shared/` 和本檔。
+11. 回饋裡的「規則」類（「以後都…」）這集照做，只記在 `work/feedback/r<N>.md` 的「建議改規則」（一條規則寫一句完整的話），不改 `shared/` 和本檔。要變成每一集都照做的規則，等我確認後才用 `status.mjs --prefs-add` 寫進 `shared/偏好.md`；工具會自己讀各專案的回饋檔，你不用去讀別的專案。
 
 ## 停點總表
 

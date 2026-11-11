@@ -94,7 +94,23 @@ export function specKeys(first, specNames = []) {
   return out;
 }
 
-export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, minOf = null, fullOf = null } = {}) {
+// 字卡動態的候選（025）：這一行的語意適合的幾張（catalog 的 sem），照「同一種語意第幾次出現」輪流給 2 張，整集不會都是同幾張
+// fx＝[{ id, zh, sem }]（已經照版式篩過）；回傳 (row) → 'fx 05 動態堆疊｜fx 23 文字方塊' 或 ''
+export const FX_ROW_MAX = 8;   // 字卡動態是短的：超過 8 秒的行不推薦（一張卡 3–6 秒）
+export function fxPicker(fx = [], per = 2) {
+  const bySem = new Map(), seen = new Map();
+  for (const f of fx) for (const s of f.sem || []) { if (!bySem.has(s)) bySem.set(s, []); bySem.get(s).push(f); }
+  return (r) => {
+    const list = bySem.get(r.sem) || [];
+    if (!list.length) return '';
+    const k = seen.get(r.sem) || 0;
+    seen.set(r.sem, k + 1);
+    const n = Math.min(per, list.length);
+    return Array.from({ length: n }, (_, i) => list[(k * n + i) % list.length]).map((f) => `fx ${f.id} ${f.zh}`).join('｜');
+  };
+}
+
+export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, minOf = null, fullOf = null, fx = null } = {}) {
   const bySem = new Map();
   for (const r of sitRows) if (r.sem) {
     if (!bySem.has(r.sem)) bySem.set(r.sem, []);
@@ -104,6 +120,7 @@ export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, 
     bySem.get(r.sem).push(...(keys.length ? keys : specNames.length && coded ? [] : [optName(r.first)]));
   }
   // 秒數（024 試跑：挑了放不下時間下限的模板，到 --outline 才發現，換模板、併段、重跑佔掉第二回合大半時間）
+  const pickFx = fx ? fxPicker(fx) : null;
   return rows.map((r) => {
     let opts = [...new Set(bySem.get(r.sem) || [])];
     const secs = secsOf ? secsOf(r) : null;
@@ -114,9 +131,12 @@ export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, 
     if (secs != null && fullOf) opts = opts.map((o) => { const f = Number(fullOf(o)) || 0; return f > secs + 0.05 ? `${o}（項目全用上要 ${f} 秒，這裡只放得下幾項）` : o; });
     const head = `#${r.a}–#${r.z} ${r.sem} ${r.tier}${secs == null ? '' : `（${secs} 秒）`}`;
     const tail = short.length ? `；放不下：${short.map((o) => `${o} ≥ ${need(o)} 秒`).join('、')}（真的要用就和前後一行併成一段）` : '';
-    if (r.tier === 'C') return `${head}：串場用最便宜的（字卡動態：大綱寫 fx 01、fx 03、fx 38 這類代號；或 12 keywords；或併進前後那一行）${opts.length ? `；這一型的列：${opts.join('｜')}` : ''}${tail}`;
+    // 字卡動態：短的行（≤ FX_ROW_MAX 秒）才列；每一行給的那兩張不一樣（輪流），大綱的模板欄直接寫「fx 05」
+    const fxs = pickFx && (secs == null || secs <= FX_ROW_MAX + 0.05) ? pickFx(r) : '';
+    const fxTail = fxs ? `；只有一個詞或一句短話就用字卡動態：${fxs}` : '';
+    if (r.tier === 'C') return `${head}：串場用最便宜的（${fxs ? `字卡動態 ${fxs}` : '字卡動態：照寫法.md「適合的語意」挑一張'}；或 12 keywords；或併進前後那一行。同一張字卡動態一集最多用 2 次）${opts.length ? `；這一型的列：${opts.join('｜')}` : ''}${tail}`;
     const none = short.length ? '這一行太短，這一型的模板都放不下 → 和前後一行併成一段，或用字卡動態' : '這一型的模板這個版式都不能用 → 照共用.md 第 3 節的替換表換全畫面';
-    return `${head}：${opts.length ? opts.join('｜') : none}${r.tier === 'A' ? '（A：一樣先套模板，候選構想寫理由）' : ''}${tail}`;
+    return `${head}：${opts.length ? opts.join('｜') : none}${r.tier === 'A' ? '（A：一樣先套模板，候選構想寫理由）' : ''}${fxTail}${tail}`;
   });
 }
 

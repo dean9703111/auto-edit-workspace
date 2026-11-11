@@ -10,6 +10,7 @@ import { ICON_ALIAS } from './icon-alias.mjs';
 import { probeDuration } from './ff.mjs';
 import { canvasOf, resolveFormat } from './canvas.mjs';
 import { alignOutline, scriptOutline, splitParts, renderCommon, renderSnippets, renderPart, renderSemantic, designTarget, designTargetOf, designEligible, designCap, semanticTypes, situationRows } from './scaffold.mjs';
+import { readPrefs } from './prefs.mjs';
 import { parseMap, checkMap, mapOptions, mergeMaps, designVsMap, rowSeconds } from './semantic-map.mjs';
 import { listFillSpecs, designFileOf, illusNames, isBlankDesign } from './custom-fill.mjs';
 import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn } from './storyboard-gen.mjs';
@@ -147,10 +148,12 @@ export function runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }) {
     project: rel(P.project), format: { label: `${fmt.format === 'portrait' ? '直式' : '橫式'} ${canvasOf(fmt.format).W}×${canvasOf(fmt.format).H}`, portrait: fmt.format === 'portrait' },
     videoDur, cues, scriptMd, plan, outline, parts, hasCamera, kinds,
     scenes: lib.scenes.map((s) => ({ ...s, summary: slotSummary(s) })).filter((s) => hasCamera || ['chapter', 'fullscreen'].includes(s.family)),
-    fillSpecs: listFillSpecs(lib.customDir).map((f) => ({ ...f, floors: floorRules(readOpt(path.join(lib.customDir, `${f.template}.html`))) })),
+    // 直式不提供的（規格 portrait: none）、沒有講者時疊在講者上的（layout: overlay）不列，寫分鏡的人就不會挑到
+    fillSpecs: listFillSpecs(lib.customDir).filter((f) => !(fmt.format === 'portrait' && f.portrait === 'none') && (hasCamera || f.layout !== 'overlay')).map((f) => ({ ...f, floors: floorRules(readOpt(path.join(lib.customDir, `${f.template}.html`))) })),
     illus: illusNames(path.join(P.templateDir, 'kit')), speaker: readSpeaker(P.templateDir), fx: lib.fx,
     situationsMd: readOpt(path.join(P.templateDir, 'SITUATIONS.md')), beatsMd: readOpt(path.join(P.templateDir, 'BEATS.md')), styleMd: readOpt(path.join(P.templateDir, '..', 'style.md')),
     voiceOnly: voiceOnlyOf(P, P.video), notes: readNotes(P),
+    prefs: readPrefs(path.resolve(P.templateDir, '..', '..')).keep.map((x) => x.text),   // 使用者確認過每一集都照做的規則（shared/偏好.md）
     assets: { screen: count('screen', /\.(mp4|mov|m4v|webm|mkv)$/i), images: count('images', /\.(jpe?g|png|webp|heic)$/i) },
   };
   const dir = packDir(P);
@@ -229,8 +232,11 @@ export function mapCmd(P, key0) {
   console.log(`地圖通過：${rows.length} 行（A ${n('A')}、B ${n('B')}、C ${n('C')}），${warns.length} 個 ⚠${nth >= 2 && warns.length ? '。可以交件，⚠ 不用再修' : ''}`);
   if (mapPassed(P, ctx.parts)) {
     console.log('第二回合：每一行可以用的模板（照語意縮好、只列這一行秒數放得下的，名稱直接寫進大綱的模板欄；寫法用 --spec 查，一次查完）：');
-    const list = specEntries(readOpt(path.join(packDir(P), '寫法.md')));
-    for (const l of mapOptions(rows, ctx.sitRows, list.map((e) => e.name), { secsOf: (r) => rowSeconds(r, ctx.cues), minOf: (name) => minOfSpec(list, name), fullOf: (name) => fullOfSpec(list, name) })) console.log(`  ${l}`);
+    const specMd = readOpt(path.join(packDir(P), '寫法.md'));
+    const list = specEntries(specMd);
+    // 字卡動態的候選：寫法.md 列的那幾張（已經照版式篩過）和它們「適合的語意」
+    const fx = [...specMd.matchAll(/^\*\*fx (\d{2}) ([^*]+)\*\*：.*?；適合的語意：([^；]+)；/gm)].map((m) => ({ id: m[1], zh: m[2].trim(), sem: m[3].split('、').map((x) => x.trim()) }));
+    for (const l of mapOptions(rows, ctx.sitRows, list.map((e) => e.name), { secsOf: (r) => rowSeconds(r, ctx.cues), minOf: (name) => minOfSpec(list, name), fullOf: (name) => fullOfSpec(list, name), fx })) console.log(`  ${l}`);
     console.log(`→ 下一步：照地圖寫大綱 ${rel(draftsDir(P))}/${key}.outline.md（模板從上面挑；地圖上是 A 的段寫候選構想，其他寫 —），再跑：`);
     console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --outline ${key}`);
   } else console.log('→ 第一回合完成：照 chapter-worker.md 回報一行，等主代理全片校正後的第二回合（不要先寫大綱）');

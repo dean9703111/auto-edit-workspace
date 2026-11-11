@@ -638,3 +638,35 @@ test('024 語意地圖：第一回合缺地圖 → --map-merge；全片校正沒
   touch(p, 'work/分鏡素材/index.json', JSON.stringify({ parts: [{ key: 'ch01' }, { key: 'ch02' }, { key: 'ch03' }] }));
   assert.match(st().at, /^剪好看／寫分鏡草稿（還缺 ch03）/, '舊的包（沒有 semanticMap）照舊直接寫草稿');
 });
+
+test('025 跨集偏好：收集各專案 r<N>.md 的「建議改規則」（無、工具提示不算、同一句只問一次）→ --prefs-add／--prefs-skip 寫 shared/偏好.md → 不再問；--prefs-drop 拿掉', async () => {
+  const S = await imp('status.mjs');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-prefs-'));
+  const fb = (proj, n, line, extra = '') => { const d = path.join(root, 'projects', proj, 'work', 'feedback'); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, `r${n}.md`), `# 回饋 r${n}\n\n## 分類\n\n建議改規則：${line}\n${extra}\n## 改了哪幾段\n`); };
+  fs.mkdirSync(path.join(root, 'shared'), { recursive: true });
+  fb('ep1', 1, '無');
+  fb('ep1', 2, '以後金句都放左邊');
+  fb('ep2', 1, '（原話有「以後」：這集照做，這裡寫一條建議，不改 shared/、AGENTS.md）');
+  fb('ep2', 2, '', '- 以後金句都放左邊。\n- 章節轉場一律不要音效\n');
+  const notes = S.collectRuleNotes(root);
+  assert.deepEqual(notes.map((n) => `${n.from}|${n.text}`), ['projects/ep1 r2|以後金句都放左邊', 'projects/ep2 r2|以後金句都放左邊。', 'projects/ep2 r2|章節轉場一律不要音效']);
+  const pend = S.pendingPrefs(root);
+  assert.deepEqual(pend.map((x) => `${x.id} ${x.text}`), ['a1 以後金句都放左邊', 'a2 章節轉場一律不要音效'], '同一句（差標點）只問一次');
+  assert.match(S.prefsLines(root).join('\n'), /--prefs-add "a1,a2"/);
+  const add = S.prefsApply(root, 'add', 'a1');
+  assert.equal(add.added[0].text, '以後金句都放左邊');
+  S.prefsApply(root, 'skip', 'a1');   // 編號重排：剩下那條變 a1
+  const prefs = S.readPrefs(root);
+  assert.deepEqual(prefs.keep.map((x) => x.text), ['以後金句都放左邊']);
+  assert.match(prefs.keep[0].from, /^projects\/ep1 r2，\d{4}-\d\d-\d\d$/);
+  assert.deepEqual(prefs.skip.map((x) => x.text), ['章節轉場一律不要音效']);
+  assert.deepEqual(S.pendingPrefs(root), [], '都問過了');
+  S.prefsApply(root, 'add', '字卡不要用紅色');
+  assert.equal(S.readPrefs(root).keep.length, 2);
+  assert.throws(() => S.prefsApply(root, 'add', 'a9'), /沒有 a9 這一條/);
+  assert.equal(S.prefsDrop(root, '1').gone.text, '以後金句都放左邊');
+  assert.throws(() => S.prefsDrop(root, '5'), /沒有第 5 條/);
+  const md = fs.readFileSync(S.prefsFile(root), 'utf8');
+  assert.match(md, /## 照做\n\n- 字卡不要用紅色（使用者說的，\d{4}-\d\d-\d\d）\n\n## 不採用\n\n- 章節轉場一律不要音效（/);
+  fs.rmSync(root, { recursive: true, force: true });
+});

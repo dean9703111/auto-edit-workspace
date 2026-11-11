@@ -1,0 +1,81 @@
+{
+  "template": "x-tags",
+  "prefix": "xtg",
+  "beat": "D",
+  "layout": "overlay",
+  "portrait": "none",
+  "portraitAlt": "12 關鍵詞條列",
+  "when": "講者露臉講一句話，句子裡連續點到 2–4 個重點詞（方案名、步驟名、功能名，≤ 5 字）：講到哪個詞，那個詞變成小標籤釘在講者頭的旁邊；疊在講者上，不擋臉",
+  "slots": {
+    "items": {
+      "label": "重點詞",
+      "type": "list",
+      "min": 2,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "詞",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "at": {
+          "label": "講到這個詞的時間（一定用 @詞）",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    }
+  },
+  "sample": {
+    "items": [
+      {
+        "text": "剪停頓",
+        "at": "#421@剪停頓"
+      },
+      {
+        "text": "上字幕",
+        "at": "#422@上字幕"
+      },
+      {
+        "text": "配音效",
+        "at": "#423@配音效"
+      },
+      {
+        "text": "加字卡",
+        "at": "#424@加字卡"
+      }
+    ]
+  },
+  "sampleMin": {
+    "items": [
+      {
+        "text": "剪停頓",
+        "at": "#421@剪停頓"
+      },
+      {
+        "text": "配音效",
+        "at": "#423@配音效"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "each": "items",
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "標籤「{text}」釘在講者頭邊（細線＋圓點）",
+      "moves": "彈出（標籤）；＋0.15 描線（細線）；＋0.4 彈出（圓點）",
+      "focus": "「{text}」"
+    },
+    {
+      "beat": "收",
+      "at": "段尾 −0.3",
+      "show": "—",
+      "moves": "淡出（整組）",
+      "focus": "講者"
+    }
+  ]
+}

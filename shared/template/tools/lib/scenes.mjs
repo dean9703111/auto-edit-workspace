@@ -91,7 +91,7 @@ export function loadFx(templateDir) {
       const m = readFileSync(file, 'utf8').match(/data-composition-variables='([\s\S]*?)'/);
       if (m) { try { vars = JSON.parse(m[1]); } catch { vars = []; } }
     }
-    return { no: Number(e.id), id: e.id, slug: e.slug, file, fileName: path.basename(e.file), zh: e.zh, en: e.en, category: e.category, when: e.when, bg: e.bg, tag: e.tag, sfx: e.sfx ?? null, portrait: e.portrait ?? 'ok', vars };
+    return { no: Number(e.id), id: e.id, slug: e.slug, file, fileName: path.basename(e.file), zh: e.zh, en: e.en, category: e.category, when: e.when, bg: e.bg, tag: e.tag, sfx: e.sfx ?? null, portrait: e.portrait ?? 'ok', sem: Array.isArray(e.sem) ? e.sem : [], vars };
   });
 }
 

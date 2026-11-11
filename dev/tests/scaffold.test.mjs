@@ -641,3 +641,31 @@ test('024 語意地圖端到端：--map 驗一份（第一回合不印模板）�
   assert.match(r.stdout, /級「X」/);
   assert.ok(!fs.existsSync(path.join(work, 'drafts', '_map.json')), '沒通過就拿掉 _map.json：第二回合不能開始');
 });
+
+test('025 共用.md：有跨集偏好（shared/偏好.md「照做」）就列在「這支影片」；沒有就不出現', () => {
+  const cues = Array.from({ length: 12 }, (_, i) => ({ n: i + 1, start: i * 5, end: i * 5 + 4, text: `第 ${i + 1} 句` }));
+  const base = { project: 'p', format: { label: '橫式' }, videoDur: 60, cues, assets: { screen: 0, images: 0 }, parts: [] };
+  assert.match(K.renderCommon({ ...base, prefs: ['金句都放左邊', '章節不要音效'] }), /- 使用者的偏好（每一集都照做；和下面的規則衝突時照這幾條）：（1）金句都放左邊；（2）章節不要音效/);
+  assert.doesNotMatch(K.renderCommon(base), /使用者的偏好/);
+});
+
+test('025 字卡動態照語意輪流推薦：catalog 每張有 sem（都是語意類型的名稱）、每種常見語意至少 2 張；mapOptions 同一種語意連續幾行給不同的卡、太長的行不推薦、C 級不再寫死三張', async () => {
+  const M = await imp('lib/semantic-map.mjs');
+  const { loadFx } = await imp('lib/scenes.mjs');
+  const fx = loadFx(TEMPLATE);
+  const types = new Set([...K.semanticTypes(fs.readFileSync(path.join(TEMPLATE, "SITUATIONS.md"), "utf8"))].map((x) => (Array.isArray(x) ? x[0] : x.name ?? x)));
+  for (const f of fx) { assert.ok(Array.isArray(f.sem), `fx ${f.id} 沒有 sem`); for (const s of f.sem) assert.ok(types.has(s), `fx ${f.id} 的 sem「${s}」不是語意類型`); }
+  const count = (s) => fx.filter((f) => f.sem.includes(s)).length;
+  for (const s of ['轉場', '重點／警告', '對比', '問答', '情境／故事']) assert.ok(count(s) >= 2, `「${s}」只有 ${count(s)} 張字卡動態`);
+  assert.ok(fx.filter((f) => f.sem.length).length >= 36, '40 張裡至少 36 張有語意入口');
+  const rows = [1, 2, 3].map((k) => ({ a: k * 10, z: k * 10 + 1, sem: '轉場', tier: 'C' }));
+  const out = M.mapOptions(rows, [], [], { secsOf: () => 4, fx });
+  const picks = out.map((l) => [...l.matchAll(/fx (\d{2})/g)].map((m) => m[1]));
+  assert.equal(new Set(picks.flat()).size, 6, `三行各兩張、都不一樣：${JSON.stringify(picks)}`);
+  assert.doesNotMatch(out.join('\n'), /fx 01、fx 03、fx 38/);
+  assert.match(out[0], /同一張字卡動態一集最多用 2 次/);
+  const long = M.mapOptions([{ a: 1, z: 6, sem: '對比', tier: 'B' }], [], [], { secsOf: () => 20, fx })[0];
+  assert.doesNotMatch(long, /字卡動態/, '20 秒的行不推薦字卡動態');
+  const short = M.mapOptions([{ a: 1, z: 2, sem: '對比', tier: 'B' }], [], [], { secsOf: () => 5, fx })[0];
+  assert.match(short, /只有一個詞或一句短話就用字卡動態：fx \d{2} [^｜]+｜fx \d{2}/);
+});

@@ -75,7 +75,7 @@
 
 ### 音效（`shared/sfx/*.wav`）
 
-9 個音效：取自下面的 CC0 1.0（公眾領域貢獻）素材，或 AI 生成並由作者以 CC0 1.0 釋出；可商用、可修改，不需要標示出處。剪接、混音、統一響度由作者處理，處理後的檔案同樣以 CC0 釋出。逐檔的原始檔名、下載網址、sha256 與處理方式在 `shared/sfx/sources.json`。CC0 全文見 https://creativecommons.org/publicdomain/zero/1.0/ 。
+9 個音效：取自下面的 CC0 1.0（公眾領域貢獻）素材，或 AI 生成並由作者以 CC0 1.0 釋出；可商用、可修改，不需要標示出處。剪接、混音、統一響度由作者處理，處理後的檔案同樣以 CC0 釋出。逐檔的原始檔名、下載網址、sha256 與處理方式在 `shared/sfx/sources.json`。`ding-2.wav` 這類檔名帶數字的是同一顆升降半音的變體，來源與授權同本尊。CC0 全文見 https://creativecommons.org/publicdomain/zero/1.0/ 。
 
 #### Kenney 音效包
 
@@ -104,6 +104,12 @@
 - 版權：Copyright 2022–2023 The MediaPipe Authors（Google LLC）
 - 出處：程式庫 https://www.npmjs.com/package/@mediapipe/tasks-vision （1.2.0，原封不動的檔案）；模型 https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
 - 說明：只用來在本機偵測講者的臉部位置（瘦臉），不上傳任何畫面。檔案沒有修改；每個檔的大小與 sha256 在同資料夾的 `manifest.json`。模型的授權寫的是 Google 文件標示的 Apache-2.0，作者 push 前要再對一次 Face Landmarker model card 原文
+
+### 人物去背模型（u2net_human_seg）
+
+- 檔案：不在這個 repo 裡。用到講者去背的模板動畫（`x-wall`、`x-magazine`、`x-breakout`）時，由 HyperFrames 的 `remove-background` 下載到使用者家目錄的 `.cache/hyperframes/background-removal/models/`
+- 授權：Apache License 2.0（HyperFrames 文件標示）；出處 U²-Net（Xuebin Qin 等人）的人像分割權重
+- 說明：只用來在本機把講者從背景分出來，不上傳任何畫面
 
 ## 繁簡對照表
 

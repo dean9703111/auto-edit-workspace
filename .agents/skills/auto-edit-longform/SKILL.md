@@ -90,4 +90,5 @@ status 和實際檔案不符時以產物為準，判斷表在 `references/progre
 
 - `references/new-project.md`：使用者說「開一個新專案」，或還沒有任何素材時才讀。
 - `references/sort-assets.md`：使用者說「分類素材」，或素材散落在專案裡時才讀。
+- `references/shorts.md`：使用者說「從這支長片切短片」「切 Shorts」時才讀（照它做）。
 - `references/progress-template.md`：status 和實際檔案不符、要以產物判斷階段時才讀。

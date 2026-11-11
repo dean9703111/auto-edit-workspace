@@ -21,6 +21,7 @@
   #footage { position: absolute; inset: 0; }
   #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
   #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
   #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
   #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
   #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
@@ -74,7 +75,7 @@
   <div id="x-ui-mock" data-composition-id="x-ui-mock" data-width="1920" data-height="1080" data-duration="13.5"
        data-cues-sample='{"start":0,"D":13.5,"cues":{"72":[2.8,5.5],"73":[5.7,8],"74":[8.2,10.8]},"refs":{"#72@匯出設定":2.8,"#73@匯出":5.7,"#74@完成":8.2}}'>
     <div class="sc-surface-fs fill"></div>
-    <div id="xui-win">
+    <div id="xui-win" data-wide-zoom="1.2">
       <div id="xui-chrome"><i class="xui-dot"></i><i class="xui-dot"></i><i class="xui-dot"></i><span id="xui-wtitle" class="sc-t40 sc-w700 sc-opt">Auto Edit 設定</span></div>
       <div id="xui-view">
         <div id="xui-canvas" data-layout-allow-overflow>

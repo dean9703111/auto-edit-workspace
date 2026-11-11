@@ -1,0 +1,70 @@
+{
+  "template": "x-wall",
+  "prefix": "xwl",
+  "beat": "F",
+  "layout": "overlay",
+  "portrait": "none",
+  "portraitAlt": "15 金句字卡或 x-wordcut",
+  "matte": true,
+  "when": "講者露臉，反覆強調一個詞、喊口號，或情緒最滿的那一句（≤ 5 字）：講者背後整面換成主色的牆、那個詞一排一排鋪滿，講者去背後站在牆前面；一集最多 2 次",
+  "slots": {
+    "word": {
+      "label": "那個詞（實心字那幾排）",
+      "type": "text",
+      "max": 5,
+      "required": true
+    },
+    "word2": {
+      "label": "第二個詞（空心字那幾排；選填，不寫就用同一個詞）",
+      "type": "text",
+      "max": 5
+    },
+    "hitAt": {
+      "label": "講到那個詞的時間（一定用 @詞）",
+      "type": "at",
+      "ref": "HIT",
+      "required": true
+    },
+    "againAt": {
+      "label": "講到第二次（或第二個詞）的時間；和 hitAt 至少差 2 秒",
+      "type": "at",
+      "ref": "AGAIN",
+      "required": true
+    }
+  },
+  "sample": {
+    "word": "剪輯師",
+    "word2": "自動剪",
+    "hitAt": "#432@剪輯師",
+    "againAt": "#433@自動剪"
+  },
+  "sampleMin": {
+    "word": "剪輯師",
+    "hitAt": "#432@剪輯師",
+    "againAt": "#433@自動剪"
+  },
+  "sheet": [
+    {
+      "beat": "1",
+      "at": "`{hitAt}`",
+      "show": "講者背後整面主色的牆；「{word}」鋪滿（實心字三排）；講者在牆前面",
+      "moves": "擦開（牆，由下）；＋0.1 錯拍彈出（實心字）",
+      "focus": "「{word}」",
+      "sfx": "impact"
+    },
+    {
+      "beat": "2",
+      "at": "`{againAt}`",
+      "show": "空心字三排補上",
+      "moves": "錯拍彈出（空心字）",
+      "focus": "整面牆"
+    },
+    {
+      "beat": "收",
+      "at": "段尾 −0.3",
+      "show": "—",
+      "moves": "淡出（牆）",
+      "focus": "講者"
+    }
+  ]
+}

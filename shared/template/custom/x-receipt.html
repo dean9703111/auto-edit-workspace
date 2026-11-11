@@ -1,0 +1,134 @@
+<!-- 預設拍型：E 數字（BEATS.md §3 E；收據：項目一列一列印出來，最後合計數上去） -->
+<!doctype html>
+<!--
+  x-receipt：收據列印（第二層 custom，layout: "fullscreen"）
+
+  【適用的講解】
+  在講「一筆一筆加起來是多少」：3–5 個項目各有一個數字，最後有一個合計，例如「手動剪一支片，找 NG 要 90 分鐘、上字幕 60 分鐘、
+  做字卡 50 分鐘、配音效 30 分鐘、輸出 20 分鐘，加起來 250 分鐘」。花了多少、省了多少、一串項目的總和都算。
+  畫面是一台出單機：上面一條深色出紙口，收據從出紙口往下印。先印出抬頭；講到哪一項，那一列印出來、金額逐字落下；
+  講到合計時印出合計列，數字從 0 數到合計、重拍、畫螢光筆，接著條碼和撕口印出來。
+
+  【不要用在哪裡】
+  - 項目沒有數字（只是清單）：用 x-checklist 或 13 標題條列。
+  - 只有兩個數字在比（以前、現在）：用 x-before-after。
+  - 同一個量在不同時間點的變化：用 x-trend。
+  - 超過 5 項：合併小項，或拆兩段。
+  - 項目一口氣唸完（兩項相隔不到 2 秒）：畫面來不及一列一列停，改用 04d 表格。這支沒有圖示。
+
+  【要改的地方】
+  1. 文字：抬頭 #xrc-title（≤ 8 字）；每一列的項目 .xrc-name（≤ 6 字）、金額 .xrc-amt（≤ 5 個字元，只寫數字，單位寫在合計）；
+     合計列的名稱 #xrc-tl（≤ 3 字）、單位 #xrc-unit（≤ 2 字）。
+  2. 合計：<script> 的 TOTAL（要等於各列金額加起來；數字從 0 數到這裡，≤ 4 位數）。
+  3. 項數：3–5 列。少一列就刪掉最後那個 .xrc-row、它的 P.wipe／P.chars 那一行，還有 const 那一行對應的 T。
+  4. 綁句：<script> 開頭 T1–T5、SUM 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 SUM 改。
+
+  【綁句欄位】
+  T1 = P.at('#402@NG') … T5 = P.at('#406@輸出')：講到每一項的時刻，那一列印出來。
+  SUM = P.at('#407@加起來')：講到合計的時刻，合計列印出來、數字 0.8 秒數上去；音效 impact。
+  項目名稱在句中間時一定用 @詞，不要綁句首。「@詞」要寫成字串字面值，build 才算得到。
+
+  【D 下限】
+  T1 ≥ 2.0（0.5 秒出紙口彈出、0.9 秒抬頭印出、標題逐字）
+  T2 ≥ T1 + 2.0（一列 0.3 秒印完、金額落下到 T1 + 0.6，停 1.2 秒）
+  T3 ≥ T2 + 2.0
+  T4 ≥ T3 + 2.0
+  T5 ≥ T4 + 2.0
+  SUM ≥ T5 + 2.0
+  D ≥ SUM + 4.0（數字數到 SUM + 1.0、條碼印到 SUM + 1.5；最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen，沒有主卡。出紙口 #xrc-slot：left 380、top 92、660×28。收據 #xrc-card：left 420、top 106、寬 580（右緣 1000，避開右下子母畫面），
+  高度由內容決定：抬頭 132、每列 76、合計列 132、條碼 96、撕口 20；5 列時 y 92–866（在字幕區 y 920 之上），3、4 列時 script 把整組在 y 120–870 垂直置中。
+  每一塊（.xrc-sec）裡各有一片紙底 .xrc-bg，所以可以一塊一塊由上往下印出來；落影加在 #xrc-card 上，只跟著印出來的部分。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-receipt 收據列印</title></head>
+<body>
+<template id="x-receipt-template">
+  <style>
+    #x-receipt { position: absolute; inset: 0; }
+    #x-receipt .fill { position: absolute; inset: 0; }
+    /* 出紙口：深色橫條，蓋在收據上緣 */
+    #x-receipt #xrc-slot { position: absolute; left: 380px; top: 92px; width: 660px; height: 28px; border-radius: 14px; background: var(--v2-ink); }
+    /* 收據：left 420、top 106、寬 580（右緣 1000）；落影只跟著印出來的部分 */
+    #x-receipt #xrc-card { position: absolute; left: 420px; top: 106px; width: 580px; color: var(--v2-ink); filter: var(--v2-pen-shadow); }
+    #x-receipt .xrc-sec { position: relative; box-sizing: border-box; width: 580px; padding: 0 40px; white-space: nowrap; }
+    #x-receipt .xrc-bg { position: absolute; inset: 0; background: var(--v2-card); }
+    #x-receipt .xrc-sec > span, #x-receipt .xrc-sec > svg { position: relative; }
+    #x-receipt #xrc-head { height: 132px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 28px; }
+    #x-receipt .xrc-rule { position: absolute; left: 40px; right: 40px; bottom: 0; height: 0; border-top: 4px dashed var(--v2-line); }
+    #x-receipt .xrc-row { height: 76px; display: flex; align-items: center; justify-content: space-between; }
+    #x-receipt #xrc-total { height: 132px; display: flex; align-items: center; justify-content: space-between; }
+    #x-receipt #xrc-sum { display: flex; align-items: baseline; gap: 12px; }
+    #x-receipt .xrc-rule--top { bottom: auto; top: 0; }
+    #x-receipt #xrc-code { height: 96px; display: flex; align-items: center; justify-content: center; }
+    #x-receipt #xrc-code svg { display: block; width: 420px; height: 56px; fill: currentColor; }
+    #x-receipt #xrc-tear { display: block; width: 580px; height: 20px; fill: var(--v2-card); }
+  </style>
+  <div id="x-receipt" data-composition-id="x-receipt" data-width="1920" data-height="1080" data-duration="18.2"
+       data-cues-sample='{"start":0,"D":18.2,"cues":{"401":[0.6,2.0],"402":[2.1,4.2],"403":[4.3,6.4],"404":[6.5,8.6],"405":[8.7,10.8],"406":[10.9,13.0],"407":[13.2,17.8]},"refs":{"#402@NG":2.3,"#403@字幕":4.5,"#404@字卡":6.7,"#405@音效":8.9,"#406@輸出":11.1,"#407@加起來":13.5}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrc-card">
+      <div id="xrc-head" class="xrc-sec"><i class="xrc-bg"></i><b class="xrc-rule" data-layout-allow-overlap></b><span id="xrc-title" class="sc-t52 sc-w900 sc-opt" data-fill="title">手動剪一支片</span></div>
+      <div id="xrc-body">
+        <div id="xrc-r1" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt" data-fill="items.1.text">找 NG</span><span class="xrc-amt sc-t44 sc-w700 sc-mono" data-fill="items.1.amt">90</span></div>
+        <div id="xrc-r2" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt" data-fill="items.2.text">上字幕</span><span class="xrc-amt sc-t44 sc-w700 sc-mono" data-fill="items.2.amt">60</span></div>
+        <div id="xrc-r3" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt" data-fill="items.3.text">做字卡</span><span class="xrc-amt sc-t44 sc-w700 sc-mono" data-fill="items.3.amt">50</span></div>
+        <div id="xrc-r4" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt" data-fill="items.4.text">配音效</span><span class="xrc-amt sc-t44 sc-w700 sc-mono" data-fill="items.4.amt">30</span></div> <!-- @if n>=4 -->
+        <div id="xrc-r5" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt" data-fill="items.5.text">輸出</span><span class="xrc-amt sc-t44 sc-w700 sc-mono" data-fill="items.5.amt">20</span></div> <!-- @if n>=5 -->
+      </div>
+      <div id="xrc-foot">
+        <div id="xrc-total" class="xrc-sec"><i class="xrc-bg"></i><b class="xrc-rule xrc-rule--top" data-layout-allow-overlap></b><span id="xrc-tl" class="sc-t52 sc-w900 sc-opt" data-fill="totalLabel">合計</span><span id="xrc-sum"><span id="xrc-num" class="sc-t80 sc-w900 sc-kw sc-mono" data-fill="total">250</span><span id="xrc-unit" class="sc-t44 sc-w700 sc-opt" data-fill="unit">分鐘</span></span></div>
+      </div>
+      <div id="xrc-end">
+        <div id="xrc-code" class="xrc-sec"><i class="xrc-bg"></i><svg viewBox="0 0 420 56" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="8" height="56" /><rect x="16" y="0" width="4" height="56" /><rect x="28" y="0" width="12" height="56" /><rect x="48" y="0" width="4" height="56" /><rect x="60" y="0" width="8" height="56" /><rect x="76" y="0" width="16" height="56" /><rect x="100" y="0" width="4" height="56" /><rect x="112" y="0" width="8" height="56" /><rect x="128" y="0" width="4" height="56" /><rect x="140" y="0" width="12" height="56" /><rect x="160" y="0" width="8" height="56" /><rect x="176" y="0" width="4" height="56" /><rect x="188" y="0" width="16" height="56" /><rect x="212" y="0" width="4" height="56" /><rect x="224" y="0" width="8" height="56" /><rect x="240" y="0" width="12" height="56" /><rect x="260" y="0" width="4" height="56" /><rect x="272" y="0" width="8" height="56" /><rect x="288" y="0" width="4" height="56" /><rect x="300" y="0" width="16" height="56" /><rect x="324" y="0" width="8" height="56" /><rect x="340" y="0" width="4" height="56" /><rect x="352" y="0" width="12" height="56" /><rect x="372" y="0" width="4" height="56" /><rect x="384" y="0" width="8" height="56" /><rect x="400" y="0" width="20" height="56" /></svg></div>
+        <svg id="xrc-tear" viewBox="0 0 580 20" xmlns="http://www.w3.org/2000/svg"><polygon points="0,0 580,0 580,6 560,20 540,6 520,20 500,6 480,20 460,6 440,20 420,6 400,20 380,6 360,20 340,6 320,20 300,6 280,20 260,6 240,20 220,6 200,20 180,6 160,20 140,6 120,20 100,6 80,20 60,6 40,20 20,6 0,20" /></svg>
+      </div>
+    </div>
+    <div id="xrc-slot" data-layout-allow-overlap></div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-receipt'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#402@NG'), T2 = P.at('#403@字幕'), T3 = P.at('#404@字卡'), T4 = P.at('#405@音效'), T5 = P.at('#406@輸出');   // 講到每一項的時刻  // @sub n==3: const T1 = P.at('#402@NG'), T2 = P.at('#403@字幕'), T3 = P.at('#404@字卡'); @@ n==4: const T1 = P.at('#402@NG'), T2 = P.at('#403@字幕'), T3 = P.at('#404@字卡'), T4 = P.at('#405@音效');
+    const SUM = P.at('#407@加起來');   // 講到合計的時刻
+    const TOTAL = 250;                 // 合計（各列金額加起來）
+    P.sfx('impact', '#407@加起來');     // 合計落定一顆音效（句號和 SUM 一樣）
+
+    // 整組在內容區（y 120–870）垂直置中：3、4 列時往下移；5 列時貼齊上緣 92（載入時算一次，不用改）
+    const CARD = document.getElementById('xrc-card'), SLOT = document.getElementById('xrc-slot'), H = CARD.offsetHeight + 14;
+    const Y = H >= 750 ? 92 : Math.round(120 + (750 - H) / 2);
+    SLOT.style.top = Y + 'px'; CARD.style.top = (Y + 14) + 'px';
+
+    // 拍 0 開場：出紙口彈出 → 0.9 秒抬頭由上往下印出來、標題逐字上浮
+    P.pop('#xrc-slot', 0.5, { from: 0.9, dy: -20 });
+    P.wipe('#xrc-head', 0.9, { dir: 'down', dur: 0.5 });
+    P.chars('#xrc-title', 1.1);
+
+    // 拍 1–5 講到哪一項，那一列由上往下印出來 → ＋0.1 金額逐字落下
+    P.wipe('#xrc-r1', T1, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r1 .xrc-amt', T1 + 0.1, { mode: 'drop' });
+    P.wipe('#xrc-r2', T2, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r2 .xrc-amt', T2 + 0.1, { mode: 'drop' });
+    P.wipe('#xrc-r3', T3, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r3 .xrc-amt', T3 + 0.1, { mode: 'drop' });
+    P.wipe('#xrc-r4', T4, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r4 .xrc-amt', T4 + 0.1, { mode: 'drop' });   // @if n>=4
+    P.wipe('#xrc-r5', T5, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r5 .xrc-amt', T5 + 0.1, { mode: 'drop' });   // @if n>=5
+
+    // 拍 合計：合計列印出來 → ＋0.2 數字從 0 數到合計 → 數完重拍、畫螢光筆 → 條碼和撕口印出來
+    P.wipe('#xrc-foot', SUM, { dir: 'down', dur: 0.4 });
+    P.count('#xrc-num', SUM + 0.2, { from: 0, to: TOTAL, dur: 0.8 });
+    P.punch('#xrc-num', SUM + 1.0, { scale: 1.12 });
+    P.marker('#xrc-sum', SUM + 1.0);
+    P.wipe('#xrc-end', SUM + 1.1, { dir: 'down', dur: 0.4 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-receipt'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

@@ -30,7 +30,7 @@ import { findCue, norm, cueByN } from './srt.mjs';
 import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTime, textWidth, onVoice, voicedAt } from './time.mjs';
 import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } from './edit.mjs';
 import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner, mediaOverlaps } from './media.mjs';
-import { SFX_RULES, SFX_SWAP, sfxBudget, thinMainSfx } from './audio.mjs';
+import { SFX_RULES, SFX_SWAP, rotateSfx, sfxBudget, thinMainSfx } from './audio.mjs';
 import { validateMoods, moodCues, zoomSpans, MOOD_KINDS } from './moods.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
@@ -54,6 +54,8 @@ const VOICE_ERR = 1;       // 只有聲音的區間沒被蓋住超過 1 秒就 �
 const VOICE_WARN = 0.1;      // 沒被蓋住超過 0.1 秒就 ⚠（舊值 0.5）
 const PIP_MIN = 0.5;        // 子母畫面片段短於 0.5 秒就不放（只會閃一下）
 const FADE = 0.5;          // 不透明幕淡入淡出
+const FX_REPEAT_MAX = 2;    // 同一張字卡動態一集最多幾次（shared/style.md「節奏」）
+const TEMPLATE_MAX = { 'x-wordcut': 1, 'x-wall': 2, 'x-magazine': 1, 'x-breakout': 1 };   // 吸睛的模板動畫一集最多幾次（shared/style.md「節奏」）
 const HANDOFF = 0.4;       // 下方字卡換卡：前一張延到後一張起點＋0.4
 const SFX_GAP = SFX_RULES.gapSec;          // 主音效之間的間隔（additive 的不算，005 的 contracts/sfx.md §4）
 const EXTRA_GAP = SFX_RULES.extraGapSec;   // 同一段內兩個音效起點的最小間隔（附加音效太近就丟掉後者）
@@ -581,6 +583,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
         if (dup) err(`src「${src}」已經給 ${dup} 用了 → 複製成另一個檔名（例 ${expect}-2.html，template id 與 data-composition-id 一起改），兩段各用一支`);
         else customSrc.set(src, seg.id);
       }
+      if (portrait && seg.__noPortrait) err(`直式不提供 ${seg.template}（它照橫式的講者位置排版）→ 改用 ${seg.__noPortrait}`);
       if (!['overlay', 'fullscreen'].includes(seg.layout)) err(`layout 要寫 "overlay"（透明、疊在講者上）或 "fullscreen"（不透明，自動加子母畫面），現在是 ${JSON.stringify(seg.layout)}`);
       it.opaque = seg.layout === 'fullscreen';
       it.pip = it.opaque && seg.pip !== false;
@@ -1083,6 +1086,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     const adj = (c) => { if (c) c.volume = r3(Math.min(3.98, c.volume * g * env(c.at))); };
     for (const it of [...timed, ...moodItems]) { adj(it.sfx); (it.sfxExtra || []).forEach(adj); }
   }
+  rotateSfx([...timed, ...moodItems].flatMap((it) => [it.sfx, ...(it.sfxExtra || [])]), sfxConf, (f) => !sfxDir || fs.existsSync(path.join(sfxDir, `${f}.wav`)));
   // 音效政策：每集上限、每分鐘密度、和人聲的比例（005 的 sfxBudget；訊息原文 contracts/cli-005.md §3）
   const budgetCues = [...timed, ...moodItems].flatMap((it) => [it.sfx && { id: it.id, name: it.sfx.name, at: it.sfx.at, volume: it.sfx.volume, main: true },
     ...(it.sfxExtra || []).map((c) => ({ id: it.id, name: c.name, at: c.at, volume: c.volume, main: !!c.beat }))].filter(Boolean));
@@ -1187,6 +1191,22 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const kindOf = (x) => (x.key === 'custom' ? (x.seg.template ? `tpl:${x.seg.template}` : `custom:${x.seg.src}`) : x.key);
   for (let i = 1; i < timed.length; i++) {
     if (timed[i].key && !['media', 'chapter', 'chapter-tag'].includes(timed[i].key) && kindOf(timed[i]) === kindOf(timed[i - 1])) timed[i].warnings.push(`${timed[i].where} 和前一段（${timed[i - 1].id}）用同一個模板 → 換一個模板或併成一段`);
+  }
+  // 吸睛的模板動畫一集有上限（TEMPLATE_MAX）：超過的那幾段提醒
+  const tplSeen = {};
+  for (const x of timed) {
+    const tpl = x.key === 'custom' ? x.seg.template : null, max = tpl ? TEMPLATE_MAX[tpl] : 0;
+    if (!max) continue;
+    tplSeen[tpl] = (tplSeen[tpl] || 0) + 1;
+    if (tplSeen[tpl] > max) x.warnings.push(`${x.where} ${tpl} 一集最多 ${max} 次，這是第 ${tplSeen[tpl]} 次 → 換成 15 金句字卡或 07 重點字卡`);
+  }
+  // 同一張字卡動態一集最多 FX_REPEAT_MAX 次（29 數字計數是資料卡，不算）：第 3 次起提醒換同類的另一張
+  const fxSeen = {};
+  for (const x of timed) {
+    if (x.type !== 'fx' || x.fxDef?.no === 29) continue;
+    const n = x.fxDef?.no;
+    fxSeen[n] = (fxSeen[n] || 0) + 1;
+    if (fxSeen[n] > FX_REPEAT_MAX) x.warnings.push(`${x.where} 字卡動態 ${String(n).padStart(2, '0')} 這一集已經用了 ${fxSeen[n] - 1} 次 → 換一張同類的（清單：node shared/template/tools/build.mjs --list，看「適合的語意」）`);
   }
   // 連續 ≥ 5 段同一個版面家族（例：06／07／11 都是下方字卡）：畫面太單調
   const famRun = timed.filter((x) => !['chapter', 'chapter-tag'].includes(x.key));

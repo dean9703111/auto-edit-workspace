@@ -1,0 +1,149 @@
+{
+  "template": "x-receipt",
+  "prefix": "xrc",
+  "beat": "E",
+  "layout": "fullscreen",
+  "when": "一筆一筆加起來是多少：3–5 個項目各有一個數字、最後有合計（花了多少、省了多少、一串項目的總和）；收據從出紙口一列一列印出來，講到合計時數字數上去",
+  "slots": {
+    "title": {
+      "label": "收據抬頭",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "items": {
+      "label": "項目",
+      "type": "list",
+      "min": 3,
+      "maxItems": 5,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "項目名稱",
+          "type": "text",
+          "max": 6,
+          "required": true
+        },
+        "amt": {
+          "label": "金額（只寫數字，≤ 5 個字元；單位寫在合計）",
+          "type": "text",
+          "max": 2.5,
+          "required": true
+        },
+        "at": {
+          "label": "講到這一項的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    },
+    "totalLabel": {
+      "label": "合計列的名稱（例：合計、省下）",
+      "type": "text",
+      "max": 3,
+      "required": true
+    },
+    "total": {
+      "label": "合計（各列金額加起來，≤ 4 位數）",
+      "type": "number",
+      "const": "TOTAL",
+      "required": true
+    },
+    "unit": {
+      "label": "合計的單位",
+      "type": "text",
+      "max": 2,
+      "required": true
+    },
+    "sumAt": {
+      "label": "講到合計的時間",
+      "type": "at",
+      "ref": "SUM",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "手動剪一支片",
+    "items": [
+      {
+        "text": "找 NG",
+        "amt": "90",
+        "at": "#402@NG"
+      },
+      {
+        "text": "上字幕",
+        "amt": "60",
+        "at": "#403@字幕"
+      },
+      {
+        "text": "做字卡",
+        "amt": "50",
+        "at": "#404@字卡"
+      },
+      {
+        "text": "配音效",
+        "amt": "30",
+        "at": "#405@音效"
+      },
+      {
+        "text": "輸出",
+        "amt": "20",
+        "at": "#406@輸出"
+      }
+    ],
+    "totalLabel": "合計",
+    "total": 250,
+    "unit": "分鐘",
+    "sumAt": "#407@加起來"
+  },
+  "sampleMin": {
+    "title": "手動剪一支片",
+    "items": [
+      {
+        "text": "找 NG",
+        "amt": "90",
+        "at": "#402@NG"
+      },
+      {
+        "text": "上字幕",
+        "amt": "60",
+        "at": "#404@字卡"
+      },
+      {
+        "text": "做字卡",
+        "amt": "50",
+        "at": "#406@輸出"
+      }
+    ],
+    "totalLabel": "合計",
+    "total": 200,
+    "unit": "分鐘",
+    "sumAt": "#407@加起來"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "出紙口；收據抬頭「{title}」",
+      "moves": "＋0.5 彈出（出紙口）；＋0.9 擦開（抬頭，由上）；＋1.1 逐字上浮（抬頭）",
+      "focus": "抬頭"
+    },
+    {
+      "each": "items",
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "第 {n} 列「{text}」{amt}",
+      "moves": "擦開（這一列，由上）；＋0.1 逐字落下（金額）",
+      "focus": "第 {n} 列"
+    },
+    {
+      "beat": "合計",
+      "at": "`{sumAt}`",
+      "show": "合計列「{totalLabel} {total} {unit}」；條碼、撕口",
+      "moves": "擦開（合計列，由上）；＋0.2 數字滾動（0 → {total}）；＋1.0 重拍（合計）；＋1.0 螢光筆（合計）；＋1.1 擦開（條碼、撕口）",
+      "focus": "合計",
+      "sfx": "impact"
+    }
+  ]
+}

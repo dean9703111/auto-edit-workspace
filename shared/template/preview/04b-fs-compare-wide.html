@@ -28,6 +28,7 @@
   #cap { z-index: 60; }
   /* 背景圖：各版面先用自己的 ../bg-*.jpg，沒有就用 ../bg.jpg，都沒有只顯示底紋（不必重新產生預覽頁） */
   .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  [data-wide] .sc-surface-fs { background-image: var(--sc-fs-pattern); }
   .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
   .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
   #pv-fs-compare #pv-wCard { position: absolute; left: 120px; top: 150px; width: 1180px; }
@@ -43,6 +44,11 @@
   #pv-fs-compare .fHIcon svg { display: block; width: 56px; height: 56px; }
   #pv-fs-compare .fItem { display: flex; align-items: center; gap: var(--sc-gap-md); white-space: nowrap; }
   #pv-fs-compare .fLine { flex: none; width: 2px; background: var(--sc-fs-line); opacity: 0.4; }
+  #pv-fs-compare [data-wide] .fHead .sc-t72, #pv-fs-compare [data-wide] .fHead.sc-t72 { font-size: 88px; line-height: 120px; }
+  #pv-fs-compare [data-wide] .fHIcon, #pv-fs-compare [data-wide] .fHIcon svg { width: 72px; height: 72px; }
+  #pv-fs-compare [data-wide] .fItem .sc-t44 { font-size: 56px; line-height: 76px; }
+  #pv-fs-compare [data-wide] .fCol:first-child { padding-right: var(--sc-gap-xl); }
+  #pv-fs-compare [data-wide] .fCol:last-child { padding-left: var(--sc-gap-xl); }
 </style>
 </head>
 <body>

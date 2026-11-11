@@ -79,6 +79,7 @@ import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
 import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip } from './lib/audio.mjs';
 import { ensureLook, lookCheck } from './lib/look.mjs';
+import { ensureMattes } from './lib/matte.mjs';
 import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
@@ -260,10 +261,10 @@ export function listText(lib) {
     const beats = Object.entries(s.beats || {}).map(([k, b]) => `${k}（${b.label}，預設 ${b.default}）`).join('；') || '—';
     lines.push(`| ${s.num} | ${s.key} | ${s.zh} | ${s.family} | ${PORTRAIT_ZH[s.portrait] || '—'} | ${len} | ${s.bindsSrt === false ? 'at: "#N"' : 'from／to'} | ${slotSummary(s)}${s.tone ? '；tone: warn／good' : ''} | ${beats} | ${sfxSummary(s)} | ${s.when} | ${s.avoid || '—'} |`);
   }
-  lines.push('', '# 字卡動態（"type": "fx", "fx": 編號；bg 預設 none＝透明疊在講者上；dark／light／accent＝不透明整張幕）', '', '| # | 中文 | 英文 | 類別 | vars | 音效 | 看到什麼句子用它 |', '|---|---|---|---|---|---|---|');
+  lines.push('', '# 字卡動態（"type": "fx", "fx": 編號；bg 預設 none＝透明疊在講者上；dark／light／accent＝不透明整張幕）', '', '| # | 中文 | 英文 | 類別 | vars | 音效 | 看到什麼句子用它 | 適合的語意 |', '|---|---|---|---|---|---|---|---|');
   for (const f of lib.fx) {
     const vars = f.vars.filter((v) => !['bg', 'accent'].includes(v.id)).map((v) => `${v.id}（${v.label}）`).join('、');
-    lines.push(`| ${f.id} | ${f.zh} | ${f.en} | ${f.category} | ${vars} | ${f.sfx ? `${f.sfx.sound} @ ${f.sfx.at ?? 'start'}` : '—'} | ${f.when} |`);
+    lines.push(`| ${f.id} | ${f.zh} | ${f.en} | ${f.category} | ${vars} | ${f.sfx ? `${f.sfx.sound} @ ${f.sfx.at ?? 'start'}` : '—'} | ${f.when} | ${f.sem?.length ? f.sem.join('、') : '—'} |`);
   }
   const tags = (v) => [v.additive ? '附加' : '', v.maxPerVideo != null ? `每集 ≤ ${v.maxPerVideo}` : ''].filter(Boolean).map((x) => `，${x}`).join('');
   lines.push('', '# 音效（"sfx"）：' + Object.entries(lib.sfx).filter(([, v]) => v.kind !== 'bgm').map(([k, v]) => `${k}（${v.zh || k}，音量 ${v.volume}${tags(v)}）`).join('、') + '、null（不配）；"sfxExtra": false 可關掉該段的附加音效（跟動畫節拍的 tick 等）；不寫＝用上表音效欄的預設');
@@ -844,7 +845,11 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     const r = renderBgmClip(path.join(P.sfx, `${res.outro.music}.wav`), path.join(P.out, 'assets'), { from: clip.from, dur: clip.dur, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, gain: clip.gain });
     outro = { file: posix(path.relative(P.out, r.file)), at: clip.at, dur: r.dur };
   }
-  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null };
+  // 人物去背層：規格寫 "matte": true 的模板動畫（x-wall…），把那一段的講者去背、疊在動畫上（lib/matte.mjs；檔在就沿用）
+  const mt = ensureMattes({ outDir: P.out, root: path.resolve(HERE, '..', '..', '..'), items: res.items, tm: res.tm, assetVideo, log, speakerBox: res.globals.speakerBox });
+  if (mt.made || mt.reused) log(`人物去背層：${mt.made + mt.reused} 段（新做 ${mt.made}、沿用 ${mt.reused}）`);
+  if (mt.problems.length) { for (const x of mt.problems) log(`✖ [${x.id}] ${x.msg}`); return { ok: false, res }; }
+  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null };
   const main = buildMain({ ...mainOpts, captions: cap });
   let test = null;
   if (flags.test) {

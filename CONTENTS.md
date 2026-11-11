@@ -12,7 +12,7 @@
 | 項目 | 數量 | 位置 | 怎麼用 |
 |---|---|---|---|
 | 情境模板 | 18 個 | `shared/template/scenes/` | 版面 9 個（章節轉場、章節角標、半版側邊欄、全畫面 4 種、兩側、講者介紹），下方字卡 7 個（一般、重點、步驟、問答、小技巧、總結、金句），條列 2 個。AI 只要填文字、圖示和要對齊的字幕句；圖示會自動「描出來」 |
-| 情境動畫範例 | 34 支（流程、比喻、前後對比、數值變化、警告、提示詞、介面示意、架構、分支、分層、清單打勾、時間軸、雙邊比較、主體標註、趨勢、比例環、痛點與解法，加上變體：電路板、循環、手機功能膠囊、零件圖、AI 逐條完成、台座、環形圖註解、方塊堆疊、一鍵歸位、紙飛機傳出去、問 AI、終端機、程式碼、人群比例、兩排人比快慢、地台裝置接力、新聞快訊） | `shared/template/custom/x-*.html` | 講解在講一個抽象的結構（流程、對比、比例…）時，AI 挑一支改成這一集的動畫，不用從零寫。畫面主角是圖，字只當標籤；動畫用 `P.at('#N@詞')` 綁到講到的那個詞，不用手算秒數 |
+| 情境動畫範例 | 41 支（流程、比喻、前後對比、數值變化、警告、提示詞、介面示意、架構、分支、分層、清單打勾、時間軸、雙邊比較、主體標註、趨勢、比例環、痛點與解法，加上變體：電路板、循環、手機功能膠囊、零件圖、AI 逐條完成、台座、環形圖註解、方塊堆疊、一鍵歸位、紙飛機傳出去、問 AI、終端機、程式碼、人群比例、兩排人比快慢、地台裝置接力、新聞快訊、資料夾樹、收據列印、同字異材快切、重點詞浮標、情緒詞整面牆、雜誌封面、破框而出） | `shared/template/custom/x-*.html` | 講解在講一個抽象的結構（流程、對比、比例…）時，AI 挑一支改成這一集的動畫，不用從零寫。畫面主角是圖，字只當標籤；動畫用 `P.at('#N@詞')` 綁到講到的那個詞，不用手算秒數 |
 | 示意動畫 | 1 支骨架＋2 個範例（`x-scene`、`x-scene-example-rec`、`x-scene-example-outline`）；插圖畫廊 22 個元件（白板線稿，暗色主題是黑板） | `shared/template/custom/`、`shared/template/kit/illus-gallery.jpg` | 講解在講看得見的東西在動（手機掃碼、資料夾刪檔、人走過去），而且沒有對得上的錄影時，AI 用線條插圖照講到的順序演出來（馬克筆一筆一筆畫出）；只有聲音的段落也靠它蓋住 |
 | 字卡動態 | 40 種 | `shared/template/fx/` | 打開 `shared/template/fx/index.html` 看效果，分鏡寫編號就能用 |
 | 動畫原始檔 | 18 情境＋40 字卡動態都是 HTML（HyperFrames） | `shared/template/scenes/<編號-key>/template.html`＋`scene.json`、`shared/template/fx/effects/fx-NN-*.html` | AI 直接讀、改、換；`fx/renders/` 和 `gallery/` 只是預覽用的影片和圖。要改模板先看 `shared/template/USAGE-reference.md` R14 |
@@ -22,7 +22,7 @@
 | 講者調光、瘦臉、美顏 | 選用，預設關閉；建議值調光 0.8、瘦臉 0.6、美顏 0.5 | `shared/template/kit/look.json`（工具 `look.mjs`） | 構圖台、剪輯台都有開關和強度滑桿。臉部偵測在本機做、不上傳 |
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
 | 字型 | 3 套（Noto Sans TC、Google Sans Flex、等寬的 JetBrains Mono） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
-| 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處） | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
+| 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；常用的四個各有兩個升降半音的變體，同一顆在一集裡輪著放、不會一模一樣地重複；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處） | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
 | 範例專案 | 原始講解 1 支、講稿、場地照 | `projects/example/`（`projects/` 底下只有它進版控，其他專案都不進） | 第一次照著做就有完成影片 |
 
 ## 工具
@@ -32,14 +32,14 @@
 | 工具 | 做什麼 |
 |---|---|
 | `build.mjs` 完成影片產生器 | 一個指令組好字幕、資訊卡、情境動畫、子母畫面、音效；人聲自動調到 YouTube 的響度標準（−14 LUFS），剪接點自動消爆音。`--check` 檢查字數、版面、文字出現時間對不對得上講到的詞。排分鏡的流程也在這裡：`--scaffold` 切章、`--merge-drafts` 合併草稿、`--storyboard` 產生分鏡表、`--apply-storyboard` 套回修改、`--review` 定稿 |
-| `media.mjs` 素材 | `prep` 一條做到剪輯清單、`rough` 一條做到初剪與字幕，跑完給字幕預覽網址（長片在背景跑）；裡面的單獨指令：把多支影片、錄音接成主軌（補錄可以只取一段插進旁白中間）；`ng-scan` 把逐字稿對到講稿，列出重講的地方和章節起點；`ng-snap` 把 NG 對齊停頓並印出 auto-editor 指令；`srt-align` 把字幕照講稿排成完整語句並對好時間（舊流程 `srt-split`、`snap-srt`）；`cutpoints` 算剪接點；`scan` 掃描螢幕錄影與圖片：每支錄影一份事件表（切頁、開視窗、等待、捲動，`work/media/<檔名>/events.md`）和縮圖總表，讓 AI 配對、讀座標 |
+| `media.mjs` 素材 | `prep` 一條做到剪輯清單、`rough` 一條做到初剪與字幕，跑完給字幕預覽網址（長片在背景跑）；裡面的單獨指令：把多支影片、錄音接成主軌（補錄可以只取一段插進旁白中間）；`ng-scan` 把逐字稿對到講稿，列出重講的地方和章節起點；`ng-snap` 把 NG 對齊停頓並印出 auto-editor 指令；`srt-align` 把字幕照講稿排成完整語句並對好時間（舊流程 `srt-split`、`snap-srt`）；`cutpoints` 算剪接點；`shorts` 從剪好的長片列出可以單獨成片的段落、裁成 9:16 開成新專案；`cut-check` 聽每個剪接點有沒有把字切一半；`ref` 拆參考片的抽格總表；`scan` 掃描螢幕錄影與圖片：每支錄影一份事件表（切頁、開視窗、等待、捲動，`work/media/<檔名>/events.md`）和縮圖總表，讓 AI 配對、讀座標 |
 | `status.mjs` 進度 | 換 session 說「繼續」時看做到哪、下一步；`--timeline` 列出時間花在哪 |
 | `caps.mjs` 能力 | 這台電腦能用哪些生圖與影片工具（只檢查、不安裝） |
 | `audit.mjs` 版面量測 | 在瀏覽器裡把每段動畫跳到中點與完成態，量出文字撐破、被裁掉、壓到字幕或子母畫面、擋到講者；`--shots` 存截圖 |
 | `qc.mjs` 驗收 | `framing`：構圖分析（講者動作範圍、建議的框）；`speaker`：量資訊卡不能擋的地方；`storyboard`：分鏡表每段的完成態截圖；`observe`：完成影片每 0.5 秒一格的觀影總表；`final`：檢查完成影片的格式、長度、響度、畫面凍結、黑畫面、長時間沒聲音 |
 | `editor.mjs` 剪輯台 | 網頁介面：初剪的字幕預覽（字幕疊在畫面上，只有聲音的黑屏也看得到）、裁剪、調音量、淡入淡出與轉場、改字幕、改字卡上的字（完成影片預覽即時換字）、構圖台拖框、分鏡表（長片先看縮圖總覽）、修改單（選段寫想怎麼改，一行指令交給 AI）。所有修改自動存，存完還能復原。說明在 `shared/template/EDITOR.md` |
 | `versions.mjs` 段落版本 | 每一段留 v1、v2…，說「s12 用 v1」就退回；回饋輪 `begin`、`finish` 自動備份、存版本、寫紀錄；`finish --preview` 出左右對照影片 |
-| `deliver.mjs` 輸出 | 一條做完：測試片段、整支 render、驗收；背景跑，停點 ④ 時就先低優先權 render，內容沒變就直接接手 |
+| `deliver.mjs` 輸出 | 一條做完：測試片段、整支 render、驗收，有 3 個以上章節時寫 `output/youtube.txt`（YouTube 說明欄用的章節時間戳與配樂出處）；背景跑，停點 ④ 時就先低優先權 render，內容沒變就直接接手 |
 | `brand.mjs` 換風格 | 換色時自動檢查顏色看不看得清楚；`bg` 把 HTML 截成背景圖並檢查留空區；`list`／`use`／`pack` 列出、套用、建立風格包；`speaker` 設定講者 |
 | `capcut.mjs` 剪映素材 | 把完成影片拆成主軌 MP4、每段一支有透明通道的 MOV、字幕 SRT 和排法清單 |
 | `look.mjs` 講者 | 偵測講者的臉、產生瘦臉與美顏底片和對照圖 `work/look-preview.jpg` |

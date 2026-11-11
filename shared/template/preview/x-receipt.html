@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-receipt 收據列印｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-receipt.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-receipt { position: absolute; inset: 0; }
+    #x-receipt .fill { position: absolute; inset: 0; }
+    /* 出紙口：深色橫條，蓋在收據上緣 */
+    #x-receipt #xrc-slot { position: absolute; left: 380px; top: 92px; width: 660px; height: 28px; border-radius: 14px; background: var(--v2-ink); }
+    /* 收據：left 420、top 106、寬 580（右緣 1000）；落影只跟著印出來的部分 */
+    #x-receipt #xrc-card { position: absolute; left: 420px; top: 106px; width: 580px; color: var(--v2-ink); filter: var(--v2-pen-shadow); }
+    #x-receipt .xrc-sec { position: relative; box-sizing: border-box; width: 580px; padding: 0 40px; white-space: nowrap; }
+    #x-receipt .xrc-bg { position: absolute; inset: 0; background: var(--v2-card); }
+    #x-receipt .xrc-sec > span, #x-receipt .xrc-sec > svg { position: relative; }
+    #x-receipt #xrc-head { height: 132px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 28px; }
+    #x-receipt .xrc-rule { position: absolute; left: 40px; right: 40px; bottom: 0; height: 0; border-top: 4px dashed var(--v2-line); }
+    #x-receipt .xrc-row { height: 76px; display: flex; align-items: center; justify-content: space-between; }
+    #x-receipt #xrc-total { height: 132px; display: flex; align-items: center; justify-content: space-between; }
+    #x-receipt #xrc-sum { display: flex; align-items: baseline; gap: 12px; }
+    #x-receipt .xrc-rule--top { bottom: auto; top: 0; }
+    #x-receipt #xrc-code { height: 96px; display: flex; align-items: center; justify-content: center; }
+    #x-receipt #xrc-code svg { display: block; width: 420px; height: 56px; fill: currentColor; }
+    #x-receipt #xrc-tear { display: block; width: 580px; height: 20px; fill: var(--v2-card); }
+  </style>
+  <div id="x-receipt" data-composition-id="x-receipt" data-width="1920" data-height="1080" data-duration="18.2"
+       data-cues-sample='{"start":0,"D":18.2,"cues":{"401":[0.6,2.0],"402":[2.1,4.2],"403":[4.3,6.4],"404":[6.5,8.6],"405":[8.7,10.8],"406":[10.9,13.0],"407":[13.2,17.8]},"refs":{"#402@NG":2.3,"#403@字幕":4.5,"#404@字卡":6.7,"#405@音效":8.9,"#406@輸出":11.1,"#407@加起來":13.5}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrc-card">
+      <div id="xrc-head" class="xrc-sec"><i class="xrc-bg"></i><b class="xrc-rule" data-layout-allow-overlap></b><span id="xrc-title" class="sc-t52 sc-w900 sc-opt">手動剪一支片</span></div>
+      <div id="xrc-body">
+        <div id="xrc-r1" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt">找 NG</span><span class="xrc-amt sc-t44 sc-w700 sc-mono">90</span></div>
+        <div id="xrc-r2" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt">上字幕</span><span class="xrc-amt sc-t44 sc-w700 sc-mono">60</span></div>
+        <div id="xrc-r3" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt">做字卡</span><span class="xrc-amt sc-t44 sc-w700 sc-mono">50</span></div>
+        <div id="xrc-r4" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt">配音效</span><span class="xrc-amt sc-t44 sc-w700 sc-mono">30</span></div>
+        <div id="xrc-r5" class="xrc-sec xrc-row"><i class="xrc-bg"></i><span class="xrc-name sc-t44 sc-w700 sc-opt">輸出</span><span class="xrc-amt sc-t44 sc-w700 sc-mono">20</span></div>
+      </div>
+      <div id="xrc-foot">
+        <div id="xrc-total" class="xrc-sec"><i class="xrc-bg"></i><b class="xrc-rule xrc-rule--top" data-layout-allow-overlap></b><span id="xrc-tl" class="sc-t52 sc-w900 sc-opt">合計</span><span id="xrc-sum"><span id="xrc-num" class="sc-t80 sc-w900 sc-kw sc-mono">250</span><span id="xrc-unit" class="sc-t44 sc-w700 sc-opt">分鐘</span></span></div>
+      </div>
+      <div id="xrc-end">
+        <div id="xrc-code" class="xrc-sec"><i class="xrc-bg"></i><svg viewBox="0 0 420 56" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="8" height="56" /><rect x="16" y="0" width="4" height="56" /><rect x="28" y="0" width="12" height="56" /><rect x="48" y="0" width="4" height="56" /><rect x="60" y="0" width="8" height="56" /><rect x="76" y="0" width="16" height="56" /><rect x="100" y="0" width="4" height="56" /><rect x="112" y="0" width="8" height="56" /><rect x="128" y="0" width="4" height="56" /><rect x="140" y="0" width="12" height="56" /><rect x="160" y="0" width="8" height="56" /><rect x="176" y="0" width="4" height="56" /><rect x="188" y="0" width="16" height="56" /><rect x="212" y="0" width="4" height="56" /><rect x="224" y="0" width="8" height="56" /><rect x="240" y="0" width="12" height="56" /><rect x="260" y="0" width="4" height="56" /><rect x="272" y="0" width="8" height="56" /><rect x="288" y="0" width="4" height="56" /><rect x="300" y="0" width="16" height="56" /><rect x="324" y="0" width="8" height="56" /><rect x="340" y="0" width="4" height="56" /><rect x="352" y="0" width="12" height="56" /><rect x="372" y="0" width="4" height="56" /><rect x="384" y="0" width="8" height="56" /><rect x="400" y="0" width="20" height="56" /></svg></div>
+        <svg id="xrc-tear" viewBox="0 0 580 20" xmlns="http://www.w3.org/2000/svg"><polygon points="0,0 580,0 580,6 560,20 540,6 520,20 500,6 480,20 460,6 440,20 420,6 400,20 380,6 360,20 340,6 320,20 300,6 280,20 260,6 240,20 220,6 200,20 180,6 160,20 140,6 120,20 100,6 80,20 60,6 40,20 20,6 0,20" /></svg>
+      </div>
+    </div>
+    <div id="xrc-slot" data-layout-allow-overlap></div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-receipt'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#402@NG'), T2 = P.at('#403@字幕'), T3 = P.at('#404@字卡'), T4 = P.at('#405@音效'), T5 = P.at('#406@輸出');   // 講到每一項的時刻
+    const SUM = P.at('#407@加起來');   // 講到合計的時刻
+    const TOTAL = 250;                 // 合計（各列金額加起來）
+    P.sfx('impact', '#407@加起來');     // 合計落定一顆音效（句號和 SUM 一樣）
+
+    // 整組在內容區（y 120–870）垂直置中：3、4 列時往下移；5 列時貼齊上緣 92（載入時算一次，不用改）
+    const CARD = document.getElementById('xrc-card'), SLOT = document.getElementById('xrc-slot'), H = CARD.offsetHeight + 14;
+    const Y = H >= 750 ? 92 : Math.round(120 + (750 - H) / 2);
+    SLOT.style.top = Y + 'px'; CARD.style.top = (Y + 14) + 'px';
+
+    // 拍 0 開場：出紙口彈出 → 0.9 秒抬頭由上往下印出來、標題逐字上浮
+    P.pop('#xrc-slot', 0.5, { from: 0.9, dy: -20 });
+    P.wipe('#xrc-head', 0.9, { dir: 'down', dur: 0.5 });
+    P.chars('#xrc-title', 1.1);
+
+    // 拍 1–5 講到哪一項，那一列由上往下印出來 → ＋0.1 金額逐字落下
+    P.wipe('#xrc-r1', T1, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r1 .xrc-amt', T1 + 0.1, { mode: 'drop' });
+    P.wipe('#xrc-r2', T2, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r2 .xrc-amt', T2 + 0.1, { mode: 'drop' });
+    P.wipe('#xrc-r3', T3, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r3 .xrc-amt', T3 + 0.1, { mode: 'drop' });
+    P.wipe('#xrc-r4', T4, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r4 .xrc-amt', T4 + 0.1, { mode: 'drop' });
+    P.wipe('#xrc-r5', T5, { dir: 'down', dur: 0.3 });  P.chars('#xrc-r5 .xrc-amt', T5 + 0.1, { mode: 'drop' });
+
+    // 拍 合計：合計列印出來 → ＋0.2 數字從 0 數到合計 → 數完重拍、畫螢光筆 → 條碼和撕口印出來
+    P.wipe('#xrc-foot', SUM, { dir: 'down', dur: 0.4 });
+    P.count('#xrc-num', SUM + 0.2, { from: 0, to: TOTAL, dur: 0.8 });
+    P.punch('#xrc-num', SUM + 1.0, { scale: 1.12 });
+    P.marker('#xrc-sum', SUM + 1.0);
+    P.wipe('#xrc-end', SUM + 1.1, { dir: 'down', dur: 0.4 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-receipt'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-receipt";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

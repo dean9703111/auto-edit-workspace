@@ -21,6 +21,7 @@ version: 0.2.0
 |---|---|
 | 停點紀錄 ④ 沒有「通過」，使用者也沒說要輸出 | 改用 `auto-edit-review` |
 | 使用者只要剪映素材（不要 final.mp4） | 只做步驟 2 |
+| 使用者要封面圖（「做封面」「做縮圖」） | 照 `references/cover.md`（`media.mjs cover`：一個標題出三張給他挑）；沒要求就不做 |
 | 停點紀錄 ④ 最後一列是「通過」、原話是「在剪輯台按「輸出完成影片」」，而且 `output/final.mp4` 比 plan.json 新 | 使用者已在剪輯台輸出並驗收，不要重做 |
 
 ## 步驟
@@ -53,6 +54,7 @@ node shared/template/tools/capcut.mjs status --project projects/<專案> --wait
 - [ ] 用 `deliver.mjs`，沒有自己拆開 render、輪詢 log
 - [ ] `qc.mjs final` 0 個 ✖，⚠ 逐項說明
 - [ ] 附上 `output/qc/qc-sheet.jpg`
+- [ ] 工具印了「YouTube 說明欄：output/youtube.txt」就把這一行照貼給使用者（章節時間戳、配樂出處；沒印就是章節不到 3 個、也沒用配樂，不用提）
 - [ ] build 的六行（人聲響度、音效比例、剪接點微淡化、講者調光、講者瘦臉、結尾配樂）和停點 ④ 報過的不一樣才貼；有配樂就提醒使用者把出處那一句貼進說明欄
 - [ ] 有配樂、有 ⚠ 的地方回報都寫了
 
@@ -81,3 +83,7 @@ qc final：<✔／⚠／✖ 原文，每項一行>
 output/qc/qc-sheet.jpg
 → 完成（有標「要修」的 ⚠ 時改寫：→ 下一個停點：④ 完成影片預覽（說「改 <段>」開始））
 ```
+
+## 什麼時候讀 references/
+
+- `references/cover.md`：使用者說「做封面」「封面圖」「做縮圖」時才讀（照它做，不做本檔的步驟）。

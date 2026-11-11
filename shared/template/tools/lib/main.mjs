@@ -1,6 +1,6 @@
 // 主合成 index.html／test.html（規格 §B.2、§B.6）與情境預覽頁 preview/NN-key.html（§F.3）
 //
-//   buildMain({ items, videoDur, captions, pip, sideShift, bg, test, footage, editFx, cues, outro, badges, canvas }) → { html, skipped }
+//   buildMain({ items, videoDur, captions, pip, sideShift, bg, test, footage, editFx, cues, outro, badges, canvas, speakerBox }) → { html, skipped }
 //     canvas    lib/canvas.mjs 的版式設定（預設橫式；橫式輸出和沒有這個參數時逐位元組相同）。直式（009 FR-021–026）：
 //               root／viewport／底片／字幕 host 1080×1920；window.__regions 注入具名區域；舞台縮放的幕（01、04 家族、全畫面情境動畫、
 //               字卡動態）host 帶 stageTransform 的 CSS transform＋data-layout-allow-overflow，下面墊一層整張畫布的純色底（#bd-<id>，
@@ -167,7 +167,7 @@ const FX_BG = { dark: '#232733', light: 'var(--fx-light-bg, #f3efe6)', accent: '
 //   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、剪輯台過黑／淡入淡出；
 //                                      keepFootage＝側邊欄段（講者被推到右邊）連底片一起放（靜音），剪映疊上去才對得起來
 //   { kind: 'main' }                  主軌：只有底片＋人聲＋剪輯台（跳接放大、過黑、淡入淡出）＋片尾配樂；沒有情境、字幕、角標、段落音效
-export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, badges = [], canvas = null, cut = null, moods = [], zooms = null }) {
+export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, badges = [], canvas = null, cut = null, moods = [], zooms = null, speakerBox = null }) {
   const C = canvas || CANVAS.landscape, portrait = C.format === 'portrait', W = C.W, H = C.H;
   const segCut = cut?.kind === 'seg', mainCut = cut?.kind === 'main';
   if (cut) {
@@ -259,6 +259,10 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
       const [hw, hh] = portrait && !st ? [W, H] : [1920, 1080];
       hosts.push(`  <div id="el-${it.id}" data-composition-id="${it.compId}" data-composition-src="${it.file}"${varAttr}
        data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
+      // 人物去背層（lib/matte.mjs）：這一段的講者（帶透明通道）疊在動畫上面，動畫就在講者後面；外層 div 不帶時間屬性（影片本身的 opacity 會被框架蓋掉）
+      if (it.matte?.file) hosts.push(`  <div id="matte-${it.id}" data-layout-ignore style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:${it.z + 1};pointer-events:none${it.matte.clip ? `;clip-path:${it.matte.clip}` : ''}">
+    <video id="mattev-${it.id}" src="${base}${it.matte.file}" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-media-start="${n3(Math.max(0, it.s + (test ? t0 : 0) - it.start))}" data-track-index="${track++}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></video>
+  </div>`);
       if (swapOut > 0) {
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: 'inset(0px 0px 0px 0px)' }, { clipPath: '${SWAP_KEEP}', duration: 0.001, ease: 'none', immediateRender: false }, ${n3(it.e)});`);
         tl.push(`tl.fromTo('#el-${it.id}', { clipPath: '${SWAP_KEEP}' }, { clipPath: '${SWAP_GONE}', duration: ${swapOut}, ease: 'power2.in', immediateRender: false }, ${n3(it.e + 0.001)});`);
@@ -388,17 +392,17 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
   for (const m of moods) {
     const c = m.sfx;
     if (!c) continue;
-    const at = r3(c.at - t0);
+    const at = r3((c.srcAt ?? c.at) - t0);
     if (at < 0 || at >= DUR) continue;
-    sfx.push(`  <audio id="sfx-mood${m.i + 1}" src="${base}assets/sfx/${c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.volume}"></audio>`);
+    sfx.push(`  <audio id="sfx-mood${m.i + 1}" src="${base}assets/sfx/${c.src ?? c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.srcVolume ?? c.volume}"></audio>`);
   }
   for (const it of items) {
     const cues = [[`sfx-${it.id}`, it.sfx], ...(it.sfxExtra || []).map((c, n) => [`sfx-${it.id}-e${n + 1}`, c])];
     for (const [id, c] of cues) {
       if (!c) continue;
-      const at = r3(c.at - t0);
+      const at = r3((c.srcAt ?? c.at) - t0);   // src＝同類變體輪到的檔（lib/audio.mjs rotateSfx）
       if (at < 0 || at >= DUR) continue;
-      sfx.push(`  <audio id="${id}" src="${base}assets/sfx/${c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.volume}"></audio>`);
+      sfx.push(`  <audio id="${id}" src="${base}assets/sfx/${c.src ?? c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.srcVolume ?? c.volume}"></audio>`);
     }
   }
   // 結尾配樂（--test 的片段從中間開始時用 data-media-start 接上）
@@ -415,6 +419,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
   if (customs.length && cues) {
     const obj = {
       v: 1,
+      ...(speakerBox ? { speaker: [speakerBox[0], speakerBox[1], speakerBox[2] - speakerBox[0], speakerBox[3] - speakerBox[1]] } : {}),   // 講者框 [x, y, w, h]：疊在講者上的情境動畫用 P.region('speaker') 讀
       cues: Object.fromEntries(cues.map((c) => [String(c.n), [r3(c.start - t0), r3(c.end - t0)]])),
       segs: Object.fromEntries(customs.map((it) => [it.id, { comp: it.compId, start: r3(it.s), D: r3(it.end - it.start), ...(it.prev ? { prev: it.prev } : {}), refs: Object.fromEntries(Object.entries(it.cueRefs || {}).map(([k, v]) => [k, r3(v - t0)])) }])),
     };

@@ -872,7 +872,7 @@ export function fontShrinkFindings({ item, html = '', tpl = '', file = '' } = {}
 // 而且留著 #<最外層 id> 才不會選到同一支範例在另一段的元素）；
 // v2 原語用 root.querySelectorAll 直接查（KIT_ROOT_QUERY）→ '#x-rack .card' 找不到：pop／dim 這類靜靜沒有動畫，
 // rack／spot 這類會丟錯、整段動畫消失（2026-11-09 在 snapshot 實測）。只擋這幾個，改法是拿掉開頭的 #<最外層 id>（root 底下查，不會跨段）
-export const KIT_ROOT_QUERY = new Set(['chars', 'marker', 'strike', 'stamp', 'punch', 'ripple', 'comet', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'flow', 'idle', 'spot', 'cam', 'grow', 'sheen', 'wipe', 'wipeOut', 'slide', 'slideOut', 'dim', 'rack', 'pop']);
+export const KIT_ROOT_QUERY = new Set(['chars', 'marker', 'strike', 'stamp', 'punch', 'ripple', 'comet', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'flow', 'idle', 'spot', 'cam', 'grow', 'sheen', 'wipe', 'wipeOut', 'slide', 'slideOut', 'dim', 'rack', 'pop', 'stick', 'peel']);
 export function rootSelectorFindings({ item, html = '', file = '' } = {}) {
   const out = [];
   if (!item || !html) return out;

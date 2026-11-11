@@ -26,6 +26,7 @@ version: 0.1.0
 | 使用者說「換暗色」「換主題」「改回亮色」 | 只做步驟 6 |
 | 使用者說「有哪些風格」「這集用 XX 風格」「換回預設」 | 只做步驟 7 |
 | 使用者說「做一個風格包」「換成我的風格」 | 步驟 1–4，第 4 步存成新的一包 |
+| 使用者說「拆這支參考片」「分析這支影片怎麼剪」 | 不做下面的步驟，改照 `references/reference-video.md`（只出報告，不改 `shared/`） |
 | 會做到步驟 4（換背景、做風格包） | 開工先跑 `node shared/template/tools/brand.mjs list`，記下 ● 在哪一包；沒有 ● 就先跑 `node shared/template/tools/brand.mjs pack 原本-<YYYYMMDD>` 把目前的存起來，再做步驟 1，步驟 4 的 `use` 才不會卡住 |
 
 ## 步驟
@@ -175,3 +176,4 @@ node shared/template/tools/brand.mjs speaker
 
 - `references/image-routing.md`：步驟 3 生成背景圖時才讀。
 - `references/bg-worker.md`：步驟 3 要派工人同時生成時才讀。
+- `references/reference-video.md`：使用者說「拆這支參考片」「分析這支影片怎麼剪」時才讀（照它做，不做本檔的步驟）。

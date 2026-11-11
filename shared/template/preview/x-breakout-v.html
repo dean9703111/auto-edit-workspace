@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-breakout 破框而出｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-breakout.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-breakout { position: absolute; inset: 0; }
+    #x-breakout .xbk-bg, #x-breakout #xbk-lid { position: absolute; background: var(--v2-node-tint); }
+    #x-breakout #xbk-frame { position: absolute; box-sizing: border-box; border: 16px solid var(--v2-card); box-shadow: var(--v2-card-shadow); }
+    #x-breakout #xbk-tag { position: absolute; box-sizing: border-box; height: 92px; padding: 0 28px; display: flex; align-items: center; white-space: nowrap;
+                           border-radius: 14px; background: var(--brand); color: var(--brand-ink); rotate: -3deg; }
+  </style>
+  <div id="x-breakout" data-composition-id="x-breakout" data-width="1920" data-height="1080" data-duration="9" data-matte="window"
+       data-cues-sample='{"start":0,"D":9,"cues":{"451":[0.5,2.9],"452":[3.0,6.0],"453":[6.1,8.6]},"refs":{"#451@以前":0.8,"#452@跳出來":3.4}}'>
+    <div id="xbk-all" data-layout-allow-overlap data-layout-allow-caption-zone data-layout-allow-overflow>
+      <div id="xbk-b1" class="xbk-bg"></div>
+      <div id="xbk-b2" class="xbk-bg"></div>
+      <div id="xbk-b3" class="xbk-bg"></div>
+      <div id="xbk-b4" class="xbk-bg"></div>
+      <div id="xbk-lid"></div>
+      <div id="xbk-frame"></div>
+      <div id="xbk-tag"><span class="sc-t44 sc-w900 sc-opt">交給 AI 剪</span></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-breakout'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const OPEN = P.at('#451@以前'), HIT = P.at('#452@跳出來');   // 講到引子／講到那個詞的時刻
+    P.sfx('impact', '#452@跳出來');     // 頭冒出來那一下的音效（句號和 HIT 一樣）
+
+    // 相框的位置：照講者框算（和 build 裁去背層用的 lib/matte.mjs breakoutWindow 同一個算法；載入時算一次，不用改）
+    const SP = P.region('speaker'), TOP = SP[1] + 40, HEAD = Math.round(0.3 * (SP[3] - 80));
+    const WL = Math.max(120, Math.round(SP[0]) - 20), WR = Math.min(1800, Math.round(SP[0] + SP[2]) + 20), WB = Math.min(880, Math.round(SP[1] + SP[3]));
+    const WT0 = Math.max(100, TOP - 40), WT1 = TOP + HEAD + 10, B = 16;   // 開口上緣：一開始在頭頂上面、HIT 之後在下巴
+    const put = function (id, l, t, w, h) { const el = document.getElementById(id); el.style.left = l + 'px'; el.style.top = t + 'px'; el.style.width = w + 'px'; el.style.height = h + 'px'; };
+    put('xbk-b1', 0, 0, WL, 1080); put('xbk-b2', WR, 0, 1920 - WR, 1080); put('xbk-b3', WL, 0, WR - WL, WT0); put('xbk-b4', WL, WB, WR - WL, 1080 - WB);
+    put('xbk-lid', WL, WT0, WR - WL, WT1 - WT0);
+    put('xbk-frame', WL - B, WT0 - B, WR - WL + 2 * B, WB - WT0 + 2 * B);
+    const TAG = document.getElementById('xbk-tag'); TAG.style.left = (WL - B) + 'px'; TAG.style.top = (WT1 - B - 92 - 16) + 'px';   // 縮下來之後的相框左上角外面（不會被疊在最上面的講者擋到）
+
+    // 拍 1 講到引子：紙底淡入 → ＋0.15 相框彈出（講者整個人在相框裡）
+    P.in('.xbk-bg', OPEN, { dur: 0.3 });
+    P.pop('#xbk-frame', OPEN + 0.15, { from: 0.94, dy: 0, dur: 0.5 });
+    // 拍 2 講到那個詞：相框上緣往下縮到下巴（紙底跟著蓋住上半）→ 頭留在相框上面 → ＋0.3 標籤彈出
+    P.wipe('#xbk-lid', HIT, { dir: 'down', dur: 0.35 });
+    P.morph('#xbk-frame', HIT, { top: WT1 - B, height: WB - WT1 + 2 * B }, { from: { top: WT0 - B, height: WB - WT0 + 2 * B }, dur: 0.35, ease: P.V2.EASE.in });
+    P.pop('#xbk-tag', HIT + 0.3, { from: 0.6, dy: 0 });
+
+    // 收：段尾前 0.3 秒整組淡出（overlay 自己退場）
+    P.out('#xbk-all', P.dur() - 0.3);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-breakout'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-breakout";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!-- 預設拍型：F 重點字卡（BEATS.md §3 F；雜誌封面：刊名的字母一個一個打在講者後面） -->
+<!doctype html>
+<!--
+  x-magazine：雜誌封面（第二層 custom，layout: "overlay"；這支不是 layout: "fullscreen"：刊名在講者後面，講者去背後疊在最上面）
+
+  【適用的講解】
+  講者露臉，講到一個可以當「刊名」的概念詞（品味、風格、效率），而且後面接著幾個重點：例如「很多人都聽過一個詞叫品味，那品味到底是什麼、要怎麼培養」。
+  講到引子時，畫面邊緣畫出封面的細框、上緣浮出期別小字；講到那個詞時，英文刊名的字母一個一個打在講者頭的後面（講者去背後擋在刊名前面）；
+  講到後面的重點時，左側的封面標題一條一條出現（大數字＋一行字），最後是左下角的條碼。背景還是原本的講者畫面，不換底。
+
+  【不要用在哪裡】
+  - 這一段講者沒有露臉，或講者的頭不在畫面上半部（刊名會打在空的地方）。
+  - 那個詞想不到合適的英文刊名（≤ 7 個字母）：用 x-wall 或 15 金句。
+  - 一集用超過 1 次。直式。這支沒有圖示。
+
+  【要改的地方】
+  1. 文字：刊名 #xmg-mast（英文大寫，≤ 7 個字母）；上緣三個小字 .xmg-top（各 ≤ 10 個字元：期別、專題名、日期）；
+     左側封面標題 1–3 條：大數字 .xmg-n（≤ 3 個字元）＋一行字 .xmg-t（≤ 8 字）。少一條就刪掉最後那個 .xmg-line 和它的 P.pop 那一行。
+  2. 綁句：<script> 開頭 OPEN、HIT、MORE 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 HIT 改。
+  3. 講者去背不用自己做：根元素有 data-matte（不要拿掉），build 會把這一段的講者去背、疊在刊名上（第一次用要下載去背模型，build 會說怎麼做）。
+
+  【綁句欄位】
+  OPEN = P.at('#441@相信')：講到引子的時刻，封面細框由左擦開、上緣小字逐字浮出。
+  HIT = P.at('#442@品味')：講到那個詞的時刻，刊名的字母一個一個彈出；音效 impact。
+  MORE = P.at('#443@什麼')：講到後面重點的時刻，左側封面標題一條一條彈出，接著條碼擦開。
+  HIT 一定用 @詞 綁在那個詞上。「@詞」要寫成字串字面值，build 才算得到。
+
+  【D 下限】
+  OPEN ≥ 0.5（build 的淡入）
+  HIT ≥ OPEN + 2.0（細框和小字動到 OPEN + 0.8，停 1.2 秒）
+  MORE ≥ HIT + 2.2（刊名打到 HIT + 1.0，停 1.2 秒）
+  D ≥ MORE + 3.0（封面標題和條碼動到 MORE + 1.2，停 1.5 秒以上，段尾前 0.3 秒整組淡出；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  overlay：沒有底，自己寫退場（段尾前 0.3 秒 P.out）。細框 #xmg-frame 離畫面四邊 40（只是一條裝飾線，可以穿過字幕區：data-layout-allow-caption-zone）。上緣小字 top 64（左、中、右三個）。
+  刊名 top 110、字高 330、置中、字距 12，寬度超過 1760 時 script 等比縮小；刻意蓋在講者框上（講者在它前面）。
+  左側封面標題從 left 96、top 500 起，每條高 104、相隔 24（數字 80、文字 44）；條碼 left 96、top 892 以上（下緣 880，在字幕區 y 920 之上）。
+  圖層由 build 排：底片 → 這張封面 → 去背的講者 → 字幕。封面標題在畫面左側，講者偏左時會被講者擋住，改用 x-wall。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-magazine 雜誌封面</title></head>
+<body>
+<template id="x-magazine-template">
+  <style>
+    #x-magazine { position: absolute; inset: 0; }
+    #x-magazine #xmg-frame { position: absolute; left: 40px; top: 40px; width: 1840px; height: 1000px; box-sizing: border-box; border: 4px solid var(--v2-card); }
+    #x-magazine .xmg-top { position: absolute; top: 64px; color: var(--v2-card); white-space: nowrap; letter-spacing: 4px; text-shadow: 0 2px 6px var(--v2-ink); }
+    #x-magazine #xmg-top1 { left: 96px; }
+    #x-magazine #xmg-top2 { left: 0; width: 1920px; text-align: center; }
+    #x-magazine #xmg-top3 { right: 96px; }
+    /* 刊名：警示紅的大字（雜誌刊頭），在講者後面 */
+    #x-magazine #xmg-mast { position: absolute; left: 0; top: 110px; width: 1920px; text-align: center; white-space: nowrap; font-size: 330px; line-height: 1; font-weight: 900;
+                            letter-spacing: 12px; color: var(--sc-warn); }
+    /* 左側封面標題：大數字＋一行字 */
+    #x-magazine .xmg-line { position: absolute; left: 96px; height: 104px; display: flex; align-items: center; gap: 20px; white-space: nowrap; color: var(--v2-card); text-shadow: 0 2px 8px var(--v2-ink); }
+    #x-magazine .xmg-n { color: var(--sc-warn); text-shadow: none; }
+    #x-magazine #xmg-l1 { top: 500px; }
+    #x-magazine #xmg-l2 { top: 628px; }
+    #x-magazine #xmg-l3 { top: 756px; }
+    #x-magazine #xmg-code { position: absolute; left: 96px; top: 892px; width: 240px; height: 0; }
+    #x-magazine #xmg-code svg { position: absolute; left: 0; bottom: 12px; display: block; width: 240px; height: 72px; background: var(--v2-card); fill: var(--v2-ink); }
+  </style>
+  <div id="x-magazine" data-composition-id="x-magazine" data-width="1920" data-height="1080" data-duration="12" data-matte="1"
+       data-cues-sample='{"start":0,"D":12,"cues":{"441":[0.5,2.8],"442":[2.9,5.4],"443":[5.5,11.6]},"refs":{"#441@相信":0.8,"#442@品味":3.4,"#443@什麼":6.0}}'>
+    <div id="xmg-frame" data-layout-allow-overlap data-layout-allow-caption-zone data-layout-allow-overflow></div>
+    <span id="xmg-top1" class="xmg-top sc-t40 sc-w700 sc-mono" data-fill="top1">VOL.01</span>
+    <span id="xmg-top2" class="xmg-top sc-t40 sc-w700" data-fill="top2">AI 時代特刊</span>
+    <span id="xmg-top3" class="xmg-top sc-t40 sc-w700 sc-mono" data-fill="top3">2026 NOV</span>
+    <div id="xmg-mast" data-layout-allow-overflow data-fill="mast">TASTE</div>
+    <div id="xmg-l1" class="xmg-line"><span class="xmg-n sc-t80 sc-w900 sc-mono" data-fill="items.1.num">2</span><span class="xmg-t sc-t44 sc-w900 sc-opt" data-fill="items.1.text">個方法練品味</span></div>
+    <div id="xmg-l2" class="xmg-line"><span class="xmg-n sc-t80 sc-w900 sc-mono" data-fill="items.2.num">90</span><span class="xmg-t sc-t44 sc-w900 sc-opt" data-fill="items.2.text">分的人多做一步</span></div> <!-- @if n>=2 -->
+    <div id="xmg-l3" class="xmg-line"><span class="xmg-n sc-t80 sc-w900 sc-mono" data-fill="items.3.num">1</span><span class="xmg-t sc-t44 sc-w900 sc-opt" data-fill="items.3.text">個常見的誤會</span></div> <!-- @if n>=3 -->
+    <div id="xmg-code"><svg viewBox="0 0 240 72" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="10" width="6" height="52" /><rect x="24" y="10" width="3" height="52" /><rect x="33" y="10" width="9" height="52" /><rect x="48" y="10" width="3" height="52" /><rect x="57" y="10" width="6" height="52" /><rect x="69" y="10" width="12" height="52" /><rect x="87" y="10" width="3" height="52" /><rect x="96" y="10" width="6" height="52" /><rect x="108" y="10" width="3" height="52" /><rect x="117" y="10" width="9" height="52" /><rect x="132" y="10" width="6" height="52" /><rect x="144" y="10" width="3" height="52" /><rect x="153" y="10" width="12" height="52" /><rect x="171" y="10" width="3" height="52" /><rect x="180" y="10" width="6" height="52" /><rect x="192" y="10" width="9" height="52" /><rect x="207" y="10" width="3" height="52" /><rect x="216" y="10" width="12" height="52" /></svg></div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-magazine'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const OPEN = P.at('#441@相信'), HIT = P.at('#442@品味'), MORE = P.at('#443@什麼');   // 講到引子／講到那個詞／講到後面的重點
+    P.sfx('impact', '#442@品味');     // 刊名打出來的音效（句號和 HIT 一樣）
+
+    // 刊名太寬就等比縮小（字母數 × 字寬估 0.62 倍字高＋字距；載入時算一次，不用改）
+    const MAST = document.getElementById('xmg-mast'), N = MAST.textContent.trim().length, WIDE = N * (330 * 0.62 + 12);
+    if (WIDE > 1760) MAST.style.fontSize = Math.floor(330 * 1760 / WIDE) + 'px';
+
+    // 拍 1 講到引子：封面細框由左擦開 → ＋0.3 上緣小字逐字浮出
+    P.wipe('#xmg-frame', OPEN, { dir: 'left', dur: 0.6 });
+    P.chars('.xmg-top', OPEN + 0.3);
+    // 拍 2 講到那個詞：刊名的字母一個一個彈出（在講者後面）
+    P.chars('#xmg-mast', HIT, { mode: 'pop', stagger: 0.09 });
+    // 拍 3 講到後面的重點：封面標題一條一條彈出 → ＋0.9 條碼由左擦開
+    P.pop('.xmg-line', MORE, { from: 0.8, dy: 20, stagger: 0.25 });
+    P.wipe('#xmg-code', MORE + 0.9, { dir: 'left', dur: 0.3 });
+
+    // 收：段尾前 0.3 秒整組淡出（overlay 自己退場）
+    P.out('#xmg-frame, .xmg-top, #xmg-mast, .xmg-line, #xmg-code', P.dur() - 0.3);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-magazine'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

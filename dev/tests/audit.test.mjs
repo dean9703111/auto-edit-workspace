@@ -941,7 +941,7 @@ test('分鏡對齊：parseBeatSheets／movesOf／refsOf 讀原型分鏡表的寫
   assert.deepEqual(x.rows.map((r) => r.moves), [['換卡不換景', '逐字上浮', '背景環境'], ['錯拍彈出', '圖示描線'], ['彗星描線', '鏡頭跟焦點', '聚焦', '漣漪'], [], []]);
   assert.equal(x.rows[4].note, true);
   // 語彙：44 個（011 加游標移動、013 加蓋章、11-09 加換焦點；拿掉講者慢推、漂浮、虛線流動、背景環境），和給 AI 查的 shared/template/BEATS.md §2 逐列相同（名稱、「對應」欄第一個 P.*；沒寫 P.* 的是 build 內建）
-  assert.equal(BT.VOCAB.length, 44);
+  assert.equal(BT.VOCAB.length, 46);   // 025：加「貼上」「撕走」
   const beatsMd = fs.readFileSync(path.join(TEMPLATE, 'BEATS.md'), 'utf8').split(/^## 2\./m)[1].split(/^## 3\./m)[0];
   const table = [...beatsMd.matchAll(/^\| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|/gm)].map((m) => [m[2].trim(), m[4].trim()]).filter(([n]) => n !== '名稱' && !/^-+$/.test(n));
   assert.deepEqual(table.map(([n, c]) => [n, (c.match(/P\.(\w+)/) || [])[1] || 'build']), BT.VOCAB.map((v) => [v.name, v.prim]));

@@ -854,6 +854,7 @@ body, #root {
   --v2-pen-ink:      #141414;
   --v2-pen-cap:      var(--brand);
   --v2-pen-shadow:   drop-shadow(8px 14px 8px rgba(20, 20, 20, 0.20));
+  --v2-sticker:      drop-shadow(5px 0 0 #FFFFFF) drop-shadow(-5px 0 0 #FFFFFF) drop-shadow(0 5px 0 #FFFFFF) drop-shadow(0 -5px 0 #FFFFFF) drop-shadow(6px 10px 8px rgba(20, 20, 20, 0.28));
   --v2-fly:          #FFFFFF;
   --v2-fly-line:     #141414;
   --v2-fly-fold:     var(--brand);
@@ -932,6 +933,7 @@ body, #root {
   --v2-pen-body:     #E9E4DE;
   --v2-pen-ink:      #121418;
   --v2-pen-shadow:   drop-shadow(8px 14px 10px rgba(0, 0, 0, 0.55));
+  --v2-sticker:      drop-shadow(5px 0 0 #FFFFFF) drop-shadow(-5px 0 0 #FFFFFF) drop-shadow(0 5px 0 #FFFFFF) drop-shadow(0 -5px 0 #FFFFFF) drop-shadow(6px 10px 10px rgba(0, 0, 0, 0.55));
   --v2-fly:          #F3EFEA;
   --v2-fly-line:     #121418;
   --v2-tape:         rgba(255, 255, 255, 0.20);
@@ -958,6 +960,8 @@ body, #root {
 .sc-strike--wave { top: 32%; height: 36%; background: none; border-radius: 0; }
 .sc-strike--wave > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .sc-strike--wave path { stroke: var(--v2-strike); }
+/* 貼紙（P.stick／P.peel 的對象）：沿著圖形外緣一圈白邊＋落影；角度由 P.stick 的 rot 轉，不寫在 CSS */
+.sc-sticker { filter: var(--v2-sticker); }
 /* 蓋章（P.stamp 的對象，作者自己寫 <b class="sc-stamp">過時</b>、自己定位）：紅框、粗字、略斜由 P.stamp 轉；疊在白卡或實拍上都看得清楚 */
 .sc-stamp { position: absolute; display: inline-block; box-sizing: border-box; padding: 0.06em 0.36em 0.1em; border: 0.11em solid currentColor; border-radius: 0.16em;
             color: var(--v2-stamp); background: color-mix(in srgb, var(--v2-stamp) 7%, transparent); font-size: 44px; font-weight: 900; line-height: 1.2;

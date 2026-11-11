@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -56,6 +56,9 @@
     #x-before-after #xba-fill1 { background: var(--sc-warn); }
     #x-before-after #xba-fill2 { background: var(--sc-good); }
     #x-before-after .xba-note { position: absolute; left: 36px; top: 380px; white-space: nowrap; }
+    /* 漲跌標：綠底膠囊，壓在右欄右上角（在 .xba-in 外面，不會被裁掉） */
+    #x-before-after .xba-delta { position: absolute; right: -56px; top: -4px; height: 72px; padding: 0 24px; line-height: 1; box-sizing: border-box; display: flex; align-items: center;
+                                 border-radius: 36px; background: var(--sc-good); color: var(--sc-on-accent); white-space: nowrap; transform: rotate(-4deg); }
     /* 箭頭：#xba-arrow 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link） */
   </style>
   <div id="x-before-after" data-composition-id="x-before-after" data-width="1920" data-height="1080" data-duration="15"
@@ -84,6 +87,7 @@
             <div class="xba-track"><div id="xba-fill2" class="xba-fill"></div></div>
             <div id="xba-gain" class="xba-note sc-t40 sc-w700 sc-gray sc-opt">NG 一次剪掉</div>
           </div>
+          <b id="xba-delta" class="xba-delta sc-t40 sc-w900">−89%</b>
         </div>
       </div>
     </div>
@@ -127,6 +131,7 @@
     P.marker('#xba-num2', SAVE);
     P.sheen('#xba-in2', SAVE + 0.1);
     P.punch('#xba-num2', SAVE + 0.1, { scale: 1.1 });
+    P.pop('#xba-delta', SAVE + 0.35, { from: 0.4, dy: 0 });
     // 拍 5 ＋0.6 右欄聚焦（放大抬起、主色亮框）
     P.spot('#xba-right', '#xba-right', SAVE + 0.6, { scale: 1.04, lift: -8 });
 

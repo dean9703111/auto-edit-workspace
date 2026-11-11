@@ -74,11 +74,37 @@ function writeJson(f, o) {
   fs.renameSync(`${f}.tmp`, f);
 }
 
+// YouTube 說明欄文字（025）：build --check --json 的 chapters（完成影片秒數 outStart）→ 章節時間戳；用了結尾配樂就附出處那一行。
+// YouTube 的規則：第一行要從 0:00 開始、至少 3 個章節、每個至少 10 秒 → 不到 3 個就不寫章節（回傳 chapters: 0）；太近的（< 10 秒）併到前一個
+export function youtubeText(j, { first = '開場' } = {}) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const stamp = (t) => { const s = Math.max(0, Math.floor(t)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`; };
+  const list = [];
+  for (const c of [...(j?.chapters || [])].filter((x) => x && x.title && Number.isFinite(x.outStart)).sort((a, b) => a.outStart - b.outStart)) {
+    const last = list[list.length - 1];
+    if (last && c.outStart - last.t < 10) continue;
+    list.push({ t: c.outStart, title: String(c.title).trim() });
+  }
+  if (list.length && list[0].t >= 10) list.unshift({ t: 0, title: first });
+  else if (list.length) list[0].t = 0;
+  const lines = [];
+  if (list.length >= 3) lines.push('章節（整段貼到 YouTube 說明欄）', ...list.map((c) => `${stamp(c.t)} ${c.title}`));
+  const credit = j?.outro?.credit;
+  if (credit) lines.push(...(lines.length ? [''] : []), '配樂出處（用了這首配樂，說明欄要保留這一行）', String(credit));
+  return { text: lines.length ? `${lines.join('\n')}\n` : '', chapters: list.length >= 3 ? list.length : 0, credit: !!credit };
+}
+
+// build.mjs --check --json 的結果（章節、結尾配樂）；讀不到回傳 null
+export function planCheckJson(P) {
+  const r = spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--project', P.project, '--check', '--json'], { cwd: P.root, encoding: 'utf8', maxBuffer: 1 << 28 });
+  try { return JSON.parse(r.stdout); } catch { return null; }
+}
+
 export function deliverPaths(project) {
   const work = path.join(project, 'work'), output = path.join(project, 'output');
   return {
     final: path.join(output, 'final.mp4'), sheet: path.join(output, 'qc', 'qc-sheet.jpg'), clip: path.join(output, 'test-clips', 'test-clip.mp4'),
-    srt: path.join(output, 'final.srt'), tmp: path.join(work, 'final-rendering.mp4'), log: path.join(work, 'render.log'), memo: path.join(work, 'final-fingerprint.json'),
+    srt: path.join(output, 'final.srt'), youtube: path.join(output, 'youtube.txt'), tmp: path.join(work, 'final-rendering.mp4'), log: path.join(work, 'render.log'), memo: path.join(work, 'final-fingerprint.json'),
     pre: path.join(work, 'final-prerender.mp4'), prePart: path.join(work, 'final-prerender.part.mp4'), preState: path.join(work, 'final-prerender.json'),
     lock: path.join(work, '.jobs', 'deliver.lock'), renderPid: (kind) => path.join(work, '.jobs', `render-${kind}.json`),
     finalContent: path.join(work, '.jobs', 'final-content.json'), preContent: path.join(work, '.jobs', 'prerender-content.json'),
@@ -631,6 +657,16 @@ export async function runDeliver(P, job, deps) {
     if (demo?.needed) job.warnings.unshift(`講者介紹還是示範人物「${demo.demo}」（${demo.segments.join('、')}）→ 跟 AI 說姓名與頭銜，或在剪輯頁設定後再輸出一次`);
     if (report.ok === false) return fail('影片輸出好了，但驗收沒過：把下面的 ✖ 貼給 AI，或修改後再輸出一次。', said('error'), '照 ✖ 後面的 → 修好，再跑一次這條指令（內容沒變只會重跑驗收；要重新 render 加 --force）');
     recordStopPassed(P.project, { said: deps.said });
+    // YouTube 說明欄文字：寫不出來不影響交件（章節不到 3 個、沒用配樂就不產生檔案）
+    // deps.checkJson＝() → build --check --json 的結果（deliver.mjs、剪輯台傳 planCheckJson；沒傳就不寫）
+    try {
+      const cj = deps.checkJson ? await deps.checkJson() : null;
+      if (cj) {
+        const yt = youtubeText(cj);
+        if (yt.text) { fs.writeFileSync(F.youtube, yt.text); job.youtube = { file: F.youtube, chapters: yt.chapters, credit: yt.credit }; }
+        else rm(F.youtube);
+      }
+    } catch { /* 沒有章節資料就不寫 */ }
     job.ok = true;
     job.message = demo?.needed ? `完成影片輸出好了，但講者介紹還是示範人物「${demo.demo}」，上片前要改。` : '完成影片輸出好了，驗收也通過了。';
     if (!plain) job.message += `（${optionsLabel(opts)}）`;

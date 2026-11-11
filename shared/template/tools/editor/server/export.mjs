@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { STEPS, RESOLUTIONS, CAPTIONS, runDeliver, spawnRunner, killTree, newJob, lockHolder, deliverPaths, prerenderInfo, prerenderCanPatch } from '../../lib/deliver.mjs';
+import { STEPS, RESOLUTIONS, CAPTIONS, runDeliver, spawnRunner, killTree, newJob, lockHolder, deliverPaths, prerenderInfo, prerenderCanPatch, planCheckJson } from '../../lib/deliver.mjs';
 
 const LOG_TAIL = 6000;
 // 整體百分比：四步各佔多少（整支影片佔大部分）；沒有百分比的步驟照經過的時間慢慢往上（est 秒走到約 63%，最多 90%），換到下一步就跳到下一步的起點
@@ -76,7 +76,7 @@ export function startExport(ctx, deps, body = {}) {
   ctx.exportJob = job;
   const log = (s) => { job.log = (job.log + s).slice(-LOG_TAIL * 4); };
   job.done = runDeliver(ctx.P, job, {
-    run: spawnRunner(job), ...deps, resolution, captions, by: 'editor', said: '在剪輯台按「輸出完成影片」', say: (s) => log(`${s}\n`),
+    run: spawnRunner(job), checkJson: () => planCheckJson(ctx.P), ...deps, resolution, captions, by: 'editor', said: '在剪輯台按「輸出完成影片」', say: (s) => log(`${s}\n`),
   }).finally(() => { ctx.report = null; });
   return [200, exportState(ctx)];
 }

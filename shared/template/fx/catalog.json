@@ -48,7 +48,11 @@
         "sound": "impact",
         "at": 0.42
       },
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場",
+        "重點／警告"
+      ]
     },
     {
       "id": "02",
@@ -68,7 +72,10 @@
         "sound": "impact",
         "at": 0.22
       },
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "重點／警告"
+      ]
     },
     {
       "id": "03",
@@ -88,7 +95,11 @@
         "sound": "impact",
         "at": 0.3
       },
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "重點／警告",
+        "總結"
+      ]
     },
     {
       "id": "04",
@@ -105,7 +116,10 @@
       "desc": "從深處衝到眼前，拖著三層殘影",
       "when": "轉場進入新話題、一個詞要有衝擊力",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "05",
@@ -122,7 +136,11 @@
       "desc": "兩行左右飛入疊成一組，整組上推換下一組",
       "when": "兩個並列關鍵詞或上下句（「衝刺／縮放」「便宜／好用」）",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "對比",
+        "列舉"
+      ]
     },
     {
       "id": "06",
@@ -139,7 +157,10 @@
       "desc": "每字有相位差地上下彈性伸縮",
       "when": "輕快、流行感的關鍵詞，語氣有彈性",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "技巧"
+      ]
     },
     {
       "id": "07",
@@ -156,7 +177,11 @@
       "desc": "詞放大穿過鏡頭，下一個詞從後方出現",
       "when": "「從 A 到 B」的轉變、話題切換、穿越到下一段",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場",
+        "對比"
+      ]
     },
     {
       "id": "08",
@@ -173,7 +198,10 @@
       "desc": "像橡膠被擠扁，最扁時換成英文再彈回",
       "when": "中英對照的術語、反差或切換語氣",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "定義／比喻"
+      ]
     },
     {
       "id": "09",
@@ -190,7 +218,10 @@
       "desc": "超大字快慢交替捲動，小字反向等速",
       "when": "章節或主題字當滿版背景，吸睛開場",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "10",
@@ -207,7 +238,8 @@
       "desc": "多欄直書，相鄰欄一上一下反向流動",
       "when": "和風、沉靜的段落標題",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": []
     },
     {
       "id": "11",
@@ -224,7 +256,10 @@
       "desc": "滿版文字格，顏色沿對角線波狀傳遞",
       "when": "背景圖紋、反覆強調同一個詞",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "重點／警告"
+      ]
     },
     {
       "id": "12",
@@ -241,7 +276,10 @@
       "desc": "三條斜帶黑白交錯，相鄰帶反向捲動",
       "when": "轉場、流行街頭風的標題過場",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "13",
@@ -258,7 +296,10 @@
       "desc": "文字沿正弦波路徑流動，波形緩慢起伏",
       "when": "輕鬆、有音樂感的段落標題",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "14",
@@ -275,7 +316,10 @@
       "desc": "多行字型、字級、速度、方向各異的跑馬燈",
       "when": "公告、限時、促銷，多個標語同時出現",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "其他"
+      ]
     },
     {
       "id": "15",
@@ -292,7 +336,8 @@
       "desc": "前中後三層直書欄，速度不同形成視差",
       "when": "和風、有層次感的標題",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": []
     },
     {
       "id": "16",
@@ -312,7 +357,10 @@
         "sound": "impact",
         "at": 0
       },
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "重點／警告"
+      ]
     },
     {
       "id": "17",
@@ -329,7 +377,10 @@
       "desc": "從遠方小點迎面衝來並穿過鏡頭",
       "when": "開場、科幻感、進入主題",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "18",
@@ -346,7 +397,10 @@
       "desc": "四面牆貼滿文字，一點透視向前流動",
       "when": "沉浸式段落開場、MV 感",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "19",
@@ -363,7 +417,10 @@
       "desc": "上下兩個文字環反向旋轉，背面變淡",
       "when": "Logo、品牌名、產品名展示",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "介紹"
+      ]
     },
     {
       "id": "20",
@@ -380,7 +437,10 @@
       "desc": "文字扭曲拉長繞中心旋轉成漩渦，再還原",
       "when": "奇幻、混亂、「腦袋打結」類的高潮",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "情境／故事"
+      ]
     },
     {
       "id": "21",
@@ -397,7 +457,10 @@
       "desc": "同心文字環從中心放大逼近並淡出",
       "when": "開場、科幻感、聚焦一個詞",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "22",
@@ -414,7 +477,10 @@
       "desc": "沿虛線橢圓軌道繞行，前大後小有遮擋",
       "when": "品牌名、標題環繞展示",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "介紹"
+      ]
     },
     {
       "id": "23",
@@ -431,7 +497,10 @@
       "desc": "立方體四面各一詞，每 90° 停頓翻轉",
       "when": "三到四個關鍵詞輪流（例：快／穩／省／簡單）",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "列舉"
+      ]
     },
     {
       "id": "24",
@@ -451,7 +520,11 @@
         "sound": "impact",
         "at": 0
       },
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場",
+        "總結"
+      ]
     },
     {
       "id": "25",
@@ -468,7 +541,11 @@
       "desc": "每字一格翻牌，亂碼翻動後依序停住",
       "when": "復古、公布結果、車站看板感",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "問答",
+        "總結"
+      ]
     },
     {
       "id": "26",
@@ -485,7 +562,10 @@
       "desc": "黑底白字卡逐字翻面換字，有時間差",
       "when": "切換、公告、「答案是」",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "問答"
+      ]
     },
     {
       "id": "27",
@@ -502,7 +582,10 @@
       "desc": "逐字打出帶游標，刪除後改打英文",
       "when": "故事敘述、引用原句、字幕式呈現",
       "sfx": null,
-      "done": "label"
+      "done": "label",
+      "sem": [
+        "情境／故事"
+      ]
     },
     {
       "id": "28",
@@ -519,7 +602,10 @@
       "desc": "每字一個滾輪，由左至右依序彈性停住",
       "when": "抽獎式的結果發表、揭曉",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "問答"
+      ]
     },
     {
       "id": "29",
@@ -539,7 +625,10 @@
         "sound": "ding",
         "at": 1.8
       },
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "數字"
+      ]
     },
     {
       "id": "30",
@@ -556,7 +645,10 @@
       "desc": "固定快訊標籤，標題由下推入交替切換",
       "when": "快訊、新聞式解說、標題切換",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "情境／故事"
+      ]
     },
     {
       "id": "31",
@@ -573,7 +665,10 @@
       "desc": "點陣字發光橫向捲動，帶掃描線",
       "when": "復古科技感、跑馬公告",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "其他"
+      ]
     },
     {
       "id": "32",
@@ -590,7 +685,10 @@
       "desc": "大字上下裂開露出小字，再合回切換",
       "when": "反差、轉換、前後對比",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "對比"
+      ]
     },
     {
       "id": "33",
@@ -607,7 +705,10 @@
       "desc": "斜置空心字逐行被填滿，再一起清空",
       "when": "MV 感的洗鍊標題",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "34",
@@ -624,7 +725,10 @@
       "desc": "巨字切成水平條隨機錯位帶色差，再對齊",
       "when": "衝擊、出錯、系統崩潰、bug",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "重點／警告"
+      ]
     },
     {
       "id": "35",
@@ -641,7 +745,10 @@
       "desc": "文字當鏤空窗，內部斜紋持續流動",
       "when": "流行、祭典、活潑的主題字",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "技巧"
+      ]
     },
     {
       "id": "36",
@@ -658,7 +765,10 @@
       "desc": "主色長陰影方向以 360° 緩慢繞圈",
       "when": "扁平風標題",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "轉場"
+      ]
     },
     {
       "id": "37",
@@ -675,7 +785,11 @@
       "desc": "空心字內液面晃動上升到滿，再下降",
       "when": "清爽、進度、累積感（「慢慢補滿」）",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "步驟",
+        "數字"
+      ]
     },
     {
       "id": "38",
@@ -692,7 +806,11 @@
       "desc": "最後兩字下方螢光筆刷開，停留後收回",
       "when": "解說時強調句尾關鍵字",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "重點／警告",
+        "技巧"
+      ]
     },
     {
       "id": "39",
@@ -709,7 +827,10 @@
       "desc": "斜向分界線來回掃動，兩側顏色互換",
       "when": "對立觀點、雙面、黑白切換的標題",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "對比"
+      ]
     },
     {
       "id": "40",
@@ -726,7 +847,11 @@
       "desc": "沿 8 字形路徑移動，拖著暈染殘影",
       "when": "漂浮、夢幻、輕盈感",
       "sfx": null,
-      "done": "timeline"
+      "done": "timeline",
+      "sem": [
+        "情境／故事"
+      ]
     }
-  ]
+  ],
+  "sem": "effects[].sem＝這張卡適合哪幾種語意（shared/template/SITUATIONS.md「語意類型」的名稱）：語意地圖照它列候選、輪流推薦，不會每次都是同幾張；空陣列＝風格很強（和風直書），不主動推薦"
 }

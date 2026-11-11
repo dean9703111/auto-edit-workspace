@@ -28,6 +28,7 @@ const { loadIcons } = await import(path.join(TOOLS, 'lib', 'scenes.mjs'));
 const { textWidth } = await import(path.join(TOOLS, 'lib', 'time.mjs'));
 
 const args = process.argv.slice(2);
+process.env.AUTO_EDIT_MATTE ||= 'box';   // 人物去背的模板（fill.json 寫 "matte": true）：驗收用假去背（方框當成人），不下載、不跑模型
 const fast = args.includes('--fast'), verbose = args.includes('--verbose');
 const names = args.includes('--all') ? listFillSpecs(CUSTOM).map((s) => s.template) : args.filter((a) => !a.startsWith('--'));
 if (!names.length) { console.log('用法：node dev/tools/custom-check.mjs <模板名> … 或 --all [--fast] [--verbose]'); process.exit(2); }

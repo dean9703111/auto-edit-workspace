@@ -9,6 +9,7 @@
 | 擦開、擦掉 | `P.wipe(sel, at, {dir, dur})`（dir：left、right、up、down）、`P.wipeOut(sel, at, {dir})` |
 | 滑入 | `P.drift(sel, at, {dx, dur, stagger})`（dx 預設 16，左側元件寫 -16） |
 | 彈出、錯拍彈出 | `P.pop(sel, at, {from, dy, to, dur, stagger})`（to 是落地亮度，預設 1） |
+| 貼上、撕走 | `P.stick(sel, at, {rot})`、`P.peel(sel, at, {rot})`：元素加 `class="sc-sticker"`（白邊＋落影）；rot 是貼好後的角度（預設 -4），兩個要寫一樣 |
 | 長出 | `P.grow(sel, at)`（卡片要固定寬高） |
 | 抽屜 | `P.slide(sel, at, {from})`、`P.slideOut(sel, at, {to})`（外層 overflow:hidden） |
 | 淡入、淡出、換內容 | `P.in(sel, at, {dur, stagger})`、`P.out(sel, at)`、`P.swap(舊, 新, at)` |

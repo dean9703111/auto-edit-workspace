@@ -666,3 +666,75 @@ test('transcriptFresh：初剪重輸出（長度差 ≤ 0.2 秒）照用 srt-ali
   clip(rough, 1);
   assert.equal(transcriptFresh(tj, rough), false, '沒有紀錄 → 照修改時間判斷');
 });
+
+test('025 ref：refRhythm 算鏡頭數、平均鏡頭長度、每 10 秒換幾次；沒給 --file 說怎麼做', async () => {
+  const M2 = await import(new URL('../../shared/template/tools/media.mjs', import.meta.url));
+  assert.deepEqual(M2.refRhythm(25, [3, 12, 14]), { shots: 4, avg: 6.25, per10: [{ from: 0, n: 1 }, { from: 10, n: 2 }, { from: 20, n: 0 }] });
+  await assert.rejects(() => M2.refSheets({ project: '/tmp/nope' }, {}), /要給參考影片：--file/);
+  await assert.rejects(() => M2.refSheets({ project: '/tmp/nope' }, { file: '/tmp/沒有這個檔.mp4' }), /找不到參考影片/);
+});
+
+test('025 shorts：候選段落在停頓上（字幕空隙或剪接點）、不從連接詞開始、長度在範圍內；裁切置中在講者身上；pick 認句號範圍', async () => {
+  const SH = await import(new URL('../../shared/template/tools/lib/shorts.mjs', import.meta.url));
+  const texts = ['今天要講三個重點', '然後第一個是構圖', '構圖決定畫面乾不乾淨', '所以先把手機架好', '第二個重點是聲音', '收音比畫質重要', '因為觀眾可以忍受畫面普通', '第三個是節奏', '剪掉所有停頓', '這樣就完成了'];
+  const cues = texts.map((text, i) => ({ n: i + 1, start: i * 5, end: i * 5 + 5, text }));   // 沒有空隙
+  const withCuts = SH.shortCandidates(cues, { min: 15, max: 30, target: 20, breaks: [20, 35, 45] });
+  assert.ok(withCuts.length > 0);
+  for (const c of withCuts) {
+    assert.ok(c.dur >= 15 && c.dur <= 30, JSON.stringify(c));
+    assert.ok(c.start === 0 || [20, 35].includes(c.start), `起點要在停頓上：${c.start}`);
+    assert.ok([20, 35, 45, 50].includes(c.end), `終點要在停頓上：${c.end}`);
+    assert.doesNotMatch(c.first, /^(然後|所以|因為)/);
+  }
+  assert.ok(withCuts.some((c) => c.flags.includes('開頭有數字')), JSON.stringify(withCuts.map((c) => c.flags)));
+  const free = SH.shortCandidates(cues, { min: 15, max: 30, target: 20 });
+  assert.ok(free.length > withCuts.length, '沒有空隙也沒有剪接點：每一句的邊界都算');
+  assert.match(SH.shortsMarkdown(withCuts, { project: 'projects/ep1' }), /media\.mjs shorts --project projects\/ep1 --pick "#\d+-#\d+" --name/);
+  assert.deepEqual(SH.cropFor({ width: 1920, height: 1080, speakerBox: [591, 61, 1337, 1026] }), { x: 660, y: 0, w: 608, h: 1080 });
+  assert.deepEqual(SH.cropFor({ width: 1920, height: 1080, speakerBox: [0, 0, 300, 1000] }), { x: 0, y: 0, w: 608, h: 1080 }, '貼邊：不超出畫面');
+  assert.deepEqual(SH.cropFor({ width: 1920, height: 1080 }), { x: 656, y: 0, w: 608, h: 1080 }, '沒有講者框：取中間');
+  assert.equal(SH.cropFor({ width: 1080, height: 1920 }), null, '已經是直的不裁');
+  assert.deepEqual(SH.pickRange(cues, '#2-#4'), { a: 2, z: 4, start: 5, end: 20 });
+  assert.throws(() => SH.pickRange(cues, '第二段'), /--pick 要寫句號範圍/);
+  assert.throws(() => SH.pickRange(cues, '#8-#99'), /找不到/);
+});
+
+test('025 cut-check：剪接點兩邊都還在講話 → mid；一邊安靜 → 正常', async () => {
+  const M2 = await import(new URL('../../shared/template/tools/media.mjs', import.meta.url));
+  const rate = 8000, pcm = new Int16Array(rate * 4);
+  // 0–1 秒講話、1–2 秒安靜、2–4 秒講話
+  for (let i = 0; i < pcm.length; i++) { const t = i / rate; pcm[i] = t >= 1 && t < 2 ? 0 : Math.round(8000 * Math.sin(i * 0.9)); }
+  const r = M2.cutCheckRows(pcm, [0.5, 1.0, 1.5, 3.0], { rate });
+  assert.deepEqual(r.rows.map((x) => x.mid), [true, false, false, true]);
+  assert.ok(r.speech > -20 && r.speech < -5, String(r.speech));
+});
+
+test('025 cover：標題解析與字寬、字級放得進框、講者框對位、三種版型的 HTML、標題太長會擋', async () => {
+  const CV = await import(new URL('../../shared/template/tools/lib/cover.mjs', import.meta.url));
+  const lines = CV.parseTitle('讓 AI 幫你|*剪片*');
+  assert.deepEqual(lines, [[{ t: '讓 AI 幫你', hi: false }], [{ t: '剪片', hi: true }]]);
+  assert.ok(Math.abs(CV.lineEm(lines[0]) - (3 + 0.56 * 2 + 0.3 * 2)) < 1e-9 && Math.abs(CV.lineEm(lines[1]) - 2.3) < 1e-9);
+  const size = CV.fitSize(lines, 900, 800, 210);
+  assert.ok(size <= 210 && size * CV.lineEm(lines[0]) <= 900 && size * 1.24 * 2 <= 800);
+  assert.equal(CV.fitSize(CV.parseTitle('一二三四五六七八九'), 900, 800, 210), 100, '九個字、900 寬 → 100px');
+  // 講者框中心對到指定的 x；畫面不露邊
+  const pl = CV.place({ CW: 1920, CH: 1080, ar: 16 / 9, NW: 1920, NH: 1080, box: [600, 100, 1000, 1000], tx: 1000, ty: 60, zoom: 1.5 });
+  assert.ok(Math.abs(pl.left + 800 / 1920 * pl.width - 1000) < 1 && pl.left <= 0 && pl.left + pl.width >= 1920 && pl.top <= 0 && pl.top + pl.height >= 1080);
+  assert.equal(CV.place({ CW: 1920, CH: 1080, ar: 16 / 9, NW: 1920, NH: 1080, box: [0, 0, 200, 900], tx: 1400, zoom: 1.2 }).left, 0, '推不到的就貼邊，不露出畫面外');
+  for (const format of ['landscape', 'portrait']) for (const layout of CV.COVER.layouts) {
+    const html = CV.coverHtml({ layout, format, title: '讓 AI 幫你|*剪片*', kicker: 'EP 12', frame: 'frame.jpg', cutout: 'cutout.png', speakerBox: [300, 100, 800, 1000], kit: 'file:///kit' });
+    assert.match(html, new RegExp(`width: ${format === 'portrait' ? 1080 : 1920}px; height: ${format === 'portrait' ? 1920 : 1080}px`));
+    assert.match(html, /<em>剪片<\/em>/);
+    assert.match(html, /class="kicker">EP 12</);
+    assert.equal(/class="cut"/.test(html.split('</style>')[1]), layout !== 'c', '底部標題那一張不疊去背層');
+    const m = html.match(/\.text \{ position: absolute; left: (\d+)px; top: (\d+)px; width: (\d+)px; height: (\d+)px/);
+    if (format === 'portrait') assert.ok(+m[2] >= 240 && +m[2] + +m[4] <= 1680, `直式的標題在中間 3:4 裡（${m[2]}–${+m[2] + +m[4]}）`);
+    if (format === 'landscape' && layout !== 'c') assert.ok(+m[1] > 900, '講者在左 → 標題放右邊');
+  }
+  assert.deepEqual(CV.titleProblems('讓 AI 幫你|*剪片*'), []);
+  assert.match(CV.titleProblems('')[0], /沒有標題 → /);
+  assert.match(CV.titleProblems('一|二|三|四')[0], /最多 3 行 → /);
+  assert.match(CV.titleProblems('這一行實在是太長了放不進封面')[0], /一行最多 9 → /);
+  assert.deepEqual(CV.candidateTimes(100, 8).length, 8);
+  assert.ok(CV.candidateTimes(100, 8).every((t) => t > 0 && t < 100));
+});

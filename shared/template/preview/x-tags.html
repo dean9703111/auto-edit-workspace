@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-tags 重點詞浮標｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-tags.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-tags { position: absolute; inset: 0; }
+    #x-tags #xtg-svg { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+    #x-tags .xtg-line { fill: none; stroke: var(--v2-ink); stroke-width: 4px; stroke-linecap: round; }
+    #x-tags .xtg-dot { fill: var(--brand); stroke: var(--v2-card); stroke-width: 4px; }
+    /* 標籤：白底墨字墨框；left／right／top 由 script 照講者框算，不寫在這裡 */
+    #x-tags .xtg-tag { position: absolute; box-sizing: border-box; height: 92px; padding: 0 28px; display: flex; align-items: center; white-space: nowrap;
+                       border: 4px solid var(--v2-ink); border-radius: 14px; background: var(--v2-card); color: var(--v2-ink); box-shadow: var(--v2-card-shadow); }
+    #x-tags .xtg-tag--a { rotate: -3deg; }
+    #x-tags .xtg-tag--b { rotate: 3deg; }
+  </style>
+  <div id="x-tags" data-composition-id="x-tags" data-width="1920" data-height="1080" data-duration="11"
+       data-cues-sample='{"start":0,"D":11,"cues":{"421":[0.6,3.0],"422":[3.1,5.2],"423":[5.3,7.4],"424":[7.5,10.6]},"refs":{"#421@剪停頓":1.0,"#422@上字幕":3.2,"#423@配音效":5.4,"#424@加字卡":7.6}}'>
+    <svg id="xtg-svg" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+      <line id="xtg-l1" class="xtg-line" x1="0" y1="0" x2="0" y2="0" /><circle id="xtg-d1" class="xtg-dot" cx="0" cy="0" r="9" />
+      <line id="xtg-l2" class="xtg-line" x1="0" y1="0" x2="0" y2="0" /><circle id="xtg-d2" class="xtg-dot" cx="0" cy="0" r="9" />
+      <line id="xtg-l3" class="xtg-line" x1="0" y1="0" x2="0" y2="0" /><circle id="xtg-d3" class="xtg-dot" cx="0" cy="0" r="9" />
+      <line id="xtg-l4" class="xtg-line" x1="0" y1="0" x2="0" y2="0" /><circle id="xtg-d4" class="xtg-dot" cx="0" cy="0" r="9" />
+    </svg>
+    <div id="xtg-t1" class="xtg-tag xtg-tag--a"><span class="sc-t44 sc-w900 sc-opt">剪停頓</span></div>
+    <div id="xtg-t2" class="xtg-tag xtg-tag--b"><span class="sc-t44 sc-w900 sc-opt">上字幕</span></div>
+    <div id="xtg-t3" class="xtg-tag xtg-tag--a"><span class="sc-t44 sc-w900 sc-opt">配音效</span></div>
+    <div id="xtg-t4" class="xtg-tag xtg-tag--b"><span class="sc-t44 sc-w900 sc-opt">加字卡</span></div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-tags'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#421@剪停頓'), T2 = P.at('#422@上字幕'), T3 = P.at('#423@配音效'), T4 = P.at('#424@加字卡');   // 講到每個詞的時刻
+
+    // 位置：讀講者框算臉的位置，標籤排在臉的兩側（載入時算一次，不用改）
+    const SP = P.region('speaker'), PAD = 40, GAP = 24, NEED = 320;
+    const TOP = SP[1] + PAD, HEAD = Math.round(0.3 * (SP[3] - 2 * PAD)), CX = Math.round(SP[0] + SP[2] / 2);
+    const ZL = Math.max(SP[0], CX - HEAD - PAD), ZR = Math.min(SP[0] + SP[2], CX + HEAD + PAD);   // 臉的位置的左右緣
+    const BOTH = ZL - GAP - 96 >= NEED && 1824 - ZR - GAP >= NEED, RIGHT = 1824 - ZR >= ZL - 96;   // 兩側都放得下；否則排在比較寬的那一側
+    [ 1, 2, 3, 4 ].forEach(function (n) {
+      var tag = document.getElementById('xtg-t' + n), line = document.getElementById('xtg-l' + n), dot = document.getElementById('xtg-d' + n);
+      if (!tag) return;
+      var right = BOTH ? n % 2 === 0 : RIGHT, row = BOTH ? Math.floor((n - 1) / 2) : n - 1;
+      var y = TOP + 10 + row * (BOTH ? 170 : 120) + (BOTH && right ? 60 : 0), x1 = right ? ZR + GAP : ZL - GAP, x2 = right ? ZR - 50 : ZL + 50;
+      tag.style.top = y + 'px';
+      if (right) tag.style.left = x1 + 'px'; else tag.style.right = (1920 - x1) + 'px';
+      line.setAttribute('x1', x1); line.setAttribute('y1', y + 46); line.setAttribute('x2', x2); line.setAttribute('y2', y + 82);
+      dot.setAttribute('cx', x2); dot.setAttribute('cy', y + 82);
+    });
+
+    // 拍 1–4 講到哪個詞：那張標籤彈出 → ＋0.15 細線描出 → ＋0.4 圓點彈出
+    P.pop('#xtg-t1', T1, { from: 0.6, dy: 0 });  P.stroke('#xtg-l1', T1 + 0.15, { dur: 0.3 });  P.pop('#xtg-d1', T1 + 0.4, { from: 0.2, dy: 0, dur: 0.3 });
+    P.pop('#xtg-t2', T2, { from: 0.6, dy: 0 });  P.stroke('#xtg-l2', T2 + 0.15, { dur: 0.3 });  P.pop('#xtg-d2', T2 + 0.4, { from: 0.2, dy: 0, dur: 0.3 });
+    P.pop('#xtg-t3', T3, { from: 0.6, dy: 0 });  P.stroke('#xtg-l3', T3 + 0.15, { dur: 0.3 });  P.pop('#xtg-d3', T3 + 0.4, { from: 0.2, dy: 0, dur: 0.3 });
+    P.pop('#xtg-t4', T4, { from: 0.6, dy: 0 });  P.stroke('#xtg-l4', T4 + 0.15, { dur: 0.3 });  P.pop('#xtg-d4', T4 + 0.4, { from: 0.2, dy: 0, dur: 0.3 });
+
+    // 收：段尾前 0.3 秒整組淡出（overlay 自己退場）
+    P.out('.xtg-tag, #xtg-svg', P.dur() - 0.3);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-tags'] = tl;
+  })();
+  </script>
+
+  </div>
+  <img id="cut" src="speaker-cutout.png" alt="" onerror="this.remove()">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-tags";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

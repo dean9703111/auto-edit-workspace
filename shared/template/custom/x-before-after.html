@@ -18,6 +18,7 @@
   【要改的地方】
   1. 文字：標題列（≤ 10 字）；兩欄的名稱 .xba-lab（≤ 5 字）、數字 .xba-v 與單位 .xba-u（數字 ≤ 3 位、單位 ≤ 2 字）、
      左欄的缺點 #xba-pain（≤ 8 字，會被劃掉）、右欄的說明 #xba-gain（≤ 8 字）。放不下就縮文案，不縮字。
+     漲跌標 #xba-delta（選填，≤ 5 個字元，例「−89%」「省 160」）：兩個數字算得出差多少才寫，講到好處時蓋在右欄右上角；不寫就整行拿掉。
   2. 圖示：#xba-ico1、#xba-ico2 裡的 svg。到 kit/icons.json 找名稱，把 svg 原文整段貼上。
      一個字都不改：svg 裡面 <rect>、<line>、<circle> 的 width、height、x、y、r 是形狀本身的尺寸，拿掉就畫不出來；
      圖示大小由 .sc-icon 的 --i 決定，<svg> 本身不用寫 width、height。
@@ -29,7 +30,7 @@
   BEFORE = P.at('#32@手動')：講到舊做法的時刻，左欄擦開。
   PAIN = P.at('#33@逐句')：講到舊做法缺點的時刻，缺點那一行被劃掉、左欄退焦；音效 alert。
   AFTER = P.at('#34@AI')：講到新做法的時刻，右欄彈出（箭頭提早 0.6 秒從左欄走過來）。
-  SAVE = P.at('#35@省下')：講到好處的時刻，右欄數字畫螢光筆、光澤掃過、重拍，0.6 秒後右欄抬起發光；音效 success。
+  SAVE = P.at('#35@省下')：講到好處的時刻，右欄數字畫螢光筆、光澤掃過、重拍，0.35 秒後漲跌標彈出，0.6 秒後右欄抬起發光；音效 success。
   名稱、數字在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#32')。
   「@詞」要寫成字串字面值（P.at('#34@AI')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#34@AI', 0.3)。
   audit 會比對：這一拍出現的字（名稱、數字）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
@@ -49,6 +50,7 @@
   箭頭由 #xba-arrow 的 data-links="xba-left>xba-right" 自動畫在兩欄中間（端點離欄框 12、箭頭頭 16；id xba-left-xba-right），不寫座標。
   欄內（都是 absolute、靠左 36）：名稱列 top 36（圖示 88＋名稱 52 字）、數字列 top 156（數字 112 字＋單位 52 字）、量條軌道 top 316（376×40）、說明 top 380（40 字）。
   右欄的 .xba-in 是光澤用的內層（overflow: hidden）；亮框由 P.spot 加在右欄外層，不會被裁掉。
+  漲跌標 #xba-delta 在右欄外層：高 72、右緣超出欄框 56、上緣超出 4（離標題列 ≥ 40；名稱 5 個字又寫漲跌標時會碰到，名稱縮成 4 個字），略斜 −4 度。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-before-after 前後對比</title></head>
@@ -74,6 +76,9 @@
     #x-before-after #xba-fill1 { background: var(--sc-warn); }
     #x-before-after #xba-fill2 { background: var(--sc-good); }
     #x-before-after .xba-note { position: absolute; left: 36px; top: 380px; white-space: nowrap; }
+    /* 漲跌標：綠底膠囊，壓在右欄右上角（在 .xba-in 外面，不會被裁掉） */
+    #x-before-after .xba-delta { position: absolute; right: -56px; top: -4px; height: 72px; padding: 0 24px; line-height: 1; box-sizing: border-box; display: flex; align-items: center;
+                                 border-radius: 36px; background: var(--sc-good); color: var(--sc-on-accent); white-space: nowrap; transform: rotate(-4deg); }
     /* 箭頭：#xba-arrow 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link） */
   </style>
   <div id="x-before-after" data-composition-id="x-before-after" data-width="1920" data-height="1080" data-duration="15"
@@ -102,6 +107,7 @@
             <div class="xba-track"><div id="xba-fill2" class="xba-fill"></div></div>
             <div id="xba-gain" class="xba-note sc-t40 sc-w700 sc-gray sc-opt" data-fill="gain">NG 一次剪掉</div>
           </div>
+          <b id="xba-delta" class="xba-delta sc-t40 sc-w900" data-fill="delta">−89%</b> <!-- @if delta -->
         </div>
       </div>
     </div>
@@ -145,6 +151,7 @@
     P.marker('#xba-num2', SAVE);
     P.sheen('#xba-in2', SAVE + 0.1);
     P.punch('#xba-num2', SAVE + 0.1, { scale: 1.1 });
+    P.pop('#xba-delta', SAVE + 0.35, { from: 0.4, dy: 0 });   // @if delta
     // 拍 5 ＋0.6 右欄聚焦（放大抬起、主色亮框）
     P.spot('#xba-right', '#xba-right', SAVE + 0.6, { scale: 1.04, lift: -8 });
 
