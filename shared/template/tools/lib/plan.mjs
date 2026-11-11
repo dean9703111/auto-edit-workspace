@@ -31,6 +31,7 @@ import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTi
 import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } from './edit.mjs';
 import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner, mediaOverlaps } from './media.mjs';
 import { SFX_RULES, SFX_SWAP, rotateSfx, sfxBudget, thinMainSfx } from './audio.mjs';
+import { BED } from './music.mjs';
 import { validateMoods, moodCues, zoomSpans, MOOD_KINDS } from './moods.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
@@ -39,10 +40,11 @@ import { floorRules, atConsts, faceZone, coverWarn, FACE_WARN } from './audit-ru
 import { readScript } from './script-file.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
-const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'moods', 'scenes'];
+const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'moods', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
+const BED_KEYS = ['music', 'volume'];
 const KEYS = {
   scene: ['id', 'type', 'scene', 'from', 'to', 'duration', 'at', 'anchor', 'slots', 'beats', 'tone', 'sfx', 'sfxExtra', 'css', 'chtag', 'pip', 'sfxVolume', 'note', 'story'],
   fx: ['id', 'type', 'fx', 'from', 'to', 'duration', 'anchor', 'bg', 'vars', 'sfx', 'sfxExtra', 'sfxVolume', 'note', 'story'],
@@ -1333,13 +1335,41 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       else { const c = cueSeconds(t, cues); if (c.error) { ok = false; errors.push(`outro.from：${c.error}`); } else start = r3(c.sec); }
       if (o.volume !== undefined && !(isNum(o.volume) && o.volume >= -20 && o.volume <= 6)) { ok = false; errors.push(`outro.volume 要是 −20～+6 的 dB 數字（0＝預設），現在是 ${JSON.stringify(o.volume)} → 改成 −20～+6 之間的數字，或刪掉這個欄位用預設`); }
       if (o.fadeOut !== undefined && !(isNum(o.fadeOut) && o.fadeOut >= 0 && o.fadeOut <= 10)) { ok = false; errors.push(`outro.fadeOut 要是 0–10 的秒數（不寫＝用 kit/sfx.json 的 fadeOut），現在是 ${JSON.stringify(o.fadeOut)} → 改成 0–10 之間的秒數，或刪掉這個欄位用預設`); }
-      if (music && ok && sfxDir && !fs.existsSync(path.join(sfxDir, `${music}.wav`))) { ok = false; errors.push(`outro：音效檔 shared/sfx/${music}.wav 不存在 → shared/sfx/ 要有完整的 ${Object.keys(sfxConf).length} 個檔（kit/sfx.json 列的每一顆；見 shared/template/USAGE-reference.md R5.2）`); }
+      if (music && ok && sfxDir && !fs.existsSync(sfxConf[music].file || path.join(sfxDir, `${music}.wav`))) { ok = false; errors.push(`outro：音效檔 shared/sfx/${music}.wav 不存在 → shared/sfx/ 要有完整的 ${Object.keys(sfxConf).length} 個檔（kit/sfx.json 列的每一顆；見 shared/template/USAGE-reference.md R5.2）`); }
       if (music === null) outro = { music: null };
       else if (ok && start != null) {
         const conf = sfxConf[music];
-        outro = { music, credit: conf.credit ?? null, from: String(o.from), start, end: videoDur, span: r3(videoDur - start), fadeIn: conf.fadeIn ?? 0,
+        outro = { music, file: conf.file ?? null, credit: conf.credit ?? null, from: String(o.from), start, end: videoDur, span: r3(videoDur - start), fadeIn: conf.fadeIn ?? 0,
           fadeOut: Math.max(o.fadeOut ?? conf.fadeOut ?? 0, edit.fadeOut || 0), gain: (conf.volume ?? 1) * dB(o.volume ?? 0) * dB(edit.volume?.sfx ?? 0),
           relDb: r3((conf.targetDb ?? 0) + (o.volume ?? 0) + (edit.volume?.sfx ?? 0) - (edit.volume?.voice ?? 0)) };
+      }
+    }
+  }
+
+  // --- 底樂 bed（選用）：整支片墊一首配樂，講話時壓低（lib/music.mjs）。plan.json 沒寫就用工作區預設（shared/setting.json 的 music.bed，music.mjs use 寫的）---
+  let bed = null;
+  const bedIn = plan.bed !== undefined ? plan.bed : lib.musicDefault ? { music: lib.musicDefault } : undefined;
+  if (bedIn !== undefined) {
+    const b = bedIn, fromPlan = plan.bed !== undefined;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) errors.push(`bed 要寫成物件，例如 "bed": { "music": "<曲名>" }，現在是 ${JSON.stringify(b)} → 照例子改，這一集不要底樂寫 "bed": { "music": null }`);
+    else {
+      for (const k of Object.keys(b)) if (!BED_KEYS.includes(k)) errors.push(`bed 不能有「${k}」→ 只能寫 ${BED_KEYS.join('、')}`);
+      const music = b.music === undefined ? null : b.music, conf = music ? sfxConf[music] : null;
+      if (music === null) bed = { music: null };
+      else if (conf?.kind !== 'bgm') {
+        const msg = `「${music}」不是曲庫裡的配樂（可用：${bgmNames(sfxConf).join('、') || '沒有'}）`;
+        if (fromPlan) errors.push(`bed.music：${msg} → 改成可用的曲名（node shared/template/tools/music.mjs list），或寫 null 不配`);
+        else warnings.push(`底樂：工作區預設的${msg}，這一集沒配 → node shared/template/tools/music.mjs use <曲名> 重新設定，或 music.mjs use none 取消預設`);
+      } else if (b.volume !== undefined && !(isNum(b.volume) && b.volume >= -12 && b.volume <= 12)) errors.push(`bed.volume 要是 −12～+12 的 dB 數字（0＝預設），現在是 ${JSON.stringify(b.volume)} → 改成數字或拿掉`);
+      else {
+        const file = conf.file || (sfxDir ? path.join(sfxDir, `${music}.wav`) : null);
+        if (file && !fs.existsSync(file)) errors.push(`bed：配樂檔 ${music}.wav 不存在 → node shared/template/tools/music.mjs list 看曲庫，換一首或重新生成`);
+        else {
+          // 檔案本身的響度（LUFS）＝ −14 ＋ targetDb − 音量倍數換成的 dB（片尾配樂的設定反推回去）；底樂講話時要落在 −14 ＋ BED.db
+          const fileLufs = -14 + (conf.targetDb ?? 0) - 20 * Math.log10(conf.volume || 1);
+          const relDb = r3(BED.db + (b.volume ?? 0) + (edit.volume?.sfx ?? 0) - (edit.volume?.voice ?? 0));
+          bed = { music, file, from: fromPlan ? 'plan.json' : '工作區預設', credit: conf.credit ?? null, relDb, gainDb: r3(-14 + BED.db + (b.volume ?? 0) + (edit.volume?.sfx ?? 0) - fileLufs) };
+        }
       }
     }
   }
@@ -1450,7 +1480,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     globals: { speakerBox, sideShift, pipCrop, pip },
     edit, editActive: ne.active, tm, outDur: videoDur, roughDur, cuesOut: cues, voiceOnly, voiceOut, voiceGaps, footage, editFx, cutpoints, voiceMoved: [...(cues.voiceMoved || [])],
     moods: moodItems.map((m) => ({ i: m.mood.i, kind: m.mood.kind, event: m.mood.event, zoom: m.mood.zoom, sfx: m.sfx, dropped: m.sfxDropped?.name ?? null, off: m.mood.sfxOff })), zooms,
-    rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro,
+    rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro, bed,
     chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
   };
 }

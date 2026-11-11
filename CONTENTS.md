@@ -42,6 +42,7 @@
 | `deliver.mjs` 輸出 | 一條做完：測試片段、整支 render、驗收，有 3 個以上章節時寫 `output/youtube.txt`（YouTube 說明欄用的章節時間戳與配樂出處）；背景跑，停點 ④ 時就先低優先權 render，內容沒變就直接接手 |
 | `brand.mjs` 換風格 | 換色時自動檢查顏色看不看得清楚；`bg` 把 HTML 截成背景圖並檢查留空區；`list`／`use`／`pack` 列出、套用、建立風格包；`speaker` 設定講者 |
 | `capcut.mjs` 剪映素材 | 把完成影片拆成主軌 MP4、每段一支有透明通道的 MOV、字幕 SRT 和排法清單 |
+| `music.mjs` 配樂（選用） | 整支片的底樂：`add` 放自己的音樂、`gen` 用 ACE-Step 1.5 在本機生成 3 首候選並開試聽頁、`keep` 存進曲庫、`use` 設成每一集預設、`list`／`status` 看曲庫與安裝狀態。沒裝 ACE-Step 也能用自己的音樂 |
 | `look.mjs` 講者 | 偵測講者的臉、產生瘦臉與美顏底片和對照圖 `work/look-preview.jpg` |
 
 ## 文件
@@ -51,6 +52,7 @@
 | [PROMPTS.md](PROMPTS.md) | 你 | 照順序貼的提示詞、停下來時怎麼回、卡住的時候 |
 | [shared/template/EDITOR.md](shared/template/EDITOR.md) | 你與 AI | 剪輯台、構圖台、修改單怎麼用，會寫哪些欄位 |
 | [setup/README.md](setup/README.md) | AI | 環境檢測與安裝手冊（Mac、Windows）；說「幫我檢測環境」，AI 照著裝，每步回報進度 |
+| [setup/ACE-Step 配樂.md](setup/ACE-Step%20配樂.md) | AI | 選配：要生成配樂才裝 ACE-Step 1.5（約 14 GB）；安裝前 AI 會先講容量、問過你 |
 | [AGENTS.md](AGENTS.md) | AI | 工作區守則：六個停點、每個流程對應哪支 Skill、資料夾權限 |
 | `.agents/skills/` | AI | 9 支 Skill（總指揮、環境、剪乾淨、分鏡、螢幕錄影、情境動畫、審查、輸出、換風格）：每個流程的逐步指令與退路 |
 | `shared/template/USAGE.md`、`USAGE-reference.md` | AI | 工具與情境的用法；AI 第一次只讀核心的 USAGE.md，每個情境的參數在 reference，或用 `node shared/template/tools/build.mjs --list` 查 |

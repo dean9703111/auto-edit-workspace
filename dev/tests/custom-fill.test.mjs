@@ -245,3 +245,27 @@ test('024 x-scene：圖示、波形元件標 data-anchor（排版把它們當錨
   const layout = fs.readFileSync(path.join(kitDir, 'scene-layout.js'), 'utf8');
   assert.match(layout, /:scope > \[data-anchor\]/, 'scene-layout.js 的 anchorOf 認得 data-anchor');
 });
+
+test('x-scene 只有小零件（搜尋列＋徽章）：沒有主角就自動放大（徽章 2 倍、細長條放寬到 640）；有主角的照舊', () => {
+  const s = F.readFillSpec(CUSTOM, 'x-scene');
+  const beats = [{ at: '#12@搜尋', in: ['a'] }, { at: '#13@不順手', in: ['b'] }];
+  const small = F.fillTemplate({ spec: s, html: read('x-scene'), id: 'x1', slots: { title: '試過都不順手', parts: [{ id: 'a', illus: 'searchBar', label: '上網搜尋' }, { id: 'b', illus: 'badge', label: '不順手' }], beats }, icons, kitDir });
+  assert.deepEqual(small.errors, []);
+  assert.match(small.html, /data-illus="badge"[^>]*style="width:192px;height:192px"/);
+  assert.match(small.html, /data-illus="searchBar"[^>]*style="width:640px;/);
+  const hero = F.fillTemplate({ spec: s, html: read('x-scene'), id: 'x1', slots: { title: '試過都不順手', parts: [{ id: 'a', illus: 'laptop', label: '電腦' }, { id: 'b', illus: 'badge', label: '不順手' }], beats }, icons, kitDir });
+  assert.match(hero.html, /data-illus="badge"[^>]*style="width:96px;height:96px"/);
+});
+
+test('autoBreak：宣告了每行上限的欄位，沒寫 // 又超過一行就自動斷成兩行；寫了 // 的照使用者寫的；兩行也放不下原樣回傳', async () => {
+  const S = await imp('lib/scenes.mjs');
+  const lines = (v) => S.autoBreak(v, 9, 2).split('//').map((x) => S.visibleLen(x));
+  assert.equal(S.autoBreak('本集流程', 9, 2), '本集流程');
+  const a = lines('手機上看不出的小毛病');
+  assert.equal(a.length, 2);
+  assert.ok(a.every((n) => n <= 9), a.join('、'));
+  assert.equal(S.autoBreak('AI 照規則剪//我只負責把關', 9, 2), 'AI 照規則剪//我只負責把關');
+  assert.ok(!/\*\*[^*]*\/\/[^*]*\*\*/.test(S.autoBreak('用 **Claude Code** 做多機錄影工具', 9, 2)), '不斷在關鍵詞裡面');
+  assert.equal(S.autoBreak('一二三四五六七八九十一二三四五六七八九', 9, 2), '一二三四五六七八九十一二三四五六七八九');
+  assert.equal(S.autoBreak('手機上看不出的小毛病', 9, 1), '手機上看不出的小毛病');
+});

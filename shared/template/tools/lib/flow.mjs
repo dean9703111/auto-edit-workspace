@@ -138,7 +138,7 @@ export function runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }) {
   if (!raw) { fs.mkdirSync(path.dirname(P.plan), { recursive: true }); plan = { version: 1 }; writeAtomic(P.plan, `${JSON.stringify(plan, null, 2)}\n`); }
   const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
   const fmt = resolveFormat({ projectDir: P.project, plan, flag: flags.format ?? null });
-  const lib = loadLib(P.templateDir);
+  const lib = loadLib(P.templateDir, P.project);
   fs.mkdirSync(path.join(P.out, '.cache'), { recursive: true });
   const count = (d, re) => { try { return fs.readdirSync(path.join(P.project, 'assets', d)).filter((n) => re.test(n)).length; } catch { return 0; } };
   const scriptMd = fs.existsSync(path.join(P.project, '講稿.md')) ? readScript(path.join(P.project, '講稿.md')) : '';
@@ -542,7 +542,7 @@ export function outlineCmd(P, file) {
     if (win && !win.first) warns.push(`${r.id}（${entry.name}）放不下任何一拍 → 併進前後一句，或換字卡`);
     else if (win) {
       const where = win.mid ? `#${win.first} 講到一半之後的詞` : `#${win.first}–#${win.last}${win.lastHead ? `（#${win.last} 只用前半句）` : ''}的詞`;
-      hints.push(`${r.id}：拍綁在 ${where}，最多 ${win.max} 拍（第一拍離段頭 ≥ ${f.open} 秒、最後一拍到段尾 ≥ ${f.end} 秒、拍與拍 ≥ ${f.gap} 秒；項目比拍多就幾項併一拍）`);
+      hints.push(`${r.id}：拍綁在 ${where}，最多 ${win.max} 拍（相鄰兩拍挑不同句的詞；項目比拍多就幾項併一拍；秒數不用算，放不下 --check-draft 會說改哪一格）`);
     }
     return { r, entry, snip, kind, a, z };
   });
@@ -962,7 +962,7 @@ function startEditor(P, label) {
 }
 
 export function storyboardCmd(P, flags, { loadLib }) {
-  const lib = loadLib(P.templateDir);
+  const lib = loadLib(P.templateDir, P.project);
   const plan = readJson(P.plan);
   if (!plan?.scenes) { console.log('✖ plan.json 還沒有 scenes → 先照 work/分鏡素材/ 寫草稿、跑 --merge-drafts'); return 1; }
   const only = flags.only ? String(flags.only).split(/[,，]/).map((s) => s.trim()).filter(Boolean) : null;
@@ -1033,7 +1033,7 @@ export function dropBeatSheets(md, ids) {
 }
 
 export function applyCmd(P, flags, { loadLib }) {
-  const lib = loadLib(P.templateDir);
+  const lib = loadLib(P.templateDir, P.project);
   const plan = readJson(P.plan);
   const file = sbFile(P);
   if (!plan?.scenes || !fs.existsSync(file)) { console.log('✖ 還沒有 work/storyboard.md 或 plan.json 的 scenes → 先跑 --storyboard'); return 1; }
@@ -1065,7 +1065,7 @@ export function applyCmd(P, flags, { loadLib }) {
   if (r.requests.length) {
     for (const q of r.requests) console.log(`要求：${q.id} ${q.label}：${q.text}`);
     const ids = [...new Set(r.requests.map((q) => q.id))];
-    console.log('→ 下一步：照要求改那幾段（換情境就改 plan.json 那段的 template／scene／slots；內容設計動畫改 work/designs/<段>.md），重截那幾段、重貼停點 ③');
+    console.log('→ 下一步：照要求改那幾段（換情境就改 plan.json 那段的 template／scene／slots；內容設計動畫改 work/designs/<段>.md），跑下面那一條重截那幾段，然後重貼停點 ③ 等使用者回覆（這次的「可以」不算，還不要派設計師）；使用者再說「可以」才重跑 --apply-storyboard，派工訊息到那時候才會印');
     console.log(`node shared/template/tools/build.mjs ${P2} --storyboard --only ${ids.join(',')}`);
     return 0;
   }

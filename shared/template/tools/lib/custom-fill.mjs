@@ -281,12 +281,14 @@ const even8 = (v) => Math.max(8, Math.round(v / 8) * 8);
 const even2 = (v) => Math.max(2, Math.round(v / 2) * 2);
 
 // 元件大小：照「主角是圖」的規則（style.md「示意動畫」、x-scene 檔頭）：一列幾個主角就有多寬；不用模型自己算
-function partSize(part, { mains, twoRows }, kitDir) {
+// boost：第一列只有一兩個元件、而且都是小零件或細長條（徽章、搜尋列、進度條；短邊都 < 120）時沒有主角，畫面會很空
+//   （2026-11-11 試跑 x0110：搜尋列＋徽章只佔卡片 12%）→ 小零件放大 2 倍、細長條放寬到 640
+function partSize(part, { mains, twoRows, boost }, kitDir) {
   if (part.w && part.h) return [part.w, part.h];
-  if (ILLUS_SMALL[part.illus]) return ILLUS_SMALL[part.illus];
+  if (ILLUS_SMALL[part.illus]) return boost ? ILLUS_SMALL[part.illus].map((v) => v * 2) : ILLUS_SMALL[part.illus];
   const ratio = part.illus ? illusRatio(kitDir, part.illus, part.opts || {}) : null;
   const [rw, rh] = ratio || [part.w || 220, part.h || 160];
-  const maxW = mains <= 1 ? 560 : mains === 2 ? 420 : mains === 3 ? 272 : 208;   // 內容區 1176 扣掉間距與左右內距 48
+  const maxW = boost ? 640 : mains <= 1 ? 560 : mains === 2 ? 420 : mains === 3 ? 272 : 208;   // 內容區 1176 扣掉間距與左右內距 48
   const maxH = twoRows ? 300 : 420;   // 內容區 580 扣掉上下內距 80、標籤 48
   const s = Math.min(maxW / rw, maxH / rh);
   return [even8(rw * s), even2(rh * s)];
@@ -418,6 +420,8 @@ function fillScene(html, slots, { icons, kitDir }) {
   const mains = Math.max(1, topRow.filter((p) => !(ILLUS_SMALL[p.illus]) && !p.side).length);
   const twoRows = (s.parts || []).some((p) => p.row && p.row !== 1) || (s.parts || []).some((p) => Array.isArray(p.parts));
   const ctx = { mains, twoRows, kitDir, icons };
+  const plain = topRow.length <= 2 && !twoRows && topRow.every((p) => !Array.isArray(p.parts) && p.illus && !p.w && !p.h && !p.side);
+  ctx.boost = plain && Math.max(...topRow.map((p) => Math.min(...partSize(p, ctx, kitDir)))) < 120;
   let out = html;
   out = out.replace(/(<!-- ══ DATA 1[^\n]*\n)[\s\S]*?(\n?[ \t]*<!-- ══ DATA 1 到這裡)/, (_, a, b) => `${a}${(s.parts || []).map((p) => `        ${scenePartHtml(p, ctx)}`).join('\n')}\n${b.replace(/^\n/, '')}`);
   out = out.replace(/(\/\/ ══ DATA 2[^\n]*\n)[\s\S]*?(\n?[ \t]*\/\/ ══ DATA 2 到這裡)/, (_, a, b) => `${a}${sceneBeatCode(s)}\n${b.replace(/^\n/, '')}`);

@@ -267,7 +267,8 @@ export function measureInPage({ hostId, W, H }) {
       sw: el.scrollWidth, cw: el.clientWidth, sh: el.scrollHeight, ch: el.clientHeight,
       constraint: -1, clips: [], parent: -1,
       moving: isMoving(el),
-      allowOverflow: !!el.closest('[data-layout-allow-overflow], [data-layout-bleed]'),
+      // data-layout-allow-overflow="self"：只有標的那個元素自己不判（例：會推出畫面的側邊欄面板），裡面的文字照樣判撐破／裁切
+      allowOverflow: (() => { const a = el.closest('[data-layout-allow-overflow], [data-layout-bleed]'); return !!a && (a === el || a.getAttribute('data-layout-allow-overflow') !== 'self'); })(),
       allowCaption: !!el.closest('[data-layout-allow-caption-zone]'),
       host: el === host,
       // 003 版面規則

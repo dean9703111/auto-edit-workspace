@@ -121,6 +121,27 @@ export function richHtml(s) {
   return escHtml(s).replace(/\*\*(.+?)\*\*/g, '<span class="sc-kw">$1</span>').replace(/(?<!:)\/\//g, '<br>');
 }
 
+// 沒寫 // 又超過一行放得下的字數：自動斷成兩行（斷在詞的邊界、兩行長度最接近、第二行不以「的、了」或標點開頭）。
+// 只在宣告了 maxLine、maxLines ≥ 2 的欄位做；已經有 // 的照使用者寫的；兩行都放不下就原樣回傳，讓上限檢查去報。
+const NO_LINE_START = '的了嗎呢吧啊著過、，。！？；：）」』】';
+const WORDS = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('zh-Hant', { granularity: 'word' }) : null;
+export function autoBreak(s, maxLine, maxLines = 1) {
+  s = String(s);
+  if (!WORDS || maxLine == null || maxLines < 2 || s.includes('//') || visibleLen(s) <= maxLine) return s;
+  let best = null;
+  for (const { index } of WORDS.segment(s)) {
+    if (index <= 0 || index >= s.length) continue;
+    const L = s.slice(0, index), R = s.slice(index);
+    if ((L.match(/\*\*/g) || []).length % 2 || L.endsWith('*') || R.startsWith('*') && !R.startsWith('**')) continue;   // 不斷在 **關鍵詞** 裡面
+    if (/^\s/.test(R) || /[A-Za-z0-9]$/.test(L) && /^[A-Za-z0-9]/.test(R)) continue;
+    const l = visibleLen(L), r = visibleLen(R);
+    if (l > maxLine || r > maxLine || !l || !r) continue;
+    const score = Math.abs(l - r) + (NO_LINE_START.includes(R.replace(/^\*\*/, '')[0]) ? 3 : 0);
+    if (!best || score < best.score) best = { score, v: `${L.trimEnd()}//${R}` };
+  }
+  return best ? best.v : s;
+}
+
 // 「值 ｜k=v k2=v2」→ { value, attrs }（scene.json 的 sample 寫法，plan.json 也接受）
 const ATTR_RE = /[\w.-]+=(?:"[^"]*"|\S+)/;
 const ATTRS_TAIL = new RegExp(`\\s*[｜|]\\s*((?:${ATTR_RE.source}\\s*)+)$`);
@@ -205,7 +226,7 @@ export function resolveScene(opts) {
   const processValue = (key, decl, value, out, label) => {
     const t = decl.type || 'text';
     if (t === 'text' || t === 'rich') {
-      const s = String(value);
+      const s = autoBreak(value, decl.maxLine, decl.maxLines);
       const len = visibleLen(s);
       if (decl.max != null && len > decl.max) err(`${label}：「${richPlain(s)}」${len} 字，上限 ${decl.max} → 縮成 ${decl.max} 字以內（全形 1、半形 0.5；不縮字級）`);
       if (decl.maxLine != null || decl.maxLines != null) {

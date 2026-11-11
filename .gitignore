@@ -7,6 +7,8 @@ projects/example/output/
 shared/setting.json
 # 舊版的講者資料（現在在 setting.json 的 speaker；舊檔還在的話照樣讀得到）
 shared/講者.json
+# 配樂曲庫（music.mjs 生成或放進來的曲子；每個人本機各一份，檔案也大）
+shared/music/
 # 剪輯偏好（創作者確認過每一集都照做的規則，status.mjs --prefs-add 寫的）：每個人本機各一份
 shared/偏好.md
 # 構圖台存的預覽參考圖（創作者自己的畫面，情境庫、風格預覽頁的講者改用它）：每個人本機各一份

@@ -78,6 +78,8 @@ import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
 import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip } from './lib/audio.mjs';
+import { loadMusic, bedPlan, renderBedClip, bedLine } from './lib/music.mjs';
+import { readSettings } from './lib/settings.mjs';
 import { ensureLook, lookCheck } from './lib/look.mjs';
 import { ensureMattes } from './lib/matte.mjs';
 import { hyperframesVersion, versionLine } from './caps.mjs';
@@ -154,14 +156,17 @@ export function pathsFrom(flags, cwd = process.cwd(), { needProject = true } = {
 
 const rel = (p) => path.relative(process.cwd(), p) || '.';
 
-export function loadLib(templateDir) {
+// projectDir：這一集自己的曲庫（work/music/）也算進配樂；沒給就只有工作區的 shared/music/
+export function loadLib(templateDir, projectDir = null) {
   const kit = path.join(templateDir, 'kit');
+  const sharedDir = path.resolve(templateDir, '..');
   const read = (f, d) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : d);
   const brandCss = fs.existsSync(path.join(kit, 'brand.css')) ? fs.readFileSync(path.join(kit, 'brand.css'), 'utf8') : '';
   const accent = (brandCss.match(/--brand\s*:\s*(#[0-9a-fA-F]{6})/) || [])[1] || '#FFD400';
   return {
     scenes: loadScenes(templateDir), icons: loadIcons(templateDir), fx: loadFx(templateDir),
-    consts: motionConsts(kit), sfx: read(path.join(kit, 'sfx.json'), {}), accent,
+    consts: motionConsts(kit), sfx: { ...read(path.join(kit, 'sfx.json'), {}), ...loadMusic({ sharedDir, projectDir }) }, accent,
+    musicDefault: readSettings(sharedDir).data.music?.bed ?? null,
     customDir: path.join(templateDir, 'custom'),
   };
 }
@@ -673,7 +678,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const hfv = hyperframesVersion(P.root);
   log(versionLine(hfv));
   const versions = { hyperframes: { pinned: hfv.pinned, installed: hfv.installed, ok: hfv.ok } };
-  const lib = loadLib(P.templateDir);
+  const lib = loadLib(P.templateDir, P.project);
   if (!lib.scenes.length) throw new Error(`找不到情境模板：${rel(path.join(P.templateDir, 'scenes'))}`);
   // 講者資料（shared/setting.json）：14 講者介紹的姓名、頭銜與 15 金句的出處預設值；沒設定就用 scene.json 的示範人物並提醒
   const speaker = readSpeaker(P.templateDir);
@@ -738,7 +743,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     }
     printIssues(res, log, flags);
     for (const w of capW) log(`⚠ ${w}`);
-    log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip)] }, flags));
+    log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip), ...bedTail(res, clip)] }, flags));
     log(res.errors.length ? `\n未通過：${res.errors.length} 個錯誤（✖），${res.warnings.length + capW.length} 個提醒（⚠）。照 → 後面的建議改 plan.json 再跑一次。` : `\n通過：${res.items.length} 段，${res.warnings.length + capW.length} 個提醒（⚠）。`);
     return { ok: !res.errors.length, res };
   }
@@ -840,16 +845,25 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const mediaN = prepareMedia(res.items, P.out, log);
   // 結尾配樂：量 wav 長度決定起播點，淡入淡出與增益烤進檔案（005 的 renderBgmClip，同參數不重做）
   const clip = outroClipOf(res, P);
+  // 底樂（選用）：鋪滿整支片、照人聲壓低；有剪輯台剪段時主軌的時間對不上，改成整段固定音量
+  const bp = bedPlan(res.bed, { outDur, outroAt: clip ? clip.at : null });
+  let bed = null;
+  if (bp) {
+    let r;
+    try { r = renderBedClip(res.bed.file, path.join(P.out, 'assets'), { dur: bp.dur, gainDb: res.bed.gainDb, key: res.tm?.cuts?.length ? null : assetVideo, fadeIn: bp.fadeIn, fadeOut: bp.fadeOut }); }
+    catch (e) { log(`✖ 底樂（${res.bed.music}）：${e.message}；這一集不要底樂就在 plan.json 第一層寫 "bed": { "music": null }`); return { ok: false, res }; }
+    bed = { file: posix(path.relative(P.out, r.file)), at: 0, dur: r.dur };
+  }
   let outro = null;
   if (clip) {
-    const r = renderBgmClip(path.join(P.sfx, `${res.outro.music}.wav`), path.join(P.out, 'assets'), { from: clip.from, dur: clip.dur, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, gain: clip.gain });
+    const r = renderBgmClip(res.outro.file || path.join(P.sfx, `${res.outro.music}.wav`), path.join(P.out, 'assets'), { from: clip.from, dur: clip.dur, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, gain: clip.gain });
     outro = { file: posix(path.relative(P.out, r.file)), at: clip.at, dur: r.dur };
   }
   // 人物去背層：規格寫 "matte": true 的模板動畫（x-wall…），把那一段的講者去背、疊在動畫上（lib/matte.mjs；檔在就沿用）
   const mt = ensureMattes({ outDir: P.out, root: path.resolve(HERE, '..', '..', '..'), items: res.items, tm: res.tm, assetVideo, log, speakerBox: res.globals.speakerBox });
   if (mt.made || mt.reused) log(`人物去背層：${mt.made + mt.reused} 段（新做 ${mt.made}、沿用 ${mt.reused}）`);
   if (mt.problems.length) { for (const x of mt.problems) log(`✖ [${x.id}] ${x.msg}`); return { ok: false, res }; }
-  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null };
+  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, bed, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null };
   const main = buildMain({ ...mainOpts, captions: cap });
   let test = null;
   if (flags.test) {
@@ -926,7 +940,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   manifest.planHash = planHash;   // 和 --check --json 的 planHash 相同（004 的 qc storyboard 用來判斷截圖是不是最新的）
   fs.writeFileSync(path.join(P.out, '.build-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
-  log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip)] }, flags));
+  log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip), ...bedTail(res, clip)] }, flags));
   log(`\n產生：${W.res.written.length} 個檔（沒變 ${W.res.same.length}）；kit 更新 ${kitN} 個檔${mediaN ? `；插入素材更新 ${mediaN} 個` : ''}${removed.length ? `；刪掉舊檔 ${removed.join('、')}` : ''}`);
   if (W.res.skipped.length) log(`⚠ 這些檔被手改過，沒有覆寫：${W.res.skipped.join('、')} → 把改動搬進 plan.json 後加 --force`);
   if (test) {
@@ -944,7 +958,7 @@ async function cli() {
   if (flags.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
   const P = pathsFrom(flags, process.cwd(), { needProject: !flags.list && !flags.gallery });
   if (flags.list) {
-    const lib = loadLib(P.templateDir);
+    const lib = loadLib(P.templateDir, P.project);
     if (flags.json) console.log(JSON.stringify({ sounds: Object.fromEntries(Object.entries(lib.sfx).map(([k, v]) => [k, { ...v, file: `shared/sfx/${k}.wav`, exists: fs.existsSync(path.join(P.sfx, `${k}.wav`)) }])), scenes: lib.scenes.map(({ template, dir, ...s }) => s), fx: lib.fx.map(({ file, ...f }) => f),
       media: { keys: MEDIA_KEYS, fields: MEDIA_FIELDS.map(([field, values, dflt, note]) => ({ field, values, default: dflt, note })) } }, null, 2));
     else console.log(listText(lib));
@@ -1011,10 +1025,16 @@ export function errorJson(message) {
     outro: null, moods: [], edit: null, paths: {} };
 }
 
+// 底樂的報告行：有設定（plan.json 的 bed 或工作區預設）才印，沒設定的人看不到這一行
+function bedTail(res, clip) {
+  if (!res.bed) return [];
+  return [bedLine(res.bed, bedPlan(res.bed, { outDur: res.outDur, outroAt: clip ? clip.at : null }), { ducked: !res.tm?.cuts?.length })];
+}
+
 // 結尾配樂的起播點：量 shared/sfx/<music>.wav 的長度（一次 ffprobe）
 function outroClipOf(res, P) {
   if (!res.outro?.music) return null;
-  const f = path.join(P.sfx, `${res.outro.music}.wav`);
+  const f = res.outro.file || path.join(P.sfx, `${res.outro.music}.wav`);
   if (!fs.existsSync(f)) return null;
   return outroClip(res.outro, probeDuration(f), res.outDur);
 }

@@ -8,6 +8,8 @@ hyperframes skill 裡這些不用做，工具都處理了：寫 story／SPEC／s
 
 不要讀 `shared/template/tools/`、`shared/template/kit/*.js`。指令都在工作區根目錄跑，路徑從 `projects/<專案>/` 寫起；文件裡的 `work/` 都是 `projects/<專案>/work/`。每段最多 18 次工具呼叫（查 registry、新畫元件都算），到第 18 次就停手，照最後的「回報」回卡在哪。
 
+**要用的寫法這份都有，不用查。** 顏色、插圖名稱和狀態、圖示寫法、完整範例都在下面；不要去 grep 或打開 `shared/template/kit/` 的 css、`illus-gallery.html`，不要查別的 class 名稱（膠囊、卡片自己用下面的顏色寫 CSS），不要為了確認語法去開別段的動畫檔。不確定的寫法照「範例」那一節抄。讀完 brief 和這份之後，3 次工具呼叫以內要寫出第一版動畫檔並跑 audit；語法對不對讓 audit 告訴你，不要在心裡驗證。
+
 ## 開工
 
 剛照 design-script.md 寫完鏡位腳本的，brief 和腳本都讀過了，直接做第 4 步。
@@ -29,8 +31,48 @@ hyperframes skill 裡這些不用做，工具都處理了：寫 story／SPEC／s
 - **進場用 `tl.from` 或 `tl.fromTo`**，元素在進場前就會藏起來；不要用 CSS `opacity: 0` 藏。一組一樣的東西用同一個 tween 加 `stagger`。不要用 `onUpdate`／`onComplete`、無限循環、補間顏色、旋轉、大位移飛入、拍與拍之間的微動（呼吸、漂浮）。
 - **位置**：最外層容器 `position:absolute`，照下面的畫布表放；裡面用一般 CSS（flex、grid、absolute）排。有底或有框的盒子寬高、left、top 寫整數 px。刻意疊在一起的加 `data-layout-allow-overlap`。
 - **顏色、字**：顏色只用 `var(--brand)`、`var(--sc-fs-ink)`、`var(--sc-fs-card)`、`var(--sc-fs-card-line)`、`var(--sc-warn)`、`var(--sc-good)`、`var(--v2-node)`、`var(--v2-line)`、`var(--v2-card)`，陰影 `var(--v2-card-shadow)`；主色只給焦點。字型用頁面預設的，不要另外載字型；字 ≥ 30px（直式專案 ≥ 38px，audit 第一行會印版式）；自畫的膠囊、標籤用 padding 撐內距（上下 ≥ 14、左右 ≥ 24），不要用 line-height 撐高置中。
-- **插圖、圖示**：用最後一節的線稿元件（`data-illus`）和圖示（`data-icon`），工具會畫進去，不要自己貼 SVG 路徑。用到插圖時 script 第一行加 `ILLUS.mount(document.getElementById('x-design-<段 id>'));`。插圖的螢幕狀態是 `.il-<狀態>` 子元素，用 GSAP 調它的 opacity 切換。
+- **插圖、圖示**：用最後一節的線稿元件（`data-illus`）和圖示（`data-icon`），工具會畫進去，不要自己貼 SVG 路徑。用到插圖時 script 第一行加 `ILLUS.mount(document.getElementById('x-design-<段 id>'));`。插圖的螢幕狀態每一種都預先畫好了，是 `.il-<狀態>` 子元素（`video` 的 class 是 `.il-content`，`blank` 沒有 class）；換狀態寫 `P.swap('#xd<段 id>-phone .il-rec', '#xd<段 id>-phone .il-warn', T2);`。
 - kit 的 `P.*` 效果（描線、數字滾動、打字、聚焦…）也能用，寫法看 `references/kit-syntax.md`；不熟就用 GSAP，不用去學。
+
+## 範例（語法照抄，畫面不要照抄）
+
+右下有講者小視窗的一段：手機先出現、旁邊冒出標籤，講到「崩潰」時手機螢幕換成警示、跳出警示圖示。`<style>`、最外層容器、`<script>` 中間各加這幾行，骨架其他地方不動。
+
+```html
+<style>
+  #x-design-s0108 #xds0108-stage { position: absolute; left: 120px; top: 150px; width: 1180px; height: 708px; }
+  #x-design-s0108 #xds0108-phone { position: absolute; left: 200px; top: 114px; width: 230px; height: 480px; }
+  #x-design-s0108 #xds0108-tag { position: absolute; left: 520px; top: 240px; padding: 18px 32px; border-radius: 999px; white-space: nowrap;
+    background: var(--sc-fs-card); border: 2px solid var(--sc-fs-card-line); color: var(--sc-fs-ink); font-size: 40px; font-weight: 700; }
+  #x-design-s0108 #xds0108-warn { position: absolute; left: 520px; top: 380px; color: var(--sc-warn); }
+</style>
+
+<div id="xds0108-stage">
+  <div id="xds0108-phone" data-illus="phone" data-orient="portrait" data-screen="rec"></div>
+  <div id="xds0108-tag">手勢開關</div>
+  <span id="xds0108-warn" class="sc-icon" data-icon="triangle-alert" style="--d:140px;--i:84px"></span>
+</div>
+
+<script>
+    ILLUS.mount(document.getElementById('x-design-s0108'));
+    const T1 = P.at('#35@手勢');
+    const T2 = P.at('#40@崩潰');
+    tl.from('#xds0108-phone', { opacity: 0, y: 24, duration: 0.5, ease: 'power3.out' }, T1);
+    tl.from('#xds0108-tag', { opacity: 0, scale: 0.9, duration: 0.4, ease: 'back.out(1.6)' }, T1 + 0.4);
+    P.swap('#xds0108-phone .il-rec', '#xds0108-phone .il-warn', T2);
+    tl.from('#xds0108-warn', { opacity: 0, scale: 0.6, duration: 0.4, ease: 'back.out(1.8)' }, T2 + 0.4);
+    P.sfx('alert', '#40@崩潰');
+</script>
+```
+
+## 大小
+
+觀眾多半用手機看，東西要大：
+
+- **主角**（這一拍在講的那個物件）長邊 300–480px；一個畫面只有一兩個物件時再大一點（到 560px）。**配角**長邊 ≥ 180px。下面元件表的尺寸是長寬比和下限，照比例放大，不要直接抄。
+- 完成態的內容要把主內容區用起來：東西太小或太少就先放大主角，不要多加東西湊滿。
+- 標籤字 36–44px、重點數字或關鍵詞 72px 以上；最小 30px 只給次要說明。圖示 `--d` ≥ 96px。
+- audit 報「主角太小」（最大的插圖長邊不到 300px）、「畫面太空」（內容蓋到的面積不到主內容區 30%）就照 → 放大，這兩條要修到沒有。數字出處：`shared/style.md`「示意動畫」。
 
 ## 畫布
 
@@ -77,7 +119,7 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id>
 
 `data-illus`，可以放大，線不會變粗。寫法：`<div data-illus="phone" data-orient="landscape" data-screen="qr" style="width:250px;height:120px"></div>`（`data-*` 就是下表的選項）。
 
-| 元件 | 狀態、選項 | 建議大小（px） |
+| 元件 | 狀態、選項 | 長寬比與下限（px；照比例放大） |
 |---|---|---|
 | `phone` | orient：portrait、landscape；screen：blank、video（人像）、play、rec、check、warn、shorts、qr | 直 120×250、橫 250×120 |
 | `phoneTripod` | 同 phone（手機架在腳架上） | 直 140×360、橫 260×300 |

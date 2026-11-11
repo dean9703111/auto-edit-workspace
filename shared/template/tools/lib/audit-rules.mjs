@@ -43,6 +43,9 @@ export const NOWRAP_MIN = 7;                            // nowrap 文字到框�
 export const SLACK_MAX = 80, CENTER_TOL = 8, STRIP_TOL = 16;   // 右側空白上限（OV/SKILL.md:140）；置中容許、撐滿父層的橫條（初值）
 // 全螢幕段（沒有講者）的內容設計動畫：左右和縮到 87% 的錄影對齊（錄影 x 125–1796、y 0–940），上下 y 112–900（角標底 96 之下、字幕 920 之上）
 export const FULL = { x: [120, 1800], y: [112, 900], top: 40, tall: 640, cx: 960, off: 160, minW: 1100 };
+// 內容設計動畫的完成態要把主內容區用起來（2026-11-11 MiniMax 試跑：照元件表的下限尺寸擺，手機 120×250，畫面大半是空的）
+//   PIP＝右下有講者小視窗時的主內容區；FILL_MIN＝內容蓋到的面積（20px 格子，重疊只算一次）佔主內容區的比例下限；HERO＝最大那個插圖的長邊下限
+export const DESIGN = { PIP: [120, 150, 1300, 858], CELL: 20, FILL_MIN: 0.3, HERO: 300 };
 export const VBAL_MAX = 40, CONTENT_TOP = 120;          // 垂直平衡（OV/AW:L218）；內容區 y 120–870（R4.1）
 export const PAD_X = [24, 0.45], PAD_Y = [14, 0.28];    // 內距門檻 max(24, 0.45×字級)、max(14, 0.28×字級)（R8 #6）
 export const LH_MIN = 1.25, LH_SKIP_FONT = 100;         // 行高 ≥ 1.25×字級（OV/PS:L27）；字級 ≥ 100 的數字不判
@@ -620,6 +623,25 @@ export function judgeLayout(meas, ctx) {
         '把內容拉開或放大，撐滿整個寬度；不用留小視窗的位置', { box: U });
       else if (w < FULL.minW) push('warn', 'full-small', null, `內容太小：這段沒有講者，畫面可以用到 x ${FULL.x[0]}–${FULL.x[1]}，內容只佔 ${ri(w)}px 寬`,
         `主角放大或多放一點對照，內容寬度至少 ${FULL.minW}px`, { box: U });
+    }
+    // ⚠ 內容設計動畫：畫面太空、主角太小（觀眾多半用手機看；直式舞台縮放的段不量）
+    if (ctx.kind === 'done' && ctx.item.seg?.design && !ctx.contentY) {
+      const Z = ctx.item.wide ? [FULL.x[0], FULL.y[0], FULL.x[1], FULL.y[1]] : DESIGN.PIP;
+      const ils = els.filter((e) => shown(e) && e.il);
+      const boxes = [...rs, ...ils.map((e) => e.shapeRect || e.rect)];
+      const C = DESIGN.CELL, nx = Math.ceil((Z[2] - Z[0]) / C), ny = Math.ceil((Z[3] - Z[1]) / C);
+      const hit = new Uint8Array(nx * ny);
+      for (const r of boxes) {
+        const x0 = Math.max(0, Math.floor((r[0] - Z[0]) / C)), x1 = Math.min(nx, Math.ceil((r[2] - Z[0]) / C));
+        const y0 = Math.max(0, Math.floor((r[1] - Z[1]) / C)), y1 = Math.min(ny, Math.ceil((r[3] - Z[1]) / C));
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) hit[y * nx + x] = 1;
+      }
+      const k = hit.reduce((a, v) => a + v, 0) / Math.max(1, nx * ny);
+      const hero = Math.max(0, ...ils.map((e) => Math.max(e.rect[2] - e.rect[0], e.rect[3] - e.rect[1])));
+      if (boxes.length && k < DESIGN.FILL_MIN) push('warn', 'design-sparse', null, `畫面太空：完成態的內容只蓋到主內容區（x ${Z[0]}–${Z[2]}、y ${Z[1]}–${Z[3]}）的 ${Math.round(k * 100)}%（< ${DESIGN.FILL_MIN * 100}%）`,
+        '主角放大到長邊 300–480px、配角 ≥ 180px、標籤字 36–44px，位置跟著拉開；不要多加東西湊滿（design-build.md「大小」）', { fill: Math.round(k * 1000) / 1000 });
+      else if (ils.length && hero < DESIGN.HERO) push('warn', 'design-hero', null, `主角太小：最大的插圖長邊只有 ${ri(hero)}px（< ${DESIGN.HERO}px）`,
+        '這一段在講的那個物件放大到長邊 300–480px（寬高照比例一起改），其他元件的位置跟著讓開（design-build.md「大小」）', { hero: ri(hero) });
     }
   }
   return out;

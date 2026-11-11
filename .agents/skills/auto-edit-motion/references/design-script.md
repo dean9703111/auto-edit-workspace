@@ -60,7 +60,7 @@
 
 **現成的線稿元件**（`data-illus`；可以放大，線不會變粗）：
 
-| 元件 | 狀態、選項 | 建議大小（px） |
+| 元件 | 狀態、選項 | 長寬比與下限（px；做動畫時照比例放大） |
 |---|---|---|
 | `phone` | orient：portrait、landscape；screen：blank、video（人像）、play、rec、check、warn、shorts、qr | 直 120×250、橫 250×120 |
 | `phoneTripod` | 同 phone（手機架在腳架上） | 直 140×360、橫 260×300 |

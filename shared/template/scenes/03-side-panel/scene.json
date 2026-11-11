@@ -15,7 +15,7 @@
   "addons": [],
   "slots": {
     "eyebrow": { "label": "眉標", "type": "text", "max": 8 },
-    "title": { "label": "標題", "type": "rich", "required": true, "max": 18 },
+    "title": { "label": "標題", "type": "rich", "required": true, "max": 18, "maxLine": 9, "maxLines": 2, "note": "一行放得下 9 個字；超過 9 個字沒寫 // 會自動斷成兩行" },
     "items": {
       "label": "項目", "type": "list", "min": 3, "maxItems": 4, "required": true,
       "item": { "text": { "type": "rich", "max": 12 }, "icon": { "type": "icon" } }

@@ -401,6 +401,26 @@ test('custom 段：index.html 的 head 有 window.__cues（在 scene-motion.js �
   assert.equal(node().status, 0);
 });
 
+test('底樂 bed（選用）：沒寫不印那一行；曲名不在曲庫、多寫欄位 ✖；music: null 不配；太短的曲子 build ✖ 說至少幾秒', () => {
+  writePlan(SCENES);
+  assert.doesNotMatch(node('--check').stdout, /底樂：/, '沒設定底樂的人看不到這一行');
+  writePlanX({ scenes: SCENES, bed: { music: 'no-such-song', loop: true } });
+  const j = JSON.parse(node('--check', '--json').stdout);
+  assert.ok(j.errors.some((e) => /bed\.music：「no-such-song」不是曲庫裡的配樂/.test(e)), j.errors.join('\n'));
+  assert.ok(j.errors.some((e) => /bed 不能有「loop」/.test(e)));
+  writePlanX({ scenes: SCENES, bed: { music: null } });
+  const off = node();
+  assert.equal(off.status, 0, off.stdout + off.stderr);
+  assert.match(off.stdout, /底樂：這一集不配/);
+  assert.doesNotMatch(read('index.html'), /id="bgm-bed"/);
+  writePlanX({ scenes: SCENES, bed: { music: 'bgm-cylinder-five' } });
+  const short = node();
+  assert.notEqual(short.status, 0);
+  assert.match(short.stdout, /✖ 底樂（bgm-cylinder-five）：.*當底樂至少要 20 秒/);
+  writePlan(SCENES);
+  assert.equal(node().status, 0);
+});
+
 test('章節：captions.html 在章節 2.5 s 內沒有字幕；chapters 進 JSON；結尾配樂 <audio id="bgm-outro">（outro 寫 music 才配，build 印出處）', () => {
   const scenesC = [...SCENES, { id: 'c1', scene: 'chapter', at: '#8', slots: { num: '01', title: '章' } }].filter((s) => s.id !== 's03');
   writePlanX({ scenes: scenesC, outro: { from: '#11' } });

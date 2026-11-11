@@ -19,6 +19,7 @@
 | 「可以了，輸出完成影片」「輸出剪映素材」（使用者也可以在剪輯台按「輸出完成影片」，自己跑完測試片段、整支與驗收；已輸出就不要重做） | `auto-edit-deliver` |
 | 「做封面」「封面圖」「做縮圖」 | `auto-edit-deliver` 的 `references/cover.md` |
 | 「換風格」「換主色」「換背景」「換暗色」「有哪些風格」「這集用 XX 風格」「講者設定成…」 | `auto-edit-style` |
+| 「生成配樂」「做配樂」「換配樂」「加底樂」「這集不要底樂」「用我自己的音樂」 | `auto-edit-style` 的 `references/music.md`（選用；沒裝 ACE-Step 也能放自己的音樂） |
 | 「子代理一次派 6 個」「子代理只能開 2 個」 | 不用 Skill：`node shared/template/tools/status.mjs --agents <N>` |
 | 「拆這支參考片」「分析這支影片怎麼剪」（要給影片檔的路徑） | `auto-edit-style` 的 `references/reference-video.md` |
 
@@ -38,7 +39,7 @@
 | `work/`（含 `versions/<段>/`） | 中間產物；`work/摘要.md` 是初剪完成後寫的影片摘要（300 字內，生成這一集的背景圖時參考） | AI 可新增、修改 |
 | `work/hyperframes/plan.json` | 完成影片的設定：段落 `scenes`、構圖 `frame`、調光 `look` | 只有主代理能寫；看一段用 `build.mjs --show <段>`，不要整份讀 |
 | `output/` | `final.mp4`、`test-clips/`、`qc/`、`capcut/` | AI 可新增 |
-| `.agents/skills/`、`setup/`、`shared/` | Skill、環境手冊、共用模板與工具、音效（只能從 `shared/sfx/` 挑） | 只能讀（例外見規則 1） |
+| `.agents/skills/`、`setup/`、`shared/` | Skill、環境手冊、共用模板與工具、音效（只能從 `shared/sfx/` 挑）、配樂曲庫（`shared/music/`；這一集專用的在 `work/music/`） | 只能讀（例外見規則 1） |
 | `dev/`、`.specify/`、`specs/` | 作者維護用 | 剪片時不要讀、不要執行；找不到合適的工具時照 `shared/template/USAGE.md`，不要自己另寫腳本 |
 
 **接手**：我說「繼續」或你不確定做到哪時，先跑 `node shared/template/tools/status.mjs --project projects/<專案>`，照它印的「下一步」做（下面那一行就是指令，整行複製執行）；有待回覆停點就重貼那個停點。它印「講者：⚠ 還沒設定」時，在回報裡問我姓名與頭銜（不擋流程，不要自己編）。它印「偏好：⚠ 有 N 條…還沒問使用者」時，跑 `node shared/template/tools/status.mjs --prefs`，在回報裡把那幾條列給我、問哪幾條以後每一集都照做（不擋流程）；我回答後照它印的 `--prefs-add`、`--prefs-skip` 記下來。我說某一條不要了，跑 `status.mjs --prefs-drop "<第幾條>"`。
@@ -47,9 +48,9 @@
 
 ## 規則
 
-1. 不要覆寫、移動或刪除 `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/setting.json`。我確認某條規則以後每一集都照做時，用 `status.mjs --prefs-add` 寫 `shared/偏好.md`（不要手動改這個檔）。我說子代理一次派幾個時，用 `status.mjs --agents` 寫 `shared/setting.json`。構圖台的「用這一格當預覽參考圖」會寫 `shared/template/preview/speaker-local.jpg`（直式 `speaker-v-local.jpg`；不進版控）。要刪除 `work/` 以外的檔案前，先問我。
+1. 不要覆寫、移動或刪除 `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/setting.json`。我確認某條規則以後每一集都照做時，用 `status.mjs --prefs-add` 寫 `shared/偏好.md`（不要手動改這個檔）。我說子代理一次派幾個時，用 `status.mjs --agents` 寫 `shared/setting.json`。我要生成配樂、放自己的音樂、設定每一集的底樂時，用 `music.mjs` 寫 `shared/music/`（已經有的曲子不改、不刪）和 `shared/setting.json`。構圖台的「用這一格當預覽參考圖」會寫 `shared/template/preview/speaker-local.jpg`（直式 `speaker-v-local.jpg`；不進版控）。要刪除 `work/` 以外的檔案前，先問我。
 2. 停點只有六個，照「停點總表」；停下來時回覆最後兩行照固定格式。我說「不用停」「跑到停點 N」才連跑。
-3. 安裝新工具前，先告訴我指令和用途，等我同意再執行。照 `setup/` 手冊做時，整份清單問一次就好。
+3. 安裝新工具前，先告訴我指令和用途，等我同意再執行。照 `setup/` 手冊做時，整份清單問一次就好。ACE-Step（生成配樂用）是選用的，不在那份清單裡：我說要生成配樂、而且 `music.mjs` 印「不能生成配樂」時才問，問的時候先講要下載多大（`setup/ACE-Step 配樂.md` 第一段）。
 4. 字幕以專案的 `講稿.md` 為準，由 `media.mjs srt-align` 照講稿排、對時間：講稿一行原則上是一則（完整語句），太長、太短由工具拆、併，不要自己拆句或併句。之後要改字（講稿本身的錯字、講稿沒有的 whisper 殘字），就在剪輯台或 `work/rough.srt` 改那一則字幕，只改字、不拆不併；不改 `講稿.md`，也不用重跑 `srt-align`。顯示時去掉「，」「。」「；」「：」，保留「、」「！」「？」；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿時工具會轉繁體、照標點切成子句，你不用補標點，也不要猜內容。
 5. 文件之間照「怎麼用這份檔」的優先序；同一層的文件互相矛盾才問我。
 6. 每次交付都附上驗證方式（例如 ffprobe 的輸出、截圖），不要只說「完成了」；工具已經印 ✓／⚠ 的，貼原文就是驗證，不要另外跑指令再驗一次。產物同時附**可點擊的超連結**：用 `<deliver-assets>` 內的 `<media>` 標籤，`src` 寫本地檔的**絕對路徑**（type 選 image／file／audio／video），例：`<deliver-assets><media type="video" src="/絕對路徑/projects/<專案>/output/final.mp4" /></deliver-assets>`。交付＝初剪完成（`work/rough.mp4`）、輸出完成影片（`output/final.mp4`、`output/qc/qc-sheet.jpg`）。停點要我看的網址只寫在停點那一行，前面不要再寫一次。
@@ -68,7 +69,7 @@
 | ③ 分鏡表 | 剪好看；④ 之後的改版 | 分鏡表網址；改版看 `work/versions/<段>/v<N>/分鏡.md` | 「可以」、「改好了」（含勾要做的內容設計動畫）、要改的段或拍 | `work/storyboard.md` → `build.mjs --apply-storyboard`；改版由 `versions.mjs accept` |
 | ④ 完成影片預覽 | 剪好看 | 完成影片預覽網址 | 要改的段、「可以了，輸出完成影片」 | plan.json、`work/feedback/` |
 | ⑤ 剪輯台 | 「打開剪輯台」 | 剪輯台網址 | 「調好了」、「照修改單改」 | 剪輯台自己寫；修改單 `work/feedback/editor-requests.md` |
-| ⑥ 背景預覽 | 換風格 | 並排圖、留空區預覽 | 「可以」、「重做」 | `shared/template/bg-*.jpg` |
+| ⑥ 背景預覽 | 換風格；生成配樂時是「配樂試聽」 | 並排圖、留空區預覽；配樂是試聽頁（3 首可以播放） | 「可以」、「重做」；配樂回「用第 N 首」、「重做」 | `shared/template/bg-*.jpg`；配樂存 `shared/music/`（這一集專用的在 `work/music/`） |
 
 停下來時的回覆照那支 Skill 的「回報格式」（行數照規則 8），最後兩行逐字用這兩行（`<…>` 換成實際值；網址前面是半形空格、後面直接換行，不要緊接全形字，不然有些 AI 工具會把後面的字當成網址的一部分）：
 
@@ -93,6 +94,9 @@
 
 ⏸ 停點 ⑥ 背景預覽｜請看 <暫存資料夾>/preview.jpg 和 <暫存資料夾>/zones-fs.jpg
 請回：「可以」或「重做」
+
+⏸ 停點 ⑥ 配樂試聽｜請看 <候選資料夾>/試聽.html
+請回：「用第 N 首」或「重做」
 ```
 
 - 工具印了停點那兩行就照抄工具印的。② 沒有 `work/look-preview.jpg`（沒開調光瘦臉）時，把「 和 work/look-preview.jpg」拿掉，其他字不動。

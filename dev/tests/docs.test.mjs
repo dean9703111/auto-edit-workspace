@@ -54,6 +54,8 @@ const STOPS = [
 // 停點 ③ 的改版變體（014；停點仍是六個，stop-points.md §2.1 最後一列）
 const STOP_VARIANTS = [
   { n: '③ 改版', skill: 'auto-edit-review', line: '⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看 work/versions/<段>/v<N>/分鏡.md\n請回：「可以」或要改的拍' },
+  // 停點 ⑥ 的配樂變體（2026-11-11 作者定：生成配樂的試聽沿用 ⑥，不新增停點）
+  { n: '⑥ 配樂', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 配樂試聽｜請看 <候選資料夾>/試聽.html\n請回：「用第 N 首」或「重做」' },
 ];
 
 // ---------- 小工具 ----------

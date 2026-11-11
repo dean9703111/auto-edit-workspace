@@ -167,14 +167,14 @@ const FX_BG = { dark: '#232733', light: 'var(--fx-light-bg, #f3efe6)', accent: '
 //   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、剪輯台過黑／淡入淡出；
 //                                      keepFootage＝側邊欄段（講者被推到右邊）連底片一起放（靜音），剪映疊上去才對得起來
 //   { kind: 'main' }                  主軌：只有底片＋人聲＋剪輯台（跳接放大、過黑、淡入淡出）＋片尾配樂；沒有情境、字幕、角標、段落音效
-export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, badges = [], canvas = null, cut = null, moods = [], zooms = null, speakerBox = null }) {
+export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, bed = null, badges = [], canvas = null, cut = null, moods = [], zooms = null, speakerBox = null }) {
   const C = canvas || CANVAS.landscape, portrait = C.format === 'portrait', W = C.W, H = C.H;
   const segCut = cut?.kind === 'seg', mainCut = cut?.kind === 'main';
   if (cut) {
     items = segCut ? items.filter((it) => it.id === cut.id) : [];
     badges = [];
     captions = null;
-    if (segCut) { outro = null; editFx = editFx && { ...editFx, punches: [], dips: [], fadeIn: 0, fadeOut: 0 }; zooms = null; }
+    if (segCut) { outro = null; bed = null; editFx = editFx && { ...editFx, punches: [], dips: [], fadeIn: 0, fadeOut: 0 }; zooms = null; }
     moods = [];
   }
   const compName = segCut ? `capcut-${cut.id}` : mainCut ? 'capcut-main' : test ? 'test-clip' : 'main';
@@ -403,6 +403,14 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
       const at = r3((c.srcAt ?? c.at) - t0);   // src＝同類變體輪到的檔（lib/audio.mjs rotateSfx）
       if (at < 0 || at >= DUR) continue;
       sfx.push(`  <audio id="${id}" src="${base}assets/sfx/${c.src ?? c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.srcVolume ?? c.volume}"></audio>`);
+    }
+  }
+  // 底樂（選用；整支片一條，--test 的片段從中間開始時用 data-media-start 接上）
+  if (bed) {
+    const at = r3(bed.at - t0);
+    if (at < DUR) {
+      const ms = at < 0 ? r3(-at) : 0, st = Math.max(0, at), du = r3(Math.min(bed.dur - ms, DUR - st));
+      if (du > 0) sfx.push(`  <audio id="bgm-bed" src="${base}${bed.file}" data-start="${n3(st)}" data-duration="${n3(du)}"${ms ? ` data-media-start="${n3(ms)}"` : ''} data-track-index="${track++}" data-volume="1"></audio>`);
     }
   }
   // 結尾配樂（--test 的片段從中間開始時用 data-media-start 接上）

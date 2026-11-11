@@ -43,7 +43,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --review
 ```
 
 全部回來才跑。它會 build、量全部動畫、出完成態拼圖，停在停點 ④（`auto-edit-review` 流程 A）。有 ✖ 就把那幾行原文交回做那段的子代理。
-還有段沒回來時，每收到一個完成通知就跑一次 `node shared/template/tools/build.mjs --project projects/<專案> --design-status`（不要寫 sleep 迴圈等檔案）。印「⚠ 超過 20 分鐘沒進度」的段，照它印的派工訊息停掉原本那個、重派一個新的；沒有 ⚠ 的段繼續等它回報，不要停它。主代理不自己寫 x-design 檔。
+還有段沒回來時，每收到一個完成通知就跑一次 `node shared/template/tools/build.mjs --project projects/<專案> --design-status`（不要寫 sleep 迴圈等檔案）。印「⚠ 超過 20 分鐘沒進度」的段，照它印的派工訊息停掉原本那個、重派一個新的；沒有 ⚠ 的段繼續等它回報，不要停它。主代理不自己寫 x-design 檔；使用者明說要你自己做時，先停掉那一段所有還在跑的設計師（含重派的），確認停了才動那個檔，不然兩邊會寫到同一個檔。
 完成判準：`--review` 印出停點 ④ 那一行。
 常見錯誤：每收一個就 build → 不用，全部回來才跑一次。
 

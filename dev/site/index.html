@@ -170,6 +170,14 @@
     },
     {
      "@type": "Question",
+     "name": "可以配背景音樂嗎？",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "可以，這是選配，預設沒有。說「用我自己的音樂」就能把手邊的曲子當整支片的底樂，音量、淡入淡出、講話時壓低都自動處理。想在電腦上生成，可以選裝開源的 ACE-Step 1.5：約需 14 GB 磁碟空間，Apple 晶片的 Mac 或有 NVIDIA 顯卡的電腦才跑得動；AI 會先告訴你容量、你同意才裝。裝好後說「生成配樂」，一次出 3 首純音樂讓你試聽。"
+     }
+    },
+    {
+     "@type": "Question",
      "name": "支援哪些 AI Agent？",
      "acceptedAnswer": {
       "@type": "Answer",
@@ -703,6 +711,7 @@
     <div class="tune"><q>s05 往左移</q><h3>某一段的卡片</h3><p>移位置、改字、換情境，只動那一段，改前改後都存版本。</p></div>
     <div class="tune"><q>s12 重新設計</q><h3>某一段的動畫</h3><p>先出新的動畫分鏡給你確認；不喜歡可以退回舊版，還有左右對照影片。</p></div>
     <div class="tune"><q>s08 不要音效</q><h3>音效、配樂</h3><p>從內建音效庫挑，關掉某一段、調音量、片尾加配樂；一分鐘以上沒音效會自動補。</p></div>
+    <div class="tune"><q>生成配樂</q><h3>背景音樂（選配）</h3><p>整支片墊一首很小聲的底樂，講話時自動壓低、比影片短就無縫循環。可以放自己的音樂；想在電腦上生成，再選裝 ACE-Step 1.5（約 14 GB，AI 會先問你），一次出 3 首讓你試聽挑選。預設沒有，不用就不必裝。</p></div>
     <div class="tune"><q>這集要調光</q><h3>講者畫面</h3><p>調光、瘦臉、美顏（磨皮、膚色提亮、淡化黑眼圈）預設關閉，構圖時同一頁就能開；剪輯台也有開關和強度滑桿。</p></div>
     <div class="tune"><q>這集換暗色</q><h3>主色、背景、亮暗</h3><p>在「構圖」選主色、上傳或挑選 AI 生成的背景，套用這一集；常用的搭配也能做成風格包。</p></div>
     <div class="tune"><q>講者設定成林大寶</q><h3>講者名字</h3><p>講者介紹卡顯示名字和頭銜、金句卡署名；設定一次，每一集都用。</p></div>
@@ -892,6 +901,7 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <details><summary><h3>背景一定要自己準備嗎？</h3></summary><p>不用。有圖可以在構圖頁直接上傳；沒有就選主色、設計風格和描述，按「複製生圖指令」貼給 AI，產生 A／B／C 三組、共 9 張背景。回構圖頁分別挑全畫面、側邊欄、章節的圖，同頁看動畫效果，選了就自動套用。頁面會準備指令，生圖由你使用的 AI 工具完成。</p></details>
     <details><summary><h3>構圖與背景改好後，要按儲存嗎？</h3></summary><p>不用，都會自動存，也馬上套用到這一集。還沒有完成影片時，後續製作會直接使用；已有完成影片時，頁面會出現「更新預覽」，按了才重新處理底片（長片要十幾分鐘）。</p></details>
     <details><summary><h3>要付費嗎？</h3></summary><p>工作區本身免費開源（程式碼 MIT 授權），用到的 ffmpeg、whisper、auto-editor、HyperFrames 也都免費。AI Agent 與選用的生圖服務，依你使用的方案計費。</p></details>
+    <details><summary><h3>可以配背景音樂嗎？</h3></summary><p>可以，這是選配，預設沒有。說「用我自己的音樂」就能把手邊的曲子當整支片的底樂，音量、淡入淡出、講話時壓低都自動處理。想在電腦上生成，可以選裝開源的 ACE-Step 1.5：約需 14 GB 磁碟空間，Apple 晶片的 Mac 或有 NVIDIA 顯卡的電腦才跑得動；AI 會先告訴你容量、你同意才裝。裝好後說「生成配樂」，一次出 3 首純音樂讓你試聽。</p></details>
     <details><summary><h3>支援哪些 AI Agent？</h3></summary><p>Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor，以及其他能在你的電腦上執行指令、讀寫檔案、會讀 AGENTS.md 的 Agent。ChatGPT 網頁版不能在電腦上執行指令，要用 Codex。</p></details>
     <details><summary><h3>可以剪直式短影片嗎？</h3></summary><p>可以，請準備直拍素材，並說「做成直式短影片」。畫布是 1080×1920，字幕、版面、卡片位置都用直式規格，適合 YouTube Shorts、Instagram Reels、抖音；目前還不支援把橫拍素材改成直式。</p></details>
     <details><summary><h3>字幕準確嗎？</h3></summary><p>先用 whisper 轉詞級逐字稿；有講稿時，字幕一行就是講稿的一行，時間自動對到講話的那一刻，錯字以講稿為準。沒有講稿時照語音斷句、轉成繁體中文。</p></details>

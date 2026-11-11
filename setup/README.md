@@ -19,6 +19,7 @@
 | HyperFrames 渲染用的瀏覽器 | 不用另外裝。S6 的 doctor 顯示 Chrome ✗ 時用 `npx -y hyperframes browser ensure` 下載，第一次 render 也會自動下載；放在 `~/.cache/hyperframes/chrome`，約 200 MB |
 | 臉部偵測檔（MediaPipe，約 18.7 MB） | 瘦臉用。已經在 `shared/template/vendor/mediapipe/`，不用裝；S5 只檢查檔案完整 |
 | 人物去背模型（選用，約 170 MB） | 只有用到「講者站在動畫前面」的模板（`x-wall`、`x-magazine`、`x-breakout`）才需要。不在安裝清單裡：build 用到時會說，問過使用者再跑 `node shared/template/tools/media.mjs matte-setup`，下載到 `~/.cache/hyperframes/background-removal/` |
+| ACE-Step 1.5（選用，約 14 GB） | 只有使用者要「生成配樂」才需要。不在安裝清單裡：`music.mjs gen` 印「不能生成配樂」時，先告訴使用者要下載多大、問過再照 `ACE-Step 配樂.md` 裝。不裝也能用 `music.mjs add` 放自己的音樂 |
 
 不用裝：Python、Docker、Google Chrome、轉逐字稿模型（約 488 MB，第一次轉逐字稿時自動下載）。
 
