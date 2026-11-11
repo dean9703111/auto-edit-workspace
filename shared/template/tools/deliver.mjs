@@ -12,7 +12,7 @@ import { pathsFrom } from './build.mjs';
 import { runJob, jobState, clearJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
 import {
   runDeliver, runPrerender, cancelPrerender, prerenderInfo, prerenderBlocked, prerenderCanPatch, contentFingerprint, finalIsCurrent, lockHolder, killTree, reapRender,
-  cliDeps, newJob, deliverPaths, QUALITY, FPS, PRERENDER, RESOLUTIONS,
+  cliDeps, newJob, deliverPaths, QUALITY, FPS, PRERENDER, RESOLUTIONS, planCheckJson,
 } from './lib/deliver.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
@@ -80,6 +80,7 @@ export function finishLines(P, job, fileStat) {
     for (const e of job.errors) L.push(`✖ ${noMark(e)}`);
     for (const w of job.warnings) L.push(`⚠ ${w}`);
     if (q?.sheet) L.push(`驗收截圖：${relTo(F.sheet)}`);
+    if (job.ok && job.youtube) L.push(`YouTube 說明欄：${relTo(job.youtube.file)}（${[job.youtube.chapters ? `章節時間戳 ${job.youtube.chapters} 個` : null, job.youtube.credit ? '配樂出處' : null].filter(Boolean).join('、')}；整段貼到說明欄）`);
     if (job.ok) L.push('→ 完成：把上面幾行和驗收截圖回報給使用者，每個 ⚠ 寫「刻意」或「要修」');
     else L.push(`→ ${job.fix}`);
     return L;
@@ -98,7 +99,7 @@ async function deliverChild(P, flags) {
   let shown = 0;
   const t0 = Date.now();
   await runDeliver(P, job, {
-    ...deps, say, by: 'cli', force: !!flags.force, said: flags.said || '輸出完成影片（deliver.mjs）',
+    ...deps, say, by: 'cli', force: !!flags.force, checkJson: () => planCheckJson(P), said: flags.said || '輸出完成影片（deliver.mjs）',
     quality: flags.quality, fps: flags.fps ? Number(flags.fps) : undefined, resolution: flags.resolution, captions: flags['no-captions'] ? 'off' : undefined,
     renderEnv: { HYPERFRAMES_RENDER_DETACHED: '1' },    // 工作行程的爸爸（前景那條指令）會先結束；不加這個 render 會自己取消（render_cancelled_parent_exited）
     onBuilt: (log) => { for (const l of buildSummary(log)) say(l); },

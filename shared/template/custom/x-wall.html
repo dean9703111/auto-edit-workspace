@@ -1,0 +1,98 @@
+<!-- 預設拍型：F 重點字卡（BEATS.md §3 F；同一個詞鋪滿講者背後整面牆） -->
+<!doctype html>
+<!--
+  x-wall：情緒詞整面牆（第二層 custom，layout: "overlay"；這支不是 layout: "fullscreen"：牆在講者後面，講者去背後疊在最上面）
+
+  【適用的講解】
+  講者露臉，反覆強調一個詞、喊一句口號，或情緒最滿的那一句，例如「它就是你的剪輯師，一個會自動剪的剪輯師」。
+  講到那個詞的瞬間，講者背後整面換成主色的牆，那個詞一排一排鋪滿（實心字的那幾排）；講到第二次（或第二個詞）時，中間那幾排空心字補上。
+  講者一直在牆的前面（build 自動把這一段的講者去背，疊在牆上），段尾整面牆淡出。
+
+  【不要用在哪裡】
+  - 這一段講者沒有露臉（全畫面、螢幕錄影、只有聲音）：沒有人可以站在牆前面，改用 x-wordcut 或 15 金句。
+  - 一集用超過 2 次：整面換色很重，多了就沒有效果。
+  - 詞超過 5 個字：一排放不了幾個，改用 15 金句。
+  - 直式。這支沒有圖示。
+
+  【要改的地方】
+  1. 文字：#xwl-w1 那個詞（≤ 5 字）；#xwl-w2 第二個詞（≤ 5 字，選填：不要就整行刪掉，空心字那幾排會用同一個詞）。每一排的字由 script 重複鋪滿，不用自己寫。
+  2. 綁句：<script> 開頭 HIT、AGAIN 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 HIT 改。
+  3. 講者去背不用自己做：根元素有 data-matte（不要拿掉），build 會把這一段的講者去背、疊在牆上（第一次用要下載去背模型，build 會說怎麼做）。
+
+  【綁句欄位】
+  HIT = P.at('#432@剪輯師')：講到那個詞的時刻，牆由下擦開、實心字那三排彈出；音效 impact。
+  AGAIN = P.at('#433@自動剪')：講到第二次（或第二個詞）的時刻，空心字那三排彈出。
+  兩個都用 @詞 綁在詞上，不要綁句首。「@詞」要寫成字串字面值，build 才算得到。
+
+  【D 下限】
+  HIT ≥ 0.5（build 的淡入）
+  AGAIN ≥ HIT + 2.0（牆和實心字動到 HIT + 0.6，停 1.2 秒）
+  D ≥ AGAIN + 2.6（空心字動到 AGAIN + 0.6，停 1.5 秒以上，段尾前 0.3 秒整面淡出；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  overlay：牆 #xwl-wall 鋪滿 1920×1080（主色底），自己寫退場（段尾前 0.3 秒 P.out）。六排字，字高 132、每排相隔 140，第一排 top 60、最後一排下緣 892（在字幕區 y 920 之上）；
+  偶數排往左錯開 200，字刻意超出畫面左右（data-layout-allow-overflow）。奇數排實心（主色上的字色）、偶數排空心（描邊）。
+  圖層由 build 排：底片 → 這面牆 → 去背的講者 → 字幕。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-wall 情緒詞整面牆</title></head>
+<body>
+<template id="x-wall-template">
+  <style>
+    #x-wall { position: absolute; inset: 0; }
+    #x-wall #xwl-wall { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--brand); color: var(--brand-ink); }
+    #x-wall .xwl-src { display: none; }
+    #x-wall .xwl-row { position: absolute; left: -40px; white-space: nowrap; font-size: 132px; line-height: 1; font-weight: 900; }
+    #x-wall .xwl-row--b { left: -240px; color: transparent; -webkit-text-stroke: 3px var(--brand-ink); }
+    #x-wall #xwl-r1 { top: 60px; }
+    #x-wall #xwl-r2 { top: 200px; }
+    #x-wall #xwl-r3 { top: 340px; }
+    #x-wall #xwl-r4 { top: 480px; }
+    #x-wall #xwl-r5 { top: 620px; }
+    #x-wall #xwl-r6 { top: 760px; }
+  </style>
+  <div id="x-wall" data-composition-id="x-wall" data-width="1920" data-height="1080" data-duration="8.4" data-matte="1"
+       data-cues-sample='{"start":0,"D":8.4,"cues":{"431":[0.5,1.4],"432":[1.5,4.0],"433":[4.1,8.0]},"refs":{"#432@剪輯師":1.8,"#433@自動剪":4.4}}'>
+    <div id="xwl-wall" data-layout-allow-overflow>
+      <i id="xwl-w1" class="xwl-src" data-fill="word">剪輯師</i>
+      <i id="xwl-w2" class="xwl-src" data-fill="word2">自動剪</i>   <!-- @if word2 -->
+      <div id="xwl-r1" class="xwl-row xwl-row--a"></div>
+      <div id="xwl-r2" class="xwl-row xwl-row--b"></div>
+      <div id="xwl-r3" class="xwl-row xwl-row--a"></div>
+      <div id="xwl-r4" class="xwl-row xwl-row--b"></div>
+      <div id="xwl-r5" class="xwl-row xwl-row--a"></div>
+      <div id="xwl-r6" class="xwl-row xwl-row--b"></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-wall'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const HIT = P.at('#432@剪輯師'), AGAIN = P.at('#433@自動剪');   // 講到那個詞／講到第二次（或第二個詞）的時刻
+    P.sfx('impact', '#432@剪輯師');     // 牆出現那一下的音效（句號和 HIT 一樣）
+
+    // 每一排把詞重複鋪滿（載入時做一次，不用改）：奇數排用第一個詞，偶數排用第二個詞（沒有就用同一個）
+    const W1 = document.getElementById('xwl-w1'), W2 = document.getElementById('xwl-w2') || W1;
+    $q('.xwl-row').forEach(function (row, i) { row.textContent = new Array(13).join((i % 2 ? W2 : W1).textContent + '\u3000'); });
+
+    // 拍 1 講到那個詞：牆由下擦開 → ＋0.1 實心字那三排錯拍彈出
+    P.wipe('#xwl-wall', HIT, { dir: 'up', dur: 0.35 });
+    P.pop('.xwl-row--a', HIT + 0.1, { from: 1.2, dy: 0, dur: 0.4, stagger: 0.06 });
+    // 拍 2 講到第二次：空心字那三排錯拍彈出
+    P.pop('.xwl-row--b', AGAIN, { from: 1.2, dy: 0, dur: 0.4, stagger: 0.06 });
+    P.punch('.xwl-row--a', AGAIN + 0.1, { scale: 1.04 });   // 實心字跟著重拍一下
+
+    // 收：段尾前 0.3 秒整面牆淡出（overlay 自己退場）
+    P.out('#xwl-wall', P.dur() - 0.3);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-wall'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

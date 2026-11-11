@@ -1,0 +1,60 @@
+{
+  "template": "x-breakout",
+  "prefix": "xbk",
+  "beat": "F",
+  "layout": "overlay",
+  "portrait": "none",
+  "portraitAlt": "15 金句字卡或 x-wordcut",
+  "matte": true,
+  "matteClip": "window",
+  "when": "講者露臉，開場第一句或整支片情緒最高的那一下：講者先被裝進白邊相框，講到那個詞的瞬間相框往下縮、頭從相框上面冒出來；講者自動去背；一集最多 1 次",
+  "slots": {
+    "tag": {
+      "label": "相框左上角外面的標籤",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "openAt": {
+      "label": "講到引子的時間（紙底、相框出現）",
+      "type": "at",
+      "ref": "OPEN",
+      "required": true
+    },
+    "hitAt": {
+      "label": "講到那個詞的時間（頭冒出來；一定用 @詞，和 openAt 至少差 2 秒）",
+      "type": "at",
+      "ref": "HIT",
+      "required": true
+    }
+  },
+  "sample": {
+    "tag": "交給 AI 剪",
+    "openAt": "#451@以前",
+    "hitAt": "#452@跳出來"
+  },
+  "sheet": [
+    {
+      "beat": "1",
+      "at": "`{openAt}`",
+      "show": "紙底；白邊相框（講者整個人在相框裡）",
+      "moves": "淡入（紙底）；＋0.15 彈出（相框）",
+      "focus": "相框"
+    },
+    {
+      "beat": "2",
+      "at": "`{hitAt}`",
+      "show": "相框上緣縮到下巴，講者的頭冒出相框；標籤「{tag}」",
+      "moves": "擦開（紙底上半，由上）；游標移動（相框上緣）；＋0.3 彈出（標籤）",
+      "focus": "講者的頭",
+      "sfx": "impact"
+    },
+    {
+      "beat": "收",
+      "at": "段尾 −0.3",
+      "show": "—",
+      "moves": "淡出（整組）",
+      "focus": "講者"
+    }
+  ]
+}

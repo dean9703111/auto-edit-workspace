@@ -13,6 +13,7 @@
 //   encodeFootagePolished(src, dst, opts)  編碼主軌：先淡化剪接點、再 loudnorm，回傳報告用的數字（lut 原樣轉給 encodeFootage）
 //   audioReportLines(info, { sfx })        build 報告要印的行（sfx＝sfxBudget() 的回傳，印「音效比例」）
 //   SFX_RULES                              音效政策的數字：主音效間隔 3 s、附加音效間隔 0.2 s、每分鐘 2 顆、上限比人聲小 3 dB
+//   rotateSfx(cues, sfxConf)              同類變體輪替：標 c.src／c.srcAt／c.srcVolume（寫 <audio> 用哪個檔）
 //   sfxBudget(cues, sfxConf, opts)         次數上限、每分鐘密度、稀疏、音效比例 → { count, over, dense, sparse, loud, levels, perMinuteAvg, warnings, lines }
 //   renderBgmClip(src, dst, opts)          結尾配樂：截取＋淡入淡出＋增益烤進 wav（dst 是資料夾時檔名含參數 hash，同參數不重做）
 //   cutDips(f32, opts)                     剪接點前後 100 ms 的 10 ms RMS，判斷有沒有挖出低於底噪的凹洞（dev 測試用）
@@ -208,6 +209,22 @@ export const KEEP_FIRST = ['chapter', 'thunder', 'shine', 'sparkle', 'alert', 's
 const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;   // 和 plan.mjs 的 fmt 相同
 const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
 const d1 = (v) => n1(r1(v).toFixed(1));
+
+// 同類變體輪替（kit/sfx.json 的 variants：同一顆升降半音）：同名的音效照時間順序輪著放 本尊 → 變體 1 → 變體 2 → 本尊…，
+// 長片裡同一顆不會一模一樣地重複。只標 c.src（檔名）、c.srcAt、c.srcVolume 給 lib/main.mjs 寫 <audio> 用；c.name、c.at、c.volume 不動（次數、密度、剪輯台都照本尊算）
+export function rotateSfx(cues, sfxConf, has = () => true) {
+  const n = {};
+  for (const c of [...cues].filter(Boolean).sort((a, b) => a.at - b.at)) {
+    const conf = sfxConf[c.name], vs = conf?.variants?.filter((v) => has(v.file));   // 沒有檔的變體不排（自訂 --sfx 資料夾）
+    delete c.src; delete c.srcAt; delete c.srcVolume;
+    if (!vs?.length) continue;
+    const k = n[c.name] = (n[c.name] ?? -1) + 1, v = vs[k % (vs.length + 1) - 1];
+    if (!v) continue;
+    c.src = v.file;
+    c.srcAt = Math.max(0, Math.round((c.at + (conf.peak || 0) - (v.peak || 0)) * 1000) / 1000);
+    c.srcVolume = Math.round(c.volume * (v.volume / (conf.volume || v.volume)) * 1000) / 1000;
+  }
+}
 
 // 每分鐘最多 perMinute 顆主音效：照優先序留，其他拿掉，不用人一段一段改。
 // 使用者在段上明寫的 sfx（it.seg.sfx）和章節音效不動；再來是情緒點（plan.json moods，it.type 'mood'：金句、反轉 ＞ 痛點、解法 ＞ 落定），

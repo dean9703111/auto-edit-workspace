@@ -21,6 +21,7 @@
   #footage { position: absolute; inset: 0; }
   #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
   #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
   #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
   #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
   #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
@@ -57,6 +58,12 @@
     #x-checklist #xchk-fill { position: absolute; inset: 0; border-radius: 12px; background: var(--brand); }
     #x-checklist #xchk-fillok { position: absolute; inset: 0; border-radius: 12px; background: var(--sc-good); }
     #x-checklist #xchk-n { position: absolute; right: 0; top: 0; width: 224px; text-align: right; white-space: nowrap; }
+    /* 全寬（沒有講者，主卡 1680）：列拉寬、字放大 */
+    #x-checklist #xchk-card[data-wide] .xchk-row { width: 1400px; height: 88px; }
+    #x-checklist #xchk-card[data-wide] .xchk-t { font-size: 60px; line-height: 80px; }
+    #x-checklist #xchk-card[data-wide] .xchk-box { width: 64px; height: 64px; }
+    #x-checklist #xchk-card[data-wide] #xchk-prog { width: 1384px; }
+    #x-checklist #xchk-card[data-wide] #xchk-track { width: 1120px; }
   </style>
   <div id="x-checklist" data-composition-id="x-checklist" data-width="1920" data-height="1080" data-duration="15.2"
        data-cues-sample='{"start":0,"D":15.2,"cues":{"121":[2.0,4.5],"122":[4.6,7.0],"123":[7.1,9.5],"124":[9.6,12.1],"125":[12.4,14.9]},"refs":{"#121@新增專案":2.3,"#122@下載":4.8,"#123@配對手機":7.3,"#124@調整解析度":9.8}}'>

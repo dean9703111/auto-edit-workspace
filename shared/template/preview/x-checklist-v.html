@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -60,6 +60,12 @@
     #x-checklist #xchk-fill { position: absolute; inset: 0; border-radius: 12px; background: var(--brand); }
     #x-checklist #xchk-fillok { position: absolute; inset: 0; border-radius: 12px; background: var(--sc-good); }
     #x-checklist #xchk-n { position: absolute; right: 0; top: 0; width: 224px; text-align: right; white-space: nowrap; }
+    /* 全寬（沒有講者，主卡 1680）：列拉寬、字放大 */
+    #x-checklist #xchk-card[data-wide] .xchk-row { width: 1400px; height: 88px; }
+    #x-checklist #xchk-card[data-wide] .xchk-t { font-size: 60px; line-height: 80px; }
+    #x-checklist #xchk-card[data-wide] .xchk-box { width: 64px; height: 64px; }
+    #x-checklist #xchk-card[data-wide] #xchk-prog { width: 1384px; }
+    #x-checklist #xchk-card[data-wide] #xchk-track { width: 1120px; }
   </style>
   <div id="x-checklist" data-composition-id="x-checklist" data-width="1920" data-height="1080" data-duration="15.2"
        data-cues-sample='{"start":0,"D":15.2,"cues":{"121":[2.0,4.5],"122":[4.6,7.0],"123":[7.1,9.5],"124":[9.6,12.1],"125":[12.4,14.9]},"refs":{"#121@新增專案":2.3,"#122@下載":4.8,"#123@配對手機":7.3,"#124@調整解析度":9.8}}'>

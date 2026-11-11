@@ -308,6 +308,7 @@ export function renderCommon(input) {
   const sp = input.speaker;
   if (input.hasCamera) L.push(sp?.state === 'set' ? `- 講者：${sp.name}（14 講者介紹一集只排一次，只有第一份排，綁自我介紹那幾句；name、titles 不用寫，自動帶入）` : sp?.state === 'off' ? '- 講者：使用者不要講者介紹，不要排 14' : '- 講者：還沒設定。14 講者介紹一集只排一次，只有第一份排，綁自我介紹那幾句；name、titles 不要寫也不要編（設定後自動帶入），在 decide 寫「講者姓名、頭銜待確認」');
   L.push(`- 素材：螢幕錄影 ${assets.screen} 支、圖片 ${assets.images} 張${assets.screen || assets.images ? '（第 5 節）' : ''}`);
+  if (input.prefs?.length) L.push(`- 使用者的偏好（每一集都照做；和下面的規則衝突時照這幾條）：${input.prefs.map((t, i) => `（${i + 1}）${t}`).join('；')}`);
   L.push(voiceOnly.length ? `- 只有聲音的區間（一定要被 media 段或不透明全幕蓋住）：${voiceOnly.map((r) => { const [a, b] = rangeOf(r); return `${clock(a)}–${clock(b)}`; }).join('、')}` : '- 只有聲音的區間：無');
   if (voiceOnly.length && hasCamera) L.push('- 這些區間沒有講者：不能用疊在講者上的字卡（06–15）和疊加的模板，全畫面段自動用全寬版型，內容設計動畫用全螢幕畫布');
   L.push('');
@@ -411,7 +412,7 @@ export function renderSnippets(input) {
     L.push('寫法：`{"id":"s01","type":"fx","fx":29,"from":"#N","to":"#Me","vars":{"label":"做了","number":"29","unit":"支影片"}}`。`bg` 不寫＝透明疊在講者上；`dark`、`light`、`accent` 是不透明整張幕。`vars` 的值一律寫字串。透明的不能和下方字卡（06–11、13–15）同時出現。', '');
     for (const f of fx) {
       const vars = (f.vars || []).filter((v) => !['bg', 'accent'].includes(v.id)).map((v) => `${v.id}（${v.label}）`).join('、');
-      L.push(`**fx ${f.id} ${f.zh}**：${f.when || ''}；vars：${vars || '—'}`);
+      L.push(`**fx ${f.id} ${f.zh}**：${f.when || ''}${f.sem?.length ? `；適合的語意：${f.sem.join('、')}` : ''}；vars：${vars || '—'}`);
     }
     L.push('');
   }
@@ -455,7 +456,7 @@ export function fillSummary(f) {
   return fillSummaryBody(f) + lines;
 }
 function fillSummaryBody(f) {
-  if (f.generator === 'scene') return 'title（≤10）；parts 每個 { id, illus|icon|src|wave, opts, label ≤10, row, side, pre, stand, w, h }（也可以 { id, layout, gap, parts: […] } 疊成一組）；links ["a>b", "a-b"]；beats 每拍 { at, in, line, state, move, count, wave, check, focus, dim, sfx }（state 寫 [元件 id, 原本的狀態, 換成的狀態]，例 ["b","blank","play"]＝b 的螢幕從 blank 換成 play；不換狀態就不寫）；route（路線圖）';
+  if (f.generator === 'scene') return 'title（≤10）；parts 每個 { id, illus|icon|src|wave, opts, label ≤10, row, side, pre, stand, w, h }（也可以 { id, layout, gap, parts: […] } 疊成一組）；links ["a>b", "a-b"]；beats 每拍 { at, in, line, state, move, count, wave, check, focus, dim, sfx, peel }（state 寫 [元件 id, 原本的狀態, 換成的狀態]，例 ["b","blank","play"]＝b 的螢幕從 blank 換成 play；不換狀態就不寫）；route（路線圖）；sticker: true（貼紙風格：元件一張一張貼上，最後一拍可以寫 { at, peel: true } 整組撕走）';
   const limit = (d) => [d.required ? '必填' : '選填', d.max != null ? `≤${d.max}` : '', d.type === 'icon' ? '圖示名' : d.type === 'at' ? '#N@詞' : d.type === 'number' ? '數字' : d.type === 'enum' ? (d.options || []).join('／') : ''].filter(Boolean).join('、');
   return Object.entries(f.slots || {}).map(([k, d]) => {
     if (d.type !== 'list') return `${k}（${d.label ? `${d.label}：` : ''}${limit(d)}）`;
@@ -497,7 +498,7 @@ export function renderSemantic(input) {
   L.push('| 級 | 是什麼 | 畫面 |', '|---|---|---|');
   L.push('| A 亮點 | 開場、核心比喻、反轉、親身經歷或小故事、抽象的道理、這集最想讓人記住的畫面、結尾 | 內容設計動畫候選（停點 ③ 使用者勾了才做；第二回合照樣先套模板） |');
   L.push('| B 結構 | 步驟、流程、列舉、對比、數字、操作這些在講結構的句子 | 照語意套模板或螢幕錄影 |');
-  L.push('| C 串場 | 轉場句、重複說明、小插曲、狀態句 | 最便宜的畫面：字卡動態、12 關鍵詞，或併進前後那一行（整支片不留沒有畫面的空白） |', '');
+  L.push('| C 串場 | 轉場句、重複說明、小插曲、狀態句 | 最便宜的畫面：字卡動態（第二回合工具會照語意列兩張候選，每行不一樣，照它挑）、12 關鍵詞，或併進前後那一行（整支片不留沒有畫面的空白） |', '');
   L.push(`A 只是提名：第 5 欄寫一句理由，全片由主代理排序、挑預算內最好的（全片約 ${target} 段、最多 ${cap} 段；你這份的估計寫在 \`chNN.md\` 開頭，不用湊數）。判斷方式：把字幕遮起來只看畫面，模板做不到才提名；只是在條列、走流程的不提名。`, '');
   L.push('## 2. 語意類型（只能用這幾個名稱）', '');
   L.push('| 語意 | 什麼樣的句子 | 預設級 |', '|---|---|---|');

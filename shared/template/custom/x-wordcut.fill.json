@@ -1,0 +1,70 @@
+{
+  "template": "x-wordcut",
+  "prefix": "xwc",
+  "beat": "F",
+  "layout": "fullscreen",
+  "when": "整支片最想讓觀眾記住的那個詞（揭曉主題、產品名、結論的關鍵詞，≤ 4 字）：同一個詞一秒內連換五種材質，講到那個詞的瞬間停在主色大字；一集最多 1 次",
+  "slots": {
+    "word": {
+      "label": "那個詞（≤ 4 個全形字）",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "sub": {
+      "label": "副標（選填）",
+      "type": "text",
+      "max": 12
+    },
+    "openAt": {
+      "label": "講到引子（「今天要講的就是…」）的時間；和 hitAt 至少差 2.5 秒",
+      "type": "at",
+      "ref": "OPEN",
+      "required": true
+    },
+    "hitAt": {
+      "label": "講到那個詞的時間（一定用 @詞）",
+      "type": "at",
+      "ref": "HIT",
+      "required": true
+    }
+  },
+  "sample": {
+    "word": "剪片",
+    "sub": "一支 Reels 三分鐘",
+    "openAt": "#411@今天",
+    "hitAt": "#412@剪片"
+  },
+  "sampleMin": {
+    "word": "剪片",
+    "openAt": "#411@今天",
+    "hitAt": "#412@剪片"
+  },
+  "sheet": [
+    {
+      "beat": "1",
+      "at": "`{openAt}`",
+      "show": "視窗；「{word}」（報紙材質）",
+      "moves": "彈出（視窗）",
+      "focus": "「{word}」"
+    },
+    {
+      "if": "sub",
+      "beat": "2",
+      "at": "`{hitAt}`",
+      "show": "連換四種材質（描邊、色塊、殘影、終端機）後停在主色底大字「{word}」＋底線＋副標「{sub}」",
+      "moves": "−0.8 淡入（材質，每 0.2 秒硬切一張）；重拍（大字）；＋0.15 擦開（底線）；＋0.35 逐字上浮（副標）",
+      "focus": "「{word}」",
+      "sfx": "impact"
+    },
+    {
+      "if": "!sub",
+      "beat": "2",
+      "at": "`{hitAt}`",
+      "show": "連換四種材質（描邊、色塊、殘影、終端機）後停在主色底大字「{word}」＋底線",
+      "moves": "−0.8 淡入（材質，每 0.2 秒硬切一張）；重拍（大字）；＋0.15 擦開（底線）",
+      "focus": "「{word}」",
+      "sfx": "impact"
+    }
+  ]
+}

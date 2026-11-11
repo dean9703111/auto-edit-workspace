@@ -193,8 +193,9 @@ async function transcribeFlow(P, flags) {
 // ---------- ng-scan → cuts.md ----------
 const cell = (s) => String(s ?? '').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|').trim();
 
-// NG 列（照時間排）：重講 [x]；真的講稿外 [ ]＋待確認；沒講稿的候選 [x]＋待確認（工具沒有講稿可以對，全部要人聽）
-export function cutRows({ ng = [], outside = [], script = null }) {
+// NG 列（照時間排）：重講 [x]；真的講稿外 [ ]＋待確認；沒講稿的候選 [x]＋待確認（工具沒有講稿可以對，全部要人聽）；
+// 贅字（025）[ ]、不寫待確認（預設不剪，不算「需要你決定」）；落在重講或講稿外那幾列裡面的不另外列
+export function cutRows({ ng = [], outside = [], script = null, fillers = [] }) {
   const rows = ng.map((g) => ({
     cut: true, start: g.start, end: g.end, text: g.text,
     reason: g.line ? `同一句講兩次：講稿第 ${g.line} 行在 ${clock(g.again)} 又講一次，留後面那次` : `同一句講兩次：${clock(g.again)} 又講一次，留後面那次`,
@@ -206,6 +207,10 @@ export function cutRows({ ng = [], outside = [], script = null }) {
     rows.push({ cut: false, start: u.start, end: u.end, text: u.text.slice(0, 40),
       reason: `講稿外：這一段逐字稿 ${u.tChars} 字、講稿只有 ${u.sChars} 字（講稿第 ${u.line} 行附近）`,
       pending: '講稿沒有這段話 → 請試聽：口誤、自言自語就勾起來剪；臨場加的話就不用動' });
+  }
+  const inRow = (f) => rows.some((r) => f.start >= r.start - 0.05 && f.end <= r.end + 0.05);
+  for (const f of fillers.filter((x) => !inRow(x))) {
+    rows.push({ cut: false, start: f.start, end: f.end, text: f.text, reason: `贅字「${f.filler}」：預設不剪，試聽後要剪再勾（剪完聽一次接點有沒有跳音）`, pending: '' });
   }
   return rows.sort((a, b) => a.start - b.start);
 }
@@ -437,7 +442,8 @@ export async function prepFlow(P, flags = {}) {
     writeAtomic(cutsFile, cutsMarkdown({ rows, chapters: chOk, order: orderTable, decide, waits }));
     const real = scan.outside.filter((u) => u.real).length, heard = scan.outside.length - real;
     const pending = rows.filter((r) => r.pending).length;
-    say(`✓ 剪輯清單：work/cuts.md（NG ${rows.length} 列，其中待確認 ${pending} 列${waits.length ? `；邊錄邊講的等待 ${waits.length} 處，預設不勾` : ''}${chOk.length ? `；章節 ${chOk.length} 章` : ''}）${scan.script ? `；講稿外 ${real} 處列進清單${heard ? `、${heard} 處字數接近是 whisper 聽錯（沒列，明細 work/ng-scan.md）` : ''}` : '；沒有講稿：相鄰句相似度找的候選，全部待確認'}`);
+    const nFill = rows.filter((r) => /^贅字/.test(r.reason)).length;
+    say(`✓ 剪輯清單：work/cuts.md（NG ${rows.length} 列，其中待確認 ${pending} 列${waits.length ? `；邊錄邊講的等待 ${waits.length} 處，預設不勾` : ''}${chOk.length ? `；章節 ${chOk.length} 章` : ''}${nFill ? `；贅字 ${nFill} 處，預設不勾` : ''}）${scan.script ? `；講稿外 ${real} 處列進清單${heard ? `、${heard} 處字數接近是 whisper 聽錯（沒列，明細 work/ng-scan.md）` : ''}` : '；沒有講稿：相鄰句相似度找的候選，全部待確認'}`);
   }
 
   // 要使用者決定的事（細節都在 cuts.md）
@@ -635,6 +641,8 @@ export async function roughFlow(P, flags = {}) {
 
   // 剪接點
   const cp = M.cutpoints(P, { log: detail });
+  // 剪接點有沒有把字切一半（聽兩側的音量）：只提醒，不擋流程
+  try { const cc = M.cutCheck(P, { log: detail }); if (cc.bad?.length) say(`⚠ ${cc.bad.length} 個剪接點可能把字切一半（${cc.bad.slice(0, 3).map((x) => clock(x.at)).join('、')}${cc.bad.length > 3 ? '…' : ''}）→ 明細：node shared/template/tools/media.mjs cut-check --project ${path.relative(process.cwd(), P.project).split(path.sep).join('/')}`); } catch (e) { detail(`cut-check 略過：${e.message}`); }
   for (const w of cp.warnings || []) warns.push(w);
   const nNg = cp.cuts.filter((c) => c.kind === 'ng').length;
   say(`✓ 剪接點：work/cutpoints.json（${cp.cuts.length} 個）`);

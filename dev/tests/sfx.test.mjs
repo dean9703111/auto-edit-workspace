@@ -23,6 +23,7 @@ const make = (...args) => spawnSync(process.execPath, [MAKE, ...args], { encodin
 const NAMES = ['ding', 'success', 'alert', 'click', 'impact', 'chapter', 'sparkle', 'shine', 'thunder', 'bgm-cylinder-five'];
 const FIELDS = ['kind', 'zh', 'use', 'event', 'peak', 'volume', 'targetDb', 'additive', 'maxPerVideo'];
 const BGM_FIELDS = ['fadeIn', 'fadeOut', 'credit'];
+const VARIANTS = Object.entries(kit).flatMap(([n, v]) => (v.variants || []).map((x) => ({ ...x, of: n })));   // 同類變體（025）：同一顆升降半音，build 輪著放
 const LICENSE_GUARD = /剪映|CapCut|综艺|鼠标|仙尘|打卡成功|正确/;
 
 // WAV：RIFF 標頭＋data 區塊（int16）
@@ -59,7 +60,7 @@ test('kit 欄位齊全、型別正確、沒有不認得的欄位（FR-001、FR-0
   for (const [n, v] of Object.entries(kit)) {
     const allowed = v.kind === 'bgm' ? [...FIELDS, ...BGM_FIELDS] : FIELDS;
     for (const f of allowed) assert.ok(f in v, `${n} 缺 ${f}`);
-    for (const f of Object.keys(v)) assert.ok(allowed.includes(f), `${n} 有不認得的欄位 ${f}`);
+    for (const f of Object.keys(v)) assert.ok(allowed.includes(f) || (f === 'variants' && v.kind === 'sfx'), `${n} 有不認得的欄位 ${f}`);
     assert.ok(['sfx', 'bgm'].includes(v.kind), `${n}.kind`);
     for (const f of ['zh', 'use', 'event']) assert.ok(typeof v[f] === 'string' && v[f].length > 0, `${n}.${f}`);
     assert.ok(Number.isFinite(v.peak) && v.peak >= 0, `${n}.peak`);
@@ -107,12 +108,32 @@ test('響度：M max（bgm 整合響度）跟 sources.json、targetDb 一致；t
   }
 });
 
+test('同類變體：檔案格式、起音、響度跟本尊同一套標準；對位點是本尊照變速換算的；make-sfx.mjs 的 VARIANTS 都做了', { skip: !hasFfmpeg && '沒有 ffmpeg' }, () => {
+  assert.deepEqual(Object.fromEntries(Object.entries(kit).filter(([, v]) => v.variants).map(([n, v]) => [n, v.variants.length])), Object.fromEntries(Object.entries(M.VARIANTS).map(([n, a]) => [n, a.length])));
+  for (const v of VARIANTS) {
+    const b = kit[v.of], w = readWav(path.join(SFX, `${v.file}.wav`));
+    assert.deepEqual(Object.keys(v), ['file', 'peak', 'volume', 'of']);
+    assert.deepEqual([w.format, w.bits, w.rate, w.channels], [1, 16, 48000, 2], `${v.file}.wav 格式`);
+    assert.ok(w.dur <= limitOf(v.of) + 0.001 && w.onsetMs <= 2.5, `${v.file}：長 ${w.dur} s、起音 ${w.onsetMs} ms`);
+    assert.ok(Math.abs(v.peak - b.peak) <= b.peak * 0.07 + 0.001, `${v.file}：peak ${v.peak}，本尊 ${b.peak}（一個半音差 6%）`);
+    const m = M.measure(M.decodeFile(path.join(SFX, `${v.file}.wav`)));
+    assert.ok(m.tp <= -1.0, `${v.file}：true peak ${m.tp} dBTP`);
+    assert.ok(Math.abs(m.mmax + 20 * Math.log10(v.volume) + 14 - b.targetDb) <= 0.5, `${v.file}：相對人聲要跟本尊一樣（targetDb ${b.targetDb}）`);
+  }
+});
+
 test('sources.json：每個名稱一筆、sha256 跟檔案一致、授權 CC0（片尾配樂 CC BY 4.0＋出處）、來源欄位齊全（FR-003、FR-035）', () => {
-  assert.deepEqual(sources.map((s) => s.file).sort(), NAMES.map((n) => `${n}.wav`).sort());
+  assert.deepEqual(sources.map((s) => s.file).sort(), [...NAMES, ...VARIANTS.map((v) => v.file)].map((n) => `${n}.wav`).sort());
   const hex = (v) => [].concat(v).every((x) => /^[0-9a-f]{64}$/.test(x));
   for (const s of sources) {
     const n = s.file.replace(/\.wav$/, '');
     assert.equal(s.sha256, sha(path.join(SFX, s.file)), `${s.file} sha256`);
+    if (s.variant_of) {   // 同類變體：授權跟本尊一樣
+      const b = sources.find((x) => x.file === s.variant_of);
+      assert.ok(b && !b.variant_of && VARIANTS.some((v) => `${v.file}.wav` === s.file && `${v.of}.wav` === s.variant_of), `${s.file}：variant_of ${s.variant_of} 要對到 kit 的 variants`);
+      assert.equal(s.license, b.license, `${s.file} license`);
+      continue;
+    }
     assert.equal(s.kind, kit[n].kind, `${s.file} kind`);
     if (s.route === 'L') {   // 片尾配樂：作者本機原曲剪輯，CC BY 4.0
       assert.equal(s.license, 'CC BY 4.0', `${s.file} license`);

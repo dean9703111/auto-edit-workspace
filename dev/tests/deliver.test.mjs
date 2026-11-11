@@ -961,3 +961,16 @@ test('實跑：剪輯台按鈕走同一份流程：真的輸出到驗收、記 �
     fs.rmSync(R.root, { recursive: true, force: true });
   }
 });
+
+test('025 youtubeText：章節時間戳第一行 0:00、太近的併掉、不到 3 個不寫；用了配樂附出處', () => {
+  const ch = (title, outStart) => ({ id: title, kind: 'chapter', title, outStart });
+  const a = D.youtubeText({ chapters: [ch('安裝', 95.4), ch('設定', 100), ch('實作', 3725.9), ch('開工', 31.2)] });
+  assert.equal(a.text, '章節（整段貼到 YouTube 說明欄）\n0:00 開場\n0:31 開工\n1:35 安裝\n1:02:05 實作\n');
+  assert.equal(a.chapters, 4);
+  const b = D.youtubeText({ chapters: [ch('開場白', 2), ch('安裝', 60), ch('收尾', 120)] });
+  assert.match(b.text, /^章節.*\n0:00 開場白\n1:00 安裝\n2:00 收尾\n$/);
+  const few = D.youtubeText({ chapters: [ch('安裝', 60)], outro: { credit: 'Cylinder Five by Chris Zabriskie (CC BY 4.0)' } });
+  assert.equal(few.chapters, 0);
+  assert.equal(few.text, '配樂出處（用了這首配樂，說明欄要保留這一行）\nCylinder Five by Chris Zabriskie (CC BY 4.0)\n');
+  assert.equal(D.youtubeText({ chapters: [] }).text, '');
+});

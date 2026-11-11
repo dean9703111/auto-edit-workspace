@@ -27,6 +27,8 @@
 
 Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區開源免費，轉檔、轉字幕、render 都在你自己的電腦上做。
 
+三步驟剪出第一支片不難，難的是下一支還像你。這裡的規則、模板、音效對照表都是純文字檔，你改過的地方，下一集照用（見[剪得像你](#剪得像你五層都能改)）。
+
 > **English** — An open-source AI video editing workspace for talking-head videos. Drop in your footage, voice-over, screen recordings and images, then tell your AI agent (Claude Code, Codex, MiniMax Code or Cursor) in plain language to "cut it clean" or "make the final cut": it removes flubbed takes, aligns subtitles to your script, adds info cards, scene animations and sound effects, and renders an MP4 (or CapCut-ready layers). A browser-based editor lets you trim, fix subtitles and card text, and queue redo requests for the agent. The framing page previews your footage in animations, with custom colors, uploaded backgrounds and AI-generated background options applied per project. Built on [HyperFrames](https://github.com/heygen-com/hyperframes); docs are in Traditional Chinese.
 
 影片教學「AI 自動剪輯 EP1」：待補
@@ -37,6 +39,7 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 |---|---|
 | 怎麼開始 | [四步開始](#四步開始)・[支援的 AI Agent](#支援的-ai-agent) |
 | 能做什麼 | [你說一句，AI 做一段](#你說一句ai-做一段)・[不滿意就改](#不滿意就改) |
+| 剪得像自己 | [剪得像你：五層都能改](#剪得像你五層都能改) |
 | 背後怎麼運作 | [AI 判斷，程式計算](#ai-判斷程式計算) |
 | 剪自己的影片 | [開自己的專案](#開自己的專案)・[錄影前檢查](#錄影前檢查)・[設定講者](#設定講者) |
 | 先看畫面、換風格 | [構圖：用自己的畫面看動畫](#構圖用自己的畫面看動畫)・[換成自己的風格](#換成自己的風格) |
@@ -64,10 +67,11 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 
 | 你說 | AI 會做 |
 |---|---|
-| 「剪乾淨」 | 找出講錯重講、卡住的句子剪掉，縮短停頓，照講稿上字幕；做完給你一個網址，字幕疊在畫面上（只有聲音的黑屏也看得到），邊聽邊看，錯字直接改 |
+| 「剪乾淨」 | 找出講錯重講、卡住的句子剪掉，縮短停頓，照講稿上字幕；「嗯、就是說」這類贅字也列進清單，預設不剪、你試聽後勾了才剪；做完給你一個網址，字幕疊在畫面上（只有聲音的黑屏也看得到），邊聽邊看，錯字直接改 |
 | 「做出完成影片」 | 看每段在講什麼：有素材就配素材，約七成套模板直接產出（相鄰不重複），約三成列成內容設計動畫候選、你勾了才專門設計；配上子母畫面和音效，人聲音量調到一致 |
 | 「配螢幕錄影」 | 把操作畫面插到講到的那一段：等待的地方快轉、要看清楚的地方放慢或定格，用放大、紅框、箭頭、說明卡指出重點，金鑰和個資打碼，多步驟的操作標上 STEP；講者小視窗會放在錄影範圍內 |
-| 「可以了，輸出完成影片」 | 輸出 `final.mp4`，附上驗收截圖。也可以在剪輯台按「輸出完成影片」，不用經過 AI：先選 1080p 或 4K、字幕燒進影片或另存字幕檔 `final.srt`，再看整體進度百分比，輸出好了直接打開資料夾 |
+| 「可以了，輸出完成影片」 | 輸出 `final.mp4`，附上驗收截圖。也可以在剪輯台按「輸出完成影片」，不用經過 AI：先選 1080p 或 4K、字幕燒進影片或另存字幕檔 `final.srt`，再看整體進度百分比，輸出好了直接打開資料夾。有 3 個以上章節時另外寫一份 `output/youtube.txt`（章節時間戳，用了配樂會附出處），整段貼到 YouTube 說明欄 |
+| 「做封面」 | 給一句標題，AI 從影片抓一格你的畫面、去背，排成三種版型的封面圖給你挑（橫式 1920×1080；直式 1080×1920，重點都在中間 3:4 裡） |
 | 「輸出剪映素材」 | 拆成主軌、透明背景的動畫片段和字幕檔，帶去剪映繼續剪 |
 
 流程有六種停點：① 剪輯清單、② 構圖、③ 分鏡表、④ 完成影片預覽；需要自己調整時開 ⑤ 剪輯台，換共用背景時看 ⑥ 背景預覽。AI 停下來時，回覆最後兩行固定是「⏸ 停點 …｜請看 <網址>」和「請回：…」：網址前後不接其他字，各家 AI 工具都點得開。例如構圖拖好框後回「調好了」，所有調整都會自動存。
@@ -84,7 +88,7 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 
 **看圖操作：① 下拉選單換呈現方式（可以先看範例） → ② 橘底的字直接改 → ③ 不滿意就寫補充說明 → ④ 回到對話說「可以」。** 內容存回 `work/storyboard.md`，AI 照這份檔製作，也可以用對話叫它改。[在官網直接試用這個介面](https://deanlin.net/auto-edit-workspace/demo/storyboard.html)。
 
-畫面會長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看（本機打開 `shared/template/index.html` 也可以，建議用 Chrome 或 Edge）：18 種情境模板、34 支情境動畫範例、示意動畫、40 種字卡動態。頁面上方可以切換風格包和亮色／暗色，還沒開始剪就能比較。
+畫面會長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看（本機打開 `shared/template/index.html` 也可以，建議用 Chrome 或 Edge）：18 種情境模板、41 支情境動畫範例、示意動畫、40 種字卡動態。頁面上方可以切換風格包和亮色／暗色，還沒開始剪就能比較。
 
 ## 不滿意就改
 
@@ -108,7 +112,7 @@ AI 先做一版，你有三種改法：
 | 音效、配樂 | 「s08 不要音效」「結尾加配樂」 | 音效只從內建的音效庫挑；超過一分鐘沒有音效時 AI 會補上；要不要片尾配樂，分鏡表會問你 |
 | 講者畫面 | 「這集要調光、瘦臉」「這集要美顏」 | 預設關閉，每次停下來的回報都會寫現在開了沒；見[講者調光、瘦臉、美顏](#講者調光瘦臉美顏選用) |
 | 主色、背景、亮暗 | 「這集換暗色」「換成藍圖風格」 | 見[換成自己的風格](#換成自己的風格) |
-| 橫式／直式 | 「做成直式短影片」 | 直拍素材可做 Shorts、Reels、抖音，字幕和版面用直式規格；目前不支援橫拍轉直式 |
+| 橫式／直式 | 「做成直式短影片」 | 直拍素材可做 Shorts、Reels、抖音，字幕和版面用直式規格。橫拍的長片說「從這支長片切短片」：AI 列出可以單獨成片的段落給你選，選了就裁成直的、開成新專案接著剪 |
 
 ### 剪輯：字幕、音量、卡片自己調
 
@@ -156,6 +160,20 @@ AI 先做一版，你有三種改法：
 3. 換下一段，一直累積。時間軸上那段會標 ✎。
 4. 按「複製給 AI」，把那一行指令貼給 AI。AI 每段派一個子代理一起改，改好停在完成影片預覽。
 5. 改完的段移到「已改完」、標 ✓，列出 AI 做了什麼；按「▶ 看結果」跳到那段。下次複製只送還沒改的。
+
+## 剪得像你：五層都能改
+
+只跟 AI 說「剪好一點」，它不知道要動哪裡。這個工作區把一支片拆成五層，每一層都是你打得開、改得動的檔案，說一句話就能換：
+
+| 層 | 是什麼 | 在哪裡 | 你說 |
+|---|---|---|---|
+| 風格 | 主色、字型、背景圖、子母畫面外框 | `shared/template/styles/`、`shared/template/kit/brand.css` | 「換風格」「換主色」 |
+| 字卡 | 18 個情境模板、40 種字卡動態 | `shared/template/scenes/`、`shared/template/fx/` | 在分鏡表換編號 |
+| 模組 | 41 支情境動畫範例、線稿示意動畫 | `shared/template/custom/` | 「s12 重新設計」 |
+| 片型 | 橫式長片、直式短影片、只有聲音 | 開工決策表 | 「做直式」 |
+| 心法 | 哪種句子配哪種畫面、什麼時候推近講者、音效跟著情緒走 | `shared/template/SITUATIONS.md`、`shared/style.md`、`shared/template/BEATS.md` | 「以後都…」 |
+
+看到別人剪得好的片，說「拆這支參考片」：AI 照片型、字體、色彩、字卡、元素、模組、動態、節奏、轉場九個維度抽格分析，告訴你哪些工作區已經做得到、哪些要新做。你在回饋裡說的「以後都…」，之後 AI 會列出來問你要不要每一集都照做；你說要的那幾條記在 `shared/偏好.md`，往後每一集寫分鏡前都會先讀。
 
 ## AI 判斷，程式計算
 

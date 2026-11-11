@@ -5,6 +5,7 @@
 //   node dev/tools/make-sfx.mjs --list
 //   node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾> [--ref <參考.wav>] [--voice <人聲>] [--src <本機音樂檔>]
 //   node dev/tools/make-sfx.mjs --write --only <名稱,…> [--src <本機音樂檔>]
+//   node dev/tools/make-sfx.mjs --variants [--only <名稱,…>]     同類變體（VARIANTS）：現在的 shared/sfx/<名稱>.wav 升降半音 → <名稱>-2.wav、-3.wav
 //
 // 路線：B＝CC0 素材下載後加工（Kenney 包）；C＝AI 生成（AI 寫的合成程式，固定亂數種子，同一台機器每次位元組相同）；
 //       L＝作者本機的音樂檔（--src 指定，核對 sha256；CC BY，用到的影片要標示出處，文字在 kit/sfx.json 的 credit）。
@@ -35,6 +36,10 @@ const CHOICE = {
   sparkle: 'sparkle-h', shine: 'shine-e', thunder: 'thunder-h', 'bgm-cylinder-five': 'cyl-a',
 };
 
+// 同類變體（025）：同一顆音效升降幾個半音，build 照出現順序輪著放，長片裡同一顆不會一模一樣地重複。音色不變、只差音高。
+// 只給一集會出現很多次的；chapter 是章節的記號、click 是真的滑鼠聲、sparkle／shine／thunder 有每集上限，都不做
+const VARIANTS = { ding: [-1, 1], success: [-1, 1], alert: [-1, 1], impact: [-1, 1] };
+
 // Kenney 包（sha256 沿用 make_sfx.py 已核對的值；檔名在 specs/005-sfx/research.md「Kenney 檔名核對」）
 const PACKS = {
   'kenney-ui': { slug: 'ui-audio', pack: 'Kenney UI Audio', file: 'ui-audio.zip', sha256: '946fc23a63d535d693eb31b2eabb80c8c28d6351e2186b344ceb71b2cb1d5eb6' },
@@ -53,7 +58,9 @@ const HELP = `產生 shared/sfx/ 的音效（作者維護用；剪片時不要�
   node dev/tools/make-sfx.mjs --list
   node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾> [--ref <參考.wav>] [--voice <人聲>] [--src <本機音樂檔>]
   node dev/tools/make-sfx.mjs --write --only <名稱,…> [--src <本機音樂檔>]
+  node dev/tools/make-sfx.mjs --variants [--only <名稱,…>]
 
+--variants    同類變體：把現在的 shared/sfx/<名稱>.wav 升降半音，寫成 <名稱>-2.wav、-3.wav（build 輪著放）；重做某一顆之後要再跑一次
 --candidates  產生候選與 A/B 試聽檔（參考→候選→參考，都調到完成影片大小）＋ index.html
 --write       把程式裡 CHOICE 選的候選寫進 shared/sfx/、sources.json、kit/sfx.json（peak、volume）、README.md
 --cache       原始下載檔的資料夾（預設系統暫存資料夾的 make-sfx-cache）
@@ -65,14 +72,16 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--help' || a === '-h') { console.log(HELP); process.exit(0); }
-    if (['--list', '--candidates', '--write'].includes(a)) { (o.mode ||= []).push(a.slice(2)); continue; }
+    if (['--list', '--candidates', '--write', '--variants'].includes(a)) { (o.mode ||= []).push(a.slice(2)); continue; }
     const k = a.startsWith('--') ? a.slice(2) : null;
     if (k && VAL.includes(k) && argv[i + 1] != null) { o[k] = argv[++i]; continue; }
     fail(`不認得的參數：${a} → 跑 node dev/tools/make-sfx.mjs --help 看可用的參數`, 2);
   }
-  if (!o.mode || o.mode.length !== 1) fail('要選一個：--list、--candidates 或 --write → 例：node dev/tools/make-sfx.mjs --candidates --only ding --out <工作區外的資料夾>', 2);
+  if (!o.mode || o.mode.length !== 1) fail('要選一個：--list、--candidates、--write 或 --variants → 例：node dev/tools/make-sfx.mjs --candidates --only ding --out <工作區外的資料夾>', 2);
   o.mode = o.mode[0];
   o.names = o.only ? o.only.split(',').map((s) => s.trim()).filter(Boolean) : Object.keys(RECIPES);
+  if (o.mode === 'variants' && !o.only) o.names = Object.keys(VARIANTS);
+  for (const n of o.names) if (o.mode === 'variants' && !VARIANTS[n]) fail(`「${n}」沒有設定同類變體（有的：${Object.keys(VARIANTS).join('、')}）→ --only 改成有的名稱，或在 VARIANTS 加一項`, 2);
   for (const n of o.names) if (!RECIPES[n]) fail(`「${n}」沒有配方（可用：${Object.keys(RECIPES).join('、')}）→ --only 改成可用的名稱`, 2);
   if (o.mode === 'candidates') {
     if (!o.out) fail('--candidates 要給 --out <資料夾> → 放 scratchpad 或系統暫存資料夾，不要放進工作區', 2);
@@ -902,6 +911,7 @@ function writeReadme(sources, kit) {
   const lines = ['# 音效清單', '',
     `${nSfx} 個音效：取自 CC0（公眾領域）素材，或 AI 生成並以 CC0 釋出；可以放進自己的影片、改編、商用，不用標示出處。`,
     ...music.map(([k, v]) => `片尾配樂 \`${k}.wav\` 是 ${by[`${k}.wav`]?.license || '—'}：預設不配，plan.json 的 outro 寫 "music": "${k}" 才會用；用到的影片要在說明欄標示「${v.credit}」。`),
+    ...(sources.some((s) => s.variant_of) ? [`同類變體：${Object.entries(kit).filter(([, v]) => v.variants?.length).map(([k, v]) => `\`${k}\`（${v.variants.map((x) => `\`${x.file}.wav\``).join('、')}）`).join('、')} 是同一顆升降一個半音，build 照出現順序輪著放，同一顆不會連著一模一樣；來源與授權同本尊。plan.json 還是只寫本尊的名稱。`] : []),
     '逐檔的下載網址、sha256、處理方式、峰值秒數與響度在 `sources.json`；每顆在完成影片裡的大小（相對人聲的 dB）與使用時機在 `shared/template/kit/sfx.json`。', '',
     '| 檔名 | 聽起來像 | 用在哪 | 來源 | 授權 |', '|---|---|---|---|---|'];
   for (const [k, v] of Object.entries(kit)) { const s = by[`${k}.wav`]; lines.push(`| \`${k}.wav\` | ${s?.like || '—'} | ${v.use} | ${srcText(s)} | ${lic(s)} |`); }
@@ -911,6 +921,7 @@ function writeReadme(sources, kit) {
   lines.push('', '作者端重新產生（只要 Node 與 ffmpeg；會重新下載 Kenney 素材並核對 sha256）：', '', '```',
     'node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾>   # 試聽候選',
     'node dev/tools/make-sfx.mjs --write --only <名稱>                                 # 寫進 shared/sfx/',
+    'node dev/tools/make-sfx.mjs --variants                                            # 同類變體（重做某一顆之後要再跑）',
     'node dev/tools/make-sfx.mjs --write --only bgm-cylinder-five --src <原曲 mp3>     # 片尾配樂要給作者本機的原曲', '```', '');
   fs.writeFileSync(path.join(SFX_DIR, 'README.md'), lines.join('\n'));
 }
@@ -941,12 +952,58 @@ async function cmdWrite(o) {
     console.log(`${name.padEnd(9)} ${cand.id.padEnd(11)} → shared/sfx/${name}.wav  ${r.m.dur.toFixed(3)} s  peak ${kit[name].peak}  ${RECIPES[name].measure === 'I' ? 'I' : 'M max'} ${f(RECIPES[name].measure === 'I' ? r.m.I : r.m.mmax)} LUFS  volume ${vol}（targetDb ${f(kit[name].targetDb)}）`);
   }
   // sources.json 照 kit 的順序排
+  writeAll(sources, kit);
+  console.log(`✔ 寫好 ${results.length} 個音效；也更新了 shared/sfx/sources.json、shared/template/kit/sfx.json（peak、volume）、shared/sfx/README.md`);
+  const stale = results.map((x) => x.name).filter((n) => VARIANTS[n]);
+  if (stale.length) console.log(`→ ${stale.join('、')} 有同類變體，接著跑 node dev/tools/make-sfx.mjs --variants --only ${stale.join(',')}`);
+  console.log('→ 接著跑 node --test dev/tests/sfx.test.mjs');
+}
+
+// sources.json 照 kit 的順序排（變體跟在本尊後面）
+function writeAll(sources, kit) {
   const order = Object.keys(kit);
-  sources.sort((a, b) => order.indexOf(a.file.replace(/\.wav$/, '')) - order.indexOf(b.file.replace(/\.wav$/, '')));
+  const key = (s) => order.indexOf((s.variant_of || s.file).replace(/\.wav$/, '')) * 10 + (s.variant_of ? Number(s.file.match(/-(\d+)\.wav$/)[1]) : 0);
+  sources.sort((a, b) => key(a) - key(b));
   fs.writeFileSync(path.join(SFX_DIR, 'sources.json'), JSON.stringify(sources, null, 2) + '\n');
   writeKit(kit);
   writeReadme(sources, kit);
-  console.log(`✔ 寫好 ${results.length} 個音效；也更新了 shared/sfx/sources.json、shared/template/kit/sfx.json（peak、volume）、shared/sfx/README.md`);
+}
+
+// 同類變體：現在的 <名稱>.wav 變速（音高跟著變）→ 同一條處理鏈（去前導靜音、長度上限、響度）→ <名稱>-<N>.wav
+function cmdVariants(o) {
+  const kit = readJson(KIT, {});
+  let sources = readJson(path.join(SFX_DIR, 'sources.json'), []);
+  for (const name of o.names) {
+    const R = RECIPES[name], baseFile = path.join(SFX_DIR, `${name}.wav`);
+    if (!kit[name] || !fs.existsSync(baseFile)) fail(`沒有 shared/sfx/${name}.wav 或 kit/sfx.json 沒有「${name}」→ 先跑 node dev/tools/make-sfx.mjs --write --only ${name}`);
+    const base = sources.find((s) => s.file === `${name}.wav`);
+    sources = sources.filter((s) => s.variant_of !== `${name}.wav`);
+    const list = [];
+    VARIANTS[name].forEach((st, i) => {
+      const file = `${name}-${i + 2}`, rate = Math.round(SR * 2 ** (st / 12));
+      const r0 = ff(['-v', 'error', '-i', baseFile, '-af', `asetrate=${rate},aresample=${SR}`, '-f', 'f32le', '-ac', '2', 'pipe:1']);
+      if (r0.status !== 0) fail(`ffmpeg 變速失敗：${ffErr(r0)} → 跑 ffmpeg -version 確認 ffmpeg 能用`);
+      const f = new Float32Array(r0.stdout.buffer.slice(r0.stdout.byteOffset, r0.stdout.byteOffset + r0.stdout.length));
+      const x = stereo(f.length / 2);
+      for (let k = 0; k < len(x); k++) { x.L[k] = f[k * 2]; x.R[k] = f[k * 2 + 1]; }
+      const r = finish(x, R);
+      const vol = +dbl(-14 + kit[name].targetDb - r.m.mmax).toFixed(3);
+      if (vol > 1) fail(`${file} 算出來的 volume 是 ${vol}（> 1）→ 這一顆不適合做變體，從 VARIANTS 拿掉`);
+      if (r.m.tp > -1.0) fail(`${file} true peak ${r.m.tp} dBTP，上限 −1.0 dBTP → 這一顆不適合做變體，從 VARIANTS 拿掉`);
+      fs.writeFileSync(path.join(SFX_DIR, `${file}.wav`), r.wav);
+      const how = `${st > 0 ? '升' : '降'} ${Math.abs(st)} 個半音`;
+      sources.push({ file: `${file}.wav`, kind: 'sfx', zh: `${kit[name].zh}（${how}）`, variant_of: `${name}.wav`, semitones: st, route: base?.route ?? 'C', like: `同 ${name}.wav，${how}`,
+        source: `shared/sfx/${name}.wav ${how}（dev/tools/make-sfx.mjs --variants）；來源與授權同 ${name}.wav`, license: base?.license ?? CC0.license, license_url: base?.license_url ?? CC0.license_url,
+        processing: `${name}.wav 變速 ${(2 ** (st / 12)).toFixed(4)} 倍（音高${how}）→ 去前導靜音 → 長度上限 ${R.limit} s → 增益到 M max ${R.target} LUFS → 48 kHz、立體聲、pcm_s16le`,
+        duration_sec: r.m.dur, max_m_lufs: r.m.mmax, true_peak_dbtp: +r.m.tp.toFixed(2), centroid_hz: centroid(r.buf), sha256: sha256(r.wav) });
+      const peak = +(kit[name].peak / 2 ** (st / 12)).toFixed(3);   // 對位點照本尊的換算（幾下一樣大聲的音效，最大樣本會跳到別下）
+      list.push({ file, peak, volume: vol });
+      console.log(`${file.padEnd(11)} ${how} → shared/sfx/${file}.wav  ${r.m.dur.toFixed(3)} s  peak ${peak}  M max ${r.m.mmax} LUFS  volume ${vol}`);
+    });
+    kit[name] = { ...kit[name], variants: list };
+  }
+  writeAll(sources, kit);
+  console.log(`✔ 寫好 ${o.names.length} 顆音效的同類變體；也更新了 sources.json、kit/sfx.json（variants）、README.md`);
   console.log('→ 接著跑 node --test dev/tests/sfx.test.mjs');
 }
 
@@ -961,11 +1018,12 @@ function cmdList() {
 }
 
 // 匯出給測試／研究用（不改變 CLI 行為）
-export { RECIPES, CHOICE, PACKS, measure, centroid, decode, decodeFile, zipList, zipRead, fetchPack };
+export { RECIPES, CHOICE, PACKS, VARIANTS, measure, centroid, decode, decodeFile, zipList, zipRead, fetchPack };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const o = parseArgs(process.argv.slice(2));
   if (o.mode === 'list') cmdList();
   else if (o.mode === 'candidates') await cmdCandidates(o);
+  else if (o.mode === 'variants') cmdVariants(o);
   else await cmdWrite(o);
 }

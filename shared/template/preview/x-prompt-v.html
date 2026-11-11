@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -60,13 +60,16 @@
                               padding: 0 40px 0 32px; border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node-tint); color: var(--sc-fs-ink);
                               display: flex; align-items: center; gap: 20px; white-space: nowrap; }
     #x-prompt #xprompt-nico { --d: 64px; --i: 36px; }
+    /* 全寬（沒有講者，主卡 1680）：提示詞放大、整組置中 */
+    #x-prompt #xprompt-card[data-wide] #xprompt-box { max-width: 1560px; height: 344px; padding: 40px 152px 40px 56px; }
+    #x-prompt #xprompt-card[data-wide] #xprompt-text { font-size: 68px; line-height: 88px; }
   </style>
   <div id="x-prompt" data-composition-id="x-prompt" data-width="1920" data-height="1080" data-duration="17.2"
        data-cues-sample='{"start":0,"D":17.2,"cues":{"62":[1.6,6.6],"63":[6.9,9.1],"64":[9.4,11.6],"65":[11.9,14.4]},"refs":{"#63@表格":6.9,"#64@時間碼":9.4}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xprompt-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span id="xprompt-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> <path d="M13 8H7" /> <path d="M17 12H7" /> </svg></span><span class="sc-opt">我的提示詞</span></div>
-      <div id="xprompt-body" data-layout="col" data-justify="start" data-gap="md">
+      <div id="xprompt-body" data-layout="col" data-justify="start" data-wide-justify="center" data-gap="md">
         <div id="xprompt-box" data-slot data-snap-width>
           <span id="xprompt-send" class="sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m5 12 7-7 7 7" /> <path d="M12 19V5" /> </svg></span>
           <div id="xprompt-text" class="sc-t52 sc-w700">

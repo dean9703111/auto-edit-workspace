@@ -403,3 +403,19 @@ test('thinMainSfx：每分鐘留 2 顆，優先序 chapter > alert／success > d
   const quiet = [it('a', 'ding', 1), it('b', 'success', 10)];
   assert.equal(A.thinMainSfx(quiet, conf), 0);
 });
+
+test('rotateSfx：同名的音效照時間輪 本尊 → 變體 1 → 變體 2 → 本尊；沒有變體、沒有檔的不動；name／at／volume 不改', () => {
+  const conf = { ding: { peak: 0.01, volume: 0.5, variants: [{ file: 'ding-2', peak: 0.03, volume: 0.25 }, { file: 'ding-3', peak: 0.01, volume: 0.5 }] }, chapter: { peak: 0.02, volume: 0.9 } };
+  const mk = () => [{ name: 'ding', at: 30, volume: 0.4 }, { name: 'chapter', at: 5, volume: 0.9 }, { name: 'ding', at: 10, volume: 0.5 }, null, { name: 'ding', at: 20, volume: 0.5 }, { name: 'ding', at: 40, volume: 0.5 }];
+  const cues = mk();
+  A.rotateSfx(cues, conf);
+  assert.deepEqual(cues.filter(Boolean).sort((a, b) => a.at - b.at).map((c) => c.src ?? c.name), ['chapter', 'ding', 'ding-2', 'ding-3', 'ding']);
+  const second = cues.find((c) => c?.at === 20);
+  assert.deepEqual([second.name, second.at, second.volume, second.srcAt, second.srcVolume], ['ding', 20, 0.5, 19.98, 0.25], '變體的峰值晚 0.02 秒就早 0.02 秒放；音量照變體和本尊的比例');
+  assert.equal(cues.find((c) => c?.at === 30).srcVolume, 0.4);
+  A.rotateSfx(cues, conf);
+  assert.deepEqual(cues.filter(Boolean).sort((a, b) => a.at - b.at).map((c) => c.src ?? c.name), ['chapter', 'ding', 'ding-2', 'ding-3', 'ding'], '再跑一次結果一樣');
+  const only3 = mk();
+  A.rotateSfx(only3, conf, (f) => f !== 'ding-2');
+  assert.deepEqual(only3.filter(Boolean).sort((a, b) => a.at - b.at).map((c) => c.src ?? c.name), ['chapter', 'ding', 'ding-3', 'ding', 'ding-3']);
+});

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-wall 情緒詞整面牆｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-wall.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-wall { position: absolute; inset: 0; }
+    #x-wall #xwl-wall { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--brand); color: var(--brand-ink); }
+    #x-wall .xwl-src { display: none; }
+    #x-wall .xwl-row { position: absolute; left: -40px; white-space: nowrap; font-size: 132px; line-height: 1; font-weight: 900; }
+    #x-wall .xwl-row--b { left: -240px; color: transparent; -webkit-text-stroke: 3px var(--brand-ink); }
+    #x-wall #xwl-r1 { top: 60px; }
+    #x-wall #xwl-r2 { top: 200px; }
+    #x-wall #xwl-r3 { top: 340px; }
+    #x-wall #xwl-r4 { top: 480px; }
+    #x-wall #xwl-r5 { top: 620px; }
+    #x-wall #xwl-r6 { top: 760px; }
+  </style>
+  <div id="x-wall" data-composition-id="x-wall" data-width="1920" data-height="1080" data-duration="8.4" data-matte="1"
+       data-cues-sample='{"start":0,"D":8.4,"cues":{"431":[0.5,1.4],"432":[1.5,4.0],"433":[4.1,8.0]},"refs":{"#432@剪輯師":1.8,"#433@自動剪":4.4}}'>
+    <div id="xwl-wall" data-layout-allow-overflow>
+      <i id="xwl-w1" class="xwl-src">剪輯師</i>
+      <i id="xwl-w2" class="xwl-src">自動剪</i>
+      <div id="xwl-r1" class="xwl-row xwl-row--a"></div>
+      <div id="xwl-r2" class="xwl-row xwl-row--b"></div>
+      <div id="xwl-r3" class="xwl-row xwl-row--a"></div>
+      <div id="xwl-r4" class="xwl-row xwl-row--b"></div>
+      <div id="xwl-r5" class="xwl-row xwl-row--a"></div>
+      <div id="xwl-r6" class="xwl-row xwl-row--b"></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-wall'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const HIT = P.at('#432@剪輯師'), AGAIN = P.at('#433@自動剪');   // 講到那個詞／講到第二次（或第二個詞）的時刻
+    P.sfx('impact', '#432@剪輯師');     // 牆出現那一下的音效（句號和 HIT 一樣）
+
+    // 每一排把詞重複鋪滿（載入時做一次，不用改）：奇數排用第一個詞，偶數排用第二個詞（沒有就用同一個）
+    const W1 = document.getElementById('xwl-w1'), W2 = document.getElementById('xwl-w2') || W1;
+    $q('.xwl-row').forEach(function (row, i) { row.textContent = new Array(13).join((i % 2 ? W2 : W1).textContent + '\u3000'); });
+
+    // 拍 1 講到那個詞：牆由下擦開 → ＋0.1 實心字那三排錯拍彈出
+    P.wipe('#xwl-wall', HIT, { dir: 'up', dur: 0.35 });
+    P.pop('.xwl-row--a', HIT + 0.1, { from: 1.2, dy: 0, dur: 0.4, stagger: 0.06 });
+    // 拍 2 講到第二次：空心字那三排錯拍彈出
+    P.pop('.xwl-row--b', AGAIN, { from: 1.2, dy: 0, dur: 0.4, stagger: 0.06 });
+    P.punch('.xwl-row--a', AGAIN + 0.1, { scale: 1.04 });   // 實心字跟著重拍一下
+
+    // 收：段尾前 0.3 秒整面牆淡出（overlay 自己退場）
+    P.out('#xwl-wall', P.dur() - 0.3);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-wall'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-wall";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

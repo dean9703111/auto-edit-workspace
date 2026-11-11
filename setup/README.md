@@ -18,6 +18,7 @@
 | 9 支 auto-edit Skill | `node setup/install-skills.mjs` 從 `.agents/skills/` 複製到 `.claude/skills/`（Claude Code）與 `~/.minimax/skills/`（MiniMax Code） |
 | HyperFrames 渲染用的瀏覽器 | 不用另外裝。S6 的 doctor 顯示 Chrome ✗ 時用 `npx -y hyperframes browser ensure` 下載，第一次 render 也會自動下載；放在 `~/.cache/hyperframes/chrome`，約 200 MB |
 | 臉部偵測檔（MediaPipe，約 18.7 MB） | 瘦臉用。已經在 `shared/template/vendor/mediapipe/`，不用裝；S5 只檢查檔案完整 |
+| 人物去背模型（選用，約 170 MB） | 只有用到「講者站在動畫前面」的模板（`x-wall`、`x-magazine`、`x-breakout`）才需要。不在安裝清單裡：build 用到時會說，問過使用者再跑 `node shared/template/tools/media.mjs matte-setup`，下載到 `~/.cache/hyperframes/background-removal/` |
 
 不用裝：Python、Docker、Google Chrome、轉逐字稿模型（約 488 MB，第一次轉逐字稿時自動下載）。
 

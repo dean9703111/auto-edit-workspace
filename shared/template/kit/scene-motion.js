@@ -76,7 +76,7 @@
      P.bar(sel, at, {from, to, dur, ease})  量條長度：scaleX from→to（預設 0→1）、transform-origin 左緣、0.8s power2.out。
                                      to 可以大於 1＝「撐破」軌道（要讓條超出軌道，軌道不能 overflow:hidden）。條的圓角用小值（scaleX 會把圓角拉橫）
      ── v2（design-system.md §11；契約 specs/contracts/motion.md）。位移、振幅用 u（＝畫布短邊／1080，橫式直式都是 1）；字的位移用 em；
-        位置用區域名（P.region(name)：band／panelTop／pip／badge／captions／safe／full，window.__regions 蓋過橫式預設；
+        位置用區域名（P.region(name)：band／panelTop／pip／badge／captions／safe／full／speaker（講者框），window.__regions 蓋過橫式預設；
         root 是 1920×1080 的子合成（data-width > data-height）在直式被舞台縮放＝STAGED：座標還是橫式，不讀 window.__regions）。
         新原語用 root.querySelectorAll 選元素，不必加進 $q 包裝清單 ──
      P.chars(sel, at, {mode, stagger, dy, dur})  逐字：拆成 inline-block 的 span[data-sc-ch]（中文一字一格，英文單字、數字整個一格）後錯拍進場。mode 'rise'（上浮 0.6em、0.6s expo.out、間隔 0.03）
@@ -129,6 +129,8 @@
      P.spin(sel, at, {until, period})  載入圈：等速轉（period 0.9s 一圈）到 until（預設段尾）；之後接 P.out 收掉、換成勾
      P.sfx(name, ref, off)           音效拍點：回傳 P.at(ref, off) 的秒數，並登記 {name, ref, off, t}（P.sfxCues、window.SceneMotion.sfx[comp id]）；
                                      ref 寫成字串字面值（例 const T1 = P.sfx('success', '#38@兩支')），build 靜態解析出 <audio>（motion.md §3）
+     P.stick(sel, at, {rot, from, twist, dur, stagger})  貼上：貼紙（class="sc-sticker"）從放大、多歪一點拍到定位；rot＝貼好後的角度（預設 -4 度）
+     P.peel(sel, at, {rot, dur, stagger})  撕走：貼紙往右上掀起、淡掉（退場）；rot 要和 P.stick 的一樣
      P.prev()                        前一段是什麼：'speaker'｜'fullscreen'｜'pip'（data-prev → __cues.segs[id].prev；單獨開檔＝'speaker'）。
                                      custom 開場：const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow'（手寫 'grow'／'swap' 也可以）
      P.V2                            時間與曲線表：IN 0.5／SHELL 0.6／EMPH 0.2／OUT 0.3／MOVE 1.0／GROUP 0.12；CH 逐字間隔；EASE.in／emph／move／tx／out／idle
@@ -265,6 +267,8 @@
   };
   // 具名區域的橫式預設 [x, y, w, h]（design-system.md §2）；直式由 009 的 canvas.mjs 注入 window.__regions 蓋過
   var REGIONS = { band: [120, 600, 1680, 260], panelTop: [120, 150, 1180, 708], pip: [1424, 594, 432, 324], badge: [1560, 40, 320, 100], captions: [0, 920, 1920, 160], safe: [96, 54, 1728, 972], full: [120, 40, 1680, 860] };
+  // 講者框 [x, y, w, h]（P.region('speaker')）：build 把 plan.json 的 speakerBox 注入 window.__cues.speaker；這是單獨開檔、預覽頁示意講者的位置。不放進 REGIONS（那張表要和 lib/canvas.mjs 一樣）
+  var SPEAKER_SAMPLE = [600, 40, 760, 960];
   var CALLS = { n: 0 };
   var ROLE = { idle: 'micro', flow: 'micro', end: 'micro', wave: 'micro', spin: 'micro', spot: 'focus', focus: 'focus', dim: 'focus', rack: 'focus', cam: 'focus', ripple: 'accent', sheen: 'accent', punch: 'accent', marker: 'accent', stamp: 'accent' };
   var registerType = function () {
@@ -336,7 +340,8 @@
     var settleTail = function (D) {
       if (!(D > 0) || !TL.getChildren || !marks.length) return;   // TL＝真的 GSAP 時間軸（tl 是加了標記的包裝）
       var lastMark = Math.max.apply(null, marks.map(function (m) { return m.t; }));
-      var kids = TL.getChildren(false, true, true), limit = D - HOLD_END - 0.75, floor = lastMark + 1, end = 0;
+      // 段尾 0.75 秒內才開始的是 overlay 自己寫的退場（P.out(…, P.dur() - 0.3)），不是收尾，不挪、也不算進 end
+      var kids = TL.getChildren(false, true, true).filter(function (k) { return k.startTime() < D - 0.75 - 1e-6; }), limit = D - HOLD_END - 0.75, floor = lastMark + 1, end = 0;
       kids.forEach(function (k) { end = Math.max(end, k.startTime() + k.totalDuration()); });
       if (end <= limit + 1e-6) return;
       var tail = kids.filter(function (k) { return k.startTime() >= floor - 1e-6 && k.totalDuration() > 0; });
@@ -659,6 +664,7 @@
     var STAGED = !!window.__regions && !!root && !!root.getAttribute && (+root.getAttribute('data-width') || 1920) > (+root.getAttribute('data-height') || 1080);
     var REGION = function (name) {
       if (Array.isArray(name)) return name;
+      if (name === 'speaker') return window.__cues && Array.isArray(window.__cues.speaker) ? window.__cues.speaker : SPEAKER_SAMPLE;
       var R = (STAGED ? null : (window.__regions || {})[name]) || REGIONS[name];
       if (!R) throw new Error('沒有這個區域：' + name + '（可用 ' + Object.keys(REGIONS).join('／') + '）');
       return R;
@@ -1163,6 +1169,18 @@
     // 彈出：縮放＋上移（dy u）＋淡入，back.out 過衝落地；to＝落地亮度
     P.pop = function (sel, at, o) {
       mv(q(sel), at, { opacity: 0, scale: opt(o, 'from', 0.82), y: opt(o, 'dy', 28) * U }, { opacity: opt(o, 'to', 1), scale: 1, y: 0 }, opt(o, 'dur', 0.55), opt(o, 'ease', 'back.out(1.6)'), opt(o, 'stagger', 0));
+      return P;
+    };
+    // 貼上：貼紙從放大、多歪 twist 度的狀態拍到定位（rot＝貼好後的角度；外觀 class="sc-sticker"）
+    P.stick = function (sel, at, o) {
+      var rot = opt(o, 'rot', -4);
+      mv(q(sel), at, { opacity: 0, scale: opt(o, 'from', 1.35), rotation: rot + opt(o, 'twist', 10) }, { opacity: 1, scale: 1, rotation: rot }, opt(o, 'dur', 0.38), opt(o, 'ease', 'back.out(2.2)'), opt(o, 'stagger', 0));
+      return P;
+    };
+    // 撕走：貼紙往右上掀起、多歪 16 度、淡掉（退場）；rot 要和貼上時一樣（頭尾狀態都寫死，亂序 seek 才一樣）
+    P.peel = function (sel, at, o) {
+      var rot = opt(o, 'rot', -4);
+      mv(q(sel), at, { opacity: 1, scale: 1, rotation: rot, x: 0, y: 0 }, { opacity: 0, scale: 1.08, rotation: rot + 16, x: 90 * U, y: -120 * U }, opt(o, 'dur', 0.4), V2.EASE.out, opt(o, 'stagger', 0));
       return P;
     };
     // 音效拍點：宣告這一拍的音效並回傳秒數（＝P.at(ref, off)）；ref 寫成字串字面值，build 靜態解析出 <audio>（motion.md §3）

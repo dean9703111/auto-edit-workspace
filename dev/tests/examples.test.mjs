@@ -44,8 +44,19 @@ const EXAMPLES = {
   'x-news': { pre: 'xnews', range: [371, 375], card: 'xnews-head' },
   // 024 資料夾樹（樹狀目錄一列一列長出來；圖示照種類從 #xfld-stamps 複製，沒有 .sc-icon）
   'x-folder': { pre: 'xfld', range: [381, 391], noIcon: true },
+  // 025 收據列印（沒有主卡：收據本身 #xrc-card；沒有圖示）
+  'x-receipt': { pre: 'xrc', range: [401, 407], noIcon: true },
+  // 025 同字異材快切（沒有主卡：視窗 #xwc-card；沒有圖示）
+  'x-wordcut': { pre: 'xwc', range: [411, 413], noIcon: true },
+  // 025 重點詞浮標（layout: "overlay"：疊在講者上，沒有滿版底、沒有主卡、自己退場）
+  'x-tags': { pre: 'xtg', range: [421, 424], noIcon: true, overlay: true },
+  // 025 情緒詞整面牆（overlay＋人物去背層：牆在講者後面；整合測試用 AUTO_EDIT_MATTE=box 的假去背，不跑模型）
+  'x-wall': { pre: 'xwl', range: [431, 433], noIcon: true, overlay: true },
+  'x-magazine': { pre: 'xmg', range: [441, 443], noIcon: true, overlay: true },
+  'x-breakout': { pre: 'xbk', range: [451, 453], noIcon: true, overlay: true },
 };
 const COUNT = Object.keys(EXAMPLES).length;
+process.env.AUTO_EDIT_MATTE = 'box';   // 人物去背：測試不下載、不跑模型（lib/matte.mjs 的 boxRemove）
 const HEAD = ['適用的講解', '不要用在哪裡', '要改的地方', '綁句欄位', 'D 下限', '版面'];
 const FOREACH1 = "[ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(";
 const FOREACH2 = "[ 'swap', 'axis', 'focus' ].forEach(";
@@ -78,7 +89,7 @@ function beatsOf(p) {
   return out;
 }
 // 拍點＋由拍點推出來的常數（const B20 = A + 1.1;）
-const PCONST = { BEAT: 0.15, STROKE: 0.7, READ: 1.2 };
+const PCONST = { BEAT: 0.15, STROKE: 0.7, READ: 1.2, dur: () => 1e3 };   // dur：overlay 自己退場寫 P.dur() - 0.3（只驗算得出數字）
 function constsOf(p) {
   const out = beatsOf(p);
   for (const m of p.code.matchAll(/\bconst ([A-Z][A-Z0-9]*) = ([^;]+);/g)) {
@@ -98,7 +109,7 @@ function lowerOf(p) {
   return out;
 }
 
-for (const [id, { pre, range, card, noIcon }] of Object.entries(EXAMPLES)) {
+for (const [id, { pre, range, card, noIcon, overlay }] of Object.entries(EXAMPLES)) {
   const p = parse(id);
 
   test(`${id}：readCustom 過、R7.3 骨架（三處 id、$q、兩行 forEach、P.end()、timeline 登記）`, () => {
@@ -109,7 +120,8 @@ for (const [id, { pre, range, card, noIcon }] of Object.entries(EXAMPLES)) {
     assert.ok(p.text.includes(`<template id="${id}-template">`));
     assert.ok(p.tpl.includes(`<div id="${id}" data-composition-id="${id}" data-width="1920" data-height="1080" data-duration="${p.sample.D}"`), 'root：三處 id 一致、data-duration＝sample 的 D');
     assert.doesNotMatch(p.tpl, new RegExp(`id="${id}"[^>]*class=`), 'root 不加 class');
-    assert.ok(p.body.includes('<div class="sc-surface-fs fill"></div>'), '第一個子元素是滿版底');
+    if (overlay) assert.ok(!p.body.includes('sc-surface-fs'), 'overlay 不放滿版底');
+    else assert.ok(p.body.includes('<div class="sc-surface-fs fill"></div>'), '第一個子元素是滿版底');
     assert.ok(p.script.includes("var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };"));
     assert.ok(p.script.includes(FOREACH1), '第一行 forEach（含 type）');
     assert.ok(p.script.includes(FOREACH2), '第二行 forEach（含 focus）');
@@ -124,7 +136,7 @@ for (const [id, { pre, range, card, noIcon }] of Object.entries(EXAMPLES)) {
     const at = HEAD.map((k) => p.head.indexOf(`【${k}】`));
     assert.ok(at.every((i) => i >= 0), `缺：${HEAD.filter((_, k) => at[k] < 0).join('、')}`);
     assert.deepEqual([...at].sort((a, b) => a - b), at, '6 小節要照順序');
-    assert.match(p.head, new RegExp(`${id}：.*layout: "fullscreen"`));
+    assert.match(p.head, new RegExp(`${id}：.*layout: "${overlay ? 'overlay' : 'fullscreen'}"`));
   });
 
   test(`${id}：data-cues-sample 涵蓋每個 P.at 字面值；句號都在 #${range[0]}–#${range[1]}`, () => {
@@ -169,7 +181,7 @@ for (const [id, { pre, range, card, noIcon }] of Object.entries(EXAMPLES)) {
     // 每個 P.xxx(sel, at …) 的 at：數字、拍點常數或「常數 ± 數字／P.BEAT」
     const beats = constsOf(p);
     const ats = [];
-    for (const m of p.code.matchAll(/\bP\.(?!at\b|end\b|dur\b|focus\b|swap\b|axis\b|sfx\b|spot\b|along\b)(\w+)\(\s*'[^']*'\s*,\s*([^,){]+)/g)) {
+    for (const m of p.code.matchAll(/\bP\.(?!at\b|end\b|dur\b|focus\b|swap\b|axis\b|sfx\b|spot\b|along\b)(\w+)\(\s*'[^']*'\s*,\s*([^,(){]+(?:\(\)[^,){]*)?)/g)) {   // 允許 P.dur()（overlay 自己退場：P.dur() - 0.3）
       const v = Function(...Object.keys(beats), 'P', `return ${m[2]}`)(...Object.values(beats), PCONST);
       assert.ok(Number.isFinite(v), `看不懂時間「${m[2]}」`);
       ats.push(v);
@@ -191,7 +203,7 @@ for (const [id, { pre, range, card, noIcon }] of Object.entries(EXAMPLES)) {
     for (const m of p.body.matchAll(/class="[^"]*\bsc-t(\d+)\b/g)) assert.ok(Number(m[1]) >= 38, `字級 sc-t${m[1]} 低於標籤下限 38`);
   });
 
-  test(`${id}：主卡右緣 ≤ 1300（避開子母畫面 x 1424 起）`, () => {
+  test(`${id}：主卡右緣 ≤ 1300（避開子母畫面 x 1424 起）`, { skip: overlay && 'overlay 沒有主卡（位置照講者框算）' }, () => {
     const cid = card || `${pre}-card`;
     const box = p.css.match(new RegExp(`#${id} #${cid}\\s*\\{[^}]*\\}`));
     assert.ok(box, `找不到 #${cid}`);
@@ -244,7 +256,9 @@ test(`index.html：④ 情境動畫分頁列出 ${COUNT} 支、#motion 沒有舊
   assert.ok(sec, '要有 #custom 區塊');
   const ifr = [...sec[1].matchAll(/<iframe src="preview\/(x-[\w-]+)\.html"/g)].map((m) => m[1]).sort();
   assert.deepEqual(ifr, Object.keys(EXAMPLES).sort());
-  assert.equal((sec[1].match(/版面：子母畫面/g) || []).length, COUNT);
+  const nOverlay = Object.values(EXAMPLES).filter((e) => e.overlay).length;
+  assert.equal((sec[1].match(/版面：子母畫面/g) || []).length, COUNT - nOverlay);
+  assert.equal((sec[1].match(/版面：疊在講者上/g) || []).length, nOverlay);
   assert.doesNotMatch(html, /進場 0\.3–0\.5|露臉 3/);
   assert.match(html, /1 秒內新出現的元素 ≤ 2 個/);
   assert.doesNotMatch(html, /音效 12 種/);
@@ -371,7 +385,7 @@ function makeProject(dir, gap = 1.0) {
     }
     fs.copyFileSync(p.file, path.join(dir, 'work/hyperframes/compositions', `${name}.html`));
     const id = `x${String(k + 1).padStart(2, '0')}`;
-    const seg = { id, type: 'custom', src: `compositions/${name}.html`, layout: 'fullscreen', from: `#${open}`, to: `#${nums[nums.length - 1]}e` };
+    const seg = { id, type: 'custom', src: `compositions/${name}.html`, layout: EXAMPLES[name].overlay ? 'overlay' : 'fullscreen', from: `#${open}`, to: `#${nums[nums.length - 1]}e` };
     if (name === 'x-ui-mock') seg.clicks = ['#73@匯出'];
     scenes.push(seg);
     segs.push({ id, name, p, start: Math.round(S * 1000) / 1000 });

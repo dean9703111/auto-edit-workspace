@@ -2,6 +2,7 @@
 
 9 個音效：取自 CC0（公眾領域）素材，或 AI 生成並以 CC0 釋出；可以放進自己的影片、改編、商用，不用標示出處。
 片尾配樂 `bgm-cylinder-five.wav` 是 CC BY 4.0：預設不配，plan.json 的 outro 寫 "music": "bgm-cylinder-five" 才會用；用到的影片要在說明欄標示「Music: "Cylinder Five" by Chris Zabriskie (http://chriszabriskie.com/cylinders/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)」。
+同類變體：`ding`（`ding-2.wav`、`ding-3.wav`）、`success`（`success-2.wav`、`success-3.wav`）、`alert`（`alert-2.wav`、`alert-3.wav`）、`impact`（`impact-2.wav`、`impact-3.wav`） 是同一顆升降一個半音，build 照出現順序輪著放，同一顆不會連著一模一樣；來源與授權同本尊。plan.json 還是只寫本尊的名稱。
 逐檔的下載網址、sha256、處理方式、峰值秒數與響度在 `sources.json`；每顆在完成影片裡的大小（相對人聲的 dB）與使用時機在 `shared/template/kit/sfx.json`。
 
 | 檔名 | 聽起來像 | 用在哪 | 來源 | 授權 |
@@ -26,5 +27,6 @@ Kenney 素材出自 https://kenney.nl ，`zip_sha256` 是當初下載的 zip 的
 ```
 node dev/tools/make-sfx.mjs --candidates --only <名稱> --out <工作區外的資料夾>   # 試聽候選
 node dev/tools/make-sfx.mjs --write --only <名稱>                                 # 寫進 shared/sfx/
+node dev/tools/make-sfx.mjs --variants                                            # 同類變體（重做某一顆之後要再跑）
 node dev/tools/make-sfx.mjs --write --only bgm-cylinder-five --src <原曲 mp3>     # 片尾配樂要給作者本機的原曲
 ```

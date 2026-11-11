@@ -339,6 +339,9 @@ export function validateScene(slots, { kitDir, icons, outDir } = {}) {
     for (const id of b.dim || []) need(id, `${w}.dim`);
     if (b.line) { const m = String(b.line).split(/[>-]/); if (m.length !== 2) errors.push(`${w}.line：要寫 a-b`); else { need(m[0], `${w}.line`); need(m[1], `${w}.line`); } }
     if (b.sfx && !/^[a-z0-9-]+$/.test(b.sfx)) errors.push(`${w}.sfx：音效名只有小寫英數字與 -`);
+    if (b.peel && !s.sticker) errors.push(`${w}.peel：撕走只有貼紙風格能用 → slots 第一層加 "sticker": true，或拿掉 peel`);
+    if (b.peel && i !== s.beats.length - 1) errors.push(`${w}.peel：整組撕走只能放在最後一拍（撕走之後畫面上沒有東西）`);
+    if (b.peel && (b.in?.length || b.focus || b.state || b.check)) errors.push(`${w}.peel：撕走那一拍不要再寫 in、focus、state、check`);
   });
   return errors;
 }
@@ -400,6 +403,7 @@ function sceneBeatCode(s) {
     if (b.check) o.push(`check: '${sid(b.check)}'`);
     if (b.focus) o.push(`focus: '${sid(b.focus)}'`);
     if (b.dim?.length) o.push(`dim: ${JSON.stringify(b.dim.map(sid)).replace(/"/g, "'")}`);
+    if (b.peel) o.push('peel: true');
     lines.push(`      [T${i + 1}, { ${o.join(', ')} }],`);
   });
   lines.push('    ];');
@@ -420,6 +424,7 @@ function fillScene(html, slots, { icons, kitDir }) {
   const links = (s.links || []).map((l) => { const arrow = String(l).includes('>'); const [x, y] = String(l).split(/[>-]/); return `${sid(x)}${arrow ? '>' : '-'}${sid(y)}`; }).join(' ');
   out = out.replace(/(<svg id="xsc-lines" data-links=")[^"]*(")/, `$1${links}$2`);
   if (s.layout) out = out.replace(/(<div id="xsc-stage" data-layout=")[^"]*(")/, `$1${esc(s.layout)}$2`);
+  if (s.sticker) out = out.replace('<div id="xsc-stage"', '<div id="xsc-stage" data-sticker');   // 貼紙風格：元件一張一張貼上（P.stick），最後一拍可以整組撕走（peel）
   // 元件少又窄（人、直拿的手機）：間距拉開，整組撐到內容區六成寬，連接線才看得到、畫面不會只擠在中間
   const row = topRow.filter((p) => !Array.isArray(p.parts));
   const widths = row.map((p) => (p.illus || p.src ? partSize(p, ctx, kitDir)[0] : p.w || 128));
@@ -519,7 +524,8 @@ function sceneSheet(s, id) {
   s.beats.forEach((b, i) => {
     const show = [], moves = [];
     let lead = null, st = null;
-    for (const x of b.in || []) { show.push(`${nameOf(x)}（標籤「${byId.get(x)?.label ?? '—'}」）`); moves.push(`彈出（${nameOf(x)}）`, '＋0.14 逐字上浮（標籤）'); lead = lead || x; }
+    for (const x of b.in || []) { show.push(`${nameOf(x)}（標籤「${byId.get(x)?.label ?? '—'}」）`); moves.push(`${s.sticker ? '貼上' : '彈出'}（${nameOf(x)}）`, '＋0.14 逐字上浮（標籤）'); lead = lead || x; }
+    if (b.peel) { show.push('貼紙整組撕走'); moves.push('撕走（全部貼紙）'); }
     if (b.line) { show.push('連接線'); moves.push('＋0.7 描線（連接線）'); }
     if (b.state) { show.push(`${nameOf(b.state[0])}換成 ${b.state[2]}`); moves.push('淡入（新狀態）', '淡出（舊狀態）', `漣漪（${nameOf(b.state[0])}）`); lead = lead || b.state[0]; st = b.state[2]; }
     if (b.move) { show.push(`${nameOf(b.move[0])}走到${nameOf(b.move[1])}旁邊`); moves.push(`游標移動（${nameOf(b.move[0])}）`); lead = lead || b.move[0]; }
@@ -530,7 +536,7 @@ function sceneSheet(s, id) {
     if (b.dim?.length) moves.push(`退焦（${b.dim.map(nameOf).join('、')}）`);
     rows.push([String(i + 1), `\`${b.at}\``, show.join('；') || '—', moves.join('；') || '—', lead ? nameOf(lead) : '—', b.sfx || '—', lead ? illusOf(lead, st) : '—', lead ? place(lead) : '—']);
   });
-  rows.push(['收', '最後一拍＋2.0', '全部（完成態停到段尾）', '回均衡', '整體', '—', '—', '—']);
+  if (!s.beats.some((b) => b.peel)) rows.push(['收', '最後一拍＋2.0', '全部（完成態停到段尾）', '回均衡', '整體', '—', '—', '—']);
   const head = [...BEAT_HEADER, ...BEAT_HEADER_ILLUS];
   return `#### 動畫分鏡 ${id}\n\n| ${head.join(' | ')} |\n|${head.map(() => '---').join('|')}|\n${rows.map((r) => `| ${r.map(fmtCell).join(' | ')} |`).join('\n')}\n`;
 }
@@ -624,6 +630,10 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
       fail([msg]); continue;
     }
     if (seg.layout == null) seg.layout = spec.layout || 'fullscreen';
+    // 規格寫 "matte": true：動畫在講者後面（build 把這一段的講者去背、疊在動畫上，lib/matte.mjs；audit 不判壓到講者）
+    // 規格寫 "portrait": "none"：這支只做橫式（位置照橫式的講者框算），直式專案 plan.mjs 會 ✖ 並建議 portraitAlt
+    if (spec.portrait === 'none') Object.defineProperty(seg, '__noPortrait', { value: spec.portraitAlt || '13 標題條列', enumerable: false, configurable: true });
+    if (spec.matte) Object.defineProperty(seg, '__matte', { value: spec.matteClip || true, enumerable: false, configurable: true });   // 'window'＝去背層裁在相框開口的左右和下緣之內（x-breakout）
     const html = fs.readFileSync(path.join(lib.customDir, `${seg.template}.html`), 'utf8');
     const r = fillTemplate({ spec, html, id: seg.id, slots: seg.slots, icons: lib.icons, kitDir: kit, outDir });
     if (r.errors.length) { fail(r.errors); continue; }

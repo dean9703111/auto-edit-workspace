@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-wordcut 同字異材快切｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-wordcut.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-wordcut { position: absolute; inset: 0; }
+    #x-wordcut .fill { position: absolute; inset: 0; }
+    #x-wordcut #xwc-card { position: absolute; left: 120px; top: 140px; width: 1180px; height: 700px; border-radius: 24px; overflow: hidden; background: var(--v2-ink); }
+    #x-wordcut .xwc-p { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; white-space: nowrap; }
+    #x-wordcut .xwc-w { display: block; font-size: 240px; line-height: 1; font-weight: 900; }
+    /* 1 報紙：白紙黑字，上下雙線與灰色的內文條 */
+    #x-wordcut #xwc-p1 { background: var(--v2-card); color: var(--v2-ink); gap: 28px; }
+    #x-wordcut #xwc-p1 .xwc-w { padding: 24px 40px; border-top: 8px double var(--v2-ink); border-bottom: 8px double var(--v2-ink); }
+    #x-wordcut .xwc-bars { display: flex; flex-direction: column; gap: 14px; width: 900px; }
+    #x-wordcut .xwc-bars i { display: block; height: 14px; background: var(--v2-node-line); }
+    #x-wordcut .xwc-bars i:last-child { width: 620px; }
+    /* 2 描邊：墨底，字只留外框 */
+    #x-wordcut #xwc-p2 { background: var(--v2-ink); }
+    #x-wordcut #xwc-p2 .xwc-w { color: transparent; -webkit-text-stroke: 4px var(--v2-card); font-weight: 500; }
+    /* 3 色塊：淺主色底，主色字加硬邊陰影 */
+    #x-wordcut #xwc-p3 { background: var(--v2-node-tint); }
+    #x-wordcut #xwc-p3 .xwc-w { color: var(--brand); text-shadow: 10px 10px 0 var(--v2-ink); }
+    /* 4 殘影：墨底，同一個詞疊三行，中間實心、上下兩行描邊變淡 */
+    #x-wordcut #xwc-p4 { background: var(--v2-ink); color: var(--v2-card); }
+    #x-wordcut #xwc-p4 .xwc-w { font-size: 180px; }
+    #x-wordcut #xwc-p4 .xwc-w--e { color: transparent; -webkit-text-stroke: 3px var(--v2-card); opacity: 0.4; }
+    /* 5 終端機：墨底、等寬綠字、提示符號與游標 */
+    #x-wordcut #xwc-p5 { background: var(--v2-ink); color: var(--sc-good); flex-direction: row; gap: 32px; }
+    #x-wordcut #xwc-p5 .xwc-w { font-size: 200px; }
+    #x-wordcut .xwc-cur { display: block; width: 100px; height: 200px; background: var(--sc-good); }
+    /* 6 定格：主色底、主色上的字、底線 */
+    #x-wordcut #xwc-p6 { background: var(--brand); color: var(--brand-ink); gap: 28px; }
+    #x-wordcut #xwc-line { width: 480px; height: 16px; border-radius: 8px; background: var(--brand-ink); }
+  </style>
+  <div id="x-wordcut" data-composition-id="x-wordcut" data-width="1920" data-height="1080" data-duration="8.6"
+       data-cues-sample='{"start":0,"D":8.6,"cues":{"411":[0.6,3.0],"412":[3.1,5.6],"413":[5.7,8.2]},"refs":{"#411@今天":1.0,"#412@剪片":3.6}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xwc-card" data-layout-allow-overlap>
+      <div id="xwc-p1" class="xwc-p"><div class="xwc-bars"><i></i><i></i><i></i></div><span class="xwc-w">剪片</span><div class="xwc-bars"><i></i><i></i><i></i></div></div>
+      <div id="xwc-p2" class="xwc-p"><span class="xwc-w">剪片</span></div>
+      <div id="xwc-p3" class="xwc-p"><span class="xwc-w">剪片</span></div>
+      <div id="xwc-p4" class="xwc-p"><span class="xwc-w xwc-w--e">剪片</span><span class="xwc-w">剪片</span><span class="xwc-w xwc-w--e">剪片</span></div>
+      <div id="xwc-p5" class="xwc-p"><span class="xwc-w sc-mono">&gt;</span><span class="xwc-w sc-mono">剪片</span><i class="xwc-cur"></i></div>
+      <div id="xwc-p6" class="xwc-p"><span id="xwc-w6" class="xwc-w">剪片</span><div id="xwc-line"></div>
+        <span id="xwc-sub" class="sc-t52 sc-w700 sc-opt">一支 Reels 三分鐘</span>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-wordcut'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const OPEN = P.at('#411@今天'), HIT = P.at('#412@剪片');   // 講到引子／講到那個詞的時刻
+    P.sfx('impact', '#412@剪片');     // 定格那一下的音效（句號和上一行一樣）
+
+    // 拍 1 講到引子：視窗彈出（最底下那張報紙材質）
+    P.pop('#xwc-card', OPEN, { from: 0.92, dy: 0, dur: 0.3 });
+    // 提早 0.8 秒快切：其餘五張每 0.2 秒硬切一張（同一個 P.in、stagger 0.2；最後一張主色剛好落在 HIT）
+    P.in('#xwc-p2, #xwc-p3, #xwc-p4, #xwc-p5, #xwc-p6', HIT - 0.8, { dur: 0.02, stagger: 0.2 });
+    // 拍 2 講到那個詞：主色大字重拍 → ＋0.15 底線由左擦開 → ＋0.35 副標逐字上浮
+    P.punch('#xwc-w6', HIT, { scale: 1.12 });
+    P.wipe('#xwc-line', HIT + 0.15, { dir: 'left' });
+    P.chars('#xwc-sub', HIT + 0.35);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-wordcut'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-wordcut";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

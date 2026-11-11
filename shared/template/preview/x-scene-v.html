@@ -15,7 +15,7 @@
 <script src="../kit/scene-motion.js"></script>
 <script src="../kit/illus.js"></script>
 <script src="../kit/scene-layout.js"></script>
-<script>window.__regions = {"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
@@ -110,7 +110,10 @@
     const L = window.SceneLayout, moved = {};
     const illusOf = function (el) { return el.querySelector('[data-illus], [data-illus-src]') || el; };
     const DRAW = 0.7;   // 一個插圖元件畫出來的秒數（馬克筆照筆順一筆一筆畫，P.draw）
-    const drawn = function (s) { return !!ROOT.querySelector(s + ' .il'); };   // 插圖元件用畫的；不是插圖（聲紋、自己的 HTML）用彈出
+    const STICKER = !!ROOT.querySelector('#xsc-stage[data-sticker]');   // 貼紙風格（fill 的 "sticker": true）：元件不用畫的，一張一張貼上；拍裡寫 peel 整組撕走
+    const rotOf = function (s) { return ROOT.querySelector(s).hasAttribute('data-tilt') ? 4 : -4; };   // 貼好後的角度：奇數張左斜、偶數張右斜
+    if (STICKER) Array.prototype.forEach.call(ROOT.querySelectorAll('.xsc-it'), function (el, i) { el.classList.add('sc-sticker'); if (i % 2) el.setAttribute('data-tilt', ''); });
+    const drawn = function (s) { return !STICKER && !!ROOT.querySelector(s + ' .il'); };   // 插圖元件用畫的；不是插圖（聲紋、自己的 HTML）用彈出
     const lblAt = function (s, at) { if (ROOT.querySelector(s + ' .xsc-lbl')) P.chars(s + ' .xsc-lbl', at, { stagger: 0.035 }); };
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
@@ -155,7 +158,8 @@
       const lines = o.line ? $q(sel(o.line) + ', ' + sel(o.line) + '-head') : [];   // 先有節點再畫線：同一支筆畫完這拍的元件，接著畫連接線與箭頭（0.5 秒）
       const strokes = drw.map(function (s) { return ROOT.querySelector(s + ' .il'); }).concat(lines);
       if (strokes.length) P.draw(strokes, t, { dur: DRAW * drw.length + (lines.length ? 0.35 : 0) });
-      if (pops.length) P.pop(pops.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
+      if (pops.length && STICKER) pops.forEach(function (s, i) { P.stick(s, t + i * 0.5, { rot: rotOf(s) }); });   // 貼紙：一張一張貼，每 0.5 秒一張
+      else if (pops.length) P.pop(pops.join(', '), t, { stagger: 0.12, from: 0.82, dy: 28 });
       ins.forEach(function (s, i) { lblAt(s, t + 0.3 + i * 0.5); if (entered.indexOf(s) < 0) entered.push(s); });   // 標籤每 0.5 秒一個（任何 1 秒內新元素 ≤ 2）
       const stAt = ins.length ? t + 0.3 + ins.length * 0.5 : t + 0.15;   // 這拍有新元件：標籤出完才換狀態，不擠在同一刻
       if (o.state) {
@@ -183,6 +187,7 @@
         P.check(s + ' .il', t + 0.3);
         if (entered.indexOf(s) < 0) entered.push(s);
       }
+      if (o.peel) { entered.forEach(function (s, i) { P.peel(s, t + i * 0.06, { rot: rotOf(s) }); }); entered.length = 0; spotted = false; }   // 整組撕走：之後沒有東西可以聚焦、回均衡
       (o.dim || []).forEach(function (id) { P.dim(sel(id), t, { to: 0.6 }); if (dimmed.indexOf(sel(id)) < 0) dimmed.push(sel(id)); });
       if (o.focus) {
         const f = sel(o.focus), fresh = ins.indexOf(f) >= 0 || o.check === o.focus;
@@ -195,7 +200,7 @@
 
     // 收：最後一拍講完 2 秒回均衡（全部亮回），完成態停到段尾
     const TR = BEATS[BEATS.length - 1][0] + 2.0;
-    if (spotted) P.spot(entered.join(', '), null, TR, { dur: 0.6 });
+    if (spotted && entered.length) P.spot(entered.join(', '), null, TR, { dur: 0.6 });
     if (dimmed.length) P.dim(dimmed.join(', '), TR, { to: 1 });
 
     P.end();                                         // 長度＝plan.json 這段的長度

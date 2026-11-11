@@ -457,7 +457,7 @@ test('P.type：cps、caret:false、空白跟著下一個字、只有空白的文
 });
 
 // ---------- 動態 v2（specs/010-motion-v2/design-system.md §11；specs/contracts/motion.md） ----------
-const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'rack', 'cam', 'grow', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'sfx'];
+const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'stick', 'peel', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'rack', 'cam', 'grow', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'sfx'];
 
 test('v2：原語清單、開頭註解、時間與曲線表、區域、u', () => {
   const { P } = mk();
@@ -564,6 +564,7 @@ const V2_FIX = {
   slide: `<div style="position:absolute;left:260px;top:140px;width:200px;height:80px;overflow:hidden"><div id="t-slide" class="t-box" style="left:0;top:0"></div></div>`,
   pop: `<div id="t-pop" class="t-box" style="left:480px;top:140px"></div>`,
   punch: `<div id="t-punch" class="t-box" style="left:700px;top:140px"></div>`,
+  stick: `<div id="t-stick" class="t-box sc-sticker" style="left:920px;top:140px"></div>`,
   dim: `<div id="t-dim" class="t-box" style="left:920px;top:140px"></div>`,
   marker: `<div id="t-marker" style="left:40px;top:260px;font-size:44px">螢光筆</div>`,
   strike: `<div id="t-strike" style="left:300px;top:260px;font-size:44px">劃掉這句</div><div id="t-wave" style="left:300px;top:330px;font-size:44px">波浪劃掉</div>`,
@@ -590,6 +591,7 @@ const V2_CODE = `
     P.wipe('#t-wipe', 0.5); P.wipeOut('#t-wipe', 4.5, { dir: 'right' });
     P.slide('#t-slide', 1.0); P.slideOut('#t-slide', 4.8);
     P.pop('#t-pop', 1.2);
+    P.stick('#t-stick', 1.3, { rot: 4 }); P.peel('#t-stick', 4.4, { rot: 4 });
     P.punch('#t-punch', 2.0);
     P.dim('#t-dim', 1.5); P.dim('#t-dim', 3.0, { to: 1 });
     P.marker('#t-marker', 1.6);

@@ -1,0 +1,100 @@
+<!-- 預設拍型：F 重點字卡（BEATS.md §3 F；講者先在相框裡，講到那個詞時頭從相框上緣冒出來） -->
+<!doctype html>
+<!--
+  x-breakout：破框而出（第二層 custom，layout: "overlay"；這支不是 layout: "fullscreen"：相框和紙底在講者後面，講者去背後疊在最上面）
+
+  【適用的講解】
+  講者露臉。開場第一句，或整支片情緒最高的那一下：例如「以前我都自己一格一格剪，直到我發現可以跳出來，讓 AI 剪」。
+  講到引子時，畫面變成一張紙底，講者被裝進一個白邊相框裡（像一張照片）；講到那個詞的瞬間，相框的上緣往下縮到下巴的高度，
+  講者的頭留在原地、從相框上面冒出來（講者去背後疊在最上面），同時相框左上角外面彈出一張主色標籤。
+
+  【不要用在哪裡】
+  - 這一段講者沒有露臉，或講者框還沒量（plan.json 沒有 speakerBox：相框不知道要放哪裡）。
+  - 一集用超過 1 次。講者離畫面左右邊緣不到 120：相框放不下。
+  - 直式。這支沒有圖示。
+
+  【要改的地方】
+  1. 文字：標籤 #xbk-tag（≤ 8 字）。
+  2. 綁句：<script> 開頭 OPEN、HIT 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 HIT 改。
+  3. 位置不用改：script 讀講者框（P.region('speaker')）算出相框；build 用同一個算法把去背的講者裁在相框的左右和下緣之內（lib/matte.mjs 的 breakoutWindow），兩邊的算法要一樣。
+
+  【綁句欄位】
+  OPEN = P.at('#451@以前')：講到引子的時刻，紙底淡入、相框彈出（講者整個人在相框裡）。
+  HIT = P.at('#452@跳出來')：講到那個詞的時刻，相框上緣往下縮、頭冒出來，0.3 秒後標籤彈出；音效 impact。
+  HIT 一定用 @詞 綁在那個詞上。「@詞」要寫成字串字面值，build 才算得到。
+
+  【D 下限】
+  OPEN ≥ 0.5（build 的淡入）
+  HIT ≥ OPEN + 2.0（紙底和相框動到 OPEN + 0.6，停 1.2 秒）
+  D ≥ HIT + 2.8（相框和標籤動到 HIT + 0.8，停 1.5 秒以上，段尾前 0.3 秒整組淡出；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  overlay：自己寫退場（段尾前 0.3 秒 P.out）。位置全部由 script 照講者框算（S＝講者框，頭頂＝S 上緣＋40，頭高＝S 高扣掉 80 的三成）：
+  相框開口左緣＝S 左緣 − 20（不小於 120）、右緣＝S 右緣＋20（不大於 1800）、下緣＝S 下緣（不大於 880，在字幕區 y 920 之上）；
+  開口上緣一開始在頭頂上面 40（不小於 100），HIT 之後縮到頭頂＋頭高＋10（下巴）。
+  紙底是開口四周的四塊（.xbk-bg）加上開口上半那一塊（#xbk-lid，HIT 時由上往下蓋住）；相框是 16 寬的白邊。
+  標籤高 92，貼著縮下來之後的相框左上角外面（相框上緣往上 16）。
+  圖層由 build 排：底片 → 紙底與相框 → 去背的講者（裁在開口的左右和下緣之內，上面不裁）→ 字幕。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-breakout 破框而出</title></head>
+<body>
+<template id="x-breakout-template">
+  <style>
+    #x-breakout { position: absolute; inset: 0; }
+    #x-breakout .xbk-bg, #x-breakout #xbk-lid { position: absolute; background: var(--v2-node-tint); }
+    #x-breakout #xbk-frame { position: absolute; box-sizing: border-box; border: 16px solid var(--v2-card); box-shadow: var(--v2-card-shadow); }
+    #x-breakout #xbk-tag { position: absolute; box-sizing: border-box; height: 92px; padding: 0 28px; display: flex; align-items: center; white-space: nowrap;
+                           border-radius: 14px; background: var(--brand); color: var(--brand-ink); rotate: -3deg; }
+  </style>
+  <div id="x-breakout" data-composition-id="x-breakout" data-width="1920" data-height="1080" data-duration="9" data-matte="window"
+       data-cues-sample='{"start":0,"D":9,"cues":{"451":[0.5,2.9],"452":[3.0,6.0],"453":[6.1,8.6]},"refs":{"#451@以前":0.8,"#452@跳出來":3.4}}'>
+    <div id="xbk-all" data-layout-allow-overlap data-layout-allow-caption-zone data-layout-allow-overflow>
+      <div id="xbk-b1" class="xbk-bg"></div>
+      <div id="xbk-b2" class="xbk-bg"></div>
+      <div id="xbk-b3" class="xbk-bg"></div>
+      <div id="xbk-b4" class="xbk-bg"></div>
+      <div id="xbk-lid"></div>
+      <div id="xbk-frame"></div>
+      <div id="xbk-tag"><span class="sc-t44 sc-w900 sc-opt" data-fill="tag">交給 AI 剪</span></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-breakout'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const OPEN = P.at('#451@以前'), HIT = P.at('#452@跳出來');   // 講到引子／講到那個詞的時刻
+    P.sfx('impact', '#452@跳出來');     // 頭冒出來那一下的音效（句號和 HIT 一樣）
+
+    // 相框的位置：照講者框算（和 build 裁去背層用的 lib/matte.mjs breakoutWindow 同一個算法；載入時算一次，不用改）
+    const SP = P.region('speaker'), TOP = SP[1] + 40, HEAD = Math.round(0.3 * (SP[3] - 80));
+    const WL = Math.max(120, Math.round(SP[0]) - 20), WR = Math.min(1800, Math.round(SP[0] + SP[2]) + 20), WB = Math.min(880, Math.round(SP[1] + SP[3]));
+    const WT0 = Math.max(100, TOP - 40), WT1 = TOP + HEAD + 10, B = 16;   // 開口上緣：一開始在頭頂上面、HIT 之後在下巴
+    const put = function (id, l, t, w, h) { const el = document.getElementById(id); el.style.left = l + 'px'; el.style.top = t + 'px'; el.style.width = w + 'px'; el.style.height = h + 'px'; };
+    put('xbk-b1', 0, 0, WL, 1080); put('xbk-b2', WR, 0, 1920 - WR, 1080); put('xbk-b3', WL, 0, WR - WL, WT0); put('xbk-b4', WL, WB, WR - WL, 1080 - WB);
+    put('xbk-lid', WL, WT0, WR - WL, WT1 - WT0);
+    put('xbk-frame', WL - B, WT0 - B, WR - WL + 2 * B, WB - WT0 + 2 * B);
+    const TAG = document.getElementById('xbk-tag'); TAG.style.left = (WL - B) + 'px'; TAG.style.top = (WT1 - B - 92 - 16) + 'px';   // 縮下來之後的相框左上角外面（不會被疊在最上面的講者擋到）
+
+    // 拍 1 講到引子：紙底淡入 → ＋0.15 相框彈出（講者整個人在相框裡）
+    P.in('.xbk-bg', OPEN, { dur: 0.3 });
+    P.pop('#xbk-frame', OPEN + 0.15, { from: 0.94, dy: 0, dur: 0.5 });
+    // 拍 2 講到那個詞：相框上緣往下縮到下巴（紙底跟著蓋住上半）→ 頭留在相框上面 → ＋0.3 標籤彈出
+    P.wipe('#xbk-lid', HIT, { dir: 'down', dur: 0.35 });
+    P.morph('#xbk-frame', HIT, { top: WT1 - B, height: WB - WT1 + 2 * B }, { from: { top: WT0 - B, height: WB - WT0 + 2 * B }, dur: 0.35, ease: P.V2.EASE.in });
+    P.pop('#xbk-tag', HIT + 0.3, { from: 0.6, dy: 0 });
+
+    // 收：段尾前 0.3 秒整組淡出（overlay 自己退場）
+    P.out('#xbk-all', P.dur() - 0.3);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-breakout'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

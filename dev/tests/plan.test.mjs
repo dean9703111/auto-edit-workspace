@@ -289,7 +289,7 @@ test('--test 平移：root 長度＝秒數、底片 data-media-start＝起點、
   assert.match(html, /src="\.\.\/assets\/rough\.mp4" data-start="0" data-duration="6" data-media-start="17\.5"/);
   assert.match(html, /id="el-s02"[^>]*\n\s+data-start="1"/);
   assert.doesNotMatch(html, /el-s01/);
-  assert.match(html, /<audio id="sfx-s02" src="\.\.\/assets\/sfx\/ding\.wav" data-start="1\.\d+"/);
+  assert.match(html, /<audio id="sfx-s02" src="\.\.\/assets\/sfx\/ding(?:-[23])?\.wav" data-start="1\.\d+"/);
   assert.match(html, /href="\.\.\/kit\/scene\.css"/);
   assert.match(html, /data-composition-src="compositions\/s02-concept\.html"/, 'data-composition-src 以專案根目錄為準，不加 ../');
   assert.deepEqual(skipped, []);
@@ -947,6 +947,30 @@ test('直式（009 FR-060）：fx/catalog.json portrait: "band" 的特效 ⚠「
   assert.match(band(R(10, 'portrait'))[0], /fx-10（.+）直式只剩中間一條 → 換成 portrait: "ok" 的特效（同類 FLOW 都是滿版，換別類）或拿掉$/);
   assert.deepEqual(band(R(1, 'portrait')), [], 'portrait: "ok" 不報');
   assert.deepEqual(band(R(7)), [], '橫式不報');
+});
+
+test('025 只做橫式的模板動畫（規格 portrait: none）：四支新的疊加模板都標了、有替代建議', () => {
+  const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'shared', 'template', 'custom');
+  for (const n of ['x-tags', 'x-wall', 'x-magazine', 'x-breakout']) {
+    const s = JSON.parse(fs.readFileSync(path.join(dir, `${n}.fill.json`), 'utf8'));
+    assert.equal(s.portrait, 'none', n);
+    assert.ok(s.portraitAlt && s.layout === 'overlay', n);
+  }
+});
+
+test('025 同一張字卡動態一集最多 2 次：第 3 次 ⚠；29 數字計數不算', () => {
+  const fxs = (id, n, no, vars) => ({ id, type: 'fx', fx: no, from: `#${n}`, to: `#${n}e`, vars });
+  const out = run([fxs('f1', 1, 4, { text: '甲' }), fxs('f2', 2, 4, { text: '乙' }), fxs('f3', 3, 4, { text: '丙' }), fxs('n1', 4, 29, { label: '做了', number: '1', unit: '支' }), fxs('n2', 5, 29, { label: '做了', number: '2', unit: '支' }), fxs('n3', 6, 29, { label: '做了', number: '3', unit: '支' })]);
+  assert.ok(byId(out, 'f3').warnings.some((w) => /字卡動態 04 這一集已經用了 2 次/.test(w)), byId(out, 'f3').warnings.join('\n') + (out.errors || []).join('\n'));
+  assert.ok(!byId(out, 'f2').warnings.some((w) => /已經用了/.test(w)));
+  assert.ok(!byId(out, 'n3').warnings.some((w) => /已經用了/.test(w)));
+});
+
+test('025 吸睛的模板動畫一集有上限：x-wordcut 第 2 次 ⚠，第 1 次不報', () => {
+  const wc = (id, from, to) => ({ id, type: 'custom', template: 'x-wordcut', from, to, slots: { word: '剪片', openAt: from, hitAt: `${to.slice(0, -1)}@開場` } });
+  const out = run([wc('x1', '#1', '#2e'), { id: 's2', scene: 'concept', from: '#3', to: '#4e', slots: { term: '名詞', desc: '說明' } }, wc('x3', '#5', '#6e')]);
+  assert.ok(byId(out, 'x3').warnings.some((w) => /x-wordcut 一集最多 1 次，這是第 2 次/.test(w)), byId(out, 'x3').warnings.join('\n') + '\n' + out.errors?.join('\n'));
+  assert.ok(!byId(out, 'x1').warnings.some((w) => /一集最多/.test(w)));
 });
 
 test('文字對時：fs-compare 整欄一起進，只看每欄第一項，改 beats（不叫人寫單項 at）', async () => {

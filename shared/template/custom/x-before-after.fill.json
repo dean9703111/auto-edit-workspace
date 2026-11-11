@@ -69,6 +69,11 @@
       "max": 8,
       "required": true
     },
+    "delta": {
+      "label": "漲跌標（選填；兩個數字的差，例「−89%」「省 160」；講到好處時蓋在右欄右上角）",
+      "type": "text",
+      "max": 3
+    },
     "ratio": {
       "label": "右欄量條長度＝新 ÷ 舊（兩邊先換算成同一個單位：3 小時 vs 20 分鐘 → 20 ÷ 180 ＝ 0.111）",
       "type": "number",
@@ -112,6 +117,7 @@
     "afterNum": "20",
     "afterUnit": "分鐘",
     "gain": "NG 一次剪掉",
+    "delta": "−89%",
     "ratio": 0.111,
     "beforeAt": "#32@手動",
     "painAt": "#33@逐句",
@@ -157,6 +163,14 @@
       "sfx": "success"
     },
     {
+      "if": "delta",
+      "beat": "4",
+      "at": "`{saveAt}`＋0.35",
+      "show": "漲跌標「{delta}」蓋在右欄右上角",
+      "moves": "彈出（漲跌標）",
+      "focus": "漲跌標"
+    },
+    {
       "beat": "5",
       "at": "`{saveAt}`＋0.6",
       "show": "—",
@@ -170,5 +184,23 @@
       "moves": "回均衡；退焦（左欄 → 0.7）",
       "focus": "整體"
     }
-  ]
+  ],
+  "sampleMin": {
+    "title": "剪一集要多久",
+    "beforeLabel": "手動剪輯",
+    "beforeIcon": "clock",
+    "beforeNum": "3",
+    "beforeUnit": "小時",
+    "pain": "逐句剪、反覆預覽",
+    "afterLabel": "AI 剪輯",
+    "afterIcon": "zap",
+    "afterNum": "20",
+    "afterUnit": "分鐘",
+    "gain": "NG 一次剪掉",
+    "ratio": 0.111,
+    "beforeAt": "#32@手動",
+    "painAt": "#33@逐句",
+    "afterAt": "#34@AI",
+    "saveAt": "#35@省下"
+  }
 }

@@ -108,6 +108,23 @@ test('speechWhisper：現成的停頓結果（--v1）只留保留段轉、時間
 // ---------- 講稿外：字數判斷 ----------
 const LINES = ['大家好歡迎來到工程師下班有約', '現在當手機掃碼連上電腦後就能即時顯示拍攝畫面', '接著我們來看第二個痛點多支手機無法同時開始與停止', '這套工具需要節點二十四以上的版本才能執行', '安裝完成後要重新開一個終端機來安裝最新的版本'];
 
+test('025 贅字：語助詞與口頭禪列出來（講稿裡有同一個詞就不列）；cuts.md 預設不勾、不寫待確認；落在 NG 列裡的不另外列', () => {
+  let t = 0;
+  const seq = (s, gap = 0) => { t += gap; const w = say(s, t); t += [...s].length * 0.2; return w; };
+  const words = [...seq(LINES[0], 0.5), ...seq('嗯嗯', 0.3), ...seq(LINES[1], 0.1), ...seq('就是說', 0.2), ...seq(LINES[2], 0.1)];
+  const r = M.ngScanRows(words, { lines: LINES });
+  assert.deepEqual(r.fillers.map((f) => f.filler), ['嗯嗯', '就是說'], JSON.stringify(r.fillers));
+  assert.match(r.fillers[0].text, /「嗯嗯」/);
+  const rows = F.cutRows({ ...r, script: { lines: LINES } }).filter((x) => /^贅字/.test(x.reason));
+  assert.equal(rows.length, 2);
+  assert.ok(rows.every((x) => x.cut === false && !x.pending), '預設不勾、不算待確認');
+  assert.match(F.cutsMarkdown({ rows }), /\| \[ \] \| [\d:.]+–[\d:.]+ \| [^|]*「嗯嗯」[^|]* \| 贅字「嗯嗯」：預設不剪/);
+  assert.deepEqual(M.fillerRows(words, [...LINES, '就是說這樣也可以']).map((f) => f.filler), ['嗯嗯'], '講稿裡有「就是說」→ 不列');
+  const f0 = r.fillers[0];
+  const covered = F.cutRows({ ng: [{ start: f0.start - 1, end: f0.end + 1, text: '重講', again: 9, line: 2 }], fillers: r.fillers, script: { lines: LINES } });
+  assert.equal(covered.filter((x) => /^贅字/.test(x.reason)).length, 1, '落在 NG 列裡的贅字不另外列');
+});
+
 test('ng-scan 講稿外：字數接近（whisper 聽錯）→ real 否；講稿字數遠少（多講一段）→ real，時間碼只含多講的字；片頭片尾也看', () => {
   let t = 0;
   const seq = (s, gap = 0) => { t += gap; const w = say(s, t); t += [...s].length * 0.2; return w; };

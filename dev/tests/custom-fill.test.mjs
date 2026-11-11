@@ -195,6 +195,22 @@ test('expandIcons：空的 data-icon 填 SVG，填過的不動，找不到回報
   assert.equal(F.expandIcons(r.html.replace('<i data-icon="nope"></i>', ''), icons).html, r.html.replace('<i data-icon="nope"></i>', ''), '填過的不動');
 });
 
+test('025 x-scene 貼紙風格：sticker: true → 舞台標 data-sticker、最後一拍 peel: true、分鏡寫貼上／撕走；沒開 sticker 或不在最後一拍的 peel ✖', () => {
+  const s = F.readFillSpec(CUSTOM, 'x-scene');
+  const parts = [{ id: 'a', illus: 'phone', opts: { screen: 'video' }, label: '原片' }, { id: 'b', illus: 'laptop', opts: { screen: 'blank' }, label: '講稿' }];
+  const slots = { title: '要準備的東西', sticker: true, parts, beats: [{ at: '#12@原片', in: ['a'] }, { at: '#13@講稿', in: ['b'] }, { at: '#14@不用了', peel: true }] };
+  const r = F.fillTemplate({ spec: s, html: read('x-scene'), id: 'x1', slots, icons, kitDir });
+  assert.deepEqual(r.errors, []);
+  assert.match(r.html, /<div id="[\w-]*stage" data-sticker /);
+  assert.match(r.html, /\[T3, \{ peel: true \}\]/);
+  const sheet = F.renderSheet(s, slots, 'x1');
+  assert.match(sheet, /貼上（原片）/); assert.match(sheet, /撕走（全部貼紙）/); assert.doesNotMatch(sheet, /回均衡/);
+  const noStk = F.fillTemplate({ spec: s, html: read('x-scene'), id: 'x1', slots: { ...slots, sticker: false }, icons, kitDir });
+  assert.ok(noStk.errors.some((e) => /peel：撕走只有貼紙風格能用/.test(e)), noStk.errors.join('\n'));
+  const mid = F.fillTemplate({ spec: s, html: read('x-scene'), id: 'x1', slots: { ...slots, beats: [slots.beats[0], { at: '#13@不用了', peel: true }, { at: '#14@講稿', in: ['b'] }] }, icons, kitDir });
+  assert.ok(mid.errors.some((e) => /只能放在最後一拍/.test(e)), mid.errors.join('\n'));
+});
+
 test('x-scene：拍裡提到的元件沒寫 in 就自動補；從頭到尾沒提到的放第一拍；隔著別的元件的連接線擋下來', () => {
   const s = { title: '測試', parts: [{ id: 'a', illus: 'phone' }, { id: 'b', illus: 'phone' }, { id: 'c', illus: 'phone' }, { id: 'd', illus: 'phone' }, { id: 'e', illus: 'phone', pre: true }],
     beats: [{ at: '#1@手機', state: ['a', 'blank', 'play'], focus: 'a' }, { at: '#2@電腦', line: 'a>b' }, { at: '#3@雲端', in: ['c'], focus: 'c' }] };

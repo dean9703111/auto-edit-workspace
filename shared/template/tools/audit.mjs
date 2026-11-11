@@ -104,6 +104,7 @@ import { groupWarnings, runCount } from './lib/flow.mjs';
 import { contactSheet, poolOn } from './lib/raster.mjs';
 import { FULL, gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
   judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings, rootSelectorFindings } from './lib/audit-rules.mjs';
+import { matteKindOf } from './lib/matte.mjs';
 import { templateFor, formatReport as checkTable } from './lib/plan.mjs';
 import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings, pickBeatSheet } from './lib/audit-beats.mjs';
 import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners } from './lib/audit-illus.mjs';
@@ -357,7 +358,7 @@ export async function audit(flags, { log = console.log } = {}) {
         msg: `index.html 和 plan.json 對不上：#el-${j.it.id} 在 index.html 從 ${m.host.start}s 開始，plan.json 算出來是 ${j.it.start}s`, fix: `重跑 node shared/template/tools/build.mjs --project ${project}` });
       return out;
     }
-    out.raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), badgeBox: pl ? null : j.it.badgeBox ?? null, speakerBox: res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
+    out.raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), badgeBox: pl ? null : j.it.badgeBox ?? null, speakerBox: matteKindOf(j.it, P.out) ? null : res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
       W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.geo ? { geo: pl.geo } : {}), ...(pl && pl.stage ? { stage: pl.stage } : {}) }));
     out.raw.push(...judgeLayout(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, ...(pl && pl.stage && pl.stage.window ? { contentY: [pl.stage.window[1], pl.stage.window[3]] } : j.it.wide && j.it.seg?.design ? { contentY: FULL.y } : {}) }));
     // 012 版面：完成態量 data-layout 容器（SceneLayout.measure，版面座標）；有容器時 illus 的手排對齊交給它
