@@ -554,11 +554,11 @@ test('024 語意地圖（純函式）：parseMap 認範圍與級；checkMap 擋�
   assert.deepEqual(synced.warns, [], '邊錄邊講蓋住的句子不用寫進地圖');
   assert.match(M.checkMap(M.parseMap('#1–#12 | 情境 | A | x |'), { part, types }).warns.join(), /沒寫理由/);
   const opts = M.mapOptions(c.rows.filter((r) => r.sem !== '亂寫'), sit);
-  assert.match(opts[0], /^#1–#3 步驟 B：08 Step 字卡｜04c 全畫面流程｜情境動畫 x-process\.html$/);
+  assert.equal(opts[0], '#1–#3 步驟 B：示意動畫 x-scene（講解在描述具體的動作、物件或過程）｜08 Step 字卡（「第一步／第二步」「首先…接著…最後」＋動詞）｜04c 全畫面流程（流程「A → B → C」，站排成一直線）｜情境動畫 x-process.html（流程有先後、站不在一直線〔上下錯落〕、要逐站亮起）｜custom x-checklist（2–4 件要確認／完成的事）｜custom x-checklist-ai（交給 AI 或工具跑的 2–4 項工作，每項有結果）｜custom x-terminal-code（講一小段程式在做什麼）', '每個選項後面帶一句什麼句子用它');
   assert.match(opts[1], /x-metaphor.*（A：一樣先套模板/);
   assert.match(opts[2], /^#7–#7 轉場 C：串場用最便宜的/);
   const specNames = ['media', '01 chapter', '06 concept', '07 key-point', '08 steps', '10 tips', '11 summary', '15 quote', '04c fs-flow', 'fx 01 文字爆發', 'fx 03 印章蓋印', 'fx 29 數字計數', 'x-process', 'x-metaphor', 'x-scene'];
-  assert.match(M.mapOptions(c.rows.slice(0, 1), sit, specNames)[0], /^#1–#3 步驟 B：08 steps｜04c fs-flow｜x-process$/, '有寫法.md 的名稱：印能直接寫進大綱的名稱');
+  assert.equal(M.mapOptions(c.rows.slice(0, 1), sit, specNames)[0], '#1–#3 步驟 B：x-scene（講解在描述具體的動作、物件或過程）｜08 steps（「第一步／第二步」「首先…接著…最後」＋動詞）｜04c fs-flow（流程「A → B → C」，站排成一直線）｜x-process（流程有先後、站不在一直線〔上下錯落〕、要逐站亮起）', '有寫法.md 的名稱：印能直接寫進大綱的名稱');
   assert.deepEqual(M.specKeys('回顧 → 11；金句 → 15', specNames), ['11 summary', '15 quote']);
   assert.deepEqual(M.specKeys('前一段是模板動畫 → 後面接一段 fx 03 印章', specNames), ['fx 03 印章蓋印']);
   assert.deepEqual(M.specKeys('media 段（USAGE.md 第 5 節）：運鏡', specNames), ['media']);
@@ -572,13 +572,13 @@ test('024 語意地圖（純函式）：parseMap 認範圍與級；checkMap 擋�
   // 024 試跑：照秒數只列放得下的；最少項目放得下、全部放不下的照列但標出來
   const mins = { '08 steps': 6, '04c fs-flow': 4, 'x-process': 9 }, fulls = { '04c fs-flow': 7 };
   const timed = M.mapOptions(c.rows.slice(0, 1), sit, specNames, { secsOf: () => 5.5, minOf: (n) => mins[n] || 0, fullOf: (n) => fulls[n] || 0 })[0];
-  assert.equal(timed, '#1–#3 步驟 B（5.5 秒）：04c fs-flow（項目全用上要 7 秒，這裡只放得下幾項）；放不下：08 steps ≥ 6 秒、x-process ≥ 9 秒（真的要用就和前後一行併成一段）');
+  assert.equal(timed, '#1–#3 步驟 B（5.5 秒）：x-scene（講解在描述具體的動作、物件或過程）｜04c fs-flow（流程「A → B → C」，站排成一直線；項目全用上要 7 秒，這裡只放得下幾項）；放不下：08 steps ≥ 6 秒、x-process ≥ 9 秒（真的要用就和前後一行併成一段）');
   assert.match(M.mapOptions(c.rows.slice(0, 1), sit, specNames, { secsOf: () => 2, minOf: () => 3 })[0], /這一行太短，這一型的模板都放不下/);
   const cs = Array.from({ length: 5 }, (_, i) => ({ n: i + 1, start: i * 3, end: i * 3 + 2.5 }));
   assert.equal(M.rowSeconds({ a: 2, z: 3 }, cs), 6, '到下一句開口（--outline 會接上空檔）');
   assert.equal(M.rowSeconds({ a: 4, z: 5 }, cs), 5.5, '最後一句到它講完');
   const voiceOnly = specNames.filter((n) => !/^(06|07|08|10|11|15) /.test(n));
-  assert.match(M.mapOptions(c.rows.slice(0, 1), sit, voiceOnly)[0], /^#1–#3 步驟 B：04c fs-flow｜x-process$/, '版式不能用的字卡不列，也不印原文');
+  assert.equal(M.mapOptions(c.rows.slice(0, 1), sit, voiceOnly)[0], '#1–#3 步驟 B：x-scene（講解在描述具體的動作、物件或過程）｜04c fs-flow（流程「A → B → C」，站排成一直線）｜x-process（流程有先後、站不在一直線〔上下錯落〕、要逐站亮起）', '版式不能用的字卡不列，也不印原文');
   // 全片：20 行 → 預算 6、最多 8；超過 ✖，開場、結尾沒有 A ⚠，5 分鐘以上沒有視覺語言 ✖
   const mk = (a, tier, sem = '步驟') => ({ raw: `#${a}`, a, z: a, sem, tier, say: `第 ${a} 句`, note: tier === 'A' ? '理由' : '' });
   const parts = [{ key: 'ch01', title: '一', firstN: 1, lastN: 10 }, { key: 'ch02', title: '二', firstN: 11, lastN: 20 }];
@@ -628,7 +628,7 @@ test('024 語意地圖端到端：--map 驗一份（第一回合不印模板）�
   assert.match(r.stdout, /--merge-drafts$/m);
   assert.ok(fs.existsSync(path.join(work, '分鏡素材', '語意地圖.md')));
   r = run('--map', 'ch01');
-  assert.match(r.stdout, /#5–#8 步驟 B（14 秒）：08 steps｜04c fs-flow｜x-process/, "印秒數和能直接寫進大綱的名稱");
+  assert.match(r.stdout, /#5–#8 步驟 B（14 秒）：x-scene（[^）]+）｜08 steps（[^）]+）｜04c fs-flow（[^）]+）｜x-process（/, "印秒數、能直接寫進大綱的名稱和什麼句子用它");
   assert.match(r.stdout, /--outline ch01$/m);
   fs.writeFileSync(path.join(work, 'drafts', 'ch01.outline.md'), 's0101 | #1 | #5 | key-point | 開場 | —\ns0102 | #5 | #9 | x-process | 步驟 | 人走過三站\ns0103 | #9 | #12e | key-point | 回顧 | —\n');
   r = run('--outline', 'ch01');

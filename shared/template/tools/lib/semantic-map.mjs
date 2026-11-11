@@ -110,14 +110,33 @@ export function fxPicker(fx = [], per = 2) {
   };
 }
 
+// 每個選項後面帶一句「什麼句子用它」（弱模型只看名稱分不出同一家族的兄弟：x-trend／x-trend-blocks、x-architecture／x-architecture-send）
+// 取 SITUATIONS §3「句子長這樣」：例句後面括號裡的說明；只有例句就印例句；「不要用在」寫了一集超過幾次的一起帶上
+const HINT_MAX = 36;
+export function optHint(r) {
+  const say = String(r?.say || '').trim();
+  if (!say) return '';
+  let h = say;
+  const p = say.startsWith('「') && say.match(/」（(.+)）$/);
+  if (p) h = p[1];
+  else if (!say.replace(/「[^」]*」/g, '').trim()) h = `例：${say.match(/^「([^」]*)」/)[1]}`;   // 只有例句
+  else if (say.includes('：「')) h = say.split('：「')[0];                                     // 「講解在描述…：「例句」」只留說明
+  h = h.replace(/（/g, '〔').replace(/）/g, '〕').replace(/[｜|]/g, '、');
+  if (h.length > HINT_MAX) h = `${h.slice(0, HINT_MAX)}…`;
+  const lim = String(r.avoid || '').match(/一集超過 (\d+) (次|段)/);
+  return lim ? `${h}；一集最多 ${lim[1]} ${lim[2]}` : h;
+}
+
 export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, minOf = null, fullOf = null, fx = null } = {}) {
-  const bySem = new Map();
+  const bySem = new Map(), hints = new Map();
   for (const r of sitRows) for (const sem of String(r.sem || '').split('、').filter(Boolean)) {   // 一列可以掛好幾個語意（去背三招：同一句常被標成問答、情境／故事）
     if (!bySem.has(sem)) bySem.set(sem, []);
     const keys = specNames.length ? specKeys(r.first, specNames) : [];
     // 有代號卻對不到寫法.md：這個版式不能用（沒有講者不能用疊加字卡、直式不提供 03），不列
     const coded = /^(fx \d{2}|\d{2}[a-d]?)(?=[\s／])|`|(?:→|或)\s*\d{2}/.test(r.first);
-    bySem.get(sem).push(...(keys.length ? keys : specNames.length && coded ? [] : [optName(r.first)]));
+    const names = keys.length ? keys : specNames.length && coded ? [] : [optName(r.first)];
+    bySem.get(sem).push(...names);
+    for (const n of names) if (!hints.has(`${sem}|${n}`)) hints.set(`${sem}|${n}`, optHint(r));
   }
   // 秒數（024 試跑：挑了放不下時間下限的模板，到 --outline 才發現，換模板、併段、重跑佔掉第二回合大半時間）
   const pickFx = fx ? fxPicker(fx) : null;
@@ -128,7 +147,11 @@ export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, 
     const short = secs == null ? [] : opts.filter((o) => need(o) > secs + 0.05);
     if (short.length) opts = opts.filter((o) => !short.includes(o));
     // 最少項目放得下、全部項目放不下：照列，但標出來（試跑時子代理看到「全用上要 13.8 秒」就自己換掉了）
-    if (secs != null && fullOf) opts = opts.map((o) => { const f = Number(fullOf(o)) || 0; return f > secs + 0.05 ? `${o}（項目全用上要 ${f} 秒，這裡只放得下幾項）` : o; });
+    opts = opts.map((o) => {
+      const f = secs != null && fullOf ? Number(fullOf(o)) || 0 : 0;
+      const notes = [hints.get(`${r.sem}|${o}`), f > secs + 0.05 ? `項目全用上要 ${f} 秒，這裡只放得下幾項` : ''].filter(Boolean);
+      return notes.length ? `${o}（${notes.join('；')}）` : o;
+    });
     const head = `#${r.a}–#${r.z} ${r.sem} ${r.tier}${secs == null ? '' : `（${secs} 秒）`}`;
     const tail = short.length ? `；放不下：${short.map((o) => `${o} ≥ ${need(o)} 秒`).join('、')}（真的要用就和前後一行併成一段）` : '';
     // 字卡動態：短的行（≤ FX_ROW_MAX 秒）才列；每一行給的那兩張不一樣（輪流），大綱的模板欄直接寫「fx 05」

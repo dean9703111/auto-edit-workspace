@@ -11,6 +11,7 @@
  *
  * 專案要先跑過 build.mjs --scaffold（有 work/分鏡素材/）。每次都先把專案複製到暫存（APFS clone，不動原專案）。
  * 每種寫法最多一輪修正（工具有 ✖ 才修），兩種一樣，比較才公平。
+ * --stream：用 mmx 的串流輸出（非串流的單次請求 300 秒就斷，--timeout 調高也沒用；串流拿不到 token 數，表上會是 0）。
  * --dry：不呼叫 mmx，只組提示、印長度（檢查腳本本身）。
  * mmx 沒登入、額度用完：印原因、結束碼 2，不影響剪片流程。
  */
@@ -86,7 +87,7 @@ function args(argv) {
   for (let i = 0; i < argv.length; i++) {
     const m = argv[i].match(/^--(.+)$/);
     if (!m) continue;
-    if (['dry', 'help'].includes(m[1])) f[m[1]] = true; else f[m[1]] = argv[++i];
+    if (['dry', 'help', 'stream'].includes(m[1])) f[m[1]] = true; else f[m[1]] = argv[++i];
   }
   return f;
 }
@@ -97,7 +98,7 @@ function mmx(F, messages, tmp) {
   if (F.dry) return Promise.resolve({ ok: true, text: '', secs: 0, input: messages.reduce((n, x) => n + x.content.length, 0), output: 0, thinking: 0, dry: true });
   const file = path.join(tmp, `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.json`);
   fs.writeFileSync(file, JSON.stringify(messages));
-  const a = ['text', 'chat', '--messages-file', file, '--max-tokens', String(F['max-tokens']), '--output', 'json', '--timeout', String(F.timeout), '--non-interactive', ...(F.model ? ['--model', F.model] : [])];
+  const a = ['text', 'chat', '--messages-file', file, '--max-tokens', String(F['max-tokens']), '--output', 'json', '--timeout', String(F.timeout), '--non-interactive', ...(F.stream ? ['--stream'] : []), ...(F.model ? ['--model', F.model] : [])];
   const t0 = Date.now();
   return new Promise((resolve) => {
     const c = spawn('mmx', a, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -108,7 +109,9 @@ function mmx(F, messages, tmp) {
     c.on('close', () => {
       const secs = Math.round((Date.now() - t0) / 100) / 10;
       let j = null;
-      try { j = JSON.parse(out.slice(out.indexOf('{'))); } catch { /* 下面處理 */ }
+      try { j = JSON.parse(out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1)); } catch { /* 下面處理 */ }
+      // --stream：mmx 只回 { content: "文字" }，沒有 token 數和 stop_reason（單次請求超過 300 秒會被斷線，串流不會）
+      if (typeof j?.content === 'string' && j.content) return resolve({ ok: true, text: j.content, thought: '', secs, input: 0, output: 0, thinking: 0, stop: 'stream' });
       if (!j?.content) return resolve({ ok: false, secs, why: `mmx 沒有回應內容：${(err || out).trim().split('\n').slice(-2).join(' ').slice(0, 200)}` });
       const text = j.content.filter((x) => x.type === 'text').map((x) => x.text).join('\n');
       const thought = j.content.filter((x) => x.type === 'thinking').map((x) => x.thinking).join('\n');

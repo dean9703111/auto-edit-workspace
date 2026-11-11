@@ -231,7 +231,7 @@ export function mapCmd(P, key0) {
   const n = (t) => rows.filter((r) => r.tier === t).length;
   console.log(`地圖通過：${rows.length} 行（A ${n('A')}、B ${n('B')}、C ${n('C')}），${warns.length} 個 ⚠${nth >= 2 && warns.length ? '。可以交件，⚠ 不用再修' : ''}`);
   if (mapPassed(P, ctx.parts)) {
-    console.log('第二回合：每一行可以用的模板（照語意縮好、只列這一行秒數放得下的，名稱直接寫進大綱的模板欄；寫法用 --spec 查，一次查完）：');
+    console.log('第二回合：每一行可以用的模板（照語意縮好、只列這一行秒數放得下的，名稱直接寫進大綱的模板欄，括號裡是什麼句子用它、不要抄進大綱；寫法用 --spec 查，一次查完）：');
     const specMd = readOpt(path.join(packDir(P), '寫法.md'));
     const list = specEntries(specMd);
     // 字卡動態的候選：寫法.md 列的那幾張（已經照版式篩過）和它們「適合的語意」

@@ -94,7 +94,7 @@ export function situationRows(md) {
     if (!on || !l.startsWith('| ')) return;
     const cells = l.replace(/^\|\s*/, '').replace(/\s*\|\s*$/, '').split(/\s+\|\s+/);
     if (cells[0] === '句子長這樣') return;
-    rows.push({ line: i + 1, say: cells[0] ?? '', layout: cells[1] ?? '', first: cells[2] ?? '', beat: cells[3] ?? '', sem: cells[9] ?? '' });
+    rows.push({ line: i + 1, say: cells[0] ?? '', layout: cells[1] ?? '', first: cells[2] ?? '', beat: cells[3] ?? '', avoid: cells[7] ?? '', sem: cells[9] ?? '' });
   });
   return rows;
 }
