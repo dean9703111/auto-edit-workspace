@@ -95,7 +95,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --map-merge
 node shared/template/tools/build.mjs --project projects/<專案> --merge-drafts
 ```
 
-第一回合：`--scaffold` 切了幾份就派幾個子代理寫語意地圖（派工照 `references/chapter-worker.md`），**同一則回覆一次全部派出**，一次最多 4 個，超過就分批；只有 1 份就自己寫（子代理用 `--map <份>` 自己驗）。全部回來才跑第 1 行：你是導演，只讀 `work/分鏡素材/語意地圖.md`、不讀字幕，照 `references/director.md` 挑 A、統一標法、寫視覺語言，再跑同一條到印「語意地圖通過」。第二回合：照它印的派工（能接續第一回合的子代理就接續，不能就重派），子代理各寫 `work/drafts/chNN.json`、各自驗過；全部回來才跑第 2 行合併。合併通過會接著產生分鏡表，最後印停點 ③ 那一行。貼那一行之前整集看一次，只看兩處（`SITUATIONS.md` §6）：第一份草稿開頭幾段的 `story.say` 有沒有開場轉折句、最後一份結尾幾段有沒有回到前面的清單。缺了才改那一份草稿、再跑一次同一條合併，最多一輪。有 `work/screen-sync.json`（邊錄邊講）時，合併會自己把 sync 段放進 plan.json，不用另外跑 `--write-plan`。合併印「派一個設計師寫鏡位腳本」才做步驟 6；印了停點 ③ 那一行就跳過步驟 7。
+第一回合：`--scaffold` 切了幾份就派幾個子代理寫語意地圖（派工照 `references/chapter-worker.md`），**同一則回覆一次全部派出**，一次最多幾個照工具印的那一行（預設 10 個），超過就分批；只有 1 份就自己寫（子代理用 `--map <份>` 自己驗）。全部回來才跑第 1 行：你是導演，只讀 `work/分鏡素材/語意地圖.md`、不讀字幕，照 `references/director.md` 挑 A、統一標法、寫視覺語言，再跑同一條到印「語意地圖通過」。第二回合：照它印的派工（能接續第一回合的子代理就接續，不能就重派），子代理各寫 `work/drafts/chNN.json`、各自驗過；全部回來才跑第 2 行合併。合併通過會接著產生分鏡表，最後印停點 ③ 那一行。貼那一行之前整集看一次，只看兩處（`SITUATIONS.md` §6）：第一份草稿開頭幾段的 `story.say` 有沒有開場轉折句、最後一份結尾幾段有沒有回到前面的清單。缺了才改那一份草稿、再跑一次同一條合併，最多一輪。有 `work/screen-sync.json`（邊錄邊講）時，合併會自己把 sync 段放進 plan.json，不用另外跑 `--write-plan`。合併印「派一個設計師寫鏡位腳本」才做步驟 6；印了停點 ③ 那一行就跳過步驟 7。
 完成判準：`--map-merge` 印「語意地圖通過」；`--merge-drafts` 0 個 ✖，最後印停點 ③ 那一行（有要先寫的鏡位腳本時改印派工，步驟 6 做完再跑步驟 7）。
 常見錯誤：`--map-merge` 印 `✖ A … 全片最多 N 段` → 你全片排序，把多的在地圖改成 B，不要叫子代理重寫；合併的 `✖ …` → 照 → 改那一份 `work/drafts/chNN.json`，再合併；不要直接改 plan.json 的 scenes，下次合併會蓋掉。
 

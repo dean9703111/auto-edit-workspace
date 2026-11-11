@@ -34,6 +34,9 @@
  *       使用者說要照做的那幾條寫進 shared/偏好.md「照做」（也可以直接寫一句規則）。之後每一集寫分鏡、改段落前都要讀這個檔。
  *   node shared/template/tools/status.mjs --prefs-skip "a2"      使用者說不要的那幾條記進「不採用」，下次不再問。
  *   node shared/template/tools/status.mjs --prefs-drop "2"       把「照做」的第 2 條拿掉（使用者說不要了）。
+ *   node shared/template/tools/status.mjs --agents 6
+ *       子代理一次最多派幾個（1–16，預設 10；不用 --project）：寫進 shared/設定.json，之後工具印的派工那一行都照這個數字。
+ *       使用者說「子代理一次派 6 個」「子代理只能開 2 個」時跑；1＝一次只派一個。
  *
  * 判斷依據：work/ 裡各階段產物在不在、修改時間先後（例：storyboard.md 比 plan.json 新＝還在分鏡表；
  * storyboard.md 是 versions.mjs accept／use 寫的不算），以及 work/製作進度.md 的「## 停點紀錄」表（同一個停點以最後一列為準，
@@ -55,6 +58,7 @@ import { narrationOf, mainCandidates } from './media.mjs';
 import { resolveFormat, formatLine, formatErrors, probeDims, canvasOf } from './lib/canvas.mjs';
 import { pendingRevisions, storyboardByVersions, nextRound, openRound } from './versions.mjs';
 import { readSpeaker, SET_CMD } from './lib/speaker.mjs';
+import { agentLimit, saveAgentLimit, SETTINGS_FILE } from './lib/agents.mjs';
 import { ensureProgress, setFact, appendStop, progressFile, STOP_STATES } from './lib/progress.mjs';
 import { jobState } from './lib/job.mjs';
 import { untouchedSample } from './lib/plan.mjs';
@@ -509,7 +513,7 @@ export function projectStatus(project) {
       [dz.filter((id) => !scripted(id)), `你是設計師，負責 ${A} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完載入 hyperframes skill，接著照 design-build.md 做動畫。`],
       [motion.filter((id) => !isDz(id)), '照 .agents/skills/auto-edit-motion/references/worker-brief.md 改 <段> 的動畫檔。'],
     ].filter(([ids]) => ids.length).map(([ids, l]) => `（${ids.join('、')}）${l}`);
-    next = `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（一次最多 4 個）；派工訊息只送下面對應的那一行（換掉 <段>，不要另外加要求）：\n  ${lines.join('\n  ')}\n全部回來才跑下一行`;
+    next = `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（一次最多 ${agentLimit(path.resolve(HERE, '..', '..'))} 個，回來再派下一批）；派工訊息只送下面對應的那一行（換掉 <段>，不要另外加要求）：\n  ${lines.join('\n  ')}\n全部回來才跑下一行`;
     nextStop = '④ 完成影片預覽';
     cmds = [review];
     ev.push(`plan.json 的 ${list8(motion)} 動畫還沒做（x 檔不在、還是範例原文，或內容設計動畫還是占位）`);
@@ -697,7 +701,7 @@ export function prefsDrop(root, arg) {
   return { gone, prefs };
 }
 
-const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'back', 'format', 'prefs-add', 'prefs-skip', 'prefs-drop'];
+const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'back', 'format', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents'];
 function parseFlags(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
@@ -720,6 +724,8 @@ function cli() {
   const flags = parseFlags(process.argv.slice(2));
   if (flags.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
   const root = path.resolve(HERE, '..', '..', '..');
+  // 子代理一次最多派幾個：不看專案
+  if (flags.agents != null) { const r = saveAgentLimit(path.join(root, 'shared'), flags.agents); console.log(`✓ 子代理一次最多派 ${r.n} 個（寫進 shared/${SETTINGS_FILE}；之後工具印的派工那一行都照這個數字）`); return 0; }
   // 跨集偏好：不看專案
   if (flags['prefs-add'] != null || flags['prefs-skip'] != null) {
     const what = flags['prefs-add'] != null ? 'add' : 'skip';

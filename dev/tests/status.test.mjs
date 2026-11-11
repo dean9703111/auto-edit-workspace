@@ -670,3 +670,17 @@ test('025 跨集偏好：收集各專案 r<N>.md 的「建議改規則」（無�
   assert.match(md, /## 照做\n\n- 字卡不要用紅色（使用者說的，\d{4}-\d\d-\d\d）\n\n## 不採用\n\n- 章節轉場一律不要音效（/);
   fs.rmSync(root, { recursive: true, force: true });
 });
+
+test('子代理一次最多派幾個：shared/設定.json 的 agents（沒有檔、格式不對＝10）；--agents 只收 1–16 的整數，不動檔裡其他設定', async () => {
+  const A = await imp('lib/agents.mjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-agents-'));
+  assert.equal(A.agentLimit(dir), 10, '沒有設定檔：預設 10');
+  fs.writeFileSync(path.join(dir, A.SETTINGS_FILE), '{"agents": 99, "other": true}');
+  assert.equal(A.agentLimit(dir), 10, '超出範圍：當成沒設定');
+  assert.equal(A.saveAgentLimit(dir, '6').n, 6);
+  assert.equal(A.agentLimit(dir), 6);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, A.SETTINGS_FILE), 'utf8')), { agents: 6, other: true }, '其他設定留著');
+  for (const bad of ['0', '17', '2.5', 'abc']) assert.throws(() => A.saveAgentLimit(dir, bad), /1–16 的整數/);
+  assert.equal(A.agentLimit(dir), 6, '寫錯不會蓋掉原本的值');
+  fs.rmSync(dir, { recursive: true, force: true });
+});

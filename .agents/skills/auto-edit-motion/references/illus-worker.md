@@ -2,7 +2,7 @@
 
 只在使用者另外要求畫線稿元件時用（例：「幫我畫一個路由器的元件」）。內容設計動畫要的新元件，由做那段的設計師自己畫（`design-build.md` 的「新畫線稿元件」），不用派工人。
 
-要畫的每個元件派一個工人，同一則回覆一次全部派出（一次最多 4 個，超過就分批）。工人只寫 `projects/<專案>/work/hyperframes/illus-local/<名稱>.svg` 和 `projects/<專案>/work/reports/illus-<名稱>.md`，不改 x 檔、plan.json、storyboard.md、`shared/`。
+要畫的每個元件派一個工人，同一則回覆一次全部派出（一次最多幾個照 AGENTS.md「子代理分工」，預設 10 個，超過就分批）。工人只寫 `projects/<專案>/work/hyperframes/illus-local/<名稱>.svg` 和 `projects/<專案>/work/reports/illus-<名稱>.md`，不改 x 檔、plan.json、storyboard.md、`shared/`。
 
 ## 派工前先準備（主代理做）
 

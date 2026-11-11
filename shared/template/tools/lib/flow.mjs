@@ -11,6 +11,8 @@ import { probeDuration } from './ff.mjs';
 import { canvasOf, resolveFormat } from './canvas.mjs';
 import { alignOutline, scriptOutline, splitParts, renderCommon, renderSnippets, renderPart, renderSemantic, designTarget, designTargetOf, designEligible, designCap, semanticTypes, situationRows } from './scaffold.mjs';
 import { readPrefs } from './prefs.mjs';
+import { agentLimit } from './agents.mjs';
+const agentsOf = (P) => agentLimit(path.resolve(P.templateDir, '..'));   // 子代理一次最多派幾個（shared/設定.json；預設 10）
 import { parseMap, checkMap, mapOptions, mergeMaps, designVsMap, rowSeconds } from './semantic-map.mjs';
 import { listFillSpecs, designFileOf, illusNames, isBlankDesign } from './custom-fill.mjs';
 import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn } from './storyboard-gen.mjs';
@@ -142,7 +144,9 @@ export function runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }) {
   const scriptMd = fs.existsSync(path.join(P.project, '講稿.md')) ? readScript(path.join(P.project, '講稿.md')) : '';
   const outline = alignOutline(scriptOutline(scriptMd), cues);
   const videoDur = probeDuration(P.video);
-  const parts = splitParts({ cues, outline, videoDur });
+  let breaks = [];   // 剪乾淨時剪過停頓的地方（work/cutpoints.json）：分份的切點優先落在這裡
+  try { breaks = (JSON.parse(readOpt(path.join(P.project, 'work', 'cutpoints.json')) || '{}').cuts || []).filter((c) => c.kind === 'pause').map((c) => Number(c.at)).filter(Number.isFinite); } catch { /* 沒有就照字幕的空檔切 */ }
+  const parts = splitParts({ cues, outline, breaks });
   const { hasCamera, kinds } = mainKinds(P);
   const input = {
     project: rel(P.project), format: { label: `${fmt.format === 'portrait' ? '直式' : '橫式'} ${canvasOf(fmt.format).W}×${canvasOf(fmt.format).H}`, portrait: fmt.format === 'portrait' },
@@ -172,7 +176,7 @@ export function runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }) {
   console.log(`→ ${rel(dir)}/：共用.md、寫法.md、語意.md＋${parts.length} 份（${parts.map((p) => `${p.key} ${p.chars} 字 ${clock(p.seconds)}`).join('、')}）；${cues.length} 句字幕`);
   console.log(`內容設計動畫候選：約三成的段（全片估計 ${target} 段左右，最多 ${designCap(target)} 段）：第一回合各份在語意地圖提名 A，主代理全片挑；停點 ③ 使用者勾了才做。底片在背景預先處理`);
   if (parts.length > 1) {
-    console.log(`→ 下一步（第一回合：語意地圖）：一份派一個子代理，同一則回覆一次派出（一次最多 4 個，回來再派下一批）；派工訊息照抄，換掉 <份>：`);
+    console.log(`→ 下一步（第一回合：語意地圖）：一份派一個子代理，同一則回覆一次派出（一次最多 ${agentsOf(P)} 個，回來再派下一批）；派工訊息照抄，換掉 <份>：`);
     console.log(`  你只負責 ${rel(P.project)} 的分鏡 <份> 這一份（全片 ${parts.length} 份：${parts.map((p) => p.key).join('、')}，其他份有別的子代理，不要碰）第一回合：語意地圖。照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 做。`);
     console.log('全部回來後合併地圖、全片校正：');
   } else console.log(`→ 下一步：照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 的第一回合寫 ${rel(draftsDir(P))}/ch01.map.md，寫完合併地圖、全片校正：`);
@@ -273,7 +277,7 @@ export function mapMergeCmd(P) {
   writeAtomic(mapState(P), `${JSON.stringify({ passed: true, at: new Date().toISOString(), hash: mapsHash(P, ctx.parts), ...m.stats }, null, 2)}\n`);
   console.log(`語意地圖通過：${head}${m.warns.length && nth < 2 ? '。⚠ 看一輪：照 → 改那幾行再跑一次就好' : ''}`);
   if (ctx.parts.length > 1) {
-    console.log('→ 下一步（第二回合：照地圖寫草稿）：能接續子代理就請第一回合那個子代理接著做，不能就重派；同一則回覆一次派出（一次最多 4 個）；派工訊息照抄，換掉 <份>：');
+    console.log(`→ 下一步（第二回合：照地圖寫草稿）：能接續子代理就請第一回合那個子代理接著做，不能就重派；同一則回覆一次派出（一次最多 ${agentsOf(P)} 個，回來再派下一批）；派工訊息照抄，換掉 <份>：`);
     console.log(`  你只負責 ${rel(P.project)} 的分鏡 <份> 這一份（全片 ${ctx.parts.length} 份：${ctx.parts.map((p) => p.key).join('、')}，其他份有別的子代理，不要碰）第二回合：照語意地圖寫草稿。照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 做。`);
     console.log('全部回來後合併：');
   } else console.log(`→ 下一步：照 .agents/skills/auto-edit-storyboard/references/chapter-worker.md 的第二回合寫 ${rel(draftsDir(P))}/ch01.json，寫完合併：`);
@@ -906,7 +910,7 @@ export function mergeDrafts(P, flags = {}, deps = {}) {
   if (r.status !== 0) { console.log('→ 下一步：照 ✖ 改（改那一份 work/drafts/chNN.json，再合併一次）'); console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --merge-drafts`); return 1; }
   const todo = designs.filter((d) => !fs.existsSync(path.join(designsDir(P), `${d.id}.md`)));
   if (todo.length) {
-    console.log(`→ 下一步：內容設計動畫一段派一個設計師寫鏡位腳本，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息只送下面這一行（換掉 <段>，不要另外加要求）：`);
+    console.log(`→ 下一步：內容設計動畫一段派一個設計師寫鏡位腳本，同一則回覆一次派出（一次最多 ${agentsOf(P)} 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息只送下面這一行（換掉 <段>，不要另外加要求）：`);
     console.log(`  你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本。`);
     console.log('全部回來後產生分鏡表：');
   } else if (deps.loadLib && !flags['no-storyboard']) {
@@ -1074,7 +1078,7 @@ export function applyCmd(P, flags, { loadLib }) {
   const noScript = todo.filter((d) => !fs.existsSync(path.join(designsDir(P), `${d.id}.md`)));
   const withScript = todo.filter((d) => !noScript.includes(d));
   if (todo.length) {
-    console.log(`→ 下一步：內容設計動畫一段派一個設計師，同一則回覆一次派出（一次最多 4 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息只送下面這一行（換掉 <段>，不要另外加要求）：`);
+    console.log(`→ 下一步：內容設計動畫一段派一個設計師，同一則回覆一次派出（一次最多 ${agentsOf(P)} 個，回來再派下一批）：${todo.map((d) => d.id).join('、')}。派工訊息只送下面這一行（換掉 <段>，不要另外加要求）：`);
     if (withScript.length) console.log(`  ${noScript.length ? `（${withScript.map((d) => d.id).join('、')}）` : ''}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先載入 hyperframes skill，再照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。`);
     if (noScript.length) console.log(`  ${withScript.length ? `（${noScript.map((d) => d.id).join('、')}）` : ''}你是設計師，負責 ${rel(P.project)} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完載入 hyperframes skill，接著照 design-build.md 做動畫。`);
     console.log('全部回來後定稿：');

@@ -19,6 +19,7 @@
 | 「可以了，輸出完成影片」「輸出剪映素材」（使用者也可以在剪輯台按「輸出完成影片」，自己跑完測試片段、整支與驗收；已輸出就不要重做） | `auto-edit-deliver` |
 | 「做封面」「封面圖」「做縮圖」 | `auto-edit-deliver` 的 `references/cover.md` |
 | 「換風格」「換主色」「換背景」「換暗色」「有哪些風格」「這集用 XX 風格」「講者設定成…」 | `auto-edit-style` |
+| 「子代理一次派 6 個」「子代理只能開 2 個」 | 不用 Skill：`node shared/template/tools/status.mjs --agents <N>` |
 | 「拆這支參考片」「分析這支影片怎麼剪」（要給影片檔的路徑） | `auto-edit-style` 的 `references/reference-video.md` |
 
 優先序：我當下的話 > 本檔 > `shared/偏好.md`（有才看：我確認過每一集都照做的規則）> `shared/style.md` > `shared/template/USAGE.md` > `USAGE-reference.md`、`SITUATIONS.md`、`REVIEW.md` > Skill；派工時派工訊息 > Skill。
@@ -46,7 +47,7 @@
 
 ## 規則
 
-1. 不要覆寫、移動或刪除 `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/講者.json`。我確認某條規則以後每一集都照做時，用 `status.mjs --prefs-add` 寫 `shared/偏好.md`（不要手動改這個檔）。構圖台的「用這一格當預覽參考圖」會寫 `shared/template/preview/speaker-local.jpg`（直式 `speaker-v-local.jpg`；不進版控）。要刪除 `work/` 以外的檔案前，先問我。
+1. 不要覆寫、移動或刪除 `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 的任何檔案。例外：我要求換主色、背景、風格包或講者預設時，可以改 `shared/template/` 的 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`kit/look.json`、`bg-*.jpg`，以及用 `brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪）；我給姓名、頭銜或說「不要講者介紹」時，用 `brand.mjs speaker` 寫 `shared/講者.json`。我確認某條規則以後每一集都照做時，用 `status.mjs --prefs-add` 寫 `shared/偏好.md`（不要手動改這個檔）。我說子代理一次派幾個時，用 `status.mjs --agents` 寫 `shared/設定.json`。構圖台的「用這一格當預覽參考圖」會寫 `shared/template/preview/speaker-local.jpg`（直式 `speaker-v-local.jpg`；不進版控）。要刪除 `work/` 以外的檔案前，先問我。
 2. 停點只有六個，照「停點總表」；停下來時回覆最後兩行照固定格式。我說「不用停」「跑到停點 N」才連跑。
 3. 安裝新工具前，先告訴我指令和用途，等我同意再執行。照 `setup/` 手冊做時，整份清單問一次就好。
 4. 字幕以專案的 `講稿.md` 為準，由 `media.mjs srt-align` 照講稿排、對時間：講稿一行原則上是一則（完整語句），太長、太短由工具拆、併，不要自己拆句或併句。之後要改字（講稿本身的錯字、講稿沒有的 whisper 殘字），就在剪輯台或 `work/rough.srt` 改那一則字幕，只改字、不拆不併；不改 `講稿.md`，也不用重跑 `srt-align`。顯示時去掉「，」「。」「；」「：」，保留「、」「！」「？」；用繁體中文，技術名詞保留英文原文，中英文之間加半形空格。沒有講稿時工具會轉繁體、照標點切成子句，你不用補標點，也不要猜內容。
@@ -104,7 +105,7 @@
 
 ## 子代理分工
 
-獨立的工作分給子代理平行做；你（主代理）負責 plan.json、派工、整合與驗收。有能派子代理的工具就用，**同一則回覆一次全部派出**，一次最多 4 個（平台上限），超過就分批，回來再派下一批；沒有才自己照那支 Skill 一個一個做。
+獨立的工作分給子代理平行做；你（主代理）負責 plan.json、派工、整合與驗收。有能派子代理的工具就用，**同一則回覆一次全部派出**，一次最多幾個照工具印的派工那一行（預設 10 個），超過就分批，回來再派下一批；平台開不了這麼多個（派工被拒絕、只開了一部分）時，照它實際開得了的數量分批，並在回報裡告訴我實際一次開了幾個、建議我把上限改成多少；我說「子代理一次派 N 個」「子代理只能開 N 個」時跑 `node shared/template/tools/status.mjs --agents <N>`（1–16）；沒有才自己照那支 Skill 一個一個做。
 
 | 工作 | 什麼時候分 | 派工訊息 | 子代理只能寫 |
 |---|---|---|---|

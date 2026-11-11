@@ -8,7 +8,7 @@
 //   situationQuestions(md)／animationRules(md) → 定大類的四題、情境動畫三條判準
 //   beatIndex(md)                           → BEATS.md 每個拍型的行號範圍
 //   sceneSnippet(scene)                     → 這個情境最少要寫的 plan.json 一段（有 <…> 佔位）
-//   splitParts({ cues, outline })           → 章節切成分工單位（照字數：太長的章再切、太小的份併起來）
+//   splitParts({ cues, outline, breaks })   → 章節切成分工單位（照字數：太長的章再切、太小的份併起來）
 //   designTarget(seconds)                   → 這一段時間估計幾段內容設計動畫候選（還不知道段數時用）
 //   designTargetOf(n)、designEligible(seg)  → 寫好草稿後照實際段數算：約三成的段（media、章節段不算）
 //   renderCommon(input)、renderSnippets(input)、renderPart(part, input) → 共用.md、寫法.md、chNN.md
@@ -174,8 +174,9 @@ const cell = (s) => String(s).replace(/\|/g, '｜').replace(/\s+/g, ' ').trim();
 const rangeOf = (r) => (Array.isArray(r) ? r : [r.start, r.end]);
 
 // 分章（specs/024）：照字數切，不照秒數：子代理要讀懂的是字，語速快慢不該改變一份的份量（數字定義在 shared/style.md「分章」）
-export const PART_CHARS = 2000;      // 一份最多約 2,000 字（去標點、空白）：一個子代理讀得仔細、又不用太久
-export const PART_MIN_CHARS = 600;   // 不到 600 字的份併到相鄰那份（一份就要一個子代理，太小不划算）
+export const PART_CHARS = 1000;      // 一份最多約 1,000 字（去標點、空白，約 13 段畫面）：比較弱的模型一份也填得完（2026-11-11 mmx 實測：868 字 3 次都填完，1,956 字 15 次只填完 1 次）
+export const PART_MERGE_MAX = 1300;  // 太小的份併到相鄰那份，併完最多 1,300 字（多一點比多派一個子代理划算）
+export const PART_MIN_CHARS = 300;   // 不到 300 字的份併到相鄰那份（一份就要一個子代理，太小不划算）
 export const DESIGN_SHARE = 0.3;  // 內容設計動畫候選：約三成的段（其他七成套模板）
 const SEG_SECONDS = 10;           // 估算用：一段平均約 10 秒（--scaffold 還不知道段數）
 export const charsOf = (text) => String(text ?? '').replace(/[\s\p{P}\p{S}]/gu, '').length;
@@ -186,9 +187,9 @@ export const designTargetOf = (n) => (n < 3 ? 0 : Math.max(1, Math.round(n * DES
 // 上限：一段內容設計動畫比模板多用很多額度（實測 30 分鐘片首讀多 3 萬字、累積多 71 萬字），超過就挑最值得的
 export const designCap = (target) => (target ? target + Math.max(1, Math.round(target / 3)) : 0);
 
-// 章節切成分工單位：有 ## 照章切；一份超過 PART_CHARS 字就切成差不多大的幾份，切點先挑小節（###）開頭，沒有才挑停頓最長的地方；
-// 最後把不到 PART_MIN_CHARS 字的份併到相鄰那份（挑併起來比較小的一邊，併完不超過 PART_CHARS）
-export function splitParts({ cues, outline = [] }) {
+// 章節切成分工單位：有 ## 照章切；一份超過 PART_CHARS 字就切成差不多大的幾份，切點先挑小節（###）開頭，再挑剪乾淨時剪過停頓的地方（breaks：講者本來就停了一下，不會切在一句話中間），都沒有才挑停頓最長的地方；
+// 最後把不到 PART_MIN_CHARS 字的份併到相鄰那份（挑併起來比較小的一邊，併完不超過 PART_MERGE_MAX）
+export function splitParts({ cues, outline = [], breaks = [] }) {
   if (!cues.length) return [];
   const chapters = outline.filter((x) => x.level === 2);
   const bounds = [];
@@ -214,10 +215,16 @@ export function splitParts({ cues, outline = [] }) {
       d = Math.abs(s - goal); best = k;
     }
     if (best > 0) return best;
+    const inWindow = (k) => { const s = span(a, k - 1); return s >= goal - 300 && s <= Math.min(PART_CHARS, goal + 300); };
+    for (let k = a + 1; k <= last; k++) {
+      if (!inWindow(k) || !breaks.some((t) => t >= cues[k - 1].end - 0.3 && t <= cues[k].start + 0.3)) continue;
+      const far = Math.abs(span(a, k - 1) - goal);
+      if (far < d) { d = far; best = k; }
+    }
+    if (best > 0) return best;
     let gap = -1;
     for (let k = a + 1; k <= last; k++) {
-      const s = span(a, k - 1);
-      if (s < goal - 300 || s > Math.min(PART_CHARS, goal + 300)) continue;
+      if (!inWindow(k)) continue;
       const g = cues[k].start - cues[k - 1].end;
       if (g > gap) { gap = g; best = k; }
     }
@@ -241,7 +248,7 @@ export function splitParts({ cues, outline = [] }) {
     chapters: p.chapter && p.chapterN && p.piece <= 1 ? [{ chapter: p.chapter, chapterN: p.chapterN, title: p.title, sub: p.sub || '' }] : [],
   }));
   for (;;) {
-    const i = list.findIndex((p, k) => span(p.a, p.z) < PART_MIN_CHARS && [list[k - 1], list[k + 1]].some((q) => q && span(Math.min(p.a, q.a), Math.max(p.z, q.z)) <= PART_CHARS));
+    const i = list.findIndex((p, k) => span(p.a, p.z) < PART_MIN_CHARS && [list[k - 1], list[k + 1]].some((q) => q && span(Math.min(p.a, q.a), Math.max(p.z, q.z)) <= PART_MERGE_MAX));
     if (i < 0) break;
     const size = (q) => (q ? span(Math.min(list[i].a, q.a), Math.max(list[i].z, q.z)) : Infinity);
     const j = size(list[i - 1]) <= size(list[i + 1]) ? i - 1 : i + 1;

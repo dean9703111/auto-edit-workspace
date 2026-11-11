@@ -52,12 +52,12 @@ test('真的文件：situationRows 行號對得上、四題與三條判準讀得
   assert.ok(K.animationRules(fs.readFileSync(path.join(WORKSPACE, 'shared', 'style.md'), 'utf8')).some((l) => /段長 ≥ 4 秒/.test(l)));
 });
 
-test('splitParts（024）：照字數切：有 ## 照章切、超過 2,000 字切成差不多大的幾份（切點先挑小節）、不到 600 字併到相鄰那份；每句都在某一份、不重複', () => {
+test('splitParts（024）：照字數切：有 ## 照章切、超過 1,000 字切成差不多大的幾份（切點先挑小節，再挑剪過停頓的地方）、不到 300 字併到相鄰那份；每句都在某一份、不重複', () => {
   // 30 分鐘、900 句（每句 2 秒、10 個字，共 9,000 字），每 50 句一個停頓長一點
   const many = Array.from({ length: 900 }, (_, i) => ({ n: i + 1, start: i * 2 + (Math.floor(i / 50) * 0.5), end: i * 2 + 1.8 + (Math.floor(i / 50) * 0.5), text: `這是第${String(i + 1).padStart(4, '0')}句字幕` }));
   assert.equal(K.charsOf('這是，第 1 句！OK'), 7, '去掉標點、空白');
   const none = K.splitParts({ cues: many, outline: [] });
-  assert.equal(none.length, 5, `9,000 字切 5 份（現在 ${none.length}）`);
+  assert.equal(none.length, 9, `9,000 字切 9 份（現在 ${none.length}）`);
   for (const p of none) assert.ok(p.chars <= K.PART_CHARS && p.chars >= K.PART_MIN_CHARS, `${p.key} ${p.chars} 字`);
   assert.ok(Math.max(...none.map((p) => p.chars)) - Math.min(...none.map((p) => p.chars)) <= 700, '差不多大');
   let next = 1;
@@ -73,17 +73,21 @@ test('splitParts（024）：照字數切：有 ## 照章切、超過 2,000 字�
   assert.equal(parts[0].chapter, null, '開場的勾子先上，不放章節轉場');
   assert.equal(parts.find((p) => p.chapterN != null).chapter, 1, '章號從下一章算起');
   // 小節：切點落在最接近目標字數的 ### 開頭
-  const secs = [{ level: 2, title: '第一章', first: 'x', n: 1 }, { level: 3, title: '小節', first: 'x', n: 151 }];
-  const two = K.splitParts({ cues: many.slice(0, 300), outline: secs });
-  assert.deepEqual(two.map((p) => p.firstN), [1, 151], '3,000 字切兩份，切在小節開頭');
-  // 太小的份併起來：開場 40 字、第一章 300 字，併到 600 字以上（第二章 2,660 字先切成兩份，第一份接上），兩章的章節段都留著
+  const secs = [{ level: 2, title: '第一章', first: 'x', n: 1 }, { level: 3, title: '小節', first: 'x', n: 101 }];
+  const two = K.splitParts({ cues: many.slice(0, 200), outline: secs });
+  assert.deepEqual(two.map((p) => p.firstN), [1, 101], '2,000 字切兩份，切在小節開頭');
+  // 沒有小節：切在剪過停頓的地方（breaks），不是字數剛好的那一句
+  const atBreak = K.splitParts({ cues: many.slice(0, 191), outline: [], breaks: [many[90].end + 0.1] });
+  assert.deepEqual(atBreak.map((p) => p.firstN), [1, 92], '切在第 91 句後面的停頓');
+  assert.deepEqual(K.splitParts({ cues: many.slice(0, 191), outline: [] }).map((p) => p.firstN), [1, 101], '沒有 breaks：照字幕的空檔');
+  // 太小的份併起來：開場 40 字、第一章 300 字，併到 300 字以上（第二章 2,660 字另外切成幾份），兩章的章節段都留著
   const later = K.splitParts({ cues: many.slice(0, 300), outline: [{ level: 2, title: '第一章', first: 'x', n: 5 }, { level: 2, title: '第二章', first: 'x', n: 35 }] });
-  assert.equal(later[0].title, '開場＋第一章＋第二章（1）', '開場和第一章都太小：一直併到 600 字以上');
+  assert.equal(later[0].title, '開場＋第一章', '開場 40 字太小：併到第一章（340 字，夠了就不再併）');
   assert.deepEqual(later.flatMap((p) => p.chapters.map((c) => c.chapterN)), [5, 35], '第一句之前有講話：章節照放，併在一起的每章都有章節段');
   assert.ok(later.every((p) => p.chars >= K.PART_MIN_CHARS && p.chars <= K.PART_CHARS));
   const tiny = K.splitParts({ cues: many.slice(0, 120), outline: [{ level: 2, title: '一', first: 'x', n: 2 }, { level: 2, title: '二', first: 'x', n: 40 }, { level: 2, title: '三', first: 'x', n: 80 }] });
-  assert.equal(tiny.length, 1, '全部加起來不到 2,000 字：併成一份');
-  assert.deepEqual(tiny[0].chapters.map((c) => c.chapterN), [2, 40, 80], '每章的章節段都在');
+  assert.equal(tiny.length, 3, '開場 10 字併進第一章；三章各 380–410 字，夠大就各自一份');
+  assert.deepEqual(tiny.flatMap((p) => p.chapters.map((c) => c.chapterN)), [2, 40, 80], '每章的章節段都在');
   assert.equal(K.designTarget(1800), 54, '30 分鐘約 180 段的三成');
   assert.equal(K.designTarget(30), 0);
   assert.equal(K.designTargetOf(20), 6);
