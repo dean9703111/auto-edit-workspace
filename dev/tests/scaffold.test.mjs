@@ -537,7 +537,7 @@ test('024 語意地圖（純函式）：parseMap 認範圍與級；checkMap 擋�
   const types = K.semanticTypes(md), sit = K.situationRows(md);
   assert.equal(types.length, 16);
   const names = new Set(types.map((t) => t.name));
-  for (const r of sit) assert.ok(names.has(r.sem) || /金句/.test(r.sem), `SITUATIONS 第 ${r.line} 行的語意「${r.sem}」不在語意類型裡`);
+  for (const r of sit) for (const s of r.sem.split('、')) assert.ok(names.has(s) || /金句/.test(s), `SITUATIONS 第 ${r.line} 行的語意「${s}」不在語意類型裡`);
   for (const t of types) assert.ok(sit.some((r) => r.sem === t.name), `「${t.name}」沒有對到任何一列`);
   const rows = M.parseMap('句號範圍 | 語意 | 級 | 在講什麼 | 特徵\n|---|---|---|---|---|\n#1–#3 | 步驟 | B | 裝好 | 項目 3\n| #4-#6e | 定義 | a | 比喻 | 理由：核心 |\n#7 | 轉場 | C | 下一步 | —\n#9–#10 | 亂寫 | Z | x |\n');
   assert.deepEqual(rows.map((r) => [r.a, r.z, r.tier]), [[1, 3, 'B'], [4, 6, 'A'], [7, 7, 'C'], [9, 10, 'Z']]);

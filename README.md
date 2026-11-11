@@ -169,7 +169,7 @@ AI 先做一版，你有三種改法：
 |---|---|---|---|
 | 風格 | 主色、字型、背景圖、子母畫面外框 | `shared/template/styles/`、`shared/template/kit/brand.css` | 「換風格」「換主色」 |
 | 字卡 | 18 個情境模板、40 種字卡動態 | `shared/template/scenes/`、`shared/template/fx/` | 在分鏡表換編號 |
-| 模組 | 41 支情境動畫範例、線稿示意動畫 | `shared/template/custom/` | 「s12 重新設計」 |
+| 模組 | 41 支情境動畫範例（含講者去背、站在動畫前面的三招：整面詞牆、雜誌封面、破框而出）、線稿示意動畫 | `shared/template/custom/` | 「s12 重新設計」 |
 | 片型 | 橫式長片、直式短影片、只有聲音 | 開工決策表 | 「做直式」 |
 | 心法 | 哪種句子配哪種畫面、什麼時候推近講者、音效跟著情緒走 | `shared/template/SITUATIONS.md`、`shared/style.md`、`shared/template/BEATS.md` | 「以後都…」 |
 
@@ -383,4 +383,4 @@ TTS、BGM、Docker 都是選用功能，這個工作區用不到。只有這幾�
 - 影片：待補
 - FB：https://www.facebook.com/deanlinbao
 - Medium：https://dean-lin.medium.com/
-- 書籍：[《工程師下班有約》](https://www.books.com.tw/products/0010935713)
+- 書籍：[《工程師下班有約》](https://www.books.com.tw/products/E050284460)

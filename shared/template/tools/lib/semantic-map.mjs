@@ -112,12 +112,12 @@ export function fxPicker(fx = [], per = 2) {
 
 export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, minOf = null, fullOf = null, fx = null } = {}) {
   const bySem = new Map();
-  for (const r of sitRows) if (r.sem) {
-    if (!bySem.has(r.sem)) bySem.set(r.sem, []);
+  for (const r of sitRows) for (const sem of String(r.sem || '').split('、').filter(Boolean)) {   // 一列可以掛好幾個語意（去背三招：同一句常被標成問答、情境／故事）
+    if (!bySem.has(sem)) bySem.set(sem, []);
     const keys = specNames.length ? specKeys(r.first, specNames) : [];
     // 有代號卻對不到寫法.md：這個版式不能用（沒有講者不能用疊加字卡、直式不提供 03），不列
     const coded = /^(fx \d{2}|\d{2}[a-d]?)(?=[\s／])|`|(?:→|或)\s*\d{2}/.test(r.first);
-    bySem.get(r.sem).push(...(keys.length ? keys : specNames.length && coded ? [] : [optName(r.first)]));
+    bySem.get(sem).push(...(keys.length ? keys : specNames.length && coded ? [] : [optName(r.first)]));
   }
   // 秒數（024 試跑：挑了放不下時間下限的模板，到 --outline 才發現，換模板、併段、重跑佔掉第二回合大半時間）
   const pickFx = fx ? fxPicker(fx) : null;
