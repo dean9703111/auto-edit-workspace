@@ -22,7 +22,7 @@
     "in": { "label": "進場", "default": "0" }
   },
   "sfx": {
-    "main": null,
+    "main": { "sound": "ding", "at": "in + 0.1" },
     "extra": []
   },
   "lists": {},

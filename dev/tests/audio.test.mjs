@@ -134,8 +134,8 @@ const CONF = {
   'bgm-outro': { kind: 'bgm', volume: 0.562, targetDb: -11, additive: false, maxPerVideo: null },
 };
 
-test('SFX_RULES：3 s、0.2 s、每分 2 顆、上限比人聲小 3 dB、超過 60 s 沒有主音效算稀疏', () => {
-  assert.deepEqual({ ...A.SFX_RULES }, { gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3, sparseSec: 60 });
+test('SFX_RULES（030 照作者的剪映定剪）：3 s、0.2 s、任一分鐘 5 顆、整支平均 3 顆／分、上限比人聲小 3 dB、超過 60 s 沒有主音效算稀疏、反應音效句尾前 0.2 s', () => {
+  assert.deepEqual({ ...A.SFX_RULES }, { gapSec: 3, extraGapSec: 0.2, perMinute: 5, avgPerMinute: 3, capDb: -3, sparseSec: 60, tailLead: 0.2 });
 });
 
 test('sfxBudget：次數、附加音效、bgm 不算、資訊行', () => {
@@ -155,7 +155,7 @@ test('sfxBudget：次數、附加音效、bgm 不算、資訊行', () => {
   assert.match(b.warnings[0], /^⚠ 音效稀疏：0:01\.20–2:00\.00（119 秒）沒有主音效 → 在這段裡找踩坑句配 alert、結果句配 success/);
   assert.deepEqual(A.sfxBudget([{ id: 's02', name: 'pop', at: 50, volume: 0.6, main: true }, { id: 's03', name: 'pop', at: 100, volume: 0.6, main: true }], CONF, { outDur: 150 }).sparse, []);
   assert.equal(b.lines[0], '音效次數：pop 1、click 2、sparkle 0／6、thunder 0／3');
-  assert.equal(b.lines[1], '音效密度：主音效平均 0.5 顆／分（上限：任一分鐘 ≤ 2 顆，超過才 ⚠），附加音效 2 顆');
+  assert.equal(b.lines[1], '音效密度：主音效平均 0.5 顆／分（上限：任一分鐘 ≤ 5 顆，超過才 ⚠），附加音效 2 顆');
   assert.deepEqual(b.levels, { main: [-7.8, -7.8, -7.8], extra: [-19.6, -19.6] });
   assert.equal(A.sfxBudget([], CONF, { outDur: 60 }).lines[1], '音效密度：主音效 0 顆，附加音效 0 顆');
 });
@@ -169,15 +169,18 @@ test('sfxBudget：thunder 4 次 → 1 行 ⚠、四顆都保留', () => {
   assert.equal(b.warnings[0], '⚠ 音效 thunder 用了 4 次，每集上限 3 次（s1 0:12.40、s2 3:05.10、s3 6:44.00、s4 9:01.20）→ 留最重要的 3 次，其他段寫 "sfx": null 或換成 alert');
 });
 
-test('sfxBudget：一分鐘 3 顆主音效 ⚠，tick 不算', () => {
+test('sfxBudget：一分鐘 6 顆主音效 ⚠，tick 不算；整支平均超過 3 顆／分另外提醒', () => {
   const cues = [
-    ...[5, 20, 40].map((at, i) => ({ id: `s${i + 1}`, name: 'pop', at, volume: 0.6, main: true })),
+    ...[5, 12, 20, 28, 40, 50].map((at, i) => ({ id: `s${i + 1}`, name: 'pop', at, volume: 0.6, main: true })),
     ...[6, 7, 8, 9, 10].map((at) => ({ id: 's1', name: 'tick', at, volume: 0.55, main: false })),
     { id: 's9', name: 'click', at: 30, volume: 0.331, main: true },   // 主音效但 additive：不算
   ];
   const b = A.sfxBudget(cues, CONF, { outDur: 120 });
-  assert.deepEqual(b.dense, [{ from: 0, to: 60, n: 3, ids: ['s1', 's2', 's3'] }]);
-  assert.equal(b.warnings[0], '⚠ 音效密度：1 個一分鐘超過 2 顆主音效（0:00–1:00 3 顆：s1、s2、s3；附加音效 tick、click 不算）→ 每分鐘留最重要的 2 顆（chapter、thunder、shine、sparkle、alert、success 先留，ding、impact 先拿掉：那段寫 "sfx": null）');
+  assert.deepEqual(b.dense, [{ from: 0, to: 60, n: 6, ids: ['s1', 's2', 's3', 's4', 's5', 's6'] }]);
+  assert.equal(b.warnings[0], '⚠ 音效密度：1 個一分鐘超過 5 顆主音效（0:00–1:00 6 顆：s1、s2、s3、s4、s5、s6；附加音效 tick、click 不算）→ 每分鐘留最重要的 5 顆（chapter、thunder、shine、sparkle、alert、success 先留，ding、impact 先拿掉：那段寫 "sfx": null）');
+  assert.ok(!b.warnings.some((w) => /音效偏多/.test(w)), '120 秒 6 顆＝平均 3 顆／分，還在上限內');
+  const many = A.sfxBudget([5, 15, 25, 35, 65, 75, 85, 95].map((at, i) => ({ id: `s${i + 1}`, name: 'pop', at, volume: 0.6, main: true })), CONF, { outDur: 120 });
+  assert.match(many.warnings.join('\n'), /⚠ 音效偏多：主音效平均每分鐘 4 顆（超過 3 顆；作者自己的定剪平均 2\.3、最多 3\.2）/);
 });
 
 test('sfxBudget＋報告：chapter 調大 2 dB → 比人聲只小 1 dB，⚠ 音效比例', () => {
@@ -388,20 +391,26 @@ test('剪接點 RMS（真實素材）：現行 15 ms 微淡化 0 個凹洞', { s
   assert.equal(holes, 0);
 });
 
-test('thinMainSfx：每分鐘留 2 顆，優先序 chapter > alert／success > ding；明寫的 sfx、click 不動', () => {
+test('thinMainSfx：每分鐘超過上限照優先序留（chapter > alert／success > ding）；明寫的 sfx、click 不動；整支平均超過 3 顆／分從最擠的那一分鐘拿', () => {
   const conf = { chapter: {}, alert: {}, success: {}, ding: {}, impact: {}, click: { additive: true } };
   const it = (id, name, at, seg = {}) => ({ id, sfx: { name, at }, sfxExtra: [], seg });
   const items = [it('a', 'ding', 1), it('b', 'success', 10), it('c', 'chapter', 20), it('d', 'impact', 30), it('e', 'alert', 40), it('f', 'ding', 70)];
   items[1].sfxExtra = [{ name: 'click', at: 11, beat: true }, { name: 'ding', at: 12, beat: true }];
-  assert.equal(A.thinMainSfx(items, conf), 4);
+  assert.equal(A.thinMainSfx(items, conf, 2), 4);
   assert.deepEqual(items.filter((x) => x.sfx).map((x) => x.id), ['c', 'e', 'f'], '留 chapter、alert；下一分鐘的 ding 不受影響');
   assert.deepEqual(items[1].sfxExtra.map((c) => c.name), ['click'], '附加的 click 留著；P.sfx 的 ding 拿掉');
   assert.equal(items[0].sfxDropped.name, 'ding');
   const locked = [it('a', 'ding', 1, { sfx: 'ding' }), it('b', 'ding', 10, { sfx: 'ding' }), it('c', 'ding', 20, { sfx: 'ding' }), it('d', 'success', 30)];
-  assert.equal(A.thinMainSfx(locked, conf), 1, '明寫的都留，只拿掉沒明寫的');
+  assert.equal(A.thinMainSfx(locked, conf, 2), 1, '明寫的都留，只拿掉沒明寫的');
   assert.equal(locked[3].sfx, null);
   const quiet = [it('a', 'ding', 1), it('b', 'success', 10)];
   assert.equal(A.thinMainSfx(quiet, conf), 0);
+  // 030：預設任一分鐘 5 顆；整支平均 3 顆／分（120 秒＝6 顆）→ 8 顆拿掉 2 顆，先拿最擠那一分鐘裡的 ding、impact（後面的先拿）
+  const avg = [it('a', 'chapter', 1), it('b', 'ding', 10), it('c', 'alert', 20), it('d', 'ding', 30), it('e', 'success', 61), it('f', 'ding', 70), it('g', 'impact', 80), it('h', 'ding', 90)];
+  assert.equal(A.thinMainSfx(avg, conf, undefined, { outDur: 120 }), 2);
+  assert.deepEqual(avg.filter((x) => x.sfx).map((x) => x.id), ['a', 'b', 'c', 'e', 'f', 'g']);
+  const short = [1, 11, 21, 31, 41].map((at, i) => it(`s${i}`, 'ding', at));
+  assert.equal(A.thinMainSfx(short, conf, undefined, { outDur: 50 }), 0, '不到一分鐘的片至少留 5 顆');
 });
 
 test('rotateSfx：同名的音效照時間輪 本尊 → 變體 1 → 變體 2 → 本尊；沒有變體、沒有檔的不動；name／at／volume 不改', () => {

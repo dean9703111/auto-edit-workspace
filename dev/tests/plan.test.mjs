@@ -94,7 +94,7 @@ test('音效：3 秒內只留第一個，被拿掉的列進警告；起點＝事
   // keywords（測試預設）：主 ding 落在 items[0]（0.2）
   assert.equal(s1.sfx.at, r3(5.5 + 0.2 - L.sfx.ding.peak + 1 / 30));
   assert.equal(s2.sfx, null);
-  assert.equal(s2.sfxDropped.name, 'ding');
+  assert.equal(s2.sfxDropped.name, 'impact');
   assert.ok(s2.warnings.some((w) => /< 3s）.*已拿掉/.test(w)));
   assert.equal(s3.sfx.name, 'success');
   // 預設：07 tone warn＝alert；章節＝chapter（章名落定 titleAt＝起點＋0.45）；fx 10 的 catalog sfx 是 null → 不配
@@ -318,15 +318,15 @@ test('音效：版型預設——02–06、08、10–13 不配（2026-11-02）�
   assert.deepEqual(s.sfxExtra, []);
 });
 
-test('音效：07 key-point 依 tone 選 ding／alert／success', () => {
+test('音效：07 key-point 依 tone 選 impact（重點句配咚咚，030）／alert／success', () => {
   const res = run([
     { id: 's01', scene: 'key-point', from: '#1', duration: 5, slots: { key: '一' } },
     { id: 's02', scene: 'key-point', tone: 'warn', from: '#4', duration: 5, slots: { key: '二' } },
     { id: 's03', scene: 'key-point', tone: 'good', from: '#7', duration: 5, slots: { key: '三' } },
   ]);
   assert.deepEqual(res.errors, []);
-  assert.deepEqual(['s01', 's02', 's03'].map((id) => { const it = byId(res, id); return (it.sfx || it.sfxDropped).name; }), ['ding', 'alert', 'success']);
-  assert.equal(byId(res, 's01').sfx, null, '同一分鐘超過 2 顆：ding 先拿掉');
+  assert.deepEqual(['s01', 's02', 's03'].map((id) => { const it = byId(res, id); return (it.sfx || it.sfxDropped).name; }), ['impact', 'alert', 'success']);
+  assert.equal(byId(res, 's01').sfx.name, 'impact', '一分鐘 3 顆在上限（5 顆）內，都留');
   assert.equal(byId(res, 's02').sfx.name, 'alert');
 });
 

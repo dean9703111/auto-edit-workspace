@@ -24,7 +24,7 @@
     "keyAt": { "label": "重點揭開（綁講到重點的詞：#N@詞）", "default": "{{in}} + P.BEAT", "min": "{{in}} + P.BEAT" }
   },
   "sfx": {
-    "main": { "sound": { "default": "ding", "warn": "alert", "good": "success" }, "at": "keyAt" },
+    "main": { "sound": { "default": "impact", "warn": "alert", "good": "success" }, "at": "keyAt" },
     "extra": []
   },
   "lists": {},

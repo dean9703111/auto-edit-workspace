@@ -249,7 +249,7 @@ test('產生的 index.html：每個 cue 一個 <audio>（主 sfx-<id>、附加 s
   const html = read('index.html');
   const audios = [...html.matchAll(/<audio id="([^"]+)"[^>]*data-track-index="(\d+)"/g)];
   const ids = audios.map((m) => m[1]);
-  // s01 concept：主 1；s02 side-panel：主 1；s03 qa：附加 ding 1；s04 fx 29：主 1（都明寫，每分鐘 2 顆的精簡不動明寫的）
+  // s01 concept：主 1；s02 side-panel：主 1；s03 qa：附加 ding 1；s04 fx 29：主 1（都明寫，每分鐘上限的精簡不動明寫的）
   assert.deepEqual(ids, ['sfx-s01', 'sfx-s02', 'sfx-s03-e1', 'sfx-s04']);
   const tracks = audios.map((m) => m[2]);
   assert.equal(new Set(tracks).size, tracks.length);

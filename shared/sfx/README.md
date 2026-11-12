@@ -7,10 +7,10 @@
 
 | 檔名 | 聽起來像 | 用在哪 | 來源 | 授權 |
 |---|---|---|---|---|
-| `ding.wav` | 帶拍動的電子提示音「滴～」 | 講重點、提醒（「提醒一下大家」）、答案揭曉 | AI 生成（`dev/tools/make-sfx.mjs` 配方 `ding-c`） | CC0 1.0（AI 生成、作者釋出） |
+| `ding.wav` | 帶拍動的電子提示音「滴～」 | 提醒、小技巧、總結、答案揭曉 | AI 生成（`dev/tools/make-sfx.mjs` 配方 `ding-c`） | CC0 1.0（AI 生成、作者釋出） |
 | `success.wav` | 鐘琴四音「叮叮叮叮～」 | 解法、成果、完成、問題解決 | AI 生成（`dev/tools/make-sfx.mjs` 配方 `success-c`） | CC0 1.0（AI 生成、作者釋出） |
 | `alert.wav` | 低沉的電子蜂鳴「嗶、嗶——」 | 千萬不要、踩坑、錯誤、限制 | AI 生成（`dev/tools/make-sfx.mjs` 配方 `alert-d`） | CC0 1.0（AI 生成、作者釋出） |
-| `impact.wav` | 綜藝低鼓「咚、咚」 | 蓋章、重擊、數字或金句落定 | AI 生成（`dev/tools/make-sfx.mjs` 配方 `impact-d`） | CC0 1.0（AI 生成、作者釋出） |
+| `impact.wav` | 綜藝低鼓「咚、咚」 | 重點句、蓋章、重擊、數字或金句落定 | AI 生成（`dev/tools/make-sfx.mjs` 配方 `impact-d`） | CC0 1.0（AI 生成、作者釋出） |
 | `click.wav` | 滑鼠按下＋放開「喀-喀」 | 螢幕錄影或情境動畫裡看得到游標按下的地方，一下一顆 | Kenney UI Audio `mouseclick1.ogg`、`mouserelease1.ogg` | CC0 1.0 |
 | `chapter.wav` | 「喀喀」接有音高的「嘭」、低鼓鼓起來 | 章節轉場（01） | AI 生成（`dev/tools/make-sfx.mjs` 配方 `chapter-o`） | CC0 1.0（AI 生成、作者釋出） |
 | `sparkle.wav` | 高音一簇亮起＋鐘聲「鏘～叮鈴」 | 入場、介紹主角（14 講者介紹）、金句閃亮（15） | AI 生成（`dev/tools/make-sfx.mjs` 配方 `sparkle-h`） | CC0 1.0（AI 生成、作者釋出） |

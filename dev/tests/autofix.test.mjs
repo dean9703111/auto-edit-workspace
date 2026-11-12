@@ -158,19 +158,17 @@ test('空檔：講者會閃一下、≤ 3 秒的沒有畫面的區間接起來�
 });
 
 test('音效太密：拿掉最不重要、最後面的那顆（寫 "sfx": null）；keepSfx 的段不動', () => {
-  const plan = P([
-    { id: 's01', scene: 'concept', from: '#1', to: '#3', slots: { text: '一般說明文字' }, sfx: { name: 'success', at: '#2' } },
-    { id: 's02', scene: 'keywords', from: '#3', to: '#5', slots: { items: ['甲乙', '丙丁'] }, sfx: { name: 'ding', at: '#4' } },
-    { id: 's03', scene: 'concept', from: '#5', to: '#8e', slots: { text: '第三段說明' }, sfx: { name: 'alert', at: '#6' } },
-  ]);
+  // 030：任一分鐘最多 5 顆 → 六段都明寫音效（相隔 3.5 秒）才會太密
+  const plan = P([['s01', 'success'], ['s02', 'ding'], ['s03', 'alert'], ['s04', 'alert'], ['s05', 'success'], ['s06', 'alert']].map(([id, name], i) => ({ id, scene: 'concept', from: `#${i + 1}`, to: i === 5 ? '#7e' : `#${i + 2}`, slots: { text: '一般說明文字' }, sfx: { name, at: `#${i + 1}` } })));
   const r = fix(plan);
-  assert.ok(has(r.before.warnings, /^音效密度：1 個一分鐘超過 2 顆主音效/));
+  assert.ok(has(r.before.warnings, /^音效密度：1 個一分鐘超過 5 顆主音效/), r.before.warnings.join('\n'));
   assert.equal(seg(r.plan, 's02').sfx, null, 'ding 不在保留名單，先拿掉');
-  assert.deepEqual(seg(r.plan, 's01').sfx, { name: 'success', at: '#2' });
+  assert.deepEqual(seg(r.plan, 's01').sfx, { name: 'success', at: '#1' });
   assert.ok(!has(r.result.warnings, /^音效密度/));
   const kept = fix(plan, { keepSfx: ['s02'] });
-  assert.deepEqual(seg(kept.plan, 's02').sfx, { name: 'ding', at: '#4' });
-  assert.equal(seg(kept.plan, 's01').sfx, null, '保留名單裡 success 比 alert 先拿掉');
+  assert.deepEqual(seg(kept.plan, 's02').sfx, { name: 'ding', at: '#2' });
+  assert.equal(seg(kept.plan, 's05').sfx, null, '保留名單裡 success 比 alert 先拿掉，拿最後面的那顆');
+  assert.deepEqual(seg(kept.plan, 's01').sfx, { name: 'success', at: '#1' });
 });
 
 test('驗證不過就退回：改了會多出提醒的修法不留；only 以外的段不動', () => {
@@ -291,19 +289,15 @@ test('--merge-drafts 寫完 plan.json 自動修，合併紀錄記修過的版本
 });
 
 test('--apply-storyboard 定稿後自動修；使用者在分鏡表改過音效的段，音效不拿掉', { skip: hasFfmpeg ? false : '要 ffmpeg' }, () => {
-  writePlan([
-    { id: 's01', scene: 'concept', from: '#1', to: '#3', slots: { text: '一般說明文字' }, sfx: { name: 'success', at: '#2' } },
-    { id: 's02', scene: 'keywords', from: '#3', to: '#5', slots: { items: ['甲乙', '丙丁'] }, sfx: { name: 'alert', at: '#4' } },
-    { id: 's03', scene: 'concept', from: '#5', to: '#8e', slots: { text: '第三段說明' }, sfx: { name: 'alert', at: '#6' } },
-  ]);
-  fs.writeFileSync(path.join(proj, 'work', 'storyboard.md'), '# 分鏡表\n\n### s02｜關鍵詞\n\n- 音效：ding\n');
+  writePlan([['s01', 'success'], ['s02', 'ding'], ['s03', 'alert'], ['s04', 'alert'], ['s05', 'success'], ['s06', 'alert']].map(([id, name], i) => ({ id, scene: 'concept', from: `#${i + 1}`, to: i === 5 ? '#7e' : `#${i + 2}`, slots: { text: '一般說明文字' }, sfx: { name, at: `#${i + 1}` } })).map((s) => (s.id === 's02' ? { ...s, sfx: { name: 'alert', at: '#2' } } : s)));
+  fs.writeFileSync(path.join(proj, 'work', 'storyboard.md'), '# 分鏡表\n\n### s02｜一般字卡\n\n- 音效：ding\n');
   const r = tool(['--project', proj, '--apply-storyboard']);
   assert.match(r.stdout, /改：s02 音效：alert → ding/, r.stdout + r.stderr);
-  assert.match(r.stdout, /自動修好 1 處：音效太密 1\n  音效太密：s01：拿掉音效 success/);
+  assert.match(r.stdout, /音效太密：s05：拿掉音效 success/, r.stdout);
   const p = JSON.parse(fs.readFileSync(planFile(), 'utf8'));
-  assert.equal(seg(p, 's01').sfx, null);
-  assert.deepEqual(seg(p, 's02').sfx, { name: 'ding', at: '#4' }, '使用者剛選的 ding 不動（不然照優先序會先拿掉它）');
-  assert.deepEqual(seg(p, 's03').sfx, { name: 'alert', at: '#6' });
+  assert.equal(seg(p, 's05').sfx, null);
+  assert.deepEqual(seg(p, 's02').sfx, { name: 'ding', at: '#2' }, '使用者剛選的 ding 不動（不然照優先序會先拿掉它）');
+  assert.deepEqual(seg(p, 's03').sfx, { name: 'alert', at: '#3' });
 });
 
 test('--check-draft：合併時工具會自動修的（這裡是講者會閃一下）不列成 ⚠ 要分章的 AI 改，只說一行「合併時工具會自動修」；草稿本身不動', { skip: hasFfmpeg ? false : '要 ffmpeg' }, () => {

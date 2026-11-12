@@ -12,7 +12,8 @@
 //   audioKey(...)／readStamp／stampMatches  重新編碼的戳記：來源、剪接點、參數、構圖、look 都沒變就不重做
 //   encodeFootagePolished(src, dst, opts)  編碼主軌：先淡化剪接點、再 loudnorm，回傳報告用的數字（lut 原樣轉給 encodeFootage）
 //   audioReportLines(info, { sfx })        build 報告要印的行（sfx＝sfxBudget() 的回傳，印「音效比例」）
-//   SFX_RULES                              音效政策的數字：主音效間隔 3 s、附加音效間隔 0.2 s、每分鐘 2 顆、上限比人聲小 3 dB
+//   SFX_RULES                              音效政策的數字：主音效間隔 3 s、附加音效間隔 0.2 s、任一分鐘最多 5 顆、整支平均超過 3 顆／分提醒、上限比人聲小 3 dB
+//                                          （030：照作者五支剪映定剪，平均 2.3 顆／分、最新一支 3.2、單一分鐘最多 5–7；原本是每分鐘 2 顆）
 //   rotateSfx(cues, sfxConf)              同類變體輪替：標 c.src／c.srcAt／c.srcVolume（寫 <audio> 用哪個檔）
 //   sfxBudget(cues, sfxConf, opts)         次數上限、每分鐘密度、稀疏、音效比例 → { count, over, dense, sparse, loud, levels, perMinuteAvg, warnings, lines }
 //   renderBgmClip(src, dst, opts)          結尾配樂：截取＋淡入淡出＋增益烤進 wav（dst 是資料夾時檔名含參數 hash，同參數不重做）
@@ -202,7 +203,7 @@ export function audioReportLines(info, { loudnorm = true, declick = true, cutpoi
 }
 
 // ---------- 音效政策（specs/contracts/sfx.md §4；訊息原文 specs/contracts/cli-005.md §3）----------
-export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute: 2, capDb: -3, sparseSec: 60 });
+export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute: 5, avgPerMinute: 3, capDb: -3, sparseSec: 60, tailLead: 0.2 });   // tailLead：反應音效（踩坑、解法）沒有動畫時打在句尾前幾秒
 export const SFX_SWAP = Object.freeze({ thunder: 'alert', sparkle: 'ding', shine: 'ding' });   // 超過每集上限時換成誰（情緒點自動換；其他段建議換）
 const SWAP = SFX_SWAP;
 export const KEEP_FIRST = ['chapter', 'thunder', 'shine', 'sparkle', 'alert', 'success'];   // lib/autofix.mjs 拿掉太密的音效也照這個優先序
@@ -229,7 +230,7 @@ export function rotateSfx(cues, sfxConf, has = () => true) {
 // 每分鐘最多 perMinute 顆主音效：照優先序留，其他拿掉，不用人一段一段改。
 // 使用者在段上明寫的 sfx（it.seg.sfx）和章節音效不動；再來是情緒點（plan.json moods，it.type 'mood'：金句、反轉 ＞ 痛點、解法 ＞ 落定），
 // 最後是模板預設和情境動畫的 P.sfx 拍點（照 KEEP_FIRST；ding、impact 先拿）。拿掉的情緒點標 it.sfxThinned；回傳拿掉幾顆
-export function thinMainSfx(items, sfxConf, perMinute = SFX_RULES.perMinute) {
+export function thinMainSfx(items, sfxConf, perMinute = SFX_RULES.perMinute, { outDur = 0, avgPerMinute = SFX_RULES.avgPerMinute } = {}) {
   const rank = (n) => { const i = KEEP_FIRST.indexOf(n); return i < 0 ? KEEP_FIRST.length : i; };
   const byMin = new Map();
   const add = (it, c, locked, prio) => { const k = Math.floor(c.at / 60); if (!byMin.has(k)) byMin.set(k, []); byMin.get(k).push({ it, c, locked, prio }); };
@@ -245,6 +246,21 @@ export function thinMainSfx(items, sfxConf, perMinute = SFX_RULES.perMinute) {
     for (const x of list) {
       if (keep.has(x)) continue;
       if (x.it.sfx === x.c) { x.it.sfxDropped = x.c; x.it.sfx = null; if (x.it.type === 'mood') x.it.sfxThinned = true; } else x.it.sfxExtra = x.it.sfxExtra.filter((c) => c !== x.c);
+      removed++;
+    }
+  }
+  // 030 整支平均不超過 avgPerMinute 顆／分（作者的定剪平均 2.3、最多 3.2；他定剪時會把語意型的砍掉約四分之一）：
+  //   超過就從最擠的那一分鐘開始，拿掉模板預設與動畫拍點（ding、impact 先拿）；情緒點、段上明寫的、章節不動。不到一分鐘的片至少留 perMinute 顆
+  if (outDur > 0) {
+    const cap = Math.max(perMinute, Math.ceil(avgPerMinute * outDur / 60));
+    const alive = (x) => (x.it.sfx === x.c) || (x.it.sfxExtra || []).includes(x.c);
+    const all = () => [...byMin.values()].flat().filter(alive);
+    for (let left = all(); left.length > cap; left = all()) {
+      const soft = left.filter((x) => !x.locked && x.prio === 0);
+      if (!soft.length) break;
+      const crowd = (x) => left.filter((y) => Math.floor(y.c.at / 60) === Math.floor(x.c.at / 60)).length;
+      const x = soft.sort((a, b) => crowd(b) - crowd(a) || rank(b.c.name) - rank(a.c.name) || b.c.at - a.c.at)[0];
+      if (x.it.sfx === x.c) { x.it.sfxDropped = x.c; x.it.sfx = null; } else x.it.sfxExtra = x.it.sfxExtra.filter((c) => c !== x.c);
       removed++;
     }
   }
@@ -300,6 +316,7 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, 
     const adds = Object.keys(sfxConf).filter((k) => sfxConf[k].additive);
     warnings.push(`⚠ 音效密度：${dense.length} 個一分鐘超過 ${R.perMinute} 顆主音效（${dense.map((d) => `${mm(d.from)}–${mm(d.to)} ${d.n} 顆：${d.ids.join('、')}`).join('；')}；附加音效${adds.length ? ` ${adds.join('、')}` : ''} 不算）→ 每分鐘留最重要的 ${R.perMinute} 顆（${KEEP_FIRST.join('、')} 先留，ding、impact 先拿掉：那段寫 "sfx": null）`);
   }
+  if (outDur > 0 && nMain > Math.max(R.perMinute, Math.ceil(R.avgPerMinute * outDur / 60))) warnings.push(`⚠ 音效偏多：主音效平均每分鐘 ${perMinuteAvg} 顆（超過 ${R.avgPerMinute} 顆；作者自己的定剪平均 2.3、最多 3.2）→ 語意型的（重點、踩坑、解法）只留最該強調的，章節、說明、等待這些固定配的不用動`);
   // gapNote(g)：空檔裡可以配音效的段（plan.mjs 給，例「x10、x11、m01」），印在秒數後面，讓人知道去哪一段配
   if (sparse.length) warnings.push(`⚠ 音效稀疏：${sparse.map((g) => { const n = gapNote ? gapNote(g) : ''; return `${fmt(g.from)}–${fmt(g.to)}（${Math.round(g.to - g.from)} 秒${n ? `：${n}` : ''}）`; }).join('、')}沒有主音效 → ${moods ? '在這段裡挑一句情緒最強的，plan.json 的 moods 加一個點（例 { "at": "#N@詞", "kind": "pain" }；類別 pain 痛點、win 解法、turn 反轉、land 落定、quote 金句），或在分鏡表的「情緒點」加一列' : `在這段裡找踩坑句配 alert、結果句配 success（落在句尾前 0.1–0.2 秒）；情境動畫在那一拍寫 P.sfx('success', '#N@詞')；錄影段寫 "sfx": { "name": "success", "at": "#Ne-0.1" }`}`);
   const loudLine = loudWarning(loud);

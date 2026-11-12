@@ -1040,14 +1040,17 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   errors.push(...moodRes.errors);
   const moodItems = moodRes.list.map((x) => ({ id: `mood${x.i + 1}`, where: x.where, type: 'mood', mood: x, sfx: x.sfx, sfxExtra: [], warnings: [], errors: [], seg: {} }));
   const moodNotes = [];
-  // 模板的預設音效：那一分鐘有情緒點的音效就讓位（段上明寫的 sfx、章節音效、附加音效不動）
+  // 030：模板的固定配對（章節、重點卡、提醒卡、總結）不再整分鐘讓位給情緒點（作者的定剪：結構型音效全數保留）；
+  //   只有和情緒點相距不到 3 秒才讓（下面的 3 秒規則）。sfxYielded＝因為離情緒點太近拿掉的模板預設音效
   let sfxYielded = 0;
-  const moodMins = new Set(moodItems.filter((m) => m.sfx).map((m) => Math.floor(m.sfx.at / 60)));
-  if (moodMins.size) {
-    for (const it of timed) {
-      if (!it.sfx || it.seg.sfx !== undefined || it.sfx.name === 'chapter' || sfxConf[it.sfx.name]?.additive) continue;
-      if (moodMins.has(Math.floor(it.sfx.at / 60))) { it.sfxDropped = it.sfx; it.sfxYield = true; it.sfx = null; sfxYielded++; }
-    }
+  // 反應音效（踩坑 alert、解法 success）不在動畫段裡時，打在那一句的句尾前 0.2 秒：結果講完那一拍才響，不搶話；
+  //   在動畫段裡照舊對齊那個詞（畫面上的事件綁在同一個詞）。作者的筆記「反應音效打在句尾」「有動畫的段對畫面事件」
+  for (const m of moodItems) {
+    const x = m.mood;
+    if (!m.sfx || !(x.kind === 'pain' || x.kind === 'win') || !(m.sfx.name === 'alert' || m.sfx.name === 'success') || x.cueEnd == null) continue;
+    if (timed.some((it) => it.type === 'custom' && it.start - 0.3 <= x.event && x.event <= it.end)) continue;
+    const at = r3(Math.min(videoDur - 0.05, Math.max(m.sfx.at, x.cueEnd - SFX_RULES.tailLead)));
+    if (at > m.sfx.at) { m.sfx = { ...m.sfx, at, tail: true }; }
   }
   // 3 秒規則只管主音效；additive（click）疊在別的聲音上，不算。
   // 優先序：段上明寫的 sfx、章節 ＞ 情緒點（金句、反轉 ＞ 痛點、解法 ＞ 落定）＞ 模板預設；同一級留前一個
@@ -1074,8 +1077,8 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     else it.warnings.push(`${it.where} 音效 ${it.sfx.name}（${it.sfx.at}s）和 ${last.id} 的音效只差 ${r3(it.sfx.at - last.sfx.at)}s（< ${SFX_GAP}s），已拿掉（只保留前一個） → 想留這顆，就在 ${last.id} 寫 "sfx": null`);
     it.sfxDropped = it.sfx; it.sfx = null;
   }
-  // 每分鐘最多 2 顆主音效：工具照優先序留（情緒點照強弱），不用人一段一段寫 "sfx": null
-  const sfxThinned = thinMainSfx([...timed, ...moodItems], sfxConf);
+  // 任一分鐘最多 SFX_RULES.perMinute 顆主音效：工具照優先序留（情緒點照強弱），不用人一段一段寫 "sfx": null
+  const sfxThinned = thinMainSfx([...timed, ...moodItems], sfxConf, undefined, { outDur: videoDur });
   for (const m of moodItems) if (m.sfxThinned) moodNotes.push(`${m.where} 的音效被每分鐘 ${SFX_RULES.perMinute} 顆的上限拿掉（那一分鐘有更強的）`);
   // 每集上限（sparkle 6、shine 3、thunder 3）：情緒點超過的，從後面的開始換成替代音效（shine、sparkle → ding；thunder → alert）
   const cnt = {};

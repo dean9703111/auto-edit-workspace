@@ -40,30 +40,44 @@ test('moodCues：五類各配一顆，峰值對齊詞的開口；sfx: null 不�
   assert.match(moodCues([{ at: '#3@沒有這個詞', kind: 'land' }], { cues, sfxConf: L.sfx }).errors[0], /找不到詞/);
 });
 
-test('取捨：同一分鐘有情緒點，模板預設音效讓位；段上明寫的 sfx 最優先；沒有情緒點的分鐘照舊', () => {
+test('取捨（030）：模板的固定配對照常出聲，離情緒點不到 3 秒才讓；段上明寫的 sfx 最優先', () => {
   const res = run([
-    kp('s01', '#2', { tone: 'warn' }),          // 0:04.5 預設 alert → 讓位
+    kp('s01', '#2', { tone: 'warn' }),          // 0:04.5 預設 alert；同一分鐘有情緒點、但相距超過 3 秒 → 照常出聲（原本整分鐘讓位）
     kp('s02', '#8', { sfx: 'success' }),        // 0:25.5 明寫 → 留，旁邊的情緒點讓位
-    kp('s03', '#20', { tone: 'good' }),         // 1:07.5 那一分鐘沒有情緒點 → 照舊
+    kp('s03', '#20', { tone: 'good' }),         // 1:07.5 附近沒有情緒點 → 照舊
+    kp('s04', '#12'),                           // 0:39.5 同一分鐘有情緒點、但相距超過 3 秒 → 照常出聲（重點卡配咚咚）
   ], [{ at: '#3@字幕', kind: 'land' }, { at: '#8@字幕', kind: 'pain' }]);
   assert.deepEqual(res.errors, []);
-  assert.equal(byId(res, 's01').sfx, null);
-  assert.equal(byId(res, 's01').sfxYield, true);
+  assert.equal(byId(res, 's01').sfx.name, 'alert');
+  assert.equal(byId(res, 's04').sfx.name, 'impact', '重點卡的固定配對是咚咚（作者的定剪用最多的一顆）');
   assert.equal(byId(res, 's02').sfx.name, 'success');
   assert.equal(byId(res, 's03').sfx.name, 'success');
   assert.equal(res.moods[0].sfx.name, 'impact');
   assert.equal(res.moods[1].sfx, null, '和明寫的音效相距不到 3 秒');
   assert.match(res.warnings.join('\n'), /moods\[1\].*和 s02 明寫的音效只差/);
-  assert.match(res.sfxBudget.lines.join('\n'), /情緒點：2 個（音效 1 顆、不出聲 1 個；模板預設音效讓位 1 顆）/);
+  assert.match(res.sfxBudget.lines.join('\n'), /情緒點：2 個（音效 1 顆、不出聲 1 個；模板預設音效讓位 0 顆）/);
 });
 
-test('取捨：3 秒內兩個情緒點留比較強的；一分鐘超過 2 顆照強弱拿（金句 > 痛點 > 落定）', () => {
+test('取捨：3 秒內兩個情緒點留比較強的；一分鐘超過 5 顆照強弱拿（金句 > 痛點 > 落定）', () => {
   const near = run([], [{ at: '#2', kind: 'land' }, { at: '#2+1', kind: 'turn' }]);
   assert.equal(near.moods[0].sfx, null);
   assert.equal(near.moods[1].sfx.name, 'shine');
-  const dense = run([], [{ at: '#2', kind: 'land' }, { at: '#5', kind: 'pain' }, { at: '#9', kind: 'quote' }]);
-  assert.deepEqual(dense.moods.map((m) => m.sfx?.name ?? null), [null, 'alert', 'sparkle']);
-  assert.match(dense.sfxBudget.lines.join('\n'), /moods\[0\].*每分鐘 2 顆的上限/);
+  const three = run([], [{ at: '#2', kind: 'land' }, { at: '#5', kind: 'pain' }, { at: '#9', kind: 'quote' }]);
+  assert.deepEqual(three.moods.map((m) => m.sfx?.name ?? null), ['impact', 'alert', 'sparkle'], '一分鐘 3 顆現在留得住');
+  const dense = run([], [{ at: '#2', kind: 'land' }, { at: '#4', kind: 'pain' }, { at: '#6', kind: 'quote' }, { at: '#8', kind: 'win' }, { at: '#10', kind: 'turn' }, { at: '#12', kind: 'land' }]);
+  assert.deepEqual(dense.moods.map((m) => m.sfx?.name ?? null), ['impact', 'alert', 'sparkle', 'success', 'shine', null], '最弱的落定拿掉一顆（同一級留前面那個）');
+  assert.equal(dense.moods.filter((m) => m.sfx).length, 5, '同一分鐘 6 個情緒點 → 留 5 顆');
+  assert.match(dense.sfxBudget.lines.join('\n'), /每分鐘 5 顆的上限/);
+});
+
+test('030 反應音效：踩坑、解法不在動畫段裡打在句尾前 0.2 秒；落定、指定別顆的照舊對齊那個詞', () => {
+  const res = run([], [{ at: '#3@字幕', kind: 'pain' }, { at: '#9@字幕', kind: 'win' }, { at: '#15@字幕', kind: 'land' }, { at: '#21@字幕', kind: 'pain', sfx: 'thunder' }]);
+  assert.deepEqual(res.errors, []);
+  assert.equal(res.moods[0].sfx.at, r3(cueEnd(3) - 0.2));
+  assert.equal(res.moods[0].sfx.tail, true);
+  assert.equal(res.moods[1].sfx.at, r3(cueEnd(9) - 0.2));
+  assert.ok(res.moods[2].sfx.at < cueEnd(15) - 0.5 && !res.moods[2].sfx.tail, '落定對齊那個詞');
+  assert.ok(!res.moods[3].sfx.tail, '打雷是氣氛，不挪到句尾');
 });
 
 test('每集上限：反轉超過 3 次，後面的 shine 換成 ding', () => {

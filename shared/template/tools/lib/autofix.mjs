@@ -28,7 +28,7 @@ import { parseTime, r3 } from './time.mjs';
 import { norm, cueByN } from './srt.mjs';
 import { textSyncIssues } from './plan.mjs';
 import { parseValue } from './scenes.mjs';
-import { KEEP_FIRST } from './audio.mjs';
+import { KEEP_FIRST, SFX_RULES } from './audio.mjs';
 
 export const KINDS = { textSync: '文字對時', overlap: '重疊', firstAt: '清單第一項比標題早', gap: '空檔', hold: '停留太短', sfx: '音效太密' };
 const ORDER = Object.keys(KINDS);
@@ -287,7 +287,7 @@ function candidates(cur, opt) {
         const s = segOf(pl, x.id);
         if (!s) return null;
         put(s, 'sfx', null, 'to');
-        return `${x.id}：拿掉音效 ${x.sfx.name}（"sfx": null；${Math.floor(dm.from / 60)}:00–${Math.floor(dm.to / 60)}:00 有 ${dm.n} 顆主音效，每分鐘最多 2 顆）`;
+        return `${x.id}：拿掉音效 ${x.sfx.name}（"sfx": null；${Math.floor(dm.from / 60)}:00–${Math.floor(dm.to / 60)}:00 有 ${dm.n} 顆主音效，任一分鐘最多 ${SFX_RULES.perMinute} 顆）`;
       } });
     }
   }

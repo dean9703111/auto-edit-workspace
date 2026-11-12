@@ -16,8 +16,9 @@
 //   insertMoods(plan, moods)   → 新的 plan 物件：moods 放在 scenes 前面（TOP_KEYS 順序）
 //   moodTarget(seconds)        → { target, low, cap, zoomCap }：一份草稿大概要幾個情緒點、最多幾次推近
 //
-// 規則（作者 2026-11-09 定案）：每分鐘最多 2 顆主音效、相距至少 3 秒，超過時照情緒強度留（金句、反轉 > 痛點、解法 > 落定 > 模板預設）；
-// 模板的預設音效只在那一分鐘沒有情緒點時才補；使用者在段上明寫的 sfx、章節音效最優先。推近每分鐘最多 1 次。
+// 規則（作者 2026-11-09 定案，2026-11-12 照他的剪映定剪放寬，specs/030）：任一分鐘最多 5 顆主音效、相距至少 3 秒，超過時照情緒強度留
+// （金句、反轉 > 痛點、解法 > 落定 > 模板的固定配對）；模板的固定配對（章節、重點卡、提醒卡、總結）照常出聲，離情緒點不到 3 秒才讓；
+// 使用者在段上明寫的 sfx、章節音效最優先。踩坑、解法的音效不在動畫段裡時打在句尾前 0.2 秒。推近每分鐘最多 1 次。
 import { parseTime, cueSeconds, r3 } from './time.mjs';
 
 export const MOOD_KINDS = Object.freeze({
@@ -76,7 +77,8 @@ export function moodCues(moods, { cues, sfxConf = {}, videoDur = Infinity, frame
       const at = r3(Math.max(0, event - (conf.peak || 0) + frame));
       if (at < videoDur) sfx = { name, at, volume: conf.volume ?? 0.5, event: r3(event), mood: true };
     }
-    list.push({ i, where, kind: m.kind, event: r3(event), sfx, zoom: m.zoom === true, rank: MOOD_KINDS[m.kind].rank, sfxOff: m.sfx === null, n: t.n });
+    const cue = (cues || []).find((q) => q.n === t.n);   // 這一句的結尾（反應音效沒有動畫時打在句尾，lib/plan.mjs）
+    list.push({ i, where, kind: m.kind, event: r3(event), sfx, zoom: m.zoom === true, rank: MOOD_KINDS[m.kind].rank, sfxOff: m.sfx === null, n: t.n, cueEnd: cue && Number.isFinite(cue.end) ? r3(cue.end) : null });
   });
   return { list, errors };
 }
@@ -113,7 +115,7 @@ export function zoomSpans(list, { cues, cutPoints = [], videoDur, speakerVisible
   return { zooms, notes };
 }
 
-// 一份草稿（seconds 秒）大概要幾個情緒點：約每分鐘 1 個（至少 1 個），最多每分鐘 2 個；推近約每分鐘最多 1 次
+// 一份草稿（seconds 秒）大概要幾個情緒點：約每分鐘 1 個（至少 1 個），最多每分鐘 2 個（情緒點只是主音效的一部分，模板的固定配對另外算）；推近約每分鐘最多 1 次
 export function moodTarget(seconds) {
   const min = Math.max(0, seconds) / 60;
   return { target: Math.max(1, Math.round(min)), low: Math.max(1, Math.floor(min * 0.6)), cap: Math.max(2, Math.ceil(min * 2)), zoomCap: Math.max(1, Math.floor(min)) };
