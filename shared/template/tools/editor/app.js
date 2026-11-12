@@ -2979,7 +2979,8 @@ document.addEventListener('pointerdown', () => { clearTimeout(tipTimer); $('#tip
 // 鍵盤
 // ---------- 修改單（右側抽屜）：選段 → 點想怎麼改、寫描述（直接存）→ 累積多段 → 複製一行指令給 AI（待改的完整內容存 work/feedback/editor-requests.md）----------
 // 剪輯台只能改字、刪清單項目；要加項目、換動畫、重新排版都寫在這裡，AI 照「照剪輯台修改單改」直接改（每段一個子代理）
-// 一段一筆 { id, tags, note, t（最後改的時間）, done?: { round, note } }：有勾或有描述才算一筆；改了就變回待改
+// 一段一筆 { id, tags, note, redo?（重新設計：從空白重畫，029）, t（最後改的時間）, done?: { round, note } }：有勾或有描述才算一筆；改了就變回待改
+// 重新設計預設不勾：沒勾＝在現有的動畫上改（改資料、換模板、手改，不用載入 hyperframes skill）；勾了＝設計師子代理從空白畫布重畫（比較貼講解、比較久）
 const RQ_TAGS = {
   anim: ['流程更細節', '以圖像展示為主', '文字少一點', '畫出關係（箭頭、引線）', '換一種動畫', '動作慢一點', '跟講的話對齊', '更有質感'],
   media: ['播太快', '播太慢', '標註更清楚', '推近到操作區', '加步驟清單', '換成動畫', '換一段錄影', '跟講的話對齊'],
@@ -3058,7 +3059,7 @@ function rqEdit(id, fn) {
   const made = !r;
   if (made) { r = { id, tags: [], note: '' }; app.requests.push(r); }
   fn(r); r.t = Date.now(); delete r.done; delete r.copiedRevision;
-  if (!r.tags.length && !r.note.trim()) app.requests = app.requests.filter((x) => x !== r);
+  if (!r.tags.length && !r.note.trim() && !r.redo) app.requests = app.requests.filter((x) => x !== r);
   else if (made) toast(`${id} 加進修改單（待改 ${rqPending().length} 段）`, 'ok', 1800);
   rqStore();
 }
@@ -3074,11 +3075,14 @@ function rqStateHtml(id) {
 function rqTopHtml(id) {
   const inf = id ? rqInfo(id) : null;
   if (!inf) return '<p class="ip-note">在時間軸或「段落」分頁點一段，在這裡點想怎麼改、或自己寫（直接存）；可以累積很多段，最後一起複製給 AI。</p>';
-  const on = app.requests.find((x) => x.id === id)?.tags || [];
+  const req = app.requests.find((x) => x.id === id), on = req?.tags || [];
+  const redo = rqKind(inf.sc) === 'anim' ? `<label class="rq-redo"><input type="checkbox" data-rq="redo"${req?.redo ? ' checked' : ''}> 重新設計這一段（從空白重畫，比較久）</label>
+    <p class="ip-note">沒勾：AI 在現有的動畫上改。勾了：另外請設計師從空白畫布重畫，比較貼講解，一段要多花幾分鐘。</p>` : '';
   // 對應字幕預設收起：選項比字幕重要，小視窗也要一眼看到
   return `<div class="rq-seg"><div class="t">${esc(inf.it?.title || inf.label)}</div><div class="m">${esc(inf.shown)}<br>完成影片 ${rqTime(inf)}　${esc(inf.id)}</div></div>
     ${inf.subs.length ? `<details class="rq-subwrap"><summary>這段的字幕（${inf.subs.length} 句）</summary><ul class="rq-subs">${inf.subs.map((c) => `<li><span class="n">#${c.n}</span>${esc(c.text)}</li>`).join('')}</ul></details>` : '<p class="ip-note">這段時間沒有字幕</p>'}
     <div class="rq-tags" role="group" aria-label="想怎麼改">${RQ_TAGS[rqKind(inf.sc)].map((t) => `<button class="toggle small${on.includes(t) ? ' on' : ''}" data-rq="tag" data-t="${esc(t)}" aria-pressed="${on.includes(t)}">${esc(t)}</button>`).join('')}</div>
+    ${redo}
     <textarea id="rqNote" rows="4" placeholder="自己描述（選填）：例如「三個步驟改成手機畫面一步步亮起」">${esc(app.requests.find((x) => x.id === id)?.note || '')}</textarea>
     <div id="rqState">${rqStateHtml(id)}</div>`;
 }
@@ -3090,7 +3094,7 @@ function rqListsHtml(cur) {
   const badge = (r) => { const s = rqStatus(r); return s.label ? `<span class="rq-sent ${s.cls}" role="status" data-tip="${esc(s.detail)}">${s.label}</span>` : ''; };
   const failedWhy = (r) => { const st = rqStatus(r); return st.cls === 'failed' ? `<div class="what err-ink">${esc(st.detail)}</div>` : ''; };
   const pi = pend.map((r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${badge(r)}${go(r)}${del(r)}</div>${failedWhy(r)}
-    ${r.tags.length ? `<div class="chips">${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`).join('');
+    ${r.tags.length || r.redo ? `<div class="chips">${r.redo ? '<span class="chip-t chip-redo">重新設計</span>' : ''}${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`).join('');
   const di = done.map((r) => `<li class="rq-item done${r.id === cur ? ' cur' : ''}"><div class="h"><b>✓ ${esc(r.id)}</b><span class="lab">${lab(r)}</span><span class="rq-done">${esc(r.done.round)}</span>
     <button class="small primary" data-rq="result" data-id="${esc(r.id)}" data-tip="切到完成影片預覽，跳到這段開頭">▶ 看結果</button>${del(r)}</div><div class="what" data-tip="${esc(r.done.note)}">${esc(r.done.note)}</div></li>`).join('');
   return `<section class="ip-sec"><h3>待改（${pend.length}）</h3>${pi ? `<ul class="rq-list">${pi}</ul>` : `<p class="ip-note">${done.length ? '都改完了' : '還沒有'}</p>`}</section>`
@@ -3121,7 +3125,10 @@ const rqCommand = (revision, pending = rqPending()) => {
   const project = app.server?.project?.dir || '';
   const cli = `node shared/template/tools/editor.mjs --project ${JSON.stringify(project)}`;
   const progress = `${revision ? '' : `先用 ${cli} --requests-state status 取得這份修改單的 revision；`}開始處理時用 ${cli} --requests-state generating --request-revision ${revision || '<剛讀取的 revision>'} --ids ${pending.map((r) => r.id).join(',')} 回報狀態；build、audit 通過後用同一指令把 generating 換成 done（可加 --round rN --message 描述），失敗則換成 failed --message 原因；逐段回報可調整 --ids，版本衝突就停下重新讀取修改單。`;
-  return `照剪輯台修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：照 auto-edit-review 流程 F 做（.agents/skills/auto-edit-review/references/editor-requests.md），不用先出提案，停在停點 ④。${progress}`;
+  const redo = pending.filter((r) => r.redo).map((r) => r.id);
+  // 哪幾段的子代理要載入 hyperframes skill 寫清楚：重新設計的段才要，其他段不用（載入一次很貴）
+  const how = redo.length ? `其中 ${redo.length} 段要重新設計（${redo.join(',')}）：只有這幾段的子代理要載入 hyperframes skill、從空白畫布重畫；其他段在現有的動畫上改，不用載入。` : '這次沒有要重新設計的段：都在現有的動畫上改，不用載入 hyperframes skill。';
+  return `照剪輯台修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：照 auto-edit-review 流程 F 做（.agents/skills/auto-edit-review/references/editor-requests.md），不用先出提案，停在停點 ④。${how}${progress}`;
 };
 function rqMarkdown() {
   const now = new Date();
@@ -3135,6 +3142,9 @@ function rqMarkdown() {
     if (!i) { L.push('- plan.json 裡找不到這段（可能被改名或刪掉了）'); }
     else L.push(`- 動畫：${i.what}`, ...(i.file ? [`- 檔案：${i.file}`] : []), `- 完成影片時間：${rqTime(i)}（${app.server?.project?.dir || ''}/work/hyperframes/plan.json：${i.span}）`);
     if (i?.gap) L.push('- 這裡現在沒有段落：照時間和字幕新增一段（段號自己取），不是改既有的段；回報狀態時用上面的段號');
+    if (i && !i.gap && rqKind(i.sc) === 'anim') L.push(r.redo
+      ? '- 做法：重新設計（使用者勾的）。這段改成 "design": true，派設計師子代理從空白畫布重畫；只有這種段的子代理要載入 hyperframes skill'
+      : '- 做法：在現有的動畫上改（沒勾「重新設計」）。改 plan.json 的資料、換模板或手改那支檔；不要改成 "design": true，子代理不用載入 hyperframes skill');
     if (r.tags.length) L.push(`- 要改：${r.tags.join('、')}`);
     if (r.note.trim()) L.push(`- 描述：${r.note.trim().replace(/\s*\n\s*/g, '／')}`);
     if (i?.subs.length) { L.push('- 對應字幕：'); for (const c of i.subs) L.push(`  - #${c.n} ${c.text}`); }
@@ -3176,6 +3186,13 @@ function onRqClick(e) {
     const id = $('#rqTop').dataset.id, t = b.dataset.t;
     if (!id) return;
     rqEdit(id, (r) => { r.tags = r.tags.includes(t) ? r.tags.filter((x) => x !== t) : [...r.tags, t]; });
+    renderRequests();
+    return;
+  }
+  if (act === 'redo') {
+    const id = $('#rqTop').dataset.id;
+    if (!id) return;
+    rqEdit(id, (r) => { if (b.checked) r.redo = true; else delete r.redo; });
     renderRequests();
     return;
   }

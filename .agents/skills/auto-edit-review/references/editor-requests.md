@@ -44,16 +44,24 @@
 
 ## 3. 分工
 
+每段的「做法」那一行是使用者選的，照它走，不要自己換另一種：
+
+- **在現有的動畫上改**（沒勾「重新設計」，預設）：不要把這段改成 `"design": true`，派出去的子代理也不用載入 `hyperframes` skill。模板做得到多少就做多少；做完覺得這段還是要整段重畫才講得清楚，在回報裡寫一句「<段> 建議勾『重新設計』」，由使用者決定。
+- **重新設計**（使用者勾的）：設計師從空白畫布重畫，只有這種段的子代理要載入 `hyperframes` skill。
+
 先看這段在 plan.json 是哪一種（`build.mjs --show <段>`），再找對應的列；每段只會對到一列。
 
-| 這段是什麼、要改的 | 誰做 |
-|---|---|
-| 模板動畫（`template`＋`slots`）、字卡、資訊卡：只改文字、條目、時間 | 你自己改 plan.json，不用派 |
-| 模板動畫、字卡、資訊卡：「換一種動畫」「以圖像展示為主」，內容是條列、走流程 | 換 `build.mjs --list` 裡另一個模板（不和前後段同一個）：你改 plan.json 那段的 `template`／`scene`＋`slots`（欄位用 `build.mjs --spec <模板>` 查），不用派 |
-| 模板動畫、字卡、資訊卡：「換一種動畫」「以圖像展示為主」，遮住字幕只看畫面看不懂、模板做不到（style.md「內容設計動畫」的判斷） | 你把那段改成 `"design": true`（拿掉 `template`、`slots`），跑 `node shared/template/tools/build.mjs --project projects/<專案> --check`，確認 `work/briefs/<段>.md` 有了再派工。派工照 `--apply-storyboard` 印的那一句：照 `.agents/skills/auto-edit-motion/references/design.md` 寫鏡位腳本、接著 做動畫。修改單就是確認過的改法，不用停 ③ |
-| 模板動畫：其他 `slots` 做不到的改動 | 一段一個子代理改那支 `<模板>-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md` |
-| 已經是內容設計動畫（`"design": true`）的段，不管哪個標籤 | 一段一個子代理用 edit 改那支 `x-design-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md`（寫法照 design.md；拍變了一起改 `work/designs/<段>.md`） |
-| 錄影段的 `marks`、`moves`、`side`、`steps`、換成動畫 | 你自己改 plan.json；換一段錄影照 `auto-edit-screen` 的筆記挑 |
+| 做法 | 這段是什麼、要改的 | 誰做 |
+|---|---|---|
+| 在現有的動畫上改 | 模板動畫（`template`＋`slots`）、字卡、資訊卡：只改文字、條目、時間 | 你自己改 plan.json，不用派 |
+| 在現有的動畫上改 | 模板動畫、字卡、資訊卡：「換一種動畫」「以圖像展示為主」 | 換 `build.mjs --list` 裡另一個模板（不和前後段同一個）：你改 plan.json 那段的 `template`／`scene`＋`slots`（欄位用 `build.mjs --spec <模板>` 查），不用派 |
+| 在現有的動畫上改 | 模板動畫：其他 `slots` 做不到的改動 | 一段一個子代理改那支 `<模板>-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md` |
+| 在現有的動畫上改 | 已經是內容設計動畫（`"design": true`）的段，不管哪個標籤 | 一段一個子代理用 edit 改那支 `x-design-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md`（拍變了一起改 `work/designs/<段>.md`） |
+| 重新設計 | 模板動畫、字卡、資訊卡 | 你把那段改成 `"design": true`（拿掉 `template`／`scene`／`fx`、`slots`），跑 `node shared/template/tools/build.mjs --project projects/<專案>`（要整個 build，不是只跑 `--check`：設計師驗收時截的才是新的畫面），確認 `work/briefs/<段>.md` 有了再派工。派工那一句：`你是設計師，負責 projects/<專案> 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design.md 寫鏡位腳本、接著做動畫（不用等確認）。`，後面接下面的「修改單」那幾行 |
+| 重新設計 | 已經是內容設計動畫的段 | 你跑 `node shared/template/tools/build.mjs --project projects/<專案> --design-canvas <段> --reset`（舊的腳本和動畫會備份），再照上一列的那一句派設計師 |
+| （不看做法） | 錄影段的 `marks`、`moves`、`side`、`steps`、換成動畫 | 你自己改 plan.json；換一段錄影照 `auto-edit-screen` 的筆記挑 |
+
+舊的修改單沒有「做法」那一行：當成「在現有的動畫上改」。
 
 **同一則回覆一次全部派出**；派工訊息的「要改什麼」寫：
 
@@ -64,7 +72,7 @@
 現在的動畫分鏡：照 work/storyboard.md 這段（grep -n -A30 "動畫分鏡 <段 id>" projects/<專案>/work/storyboard.md），照上面的改法改；拍變了改 work/designs/<段 id>.md 那張表（內容設計動畫段），不要改 storyboard.md
 ```
 
-剛改成 `"design": true` 的段不附「現在的動畫分鏡」那行（那是舊模板的拍），設計師照鏡位腳本重想。
+重新設計的段不附「現在的動畫分鏡」那行（那是舊的拍），設計師照鏡位腳本重想。
 
 不 render：改完用 `versions.mjs finish` 驗證，作者在它印的完成影片預覽網址看會動的樣子。比較影片要兩版都有預覽：使用者說修改時就說要比較，`begin`、`finish` 都加 `--preview`；改完才要比較，先跟他說「舊版沒有預覽影片，兩版各要 render 一次（一段約 25 秒）」，他說好再照 `references/feedback-round.md` 第 1 節的四行做。
 

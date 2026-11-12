@@ -83,7 +83,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 | 任何段（scene／fx／custom／media） | `sfxVolume` | 這段音效的音量（dB），0 就拿掉這個欄位 |
 | | `sfx` | 只會寫 `null`（使用者按了靜音）；取消靜音時換回原本的值（記在 `.editor/memory.json`），原本沒寫就拿掉 |
 | scene 的 `slots`、fx 的 `vars`、模板動畫（`type: "custom"`＋`template`）的 `slots` | 文字值 | 改字（含清單項目的 `text`、QA 的 `{ "text", "at" }` 裡的 `text`；字數上限照情境的 `max`）；清單只能刪項目、不能加（剪輯台不顯示「新增一項」）；模板動畫只能改 `custom/<模板>.fill.json` 標成文字的欄位，圖示、時間、結構和項目數都不能動。改了字的段，按「更新預覽」時自動跑 `audit.mjs --only <那幾段>`，✖／⚠ 列在剪輯台檢查清單（`[段] 版面：…`） |
-| `work/feedback/editor-requests.md` | 修改單 | 「修改單」按「複製給 AI」時整份覆寫、只寫待改的段（剪貼簿只放一行指令「照剪輯台修改單改這 N 段（<這個檔>）：…」）：每段的 id、動畫是什麼、檔案（自訂動畫、錄影；路徑從工作區根目錄寫起，例 `projects/<專案>/work/hyperframes/compositions/x-….html`）、完成影片時間、plan.json 起訖、要改的標籤、描述、對應字幕（`#N 文字`）。使用者說「照修改單改」就照 `auto-edit-review` 流程 F 做 |
+| `work/feedback/editor-requests.md` | 修改單 | 「修改單」按「複製給 AI」時整份覆寫、只寫待改的段（剪貼簿只放一行指令「照剪輯台修改單改這 N 段（<這個檔>）：…」）：每段的 id、動畫是什麼、檔案（自訂動畫、錄影；路徑從工作區根目錄寫起，例 `projects/<專案>/work/hyperframes/compositions/x-….html`）、完成影片時間、plan.json 起訖、做法（動畫段才有：使用者沒勾「重新設計」＝在現有的動畫上改；勾了＝設計師從空白畫布重畫，只有這種段的子代理要載入 `hyperframes` skill）、要改的標籤、描述、對應字幕（`#N 文字`）。使用者說「照修改單改」就照 `auto-edit-review` 流程 F 做 |
 | `type: "media"` 的段 | `from`／`to`／`in`／`anchor` | 使用者拖邊緣裁剪或整段移動：對到字幕邊界寫 `"#N"`／`"#Ne"` 並把 `anchor` 換成那句的開頭；沒對到寫秒數並拿掉 `anchor`；拖左緣時 `in` 跟著變（畫面內容不跑；有變速、定格的段改寫 `retime`／`hold`，每一區的速度不變）；寫了 `to` 就拿掉 `duration` |
 | | `speed`／`hold`／`retime`／`in`／`out` | 畫面速度（屬性的「畫面速度」）。整段同速寫 `in`＋`speed`（0.5–4）；整段定格寫 `hold`；分區或超過 4 倍寫 `retime`（`at` 是 `+秒`，時間沒動的點留原本的寫法，例 `#21@詞`）；互斥的欄位自動拿掉，`out` 只會被拿掉。你寫的 `retime` 也會顯示在這裡，使用者看得到、改得了 |
 | | `enter`／`exit`／`volume` | 進出場（`cut`／`fade`／`slide`／`zoom`）；原聲 `null`（靜音）或 dB |

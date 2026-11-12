@@ -42,6 +42,9 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     await page.click('[data-rq="copy"]');
     await page.waitForFunction(() => document.querySelector('.rq-sent')?.textContent === '已複製');
     assert.match(await page.evaluate(() => window.copiedRequest), /--requests-state generating --request-revision [a-f0-9]{40} --ids s01,s02/);
+    // 029：沒勾「重新設計」＝在現有的動畫上改，提示詞寫明不用載入 hyperframes skill；修改單每段有「做法」那一行
+    assert.match(await page.evaluate(() => window.copiedRequest), /這次沒有要重新設計的段：都在現有的動畫上改，不用載入 hyperframes skill。/);
+    assert.equal((fs.readFileSync(path.join(work, 'feedback/editor-requests.md'), 'utf8').match(/- 做法：在現有的動畫上改（沒勾「重新設計」）/g) || []).length, 2);
     assert.doesNotMatch(await page.$eval('#requests', (el) => el.textContent), /已送出/);
     let q = (await (await fetch(new URL('/api/requests/status', editor.url))).json()).requests;
     assert.deepEqual(q.states, {});
@@ -65,6 +68,13 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     await page.type('#rqNote', '重新調整');
     await page.waitForFunction(() => document.querySelector('#rqState')?.textContent.includes('待改：已存進修改單'));
     assert.equal(await page.$$('.rq-item.done').then((x) => x.length), 0);
+    // 029：勾了「重新設計」的段寫進修改單，複製的那一行寫明只有這幾段的子代理要載入 hyperframes skill
+    assert.equal(await page.$eval('#rqTop [data-rq="redo"]', (el) => el.checked), false, '預設不勾');
+    await page.click('#rqTop [data-rq="redo"]');
+    await page.waitForSelector('.rq-item .chip-redo');
+    await page.click('[data-rq="copy"]');
+    await page.waitForFunction(() => /其中 1 段要重新設計（s01）：只有這幾段的子代理要載入 hyperframes skill、從空白畫布重畫；其他段在現有的動畫上改，不用載入。/.test(window.copiedRequest || ''));
+    assert.match(fs.readFileSync(path.join(work, 'feedback/editor-requests.md'), 'utf8'), /## 1\. s01[\s\S]*- 做法：重新設計（使用者勾的）[\s\S]*## 2\. s02[\s\S]*- 做法：在現有的動畫上改/);
     // 剪貼簿失敗時，存檔成功也不能宣稱已複製。
     await page.evaluate(() => {
       navigator.clipboard.writeText = async () => { throw new Error('clipboard denied'); };
