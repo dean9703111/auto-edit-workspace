@@ -1,0 +1,319 @@
+{
+ "id": "ai",
+ "zh": "科技與 AI",
+ "when": "講到 AI、自動化、網路、資料、演算法",
+ "items": [
+  {
+   "id": "ai",
+   "zh": "AI",
+   "when": "講到 AI、人工智慧",
+   "tags": [
+    "AI",
+    "人工智慧"
+   ],
+   "file": "ai/ai.svg",
+   "from": "tabler:ai"
+  },
+  {
+   "id": "chatbot",
+   "zh": "聊天機器人",
+   "when": "講到問 AI、ChatGPT、對話助理",
+   "tags": [
+    "聊天機器人",
+    "ChatGPT",
+    "助理"
+   ],
+   "file": "ai/chatbot.svg",
+   "from": "tabler:message-chatbot"
+  },
+  {
+   "id": "prompt",
+   "zh": "提示詞",
+   "when": "講到下指令給 AI、提示詞",
+   "tags": [
+    "提示詞",
+    "prompt"
+   ],
+   "file": "ai/prompt.svg",
+   "from": "tabler:prompt"
+  },
+  {
+   "id": "automation",
+   "zh": "自動化",
+   "when": "講到自動化、流程自動跑",
+   "tags": [
+    "自動化",
+    "流程"
+   ],
+   "file": "ai/automation.svg",
+   "from": "tabler:automation"
+  },
+  {
+   "id": "cloud-computing",
+   "zh": "雲端運算",
+   "when": "講到雲端服務、線上運算",
+   "tags": [
+    "雲端運算",
+    "雲服務"
+   ],
+   "file": "ai/cloud-computing.svg",
+   "from": "tabler:cloud-computing"
+  },
+  {
+   "id": "network",
+   "zh": "網路節點",
+   "when": "講到網路、連線、節點",
+   "tags": [
+    "網路",
+    "連線",
+    "節點"
+   ],
+   "file": "ai/network.svg",
+   "from": "tabler:network"
+  },
+  {
+   "id": "binary",
+   "zh": "二進位",
+   "when": "講到資料、數位、0 與 1",
+   "tags": [
+    "二進位",
+    "數位"
+   ],
+   "file": "ai/binary.svg",
+   "from": "tabler:binary"
+  },
+  {
+   "id": "atom",
+   "zh": "原子",
+   "when": "講到核心、科學、最小單位",
+   "tags": [
+    "原子",
+    "核心",
+    "科學"
+   ],
+   "file": "ai/atom.svg",
+   "from": "tabler:atom"
+  },
+  {
+   "id": "topology",
+   "zh": "拓樸",
+   "when": "講到架構、互相連接、系統圖",
+   "tags": [
+    "架構",
+    "拓樸"
+   ],
+   "file": "ai/topology.svg",
+   "from": "tabler:topology-star-3"
+  },
+  {
+   "id": "fingerprint",
+   "zh": "指紋",
+   "when": "講到身分驗證、獨一無二",
+   "tags": [
+    "指紋",
+    "驗證"
+   ],
+   "file": "ai/fingerprint.svg",
+   "from": "tabler:fingerprint"
+  },
+  {
+   "id": "face-id",
+   "zh": "臉部辨識",
+   "when": "講到臉部辨識、解鎖、偵測臉",
+   "tags": [
+    "臉部辨識",
+    "Face ID"
+   ],
+   "file": "ai/face-id.svg",
+   "from": "tabler:face-id"
+  },
+  {
+   "id": "scan",
+   "zh": "掃描",
+   "when": "講到掃描、辨識、讀取",
+   "tags": [
+    "掃描",
+    "辨識"
+   ],
+   "file": "ai/scan.svg",
+   "from": "tabler:scan"
+  },
+  {
+   "id": "wifi",
+   "zh": "Wi-Fi",
+   "when": "講到無線網路、連上網",
+   "tags": [
+    "Wi-Fi",
+    "無線",
+    "上網"
+   ],
+   "file": "ai/wifi.svg",
+   "from": "tabler:wifi"
+  },
+  {
+   "id": "bluetooth",
+   "zh": "藍牙",
+   "when": "講到藍牙、配對",
+   "tags": [
+    "藍牙",
+    "配對"
+   ],
+   "file": "ai/bluetooth.svg",
+   "from": "tabler:bluetooth"
+  },
+  {
+   "id": "antenna",
+   "zh": "天線",
+   "when": "講到訊號、收訊、基地台",
+   "tags": [
+    "天線",
+    "訊號"
+   ],
+   "file": "ai/antenna.svg",
+   "from": "tabler:antenna"
+  },
+  {
+   "id": "satellite",
+   "zh": "衛星",
+   "when": "講到衛星、定位、遠端傳輸",
+   "tags": [
+    "衛星",
+    "定位"
+   ],
+   "file": "ai/satellite.svg",
+   "from": "tabler:satellite"
+  },
+  {
+   "id": "circuit",
+   "zh": "電路",
+   "when": "講到電路、硬體原理",
+   "tags": [
+    "電路"
+   ],
+   "file": "ai/circuit.svg",
+   "from": "tabler:circuit-switch-open"
+  },
+  {
+   "id": "math",
+   "zh": "函數",
+   "when": "講到公式、演算法、計算",
+   "tags": [
+    "公式",
+    "演算法"
+   ],
+   "file": "ai/math.svg",
+   "from": "tabler:math-function"
+  },
+  {
+   "id": "variable",
+   "zh": "變數",
+   "when": "講到變數、參數、代入",
+   "tags": [
+    "變數",
+    "參數"
+   ],
+   "file": "ai/variable.svg",
+   "from": "tabler:variable"
+  },
+  {
+   "id": "schema",
+   "zh": "資料結構",
+   "when": "講到欄位、結構、資料表關係",
+   "tags": [
+    "資料結構",
+    "欄位"
+   ],
+   "file": "ai/schema.svg",
+   "from": "tabler:schema"
+  },
+  {
+   "id": "webhook",
+   "zh": "Webhook",
+   "when": "講到觸發、串接通知",
+   "tags": [
+    "Webhook",
+    "觸發"
+   ],
+   "file": "ai/webhook.svg",
+   "from": "tabler:webhook"
+  },
+  {
+   "id": "browser",
+   "zh": "瀏覽器",
+   "when": "講到網頁、打開瀏覽器",
+   "tags": [
+    "瀏覽器",
+    "網頁"
+   ],
+   "file": "ai/browser.svg",
+   "from": "tabler:browser"
+  },
+  {
+   "id": "app-window",
+   "zh": "視窗",
+   "when": "講到軟體視窗、介面",
+   "tags": [
+    "視窗",
+    "介面"
+   ],
+   "file": "ai/app-window.svg",
+   "from": "tabler:app-window"
+  },
+  {
+   "id": "apps",
+   "zh": "應用程式",
+   "when": "講到 App、很多工具",
+   "tags": [
+    "App",
+    "應用程式"
+   ],
+   "file": "ai/apps.svg",
+   "from": "tabler:apps"
+  },
+  {
+   "id": "plug-connected",
+   "zh": "已連接",
+   "when": "講到串起來、接上、整合",
+   "tags": [
+    "連接",
+    "整合"
+   ],
+   "file": "ai/plug-connected.svg",
+   "from": "tabler:plug-connected"
+  },
+  {
+   "id": "cube",
+   "zh": "方塊",
+   "when": "講到模組、3D、一個單位",
+   "tags": [
+    "方塊",
+    "模組",
+    "3D"
+   ],
+   "file": "ai/cube.svg",
+   "from": "tabler:cube"
+  },
+  {
+   "id": "stack",
+   "zh": "堆疊",
+   "when": "講到技術堆疊、一層一層疊",
+   "tags": [
+    "堆疊",
+    "技術棧"
+   ],
+   "file": "ai/stack.svg",
+   "from": "tabler:stack"
+  },
+  {
+   "id": "chart-dots",
+   "zh": "資料點",
+   "when": "講到資料分析、分佈",
+   "tags": [
+    "資料點",
+    "分析"
+   ],
+   "file": "ai/chart-dots.svg",
+   "from": "tabler:chart-dots"
+  }
+ ]
+}

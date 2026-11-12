@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-route 路線地圖｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-route.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-route { position: absolute; inset: 0; }
+    #x-route .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 194、1180×620（右緣 1300） */
+    #x-route #xrt-card { position: absolute; left: 120px; top: 194px; width: 1180px; height: 620px; }
+    #x-route #xrt-ico { position: absolute; left: 56px; top: 36px; }
+    #x-route #xrt-title { position: absolute; left: 152px; top: 36px; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 地圖：淡色底＋格線；虛線＝預定路線、空心點＝每一站（跟主卡一起出現）；主色實線＝走過的路線 */
+    #x-route #xrt-map { position: absolute; left: 56px; top: 144px; width: 1068px; height: 436px; border-radius: 16px; background: var(--v2-node-tint); }
+    #x-route #xrt-svg { position: absolute; left: 0; top: 0; width: 1068px; height: 436px; overflow: visible; }
+    #x-route .xrt-grid { fill: none; stroke: var(--sc-fs-card); stroke-width: 3; }
+    #x-route .xrt-base { fill: none; stroke: var(--v2-line); stroke-width: 6; stroke-dasharray: 2 16; stroke-linecap: round; }
+    #x-route .xrt-leg { fill: none; stroke: var(--brand); stroke-width: 8; stroke-linecap: round; }
+    #x-route .xrt-dot { fill: var(--sc-fs-card); stroke: var(--v2-line); stroke-width: 4; }
+    /* 一站：圖釘、地名、備註由上到下置中；left／top 由 script 照站數填（圖釘的中心＝站的中心點） */
+    #x-route .xrt-stop { position: absolute; left: 0; top: 0; width: 260px; display: flex; flex-direction: column; align-items: center; white-space: nowrap; }
+    #x-route .xrt-name { margin-top: 8px; color: var(--sc-fs-ink); }
+    #x-route .xrt-note { color: var(--sc-fs-mute); }
+  </style>
+  <div id="x-route" data-composition-id="x-route" data-width="1920" data-height="1080" data-duration="12.6"
+       data-cues-sample='{"start":0,"D":12.6,"cues":{"481":[0.4,1.4],"482":[1.5,3.9],"483":[4.0,6.4],"484":[6.5,8.9],"485":[9.0,12.4]},"refs":{"#482@台北":1.7,"#483@台中":4.2,"#484@台南":6.7,"#485@高雄":9.2}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrt-card" class="sc-wcard" data-layout="free">
+      <span id="xrt-ico" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" /> <path d="M15 5.764v15" /> <path d="M9 3.236v15" /> </svg></span>
+      <div id="xrt-title" class="sc-t52 sc-w900"><span class="sc-opt">這趟南下的路線</span></div>
+      <div id="xrt-map">
+        <svg id="xrt-svg" viewBox="0 0 1068 436" xmlns="http://www.w3.org/2000/svg" data-layout-ignore>
+          <path class="xrt-grid" d="M0 109H1068M0 218H1068M0 327H1068M178 0V436M356 0V436M534 0V436M712 0V436M890 0V436" />
+          <path id="xrt-base" class="xrt-base" />
+          <path id="xrt-l1" class="xrt-leg" />
+          <path id="xrt-l2" class="xrt-leg" />
+          <path id="xrt-l3" class="xrt-leg" />
+          <circle class="xrt-dot" r="12" />
+          <circle class="xrt-dot" r="12" />
+          <circle class="xrt-dot" r="12" />
+          <circle class="xrt-dot" r="12" />
+        </svg>
+        <div id="xrt-s1" class="xrt-stop"><span id="xrt-p1" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /> </svg></span><span class="xrt-name sc-t44 sc-w700 sc-opt">台北</span>
+          <span class="xrt-note sc-t40 sc-w500 sc-opt">出發</span>
+        </div>
+        <div id="xrt-s2" class="xrt-stop"><span id="xrt-p2" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /> </svg></span><span class="xrt-name sc-t44 sc-w700 sc-opt">台中</span>
+          <span class="xrt-note sc-t40 sc-w500 sc-opt">吃午餐</span>
+        </div>
+        <div id="xrt-s3" class="xrt-stop"><span id="xrt-p3" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /> </svg></span><span class="xrt-name sc-t44 sc-w700 sc-opt">台南</span>
+          <span class="xrt-note sc-t40 sc-w500 sc-opt">看古蹟</span>
+        </div>
+        <div id="xrt-s4" class="xrt-stop"><span id="xrt-p4" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /> </svg></span><span class="xrt-name sc-t44 sc-w700 sc-opt">高雄</span>
+          <span class="xrt-note sc-t40 sc-w500 sc-opt">住一晚</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-route'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#482@台北'), T2 = P.at('#483@台中'), T3 = P.at('#484@台南'), T4 = P.at('#485@高雄');   // 講到每個地點的時刻
+    P.sfx('ding', '#485@高雄');                        // 最後一站一顆提示音（句號和最後一站一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 照站數排位置（載入時算一次，不用改）：站的中心點一高一低，路線是連過每一站的平滑曲線
+    const STOPS = $q('.xrt-stop'), N = STOPS.length;
+    const XS = N === 2 ? [220, 848] : N === 3 ? [160, 534, 908] : [130, 400, 670, 940], YS = [250, 110, 250, 110];
+    const LEG = function (i) { var m = (XS[i] + XS[i + 1]) / 2; return 'M' + XS[i] + ' ' + YS[i] + 'C' + m + ' ' + YS[i] + ' ' + m + ' ' + YS[i + 1] + ' ' + XS[i + 1] + ' ' + YS[i + 1]; };
+    STOPS.forEach(function (s, i) { s.style.left = (XS[i] - 130) + 'px'; s.style.top = (YS[i] - 36) + 'px'; });
+    $q('.xrt-dot').forEach(function (c, i) { c.setAttribute('cx', XS[i]); c.setAttribute('cy', YS[i]); });
+    $q('.xrt-leg').forEach(function (p, i) { p.setAttribute('d', LEG(i)); });
+    document.getElementById('xrt-base').setAttribute('d', STOPS.slice(1).map(function (s, i) { return LEG(i); }).join(''));
+
+    // 拍 0 開場：主卡進場（看 ENTER；地圖、虛線路線、空心點跟著主卡一起出現）→ 圖示描線、標題逐字
+    if (ENTER === 'grow') P.grow('#xrt-card', 0.3);
+    else { P.wipe('#xrt-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xrt-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xrt-ico', 0.5);
+    P.chars('#xrt-title .sc-opt', 0.62, { stagger: 0.03 });
+
+    // 拍 1 出發地：圖釘（連地名、備註）彈出 → ＋0.1 圖示描線
+    P.pop('#xrt-s1', T1);  P.icon('#xrt-p1', T1 + 0.1, { dur: 0.5 });
+    // 拍 2–4 下一站：路線提早 0.5 秒開始描（彗星描線），講到地名時到站 → 圖釘彈出 → ＋0.1 圖示描線
+    P.comet('#xrt-l1', T2 - 0.5, { dur: 0.5 });  P.pop('#xrt-s2', T2);  P.icon('#xrt-p2', T2 + 0.1, { dur: 0.5 });
+    P.comet('#xrt-l2', T3 - 0.5, { dur: 0.5 });  P.pop('#xrt-s3', T3);  P.icon('#xrt-p3', T3 + 0.1, { dur: 0.5 });
+    P.comet('#xrt-l3', T4 - 0.5, { dur: 0.5 });  P.pop('#xrt-s4', T4);  P.icon('#xrt-p4', T4 + 0.1, { dur: 0.5 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-route'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-route";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

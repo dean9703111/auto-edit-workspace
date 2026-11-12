@@ -17,7 +17,7 @@
      P.in(sel, at, {dur, stagger})   淡入 opacity 0→1，IN 0.5s、sine.out；stagger＝同組依序間隔
      P.out(sel, at, {dur, stagger})  淡出 opacity 1→0，OUT 0.3s、sine.in（所有情境的離場；v2 退場比進場快，design-system.md §3）
      P.swap(outSel, inSel, at, {dur})原地交叉淡化：同一時間 out（0.3）＋ in（0.5）——同位置換內容、沒有順序（全畫面子版型）
-     P.sideIn(sel, at)               側邊欄面板 x −960 → 0，PUSH 0.7s、ease＝P.pushEase
+     P.sideIn(sel, at)               側邊欄面板 x −960 → 0，PUSH 0.7s、ease＝P.pushEase（面板在右時 x 960 → 0）
      P.sideOut(sel, at)              側邊欄面板 x 0 → −960，同上
      P.pushEase(p)                   與 tools/side_shift.py 相同的 9 點（steps=8）easeInOutSine 分段線性曲線：
                                      e_i ＝ −(cos(π·i/8) − 1)/2，i＝0..8，點間線性。剪映只能寫線性關鍵影格，兩邊用同一組點才逐格一致
@@ -333,6 +333,7 @@
     (window.SceneMotion.marks = window.SceneMotion.marks || {})[comp || '?'] = marks;
     var lv = new Map();   // P.focus 記的亮度：元素 → { v: 目前 opacity, t: 最後一次改動結束的秒數 }
     var IN = 0.5, OUT = 0.3, STEP = 0.35, HOLD = 0.6, PUSH = 0.7, SHIFT = 480, SIDE = 960;
+    function panelRight() { return !!(root && root.closest && root.closest('[data-panel-side="right"]')); }
     var DRIFT = 16, RISE = 8, AXIS = 12, REVEAL = 0.55, MASK = 0.6, AXIS_DUR = 0.45, AXIS_LAG = 0.1;
     var BEAT = 0.15, READ = 1.2, HOLD_END = 1.5;
     // 收尾（回均衡這類排在最後一拍之後的動作）太晚、最後一幕停不到 HOLD_END 時，把它們整組往前挪：段長比模板要的短一點時不用每段改 plan.json。
@@ -465,8 +466,9 @@
         fade(inSel, at, 0, 1, o.dur != null ? o.dur : IN, 'sine.out');
         return P;
       },
-      sideIn: function (sel, at) { push(sel, at, -SIDE, 0); return P; },
-      sideOut: function (sel, at) { push(sel, at, 0, -SIDE); return P; },
+      // 027：面板在右（容器帶 data-panel-side="right"，講者在左時 build 加）就從右邊推入、往右邊推出
+      sideIn: function (sel, at) { push(sel, at, panelRight() ? SIDE : -SIDE, 0); return P; },
+      sideOut: function (sel, at) { push(sel, at, 0, panelRight() ? SIDE : -SIDE); return P; },
       end: function (dur) {
         var D = dur == null ? P.dur() : dur;
         settleTail(D);

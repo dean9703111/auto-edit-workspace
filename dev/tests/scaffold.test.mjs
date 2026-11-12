@@ -118,9 +118,13 @@ test('--scaffold 端到端：共用、寫法、每份一檔；不改既有 plan.
   assert.equal(JSON.parse(fs.readFileSync(path.join(work, '分鏡素材', 'index.json'), 'utf8')).semanticMap, true);
   assert.equal(fs.readFileSync(path.join(out, 'plan.json'), 'utf8'), planText, 'plan.json 不動');
   const dir = path.join(work, '分鏡素材');
-  const common = fs.readFileSync(path.join(dir, '共用.md'), 'utf8'), snippets = fs.readFileSync(path.join(dir, '寫法.md'), 'utf8');
+  const common = fs.readFileSync(path.join(dir, '共用.md'), 'utf8'), snippets = fs.readFileSync(path.join(dir, '.spec.md'), 'utf8');
+  assert.ok(!fs.existsSync(path.join(dir, '寫法.md')), '026：寫法收成工具用的 .spec.md，不列在分鏡素材裡');
+  assert.doesNotMatch(r.stdout, /寫法\.md/);
   assert.match(common, /\[100,100,900,900\]/);
-  assert.match(common, /不要查 `transcript\.json`/);
+  assert.match(common, /秒數工具算/);
+  assert.doesNotMatch(common, /句子長這樣/, '026：情境對照表不放進共用.md（--map 會印每一行能用的模板）');
+  assert.ok(common.length < 9000, `共用.md ${common.length} 字`);
   assert.match(common, /內容設計動畫/);
   assert.match(snippets, /\*\*07 key-point\*\*/);
   assert.match(snippets, /"beats":\{"keyAt":"#N@詞"\}/);
@@ -135,7 +139,7 @@ test('--scaffold 端到端：共用、寫法、每份一檔；不改既有 plan.
   assert.match(snippets, /side-panel/, '橫式有 03');
   const v = run('--format', 'portrait');
   assert.equal(v.status, 0, v.stdout + v.stderr);
-  assert.doesNotMatch(fs.readFileSync(path.join(dir, '寫法.md'), 'utf8'), /\*\*03 side-panel/, '直式不列 03');
+  assert.doesNotMatch(fs.readFileSync(path.join(dir, '.spec.md'), 'utf8'), /\*\*03 side-panel/, '直式不列 03');
   // 純聲音：assets/camera 空的、沒有 plan.json
   fs.unlinkSync(path.join(proj, 'assets', 'camera', 'a.mp4'));
   fs.mkdirSync(path.join(proj, 'assets', 'voice'), { recursive: true });
@@ -145,7 +149,7 @@ test('--scaffold 端到端：共用、寫法、每份一檔；不改既有 plan.
   assert.equal(pure.status, 0, pure.stdout + pure.stderr);
   assert.ok(fs.existsSync(path.join(out, 'plan.json')), '純聲音也建好 plan.json');
   assert.match(fs.readFileSync(path.join(dir, '共用.md'), 'utf8'), /沒有講者/);
-  assert.doesNotMatch(fs.readFileSync(path.join(dir, '寫法.md'), 'utf8'), /\*\*07 key-point/, '純聲音不列下方字卡');
+  assert.doesNotMatch(fs.readFileSync(path.join(dir, '.spec.md'), 'utf8'), /\*\*07 key-point/, '純聲音不列下方字卡');
 });
 
 test('寫法：模板的時間下限印成一行，寫草稿前就知道放不下', () => {
@@ -434,7 +438,7 @@ test('022 --design-status：還沒動手／腳本寫好／動畫做了＋audit �
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(p, 'work', 'hyperframes', '.cache', 'check-runs.json'), 'utf8')), { 'audit:d3': 2 }, '023：要重派的段次數歸零，別段不動');
   assert.match(r.stdout, /d1：還沒動手（派出 30 分鐘）　⚠ 超過 20 分鐘沒進度/);
-  assert.match(r.stdout, /→ 下一步：停掉原本負責 d1、d4 的設計師，重派[\s\S]*（d4）你是設計師[^\n]*用 edit 接著改，不要整份重寫[\s\S]*（d1）你是設計師[^\n]*先照 \.agents\/skills\/auto-edit-motion\/references\/design-script\.md 寫鏡位腳本/);
+  assert.match(r.stdout, /→ 下一步：停掉原本負責 d1、d4 的設計師，重派[\s\S]*（d4）你是設計師[^\n]*用 edit 接著改，不要整份重寫[\s\S]*（d1）你是設計師[^\n]*照 \.agents\/skills\/auto-edit-motion\/references\/design\.md 寫鏡位腳本、接著做動畫/);
   // 023：重派之後從重派起算，新設計師還沒寫檔也不會馬上又被判卡住
   const again = spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--project', p, '--design-status'], { encoding: 'utf8' });
   assert.match(again.stdout, /d1：還沒動手（重派 0 分鐘）\n/);
@@ -576,7 +580,12 @@ test('024 語意地圖（純函式）：parseMap 認範圍與級；checkMap 擋�
   // 024 試跑：照秒數只列放得下的；最少項目放得下、全部放不下的照列但標出來
   const mins = { '08 steps': 6, '04c fs-flow': 4, 'x-process': 9 }, fulls = { '04c fs-flow': 7 };
   const timed = M.mapOptions(c.rows.slice(0, 1), sit, specNames, { secsOf: () => 5.5, minOf: (n) => mins[n] || 0, fullOf: (n) => fulls[n] || 0 })[0];
-  assert.equal(timed, '#1–#3 步驟 B（5.5 秒）：x-scene（講解在描述具體的動作、物件或過程）｜04c fs-flow（流程「A → B → C」，站排成一直線；項目全用上要 7 秒，這裡只放得下幾項）；放不下：08 steps ≥ 6 秒、x-process ≥ 9 秒（真的要用就和前後一行併成一段）');
+  assert.equal(timed, '#1–#3 步驟 B（5.5 秒）：x-scene（講解在描述具體的動作、物件或過程）｜04c fs-flow＊（流程「A → B → C」，站排成一直線）', '026：放不下全部項目的標 ＊；只有一行、沒有前後可以併：放不下的不列');
+  // 026：放不下的模板，工具直接說併哪一行就放得下（不印秒數下限）
+  const secsBy = { 1: 5.5, 4: 2, 7: 4 };
+  const merged = M.mapOptions(c.rows.slice(0, 3), sit, specNames, { secsOf: (r) => secsBy[r.a] ?? 3, minOf: (n) => mins[n] || 0, fullOf: () => 0 });
+  assert.match(merged[0], /；併後一行就放得下：08 steps$/, '5.5＋2 秒放得下 08 steps（6 秒），x-process（9 秒）併了也不夠就不列');
+  assert.doesNotMatch(merged.join('\n'), /≥ \d+ 秒/);
   assert.match(M.mapOptions(c.rows.slice(0, 1), sit, specNames, { secsOf: () => 2, minOf: () => 3 })[0], /這一行太短，這一型的模板都放不下/);
   const cs = Array.from({ length: 5 }, (_, i) => ({ n: i + 1, start: i * 3, end: i * 3 + 2.5 }));
   assert.equal(M.rowSeconds({ a: 2, z: 3 }, cs), 6, '到下一句開口（--outline 會接上空檔）');
@@ -632,10 +641,15 @@ test('024 語意地圖端到端：--map 驗一份（第一回合不印模板）�
   assert.match(r.stdout, /--merge-drafts$/m);
   assert.ok(fs.existsSync(path.join(work, '分鏡素材', '語意地圖.md')));
   r = run('--map', 'ch01');
-  assert.match(r.stdout, /#5–#8 步驟 B（14 秒）：x-scene（[^）]+）｜08 steps（[^）]+）｜04c fs-flow（[^）]+）｜x-process（/, "印秒數、能直接寫進大綱的名稱和什麼句子用它");
+  // 027 版面節奏：這支只有 42 秒，湊不到 45 秒的子母畫面 → 整支用字卡；行首標版面、只列那種版面的模板
+  assert.match(r.stdout, /版面安排（工具照規則排好了，照行首標的版面挑模板）：0:01–0:42 字卡/);
+  assert.match(r.stdout, /〔字卡〕#5–#8 步驟 B（14 秒）：08 steps（[^）]+）/, "印秒數、能直接寫進大綱的名稱和什麼句子用它");
+  assert.doesNotMatch(r.stdout, /〔字卡〕#5–#8[^\n]*x-process/, '字卡區塊不列全畫面的模板');
   assert.match(r.stdout, /--outline ch01$/m);
   fs.writeFileSync(path.join(work, 'drafts', 'ch01.outline.md'), 's0101 | #1 | #5 | key-point | 開場 | —\ns0102 | #5 | #9 | x-process | 步驟 | 人走過三站\ns0103 | #9 | #12e | key-point | 回顧 | —\n');
   r = run('--outline', 'ch01');
+  assert.match(r.stdout, /✖ 版面節奏：開頭 30 秒要讓觀眾先認識講者：s0102（0:\d\d，子母畫面）/, '027：大綱這一步就擋');
+  assert.match(r.stdout, /✖ 版面節奏：子母畫面只連續 [\d.]+ 秒（s0102/);
   assert.match(r.stdout, /地圖上 #1–#4 是 A（開場的故事）→ 那一段寫候選構想/);
   assert.match(r.stdout, /s0102 寫了候選構想，但 #5 在地圖上不是 A/);
   assert.doesNotMatch(r.stdout, /三成約/, '有地圖就不照每份三成算');
@@ -672,4 +686,80 @@ test('025 字卡動態照語意輪流推薦：catalog 每張有 sem（都是語�
   assert.doesNotMatch(long, /字卡動態/, '20 秒的行不推薦字卡動態');
   const short = M.mapOptions([{ a: 1, z: 2, sem: '對比', tier: 'B' }], [], [], { secsOf: () => 5, fx })[0];
   assert.match(short, /只有一個詞或一句短話就用字卡動態：fx \d{2} [^｜]+｜fx \d{2}/);
+});
+
+test('026 brief：字幕標出每一秒講到哪、段尾在句子中間就註明；拍點換成這一段的建議；視覺語言只帶和這一段有關的', async () => {
+  const F = await imp('lib/flow.mjs');
+  const cues = [{ n: 1, start: 10, end: 13.6, text: '而這個工具從萌生想法到完成' }, { n: 2, start: 13.6, end: 16, text: '前後只花了一個小時' }];
+  // 沒有詞級逐字稿：照字數比例標；整秒落在句首的不標（句首的秒數已經寫在前面）
+  const lines = F.briefCueLines(cues, 1, 2, 10, { words: [], end: 5 });
+  assert.match(lines[0], /^#1（段內 0\.0–3\.6 秒）而這個工⟨1⟩.*⟨2⟩.*⟨3⟩/);
+  assert.match(lines[1], /^#2（段內 3\.6–5\.0 秒）.*（這段在 5\.0 秒結束，這句後面是下一段）$/);
+  assert.equal(F.briefCueLines(cues, 1, 1, 10)[0], '#1（段內 0.0–3.6 秒）而這個工具從萌生想法到完成', '不給 words 就不標（舊的呼叫方式不變）');
+  // 拍點：短的段只放 1 拍；長的段給範圍和拍數
+  assert.match(F.beatAdvice(3.8), /只有 3\.8 秒：第 0 拍之後放 1 拍.*不能晚於 3\.3 秒/);
+  assert.equal(F.beatAdvice(9.3), '第 0 拍之後放得下 2 拍，兩拍相隔 2.5 秒以上。第一拍在 1.5 秒之後（前面留給開場），最後一拍在 6.3 秒前最從容；最關鍵的詞比這晚也照樣綁它（那一拍的動作做短一點，audit 的「最後一幕太短」⚠ 留著），但不能晚於 8.8 秒：那之後畫面已經在淡出，看不到。');
+  assert.match(F.beatAdvice(5.5), /放得下 1 拍。.*最後一拍在 2\.5 秒前最從容.*不能晚於 5\.0 秒/);
+  // 數字和 audit 的常數對得上：最從容＝段尾前（淡出 0.5＋最後一幕 1.5＋一拍的動作 1 秒），最晚＝淡出之前
+  const AR = await imp('lib/audit-rules.mjs');
+  assert.equal(F.BRIEF_BEAT.end, F.BRIEF_BEAT.fade + AR.TAIL_MIN + 1);
+  assert.ok(F.BRIEF_BEAT.gap >= AR.HOLD_MIN + 1);
+  assert.equal(F.beatAdvice('?'), '');
+  // 視覺語言
+  const md = '# 視覺語言\n\n這集在講：一件事\n\n## 貫穿全片的主題（2 個）\n\n- **橘線**：#20–#21 出現，#52–#59 回來\n- **足跡**：#12–#14 出現\n\n## 配色\n\n主色給焦點\n\n## 其他段的方向\n\n- #3–#5：四個框\n- #53：即時畫面\n';
+  const v = F.visionFor(md, 52, 54);
+  assert.match(v, /這集在講：一件事/);
+  assert.match(v, /### 這一段用到的主題\n\n- \*\*橘線\*\*/);
+  assert.match(v, /全片另外的主題（這一段不在它們的範圍，想呼應才用）：足跡/);
+  assert.match(v, /### 配色\n\n主色給焦點/);
+  assert.match(v, /### 這一段的方向\n\n- #53：即時畫面/);
+  assert.doesNotMatch(v, /四個框/);
+  assert.doesNotMatch(F.visionFor(md, 30, 31), /這一段的方向|這一段用到的主題/);
+  assert.match(F.visionFor('這集在講：x\n\n## 貫穿全片的主題\n\n- **甲**：一條線\n', 1, 2), /- \*\*甲\*\*：一條線/, '主題沒寫句號：全部留');
+  assert.equal(F.visionFor('', 1, 2), '');
+});
+
+test('026 --spec 不印時間下限的秒數（工具照樣用它算）；--design-canvas 補空白畫布、--reset 備份後換回空白', async () => {
+  const F = await imp('lib/flow.mjs');
+  const shown = F.specShown('**x-a**：用途\n時間下限（`--check-draft` 會用實際時間算，不用自己算）：第一拍離段頭 ≥ 2 秒、拍與拍 ≥ 2.5 秒\n全部欄位：a');
+  assert.doesNotMatch(shown, /≥ 2 秒|時間下限/);
+  assert.match(shown, /一拍一句/);
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-canvas-'));
+  const out = path.join(p, 'work', 'hyperframes'), file = path.join(out, 'compositions', 'x-design-d1.html');
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(path.join(out, 'plan.json'), JSON.stringify({ scenes: [{ id: 'd1', design: true, from: '#1', to: '#1e', story: { idea: '兩支手機' } }, { id: 's2', scene: 'key-point' }] }));
+  const P = { project: p, plan: path.join(out, 'plan.json'), out, templateDir: TEMPLATE };
+  const logs = []; const log = console.log; console.log = (m) => logs.push(m);
+  try {
+    assert.equal(F.designCanvasCmd(P, 'd1'), 0);
+    assert.match(fs.readFileSync(file, 'utf8'), /id="x-design-d1"[\s\S]*data-design-blank[\s\S]*兩支手機/);
+    assert.equal(F.designCanvasCmd(P, 's2'), 1, '不是內容設計動畫段');
+    fs.writeFileSync(file, '<template><div id="x-design-d1">做好了</div></template>');
+    fs.mkdirSync(path.join(p, 'work', 'designs'), { recursive: true });
+    fs.writeFileSync(path.join(p, 'work', 'designs', 'd1.md'), '腳本');
+    assert.equal(F.designCanvasCmd(P, 'd1'), 0);
+    assert.match(fs.readFileSync(file, 'utf8'), /做好了/, '已經有內容的不動');
+    assert.equal(F.designCanvasCmd(P, 'd1', { reset: true }), 0);
+    assert.match(fs.readFileSync(file, 'utf8'), /data-design-blank/);
+    const old = fs.readdirSync(path.join(p, 'work', 'designs', '.old'));
+    assert.equal(old.filter((f) => /^d1-.*\.html$/.test(f)).length, 1);
+    assert.equal(old.filter((f) => /^d1-.*\.md$/.test(f)).length, 1);
+    assert.ok(!fs.existsSync(path.join(p, 'work', 'designs', 'd1.md')));
+  } finally { console.log = log; fs.rmSync(p, { recursive: true, force: true }); }
+  assert.match(logs.join('\n'), /✓ d1：空白畫布[\s\S]*✖ s2 不是內容設計動畫段[\s\S]*已經有內容，沒有動[\s\S]*舊的備份在/);
+});
+
+test('026 檢查次數的上限由工具數：草稿檢查到第 5 次還有 ✖ 印「→ 停手」；重派時連驗收的次數一起歸零', async () => {
+  const F = await imp('lib/flow.mjs');
+  assert.equal(F.CHECK_TRY_MAX, 5);
+  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-runs-'));
+  const P = { out: path.join(p, 'work', 'hyperframes') };
+  for (let i = 0; i < 3; i++) { F.runCount(P, 'audit:d1'); F.runCount(P, 'audit-try:d1'); }
+  F.runCount(P, 'audit-try:d2');
+  assert.deepEqual(F.resetRuns(P, ['d1', 'd2']).sort(), ['d1', 'd2']);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(P.out, '.cache', 'check-runs.json'), 'utf8')), {});
+  fs.rmSync(p, { recursive: true, force: true });
+  const src = fs.readFileSync(path.join(TOOLS, 'audit.mjs'), 'utf8');
+  assert.match(src, /export const AUDIT_TRY_MAX = 6;/);
+  assert.match(src, /→ 停手：這一段已經驗收 \$\{r\.stop\} 次還有 ✖/);
 });

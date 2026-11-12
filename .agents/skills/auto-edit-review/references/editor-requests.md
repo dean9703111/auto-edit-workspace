@@ -49,10 +49,10 @@
 | 這段是什麼、要改的 | 誰做 |
 |---|---|
 | 模板動畫（`template`＋`slots`）、字卡、資訊卡：只改文字、條目、時間 | 你自己改 plan.json，不用派 |
-| 模板動畫、字卡、資訊卡：「換一種動畫」「以圖像展示為主」，內容是條列、走流程 | 換 `build.mjs --list` 裡另一個模板（不和前後段同一個）：你改 plan.json 那段的 `template`／`scene`＋`slots`（寫法在 `work/分鏡素材/寫法.md`），不用派 |
-| 模板動畫、字卡、資訊卡：「換一種動畫」「以圖像展示為主」，遮住字幕只看畫面看不懂、模板做不到（style.md「內容設計動畫」的判斷） | 你把那段改成 `"design": true`（拿掉 `template`、`slots`），跑 `node shared/template/tools/build.mjs --project projects/<專案> --check`，確認 `work/briefs/<段>.md` 有了再派工。派工照 `--apply-storyboard` 印的那一句：先照 `.agents/skills/auto-edit-motion/references/design-script.md` 寫鏡位腳本（不用等確認），寫完接著照 `design-build.md` 做動畫。修改單就是確認過的改法，不用停 ③ |
+| 模板動畫、字卡、資訊卡：「換一種動畫」「以圖像展示為主」，內容是條列、走流程 | 換 `build.mjs --list` 裡另一個模板（不和前後段同一個）：你改 plan.json 那段的 `template`／`scene`＋`slots`（欄位用 `build.mjs --spec <模板>` 查），不用派 |
+| 模板動畫、字卡、資訊卡：「換一種動畫」「以圖像展示為主」，遮住字幕只看畫面看不懂、模板做不到（style.md「內容設計動畫」的判斷） | 你把那段改成 `"design": true`（拿掉 `template`、`slots`），跑 `node shared/template/tools/build.mjs --project projects/<專案> --check`，確認 `work/briefs/<段>.md` 有了再派工。派工照 `--apply-storyboard` 印的那一句：照 `.agents/skills/auto-edit-motion/references/design.md` 寫鏡位腳本、接著 做動畫。修改單就是確認過的改法，不用停 ③ |
 | 模板動畫：其他 `slots` 做不到的改動 | 一段一個子代理改那支 `<模板>-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md` |
-| 已經是內容設計動畫（`"design": true`）的段，不管哪個標籤 | 一段一個子代理用 edit 改那支 `x-design-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md`（寫法照 design-build.md；拍變了一起改 `work/designs/<段>.md`） |
+| 已經是內容設計動畫（`"design": true`）的段，不管哪個標籤 | 一段一個子代理用 edit 改那支 `x-design-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md`（寫法照 design.md；拍變了一起改 `work/designs/<段>.md`） |
 | 錄影段的 `marks`、`moves`、`side`、`steps`、換成動畫 | 你自己改 plan.json；換一段錄影照 `auto-edit-screen` 的筆記挑 |
 
 **同一則回覆一次全部派出**；派工訊息的「要改什麼」寫：
@@ -75,7 +75,7 @@
 - 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`（build、量、存改後版本、寫驗證、記停點 ④），打開它印的圖，只看改到的段。
 - `finish` 會自己填 `work/feedback/r<N>.md` 的「分類」改法和「改了哪幾段」（`- <段 id>：<改了什麼>（v1 → v2）`），不用重寫。你只補三種：沒做的段加一列 `- <段 id>：沒做，<理由>`；新增的段加一列 `- t1095：新增 s05b，<做了什麼>`；工具寫得太籠統（例「改了」）就用 edit 改那一列冒號後面的字。id 照修改單的寫、一段一列（剪輯台讀這一列，把修改單上那段標「✓ 已改」、可以點「看結果」）。
 - 回報每段一行「<段>：<做了什麼>」，加「剪輯台的修改單可以按『清空修改單』」，最後兩行是停點 ④。
-- 工具呼叫預算：每段算回饋輪的一項（6 次），動畫段另計（一段 18 次）。
+- 工具呼叫預算：每段算回饋輪的一項（6 次）；動畫段的子代理由工具數驗收次數（第 6 次還有 ✖ 印「→ 停手」）。
 
 ## 5. 回報剪輯台
 

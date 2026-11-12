@@ -1,0 +1,345 @@
+{
+ "id": "device",
+ "zh": "裝置與硬體",
+ "when": "講到用什麼設備、硬體、接線、規格",
+ "items": [
+  {
+   "id": "phone",
+   "zh": "手機",
+   "when": "講到用手機拍、在手機上操作、手機 App",
+   "tags": [
+    "手機",
+    "智慧型手機",
+    "iPhone",
+    "行動裝置"
+   ],
+   "file": "device/phone.svg",
+   "from": "tabler:device-mobile"
+  },
+  {
+   "id": "laptop",
+   "zh": "筆電",
+   "when": "講到用電腦剪片、打開筆電工作",
+   "tags": [
+    "筆電",
+    "筆記型電腦",
+    "MacBook",
+    "電腦"
+   ],
+   "file": "device/laptop.svg",
+   "from": "tabler:device-laptop"
+  },
+  {
+   "id": "desktop",
+   "zh": "桌機螢幕",
+   "when": "講到桌上型電腦、大螢幕、工作站",
+   "tags": [
+    "桌機",
+    "螢幕",
+    "顯示器",
+    "電腦"
+   ],
+   "file": "device/desktop.svg",
+   "from": "tabler:device-desktop"
+  },
+  {
+   "id": "tablet",
+   "zh": "平板",
+   "when": "講到平板、iPad、用觸控筆",
+   "tags": [
+    "平板",
+    "iPad",
+    "觸控"
+   ],
+   "file": "device/tablet.svg",
+   "from": "tabler:device-tablet"
+  },
+  {
+   "id": "watch",
+   "zh": "智慧手錶",
+   "when": "講到手錶通知、穿戴裝置、記錄運動",
+   "tags": [
+    "手錶",
+    "穿戴裝置",
+    "Apple Watch"
+   ],
+   "file": "device/watch.svg",
+   "from": "tabler:device-watch"
+  },
+  {
+   "id": "tv",
+   "zh": "電視",
+   "when": "講到電視、大螢幕播放、在客廳看",
+   "tags": [
+    "電視",
+    "大螢幕",
+    "投放"
+   ],
+   "file": "device/tv.svg",
+   "from": "tabler:device-tv"
+  },
+  {
+   "id": "camera",
+   "zh": "相機",
+   "when": "講到拍照、相機設定、攝影器材",
+   "tags": [
+    "相機",
+    "拍照",
+    "攝影",
+    "鏡頭"
+   ],
+   "file": "device/camera.svg",
+   "from": "tabler:camera"
+  },
+  {
+   "id": "video-camera",
+   "zh": "攝影機",
+   "when": "講到錄影、拍片、開始錄",
+   "tags": [
+    "攝影機",
+    "錄影",
+    "拍片"
+   ],
+   "file": "device/video-camera.svg",
+   "from": "tabler:video"
+  },
+  {
+   "id": "webcam",
+   "zh": "視訊鏡頭",
+   "when": "講到開鏡頭、視訊、直播用的鏡頭",
+   "tags": [
+    "webcam",
+    "視訊鏡頭",
+    "鏡頭"
+   ],
+   "file": "device/webcam.svg",
+   "from": "tabler:device-computer-camera"
+  },
+  {
+   "id": "microphone",
+   "zh": "麥克風",
+   "when": "講到收音、錄音、配音、Podcast",
+   "tags": [
+    "麥克風",
+    "收音",
+    "錄音",
+    "配音"
+   ],
+   "file": "device/microphone.svg",
+   "from": "tabler:microphone"
+  },
+  {
+   "id": "headphones",
+   "zh": "耳機",
+   "when": "講到監聽、戴耳機、聽音樂",
+   "tags": [
+    "耳機",
+    "監聽"
+   ],
+   "file": "device/headphones.svg",
+   "from": "tabler:headphones"
+  },
+  {
+   "id": "speaker",
+   "zh": "喇叭",
+   "when": "講到播放聲音、音響、外放",
+   "tags": [
+    "喇叭",
+    "音響",
+    "播放"
+   ],
+   "file": "device/speaker.svg",
+   "from": "tabler:device-speaker"
+  },
+  {
+   "id": "keyboard",
+   "zh": "鍵盤",
+   "when": "講到打字、快捷鍵、輸入",
+   "tags": [
+    "鍵盤",
+    "打字",
+    "快捷鍵"
+   ],
+   "file": "device/keyboard.svg",
+   "from": "tabler:keyboard"
+  },
+  {
+   "id": "mouse",
+   "zh": "滑鼠",
+   "when": "講到點擊、拖曳、用滑鼠操作",
+   "tags": [
+    "滑鼠",
+    "點擊",
+    "拖曳"
+   ],
+   "file": "device/mouse.svg",
+   "from": "tabler:mouse"
+  },
+  {
+   "id": "printer",
+   "zh": "印表機",
+   "when": "講到列印、輸出紙本",
+   "tags": [
+    "印表機",
+    "列印",
+    "紙本"
+   ],
+   "file": "device/printer.svg",
+   "from": "tabler:printer"
+  },
+  {
+   "id": "router",
+   "zh": "路由器",
+   "when": "講到網路設備、Wi-Fi 分享器",
+   "tags": [
+    "路由器",
+    "分享器",
+    "網路設備"
+   ],
+   "file": "device/router.svg",
+   "from": "tabler:router"
+  },
+  {
+   "id": "server",
+   "zh": "伺服器",
+   "when": "講到主機、後端、機房、部署",
+   "tags": [
+    "伺服器",
+    "主機",
+    "後端",
+    "機房"
+   ],
+   "file": "device/server.svg",
+   "from": "tabler:server"
+  },
+  {
+   "id": "usb",
+   "zh": "USB",
+   "when": "講到接線、傳輸線、插上隨身碟",
+   "tags": [
+    "USB",
+    "傳輸線",
+    "隨身碟"
+   ],
+   "file": "device/usb.svg",
+   "from": "tabler:usb"
+  },
+  {
+   "id": "sd-card",
+   "zh": "記憶卡",
+   "when": "講到記憶卡、把檔案從相機拿出來",
+   "tags": [
+    "記憶卡",
+    "SD 卡"
+   ],
+   "file": "device/sd-card.svg",
+   "from": "tabler:device-sd-card"
+  },
+  {
+   "id": "hard-drive",
+   "zh": "硬碟",
+   "when": "講到硬碟、儲存空間、備份到外接硬碟",
+   "tags": [
+    "硬碟",
+    "外接硬碟",
+    "儲存空間"
+   ],
+   "file": "device/hard-drive.svg",
+   "from": "lucide:hard-drive"
+  },
+  {
+   "id": "battery",
+   "zh": "電池",
+   "when": "講到電量、續航、快沒電",
+   "tags": [
+    "電池",
+    "電量",
+    "續航"
+   ],
+   "file": "device/battery.svg",
+   "from": "tabler:battery-3"
+  },
+  {
+   "id": "plug",
+   "zh": "插頭",
+   "when": "講到充電、接電源、插上去",
+   "tags": [
+    "插頭",
+    "充電",
+    "電源"
+   ],
+   "file": "device/plug.svg",
+   "from": "tabler:plug"
+  },
+  {
+   "id": "cpu",
+   "zh": "晶片",
+   "when": "講到處理器、效能、運算",
+   "tags": [
+    "晶片",
+    "CPU",
+    "處理器",
+    "效能"
+   ],
+   "file": "device/cpu.svg",
+   "from": "tabler:cpu"
+  },
+  {
+   "id": "gamepad",
+   "zh": "遊戲手把",
+   "when": "講到玩遊戲、遊戲主機",
+   "tags": [
+    "手把",
+    "遊戲",
+    "主機"
+   ],
+   "file": "device/gamepad.svg",
+   "from": "tabler:device-gamepad-2"
+  },
+  {
+   "id": "drone",
+   "zh": "空拍機",
+   "when": "講到空拍、無人機",
+   "tags": [
+    "空拍機",
+    "無人機"
+   ],
+   "file": "device/drone.svg",
+   "from": "tabler:drone"
+  },
+  {
+   "id": "projector",
+   "zh": "投影機",
+   "when": "講到投影、簡報播放、上課投出來",
+   "tags": [
+    "投影機",
+    "投影"
+   ],
+   "file": "device/projector.svg",
+   "from": "tabler:device-projector"
+  },
+  {
+   "id": "remote",
+   "zh": "遙控器",
+   "when": "講到遙控、遠端控制、切換",
+   "tags": [
+    "遙控器",
+    "遙控"
+   ],
+   "file": "device/remote.svg",
+   "from": "tabler:device-remote"
+  },
+  {
+   "id": "devices",
+   "zh": "多個裝置",
+   "when": "講到跨裝置、手機電腦都能用、同步",
+   "tags": [
+    "跨裝置",
+    "多裝置",
+    "同步"
+   ],
+   "file": "device/devices.svg",
+   "from": "tabler:devices"
+  }
+ ]
+}

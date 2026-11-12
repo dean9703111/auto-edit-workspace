@@ -1,6 +1,6 @@
 // build.mjs --gallery 產生，不要手改
 window.__SFX_DATA = {
-  "generated": "2026-11-10T16:49:20.136Z",
+  "generated": "2026-11-12T06:09:42.679Z",
   "sounds": {
     "ding": {
       "kind": "sfx",
@@ -11,7 +11,19 @@ window.__SFX_DATA = {
       "volume": 0.468,
       "targetDb": -12.6,
       "additive": false,
-      "maxPerVideo": null
+      "maxPerVideo": null,
+      "variants": [
+        {
+          "file": "ding-2",
+          "peak": 0.011,
+          "volume": 0.468
+        },
+        {
+          "file": "ding-3",
+          "peak": 0.009,
+          "volume": 0.468
+        }
+      ]
     },
     "success": {
       "kind": "sfx",
@@ -22,7 +34,19 @@ window.__SFX_DATA = {
       "volume": 0.692,
       "targetDb": -5.2,
       "additive": false,
-      "maxPerVideo": null
+      "maxPerVideo": null,
+      "variants": [
+        {
+          "file": "success-2",
+          "peak": 0.145,
+          "volume": 0.692
+        },
+        {
+          "file": "success-3",
+          "peak": 0.129,
+          "volume": 0.692
+        }
+      ]
     },
     "alert": {
       "kind": "sfx",
@@ -33,7 +57,19 @@ window.__SFX_DATA = {
       "volume": 0.569,
       "targetDb": -6.9,
       "additive": false,
-      "maxPerVideo": null
+      "maxPerVideo": null,
+      "variants": [
+        {
+          "file": "alert-2",
+          "peak": 0.019,
+          "volume": 0.569
+        },
+        {
+          "file": "alert-3",
+          "peak": 0.017,
+          "volume": 0.569
+        }
+      ]
     },
     "impact": {
       "kind": "sfx",
@@ -44,7 +80,19 @@ window.__SFX_DATA = {
       "volume": 0.617,
       "targetDb": -6.2,
       "additive": false,
-      "maxPerVideo": null
+      "maxPerVideo": null,
+      "variants": [
+        {
+          "file": "impact-2",
+          "peak": 0.142,
+          "volume": 0.617
+        },
+        {
+          "file": "impact-3",
+          "peak": 0.126,
+          "volume": 0.617
+        }
+      ]
     },
     "click": {
       "kind": "sfx",

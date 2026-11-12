@@ -162,7 +162,7 @@ export function noSheetFinding(item, file) {
 }
 
 // sheet＝parseBeatSheets 的一段；marks＝collectMotionInPage 的 marks（段內秒數）；cuesOut＝build --check 的完成影片秒數字幕；html＝x-*.html 原文
-export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '', file = '', local = [] }) {
+export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '', file = '', local = [], picIds = null }) {
   const out = [];
   const base = { id: item.id, label: item.label, kind: 'beats', el: null };
   const err = (rule, t, msg, fix, data = {}) => out.push({ ...base, level: 'error', rule, t: Math.round((item.start + t) * 1000) / 1000, msg, fix, data });
@@ -246,8 +246,9 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
     if (row.illus == null || row.note || designed) continue;
     for (const n of illusNamesOf(row.illus)) {
       if (ILLUS_BUILTIN.includes(n) || reg.includes(n) || local.includes(n)) continue;
+      if (/^pic:[\w-]+$/.test(n) && picIds?.has(n.slice(4))) continue;   // 圖庫的圖（028）：寫 pic:<id>
       err('beats-illus', 0, `分鏡第 ${row.beat} 拍的插圖元件「${n}」不在畫廊（shared/template/kit/illus-gallery.jpg 的 ${ILLUS_BUILTIN.length} 個）、沒有 ILLUS.register，work/hyperframes/illus-local/ 也沒有 ${n}.svg`,
-        `改成畫廊的元件名（大小寫照抄，例 phoneTripod），或照 shared/template/kit/illus-style.md 畫好存成 work/hyperframes/illus-local/${n}.svg；圖示（kit/icons.json）寫在「畫面上出現什麼」欄`, { beat: row.beat, name: n });
+        `改成畫廊的元件名（大小寫照抄，例 phoneTripod），或照 shared/template/kit/illus-style.md 畫好存成 work/hyperframes/illus-local/${n}.svg；圖庫的圖寫 pic:<id>（node shared/template/tools/build.mjs --pics <詞> 查）；圖示（kit/icons.json）寫在「畫面上出現什麼」欄`, { beat: row.beat, name: n });
     }
   }
   return out;

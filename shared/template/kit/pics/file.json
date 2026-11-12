@@ -1,0 +1,324 @@
+{
+ "id": "file",
+ "zh": "檔案與資料",
+ "when": "講到檔案、資料夾、上傳下載、備份、整理",
+ "items": [
+  {
+   "id": "file",
+   "zh": "檔案",
+   "when": "講到一個檔案、文件",
+   "tags": [
+    "檔案",
+    "文件"
+   ],
+   "file": "file/file.svg",
+   "from": "tabler:file"
+  },
+  {
+   "id": "file-text",
+   "zh": "文字檔",
+   "when": "講到講稿、文件、筆記檔",
+   "tags": [
+    "講稿",
+    "文件",
+    "文字檔"
+   ],
+   "file": "file/file-text.svg",
+   "from": "tabler:file-text"
+  },
+  {
+   "id": "folder",
+   "zh": "資料夾",
+   "when": "講到資料夾、專案資料夾、分類",
+   "tags": [
+    "資料夾",
+    "分類",
+    "專案"
+   ],
+   "file": "file/folder.svg",
+   "from": "tabler:folder"
+  },
+  {
+   "id": "folders",
+   "zh": "多個資料夾",
+   "when": "講到很多專案、整理資料夾",
+   "tags": [
+    "資料夾",
+    "整理"
+   ],
+   "file": "file/folders.svg",
+   "from": "tabler:folders"
+  },
+  {
+   "id": "zip",
+   "zh": "壓縮檔",
+   "when": "講到打包、壓縮、下載一包",
+   "tags": [
+    "壓縮檔",
+    "打包",
+    "zip"
+   ],
+   "file": "file/zip.svg",
+   "from": "tabler:file-zip"
+  },
+  {
+   "id": "spreadsheet",
+   "zh": "試算表",
+   "when": "講到表格、Excel、試算表",
+   "tags": [
+    "試算表",
+    "Excel",
+    "表格"
+   ],
+   "file": "file/spreadsheet.svg",
+   "from": "tabler:file-spreadsheet"
+  },
+  {
+   "id": "pdf",
+   "zh": "PDF",
+   "when": "講到 PDF、匯出文件",
+   "tags": [
+    "PDF",
+    "文件"
+   ],
+   "file": "file/pdf.svg",
+   "from": "tabler:file-type-pdf"
+  },
+  {
+   "id": "database",
+   "zh": "資料庫",
+   "when": "講到資料庫、存資料、後台資料",
+   "tags": [
+    "資料庫",
+    "資料",
+    "存"
+   ],
+   "file": "file/database.svg",
+   "from": "tabler:database"
+  },
+  {
+   "id": "cloud",
+   "zh": "雲端",
+   "when": "講到雲端、線上、存在網路上",
+   "tags": [
+    "雲端",
+    "線上"
+   ],
+   "file": "file/cloud.svg",
+   "from": "tabler:cloud"
+  },
+  {
+   "id": "cloud-upload",
+   "zh": "上傳雲端",
+   "when": "講到上傳、備份到雲端、傳上去",
+   "tags": [
+    "上傳",
+    "備份",
+    "雲端"
+   ],
+   "file": "file/cloud-upload.svg",
+   "from": "tabler:cloud-upload"
+  },
+  {
+   "id": "cloud-download",
+   "zh": "從雲端下載",
+   "when": "講到從雲端下載、抓下來",
+   "tags": [
+    "下載",
+    "雲端"
+   ],
+   "file": "file/cloud-download.svg",
+   "from": "tabler:cloud-download"
+  },
+  {
+   "id": "download",
+   "zh": "下載",
+   "when": "講到下載、存到電腦",
+   "tags": [
+    "下載",
+    "存檔"
+   ],
+   "file": "file/download.svg",
+   "from": "tabler:download"
+  },
+  {
+   "id": "upload",
+   "zh": "上傳",
+   "when": "講到上傳、交出去",
+   "tags": [
+    "上傳"
+   ],
+   "file": "file/upload.svg",
+   "from": "tabler:upload"
+  },
+  {
+   "id": "trash",
+   "zh": "垃圾桶",
+   "when": "講到刪除、丟掉、不要的",
+   "tags": [
+    "垃圾桶",
+    "刪除",
+    "丟掉"
+   ],
+   "file": "file/trash.svg",
+   "from": "tabler:trash"
+  },
+  {
+   "id": "archive",
+   "zh": "封存箱",
+   "when": "講到封存、歸檔、收起來",
+   "tags": [
+    "封存",
+    "歸檔"
+   ],
+   "file": "file/archive.svg",
+   "from": "tabler:archive"
+  },
+  {
+   "id": "clipboard",
+   "zh": "剪貼板",
+   "when": "講到複製貼上、清單板",
+   "tags": [
+    "剪貼板",
+    "複製",
+    "貼上"
+   ],
+   "file": "file/clipboard.svg",
+   "from": "tabler:clipboard"
+  },
+  {
+   "id": "copy",
+   "zh": "複製",
+   "when": "講到複製一份、重複使用",
+   "tags": [
+    "複製",
+    "副本"
+   ],
+   "file": "file/copy.svg",
+   "from": "tabler:copy"
+  },
+  {
+   "id": "link",
+   "zh": "連結",
+   "when": "講到連結、網址、貼連結",
+   "tags": [
+    "連結",
+    "網址"
+   ],
+   "file": "file/link.svg",
+   "from": "tabler:link"
+  },
+  {
+   "id": "paperclip",
+   "zh": "迴紋針",
+   "when": "講到附件、夾帶檔案",
+   "tags": [
+    "附件",
+    "迴紋針"
+   ],
+   "file": "file/paperclip.svg",
+   "from": "tabler:paperclip"
+  },
+  {
+   "id": "table",
+   "zh": "表格",
+   "when": "講到表格、欄位、對照表",
+   "tags": [
+    "表格",
+    "欄位"
+   ],
+   "file": "file/table.svg",
+   "from": "tabler:table"
+  },
+  {
+   "id": "notes",
+   "zh": "筆記",
+   "when": "講到筆記、記下來、重點整理",
+   "tags": [
+    "筆記",
+    "記錄"
+   ],
+   "file": "file/notes.svg",
+   "from": "tabler:notes"
+  },
+  {
+   "id": "notebook",
+   "zh": "筆記本",
+   "when": "講到筆記本、手帳、寫下來",
+   "tags": [
+    "筆記本",
+    "手帳"
+   ],
+   "file": "file/notebook.svg",
+   "from": "tabler:notebook"
+  },
+  {
+   "id": "bookmark",
+   "zh": "書籤",
+   "when": "講到收藏、存起來之後看",
+   "tags": [
+    "書籤",
+    "收藏"
+   ],
+   "file": "file/bookmark.svg",
+   "from": "tabler:bookmark"
+  },
+  {
+   "id": "tag",
+   "zh": "標籤",
+   "when": "講到標籤、分類、貼標",
+   "tags": [
+    "標籤",
+    "分類"
+   ],
+   "file": "file/tag.svg",
+   "from": "tabler:tag"
+  },
+  {
+   "id": "search",
+   "zh": "搜尋",
+   "when": "講到搜尋、找資料、查詢",
+   "tags": [
+    "搜尋",
+    "找",
+    "查詢"
+   ],
+   "file": "file/search.svg",
+   "from": "tabler:search"
+  },
+  {
+   "id": "file-export",
+   "zh": "匯出",
+   "when": "講到匯出、輸出檔案",
+   "tags": [
+    "匯出",
+    "輸出"
+   ],
+   "file": "file/file-export.svg",
+   "from": "tabler:file-export"
+  },
+  {
+   "id": "file-import",
+   "zh": "匯入",
+   "when": "講到匯入、讀進來",
+   "tags": [
+    "匯入",
+    "讀進來"
+   ],
+   "file": "file/file-import.svg",
+   "from": "tabler:file-import"
+  },
+  {
+   "id": "backup",
+   "zh": "存檔",
+   "when": "講到存檔、儲存、備份",
+   "tags": [
+    "存檔",
+    "儲存",
+    "備份"
+   ],
+   "file": "file/backup.svg",
+   "from": "tabler:device-floppy"
+  }
+ ]
+}

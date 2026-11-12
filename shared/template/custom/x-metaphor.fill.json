@@ -4,6 +4,27 @@
   "beat": "G",
   "layout": "fullscreen",
   "when": "比喻三段式：生活物件 → 技術概念 → 一句結論（＋一句代價／限制）。左邊觀眾熟悉的東西、右邊這集要教的概念，下面兩句是結論與代價，講到哪個哪個就是唯一的焦點",
+  "lines": [
+    {
+      "label": "結論句（sumPre＋sumKw＋sumPost）",
+      "slots": [
+        "sumPre",
+        "sumKw",
+        "sumPost"
+      ],
+      "max": 10,
+      "fix": "結論句三段合計 ≤ 10 字：縮短關鍵詞前後的字"
+    },
+    {
+      "label": "限制句（warnBad＋warnRest）",
+      "slots": [
+        "warnBad",
+        "warnRest"
+      ],
+      "max": 9,
+      "fix": "限制句合計 ≤ 9 字：縮短壞的詞後面的字"
+    }
+  ],
   "slots": {
     "title": {
       "label": "標題",
@@ -50,7 +71,7 @@
       "max": 10
     },
     "warnBad": {
-      "label": "限制句裡壞的那個詞（會重拍；選填：不寫就沒有最下面的警示條，要寫就連 warnAt 一起寫；限制句合計 ≤ 10 字）",
+      "label": "限制句裡壞的那個詞（會重拍；選填：不寫就沒有最下面的警示條，要寫就連 warnAt 一起寫；限制句合計 ≤ 9 字）",
       "type": "text",
       "max": 6
     },

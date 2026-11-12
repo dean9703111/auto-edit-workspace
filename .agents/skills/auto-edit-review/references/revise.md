@@ -2,7 +2,7 @@
 
 使用者指名一段要重新設計、更完善、換個動畫時照這份做。沒指名段（「動畫都更細節一點」）先列出動畫段、每段一句可以改的方向，問要改哪幾段，可以一次 `--seg s08,s12`。
 
-**重新設計要回到內容，不是換一支模板**：想清楚這段要傳達什麼，再想畫面（`.agents/skills/auto-edit-motion/references/design-build.md`）。使用者想要的是更貼合內容的動畫。
+**重新設計要回到內容，不是換一支模板**：想清楚這段要傳達什麼，再想畫面（`.agents/skills/auto-edit-motion/references/design.md`）。使用者想要的是更貼合內容的動畫。
 
 ## 1. 開提案 → 停點 ③
 
@@ -21,8 +21,8 @@ node shared/template/tools/versions.mjs accept --project projects/<專案> --seg
 
 記 ③ 通過，分鏡寫回 `work/storyboard.md`。使用者要改分鏡的拍：改那份分鏡.md、重貼停點 ③，不要 accept。
 
-- 內容設計動畫（已經是 `"design": true`）：派設計師照 `.agents/skills/auto-edit-motion/references/design-build.md` 改 `x-design-<段>.html`。「這版要改什麼」有換主角、換場景、換版面其中一項，才清空重做（第一次 write 只寫骨架，照 design-build.md 的做法，之後只用 edit）；其他（加站、改時間、換插圖、改字）都接著用 edit 改，不要整份重寫。
-- 這段原本是模板、要改成內容設計：plan.json 那段拿掉 `template`、`slots`，加 `"design": true`，跑 `node shared/template/tools/build.mjs --project projects/<專案> --check`，確認 `work/briefs/<段>.md` 有了再派工。派工照 `--apply-storyboard` 印的那一句：先照 `.agents/skills/auto-edit-motion/references/design-script.md` 寫鏡位腳本（不用等確認），寫完接著照 `design-build.md` 做動畫。
+- 內容設計動畫（已經是 `"design": true`）：派設計師照 `.agents/skills/auto-edit-motion/references/design.md` 改 `x-design-<段>.html`。「這版要改什麼」有換主角、換場景、換版面其中一項，才清空重做（先 `build.mjs --design-canvas <段> --reset` 換回空白畫布）；其他（加站、改時間、換插圖、改字）都接著用 edit 改，不要整份重寫。
+- 這段原本是模板、要改成內容設計：plan.json 那段拿掉 `template`、`slots`，加 `"design": true`，跑 `node shared/template/tools/build.mjs --project projects/<專案> --check`，確認 `work/briefs/<段>.md` 有了再派工。派工照 `--apply-storyboard` 印的那一句：照 `.agents/skills/auto-edit-motion/references/design.md` 寫鏡位腳本、接著做動畫（不用等確認）。
 - 模板動畫：改 plan.json 的 `slots`。字卡段：照分鏡改 plan.json 那段。
 
 ## 3. 做完 → 停點 ④

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" fill="none">
+  <g class="il-shade" transform="translate(2.2 2.2)"><path d="M10 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-accent-soft)"/><path d="M18 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-accent-soft)"/><path d="M10 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-accent-soft)"/><path d="M6 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-accent-soft)"/><path d="M18 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-accent-soft)"/><path d="M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-accent-soft)"/><path d="M22 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-accent-soft)"/></g>
+  <g transform="translate(1 1)">
+    <path d="M10 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-body)"/>
+    <path d="M18 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-body)"/>
+    <path d="M10 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-body)"/>
+    <path d="M6 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-body)"/>
+    <path d="M18 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-body)"/>
+    <path d="M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-body)"/>
+    <path d="M22 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" fill="var(--il-body)"/>
+    <path d="M10 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M18 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M10 5a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M6 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M18 19a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M22 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0z" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M6 12h4" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M14 12h4" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M15 7l-2 3" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M9 7l2 3" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M11 14l-2 3" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M13 14l2 3" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+  </g>
+</svg>

@@ -29,8 +29,8 @@
 | 1 | 調光瘦臉、素材盤點、構圖（只有聲音就跳過構圖） | `look.mjs status`、`media.mjs scan`、`qc.mjs framing`＋`editor.mjs` | 第 7 節、2.2、第 5 節 | **停點 ②** |
 | 2 | 量講者框、產生分鏡素材 | `qc.mjs speaker --write`、`build.mjs --scaffold` | 2.2 | |
 | 3 | 分章寫分鏡（一份一個子代理）：第一回合語意地圖 → 主代理全片校正 → 第二回合草稿（大綱 → 骨架）、合併（通過就接著做第 5 步） | `build.mjs --map chNN`、`build.mjs --map-merge`、`build.mjs --outline chNN`、`build.mjs --check-draft chNN`、`build.mjs --merge-drafts` | `work/分鏡素材/`、style.md「分章」 | |
-| 4 | （只有事先指定要做的內容設計動畫）寫鏡位腳本；其他值得設計的段在草稿標候選，③ 勾了才做 | `auto-edit-motion` 的 `references/design-script.md` | style.md「內容設計動畫」 | |
-| 5 | 截圖、產生分鏡表（內容設計動畫候選有預估時間、預算內預設勾） | `build.mjs --storyboard`（`--merge-drafts` 已經接著做了就跳過） | 2.3 | **停點 ③** |
+| 4 | （只有事先指定要做的內容設計動畫）寫鏡位腳本；其他值得設計的段在草稿標候選，③ 勾了才做 | `auto-edit-motion` 的 `references/design.md` | style.md「內容設計動畫」 | |
+| 5 | 截圖、產生分鏡表（內容設計動畫候選有預估時間、預設都不勾） | `build.mjs --storyboard`（`--merge-drafts` 已經接著做了就跳過） | 2.3 | **停點 ③** |
 | 6 | 套回修改；勾了的內容設計動畫：設計師寫鏡位腳本、從空白畫布做；等設計師時看進度 | `build.mjs --apply-storyboard`；`audit.mjs --only <段> --shots --sheet`；`build.mjs --design-status` | | |
 | 7 | build＋量測＋完成態拼圖＋開預覽（不 render） | `build.mjs --review` | `REVIEW.md`、2.6 | **停點 ④** |
 | 8 | 修改：一輪回饋（不 render，看完成影片預覽與拼圖） | `versions.mjs begin --seg <段> --say "…"`、`versions.mjs finish` | | |
@@ -96,7 +96,7 @@
 - 插入素材的列（第 5 節）：「情境」是 `media 螢幕錄影` 或 `media 圖片`；「畫面文字」是素材路徑、起點秒數（`in`）、要做的運鏡／紅框／放大鏡；「理由」是講解和畫面對上的地方。只有聲音的區間列在「只有聲音的區間」表，寫用哪一段蓋住。
 - 「音效」欄：`預設`、`無`（`"sfx": null`）、換成某個名稱（例：`shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`（音效清單見 R5.2）。`sparkle`、`shine`、`thunder` 超過 style.md 的每集上限時，寫進草稿的 `decide`，會列進「需要我決定的事」讓使用者挑；結尾要不要配樂（`outro`）也列一題。
 - 時間碼是那幾句在 rough.srt 的起點與結尾；「字幕」欄是起點那句的原文（草稿的 `anchor`）。
-- 內容設計動畫的段：工具把設計師的鏡位腳本（`work/designs/<段>.md` 的 `#### 動畫分鏡 <段 id>` 表，表頭 `| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |`，audit 會讀這張表）放進那一段。模板動畫的拍由模板內建，不寫動畫分鏡、不寫插圖清單；鏡位腳本的寫法只給設計師看（`auto-edit-motion` 的 `references/design-script.md`）。
+- 內容設計動畫的段：工具把設計師的鏡位腳本（`work/designs/<段>.md` 的 `#### 動畫分鏡 <段 id>` 表，表頭 `| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |`，audit 會讀這張表）放進那一段。模板動畫的拍由模板內建，不寫動畫分鏡、不寫插圖清單；鏡位腳本的寫法只給設計師看（`auto-edit-motion` 的 `references/design.md`）。
 
 ### 2.4 先處理字幕長度
 

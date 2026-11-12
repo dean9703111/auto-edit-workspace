@@ -1,0 +1,304 @@
+{
+ "id": "nature",
+ "zh": "天氣與自然",
+ "when": "講到天氣、季節、環境、能量",
+ "items": [
+  {
+   "id": "sun",
+   "zh": "太陽",
+   "when": "講到白天、晴天、陽光",
+   "tags": [
+    "太陽",
+    "晴天"
+   ],
+   "file": "nature/sun.svg",
+   "from": "tabler:sun"
+  },
+  {
+   "id": "cloud-rain",
+   "zh": "下雨",
+   "when": "講到下雨、壞天氣、低潮",
+   "tags": [
+    "下雨",
+    "壞天氣"
+   ],
+   "file": "nature/cloud-rain.svg",
+   "from": "tabler:cloud-rain"
+  },
+  {
+   "id": "snowflake",
+   "zh": "雪花",
+   "when": "講到冬天、冷、凍結",
+   "tags": [
+    "雪花",
+    "冷",
+    "凍結"
+   ],
+   "file": "nature/snowflake.svg",
+   "from": "tabler:snowflake"
+  },
+  {
+   "id": "wind",
+   "zh": "風",
+   "when": "講到風、順風、吹走",
+   "tags": [
+    "風"
+   ],
+   "file": "nature/wind.svg",
+   "from": "tabler:wind"
+  },
+  {
+   "id": "storm",
+   "zh": "雷雨",
+   "when": "講到暴風雨、危機",
+   "tags": [
+    "雷雨",
+    "危機"
+   ],
+   "file": "nature/storm.svg",
+   "from": "tabler:cloud-storm"
+  },
+  {
+   "id": "rainbow",
+   "zh": "彩虹",
+   "when": "講到雨過天晴、多元",
+   "tags": [
+    "彩虹"
+   ],
+   "file": "nature/rainbow.svg",
+   "from": "tabler:rainbow"
+  },
+  {
+   "id": "temperature",
+   "zh": "溫度",
+   "when": "講到溫度、熱度、冷熱",
+   "tags": [
+    "溫度",
+    "熱度"
+   ],
+   "file": "nature/temperature.svg",
+   "from": "tabler:temperature"
+  },
+  {
+   "id": "tree",
+   "zh": "樹",
+   "when": "講到成長、扎根、大樹",
+   "tags": [
+    "樹",
+    "成長",
+    "扎根"
+   ],
+   "file": "nature/tree.svg",
+   "from": "tabler:tree"
+  },
+  {
+   "id": "leaf",
+   "zh": "葉子",
+   "when": "講到自然、環保、新芽",
+   "tags": [
+    "葉子",
+    "環保"
+   ],
+   "file": "nature/leaf.svg",
+   "from": "tabler:leaf"
+  },
+  {
+   "id": "seedling",
+   "zh": "幼苗",
+   "when": "講到剛起步、萌芽、新手期",
+   "tags": [
+    "幼苗",
+    "起步",
+    "萌芽"
+   ],
+   "file": "nature/seedling.svg",
+   "from": "tabler:seedling"
+  },
+  {
+   "id": "cactus",
+   "zh": "仙人掌",
+   "when": "講到耐旱、撐過去",
+   "tags": [
+    "仙人掌"
+   ],
+   "file": "nature/cactus.svg",
+   "from": "tabler:cactus"
+  },
+  {
+   "id": "mushroom",
+   "zh": "蘑菇",
+   "when": "講到快速長出來",
+   "tags": [
+    "蘑菇"
+   ],
+   "file": "nature/mushroom.svg",
+   "from": "tabler:mushroom"
+  },
+  {
+   "id": "flame",
+   "zh": "火焰",
+   "when": "講到很夯、熱門、燃燒",
+   "tags": [
+    "火焰",
+    "熱門",
+    "夯"
+   ],
+   "file": "nature/flame.svg",
+   "from": "tabler:flame"
+  },
+  {
+   "id": "ripple",
+   "zh": "水波",
+   "when": "講到漣漪、擴散影響",
+   "tags": [
+    "水波",
+    "漣漪"
+   ],
+   "file": "nature/ripple.svg",
+   "from": "tabler:ripple"
+  },
+  {
+   "id": "wave",
+   "zh": "波形",
+   "when": "講到起伏、波動、週期",
+   "tags": [
+    "波形",
+    "起伏"
+   ],
+   "file": "nature/wave.svg",
+   "from": "tabler:wave-sine"
+  },
+  {
+   "id": "planet",
+   "zh": "星球",
+   "when": "講到宇宙、另一個世界",
+   "tags": [
+    "星球",
+    "宇宙"
+   ],
+   "file": "nature/planet.svg",
+   "from": "tabler:planet"
+  },
+  {
+   "id": "stars",
+   "zh": "星空",
+   "when": "講到夢想、夜晚、評價很高",
+   "tags": [
+    "星空",
+    "夢想"
+   ],
+   "file": "nature/stars.svg",
+   "from": "tabler:stars"
+  },
+  {
+   "id": "comet",
+   "zh": "流星",
+   "when": "講到一閃而過、許願",
+   "tags": [
+    "流星"
+   ],
+   "file": "nature/comet.svg",
+   "from": "tabler:comet"
+  },
+  {
+   "id": "meteor",
+   "zh": "隕石",
+   "when": "講到衝擊、突然砸下來",
+   "tags": [
+    "隕石",
+    "衝擊"
+   ],
+   "file": "nature/meteor.svg",
+   "from": "tabler:meteor"
+  },
+  {
+   "id": "volcano",
+   "zh": "火山",
+   "when": "講到爆發、累積很久",
+   "tags": [
+    "火山",
+    "爆發"
+   ],
+   "file": "nature/volcano.svg",
+   "from": "tabler:volcano"
+  },
+  {
+   "id": "fish",
+   "zh": "魚",
+   "when": "講到魚、釣魚、上鉤",
+   "tags": [
+    "魚",
+    "釣"
+   ],
+   "file": "nature/fish.svg",
+   "from": "tabler:fish"
+  },
+  {
+   "id": "bird",
+   "zh": "鳥",
+   "when": "講到自由、飛、早起",
+   "tags": [
+    "鳥",
+    "自由"
+   ],
+   "file": "nature/bird.svg",
+   "from": "lucide:bird"
+  },
+  {
+   "id": "butterfly",
+   "zh": "蝴蝶",
+   "when": "講到蛻變、蝴蝶效應",
+   "tags": [
+    "蝴蝶",
+    "蛻變"
+   ],
+   "file": "nature/butterfly.svg",
+   "from": "tabler:butterfly"
+  },
+  {
+   "id": "feather",
+   "zh": "羽毛",
+   "when": "講到輕、輕量、寫作",
+   "tags": [
+    "羽毛",
+    "輕量"
+   ],
+   "file": "nature/feather.svg",
+   "from": "tabler:feather"
+  },
+  {
+   "id": "egg",
+   "zh": "蛋",
+   "when": "講到雛形、孵化、還沒成形",
+   "tags": [
+    "蛋",
+    "雛形",
+    "孵化"
+   ],
+   "file": "nature/egg.svg",
+   "from": "tabler:egg"
+  },
+  {
+   "id": "sunrise",
+   "zh": "日出",
+   "when": "講到開始、早晨、新的一天",
+   "tags": [
+    "日出",
+    "開始"
+   ],
+   "file": "nature/sunrise.svg",
+   "from": "tabler:sunrise"
+  },
+  {
+   "id": "sunset",
+   "zh": "日落",
+   "when": "講到結束、收工、傍晚",
+   "tags": [
+    "日落",
+    "結束"
+   ],
+   "file": "nature/sunset.svg",
+   "from": "tabler:sunset"
+  }
+ ]
+}

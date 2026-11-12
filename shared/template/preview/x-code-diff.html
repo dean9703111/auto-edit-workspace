@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-code-diff 程式碼改前改後｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-code-diff.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-code-diff { position: absolute; inset: 0; }
+    #x-code-diff .fill { position: absolute; inset: 0; }
+    /* 編輯器視窗：左 120、寬 1180（右緣 1300）；top、height 由 script 照行數填（這裡是 4 行＋結果列的值） */
+    #x-code-diff #xcd-win { position: absolute; left: 120px; top: 240px; width: 1180px; height: 528px; box-sizing: border-box; overflow: hidden;
+                            border-radius: 24px; background: var(--v2-term); color: var(--v2-term-ink); box-shadow: var(--v2-card-shadow); }
+    #x-code-diff #xcd-bar { height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 14px;
+                            background: var(--v2-term-bar); color: var(--v2-term-mute); white-space: nowrap; }
+    #x-code-diff .xcd-dot { width: 18px; height: 18px; border-radius: 9px; background: var(--v2-term-mute); flex: none; }
+    #x-code-diff #xcd-tico { --d: 48px; --i: 32px; margin-left: 16px; color: var(--v2-term-mute); }
+    /* 程式區：上下各留 32；一組（改前、改後）一個區塊，每行高 72 */
+    #x-code-diff #xcd-body { padding: 32px 0; background: var(--v2-term); }   /* 自己帶底色：audit 量程式碼到這一區四邊的內距（太長的行會報） */
+    #x-code-diff .xcd-grp { position: relative; }
+    #x-code-diff .xcd-band { position: absolute; left: 0; top: 0; width: 1180px; height: 100%; box-sizing: border-box; }
+    #x-code-diff #xcd-oband { border-left: 8px solid var(--sc-warn-kw); background: color-mix(in srgb, var(--sc-warn) 24%, var(--v2-term)); color: var(--sc-warn-kw); }
+    #x-code-diff #xcd-nband { border-left: 8px solid var(--v2-term-ok); background: color-mix(in srgb, var(--v2-term-ok) 22%, var(--v2-term)); color: var(--v2-term-ok); }
+    #x-code-diff .xcd-band::before { content: attr(data-sg); position: absolute; left: 36px; top: 0; white-space: pre; line-height: 72px; }   /* 每行前面的「−」「+」：寫在 data-sg（一行一個，用換行隔開），跟著色帶一起亮起 */
+    #x-code-diff .xcd-code { position: relative; padding-left: 128px; }
+    #x-code-diff .xcd-ln { width: max-content; height: 72px; line-height: 72px; white-space: pre; }
+    /* 結果列：程式區下面，高 88 */
+    #x-code-diff #xcd-out { height: 88px; box-sizing: border-box; padding: 0 48px; border-top: 2px solid var(--v2-term-bar);
+                            display: flex; align-items: center; gap: 16px; color: var(--v2-term-ok); white-space: nowrap; }
+  </style>
+  <div id="x-code-diff" data-composition-id="x-code-diff" data-width="1920" data-height="1080" data-duration="11"
+       data-cues-sample='{"start":0,"D":11,"cues":{"491":[0.4,1.4],"492":[1.6,4.0],"493":[4.2,7.4],"494":[7.6,10.6]},"refs":{"#492@寫死":1.9,"#493@設定檔":4.5,"#494@不用":7.9}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcd-win">
+      <div id="xcd-bar"><i class="xcd-dot"></i><i class="xcd-dot"></i><i class="xcd-dot"></i><span id="xcd-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M9 10h6" /> <path d="M12 13V7" /> <path d="M9 17h6" /> </svg></span><span id="xcd-file" class="sc-t40 sc-w700 sc-mono sc-opt">cut.mjs</span></div>
+      <div id="xcd-body">
+        <div id="xcd-old" class="xcd-grp">
+          <i id="xcd-oband" class="xcd-band sc-t44 sc-w700 sc-mono" data-sg="−&#10;−&#10;−" data-layout-allow-overlap></i>
+          <div id="xcd-ocode" class="xcd-code sc-t44 sc-w500 sc-mono">
+            <div class="xcd-ln">const PAUSE = 0.5;</div>
+            <div class="xcd-ln">cut(video, PAUSE);</div>
+            <div class="xcd-ln">save(video);</div>
+          </div>
+        </div>
+        <div id="xcd-new" class="xcd-grp">
+          <i id="xcd-nband" class="xcd-band sc-t44 sc-w700 sc-mono" data-sg="+&#10;+&#10;+" data-layout-allow-overlap></i>
+          <div id="xcd-ncode" class="xcd-code sc-t44 sc-w500 sc-mono">
+            <div class="xcd-ln">const cfg = load('setting.json');</div>
+            <div class="xcd-ln">cut(video, cfg.pause);</div>
+            <div class="xcd-ln">save(video);</div>
+          </div>
+        </div>
+      </div>
+      <div id="xcd-out" class="sc-t40 sc-w700 sc-mono"><span>✓</span><span id="xcd-res">改設定檔就好，不用動程式</span></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-code-diff'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const DEL = P.at('#492@寫死'), ADD = P.at('#493@設定檔'), RUN = P.at('#494@不用');   // 原本的問題／改成什麼／結果
+    P.sfx('ding', '#493@設定檔');                      // 改成什麼一顆提示音（句號和 ADD 一樣）
+    P.sfx('success', '#494@不用');                     // 結果一顆 success（句號和 RUN 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 視窗高度照行數算、上下置中（載入時算一次，不用改）：標題列 88＋程式區 64＋每行 72＋結果列 88
+    const WIN = document.getElementById('xcd-win'), TALL = 152 + $q('.xcd-ln').length * 72 + (document.getElementById('xcd-out') ? 88 : 0);
+    WIN.style.height = TALL + 'px'; WIN.style.top = Math.round(150 + (708 - TALL) / 2) + 'px';
+
+    // 拍 0 開場：視窗進場（看 ENTER；原本的寫法跟著視窗一起出現）→ 檔名圖示描線、檔名逐字
+    if (ENTER === 'grow') P.grow('#xcd-win', 0.3);
+    else { P.wipe('#xcd-win', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcd-win', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xcd-tico', 0.5);
+    P.chars('#xcd-file', 0.62, { stagger: 0.03 });
+    // 拍 1 改前：原本那幾行的刪除帶（連「−」）由左往右亮起 → ＋0.2 字退焦
+    P.wipe('#xcd-oband', DEL, { dir: 'left', dur: 0.4 });
+    P.dim('#xcd-ocode', DEL + 0.2, { to: 0.55 });
+    // 拍 2 改後：新增帶（連「+」）由左往右亮起 → ＋0.2 新的寫法逐字打出（固定 1 秒）
+    P.wipe('#xcd-nband', ADD, { dir: 'left', dur: 0.4 });
+    P.type('#xcd-ncode', ADD + 0.2, { dur: 1.0 });
+    // 拍 3 結果：結果列由左往右印出 → ＋0.4 重拍
+    P.wipe('#xcd-out', RUN, { dir: 'left', dur: 0.4 });
+    P.punch('#xcd-res', RUN + 0.4, { scale: 1.04 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-code-diff'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-code-diff";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

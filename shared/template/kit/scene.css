@@ -535,6 +535,16 @@ body, #root {
   background: linear-gradient(90deg, var(--sc-side-edge) 0 6px, var(--sc-deep) 6px 18px);
 }
 
+/* 027 講者在左：半螢幕的面板改從右邊推入（容器帶 data-panel-side="right"，build 照 speakerSide 加）。
+   面板移到右半、和實拍交界的色條換到左緣；面板裡的內容位置不變。動作方向在 scene-motion.js 的 P.sideIn／P.sideOut。 */
+[data-panel-side="right"] .sc-side { left: 960px; }
+[data-panel-side="right"] .sc-side::before { left: 18px; }
+[data-panel-side="right"] .sc-side::after { left: 0; background: linear-gradient(270deg, var(--sc-side-edge) 0 6px, var(--sc-deep) 6px 18px); }
+/* 027 講者在左：下方字卡、關鍵詞靠右（容器帶 data-card-side="right"）。各情境用 id 寫 left: 120px，這裡要蓋過去 */
+[data-card-side="right"] .sc-lt, [data-card-side="right"] .v2-lt { left: auto !important; right: 120px; }
+[data-card-side="right"] #kwList { left: auto !important; right: calc(120px - var(--sc-pad-card)); }
+
+
 /* ==========================================================================
    v2（情境規範 §1.6）：間距尺度、下方字卡底座 .sc-lt、迷你章節卡 .sc-chtag
    只新增、不改上面的 v1 class。DOM 範例與幾何契約寫在檔頭「v2」段。

@@ -35,7 +35,11 @@
     "bigDec": {
       "label": "大數字的小數位數（選填：整數不用寫；1.5 倍寫 1）",
       "type": "enum",
-      "options": [0, 1, 2]
+      "options": [
+        0,
+        1,
+        2
+      ]
     },
     "unit": {
       "label": "大數字的單位",
@@ -70,7 +74,7 @@
     "trendValue": {
       "label": "漲幅（有 trendPts 才要）",
       "type": "text",
-      "max": 5
+      "max": 4
     },
     "trendIcon": {
       "label": "走勢卡圖示（有 trendPts 才要；漲 trending-up、跌 trending-down）",
@@ -106,12 +110,24 @@
     "unit": "倍",
     "bigSub": "比去年同期",
     "trendPts": [
-      { "y": 196 },
-      { "y": 170 },
-      { "y": 176 },
-      { "y": 120 },
-      { "y": 96 },
-      { "y": 24 }
+      {
+        "y": 196
+      },
+      {
+        "y": 170
+      },
+      {
+        "y": 176
+      },
+      {
+        "y": 120
+      },
+      {
+        "y": 96
+      },
+      {
+        "y": 24
+      }
     ],
     "trendLabel": "近 6 個月",
     "trendValue": "+120%",

@@ -1,6 +1,6 @@
 # kit 的 `P.*` 語法速查
 
-給手改模板動畫（`x-<模板>-<段>.html`）用，以及對照 `shared/template/BEATS.md` §2 語彙表「對應」欄的 `P.*`。內容設計動畫（`x-design-<段>.html`）照 hyperframes skill 直接寫 GSAP，不用這份；要用也可以，兩種寫法可以混在同一個檔。
+給手改模板動畫（`x-<模板>-<段>.html`）用，以及對照 `shared/template/BEATS.md` §2 語彙表「對應」欄的 `P.*`。內容設計動畫（`x-design-<段>.html`）直接寫 GSAP（`design.md`），只在要用現成動作時查這份的那一列；要用也可以，兩種寫法可以混在同一個檔。
 
 不用去讀 `kit/scene-motion.js`。`sel` 是選擇器字串，`at` 是段內秒數（`const T1 = P.at('#13@跑到')`），大括號都是選填。`sel` 不要從最外層的 id 開始（`'#x-crowd-s05 .xcrd-p'`）：完成影片裡最外層的 id 會被拿掉，pop、dim、rack、spot 這類找不到元素，audit 會 ✖；寫 class（`'.xcrd-p'`）或元素自己的 id。
 

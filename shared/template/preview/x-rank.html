@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-rank 排名長條圖｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-rank.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-rank { position: absolute; inset: 0; }
+    #x-rank .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、寬 1180（右緣 1300）；高度跟著列數，上下置中 */
+    #x-rank #xrk-card { position: absolute; left: 120px; top: 172px; width: 1180px; height: 664px; }
+    #x-rank #xrk-ico { position: absolute; left: 56px; top: 36px; }
+    #x-rank #xrk-title { position: absolute; left: 152px; top: 36px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-rank #xrk-unit { position: absolute; right: 56px; top: 36px; }
+    /* 骨架：名次徽章＋空軌道（跟主卡一起出現）；第 1 名的徽章是主色 */
+    #x-rank .xrk-badge { position: absolute; left: 56px; width: 64px; height: 64px; border-radius: 32px; display: grid; place-items: center;
+                         background: var(--v2-node-tint); color: var(--sc-fs-ink); }
+    #x-rank #xrk-g1 { background: var(--brand); color: var(--brand-ink); }
+    #x-rank .xrk-track { position: absolute; left: 464px; width: 480px; height: 36px; border-radius: 6px; background: var(--sc-fs-node-line); }
+    #x-rank #xrk-g1 { top: 148px; }
+    #x-rank #xrk-g2 { top: 244px; }
+    #x-rank #xrk-g3 { top: 340px; }
+    #x-rank #xrk-g4 { top: 436px; }
+    #x-rank #xrk-g5 { top: 532px; }
+    #x-rank #xrk-k1 { top: 162px; }
+    #x-rank #xrk-k2 { top: 258px; }
+    #x-rank #xrk-k3 { top: 354px; }
+    #x-rank #xrk-k4 { top: 450px; }
+    #x-rank #xrk-k5 { top: 546px; }
+    /* 內容列（照講的順序寫；top 由 script 照名次填）：名稱、長條、數字 */
+    #x-rank .xrk-row { position: absolute; left: 144px; top: 144px; width: 980px; height: 72px; }
+    #x-rank .xrk-name { position: absolute; left: 0; top: 6px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-rank .xrk-bar { position: absolute; left: 320px; top: 18px; width: 480px; height: 36px; border-radius: 6px; background: var(--v2-mute); }
+    #x-rank .xrk-val { position: absolute; right: 0; top: 3px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-rank .xrk-row[data-top] .xrk-bar { background: var(--brand); }
+  </style>
+  <div id="x-rank" data-composition-id="x-rank" data-width="1920" data-height="1080" data-duration="16.4"
+       data-cues-sample='{"start":0,"D":16.4,"cues":{"501":[0.4,1.4],"502":[1.6,3.6],"503":[3.7,5.7],"504":[5.8,7.8],"505":[7.9,9.9],"506":[10.0,12.2],"507":[12.4,16.2]},"refs":{"#502@輸出":1.8,"#503@音效":3.9,"#504@字卡":6.0,"#505@字幕":8.1,"#506@NG":10.2,"#507@一半":12.7}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrk-card" class="sc-wcard" data-layout="free">
+      <span id="xrk-ico" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /> <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /> <path d="M4 22h16" /> <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /> <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /> <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /> </svg></span>
+      <div id="xrk-title" class="sc-t52 sc-w900"><span class="sc-opt">最花時間的步驟</span></div>
+      <div id="xrk-unit" class="sc-pill"><span class="sc-opt">分鐘</span></div>
+      <span id="xrk-g1" class="xrk-badge sc-t40 sc-w900"><span class="sc-opt">1</span></span><i id="xrk-k1" class="xrk-track" data-layout-allow-overlap></i>
+      <span id="xrk-g2" class="xrk-badge sc-t40 sc-w900"><span class="sc-opt">2</span></span><i id="xrk-k2" class="xrk-track" data-layout-allow-overlap></i>
+      <span id="xrk-g3" class="xrk-badge sc-t40 sc-w900"><span class="sc-opt">3</span></span><i id="xrk-k3" class="xrk-track" data-layout-allow-overlap></i>
+      <span id="xrk-g4" class="xrk-badge sc-t40 sc-w900"><span class="sc-opt">4</span></span><i id="xrk-k4" class="xrk-track" data-layout-allow-overlap></i>
+      <span id="xrk-g5" class="xrk-badge sc-t40 sc-w900"><span class="sc-opt">5</span></span><i id="xrk-k5" class="xrk-track" data-layout-allow-overlap></i>
+      <div id="xrk-r1" class="xrk-row"><span class="xrk-name sc-t44 sc-w700 sc-opt">輸出</span><i id="xrk-b1" class="xrk-bar"></i><span id="xrk-v1" class="xrk-val sc-t48 sc-w900 sc-mono">20</span></div>
+      <div id="xrk-r2" class="xrk-row"><span class="xrk-name sc-t44 sc-w700 sc-opt">配音效</span><i id="xrk-b2" class="xrk-bar"></i><span id="xrk-v2" class="xrk-val sc-t48 sc-w900 sc-mono">30</span></div>
+      <div id="xrk-r3" class="xrk-row"><span class="xrk-name sc-t44 sc-w700 sc-opt">做字卡</span><i id="xrk-b3" class="xrk-bar"></i><span id="xrk-v3" class="xrk-val sc-t48 sc-w900 sc-mono">50</span></div>
+      <div id="xrk-r4" class="xrk-row"><span class="xrk-name sc-t44 sc-w700 sc-opt">上字幕</span><i id="xrk-b4" class="xrk-bar"></i><span id="xrk-v4" class="xrk-val sc-t48 sc-w900 sc-mono">60</span></div>
+      <div id="xrk-r5" class="xrk-row"><span class="xrk-name sc-t44 sc-w700 sc-opt">找 NG</span><i id="xrk-b5" class="xrk-bar"></i><span id="xrk-v5" class="xrk-val sc-t48 sc-w900 sc-mono">90</span></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-rank'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#502@輸出'), T2 = P.at('#503@音效'), T3 = P.at('#504@字卡'), T4 = P.at('#505@字幕'), T5 = P.at('#506@NG');   // 講到每一項的時刻（照講的順序）
+    const TOP = P.at('#507@一半');                     // 講到結論的時刻
+    P.sfx('impact', '#507@一半');                      // 結論一顆音效（句號和 TOP 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 照數字排名（載入時算一次，不用改）：數字最大的那一列放到第 1 名的位置、長條換主色；長條長度＝數字 ÷ 最大值
+    const ROWS = $q('.xrk-row'), TEXT = ROWS.map(function (r) { return r.querySelector('.xrk-val').textContent.trim(); });
+    const VALS = TEXT.map(function (t) { return parseFloat(t) || 0; }), DEC = TEXT.map(function (t) { return (t.split('.')[1] || '').length; });
+    const PEAK = Math.max.apply(null, VALS) || 1, RATIO = VALS.map(function (v) { return Math.max(0.04, v / PEAK); });
+    const ORDER = VALS.map(function (v, i) { return i; }).sort(function (a, b) { return VALS[b] - VALS[a] || a - b; });   // 第 k 名是第幾列
+    ORDER.forEach(function (i, k) { ROWS[i].style.top = (144 + k * 96) + 'px'; });
+    ROWS[ORDER[0]].setAttribute('data-top', '');
+    const BEST = '#' + ROWS[ORDER[0]].id;              // 第一名那一列
+    const REST = ORDER.slice(1).map(function (i) { return '#' + ROWS[i].id; }).join(', ');   // 其他列
+
+    // 拍 0 開場：主卡進場（看 ENTER；名次徽章和空軌道跟著主卡一起出現）→ 圖示描線、標題逐字
+    if (ENTER === 'grow') P.grow('#xrk-card', 0.3);
+    else { P.wipe('#xrk-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xrk-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xrk-ico', 0.5);
+    P.chars('#xrk-title .sc-opt', 0.62, { stagger: 0.03 });
+
+    // 拍 1–5 講到哪一項：那一列由左擦開 → ＋0.1 長條長到比例、數字數上去（0.6 秒）
+    P.wipe('#xrk-r1', T1, { dir: 'left', dur: 0.4 });  P.bar('#xrk-b1', T1 + 0.1, { to: RATIO[0], dur: 0.6 });  P.count('#xrk-v1', T1 + 0.1, { from: 0, to: VALS[0], dur: 0.6, decimals: DEC[0] });
+    P.wipe('#xrk-r2', T2, { dir: 'left', dur: 0.4 });  P.bar('#xrk-b2', T2 + 0.1, { to: RATIO[1], dur: 0.6 });  P.count('#xrk-v2', T2 + 0.1, { from: 0, to: VALS[1], dur: 0.6, decimals: DEC[1] });
+    P.wipe('#xrk-r3', T3, { dir: 'left', dur: 0.4 });  P.bar('#xrk-b3', T3 + 0.1, { to: RATIO[2], dur: 0.6 });  P.count('#xrk-v3', T3 + 0.1, { from: 0, to: VALS[2], dur: 0.6, decimals: DEC[2] });
+    P.wipe('#xrk-r4', T4, { dir: 'left', dur: 0.4 });  P.bar('#xrk-b4', T4 + 0.1, { to: RATIO[3], dur: 0.6 });  P.count('#xrk-v4', T4 + 0.1, { from: 0, to: VALS[3], dur: 0.6, decimals: DEC[3] });
+    P.wipe('#xrk-r5', T5, { dir: 'left', dur: 0.4 });  P.bar('#xrk-b5', T5 + 0.1, { to: RATIO[4], dur: 0.6 });  P.count('#xrk-v5', T5 + 0.1, { from: 0, to: VALS[4], dur: 0.6, decimals: DEC[4] });
+
+    // 拍 結論：第一名亮著、其他列退焦 → 第一名的數字重拍、名稱畫螢光筆；完成態停到段尾
+    P.dim(REST, TOP, { to: 0.5 });
+    P.punch(BEST + ' .xrk-val', TOP + 0.1, { scale: 1.12 });
+    P.marker(BEST + ' .xrk-name', TOP + 0.1);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-rank'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-rank";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

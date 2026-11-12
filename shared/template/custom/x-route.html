@@ -1,0 +1,147 @@
+<!-- 預設拍型：A 流程（BEATS.md §3 A；站換成地圖上的地點：路線描到下一站、圖釘彈出） -->
+<!doctype html>
+<!--
+  x-route：路線地圖（第二層 custom，layout: "fullscreen"；2–4 個地點有先後，路線一段一段描過去）
+
+  【適用的講解】
+  在講「從哪裡到哪裡」：2–4 個地點有先後順序，例如「從台北出發，先到台中吃午餐，再到台南看古蹟，最後在高雄住一晚」
+  「這趟去了東京、京都、大阪」。畫面是一張地圖卡：虛線的預定路線和每一站的空心點一開始就在；
+  講到出發地，第一個圖釘彈出；講到下一個地點，主色的路線描過去、到站時圖釘彈出、地名和備註跟著出現。
+
+  【不要用在哪裡】
+  - 抽象的步驟（沒有地點）：用 x-process、04c。
+  - 檔案、資料在裝置之間怎麼走：用 x-architecture、x-scene。
+  - 只提到一個地點：不下卡，或 07 重點字卡。
+  - 超過 4 個地點：只留頭、尾和轉折的那幾站，或拆兩段。
+
+  【要改的地方】
+  1. 文字：標題 #xrt-title（≤ 12 字）；每一站的地名 .xrt-name（≤ 5 字）、備註 .xrt-note（選填，≤ 6 字，例「吃午餐」「搭高鐵」）。
+  2. 站數：2–4 站。少一站就刪掉最後那個 .xrt-stop、同號的 .xrt-dot 和 .xrt-leg、它的 P.comet／P.pop／P.icon 那幾行，還有 const 那一行對應的 T；
+     P.sfx 的句號改成最後一站的。每一站的位置由 script 照站數排（載入時算一次，不用改）。
+  3. 圖示：標題列 #xrt-ico 的 svg。到 kit/icons.json 找名稱，把 svg 原文整段貼上。每一站 #xrt-p1–#xrt-p4 固定是圖釘，不用改。
+  4. 綁句：<script> 開頭 T1–T4 的句號與詞（見【綁句欄位】）。
+  5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改。
+
+  【綁句欄位】
+  T1 = P.at('#482@台北')：講到出發地的時刻，第一個圖釘彈出。
+  T2 = P.at('#483@台中') … T4 = P.at('#485@高雄')：講到下一個地點的時刻；路線提早 0.5 秒開始描，講到地名時剛好到站、圖釘彈出。
+  最後一站配一顆音效 ding（P.sfx('ding', '#485@高雄')，句號和最後一站一樣）。
+  地名在句中間時一定用 @詞，不要綁句首。「@詞」要寫成字串字面值，build 才算得到。
+
+  【D 下限】
+  T1 ≥ 1.5（主卡 0.3 秒長出、0.5 秒起圖示描線、標題逐字）
+  T2 ≥ T1 + 2.4（圖釘 0.6 秒做完、停 1.2 秒，路線提早 0.5 秒開始描）
+  T3 ≥ T2 + 2.4
+  T4 ≥ T3 + 2.4
+  D ≥ T2 + 3.0（最後一站 0.6 秒做完＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  D ≥ T3 + 3.0
+  D ≥ T4 + 3.0
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 #xrt-card：left 120、top 194、寬 1180、高 620（右緣 1300，避開右下子母畫面；
+  在內容區 y 150–858 上下置中）。卡內 free：標題列 top 36（圖示圓 72 left 56、標題 52 字 left 152）；
+  地圖 #xrt-map：left 56、top 144、1068×436（淡色底＋卡片色的格線，像地圖的方格）。站的中心點（地圖座標）：2 站 (220, 250)、(848, 110)；
+  3 站 (160, 250)、(534, 110)、(908, 250)；4 站 (130, 250)、(400, 110)、(670, 250)、(940, 110)。
+  每一站 .xrt-stop 寬 260、以中心點置中：圖釘圓 72、地名 44 字、備註 40 字由上到下。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-route 路線地圖</title></head>
+<body>
+<template id="x-route-template">
+  <style>
+    #x-route { position: absolute; inset: 0; }
+    #x-route .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 194、1180×620（右緣 1300） */
+    #x-route #xrt-card { position: absolute; left: 120px; top: 194px; width: 1180px; height: 620px; }
+    #x-route #xrt-ico { position: absolute; left: 56px; top: 36px; }
+    #x-route #xrt-title { position: absolute; left: 152px; top: 36px; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 地圖：淡色底＋格線；虛線＝預定路線、空心點＝每一站（跟主卡一起出現）；主色實線＝走過的路線 */
+    #x-route #xrt-map { position: absolute; left: 56px; top: 144px; width: 1068px; height: 436px; border-radius: 16px; background: var(--v2-node-tint); }
+    #x-route #xrt-svg { position: absolute; left: 0; top: 0; width: 1068px; height: 436px; overflow: visible; }
+    #x-route .xrt-grid { fill: none; stroke: var(--sc-fs-card); stroke-width: 3; }
+    #x-route .xrt-base { fill: none; stroke: var(--v2-line); stroke-width: 6; stroke-dasharray: 2 16; stroke-linecap: round; }
+    #x-route .xrt-leg { fill: none; stroke: var(--brand); stroke-width: 8; stroke-linecap: round; }
+    #x-route .xrt-dot { fill: var(--sc-fs-card); stroke: var(--v2-line); stroke-width: 4; }
+    /* 一站：圖釘、地名、備註由上到下置中；left／top 由 script 照站數填（圖釘的中心＝站的中心點） */
+    #x-route .xrt-stop { position: absolute; left: 0; top: 0; width: 260px; display: flex; flex-direction: column; align-items: center; white-space: nowrap; }
+    #x-route .xrt-name { margin-top: 8px; color: var(--sc-fs-ink); }
+    #x-route .xrt-note { color: var(--sc-fs-mute); }
+  </style>
+  <div id="x-route" data-composition-id="x-route" data-width="1920" data-height="1080" data-duration="12.6"
+       data-cues-sample='{"start":0,"D":12.6,"cues":{"481":[0.4,1.4],"482":[1.5,3.9],"483":[4.0,6.4],"484":[6.5,8.9],"485":[9.0,12.4]},"refs":{"#482@台北":1.7,"#483@台中":4.2,"#484@台南":6.7,"#485@高雄":9.2}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrt-card" class="sc-wcard" data-layout="free">
+      <span id="xrt-ico" class="sc-icon sc-icon--72" data-fill="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" /> <path d="M15 5.764v15" /> <path d="M9 3.236v15" /> </svg></span>
+      <div id="xrt-title" class="sc-t52 sc-w900"><span class="sc-opt" data-fill="title">這趟南下的路線</span></div>
+      <div id="xrt-map">
+        <svg id="xrt-svg" viewBox="0 0 1068 436" xmlns="http://www.w3.org/2000/svg" data-layout-ignore>
+          <path class="xrt-grid" d="M0 109H1068M0 218H1068M0 327H1068M178 0V436M356 0V436M534 0V436M712 0V436M890 0V436" />
+          <path id="xrt-base" class="xrt-base" />
+          <path id="xrt-l1" class="xrt-leg" />
+          <path id="xrt-l2" class="xrt-leg" /> <!-- @if n>=3 -->
+          <path id="xrt-l3" class="xrt-leg" /> <!-- @if n>=4 -->
+          <circle class="xrt-dot" r="12" />
+          <circle class="xrt-dot" r="12" />
+          <circle class="xrt-dot" r="12" /> <!-- @if n>=3 -->
+          <circle class="xrt-dot" r="12" /> <!-- @if n>=4 -->
+        </svg>
+        <div id="xrt-s1" class="xrt-stop"><span id="xrt-p1" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /> </svg></span><span class="xrt-name sc-t44 sc-w700 sc-opt" data-fill="items.1.text">台北</span>
+          <span class="xrt-note sc-t40 sc-w500 sc-opt" data-fill="items.1.note">出發</span> <!-- @if items.1.note -->
+        </div>
+        <div id="xrt-s2" class="xrt-stop"><span id="xrt-p2" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /> </svg></span><span class="xrt-name sc-t44 sc-w700 sc-opt" data-fill="items.2.text">台中</span>
+          <span class="xrt-note sc-t40 sc-w500 sc-opt" data-fill="items.2.note">吃午餐</span> <!-- @if items.2.note -->
+        </div>
+        <!-- @if n>=3 { -->
+        <div id="xrt-s3" class="xrt-stop"><span id="xrt-p3" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /> </svg></span><span class="xrt-name sc-t44 sc-w700 sc-opt" data-fill="items.3.text">台南</span>
+          <span class="xrt-note sc-t40 sc-w500 sc-opt" data-fill="items.3.note">看古蹟</span> <!-- @if items.3.note -->
+        </div>
+        <!-- @} -->
+        <!-- @if n>=4 { -->
+        <div id="xrt-s4" class="xrt-stop"><span id="xrt-p4" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /> </svg></span><span class="xrt-name sc-t44 sc-w700 sc-opt" data-fill="items.4.text">高雄</span>
+          <span class="xrt-note sc-t40 sc-w500 sc-opt" data-fill="items.4.note">住一晚</span> <!-- @if items.4.note -->
+        </div>
+        <!-- @} -->
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-route'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#482@台北'), T2 = P.at('#483@台中'), T3 = P.at('#484@台南'), T4 = P.at('#485@高雄');   // 講到每個地點的時刻  // @sub n==2: const T1 = P.at('#482@台北'), T2 = P.at('#483@台中'); @@ n==3: const T1 = P.at('#482@台北'), T2 = P.at('#483@台中'), T3 = P.at('#484@台南');
+    P.sfx('ding', '#485@高雄');                        // 最後一站一顆提示音（句號和最後一站一樣）  // @sub n==2: P.sfx('ding', '#483@台中'); @@ n==3: P.sfx('ding', '#484@台南');
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 照站數排位置（載入時算一次，不用改）：站的中心點一高一低，路線是連過每一站的平滑曲線
+    const STOPS = $q('.xrt-stop'), N = STOPS.length;
+    const XS = N === 2 ? [220, 848] : N === 3 ? [160, 534, 908] : [130, 400, 670, 940], YS = [250, 110, 250, 110];
+    const LEG = function (i) { var m = (XS[i] + XS[i + 1]) / 2; return 'M' + XS[i] + ' ' + YS[i] + 'C' + m + ' ' + YS[i] + ' ' + m + ' ' + YS[i + 1] + ' ' + XS[i + 1] + ' ' + YS[i + 1]; };
+    STOPS.forEach(function (s, i) { s.style.left = (XS[i] - 130) + 'px'; s.style.top = (YS[i] - 36) + 'px'; });
+    $q('.xrt-dot').forEach(function (c, i) { c.setAttribute('cx', XS[i]); c.setAttribute('cy', YS[i]); });
+    $q('.xrt-leg').forEach(function (p, i) { p.setAttribute('d', LEG(i)); });
+    document.getElementById('xrt-base').setAttribute('d', STOPS.slice(1).map(function (s, i) { return LEG(i); }).join(''));
+
+    // 拍 0 開場：主卡進場（看 ENTER；地圖、虛線路線、空心點跟著主卡一起出現）→ 圖示描線、標題逐字
+    if (ENTER === 'grow') P.grow('#xrt-card', 0.3);
+    else { P.wipe('#xrt-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xrt-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xrt-ico', 0.5);
+    P.chars('#xrt-title .sc-opt', 0.62, { stagger: 0.03 });
+
+    // 拍 1 出發地：圖釘（連地名、備註）彈出 → ＋0.1 圖示描線
+    P.pop('#xrt-s1', T1);  P.icon('#xrt-p1', T1 + 0.1, { dur: 0.5 });
+    // 拍 2–4 下一站：路線提早 0.5 秒開始描（彗星描線），講到地名時到站 → 圖釘彈出 → ＋0.1 圖示描線
+    P.comet('#xrt-l1', T2 - 0.5, { dur: 0.5 });  P.pop('#xrt-s2', T2);  P.icon('#xrt-p2', T2 + 0.1, { dur: 0.5 });
+    P.comet('#xrt-l2', T3 - 0.5, { dur: 0.5 });  P.pop('#xrt-s3', T3);  P.icon('#xrt-p3', T3 + 0.1, { dur: 0.5 });   // @if n>=3
+    P.comet('#xrt-l3', T4 - 0.5, { dur: 0.5 });  P.pop('#xrt-s4', T4);  P.icon('#xrt-p4', T4 + 0.1, { dur: 0.5 });   // @if n>=4
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-route'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

@@ -32,6 +32,7 @@ import { textWidth } from './time.mjs';
 import { BEAT_HEADER, BEAT_HEADER_ILLUS } from './audit-beats.mjs';
 import { rewriteIfSame, withLock } from './atomic.mjs';
 import { iconHint } from './icon-alias.mjs';
+import { loadPics, findPics, picSrc } from './pics.mjs';
 
 const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 16);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -114,10 +115,15 @@ export function validateSlots(spec, slots, { icons } = {}) {
     }
   }
   // lines：排在同一行、不換行的幾格加起來的字數（x-prompt 的 pre＋k1＋mid＋k2＋post：每格各自沒超過，加起來超過框寬就被切掉）
+  // 026：weights＝每格一個字佔多寬（字級不一樣大的幾格排在同一行；不寫＝都算 1）；list＝這幾格是清單每一項裡的欄位，一項一項算。
+  //   這些合計的上限原本只寫在欄位說明裡，填的人照各格的上限填滿就會破版（dev/tools/custom-check.mjs --stress 量出來的）
   for (const ln of spec.lines || []) {
-    const text = (ln.slots || []).map((k) => String(s[k] ?? '')).join('');
-    const w = textWidth(text.replace(/\*\*/g, ''));
-    if (ln.max != null && w > ln.max) errors.push(`${ln.label || (ln.slots || []).join('＋')}「${text}」${w} 字，上限 ${ln.max}（這幾格排在同一行、不換行）→ ${ln.fix || '縮文案，不縮字'}`);
+    const rows = ln.list ? (Array.isArray(s[ln.list]) ? s[ln.list] : []).map((it, i) => ({ src: it || {}, where: `slots.${ln.list}[${i}] 的` })) : [{ src: s, where: '' }];
+    for (const { src, where } of rows) {
+      const parts = (ln.slots || []).map((k) => String(src[k] ?? '').replace(/\*\*/g, ''));
+      const w = Math.round(parts.reduce((n, t, i) => n + textWidth(t) * (ln.weights?.[i] ?? 1), 0) * 10) / 10;
+      if (ln.max != null && w > ln.max + 1e-9) errors.push(`${where}${ln.label || (ln.slots || []).join('＋')}「${parts.join(ln.weights ? '｜' : '')}」${ln.weights ? `合計寬 ${w}` : `${w} 字`}，上限 ${ln.max}（這幾格排在同一行、不換行）→ ${ln.fix || '縮文案，不縮字'}`);
+    }
   }
   return errors;
 }
@@ -286,10 +292,11 @@ const even2 = (v) => Math.max(2, Math.round(v / 2) * 2);
 function partSize(part, { mains, twoRows, boost }, kitDir) {
   if (part.w && part.h) return [part.w, part.h];
   if (ILLUS_SMALL[part.illus]) return boost ? ILLUS_SMALL[part.illus].map((v) => v * 2) : ILLUS_SMALL[part.illus];
-  const ratio = part.illus ? illusRatio(kitDir, part.illus, part.opts || {}) : null;
+  const ratio = part.illus ? illusRatio(kitDir, part.illus, part.opts || {}) : part.pic ? [1, 1] : null;
   const [rw, rh] = ratio || [part.w || 220, part.h || 160];
   const maxW = boost ? 640 : mains <= 1 ? 560 : mains === 2 ? 420 : mains === 3 ? 272 : 208;   // 內容區 1176 扣掉間距與左右內距 48
   const maxH = twoRows ? 300 : 420;   // 內容區 580 扣掉上下內距 80、標籤 48
+  if (part.pic) { const side = even8(Math.min(maxW, maxH)); return [side, side]; }   // 圖庫的圖都是正方形
   const s = Math.min(maxW / rw, maxH / rh);
   return [even8(rw * s), even2(rh * s)];
 }
@@ -317,7 +324,8 @@ export function validateScene(slots, { kitDir, icons, outDir } = {}) {
     if (p.illus && names && !names.includes(p.illus)) errors.push(`parts.${p.id}：畫廊沒有「${p.illus}」（可用：${names.join('、')}）→ 改用圖示（icon；查名稱：node shared/template/tools/build.mjs --project projects/<專案> --icons <中文名稱>）`);
     if (p.icon && icons && !icons.get(String(p.icon))) errors.push(`parts.${p.id}：找不到圖示「${p.icon}」（kit/icons.json；${iconHint(p.icon, icons.names || [])}）`);
     if (p.src && outDir && !fs.existsSync(path.join(outDir, p.src))) errors.push(`parts.${p.id}：找不到 ${p.src} → 先照 shared/template/kit/illus-style.md 畫好放在 work/hyperframes/illus-local/`);
-    if (!p.illus && !p.icon && !p.src && !p.wave) errors.push(`parts.${p.id}：要有 illus、icon、src 或 wave 其中一個`);
+    if (p.pic && kitDir && !picOf(p, kitDir)) { const near = findPics(loadPics(kitDir), String(p.pic), { limit: 5 }).map((x) => `${x.id}（${x.zh}）`); errors.push(`parts.${p.id}：圖庫沒有「${p.pic}」${near.length ? `（相近的：${near.join('、')}）` : ''} → 查 id：node shared/template/tools/build.mjs --project projects/<專案> --pics <中文名稱>`); }
+    if (!p.illus && !p.icon && !p.src && !p.wave && !p.pic) errors.push(`parts.${p.id}：要有 illus、pic、icon、src 或 wave 其中一個`);
   }
   const need = (id, where) => { if (!ids.has(id)) errors.push(`${where}：parts 裡沒有「${id}」`); };
   const rowIds = (s.parts || []).filter((p) => !(p.row && p.row !== 1) && !Array.isArray(p.parts)).map((p) => p.id);
@@ -349,6 +357,9 @@ export function validateScene(slots, { kitDir, icons, outDir } = {}) {
 }
 
 const sid = (id) => `xsc-${id}`;
+// 圖庫的圖（028）：parts 寫 { "pic": "<id>" }，工具換成 data-illus-src="kit/pics/<類別>/<id>.svg"（正方形）
+const picOf = (p, kitDir) => (p.pic && kitDir ? loadPics(kitDir)?.byId.get(String(p.pic)) || null : null);
+const srcOf = (p, kitDir) => p.src || (picOf(p, kitDir) ? picSrc(picOf(p, kitDir)) : null);
 
 function scenePartHtml(p, ctx) {
   if (Array.isArray(p.parts)) {
@@ -365,7 +376,8 @@ function scenePartHtml(p, ctx) {
   else {
     const [w, h] = partSize(p, ctx, ctx.kitDir);
     const opts = Object.entries(p.opts || {}).map(([k, v]) => ` data-${k}="${esc(v)}"`).join('');
-    body = p.src ? `<div data-illus-src="${esc(p.src)}"${opts} style="width:${w}px;height:${h}px"></div>` : `<div data-illus="${esc(p.illus)}"${opts} style="width:${w}px;height:${h}px"></div>`;
+    const src = srcOf(p, ctx.kitDir);
+    body = src ? `<div data-illus-src="${esc(src)}"${opts} style="width:${w}px;height:${h}px"></div>` : `<div data-illus="${esc(p.illus)}"${opts} style="width:${w}px;height:${h}px"></div>`;
   }
   return `<div id="${sid(p.id)}" class="${cls}" data-slot${row}>${body}${label}</div>`;
 }
@@ -431,7 +443,7 @@ function fillScene(html, slots, { icons, kitDir }) {
   if (s.sticker) out = out.replace('<div id="xsc-stage"', '<div id="xsc-stage" data-sticker');   // 貼紙風格：元件一張一張貼上（P.stick），最後一拍可以整組撕走（peel）
   // 元件少又窄（人、直拿的手機）：間距拉開，整組撐到內容區六成寬，連接線才看得到、畫面不會只擠在中間
   const row = topRow.filter((p) => !Array.isArray(p.parts));
-  const widths = row.map((p) => (p.illus || p.src ? partSize(p, ctx, kitDir)[0] : p.w || 128));
+  const widths = row.map((p) => (p.illus || p.src || p.pic ? partSize(p, ctx, kitDir)[0] : p.w || 128));
   const stretch = row.length >= 2 && row.length === topRow.length ? Math.min(320, ((1176 * 0.6) - widths.reduce((a, b) => a + b, 0)) / (row.length - 1)) : 0;
   const gap = s.gap || (stretch > 96 ? String(even8(stretch)) : null);
   if (gap) out = out.replace(/(<div id="xsc-stage"[^>]*data-gap=")[^"]*(")/, `$1${esc(gap)}$2`);
@@ -522,7 +534,7 @@ function sceneSheet(s, id) {
     if (!p) return '—';
     if (p.wave || p.icon) return '—';
     const o = state || Object.values(p.opts || {}).join(', ');
-    return `\`${p.illus || p.src}\`${o ? `（${o}）` : ''}`;
+    return `\`${p.illus || p.src || `pic:${p.pic}`}\`${o ? `（${o}）` : ''}`;
   };
   const rows = [['0', '段起點', `場景骨架：面板＋標題「${s.title}」`, '開場（依前段）；＋0.5 逐字上浮（標題）', '標題', '—', '—', 'panelTop']];
   s.beats.forEach((b, i) => {
@@ -590,7 +602,7 @@ export const isBlankDesign = (html) => !html || /<[a-zA-Z][^<>]*\sdata-design-bl
 const blankShape = (html) => String(html).replace(/(<[a-zA-Z][^<>]*\sdata-design-blank\b[^<>]*>\s*<span[^<>]*>)[\s\S]*?(<\/span>)/, '$1$2');
 
 // 內容設計動畫的空白畫布：整個檔還是空白就跟著最新的構想更新；設計師動手之後工具不再覆寫
-function blankFor(customDir, seg) {
+export function blankFor(customDir, seg) {
   const html = fs.readFileSync(path.join(customDir, '_blank.html'), 'utf8');
   const idea = String(seg.story?.idea || '內容設計動畫（製作中）');
   // 疊在講者上的（layout: "overlay"）不要底圖

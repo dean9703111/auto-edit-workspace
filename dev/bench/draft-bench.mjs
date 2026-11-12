@@ -122,7 +122,7 @@ function mmx(F, messages, tmp) {
 
 function materials(proj, part) {
   const D = path.join(proj, 'work', '分鏡素材');
-  const common = read(path.join(D, '共用.md')), ch = read(path.join(D, `${part}.md`)), howto = read(path.join(D, '寫法.md'));
+  const common = read(path.join(D, '共用.md')), ch = read(path.join(D, `${part}.md`)), howto = (read(path.join(D, '.spec.md')) || read(path.join(D, '寫法.md')));
   if (!common || !ch || !howto) throw new Error(`${proj} 沒有 work/分鏡素材/（共用.md、${part}.md、寫法.md）→ 先跑 build.mjs --project ${proj} --scaffold`);
   const list = specEntries(howto);
   const menu = list.map((e) => `- ${e.text.split('\n')[0].replace(/\*\*/g, '')}`).join('\n');

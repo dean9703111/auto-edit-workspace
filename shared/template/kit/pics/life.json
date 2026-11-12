@@ -1,0 +1,314 @@
+{
+ "id": "life",
+ "zh": "生活與飲食",
+ "when": "講到日常、吃喝、家裡、衣物、寵物",
+ "items": [
+  {
+   "id": "coffee",
+   "zh": "咖啡",
+   "when": "講到喝咖啡、提神、休息一下",
+   "tags": [
+    "咖啡",
+    "提神"
+   ],
+   "file": "life/coffee.svg",
+   "from": "tabler:coffee"
+  },
+  {
+   "id": "cup",
+   "zh": "杯子",
+   "when": "講到喝水、飲料",
+   "tags": [
+    "杯子",
+    "飲料"
+   ],
+   "file": "life/cup.svg",
+   "from": "tabler:cup"
+  },
+  {
+   "id": "bottle",
+   "zh": "瓶子",
+   "when": "講到一瓶、飲品",
+   "tags": [
+    "瓶子"
+   ],
+   "file": "life/bottle.svg",
+   "from": "tabler:bottle"
+  },
+  {
+   "id": "pizza",
+   "zh": "披薩",
+   "when": "講到吃東西、聚餐、切成幾塊",
+   "tags": [
+    "披薩",
+    "吃"
+   ],
+   "file": "life/pizza.svg",
+   "from": "tabler:pizza"
+  },
+  {
+   "id": "burger",
+   "zh": "漢堡",
+   "when": "講到速食、吃午餐",
+   "tags": [
+    "漢堡",
+    "速食"
+   ],
+   "file": "life/burger.svg",
+   "from": "tabler:burger"
+  },
+  {
+   "id": "apple",
+   "zh": "蘋果",
+   "when": "講到水果、健康飲食",
+   "tags": [
+    "蘋果",
+    "水果"
+   ],
+   "file": "life/apple.svg",
+   "from": "tabler:apple"
+  },
+  {
+   "id": "salad",
+   "zh": "沙拉",
+   "when": "講到吃健康、輕食",
+   "tags": [
+    "沙拉",
+    "輕食"
+   ],
+   "file": "life/salad.svg",
+   "from": "tabler:salad"
+  },
+  {
+   "id": "cake",
+   "zh": "蛋糕",
+   "when": "講到慶祝、生日、甜點",
+   "tags": [
+    "蛋糕",
+    "生日",
+    "慶祝"
+   ],
+   "file": "life/cake.svg",
+   "from": "tabler:cake"
+  },
+  {
+   "id": "kitchen",
+   "zh": "餐具",
+   "when": "講到吃飯、用餐、做菜",
+   "tags": [
+    "餐具",
+    "吃飯",
+    "做菜"
+   ],
+   "file": "life/kitchen.svg",
+   "from": "tabler:tools-kitchen-2"
+  },
+  {
+   "id": "shirt",
+   "zh": "衣服",
+   "when": "講到穿搭、衣服",
+   "tags": [
+    "衣服",
+    "穿搭"
+   ],
+   "file": "life/shirt.svg",
+   "from": "tabler:shirt"
+  },
+  {
+   "id": "shoe",
+   "zh": "鞋子",
+   "when": "講到鞋子、走路、出門",
+   "tags": [
+    "鞋子"
+   ],
+   "file": "life/shoe.svg",
+   "from": "tabler:shoe"
+  },
+  {
+   "id": "hanger",
+   "zh": "衣架",
+   "when": "講到衣櫃、整理衣服",
+   "tags": [
+    "衣架",
+    "衣櫃"
+   ],
+   "file": "life/hanger.svg",
+   "from": "tabler:hanger"
+  },
+  {
+   "id": "bath",
+   "zh": "浴缸",
+   "when": "講到洗澡、放鬆",
+   "tags": [
+    "浴缸",
+    "洗澡"
+   ],
+   "file": "life/bath.svg",
+   "from": "tabler:bath"
+  },
+  {
+   "id": "sofa",
+   "zh": "沙發",
+   "when": "講到在家放鬆、客廳",
+   "tags": [
+    "沙發",
+    "客廳"
+   ],
+   "file": "life/sofa.svg",
+   "from": "tabler:sofa"
+  },
+  {
+   "id": "armchair",
+   "zh": "單人椅",
+   "when": "講到坐著、舒適",
+   "tags": [
+    "椅子"
+   ],
+   "file": "life/armchair.svg",
+   "from": "tabler:armchair"
+  },
+  {
+   "id": "plant",
+   "zh": "盆栽",
+   "when": "講到成長、養植物",
+   "tags": [
+    "盆栽",
+    "植物",
+    "成長"
+   ],
+   "file": "life/plant.svg",
+   "from": "tabler:plant"
+  },
+  {
+   "id": "flower",
+   "zh": "花",
+   "when": "講到美好、開花結果",
+   "tags": [
+    "花"
+   ],
+   "file": "life/flower.svg",
+   "from": "tabler:flower"
+  },
+  {
+   "id": "dog",
+   "zh": "狗",
+   "when": "講到狗、寵物、陪伴",
+   "tags": [
+    "狗",
+    "寵物"
+   ],
+   "file": "life/dog.svg",
+   "from": "tabler:dog"
+  },
+  {
+   "id": "cat",
+   "zh": "貓",
+   "when": "講到貓、寵物",
+   "tags": [
+    "貓",
+    "寵物"
+   ],
+   "file": "life/cat.svg",
+   "from": "tabler:cat"
+  },
+  {
+   "id": "paw",
+   "zh": "腳印",
+   "when": "講到寵物、足跡",
+   "tags": [
+    "腳印",
+    "寵物"
+   ],
+   "file": "life/paw.svg",
+   "from": "tabler:paw"
+  },
+  {
+   "id": "umbrella",
+   "zh": "雨傘",
+   "when": "講到保護、下雨、保險",
+   "tags": [
+    "雨傘",
+    "保護",
+    "保險"
+   ],
+   "file": "life/umbrella.svg",
+   "from": "tabler:umbrella"
+  },
+  {
+   "id": "glasses",
+   "zh": "眼鏡",
+   "when": "講到看清楚、戴眼鏡",
+   "tags": [
+    "眼鏡",
+    "看清楚"
+   ],
+   "file": "life/glasses.svg",
+   "from": "tabler:eyeglass"
+  },
+  {
+   "id": "candle",
+   "zh": "蠟燭",
+   "when": "講到氣氛、停電、紀念",
+   "tags": [
+    "蠟燭"
+   ],
+   "file": "life/candle.svg",
+   "from": "tabler:candle"
+  },
+  {
+   "id": "vacuum",
+   "zh": "吸塵器",
+   "when": "講到打掃、清理、整理乾淨",
+   "tags": [
+    "吸塵器",
+    "打掃",
+    "清理"
+   ],
+   "file": "life/vacuum.svg",
+   "from": "tabler:vacuum-cleaner"
+  },
+  {
+   "id": "washing-machine",
+   "zh": "洗衣機",
+   "when": "講到洗衣服、家事",
+   "tags": [
+    "洗衣機",
+    "家事"
+   ],
+   "file": "life/washing-machine.svg",
+   "from": "tabler:wash-machine"
+  },
+  {
+   "id": "fridge",
+   "zh": "冰箱",
+   "when": "講到冰箱、保存",
+   "tags": [
+    "冰箱"
+   ],
+   "file": "life/fridge.svg",
+   "from": "tabler:fridge"
+  },
+  {
+   "id": "toilet-paper",
+   "zh": "衛生紙",
+   "when": "講到日用品、囤貨",
+   "tags": [
+    "衛生紙",
+    "日用品"
+   ],
+   "file": "life/toilet-paper.svg",
+   "from": "tabler:toilet-paper"
+  },
+  {
+   "id": "basket",
+   "zh": "籃子",
+   "when": "講到採買、裝東西",
+   "tags": [
+    "籃子",
+    "採買"
+   ],
+   "file": "life/basket.svg",
+   "from": "tabler:basket"
+  }
+ ]
+}

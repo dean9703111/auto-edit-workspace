@@ -1,0 +1,313 @@
+{
+ "id": "health",
+ "zh": "健康與運動",
+ "when": "講到身體、運動、醫療、作息",
+ "items": [
+  {
+   "id": "heartbeat",
+   "zh": "心跳",
+   "when": "講到心跳、生命力、健康狀況",
+   "tags": [
+    "心跳",
+    "健康"
+   ],
+   "file": "health/heartbeat.svg",
+   "from": "tabler:heartbeat"
+  },
+  {
+   "id": "activity",
+   "zh": "活動量",
+   "when": "講到活動量、波動、狀態",
+   "tags": [
+    "活動量",
+    "波動"
+   ],
+   "file": "health/activity.svg",
+   "from": "tabler:activity"
+  },
+  {
+   "id": "stethoscope",
+   "zh": "聽診器",
+   "when": "講到看醫生、檢查",
+   "tags": [
+    "聽診器",
+    "看醫生"
+   ],
+   "file": "health/stethoscope.svg",
+   "from": "tabler:stethoscope"
+  },
+  {
+   "id": "pill",
+   "zh": "藥丸",
+   "when": "講到吃藥、解藥、解法",
+   "tags": [
+    "藥",
+    "解藥"
+   ],
+   "file": "health/pill.svg",
+   "from": "tabler:pill"
+  },
+  {
+   "id": "vaccine",
+   "zh": "針筒",
+   "when": "講到打針、疫苗",
+   "tags": [
+    "針筒",
+    "疫苗"
+   ],
+   "file": "health/vaccine.svg",
+   "from": "tabler:vaccine"
+  },
+  {
+   "id": "first-aid",
+   "zh": "急救箱",
+   "when": "講到急救、緊急處理",
+   "tags": [
+    "急救箱",
+    "急救"
+   ],
+   "file": "health/first-aid.svg",
+   "from": "tabler:first-aid-kit"
+  },
+  {
+   "id": "thermometer",
+   "zh": "體溫計",
+   "when": "講到發燒、溫度",
+   "tags": [
+    "體溫計",
+    "發燒"
+   ],
+   "file": "health/thermometer.svg",
+   "from": "tabler:thermometer"
+  },
+  {
+   "id": "barbell",
+   "zh": "槓鈴",
+   "when": "講到重訓、健身",
+   "tags": [
+    "槓鈴",
+    "重訓",
+    "健身"
+   ],
+   "file": "health/barbell.svg",
+   "from": "tabler:barbell"
+  },
+  {
+   "id": "treadmill",
+   "zh": "跑步機",
+   "when": "講到運動、有氧",
+   "tags": [
+    "跑步機",
+    "運動"
+   ],
+   "file": "health/treadmill.svg",
+   "from": "tabler:treadmill"
+  },
+  {
+   "id": "yoga",
+   "zh": "瑜珈",
+   "when": "講到伸展、放鬆、身心",
+   "tags": [
+    "瑜珈",
+    "伸展"
+   ],
+   "file": "health/yoga.svg",
+   "from": "tabler:yoga"
+  },
+  {
+   "id": "football",
+   "zh": "足球",
+   "when": "講到足球、比賽",
+   "tags": [
+    "足球"
+   ],
+   "file": "health/football.svg",
+   "from": "tabler:ball-football"
+  },
+  {
+   "id": "basketball",
+   "zh": "籃球",
+   "when": "講到籃球、投籃",
+   "tags": [
+    "籃球"
+   ],
+   "file": "health/basketball.svg",
+   "from": "tabler:ball-basketball"
+  },
+  {
+   "id": "tennis",
+   "zh": "網球",
+   "when": "講到網球、來回對打",
+   "tags": [
+    "網球"
+   ],
+   "file": "health/tennis.svg",
+   "from": "tabler:ball-tennis"
+  },
+  {
+   "id": "swimming",
+   "zh": "游泳",
+   "when": "講到游泳、下水",
+   "tags": [
+    "游泳"
+   ],
+   "file": "health/swimming.svg",
+   "from": "tabler:swimming"
+  },
+  {
+   "id": "moon",
+   "zh": "月亮",
+   "when": "講到晚上、熬夜、睡眠",
+   "tags": [
+    "月亮",
+    "晚上",
+    "熬夜"
+   ],
+   "file": "health/moon.svg",
+   "from": "tabler:moon"
+  },
+  {
+   "id": "mask",
+   "zh": "面具",
+   "when": "講到偽裝、演戲、表面功夫",
+   "tags": [
+    "面具",
+    "偽裝",
+    "演戲"
+   ],
+   "file": "health/mask.svg",
+   "from": "tabler:masks-theater"
+  },
+  {
+   "id": "virus",
+   "zh": "病毒",
+   "when": "講到病毒、感染、擴散",
+   "tags": [
+    "病毒",
+    "感染"
+   ],
+   "file": "health/virus.svg",
+   "from": "tabler:virus"
+  },
+  {
+   "id": "dna",
+   "zh": "DNA",
+   "when": "講到基因、天生、本質",
+   "tags": [
+    "DNA",
+    "基因"
+   ],
+   "file": "health/dna.svg",
+   "from": "tabler:dna-2"
+  },
+  {
+   "id": "lungs",
+   "zh": "肺",
+   "when": "講到呼吸、喘口氣",
+   "tags": [
+    "肺",
+    "呼吸"
+   ],
+   "file": "health/lungs.svg",
+   "from": "tabler:lungs"
+  },
+  {
+   "id": "tooth",
+   "zh": "牙齒",
+   "when": "講到牙齒、看牙醫",
+   "tags": [
+    "牙齒"
+   ],
+   "file": "health/tooth.svg",
+   "from": "tabler:dental"
+  },
+  {
+   "id": "bone",
+   "zh": "骨頭",
+   "when": "講到骨架、結構、支撐",
+   "tags": [
+    "骨頭",
+    "骨架"
+   ],
+   "file": "health/bone.svg",
+   "from": "tabler:bone"
+  },
+  {
+   "id": "wheelchair",
+   "zh": "輪椅",
+   "when": "講到無障礙、行動不便",
+   "tags": [
+    "輪椅",
+    "無障礙"
+   ],
+   "file": "health/wheelchair.svg",
+   "from": "tabler:wheelchair"
+  },
+  {
+   "id": "massage",
+   "zh": "按摩",
+   "when": "講到放鬆、紓壓",
+   "tags": [
+    "按摩",
+    "紓壓"
+   ],
+   "file": "health/massage.svg",
+   "from": "tabler:massage"
+  },
+  {
+   "id": "calm",
+   "zh": "平靜臉",
+   "when": "講到冷靜、沒什麼感覺、普通",
+   "tags": [
+    "平靜",
+    "冷靜",
+    "普通"
+   ],
+   "file": "health/calm.svg",
+   "from": "tabler:mood-neutral"
+  },
+  {
+   "id": "scale-weight",
+   "zh": "體重計",
+   "when": "講到體重、減重",
+   "tags": [
+    "體重計",
+    "減重"
+   ],
+   "file": "health/scale-weight.svg",
+   "from": "tabler:scale-outline"
+  },
+  {
+   "id": "droplet",
+   "zh": "水滴",
+   "when": "講到喝水、一滴、水分",
+   "tags": [
+    "水滴",
+    "喝水"
+   ],
+   "file": "health/droplet.svg",
+   "from": "tabler:droplet"
+  },
+  {
+   "id": "salt",
+   "zh": "調味罐",
+   "when": "講到加一點、調味",
+   "tags": [
+    "調味"
+   ],
+   "file": "health/salt.svg",
+   "from": "tabler:salt"
+  },
+  {
+   "id": "nurse",
+   "zh": "護理師",
+   "when": "講到照護、醫護人員",
+   "tags": [
+    "護理師",
+    "照護"
+   ],
+   "file": "health/nurse.svg",
+   "from": "tabler:nurse"
+  }
+ ]
+}

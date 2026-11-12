@@ -97,7 +97,7 @@ test('applyStoryboard：改字、改音效、勾金句都套回 plan；沒改就
   assert.match(G.applyStoryboard(broken, plan, { scenes, specs }).unmatched[0], /s0101/);
 });
 
-test('內容設計動畫候選：分鏡表列成勾選表（預算內預設勾、有預估），勾了才改成內容設計動畫，取消勾不動', () => {
+test('內容設計動畫候選：分鏡表列成勾選表（026：預設都不勾、有預估），勾了才改成內容設計動畫，沒勾不動', () => {
   const cand = { ...plan, scenes: plan.scenes.map((s) => (s.id === 's0101' ? { ...s, sfx: 'pop', story: { ...s.story, designIdea: '同步像兩支手機握手', designWhy: '抽象概念' } } : s)) };
   assert.equal(G.isDesignPick(cand.scenes[0]), true);
   assert.equal(G.isDesignPick(cand.scenes[2]), false, '已經是內容設計動畫');
@@ -107,16 +107,16 @@ test('內容設計動畫候選：分鏡表列成勾選表（預算內預設勾�
   assert.deepEqual(st.warnings, []);
   assert.match(md, /### 內容設計動畫候選/);
   assert.match(md, /\| 段 \| 時間碼 \| 現在用 \| 構想 \| 為什麼值得設計 \| 預估 \| 要不要 ☐ \|/);
-  assert.match(md, /\| s0101 \| [^|]+ \| [^|]+ \| 同步像兩支手機握手 \| 抽象概念 \| 12 分鐘 \| ☑ \|/, '預算內預設勾');
-  assert.match(md, /預設全勾 1 段（預估 12 分鐘，4 段同時做）/);
+  assert.match(md, /\| s0101 \| [^|]+ \| [^|]+ \| 同步像兩支手機握手 \| 抽象概念 \| 12 分鐘 \| ☐ \|/, '026：預設不勾，先套模板合成');
+  assert.match(md, /預設都不勾：先全部套模板出完成影片預覽（全勾 1 段約 12 分鐘，4 段同時做）。想一開始就專門設計的段才勾/);
+  assert.match(md, /不滿意再說「<段> 重新設計」/);
   assert.match(findSection(md, 's0101').text, /- 可以改做內容設計動畫：同步像兩支手機握手/);
-  // 取消勾：plan 不動
-  const unticked = md.split('\n').map((l) => (l.startsWith('| s0101 |') && l.includes('同步像兩支手機握手') ? l.replace(/☑ \|$/, '☐ |') : l)).join('\n');
-  const none = G.applyStoryboard(unticked, cand, { scenes, specs });
+  // 沒勾（預設）：plan 不動
+  const none = G.applyStoryboard(md, cand, { scenes, specs });
   assert.equal(none.changed, false);
   assert.deepEqual(none.designs, []);
   // 勾了：換成內容設計動畫，留起訖、音效，拿掉模板欄位，構想搬到 story.idea
-  const ticked = md;
+  const ticked = md.split('\n').map((l) => (l.startsWith('| s0101 |') && l.includes('同步像兩支手機握手') ? l.replace(/☐ \|$/, '☑ |') : l)).join('\n');
   const r = G.applyStoryboard(ticked, cand, { scenes, specs });
   assert.deepEqual(r.designs, ['s0101']);
   assert.ok(r.changes.includes('s0101 改成內容設計動畫（使用者勾選）'));
@@ -127,7 +127,7 @@ test('內容設計動畫候選：分鏡表列成勾選表（預算內預設勾�
   assert.deepEqual(G.applyStoryboard(ticked, r.plan, { scenes, specs }).designs, []);
 });
 
-test('022 預設勾選：⌈n/4⌉×12 ≤ 30 分鐘；各章輪流、同章段長的先；表下寫全勾要多久', () => {
+test('022 建議先做的段：⌈n/4⌉×12 ≤ 30 分鐘；各章輪流、同章段長的先；026 預設都不勾、表下寫全勾要多久', () => {
   assert.deepEqual([1, 4, 5, 8, 9].map(G.designMinutes), [12, 12, 24, 24, 36]);
   const cands = [
     { id: 'a1', part: '一', secs: 8 }, { id: 'a2', part: '一', secs: 20 }, { id: 'a3', part: '一', secs: 15 }, { id: 'a4', part: '一', secs: 9 },
@@ -139,7 +139,10 @@ test('022 預設勾選：⌈n/4⌉×12 ≤ 30 分鐘；各章輪流、同章段�
   assert.deepEqual([...on], ['a2', 'b2', 'c2', 'a3', 'b1', 'c3', 'a4', 'c1'], '各章輪流，同章長的先；二章用完就跳過');
   assert.ok(G.designMinutes(on.size) <= G.DESIGN_BUDGET);
   const d = { cands, on, minutes: G.designMinutes(on.size), all: G.designMinutes(cands.length) };
-  assert.equal(G.designPlanLine(d), '預設勾 8 段（預估 24 分鐘，4 段同時做）；全勾 10 段約 36 分鐘');
+  assert.equal(G.designPlanLine(d), '勾了 8 段（預估 24 分鐘，4 段同時做）；全勾 10 段約 36 分鐘');
+  assert.equal(G.designPlanLine({ cands, on: new Set(), minutes: 0, all: 36 }), '預設都不勾：先全部套模板出完成影片預覽（全勾 10 段約 36 分鐘，4 段同時做）');
+  const dp = G.designPlan([{ id: 'k1', scene: 'key-point', story: { designIdea: '握手' } }, { id: 'k2', scene: 'key-point', story: {} }]);
+  assert.deepEqual([dp.cands.map((c) => c.id), [...dp.on], [...dp.suggest]], [['k1'], [], ['k1']]);
   assert.equal(G.defaultPicks([]).size, 0);
 });
 

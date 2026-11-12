@@ -197,6 +197,7 @@
     <a class="home" data-home href="../../index.html">← 官網首頁</a>
     <a href="index.html" aria-current="page">影片情境庫</a>
     <a href="fx/index.html">字卡動態 40 種</a>
+    <a href="kit/pics-gallery.html">圖庫 444 個</a>
     <a class="gh" href="https://github.com/dean9703111/auto-edit-workspace">GitHub ↗</a>
   </div>
 </nav>
@@ -1144,7 +1145,7 @@
         <div class="title"><span class="no">④</span><h3>示意動畫（骨架）</h3><code>x-scene</code></div>
         <dl>
           <dt>什麼時候用</dt><dd>講解在描述具體的動作、物件或過程（「拍完先上傳雲端，再下載到電腦打開播放」）；畫面主角是線條插圖（kit/illus-gallery.jpg 的元件）</dd>
-          <dt>不要用在</dt><dd class="avoid">只有名詞、沒有動作（用 12 或 x-callout）；抽象步驟、沒有具體物件（用 x-process）；畫廊沒有的物件先照 kit/illus-style.md 畫成 illus-local/*.svg</dd>
+          <dt>不要用在</dt><dd class="avoid">只有名詞、沒有動作（用 12 或 x-callout）；抽象步驟、沒有具體物件（用 x-process）；畫廊沒有的物件先查圖庫（kit/pics-gallery.html），圖庫也沒有才照 kit/illus-style.md 畫成 illus-local/*.svg</dd>
           <dt>畫面上</dt><dd>插圖元件照拍一個一個彈出、元件之間描線、螢幕換狀態（錄影 → 播放）、最後結果徽章打勾；同一時間只有一個焦點</dd>
         </dl>
         <div class="limits"><span>版面：子母畫面</span><span>物件 2–4 個</span><span>標籤 ≤ 10 字</span><span>只填 DATA：元件清單＋拍</span></div>
@@ -1288,6 +1289,81 @@
           <dt>畫面上</dt><dd>快訊標籤翻起來、標題條擦開 → 講到數字，大數字卡翻起來數上去 → 講到變化，走勢卡畫線 → 講到出處，來源列擦開</dd>
         </dl>
         <div class="limits"><span>版面：子母畫面</span><span>1 個數字＋1 條走勢</span><span>標題 ≤ 14 字、來源 ≤ 24 字</span><span>綁句 T1–T3</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-point.html" loading="lazy" title="x-point 全畫面的一句重點 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-point.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-point 全畫面的一句重點"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>全畫面的一句重點</h3><code>x-point</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>前後都是全畫面的動畫，中間一兩句重點、提醒、轉折或小結（「所以開拍前一定要先確認」「接下來換安裝」）：講者留在小視窗，不用為了一句話切回講者再切回來</dd>
+          <dt>不要用在</dt><dd class="avoid">講者滿版露臉的時候（用 07 重點字卡）；有 2 個以上並列的重點（用 x-checklist、04a）；整支片最想讓人記住的那個詞（用 x-wordcut）</dd>
+          <dt>畫面上</dt><dd>主卡和大圖示先出現 → 講到那個詞，重點句逐字浮出、圖示重拍 → 0.5 秒後補一句淡入</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>4 秒起</span><span>重點句 ≤ 9 字、補一句 ≤ 14 字</span><span>圖示 1 個</span><span>綁句 T1</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-comment.html" loading="lazy" title="x-comment 留言卡 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-comment.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-comment 留言卡"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>留言卡</h3><code>x-comment</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>轉述別人說的話：觀眾留言、私訊、網友的提問或評論（「有觀眾留言問我：剪一支片到底要多久？其實現在半小時就夠了」）</dd>
+          <dt>不要用在</dt><dd class="avoid">自問自答、沒有「別人說」（用 06）；和 AI 的一問一答（用 x-prompt-chat）；名人說的話、整句金句（用 15）；留言超過兩行</dd>
+          <dt>畫面上</dt><dd>留言卡：頭像、名稱先出現 → 講到留言內容逐字打出、讚數彈出 → 講到回答，留言卡往上讓位、退焦，下面彈出回覆卡</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>留言 1–2 行、每行 ≤ 15 字</span><span>回覆選填、≤ 14 字</span><span>圖示固定</span><span>綁句 T1／T2</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-route.html" loading="lazy" title="x-route 路線地圖 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-route.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-route 路線地圖"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>路線地圖</h3><code>x-route</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>從哪裡到哪裡：2–4 個地點有先後（「從台北出發，先到台中吃午餐，再到台南，最後在高雄住一晚」「這趟去了東京、京都、大阪」）</dd>
+          <dt>不要用在</dt><dd class="avoid">抽象的步驟、沒有地點（用 x-process、04c）；資料在裝置之間怎麼走（用 x-architecture）；只提到一個地點；超過 4 個地點</dd>
+          <dt>畫面上</dt><dd>地圖卡：虛線的預定路線和每一站的空心點先在 → 講到出發地，圖釘彈出 → 講到下一個地點，主色路線描過去，到站時圖釘、地名、備註彈出</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>2–4 站</span><span>地名 ≤ 5 字、備註 ≤ 6 字</span><span>圖釘固定</span><span>綁句 T1–T4</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-code-diff.html" loading="lazy" title="x-code-diff 程式碼改前改後 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-code-diff.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-code-diff 程式碼改前改後"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>程式碼改前改後</h3><code>x-code-diff</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>程式、設定檔、指令的改前改後（「原本停頓秒數寫死在程式裡；改成讀設定檔之後，改設定檔就好」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只是介紹一段程式在做什麼（用 x-terminal-code）；不是程式的前後對比（用 x-before-after）；改動超過 3 行、要逐字看懂的長程式（用螢幕錄影）</dd>
+          <dt>畫面上</dt><dd>編輯器視窗：原本的寫法先在 → 講到它的問題，那幾行亮起紅色刪除帶、字退焦 → 講到改成什麼，綠色新增帶亮起、新的寫法逐字打出 → 最後印出結果列</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>改前、改後各 1–3 行</span><span>每行 ≤ 38 個半形字</span><span>結果列選填</span><span>綁句 DEL／ADD／RUN</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-rank.html" loading="lazy" title="x-rank 排名長條圖 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-rank.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-rank 排名長條圖"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>排名長條圖</h3><code>x-rank</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>在比誰最多：3–5 個項目各有一個數字、要看出名次（「最花時間的是找 NG 要 90 分鐘，再來上字幕 60 分鐘、做字卡 50 分鐘」）</dd>
+          <dt>不要用在</dt><dd class="avoid">同一個量在不同時間點的變化（用 x-trend）；有合計（用 x-receipt）；只有兩個數字（用 x-before-after、x-numbers）；數字越小越好的排名（用 04d）</dd>
+          <dt>畫面上</dt><dd>排行榜：名次徽章和空軌道先在 → 講到哪一項，那一列擦開、長條長到比例、數字數上去（照數字自動排名，第一名主色）→ 講到結論，第一名亮著、其他退焦</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>3–5 項</span><span>名稱 ≤ 6 字、數字 0–99999</span><span>圖示 1 個</span><span>綁句 T1–T5／TOP</span></div>
       </div>
     </article>
 

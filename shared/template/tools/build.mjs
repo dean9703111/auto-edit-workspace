@@ -15,6 +15,7 @@
  *                                                     全片校正通過後再跑，印每一行可以用的模板（照語意縮好的）
  *   node shared/template/tools/build.mjs --project projects/<專案> --map-merge   合併各份地圖成 work/分鏡素材/語意地圖.md，主代理全片校正（A 名單、視覺語言.md、統一標法）；通過才印第二回合的派工
  *   node shared/template/tools/build.mjs --project projects/<專案> --design-status   內容設計動畫做到哪：每段「還沒動手／腳本寫好／動畫做了、audit 過沒」；空白畫布超過 20 分鐘沒進度就印重派的派工訊息
+ *   node shared/template/tools/build.mjs --project projects/<專案> --design-canvas s0105   內容設計動畫的空白畫布不見了就補一份（已經有內容的不動；好幾段用逗號）；加 --reset＝這一段從頭重做：舊的動畫檔、鏡位腳本備份到 work/designs/.old/，畫布換回空白
  *   node shared/template/tools/build.mjs --project projects/<專案> --outline ch03   讀 work/drafts/ch03.outline.md（一段一行：id | from | to | 模板 | 在講什麼 | 候選構想），檢查段長、相鄰模板、接縫、候選數量，產生要填的草稿骨架 work/drafts/ch03.json（填過的段留著）
  *   node shared/template/tools/build.mjs --project projects/<專案> --check-draft work/drafts/ch03.json   只驗一份草稿（不受別章影響）
  *   node shared/template/tools/build.mjs --project projects/<專案> --merge-drafts   合併 work/drafts/ch*.json 成 plan.json 的 scenes，寫內容設計動畫的派工資料（work/briefs/）；
@@ -41,8 +42,9 @@
  *   底片要重新編碼時走背景工作（work/.jobs/prepare.*，同時只有一條在寫）：前景最多等 --wait <秒>（預設 540），超過結束碼 75，再跑一次同一條會接著等
  *   node shared/template/tools/build.mjs --no-loudnorm  重新編碼底片時不做人聲響度標準化（預設調到 −14 LUFS、true peak ≤ −1 dBTP）
  *   node shared/template/tools/build.mjs --no-declick   重新編碼底片時不在剪接點（work/cutpoints.json）做 15 ms 微淡化
- *   node shared/template/tools/build.mjs --project projects/<專案> --spec key-point   查字卡或模板的寫法（欄位、限制、時間下限；一次查好幾個用逗號：--spec key-point,x-scene）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --spec key-point   查字卡或模板的寫法（欄位、限制；一次查好幾個用逗號：--spec key-point,x-scene）
  *   node shared/template/tools/build.mjs --project projects/<專案> --icons 手機,雲端    查圖示名稱
+ *   node shared/template/tools/build.mjs --project projects/<專案> --pics 手機,雲端     查圖庫（常用物件的線稿，附使用時機）；--pics 不帶詞印目錄、--pics <類別> 印那一類
  *   node shared/template/tools/build.mjs --project projects/<專案> --words 28-41       看這幾句的字幕與逐字稿（挑 @詞 用）
  *   node shared/template/tools/build.mjs --project projects/<專案> --show s05,x03      只看這幾段的 plan（不用整份讀 plan.json）
  *   node shared/template/tools/build.mjs --gallery    （作者用）重新產生 shared/template/preview/*.html（情境動畫另出直式 x-<名稱>-v.html，和直式講者示意 speaker-v.jpg、speaker-v-dark.jpg）
@@ -86,7 +88,8 @@ import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
-import { runScaffold, mapCmd, mapMergeCmd, checkDraft, outlineCmd, designStatusCmd, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan, ensureBriefs } from './lib/flow.mjs';
+import { picsCmd } from './lib/pics.mjs';
+import { runScaffold, mapCmd, mapMergeCmd, checkDraft, outlineCmd, designStatusCmd, designCanvasCmd, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan, ensureBriefs } from './lib/flow.mjs';
 import { autofixPlan, summaryLines } from './lib/autofix.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
 import { jobState, runJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
@@ -104,7 +107,7 @@ const NOCAPS_FILE = 'compositions/final-nocaps.html', NOCAPS_SRT = 'final-nocaps
 const captionSrt = (captions) => { let n = 0; return formatSrt(captions.items.flatMap((c) => c.spans.map(([a, b]) => ({ n: ++n, start: a, end: b, text: c.text })))); };
 const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
 const OUTPUT_DIRS = ['output', path.join('output', 'test-clips'), path.join('output', 'qc')];
-const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'outline', 'map', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx'];
+const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'outline', 'map', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx', 'design-canvas'];
 
 export function parseArgs(argv) {
   const flags = {};
@@ -112,11 +115,12 @@ export function parseArgs(argv) {
     const a = argv[i];
     if (!a.startsWith('--')) throw new Error(`看不懂的參數「${a}」（用 --help 看用法）`);
     const [k, inline] = a.slice(2).split('=');
-    if (VALUE_FLAGS.includes(k)) {
+    if (k === 'pics') { const v = inline ?? (argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : null); flags.pics = v ?? true; }   // 不帶詞＝印圖庫目錄
+    else if (VALUE_FLAGS.includes(k)) {
       const v = inline ?? argv[++i];
       if (v == null) throw new Error(`--${k} 後面要接值`);
       flags[k] = v;
-    } else if (['check', 'list', 'scaffold', 'map-merge', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'nocaps', 'autofix'].includes(k)) flags[k] = true;
+    } else if (['check', 'list', 'scaffold', 'map-merge', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'nocaps', 'autofix', 'reset'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -863,7 +867,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const mt = ensureMattes({ outDir: P.out, root: path.resolve(HERE, '..', '..', '..'), items: res.items, tm: res.tm, assetVideo, log, speakerBox: res.globals.speakerBox });
   if (mt.made || mt.reused) log(`人物去背層：${mt.made + mt.reused} 段（新做 ${mt.made}、沿用 ${mt.reused}）`);
   if (mt.problems.length) { for (const x of mt.problems) log(`✖ [${x.id}] ${x.msg}`); return { ok: false, res }; }
-  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, bed, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null };
+  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, panelSide: res.globals.panelSide, cardSide: res.globals.cardSide, speakerSide: res.globals.speakerSide, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, bed, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null };
   const main = buildMain({ ...mainOpts, captions: cap });
   let test = null;
   if (flags.test) {
@@ -974,6 +978,7 @@ async function cli() {
   if (flags.scaffold) { runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }); return 0; }
   if (flags.spec) return specCmd(P, flags.spec);
   if (flags.icons) return iconsCmd(flags.icons, { loadLib, templateDir: P.templateDir });
+  if (flags.pics) return picsCmd(flags.pics, { kitDir: path.join(P.templateDir, 'kit') });
   if (flags.words) return wordsCmd(P, flags.words);
   if (flags.show) return showCmd(P, flags.show);
   if (flags.autofix) return autofixCmd(P, flags);
@@ -981,6 +986,7 @@ async function cli() {
   if (flags['map-merge']) return mapMergeCmd(P);
   if (flags.outline) return outlineCmd(P, flags.outline);
   if (flags['design-status']) return designStatusCmd(P);
+  if (flags['design-canvas']) return designCanvasCmd(P, flags['design-canvas'], { reset: !!flags.reset });
   if (flags['check-draft']) return checkDraft(P, flags['check-draft']);
   if (flags['merge-drafts']) return mergeDrafts(P, flags, { loadLib });
   if (flags.storyboard) return storyboardCmd(P, flags, { loadLib });

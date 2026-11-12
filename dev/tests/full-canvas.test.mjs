@@ -162,10 +162,9 @@ test('分鏡素材：chNN 開頭列出這一份裡沒有講者的句子；共用
 
 test('設計師文件：全螢幕的範圍、87%、右上角標都寫得清楚；style.md 同一組數字', () => {
   const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
-  const build = read('.agents/skills/auto-edit-motion/references/design-build.md');
-  assert.match(build, /全螢幕（這段沒有講者） \| x 120–1800、y 40–900/);
-  assert.match(build, /87%/);
-  assert.match(read('.agents/skills/auto-edit-motion/references/design-script.md'), /全螢幕寫 `full`/);
+  // 026：畫布的範圍只寫在 brief（工具照這一段算的），設計師文件指過去，不再放一張三種畫布的表
+  assert.match(read('.agents/skills/auto-edit-motion/references/design.md'), /brief「畫布」寫的範圍/);
+  assert.match(read('shared/template/tools/lib/flow.mjs'), /內容用滿 x 120–1800、y 40–900，左右和縮到 87% 的螢幕錄影對齊/);
   const style = read('shared/style.md');
   assert.match(style, /縮到 87% 的螢幕錄影/);
   assert.match(style, /右緣 1780、y 16–96/);

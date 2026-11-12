@@ -7,8 +7,9 @@
 照這個順序選，前一種能用就不要往下：
 
 1. 畫廊裡有 → 直接用 `data-illus="<元件名>"`（畫廊每格下面有寫法）。
-2. lucide 圖示單個或 2–3 個組合放進卡片、膠囊能表達 → 用圖示。名稱用 `node shared/template/tools/build.mjs --project projects/<專案> --icons 手機,雲端` 查；不要打開 `kit/icons.json`（一行 586 KB）。
-3. 都不行 → 照本檔新畫一個 SVG（內容設計動畫一段最多新畫一個）。
+2. 圖庫裡有（`kit/pics/`，常用物件的線稿，同一個畫風）→ `node shared/template/tools/build.mjs --project projects/<專案> --pics 手機,獎盃` 查，照它印的 `data-illus-src="kit/pics/<類別>/<id>.svg"` 掛（正方形，主角 300–480px）。不帶詞印目錄（有哪幾類、每一類什麼時候翻）。
+3. lucide 圖示單個或 2–3 個組合放進卡片、膠囊能表達 → 用圖示。名稱用 `node shared/template/tools/build.mjs --project projects/<專案> --icons 手機,雲端` 查；不要打開 `kit/icons.json`（一行 586 KB）。
+4. 都不行 → 照本檔新畫一個 SVG（內容設計動畫一段最多新畫一個）。
 
 相片、背景、質感圖不走這條；示意插圖一律是向量線條。
 

@@ -1,0 +1,103 @@
+{
+  "template": "x-route",
+  "prefix": "xrt",
+  "beat": "A",
+  "layout": "fullscreen",
+  "when": "從哪裡到哪裡：2–4 個地點有先後（「從台北出發，先到台中，再到高雄」「這趟去了東京、京都、大阪」）；地圖上的路線一段一段描過去，講到地名時到站、圖釘彈出",
+  "slots": {
+    "title": {
+      "label": "標題（這條路線是什麼）",
+      "type": "text",
+      "max": 12,
+      "required": true
+    },
+    "icon": {
+      "label": "標題列圖示（路線用 map，飛行用 plane，開車用 car）",
+      "type": "icon",
+      "required": true
+    },
+    "items": {
+      "label": "地點（照走的順序）",
+      "type": "list",
+      "min": 2,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "地名",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "note": {
+          "label": "備註（選填，例「吃午餐」「搭高鐵」）",
+          "type": "text",
+          "max": 6
+        },
+        "at": {
+          "label": "講到這個地點的時間",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    }
+  },
+  "sample": {
+    "title": "這趟南下的路線",
+    "icon": "map",
+    "items": [
+      {
+        "text": "台北",
+        "note": "出發",
+        "at": "#482@台北"
+      },
+      {
+        "text": "台中",
+        "note": "吃午餐",
+        "at": "#483@台中"
+      },
+      {
+        "text": "台南",
+        "note": "看古蹟",
+        "at": "#484@台南"
+      },
+      {
+        "text": "高雄",
+        "note": "住一晚",
+        "at": "#485@高雄"
+      }
+    ]
+  },
+  "sampleMin": {
+    "title": "這趟南下的路線",
+    "icon": "map",
+    "items": [
+      {
+        "text": "台北",
+        "at": "#482@台北"
+      },
+      {
+        "text": "台南",
+        "at": "#484@台南"
+      }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡「{title}」＋地圖、虛線路線、每一站的空心點",
+      "moves": "開場（依前段）；＋0.5 圖示描線；＋0.62 逐字上浮（標題）",
+      "focus": "主卡"
+    },
+    {
+      "each": "items",
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "第 {n} 站「{text}」",
+      "moves": "−0.5 彗星描線（到這一站的路線；第 1 站沒有）；彈出（圖釘、地名）；＋0.1 圖示描線（圖釘）",
+      "focus": "第 {n} 站"
+    }
+  ]
+}

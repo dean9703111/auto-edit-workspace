@@ -1,0 +1,308 @@
+{
+ "id": "travel",
+ "zh": "交通與旅行",
+ "when": "講到移動、交通工具、出國、旅程",
+ "items": [
+  {
+   "id": "car",
+   "zh": "汽車",
+   "when": "講到開車、車子",
+   "tags": [
+    "汽車",
+    "開車"
+   ],
+   "file": "travel/car.svg",
+   "from": "tabler:car"
+  },
+  {
+   "id": "bus",
+   "zh": "公車",
+   "when": "講到搭公車、大眾運輸",
+   "tags": [
+    "公車"
+   ],
+   "file": "travel/bus.svg",
+   "from": "tabler:bus"
+  },
+  {
+   "id": "train",
+   "zh": "火車",
+   "when": "講到搭火車、高鐵、通勤",
+   "tags": [
+    "火車",
+    "高鐵"
+   ],
+   "file": "travel/train.svg",
+   "from": "tabler:train"
+  },
+  {
+   "id": "plane",
+   "zh": "飛機",
+   "when": "講到搭飛機、出國",
+   "tags": [
+    "飛機",
+    "出國"
+   ],
+   "file": "travel/plane.svg",
+   "from": "tabler:plane"
+  },
+  {
+   "id": "plane-departure",
+   "zh": "起飛",
+   "when": "講到出發、啟程",
+   "tags": [
+    "起飛",
+    "出發"
+   ],
+   "file": "travel/plane-departure.svg",
+   "from": "tabler:plane-departure"
+  },
+  {
+   "id": "plane-arrival",
+   "zh": "降落",
+   "when": "講到抵達、回國",
+   "tags": [
+    "降落",
+    "抵達"
+   ],
+   "file": "travel/plane-arrival.svg",
+   "from": "tabler:plane-arrival"
+  },
+  {
+   "id": "ship",
+   "zh": "船",
+   "when": "講到搭船、海運",
+   "tags": [
+    "船",
+    "海運"
+   ],
+   "file": "travel/ship.svg",
+   "from": "tabler:ship"
+  },
+  {
+   "id": "bike",
+   "zh": "腳踏車",
+   "when": "講到騎車、單車",
+   "tags": [
+    "腳踏車",
+    "單車"
+   ],
+   "file": "travel/bike.svg",
+   "from": "tabler:bike"
+  },
+  {
+   "id": "motorbike",
+   "zh": "機車",
+   "when": "講到騎機車、外送",
+   "tags": [
+    "機車"
+   ],
+   "file": "travel/motorbike.svg",
+   "from": "tabler:motorbike"
+  },
+  {
+   "id": "scooter",
+   "zh": "滑板車",
+   "when": "講到短程移動、滑板車",
+   "tags": [
+    "滑板車"
+   ],
+   "file": "travel/scooter.svg",
+   "from": "tabler:scooter"
+  },
+  {
+   "id": "truck",
+   "zh": "卡車",
+   "when": "講到搬家、載貨",
+   "tags": [
+    "卡車",
+    "載貨"
+   ],
+   "file": "travel/truck.svg",
+   "from": "tabler:truck"
+  },
+  {
+   "id": "ambulance",
+   "zh": "救護車",
+   "when": "講到緊急、救援",
+   "tags": [
+    "救護車",
+    "緊急"
+   ],
+   "file": "travel/ambulance.svg",
+   "from": "tabler:ambulance"
+  },
+  {
+   "id": "luggage",
+   "zh": "行李箱",
+   "when": "講到出國、打包行李",
+   "tags": [
+    "行李箱",
+    "打包"
+   ],
+   "file": "travel/luggage.svg",
+   "from": "tabler:luggage"
+  },
+  {
+   "id": "passport",
+   "zh": "護照",
+   "when": "講到護照、入境",
+   "tags": [
+    "護照"
+   ],
+   "file": "travel/passport.svg",
+   "from": "lucide:book-user"
+  },
+  {
+   "id": "gas-station",
+   "zh": "加油站",
+   "when": "講到加油、補充能量",
+   "tags": [
+    "加油站",
+    "加油"
+   ],
+   "file": "travel/gas-station.svg",
+   "from": "tabler:gas-station"
+  },
+  {
+   "id": "parking",
+   "zh": "停車",
+   "when": "講到停車、暫停放著",
+   "tags": [
+    "停車"
+   ],
+   "file": "travel/parking.svg",
+   "from": "tabler:parking"
+  },
+  {
+   "id": "traffic-lights",
+   "zh": "紅綠燈",
+   "when": "講到等一下、通行、規則",
+   "tags": [
+    "紅綠燈",
+    "通行"
+   ],
+   "file": "travel/traffic-lights.svg",
+   "from": "tabler:traffic-lights"
+  },
+  {
+   "id": "steering-wheel",
+   "zh": "方向盤",
+   "when": "講到掌控、自己開",
+   "tags": [
+    "方向盤",
+    "掌控"
+   ],
+   "file": "travel/steering-wheel.svg",
+   "from": "tabler:steering-wheel"
+  },
+  {
+   "id": "helmet",
+   "zh": "安全帽",
+   "when": "講到安全、防護裝備",
+   "tags": [
+    "安全帽"
+   ],
+   "file": "travel/helmet.svg",
+   "from": "tabler:helmet"
+  },
+  {
+   "id": "anchor",
+   "zh": "船錨",
+   "when": "講到穩住、定住、固定",
+   "tags": [
+    "船錨",
+    "穩住"
+   ],
+   "file": "travel/anchor.svg",
+   "from": "tabler:anchor"
+  },
+  {
+   "id": "sailboat",
+   "zh": "帆船",
+   "when": "講到順風、航行、慢慢前進",
+   "tags": [
+    "帆船",
+    "航行"
+   ],
+   "file": "travel/sailboat.svg",
+   "from": "tabler:sailboat"
+  },
+  {
+   "id": "ufo",
+   "zh": "幽浮",
+   "when": "講到不可思議、外星",
+   "tags": [
+    "幽浮",
+    "外星"
+   ],
+   "file": "travel/ufo.svg",
+   "from": "tabler:ufo"
+  },
+  {
+   "id": "balloon",
+   "zh": "氣球",
+   "when": "講到慶祝、輕飄飄",
+   "tags": [
+    "氣球",
+    "慶祝"
+   ],
+   "file": "travel/balloon.svg",
+   "from": "tabler:balloon"
+  },
+  {
+   "id": "compass-travel",
+   "zh": "導航",
+   "when": "講到導航、帶路",
+   "tags": [
+    "導航",
+    "帶路"
+   ],
+   "file": "travel/compass-travel.svg",
+   "from": "tabler:navigation"
+  },
+  {
+   "id": "route",
+   "zh": "路線",
+   "when": "講到路線、從 A 到 B",
+   "tags": [
+    "路線"
+   ],
+   "file": "travel/route.svg",
+   "from": "tabler:route"
+  },
+  {
+   "id": "world-pin",
+   "zh": "世界地點",
+   "when": "講到在哪個國家、海外據點",
+   "tags": [
+    "海外",
+    "國家"
+   ],
+   "file": "travel/world-pin.svg",
+   "from": "tabler:world-pin"
+  },
+  {
+   "id": "bed",
+   "zh": "床",
+   "when": "講到住宿、睡一晚、休息",
+   "tags": [
+    "床",
+    "住宿"
+   ],
+   "file": "travel/bed.svg",
+   "from": "tabler:bed"
+  },
+  {
+   "id": "suitcase",
+   "zh": "手提箱",
+   "when": "講到出差、帶著走",
+   "tags": [
+    "手提箱",
+    "出差"
+   ],
+   "file": "travel/suitcase.svg",
+   "from": "tabler:briefcase-2"
+  }
+ ]
+}

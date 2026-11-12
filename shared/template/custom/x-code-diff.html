@@ -1,0 +1,136 @@
+<!-- 預設拍型：C 對比（BEATS.md §3 C；同一個視窗裡的改前、改後：舊的那幾行標紅退焦，新的那幾行標綠打出來） -->
+<!doctype html>
+<!--
+  x-code-diff：程式碼改前改後（第二層 custom，layout: "fullscreen"；編輯器視窗裡，原本的 1–3 行標成刪除，改成的 1–3 行打出來）
+
+  【適用的講解】
+  在講「這段程式原本怎麼寫、改成怎麼寫」，例如「原本停頓秒數寫死在程式裡，每次要調都得改程式；改成讀設定檔之後，改設定檔就好」。
+  設定檔、指令、提示詞的改前改後也可以（一行一行的文字都行）。
+  畫面是一個編輯器視窗：原本的寫法一開始就在；講到它的問題時，那幾行亮起紅色的刪除帶（前面一個「−」）、字退焦；
+  講到改成什麼時，下面亮起綠色的新增帶（前面一個「+」）、新的寫法逐字打出來；有結果的話最後印出結果列。
+
+  【不要用在哪裡】
+  - 只是介紹一段程式在做什麼（沒有改）：用 x-terminal-code。
+  - 終端機指令與輸出：用 x-terminal。
+  - 改動超過 3 行、或要觀眾逐字看懂的長程式：用螢幕錄影。
+  - 不是程式的前後對比（數字、做法）：用 x-before-after、x-versus。
+
+  【要改的地方】
+  1. 文字：檔名 #xcd-file（≤ 16 個半形字）；原本的寫法 .xcd-ln（1–3 行）、改成的寫法（1–3 行），每行 ≤ 38 個半形字寬（中文算 2），
+     縮排直接在行首打空白；結果列 #xcd-res（選填，≤ 16 字）。放不下就只留有改到的那幾行，不縮字。
+  2. 行數：少一行就刪掉那個 .xcd-ln，同一組色帶的 data-sg 少寫一個符號（一行一個「−」或「+」，用 &#10; 隔開）。視窗高度由 script 照行數算（載入時算一次，不用改）。
+  3. 圖示：檔名前的 #xcd-tico（file-diff），不用改。
+  4. 綁句：<script> 開頭 DEL、ADD、RUN（見【綁句欄位】），P.sfx 的句號跟著 ADD、RUN 改。
+  5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改。
+
+  【綁句欄位】
+  DEL = P.at('#492@寫死')：講到原本寫法的問題，原本那幾行亮起刪除帶、字退焦。
+  ADD = P.at('#493@設定檔')：講到改成什麼，新增帶亮起、新的寫法 1 秒打完；音效 ding（P.sfx('ding', '#493@設定檔')，句號一起改）。
+  RUN = P.at('#494@不用')：講到改完的結果（選填），結果列由左往右印出；音效 success（P.sfx('success', '#494@不用')）。
+  「@詞」要寫成字串字面值，build 才算得到。
+
+  【D 下限】
+  DEL ≥ 1.6（視窗 0.3 秒長出、0.5 秒起檔名圖示描線、檔名逐字）
+  ADD ≥ DEL + 2.0（刪除帶 0.4 秒、退焦到 DEL + 0.6，停 1.2 秒）
+  RUN ≥ ADD + 2.6（新增帶 0.4 秒、打字到 ADD + 1.2，停 1.2 秒）
+  D ≥ RUN + 2.8（結果列 0.5 秒＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  D ≥ ADD + 3.4（沒有結果列時：打字 1.2 秒＋最後一幕停 1.5 秒＋淡出 0.5 秒）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：視窗進場看 script 的 ENTER；離場由 build 處理。視窗 #xcd-win：left 120、寬 1180（右緣 1300，避開右下子母畫面）；
+  高度＝標題列 88＋程式區（上下各留 32、每行 72）＋結果列 88（有才算），script 算好後在內容區 y 150–858 上下置中。
+  亮色暗色主題都是深色視窗。程式區：符號欄（「−」「+」）left 44、程式碼從 left 128 開始，等寬字 44、行高 72。
+  刪除帶、新增帶各蓋住自己那一組的每一行（左邊 8px 色條）。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-code-diff 程式碼改前改後</title></head>
+<body>
+<template id="x-code-diff-template">
+  <style>
+    #x-code-diff { position: absolute; inset: 0; }
+    #x-code-diff .fill { position: absolute; inset: 0; }
+    /* 編輯器視窗：左 120、寬 1180（右緣 1300）；top、height 由 script 照行數填（這裡是 4 行＋結果列的值） */
+    #x-code-diff #xcd-win { position: absolute; left: 120px; top: 240px; width: 1180px; height: 528px; box-sizing: border-box; overflow: hidden;
+                            border-radius: 24px; background: var(--v2-term); color: var(--v2-term-ink); box-shadow: var(--v2-card-shadow); }
+    #x-code-diff #xcd-bar { height: 88px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; gap: 14px;
+                            background: var(--v2-term-bar); color: var(--v2-term-mute); white-space: nowrap; }
+    #x-code-diff .xcd-dot { width: 18px; height: 18px; border-radius: 9px; background: var(--v2-term-mute); flex: none; }
+    #x-code-diff #xcd-tico { --d: 48px; --i: 32px; margin-left: 16px; color: var(--v2-term-mute); }
+    /* 程式區：上下各留 32；一組（改前、改後）一個區塊，每行高 72 */
+    #x-code-diff #xcd-body { padding: 32px 0; background: var(--v2-term); }   /* 自己帶底色：audit 量程式碼到這一區四邊的內距（太長的行會報） */
+    #x-code-diff .xcd-grp { position: relative; }
+    #x-code-diff .xcd-band { position: absolute; left: 0; top: 0; width: 1180px; height: 100%; box-sizing: border-box; }
+    #x-code-diff #xcd-oband { border-left: 8px solid var(--sc-warn-kw); background: color-mix(in srgb, var(--sc-warn) 24%, var(--v2-term)); color: var(--sc-warn-kw); }
+    #x-code-diff #xcd-nband { border-left: 8px solid var(--v2-term-ok); background: color-mix(in srgb, var(--v2-term-ok) 22%, var(--v2-term)); color: var(--v2-term-ok); }
+    #x-code-diff .xcd-band::before { content: attr(data-sg); position: absolute; left: 36px; top: 0; white-space: pre; line-height: 72px; }   /* 每行前面的「−」「+」：寫在 data-sg（一行一個，用換行隔開），跟著色帶一起亮起 */
+    #x-code-diff .xcd-code { position: relative; padding-left: 128px; }
+    #x-code-diff .xcd-ln { width: max-content; height: 72px; line-height: 72px; white-space: pre; }
+    /* 結果列：程式區下面，高 88 */
+    #x-code-diff #xcd-out { height: 88px; box-sizing: border-box; padding: 0 48px; border-top: 2px solid var(--v2-term-bar);
+                            display: flex; align-items: center; gap: 16px; color: var(--v2-term-ok); white-space: nowrap; }
+  </style>
+  <div id="x-code-diff" data-composition-id="x-code-diff" data-width="1920" data-height="1080" data-duration="11"
+       data-cues-sample='{"start":0,"D":11,"cues":{"491":[0.4,1.4],"492":[1.6,4.0],"493":[4.2,7.4],"494":[7.6,10.6]},"refs":{"#492@寫死":1.9,"#493@設定檔":4.5,"#494@不用":7.9}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcd-win">
+      <div id="xcd-bar"><i class="xcd-dot"></i><i class="xcd-dot"></i><i class="xcd-dot"></i><span id="xcd-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M9 10h6" /> <path d="M12 13V7" /> <path d="M9 17h6" /> </svg></span><span id="xcd-file" class="sc-t40 sc-w700 sc-mono sc-opt" data-fill="file">cut.mjs</span></div>
+      <div id="xcd-body">
+        <div id="xcd-old" class="xcd-grp">
+          <i id="xcd-oband" class="xcd-band sc-t44 sc-w700 sc-mono" data-sg="−&#10;−&#10;−" data-layout-allow-overlap></i> <!-- @sub before==1: <i id="xcd-oband" class="xcd-band sc-t44 sc-w700 sc-mono" data-sg="−" data-layout-allow-overlap></i> @@ before==2: <i id="xcd-oband" class="xcd-band sc-t44 sc-w700 sc-mono" data-sg="−&#10;−" data-layout-allow-overlap></i> -->
+          <div id="xcd-ocode" class="xcd-code sc-t44 sc-w500 sc-mono">
+            <div class="xcd-ln" data-fill="before.1.text">const PAUSE = 0.5;</div>
+            <div class="xcd-ln" data-fill="before.2.text">cut(video, PAUSE);</div> <!-- @if before>=2 -->
+            <div class="xcd-ln" data-fill="before.3.text">save(video);</div> <!-- @if before>=3 -->
+          </div>
+        </div>
+        <div id="xcd-new" class="xcd-grp">
+          <i id="xcd-nband" class="xcd-band sc-t44 sc-w700 sc-mono" data-sg="+&#10;+&#10;+" data-layout-allow-overlap></i> <!-- @sub after==1: <i id="xcd-nband" class="xcd-band sc-t44 sc-w700 sc-mono" data-sg="+" data-layout-allow-overlap></i> @@ after==2: <i id="xcd-nband" class="xcd-band sc-t44 sc-w700 sc-mono" data-sg="+&#10;+" data-layout-allow-overlap></i> -->
+          <div id="xcd-ncode" class="xcd-code sc-t44 sc-w500 sc-mono">
+            <div class="xcd-ln" data-fill="after.1.text">const cfg = load('setting.json');</div>
+            <div class="xcd-ln" data-fill="after.2.text">cut(video, cfg.pause);</div> <!-- @if after>=2 -->
+            <div class="xcd-ln" data-fill="after.3.text">save(video);</div> <!-- @if after>=3 -->
+          </div>
+        </div>
+      </div>
+      <div id="xcd-out" class="sc-t40 sc-w700 sc-mono"><span>✓</span><span id="xcd-res" data-fill="result">改設定檔就好，不用動程式</span></div> <!-- @if runAt -->
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-code-diff'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const DEL = P.at('#492@寫死'), ADD = P.at('#493@設定檔'), RUN = P.at('#494@不用');   // 原本的問題／改成什麼／結果  // @sub !runAt: const DEL = P.at('#492@寫死'), ADD = P.at('#493@設定檔');
+    P.sfx('ding', '#493@設定檔');                      // 改成什麼一顆提示音（句號和 ADD 一樣）
+    P.sfx('success', '#494@不用');                     // 結果一顆 success（句號和 RUN 一樣）  // @if runAt
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 視窗高度照行數算、上下置中（載入時算一次，不用改）：標題列 88＋程式區 64＋每行 72＋結果列 88
+    const WIN = document.getElementById('xcd-win'), TALL = 152 + $q('.xcd-ln').length * 72 + (document.getElementById('xcd-out') ? 88 : 0);
+    WIN.style.height = TALL + 'px'; WIN.style.top = Math.round(150 + (708 - TALL) / 2) + 'px';
+
+    // 拍 0 開場：視窗進場（看 ENTER；原本的寫法跟著視窗一起出現）→ 檔名圖示描線、檔名逐字
+    if (ENTER === 'grow') P.grow('#xcd-win', 0.3);
+    else { P.wipe('#xcd-win', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcd-win', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.icon('#xcd-tico', 0.5);
+    P.chars('#xcd-file', 0.62, { stagger: 0.03 });
+    // 拍 1 改前：原本那幾行的刪除帶（連「−」）由左往右亮起 → ＋0.2 字退焦
+    P.wipe('#xcd-oband', DEL, { dir: 'left', dur: 0.4 });
+    P.dim('#xcd-ocode', DEL + 0.2, { to: 0.55 });
+    // 拍 2 改後：新增帶（連「+」）由左往右亮起 → ＋0.2 新的寫法逐字打出（固定 1 秒）
+    P.wipe('#xcd-nband', ADD, { dir: 'left', dur: 0.4 });
+    P.type('#xcd-ncode', ADD + 0.2, { dur: 1.0 });
+    // 拍 3 結果：結果列由左往右印出 → ＋0.4 重拍  // @if runAt
+    P.wipe('#xcd-out', RUN, { dir: 'left', dur: 0.4 });   // @if runAt
+    P.punch('#xcd-res', RUN + 0.4, { scale: 1.04 });   // @if runAt
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-code-diff'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

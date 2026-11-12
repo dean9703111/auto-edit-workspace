@@ -1,0 +1,134 @@
+<!-- 預設拍型：H 提示詞（BEATS.md §3 H；留言逐字打出 → 回覆卡彈出） -->
+<!doctype html>
+<!--
+  x-comment：留言卡（第二層 custom，layout: "fullscreen"；一則留言逐字打出來，講到回答時下面彈出回覆）
+
+  【適用的講解】
+  在轉述別人說的話：觀眾留言、私訊、網友的提問或評論，例如「有觀眾留言問我：剪一支片到底要多久？其實現在半小時就夠了」。
+  畫面是一張留言卡：頭像、名稱先出現；講到留言內容時逐字打出來（最多兩行）、讚數彈出；
+  有回答的話，講到回答時留言卡往上讓位、退焦，下面彈出一張回覆卡。
+
+  【不要用在哪裡】
+  - 自問自答、沒有「別人說」：用 06 問答或 x-fix。
+  - 和 AI 的一問一答：用 x-prompt-chat。
+  - 名人說過的話、整句金句：用 15 金句。
+  - 留言超過兩行（30 字）：只留最關鍵的那一句，放不下就縮文案，不縮字。
+
+  【要改的地方】
+  1. 文字：名稱 #xcm-name（≤ 8 字，例「觀眾留言」「@小明」）、來源 #xcm-meta（選填，≤ 6 字，例「3 天前」）；
+     留言第一行、第二行（各 ≤ 15 字，第二行選填）；讚數（選填，≤ 4 個數字）；
+     回覆標籤（選填，≤ 4 字，例「我的回答」）、回覆（選填，≤ 14 字；有回覆標籤時兩格合計有上限，工具會算）。
+  2. 圖示：頭像 #xcm-ava、讚 #xcm-lk、回覆箭頭 #xcm-arr 固定，不用改。
+  3. 綁句：<script> 開頭 T1、T2 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 T2 改。
+  4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改。
+
+  【綁句欄位】
+  T1 = P.at('#472@剪')：講到留言內容的第一個詞，留言開始逐字打出（1.2 秒打完），讚數晚 1.3 秒彈出。
+  T2 = P.at('#474@其實')：講到回答的時刻，留言卡往上移 128、退焦，回覆箭頭和回覆卡（連同回覆的字）彈出；音效 ding（P.sfx('ding', '#474@其實')，句號一起改）。
+  「@詞」要寫成字串字面值（P.at('#472@剪')，不要用變數組字串），build 才算得到。
+
+  【D 下限】
+  T1 ≥ 1.2（主卡 0.3 秒長出、頭像 0.45 秒彈出、名稱 0.6 秒淡入）
+  T2 ≥ T1 + 2.6（留言 1.2 秒打完、讚數到 T1 + 1.6，停 1 秒）
+  D ≥ T2 + 3.0（回覆約 0.9 秒做完＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  D ≥ T1 + 3.6（沒有回覆時：留言、讚數 1.6 秒做完＋最後一幕停 1.5 秒＋淡出 0.5 秒）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。留言卡 #xcm-card：left 120、top 318、寬 1180、高 372（右緣 1300，避開右下子母畫面；
+  在內容區 y 150–858 上下置中）；有回覆時講到回答那一拍往上移到 top 190，讓出下面的位置。卡內 free：頭像圓 120（圖示 68）left 56、上下置中；
+  文字欄 left 208、寬 916、上下置中：名稱列（44 字＋來源 40 字）、留言（56 字，行高 76，最多兩行）、讚數列（圖示圓 56＋40 字）。
+  回覆箭頭 #xcm-arr：left 176、top 654（圓 72）。回覆卡 #xcm-reply：left 280、top 602、高 176、寬度跟著內容（最寬 1020，右緣 ≤ 1300、底 778）：回覆標籤膠囊＋回覆 52 字。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-comment 留言卡</title></head>
+<body>
+<template id="x-comment-template">
+  <style>
+    #x-comment { position: absolute; inset: 0; }
+    #x-comment .fill { position: absolute; inset: 0; }
+    /* 留言卡：左 120、頂 318、1180×372（右緣 1300，避開右下子母畫面；上下置中）；有回覆時 script 在回覆那一拍把它往上移到 190 */
+    #x-comment #xcm-card { position: absolute; left: 120px; top: 318px; width: 1180px; height: 372px; }
+    #x-comment #xcm-ava { position: absolute; left: 56px; top: 126px; --d: 120px; --i: 68px; }
+    /* 文字欄：名稱列、留言、讚數列由上到下，整組上下置中（少一列也置中） */
+    #x-comment #xcm-col { position: absolute; left: 208px; top: 0; width: 916px; height: 372px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+    #x-comment #xcm-head { display: flex; align-items: baseline; gap: 20px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-comment #xcm-meta { color: var(--sc-fs-mute); }
+    #x-comment #xcm-q { white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-comment #xcm-like { display: flex; align-items: center; gap: 16px; white-space: nowrap; color: var(--sc-fs-mute); }
+    #x-comment #xcm-lk { --d: 56px; --i: 32px; }
+    /* 回覆：箭頭在左、回覆卡在右下（縮排 160，看得出是回這一則） */
+    #x-comment #xcm-arr { position: absolute; left: 176px; top: 654px; --d: 72px; --i: 40px; }
+    #x-comment #xcm-reply { position: absolute; left: 280px; top: 602px; max-width: 1020px; height: 176px; box-sizing: border-box; padding: 0 48px;
+                            display: flex; align-items: center; gap: 28px; white-space: nowrap; }
+    #x-comment #xcm-rt { color: var(--sc-fs-ink); }
+  </style>
+  <div id="x-comment" data-composition-id="x-comment" data-width="1920" data-height="1080" data-duration="9.2"
+       data-cues-sample='{"start":0,"D":9.2,"cues":{"471":[0.4,1.4],"472":[1.5,4.2],"473":[4.3,5.2],"474":[5.4,9.0]},"refs":{"#472@剪":1.6,"#474@其實":5.5}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcm-card" class="sc-wcard" data-layout="free">
+      <span id="xcm-ava" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span>
+      <div id="xcm-col">
+        <div id="xcm-head"><span id="xcm-name" class="sc-t44 sc-w900 sc-opt" data-fill="name">觀眾留言</span><span id="xcm-meta" class="sc-t40 sc-w500 sc-opt" data-fill="meta">3 天前</span></div> <!-- @sub !meta: <div id="xcm-head"><span id="xcm-name" class="sc-t44 sc-w900 sc-opt" data-fill="name">觀眾留言</span></div> -->
+        <div id="xcm-q" class="sc-t56 sc-w700"><span data-fill="quote">剪一支片到底要多久？</span>
+          <!-- @if quote2 { -->
+          <br><span data-fill="quote2">每次都弄到半夜</span>
+          <!-- @} -->
+        </div>
+        <!-- @if likes { -->
+        <div id="xcm-like"><span id="xcm-lk" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M7 10v12" /> <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" /> </svg></span><span id="xcm-ln" class="sc-t40 sc-w700 sc-mono sc-opt" data-fill="likes">128</span></div>
+        <!-- @} -->
+      </div>
+    </div>
+    <!-- @if reply { -->
+    <span id="xcm-arr" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="15 10 20 15 15 20" /> <path d="M4 4v7a4 4 0 0 0 4 4h12" /> </svg></span>
+    <div id="xcm-reply" class="sc-wcard">
+      <!-- @if replyTag { -->
+      <div id="xcm-rtag" class="sc-pill"><span class="sc-opt" data-fill="replyTag">我的回答</span></div>
+      <!-- @} -->
+      <div id="xcm-rt" class="sc-t52 sc-w900"><span class="sc-opt" data-fill="reply">現在半小時就夠</span></div>
+    </div>
+    <!-- @} -->
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-comment'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#472@剪');                        // 講到留言內容的第一個詞
+    const T2 = P.at('#474@其實');                      // 講到回答的時刻  // @if reply
+    P.sfx('ding', '#474@其實');                        // 回覆一顆提示音（句號和 T2 一樣）  // @if reply
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 拍 0 開場：留言卡進場（看 ENTER）→ 頭像彈出、圖示描線 → 名稱淡入（先看得到是誰說的）
+    if (ENTER === 'grow') P.grow('#xcm-card', 0.3);
+    else { P.wipe('#xcm-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcm-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.pop('#xcm-ava', 0.45);
+    P.icon('#xcm-ava', 0.6);
+    P.in('#xcm-head', 0.6);
+
+    // 拍 1 留言：留言逐字打出（1.2 秒）→ ＋1.3 讚數彈出、圖示描線
+    P.type('#xcm-q', T1, { dur: 1.2 });
+    // @if likes {
+    P.pop('#xcm-like', T1 + 1.3);
+    P.icon('#xcm-lk', T1 + 1.4);
+    // @}
+
+    // @if reply {
+    // 拍 2 回覆：留言卡往上讓位（top 318 → 190）、退焦 → ＋0.2 回覆箭頭、回覆卡彈出（字跟著卡一起出現）；完成態停到段尾
+    P.morph('#xcm-card', T2, { top: 190 }, { from: { top: 318 }, dur: 0.5, ease: P.V2.EASE.move });
+    P.dim('#xcm-card', T2);
+    P.pop('#xcm-arr', T2 + 0.2);
+    P.pop('#xcm-reply', T2 + 0.2);
+    P.icon('#xcm-arr', T2 + 0.35);
+    // @}
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-comment'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

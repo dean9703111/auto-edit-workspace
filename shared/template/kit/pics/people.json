@@ -1,0 +1,314 @@
+{
+ "id": "people",
+ "zh": "人物與角色",
+ "when": "講到人、觀眾、團隊、角色、動作",
+ "items": [
+  {
+   "id": "user",
+   "zh": "一個人",
+   "when": "講到一個人、使用者、我",
+   "tags": [
+    "人",
+    "使用者"
+   ],
+   "file": "people/user.svg",
+   "from": "tabler:user"
+  },
+  {
+   "id": "users",
+   "zh": "一群人",
+   "when": "講到觀眾、團隊、大家",
+   "tags": [
+    "一群人",
+    "觀眾",
+    "團隊"
+   ],
+   "file": "people/users.svg",
+   "from": "tabler:users"
+  },
+  {
+   "id": "user-circle",
+   "zh": "頭像",
+   "when": "講到帳號、個人檔案、頭像",
+   "tags": [
+    "頭像",
+    "帳號",
+    "個人檔案"
+   ],
+   "file": "people/user-circle.svg",
+   "from": "tabler:user-circle"
+  },
+  {
+   "id": "user-check",
+   "zh": "通過的人",
+   "when": "講到審核通過、合格、驗證過",
+   "tags": [
+    "通過",
+    "驗證",
+    "合格"
+   ],
+   "file": "people/user-check.svg",
+   "from": "tabler:user-check"
+  },
+  {
+   "id": "user-question",
+   "zh": "疑惑的人",
+   "when": "講到新手、不知道怎麼做的人",
+   "tags": [
+    "新手",
+    "疑惑"
+   ],
+   "file": "people/user-question.svg",
+   "from": "tabler:user-question"
+  },
+  {
+   "id": "user-star",
+   "zh": "明星",
+   "when": "講到網紅、創作者、KOL",
+   "tags": [
+    "網紅",
+    "創作者",
+    "KOL"
+   ],
+   "file": "people/user-star.svg",
+   "from": "tabler:user-star"
+  },
+  {
+   "id": "user-heart",
+   "zh": "粉絲",
+   "when": "講到粉絲、支持者",
+   "tags": [
+    "粉絲",
+    "支持者"
+   ],
+   "file": "people/user-heart.svg",
+   "from": "tabler:user-heart"
+  },
+  {
+   "id": "friends",
+   "zh": "朋友",
+   "when": "講到朋友、同伴、兩個人",
+   "tags": [
+    "朋友",
+    "同伴"
+   ],
+   "file": "people/friends.svg",
+   "from": "tabler:friends"
+  },
+  {
+   "id": "baby",
+   "zh": "嬰兒車",
+   "when": "講到小孩、帶小孩、育兒",
+   "tags": [
+    "小孩",
+    "育兒"
+   ],
+   "file": "people/baby.svg",
+   "from": "tabler:baby-carriage"
+  },
+  {
+   "id": "old",
+   "zh": "長輩",
+   "when": "講到長輩、爸媽、年長者",
+   "tags": [
+    "長輩",
+    "爸媽"
+   ],
+   "file": "people/old.svg",
+   "from": "tabler:old"
+  },
+  {
+   "id": "man",
+   "zh": "男生",
+   "when": "講到男生、他",
+   "tags": [
+    "男生"
+   ],
+   "file": "people/man.svg",
+   "from": "tabler:man"
+  },
+  {
+   "id": "woman",
+   "zh": "女生",
+   "when": "講到女生、她",
+   "tags": [
+    "女生"
+   ],
+   "file": "people/woman.svg",
+   "from": "tabler:woman"
+  },
+  {
+   "id": "robot",
+   "zh": "機器人",
+   "when": "講到 AI、機器人、自動幫你做",
+   "tags": [
+    "機器人",
+    "AI",
+    "自動"
+   ],
+   "file": "people/robot.svg",
+   "from": "tabler:robot"
+  },
+  {
+   "id": "walk",
+   "zh": "走路",
+   "when": "講到走過去、移動、散步",
+   "tags": [
+    "走路",
+    "移動"
+   ],
+   "file": "people/walk.svg",
+   "from": "tabler:walk"
+  },
+  {
+   "id": "run",
+   "zh": "跑步",
+   "when": "講到趕時間、衝、跑",
+   "tags": [
+    "跑步",
+    "趕",
+    "衝"
+   ],
+   "file": "people/run.svg",
+   "from": "tabler:run"
+  },
+  {
+   "id": "hand-stop",
+   "zh": "手掌停",
+   "when": "講到等一下、停、不要",
+   "tags": [
+    "停",
+    "等一下",
+    "不要"
+   ],
+   "file": "people/hand-stop.svg",
+   "from": "tabler:hand-stop"
+  },
+  {
+   "id": "hand-click",
+   "zh": "手指點擊",
+   "when": "講到點一下、按下去",
+   "tags": [
+    "點擊",
+    "按"
+   ],
+   "file": "people/hand-click.svg",
+   "from": "tabler:hand-click"
+  },
+  {
+   "id": "heart-handshake",
+   "zh": "合作握手",
+   "when": "講到合作、成交、互相幫忙",
+   "tags": [
+    "合作",
+    "握手",
+    "成交"
+   ],
+   "file": "people/heart-handshake.svg",
+   "from": "tabler:heart-handshake"
+  },
+  {
+   "id": "ear",
+   "zh": "耳朵",
+   "when": "講到聽、聽眾、聽到",
+   "tags": [
+    "耳朵",
+    "聽"
+   ],
+   "file": "people/ear.svg",
+   "from": "tabler:ear"
+  },
+  {
+   "id": "eye",
+   "zh": "眼睛",
+   "when": "講到看、觀看、注意看",
+   "tags": [
+    "眼睛",
+    "看",
+    "觀看"
+   ],
+   "file": "people/eye.svg",
+   "from": "tabler:eye"
+  },
+  {
+   "id": "brain",
+   "zh": "大腦",
+   "when": "講到思考、記憶、腦袋",
+   "tags": [
+    "大腦",
+    "思考",
+    "記憶"
+   ],
+   "file": "people/brain.svg",
+   "from": "tabler:brain"
+  },
+  {
+   "id": "bulb",
+   "zh": "點子",
+   "when": "講到想到辦法、靈感、點子",
+   "tags": [
+    "點子",
+    "靈感",
+    "想到"
+   ],
+   "file": "people/bulb.svg",
+   "from": "tabler:bulb"
+  },
+  {
+   "id": "mood-happy",
+   "zh": "大笑",
+   "when": "講到超開心、成功了",
+   "tags": [
+    "大笑",
+    "超開心"
+   ],
+   "file": "people/mood-happy.svg",
+   "from": "tabler:mood-happy"
+  },
+  {
+   "id": "mood-confuzed",
+   "zh": "困惑臉",
+   "when": "講到搞不懂、卡住",
+   "tags": [
+    "困惑",
+    "搞不懂"
+   ],
+   "file": "people/mood-confuzed.svg",
+   "from": "tabler:mood-confuzed"
+  },
+  {
+   "id": "mood-angry",
+   "zh": "生氣臉",
+   "when": "講到生氣、崩潰、不爽",
+   "tags": [
+    "生氣",
+    "崩潰"
+   ],
+   "file": "people/mood-angry.svg",
+   "from": "tabler:mood-angry"
+  },
+  {
+   "id": "mood-nervous",
+   "zh": "緊張臉",
+   "when": "講到緊張、焦慮、擔心",
+   "tags": [
+    "緊張",
+    "焦慮"
+   ],
+   "file": "people/mood-nervous.svg",
+   "from": "tabler:mood-nervous"
+  },
+  {
+   "id": "zzz",
+   "zh": "睡覺",
+   "when": "講到睡覺、休息、熬夜",
+   "tags": [
+    "睡覺",
+    "休息",
+    "熬夜"
+   ],
+   "file": "people/zzz.svg",
+   "from": "tabler:zzz"
+  }
+ ]
+}

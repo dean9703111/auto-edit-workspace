@@ -5,6 +5,11 @@
  *   node dev/tools/custom-check.mjs x-process [x-ring …]     指定幾支
  *   node dev/tools/custom-check.mjs --all                    有 .fill.json 的全部
  *   --fast    只查標記（第 1 項），不 build
+ *   --stress  多排一段「最長文字」：每個文字欄位都填到字數上限（026：填資料時字數上限內的字放不放得下、會不會被擠小，
+ *             要用上限實際排一次才知道）；這一段的 ✖ 算不通過，⚠ 另外列出來
+ *   --keep    暫存專案不刪（印出路徑），要自己進去看 compositions/、截別的時間點時用
+ *   --shots <資料夾>  把每一段的完成態截圖存到這個資料夾（<模板>-x1.png 最多項、-x2.png 最少項、-x3.png 最長文字）：
+ *             audit 量得到重疊和出界，量不到「好不好看」，新模板要用眼睛看一次
  *
  * 每支查三件事：
  *   1. 標記沒有改到模板：用 sample 填回去（不換圖示、不改名），要和模板拿掉標記後一字不差
@@ -29,8 +34,9 @@ const { textWidth } = await import(path.join(TOOLS, 'lib', 'time.mjs'));
 
 const args = process.argv.slice(2);
 process.env.AUTO_EDIT_MATTE ||= 'box';   // 人物去背的模板（fill.json 寫 "matte": true）：驗收用假去背（方框當成人），不下載、不跑模型
-const fast = args.includes('--fast'), verbose = args.includes('--verbose');
-const names = args.includes('--all') ? listFillSpecs(CUSTOM).map((s) => s.template) : args.filter((a) => !a.startsWith('--'));
+const fast = args.includes('--fast'), verbose = args.includes('--verbose'), stress = args.includes('--stress');
+const shotsAt = args.indexOf('--shots'), shots = shotsAt >= 0 ? path.resolve(args[shotsAt + 1] || '') : null;
+const names = args.includes('--all') ? listFillSpecs(CUSTOM).map((s) => s.template) : args.filter((a, i) => !a.startsWith('--') && (shotsAt < 0 || i !== shotsAt + 1));
 if (!names.length) { console.log('用法：node dev/tools/custom-check.mjs <模板名> … 或 --all [--fast] [--verbose]'); process.exit(2); }
 const icons = loadIcons(TEMPLATE), kitDir = path.join(TEMPLATE, 'kit');
 const stamp = (t) => { const ms = Math.round(t * 1000); const q = (n, w = 2) => String(n).padStart(w, '0'); return `${q(Math.floor(ms / 3600000))}:${q(Math.floor(ms / 60000) % 60)}:${q(Math.floor(ms / 1000) % 60)},${q(ms % 1000, 3)}`; };
@@ -47,6 +53,39 @@ function minSlots(spec) {
   if (spec.sampleMin) return spec.sampleMin;
   const out = JSON.parse(JSON.stringify(spec.sample));
   for (const [k, d] of Object.entries(spec.slots || {})) if (d.type === 'list' && d.min != null && Array.isArray(out[k])) out[k] = out[k].slice(0, d.min);
+  return out;
+}
+
+// 最長文字的 slots：sample 的每個文字欄位補到字數上限（全形字算 1、半形 0.5；補的是全形字，最寬的情況）
+const padTo = (str, max) => { let out = String(str ?? ''); while (textWidth(out) + 1 <= max + 1e-9) out += '長'; return out; };
+function longSlots(spec) {
+  const out = JSON.parse(JSON.stringify(spec.sample));
+  const lines = spec.lines || [];
+  const inLine = (k, list = null) => lines.some((ln) => (ln.list || null) === list && (ln.slots || []).includes(k));
+  // 各格自己的上限（不在合計規則裡的）
+  for (const [k, d] of Object.entries(spec.slots || {})) {
+    if (d.type === 'text' && d.max && typeof out[k] === 'string' && !inLine(k)) out[k] = padTo(out[k], d.max);
+    if (d.type === 'list' && Array.isArray(out[k])) for (const it of out[k]) for (const [f, fd] of Object.entries(d.item || {})) if (fd.type === 'text' && fd.max && typeof it?.[f] === 'string' && !inLine(f, k)) it[f] = padTo(it[f], fd.max);
+  }
+  // 合計規則（lines）：一格一格補字，補到任何一格再多一個字就會超過自己的上限或合計上限為止
+  for (const ln of lines) {
+    const rows = ln.list ? (Array.isArray(out[ln.list]) ? out[ln.list] : []) : [out];
+    const defOf = (k) => (ln.list ? spec.slots?.[ln.list]?.item?.[k] : spec.slots?.[k]) || {};
+    for (const src of rows) {
+      const total = () => (ln.slots || []).reduce((n, k, i) => n + textWidth(String(src[k] ?? '')) * (ln.weights?.[i] ?? 1), 0);
+      for (let guard = 0; guard < 200; guard++) {
+        let grew = false;
+        (ln.slots || []).forEach((k, i) => {
+          if (typeof src[k] !== 'string' || !src[k]) return;   // 選填、sample 沒寫的格子不硬塞
+          const w = ln.weights?.[i] ?? 1, d = defOf(k);
+          if (d.max && textWidth(src[k]) + 1 > d.max + 1e-9) return;
+          if (total() + w > ln.max + 1e-9) return;
+          src[k] += '長'; grew = true;
+        });
+        if (!grew) break;
+      }
+    }
+  }
   return out;
 }
 
@@ -97,7 +136,7 @@ function runProject(name, spec, html) {
   const srt = [], scenes = [], sheets = [];
   const OFF = 1000;
   let S = 1;
-  [[spec.sample, 0, 'x1'], [minSlots(spec), OFF, 'x2']].forEach(([slots, off, id]) => {
+  [[spec.sample, 0, 'x1'], [minSlots(spec), OFF, 'x2'], ...(stress && spec.generator !== 'scene' ? [[longSlots(spec), 2 * OFF, 'x3']] : [])].forEach(([slots, off, id]) => {
     const open = nums[0] - 1 + off;
     srt.push({ n: open, a: S, b: S + sample.cues[nums[0]][0] - 0.3, text: `第 ${open} 句開場` });
     nums.forEach((n, i) => {
@@ -126,13 +165,19 @@ function runProject(name, spec, html) {
   }
   let warns = [];
   if (!bad.length) {
-    const au = tool('audit.mjs', '--project', proj, '--only', 'x1,x2');
+    const au = tool('audit.mjs', '--project', proj, '--only', scenes.map((x) => x.id).join(','));
     const lines = (au.stdout + au.stderr).split('\n');
     bad.push(...lines.filter((l) => /^\s*✖/.test(l) && !/^\s*✖ 0/.test(l)).map((l) => `audit ${l.trim()}`));
     warns = lines.filter((l) => /^\s*⚠/.test(l)).map((l) => l.trim());
     if (au.status !== 0 && !bad.length) bad.push(`audit 結束碼 ${au.status}：${lines.filter((l) => l.trim()).slice(-3).join(' ')}`);
   }
-  try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* 暫存 */ }
+  if (shots && !bad.length) {
+    tool('qc.mjs', 'storyboard', '--project', proj, '--only', scenes.map((x) => x.id).join(','));
+    fs.mkdirSync(shots, { recursive: true });
+    for (const x of scenes) { const png = path.join(proj, 'work', 'storyboard-preview', `${x.id}.png`); if (fs.existsSync(png)) fs.copyFileSync(png, path.join(shots, `${name}-${x.id}.png`)); }
+  }
+  if (args.includes('--keep')) console.log(`  暫存專案留在 ${proj}`);
+  else try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* 暫存 */ }
   return { bad, warns };
 }
 

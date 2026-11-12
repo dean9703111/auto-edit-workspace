@@ -1,0 +1,318 @@
+{
+ "id": "comm",
+ "zh": "溝通與社群",
+ "when": "講到訊息、留言、通知、分享、社群互動",
+ "items": [
+  {
+   "id": "message",
+   "zh": "訊息",
+   "when": "講到訊息、留言、私訊",
+   "tags": [
+    "訊息",
+    "留言",
+    "私訊"
+   ],
+   "file": "comm/message.svg",
+   "from": "tabler:message"
+  },
+  {
+   "id": "messages",
+   "zh": "對話",
+   "when": "講到聊天、來回討論、對話",
+   "tags": [
+    "對話",
+    "聊天",
+    "討論"
+   ],
+   "file": "comm/messages.svg",
+   "from": "tabler:messages"
+  },
+  {
+   "id": "mail",
+   "zh": "信件",
+   "when": "講到 Email、寄信、收信",
+   "tags": [
+    "信",
+    "Email",
+    "郵件"
+   ],
+   "file": "comm/mail.svg",
+   "from": "tabler:mail"
+  },
+  {
+   "id": "send",
+   "zh": "送出",
+   "when": "講到送出、寄出、發布",
+   "tags": [
+    "送出",
+    "寄出",
+    "發布"
+   ],
+   "file": "comm/send.svg",
+   "from": "tabler:send"
+  },
+  {
+   "id": "phone-call",
+   "zh": "電話",
+   "when": "講到打電話、通話、客服",
+   "tags": [
+    "電話",
+    "通話"
+   ],
+   "file": "comm/phone-call.svg",
+   "from": "tabler:phone-call"
+  },
+  {
+   "id": "video-call",
+   "zh": "視訊通話",
+   "when": "講到開會、視訊、線上會議",
+   "tags": [
+    "視訊",
+    "線上會議"
+   ],
+   "file": "comm/video-call.svg",
+   "from": "tabler:video-plus"
+  },
+  {
+   "id": "bell",
+   "zh": "通知鈴",
+   "when": "講到通知、提醒、開啟小鈴鐺",
+   "tags": [
+    "通知",
+    "提醒",
+    "小鈴鐺"
+   ],
+   "file": "comm/bell.svg",
+   "from": "tabler:bell"
+  },
+  {
+   "id": "megaphone",
+   "zh": "大聲公",
+   "when": "講到宣布、宣傳、公告、行銷",
+   "tags": [
+    "大聲公",
+    "宣傳",
+    "公告"
+   ],
+   "file": "comm/megaphone.svg",
+   "from": "tabler:speakerphone"
+  },
+  {
+   "id": "share",
+   "zh": "分享",
+   "when": "講到分享、轉發、傳給別人",
+   "tags": [
+    "分享",
+    "轉發"
+   ],
+   "file": "comm/share.svg",
+   "from": "tabler:share"
+  },
+  {
+   "id": "thumb-up",
+   "zh": "按讚",
+   "when": "講到按讚、喜歡、好評",
+   "tags": [
+    "按讚",
+    "喜歡",
+    "好評"
+   ],
+   "file": "comm/thumb-up.svg",
+   "from": "tabler:thumb-up"
+  },
+  {
+   "id": "thumb-down",
+   "zh": "倒讚",
+   "when": "講到不喜歡、負評",
+   "tags": [
+    "倒讚",
+    "負評"
+   ],
+   "file": "comm/thumb-down.svg",
+   "from": "tabler:thumb-down"
+  },
+  {
+   "id": "heart",
+   "zh": "愛心",
+   "when": "講到喜歡、收藏、愛",
+   "tags": [
+    "愛心",
+    "喜歡"
+   ],
+   "file": "comm/heart.svg",
+   "from": "tabler:heart"
+  },
+  {
+   "id": "star",
+   "zh": "星星",
+   "when": "講到評分、收藏、五星",
+   "tags": [
+    "星星",
+    "評分"
+   ],
+   "file": "comm/star.svg",
+   "from": "tabler:star"
+  },
+  {
+   "id": "at",
+   "zh": "@ 提及",
+   "when": "講到標記某人、帳號、提到",
+   "tags": [
+    "標記",
+    "帳號",
+    "@"
+   ],
+   "file": "comm/at.svg",
+   "from": "tabler:at"
+  },
+  {
+   "id": "rss",
+   "zh": "訂閱訊號",
+   "when": "講到訂閱、追蹤更新",
+   "tags": [
+    "訂閱",
+    "追蹤"
+   ],
+   "file": "comm/rss.svg",
+   "from": "tabler:rss"
+  },
+  {
+   "id": "world",
+   "zh": "地球",
+   "when": "講到全世界、網路、國際",
+   "tags": [
+    "地球",
+    "全世界",
+    "國際"
+   ],
+   "file": "comm/world.svg",
+   "from": "tabler:world"
+  },
+  {
+   "id": "language",
+   "zh": "語言",
+   "when": "講到翻譯、多語言、外語",
+   "tags": [
+    "語言",
+    "翻譯"
+   ],
+   "file": "comm/language.svg",
+   "from": "tabler:language"
+  },
+  {
+   "id": "user-plus",
+   "zh": "加好友",
+   "when": "講到新增成員、追蹤、邀請",
+   "tags": [
+    "加好友",
+    "邀請",
+    "追蹤"
+   ],
+   "file": "comm/user-plus.svg",
+   "from": "tabler:user-plus"
+  },
+  {
+   "id": "social",
+   "zh": "社群網絡",
+   "when": "講到社群、人脈、連結彼此",
+   "tags": [
+    "社群",
+    "人脈",
+    "網絡"
+   ],
+   "file": "comm/social.svg",
+   "from": "tabler:social"
+  },
+  {
+   "id": "comment-question",
+   "zh": "提問",
+   "when": "講到有人問、常見問題、發問",
+   "tags": [
+    "提問",
+    "問題"
+   ],
+   "file": "comm/comment-question.svg",
+   "from": "tabler:message-question"
+  },
+  {
+   "id": "comment-heart",
+   "zh": "暖心留言",
+   "when": "講到感謝留言、正面回饋",
+   "tags": [
+    "留言",
+    "回饋",
+    "感謝"
+   ],
+   "file": "comm/comment-heart.svg",
+   "from": "tabler:message-heart"
+  },
+  {
+   "id": "ad",
+   "zh": "廣告",
+   "when": "講到廣告、業配、投放",
+   "tags": [
+    "廣告",
+    "業配"
+   ],
+   "file": "comm/ad.svg",
+   "from": "tabler:ad"
+  },
+  {
+   "id": "news",
+   "zh": "新聞",
+   "when": "講到新聞、消息、報導",
+   "tags": [
+    "新聞",
+    "報導"
+   ],
+   "file": "comm/news.svg",
+   "from": "tabler:news"
+  },
+  {
+   "id": "calendar-event",
+   "zh": "活動日",
+   "when": "講到活動、直播時間、上片日",
+   "tags": [
+    "活動",
+    "行程"
+   ],
+   "file": "comm/calendar-event.svg",
+   "from": "tabler:calendar-event"
+  },
+  {
+   "id": "live-photo",
+   "zh": "直播中",
+   "when": "講到正在直播、現場",
+   "tags": [
+    "直播",
+    "現場"
+   ],
+   "file": "comm/live-photo.svg",
+   "from": "tabler:live-photo"
+  },
+  {
+   "id": "mood-smile",
+   "zh": "笑臉",
+   "when": "講到開心、滿意、正面反應",
+   "tags": [
+    "笑臉",
+    "開心",
+    "滿意"
+   ],
+   "file": "comm/mood-smile.svg",
+   "from": "tabler:mood-smile"
+  },
+  {
+   "id": "mood-sad",
+   "zh": "哭臉",
+   "when": "講到難過、失望、負面反應",
+   "tags": [
+    "哭臉",
+    "難過",
+    "失望"
+   ],
+   "file": "comm/mood-sad.svg",
+   "from": "tabler:mood-sad"
+  }
+ ]
+}

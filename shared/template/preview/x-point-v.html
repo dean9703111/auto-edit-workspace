@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-point 全畫面的一句重點｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-point.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-point { position: absolute; inset: 0; }
+    #x-point .fill { position: absolute; inset: 0; }
+    /* 主卡：左 120、頂 246、1180×516（右緣 1300，避開右下子母畫面） */
+    #x-point #xpt-card { position: absolute; left: 120px; top: 246px; width: 1180px; height: 516px; }
+    #x-point #xpt-ico { position: absolute; left: 96px; top: 138px; --d: 240px; --i: 132px; }
+    #x-point #xpt-tag { position: absolute; left: 400px; top: 104px; height: 64px; padding: 0 32px; }
+    #x-point #xpt-key { position: absolute; left: 400px; top: 196px; width: 700px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-point #xpt-sub { position: absolute; left: 400px; top: 318px; width: 700px; white-space: nowrap; color: var(--sc-fs-mute); }
+    /* 沒有小標、也沒有補一句：重點句在卡片正中 */
+    #x-point #xpt-card[data-solo] #xpt-key { top: 212px; }
+    /* 全寬（沒有講者，主卡 1680）：字放大 */
+    #x-point #xpt-card[data-wide] #xpt-key { width: 1200px; font-size: 96px; line-height: 124px; top: 180px; }
+    #x-point #xpt-card[data-wide] #xpt-sub { width: 1200px; font-size: 52px; line-height: 72px; top: 326px; }
+  </style>
+  <div id="x-point" data-composition-id="x-point" data-width="1920" data-height="1080" data-duration="6"
+       data-cues-sample='{"start":0,"D":6,"cues":{"461":[0.8,3.2],"462":[3.3,5.8]},"refs":{"#461@確認":1.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xpt-card" class="sc-wcard" data-layout="free">
+      <span id="xpt-ico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span>
+      <div id="xpt-tag" class="sc-pill"><span class="sc-opt">重點</span></div>
+      <div id="xpt-key" class="sc-t72 sc-w900"><span class="sc-opt">先確認再開拍</span></div>
+      <div id="xpt-sub" class="sc-t44"><span class="sc-opt">省下重錄的時間</span></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-point'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#461@確認');                      // 講到那句重點的時刻
+    P.sfx('ding', '#461@確認');                        // 提示音（句號和 T1 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 拍 0 開場：主卡進場（看 ENTER）→ 圖示彈出、小標淡入（先看得到這句話是哪一類）
+    if (ENTER === 'grow') P.grow('#xpt-card', 0.3);
+    else { P.wipe('#xpt-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xpt-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.pop('#xpt-ico', 0.45);
+    P.in('#xpt-tag', 0.6);
+
+    // 拍 1 重點：重點句逐字浮出、圖示重拍 → ＋0.5 補一句淡入；完成態停到段尾
+    P.chars('#xpt-key .sc-opt', T1, { stagger: 0.035 });
+    P.punch('#xpt-ico', T1);
+    P.in('#xpt-sub', T1 + 0.5);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-point'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-point";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

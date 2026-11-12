@@ -281,7 +281,7 @@ test('流程：內容設計動畫還是空白畫布 → 不 build、不 render�
   let job = await deliver(deps());   // 還沒有檔
   assert.equal(job.ok, false);
   assert.match(job.message, /內容設計動畫還沒做：d01/);
-  assert.match(job.fix, /design-build\.md/);
+  assert.match(job.fix, /design\.md/);
   assert.deepEqual(calls, []);
   assert.equal(rowsOf().length, 0);
   fs.writeFileSync(design, '<template id="x"><div data-design-blank="1">占位字</div></template>');

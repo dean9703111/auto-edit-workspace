@@ -1,7 +1,7 @@
 # 動畫分鏡查表（給 AI 查）
 
 分鏡表（停點 ③）裡，每段情境動畫（`x-*`、04 家族）都有一張「動畫分鏡」：一拍一列，寫講到哪個詞、畫面上出現什麼、用哪個具名動作、觀眾看哪裡、配哪顆音效。字卡（06／07／12／13）沒有。
-這份給寫鏡位腳本的設計師、寫改版分鏡（`work/versions/<段>/v<N>/分鏡.md`）的人查動作名稱（§2）和表頭（§1）。分章草稿只用 §5.4 的表挑 `x-scene` 的元件和拍；畫廊沒有的物件，parts 那一項寫 `icon`（lucide 名稱），不新畫 SVG。`work/storyboard.md` 由 `build.mjs --storyboard` 產生（模板段的動畫分鏡照模板自動寫），不要手改；§3、§4 的拍型是模板內建的拍，只當參考。內容設計動畫（`design: true`）的鏡位腳本照 `auto-edit-motion` 的 `references/design-script.md` 寫，不套 §3–§5 的拍型和位置寫法。
+這份給寫鏡位腳本的設計師、寫改版分鏡（`work/versions/<段>/v<N>/分鏡.md`）的人查動作名稱（§2）和表頭（§1）。分章草稿只用 §5.4 的表挑 `x-scene` 的元件和拍；畫廊沒有的物件，parts 那一項寫 `icon`（lucide 名稱），不新畫 SVG。`work/storyboard.md` 由 `build.mjs --storyboard` 產生（模板段的動畫分鏡照模板自動寫），不要手改；§3、§4 的拍型是模板內建的拍，只當參考。內容設計動畫（`design: true`）的鏡位腳本照 `auto-edit-motion` 的 `references/design.md` 寫（動態欄一樣只用 §2 的名稱），不套 §3–§5 的拍型和位置寫法。
 這份只做查表：秒數與曲線照 `shared/style.md`「節奏」，版面與情境照 `shared/template/SITUATIONS.md`，分鏡表其他欄位照 `shared/template/USAGE.md` 2.3。
 
 ## 1. 怎麼寫一張動畫分鏡（照抄、填空）
@@ -235,7 +235,7 @@
 
 ## 5. 示意動畫（拍型 S）
 
-講解在描述具體的動作、物件或過程（手機架上腳架試錄、檔案從手機傳到雲端、人走到手機旁按播放）時，畫面的主角是線條插圖（`shared/template/kit/illus-gallery.jpg` 的元件），不是卡片上的字。做法：`custom/x-scene.html` 骨架＋插圖元件，照分鏡一拍一拍組裝。內容設計動畫（`design: true`）不套這一節：鏡位腳本照 `auto-edit-motion` 的 `references/design-script.md` 寫（位置欄只寫 `full`、`panelTop`、`overlay`），不用 x-scene 骨架。
+講解在描述具體的動作、物件或過程（手機架上腳架試錄、檔案從手機傳到雲端、人走到手機旁按播放）時，畫面的主角是線條插圖（`shared/template/kit/illus-gallery.jpg` 的元件），不是卡片上的字。做法：`custom/x-scene.html` 骨架＋插圖元件，照分鏡一拍一拍組裝。內容設計動畫（`design: true`）不套這一節：鏡位腳本照 `auto-edit-motion` 的 `references/design.md` 寫，不用 x-scene 骨架。
 
 ### 5.1 分鏡表多兩欄
 
@@ -291,7 +291,7 @@
 | router | 新建 SVG | 規格：router，建議尺寸 220×120，狀態 led／warn；描述：橫式機身＋兩根天線＋前面板三顆燈 |
 
 - 「新建 SVG」那一列的「怎麼來」照這個格式寫（工具會讀）：`規格：<名稱>，建議尺寸 <寬>×<高>，狀態 <a>／<b>；描述：<長什麼樣>`。名稱小寫英文開頭、只用英數；建議尺寸參考畫廊裡大小相近的元件。
-- 新建的 SVG 由內容設計動畫的設計師在做動畫時自己畫（`auto-edit-motion` 的 `references/design-build.md`「新畫線稿元件」）。
+- 新建的 SVG 由內容設計動畫的設計師在做動畫時自己畫（`auto-edit-motion` 的 `references/design-kit.md`「新畫一個物件」）。
 
 ### 5.4 常見講解怎麼畫（作者定案過的畫法，先查這張再自己想）
 

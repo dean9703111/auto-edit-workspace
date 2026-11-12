@@ -1,0 +1,325 @@
+{
+ "id": "tool",
+ "zh": "工具與設定",
+ "when": "講到設定、修理、權限、安全、開發工具",
+ "items": [
+  {
+   "id": "settings",
+   "zh": "設定",
+   "when": "講到設定、調整選項",
+   "tags": [
+    "設定",
+    "齒輪"
+   ],
+   "file": "tool/settings.svg",
+   "from": "tabler:settings"
+  },
+  {
+   "id": "tool",
+   "zh": "扳手",
+   "when": "講到修理、維修、工具",
+   "tags": [
+    "扳手",
+    "修理",
+    "工具"
+   ],
+   "file": "tool/tool.svg",
+   "from": "tabler:tool"
+  },
+  {
+   "id": "hammer",
+   "zh": "鐵鎚",
+   "when": "講到建造、敲定、動手做",
+   "tags": [
+    "鐵鎚",
+    "建造"
+   ],
+   "file": "tool/hammer.svg",
+   "from": "tabler:hammer"
+  },
+  {
+   "id": "tools",
+   "zh": "工具組",
+   "when": "講到一組工具、工具箱",
+   "tags": [
+    "工具組",
+    "工具箱"
+   ],
+   "file": "tool/tools.svg",
+   "from": "tabler:tools"
+  },
+  {
+   "id": "adjustments",
+   "zh": "調整鈕",
+   "when": "講到微調、參數、調數值",
+   "tags": [
+    "微調",
+    "參數"
+   ],
+   "file": "tool/adjustments.svg",
+   "from": "tabler:adjustments"
+  },
+  {
+   "id": "filter",
+   "zh": "篩選",
+   "when": "講到篩選、過濾、挑出來",
+   "tags": [
+    "篩選",
+    "過濾"
+   ],
+   "file": "tool/filter.svg",
+   "from": "tabler:filter"
+  },
+  {
+   "id": "key",
+   "zh": "鑰匙",
+   "when": "講到金鑰、關鍵、解鎖",
+   "tags": [
+    "鑰匙",
+    "金鑰",
+    "關鍵"
+   ],
+   "file": "tool/key.svg",
+   "from": "tabler:key"
+  },
+  {
+   "id": "lock",
+   "zh": "上鎖",
+   "when": "講到加密、鎖住、保護",
+   "tags": [
+    "鎖",
+    "加密",
+    "保護"
+   ],
+   "file": "tool/lock.svg",
+   "from": "tabler:lock"
+  },
+  {
+   "id": "lock-open",
+   "zh": "解鎖",
+   "when": "講到解鎖、開放、打開",
+   "tags": [
+    "解鎖",
+    "開放"
+   ],
+   "file": "tool/lock-open.svg",
+   "from": "tabler:lock-open"
+  },
+  {
+   "id": "shield",
+   "zh": "盾牌",
+   "when": "講到防護、安全",
+   "tags": [
+    "盾牌",
+    "防護",
+    "安全"
+   ],
+   "file": "tool/shield.svg",
+   "from": "tabler:shield"
+  },
+  {
+   "id": "shield-check",
+   "zh": "安全通過",
+   "when": "講到已保護、驗證安全",
+   "tags": [
+    "安全",
+    "驗證"
+   ],
+   "file": "tool/shield-check.svg",
+   "from": "tabler:shield-check"
+  },
+  {
+   "id": "bug",
+   "zh": "蟲",
+   "when": "講到 bug、出錯、問題",
+   "tags": [
+    "bug",
+    "錯誤",
+    "蟲"
+   ],
+   "file": "tool/bug.svg",
+   "from": "tabler:bug"
+  },
+  {
+   "id": "code",
+   "zh": "程式碼",
+   "when": "講到寫程式、程式碼",
+   "tags": [
+    "程式",
+    "程式碼"
+   ],
+   "file": "tool/code.svg",
+   "from": "tabler:code"
+  },
+  {
+   "id": "terminal",
+   "zh": "終端機",
+   "when": "講到下指令、終端機、命令列",
+   "tags": [
+    "終端機",
+    "指令"
+   ],
+   "file": "tool/terminal.svg",
+   "from": "tabler:terminal-2"
+  },
+  {
+   "id": "git-branch",
+   "zh": "分支",
+   "when": "講到版本、分支、另一條線",
+   "tags": [
+    "分支",
+    "版本"
+   ],
+   "file": "tool/git-branch.svg",
+   "from": "tabler:git-branch"
+  },
+  {
+   "id": "puzzle",
+   "zh": "拼圖",
+   "when": "講到外掛、擴充、缺一塊",
+   "tags": [
+    "拼圖",
+    "外掛",
+    "擴充"
+   ],
+   "file": "tool/puzzle.svg",
+   "from": "tabler:puzzle"
+  },
+  {
+   "id": "magnet",
+   "zh": "磁鐵",
+   "when": "講到吸引、吸住觀眾",
+   "tags": [
+    "磁鐵",
+    "吸引"
+   ],
+   "file": "tool/magnet.svg",
+   "from": "tabler:magnet"
+  },
+  {
+   "id": "ruler",
+   "zh": "尺",
+   "when": "講到尺寸、量測、規格",
+   "tags": [
+    "尺",
+    "尺寸",
+    "量"
+   ],
+   "file": "tool/ruler.svg",
+   "from": "tabler:ruler"
+  },
+  {
+   "id": "flask",
+   "zh": "燒瓶",
+   "when": "講到實驗、測試看看",
+   "tags": [
+    "燒瓶",
+    "實驗",
+    "測試"
+   ],
+   "file": "tool/flask.svg",
+   "from": "tabler:flask"
+  },
+  {
+   "id": "microscope",
+   "zh": "顯微鏡",
+   "when": "講到仔細看、研究、分析",
+   "tags": [
+    "顯微鏡",
+    "研究"
+   ],
+   "file": "tool/microscope.svg",
+   "from": "tabler:microscope"
+  },
+  {
+   "id": "recycle",
+   "zh": "回收",
+   "when": "講到重複利用、循環",
+   "tags": [
+    "回收",
+    "重複利用"
+   ],
+   "file": "tool/recycle.svg",
+   "from": "tabler:recycle"
+  },
+  {
+   "id": "refresh",
+   "zh": "重新整理",
+   "when": "講到重來、更新、重跑",
+   "tags": [
+    "重新整理",
+    "更新",
+    "重跑"
+   ],
+   "file": "tool/refresh.svg",
+   "from": "tabler:refresh"
+  },
+  {
+   "id": "switch",
+   "zh": "開關",
+   "when": "講到打開功能、切換",
+   "tags": [
+    "開關",
+    "切換"
+   ],
+   "file": "tool/switch.svg",
+   "from": "tabler:toggle-right"
+  },
+  {
+   "id": "power",
+   "zh": "電源鍵",
+   "when": "講到開機、關機、啟動",
+   "tags": [
+    "電源",
+    "開機",
+    "啟動"
+   ],
+   "file": "tool/power.svg",
+   "from": "tabler:power"
+  },
+  {
+   "id": "link-off",
+   "zh": "斷開連結",
+   "when": "講到斷線、解除、分開",
+   "tags": [
+    "斷開",
+    "解除"
+   ],
+   "file": "tool/link-off.svg",
+   "from": "tabler:unlink"
+  },
+  {
+   "id": "api",
+   "zh": "API",
+   "when": "講到 API、串接、介接",
+   "tags": [
+    "API",
+    "串接"
+   ],
+   "file": "tool/api.svg",
+   "from": "tabler:api"
+  },
+  {
+   "id": "package-export",
+   "zh": "發布套件",
+   "when": "講到發布、交付、打包出去",
+   "tags": [
+    "發布",
+    "交付"
+   ],
+   "file": "tool/package-export.svg",
+   "from": "tabler:package-export"
+  },
+  {
+   "id": "bandage",
+   "zh": "OK 繃",
+   "when": "講到修補、暫時解法",
+   "tags": [
+    "修補",
+    "OK 繃"
+   ],
+   "file": "tool/bandage.svg",
+   "from": "tabler:bandage"
+  }
+ ]
+}

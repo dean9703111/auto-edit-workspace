@@ -14,14 +14,14 @@
 你只能寫：projects/<專案>/work/hyperframes/compositions/<檔名>（build 已經產生）、projects/<專案>/work/hyperframes/illus-local/ 底下自己新畫的 SVG、projects/<專案>/work/reports/<段 id>.md；內容設計動畫段另外可以寫 projects/<專案>/work/designs/<段 id>.md（拍變了就改這張動畫分鏡表，audit 照它對）
 不能做：改 plan.json、work/rough.srt、work/storyboard.md、shared/、assets/；跑 build、snapshot、render（查圖示名稱的 build.mjs --icons 可以跑）；讀 shared/template/tools/、shared/template/kit/*.js、USAGE-reference.md、別段的 compositions；用 node 或 python 拆元件、圖示的 SVG（寫 data-illus、data-icon）
 改法：用 edit 改要改的那幾處，不要整份重寫（重寫一次和第一次做一樣久）
-寫法：x-design-<段 id>.html 先載入 hyperframes skill，照 .agents/skills/auto-edit-motion/references/design-build.md 用 GSAP 改。模板檔（x-<模板>-<段 id>.html）沿用檔裡原本的 id 前綴、檔頭【D 下限】和版面範圍，不要改成 x-design 的寫法；語法照 .agents/skills/auto-edit-motion/references/kit-syntax.md
+寫法：x-design-<段 id>.html 照 .agents/skills/auto-edit-motion/references/design.md 第 2 節用 GSAP 改。模板檔（x-<模板>-<段 id>.html）沿用檔裡原本的 id 前綴、檔頭【D 下限】和版面範圍，不要改成 x-design 的寫法；語法照 .agents/skills/auto-edit-motion/references/kit-syntax.md
 要改什麼：<修改單的標籤與描述，或使用者原話>
 這段的字幕：
 #<N> <字幕原文>
 共用元件規格（有才寫）：<元件：大小、位置、配色>
 驗收（一條指令，內含這段的所有檢查；別段有 ✖ 不影響你）：
 node shared/template/tools/audit.mjs --project projects/<專案> --only <段 id> --shots --sheet
-✖ 全修。→ 寫「重跑 build」「snapshot」時，只要改好這支檔、重跑上面那條 audit；要改 plan.json 才修得掉的，把那行原文交回主代理。同一個 ✖ 改兩次還在、或工具呼叫到第 18 次，就停手回報。
+✖ 全修。→ 寫「重跑 build」「snapshot」時，只要改好這支檔、重跑上面那條 audit；要改 plan.json 才修得掉的，把那行原文交回主代理。同一個 ✖ 改兩次還在就停手回報。
 ⚠ 只修一輪：照 → 用 edit 改那幾行（不要整份重寫），再跑同一條 audit 一次就停，留下的 ⚠ 和理由寫進 work/reports/<段 id>.md。印「通過」或「可以交件」都算過關。
 0 個 ✖ 才會出拼圖，交件前打開 work/audit-shots/sheet-<段 id>.jpg 看一次：動作看得到、字和插圖沒有擠在一角。子母畫面的小視窗在這張圖是空框，正常。
 ```

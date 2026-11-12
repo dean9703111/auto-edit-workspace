@@ -31,7 +31,8 @@ node shared/template/tools/status.mjs --project projects/<專案>
 
 它印目前階段、該讀哪支 Skill 的第幾步、**完整可貼的下一條指令**，有待回覆停點就印停點那兩行。照著做，不用另外查路由。第一次開工：`media.mjs prep`（或 `status.mjs --project projects/<專案> --init`）會自動填開工決策表；使用者說直式時，`prep` 加 `--format portrait`。
 完成判準：讀到 `目前在：`、`Skill：`、`→ 下一步：` 或待回覆的停點。
-常見錯誤：印「講者：⚠ 還沒設定」→ 在回報裡問姓名與頭銜（不擋流程，不要自己編）。
+它印 ⚠ 時在回報裡問使用者，不擋流程：「講者：⚠ 還沒設定」問姓名與頭銜（不要自己編）；「偏好：⚠ 有 N 條…還沒問使用者」跑 `node shared/template/tools/status.mjs --prefs` 把那幾條列出來，問哪幾條以後每一集都照做，回答後照它印的 `--prefs-add`、`--prefs-skip` 記下來（使用者說某一條不要了：`--prefs-drop "<第幾條>"`）。使用者問「為什麼這麼久」「時間花在哪」：跑 `status.mjs --project projects/<專案> --timeline`，照它印的回答。
+常見錯誤：把 Skill 整份讀完才動手 → 只讀 status 印的那一步。
 
 **2. 有待回覆的停點**
 
@@ -39,7 +40,7 @@ node shared/template/tools/status.mjs --project projects/<專案>
 （不用指令：重貼 status 印的那個停點的最後兩行）
 ```
 
-完成判準：回覆最後兩行＝AGENTS.md「停點總表」那個停點的原文。
+完成判準：回覆最後兩行＝status 印的那個停點的原文。
 常見錯誤：使用者這句話其實就是在回覆那個停點 → 照那支 Skill「停點」表做，不要重貼。
 
 **3. 交棒**
@@ -92,3 +93,4 @@ status 和實際檔案不符時以產物為準，判斷表在 `references/progre
 - `references/sort-assets.md`：使用者說「分類素材」，或素材散落在專案裡時才讀。
 - `references/shorts.md`：使用者說「從這支長片切短片」「切 Shorts」時才讀（照它做）。
 - `references/progress-template.md`：status 和實際檔案不符、要以產物判斷階段時才讀。
+- `references/subagents.md`：要派子代理、或想知道子代理能寫哪些檔、能跑哪些指令時才讀。

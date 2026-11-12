@@ -1,0 +1,319 @@
+{
+ "id": "learn",
+ "zh": "學習與知識",
+ "when": "講到學習、教學、知識、問題與解答",
+ "items": [
+  {
+   "id": "book",
+   "zh": "書",
+   "when": "講到一本書、閱讀、教材",
+   "tags": [
+    "書",
+    "閱讀",
+    "教材"
+   ],
+   "file": "learn/book.svg",
+   "from": "tabler:book"
+  },
+  {
+   "id": "books",
+   "zh": "一疊書",
+   "when": "講到很多資料、書單",
+   "tags": [
+    "書",
+    "書單"
+   ],
+   "file": "learn/books.svg",
+   "from": "tabler:books"
+  },
+  {
+   "id": "school",
+   "zh": "學士帽",
+   "when": "講到畢業、學校、學歷",
+   "tags": [
+    "學士帽",
+    "畢業",
+    "學校"
+   ],
+   "file": "learn/school.svg",
+   "from": "tabler:school"
+  },
+  {
+   "id": "pencil-edit",
+   "zh": "編輯",
+   "when": "講到修改、編輯內容",
+   "tags": [
+    "編輯",
+    "修改"
+   ],
+   "file": "learn/pencil-edit.svg",
+   "from": "tabler:edit"
+  },
+  {
+   "id": "writing",
+   "zh": "寫字",
+   "when": "講到寫作、手寫、寫文章",
+   "tags": [
+    "寫作",
+    "寫字"
+   ],
+   "file": "learn/writing.svg",
+   "from": "tabler:writing"
+  },
+  {
+   "id": "abc",
+   "zh": "字母",
+   "when": "講到基礎、入門、ABC",
+   "tags": [
+    "字母",
+    "基礎",
+    "入門"
+   ],
+   "file": "learn/abc.svg",
+   "from": "tabler:abc"
+  },
+  {
+   "id": "math-symbols",
+   "zh": "數學符號",
+   "when": "講到數學、計算題",
+   "tags": [
+    "數學"
+   ],
+   "file": "learn/math-symbols.svg",
+   "from": "tabler:math-symbols"
+  },
+  {
+   "id": "backpack",
+   "zh": "書包",
+   "when": "講到學生、上課、通勤",
+   "tags": [
+    "書包",
+    "學生"
+   ],
+   "file": "learn/backpack.svg",
+   "from": "tabler:backpack"
+  },
+  {
+   "id": "chalkboard",
+   "zh": "黑板",
+   "when": "講到上課、講解、教室",
+   "tags": [
+    "黑板",
+    "上課",
+    "教室"
+   ],
+   "file": "learn/chalkboard.svg",
+   "from": "tabler:chalkboard"
+  },
+  {
+   "id": "help",
+   "zh": "問號",
+   "when": "講到疑問、常見問題、不知道",
+   "tags": [
+    "問號",
+    "疑問"
+   ],
+   "file": "learn/help.svg",
+   "from": "tabler:help"
+  },
+  {
+   "id": "info-circle",
+   "zh": "資訊",
+   "when": "講到補充說明、小知識",
+   "tags": [
+    "資訊",
+    "說明",
+    "小知識"
+   ],
+   "file": "learn/info-circle.svg",
+   "from": "tabler:info-circle"
+  },
+  {
+   "id": "quote",
+   "zh": "引言",
+   "when": "講到名言、引用、金句",
+   "tags": [
+    "引言",
+    "名言"
+   ],
+   "file": "learn/quote.svg",
+   "from": "tabler:quote"
+  },
+  {
+   "id": "blockquote",
+   "zh": "引用段落",
+   "when": "講到引用一段話、文獻",
+   "tags": [
+    "引用",
+    "文獻"
+   ],
+   "file": "learn/blockquote.svg",
+   "from": "tabler:blockquote"
+  },
+  {
+   "id": "vocabulary",
+   "zh": "字典",
+   "when": "講到名詞解釋、單字",
+   "tags": [
+    "字典",
+    "名詞解釋"
+   ],
+   "file": "learn/vocabulary.svg",
+   "from": "tabler:vocabulary"
+  },
+  {
+   "id": "lamp",
+   "zh": "檯燈",
+   "when": "講到讀書、熬夜工作、書桌",
+   "tags": [
+    "檯燈",
+    "讀書"
+   ],
+   "file": "learn/lamp.svg",
+   "from": "tabler:lamp"
+  },
+  {
+   "id": "podium",
+   "zh": "講台",
+   "when": "講到演講、發表、上台",
+   "tags": [
+    "講台",
+    "演講"
+   ],
+   "file": "learn/podium.svg",
+   "from": "tabler:podium"
+  },
+  {
+   "id": "microscope-2",
+   "zh": "望遠鏡",
+   "when": "講到遠見、展望、看未來",
+   "tags": [
+    "望遠鏡",
+    "展望"
+   ],
+   "file": "learn/microscope-2.svg",
+   "from": "tabler:telescope"
+  },
+  {
+   "id": "map-2",
+   "zh": "地圖攤開",
+   "when": "講到學習地圖、路線規劃",
+   "tags": [
+    "地圖",
+    "路線"
+   ],
+   "file": "learn/map-2.svg",
+   "from": "tabler:map-2"
+  },
+  {
+   "id": "compass",
+   "zh": "指南針",
+   "when": "講到方向、指引、找方向",
+   "tags": [
+    "指南針",
+    "方向"
+   ],
+   "file": "learn/compass.svg",
+   "from": "tabler:compass"
+  },
+  {
+   "id": "stairs",
+   "zh": "階梯",
+   "when": "講到進階、一步一步、等級",
+   "tags": [
+    "階梯",
+    "進階"
+   ],
+   "file": "learn/stairs.svg",
+   "from": "tabler:stairs"
+  },
+  {
+   "id": "stairs-up",
+   "zh": "往上爬",
+   "when": "講到升級、進步",
+   "tags": [
+    "升級",
+    "進步"
+   ],
+   "file": "learn/stairs-up.svg",
+   "from": "tabler:stairs-up"
+  },
+  {
+   "id": "tournament",
+   "zh": "賽程",
+   "when": "講到淘汰、比賽、分組",
+   "tags": [
+    "比賽",
+    "賽程"
+   ],
+   "file": "learn/tournament.svg",
+   "from": "tabler:tournament"
+  },
+  {
+   "id": "versions",
+   "zh": "版本",
+   "when": "講到第幾版、改版",
+   "tags": [
+    "版本",
+    "改版"
+   ],
+   "file": "learn/versions.svg",
+   "from": "tabler:versions"
+  },
+  {
+   "id": "highlight",
+   "zh": "螢光筆",
+   "when": "講到畫重點、標記",
+   "tags": [
+    "螢光筆",
+    "畫重點"
+   ],
+   "file": "learn/highlight.svg",
+   "from": "tabler:highlight"
+  },
+  {
+   "id": "list-details",
+   "zh": "條列說明",
+   "when": "講到大綱、條列重點",
+   "tags": [
+    "大綱",
+    "條列"
+   ],
+   "file": "learn/list-details.svg",
+   "from": "tabler:list-details"
+  },
+  {
+   "id": "category",
+   "zh": "分類格",
+   "when": "講到分類、類別、整理",
+   "tags": [
+    "分類",
+    "類別"
+   ],
+   "file": "learn/category.svg",
+   "from": "tabler:category"
+  },
+  {
+   "id": "zoom-question",
+   "zh": "查問題",
+   "when": "講到找原因、排查",
+   "tags": [
+    "排查",
+    "找原因"
+   ],
+   "file": "learn/zoom-question.svg",
+   "from": "tabler:zoom-question"
+  },
+  {
+   "id": "certificate-2",
+   "zh": "獎狀",
+   "when": "講到完成課程、獎狀",
+   "tags": [
+    "獎狀",
+    "結業"
+   ],
+   "file": "learn/certificate-2.svg",
+   "from": "tabler:certificate-2"
+  }
+ ]
+}

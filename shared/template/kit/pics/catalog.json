@@ -1,0 +1,134 @@
+{
+ "version": 1,
+ "count": 444,
+ "how": "先看 categories 的 when 決定翻哪一類，再讀那一類的 <id>.json 挑項目（看 when、tags）；或用工具找：node shared/template/tools/build.mjs --pics 手機,雲端",
+ "mount": "<div data-illus-src=\"kit/pics/<類別>/<id>.svg\" style=\"width:320px;height:320px\"></div>",
+ "sources": [
+  {
+   "name": "Tabler Icons",
+   "license": "MIT",
+   "url": "https://github.com/tabler/tabler-icons",
+   "file": "LICENSE-tabler.txt"
+  },
+  {
+   "name": "Lucide",
+   "license": "ISC",
+   "url": "https://lucide.dev",
+   "file": "../LICENSE-lucide.txt"
+  }
+ ],
+ "categories": [
+  {
+   "id": "device",
+   "zh": "裝置與硬體",
+   "when": "講到用什麼設備、硬體、接線、規格",
+   "count": 28,
+   "index": "device.json"
+  },
+  {
+   "id": "media",
+   "zh": "影音與創作",
+   "when": "講到拍片、剪輯、修圖、設計、音樂",
+   "count": 27,
+   "index": "media.json"
+  },
+  {
+   "id": "file",
+   "zh": "檔案與資料",
+   "when": "講到檔案、資料夾、上傳下載、備份、整理",
+   "count": 28,
+   "index": "file.json"
+  },
+  {
+   "id": "comm",
+   "zh": "溝通與社群",
+   "when": "講到訊息、留言、通知、分享、社群互動",
+   "count": 27,
+   "index": "comm.json"
+  },
+  {
+   "id": "people",
+   "zh": "人物與角色",
+   "when": "講到人、觀眾、團隊、角色、動作",
+   "count": 27,
+   "index": "people.json"
+  },
+  {
+   "id": "work",
+   "zh": "工作與時間",
+   "when": "講到工作、進度、目標、排程、成果",
+   "count": 28,
+   "index": "work.json"
+  },
+  {
+   "id": "money",
+   "zh": "金錢與消費",
+   "when": "講到錢、價格、購買、成本、收入",
+   "count": 27,
+   "index": "money.json"
+  },
+  {
+   "id": "tool",
+   "zh": "工具與設定",
+   "when": "講到設定、修理、權限、安全、開發工具",
+   "count": 28,
+   "index": "tool.json"
+  },
+  {
+   "id": "ai",
+   "zh": "科技與 AI",
+   "when": "講到 AI、自動化、網路、資料、演算法",
+   "count": 28,
+   "index": "ai.json"
+  },
+  {
+   "id": "learn",
+   "zh": "學習與知識",
+   "when": "講到學習、教學、知識、問題與解答",
+   "count": 28,
+   "index": "learn.json"
+  },
+  {
+   "id": "place",
+   "zh": "地點與建築",
+   "when": "講到在哪裡、建築、場所、地圖",
+   "count": 28,
+   "index": "place.json"
+  },
+  {
+   "id": "travel",
+   "zh": "交通與旅行",
+   "when": "講到移動、交通工具、出國、旅程",
+   "count": 28,
+   "index": "travel.json"
+  },
+  {
+   "id": "life",
+   "zh": "生活與飲食",
+   "when": "講到日常、吃喝、家裡、衣物、寵物",
+   "count": 28,
+   "index": "life.json"
+  },
+  {
+   "id": "health",
+   "zh": "健康與運動",
+   "when": "講到身體、運動、醫療、作息",
+   "count": 28,
+   "index": "health.json"
+  },
+  {
+   "id": "nature",
+   "zh": "天氣與自然",
+   "when": "講到天氣、季節、環境、能量",
+   "count": 27,
+   "index": "nature.json"
+  },
+  {
+   "id": "symbol",
+   "zh": "符號與狀態",
+   "when": "講到對錯、警告、方向、狀態、強調",
+   "count": 29,
+   "index": "symbol.json"
+  }
+ ]
+}

@@ -1,0 +1,324 @@
+{
+ "id": "work",
+ "zh": "工作與時間",
+ "when": "講到工作、進度、目標、排程、成果",
+ "items": [
+  {
+   "id": "briefcase",
+   "zh": "公事包",
+   "when": "講到工作、接案、上班",
+   "tags": [
+    "工作",
+    "接案",
+    "上班"
+   ],
+   "file": "work/briefcase.svg",
+   "from": "tabler:briefcase"
+  },
+  {
+   "id": "presentation",
+   "zh": "簡報",
+   "when": "講到簡報、提案、報告",
+   "tags": [
+    "簡報",
+    "提案",
+    "報告"
+   ],
+   "file": "work/presentation.svg",
+   "from": "tabler:presentation"
+  },
+  {
+   "id": "report",
+   "zh": "報表",
+   "when": "講到報告、成效、數據整理",
+   "tags": [
+    "報表",
+    "成效"
+   ],
+   "file": "work/report.svg",
+   "from": "tabler:report"
+  },
+  {
+   "id": "target",
+   "zh": "靶心",
+   "when": "講到目標、精準、命中",
+   "tags": [
+    "目標",
+    "精準"
+   ],
+   "file": "work/target.svg",
+   "from": "tabler:target"
+  },
+  {
+   "id": "trophy",
+   "zh": "獎盃",
+   "when": "講到第一名、得獎、達成",
+   "tags": [
+    "獎盃",
+    "第一名",
+    "得獎"
+   ],
+   "file": "work/trophy.svg",
+   "from": "tabler:trophy"
+  },
+  {
+   "id": "award",
+   "zh": "獎章",
+   "when": "講到認證、表揚、榮譽",
+   "tags": [
+    "獎章",
+    "認證"
+   ],
+   "file": "work/award.svg",
+   "from": "tabler:award"
+  },
+  {
+   "id": "certificate",
+   "zh": "證書",
+   "when": "講到證照、結業、證明",
+   "tags": [
+    "證書",
+    "證照"
+   ],
+   "file": "work/certificate.svg",
+   "from": "tabler:certificate"
+  },
+  {
+   "id": "calendar",
+   "zh": "行事曆",
+   "when": "講到日期、排程、哪一天",
+   "tags": [
+    "行事曆",
+    "日期",
+    "排程"
+   ],
+   "file": "work/calendar.svg",
+   "from": "tabler:calendar"
+  },
+  {
+   "id": "clock",
+   "zh": "時鐘",
+   "when": "講到時間、幾點、花多久",
+   "tags": [
+    "時鐘",
+    "時間"
+   ],
+   "file": "work/clock.svg",
+   "from": "tabler:clock"
+  },
+  {
+   "id": "hourglass",
+   "zh": "沙漏",
+   "when": "講到等待、時間流逝、倒數",
+   "tags": [
+    "沙漏",
+    "等待",
+    "倒數"
+   ],
+   "file": "work/hourglass.svg",
+   "from": "tabler:hourglass"
+  },
+  {
+   "id": "stopwatch",
+   "zh": "碼表",
+   "when": "講到計時、多快、幾秒",
+   "tags": [
+    "碼表",
+    "計時"
+   ],
+   "file": "work/stopwatch.svg",
+   "from": "tabler:stopwatch"
+  },
+  {
+   "id": "alarm",
+   "zh": "鬧鐘",
+   "when": "講到提醒、截止、時間到",
+   "tags": [
+    "鬧鐘",
+    "提醒",
+    "截止"
+   ],
+   "file": "work/alarm.svg",
+   "from": "tabler:alarm"
+  },
+  {
+   "id": "checklist",
+   "zh": "檢查表",
+   "when": "講到清單、逐項確認",
+   "tags": [
+    "檢查表",
+    "清單"
+   ],
+   "file": "work/checklist.svg",
+   "from": "tabler:checklist"
+  },
+  {
+   "id": "list-check",
+   "zh": "待辦清單",
+   "when": "講到待辦、完成事項",
+   "tags": [
+    "待辦",
+    "清單"
+   ],
+   "file": "work/list-check.svg",
+   "from": "tabler:list-check"
+  },
+  {
+   "id": "checkbox",
+   "zh": "打勾",
+   "when": "講到完成、確認了",
+   "tags": [
+    "打勾",
+    "完成"
+   ],
+   "file": "work/checkbox.svg",
+   "from": "tabler:checkbox"
+  },
+  {
+   "id": "flag",
+   "zh": "旗子",
+   "when": "講到里程碑、目標達成、標記",
+   "tags": [
+    "旗子",
+    "里程碑"
+   ],
+   "file": "work/flag.svg",
+   "from": "tabler:flag"
+  },
+  {
+   "id": "chart-bar",
+   "zh": "長條圖",
+   "when": "講到數據、比較、統計",
+   "tags": [
+    "長條圖",
+    "數據",
+    "統計"
+   ],
+   "file": "work/chart-bar.svg",
+   "from": "tabler:chart-bar"
+  },
+  {
+   "id": "chart-line",
+   "zh": "折線圖",
+   "when": "講到趨勢、成長、變化",
+   "tags": [
+    "折線圖",
+    "趨勢"
+   ],
+   "file": "work/chart-line.svg",
+   "from": "tabler:chart-line"
+  },
+  {
+   "id": "chart-pie",
+   "zh": "圓餅圖",
+   "when": "講到比例、佔比、分配",
+   "tags": [
+    "圓餅圖",
+    "比例"
+   ],
+   "file": "work/chart-pie.svg",
+   "from": "tabler:chart-pie"
+  },
+  {
+   "id": "trending-up",
+   "zh": "上升",
+   "when": "講到成長、變多、往上",
+   "tags": [
+    "上升",
+    "成長"
+   ],
+   "file": "work/trending-up.svg",
+   "from": "tabler:trending-up"
+  },
+  {
+   "id": "trending-down",
+   "zh": "下降",
+   "when": "講到下滑、變少、往下",
+   "tags": [
+    "下降",
+    "下滑"
+   ],
+   "file": "work/trending-down.svg",
+   "from": "tabler:trending-down"
+  },
+  {
+   "id": "id-badge",
+   "zh": "識別證",
+   "when": "講到身分、員工、名牌",
+   "tags": [
+    "識別證",
+    "身分"
+   ],
+   "file": "work/id-badge.svg",
+   "from": "tabler:id-badge-2"
+  },
+  {
+   "id": "signature",
+   "zh": "簽名",
+   "when": "講到簽約、同意、簽名",
+   "tags": [
+    "簽名",
+    "簽約"
+   ],
+   "file": "work/signature.svg",
+   "from": "tabler:signature"
+  },
+  {
+   "id": "subtask",
+   "zh": "分工",
+   "when": "講到拆任務、分工、子任務",
+   "tags": [
+    "分工",
+    "拆任務"
+   ],
+   "file": "work/subtask.svg",
+   "from": "tabler:subtask"
+  },
+  {
+   "id": "progress",
+   "zh": "進度",
+   "when": "講到進度、做到哪、完成度",
+   "tags": [
+    "進度",
+    "完成度"
+   ],
+   "file": "work/progress.svg",
+   "from": "tabler:progress"
+  },
+  {
+   "id": "calendar-time",
+   "zh": "排程時間",
+   "when": "講到預約、定時、排時間",
+   "tags": [
+    "預約",
+    "定時"
+   ],
+   "file": "work/calendar-time.svg",
+   "from": "tabler:calendar-time"
+  },
+  {
+   "id": "bolt",
+   "zh": "閃電",
+   "when": "講到很快、效率、馬上",
+   "tags": [
+    "閃電",
+    "快",
+    "效率"
+   ],
+   "file": "work/bolt.svg",
+   "from": "tabler:bolt"
+  },
+  {
+   "id": "rocket",
+   "zh": "火箭",
+   "when": "講到起飛、快速成長、上線",
+   "tags": [
+    "火箭",
+    "起飛",
+    "上線"
+   ],
+   "file": "work/rocket.svg",
+   "from": "tabler:rocket"
+  }
+ ]
+}

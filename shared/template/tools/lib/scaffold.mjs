@@ -11,7 +11,7 @@
 //   splitParts({ cues, outline, breaks })   → 章節切成分工單位（照字數：太長的章再切、太小的份併起來）
 //   designTarget(seconds)                   → 這一段時間估計幾段內容設計動畫候選（還不知道段數時用）
 //   designTargetOf(n)、designEligible(seg)  → 寫好草稿後照實際段數算：約三成的段（media、章節段不算）
-//   renderCommon(input)、renderSnippets(input)、renderPart(part, input) → 共用.md、寫法.md、chNN.md
+//   renderCommon(input)、renderSnippets(input)、renderPart(part, input) → 共用.md、.spec.md（工具用）、chNN.md
 import { normText, textWidth } from './time.mjs';
 import { moodCandidates, moodTarget, MOOD_KINDS } from './moods.mjs';
 
@@ -306,7 +306,7 @@ export function renderCommon(input) {
   const { project, format, videoDur, cues, plan = {}, situationsMd, beatsMd, voiceOnly = [], assets = { screen: 0, images: 0 }, notes = [], hasCamera = true, kinds = '', parts = [] } = input;
   const L = [];
   L.push(`# 分鏡素材（共用）：${project}（build.mjs --scaffold 產生，不要手改；字幕改過、工作區更新過都要重跑）`, '');
-  L.push('排分鏡要查的東西都在這份和你那一章的 `chNN.md`。**照這兩份寫，不要整份讀 USAGE／SITUATIONS／BEATS，也不要寫 script 查逐字稿或秒數**；這裡沒寫的才照最後一節找那幾行。', '');
+  L.push('這份是這支影片的事實和草稿的格式；做法照 `chapter-worker.md`。字幕在你那一份 `chNN.md`；秒數、放不放得下都由工具算，不用查逐字稿。', '');
   L.push('## 1. 這支影片', '');
   L.push(`- 版式：${format?.label ?? '—'}；長度 ${clock(videoDur)}（${cues.length} 句字幕），分成 ${parts.length} 份寫`);
   L.push(`- 主軌：${kinds || (hasCamera ? '有講者' : '只有聲音')}${hasCamera ? '' : '。**沒有講者**：沒有疊加、子母畫面，每一段都要有畫面（media 或不透明全幕），全畫面段自動用全寬版型，字卡（06–15）不能用'}`);
@@ -321,16 +321,9 @@ export function renderCommon(input) {
   L.push('');
 
   L.push('## 2. 怎麼選：三條路', '');
-  L.push('1. **有對得上的錄影或圖片** → media 段（第 5 節）。', '2. **內容設計動畫**（第 4 節）：這段值得專門為它設計畫面。', '3. **模板**：字卡與模板動畫，工具直接產出，不用另外做動畫。**相鄰兩段不要用同一個模板**（例：兩段 `x-process` 連著），換一個或併成一段。選模板只看第 3 節的對照表；寫法在 `寫法.md`，**寫完大綱、填骨架時才查，要哪一個就查哪一個，不用整份讀**：`build.mjs --project <專案> --spec x-process`（字卡寫 key，例 `key-point`）。', '');
-  const questions = situationQuestions(situationsMd), rules = animationRules(input.styleMd);
-  if (questions.length) L.push('定大類的四題：', '', ...questions, '');
-  if (rules.length) L.push('退到字卡只能用這幾條當理由（「字卡比較簡單」「時間不夠」不是理由）：', '', ...rules, '');
-
-  L.push('## 3. 情境對照表（句子對到哪一列就用它的「首選」）', '');
-  L.push('要看「次選」「不要用在」：讀 `shared/template/SITUATIONS.md` 那一行（第一欄是行號），不用讀別行。', '');
-  L.push('| 行 | 句子長這樣 | 首選 |', '|---|---|---|');
-  for (const r of situationRows(situationsMd)) L.push(`| ${r.line} | ${cell(cut(r.say, 46))} | ${cell(cut(r.first, 34))} |`);
-  L.push('');
+  L.push('1. **有對得上的錄影或圖片** → media 段（第 5 節）。', '2. **模板**（字卡與模板動畫，工具直接產出）：每一行能用哪幾個，`--map <份>` 會照語意和秒數列出來，從裡面挑最像那幾句話的。講的是過程、對比、數量變化、組成，就用畫得出來的模板動畫（`x-…`）；字卡留給一個名詞、一句重點、一個提醒。相鄰兩段用不同的模板。', '3. **內容設計動畫候選**（第 4 節）：地圖上是 A 的段，照樣先套模板，再寫一句構想。', '');
+  L.push('## 3. 模板怎麼挑', '');
+  L.push('照 `--map <份>` 印的挑；欄位到填骨架時才查：`node shared/template/tools/build.mjs --project projects/<專案> --spec x-process,key-point`（一次查好幾個）。想知道某個模板還有什麼替代、不適合用在哪，才讀 `shared/template/SITUATIONS.md` 講它的那一行。', '');
   if (voiceOnly.length) {
     L.push('**沒有講者的句子**（`chNN.md` 開頭有列）不能用下方字卡和 12、13、14，底下是黑的。照這張換：', '');
     L.push('| 原本想用 | 換成 |', '|---|---|');
@@ -345,9 +338,8 @@ export function renderCommon(input) {
 
   L.push('## 4. 內容設計動畫候選（使用者在停點 ③ 勾了才做）', '');
   L.push('內容設計動畫是設計師子代理從空白畫布專門為一段設計的畫面，質感最好，但一段要多花不少時間，所以**先照常套模板或字卡，再把值得設計的段標成候選**：在那段的 `story` 加 `designIdea`（一句話構想）和 `designWhy`（為什麼值得設計）。使用者在分鏡表勾了，工具才把那段換成內容設計動畫；沒勾就用你寫的模板，所以模板那部分一樣要寫完整。', '');
-  L.push('什麼時候標候選：親身經驗或小故事、比喻、因果與轉折（以前怎樣、後來發現）、抽象的道理、情緒高點、這集最想讓人記住的畫面。**只是在條列、走流程的段落不用標。**判斷方式：把字幕遮起來只看畫面，能不能看懂在講什麼；模板做不到就標。', '');
   L.push('```json', '{"id":"s0305","scene":"key-point","from":"#N","to":"#Me","anchor":"<起點那句的一小段原文>","slots":{…照模板寫完整…},"story":{"say":"<講解在講什麼>","why":"<為什麼用這個模板>","designIdea":"<一句話：畫面上發生什麼事、為什麼這樣畫。不要寫模板名稱>","designWhy":"<為什麼值得設計>"}}', '```', '');
-  L.push(`哪幾段是候選：**照語意地圖上的 A**（第一回合各份提名、主代理全片挑好的，\`work/drafts/<份>.map.md\` 第 3 欄寫 A 的那幾行），不用自己再挑、不用湊數；覺得地圖漏了值得設計的，寫進 decide。段長至少 6 秒、講了 2 句以上才放得下（要有 \`from\`、\`to\`）。相鄰的候選不要用同一種畫面。不要自己寫 \`"design": true\`：那是使用者勾了之後工具換的。`, '');
+  L.push(`哪幾段是候選：**語意地圖上的 A**（\`work/drafts/<份>.map.md\` 第 3 欄；主代理全片挑好的）。覺得地圖漏了值得設計的，寫進 decide。段長至少 6 秒、講了 2 句以上才放得下。相鄰的候選用不同的畫面。\`"design": true\` 是使用者勾了之後工具換的，草稿不寫。`, '');
 
   L.push('## 5. 螢幕錄影、圖片（media）', '');
   L.push('```json', '{"id":"m0301","type":"media","src":"assets/screen/<檔名>","from":"#N","to":"#Me","anchor":"<起點那句的一小段原文>","in":<素材第幾秒>}', '```', '');
@@ -359,16 +351,16 @@ export function renderCommon(input) {
   }
 
   L.push('## 6. 時間怎麼寫', '');
-  L.push('**秒數 build 自己算，不要查 `transcript.json`、不要自己算秒數。** 寫字幕裡有的詞就好，檢查對不上會告訴你改哪裡。', '**模板的「時間下限」（第一拍離段頭、拍與拍、最後一拍到段尾）也不用先算**：照講到的詞綁，`--check-draft` 用實際時間檢查，哪一拍太近、哪段太短會直接說，再照 → 改（同一句的併一拍、少一拍、段頭往前提）。字幕前面的時間只用來看段大概多長。', '');
+  L.push('時間都寫成「第幾句、哪個詞」，秒數工具算。拍放不放得下 `--check-draft` 用實際時間檢查，會直接說哪一拍要改（常見的改法：同一句的併一拍、少一拍、段頭往前提一句）。', '');
   L.push('| 寫法 | 意思 |', '|---|---|', '| `#N`／`#Ne` | 第 N 句的起點／結尾 |', '| `#N+0.3`、`#Ne-0.2` | 再加減秒數 |', '| `#N@詞` | 第 N 句裡講到這個詞的時間（卡片主文字、每條項目、動畫站都綁這個） |', '| `+1.2` | 本段起點之後 1.2 秒（只能用在 at、beats） |', '');
   L.push('段的 `from` 綁這段第一句；JSON 不能有註解、最後一項後面不能有逗號。02 章節角標可以和別段重疊，不用接縫；其他段（含 14 講者介紹）一段接一段，不重疊（這段的 `to` 寫下一段的 `from`）。', '');
 
   L.push('## 7. 草稿格式', '');
   L.push('每一章寫一份 `work/drafts/chNN.json`，`story` 每段都要有（分鏡表由工具從這裡產生，不用另外寫）：', '');
   L.push('```json', '{"chapter":"03","segments":[{"id":"s0301","scene":"key-point","from":"#N","to":"#Me","anchor":"…","slots":{"key":"…"},"beats":{"keyAt":"#N@詞"},"story":{"say":"講解在講什麼","why":"為什麼這樣呈現"}}],"icons":{"剪輯清單":"scissors"},"quotes":[{"n":42,"text":"原句","card":"卡上文字（≤ 14 字）","mood":"正"}],"moods":[{"at":"#N@詞","kind":"pain"},{"at":"#M@詞","kind":"turn","zoom":true}],"decide":["拿不定、要使用者決定的事"]}', '```', '');
-  L.push('骨架第一次填：Read 一次整份、填好用 Write 一次寫回（`auto` 格和其他欄位原樣保留）。`chNN.md` 有「章節段」就原樣貼進 segments 最前面（大綱不寫它；之後再跑 `--outline` 會洗掉，要重貼）。', '寫完先驗這一份（不會被別章影響）：`node shared/template/tools/build.mjs --project projects/<專案> --check-draft chNN`。之後只用 Edit 改它點名的那幾格。✖ 全修。⚠ 只修一輪：照 → 用 Edit 改那幾格（不要整份重寫），再跑同一條檢查一次就停，留下的 ⚠ 寫進 decide 或回報。印「通過」或「可以交件」都算過關。同一個 ✖ 改 2 次還在，停下來回報指令和 ✖ 原文。', '');
-  L.push('金句只放 `quotes`（每份最多 2 則，挑最像翻轉句的），不要排成 15 金句字卡段（使用者勾了才上）；那幾句照常排在一般的段裡，和 quotes 重複沒關係。`mood` 寫 正、負、中 其中一個。同一個物件全集用同一個圖示：`icons` 寫你用的對應；圖示名寫錯 `--check-draft` 會列最接近的，不用先確認。', '');
-  L.push(`**情緒點寫 \`moods\`**：音效照講者的情緒放，不照模板。挑講者情緒最強的那個詞，寫 \`{ "at": "#N@詞", "kind": "…" }\`，\`kind\` 只有五種：${Object.entries(MOOD_KINDS).map(([k, v]) => `\`${k}\` ${v.zh}（${v.sound}）`).join('、')}。約每分鐘 1 個（\`chNN.md\` 寫了這一份要幾個），工具會照強弱取捨、對齊詞的開口、把同一分鐘模板的預設音效拿掉，你不用算秒數也不用管上限。金句、反轉、數字落定那一下可以加 \`"zoom": true\`（講者畫面爆衝推近，約每分鐘最多 1 次），只在講者露臉的時候有效。`, '');
+  L.push('骨架由 `--outline` 產生，你填 `<…>` 和 `#N@詞`；寫 `auto` 的格子和其他欄位原樣留著。`chNN.md` 有「章節段」就原樣貼進 segments 最前面（再跑 `--outline` 會洗掉，要重貼）。', '');
+  L.push('- **畫面上的字**：`<≤N 字>` 是上限。卡上的字用字幕原詞時，時間寫 `auto` 的格子工具會自己找到講到它的地方；改寫過的（字幕沒有這幾個字）就寫 `#N@詞`（那句字幕裡連續的 2–4 個字）。清單、條列每一項把最該記住的詞包成 `**詞**`（主色，每項最多 1 個）。', '- **金句**寫 `quotes`（每份最多 2 則，挑最像翻轉句的），不另外排成金句字卡的段：使用者在分鏡表勾了才上。那幾句照常排在一般的段裡。`mood` 寫 正、負、中 其中一個。', '- `story.why` 工具先填了那個模板的用途，有更貼切的理由再改；`story.say` 寫這段在講什麼。', '- **圖示**寫中文常見的（手機、電腦…）工具會換成英文；同一個東西全集用同一個，對應寫在 `icons`。要查名稱：`--icons 手機,雲端`。');
+  L.push(`- **情緒點寫 \`moods\`**：音效照講者的情緒放，不照模板。挑講者情緒最強的那個詞，寫 \`{ "at": "#N@詞", "kind": "…" }\`，\`kind\` 只有五種：${Object.entries(MOOD_KINDS).map(([k, v]) => `\`${k}\` ${v.zh}（${v.sound}）`).join('、')}。約每分鐘 1 個（\`chNN.md\` 寫了這一份要幾個），數量上限、秒數工具處理。金句、反轉、數字落定那一下可以加 \`"zoom": true\`（講者畫面爆衝推近，約每分鐘最多 1 次），只在講者露臉的時候有效。`, '');
 
   L.push('## 8. 這裡沒寫才去查', '');
   L.push('| 要查什麼 | 去哪裡 |', '|---|---|');
@@ -379,7 +371,7 @@ export function renderCommon(input) {
   return `${L.join('\n')}\n`;
 }
 
-// 寫法.md：每種字卡、每支模板動畫一節，開頭固定「**名稱**」，要哪個 grep 哪個
+// .spec.md（工具用的資料，--spec 查）：每種字卡、每支模板動畫一節，開頭固定「**名稱**」，要哪個 grep 哪個
 export function renderSnippets(input) {
   const { format, fillSpecs = [] } = input;
   const scenes = (input.scenes || []).filter((s) => !(format?.portrait && s.portrait === 'none'));
@@ -428,11 +420,11 @@ export function renderSnippets(input) {
   L.push('寫了 `template`＋`slots` 就好，`from`／`to` 綁這段的第一句和最後一句。每項的 `at` 綁講到那個東西的詞。', '');
   L.push('**段太短、放不下「時間下限」時**：同一句講到的併同一拍或少一拍；段頭往前提（從前一句開始）。不要把段尾延進下一個話題。還是放不下就換字卡。', '');
   for (const f of fillSpecs) {
-    L.push(`**${f.template}**（拍型 ${f.beat ?? '—'}）${f.when ? `：${f.when}` : ''}`, '');
+    L.push(`**${f.template}**（拍型 ${f.beat ?? '—'}，${f.layout === 'overlay' ? '疊加' : '子母畫面'}）${f.when ? `：${f.when}` : ''}`, '');
     L.push('```json', fillSnippet(f), '```');
     const all = fillSummary(f);
     if (all) L.push(`全部欄位：${all}`);
-    if (f.generator === 'scene' && input.illus?.length) L.push(`畫廊元件（illus）：${input.illus.join('、')}；螢幕類的狀態（opts.screen、state）：blank、video、play、rec、check、warn、shorts、qr、app。畫廊沒有的物件寫 \`icon\`（lucide 名稱，用 \`--icons 甲,乙\` 查），不要新畫 SVG`);
+    if (f.generator === 'scene' && input.illus?.length) L.push(`畫廊元件（illus）：${input.illus.join('、')}；螢幕類的狀態（opts.screen、state）：blank、video、play、rec、check、warn、shorts、qr、app。畫廊沒有的物件先查圖庫（\`--pics 甲,乙\`：常用物件的線稿，每個附使用時機），parts 寫 \`{ "id": "a", "pic": "<圖庫 id>" }\`；圖庫也沒有才寫 \`icon\`（lucide 名稱，用 \`--icons 甲,乙\` 查），不要新畫 SVG`);
     const floor = floorLine(f.floors);
     if (floor) L.push(floor);
     L.push('');
@@ -463,7 +455,7 @@ export function fillSummary(f) {
   return fillSummaryBody(f) + lines;
 }
 function fillSummaryBody(f) {
-  if (f.generator === 'scene') return 'title（≤10）；parts 每個 { id, illus|icon|src|wave, opts, label ≤10, row, side, pre, stand, w, h }（也可以 { id, layout, gap, parts: […] } 疊成一組）；links ["a>b", "a-b"]；beats 每拍 { at, in, line, state, move, count, wave, check, focus, dim, sfx, peel }（state 寫 [元件 id, 原本的狀態, 換成的狀態]，例 ["b","blank","play"]＝b 的螢幕從 blank 換成 play；不換狀態就不寫）；route（路線圖）；sticker: true（貼紙風格：元件一張一張貼上，最後一拍可以寫 { at, peel: true } 整組撕走）';
+  if (f.generator === 'scene') return 'title（≤10）；parts 每個 { id, illus|pic|icon|src|wave, opts, label ≤10, row, side, pre, stand, w, h }（也可以 { id, layout, gap, parts: […] } 疊成一組）；links ["a>b", "a-b"]；beats 每拍 { at, in, line, state, move, count, wave, check, focus, dim, sfx, peel }（state 寫 [元件 id, 原本的狀態, 換成的狀態]，例 ["b","blank","play"]＝b 的螢幕從 blank 換成 play；不換狀態就不寫）；route（路線圖）；sticker: true（貼紙風格：元件一張一張貼上，最後一拍可以寫 { at, peel: true } 整組撕走）';
   const limit = (d) => [d.required ? '必填' : '選填', d.max != null ? `≤${d.max}` : '', d.type === 'icon' ? '圖示名' : d.type === 'at' ? '#N@詞' : d.type === 'number' ? '數字' : d.type === 'enum' ? (d.options || []).join('／') : ''].filter(Boolean).join('、');
   return Object.entries(f.slots || {}).map(([k, d]) => {
     if (d.type !== 'list') return `${k}（${d.label ? `${d.label}：` : ''}${limit(d)}）`;
@@ -494,13 +486,13 @@ export function fillSnippet(f) {
   return JSON.stringify({ id: 'x0301', type: 'custom', template: f.template, from: '#N', to: '#Me', anchor: '<起點那句的一小段原文>', slots });
 }
 
-// 語意.md：第一回合（語意地圖）只要讀這份和自己那份 chNN.md，不讀共用.md、寫法.md
+// 語意.md：第一回合（語意地圖）只要讀這份和自己那份 chNN.md，不讀共用.md
 export function renderSemantic(input) {
   const { project, situationsMd, videoDur = 0, parts = [] } = input;
   const types = semanticTypes(situationsMd), target = designTarget(videoDur), cap = designCap(target);
   const L = [];
   L.push(`# 語意地圖（第一回合）：${project}（build.mjs --scaffold 產生，不要手改）`, '');
-  L.push('第一回合只做一件事：讀你那份 `chNN.md` 的字幕，把句子分組、標語意和分級，寫成 `work/drafts/<份>.map.md`。**這一回合不挑模板、不讀 `共用.md`、`寫法.md`**：模板第二回合照地圖挑，工具會把每一行能用的模板縮好。', '');
+  L.push('第一回合只做一件事：讀你那份 `chNN.md` 的字幕，把句子分組、標語意和分級，寫成 `work/drafts/<份>.map.md`。這一回合只要這份和你那份 `chNN.md`：模板第二回合才挑，工具會把每一行能用的列出來。', '');
   L.push('## 1. 分級：力氣花在觀眾注意力最高的地方', '');
   L.push('| 級 | 是什麼 | 畫面 |', '|---|---|---|');
   L.push('| A 亮點 | 開場、核心比喻、反轉、親身經歷或小故事、抽象的道理、這集最想讓人記住的畫面、結尾 | 內容設計動畫候選（停點 ③ 使用者勾了才做；第二回合照樣先套模板） |');

@@ -20,16 +20,6 @@
     "reason": "設計師回報上限：只交一段動畫，比 AGENTS.md 規則 8 的子代理 25 行短"
   },
   {
-    "file": "design-build.md",
-    "text": "最多 5 行",
-    "reason": "設計師階段一回報上限：鏡位腳本在檔案裡，回報只寫構想"
-  },
-  {
-    "file": "design-build.md",
-    "text": "最多 10 行",
-    "reason": "設計師階段二回報上限：只交一段動畫，比 AGENTS.md 規則 8 的子代理 25 行短"
-  },
-  {
     "file": "director.md",
     "text": "最多 2000 字",
     "reason": "導演子代理寫的視覺語言會貼進每段設計師的資料，要短"

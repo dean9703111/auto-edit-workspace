@@ -1,0 +1,75 @@
+{
+  "template": "x-point",
+  "prefix": "xpt",
+  "beat": "F",
+  "layout": "fullscreen",
+  "when": "子母畫面中間的一句重點、提醒、轉折或小結（一兩句、4 秒起）：一個大圖示加一句話，講到那個詞的瞬間出現；前後都是全畫面的動畫時用它，不用切回講者",
+  "slots": {
+    "tag": {
+      "label": "小標（選填，例「重點」「注意」「接下來」）",
+      "type": "text",
+      "max": 6
+    },
+    "key": {
+      "label": "那一句重點（用字幕原詞）",
+      "type": "text",
+      "max": 9,
+      "required": true
+    },
+    "sub": {
+      "label": "補一句（選填）",
+      "type": "text",
+      "max": 14
+    },
+    "icon": {
+      "label": "圖示",
+      "type": "icon",
+      "required": true
+    },
+    "at": {
+      "label": "講到那句重點的時間",
+      "type": "at",
+      "ref": "T1",
+      "required": true
+    }
+  },
+  "sample": {
+    "tag": "重點",
+    "key": "先確認再開拍",
+    "sub": "省下重錄的時間",
+    "icon": "circle-check",
+    "at": "#461@確認"
+  },
+  "sampleMin": {
+    "key": "先確認再開拍",
+    "icon": "circle-check",
+    "at": "#461@確認"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "主卡＋圖示",
+      "moves": "開場（依前段）；＋0.45 彈出（圖示）",
+      "focus": "主卡"
+    },
+    {
+      "if": "sub",
+      "beat": "1",
+      "at": "`{at}`",
+      "show": "「{key}」＋補一句「{sub}」",
+      "moves": "逐字上浮（重點句）；重拍（圖示）；＋0.5 淡入（補一句）",
+      "focus": "「{key}」",
+      "sfx": "ding"
+    },
+    {
+      "if": "!sub",
+      "beat": "1",
+      "at": "`{at}`",
+      "show": "「{key}」",
+      "moves": "逐字上浮（重點句）；重拍（圖示）",
+      "focus": "「{key}」",
+      "sfx": "ding"
+    }
+  ]
+}

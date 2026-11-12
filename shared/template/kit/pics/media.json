@@ -1,0 +1,323 @@
+{
+ "id": "media",
+ "zh": "影音與創作",
+ "when": "講到拍片、剪輯、修圖、設計、音樂",
+ "items": [
+  {
+   "id": "movie",
+   "zh": "電影膠卷",
+   "when": "講到影片、電影、一支片",
+   "tags": [
+    "影片",
+    "電影",
+    "膠卷"
+   ],
+   "file": "media/movie.svg",
+   "from": "tabler:movie"
+  },
+  {
+   "id": "clapperboard",
+   "zh": "場記板",
+   "when": "講到開拍、拍攝現場、Action",
+   "tags": [
+    "場記板",
+    "開拍",
+    "拍攝"
+   ],
+   "file": "media/clapperboard.svg",
+   "from": "lucide:clapperboard"
+  },
+  {
+   "id": "play",
+   "zh": "播放",
+   "when": "講到按播放、開始播、試看",
+   "tags": [
+    "播放",
+    "開始"
+   ],
+   "file": "media/play.svg",
+   "from": "tabler:player-play"
+  },
+  {
+   "id": "pause",
+   "zh": "暫停",
+   "when": "講到暫停、先停一下、停頓",
+   "tags": [
+    "暫停",
+    "停頓"
+   ],
+   "file": "media/pause.svg",
+   "from": "tabler:player-pause"
+  },
+  {
+   "id": "record",
+   "zh": "錄製",
+   "when": "講到正在錄、按下錄影",
+   "tags": [
+    "錄製",
+    "錄影中"
+   ],
+   "file": "media/record.svg",
+   "from": "tabler:player-record"
+  },
+  {
+   "id": "photo",
+   "zh": "照片",
+   "when": "講到圖片、照片、縮圖、封面圖",
+   "tags": [
+    "照片",
+    "圖片",
+    "縮圖",
+    "封面"
+   ],
+   "file": "media/photo.svg",
+   "from": "tabler:photo"
+  },
+  {
+   "id": "music",
+   "zh": "音樂",
+   "when": "講到配樂、背景音樂、音效",
+   "tags": [
+    "音樂",
+    "配樂",
+    "音效"
+   ],
+   "file": "media/music.svg",
+   "from": "tabler:music"
+  },
+  {
+   "id": "volume",
+   "zh": "音量",
+   "when": "講到聲音大小、音量、開聲音",
+   "tags": [
+    "音量",
+    "聲音"
+   ],
+   "file": "media/volume.svg",
+   "from": "tabler:volume"
+  },
+  {
+   "id": "mute",
+   "zh": "靜音",
+   "when": "講到沒聲音、靜音、關掉聲音",
+   "tags": [
+    "靜音",
+    "沒聲音"
+   ],
+   "file": "media/mute.svg",
+   "from": "tabler:volume-off"
+  },
+  {
+   "id": "broadcast",
+   "zh": "直播訊號",
+   "when": "講到直播、開台、播出去",
+   "tags": [
+    "直播",
+    "開台",
+    "播出"
+   ],
+   "file": "media/broadcast.svg",
+   "from": "tabler:broadcast"
+  },
+  {
+   "id": "podcast",
+   "zh": "Podcast",
+   "when": "講到 Podcast、訪談、聲音節目",
+   "tags": [
+    "Podcast",
+    "訪談",
+    "節目"
+   ],
+   "file": "media/podcast.svg",
+   "from": "tabler:microphone-2"
+  },
+  {
+   "id": "scissors",
+   "zh": "剪刀",
+   "when": "講到剪輯、剪掉、剪片",
+   "tags": [
+    "剪刀",
+    "剪輯",
+    "剪掉"
+   ],
+   "file": "media/scissors.svg",
+   "from": "tabler:scissors"
+  },
+  {
+   "id": "cut-tool",
+   "zh": "刀片",
+   "when": "講到切一刀、分割片段",
+   "tags": [
+    "切",
+    "分割",
+    "刀片"
+   ],
+   "file": "media/cut-tool.svg",
+   "from": "tabler:slice"
+  },
+  {
+   "id": "brush",
+   "zh": "筆刷",
+   "when": "講到上色、畫圖、美術",
+   "tags": [
+    "筆刷",
+    "畫圖",
+    "上色"
+   ],
+   "file": "media/brush.svg",
+   "from": "tabler:brush"
+  },
+  {
+   "id": "palette",
+   "zh": "調色盤",
+   "when": "講到配色、調色、色彩",
+   "tags": [
+    "調色盤",
+    "配色",
+    "調色"
+   ],
+   "file": "media/palette.svg",
+   "from": "tabler:palette"
+  },
+  {
+   "id": "pencil",
+   "zh": "鉛筆",
+   "when": "講到寫、編輯、修改文字",
+   "tags": [
+    "鉛筆",
+    "寫",
+    "編輯"
+   ],
+   "file": "media/pencil.svg",
+   "from": "tabler:pencil"
+  },
+  {
+   "id": "color-picker",
+   "zh": "滴管",
+   "when": "講到取色、選顏色",
+   "tags": [
+    "滴管",
+    "取色"
+   ],
+   "file": "media/color-picker.svg",
+   "from": "tabler:color-picker"
+  },
+  {
+   "id": "layers",
+   "zh": "圖層",
+   "when": "講到圖層、疊加、一層一層",
+   "tags": [
+    "圖層",
+    "疊加",
+    "層"
+   ],
+   "file": "media/layers.svg",
+   "from": "tabler:stack-2"
+  },
+  {
+   "id": "crop",
+   "zh": "裁切",
+   "when": "講到裁切、構圖、切掉邊",
+   "tags": [
+    "裁切",
+    "構圖"
+   ],
+   "file": "media/crop.svg",
+   "from": "tabler:crop"
+  },
+  {
+   "id": "wand",
+   "zh": "魔術棒",
+   "when": "講到一鍵完成、自動處理、變魔術",
+   "tags": [
+    "魔術棒",
+    "自動",
+    "一鍵"
+   ],
+   "file": "media/wand.svg",
+   "from": "tabler:wand"
+  },
+  {
+   "id": "sparkles",
+   "zh": "亮點",
+   "when": "講到效果、變好看、質感提升",
+   "tags": [
+    "亮點",
+    "特效",
+    "質感"
+   ],
+   "file": "media/sparkles.svg",
+   "from": "tabler:sparkles"
+  },
+  {
+   "id": "subtitles",
+   "zh": "字幕",
+   "when": "講到字幕、上字幕、CC",
+   "tags": [
+    "字幕",
+    "CC"
+   ],
+   "file": "media/subtitles.svg",
+   "from": "tabler:badge-cc"
+  },
+  {
+   "id": "screen-share",
+   "zh": "螢幕分享",
+   "when": "講到螢幕錄影、分享畫面",
+   "tags": [
+    "螢幕分享",
+    "螢幕錄影"
+   ],
+   "file": "media/screen-share.svg",
+   "from": "tabler:screen-share"
+  },
+  {
+   "id": "typography",
+   "zh": "字體",
+   "when": "講到字體、字卡、標題字",
+   "tags": [
+    "字體",
+    "字卡",
+    "文字"
+   ],
+   "file": "media/typography.svg",
+   "from": "tabler:typography"
+  },
+  {
+   "id": "vector",
+   "zh": "向量圖",
+   "when": "講到設計稿、向量、畫線稿",
+   "tags": [
+    "向量",
+    "設計",
+    "線稿"
+   ],
+   "file": "media/vector.svg",
+   "from": "tabler:vector"
+  },
+  {
+   "id": "aspect-ratio",
+   "zh": "畫面比例",
+   "when": "講到橫式直式、比例、尺寸",
+   "tags": [
+    "比例",
+    "橫式",
+    "直式",
+    "尺寸"
+   ],
+   "file": "media/aspect-ratio.svg",
+   "from": "tabler:aspect-ratio"
+  },
+  {
+   "id": "timeline",
+   "zh": "時間軸",
+   "when": "講到時間軸、軌道、排片段",
+   "tags": [
+    "時間軸",
+    "軌道"
+   ],
+   "file": "media/timeline.svg",
+   "from": "tabler:timeline"
+  }
+ ]
+}

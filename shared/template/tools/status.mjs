@@ -447,7 +447,7 @@ export function projectStatus(project) {
     : camera && !boxed
       ? { at: '剪好看／② 通過，量講者框', skill: 'auto-edit-storyboard 步驟 4', next: '量講者框，再產生分鏡素材（依序跑下面 2 行）', stop: '③ 分鏡表', cmds: [speaker, scaffold] }
       : !pack
-        ? { at: camera ? '剪好看／產生分鏡素材' : '剪好看／產生分鏡素材（沒有講者：跳過 ② 構圖和講者框）', skill: 'auto-edit-storyboard 步驟 4', next: '產生 work/分鏡素材/（共用.md、寫法.md、每章一份 chNN.md）', stop: '③ 分鏡表', cmds: [scaffold] }
+        ? { at: camera ? '剪好看／產生分鏡素材' : '剪好看／產生分鏡素材（沒有講者：跳過 ② 構圖和講者框）', skill: 'auto-edit-storyboard 步驟 4', next: '產生 work/分鏡素材/（共用.md、語意.md、每章一份 chNN.md）', stop: '③ 分鏡表', cmds: [scaffold] }
         : mapFlow && mapMissing.length
           ? { at: `剪好看／第一回合：語意地圖（還缺 ${list8(mapMissing)}）`, skill: 'auto-edit-storyboard 步驟 5', next: `${partKeys.length > 1 ? '一份派一個子代理寫 work/drafts/<份>.map.md，同一則回覆一次派出（派工：auto-edit-storyboard 的 references/chapter-worker.md 第一回合）' : '照 work/分鏡素材/語意.md 寫 work/drafts/ch01.map.md'}；還缺 ${list8(mapMissing)}。全部寫好才跑下一行（合併地圖、全片校正）`, stop: '③ 分鏡表', cmds: [mapMerge] }
           : mapFlow && !mapOk
@@ -456,7 +456,7 @@ export function projectStatus(project) {
           ? { at: `剪好看／${mapFlow ? '第二回合：' : ''}寫分鏡草稿（還缺 ${list8(draftMissing)}）`, skill: 'auto-edit-storyboard 步驟 5', next: `${partKeys.length > 1 ? `一份派一個子代理寫 work/drafts/<份>.json，同一則回覆一次派出（派工：auto-edit-storyboard 的 references/chapter-worker.md${mapFlow ? ' 第二回合；能接續第一回合的子代理就接續' : ''}）` : '照 work/分鏡素材/ 的 共用.md 和那一份寫 work/drafts/<份>.json'}；還缺 ${list8(draftMissing)}。全部寫好才跑下一行合併`, stop: '③ 分鏡表', cmds: [merge] }
           : !merged
             ? { at: '剪好看／合併分鏡草稿', skill: 'auto-edit-storyboard 步驟 5', next: '合併 work/drafts/ 成 plan.json 的 scenes', stop: '③ 分鏡表', cmds: [merge] }
-            : { at: '剪好看／產生分鏡表', skill: designMissing.length ? 'auto-edit-storyboard 步驟 6–7' : 'auto-edit-storyboard 步驟 7', next: designMissing.length ? `內容設計動畫一段派一個設計師子代理寫鏡位腳本，同一則回覆一次派出（派工：auto-edit-motion 的 references/design-script.md）：${list8(designMissing)}；全部回來才跑下一行（build、截圖、產生分鏡表、停在停點 ③）` : '截圖、產生分鏡表、開分鏡表頁、記停點 ③，一條指令做完', stop: '③ 分鏡表', cmds: [storyCmd] };
+            : { at: '剪好看／產生分鏡表', skill: designMissing.length ? 'auto-edit-storyboard 步驟 6–7' : 'auto-edit-storyboard 步驟 7', next: designMissing.length ? `內容設計動畫一段派一個設計師子代理寫鏡位腳本，同一則回覆一次派出（派工：auto-edit-motion 的 references/design.md）：${list8(designMissing)}；全部回來才跑下一行（build、截圖、產生分鏡表、停在停點 ③）` : '截圖、產生分鏡表、開分鏡表頁、記停點 ③，一條指令做完', stop: '③ 分鏡表', cmds: [storyCmd] };
 
   // 停點 ③：確認了就套回 plan.json；還沒給使用者看就產生分鏡表（--storyboard 會記 ③ 待回覆）
   const s10 = passed('③ 分鏡表')
@@ -513,8 +513,8 @@ export function projectStatus(project) {
     // 接手時主代理沒看過 --apply-storyboard 印的派工行：這裡照印同樣的行，不讓主代理自己寫派工訊息
     const isDz = (id) => planJson?.scenes?.find((s) => s.id === id)?.design, scripted = (id) => fs.existsSync(W(path.join('designs', `${id}.md`)));
     const dz = motion.filter(isDz), lines = [
-      [dz.filter(scripted), `你是設計師，負責 ${A} 的內容設計動畫 <段>。先載入 hyperframes skill，再照 .agents/skills/auto-edit-motion/references/design-build.md 做動畫。`],
-      [dz.filter((id) => !scripted(id)), `你是設計師，負責 ${A} 的內容設計動畫 <段>。先照 .agents/skills/auto-edit-motion/references/design-script.md 寫鏡位腳本（不用等確認），寫完載入 hyperframes skill，接著照 design-build.md 做動畫。`],
+      [dz.filter(scripted), `你是設計師，負責 ${A} 的內容設計動畫 <段>。鏡位腳本已經寫好：照 .agents/skills/auto-edit-motion/references/design.md 做動畫（第 2 節）。`],
+      [dz.filter((id) => !scripted(id)), `你是設計師，負責 ${A} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design.md 寫鏡位腳本、接著做動畫（不用等確認）。`],
       [motion.filter((id) => !isDz(id)), '照 .agents/skills/auto-edit-motion/references/worker-brief.md 改 <段> 的動畫檔。'],
     ].filter(([ids]) => ids.length).map(([ids, l]) => `（${ids.join('、')}）${l}`);
     next = `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（一次最多 ${agentLimit(path.resolve(HERE, '..', '..'))} 個，回來再派下一批）；派工訊息只送下面對應的那一行（換掉 <段>，不要另外加要求）：\n  ${lines.join('\n  ')}\n全部回來才跑下一行`;

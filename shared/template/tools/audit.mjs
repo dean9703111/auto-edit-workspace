@@ -107,7 +107,8 @@ import { FULL, gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarn
 import { matteKindOf } from './lib/matte.mjs';
 import { templateFor, formatReport as checkTable } from './lib/plan.mjs';
 import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings, pickBeatSheet } from './lib/audit-beats.mjs';
-import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners } from './lib/audit-illus.mjs';
+import { loadPics, picOfSrc } from './lib/pics.mjs';
+import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners, designColorFindings, designRotateFindings } from './lib/audit-illus.mjs';
 import { judgeLayoutRules } from './lib/audit-layout.mjs';
 import { resolveFormat, formatLine, canvasOf } from './lib/canvas.mjs';
 
@@ -358,7 +359,7 @@ export async function audit(flags, { log = console.log } = {}) {
         msg: `index.html 和 plan.json 對不上：#el-${j.it.id} 在 index.html 從 ${m.host.start}s 開始，plan.json 算出來是 ${j.it.start}s`, fix: `重跑 node shared/template/tools/build.mjs --project ${project}` });
       return out;
     }
-    out.raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), badgeBox: pl ? null : j.it.badgeBox ?? null, speakerBox: matteKindOf(j.it, P.out) ? null : res.globals.speakerBox, sideShift: res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
+    out.raw.push(...judgeSample(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, pipOn: !pl && pipOnAt(j.it, j.t), badgeBox: pl ? null : j.it.badgeBox ?? null, speakerBox: matteKindOf(j.it, P.out) ? null : res.globals.speakerBox, sideShift: res.globals.panelSide === 'right' ? -res.globals.sideShift : res.globals.sideShift, speakerWarn: speakerWarnOf(j.it),
       W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.geo ? { geo: pl.geo } : {}), ...(pl && pl.stage ? { stage: pl.stage } : {}) }));
     out.raw.push(...judgeLayout(m, { item: j.it, t: j.t, kind: j.kind, layout: seg.layout, ...(pl && pl.stage && pl.stage.window ? { contentY: [pl.stage.window[1], pl.stage.window[3]] } : j.it.wide && j.it.seg?.design ? { contentY: FULL.y } : {}) }));
     // 012 版面：完成態量 data-layout 容器（SceneLayout.measure，版面座標）；有容器時 illus 的手排對齊交給它
@@ -402,6 +403,7 @@ export async function audit(flags, { log = console.log } = {}) {
   const pageErrs = scriptErrors(pageErrors, pick.list, htmlOf);
   const ilDir = path.join(P.out, 'illus-local');
   const local = fs.existsSync(ilDir) ? fs.readdirSync(ilDir).filter((f) => /^[A-Za-z0-9]+\.svg$/.test(f)).map((f) => f.slice(0, -4)) : [];
+  const picsLib = loadPics(path.join(P.templateDir, 'kit'));   // 圖庫（028）：data-illus-src="kit/pics/<類別>/<id>.svg" 也認
   report.warnings.push(...pageErrs.warnings);
   const cue = cueFindings(cueErrs, pick.list);
   report.warnings.push(...cue.warnings);
@@ -431,9 +433,11 @@ export async function audit(flags, { log = console.log } = {}) {
     motion.push(...fontShrinkFindings({ item: it, html, tpl, file: it.file }));
     motion.push(...rootSelectorFindings({ item: it, html, file: it.file }));
     if (!sheet) motion.push(noSheetFinding(it, it.file));
-    else if (mo) motion.push(...beatFindings({ item: it, sheet, marks: mo.marks || [], cuesOut: res.cuesOut || [], html, file: it.file, local }));
+    else if (mo) motion.push(...beatFindings({ item: it, sheet, marks: mo.marks || [], cuesOut: res.cuesOut || [], html, file: it.file, local, picIds: new Set((picsLib?.items || []).map((x) => x.id)) }));
     // 011 示意動畫：元件名與 illus-local 檔、閃爍、先有節點再畫線
-    motion.push(...illusNameFindings({ item: it, html, file: it.file, local }));
+    motion.push(...illusNameFindings({ item: it, html, file: it.file, local, isPic: (s) => !!picOfSrc(picsLib, s) }));
+    motion.push(...designColorFindings({ item: it, html, file: it.file }));
+    motion.push(...designRotateFindings({ item: it, html, file: it.file }));
     if (bs.list) motion.push(...illusListFindings({ item: it, list: bs.list, html, local }));
     motion.push(...illusMotionFindings(mo, { item: it }));
     report.notes.push(...r.notes);
@@ -460,8 +464,16 @@ export async function audit(flags, { log = console.log } = {}) {
     const nth = Math.max(...only.map((id) => runCount(P, `audit:${id}`)));
     if (nth >= 2 && findings.length) report.settled = true;
   }
+  // 026 驗收次數的上限由工具數（子代理不用自己數工具呼叫）：同一段驗收到第 AUDIT_TRY_MAX 次還有 ✖ 就叫它停手回報。
+  // 重派、改版確認、回饋輪開始時 resetRuns 會歸零
+  if (only && P.out && !flags.review) {
+    const tries = Math.max(...only.map((id) => runCount(P, `audit-try:${id}`)));
+    if (!report.ok && tries >= AUDIT_TRY_MAX) report.stop = tries;
+  }
   return report;
 }
+
+export const AUDIT_TRY_MAX = 6;
 
 // 預設只印 ✖、⚠ 與統計；verbose 才印全表、每張截圖、節奏備註（長片一段一行也有上百行）
 export function formatReport(r, { verbose = false } = {}) {
@@ -494,6 +506,7 @@ export function formatReport(r, { verbose = false } = {}) {
   if (r.segments.length) {
     const looks = r.shots?.length ? '' : r.only ? '要看畫面：這條加 --shots --sheet。' : '要看畫面：qc.mjs storyboard --sheet。';
     L.push('', ne ? `未通過：${ne} 個錯誤（✖），${nw} 個提醒（⚠）。照 → 後面的改法改 custom 檔（或 plan.json 後重跑 build），再跑一次 audit。` : `通過：${r.segments.length} 段，${nw} 個提醒（⚠）。${r.settled ? '可以交件，⚠ 不用再修。' : ''}audit 量的是幾何，畫面對不對還要看圖。${looks}`);
+    if (r.stop) L.push(`→ 停手：這一段已經驗收 ${r.stop} 次還有 ✖。不要再改，把上面還在的 ✖ 原文回報主代理（回報格式照你那份說明的「停手」那一行）。`);
     const bad = [...new Set(r.findings.flatMap((f) => f.at || []))].sort((a, b) => a - b).slice(0, 12);
     // 有 --only 的是工人（不能跑 snapshot）：看圖用 --shots --sheet
     if (bad.length && !r.only && !r.shots?.length) L.push(`看畫面：cd ${r.project}/work/hyperframes && npx hyperframes snapshot --at ${bad.map((t) => r3(t)).join(',')} --no-end -o ../../output/qc`);

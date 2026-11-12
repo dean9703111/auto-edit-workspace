@@ -1,0 +1,119 @@
+{
+  "template": "x-comment",
+  "prefix": "xcm",
+  "beat": "H",
+  "layout": "fullscreen",
+  "when": "轉述別人說的話：觀眾留言、私訊、網友的提問或評論（「有人留言問我…」「很多人私訊說…」）；留言卡逐字打出那句話，有回答的話講到回答時下面彈出回覆卡",
+  "slots": {
+    "name": {
+      "label": "誰說的（例「觀眾留言」「@小明」「網友」）",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "meta": {
+      "label": "來源或時間（選填，例「3 天前」「YouTube」）",
+      "type": "text",
+      "max": 6
+    },
+    "quote": {
+      "label": "留言第一行（用字幕原詞）",
+      "type": "text",
+      "max": 15,
+      "required": true
+    },
+    "quote2": {
+      "label": "留言第二行（選填）",
+      "type": "text",
+      "max": 15
+    },
+    "likes": {
+      "label": "讚數（選填，只寫數字）",
+      "type": "text",
+      "max": 2
+    },
+    "quoteAt": {
+      "label": "講到留言內容第一個詞的時間",
+      "type": "at",
+      "ref": "T1",
+      "required": true
+    },
+    "replyTag": {
+      "label": "回覆卡的標籤（選填，例「我的回答」；有 reply 才寫）",
+      "type": "text",
+      "max": 4,
+      "with": ["reply"]
+    },
+    "reply": {
+      "label": "回覆（選填，要和 replyAt 一起寫；有回覆標籤時 ≤ 12 字）",
+      "type": "text",
+      "max": 14,
+      "with": ["replyAt"]
+    },
+    "replyAt": {
+      "label": "講到回答的時間（選填；要比 quoteAt 晚 2.6 秒以上）",
+      "type": "at",
+      "ref": "T2",
+      "with": ["reply"]
+    }
+  },
+  "lines": [
+    {
+      "label": "回覆標籤＋回覆（replyTag＋reply）",
+      "slots": ["replyTag", "reply"],
+      "weights": [1, 1.3],
+      "max": 20.5,
+      "fix": "有回覆標籤時回覆 ≤ 12 字：縮短回覆，或不寫回覆標籤（回覆可以到 14 字）"
+    }
+  ],
+  "sample": {
+    "name": "觀眾留言",
+    "meta": "3 天前",
+    "quote": "剪一支片到底要多久？",
+    "quote2": "每次都弄到半夜",
+    "likes": "128",
+    "quoteAt": "#472@剪",
+    "replyTag": "我的回答",
+    "reply": "現在半小時就夠",
+    "replyAt": "#474@其實"
+  },
+  "sampleMin": {
+    "name": "觀眾留言",
+    "quote": "剪一支片到底要多久？",
+    "quoteAt": "#472@剪"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "留言卡＋頭像＋「{name}」",
+      "moves": "開場（依前段）；＋0.45 彈出（頭像）；＋0.6 圖示描線（頭像）；＋0.6 淡入（名稱）",
+      "focus": "留言卡"
+    },
+    {
+      "if": "likes",
+      "beat": "1",
+      "at": "`{quoteAt}`",
+      "show": "留言「{quote}」＋讚數 {likes}",
+      "moves": "打字（留言）；＋1.3 彈出（讚數）；＋1.4 圖示描線（讚）",
+      "focus": "留言"
+    },
+    {
+      "if": "!likes",
+      "beat": "1",
+      "at": "`{quoteAt}`",
+      "show": "留言「{quote}」",
+      "moves": "打字（留言）",
+      "focus": "留言"
+    },
+    {
+      "if": "reply",
+      "beat": "2",
+      "at": "`{replyAt}`",
+      "show": "回覆卡「{reply}」",
+      "moves": "游標移動（留言卡上移讓位）；退焦（留言卡）；＋0.2 彈出（回覆箭頭、回覆卡）；＋0.35 圖示描線（回覆箭頭）",
+      "focus": "回覆",
+      "sfx": "ding"
+    }
+  ]
+}

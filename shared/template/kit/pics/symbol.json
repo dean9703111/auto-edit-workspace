@@ -1,0 +1,327 @@
+{
+ "id": "symbol",
+ "zh": "符號與狀態",
+ "when": "講到對錯、警告、方向、狀態、強調",
+ "items": [
+  {
+   "id": "check",
+   "zh": "勾",
+   "when": "講到正確、完成、可以",
+   "tags": [
+    "勾",
+    "正確",
+    "完成"
+   ],
+   "file": "symbol/check.svg",
+   "from": "tabler:check"
+  },
+  {
+   "id": "x",
+   "zh": "叉",
+   "when": "講到錯誤、不行、取消",
+   "tags": [
+    "叉",
+    "錯誤",
+    "取消"
+   ],
+   "file": "symbol/x.svg",
+   "from": "tabler:x"
+  },
+  {
+   "id": "circle-check",
+   "zh": "圓圈勾",
+   "when": "講到通過、成功",
+   "tags": [
+    "通過",
+    "成功"
+   ],
+   "file": "symbol/circle-check.svg",
+   "from": "tabler:circle-check"
+  },
+  {
+   "id": "circle-x",
+   "zh": "圓圈叉",
+   "when": "講到失敗、被拒絕",
+   "tags": [
+    "失敗",
+    "拒絕"
+   ],
+   "file": "symbol/circle-x.svg",
+   "from": "tabler:circle-x"
+  },
+  {
+   "id": "alert-triangle",
+   "zh": "警告",
+   "when": "講到注意、小心、警告",
+   "tags": [
+    "警告",
+    "注意",
+    "小心"
+   ],
+   "file": "symbol/alert-triangle.svg",
+   "from": "tabler:alert-triangle"
+  },
+  {
+   "id": "alert-circle",
+   "zh": "驚嘆號",
+   "when": "講到重要提醒、出狀況",
+   "tags": [
+    "驚嘆號",
+    "提醒"
+   ],
+   "file": "symbol/alert-circle.svg",
+   "from": "tabler:alert-circle"
+  },
+  {
+   "id": "ban",
+   "zh": "禁止",
+   "when": "講到不可以、禁止、封鎖",
+   "tags": [
+    "禁止",
+    "封鎖"
+   ],
+   "file": "symbol/ban.svg",
+   "from": "tabler:ban"
+  },
+  {
+   "id": "plus",
+   "zh": "加號",
+   "when": "講到新增、加上、更多",
+   "tags": [
+    "加號",
+    "新增"
+   ],
+   "file": "symbol/plus.svg",
+   "from": "tabler:plus"
+  },
+  {
+   "id": "minus",
+   "zh": "減號",
+   "when": "講到減少、拿掉",
+   "tags": [
+    "減號",
+    "減少"
+   ],
+   "file": "symbol/minus.svg",
+   "from": "tabler:minus"
+  },
+  {
+   "id": "equal",
+   "zh": "等號",
+   "when": "講到等於、一樣",
+   "tags": [
+    "等號",
+    "等於"
+   ],
+   "file": "symbol/equal.svg",
+   "from": "tabler:equal"
+  },
+  {
+   "id": "arrow-right",
+   "zh": "向右箭頭",
+   "when": "講到下一步、前往、變成",
+   "tags": [
+    "箭頭",
+    "下一步"
+   ],
+   "file": "symbol/arrow-right.svg",
+   "from": "tabler:arrow-right"
+  },
+  {
+   "id": "arrow-up",
+   "zh": "向上箭頭",
+   "when": "講到提升、往上",
+   "tags": [
+    "向上",
+    "提升"
+   ],
+   "file": "symbol/arrow-up.svg",
+   "from": "tabler:arrow-up"
+  },
+  {
+   "id": "arrow-down",
+   "zh": "向下箭頭",
+   "when": "講到下降、往下",
+   "tags": [
+    "向下",
+    "下降"
+   ],
+   "file": "symbol/arrow-down.svg",
+   "from": "tabler:arrow-down"
+  },
+  {
+   "id": "arrows-exchange",
+   "zh": "交換",
+   "when": "講到互換、對調、來回",
+   "tags": [
+    "交換",
+    "對調"
+   ],
+   "file": "symbol/arrows-exchange.svg",
+   "from": "tabler:arrows-exchange"
+  },
+  {
+   "id": "repeat",
+   "zh": "重複",
+   "when": "講到重複、循環、再一次",
+   "tags": [
+    "重複",
+    "循環"
+   ],
+   "file": "symbol/repeat.svg",
+   "from": "tabler:repeat"
+  },
+  {
+   "id": "infinity",
+   "zh": "無限",
+   "when": "講到無限、不限次數、永遠",
+   "tags": [
+    "無限"
+   ],
+   "file": "symbol/infinity.svg",
+   "from": "tabler:infinity"
+  },
+  {
+   "id": "hash",
+   "zh": "井字號",
+   "when": "講到編號、hashtag、主題標籤",
+   "tags": [
+    "井字號",
+    "hashtag"
+   ],
+   "file": "symbol/hash.svg",
+   "from": "tabler:hash"
+  },
+  {
+   "id": "question-mark",
+   "zh": "問號",
+   "when": "講到為什麼、不確定",
+   "tags": [
+    "問號",
+    "為什麼"
+   ],
+   "file": "symbol/question-mark.svg",
+   "from": "tabler:question-mark"
+  },
+  {
+   "id": "exclamation-mark",
+   "zh": "驚嘆",
+   "when": "講到重點、驚訝",
+   "tags": [
+    "驚嘆",
+    "重點"
+   ],
+   "file": "symbol/exclamation-mark.svg",
+   "from": "tabler:exclamation-mark"
+  },
+  {
+   "id": "eye-off",
+   "zh": "隱藏",
+   "when": "講到看不到、隱藏、不公開",
+   "tags": [
+    "隱藏",
+    "看不到"
+   ],
+   "file": "symbol/eye-off.svg",
+   "from": "tabler:eye-off"
+  },
+  {
+   "id": "hourglass-empty",
+   "zh": "時間到",
+   "when": "講到來不及、時間用完",
+   "tags": [
+    "時間到",
+    "來不及"
+   ],
+   "file": "symbol/hourglass-empty.svg",
+   "from": "tabler:hourglass-empty"
+  },
+  {
+   "id": "loader",
+   "zh": "載入中",
+   "when": "講到等待、處理中、轉圈",
+   "tags": [
+    "載入",
+    "處理中"
+   ],
+   "file": "symbol/loader.svg",
+   "from": "tabler:loader"
+  },
+  {
+   "id": "medal",
+   "zh": "獎牌",
+   "when": "講到名次、獲獎",
+   "tags": [
+    "獎牌",
+    "名次"
+   ],
+   "file": "symbol/medal.svg",
+   "from": "tabler:medal"
+  },
+  {
+   "id": "focus",
+   "zh": "對焦",
+   "when": "講到專注、聚焦、鎖定",
+   "tags": [
+    "對焦",
+    "專注",
+    "聚焦"
+   ],
+   "file": "symbol/focus.svg",
+   "from": "tabler:focus-2"
+  },
+  {
+   "id": "maximize",
+   "zh": "放大",
+   "when": "講到放大、全螢幕",
+   "tags": [
+    "放大",
+    "全螢幕"
+   ],
+   "file": "symbol/maximize.svg",
+   "from": "tabler:maximize"
+  },
+  {
+   "id": "minimize",
+   "zh": "縮小",
+   "when": "講到縮小、收起來",
+   "tags": [
+    "縮小"
+   ],
+   "file": "symbol/minimize.svg",
+   "from": "tabler:minimize"
+  },
+  {
+   "id": "click",
+   "zh": "點擊",
+   "when": "講到點一下、互動",
+   "tags": [
+    "點擊"
+   ],
+   "file": "symbol/click.svg",
+   "from": "tabler:click"
+  },
+  {
+   "id": "pointer",
+   "zh": "游標",
+   "when": "講到滑鼠游標、指著",
+   "tags": [
+    "游標"
+   ],
+   "file": "symbol/pointer.svg",
+   "from": "tabler:pointer"
+  },
+  {
+   "id": "confetti",
+   "zh": "彩帶",
+   "when": "講到慶祝、恭喜、達成",
+   "tags": [
+    "彩帶",
+    "慶祝",
+    "恭喜"
+   ],
+   "file": "symbol/confetti.svg",
+   "from": "tabler:confetti"
+  }
+ ]
+}

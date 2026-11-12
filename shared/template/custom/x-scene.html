@@ -12,7 +12,8 @@
   - 只有名詞、沒有動作：用 12 關鍵詞或 x-callout。
   - 抽象的先後步驟、沒有具體物件：用 x-process；資料在裝置之間怎麼走、要畫架構：用 x-architecture。
   - 物件超過 4 個、狀態要換超過 3 次：拆成兩段。
-  - 畫廊沒有、圖示組合也表達不了的物件：先照 shared/template/kit/illus-style.md 畫成 work/hyperframes/illus-local/<名稱>.svg，再回來組裝。
+  - 畫廊沒有的常用物件：先查圖庫（node shared/template/tools/build.mjs --project projects/<專案> --pics <詞>），有就用 data-illus-src="kit/pics/<類別>/<id>.svg"。
+  - 畫廊、圖庫都沒有、圖示組合也表達不了的物件：先照 shared/template/kit/illus-style.md 畫成 work/hyperframes/illus-local/<名稱>.svg，再回來組裝。
 
   【要改的地方】
   只改兩塊 DATA，其他不用動（這支沒有圖示：主角是插圖元件；script 第一行的 ILLUS.mount 不要動）。

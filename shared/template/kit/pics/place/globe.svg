@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" fill="none">
+  <g class="il-shade" transform="translate(2.2 2.2)"><path d="M7 9a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" fill="var(--il-accent-soft)"/></g>
+  <g transform="translate(1 1)">
+    <path d="M7 9a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" fill="var(--il-body)"/>
+    <path d="M7 9a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M5.75 15a8.015 8.015 0 1 0 9.25 -13" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M11 17v4" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M7 21h8" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+  </g>
+</svg>

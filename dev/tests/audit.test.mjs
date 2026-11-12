@@ -160,12 +160,17 @@ test('✖ 壓到子母畫面：只在全畫面、這一刻有子母畫面時判'
   assert.deepEqual(R.PIP_ZONE, [1424, 581, 1888, 951]);   // 和 lib/media.mjs、build 同一組（程式為準；specs/README.md 主代理裁決）
 });
 
-test('⚠ 壓到講者：面積比例、依門檻；側邊欄加 sideShift；全畫面不判', () => {
+test('壓到講者：面積比例、依門檻（蓋到臉 ✖、只壓到身體 ⚠）；側邊欄加 sideShift；全畫面不判', () => {
   const sb = [750, 236, 1260, 880];
   const list = el({ i: 0, rect: [820, 300, 1340, 600], painted: true, desc: { id: 'xbad-list' } });
   const f = judge([list], { speakerBox: sb, speakerWarn: 0.02 });
   const s = f.find((x) => x.rule === 'speaker');
-  assert.equal(s.level, 'warn');
+  assert.equal(s.level, 'error', '027：這一塊蓋到臉的位置（講者框上緣那 30%）→ ✖');
+  assert.match(s.msg, /^蓋到講者的臉：內容蓋到講者框 \d+%、臉的位置 \d+%/);
+  // 只壓到身體（臉的下面）：還是 ⚠
+  const body = judge([el({ i: 5, rect: [820, 640, 1340, 860], painted: true, desc: { id: 'xbad-body' } })], { speakerBox: sb, speakerWarn: 0.02 }).find((x) => x.rule === 'speaker');
+  assert.equal(body.level, 'warn');
+  assert.match(body.msg, /^壓到講者：/);
   assert.equal(s.data.ratio, +R.coverRatio([[820, 300, 1340, 600]], sb).toFixed(3));
   assert.match(s.msg, /內容蓋到講者框 \d+%.*主要是 #xbad-list/);
   const small = el({ i: 1, rect: [700, 600, 790, 860], painted: true });   // 約 7%
@@ -979,6 +984,8 @@ test('分鏡對齊：beatFindings ✖ 缺拍／多出來的 P.at／語彙不存�
   const voc = run([['0', '`#35`', '', '彈跳出現；淡入', '', '']], [m35], 'P.in(); P.end();');
   assert.deepEqual(voc.map((f) => [f.rule, f.data.word]), [['beats-vocab', '彈跳出現']]);
   assert.match(voc[0].fix, /例如「彈出」/);
+  // 026：內容設計動畫的動態欄一樣只能用語彙表的名稱（全片的動作語言靠它一致）
+  assert.deepEqual(BT.beatFindings({ item: bItem, sheet: sheet([['0', '`#35`', '', '彈跳出現；淡入', '', '']]), marks: [m35], cuesOut: bCues, html: 'tl.from(); P.end();', file: 'compositions/x-design-x05.html' }).map((f) => f.rule), ['beats-vocab']);
   // 用了沒做的動作 → ⚠（每個原語一則；build 內建、背景環境有 P.end 不查）
   const prim = run([['0', '`#35`', '', '漣漪；聚焦；子母畫面飛入；背景環境', '', '']], [m35], 'P.spot(); P.end();');
   assert.deepEqual(prim.map((f) => `${f.level}:${f.rule}:${f.data.prim}`), ['warn:beats-prim:ripple']);
@@ -1274,4 +1281,30 @@ test('P.* 的選擇器從最外層 id 開始 ✖（完成影片裡最外層 id �
   for (const n of fs.readdirSync(dir).filter((x) => x.endsWith('.html'))) {
     assert.deepEqual(R.rootSelectorFindings({ item: { id: n, label: n }, html: fs.readFileSync(path.join(dir, n), 'utf8'), file: n }).map((x) => x.msg), [], n);
   }
+});
+
+test('026 內容設計動畫：顏色寫死 ⚠（style、屬性、svg、GSAP 的顏色）；選擇器、P.at 的 #N 不算；模板檔不查', async () => {
+  const A = await imp('lib/audit-illus.mjs');
+  const html = `<template><!-- #abc 註解不算 --><style>#x-design-s1 #xds1-a { color: #fff; background: var(--brand); box-shadow: 0 2px 8px rgba(0,0,0,.2); } #x-design-s1 #face { fill: none; }</style>
+<div id="xds1-a" style="border-color: #F6630F"></div><svg><path stroke="#111" fill="none"/></svg>
+<script>const T1 = P.at('#131@詞'); tl.to('#xds1-a', { backgroundColor: '#00ff00' }, T1); P.sfx('ding', '#131@詞');</script></template>`;
+  assert.deepEqual(A.colorLiterals(html), ['#fff', 'rgba(0,0,0,.2)', '#F6630F', '#111', '#00ff00']);
+  const f = A.designColorFindings({ item: { id: 's1', label: 'x' }, html, file: 'compositions/x-design-s1.html' });
+  assert.equal(f.length, 1);
+  assert.equal(f[0].level, 'warn');
+  assert.match(f[0].msg, /^顏色寫死：.*#fff、rgba\(0,0,0,\.2\)/);
+  assert.match(f[0].fix, /var\(--brand-ink\)/);
+  assert.deepEqual(A.designColorFindings({ item: { id: 's1', label: 'x' }, html, file: 'compositions/x-scene-s1.html' }), [], '模板檔不查（模板自己的檔由 dev 的檢查管）');
+  assert.deepEqual(A.designColorFindings({ item: { id: 's1', label: 'x' }, html: '<style>#x-design-s1 .a { color: var(--sc-fs-ink); background: transparent; }</style>', file: 'x-design-s1.html' }), []);
+});
+
+test('026 內容設計動畫：旋轉了非 90 度 ⚠（CSS rotate、GSAP rotation）；90 的倍數、模板檔不算', async () => {
+  const A = await imp('lib/audit-illus.mjs');
+  const html = `<style>#x-design-s1 .a { transform: rotate(-4deg); } #x-design-s1 .b { transform: rotate(90deg); }</style><script>tl.to('.a', { rotation: 12, duration: 0.3 }, 1); tl.to('.b', { rotation: 180 }, 2);</script>`;
+  assert.deepEqual(A.rotationLiterals(html), ['rotate(-4deg)', 'rotation: 12']);
+  const f = A.designRotateFindings({ item: { id: 's1', label: 'x' }, html, file: 'compositions/x-design-s1.html' });
+  assert.equal(f[0].rule, 'design-rotate');
+  assert.equal(f[0].level, 'warn');
+  assert.deepEqual(A.designRotateFindings({ item: { id: 's1', label: 'x' }, html, file: 'compositions/x-stamp-s1.html' }), []);
+  assert.deepEqual(A.designRotateFindings({ item: { id: 's1', label: 'x' }, html: '<style>.b { transform: rotate(180deg); }</style>', file: 'x-design-s1.html' }), []);
 });

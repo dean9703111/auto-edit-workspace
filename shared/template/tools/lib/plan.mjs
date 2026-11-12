@@ -37,10 +37,12 @@ import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
 import { floorRules, atConsts, faceZone, coverWarn, FACE_WARN } from './audit-rules.mjs';
+import { layoutFindings, modeOfLayout } from './layout-rhythm.mjs';
+import { sideLayout, SIDES } from './speaker-side.mjs';
 import { readScript } from './script-file.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
-const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'moods', 'scenes'];
+const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'moods', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
@@ -466,9 +468,13 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     speakerBox = null;
   }
   if (speakerBox == null && !errors.length) warnings.push('沒寫 speakerBox：看場地照框出講者頭、身體與手勢（外擴 40px），build 才能檢查右移與碰撞');
-  const sideShift = plan.sideShift ?? 480;
+  // 027 講者位置（lib/speaker-side.mjs）：講者在左／中／右決定字卡靠哪邊、半螢幕的面板從哪邊推入、講者移多少。
+  //   sideShift 不寫＝照講者框算（在右就不用移那麼多；在中間和以前一樣 480）；plan.json 可以寫死 speakerSide、sideShift
+  if (plan.speakerSide !== undefined && !SIDES.includes(plan.speakerSide)) errors.push(`speakerSide 只能是 "left"、"center"、"right"（不寫＝照講者框的位置算），現在是 ${JSON.stringify(plan.speakerSide)}`);
+  const sl = sideLayout(portrait ? null : speakerBox, C, { side: SIDES.includes(plan.speakerSide) ? plan.speakerSide : null, shift: isNum(plan.sideShift) ? plan.sideShift : null });
+  const sideShift = plan.sideShift ?? Math.abs(sl.shift);
   if (portrait && plan.sideShift !== undefined) warnings.push('直式不用 sideShift（沒有半畫面）→ 刪掉這個欄位');
-  if (!isNum(sideShift) || sideShift < 0 || sideShift > 960) errors.push(`sideShift 要是 0–960 的數字（預設 480），現在是 ${JSON.stringify(plan.sideShift)}`);
+  if (!isNum(sideShift) || sideShift < 0 || sideShift > 960) errors.push(`sideShift 要是 0–960 的數字（不寫＝照講者的位置算，講者在中間是 480），現在是 ${JSON.stringify(plan.sideShift)}`);
   if (plan.frame != null) {
     const fr = plan.frame;
     if (!(Array.isArray(fr) && fr.length === 4 && fr.every(isNum) && fr[0] >= 0 && fr[1] >= 0 && fr[2] > 0 && fr[3] > 0 && fr[0] + fr[2] <= C.W && fr[1] + fr[3] <= C.H))
@@ -1224,9 +1230,13 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   if (spaced && early.length > 1) early[1].warnings.push(`${early[1].where} 開場前 30 秒已經有 ${early.length} 張（建議最多一張）`);
   if (speakerBox) {
     for (const it of timed) {
-      if (it.side && sideShift > 0 && speakerBox[2] + sideShift > C.W) it.warnings.push(`${it.where} 講者右移 ${sideShift} 後右緣到 ${speakerBox[2] + sideShift}，超出畫面 → plan.json 設 "sideShift": 0（講者本來就在面板外），或改用 04a 全畫面清單`);
-      const fam = it.scene ? (FOOT[it.key] || FOOT[it.scene.family]) : null;
+      if (it.side && sideShift > 0 && sl.panelSide === 'left' && speakerBox[2] + sideShift > C.W) it.warnings.push(`${it.where} 講者右移 ${sideShift} 後右緣到 ${speakerBox[2] + sideShift}，超出畫面 → plan.json 設 "sideShift": 0（講者本來就在面板外），或改用 04a 全畫面清單`);
+      if (it.side && sideShift > 0 && sl.panelSide === 'right' && speakerBox[0] - sideShift < 0) it.warnings.push(`${it.where} 講者左移 ${sideShift} 後左緣到 ${speakerBox[0] - sideShift}，超出畫面 → plan.json 設 "sideShift": 0（講者本來就在面板外），或改用 04a 全畫面清單`);
+      let fam = it.scene ? (FOOT[it.key] || FOOT[it.scene.family]) : null;
       if (!fam) continue;
+      // 027：講者在左時，下方字卡、關鍵詞靠右、半螢幕的面板在右 → 版位左右鏡像
+      const mirrored = !portrait && (it.side ? sl.panelSide === 'right' : sl.cardSide === 'right' && (it.lower || it.key === 'keywords'));
+      if (mirrored) fam = fam.map(([x0, y0, x1, y1]) => [C.W - x1, y0, C.W - x0, y1]);
       if (portrait && fam.some((r) => C.unsafe.some((u) => inter(r, u) > 0))) it.warnings.push(`${it.where} 「${it.scene.zh}」會壓到平台介面的範圍（上 240、下 480、右側按鈕列）→ 用 snapshot 確認，被蓋到就換情境`);
       // 模板固定的版位只壓到講者框下半身（身體）不報；蓋到臉的位置、或蓋住講者框四成以上（手勢多半會被擋）才報（門檻和 audit 的「壓到講者」一樣）
       const area = (speakerBox[2] - speakerBox[0]) * (speakerBox[3] - speakerBox[1]);
@@ -1474,10 +1484,17 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     }
   }
 
+  // 027 版面節奏（lib/layout-rhythm.mjs）：有講者的橫式，開頭 30 秒字卡、半螢幕 ≥ 15 秒、子母畫面 ≥ 45 秒。
+  // 大綱那一步（--outline）是 ✖；這裡是 ⚠：之後在剪輯台、修改單改過的段也量得到，但不擋 build
+  if (!portrait && speakerBox) {
+    const lay = timed.filter((x) => x.type !== 'media' || !x.media?.sync).map((x) => ({ id: x.id, start: x.start, end: x.end, mode: modeOfLayout(x.side ? 'side' : x.opaque ? 'pip' : 'overlay', x.key) }));
+    for (const f of layoutFindings(lay, { voice: voiceOut })) warnings.push(`版面節奏：${f.msg} → ${f.fix}`);
+  }
+
   const all = items.flatMap((x) => x.errors);
   return {
     items: timed, allItems: items, errors: [...errors, ...all], warnings: [...warnings, ...items.flatMap((x) => x.warnings), ...moodItems.flatMap((x) => x.warnings)],
-    globals: { speakerBox, sideShift, pipCrop, pip },
+    globals: { speakerBox, sideShift, pipCrop, pip, speakerSide: sl.side, panelSide: sl.panelSide, cardSide: sl.cardSide, sideLine: !portrait && speakerBox ? sl.zh : null },
     edit, editActive: ne.active, tm, outDur: videoDur, roughDur, cuesOut: cues, voiceOnly, voiceOut, voiceGaps, footage, editFx, cutpoints, voiceMoved: [...(cues.voiceMoved || [])],
     moods: moodItems.map((m) => ({ i: m.mood.i, kind: m.mood.kind, event: m.mood.event, zoom: m.mood.zoom, sfx: m.sfx, dropped: m.sfxDropped?.name ?? null, off: m.mood.sfxOff })), zooms,
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro, bed,
@@ -1701,6 +1718,7 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
   }
   // 只是告知（不用改）：逐字稿給的時間落在停頓裡的 #N@詞，已經對到開口（lib/time.mjs onVoice）
   if (res.voiceMoved?.length) lines.push(`綁詞對準開口：${res.voiceMoved.length} 個 #N@詞 原本落在停頓裡（那一刻沒在說話），已移到開口那一刻：${res.voiceMoved.slice(0, 6).join('、')}${res.voiceMoved.length > 6 ? '…' : ''}`);
+  if (res.globals?.sideLine) lines.push(res.globals.sideLine);
   if (res.sfxBudget) lines.push(...res.sfxBudget.lines);
   // 轉場與主題（design-system.md §5、§10；每段的值在 --check --json 的 items[].out.tx）
   const txCount = (k, v) => res.items.filter((it) => it[k] === v).map((it) => it.id);

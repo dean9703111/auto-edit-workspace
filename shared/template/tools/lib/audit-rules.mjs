@@ -396,7 +396,8 @@ export function judgeSample(meas, ctx) {
       }
       const top = [...groups.entries()].sort((a, b) => b[1] - a[1]).map(([g]) => g);
       const who = top.slice(0, 2).map((g) => descText(boxDesc(g.desc))).join('、');
-      push('warn', 'speaker', top[0], `壓到講者：內容蓋到講者框 ${Math.round(ratio * 100)}%${face >= FACE_WARN ? `、臉的位置 ${Math.round(face * 100)}%` : ''}（speakerBox ${JSON.stringify(box)}${ctx.item.side ? `，已加 sideShift ${ctx.sideShift}` : ''}）；主要是 ${who}`,
+      // 027：蓋到臉（臉的位置 ≥ FACE_WARN）是 ✖，一定要移開；只壓到身體、手勢還是 ⚠
+      push(face >= FACE_WARN ? 'error' : 'warn', 'speaker', top[0], `${face >= FACE_WARN ? '蓋到講者的臉' : '壓到講者'}：內容蓋到講者框 ${Math.round(ratio * 100)}%${face >= FACE_WARN ? `、臉的位置 ${Math.round(face * 100)}%` : ''}（speakerBox ${JSON.stringify(box)}${ctx.item.side ? `，已加 sideShift ${ctx.sideShift}` : ''}）；主要是 ${who}`,
         `移到講者框外（例：右緣 ≤ ${box[0]}，或左緣 ≥ ${box[2]}）；用 snapshot 看有沒有擋到臉與手勢，擋到就移位或改 layout: "fullscreen"，只壓到身體就保留、給使用者看預覽時點名`, { ratio: r3(ratio), face: r3(face), box });
     }
   }
@@ -639,9 +640,9 @@ export function judgeLayout(meas, ctx) {
       const k = hit.reduce((a, v) => a + v, 0) / Math.max(1, nx * ny);
       const hero = Math.max(0, ...ils.map((e) => Math.max(e.rect[2] - e.rect[0], e.rect[3] - e.rect[1])));
       if (boxes.length && k < DESIGN.FILL_MIN) push('warn', 'design-sparse', null, `畫面太空：完成態的內容只蓋到主內容區（x ${Z[0]}–${Z[2]}、y ${Z[1]}–${Z[3]}）的 ${Math.round(k * 100)}%（< ${DESIGN.FILL_MIN * 100}%）`,
-        '主角放大到長邊 300–480px、配角 ≥ 180px、標籤字 36–44px，位置跟著拉開；不要多加東西湊滿（design-build.md「大小」）', { fill: Math.round(k * 1000) / 1000 });
+        '主角放大到長邊 300–480px、配角 ≥ 180px、標籤字 36–44px，位置跟著拉開；不要多加東西湊滿（design.md「大小」）', { fill: Math.round(k * 1000) / 1000 });
       else if (ils.length && hero < DESIGN.HERO) push('warn', 'design-hero', null, `主角太小：最大的插圖長邊只有 ${ri(hero)}px（< ${DESIGN.HERO}px）`,
-        '這一段在講的那個物件放大到長邊 300–480px（寬高照比例一起改），其他元件的位置跟著讓開（design-build.md「大小」）', { hero: ri(hero) });
+        '這一段在講的那個物件放大到長邊 300–480px（寬高照比例一起改），其他元件的位置跟著讓開（design.md「大小」）', { hero: ri(hero) });
     }
   }
   return out;

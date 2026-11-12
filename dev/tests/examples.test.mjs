@@ -54,6 +54,9 @@ const EXAMPLES = {
   'x-wall': { pre: 'xwl', range: [431, 433], noIcon: true, overlay: true },
   'x-magazine': { pre: 'xmg', range: [441, 443], noIcon: true, overlay: true },
   'x-breakout': { pre: 'xbk', range: [451, 453], noIcon: true, overlay: true },
+  // 027 補情境：短版一句重點（子母畫面區塊中間的重點句不用切回講者；one＝整段只有一拍，只綁一句、【D 下限】兩條）、留言卡、路線地圖、程式碼改前改後（沒有主卡：視窗 #xcd-win）、排名長條圖
+  'x-point': { pre: 'xpt', range: [461, 462], one: true }, 'x-comment': { pre: 'xcm', range: [471, 474] }, 'x-route': { pre: 'xrt', range: [481, 485] },
+  'x-code-diff': { pre: 'xcd', range: [491, 495], card: 'xcd-win' }, 'x-rank': { pre: 'xrk', range: [501, 507] },
 };
 const COUNT = Object.keys(EXAMPLES).length;
 process.env.AUTO_EDIT_MATTE = 'box';   // 人物去背：測試不下載、不跑模型（lib/matte.mjs 的 boxRemove）
@@ -109,7 +112,7 @@ function lowerOf(p) {
   return out;
 }
 
-for (const [id, { pre, range, card, noIcon, overlay }] of Object.entries(EXAMPLES)) {
+for (const [id, { pre, range, card, noIcon, overlay, one }] of Object.entries(EXAMPLES)) {
   const p = parse(id);
 
   test(`${id}：readCustom 過、R7.3 骨架（三處 id、$q、兩行 forEach、P.end()、timeline 登記）`, () => {
@@ -143,7 +146,7 @@ for (const [id, { pre, range, card, noIcon, overlay }] of Object.entries(EXAMPLE
     assert.equal(p.sample.start, 0);
     assert.ok(p.sample.D > 0);
     const refs = readCustom(p.file, id).refs;
-    assert.ok(refs.length >= 2, '至少綁兩句');
+    assert.ok(refs.length >= (one ? 1 : 2), one ? '至少綁一句' : '至少綁兩句');
     for (const ref of refs) assert.ok(Number.isFinite(atOf(p.sample, ref)), `${id}：sample 算不出 P.at('${ref}') → data-cues-sample 補上這一句${ref.includes('@') ? '（@詞 寫在 refs）' : ''}`);
     const nums = [...Object.keys(p.sample.cues).map(Number), ...refs.map((r) => Number(r.match(/^#(\d+)/)[1]))];
     for (const n of nums) assert.ok(n >= range[0] && n <= range[1], `${id}：#${n} 不在 #${range[0]}–#${range[1]}`);
@@ -153,7 +156,7 @@ for (const [id, { pre, range, card, noIcon, overlay }] of Object.entries(EXAMPLE
   test(`${id}：【D 下限】可解析，sample 的拍點與 D 都滿足`, () => {
     const beats = { ...beatsOf(p), D: p.sample.D };
     const low = lowerOf(p);
-    assert.ok(low.length >= 3 && low.some((c) => c.x === 'D'), `D 下限至少 3 條、含 D ≥ …（解析到 ${JSON.stringify(low)}）`);
+    assert.ok(low.length >= (one ? 2 : 3) && low.some((c) => c.x === 'D'), `D 下限至少 ${one ? 2 : 3} 條、含 D ≥ …（解析到 ${JSON.stringify(low)}）`);
     for (const { x, y, n } of low) {
       assert.ok(x in beats, `【D 下限】的 ${x} 在 script 裡沒有 const ${x} = P.at(…)`);
       const need = (y ? beats[y] : 0) + n;
@@ -451,7 +454,7 @@ test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build →
     const bs = Object.values(beatsOf(p)).sort((x, y) => x - y);
     times.push(start + p.sample.D - 0.6, start + bs[0] + 1, start + bs[Math.floor(bs.length / 2)] + 1);
   }
-  const ts = times.map((t) => Math.round(t * 100) / 100);
+  const ts = [...new Set(times.map((t) => Math.round(t * 100) / 100))];   // 只有一拍的模板（x-point）第一拍和中間拍是同一格，不重複截
   const seq = [...ts].sort((x, y) => x - y), shuf = [...ts.filter((_, i) => i % 3 === 0).reverse(), ...ts.filter((_, i) => i % 3 !== 0)];
   const hf = path.join(dir, 'work', 'hyperframes');
   // 每次 snapshot 先截一格暖身（0.1 s，不比）：剛開的瀏覽器第一格的反鋸齒和之後的不同

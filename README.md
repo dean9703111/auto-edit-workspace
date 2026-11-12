@@ -89,7 +89,21 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 
 **看圖操作：① 下拉選單換呈現方式（可以先看範例） → ② 橘底的字直接改 → ③ 不滿意就寫補充說明 → ④ 回到對話說「可以」。** 內容存回 `work/storyboard.md`，AI 照這份檔製作，也可以用對話叫它改。[在官網直接試用這個介面](https://deanlin.net/auto-edit-workspace/demo/storyboard.html)。
 
-畫面會長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看（本機打開 `shared/template/index.html` 也可以，建議用 Chrome 或 Edge）：18 種情境模板、41 支情境動畫範例、示意動畫、40 種字卡動態。頁面上方可以切換風格包和亮色／暗色，還沒開始剪就能比較。
+畫面會長什麼樣子，先到[官網的情境庫](https://deanlin.net/auto-edit-workspace/shared/template/)看（本機打開 `shared/template/index.html` 也可以，建議用 Chrome 或 Edge）：18 種情境模板、46 支情境動畫範例、示意動畫、40 種字卡動態。頁面上方可以切換風格包和亮色／暗色，還沒開始剪就能比較。
+
+每一段用哪種版面，不是各段自己決定：AI 會先排整支片的版面節奏，切進去就待夠久，畫面不會跳來跳去。
+
+<p align="center"><a href="dev/site/guides/layout-rhythm.svg"><picture><source media="(max-width: 600px)" srcset="dev/site/guides/layout-rhythm-mobile.svg"><img src="dev/site/guides/layout-rhythm.svg" alt="版面節奏：開頭 30 秒以字卡為主、半螢幕一次至少 15 秒、子母畫面一次至少 45 秒；下方是一支片前兩分鐘的版面安排示意" width="1000"></picture></a></p>
+
+- **開頭 30 秒以字卡為主**：講者滿版露臉，先讓觀眾認識你。
+- **半螢幕一次至少 15 秒，子母畫面一次至少 45 秒**：排不到這個長度的段，AI 會併進前後的段，或改回疊在講者上的字卡；不合的地方檢查時會列出來。
+- **講者站左、中、右都可以**：量一次講者的位置，字卡和半螢幕面板自動放到另一邊；字卡蓋到臉，檢查會擋下來。
+
+<p align="center"><a href="dev/site/guides/speaker-side.svg"><picture><source media="(max-width: 600px)" srcset="dev/site/guides/speaker-side-mobile.svg"><img src="dev/site/guides/speaker-side.svg" alt="講者在左、中、右時的版面：講者在左，字卡靠右、面板從右邊出來；講者在中間或右邊，字卡與面板在左" width="1000"></picture></a></p>
+
+講到具體的東西（手機、雲端、獎盃、行李箱…）時，AI 先到[圖庫](https://deanlin.net/auto-edit-workspace/shared/template/kit/pics-gallery.html)找現成的線稿：444 個常用物件、分 16 類，每一張都寫了什麼時候用，顏色跟著你的主色與亮暗主題（本機打開 `shared/template/kit/pics-gallery.html`）。
+
+<p align="center"><a href="dev/site/guides/pics.jpg"><img src="dev/site/guides/pics.jpg" alt="圖庫一覽：手機、筆電、檔案、訊息、人物、獎盃、錢、工具、AI、書、建築、交通、飲食、健康、天氣、符號等常用物件的線稿，每張下面是中文名" width="1000"></a></p>
 
 ## 不滿意就改
 
@@ -170,7 +184,7 @@ AI 先做一版，你有三種改法：
 |---|---|---|---|
 | 風格 | 主色、字型、背景圖、子母畫面外框 | `shared/template/styles/`、`shared/template/kit/brand.css` | 「換風格」「換主色」 |
 | 字卡 | 18 個情境模板、40 種字卡動態 | `shared/template/scenes/`、`shared/template/fx/` | 在分鏡表換編號 |
-| 模組 | 41 支情境動畫範例（含講者去背、站在動畫前面的三招：整面詞牆、雜誌封面、破框而出）、線稿示意動畫 | `shared/template/custom/` | 「s12 重新設計」 |
+| 模組 | 46 支情境動畫範例（含講者去背、站在動畫前面的三招：整面詞牆、雜誌封面、破框而出）、線稿示意動畫、圖庫（444 個常用物件的線稿） | `shared/template/custom/`、`shared/template/kit/pics/` | 「s12 重新設計」 |
 | 片型 | 橫式長片、直式短影片、只有聲音 | 開工決策表 | 「做直式」 |
 | 心法 | 哪種句子配哪種畫面、什麼時候推近講者、音效跟著情緒走 | `shared/template/SITUATIONS.md`、`shared/style.md`、`shared/template/BEATS.md` | 「以後都…」 |
 

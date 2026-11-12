@@ -96,10 +96,10 @@ const layoutOf = (item) => item?.layoutZh || '—';
 
 // 內容設計動畫候選：草稿照常套模板，另外在 story 寫 designIdea（構想）、designWhy（為什麼值得設計）；③ 勾了才改成內容設計動畫
 export const isDesignPick = (seg) => !seg.design && seg.type !== 'media' && !!String(seg.story?.designIdea || '').trim();
-// 時間成本（建議初值，shared/style.md「內容設計動畫」）：一段約 12 分鐘、同時 4 段；③ 預設勾到預估 ≤ 30 分鐘
+// 時間成本（建議初值，shared/style.md「內容設計動畫」）：一段約 12 分鐘、同時 4 段；建議先做的那幾段＝預估 ≤ 30 分鐘
 export const DESIGN_MIN = 12, DESIGN_PAR = 4, DESIGN_BUDGET = 30;
 export const designMinutes = (n) => Math.ceil(n / DESIGN_PAR) * DESIGN_MIN;
-// 預設勾哪幾段：各章輪流（章照出現順序），同一章段長的先；加到下一段會超過預算就停。cands＝[{ id, part, secs }]
+// 要勾的話建議先做哪幾段：各章輪流（章照出現順序），同一章段長的先；加到下一段會超過預算就停。cands＝[{ id, part, secs }]
 export function defaultPicks(cands) {
   const parts = [];
   for (const c of cands) { let g = parts.find((x) => x.part === c.part); if (!g) parts.push(g = { part: c.part, list: [] }); g.list.push(c); }
@@ -110,14 +110,16 @@ export function defaultPicks(cands) {
   for (const id of order) { if (designMinutes(on.size + 1) > DESIGN_BUDGET) break; on.add(id); }
   return on;
 }
+// 026：預設都不勾（作者 2026-11-12：分鏡確認後先全部套模板合成，看完預覽不滿意的段再專門設計；
+// 之前預設勾到 30 分鐘的預算，一開工就要等設計師做完才看得到第一版）。on＝預設勾的（空的）；suggest＝要勾的話建議先做哪幾段
 export function designPlan(segs, { items = new Map(), partOf = () => '—' } = {}) {
   const cands = segs.filter(isDesignPick).map((s) => { const it = items.get(s.id); return { id: s.id, part: partOf(s), secs: it ? it.end - it.start : 0 }; });
-  const on = defaultPicks(cands);
-  return { cands, on, minutes: designMinutes(on.size), all: designMinutes(cands.length) };
+  const suggest = defaultPicks(cands);
+  return { cands, on: new Set(), suggest, minutes: 0, all: designMinutes(cands.length) };
 }
-export const designPlanLine = (d) => (d.on.size === d.cands.length
-  ? `預設全勾 ${d.on.size} 段（預估 ${d.minutes} 分鐘，${DESIGN_PAR} 段同時做）`
-  : `預設勾 ${d.on.size} 段（預估 ${d.minutes} 分鐘，${DESIGN_PAR} 段同時做）；全勾 ${d.cands.length} 段約 ${d.all} 分鐘`);
+export const designPlanLine = (d) => (d.on.size
+  ? `勾了 ${d.on.size} 段（預估 ${d.minutes} 分鐘，${DESIGN_PAR} 段同時做）；全勾 ${d.cands.length} 段約 ${d.all} 分鐘`
+  : `預設都不勾：先全部套模板出完成影片預覽（全勾 ${d.cands.length} 段約 ${d.all} 分鐘，${DESIGN_PAR} 段同時做）`);
 
 const DESIGN_KEEP = ['id', 'from', 'to', 'duration', 'anchor', 'sfx', 'sfxExtra', 'pip', 'sfxVolume', 'note'];
 export function toDesign(seg) {
@@ -270,12 +272,12 @@ export function renderStoryboard(ctx) {
   }
   const dp = designPlan(segs, { items, partOf: chapterOf });
   if (dp.cands.length) {
-    L.push('### 內容設計動畫候選（☑ 的段從空白畫布專門設計；取消勾就照現在的版面）', '', '| 段 | 時間碼 | 現在用 | 構想 | 為什麼值得設計 | 預估 | 要不要 ☐ |', '|---|---|---|---|---|---|---|');
+    L.push('### 內容設計動畫候選（預設都不勾：先照現在的版面合成；勾 ☑ 的段才從空白畫布專門設計）', '', '| 段 | 時間碼 | 現在用 | 構想 | 為什麼值得設計 | 預估 | 要不要 ☐ |', '|---|---|---|---|---|---|---|');
     for (const c of dp.cands) {
       const s = segs.find((x) => x.id === c.id), it = items.get(s.id);
       L.push(`| ${s.id} | ${clock(it?.start)}–${clock(it?.end)} | ${cell(cardLabel(s, it))} | ${cell(s.story.designIdea)} | ${cell(s.story.designWhy || '—')} | ${DESIGN_MIN} 分鐘 | ${dp.on.has(s.id) ? '☑' : '☐'} |`);
     }
-    L.push('', `${designPlanLine(dp)}；要更快就取消勾，要更多就勾上（${DESIGN_PAR} 段一批，每批約 ${DESIGN_MIN} 分鐘）`, '');
+    L.push('', `${designPlanLine(dp)}。想一開始就專門設計的段才勾（${DESIGN_PAR} 段一批，每批約 ${DESIGN_MIN} 分鐘）；也可以先看完成影片預覽，不滿意再說「<段> 重新設計」`, '');
   }
   const mr = moodRows(ctx);
   if (mr.length) {

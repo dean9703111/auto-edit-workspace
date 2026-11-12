@@ -1,0 +1,316 @@
+{
+ "id": "place",
+ "zh": "地點與建築",
+ "when": "講到在哪裡、建築、場所、地圖",
+ "items": [
+  {
+   "id": "home",
+   "zh": "家",
+   "when": "講到在家、住家、首頁",
+   "tags": [
+    "家",
+    "住家"
+   ],
+   "file": "place/home.svg",
+   "from": "tabler:home"
+  },
+  {
+   "id": "building",
+   "zh": "大樓",
+   "when": "講到公司、辦公室",
+   "tags": [
+    "大樓",
+    "公司",
+    "辦公室"
+   ],
+   "file": "place/building.svg",
+   "from": "tabler:building"
+  },
+  {
+   "id": "skyscraper",
+   "zh": "摩天大樓",
+   "when": "講到大企業、都市、總部",
+   "tags": [
+    "摩天大樓",
+    "企業",
+    "都市"
+   ],
+   "file": "place/skyscraper.svg",
+   "from": "tabler:building-skyscraper"
+  },
+  {
+   "id": "hospital",
+   "zh": "醫院",
+   "when": "講到醫院、看病",
+   "tags": [
+    "醫院"
+   ],
+   "file": "place/hospital.svg",
+   "from": "tabler:building-hospital"
+  },
+  {
+   "id": "factory",
+   "zh": "工廠",
+   "when": "講到工廠、生產、製造",
+   "tags": [
+    "工廠",
+    "生產"
+   ],
+   "file": "place/factory.svg",
+   "from": "tabler:building-factory-2"
+  },
+  {
+   "id": "warehouse",
+   "zh": "倉庫",
+   "when": "講到倉庫、庫存、存放",
+   "tags": [
+    "倉庫",
+    "庫存"
+   ],
+   "file": "place/warehouse.svg",
+   "from": "tabler:building-warehouse"
+  },
+  {
+   "id": "church",
+   "zh": "教堂",
+   "when": "講到教堂、婚禮",
+   "tags": [
+    "教堂"
+   ],
+   "file": "place/church.svg",
+   "from": "tabler:building-church"
+  },
+  {
+   "id": "castle",
+   "zh": "城堡",
+   "when": "講到城堡、堡壘、護城河",
+   "tags": [
+    "城堡"
+   ],
+   "file": "place/castle.svg",
+   "from": "tabler:building-castle"
+  },
+  {
+   "id": "bridge",
+   "zh": "橋",
+   "when": "講到橋接、連接兩邊",
+   "tags": [
+    "橋",
+    "連接"
+   ],
+   "file": "place/bridge.svg",
+   "from": "tabler:building-bridge"
+  },
+  {
+   "id": "lighthouse",
+   "zh": "燈塔",
+   "when": "講到指引、方向、燈塔",
+   "tags": [
+    "燈塔",
+    "指引"
+   ],
+   "file": "place/lighthouse.svg",
+   "from": "tabler:building-lighthouse"
+  },
+  {
+   "id": "stadium",
+   "zh": "體育場",
+   "when": "講到比賽場地、演唱會",
+   "tags": [
+    "體育場",
+    "場館"
+   ],
+   "file": "place/stadium.svg",
+   "from": "tabler:building-stadium"
+  },
+  {
+   "id": "tent",
+   "zh": "帳篷",
+   "when": "講到露營、戶外",
+   "tags": [
+    "帳篷",
+    "露營"
+   ],
+   "file": "place/tent.svg",
+   "from": "tabler:tent"
+  },
+  {
+   "id": "map",
+   "zh": "地圖",
+   "when": "講到地圖、位置、路線",
+   "tags": [
+    "地圖",
+    "位置"
+   ],
+   "file": "place/map.svg",
+   "from": "tabler:map"
+  },
+  {
+   "id": "map-pin",
+   "zh": "圖釘位置",
+   "when": "講到地點、打卡、在這裡",
+   "tags": [
+    "地點",
+    "打卡",
+    "位置"
+   ],
+   "file": "place/map-pin.svg",
+   "from": "tabler:map-pin"
+  },
+  {
+   "id": "pin",
+   "zh": "圖釘",
+   "when": "講到釘選、固定、置頂",
+   "tags": [
+    "圖釘",
+    "釘選",
+    "置頂"
+   ],
+   "file": "place/pin.svg",
+   "from": "tabler:pin"
+  },
+  {
+   "id": "globe",
+   "zh": "地球儀",
+   "when": "講到全球、國外、世界各地",
+   "tags": [
+    "地球儀",
+    "全球"
+   ],
+   "file": "place/globe.svg",
+   "from": "tabler:globe"
+  },
+  {
+   "id": "mountain",
+   "zh": "山",
+   "when": "講到爬山、挑戰、高峰",
+   "tags": [
+    "山",
+    "挑戰",
+    "高峰"
+   ],
+   "file": "place/mountain.svg",
+   "from": "tabler:mountain"
+  },
+  {
+   "id": "beach",
+   "zh": "海灘",
+   "when": "講到度假、放鬆、海邊",
+   "tags": [
+    "海灘",
+    "度假"
+   ],
+   "file": "place/beach.svg",
+   "from": "tabler:beach"
+  },
+  {
+   "id": "trees",
+   "zh": "樹林",
+   "when": "講到公園、森林、戶外",
+   "tags": [
+    "樹林",
+    "公園"
+   ],
+   "file": "place/trees.svg",
+   "from": "tabler:trees"
+  },
+  {
+   "id": "road",
+   "zh": "道路",
+   "when": "講到路上、一路走來、路線",
+   "tags": [
+    "道路",
+    "路"
+   ],
+   "file": "place/road.svg",
+   "from": "tabler:road"
+  },
+  {
+   "id": "signpost",
+   "zh": "路標",
+   "when": "講到方向、往這邊",
+   "tags": [
+    "路標",
+    "方向"
+   ],
+   "file": "place/signpost.svg",
+   "from": "tabler:sign-right"
+  },
+  {
+   "id": "door",
+   "zh": "門",
+   "when": "講到入口、進門、門檻",
+   "tags": [
+    "門",
+    "入口"
+   ],
+   "file": "place/door.svg",
+   "from": "tabler:door"
+  },
+  {
+   "id": "door-enter",
+   "zh": "進門",
+   "when": "講到加入、登入、進去",
+   "tags": [
+    "進門",
+    "加入",
+    "登入"
+   ],
+   "file": "place/door-enter.svg",
+   "from": "tabler:door-enter"
+  },
+  {
+   "id": "door-exit",
+   "zh": "出門",
+   "when": "講到離開、登出、退出",
+   "tags": [
+    "出門",
+    "離開",
+    "登出"
+   ],
+   "file": "place/door-exit.svg",
+   "from": "tabler:door-exit"
+  },
+  {
+   "id": "elevator",
+   "zh": "電梯",
+   "when": "講到上下樓、快速上升",
+   "tags": [
+    "電梯"
+   ],
+   "file": "place/elevator.svg",
+   "from": "tabler:elevator"
+  },
+  {
+   "id": "fence",
+   "zh": "圍籬",
+   "when": "講到界線、限制、隔開",
+   "tags": [
+    "圍籬",
+    "界線"
+   ],
+   "file": "place/fence.svg",
+   "from": "tabler:fence"
+  },
+  {
+   "id": "garden-cart",
+   "zh": "推車",
+   "when": "講到搬運、園藝",
+   "tags": [
+    "推車"
+   ],
+   "file": "place/garden-cart.svg",
+   "from": "tabler:garden-cart"
+  },
+  {
+   "id": "fountain",
+   "zh": "噴泉",
+   "when": "講到廣場、源源不絕",
+   "tags": [
+    "噴泉"
+   ],
+   "file": "place/fountain.svg",
+   "from": "tabler:fountain"
+  }
+ ]
+}

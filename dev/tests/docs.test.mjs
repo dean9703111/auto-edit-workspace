@@ -108,7 +108,7 @@ test('T3 skills：每支 SKILL.md 最多 200 行', () => {
   noProblems(bad, 'SKILL.md 超過 200 行', '細節搬進 references/，SKILL.md 只留步驟、判準、停點、退路');
 });
 
-test('T4 skills：骨架（開頭兩行、一覽表頭、必要標題、每步三件事、自我核對 5–8 項）', () => {
+test('T4 skills：骨架（開頭兩行、一覽表頭、必要標題、每步有指令和完成判準、自我核對 5–8 項）', () => {
   const L1 = '規則在 AGENTS.md；本檔只寫這一階段的指令、判準、停點、退路。';
   const L2 = '衝突時：使用者當下的話 > AGENTS.md > shared/style.md > USAGE.md > USAGE-reference.md > 本 Skill；派工時派工訊息 > 本 Skill。';
   const HEAD = '| 輸入 | 指令 | 產出 | 完成判準 | 停點 |';
@@ -134,9 +134,9 @@ test('T4 skills：骨架（開頭兩行、一覽表頭、必要標題、每步�
     const nSteps = (steps.match(/^\*\*([A-Z]\d*|\d+)\.\s/gm) || []).length;
     const nCode = (steps.match(/^```/gm) || []).length / 2;
     const nDone = (steps.match(/完成判準：/g) || []).length;
-    const nErr = (steps.match(/常見錯誤：[^\n]*→/g) || []).length;
+    // 026：「常見錯誤」不再每步必填。工具訊息自己會說怎麼改的不重抄；和工具訊息不一樣的判斷寫在退路表
     if (!nSteps) bad.push(`${f}：「## 步驟」裡找不到 **1. …** 這種步驟標題`);
-    if (nCode < nSteps || nDone < nSteps || nErr < nSteps) bad.push(`${f}：${nSteps} 個步驟，但指令區塊 ${nCode}、「完成判準：」${nDone}、「常見錯誤：…→…」${nErr}（每步都要三件事）`);
+    if (nCode < nSteps || nDone < nSteps) bad.push(`${f}：${nSteps} 個步驟，但指令區塊 ${nCode}、「完成判準：」${nDone}（每步都要有指令和完成判準）`);
     const selfCheck = section(text, '## 自我核對') || '';
     const items = (selfCheck.match(/^- \[ \]/gm) || []).length;
     if (items < 5 || items > 8) bad.push(`${f}：自我核對 ${items} 項（要 5–8 項）`);
@@ -417,10 +417,11 @@ test('T25 字幕數字一致：style.md「字幕」＝kit/captions.css，auto-ed
     return { 字級: g(/字級\s*(\d+)\s*px/), 字重: g(/字重\s*(\d+)/), 底板高: g(/底板高\s*(\d+)\s*px/), 內距上下: g(/內距上下\s*(\d+)\s*px/), 內距左右: g(/左右\s*(\d+)\s*px/), 距畫面底: g(/距畫面底\s*(\d+)\s*px/), 每則字數: g(/每則最多\s*(\d+)\s*個?字/) };
   };
   const st = pick(section(read(STYLE), '## 字幕'));
-  const ag = pick((section(read(skillMd('auto-edit-rough')), '## 判準與數字') || '').split('\n').filter((l) => /^\| 字幕/.test(l)).join('\n')); // 只看「剪乾淨的數字」
+  // 026：auto-edit-rough 不再抄一份字幕的數字（工具排的，數字只留在 style.md）；哪天又寫了就要和 style.md 一樣
+  const ag = pick(read(skillMd('auto-edit-rough')).split('\n').filter((l) => /每則最多/.test(l)).join('\n'));
   const bad = [];
   for (const k of Object.keys(st)) if (st[k] === null) bad.push(`style.md「字幕」找不到「${k}」`);
-  if (ag.每則字數 !== st.每則字數) bad.push(`每則字數：style.md ${st.每則字數}、auto-edit-rough ${ag.每則字數 ?? '（沒寫）'}`);
+  if (ag.每則字數 != null && ag.每則字數 !== st.每則字數) bad.push(`每則字數：style.md ${st.每則字數}、auto-edit-rough ${ag.每則字數 ?? '（沒寫）'}`);
   const CSS = 'shared/template/kit/captions.css';
   if (exists(CSS)) {
     const css = read(CSS);
@@ -591,7 +592,7 @@ test('T30 直式數字一致：style.md「直式」＝canvas.mjs，Skill 的字�
   const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   for (const k of Object.keys(st)) {
     if (!st[k]) bad.push(`style.md「直式」找不到「${k}」`);
-    else if (k in ag && !eq(ag[k], st[k])) bad.push(`${k}：style.md ${st[k]}、Skill ${ag[k]?.length ? ag[k] : '（沒寫）'}`);
+    else if (k in ag && ag[k]?.length && !eq(ag[k], st[k])) bad.push(`${k}：style.md ${st[k]}、Skill ${ag[k]?.length ? ag[k] : '（沒寫）'}`);
   }
   const CV = 'shared/template/tools/lib/canvas.mjs';
   if (exists(CV)) {

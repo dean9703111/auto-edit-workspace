@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-comment 留言卡｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-comment.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-comment { position: absolute; inset: 0; }
+    #x-comment .fill { position: absolute; inset: 0; }
+    /* 留言卡：左 120、頂 318、1180×372（右緣 1300，避開右下子母畫面；上下置中）；有回覆時 script 在回覆那一拍把它往上移到 190 */
+    #x-comment #xcm-card { position: absolute; left: 120px; top: 318px; width: 1180px; height: 372px; }
+    #x-comment #xcm-ava { position: absolute; left: 56px; top: 126px; --d: 120px; --i: 68px; }
+    /* 文字欄：名稱列、留言、讚數列由上到下，整組上下置中（少一列也置中） */
+    #x-comment #xcm-col { position: absolute; left: 208px; top: 0; width: 916px; height: 372px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+    #x-comment #xcm-head { display: flex; align-items: baseline; gap: 20px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-comment #xcm-meta { color: var(--sc-fs-mute); }
+    #x-comment #xcm-q { white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-comment #xcm-like { display: flex; align-items: center; gap: 16px; white-space: nowrap; color: var(--sc-fs-mute); }
+    #x-comment #xcm-lk { --d: 56px; --i: 32px; }
+    /* 回覆：箭頭在左、回覆卡在右下（縮排 160，看得出是回這一則） */
+    #x-comment #xcm-arr { position: absolute; left: 176px; top: 654px; --d: 72px; --i: 40px; }
+    #x-comment #xcm-reply { position: absolute; left: 280px; top: 602px; max-width: 1020px; height: 176px; box-sizing: border-box; padding: 0 48px;
+                            display: flex; align-items: center; gap: 28px; white-space: nowrap; }
+    #x-comment #xcm-rt { color: var(--sc-fs-ink); }
+  </style>
+  <div id="x-comment" data-composition-id="x-comment" data-width="1920" data-height="1080" data-duration="9.2"
+       data-cues-sample='{"start":0,"D":9.2,"cues":{"471":[0.4,1.4],"472":[1.5,4.2],"473":[4.3,5.2],"474":[5.4,9.0]},"refs":{"#472@剪":1.6,"#474@其實":5.5}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xcm-card" class="sc-wcard" data-layout="free">
+      <span id="xcm-ava" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" /> </svg></span>
+      <div id="xcm-col">
+        <div id="xcm-head"><span id="xcm-name" class="sc-t44 sc-w900 sc-opt">觀眾留言</span><span id="xcm-meta" class="sc-t40 sc-w500 sc-opt">3 天前</span></div>
+        <div id="xcm-q" class="sc-t56 sc-w700"><span>剪一支片到底要多久？</span>
+          <br><span>每次都弄到半夜</span>
+        </div>
+        <div id="xcm-like"><span id="xcm-lk" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M7 10v12" /> <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" /> </svg></span><span id="xcm-ln" class="sc-t40 sc-w700 sc-mono sc-opt">128</span></div>
+      </div>
+    </div>
+    <span id="xcm-arr" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="15 10 20 15 15 20" /> <path d="M4 4v7a4 4 0 0 0 4 4h12" /> </svg></span>
+    <div id="xcm-reply" class="sc-wcard">
+      <div id="xcm-rtag" class="sc-pill"><span class="sc-opt">我的回答</span></div>
+      <div id="xcm-rt" class="sc-t52 sc-w900"><span class="sc-opt">現在半小時就夠</span></div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-comment'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#472@剪');                        // 講到留言內容的第一個詞
+    const T2 = P.at('#474@其實');                      // 講到回答的時刻
+    P.sfx('ding', '#474@其實');                        // 回覆一顆提示音（句號和 T2 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 拍 0 開場：留言卡進場（看 ENTER）→ 頭像彈出、圖示描線 → 名稱淡入（先看得到是誰說的）
+    if (ENTER === 'grow') P.grow('#xcm-card', 0.3);
+    else { P.wipe('#xcm-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcm-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.pop('#xcm-ava', 0.45);
+    P.icon('#xcm-ava', 0.6);
+    P.in('#xcm-head', 0.6);
+
+    // 拍 1 留言：留言逐字打出（1.2 秒）→ ＋1.3 讚數彈出、圖示描線
+    P.type('#xcm-q', T1, { dur: 1.2 });
+    P.pop('#xcm-like', T1 + 1.3);
+    P.icon('#xcm-lk', T1 + 1.4);
+
+    // 拍 2 回覆：留言卡往上讓位（top 318 → 190）、退焦 → ＋0.2 回覆箭頭、回覆卡彈出（字跟著卡一起出現）；完成態停到段尾
+    P.morph('#xcm-card', T2, { top: 190 }, { from: { top: 318 }, dur: 0.5, ease: P.V2.EASE.move });
+    P.dim('#xcm-card', T2);
+    P.pop('#xcm-arr', T2 + 0.2);
+    P.pop('#xcm-reply', T2 + 0.2);
+    P.icon('#xcm-arr', T2 + 0.35);
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-comment'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-comment";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

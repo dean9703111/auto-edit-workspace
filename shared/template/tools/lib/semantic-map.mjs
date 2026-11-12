@@ -3,11 +3,12 @@
 // 主代理只讀合併後的 work/分鏡素材/語意地圖.md 做全片校正（挑 A、統一標法），第二回合子代理照地圖挑模板、填字。純函式，不讀檔、不寫檔。
 //   parseMap(md)                                  → [{ line, raw, a, z, sem, tier, say, note }]
 //   checkMap(rows, { part, cues, types, syncSpans }) → { errors, warns, rows（語意補成全名、照句號排） }
-//   mapOptions(rows, sitRows, specNames, { secsOf, minOf }) → 每行可以用的模板（照語意縮好的 SITUATIONS §3 列；有寫法.md 的名稱就印能直接寫進大綱的名稱；
+//   mapOptions(rows, sitRows, specNames, { secsOf, minOf }) → 每行可以用的模板（照語意縮好的 SITUATIONS §3 列；有.spec.md 的名稱就印能直接寫進大綱的名稱；
 //                                                   給了秒數就只列放得下的，放不下的另列最短秒數）
 //   mapBudget(rows)                               → { eligible, target, cap }：A 的預算（沿用 022：可設計段的三成，上限再加三分之一）
 //   mergeMaps(parts, rowsByKey, { videoDur, hasVision }) → { md, errors, warns, stats }
 //   designVsMap(items, rows)                      → 大綱、草稿的候選構想和地圖上的 A 對不對得上（⚠ 文字）
+import { planLayout } from './layout-rhythm.mjs';
 import { designTargetOf, designCap } from './scaffold.mjs';
 
 export const TIERS = { A: '亮點', B: '結構', C: '串場' };
@@ -79,7 +80,7 @@ const optName = (first) => {
   return t.length > 24 ? `${t.slice(0, 24)}…` : t;
 };
 
-// 首選欄 → 寫法.md 的名稱（大綱的模板欄直接寫得進去）：反引號裡的 x-*、開頭的代號（08、04c、fx 29）、media、不下卡；對不到才印原文
+// 首選欄 → .spec.md 的名稱（大綱的模板欄直接寫得進去）：反引號裡的 x-*、開頭的代號（08、04c、fx 29）、media、不下卡；對不到才印原文
 export function specKeys(first, specNames = []) {
   const t = String(first), out = [];
   const byName = (k) => specNames.find((n) => { const x = n.toLowerCase(), y = k.toLowerCase(); return x === y || x.split(/\s+/).includes(y); });
@@ -127,12 +128,14 @@ export function optHint(r) {
   return lim ? `${h}；一集最多 ${lim[1]} ${lim[2]}` : h;
 }
 
-export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, minOf = null, fullOf = null, fx = null } = {}) {
+// 027 版面節奏：modeOf(name) 給了就先排版面（lib/layout-rhythm.mjs 的 planLayout），每一行只列那種版面的模板，行首標〔字卡〕〔子母畫面〕〔半螢幕〕；
+//   回傳的陣列多一個 .plan（每一行 { mode, merge }）給 --map 印「版面安排」那一行
+export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, minOf = null, fullOf = null, fx = null, modeOf = null, startOf = null } = {}) {
   const bySem = new Map(), hints = new Map();
   for (const r of sitRows) for (const sem of String(r.sem || '').split('、').filter(Boolean)) {   // 一列可以掛好幾個語意（去背三招：同一句常被標成問答、情境／故事）
     if (!bySem.has(sem)) bySem.set(sem, []);
     const keys = specNames.length ? specKeys(r.first, specNames) : [];
-    // 有代號卻對不到寫法.md：這個版式不能用（沒有講者不能用疊加字卡、直式不提供 03），不列
+    // 有代號卻對不到.spec.md：這個版式不能用（沒有講者不能用疊加字卡、直式不提供 03），不列
     const coded = /^(fx \d{2}|\d{2}[a-d]?)(?=[\s／])|`|(?:→|或)\s*\d{2}/.test(r.first);
     const names = keys.length ? keys : specNames.length && coded ? [] : [optName(r.first)];
     bySem.get(sem).push(...names);
@@ -140,27 +143,54 @@ export function mapOptions(rows, sitRows = [], specNames = [], { secsOf = null, 
   }
   // 秒數（024 試跑：挑了放不下時間下限的模板，到 --outline 才發現，換模板、併段、重跑佔掉第二回合大半時間）
   const pickFx = fx ? fxPicker(fx) : null;
-  return rows.map((r) => {
-    let opts = [...new Set(bySem.get(r.sem) || [])];
+  const semModes = (r) => { const ms = [...new Set(bySem.get(r.sem) || [])].map(modeOf).filter(Boolean); return { any: ms, first: ms[0] ?? null }; };
+  const plan = modeOf && startOf && secsOf ? planLayout(rows, { startOf, secsOf, modesOf: semModes }) : null;
+  const TAG = { card: '〔字卡〕', pip: '〔子母畫面〕', half: '〔半螢幕〕' };
+  const lines = rows.map((r, ri) => {
+    const mode = plan?.[ri]?.mode ?? null;
+    const inMode = (o) => !mode || !modeOf || (modeOf(o) ?? mode) === mode || (mode === 'pip' && modeOf(o) === 'full');
+    let opts = [...new Set(bySem.get(r.sem) || [])].filter(inMode);
     const secs = secsOf ? secsOf(r) : null;
+    const prevS = secsOf && rows[ri - 1] ? secsOf(rows[ri - 1]) : null, nextS = secsOf && rows[ri + 1] ? secsOf(rows[ri + 1]) : null;
     const need = (o) => (minOf ? Number(minOf(o)) || 0 : 0);
     const short = secs == null ? [] : opts.filter((o) => need(o) > secs + 0.05);
     if (short.length) opts = opts.filter((o) => !short.includes(o));
     // 最少項目放得下、全部項目放不下：照列，但標出來（試跑時子代理看到「全用上要 13.8 秒」就自己換掉了）
     opts = opts.map((o) => {
       const f = secs != null && fullOf ? Number(fullOf(o)) || 0 : 0;
-      const notes = [hints.get(`${r.sem}|${o}`), f > secs + 0.05 ? `項目全用上要 ${f} 秒，這裡只放得下幾項` : ''].filter(Boolean);
-      return notes.length ? `${o}（${notes.join('；')}）` : o;
+      // 最少項目放得下、全部項目放不下：名稱後面標 ＊（--map 的說明那一行有寫＊的意思；每個都寫一句太佔篇幅）
+      const hint = hints.get(`${r.sem}|${o}`), star = f > secs + 0.05 ? '＊' : '';
+      return hint ? `${o}${star}（${hint}）` : `${o}${star}`;
     });
-    const head = `#${r.a}–#${r.z} ${r.sem} ${r.tier}${secs == null ? '' : `（${secs} 秒）`}`;
-    const tail = short.length ? `；放不下：${short.map((o) => `${o} ≥ ${need(o)} 秒`).join('、')}（真的要用就和前後一行併成一段）` : '';
+    const head = `${mode ? TAG[mode] : ''}#${r.a}–#${r.z} ${r.sem} ${r.tier}${secs == null ? '' : `（${secs} 秒）`}`;
+    const semFirst = plan ? semModes(r).first : null;
+    // 這一行放不下的模板：工具直接算「併前一行／後一行／前後兩行」哪一種放得下，不印秒數下限
+    // （026：印「≥ N 秒」時，寫大綱的人會去查每支模板的下限、自己加總每一種併法）
+    const fitBy = (o) => {
+      const n = need(o), ok = (x) => x != null && x + 0.05 >= n;
+      if (ok(prevS != null ? secs + prevS : null) && ok(nextS != null ? secs + nextS : null)) return '併前一行或後一行';
+      if (ok(prevS != null ? secs + prevS : null)) return '併前一行';
+      if (ok(nextS != null ? secs + nextS : null)) return '併後一行';
+      if (ok(prevS != null && nextS != null ? secs + prevS + nextS : null)) return '前後兩行都併進來';
+      return '';
+    };
+    const byHow = new Map();
+    for (const o of short) { const how = fitBy(o); if (how) byHow.set(how, [...(byHow.get(how) || []), o]); }
+    const tail = [...byHow].map(([how, list]) => `；${how}就放得下：${list.join('、')}`).join('');
+
     // 字卡動態：短的行（≤ FX_ROW_MAX 秒）才列；每一行給的那兩張不一樣（輪流），大綱的模板欄直接寫「fx 05」
-    const fxs = pickFx && (secs == null || secs <= FX_ROW_MAX + 0.05) ? pickFx(r) : '';
+    const fxs = pickFx && mode !== 'pip' && mode !== 'half' && (secs == null || secs <= FX_ROW_MAX + 0.05) ? pickFx(r) : '';
     const fxTail = fxs ? `；只有一個詞或一句短話就用字卡動態：${fxs}` : '';
-    if (r.tier === 'C') return `${head}：串場用最便宜的（${fxs ? `字卡動態 ${fxs}` : '字卡動態：照寫法.md「適合的語意」挑一張'}；或 12 keywords；或併進前後那一行。同一張字卡動態一集最多用 2 次）${opts.length ? `；這一型的列：${opts.join('｜')}` : ''}${tail}`;
-    const none = short.length ? '這一行太短，這一型的模板都放不下 → 和前後一行併成一段，或用字卡動態' : '這一型的模板這個版式都不能用 → 照共用.md 第 3 節的替換表換全畫面';
+    // 子母畫面區塊裡，重點、轉場這種本來用字卡的行：併進前一段，不切回講者（切回去又切進來，畫面會晃）
+    if (mode === 'pip' && (plan[ri].merge || r.tier === 'C' || semFirst !== 'pip')) {
+      return `${head}：併進前一段（前一段的 to 寫到這一行結尾；這一行講到的重點詞可以綁成前一段的最後一拍），子母畫面中間不切回講者${opts.length ? `；要單獨成段就用：${opts.join('｜')}` : ''}${tail}`;
+    }
+    if (r.tier === 'C') return `${head}：串場用最便宜的（${fxs ? `字卡動態 ${fxs}` : '字卡動態：`--spec fx` 看有哪幾張'}；或 12 keywords；或併進前後那一行。同一張字卡動態一集最多用 2 次）${opts.length ? `；這一型的列：${opts.join('｜')}` : ''}${tail}`;
+    const none = mode === 'card' && !short.length ? '用下方字卡（07 key-point、06 concept、12 keywords）或字卡動態' : mode === 'pip' ? '這一行太短，全畫面的模板放不下 → 併進前後那一行（同一個子母畫面區塊裡的段）' : short.length ? '這一行太短，這一型的模板都放不下 → 併進前後那一行，或用字卡動態' : '這一型的模板這個版式都不能用 → 照共用.md 第 3 節的替換表換全畫面';
     return `${head}：${opts.length ? opts.join('｜') : none}${r.tier === 'A' ? '（A：一樣先套模板，候選構想寫理由）' : ''}${fxTail}${tail}`;
   });
+  if (plan) lines.plan = plan;
+  return lines;
 }
 
 // 一行地圖大約幾秒：從第一句開口到下一句開口（--outline 會把段與段的空檔接上，照接好的算）

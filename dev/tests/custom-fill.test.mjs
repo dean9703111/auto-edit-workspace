@@ -269,3 +269,22 @@ test('autoBreak：宣告了每行上限的欄位，沒寫 // 又超過一行就�
   assert.equal(S.autoBreak('一二三四五六七八九十一二三四五六七八九', 9, 2), '一二三四五六七八九十一二三四五六七八九');
   assert.equal(S.autoBreak('手機上看不出的小毛病', 9, 1), '手機上看不出的小毛病');
 });
+
+test('026 合計上限（lines）：幾格排在同一行的寬度加起來、每格一個字多寬（weights）、清單每一項各算一次（list）', async () => {
+  const { validateSlots } = await imp('lib/custom-fill.mjs');
+  const spec = {
+    lines: [
+      { label: '結論句', slots: ['a', 'b'], max: 10, fix: '縮短' },
+      { label: '名稱＋說明', list: 'items', slots: ['text', 'desc'], weights: [52, 40], max: 344, fix: '縮短說明' },
+    ],
+    slots: { a: { type: 'text', max: 10 }, b: { type: 'text', max: 10 }, items: { type: 'list', item: { text: { type: 'text', max: 5 }, desc: { type: 'text', max: 6 } } } },
+  };
+  assert.deepEqual(validateSlots(spec, { a: '五個字五個', b: '再五個字喔', items: [{ text: '內容', desc: '值得看完整支' }] }), [], '2×52＋6×40＝344 剛好放得下');
+  const bad = validateSlots(spec, { a: '六個字六個字', b: '再五個字喔', items: [{ text: '內容', desc: '好' }, { text: '三個字', desc: '這樣五個字' }] });
+  assert.equal(bad.length, 2);
+  assert.match(bad[0], /^結論句「六個字六個字再五個字喔」11 字，上限 10（這幾格排在同一行、不換行）→ 縮短$/);
+  assert.match(bad[1], /^slots\.items\[1\] 的名稱＋說明「三個字｜這樣五個字」合計寬 356，上限 344/);
+  // 真的模板：壓力測試（dev/tools/custom-check.mjs --stress）量出來會破版的幾支都宣告了合計上限
+  const read = (n) => JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'custom', `${n}.fill.json`), 'utf8'));
+  for (const n of ['x-metaphor', 'x-ring-facets', 'x-trend', 'x-terminal', 'x-prompt']) assert.ok(read(n).lines?.length, `${n} 要有 lines`);
+});

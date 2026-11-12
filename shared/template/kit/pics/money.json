@@ -1,0 +1,311 @@
+{
+ "id": "money",
+ "zh": "金錢與消費",
+ "when": "講到錢、價格、購買、成本、收入",
+ "items": [
+  {
+   "id": "coin",
+   "zh": "硬幣",
+   "when": "講到錢、一塊錢、小額",
+   "tags": [
+    "硬幣",
+    "錢"
+   ],
+   "file": "money/coin.svg",
+   "from": "tabler:coin"
+  },
+  {
+   "id": "coins",
+   "zh": "一堆硬幣",
+   "when": "講到存錢、累積、收入",
+   "tags": [
+    "存錢",
+    "收入"
+   ],
+   "file": "money/coins.svg",
+   "from": "tabler:coins"
+  },
+  {
+   "id": "cash",
+   "zh": "鈔票",
+   "when": "講到現金、花錢、賺錢",
+   "tags": [
+    "鈔票",
+    "現金"
+   ],
+   "file": "money/cash.svg",
+   "from": "tabler:cash"
+  },
+  {
+   "id": "credit-card",
+   "zh": "信用卡",
+   "when": "講到刷卡、付款、訂閱扣款",
+   "tags": [
+    "信用卡",
+    "刷卡",
+    "付款"
+   ],
+   "file": "money/credit-card.svg",
+   "from": "tabler:credit-card"
+  },
+  {
+   "id": "wallet",
+   "zh": "錢包",
+   "when": "講到預算、荷包、花費",
+   "tags": [
+    "錢包",
+    "預算"
+   ],
+   "file": "money/wallet.svg",
+   "from": "tabler:wallet"
+  },
+  {
+   "id": "pig-money",
+   "zh": "小豬撲滿",
+   "when": "講到存錢、省錢",
+   "tags": [
+    "撲滿",
+    "存錢",
+    "省錢"
+   ],
+   "file": "money/pig-money.svg",
+   "from": "tabler:pig-money"
+  },
+  {
+   "id": "receipt",
+   "zh": "收據",
+   "when": "講到帳單、發票、明細",
+   "tags": [
+    "收據",
+    "帳單",
+    "發票"
+   ],
+   "file": "money/receipt.svg",
+   "from": "tabler:receipt"
+  },
+  {
+   "id": "shopping-cart",
+   "zh": "購物車",
+   "when": "講到購買、下單、加入購物車",
+   "tags": [
+    "購物車",
+    "購買",
+    "下單"
+   ],
+   "file": "money/shopping-cart.svg",
+   "from": "tabler:shopping-cart"
+  },
+  {
+   "id": "shopping-bag",
+   "zh": "購物袋",
+   "when": "講到買東西、戰利品",
+   "tags": [
+    "購物袋",
+    "買"
+   ],
+   "file": "money/shopping-bag.svg",
+   "from": "tabler:shopping-bag"
+  },
+  {
+   "id": "discount",
+   "zh": "折扣",
+   "when": "講到優惠、打折、折扣碼",
+   "tags": [
+    "折扣",
+    "優惠"
+   ],
+   "file": "money/discount.svg",
+   "from": "tabler:discount"
+  },
+  {
+   "id": "gift",
+   "zh": "禮物",
+   "when": "講到贈品、送你、驚喜",
+   "tags": [
+    "禮物",
+    "贈品"
+   ],
+   "file": "money/gift.svg",
+   "from": "tabler:gift"
+  },
+  {
+   "id": "bank",
+   "zh": "銀行",
+   "when": "講到銀行、帳戶、匯款",
+   "tags": [
+    "銀行",
+    "帳戶"
+   ],
+   "file": "money/bank.svg",
+   "from": "tabler:building-bank"
+  },
+  {
+   "id": "store",
+   "zh": "商店",
+   "when": "講到店面、開店、商家",
+   "tags": [
+    "商店",
+    "店面"
+   ],
+   "file": "money/store.svg",
+   "from": "tabler:building-store"
+  },
+  {
+   "id": "delivery",
+   "zh": "貨運",
+   "when": "講到出貨、配送、寄送",
+   "tags": [
+    "貨運",
+    "配送",
+    "出貨"
+   ],
+   "file": "money/delivery.svg",
+   "from": "tabler:truck-delivery"
+  },
+  {
+   "id": "package",
+   "zh": "包裹",
+   "when": "講到包裹、商品、開箱",
+   "tags": [
+    "包裹",
+    "商品",
+    "開箱"
+   ],
+   "file": "money/package.svg",
+   "from": "tabler:package"
+  },
+  {
+   "id": "barcode",
+   "zh": "條碼",
+   "when": "講到條碼、掃商品",
+   "tags": [
+    "條碼"
+   ],
+   "file": "money/barcode.svg",
+   "from": "tabler:barcode"
+  },
+  {
+   "id": "qrcode",
+   "zh": "QR Code",
+   "when": "講到掃碼、QR Code",
+   "tags": [
+    "QR Code",
+    "掃碼"
+   ],
+   "file": "money/qrcode.svg",
+   "from": "tabler:qrcode"
+  },
+  {
+   "id": "dollar",
+   "zh": "錢的符號",
+   "when": "講到價格、費用、多少錢",
+   "tags": [
+    "價格",
+    "費用"
+   ],
+   "file": "money/dollar.svg",
+   "from": "tabler:currency-dollar"
+  },
+  {
+   "id": "percentage",
+   "zh": "百分比",
+   "when": "講到百分比、比例、利率",
+   "tags": [
+    "百分比",
+    "利率"
+   ],
+   "file": "money/percentage.svg",
+   "from": "tabler:percentage"
+  },
+  {
+   "id": "calculator",
+   "zh": "計算機",
+   "when": "講到算一下、成本計算",
+   "tags": [
+    "計算機",
+    "算"
+   ],
+   "file": "money/calculator.svg",
+   "from": "tabler:calculator"
+  },
+  {
+   "id": "scale",
+   "zh": "天平",
+   "when": "講到衡量、比較輕重、取捨",
+   "tags": [
+    "天平",
+    "衡量",
+    "取捨"
+   ],
+   "file": "money/scale.svg",
+   "from": "tabler:scale"
+  },
+  {
+   "id": "diamond",
+   "zh": "鑽石",
+   "when": "講到高價值、精品、珍貴",
+   "tags": [
+    "鑽石",
+    "價值"
+   ],
+   "file": "money/diamond.svg",
+   "from": "tabler:diamond"
+  },
+  {
+   "id": "crown",
+   "zh": "皇冠",
+   "when": "講到最頂級、VIP、王者",
+   "tags": [
+    "皇冠",
+    "VIP"
+   ],
+   "file": "money/crown.svg",
+   "from": "tabler:crown"
+  },
+  {
+   "id": "ticket",
+   "zh": "票券",
+   "when": "講到門票、優惠券、入場",
+   "tags": [
+    "票",
+    "優惠券"
+   ],
+   "file": "money/ticket.svg",
+   "from": "tabler:ticket"
+  },
+  {
+   "id": "tax",
+   "zh": "稅單",
+   "when": "講到稅、報稅",
+   "tags": [
+    "稅",
+    "報稅"
+   ],
+   "file": "money/tax.svg",
+   "from": "tabler:receipt-tax"
+  },
+  {
+   "id": "moneybag",
+   "zh": "錢袋",
+   "when": "講到大筆收入、賺到、獎金",
+   "tags": [
+    "錢袋",
+    "獎金",
+    "賺"
+   ],
+   "file": "money/moneybag.svg",
+   "from": "tabler:moneybag"
+  },
+  {
+   "id": "business-plan",
+   "zh": "商業計畫",
+   "when": "講到商業模式、規劃、提案",
+   "tags": [
+    "商業計畫",
+    "商業模式"
+   ],
+   "file": "money/business-plan.svg",
+   "from": "tabler:businessplan"
+  }
+ ]
+}

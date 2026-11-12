@@ -28,6 +28,7 @@ import { r3, FPS } from './time.mjs';
 import { SCOPE_P } from './assemble.mjs';
 import { mediaParts, EXIT } from './media.mjs';
 import { CANVAS, stageTransform, regionsScript } from './canvas.mjs';
+import { fxStage } from './speaker-side.mjs';
 
 const FADE = 0.5;
 const PUSH = 0.7;
@@ -167,9 +168,12 @@ const FX_BG = { dark: '#232733', light: 'var(--fx-light-bg, #f3efe6)', accent: '
 //   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、剪輯台過黑／淡入淡出；
 //                                      keepFootage＝側邊欄段（講者被推到右邊）連底片一起放（靜音），剪映疊上去才對得起來
 //   { kind: 'main' }                  主軌：只有底片＋人聲＋剪輯台（跳接放大、過黑、淡入淡出）＋片尾配樂；沒有情境、字幕、角標、段落音效
-export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, bed = null, badges = [], canvas = null, cut = null, moods = [], zooms = null, speakerBox = null }) {
+export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide = null, items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, bed = null, badges = [], canvas = null, cut = null, moods = [], zooms = null, speakerBox = null }) {
   const C = canvas || CANVAS.landscape, portrait = C.format === 'portrait', W = C.W, H = C.H;
   const segCut = cut?.kind === 'seg', mainCut = cut?.kind === 'main';
+  // 027 講者位置：面板在右時底片往左移；容器帶 data-panel-side／data-card-side，kit/scene.css、scene-motion.js 照它鏡像（預設在左時不加屬性，輸出和以前一樣）
+  const footX = !portrait && panelSide === 'right' ? -sideShift : sideShift;
+  const sideAttr = (it) => (portrait ? '' : it.side && panelSide === 'right' ? ' data-panel-side="right"' : cardSide === 'right' && (it.lower || it.key === 'keywords') ? ' data-card-side="right"' : '');
   if (cut) {
     items = segCut ? items.filter((it) => it.id === cut.id) : [];
     badges = [];
@@ -218,7 +222,9 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
   const EDGE = 110.4;   // 新畫面的左緣跟著細帶右緣：起點 2120px＝畫面寬的 110.4%（細帶 2070＋48，留 2px）
   // 直式：舞台縮放的幕（FR-022／023）；字卡動態 bg none 縮到下面一點、不墊底
   const stageOf = (it) => {
-    if (!portrait || it.type === 'media') return null;
+    // 027 橫式：透明的字卡動態縮小放到講者旁邊（或下方字卡的位置），不蓋到臉（lib/speaker-side.mjs 的 fxStage）；沒有講者框就不動
+    if (!portrait) return it.type === 'fx' && !it.opaque && speakerBox ? fxStage(speakerBox, C, { side: speakerSide }) : null;
+    if (it.type === 'media') return null;
     if (it.type === 'fx') return stageTransform('fx', C, { clear: !it.opaque });
     if (it.type === 'scene') return it.scene.portrait === 'stage' ? stageTransform(it.key === 'chapter' ? 'ch' : 'fs', C) : null;
     return it.type === 'custom' && it.opaque ? stageTransform('fs', C) : null;
@@ -258,7 +264,7 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
       if (bd) hosts.push(`  <div id="bd-${it.id}" class="clip" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-track-index="${track++}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:${it.type === 'fx' ? FX_BG[it.bg] : it.key === 'chapter' ? 'var(--sc-ch-bg)' : 'var(--sc-fs-bg)'};z-index:${it.z - 1}"></div>`);
       const [hw, hh] = portrait && !st ? [W, H] : [1920, 1080];
       hosts.push(`  <div id="el-${it.id}" data-composition-id="${it.compId}" data-composition-src="${it.file}"${varAttr}
-       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
+       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${sideAttr(it)}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
       // 人物去背層（lib/matte.mjs）：這一段的講者（帶透明通道）疊在動畫上面，動畫就在講者後面；外層 div 不帶時間屬性（影片本身的 opacity 會被框架蓋掉）
       if (it.matte?.file) hosts.push(`  <div id="matte-${it.id}" data-layout-ignore style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:${it.z + 1};pointer-events:none${it.matte.clip ? `;clip-path:${it.matte.clip}` : ''}">
     <video id="mattev-${it.id}" src="${base}${it.matte.file}" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-media-start="${n3(Math.max(0, it.s + (test ? t0 : 0) - it.start))}" data-track-index="${track++}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></video>
@@ -332,8 +338,8 @@ export function buildMain({ items, videoDur, captions, pip, sideShift = 480, bg 
   // 側邊欄：底片層右移 sideShift，和面板 P.sideIn 同一條 9 點曲線、0.7 秒（§B.6）
   footTweens.sort((a, b) => a.at - b.at).forEach((f, i) => {
     const ir = i === 0 ? '' : ', immediateRender: false';
-    if (f.kind === 'in') tl.push(`tl.fromTo('#footage', { x: 0 }, { x: ${sideShift}, duration: ${PUSH}, ease${ir} }, ${n3(f.at)});`);
-    else if (f.kind === 'out') tl.push(`tl.fromTo('#footage', { x: ${sideShift} }, { x: 0, duration: ${PUSH}, ease${ir} }, ${n3(f.at)});`);
+    if (f.kind === 'in') tl.push(`tl.fromTo('#footage', { x: 0 }, { x: ${footX}, duration: ${PUSH}, ease${ir} }, ${n3(f.at)});`);
+    else if (f.kind === 'out') tl.push(`tl.fromTo('#footage', { x: ${footX} }, { x: 0, duration: ${PUSH}, ease${ir} }, ${n3(f.at)});`);
     else tl.push(`tl.set('#footage', { x: 0 }, ${n3(f.at)});`);
   });
 

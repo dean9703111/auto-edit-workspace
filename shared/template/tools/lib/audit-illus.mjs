@@ -31,10 +31,54 @@ export function illusOf(html) {
     registered: uniq([...script.matchAll(/\bILLUS\.register\(\s*['"]([A-Za-z0-9]+)['"]/g)].map((m) => m[1])),
   };
 }
+// 026 內容設計動畫：顏色只能用 token（style.md、USAGE-reference.md R8：使用者換主色、換亮暗主題時要跟著變）。
+// 設計師自己畫的圖形（CSS、inline svg）沒有 illus-lint 把關，寫死的色碼由這裡抓：
+//   <style> 的宣告值、style="…"、svg 的 fill／stroke 等屬性、script 裡 GSAP 的顏色屬性。選擇器（#xd…）、P.at('#12@詞') 不算。
+const COLOR_LIT = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\([^)]*\)/g;
+export function colorLiterals(html) {
+  const s = String(html || '').replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = [];
+  const take = (text) => { for (const m of String(text).matchAll(COLOR_LIT)) out.push(m[0]); };
+  for (const st of s.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)) for (const decl of st[1].matchAll(/\{([^{}]*)\}/g)) take(decl[1]);
+  for (const at of s.matchAll(/\sstyle="([^"]*)"/g)) take(at[1]);
+  for (const at of s.matchAll(/\s(?:fill|stroke|stop-color|flood-color|color)="([^"]*)"/g)) take(at[1]);
+  for (const sc of s.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) {
+    for (const m of sc[1].matchAll(/\b(?:color|backgroundColor|background|fill|stroke|borderColor|boxShadow)\s*:\s*(['"`])([^'"`]*)\1/g)) take(m[2]);
+  }
+  return [...new Set(out)];
+}
+export function designColorFindings({ item, html, file = '' }) {
+  if (!/x-design-/.test(String(file || ''))) return [];
+  const lits = colorLiterals(html);
+  if (!lits.length) return [];
+  return [{ id: item.id, label: item.label, kind: 'illus', el: null, at: [], t: null, level: 'warn', rule: 'design-color',
+    msg: `顏色寫死：${file || item.label} 用了 ${lits.slice(0, 6).join('、')}${lits.length > 6 ? `…（共 ${lits.length} 種）` : ''}，使用者換主色、換亮暗主題時不會跟著變`,
+    fix: '改成 token：主色 var(--brand)、主色底上的字 var(--brand-ink)、字 var(--sc-fs-ink)、卡片底 var(--sc-fs-card)、框線 var(--sc-fs-card-line)、警告 var(--sc-warn)、成功 var(--sc-good)、線 var(--v2-line)、陰影 var(--v2-card-shadow)；要透明寫 transparent', data: { colors: lits } }];
+}
+
+// 026 內容設計動畫：不轉非 90 度的角度（USAGE-reference.md R8 #13：斜邊會鋸齒；作者不要旋轉的動作）。
+// CSS 的 rotate(Ndeg)、GSAP 的 rotation／rotate: N；0、±90、±180、±270、360 不算
+export function rotationLiterals(html) {
+  const s = String(html || '').replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = [];
+  const add = (n, raw) => { const v = Number(n); if (Number.isFinite(v) && Math.abs(v % 90) > 1e-6) out.push(raw.trim()); };
+  for (const m of s.matchAll(/rotate[XYZ]?\(\s*(-?\d+(?:\.\d+)?)deg\s*\)/g)) add(m[1], m[0]);
+  for (const m of s.matchAll(/\b(?:rotation|rotate|rotateZ)\s*:\s*['"]?(-?\d+(?:\.\d+)?)(?:deg)?['"]?/g)) add(m[1], m[0]);
+  return [...new Set(out)];
+}
+export function designRotateFindings({ item, html, file = '' }) {
+  if (!/x-design-/.test(String(file || ''))) return [];
+  const rots = rotationLiterals(html);
+  if (!rots.length) return [];
+  return [{ id: item.id, label: item.label, kind: 'illus', el: null, at: [], t: null, level: 'warn', rule: 'design-rotate',
+    msg: `旋轉了非 90 度的角度：${file || item.label} 有 ${rots.slice(0, 4).join('、')}（斜邊會鋸齒，全片的動作也不用旋轉）`,
+    fix: '拿掉這個旋轉；要表示「歪了」「不穩」就畫兩個錯開的輪廓，或用位置、大小的變化', data: { rotations: rots } }];
+}
+
 export const localName = (src) => (String(src).match(/^illus-local\/([A-Za-z0-9]+)\.svg$/) || [])[1] || null;
 
 // local＝work/hyperframes/illus-local/ 裡的 svg 檔名（不含 .svg）
-export function illusNameFindings({ item, html, file = '', local = [] }) {
+export function illusNameFindings({ item, html, file = '', local = [], isPic = null }) {
   const out = [];
   const { used, src, registered } = illusOf(html);
   const name = file || item.label;
@@ -45,10 +89,11 @@ export function illusNameFindings({ item, html, file = '', local = [] }) {
       fix: local.includes(n) ? `專案元件用 data-illus-src="illus-local/${n}.svg"，不是 data-illus` : `改成 shared/template/kit/illus-gallery.jpg 裡的元件名（大小寫照抄），或照 shared/template/kit/illus-style.md 畫成 work/hyperframes/illus-local/${n}.svg 再用 data-illus-src 掛`, data: { name: n } });
   }
   for (const s of src) {
+    if (isPic && isPic(s)) continue;   // 圖庫的圖（kit/pics/<類別>/<id>.svg，028）
     const n = localName(s);
     if (n && local.includes(n)) continue;
     out.push({ ...base, level: 'error', rule: 'illus-src', msg: `${name} 的 data-illus-src="${s}" ${n ? `在 work/hyperframes/illus-local/ 找不到 ${n}.svg` : '不是 illus-local/<名稱>.svg'}（畫面上會是空的）`,
-      fix: n ? `照 shared/template/kit/illus-style.md 畫好存成 work/hyperframes/illus-local/${n}.svg（路徑相對主合成 index.html），或改用畫廊的元件 data-illus="…"` : '寫成 data-illus-src="illus-local/<名稱>.svg"（名稱小寫英文開頭、只用英數）', data: { src: s } });
+      fix: n ? `照 shared/template/kit/illus-style.md 畫好存成 work/hyperframes/illus-local/${n}.svg（路徑相對主合成 index.html），或改用畫廊的元件 data-illus="…"` : '寫成 data-illus-src="illus-local/<名稱>.svg"（名稱小寫英文開頭、只用英數）；圖庫的圖是 kit/pics/<類別>/<id>.svg（node shared/template/tools/build.mjs --pics <詞> 會印整行）', data: { src: s } });
   }
   return out;
 }

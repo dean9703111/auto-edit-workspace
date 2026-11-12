@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" fill="none">
+  <g class="il-shade" transform="translate(2.2 2.2)"><path d="M3 21h4l13 -13a1.5 1.5 0 0 0 -4 -4l-13 13v4" fill="var(--il-accent-soft)"/></g>
+  <g transform="translate(1 1)">
+    <path d="M3 21h4l13 -13a1.5 1.5 0 0 0 -4 -4l-13 13v4" fill="var(--il-body)"/>
+    <path d="M3 21h4l13 -13a1.5 1.5 0 0 0 -4 -4l-13 13v4" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M14.5 5.5l4 4" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M12 8l-5 -5l-4 4l5 5" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M7 8l-1.5 1.5" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M16 12l5 5l-4 4l-5 -5" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path d="M16 17l-1.5 1.5" stroke="var(--il-line)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+  </g>
+</svg>

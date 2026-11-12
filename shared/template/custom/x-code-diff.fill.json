@@ -1,0 +1,130 @@
+{
+  "template": "x-code-diff",
+  "prefix": "xcd",
+  "beat": "C",
+  "layout": "fullscreen",
+  "when": "程式、設定檔、指令的改前改後（「原本這行寫死…改成讀設定檔」）：編輯器視窗裡原本的 1–3 行標成刪除、退焦，改成的 1–3 行標成新增、逐字打出來；有結果再印一列結果",
+  "slots": {
+    "file": {
+      "label": "檔名",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "before": {
+      "label": "原本的寫法（1–3 行，只放有改到的）",
+      "type": "list",
+      "min": 1,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "這一行（純文字；≤ 38 個半形字寬，中文算 2；縮排直接在行首打空白）",
+          "type": "text",
+          "max": 19,
+          "required": true
+        }
+      }
+    },
+    "after": {
+      "label": "改成的寫法（1–3 行）",
+      "type": "list",
+      "min": 1,
+      "maxItems": 3,
+      "required": true,
+      "item": {
+        "text": {
+          "label": "這一行（純文字；≤ 38 個半形字寬，中文算 2；縮排直接在行首打空白）",
+          "type": "text",
+          "max": 19,
+          "required": true
+        }
+      }
+    },
+    "delAt": {
+      "label": "講到原本寫法的問題的時間（刪除帶亮起）",
+      "type": "at",
+      "ref": "DEL",
+      "required": true
+    },
+    "addAt": {
+      "label": "講到改成什麼的時間（新增帶亮起、新的寫法打出來；要比 delAt 晚 2 秒以上）",
+      "type": "at",
+      "ref": "ADD",
+      "required": true
+    },
+    "runAt": {
+      "label": "講到改完的結果的時間（選填，要和 result 一起寫；要比 addAt 晚 2.6 秒以上）",
+      "type": "at",
+      "ref": "RUN",
+      "with": ["result"]
+    },
+    "result": {
+      "label": "結果列（選填，要和 runAt 一起寫）",
+      "type": "text",
+      "max": 16,
+      "with": ["runAt"]
+    }
+  },
+  "sample": {
+    "file": "cut.mjs",
+    "before": [
+      { "text": "const PAUSE = 0.5;" },
+      { "text": "cut(video, PAUSE);" },
+      { "text": "save(video);" }
+    ],
+    "after": [
+      { "text": "const cfg = load('setting.json');" },
+      { "text": "cut(video, cfg.pause);" },
+      { "text": "save(video);" }
+    ],
+    "delAt": "#492@寫死",
+    "addAt": "#493@設定檔",
+    "runAt": "#494@不用",
+    "result": "改設定檔就好，不用動程式"
+  },
+  "sampleMin": {
+    "file": "cut.mjs",
+    "before": [
+      { "text": "const PAUSE = 0.5;" }
+    ],
+    "after": [
+      { "text": "const PAUSE = cfg.pause;" }
+    ],
+    "delAt": "#492@寫死",
+    "addAt": "#493@設定檔"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "編輯器視窗＋檔名「{file}」＋原本的寫法",
+      "moves": "開場（依前段）；＋0.5 圖示描線（檔名圖示）；＋0.62 逐字上浮（檔名）",
+      "focus": "原本的寫法"
+    },
+    {
+      "beat": "1",
+      "at": "`{delAt}`",
+      "show": "原本那幾行亮起刪除帶（紅，前面「−」）",
+      "moves": "擦開（刪除帶，由左）；＋0.2 退焦（原本的寫法 → 0.55）",
+      "focus": "刪除帶"
+    },
+    {
+      "beat": "2",
+      "at": "`{addAt}`",
+      "show": "新增帶（綠，前面「+」）＋改成的寫法逐字打出",
+      "moves": "擦開（新增帶，由左）；＋0.2 打字（改成的寫法，1 秒）",
+      "focus": "改成的寫法",
+      "sfx": "ding"
+    },
+    {
+      "if": "runAt",
+      "beat": "3",
+      "at": "`{runAt}`",
+      "show": "結果列「✓ {result}」由左往右印出",
+      "moves": "擦開（結果列，由左）；＋0.4 重拍（結果文字）",
+      "focus": "結果列",
+      "sfx": "success"
+    }
+  ]
+}
