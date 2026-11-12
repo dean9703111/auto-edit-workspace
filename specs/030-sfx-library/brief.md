@@ -85,6 +85,16 @@
 
 建議：repo 只內建 CC0（現在就是這樣），另外給一個「自備音效」的資料夾（不進版控，像 `shared/music/`），每個人把自己下載的音效放進去、對到角色名稱（咚咚、滴、秒針…），工具優先用自備的。這樣工具不用處理標示出處，也不用擔心再散布。
 
+## 自備音效（作者 2026-11-12 定案：「照這個方向做，可以把我剪映用到的直接搬過來放著」「自己的 gitignore 不上傳，但附上使用方式」）
+
+- `shared/sfx-local/`（`.gitignore`）：同名的蓋過內建，kit 沒有的名稱多一顆。作者剪映的 13 顆已轉檔放在他本機的這個資料夾（不進 repo）。
+- `lib/sfx-local.mjs`：量對準點（第一次到達最大聲 70% 的地方：敲兩下的對到第一下）和最響 150 ms 的響度；音量＝照 kit 那個名稱的 targetDb 算（公式同 `lib/plan.mjs`：檔案響度＝−14＋targetDb−音量的 dB），最大 1 倍、不超過比人聲小 3 dB；結果記在 `shared/sfx-local/sfx.json`，`manual: true` 的音量不重算；自備的沒有變體。
+- `build.mjs`：`loadLib` 合併自備的設定；複製音效時自備的蓋過內建的同名檔（`--sfx` 指到別處時不套）。測試用 `AUTO_EDIT_NO_LOCAL_SFX=1` 關掉（`dev/tests/helpers.mjs`）。
+- 使用方式寫在 `shared/sfx/README.md`「自備音效」。
+- 測試專案 build：13 顆都換上，主音效比人聲小 3.0–7.0 dB。**作者還沒聽過換上之後的成品。**
+
+還沒做：新角色（`tick` 秒針 32 秒要照段長裁、`checkin`、`question`、`wow`）還沒有規則會用到它們，只能在段上明寫；「說明、等待配秒針」；README／官網的音效說明。
+
 ## 暫存物（不在 repo）
 
 - `projects/t026/work/sfx-proto/`：第一版試聽頁與三支混音影片（作廢）。

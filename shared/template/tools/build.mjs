@@ -89,6 +89,7 @@ import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZo
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
 import { picsCmd } from './lib/pics.mjs';
+import { syncLocalSfx, localSfxDir } from './lib/sfx-local.mjs';
 import { runScaffold, mapCmd, mapMergeCmd, checkDraft, outlineCmd, designStatusCmd, designCanvasCmd, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan, ensureBriefs } from './lib/flow.mjs';
 import { autofixPlan, summaryLines } from './lib/autofix.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
@@ -169,7 +170,7 @@ export function loadLib(templateDir, projectDir = null) {
   const accent = (brandCss.match(/--brand\s*:\s*(#[0-9a-fA-F]{6})/) || [])[1] || '#FFD400';
   return {
     scenes: loadScenes(templateDir), icons: loadIcons(templateDir), fx: loadFx(templateDir),
-    consts: motionConsts(kit), sfx: { ...read(path.join(kit, 'sfx.json'), {}), ...loadMusic({ sharedDir, projectDir }) }, accent,
+    consts: motionConsts(kit), sfx: (() => { const k = read(path.join(kit, 'sfx.json'), {}); return { ...k, ...syncLocalSfx(sharedDir, { kit: k }), ...loadMusic({ sharedDir, projectDir }) }; })(), accent,   // 自備音效（shared/sfx-local/，030）蓋過內建的同名音效
     musicDefault: readSettings(sharedDir).data.music?.bed ?? null,
     customDir: path.join(templateDir, 'custom'),
   };
@@ -919,6 +920,13 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     if (fs.existsSync(src) && copyIfDiff(src, path.join(P.out, 'kit', f))) kitN++;
   }
   if (fs.existsSync(P.sfx)) for (const f of fs.readdirSync(P.sfx).filter((x) => x.endsWith('.wav'))) copyIfChanged(path.join(P.sfx, f), path.join(P.out, 'assets', 'sfx', f));
+  // 自備音效蓋過內建的同名檔（--sfx 指到別的資料夾時不套；測試用 AUTO_EDIT_NO_LOCAL_SFX=1 關掉）
+  const localSfx = localSfxDir(path.resolve(P.templateDir, '..'));
+  if (!flags.sfx && process.env.AUTO_EDIT_NO_LOCAL_SFX !== '1' && fs.existsSync(localSfx)) {
+    const mine = fs.readdirSync(localSfx).filter((x) => /^[a-z][a-z0-9-]*\.wav$/.test(x));
+    for (const f of mine) copyIfChanged(path.join(localSfx, f), path.join(P.out, 'assets', 'sfx', f));
+    if (mine.length) log(`自備音效 ${mine.length} 顆（shared/sfx-local/）：${mine.map((f) => f.slice(0, -4)).join('、')}`);
+  }
   if (hfShim(P.out)) log('專案在工作區外面：寫了 work/hyperframes/node_modules/.bin/hyperframes，npx hyperframes 會用工作區釘住的版本');
   if (bg) for (const f of new Set(Object.values(bg).filter(Boolean))) copyIfDiff(srcOf(f), path.join(P.out, 'assets', f));
   const generated = new Set();

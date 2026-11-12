@@ -30,3 +30,18 @@ node dev/tools/make-sfx.mjs --write --only <名稱>                             
 node dev/tools/make-sfx.mjs --variants                                            # 同類變體（重做某一顆之後要再跑）
 node dev/tools/make-sfx.mjs --write --only bgm-cylinder-five --src <原曲 mp3>     # 片尾配樂要給作者本機的原曲
 ```
+
+## 自備音效
+
+想換成自己的音色（例如從 YouTube 音效庫下載、自己錄的、自己買的），不用改任何設定：
+
+1. 把音效存成 `.wav`，放到 `shared/sfx-local/`（這個資料夾不進版控，每個人本機各一份）。
+2. 檔名用上表的名稱：`ding.wav`、`success.wav`、`alert.wav`、`impact.wav`、`click.wav`、`chapter.wav`、`sparkle.wav`、`shine.wav`、`thunder.wav`。有放的那一顆，工具就用你的；沒放的照用內建的。
+3. 下一次 build 就生效，報告會印「自備音效 N 顆」。
+
+工具會自己量每一顆的對準點（對到聲音的第一下）和響度，音量照那個名稱原本設計的「比人聲小幾分貝」算，所以換了檔，和人聲的比例不變。量的結果記在 `shared/sfx-local/sfx.json`；想自己定音量，在那一筆寫 `"volume": 0.5, "manual": true`。
+
+- 不是 `.wav` 的先轉檔：`ffmpeg -i 來源.mp3 -ar 48000 shared/sfx-local/impact.wav`。
+- 檔名只用小寫英數和 `-`。上表沒有的名稱（例 `tick.wav`）也可以放，在 plan.json 那一段寫 `"sfx": "tick"` 就用得到。
+- 自備的音效沒有升降半音的變體，同一顆不會輪著換。
+- 授權自己負責：只放你有權用在影片裡的音效。多數免費音效庫（YouTube 音效庫、Pixabay、Mixkit）可以用在影片，但不能把音檔再散布，所以這個資料夾不會、也不該上傳。

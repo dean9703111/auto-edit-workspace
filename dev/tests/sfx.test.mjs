@@ -246,3 +246,36 @@ test('make-sfx.mjs 的訊息＝cli-005 原文：--help（§1.7）、名稱沒有
   assert.ok(msgs.length >= 10);
   for (const m of msgs) assert.match(m, / ?→ /, `make-sfx.mjs 的 ✖ 沒有「→ 改法」：${m.slice(0, 60)}`);
 });
+
+test('030 自備音效（shared/sfx-local/）：同名的蓋過內建、音量照那個名稱的 targetDb 算、沒有變體；kit 沒有的名稱多一顆；量過的記在 sfx.json，檔案沒變不重量；環境變數可以關掉', async (t) => {
+  if (spawnSync('ffmpeg', ['-version']).status !== 0) return t.skip('要 ffmpeg');
+  const { syncLocalSfx, measureWav, volumeFor } = await imp('lib/sfx-local.mjs');
+  const shared = fs.mkdtempSync(path.join(os.tmpdir(), 'sfx-local-')), dir = path.join(shared, 'sfx-local');
+  fs.mkdirSync(dir);
+  const tone = (name, extra) => spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `anullsrc=r=48000:cl=mono:d=0.2`, '-f', 'lavfi', '-i', `sine=frequency=880:duration=0.3:sample_rate=48000`, '-filter_complex', `[0][1]concat=n=2:v=0:a=1${extra || ''}`, path.join(dir, `${name}.wav`)]);
+  tone('ding'); tone('tick', ',volume=0.25');
+  const m = measureWav(path.join(dir, 'ding.wav'));
+  assert.ok(m.peak >= 0.19 && m.peak <= 0.22, `對準點在聲音開始的地方（${m.peak}）`);
+  assert.equal(volumeFor(-20, -6), 1, '太小聲的檔最多放到 1 倍');
+  assert.equal(volumeFor(-10, -6), 0.316, '檔案 −10 LUFS＝比人聲（−14）大 4 dB，要比人聲小 6 dB → 降 10 dB');
+  const prev = process.env.AUTO_EDIT_NO_LOCAL_SFX;
+  try {
+    process.env.AUTO_EDIT_NO_LOCAL_SFX = '1';
+    assert.deepEqual(syncLocalSfx(shared, { kit }), {}, '測試預設關掉');
+    process.env.AUTO_EDIT_NO_LOCAL_SFX = '0';
+    const conf = syncLocalSfx(shared, { kit });
+    assert.deepEqual(Object.keys(conf).sort(), ['ding', 'tick']);
+    assert.equal(conf.ding.local, true);
+    assert.deepEqual(conf.ding.variants, [], '自備的沒有變體，不輪替');
+    assert.equal(conf.ding.zh, kit.ding.zh, '同名的沿用內建的說明');
+    assert.ok(Math.abs(conf.ding.targetDb - kit.ding.targetDb) <= 0.2 || conf.ding.volume === 1, `和人聲的比例照內建的設計（${conf.ding.targetDb} vs ${kit.ding.targetDb}）`);
+    assert.equal(conf.tick.kind, 'sfx');
+    assert.ok(conf.tick.volume > 0 && conf.tick.volume <= 1);
+    const state = JSON.parse(fs.readFileSync(path.join(dir, 'sfx.json'), 'utf8'));
+    assert.deepEqual(Object.keys(state).sort(), ['ding', 'tick']);
+    // 自己定音量：manual 的不被重算
+    state.ding = { ...state.ding, volume: 0.33, manual: true };
+    fs.writeFileSync(path.join(dir, 'sfx.json'), JSON.stringify(state));
+    assert.equal(syncLocalSfx(shared, { kit }).ding.volume, 0.33);
+  } finally { if (prev == null) delete process.env.AUTO_EDIT_NO_LOCAL_SFX; else process.env.AUTO_EDIT_NO_LOCAL_SFX = prev; fs.rmSync(shared, { recursive: true, force: true }); }
+});

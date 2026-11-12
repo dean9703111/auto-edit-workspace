@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+process.env.AUTO_EDIT_NO_LOCAL_SFX ??= '1';   // 測試不看本機的自備音效（shared/sfx-local/ 每個人不一樣），結果才不會跟著機器變
 const here = path.dirname(fileURLToPath(import.meta.url));
 // 兩種擺法都能跑：agent-skills 的 video/minimax/素材/tools/template-tests/（工作區在 ../../workspace）、
 // 獨立 repo auto-edit-workspace 的 dev/tests/（工作區就是 ../..）
