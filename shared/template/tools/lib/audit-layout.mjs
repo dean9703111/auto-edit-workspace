@@ -56,7 +56,7 @@ function segHits(p, q, b) {
 
 export function judgeLayoutRules(lay, { item, t = null } = {}) {
   const out = [];
-  if (!lay || !item || !(lay.containers || []).length) return out;
+  if (!lay || !item || (!(lay.containers || []).length && !(lay.links || []).length)) return out;   // 沒有版面宣告的畫面（內容設計動畫）只量連接線
   const push = (level, rule, el, msg, fix, data = {}) => out.push({ id: item.id, label: item.label, level, rule, el: el ? { id: el } : null, at: [], t, kind: 'done', msg: `${msg}`, fix: `${fix}（${STYLE}）`, data });
   const parent = new Map();   // slot id → 所在容器 id（巢狀群組本身也是 slot）
   for (const c of lay.containers) for (const s of c.slots) if (s.id) parent.set(s.id, c.id);

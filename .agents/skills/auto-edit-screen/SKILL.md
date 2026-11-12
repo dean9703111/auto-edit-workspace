@@ -54,6 +54,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src "as
 | 畫面在做什麼 | 寫法 |
 |---|---|
 | 等待（進度條、轉圈、下載、AI 生成） | `retime` 跳過：`[{ "at": "#21", "src": 19 }, { "at": "#21+1", "src": 31 }]` |
+| 等待而且那幾秒沒人講話（邊錄邊講的 sync 快轉段，`--check` 那一列印「等待卡」） | 工具自動放等待卡、配秒針。你只要在那一段加 `"wait": "AI 逐張辨識收據｜寫入 Excel"`：1–2 行、用「｜」分行、每行 ≤ 12 字，寫 AI 或系統正在做的事（看 `events.md` 或那幾秒的截圖判斷）；`from`／`to`／`retime` 不要改 |
 | 要點之前、要看清楚的操作 | `retime` 放慢（×0.5–0.7），同時 `moves` 推近、`marks` 或 `arrows` 指出來 |
 | 停在一個結果畫面講好幾句 | `retime` 裡 `src` 一樣的兩點（整段都停就寫 `hold`） |
 | 整段同一個速度 | `in`、`out` |

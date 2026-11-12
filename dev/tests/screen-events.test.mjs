@@ -86,27 +86,30 @@ test('waitsInMain：畫面在等又沒人講話 ≥ 3 秒才列；有講話切�
   assert.deepEqual(E.waitsInMain(clips, [{ start: 21, end: 39 }], () => ev), []);
 });
 
-test('cuts.md 的等待表：預設不勾、頁面當 NG 列；勾了留 1.5 秒；screen-sync 放一段快轉，前後接得上', () => {
-  const md = R.cutsMarkdown({ rows: [{ cut: true, start: 3, end: 5, text: '重講', reason: '同一句講兩次', pending: '' }], waits: [{ start: 22.2, end: 31.4, file: 'assets/screen/r.mp4', kind: '畫面在轉' }] });
+test('cuts.md 的等待表：預設不勾、頁面當 NG 列；勾了留等待的五分之一（1.5–4.5 秒，≥ 3 秒的會有等待卡）；screen-sync 放一段快轉，前後接得上', () => {
+  assert.deepEqual([4, 7.5, 10, 15, 17.5, 200].map((w) => M.waitKeep(w)), [1.5, 1.5, 2, 3, 3.5, 4.5]);
+  const md = R.cutsMarkdown({ rows: [{ cut: true, start: 3, end: 5, text: '重講', reason: '同一句講兩次', pending: '' }], waits: [{ start: 22, end: 32, file: 'assets/screen/r.mp4', kind: '畫面在轉' }] });
+  assert.match(md, /等待：10\.0 秒沒人講話，勾了壓成 2 秒快轉 \|/, '10 秒的等待留 2 秒，不到 3 秒：沒有等待卡');
+  assert.match(R.cutsMarkdown({ rows: [], waits: [{ start: 20, end: 40, file: 'assets/screen/r.mp4', kind: '靜止' }] }), /等待：20\.0 秒沒人講話，勾了壓成 4 秒快轉＋等待卡/);
   assert.match(md, /## 等待（邊錄邊講）/);
   const cm = M.parseCutsMd(md);
   assert.deepEqual(cm.ng.map((r) => [r.cut, !!r.wait]), [[true, false], [false, true]], 'NG 預設勾、等待預設不勾');
   assert.deepEqual(cm.ng.filter((r) => r.cut).length, 1);
   const on = M.parseCutsMd(M.setCutChecks(md, { 2: true }));
   assert.equal(on.ng[1].cut, true);
-  // 不對齊停頓：留開頭 1.5 秒
+  // 不對齊停頓：10 秒的等待留開頭 2 秒（5 倍快轉）
   const snapped = M.snapNg(on.ng, [[20, 32]], 1);
-  assert.deepEqual([snapped[1].a, snapped[1].b], [23.7, 31.4]);
-  // main 0–40 秒、剪掉 23.7–31.4 → 三段：一般、快轉、一般；快轉的起點接前段、終點接後段
+  assert.deepEqual([snapped[1].a, snapped[1].b], [24, 32]);
+  // main 0–40 秒、剪掉 24–32 → 三段：一般、快轉、一般；快轉的起點接前段、終點接後段
   const clips = [{ kind: 'screen', file: 'assets/screen/r.mp4', start: 0, end: 40 }];
-  const v1 = { chunks: [[0, 711, 1], [711, 942, 99999], [942, 1200, 1]] };
-  const segs = M.screenSegments(clips, v1, 30, [[22.2, 31.4]]);
+  const v1 = { chunks: [[0, 720, 1], [720, 960, 99999], [960, 1200, 1]] };
+  const segs = M.screenSegments(clips, v1, 30, [[22, 32]]);
   assert.deepEqual(segs.map((s) => s.id), ['sync01', 'sync02', 'sync03']);
-  assert.deepEqual([segs[0].from, segs[0].to, segs[0].in], [0, 22.2, 0]);
-  assert.deepEqual([segs[1].from, segs[1].to], [22.2, 23.7]);
-  assert.deepEqual(segs[1].retime, [{ at: '+0', src: 22.2 }, { at: '+1.5', src: 31.4 }]);
+  assert.deepEqual([segs[0].from, segs[0].to, segs[0].in], [0, 22, 0]);
+  assert.deepEqual([segs[1].from, segs[1].to], [22, 24]);
+  assert.deepEqual(segs[1].retime, [{ at: '+0', src: 22 }, { at: '+2', src: 32 }]);
   assert.equal(segs[1].in, undefined, 'retime 和 in 擇一');
-  assert.deepEqual([segs[2].from, segs[2].in], [23.7, 31.4]);
+  assert.deepEqual([segs[2].from, segs[2].in], [24, 32]);
   // 沒勾：照舊兩段
   assert.equal(M.screenSegments(clips, v1, 30, []).length, 2);
 });

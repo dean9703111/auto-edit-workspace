@@ -69,7 +69,7 @@
      P.push(sel, at, {to, from, origin, dur, ease})  慢速鏡頭推進：scale from→to（預設 1→1.4）、origin 預設 "50% 50%"、2.4s、sine.inOut。
                                      只用在全畫面；被縮放的元素（含祖先）不要設 will-change（文字會糊）；tween 已帶 force3D:false。
                                      推進後的座標＝origin＋scale×(靜止座標−origin)，要自己算有沒有出界（右緣 ≤ 1300 的全畫面主內容尤其注意）
-     P.count(sel, at, {from, to, dur, decimals, prefix, suffix, comma, ease})  數字計數器：自訂 GSAP plugin（scCount）每次 render 直接寫元素的 textContent
+     P.count(sel, at, {from, to, dur, decimals, prefix, suffix, comma, clock, ease})  數字計數器（clock: true＝把秒數寫成 m:ss）：自訂 GSAP plugin（scCount）每次 render 直接寫元素的 textContent
                                      （不靠 onUpdate／proxy：HyperFrames 有的 seek 路徑 suppressEvents＝true，callback 不會跑）。
                                      預設 0→100、1.2s、power2.out；起點之前顯示 from、終點之後顯示 to，往回 seek 也對。
                                      自動加 font-variant-numeric: tabular-nums，數字寬度固定不抖；元素要放得下最寬的那個值（固定寬度＋置右／置中）
@@ -191,6 +191,8 @@
 
   // 數字計數 plugin（P.count 用）：值＝{from, to, decimals, comma, prefix, suffix}；render(ratio) 依緩動後的進度算出數字寫進 textContent
   var fmtCount = function (v, c) {
+    // clock：把秒數寫成 m:ss（等待卡的計時；到整秒才跳）
+    if (c.clock) { var t = Math.floor(Number(v) + 1e-6), ss = t % 60; return c.prefix + Math.floor(t / 60) + ':' + (ss < 10 ? '0' : '') + ss + c.suffix; }
     var s = Number(v).toFixed(c.decimals);
     if (c.comma) { var p = s.split('.'); p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); s = p.join('.'); }
     return c.prefix + s + c.suffix;
@@ -523,7 +525,7 @@
       },
       count: function (sel, at, o) {
         var cfg = { from: opt(o, 'from', 0), to: opt(o, 'to', 100), decimals: opt(o, 'decimals', 0), comma: !!(o && o.comma),
-                    prefix: opt(o, 'prefix', ''), suffix: opt(o, 'suffix', '') };
+                    prefix: opt(o, 'prefix', ''), suffix: opt(o, 'suffix', ''), clock: !!(o && o.clock) };
         els(sel).forEach(function (el) {
           el.style.fontVariantNumeric = 'tabular-nums';
           // 自訂 GSAP plugin：每次 render（含 suppressEvents 的 seek、immediateRender）都直接寫 textContent，不靠 onUpdate／proxy

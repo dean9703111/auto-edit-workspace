@@ -67,3 +67,19 @@
 .mside__hi { position: absolute; inset: 8px 0; border-radius: 16px; background: var(--v2-node-tint); opacity: 0; }
 .mside__num { position: relative; flex: none; width: 60px; height: 60px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font: 800 34px/60px var(--sc-font); text-align: center; }
 .mside__txt { position: relative; font: 700 48px/1.2 var(--sc-font); color: var(--sc-fs-ink); white-space: nowrap; }
+
+/* 等待卡（031）：沒人講話的快轉（×5 以上）。畫面壓暗（.mdim），中央一張深色卡：計時圈（跑完一圈＝等完、跑完變綠）＋圈裡是實際經過的時間
+   ＋在等什麼（一兩行）＋快轉倍數。位置、寬度、縮放由 lib/media.mjs 算（left／top 是卡片中心）。 */
+.mwz { position: absolute; inset: 0; pointer-events: none; }
+.mwait { position: absolute; translate: -50% -50%; transform-origin: 50% 50%; }
+.mwait__card { box-sizing: border-box; padding: 44px 56px 40px; border-radius: 28px; background: var(--sc-card); border: 2px solid var(--sc-card-line); box-shadow: var(--sc-lift); display: flex; flex-direction: column; align-items: center; color: var(--sc-ink); opacity: 0; transform-origin: 50% 50%; }
+.mwait__dial { position: relative; flex: none; width: 168px; height: 168px; }
+.mwait__dial svg { display: block; width: 168px; height: 168px; overflow: visible; }
+.mwait__track { fill: none; stroke: rgba(255, 255, 255, 0.18); stroke-width: 12px; }
+.mwait__arc { fill: none; stroke: var(--brand); stroke-width: 12px; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.mwait__done { fill: none; stroke: var(--sc-good); stroke-width: 12px; opacity: 0; }
+.mwait__time { position: absolute; inset: 0; display: grid; place-items: center; font: 900 48px/1 var(--sc-font); font-variant-numeric: tabular-nums; }
+.mwait__title { margin-top: 28px; font: 900 56px/1.25 var(--sc-font); white-space: nowrap; }
+.mwait__sub { margin-top: 4px; font: 700 44px/1.3 var(--sc-font); opacity: 0.78; white-space: nowrap; }
+.mwait__ff { margin-top: 28px; height: 60px; box-sizing: border-box; padding: 0 28px 0 22px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); display: flex; align-items: center; gap: 12px; font: 700 38px/1 var(--sc-font); white-space: nowrap; }
+.mwait__ff svg { flex: none; width: 34px; height: 34px; fill: currentColor; }

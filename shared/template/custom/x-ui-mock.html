@@ -22,7 +22,7 @@
   3. 按鈕位置：按鈕在 #xui-head 的右端（left 560＝設定列寬 768 − 按鈕寬 208），排完在畫布的 (896, 40)。改了按鈕寬高或設定列寬度，就同時改 script 裡游標終點 BTN 的兩個數字：
      BTN ＝ { left: 畫布 left ＋ 寬 ÷ 2 − 8, top: 畫布 top ＋ 高 ÷ 2 − 8 }（游標箭尖在 svg 的 (8, 8)；現在 left 992、top 76）。
      游標和按鈕都在畫布 #xui-canvas 裡，鏡頭（整個視窗）帶過去時一起動，不用再算縮放。按鈕聚焦會放大 1.07、抬起 10 px：按鈕 top ≥ 24。
-  4. 綁句：<script> 開頭 ZOOM、CLICK、RESULT（見【綁句欄位】），下一行 P.sfx 的句號跟著改成一樣。點擊音效寫在 plan.json 這段："clicks": ["#73@匯出"]（照 shared/style.md「音效」的 clicks），和 CLICK 同一個詞。
+  4. 綁句：<script> 開頭 ZOOM、CLICK、RESULT（見【綁句欄位】），下面兩行 P.sfx 的句號跟著改成一樣（按下＝click、結果＝success）；plan.json 這段不用另外寫 "clicks"。
   5. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改；要固定才改成 'grow' 或 'swap'。
 
   【綁句欄位】
@@ -129,7 +129,8 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const ZOOM = P.at('#72@匯出設定'), CLICK = P.at('#73@匯出'), RESULT = P.at('#74@完成');   // 哪個畫面／按下／結果
 
-    P.sfx('success', '#74@完成');   // 結果＝success（句號和上一行一樣）；按下的 click 寫在 plan.json 的 "clicks"
+    P.sfx('click', '#73@匯出');     // 按下＝click（句號和 CLICK 一樣）
+    P.sfx('success', '#74@完成');   // 結果＝success（句號和 RESULT 一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const UI = '#xui-nav1, #xui-nav2, #xui-nav3, #xui-ptitle, #xui-btn, #xui-row1, #xui-row2, #xui-row3';   // 介面元件（彈出順序＝聚焦的組）
     const BTN = { left: 992, top: 76 };   // 游標終點＝按鈕中心各減 8（改了按鈕位置就改這兩個數字）

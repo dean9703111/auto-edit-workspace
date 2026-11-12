@@ -227,8 +227,8 @@ export function cutsMarkdown({ rows = [], chapters = [], order = null, decide = 
   for (const r of rows) L.push(`| ${r.cut ? '[x]' : '[ ]'} | ${clock(r.start)}–${clock(r.end)} | ${cell(r.text) || '—'} | ${cell(r.reason)} | ${cell(r.pending) || '—'} |`);
   L.push('');
   if (waits.length) {
-    L.push('## 等待（邊錄邊講）', '', `畫面在等、也沒人講話的地方。勾了就壓成 ${M.WAIT_KEEP} 秒快轉，那段聲音一起剪掉；預設不勾。`, '', '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|');
-    for (const w of waits) L.push(`| [ ] | ${clock(w.start)}–${clock(w.end)} | ${cell(w.file)} ${w.kind === '畫面在轉' ? '畫面在轉' : w.kind === '靜止' ? '畫面沒動' : '只有小動作（可能在打字）'} | 等待：${(w.end - w.start).toFixed(1)} 秒沒人講話，勾了壓成 ${M.WAIT_KEEP} 秒快轉 | — |`);
+    L.push('## 等待（邊錄邊講）', '', `畫面在等、也沒人講話的地方。勾了就壓成 ${M.WAIT_KEEP}–${M.WAIT_KEEP_MAX} 秒的快轉（等待的五分之一），其他剪掉；等待 15 秒以上的，完成影片會自動放等待卡（計時圈＋在等什麼）、配秒針。預設不勾。`, '', '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|');
+    for (const w of waits) L.push(`| [ ] | ${clock(w.start)}–${clock(w.end)} | ${cell(w.file)} ${w.kind === '畫面在轉' ? '畫面在轉' : w.kind === '靜止' ? '畫面沒動' : '只有小動作（可能在打字）'} | 等待：${(w.end - w.start).toFixed(1)} 秒沒人講話，勾了壓成 ${M.waitKeep(w.end - w.start)} 秒快轉${M.waitKeep(w.end - w.start) >= 3 ? '＋等待卡' : ''} | — |`);
     L.push('');
   }
   if (chapters.length) {

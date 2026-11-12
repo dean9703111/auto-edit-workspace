@@ -541,6 +541,11 @@ test('P.sfx（motion.md §5）：情境動畫的音效拍點靜態解析成 <aud
   assert.match(idx, /<audio id="sfx-x01-e2" src="assets\/sfx\/click\.wav"/);
   // custom 段的 prev 也進 window.__cues.segs[id]（P 讀得到）
   assert.match(idx, /"x01":\{"comp":"x-beat","start":8,"D":6\.5,"prev":"speaker","refs":/);
+  // 031：同一下點擊，段上的 clicks 和動畫檔的 P.sfx('click') 都寫了（x-ui-mock 現在自己帶點擊，舊的 plan.json 還留著 clicks）→ 只響一顆；不同時間的照樣各一顆
+  writePlan(seg({ clicks: ['#4+0.5'] }));
+  assert.deepEqual(JSON.parse(node('--check', '--json').stdout).items.find((i) => i.id === 'x01').sfx.map((c) => c.name).sort(), ['click', 'ding']);
+  writePlan(seg({ clicks: ['#4+2'] }));
+  assert.deepEqual(JSON.parse(node('--check', '--json').stdout).items.find((i) => i.id === 'x01').sfx.map((c) => c.name).sort(), ['click', 'click', 'ding']);
   // sfxExtra: false：整段的拍點音效關掉
   writePlan(seg({ sfxExtra: false }));
   assert.deepEqual(JSON.parse(node('--check', '--json').stdout).items.find((i) => i.id === 'x01').sfx, []);

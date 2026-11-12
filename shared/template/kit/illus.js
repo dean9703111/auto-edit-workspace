@@ -31,7 +31,7 @@
  *   要重畫（例：改了 data-screen）帶 {force:true}，那些元素的動畫狀態會重置。
  *   data-* 名稱即 opts 名稱：data-orient / data-screen / data-arrow / data-tone / data-bars
  *   / data-seed / data-color / data-angle / data-len / data-fill / data-kind / data-title
- *   / data-text / data-saved。數字與布林（"true"）會自動轉型。
+ *   / data-text / data-saved / data-sand。數字與布林（"true"）會自動轉型。
  * ILLUS.textWidth(str, fontSize) 估算文字寬（searchBar 游標位置用）。
  *
  * 通則
@@ -103,6 +103,12 @@
  *                       GSAP：gsap.to('.il-hand',{rotation:360, svgOrigin:'110 135'})
  *                     .il-sweep：pathLength=100、dasharray 100、預設 dashoffset 100（空）→ 0 畫滿一圈，
  *                       GSAP：gsap.to('.il-sweep',{strokeDashoffset:0})，從 12 點鐘方向順時針
+ *  hourglass(opts)    sand: top*|flow|bottom   .il-glass（玻璃）.il-sandtop（上面的沙）.il-sandbot（下面的沙堆）.il-stream（細流）  200×300
+ *                     top＝沙都在上面（沙堆、細流 opacity:0）；flow＝流到一半（三個都看得到）；bottom＝流完（上面的沙、細流 opacity:0）
+ *                     玻璃是上下對稱的兩個漏斗，壁是直的：沙用「等比縮放」就會一路貼著玻璃，不要只縮高度（會凸出玻璃外）。
+ *                       上面的沙往腰部流光：gsap.to('.il-sandtop', { scale: 0, svgOrigin: '100 156.5', ease: 'none' })
+ *                       下面的沙堆長出來：  gsap.fromTo('.il-sandbot', { opacity: 1, scale: 0 }, { scale: 1, svgOrigin: '100 276', ease: 'none' })
+ *                       細流：流的時候 gsap.to('.il-stream', { opacity: 1, duration: 0.2 })，流完淡出
  *  bookmark(opts)     saved: false*|true    .il-off（書籤輪廓＋「儲存」）.il-on（黃書籤＋「已儲存」），
  *                     兩組都畫，未選的 opacity:0；用 opacity 切換                    220×72
  * ===================================================================== */
@@ -564,6 +570,28 @@
     return SVG('stopwatch', 220, 240, s);
   }
 
+  /* ---------- hourglass ---------- */
+  // 上下兩片底座＋一體成形的玻璃（兩個對稱的漏斗，肩膀是圓角、壁是直線，腰寬 16）。壁的延長線交在 (100,156.5)／(100,143.5)：
+  // 沙以那一點等比縮放，邊緣剛好一直貼著玻璃壁。畫的順序：玻璃底色 → 沙 → 玻璃描邊（描邊蓋住沙的邊）→ 底座
+  function hourglass(o) {
+    o = o || {};
+    var st = o.sand === 'flow' || o.sand === 'bottom' ? o.sand : 'top';
+    var glass = 'M32 24L168 24L168 40Q168 50.1 154 72L108 144L108 156L154 228Q168 249.9 168 260L168 276L32 276L32 260Q32 249.9 46 228L92 156L92 144L46 72Q32 50.1 32 40Z';
+    var s = P(glass, { fill: INNER });
+    // 上面的沙：水平面 y=84，沿著壁到腰；flow 時縮到 0.62（以壁的交點為中心）
+    s += P('M53.7 84L146.3 84L108 144L92 144Z', { 'class': 'il-sandtop', fill: YEL, off: st === 'bottom',
+      transform: st === 'flow' ? 'translate(100 156.5) scale(0.62) translate(-100 -156.5)' : null });
+    // 細流：腰到底
+    s += R(98.5, 150, 3, 124, 1.5, { 'class': 'il-stream', fill: YEL, off: st !== 'flow' });
+    // 下面的沙堆：貼著底、中間隆起；flow 時 0.7 倍（以底邊中點為中心）
+    s += P('M46 276L154 276Q132 238 100 230Q68 238 46 276Z', { 'class': 'il-sandbot', fill: YEL, off: st === 'top',
+      transform: st === 'flow' ? 'translate(100 276) scale(0.7) translate(-100 -276)' : null });
+    s += P(glass, { 'class': 'il-glass', fill: 'none', s: 4 });
+    s += R(16, 4, 168, 20, 8, { fill: BODY, s: 4 });
+    s += R(16, 276, 168, 20, 8, { fill: BODY, s: 4 });
+    return SVG('hourglass', 200, 300, s);
+  }
+
   /* ---------- bookmark ---------- */
   function bookmark(o) {
     o = o || {};
@@ -580,7 +608,7 @@
     phone: phone, tripod: tripod, phoneTripod: phoneTripod, laptop: laptop, monitor: monitor,
     cloud: cloud, personBust: personBust, pgPerson: pgPerson, personTop: personTop, desk: desk, stage: stage, cone: cone,
     waveform: waveform, progress: progress, energy: energy, fileVideo: fileVideo, window: windowC,
-    searchBar: searchBar, badge: badge, recPill: recPill, stopwatch: stopwatch, bookmark: bookmark
+    searchBar: searchBar, badge: badge, recPill: recPill, stopwatch: stopwatch, hourglass: hourglass, bookmark: bookmark
   };
   var BUILTIN = Object.keys(COMP);
   var ILLUS = window.ILLUS = {};

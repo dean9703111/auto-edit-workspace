@@ -89,7 +89,7 @@ import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZo
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
 import { picsCmd } from './lib/pics.mjs';
-import { syncLocalSfx, localSfxDir } from './lib/sfx-local.mjs';
+import { syncLocalSfx, localSfxDir, LOCAL_ROLES } from './lib/sfx-local.mjs';
 import { runScaffold, mapCmd, mapMergeCmd, checkDraft, outlineCmd, designStatusCmd, designCanvasCmd, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan, ensureBriefs } from './lib/flow.mjs';
 import { autofixPlan, summaryLines } from './lib/autofix.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
@@ -277,7 +277,10 @@ export function listText(lib) {
     lines.push(`| ${f.id} | ${f.zh} | ${f.en} | ${f.category} | ${vars} | ${f.sfx ? `${f.sfx.sound} @ ${f.sfx.at ?? 'start'}` : '—'} | ${f.when} | ${f.sem?.length ? f.sem.join('、') : '—'} |`);
   }
   const tags = (v) => [v.additive ? '附加' : '', v.maxPerVideo != null ? `每集 ≤ ${v.maxPerVideo}` : ''].filter(Boolean).map((x) => `，${x}`).join('');
-  lines.push('', '# 音效（"sfx"）：' + Object.entries(lib.sfx).filter(([, v]) => v.kind !== 'bgm').map(([k, v]) => `${k}（${v.zh || k}，音量 ${v.volume}${tags(v)}）`).join('、') + '、null（不配）；"sfxExtra": false 可關掉該段的附加音效（跟動畫節拍的 tick 等）；不寫＝用上表音效欄的預設');
+  lines.push('', '# 音效（"sfx"）：' + Object.entries(lib.sfx).filter(([k, v]) => v.kind !== 'bgm' && !LOCAL_ROLES[k]?.auto).map(([k, v]) => `${k}（${v.zh || k}，音量 ${v.volume}${tags(v)}）`).join('、') + '、null（不配）；"sfxExtra": false 可關掉該段的附加音效（跟動畫節拍的、等待快轉的秒針）；不寫＝用上表音效欄的預設');
+  // 自備角色：這台機器沒放的也能寫（改用箭頭後面那一顆）；tick 是工具自動配在等待快轉上的
+  const roles = Object.entries(LOCAL_ROLES).filter(([, r]) => !r.auto).map(([k, r]) => `${k}（${r.zh}，每集 ≤ ${r.maxPerVideo}${lib.sfx[k] ? '' : `；這台機器沒放 → ${r.fallback ?? '不出聲，情緒點照類別配'}`}）`);
+  lines.push(`自備角色（shared/sfx-local/ 放了才有那個聲音，用法見 shared/style.md「情緒點」）：${roles.join('、')}；等待快轉的秒針（tick）${lib.sfx.tick ? '已放，工具自動配' : '沒放，不配'}`);
   const bgms = Object.keys(lib.sfx).filter((k) => lib.sfx[k].kind === 'bgm');
   if (bgms.length) lines.push(`結尾配樂（plan.json "outro"）：${bgms.join('、')}`);
   lines.push('', '# 插入素材（"type": "media"：螢幕錄影或圖片，整張幕＋右下角子母畫面；用法見 shared/template/USAGE.md 第 5 節）', '',

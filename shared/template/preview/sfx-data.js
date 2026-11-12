@@ -1,27 +1,27 @@
 // build.mjs --gallery 產生，不要手改
 window.__SFX_DATA = {
-  "generated": "2026-11-12T06:09:42.679Z",
+  "generated": "2026-11-12T11:34:28.357Z",
   "sounds": {
     "ding": {
       "kind": "sfx",
       "zh": "提示「滴」",
-      "use": "講重點、提醒（「提醒一下大家」）、答案揭曉",
-      "event": "重點字出現那一格",
+      "use": "提醒、小技巧、總結、答案揭曉",
+      "event": "卡片出現那一格",
       "peak": 0.01,
-      "volume": 0.468,
-      "targetDb": -12.6,
+      "volume": 0.733,
+      "targetDb": -8.7,
       "additive": false,
       "maxPerVideo": null,
       "variants": [
         {
           "file": "ding-2",
           "peak": 0.011,
-          "volume": 0.468
+          "volume": 0.733
         },
         {
           "file": "ding-3",
           "peak": 0.009,
-          "volume": 0.468
+          "volume": 0.733
         }
       ]
     },
@@ -74,7 +74,7 @@ window.__SFX_DATA = {
     "impact": {
       "kind": "sfx",
       "zh": "綜藝「咚咚」",
-      "use": "蓋章、重擊、數字或金句落定",
+      "use": "重點句、蓋章、重擊、數字或金句落定",
       "event": "落定、蓋章落地那一格（第一下）",
       "peak": 0.134,
       "volume": 0.617,
@@ -111,8 +111,9 @@ window.__SFX_DATA = {
       "use": "章節轉場（01）",
       "event": "章名落定那一格（01 的 titleAt＝段起點＋0.45 s）",
       "peak": 0.021,
-      "volume": 0.891,
-      "targetDb": -3,
+      "volume": 1,
+      "targetDb": -2,
+      "roleDb": 3.2,
       "additive": false,
       "maxPerVideo": null
     },
@@ -122,8 +123,8 @@ window.__SFX_DATA = {
       "use": "入場、介紹主角（14 講者介紹）、金句閃亮（15）",
       "event": "主角或金句出現完成那一格",
       "peak": 0.18,
-      "volume": 0.638,
-      "targetDb": -5.9,
+      "volume": 0.575,
+      "targetDb": -6.8,
       "additive": false,
       "maxPerVideo": 6
     },
@@ -133,8 +134,8 @@ window.__SFX_DATA = {
       "use": "轉折亮點：本集最得意的設計、關鍵詞大字進場",
       "event": "關鍵詞到位那一格",
       "peak": 0.699,
-      "volume": 0.891,
-      "targetDb": -3,
+      "volume": 0.668,
+      "targetDb": -5.5,
       "additive": false,
       "maxPerVideo": 3
     },
@@ -144,8 +145,9 @@ window.__SFX_DATA = {
       "use": "負面情緒：壓力、焦慮、晴天霹靂（15 金句 tone warn 預設）",
       "event": "負面問句或壞消息出現那一格",
       "peak": 0.2,
-      "volume": 0.891,
-      "targetDb": -3,
+      "volume": 1,
+      "targetDb": -2,
+      "roleDb": 0.6,
       "additive": false,
       "maxPerVideo": 3
     },
@@ -226,7 +228,7 @@ window.__SFX_DATA = {
       "zh": "重點字卡",
       "no": "07",
       "main": {
-        "sound": "ding",
+        "sound": "impact",
         "at": 0.15
       },
       "extra": []
@@ -251,13 +253,19 @@ window.__SFX_DATA = {
     "tips": {
       "zh": "Tips 字卡",
       "no": "10",
-      "main": null,
+      "main": {
+        "sound": "ding",
+        "at": 0.1
+      },
       "extra": []
     },
     "summary": {
       "zh": "總結字卡",
       "no": "11",
-      "main": null,
+      "main": {
+        "sound": "ding",
+        "at": 0.1
+      },
       "extra": []
     },
     "keywords": {

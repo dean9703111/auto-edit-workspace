@@ -23,7 +23,7 @@
 | 講者調光、瘦臉、美顏 | 選用，預設關閉；建議值調光 0.8、瘦臉 0.6、美顏 0.5 | `shared/template/kit/look.json`（工具 `look.mjs`） | 構圖台、剪輯台都有開關和強度滑桿。臉部偵測在本機做、不上傳 |
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
 | 字型 | 3 套（Noto Sans TC、Google Sans Flex、等寬的 JetBrains Mono） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
-| 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；常用的四個各有兩個升降半音的變體，同一顆在一集裡輪著放、不會一模一樣地重複；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處） | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
+| 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；常用的四個各有兩個升降半音的變體，同一顆在一集裡輪著放、不會一模一樣地重複；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處）。想用自己的音效：同名的 `.wav` 放進 `shared/sfx-local/`（不進版控）就會取代內建的，另外認得 tick、checkin、question、wow 四個自備角色 | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
 | 範例專案 | 原始講解 1 支、講稿、場地照 | `projects/example/`（`projects/` 底下只有它進版控，其他專案都不進） | 第一次照著做就有完成影片 |
 
 ## 工具

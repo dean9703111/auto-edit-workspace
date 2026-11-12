@@ -20,6 +20,7 @@
 // （金句、反轉 > 痛點、解法 > 落定 > 模板的固定配對）；模板的固定配對（章節、重點卡、提醒卡、總結）照常出聲，離情緒點不到 3 秒才讓；
 // 使用者在段上明寫的 sfx、章節音效最優先。踩坑、解法的音效不在動畫段裡時打在句尾前 0.2 秒。推近每分鐘最多 1 次。
 import { parseTime, cueSeconds, r3 } from './time.mjs';
+import { LOCAL_ROLES, sfxActual } from './sfx-local.mjs';
 
 export const MOOD_KINDS = Object.freeze({
   quote: { zh: '金句', sound: 'sparkle', rank: 5 },
@@ -42,7 +43,7 @@ export function validateMoods(moods, sfxConf = {}) {
   const errors = [];
   if (moods === undefined) return errors;
   if (!Array.isArray(moods)) return [`moods 要是陣列，例 "moods": [{ "at": "#12@千萬不要", "kind": "pain" }]，現在是 ${JSON.stringify(moods)}`];
-  const names = Object.keys(sfxConf).filter((k) => sfxConf[k]?.kind !== 'bgm');
+  const names = [...new Set([...Object.keys(sfxConf).filter((k) => sfxConf[k]?.kind !== 'bgm'), ...Object.keys(LOCAL_ROLES)])].filter((k) => !LOCAL_ROLES[k]?.auto);   // 自備角色沒放也能寫（改用內建的）；tick 是工具自動配在等待快轉上的，不能自己寫
   moods.forEach((m, i) => {
     const w = `moods[${i}]`;
     if (!m || typeof m !== 'object' || Array.isArray(m)) { errors.push(`${w} 要寫成 { "at": "#N@詞", "kind": "pain" }，現在是 ${JSON.stringify(m)}`); return; }
@@ -70,7 +71,9 @@ export function moodCues(moods, { cues, sfxConf = {}, videoDur = Infinity, frame
     if (c.error) { errors.push(`${where}：${c.error}`); return; }
     const event = c.sec;
     if (!(event >= 0 && event < videoDur)) return;   // 剪掉的句子：不出聲也不報錯（剪輯台剪掉的）
-    const name = moodSound(m.kind, m.sfx);
+    // 寫了自備角色（checkin、question、wow）但這台機器沒放：改用它的 fallback，沒有 fallback 就照類別配
+    const want = moodSound(m.kind, m.sfx);
+    const name = want && !sfxConf[want] && want in LOCAL_ROLES ? (sfxActual(want, sfxConf) ?? moodSound(m.kind)) : want;
     let sfx = null;
     if (name && sfxConf[name]) {
       const conf = sfxConf[name];

@@ -389,7 +389,6 @@ function makeProject(dir, gap = 1.0) {
     fs.copyFileSync(p.file, path.join(dir, 'work/hyperframes/compositions', `${name}.html`));
     const id = `x${String(k + 1).padStart(2, '0')}`;
     const seg = { id, type: 'custom', src: `compositions/${name}.html`, layout: EXAMPLES[name].overlay ? 'overlay' : 'fullscreen', from: `#${open}`, to: `#${nums[nums.length - 1]}e` };
-    if (name === 'x-ui-mock') seg.clicks = ['#73@匯出'];
     scenes.push(seg);
     segs.push({ id, name, p, start: Math.round(S * 1000) / 1000 });
     S += p.sample.D + gap;

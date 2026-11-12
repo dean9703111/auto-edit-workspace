@@ -180,7 +180,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 聲音由 build 處理，回報時把 build 印的這三行貼給使用者：
 - 人聲響度：重新編碼底片時，人聲調到 −14 LUFS、true peak ≤ −1 dBTP（YouTube 播放的基準），報告印 `人聲響度 −21.9 LUFS → −13.9 LUFS（true peak −7.1）`。量測結果有快取，素材沒變就不重量。完成影片的整體響度會落在 −14 ±1.5，因為音效、插入素材的聲音和結尾配樂也混在裡面。
-- 音效比例：每顆音效的大小寫在 `shared/template/kit/sfx.json` 的 `targetDb`（相對人聲的 dB，上限照 `shared/style.md` 音效段）。報告印 `音效比例：主音效比人聲小 3.0–12.6 dB（中位 7.9）、附加音效小 16.1–16.1 dB；上限是比人聲小 3 dB`；有超過上限的會 ⚠，列出段落和要再調低幾 dB → 在剪輯台調那一段的音效音量（`sfxVolume`）。用了 `--no-loudnorm` 時印「沒有檢查」。
+- 音效比例：每顆音效的大小寫在 `shared/template/kit/sfx.json` 的 `targetDb`（相對人聲的 dB，上限照 `shared/style.md` 音效段）。報告印 `音效比例：主音效比人聲小 5.2–8.7 dB（中位 6.2）、附加音效小 19.6–19.6 dB；上限是比人聲小 3 dB`（用到章節、打雷這類設計上就比較大的音效時，寫成「主音效從比人聲小 8.7 dB 到小 2.0 dB」並註明照 kit/sfx.json）；有超過上限、又比那顆設計的大小還大的會 ⚠，列出段落和要再調低幾 dB → 在剪輯台調那一段的音效音量（`sfxVolume`）。用了 `--no-loudnorm` 時印「沒有檢查」。
 - 剪接點：`work/cutpoints.json` 的每個點，重新編碼時前後各淡 15 毫秒，消掉硬切的爆音（15 毫秒不會在底噪上挖出聽得到的凹洞）；剪輯台 `cuts` 的接點由 HyperFrames 淡 20 毫秒。有 `cutpoints.json` 時印 `剪接點微淡化：2 個接點，前後各 15 ms`；沒有時印「剪接點微淡化：略過（work/cutpoints.json 不存在；…）」，不是錯誤。
 - `--check` 最後另外印「音效次數」「音效密度」兩行；有 ⚠（某個音效超過每集上限、某一分鐘主音效太多）就照 → 處理，或在回報裡說明保留的理由。
 - 講者與配樂：build 另外印「講者調光：…」「講者瘦臉：…」「結尾配樂：…」三行，也一起貼。沒開、沒配時括號裡寫怎麼開（`講者調光：關（kit/look.json 預設；要開就在 plan.json 寫 "look"…）`、`結尾配樂：沒配（預設不配；要配就在 plan.json 第一層寫 "outro"…）`）：使用者看到才知道有這些功能，不要省略。
@@ -243,6 +243,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `tone` | `"warn"`（警示紅）或 `"good"`（解方綠），`--list` 寫了 tone 的情境才能用 |
 | `sfx` | `kit/sfx.json` 裡 `kind` 是 `sfx` 的名稱之一（見 R5.2 或 `--list`）或 `null`；不寫＝用情境預設（R5）。要落在某一句（踩坑句、結果句）寫 `{ "name": "alert", "at": "#12e-0.1" }`（任何段都可以；`at` 寫法同 `marks`，要在這段裡） |
 | `clicks` | media、custom 段：畫面上看得到游標按下的時間（`["+3.2", "#21@安裝"]`），一下一顆 `click`（R5.2） |
+| `wait` | media 段：等待卡上寫在等什麼（`"AI 逐張辨識收據｜寫入 Excel"`，1–2 行、每行 ≤ 12 字）；`false`＝不要等待卡。等待卡是工具自動放的：錄影快轉 5 倍以上、至少 3 秒、那幾秒沒人講話（第 5 節） |
 | `sfxExtra` | `false`＝關掉這段跟著條列／步驟的附加音效；不寫＝開 |
 | `sfxVolume` | 這段音效的音量（dB，−60～+12，0＝預設），主音效＋附加音效一起調；通常是剪輯台寫的 |
 | `css` | 只改位置的 CSS，id 寫模板原名（R4） |
@@ -506,10 +507,10 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `src` | 必填 | 相對專案資料夾，只能在 `assets/screen/` 或 `assets/images/` 底下。影片 `.mp4 .mov .m4v .webm`，圖片 `.jpg .jpeg .png .webp` |
 | `from`／`to`／`duration`／`anchor` | `to` 或 `duration` 必填 | 同其他段（3.4） |
 | `in` | `0` | 錄影從第幾秒開始播；`in ＋ 段長 × speed` 不能超過錄影長度 |
-| `out` | — | 錄影播到第幾秒：`speed`＝(`out` − `in`) ÷ 段長，build 算；段 ≤ 3 秒時可到 64 倍（快轉跳過等待，⚠ 提醒） |
+| `out` | — | 錄影播到第幾秒：`speed`＝(`out` − `in`) ÷ 段長，build 算；段 ≤ 5 秒時可到 600 倍（快轉跳過等待，⚠ 提醒） |
 | `speed` | `1` | 0.5–4（和 `out` 擇一） |
 | `hold` | — | 定格：整段停在錄影第幾秒那一格（build 抽成一張圖；`in`／`out`／`speed`／`volume` 不用寫）；標註、放大鏡、運鏡照常 |
-| `retime` | — | 同一段裡變速、定格：`[{ "at": "#21", "src": 19 }, …]`，講到 `at` 時錄影在第 `src` 秒，兩點之間速度 build 算（下限 ×0.25、上限 ×16，3 秒內的跳過等待可到 ×64）；`src` 一樣＝定格。第一點之前、最後一點之後是正常速度。運鏡、紅框跨整段；不保留原聲；和 `in`／`out`／`speed`／`hold` 擇一 |
+| `retime` | — | 同一段裡變速、定格：`[{ "at": "#21", "src": 19 }, …]`，講到 `at` 時錄影在第 `src` 秒，兩點之間速度 build 算（下限 ×0.25、上限 ×16，5 秒內的跳過等待可到 ×600）；`src` 一樣＝定格。第一點之前、最後一點之後是正常速度。運鏡、紅框跨整段；不保留原聲；和 `in`／`out`／`speed`／`hold` 擇一 |
 | `redact` | — | 打碼：`[{ "box": [x, y, w, h], "at": "#21", "until": "#22e" }]`，框裡的東西模糊後燒進影片（放大鏡也看不到原文）；`at`、`until` 不寫＝整段。框要蓋住那段時間它會出現的所有位置，build 完在拼圖看一次 |
 | `fit` | `"contain"` | `contain`＝整張看得到，放在字幕帶上方（y 0–940），空白處是黑底；`cover`＝鋪滿 1920×1080，多的裁掉 |
 | `pip` | `true` | 右下角子母畫面露臉（橫式會自動移進素材右下角，不用寫座標）；只有聲音的區間自動不放。`false`＝整段不露臉 |
@@ -575,11 +576,12 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 |---|---|---|
 | `media.mjs main` | 每支 `assets/screen/` 錄影判斷一次：有講話、有換氣停頓（有聲音的時間 20–95%）＝邊錄邊講，接進主軌（只取聲音、配純黑，`main.json` 的 `kind` 是 `screen`）；一路不停的背景音樂、沒聲音＝插入素材 | 判斷印在停點 ①；判斷錯了用 `--order` 指定要接的檔 |
 | `media.mjs ng-snap` | 錄影那幾段整段 `--add-in`（扣掉 NG）：只剪 NG、停頓保留，畫面才不會亂跳；有講稿時照講稿比對主軌順序 | 順序 ⚠ 放進停點 ① |
-| `media.mjs prep` | 畫面在等、又沒人講話 ≥ 3 秒的地方列進 `cuts.md` 的「等待」表（預設不勾；和 NG 列一樣在剪輯清單頁勾） | 停點 ① 給使用者看；勾了就壓成 1.5 秒快轉，那段聲音一起剪掉 |
+| `media.mjs prep` | 畫面在等、又沒人講話 ≥ 3 秒的地方列進 `cuts.md` 的「等待」表（預設不勾；和 NG 列一樣在剪輯清單頁勾） | 停點 ① 給使用者看；勾了就壓成等待長度五分之一的快轉（最少 1.5 秒、最多 4.5 秒），其他剪掉；等待 15 秒以上的，完成影片自動放等待卡、配秒針（style.md「螢幕錄影與圖片」），那一段（`screen-sync` 產生的快轉段）補一句 `"wait": "在等什麼"` |
 | `media.mjs screen-sync` | 照 `work/cuts.v1.json` 算初剪後每段對到錄影的哪一秒，寫 `work/screen-sync.json`（`sync01`、`sync02`…，NG 剪掉的地方切成兩段；勾了的等待多一段 `retime` 快轉，前後硬接） | 初剪、cutpoints 之後跑 |
 | `media.mjs screen-sync --write-plan` | 把 sync 段放進 plan.json（先備份 `plan.json.sync-<時間>`；舊的 sync 段整批換掉，其他段不動） | `--merge-drafts` 會自己放，平常不用跑；初剪重做過、沒有重新合併時才跑 |
 
 - sync 段就是一般的 media 段：可以加 `moves`、`callouts`、`clicks`（5.5），`from`／`to`／`in` 不要改，改了畫面就對不上聲音。
+- 等待卡：快轉段（勾了的等待）快轉 5 倍以上、至少 3 秒時，build 自動把錄影壓暗、放等待卡（計時圈、實際等了多久、快轉幾倍）並配秒針接 `ding`，`--check` 那一列印「等待卡 1（快轉 N 倍、實際 M 秒）」。build 會讓快轉提早跑完、最後約 1 秒停在結果那一格（那一列的變速會多一段「定格」）：`ding` 響完再過 0.1 秒人聲才回來。在那一段加 `"wait": "AI 逐張辨識收據｜寫入 Excel"` 寫在等什麼（1–2 行、用「｜」分行、每行 ≤ 12 字）；沒寫卡片上是「處理中」、`--check` ⚠。不要等待卡寫 `"wait": false`。
 - 兩段 sync 相接時 build 自動疊化 0.47 秒（NG 剪接點不會硬跳）。
 - sync 段蓋住的區間沒有講者小視窗（整段在只有聲音的區間）；build `--check` 報「只有聲音的區間沒有畫面」而有 `work/screen-sync.json` 時，會直接叫你跑 `--write-plan`。
 

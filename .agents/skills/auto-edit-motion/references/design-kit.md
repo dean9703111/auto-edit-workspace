@@ -49,9 +49,22 @@
 
 數字滾動 `P.count`、打字 `P.type`、把線或框畫出來 `P.draw`／`P.stroke`、聚焦（一個放大、其他壓暗）`P.spot`、換狀態 `P.swap` 這幾種，用 kit 的比自己寫穩（時間軸跳到任何一秒都對）。寫法查同一個資料夾的 `kit-syntax.md` 那一列；可以和 GSAP 混在同一個檔。
 
+## 連接線、引線
+
+兩個東西之間的線（箭頭、引線、連到標籤的線）不要自己算座標寫 `<path d="M440 560 L560 300">`：元件一搬位置線就歪，兩條線還會交叉。放一個空的 svg，寫要連哪兩個元件的 id，kit 會把線畫在兩邊外框邊的中點之間、兩端各留一點空隙：
+
+```html
+<svg id="xd-lines" data-links="xd-phone-xd-cardA xd-phone>xd-cardB"></svg>
+```
+
+- `a-b` 沒有箭頭、`a>b` 有箭頭；多條用空白隔開。svg 放在和這些元件同一個容器裡（容器要有 `position`）。
+- 線的 id 是 `<a>-<b>`，描出來寫 `P.stroke('#xd-phone-xd-cardA', T, { dur: 0.5 })`。顏色、粗細用 CSS 寫在這個 id 上。
+- 左右並排的兩個元件是水平直線，上下並排是垂直直線，斜對角是先水平再垂直的折線。想要線是直的，就把兩個元件排在同一列或同一欄。
+- 真的要手寫（例：曲線），兩端要落在元件邊的中點外 4–32 px；audit 會量，歪了印 ⚠ `layout-link`。
+
 ## 現成的線稿元件
 
-有合用的就用它（別段也用同一個，全片才一致）；沒有才照「新畫一個物件」畫。現有：`phone`、`phoneTripod`、`tripod`、`laptop`、`monitor`、`cloud`、`personBust`、`pgPerson`、`personTop`、`desk`、`stage`、`cone`、`waveform`、`progress`、`energy`、`fileVideo`、`window`、`searchBar`、`badge`、`recPill`、`stopwatch`、`bookmark`。長相、選項和寫法看 `shared/template/kit/illus-gallery.jpg`（一張圖，每格下面有寫法）。
+有合用的就用它（別段也用同一個，全片才一致）；沒有才照「新畫一個物件」畫。現有：`phone`、`phoneTripod`、`tripod`、`laptop`、`monitor`、`cloud`、`personBust`、`pgPerson`、`personTop`、`desk`、`stage`、`cone`、`waveform`、`progress`、`energy`、`fileVideo`、`window`、`searchBar`、`badge`、`recPill`、`stopwatch`、`hourglass`（沙漏，沙會流）、`bookmark`。長相、選項和寫法看 `shared/template/kit/illus-gallery.jpg`（一張圖，每格下面有寫法）。
 
 - 掛上去：`<div data-illus="laptop" data-screen="blank" style="width:420px;height:285px"></div>`（寬高照圖上的比例放大），script 第一行加 `ILLUS.mount(document.getElementById('x-design-<段>'));`。
 - 有螢幕的元件每個狀態都畫好了，是 `.il-<狀態>` 子元素（`video` 的 class 是 `.il-content`）；換狀態：`P.swap('#xd<段>-a .il-rec', '#xd<段>-a .il-warn', T2)`。

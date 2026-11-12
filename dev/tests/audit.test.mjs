@@ -1219,6 +1219,11 @@ test('012：judgeLayoutRules 六條各一好一壞（row-align／gap／center／
   assert.match(through[0].msg, /穿過 #b/);
   const hand = J([cont(A3)], [lk([[302, 250], [388, 250]], { id: 'line3', hand: true })]);
   assert.ok(hand.length === 1 && /（手寫）/.test(hand[0].msg) && /端點離外框 2px/.test(hand[0].msg), hand.map((f) => f.msg).join('\n'));
+  // 031：沒有版面宣告的畫面（內容設計動畫，containers 是空的）也量手寫的連接線：設計師把座標寫死、線歪了要抓得到
+  const free = J([], [lk([[300, 330], [400, 330]], { id: 'leadA', hand: true })]);
+  assert.ok(free.length === 1 && /連接線 #leadA（手寫）/.test(free[0].msg) && /#a 端點離外框 0px/.test(free[0].msg) && /#b 端點離左右邊中點 80px/.test(free[0].msg), free.map((f) => f.msg).join('\n'));
+  assert.deepEqual(J([], [lk([[312, 250], [388, 250]], { hand: true })]), [], '接在兩邊的邊中點、留了空隙：不提醒');
+  assert.deepEqual(J([], []), []);
   // 訊息只指 shared/style.md「版面」
   const all = [...J([cont(three({ b: { anchor: [400, 170, 600, 370] }, c: [712, 150, 912, 350] }))]), ...through, ...hand, ...J([lab([180, 316, 240, 350])])];
   assert.deepEqual([...new Set(all.map((f) => f.rule))].sort(), ['layout-gap', 'layout-label', 'layout-link', 'layout-row-align']);

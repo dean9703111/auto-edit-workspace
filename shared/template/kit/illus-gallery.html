@@ -128,6 +128,8 @@
   grp('stopwatch', '220×240 · .il-hand（svgOrigin "110 135"）.il-sweep（dashoffset 100→0）.il-ticks');
   add('stopwatch', {}, 220);
   add('stopwatch', {}, 220, 'stopwatch');
+  grp('hourglass', '200×300 · .il-glass .il-sandtop（scale→0，svgOrigin "100 156.5"）.il-sandbot（scale 0→1，svgOrigin "100 276"）.il-stream');
+  ['top', 'flow', 'bottom'].forEach(function (k) { add('hourglass', { sand: k }, 200); });
   grp('bookmark', '220×72 · .il-off .il-on（用 opacity 切換）');
   add('bookmark', { saved: false }, 220);
   add('bookmark', { saved: true }, 220);

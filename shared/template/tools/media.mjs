@@ -983,6 +983,11 @@ const isChecked = (v) => /^(\[\s*[xX✓✔]\s*\]|[xX✓✔✅])$/.test(String(v 
 // 「等待」表的列（邊錄邊講：畫面在等、又沒人講話）：和 NG 列同一種格式，剪輯清單頁不用改就能勾；原因欄以「等待」開頭，勾了留 WAIT_KEEP 秒快轉，其他剪掉
 export const WAIT_RE = /^等待/;
 export const WAIT_KEEP = 1.5;
+// 勾了的等待留幾秒：等待長度的五分之一（＝5 倍快轉），最少 WAIT_KEEP 秒、最多 WAIT_KEEP_MAX 秒。
+// 留到 3 秒以上（等待 ≥ 15 秒）完成影片會自動放等待卡、配秒針（lib/media.mjs 的 WAIT：×5 以上、至少 3 秒、沒人講話）；比較短的等待只是快轉帶過。
+// 上限 4.5 秒＝卡片約 3.5 秒＋結果停 1 秒（「滴」響完再過 0.1 秒人聲才回來）
+export const WAIT_KEEP_MAX = 4.5;
+export const waitKeep = (len) => r3(Math.min(WAIT_KEEP_MAX, Math.max(WAIT_KEEP, len / 5)));
 // → { ng: [{ row, line, start, end, text, reason, pending, raw, cut, cutCol, wait? }], chapters: [{ row, title, first, t }], hasNg, hasChapters, hasCutCol, ngTables, errors }
 // cut：有「剪」欄時看勾選；沒有「剪」欄（舊格式）時＝「待確認」欄沒寫字。ngTables：[{ head, iCut, lines }]（行號從 0 起，setCutChecks 用）
 export function parseCutsMd(text) {
@@ -1088,8 +1093,8 @@ export function snapNg(rows, sil, win = CUT.ngWin, chapterSil = []) {
   const chOf = (s) => chapterSil.find((c) => c && c[0] === s[0] && c[1] === s[1]);
   return rows.map((r) => {
     if (r.cut != null ? !r.cut : r.pending) return { ...r, skip: true };
-    // 等待：本來就沒人講話，不用對齊停頓；留開頭 WAIT_KEEP 秒給 screen-sync 放快轉
-    if (r.wait) return { ...r, a: r3(Math.min(r.end, r.start + WAIT_KEEP)), b: r3(r.end), missStart: false, missEnd: false, miss: false, toChapter: false };
+    // 等待：本來就沒人講話，不用對齊停頓；留開頭 waitKeep 秒給 screen-sync 放快轉
+    if (r.wait) return { ...r, a: r3(Math.min(r.end, r.start + waitKeep(r.end - r.start))), b: r3(r.end), missStart: false, missEnd: false, miss: false, toChapter: false };
     const sa = near(r.start, 0), sb = near(r.end, 1);
     const ch = sb && chOf(sb);
     const toChapter = !!(ch && r.end >= sb[0] - 1e-9 && r.end <= sb[1] + 1e-9);
@@ -1813,7 +1818,7 @@ export function cutpoints(P, { dryRun = false, log = console.log, now = new Date
 
 // ---------- 邊錄邊講的螢幕錄影：初剪後把錄影畫面蓋回主軌（screen-sync）----------
 // cuts.v1.json 每個保留段 ∩ main.json 的 screen 段 → rough.mp4 的起訖＋錄影本身的秒數（in）；前後相接、錄影也連續的併成一段
-// waits：勾了的等待（main.mp4 的秒數 [起, 迄]）：留下來的 WAIT_KEEP 秒放一段快轉（retime），從等待開始一路快轉到等待結束，前後都接得上
+// waits：勾了的等待（main.mp4 的秒數 [起, 迄]）：留下來的 waitKeep 秒放一段快轉（retime），從等待開始一路快轉到等待結束，前後都接得上
 export function screenSegments(clips, v1, fps, waits = []) {
   const scr = clips.filter((c) => c.kind === 'screen');
   const out = [];
@@ -1834,9 +1839,9 @@ export function screenSegments(clips, v1, fps, waits = []) {
   const segs = [];
   out.forEach((x, i) => {
     const nx = out[i + 1];
-    const w = nx && nx.src === x.src ? waits.find(([a, b]) => Math.abs(x.mainTo - Math.min(b, a + WAIT_KEEP)) < 0.25 && Math.abs(nx.mainFrom - b) < 0.25) : null;
+    const w = nx && nx.src === x.src ? waits.find(([a, b]) => Math.abs(x.mainTo - Math.min(b, a + waitKeep(b - a))) < 0.25 && Math.abs(nx.mainFrom - b) < 0.25) : null;
     if (w && x.to - x.from > 0.2) {
-      const keep = Math.min(WAIT_KEEP, x.to - x.from), mid = x.to - keep;
+      const keep = Math.min(waitKeep(w[1] - w[0]), x.to - x.from), mid = x.to - keep;
       if (mid - x.from > 0.05) segs.push({ src: x.src, from: x.from, to: mid, in: x.in });
       segs.push({ src: x.src, from: Math.max(mid, x.from), to: x.to, retime: [{ at: '+0', src: r3(x.in + (x.to - x.from) - keep) }, { at: `+${r3(keep)}`, src: r3(nx.in) }] });
     } else segs.push({ src: x.src, from: x.from, to: x.to, in: x.in });

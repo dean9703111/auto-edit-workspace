@@ -17,6 +17,8 @@
     .fx-37-back { color: var(--fx-hi); opacity: .5; clip-path: polygon(0 100%, 0 100%, 0 100%); }
     .fx-37-front { color: var(--fx-hi); clip-path: polygon(0 100%, 0 100%, 0 100%); }
     .fx-stage[data-bg="none"] .fx-37-box { filter: drop-shadow(0 2px 4px rgba(0,0,0,.85)); }
+    /* 透明疊在講者畫面上：空心字後面墊一層深色的實心字。白色外框在淺色背景（白牆、白衣服）上看不見，水位還沒滿的時候字會像缺了一半 */
+    .fx-stage[data-bg="none"] .fx-37-ghost { visibility: visible; color: rgba(16,18,25,0.82); }
   </style>
   <div id="root" data-composition-id="fx-37-liquid-fill" data-width="1920" data-height="1080" data-duration="4">
     <svg width="0" height="0" style="position:absolute">
@@ -38,7 +40,7 @@
   <script src="fx-kit.js"></script>
   <script>
     /* 37 Liquid Fill：實心主色複本用 clip-path polygon 裁出波浪液面；液面高度與波相位都是時間的純函數，
-       從底部升到滿、停留晃動、再降回底部 */
+       從底部升到滿，之後停在滿的狀態（2026-11-12：原本會再降回空心，短的段落大半時間字都是半滿的，看起來像破掉） */
     const v = window.__hyperframes.getVariables();
     const stage = document.querySelector('.fx-stage');
     const box = document.querySelector('.fx-37-box');
@@ -54,10 +56,10 @@
     const CYC = 3.2;     // 液面橫跨整個字的波數
     const WAVES = Math.max(2, Math.round(D / 1.5)); // 整數個波相位週期，首尾相同
     const T0 = 0.15, edge = 0.15;
-    const move = Math.max(0.5, (D - 2 * edge) * 0.36); // 上升／下降各佔的秒數
+    const move = Math.max(0.5, Math.min(1.4, (D - 2 * edge) * 0.36)); // 上升佔的秒數（長的段落也不超過 1.4 秒）
     const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
     // 液位 0＝空、1＝滿
-    const level = (t) => smooth((t - T0) / move) - smooth((t - (D - edge - move)) / move);
+    const level = (t) => smooth((t - T0) / move);
 
     function poly(t, phase, lv) {
       const H = SIZE; // line-height 1，高度＝字級，不量 DOM

@@ -43,6 +43,7 @@ const COMPONENTS = {
   badge: [{}, [72, 72], ['il-badge']],
   recPill: [{}, [200, 60], ['il-dot', 'il-time', 'il-label']],
   stopwatch: [{}, [220, 240], ['il-hand', 'il-sweep', 'il-ticks']],
+  hourglass: [{}, [200, 300], ['il-glass', 'il-sandtop', 'il-sandbot', 'il-stream']],
   bookmark: [{}, [220, 72], ['il-off', 'il-on']],
 };
 const NAMES = Object.keys(COMPONENTS);

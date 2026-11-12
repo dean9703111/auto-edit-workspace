@@ -10,7 +10,7 @@
 import { fmtT, isAnc } from './audit-rules.mjs';
 
 export const ILLUS_BUILTIN = ['phone', 'tripod', 'phoneTripod', 'laptop', 'monitor', 'cloud', 'personBust', 'pgPerson', 'personTop', 'desk', 'stage', 'cone',
-  'waveform', 'progress', 'energy', 'fileVideo', 'window', 'searchBar', 'badge', 'recPill', 'stopwatch', 'bookmark'];
+  'waveform', 'progress', 'energy', 'fileVideo', 'window', 'searchBar', 'badge', 'recPill', 'stopwatch', 'hourglass', 'bookmark'];
 export const IL_STROKE = 2;              // 描邊外擴（契約 §5.5）
 export const LABEL_MAX = 10;             // 示意動畫的字只當標籤（ep2 hyperframes-overlay design-rules.md:9）
 export const ALIGN_NEAR = [4, 16];       // 手排（不在 data-layout 裡）的兩個元件中線差 4–16 px ⚠ layout-row-align（012 併進版面規則；design-rules.md:87 同列同中線）

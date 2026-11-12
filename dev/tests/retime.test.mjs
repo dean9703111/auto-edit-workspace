@@ -77,8 +77,10 @@ test('retime 欄位檢查：形狀、不能倒帶、擇一、速度上下限；-
   assert.match(checkJson().errors.join('\n'), /錄影不能倒帶/);
   writePlan([seg({ retime: [{ at: '+0', src: 0 }, { at: '+5', src: 0.5 }] })]);
   assert.match(checkJson().errors.join('\n'), /下限 0\.25/);
+  // 031：5 秒內的跳過等待可到 ×600（AI 跑好幾分鐘壓成 4.5 秒的等待）；這支錄影只有 10 秒，快不到上限
   writePlan([seg({ retime: [{ at: '+0', src: 0 }, { at: '+0.1', src: 9.9 }] })]);
-  assert.match(checkJson().errors.join('\n'), /上限 ×16/);
+  assert.doesNotMatch(checkJson().errors.join('\n'), /上限 ×16/);
+  assert.deepEqual([M.WAIT.fast, M.WAIT.short], [600, 5]);
   writePlan([seg({ retime: [{ at: '+0', src: 99 }, { at: '+2', src: 100 }] })]);
   assert.match(checkJson().errors.join('\n'), /src 99 超出錄影長度/);
 
@@ -213,4 +215,79 @@ test('邊錄邊講的快轉段：三段都硬接，不疊化', () => {
   const j = checkJson();
   assert.deepEqual(j.errors, []);
   assert.doesNotMatch(run('--check').stdout, /疊化/);
+});
+
+test('031 等待卡：沒人講話、×5 以上、至少 3 秒的快轉 → 畫面壓暗、等待卡（計時圈、實際經過的時間、在等什麼、快轉倍數）；快轉提早跑完、停在結果那一格，「滴」響完再過 0.1 秒人聲才回來；秒針（自備才有）響到圈跑完；一邊講一邊快轉、不夠快、太短、"wait": false 都沒有', () => {
+  const it = (retime, extra = {}) => ({ start: 3, end: 9, rough0: [3, 9], media: { kind: 'video', retime }, ...extra });
+  const rt = { knots: [[0, 0], [1, 1], [4.5, 21], [6, 22.5]], speeds: [1, 5.714, 1] };
+  assert.deepEqual(M.waitSpans(it(rt), undefined, [{ start: 1, end: 4 }, { start: 7.5, end: 9 }]), [{ a: 4, b: 7.5, real: 20, speed: 5.714, knots: [1, 2] }]);
+  assert.deepEqual(M.waitSpans(it(rt), undefined, [{ start: 1, end: 5 }]), [], '快轉的時候在講話：不是等待');
+  assert.deepEqual(M.waitSpans(it({ knots: [[0, 0], [2.5, 50], [6, 53.5]], speeds: [20, 1] })), [], '不到 3 秒');
+  assert.deepEqual(M.waitSpans(it({ knots: [[0, 0], [4, 16], [6, 18]], speeds: [4, 1] })), [], '×4 是加速，不是等待');
+  assert.deepEqual(M.waitSpans(it({ knots: [[0, 0], [1, 6], [4, 36], [6, 38]], speeds: [6, 10, 1] })), [{ a: 3, b: 7, real: 36, speed: 9, knots: [0, 2] }], '連著的快轉併成一段');
+  assert.deepEqual(M.waitSpans({ start: 10, end: 13.5, media: { kind: 'video', in: 5, out: 47, speed: 12, retime: null } }), [{ a: 10, b: 13.5, real: 42, speed: 12 }], '整段用 out 快轉');
+  assert.deepEqual(M.waitSpans({ start: 10, end: 14, media: { kind: 'video', speed: 3, retime: null } }), [], '只寫 speed 的是加速');
+  assert.deepEqual(M.waitSpans({ start: 10, end: 14, media: { kind: 'image' } }), []);
+
+  // 真的 build：20 秒的錄影，第 4–7.5 秒沒人講話，3.5 秒跑完 18 秒（×5.14）
+  const local = path.join(root, 'shared', 'sfx-local'), srtFile = path.join(proj, 'work', 'rough.srt'), srt0 = fs.readFileSync(srtFile, 'utf8');
+  const LONG = 'assets/screen/長.mp4';
+  ff(['-f', 'lavfi', '-i', 'color=c=black:s=320x200:r=30:d=20', '-vf', "geq=lum='16+10*T':cb=128:cr=128", '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '300', '-pix_fmt', 'yuv420p', path.join(proj, ...LONG.split('/'))]);
+  const kit = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8'));
+  // 「滴」響完再過 0.1 秒人聲才回來：圈跑完＝等待結束前（滴的長度−峰值＋0.1 秒＋1 格）
+  const dingLen = dur(path.join(root, 'shared', 'sfx', 'ding.wav'));
+  const lead = +(dingLen - kit.ding.peak + 0.1 + 1 / 30).toFixed(3), end = +(7.5 - lead).toFixed(3), cardSec = +(end - 4).toFixed(3);
+  const dingAt = +(end - kit.ding.peak + 1 / 30).toFixed(3);
+  assert.ok(Math.abs(dingAt + dingLen + 0.1 - 7.5) < 0.002, `滴在 ${dingAt} 開始、響 ${dingLen} 秒，結束後 0.1 秒是 7.5（人聲）`);
+  const env = { ...process.env, AUTO_EDIT_NO_LOCAL_SFX: '0' };
+  const runL = (...args) => spawnSync(process.execPath, [BUILD, ...args, '--template', tpl, '--project', 'projects/p1'], { cwd: root, encoding: 'utf8', timeout: 180000, env });
+  const wait = { src: LONG, retime: [{ at: '+1', src: 0 }, { at: '+4.5', src: 18 }], pip: false };
+  const rx = (x) => String(x).replace('.', '\\.');
+  try {
+    fs.writeFileSync(srtFile, '1\n00:00:01,000 --> 00:00:04,000\n第 1 句字幕內容\n\n2\n00:00:07,500 --> 00:00:09,000\n第 2 句字幕內容\n');
+    // 沒有自備秒針（預設的測試環境）：等待卡照樣有，音效只有 ding
+    writePlan([seg({ ...wait, wait: 'AI 逐張辨識收據｜寫入 Excel' })]);
+    const j = checkJson();
+    assert.deepEqual(j.errors, []);
+    const speed = +(18 / cardSec).toFixed(3);
+    assert.deepEqual(j.items[0].out.annotations.waits, [{ k: 1, at: 4, until: 7.5, real: 18, speed, text: 'AI 逐張辨識收據｜寫入 Excel' }]);
+    assert.deepEqual(j.items[0].out.annotations.knots, [[0, 0], [1, 0], [+(1 + cardSec).toFixed(3), 18], [4.5, 18], [6, 19.5]], '快轉提早跑完，後面停在結果那一格到等待結束');
+    assert.deepEqual(j.items[0].sfx.map((c) => [c.name, c.at]), [['ding', dingAt]]);
+    assert.match(run('--check').stdout, new RegExp(`定格、4\\.5–6s ×1、等待卡 1（快轉 ${Math.round(speed)} 倍、實際 18 秒）`), '快轉後面多一段定格（停在結果那一格）');
+    const b = run();
+    assert.equal(b.status, 0, b.stdout + b.stderr);
+    let html = fs.readFileSync(path.join(out, 'index.html'), 'utf8');
+    assert.match(html, /<div id="mwd-m01-1" class="clip mdim" data-start="4" data-duration="3\.5" /, '壓暗層的時間＝整段等待（收的時候自己淡出）');
+    assert.match(html, /<div id="mwk-m01-1" class="mwait__card"[^>]*>[\s\S]*?<span id="mwt-m01-1" class="mwait__time">0:00<\/span>[\s\S]*?<div class="mwait__title">AI 逐張辨識收據<\/div>\s*<div class="mwait__sub">寫入 Excel<\/div>[\s\S]*?<span>快轉 \d+ 倍<\/span>/);
+    assert.match(html, new RegExp(`M\\.count\\('#mwt-m01-1', 4, \\{ from: 0, to: 18, dur: ${rx(cardSec)}, ease: 'none', clock: true \\}\\);`), '數字從 0:00 跑到實際經過的 18 秒，圈跑完就停');
+    assert.match(html, new RegExp(`tl\\.fromTo\\('#mwk-m01-1', \\{ opacity: 1, scale: 1 \\}, \\{ opacity: 0, scale: 1\\.04, duration: 0\\.2, [^}]*\\}, ${rx(end)}\\);`), '圈跑完那一刻卡片收掉，露出結果');
+    // 沒寫在等什麼：卡片寫「處理中」，--check 提醒
+    writePlan([seg(wait)]);
+    assert.match(run('--check').stdout, /⚠ \[m01 media\] 等待卡（1–4\.5s，實際 18 秒）沒有寫在等什麼，卡片上只會寫「處理中」→ 這段加 "wait": "在等什麼"/);
+    assert.equal(checkJson().items[0].out.annotations.waits[0].text, '處理中');
+    // 自備了秒針：從等待開始響到圈跑完，只播那一段；自備的 ding 沒放，照內建的長度算
+    fs.mkdirSync(local, { recursive: true });
+    ff(['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=mono:d=0.2', '-f', 'lavfi', '-i', 'sine=frequency=880:duration=6:sample_rate=48000', '-filter_complex', '[0][1]concat=n=2:v=0:a=1,volume=0.2', path.join(local, 'tick.wav')]);
+    const jl = JSON.parse(runL('--check', '--json').stdout);
+    assert.deepEqual(jl.items[0].sfx.map((c) => [c.name, c.at, c.dur ?? null]), [['tick', 4, cardSec], ['ding', dingAt, null]]);
+    assert.equal(runL().status, 0);
+    html = fs.readFileSync(path.join(out, 'index.html'), 'utf8');
+    assert.match(html, new RegExp(`<audio id="sfx-m01-e1" src="assets/sfx/tick\\.wav" data-start="4" data-duration="${rx(cardSec)}" data-media-start="0\\.1[0-9]*" `), '秒針只播到圈跑完，從第一下前面一點開始');
+    assert.ok(fs.existsSync(path.join(out, 'assets', 'sfx', 'tick.wav')), '自備的檔有複製進專案');
+    // "sfxExtra": false：卡片還在、音效關掉、不用等滴（圈跑到等待結束前 0.2 秒，不定格）；"wait": false：卡片和音效都沒有
+    writePlan([seg({ ...wait, sfxExtra: false })]);
+    const q = JSON.parse(runL('--check', '--json').stdout).items[0];
+    assert.deepEqual([q.sfx, q.out.annotations.waits.length, q.out.annotations.knots], [[], 1, [[0, 0], [1, 0], [4.5, 18], [6, 19.5]]]);
+    writePlan([seg({ ...wait, wait: false })]);
+    const off = JSON.parse(runL('--check', '--json').stdout).items[0];
+    assert.deepEqual([off.sfx, off.out.annotations.waits], [[], []]);
+    // 一邊講一邊快轉（第 2 句提早到 4.5 秒開口）：不是等待
+    fs.writeFileSync(srtFile, '1\n00:00:01,000 --> 00:00:04,000\n第 1 句字幕內容\n\n2\n00:00:04,500 --> 00:00:09,000\n第 2 句字幕內容\n');
+    writePlan([seg({ ...wait, wait: 'AI 安裝套件' })]);
+    assert.deepEqual(checkJson().items[0].out.annotations.waits, []);
+    assert.match(run('--check').stdout, /wait：這段沒有「×5 以上、至少 3 秒、沒人講話」的快轉，等待卡不會出現/);
+    // wait 寫錯
+    writePlan([seg({ ...wait, wait: '一二三四五六七八九十一二三' })]);
+    assert.match(checkJson().errors.join('\n'), /wait 要寫在等什麼：1–2 行、用「｜」分行、每行 1–12 字/);
+  } finally { fs.writeFileSync(srtFile, srt0); fs.rmSync(local, { recursive: true, force: true }); }
 });

@@ -45,6 +45,7 @@ opts 寫成 HTML 屬性時是 `data-<opt>`（數字、布林自動轉型）。�
 | `badge` | `kind`: check*／cross／warn | `.il-badge` | 72×72 | good／warn／accent 底＋line；warn 的驚嘆號 on-accent |
 | `recPill` | — | `.il-dot` `.il-time`（tabular-nums）`.il-label` | 200×60 | body＋line；點 warn、REC line、時間 sub |
 | `stopwatch` | — | `.il-hand`（svgOrigin "110 135"）`.il-sweep`（pathLength 100、dashoffset 100→0）`.il-ticks` | 220×240 | body／inner＋line；sweep accent（唯一不是 non-scaling 的描邊） |
+| `hourglass` | `sand`: top*／flow／bottom | `.il-glass` `.il-sandtop`（等比縮到 0，svgOrigin "100 156.5"）`.il-sandbot`（等比 0→1，svgOrigin "100 276"）`.il-stream` | 200×300 | inner＋line；沙 accent；底座 body |
 | `bookmark` | `saved`: false*／true | `.il-off` `.il-on`（opacity 切換） | 220×72 | body＋line；已儲存 accent |
 
 螢幕狀態在 phone／phoneTripod／laptop／monitor 都已畫好，只有 `screen` 指定的那個 opacity 1；切換用 GSAP 動 opacity（`P.in`／`P.out`／`P.swap`）。

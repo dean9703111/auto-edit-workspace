@@ -39,9 +39,20 @@ node dev/tools/make-sfx.mjs --write --only bgm-cylinder-five --src <原曲 mp3> 
 2. 檔名用上表的名稱：`ding.wav`、`success.wav`、`alert.wav`、`impact.wav`、`click.wav`、`chapter.wav`、`sparkle.wav`、`shine.wav`、`thunder.wav`。有放的那一顆，工具就用你的；沒放的照用內建的。
 3. 下一次 build 就生效，報告會印「自備音效 N 顆」。
 
-工具會自己量每一顆的對準點（對到聲音的第一下）和響度，音量照那個名稱原本設計的「比人聲小幾分貝」算，所以換了檔，和人聲的比例不變。量的結果記在 `shared/sfx-local/sfx.json`；想自己定音量，在那一筆寫 `"volume": 0.5, "manual": true`。
+工具會自己量每一顆的對準點（對到聲音的第一下）和響度，音量照那個名稱設計的「比人聲大或小幾分貝」算（`kit/sfx.json` 的 `roleDb`，沒有就是 `targetDb`），所以換了檔，和人聲的比例不變；最多放到 1 倍，不會放大到破音。量的結果記在 `shared/sfx-local/sfx.json`；想自己定音量，在那一筆寫 `"volume": 0.5, "manual": true`。
 
 - 不是 `.wav` 的先轉檔：`ffmpeg -i 來源.mp3 -ar 48000 shared/sfx-local/impact.wav`。
-- 檔名只用小寫英數和 `-`。上表沒有的名稱（例 `tick.wav`）也可以放，在 plan.json 那一段寫 `"sfx": "tick"` 就用得到。
+- 檔名只用小寫英數和 `-`。上表沒有的名稱（例 `pop.wav`）也可以放，在 plan.json 那一段寫 `"sfx": "pop"` 就用得到。
 - 自備的音效沒有升降半音的變體，同一顆不會輪著換。
+
+### 多四個角色（放了才有）
+
+內建的九顆之外，工具認得下面四個名稱。這四顆 repo 沒有內建，放了才有那個聲音；沒放也不會出錯，工具照「沒放的時候」那一欄處理。
+
+| 檔名 | 聲音 | 什麼時候用 | 怎麼配 | 沒放的時候 |
+|---|---|---|---|---|
+| `tick.wav` | 秒針滴答（可以很長，工具只播需要的那幾秒） | 等待卡：螢幕錄影快轉 5 倍以上、至少 3 秒、那幾秒沒人講話 | 工具自動配：秒針從等待卡出現響到計時圈跑完，接一顆 `ding`（`ding` 響完再過 0.1 秒人聲才回來）；那段寫 `"sfxExtra": false` 關掉 | 等待卡照樣出現，只有結尾的 `ding` |
+| `checkin.wav` | 過關的提示音 | 步驟做完、畫面上看得到成了（配對完成、上傳成功、版號正確） | 情緒點寫 `{ "at": "#N@詞", "kind": "win", "sfx": "checkin" }`；一集最多 5 次 | 用 `success` |
+| `question.wav` | 疑問「啊？」 | 傻眼、結果和預期相反 | 情緒點寫 `"kind": "pain", "sfx": "question"`；一集最多 1 次 | 照痛點配 `alert` |
+| `wow.wav` | 哇嗚 | 結果比預期好的驚喜 | 情緒點寫 `"kind": "win", "sfx": "wow"`；一集最多 1 次 | 用 `success` |
 - 授權自己負責：只放你有權用在影片裡的音效。多數免費音效庫（YouTube 音效庫、Pixabay、Mixkit）可以用在影片，但不能把音檔再散布，所以這個資料夾不會、也不該上傳。

@@ -365,7 +365,7 @@ export async function audit(flags, { log = console.log } = {}) {
     // 012 版面：完成態量 data-layout 容器（SceneLayout.measure，版面座標）；有容器時 illus 的手排對齊交給它
     let lay = null;
     if (j.kind === 'done' && !m.missingHost) {
-      const js = await S.evaluate(`(() => { const h = document.getElementById(${JSON.stringify(`el-${j.it.id}`)}); return h && window.SceneLayout ? JSON.stringify(window.SceneLayout.measure(h)) : 'null'; })()`);
+      const js = await S.evaluate(`(() => { const h = document.getElementById(${JSON.stringify(`el-${j.it.id}`)}); return h && window.SceneLayout ? JSON.stringify(window.SceneLayout.measure(h, { free: ${!!j.it.seg?.design} })) : 'null'; })()`);   // free：內容設計動畫（空白畫布）也量手寫的連接線
       lay = JSON.parse(js || 'null');
       out.raw.push(...judgeLayoutRules(lay, { item: j.it, t: j.t }));
     }

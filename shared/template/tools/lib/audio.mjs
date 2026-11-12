@@ -203,7 +203,7 @@ export function audioReportLines(info, { loudnorm = true, declick = true, cutpoi
 }
 
 // ---------- 音效政策（specs/contracts/sfx.md §4；訊息原文 specs/contracts/cli-005.md §3）----------
-export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute: 5, avgPerMinute: 3, capDb: -3, sparseSec: 60, tailLead: 0.2 });   // tailLead：反應音效（踩坑、解法）沒有動畫時打在句尾前幾秒
+export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute: 5, avgPerMinute: 3, capDb: -3, sparseSec: 60, tailLead: 0.2, afterDing: 0.1 });   // tailLead：反應音效（踩坑、解法）沒有動畫時打在句尾前幾秒；afterDing：等待卡的「滴」響完之後隔幾秒人聲才回來
 export const SFX_SWAP = Object.freeze({ thunder: 'alert', sparkle: 'ding', shine: 'ding' });   // 超過每集上限時換成誰（情緒點自動換；其他段建議換）
 const SWAP = SFX_SWAP;
 export const KEEP_FIRST = ['chapter', 'thunder', 'shine', 'sparkle', 'alert', 'success'];   // lib/autofix.mjs 拿掉太密的音效也照這個優先序
@@ -291,7 +291,9 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, 
     if (!Number.isFinite(conf.targetDb) || !(conf.volume > 0) || !(c.volume > 0)) continue;
     rel.push({ c, db: conf.targetDb + 20 * Math.log10(c.volume / conf.volume) - voiceDb });
   }
-  const loud = rel.filter((x) => x.db > R.capDb + 0.05).map((x) => ({ id: x.c.id, name: x.c.name, at: r3(x.c.at), relDb: r1(x.db) }));
+  // 太大聲：超過「比人聲小 3 dB」，而且比這顆設計的大小還大（章節、打雷這類照作者剪映的比例本來就比較大，照設計放不算）
+  const capOf = (c) => Math.max(R.capDb, sfxConf[c.name].targetDb);
+  const loud = rel.filter((x) => x.db > capOf(x.c) + 0.05).map((x) => ({ id: x.c.id, name: x.c.name, at: r3(x.c.at), relDb: r1(x.db), cap: r1(capOf(x.c)) }));
   const mainDb = rel.filter((x) => isMain(x.c)).map((x) => x.db), extraDb = rel.filter((x) => !isMain(x.c)).map((x) => x.db);
   const levels = {
     main: mainDb.length ? [r1(Math.min(...mainDb)), r1(Math.max(...mainDb)), r1(median(mainDb))] : null,
@@ -327,13 +329,15 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, 
     `音效次數：${cnt.join('、') || '沒有音效'}`,
     nMain ? `音效密度：主音效平均 ${perMinuteAvg} 顆／分（上限：任一分鐘 ≤ ${R.perMinute} 顆，超過才 ⚠），附加音效 ${nExtra} 顆${thinned ? `；每分鐘超過的已自動拿掉 ${thinned} 顆` : ''}` : `音效密度：主音效 0 顆，附加音效 ${nExtra} 顆`,
   ];
-  return { count, over, dense, sparse, loud, levels, perMinuteAvg, warnings, lines };
+  // designOver：這支片用到設計上就比上限大的音效（章節、打雷：照作者剪映的比例），報告的上限那句要註明
+  const designOver = list.some((c) => Number.isFinite(sfxConf[c.name].targetDb) && sfxConf[c.name].targetDb > R.capDb + 0.05);
+  return { count, over, dense, sparse, loud, levels, perMinuteAvg, warnings, lines, designOver };
 }
 
 function loudWarning(loud) {
   if (!loud?.length) return null;
   const R = SFX_RULES;
-  const items = loud.slice(0, 8).map((x) => `${x.id} ${x.name} ${fmtT(x.at)} ${d1(x.relDb)} dB → sfxVolume 再減 ${r1(x.relDb - R.capDb).toFixed(1)}`);
+  const items = loud.slice(0, 8).map((x) => `${x.id} ${x.name} ${fmtT(x.at)} ${d1(x.relDb)} dB → sfxVolume 再減 ${r1(x.relDb - (x.cap ?? R.capDb)).toFixed(1)}`);
   const more = loud.length > 8 ? `…等 ${loud.length} 顆` : '';
   return `⚠ 音效比例：${loud.length} 顆音效比人聲下 ${-R.capDb} dB 還大聲（${items.join('、')}${more}）→ 在剪輯台把這幾段的音效調小，或改 plan.json 那段的 sfxVolume`;
 }
@@ -342,9 +346,13 @@ function sfxLevelLines(b, { loudnorm = true } = {}) {
   if (!loudnorm) return ['音效比例：沒有檢查（用了 --no-loudnorm，人聲不是 −14 LUFS，音效和人聲的比例會跟 kit/sfx.json 的設計不同）'];
   const { main, extra } = b.levels || {};
   if (!main && !extra) return ['音效比例：這支片沒有音效'];
-  const cap = `上限是比人聲小 ${-SFX_RULES.capDb} dB`;
+  // 有設計上就比上限大的音效（章節、打雷：照作者剪映的比例）時，範圍寫成「從小幾 dB 到大幾 dB」
+  const over = !!b.designOver;
+  const cap = `上限是比人聲小 ${-SFX_RULES.capDb} dB${over ? '（章節、打雷這類設計上就比較大的照 kit/sfx.json）' : ''}`;
+  const side = (v) => (v > 0.05 ? `大 ${d1(v)}` : `小 ${d1(-v)}`);
   const parts = [];
-  if (main) parts.push(`主音效比人聲小 ${d1(-main[1])}–${d1(-main[0])} dB（中位 ${d1(-main[2])}）`);
+  if (main && main[1] > 0.05) parts.push(`主音效從比人聲${side(main[0])} dB 到${side(main[1])} dB（中位${side(main[2])}）`);
+  else if (main) parts.push(`主音效比人聲小 ${d1(-main[1])}–${d1(-main[0])} dB（中位 ${d1(-main[2])}）`);
   if (extra) parts.push(`${main ? '' : '附加音效比人聲'}${main ? '附加音效小' : '小'} ${d1(-extra[1])}–${d1(-extra[0])} dB`);
   const out = [`音效比例：${parts.join('、')}；${cap}`];
   const w = loudWarning(b.loud);

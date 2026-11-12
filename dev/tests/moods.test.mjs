@@ -155,3 +155,39 @@ test('分鏡表情緒點表：時間、音效照 --check --json；推不到照�
   assert.deepEqual(Object.keys(out.plan), ['version', 'moods', 'scenes']);
   assert.ok(out.changes.some((c) => /取消 #3@字幕（落定）/.test(c)) && out.changes.some((c) => /加回 #20（痛點）/.test(c)), out.changes.join('\n'));
 });
+
+test('031 自備角色（checkin、question、wow）：沒放的機器也能寫，改用內建的；放了就用自備的；tick 不能自己寫；超過每集上限的換回去', async () => {
+  const { LOCAL_ROLES, sfxActual } = await imp('lib/sfx-local.mjs');
+  assert.deepEqual(Object.keys(LOCAL_ROLES).sort(), ['checkin', 'question', 'tick', 'wow']);
+  // 沒放：寫了不報錯
+  assert.deepEqual(validateMoods([{ at: '#3', kind: 'win', sfx: 'checkin' }, { at: '#9', kind: 'pain', sfx: 'question' }, { at: '#12', kind: 'win', sfx: 'wow' }], L.sfx), []);
+  assert.match(validateMoods([{ at: '#3', kind: 'win', sfx: 'tick' }], L.sfx)[0], /sfx 只能是/);
+  assert.equal(sfxActual('checkin', L.sfx), 'success');
+  assert.equal(sfxActual('question', L.sfx), null);
+  assert.equal(sfxActual('ding', L.sfx), 'ding');
+  assert.equal(sfxActual('boom', L.sfx), undefined);
+  const a = moodCues([{ at: '#3', kind: 'win', sfx: 'checkin' }, { at: '#9', kind: 'pain', sfx: 'question' }], { cues, sfxConf: L.sfx, videoDur: VD });
+  assert.deepEqual(a.errors, []);
+  assert.deepEqual(a.list.map((x) => x.sfx.name), ['success', 'alert'], 'checkin → 完成音；question 沒有替代 → 照痛點配 alert');
+  // 放了：用自備的，音量、對準點照它自己的
+  const mine = { ...L.sfx, checkin: { kind: 'sfx', zh: '打卡成功', peak: 0.3, volume: 0.4, targetDb: -3.5, additive: false, maxPerVideo: 5, variants: [], local: true }, question: { kind: 'sfx', zh: '疑問', peak: 0.2, volume: 0.5, targetDb: -3, additive: false, maxPerVideo: 1, variants: [], local: true }, tick: { kind: 'sfx', zh: '秒針', peak: 0.37, volume: 1, targetDb: -16, additive: false, maxPerVideo: null, variants: [], local: true } };
+  const b = moodCues([{ at: '#3', kind: 'win', sfx: 'checkin' }], { cues, sfxConf: mine, videoDur: VD });
+  assert.equal(b.list[0].sfx.name, 'checkin');
+  assert.equal(b.list[0].sfx.volume, 0.4);
+  assert.equal(b.list[0].sfx.at, r3(cueStart(3) - 0.3 + F));
+  assert.match(validateMoods([{ at: '#3', kind: 'win', sfx: 'tick' }], mine)[0], /sfx 只能是/, '放了 tick 也不能自己寫（工具自動配）');
+  // question 一集最多一次：第二顆換成那個情緒點的類別音效
+  const res = resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], moods: [{ at: '#3', kind: 'pain', sfx: 'question' }, { at: '#30', kind: 'pain', sfx: 'question' }], scenes: [] }, cues, videoDur: VD, lib: { ...L, sfx: mine }, outDir: os.tmpdir() });
+  assert.deepEqual(res.errors ?? [], []);
+  assert.deepEqual(res.moods.map((m) => m.sfx?.name), ['question', 'alert']);
+});
+
+test('031 段上寫自備角色：沒放改用內建的（question 不出聲）；tick 寫在段上 ✖', () => {
+  const ok = run([kp('s01', '#3', { sfx: 'checkin' }), kp('s02', '#12', { sfx: 'question' }), kp('s03', '#20', { sfx: { name: 'wow', at: '#20' } })]);
+  assert.deepEqual(ok.errors, []);
+  assert.equal(byId(ok, 's01').sfx.name, 'success');
+  assert.ok(!byId(ok, 's02').sfx, 'question 沒放、也沒有替代的：不出聲');
+  assert.equal(byId(ok, 's03').sfx.name, 'success');
+  const bad = run([kp('s01', '#3', { sfx: 'tick' })]);
+  assert.match(bad.errors.join('\n'), /「tick」（秒針）是工具自動配的/);
+});

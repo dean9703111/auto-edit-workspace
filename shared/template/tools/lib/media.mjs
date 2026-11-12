@@ -26,7 +26,7 @@ import { splitAtJoins, dB } from './edit.mjs';
 import { visibleLen, nearest, loadIcons } from './scenes.mjs';
 import { CANVAS } from './canvas.mjs';
 
-export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'retime', 'redact', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'note'];
+export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'retime', 'redact', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'wait', 'note'];
 export const MEDIA_DIRS = ['assets/screen/', 'assets/images/'];
 export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom', 'whip'];
 export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5, whip: 0.3, tape: 0.6, tilt: 0.65 };
@@ -98,6 +98,41 @@ const DIRS = { n: [0, -1], ne: [0.7071, -0.7071], e: [1, 0], se: [0.7071, 0.7071
 const AUTO_DIRS = ['ne', 'nw', 'se', 'sw', 'e', 'w', 'n', 's'];
 const ANN_KEYS = ['callouts', 'spot', 'arrows'];
 const FREEZE_WARN = 15;   // 定格超過幾秒提醒
+// 等待卡（031，作者剪映定剪的「等待段三件套」：加載中＋說明卡＋秒針）：錄影快轉 ×5 以上、至少 2 秒、那幾秒沒人講話 → 畫面壓暗，
+// 中央一張卡：計時圈（跑完一圈＝等完）＋圈裡的數字是實際經過的時間＋「在等什麼」一兩行＋快轉倍數。圈跑完那一刻（結束前 lead 秒）變綠、
+// 卡片收掉露出結果；音效（秒針響到那一刻、接一顆 ding）在 lib/plan.mjs。fast／short：跳過等待的快轉上限（short 秒以內可到 ×fast）
+// lead：計時圈跑完到等待結束的秒數。有音效時由 lib/plan.mjs 算（「滴」的尾巴＋0.1 秒：滴響完再過 0.1 秒人聲才回來，2026-11-12 作者），
+// 快轉提早跑完、剩下的時間停在結果那一格（retime 才做得到；整段用 out 快轉的照 0.2 秒）；minCard：卡片至少露多久
+export const WAIT = { speed: 5, minLen: 3, speech: 0.3, lead: 0.2, minCard: 1.8, in: 0.3, out: 0.2, dim: 0.5, maxLen: 12, minW: 560, maxW: 880, padX: 56, title: 56, sub: 44, fast: 600, short: 5 };
+
+// 錄影段裡的「等待」（完成影片秒數）：retime 兩點之間、或整段用 out 快轉，×5 以上、至少 2 秒、而且那幾秒沒人講話；連著的併成一段。
+// 回傳 [{ a, b, real（實際經過幾秒＝素材被跳過的長度）, speed }]。邊錄邊講、在剪輯清單勾了的等待（10 秒以上）就是這種；一邊講一邊快轉的不算。
+// toOut：rough 秒數 → 完成影片秒數
+export function waitSpans(it, toOut = (x) => x, cues = []) {
+  const m = it.media;
+  if (!m || m.kind !== 'video') return [];
+  const spans = [];
+  if (m.retime) {
+    const r0 = it.rough0 ? it.rough0[0] : it.start, k = m.retime.knots;
+    m.retime.speeds.forEach((sp, i) => {
+      if (!(sp >= WAIT.speed - 0.05)) return;
+      const a = toOut(r0 + k[i][0]), b = toOut(r0 + k[i + 1][0]), real = k[i + 1][1] - k[i][1], l = spans[spans.length - 1];
+      if (l && a - l.b < 0.05) { l.b = b; l.real += real; l.j = i + 1; } else spans.push({ a, b, real, i, j: i + 1 });
+    });
+  } else if (m.out != null && m.speed >= WAIT.speed - 0.05) spans.push({ a: it.start, b: it.end, real: m.out - (m.in ?? 0) });
+  const speech = (w) => (cues || []).reduce((s, c) => s + Math.max(0, Math.min(w.b, c.end) - Math.max(w.a, c.start)), 0);
+  return spans.filter((w) => w.b - w.a >= WAIT.minLen - 1e-6 && speech(w) < WAIT.speech)
+    .map((w) => ({ a: r3(w.a), b: r3(w.b), real: r3(w.real), speed: r3(w.real / (w.b - w.a)), ...(w.i != null ? { knots: [w.i, w.j] } : {}) }));
+}
+// 等待的快轉提早 lead 秒跑完，剩下的時間停在結果那一格：knots 第 i–j 點之間照比例擠到前面，後面補一個「src 一樣」的點（定格）
+function holdResult(rt, i, j, lead) {
+  const t0 = rt.knots[i][0], t1 = rt.knots[j][0], k = (t1 - lead - t0) / (t1 - t0);
+  for (let q = i + 1; q <= j; q++) rt.knots[q][0] = r3(t0 + (rt.knots[q][0] - t0) * k);
+  rt.knots.splice(j + 1, 0, [t1, rt.knots[j][1]]);
+  rt.speeds = rt.knots.slice(1).map((p, q) => r3((p[1] - rt.knots[q][1]) / (p[0] - rt.knots[q][0])));
+}
+// 實際經過的時間：「20 秒」「3 分 12 秒」（報告用）；卡片上的數字是 m:ss
+const realText = (sec) => { const t = Math.round(sec); return t < 60 ? `${t} 秒` : `${Math.floor(t / 60)} 分${t % 60 ? ` ${t % 60} 秒` : ''}`; };
 const TEMPLATE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 let iconCache = null;
 
@@ -114,7 +149,7 @@ export const MEDIA_FIELDS = [
   ['src', '"assets/screen/<檔名>" 或 "assets/images/<檔名>"', '必填', `相對專案資料夾；影片 .mp4 .mov .m4v .webm、圖片 .jpg .jpeg .png .webp（先跑 media.mjs scan）`],
   ['from／to／duration／anchor', '同其他段', 'to 或 duration 必填', 'rough.srt 的句號或秒數'],
   ['in', '秒數', '0', '錄影從第幾秒開始播；in＋段長×speed 不能超過錄影長度'],
-  ['out', '秒數', '—', '錄影播到第幾秒：speed 自動＝(out−in)÷段長（不用寫 speed）；段 ≤ 3 秒時可到 64 倍（快轉跳過等待）'],
+  ['out', '秒數', '—', '錄影播到第幾秒：speed 自動＝(out−in)÷段長（不用寫 speed）；段 ≤ 5 秒時可到 600 倍（快轉跳過等待）'],
   ['speed', '0.5–4', '1', '播放速度（2＝兩倍速）'],
   ['hold', '秒數', '—', '定格：整段停在錄影第幾秒那一格（in／out／speed 不用寫）；標註、放大鏡、運鏡照常'],
   ['retime', '[{ "at", "src" }]', '—', '同一段裡變速、定格：講到 at 時錄影要在第 src 秒，兩點之間自動算速度，src 一樣＝定格；運鏡、紅框跨整段不會斷。第一點之前、最後一點之後是正常速度（錄影用完就停在最後一格）；不保留原聲。和 in／out／speed／hold 擇一'],
@@ -131,6 +166,7 @@ export const MEDIA_FIELDS = [
   ['side', '{ "title", "items": [{ "at", "text" }] }', '—', '右側步驟清單（橫式、直式／窄的錄影）：錄影靠左（左邊 720 寬），右邊一張卡＝標題（1–12 字）＋1–5 條步驟（每條 1–14 字），一開始淡淡列著、講到 at 那條亮起；有講者小視窗時清單在小視窗上方（最多 2 條）'],
   ['steps', '[{ "at", "text" }]', '—', 'STEP 膠囊（text 1–12 字）放在錄影可見區左上（離錄影邊 32px）；壓到紅框自動換右上，"stepsSide": "right" 指定右上；號碼自動累加，同字沿用；相鄰兩步 ≥ 1.65 秒'],
   ['arrows', '[{ "at", "until", "to": [x,y], "from" }]', '—', '箭頭：箭尖離 to 9px，from＝箭尾方向（n／ne／e／se／s／sw／w／nw，不寫＝自動）；放不下就拿掉；一次一支、至少 2.2 秒，until 不寫＝at＋3 秒'],
+  ['wait', '"在等什麼" 或 false', '—', `等待卡的說明：錄影快轉 ×${WAIT.speed} 以上、至少 ${WAIT.minLen} 秒、那幾秒沒人講話時，工具自動壓暗畫面、放等待卡（計時圈＋實際經過的時間＋快轉倍數）並配秒針接 ding。這裡寫在等什麼，1–2 行、用「｜」分行、每行 1–${WAIT.maxLen} 字（例 "AI 逐張辨識收據｜寫入 Excel"）；false＝不要等待卡也不要秒針`],
   ['clicks', '["#21@安裝", "+3.2"]', '—', '錄影裡看得到游標按下的時間，一下配一顆 click 附加音效（不受 3 秒規則）；時間寫法同 at，要落在這段裡；"sfxExtra": false 會一起關掉'],
   ['sfx', '音效名稱或 null', '不配', '錄影段預設不配'],
   ['sfxVolume', '−60～+12（dB）', '0', '這段音效的音量（每一種段落都能寫）'],
@@ -391,6 +427,14 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
     else m.kenburns = seg.kenburns;
   }
   for (const k of ['moves', 'marks', 'lens', 'callouts', 'spot', 'steps', 'arrows']) if (seg[k] != null && !Array.isArray(seg[k])) err(`${k} 要寫成陣列（[{ … }, { … }]）`);
+  // 等待卡的說明（wait）：1–2 行，「｜」或換行分行；false＝不要等待卡
+  m.waitOff = seg.wait === false; m.waitLines = null;
+  if (seg.wait != null && seg.wait !== false) {
+    const lines = typeof seg.wait === 'string' ? seg.wait.split(/[｜\n]/).map((x) => x.trim()).filter(Boolean) : [];
+    if (typeof seg.wait !== 'string' || !lines.length || lines.length > 2 || lines.some((x) => visibleLen(x) > WAIT.maxLen)) err(`wait 要寫在等什麼：1–2 行、用「｜」分行、每行 1–${WAIT.maxLen} 字（例 "AI 逐張辨識收據｜寫入 Excel"），或 false（不要等待卡），現在是 ${JSON.stringify(seg.wait)}`);
+    else if (kind !== 'video') warn('wait：等待卡只給錄影的快轉用，圖片沒有，已忽略');
+    else m.waitLines = lines;
+  }
   // 轉檔尺寸（只縮不放；yuv420p 要偶數）
   const fsx = Math.min(1, MAX_FILE[0] / info.width, MAX_FILE[1] / info.height);
   m.file = kind === 'video' ? { w: even(info.width * fsx), h: even(info.height * fsx) } : { w: info.width, h: info.height };
@@ -458,7 +502,7 @@ export function assetUsage(projectDir, scenes) {
   return { screen: one('assets/screen/'), images: one('assets/images/') };
 }
 
-export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null, steps: stepState = null, canvas = null, badge = null, err, warn }) {
+export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null, steps: stepState = null, canvas = null, badge = null, waitLead = WAIT.lead, err, warn }) {
   const m = it.media, seg = it.seg;
   const s = it.start, e = it.end;
   const W = m.info.width, H = m.info.height;
@@ -513,7 +557,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     if (m.out != null) {
       const len = r3(re - rs), sp = r3((m.out - m.in) / len);
       if (sp < 0.5) err(`out：素材 ${m.in}–${m.out}s 只有 ${r3(m.out - m.in)}s，放進 ${len}s 的段要慢到 ×${sp}（下限 0.5）→ out 改大，或段落縮短`);
-      else if (sp > 64 || (sp > 4 && len > 3)) err(`out：素材 ${m.in}–${m.out}s 放進 ${len}s 的段要 ×${sp}（一般上限 4；段 ≤ 3 秒的快轉上限 64）→ 拆成兩段、中間等待的部分另開一段短的快轉`);
+      else if (sp > WAIT.fast || (sp > 4 && len > WAIT.short)) err(`out：素材 ${m.in}–${m.out}s 放進 ${len}s 的段要 ×${sp}（一般上限 4；段 ≤ ${WAIT.short} 秒的快轉上限 ${WAIT.fast}）→ 拆成兩段、中間等待的部分另開一段短的快轉`);
       else {
         if (sp > 4) warn(`out：×${sp} 快轉 ${len}s（跳過等待）；確定畫面只是在等，不是要看的操作`);
         m.speed = sp;
@@ -605,7 +649,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
         const dt = knots[i][0] - knots[i - 1][0], sp = r3((knots[i][1] - knots[i - 1][1]) / dt);
         speeds.push(sp);
         if (sp > 0 && sp < 0.25) err(`retime：第 ${r3(knots[i - 1][0])}–${r3(knots[i][0])} 秒要慢到 ×${sp}（下限 0.25，太慢畫面會一格一格跳）→ src 拉開，或改成定格（src 一樣）`);
-        else if (sp > 64 || (sp > 16 && dt > 3)) err(`retime：第 ${r3(knots[i - 1][0])}–${r3(knots[i][0])} 秒要 ×${sp}（上限 ×16，3 秒內的跳過等待可到 ×64）→ 多留一點時間給這段，或 src 改小`);
+        else if (sp > WAIT.fast || (sp > 16 && dt > WAIT.short + 1e-6)) err(`retime：第 ${r3(knots[i - 1][0])}–${r3(knots[i][0])} 秒要 ×${sp}（上限 ×16，${WAIT.short} 秒內的跳過等待可到 ×${WAIT.fast}）→ 多留一點時間給這段，或 src 改小`);
       }
       m.retime = { knots, speeds, len };
       m.pieces = splitAtJoins(s, e, tm).map((p) => ({ s: p.s, e: p.e, fms: r3(p.ms - r0) }));
@@ -1120,6 +1164,27 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const mk of m.marks) for (const b of markBoxes(mk, mk.at, mk.until)) hit(b, mk.at, `marks[${mk.i}] 的紅框`);
   }
 
+  // --- 等待卡：沒人講話的 ×5 以上快轉（WAIT）；位置＝錄影可見區的中心，不壓到講者小視窗、右側步驟清單 ---
+  m.waits = [];
+  if (m.kind === 'video' && m.hold == null && !m.waitOff) {
+    const lines = m.waitLines || ['處理中'];
+    const px = (t, size) => [...t].reduce((a, ch) => a + (ch.codePointAt(0) >= 0x20 && ch.codePointAt(0) <= 0x7e ? size * 0.6 : size), 0);
+    const cardW = Math.min(WAIT.maxW, Math.max(WAIT.minW, Math.ceil(2 * WAIT.padX + Math.max(px(lines[0], WAIT.title), lines[1] ? px(lines[1], WAIT.sub) : 0))));
+    const limR = m.side ? G.left + G.width - 16 : F.format !== 'portrait' && F.pip ? F.pip[0] - 24 : F.W - 40, limL = m.side ? G.left + 16 : 40;
+    const scale = Math.min(1, Math.round(((limR - limL) / cardW) * 1000) / 1000);
+    const w = cardW * scale, cx = Math.round(Math.min(Math.max(G.left + G.width / 2, limL + w / 2), limR - w / 2)), cy = Math.round(G.top + G.height / 2);
+    const spans = waitSpans(it, (x) => (tm.identity ? x : tm.map(x)), cues);
+    // 從最後一個往前處理：補定格會多一個 knot，前面的編號才不會跑掉
+    m.waits = spans.map((x, k) => ({ x, k })).reverse().map(({ x, k }) => {
+      const lead = x.knots && waitLead > WAIT.lead ? Math.max(WAIT.lead, Math.min(waitLead, r3(x.b - x.a - WAIT.minCard))) : WAIT.lead;
+      if (x.knots && lead > WAIT.lead + 1e-6) holdResult(m.retime, x.knots[0], x.knots[1], lead);
+      const end = r3(x.b - lead), speed = r3(x.real / (end - x.a));
+      return { a: x.a, b: x.b, real: x.real, speed, k: k + 1, end, lines, cardW, scale, cx, cy, times: Math.max(WAIT.speed, Math.round(speed)) };
+    }).reverse();
+    if (m.waits.length && !m.waitLines) warn(`等待卡（${m.waits.map((x) => `${r3(x.a - s)}–${r3(x.b - s)}s，實際 ${realText(x.real)}`).join('、')}）沒有寫在等什麼，卡片上只會寫「處理中」→ 這段加 "wait": "在等什麼"（1–2 行、用「｜」分行、每行 ≤ ${WAIT.maxLen} 字，例 "AI 逐張辨識收據｜寫入 Excel"）；不要等待卡寫 "wait": false`);
+    else if (!m.waits.length && m.waitLines) warn(`wait：這段沒有「×${WAIT.speed} 以上、至少 ${WAIT.minLen} 秒、沒人講話」的快轉，等待卡不會出現 → 確認 retime／out 的快轉夠快夠長、那幾秒沒有字幕；用不到就拿掉 wait`);
+  }
+
   // --- 報告與 JSON ---
   const pathN = m.marks.reduce((a, mk) => a + mk.path.length, 0);
   const nums = stepList.map((x) => x.n);
@@ -1130,6 +1195,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     stepList.length ? `STEP ${stepList.length}（第 ${Math.min(...nums)}${Math.max(...nums) !== Math.min(...nums) ? `–${Math.max(...nums)}` : ''} 步）` : '',
     m.arrows.length || dropped ? `箭頭 ${m.arrows.length}${dropped ? `（拿掉 ${dropped}）` : ''}` : '',
     m.lenses.length ? `放大鏡 ${m.lenses.length}` : '',
+    m.waits.length ? `等待卡 ${m.waits.length}（${m.waits.map((x) => `快轉 ${x.times} 倍、實際 ${realText(x.real)}`).join('；')}）` : '',
   ].filter(Boolean);
   // 下限：錄影段 ≥ 4 秒（style.md「標註不要密」的平均間距）卻一個標註、運鏡都沒有
   if ((m.kind === 'video' || m.hold != null) && !parts.length && e - s >= 4) {
@@ -1150,6 +1216,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     arrows: m.arrows.map((a) => ({ i: a.i, at: a.at, until: a.until, ready: a.ready, from: a.from })),
     lens: m.lenses.map((L) => ({ i: L.i, at: L.la, until: L.lb, ready: r3(L.la + LENS.delay + LENS.pop) })),
     redact: m.redact.map((rd) => ({ i: rd.i })),
+    waits: m.waits.map((x) => ({ k: x.k, at: x.a, until: x.b, real: x.real, speed: x.speed, text: x.lines.join('｜') })),
     // 段內第幾秒 ↔ 素材第幾秒（剪輯台的即時模擬、面板用；hold、out、speed 都換成這個）
     knots: sourceKnots(m, r3(e - s)),
   };
@@ -1326,7 +1393,43 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
     html.push(`      <div id="mlsrc-${L.id}" class="mlsrc">${(L.urls || []).map((u) => `<img src="${base}${u}" alt="">`).join('')}</div>`);
     html.push('    </div>');
   }
+  // 等待卡：壓暗層計時、卡片不計時；卡片的進出場、計時圈、數字都掛在時間軸上
+  const wts = (m.waits || []).filter((x) => x.a < lim - 1e-6);
+  for (const x of wts) {
+    const wid = `${id}-${x.k}`, ts = `data-start="${sh(x.a)}" data-duration="${n3(Math.min(x.b, lim) - x.a)}"`;
+    html.push(`    <div id="mwz-${wid}" class="mwz">`);
+    // 只壓暗錄影那一塊（右側步驟清單、四周的黑底不動）
+    html.push(`      <div id="mwd-${wid}" class="clip mdim" ${ts} data-track-index="${nextTrack()}" style="${style}"></div>`);
+    // 卡片不計時：CSS 預設 opacity 0，時間軸自己淡入淡出（計時 div 裡再放有 id 的 div 會被 lint 當成要拆子合成，和放大鏡的鏡片一樣）
+    html.push(`      <div id="mwc-${wid}" class="mwait" data-layout-allow-overlap style="left:${x.cx}px;top:${x.cy}px${x.scale < 1 ? `;scale:${x.scale}` : ''}">`);
+    html.push(`        <div id="mwk-${wid}" class="mwait__card" style="width:${x.cardW}px">`);
+    html.push(`          <div class="mwait__dial"><svg viewBox="0 0 168 168"><circle class="mwait__track" cx="84" cy="84" r="72"/><circle id="mwr-${wid}" class="mwait__arc" cx="84" cy="84" r="72" pathLength="1" transform="rotate(-90 84 84)"/><circle id="mwg-${wid}" class="mwait__done" cx="84" cy="84" r="72"/></svg><span id="mwt-${wid}" class="mwait__time">0:00</span></div>`);
+    html.push(`          <div class="mwait__title">${esc(x.lines[0])}</div>`);
+    if (x.lines[1]) html.push(`          <div class="mwait__sub">${esc(x.lines[1])}</div>`);
+    html.push(`          <div class="mwait__ff"><svg viewBox="0 0 24 24"><path d="M3 5.5v13l8.5-6.5zM12.5 5.5v13L21 12z"/></svg><span>快轉 ${x.times} 倍</span></div>`);
+    html.push('        </div>');
+    html.push('      </div>');
+    html.push('    </div>');
+  }
   html.push('  </div>');
+
+  // --- 等待卡的動作：壓暗＋卡片進場 → 計時圈跑一圈、數字從 0:00 跑到實際經過的時間（等速）→ 跑完那一刻圈變綠、卡片放大淡出、壓暗收掉 ---
+  if (wts.length) {
+    const wm = [];
+    for (const x of wts) {
+      const wid = `${id}-${x.k}`, run = n3(x.end - x.a);
+      tl.push(`tl.fromTo('#mwd-${wid}', { opacity: 0 }, { opacity: ${WAIT.dim}, duration: ${WAIT.in}, ease: 'sine.out' }, ${sh(x.a)});`);
+      tl.push(`tl.fromTo('#mwk-${wid}', { opacity: 0, scale: 0.94, y: 16 }, { opacity: 1, scale: 1, y: 0, duration: ${WAIT.in}, ease: 'power3.out' }, ${sh(x.a)});`);
+      tl.push(`tl.fromTo('#mwr-${wid}', { strokeDashoffset: 1 }, { strokeDashoffset: 0, autoRound: false, duration: ${run}, ease: 'none' }, ${sh(x.a)});`);
+      wm.push(`M.count('#mwt-${wid}', ${sh(x.a)}, { from: 0, to: ${Math.round(x.real)}, dur: ${run}, ease: 'none', clock: true });`);
+      if (x.end < lim - 1e-6) {
+        tl.push(`tl.fromTo('#mwg-${wid}', { opacity: 0 }, { opacity: 1, duration: 0.08, ease: 'none' }, ${sh(x.end)});`);
+        tl.push(`tl.fromTo('#mwk-${wid}', { opacity: 1, scale: 1 }, { opacity: 0, scale: 1.04, duration: ${WAIT.out}, ease: 'power2.in', immediateRender: false }, ${sh(x.end)});`);
+        tl.push(`tl.fromTo('#mwd-${wid}', { opacity: ${WAIT.dim} }, { opacity: 0, duration: ${WAIT.out}, ease: 'sine.in', immediateRender: false }, ${sh(x.end)});`);
+      }
+    }
+    tl.push(`{ const M = SceneMotion(tl, document.getElementById('el-${id}'));\n  ${wm.join('\n  ')}\n}`);
+  }
 
   // --- 進出場（整層＋子母畫面）---
   const pipSel = (it.pipIds || []).join(', ');

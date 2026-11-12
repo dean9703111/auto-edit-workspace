@@ -23,7 +23,7 @@
  *   元件的「錨點」＝它直接包著的插圖（[data-illus]／[data-illus-src]），沒有就是元件自己；中線對錨點。
  *   連接線端點在元件外框（含標籤）沿線方向的邊外 --sc-link-gap；直線的另一軸在兩個錨點重疊段的正中，L 形對各自錨點中線。
  *
- * API：SceneLayout.apply(root, {force})、SceneLayout.measure(root) → 給 audit（lib/audit-layout.mjs）的 JSON
+ * API：SceneLayout.apply(root, {force})、SceneLayout.measure(root, {free}) → 給 audit（lib/audit-layout.mjs）的 JSON；free: true＝沒有版面宣告的畫面也找手寫的連接線
  *      （容器、slot 外框／錨點／標籤、走位過的 slot 另帶排版時的外框 home、data-links 的線與手寫的連接線）、
  *      SceneLayout.box(el, ref) → el 相對 ref 的 [x, y, w, h]（版面座標，不含 transform）、SceneLayout.token(name)
  */
@@ -273,7 +273,7 @@
   }
 
   // 給 audit：每個容器的外框與 slot（錨點、標籤），每條線的端點；座標都相對 root（版面座標）
-  function measure(root) {
+  function measure(root, opt) {
     var out = { containers: [], links: [] };
     if (!root || !root.querySelectorAll) return out;
     var r4 = function (b) { return [b[0], b[1], b[0] + b[2], b[1] + b[3]]; };
@@ -303,21 +303,43 @@
     // 手寫的線（free 也量）：不在插圖裡、有描邊的 path／line／polyline，第一段子路徑兩端各離一個不同的元件 ≤ 48px 才算連接線
     //   端點認最近的元件；一樣近（巢狀群組和裡面的元件同一邊）認最內層的 data-slot 或插圖（.il）
     var slots = Array.prototype.slice.call(root.querySelectorAll('[data-layout] > [data-slot]'));
+    // 沒有版面宣告的畫面（內容設計動畫：元件自己寫 left／top）：改認「看得出是一塊東西」的元素＝示意插圖和有底色或框線的方塊（卡片）。
+    //   整張的底、線自己所在的容器不算。這樣手寫座標的引線歪掉、沒接到邊的中點也量得到（031：設計師把座標寫死，兩條引線交叉、沒對到卡片）
+    //   只在 opt.free 時量（audit 對內容設計動畫才開）：手排的模板有刻意接在元件上的線（例 x-desk 從上面垂到地台的虛線），不是連接線
+    var free = !!(opt && opt.free) && !root.querySelector('[data-layout]');
+    if (free) {
+      slots = Array.prototype.filter.call(root.querySelectorAll('*'), function (e) {
+        if (e.closest('svg') || e.closest('[data-layout-ignore], [data-layout-check="ignore"]')) return false;
+        if (e.offsetWidth < 48 || e.offsetHeight < 48) return false;
+        if (e.offsetWidth >= root.offsetWidth * 0.9 && e.offsetHeight >= root.offsetHeight * 0.9) return false;
+        if (e.hasAttribute('data-illus') || e.hasAttribute('data-illus-src')) return true;
+        var cs = getComputedStyle(e), bg = cs.backgroundColor;
+        return (parseFloat(cs.borderTopWidth) || 0) > 0 || (!!bg && bg !== 'transparent' && !/,\s*0\)$/.test(bg));
+      });
+    }
     if (slots.length < 2) return out;
     var rr = root.getBoundingClientRect(), k = root.offsetWidth ? rr.width / root.offsetWidth : 1;
     var dist = function (p, b) { return Math.hypot(Math.max(b[0] - p[0], 0, p[0] - b[2]), Math.max(b[1] - p[1], 0, p[1] - b[3])); };
     var sb = [];
-    slots.forEach(function (s) { sb.push({ el: s, b: r4(box(s, root)) }); Array.prototype.forEach.call(s.querySelectorAll('.il'), function (e) { sb.push({ el: e, b: r4(box(e, root)) }); }); });
+    slots.forEach(function (s) { sb.push({ el: s, b: r4(box(s, root)) }); if (!free) Array.prototype.forEach.call(s.querySelectorAll('.il'), function (e) { sb.push({ el: e, b: r4(box(e, root)) }); }); });
+    var line = null;   // 現在在量的那條線（free：包著它的容器不算端點）
     var nearest = function (p) {
       var best = null;
-      sb.forEach(function (x) { var d = dist(p, x.b); if (d <= 48 && (!best || d < best.d - 0.5 || (Math.abs(d - best.d) <= 0.5 && best.el.contains(x.el)))) best = { d: d, el: x.el }; });
+      sb.forEach(function (x) { if (free && line && x.el.contains(line)) return; var d = dist(p, x.b); if (d <= 48 && (!best || d < best.d - 0.5 || (Math.abs(d - best.d) <= 0.5 && best.el.contains(x.el)))) best = { d: d, el: x.el }; });
       return best && best.el;
     };
-    var slotOf = function (e) { return e.hasAttribute('data-slot') ? e : e.parentNode.closest('[data-slot]'); };
+    // 端點屬於哪一個元件：有版面宣告＝它的 data-slot；free＝包著它的最外層方塊（卡片裡的插圖算那張卡）
+    var slotOf = function (e) {
+      if (!free) return e.hasAttribute('data-slot') ? e : e.parentNode.closest('[data-slot]');
+      var t = e;
+      for (var q = e.parentNode; q && q !== root; q = q.parentNode) if (slots.indexOf(q) >= 0 && !(line && q.contains(line))) t = q;
+      return t;
+    };
     var ends = function (e) { var s = slotOf(e); return { id: s && s.id || null, box: r4(box(e, root)), anchor: r4(box(e.hasAttribute('data-slot') ? anchorOf(e) : e, root)) }; };
     Array.prototype.forEach.call(root.querySelectorAll('svg path, svg line, svg polyline'), function (el, n) {
       if (el.hasAttribute('data-link') || el.closest('[data-illus], [data-illus-src], svg[data-links], [data-layout-ignore], [data-layout-check="ignore"]')) return;   // 退出標記比照 audit-page（例：時間軸刻意橫過每個點）
       if (getComputedStyle(el).stroke === 'none') return;
+      line = el;
       var sub = el;
       if (el.tagName === 'path') {   // 第一段子路徑（箭頭頭常寫在同一個 path 的第二段）
         var d0 = (el.getAttribute('d') || '').trim().split(/(?=[Mm])/)[0];

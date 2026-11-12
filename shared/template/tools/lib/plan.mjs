@@ -29,10 +29,11 @@ import { readCustom } from './assemble.mjs';
 import { findCue, norm, cueByN } from './srt.mjs';
 import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTime, textWidth, onVoice, voicedAt } from './time.mjs';
 import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } from './edit.mjs';
-import { MEDIA_KEYS, ENTER, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner, mediaOverlaps } from './media.mjs';
+import { MEDIA_KEYS, ENTER, WAIT, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner, mediaOverlaps } from './media.mjs';
 import { SFX_RULES, SFX_SWAP, rotateSfx, sfxBudget, thinMainSfx } from './audio.mjs';
+import { LOCAL_ROLES, sfxActual, wavSeconds } from './sfx-local.mjs';
 import { BED } from './music.mjs';
-import { validateMoods, moodCues, zoomSpans, MOOD_KINDS } from './moods.mjs';
+import { validateMoods, moodCues, moodSound, zoomSpans, MOOD_KINDS } from './moods.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, canvasOf } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
@@ -232,7 +233,11 @@ export function sceneSfxCues({ scene, resolved, D, tone = null, override, extraO
   return { main, extra, errors };
 }
 
-const sfxNames = (conf) => Object.keys(conf).filter((k) => conf[k]?.kind !== 'bgm');
+// 段上能寫的音效名稱：這台機器有的＋自備角色（沒放會改用內建的）；tick 是工具自動配在等待快轉上的，不能自己寫
+const sfxNames = (conf) => [...new Set([...Object.keys(conf).filter((k) => conf[k]?.kind !== 'bgm'), ...Object.keys(LOCAL_ROLES)])].filter((k) => !LOCAL_ROLES[k]?.auto);
+const sfxOk = (n, conf) => (n in conf || n in LOCAL_ROLES) && !LOCAL_ROLES[n]?.auto;
+const AUTO_SFX_MSG = (n) => `「${n}」（${LOCAL_ROLES[n].zh}）是工具自動配的（${LOCAL_ROLES[n].use.split('：')[0]}），不能自己寫 → 拿掉`;
+
 const bgmNames = (conf) => Object.keys(conf).filter((k) => conf[k]?.kind === 'bgm');
 
 // ---------- 文字對時（F4）：卡片的主文字出現時間 vs 講到那個詞的時間 ----------
@@ -400,6 +405,9 @@ export function untouchedSample(file, customDir) {
 export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, projectDir = null, voiceOnly = [], cutpoints = [], probe, projectRel = 'projects/<專案>', canvas = null }) {
   const errors = [], warnings = [];
   const { scenes, icons, fx, consts, sfx: sfxConf = {}, accent = '#FFD400' } = lib;
+  // 等待卡：「滴」響完再過 afterDing 秒人聲才回來（2026-11-12 作者）→ 計時圈跑完（滴的峰值）要比等待結束早「滴的尾巴＋afterDing」
+  const dingLen = sfxConf.ding ? (sfxConf.ding.seconds ?? (sfxDir ? wavSeconds(path.join(sfxDir, 'ding.wav')) : null)) : null;
+  const waitLead = dingLen ? r3(Math.max(WAIT.lead, dingLen - (sfxConf.ding.peak || 0) + SFX_RULES.afterDing + 1 / FPS)) : WAIT.lead;   // ＋1 格：音效的峰值排在畫面事件後一格
   const roughDur = videoDur;
   // work/storyboard.md 的動畫分鏡表（outDir＝work/hyperframes；第一次用到才讀）
   let sheets = null;
@@ -695,8 +703,9 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     }
     const sfxObj = seg.sfx !== null && typeof seg.sfx === 'object';
     if (sfxObj && (Array.isArray(seg.sfx) || typeof seg.sfx.name !== 'string' || seg.sfx.at == null || Object.keys(seg.sfx).some((k) => !['name', 'at'].includes(k)))) err(`sfx 寫成物件時要有 name 和 at：{ "name": "success", "at": "#12e-0.1" }（at 寫法同 marks），現在是 ${JSON.stringify(seg.sfx)}`);
-    else if (sfxObj && !(seg.sfx.name in sfxConf)) err(`sfx.name：只能是 ${sfxNames(sfxConf).join('／')}，現在是「${seg.sfx.name}」→ 改成清單裡的名稱`);
-    else if (!sfxObj && seg.sfx !== undefined && seg.sfx !== null && !(seg.sfx in sfxConf)) err(`sfx：只能是 ${sfxNames(sfxConf).join('／')} 或 null，現在是「${seg.sfx}」→ 改成清單裡的名稱（跑 build.mjs --list 看每顆的用途），或寫 null 不放音效`);
+    else if (LOCAL_ROLES[sfxObj ? seg.sfx.name : seg.sfx]?.auto) err(`sfx：${AUTO_SFX_MSG(sfxObj ? seg.sfx.name : seg.sfx)}`);
+    else if (sfxObj && !sfxOk(seg.sfx.name, sfxConf)) err(`sfx.name：只能是 ${sfxNames(sfxConf).join('／')}，現在是「${seg.sfx.name}」→ 改成清單裡的名稱`);
+    else if (!sfxObj && seg.sfx !== undefined && seg.sfx !== null && !sfxOk(seg.sfx, sfxConf)) err(`sfx：只能是 ${sfxNames(sfxConf).join('／')} 或 null，現在是「${seg.sfx}」→ 改成清單裡的名稱（跑 build.mjs --list 看每顆的用途），或寫 null 不放音效`);
     else if (seg.sfx && sfxConf[sfxObj ? seg.sfx.name : seg.sfx]?.kind === 'bgm') err(`sfx：「${seg.sfx}」是配樂，不能當段落音效 → 結尾配樂寫在 plan.json 第一層的 "outro"（例 "outro": { "from": "#120" }）`);
     if (seg.clicks !== undefined && !Array.isArray(seg.clicks)) err('clicks 要寫成陣列，例如 ["+3.2", "#21@安裝"] → 一顆點擊一個元素，只有一顆也要加 [ ]');
     if (seg.sfxVolume !== undefined && !(typeof seg.sfxVolume === 'number' && Number.isFinite(seg.sfxVolume) && seg.sfxVolume >= -60 && seg.sfxVolume <= 12)) err(`sfxVolume 要是 −60～+12 的 dB 數字（這段音效的音量，0＝預設），現在是 ${JSON.stringify(seg.sfxVolume)}`);
@@ -916,7 +925,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       else if (it.seg.chtag && !it.chapter) it.errors.push(`${it.where} chtag：前面沒有章節轉場（chapter），角標不知道要寫哪一章 → 在這段前面加 01 章節轉場，或刪掉 "chtag": true`);
     } else if (it.type === 'media') {
       const pipAt = (t) => it.pipPieces.some((p) => t >= p.s - 1e-6 && t < p.e);
-      it.mediaReport = validateMedia(it, { cues, tm, pipAt, icons, steps, canvas: C, badge: secBadgeFor(it), err: (m) => it.errors.push(`${it.where} ${m}`), warn: (m) => it.warnings.push(`${it.where} ${m}`) });
+      it.mediaReport = validateMedia(it, { cues, tm, pipAt, icons, steps, canvas: C, badge: secBadgeFor(it), waitLead: it.seg.sfxExtra === false ? WAIT.lead : waitLead, err: (m) => it.errors.push(`${it.where} ${m}`), warn: (m) => it.warnings.push(`${it.where} ${m}`) });
     } else if (it.type === 'custom') {
       // 情境動畫綁句：x-*.html 裡的 P.at('#N…') 預先算成完成影片秒數（specs/contracts/cues.md §3）
       it.cueRefs = {};
@@ -977,15 +986,19 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       return ev;
     };
     const obj = seg.sfx !== null && typeof seg.sfx === 'object';
+    // 自備角色（checkin、question、wow）這台機器沒放：改用它的 fallback（null＝不出聲）
+    const act = (n) => (typeof n === 'string' && !sfxConf[n] && n in LOCAL_ROLES ? sfxActual(n, sfxConf) : n);
+    const segName = act(obj ? seg.sfx.name : seg.sfx);
     if (it.type === 'scene') {
       // 字卡：主音效照情境的拍點；寫成 { name, at } 就放在那一刻（踩坑句、結果句），附加音效照舊
-      const c = sceneSfxCues({ scene: it.scene, resolved: it.resolved, D: it.D, tone: it.resolved?.tone ?? null, override: obj ? undefined : seg.sfx, extraOn: seg.sfxExtra !== false, sfxConf });
+      const c = sceneSfxCues({ scene: it.scene, resolved: it.resolved, D: it.D, tone: it.resolved?.tone ?? null, override: obj ? undefined : segName, extraOn: seg.sfxExtra !== false, sfxConf });
       it.errors.push(...c.errors.map((m) => `${it.where} ${m}`));
       main = c.main; extra = c.extra;
-      if (obj && sfxConf[seg.sfx.name]) { const ev = evOf(seg.sfx.at, 'sfx.at'); main = ev != null ? { name: seg.sfx.name, rel: r3(ev - it.start) } : null; }
+      if (obj && segName && sfxConf[segName]) { const ev = evOf(seg.sfx.at, 'sfx.at'); main = ev != null ? { name: segName, rel: r3(ev - it.start) } : null; }
+      else if (obj && segName === null) main = null;
     } else {
       const def = it.fxDef?.sfx;
-      const name = obj ? seg.sfx.name : seg.sfx === undefined ? (def?.sound ?? null) : seg.sfx;
+      const name = seg.sfx === undefined ? (def?.sound ?? null) : segName;
       if (name && !sfxConf[name] && seg.sfx === undefined) it.errors.push(`${it.where} 音效 fx ${it.seg.fx}：sfx.json 沒有「${name}」`);
       if (name && sfxConf[name]) {
         // { name, at }：主音效放在那一刻（錄影段的踩坑句、結果句）；沒寫 at 的照舊放段起點
@@ -1004,18 +1017,23 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       if (it.type === 'custom' && seg.sfxExtra !== false) {
         for (const b of it.sfxBeats || []) {
           const head = `${it.where} ${it.file} 的 P.sfx('${b.name}', '${b.ref}')`;
-          if (!sfxConf[b.name] || sfxConf[b.name].kind === 'bgm') { it.errors.push(`${head}：kit/sfx.json 沒有「${b.name}」這顆音效 → 改成 ${Object.keys(sfxConf).filter((k) => sfxConf[k].kind !== 'bgm').join('、')} 其中一個`); continue; }
+          if (LOCAL_ROLES[b.name]?.auto) { it.errors.push(`${head}：${AUTO_SFX_MSG(b.name)}`); continue; }
+          const bn = act(b.name);
+          if (bn === null) continue;   // 自備角色沒放、也沒有替代的：不出聲
+          if (!sfxConf[bn] || sfxConf[bn].kind === 'bgm') { it.errors.push(`${head}：kit/sfx.json 沒有「${b.name}」這顆音效 → 改成 ${sfxNames(sfxConf).join('、')} 其中一個`); continue; }
           const at = it.cueRefs?.[b.ref];
           if (at == null) continue;   // ref 寫錯：上面的綁句檢查已經 ✖
           const ev = r3(at + b.off);
           if (ev < it.start - 0.05 || ev > it.end + 0.05) { if (!it.sample) it.warnings.push(`${head}${b.off ? ` +${b.off}` : ''} 在 ${fmt(ev)}，不在這段 ${fmt(it.start)}–${fmt(it.end)} 裡，已拿掉 → 改綁這段裡的句子`); continue; }
-          extra.push({ name: b.name, rel: r3(ev - it.start), vol: 1, beat: true });
+          // 同一下點擊，段上的 clicks 和動畫檔的 P.sfx('click') 都寫了（舊的 plan.json）：只留一顆
+          if (sfxConf[bn].additive && extra.some((c) => c.name === bn && Math.abs(c.rel - (ev - it.start)) < 0.1)) continue;
+          extra.push({ name: bn, rel: r3(ev - it.start), vol: 1, beat: true });
         }
       }
     }
     if (sfxDir) {
       for (const n of new Set([main?.name, ...extra.map((c) => c.name)].filter(Boolean))) {
-        if (!fs.existsSync(path.join(sfxDir, `${n}.wav`))) it.errors.push(`${it.where} 音效檔 shared/sfx/${n}.wav 不存在 → shared/sfx/ 要有完整的 ${Object.keys(sfxConf).length} 個檔（kit/sfx.json 列的每一顆；見 shared/template/USAGE-reference.md R5.2）`);
+        if (!sfxConf[n]?.local && !fs.existsSync(path.join(sfxDir, `${n}.wav`))) it.errors.push(`${it.where} 音效檔 shared/sfx/${n}.wav 不存在 → shared/sfx/ 要有完整的 ${Object.keys(sfxConf).length} 個檔（kit/sfx.json 列的每一顆；見 shared/template/USAGE-reference.md R5.2）`);
       }
     }
     const mk = (c, vol) => {
@@ -1029,6 +1047,16 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
       else it.sfx = cue;
     }
     it.sfxExtra = extra.map((c) => mk(c, r2((sfxConf[c.name].volume ?? 0.5) * c.vol))).filter((c) => c.at < videoDur);
+    // 等待卡（lib/media.mjs 的 WAIT：沒人講話的 ×5 以上快轉）：秒針從卡片出現響到計時圈跑完（結束前 0.2 秒），那一刻接一顆 ding＝結果出現
+    // （作者的剪映定剪 10 次有 10 次這樣配，specs/031）。秒針要使用者自備了 tick 才有；ding 是內建的，一定有
+    if (it.type === 'media' && seg.sfxExtra !== false) {
+      for (const w of it.media?.waits || []) {
+        const end = r3(Math.min(w.end, videoDur)), tc = sfxConf.tick, dc = sfxConf.ding;
+        if (!(end - w.a > 0.3)) continue;
+        if (tc) it.sfxExtra.push({ name: 'tick', at: w.a, dur: r3(end - w.a), from: r3(Math.max(0, (tc.peak || 0) - 0.05)), volume: tc.volume ?? 1, event: w.a, wait: true });
+        if (dc && dc.kind !== 'bgm' && end < videoDur) it.sfxExtra.push({ name: 'ding', at: r3(Math.max(0, end - (dc.peak || 0) + frame)), volume: dc.volume ?? 0.5, event: end, wait: true });
+      }
+    }
     // 這段的音效音量（sfxVolume，dB）：主音效＋附加音效一起調
     if (typeof seg.sfxVolume === 'number' && Number.isFinite(seg.sfxVolume) && seg.sfxVolume !== 0) {
       const g = dB(seg.sfxVolume);
@@ -1084,8 +1112,9 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const cnt = {};
   for (const x of [...timed, ...moodItems]) if (x.sfx) cnt[x.sfx.name] = (cnt[x.sfx.name] || 0) + 1;
   for (const m of [...moodItems].filter((x) => x.sfx).sort((a, b) => b.sfx.at - a.sfx.at)) {
-    const n = m.sfx.name, max = sfxConf[n]?.maxPerVideo, to = SFX_SWAP[n];
-    if (max == null || !(cnt[n] > max) || !to || !sfxConf[to]) continue;
+    // 自備角色（question、wow、checkin）超過的：換成它的 fallback，沒有就照這個情緒點的類別配
+    const n = m.sfx.name, max = sfxConf[n]?.maxPerVideo, to = SFX_SWAP[n] ?? (n in LOCAL_ROLES ? LOCAL_ROLES[n].fallback ?? moodSound(m.mood.kind) : null);
+    if (max == null || !(cnt[n] > max) || !to || to === n || !sfxConf[to]) continue;
     cnt[n]--; cnt[to] = (cnt[to] || 0) + 1;
     m.sfx = { ...m.sfx, name: to, at: r3(Math.max(0, m.sfx.event - (sfxConf[to].peak || 0) + frame)), volume: sfxConf[to].volume ?? 0.5 };
     moodNotes.push(`${m.where} 的 ${n} 超過每集 ${max} 次，換成 ${to}`);
@@ -1616,7 +1645,7 @@ export function jsonItems(res) {
   return res.items.map((it) => {
     const o = {
       id: it.id, type: it.type, label: it.label, start: back(it.start), end: back(it.planEnd ?? it.end, true),
-      sfx: [it.sfx, ...(it.sfxExtra || [])].filter(Boolean).map((c) => ({ name: c.name, at: back(c.at), volume: c.volume, db: c.volume > 0 ? +(20 * Math.log10(c.volume)).toFixed(1) : null })),
+      sfx: [it.sfx, ...(it.sfxExtra || [])].filter(Boolean).map((c) => ({ name: c.name, at: back(c.at), volume: c.volume, db: c.volume > 0 ? +(20 * Math.log10(c.volume)).toFixed(1) : null, ...(c.dur > 0 ? { dur: c.dur } : {}) })),
       warnings: it.warnings.length,
     };
     // 畫面上實際停到哪裡（下方字卡換卡、接不透明幕時會自動延長或提早收）；和 end 一樣時不寫

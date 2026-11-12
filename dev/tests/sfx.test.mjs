@@ -60,16 +60,20 @@ test('kit 欄位齊全、型別正確、沒有不認得的欄位（FR-001、FR-0
   for (const [n, v] of Object.entries(kit)) {
     const allowed = v.kind === 'bgm' ? [...FIELDS, ...BGM_FIELDS] : FIELDS;
     for (const f of allowed) assert.ok(f in v, `${n} 缺 ${f}`);
-    for (const f of Object.keys(v)) assert.ok(allowed.includes(f) || (f === 'variants' && v.kind === 'sfx'), `${n} 有不認得的欄位 ${f}`);
+    for (const f of Object.keys(v)) assert.ok(allowed.includes(f) || (['variants', 'roleDb'].includes(f) && v.kind === 'sfx'), `${n} 有不認得的欄位 ${f}`);
     assert.ok(['sfx', 'bgm'].includes(v.kind), `${n}.kind`);
     for (const f of ['zh', 'use', 'event']) assert.ok(typeof v[f] === 'string' && v[f].length > 0, `${n}.${f}`);
     assert.ok(Number.isFinite(v.peak) && v.peak >= 0, `${n}.peak`);
     assert.ok(v.volume > 0 && v.volume <= 1, `${n}.volume ${v.volume}`);
-    assert.ok(v.targetDb <= -3, `${n}.targetDb ${v.targetDb} 要 ≤ −3`);
+    // 031：大小照作者剪映定剪的比例。章節、打雷在他的片裡比人聲還大（roleDb），內建檔放到 1 倍只到 −2；其他都 ≤ −3
+    if ('roleDb' in v) { assert.equal(v.volume, 1, `${n} 有 roleDb＝內建檔放到 1 倍還不夠大`); assert.ok(v.roleDb > v.targetDb && v.targetDb <= -2, `${n}.roleDb ${v.roleDb}／targetDb ${v.targetDb}`); }
+    else assert.ok(v.targetDb <= -3, `${n}.targetDb ${v.targetDb} 要 ≤ −3`);
     assert.equal(typeof v.additive, 'boolean', `${n}.additive`);
     assert.ok(v.maxPerVideo === null || (Number.isInteger(v.maxPerVideo) && v.maxPerVideo >= 1), `${n}.maxPerVideo`);
     if (v.kind === 'bgm') { assert.equal(v.peak, 0); for (const f of ['fadeIn', 'fadeOut']) assert.ok(v[f] > 0 && v[f] <= 10, `${n}.${f}`); assert.match(v.credit, /^Music: ".+" by .+ licensed under CC BY 4\.0/, `${n}.credit`); }
   }
+  assert.deepEqual(Object.fromEntries(Object.entries(kit).filter(([, v]) => 'roleDb' in v).map(([n, v]) => [n, v.roleDb])), { chapter: 3.2, thunder: 0.6 });
+  assert.deepEqual(['ding', 'sparkle', 'shine', 'impact', 'alert', 'success', 'click'].map((n) => kit[n].targetDb), [-8.7, -6.8, -5.5, -6.2, -6.9, -5.2, -19.6], '照作者剪映定剪的比例（specs/031）');
   assert.deepEqual(Object.keys(kit).filter((n) => kit[n].additive).sort(), ['click']);
   assert.deepEqual(Object.fromEntries(Object.entries(kit).filter(([, v]) => v.maxPerVideo !== null).map(([n, v]) => [n, v.maxPerVideo])), { sparkle: 6, shine: 3, thunder: 3 });
   assert.deepEqual(Object.keys(kit).filter((n) => kit[n].kind === 'bgm'), ['bgm-cylinder-five']);
