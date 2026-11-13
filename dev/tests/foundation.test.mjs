@@ -104,7 +104,8 @@ test('say.report：停點兩行在最後、附件在停點前、最多 15 行', 
   const r = report(['預覽好了：12 段', 'audit：✖ 0、⚠ 3'], { assets: ['/tmp/a b/final.mp4'], stop });
   assert.equal(r[0], REPORT_HEAD);
   assert.deepEqual(r.slice(-2), stop.split('\n'));
-  assert.equal(r.at(-3), '<deliver-assets><media type="video" src="/tmp/a b/final.mp4" /></deliver-assets>');
+  const abs = path.resolve('/tmp/a b/final.mp4').split(path.sep).join('/');   // Windows 會帶磁碟代號（D:/tmp/…）
+  assert.equal(r.at(-3), `<deliver-assets><media type="video" src="${abs}" /></deliver-assets>`);
   const long = report(Array.from({ length: 40 }, (_, i) => `第 ${i + 1} 行`), { stop });
   assert.equal(long.length, REPORT_MAX);
   assert.deepEqual(long.slice(-2), stop.split('\n'));
