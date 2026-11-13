@@ -6,9 +6,10 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TOOLS, TEMPLATE, tmpDir, needs } from './helpers.mjs';
 
-const E = await import(path.join(TOOLS, 'lib', 'events.mjs'));
-const M = await import(path.join(TOOLS, 'media.mjs'));
-const R = await import(path.join(TOOLS, 'lib', 'rough-flow.mjs'));
+import { pathToFileURL } from 'node:url';
+const E = await import(pathToFileURL(path.join(TOOLS, 'lib', 'events.mjs')).href);
+const M = await import(pathToFileURL(path.join(TOOLS, 'media.mjs')).href);
+const R = await import(pathToFileURL(path.join(TOOLS, 'lib', 'rough-flow.mjs')).href);
 
 // 假的後台畫面：灰底、一列一列的「字」。每格 960×540，素材 1920×1080
 const W = 960, H = 540, FPS = 10;

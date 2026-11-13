@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HELP = `一鍵檢查：照 status.mjs --json 印的下一條指令，從素材一路跑到停點 ④ 完成影片預覽（和 AI 剪片走同一條路）
 
@@ -44,8 +44,8 @@ const args = process.argv.slice(2);
 const flag = (n) => args.includes(n);
 const val = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
 if (flag('--help') || flag('-h')) { console.log(HELP); process.exit(0); }
-const { hfArgs } = await import(path.join(TOOLS, 'lib', 'hf.mjs'));   // 測試專案在工作區外面：npx 會跑到快取裡的別版，直接跑工作區釘的那一版
-const { STOP } = await import(path.join(TOOLS, 'lib', 'stops.mjs'));
+const { hfArgs } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'hf.mjs')).href);   // 測試專案在工作區外面：npx 會跑到快取裡的別版，直接跑工作區釘的那一版
+const { STOP } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'stops.mjs')).href);
 const outFile = path.resolve(ROOT, val('--out') || path.join('dev', 'loop', 'last-check.md'));
 const logFile = path.join(ROOT, 'dev', 'loop', 'check-log.md');
 const FIXTURES = path.join(HERE, 'loop', 'fixtures');
@@ -113,7 +113,7 @@ const tool = (file, project, rest) => `node shared/template/tools/${file} --proj
 
 // ---------- Chrome、ffmpeg 有沒有 ----------
 let chrome = null;
-try { const { findChrome } = await import(path.join(TOOLS, 'lib', 'audit-browser.mjs')); chrome = findChrome({}); } catch { chrome = null; }
+try { const { findChrome } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'audit-browser.mjs')).href); chrome = findChrome({}); } catch { chrome = null; }
 const hasFfmpeg = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0;
 
 // ---------- 1. 單元測試 ----------

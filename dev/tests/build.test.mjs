@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { TOOLS, TEMPLATE, makeSrt, imp, missingTools, skipAll } from './helpers.mjs';
 
 // 整個檔都靠 before 用 ffmpeg 做的小影片：沒有 ffmpeg 就全部略過，before 也不做
@@ -355,8 +355,8 @@ test('示意插圖（specs/contracts/illus.md §5.1）：主合成與 custom 預
   assert.ok(at('src="kit/gsap.min.js"') < at('src="kit/scene-motion.js"') && at('src="kit/scene-motion.js"') < at('src="kit/illus.js"'));
   for (const f of ['illus.js', 'illus.css']) assert.ok(fs.existsSync(path.join(out, 'kit', f)), `kit/${f} 要複製`);
   for (const f of ['illus-gallery.html', 'illus-gallery.jpg', 'illus-style.md']) assert.ok(!fs.existsSync(path.join(out, 'kit', f)), `kit/${f} 不該進專案`);
-  const { buildCustomPreview } = await import(path.join(TEMPLATE, 'tools', 'lib', 'custom-preview.mjs'));
-  const { KIT_LINKS } = await import(path.join(TEMPLATE, 'tools', 'lib', 'main.mjs'));
+  const { buildCustomPreview } = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'custom-preview.mjs')).href);
+  const { KIT_LINKS } = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'main.mjs')).href);
   const pv = buildCustomPreview({ name: 'x-a', html: '<template id="x-a-template"><div id="x-a"></div></template>', kitLinks: KIT_LINKS });
   assert.ok(pv.indexOf('href="../kit/scene.css"') < pv.indexOf('href="../kit/illus.css"'));
   assert.ok(pv.indexOf('src="../kit/scene-motion.js"') < pv.indexOf('src="../kit/illus.js"'));
@@ -566,7 +566,7 @@ test('P.sfx（motion.md §5）：情境動畫的音效拍點靜態解析成 <aud
 });
 
 test('012：prefixIds 改寫 data-links（a>b、a-b，id 本身有「-」）與產生的線 id（<a>-<b>、<a>-<b>-head）；checkRefs 認得產生的線（情境模板才能用 data-links）', async () => {
-  const { prefixIds, checkRefs } = await import(path.join(TEMPLATE, 'tools', 'lib', 'assemble.mjs'));
+  const { prefixIds, checkRefs } = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'assemble.mjs')).href);
   const body = '<div id="n-1"></div><div id="n-2"></div><div id="n3"></div><svg id="ln" data-links="n-1>n-2 n-2-n3"></svg>';
   const timeline = "P.stroke('#n-1-n-2', 1); P.comet('#n-2-n3', 2); P.in('#n-1-n-2-head', 3); P.in('#n-1', 0);";
   const out = prefixIds({ style: '#n-1 { left: 0; }', body, timeline }, 's05-');

@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TOOLS, TEMPLATE, makeSrt, tmpDir, missingTools, skipAll } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 // 整個檔都靠 before 用 ffmpeg 做的假專案：沒有 ffmpeg 就全部略過，before 也不做
 const noFf = await missingTools('ffmpeg');
 const test = skipAll(nodeTest, noFf);
@@ -159,7 +160,7 @@ const clip = (file, sec) => ff(['-f', 'lavfi', '-i', 'testsrc=size=160x90:rate=3
 const listAll = (dir) => fs.readdirSync(dir, { recursive: true }).map(String).sort();
 
 test('cuts.md：兩張表用表頭辨認、四種時間寫法、待確認的列略過、程式碼區塊裡的表不算', async () => {
-  const { parseCutsMd, parseRange } = await import(MEDIA);
+  const { parseCutsMd, parseRange } = await import(pathToFileURL(MEDIA).href);
   assert.deepEqual(parseRange('0:12.40–0:15.10'), [12.4, 15.1]);
   assert.deepEqual(parseRange('00:01:02,500 --> 00:01:03,000'), [62.5, 63]);
   assert.deepEqual(parseRange('1:00:00.5~1:00:01'), [3600.5, 3601]);
@@ -178,7 +179,7 @@ test('cuts.md：兩張表用表頭辨認、四種時間寫法、待確認的列�
 });
 
 test('cuts.md「剪」欄（016）：[x] 剪、[ ] 不剪，待確認只是提醒；setCutChecks 只改那一格，舊格式自動在最前面加欄', async () => {
-  const { parseCutsMd, setCutChecks } = await import(MEDIA);
+  const { parseCutsMd, setCutChecks } = await import(pathToFileURL(MEDIA).href);
   const md = ['## NG', '', '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|',
     '| [x] | 0:10.00–0:11.00 | a\\|b | 重講 | — |', '| [ ] | 0:20.00–0:21.00 | 不剪 | 卡住 | — |', '| [x] | 0:30.00–0:31.00 | 不確定 | 講稿外 | 可能是 whisper 補的 |', '', '## 需要你決定', '', '- 無', ''].join('\n');
   const j = parseCutsMd(md);
@@ -249,7 +250,7 @@ test('ng-snap（016）：有「剪」欄時只剪 [x]，沒勾的列不剪也不
 });
 
 test('ng-snap：NG 連下一句開頭一起剪、吃掉章節的停頓 → 這章不保留並 ⚠；終點落在章節停頓裡 → 吸到停頓起點；多支主軌沒接 → ✖', async () => {
-  const { snapNg, chapterKeep, silencesOf } = await import(MEDIA);
+  const { snapNg, chapterKeep, silencesOf } = await import(pathToFileURL(MEDIA).href);
   const sil = silencesOf(V1, 30);
   assert.deepEqual(sil[2], [37.3, 41]);
   const [ng] = snapNg([{ row: 1, start: 37, end: 39 }], sil);
@@ -315,7 +316,7 @@ test('srt-split 收掉了（032 C8：沒有 Skill 引用、走不到）：印「
 
 // ---------- round 2：A-01 章節開口、A-07 --k=v、F2 verify-rough 與 build --check 的全黑 ✖ ----------
 test('chapterKeep（A-01）：表上時間落在停頓中間 → 用這個停頓的終點當開口並說明；不在停頓裡就往後 6 秒內找', async () => {
-  const { chapterKeep, CUT } = await import(MEDIA);
+  const { chapterKeep, CUT } = await import(pathToFileURL(MEDIA).href);
   const [c] = chapterKeep([{ row: 2, title: 'x', t: 5.3 }], [[5.167, 8.867]], 0.15);
   assert.ok(!c.none);
   assert.deepEqual([c.onset, c.early, c.keep], [9.017, 3.717, [6.167, 8.867]]);
@@ -335,7 +336,7 @@ test('chapterKeep（A-01）：表上時間落在停頓中間 → 用這個停頓
 });
 
 test('parseArgs（A-07）：--key=value 只在第一個 = 切', async () => {
-  const { parseArgs } = await import(MEDIA);
+  const { parseArgs } = await import(pathToFileURL(MEDIA).href);
   assert.equal(parseArgs(['ng-snap', '--edit=audio:threshold=0.1']).edit, 'audio:threshold=0.1');
   assert.equal(parseArgs(['ng-snap', '--margin', '0.2sec']).margin, '0.2sec');
 });
@@ -352,7 +353,7 @@ function brokenRough(name, { blackSource = false } = {}) {
 }
 
 test('verify-rough（F2）：rough 黑、原片同一秒不黑 → ✖＋重做指令（結束碼 1）；原片也黑 → ✓；不寫檔', async () => {
-  const { roughToSource } = await import(MEDIA);
+  const { roughToSource } = await import(pathToFileURL(MEDIA).href);
   const v1 = { chunks: [[0, 60, 1], [60, 90, 99999], [90, 150, 1]] };
   assert.equal(roughToSource(v1, 30, 1), 1);
   assert.equal(roughToSource(v1, 30, 3), 4);
@@ -405,7 +406,7 @@ const SCRIPT_MD = ['# 示範稿', '這是 `assets/a.mp4` 的講稿（說明行�
 const SAID = [['嗨大家好我是頂淵'], ['歡迎來到工程師下班有約', 0.3], ['那並且跟我一樣使用手機', 0.3], ['在固定的機位錄影'], ['但用起來都不順手', 0.3], ['如果你打算拍YouTubePodcast線上課程或訪談節目', 0.3], ['所以我乾脆', 0.6]];
 
 test('F8 srt-align（純函式）：講稿行、顯示文字去「，。；：」、全域對齊扛錯字與多字、沒講的行內插 ⚠、長行在「、，」拆、同一口氣併、連接詞不併', async () => {
-  const { scriptLines, displayText, alignCues, clausesFromSrt } = await import(MEDIA);
+  const { scriptLines, displayText, alignCues, clausesFromSrt } = await import(pathToFileURL(MEDIA).href);
   const lines = scriptLines(SCRIPT_MD);
   assert.deepEqual(lines, ['嗨！大家好，我是鼎淵', '歡迎來到工程師下班有約', '並且跟我一樣使用手機', '在固定的機位錄影', '但用起來都不順手', '如果你打算拍 YouTube、Podcast、線上課程，或訪談節目', '這一行沒有講', '所以我乾脆']);
   assert.equal(displayText('嗨！大家好，我是鼎淵。'), '嗨！大家好我是鼎淵');
@@ -470,8 +471,8 @@ test('F8 srt-align（CLI）：--dry-run 只印表；寫回備份 rough.srt.align
   assert.match(r.stdout, /有 transcript\.json，不用跑 snap-srt/);
 });
 test('F8 srt-align 重新對句號的三個坑：情境動畫只換 <script> 裡的 P.at／P.sfx 字串（檔頭註解含「<script>」、JS 註解、屬性都不動）；outro.from 也換；anchor 段整段平移、長度不變、前一段的 to 跟著接上', async () => {
-  const { remapPlanByTime, remapCustomRefs, CONNECTIVE } = await import(MEDIA);
-  const { refTime } = await import(path.join(TOOLS, 'editor', 'subtitles.mjs'));
+  const { remapPlanByTime, remapCustomRefs, CONNECTIVE } = await import(pathToFileURL(MEDIA).href);
+  const { refTime } = await import(pathToFileURL(path.join(TOOLS, 'editor', 'subtitles.mjs')).href);
   const oldCues = [
     { n: 1, start: 0, end: 2, text: '開場白' }, { n: 2, start: 2, end: 5, text: '第二句' },
     { n: 3, start: 5, end: 8, text: '重點來了這一段' }, { n: 4, start: 8, end: 12, text: '第四句很長' },
@@ -534,7 +535,7 @@ const parseSrtText = (t) => t.trim().split(/\n\s*\n/).map((b) => { const l = b.s
 const speech = (file, sec, video = 'testsrc') => ff(['-f', 'lavfi', '-i', `${video}=size=320x200:rate=30`, '-f', 'lavfi', '-i', 'aevalsrc=sin(2*PI*300*t)*lt(mod(t\\,1)\\,0.6):s=48000', '-t', String(sec), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', file]);
 
 test('main：邊錄邊講的螢幕錄影接進主軌（kind screen、只取聲音配純黑）；背景音樂與沒聲音的錄影當插入素材；--order 可以放進沒偵測到的、沒聲音的找不到', async () => {
-  const { narrationOf, lumaAt } = await import(MEDIA);
+  const { narrationOf, lumaAt } = await import(pathToFileURL(MEDIA).href);
   const p = mkProj('nscr');
   clip(path.join(p, 'assets', 'camera', 'a.mp4'), 2);
   speech(path.join(p, 'assets', 'screen', 'b-講解.mp4'), 3);
@@ -561,7 +562,7 @@ test('main：邊錄邊講的螢幕錄影接進主軌（kind screen、只取聲�
 });
 
 test('subtractRanges、screenSegments（剪掉的地方換回錄影秒數、相接又連續的併成一段）、scriptOrder／suggestOrder（照講稿行號排、對不到的放最後）', async () => {
-  const { subtractRanges, screenSegments, scriptOrder, suggestOrder } = await import(MEDIA);
+  const { subtractRanges, screenSegments, scriptOrder, suggestOrder } = await import(pathToFileURL(MEDIA).href);
   assert.deepEqual(subtractRanges([2, 10], [[6, 7], [3, 4]]), [[2, 3], [4, 6], [7, 10]]);
   assert.deepEqual(subtractRanges([2, 10], [[0, 3], [9, 12]]), [[3, 9]]);
   const clips = [{ file: 'assets/camera/a.mp4', kind: 'camera', start: 0, end: 2 }, { file: 'assets/screen/s.mp4', kind: 'screen', start: 2, end: 10 }];
@@ -623,7 +624,7 @@ test('screen-sync：照 main.json＋cuts.v1.json 算 sync 段（不超過錄影�
 });
 
 test('transcriptFresh：初剪重輸出（長度差 ≤ 0.2 秒）照用 srt-align 記下的逐字稿；長度變了或逐字稿換過 → 要重轉', async (t) => {
-  const { transcriptFresh, noteTranscript } = await import(path.join(TOOLS, 'lib', 'ff.mjs'));
+  const { transcriptFresh, noteTranscript } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'ff.mjs')).href);
   const d = tmpDir(t, 'hf-tjf-');
   const tj = path.join(d, 'transcript.json'), rough = path.join(d, 'rough.mp4');
   clip(rough, 1);

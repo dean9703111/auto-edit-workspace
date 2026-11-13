@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TOOLS, TEMPLATE, makeSrt, hasChrome, missingTools, skipAll } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 // 整個檔都靠 before 用 ffmpeg 做的假專案：沒有 ffmpeg 就全部略過，before 也不做
 const noFf = await missingTools('ffmpeg');
 const test = skipAll(nodeTest, noFf);
@@ -397,8 +398,8 @@ test('--list 提到 media 段的欄位；--list --json 有 media.fields', () => 
 
 // ---------- 004：錄影標註（callouts／spot／steps／arrows／marks.path，契約 specs/contracts/media.md）----------
 
-const MEDIA_LIB = await import(path.join(TOOLS, 'lib', 'media.mjs'));
-const MEDIA_LIB_FRAMES = await import(path.join(TOOLS, 'media.mjs'));
+const MEDIA_LIB = await import(pathToFileURL(path.join(TOOLS, 'lib', 'media.mjs')).href);
+const MEDIA_LIB_FRAMES = await import(pathToFileURL(path.join(TOOLS, 'media.mjs')).href);
 
 test('標註幾何：§1.1 三組例題、stage 換算、卡片寬度估算', () => {
   const { mediaGeometry, toStage, cardWidth, textPx } = MEDIA_LIB;
@@ -889,7 +890,7 @@ test('kit/media.js 放大鏡：補間目標是 canvas 元素（目標是普通�
 });
 
 test('字幕斷行：沒有標點時斷在詞的邊界，不切詞、不切英文、不切引號', async () => {
-  const M2 = await import(path.join(TOOLS, 'media.mjs'));
+  const M2 = await import(pathToFileURL(path.join(TOOLS, 'media.mjs')).href);
   const parts = (text, max = 18) => M2.splitRow({ text, start: 0, end: 5, chars: [], ok: true }, max).map((p) => p.text);
   for (const [text, bad] of [
     ['代表 AI 會自己判斷哪些動作需要你的授權並且直接執行其他動作', /動$/],

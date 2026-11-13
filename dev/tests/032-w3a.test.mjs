@@ -8,8 +8,9 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TOOLS, TEMPLATE, imp } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 const MEDIA = path.join(TOOLS, 'media.mjs');
-const M = await import(MEDIA);
+const M = await import(pathToFileURL(MEDIA).href);
 const F = await imp('lib/rough-flow.mjs');
 const A = await imp('lib/assets-manifest.mjs');
 const { REPORT_HEAD } = await imp('lib/say.mjs');

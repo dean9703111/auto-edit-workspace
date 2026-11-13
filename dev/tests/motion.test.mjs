@@ -12,6 +12,7 @@ import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { TEMPLATE } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 const KIT = path.join(TEMPLATE, 'kit');
 const MOTION_SRC = fs.readFileSync(path.join(KIT, 'scene-motion.js'), 'utf8');
 
@@ -555,7 +556,7 @@ test('P.grow：目標框在掛載時量好；之後 seek 時量不到大小（�
 });
 
 // 亂序 seek 逐像素相同（brief 硬限制）：每個原語各自一區，亂序與照順序 seek 後，每區的計算樣式與整張截圖都要相同
-const AB = await import(path.join(TEMPLATE, 'tools', 'lib', 'audit-browser.mjs'));
+const AB = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'audit-browser.mjs')).href);
 let chrome = null, runtime = null;
 try { chrome = AB.chromeCandidates()[0] || null; runtime = AB.findRuntime({}).file; } catch { /* 沒裝 */ }
 const V2_FIX = {
@@ -681,7 +682,7 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
 // 012 版面 helper（kit/scene-layout.js；specs/contracts/motion.md §8）：宣告式排版的幾何、連接線端點、手寫線的量法、亂序 seek 不影響
 test('SceneLayout：row 等距、底對齊（標籤同一條線）、群組置中、第二列、巢狀 col、連接線端點；手寫線量得到；亂序 seek 版面不變', { skip: !(chrome && runtime) && '找不到 HyperFrames 的 Chrome 或 runtime（npx hyperframes browser ensure）', timeout: 120000 }, async () => {
   const os = await import('node:os');
-  const { judgeLayoutRules } = await import(path.join(TEMPLATE, 'tools', 'lib', 'audit-layout.mjs'));
+  const { judgeLayoutRules } = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'audit-layout.mjs')).href);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-layout-'));
   try {
     fs.mkdirSync(path.join(dir, 'kit')); fs.mkdirSync(path.join(dir, 'compositions'));
@@ -815,8 +816,8 @@ test('SceneLayout：row 等距、底對齊（標籤同一條線）、群組置�
 test('SceneLayout 載入順序：主合成、畫廊、custom 預覽頁都是 scene-motion.js → illus.js → scene-layout.js（brief §2；002 的 build.test 只比到 illus.js）', async () => {
   const src = fs.readFileSync(path.join(TEMPLATE, 'tools', 'lib', 'main.mjs'), 'utf8');
   assert.equal([...src.matchAll(/kit\/illus\.js"><\/script>\n\s*<script src="[^"]*kit\/scene-layout\.js"><\/script>/g)].length, 2, '主合成 head 與畫廊 head 各一次，緊接在 illus.js 之後');
-  const { buildCustomPreview } = await import(path.join(TEMPLATE, 'tools', 'lib', 'custom-preview.mjs'));
-  const { KIT_LINKS } = await import(path.join(TEMPLATE, 'tools', 'lib', 'main.mjs'));
+  const { buildCustomPreview } = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'custom-preview.mjs')).href);
+  const { KIT_LINKS } = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'main.mjs')).href);
   const pv = buildCustomPreview({ name: 'x-a', html: '<template id="x-a-template"><div id="x-a"></div></template>', kitLinks: KIT_LINKS });
   const at = (s) => { const i = pv.indexOf(s); assert.ok(i > 0, `預覽頁沒有 ${s}`); return i; };
   assert.ok(at('src="../kit/scene-motion.js"') < at('src="../kit/illus.js"') && at('src="../kit/illus.js"') < at('src="../kit/scene-layout.js"'));

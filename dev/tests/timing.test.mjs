@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { lib, imp, TOOLS, tmpDir, missingTools, skipAll } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 const T = await imp('lib/time.mjs');
 const { resolvePlan } = await imp('lib/plan.mjs');
 const { parseSrt } = await imp('lib/srt.mjs');
@@ -394,15 +395,15 @@ test('attachWords：transcript.json 比 rough.mp4 舊、長度對不上、格式
 });
 
 test('繁簡：normText 折成同一種、#N@詞 對得上簡體逐字稿；toTrad 處理一字多義', async () => {
-  const { normText } = await import(path.join(TOOLS, 'lib', 'time.mjs'));
-  const Z = await import(path.join(TOOLS, 'lib', 'zh.mjs'));
+  const { normText } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'time.mjs')).href);
+  const Z = await import(pathToFileURL(path.join(TOOLS, 'lib', 'zh.mjs')).href);
   assert.equal(normText('不滿意的資料夾裡'), normText('不满意的资料夹里'));
   assert.equal([...normText('發髮')].length, 2, '一個字換一個字，位置對照不會歪');
   for (const [s, t] of [['这只影片的头发很干净', '這隻影片的頭髮很乾淨'], ['只有一只猫', '只有一隻貓'], ['干嘛复制这里的资料', '幹嘛複製這裡的資料'], ['系统关系很复杂', '系統關係很複雜'], ['一公里', '一公里'], ['沉默', '沉默'], ['喂', '喂']]) assert.equal(Z.toTrad(s), t);
   assert.equal(Z.hasSimplified('我們會'), false);
   assert.equal(Z.hasSimplified('我们会'), true);
   const words = [{ text: 'AI剪完如果有', start: 10, end: 11 }, { text: '不满意', start: 11, end: 12 }, { text: '的地方', start: 12, end: 13 }];
-  const { wordTime } = await import(path.join(TOOLS, 'lib', 'time.mjs'));
+  const { wordTime } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'time.mjs')).href);
   const t = wordTime(words, { start: 10, end: 13, text: 'AI 剪完如果有不滿意的地方' }, '不滿意');
   assert.ok(Math.abs(t - 11) < 0.05, `簡體逐字稿也找得到：${t}`);
 });

@@ -8,10 +8,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TOOLS, TEMPLATE, hasChrome, needs, missingTools } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 const MEDIA = path.join(TOOLS, 'media.mjs');
-const M = await import(MEDIA);
-const X = await import(path.join(TOOLS, 'lib', 'transcript-map.mjs'));
-const F = await import(path.join(TOOLS, 'lib', 'rough-flow.mjs'));
+const M = await import(pathToFileURL(MEDIA).href);
+const X = await import(pathToFileURL(path.join(TOOLS, 'lib', 'transcript-map.mjs')).href);
+const F = await import(pathToFileURL(path.join(TOOLS, 'lib', 'rough-flow.mjs')).href);
 
 const hasAe = spawnSync('auto-editor', ['--version'], { encoding: 'utf8' }).status === 0;
 // 端到端那幾個要 auto-editor，合成短片要 ffmpeg：缺一個就略過
@@ -375,7 +376,7 @@ test('rough：剪輯清單頁已經開著（正常流程）→ 一樣印字幕�
   assert.equal(sc.status, 0, sc.stdout + sc.stderr);
   assert.ok(fs.existsSync(path.join(p, 'work', '分鏡素材', 'index.json')), sc.stdout);
   // 底片在背景處理：等它跑完才收拾暫存資料夾
-  const { jobState } = await import(path.join(TOOLS, 'lib', 'job.mjs'));
+  const { jobState } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'job.mjs')).href);
   const until = Date.now() + 60000;
   while (Date.now() < until && jobState(p, 'prepare').state === 'running') await new Promise((ok) => setTimeout(ok, 200));
   assert.notEqual(jobState(p, 'prepare').state, 'running');
@@ -390,7 +391,7 @@ test('rough：直式專案建的 plan.json 帶 format，後面的 build 不會�
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const plan = JSON.parse(fs.readFileSync(path.join(p, 'work', 'hyperframes', 'plan.json'), 'utf8'));
   assert.deepEqual(plan, { version: 1, format: 'portrait' });
-  const { formatErrors } = await import(path.join(TOOLS, 'lib', 'canvas.mjs'));
+  const { formatErrors } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'canvas.mjs')).href);
   assert.match(fs.readFileSync(path.join(p, 'work', '製作進度.md'), 'utf8'), /版式[^\n]*直式/, '開工決策表是直式，才驗得到對不上');
   assert.deepEqual(formatErrors({ projectDir: p, plan, format: 'portrait', dims: { w: 180, h: 320 } }), []);
   const st = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', 'projects/flowportrait'], { encoding: 'utf8', cwd: root });
@@ -399,7 +400,7 @@ test('rough：直式專案建的 plan.json 帶 format，後面的 build 不會�
   assert.equal(sc.status, 0, sc.stdout + sc.stderr);
   assert.doesNotMatch(sc.stdout + sc.stderr, /沒寫 format|版式.*對不上/);
   // --scaffold 也會在背景處理底片：等它跑完才收拾暫存資料夾
-  const { jobState } = await import(path.join(TOOLS, 'lib', 'job.mjs'));
+  const { jobState } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'job.mjs')).href);
   const until = Date.now() + 60000;
   while (Date.now() < until && jobState(p, 'prepare').state === 'running') await new Promise((ok) => setTimeout(ok, 200));
   assert.notEqual(jobState(p, 'prepare').state, 'running');

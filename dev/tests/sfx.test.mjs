@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { WORKSPACE, TEMPLATE, imp, tmpDir } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 const SFX = path.join(WORKSPACE, 'shared', 'sfx');
 const MAKE = path.join(WORKSPACE, 'dev', 'tools', 'make-sfx.mjs');
 const kit = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8'));
@@ -49,7 +50,7 @@ function readWav(p) {
   return { ...fmt, frames, dur: frames / fmt.rate, peakSec: pkI / fmt.rate, onsetMs: (on / fmt.rate) * 1000 };
 }
 
-const M = await import(MAKE);   // 匯入不執行 CLI
+const M = await import(pathToFileURL(MAKE).href);   // 匯入不執行 CLI
 const limitOf = (n) => (M.RECIPES[n] ? M.RECIPES[n].limit : 2.0);
 
 test('名稱清單：9 個音效＋1 首片尾配樂，跟 contracts/sfx.md §2 一樣', () => {

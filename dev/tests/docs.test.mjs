@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const SELF = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(SELF), '..', '..');
@@ -43,7 +43,7 @@ const SETUP_MD = fs.readdirSync(abs('setup')).filter((f) => f.endsWith('.md')).m
 const have = (list) => list.filter(exists);
 
 // ---------- 停點（032 D9：名稱與兩行原文只從 tools/lib/stops.mjs 讀，這裡不再手列；這裡只寫每個停點歸哪支 Skill、文件用的占位） ----------
-const { STOP, stopLines } = await import(abs('shared/template/tools/lib/stops.mjs'));
+const { STOP, stopLines } = await import(pathToFileURL(abs('shared/template/tools/lib/stops.mjs')).href);
 const STOPS = [
   { n: STOP.cuts, skill: 'auto-edit-rough', line: stopLines.cuts('<剪輯清單網址>') },
   { n: STOP.framing, skill: 'auto-edit-storyboard', line: stopLines.framing('<構圖台網址>', { look: true }) },
@@ -646,7 +646,7 @@ test('T30 直式數字一致：style.md「直式」＝canvas.mjs，Skill 的字�
   }
   const CV = 'shared/template/tools/lib/canvas.mjs';
   if (exists(CV)) {
-    const { CANVAS } = await import(abs(CV));
+    const { CANVAS } = await import(pathToFileURL(abs(CV)).href);
     const p = CANVAS.portrait, ts = p.textSafe;
     const cv = {
       畫布: [p.W, p.H],
@@ -659,7 +659,7 @@ test('T30 直式數字一致：style.md「直式」＝canvas.mjs，Skill 的字�
     };
     for (const k of Object.keys(cv)) if (st[k] && !eq(cv[k], st[k])) bad.push(`${k}：style.md ${st[k]}、canvas.mjs ${cv[k]}`);
     // 直式 audit 的數字出處：字級下限＝ceil(32 ÷ 縮放倍率)、鏡頭推看得到的範圍＝上半面板換回子合成座標（canvas.mjs stage）
-    const { stageTransform } = await import(abs(CV));
+    const { stageTransform } = await import(pathToFileURL(abs(CV)).href);
     const sec = section(read(STYLE), '## 直式') || '';
     const num = (re) => { const m = sec.match(re); return m ? m.slice(1).map(Number) : null; };
     const min = p.minTextPx, need = (k) => { const s = stageTransform(k, p); return s ? Math.ceil(min / s.s) : null; };
@@ -739,7 +739,7 @@ test('T31 指到的步驟、規則、AGENTS.md 章節都存在（032 D1）', () 
 
 // D2：程式常數 → 文件句型。同一個句型在文件（含範例）裡出現別的數字就紅；句型一次都找不到也紅（文件改了說法，這張表要跟著改）
 test('T32 音效數字和 lib/audio.mjs 的 SFX_RULES 一樣（032 D2）', async () => {
-  const { SFX_RULES: S } = await import(abs('shared/template/tools/lib/audio.mjs'));
+  const { SFX_RULES: S } = await import(pathToFileURL(abs('shared/template/tools/lib/audio.mjs')).href);
   const N = '(\\d+(?:\\.\\d+)?)';
   const RULES = [
     ['SFX_RULES.perMinute', S.perMinute, [`任一分鐘最多\\s*${N}\\s*顆`, `一分鐘超過\\s*${N}\\s*顆主音效`, `某一分鐘主音效超過\\s*${N}\\s*顆`, `任一分鐘\\s*≤\\s*${N}\\s*顆`, `每分鐘留最重要的\\s*${N}\\s*顆`, `[這那]一分鐘已經\\s*${N}\\s*顆`]],

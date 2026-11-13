@@ -5,11 +5,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BENCH = path.join(ROOT, 'dev', 'bench', 'draft-bench.mjs');
-const B = await import(BENCH);
+const B = await import(pathToFileURL(BENCH).href);
 
 test('draftMetrics：模板動畫比例、候選比例只算非 media、非章節／講者段；相鄰同模板不算 media 和章節角標', () => {
   const segs = [

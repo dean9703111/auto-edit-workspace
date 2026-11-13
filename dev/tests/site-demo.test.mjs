@@ -5,12 +5,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { TEMPLATE, imp } from './helpers.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DEMO = path.join(ROOT, 'dev', 'site', 'demo');
-const { cutsDemoState, setDemoCut, BEAT_HEADERS } = await import(path.join(DEMO, 'demo-core.mjs'));
+const { cutsDemoState, setDemoCut, BEAT_HEADERS } = await import(pathToFileURL(path.join(DEMO, 'demo-core.mjs')).href);
 const { cutsState } = await imp('editor/server/cuts.mjs');
 const { storyboardState } = await imp('editor/server/storyboard.mjs');
 const { BEAT_HEADER, BEAT_HEADER_ILLUS } = await imp('lib/audit-beats.mjs');

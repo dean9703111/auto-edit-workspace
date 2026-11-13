@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TEMPLATE, imp, hasChrome } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 const { readCustom } = await imp('lib/assemble.mjs');
 const { buildCustomPreview } = await imp('lib/custom-preview.mjs');
 const { stripMarkers } = await imp('lib/custom-fill.mjs');   // 檔裡的填空標記是給工具看的，這裡看去掉標記後的畫面與程式
@@ -429,8 +430,8 @@ test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build →
   assert.deepEqual(r.findings.map((f) => `${f.level} ${f.id} ${f.rule} ${f.msg}`), [], '每支都要 0 ✖、0 ⚠');
   assert.equal(r.ok, true);
   // x-process 的 data-links 端點符合 layout-link（第 7 條）：完成態量 SceneLayout.measure，三條線兩端離站的外框 12（--sc-link-gap）、在邊中點 ±8
-  const AB = await import(path.join(TEMPLATE, 'tools', 'lib', 'audit-browser.mjs'));
-  const { judgeLayoutRules } = await import(path.join(TEMPLATE, 'tools', 'lib', 'audit-layout.mjs'));
+  const AB = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'audit-browser.mjs')).href);
+  const { judgeLayoutRules } = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'audit-layout.mjs')).href);
   const xp = r.segments.find((sg) => /x-process\.html/.test(sg.label));
   const S = await AB.openSession({ dir: path.join(dir, 'work', 'hyperframes'), chrome: AB.findChrome({}), runtime: AB.findRuntime({}).file });
   try {

@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TOOLS, TEMPLATE, imp } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 const S = await imp('status.mjs');
 const { stopLines } = await imp('lib/stops.mjs');
 const has = (rel) => fs.existsSync(path.join(TOOLS, rel));
@@ -142,7 +143,7 @@ test('D3：skillsWarnLine：ok 才不印；第一筆＋共 N 處；第一筆自�
 });
 
 test('D3：status 照 checkInstalled 的結果印 Skill：⚠（不一致才印），檢查要快', { skip: !has('../../../setup/install-skills.mjs') && '沒有 setup/install-skills.mjs' }, async (t) => {
-  const mod = await import(path.join(TOOLS, '..', '..', '..', 'setup', 'install-skills.mjs'));
+  const mod = await import(pathToFileURL(path.join(TOOLS, '..', '..', '..', 'setup', 'install-skills.mjs')).href);
   if (typeof mod.checkInstalled !== 'function') { t.skip('W5 的 checkInstalled 還沒有'); return; }
   const t0 = performance.now();
   const r = mod.checkInstalled();

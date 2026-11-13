@@ -7,13 +7,14 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { TOOLS, TEMPLATE, makeSrt, missingTools, skipAll } from './helpers.mjs';
 
+import { pathToFileURL } from 'node:url';
 // 整個檔都靠 before 用 ffmpeg 做的錄影：沒有 ffmpeg 就全部略過，before 也不做
 const noFf = await missingTools('ffmpeg');
 const test = skipAll(nodeTest, noFf);
 
 const BUILD = path.join(TOOLS, 'build.mjs');
-const FF = await import(path.join(TOOLS, 'lib', 'ff.mjs'));
-const M = await import(path.join(TOOLS, 'lib', 'media.mjs'));
+const FF = await import(pathToFileURL(path.join(TOOLS, 'lib', 'ff.mjs')).href);
+const M = await import(pathToFileURL(path.join(TOOLS, 'lib', 'media.mjs')).href);
 const ff = (args) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
 const dur = (f) => Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f], { encoding: 'utf8' }).stdout.trim());
 
@@ -188,7 +189,7 @@ test('帳本：同一段素材放兩次 ⚠、定格和相接的不算、同一�
   assert.deepEqual([u.images.used, u.images.total, u.images.unused], [1, 1, []]);
   assert.equal(u.screen.used, 0);
   assert.ok(u.screen.total >= 1 && u.screen.unused.includes('亮度.mp4'));
-  const { assetUsageLine } = await import(path.join(TOOLS, 'lib', 'flow.mjs'));
+  const { assetUsageLine } = await import(pathToFileURL(path.join(TOOLS, 'lib', 'flow.mjs')).href);
   assert.match(assetUsageLine(proj, [{ type: 'media', src: IMG }]), /^素材：錄影用了 0／\d+ 支、圖片用了 1／1 張；沒用到：亮度\.mp4/);
   fs.rmSync(path.join(proj, ...IMG.split('/')));
 });
