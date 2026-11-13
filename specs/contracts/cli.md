@@ -6,7 +6,7 @@
 
 | 契約 | 擁有者 | 指令 | 一行摘要 |
 |---|---|---|---|
-| [cli-001.md](cli-001.md) | 001 skills-docs | `node setup/install-skills.mjs` | 把 `.agents/skills/` 的 9 支 auto-edit Skill 複製到 MiniMax Code（`~/.minimax/skills/`）與 Claude Code（`.claude/skills/`）；標記檔、衝突、`--dry-run`／`--check`／`--json`、結束碼 0／1／2 |
+| [cli-001.md](cli-001.md) | 001 skills-docs | `node setup/install-skills.mjs` | 偵測裝了哪些 Agent，在工作區的 `.claude/skills/`（Claude Code）、`.minimax/skills/`（MiniMax Code）建連到 `.agents/skills/` 的連結（建不了才複製）；移除舊版的全域複本、衝突、`--agent`／`--dry-run`／`--check`／`--json`、結束碼 0／1／2 |
 | [cli-002.md](cli-002.md) | 002 pipeline-timing | `build.mjs`（新報告行）、`media.mjs ng-snap`／`cutpoints`／`srt-split`／`srt-align`、`status.mjs`、`caps.mjs` | build 的版本行、節奏與「沒有畫面的區間」、章節空檔、`P.at` 綁句訊息；剪乾淨的 NG 對齊與 auto-editor 三行、剪接點、拆句；專案進度與能力檢查 |
 | [cli-003.md](cli-003.md) | 003 motion-audit | `audit.mjs`（新訊息） | `--help` 原文、新增的 3 條 ✖ 與 11 條 ⚠（版面與節奏）、SceneMotion 執行期錯誤、`--json` 新欄位 |
 | [cli-004.md](cli-004.md) | 004 media-annotations-qc | `qc.mjs storyboard`／`observe`／`framing`、`brand.mjs bg` | 分鏡表每段完成態截圖、完成影片觀影總表與接縫圖、構圖倍率表的「建議」欄、HTML 背景圖截圖與留空區檢查 |

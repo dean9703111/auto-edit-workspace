@@ -15,7 +15,7 @@
 | auto-editor | 剪掉空白和停頓 |
 | HyperFrames Skill、auto-editor Skill | 裝到 `~/.minimax/skills/`（實體檔在 `~/.agents/skills/`，`~/.minimax/skills/` 是連結，兩邊都不要刪） |
 | 工作區的 HyperFrames（`npm install`） | 照工作區根目錄 `package.json` 裝固定版本到 `node_modules/`；之後 `npx hyperframes` 都用這一版 |
-| 9 支 auto-edit Skill | `node setup/install-skills.mjs` 從 `.agents/skills/` 複製到 `.claude/skills/`（Claude Code）與 `~/.minimax/skills/`（MiniMax Code）；子代理定義 `.agents/agents/auto-edit-worker.md` 一起複製到 `.claude/agents/`（Claude Code） |
+| 9 支 auto-edit Skill | `node setup/install-skills.mjs` 偵測這台電腦裝了哪些 Agent，在工作區建連到正本 `.agents/skills/` 的連結：`.claude/skills/`（Claude Code）、`.minimax/skills/`（MiniMax Code）；Codex、Cursor 直接讀 `.agents/skills/`。子代理定義 `.agents/agents/auto-edit-worker.md` 一起連到 `.claude/agents/`（Claude Code）。之後改正本不用重裝 |
 | HyperFrames 渲染用的瀏覽器 | 不用另外裝。S6 的 doctor 顯示 Chrome ✗ 時用 `npx -y hyperframes browser ensure` 下載，第一次 render 也會自動下載；放在 `~/.cache/hyperframes/chrome`，約 200 MB |
 | 臉部偵測檔（MediaPipe，約 18.7 MB） | 瘦臉用。已經在 `shared/template/vendor/mediapipe/`，不用裝；S5 只檢查檔案完整 |
 | 人物去背模型（選用，約 170 MB） | 只有用到「講者站在動畫前面」的模板（`x-wall`、`x-magazine`、`x-breakout`）才需要。不在安裝清單裡：build 用到時會說，問過使用者再跑 `node shared/template/tools/media.mjs matte-setup`，下載到 `~/.cache/hyperframes/background-removal/` |
@@ -30,7 +30,7 @@
 3. 開始前把這一輪要做的步驟一次列給使用者，問一次（最後一行 `❓ 請回：「可以開始」或要拿掉的步驟編號`）。同意後照做，不再逐項問。
 4. 檢測顯示已經有的，不重裝、不升級。
 5. 不用 sudo。要輸入電腦密碼的步驟（Mac 安裝 Homebrew）交給使用者在終端機執行，你等他說「好了」再驗證。Windows 的 winget 由你執行，執行前先提醒使用者等一下跳出視窗要按「是」。
-6. 不改 `projects/*/assets/`、`projects/*/講稿.md`、`shared/`，也不在工作區留下任何檔案（例外：S3 的 `node_modules/`、`package-lock.json`，S4 的 `.claude/skills/auto-edit-*`、`.claude/agents/auto-edit-worker.md`）。
+6. 不改 `projects/*/assets/`、`projects/*/講稿.md`、`shared/`，也不在工作區留下任何檔案（例外：S3 的 `node_modules/`、`package-lock.json`，S4 的 `.claude/skills/auto-edit-*`、`.minimax/skills/auto-edit-*`、`.claude/agents/auto-edit-worker.md` 這些連結）。
 7. 只裝上面表格裡的東西。
 8. 同一步失敗兩次就停：印出 ❌、一句原因、下一步，再查 `troubleshooting.md`。不要自己改用別的安裝方式（pip、從原始碼編譯等）。這份手冊沒寫到的狀況，把錯誤訊息原文給使用者看，不要猜。
 9. 會跑很久的指令（Homebrew、`brew install ffmpeg`、winget）照你的工具規則用背景執行，跑完再驗證。
@@ -96,7 +96,7 @@
 依作業系統讀 `mac.md` 或 `windows.md`，只做 `todo` 對到的步驟，順序照文件。
 做完再跑一次步驟 0 的檢測（Mac 不要加 PATH 前綴）：
 
-- 還有 `restart`：先用 PATH 前綴把 S1–S4 做掉（它們只寫 `~/.agents/skills`、`~/.minimax/skills`、工作區的 `node_modules/` 與 `.claude/skills/`，跟重開無關），再請使用者重開 MiniMax Code（`M8`／`W9`），這一輪到這裡結束。他重開後再說一次「幫我檢測環境」，你從步驟 0 重新開始、重新編號，這時通常只剩 S5–S9。
+- 還有 `restart`：先用 PATH 前綴把 S1–S4 做掉（它們只寫 `~/.agents/skills`、`~/.minimax/skills`、工作區的 `node_modules/`、`.claude/`、`.minimax/`，跟重開無關），再請使用者重開 MiniMax Code（`M8`／`W9`），這一輪到這裡結束。他重開後再說一次「幫我檢測環境」，你從步驟 0 重新開始、重新編號，這時通常只剩 S5–S9。
 - 沒有 `restart`：往下做共用步驟。
 
 ### 步驟 3：共用步驟（Mac、Windows 都一樣）
@@ -112,8 +112,8 @@ S1–S9 的指令都可以加 PATH 前綴（Mac：`export PATH="/opt/homebrew/bi
 **S3 安裝工作區的 HyperFrames**（`hyperframes_local` 是 `ok` 就跳過）：在工作區根目錄執行 `npm install`。
 驗證：`node -p "require('./node_modules/hyperframes/package.json').version"` 印出的版本和 `package.json` 的 `devDependencies.hyperframes` 一樣；`node shared/template/tools/caps.mjs` 的 HyperFrames 那一列是「可用」（這時 Chrome 那一列還沒好是正常的，S6 處理）。失敗看 `troubleshooting.md`「共用」。
 
-**S4 安裝 9 支 auto-edit Skill**（`skill_auto_edit` 是 `ok` 就跳過）：`node setup/install-skills.mjs`（只想看會做什麼：加 `--dry-run`；只比對不寫檔：加 `--check`；只裝一個位置：`--target project` 或 `--target user`；給程式讀：加 `--json`）。
-驗證：最後一行 `✓ 完成：9 支 × 2 個位置…；子代理 1 個（.claude/agents/）…`，結束碼 0。印 `✖ 衝突` 時看 `troubleshooting.md`「共用」。
+**S4 安裝 9 支 auto-edit Skill**（`skill_auto_edit` 是 `ok` 就跳過）：`node setup/install-skills.mjs`（只想看會做什麼：加 `--dry-run`；只比對不寫檔：加 `--check`；不偵測、指定 Agent：`--agent claude,minimax`；給程式讀：加 `--json`）。它看家目錄有哪些 Agent 的設定資料夾（`.claude`、`.minimax`、`.codex`、`.cursor`），在工作區建連結：Mac 用 symlink、Windows 用 junction（一般帳號就能建，不用系統管理員）；這個磁碟建不了連結才改成複製。舊版裝在 `~/.minimax/skills/` 的 `auto-edit-*` 會自動移除（專案層優先），刪不掉時它會印要執行的指令，交給使用者執行。
+驗證：最後一行 `✓ 完成：9 支 × N 個 Agent（…）…`（只偵測到 Codex、Cursor 時是 `✓ Codex、Cursor 直接讀 .agents/skills/，不用裝`），結束碼 0。印 `✖ 衝突` 時看 `troubleshooting.md`「共用」。
 
 **S5 臉部偵測檔**（瘦臉用；`mediapipe` 是 `ok` 就跳過，`missing` 不擋其他步驟）：`node shared/template/tools/look.mjs ensure`。驗證：最後一行 `✓ 4 個檔都對`。出現 ✖：先 `git checkout -- shared/template/vendor/mediapipe`（下載 ZIP 的使用者：重新下載工作區），再跑一次；還是 ✖ 就照那一行的 → 做（`--download` 會下載約 18.7 MB，算安裝：先把指令和用途告訴使用者，同意才跑）。不想處理也可以跳過，之後剪片只調光、不瘦臉。
 

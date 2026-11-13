@@ -56,6 +56,8 @@ Windows 的解法都**未在 Windows 實測**，照做後一定要再驗證。
 | 檢測顯示「轉逐字稿模型」ℹ️ 或 ⚠️ | 不用處理。第一次轉逐字稿時會自動下載（約 488 MB），下載不完整也會自動重抓 |
 | S3 `npm install` 失敗：`npm ERR! network`、`ETIMEDOUT` | 網路問題。等 1 分鐘重跑一次；公司網路擋 npm 時換一個網路。不要改用系統管理員權限 |
 | S3 `npm install` 失敗：`npm ERR! code EACCES` | 不是在工作區根目錄跑，或資料夾沒有寫入權限。確認目前資料夾看得到 `package.json`、`AGENTS.md`，再跑一次；不要改用系統管理員權限 |
-| S4 印 `✖ 衝突 … 這個資料夾不是 install-skills 裝的` | 那個位置已經有同名、但不是這個工具裝的 Skill（或是捷徑）。把路徑給使用者看，請他改名或移走，再跑 `node setup/install-skills.mjs`；不要自己刪 |
+| S4 印 `✖ 衝突 … 這個資料夾不是 install-skills 裝的` | 那個位置已經有同名、但不是這個工具裝的 Skill（或是指到別處的捷徑）。把路徑給使用者看，請他改名或移走，再跑 `node setup/install-skills.mjs`；不要自己刪 |
 | S5 `look.mjs ensure` 或 `look.mjs status` 印 `✖`（少檔、`sha256 不對`） | 瘦臉要用的 MediaPipe 檔不完整。先 `git checkout -- shared/template/vendor/mediapipe`（下載 ZIP 的使用者：重新下載工作區），再跑 `node shared/template/tools/look.mjs ensure`；還是 ✖ 才跑 `node shared/template/tools/look.mjs ensure --download`（約 18.7 MB，算安裝：先問使用者）。下載失敗就確認網路能連 `cdn.jsdelivr.net` 與 `storage.googleapis.com`；都不行就跳過，之後只調光、不瘦臉 |
-| 輸入框「+ → Skills」看不到 `auto-edit-*` | 先跑 `node setup/install-skills.mjs --check`：印 `還沒裝` 或 `和原始檔不同` 就跑 `node setup/install-skills.mjs`；都一致就重開 MiniMax Code。Claude Code 讀的是工作區的 `.claude/skills/` |
+| 輸入框「+ → Skills」看不到 `auto-edit-*` | 先跑 `node setup/install-skills.mjs --check`：印 `還沒裝`、`和正本不同`、`連結指到別的地方` 就跑 `node setup/install-skills.mjs`；都一致就重開 MiniMax Code。MiniMax Code 讀的是工作區的 `.minimax/skills/`、Claude Code 讀 `.claude/skills/`：第二行 `Agent（偵測到的）：` 沒有你用的那個 Agent，就加 `--agent minimax`（或 `claude`）再跑一次 |
+| S4 印 `⚠ 有 N 個是複製的（這個磁碟或帳號建不了連結）` | 工作區放在 exFAT 隨身碟、網路磁碟，或 Windows 沒開「開發人員模式」（只影響子代理那一個檔）。照樣能用，只是之後改了 `.agents/` 的正本要再跑一次 `node setup/install-skills.mjs`；想改成連結就把工作區搬到電腦本機的磁碟 |
+| S4 印 `✖ 刪不掉（…）→ 自己執行：…` | 舊版裝在 `~/.minimax/skills/` 的全域複本刪不掉（通常是 MiniMax Code 正開著、檔案被占用）。把那行指令貼給使用者，請他關掉 MiniMax Code 後自己執行，再跑一次 `node setup/install-skills.mjs` |

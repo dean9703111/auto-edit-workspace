@@ -374,25 +374,22 @@ else HL_STATUS=ok; HL_NOTE=""; fi
 add_item hyperframes_local "工作區的 HyperFrames" "$HL_STATUS" "$HF_LOCAL" "$WS_ROOT/node_modules/hyperframes" "$HL_NOTE" 1 "S3"
 
 # 9 支 auto-edit Skill＋子代理定義（S4：node setup/install-skills.mjs）
-# 檔案都在之後，有 Node 22 就用 install-skills.mjs 的 checkInstalled() 比對內容（sha256）：.agents/ 改過、複本還是舊的也算沒好
-AE_MISSING=""
-for s in longform setup rough storyboard screen motion review deliver style; do
-  [ -f "$SKILLS_DIR/auto-edit-$s/SKILL.md" ] || AE_MISSING="${AE_MISSING}${AE_MISSING:+、}auto-edit-$s"
-done
-if [ -n "$AE_MISSING" ]; then
-  AE_STATUS=missing; AE_NOTE="少了 ${AE_MISSING}（README 共用步驟 S4）"
-else
-  AE_STATUS=ok; AE_NOTE=""
-  AE_NODE=""
-  case $N_STATUS in ok|restart|not_in_path) AE_NODE=$N_PATH ;; esac
-  if [ -n "$AE_NODE" ] && [ -f "$WS_ROOT/setup/install-skills.mjs" ]; then
-    # 路徑用環境變數傳：放在 -e 後面當參數的話，install-skills.mjs 會以為自己被直接執行
-    AE_CHECK=$(AE_INSTALL_SKILLS="$WS_ROOT/setup/install-skills.mjs" "$AE_NODE" --input-type=module -e 'const { pathToFileURL } = await import("node:url"); const { checkInstalled } = await import(pathToFileURL(process.env.AE_INSTALL_SKILLS).href); const r = checkInstalled(); console.log(r.ok ? "ok" : r.stale.join("；"));' 2>/dev/null)
-    if [ -z "$AE_CHECK" ]; then AE_NOTE="檔案都在；install-skills.mjs 沒辦法比對內容"
-    elif [ "$AE_CHECK" != "ok" ]; then AE_STATUS=too_old; AE_NOTE="${AE_CHECK}（README 共用步驟 S4）"; fi
-  fi
+# 裝在哪要看這台電腦裝了哪些 Agent（工作區的 .claude/skills/、.minimax/skills/ 連到 .agents/skills/ 的正本），
+# 所以交給 install-skills.mjs 的 checkInstalled() 判斷：一支都沒裝＝missing，裝了但連結指錯、複本舊了、還有舊版的全域複本＝too_old
+AE_STATUS=missing; AE_NOTE="要先有 Node.js 22 才能裝（README 共用步驟 S4）"
+AE_NODE=""
+case $N_STATUS in ok|restart|not_in_path) AE_NODE=$N_PATH ;; esac
+if [ -n "$AE_NODE" ] && [ -f "$WS_ROOT/setup/install-skills.mjs" ]; then
+  # 路徑用環境變數傳：放在 -e 後面當參數的話，install-skills.mjs 會以為自己被直接執行
+  AE_CHECK=$(AE_INSTALL_SKILLS="$WS_ROOT/setup/install-skills.mjs" "$AE_NODE" --input-type=module -e 'const { pathToFileURL } = await import("node:url"); const { checkInstalled } = await import(pathToFileURL(process.env.AE_INSTALL_SKILLS).href); const r = checkInstalled(); console.log(r.ok ? "ok" : (r.none ? "none\t" : "stale\t") + r.stale.join("；"));' 2>/dev/null)
+  case $AE_CHECK in
+    ok) AE_STATUS=ok; AE_NOTE="" ;;
+    none*) AE_STATUS=missing; AE_NOTE="還沒裝（README 共用步驟 S4）" ;;
+    stale*) AE_STATUS=too_old; AE_NOTE="${AE_CHECK#stale	}（README 共用步驟 S4）" ;;
+    *) AE_STATUS=missing; AE_NOTE="install-skills.mjs 沒辦法比對（README 共用步驟 S4）" ;;
+  esac
 fi
-add_item skill_auto_edit "Skill：auto-edit（9 支）" "$AE_STATUS" "" "$SKILLS_DIR" "$AE_NOTE" 1 "S4"
+add_item skill_auto_edit "Skill：auto-edit（9 支）" "$AE_STATUS" "" "$WS_ROOT/.agents/skills" "$AE_NOTE" 1 "S4"
 
 # 臉部偵測檔（S5：look.mjs ensure；瘦臉是選用，missing 不算進 todo）
 MP_DIR="$WS_ROOT/shared/template/vendor/mediapipe"

@@ -384,32 +384,34 @@ try {
     }
 
     # 9 支 auto-edit Skill＋子代理定義（S4：node setup/install-skills.mjs）
-    # 檔案都在之後，有 Node 22 就跑 install-skills.mjs --check --json 比對內容（sha256）：.agents/ 改過、複本還是舊的也算沒好
-    $aeMissing = @()
-    foreach ($n in @('longform', 'setup', 'rough', 'storyboard', 'screen', 'motion', 'review', 'deliver', 'style')) {
-        if (-not (Test-File ($skillRoot + '\auto-edit-' + $n + '\SKILL.md'))) { $aeMissing += ('auto-edit-' + $n) }
-    }
-    $aeSkill = @{ Status = 'ok'; Note = '' }
+    # 裝在哪要看這台電腦裝了哪些 Agent（工作區的 .claude\skills\、.minimax\skills\ 連到 .agents\skills\ 的正本），
+    # 所以交給 install-skills.mjs --check --json 判斷：一支都沒裝＝missing，裝了但連結指錯、複本舊了、還有舊版的全域複本＝too_old
+    $aeSkill = @{ Status = 'missing'; Note = '要先有 Node.js 22 才能裝（README 共用步驟 S4）' }
     $aeScript = $wsRoot + '\setup\install-skills.mjs'
-    if ($aeMissing.Count -gt 0) { $aeSkill.Status = 'missing'; $aeSkill.Note = '少了 ' + ($aeMissing -join '、') + '（README 共用步驟 S4）' }
-    elseif ($node.Path -and (@('ok', 'restart', 'not_in_path') -contains $node.Status) -and (Test-File $aeScript)) {
+    $aeRoot = $wsRoot + '\.agents\skills'
+    if ($node.Path -and (@('ok', 'restart', 'not_in_path') -contains $node.Status) -and (Test-File $aeScript)) {
         $aeOut = Invoke-Quiet $node.Path ('"' + $aeScript + '" --check --json')
         $aeJson = $null
         foreach ($line in ($aeOut -split "`r?`n")) {
             if ($line.StartsWith('{')) { try { $aeJson = $line | ConvertFrom-Json } catch { } }
         }
-        if (-not $aeJson) { $aeSkill.Note = '檔案都在；install-skills.mjs 沒辦法比對內容' }
-        elseif (-not $aeJson.ok) {
+        if (-not $aeJson) { $aeSkill.Note = 'install-skills.mjs 沒辦法比對（README 共用步驟 S4）' }
+        elseif ($aeJson.ok) { $aeSkill.Status = 'ok'; $aeSkill.Note = '' }
+        else {
             $aeBad = @()
+            $aeAll = @(@($aeJson.items) + @($aeJson.agents) | Where-Object { $_ })
+            $aeNone = ($aeAll.Count -gt 0) -and (@($aeAll | Where-Object { $_.status -ne 'missing' }).Count -eq 0)
             foreach ($e in @($aeJson.errors)) { if ($e) { $aeBad += [string]$e } }
-            foreach ($it in (@($aeJson.items) + @($aeJson.agents))) {
-                if (-not $it) { continue }
+            foreach ($it in $aeAll) {
                 if ($it.status -eq 'conflict') { $aeBad += ([string]$it.show + ' 不是 install-skills 裝的（同名）→ 改名或移走它') }
                 elseif ($it.status -eq 'missing') { $aeBad += ([string]$it.show + ' 還沒裝') }
                 elseif ($it.status -eq 'stale') { $aeBad += ([string]$it.show + ' 和 .agents\ 的正本不同') }
             }
-            $aeSkill.Status = 'too_old'
-            $aeSkill.Note = ($aeBad -join '；') + '（README 共用步驟 S4）'
+            foreach ($it in @($aeJson.legacy)) {
+                if ($it -and $it.status -eq 'found') { $aeBad += ([string]$it.show + ' 是舊版的全域複本（專案層優先）') }
+            }
+            if ($aeNone) { $aeSkill.Status = 'missing'; $aeSkill.Note = '還沒裝（README 共用步驟 S4）' }
+            else { $aeSkill.Status = 'too_old'; $aeSkill.Note = ($aeBad -join '；') + '（README 共用步驟 S4）' }
         }
     }
 
@@ -445,7 +447,7 @@ try {
     Add-Item 'skill_hyperframes' 'Skill：hyperframes' $skills['hyperframes'].Status '' $skills['hyperframes'].Path $skills['hyperframes'].Note $true 'S1'
     Add-Item 'skill_auto_editor' 'Skill：auto-editor' $skills['auto-editor'].Status '' $skills['auto-editor'].Path $skills['auto-editor'].Note $true 'S2'
     Add-Item 'hyperframes_local' '工作區的 HyperFrames' $hfLocal.Status $hfLocal.Version $hfLocal.Path $hfLocal.Note $true 'S3'
-    Add-Item 'skill_auto_edit' 'Skill：auto-edit（9 支）' $aeSkill.Status '' $skillRoot $aeSkill.Note $true 'S4'
+    Add-Item 'skill_auto_edit' 'Skill：auto-edit（9 支）' $aeSkill.Status '' $aeRoot $aeSkill.Note $true 'S4'
     Add-Item 'mediapipe' '臉部偵測檔（瘦臉用）' $mp.Status '' $mpDir $mp.Note $false 'S5'
     Add-Item 'whisper_model' '轉逐字稿模型' $model.Status '' $modelPath $model.Note $false ''
 } catch {

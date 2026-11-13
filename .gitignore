@@ -21,6 +21,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 .claude/
+# MiniMax Code 的專案層設定（.minimax/skills/ 是 install-skills.mjs 建的連結，正本在 .agents/skills/）
+.minimax/
 # Codex 的本機設定（子代理定義的正本在 .agents/agents/）
 .codex/
 .playwright-mcp/

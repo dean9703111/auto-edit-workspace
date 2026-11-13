@@ -8,7 +8,7 @@
 | `npm run test:fast` | 不用 ffmpeg、Chrome、`node_modules` 的那一批（docs、install-skills、foundation、032-w5 和 plan、scenes、editor-storyboard 等單元測試）；`.github/workflows/check.yml` 在 push、pull request 時用 Ubuntu 與 Windows 跑的就是這一批，官網（`pages.yml`）要它過了才部署 | `npm run test:fast`（清單在 `package.json` 的 `scripts`；新增不碰 ffmpeg／Chrome 的測試檔就加進去） |
 | `tests/docs.test.mjs` | 文件一致性：9 支 Skill 的骨架、六個停點的原文、門檻數字找得到出處（AGENTS.md、style.md、USAGE*.md、工具 `--help`）、文件寫到的檔案存在、G04 八項矛盾 | `npm run test:docs`（＝`node --test dev/tests/docs.test.mjs`；零依賴；約 1 秒） |
 | `tests/docs-allow.json` | docs.test 的數字白名單：每筆 `{ "file", "text", "reason" }`，上限 40 筆；能搬進 style.md 或 AGENTS.md 的就不要加 | 改完重跑 docs.test |
-| `tests/install-skills.test.mjs` | `setup/install-skills.mjs` 的案例：9 支 Skill、子代理定義（`.agents/agents/` → `.claude/agents/`）、`checkInstalled()`（在系統暫存資料夾裝，不碰 `~/.minimax` 與 `.claude`） | `node --test dev/tests/install-skills.test.mjs` |
+| `tests/install-skills.test.mjs` | `setup/install-skills.mjs` 的案例：偵測 Agent、9 支 Skill 的連結（建不了連結時的複製）、移除舊版的全域複本、子代理定義（`.agents/agents/` → `.claude/agents/`）、`checkInstalled()`（在系統暫存資料夾做迷你工作區和假的家目錄，不碰真正的 `~/.minimax` 與 `.claude`） | `node --test dev/tests/install-skills.test.mjs` |
 | `tests/foundation.test.mjs` | 032 的共用模組：`lib/tries.mjs`（計數）、`lib/stops.mjs`（停點原文）、`lib/say.mjs`（訊息出口）、`lib/cli.mjs`（參數） | `node --test dev/tests/foundation.test.mjs` |
 | `tests/helpers.mjs` | 測試共用：`tmpDir(t)`（測試結束自動清掉的暫存資料夾）、`needs(t, 'ffmpeg'｜'chrome'｜'puppeteer')`（缺就 skip）、`missingTools`＋`skipAll`（整個檔都要瀏覽器時）、`fixture(name, make)`（同一輪共用的小素材） | 測試檔 `import … from './helpers.mjs'` |
 | `hooks/pre-commit` | 提交前跑 docs.test，沒過就擋下這次提交（約 1 秒） | 每個 clone 啟用一次：`git config core.hooksPath dev/hooks`；臨時略過：`git commit --no-verify` |

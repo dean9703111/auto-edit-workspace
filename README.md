@@ -225,9 +225,9 @@ flowchart LR
 
 | Agent | 守則 | 9 支 Skill |
 |---|---|---|
-| Claude Code | 自動讀 `AGENTS.md` | 環境檢測時由 `node setup/install-skills.mjs` 裝進工作區的 `.claude/skills/` |
-| MiniMax Code | 自動讀 `AGENTS.md` | 環境檢測時裝進 `~/.minimax/skills/` |
-| ChatGPT（Codex） | 自動讀 `AGENTS.md` | `AGENTS.md` 會要它直接讀 `.agents/skills/<名稱>/SKILL.md`，不用安裝 |
+| Claude Code | 自動讀 `AGENTS.md` | 環境檢測時由 `node setup/install-skills.mjs` 在工作區的 `.claude/skills/` 建連到 `.agents/skills/` 的連結 |
+| MiniMax Code | 自動讀 `AGENTS.md` | 同上，連結建在工作區的 `.minimax/skills/` |
+| ChatGPT（Codex） | 自動讀 `AGENTS.md` | 直接讀工作區的 `.agents/skills/`，不用安裝 |
 | Cursor | 自動讀 `AGENTS.md` | 同上 |
 | 其他 Agent | 開工先說「先讀 AGENTS.md」 | 同上 |
 

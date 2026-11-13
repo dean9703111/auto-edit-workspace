@@ -65,7 +65,7 @@ auto-editor --version
 ```
 
 依序是 S1、S2、S3（在工作區根目錄）、S4、S5、S6、S7；S8 列素材、S9 最後檢測照手冊原文。每一步先看檢測 JSON，那一項是 `ok` 就跳過（手冊每一步括號裡的條件）。手冊裡的 `npx` 一律加 `-y`，才不會停在 `Ok to proceed?`。
-完成判準：S3 之後 `node_modules/hyperframes/package.json` 的 version 和根目錄 `package.json` 釘的一樣；S4 最後一行 `✓ 完成：9 支 × 2 個位置…；子代理 1 個…`；S5 最後一行 `✓ 4 個檔都對`（✖ 不擋其他步驟，照手冊 S5 處理）；S9 的 `all_ok` 是 `true`。
+完成判準：S3 之後 `node_modules/hyperframes/package.json` 的 version 和根目錄 `package.json` 釘的一樣；S4 最後一行 `✓ 完成：9 支 × N 個 Agent…`（或 `✓ Codex、Cursor 直接讀 .agents/skills/，不用裝`）；S5 最後一行 `✓ 4 個檔都對`（✖ 不擋其他步驟，照手冊 S5 處理）；S9 的 `all_ok` 是 `true`。
 常見錯誤：`npm install` 在 `setup/` 裡跑 → 一定在工作區根目錄（有 `package.json` 的那層）；S4 印 `✖ 衝突` → 退路表「衝突」那兩列。
 
 **4. 能力探測**（只讀，不裝、不登入）
@@ -103,6 +103,7 @@ node shared/template/tools/brand.mjs speaker
 | `npm ERR! code EACCES` | 不要改用系統管理員權限；確認在工作區根目錄、不是系統資料夾 | 停下來回報：指令、錯誤原文、已經試過什麼（`setup/README.md` 原則 8） |
 | `npm ERR! network`、`ETIMEDOUT` | 等 1 分鐘重跑一次 | 停下來回報 |
 | `✖ 衝突 … 這個資料夾不是 install-skills 裝的` | 把那個路徑貼給使用者，問要不要改名或移走；不要自己刪 | — |
+| `✖ 刪不掉（…）→ 自己執行：…` | 舊版的全域複本刪不掉：把那行指令原文貼給使用者，請他關掉 MiniMax Code 後自己執行，再跑一次 S4 | — |
 | `✖ 衝突 → 這個檔不是 install-skills 裝的` | 是 `.claude/agents/` 裡同名、內容不同的子代理定義：同上，把路徑貼給使用者問，不要自己刪 | — |
 | 檢測項目 `restart` | 照本檔「開始前」的 `restart` 那一列 | — |
 | 其他症狀 | 查 `setup/troubleshooting.md` | 停下來回報 |
@@ -120,7 +121,7 @@ node shared/template/tools/brand.mjs speaker
 | 項目 | 狀態 | 版本或位置 |
 |---|---|---|
 | Node.js | ✅ | v24.16.0 |
-| 9 支 auto-edit Skill | ✅ | .claude/skills/、~/.minimax/skills/ |
+| 9 支 auto-edit Skill | ✅ | .claude/skills/、.minimax/skills/（連到 .agents/skills/） |
 （其他項目）
 能力表：<caps.mjs 的表>
 講者：<brand.mjs speaker 印的姓名｜還沒設定，請給我姓名與頭銜（或說「不要講者介紹」）>
