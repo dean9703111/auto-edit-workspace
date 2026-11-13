@@ -373,12 +373,25 @@ elif [ -n "$HF_PIN" ] && [ "$HF_LOCAL" != "$HF_PIN" ]; then HL_STATUS=too_old; H
 else HL_STATUS=ok; HL_NOTE=""; fi
 add_item hyperframes_local "工作區的 HyperFrames" "$HL_STATUS" "$HF_LOCAL" "$WS_ROOT/node_modules/hyperframes" "$HL_NOTE" 1 "S3"
 
-# 9 支 auto-edit Skill（S4：node setup/install-skills.mjs）
+# 9 支 auto-edit Skill＋子代理定義（S4：node setup/install-skills.mjs）
+# 檔案都在之後，有 Node 22 就用 install-skills.mjs 的 checkInstalled() 比對內容（sha256）：.agents/ 改過、複本還是舊的也算沒好
 AE_MISSING=""
 for s in longform setup rough storyboard screen motion review deliver style; do
   [ -f "$SKILLS_DIR/auto-edit-$s/SKILL.md" ] || AE_MISSING="${AE_MISSING}${AE_MISSING:+、}auto-edit-$s"
 done
-if [ -z "$AE_MISSING" ]; then AE_STATUS=ok; AE_NOTE=""; else AE_STATUS=missing; AE_NOTE="少了 ${AE_MISSING}（README 共用步驟 S4）"; fi
+if [ -n "$AE_MISSING" ]; then
+  AE_STATUS=missing; AE_NOTE="少了 ${AE_MISSING}（README 共用步驟 S4）"
+else
+  AE_STATUS=ok; AE_NOTE=""
+  AE_NODE=""
+  case $N_STATUS in ok|restart|not_in_path) AE_NODE=$N_PATH ;; esac
+  if [ -n "$AE_NODE" ] && [ -f "$WS_ROOT/setup/install-skills.mjs" ]; then
+    # 路徑用環境變數傳：放在 -e 後面當參數的話，install-skills.mjs 會以為自己被直接執行
+    AE_CHECK=$(AE_INSTALL_SKILLS="$WS_ROOT/setup/install-skills.mjs" "$AE_NODE" --input-type=module -e 'const { pathToFileURL } = await import("node:url"); const { checkInstalled } = await import(pathToFileURL(process.env.AE_INSTALL_SKILLS).href); const r = checkInstalled(); console.log(r.ok ? "ok" : r.stale.join("；"));' 2>/dev/null)
+    if [ -z "$AE_CHECK" ]; then AE_NOTE="檔案都在；install-skills.mjs 沒辦法比對內容"
+    elif [ "$AE_CHECK" != "ok" ]; then AE_STATUS=too_old; AE_NOTE="${AE_CHECK}（README 共用步驟 S4）"; fi
+  fi
+fi
 add_item skill_auto_edit "Skill：auto-edit（9 支）" "$AE_STATUS" "" "$SKILLS_DIR" "$AE_NOTE" 1 "S4"
 
 # 臉部偵測檔（S5：look.mjs ensure；瘦臉是選用，missing 不算進 todo）

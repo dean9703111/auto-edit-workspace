@@ -1,11 +1,15 @@
 // media 段的 retime（同一段變速、定格）、redact（打碼）、同一支錄影接著播硬接：真的轉檔，用畫面亮度反推素材時間
-import { test, before } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE, makeSrt } from './helpers.mjs';
+import { TOOLS, TEMPLATE, makeSrt, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都靠 before 用 ffmpeg 做的錄影：沒有 ffmpeg 就全部略過，before 也不做
+const noFf = await missingTools('ffmpeg');
+const test = skipAll(nodeTest, noFf);
 
 const BUILD = path.join(TOOLS, 'build.mjs');
 const FF = await import(path.join(TOOLS, 'lib', 'ff.mjs'));
@@ -24,6 +28,7 @@ const srcAtFile = (f, at) => {
 const near = (got, want, tol, what) => assert.ok(Math.abs(got - want) <= tol, `${what}：畫面是素材第 ${got.toFixed(2)} 秒，應該是 ${want}`);
 
 before(() => {
+  if (noFf) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-retime-'));
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   tpl = path.join(root, 'shared', 'template');
@@ -39,6 +44,7 @@ before(() => {
   ff(['-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, 'work', 'rough.mp4')]);
   fs.writeFileSync(path.join(proj, 'work', 'rough.srt'), makeSrt({ n: 6 }));
 });
+after(() => { if (root) fs.rmSync(root, { recursive: true, force: true }); });
 
 const writePlan = (scenes) => fs.writeFileSync(path.join(out, 'plan.json'), JSON.stringify({ version: 1, look: false, speakerBox: [100, 100, 300, 300], scenes }, null, 2));
 const run = (...args) => spawnSync(process.execPath, [BUILD, ...args, '--template', tpl, '--project', 'projects/p1'], { cwd: root, encoding: 'utf8', timeout: 180000 });

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, imp, hasChrome, makeSrt } from './helpers.mjs';
+import { TOOLS, imp, hasChrome, makeSrt, fixture } from './helpers.mjs';
 
 const V = await imp('versions.mjs');
 const { projectStatus, readStopLog } = await imp('status.mjs');
@@ -148,7 +148,8 @@ test('digestAudit：✖、⚠ 用 audit 的格式；截圖對回段；pickShots 
 test('shotSheet：jpg、png 混著拼成一張；一張也可以；直式 6 欄', { skip: spawnSync('ffmpeg', ['-version']).status !== 0 && '沒有 ffmpeg' }, () => {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-sheet-'));
   tmps.push(d);
-  const pic = (f) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=1920x1080:rate=1', '-frames:v', '1', path.join(d, f)]); assert.equal(r.status, 0, String(r.stderr)); return path.join(d, f); };
+  // jpg、png 各做一次（ffmpeg 照副檔名選格式），每張複製一份
+  const pic = (f) => { fs.copyFileSync(fixture(`sheet-1080p${path.extname(f)}`, (o) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=1920x1080:rate=1', '-frames:v', '1', o]); assert.equal(r.status, 0, String(r.stderr)); }), path.join(d, f)); return path.join(d, f); };
   const size = (f) => spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f], { encoding: 'utf8' }).stdout.trim();
   const out = V.shotSheet([pic('a.jpg'), pic('b.png'), pic('c.jpg'), pic('d.png'), pic('e.jpg')], path.join(d, 'sub', 'sheet.jpg'));
   assert.equal(size(out), `${4 * 480 + 3 * 4},${2 * 270 + 4}`);
@@ -347,8 +348,8 @@ test('finish：build → audit 改到的段 → 存版本 → r<N>.md → ④ �
   assert.match(out, /audit --only s05,s12：✖ 0、⚠ 0/);
   assert.match(out, /錄影段（audit 不量）：s15 截 0:13\.50/);
   assert.match(out, /版本：s05 v1 → v2；s15 v1 → v2；s12 v1 → v2/);
-  assert.equal(log.at(-1), '⏸ 停點 ④ 完成影片預覽｜請看 http://127.0.0.1:4400/?view=final\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」');
-  assert.match(log.at(-2), /^→ 下一步：看上面那張截圖/);
+  assert.equal(log.slice(-2).join('\n'), '⏸ 停點 ④ 完成影片預覽｜請看 http://127.0.0.1:4400/?view=final\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」', '032 A3：回報段最後兩行是停點');
+  assert.equal(log.filter((l) => l.startsWith('⏸')).length, 1, '停點那兩行只出現一次');
   // 版本
   assert.equal(JSON.parse(read(p, 'work/versions/s05/v2/.meta.json')).kind, 'r1 改之後');
   assert.equal(fs.existsSync(path.join(p, 'work', 'versions', 's05', 'v2', '預覽.mp4')), false);
@@ -643,8 +644,8 @@ test('CLI：new 印記停點的指令和停點 ③；accept 自己記通過（�
   const n = RUN('new', '--project', p, '--seg', 's12', '--no-preview', '--note', '「重新設計」');
   assert.equal(n.status, 0, n.stderr);
   let L = n.stdout.trim().split('\n');
-  assert.match(L.at(-4), /^→ 下一步：改每份 分鏡\.md/);
-  assert.equal(L.at(-3), `node shared/template/tools/status.mjs --project ${p} --mark "③ 分鏡表（s12 v2）" --state 待回覆 --back "work/versions/s12/v2/分鏡.md"`);
+  assert.match(L.at(-4), /^停點紀錄：\| .* \| ③ 分鏡表（s12 v2） \| 待回覆 \| — \| work\/versions\/s12\/v2\/分鏡\.md \|$/, '032 A5：new 自己記停點 ③');
+  assert.match(L.at(-3), /^→ 改每份 分鏡\.md/);
   assert.match(L.at(-2), /^⏸ 停點 ③ 分鏡表（s12 v2）｜請看 \S*分鏡\.md$/);
   assert.equal(L.at(-1), '請回：「可以」或要改的拍');
   const mark = spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p, '--mark', '③ 分鏡表（s12 v2）', '--state', '待回覆', '--back', 'work/versions/s12/v2/分鏡.md'], { encoding: 'utf8' });
@@ -656,7 +657,7 @@ test('CLI：new 印記停點的指令和停點 ③；accept 自己記通過（�
   assert.equal(a.status, 0, a.stderr);
   assert.match(a.stdout, /停點紀錄：\| .* \| ③ 分鏡表（s12 v2） \| 通過 \| 「可以」 \| work\/storyboard\.md \|/);
   L = a.stdout.trim().split('\n');
-  assert.equal(L.at(-1), `node shared/template/tools/versions.mjs save --project ${p} --seg s12`, '沒開回饋輪：save');
+  assert.equal(L.at(-1), `node shared/template/tools/versions.mjs finish --project ${p}`, '032 A5：new 自己開了回饋輪，accept 接 finish');
   assert.deepEqual(projectStatus(p).waiting, []);
   // 回饋輪裡：accept 接 finish
   const q = mk();
@@ -678,7 +679,8 @@ test('CLI：new 印記停點的指令和停點 ③；accept 自己記通過（�
   const r = V.finishRound(e.P, {}, () => {}, stepsOf().steps);
   assert.deepEqual(r.versions[0], { id: 's05', before: 2, after: 1, compare: null });
   L = RUN('use', '--project', w, '--seg', 's05', '--ver', 'v2', '--no-preview').stdout.trim().split('\n');
-  assert.equal(L.at(-1), `node shared/template/tools/build.mjs --project ${w}`);
+  assert.equal(V.openRound(w).n, 2, '032 A5：沒開回饋輪就自己 begin → use → finish');
+  assert.equal(L.at(-1), `node shared/template/tools/versions.mjs finish --project ${w}`, '假專案沒有影片：finish 停在 ✖，接著跑 finish');
 });
 
 test('長片：status 的輸出不跟著段數變長（一輪改 30 段、60 段動畫沒做）', () => {

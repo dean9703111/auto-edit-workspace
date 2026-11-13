@@ -2,10 +2,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE } from './helpers.mjs';
+import { TOOLS, TEMPLATE, tmpDir, needs } from './helpers.mjs';
 
 const E = await import(path.join(TOOLS, 'lib', 'events.mjs'));
 const M = await import(path.join(TOOLS, 'media.mjs'));
@@ -124,8 +123,9 @@ test('pickTimes：優先取事件變完之後那一格，標原因；固定間�
   assert.ok(M.pickTimes(1800, Array.from({ length: 200 }, (_, i) => ({ t: i * 9 }))).length <= 64);
 });
 
-test('media.mjs scan：寫 events.md／events.json、index.md 是總表（不列每一格）；舊版的 index 算過期', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-events-'));
+test('media.mjs scan：寫 events.md／events.json、index.md 是總表（不列每一格）；舊版的 index 算過期', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
+  const root = tmpDir(t, 'hf-events-');
   const p = path.join(root, 'projects', 'p1');
   for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(p, 'assets', d), { recursive: true });
   fs.mkdirSync(path.join(p, 'work'), { recursive: true });

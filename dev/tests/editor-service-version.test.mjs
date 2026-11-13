@@ -1,15 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import { TEMPLATE, TOOLS, imp } from './helpers.mjs';
+import { TEMPLATE, TOOLS, imp, tmpDir } from './helpers.mjs';
 
 const { SERVER_REVISION } = await imp('editor.mjs');
 
-test('重新開啟舊版服務會更新後端並保留原網址；新 API 正常回傳 JSON', { timeout: 60000 }, async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-editor-version-'));
+test('重新開啟舊版服務會更新後端並保留原網址；新 API 正常回傳 JSON', { timeout: 60000 }, async (t) => {
+  const root = tmpDir(t, 'hf-editor-version-');
   const project = path.join(root, 'projects', 'version');
   const dir = path.join(project, 'work', 'hyperframes', '.editor');
   fs.mkdirSync(dir, { recursive: true }); fs.mkdirSync(path.join(root, 'shared'));

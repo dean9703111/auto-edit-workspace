@@ -799,7 +799,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
        node shared/template/tools/brand.mjs bg --html <暫存>/bg-fs.html --kind fs --out <暫存>
 
    產生 `bg-fs.jpg`（成品）、`zones-fs.jpg`（疊上留空區框：紅＝主卡或文字區、藍＝子母畫面、黃＝字幕帶）、`raw-fs.png`（原始截圖）。
-3. 看指令印的那一行：`✔ 留空區乾淨` 就好；`⚠ 紅框（全畫面主卡）裡有 2.3% 的像素是裝飾` 就把裝飾移到框外，重跑。
+3. 看指令印的那一行：`✓ 留空區乾淨` 就好；`⚠ 紅框（全畫面主卡）裡有 2.3% 的像素是裝飾` 就把裝飾移到框外，重跑。
 4. 三張都做完會多一張 `preview.jpg`（上排原圖、下排疊框版，1600×720）。把它給使用者看，**停下來等同意**（停點 ⑥）；同意後照 `auto-edit-style` 步驟 4 存成風格包、套用（`brand.mjs pack`、`brand.mjs use`），再重跑 build；不要照指令最後印的 `cp`／`Copy-Item` 直接複製。
 5. `--out` 不能是 `shared/template/` 裡面（✖）：背景圖一定要經過使用者同意才放進模板。
 
@@ -810,7 +810,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 不可以 | 理由 |
 |---|---|
 | 重新設計卡片、自己畫第一層情境的版面 | 版型只從素材包挑 |
-| 改 `shared/template/` 裡的任何檔（例外：使用者要求時的 `kit/brand.css`、`kit/pip-frame.png`（brand.mjs 寫）、`kit/look.json`、`bg-fs.jpg`／`bg-side.jpg`／`bg-ch.jpg`／`bg.jpg`） | 模板是共用素材；改壞了每集都壞 |
+| 改 `shared/template/` 裡的任何檔（例外：使用者要求時的 `kit/brand.css`、`kit/pip-frame.png`（brand.mjs 寫）、`kit/look.json`（`look.mjs default` 寫）、`bg-fs.jpg`／`bg-side.jpg`／`bg-ch.jpg`／`bg.jpg`） | 模板是共用素材；改壞了每集都壞 |
 | 手改 build 產生的檔（`index.html`、`compositions/sNN-*.html`、`captions.html`、`test-clip.html`、`work/hyperframes/kit/`） | 下次 build 會被擋下或蓋掉；改 plan.json 再重跑 |
 | 用 `css` 改字級、顏色、寬度、內距 | 字級是作者定好的下限；`css` 只改位置 |
 | 另外下載字型、圖示、音效、素材，或用 CDN | 全部都附了；另外下載的東西 Windows 與離線環境不一定有 |
@@ -840,9 +840,10 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 字卡動態預覽影片 | `shared/template/fx/renders/` | 每種效果一支 | 只給畫廊（`fx/index.html`）看，完成影片不用，改了效果 HTML 也不會跟著變 |
 | 音效資料 | `shared/template/preview/sfx-data.js` | 1 個 | `build.mjs --gallery` 產生，畫廊頁與音效總表用 |
 | 主合成產生器 | `shared/template/tools/build.mjs` | 1 支 | 核心第 2 節 |
-| 素材工具 | `shared/template/tools/media.mjs` | 1 支 | `scan`（contact sheet）、`frame --grid`（座標格線圖）、`main`（接主軌）、`ng-snap`／`srt-align`／`cutpoints`（剪乾淨；舊流程 `srt-split`／`snap-srt`）；核心第 5 節 |
+| 素材工具 | `shared/template/tools/media.mjs` | 1 支 | `scan`（contact sheet）、`frame --grid`（座標格線圖）、`main`（接主軌）、`ng-snap`／`srt-align`／`cutpoints`（剪乾淨；舊流程 `snap-srt`）；核心第 5 節 |
 | 插入素材與剪輯台效果的樣式 | `shared/template/kit/media.css`、`kit/media.js` | 各 1 個 | build 用到時自動連；紅框、說明卡、聚光燈、STEP、箭頭、放大鏡、dip、淡入淡出 |
-| 換主色工具 | `shared/template/tools/brand.mjs` | 1 支 | 換主色、`bg` 把 HTML 截成背景圖（R9） |
+| 換主色工具 | `shared/template/tools/brand.mjs` | 1 支 | 換主色、`bg` 做背景圖（`--tmp`、`--html`、`--image`、`--verify`；R9） |
+| 剪映素材 | `shared/template/tools/capcut.mjs` | 1 支 | 核心 2.7b。舊寫法 `node shared/template/tools/capcut.mjs --project projects/<專案> --background`（開了就回）＋`node shared/template/tools/capcut.mjs status --project projects/<專案> --wait` 還能用（同一個背景工作），文件不再用 |
 | 講者調光＋瘦臉 | `shared/template/tools/look.mjs`、`kit/look.json`、`kit/look/*.cube`、`vendor/mediapipe/` | 1 支＋設定 | 核心第 7 節 |
 | 分鏡素材 | `shared/template/tools/build.mjs --scaffold`、`tools/lib/scaffold.mjs` | 1 個旗標 | 排分鏡前產生 `work/分鏡素材/`（共用、寫法、每章一份）：字幕編號、章節、情境對照、每種情境的 plan.json 寫法 |
 | 進度、能力 | `shared/template/tools/status.mjs`、`caps.mjs` | 各 1 支 | 接手時看做到哪；換風格前看能用哪條生圖路線（R9.3） |

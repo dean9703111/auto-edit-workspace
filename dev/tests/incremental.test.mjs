@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
-import { TEMPLATE, TOOLS, imp, hasChrome } from './helpers.mjs';
+import { TEMPLATE, TOOLS, imp, hasChrome, fixture } from './helpers.mjs';
 
 const I = await imp('lib/incremental.mjs');
 const FF = await imp('lib/ff.mjs');
@@ -194,8 +194,9 @@ test('audioOnlyHtml：一支底片＋音效才做；片長一定整除；底片�
 
 function encode(dst, seconds, seed, extra = []) {
   // 和 HyperFrames 的設定一樣：沒有 B 格、closed GOP、固定關鍵影格；seed 不同畫面不同
-  const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `testsrc2=size=320x180:rate=30,hue=h=${seed}`, '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=48000', '-t', String(seconds), '-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'stillimage', '-bf', '0', '-g', '60', '-keyint_min', '60', '-sc_threshold', '0', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', ...extra, dst], { encoding: 'utf8' });
-  assert.equal(r.status, 0, r.stderr);
+  const make = (f) => { const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `testsrc2=size=320x180:rate=30,hue=h=${seed}`, '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=48000', '-t', String(seconds), '-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'stillimage', '-bf', '0', '-g', '60', '-keyint_min', '60', '-sc_threshold', '0', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', ...extra, f], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
+  if (extra.length) { make(dst); return; }
+  fs.copyFileSync(fixture(`inc-${seconds}s-h${seed}.mp4`, make), dst);   // 同樣的片子這一輪只做一次
 }
 const runner = (cmd, args) => { const r = spawnSync(cmd, args, { encoding: 'utf8', maxBuffer: 1 << 28 }); return Promise.resolve({ code: r.status, stdout: r.stdout, stderr: r.stderr }); };
 const frameMd5 = (f, map = '0:v:0') => spawnSync('ffmpeg', ['-v', 'error', '-i', f, '-map', map, '-f', 'framemd5', '-'], { encoding: 'utf8', maxBuffer: 1 << 28 }).stdout.split('\n').filter((l) => l && !l.startsWith('#')).map((l) => l.split(',').pop().trim());
@@ -389,8 +390,9 @@ function realProject({ size = '640x360', film = 20 } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-inc-real-'));
   const project = path.join(root, 'projects', 'demo'), work = path.join(project, 'work'), out = path.join(work, 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
-  const ff = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `testsrc2=size=${size}:rate=30`, '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=44100', '-t', String(film), '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p', '-c:a', 'aac', path.join(work, 'rough.mp4')], { encoding: 'utf8' });
-  assert.equal(ff.status, 0, ff.stderr);
+  // 同樣尺寸、長度的主軌這一輪只做一次，各專案複製一份
+  const src = fixture(`inc-real-${size}-${film}s.mp4`, (f) => { const ff = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `testsrc2=size=${size}:rate=30`, '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=44100', '-t', String(film), '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '30', '-keyint_min', '30', '-pix_fmt', 'yuv420p', '-c:a', 'aac', f], { encoding: 'utf8' }); assert.equal(ff.status, 0, ff.stderr); });
+  fs.copyFileSync(src, path.join(work, 'rough.mp4'));
   const stamp = (t) => `00:00:${String(Math.floor(t)).padStart(2, '0')},${String(Math.round((t % 1) * 1000)).padStart(3, '0')}`;
   const n = Math.floor((film - 1) / 3);
   fs.writeFileSync(path.join(work, 'rough.srt'), Array.from({ length: n }, (_, i) => `${i + 1}\n${stamp(1 + i * 3)} --> ${stamp(3.5 + i * 3)}\n第${i + 1}句字幕\n`).join('\n'));
@@ -423,7 +425,7 @@ test('實跑：改一段、字幕、音效都只重畫改到的（其他畫面�
     ok(r);
     assert.match(r.stdout, /只重畫改到的/);
     assert.match(r.stdout, /只重畫改到的地方，接回上一支/);
-    assert.match(r.stdout, /✔ 完成影片/);
+    assert.match(r.stdout, /✓ 完成影片/);
     const v1 = frameMd5(R.final);
     assert.equal(v1.length, v0.length);
     same(v1, v0, 0, 12);

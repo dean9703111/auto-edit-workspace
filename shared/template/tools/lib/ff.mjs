@@ -20,11 +20,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { CANVAS } from './canvas.mjs';
 import { hdrKind, hdrCube } from './hdr.mjs';
+import { r3 } from './time.mjs';
 
 export const VIDEO_EXT = ['.mp4', '.mov', '.m4v', '.webm'];
 export const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 export const AUDIO_EXT = ['.m4a', '.mp3', '.wav', '.aac', '.flac', '.ogg', '.opus'];
-const r3 = (n) => +Number(n).toFixed(3);
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 
 // 暫存檔名帶 pid：中途被砍又重跑時，舊的 ffmpeg 還在寫也不會和新的寫同一個檔（同一個檔兩邊一起寫，影片會壞，ffmpeg 不會報錯）

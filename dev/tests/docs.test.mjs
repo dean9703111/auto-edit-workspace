@@ -42,21 +42,31 @@ const BEATS = 'shared/template/BEATS.md';
 const SETUP_MD = fs.readdirSync(abs('setup')).filter((f) => f.endsWith('.md')).map((f) => `setup/${f}`);
 const have = (list) => list.filter(exists);
 
-// ---------- 停點（specs/contracts/stop-points.md §2.1；執行期的真相是 AGENTS.md「停點總表」） ----------
+// ---------- 停點（032 D9：名稱與兩行原文只從 tools/lib/stops.mjs 讀，這裡不再手列；這裡只寫每個停點歸哪支 Skill、文件用的占位） ----------
+const { STOP, stopLines } = await import(abs('shared/template/tools/lib/stops.mjs'));
 const STOPS = [
-  { n: '①', name: '剪輯清單', skill: 'auto-edit-rough', line: '⏸ 停點 ① 剪輯清單｜請看 <剪輯清單網址>\n請回：勾好後說「可以」，或要改的列' },
-  { n: '②', name: '構圖', skill: 'auto-edit-storyboard', line: '⏸ 停點 ② 構圖｜請看 <構圖台網址> 和 work/look-preview.jpg\n請回：拖好框說「調好了」（會自動存），或說「用建議的」' },
-  { n: '③', name: '分鏡表', skill: 'auto-edit-storyboard', line: '⏸ 停點 ③ 分鏡表｜請看 <分鏡表網址>\n請回：改好後說「可以」，或要改的地方' },
-  { n: '④', name: '完成影片預覽', skill: 'auto-edit-review', line: '⏸ 停點 ④ 完成影片預覽｜請看 <完成影片預覽網址>\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」' },
-  { n: '⑤', name: '剪輯台', skill: 'auto-edit-review', line: '⏸ 停點 ⑤ 剪輯台｜請看 <剪輯台網址>\n請回：調完說「調好了」（會自動存）' },
-  { n: '⑥', name: '背景預覽', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 背景預覽｜請看 <暫存資料夾>/preview.jpg 和 <暫存資料夾>/zones-fs.jpg\n請回：「可以」或「重做」' },
+  { n: STOP.cuts, skill: 'auto-edit-rough', line: stopLines.cuts('<剪輯清單網址>') },
+  { n: STOP.framing, skill: 'auto-edit-storyboard', line: stopLines.framing('<構圖台網址>', { look: true }) },
+  { n: STOP.storyboard, skill: 'auto-edit-storyboard', line: stopLines.storyboard('<分鏡表網址>') },
+  { n: STOP.final, skill: 'auto-edit-review', line: stopLines.final('<完成影片預覽網址>') },
+  { n: STOP.editor, skill: 'auto-edit-review', line: stopLines.editor('<剪輯台網址>') },
+  { n: STOP.bg, skill: 'auto-edit-style', line: stopLines.bg('<暫存資料夾>') },
 ];
-// 停點 ③ 的改版變體（014；停點仍是六個，stop-points.md §2.1 最後一列）
+// 停點 ③ 的改版變體（014）、⑥ 的配樂變體（2026-11-11 作者定：沿用 ⑥，不新增停點）；停點仍是六個
 const STOP_VARIANTS = [
-  { n: '③ 改版', skill: 'auto-edit-review', line: '⏸ 停點 ③ 分鏡表（<段> v<N>）｜請看 work/versions/<段>/v<N>/分鏡.md\n請回：「可以」或要改的拍' },
-  // 停點 ⑥ 的配樂變體（2026-11-11 作者定：生成配樂的試聽沿用 ⑥，不新增停點）
-  { n: '⑥ 配樂', skill: 'auto-edit-style', line: '⏸ 停點 ⑥ 配樂試聽｜請看 <候選資料夾>/試聽.html\n請回：「用第 N 首」或「重做」' },
+  { n: `${STOP.storyboard} 改版`, skill: 'auto-edit-review', line: stopLines.revise(`${STOP.storyboard}（<段> v<N>）`, 'work/versions/<段>/v<N>/分鏡.md') },
+  { n: STOP.music, skill: 'auto-edit-style', line: stopLines.music('<候選資料夾>/試聽.html') },
 ];
+
+// ---------- 白名單（dev/tests/docs-allow.json）：每一筆都要真的用到（032 D9），沒用到就紅 ----------
+const ALLOW = JSON.parse(read('dev/tests/docs-allow.json'));
+const allowOf = (id) => ALLOW.filter((a) => (a.test || 'T10') === id);
+const unusedAllow = (list, used) => list.filter((a) => !used.has(a))
+  .map((a) => `docs-allow.json 這一筆沒用到（${a.test || 'T10'}｜${a.file || '—'}｜${a.text}）：對應的文字已經改掉或程式已經做好，刪掉這一筆`);
+
+// ---------- 工具原始碼（T24、T31、T35 用；node_modules、vendor 不算） ----------
+const walkSrc = (d, out = []) => { for (const e of fs.readdirSync(abs(d), { withFileTypes: true })) { const p = `${d}/${e.name}`; if (e.isDirectory()) { if (!/node_modules|vendor/.test(p)) walkSrc(p, out); } else if (/\.(mjs|js)$/.test(e.name)) out.push(p); } return out; };
+const TOOL_SRC_FILES = exists('shared/template/tools') ? walkSrc('shared/template/tools') : [];
 
 // ---------- 小工具 ----------
 const stripFences = (text) => text.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, (m) => m.replace(/[^\n]/g, ''));
@@ -108,9 +118,8 @@ test('T3 skills：每支 SKILL.md 最多 200 行', () => {
   noProblems(bad, 'SKILL.md 超過 200 行', '細節搬進 references/，SKILL.md 只留步驟、判準、停點、退路');
 });
 
-test('T4 skills：骨架（開頭兩行、一覽表頭、必要標題、每步有指令和完成判準、自我核對 5–8 項）', () => {
+test('T4 skills：骨架（開頭一行、一覽表頭、必要標題、每步有指令和完成判準、自我核對 5–8 項）', () => {
   const L1 = '規則在 AGENTS.md；本檔只寫這一階段的指令、判準、停點、退路。';
-  const L2 = '衝突時：使用者當下的話 > AGENTS.md > shared/style.md > USAGE.md > USAGE-reference.md > 本 Skill；派工時派工訊息 > 本 Skill。';
   const HEAD = '| 輸入 | 指令 | 產出 | 完成判準 | 停點 |';
   const H2 = ['## 步驟', '## 自我核對', '## 退路表', '## 工具呼叫預算', '## 回報格式'];
   const bad = [];
@@ -120,7 +129,9 @@ test('T4 skills：骨架（開頭兩行、一覽表頭、必要標題、每步�
     const body = text.replace(/^---\n[\s\S]*?\n---\n/, '').split('\n');
     const t = body.findIndex((l) => l.startsWith('# '));
     const after = body.slice(t + 1).filter((l) => l.trim());
-    if (after[0] !== L1 || after[1] !== L2) bad.push(`${f}：標題下第一段不是固定的兩行（規則在 AGENTS.md…／衝突時：…）`);
+    if (after[0] !== L1) bad.push(`${f}：標題下第一行不是「${L1}」`);
+    // 032 D9：優先序只寫在 AGENTS.md「怎麼用這份檔」一處；Skill 再抄一份會落後
+    if (body.some((l) => l.startsWith('衝突時：'))) bad.push(`${f}：還有「衝突時：…」那一行（優先序只留 AGENTS.md 那一份，刪掉）`);
     const firstTable = after.find((l) => l.startsWith('|'));
     if (firstTable !== HEAD) bad.push(`${f}：第一張表的表頭不是「${HEAD}」`);
     for (const h of H2) if (!body.includes(h)) bad.push(`${f}：少了標題「${h}」`);
@@ -143,7 +154,8 @@ test('T4 skills：骨架（開頭兩行、一覽表頭、必要標題、每步�
     const fallback = section(text, '## 退路表') || '';
     if (!fallback.includes('| 症狀（工具原文） | 做法 | 第二次還失敗 |')) bad.push(`${f}：退路表表頭要是「| 症狀（工具原文） | 做法 | 第二次還失敗 |」`);
     const budget = section(text, '## 工具呼叫預算') || '';
-    if (!/\d+ 次/.test(budget) || !budget.includes('停')) bad.push(`${f}：工具呼叫預算要寫「N 次」和「超過就停下來回報」`);
+    // 032 A4：次數由工具數（lib/tries.mjs 的 MAIN_TRY_MAX），預算節一律寫「工具印「→ 停手」就停」，不再要求抄數字
+    if (!budget.includes('→ 停手')) bad.push(`${f}：工具呼叫預算要寫「工具印「→ 停手」就停」（次數由工具數，不用寫數字）`);
   }
   noProblems(bad, 'SKILL.md 骨架不符 FR-004–FR-006、FR-009、FR-013、FR-014', '照 specs/001-skills-docs/skill-outline.md §0 的共用骨架補齊');
 });
@@ -168,8 +180,8 @@ test('T6 停點：AGENTS.md「停點總表」恰好 6 列、①–⑥', () => {
   const start = ls.findIndex((l) => l.startsWith('|'));
   const rows = [];
   for (let i = start + 2; i < ls.length && ls[i].startsWith('|'); i++) rows.push(ls[i].split('|')[1].trim());
-  const want = STOPS.map((s) => `${s.n} ${s.name}`);
-  check(JSON.stringify(rows) === JSON.stringify(want), `停點總表第一張表的第一欄是 ${JSON.stringify(rows)}，要是 ${JSON.stringify(want)} → 照 stop-points.md §1，只有六列`);
+  const want = STOPS.map((s) => s.n);
+  check(JSON.stringify(rows) === JSON.stringify(want), `停點總表第一張表的第一欄是 ${JSON.stringify(rows)}，要是 ${JSON.stringify(want)}（shared/template/tools/lib/stops.mjs 的 STOP）→ 只有六列，名稱照 lib/stops.mjs`);
 });
 
 test('T7 停點：六個（＋③ 改版）最後兩行原文都在 AGENTS.md 與對應的 SKILL.md', () => {
@@ -179,7 +191,7 @@ test('T7 停點：六個（＋③ 改版）最後兩行原文都在 AGENTS.md �
     if (!agents.includes(s.line)) bad.push(`AGENTS.md 少了停點 ${s.n} 的原文`);
     if (exists(skillMd(s.skill)) && !read(skillMd(s.skill)).includes(s.line)) bad.push(`${skillMd(s.skill)} 少了停點 ${s.n} 的原文`);
   }
-  noProblems(bad, '停點最後兩行和契約不一致', '逐字照 specs/contracts/stop-points.md §2.1 貼上（<…> 保留原樣）');
+  noProblems(bad, '停點最後兩行和 shared/template/tools/lib/stops.mjs 不一致', '逐字照 lib/stops.mjs 的 stopLines 印出來的兩行貼上（<…> 保留原樣）；要改字先改 lib/stops.mjs');
 });
 
 // 018：預覽與修改都在剪輯台，Studio 不再出現在給使用者的流程；只留相容舊專案、舊說法的那幾句
@@ -257,23 +269,27 @@ test('T10 數字找得到出處（AGENTS.md、style.md、USAGE.md、USAGE-refere
   const sources = new Set();
   for (const f of have(['AGENTS.md', STYLE, U, R])) for (const l of stripForNumbers(read(f)).split('\n')) for (const p of pairsIn(l, { comparatorOnly: false })) sources.add(p);
   for (const t of TOOLS) for (const l of helpOf(t).split('\n')) for (const p of pairsIn(l, { comparatorOnly: false })) sources.add(p);
-  const allowAll = JSON.parse(read('dev/tests/docs-allow.json'));
-  const allow = allowAll.filter((a) => !a.test || a.test === 'T10');
-  const badAllow = allow.filter((a) => !a.file || !a.text || !a.reason).map((a) => JSON.stringify(a));
-  noProblems(badAllow, 'docs-allow.json 有缺欄位的項目', '每筆都要有 file、text、reason');
-  check(allowAll.length <= 40, `docs-allow.json 有 ${allowAll.length} 筆（上限 40）→ 把數字搬進 style.md 或 AGENTS.md，不要一直加白名單`);
+  const allow = allowOf('T10');
+  const badAllow = ALLOW.filter((a) => !a.text || !a.reason || ((a.test || 'T10') === 'T10' && !a.file)).map((a) => JSON.stringify(a));
+  noProblems(badAllow, 'docs-allow.json 有缺欄位的項目', '每筆都要有 text、reason（T10、T31、T35 還要有 file）');
+  const KNOWN = new Set(['T10', 'T12', 'T29', 'T31', 'T35']);
+  noProblems(ALLOW.filter((a) => !KNOWN.has(a.test || 'T10')).map((a) => JSON.stringify(a)), 'docs-allow.json 有 test 欄位認不得的項目', `test 只能是 ${[...KNOWN].join('、')}（不寫＝T10）`);
+  check(ALLOW.length <= 40, `docs-allow.json 有 ${ALLOW.length} 筆（上限 40）→ 把數字搬進 style.md 或 AGENTS.md，不要一直加白名單`);
   const bad = [];
+  const used = new Set();
   for (const f of have([...SKILL_FILES, SITU, REVIEW, BEATS])) {
     stripForNumbers(read(f)).split('\n').forEach((l, i) => {
       for (const p of pairsIn(l, { comparatorOnly: true })) {
         if (sources.has(p)) continue;
         if (/ 次$/.test(p) && /最多|預算|上限/.test(l)) continue; // 工具呼叫預算：每支 Skill 自己定義，不是全域門檻
-        if (allow.some((a) => f.endsWith(a.file) && l.includes(a.text))) continue;
+        const a = allow.find((x) => f.endsWith(x.file) && l.includes(x.text));
+        if (a) { used.add(a); continue; }
         bad.push(`${f}:${i + 1} ${p}`);
       }
     });
   }
   noProblems(bad, '門檻數字在 AGENTS.md、style.md、USAGE*.md、工具 --help 都找不到（FR-091）', '寫進 style.md 或 AGENTS.md，或加進 dev/tests/docs-allow.json 並寫理由');
+  noProblems(unusedAllow(allow, used), 'docs-allow.json（T10）有用不到的項目', '刪掉這幾筆（白名單只留真的在擋的數字）');
 });
 
 test('T11 工具 --help 的每個子指令在文件裡都出現過', () => {
@@ -302,7 +318,8 @@ test('T11 工具 --help 的每個子指令在文件裡都出現過', () => {
 test('T12 文件裡的指令與檔案都存在', (t) => {
   const contracts = exists('specs/contracts') ? fs.readdirSync(abs('specs/contracts')).map((f) => read(`specs/contracts/${f}`)).join('\n') : '';
   const files = have(['AGENTS.md', 'PROMPTS.md', 'README.md', U, R, EDITOR, SITU, REVIEW, BEATS, ...SETUP_MD, ...SKILL_FILES]);
-  const allowT12 = JSON.parse(read('dev/tests/docs-allow.json')).filter((a) => a.test === 'T12').map((a) => a.text);
+  const allowT12 = allowOf('T12');
+  const used = new Set();
   const bad = [];
   const pending = new Set();
   for (const f of files) {
@@ -314,13 +331,16 @@ test('T12 文件裡的指令與檔案都存在', (t) => {
       for (const m of l.matchAll(/shared\/template\/custom\/(x-[\w-]+\.html)/g)) refs.push(`shared/template/custom/${m[1]}`);
       for (const p of refs) {
         if (p.includes('<') || exists(p)) continue;
-        if (contracts.includes(p) || allowT12.includes(p)) pending.add(p); else bad.push(`${f}:${i + 1} ${p}`);
+        const a = allowT12.find((x) => x.text === p);
+        if (a) used.add(a);
+        if (contracts.includes(p) || a) pending.add(p); else bad.push(`${f}:${i + 1} ${p}`);
       }
       if (skillDir) for (const m of l.matchAll(/(\.agents\/skills\/[\w-]+\/)?references\/([\w.-]+\.md)/g)) if (!exists(`${m[1] ? m[1].slice(0, -1) : skillDir}/references/${m[2]}`)) bad.push(`${f}:${i + 1} ${m[0]}`);
     });
   }
   if (pending.size) t.diagnostic(`契約或 docs-allow.json（test: T12）列了、還沒實作的檔（做好後刪掉 allow 那筆）：${[...pending].join('、')}`);
   noProblems(bad, '文件寫到的檔案不存在（FR-093）', '改成存在的路徑；新工具要先寫進 specs/contracts/cli-00N.md');
+  noProblems(unusedAllow(allowT12, used), 'docs-allow.json（T12）有用不到的項目', '檔案已經做好或文件不再提：刪掉這幾筆');
 });
 
 // ---------- T13–T20：G04 八項矛盾（style.md 為準） ----------
@@ -369,8 +389,7 @@ test('T23 剪片時讀的文件不叫 AI 去讀 specs/ 或 dev/（review-r1 A-03
 
 // 文件引用的工具原文：每一組的字串要同時出現在那份文件與工具原始碼裡（工具改了字，這裡會紅，提醒改文件）
 test('T24 文件引用的工具原文和程式一字不差（第 2 輪對齊）', () => {
-  const walk = (d, out = []) => { for (const e of fs.readdirSync(abs(d), { withFileTypes: true })) { const p = `${d}/${e.name}`; if (e.isDirectory()) { if (!/node_modules|vendor/.test(p)) walk(p, out); } else if (/\.(mjs|js)$/.test(e.name)) out.push(p); } return out; };
-  const src = walk('shared/template/tools').map(read).join('\n');
+  const src = TOOL_SRC_FILES.map(read).join('\n');
   const SKR = skillMd('auto-edit-rough');
   const pairs = [
     [U, '是全黑，但素材沒有純聲音檔 → 初剪壞了：跑 node shared/template/tools/media.mjs verify-rough --project'],
@@ -385,7 +404,7 @@ test('T24 文件引用的工具原文和程式一字不差（第 2 輪對齊）'
     [U, '清掉同一段的舊截圖（這次張數變了）：'],
     [U, '是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project'],
     [R, '才講到、不是 #'],
-    [U, '抽樣 12 格都沒偵測到臉 → 這支只調光；確定有講者就跑 node shared/template/tools/look.mjs run --project'],
+    [U, '講者瘦臉略過：抽樣 12 格都沒偵測到臉 → 這支只調光；確定有講者就跑 '],
     [U, 'build 會停下來：'],
     [U, 'rhythm 只能是 "continuous"（預設，照 style.md 連續覆蓋）或 "spaced"（要留露臉空檔），現在是 '],
     [U, '→ 改成清單裡的名稱（跑 build.mjs --list 看每顆的用途），或寫 null 不放音效'],
@@ -485,31 +504,60 @@ test('T26 BEATS.md：動作名稱 ⊆ 010 design-system §14.1、動畫分鏡表
   noProblems(bad, '動畫分鏡的語彙或表頭不一致', '動態欄只寫 BEATS.md §2 的名稱（括號寫對象）；表頭照抄 BEATS.md §1；新名稱先進 design-system §14.1 再進 BEATS.md');
 });
 
-// AGENTS.md 與 Skill 引用的工具指令：要嘛工具 --help 有，要嘛在 cli-00N.md 契約裡；只在 cli.md 索引標了的算「待寫」
-test('T27 AGENTS.md、Skill 引用的工具指令在 --help 或 cli 契約裡', (t) => {
+// 文件裡每段 node shared/template/tools/<工具>.mjs …：子指令與每個 --旗標都要在那支工具的 --help（media.mjs 看那個子指令自己的 --help）；
+// 不在 --help 的，要嘛 cli-00N.md 契約有（工具名緊接子指令那一行），要嘛 cli.md 索引標了「待寫」（032 D5）
+test('T27 文件寫的工具指令：子指令與每個 --旗標都在那支工具的 --help（或 cli 契約）裡', (t) => {
   const cdir = 'specs/contracts';
   const cFiles = exists(cdir) ? fs.readdirSync(abs(cdir)).filter((f) => /^cli-\d+\.md$/.test(f)).map((f) => read(`${cdir}/${f}`)) : [];
   const index = exists(`${cdir}/cli.md`) ? read(`${cdir}/cli.md`) : '';
-  const tokRe = (tok) => new RegExp(`(^|[\\s\`"(／/])${tok.replace(/[-]/g, '\\-')}(?![\\w-])`);
-  const inText = (text, base, tok) => text.split('\n').some((l) => l.includes(base) && tokRe(tok).test(l));
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokRe = (tok) => new RegExp(`(^|[\\s\`"(／/\\[|｜,，、])${esc(tok)}(?![\\w-])`);
+  // 契約比對：工具名後面緊接子指令；旗標要在同一行、工具名（和子指令）之後
+  const inText = (text, base, sub, flag) => {
+    const re = flag ? new RegExp(`${esc(base)}\\s+${sub ? `${esc(sub)}\\s` : ''}.*?${esc(flag)}(?![\\w-])`) : new RegExp(`${esc(base)}\\s+${esc(sub)}(?![\\w-])`);
+    return text.split('\n').some((l) => re.test(l));
+  };
+  // 指令到哪裡結束：反引號、表格的 |、中文標點（引號裡的不算）
+  const END = new Set(['`', '|', '；', '，', '（', '）', '、', '。', '「', '」', '：']);
+  const cmdAt = (l, i) => { let q = false, out = ''; for (; i < l.length; i++) { const c = l[i]; if (c === '"') q = !q; if (!q && END.has(c)) break; out += c; } return out; };
+  const subHelp = new Map();
+  const helpFor = (base, sub) => {
+    const tool = `shared/template/tools/${base}`;
+    if (base !== 'media.mjs' || !sub) return helpOf(tool);
+    if (!subHelp.has(sub)) { const r = spawnSync(process.execPath, [abs(tool), sub, '--help'], { cwd: ROOT, encoding: 'utf8', timeout: 20000 }); subHelp.set(sub, `${r.stdout || ''}\n${r.stderr || ''}`); }
+    return subHelp.get(sub);
+  };
   const bad = [];
   const pending = new Set();
-  for (const f of have(['AGENTS.md', ...SKILL_FILES])) {
+  const judge = (where, base, sub, flag, help) => {
+    const tok = flag || sub;
+    if (tokRe(tok).test(help) || cFiles.some((c) => inText(c, base, sub, flag))) return;
+    const name = `${base}${sub ? ` ${sub}` : ''}${flag ? ` ${flag}` : ''}`;
+    if (inText(index, base, sub, flag)) pending.add(name); else bad.push(`${where} ${name}${flag ? '' : '（子指令）'}`);
+  };
+  for (const f of have(['AGENTS.md', 'PROMPTS.md', 'README.md', U, R, EDITOR, ...SETUP_MD, ...SKILL_FILES])) {
     lines(f).forEach((l, i) => {
-      for (const m of l.matchAll(/node\s+shared\/template\/tools\/([\w-]+\.mjs)((?:[ \t]+[^\s`|；，）]+)*)/g)) {
+      for (const m of l.matchAll(/node\s+shared\/template\/tools\/([\w-]+\.mjs)/g)) {
         const base = m[1];
         if (!exists(`shared/template/tools/${base}`)) continue;
-        const toks = m[2].trim().split(/\s+/).filter(Boolean);
-        let tok = '';
-        for (let k = 0; k < toks.length; k++) { if (toks[k] === '--project') { k++; continue; } if (/^(--[\w-]+|[a-z][\w-]*)$/.test(toks[k])) tok = toks[k]; break; }
-        if (!tok) continue;
-        if (tokRe(tok).test(helpOf(`shared/template/tools/${base}`)) || cFiles.some((c) => inText(c, base, tok))) continue;
-        if (inText(index, base, tok)) pending.add(`${base} ${tok}`); else bad.push(`${f}:${i + 1} ${base} ${tok}`);
+        const toks = cmdAt(l, m.index + m[0].length).match(/"[^"]*"?|\S+/g) || [];
+        let k = 0;
+        while (toks[k] === '--project') k += 2;
+        const sub = toks[k] && /^[a-z][\w-]*$/.test(toks[k]) ? toks[k] : '';
+        if (sub) judge(`${f}:${i + 1}`, base, sub, '', helpOf(`shared/template/tools/${base}`));
+        for (const tk of toks) {
+          if (tk.startsWith('"')) continue;
+          for (const part of tk.replace(/^[[(]+|[\])]+$/g, '').split(/[|｜]/)) {
+            const fm = part.match(/^(--[A-Za-z][\w-]*)/);
+            if (fm && fm[1] !== '--help') judge(`${f}:${i + 1}`, base, sub, fm[1], helpFor(base, sub));
+          }
+        }
       }
     });
   }
   if (pending.size) t.diagnostic(`cli.md 索引標了、還沒寫進 cli-00N.md 的指令（交件後自動轉成要存在）：${[...pending].join('、')}`);
-  noProblems([...new Set(bad)], '文件寫的工具指令在 --help 與 cli 契約都找不到', '改成存在的子指令；新指令先請擁有者寫進 specs/contracts/cli-00N.md（或在 cli.md 索引標「待寫」）');
+  noProblems([...new Set(bad)], '文件寫的工具指令（子指令或旗標）在那支工具的 --help 與 cli 契約都找不到',
+    '改成 --help 列的寫法；工具真的有這個子指令或旗標，就請那支工具的擁有者補進檔頭的 --help（media.mjs 補在那個子指令的說明）');
 });
 
 // 012 版面：style.md「版面」的 token 表＝kit/scene.css :root 的 --sc-*（scene.css 歸 003）
@@ -539,19 +587,20 @@ test('T29 版面規則名與屬性值在程式裡、「位置」欄寫排法（0
     for (let k = 0; k < ls.length; k++) if (new RegExp(`^\\s*\\*\\s+data-${a}\\s`).test(ls[k])) { out.push(ls[k]); while (k + 1 < ls.length && /^\s*\*\s{6,}\S/.test(ls[k + 1])) out.push(ls[++k]); }
     return out.join(' ');
   };
-  const pendingAllow = JSON.parse(read('dev/tests/docs-allow.json')).filter((a) => a.test === 'T29').map((a) => a.text);
+  const allowT29 = allowOf('T29'), used = new Set();
+  const isPending = (s) => { const a = allowT29.find((x) => x.text === s); if (a) used.add(a); return !!a; };
   const bad = [], pending = new Set();
   const files = have([STYLE, BEATS, U, R, SITU, ...SKILL_FILES]);
   for (const f of files) {
     lines(f).forEach((l, i) => {
       for (const m of l.matchAll(/(?<![\w-])(layout-[a-z]+(?:-[a-z]+)*)/g)) {
         if (rules.has(m[1])) continue;
-        if (pendingAllow.includes(m[1])) pending.add(m[1]); else bad.push(`${f}:${i + 1} 規則 ${m[1]} 不在 ${AUD}`);
+        if (isPending(m[1])) pending.add(m[1]); else bad.push(`${f}:${i + 1} 規則 ${m[1]} 不在 ${AUD}`);
       }
       for (const m of l.matchAll(/data-(layout|gap|align|justify)="([\w-]+)"/g)) {
         const words = attrLine(m[1]);
         if (new RegExp(`(^|[\\s（／(、])${m[2]}(?![\\w-])`).test(words)) continue;
-        if (pendingAllow.includes(m[0])) pending.add(m[0]); else bad.push(`${f}:${i + 1} ${m[0]} 不在 ${HELP} 檔頭`);
+        if (isPending(m[0])) pending.add(m[0]); else bad.push(`${f}:${i + 1} ${m[0]} 不在 ${HELP} 檔頭`);
       }
     });
   }
@@ -569,6 +618,7 @@ test('T29 版面規則名與屬性值在程式裡、「位置」欄寫排法（0
   }
   if (pending.size) t.diagnostic(`docs-allow.json（test: T29）列了、程式還沒有的（做好後刪掉 allow 那筆）：${[...pending].join('、')}`);
   noProblems(bad, '版面規則名、屬性值和程式對不上，或「位置」欄寫了像素', '規則名照 lib/audit-layout.mjs、屬性值照 kit/scene-layout.js 檔頭；「位置」寫 <區域>｜<排法> <第幾個>（style.md「版面」）');
+  noProblems(unusedAllow(allowT29, used), 'docs-allow.json（T29）有用不到的項目', '程式已經有了或文件不再提：刪掉這幾筆');
 });
 
 // 009 直式：auto-edit-rough、auto-edit-storyboard 的直式數字＝style.md「直式」＝tools/lib/canvas.mjs CANVAS.portrait（FR-155）
@@ -629,4 +679,177 @@ test('T30 直式數字一致：style.md「直式」＝canvas.mjs，Skill 的字�
     if (p.caption.font !== L.font || p.caption.weight !== L.weight) t.diagnostic(`canvas.mjs 直式字幕還是 ${p.caption.font} px／字重 ${p.caption.weight}（決定 2：和橫式同一套 ${L.font} px／${L.weight}；002 改）`);
   }
   noProblems(bad, '直式數字三處不一致（style.md「直式」為準）', 'style.md「直式」、tools/lib/canvas.mjs 的 CANVAS.portrait 改成同一組數字，auto-edit-rough 的字幕字數、auto-edit-storyboard 的頭頂也要一樣（canvas.mjs 歸 002）');
+});
+
+// ---------- 032 架構優化：文件和程式、文件和文件之間的對照 ----------
+// D1：文件與工具原始碼裡的「auto-edit-<名稱> 步驟 X」「流程 X」「步驟 X–Y」要是那支 SKILL.md 的步驟標題（**X. ）；
+// 「AGENTS.md 規則 N」「AGENTS.md「標題」」也要存在。只寫在內文、沒有自己標題的（例：流程 F）列在 docs-allow.json（test: T31）
+test('T31 指到的步驟、規則、AGENTS.md 章節都存在（032 D1）', () => {
+  const stepsOf = new Map(SKILLS.filter((n) => exists(skillMd(n)))
+    .map((n) => [n, new Set([...(section(read(skillMd(n)), '## 步驟') || '').matchAll(/^\*\*([A-Z]\d*|\d+)\.\s/gm)].map((m) => m[1]))]));
+  const agents = read('AGENTS.md');
+  const heads = new Set([...agents.matchAll(/^#{2,} (.+)$/gm)].map((m) => m[1].trim()));
+  const rules = new Set([...(section(agents, '## 規則') || '').matchAll(/^(\d+)\. /gm)].map((m) => m[1]));
+  const allow = allowOf('T31'), used = new Set();
+  const bad = [];
+  const T = '([A-Z]\\d*|\\d+)';
+  const QUAL = new RegExp(`auto-edit-([a-z]+)(?:/SKILL\\.md)?\`?\\s*(?:的\\s*)?(?:(步驟|流程)\\s*${T}|([A-Z]\\d+))(?:\\s*[–~-]\\s*${T})?`, 'g');
+  const BARE = new RegExp(`(?<![\\w-])(步驟|流程)\\s*${T}(?:\\s*[–~-]\\s*${T})?`, 'g');
+  const verify = (where, skill, kw, ids, local = new Set()) => {
+    const steps = stepsOf.get(skill);
+    if (!steps) { bad.push(`${where} 沒有 ${skill} 這支 Skill`); return; }
+    for (const id of ids) {
+      if (steps.has(id) || local.has(id)) continue;
+      const a = allow.find((x) => x.file === skill && x.text === `${kw || '步驟'} ${id}`);
+      if (a) { used.add(a); continue; }
+      bad.push(`${where} ${skill} ${kw || ''}${kw ? ' ' : ''}${id}（這支只有 ${[...steps].join('、')}）`);
+    }
+  };
+  const scan = (f, own) => {
+    const text = read(f);
+    const local = new Set([...text.matchAll(/^#+ (?:步驟|流程) ([A-Z]\d*|\d+)\b/gm)].map((m) => m[1]));   // references 自己的「## 步驟 A」
+    text.split('\n').forEach((l, i) => {
+      const where = `${f}:${i + 1}`;
+      const spans = [];
+      for (const m of l.matchAll(QUAL)) {
+        spans.push([m.index, m.index + m[0].length]);
+        verify(where, `auto-edit-${m[1]}`, m[2], [m[3] || m[4], m[5]].filter(Boolean));
+      }
+      if (own && !/^#+ /.test(l)) {
+        for (const m of l.matchAll(BARE)) {
+          if (spans.some(([a, b]) => m.index >= a && m.index < b)) continue;
+          const before = l.slice(0, m.index);
+          const doc = before.match(/([\w./-]+\.md)`?\s*(?:的\s*)?$/);
+          if (doc && doc[1] !== 'SKILL.md') continue;   // 「setup/README.md 步驟 3」：指別份文件的步驟
+          if (/(手冊|共用)$/.test(before)) continue;
+          verify(where, own, m[1], [m[2], m[3]].filter(Boolean), local);
+        }
+      }
+      for (const m of l.matchAll(/AGENTS\.md`?\s*(?:的\s*)?規則\s*(\d+)/g)) if (!rules.has(m[1])) bad.push(`${where} AGENTS.md 規則 ${m[1]}（只有 1–${rules.size}）`);
+      for (const m of l.matchAll(/AGENTS\.md`?\s*(?:的\s*)?「([^」]+)」/g)) if (!heads.has(m[1])) bad.push(`${where} AGENTS.md「${m[1]}」不是 AGENTS.md 的標題`);
+    });
+  };
+  const docs = have(['AGENTS.md', 'PROMPTS.md', 'README.md', 'CONTENTS.md', U, R, STYLE, SITU, REVIEW, EDITOR, BEATS, ...SETUP_MD]);
+  for (const f of docs) scan(f, null);
+  for (const f of SKILL_FILES) scan(f, f.split('/')[2]);
+  for (const f of TOOL_SRC_FILES) scan(f, null);
+  noProblems(bad, '指到不存在的步驟、規則或 AGENTS.md 章節', '改成那支 SKILL.md 真的有的步驟標題（**X. ）、AGENTS.md 真的有的規則與標題；只寫在內文的流程，加進 docs-allow.json（test: T31，file 寫 Skill 名稱）並寫理由');
+  noProblems(unusedAllow(allow, used), 'docs-allow.json（T31）有用不到的項目', '刪掉這幾筆');
+});
+
+// D2：程式常數 → 文件句型。同一個句型在文件（含範例）裡出現別的數字就紅；句型一次都找不到也紅（文件改了說法，這張表要跟著改）
+test('T32 音效數字和 lib/audio.mjs 的 SFX_RULES 一樣（032 D2）', async () => {
+  const { SFX_RULES: S } = await import(abs('shared/template/tools/lib/audio.mjs'));
+  const N = '(\\d+(?:\\.\\d+)?)';
+  const RULES = [
+    ['SFX_RULES.perMinute', S.perMinute, [`任一分鐘最多\\s*${N}\\s*顆`, `一分鐘超過\\s*${N}\\s*顆主音效`, `某一分鐘主音效超過\\s*${N}\\s*顆`, `任一分鐘\\s*≤\\s*${N}\\s*顆`, `每分鐘留最重要的\\s*${N}\\s*顆`, `[這那]一分鐘已經\\s*${N}\\s*顆`]],
+    ['SFX_RULES.avgPerMinute', S.avgPerMinute, [`平均不超過每分鐘\\s*${N}\\s*顆`, `平均每分鐘不超過\\s*${N}\\s*顆`]],
+    ['SFX_RULES.gapSec', S.gapSec, [`主音效、?相距(?:不到|至少)\\s*${N}\\s*秒`, `離前一顆不到\\s*${N}\\s*秒`, `${N}\\s*秒間隔只比主音效`, `只差 [\\d.]+s（<\\s*${N}\\s*s）`]],
+    ['SFX_RULES.extraGapSec', S.extraGapSec, [`附加音效的起點相距不到\\s*${N}\\s*秒`]],
+    ['SFX_RULES.sparseSec', S.sparseSec, [`超過\\s*${N}\\s*秒沒有主音效`]],
+  ];
+  const files = have(['AGENTS.md', 'PROMPTS.md', 'README.md', STYLE, U, R, SITU, REVIEW, EDITOR, BEATS, ...SETUP_MD, ...SKILL_FILES]);
+  const bad = [];
+  for (const [name, want, pats] of RULES) {
+    let hits = 0;
+    for (const f of files) lines(f).forEach((l, i) => {
+      for (const p of pats) for (const m of l.matchAll(new RegExp(p, 'g'))) {
+        hits++;
+        if (Number(m[1]) !== want) bad.push(`${f}:${i + 1} 寫 ${m[1]}，${name} 是 ${want}：${m[0]}`);
+      }
+    });
+    if (!hits) bad.push(`${name}：文件裡一個句型都找不到（${pats.join('｜')}）`);
+  }
+  noProblems(bad, '音效數字和程式常數不一致', '照 shared/template/tools/lib/audio.mjs 的 SFX_RULES 改文件（工具印的原文以 lib/audio.mjs、lib/plan.mjs 為準）；文件換了說法就更新 T32 的句型表');
+});
+
+// D2：USAGE.md 的 --check 範例只能出現 kit/sfx.json 有的音效（音效改名、拿掉之後範例不能還留著舊名字）
+test('T33 USAGE.md 範例裡的音效名都在 kit/sfx.json（032 D2）', () => {
+  const kit = new Set(Object.keys(JSON.parse(read('shared/template/kit/sfx.json'))));
+  const names = [];
+  read(U).split('\n').forEach((l, i) => {
+    const add = (n) => names.push([n, i + 1]);
+    for (const m of l.matchAll(/音效 ([a-z][\w-]*)（/g)) add(m[1]);
+    for (const m of l.matchAll(/（([a-z][\w-]*) 已拿掉）/g)) add(m[1]);
+    for (const m of l.matchAll(/＋([a-z][\w-]*)×\d/g)) add(m[1]);
+    if (l.startsWith('音效次數：')) for (const m of l.slice(5).matchAll(/([a-z][\w-]*) \d+/g)) add(m[1]);
+    const cells = l.split('｜');
+    if (cells.length >= 6) for (const m of cells[4].matchAll(/(?:^|＋)([a-z][\w-]*)(?= \d+:\d\d|×\d)/g)) add(m[1]);
+  });
+  check(names.length > 0, 'USAGE.md 找不到任何 --check 範例裡的音效名 → 範例格式改了，更新 T33 的抓法');
+  noProblems(names.filter(([n]) => !kit.has(n)).map(([n, ln]) => `${U}:${ln} ${n}`), 'USAGE.md 範例裡有 kit/sfx.json 沒有的音效',
+    `換成 kit/sfx.json 有的（${[...kit].join('、')}）；範例最好重跑 build.mjs --check 貼實際輸出`);
+});
+
+// D4：AGENTS.md 路由表每一列的觸發語都要寫在那一列 Skill 的 description；同一句觸發語不能出現在兩支 Skill 的 description
+test('T34 路由表的觸發語都在 Skill 的 description，而且不重複（032 D4）', () => {
+  const sec = section(read('AGENTS.md'), '## 怎麼用這份檔') || '';
+  const desc = new Map(SKILLS.filter((n) => exists(skillMd(n))).map((n) => [n, frontmatter(read(skillMd(n)))?.description || '']));
+  const bad = [];
+  let rows = 0;
+  for (const l of sec.split('\n')) {
+    if (!/^\|/.test(l) || /^\|---|^\| 我說 /.test(l)) continue;
+    const [say, to] = l.split('|').slice(1, 3);
+    const skill = (to.match(/`(auto-edit-[a-z]+)`/) || [])[1];
+    if (!skill) continue;
+    rows++;
+    for (const m of say.matchAll(/「([^」]+)」/g)) if (!desc.get(skill)?.includes(`「${m[1]}」`)) bad.push(`${skillMd(skill)} 的 description 少了「${m[1]}」（AGENTS.md 路由表）`);
+  }
+  check(rows > 0, 'AGENTS.md「怎麼用這份檔」找不到路由表（| 我說 | Skill |）→ 路由表改了格式就更新 T34');
+  const owner = new Map();
+  for (const [n, d] of desc) for (const m of d.matchAll(/「([^」]+)」/g)) { if (!owner.has(m[1])) owner.set(m[1], new Set()); owner.get(m[1]).add(n); }
+  for (const [q, set] of owner) if (set.size > 1) bad.push(`「${q}」同時在 ${[...set].join('、')} 的 description`);
+  noProblems(bad, 'Skill 的 description 和 AGENTS.md 路由表不一致', '觸發語照路由表寫進那一列的 Skill 的 description（「當使用者說…時使用」那一句）；同一句只留在路由表指定的那一支，別支改成不會搶的說法');
+});
+
+// D5：9 支 Skill 退路表第一欄用反引號引的工具原文，切掉 …、<…>、N／M 這類占位後每一段都要在工具原始碼找得到；
+// 原始碼的 ${…} 當萬用字元（固定的字要佔六成以上），或由兩段以上原始碼的字串接起來（每段至少 6 個字）。
+// 開頭的 ✖／⚠ 由印的地方統一加，不算。不是工具印的（npm 的訊息）、程式組字組得太碎的，列在 docs-allow.json（test: T35，text 是第一欄裡的字）
+test('T35 退路表的工具原文在工具原始碼裡找得到（032 D5）', () => {
+  const setupSrc = fs.readdirSync(abs('setup')).filter((f) => f.endsWith('.mjs')).map((f) => `setup/${f}`);
+  const src = [...TOOL_SRC_FILES, ...setupSrc].map(read).join('\n');
+  const W = '\u0001';
+  const unwrap = (l) => { let out = '', i = 0; while (i < l.length) { if (l[i] === '$' && l[i + 1] === '{') { let d = 0, j = i + 1; for (; j < l.length; j++) { if (l[j] === '{') d++; else if (l[j] === '}' && --d === 0) break; } out += W; i = j + 1; } else out += l[i++]; } return out; };
+  const wild = src.split('\n').filter((l) => l.includes('${')).map(unwrap);
+  // p 對上 t 的某一段（W＝任意字串）時，最多有幾個字是 t 的固定字對上的；對不上回 -1
+  const lit = (p, t) => {
+    let cur = new Int16Array(t.length + 1).fill(0);
+    for (let i = 0; i < p.length; i++) {
+      const nxt = new Int16Array(t.length + 1).fill(-1);
+      for (let k = 0; k < t.length; k++) { const v = cur[k]; if (v < 0) continue; if (t[k] === W) nxt[k] = Math.max(nxt[k], v); else if (t[k] === p[i]) nxt[k + 1] = Math.max(nxt[k + 1], v + 1); }
+      for (let k = 0; k < t.length; k++) if (nxt[k] >= 0 && t[k] === W) nxt[k + 1] = Math.max(nxt[k + 1], nxt[k]);
+      cur = nxt;
+    }
+    return Math.max(...cur);
+  };
+  const found = (p) => {
+    if (src.includes(p)) return true;
+    const need = Math.max(4, Math.ceil(p.length * 0.55));
+    const grams = []; for (let i = 0; i + 3 <= p.length; i++) grams.push(p.slice(i, i + 3));
+    if (wild.some((l) => grams.some((g) => l.includes(g)) && lit(p, l) >= need)) return true;
+    let i = 0, n = 0;
+    while (i < p.length) { let j = i; while (j < p.length && src.includes(p.slice(i, j + 1))) j++; if (j - i < 6 && !(j === p.length && j - i >= 3 && n)) return false; i = j; n++; }
+    return true;
+  };
+  const PH = /→|…|\.\.\.|<[^>]*>|(?<![A-Za-z0-9])(?:[NM]s?|W×H)(?![A-Za-z0-9])/g;
+  const allow = allowOf('T35'), used = new Set();
+  const bad = [];
+  for (const n of SKILLS.filter((x) => exists(skillMd(x)))) {
+    const f = skillMd(n);
+    const ls = lines(f);
+    const start = ls.indexOf('## 退路表');
+    for (let i = start + 1; start >= 0 && i < ls.length && !/^## /.test(ls[i]); i++) {
+      const l = ls[i];
+      if (!l.startsWith('|') || /^\|---|^\| 症狀/.test(l)) continue;
+      const cell = l.split('|')[1];
+      const a = allow.find((x) => f.endsWith(x.file) && cell.includes(x.text));
+      if (a) { used.add(a); continue; }
+      for (const m of cell.matchAll(/`([^`]+)`/g)) {
+        const miss = m[1].split(PH).map((s) => s.trim().replace(/^[✖⚠✓✔⏳]\s*/, '')).filter((s) => s.length >= 2 && !found(s));
+        if (miss.length) bad.push(`${f}:${i + 1} \`${m[1].slice(0, 70)}\` 找不到：${miss.map((s) => `「${s}」`).join('')}`);
+      }
+    }
+  }
+  noProblems(bad, '退路表第一欄的工具原文在 shared/template/tools/、setup/*.mjs 的原始碼找不到', '照工具現在印的字改（變動的部分寫 …、<段>、N），做法欄也照工具 → 後面的建議改；確定不是工具印的，加進 docs-allow.json（test: T35）並寫理由');
+  noProblems(unusedAllow(allow, used), 'docs-allow.json（T35）有用不到的項目', '刪掉這幾筆');
 });

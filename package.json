@@ -5,6 +5,11 @@
   "engines": {
     "node": ">=22"
   },
+  "scripts": {
+    "test:docs": "node --test dev/tests/docs.test.mjs",
+    "test:fast": "node --test dev/tests/docs.test.mjs dev/tests/install-skills.test.mjs dev/tests/foundation.test.mjs dev/tests/032-w5.test.mjs dev/tests/plan.test.mjs dev/tests/scenes.test.mjs dev/tests/custom-fill.test.mjs dev/tests/moods.test.mjs dev/tests/pics.test.mjs dev/tests/icons.test.mjs dev/tests/edit.test.mjs dev/tests/editor-subtitles.test.mjs dev/tests/editor-issues.test.mjs dev/tests/editor-storyboard.test.mjs dev/tests/editor-cuts.test.mjs dev/tests/full-canvas.test.mjs dev/tests/layout-rhythm.test.mjs dev/tests/storyboard-gen.test.mjs dev/tests/ngscan.test.mjs dev/tests/speaker.test.mjs dev/tests/speaker-side.test.mjs dev/tests/speakerbox.test.mjs dev/tests/site-demo.test.mjs",
+    "test": "node --test --test-timeout=300000 \"dev/tests/*.test.mjs\""
+  },
   "devDependencies": {
     "hyperframes": "0.9.28"
   }

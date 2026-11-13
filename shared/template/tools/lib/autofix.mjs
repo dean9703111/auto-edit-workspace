@@ -20,6 +20,9 @@
 //   hold      最後一個內容到退場停不到 1.5 秒：後面有空就 to 往後延（不能壓到下一段）；後一段 0 秒相接就連後一段的 from 一起延
 //   sfx       一分鐘超過 2 顆主音效（工具自動拿掉之後還超過＝都是段上寫明的）：照 lib/audio.mjs 的優先序拿掉最不重要、最後面的那顆
 //             （寫 "sfx": null；章節音效與 keepSfx 不動）
+//   merge     動畫分鏡的相鄰兩拍只隔不到範例的最小拍距：後一拍改綁前一拍的詞（同一句講到的兩個東西放同一拍）；不行就前一拍改綁後一拍的詞
+//             （拍和詞的對應看這段的動畫分鏡 __sheet；寫在 at／…At 欄的才改）
+//   tail      動畫分鏡的最後一拍到段尾不夠範例的下限（最後一幕太短）：和 hold 一樣把 to 往後延（後一段 0 秒相接就一起延它的 from）
 // 每一處都要過：目標那一則消失、✖／⚠ 沒有多（只差秒數的算同一則）、沒有畫面的區間／#N@詞 估的個數／音效太密／音效稀疏沒變多、
 // 段數沒變少、透明字卡沒有被整張幕蓋住更久（延長、挪動不能把下一張卡的開頭藏在幕底下）。
 // 不能自動修的（#N@詞 估的、音效稀疏、蓋到講者這類要看畫面的）照舊報。
@@ -29,8 +32,9 @@ import { norm, cueByN } from './srt.mjs';
 import { textSyncIssues } from './plan.mjs';
 import { parseValue } from './scenes.mjs';
 import { KEEP_FIRST, SFX_RULES } from './audio.mjs';
+import { parseBeatSheets } from './audit-beats.mjs';
 
-export const KINDS = { textSync: '文字對時', overlap: '重疊', firstAt: '清單第一項比標題早', gap: '空檔', hold: '停留太短', sfx: '音效太密' };
+export const KINDS = { textSync: '文字對時', overlap: '重疊', firstAt: '清單第一項比標題早', gap: '空檔', hold: '停留太短', sfx: '音效太密', merge: '拍距不足（併拍）', tail: '最後一幕太短' };
 const ORDER = Object.keys(KINDS);
 const OVERLAP_MAX = 0.5, GAP_MAX = 3, HOLD_STEP = 0.05, NEAR = 0.45, EPS = 0.002;
 
@@ -143,6 +147,23 @@ function setItemAt(seg, key, i, v) {
   return true;
 }
 const fmtV = (v) => JSON.stringify(v);
+// 段裡寫時間的欄（at、…At）值是 from 的，全部改成 to；回傳改了幾格。兩個值都要還在段裡才改
+// （兩個值都在才換：已經併過的不會再來回併）
+function swapRef(seg, from, to) {
+  const hits = [];
+  let other = 0;
+  const walk = (v) => {
+    if (Array.isArray(v)) { v.forEach((x) => (x && typeof x === 'object' ? walk(x) : null)); return; }
+    for (const [k, x] of Object.entries(v)) {
+      if (x && typeof x === 'object') walk(x);
+      else if (k === 'at' || /At$/.test(k)) { if (x === from) hits.push([v, k]); else if (x === to) other++; }
+    }
+  };
+  for (const [k, x] of Object.entries(seg || {})) if (k !== 'story' && x && typeof x === 'object') walk(x);
+  if (!other) return 0;
+  for (const [v, k] of hits) v[k] = to;
+  return hits.length;
+}
 
 // ---------- 候選修法（照 res 現在的提醒算；套用時只動 plan 的複本）----------
 
@@ -257,22 +278,48 @@ function candidates(cur, opt) {
   }
 
   // hold：最後一個內容在第 Xs，到退場只停 Ys，建議 ≥ Zs → 後面有空就延 to；後一段 0 秒相接就一起延它的 from
-  each(/^\[(\S+)[^\]]*\] 最後一個內容在第 ([\d.]+)s，到退場只停 ([\d.]+)s，建議 ≥ ([\d.]+)s/, (it, m, w) => {
-    if (!it.seg || !ok(it.id)) return;
-    const d = r3(Math.ceil((Number(m[4]) - Number(m[3])) / HOLD_STEP - 1e-6) * HOLD_STEP);
-    if (!(d > 0) || d > GAP_MAX) return;
-    const end = endOf(it), gone = msgGone(w);
+  const extendTo = (kind, it, d, gone, why) => {
+    const end = endOf(it);
     const inWay = items.filter((x) => x !== it && x.start > it.start + EPS && x.start >= end - EPS && x.start < end + d - EPS);
     if (!inWay.length) {
-      out.push({ kind: 'hold', id: it.id, key: `hold|${it.id}|extend`, gone, apply: (pl) => (extend(segOf(pl, it.id), it, d) ? `${it.id}：to 往後延 ${d}s（最後一個內容多停一下）` : null) });
+      out.push({ kind, id: it.id, key: `${kind}|${it.id}|extend`, gone, apply: (pl) => (extend(segOf(pl, it.id), it, d) ? `${it.id}：to 往後延 ${d}s（${why}）` : null) });
       return;
     }
     if (!inWay.every((n) => Math.abs(n.start - end) <= EPS && movable(n)) || !ok(it.id, ...inWay.map((n) => n.id))) return;
-    out.push({ kind: 'hold', id: it.id, key: `hold|${it.id}|shift`, gone, apply: (pl) => {
+    out.push({ kind, id: it.id, key: `${kind}|${it.id}|shift`, gone, apply: (pl) => {
       if (!extend(segOf(pl, it.id), it, d)) return null;
       for (const n of inWay) if (!setFrom(pl, n.id, shiftTime(segOf(pl, n.id)?.from, d))) return null;
       return `${it.id}：to 往後延 ${d}s，${inWay.map((n) => n.id).join('、')} 的 from 一起延（維持 0 秒相接）`;
     } });
+  };
+  const stepUp = (need, got) => r3(Math.ceil((need - got) / HOLD_STEP - 1e-6) * HOLD_STEP);
+  each(/^\[(\S+)[^\]]*\] 最後一個內容在第 ([\d.]+)s，到退場只停 ([\d.]+)s，建議 ≥ ([\d.]+)s/, (it, m, w) => {
+    if (!it.seg || !ok(it.id)) return;
+    const d = stepUp(Number(m[4]), Number(m[3]));
+    if (!(d > 0) || d > GAP_MAX) return;
+    extendTo('hold', it, d, msgGone(w), '最後一個內容多停一下');
+  });
+
+  // tail（B4）：動畫分鏡「最後一拍 …到段尾只剩 Ys，範例檔頭【D 下限】要 ≥ Zs」→ 和 hold 一樣延 to
+  each(/^\[(\S+)[^\]]*\] 動畫分鏡：最後一拍 \S+（[^）]*）到段尾只剩 ([\d.]+)s，範例檔頭【D 下限】要 ≥ ([\d.]+)s/, (it, m, w) => {
+    if (!it.seg || !ok(it.id)) return;
+    const d = stepUp(Number(m[3]), Number(m[2]));
+    if (!(d > 0) || d > GAP_MAX) return;
+    extendTo('tail', it, d, msgGone(w), `最後一拍到段尾要 ≥ ${m[3]}s`);
+  });
+
+  // merge（B4）：動畫分鏡「第 A 拍（…）到第 B 拍（…）只隔 Xs」→ 兩拍綁同一個詞（同一句講到的兩個東西放同一拍）
+  each(/^\[(\S+)[^\]]*\] 動畫分鏡：第 (\S+) 拍（[^）]*）到第 (\S+) 拍（[^）]*）只隔 ([\d.]+)s/, (it, m, w) => {
+    // 032 B6：拍點正本不在 slots 的段（內容設計動畫、手改過的模板段，表在 work/designs/）：綁詞不在 slots，swapRef 改不到，不出候選
+    if (!it.seg || !ok(it.id) || m[2] === m[3] || (it.seg.__beatOwner ?? 'plan') !== 'plan') return;
+    let sheet = null;
+    try { sheet = it.seg.__sheet ? parseBeatSheets(it.seg.__sheet).get(it.seg.id) : null; } catch { sheet = null; }
+    const refOf = (beat) => sheet?.rows.find((r) => r.beat === beat && !r.start && r.refs?.length)?.refs[0]?.ref;
+    // 兩拍綁同一個詞就不會再拍距不足：build.mjs 的 checkerOf 每次照當下的 slots 重算 __sheet，所以等那則提醒消失才收
+    const a = refOf(m[2]), b = refOf(m[3]), gone = msgGone(w);
+    if (!a || !b || a === b) return;
+    out.push({ kind: 'merge', id: it.id, key: `mg|${it.id}|${m[3]}|early`, gone, apply: (pl) => (swapRef(segOf(pl, it.id), b, a) ? `${it.id}：第 ${m[3]} 拍併進第 ${m[2]} 拍（${fmtV(b)} 改成 ${fmtV(a)}；原本只隔 ${m[4]}s）` : null) });
+    out.push({ kind: 'merge', id: it.id, key: `mg|${it.id}|${m[2]}|late`, gone, apply: (pl) => (swapRef(segOf(pl, it.id), a, b) ? `${it.id}：第 ${m[2]} 拍併進第 ${m[3]} 拍（${fmtV(a)} 改成 ${fmtV(b)}；原本只隔 ${m[4]}s）` : null) });
   });
 
   // sfx：同一分鐘超過 2 顆主音效（工具自動拿掉之後還超過的，都是段上寫明的）

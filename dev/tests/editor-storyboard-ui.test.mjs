@@ -1,13 +1,17 @@
 // 分鏡表頁（瀏覽器）：文字不會無聲消失：打字自動存、頁首固定、離開提醒、連不到時留字並補存、檔案被改過時留字。講者還沒設定時頂端可以直接填。
-import { test, before, after } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import puppeteer from 'puppeteer-core';
 import { startEditor } from '../../shared/template/tools/editor.mjs';
 import { findChrome } from '../../shared/template/tools/lib/audit-browser.mjs';
-import { TEMPLATE } from './helpers.mjs';
+import { TEMPLATE, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都要開瀏覽器（其中一個測試還要 ffmpeg）：沒有 Chrome、ffmpeg 或 puppeteer-core（hyperframes 順帶裝的，不在 package.json）就全部略過，用到才載入
+const noUi = await missingTools('chrome', 'ffmpeg', 'puppeteer');
+const test = skipAll(nodeTest, noUi);
+const puppeteer = noUi ? null : (await import('puppeteer-core')).default;
 
 const filler = (id) => [`## ${id}（#1–2e，0:00.00–0:04.94）`, '', '- 起點那句字幕：嗨', '- 版面：疊加（07 重點字卡）', `- 畫面文字：標題「${id} 的字」，綁 \`#1@嗨\``, '- 理由：這是一段很長的內容，用來把頁面撐高', '', ...Array.from({ length: 30 }, (_, i) => `- 備註${i}：撐高`), ''];
 const MD = ['# 分鏡表：demo（草稿）', '', ...filler('s01'), ...filler('s02'), ...filler('s03'), '## 需要我決定的事', '', '1. 結尾要不要配樂', ''].join('\n');
@@ -24,6 +28,7 @@ const inView = (sel) => page.$eval(sel, (el) => { const r = el.getBoundingClient
 const untilFile = async (re, ms = 6000) => { const t = Date.now(); while (Date.now() - t < ms) { if (re.test(fs.readFileSync(file, 'utf8'))) return true; await sleep(100); } return false; };
 
 before(async () => {
+  if (noUi) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-sb-ui-'));
   const project = path.join(root, 'projects', 'demo');
   work = path.join(project, 'work');
@@ -39,7 +44,7 @@ before(async () => {
   page.on('dialog', async (d) => { dialogs.push(d.type()); await d.accept(); });
   await page.setViewport({ width: 1280, height: 720 });
 });
-after(async () => { await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
+after(async () => { if (noUi) return; await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
 
 test('分鏡表：頁首捲到哪都在；打字停手就存，不用離開欄位', async () => {
   await open();
@@ -186,6 +191,20 @@ test('分鏡表：內容設計動畫的概念直接看得到，占位圖標「�
   assert.equal(await untilFile(/貼標籤「腳架晃了」；講到「雲端」雲彈出；中央（圖示「camera」）/), true);
 });
 
+test('分鏡表（032 B6）：模板段的動畫分鏡照 plan.json 產生，格子唯讀；有「拍點正本」那一行的段（正本在 work/designs/）可以改，那一行不放進 AI 的備註', async () => {
+  const head = ['| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |', '|---|---|---|---|---|---|'];
+  const sec = (id, extra) => [`## ${id}（#1–2e，0:00.00–0:04.94）`, '', '- 起點那句字幕：嗨', '- 版面：疊加（x-point）', '- 音效：預設', '- 理由：測試', '', '截圖觀察：無', '', ...extra,
+    `#### 動畫分鏡 ${id}`, '', ...head, `| 1 | \`#1@嗨\` | 主卡標題「${id} 的字」 | 彈出 | 主卡 | — |`, ''];
+  fs.writeFileSync(file, `${MD}\n${[...sec('t01', []), ...sec('h01', ['- 拍點正本：work/designs/h01.md', ''])].join('\n')}`);
+  await page.goto(new URL('/storyboard', editor.url).href, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#sec-h01');
+  assert.equal(await page.$$eval('#sec-t01 .sb-table [contenteditable]', (a) => a.length), 0, '模板段：表上的字不能改（在畫面文字改）');
+  assert.match(await page.$eval('#sec-t01 .sb-table', (n) => n.textContent), /主卡標題「t01 的字」/, '看得到');
+  assert.deepEqual(await page.$$eval('#sec-h01 .sb-table .sb-piece', (a) => a.map((e) => e.textContent)), ['h01 的字']);
+  assert.equal(await page.$$eval('#sec-h01 .sb-table [contenteditable]', (a) => a.length), 1);
+  assert.doesNotMatch(await page.$eval('#sec-h01', (n) => n.textContent), /拍點正本/);
+});
+
 test('流程列：標出這一頁、走過的步驟與等你回覆的那一步，可以直接換頁', async () => {
   fs.writeFileSync(path.join(work, 'cuts.md'), '# 剪輯清單\n\n## NG\n\n| 剪 | 時間碼 | 內容 | 原因 | 待確認 |\n|---|---|---|---|---|\n');
   fs.writeFileSync(path.join(work, '製作進度.md'), ['# 製作進度', '', '## 開工決策表', '', '| 欄 | 值 |', '|---|---|', '| 主軌種類 | 只有真人 |', '', '## 停點紀錄', '', '| 時間 | 停點 | 狀態 | 使用者原話 | 寫回哪裡 |', '|---|---|---|---|---|', '| 2026-11-06 10:00 | ① 剪輯清單 | 通過 | 可以 | |', '| 2026-11-06 10:05 | ③ 分鏡表 | 待回覆 | | |', '', '## 回饋輪', ''].join('\n'));
@@ -225,8 +244,10 @@ test('分鏡表：需要決定的事一項一張卡，各自回答；給 AI 的�
   await page.evaluate(() => document.activeElement.blur());
   assert.equal(await untilFile(/1\. 講者的姓名與頭銜還沒給\n {3}- 回答：鼎淵\n/), true);
   await page.waitForFunction(() => document.querySelector('.sb-ask.answered .sb-ask-mark')?.textContent === '✓');
-  const again = await page.$$('.sb-answer');
-  await again[2].click();
+  // 存檔後頁面會重畫一次（輪詢看到檔案變了）：剛拿到的元素可能已經換掉，換掉就重拿再點
+  for (let k = 0; ; k++) {
+    try { await (await page.$$('.sb-answer'))[2].click(); break; } catch (e) { if (k >= 5 || !/detached/i.test(e.message)) throw e; await sleep(200); }
+  }
   await page.keyboard.type('不要');
   await page.evaluate(() => document.activeElement.blur());
   assert.equal(await untilFile(/3\. 結尾要不要配樂\n {3}- 回答：不要\n/), true);

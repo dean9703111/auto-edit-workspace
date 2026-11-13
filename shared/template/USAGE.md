@@ -26,14 +26,14 @@
 
 | # | 做什麼 | 指令 | 查 | 停？ |
 |---|---|---|---|---|
-| 1 | 調光瘦臉、素材盤點、構圖（只有聲音就跳過構圖） | `look.mjs status`、`media.mjs scan`、`qc.mjs framing`＋`editor.mjs` | 第 7 節、2.2、第 5 節 | **停點 ②** |
-| 2 | 量講者框、產生分鏡素材 | `qc.mjs speaker --write`、`build.mjs --scaffold` | 2.2 | |
+| 1 | 素材盤點；調光瘦臉、構圖（只有聲音就跳過構圖） | `media.mjs scan`（`auto-edit-screen` 步驟 1）、`build.mjs --framing` | 第 5 節、第 7 節、2.2 | **停點 ②** |
+| 2 | 量講者框、產生分鏡素材 | `build.mjs --framing-done`（沒有講者的專案 `--framing` 已經做了） | 2.2 | |
 | 3 | 分章寫分鏡（一份一個子代理）：第一回合語意地圖 → 主代理全片校正 → 第二回合草稿（大綱 → 骨架）、合併（通過就接著做第 5 步） | `build.mjs --map chNN`、`build.mjs --map-merge`、`build.mjs --outline chNN`、`build.mjs --check-draft chNN`、`build.mjs --merge-drafts` | `work/分鏡素材/`、style.md「分章」 | |
 | 4 | （只有事先指定要做的內容設計動畫）寫鏡位腳本；其他值得設計的段在草稿標候選，③ 勾了才做 | `auto-edit-motion` 的 `references/design.md` | style.md「內容設計動畫」 | |
 | 5 | 截圖、產生分鏡表（內容設計動畫候選有預估時間、預設都不勾） | `build.mjs --storyboard`（`--merge-drafts` 已經接著做了就跳過） | 2.3 | **停點 ③** |
 | 6 | 套回修改；勾了的內容設計動畫：設計師寫鏡位腳本、從空白畫布做；等設計師時看進度 | `build.mjs --apply-storyboard`；`audit.mjs --only <段> --shots --sheet`；`build.mjs --design-status` | | |
 | 7 | build＋量測＋完成態拼圖＋開預覽（不 render） | `build.mjs --review` | `REVIEW.md`、2.6 | **停點 ④** |
-| 8 | 修改：一輪回饋（不 render，看完成影片預覽與拼圖） | `versions.mjs begin --seg <段> --say "…"`、`versions.mjs finish` | | |
+| 8 | 修改：一輪回饋（不 render，看完成影片預覽與拼圖） | `versions.mjs begin --seg <段> --said "…"`、`versions.mjs finish` | | |
 | 9 | 輸出並驗收 | `deliver.mjs` | 2.7、2.8 | |
 
 理由：改分鏡表只要改一行字，改完成影片要等好幾分鐘 render。所以順序是「分鏡 → 檢查 → 截圖 → 完成影片預覽 → 短片段 → 整支」。
@@ -48,11 +48,11 @@
 
 ### 2.2 量 `speakerBox`
 
-0. **先確認構圖（畫面要不要放大）**：跑 `node shared/template/tools/qc.mjs framing --project projects/<專案>`。它量講者的動作範圍、偵測四周黑邊，算出 1.0／1.15／1.3 倍的 16:9 裁切框（講者水平置中、頭頂上方留 120px），存 `work/構圖預覽.jpg`（每個倍率一格，橘框是講者動作範圍；紅底標題＝會切到手勢），並印出每個倍率的 `frame` 與畫質提醒（來源像素被放大的倍數）。
-   - 接著開剪輯台（`node shared/template/tools/editor.mjs --project projects/<專案>`），把它印的「構圖台」網址給使用者：在沒裁切的 `work/rough.mp4` 上拖一個鎖定比例的框（最多放大 2 倍），右邊即時顯示裁切後套上字幕、下方字卡、子母畫面小視窗的樣子；切到手勢、每個像素放大超過 3.5 倍、直式頭頂／下巴不在範圍會標紅。拖好就自動寫進 plan.json 的 `frame`（還沒有 plan.json 會新建；打開頁面就把建議的框存起來，所以使用者沒動框直接說「調好了」，用的就是建議的框）。這一步要在列分鏡表之前做（`EDITOR.md`「構圖台」）。
+0. **先確認構圖（畫面要不要放大）**：跑 `node shared/template/tools/build.mjs --project projects/<專案> --framing`，一條做完：講者瘦臉過期先跑 look（印「⏳ 還在跑」就再跑同一條）、量構圖、開構圖台、記停點 ②，最後印回報段和停點 ② 那兩行（沒有講者的專案印「不用構圖」，直接產生分鏡素材）。量構圖（`qc.mjs framing`）是量講者的動作範圍、偵測四周黑邊，算出 1.0／1.15／1.3 倍的 16:9 裁切框（講者水平置中、頭頂上方留 120px），存 `work/構圖預覽.jpg`（每個倍率一格，橘框是講者動作範圍；紅底標題＝會切到手勢），並印出每個倍率的 `frame` 與畫質提醒（來源像素被放大的倍數）。
+   - 停點 ② 的網址是剪輯台的「構圖台」：在沒裁切的 `work/rough.mp4` 上拖一個鎖定比例的框（最多放大 2 倍），右邊即時顯示裁切後套上字幕、下方字卡、子母畫面小視窗的樣子；切到手勢、每個像素放大超過 3.5 倍、直式頭頂／下巴不在範圍會標紅。拖好就自動寫進 plan.json 的 `frame`（還沒有 plan.json 會新建；打開頁面就把建議的框存起來，所以使用者沒動框直接說「調好了」，用的就是建議的框）。這一步要在列分鏡表之前做（`EDITOR.md`「構圖台」）。
    - 看預覽圖判斷：四周有多餘的外框（黑邊、櫃子、大片空牆、桌面倒影）讓構圖鬆散時，建議放大；講者的手勢會被切到、或原片解析度低（每個像素放大超過 3.5 倍會明顯變軟）時，倍率往小選。
    - 每個倍率都會切到手勢或放大超過 3.5 倍時，「建議」是表上倍率最小的那一列（有黑邊時表上最小的是 1.13x 這類，不是 1.00x；1.00x 會露出黑邊）。
-   - 把構圖台網址與建議倍率給使用者，**停下來等確認**。使用者說「調好了」：構圖台已經寫好 `frame`，不用再改；說「用建議的」：跑 `node shared/template/tools/qc.mjs framing --project projects/<專案> --write`（把表上 ✔ 那一列寫進 plan.json 第一層的 `frame`，1.0 倍不寫），不要手寫。之後在構圖台換框，已經量好的 `speakerBox` 會跟著換算，不用重量。build 重新編碼底片時會照它裁切放大回 1920×1080，子母畫面、碰撞檢查都以裁切後的畫面為準。
+   - 使用者回覆後跑 `node shared/template/tools/build.mjs --project projects/<專案> --framing-done --said "使用者原話"`：「調好了」不加 `--use`（構圖台已經寫好 `frame`）；「用建議的」加 `--use suggested`（表上 ✓ 那一列，1.0 倍不寫）；說了倍率加 `--use 1.15`。它記 ② 通過、量講者框（第 4 步）、產生分鏡素材；不要手寫 `frame`。之後在構圖台換框，已經量好的 `speakerBox` 會跟著換算，不用重量。build 重新編碼底片時會照它裁切放大回 1920×1080，子母畫面、碰撞檢查都以裁切後的畫面為準。
    - 直式（plan.json `"format": "portrait"`）：預覽圖是直的、裁切框是 9:16，倍率一樣 1.0／1.15／1.3；另看講者頭頂有沒有落在 y 380–520、下巴 ≤ 860（`shared/style.md`「直式」）。
    - 寫好 `frame` 之後才做下面的步驟（場地照的座標要換算：`(x − frame.x) × 1920 ÷ frame.w`；`qc.mjs speaker` 會自動照 `frame` 裁切後再量）。
 第 1–3 步是手動框講者，只有第 4 步的 `qc.mjs speaker` 印「8 格之間幾乎沒有動作」時才做；平常直接做第 4 步。
@@ -60,7 +60,7 @@
 1. 場地照：專案資料夾裡檔名有「場地照」的圖。沒有就截一張：`ffmpeg -v error -ss 5 -i projects/<專案>/work/rough.mp4 -frames:v 1 projects/<專案>/work/場地照.jpg`。
 2. 確認是 1920×1080：`ffprobe -v error -show_entries stream=width,height -of csv=p=0 <場地照路徑>`。不是的話，量出來的數字要等比換算（範例的 `示範口播.mp4` 是 640×360，從它截的場地照量出來要乘 3）。講者框整個落在底片尺寸內時，`--check` 會提醒「看起來是用原尺寸截圖的像素量的」並附換算後的框。
 3. 框出講者的頭頂、兩肩、手勢會到的範圍，四邊各外擴 40px，寫成 `[x1, y1, x2, y2]`（左上到右下）。
-4. 場地照只是一張靜止畫面，看不出手勢會比到哪。有 `work/rough.mp4` 之後，一定要跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案> --write`（`--write` 把青色建議框寫進 plan.json 的 `speakerBox`，已經有的不覆寫，`--force` 才覆寫），它會產生兩張圖：
+4. 場地照只是一張靜止畫面，看不出手勢會比到哪，所以 `--framing-done` 會跑 `node shared/template/tools/qc.mjs speaker --project projects/<專案> --write`（`--write` 把青色建議框寫進 plan.json 的 `speakerBox`，已經有的不覆寫，`--force` 才覆寫），它會產生兩張圖：
 
    - `work/場地照-動作範圍.jpg`：8 張畫面疊在一起，橘色是動作掃過的範圍。格線每 100px 一條、每 500px 一條粗線，數字就是 1920×1080 的座標（不是 1080p 的影片會先等比放大，座標不用再換算）。青色框是自動估的範圍（已外擴 40px），只當參考，桌面倒影會讓它的下緣偏大。
    - `work/場地照-8格.jpg`：8 個時間點的總表，先確認講者整集沒有換位置。
@@ -96,7 +96,7 @@
 - 插入素材的列（第 5 節）：「情境」是 `media 螢幕錄影` 或 `media 圖片`；「畫面文字」是素材路徑、起點秒數（`in`）、要做的運鏡／紅框／放大鏡；「理由」是講解和畫面對上的地方。只有聲音的區間列在「只有聲音的區間」表，寫用哪一段蓋住。
 - 「音效」欄：`預設`、`無`（`"sfx": null`）、換成某個名稱（例：`shine`），錄影段加 `clicks 2 下（#21@安裝、+3.2）`（音效清單見 R5.2）。`sparkle`、`shine`、`thunder` 超過 style.md 的每集上限時，寫進草稿的 `decide`，會列進「需要我決定的事」讓使用者挑；結尾要不要配樂（`outro`）也列一題。
 - 時間碼是那幾句在 rough.srt 的起點與結尾；「字幕」欄是起點那句的原文（草稿的 `anchor`）。
-- 內容設計動畫的段：工具把設計師的鏡位腳本（`work/designs/<段>.md` 的 `#### 動畫分鏡 <段 id>` 表，表頭 `| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |`，audit 會讀這張表）放進那一段。模板動畫的拍由模板內建，不寫動畫分鏡、不寫插圖清單；鏡位腳本的寫法只給設計師看（`auto-edit-motion` 的 `references/design.md`）。
+- 每段的動畫分鏡都是工具從正本產生，分鏡表上那張是副本：模板動畫的正本是 plan.json 那段的 `slots`（拍由模板內建，不寫動畫分鏡、不寫插圖清單）；內容設計動畫、手改過的模板動畫、手寫的動畫檔的正本是 `work/designs/<段>.md` 的 `#### 動畫分鏡 <段 id>` 表（表頭 `| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |`，audit 照這張表對拍），分鏡表那一段多一行 `- 拍點正本：work/designs/<段>.md`。手改的模板段第一次 build／audit 時工具照分鏡表建好這份。看一段現在的拍：`build.mjs --show <段>`。032 之前做的舊專案，第一次跑 build、audit、versions 時工具自動把拍點搬到正本一次（印一行，記在 `work/hyperframes/.cache/beats-v2.json`，不用另外跑）；想先看會動到哪幾段：`node shared/template/tools/build.mjs --project projects/<專案> --migrate-beats --dry-run`（去掉 `--dry-run` 不看紀錄再搬一次）。鏡位腳本的寫法只給設計師看（`auto-edit-motion` 的 `references/design.md`）。
 
 ### 2.4 先處理字幕長度
 
@@ -106,7 +106,7 @@
 ⚠ 字幕 #12「提醒我桌子、椅子、電腦、提詞器、攝影機」19 字，超過 18 字 → 在 rough.srt 拆成兩則（斷在標點處）
 ```
 
-還有超過 18 字的（多半是之後手改過）：到剪輯台分割（剪輯台會一起重對 `#N`）。要整份重新斷句（例：講稿改過）而 plan.json 已經用到 `#N`：`node shared/template/tools/media.mjs srt-align --project projects/<專案> --remap-plan`（照時間把 plan.json 與情境動畫的 `P.at` 換到新句號，先備份 `.align-<時間戳>`；storyboard.md 的句號會過期，以 plan.json 為準）。舊專案（沒有 `work/rough.srt.align-*`、plan.json 還沒寫）才用 `node shared/template/tools/media.mjs srt-split --project projects/<專案>`（先 `--dry-run`）；plan.json 已經用到句號時 `srt-split` 會拒絕。不要手改 rough.srt 拆句：後面的句號全部 +1，每一段的 `#N` 都要重對。
+還有超過 18 字的（多半是之後手改過）：到剪輯台分割（剪輯台會一起重對 `#N`）。要整份重新斷句（例：講稿改過）而 plan.json 已經用到 `#N`：`node shared/template/tools/media.mjs srt-align --project projects/<專案> --remap-plan`（照時間把 plan.json 與情境動畫的 `P.at` 換到新句號，先備份 `.align-<時間戳>`）。plan.json 還沒寫就不用加 `--remap-plan`（先 `--dry-run` 看表）。不要手改 rough.srt 拆句：後面的句號全部 +1，每一段的 `#N` 都要重對。
 
 ### 2.5 snapshot 怎麼看
 
@@ -119,11 +119,11 @@
 
 ### 2.6 完成影片預覽與修改
 
-1. `build.mjs --review` 已經開好剪輯台，停點 ④ 那一行的網址就是完成影片預覽（像 `http://127.0.0.1:4400/?view=final`），不用再跑 `editor.mjs`。打不開才跑 `node shared/template/tools/editor.mjs --project projects/<專案> --status` 看狀態（它在非互動的 shell 裡會自己轉到背景，不用加 `&` 或 nohup；關掉用 `--stop`）。
+1. `build.mjs --review` 已經開好剪輯台，停點 ④ 那一行的網址就是完成影片預覽（像 `http://127.0.0.1:4400/?view=final`），不用再跑 `editor.mjs`。打不開才跑 `node shared/template/tools/editor.mjs --project projects/<專案> --status` 看狀態（它在非互動的 shell 裡會自己轉到背景，不用加 `&` 或 nohup；關掉用 `--stop`）。`node shared/template/tools/editor.mjs --project projects/<專案> --json` 是給別的工具讀網址用的，平常不用跑。
 2. 給網址時一起說三件事：要使用者確認的卡（例：碰撞 ⚠ 那張）；請他順便看字幕有沒有對到講話（snapshot 檢查不到）；要改哪一段，直接說時間軸上的段落編號（例「s05 的金句卡往左移」）就可以。
 3. 使用者直接說段落編號（例「s05 的金句卡」）時，直接改 plan.json 的那個 `id`。他說「這張卡」「我選的」時，請他說段號或大約第幾秒。
-   - 使用者說「第 X 秒那張卡」：看 `--check` 報告的「起–迄」欄，X 落在哪一段就是哪一段（例：75 秒 → `s04｜15 金句字卡｜1:13.26–1:18.40`）。
-4. 先跑 `node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段> --say "原話"`（備份、存改前版本，印那一段的原文），再改那一段：文字改 `slots`，時間改 `from`／`to`／`at`，位置改 `css`（R4）。改完跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`（build、量、存版本一次做完），不用另外跑 `--check`、build。剪輯台的預覽會自動換成新版；畫面沒變就重新整理頁面。只想單獨存一版：`node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>`，平常不用。
+   - 使用者說「第 X 秒那張卡」：跑 `node shared/template/tools/build.mjs --project projects/<專案> --show 1:15`（也收 `75`＝完成影片第幾秒），先印那一秒所在的段，再印那一段。
+4. 先跑 `node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段> --said "原話"`（備份、存改前版本，印那一段的原文），再改那一段：文字改 `slots`，時間改 `from`／`to`／`at`，位置改 `css`（R4）。改完跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`（build、量、存版本一次做完），不用另外跑 `--check`、build。剪輯台的預覽會自動換成新版；畫面沒變就重新整理頁面。只想單獨存一版：`node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段>`，平常不用。
 5. 使用者沒說怎麼改、只說要更好（「s12 想更完善」「重新設計」），照 `auto-edit-review` 流程 D（改版）；要退回舊版（「s12 用 v1」），照流程 E（退回）。
 6. 產生檔被手改過（舊專案可能在 Studio 拖過東西）時，build 會印出下面其中一則。先看改了什麼，把要保留的搬進 plan.json，再 `node shared/template/tools/build.mjs --project projects/<專案> --force`。
    - `⚠ 這些檔被手改過，沒有覆寫：… → 把改動搬進 plan.json 後加 --force`
@@ -144,14 +144,13 @@ node shared/template/tools/deliver.mjs --project projects/<專案> --said "使�
 ### 2.7b 剪映素材（使用者要求才做）
 
 ```bash
-node shared/template/tools/capcut.mjs --project projects/<專案> --dry-run
-node shared/template/tools/capcut.mjs --project projects/<專案> --background
-node shared/template/tools/capcut.mjs status --project projects/<專案> --wait
+node shared/template/tools/capcut.mjs --project projects/<專案>
 ```
 
-- 先跑 `build.mjs --capcut`（工具自己跑）：每段一支 `compositions/capcut-<段>.html`（透明底、沒有字幕、角標與主軌聲音；半畫面段連講者一起，因為講者被推到右邊）、一支主軌 `compositions/capcut-main.html`，清單 `work/hyperframes/capcut.json`。
+- 在背景跑、前景最多等 9 分鐘；印「⏳ 還在跑」就再跑同一條（會接著等、做過的不重做），不用輪詢。只想先看會出幾支、多長：加 `--dry-run`（不 render）。要取消：`node shared/template/tools/capcut.mjs --project projects/<專案> --cancel`（做好的檔留著）。
+- 工具先跑 `build.mjs --capcut`：每段一支 `compositions/capcut-<段>.html`（透明底、沒有字幕、角標與主軌聲音；半畫面段連講者一起，因為講者被推到右邊）、一支主軌 `compositions/capcut-main.html`，清單 `work/hyperframes/capcut.json`。
 - 再逐支 render 到 `output/capcut/`：每段 `NN_<段>_<起點>.mov`（`--format mov`＝ProRes 4444、有透明通道、帶那段的音效）、`主軌.mp4`、`字幕.srt`（照畫面上實際顯示的時間）、`清單.md`。合成和底片都沒變的會略過；`--only s05,s12` 只做幾段；`--no-main` 不做主軌。
-- 每段約 30 秒 render、5 秒的段約 30 MB；預設同時 3 支（`--jobs N`）。用 `--background`，再跑 `status --wait`（等到做完或快逾時才印一行，不用輪詢）。
+- 每段約 30 秒 render、5 秒的段約 30 MB；預設同時 3 支（`--jobs N`）。
 - 不輸出：章節角標、疊加卡期間講者的慢推（剪映用文字、關鍵影格補）。
 
 ### 2.8 驗收（附輸出給使用者）
@@ -209,11 +208,13 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 ### 3.2 第一層欄位
 
+`theme`、`style`、`format`、`speakerSide`、`chapterBadge`、`look`、`bed`、`outro` 這幾個設定用 `node shared/template/tools/build.mjs --project projects/<專案> --set "<鍵>=<值>"` 改（好幾個用 `;` 隔開，例 `--set "theme=dark;look.slim=0.6"`；拿掉用 `--unset "<鍵>"`；能寫的鍵和值看 `build.mjs --help`），不手改 plan.json。
+
 | 欄位 | 必填 | 值 | 說明 |
 |---|---|---|---|
 | `version` | ✓ | `1` | 固定 |
 | `format` | 直式必填 | `"landscape"`、`"portrait"` | 版式（`auto-edit-longform`「版式」）：直式寫 `"portrait"`，橫式不寫。要和 `work/製作進度.md` 開工決策表的「版式」一樣，不一樣時 `--check` ✖ |
-| `look` | | `false` 或 `{ "color": 0–1, "slim": 0–1.2, "beauty": 0–1 }` | 講者調光、瘦臉、美顏（第 7 節；`beauty` 選填）。不寫＝用 `shared/template/kit/look.json`（預設都是 0＝關）；`false`＝都關。使用者要求才寫（要開建議 `{ "color": 0.8, "slim": 0.6 }`，美顏 `"beauty": 0.5`），構圖台、剪輯台「講者」也會寫 |
+| `look` | | `false` 或 `{ "color": 0–1, "slim": 0–1.2, "beauty": 0–1 }` | 講者調光、瘦臉、美顏（第 7 節；`beauty` 選填）。不寫＝用 `shared/template/kit/look.json`（預設都是 0＝關）；`false`＝都關。使用者要求才寫（要開建議 `--set "look.color=0.8;look.slim=0.6"`，美顏 `look.beauty=0.5`；都關 `--set look=off`），構圖台、剪輯台「講者」也會寫 |
 | `frame` | | `[x, y, w, h]` | 構圖裁切（2.2 第 0 步）：1920×1080 座標、16:9；底片照它裁切放大回 1920×1080。不寫＝原樣 |
 | `speakerBox` | 強烈建議 | `[x1, y1, x2, y2]` | 講者框（2.2）。有 `frame` 時是裁切後的座標。沒寫會提醒，也無法檢查碰撞 |
 | `sideShift` | | `0`–`960`，預設 `480` | 03 側邊欄時講者往右推多少 px（R4） |
@@ -222,7 +223,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `rhythm` | | `"continuous"`（預設）或 `"spaced"` | 卡片節奏。`continuous`＝連續覆蓋（style.md）：報「沒有畫面的區間」與「講者會閃一下」；只有使用者說要留露臉空檔時才寫 `"spaced"` |
 | `outro` | | 物件 | 結尾配樂：`{ "from": "#N" }`（從第 N 句起播到片尾，淡入淡出自動；`music`、`volume`、`fadeOut` 選填）。使用者要片尾配樂時才寫（R5.2） |
 | `bed` | | 物件 | 底樂（選用）：`{ "music": "<曲名>" }` 整支片墊一首配樂，講話時自動壓低，片頭淡入、片尾（或片尾配樂起播前）淡出；`volume` 選填（dB）。這一集不要寫 `{ "music": null }`。曲名看 `music.mjs list`；使用者要底樂時才寫（`auto-edit-style` 的 `references/music.md`） |
-| `chapterBadge` | | `true`（預設）或 `false` | 章節角標自動常駐右上角：章節開始（01 章節轉場結束；沒有 01 時是 02 章節角標段開始）一直到下一章或片尾配樂，子母畫面、全幕時自動淡出。不要常駐才寫 `false`（回到舊的行為：02 段只顯示那幾秒、`chtag` 附件照舊）。使用者說不要角標時才寫 |
+| `chapterBadge` | | `true`（預設）或 `false` | 章節角標自動常駐右上角：章節開始（01 章節轉場結束；沒有 01 時是 02 章節角標段開始）一直到下一章或片尾配樂，子母畫面、全幕時自動淡出。不要常駐才寫 `false`（回到舊的行為：02 段只顯示那幾秒、`chtag` 附件照舊）。使用者說不要角標時才寫（`--set chapterBadge=false`） |
 | `sections` | | 陣列 | 小節角標：`[{ "at": "#N", "name": "STEP 1｜設定資料夾" }]`（講稿 `###` 小節的第一句、小節名 ≤ 12 字）。有寫時右上角角標改成「章號＋目前小節」（寬度跟著小節名），子母畫面、全幕、錄影段也露出（橫式錄影段：旁邊有空位就放空位，沒有就貼錄影畫面右上角；錄影的 `steps` 和小節名重複時不畫、⚠ 請刪掉；說明卡、箭頭自動避開，紅框被蓋到 ⚠）。講稿有 `###` 而沒寫時 `--check` 會 ⚠ 並印出可以直接貼的整行 |
 | `theme` | | `"light"`（預設，不寫）或 `"dark"` | 主題：暗色時 build 換 `bg-*-dark.jpg`、所有合成 `<html data-theme="dark">`；只換顏色 token，版面與動態不變。剪輯台可以切；AI 只在使用者明說「暗色」時寫（`auto-edit-style` 步驟 6） |
 | `style` | | 風格包名稱，例 `"藍圖"` | 這一集用 `shared/template/styles/<名稱>/` 的主色、子母畫面外框、背景圖（亮暗都看包裡的；包裡沒有的檔用 `shared/template/` 目前的）。不寫＝工作區目前的。名稱照 `brand.mjs list`；AI 只在使用者說「這集用 XX 風格」時寫（`auto-edit-style` 步驟 7） |
@@ -289,15 +290,15 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 輸出有三部分：✖ 錯誤（一定要修，有 ✖ 時 build 不產生任何檔）、⚠ 提醒（建議修，可以說明理由後保留）、每段一列的報告。每則訊息 `→` 後面就是修改建議。
 
-工具知道答案的幾種會自動改：`--merge-drafts`、`--apply-storyboard` 寫完 plan.json 會跑 `node shared/template/tools/build.mjs --project projects/<專案> --autofix`，把文字對時、兩段透明情境重疊 ≤ 0.5 秒、清單第一項比標題早、≤ 3 秒的空檔（講者會閃一下、沒有畫面的區間）、停留太短、一分鐘超過 2 顆主音效直接改進 plan.json（一處一處試，重跑檢查沒變好就退回；改之前備份 `plan.json.bak-autofix-<時間>`），印「自動修好 N 處：…」和每一處改了什麼。`--check` 剩下的才要處理。剪輯台的「更新預覽」、`--check`、`--review` 不會自動改（使用者在剪輯台改的時間要算數）；回饋輪自己改了段之後要用，加 `--only <這輪改的段>`。
+工具知道答案的幾種會自動改：`--merge-drafts`、`--apply-storyboard` 寫完 plan.json 會跑 `node shared/template/tools/build.mjs --project projects/<專案> --autofix`，把文字對時、兩段透明情境重疊 ≤ 0.5 秒、清單第一項比標題早、≤ 3 秒的空檔（講者會閃一下、沒有畫面的區間）、停留太短、一分鐘超過 5 顆主音效直接改進 plan.json（一處一處試，重跑檢查沒變好就退回；改之前備份 `plan.json.bak-autofix-<時間>`），印「自動修好 N 處：…」和每一處改了什麼。`--check` 剩下的才要處理。剪輯台的「更新預覽」、`--check`、`--review` 不會自動改（使用者在剪輯台改的時間要算數）；回饋輪自己改了段之後要用，加 `--only <這輪改的段>`。
 
-真實範例（75 秒合成測試專案的實際輸出：字幕 #7 還沒拆句、講者在右側、合成影片沒有臉）：
+真實範例（75 秒合成測試專案的實際輸出：字幕 #7 還沒拆句、講者在右側、沒有詞級逐字稿、沒開調光瘦臉）：
 
 ```json
 {"version":1,"speakerBox":[960,260,1640,1000],"sideShift":480,"pipCrop":"auto",
  "scenes":[
   {"id":"s01","scene":"chapter","at":"#5","slots":{"num":"01","title":"場地設定","sub":"一份文件記位置"}},
-  {"id":"s02","scene":"concept","from":"#5","to":"#7e","anchor":"第 5 句","slots":{"tag":"概念","icon":"clipboard-list","text":"**場地設定**：一份文件記位置"}},
+  {"id":"s02","scene":"concept","from":"#5","to":"#7e","anchor":"場地設定","slots":{"tag":"概念","icon":"clipboard-list","text":"**場地設定**：一份文件記位置"}},
   {"id":"s03","scene":"summary","from":"#8","to":"#9e","slots":{"text":"少了這份文件//場佈要多花**半小時**"}},
   {"id":"s04","scene":"side-panel","from":"#11","to":"#13e","slots":{"eyebrow":"剪輯流程","title":"拍完之後//先做**兩件事**","items":["初剪：移除多餘",{"text":"**Whisper** 轉字幕","at":"#12"},{"text":"輸出 **SRT** 檔","at":"#13"}]}},
   {"id":"s05","type":"fx","fx":29,"from":"#14","to":"#15e","bg":"none","vars":{"label":"做了","number":"29","unit":"支影片"}}]}
@@ -305,31 +306,34 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 ```
 專案：projects/<專案>
+版式：橫式 1920×1080（來源：預設）
 HyperFrames <版本>（package.json 釘 <版本>）
-⚠ 音效密度：1 個一分鐘超過 2 顆主音效（0:00–1:00 4 顆；附加音效 click 不算）→ 每分鐘留最重要的 2 顆（chapter、thunder、shine、sparkle、alert、success 先留，ding、impact 先拿掉：那段寫 "sfx": null）
+✖ 文字對時：s02 的 text「場地設定：一份文件記位置」在 0:17.50 出現，「場地設定」0:19.37（#5）才講到 → beats.in 寫 "#5@場地設定"（沒有詞級逐字稿，講到的秒數用字數比例估）
 ⚠ 沒有畫面的區間共 3 段、35.25s → 照 style.md「連續覆蓋」補卡片或情境動畫，或把前一段的 to 延到下一段的 from（0 秒相接）；故意留給講者的就在 plan.json 寫 "rhythm": "spaced"
-⚠ [s02 concept] 音效 pop（17.623s）和 s01 的音效只差 2.427s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 s01 寫 "sfx": null
+⚠ 版面節奏：半螢幕只連續 10 秒（s04，0:38–0:48），至少要 15 秒：切進去馬上又切回講者，畫面會晃 → 把這一段拉長到 ≥ 15 秒（併進前後一行），或改成疊在講者上的字卡
 ⚠ [s03 summary] 和前一段 s02 之間只空 0.50s，講者會閃一下 → s02 改 "to": "#8"（0 秒相接），或拉開到 1.0s 以上
 ⚠ [s04 side-panel] 講者右移 480 後右緣到 2120，超出畫面 → plan.json 設 "sideShift": 0（講者本來就在面板外），或改用 04a 全畫面清單
 ⚠ [s05 fx 29] 和前一段 s04 之間只空 0.50s，講者會閃一下 → s04 改 "to": "#14"（0 秒相接），或拉開到 1.0s 以上
-⚠ 講者瘦臉略過：抽樣 12 格都沒偵測到臉 → 這支只調光；確定有講者就跑 node shared/template/tools/look.mjs run --project projects/<專案> --force
 ⚠ 字幕 #7「提醒我桌子、椅子、電腦、提詞器、攝影機」19 字，超過 18 字 → 在 rough.srt 拆成兩則（斷在標點處）
-id｜情境｜起–迄｜長度｜音效時間｜警告
-s01｜01 章節轉場｜0:14.75–0:17.25｜2.5s｜chapter 0:15.20｜—（放在 #5 前的空檔（3.00s），前後各留 0.25s）
-s02｜06 一般字卡｜0:17.50–0:27.50｜10s｜（pop 已拿掉）｜⚠ 1
-s03｜11 總結字卡｜0:28.00–0:34.50｜6.5s｜pop 0:28.12｜⚠ 1
+ id｜情境｜起–迄｜長度｜音效時間｜警告
+s01｜01 章節轉場｜0:14.75–0:17.25｜2.5s｜chapter 0:15.21｜—（放在 #5 前的空檔（3.00s），前後各留 0.25s）
+s02｜06 一般字卡｜0:17.50–0:27.50｜10s｜—｜—
+s03｜11 總結字卡｜0:28.00–0:34.50｜6.5s｜ding 0:28.12｜⚠ 1
 s04｜03 半版側邊欄｜0:38.50–0:48.50｜10s｜—｜⚠ 1
 s05｜fx 29 數字計數｜0:49.00–0:55.50｜6.5s｜ding 0:50.82｜⚠ 1
 影片長度 1:15.00（75s）
 節奏：continuous（連續覆蓋：每段講解都要有畫面；要留露臉空檔就在 plan.json 寫 "rhythm": "spaced"）
 沒有畫面的區間（> 1.0s）：0:01.00–0:14.75（13.75s）、0:34.50–0:38.50（4.00s）、0:55.50–1:13.00（17.50s）；共 35.25s，佔講解 49.0%
+講者位置：右（中心 x 1300）→ 字卡靠左、半螢幕面板在左、講者右移 480
 音效次數：ding 2、chapter 1、sparkle 0／6、shine 0／3、thunder 0／3
-音效密度：主音效平均 3.2 顆／分（上限：任一分鐘 ≤ 2 顆，超過才 ⚠），附加音效 3 顆
+音效密度：主音效平均 2.4 顆／分（上限：任一分鐘 ≤ 5 顆，超過才 ⚠），附加音效 0 顆
+轉場：疊加卡 2（s02、s03）；章節擦入 1（s01）｜主題：亮色
+結尾配樂：沒配（預設不配；要配就在 plan.json 第一層寫 "outro": { "from": "#N" }，N＝結語金句講完後那一句；確定不配寫 "outro": { "music": null }）
 
-通過：5 段，8 個提醒（⚠）。
+未通過：1 個錯誤（✖），6 個提醒（⚠）。照 → 後面的建議改 plan.json 再跑一次。
 ```
 
-順序：`專案：` → HyperFrames 版本（有 ⚠ 就在工作區根目錄跑 `npm install`）→ ✖ → 整支片的 ⚠（音效密度、沒有畫面的區間）→ 每段的 ⚠ → 講者調光瘦臉的 ⚠ → 字幕的 ⚠ → 每段一列的報告 → 「影片長度」「節奏」「沒有畫面的區間」（有只有聲音的區間時再一行「只有聲音」）→「音效次數」「音效密度」→ 最後一行 `通過：…` 或 `未通過：…`。「沒有畫面的區間」要是「無」才算連續覆蓋；有的話補一段，或把前一段的 `to` 改成下一段的 `from`（0 秒相接）。
+順序：`專案：` → `版式：` → HyperFrames 版本（有 ⚠ 就在工作區根目錄跑 `npm install`）→ ✖ → 整支片的 ⚠（沒有畫面的區間、版面節奏、音效密度、音效稀疏）→ 每段的 ⚠ → 講者調光瘦臉的 ⚠ → 字幕的 ⚠ → 每段一列的報告 → 「影片長度」「節奏」「沒有畫面的區間」（有只有聲音的區間時再一行「只有聲音」）→「講者位置」→「音效次數」「音效密度」→「轉場」「結尾配樂」（用到情緒點、子母畫面時還有「情緒點」「子母畫面的講者小視窗」這類摘要行）→ 最後一行 `通過：…` 或 `未通過：…`。「沒有畫面的區間」要是「無」才算連續覆蓋；有的話補一段，或把前一段的 `to` 改成下一段的 `from`（0 秒相接）。
 
 「音效時間」欄會顯示 `ding 0:12.55 ＋click×2`：前面是主音效與起點，`＋` 後面是這段附加音效（09 答案的 ding、游標點擊）的顆數；被拿掉的主音效寫成 `（ding 已拿掉）`，沒有音效是 `—`。
 
@@ -352,16 +356,15 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 
 | 提醒 | 改法 |
 |---|---|
-| 音效密度：一分鐘 4 顆主音效 | 照 `→` 留最重要的 2 顆（例：s03 寫 `"sfx": null`），或回報說明保留的理由 |
+| ✖ 文字對時：s02 的 text 比「場地設定」早出現 | 照 `→` 在 s02 寫 `"beats": { "in": "#5@場地設定" }`，字卡等講到這個詞才出現。真實專案有詞級逐字稿，秒數會更準 |
 | 沒有畫面的區間 3 段 | 開頭 0:01.00–0:14.75、結尾 0:55.50–1:13.00 補卡片或情境動畫；中間 0:34.50–0:38.50 把 s03 的 `to` 延到 `"#11"`（s04 的 `from`，0 秒相接） |
-| s02 的 pop 已拿掉 | 只是告知：和 s01 的 chapter 只差 2.4 秒。想留 pop 就在 s01 寫 `"sfx": null` |
+| 版面節奏：半螢幕只連續 10 秒 | 照 `→`：s04 拉長到 15 秒以上（併進前後一行），或改成疊在講者上的字卡（style.md「版面不要一直切」那一條） |
 | s03、s05 講者會閃一下 | 照 `→`：s02 的 `to` 改成 `"#8"`、s04 的 `to` 改成 `"#14"`，0 秒相接 |
 | s04 右移後超出畫面 | `"sideShift": 0`。講者框左緣 x1＝960，本來就在面板（x 0–960）外 |
-| 講者瘦臉略過：抽樣 12 格都沒偵測到臉 | 合成影片沒有臉，只調光是正常的；真實專案畫面裡明明有講者，才照 `→` 加 `--force` 重跑（第 7 節） |
 | 字幕 #7 超過 18 字 | 在 rough.srt 拆句（2.4），改完重新對 plan.json 的句號 |
 | 字幕含句中標點、字幕不到 0.6 秒 | 照 4.2 那兩列的 → 改（style.md「字幕」） |
 
-這份是手寫 plan.json 直接 `--check`；走 `--merge-drafts` 時，「講者會閃一下」這兩則會先自動修掉（上面那段），沒有畫面的區間只有中間 4.00 秒那段超過 3 秒，要自己補。
+這份是手寫 plan.json 直接 `--check`；走 `--merge-drafts` 時，「文字對時」那一則和「講者會閃一下」那兩則會先自動修掉（上面那段），沒有畫面的區間只有中間 4.00 秒那段超過 3 秒，要自己補。
 
 ### 4.2 常見訊息
 
@@ -404,30 +407,30 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `outro.music：「…」不是配樂（可用：bgm-cylinder-five）→ 改成可用的配樂名稱，或寫 null 不配` | ✖ | 照 → 改 |
 | `sfx：只能是 … 或 null，現在是「…」→ 改成清單裡的名稱（跑 build.mjs --list 看每顆的用途），或寫 null 不放音效` | ✖ | 照 → 改 |
 | `src「compositions/x-process.html」已經給 x01 用了 → 複製成另一個檔名…` | ✖ | 同一支情境動畫不能登記兩段 |
-| `音效密度：N 個一分鐘超過 2 顆主音效（…）→ 每分鐘留最重要的 2 顆…` | ⚠ | 只有段上明寫的 `sfx` 才會超過（其他的 build 自動拿掉）；`--autofix` 會照同一個優先序在最不重要的那段寫 `"sfx": null`（章節音效、使用者在分鏡表改過的不動），剩下的回報說明保留的理由 |
+| `音效密度：N 個一分鐘超過 5 顆主音效（…）→ 每分鐘留最重要的 5 顆…` | ⚠ | 只有段上明寫的 `sfx` 才會超過（其他的 build 自動拿掉）；`--autofix` 會照同一個優先序在最不重要的那段寫 `"sfx": null`（章節音效、使用者在分鏡表改過的不動），剩下的回報說明保留的理由 |
 | `音效稀疏：0:00.00–3:33.41（213 秒：x10、x11…）沒有主音效 → …` | ⚠ | 每個空檔都補一顆：括號裡的情境動畫在結果那拍寫 `P.sfx('success', '#N@詞')`（壞事 `alert`），錄影段寫 `"sfx": { "name": "success", "at": "#Ne-0.1" }` |
 | `最後一個內容在第 Xs，到退場只停 Ys，建議 ≥ 1.5s` | ⚠ | 後面有空、或下一段能一起往後挪時 `--autofix` 會自動延；剩下的 `to` 往後延一句，或請使用者決定 |
 | `slots.items[0].at：…比 beats.head…還早` | ⚠ | 第一項不寫 `at` |
-| `音效 pop（…s）和 s01 的音效只差 2.427s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 s01 寫 "sfx": null` | ⚠ | 只是告知；想保留後一個，就照 `→` 在前一段寫 `"sfx": null` |
+| `音效 ding（…s）和 s01 的音效只差 2.427s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 s01 寫 "sfx": null` | ⚠ | 只是告知；想保留後一個，就照 `→` 在前一段寫 `"sfx": null` |
 | `和 X 時間重疊 Ns → 一段只放一個情境` | ⚠ | ≤ 0.5 秒的 `--autofix` 會自動錯開；更長的錯開時間 |
 | `只有聲音的區間 …–… 有 Ns 沒有畫面（全黑，講者不在）→ 跑 … media.mjs scan …` | ✖（> 1 秒；0.1–1 秒是 ⚠） | 照第 5 節配一段螢幕錄影或圖片，`from`／`to` 蓋住這個區間；或用不透明的全畫面情境（04 家族）蓋住 |
 | `src：找不到 assets/screen/… → 檔名要和專案的 assets/ 資料夾裡一模一樣（現有：…）` | ✖ | 照括號裡的現有檔名改；路徑相對專案資料夾，開頭是 `assets/` |
 | `素材 … 長 Ns；從第 Ns 起播 Ns 要用到第 Ns → to 提早、in 改小，或 speed 改小` | ✖ | 錄影不夠長：`in` 往前、`to` 提早，或拆成兩段 media |
 | `… [x, y, w, h] 超出素材範圍 W×H → 座標是素材原尺寸的像素…` | ✖ | 用 `media.mjs frame --grid` 重讀座標（5.4），不要用 1920×1080 的畫面座標 |
 | `marks：… 同時有 N 個紅框（最多 2 個）` | ✖ | 位置相近的合成一個大框，或錯開 `at`／`until`（5.5） |
-| `錄影 Ns 沒有任何標註或運鏡 → 講解講到畫面上的東西…` | ⚠ | 照 `auto-edit-screen` 步驟 3–4 讀座標、加紅框／說明卡／STEP（style.md「螢幕錄影與圖片」）；只對好 `in` 不算配完 |
+| `錄影 Ns 沒有任何標註或運鏡 → 講解講到畫面上的東西…` | ⚠ | 照 `auto-edit-screen` 步驟 3 讀座標、加紅框／說明卡／STEP（style.md「螢幕錄影與圖片」）；只對好 `in` 不算配完 |
 | `在插入素材 X（…）播放期間出現，會被素材蓋住看不到` | ✖ | 下方字卡、側邊欄不能放在 media 段期間；移到前後，或把 media 拆成兩段 |
 | `和 X 時間重疊 Ns：整張幕（插入素材、全畫面、章節轉場、不透明字卡）同一時間只能有一張` | ✖ | 前一段 `to` 提早到後一段的 `from`（剛好接上就好，build 會處理接縫） |
 | `marks[i] 在畫面上會被右下角的子母畫面擋住` | ⚠ | 這段寫 `"pip": false`，或用 `moves` 把那一塊推到畫面中間 |
 | `整段都在 edit.cuts 剪掉的範圍裡，已拿掉` | ⚠ | 使用者在剪輯台剪掉了這段講解；不要這段就從 plan.json 刪掉，要留就請使用者在剪輯台改 |
 | `edit.joins[i]：at Ns 不在剪接點上（最近的是 Ns）` | ⚠ | 剪輯台的轉場沒對到剪接點；請使用者在剪輯台重新選，或改成括號裡的秒數 |
-| `瘦臉底片不是最新的（<原因>；預估 N 分…；不要瘦臉就在 plan.json 寫 "look": { "slim": 0 }）→ 先跑 node shared/template/tools/look.mjs run --project …` | ✖ | 照 `→` 後面的指令跑（預估超過 2 分鐘時它已經帶 `--background`，用 `look.mjs status` 看進度），跑完再 build |
+| `瘦臉底片不是最新的（<原因>；預估 N 分…；不要瘦臉就在 plan.json 寫 "look": { "slim": 0 }）→ 先跑 node shared/template/tools/look.mjs run --project …` | ✖ | 照 `→` 後面的指令跑（印「⏳ 還在跑」就再跑同一條，會接著等），跑完再 build |
 | `⚠ 講者瘦臉略過：臉寬中位數 N px < 60 px…，只調光` | ⚠ | 畫面裡的臉太小，瘦臉看不出來，是正常的；回報時說明 |
 | `⚠ 講者瘦臉略過：偵測率 N%（< 80%），只調光 → …` | ⚠ | 看 `work/look-preview.jpg`；講者常轉身、遮臉時會這樣。確定不要就寫 `"look": { "slim": 0 }` |
 | `⚠ 講者瘦臉略過：抽樣 12 格都沒偵測到臉 → 這支只調光；確定有講者就跑 … look.mjs run --project … --force` | ⚠ | 只有聲音或講者沒入鏡的影片是正常的；畫面裡明明有講者才照 `→` 重跑 |
 | `⚠ 講者瘦臉略過：找不到 shared/template/vendor/mediapipe/…，只調光 → node shared/template/tools/look.mjs ensure` | ⚠ | 跑 `node shared/template/tools/look.mjs ensure` 看缺哪個檔，照它的 → 做（`setup/troubleshooting.md`） |
 | `⚠ 講者瘦臉略過：找不到 HyperFrames 的 Chrome，只調光 → npx hyperframes browser ensure` | ⚠ | 照 `→` 跑，再 build |
-| `⚠ 講者瘦臉還在跑（look.mjs run，pid …）→ 等 … 顯示「完成」再 build` | ⚠ | 背景的 `look.mjs run` 還沒跑完：每 30 秒跑一次 `look.mjs status`，「完成」後再 build |
+| `⚠ 講者瘦臉還在跑（look.mjs run，pid …；跑這條會接著等，做完再 build）→ node shared/template/tools/look.mjs run --project …` | ⚠ | 背景的 `look.mjs run` 還沒跑完：跑 → 後面那一條（會接著等，不用每 30 秒查 `look.mjs status`），做完再 build |
 | `⚠ 瘦臉還沒套到底片（…），這次先用 work/rough.mp4 → …` | ⚠ | 這次 build 先用沒瘦臉的底片；照 `→` 跑完 `look.mjs run` 再 build |
 | `look.slim 要是 0–1.2 的數字…` 這類 `look…` 開頭的訊息 | ✖ | 照訊息改 plan.json 的 `look`（只能寫 `color`、`slim`、`beauty`） |
 | `✖ s21 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 1:56.14–2:33.51 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/<專案> 照它印的做`（`qc.mjs storyboard`、`qc.mjs final`；另一種是「講者小視窗在 m:ss.ss 就沒了（段到 …）」） | ✖ | 不是版面的問題，不要改 plan.json；照 → 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報 |
@@ -594,7 +597,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 - 第一層的 `frame`（構圖台拖的框；停點 ② 還沒有 plan.json 時會新建）：換框時已經有的 `speakerBox`、`pipCrop`（陣列）會跟著換算成同一塊畫面，不用重量。
 - 任何段落的 `sfxVolume`、`"sfx": null`（靜音），以及 `slots`／`vars` 的文字。
 - media 段的 `from`／`to`／`in`／`anchor`／`enter`／`exit`／`volume`。拖到字幕邊界時寫 `"#N"`／`"#Ne"`，沒對到字幕時寫秒數並拿掉 `anchor`；兩種都能直接 build。
-- `work/rough.srt` 的字幕文字與時間，也可能新增、分割、合併、刪除字幕；句子數量變了，剪輯台會把 plan.json 所有 `#N` 一起重新對好，`work/storyboard.md` 的句號會過期，以 plan.json 為準。
+- `work/rough.srt` 的字幕文字與時間，也可能新增、分割、合併、刪除字幕；句子數量變了，剪輯台會把 plan.json 所有 `#N` 一起重新對好。
 
 ### 6.1 `edit` 的欄位
 
@@ -652,21 +655,23 @@ node shared/template/tools/build.mjs --project projects/<專案> --check --json
 指令（完整說明：`node shared/template/tools/look.mjs --help`）：
 
 - 看狀態與下一步：`node shared/template/tools/look.mjs status --project projects/<專案>`（只讀，不寫任何檔；「→ 下一步」下面那一行就是要跑的指令）
-- 偵測＋瘦臉：`node shared/template/tools/look.mjs run --project projects/<專案>`；預估超過 2 分鐘加 `--background`，再用 `status` 看進度
+- 偵測＋瘦臉：`node shared/template/tools/look.mjs run --project projects/<專案>`（在背景跑、前景最多等 9 分鐘；印「⏳ 還在跑」就再跑同一條，會接著等、不會重做）
+- 取消背景的偵測：`node shared/template/tools/look.mjs cancel --project projects/<專案>`（瘦臉底片不換上去）
 - 只重畫對照圖：`node shared/template/tools/look.mjs preview --project projects/<專案>`
 - 檢查臉部偵測的檔案：`node shared/template/tools/look.mjs ensure`
+- 改工作區的預設（以後每一集都用）：`node shared/template/tools/look.mjs default --color 0.8 --slim 0.6`（只寫要改的；不帶值＝印目前的預設）
 
-plan.json 的寫法（使用者要求才寫）：
+這一集的寫法（使用者要求才寫；用 `build.mjs --set`，只動寫到的鍵，其他照舊）：
 
-| 使用者說 | 寫 |
+| 使用者說 | 跑 |
 |---|---|
-| 要調光、瘦臉 | `"look": { "color": 0.8, "slim": 0.6 }`（改完跑 `look.mjs run`） |
-| 只要調光 | `"look": { "color": 0.8 }` |
-| 只要瘦臉 | `"look": { "slim": 0.6 }`（改完跑 `look.mjs run`） |
-| 要美顏（磨皮、提亮、淡化黑眼圈） | `look` 加 `"beauty": 0.5`（0–1；改完跑 `look.mjs run`） |
-| 調光淡一點 | `"look": { "color": 0.5, "slim": <原本的值> }` |
-| 瘦一點／不要那麼瘦 | `"look": { "color": <原本的值>, "slim": 0.8 }`／`0.3`（改完跑 `look.mjs run`） |
-| 都不要（kit 預設被改成開的時候） | `"look": false` |
+| 要調光、瘦臉 | `node shared/template/tools/build.mjs --project projects/<專案> --set "look.color=0.8;look.slim=0.6"`（改完跑 `look.mjs run`） |
+| 只要調光 | `--set look.color=0.8` |
+| 只要瘦臉 | `--set look.slim=0.6`（改完跑 `look.mjs run`） |
+| 要美顏（磨皮、提亮、淡化黑眼圈） | `--set look.beauty=0.5`（0–1；改完跑 `look.mjs run`） |
+| 調光淡一點 | `--set look.color=0.5` |
+| 瘦一點／不要那麼瘦 | `--set look.slim=0.8`／`0.3`（改完跑 `look.mjs run`） |
+| 都不要（kit 預設被改成開的時候） | `--set look=off` |
 
 - 自動略過瘦臉（只調光）：臉寬 < 60 px（畫面裡的臉太小）、抽樣 12 格都沒偵測到臉（確定有講者就加 `--force`）、偵測率 < 80 %、找不到臉部偵測的檔案或 Chrome。build 會印 ⚠ 和原因，不用處理。
 - 側臉時瘦臉自動減半、偵測不到的格自動淡掉，不會一格有一格沒有。

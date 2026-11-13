@@ -1,12 +1,12 @@
 // 時間準確度：關鍵詞對齊（"#N@詞"）＋ 字幕起點對齊開口（media.mjs snap-srt）
 // snap-srt 的音訊全部用 ffmpeg aevalsrc 現場合成（已知開口時間），驗證對齊誤差 ≤ 50ms
-import { test, before } from 'node:test';
+import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { lib, imp, TOOLS } from './helpers.mjs';
+import { lib, imp, TOOLS, tmpDir, missingTools, skipAll } from './helpers.mjs';
 
 const T = await imp('lib/time.mjs');
 const { resolvePlan } = await imp('lib/plan.mjs');
@@ -187,8 +187,11 @@ const P = (proj) => ({ project: proj });
 const quiet = () => {};
 
 before(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-timing-')); });
+after(() => { if (root) fs.rmSync(root, { recursive: true, force: true }); });
+// snap-srt 的測試要 ffmpeg 合成聲音：沒有就略過這幾個
+const ffTest = skipAll(test, await missingTools('ffmpeg'));
 
-test('snap-srt：字幕故意偏早 1 秒，對齊後開口誤差 ≤ 50ms；音量大小不影響（門檻是相對的）', () => {
+ffTest('snap-srt：字幕故意偏早 1 秒，對齊後開口誤差 ≤ 50ms；音量大小不影響（門檻是相對的）', () => {
   const ranges = [[1, 3], [4.2, 6.5], [7, 9], [10.5, 12]];
   for (const amp of [0.5, 0.05, 0.005]) {
     const proj = project(`syn-${amp}`, { ranges, amp, dur: 14, srt: [[0, 1.9, '第一句'], [3.2, 5.2, '第二句'], [6.0, 8.1, '第三句'], [9.6, 12.9, '第四句']] });
@@ -198,7 +201,7 @@ test('snap-srt：字幕故意偏早 1 秒，對齊後開口誤差 ≤ 50ms；音
   }
 });
 
-test('snap-srt：結尾拖進靜音超過 0.4 秒 → 收到說話結束＋0.15；不重疊、每則 ≥ 0.6 秒、順序不變', () => {
+ffTest('snap-srt：結尾拖進靜音超過 0.4 秒 → 收到說話結束＋0.15；不重疊、每則 ≥ 0.6 秒、順序不變', () => {
   const proj = project('syn-end', { ranges: [[1, 3], [4.2, 6.5], [7, 9], [10.5, 12]], dur: 14, srt: [[0, 1.9, '一'], [3.2, 5.2, '二'], [6.0, 8.1, '三'], [9.6, 12.9, '四']] });
   const { rows } = M.snapSrt(P(proj), { dryRun: true, log: quiet });
   assert.ok(Math.abs(rows[3].end - 12.15) <= 0.05, `第 4 則結尾 ${rows[3].end}`);
@@ -209,7 +212,7 @@ test('snap-srt：結尾拖進靜音超過 0.4 秒 → 收到說話結束＋0.15�
   });
 });
 
-test('snap-srt：已經對準的不動（差 ≤ 0.25 秒）；窗外的不動；沒有任何調整時不寫檔也不備份', () => {
+ffTest('snap-srt：已經對準的不動（差 ≤ 0.25 秒）；窗外的不動；沒有任何調整時不寫檔也不備份', () => {
   const proj = project('syn-ok', { ranges: [[1, 3], [4.2, 6.5], [7, 9]], dur: 11, srt: [[1.1, 3, '一'], [4.3, 6.5, '二'], [7.2, 9, '三']] });
   const r = M.snapSrt(P(proj), { log: quiet });
   assert.equal(r.changed.length, 0);
@@ -220,7 +223,7 @@ test('snap-srt：已經對準的不動（差 ≤ 0.25 秒）；窗外的不動�
   assert.equal(M.snapSrt(P(far), { dryRun: true, log: quiet }).rows[0].dStart, 0);
 });
 
-test('snap-srt：寫回前備份成 rough.srt.bak-<時間戳>（新檔，原檔內容一字不差）；文字與格式原樣保留；--dry-run 不寫；不刪任何檔', () => {
+ffTest('snap-srt：寫回前備份成 rough.srt.bak-<時間戳>（新檔，原檔內容一字不差）；文字與格式原樣保留；--dry-run 不寫；不刪任何檔', () => {
   const srt = [[0, 1.9, '第一句，有逗號'], [3.2, 5.2, '第二句'], [6.0, 8.1, '第三句']];
   const proj = project('syn-write', { ranges: [[1, 3], [4.2, 6.5], [7, 9]], dur: 11, srt });
   const f = path.join(proj, 'work', 'rough.srt');
@@ -267,7 +270,7 @@ test('snapCues（純函式）：起點撞到鄰居就退回原值，不重疊；
   assert.equal(M.snapCues([{ n: 1, start: 2, end: 4, text: 'a' }], [[1.3, 3]]).rows[0].dStart, 0);
 });
 
-test('snap-srt：缺檔、沒有聲音、整段靜音都給 ✖ 風格的中文訊息', () => {
+ffTest('snap-srt：缺檔、沒有聲音、整段靜音都給 ✖ 風格的中文訊息', () => {
   const none = path.join(root, 'projects', 'empty');
   fs.mkdirSync(path.join(none, 'work'), { recursive: true });
   assert.throws(() => M.snapSrt(P(none), { log: quiet }), /找不到.*rough\.srt → 先跑/);
@@ -280,7 +283,7 @@ test('snap-srt：缺檔、沒有聲音、整段靜音都給 ✖ 風格的中文�
   assert.throws(() => M.snapSrt(P(none), { below: 'abc', log: quiet }), /--below 要是/);
 });
 
-test('CLI：snap-srt --dry-run 印調整表、--help 有說明、build 不會呼叫它', () => {
+ffTest('CLI：snap-srt --dry-run 印調整表、--help 有說明、build 不會呼叫它', () => {
   const proj = project('syn-cli', { ranges: [[1, 3], [4.2, 6.5]], dur: 8, srt: [[0, 1.9, '一'], [3.2, 5.2, '二']] });
   const run = (...a) => spawnSync(process.execPath, [path.join(TOOLS, 'media.mjs'), ...a], { encoding: 'utf8', cwd: root });
   const r = run('snap-srt', '--project', proj, '--dry-run');
@@ -312,14 +315,14 @@ test('scanCueRefs：只看 <template> 的 <script>；註解裡的不算；單雙
     window.__timelines['x-a'] = gsap.timeline({ paused: true });
   </script></template></body></html>`;
   assert.deepEqual(scanCueRefs(html), ['#18', '#18@逐字稿', '#20e']);
-  const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'hf-scan-')), 'x-a.html');
+  const f = path.join(tmpDir(null, 'hf-scan-'), 'x-a.html');
   fs.writeFileSync(f, html);
   assert.deepEqual(readCustom(f, 'x-a').refs, ['#18', '#18@逐字稿', '#20e']);
 });
 
 test('cues.md §6 的 002 端：refs[#18] 等於 from #18 算出的起點；#18@逐字稿＝cueSeconds；#99 ✖', () => {
   const cs = parseSrt('17\n00:00:40,000 --> 00:00:42,900\n先錄影\n\n18\n00:00:43,200 --> 00:00:45,600\n轉成逐字稿\n\n19\n00:00:46,200 --> 00:00:48,400\n再校正\n\n20\n00:00:49,200 --> 00:00:51,800\n最後剪輯\n');
-  const od = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-cues-'));
+  const od = tmpDir(null, 'hf-cues-');
   fs.mkdirSync(path.join(od, 'compositions'));
   fs.writeFileSync(path.join(od, 'compositions', 'x-process.html'), `<template><div id="x-process" data-composition-id="x-process"></div><script>P.at('#18'); P.at('#18@逐字稿'); P.at('#99'); window.__timelines['x-process'] = gsap.timeline({ paused: true });</script></template>`);
   const go = (scenes) => resolvePlan({ plan: { version: 1, scenes }, cues: cs, videoDur: 60, lib: L, outDir: od });
@@ -370,7 +373,7 @@ test('cueSeconds：有 cues.words 時 #N@詞 用真實時間；找不到詞、�
 
 test('attachWords：transcript.json 比 rough.mp4 舊、長度對不上、格式錯 → 不掛並記原因；plan 有 #N@詞 時一則 ⚠', async () => {
   const { attachWords } = await imp('build.mjs');
-  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-words-'));
+  const d = tmpDir(null, 'hf-words-');
   const tj = path.join(d, 'transcript.json'), video = path.join(d, 'rough.mp4');
   const srt = '1\n00:00:01,000 --> 00:00:03,000\n第一句放到電腦\n';
   fs.writeFileSync(video, 'x');

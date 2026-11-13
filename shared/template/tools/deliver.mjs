@@ -7,15 +7,19 @@
 // workers 2 是 158、168、174 秒，CPU 約 480 秒；workers 2＋nice 10 是 137、188、196 秒，CPU 約 460 秒。差距比負載造成的誤差小；影音 md5 和自動 worker 相同。
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { pathsFrom } from './build.mjs';
+import { pathsFrom } from './lib/project.mjs';
 import { runJob, jobState, clearJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
 import {
   runDeliver, runPrerender, cancelPrerender, prerenderInfo, prerenderBlocked, prerenderCanPatch, contentFingerprint, finalIsCurrent, lockHolder, killTree, reapRender,
-  cliDeps, newJob, deliverPaths, QUALITY, FPS, PRERENDER, RESOLUTIONS, planCheckJson,
+  cliDeps, newJob, deliverPaths, QUALITY, FPS, PRERENDER, RESOLUTIONS,
 } from './lib/deliver.mjs';
+import { report, next, cmdLine } from './lib/say.mjs';
+import { mainTry, stopLine } from './lib/tries.mjs';
+import { splitFlag, valueOf, oneOf, saidOf, isMain } from './lib/cli.mjs';
+import { isSummaryLine, isSfxWarn } from './lib/build-summary.mjs';
+import { clock1 } from './lib/time.mjs';
 
-const SELF = fileURLToPath(import.meta.url);
+const DELIVER_STALL_MIN = 20;   // render 一個百分比就要好幾分鐘（長片），比預設的 10 分鐘寬一點
 const HELP = `輸出完成影片（一條指令跑完測試片段、整支、驗收；要 Node 22、ffmpeg、HyperFrames）
 
   node shared/template/tools/deliver.mjs --project projects/<專案>              輸出 output/final.mp4 並驗收（結束碼 0 做完、1 失敗、${STILL_RUNNING} 還在跑）
@@ -23,7 +27,10 @@ const HELP = `輸出完成影片（一條指令跑完測試片段、整支、驗
   node shared/template/tools/deliver.mjs --project projects/<專案> --cancel     取消背景的輸出和預先 render（連 Chrome 一起收，上一支 final.mp4 不動）
 
 等待：前景最多等 ${DEFAULT_WAIT} 秒（--wait <秒> 可改）；超過時背景繼續，再跑一次同一條指令會接著等，不會重跑。進度每 10% 一行，render 全文在 work/render.log。
-選項： --quality looks（預設）； --fps 30（預設）； --force（內容沒變也重新 render）； --said "<使用者原話>"（寫進停點紀錄）
+  log 和 work/render.log 超過 ${DELIVER_STALL_MIN} 分鐘沒有新內容時，「⏳ 還在跑」下面多一行 ⚠ 和取消指令。
+做完：最後印回報段（照貼給使用者；每個 ⚠ 補「刻意／要修」），附 final.mp4 和驗收截圖。連續 4 次沒過印「→ 停手」。
+內容沒變、上次驗收過（剪輯台按過「輸出完成影片」也算）：印「✓ 已經是最新的」和上次的驗收結果，不重新輸出、不重跑驗收。
+選項： --quality looks（預設）； --fps 30（預設）； --force（內容沒變也重新 render、重跑驗收）； --said "<使用者原話>"（寫進停點紀錄；--say 也收）
 畫素與字幕（使用者指定才加；預設 1080p、字幕燒進影片）： --resolution 4k（畫面更銳利，輸出時間和檔案大小都多好幾倍，磁碟要夠放影格暫存）；
   --no-captions（字幕不燒進影片，另存 output/final.srt）。加了這兩個就不接手預先 render、不走只重畫幾段，整支重新輸出。
 預先 render：--workers <N>（預設 ${PRERENDER.workers}）。內容的指紋（plan.json、rough.srt、合成、kit、assets）相同且做完 → 直接搬成 final.mp4、跑驗收；
@@ -31,57 +38,77 @@ const HELP = `輸出完成影片（一條指令跑完測試片段、整支、驗
 只改了幾段時，輸出和預先 render 都只重畫改到的時間窗、接回上一支（通常不到一分鐘）；不是局部改動就印一行原因、整支重新 render。--force 一律整支。
 記憶體 8 GB 以下、磁碟剩不到 20 GB 不跑。`;
 
-const VALUE_FLAGS = ['project', 'template', 'quality', 'fps', 'wait', 'workers', 'said', 'resolution'];
+const VALUE_FLAGS = ['project', 'template', 'quality', 'fps', 'wait', 'workers', 'said', 'say', 'resolution'];
 const BOOL_FLAGS = ['prerender', 'cancel', 'force', 'help', 'no-captions'];
 const QUALITIES = ['draft', 'looks', 'delivery', 'standard', 'high'];
+const MODES = ['prerender', 'cancel'];   // 一次只能做一件；--force、--wait 這些修飾旗標照舊能搭配
+const USAGE = '→ 看用法：node shared/template/tools/deliver.mjs --help';
 
 export function parseDeliverArgs(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (!a.startsWith('--')) throw new Error(`看不懂的參數「${a}」→ 看用法：node shared/template/tools/deliver.mjs --help`);
-    const [k, inline] = a.slice(2).split(/=(.*)/s);
+    if (!a.startsWith('--')) throw new Error(`看不懂的參數「${a}」${USAGE}`);
+    const [k, inline] = splitFlag(a);
     if (VALUE_FLAGS.includes(k)) {
-      const v = inline ?? argv[++i];
-      if (v == null) throw new Error(`--${k} 後面要接值 → 看用法：node shared/template/tools/deliver.mjs --help`);
-      flags[k] = v;
+      try { [flags[k], i] = valueOf(argv, i, k, inline); } catch (e) { throw new Error(`${e.message} ${USAGE}`); }
     } else if (BOOL_FLAGS.includes(k)) flags[k] = true;
-    else throw new Error(`沒有 --${k} 這個參數 → 看用法：node shared/template/tools/deliver.mjs --help`);
+    else throw new Error(`沒有 --${k} 這個參數 ${USAGE}`);
   }
+  oneOf(flags, MODES);
   for (const k of ['wait', 'workers', 'fps']) if (flags[k] != null && !/^\d+$/.test(String(flags[k]))) throw new Error(`--${k} 要寫數字，現在是「${flags[k]}」→ 例：--${k} ${k === 'wait' ? 300 : k === 'fps' ? 30 : 2}`);
   if (flags.quality != null && !QUALITIES.includes(flags.quality)) throw new Error(`--quality 只能是 ${QUALITIES.join('、')}，現在是「${flags.quality}」→ 交付一律用 looks`);
   if (flags.resolution != null && !RESOLUTIONS.includes(String(flags.resolution).toLowerCase())) throw new Error(`--resolution 只能是 ${RESOLUTIONS.join('、')}，現在是「${flags.resolution}」`);
   if (flags.resolution) flags.resolution = String(flags.resolution).toLowerCase();
   if (flags.prerender && (flags.resolution || flags['no-captions'])) throw new Error('預先 render 只做 1080p＋燒字幕：--prerender 不能加 --resolution、--no-captions');
-  if (flags.prerender && flags.cancel) throw new Error('--prerender 和 --cancel 只能選一個 → 看用法：node shared/template/tools/deliver.mjs --help');
   return flags;
 }
 
 const relTo = (f) => path.relative(process.cwd(), f).split(path.sep).join('/') || '.';
-const mmss = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;
+const mmss = clock1;
 const mb = (n) => (n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} GB` : `${Math.round(n / 1024 ** 2)} MB`);
 const elapsed = (ms) => { const s = Math.round(ms / 1000); return s >= 60 ? `${Math.floor(s / 60)} 分 ${s % 60} 秒` : `${s} 秒`; };
 
-// build 報告裡 AGENTS.md 要求回報的那幾行（沒開、沒配也有一行）
-const BUILD_LINE = /^(?:人聲響度|音效比例|剪接點微淡化|講者調光|講者瘦臉|結尾配樂)|^⚠ .*音效(?:次數|密度|稀疏|比例)/;
-export const buildSummary = (log) => String(log).split(/\r?\n/).filter((l) => BUILD_LINE.test(l));
+// build 報告裡 AGENTS.md 要求回報的那幾行（沒開、沒配也有一行）：六行摘要和音效的 ⚠ 怎麼認只有 lib/build-summary.mjs 那一份
+export const buildSummary = (log) => String(log).split(/\r?\n/).filter((l) => isSummaryLine(l) || isSfxWarn(l));
 
 const noMark = (s) => String(s).replace(/^✖\s*/, '');
 const SOURCE = { render: '這次 render', incremental: '只重畫改到的地方，接回上一支', prerender: '預先 render（沒有重新 render）', same: '上次輸出的（內容沒變，沒有重新 render）' };
 
-export function finishLines(P, job, fileStat) {
+// 回報段（A3）：照 auto-edit-deliver 的「回報格式」，工具知道的都填好；每個 ⚠ 的「刻意／要修」留給 AI 補。沒有停點，最後一行是「→ 完成」
+const shortWarn = (w) => { const s = String(w).replace(/^⚠\s*/, '').split(/\s*→\s/)[0]; return s.length > 90 ? `${s.slice(0, 89)}…` : s; };
+function reportLines(P, job, { avFacts, built }) {
+  const F = deliverPaths(P.project), q = job.qc || {};
+  const okN = (q.checks || []).filter((c) => c.level === 'ok').length;
+  const lines = [
+    `完成影片輸出完成：${relTo(F.final)}${q.duration?.actual != null ? `（${q.duration.actual.toFixed(1)}s）` : ''}`,
+    `驗證：${avFacts.join('，') || '—'}；${SOURCE[job.source] || job.source || '—'}`,
+    `qc final：${okN ? `✓ ${okN} 項、` : ''}⚠ ${q.warnings ?? job.warnings.length} 項、✖ ${q.errors ?? 0} 項${job.reused ? '（上次驗收的結果）' : ''}`,
+    ...job.warnings.map((w) => `⚠ 說明：${shortWarn(w)}｜刻意／要修：<理由>`),
+    built.length ? `${built.join('；')}（build 原文；和停點 ④ 報過的一樣就刪掉這行）` : null,
+    q.sheet ? relTo(F.sheet) : null,
+    job.youtube ? `YouTube 說明欄：${relTo(job.youtube.file)}（整段貼到說明欄）` : null,
+  ].filter(Boolean);
+  const done = job.warnings.length ? '→ 完成（有標「要修」的 ⚠ 時改寫：→ 下一個停點：④ 完成影片預覽（說「改 <段>」開始））' : '→ 完成';
+  return report(lines, { assets: [F.final, q.sheet ? F.sheet : null].filter(Boolean).map((f) => path.resolve(f)), stop: done });
+}
+
+// built：build 摘要那幾行（buildSummary），放進回報段
+export function finishLines(P, job, fileStat, { built = [] } = {}) {
   const F = deliverPaths(P.project), L = [''];
   const q = job.qc, fmt = q?.format;
   if (job.ok || q) {
-    const facts = [q?.duration?.actual != null ? `${mmss(q.duration.actual)}（${q.duration.actual.toFixed(1)} 秒）` : null, fmt ? `${fmt.width}×${fmt.height}、${Math.round(fmt.fps)}fps、${fmt.hasAudio ? '有音軌' : '沒有音軌'}` : null, fileStat ? mb(fileStat.size) : null].filter(Boolean);
-    L.push(`${job.ok ? '✔' : '✖'} 完成影片：${relTo(F.final)}（${facts.join('，')}）`);
+    if (job.ok && job.reused) L.push('✓ 已經是最新的：output/final.mp4（內容沒變，不重新輸出；要強制重做加 --force）');
+    const avFacts = [fmt ? `${fmt.width}×${fmt.height}、${Math.round(fmt.fps)}fps、${fmt.hasAudio ? '有音軌' : '沒有音軌'}` : null, fileStat ? mb(fileStat.size) : null].filter(Boolean);
+    const facts = [q?.duration?.actual != null ? `${mmss(q.duration.actual)}（${q.duration.actual.toFixed(1)} 秒）` : null, ...avFacts];
+    L.push(`${job.ok ? '✓' : '✖'} 完成影片：${relTo(F.final)}（${facts.filter(Boolean).join('，')}）`);
     if (job.source) L.push(`來源：${SOURCE[job.source] || job.source}；用了 ${elapsed(Date.now() - job.startedAt)}`);
     L.push(`驗收：${q?.errors ?? job.errors.length} 個 ✖、${q?.warnings ?? job.warnings.length} 個 ⚠`);
     for (const e of job.errors) L.push(`✖ ${noMark(e)}`);
     for (const w of job.warnings) L.push(`⚠ ${w}`);
     if (q?.sheet) L.push(`驗收截圖：${relTo(F.sheet)}`);
     if (job.ok && job.youtube) L.push(`YouTube 說明欄：${relTo(job.youtube.file)}（${[job.youtube.chapters ? `章節時間戳 ${job.youtube.chapters} 個` : null, job.youtube.credit ? '配樂出處' : null].filter(Boolean).join('、')}；整段貼到說明欄）`);
-    if (job.ok) L.push('→ 完成：把上面幾行和驗收截圖回報給使用者，每個 ⚠ 寫「刻意」或「要修」');
+    if (job.ok) L.push(...reportLines(P, job, { avFacts, built }));
     else L.push(`→ ${job.fix}`);
     return L;
   }
@@ -96,20 +123,20 @@ async function deliverChild(P, flags) {
   const job = newJob();
   const say = (s) => console.log(s);
   const deps = cliDeps(P, job, { say });
-  let shown = 0;
+  let shown = 0, built = [];
   const t0 = Date.now();
   await runDeliver(P, job, {
-    ...deps, say, by: 'cli', force: !!flags.force, checkJson: () => planCheckJson(P), said: flags.said || '輸出完成影片（deliver.mjs）',
+    ...deps, say, by: 'cli', force: !!flags.force, checkJson: async () => (await import('./lib/check-project.mjs')).checkProject(P.project), said: saidOf(flags) || '輸出完成影片（deliver.mjs）',
     quality: flags.quality, fps: flags.fps ? Number(flags.fps) : undefined, resolution: flags.resolution, captions: flags['no-captions'] ? 'off' : undefined,
     renderEnv: { HYPERFRAMES_RENDER_DETACHED: '1' },    // 工作行程的爸爸（前景那條指令）會先結束；不加這個 render 會自己取消（render_cancelled_parent_exited）
-    onBuilt: (log) => { for (const l of buildSummary(log)) say(l); },
+    onBuilt: (log) => { built = buildSummary(log); for (const l of built) say(l); },
     onPercent: (p) => {
       const tens = Math.floor(p / 10) * 10;
       if (tens > shown) { shown = tens; say(`  ${tens}%（已 ${elapsed(Date.now() - t0)}）`); }
     },
   });
   const st = (() => { try { return fs.statSync(deliverPaths(P.project).final); } catch { return null; } })();
-  for (const l of finishLines(P, job, st)) say(l);
+  for (const l of finishLines(P, job, st, { built })) say(l);
   return job.ok ? 0 : 1;
 }
 
@@ -140,7 +167,7 @@ export async function startPrerender(P, flags, { log = console.log, argv = proce
   }
   clearJob(P.project, 'prerender');
   await runJob({ project: P.project, name: 'prerender', argv, waitSec: 0, log, run: () => 0 });
-  log(`✔ 在背景預先 render（低優先權、${flags.workers || PRERENDER.workers} 個 worker，全文 log：${relTo(deliverPaths(P.project).log)}）`);
+  log(`✓ 在背景預先 render（低優先權、${flags.workers || PRERENDER.workers} 個 worker，全文 log：${relTo(deliverPaths(P.project).log)}）`);
   log('→ 不用等它，照常停在停點 ④。使用者說「輸出」時跑 deliver.mjs 就會接手；只改幾段會自動補上，其他改動會自動取消重來');
   return 0;
 }
@@ -177,24 +204,36 @@ async function main() {
     return runJob({ project: P.project, name: 'prerender', run: () => prerenderChild(P, flags) });
   }
   if (flags.cancel) return cancelAll(P);
-  if (!fs.existsSync(P.plan)) { console.log(`✖ 還沒有 ${relTo(P.plan)} → 先做到分鏡表確認（auto-edit-storyboard），才能輸出`); return 1; }
+  if (!fs.existsSync(P.plan) && !isJobChild(name)) return counted(P, (console.log(`✖ 還沒有 ${relTo(P.plan)} → 先做到分鏡表確認（auto-edit-storyboard），才能輸出`), 1));
   if (flags.prerender) return startPrerender(P, flags);
-  if (!isJobChild(name)) {
-    const holder = lockHolder(P);
-    if (holder?.by === 'editor') { console.log('✖ 剪輯台正在輸出完成影片 → 等它跑完或在剪輯台按取消，再跑一次這條指令'); return 1; }
-    // 上次做完、結果沒印出來（等的那條指令被砍了），之後內容又改過：那個結果過期了，重新輸出，不要把舊的成功印出來
-    const st = jobState(P.project, 'deliver');
-    if (st.state === 'done' && st.reported === false && !finalIsCurrent(P, contentFingerprint(P, { quality: flags.quality || QUALITY, fps: flags.fps ? Number(flags.fps) : FPS, resolution: flags.resolution, captions: flags['no-captions'] ? 'off' : undefined }))) clearJob(P.project, 'deliver');
-  }
+  if (isJobChild(name)) return runJob({ project: P.project, name, run: () => deliverChild(P, flags) });
+  const holder = lockHolder(P);
+  if (holder?.by === 'editor') return counted(P, (console.log('✖ 剪輯台正在輸出完成影片 → 等它跑完或在剪輯台按取消，再跑一次這條指令'), 1));
+  // 上次做完、結果沒印出來（等的那條指令被砍了），之後內容又改過：那個結果過期了，重新輸出，不要把舊的成功印出來
+  const st = jobState(P.project, 'deliver');
+  if (st.state === 'done' && st.reported === false && !finalIsCurrent(P, contentFingerprint(P, { quality: flags.quality || QUALITY, fps: flags.fps ? Number(flags.fps) : FPS, resolution: flags.resolution, captions: flags['no-captions'] ? 'off' : undefined }))) clearJob(P.project, 'deliver');
   const waitSec = flags.wait != null ? Number(flags.wait) : DEFAULT_WAIT;
-  const code = await runJob({ project: P.project, name, run: () => deliverChild(P, flags), waitSec, retryFailed: !!flags.force });
+  const F = deliverPaths(P.project);
+  const code = await runJob({
+    project: P.project, name, run: () => deliverChild(P, flags), waitSec, retryFailed: !!flags.force,
+    stallMin: DELIVER_STALL_MIN, activity: [F.log, jobState(P.project, 'look').logFile], cancel: cmdLine('deliver.mjs', ['--project', relTo(P.project), '--cancel']),
+  });
   if (code === STILL_RUNNING) {
-    if (waitSec <= 0) console.log('→ 下一步：再跑一次同一條指令會接著等，不會重跑');   // job.mjs 等過才印這一行
-    console.log(`node ${relTo(SELF)} ${process.argv.slice(2).map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ')}`);
+    // job.mjs 等過才印「→ 下一步」那一行（下面接同一條指令）；沒等（--wait 0）就這裡印
+    const again = cmdLine('deliver.mjs', process.argv.slice(2));
+    for (const l of waitSec <= 0 ? next('再跑一次同一條指令會接著等，不會重跑', again) : [again]) console.log(l);
+    return code;
   }
+  return counted(P, code);
+}
+
+// 主代理連續沒過幾次就停手（A4）：還在跑（75）不算；到上限在最後印「→ 停手」
+function counted(P, code) {
+  const t = mainTry(P.project, 'deliver', code === 0);
+  if (t.stop) console.log(stopLine(t.n, 'deliver.mjs '));
   return code;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === SELF) {
+if (isMain(import.meta.url)) {
   main().then((c) => { process.exitCode = c; }, (e) => { console.error(`✖ ${e.message}`); process.exitCode = 1; });
 }

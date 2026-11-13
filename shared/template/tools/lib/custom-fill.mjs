@@ -23,6 +23,7 @@
 //   fillTemplate({ spec, html, id, slots, icons, rename, keepIcons, illus }) → { name, file, html, errors }
 //   renderSheet(spec, slots, id) → 「#### 動畫分鏡 <id>」那一節（markdown）
 //   materializeFills({ plan, outDir, lib, prune }) → { errors, warnings, written }：把 plan 裡的模板段、內容設計動畫段變成檔案（會在 seg 上寫 src、layout）
+//   fillStateOf({ seg, outDir, lib }) → 'missing'｜'tool'｜'hand'：模板段的動畫檔是工具產生的還是手改過（032 B6）
 //   expandIcons(html, icons) → { html, missing }：<span data-icon="名稱"></span> 填成 SVG
 import fs from 'node:fs';
 import path from 'node:path';
@@ -595,15 +596,55 @@ export function renderSheet(spec, slots, id) {
 export const fillFileOf = (seg) => `compositions/${seg.template}-${seg.id}.html`;
 export const designFileOf = (seg) => `compositions/x-design-${seg.id}.html`;
 
+const readFillCache = (outDir) => { try { return JSON.parse(fs.readFileSync(path.join(outDir, '.cache', 'custom-fill.json'), 'utf8')) || {}; } catch { return {}; } };
+
+// 模板段的動畫檔是誰的（032 B6，lib/beat-source.mjs 用它判斷拍點正本在哪）：
+//   'missing'＝檔還不在；'tool'＝內容就是照現在 slots 產生的、或雜湊＝.cache/custom-fill.json 記的（工具上次寫的）；'hand'＝其他（手改過）
+// html：照現在 slots 產生的內容（materializeFills 已經算好就傳進來）；沒給而有 lib（customDir、icons）就自己產生一份，都沒有只看雜湊
+export function fillStateOf({ seg, outDir, lib = null, html, cache, cur }) {
+  const file = fillFileOf(seg);
+  if (cur === undefined) { try { cur = fs.readFileSync(path.join(outDir, file), 'utf8'); } catch { cur = null; } }
+  if (cur == null) return 'missing';
+  const c = cache ?? readFillCache(outDir);
+  if (c[file] && sha(cur) === c[file]) return 'tool';
+  if (html === undefined && lib?.customDir) {
+    html = null;
+    try {
+      const spec = readFillSpec(lib.customDir, seg.template);
+      if (spec) {
+        const r = fillTemplate({ spec, html: fs.readFileSync(path.join(lib.customDir, `${seg.template}.html`), 'utf8'), id: seg.id, slots: seg.slots, icons: lib.icons, kitDir: lib.kitDir || path.join(path.dirname(lib.customDir), 'kit'), outDir });
+        if (!r.errors.length) html = r.html;
+      }
+    } catch { html = null; }
+  }
+  return html != null && cur === html ? 'tool' : 'hand';
+}
+
 // 內容設計動畫還沒做：占位那個元素（data-design-blank）還在。不要比對構想文字：寫草稿時構想可能又改過
 export const isBlankDesign = (html) => !html || /<[a-zA-Z][^<>]*\sdata-design-blank\b/.test(String(html));
 
 // 拿掉構想文字後的樣子：比較兩份空白畫布是不是只差構想
 const blankShape = (html) => String(html).replace(/(<[a-zA-Z][^<>]*\sdata-design-blank\b[^<>]*>\s*<span[^<>]*>)[\s\S]*?(<\/span>)/, '$1$2');
 
+// 032 B8：舞台容器。內容放進 #xd-stage 就上下置中在內容區 y 120–870（x 120–1300；沒有講者的全螢幕段，kit 的 widen 會把這個
+// 寬 1180 的頂層元素整塊移到正中間），子代理照著放就不會偏上（不用等 audit 報垂直不平衡再一格一格移）。
+// _blank.html 還沒有 xd-stage 時由這裡補上，占位一起放進舞台；_blank.html 的格式改過（對不到）就照原檔
+const STAGE_NOTE = '/* 舞台：內容放進 #xd-stage，整組自動上下置中（內容區 y 120–870、x 120–1300；沒有講者的全螢幕段會自動移到畫面正中間）。舞台裡用一般排版（flex、grid），不用自己算 top */';
+const STAGE_RULE = '#x-design #xd-stage { position: absolute; left: 120px; top: 120px; width: 1180px; height: 750px; display: flex; flex-direction: column; align-items: center; justify-content: center; }';
+export function withStage(html) {
+  const s = String(html);
+  const fill = /(\n([ \t]*)#x-design \.fill \{[^\n]*\})/, idea = /\n([ \t]*)(<div id="xd-idea"[^\n]*<\/div>)/, ideaPos = '#x-design #xd-idea { position: absolute; left: 120px; top: 300px; ';
+  if (s.includes('xd-stage') || !fill.test(s) || !idea.test(s) || !s.includes(ideaPos)) return s;
+  return s.replace(fill, (all, line, ind) => `${line}\n${ind}${STAGE_NOTE}\n${ind}${STAGE_RULE}`)
+    .replace(ideaPos, '#x-design #xd-idea { ')
+    .replace(idea, (all, ind, el) => `\n${ind}<div id="xd-stage">\n${ind}  ${el}\n${ind}</div>`);
+}
+
 // 內容設計動畫的空白畫布：整個檔還是空白就跟著最新的構想更新；設計師動手之後工具不再覆寫
-export function blankFor(customDir, seg) {
-  const html = fs.readFileSync(path.join(customDir, '_blank.html'), 'utf8');
+// stage: false＝032 之前的舊骨架（沒有舞台）：materializeFills 認得它，還是空白就換成新的
+export function blankFor(customDir, seg, { stage = true } = {}) {
+  const raw = fs.readFileSync(path.join(customDir, '_blank.html'), 'utf8');
+  const html = stage ? withStage(raw) : raw;
   const idea = String(seg.story?.idea || '內容設計動畫（製作中）');
   // 疊在講者上的（layout: "overlay"）不要底圖
   return (seg.layout === 'overlay' ? html.replace(/\s*<div class="sc-surface-fs fill"><\/div>/, '') : html)
@@ -659,13 +700,14 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     let cur = null;
     try { cur = fs.readFileSync(abs, 'utf8'); } catch { cur = null; }
+    // 032 B6：判斷抽成 fillStateOf（lib/beat-source.mjs 也用它決定拍點正本在 plan.json 還是 work/designs/）；記在段上，同一次 build 不用再算
+    const state = fillStateOf({ seg, outDir, html: r.html, cache, cur });
+    Object.defineProperty(seg, '__fillState', { value: state, enumerable: false, configurable: true });
     if (cur === r.html) { cache[file] = sha(r.html); continue; }
-    if (cur != null && cache[file] && sha(cur) !== cache[file]) {
-      warnings.push(`${where} ${file} 手改過，這次 slots 的改動沒有套用 → 要照 slots 重新產生就刪掉這個檔`);
-      continue;
-    }
-    if (cur != null && !cache[file]) {
-      warnings.push(`${where} ${file} 已經有了（不是工具產生的），沒有覆寫 → 要照 slots 重新產生就刪掉這個檔`);
+    if (state === 'hand') {
+      warnings.push(cache[file]
+        ? `${where} ${file} 手改過，這次 slots 的改動沒有套用 → 要照 slots 重新產生就刪掉這個檔`
+        : `${where} ${file} 已經有了（不是工具產生的），沒有覆寫 → 要照 slots 重新產生就刪掉這個檔`);
       continue;
     }
     fs.writeFileSync(abs, r.html);
@@ -687,8 +729,10 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
     try { cur = fs.readFileSync(abs, 'utf8'); } catch { cur = null; }
     if (isBlankDesign(cur)) {
       // 只有整個檔還是空白（只差構想文字）才更新；設計師寫到一半、占位還沒刪的檔絕對不能蓋（別段的 audit 也會跑到這裡）
+      // 032 之前的舊骨架（沒有舞台）還是空白的，也換成有舞台的新骨架
+      const same = (b) => blankShape(cur) === blankShape(b);
       if (cur == null) { fs.writeFileSync(abs, blank); written.push(file); }
-      else if (cur !== blank && blankShape(cur) === blankShape(blank) && rewriteIfSame(abs, cur, blank)) written.push(file);   // 設計師可能剛好在存：內容變了就不寫
+      else if (cur !== blank && (same(blank) || same(blankFor(lib.customDir, seg, { stage: false }))) && rewriteIfSame(abs, cur, blank)) written.push(file);   // 設計師可能剛好在存：內容變了就不寫
       Object.defineProperty(seg, '__blank', { value: true, enumerable: false, configurable: true });
     }
     live.add(file);

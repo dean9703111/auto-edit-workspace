@@ -35,7 +35,7 @@
 | 沒有 `work/cuts.md` | 剪乾淨：找 NG | auto-edit-rough 步驟 1 |
 | 有 cuts.md、沒有 `work/rough.mp4` | 剪乾淨：停點 ① | auto-edit-rough（等使用者回 ①） |
 | 有 rough.mp4，缺 `work/rough.srt` 或 `work/cutpoints.json` | 剪乾淨：字幕、剪接點 | auto-edit-rough 步驟 2（再跑同一條 `media.mjs rough`，會接著做） |
-| 沒有 `work/構圖預覽.jpg` | 剪好看：構圖 | auto-edit-storyboard 步驟 1 |
+| 沒有 `work/構圖預覽.jpg` | 剪好看：構圖 | auto-edit-storyboard 步驟 3 |
 | 沒有 `work/storyboard.md` | 剪好看：停點 ② 之後 | auto-edit-storyboard 步驟 4 |
 | storyboard.md 比 `work/hyperframes/plan.json` 新 | 剪好看：停點 ③ | auto-edit-storyboard（等使用者回 ③） |
 | 沒有 `work/hyperframes/index.html` | 定稿 | auto-edit-review 流程 A |

@@ -1,14 +1,18 @@
 // 剪輯台自動存檔：存檔途中又改、拖曳中、連不到服務、切走分頁、有完成影片時的預設畫面；/api/restore 的保護
-import { test, before, after } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import puppeteer from 'puppeteer-core';
 import { startEditor } from '../../shared/template/tools/editor.mjs';
 import { findChrome } from '../../shared/template/tools/lib/audit-browser.mjs';
-import { TEMPLATE } from './helpers.mjs';
+import { TEMPLATE, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都要開瀏覽器：沒有 Chrome、ffmpeg 或 puppeteer-core（hyperframes 順帶裝的，不在 package.json）就全部略過，用到才載入
+const noUi = await missingTools('chrome', 'ffmpeg', 'puppeteer');
+const test = skipAll(nodeTest, noUi);
+const puppeteer = noUi ? null : (await import('puppeteer-core')).default;
 
 let root, work, editor, browser, page;
 const errors = [];
@@ -30,6 +34,7 @@ async function open() {
 }
 
 before(async () => {
+  if (noUi) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-auto-'));
   const project = path.join(root, 'projects', 'demo');
   work = path.join(project, 'work');
@@ -49,7 +54,7 @@ before(async () => {
   await page.evaluateOnNewDocument(() => { for (const k of ['coach.v2', 'coach-final.v1', 'coach-rough.v1']) localStorage.setItem(`auto-edit-editor.${k}`, '1'); });
   await open();
 });
-after(async () => { await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
+after(async () => { if (noUi) return; await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
 
 test('存檔途中又改了：後改的不會不見，下一輪存進去；已送出的字幕操作不會重複', async () => {
   await page.setRequestInterception(true);

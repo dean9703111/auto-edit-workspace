@@ -12,6 +12,7 @@ const SHOWN_LABEL = { 起點那句字幕: '從這句開始', 概念: '概念', �
 const NOT_DONE = /還沒有畫面/;                    // 「截圖觀察」寫這句＝內容設計動畫還沒做，截圖只是占位
 const BEAT_COLS = /^(拍|講到|畫面上出現什麼)/;   // 動畫分鏡只顯示這三欄，其他欄給工具和 AI 用，一樣留在檔案裡
 const HIDDEN_GROUP = /^插圖清單/;                // 給 AI 畫圖用的清單，不顯示
+const OWNER_LABEL = '拍點正本';                   // 032 B6：有這一行＝動畫分鏡的正本是 work/designs/<段>.md，表上的字可以改（存回去由 --apply-storyboard 寫回正本）；沒有＝照 plan.json 產生，唯讀
 const GRID_FROM = 8;                             // 幾段以上預設開總覽（短片一路捲下去就看完了）
 // 寫給做動畫的 AI 看的座標、尺寸（括號裡有數字的）：留在檔案裡，畫面上不顯示
 const humanText = (s) => String(s ?? '').replace(/[（(][^（）()]*\d[^（）()]*[）)]/g, '').replace(/\s{2,}/g, ' ').trim();
@@ -60,8 +61,9 @@ function friendlyFixed(p) {
 const quoteKind = (t, before) => (/講到\s*$/.test(before) ? 'speech' : /圖示\s*$/.test(before) || /^[a-z][\w-]*$/.test(t) ? 'icon' : 'text');
 
 // beat＝動畫分鏡的一格：沒有引號的是動畫描述（不是畫面上的字），不標橘底，想改寫在這段的補充說明
-function textField(value, attrs, label, { beat = false } = {}) {
-  if (beat && (!QUOTED.test(value) || !canEdit())) return `<div class="sb-read sb-beat">${inline(humanText(value))}</div>`;
+// locked＝這段的動畫分鏡照 plan.json 產生（模板動畫）：表上改了也不會生效，字在「畫面文字」改
+function textField(value, attrs, label, { beat = false, locked = false } = {}) {
+  if (beat && (locked || !QUOTED.test(value) || !canEdit())) return `<div class="sb-read sb-beat">${inline(humanText(value))}</div>`;
   if (!canEdit() || !QUOTED.test(value)) return editable(value, attrs, label);
   const list = value.split(QUOTED).filter((p) => p !== '');
   const parts = list.map((p, i) => {
@@ -77,7 +79,7 @@ function textField(value, attrs, label, { beat = false } = {}) {
 // `#6@儲存`＋0.2 → 儲存＋0.2；`#14` → 第 14 句
 const friendlyBind = (v) => v.replace(/`?#(\d+)e?@([^`]*)`?/g, '$2').replace(/`?#(\d+)e?`?/g, '第 $1 句');
 
-function tableHtml(t) {
+function tableHtml(t, { scripted = true } = {}) {
   const on = canEdit();
   const beats = t.head.some((h) => h.startsWith('畫面上出現什麼'));
   const cols = t.head.map((h, c) => ({ h, c })).filter(({ h }) => !beats || BEAT_COLS.test(h));
@@ -90,7 +92,7 @@ function tableHtml(t) {
     if (c === checkCol) return `<td class="check"><input type="checkbox" ${CHECKED.test(v) ? 'checked' : ''} ${on ? '' : 'disabled'} data-line="${r.line}" data-col="${c}" data-raw="${esc(v)}" aria-label="${esc(h)}：${esc(r.cells[0] ?? '')}"></td>`;
     const cls = WIDE_COL.test(h) ? 'wide' : '';
     // 「收」那一拍是動畫的收尾，不是畫面上的字
-    if (TEXT_COL.test(h) && r.cells[0] !== '收') return `<td class="${cls}">${textField(v, `data-line="${r.line}" data-col="${c}"`, h, { beat: beats })}</td>`;
+    if (TEXT_COL.test(h) && r.cells[0] !== '收') return `<td class="${cls}">${textField(v, `data-line="${r.line}" data-col="${c}"`, h, { beat: beats, locked: beats && !scripted })}</td>`;
     return `<td class="${cls}"><div class="sb-read">${inline(beats ? friendlyBind(v) : v)}</div></td>`;
   }).join('')}</tr>`).join('');
   return `<div class="sb-tablewrap"><table class="sb-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -103,14 +105,14 @@ function readRow(b, n) {
   return b.ordered ? `<div class="sb-ordered"><span class="sb-mark">${n}.</span>${row}</div>` : row;
 }
 
-function blocksHtml(blocks) {
+function blocksHtml(blocks, opt = {}) {
   let n = 0;
   return blocks.map((b) => {
     if (b.type !== 'item' || !b.ordered) n = 0;
     if ((b.type === 'item' || b.type === 'para') && OWN_ROW.has(b.label)) return '';
     if (b.type === 'item' && b.label === '畫面文字') return `<div class="sb-field"><span class="sb-label">畫面文字</span>${textField(b.value, `data-line="${b.line}"`, '畫面文字')}</div>`;
     if (b.type === 'item' || b.type === 'para') return readRow(b, b.ordered ? ++n : 0);
-    if (b.type === 'table') return tableHtml(b);
+    if (b.type === 'table') return tableHtml(b, opt);
     if (b.type === 'code') return `<pre class="sb-pre">${esc(b.lines.join('\n'))}</pre>`;
     if (b.type === 'heading') return `<h3 class="sb-subhead">${inline(b.text)}</h3>`;
     return '';
@@ -194,13 +196,15 @@ function segHtml(s) {
   const observed = rows.find((b) => b.label === '截圖觀察');
   const notDone = NOT_DONE.test(observed?.value || '');
   const design = by('概念').length > 0;
-  const backstage = rows.filter((b) => (b.type === 'item' || b.type === 'para') && !SHOWN_LABEL[b.label] && !OWN_ROW.has(b.label) && b.label !== '畫面文字' && !(b === observed && (notDone || /^無$/.test(b.value))));
+  // 動畫分鏡的字能不能改：正本在 work/designs/ 的段（有「拍點正本」那一行；舊分鏡表的內容設計段沒有這行也算）才能改
+  const scripted = design || by(OWNER_LABEL).length > 0;
+  const backstage = rows.filter((b) => (b.type === 'item' || b.type === 'para') && !SHOWN_LABEL[b.label] && !OWN_ROW.has(b.label) && b.label !== '畫面文字' && b.label !== OWNER_LABEL && !(b === observed && (notDone || /^無$/.test(b.value))));
   const fields = blocksHtml(by('起點那句字幕')) + sceneSelect(s) + blocksHtml(by('概念')) + blocksHtml(by('畫面')) + blocksHtml(by('畫面文字')) + blocksHtml(by('素材')) + sfxSelect(s);
   const shotBox = shots.length ? `<div class="sb-shots${shots.length > 1 ? ' many' : ''}${notDone ? ' pending' : ''}">${shots.map(shotHtml).join('')}${notDone ? '<span class="sb-pending">動畫還沒做：這張只是占位，你確認後 AI 才會做</span>' : ''}</div>` : '';
   const body = `<div class="sb-segbody${shots.length ? '' : ' noshot'}">${shotBox}<div class="sb-fields">${fields}</div></div>`;
   // 鏡位腳本是給做動畫的 AI 看的細節，預設收起：看概念和畫面就夠判斷，想改細節再打開
   const beatCount = (g) => g.blocks.find((b) => b.type === 'table')?.rows.length || 0;
-  const subs = rest.filter((g) => !HIDDEN_GROUP.test(g.heading.text)).map((g) => `<div class="sb-subgroup">${foldHtml(`${s.key}:${g.heading.text}`, `${design ? '鏡位腳本' : g.heading.text.replace(/\s+\S+$/, '')}${beatCount(g) ? `（${beatCount(g)} 拍）` : ''}：給 AI 的細節，想看再打開`, false, blocksHtml(g.blocks))}</div>`).join('');
+  const subs = rest.filter((g) => !HIDDEN_GROUP.test(g.heading.text)).map((g) => `<div class="sb-subgroup">${foldHtml(`${s.key}:${g.heading.text}`, `${design ? '鏡位腳本' : g.heading.text.replace(/\s+\S+$/, '')}${beatCount(g) ? `（${beatCount(g)} 拍）` : ''}：給 AI 的細節，想看再打開`, false, blocksHtml(g.blocks, { scripted }))}</div>`).join('');
   const notes = backstage.length ? `<div class="sb-subgroup">${foldHtml(`${s.key}:notes`, 'AI 的備註', false, `<div class="sb-fields">${blocksHtml(backstage)}</div>`)}</div>` : '';
   const note = design
     ? noteBox(s, '這段動畫想怎麼改？', '例如：第 3 拍不要飛來飛去，改成兩個畫面並排。你說「可以」之後 AI 會照這裡重寫鏡位腳本。')

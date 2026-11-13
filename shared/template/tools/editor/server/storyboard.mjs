@@ -8,6 +8,7 @@ import { BEAT_HEADER, BEAT_HEADER_ILLUS } from '../../lib/audit-beats.mjs';
 import { storyboardDocState, applyStoryboardEdit } from '../storyboard-md.mjs';
 import { storyboardOptions } from './storyboard-options.mjs';
 import { speakerInfo } from './speaker.mjs';
+import { writeAtomic } from '../../lib/atomic.mjs';
 
 const PREVIEW_DIR = 'storyboard-preview';
 const BEAT_HEADERS = [BEAT_HEADER, [...BEAT_HEADER, ...BEAT_HEADER_ILLUS]];
@@ -59,7 +60,7 @@ export function saveStoryboard(ctx, body) {
     if (e.extra?.moved) e.extra = { state: storyboardState(ctx) };
     throw e;
   }
-  if (next !== text) fs.writeFileSync(f, next);
+  if (next !== text) writeAtomic(f, next);   // AI 可能同時在讀這個檔：寫完才換上，不讀到半個檔
   return storyboardState(ctx);
 }
 

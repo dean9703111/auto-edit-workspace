@@ -10,13 +10,10 @@
 
 每段的版本在 `work/versions/<段>/v<N>/`：`段落.json`（plan.json 那一段）、動畫的 html（手寫、內容設計、模板動畫都有）與 svg、內容設計動畫的 `鏡位腳本.md`、`分鏡.md`、`預覽.jpg`（audit 拼圖）。預設都不 render。
 
-比較影片（`比較-v<舊>-v<新>.mp4`，左舊右新）要兩版都有 `預覽.mp4`。使用者說修改時就說要比較：`begin`、`finish` 都加 `--preview`。改完才要比較：先跟他說「舊版沒有預覽影片，兩版各要 render 一次（一段約 25 秒）」，他說好再跑下面四行（`use` 印的「→ 下一步」先不用照做，四行跑完、最後一行印「比較：…」就好）：
+比較影片（`比較-v<舊>-v<新>.mp4`，左舊右新）要兩版都有 `預覽.mp4`。使用者說修改時就說要比較：`begin`、`finish` 都加 `--preview`。改完才要比較：跑下面這一條（沒給 `--a`／`--b`＝目前用的版和最新的另一版；沒有預覽的那一版先 render，一段約 25 秒；跑完換回原本用的版），把它印的比較影片路徑給使用者：
 
 ```
-node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v<舊>
-node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段> --preview
-node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v<新>
-node shared/template/tools/versions.mjs save --project projects/<專案> --seg <段> --preview
+node shared/template/tools/versions.mjs compare --project projects/<專案> --seg <段> --a v<舊> --b v<新>
 ```
 
 ## 2. 規則還是個案
@@ -29,7 +26,7 @@ node shared/template/tools/versions.mjs save --project projects/<專案> --seg <
 | 指名一個時間的音效或講者推近（「1:20 那聲太吵」「講到竟然要有音效」「這句講者推近」） | 個案 | `build.mjs --check` 的音效報告看那一顆是誰放的：「情緒點」那一行列的 → 改 plan.json 第一層 `moods`（不要＝刪那一項、換聲音＝`"sfx": "<名稱>"`、要推近＝`"zoom": true`、要新加＝`{ "at": "#N@詞", "kind": "<五類>" }`，style.md「情緒點」）；段上的 → 改那一段的 `sfx` |
 | 「s12 用 v1」「退回上一版」 | 個案（退回） | SKILL.md 流程 E；rN.md 的改法寫「退回 v1」 |
 | 「以後」「每次」「都」「全部的 X」 | 規則 | 這一集照做；在 rN.md「建議改規則」寫一條（一句完整的話，例「金句都放左邊」），**不改** `shared/`、AGENTS.md（AGENTS.md 規則 1）。之後 `status.mjs` 會提醒問使用者要不要每一集都照做（AGENTS.md 規則 11） |
-| 「這張卡」「我選的」 | 個案 | 請使用者說段號或大約第幾秒，再照 `--check` 報告的「起–迄」找段（USAGE.md 2.6） |
+| 「這張卡」「我選的」 | 個案 | 請使用者說段號或大約第幾秒，再跑 `node shared/template/tools/build.mjs --project projects/<專案> --show <秒>`（例 `--show 1:15`）找段 |
 | 分不出來 | 個案 | 照個案改，rN.md 註明「可能是規則，請確認」 |
 | 一句話可以解成「刪掉」或「避開／挪開」（「擇一即可」「不要重疊」） | 個案 | 先做不刪的那個解讀（挪位置、錯開時間），回報另一種解讀讓使用者選；參考專案曾因刪掉 8 支箭頭白做一輪 |
 
@@ -66,6 +63,6 @@ node shared/template/tools/versions.mjs save --project projects/<專案> --seg <
 - audit --only：✖ 0；拼圖 sheet-s05.jpg、sheet-s09.jpg 沒有 FAIL
 ```
 
-## 4. 預算
+## 4. 卡住時
 
-每一項最多 6 次工具呼叫。某一項超過就停下來，回報那一項卡在哪，其他項照做。
+`finish` 印「→ 停手」就停，回報它上面還在的 ✖ 原文和卡在哪一項（SKILL.md「工具呼叫預算」）。

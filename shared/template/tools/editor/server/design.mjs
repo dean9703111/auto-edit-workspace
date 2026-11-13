@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { brandColors, rewriteBrandCss, drawPipFrame, drawPipFrameV } from '../../brand.mjs';
 import { packDir, PACK_KIT, PACK_BG, templatePathOf } from '../../lib/styles.mjs';
 import { appliedDesign } from '../../lib/project-design.mjs';
-import { resolveFormat } from '../../lib/canvas.mjs';
+import { resolveFormat, CANVAS } from '../../lib/canvas.mjs';
 import { readSummary } from '../../lib/summary.mjs';
 
 export const KINDS = { fs: [1920, 1080], side: [960, 1080], ch: [1920, 1080] };
@@ -233,7 +233,8 @@ export function prepareDesignRequest(ctx, body) {
   const sourceRef = referenceFile(ctx, s.reference);
   const ref = sourceRef && fs.existsSync(sourceRef) ? path.join(dir, 'reference' + path.extname(sourceRef)) : null;
   if (ref) fs.copyFileSync(sourceRef, ref);
-  const zones = { fs: '全畫面主卡 x 120–1380、y 150–862；講者小視窗 x 1424–1888、y 581–951；字幕帶 y ≥ 920', side: '側邊欄文字區 x 0–816、y 86–864', ch: '章名卡 x 160–1760、y 260–870' };
+  const PZ = CANVAS.landscape.pip.zone;
+  const zones = { fs: `全畫面主卡 x 120–1380、y 150–862；講者小視窗 x ${PZ[0]}–${PZ[2]}、y ${PZ[1]}–${PZ[3]}；字幕帶 y ≥ 920`, side: '側邊欄文字區 x 0–816、y 86–864', ch: '章名卡 x 160–1760、y 260–870' };
   const visualDirection = direction !== 'auto' ? `指定風格：${DIRECTIONS[direction][0]}。${DIRECTIONS[direction][1]}。` : ref || description
     ? '以使用者描述與參考圖決定視覺語言，沿用其具體造型、材質、輪廓與配色。A 著重線條結構、B 著重形狀編排、C 著重材質層次，三組都須符合指定風格。'
     : 'A 科技工程線稿（正交網格、精準細線）；B 編輯平面設計（紙感、明確幾何色塊）；C 立體幾何（實體造型、清楚材質與投影）。';

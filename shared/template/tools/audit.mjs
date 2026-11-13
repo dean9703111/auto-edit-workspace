@@ -14,7 +14,9 @@
  *   --jobs N：同時開幾個 Chrome 量（預設 4、最多 8；每 3 段開一個，段少就少開）；順序與結果和 --jobs 1 一樣
  *   --verbose：多印全表（每段的量測時間與結果）、每張截圖的路徑、節奏備註；預設只印 ✖、⚠ 與統計
  *
- * 先 build（audit 量的是 build 產生的 work/hyperframes/index.html；只改了 custom 檔不用重 build，改了 plan.json 要先 build）。
+ * 量的是 build 產生的 work/hyperframes/index.html（只改了 custom 檔不用重 build）。plan.json 比 index.html 新時：沒帶 --only（主代理）會先 build 再量
+ * （build 沒過就 ✖ 並印 build 的 ✖；底片要重新編碼就叫你先跑 build）；帶 --only（子代理不能 build）就 ✖、不量、不出拼圖，把那一行原文交回主代理。
+ * --only 每跑一次記一次那幾段的心跳（work/.jobs/beats/，build --design-status 用來判斷子代理有沒有在動）。
  * 段落起迄取自 build.mjs --check（完成影片秒數，和完成影片預覽、snapshot 的秒數一樣）。完成態那一刻全部還在動（退場比 0.6 秒長）時，每次往前 0.3 秒找靜止的畫面。
  * custom 段另外讀時間軸，在每個停 ≥ 0.4 秒的靜止畫面再量一次（每段最多 8 次），並檢查節奏。
  * 和 npx hyperframes snapshot／check 用同一個 runtime 與 seek（__player.renderSeek），所以量到的就是 render 的版面；約 2–5 秒一段。
@@ -63,7 +65,7 @@
  *   字級比範例小   custom 的元素（id／class 去掉前綴對回範例）字級比範例小（sc-tNN、style、<style> 的 font-size）：字放不下要縮文案或加寬容器
  *   綁句對不上     custom 的 P.at('#N')、P.at('#N@詞') 那一拍出現的字（站名、項目），在這段的另一句才講到（數字、英文整個詞比，中文取 2–4 字；刪除線、底線、位移不算出現；找不到不報）
  *   畫面沒有變化   custom 段裡連續 > 6 秒沒有任何動作（進場、點亮、焦點切換、描線、數字變化、位移都算動作），而那段時間有字幕句在講
- *   沒有動畫分鏡   work/storyboard.md 沒有「#### 動畫分鏡 <段 id>」表（拍型照 shared/template/BEATS.md §3）
+ *   沒有動畫分鏡   這段的拍點正本沒有「#### 動畫分鏡 <段 id>」表（模板段照 plan.json 產生；內容設計動畫、手改過的模板段在 work/designs/<段 id>.md；拍型照 shared/template/BEATS.md §3）
  *   分鏡用了沒做的動作 分鏡「動態」欄寫了某個動作，custom 檔裡沒有對應的 P.*（例：寫「漣漪」卻沒有 P.ripple）
  *   分鏡沒寫的動作 custom 檔裡有 P.spot／P.dim／P.idle／P.cam，分鏡表一拍都沒寫聚焦、退焦、漂浮、鏡頭（多半是範例沒改到的殘留）
  *   ── 下面只量有示意插圖元件（kit/illus.js 的 .il）的段；量元件邊緣時描邊外擴 2px ──
@@ -97,7 +99,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { build, pathsFrom, projectLabel } from './build.mjs';
+import { build, pathsFrom, projectLabel, loadLib } from './build.mjs';
 import { findChrome, findRuntime, openSessions, openBrowser, freshRefsScript } from './lib/audit-browser.mjs';
 import { createHash } from 'node:crypto';
 import { groupWarnings, runCount } from './lib/flow.mjs';
@@ -106,29 +108,29 @@ import { FULL, gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarn
   judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings, rootSelectorFindings } from './lib/audit-rules.mjs';
 import { matteKindOf } from './lib/matte.mjs';
 import { templateFor, formatReport as checkTable } from './lib/plan.mjs';
-import { parseBeatSheets, beatFindings, noSheetFinding, parseIllusLists, illusListFindings, pickBeatSheet } from './lib/audit-beats.mjs';
+import { beatFindings, noSheetFinding, illusListFindings } from './lib/audit-beats.mjs';
 import { loadPics, picOfSrc } from './lib/pics.mjs';
 import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners, designColorFindings, designRotateFindings } from './lib/audit-illus.mjs';
 import { judgeLayoutRules } from './lib/audit-layout.mjs';
 import { resolveFormat, formatLine, canvasOf } from './lib/canvas.mjs';
+import { touchBeat } from './lib/tries.mjs';
+import { splitFlag, valueOf, isMain } from './lib/cli.mjs';
+import { ensureBeatsV2, beatSourceOf } from './lib/beat-source.mjs';
+import { r3Round as r3 } from './lib/time.mjs';
 
 const VALUE_FLAGS = ['project', 'only', 'chrome', 'runtime', 'template', 'format', 'jobs'];
 export const JOBS = { default: 4, max: 8 };
 const rel = (p) => path.relative(process.cwd(), p) || '.';
-const r3 = (n) => Math.round(n * 1000) / 1000;
 
-// --shots：量的每個取樣時刻（中點、靜止、完成態）各存一張截圖到 work/audit-shots/<段 id>-<秒>.jpg（子代理看不到 snapshot，用這個看自己那段；改完 x 檔不用 build）。用法寫在 auto-edit-motion 步驟 6、worker-brief
+// --shots：量的每個取樣時刻（中點、靜止、完成態）各存一張截圖到 work/audit-shots/<段 id>-<秒>.jpg（子代理看不到 snapshot，用這個看自己那段；改完 x 檔不用 build）。用法寫在 auto-edit-motion 步驟 3、references/design.md、worker-brief.md
 export function parseArgs(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) throw new Error(`看不懂的參數「${a}」（用 --help 看用法）`);
-    const [k, inline] = a.slice(2).split('=');
-    if (VALUE_FLAGS.includes(k)) {
-      const v = inline ?? argv[++i];
-      if (v == null) throw new Error(`--${k} 後面要接值`);
-      flags[k] = v;
-    } else if (['all', 'json', 'help', 'shots', 'sheet', 'verbose', 'review'].includes(k)) flags[k] = true;
+    const [k, inline] = splitFlag(a);   // 只在第一個 = 切
+    if (VALUE_FLAGS.includes(k)) [flags[k], i] = valueOf(argv, i, k, inline);   // 缺值、或下一個是另一個旗標就丟錯
+    else if (['all', 'json', 'help', 'shots', 'sheet', 'verbose', 'review'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
@@ -207,6 +209,19 @@ export function splitPageErrors({ errors = [], cueErrs = [], others = [], htmlOf
   return { errors: keepE, cueErrs: keepC, others: hit.size, otherIds: [...new Set([...hit].map((k) => k.split('|')[0]))] };
 }
 
+// B3：主代理改了 plan.json 沒 build 就 audit → 先 build（build.mjs 的 build()，log 收起來，只回報 ✖）。
+// 底片要重新編碼（構圖、瘦臉改了；長片要好幾分鐘）不在這裡做：交給 build 的背景工作，叫它先跑 build
+export function rebuildFirst(flags, P, project, buildFn = build) {
+  const lines = [];
+  let r;
+  try { r = buildFn({ project: flags.project, template: flags.template }, { log: (...a) => lines.push(a.join(' ')), delegateEncode: !!P.project }); }
+  catch (e) { return { ok: false, errors: [`plan.json 比 index.html 新，先 build 失敗：${e.message}`] }; }
+  if (r?.needEncode) return { ok: false, errors: [`plan.json 比 index.html 新，要先 build，而且底片要重新編碼（在背景跑）→ 跑 node shared/template/tools/build.mjs --project ${project}（印「還在跑」就再跑同一條），再跑這條 audit`] };
+  if (r?.ok) return { ok: true };
+  const bad = lines.flatMap((l) => String(l).split('\n')).filter((l) => /^\s*✖/.test(l)).map((l) => `build：${l.replace(/^\s*✖\s*/, '')}`);
+  return { ok: false, errors: [`plan.json 比 index.html 新，先 build 沒過 → 照下面 build 的 → 改好 plan.json，再跑這條 audit`, ...bad] };
+}
+
 const SHOT_KIND = { done: '完成態', still: '靜止', mid: '中點' };
 
 // 一段的截圖拼成一張（每格標時間與取樣種類）：平行工人各寫各的檔
@@ -254,7 +269,18 @@ export async function audit(flags, { log = console.log } = {}) {
   const jobs = jobsOf(flags.jobs), wantShots = !!(flags.shots || flags.sheet);
   const report = { ok: false, project, format: fmt.format, canvas: [cv.W, cv.H], only, errors: [], warnings: [], notes: [], segments: [], findings: [], chrome: null, runtime: null };
   log(formatLine(fmt));
+  // 032 B6：拍點正本的遷移（每個專案第一次自動做一次；之後 audit 只讀正本）
+  if (P.project) report.notes.push(...ensureBeatsV2(P, { lib: () => loadLib(P.templateDir, P.project) }).lines);
+  // B5：子代理每驗收一次碰一下心跳（build --design-status 看這次派工之後有沒有在動）；--review 是主代理重量變了的段，不算
+  if (only && P.project && !flags.review) for (const id of only) touchBeat(P.project, id);
   if (!fs.existsSync(index)) { report.errors.push(`找不到 ${rel(index)} → 先跑 node shared/template/tools/build.mjs --project ${project}`); return report; }
+  // B3：plan.json 比 index.html 新＝量到的會是舊版。主代理（沒帶 --only）先 build 再量；子代理不能 build，下面過了 --check 再 ✖ 交回主代理
+  const stale = () => fs.existsSync(P.plan) && fs.statSync(P.plan).mtimeMs > fs.statSync(index).mtimeMs + 1;
+  if (!only && stale()) {
+    const b = rebuildFirst(flags, P, project);
+    if (!b.ok) { report.errors.push(...b.errors); return report; }
+    report.notes.push('plan.json 比 index.html 新：先 build 了，量的是最新版');
+  }
 
   const chk = build({ project: flags.project, template: flags.template, check: true, json: true }, { log: () => {} });
   // 有 --only：其他段的 ✖ 不擋（平行工人各改各的）；這段自己的 ✖、全域的 ✖ 才量不了
@@ -283,7 +309,8 @@ export async function audit(flags, { log = console.log } = {}) {
     report.notes.push(flags.all ? 'plan.json 沒有可以量的段' : 'plan.json 沒有 custom 段（type: "custom"）→ 要量情境模板加 --all');
     return report;
   }
-  if (fs.existsSync(P.plan) && fs.statSync(P.plan).mtimeMs > fs.statSync(index).mtimeMs + 1) report.warnings.push(`plan.json 比 index.html 新 → 先重跑 build，量到的才是最新版`);
+  // B3（子代理）：這段自己與全域的 ✖ 先照上面報（比較具體），都過了才看 index.html 是不是舊的
+  if (only && stale()) { report.errors.push('plan.json 比 index.html 新，這次量不準（不出拼圖）→ 子代理不能 build：把這一行原文交回主代理，主代理跑完 build 再驗收'); return report; }
   const root = fs.readFileSync(index, 'utf8').match(/data-width="(\d+)"[^>]*data-height="(\d+)"/);
   if (root && (+root[1] !== cv.W || +root[2] !== cv.H)) report.warnings.push(`index.html 是 ${root[1]}×${root[2]}，版式是${portrait ? '直式' : '橫式'} ${cv.W}×${cv.H} → 用同一個版式重跑 build 再 audit（這次照 ${cv.W}×${cv.H} 的規則量）`);
 
@@ -408,32 +435,24 @@ export async function audit(flags, { log = console.log } = {}) {
   const cue = cueFindings(cueErrs, pick.list);
   report.warnings.push(...cue.warnings);
   const motion = [];
-  const sbFile = path.join(path.dirname(P.out), 'storyboard.md');
-  const sbText = fs.existsSync(sbFile) ? fs.readFileSync(sbFile, 'utf8') : '';
-  const sheets = parseBeatSheets(sbText), lists = parseIllusLists(sbText);
-  // 內容設計動畫的鏡位腳本 work/designs/<段>.md：③ 勾選後才寫（分鏡表還沒有這張表），或改動畫時設計師改了拍（比 storyboard.md 新）就用它
-  const sbTime = sbText ? fs.statSync(sbFile).mtimeMs : 0;
-  const designOf = (it) => {
-    const f = it.seg?.design && path.join(path.dirname(P.out), 'designs', `${it.id}.md`);
-    return f && fs.existsSync(f) ? { text: fs.readFileSync(f, 'utf8'), newer: fs.statSync(f).mtimeMs > sbTime } : null;
-  };
   for (const it of customs) {
     const r = judgeMotion(motions.get(it.id), { item: it, fadeOut: !!it.fadeOut });
     motion.push(...r.findings);
     const src = it.file && path.join(P.out, it.file);
     motion.push(...cueTextFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [], names: src && fs.existsSync(src) ? atNames(fs.readFileSync(src, 'utf8')) : {} }));
     motion.push(...staticFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [] }));
-    // 分鏡對齊：work/storyboard.md 的「#### 動畫分鏡 <段 id>」表和檔裡的 P.at 逐拍比（cli-003 §2.3d）
-    const own = it.seg?.__sheet ? parseBeatSheets(it.seg.__sheet) : new Map();
-    const bs = pickBeatSheet(it.id, { sheets: sheets.has(it.id) ? sheets : own, lists, design: designOf(it) });
+    // 分鏡對齊：這段拍點正本的「#### 動畫分鏡 <段 id>」表和檔裡的 P.at 逐拍比（cli-003 §2.3d）。032 B6：只讀正本——
+    // 模板段照 plan.json 的 slots 產生、手寫段讀 work/designs/<段>.md；不讀 storyboard.md（那是副本）、不比修改時間。手改模板段第一次被發現就建鏡位腳本
+    const bs = it.seg ? beatSourceOf(P, it.seg, { seed: true }) : { owner: 'none', file: null, sheet: null, list: null };
+    for (const n of [it.seg?.__beatNote, bs.seeded]) if (n && !report.notes.includes(n)) report.notes.push(n);
     const sheet = bs.sheet, mo = motions.get(it.id), html = htmlOf(it);
     // 範例檔頭【D 下限】：第一拍離段起點、段長；和範例原檔比：下限被改小、字級被縮小
     const tpl = (templateFor(html, path.join(P.templateDir, 'custom')) || {}).html || '';
     motion.push(...floorFindings({ item: it, html, cuesOut: res.cuesOut || [], file: it.file, tpl }));
     motion.push(...fontShrinkFindings({ item: it, html, tpl, file: it.file }));
     motion.push(...rootSelectorFindings({ item: it, html, file: it.file }));
-    if (!sheet) motion.push(noSheetFinding(it, it.file));
-    else if (mo) motion.push(...beatFindings({ item: it, sheet, marks: mo.marks || [], cuesOut: res.cuesOut || [], html, file: it.file, local, picIds: new Set((picsLib?.items || []).map((x) => x.id)) }));
+    if (!sheet) motion.push(noSheetFinding(it, it.file, { owner: bs.owner, src: bs.file }));
+    else if (mo) motion.push(...beatFindings({ item: it, sheet, marks: mo.marks || [], cuesOut: res.cuesOut || [], html, file: it.file, local, picIds: new Set((picsLib?.items || []).map((x) => x.id)), owner: bs.owner, src: bs.file }));
     // 011 示意動畫：元件名與 illus-local 檔、閃爍、先有節點再畫線
     motion.push(...illusNameFindings({ item: it, html, file: it.file, local, isPic: (s) => !!picOfSrc(picsLib, s) }));
     motion.push(...designColorFindings({ item: it, html, file: it.file }));
@@ -529,10 +548,7 @@ async function cli() {
   return r.ok ? 0 : 1;
 }
 
-const isMain = () => {
-  try { return !!process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url)); } catch { return false; }
-};
-if (isMain()) {
+if (isMain(import.meta.url)) {
   const wantJson = process.argv.includes('--json');
   cli().then((code) => { process.exitCode = code; }, (e) => {
     if (wantJson) console.log(JSON.stringify({ ok: false, errors: [e.message], warnings: [], segments: [], findings: [] }, null, 2));

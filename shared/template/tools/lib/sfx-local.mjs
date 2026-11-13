@@ -13,6 +13,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { r3Round as r3 } from './time.mjs';
+import { LOUD } from './audio.mjs';
 
 export const LOCAL_SFX_DIR = 'sfx-local';
 export const LOCAL_DEFAULT_DB = -6;        // kit 沒有的名稱：比人聲小 6 dB
@@ -32,8 +34,7 @@ export function sfxActual(name, sfxConf = {}) {
   return fb && sfxConf[fb] ? fb : null;
 }
 
-const VOICE_LUFS = -14, RATE = 48000, WIN = Math.round(0.15 * RATE), STATE_VER = 2;   // STATE_VER：量法改了就加 1，舊的量測結果重量
-const r3 = (n) => Math.round(n * 1000) / 1000;
+const VOICE_LUFS = LOUD.I, RATE = 48000, WIN = Math.round(0.15 * RATE), STATE_VER = 2;   // STATE_VER：量法改了就加 1，舊的量測結果重量
 
 export const localSfxDir = (sharedDir) => path.join(sharedDir, LOCAL_SFX_DIR);
 

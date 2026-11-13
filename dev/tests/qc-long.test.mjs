@@ -5,10 +5,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { imp, hasChrome, makeSrt, TEMPLATE, TOOLS } from './helpers.mjs';
+import { imp, hasChrome, makeSrt, TEMPLATE, TOOLS, missingTools, fixture as shared } from './helpers.mjs';
 
 const Q = await imp('qc.mjs');
 const CHROME = await hasChrome();
+// 都要 ffmpeg 做片子；專案那幾個另外要 Chrome：缺一個就略過
+const NO_FF = await missingTools('ffmpeg');
+const NO_UI = (!CHROME && '沒有 HyperFrames 的 Chrome，略過') || NO_FF;
 const TMP = [];
 const mkTmp = (p) => { const d = fs.mkdtempSync(path.join(os.tmpdir(), p)); TMP.push(d); return d; };
 after(() => { for (const d of TMP) fs.rmSync(d, { recursive: true, force: true }); });
@@ -102,7 +105,7 @@ test('jobsOf、parseArgs：storyboard 的 --only、--sheet、--jobs、--verbose'
 
 // ---------- 一次解碼（只要 ffmpeg）----------
 
-test('analyzeFinal：一次解碼算出凍結、黑畫面、靜止灰階、無聲、響度；總覽圖格子和 -ss 抽到的是同一格；凍結和全解析 30 格的結果對得上', { timeout: 120000 }, () => {
+test('analyzeFinal：一次解碼算出凍結、黑畫面、靜止灰階、無聲、響度；總覽圖格子和 -ss 抽到的是同一格；凍結和全解析 30 格的結果對得上', { timeout: 120000, skip: NO_FF }, () => {
   const dir = mkTmp('hf-qc-an-');
   const mp4 = path.join(dir, 'a.mp4');
   // 0–6 秒有雜訊、6–16 靜止、16–20 有雜訊、20–21 全黑、21–30 有雜訊；聲音 0–24、24–30 沒聲音
@@ -151,7 +154,9 @@ function fixture(srtN = 12, dur = 46) {
   for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   const proj = path.join(root, 'projects', 'p1'), out = path.join(proj, 'work', 'hyperframes');
   fs.mkdirSync(path.join(out, 'compositions'), { recursive: true });
-  ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', String(dur), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, 'work', 'rough.mp4')]);
+  // 同樣長度的片子這一輪只做一次，各專案複製一份（測試會在專案裡改東西）
+  const src = shared(`qc-long-rough-${dur}s.mp4`, (f) => ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', String(dur), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', f]));
+  fs.copyFileSync(src, path.join(proj, 'work', 'rough.mp4'));
   fs.writeFileSync(path.join(proj, 'work', 'rough.srt'), makeSrt({ n: srtN }));   // #N 起點 (N−1)×3.5＋1
   const tool = (t) => (...args) => spawnSync(process.execPath, [path.join(TOOLS, t), ...args, '--project', 'projects/p1'], { encoding: 'utf8', cwd: root });
   return { root, proj, out, dir: path.join(proj, 'work', 'storyboard-preview'), qc: tool('qc.mjs'), build: tool('build.mjs') };
@@ -161,7 +166,7 @@ const keyCard = (id, n) => ({ id, scene: 'key-point', from: `#${n}`, to: `#${n +
 const listCard = (id, n) => ({ id, scene: 'fs-list', from: `#${n}`, to: `#${n + 1}e`, slots: { title: `清單 ${id}`, items: ['第一', '第二', '第三'] } });
 const mtime = (f) => fs.statSync(f).mtimeMs;
 
-test('storyboard：範例原文跳過並印一行；--sheet 拼圖每格標段 id 與為什麼；shots.json；預設安靜；--only 只重截、其他段不動、只重做有動到的頁', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 600000 }, () => {
+test('storyboard：範例原文跳過並印一行；--sheet 拼圖每格標段 id 與為什麼；shots.json；預設安靜；--only 只重截、其他段不動、只重做有動到的頁', { skip: NO_UI, timeout: 600000 }, () => {
   const F = fixture();
   // x01：範例原封不動複製（還是範例原文）；其他段是做好的
   fs.copyFileSync(path.join(TEMPLATE, 'custom', 'x-fix.html'), path.join(F.out, 'compositions', 'x-fix.html'));
@@ -239,7 +244,7 @@ test('storyboard：範例原文跳過並印一行；--sheet 拼圖每格標段 i
   assert.ok(!fs.existsSync(path.join(F.dir, 'sheet-01.jpg')), '整支重截沒加 --sheet：舊頁清掉');
 });
 
-test('storyboard --jobs：多個截圖行程，張數、時間、為什麼和一個行程一樣；張數少時不開多的；--json 結構相容', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 900000 }, () => {
+test('storyboard --jobs：多個截圖行程，張數、時間、為什麼和一個行程一樣；張數少時不開多的；--json 結構相容', { skip: NO_UI, timeout: 900000 }, () => {
   const F = fixture(24, 90);
   const scenes = [];
   for (let k = 0; k < 11; k++) scenes.push(k % 2 ? listCard(`s${String(k + 1).padStart(2, '0')}`, k * 2 + 1) : keyCard(`s${String(k + 1).padStart(2, '0')}`, k * 2 + 1));
@@ -263,7 +268,7 @@ test('storyboard --jobs：多個截圖行程，張數、時間、為什麼和一
   assert.doesNotMatch(F.qc('storyboard', '--only', 's01', '--jobs', '4').stdout, /行程併發/);
 });
 
-test('直式：storyboard --sheet 每格 9:16（一列 6 格）、audit --only --sheet 也是直的', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 300000 }, () => {
+test('直式：storyboard --sheet 每格 9:16（一列 6 格）、audit --only --sheet 也是直的', { skip: NO_UI, timeout: 300000 }, () => {
   const F = fixture();
   ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=360x640:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '46', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(F.proj, 'work', 'rough.mp4')]);
   fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, format: 'portrait', look: false, check: { textSync: false }, speakerBox: [100, 400, 980, 860], rhythm: 'spaced', scenes: [keyCard('s01', 1), keyCard('s02', 4)] }));
@@ -280,7 +285,7 @@ test('直式：storyboard --sheet 每格 9:16（一列 6 格）、audit --only -
   assert.ok(h > 500, `每格要是直的，現在高 ${h}`);
 });
 
-test('final：併進靜止與被蓋住、只出文字；字卡段不報靜止；沒有講者小視窗照樣 ✖；總覽圖照舊', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 600000 }, () => {
+test('final：併進靜止與被蓋住、只出文字；字卡段不報靜止；沒有講者小視窗照樣 ✖；總覽圖照舊', { skip: NO_UI, timeout: 600000 }, () => {
   const F = fixture();
   // s02 有小視窗、s03 pip: false：都是字卡，畫面靜止＋聲音在講也不報（靜止只看錄影、圖片段）
   plan(F, [listCard('s02', 3), { ...listCard('s03', 8), pip: false }]);
@@ -295,8 +300,8 @@ test('final：併進靜止與被蓋住、只出文字；字卡段不報靜止；
   assert.ok(Array.isArray(j.covered));
   assert.deepEqual(j.stills, [], JSON.stringify(j.stills));
   r = F.qc('final');
-  assert.match(r.stdout, /✔ 錄影、圖片段沒有聲音還在講/);
-  assert.match(r.stdout, /✔ 沒有字還沒出現就被下一段蓋住/);
+  assert.match(r.stdout, /✓ 錄影、圖片段沒有聲音還在講/);
+  assert.match(r.stdout, /✓ 沒有字還沒出現就被下一段蓋住/);
   assert.match(r.stdout, /→ 總覽圖 projects\/p1\/output\/qc\/qc-sheet\.jpg（\d+ 格，每 10 秒一格/);
   assert.ok(!fs.existsSync(path.join(F.proj, 'work', 'observe')), '只出文字，不做 observe 的圖');
   // 既有防線：rough.mp4 全黑一段、專案沒有聲音素材 → ✖ 沒有講者小視窗

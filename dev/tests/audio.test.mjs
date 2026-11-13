@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { lib, imp, makeSrt } from './helpers.mjs';
+import { lib, imp, makeSrt, tmpDir } from './helpers.mjs';
 
 const A = await imp('lib/audio.mjs');
 const { probeDuration, probeMedia } = await imp('lib/ff.mjs');
@@ -13,7 +13,7 @@ const { resolvePlan } = await imp('lib/plan.mjs');
 const { buildMain } = await imp('lib/main.mjs');
 const { parseSrt } = await imp('lib/srt.mjs');
 
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'audio-test-'));
+const tmp = () => tmpDir(null, 'audio-test-');   // 掛在呼叫它的那個 test 結束時清
 const ff = (args) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
 const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0;
 const near = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} 應該接近 ${b}（±${tol}）`);

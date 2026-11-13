@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, imp } from './helpers.mjs';
+import { TOOLS, imp, needs } from './helpers.mjs';
 
 const M = await imp('lib/music.mjs');
 const { probeDuration } = await imp('lib/ff.mjs');
@@ -45,7 +45,8 @@ test('曲庫：registerTrack 寫登錄檔、已經有的曲名不覆寫、曲名
   assert.deepEqual(M.loadMusic({ sharedDir: path.join(tmp, 'none') }), {});
 });
 
-test('normalizeTrack：48 kHz 立體聲、響度調到 −20 LUFS；renderBedClip：比影片短就循環鋪滿、音量照給的 dB、同參數不重做、太短的曲子丟錯', () => {
+test('normalizeTrack：48 kHz 立體聲、響度調到 −20 LUFS；renderBedClip：比影片短就循環鋪滿、音量照給的 dB、同參數不重做、太短的曲子丟錯', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
   const src = tone(path.join(tmp, 'src.wav'), 30);
   const lib = path.join(tmp, 'lib.wav');
   const n = M.normalizeTrack(src, lib);

@@ -6,12 +6,19 @@
 //   cutRows(scan)       → ng-scan 的結果 → cuts.md 的 NG 列
 //   cutsMarkdown(...)   → cuts.md 全文
 //   flowCli(cmd, P, flags) → media.mjs 的指令入口
+//   cutsCli(P, flags)   → media.mjs cuts：停點 ① 使用者指名改哪幾列的「剪」欄
 import { hasSimplified, toTrad } from './zh.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { runJob, jobState, STILL_RUNNING } from './job.mjs';
+import { runJob, jobState, isJobChild, STILL_RUNNING } from './job.mjs';
+import { STOP, stopLines } from './stops.mjs';
+import { report, next, cmdLine } from './say.mjs';
+import { saidOf } from './cli.mjs';
+import { mainTry, stopLine } from './tries.mjs';
+import { writeManifest } from './assets-manifest.mjs';
+import { editorUrlsSync } from './editor-urls.mjs';
 import { appendStop, progressFile } from './progress.mjs';
 import { hfArgs } from './hf.mjs';
 import { resolveFormat } from './canvas.mjs';
@@ -21,15 +28,21 @@ import { spawnP } from './proc.mjs';
 import { readScript } from './script-file.mjs';
 import { writeAtomic } from './atomic.mjs';
 import { mapWords, keptSegments, wordsToSource } from './transcript-map.mjs';
-import * as M from '../media.mjs';
+// 032 C9：剪乾淨用的函式在 lib/rough/（以前整包匯入 media.mjs，media.mjs 又動態匯入這支：循環）
+import { scanFresh, scan as scanMedia, scanSummary, blackDetectBg, blackCacheOf, refreshVoiceOnly } from './rough/scan.mjs';
+import { mainIsCurrent, joinMain, mainCandidates, screenJudge } from './rough/main-track.mjs';
+import { readV1, aeSilenceAsync, WAIT_KEEP, WAIT_KEEP_MAX, waitKeep, scriptOrder, suggestOrder, editForLevel, CUT, parseCutsMd, setCutChecks, aeFailure, aeArgs } from './rough/cuts.mjs';
+import { cutpoints, cutCheck } from './rough/cutpoints.mjs';
+import { ngScan, chapterRows, ngSnap, utterances } from './rough/ngscan.mjs';
+import { waitRows, screenSync } from './rough/screen-sync.mjs';
+import { srtAlign, captionMax } from './rough/align.mjs';
+import { clock2r } from './time.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MEDIA = path.join(HERE, '..', 'media.mjs');
-const EDITOR = path.join(HERE, '..', 'editor.mjs');
 const BUILD = path.join(HERE, '..', 'build.mjs');
-const STOP1 = '① 剪輯清單';
+const STOP1 = STOP.cuts;
 const CUTS_DRAFT = '<!-- prep 草稿：ng-snap 預跑完才算數 -->';
-const STOP_LINE = (url) => `⏸ 停點 ① 剪輯清單｜請看 ${url}\n請回：勾好後說「可以」，或要改的列`;
 export const ROUGH_WARN = { pause: 0.35, total: 0.6 };   // 停頓剪掉超過（扣掉 NG 後的）35%、或整支剪掉超過 60% → ⚠
 const SPEECH_RATE = 16000;
 const MIN_SPEECH = 0.2;   // 靜音判斷把超過 80% 都當靜音（錄得太小聲、門檻不對）：不要只拿剩下的去轉
@@ -39,7 +52,7 @@ const relPath = (p) => posix(path.relative(process.cwd(), p)) || '.';
 const exists = (f) => fs.existsSync(f);
 const mtime = (f) => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } };
 const secs = (ms) => Math.round(ms / 100) / 10;
-const clock = (t) => { const r = Math.round(t * 100) / 100; return `${Math.floor(r / 60)}:${(r % 60).toFixed(2).padStart(5, '0')}`; };
+const clock = clock2r;
 const cleanEnv = () => { const e = { ...process.env }; delete e.AUTO_EDIT_JOB; return e; };
 const pad2 = (n) => String(n).padStart(2, '0');
 const stamp = (d = new Date()) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
@@ -110,7 +123,7 @@ export async function speechWhisper(P, mainFile, { edit, margin, v1: v1Given = n
   const info = probeMedia(mainFile);
   let silence;
   try {
-    silence = v1Given ? M.readV1(path.resolve(v1Given)) : M.readV1((await M.aeSilenceAsync(P, mainFile, { edit, margin, log: detail })).file);
+    silence = v1Given ? readV1(path.resolve(v1Given)) : readV1((await aeSilenceAsync(P, mainFile, { edit, margin, log: detail })).file);
   } catch (e) {
     if (/找不到 auto-editor/.test(e.message)) throw e;
     detail(`判斷停頓失敗（${e.message}）：直接轉 main.mp4`);
@@ -227,8 +240,8 @@ export function cutsMarkdown({ rows = [], chapters = [], order = null, decide = 
   for (const r of rows) L.push(`| ${r.cut ? '[x]' : '[ ]'} | ${clock(r.start)}–${clock(r.end)} | ${cell(r.text) || '—'} | ${cell(r.reason)} | ${cell(r.pending) || '—'} |`);
   L.push('');
   if (waits.length) {
-    L.push('## 等待（邊錄邊講）', '', `畫面在等、也沒人講話的地方。勾了就壓成 ${M.WAIT_KEEP}–${M.WAIT_KEEP_MAX} 秒的快轉（等待的五分之一），其他剪掉；等待 15 秒以上的，完成影片會自動放等待卡（計時圈＋在等什麼）、配秒針。預設不勾。`, '', '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|');
-    for (const w of waits) L.push(`| [ ] | ${clock(w.start)}–${clock(w.end)} | ${cell(w.file)} ${w.kind === '畫面在轉' ? '畫面在轉' : w.kind === '靜止' ? '畫面沒動' : '只有小動作（可能在打字）'} | 等待：${(w.end - w.start).toFixed(1)} 秒沒人講話，勾了壓成 ${M.waitKeep(w.end - w.start)} 秒快轉${M.waitKeep(w.end - w.start) >= 3 ? '＋等待卡' : ''} | — |`);
+    L.push('## 等待（邊錄邊講）', '', `畫面在等、也沒人講話的地方。勾了就壓成 ${WAIT_KEEP}–${WAIT_KEEP_MAX} 秒的快轉（等待的五分之一），其他剪掉；等待 15 秒以上的，完成影片會自動放等待卡（計時圈＋在等什麼）、配秒針。預設不勾。`, '', '| 剪 | 時間碼 | 內容 | 原因 | 待確認 |', '|---|---|---|---|---|');
+    for (const w of waits) L.push(`| [ ] | ${clock(w.start)}–${clock(w.end)} | ${cell(w.file)} ${w.kind === '畫面在轉' ? '畫面在轉' : w.kind === '靜止' ? '畫面沒動' : '只有小動作（可能在打字）'} | 等待：${(w.end - w.start).toFixed(1)} 秒沒人講話，勾了壓成 ${waitKeep(w.end - w.start)} 秒快轉${waitKeep(w.end - w.start) >= 3 ? '＋等待卡' : ''} | — |`);
     L.push('');
   }
   if (chapters.length) {
@@ -269,8 +282,8 @@ function orderInfo(P, { clips, words, lines, explicit, judge }) {
   let rows = clips.map((c, k) => ({ ...c, k }));
   let note = clips.length > 1 ? `現在${how}（${clips.length} 支）。` : '主軌只有 1 支；下面是螢幕錄影的判斷（判斷錯了就說，會改接進主軌的檔）。';
   if (clips.length > 1 && lines?.length) {
-    const scored = M.scriptOrder(clips, words, lines);
-    const sug = M.suggestOrder(scored);
+    const scored = scriptOrder(clips, words, lines);
+    const sug = suggestOrder(scored);
     const same = sug.every((r, i) => r.k === i);
     const sugAt = new Map(sug.map((r, i) => [r.k, i + 1]));
     rows = scored.map((r) => ({ ...r, sug: sugAt.get(r.k) }));
@@ -319,14 +332,26 @@ async function initProgressSafe(project, detail, format = null) {
   } catch (e) { detail(`開工決策表沒填（${e.message}）`); return null; }
 }
 
+// ---------- 剪輯台網址 ----------
+// editor.mjs --json 直接回各頁網址（lib/editor-urls.mjs），不從人看的輸出比對「剪輯清單：」這類文字。
+// 背景工作的標記（AUTO_EDIT_JOB）不往下傳：剪輯台是常駐的，帶著它之後開的工具會以為自己是 prep／rough 的子行程
+function editorUrls(P, flags) {
+  const job = process.env.AUTO_EDIT_JOB;
+  delete process.env.AUTO_EDIT_JOB;
+  try { return editorUrlsSync(P.project, { template: flags.template }); } finally { if (job !== undefined) process.env.AUTO_EDIT_JOB = job; }
+}
+// 開不成功時 editorUrlsSync 只回 null：原因在剪輯台的 log（ensureEditor 寫的），指過去
+const editorWhy = (P) => {
+  const log = path.join(P.project, 'work', 'hyperframes', '.editor', 'editor.log');
+  return exists(log) ? `細節：${relPath(log)}` : `跑 node shared/template/tools/editor.mjs --project ${relPath(P.project)} 看錯誤`;
+};
+
 // ---------- 剪輯清單頁 ----------
 function openCutsPage(P, flags, detail) {
-  const args = [EDITOR, '--project', P.project, ...(flags.template ? ['--template', flags.template] : []), '--background'];
-  const r = spawnSync(process.execPath, args, { encoding: 'utf8', env: cleanEnv(), cwd: process.cwd(), timeout: 60000 });
-  detail(String(r.stdout || ''), String(r.stderr || ''));
-  const m = String(r.stdout || '').match(/剪輯清單：(\S+)/);
-  if (r.status === 0 && m) return { url: m[1] };
-  return { url: null, why: String(r.stderr || r.stdout || r.error?.message || '').trim().split(/\r?\n/).slice(-8).join('\n') };
+  const u = editorUrls(P, flags);
+  detail(u ? `剪輯清單：${u.cuts}` : '剪輯台沒開成功（editor.mjs --json 沒回網址）');
+  if (u?.cuts) return { url: u.cuts };
+  return { url: null, why: editorWhy(P) };
 }
 
 // 初剪完成就能在瀏覽器看字幕疊在畫面上（不用另外輸出）。
@@ -344,11 +369,10 @@ function openRoughPreview(P, flags, detail) {
   const tpl = flags.template ? ['--template', flags.template] : [];
   const pre = spawnSync(process.execPath, [BUILD, '--project', P.project, '--prepare', ...tpl], { encoding: 'utf8', env: cleanEnv(), cwd: process.cwd(), timeout: 60000 });
   detail(String(pre.stdout || ''), String(pre.stderr || ''));
-  const r = spawnSync(process.execPath, [EDITOR, '--project', P.project, ...tpl, '--background'], { encoding: 'utf8', env: cleanEnv(), cwd: process.cwd(), timeout: 60000 });
-  detail(String(r.stdout || ''), String(r.stderr || ''));
-  // 正常流程剪輯台早就開著（① 的剪輯清單頁）：那時印的是「剪輯已經開著：」
-  const m = String(r.stdout || '').match(/^剪輯(?:已經開著)?：(\S+)/m);
-  return { url: r.status === 0 && m ? m[1] : null };
+  // 正常流程剪輯台早就開著（① 的剪輯清單頁）：開著就直接回網址
+  const u = editorUrls(P, flags);
+  detail(u ? `剪輯：${u.main}` : '剪輯台沒開成功（editor.mjs --json 沒回網址）');
+  return { url: u?.main ?? null };
 }
 
 // ---------- prep：一條指令到停點 ① ----------
@@ -372,11 +396,11 @@ export async function prepFlow(P, flags = {}) {
   const order = flags.order ?? null;
   let joined = false, judge = [];
   const t0 = Date.now();
-  if (M.mainIsCurrent(P, order)) {
+  if (mainIsCurrent(P, order)) {
     detail('work/main.mp4 是最新的，不重接');
   } else {
     const logged = [];
-    M.joinMain(P, { order, log: (l) => { logged.push(l); detail(l); } });
+    joinMain(P, { order, log: (l) => { logged.push(l); detail(l); } });
     joined = true;
     judge = logged.filter((l) => /^assets\/screen\//.test(l));
   }
@@ -390,17 +414,17 @@ export async function prepFlow(P, flags = {}) {
   // 逐字稿＋掃素材（同時跑）
   const tjFresh = exists(mainTj) && mtime(mainTj) >= mtime(mainFile) - 1000 && !flags.transcript;
   const haveMedia = hasMediaFiles(P);
-  const scanTask = haveMedia && !M.scanFresh(P) ? (async () => {
+  const scanTask = haveMedia && !scanFresh(P) ? (async () => {
     const t1 = Date.now();
-    try { const j = await M.scan(P, { log: detail }); return { line: M.scanSummary(j, secs(Date.now() - t1)) }; } catch (e) { return { warn: `⚠ 素材掃描失敗（${e.message}）→ 之後跑 node shared/template/tools/media.mjs scan --project ${pj}` }; }
-  })() : Promise.resolve(haveMedia ? { line: `${M.scanSummary(JSON.parse(fs.readFileSync(path.join(work, 'media', 'index.json'), 'utf8')))}（沒換，沿用）` } : { line: '素材：assets/screen/、assets/images/ 都是空的' });
+    try { const j = await scanMedia(P, { log: detail }); return { line: scanSummary(j, secs(Date.now() - t1)) }; } catch (e) { return { warn: `⚠ 素材掃描失敗（${e.message}）→ 之後跑 node shared/template/tools/media.mjs scan --project ${pj}` }; }
+  })() : Promise.resolve(haveMedia ? { line: `${scanSummary(JSON.parse(fs.readFileSync(path.join(work, 'media', 'index.json'), 'utf8')))}（沒換，沿用）` } : { line: '素材：assets/screen/、assets/images/ 都是空的' });
   for (const w of mainWarn) say(`⚠ ${w}`);
   // 全靜音：whisper 會幻聽出一堆字，auto-editor 也剪不出東西，在這裡就講清楚
-  const measured = M.editForLevel(mainFile);
+  const measured = editForLevel(mainFile);
   if (measured.silent && !flags.transcript) throw new Error(`主軌是靜音（最大音量 ${measured.peak} dB）→ 這個流程靠講話的聲音剪：確認錄影時有收音、素材沒放錯；聲音在別的檔就放 assets/voice/`);
   const level = flags.edit ? { edit: flags.edit, note: null } : measured;
   if (level.note) say(`✓ ${level.note}`);
-  const whisperTask = tjFresh ? null : flags.transcript ? Promise.resolve(useTranscript(P, flags.transcript)) : speechWhisper(P, mainFile, { edit: level.edit, margin: flags.margin ?? M.CUT.margin, v1: flags.v1 ?? null, detail });
+  const whisperTask = tjFresh ? null : flags.transcript ? Promise.resolve(useTranscript(P, flags.transcript)) : speechWhisper(P, mainFile, { edit: level.edit, margin: flags.margin ?? CUT.margin, v1: flags.v1 ?? null, detail });
   const [tr, sc] = await Promise.allSettled([whisperTask, scanTask]);
   if (tr.status === 'rejected') throw tr.reason;
   let words;
@@ -421,48 +445,52 @@ export async function prepFlow(P, flags = {}) {
 
   // cuts.md：還是最新的就不重寫（使用者可能已經勾過）
   const cutsFresh = exists(cutsFile) && !joined && !flags.again && mtime(cutsFile) >= mtime(mainFile) - 1000 && !fs.readFileSync(cutsFile, 'utf8').includes(CUTS_DRAFT);
-  let regenerated = false;
+  let regenerated = false, cutsLine;
   if (cutsFresh) {
-    say('✓ 剪輯清單：work/cuts.md 還是最新的，不重寫（使用者勾過的都留著）');
+    cutsLine = '✓ 剪輯清單：work/cuts.md 還是最新的，不重寫（使用者勾過的都留著）';
   } else {
     if (exists(cutsFile)) { const b = backupName(cutsFile, 'bak'); fs.copyFileSync(cutsFile, b); say(`（舊清單備份：${relPath(b)}）`); regenerated = true; }
-    if (!joined) judge = M.mainCandidates(proj).screens.map((x) => M.screenJudge(x));
-    const scan = M.ngScan(P, { log: detail, words });
+    if (!joined) judge = mainCandidates(proj).screens.map((x) => screenJudge(x));
+    const scan = ngScan(P, { log: detail, words });
     const rows = cutRows(scan);
-    const chapters = scan.script ? M.chapterRows(scan.script, scan.lineTime) : [];
+    const chapters = scan.script ? chapterRows(scan.script, scan.lineTime) : [];
     const missing = chapters.filter((c) => c.t == null);
     const chOk = chapters.filter((c) => c.t != null);
     const { order: orderTable, extra } = orderInfo(P, { clips, words, lines: scan.script?.lines, explicit: !!order, judge });
     const pre = [...mainWarn, ...extra, ...voiceNotice(P, clips), ...missing.map((c) => `章節「${c.title}」第一句「${c.first}」在逐字稿找不到 → 查 work/ng-scan.md 前後行的時間，補進章節空檔表`)];
     // 先寫表、預跑 ng-snap（它讀 cuts.md），把 ⚠ 寫進「需要你決定」
-    const waits = M.waitRows(P, clips, words);
+    const waits = waitRows(P, clips, words);
     fs.writeFileSync(cutsFile, `${cutsMarkdown({ rows, chapters: chOk, order: orderTable, decide: [], waits })}${CUTS_DRAFT}\n`);
-    const snap = M.ngSnap(P, { edit: level.edit, margin: flags.margin ?? M.CUT.margin, v1: flags.v1 ?? null, log: detail });
+    const snap = ngSnap(P, { edit: level.edit, margin: flags.margin ?? CUT.margin, v1: flags.v1 ?? null, log: detail });
     const decide = decideList(rows, snap.warnings, pre);
     writeAtomic(cutsFile, cutsMarkdown({ rows, chapters: chOk, order: orderTable, decide, waits }));
     const real = scan.outside.filter((u) => u.real).length, heard = scan.outside.length - real;
     const pending = rows.filter((r) => r.pending).length;
     const nFill = rows.filter((r) => /^贅字/.test(r.reason)).length;
-    say(`✓ 剪輯清單：work/cuts.md（NG ${rows.length} 列，其中待確認 ${pending} 列${waits.length ? `；邊錄邊講的等待 ${waits.length} 處，預設不勾` : ''}${chOk.length ? `；章節 ${chOk.length} 章` : ''}${nFill ? `；贅字 ${nFill} 處，預設不勾` : ''}）${scan.script ? `；講稿外 ${real} 處列進清單${heard ? `、${heard} 處字數接近是 whisper 聽錯（沒列，明細 work/ng-scan.md）` : ''}` : '；沒有講稿：相鄰句相似度找的候選，全部待確認'}`);
+    cutsLine = `✓ 剪輯清單：work/cuts.md（NG ${rows.length} 列，其中待確認 ${pending} 列${waits.length ? `；邊錄邊講的等待 ${waits.length} 處，預設不勾` : ''}${chOk.length ? `；章節 ${chOk.length} 章` : ''}${nFill ? `；贅字 ${nFill} 處，預設不勾` : ''}）${scan.script ? `；講稿外 ${real} 處列進清單${heard ? `、${heard} 處字數接近是 whisper 聽錯（沒列，明細 work/ng-scan.md）` : ''}` : '；沒有講稿：相鄰句相似度找的候選，全部待確認'}`;
   }
 
-  // 要使用者決定的事（細節都在 cuts.md）
+  // 要使用者決定的事（細節都在 cuts.md）：剪輯清單那一行和這幾行放進最後的回報段（A3），不在前面先印一次
   const need = parseDecide(fs.readFileSync(cutsFile, 'utf8'));
-  if (need.length) {
-    say(`需要你決定 ${need.length} 項（work/cuts.md 最後一節）：`);
-    for (const d of need.slice(0, 6)) say(`- ${d.length > 160 ? `${d.slice(0, 160)}…` : d}`);
-    if (need.length > 6) say(`- …還有 ${need.length - 6} 項`);
-  }
+  const needLines = !need.length ? [] : [
+    `需要你決定 ${need.length} 項（work/cuts.md 最後一節）：`,
+    ...need.slice(0, 6).map((d) => `- ${d.length > 160 ? `${d.slice(0, 160)}…` : d}`),
+    ...(need.length > 6 ? [`- …還有 ${need.length - 6} 項`] : []),
+  ];
+
+  // 素材清單（A10）：之後 status.mjs 比對，素材被換掉或搬走才提醒得到。只是提醒用，寫不成不擋流程
+  try { writeManifest(proj); } catch (e) { detail(`素材清單沒寫成（${e.message}）`); }
 
   // 「不用停」：待確認的列不剪、紀錄略過
   if (flags['skip-stop']) {
+    say(cutsLine);
+    for (const l of needLines) say(l);
     const text = fs.readFileSync(cutsFile, 'utf8');
-    const off = Object.fromEntries(M.parseCutsMd(text).ng.filter((r) => r.pending).map((r) => [r.row, false]));
-    if (Object.keys(off).length) writeAtomic(cutsFile, M.setCutChecks(text, off));
-    appendStop(proj, { stop: STOP1, state: '略過', said: flags.said ?? '', back: 'work/cuts.md' });
+    const off = Object.fromEntries(parseCutsMd(text).ng.filter((r) => r.pending).map((r) => [r.row, false]));
+    if (Object.keys(off).length) writeAtomic(cutsFile, setCutChecks(text, off));
+    appendStop(proj, { stop: STOP1, state: '略過', said: saidOf(flags), back: 'work/cuts.md' });
     say(`⏭ 停點 ① 略過：cuts.md 打勾的列照剪，待確認的 ${Object.keys(off).length} 列不剪`);
-    say('→ 下一步：輸出初剪、字幕、剪接點');
-    say(`node shared/template/tools/media.mjs rough --project ${pj}`);
+    for (const l of next('輸出初剪、字幕、剪接點', cmdLine('media.mjs', ['rough', '--project', pj]))) say(l);
     return 0;
   }
 
@@ -474,9 +502,9 @@ export async function prepFlow(P, flags = {}) {
     else say(`⚠ 剪輯清單頁沒開成功，網址改給 work/cuts.md（請使用者直接改「剪」欄）：\n${page.why}`);
   }
   const last = lastStop1(proj);
-  if (regenerated && last === '待回覆') appendStop(proj, { stop: STOP1, state: '修改後重停', said: flags.said ?? '', back: 'work/cuts.md' });
+  if (regenerated && last === '待回覆') appendStop(proj, { stop: STOP1, state: '修改後重停', said: saidOf(flags), back: 'work/cuts.md' });
   if (regenerated || last !== '待回覆') appendStop(proj, { stop: STOP1, state: '待回覆' });
-  say(STOP_LINE(url));
+  for (const l of report([cutsLine, ...needLines], { stop: stopLines.cuts(url) })) say(l);
   return 0;
 }
 
@@ -494,7 +522,7 @@ async function autoEditor(args, { onSpawn = null } = {}) {
   if (r.error?.code === 'ENOENT' && process.platform === 'win32') r = await spawnP('auto-editor', args.map((x) => `"${x}"`), { env: cleanEnv(), tail: 4000, shell: true });
   if (r.error?.code === 'ENOENT') throw new Error('找不到 auto-editor → 照 setup/ 的手冊安裝');
   if (r.status !== 0) {
-    throw M.aeFailure(r, '；第二次還失敗就停下來回報這段訊息');
+    throw aeFailure(r, '；第二次還失敗就停下來回報這段訊息');
   }
   return r;
 }
@@ -504,7 +532,7 @@ async function cutRough(P, snap, edit, margin, detail) {
   const work = path.join(P.project, 'work');
   const tmpMp4 = tmpFor(path.join(work, 'rough.mp4')), tmpV1 = tmpFor(path.join(work, 'cuts.v1.json'));   // 檔名帶 pid：上一次的 auto-editor 還在寫也不會寫到同一個檔
   sweepTmp(work);
-  const base = M.aeArgs({ src: relPath(snap.src), edit, margin, cutOut: snap.cutOut, addIn: snap.addIn });
+  const base = aeArgs({ src: relPath(snap.src), edit, margin, cutOut: snap.cutOut, addIn: snap.addIn });
   detail(`auto-editor ${base.join(' ')}`);
   const kids = [], onSpawn = (c) => kids.push(c);
   const both = [
@@ -552,13 +580,13 @@ export async function roughFlow(P, flags = {}) {
   // 做完了嗎：rough 走到底會留標記；舊流程做的看 cutpoints.json 有沒有比 rough.mp4 新
   const finished = exists(f.rough) && exists(f.srt) && exists(f.points) && (mtime(roughDoneFile(work)) >= mtime(f.rough) - 1000 || mtime(f.points) >= mtime(f.rough) - 1000);
   if (finished && !flags.again) throw new Error(`初剪已經做完了（work/rough.mp4、rough.srt、cutpoints.json 都在）→ 先問使用者要不要重剪（字幕會重排，在剪輯台改過的字幕會被蓋掉，舊檔有備份）；要重剪跑 node shared/template/tools/media.mjs rough --project ${pj} --again`);
-  const edit = flags.edit ?? M.editForLevel(path.join(work, 'main.mp4')).edit, margin = flags.margin ?? M.CUT.margin;
+  const edit = flags.edit ?? editForLevel(path.join(work, 'main.mp4')).edit, margin = flags.margin ?? CUT.margin;
 
   // NG 對齊停頓
   const cutsText = fs.readFileSync(f.cuts, 'utf8');
-  const snap = M.ngSnap(P, { edit, margin, log: detail });
+  const snap = ngSnap(P, { edit, margin, log: detail });
   for (const w of snap.warnings) if (!cutsText.includes(w.slice(0, 40))) warns.push(w);
-  const cm = M.parseCutsMd(cutsText);
+  const cm = parseCutsMd(cutsText);
   // 輸出初剪：參數和清單都沒變就沿用（重跑只補後面沒做完的）
   const key = roughKey(snap, edit, margin);
   let keyWas = null;
@@ -568,7 +596,7 @@ export async function roughFlow(P, flags = {}) {
   if (exists(f.rough) && !sameCut && !flags.again) throw new Error(`work/rough.mp4 已經存在，但和現在的剪輯清單或參數不同 → 先問使用者要不要重剪（會蓋掉）；要重剪跑 node shared/template/tools/media.mjs rough --project ${pj} --again`);
   fs.rmSync(roughDoneFile(work), { force: true });
   // ① 通過（紀錄最後一列還是待回覆才記）
-  if (['待回覆', '修改後重停'].includes(lastStop1(proj))) appendStop(proj, { stop: STOP1, state: '通過', said: flags.said ?? '', back: 'work/cuts.md' });
+  if (['待回覆', '修改後重停'].includes(lastStop1(proj))) appendStop(proj, { stop: STOP1, state: '通過', said: saidOf(flags), back: 'work/cuts.md' });
   say(`✓ NG 對齊停頓：剪 ${snap.cutOut.length} 段${snap.addIn.length ? `、保留 ${snap.addIn.length} 段停頓` : ''}（cuts.md 打勾 ${cm.ng.filter((r) => r.cut).length} 列、不剪 ${cm.ng.filter((r) => !r.cut).length} 列）`);
   const t0 = Date.now();
   if (sameCut) say('✓ 初剪：work/rough.mp4 參數和清單都沒變，沿用');
@@ -579,7 +607,7 @@ export async function roughFlow(P, flags = {}) {
     say(`✓ 初剪：work/rough.mp4、work/cuts.v1.json（用 ${secs(Date.now() - t0)}s）`);
   }
   const mainInfo = probeMedia(f.main), roughInfo = probeMedia(f.rough);
-  const v1 = M.readV1(f.v1);
+  const v1 = readV1(f.v1);
   const fps = roughInfo.fps || 30;
   const st = cutStats(v1, fps, mainInfo.duration ?? 0, roughInfo.duration ?? 0, snap.cutOut);
   if (st.high) warns.push(`⚠ 剪掉比例過高：${clock(mainInfo.duration ?? 0)} → ${clock(roughInfo.duration ?? 0)}（剪掉 ${Math.round(st.ratio * 100)}%：NG ${Math.round(st.ngSec)}s、停頓 ${Math.round(st.pauseSec)}s）→ 你聽不到聲音，不要自己分析音訊：把這行貼給使用者，請他在字幕預覽聽開頭 1 分鐘，照常往下做；他說尾音或小聲的字被切掉才重跑 node shared/template/tools/media.mjs rough --project ${pj} --edit "audio:-26dB" --again（還切到就 -30dB）；錄影裡本來就有很長的空檔就不用改`);
@@ -599,7 +627,7 @@ export async function roughFlow(P, flags = {}) {
   const indexed = exists(path.join(work, 'media', 'index.json'));
   const whisperTask = canMap ? null : flags.transcript ? Promise.resolve(useTranscript(P, flags.transcript)) : whisper(P, f.rough, { srt: f.srt, onSpawn: (c) => { child = c; } });
   whisperTask?.catch(() => {});   // 等 verify 的時候 whisper 先失敗：後面 await 才處理，這裡不算沒接住
-  const voiceTask = indexed ? (voiceClips ? M.blackDetectBg(f.rough, M.blackCacheOf(P)) : Promise.resolve([])).catch(() => null) : Promise.resolve(null);
+  const voiceTask = indexed ? (voiceClips ? blackDetectBg(f.rough, blackCacheOf(P)) : Promise.resolve([])).catch(() => null) : Promise.resolve(null);
   const verify = await verifyChild(P, flags);
   detail(verify.stdout, verify.stderr);
   if (verify.error) throw verify.error;
@@ -612,8 +640,7 @@ export async function roughFlow(P, flags = {}) {
     say(at >= 0 ? lines.slice(at).filter(Boolean).join('\n') : `✖ verify-rough 失敗：${String(verify.stderr).trim().slice(-300)}`);
     try { fs.rmSync(roughKeyFile(work), { force: true }); } catch { /* 下次重剪就好 */ }
     say(`細節：${relPath(detail.file)}`);
-    say(/解碼有錯/.test(verifyOut) ? '→ 下一步：重新輸出初剪（紀錄已清掉，這次會真的重剪）' : '→ 下一步：照上面第 1 步重接主軌後，第 2–4 步可以用這一條');
-    say(`node shared/template/tools/media.mjs rough --project ${pj} --again`);
+    for (const l of next(/解碼有錯/.test(verifyOut) ? '重新輸出初剪（紀錄已清掉，這次會真的重剪）' : '照上面第 1 步重接主軌後，第 2–4 步可以用這一條', cmdLine('media.mjs', ['rough', '--project', pj, '--again']))) say(l);
     return 1;
   }
   const verifyLine = verifyOut.split(/\r?\n/).find((l) => l.startsWith('✓')) || '✓';
@@ -625,24 +652,24 @@ export async function roughFlow(P, flags = {}) {
     const mainWords = parseWords(fs.readFileSync(f.mainTj, 'utf8'), 'work/transcript-main.json');
     const m = mapWords(mainWords, v1, v1FpsOf(v1, fps), { ngRanges });
     fs.writeFileSync(f.tj, JSON.stringify(m.words, null, 1) + '\n');
-    if (!exists(f.srt)) fs.writeFileSync(f.srt, formatSrt(M.utterances(m.words).map((u, i) => ({ n: i + 1, start: u.start, end: Math.max(u.end, u.start + 0.01), text: u.text })), {}));
+    if (!exists(f.srt)) fs.writeFileSync(f.srt, formatSrt(utterances(m.words).map((u, i) => ({ n: i + 1, start: u.start, end: Math.max(u.end, u.start + 0.01), text: u.text })), {}));
     say(`✓ 逐字稿：main.mp4 那份換算成 rough.mp4 時間軸，不重轉（${m.words.length} 個詞；NG 裡的丟掉 ${m.dropped} 個${m.collapsed ? `、落在剪掉範圍的重排 ${m.collapsed} 個` : ''}）`);
   } else {
     const r = await whisperTask;
-    if (flags.transcript && !exists(f.srt)) fs.writeFileSync(f.srt, formatSrt(M.utterances(r.words).map((u, i) => ({ n: i + 1, start: u.start, end: Math.max(u.end, u.start + 0.01), text: u.text })), {}));
+    if (flags.transcript && !exists(f.srt)) fs.writeFileSync(f.srt, formatSrt(utterances(r.words).map((u, i) => ({ n: i + 1, start: u.start, end: Math.max(u.end, u.start + 0.01), text: u.text })), {}));
     say(`✓ 逐字稿：對 rough.mp4 轉（${lineOfWhisper(r)}${hasScript ? '' : '；沒有講稿'}）`);
   }
 
   // 字幕
   const planFile = path.join(work, 'hyperframes', 'plan.json');
-  const res = M.srtAlign(P, { remapPlan: !!flags['remap-plan'], max: M.captionMax(P, flags.max, detail), log: detail, remapFrom: oldCues && exists(planFile) ? parseSrt(oldCues) : null });
+  const res = srtAlign(P, { remapPlan: !!flags['remap-plan'], max: captionMax(P, flags.max, detail), log: detail, remapFrom: oldCues && exists(planFile) ? parseSrt(oldCues) : null });
   for (const w of res.warnings || []) warns.push(w);
   say(`✓ 字幕：work/rough.srt（${res.cues.length} 則${hasScript ? '，照講稿' : ''}）`);
 
   // 剪接點
-  const cp = M.cutpoints(P, { log: detail });
+  const cp = cutpoints(P, { log: detail });
   // 剪接點有沒有把字切一半（聽兩側的音量）：只提醒，不擋流程
-  try { const cc = M.cutCheck(P, { log: detail }); if (cc.bad?.length) say(`⚠ ${cc.bad.length} 個剪接點可能把字切一半（${cc.bad.slice(0, 3).map((x) => clock(x.at)).join('、')}${cc.bad.length > 3 ? '…' : ''}）→ 明細：node shared/template/tools/media.mjs cut-check --project ${path.relative(process.cwd(), P.project).split(path.sep).join('/')}`); } catch (e) { detail(`cut-check 略過：${e.message}`); }
+  try { const cc = cutCheck(P, { log: detail }); if (cc.bad?.length) say(`⚠ ${cc.bad.length} 個剪接點可能把字切一半（${cc.bad.slice(0, 3).map((x) => clock(x.at)).join('、')}${cc.bad.length > 3 ? '…' : ''}）→ 明細：node shared/template/tools/media.mjs cut-check --project ${path.relative(process.cwd(), P.project).split(path.sep).join('/')}`); } catch (e) { detail(`cut-check 略過：${e.message}`); }
   for (const w of cp.warnings || []) warns.push(w);
   const nNg = cp.cuts.filter((c) => c.kind === 'ng').length;
   say(`✓ 剪接點：work/cutpoints.json（${cp.cuts.length} 個）`);
@@ -650,47 +677,100 @@ export async function roughFlow(P, flags = {}) {
   // 邊錄邊講的螢幕錄影
   let syncLine = null;
   if (clips.some((c) => c.kind === 'screen')) {
-    const ss = M.screenSync(P, { log: detail });
+    const ss = screenSync(P, { log: detail });
     syncLine = `螢幕錄影同步 ${ss.segments.length} 段（work/screen-sync.json；寫好 plan.json 草稿後再跑 node shared/template/tools/media.mjs screen-sync --project ${pj} --write-plan）`;
     say(`✓ ${syncLine}`);
   }
 
   // 只有聲音的區間（已經掃過素材才更新 index.md）
   const voiceOnly = await voiceTask;
-  if (indexed && voiceOnly) M.refreshVoiceOnly(P, voiceOnly);
+  if (indexed && voiceOnly) refreshVoiceOnly(P, voiceOnly);
 
   fs.mkdirSync(path.dirname(roughDoneFile(work)), { recursive: true });
   fs.writeFileSync(roughDoneFile(work), `${key}\n`);
 
-  // 結尾：Skill 回報要的數字
+  // 結尾：Skill 回報要的數字，整段是回報段（A3）；摘要要 AI 寫完才有，留一行提示
   const removed = st.segments;
-  say('');
-  say(`初剪完成：原始 ${(mainInfo.duration ?? 0).toFixed(2)}s → 初剪 ${(roughInfo.duration ?? 0).toFixed(2)}s，剪掉 ${removed} 段（NG ${snap.cutOut.length} 段；剪掉 ${Math.round(st.ratio * 100)}%）`);
-  say(`srt-align：${res.summary}；⚠：${(res.warnings || []).length ? (res.warnings || []).join(' ') : '無'}`);
-  say(`剪接點 ${cp.cuts.length} 個：ng ${nNg}、pause ${cp.cuts.length - nNg}（表在 work/.jobs/rough-detail.log、work/cutpoints.json）`);
-  say(`驗證：work/rough.mp4 → ${(roughInfo.duration ?? 0).toFixed(2)}s、${roughInfo.width}×${roughInfo.height}；verify-rough → ${verifyLine}`);
-  const others = warns.filter((w) => !(res.warnings || []).includes(w));
-  for (const w of others) say(w);
+  // 其他 ⚠（剪掉比例過高這類）照舊印在回報段前面：每則自己寫了要不要貼給使用者
+  for (const w of warns.filter((x) => !(res.warnings || []).includes(x))) say(w);
   const preview = openRoughPreview(P, flags, detail);
-  if (preview.url) say(`字幕預覽：${preview.url}（字幕疊在畫面上，只有聲音的黑屏也看得到；錯字直接改，會自動存）`);
+  const lines = [
+    `初剪完成：原始 ${(mainInfo.duration ?? 0).toFixed(2)}s → 初剪 ${(roughInfo.duration ?? 0).toFixed(2)}s，剪掉 ${removed} 段（NG ${snap.cutOut.length} 段；剪掉 ${Math.round(st.ratio * 100)}%）`,
+    `srt-align：${res.summary}；⚠：${(res.warnings || []).length ? (res.warnings || []).join(' ') : '無'}`,
+    `剪接點 ${cp.cuts.length} 個：ng ${nNg}、pause ${cp.cuts.length - nNg}（表在 work/.jobs/rough-detail.log、work/cutpoints.json）`,
+    `驗證：work/rough.mp4 → ${(roughInfo.duration ?? 0).toFixed(2)}s、${roughInfo.width}×${roughInfo.height}；verify-rough → ${verifyLine}`,
+    ...(preview.url ? [`字幕預覽：${preview.url}（字幕疊在畫面上，只有聲音的黑屏也看得到；錯字直接改，會自動存）`] : []),
+    `摘要：（寫好 work/摘要.md、跑 node shared/template/tools/status.mjs --project ${pj} --summary 之後，把它印的 ✓ 那一行換到這裡）`,
+  ];
+  for (const l of report(lines, { assets: [f.rough] })) say(l);
   // 不用等使用者再說一次：status.mjs 會印下一條（有素材先盤點；主軌沒有真人畫面就跳過構圖）。使用者明說只要「剪乾淨」才停在這裡
-  say(`→ 下一步：接著做（有素材先盤點，${clips.some((c) => c.kind === 'camera') ? '再到 ② 構圖' : '主軌沒有真人畫面，不用構圖'}；使用者明說只要「剪乾淨」才停在這裡）`);
-  say(`node shared/template/tools/status.mjs --project ${pj}`);
+  for (const l of next(`接著做（有素材先盤點，${clips.some((c) => c.kind === 'camera') ? '再到 ② 構圖' : '主軌沒有真人畫面，不用構圖'}；使用者明說只要「剪乾淨」才停在這裡）`, cmdLine('status.mjs', ['--project', pj]))) say(l);
+  return 0;
+}
+
+// ---------- cuts：停點 ① 使用者指名改哪幾列（「第 3 列不要剪」） ----------
+// 列號＝剪輯清單頁每列的號碼＝parseCutsMd 的 row（NG 表、等待表由上往下連號）；只改「剪」欄，和頁面勾選走同一個 setCutChecks
+export function parseRowList(s, flag) {
+  const out = [];
+  for (const part of String(s ?? '').split(/[,，、\s]+/).map((x) => x.replace(/^#|^第|列$/g, '')).filter(Boolean)) {
+    const m = part.match(/^(\d+)(?:[-–~](\d+))?$/);
+    if (!m) throw new Error(`--${flag} 要寫列號（例 3,5 或 3-5），「${part}」看不懂`);
+    const a = +m[1], b = m[2] != null ? +m[2] : a;
+    for (let n = Math.min(a, b); n <= Math.max(a, b); n++) out.push(n);
+  }
+  return [...new Set(out)];
+}
+
+export function cutsCli(P, flags) {
+  const proj = P.project, pj = relPath(proj), work = path.join(proj, 'work');
+  const file = path.join(work, 'cuts.md');
+  const keep = flags.keep != null ? parseRowList(flags.keep, 'keep') : [];
+  const cut = flags.cut != null ? parseRowList(flags.cut, 'cut') : [];
+  if (!keep.length && !cut.length) throw new Error(`要寫改哪幾列 → 不剪：--keep 3,5；要剪：--cut 7（列號是剪輯清單頁每列的號碼），例 node shared/template/tools/media.mjs cuts --project ${pj} --keep 3 --said "第 3 列不要剪"`);
+  const both = keep.filter((n) => cut.includes(n));
+  if (both.length) throw new Error(`第 ${both.join('、')} 列同時寫在 --keep 和 --cut → 一列只放一邊`);
+  if (!exists(file)) throw new Error(`找不到 work/cuts.md → 先跑 node shared/template/tools/media.mjs prep --project ${pj}`);
+  if (jobState(proj, 'prep').state === 'running') throw new Error(`media.mjs prep 還在背景跑（cuts.md 可能會重寫）→ 等它跑完到停點 ①：node shared/template/tools/media.mjs prep --project ${pj}`);
+  // 剪輯清單頁在初剪之後也變成唯讀：這裡跟著擋，改勾選要連初剪一起重做
+  if (exists(path.join(work, 'rough.mp4'))) throw new Error(`初剪已經輸出了（work/rough.mp4），這份清單現在只能看 → 先問使用者要不要重剪（字幕會重排）；要的話改好 work/cuts.md 那幾列的「剪」欄，再跑 node shared/template/tools/media.mjs rough --project ${pj} --again`);
+  const text = fs.readFileSync(file, 'utf8');
+  const cm = parseCutsMd(text);
+  const rows = new Map(cm.ng.map((r) => [r.row, r]));
+  const bad = [...keep, ...cut].filter((n) => !rows.has(n));
+  if (bad.length) throw new Error(`剪輯清單沒有第 ${bad.join('、')} 列 → ${cm.ng.length ? `現在是第 1–${cm.ng.length} 列（剪輯清單頁每列的號碼）` : 'work/cuts.md 的 NG 表是空的，沒有能改的列'}`);
+  const checks = Object.fromEntries([...keep.map((n) => [n, false]), ...cut.map((n) => [n, true])]);
+  const next = setCutChecks(text, checks);
+  if (next !== text) writeAtomic(file, next);
+  const changed = Object.entries(checks).filter(([n, on]) => rows.get(+n).cut !== on).map(([n]) => +n);
+  const fmt = (ns) => ns.map((n) => `第 ${n} 列（${clock(rows.get(n).start)}–${clock(rows.get(n).end)}）`).join('、');
+  const parts = [keep.length ? `${fmt(keep)}不剪` : '', cut.length ? `${fmt(cut)}要剪` : ''].filter(Boolean);
+  appendStop(proj, { stop: STOP1, state: '修改後重停', said: saidOf(flags), back: 'work/cuts.md' });
+  const after = parseCutsMd(next).ng;
+  let url = 'work/cuts.md';
+  if (!flags['no-editor']) {
+    const page = openCutsPage(P, flags, () => {});
+    if (page.url) url = page.url;
+    else console.log(`⚠ 剪輯清單頁沒開成功，網址改給 work/cuts.md（請使用者直接改「剪」欄）：\n${page.why}`);
+  }
+  const lines = [
+    `✓ 剪輯清單：${parts.join('；')}${changed.length ? '' : '（本來就是這樣，cuts.md 沒有改）'}（work/cuts.md）`,
+    `現在 ${after.length} 列：剪 ${after.filter((r) => r.cut).length} 列、不剪 ${after.filter((r) => !r.cut).length} 列`,
+  ];
+  for (const l of report(lines, { stop: stopLines.cuts(url) })) console.log(l);
   return 0;
 }
 
 // ---------- 指令入口 ----------
-// 還在跑時印可以直接貼的同一條指令（「→ 下一步」的下一行）
-const quoteArg = (a) => (/^[\w./:@=-]+$/.test(a) ? a : `"${a}"`);
-const sameCommand = () => `node ${relPath(process.argv[1])} ${process.argv.slice(2).map(quoteArg).join(' ')}`;
+// 還在跑時印可以直接貼的同一條指令（「→ 下一步」的下一行）：flowCli 只從 media.mjs 進來，指令照 cmdLine 組（路徑有空白也能貼）
+const sameCommand = () => cmdLine('media.mjs', process.argv.slice(2));
 
 export async function flowCli(cmd, P, flags) {
   const wait = flags.wait != null ? Number(flags.wait) : undefined;
   if (flags.wait != null && !(wait >= 0)) throw new Error(`--wait 要是秒數（0 ＝開了就回），現在是「${flags.wait}」`);
   const scanFlow = async () => {
     const t0 = Date.now();
-    const j = await M.scan(P);
-    console.log(M.scanSummary(j, secs(Date.now() - t0)));
+    const j = await scanMedia(P);
+    console.log(scanSummary(j, secs(Date.now() - t0)));
     return j.files.length && j.files.every((x) => x.error) ? 1 : 0;
   };
   const flow = { prep: () => prepFlow(P, flags), rough: () => roughFlow(P, flags), transcribe: () => transcribeFlow(P, flags), scan: scanFlow }[cmd];
@@ -705,5 +785,10 @@ export async function flowCli(cmd, P, flags) {
   const log = cmd === 'scan' || cmd === 'transcribe' ? (l) => { if (!/在背景跑，log/.test(l)) console.log(l); } : console.log;
   const code = await runJob({ project: P.project, name: cmd, run, log, retryFailed: !!flags.again, ...(wait != null ? { waitSec: wait } : {}) });
   if (code === STILL_RUNNING) console.log(sameCommand());
+  // 主代理同一條連續沒過幾次就停手（A4）：只在前景算一次（背景子行程也會走到這裡）；還在跑（75）不算
+  else if ((cmd === 'prep' || cmd === 'rough') && !isJobChild(cmd)) {
+    const t = mainTry(P.project, cmd, code === 0);
+    if (t.stop) console.log(stopLine(t.n, `media.mjs ${cmd} `));
+  }
   return code;
 }

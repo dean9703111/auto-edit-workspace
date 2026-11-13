@@ -5,21 +5,18 @@
 ## 0. 暫存資料夾（每次換背景開一個新的）
 
 ```
-Mac：TMP="$(mktemp -d)"; echo "$TMP"
-Windows（PowerShell）：$TMP = (New-Item -ItemType Directory -Path "$env:TEMP\bg-$(Get-Random)").FullName; $TMP
+node shared/template/tools/brand.mjs bg --tmp
 ```
 
 記下它印的完整路徑。後面每條指令的 `$TMP` 都直接換成這個路徑再執行（每條指令是新的 shell，變數不會留著）。回報與停點 ⑥ 也寫這個完整路徑。所有輸出都先放這裡，使用者同意後照 `auto-edit-style` 步驟 4 存成風格包、套用，不要自己複製進 `shared/template/`。
 
-## 1. 使用者給的圖
+## 1. 使用者給的圖（其他路線的成品也用這條轉）
 
 ```
-ffmpeg -v error -y -i "<使用者的圖>" -vf "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080" -q:v 2 "$TMP/bg-fs.jpg"
-ffmpeg -v error -y -i "<使用者的圖>" -vf "scale=960:1080:force_original_aspect_ratio=increase,crop=960:1080" -q:v 2 "$TMP/bg-side.jpg"
-ffmpeg -v error -y -i "<使用者的圖>" -vf "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080" -q:v 2 "$TMP/bg-ch.jpg"
+node shared/template/tools/brand.mjs bg --image "<圖>" --kind fs --out "$TMP"
 ```
 
-Windows 把 `"$TMP/…"` 寫成 `"$TMP\…"`，其餘相同。其他路線產生的圖尺寸不對時，也用這三行裁。
+縮放到蓋滿、從中間裁成那一種的尺寸，存成 `$TMP/bg-<種類>.jpg`，另存 zones 圖、量留空區。三種（`fs`、`side`、`ch`）還缺哪幾種，它會印同一張圖接著裁的指令，照「→ 下一步」跑；三種齊了它印第 5 節那一條。暗色加 `--dark`（存成 `bg-<種類>-dark.jpg`）。
 
 ## 2. Codex（提示詞一定從 stdin 給；`-i` 會吃掉後面的字串）
 
@@ -29,7 +26,7 @@ Windows（PowerShell）：Copy-Item shared\template\bg-fs.jpg "$TMP\ref.jpg"
 codex exec --skip-git-repo-check -C "$TMP" -s workspace-write -i "$TMP/ref.jpg" < "$TMP/prompt.md"
 ```
 
-`prompt.md` 寫：主色色碼、三張的尺寸與檔名（`raw-fs.png`、`raw-side.png`、`raw-ch.png`）、每張要留空的區域（R9.2 原文照抄）。做完用第 1 節同種類那一行的 ffmpeg 轉成 `bg-<種類>.jpg`（`<使用者的圖>` 換成 `raw-<種類>.png`）。派工人同時生成（`references/bg-worker.md`）時，每張一份 prompt、只寫自己那張，`-C` 和 prompt 都換成 `$TMP/<種類>`，參考圖仍用 `$TMP/ref.jpg`。PowerShell 沒有 `<`，改成 `Get-Content "$TMP\prompt.md" -Raw | codex exec --skip-git-repo-check -C "$TMP" -s workspace-write -i "$TMP\ref.jpg"`。
+`prompt.md` 寫：主色色碼、三張的尺寸與檔名（`raw-fs.png`、`raw-side.png`、`raw-ch.png`）、每張要留空的區域（R9.2 原文照抄）。做完用第 1 節那一條轉成 `bg-<種類>.jpg`（`<圖>` 換成 `$TMP/raw-<種類>.png`，`--kind` 換成那一種）。派工人同時生成（`references/bg-worker.md`）時，每張一份 prompt、只寫自己那張，`-C` 和 prompt 都換成 `$TMP/<種類>`，參考圖仍用 `$TMP/ref.jpg`。PowerShell 沒有 `<`，改成 `Get-Content "$TMP\prompt.md" -Raw | codex exec --skip-git-repo-check -C "$TMP" -s workspace-write -i "$TMP\ref.jpg"`。
 
 ## 3. MiniMax CLI（`mmx`）
 
@@ -39,9 +36,9 @@ mmx image generate --prompt "<side 的提示詞>" --width 960 --height 1080 --n 
 mmx image generate --prompt "<ch 的提示詞>" --width 1920 --height 1080 --n 3 --out-dir "$TMP/mmx" --out-prefix bg-ch --quiet
 ```
 
-每種各出 3 張，挑留空區最乾淨的一張，用第 1 節的指令轉成 `bg-<種類>.jpg`。三行互不相關，派工人同時跑（`references/bg-worker.md`）。
+每種各出 3 張，挑留空區最乾淨的一張，用第 1 節那一條轉成 `bg-<種類>.jpg`。三行互不相關，派工人同時跑（`references/bg-worker.md`）。
 
-暗色版（plan.json `"theme": "dark"` 用的 `bg-<種類>-dark.jpg`；HTML 路線還不能做暗色，沒有 mmx 也沒有使用者的圖就沿用目前的暗色，回報寫「暗色背景沒換，要 mmx 或你給圖」）：fs 的提示詞照抄下面這段（`<主色色碼>` 換掉），side、ch 只換 `--width`、`--out-prefix`；轉檔時檔名寫 `bg-<種類>-dark.jpg`。
+暗色版（plan.json `"theme": "dark"` 用的 `bg-<種類>-dark.jpg`；HTML 路線還不能做暗色，沒有 mmx 也沒有使用者的圖就沿用目前的暗色，回報寫「暗色背景沒換，要 mmx 或你給圖」）：fs 的提示詞照抄下面這段（`<主色色碼>` 換掉），side、ch 只換 `--width`、`--out-prefix`；轉檔時加 `--dark`。
 
 ```
 mmx image generate --prompt "Dark premium tech presentation background, deep graphite black (#0C0E12) smooth matte surface, a soft diffuse warm (<主色色碼>) light bloom in the upper-right corner fading out, faint cool blue-gray haze in the lower-left corner, very fine film grain, subtle vignette, large calm empty area in the center and left, no objects, no text, no lines, no shapes, cinematic, 16:9" --width 1920 --height 1080 --seed 4242 --n 3 --out-dir "$TMP/mmx" --out-prefix bg-fs-dark --quiet
@@ -62,13 +59,9 @@ node shared/template/tools/brand.mjs bg --html "$TMP/bg-ch.html" --kind ch --out
 ## 5. 驗證（每條路都一樣）
 
 ```
-ffprobe -v error -show_entries stream=width,height -of csv=p=0 "$TMP/bg-fs.jpg"
-ffmpeg -v error -y -i "$TMP/bg-fs.jpg" -vf "drawbox=x=120:y=150:w=1260:h=712:color=red@0.8:t=4,drawbox=x=1424:y=581:w=464:h=370:color=blue@0.8:t=4,drawbox=x=0:y=920:w=1920:h=160:color=yellow@0.8:t=4" "$TMP/zones-fs.jpg"
-ffmpeg -v error -y -i "$TMP/bg-side.jpg" -vf "drawbox=x=0:y=86:w=816:h=778:color=red@0.8:t=4" "$TMP/zones-side.jpg"
-ffmpeg -v error -y -i "$TMP/bg-ch.jpg" -vf "drawbox=x=160:y=260:w=1600:h=610:color=red@0.8:t=4" "$TMP/zones-ch.jpg"
-ffmpeg -v error -y -i "$TMP/bg-fs.jpg" -i "$TMP/bg-side.jpg" -i "$TMP/bg-ch.jpg" -filter_complex "[0]scale=640:360[a];[1]scale=320:360[b];[2]scale=640:360[c];[a][b][c]hstack=3" "$TMP/preview.jpg"
+node shared/template/tools/brand.mjs bg --verify "$TMP"
 ```
 
-- 尺寸要是 `1920,1080`、`960,1080`、`1920,1080`。
-- `zones-fs.jpg`：紅框（全畫面主卡）、藍框（子母畫面）、黃框（字幕帶）裡沒有裝飾（R9.2）。`zones-side.jpg` 的紅框（側邊欄文字區）、`zones-ch.jpg` 的紅框（章名卡）裡也沒有裝飾。
-- `preview.jpg` 給使用者看 → 停點 ⑥。只有 HTML 路線、而且三張是你自己一張一張做的，`brand.mjs bg` 已經產生 zones 和 `preview.jpg`，只要跑 ffprobe 那一行；派工人做的一律由主代理跑這一節。
+驗三張（和 `-dark` 三張，有的話）的尺寸、重做 zones 圖、量留空區、產生並排預覽 `preview.jpg`（暗色三張齊了另出 `preview-dark.jpg`），最後印回報段和停點 ⑥ 那兩行（完整路徑），照抄給使用者。尺寸不對、少一張會 ✖：照那一行的 → 做。派工人做的一律由主代理跑這一節。
+
+`zones-fs.jpg` 的紅框（全畫面主卡）、藍框（子母畫面）、黃框（字幕帶），`zones-side.jpg` 的紅框（側邊欄文字區）、`zones-ch.jpg` 的紅框（章名卡）裡都不能有裝飾（R9.2）；`--verify` 量到有裝飾會印 ⚠，照它的 → 做。

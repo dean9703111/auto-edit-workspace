@@ -9,7 +9,7 @@
 //   remapCues(cues, tm) → 完成影片時間的字幕（整句被剪掉的長度變 0，字幕產生器會略過）
 //   dB(x) → 線性增益
 
-import { r3 } from './time.mjs';
+import { r3, clock2 } from './time.mjs';
 
 export const EDIT_KEYS = ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins'];
 export const VOLUME_KEYS = ['voice', 'sfx', 'media'];
@@ -19,7 +19,7 @@ export const PUNCH = 1.08;       // punch 放大倍率
 export const JOIN_TOL = 0.1;     // joins.at 要對到剪接點的容許誤差
 export const dB = (x) => Math.pow(10, (x || 0) / 20);
 const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
-const fmt = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+const fmt = clock2;
 
 export const DEFAULT_EDIT = () => ({ cuts: [], fadeIn: 0, fadeOut: 0, volume: { voice: 0, sfx: 0, media: 0 }, gains: [], joins: [] });
 

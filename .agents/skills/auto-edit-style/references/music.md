@@ -13,9 +13,9 @@
 | 「生成配樂」「做配樂」「換配樂」 | 步驟 B（要 ACE-Step；沒裝照步驟 B 的第 2 點問） |
 | 「這集生一首新的」 | 步驟 B，每條指令加 `--project projects/<專案>` |
 | 「每一集都用這首」 | `node shared/template/tools/music.mjs use <曲名>` |
-| 「這集不要底樂」 | 那一集 plan.json 第一層寫 `"bed": { "music": null }`，跑 build |
+| 「這集不要底樂」 | `node shared/template/tools/build.mjs --project projects/<專案> --set bed.music=none`，照它印的下一步跑 build |
 | 「以後都不要底樂」 | `node shared/template/tools/music.mjs use none` |
-| 「底樂大聲一點／小聲一點」 | 那一集 plan.json 的 `bed` 加 `"volume": 3`（dB，−12～+12；一次調 3），跑 build |
+| 「底樂大聲一點／小聲一點」 | `node shared/template/tools/build.mjs --project projects/<專案> --set bed.volume=3`（dB，−12～+12；一次調 3，小聲寫 `-3`），照它印的下一步跑 build |
 
 ## 步驟 A：放自己的音樂
 
@@ -36,9 +36,9 @@
 
 | 使用者要 | 做法 |
 |---|---|
-| 這一集當底樂 | 那一集 plan.json 第一層寫 `"bed": { "music": "<曲名>" }` |
+| 這一集當底樂 | `node shared/template/tools/build.mjs --project projects/<專案> --set bed.music=<曲名>` |
 | 每一集都當底樂 | `node shared/template/tools/music.mjs use <曲名>`（plan.json 不用寫） |
-| 當片尾配樂 | 那一集 plan.json 第一層寫 `"outro": { "from": "#N", "music": "<曲名>" }`（N＝結語金句講完後那一句） |
+| 當片尾配樂 | `node shared/template/tools/build.mjs --project projects/<專案> --set "outro.from=#N;outro.music=<曲名>"`（N＝結語金句講完後那一句） |
 
 沒講清楚就問一次：「要每一集都用，還是只用在這一集？」
 

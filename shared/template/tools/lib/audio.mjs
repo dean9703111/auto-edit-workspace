@@ -1,6 +1,6 @@
 // 主軌聲音處理（零依賴；build.mjs 重新編碼底片時用）：人聲響度標準化＋剪接點微淡化；音效政策與結尾配樂（契約 specs/contracts/sfx.md）
 //
-//   LOUD、CUT_FADE                         目標（−14 LUFS／true peak −1 dBTP）與剪接點淡化長度（秒）
+//   LOUD、CUT_FADE                         目標（−14 LUFS／true peak −1 dBTP）與剪接點淡化長度（秒）；LOUD_TEXT＝訊息裡的「−14 LUFS」
 //   parseLoudnorm(text)                    ffmpeg loudnorm 印出的 JSON → { i, tp, lra, thresh, offset }（數字）；沒有或全靜音 → null
 //   loudnormFilter(m, target)              第二段（套用）的 -af 字串，用量到的值、能線性就線性
 //   loudnessPlan(m, target)                { gainDb, linear, tp }：預估要加／減幾 dB、會不會走線性、套用後的 true peak
@@ -23,13 +23,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { run, probeMedia, encodeFootage, tmpFor, sweepTmp } from './ff.mjs';
+import { r3, clock2 } from './time.mjs';
 
 export const LOUD = { I: -14, TP: -1, LRA: 11 };
+export const LOUD_TEXT = `${String(LOUD.I).replace('-', '−')} LUFS`;   // 訊息裡的寫法「−14 LUFS」（032 C7：數字只寫在 LOUD）
 export const CUT_FADE = 0.015;      // 剪接點前後各 15 ms（接點處最大跳變比硬切少約九成；30 ms 起接點附近的能量被吃掉過半，實驗見 USAGE.md 2.8；凹洞量測見 specs/005-sfx/research.md）
 export const AUDIO_VER = 1;
 const RATE = 48000;
 const r1 = (n) => +Number(n).toFixed(1);
-const r3 = (n) => +Number(n).toFixed(3);
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
 
 // ---------- 響度 ----------
@@ -207,7 +208,7 @@ export const SFX_RULES = Object.freeze({ gapSec: 3, extraGapSec: 0.2, perMinute:
 export const SFX_SWAP = Object.freeze({ thunder: 'alert', sparkle: 'ding', shine: 'ding' });   // 超過每集上限時換成誰（情緒點自動換；其他段建議換）
 const SWAP = SFX_SWAP;
 export const KEEP_FIRST = ['chapter', 'thunder', 'shine', 'sparkle', 'alert', 'success'];   // lib/autofix.mjs 拿掉太密的音效也照這個優先序
-const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;   // 和 plan.mjs 的 fmt 相同
+const fmtT = clock2;   // 和 plan.mjs 的 fmt 相同
 const median = (a) => { const b = [...a].sort((x, y) => x - y); const m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
 const d1 = (v) => n1(r1(v).toFixed(1));
 
@@ -343,7 +344,7 @@ function loudWarning(loud) {
 }
 
 function sfxLevelLines(b, { loudnorm = true } = {}) {
-  if (!loudnorm) return ['音效比例：沒有檢查（用了 --no-loudnorm，人聲不是 −14 LUFS，音效和人聲的比例會跟 kit/sfx.json 的設計不同）'];
+  if (!loudnorm) return [`音效比例：沒有檢查（用了 --no-loudnorm，人聲不是 ${LOUD_TEXT}，音效和人聲的比例會跟 kit/sfx.json 的設計不同）`];
   const { main, extra } = b.levels || {};
   if (!main && !extra) return ['音效比例：這支片沒有音效'];
   // 有設計上就比上限大的音效（章節、打雷：照作者剪映的比例）時，範圍寫成「從小幾 dB 到大幾 dB」

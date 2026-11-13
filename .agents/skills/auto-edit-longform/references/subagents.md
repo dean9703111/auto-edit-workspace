@@ -1,6 +1,6 @@
 # 子代理分工（主代理要派工時才讀）
 
-有能派子代理的工具就用；沒有才自己照那支 Skill 一個一個做。派工訊息工具會印，照抄那一行。
+有能派子代理的工具就用；沒有才自己照那支 Skill 一個一個做。派工訊息工具會印在「→ 派工：」下面，一行一則，照抄。
 
 | 工作 | 什麼時候分 | 子代理照哪一份做 | 子代理只能寫 |
 |---|---|---|---|
@@ -11,6 +11,6 @@
 | 錄影的運鏡與標註 | 2 支以上 | `auto-edit-screen` 步驟 2–3 | `work/media/frames/`、`work/reports/<檔名>.md`，結果回報給主代理寫草稿 |
 | 手改模板動畫 | 修改單、我指定模板做不到的改動 | `.agents/skills/auto-edit-motion/references/worker-brief.md` | 那一支 `compositions/<模板>-<段>.html`、`work/reports/<段>.md` |
 
-子代理可以跑的指令只有：`build.mjs --map`、`--outline`、`--check-draft`（自己那份）、`--spec`、`--icons`、`--words`、`--design-canvas <自己的段>`，`audit.mjs --only <自己的段> --shots --sheet`，`media.mjs frame`、`media.mjs illus-lint`，設計師另外可以跑 `npx hyperframes catalog`、`npx hyperframes add`（在子殼裡）。合併、產生分鏡表、定稿、開剪輯台、render 都是主代理的事。別段有 ✖ 不影響 `--only`。
+子代理可以跑的指令只有：`build.mjs --map`、`--outline`、`--check-draft`（自己那份）、`--spec`、`--icons`、`--words`、`--design-canvas <自己的段>`，`audit.mjs --only <自己的段> --shots --sheet`，`media.mjs frame`、`media.mjs illus-lint`、`media.mjs illus-show`，設計師另外可以跑 `npx hyperframes catalog`、`npx hyperframes add`（在子殼裡）。合併、產生分鏡表、定稿、開剪輯台、render 都是主代理的事。別段有 ✖ 不影響 `--only`。
 
 一次最多派幾個照工具印的數字（預設 10 個）；我說「子代理一次派 N 個」「只能開 N 個」時跑 `node shared/template/tools/status.mjs --agents <N>`（1–16）。平台實際開不了那麼多時，照開得了的數量分批，並在回報裡建議我把上限改成多少。

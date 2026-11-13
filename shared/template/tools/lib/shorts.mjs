@@ -13,9 +13,10 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parseSrt } from './srt.mjs';
 import { probeMedia } from './ff.mjs';
+import { next } from './say.mjs';
+import { r3Round as r3 } from './time.mjs';
 
 export const SHORTS = { min: 20, max: 75, target: 45, pause: 0.35, pad: 0.15, keep: 24 };
-const r3 = (n) => Math.round(n * 1000) / 1000;
 const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const CONNECT = /^(然後|接著|所以|因為|但是|不過|而且|另外|那|那麼|再來|最後|其次|因此|也就是|或者|或是|並且|這樣|這個|它|他|她)/;
 const clean = (s) => String(s).replace(/\s+/g, ' ').trim();
@@ -113,7 +114,7 @@ export function makeShort({ project, name, range, root, log = console.log }) {
   const soft = crop && crop.h < 1920 ? `來源高 ${info.height}，放大 ${(1920 / crop.h).toFixed(1)} 倍${1920 / crop.h > 1.9 ? '（會偏軟；有 4K 原檔的話用原檔重做比較清楚）' : ''}` : '來源已經是直的，沒有裁切';
   log(`✓ 短片專案：projects/${name}（#${r.a}–#${r.z}，${Math.round(dur)} 秒，${lines.length} 句；${crop ? `裁來源 x ${crop.x}–${crop.x + crop.w} 的直條，` : ''}${soft}）`);
   log(`→ assets/camera/${name}.mp4（1080×1920）、講稿.md（這一段的字幕，一行一句）`);
-  log('→ 下一步：請使用者看一眼講者有沒有在畫面中間；沒問題就照一般流程剪這個新專案（直式）：');
-  log(`用 auto-edit-longform 剪 projects/${name}`);
+  // 「用 auto-edit-longform 剪 …」是給 AI 的說法、不是指令：寫進說明那一行（「→ 下一步」下面只放整行能跑的指令）
+  for (const l of next(`請使用者看一眼講者有沒有在畫面中間；沒問題就照一般流程剪這個新專案（直式）：用 auto-edit-longform 剪 projects/${name}`)) log(l);
   return { dir: dst, file: out, range: r, crop, lines: lines.length };
 }

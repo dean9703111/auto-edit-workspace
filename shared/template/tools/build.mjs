@@ -47,6 +47,30 @@
  *   node shared/template/tools/build.mjs --project projects/<專案> --pics 手機,雲端     查圖庫（常用物件的線稿，附使用時機）；--pics 不帶詞印目錄、--pics <類別> 印那一類
  *   node shared/template/tools/build.mjs --project projects/<專案> --words 28-41       看這幾句的字幕與逐字稿（挑 @詞 用）
  *   node shared/template/tools/build.mjs --project projects/<專案> --show s05,x03      只看這幾段的 plan（不用整份讀 plan.json）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --show 1:15        也收時間（1:15、1:15.2、75＝完成影片第幾秒）：先印那一秒所在的段（和 --check 報告的「起–迄」同一套），再印那一段
+ *   node shared/template/tools/build.mjs --project projects/<專案> --set "theme=dark;look.slim=0.6"
+ *                                                     只改 plan.json 第一層的設定（每次重新讀檔、只動這幾個鍵、照原本的縮排寫回），印「✓ plan.json：theme＝dark（原本 light）」和下一步：
+ *                                                     theme（light／dark）、style（shared/template/styles/ 的資料夾名）、format（portrait／landscape）、speakerSide（left／center／right）、
+ *                                                     chapterBadge（true／false）、look（off）、look.color（0–1）、look.slim（0–1.2）、look.beauty（0–1）、
+ *                                                     bed.music（曲庫的曲名；none＝這一集不配）、bed.volume（−12～12 dB）、outro.from（#N）、outro.music（曲名；none＝不配）。
+ *                                                     鍵或值不對 ✖ 並列出能寫的。還沒有 plan.json 時 theme、style、format、look* 會先建 { "version": 1 } 再寫
+ *   node shared/template/tools/build.mjs --project projects/<專案> --unset "style;format"   拿掉這幾個設定（回到預設）；另外收 bed、outro（整個拿掉：底樂回到工作區預設、不配片尾配樂）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --to-design s05,s12
+ *                                                     把這幾段換成內容設計動畫（拿掉模板與欄位，先備份 plan.json）、補 work/briefs/、驗收次數歸零、build，印派工那一行；
+ *                                                     已經是內容設計動畫的段不重做
+ *   node shared/template/tools/build.mjs --project projects/<專案> --framing
+ *                                                     停點 ② 一條做完：講者瘦臉過期先跑（還在背景跑結束碼 75，再跑同一條）、量構圖（work/構圖預覽.jpg）、開構圖台、記 ② 待回覆，
+ *                                                     最後印回報段（建議倍率、調光瘦臉、素材盤點）＋停點 ② 那兩行。沒有講者（只有聲音、邊錄邊講的螢幕錄影）印「不用構圖」，直接產生分鏡素材（同 --scaffold）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --framing-done [--use suggested｜<倍率>] [--said "使用者原話"]
+ *                                                     停點 ② 回覆後一條做完：不帶 --use＝「調好了」（構圖台已經存好）；suggested＝寫入建議的框；倍率（1–2，例 1.15）＝寫入那個倍率的框。
+ *                                                     接著記 ② 通過（② 最後一筆已經是通過就不再記）、瘦臉過期先跑（還在背景跑結束碼 75，再跑同一條）、量講者框、
+ *                                                     產生分鏡素材（同 --scaffold，最後印它的下一步；分鏡素材已經切好、構圖框沒變就不重切）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --migrate-beats [--dry-run]
+ *                                                     拍點正本的遷移（032 B6；每個專案第一次跑 build／audit／versions 會自動做一次，記在 work/hyperframes/.cache/beats-v2.json）：
+ *                                                     手改過的模板段、內容設計動畫的拍點表放進 work/designs/<段>.md，模板段的表和 plan.json 不同就印一行。不看標記重跑；--dry-run 只印不寫
+ *   --said "使用者原話"：--apply-storyboard、--framing-done 記進停點紀錄（也收 --say；--said="…" 的值裡有 = 也照收）
+ *   一次只跑一個模式（--check、--scaffold、--storyboard、--review、--set／--unset、--framing…上面每一條指令的主旗標）：寫了兩個 ✖「不能一起用」；
+ *   --only、--force、--json、--table、--said、--wait、--format、路徑旗標這類修飾照常搭配。值旗標後面接的是另一個旗標（--project --check）也 ✖
  *   node shared/template/tools/build.mjs --gallery    （作者用）重新產生 shared/template/preview/*.html（情境動畫另出直式 x-<名稱>-v.html，和直式講者示意 speaker-v.jpg、speaker-v-dark.jpg）
  *   --format landscape|portrait（或 橫式|直式）：蓋過版式（預設照 plan.json "format" > work/製作進度.md 開工決策表「版式」> 主軌寬高比；lib/canvas.mjs）
  *
@@ -67,8 +91,8 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseSrt, formatSrt } from './lib/srt.mjs';
-import { floorFrame, r3 } from './lib/time.mjs';
-import { loadScenes, loadIcons, loadFx, motionConsts, resolveScene, sampleSeg } from './lib/scenes.mjs';
+import { floorFrame, r3, clock2, clock2r } from './lib/time.mjs';
+import { resolveScene, sampleSeg } from './lib/scenes.mjs';
 import { assembleScene, sceneParts, hashOf, verifyHash } from './lib/assemble.mjs';
 import { buildCaptions, captionWarnings } from './lib/captions.mjs';
 import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
@@ -79,9 +103,8 @@ import { hfShim } from './lib/hf.mjs';
 import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
-import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip } from './lib/audio.mjs';
-import { loadMusic, bedPlan, renderBedClip, bedLine } from './lib/music.mjs';
-import { readSettings } from './lib/settings.mjs';
+import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip, LOUD_TEXT } from './lib/audio.mjs';
+import { bedPlan, renderBedClip, bedLine } from './lib/music.mjs';
 import { ensureLook, lookCheck } from './lib/look.mjs';
 import { ensureMattes } from './lib/matte.mjs';
 import { hyperframesVersion, versionLine } from './caps.mjs';
@@ -89,14 +112,23 @@ import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZo
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
 import { appliedDesign } from './lib/project-design.mjs';
 import { picsCmd } from './lib/pics.mjs';
-import { syncLocalSfx, localSfxDir, LOCAL_ROLES } from './lib/sfx-local.mjs';
+import { localSfxDir, LOCAL_ROLES } from './lib/sfx-local.mjs';
 import { runScaffold, mapCmd, mapMergeCmd, checkDraft, outlineCmd, designStatusCmd, designCanvasCmd, mergeDrafts, storyboardCmd, applyCmd, reviewCmd, groupWarnings, specCmd, iconsCmd, wordsCmd, showCmd, backupPlan, ensureBriefs } from './lib/flow.mjs';
 import { autofixPlan, summaryLines } from './lib/autofix.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
 import { jobState, runJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
-import { materializeFills } from './lib/custom-fill.mjs';
+import { materializeFills, readFillSpec, renderSheet } from './lib/custom-fill.mjs';
+import { splitFlag, valueOf, oneOf, saidOf, isMain } from './lib/cli.mjs';
+import { fail, next as nextLines } from './lib/say.mjs';
+import { planSetCmd, toDesignCmd } from './lib/plan-set.mjs';
+import { framingCmd, framingDoneCmd } from './lib/framing-flow.mjs';
+import { attachBeats, ensureBeatsV2, migrateBeats } from './lib/beat-source.mjs';
+import { findProject, pathsFrom, loadLib, hasVoiceSource, projectLabel, fromRoot } from './lib/project.mjs';
+import { markStep } from './lib/progress.mjs';
 
 export { probeDuration, encodeFootage };
+// 032 C9：專案路徑與模板庫搬到 lib/project.mjs，這裡照舊匯出（別的工具、測試不用改）
+export { findProject, pathsFrom, loadLib, hasVoiceSource, projectLabel };
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // 第二層情境動畫的預覽頁（003 的 lib/custom-preview.mjs；檔還沒出現前 --gallery 照常跑，只是不產生 preview/x-*.html）
@@ -108,73 +140,31 @@ const NOCAPS_FILE = 'compositions/final-nocaps.html', NOCAPS_SRT = 'final-nocaps
 const captionSrt = (captions) => { let n = 0; return formatSrt(captions.items.flatMap((c) => c.spans.map(([a, b]) => ({ n: ++n, start: a, end: b, text: c.text })))); };
 const CAPCUT_RE = /^compositions\/capcut-[^/]+\.html$/;
 const OUTPUT_DIRS = ['output', path.join('output', 'test-clips'), path.join('output', 'qc')];
-const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'outline', 'map', 'said', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx', 'design-canvas'];
+const VALUE_FLAGS = ['project', 'plan', 'srt', 'video', 'out', 'sfx', 'template', 'test', 'only', 'format', 'check-draft', 'outline', 'map', 'said', 'say', 'spec', 'icons', 'words', 'show', 'wait', 'keep-sfx', 'design-canvas', 'set', 'unset', 'to-design', 'use'];
 
 export function parseArgs(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) throw new Error(`看不懂的參數「${a}」（用 --help 看用法）`);
-    const [k, inline] = a.slice(2).split('=');
+    // 只在第一個 = 切：--set "a=b;c=d"、--said="…=…" 的值裡也有 =
+    const [k, inline] = splitFlag(a);
     if (k === 'pics') { const v = inline ?? (argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : null); flags.pics = v ?? true; }   // 不帶詞＝印圖庫目錄
-    else if (VALUE_FLAGS.includes(k)) {
-      const v = inline ?? argv[++i];
-      if (v == null) throw new Error(`--${k} 後面要接值`);
-      flags[k] = v;
-    } else if (['check', 'list', 'scaffold', 'map-merge', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'nocaps', 'autofix', 'reset'].includes(k)) flags[k] = true;
+    else if (VALUE_FLAGS.includes(k)) { try { [flags[k], i] = valueOf(argv, i, k, inline); } catch (e) { throw new Error(`${e.message} → 在 --${k} 後面補上值（用 --help 看用法）`); } }
+    else if (['check', 'list', 'scaffold', 'map-merge', 'merge-drafts', 'no-storyboard', 'design-status', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'reencode', 'prerender', 'no-prerender', 'no-reuse', 'all-sheets', 'table', 'json', 'force', 'gallery', 'help', 'no-loudnorm', 'no-declick', 'capcut', 'nocaps', 'autofix', 'reset', 'framing', 'framing-done', 'migrate-beats', 'dry-run'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
   return flags;
 }
 
-// 專案資料夾：--project（路徑或名稱）→ 目前資料夾所在的專案 → projects/ 只有一個時用它；--plan／--srt／--video／--out 全給時可以沒有專案
-export function findProject(flags, root, cwd = process.cwd()) {
-  const projects = path.join(root, 'projects');
-  const list = () => (fs.existsSync(projects) ? fs.readdirSync(projects, { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith('.')).map((d) => d.name) : []);
-  if (flags.project) {
-    for (const p of [path.resolve(cwd, flags.project), path.join(projects, flags.project)]) if (fs.existsSync(p) && fs.statSync(p).isDirectory()) return p;
-    throw new Error(`找不到專案「${flags.project}」→ 現有專案：${list().map((n) => `projects/${n}`).join('、') || '（projects/ 是空的）'}`);
-  }
-  const r = path.relative(projects, cwd);
-  if (r && !r.startsWith('..') && !path.isAbsolute(r)) return path.join(projects, r.split(path.sep)[0]);
-  if (['plan', 'srt', 'video', 'out'].every((k) => flags[k])) return null;
-  const names = list();
-  if (names.length === 1) return path.join(projects, names[0]);
-  throw new Error(`要指定專案：加 --project projects/<專案> → 現有專案：${names.map((n) => `projects/${n}`).join('、') || '（projects/ 是空的，先建專案資料夾）'}`);
-}
-
-export function pathsFrom(flags, cwd = process.cwd(), { needProject = true } = {}) {
-  const templateDir = flags.template ? path.resolve(cwd, flags.template) : path.resolve(HERE, '..');
-  const shared = path.resolve(templateDir, '..');
-  const root = path.resolve(shared, '..');
-  const project = needProject ? findProject(flags, root, cwd) : null;
-  const work = project ? path.join(project, 'work') : null;
-  const out = flags.out ? path.resolve(cwd, flags.out) : work && path.join(work, 'hyperframes');
-  return {
-    templateDir, root, project, out,
-    plan: flags.plan ? path.resolve(cwd, flags.plan) : out && path.join(out, 'plan.json'),
-    srt: flags.srt ? path.resolve(cwd, flags.srt) : work && path.join(work, 'rough.srt'),
-    video: flags.video ? path.resolve(cwd, flags.video) : work && path.join(work, 'rough.mp4'),
-    sfx: flags.sfx ? path.resolve(cwd, flags.sfx) : path.join(shared, 'sfx'),
-  };
-}
+// 一次只做一件事：這些是「模式」，寫了兩個以前只靜靜跑第一個，現在 ✖。其他旗標是可以搭配的修飾
+// （--only、--force、--json、--table、--said／--say、--wait、--format、--use、--reset、--keep-sfx、--no-storyboard、--no-reuse、--prerender、
+//   --all-sheets、--test、--nocaps、--capcut、--reencode、--no-loudnorm、--no-declick、路徑旗標）。--set、--unset 是同一件事，可以一起寫
+export const MODES = ['list', 'gallery', 'framing', 'framing-done', 'set', 'unset', 'to-design', 'scaffold', 'spec', 'icons', 'pics', 'words', 'show', 'autofix',
+  'map', 'map-merge', 'outline', 'design-status', 'design-canvas', 'check-draft', 'merge-drafts', 'storyboard', 'apply-storyboard', 'review', 'prepare', 'check', 'migrate-beats'];
+export const modeOf = (flags) => oneOf({ ...flags, unset: flags.set != null ? undefined : flags.unset }, MODES);
 
 const rel = (p) => path.relative(process.cwd(), p) || '.';
-
-// projectDir：這一集自己的曲庫（work/music/）也算進配樂；沒給就只有工作區的 shared/music/
-export function loadLib(templateDir, projectDir = null) {
-  const kit = path.join(templateDir, 'kit');
-  const sharedDir = path.resolve(templateDir, '..');
-  const read = (f, d) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : d);
-  const brandCss = fs.existsSync(path.join(kit, 'brand.css')) ? fs.readFileSync(path.join(kit, 'brand.css'), 'utf8') : '';
-  const accent = (brandCss.match(/--brand\s*:\s*(#[0-9a-fA-F]{6})/) || [])[1] || '#FFD400';
-  return {
-    scenes: loadScenes(templateDir), icons: loadIcons(templateDir), fx: loadFx(templateDir),
-    consts: motionConsts(kit), sfx: (() => { const k = read(path.join(kit, 'sfx.json'), {}); return { ...k, ...syncLocalSfx(sharedDir, { kit: k }), ...loadMusic({ sharedDir, projectDir }) }; })(), accent,   // 自備音效（shared/sfx-local/，030）蓋過內建的同名音效
-    musicDefault: readSettings(sharedDir).data.music?.bed ?? null,
-    customDir: path.join(templateDir, 'custom'),
-  };
-}
 
 // ---------- 寫檔與保護 ----------
 
@@ -507,19 +497,13 @@ export function voiceOnlyOf(P, videoFile, log = () => {}) {
   return blackDetect(videoFile, path.join(P.out, '.cache', 'blackdetect.json'), () => log('偵測只有聲音的區間（rough.mp4 全黑的地方；第一次會花一點時間，之後用快取）…'));
 }
 
-// 專案有沒有只有聲音的主軌素材：assets/voice/ 有檔，或 work/main.json 有 kind "voice"／"screen"（邊錄邊講的螢幕錄影，主軌只取聲音）的段
-export function hasVoiceSource(projectDir) {
-  try { if (fs.readdirSync(path.join(projectDir, 'assets', 'voice')).some((x) => !x.startsWith('.'))) return true; } catch { /* 沒有資料夾 */ }
-  try { return (JSON.parse(fs.readFileSync(path.join(projectDir, 'work', 'main.json'), 'utf8')).clips || []).some((c) => c.kind === 'voice' || c.kind === 'screen'); } catch { return false; }
-}
-
 // rough.mp4 有全黑區間、專案卻沒有只有聲音的素材 → 初剪壞了（auto-editor 剪手機原檔的已知問題），不能當成「只有聲音」默默拿掉小視窗
 // → { voiceOnly（給 resolvePlan 用）, black（併好的全黑區間）, errors }；相鄰 ≤ 0.1 秒的黑段併成一段
 export function roughBlackCheck(projectDir, voiceOnly, projectRel = 'projects/<專案>') {
   if (!projectDir || !voiceOnly?.length || !fs.existsSync(path.join(projectDir, 'assets')) || hasVoiceSource(projectDir)) return { voiceOnly: voiceOnly || [], black: [], errors: [] };
   const black = [];
   for (const [a, b] of [...voiceOnly].sort((x, y) => x[0] - y[0])) { const l = black[black.length - 1]; if (l && a - l[1] <= 0.1 + 1e-9) l[1] = Math.max(l[1], b); else black.push([a, b]); }
-  const clock = (t) => { const r = Math.round(t * 100) / 100; return `${Math.floor(r / 60)}:${(r % 60).toFixed(2).padStart(5, '0')}`; };
+  const clock = clock2r;
   const where = black.map(([a, b]) => `${clock(a)}–${clock(b)}`).join('、');
   return { voiceOnly: [], black, errors: [`work/rough.mp4 在 ${where} 是全黑，但素材沒有純聲音檔 → 初剪壞了：跑 node shared/template/tools/media.mjs verify-rough --project ${projectRel}`] };
 }
@@ -534,12 +518,6 @@ export function mediaRoot(P) {
 }
 
 const posix = (p) => p.split(path.sep).join('/');
-const realish = (p) => { try { return fs.realpathSync(p); } catch { return p; } };
-// 工作區根目錄底下就寫相對路徑（projects/example/…）；比對用 realpath（macOS 的 /var 其實是 /private/var）
-const fromRoot = (P, p) => { const r = path.relative(realish(P.root), realish(p)); return r && !r.startsWith('..') && !path.isAbsolute(r) ? posix(r) : posix(p); };
-// 訊息裡的專案寫法：在 projects/ 底下就寫 projects/<名稱>（工具從別處 symlink 過來時 root 對不到，也照樣好讀）
-export const projectLabel = (P, dir) => (path.basename(path.dirname(dir)) === 'projects' ? `projects/${path.basename(dir)}` : fromRoot(P, dir));
-
 // 插入素材：轉檔（30fps CFR、每秒一個關鍵影格、speed 做進檔案）／複製圖片／放大鏡逐格；簽章沒變就不重做，沒用到的舊檔刪掉
 function prepareMedia(items, out, log) {
   const dir = path.join(out, 'assets', 'media');
@@ -613,6 +591,8 @@ function prepareMedia(items, out, log) {
 // 情境動畫段（模板填好的、內容設計動畫）由 materializeFills 補在段上的 src、layout 與標記照段 id 帶過去；#N@詞 用字數估的清單每次重算
 function checkerOf({ base, filled, speaker, cues }) {
   const fill = new Map((filled.scenes || []).filter((s) => s?.type === 'custom' && s.id).map((s) => [s.id, s]));
+  const specs = new Map();
+  const specOf = (t) => { if (!specs.has(t)) { let sp = null; try { sp = readFillSpec(base.lib.customDir, t); } catch { sp = null; } specs.set(t, sp); } return specs.get(t); };
   return (pl) => {
     const plan = structuredClone(pl);
     for (const s of plan.scenes || []) {
@@ -620,7 +600,15 @@ function checkerOf({ base, filled, speaker, cues }) {
       if (!f) continue;
       if (f.src !== undefined) s.src = f.src;
       if (s.layout == null && f.layout != null) s.layout = f.layout;
-      for (const k of ['__fillErrors', '__sheet', '__blank']) if (f[k] !== undefined) Object.defineProperty(s, k, { value: f[k], enumerable: false, configurable: true });
+      for (const k of ['__fillErrors', '__blank', '__beatOwner']) if (f[k] !== undefined) Object.defineProperty(s, k, { value: f[k], enumerable: false, configurable: true });
+      // 動畫分鏡照這一次的 slots 重算：autofix 改了拍綁的詞（併拍、文字對時），沿用一開始算的表，那則提醒會一直在（032）
+      // 只有拍點正本是 slots 的段（owner plan）要重算；手寫段的表在 work/designs/，autofix 改不到也不用重算（032 B6）
+      if (f.__sheet !== undefined) {
+        const spec = s.template && (f.__beatOwner ?? 'plan') === 'plan' ? specOf(s.template) : null;
+        let sheet = f.__sheet;
+        if (spec) try { sheet = renderSheet(spec, s.slots, s.id); } catch { /* 算不出來就沿用開始時的表 */ }
+        Object.defineProperty(s, '__sheet', { value: sheet, enumerable: false, configurable: true });
+      }
     }
     cues.approx = new Set();
     cues.voiceMoved = new Set();
@@ -671,11 +659,17 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   if (P.project) log(`專案：${rel(P.project)}`);
   const { plan, cues } = loadInputs(P);
   if (!flags.check && !flags.prepare && plan.scenes === undefined) throw new Error('plan.json 還沒有 scenes → 先跑 build.mjs --scaffold，照 work/分鏡素材/ 寫段落');
-  // 背景的底片處理還在跑：等它，不要重複編碼（--scaffold 開的；長片約幾分鐘）
+  // 背景的底片處理還在跑：等它，不要重複編碼（--scaffold 開的；長片約幾分鐘）。
+  // 最多等 --wait 秒（預設 DEFAULT_WAIT），到了回 stillRunning，由 buildCli 印「⏳ 還在跑」、結束碼 75（032）
   if (!flags.check && !flags.prepare && P.project && jobState(P.project, 'prepare').state === 'running') {
     log('底片還在背景處理，等它做完…');
     const wait = new Int32Array(new SharedArrayBuffer(4));
-    while (jobState(P.project, 'prepare').state === 'running') Atomics.wait(wait, 0, 0, 1000);
+    const sec = Number(flags.wait ?? DEFAULT_WAIT);
+    const until = Date.now() + (sec >= 0 ? sec : DEFAULT_WAIT) * 1000;
+    while (jobState(P.project, 'prepare').state === 'running') {
+      if (Date.now() >= until) return { ok: false, stillRunning: true };
+      Atomics.wait(wait, 0, 0, Math.max(1, Math.min(1000, until - Date.now())));
+    }
   }
   // 版式（009 FR-003）：--format > plan.json > 開工決策表 > 主軌寬高比；之後的幾何一律讀 canvas
   const fmt = resolveFormat({ projectDir: P.project, plan, flag: flags.format ?? null });
@@ -693,6 +687,8 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   lib.scenes = applySpeaker(lib.scenes, speaker);
   // 情境動畫模板段（template＋slots）：產生 compositions/<模板>-<段>.html，之後和手寫的 x 檔走同一條路（lib/custom-fill.mjs）
   const fills = materializeFills({ plan, outDir: P.out, lib, prune: !flags.check });
+  // 032 B6：每段的動畫分鏡照拍點正本（模板段＝slots，手寫段＝work/designs/<段>.md），手改模板段第一次被發現就建鏡位腳本
+  for (const n of attachBeats({ plan, P, lib, prune: !flags.check }).notes) log(n);
   const planHash = createHash('sha1').update(fs.readFileSync(P.plan)).digest('hex').slice(0, 8);
   // 講者調光＋瘦臉（006 的 ensureLook）：build 才做；瘦臉底片過期而且能跑時丟錯停下來（裁決 D4，contracts/look.md §3；✖ 原文是 006 的）
   const look = !flags.check && P.project ? ensureLook({ projectDir: P.project, plan, log, templateDir: P.templateDir, strict: true }) : null;
@@ -767,7 +763,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   let encoded = false, audioInfo = null;
   if (look) for (const l of look.report) log(l);
   if (!fresh) {
-    log(`重新編碼底片 → ${rel(assetVideo)}（30fps、每秒一個關鍵影格${audioOpts.loudnorm ? '、人聲調到 −14 LUFS' : ''}${audioOpts.declick && cp.list.length ? '、剪接點微淡化' : ''}）…`);
+    log(`重新編碼底片 → ${rel(assetVideo)}（30fps、每秒一個關鍵影格${audioOpts.loudnorm ? `、人聲調到 ${LOUD_TEXT}` : ''}${audioOpts.declick && cp.list.length ? '、剪接點微淡化' : ''}）…`);
     audioInfo = encodeFootagePolished(footSrc, assetVideo, { cacheDir: path.join(P.out, '.cache'), cutpoints: cp.list.map((c) => c.at), ...audioOpts, crop: frameCrop(plan, footSrc), lut: look?.lut ?? null, canvas: C,
       onMeasure: () => log('量人聲響度（第一次會花一點時間，之後用快取）…') });
     fs.mkdirSync(path.dirname(stampFile), { recursive: true });
@@ -954,6 +950,8 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   }
   manifest.planHash = planHash;   // 和 --check --json 的 planHash 相同（004 的 qc storyboard 用來判斷截圖是不是最新的）
   fs.writeFileSync(path.join(P.out, '.build-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  // 032 C10：寫完專案的 index.html 記一筆（一般 build、--storyboard、--review 都走這裡）；--out 指到別處時不是這個專案的產物，不記
+  if (P.project && path.resolve(P.out) === path.join(P.project, 'work', 'hyperframes')) markStep(P.project, 'build');
 
   log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip), ...bedTail(res, clip)] }, flags));
   log(`\n產生：${W.res.written.length} 個檔（沒變 ${W.res.same.length}）；kit 更新 ${kitN} 個檔${mediaN ? `；插入素材更新 ${mediaN} 個` : ''}${removed.length ? `；刪掉舊檔 ${removed.join('、')}` : ''}`);
@@ -971,6 +969,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
 async function cli() {
   const flags = parseArgs(process.argv.slice(2));
   if (flags.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
+  modeOf(flags);
   const P = pathsFrom(flags, process.cwd(), { needProject: !flags.list && !flags.gallery });
   if (flags.list) {
     const lib = loadLib(P.templateDir, P.project);
@@ -986,12 +985,37 @@ async function cli() {
     return r.problems.length ? 1 : 0;
   }
   if (flags.template) P.templateArg = ['--template', flags.template];
+  // --check --json：印 lib/check-project.mjs 的 checkProject（qc、versions、deliver 在行程內直接呼叫同一個；拍點正本遷移在它裡面做）
+  // （--use 不能和 --check 一起用：留給下面照舊丟錯）
+  if (flags.check && flags.json && flags.use == null) {
+    const j = (await import('./lib/check-project.mjs')).checkProject(flags.project, flags);
+    console.log(JSON.stringify(j, null, 2));
+    return j.ok ? 0 : 1;
+  }
+  // 032 B6：拍點正本的遷移，每個專案第一次跑 build 自動做一次（--migrate-beats 是作者手動檢查用，不看標記）
+  const beatLib = () => loadLib(P.templateDir, P.project);
+  if (flags['migrate-beats']) {
+    const r = migrateBeats(P, { lib: beatLib(), dryRun: !!flags['dry-run'] });
+    console.log(`拍點正本遷移${flags['dry-run'] ? '（--dry-run：只印、不寫檔）' : ''}：${r.lines.length ? `${r.lines.length} 段` : '沒有要動的段'}`);
+    for (const l of r.lines) console.log(`  ${l}`);
+    return 0;
+  }
+  if (P.project) { const mig = ensureBeatsV2(P, { lib: beatLib }); if (!flags.json) for (const l of mig.lines) console.log(l); }
+  if (flags.say != null && flags.said == null) flags.said = saidOf(flags);
+  if (flags.use != null && !flags['framing-done']) throw new Error('--use 只能和 --framing-done 一起用 → 例 --framing-done --use suggested');
+  const label = P.project ? projectLabel(P, P.project) : 'projects/<專案>';
+  if (flags.framing || flags['framing-done']) {
+    const deps = { label, scaffold: () => { runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }); return 0; } };
+    return flags.framing ? framingCmd(P, flags, deps) : framingDoneCmd(P, flags, deps);
+  }
+  if (flags.set != null || flags.unset != null) return planSetCmd(P, flags, { label });
+  if (flags['to-design']) return toDesignCmd(P, flags['to-design'], { label, templateArg: P.templateArg || [] });
   if (flags.scaffold) { runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }); return 0; }
   if (flags.spec) return specCmd(P, flags.spec);
   if (flags.icons) return iconsCmd(flags.icons, { loadLib, templateDir: P.templateDir });
   if (flags.pics) return picsCmd(flags.pics, { kitDir: path.join(P.templateDir, 'kit') });
   if (flags.words) return wordsCmd(P, flags.words);
-  if (flags.show) return showCmd(P, flags.show);
+  if (flags.show) return showAt(P, flags);
   if (flags.autofix) return autofixCmd(P, flags);
   if (flags.map) return mapCmd(P, flags.map);
   if (flags['map-merge']) return mapMergeCmd(P);
@@ -1002,7 +1026,7 @@ async function cli() {
   if (flags['merge-drafts']) return mergeDrafts(P, flags, { loadLib });
   if (flags.storyboard) return storyboardCmd(P, flags, { loadLib });
   if (flags['apply-storyboard']) return applyCmd(P, flags, { loadLib });
-  if (flags.review) return reviewCmd(P, flags);
+  if (flags.review) return reviewCmd(P, flags, { loadLib });
   // 底片先在背景處理（--scaffold 會自動開）；同一支正在跑就等它，不要重複編碼
   if (flags.prepare) return runJob({ project: P.project, name: 'prepare', argv: process.argv.slice(1), waitSec: 0, again: true, log: () => {}, run: async () => (build(flags).ok ? 0 : 1) });
   return buildCli(flags, P);
@@ -1016,21 +1040,71 @@ async function buildCli(flags, P) {
   const argv = [fileURLToPath(import.meta.url), '--project', P.project, '--prepare',
     ...['template', 'format', 'plan', 'srt', 'video', 'out', 'sfx'].flatMap((k) => (flags[k] ? [`--${k}`, flags[k]] : [])),
     ...['no-loudnorm', 'no-declick', 'reencode'].filter((k) => flags[k]).map((k) => `--${k}`)];
+  const sameCmd = () => `node ${rel(fileURLToPath(import.meta.url))} ${process.argv.slice(2).map((a) => (/^[\w./:@=-]+$/.test(a) ? a : `"${a}"`)).join(' ')}`;
   const job = async () => {
     const code = await runJob({ project: P.project, name: 'prepare', argv, again: true, waitSec, log: console.log, run: () => 1 });
-    if (code === STILL_RUNNING) console.log(`node ${rel(fileURLToPath(import.meta.url))} ${process.argv.slice(2).map((a) => (/^[\w./:@=-]+$/.test(a) ? a : `"${a}"`)).join(' ')}`);
+    if (code === STILL_RUNNING) console.log(sameCmd());
     return code;
+  };
+  // build() 裡等背景底片處理等到 --wait 上限還沒好：和 runJob 逾時同一種訊息、結束碼 75
+  const still = () => {
+    const st = jobState(P.project, 'prepare');
+    console.log(`\n⏳ prepare 還在跑（${st.startedAt ? `已經 ${Math.round((Date.now() - st.startedAt) / 1000)} 秒，` : ''}背景繼續，不用重開）`);
+    for (const l of nextLines('再跑一次同一條指令會接著等，不會重跑', sameCmd())) console.log(l);
+    return STILL_RUNNING;
   };
   // 別條指令開的還在跑：接著等（失敗也沒關係，下面會照現在的 plan 重新判斷）
   if (viaJob && jobState(P.project, 'prepare').state === 'running' && await job() === STILL_RUNNING) return STILL_RUNNING;
   let r = build(flags, { delegateEncode: viaJob });
+  if (r.stillRunning) return still();
   if (r.needEncode) {
     const code = await job();
     if (code !== 0) return code;
     r = build({ ...flags, reencode: false });
+    if (r.stillRunning) return still();
   }
   if (r.json) console.log(JSON.stringify(r.json, null, 2));
   return r.ok ? 0 : 1;
+}
+
+// ---------- --show 收時間（032 A9④）----------
+// 使用者說「第 75 秒那張卡」：先換成那一秒所在的段再交給 showCmd。秒數是完成影片的（--check --json 的 out.start／out.end，
+// 和 --check 報告的「起–迄」欄同一套；USAGE.md 2.6 第 3 點）
+const CLOCK_RE = /^(?:(\d+):)?(\d+(?:\.\d+)?)$/;
+export function parseClock(s) {
+  const m = String(s ?? '').trim().match(CLOCK_RE);
+  return m ? (m[1] ? Number(m[1]) * 60 : 0) + Number(m[2]) : null;
+}
+const clockOf = clock2;
+// → { hit: [那一秒在畫面上的段（疊加段會有好幾段）], prev, next（前後最近的段） }
+export function segsAt(items, t) {
+  const list = items.filter((it) => it?.out && Number.isFinite(it.out.start) && Number.isFinite(it.out.end));
+  const hit = list.filter((it) => it.out.start <= t + 1e-6 && t < it.out.end - 1e-6);
+  const prev = list.filter((it) => it.out.end <= t + 1e-6).sort((a, b) => b.out.end - a.out.end)[0] || null;
+  const next = list.filter((it) => it.out.start > t + 1e-6).sort((a, b) => a.out.start - b.out.start)[0] || null;
+  return { hit, prev, next };
+}
+const segDesc = (it) => `${it.id}（${it.label || it.key || it.type}｜${clockOf(it.out.start)}–${clockOf(it.out.end)}）`;
+
+function showAt(P, flags) {
+  const toks = String(flags.show).split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+  if (!toks.some((x) => parseClock(x) != null)) return showCmd(P, flags.show, { loadLib });
+  let items;
+  try { items = build({ ...flags, show: undefined, check: true, json: true }, { log: () => {} }).json?.items || []; } catch (e) { console.log(fail(e.message)); return 1; }
+  if (!items.length) { console.log(fail('算不出每一段在完成影片的時間（plan.json 還有 ✖ 或還沒有段落）', '先跑 build.mjs --check 照 → 修好，或直接用段 id：--show s05')); return 1; }
+  const ids = [];
+  let bad = 0;
+  for (const tok of toks) {
+    const t = parseClock(tok);
+    if (t == null) { ids.push(tok); continue; }
+    const r = segsAt(items, t);
+    if (!r.hit.length) { bad++; console.log(fail(`完成影片 ${clockOf(t)} 沒有段落`, `前後最近的段：${[r.prev, r.next].filter(Boolean).map(segDesc).join('、') || '沒有'}（時間看 build.mjs --check 報告的「起–迄」欄）`)); continue; }
+    console.log(`${tok} → ${r.hit.map(segDesc).join('、')}`);
+    ids.push(...r.hit.map((it) => it.id));
+  }
+  if (!ids.length) return 1;
+  const code = showCmd(P, [...new Set(ids)].join(','), { loadLib });
+  return bad ? 1 : code;
 }
 
 // --check --json 出錯時也印齊 schema 2 的鍵（specs/contracts/check-json.md §5）
@@ -1056,11 +1130,8 @@ function outroClipOf(res, P) {
   return outroClip(res.outro, probeDuration(f), res.outDur);
 }
 
-// 用 realpath 比對：從 symlink 路徑執行時（例如 shared/template 是連結）也要跑，不能靜默 exit 0
-const isMain = () => {
-  try { return !!process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url)); } catch { return false; }
-};
-if (isMain()) {
+// 用 realpath 比對（lib/cli.mjs）：從 symlink 路徑執行時（例如 shared/template 是連結）也要跑，不能靜默 exit 0
+if (isMain(import.meta.url)) {
   const wantJson = process.argv.includes('--json') && process.argv.includes('--check');
   cli().then((code) => { process.exitCode = code; }, (e) => {
     // --check --json：出錯也只印 JSON（剪輯台讀 stdout）

@@ -222,7 +222,8 @@ export function mergeMaps(parts, rowsByKey, { videoDur = 0, hasVision = false, v
   }
   const perPart = parts.map((p) => [p.key, A.filter((r) => r.part === p.key).length]);
   const [topKey, topN] = perPart.reduce((x, y) => (y[1] > x[1] ? y : x), ['', 0]);
-  if (A.length >= 4 && topN * 2 > A.length) warns.push(`${topKey} 占了 A 的一半以上（${topN}／${A.length}）→ 確認別份沒有漏掉值得設計的時刻`);
+  // 只有一份時 A 全在那一份是當然的，不報
+  if (parts.length >= 2 && A.length >= 4 && topN * 2 > A.length) warns.push(`${topKey} 占了 A 的一半以上（${topN}／${A.length}）→ 確認別份沒有漏掉值得設計的時刻`);
   let run = [];
   const runs = [];
   for (const r of [...all, { tier: '' }]) { if (r.tier === 'C') run.push(r); else { if (run.length >= 4) runs.push(run); run = []; } }

@@ -1,0 +1,5168 @@
+{
+ "items": [
+  {
+   "idx": 0,
+   "id": "c1",
+   "seg": {
+    "id": "c1",
+    "scene": "chapter",
+    "at": "#2",
+    "slots": {
+     "num": 1,
+     "title": "開始",
+     "sub": "先看問題"
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[c1 chapter] #2 前的空檔只有 0.50s（< 2s），章節 2.5s 會壓到 #2 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/p3e，照它印的指令重剪"
+   ],
+   "where": "[c1 chapter]",
+   "type": "scene",
+   "scene": "$scene:chapter",
+   "key": "chapter",
+   "label": "01 章節轉場",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "compId": "c1-chapter",
+   "file": "compositions/c1-chapter.html",
+   "D": 2.5,
+   "start": 4.5,
+   "chapterNote": "空檔 0.50s < 2s，從 #2 起點開始蓋 2.5s",
+   "chInfo": {
+    "cue": 2,
+    "gap": 0.5,
+    "placement": "cover"
+   },
+   "end": 7,
+   "planEnd": 7,
+   "rough0": [
+    4.5,
+    7
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [
+    "字幕避開章節：#2 晚 2.50s 出現"
+   ],
+   "txIn": "chapter",
+   "prev": "speaker",
+   "txOut": "fade",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "1",
+     "title": "開始",
+     "title_len": 2,
+     "title_lines": [
+      2
+     ],
+     "sub": "先看問題",
+     "sub_len": 4,
+     "sub_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "titleAt": 0.45,
+     "subAt": 0.6
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "sfx": {
+    "name": "chapter",
+    "at": 4.962,
+    "volume": 0.794,
+    "event": 4.95
+   }
+  },
+  {
+   "idx": 1,
+   "id": "s01",
+   "seg": {
+    "id": "s01",
+    "scene": "concept",
+    "from": "#3",
+    "to": "#3e",
+    "slots": {
+     "text": "先講概念"
+    }
+   },
+   "errors": [
+    "[s01 concept] 段長 3s，「一般字卡」至少 3.5s → to 往後延到至少 0:11.50（11.5s）或換情境"
+   ],
+   "warnings": [],
+   "where": "[s01 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s01-concept",
+   "file": "compositions/s01-concept.html",
+   "start": 8,
+   "end": 11,
+   "planEnd": 11,
+   "rough0": [
+    8,
+    11
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 3,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "概念",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 18h6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 22h4\" /> </svg>",
+     "text": "先講概念",
+     "text_text": "先講概念",
+     "text_len": 4,
+     "text_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": []
+  },
+  {
+   "idx": 2,
+   "id": "s02",
+   "seg": {
+    "id": "s02",
+    "scene": "key-point",
+    "from": "#4",
+    "to": "#4e",
+    "slots": {
+     "lead": "重點",
+     "key": "放到電腦"
+    }
+   },
+   "errors": [
+    "[s02 key-point] 段長 3s，「重點字卡」至少 3.5s → to 往後延到至少 0:15.00（15s）或換情境"
+   ],
+   "warnings": [
+    "[s02 key-point] 和前一段 s01 之間只空 0.50s，講者會閃一下 → s01 改 \"to\": \"#4\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[s02 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s02-key-point",
+   "file": "compositions/s02-key-point.html",
+   "start": 11.5,
+   "end": 14.5,
+   "planEnd": 14.5,
+   "rough0": [
+    11.5,
+    14.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 3,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" /> </svg>",
+     "lead": "重點",
+     "lead_len": 2,
+     "lead_lines": [
+      2
+     ],
+     "key": "放到電腦",
+     "key_len": 4,
+     "key_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "sfx": null,
+   "sfxDropped": {
+    "name": "impact",
+    "at": 11.549,
+    "volume": 0.617,
+    "event": 11.65
+   }
+  },
+  {
+   "idx": 3,
+   "id": "k1",
+   "seg": {
+    "id": "k1",
+    "scene": "keywords",
+    "from": "#5",
+    "to": "#6e",
+    "slots": {
+     "items": [
+      {
+       "text": "甲"
+      },
+      {
+       "text": "乙"
+      }
+     ]
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[k1 keywords] 和前一段 s02 之間只空 0.50s，講者會閃一下 → s02 改 \"to\": \"#5\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[k1 keywords]",
+   "type": "scene",
+   "scene": "$scene:keywords",
+   "key": "keywords",
+   "label": "12 關鍵詞條列",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "k1-keywords",
+   "file": "compositions/k1-keywords.html",
+   "start": 15,
+   "end": 21.5,
+   "planEnd": 21.5,
+   "rough0": [
+    15,
+    21.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.5,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "items": [
+      {
+       "text": "甲",
+       "text_text": "甲",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 0.2
+      },
+      {
+       "text": "乙",
+       "text_text": "乙",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 0.7
+      }
+     ],
+     "itemsHasIcon": false
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.2,
+      0.7
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": []
+  },
+  {
+   "idx": 4,
+   "id": "f1",
+   "seg": {
+    "id": "f1",
+    "type": "fx",
+    "fx": 29,
+    "bg": "dark",
+    "from": "#7",
+    "to": "#7e",
+    "vars": {
+     "number": "1"
+    },
+    "sfx": {
+     "name": "ding",
+     "at": "#7e-0.2"
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[f1 fx 29] 和前一段 k1 之間只空 0.50s，講者會閃一下 → k1 改 \"to\": \"#7\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[f1 fx 29]",
+   "type": "fx",
+   "fxDef": "$fx:29",
+   "key": "fx-29",
+   "label": "fx 29 數字計數",
+   "bg": "dark",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "vars": {
+    "number": "1",
+    "bg": "dark",
+    "accent": "#F6630F"
+   },
+   "compId": "card-29-1",
+   "file": "compositions/fx-29-odometer.html",
+   "start": 22,
+   "end": 25,
+   "planEnd": 25,
+   "rough0": [
+    22,
+    25
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 3,
+   "txIn": "fade",
+   "prev": "speaker",
+   "txOut": "fade",
+   "pipPieces": [],
+   "sfxExtra": [],
+   "sfx": {
+    "name": "ding",
+    "at": 24.823,
+    "volume": 0.582,
+    "event": 24.8
+   },
+   "badgeBox": [
+    1620,
+    56,
+    1824,
+    136
+   ]
+  },
+  {
+   "idx": 5,
+   "id": "m1",
+   "seg": {
+    "id": "m1",
+    "type": "media",
+    "src": "assets/screen/v.mp4",
+    "from": "#8",
+    "to": "#11e",
+    "in": 2,
+    "moves": [
+     {
+      "at": "+0.9",
+      "to": [
+       100,
+       100,
+       1200,
+       675
+      ]
+     },
+     {
+      "at": "+11.5",
+      "to": "full"
+     }
+    ],
+    "marks": [
+     {
+      "at": "#9",
+      "box": [
+       200,
+       200,
+       300,
+       100
+      ],
+      "path": [
+       {
+        "at": "#9+1",
+        "box": [
+         220,
+         260,
+         300,
+         100
+        ]
+       }
+      ]
+     }
+    ],
+    "callouts": [
+     {
+      "at": "#10",
+      "until": "#10e",
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "icon": "star"
+     }
+    ],
+    "steps": [
+     {
+      "at": "#8",
+      "text": "打開設定"
+     },
+     {
+      "at": "#10",
+      "text": "按下儲存"
+     }
+    ],
+    "clicks": [
+     "+2"
+    ],
+    "sfx": "success"
+   },
+   "errors": [],
+   "warnings": [
+    "[m1 media] steps[0]「打開設定」和右上角的小節角標「STEP 1｜設定」重複（畫面上下兩個角各寫一次）→ 刪掉這個 step，角標已經寫了在哪一步；要分更細的步驟再寫不同的字（這次不畫這顆膠囊）",
+    "[m1 media] 音效 success（25.396s）和 f1 的音效只差 0.573s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 f1 寫 \"sfx\": null",
+    "[m1 media] 和前一段 f1 之間只空 0.50s，講者會閃一下 → f1 改 \"to\": \"#8\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[m1 media]",
+   "type": "media",
+   "key": "media",
+   "label": "media v.mp4",
+   "media": {
+    "src": "assets/screen/v.mp4",
+    "abs": "<TMP>/X/assets/screen/v.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 2560,
+     "height": 1440,
+     "duration": 90,
+     "hasAudio": true
+    },
+    "in": 2,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 2560,
+     "h": 1440,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       0,
+       0,
+       1920,
+       940
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1339,
+      578,
+      1803,
+      948
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1235
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 0.652734375,
+     "ky": 0.6527777777777778,
+     "left": 125,
+     "top": 0,
+     "width": 1671,
+     "height": 940
+    },
+    "pipShift": [
+     -85,
+     -3
+    ],
+    "pieces": [
+     {
+      "s": 25.5,
+      "e": 39.47,
+      "fms": 2
+     }
+    ],
+    "retime": null,
+    "redact": [],
+    "cams": [
+     {
+      "i": 0,
+      "t0": 26.4,
+      "dur": 2.2,
+      "from": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      },
+      "to": {
+       "z": 2.1333,
+       "x": -281.4,
+       "y": -139.3
+      }
+     },
+     {
+      "i": 1,
+      "t0": 37,
+      "dur": 2.2,
+      "from": {
+       "z": 2.1333,
+       "x": -281.4,
+       "y": -139.3
+      },
+      "to": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      }
+     }
+    ],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -23.5
+    },
+    "marks": [
+     {
+      "id": "mmk-m1-1",
+      "i": 0,
+      "at": 29,
+      "until": 39.47,
+      "rect": [
+       251.8,
+       126.81,
+       203.32,
+       72.78
+      ],
+      "sw": 1.875,
+      "rx": 2.81,
+      "path": [
+       {
+        "k": 0,
+        "at": 30,
+        "dur": 0.4,
+        "rect": [
+         264.85,
+         165.97,
+         203.32,
+         72.78
+        ]
+       }
+      ]
+     }
+    ],
+    "lenses": [],
+    "steps": {
+     "list": [
+      {
+       "i": 1,
+       "at": 32.5,
+       "text": "按下儲存",
+       "n": 1,
+       "carry": false,
+       "ready": 33
+      }
+     ],
+     "carry": false,
+     "capsule": {
+      "box": [
+       157,
+       40,
+       435,
+       120
+      ],
+      "side": "left",
+      "from": 32.5,
+      "to": 39.47
+     }
+    },
+    "callouts": [
+     {
+      "i": 0,
+      "at": 32.5,
+      "until": 35.5,
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "iconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" /> </svg>",
+      "side": "right",
+      "quick": false,
+      "ready": 33.35,
+      "k": 1,
+      "R": [
+       813,
+       270,
+       294,
+       127
+      ],
+      "card": [
+       1163.2450937500003,
+       286.1740833333334,
+       1417.2450937500003,
+       382.1740833333334
+      ],
+      "anchor": "left",
+      "x": 1163,
+      "top": 286,
+      "lead": {
+       "d": "M1107 334 L1163 334",
+       "dot": [
+        1107,
+        334
+       ]
+      }
+     }
+    ],
+    "spots": [],
+    "arrows": [],
+    "waits": []
+   },
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 25.5,
+   "end": 39.47,
+   "planEnd": 39,
+   "rough0": [
+    25.5,
+    39
+   ],
+   "fadeIn": true,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "m2",
+   "pipEnd": 39,
+   "enterFx": "fade",
+   "exitFx": "cut",
+   "D": 13.97,
+   "txIn": "media",
+   "prev": "speaker",
+   "txOut": "media",
+   "pipPieces": [
+    {
+     "s": 25.5,
+     "e": 39,
+     "ms": 25.5,
+     "enter": "fade",
+     "exitDur": 0,
+     "exit": "none"
+    }
+   ],
+   "mediaReport": {
+    "summary": "運鏡 2、紅框 1（跟捲動 1 次）、標註 1、STEP 1（第 1 步）",
+    "json": {
+     "marks": [
+      {
+       "i": 0,
+       "at": 29,
+       "until": 39.47,
+       "ready": 29.4,
+       "path": [
+        {
+         "k": 0,
+         "at": 30,
+         "ready": 30.4
+        }
+       ]
+      }
+     ],
+     "callouts": [
+      {
+       "i": 0,
+       "at": 32.5,
+       "until": 35.5,
+       "ready": 33.35,
+       "side": "right",
+       "text": "按這裡"
+      }
+     ],
+     "spot": [],
+     "steps": [
+      {
+       "i": 1,
+       "at": 32.5,
+       "ready": 33,
+       "n": 1,
+       "text": "按下儲存",
+       "carry": false
+      }
+     ],
+     "side": null,
+     "arrows": [],
+     "lens": [],
+     "redact": [],
+     "waits": [],
+     "knots": [
+      [
+       0,
+       2
+      ],
+      [
+       13.97,
+       15.97
+      ]
+     ],
+     "view": {
+      "scale": 0.653,
+      "moves": 2,
+      "lens": 0,
+      "landscape": true
+     }
+    }
+   },
+   "sfxExtra": [
+    {
+     "name": "click",
+     "at": 27.518,
+     "volume": 0.334,
+     "event": 27.5
+    }
+   ],
+   "sfx": null,
+   "sfxDropped": {
+    "name": "success",
+    "at": 25.396,
+    "volume": 0.692,
+    "event": 25.5
+   },
+   "badgeBox": [
+    1392,
+    16,
+    1780,
+    96
+   ]
+  },
+  {
+   "idx": 6,
+   "id": "m2",
+   "seg": {
+    "id": "m2",
+    "type": "media",
+    "src": "assets/images/a.png",
+    "from": "#11e",
+    "to": "#14e",
+    "kenburns": true,
+    "lens": [
+     {
+      "at": "#12+0.5",
+      "box": [
+       100,
+       100,
+       200,
+       100
+      ]
+     }
+    ],
+    "arrows": [
+     {
+      "at": "#13",
+      "to": [
+       500,
+       300
+      ]
+     }
+    ],
+    "spot": [
+     {
+      "at": "#14",
+      "box": [
+       300,
+       300,
+       200,
+       200
+      ]
+     }
+    ]
+   },
+   "errors": [],
+   "warnings": [
+    "[m2 media] kenburns：有 callouts／spot／arrows 時不做慢推（標註要對準不動的畫面），已忽略"
+   ],
+   "where": "[m2 media]",
+   "type": "media",
+   "key": "media",
+   "label": "media a.png",
+   "media": {
+    "src": "assets/images/a.png",
+    "abs": "<TMP>/X/assets/images/a.png",
+    "kind": "image",
+    "ext": ".png",
+    "info": {
+     "width": 1600,
+     "height": 900
+    },
+    "in": 0,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 1600,
+     "h": 900,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       0,
+       0,
+       1920,
+       940
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1339,
+      578,
+      1803,
+      948
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1235
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 1.044375,
+     "ky": 1.0444444444444445,
+     "left": 125,
+     "top": 0,
+     "width": 1671,
+     "height": 940
+    },
+    "pipShift": [
+     -85,
+     -3
+    ],
+    "retime": null,
+    "redact": [],
+    "cams": [],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -23.5
+    },
+    "marks": [],
+    "lenses": [
+     {
+      "id": "m2-l1",
+      "i": 0,
+      "la": 40,
+      "lb": 43,
+      "N": 90,
+      "R": [
+       229.44,
+       104.44,
+       208.88,
+       104.44
+      ],
+      "C": [
+       416,
+       208
+      ],
+      "outer": [
+       739,
+       333,
+       442,
+       234
+      ],
+      "back": {
+       "x": -626.13,
+       "y": -293.33,
+       "scaleX": 0.5021,
+       "scaleY": 0.50214
+      },
+      "crop": [
+       100,
+       100,
+       200,
+       100
+      ],
+      "ranges": [],
+      "map": null,
+      "urls": null
+     }
+    ],
+    "steps": {
+     "list": [],
+     "carry": false,
+     "capsule": null
+    },
+    "callouts": [],
+    "spots": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 46.5,
+      "until": 49.5,
+      "hole": [
+       430,
+       305,
+       225,
+       225
+      ],
+      "ready": 46.9
+     }
+    ],
+    "arrows": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 43,
+      "until": 46,
+      "from": "ne",
+      "len": 120,
+      "u": [
+       0.7071,
+       -0.7071
+      ],
+      "tip": [
+       653.55,
+       306.97
+      ],
+      "base": [
+       674.76,
+       285.76
+      ],
+      "tail": [
+       738.4,
+       222.12
+      ],
+      "c1": [
+       685.37,
+       296.36
+      ],
+      "c2": [
+       664.16,
+       275.15
+      ],
+      "ready": 43.5
+     }
+    ],
+    "waits": []
+   },
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 39,
+   "end": 49.5,
+   "planEnd": 49.5,
+   "rough0": [
+    39,
+    49.5
+   ],
+   "fadeIn": false,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [
+    "和 m1 疊化 0.47s"
+   ],
+   "xfade": 0.47,
+   "enterFx": "cut",
+   "exitFx": "fade",
+   "D": 10.5,
+   "txIn": "media",
+   "prev": "speaker",
+   "txOut": "media",
+   "pipPieces": [
+    {
+     "s": 39,
+     "e": 44,
+     "ms": 39,
+     "enter": "none",
+     "exitDur": 0.4,
+     "exit": "fade"
+    },
+    {
+     "s": 47,
+     "e": 49.5,
+     "ms": 47,
+     "enter": "fade",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "pipNote": "只有聲音的區間不放子母畫面",
+   "mediaReport": {
+    "summary": "聚光燈 1、箭頭 1、放大鏡 1；有標註，不做慢推",
+    "json": {
+     "marks": [],
+     "callouts": [],
+     "spot": [
+      {
+       "i": 0,
+       "at": 46.5,
+       "until": 49.5,
+       "ready": 46.9
+      }
+     ],
+     "steps": [],
+     "side": null,
+     "arrows": [
+      {
+       "i": 0,
+       "at": 43,
+       "until": 46,
+       "ready": 43.5,
+       "from": "ne"
+      }
+     ],
+     "lens": [
+      {
+       "i": 0,
+       "at": 40,
+       "until": 43,
+       "ready": 40.88
+      }
+     ],
+     "redact": [],
+     "waits": [],
+     "knots": null
+    }
+   },
+   "sfxExtra": [],
+   "badgeBox": [
+    1392,
+    16,
+    1780,
+    96
+   ]
+  },
+  {
+   "idx": 7,
+   "id": "x1",
+   "seg": {
+    "id": "x1",
+    "type": "custom",
+    "src": "compositions/x-demo.html",
+    "layout": "fullscreen",
+    "from": "#15",
+    "to": "#17e",
+    "clicks": [
+     "+1"
+    ]
+   },
+   "errors": [],
+   "warnings": [
+    "[x1 custom] 和前一段 m2 之間只空 0.50s，講者會閃一下 → m2 改 \"to\": \"#15\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[x1 custom]",
+   "type": "custom",
+   "key": "custom",
+   "label": "custom x-demo.html",
+   "compId": "x-demo",
+   "file": "compositions/x-demo.html",
+   "refList": [
+    "#16",
+    "#17"
+   ],
+   "sfxBeats": [
+    {
+     "name": "click",
+     "ref": "#16",
+     "off": 0.2
+    },
+    {
+     "name": "ding",
+     "ref": "#17",
+     "off": 0
+    }
+   ],
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 50,
+   "end": 60,
+   "planEnd": 60,
+   "rough0": [
+    50,
+    60
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 10,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "retract",
+   "pipPieces": [
+    {
+     "s": 50,
+     "e": 60,
+     "ms": 50,
+     "enter": "fade",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "cueRefs": {
+    "#16": 53.5,
+    "#17": 57
+   },
+   "sfxExtra": [
+    {
+     "name": "click",
+     "at": 51.018,
+     "volume": 0.334,
+     "event": 51
+    },
+    {
+     "name": "click",
+     "at": 53.718,
+     "volume": 0.334,
+     "event": 53.7,
+     "beat": true
+    }
+   ],
+   "badgeBox": [
+    1436,
+    56,
+    1824,
+    136
+   ]
+  },
+  {
+   "idx": 8,
+   "id": "t1",
+   "seg": {
+    "id": "t1",
+    "scene": "chapter-tag",
+    "from": "#18",
+    "to": "#18e",
+    "slots": {
+     "num": 2,
+     "name": "第二章"
+    }
+   },
+   "errors": [
+    "[t1 chapter-tag] 段長 2.5s，「章節角標」至少 3.5s → to 往後延到至少 1:03.50（63.5s）或換情境"
+   ],
+   "warnings": [],
+   "where": "[t1 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "t1-chapter-tag",
+   "file": "compositions/t1-chapter-tag.html",
+   "start": 60,
+   "end": 62.5,
+   "planEnd": 62.5,
+   "rough0": [
+    61,
+    63.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 2.5,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "2",
+     "name": "第二章",
+     "name_len": 3,
+     "name_lines": [
+      3
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 9,
+   "id": "s05",
+   "seg": {
+    "id": "s05",
+    "scene": "side-panel",
+    "from": "#19",
+    "to": "#21e",
+    "sfxVolume": -3,
+    "slots": {
+     "title": "三件事",
+     "items": [
+      {
+       "text": "一"
+      },
+      {
+       "text": "二"
+      },
+      {
+       "text": "三"
+      }
+     ]
+    }
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s05 side-panel]",
+   "type": "scene",
+   "scene": "$scene:side-panel",
+   "key": "side-panel",
+   "label": "03 半版側邊欄",
+   "opaque": false,
+   "pip": false,
+   "side": true,
+   "lower": false,
+   "z": 20,
+   "compId": "s05-side-panel",
+   "file": "compositions/s05-side-panel.html",
+   "start": 63,
+   "end": 73,
+   "planEnd": 73,
+   "rough0": [
+    64,
+    74
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 10,
+   "txIn": "side",
+   "prev": "speaker",
+   "txOut": "side",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "title": "三件事",
+     "title_text": "三件事",
+     "title_len": 3,
+     "title_lines": [
+      3
+     ],
+     "items": [
+      {
+       "text": "一",
+       "text_text": "一",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 1.3
+      },
+      {
+       "text": "二",
+       "text_text": "二",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 1.9
+      },
+      {
+       "text": "三",
+       "text_text": "三",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 2.5
+      }
+     ],
+     "itemsHasIcon": false
+    },
+    "beats": {
+     "head": 0.7
+    },
+    "listTimes": {
+     "items": [
+      1.3,
+      1.9,
+      2.5
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": []
+  },
+  {
+   "idx": 10,
+   "id": "s06",
+   "seg": {
+    "id": "s06",
+    "scene": "fs-list",
+    "from": "#22",
+    "to": "#24e",
+    "slots": {
+     "title": "清單",
+     "items": [
+      "一",
+      "二",
+      "三"
+     ]
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[s06 fs-list] 和前一段 s05 之間只空 0.50s，講者會閃一下 → s05 改 \"to\": \"#22\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[s06 fs-list]",
+   "type": "scene",
+   "scene": "$scene:fs-list",
+   "key": "fs-list",
+   "label": "04a 全畫面清單",
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "compId": "s06-fs-list",
+   "file": "compositions/s06-fs-list.html",
+   "start": 73.5,
+   "end": 83.5,
+   "planEnd": 83.5,
+   "rough0": [
+    74.5,
+    84.5
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 10,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "retract",
+   "pipPieces": [
+    {
+     "s": 73.5,
+     "e": 83.5,
+     "ms": 74.5,
+     "enter": "fly",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "resolved": {
+    "ctx": {
+     "title": "清單",
+     "title_len": 2,
+     "title_lines": [
+      2
+     ],
+     "items": [
+      {
+       "text": "一",
+       "text_text": "一",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 0.5
+      },
+      {
+       "text": "二",
+       "text_text": "二",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 0.85
+      },
+      {
+       "text": "三",
+       "text_text": "三",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 1.2
+      }
+     ],
+     "itemsHasIcon": false
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.5,
+      0.85,
+      1.2
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "badgeBox": [
+    1580,
+    56,
+    1824,
+    136
+   ]
+  },
+  {
+   "idx": 11,
+   "id": "m3",
+   "seg": {
+    "id": "m3",
+    "type": "media",
+    "src": "assets/screen/w.mp4",
+    "from": "#25",
+    "to": "#27e",
+    "sfxExtra": true,
+    "retime": [
+     {
+      "at": "+0.5",
+      "src": 1
+     },
+     {
+      "at": "+3",
+      "src": 40
+     },
+     {
+      "at": "+6",
+      "src": 41
+     }
+    ],
+    "wait": "AI 處理中｜寫入檔案",
+    "redact": [
+     {
+      "box": [
+       0,
+       0,
+       100,
+       50
+      ]
+     }
+    ],
+    "side": {
+     "title": "配對手機",
+     "items": [
+      {
+       "at": "#25",
+       "text": "打開 App"
+      },
+      {
+       "at": "#26",
+       "text": "掃碼"
+      }
+     ]
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[m3 media] wait：這段沒有「×5 以上、至少 3 秒、沒人講話」的快轉，等待卡不會出現 → 確認 retime／out 的快轉夠快夠長、那幾秒沒有字幕；用不到就拿掉 wait",
+    "[m3 media] 錄影 10s 沒有任何標註或運鏡 → 講解講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3）；真的沒有要指的東西，回報寫保留理由",
+    "[m3 media] 和前一段 s06 之間只空 0.50s，講者會閃一下 → s06 改 \"to\": \"#25\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[m3 media]",
+   "type": "media",
+   "key": "media",
+   "label": "media w.mp4",
+   "media": {
+    "src": "assets/screen/w.mp4",
+    "abs": "<TMP>/X/assets/screen/w.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 1920,
+     "height": 1080,
+     "duration": 120,
+     "hasAudio": false
+    },
+    "in": 0,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": false,
+    "retimeRaw": [
+     {
+      "at": "+0.5",
+      "src": 1
+     },
+     {
+      "at": "+3",
+      "src": 40
+     },
+     {
+      "at": "+6",
+      "src": 41
+     }
+    ],
+    "out": null,
+    "waitOff": false,
+    "waitLines": [
+     "AI 處理中",
+     "寫入檔案"
+    ],
+    "file": {
+     "w": 1920,
+     "h": 1080,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       120,
+       0,
+       720,
+       940
+      ],
+      "cover": [
+       120,
+       0,
+       720,
+       940
+      ]
+     },
+     "focus": [
+      120,
+      0,
+      720,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [
+      {
+       "box": [
+        840,
+        172,
+        1800,
+        548
+       ],
+       "why": "壓到右側步驟清單"
+      }
+     ],
+     "pip": [
+      1424,
+      581,
+      1888,
+      951
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1320
+     }
+    },
+    "side": {
+     "title": "配對手機",
+     "items": [
+      {
+       "i": 0,
+       "at": 84,
+       "text": "打開 App"
+      },
+      {
+       "i": 1,
+       "at": 87.5,
+       "text": "掃碼"
+      }
+     ],
+     "box": [
+      840,
+      172,
+      960,
+      376
+     ]
+    },
+    "geo": {
+     "kx": 0.375,
+     "ky": 0.375,
+     "left": 120,
+     "top": 268,
+     "width": 720,
+     "height": 405
+    },
+    "pipShift": null,
+    "retime": {
+     "knots": [
+      [
+       0,
+       0.5
+      ],
+      [
+       0.5,
+       1
+      ],
+      [
+       3,
+       40
+      ],
+      [
+       6,
+       41
+      ],
+      [
+       10,
+       45
+      ]
+     ],
+     "speeds": [
+      1,
+      15.6,
+      0.333,
+      1
+     ],
+     "len": 10
+    },
+    "pieces": [
+     {
+      "s": 84,
+      "e": 94,
+      "fms": 0
+     }
+    ],
+    "redact": [
+     {
+      "i": 0,
+      "at": null,
+      "until": null,
+      "box": [
+       0,
+       0,
+       100,
+       50
+      ]
+     }
+    ],
+    "cams": [],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -24,
+     "y": -23.5
+    },
+    "marks": [],
+    "lenses": [],
+    "steps": {
+     "list": [],
+     "carry": false,
+     "capsule": null
+    },
+    "callouts": [],
+    "spots": [],
+    "arrows": [],
+    "waits": []
+   },
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 84,
+   "end": 94,
+   "planEnd": 94,
+   "rough0": [
+    85,
+    95
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "enterFx": "fade",
+   "exitFx": "fade",
+   "D": 10,
+   "txIn": "media",
+   "prev": "speaker",
+   "txOut": "media",
+   "pipPieces": [
+    {
+     "s": 84,
+     "e": 89,
+     "ms": 85,
+     "enter": "fly",
+     "exitDur": 0.4,
+     "exit": "fade"
+    },
+    {
+     "s": 91,
+     "e": 94,
+     "ms": 92,
+     "enter": "fade",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "pipNote": "只有聲音的區間不放子母畫面",
+   "mediaReport": {
+    "summary": "打碼 1 處、變速 0–0.5s ×1、0.5–3s ×15.6、3–6s ×0.333、6–10s ×1",
+    "json": {
+     "marks": [],
+     "callouts": [],
+     "spot": [],
+     "steps": [],
+     "side": {
+      "title": "配對手機",
+      "box": [
+       840,
+       172,
+       960,
+       376
+      ],
+      "items": [
+       {
+        "i": 0,
+        "at": 84,
+        "text": "打開 App"
+       },
+       {
+        "i": 1,
+        "at": 87.5,
+        "text": "掃碼"
+       }
+      ]
+     },
+     "arrows": [],
+     "lens": [],
+     "redact": [
+      {
+       "i": 0
+      }
+     ],
+     "waits": [],
+     "knots": [
+      [
+       0,
+       0.5
+      ],
+      [
+       0.5,
+       1
+      ],
+      [
+       3,
+       40
+      ],
+      [
+       6,
+       41
+      ],
+      [
+       10,
+       45
+      ]
+     ],
+     "view": {
+      "scale": 0.375,
+      "moves": 0,
+      "lens": 0,
+      "landscape": true
+     }
+    }
+   },
+   "sfxExtra": [],
+   "badgeBox": [
+    1580,
+    56,
+    1824,
+    136
+   ]
+  },
+  {
+   "idx": 12,
+   "id": "s07",
+   "seg": {
+    "id": "s07",
+    "scene": "quote",
+    "from": "#28",
+    "to": "#28e",
+    "slots": {
+     "text": "最後一句"
+    }
+   },
+   "errors": [
+    "[s07 quote] 段長 3s，「金句字卡」至少 4s → to 往後延到至少 1:38.50（98.5s）或換情境"
+   ],
+   "warnings": [
+    "[s07 quote] 和前一段 m3 之間只空 0.50s，講者會閃一下 → m3 改 \"to\": \"#28\"（0 秒相接），或拉開到 1.0s 以上",
+    "[s07 quote] 「金句字卡」大約會蓋到講者框 41%（超過四成，手勢多半會被擋） → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）"
+   ],
+   "where": "[s07 quote]",
+   "type": "scene",
+   "scene": "$scene:quote",
+   "key": "quote",
+   "label": "15 金句字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s07-quote",
+   "file": "compositions/s07-quote.html",
+   "start": 94.5,
+   "end": 97.5,
+   "planEnd": 97.5,
+   "rough0": [
+    95.5,
+    98.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 3,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "金句",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "text": "最後一句",
+     "text_text": "最後一句",
+     "text_len": 4,
+     "text_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "sfx": null,
+   "sfxDropped": {
+    "name": "sparkle",
+    "at": 94.453,
+    "volume": 0.575,
+    "event": 94.6
+   }
+  },
+  {
+   "idx": 13,
+   "id": "s08",
+   "seg": {
+    "id": "s08",
+    "scene": "summary",
+    "from": "#29",
+    "to": "#30e",
+    "sfxExtra": false,
+    "slots": {
+     "text": "總結一下"
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[s08 summary] 和前一段 s07 之間只空 0.50s，講者會閃一下 → s07 改 \"to\": \"#29\"（0 秒相接），或拉開到 1.0s 以上",
+    "[s08 summary] 「總結字卡」大約會蓋到講者框 41%（超過四成，手勢多半會被擋） → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）"
+   ],
+   "where": "[s08 summary]",
+   "type": "scene",
+   "scene": "$scene:summary",
+   "key": "summary",
+   "label": "11 總結字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s08-summary",
+   "file": "compositions/s08-summary.html",
+   "start": 98,
+   "end": 104.5,
+   "planEnd": 104.5,
+   "rough0": [
+    99,
+    105.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.5,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "總結",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"10\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m9 12 2 2 4-4\" /> </svg>",
+     "text": "總結一下",
+     "text_text": "總結一下",
+     "text_len": 4,
+     "text_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "sfx": null,
+   "sfxDropped": {
+    "name": "ding",
+    "at": 98.123,
+    "volume": 0.733,
+    "event": 98.1
+   }
+  }
+ ],
+ "allItems": [
+  {
+   "idx": 0,
+   "id": "c1",
+   "seg": {
+    "id": "c1",
+    "scene": "chapter",
+    "at": "#2",
+    "slots": {
+     "num": 1,
+     "title": "開始",
+     "sub": "先看問題"
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[c1 chapter] #2 前的空檔只有 0.50s（< 2s），章節 2.5s 會壓到 #2 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/p3e，照它印的指令重剪"
+   ],
+   "where": "[c1 chapter]",
+   "type": "scene",
+   "scene": "$scene:chapter",
+   "key": "chapter",
+   "label": "01 章節轉場",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "compId": "c1-chapter",
+   "file": "compositions/c1-chapter.html",
+   "D": 2.5,
+   "start": 4.5,
+   "chapterNote": "空檔 0.50s < 2s，從 #2 起點開始蓋 2.5s",
+   "chInfo": {
+    "cue": 2,
+    "gap": 0.5,
+    "placement": "cover"
+   },
+   "end": 7,
+   "planEnd": 7,
+   "rough0": [
+    4.5,
+    7
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [
+    "字幕避開章節：#2 晚 2.50s 出現"
+   ],
+   "txIn": "chapter",
+   "prev": "speaker",
+   "txOut": "fade",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "1",
+     "title": "開始",
+     "title_len": 2,
+     "title_lines": [
+      2
+     ],
+     "sub": "先看問題",
+     "sub_len": 4,
+     "sub_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "titleAt": 0.45,
+     "subAt": 0.6
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "sfx": {
+    "name": "chapter",
+    "at": 4.962,
+    "volume": 0.794,
+    "event": 4.95
+   }
+  },
+  {
+   "idx": 1,
+   "id": "s01",
+   "seg": {
+    "id": "s01",
+    "scene": "concept",
+    "from": "#3",
+    "to": "#3e",
+    "slots": {
+     "text": "先講概念"
+    }
+   },
+   "errors": [
+    "[s01 concept] 段長 3s，「一般字卡」至少 3.5s → to 往後延到至少 0:11.50（11.5s）或換情境"
+   ],
+   "warnings": [],
+   "where": "[s01 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s01-concept",
+   "file": "compositions/s01-concept.html",
+   "start": 8,
+   "end": 11,
+   "planEnd": 11,
+   "rough0": [
+    8,
+    11
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 3,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "概念",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 18h6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 22h4\" /> </svg>",
+     "text": "先講概念",
+     "text_text": "先講概念",
+     "text_len": 4,
+     "text_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": []
+  },
+  {
+   "idx": 2,
+   "id": "s02",
+   "seg": {
+    "id": "s02",
+    "scene": "key-point",
+    "from": "#4",
+    "to": "#4e",
+    "slots": {
+     "lead": "重點",
+     "key": "放到電腦"
+    }
+   },
+   "errors": [
+    "[s02 key-point] 段長 3s，「重點字卡」至少 3.5s → to 往後延到至少 0:15.00（15s）或換情境"
+   ],
+   "warnings": [
+    "[s02 key-point] 和前一段 s01 之間只空 0.50s，講者會閃一下 → s01 改 \"to\": \"#4\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[s02 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s02-key-point",
+   "file": "compositions/s02-key-point.html",
+   "start": 11.5,
+   "end": 14.5,
+   "planEnd": 14.5,
+   "rough0": [
+    11.5,
+    14.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 3,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" /> </svg>",
+     "lead": "重點",
+     "lead_len": 2,
+     "lead_lines": [
+      2
+     ],
+     "key": "放到電腦",
+     "key_len": 4,
+     "key_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "sfx": null,
+   "sfxDropped": {
+    "name": "impact",
+    "at": 11.549,
+    "volume": 0.617,
+    "event": 11.65
+   }
+  },
+  {
+   "idx": 3,
+   "id": "k1",
+   "seg": {
+    "id": "k1",
+    "scene": "keywords",
+    "from": "#5",
+    "to": "#6e",
+    "slots": {
+     "items": [
+      {
+       "text": "甲"
+      },
+      {
+       "text": "乙"
+      }
+     ]
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[k1 keywords] 和前一段 s02 之間只空 0.50s，講者會閃一下 → s02 改 \"to\": \"#5\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[k1 keywords]",
+   "type": "scene",
+   "scene": "$scene:keywords",
+   "key": "keywords",
+   "label": "12 關鍵詞條列",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "k1-keywords",
+   "file": "compositions/k1-keywords.html",
+   "start": 15,
+   "end": 21.5,
+   "planEnd": 21.5,
+   "rough0": [
+    15,
+    21.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.5,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "items": [
+      {
+       "text": "甲",
+       "text_text": "甲",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 0.2
+      },
+      {
+       "text": "乙",
+       "text_text": "乙",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 0.7
+      }
+     ],
+     "itemsHasIcon": false
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.2,
+      0.7
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": []
+  },
+  {
+   "idx": 4,
+   "id": "f1",
+   "seg": {
+    "id": "f1",
+    "type": "fx",
+    "fx": 29,
+    "bg": "dark",
+    "from": "#7",
+    "to": "#7e",
+    "vars": {
+     "number": "1"
+    },
+    "sfx": {
+     "name": "ding",
+     "at": "#7e-0.2"
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[f1 fx 29] 和前一段 k1 之間只空 0.50s，講者會閃一下 → k1 改 \"to\": \"#7\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[f1 fx 29]",
+   "type": "fx",
+   "fxDef": "$fx:29",
+   "key": "fx-29",
+   "label": "fx 29 數字計數",
+   "bg": "dark",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "vars": {
+    "number": "1",
+    "bg": "dark",
+    "accent": "#F6630F"
+   },
+   "compId": "card-29-1",
+   "file": "compositions/fx-29-odometer.html",
+   "start": 22,
+   "end": 25,
+   "planEnd": 25,
+   "rough0": [
+    22,
+    25
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 3,
+   "txIn": "fade",
+   "prev": "speaker",
+   "txOut": "fade",
+   "pipPieces": [],
+   "sfxExtra": [],
+   "sfx": {
+    "name": "ding",
+    "at": 24.823,
+    "volume": 0.582,
+    "event": 24.8
+   },
+   "badgeBox": [
+    1620,
+    56,
+    1824,
+    136
+   ]
+  },
+  {
+   "idx": 5,
+   "id": "m1",
+   "seg": {
+    "id": "m1",
+    "type": "media",
+    "src": "assets/screen/v.mp4",
+    "from": "#8",
+    "to": "#11e",
+    "in": 2,
+    "moves": [
+     {
+      "at": "+0.9",
+      "to": [
+       100,
+       100,
+       1200,
+       675
+      ]
+     },
+     {
+      "at": "+11.5",
+      "to": "full"
+     }
+    ],
+    "marks": [
+     {
+      "at": "#9",
+      "box": [
+       200,
+       200,
+       300,
+       100
+      ],
+      "path": [
+       {
+        "at": "#9+1",
+        "box": [
+         220,
+         260,
+         300,
+         100
+        ]
+       }
+      ]
+     }
+    ],
+    "callouts": [
+     {
+      "at": "#10",
+      "until": "#10e",
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "icon": "star"
+     }
+    ],
+    "steps": [
+     {
+      "at": "#8",
+      "text": "打開設定"
+     },
+     {
+      "at": "#10",
+      "text": "按下儲存"
+     }
+    ],
+    "clicks": [
+     "+2"
+    ],
+    "sfx": "success"
+   },
+   "errors": [],
+   "warnings": [
+    "[m1 media] steps[0]「打開設定」和右上角的小節角標「STEP 1｜設定」重複（畫面上下兩個角各寫一次）→ 刪掉這個 step，角標已經寫了在哪一步；要分更細的步驟再寫不同的字（這次不畫這顆膠囊）",
+    "[m1 media] 音效 success（25.396s）和 f1 的音效只差 0.573s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 f1 寫 \"sfx\": null",
+    "[m1 media] 和前一段 f1 之間只空 0.50s，講者會閃一下 → f1 改 \"to\": \"#8\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[m1 media]",
+   "type": "media",
+   "key": "media",
+   "label": "media v.mp4",
+   "media": {
+    "src": "assets/screen/v.mp4",
+    "abs": "<TMP>/X/assets/screen/v.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 2560,
+     "height": 1440,
+     "duration": 90,
+     "hasAudio": true
+    },
+    "in": 2,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 2560,
+     "h": 1440,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       0,
+       0,
+       1920,
+       940
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1339,
+      578,
+      1803,
+      948
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1235
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 0.652734375,
+     "ky": 0.6527777777777778,
+     "left": 125,
+     "top": 0,
+     "width": 1671,
+     "height": 940
+    },
+    "pipShift": [
+     -85,
+     -3
+    ],
+    "pieces": [
+     {
+      "s": 25.5,
+      "e": 39.47,
+      "fms": 2
+     }
+    ],
+    "retime": null,
+    "redact": [],
+    "cams": [
+     {
+      "i": 0,
+      "t0": 26.4,
+      "dur": 2.2,
+      "from": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      },
+      "to": {
+       "z": 2.1333,
+       "x": -281.4,
+       "y": -139.3
+      }
+     },
+     {
+      "i": 1,
+      "t0": 37,
+      "dur": 2.2,
+      "from": {
+       "z": 2.1333,
+       "x": -281.4,
+       "y": -139.3
+      },
+      "to": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      }
+     }
+    ],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -23.5
+    },
+    "marks": [
+     {
+      "id": "mmk-m1-1",
+      "i": 0,
+      "at": 29,
+      "until": 39.47,
+      "rect": [
+       251.8,
+       126.81,
+       203.32,
+       72.78
+      ],
+      "sw": 1.875,
+      "rx": 2.81,
+      "path": [
+       {
+        "k": 0,
+        "at": 30,
+        "dur": 0.4,
+        "rect": [
+         264.85,
+         165.97,
+         203.32,
+         72.78
+        ]
+       }
+      ]
+     }
+    ],
+    "lenses": [],
+    "steps": {
+     "list": [
+      {
+       "i": 1,
+       "at": 32.5,
+       "text": "按下儲存",
+       "n": 1,
+       "carry": false,
+       "ready": 33
+      }
+     ],
+     "carry": false,
+     "capsule": {
+      "box": [
+       157,
+       40,
+       435,
+       120
+      ],
+      "side": "left",
+      "from": 32.5,
+      "to": 39.47
+     }
+    },
+    "callouts": [
+     {
+      "i": 0,
+      "at": 32.5,
+      "until": 35.5,
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "iconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" /> </svg>",
+      "side": "right",
+      "quick": false,
+      "ready": 33.35,
+      "k": 1,
+      "R": [
+       813,
+       270,
+       294,
+       127
+      ],
+      "card": [
+       1163.2450937500003,
+       286.1740833333334,
+       1417.2450937500003,
+       382.1740833333334
+      ],
+      "anchor": "left",
+      "x": 1163,
+      "top": 286,
+      "lead": {
+       "d": "M1107 334 L1163 334",
+       "dot": [
+        1107,
+        334
+       ]
+      }
+     }
+    ],
+    "spots": [],
+    "arrows": [],
+    "waits": []
+   },
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 25.5,
+   "end": 39.47,
+   "planEnd": 39,
+   "rough0": [
+    25.5,
+    39
+   ],
+   "fadeIn": true,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "m2",
+   "pipEnd": 39,
+   "enterFx": "fade",
+   "exitFx": "cut",
+   "D": 13.97,
+   "txIn": "media",
+   "prev": "speaker",
+   "txOut": "media",
+   "pipPieces": [
+    {
+     "s": 25.5,
+     "e": 39,
+     "ms": 25.5,
+     "enter": "fade",
+     "exitDur": 0,
+     "exit": "none"
+    }
+   ],
+   "mediaReport": {
+    "summary": "運鏡 2、紅框 1（跟捲動 1 次）、標註 1、STEP 1（第 1 步）",
+    "json": {
+     "marks": [
+      {
+       "i": 0,
+       "at": 29,
+       "until": 39.47,
+       "ready": 29.4,
+       "path": [
+        {
+         "k": 0,
+         "at": 30,
+         "ready": 30.4
+        }
+       ]
+      }
+     ],
+     "callouts": [
+      {
+       "i": 0,
+       "at": 32.5,
+       "until": 35.5,
+       "ready": 33.35,
+       "side": "right",
+       "text": "按這裡"
+      }
+     ],
+     "spot": [],
+     "steps": [
+      {
+       "i": 1,
+       "at": 32.5,
+       "ready": 33,
+       "n": 1,
+       "text": "按下儲存",
+       "carry": false
+      }
+     ],
+     "side": null,
+     "arrows": [],
+     "lens": [],
+     "redact": [],
+     "waits": [],
+     "knots": [
+      [
+       0,
+       2
+      ],
+      [
+       13.97,
+       15.97
+      ]
+     ],
+     "view": {
+      "scale": 0.653,
+      "moves": 2,
+      "lens": 0,
+      "landscape": true
+     }
+    }
+   },
+   "sfxExtra": [
+    {
+     "name": "click",
+     "at": 27.518,
+     "volume": 0.334,
+     "event": 27.5
+    }
+   ],
+   "sfx": null,
+   "sfxDropped": {
+    "name": "success",
+    "at": 25.396,
+    "volume": 0.692,
+    "event": 25.5
+   },
+   "badgeBox": [
+    1392,
+    16,
+    1780,
+    96
+   ]
+  },
+  {
+   "idx": 6,
+   "id": "m2",
+   "seg": {
+    "id": "m2",
+    "type": "media",
+    "src": "assets/images/a.png",
+    "from": "#11e",
+    "to": "#14e",
+    "kenburns": true,
+    "lens": [
+     {
+      "at": "#12+0.5",
+      "box": [
+       100,
+       100,
+       200,
+       100
+      ]
+     }
+    ],
+    "arrows": [
+     {
+      "at": "#13",
+      "to": [
+       500,
+       300
+      ]
+     }
+    ],
+    "spot": [
+     {
+      "at": "#14",
+      "box": [
+       300,
+       300,
+       200,
+       200
+      ]
+     }
+    ]
+   },
+   "errors": [],
+   "warnings": [
+    "[m2 media] kenburns：有 callouts／spot／arrows 時不做慢推（標註要對準不動的畫面），已忽略"
+   ],
+   "where": "[m2 media]",
+   "type": "media",
+   "key": "media",
+   "label": "media a.png",
+   "media": {
+    "src": "assets/images/a.png",
+    "abs": "<TMP>/X/assets/images/a.png",
+    "kind": "image",
+    "ext": ".png",
+    "info": {
+     "width": 1600,
+     "height": 900
+    },
+    "in": 0,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 1600,
+     "h": 900,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       0,
+       0,
+       1920,
+       940
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1339,
+      578,
+      1803,
+      948
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1235
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 1.044375,
+     "ky": 1.0444444444444445,
+     "left": 125,
+     "top": 0,
+     "width": 1671,
+     "height": 940
+    },
+    "pipShift": [
+     -85,
+     -3
+    ],
+    "retime": null,
+    "redact": [],
+    "cams": [],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -23.5
+    },
+    "marks": [],
+    "lenses": [
+     {
+      "id": "m2-l1",
+      "i": 0,
+      "la": 40,
+      "lb": 43,
+      "N": 90,
+      "R": [
+       229.44,
+       104.44,
+       208.88,
+       104.44
+      ],
+      "C": [
+       416,
+       208
+      ],
+      "outer": [
+       739,
+       333,
+       442,
+       234
+      ],
+      "back": {
+       "x": -626.13,
+       "y": -293.33,
+       "scaleX": 0.5021,
+       "scaleY": 0.50214
+      },
+      "crop": [
+       100,
+       100,
+       200,
+       100
+      ],
+      "ranges": [],
+      "map": null,
+      "urls": null
+     }
+    ],
+    "steps": {
+     "list": [],
+     "carry": false,
+     "capsule": null
+    },
+    "callouts": [],
+    "spots": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 46.5,
+      "until": 49.5,
+      "hole": [
+       430,
+       305,
+       225,
+       225
+      ],
+      "ready": 46.9
+     }
+    ],
+    "arrows": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 43,
+      "until": 46,
+      "from": "ne",
+      "len": 120,
+      "u": [
+       0.7071,
+       -0.7071
+      ],
+      "tip": [
+       653.55,
+       306.97
+      ],
+      "base": [
+       674.76,
+       285.76
+      ],
+      "tail": [
+       738.4,
+       222.12
+      ],
+      "c1": [
+       685.37,
+       296.36
+      ],
+      "c2": [
+       664.16,
+       275.15
+      ],
+      "ready": 43.5
+     }
+    ],
+    "waits": []
+   },
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 39,
+   "end": 49.5,
+   "planEnd": 49.5,
+   "rough0": [
+    39,
+    49.5
+   ],
+   "fadeIn": false,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [
+    "和 m1 疊化 0.47s"
+   ],
+   "xfade": 0.47,
+   "enterFx": "cut",
+   "exitFx": "fade",
+   "D": 10.5,
+   "txIn": "media",
+   "prev": "speaker",
+   "txOut": "media",
+   "pipPieces": [
+    {
+     "s": 39,
+     "e": 44,
+     "ms": 39,
+     "enter": "none",
+     "exitDur": 0.4,
+     "exit": "fade"
+    },
+    {
+     "s": 47,
+     "e": 49.5,
+     "ms": 47,
+     "enter": "fade",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "pipNote": "只有聲音的區間不放子母畫面",
+   "mediaReport": {
+    "summary": "聚光燈 1、箭頭 1、放大鏡 1；有標註，不做慢推",
+    "json": {
+     "marks": [],
+     "callouts": [],
+     "spot": [
+      {
+       "i": 0,
+       "at": 46.5,
+       "until": 49.5,
+       "ready": 46.9
+      }
+     ],
+     "steps": [],
+     "side": null,
+     "arrows": [
+      {
+       "i": 0,
+       "at": 43,
+       "until": 46,
+       "ready": 43.5,
+       "from": "ne"
+      }
+     ],
+     "lens": [
+      {
+       "i": 0,
+       "at": 40,
+       "until": 43,
+       "ready": 40.88
+      }
+     ],
+     "redact": [],
+     "waits": [],
+     "knots": null
+    }
+   },
+   "sfxExtra": [],
+   "badgeBox": [
+    1392,
+    16,
+    1780,
+    96
+   ]
+  },
+  {
+   "idx": 7,
+   "id": "x1",
+   "seg": {
+    "id": "x1",
+    "type": "custom",
+    "src": "compositions/x-demo.html",
+    "layout": "fullscreen",
+    "from": "#15",
+    "to": "#17e",
+    "clicks": [
+     "+1"
+    ]
+   },
+   "errors": [],
+   "warnings": [
+    "[x1 custom] 和前一段 m2 之間只空 0.50s，講者會閃一下 → m2 改 \"to\": \"#15\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[x1 custom]",
+   "type": "custom",
+   "key": "custom",
+   "label": "custom x-demo.html",
+   "compId": "x-demo",
+   "file": "compositions/x-demo.html",
+   "refList": [
+    "#16",
+    "#17"
+   ],
+   "sfxBeats": [
+    {
+     "name": "click",
+     "ref": "#16",
+     "off": 0.2
+    },
+    {
+     "name": "ding",
+     "ref": "#17",
+     "off": 0
+    }
+   ],
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 50,
+   "end": 60,
+   "planEnd": 60,
+   "rough0": [
+    50,
+    60
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 10,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "retract",
+   "pipPieces": [
+    {
+     "s": 50,
+     "e": 60,
+     "ms": 50,
+     "enter": "fade",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "cueRefs": {
+    "#16": 53.5,
+    "#17": 57
+   },
+   "sfxExtra": [
+    {
+     "name": "click",
+     "at": 51.018,
+     "volume": 0.334,
+     "event": 51
+    },
+    {
+     "name": "click",
+     "at": 53.718,
+     "volume": 0.334,
+     "event": 53.7,
+     "beat": true
+    }
+   ],
+   "badgeBox": [
+    1436,
+    56,
+    1824,
+    136
+   ]
+  },
+  {
+   "idx": 8,
+   "id": "t1",
+   "seg": {
+    "id": "t1",
+    "scene": "chapter-tag",
+    "from": "#18",
+    "to": "#18e",
+    "slots": {
+     "num": 2,
+     "name": "第二章"
+    }
+   },
+   "errors": [
+    "[t1 chapter-tag] 段長 2.5s，「章節角標」至少 3.5s → to 往後延到至少 1:03.50（63.5s）或換情境"
+   ],
+   "warnings": [],
+   "where": "[t1 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "t1-chapter-tag",
+   "file": "compositions/t1-chapter-tag.html",
+   "start": 60,
+   "end": 62.5,
+   "planEnd": 62.5,
+   "rough0": [
+    61,
+    63.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 2.5,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "2",
+     "name": "第二章",
+     "name_len": 3,
+     "name_lines": [
+      3
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 9,
+   "id": "s05",
+   "seg": {
+    "id": "s05",
+    "scene": "side-panel",
+    "from": "#19",
+    "to": "#21e",
+    "sfxVolume": -3,
+    "slots": {
+     "title": "三件事",
+     "items": [
+      {
+       "text": "一"
+      },
+      {
+       "text": "二"
+      },
+      {
+       "text": "三"
+      }
+     ]
+    }
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s05 side-panel]",
+   "type": "scene",
+   "scene": "$scene:side-panel",
+   "key": "side-panel",
+   "label": "03 半版側邊欄",
+   "opaque": false,
+   "pip": false,
+   "side": true,
+   "lower": false,
+   "z": 20,
+   "compId": "s05-side-panel",
+   "file": "compositions/s05-side-panel.html",
+   "start": 63,
+   "end": 73,
+   "planEnd": 73,
+   "rough0": [
+    64,
+    74
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 10,
+   "txIn": "side",
+   "prev": "speaker",
+   "txOut": "side",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "title": "三件事",
+     "title_text": "三件事",
+     "title_len": 3,
+     "title_lines": [
+      3
+     ],
+     "items": [
+      {
+       "text": "一",
+       "text_text": "一",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 1.3
+      },
+      {
+       "text": "二",
+       "text_text": "二",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 1.9
+      },
+      {
+       "text": "三",
+       "text_text": "三",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 2.5
+      }
+     ],
+     "itemsHasIcon": false
+    },
+    "beats": {
+     "head": 0.7
+    },
+    "listTimes": {
+     "items": [
+      1.3,
+      1.9,
+      2.5
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": []
+  },
+  {
+   "idx": 10,
+   "id": "s06",
+   "seg": {
+    "id": "s06",
+    "scene": "fs-list",
+    "from": "#22",
+    "to": "#24e",
+    "slots": {
+     "title": "清單",
+     "items": [
+      "一",
+      "二",
+      "三"
+     ]
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[s06 fs-list] 和前一段 s05 之間只空 0.50s，講者會閃一下 → s05 改 \"to\": \"#22\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[s06 fs-list]",
+   "type": "scene",
+   "scene": "$scene:fs-list",
+   "key": "fs-list",
+   "label": "04a 全畫面清單",
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "compId": "s06-fs-list",
+   "file": "compositions/s06-fs-list.html",
+   "start": 73.5,
+   "end": 83.5,
+   "planEnd": 83.5,
+   "rough0": [
+    74.5,
+    84.5
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 10,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "retract",
+   "pipPieces": [
+    {
+     "s": 73.5,
+     "e": 83.5,
+     "ms": 74.5,
+     "enter": "fly",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "resolved": {
+    "ctx": {
+     "title": "清單",
+     "title_len": 2,
+     "title_lines": [
+      2
+     ],
+     "items": [
+      {
+       "text": "一",
+       "text_text": "一",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 0.5
+      },
+      {
+       "text": "二",
+       "text_text": "二",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 0.85
+      },
+      {
+       "text": "三",
+       "text_text": "三",
+       "text_len": 1,
+       "text_lines": [
+        1
+       ],
+       "at": 1.2
+      }
+     ],
+     "itemsHasIcon": false
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.5,
+      0.85,
+      1.2
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "badgeBox": [
+    1580,
+    56,
+    1824,
+    136
+   ]
+  },
+  {
+   "idx": 11,
+   "id": "m3",
+   "seg": {
+    "id": "m3",
+    "type": "media",
+    "src": "assets/screen/w.mp4",
+    "from": "#25",
+    "to": "#27e",
+    "sfxExtra": true,
+    "retime": [
+     {
+      "at": "+0.5",
+      "src": 1
+     },
+     {
+      "at": "+3",
+      "src": 40
+     },
+     {
+      "at": "+6",
+      "src": 41
+     }
+    ],
+    "wait": "AI 處理中｜寫入檔案",
+    "redact": [
+     {
+      "box": [
+       0,
+       0,
+       100,
+       50
+      ]
+     }
+    ],
+    "side": {
+     "title": "配對手機",
+     "items": [
+      {
+       "at": "#25",
+       "text": "打開 App"
+      },
+      {
+       "at": "#26",
+       "text": "掃碼"
+      }
+     ]
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[m3 media] wait：這段沒有「×5 以上、至少 3 秒、沒人講話」的快轉，等待卡不會出現 → 確認 retime／out 的快轉夠快夠長、那幾秒沒有字幕；用不到就拿掉 wait",
+    "[m3 media] 錄影 10s 沒有任何標註或運鏡 → 講解講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3）；真的沒有要指的東西，回報寫保留理由",
+    "[m3 media] 和前一段 s06 之間只空 0.50s，講者會閃一下 → s06 改 \"to\": \"#25\"（0 秒相接），或拉開到 1.0s 以上"
+   ],
+   "where": "[m3 media]",
+   "type": "media",
+   "key": "media",
+   "label": "media w.mp4",
+   "media": {
+    "src": "assets/screen/w.mp4",
+    "abs": "<TMP>/X/assets/screen/w.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 1920,
+     "height": 1080,
+     "duration": 120,
+     "hasAudio": false
+    },
+    "in": 0,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": false,
+    "retimeRaw": [
+     {
+      "at": "+0.5",
+      "src": 1
+     },
+     {
+      "at": "+3",
+      "src": 40
+     },
+     {
+      "at": "+6",
+      "src": 41
+     }
+    ],
+    "out": null,
+    "waitOff": false,
+    "waitLines": [
+     "AI 處理中",
+     "寫入檔案"
+    ],
+    "file": {
+     "w": 1920,
+     "h": 1080,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       120,
+       0,
+       720,
+       940
+      ],
+      "cover": [
+       120,
+       0,
+       720,
+       940
+      ]
+     },
+     "focus": [
+      120,
+      0,
+      720,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [
+      {
+       "box": [
+        840,
+        172,
+        1800,
+        548
+       ],
+       "why": "壓到右側步驟清單"
+      }
+     ],
+     "pip": [
+      1424,
+      581,
+      1888,
+      951
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1320
+     }
+    },
+    "side": {
+     "title": "配對手機",
+     "items": [
+      {
+       "i": 0,
+       "at": 84,
+       "text": "打開 App"
+      },
+      {
+       "i": 1,
+       "at": 87.5,
+       "text": "掃碼"
+      }
+     ],
+     "box": [
+      840,
+      172,
+      960,
+      376
+     ]
+    },
+    "geo": {
+     "kx": 0.375,
+     "ky": 0.375,
+     "left": 120,
+     "top": 268,
+     "width": 720,
+     "height": 405
+    },
+    "pipShift": null,
+    "retime": {
+     "knots": [
+      [
+       0,
+       0.5
+      ],
+      [
+       0.5,
+       1
+      ],
+      [
+       3,
+       40
+      ],
+      [
+       6,
+       41
+      ],
+      [
+       10,
+       45
+      ]
+     ],
+     "speeds": [
+      1,
+      15.6,
+      0.333,
+      1
+     ],
+     "len": 10
+    },
+    "pieces": [
+     {
+      "s": 84,
+      "e": 94,
+      "fms": 0
+     }
+    ],
+    "redact": [
+     {
+      "i": 0,
+      "at": null,
+      "until": null,
+      "box": [
+       0,
+       0,
+       100,
+       50
+      ]
+     }
+    ],
+    "cams": [],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -24,
+     "y": -23.5
+    },
+    "marks": [],
+    "lenses": [],
+    "steps": {
+     "list": [],
+     "carry": false,
+     "capsule": null
+    },
+    "callouts": [],
+    "spots": [],
+    "arrows": [],
+    "waits": []
+   },
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 84,
+   "end": 94,
+   "planEnd": 94,
+   "rough0": [
+    85,
+    95
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "enterFx": "fade",
+   "exitFx": "fade",
+   "D": 10,
+   "txIn": "media",
+   "prev": "speaker",
+   "txOut": "media",
+   "pipPieces": [
+    {
+     "s": 84,
+     "e": 89,
+     "ms": 85,
+     "enter": "fly",
+     "exitDur": 0.4,
+     "exit": "fade"
+    },
+    {
+     "s": 91,
+     "e": 94,
+     "ms": 92,
+     "enter": "fade",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "pipNote": "只有聲音的區間不放子母畫面",
+   "mediaReport": {
+    "summary": "打碼 1 處、變速 0–0.5s ×1、0.5–3s ×15.6、3–6s ×0.333、6–10s ×1",
+    "json": {
+     "marks": [],
+     "callouts": [],
+     "spot": [],
+     "steps": [],
+     "side": {
+      "title": "配對手機",
+      "box": [
+       840,
+       172,
+       960,
+       376
+      ],
+      "items": [
+       {
+        "i": 0,
+        "at": 84,
+        "text": "打開 App"
+       },
+       {
+        "i": 1,
+        "at": 87.5,
+        "text": "掃碼"
+       }
+      ]
+     },
+     "arrows": [],
+     "lens": [],
+     "redact": [
+      {
+       "i": 0
+      }
+     ],
+     "waits": [],
+     "knots": [
+      [
+       0,
+       0.5
+      ],
+      [
+       0.5,
+       1
+      ],
+      [
+       3,
+       40
+      ],
+      [
+       6,
+       41
+      ],
+      [
+       10,
+       45
+      ]
+     ],
+     "view": {
+      "scale": 0.375,
+      "moves": 0,
+      "lens": 0,
+      "landscape": true
+     }
+    }
+   },
+   "sfxExtra": [],
+   "badgeBox": [
+    1580,
+    56,
+    1824,
+    136
+   ]
+  },
+  {
+   "idx": 12,
+   "id": "s07",
+   "seg": {
+    "id": "s07",
+    "scene": "quote",
+    "from": "#28",
+    "to": "#28e",
+    "slots": {
+     "text": "最後一句"
+    }
+   },
+   "errors": [
+    "[s07 quote] 段長 3s，「金句字卡」至少 4s → to 往後延到至少 1:38.50（98.5s）或換情境"
+   ],
+   "warnings": [
+    "[s07 quote] 和前一段 m3 之間只空 0.50s，講者會閃一下 → m3 改 \"to\": \"#28\"（0 秒相接），或拉開到 1.0s 以上",
+    "[s07 quote] 「金句字卡」大約會蓋到講者框 41%（超過四成，手勢多半會被擋） → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）"
+   ],
+   "where": "[s07 quote]",
+   "type": "scene",
+   "scene": "$scene:quote",
+   "key": "quote",
+   "label": "15 金句字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s07-quote",
+   "file": "compositions/s07-quote.html",
+   "start": 94.5,
+   "end": 97.5,
+   "planEnd": 97.5,
+   "rough0": [
+    95.5,
+    98.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 3,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "金句",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "text": "最後一句",
+     "text_text": "最後一句",
+     "text_len": 4,
+     "text_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "sfx": null,
+   "sfxDropped": {
+    "name": "sparkle",
+    "at": 94.453,
+    "volume": 0.575,
+    "event": 94.6
+   }
+  },
+  {
+   "idx": 13,
+   "id": "s08",
+   "seg": {
+    "id": "s08",
+    "scene": "summary",
+    "from": "#29",
+    "to": "#30e",
+    "sfxExtra": false,
+    "slots": {
+     "text": "總結一下"
+    }
+   },
+   "errors": [],
+   "warnings": [
+    "[s08 summary] 和前一段 s07 之間只空 0.50s，講者會閃一下 → s07 改 \"to\": \"#29\"（0 秒相接），或拉開到 1.0s 以上",
+    "[s08 summary] 「總結字卡」大約會蓋到講者框 41%（超過四成，手勢多半會被擋） → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）"
+   ],
+   "where": "[s08 summary]",
+   "type": "scene",
+   "scene": "$scene:summary",
+   "key": "summary",
+   "label": "11 總結字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s08-summary",
+   "file": "compositions/s08-summary.html",
+   "start": 98,
+   "end": 104.5,
+   "planEnd": 104.5,
+   "rough0": [
+    99,
+    105.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.5,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "總結",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"10\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m9 12 2 2 4-4\" /> </svg>",
+     "text": "總結一下",
+     "text_text": "總結一下",
+     "text_len": 4,
+     "text_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": {
+    "start": 4.5,
+    "num": "1",
+    "name": "開始",
+    "sub": "先看問題"
+   },
+   "sfxExtra": [],
+   "sfx": null,
+   "sfxDropped": {
+    "name": "ding",
+    "at": 98.123,
+    "volume": 0.733,
+    "event": 98.1
+   }
+  }
+ ],
+ "errors": [
+  "[s01 concept] 段長 3s，「一般字卡」至少 3.5s → to 往後延到至少 0:11.50（11.5s）或換情境",
+  "[s02 key-point] 段長 3s，「重點字卡」至少 3.5s → to 往後延到至少 0:15.00（15s）或換情境",
+  "[t1 chapter-tag] 段長 2.5s，「章節角標」至少 3.5s → to 往後延到至少 1:03.50（63.5s）或換情境",
+  "[s07 quote] 段長 3s，「金句字卡」至少 4s → to 往後延到至少 1:38.50（98.5s）或換情境"
+ ],
+ "warnings": [
+  "沒有畫面的區間共 2 段、6.50s → 照 style.md「連續覆蓋」補卡片或情境動畫，或把前一段的 to 延到下一段的 from（0 秒相接）；故意留給講者的就在 plan.json 寫 \"rhythm\": \"spaced\"",
+  "版面節奏：開頭 30 秒要讓觀眾先認識講者：f1（0:22，子母畫面）、m1（0:25，子母畫面） 把講者縮小或推到一邊了 → 這幾段換成疊在講者上的字卡（下方字卡、字卡動態、疊加的模板），或把起點延到 0:30 之後",
+  "版面節奏：子母畫面只連續 38 秒（f1–x1，0:22–1:00），至少要 45 秒：切進去馬上又切回講者，畫面會晃 → 把前後相鄰的段也換成全畫面的模板（或併成一段），讓子母畫面連續 ≥ 45 秒；湊不到就把這幾段改成疊在講者上的字卡",
+  "版面節奏：半螢幕只連續 10 秒（s05，1:03–1:13），至少要 15 秒：切進去馬上又切回講者，畫面會晃 → 把這一段拉長到 ≥ 15 秒（併進前後一行），或改成疊在講者上的字卡",
+  "版面節奏：子母畫面只連續 20.5 秒（s06、m3，1:13–1:34），至少要 45 秒：切進去馬上又切回講者，畫面會晃 → 把前後相鄰的段也換成全畫面的模板（或併成一段），讓子母畫面連續 ≥ 45 秒；湊不到就把這幾段改成疊在講者上的字卡",
+  "[c1 chapter] #2 前的空檔只有 0.50s（< 2s），章節 2.5s 會壓到 #2 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/p3e，照它印的指令重剪",
+  "[s02 key-point] 和前一段 s01 之間只空 0.50s，講者會閃一下 → s01 改 \"to\": \"#4\"（0 秒相接），或拉開到 1.0s 以上",
+  "[k1 keywords] 和前一段 s02 之間只空 0.50s，講者會閃一下 → s02 改 \"to\": \"#5\"（0 秒相接），或拉開到 1.0s 以上",
+  "[f1 fx 29] 和前一段 k1 之間只空 0.50s，講者會閃一下 → k1 改 \"to\": \"#7\"（0 秒相接），或拉開到 1.0s 以上",
+  "[m1 media] steps[0]「打開設定」和右上角的小節角標「STEP 1｜設定」重複（畫面上下兩個角各寫一次）→ 刪掉這個 step，角標已經寫了在哪一步；要分更細的步驟再寫不同的字（這次不畫這顆膠囊）",
+  "[m1 media] 音效 success（25.396s）和 f1 的音效只差 0.573s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 f1 寫 \"sfx\": null",
+  "[m1 media] 和前一段 f1 之間只空 0.50s，講者會閃一下 → f1 改 \"to\": \"#8\"（0 秒相接），或拉開到 1.0s 以上",
+  "[m2 media] kenburns：有 callouts／spot／arrows 時不做慢推（標註要對準不動的畫面），已忽略",
+  "[x1 custom] 和前一段 m2 之間只空 0.50s，講者會閃一下 → m2 改 \"to\": \"#15\"（0 秒相接），或拉開到 1.0s 以上",
+  "[s06 fs-list] 和前一段 s05 之間只空 0.50s，講者會閃一下 → s05 改 \"to\": \"#22\"（0 秒相接），或拉開到 1.0s 以上",
+  "[m3 media] wait：這段沒有「×5 以上、至少 3 秒、沒人講話」的快轉，等待卡不會出現 → 確認 retime／out 的快轉夠快夠長、那幾秒沒有字幕；用不到就拿掉 wait",
+  "[m3 media] 錄影 10s 沒有任何標註或運鏡 → 講解講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3）；真的沒有要指的東西，回報寫保留理由",
+  "[m3 media] 和前一段 s06 之間只空 0.50s，講者會閃一下 → s06 改 \"to\": \"#25\"（0 秒相接），或拉開到 1.0s 以上",
+  "[s07 quote] 和前一段 m3 之間只空 0.50s，講者會閃一下 → m3 改 \"to\": \"#28\"（0 秒相接），或拉開到 1.0s 以上",
+  "[s07 quote] 「金句字卡」大約會蓋到講者框 41%（超過四成，手勢多半會被擋） → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）",
+  "[s08 summary] 和前一段 s07 之間只空 0.50s，講者會閃一下 → s07 改 \"to\": \"#29\"（0 秒相接），或拉開到 1.0s 以上",
+  "[s08 summary] 「總結字卡」大約會蓋到講者框 41%（超過四成，手勢多半會被擋） → 看 --storyboard 的截圖確認，擋到臉或手勢就換情境（例：12 關鍵詞條列、04 全畫面）"
+ ],
+ "globals": {
+  "speakerBox": [
+   700,
+   200,
+   1220,
+   1000
+  ],
+  "sideShift": 480,
+  "pipCrop": "auto",
+  "pip": {
+   "crop": {
+    "x": 346.66666666666674,
+    "y": 140.00000000000006,
+    "w": 1226.6666666666665,
+    "h": 919.9999999999999
+   },
+   "style": {
+    "left": -122,
+    "top": -49,
+    "width": 676,
+    "height": 380
+   }
+  },
+  "speakerSide": "center",
+  "panelSide": "left",
+  "cardSide": "left",
+  "sideLine": "講者位置：中（中心 x 960）→ 字卡靠左、半螢幕面板在左、講者右移 480"
+ },
+ "edit": {
+  "cuts": [
+   [
+    60,
+    61
+   ]
+  ],
+  "fadeIn": 0.5,
+  "fadeOut": 1,
+  "volume": {
+   "voice": 1,
+   "sfx": -2,
+   "media": -1
+  },
+  "gains": [
+   {
+    "from": 70,
+    "to": 75,
+    "db": -3
+   }
+  ],
+  "joins": [
+   {
+    "at": 20,
+    "type": "punch"
+   },
+   {
+    "at": 60,
+    "type": "dip",
+    "dur": 0.4
+   }
+  ]
+ },
+ "editActive": true,
+ "tm": {
+  "cuts": [
+   [
+    60,
+    61
+   ]
+  ],
+  "keep": [
+   [
+    0,
+    60
+   ],
+   [
+    61,
+    106
+   ]
+  ],
+  "outDur": 105,
+  "identity": false,
+  "map": "$fn",
+  "joinsOut": [
+   60
+  ],
+  "unmapStart": "$fn",
+  "unmapEnd": "$fn"
+ },
+ "outDur": 105,
+ "roughDur": 106,
+ "cuesOut": {
+  "$array": [
+   {
+    "n": 1,
+    "start": 1,
+    "end": 4,
+    "text": "第 1 句字幕內容"
+   },
+   {
+    "n": 2,
+    "start": 4.5,
+    "end": 7.5,
+    "text": "第 2 句字幕內容"
+   },
+   {
+    "n": 3,
+    "start": 8,
+    "end": 11,
+    "text": "第 3 句字幕內容"
+   },
+   {
+    "n": 4,
+    "start": 11.5,
+    "end": 14.5,
+    "text": "第 4 句字幕內容"
+   },
+   {
+    "n": 5,
+    "start": 15,
+    "end": 18,
+    "text": "第 5 句字幕內容"
+   },
+   {
+    "n": 6,
+    "start": 18.5,
+    "end": 21.5,
+    "text": "第 6 句字幕內容"
+   },
+   {
+    "n": 7,
+    "start": 22,
+    "end": 25,
+    "text": "第 7 句字幕內容"
+   },
+   {
+    "n": 8,
+    "start": 25.5,
+    "end": 28.5,
+    "text": "第 8 句字幕內容"
+   },
+   {
+    "n": 9,
+    "start": 29,
+    "end": 32,
+    "text": "第 9 句字幕內容"
+   },
+   {
+    "n": 10,
+    "start": 32.5,
+    "end": 35.5,
+    "text": "第 10 句字幕內容"
+   },
+   {
+    "n": 11,
+    "start": 36,
+    "end": 39,
+    "text": "第 11 句字幕內容"
+   },
+   {
+    "n": 12,
+    "start": 39.5,
+    "end": 42.5,
+    "text": "第 12 句字幕內容"
+   },
+   {
+    "n": 13,
+    "start": 43,
+    "end": 46,
+    "text": "第 13 句字幕內容"
+   },
+   {
+    "n": 14,
+    "start": 46.5,
+    "end": 49.5,
+    "text": "第 14 句字幕內容"
+   },
+   {
+    "n": 15,
+    "start": 50,
+    "end": 53,
+    "text": "第 15 句字幕內容"
+   },
+   {
+    "n": 16,
+    "start": 53.5,
+    "end": 56.5,
+    "text": "第 16 句字幕內容"
+   },
+   {
+    "n": 17,
+    "start": 57,
+    "end": 60,
+    "text": "第 17 句字幕內容"
+   },
+   {
+    "n": 18,
+    "start": 60,
+    "end": 62.5,
+    "text": "第 18 句字幕內容"
+   },
+   {
+    "n": 19,
+    "start": 63,
+    "end": 66,
+    "text": "第 19 句字幕內容"
+   },
+   {
+    "n": 20,
+    "start": 66.5,
+    "end": 69.5,
+    "text": "第 20 句字幕內容"
+   },
+   {
+    "n": 21,
+    "start": 70,
+    "end": 73,
+    "text": "第 21 句字幕內容"
+   },
+   {
+    "n": 22,
+    "start": 73.5,
+    "end": 76.5,
+    "text": "第 22 句字幕內容"
+   },
+   {
+    "n": 23,
+    "start": 77,
+    "end": 80,
+    "text": "第 23 句字幕內容"
+   },
+   {
+    "n": 24,
+    "start": 80.5,
+    "end": 83.5,
+    "text": "第 24 句字幕內容"
+   },
+   {
+    "n": 25,
+    "start": 84,
+    "end": 87,
+    "text": "第 25 句字幕內容"
+   },
+   {
+    "n": 26,
+    "start": 87.5,
+    "end": 90.5,
+    "text": "第 26 句字幕內容"
+   },
+   {
+    "n": 27,
+    "start": 91,
+    "end": 94,
+    "text": "第 27 句字幕內容"
+   },
+   {
+    "n": 28,
+    "start": 94.5,
+    "end": 97.5,
+    "text": "第 28 句字幕內容"
+   },
+   {
+    "n": 29,
+    "start": 98,
+    "end": 101,
+    "text": "第 29 句字幕內容"
+   },
+   {
+    "n": 30,
+    "start": 101.5,
+    "end": 104.5,
+    "text": "第 30 句字幕內容"
+   }
+  ],
+  "$props": {
+   "wordsWhy": "$undefined",
+   "approx": "$undefined",
+   "voiceMoved": "$undefined"
+  }
+ },
+ "voiceOnly": [
+  [
+   44,
+   47
+  ],
+  [
+   90,
+   92
+  ]
+ ],
+ "voiceOut": [
+  [
+   44,
+   47
+  ],
+  [
+   89,
+   91
+  ]
+ ],
+ "voiceGaps": [],
+ "footage": {
+  "clips": [
+   {
+    "s": 0,
+    "e": 60,
+    "ms": 0,
+    "fadeIn": 0.5,
+    "fadeOut": 0.2,
+    "volume": 1.122,
+    "gainDb": 1
+   },
+   {
+    "s": 60,
+    "e": 69,
+    "ms": 61,
+    "fadeIn": 0.2,
+    "fadeOut": 0,
+    "volume": 1.122,
+    "gainDb": 1
+   },
+   {
+    "s": 69,
+    "e": 74,
+    "ms": 70,
+    "fadeIn": 0,
+    "fadeOut": 0,
+    "volume": 0.794,
+    "gainDb": -2
+   },
+   {
+    "s": 74,
+    "e": 105,
+    "ms": 75,
+    "fadeIn": 0,
+    "fadeOut": 1,
+    "volume": 1.122,
+    "gainDb": 1
+   }
+  ]
+ },
+ "editFx": {
+  "fadeIn": 0.5,
+  "fadeOut": 1,
+  "dips": [
+   {
+    "at": 60,
+    "dur": 0.4
+   }
+  ],
+  "punches": [
+   {
+    "a": 20,
+    "b": 60
+   }
+  ],
+  "scale": 1.08,
+  "origin": "960px 440px",
+  "mediaDb": -1
+ },
+ "cutpoints": [
+  {
+   "at": 20,
+   "kind": "pause"
+  },
+  {
+   "at": 60,
+   "kind": "ng"
+  }
+ ],
+ "voiceMoved": [],
+ "moods": [
+  {
+   "i": 0,
+   "kind": "pain",
+   "event": 9.4,
+   "zoom": true,
+   "sfx": {
+    "name": "alert",
+    "at": 10.8,
+    "volume": 0.452,
+    "event": 9.4,
+    "mood": true,
+    "tail": true
+   },
+   "dropped": null,
+   "off": false
+  },
+  {
+   "i": 1,
+   "kind": "win",
+   "event": 18.5,
+   "zoom": false,
+   "sfx": {
+    "name": "success",
+    "at": 21.3,
+    "volume": 0.55,
+    "event": 18.5,
+    "mood": true,
+    "tail": true
+   },
+   "dropped": null,
+   "off": false
+  },
+  {
+   "i": 2,
+   "kind": "quote",
+   "event": 68,
+   "zoom": false,
+   "sfx": {
+    "name": "sparkle",
+    "at": 67.853,
+    "volume": 0.457,
+    "event": 68,
+    "mood": true
+   },
+   "dropped": null,
+   "off": false
+  },
+  {
+   "i": 3,
+   "kind": "turn",
+   "event": 87.5,
+   "zoom": false,
+   "sfx": null,
+   "dropped": null,
+   "off": true
+  },
+  {
+   "i": 4,
+   "kind": "land",
+   "event": 94.5,
+   "zoom": false,
+   "sfx": {
+    "name": "impact",
+    "at": 94.399,
+    "volume": 0.49,
+    "event": 94.5,
+    "mood": true
+   },
+   "dropped": null,
+   "off": false
+  }
+ ],
+ "zooms": {
+  "origin": "960px 440px",
+  "list": [
+   {
+    "a": 9.4,
+    "b": 11,
+    "scale": 1.25,
+    "dur": 0.2,
+    "where": "moods[0]（#3@字幕 痛點）",
+    "i": 0,
+    "base": 1
+   }
+  ]
+ },
+ "rhythm": "continuous",
+ "uncovered": [
+  {
+   "start": 1,
+   "end": 4.5,
+   "len": 3.5
+  },
+  {
+   "start": 60,
+   "end": 63,
+   "len": 3
+  }
+ ],
+ "spokenLen": 103.5,
+ "chapters": [
+  {
+   "id": "c1",
+   "kind": "chapter",
+   "num": "1",
+   "cue": 2,
+   "title": "開始",
+   "start": 4.5,
+   "end": 7,
+   "gap": 0.5,
+   "placement": "cover",
+   "captionsClipped": [
+    2
+   ],
+   "badge": [
+    [
+     7,
+     60
+    ]
+   ]
+  },
+  {
+   "id": "t1",
+   "kind": "tag",
+   "num": "2",
+   "cue": null,
+   "title": "第二章",
+   "start": 60,
+   "end": 62.5,
+   "gap": null,
+   "placement": null,
+   "captionsClipped": [],
+   "badge": [
+    [
+     60,
+     98
+    ]
+   ]
+  }
+ ],
+ "blackout": [
+  [
+   4.5,
+   7
+  ]
+ ],
+ "sfxBudget": {
+  "count": {
+   "chapter": 1,
+   "alert": 1,
+   "success": 1,
+   "ding": 1,
+   "click": 3,
+   "sparkle": 1,
+   "impact": 1
+  },
+  "over": [],
+  "dense": [],
+  "sparse": [],
+  "loud": [],
+  "levels": {
+   "main": [
+    -11.7,
+    -5,
+    -9.5
+   ],
+   "extra": [
+    -22.6,
+    -22.6
+   ]
+  },
+  "perMinuteAvg": 3.4,
+  "warnings": [],
+  "lines": [
+   "音效次數：ding 1、success 1、alert 1、impact 1、click 3、chapter 1、sparkle 1／6、shine 0／3、thunder 0／3",
+   "音效密度：主音效平均 3.4 顆／分（上限：任一分鐘 ≤ 5 顆，超過才 ⚠），附加音效 3 顆；每分鐘超過的已自動拿掉 2 顆",
+   "情緒點：5 個（音效 4 顆、不出聲 1 個；模板預設音效讓位 2 顆）",
+   "講者爆衝推近：1 次（0:09.40）"
+  ],
+  "designOver": true
+ },
+ "outro": {
+  "music": "bgm-cylinder-five",
+  "file": null,
+  "credit": "Music: \"Cylinder Five\" by Chris Zabriskie (http://chriszabriskie.com/cylinders/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)",
+  "from": "#29",
+  "start": 98,
+  "end": 105,
+  "span": 7,
+  "fadeIn": 3.2,
+  "fadeOut": 1.85,
+  "gain": 0.3160358247569762,
+  "relDb": -17
+ },
+ "bed": {
+  "music": "bgm-cylinder-five",
+  "file": "<ROOT>/shared/sfx/bgm-cylinder-five.wav",
+  "from": "plan.json",
+  "credit": "Music: \"Cylinder Five\" by Chris Zabriskie (http://chriszabriskie.com/cylinders/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)",
+  "relDb": -25,
+  "gainDb": -18.005
+ },
+ "chapterBadge": true,
+ "badges": [
+  {
+   "id": "c1",
+   "k": 1,
+   "num": "1",
+   "name": "開始",
+   "start": 7,
+   "end": 60,
+   "hide": [],
+   "show": [
+    [
+     7,
+     60
+    ]
+   ],
+   "subs": [
+    {
+     "at": 29,
+     "name": "STEP 1｜設定"
+    }
+   ],
+   "spots": [
+    {
+     "id": "m1",
+     "a": 25.5,
+     "z": 49.5,
+     "dx": -44,
+     "dy": -40
+    }
+   ]
+  },
+  {
+   "id": "t1",
+   "k": 2,
+   "num": "2",
+   "name": "第二章",
+   "start": 60,
+   "end": 98,
+   "hide": [],
+   "show": [
+    [
+     60,
+     98
+    ]
+   ],
+   "sweep": true,
+   "subs": [
+    {
+     "at": 63,
+     "name": "第二節"
+    }
+   ]
+  }
+ ],
+ "theme": "dark",
+ "style": "預設",
+ "format": "landscape",
+ "canvas": {
+  "format": "landscape",
+  "W": 1920,
+  "H": 1080,
+  "fps": 30,
+  "unsafe": [],
+  "textSafe": [
+   [
+    0,
+    120,
+    1920,
+    870
+   ]
+  ],
+  "caption": {
+   "font": 76,
+   "line": 71,
+   "weight": 400,
+   "stroke": 0,
+   "pad": [
+    24,
+    37,
+    23
+   ],
+   "bottom": 6,
+   "box": [
+    40,
+    956,
+    1880,
+    1074
+   ],
+   "zone": [
+    0,
+    920,
+    1920,
+    1080
+   ],
+   "maxChars": 18,
+   "maxW": 1840
+  },
+  "lowerThird": {
+   "left": 120,
+   "bottom": 220,
+   "rect": [
+    120,
+    536,
+    1020,
+    860
+   ]
+  },
+  "centerCard": {
+   "rect": [
+    510,
+    536,
+    1410,
+    860
+   ]
+  },
+  "badge": {
+   "rect": [
+    1200,
+    56,
+    1824,
+    168
+   ],
+   "side": "right",
+   "dx": 16
+  },
+  "pip": {
+   "box": [
+    1424,
+    594,
+    432,
+    324
+   ],
+   "zone": [
+    1424,
+    581,
+    1888,
+    951
+   ],
+   "aspect": 1.3333333333333333,
+   "frame": "kit/pip-frame.png"
+  },
+  "stage": {
+   "fs": null,
+   "fx": null,
+   "ch": null
+  },
+  "media": {
+   "view": {
+    "contain": [
+     0,
+     0,
+     1920,
+     940
+    ],
+    "cover": [
+     0,
+     0,
+     1920,
+     1080
+    ]
+   }
+  },
+  "framing": {
+   "aspect": 1.7777777777777777,
+   "headTop": 120
+  },
+  "minTextPx": 30,
+  "regions": {
+   "band": [
+    120,
+    600,
+    1680,
+    260
+   ],
+   "panelTop": [
+    120,
+    150,
+    1180,
+    708
+   ],
+   "pip": [
+    1424,
+    594,
+    432,
+    324
+   ],
+   "badge": [
+    1560,
+    40,
+    320,
+    100
+   ],
+   "captions": [
+    0,
+    920,
+    1920,
+    160
+   ],
+   "safe": [
+    96,
+    54,
+    1728,
+    972
+   ],
+   "full": [
+    120,
+    40,
+    1680,
+    860
+   ]
+  }
+ }
+}

@@ -1,5 +1,5 @@
 // build.mjs 端到端（不 render）：產生專案、雜湊保護、--check、--test、CRLF 字幕、舊檔清理、--list、--gallery
-import { test, before } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -7,7 +7,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
-import { TOOLS, TEMPLATE, makeSrt, imp } from './helpers.mjs';
+import { TOOLS, TEMPLATE, makeSrt, imp, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都靠 before 用 ffmpeg 做的小影片：沒有 ffmpeg 就全部略過，before 也不做
+const noFf = await missingTools('ffmpeg');
+const test = skipAll(nodeTest, noFf);
 
 const BUILD = path.join(TOOLS, 'build.mjs');
 const { verifyHash } = await imp('lib/assemble.mjs');
@@ -25,6 +29,7 @@ const SCENES = [
 ];
 
 before(() => {
+  if (noFf) return;
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-build-'));
   work = path.join(dir, 'work');
   out = path.join(work, 'hyperframes');
@@ -40,6 +45,7 @@ before(() => {
   fs.writeFileSync(path.join(work, 'rough.srt'), makeSrt({ n: 12, eol: '\r\n' }));   // Windows 換行
   writePlan(SCENES);
 });
+after(() => { if (dir) fs.rmSync(dir, { recursive: true, force: true }); });
 
 test('--check 不寫檔，通過時 exit 0；有錯時 exit 1 並印出修改建議', () => {
   const r = node('--check');

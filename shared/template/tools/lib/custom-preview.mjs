@@ -23,6 +23,7 @@ export function buildCustomPreview({ name, html, pipStyle, kitLinks = [], format
   if (!m) throw new Error(`custom/${name}.html 沒有 <template id="${name}-template">`);
   const title = (String(html).match(/<title>([^<]*)<\/title>/i) || [])[1] || name;
   const st = pipStyle || { left: 0, top: 0, width: 432, height: 324 };
+  const PIP = CANVAS.landscape.pip.box;
   const overlay = !/sc-surface-fs/.test(m[1]);   // layout: "overlay" 的模板沒有滿版底：疊在講者示意圖上、不放子母畫面
   if (format === 'portrait') return portraitPage({ name, title, body: m[1], kitLinks });
   if (format !== 'landscape') throw new Error(`format 只能是 "landscape" 或 "portrait"（現在是 ${JSON.stringify(format)}）`);
@@ -45,7 +46,7 @@ ${kitLinks.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
   #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
   #scene { position: absolute; inset: 0; z-index: 30; }
   #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
-  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip { position: absolute; left: ${PIP[0]}px; top: ${PIP[1]}px; width: ${PIP[2]}px; height: ${PIP[3]}px; overflow: hidden; border-radius: 6px; z-index: 40; }
   #pip img { position: absolute; left: ${st.left}px; top: ${st.top}px; width: ${st.width}px; height: ${st.height}px; }
   #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
   .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }

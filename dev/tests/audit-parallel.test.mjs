@@ -5,12 +5,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { imp, hasChrome, makeSrt, TEMPLATE, TOOLS } from './helpers.mjs';
+import { imp, hasChrome, makeSrt, TEMPLATE, TOOLS, missingTools } from './helpers.mjs';
 
 const A = await imp('audit.mjs');
 const R = await imp('lib/audit-rules.mjs');
 const RS = await imp('lib/raster.mjs');
 const CHROME = await hasChrome();
+// 開瀏覽器量的那幾個要 Chrome，before 做的假專案要 ffmpeg：缺一個就略過（before 也不做）
+const NO_UI = (!CHROME && '沒有 HyperFrames 的 Chrome，略過') || await missingTools('ffmpeg');
 const TMP = [];
 after(() => { for (const d of TMP) fs.rmSync(d, { recursive: true, force: true }); });
 const ffmpeg = (args) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
@@ -151,7 +153,7 @@ function fixture(n = 4) {
 
 let F = null;
 before(() => {
-  if (!CHROME) return;
+  if (NO_UI) return;
   F = fixture();
   const b = F.build();
   assert.equal(b.status, 0, b.stdout + b.stderr);
@@ -159,7 +161,7 @@ before(() => {
 const xPath = (name) => path.join(F.out, 'compositions', `${name}.html`);
 const withFile = (name, html, fn) => { const f = xPath(name), old = fs.readFileSync(f, 'utf8'); fs.writeFileSync(f, html); try { return fn(); } finally { fs.writeFileSync(f, old); } };
 
-test('平行工人回歸：x01 的 #N@詞 對不上（工人 A 改到一半），x02 的 audit --only 照常量；--only x01 與全片才擋', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 180000 }, () => {
+test('平行工人回歸：x01 的 #N@詞 對不上（工人 A 改到一半），x02 的 audit --only 照常量；--only x01 與全片才擋', { skip: NO_UI, timeout: 180000 }, () => {
   const bad = custom('x-seg1', { script: "const T1 = P.at('#2@不存在的詞');" });
   withFile('x-seg1', bad, () => {
     // 工人 B：照常量，只多一行其他段
@@ -187,7 +189,7 @@ test('平行工人回歸：x01 的 #N@詞 對不上（工人 A 改到一半）�
   });
 });
 
-test('平行工人回歸：x01 的 script 丟錯、檔案寫到一半（只有前半）→ x02 照量，頁面錯誤只算進「其他段」；全域 ✖ 還是擋', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 180000 }, () => {
+test('平行工人回歸：x01 的 script 丟錯、檔案寫到一半（只有前半）→ x02 照量，頁面錯誤只算進「其他段」；全域 ✖ 還是擋', { skip: NO_UI, timeout: 180000 }, () => {
   withFile('x-seg1', custom('x-seg1', { script: "throw new Error('工人 A 改到一半');" }), () => {
     const j = JSON.parse(F.audit('--only', 'x02', '--json').stdout);
     assert.equal(j.ok, true, JSON.stringify(j.errors));
@@ -210,29 +212,29 @@ test('平行工人回歸：x01 的 script 丟錯、檔案寫到一半（只有�
     assert.deepEqual(j.others.ids, ['x01']);
     assert.ok(j.segments[0].samples.length >= 2);
   } finally { fs.writeFileSync(gone, keep); }
-  // 別段的 from 寫錯（排不上時間軸）：指名段照量，時間軸還在
-  const planF = path.join(F.out, 'plan.json'), plan0 = fs.readFileSync(planF, 'utf8');
+  // 別段的 from 寫錯（主代理改了 plan.json 還沒 build）：別段的 ✖ 照樣不擋，但 index.html 是舊的 → 032 B3：子代理 ✖、不量，交回主代理
+  const planF = path.join(F.out, 'plan.json'), plan0 = fs.readFileSync(planF, 'utf8'), st0 = fs.statSync(planF);
   const pj = JSON.parse(plan0);
   pj.scenes[0].from = '#999';
   fs.writeFileSync(planF, JSON.stringify(pj));
   try {
     const j = JSON.parse(F.audit('--only', 'x02', '--json').stdout);
-    assert.equal(j.ok, true, JSON.stringify(j.errors));
+    assert.equal(j.ok, false);
     assert.deepEqual(j.others, { errors: 1, ids: ['x01'] });
-    assert.ok(j.segments[0].samples.length >= 2);
-    assert.ok(j.warnings.some((w) => /plan\.json 比 index\.html 新/.test(w)));
-  } finally { fs.writeFileSync(planF, plan0); }
-  // 全域的 ✖（plan.json 第一層）：指名段也量不了
+    assert.deepEqual(j.errors, ['plan.json 比 index.html 新，這次量不準（不出拼圖）→ 子代理不能 build：把這一行原文交回主代理，主代理跑完 build 再驗收']);
+    assert.equal(j.segments.length, 0);
+  } finally { fs.writeFileSync(planF, plan0); fs.utimesSync(planF, st0.atime, st0.mtime); }
+  // 全域的 ✖（plan.json 第一層）：指名段也量不了（比「index.html 是舊的」先報）
   const plan = path.join(F.out, 'plan.json'), old = fs.readFileSync(plan, 'utf8');
   fs.writeFileSync(plan, JSON.stringify({ ...JSON.parse(old), rhythm: 'nope' }));
   try {
     const r = F.audit('--only', 'x02');
     assert.equal(r.status, 1);
     assert.match(r.stdout, /✖ build --check：rhythm 只能是/);
-  } finally { fs.writeFileSync(plan, old); }
+  } finally { fs.writeFileSync(plan, old); fs.utimesSync(plan, st0.atime, st0.mtime); }
 });
 
-test('一條指令夠用：--only 印這段的 --check 一行與 ⚠；--shots --sheet 拼成一張、只印那張；舊圖清掉；工人各寫各的檔', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 180000 }, () => {
+test('一條指令夠用：--only 印這段的 --check 一行與 ⚠；--shots --sheet 拼成一張、只印那張；舊圖清掉；工人各寫各的檔', { skip: NO_UI, timeout: 180000 }, () => {
   // 綁在段外（段起點之前）的 P.at → --check 的 ⚠
   withFile('x-seg2', custom('x-seg2', { script: "const T9 = P.at('#3');" }), () => {
     const r = F.audit('--only', 'x02', '--shots', '--sheet');
@@ -257,7 +259,7 @@ test('一條指令夠用：--only 印這段的 --check 一行與 ⚠；--shots -
   assert.equal(j.sheets, undefined);
 });
 
-test('--jobs：併發和循序的順序與內容一樣（findings、segments、shots、notes、warnings）', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 240000 }, () => {
+test('--jobs：併發和循序的順序與內容一樣（findings、segments、shots、notes、warnings）', { skip: NO_UI, timeout: 240000 }, () => {
   const run = (jobs) => {
     const r = F.audit('--jobs', String(jobs), '--json', '--shots');
     assert.ok(r.stdout.startsWith('{'), r.stdout + r.stderr);

@@ -1,6 +1,10 @@
 // 畫布設定：橫式／直式的幾何常數與換算（specs/009-vertical/spec.md §B FR-010、FR-011、文末「決定」節；spike 見 specs/009-vertical/plan.md D-1）
 //
 //   橫式：main.mjs、plan.mjs、captions.mjs 仍用自己的常數（橫式輸出逐位元組不變），dev/tests/canvas.test.mjs 確認 CANVAS.landscape 和那些常數一模一樣；
+//         032 C7 起：子母畫面的框與禁入區（main.mjs、brand.mjs）、每則字數（media.mjs srt-align）、畫布尺寸（qc.mjs）改從這裡匯入；
+//         kit/ 的 JS、CSS 與剪輯台頁面匯入不了，dev/tests/032-c7.test.mjs 拿它們的數字和這份對；
+//         plan.mjs 原本自己寫的 footprint（keywords、two-sides）、badgeZones、pushOrigin、sideShift、直式 pipCropMinW 收在 LAYOUT（值不變）
+//   LAYOUT = { landscape, portrait } → plan.mjs 的版面數字（不在 CANVAS 裡，CANVAS 的內容不變）
 //   直式：一律讀這份（T002-V03–V06 接線：main／plan／captions／assemble／build／status／media.mjs）。
 //
 //   CANVAS = { landscape, portrait }、canvasOf(format) → 該版式的設定（format 只能是 "landscape"／"portrait"）
@@ -20,6 +24,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { r3 } from './time.mjs';
 
 export const FORMATS = ['landscape', 'portrait'];
 const ZH = { landscape: '橫式', portrait: '直式' };
@@ -68,12 +73,28 @@ export const CANVAS = {
   },
 };
 
+// 032 C7：plan.mjs 原本自己寫的版面數字（值不變）。不放進 CANVAS：resolvePlan 的結果帶著整份 canvas（032-p3e 的快照），加鍵會改到它
+export const LAYOUT = {
+  landscape: {
+    // 各情境大約佔的畫面範圍（plan.mjs FOOTPRINT 裡 CANVAS 沒有的兩個；只用來提醒和講者框的碰撞）
+    footprint: { keywords: [[120, 160, 560, 870]], 'two-sides': [[96, 160, 600, 870], [1320, 160, 1824, 870]] },
+    // 疊加情境量過的範圍（模板的實際座標），和角標重疊才隱藏角標（plan.mjs BADGE.zones）；side-panel＝03 側邊欄面板（左半 960×1080）
+    badgeZones: { 'two-sides': [[96, 211, 600, 819], [1320, 211, 1824, 819]], 'side-panel': [[0, 0, 960, 1080]], keywords: [[120, 160, 560, 870]] },
+    pushOrigin: [960, 400],                 // 講者推近沒有講者框時的縮放原點 transform-origin（px）
+    sideShift: { max: 960, center: 480 },   // plan.json sideShift 可寫 0–max（半個畫面寬）；不寫時講者在中間移 center（speaker-side.mjs sideLayout 的上限＝半寬的一半）
+  },
+  portrait: {
+    badgeZones: {},                         // 直式沒有要隱藏角標的疊加情境（角標 y 250–362、卡片帶 880 起）
+    pushOrigin: [540, 710],                 // ＝plan.mjs 的 W / 2、round(H × 0.37)
+    pipCropMinW: 540,                       // 子母畫面 "auto" 裁切寬 clamp(講者框寬 × 1.3, pipCropMinW, W)
+  },
+};
+
 export function canvasOf(format = 'landscape') {
   if (!FORMATS.includes(format)) throw new Error(`format 只能是 "landscape" 或 "portrait"（現在是 ${JSON.stringify(format)}）`);
   return CANVAS[format];
 }
 
-const r3 = (n) => +Number(n).toFixed(3);
 
 // FR-011：X = to[0] + (x − window[0]) × s、Y = to[1] + (y − window[1]) × s；host 的 CSS 是 translate(tx, ty) scale(s)、transform-origin 0 0
 // window 是 [x0, y0, x1, y1]（spike：[120,130,1300,880]＝1180×750，×0.8475＝1000×636）；translate 取小數 3 位

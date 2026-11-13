@@ -1,7 +1,7 @@
 // 分鏡表由工具產生：plan.json（段落與 story）＋ --check 的時間＋截圖清單 → work/storyboard.md；
 // 使用者在網頁改完之後，applyStoryboard 把改動套回 plan.json（只動改到的欄位）。格式見 USAGE.md 2.3；解析在 editor/storyboard-md.mjs。零依賴。
 //   textFields(seg, { scenes, specs })        → 這段「畫面文字」的欄位清單 [{ path, label, value }]，順序固定
-//   renderSection(seg, ctx)                   → 一段（### <id>｜…）
+//   renderSection(seg, ctx)                   → 一段（### <id>｜…）；ctx.beats（Map id → 正本的動畫分鏡，lib/beat-source.mjs 的 beatBlock）有這段就放它
 //   renderStoryboard(ctx)                     → 整份 markdown
 //   tidyDecide(list, { cues })                → { ask, ai }：「需要我決定的事」去重、白話；ask 問作者，ai 是 AI 自己能決定的
 //   applyStoryboard(md, plan, { scenes, specs, cues }) → { plan, changes, requests, unmatched, answers, designs（這次勾成內容設計動畫的段）, changed }
@@ -161,7 +161,11 @@ export function renderSection(seg, ctx) {
   for (const p of pics) L.push(p.md || `![${seg.id}](storyboard-preview/${p.file})`);
   if (pics.length) L.push('');
   L.push(`截圖觀察：${seg.design && !design?.done ? '動畫要在這張鏡位腳本確認後才做，所以還沒有畫面' : '無'}`, '');
-  if (seg.design) {
+  // 032 B6：ctx.beats（id → beat-source.mjs 的 beatBlock：正本的動畫分鏡＋插圖清單，手寫段多一行「- 拍點正本：…」）有這段就用它
+  if (ctx.beats?.has?.(seg.id)) {
+    const b = ctx.beats.get(seg.id);
+    if (b) L.push(b.trim(), '');
+  } else if (seg.design) {
     if (design?.sheet) L.push(design.sheet.trim(), '');
   } else if (seg.type === 'custom' && seg.template) {
     const spec = specs.get(seg.template);

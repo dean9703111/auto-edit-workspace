@@ -1,0 +1,2412 @@
+[
+ {
+  "id": "m1",
+  "r": {
+   "summary": "運鏡 2、紅框 1（跟捲動 1 次）、標註 1、STEP 1（第 1 步）",
+   "json": {
+    "marks": [
+     {
+      "i": 0,
+      "at": 29,
+      "until": 39,
+      "ready": 29.4,
+      "path": [
+       {
+        "k": 0,
+        "at": 30,
+        "ready": 30.4
+       }
+      ]
+     }
+    ],
+    "callouts": [
+     {
+      "i": 0,
+      "at": 32.5,
+      "until": 35.5,
+      "ready": 33.35,
+      "side": "right",
+      "text": "按這裡"
+     }
+    ],
+    "spot": [],
+    "steps": [
+     {
+      "i": 1,
+      "at": 32.5,
+      "ready": 33,
+      "n": 1,
+      "text": "按下儲存",
+      "carry": false
+     }
+    ],
+    "side": null,
+    "arrows": [],
+    "lens": [],
+    "redact": [],
+    "waits": [],
+    "knots": [
+     [
+      0,
+      2
+     ],
+     [
+      13.5,
+      15.5
+     ]
+    ],
+    "view": {
+     "scale": 0.653,
+     "moves": 2,
+     "lens": 0,
+     "landscape": true
+    }
+   }
+  },
+  "it": {
+   "id": "m1",
+   "seg": {
+    "id": "m1",
+    "type": "media",
+    "src": "assets/screen/v.mp4",
+    "from": "#8",
+    "to": "#11e",
+    "in": 2,
+    "moves": [
+     {
+      "at": "+0.9",
+      "to": [
+       100,
+       100,
+       1200,
+       675
+      ]
+     },
+     {
+      "at": "+11.5",
+      "to": "full"
+     }
+    ],
+    "marks": [
+     {
+      "at": "#9",
+      "box": [
+       200,
+       200,
+       300,
+       100
+      ],
+      "path": [
+       {
+        "at": "#9+1",
+        "box": [
+         220,
+         260,
+         300,
+         100
+        ]
+       }
+      ]
+     }
+    ],
+    "callouts": [
+     {
+      "at": "#10",
+      "until": "#10e",
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "icon": "star"
+     }
+    ],
+    "steps": [
+     {
+      "at": "#8",
+      "text": "打開設定"
+     },
+     {
+      "at": "#10",
+      "text": "按下儲存"
+     }
+    ],
+    "clicks": [
+     "+2"
+    ],
+    "sfx": "success"
+   },
+   "media": {
+    "src": "assets/screen/v.mp4",
+    "abs": "<TMP>/X/assets/screen/v.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 2560,
+     "height": 1440,
+     "duration": 90,
+     "hasAudio": true
+    },
+    "in": 2,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 2560,
+     "h": 1440,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       0,
+       0,
+       1920,
+       940
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1339,
+      578,
+      1803,
+      948
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1235
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 0.652734375,
+     "ky": 0.6527777777777778,
+     "left": 125,
+     "top": 0,
+     "width": 1671,
+     "height": 940
+    },
+    "pipShift": [
+     -85,
+     -3
+    ],
+    "pieces": [
+     {
+      "s": 25.5,
+      "e": 39,
+      "fms": 2
+     }
+    ],
+    "retime": null,
+    "redact": [],
+    "cams": [
+     {
+      "i": 0,
+      "t0": 26.4,
+      "dur": 2.2,
+      "from": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      },
+      "to": {
+       "z": 2.1333,
+       "x": -281.4,
+       "y": -139.3
+      }
+     },
+     {
+      "i": 1,
+      "t0": 37,
+      "dur": 2,
+      "from": {
+       "z": 2.1333,
+       "x": -281.4,
+       "y": -139.3
+      },
+      "to": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      }
+     }
+    ],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -23.5
+    },
+    "marks": [
+     {
+      "id": "mmk-m1-1",
+      "i": 0,
+      "at": 29,
+      "until": 39,
+      "rect": [
+       251.8,
+       126.81,
+       203.32,
+       72.78
+      ],
+      "sw": 1.875,
+      "rx": 2.81,
+      "path": [
+       {
+        "k": 0,
+        "at": 30,
+        "dur": 0.4,
+        "rect": [
+         264.85,
+         165.97,
+         203.32,
+         72.78
+        ]
+       }
+      ]
+     }
+    ],
+    "lenses": [],
+    "steps": {
+     "list": [
+      {
+       "i": 1,
+       "at": 32.5,
+       "text": "按下儲存",
+       "n": 1,
+       "carry": false,
+       "ready": 33
+      }
+     ],
+     "carry": false,
+     "capsule": {
+      "box": [
+       157,
+       40,
+       435,
+       120
+      ],
+      "side": "left",
+      "from": 32.5,
+      "to": 39
+     }
+    },
+    "callouts": [
+     {
+      "i": 0,
+      "at": 32.5,
+      "until": 35.5,
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "iconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" /> </svg>",
+      "side": "right",
+      "quick": false,
+      "ready": 33.35,
+      "k": 1,
+      "R": [
+       813,
+       270,
+       294,
+       127
+      ],
+      "card": [
+       1163.2450937500003,
+       286.1740833333334,
+       1417.2450937500003,
+       382.1740833333334
+      ],
+      "anchor": "left",
+      "x": 1163,
+      "top": 286,
+      "lead": {
+       "d": "M1107 334 L1163 334",
+       "dot": [
+        1107,
+        334
+       ]
+      }
+     }
+    ],
+    "spots": [],
+    "arrows": [],
+    "waits": []
+   },
+   "start": 25.5,
+   "end": 39,
+   "z": 30,
+   "enterFx": "fade",
+   "exitFx": "fade",
+   "pipPieces": [
+    {
+     "s": 25.5,
+     "e": 39,
+     "ms": 25.5
+    }
+   ]
+  },
+  "msgs": [
+   "⚠ moves[1] 在段尾之後才結束，dur 已縮成 2s",
+   "⚠ steps[0]「打開設定」和右上角的小節角標「STEP 1｜設定」重複（畫面上下兩個角各寫一次）→ 刪掉這個 step，角標已經寫了在哪一步；要分更細的步驟再寫不同的字（這次不畫這顆膠囊）"
+  ]
+ },
+ {
+  "id": "m1b",
+  "r": {
+   "summary": "運鏡 1、STEP 2（第 1–2 步）",
+   "json": {
+    "marks": [],
+    "callouts": [],
+    "spot": [],
+    "steps": [
+     {
+      "i": 0,
+      "at": 39,
+      "ready": 39,
+      "n": 1,
+      "text": "按下儲存",
+      "carry": true
+     },
+     {
+      "i": 1,
+      "at": 42,
+      "ready": 42.45,
+      "n": 2,
+      "text": "完成",
+      "carry": false
+     }
+    ],
+    "side": null,
+    "arrows": [],
+    "lens": [],
+    "redact": [],
+    "waits": [],
+    "knots": [
+     [
+      0,
+      2
+     ],
+     [
+      7,
+      9
+     ]
+    ],
+    "view": {
+     "scale": 0.653,
+     "moves": 1,
+     "lens": 0,
+     "landscape": true
+    }
+   }
+  },
+  "it": {
+   "id": "m1b",
+   "seg": {
+    "id": "m1b",
+    "type": "media",
+    "src": "assets/screen/v.mp4",
+    "from": "#8",
+    "to": "#11e",
+    "in": 2,
+    "moves": [
+     {
+      "at": "+0.9",
+      "to": [
+       100,
+       100,
+       1200,
+       675
+      ]
+     },
+     {
+      "at": "+11.5",
+      "to": "full"
+     }
+    ],
+    "marks": [
+     {
+      "at": "#9",
+      "box": [
+       200,
+       200,
+       300,
+       100
+      ],
+      "path": [
+       {
+        "at": "#9+1",
+        "box": [
+         220,
+         260,
+         300,
+         100
+        ]
+       }
+      ]
+     }
+    ],
+    "callouts": [
+     {
+      "at": "#10",
+      "until": "#10e",
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "icon": "star"
+     }
+    ],
+    "steps": [
+     {
+      "at": "+0",
+      "text": "按下儲存"
+     },
+     {
+      "at": "+3",
+      "text": "完成"
+     }
+    ],
+    "clicks": [
+     "+2"
+    ],
+    "sfx": "success"
+   },
+   "media": {
+    "src": "assets/screen/v.mp4",
+    "abs": "<TMP>/X/assets/screen/v.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 2560,
+     "height": 1440,
+     "duration": 90,
+     "hasAudio": true
+    },
+    "in": 2,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 2560,
+     "h": 1440,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       0,
+       0,
+       1920,
+       940
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1424,
+      581,
+      1888,
+      951
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1320
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 0.652734375,
+     "ky": 0.6527777777777778,
+     "left": 125,
+     "top": 0,
+     "width": 1671,
+     "height": 940
+    },
+    "pipShift": null,
+    "pieces": [
+     {
+      "s": 39,
+      "e": 46,
+      "fms": 2
+     }
+    ],
+    "retime": null,
+    "redact": [],
+    "cams": [
+     {
+      "i": 0,
+      "t0": 39.9,
+      "dur": 2.2,
+      "from": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      },
+      "to": {
+       "z": 2.1333,
+       "x": -281.4,
+       "y": -139.3
+      }
+     }
+    ],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -23.5
+    },
+    "marks": [],
+    "lenses": [],
+    "steps": {
+     "list": [
+      {
+       "i": 0,
+       "at": 39,
+       "text": "按下儲存",
+       "n": 1,
+       "carry": true,
+       "ready": 39
+      },
+      {
+       "i": 1,
+       "at": 42,
+       "text": "完成",
+       "n": 2,
+       "carry": false,
+       "ready": 42.45
+      }
+     ],
+     "carry": true,
+     "capsule": {
+      "box": [
+       157,
+       40,
+       435,
+       120
+      ],
+      "side": "left",
+      "from": 39,
+      "to": 46
+     }
+    },
+    "callouts": [],
+    "spots": [],
+    "arrows": [],
+    "waits": []
+   },
+   "start": 39,
+   "end": 46,
+   "z": 30,
+   "enterFx": "fade",
+   "exitFx": "fade",
+   "pipPieces": []
+  },
+  "msgs": [
+   "✖ moves[1].at（0:50.50）不在這段 0:39.00–0:46.00 裡 → 改成這段範圍內的句號或 +秒數",
+   "✖ marks[0].at（0:29.00）不在這段 0:39.00–0:46.00 裡 → 改成這段範圍內的句號或 +秒數",
+   "✖ callouts[0].at（0:32.50）不在這段 0:39.00–0:46.00 裡 → 改成這段範圍內的句號或 +秒數"
+  ]
+ },
+ {
+  "id": "m2",
+  "r": {
+   "summary": "聚光燈 1、箭頭 1、放大鏡 1；有標註，不做慢推",
+   "json": {
+    "marks": [],
+    "callouts": [],
+    "spot": [
+     {
+      "i": 0,
+      "at": 46.5,
+      "until": 50.5,
+      "ready": 46.9
+     }
+    ],
+    "steps": [],
+    "side": null,
+    "arrows": [
+     {
+      "i": 0,
+      "at": 43,
+      "until": 46,
+      "ready": 43.5,
+      "from": "ne"
+     }
+    ],
+    "lens": [
+     {
+      "i": 0,
+      "at": 40,
+      "until": 43,
+      "ready": 40.88
+     }
+    ],
+    "redact": [],
+    "waits": [],
+    "knots": null
+   }
+  },
+  "it": {
+   "id": "m2",
+   "seg": {
+    "id": "m2",
+    "type": "media",
+    "src": "assets/images/a.png",
+    "from": "#11e",
+    "to": "#14e",
+    "kenburns": true,
+    "lens": [
+     {
+      "at": "#12+0.5",
+      "box": [
+       100,
+       100,
+       200,
+       100
+      ]
+     }
+    ],
+    "arrows": [
+     {
+      "at": "#13",
+      "to": [
+       500,
+       300
+      ]
+     }
+    ],
+    "spot": [
+     {
+      "at": "#14",
+      "box": [
+       300,
+       300,
+       200,
+       200
+      ]
+     }
+    ]
+   },
+   "media": {
+    "src": "assets/images/a.png",
+    "abs": "<TMP>/X/assets/images/a.png",
+    "kind": "image",
+    "ext": ".png",
+    "info": {
+     "width": 1600,
+     "height": 900
+    },
+    "in": 0,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 1600,
+     "h": 900,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       0,
+       0,
+       1920,
+       940
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1424,
+      581,
+      1888,
+      951
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1320
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 1.044375,
+     "ky": 1.0444444444444445,
+     "left": 125,
+     "top": 0,
+     "width": 1671,
+     "height": 940
+    },
+    "pipShift": null,
+    "retime": null,
+    "redact": [],
+    "cams": [],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -23.5
+    },
+    "marks": [],
+    "lenses": [
+     {
+      "id": "m2-l1",
+      "i": 0,
+      "la": 40,
+      "lb": 43,
+      "N": 90,
+      "R": [
+       229.44,
+       104.44,
+       208.88,
+       104.44
+      ],
+      "C": [
+       416,
+       208
+      ],
+      "outer": [
+       739,
+       333,
+       442,
+       234
+      ],
+      "back": {
+       "x": -626.13,
+       "y": -293.33,
+       "scaleX": 0.5021,
+       "scaleY": 0.50214
+      },
+      "crop": [
+       100,
+       100,
+       200,
+       100
+      ],
+      "ranges": [],
+      "map": null,
+      "urls": null
+     }
+    ],
+    "steps": {
+     "list": [],
+     "carry": false,
+     "capsule": null
+    },
+    "callouts": [],
+    "spots": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 46.5,
+      "until": 50.5,
+      "hole": [
+       430,
+       305,
+       225,
+       225
+      ],
+      "ready": 46.9
+     }
+    ],
+    "arrows": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 43,
+      "until": 46,
+      "from": "ne",
+      "len": 120,
+      "u": [
+       0.7071,
+       -0.7071
+      ],
+      "tip": [
+       653.55,
+       306.97
+      ],
+      "base": [
+       674.76,
+       285.76
+      ],
+      "tail": [
+       738.4,
+       222.12
+      ],
+      "c1": [
+       685.37,
+       296.36
+      ],
+      "c2": [
+       664.16,
+       275.15
+      ],
+      "ready": 43.5
+     }
+    ],
+    "waits": []
+   },
+   "start": 39,
+   "end": 50.5,
+   "z": 30,
+   "enterFx": "fade",
+   "exitFx": "fade",
+   "pipPieces": []
+  },
+  "msgs": [
+   "⚠ kenburns：有 callouts／spot／arrows 時不做慢推（標註要對準不動的畫面），已忽略"
+  ]
+ },
+ {
+  "id": "m3",
+  "r": {
+   "summary": "打碼 1 處、變速 0–0.5s ×1、0.5–3s ×15.6、3–6s ×0.333、6–10.5s ×1",
+   "json": {
+    "marks": [],
+    "callouts": [],
+    "spot": [],
+    "steps": [],
+    "side": {
+     "title": "配對手機",
+     "box": [
+      840,
+      332,
+      960,
+      376
+     ],
+     "items": [
+      {
+       "i": 0,
+       "at": 85,
+       "text": "打開 App"
+      },
+      {
+       "i": 1,
+       "at": 88.5,
+       "text": "掃碼"
+      }
+     ]
+    },
+    "arrows": [],
+    "lens": [],
+    "redact": [
+     {
+      "i": 0
+     }
+    ],
+    "waits": [],
+    "knots": [
+     [
+      0,
+      0.5
+     ],
+     [
+      0.5,
+      1
+     ],
+     [
+      3,
+      40
+     ],
+     [
+      6,
+      41
+     ],
+     [
+      10.5,
+      45.5
+     ]
+    ],
+    "view": {
+     "scale": 0.375,
+     "moves": 0,
+     "lens": 0,
+     "landscape": true
+    }
+   }
+  },
+  "it": {
+   "id": "m3",
+   "seg": {
+    "id": "m3",
+    "type": "media",
+    "src": "assets/screen/w.mp4",
+    "from": "#25",
+    "to": "#27e",
+    "sfxExtra": true,
+    "retime": [
+     {
+      "at": "+0.5",
+      "src": 1
+     },
+     {
+      "at": "+3",
+      "src": 40
+     },
+     {
+      "at": "+6",
+      "src": 41
+     }
+    ],
+    "wait": "AI 處理中｜寫入檔案",
+    "redact": [
+     {
+      "box": [
+       0,
+       0,
+       100,
+       50
+      ]
+     }
+    ],
+    "side": {
+     "title": "配對手機",
+     "items": [
+      {
+       "at": "#25",
+       "text": "打開 App"
+      },
+      {
+       "at": "#26",
+       "text": "掃碼"
+      }
+     ]
+    }
+   },
+   "media": {
+    "src": "assets/screen/w.mp4",
+    "abs": "<TMP>/X/assets/screen/w.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 1920,
+     "height": 1080,
+     "duration": 120,
+     "hasAudio": false
+    },
+    "in": 0,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": false,
+    "retimeRaw": [
+     {
+      "at": "+0.5",
+      "src": 1
+     },
+     {
+      "at": "+3",
+      "src": 40
+     },
+     {
+      "at": "+6",
+      "src": 41
+     }
+    ],
+    "out": null,
+    "waitOff": false,
+    "waitLines": [
+     "AI 處理中",
+     "寫入檔案"
+    ],
+    "file": {
+     "w": 1920,
+     "h": 1080,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       120,
+       0,
+       720,
+       940
+      ],
+      "cover": [
+       120,
+       0,
+       720,
+       940
+      ]
+     },
+     "focus": [
+      120,
+      0,
+      720,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [
+      {
+       "box": [
+        840,
+        332,
+        1800,
+        708
+       ],
+       "why": "壓到右側步驟清單"
+      }
+     ],
+     "pip": [
+      1424,
+      581,
+      1888,
+      951
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1320
+     }
+    },
+    "side": {
+     "title": "配對手機",
+     "items": [
+      {
+       "i": 0,
+       "at": 85,
+       "text": "打開 App"
+      },
+      {
+       "i": 1,
+       "at": 88.5,
+       "text": "掃碼"
+      }
+     ],
+     "box": [
+      840,
+      332,
+      960,
+      376
+     ]
+    },
+    "geo": {
+     "kx": 0.375,
+     "ky": 0.375,
+     "left": 120,
+     "top": 268,
+     "width": 720,
+     "height": 405
+    },
+    "pipShift": null,
+    "retime": {
+     "knots": [
+      [
+       0,
+       0.5
+      ],
+      [
+       0.5,
+       1
+      ],
+      [
+       3,
+       40
+      ],
+      [
+       6,
+       41
+      ],
+      [
+       10.5,
+       45.5
+      ]
+     ],
+     "speeds": [
+      1,
+      15.6,
+      0.333,
+      1
+     ],
+     "len": 10.5
+    },
+    "pieces": [
+     {
+      "s": 85,
+      "e": 95.5,
+      "fms": 0
+     }
+    ],
+    "redact": [
+     {
+      "i": 0,
+      "at": null,
+      "until": null,
+      "box": [
+       0,
+       0,
+       100,
+       50
+      ]
+     }
+    ],
+    "cams": [],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -24,
+     "y": -23.5
+    },
+    "marks": [],
+    "lenses": [],
+    "steps": {
+     "list": [],
+     "carry": false,
+     "capsule": null
+    },
+    "callouts": [],
+    "spots": [],
+    "arrows": [],
+    "waits": []
+   },
+   "start": 85,
+   "end": 95.5,
+   "z": 30,
+   "enterFx": "fade",
+   "exitFx": "fade",
+   "pipPieces": []
+  },
+  "msgs": [
+   "⚠ wait：這段沒有「×5 以上、至少 3 秒、沒人講話」的快轉，等待卡不會出現 → 確認 retime／out 的快轉夠快夠長、那幾秒沒有字幕；用不到就拿掉 wait",
+   "⚠ 錄影 10.5s 沒有任何標註或運鏡 → 講解講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3）；真的沒有要指的東西，回報寫保留理由"
+  ]
+ },
+ {
+  "id": "m1p",
+  "r": {
+   "summary": "運鏡 2、紅框 1（跟捲動 1 次）、標註 1、STEP 2（第 1–3 步）",
+   "json": {
+    "marks": [
+     {
+      "i": 0,
+      "at": 29,
+      "until": 39,
+      "ready": 29.4,
+      "path": [
+       {
+        "k": 0,
+        "at": 30,
+        "ready": 30.4
+       }
+      ]
+     }
+    ],
+    "callouts": [
+     {
+      "i": 0,
+      "at": 32.5,
+      "until": 35.5,
+      "ready": 33.35,
+      "side": "right",
+      "text": "按這裡"
+     }
+    ],
+    "spot": [],
+    "steps": [
+     {
+      "i": 0,
+      "at": 25.5,
+      "ready": 26,
+      "n": 3,
+      "text": "打開設定",
+      "carry": false
+     },
+     {
+      "i": 1,
+      "at": 32.5,
+      "ready": 32.95,
+      "n": 1,
+      "text": "按下儲存",
+      "carry": false
+     }
+    ],
+    "side": null,
+    "arrows": [],
+    "lens": [],
+    "redact": [],
+    "waits": [],
+    "knots": [
+     [
+      0,
+      2
+     ],
+     [
+      13.5,
+      15.5
+     ]
+    ],
+    "view": {
+     "scale": 0.422,
+     "moves": 2,
+     "lens": 0
+    }
+   }
+  },
+  "it": {
+   "id": "m1p",
+   "seg": {
+    "id": "m1p",
+    "type": "media",
+    "src": "assets/screen/v.mp4",
+    "from": "#8",
+    "to": "#11e",
+    "in": 2,
+    "moves": [
+     {
+      "at": "+0.9",
+      "to": [
+       100,
+       100,
+       1200,
+       675
+      ]
+     },
+     {
+      "at": "+11.5",
+      "to": "full"
+     }
+    ],
+    "marks": [
+     {
+      "at": "#9",
+      "box": [
+       200,
+       200,
+       300,
+       100
+      ],
+      "path": [
+       {
+        "at": "#9+1",
+        "box": [
+         220,
+         260,
+         300,
+         100
+        ]
+       }
+      ]
+     }
+    ],
+    "callouts": [
+     {
+      "at": "#10",
+      "until": "#10e",
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "icon": "star"
+     }
+    ],
+    "steps": [
+     {
+      "at": "#8",
+      "text": "打開設定"
+     },
+     {
+      "at": "#10",
+      "text": "按下儲存"
+     }
+    ],
+    "clicks": [
+     "+2"
+    ],
+    "sfx": "success"
+   },
+   "media": {
+    "src": "assets/screen/v.mp4",
+    "abs": "<TMP>/X/assets/screen/v.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 2560,
+     "height": 1440,
+     "duration": 90,
+     "hasAudio": true
+    },
+    "in": 2,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 2560,
+     "h": 1440,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "portrait",
+     "panel": true,
+     "W": 1080,
+     "H": 1920,
+     "view": {
+      "contain": [
+       0,
+       240,
+       1080,
+       660
+      ],
+      "cover": [
+       0,
+       0,
+       1080,
+       900
+      ]
+     },
+     "focus": [
+      0,
+      240,
+      1080,
+      660
+     ],
+     "screen": [
+      0,
+      0,
+      1080,
+      900
+     ],
+     "safe": [
+      60,
+      260,
+      1020,
+      880
+     ],
+     "avoid": [
+      {
+       "box": [
+        940,
+        840,
+        1080,
+        1440
+       ],
+       "why": "壓到右側平台按鈕區（x 940–1080、y 840–1440）"
+      }
+     ],
+     "pip": null,
+     "pipWhy": "壓到下半的講者面板",
+     "bottom": 900,
+     "bottomWhy": "壓到下半的講者面板",
+     "top": 240,
+     "step": {
+      "left": 60,
+      "top": 260
+     },
+     "lens": {
+      "maxW": 934,
+      "maxH": 594,
+      "cx": 540,
+      "cy": 570,
+      "top": 260,
+      "bottom": 880,
+      "pipLeft": null
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 0.421875,
+     "ky": 0.4222222222222222,
+     "left": 0,
+     "top": 266,
+     "width": 1080,
+     "height": 608
+    },
+    "pipShift": null,
+    "pieces": [
+     {
+      "s": 25.5,
+      "e": 39,
+      "fms": 2
+     }
+    ],
+    "retime": null,
+    "redact": [],
+    "cams": [
+     {
+      "i": 0,
+      "t0": 26.4,
+      "dur": 2.2,
+      "from": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      },
+      "to": {
+       "z": 2.1333,
+       "x": -90,
+       "y": -391.5
+      }
+     },
+     {
+      "i": 1,
+      "t0": 37,
+      "dur": 2,
+      "from": {
+       "z": 2.1333,
+       "x": -90,
+       "y": -391.5
+      },
+      "to": {
+       "z": 1,
+       "x": 0,
+       "y": 0
+      }
+     }
+    ],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -27,
+     "y": -28.5
+    },
+    "marks": [
+     {
+      "id": "mmk-m1p-1",
+      "i": 0,
+      "at": 29,
+      "until": 39,
+      "rect": [
+       80.62,
+       346.69,
+       134.06,
+       49.72
+      ],
+      "sw": 1.875,
+      "rx": 2.81,
+      "path": [
+       {
+        "k": 0,
+        "at": 30,
+        "dur": 0.4,
+        "rect": [
+         89.06,
+         372.03,
+         134.06,
+         49.72
+        ]
+       }
+      ]
+     }
+    ],
+    "lenses": [],
+    "steps": {
+     "list": [
+      {
+       "i": 0,
+       "at": 25.5,
+       "text": "打開設定",
+       "n": 3,
+       "carry": false,
+       "ready": 26
+      },
+      {
+       "i": 1,
+       "at": 32.5,
+       "text": "按下儲存",
+       "n": 1,
+       "carry": false,
+       "ready": 32.95
+      }
+     ],
+     "carry": false,
+     "capsule": {
+      "box": [
+       60,
+       260,
+       338,
+       340
+      ],
+      "side": "left",
+      "from": 25.5,
+      "to": 39
+     }
+    },
+    "callouts": [
+     {
+      "i": 0,
+      "at": 32.5,
+      "until": 35.5,
+      "box": [
+       600,
+       300,
+       200,
+       80
+      ],
+      "text": "按這裡",
+      "iconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" /> </svg>",
+      "side": "right",
+      "quick": false,
+      "ready": 33.35,
+      "k": 1,
+      "R": [
+       442,
+       438,
+       196,
+       88
+      ],
+      "card": [
+       693.9887500000001,
+       434.20486666666676,
+       947.9887500000001,
+       530.2048666666667
+      ],
+      "anchor": "left",
+      "x": 694,
+      "top": 434,
+      "lead": {
+       "d": "M638 482 L694 482",
+       "dot": [
+        638,
+        482
+       ]
+      }
+     }
+    ],
+    "spots": [],
+    "arrows": [],
+    "waits": []
+   },
+   "start": 25.5,
+   "end": 39,
+   "z": 30,
+   "enterFx": "fade",
+   "exitFx": "fade",
+   "pipPieces": [
+    {
+     "s": 25.5,
+     "e": 39,
+     "ms": 25.5
+    }
+   ]
+  },
+  "msgs": [
+   "⚠ moves[1] 在段尾之後才結束，dur 已縮成 2s"
+  ]
+ },
+ {
+  "id": "m2t",
+  "r": {
+   "summary": "聚光燈 1、箭頭 1、放大鏡 1；有標註，不做慢推",
+   "json": {
+    "marks": [],
+    "callouts": [],
+    "spot": [
+     {
+      "i": 0,
+      "at": 46.5,
+      "until": 50.5,
+      "ready": 46.9
+     }
+    ],
+    "steps": [],
+    "side": null,
+    "arrows": [
+     {
+      "i": 0,
+      "at": 43,
+      "until": 46,
+      "ready": 43.5,
+      "from": "ne"
+     }
+    ],
+    "lens": [
+     {
+      "i": 0,
+      "at": 40,
+      "until": 43,
+      "ready": 40.88
+     }
+    ],
+    "redact": [],
+    "waits": [],
+    "knots": null
+   }
+  },
+  "it": {
+   "id": "m2t",
+   "seg": {
+    "id": "m2t",
+    "type": "media",
+    "src": "assets/images/a.png",
+    "from": "#11e",
+    "to": "#14e",
+    "kenburns": true,
+    "lens": [
+     {
+      "at": "#12+0.5",
+      "box": [
+       100,
+       100,
+       200,
+       100
+      ]
+     }
+    ],
+    "arrows": [
+     {
+      "at": "#13",
+      "to": [
+       500,
+       300
+      ]
+     }
+    ],
+    "spot": [
+     {
+      "at": "#14",
+      "box": [
+       300,
+       300,
+       200,
+       200
+      ]
+     }
+    ],
+    "enter": "tape"
+   },
+   "media": {
+    "src": "assets/images/a.png",
+    "abs": "<TMP>/X/assets/images/a.png",
+    "kind": "image",
+    "ext": ".png",
+    "info": {
+     "width": 1600,
+     "height": 900
+    },
+    "in": 0,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "tape",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 1600,
+     "h": 900,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       200,
+       90,
+       1520,
+       790
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      200,
+      90,
+      1520,
+      790
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1424,
+      581,
+      1888,
+      951
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1320
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 0.8775,
+     "ky": 0.8777777777777778,
+     "left": 258,
+     "top": 90,
+     "width": 1404,
+     "height": 790
+    },
+    "pipShift": null,
+    "retime": null,
+    "redact": [],
+    "cams": [],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -24.3
+    },
+    "marks": [],
+    "lenses": [
+     {
+      "id": "m2t-l1",
+      "i": 0,
+      "la": 40,
+      "lb": 43,
+      "N": 90,
+      "R": [
+       345.75,
+       177.78,
+       175.5,
+       87.78
+      ],
+      "C": [
+       350,
+       174
+      ],
+      "outer": [
+       772,
+       350,
+       376,
+       200
+      ],
+      "back": {
+       "x": -526.5,
+       "y": -228.33,
+       "scaleX": 0.50143,
+       "scaleY": 0.50447
+      },
+      "crop": [
+       100,
+       100,
+       200,
+       100
+      ],
+      "ranges": [],
+      "map": null,
+      "urls": null
+     }
+    ],
+    "steps": {
+     "list": [],
+     "carry": false,
+     "capsule": null
+    },
+    "callouts": [],
+    "spots": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 46.5,
+      "until": 50.5,
+      "hole": [
+       513,
+       345,
+       192,
+       192
+      ],
+      "ready": 46.9
+     }
+    ],
+    "arrows": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 43,
+      "until": 46,
+      "from": "ne",
+      "len": 120,
+      "u": [
+       0.7071,
+       -0.7071
+      ],
+      "tip": [
+       703.11,
+       346.97
+      ],
+      "base": [
+       724.33,
+       325.76
+      ],
+      "tail": [
+       787.97,
+       262.12
+      ],
+      "c1": [
+       734.93,
+       336.36
+      ],
+      "c2": [
+       713.72,
+       315.15
+      ],
+      "ready": 43.5
+     }
+    ],
+    "waits": []
+   },
+   "start": 39,
+   "end": 50.5,
+   "z": 30,
+   "enterFx": "tape",
+   "exitFx": "fade",
+   "pipPieces": []
+  },
+  "msgs": [
+   "⚠ kenburns：有 callouts／spot／arrows 時不做慢推（標註要對準不動的畫面），已忽略"
+  ]
+ },
+ {
+  "id": "bad",
+  "r": {
+   "summary": "聚光燈 1、STEP 1（第 4 步）",
+   "json": {
+    "marks": [],
+    "callouts": [],
+    "spot": [
+     {
+      "i": 0,
+      "at": 26.5,
+      "until": 32.5,
+      "ready": 26.9
+     }
+    ],
+    "steps": [
+     {
+      "i": 1,
+      "at": 26,
+      "ready": 26.5,
+      "n": 4,
+      "text": "下一步",
+      "carry": false
+     }
+    ],
+    "side": null,
+    "arrows": [],
+    "lens": [],
+    "redact": [],
+    "waits": [],
+    "knots": [
+     [
+      0,
+      0
+     ],
+     [
+      7,
+      7
+     ]
+    ],
+    "view": {
+     "scale": 0.653,
+     "moves": 0,
+     "lens": 0,
+     "landscape": true
+    }
+   }
+  },
+  "it": {
+   "id": "bad",
+   "seg": {
+    "id": "bad",
+    "type": "media",
+    "src": "assets/screen/v.mp4",
+    "from": "#8",
+    "to": "#9e",
+    "moves": [
+     {
+      "at": 3,
+      "to": [
+       0,
+       0,
+       9999,
+       10
+      ]
+     },
+     {
+      "at": "+0.1",
+      "to": "full",
+      "dur": 9
+     }
+    ],
+    "marks": [
+     {
+      "at": "#20",
+      "box": [
+       1,
+       2,
+       3
+      ]
+     },
+     {
+      "at": "+0.2",
+      "until": "+0.3",
+      "box": [
+       10,
+       10,
+       50,
+       50
+      ]
+     }
+    ],
+    "callouts": [
+     {
+      "at": "+0.5",
+      "box": [
+       10,
+       10,
+       50,
+       50
+      ],
+      "text": "一二三四五六七八九十一二三"
+     }
+    ],
+    "steps": [
+     {
+      "at": "+0",
+      "text": ""
+     },
+     {
+      "at": "+0.5",
+      "text": "下一步"
+     },
+     {
+      "at": "+0.6",
+      "text": "再下一步"
+     }
+    ],
+    "lens": [
+     {
+      "at": "+1",
+      "until": "+1.5",
+      "box": [
+       0,
+       0,
+       10,
+       10
+      ]
+     }
+    ],
+    "arrows": [
+     {
+      "at": "+1",
+      "to": [
+       9000,
+       1
+      ]
+     }
+    ],
+    "spot": [
+     {
+      "at": "+1",
+      "box": [
+       0,
+       0,
+       10,
+       10
+      ]
+     }
+    ],
+    "redact": {
+     "box": [
+      0,
+      0,
+      1,
+      1
+     ]
+    },
+    "side": {
+     "items": []
+    },
+    "stepsSide": "up"
+   },
+   "media": {
+    "src": "assets/screen/v.mp4",
+    "abs": "<TMP>/X/assets/screen/v.mp4",
+    "kind": "video",
+    "ext": ".mp4",
+    "info": {
+     "width": 2560,
+     "height": 1440,
+     "duration": 90,
+     "hasAudio": true
+    },
+    "in": 0,
+    "speed": 1,
+    "fit": "contain",
+    "volume": null,
+    "enter": "fade",
+    "exit": "fade",
+    "kenburns": false,
+    "hasAnn": true,
+    "waitOff": false,
+    "waitLines": null,
+    "file": {
+     "w": 2560,
+     "h": 1440,
+     "sx": 1,
+     "sy": 1
+    },
+    "frame": {
+     "format": "landscape",
+     "W": 1920,
+     "H": 1080,
+     "view": {
+      "contain": [
+       0,
+       0,
+       1920,
+       940
+      ],
+      "cover": [
+       0,
+       0,
+       1920,
+       1080
+      ]
+     },
+     "focus": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "screen": [
+      0,
+      0,
+      1920,
+      1080
+     ],
+     "safe": [
+      40,
+      40,
+      1880,
+      900
+     ],
+     "avoid": [],
+     "pip": [
+      1424,
+      581,
+      1888,
+      951
+     ],
+     "pipWhy": "壓到右下角子母畫面",
+     "bottom": 920,
+     "bottomWhy": "壓到字幕區",
+     "top": null,
+     "step": {
+      "left": 48,
+      "top": 40
+     },
+     "lens": {
+      "maxW": 1600,
+      "maxH": 720,
+      "cx": 960,
+      "cy": 450,
+      "top": 40,
+      "bottom": 900,
+      "pipLeft": 1320
+     }
+    },
+    "side": null,
+    "geo": {
+     "kx": 0.652734375,
+     "ky": 0.6527777777777778,
+     "left": 125,
+     "top": 0,
+     "width": 1671,
+     "height": 940
+    },
+    "pipShift": null,
+    "pieces": [
+     {
+      "s": 25.5,
+      "e": 32.5,
+      "fms": 0
+     }
+    ],
+    "retime": null,
+    "redact": [],
+    "cams": [],
+    "kb": false,
+    "kbTo": {
+     "z": 1.05,
+     "x": -48,
+     "y": -23.5
+    },
+    "marks": [],
+    "lenses": [],
+    "steps": {
+     "list": [
+      {
+       "i": 1,
+       "at": 26,
+       "text": "下一步",
+       "n": 4,
+       "carry": false,
+       "ready": 26.5
+      }
+     ],
+     "carry": false,
+     "capsule": {
+      "box": [
+       157,
+       40,
+       395,
+       120
+      ],
+      "side": "left",
+      "from": 26,
+      "to": 32.5
+     }
+    },
+    "callouts": [],
+    "spots": [
+     {
+      "i": 0,
+      "k": 1,
+      "at": 26.5,
+      "until": 32.5,
+      "hole": [
+       117,
+       -8,
+       23,
+       23
+      ],
+      "ready": 26.9
+     }
+    ],
+    "arrows": [],
+    "waits": []
+   },
+   "start": 25.5,
+   "end": 32.5,
+   "z": 30,
+   "enterFx": "fade",
+   "exitFx": "fade",
+   "pipPieces": []
+  },
+  "msgs": [
+   "✖ side.items 要寫 1–5 條 [{ \"at\": \"#N@詞\", \"text\": \"…\" }]，現在是 []",
+   "✖ redact 要寫成陣列（[{ \"box\": [x, y, w, h] }]）",
+   "✖ moves[0].at：不能寫絕對秒數「3」→ 改成 \"+3.2\"（本段起點後幾秒）或 \"#N\"（綁字幕句）",
+   "✖ moves[1].dur 要是 0.2–5 的秒數，現在是 9",
+   "✖ marks[0].at（1:07.50）不在這段 0:25.50–0:32.50 裡 → 改成這段範圍內的句號或 +秒數",
+   "⚠ marks[1] 只停 0.1s（< 0.5s，閃一下就不見），已拿掉 → 要留就把 until 往後延",
+   "✖ callouts[0].text「一二三四五六七八九十一二三」有 13 字（上限 12）→ 縮成名詞或一句重點，細節交給講解",
+   "✖ lens[0] 只有 0.5s，放大鏡至少要 1.2s（彈出 0.6＋縮回 0.32＋看清楚的時間）→ until 往後延",
+   "✖ steps[0].text 要寫 1–12 字（這一步在做什麼），現在是 \"\" → 補上這一步的動作",
+   "✖ steps[2] 和前一步只差 0.1s（要 ≥ 1.65s：換步 0.45＋停 1.2）→ 合併成一步，或把 at 往後挪到 0:27.65 之後",
+   "✖ stepsSide 只能是 \"left\"（預設）或 \"right\"，現在是 \"up\"",
+   "✖ arrows[0].to [9000, 1] 超出素材範圍 2560×1440 → 座標是素材原尺寸的像素（不是 1920×1080 的畫面座標），用 media.mjs frame --grid 重讀"
+  ]
+ }
+]

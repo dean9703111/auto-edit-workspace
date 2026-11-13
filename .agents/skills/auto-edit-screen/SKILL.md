@@ -6,7 +6,6 @@ version: 0.1.0
 # 螢幕錄影與圖片配對
 
 規則在 AGENTS.md；本檔只寫這一階段的指令、判準、停點、退路。
-衝突時：使用者當下的話 > AGENTS.md > shared/style.md > USAGE.md > USAGE-reference.md > 本 Skill；派工時派工訊息 > 本 Skill。
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
@@ -75,9 +74,8 @@ node shared/template/tools/build.mjs --project projects/<專案> --check-draft <
 ## 自我核對
 
 - [ ] 每段 media 都對到講解同一個操作
-- [ ] 座標是素材原尺寸
-- [ ] 只有聲音的區間全部蓋住
-- [ ] 錄影段沒放下方資訊卡（style.md「螢幕錄影與圖片」）
+- [ ] 座標是素材原尺寸（從格線圖讀的）
+- [ ] 紅框、說明卡寫好後，用 `--box` 截那一刻看過一次
 - [ ] 段尾沒露出下一步、沒露出個資；停住的畫面都寫了 `hold`
 - [ ] 當子代理時只寫自己那份筆記（盤點）或草稿（分章）
 
@@ -94,7 +92,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check-draft <
 
 ## 工具呼叫預算
 
-每支錄影最多 6 次。超過就停下來回報卡在哪。
+每支錄影最多 6 次。超過就停下來回報卡在哪；工具印「→ 停手」也一樣停。
 
 ## 回報格式
 

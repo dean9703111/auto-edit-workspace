@@ -14,7 +14,7 @@
  *       另存總覽圖 output/qc/qc-sheet.jpg（每 10 秒一格，長片拉長間隔到最多 80 格、整片都有；最上面標主題 theme: light／dark），給人或 AI 快速掃一眼；
  *         直式每格 9:16，格上疊 unsafe[]（平台介面區）的紅色半透明框。
  *       預期長度跑 build.mjs --check --json 取得（rough.mp4 − cuts）。
- *       輸出 ✔／⚠／✖；有 ✖ 結束碼是 1，只有 ⚠ 是 0。--json 只印一個 JSON。
+ *       輸出 ✓／⚠／✖；有 ✖ 結束碼是 1，只有 ⚠ 是 0。--json 只印一個 JSON。
  *   node shared/template/tools/qc.mjs speaker --project projects/<專案> [--file <mp4>] [--write [--force]]
  *       --write：把青色建議框寫進 plan.json 的 speakerBox（已經有的不覆寫；--force 才覆寫）
  *       講者動作範圍圖：從 work/rough.mp4 平均抽 8 張，存
@@ -23,7 +23,7 @@
  *       不是畫布尺寸（橫式 1920×1080、直式 1080×1920）的影片先等比放大（不足的邊補黑），圖上的座標直接就是 speakerBox 的座標。
  *       plan.json 有 frame（構圖裁切）時，先照 frame 裁切放大再量，座標就是裁切後完成影片上的座標。
  *   node shared/template/tools/qc.mjs framing --project projects/<專案> [--file <mp4>] [--zooms 1,1.15,1.3]
- *   node shared/template/tools/qc.mjs framing --project projects/<專案> --write   使用者說「用建議的」：把 ✔ 那一列寫進 plan.json（1.0 倍不寫）
+ *   node shared/template/tools/qc.mjs framing --project projects/<專案> --write   使用者說「用建議的」：把 ✓ 那一列寫進 plan.json（1.0 倍不寫）
  *       構圖預覽：量講者動作範圍、偵測四周黑邊，算出每個放大倍率的 16:9 裁切框（頭頂上方留 120px、講者水平置中），
  *       存 work/構圖預覽.jpg（每個倍率一格，橘框是講者動作範圍）並印出每個倍率的 frame 與會不會切到手勢。
  *       停點 ② 用剪輯台的構圖台（editor.mjs 印的「構圖台」網址）讓使用者拖框，拖好就自動寫進 plan.json 的 frame；
@@ -61,8 +61,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { pathsFrom, hasVoiceSource, build } from './build.mjs';
+import { build } from './build.mjs';
+import { checkProject } from './lib/check-project.mjs';
+import { LOUD_TEXT } from './lib/audio.mjs';
+import { pathsFrom, hasVoiceSource } from './lib/project.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
+import { markStep } from './lib/progress.mjs';
 import { run, probeMedia, rawFrame, writeJpg, lut3dFilter, blackDetect } from './lib/ff.mjs';
 import { ensureLook } from './lib/look.mjs';
 import { canvas, fillRect, blit, text, contactSheet, spawnAsync, pool } from './lib/raster.mjs';
@@ -70,21 +74,24 @@ import { parseSrt } from './lib/srt.mjs';
 import { findChrome, findRuntime, openSession, openBrowser } from './lib/audit-browser.mjs';
 import { gateCheck } from './lib/audit-rules.mjs';
 import { hfArgs } from './lib/hf.mjs';
-import { drawGrid } from './media.mjs';
+import { drawGrid } from './lib/rough/scan.mjs';
 import { canvasOf, resolveFormat, formatLine } from './lib/canvas.mjs';
+import { ok, next, cmdLine } from './lib/say.mjs';
+import { splitFlag, valueOf, isMain } from './lib/cli.mjs';
+import { r3, clock1, clock2 } from './lib/time.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+const LAND = canvasOf('landscape');   // 橫式畫布 1920×1080（032 C7：尺寸只寫在 lib/canvas.mjs）
 // Windows 的 npx 是 npx.cmd，要經過 shell 才叫得起來（其他平台不變）
 const VALUE_FLAGS = ['project', 'template', 'file', 'zooms', 'from', 'to', 'offset', 'chrome', 'format', 'only', 'jobs', 'scale'];
 const r1 = (n) => Number(n).toFixed(1);
 const r2 = (n) => Number(n).toFixed(2);
-const r3 = (n) => +Number(n).toFixed(3);
 // 工作區（目前資料夾）外的路徑印絕對路徑（cli-004 §1）
 const rel = (p) => { const r = path.relative(process.cwd(), p); return !r ? '.' : r.startsWith('..') || path.isAbsolute(r) ? path.resolve(p) : r; };
 const tail = (s, n = 400) => String(s ?? '').trim().slice(-n);
 
 // 判斷門檻
-export const LIMITS = { width: 1920, height: 1080, fps: 30, durTol: 0.1, lufsMin: -15.5, lufsMax: -12.5, tpMax: -1.0, freeze: 3, black: 0.5, silence: 4, sheetStep: 10, sheetMax: 80 };
+export const LIMITS = { width: LAND.W, height: LAND.H, fps: 30, durTol: 0.1, lufsMin: -15.5, lufsMax: -12.5, tpMax: -1.0, freeze: 3, black: 0.5, silence: 4, sheetStep: 10, sheetMax: 80 };
 // 併發：--jobs 預設與上限（storyboard 的截圖行程）；ffmpeg 抽格、Chrome 排版同時幾個
 export const JOBS = { default: 4, max: 8, ffmpeg: 6, chrome: 4 };
 export function jobsOf(v) {
@@ -100,11 +107,10 @@ export function parseArgs(argv) {
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (!a.startsWith('--')) throw new Error(`看不懂的參數「${a}」→ 參數都以 -- 開頭；用 node shared/template/tools/qc.mjs --help 看用法`);
-    const [k, inline] = a.slice(2).split('=');
+    // 只在第一個 = 切（--file=a=b.mp4 的值是 a=b.mp4）；值不能是另一個旗標（--project --json 不會把 --json 當專案）
+    const [k, inline] = splitFlag(a);
     if (VALUE_FLAGS.includes(k)) {
-      const v = inline ?? rest[++i];
-      if (v == null) throw new Error(`--${k} 後面要接值 → 在 --${k} 後面補上值（用 --help 看格式）`);
-      flags[k] = v;
+      try { [flags[k], i] = valueOf(rest, i, k, inline); } catch (e) { throw new Error(`${e.message} → 在 --${k} 後面補上值（用 --help 看格式）`); }
     } else if (['json', 'help', 'write', 'force', 'sheet', 'sample', 'verbose', 'no-captions'].includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數 → 拿掉它；用 node shared/template/tools/qc.mjs --help 看有哪些參數`);
   }
@@ -113,7 +119,7 @@ export function parseArgs(argv) {
 
 // ---------- 純函式：解析 ffmpeg 輸出 ----------
 
-export const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;
+export const fmtT = clock1;
 
 // freezedetect：lavfi.freezedetect.freeze_start／freeze_duration／freeze_end；凍到片尾時可能沒有 freeze_end → 用 dur 補
 export function parseFreeze(stderr, dur = null) {
@@ -231,7 +237,7 @@ export function pipCoverage(items, scenes = [], black = []) {
   });
 }
 
-const fmtT2 = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+const fmtT2 = clock2;
 
 // 相鄰 ≤ 0.1 秒的全黑區間併成一段（blackdetect 常每幾秒斷一格）
 export function mergeRanges(ranges, gap = 0.1) {
@@ -328,7 +334,7 @@ export function judge(f) {
       if (i < L.lufsMin) msgs.push(`整合響度 ${r1(i)} LUFS 偏小聲（應在 ${L.lufsMin}～${L.lufsMax}）`);
       else if (i > L.lufsMax) msgs.push(`整合響度 ${r1(i)} LUFS 偏大聲（應在 ${L.lufsMin}～${L.lufsMax}）`);
       if (tp != null && tp > L.tpMax) msgs.push(`true peak ${r1(tp)} dBTP 太高（應 ≤ ${L.tpMax}）`);
-      if (msgs.length) add('loudness', 'warn', `${msgs.join('；')} → 到剪輯台調音量，或把人聲標準化到 −14 LUFS 後重新 render`);
+      if (msgs.length) add('loudness', 'warn', `${msgs.join('；')} → 到剪輯台調音量，或把人聲標準化到 ${LOUD_TEXT} 後重新 render`);
       else add('loudness', 'ok', `響度 ${r1(i)} LUFS、true peak ${tp == null ? '—' : r1(tp)} dBTP`);
     }
   }
@@ -426,7 +432,7 @@ export function captionSpec(cv = null) {
   return { ...CAPTION, top: cv.caption.box[1], bottom: cv.caption.box[3], ink: cv.caption.line };
 }
 
-// 量到的 [{ n, text, top, bottom, ink }] → ✔／⚠；error＝量不到的原因；C＝captionSpec(canvas)
+// 量到的 [{ n, text, top, bottom, ink }] → ✓／⚠；error＝量不到的原因；C＝captionSpec(canvas)
 export function captionStyleChecks(m, C = CAPTION) {
   if (m.error) return [{ level: 'warn', text: `量不到字幕樣式：${m.error}` }];
   const s = m.samples || [];
@@ -462,7 +468,7 @@ function captionInPage() {
 // 底板位置從 build 好的頁面量（HyperFrames runtime＋同一個 seek），字高從完成影片那一格的白字量
 export async function measureCaptions(P, flags, file, cues, cv = null, session = null) {
   if (!cues?.length) return null;
-  const W = cv?.W ?? 1920, H = cv?.H ?? 1080;
+  const W = cv?.W ?? LAND.W, H = cv?.H ?? LAND.H;
   if (!fs.existsSync(path.join(P.out, 'index.html'))) return { error: `還沒 build（找不到 work/hyperframes/index.html）→ 先跑 build.mjs 再重跑 qc final` };
   let S = session;
   try { S ||= await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file, W, H }); } catch (e) { return { error: `開不了 HyperFrames 的 Chrome（${tail(e.message, 160)}）→ 跑 npx hyperframes browser ensure 後重跑` }; }
@@ -613,23 +619,25 @@ export async function finalCheck(P, flags) {
   try { sheet = makeQcSheet(file, dur, path.join(P.project, 'output', 'qc', 'qc-sheet.jpg'), theme, cv, { layout, frames }); } catch (e) {
     verdict.checks.push({ key: 'sheet', level: 'warn', text: `總覽圖產生失敗：${e.message}` }); verdict.warnings++;
   }
+  // 032 C10：驗收的是這個專案的 output/final.mp4、qc-sheet.jpg 寫好了才記一筆（--file 指別支不記）
+  if (sheet && file === path.join(P.project, 'output', 'final.mp4')) markStep(P.project, 'qc');
   return { file, fmt, facts, ...verdict, sheet };
 }
 
-const ICON = { ok: '✔', warn: '⚠', error: '✖' };
+const ICON = { ok: '✓', warn: '⚠', error: '✖' };
 
 function printFinal(P, r) {
   if (r.fmt) console.log(r.fmt.line);
   console.log(`專案：${rel(P.project)}\n完成影片：${rel(r.file)}\n`);
   for (const c of r.checks) console.log(`${ICON[c.level]} ${c.text}`);
   if (r.sheet) console.log(`\n→ 總覽圖 ${rel(r.sheet.file)}（${r.sheet.count} 格，每 ${r.sheet.step} 秒一格，主題 ${r.sheet.theme}；打開掃一眼有沒有掉圖、卡住${r.sheet.unsafe ? '；直式每格 9:16，紅色半透明框是平台介面區（canvas unsafe），字幕、卡片字、角標不該進去' : ''}）`);
-  console.log(`\n${r.errors ? `✖ ${r.errors} 項錯誤` : '✔ 沒有錯誤'}${r.warnings ? `、⚠ ${r.warnings} 項提醒` : ''}${r.errors ? ' → 先修好再交付' : r.warnings ? ' → 逐項確認是不是刻意的' : ' → 可以交付'}`);
+  console.log(`\n${r.errors ? `✖ ${r.errors} 項錯誤` : '✓ 沒有錯誤'}${r.warnings ? `、⚠ ${r.warnings} 項提醒` : ''}${r.errors ? ' → 先修好再交付' : r.warnings ? ' → 逐項確認是不是刻意的' : ' → 可以交付'}`);
 }
 
 // ---------- speaker ----------
 
 // 抽一格，等比放進畫布 W×H（橫式 1920×1080、直式 1080×1920；不足補黑）；frame＝[x, y, w, h]（畫布座標）時再裁切放大回 W×H；lut＝講者調光的 .cube（接在 crop／scale 之後）
-function frame1080(file, at, frame = null, lut = null, W = 1920, H = 1080) {
+function frame1080(file, at, frame = null, lut = null, W = LAND.W, H = LAND.H) {
   const crop = frame ? `,crop=${frame[2]}:${frame[3]}:${frame[0]}:${frame[1]},scale=${W}:${H}:flags=lanczos` : '';
   const vf = `scale=${W}:${H}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black${crop}${lut ? `,${lut3dFilter(lut)}` : ''},format=rgb24`;
   const args = ['-v', 'error', '-ss', String(r3(at)), '-i', file, '-frames:v', '1', '-vf', vf, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'];
@@ -675,7 +683,7 @@ const lum = (d, i) => (d[i] * 54 + d[i + 1] * 183 + d[i + 2] * 19) >> 8;
 
 const MOTION_CORE = 0.1;
 // 平均畫面＋動作範圍。回傳 { mean(rgb Buffer), dev(Uint8Array 每像素最大亮度偏差), bbox, core }
-export function motionStats(frames, w = 1920, h = 1080, { thresh = 40, minPx = 12 } = {}) {
+export function motionStats(frames, w = LAND.W, h = LAND.H, { thresh = 40, minPx = 12 } = {}) {
   const n = frames.length, px = w * h;
   const sum = new Uint32Array(px * 3);
   for (const f of frames) for (let i = 0; i < px * 3; i++) sum[i] += f[i];
@@ -698,7 +706,7 @@ export function motionStats(frames, w = 1920, h = 1080, { thresh = 40, minPx = 1
   return { mean, dev, bbox: x1 < 0 || y1 < 0 ? null : [x1, y1, x2, y2], core };
 }
 
-export const padBox = (b, pad = 40, w = 1920, h = 1080) => [Math.max(0, b[0] - pad), Math.max(0, b[1] - pad), Math.min(w, b[2] + pad), Math.min(h, b[3] + pad)];
+export const padBox = (b, pad = 40, w = LAND.W, h = LAND.H) => [Math.max(0, b[0] - pad), Math.max(0, b[1] - pad), Math.min(w, b[2] + pad), Math.min(h, b[3] + pad)];
 
 function rectOutline(c, [x1, y1, x2, y2], rgb, t = 4) {
   fillRect(c, x1, y1, x2 - x1, t, rgb); fillRect(c, x1, y2 - t, x2 - x1, t, rgb);
@@ -771,7 +779,7 @@ function planFrame(P) {
 // ---------- framing（構圖預覽） ----------
 
 // 四周的黑邊（平均畫面每一列／行的平均亮度 < 18 就算黑邊）→ 內容範圍 [x1, y1, x2, y2]
-export function contentBox(mean, w = 1920, h = 1080, th = 18) {
+export function contentBox(mean, w = LAND.W, h = LAND.H, th = 18) {
   const rowL = (y) => { let t = 0; for (let x = 0; x < w; x += 4) t += lum(mean, (y * w + x) * 3); return t / Math.ceil(w / 4); };
   const colL = (x) => { let t = 0; for (let y = 0; y < h; y += 4) t += lum(mean, (y * w + x) * 3); return t / Math.ceil(h / 4); };
   let y1 = 0, y2 = h, x1 = 0, x2 = w;
@@ -788,12 +796,12 @@ export function framingCandidates(motion, content, zooms = [1, 1.15, 1.3], head 
   const cw = content[2] - content[0], ch = content[3] - content[1];
   const maxW = Math.floor(Math.min(cw, (ch * 16) / 9) / 16) * 16;
   return zooms.map((z) => {
-    const w = Math.min(maxW, Math.round(1920 / z / 16) * 16), h = (w * 9) / 16, k = 1920 / w;
+    const w = Math.min(maxW, Math.round(LAND.W / z / 16) * 16), h = (w * 9) / 16, k = LAND.W / w;
     const clamp = (v, lo, hi) => Math.round(Math.min(Math.max(v, lo), hi));
     const x = clamp(cx - w / 2, content[0], content[2] - w), y = clamp(by1 - head / k, content[1], content[3] - h);
     const tf = (b) => [Math.round((b[0] - x) * k), Math.round((b[1] - y) * k), Math.round((b[2] - x) * k), Math.round((b[3] - y) * k)];
     const m = tf(motion);
-    const cut = [m[0] < 40 && '左', m[1] < 40 && '上', m[2] > 1880 && '右'].filter(Boolean);
+    const cut = [m[0] < 40 && '左', m[1] < 40 && '上', m[2] > LAND.W - 40 && '右'].filter(Boolean);
     return { zoom: +r2(k), frame: [x, y, w, h], motion: m, cut };
   });
 }
@@ -893,18 +901,25 @@ export function framingPreview(P, flags) {
   return { ...out, file };
 }
 
-function printFraming(P, r) {
+// 「建議：」後面那一段（倍率與理由）：build.mjs --framing 的回報段也用（032 A2）
+export function suggestionText(r) {
+  const sug = r.suggestion, portrait = r.fmt.format === 'portrait';
+  const face = portrait ? '、頭頂／下巴不合' : '', faceOk = portrait ? '、頭頂／下巴在範圍內' : '';
+  return sug.none ? `${sug.zoom.toFixed(2)}x（每個倍率都標了切到手勢${face}或放大超過 3.5 倍，選表上最小的；最後由使用者選）` : `${sug.zoom.toFixed(2)}x（不切到手勢${faceOk}、來源像素放大 ≤ 3.5 倍的倍率裡最大的；最後由使用者選）`;
+}
+
+// 構圖分析的報告（不含「→ 下一步」：qc.mjs framing 和 build.mjs --framing 的下一步不同）
+export function framingLines(P, r) {
   const { W, H, framing } = r.fmt.canvas, portrait = r.fmt.format === 'portrait';
-  console.log(r.fmt.line);
-  console.log(`專案：${rel(P.project)}\n來源：${rel(r.src)}（${r.srcSize[0]}×${r.srcSize[1]}）`);
-  if (r.look?.line) console.log(r.look.line);
-  for (const w of r.look?.warns || []) console.log(w);
-  console.log(`講者動作範圍 [${r.motion.join(', ')}]（下緣只算到內容範圍 90%，避開桌面倒影）`);
+  const out = [r.fmt.line, `專案：${rel(P.project)}\n來源：${rel(r.src)}（${r.srcSize[0]}×${r.srcSize[1]}）`];
+  if (r.look?.line) out.push(r.look.line);
+  for (const w of r.look?.warns || []) out.push(w);
+  out.push(`講者動作範圍 [${r.motion.join(', ')}]（下緣只算到內容範圍 90%，避開桌面倒影）`);
   const [x1, y1, x2, y2] = r.content;
-  console.log(x1 || y1 || x2 < W || y2 < H ? `偵測到黑邊：內容範圍 [${r.content.join(', ')}]，裁切框都在這裡面` : '四周沒有黑邊');
-  if (portrait) console.log(`直式構圖：頭頂要落在 y ${framing.headTop[0]}–${framing.headTop[1]}、下巴 ≤ ${framing.chinMax}（下巴${r.chinFrom ? '用 work/face-landmarks.json 量' : '沒有 face-landmarks.json，用動作範圍上緣＋框高 30% 估'}）`);
-  console.log(`\n→ ${rel(r.file)}：每個倍率一格，橘框是講者動作範圍（裁切後）；紅底標題＝會切到手勢${portrait ? '或頭頂／下巴不在範圍；青線是頭頂範圍、洋紅線是下巴上限' : ''}\n`);
-  console.log('倍率｜frame（寫進 plan.json）｜講者動作範圍（裁切後）｜備註｜建議');
+  out.push(x1 || y1 || x2 < W || y2 < H ? `偵測到黑邊：內容範圍 [${r.content.join(', ')}]，裁切框都在這裡面` : '四周沒有黑邊');
+  if (portrait) out.push(`直式構圖：頭頂要落在 y ${framing.headTop[0]}–${framing.headTop[1]}、下巴 ≤ ${framing.chinMax}（下巴${r.chinFrom ? '用 work/face-landmarks.json 量' : '沒有 face-landmarks.json，用動作範圍上緣＋框高 30% 估'}）`);
+  out.push(`\n→ ${rel(r.file)}：每個倍率一格，橘框是講者動作範圍（裁切後）；紅底標題＝會切到手勢${portrait ? '或頭頂／下巴不在範圍；青線是頭頂範圍、洋紅線是下巴上限' : ''}\n`);
+  out.push('倍率｜frame（寫進 plan.json）｜講者動作範圍（裁切後）｜備註｜建議');
   const sug = r.suggestion;
   for (const c of r.cands) {
     const notes = [];
@@ -912,12 +927,17 @@ function printFraming(P, r) {
     if (c.cut.length) notes.push(`⚠ 會切到${c.cut.join('、')}側手勢`);
     if (c.face?.length) notes.push(`⚠ ${c.face.join('、')}`);
     if (r.srcSize[0] < W) notes.push(`來源 ${r.srcSize[0]}px 寬，每個像素放大 ${c.upscale} 倍${c.upscale > 3.5 ? '，會明顯變軟' : ''}`);
-    console.log(`${c.zoom.toFixed(2)}x｜[${c.frame.join(', ')}]｜[${c.motion.join(', ')}]｜${notes.join('；') || '—'}｜${Math.abs(c.zoom - sug.zoom) < 1e-6 ? '✔' : '—'}`);
+    out.push(`${c.zoom.toFixed(2)}x｜[${c.frame.join(', ')}]｜[${c.motion.join(', ')}]｜${notes.join('；') || '—'}｜${Math.abs(c.zoom - sug.zoom) < 1e-6 ? '✓' : '—'}`);
   }
-  const face = portrait ? '、頭頂／下巴不合' : '', faceOk = portrait ? '、頭頂／下巴在範圍內' : '';
-  console.log(sug.none ? `建議：${sug.zoom.toFixed(2)}x（每個倍率都標了切到手勢${face}或放大超過 3.5 倍，選表上最小的；最後由使用者選）` : `建議：${sug.zoom.toFixed(2)}x（不切到手勢${faceOk}、來源像素放大 ≤ 3.5 倍的倍率裡最大的；最後由使用者選）`);
-  console.log(`\n→ 下一步：開剪輯台，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就跑 qc.mjs framing --write，之後跑 qc.mjs speaker --write 量講者框`);
-  console.log(`node shared/template/tools/editor.mjs --project ${rel(P.project)}`);
+  out.push(`建議：${suggestionText(r)}`);
+  return out;
+}
+
+function printFraming(P, r) {
+  for (const l of framingLines(P, r)) console.log(l);
+  console.log('');
+  for (const l of next('開剪輯台，把它印的「構圖台」網址給使用者拖框（停點 ②，框一開始就是建議那一列）；使用者說「用建議的」就跑 qc.mjs framing --write，之後跑 qc.mjs speaker --write 量講者框',
+    cmdLine('editor.mjs', ['--project', rel(P.project)]))) console.log(l);
 }
 
 function printSpeaker(P, r) {
@@ -951,7 +971,7 @@ export function writeSpeakerBox(P, suggest, { force = false } = {}) {
   return { wrote: true, box: suggest, reason: 'written' };
 }
 
-// 使用者說「用建議的」：把 ✔ 那一列寫進 plan.json 第一層（1.0 倍不寫，已有的 frame 拿掉）
+// 使用者說「用建議的」：把 ✓ 那一列寫進 plan.json 第一層（1.0 倍不寫，已有的 frame 拿掉）
 export function writeFrame(P, r) {
   const c = r.cands.find((x) => Math.abs(x.zoom - r.suggestion.zoom) < 1e-6);
   let plan = { version: 1 };
@@ -965,27 +985,25 @@ export function writeFrame(P, r) {
   return { frame, zoom: c?.zoom ?? 1 };
 }
 
+// speaker --write 的結果（不含「→ 下一步」：build.mjs --framing-done 量完接著自己切章，032 A2）
+export function speakerWriteLines(P, w) {
+  if (w.reason === 'none') return ['✖ 沒有寫 speakerBox：8 格之間幾乎沒有動作，估不出範圍 → 看 8 格總表手動框，寫進 plan.json 第一層'];
+  return [w.reason === 'exists' ? `plan.json 已經有 speakerBox ${JSON.stringify(w.box)}，沒有覆寫（要換成建議框加 --force）` : ok(`speakerBox ${JSON.stringify(w.box)} 已寫進 ${rel(P.plan)}`),
+    '建議框已經含手勢範圍，不用開圖確認；之後 --review 的拼圖看到卡片擋到手勢或臉，才照 work/場地照-動作範圍.jpg 改 plan.json 的 speakerBox'];
+}
+
 function printSpeakerWrite(P, w) {
   console.log('');
-  if (w.reason === 'none') { console.log('✖ 沒有寫 speakerBox：8 格之間幾乎沒有動作，估不出範圍 → 看 8 格總表手動框，寫進 plan.json 第一層'); return; }
-  if (w.reason === 'exists') console.log(`plan.json 已經有 speakerBox ${JSON.stringify(w.box)}，沒有覆寫（要換成建議框加 --force）`);
-  else console.log(`✔ speakerBox ${JSON.stringify(w.box)} 已寫進 ${rel(P.plan)}`);
-  console.log('建議框已經含手勢範圍，不用開圖確認；之後 --review 的拼圖看到卡片擋到手勢或臉，才照 work/場地照-動作範圍.jpg 改 plan.json 的 speakerBox');
-  console.log('→ 下一步：拿分鏡素材（字幕編號、章節、情境對照、plan.json 寫法）');
-  console.log(`node shared/template/tools/build.mjs --project ${rel(P.project)} --scaffold`);
+  for (const l of speakerWriteLines(P, w)) console.log(l);
+  if (w.reason === 'none') return;
+  for (const l of next('拿分鏡素材（字幕編號、章節、情境對照、plan.json 寫法）', cmdLine('build.mjs', ['--project', rel(P.project), '--scaffold']))) console.log(l);
 }
 
 // ---------- build --check --json（storyboard／observe／final 共用）----------
 
-// → { json } 或 { error, stderr }（error＝沒有輸出 JSON）
+// → { json }（032：行程內的 checkProject，和 build --check --json 印的同一份；出錯也是 JSON、ok: false，不會沒有輸出）
 export function checkJsonOf(P, flags) {
-  const args = [path.join(HERE, 'build.mjs'), '--project', P.project, '--check', '--json'];
-  if (flags.template) args.push('--template', path.resolve(flags.template));
-  if (flags.format) args.push('--format', String(flags.format));
-  const r = spawnSync(process.execPath, args, { encoding: 'utf8', maxBuffer: 1 << 28 });
-  let j = null;
-  try { j = JSON.parse(r.stdout); } catch { /* 下面處理 */ }
-  return j ? { json: j } : { error: tail(r.stderr, 200), stderr: r.stderr };
+  return { json: checkProject(P.project, { template: flags.template ? path.resolve(flags.template) : undefined, format: flags.format ? String(flags.format) : undefined }) };
 }
 
 // items[].out（完成影片秒數，contracts/check-json.md §3.1）；002 還沒加的時候用 start／end＋cuts 推算（每段只有起迄）
@@ -1425,7 +1443,7 @@ function printStoryboard(P, r, { verbose = false } = {}) {
     console.log(`→ 拼圖 ${r.sheets.length} 頁（每頁 ${SHEET.per} 張，每格標時間、段 id、為什麼）：${path.join(rel(r.dir), r.sheets[0].file)}${r.sheets.length > 1 ? ` … ${r.sheets[r.sheets.length - 1].file}` : ''}${r.only ? `；這次重做 ${redo.join('、') || '（沒有）'}` : ''}`);
     if (verbose) for (const x of r.sheets) console.log(`  ${x.file}｜${x.ids.join('、')}`);
   }
-  console.log(`✔ ${r.shots.length} 張都存好了：${path.join(rel(r.dir), path.sep)}${full ? '' : `（每段的截圖、為什麼、貼上用的 markdown 在 ${path.join(rel(r.dir), 'shots.json')}；要印全表加 --verbose）`}`);
+  console.log(`✓ ${r.shots.length} 張都存好了：${path.join(rel(r.dir), path.sep)}${full ? '' : `（每段的截圖、為什麼、貼上用的 markdown 在 ${path.join(rel(r.dir), 'shots.json')}；要印全表加 --verbose）`}`);
 }
 
 // ---------- observe（觀影總表，cli-004 §3）----------
@@ -1579,7 +1597,7 @@ export async function observeRun(P, flags) {
     const layout = async (kind, k, html, H) => {
       const hf = path.join(tiles, `${kind}-${nn(k)}.html`), jpg = path.join(dir, `${kind}-${nn(k)}.jpg`);
       fs.writeFileSync(hf, html);
-      try { await browser.shot({ file: hf, out: jpg, width: 1920, height: H, quality: 85 }); } catch (e) { throw new Error(`Chrome 排版失敗（${kind}-${nn(k)}）：${e.message} → 重跑一次；還是失敗就加 --from／--to 縮小範圍`); }
+      try { await browser.shot({ file: hf, out: jpg, width: LAND.W, height: H, quality: 85 }); } catch (e) { throw new Error(`Chrome 排版失敗（${kind}-${nn(k)}）：${e.message} → 重跑一次；還是失敗就加 --from／--to 縮小範圍`); }
       return jpg;
     };
     const sheetPlan = [];
@@ -1592,7 +1610,7 @@ export async function observeRun(P, flags) {
         const L = cellLabel(ts[i], segs, cues);
         return `<div class="cell">${tileFiles[i] ? `<img src="${tileFiles[i]}">` : ''}<div class="lab"><b>${L.time}</b>｜<i>${escH(L.id)}</i>｜${escH(L.text)}</div></div>`;
       }).join('');
-      const html = obsPage(fontsCss, 1920, H, `<div class="bar">觀影總表 ${nn(k)}｜${fmtT(a)}–${fmtT(b)}｜${escH(name)}｜每格 ${OBS.step} 秒</div><div class="grid">${cells}</div>`, '', L);
+      const html = obsPage(fontsCss, LAND.W, H, `<div class="bar">觀影總表 ${nn(k)}｜${fmtT(a)}–${fmtT(b)}｜${escH(name)}｜每格 ${OBS.step} 秒</div><div class="grid">${cells}</div>`, '', L);
       return { file: await layout('sheet', k, html, H), from: a, to: b, cells: idx.length };
     });
     sheets.push(...madeSheets);
@@ -1618,7 +1636,7 @@ export async function observeRun(P, flags) {
         return `<div class="row"><div class="st">接縫 ${sm.n}｜${fmtT(sm.at)}｜${escH(sm.before ?? '—')} → ${escH(sm.after ?? '—')}</div><div class="sr">${cells}</div></div>`;
       }).join('');
       const extra = `.row{height:${seamRow}px}.st{height:30px;line-height:30px;padding:0 12px;font-size:17px;font-weight:700;color:#FFD400;background:#1E2740}.sr{display:flex;gap:4px;padding-left:2px}.sc{width:${sw}px}.sc img{display:block;width:${sw}px;height:${shh}px}.sl{height:20px;line-height:20px;font-size:14px;text-align:center}`;
-      const html = obsPage(fontsCss, 1920, H, rowsHtml, extra);
+      const html = obsPage(fontsCss, LAND.W, H, rowsHtml, extra);
       const jpg = await layout('seam', k, html, H);
       group.forEach((sm, i) => { sm.file = jpg; sm.row = i + 1; });
       return jpg;
@@ -1648,7 +1666,7 @@ export async function observeRun(P, flags) {
       const madeBeats = await pool(beatPlan, JOBS.chrome, async ({ group, k }) => {
         const rows = Math.ceil(group.length / L.beatCols), H = OBS.title + rows * (bh + 52);
         const cells = group.map((b) => `<div class="bc"><img src="b${String(b.n).padStart(3, '0')}.jpg"><div class="lab"><b>${fmtT2(b.at)}</b>｜<i>${escH(b.id)}</i>｜${escH(b.why)}</div></div>`).join('');
-        const html = obsPage(fontsCss, 1920, H, `<div class="bar">拍點表 ${nn(k)}｜${escH(name)}｜和 storyboard 同一套取樣時刻，從完成影片抽格</div><div class="bgrid">${cells}</div>`, extra);
+        const html = obsPage(fontsCss, LAND.W, H, `<div class="bar">拍點表 ${nn(k)}｜${escH(name)}｜和 storyboard 同一套取樣時刻，從完成影片抽格</div><div class="bgrid">${cells}</div>`, extra);
         const jpg = await layout('beat', k, html, H);
         group.forEach((b) => { b.file = jpg; });
         return jpg;
@@ -1703,7 +1721,7 @@ function printObserve(P, r) {
   }
   console.log(`→ ${rel(r.index)}（總表索引、靜止區間、拍點、接縫清單）`);
   if (r.static.length) for (const s of r.static) console.log(`⚠ 靜止 ${fmtT(s.from)}–${fmtT(s.to)}（${r1(s.to - s.from)} 秒）｜${s.id ?? '—'}｜${s.cue ?? '（無字幕）'} → 對照講解決定要不要補畫面（換段、加標註或情境動畫）；刻意留白就不用理它`);
-  else console.log(`✔ 沒有 ≥ ${OBS.still} 秒幾乎不變的區間`);
+  else console.log(`✓ 沒有 ≥ ${OBS.still} 秒幾乎不變的區間`);
   console.log('下一步：逐張看 sheet-NN.jpg、beat-NN.jpg 與 seam-NN.jpg；有問題照「[P0] 0:41.2（s05） 問題｜證據（sheet-02.jpg 第 3 列第 5 格）｜修法」回報');
 }
 
@@ -1771,10 +1789,8 @@ export async function cli() {
   return 0;
 }
 
-const isMain = () => {
-  try { return !!process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url)); } catch { return false; }
-};
-if (isMain()) cli().then((code) => { process.exitCode = code; }, (e) => {
+// 經 symlink 執行也算（lib/cli.mjs 用 realpath 比）
+if (isMain(import.meta.url)) cli().then((code) => { process.exitCode = code; }, (e) => {
   if (process.argv.includes('--json') && ['storyboard', 'observe'].includes(process.argv[2])) console.log(JSON.stringify({ ok: false, errors: e.message.split('\n✖ ') }));
   else console.error(`✖ ${e.message}`);
   process.exitCode = 1;

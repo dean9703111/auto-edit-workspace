@@ -903,7 +903,7 @@ function applyReport(rep0) {
   app.saveErrors = null;
   const d = rep?.data;
   app.reportReady = !!d;
-  app.items = (d?.items || rep?.fallback?.items || []).filter((it) => Number.isFinite(it.start) && Number.isFinite(it.end))
+  app.items = (d?.items || []).filter((it) => Number.isFinite(it.start) && Number.isFinite(it.end))
     .map((it) => ({ id: it.id, type: it.type || 'scene', label: it.label || '', start: it.start, end: it.end, shownEnd: Number.isFinite(it.shownEnd) ? it.shownEnd : null, src: it.src || null, warnings: it.warnings || 0, sfx: Array.isArray(it.sfx) ? it.sfx : [], out: it.out || null, enter: it.enter ?? null, exit: it.exit ?? null }));   // out、enter、exit：實際的轉場和畫面速度，介面要照這個顯示
   app.voiceOnly = Array.isArray(d?.voiceOnly) ? d.voiceOnly.filter((v) => Array.isArray(v) && v.length === 2) : [];
   // 情緒點（plan.json moods，023）：音效軌上看得到，改在分鏡表或跟 AI 說（不屬於任何一段，這裡不拖不靜音）
@@ -915,7 +915,7 @@ function applyReport(rep0) {
   if (rough) { app.voiceUncovered = []; app.uncovered = []; }
   if (Array.isArray(d?.cutpoints) && d.cutpoints.length) app.cutpoints = d.cutpoints.filter((c) => Number.isFinite(c?.at)).map((c) => ({ at: c.at, kind: c.kind === 'ng' ? 'ng' : 'pause' }));
   if (!app.dur && d?.videoDur) { app.dur = d.videoDur; timeline.setDuration(app.dur); }
-  app.itemsHint = rough ? '分鏡做好後，字卡和動畫會排在這裡' : d || rep?.fallback ? '還沒有字卡或動畫' : '看不到段落位置：檢查報告讀不到（點左下角的檢查結果）';
+  app.itemsHint = rough ? '分鏡做好後，字卡和動畫會排在這裡' : d ? '還沒有字卡或動畫' : '看不到段落位置：檢查報告讀不到（點左下角的檢查結果）';
   renderCheck();
 }
 
@@ -1642,7 +1642,7 @@ function renderCheck() {
     const facts = [(d.items || []).length ? `${d.items.length} 段` : '', Number.isFinite(d.outputDur) ? `完成影片 ${fmt(d.outputDur, 0)}` : ''].filter(Boolean).join('、');
     if (d) sum.innerHTML = errors.length ? `<b class="err-ink">${errors.length} 個錯誤</b>要先改好才能更新預覽；點一則跳到那一段。`
       : `<span class="ok-ink">✓ 可以輸出</span>${facts ? `：${facts}` : ''}。${look}`;
-    else sum.innerHTML = `<b class="warn-ink">${rep.fallback ? '簡易檢查' : '讀不到檢查報告'}</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
+    else sum.innerHTML = `<b class="warn-ink">讀不到檢查報告</b>：${esc(rep.error || '')}${rep.log ? `<details><summary>訊息</summary><pre>${esc(rep.log)}</pre></details>` : ''}`;
   }
   // 剛在剪輯台改字的段：重新產生後量的版面（audit），放最前面
   const au0 = app.saveErrors ? null : app.auditIssues;
@@ -3121,10 +3121,10 @@ function renderRequests() {
     ${app.requests.length ? `<button class="small ghost" data-rq="clear">${rqClearArm ? '再按一次清空' : '清空修改單'}</button>` : ''}`;
 }
 // 複製給 AI 的只有這一行（待改的完整內容存在 editor-requests.md，AI 讀檔）
-const rqCommand = (revision, pending = rqPending()) => {
+// 剪輯台的「生成中／已改完／失敗」由 versions.mjs begin --requests、finish 自己回報，這裡只給開輪那一條
+const rqCommand = (pending = rqPending()) => {
   const project = app.server?.project?.dir || '';
-  const cli = `node shared/template/tools/editor.mjs --project ${JSON.stringify(project)}`;
-  const progress = `${revision ? '' : `先用 ${cli} --requests-state status 取得這份修改單的 revision；`}開始處理時用 ${cli} --requests-state generating --request-revision ${revision || '<剛讀取的 revision>'} --ids ${pending.map((r) => r.id).join(',')} 回報狀態；build、audit 通過後用同一指令把 generating 換成 done（可加 --round rN --message 描述），失敗則換成 failed --message 原因；逐段回報可調整 --ids，版本衝突就停下重新讀取修改單。`;
+  const progress = `第一步跑 node shared/template/tools/versions.mjs begin --project ${JSON.stringify(project)} --requests`;
   const redo = pending.filter((r) => r.redo).map((r) => r.id);
   // 哪幾段的子代理要載入 hyperframes skill 寫清楚：重新設計的段才要，其他段不用（載入一次很貴）
   const how = redo.length ? `其中 ${redo.length} 段要重新設計（${redo.join(',')}）：只有這幾段的子代理要載入 hyperframes skill、從空白畫布重畫；其他段在現有的動畫上改，不用載入。` : '這次沒有要重新設計的段：都在現有的動畫上改，不用載入 hyperframes skill。';
@@ -3161,7 +3161,7 @@ async function rqCopy() {
   if (!saved) { toast(`修改單存檔失敗：${r.data?.message || r.status}`, 'err', 7000); return; }
   app.server.requests = r.data.requests;
   // 複製等待期間若有編輯，保留原本那批的段與版本，不把新需求誤標成已複製。
-  const cmd = rqCommand(r.data.requests.revision, submitted);
+  const cmd = rqCommand(submitted);
   let copied = false;
   try { await navigator.clipboard.writeText(cmd); copied = true; } catch {
     const ta = document.createElement('textarea'); ta.value = cmd; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();

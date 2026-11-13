@@ -8,10 +8,13 @@
 //   modeOfLayout(layout, key)             → --check 的 items[].layout（overlay｜side｜pip｜full）換成 card｜half｜pip｜null（章節幕不算）
 //   layoutRuns(segs)                      → 連續同一種版面的區塊 [{ mode, start, end, ids }]（segs＝[{ id, start, end, mode }]，mode 是 null 的不算）
 //   layoutFindings(segs, { voice })       → 違反三條規則的地方 [{ rule, ids, start, end, secs, msg, fix }]；voice＝只有聲音的區間（那裡本來就沒有講者，不算）
+//                                           秒數比較留 TOL 秒容差；segs 帶了 from／to（大綱的句號）時，fix 寫可以照抄的改法（延哪一段的 to、併哪幾段）
 //   planLayout(rows, { startOf, secsOf, modesOf }) → 每一行地圖該用哪一種版面 [{ mode, merge }]（照三條規則排；merge＝這一行沒有全畫面模板，併進前一段）
 //   layoutPlanLine(rows, plan, { startOf, secsOf })  → 「0:00–0:31 字卡｜0:31–1:25 子母畫面（#15–#38）｜…」
 
 export const RHYTHM = { intro: 30, half: 15, pip: 45, join: 1, absorb: 10 };
+// 連續秒數差這麼一點不報（032 實跑：子母畫面 44.9 秒被 ✖，改大綱只為了湊 0.1 秒）
+export const TOL = 0.5;
 export const MODE_ZH = { card: '字卡', half: '半螢幕', pip: '子母畫面' };
 
 const fmt = (t) => { const m = Math.floor(t / 60); return `${m}:${String(Math.floor(t - m * 60)).padStart(2, '0')}`; };
@@ -56,15 +59,48 @@ export function layoutFindings(segs, { voice = [], R = RHYTHM } = {}) {
   // 2、3. 半螢幕、子母畫面一次要連續夠久
   for (const run of layoutRuns(list)) {
     const need = run.mode === 'half' ? R.half : run.mode === 'pip' ? R.pip : 0, secs = r1(run.end - run.start);
-    if (!need || secs >= need - 0.05) continue;
+    if (!need || secs >= need - TOL) continue;
     const ids = run.ids.length > 3 ? `${run.ids[0]}–${run.ids[run.ids.length - 1]}` : run.ids.join('、');
+    const how = stretchFix(segs, run, need, R);
     out.push({ rule: run.mode, ids: run.ids, start: run.start, end: run.end, secs,
       msg: `${MODE_ZH[run.mode]}只連續 ${secs} 秒（${ids}，${fmt(run.start)}–${fmt(run.end)}），至少要 ${need} 秒：切進去馬上又切回講者，畫面會晃`,
-      fix: run.mode === 'pip'
+      fix: how ? `${how}；不想併就把這幾段改成疊在講者上的字卡` : run.mode === 'pip'
         ? `把前後相鄰的段也換成全畫面的模板（或併成一段），讓子母畫面連續 ≥ ${need} 秒；湊不到就把這幾段改成疊在講者上的字卡`
         : `把這一段拉長到 ≥ ${need} 秒（併進前後一行），或改成疊在講者上的字卡` });
   }
   return out;
+}
+
+// 不夠長的區塊：往後（或往前）併最少幾段就夠長，寫成照抄就能改的一句（大綱的 from／to 是句號；沒帶就回 ''，用通用的說法）
+//   往後：區塊最後一段的 to 改成被併那幾段最後一段的 to；往前：區塊第一段的 from 改成被併那一段的 from
+//   不跨過章節、整張幕（mode 是 null 的段），往前不併進開頭的字卡區
+function stretchFix(segs, run, need, R) {
+  const all = [...segs].filter((s) => s.end > s.start).sort((a, b) => a.start - b.start);
+  const first = all.findIndex((s) => s.id === run.ids[0]), last = all.findIndex((s) => s.id === run.ids[run.ids.length - 1]);
+  if (first < 0 || last < 0 || !all[first].from || !all[last].to) return '';
+  const ok = (a, b) => b - a >= need - TOL;
+  // 併到第 k 段之後，再過去緊接著的同一種版面的段會接成同一個區塊，一起算
+  const reachFwd = (k) => { let e = all[k].end; for (let i = k + 1; i < all.length && all[i].mode === run.mode && all[i].start - e <= R.join + 1e-6; i++) e = Math.max(e, all[i].end); return e; };
+  const reachBack = (k) => { let s = all[k].start; for (let i = k - 1; i >= 0 && all[i].mode === run.mode && s - all[i].end <= R.join + 1e-6; i--) s = Math.min(s, all[i].start); return s; };
+  const tries = [];
+  // 併段最多併 2 段（再多一段畫面要撐太久）；子母畫面另外可以把相鄰的段換成全畫面的模板（最多 3 段）
+  for (let k = last + 1; k < all.length && k - last <= 3 && all[k].to && all[k].mode; k++) {
+    const end = reachFwd(k);
+    if (!ok(run.start, end)) continue;
+    const eat = all.slice(last + 1, k + 1).map((s) => s.id), secs = r1(end - run.start);
+    if (eat.length <= 2) tries.push({ n: eat.length, text: `把 ${all[last].id} 的 to 改成 ${all[k].to}（併進 ${eat.join('、')}，那${eat.length > 1 ? '幾' : '一'}行從大綱刪掉），${MODE_ZH[run.mode]}就連續 ${secs} 秒` });
+    if (run.mode === 'pip') tries.push({ n: eat.length + 0.5, text: `把 ${eat.join('、')} 也換成全畫面的模板（照 --map 那一行〔子母畫面〕的模板），子母畫面就連續 ${secs} 秒` });
+    break;
+  }
+  for (let k = first - 1; k >= 0 && first - k <= 3 && all[k].from && all[k].mode && all[k].start >= R.intro - 1e-6; k--) {
+    const start = reachBack(k);
+    if (!ok(start, run.end)) continue;
+    const eat = all.slice(k, first).map((s) => s.id), secs = r1(run.end - start);
+    if (eat.length <= 2) tries.push({ n: eat.length, text: `把 ${all[first].id} 的 from 改成 ${all[k].from}（併進 ${eat.join('、')}，那${eat.length > 1 ? '幾' : '一'}行從大綱刪掉），${MODE_ZH[run.mode]}就連續 ${secs} 秒` });
+    if (run.mode === 'pip') tries.push({ n: eat.length + 0.5, text: `把 ${eat.join('、')} 也換成全畫面的模板（照 --map 那一行〔子母畫面〕的模板），子母畫面就連續 ${secs} 秒` });
+    break;
+  }
+  return tries.sort((a, b) => a.n - b.n).slice(0, 2).map((x) => x.text).join('；或') || '';
 }
 
 // 每一行地圖該用哪一種版面。modesOf(row) → { any: [這一行的語意有哪幾種版面的模板], first: 首選模板的版面 }

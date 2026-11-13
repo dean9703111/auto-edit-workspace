@@ -24,7 +24,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # 先跑自動檢查（check.yml 的同一批測試），過了才部署
+  check:
+    uses: ./.github/workflows/check.yml
+
   deploy:
+    needs: check
     runs-on: ubuntu-latest
     environment:
       name: github-pages

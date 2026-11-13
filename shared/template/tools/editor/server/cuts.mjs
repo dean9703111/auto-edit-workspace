@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { parseCutsMd, setCutChecks } from '../../media.mjs';
+import { parseCutsMd, setCutChecks } from '../../lib/rough/cuts.mjs';
+import { writeAtomic } from '../../lib/atomic.mjs';
 
 const fail = (message, status = 400, extra = {}) => Object.assign(new Error(message), { status, extra });
 const sha = (s) => crypto.createHash('sha1').update(s).digest('hex');
@@ -60,6 +61,6 @@ export function saveCuts(ctx, body) {
     if (typeof v !== 'boolean') throw fail(`第 ${k} 列要給 true 或 false`);
   }
   const next = setCutChecks(text, cut);
-  if (next !== text) fs.writeFileSync(f.cuts, next);
+  if (next !== text) writeAtomic(f.cuts, next);   // AI 可能同時在讀這個檔：寫完才換上，不讀到半個檔
   return cutsState(ctx);
 }

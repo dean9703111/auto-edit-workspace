@@ -4,6 +4,8 @@
 //   validateMedia(it, { cues, tm, pipAt, icons, steps, canvas, badge, err, warn }) → { summary, json }（badge＝小節角標在畫面上的框 { box, side }，plan.json 有 sections 才傳）
 //                                                          段落時間定案後：畫面位置、錄影片段（cut 會切開）、運鏡、紅框（含跟捲動）、放大鏡、
 //                                                          說明卡 callouts、聚光燈 spot、STEP 膠囊 steps、箭頭 arrows（resolveMedia＝過渡期別名）
+//                                                          內部（032 C10）：validateMedia 只算畫面幾何、組 mc，之後每一節是收 mc 的小函式（mediaPieces、mediaRetime、
+//                                                          markRects、mediaLenses、placeCallouts、mediaArrows、badgeCollisions、mediaReport…），照呼叫順序排在後面
 //   newStepState()                                         STEP 編號狀態（整份 plan.json 一個）
 //   mediaJobs(it)                                          build 要準備的素材檔（轉檔、複製、放大鏡逐格）
 //   mediaParts(it, { off, lim, base, nextTrack, mediaDb, edit, outDur }) → { html, tl[] }（主合成用；off＝--test 起點）
@@ -20,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { parseTime, cueSeconds, r3, FPS } from './time.mjs';
+import { parseTime, cueSeconds, r3, FPS, clock2 } from './time.mjs';
 import { probeMedia, VIDEO_EXT, IMAGE_EXT } from './ff.mjs';
 import { splitAtJoins, dB } from './edit.mjs';
 import { visibleLen, nearest, loadIcons } from './scenes.mjs';
@@ -41,7 +43,7 @@ export const WHIP = { stretch: 1.15, blur: 24 };
 export const TILT = { rx: 22, ry: -8, dy: 40, scale: 0.94, fade: 0.25, persp: 1800 };
 // contain：放在字幕帶上方（y 0–940，和作者錄影段「可見區不碰字幕帶」同理）；cover：鋪滿 1920×1080
 export const VIEW = { contain: [0, 0, 1920, 940], cover: [0, 0, 1920, 1080] };
-export const PIP_ZONE = [1424, 581, 1888, 951];   // 子母畫面外框禁入區 x1, y1, x2, y2
+export const PIP_ZONE = CANVAS.landscape.pip.zone;   // 子母畫面外框禁入區 x1, y1, x2, y2
 const CAPTION_Y = 920;
 const MAX_FILE = [3840, 2160];
 const MARK = { pad: 6, sw: 4, draw: 0.4, out: 0.3, min: 0.5, hold: 1, max: 2, rx: 6 };
@@ -137,7 +139,7 @@ const TEMPLATE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 let iconCache = null;
 
 const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
-const fmt = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+const fmt = clock2;
 const n3 = (x) => String(r3(x));
 const even = (x) => Math.max(2, Math.floor(x / 2) * 2);
 const inter = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
@@ -201,7 +203,7 @@ export function mediaCorner(info, fit = 'contain', { w = 0, h = 80, dflt = [1824
 // 橫式錄影段的子母畫面要落在錄影裡面（使用者：「右下的子母畫面要在螢幕錄影範圍內」）：
 //   跨在錄影邊上 → 移進錄影右下角，外框離錄影邊 BADGE_INSET（右緣和小節角標對齊）；回傳 [dx, dy]＝相對畫布右下的位移
 //   只碰到邊邊（手機直式、正方形的圖、很扁的橫幅）→ null：留在原位，移進去反而蓋掉素材一大塊；本來就在裡面（鋪滿）→ null
-const PIP_BODY = [1424, 594, 1856, 918], PIP_RING = 9;   // 本體（canvas.mjs 的 pip.box）；外框比本體多 9 px（brand.mjs drawPipFrame）
+const [PX, PY, PW, PH] = CANVAS.landscape.pip.box, PIP_BODY = [PX, PY, PX + PW, PY + PH], PIP_RING = 9;   // 本體（canvas.mjs 的 pip.box）；外框比本體多 9 px（brand.mjs drawPipFrame）
 const PIP_KEEP = 0.25;                                   // 小視窗重疊素材不到這個比例算「只碰到邊邊」
 export function pipShift(G) {
   const R = [G.left, G.top, G.left + G.width, G.top + G.height];
@@ -502,6 +504,7 @@ export function assetUsage(projectDir, scenes) {
   return { screen: one('assets/screen/'), images: one('assets/images/') };
 }
 
+const BADGE_WHY = '壓到右上角的小節角標';   // 說明卡、箭頭的位置避開小節角標時的理由
 export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null, steps: stepState = null, canvas = null, badge = null, waitLead = WAIT.lead, err, warn }) {
   const m = it.media, seg = it.seg;
   const s = it.start, e = it.end;
@@ -548,7 +551,34 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   }
   const [VX, VY, VW, VH] = F.view[m.fit], [FX, FY, FW, FH] = F.focus;
   const toStage = (b) => stageOf(G, b);
+  // 後面各節拆成收 mc 的小函式（032 C10）：段落、素材、畫面位置與共用的換算都放這裡，各節算出來的再掛回 mc。
+  // 順序不能換：後面的節讀前面寫在 m 上的值（pieces、cams、marks、lenses…），✖／⚠ 的先後也照這個順序
+  const mc = { it, m, seg, sd, s, e, W, H, F, G, VX, VY, VW, VH, FX, FY, FW, FH, toStage, cues, tm, pipAt, icons, stepState, badge, waitLead, err, warn };
 
+  mediaPieces(mc);
+  Object.assign(mc, mediaHelpers(mc));        // tAt、inSeg、boxOf、keysOk
+  mediaRetime(mc);
+  mediaRedact(mc);
+  mediaSideItems(mc);
+  Object.assign(mc, mediaMoves(mc));          // camAt、moving
+  mc.marks = parseMarks(mc);
+  mc.callouts = parseCallouts(mc);
+  markRects(mc);
+  mediaLenses(mc);
+  Object.assign(mc, mediaSteps(mc));          // stepList、capAt、capsule
+  Object.assign(mc, annotationHelpers(mc));   // ov、camErr、cutWarn、lensAt、pipOn、scrBox、offScreen、markBoxes…
+  capsuleSide(mc);
+  placeCallouts(mc);
+  mediaSpots(mc);
+  mc.dropped = mediaArrows(mc);
+  capsuleCollisions(mc);
+  badgeCollisions(mc);
+  mediaWaits(mc);
+  return mediaReport(mc);
+}
+
+// validateMedia 的一節：錄影切成幾片（m.pieces；out 換算速度 m.speed）
+function mediaPieces({ it, m, s, e, tm, err, warn }) {
   // 錄影片段：接點（cut）切開，檔案的第 t 秒＝素材的第 t×speed 秒
   if (m.kind === 'video' && !m.retimeRaw) {
     const r0 = tm.unmapStart(s);
@@ -576,7 +606,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       m.pieces.push({ s: p.s, e: r3(Math.min(p.e, p.s + room)), fms: p.fms });
     }
   }
+}
 
+// validateMedia 共用的換算：時間（tAt、inSeg）、素材座標（boxOf）、欄位（keysOk）；寫錯就 err
+function mediaHelpers({ s, e, cues, W, H, F, err }) {
   // 時間：#N／#Ne／+秒（本段起點後）
   const tAt = (v, what) => {
     const t = parseTime(v);
@@ -611,7 +644,11 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const k of Object.keys(o)) if (!keys.includes(k)) { err(`${what}.${k}：沒有這個欄位（可用：${keys.join('、')}）`); ok = false; }
     return ok;
   };
+  return { tAt, inSeg, boxOf, keysOk };
+}
 
+// validateMedia 的一節：同一段裡變速、定格（m.retime、m.pieces）
+function mediaRetime({ it, m, s, e, tm, tAt, inSeg, err }) {
   // --- 同一段裡變速、定格（retime）：檔案就是這一段，長度＝段長，第 t 秒＝照 knots 內插的素材秒數 ---
   m.retime = null;
   if (m.kind === 'video' && m.retimeRaw) {
@@ -655,7 +692,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       m.pieces = splitAtJoins(s, e, tm).map((p) => ({ s: p.s, e: p.e, fms: r3(p.ms - r0) }));
     } else m.pieces = [];
   }
+}
 
+// validateMedia 的一節：打碼（m.redact）
+function mediaRedact({ m, seg, s, tm, keysOk, boxOf, tAt, inSeg, err, warn }) {
   // --- 打碼（redact）：框的座標換成轉出來的檔案尺寸，時間換成檔案的秒數，轉檔時燒進去 ---
   m.redact = [];
   if (Array.isArray(seg.redact)) {
@@ -675,7 +715,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       m.redact.push({ i, at, until, box: [box[0] * sx, box[1] * sy, box[2] * sx, box[3] * sy].map((v) => Math.round(v)) });
     });
   } else if (seg.redact != null) err('redact 要寫成陣列（[{ "box": [x, y, w, h] }]）');
+}
 
+// validateMedia 的一節：右側步驟清單的標題與每一條（m.side）
+function mediaSideItems({ m, sd, keysOk, tAt, inSeg, err, warn }) {
   // --- 右側步驟清單：標題、每一條的字與時間 ---
   if (m.side) {
     if (keysOk(sd, 'side', ['title', 'items'])) {
@@ -696,7 +739,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       m.side.items.push({ i, at, text });
     });
   }
+}
 
+// validateMedia 的一節：運鏡、慢推（m.cams、m.kb、m.kbTo；回傳 camAt(t)：那一刻的鏡頭、moving(a, b)：那段期間有沒有在動）
+function mediaMoves({ m, seg, s, e, G, W, H, VX, VY, VW, VH, FX, FY, FW, FH, toStage, keysOk, tAt, inSeg, boxOf, err, warn }) {
   // --- 運鏡 ---
   const ID = { z: 1, x: 0, y: 0 };
   const camFor = (box) => {
@@ -760,7 +806,11 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     return c;
   };
   const moving = (a, b) => m.kb ? false : m.cams.some((mv) => mv.t0 < b - 1e-6 && mv.t0 + mv.dur > a + 1e-6);
+  return { camAt, moving };
+}
 
+// validateMedia 的一節：紅框的欄位與時間（回傳 marks；位置等說明卡驗完再算）
+function parseMarks({ seg, e, keysOk, tAt, inSeg, boxOf, err, warn }) {
   // --- 紅框 ---
   const marks = [];
   (seg.marks || []).forEach((mk, i) => {
@@ -813,7 +863,11 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       return true;
     });
   }
+  return marks;
+}
 
+// validateMedia 的一節：說明卡的欄位與時間（回傳 callouts；位置等運鏡、膠囊定了再擺）
+function parseCallouts({ seg, e, icons, keysOk, tAt, inSeg, boxOf, err }) {
   // --- 說明卡：先驗欄位與時間（紅框數要一起算）；位置等運鏡、膠囊定了再擺 ---
   const callouts = [];
   if (Array.isArray(seg.callouts)) seg.callouts.forEach((co, i) => {
@@ -848,7 +902,11 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     }
     callouts.push({ i, at, until, box, text, iconSvg, side: co.side ?? null, quick, ready });
   });
+  return callouts;
+}
 
+// validateMedia 的一節：同一時間的紅框數、紅框在畫面上的位置與全程查擋到（m.marks）
+function markRects({ it, m, F, marks, callouts, camAt, toStage, pipAt, err, warn }) {
   // 同一時間的紅框（marks＋callouts 的框）≤ 2
   const frames = [...marks.map((x) => ({ at: x.at, until: x.until, co: false })), ...callouts.map((x) => ({ at: x.at, until: x.until, co: true }))];
   const crowded = new Set();
@@ -889,7 +947,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const t of times.sort((a, b) => a - b)) check(rectAt(t), t, `marks[${mk.i}]`, ` 在 ${fmt(t)}`);
     return { id: `mmk-${it.id}-${n + 1}`, i: mk.i, at: mk.at, until: mk.until, rect, sw: +(MARK.sw / c.z).toFixed(3), rx: +(MARK.rx / c.z).toFixed(2), path };
   });
+}
 
+// validateMedia 的一節：放大鏡（m.lenses）
+function mediaLenses({ it, m, seg, s, e, F, camAt, moving, toStage, pipAt, keysOk, tAt, inSeg, boxOf, err, warn }) {
   // --- 放大鏡 ---
   m.lenses = [];
   const frameSnap = (t) => r3(s + Math.round((t - s) * FPS) / FPS);
@@ -951,7 +1012,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
       crop, ranges: ranges.map(({ at, frames }) => ({ at, frames })), map: null, urls: null,
     });
   });
+}
 
+// validateMedia 的一節：STEP 膠囊（m.steps；回傳 stepList、capAt(side)：膠囊放左／右的框、capsule）
+function mediaSteps({ m, seg, s, e, F, G, badge, stepState, keysOk, tAt, inSeg, err, warn }) {
   // --- STEP 膠囊（編號全片累加、同字沿用；和前一段相接、同字時不重播進場）---
   const st = stepState || newStepState();
   const stepList = [];
@@ -1001,7 +1065,11 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   if (seg.stepsSide != null && !['left', 'right'].includes(seg.stepsSide)) err(`stepsSide 只能是 "left"（預設）或 "right"，現在是 ${JSON.stringify(seg.stepsSide)}`);
   const capsule = stepList.length ? { box: capAt(seg.stepsSide === 'right' ? 'right' : 'left'), side: seg.stepsSide === 'right' ? 'right' : 'left', from: carry ? s : stepList[0].at, to: e } : null;
   m.steps = { list: stepList, carry, capsule };
+  return { stepList, capAt, capsule };
+}
 
+// validateMedia 說明卡、聚光燈、箭頭共用的判斷（時間重疊、運鏡、接點、放大鏡、子母畫面、畫面座標、紅框占的範圍）
+function annotationHelpers({ m, F, camAt, toStage, pipAt, err, warn }) {
   // --- 說明卡、聚光燈、箭頭共用 ---
   const ov = (a1, b1, a2, b2) => a1 < b2 - 1e-6 && a2 < b1 - 1e-6;
   const moveIn = (a, b) => m.cams.findIndex((mv) => ov(a, b, mv.t0, mv.t0 + mv.dur));
@@ -1026,15 +1094,21 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const x of steps2) if (ov(a, b, x.at, x.end)) out.push(xyxy(toScreen(x.rect, camAt(Math.max(a, x.at)))));
     return out;
   };
+  return { ov, moveIn, camErr, cutWarn, lensAt, pipOn, scrBox, offScreen, markBoxes };
+}
 
+// validateMedia 的一節：STEP 膠囊壓到紅框、沒寫 stepsSide → 換到右邊（改 capsule）
+function capsuleSide({ m, seg, badge, capsule, capAt, markBoxes }) {
   // 膠囊壓到紅框、沒寫 stepsSide → 換到右邊（右邊也壓到、或右上有小節角標就留左邊，下面的碰撞檢查會 ⚠）
-  const BADGE_WHY = '壓到右上角的小節角標';
   if (capsule && seg.stepsSide == null) {
     const hitAt = (box) => m.marks.some((mk) => markBoxes(mk, capsule.from, capsule.to).some((b) => hits(box, b)));
     const right = capAt('right');
     if (hitAt(capsule.box) && !hitAt(right) && !(badge && hits(right, badge.box))) Object.assign(capsule, { box: right, side: 'right' });
   }
+}
 
+// validateMedia 的一節：說明卡擺位置（m.callouts）
+function placeCallouts({ m, F, badge, callouts, capsule, camErr, scrBox, offScreen, lensAt, cutWarn, pipOn, ov, markBoxes, err, warn }) {
   // --- 說明卡：擺位置（運鏡、紅框、膠囊都定了）---
   m.callouts = [];
   for (const co of callouts) {
@@ -1064,7 +1138,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     }
     m.callouts.push({ ...co, k: m.callouts.length + 1, R: R.map(ri), side: p.side, card: p.card, anchor: p.anchor, x: p.x, top: p.top, lead: p.lead });
   }
+}
 
+// validateMedia 的一節：聚光燈（m.spots）
+function mediaSpots({ m, seg, e, F, ov, lensAt, camErr, scrBox, offScreen, cutWarn, pipOn, keysOk, tAt, inSeg, boxOf, err, warn }) {
   // --- 聚光燈 ---
   m.spots = [];
   if (Array.isArray(seg.spot)) seg.spot.forEach((sp, i) => {
@@ -1093,7 +1170,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     if (F.pip && pipOn(at, until) && inter(holeBox, F.pip) > 0.3 * hole[2] * hole[3]) warn(`${what} 的亮區被右下角的子母畫面擋住（全畫面變暗卻看不到重點）→ 這段寫 "pip": false，或先用 moves 把那一塊推到畫面中間`);
     m.spots.push({ i, k: m.spots.length + 1, at, until, hole, ready: r3(at + SPOT.fade) });
   });
+}
 
+// validateMedia 的一節：箭頭（m.arrows；回傳拿掉了幾支）
+function mediaArrows({ m, seg, e, W, H, F, capsule, badge, ov, lensAt, camErr, cutWarn, camAt, toStage, pipOn, markBoxes, keysOk, tAt, inSeg, err, warn }) {
   // --- 箭頭 ---
   m.arrows = [];
   let dropped = 0;
@@ -1135,7 +1215,11 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     if (p.alt) { err(`${what} 從 "${ar.from}" 方向放會${p.why[ar.from].join('、')} → 改 "from": "${p.alt}"（放得下）`); return; }
     m.arrows.push({ i, k: m.arrows.length + 1, at, until, from: p.from, len: p.len, u: p.u, tip: p.tip, base: p.base, tail: p.tail, c1: p.c1, c2: p.c2, ready: r3(at + ARROW.fade) });
   });
+  return dropped;
+}
 
+// validateMedia 的一節：STEP 膠囊壓到說明卡的框、亮區、紅框（⚠）
+function capsuleCollisions({ m, capsule, ov, markBoxes, warn }) {
   // --- 膠囊碰撞（⚠）---
   if (capsule) {
     const told = new Set();
@@ -1148,7 +1232,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const sp of m.spots) hit(xyxy(sp.hole), sp.at, sp.until, `spot[${sp.i}] 的亮區`);
     for (const mk of m.marks) for (const b of markBoxes(mk, capsule.from, capsule.to)) hit(b, mk.at, mk.until, `marks[${mk.i}] 的紅框`);
   }
+}
 
+// validateMedia 的一節：小節角標蓋到膠囊、說明卡的框、亮區、紅框（⚠）
+function badgeCollisions({ m, badge, capsule, markBoxes, warn }) {
   // --- 小節角標碰撞（⚠）：膠囊指定放右上、紅框／亮區在角標底下（角標蓋在錄影上，z 55）---
   if (badge) {
     const told = new Set();
@@ -1163,7 +1250,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     for (const sp of m.spots) hit(xyxy(sp.hole), sp.at, `spot[${sp.i}] 的亮區`);
     for (const mk of m.marks) for (const b of markBoxes(mk, mk.at, mk.until)) hit(b, mk.at, `marks[${mk.i}] 的紅框`);
   }
+}
 
+// validateMedia 的一節：等待卡（m.waits）
+function mediaWaits({ it, m, s, F, G, tm, cues, waitLead, warn }) {
   // --- 等待卡：沒人講話的 ×5 以上快轉（WAIT）；位置＝錄影可見區的中心，不壓到講者小視窗、右側步驟清單 ---
   m.waits = [];
   if (m.kind === 'video' && m.hold == null && !m.waitOff) {
@@ -1184,7 +1274,10 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     if (m.waits.length && !m.waitLines) warn(`等待卡（${m.waits.map((x) => `${r3(x.a - s)}–${r3(x.b - s)}s，實際 ${realText(x.real)}`).join('、')}）沒有寫在等什麼，卡片上只會寫「處理中」→ 這段加 "wait": "在等什麼"（1–2 行、用「｜」分行、每行 ≤ ${WAIT.maxLen} 字，例 "AI 逐張辨識收據｜寫入 Excel"）；不要等待卡寫 "wait": false`);
     else if (!m.waits.length && m.waitLines) warn(`wait：這段沒有「×${WAIT.speed} 以上、至少 ${WAIT.minLen} 秒、沒人講話」的快轉，等待卡不會出現 → 確認 retime／out 的快轉夠快夠長、那幾秒沒有字幕；用不到就拿掉 wait`);
   }
+}
 
+// validateMedia 的一節：報告那一行（summary）與 --check --json 的 media 欄（json）；錄影沒有標註、定格太久 ⚠
+function mediaReport({ m, seg, s, e, W, H, F, G, stepList, dropped, warn }) {
   // --- 報告與 JSON ---
   const pathN = m.marks.reduce((a, mk) => a + mk.path.length, 0);
   const nums = stepList.map((x) => x.n);
@@ -1199,7 +1292,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   ].filter(Boolean);
   // 下限：錄影段 ≥ 4 秒（style.md「標註不要密」的平均間距）卻一個標註、運鏡都沒有
   if ((m.kind === 'video' || m.hold != null) && !parts.length && e - s >= 4) {
-    warn(`錄影 ${r3(e - s)}s 沒有任何標註或運鏡 → 講解講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3–4）；真的沒有要指的東西，回報寫保留理由`);
+    warn(`錄影 ${r3(e - s)}s 沒有任何標註或運鏡 → 講解講到畫面上的東西（按鈕、欄位、選項、數字，或說「這邊」「點」「選」）那句加紅框 marks 或說明卡 callouts，一步一步的操作加 steps（auto-edit-screen 步驟 3）；真的沒有要指的東西，回報寫保留理由`);
   }
   if (m.retime) parts.unshift(`變速 ${retimeText(m.retime)}`);
   if (m.redact.length) parts.unshift(`打碼 ${m.redact.length} 處`);
@@ -1227,6 +1320,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   else if (F.format !== 'portrait' && rec) json.view = { scale: r3(G.kx), moves: m.cams.length, lens: m.lenses.length, landscape: true };
   return { summary, json };
 }
+
 // 過渡期別名（002 改成呼叫 validateMedia 之前 build 照常能跑）
 export const resolveMedia = validateMedia;
 

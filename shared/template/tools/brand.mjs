@@ -15,7 +15,8 @@
  *
  * 風格包（shared/template/styles/<名稱>/：主色＋外框＋背景圖一包，lib/styles.mjs）：
  *   brand.mjs list                     列出風格包，標出工作區目前用的是哪一包
- *   brand.mjs use <名稱>               把那一包複製進 shared/template/（之後每一集預設用它）；目前的設定不屬於任何包時先停下來
+ *   brand.mjs use <名稱> [--force]     把那一包複製進 shared/template/（之後每一集預設用它）；目前的設定不屬於任何包時先自動存成「原本-<YYYYMMDD>」
+ *                                      （同名就加 -2），印存在哪、怎麼換回來；--force＝不存直接蓋
  *   brand.mjs pack <名稱> [--color "#RRGGBB"] [--bg <資料夾>] [--note "說明"]
  *                                      建一包：不給 --color／--bg 就把 shared/template/ 目前的主色與背景存成一包；
  *                                      給了就照色碼算 brand.css、畫外框，背景圖從 --bg 資料夾拿 bg-*.jpg（不動 shared/template/ 目前的設定）
@@ -27,17 +28,26 @@
  *                                                       設定（頭銜 1–3 個，用逗號或「、」分開；--short 是金句出處，不給＝姓名）
  *   brand.mjs speaker off                               關閉：不放講者介紹
  *
- * 背景圖（HTML 路線）：node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
- *   用 HyperFrames 的 Chrome 把 HTML 截成 bg-<kind>.jpg，疊留空區框、量留空區乾不乾淨，三張到齊做並排預覽 preview.jpg。
- *   不寫 shared/template/：使用者同意後才複製（auto-edit-style 步驟 2–4）。完整用法：--help
+ * 背景圖（輸出都在暫存資料夾，不寫 shared/template/：使用者同意後才 pack --bg、use；auto-edit-style 步驟 2–4）：
+ *   brand.mjs bg --tmp                                                    開一個暫存資料夾、印完整路徑
+ *   brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]       HTML 路線：用 HyperFrames 的 Chrome 截成 bg-<kind>.jpg，
+ *                                                                         疊留空區框、量留空區乾不乾淨，三張到齊做並排預覽 preview.jpg
+ *   brand.mjs bg --image <圖> --kind fs|side|ch [--dark] --out <資料夾>    使用者的圖：縮放裁切成那一種的尺寸、zones 圖、量留空區（同一套量法）
+ *   brand.mjs bg --verify <資料夾>                                        三張（和 -dark）尺寸、zones、preview.jpg，最後印停點 ⑥ 那兩行
+ *   完整用法：--help
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { listPacks, packsJs, samePack, copyIfDiff, templatePathOf, PACK_KIT, PACK_BG, STYLES_DIR, DEFAULT_PACK } from './lib/styles.mjs';
 import { readSpeaker, validateSpeaker, SPEAKER_FILE, SET_CMD } from './lib/speaker.mjs';
 import { writeSetting } from './lib/settings.mjs';
+import { ok, warn, fail, next, cmdLine, report } from './lib/say.mjs';
+import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
+import { stopLines } from './lib/stops.mjs';
+import { CANVAS } from './lib/canvas.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEEP = '#0B1020';
@@ -147,7 +157,9 @@ export function encodePng(rgba, w, h) {
 
 // 照 hyperframes-scenes make-pip-frame.py：本體 1344,630–1856,918；由外而內 3px 白 alpha 0.4 描邊（外圓角 15）→ 6px 主色環（圓角 12）
 // → 內縮 3px 的 #141414 環（圓角 6）→ 挖空本體（圓角 3）。4 倍超取樣畫好，再用 Lanczos-3（預乘 alpha）縮回 1×，和 PIL 的 LANCZOS 相同做法。
-export function drawPipFrame(color, { box = [1424, 594, 1856, 918], W = 1920, H = 1080 } = {}) {
+// 本體與畫布尺寸照 lib/canvas.mjs（032 C7：子母畫面的框只寫在那裡）；box 是 [x1, y1, x2, y2]
+const PIP_L = CANVAS.landscape.pip.box, PIP_V = CANVAS.portrait.pip.box;
+export function drawPipFrame(color, { box = [PIP_L[0], PIP_L[1], PIP_L[0] + PIP_L[2], PIP_L[1] + PIP_L[3]], W = CANVAS.landscape.W, H = CANVAS.landscape.H } = {}) {
   const ring = parseHex(color);
   const K = 4;
   const [x1, y1, x2, y2] = box;
@@ -219,7 +231,7 @@ export function drawPipFrame(color, { box = [1424, 594, 1856, 918], W = 1920, H 
 export const BG_KINDS = {
   fs: { w: 1920, h: 1080, zh: '全畫面與插入素材', zones: [
     { name: '全畫面主卡', color: 'red', zh: '紅', rect: [120, 150, 1380, 862] },
-    { name: '子母畫面', color: 'blue', zh: '藍', rect: [1424, 581, 1888, 951] },
+    { name: '子母畫面', color: 'blue', zh: '藍', rect: [...CANVAS.landscape.pip.zone] },   // 禁入區（lib/canvas.mjs 的 pip.zone）
     { name: '字幕帶', color: 'yellow', zh: '黃', rect: [0, 920, 1920, 1080] }] },
   side: { w: 960, h: 1080, zh: '側邊欄面板', zones: [{ name: '側邊欄文字區', color: 'red', zh: '紅', rect: [0, 86, 816, 864] }] },
   ch: { w: 1920, h: 1080, zh: '章節轉場', zones: [{ name: '章名卡', color: 'red', zh: '紅', rect: [160, 260, 1760, 870] }] },
@@ -250,7 +262,7 @@ export function decorRatio(rgb, W, H, [x1, y1, x2, y2], th = BG_DECOR.lumDiff) {
 const shown = (p, root) => { const r = path.relative(root, p); return r && !r.startsWith('..') && !path.isAbsolute(r) ? r : p; };
 
 export async function renderBg({ html, kind, out, chrome, kitDir }) {
-  const { run, probeMedia, rawFrame } = await import('./lib/ff.mjs');
+  const { run, probeMedia } = await import('./lib/ff.mjs');
   const { htmlShot } = await import('./lib/raster.mjs');
   const K = BG_KINDS[kind];
   const htmlAbs = path.resolve(html);
@@ -261,25 +273,74 @@ export async function renderBg({ html, kind, out, chrome, kitDir }) {
   try {
     try { htmlShot({ chrome, file: render, out: raw, width: K.w, height: K.h }); } catch (e) { throw new Error(`Chrome 截圖失敗：${e.message} → 先用瀏覽器打開這個 HTML 看有沒有錯，或跑 npx hyperframes browser ensure`); }
   } finally { fs.rmSync(render, { force: true }); }
-  let r = run('ffmpeg', ['-y', '-v', 'error', '-i', raw, '-q:v', '2', jpg]);
+  const r = run('ffmpeg', ['-y', '-v', 'error', '-i', raw, '-q:v', '2', jpg]);
   if (r.status !== 0) throw new Error(`轉 JPG 失敗：${String(r.stderr).trim().slice(-300)} → 重跑一次；還是失敗就把這行回報`);
   const info = probeMedia(jpg);
   if (info.width !== K.w || info.height !== K.h) throw new Error(`截出來是 ${info.width}×${info.height}，不是 ${K.w}×${K.h} → 回報這一行（Chrome 版本：${chrome}）`);
-  const boxes = K.zones.map((z) => `drawbox=x=${z.rect[0]}:y=${z.rect[1]}:w=${z.rect[2] - z.rect[0]}:h=${z.rect[3] - z.rect[1]}:color=${z.color}@0.8:t=4`).join(',');
-  r = run('ffmpeg', ['-y', '-v', 'error', '-i', jpg, '-vf', boxes, '-q:v', '2', zones]);
-  if (r.status !== 0) throw new Error(`疊留空區框失敗：${String(r.stderr).trim().slice(-300)} → 重跑一次；還是失敗就把這行回報`);
-  const px = rawFrame(jpg, { width: K.w, height: K.h });
-  const decor = K.zones.map((z) => ({ ...z, ratio: decorRatio(px, K.w, K.h, z.rect) }));
+  const decor = await zonesOf({ jpg, kind, zones });
   return { kind, jpg, zones, raw, decor, external: /\bhttps?:\/\/(?!www\.w3\.org\/)/i.test(src) };
 }
 
-export async function makePreview(out) {
+// 疊留空區框存成 zones 圖、量每個框裡的裝飾占比：HTML、使用者的圖、--verify 三條路同一套量法
+export async function zonesOf({ jpg, kind, zones }) {
+  const { run, rawFrame } = await import('./lib/ff.mjs');
+  const K = BG_KINDS[kind];
+  const boxes = K.zones.map((z) => `drawbox=x=${z.rect[0]}:y=${z.rect[1]}:w=${z.rect[2] - z.rect[0]}:h=${z.rect[3] - z.rect[1]}:color=${z.color}@0.8:t=4`).join(',');
+  const r = run('ffmpeg', ['-y', '-v', 'error', '-i', jpg, '-vf', boxes, '-q:v', '2', zones]);
+  if (r.status !== 0) throw new Error(`疊留空區框失敗：${String(r.stderr).trim().slice(-300)} → 重跑一次；還是失敗就把這行回報`);
+  const px = rawFrame(jpg, { width: K.w, height: K.h });
+  return K.zones.map((z) => ({ ...z, ratio: decorRatio(px, K.w, K.h, z.rect) }));
+}
+
+// 量完的那幾行：框裡有裝飾 ⚠（附 fix），都乾淨 ✓
+export function decorLines(kind, decor, fix) {
+  const K = BG_KINDS[kind];
+  const bad = decor.filter((z) => z.ratio > BG_DECOR.maxRatio);
+  if (!bad.length) return [ok(`留空區乾淨（${K.zones.map((z) => z.zh).join('、')}框裡沒有裝飾）`)];
+  return bad.map((z) => `⚠ ${z.zh}框（${z.name}）裡有 ${(z.ratio * 100).toFixed(z.ratio < 0.01 ? 2 : 1)}% 的像素是裝飾（和框內中位亮度差 > ${BG_DECOR.lumDiff}）→ ${fix}`);
+}
+
+// 使用者給的圖（或其他路線尺寸不對的圖）：縮放到蓋滿、從中間裁成這一種的尺寸（image-routing.md 第 1 節就是叫這一條：brand.mjs bg --image）；dark＝存成 bg-<kind>-dark.jpg
+export async function cropBg({ image, kind, dark = false, out }) {
+  const { run, probeMedia } = await import('./lib/ff.mjs');
+  const K = BG_KINDS[kind], sfx = dark ? '-dark' : '';
+  fs.mkdirSync(out, { recursive: true });
+  const jpg = path.join(out, `bg-${kind}${sfx}.jpg`), zones = path.join(out, `zones-${kind}${sfx}.jpg`);
+  const r = run('ffmpeg', ['-y', '-v', 'error', '-i', path.resolve(image), '-vf', `scale=${K.w}:${K.h}:force_original_aspect_ratio=increase,crop=${K.w}:${K.h}`, '-frames:v', '1', '-q:v', '2', jpg]);
+  if (r.status !== 0) throw new Error(`縮放裁切失敗：${String(r.stderr).trim().slice(-300)} → 確認「${image}」是圖片（jpg、png、webp；HEIC 先轉成 jpg），再跑一次`);
+  const info = probeMedia(jpg);
+  if (info.width !== K.w || info.height !== K.h) throw new Error(`裁出來是 ${info.width}×${info.height}，不是 ${K.w}×${K.h} → 回報這一行`);
+  return { kind, dark, jpg, zones, decor: await zonesOf({ jpg, kind, zones }) };
+}
+
+// 停點 ⑥ 之前的總驗證：亮色三張一定要有、暗色（-dark）有就一起驗；尺寸、zones 圖、並排預覽
+export async function verifyBg(dir) {
+  const { probeMedia } = await import('./lib/ff.mjs');
+  const kinds = Object.keys(BG_KINDS), errors = [], warnings = [], rows = [];
+  for (const sfx of ['', '-dark']) {
+    const have = kinds.filter((k) => fs.existsSync(path.join(dir, `bg-${k}${sfx}.jpg`)));
+    if (!sfx && have.length < kinds.length) errors.push(`少了 ${kinds.filter((k) => !have.includes(k)).map((k) => `bg-${k}.jpg`).join('、')} → 三張都要有（brand.mjs bg 的 --html 或 --image 做那一種）`);
+    if (sfx && have.length && have.length < kinds.length) warnings.push(`暗色只有 ${have.map((k) => `bg-${k}-dark.jpg`).join('、')} → 暗色三張都要有，或都拿掉（沿用目前的暗色）`);
+    for (const kind of have) {
+      const K = BG_KINDS[kind], file = path.join(dir, `bg-${kind}${sfx}.jpg`), m = probeMedia(file);
+      if (m.width !== K.w || m.height !== K.h) { errors.push(`bg-${kind}${sfx}.jpg 是 ${m.width}×${m.height}，要 ${K.w}×${K.h} → 用 brand.mjs bg --image <那張圖> --kind ${kind}${sfx ? ' --dark' : ''} --out <這個資料夾> 裁成對的尺寸`); continue; }
+      rows.push({ kind, dark: !!sfx, file, decor: await zonesOf({ jpg: file, kind, zones: path.join(dir, `zones-${kind}${sfx}.jpg`) }) });
+    }
+  }
+  if (errors.length) return { errors, warnings, rows, previews: [] };
+  const previews = [(await makePreview(dir)).file];
+  if (rows.filter((r) => r.dark).length === kinds.length) previews.push((await makePreview(dir, '-dark')).file);
+  return { errors, warnings, rows, previews };
+}
+
+// sfx：'-dark' 時拼暗色三張，存成 preview-dark.jpg
+export async function makePreview(out, sfx = '') {
   const { run } = await import('./lib/ff.mjs');
-  const f = (k, p) => path.join(out, `${p}-${k}.jpg`);
+  const f = (k, p) => path.join(out, `${p}-${k}${sfx}.jpg`);
   const need = ['fs', 'side', 'ch'];
   const missing = need.filter((k) => !fs.existsSync(f(k, 'bg')) || !fs.existsSync(f(k, 'zones')));
   if (missing.length) return { missing };
-  const file = path.join(out, 'preview.jpg');
+  const file = path.join(out, `preview${sfx}.jpg`);
   const ins = [...need.map((k) => f(k, 'bg')), ...need.map((k) => f(k, 'zones'))].flatMap((x) => ['-i', x]);
   const fc = '[0]scale=640:360[a];[1]scale=320:360[b];[2]scale=640:360[c];[3]scale=640:360[d];[4]scale=320:360[e];[5]scale=640:360[f];[a][b][c]hstack=3[top];[d][e][f]hstack=3[bot];[top][bot]vstack';
   const r = run('ffmpeg', ['-y', '-v', 'error', ...ins, '-filter_complex', fc, '-q:v', '2', file]);
@@ -295,21 +356,39 @@ const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與
 
   node shared/template/tools/brand.mjs list
       列出風格包（shared/template/styles/<名稱>/：主色＋外框＋背景圖），標出工作區目前用的那一包。
-  node shared/template/tools/brand.mjs use <名稱>
+  node shared/template/tools/brand.mjs use <名稱> [--force]
       把那一包複製進 shared/template/（每一集預設用它；只換一集就在 plan.json 寫 "style": "<名稱>"）。
-      目前的主色與背景不屬於任何包時會停下來，請先 brand.mjs pack <新名稱> 存起來（或加 --force 直接蓋掉）。
+      目前的主色與背景不屬於任何包時，先自動存成「原本-<YYYYMMDD>」（同名已經有就加 -2、-3…）再換，印存在哪、怎麼換回來；
+      --force＝不存，直接蓋掉。
   node shared/template/tools/brand.mjs pack <名稱> [--color "#RRGGBB"] [--bg <資料夾>] [--note "說明"]
       建一包：只給名稱＝把 shared/template/ 目前的主色與背景存成一包；給 --color 就照色碼算 brand.css、畫外框；
       給 --bg 就從那個資料夾拿 bg-fs.jpg、bg-side.jpg、bg-ch.jpg（和 -dark 三張，有的話）。不會改 shared/template/ 目前的設定。
 
-  node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
-      背景圖的 HTML 路線：用 Chrome 把 HTML 截成 bg-<kind>.jpg（fs 1920×1080、side 960×1080、ch 1920×1080），
-      另存疊上留空區框的 zones-<kind>.jpg；三張都在時產生並排預覽 preview.jpg。
-      HTML 裡顏色用 var(--brand)、字型用 var(--font-cjk)（工具自動接上 kit/brand.css 與 kit/fonts.css）。
-      輸出在 --out（預設 HTML 所在的資料夾），不能在 shared/template/ 裡；使用者看過 preview.jpg 同意後，
-      才把 bg-*.jpg 複製進 shared/template/。
+  node shared/template/tools/brand.mjs speaker
+      看講者資料（shared/setting.json：14 講者介紹的姓名、頭銜，15 金句的出處）。
+  node shared/template/tools/brand.mjs speaker --name "林大寶" --titles "影音創作者,科技部落客" [--short "大寶"]
+      設定講者（頭銜 1–3 個，用逗號或「、」分開；--short 是金句出處，不給＝姓名；只改頭銜就只給 --titles）。
+  node shared/template/tools/brand.mjs speaker off
+      關閉：不放講者介紹。
 
-測試用：--kit <kit 資料夾>、--no-frame（換主色時不重畫外框）、--chrome <chrome 路徑>`;
+  背景圖（三張：fs 1920×1080、side 960×1080、ch 1920×1080；暗色是 bg-<kind>-dark.jpg）。輸出都先放暫存資料夾，
+  不能在 shared/template/ 裡；使用者看過 preview.jpg 同意（停點 ⑥）後，用 pack --bg 存成風格包、use 套用，不要自己複製。
+
+  node shared/template/tools/brand.mjs bg --tmp
+      開一個新的暫存資料夾，印完整路徑（後面指令的 <暫存資料夾> 都換成它）。
+  node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]
+      HTML 路線：用 Chrome 把 HTML 截成 bg-<kind>.jpg，另存疊上留空區框的 zones-<kind>.jpg、量留空區乾不乾淨；
+      三張都在時產生並排預覽 preview.jpg。HTML 裡顏色用 var(--brand)、字型用 var(--font-cjk)
+      （工具自動接上 kit/brand.css 與 kit/fonts.css）。--out 預設是 HTML 所在的資料夾。
+  node shared/template/tools/brand.mjs bg --image <圖> --kind fs|side|ch [--dark] --out <資料夾>
+      使用者給的圖（或其他路線尺寸不對的圖）：縮放到蓋滿、從中間裁成那一種的尺寸，存成 bg-<kind>.jpg
+      （--dark 存成 bg-<kind>-dark.jpg），另存 zones 圖、量留空區（和 HTML 路線同一套量法）。--out 一定要寫。
+  node shared/template/tools/brand.mjs bg --verify <資料夾>
+      停點 ⑥ 之前跑：三張（和 -dark 三張，有的話）尺寸對不對、重做 zones 圖、量留空區、產生並排預覽 preview.jpg
+      （暗色三張齊了另出 preview-dark.jpg），最後印停點 ⑥ 那兩行（完整路徑）。尺寸不對、少一張 ✖，結束碼 1。
+
+測試用：--kit <kit 資料夾>、--no-frame（換主色時不重畫外框）、--chrome <chrome 路徑>
+旗標也可以寫成 --旗標=值（只在第一個 = 切，例 --note="a=b"）；要值的旗標後面沒接值（或接著另一個旗標）✖。`;
 
 const inside = (child, parent) => {
   const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
@@ -317,41 +396,102 @@ const inside = (child, parent) => {
   return r === '' || (!r.startsWith('..') && !path.isAbsolute(r));
 };
 
+// 四組子指令共用的參數寫法（lib/cli.mjs）：--旗標=值 只在第一個 = 切；缺值、或下一個是另一個旗標就 ✖，附各自的「→ 怎麼改」
+function takeValue(args, i, k, inline, fix) {
+  try { return valueOf(args, i, k, inline); } catch (e) { throw new Error(`${e.message} → ${fix}`); }
+}
+
 async function bgCli(args) {
   const o = {};
   for (let i = 0; i < args.length; i++) {
-    const k = args[i];
-    if (['--html', '--kind', '--out', '--kit', '--chrome'].includes(k)) {
-      if (args[i + 1] == null) throw new Error(`${k} 後面要接值 → 在 ${k} 後面補上值（用 node shared/template/tools/brand.mjs bg --help 看格式）`);
-      o[k.slice(2)] = args[++i];
-    } else throw new Error(`brand.mjs bg 看不懂「${k}」→ 照這個用法改：node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]`);
+    const [k, inline] = String(args[i]).startsWith('--') ? splitFlag(args[i]) : [null];
+    if (['html', 'image', 'verify', 'kind', 'out', 'kit', 'chrome'].includes(k)) [o[k], i] = takeValue(args, i, k, inline, `在 --${k} 後面補上值（用 node shared/template/tools/brand.mjs bg --help 看格式）`);
+    else if (['dark', 'tmp', 'help'].includes(k)) o[k] = true;
+    else throw new Error(`brand.mjs bg 看不懂「${args[i]}」→ 照這個用法改：node shared/template/tools/brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]（其他用法：--help）`);
   }
-  if (!Object.hasOwn(BG_KINDS, o.kind ?? '')) throw new Error(`--kind 只能是 fs（1920×1080，全畫面與插入素材）、side（960×1080，側邊欄面板）、ch（1920×1080，章節轉場），現在是「${o.kind ?? ''}」→ 改成 fs、side 或 ch`);
-  if (!o.html || !/\.html?$/i.test(o.html) || !fs.existsSync(o.html)) throw new Error(`--html 要指一個 .html 檔，找不到「${o.html ?? ''}」→ 先把背景圖做成 .html 檔（USAGE-reference.md R9.3），再用 --html 指它的路徑`);
+  if (o.help) { console.log(BG_HELP); return 0; }
+  const mode = oneOf(o, ['tmp', 'verify', 'image', 'html']);
+  if (mode === 'tmp') {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bg-'));
+    console.log(ok(`暫存資料夾：${dir}`));
+    console.log('後面指令裡的 <暫存資料夾> 都換成上面這個完整路徑（每條指令是新的 shell，變數不會留著）；回報與停點 ⑥ 也寫它');
+    return 0;
+  }
   const kitDir = o.kit ? path.resolve(o.kit) : path.resolve(HERE, '..', 'kit');
   const templateDir = path.dirname(kitDir);
+  const root = path.resolve(templateDir, '..', '..');
+  if (mode === 'verify') return bgVerifyCli(path.resolve(o.verify), templateDir, root);
+  if (o.dark && mode !== 'image') throw new Error('--dark 只能和 --image 一起用（HTML 路線還不能做暗色）→ 暗色背景用 mmx 或使用者的圖，再跑 brand.mjs bg --image <圖> --kind <種類> --dark --out <暫存資料夾>');
+  if (!Object.hasOwn(BG_KINDS, o.kind ?? '')) throw new Error(`--kind 只能是 fs（1920×1080，全畫面與插入素材）、side（960×1080，側邊欄面板）、ch（1920×1080，章節轉場），現在是「${o.kind ?? ''}」→ 改成 fs、side 或 ch`);
+  if (mode === 'image') return bgImageCli(o, templateDir, root);
+  if (!o.html || !/\.html?$/i.test(o.html) || !fs.existsSync(o.html)) throw new Error(`--html 要指一個 .html 檔，找不到「${o.html ?? ''}」→ 先把背景圖做成 .html 檔（USAGE-reference.md R9.3），再用 --html 指它的路徑`);
   const out = path.resolve(o.out ?? path.dirname(path.resolve(o.html)));
   if (inside(out, templateDir)) throw new Error(`輸出資料夾不能在 shared/template/ 裡（${out}）→ 先放暫存資料夾，使用者看過 preview.jpg 同意後再複製`);
   const { findChrome } = await import('./lib/audit-browser.mjs');
   const chrome = findChrome({ chrome: o.chrome });
-  const root = path.resolve(templateDir, '..', '..');
   const K = BG_KINDS[o.kind];
   console.log(`背景圖（HTML 路線）：${shown(path.resolve(o.html), root)} → ${o.kind}（${K.w}×${K.h}）`);
   console.log(`Chrome：${chrome}`);
   const r = await renderBg({ html: o.html, kind: o.kind, out, chrome, kitDir });
-  console.log(`→ ${shown(r.jpg, root)}（${K.w}×${K.h} ✔）`);
-  const zh = (z) => `${z.zh}＝${z.name} ${z.rect[0] === 0 && z.rect[2] === K.w ? '' : `x ${z.rect[0]}–${z.rect[2]}、`}y ${z.rect[1]}–${z.rect[3]}`;
-  console.log(`→ ${shown(r.zones, root)}（${K.zones.map(zh).join('；')}）`);
+  console.log(`→ ${shown(r.jpg, root)}（${K.w}×${K.h} ✓）`);
+  console.log(`→ ${shown(r.zones, root)}（${zonesText(o.kind)}）`);
   if (r.external) console.log('⚠ HTML 裡有網路網址（http／https）：離線或沒有網路時會載不到 → 圖片、字型改用本機檔案');
-  const bad = r.decor.filter((z) => z.ratio > BG_DECOR.maxRatio);
-  if (bad.length) for (const z of bad) console.log(`⚠ ${z.zh}框（${z.name}）裡有 ${(z.ratio * 100).toFixed(z.ratio < 0.01 ? 2 : 1)}% 的像素是裝飾（和框內中位亮度差 > ${BG_DECOR.lumDiff}）→ 裝飾移到框外，重跑這個指令`);
-  else console.log(`✔ 留空區乾淨（${K.zones.map((z) => z.zh).join('、')}框裡沒有裝飾）`);
+  for (const l of decorLines(o.kind, r.decor, '裝飾移到框外，重跑這個指令')) console.log(l);
   const pv = await makePreview(out);
   if (pv.missing.length) { console.log(`還沒做：${pv.missing.join('、')} → 各寫一個 HTML，跑 ${pv.missing.map((k) => `--kind ${k}`).join('、')}（三張都有才產生 preview.jpg）`); return 0; }
   console.log(`→ ${shown(pv.file, root)}（三張並排：上排原圖、下排疊留空區框，1600×720）`);
   console.log('下一步：把 preview.jpg 給使用者看，停下來等同意（停點 ⑥）。同意後照 auto-edit-style 步驟 4 存成風格包再套用，不要自己複製進 shared/template/：');
   console.log(`  node shared/template/tools/brand.mjs pack <包名> --bg "${shown(out, root)}"`);
   console.log('  node shared/template/tools/brand.mjs use <包名>');
+  return 0;
+}
+
+// zones 圖每個框是什麼（印在 zones 圖那一行）
+const zonesText = (kind) => {
+  const K = BG_KINDS[kind];
+  return K.zones.map((z) => `${z.zh}＝${z.name} ${z.rect[0] === 0 && z.rect[2] === K.w ? '' : `x ${z.rect[0]}–${z.rect[2]}、`}y ${z.rect[1]}–${z.rect[3]}`).join('；');
+};
+
+// bg --image：使用者的圖裁成一種；同一個亮／暗還缺哪幾種就印同一張圖接著裁的指令，三種齊了就接 --verify
+async function bgImageCli(o, templateDir, root) {
+  if (!o.image || !fs.existsSync(o.image) || !fs.statSync(o.image).isFile()) throw new Error(`--image 要指一張圖，找不到「${o.image ?? ''}」→ 寫使用者那張圖的路徑（jpg、png、webp）`);
+  if (!o.out) throw new Error(`--image 一定要寫 --out <資料夾> → 先跑 node shared/template/tools/brand.mjs bg --tmp 開一個暫存資料夾（不要寫進素材資料夾或 shared/template/）`);
+  const out = path.resolve(o.out);
+  if (inside(out, templateDir)) throw new Error(`輸出資料夾不能在 shared/template/ 裡（${out}）→ 先放暫存資料夾，使用者看過 preview.jpg 同意後再複製`);
+  const K = BG_KINDS[o.kind], dark = !!o.dark, sfx = dark ? '-dark' : '';
+  console.log(`背景圖（使用者的圖）：${shown(path.resolve(o.image), root)} → ${o.kind}${dark ? '（暗色）' : ''}（${K.w}×${K.h}，縮放到蓋滿、從中間裁切）`);
+  const r = await cropBg({ image: o.image, kind: o.kind, dark, out });
+  console.log(`→ ${shown(r.jpg, root)}（${K.w}×${K.h} ✓）`);
+  console.log(`→ ${shown(r.zones, root)}（${zonesText(o.kind)}）`);
+  for (const l of decorLines(o.kind, r.decor, '圖在框裡有東西，字卡會疊在上面：問使用者要不要換一張；說照用就照用（回報寫進去）')) console.log(l);
+  const missing = Object.keys(BG_KINDS).filter((k) => !fs.existsSync(path.join(out, `bg-${k}${sfx}.jpg`)));
+  const L = missing.length
+    ? next(`${dark ? '暗色' : ''}還沒做 ${missing.join('、')}：同一張圖接著裁（要用別張圖就換掉 --image 那一段）`, ...missing.map((k) => cmdLine('brand.mjs', ['bg', '--image', path.resolve(o.image), '--kind', k, ...(dark ? ['--dark'] : []), '--out', out])))
+    : next('三種都有了：驗證尺寸、出並排預覽、印停點 ⑥', cmdLine('brand.mjs', ['bg', '--verify', out]));
+  for (const l of L) console.log(l);
+  return 0;
+}
+
+// bg --verify：停點 ⑥ 之前的總驗證；最後兩行是停點 ⑥（完整路徑）
+async function bgVerifyCli(dir, templateDir, root) {
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error(`--verify 要指放背景圖的資料夾，找不到「${dir}」→ 寫 brand.mjs bg 的 --out 那個資料夾`);
+  if (inside(dir, templateDir)) throw new Error(`--verify 的資料夾不能在 shared/template/ 裡（${dir}）→ 驗暫存資料夾；風格包的圖用 brand.mjs list 看`);
+  const v = await verifyBg(dir);
+  for (const w of v.warnings) console.log(warn(w));
+  if (v.errors.length) { for (const e of v.errors) console.log(fail(e)); return 1; }
+  const lines = [];
+  for (const r of v.rows) {
+    const K = BG_KINDS[r.kind];
+    lines.push(`${path.basename(r.file)} ${K.w}×${K.h} ✓`);
+    for (const l of decorLines(r.kind, r.decor, '重做那一張（裝飾移到框外）或換一張；使用者看過說可以就照用')) lines.push(`  ${l}`);
+  }
+  for (const l of lines) console.log(l);
+  for (const f of v.previews) console.log(`→ ${shown(f, root)}（三張並排：上排原圖、下排疊留空區框，1600×720）`);
+  const dirty = v.rows.filter((r) => r.decor.some((z) => z.ratio > BG_DECOR.maxRatio)).map((r) => path.basename(r.file));
+  const rep = [`三張背景：${v.rows.filter((r) => !r.dark).map((r) => `${path.basename(r.file)} ${BG_KINDS[r.kind].w}×${BG_KINDS[r.kind].h}`).join('、')}（${dir}）`,
+    ...(v.rows.some((r) => r.dark) ? [`暗色：${v.rows.filter((r) => r.dark).map((r) => path.basename(r.file)).join('、')}${v.previews[1] ? `（並排 ${path.basename(v.previews[1])}）` : ''}`] : []),
+    dirty.length ? `留空區：⚠ ${dirty.join('、')} 框裡有裝飾（上面有每一張的比例）` : '留空區：乾淨'];
+  for (const l of report(rep, { stop: stopLines.bg(dir) })) console.log(l);
   return 0;
 }
 
@@ -372,18 +512,34 @@ export function currentPack(templateDir) {
   return listPacks(templateDir).find((p) => samePack(templateDir, path.join(templateDir, STYLES_DIR, p.dir)))?.dir ?? null;
 }
 
-export function usePack(templateDir, name, { force = false } = {}) {
+// 「原本-20261113」已經有了就用「原本-20261113-2」、「-3」…
+export function freePackName(templateDir, base) {
+  const taken = (n) => fs.existsSync(path.join(templateDir, STYLES_DIR, n));
+  if (!taken(base)) return base;
+  let i = 2;
+  while (taken(`${base}-${i}`)) i++;
+  return `${base}-${i}`;
+}
+const ymd = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+
+export function usePack(templateDir, name, { force = false, now = new Date() } = {}) {
   const packs = listPacks(templateDir);
   const p = packs.find((x) => x.dir === name);
   if (!p) throw new Error(`找不到風格包「${name}」→ 現有：${packs.map((x) => x.dir).join('、') || '（沒有）'}；看清單：node shared/template/tools/brand.mjs list`);
   const cur = currentPack(templateDir);
-  if (!cur && !force) throw new Error('shared/template/ 目前的主色或背景不屬於任何風格包，直接換會弄丟 → 先存起來：node shared/template/tools/brand.mjs pack <新名稱>（確定不要了才加 --force）');
+  // 目前的主色與背景不屬於任何包：直接換會弄丟，先自動存成「原本-<YYYYMMDD>」（AI 不用自己記得先 pack）；--force＝確定不要了，不存
+  let saved = null;
+  if (!cur && !force) {
+    saved = freePackName(templateDir, `原本-${ymd(now)}`);
+    makePack(templateDir, saved, { note: `換成「${name}」之前自動存的` });
+    writePacksJs(templateDir);
+  }
   const dir = path.join(templateDir, STYLES_DIR, name);
   const changed = [];
   for (const f of p.files) if (copyIfDiff(path.join(dir, f), path.join(templateDir, templatePathOf(f)))) changed.push(templatePathOf(f));
   // 這包沒有暗色背景：留著舊的會變成「亮色是新包、暗色是舊包」→ 提醒
   const noDark = PACK_BG.filter((f) => f.endsWith('-dark.jpg') && !p.files.includes(f));
-  return { from: cur, pack: p, changed, noDark };
+  return { from: cur, saved, pack: p, changed, noDark };
 }
 
 export function makePack(templateDir, name, { color = null, bg = null, note = '', kitDir = path.join(templateDir, 'kit') } = {}) {
@@ -421,13 +577,11 @@ export function makePack(templateDir, name, { color = null, bg = null, note = ''
 async function packCli(cmd, args) {
   const o = { _: [] };
   for (let i = 0; i < args.length; i++) {
-    const k = args[i];
-    if (['--color', '--bg', '--note', '--kit'].includes(k)) {
-      if (args[i + 1] == null) throw new Error(`${k} 後面要接值 → 看用法：node shared/template/tools/brand.mjs --help`);
-      o[k.slice(2)] = args[++i];
-    } else if (k === '--force') o.force = true;
-    else if (k.startsWith('--')) throw new Error(`brand.mjs ${cmd} 沒有 ${k} 這個參數 → 看用法：node shared/template/tools/brand.mjs --help`);
-    else o._.push(k);
+    if (!String(args[i]).startsWith('--')) { o._.push(args[i]); continue; }
+    const [k, inline] = splitFlag(args[i]);
+    if (['color', 'bg', 'note', 'kit'].includes(k)) [o[k], i] = takeValue(args, i, k, inline, '看用法：node shared/template/tools/brand.mjs --help');
+    else if (k === 'force') o.force = true;
+    else throw new Error(`brand.mjs ${cmd} 沒有 --${k} 這個參數 → 看用法：node shared/template/tools/brand.mjs --help`);
   }
   const kitDir = o.kit ? path.resolve(o.kit) : undefined;
   const templateDir = templateOf(kitDir);
@@ -447,7 +601,8 @@ async function packCli(cmd, args) {
   if (!name || o._.length > 1) throw new Error(`brand.mjs ${cmd} 要接一個風格包名稱 → 例：node shared/template/tools/brand.mjs ${cmd} ${DEFAULT_PACK}`);
   if (cmd === 'use') {
     const r = usePack(templateDir, name, { force: !!o.force });
-    console.log(`換成風格包「${name}」（原本：${r.from ?? '不屬於任何包'}）：${r.changed.length ? r.changed.map((f) => `shared/template/${f}`).join('、') : '檔案都一樣，沒有變'}`);
+    if (r.saved) console.log(ok(`原本的主色與背景不屬於任何包，先存成風格包「${r.saved}」（shared/template/${STYLES_DIR}/${r.saved}/）；要換回來：node shared/template/tools/brand.mjs use ${r.saved}`));
+    console.log(`換成風格包「${name}」（原本：${r.from ?? (r.saved ? `不屬於任何包，已存成「${r.saved}」` : '不屬於任何包')}）：${r.changed.length ? r.changed.map((f) => `shared/template/${f}`).join('、') : '檔案都一樣，沒有變'}`);
     if (r.noDark.length) console.log(`⚠ 這包沒有暗色背景（${r.noDark.join('、')}），shared/template/ 留著原本的；暗色主題的集數背景會對不上主色 → 補進 shared/template/${STYLES_DIR}/${name}/ 再 use 一次`);
     console.log('接著重跑 node shared/template/tools/build.mjs，完成影片就會換；預覽頁 shared/template/index.html 重新整理即可');
     return 0;
@@ -480,12 +635,10 @@ export function writeSpeaker(templateDir, data) {
 function speakerCli(args) {
   const o = { _: [] };
   for (let i = 0; i < args.length; i++) {
-    const k = args[i];
-    if (['--name', '--titles', '--short', '--kit'].includes(k)) {
-      if (args[i + 1] == null) throw new Error(`${k} 後面要接值 → 例：${SET_CMD}`);
-      o[k.slice(2)] = args[++i];
-    } else if (k.startsWith('--')) throw new Error(`brand.mjs speaker 沒有 ${k} 這個參數 → 例：${SET_CMD}`);
-    else o._.push(k);
+    if (!String(args[i]).startsWith('--')) { o._.push(args[i]); continue; }
+    const [k, inline] = splitFlag(args[i]);
+    if (['name', 'titles', 'short', 'kit'].includes(k)) [o[k], i] = takeValue(args, i, k, inline, `例：${SET_CMD}`);
+    else throw new Error(`brand.mjs speaker 沒有 --${k} 這個參數 → 例：${SET_CMD}`);
   }
   const templateDir = templateOf(o.kit ? path.resolve(o.kit) : undefined);
   const where = `shared/${SPEAKER_FILE}`;
@@ -520,7 +673,7 @@ function speakerCli(args) {
 // ---------- CLI ----------
 
 // 直式講者面板（009 FR-130）：1080×1920 透明，y 897–903 一條 6px 主色線（上半資訊面板／下半講者面板的分隔線，canvas.mjs pip.frame）
-export function drawPipFrameV(color, { W = 1080, H = 1920, line = [897, 903] } = {}) {
+export function drawPipFrameV(color, { W = CANVAS.portrait.W, H = CANVAS.portrait.H, line = [PIP_V[1] - 3, PIP_V[1] + 3] } = {}) {
   const [r, g, b] = parseHex(color);
   const rgba = Buffer.alloc(W * H * 4);
   for (let y = line[0]; y < line[1]; y++) for (let x = 0; x < W; x++) rgba.set([r, g, b, 255], (y * W + x) * 4);
@@ -546,10 +699,12 @@ async function cli() {
   if (args[0] === 'speaker') return speakerCli(args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--kit') kitDir = path.resolve(args[++i]);
-    else if (args[i] === '--no-frame') frame = false;
-    else if (args[i] === '--help') { console.log(BG_HELP); return 0; }
-    else color = args[i];
+    if (!String(args[i]).startsWith('--')) { color = args[i]; continue; }
+    const [k, inline] = splitFlag(args[i]);
+    if (k === 'kit') { let v; [v, i] = takeValue(args, i, k, inline, '寫 kit 資料夾的路徑（測試用；平常不用寫）'); kitDir = path.resolve(v); }
+    else if (k === 'no-frame') frame = false;
+    else if (k === 'help') { console.log(BG_HELP); return 0; }
+    else throw new Error(`brand.mjs 沒有 --${k} 這個參數 → 換主色：node shared/template/tools/brand.mjs "#1B7F4B"（其他用法：--help）`);
   }
   if (!color) { console.error('✖ 要給一個色碼 → 例如：node shared/template/tools/brand.mjs "#1B7F4B"；背景圖用 brand.mjs bg --html <檔> --kind fs|side|ch'); return 1; }
   const c = applyBrand(color, { kitDir, frame });
@@ -565,6 +720,7 @@ async function cli() {
   return 0;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// 經 symlink 執行也算（lib/cli.mjs 的 isMain 用 realpath 比）：以前直接比路徑，從 symlink 跑什麼都不做
+if (isMain(import.meta.url)) {
   cli().then((code) => { process.exitCode = code; }, (e) => { console.error(`✖ ${e.message}`); process.exitCode = 1; });
 }

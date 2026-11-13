@@ -2,13 +2,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, makeSrt, imp } from './helpers.mjs';
+import { TOOLS, makeSrt, imp, tmpDir, fixture } from './helpers.mjs';
 
+// 暫存都用 tmpDir：掛在呼叫它的那個 test 結束時清
 const tmpProject = (name = 'hf-rel-') => {
-  const project = fs.mkdtempSync(path.join(os.tmpdir(), name));
+  const project = tmpDir(null, name);
   fs.mkdirSync(path.join(project, 'work', 'hyperframes'), { recursive: true });
   return project;
 };
@@ -227,7 +227,7 @@ test('runJob：工作行程被砍 → 重跑前收掉它留下的子行程；同
 
 test('tmpFor／sweepTmp：暫存檔名帶 pid、副檔名不變（ffmpeg 靠它選格式）；只清主人不在的', async () => {
   const { tmpFor, sweepTmp, decodeIssues } = await imp('lib/ff.mjs');
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-rel-tmp-'));
+  const dir = tmpDir(null, 'hf-rel-tmp-');
   const t = tmpFor(path.join(dir, 'rough.mp4'));
   assert.equal(path.basename(t), `.rough.${process.pid}.tmp.mp4`);
   assert.equal(path.basename(tmpFor(path.join(dir, 'cuts.v1.json'))), `.cuts.v1.${process.pid}.tmp.json`);
@@ -245,8 +245,10 @@ test('tmpFor／sweepTmp：暫存檔名帶 pid、副檔名不變（ffmpeg 靠它�
 // ---------- 第 2、3 項：實際的影片 ----------
 
 function shortClip(file, { seconds = 2, size = '320x180', extra = [] } = {}) {
-  const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `testsrc2=s=${size}:r=30:d=${seconds}`, '-f', 'lavfi', '-i', `sine=f=440:d=${seconds}`, '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', ...extra, file], { encoding: 'utf8' });
-  assert.equal(r.status, 0, r.stderr);
+  const make = (f) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `testsrc2=s=${size}:r=30:d=${seconds}`, '-f', 'lavfi', '-i', `sine=f=440:d=${seconds}`, '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', ...extra, f], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
+  if (extra.length) { make(file); return file; }
+  // 同樣長度、尺寸的片子這一輪只做一次，各測試複製一份（有的測試會往檔裡寫垃圾）
+  fs.copyFileSync(fixture(`rel-${size}-${seconds}s.mp4`, make), file);
   return file;
 }
 
@@ -269,7 +271,7 @@ test('verify-rough：解碼有錯就 ✖（ffmpeg 結束碼還是 0，黑畫面�
 test('encodeFootage：寫完才換上，失敗舊檔不動、不留暫存；encodeFootagePolished 的聲音暫存帶 pid、用完就刪', { skip: ffSkip }, async () => {
   const { encodeFootage } = await imp('lib/ff.mjs');
   const { encodeFootagePolished } = await imp('lib/audio.mjs');
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-rel-enc-'));
+  const dir = tmpDir(null, 'hf-rel-enc-');
   const src = shortClip(path.join(dir, 'src.mp4')), dst = path.join(dir, 'out', 'rough.mp4');
   fs.mkdirSync(path.dirname(dst));
   fs.writeFileSync(dst, 'old');
@@ -321,7 +323,7 @@ test('build：底片要編碼走背景工作（戳記記底片大小與時間）
 
 test('probeMedia：旋轉 90／270 寬高交換，180 不換；主軌變直的、沒有黑邊；插入素材不變形', { skip: ffSkip }, async () => {
   const { probeMedia, encodeMedia } = await imp('lib/ff.mjs');
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-rel-rot-'));
+  const dir = tmpDir(null, 'hf-rel-rot-');
   const base = shortClip(path.join(dir, 'base.mp4'));
   const rotated = (deg) => {
     const f = path.join(dir, `r${deg}.mov`);
@@ -422,7 +424,7 @@ test('HLG 主軌：main.mp4 是 SDR BT.709，顏色照 LUT；舊版留下的 HDR
 test('素材異常：截斷的檔列進 main.json 的 warnings；沒聲音軌 ✖；聲音在第二軌用第二軌；全靜音 prep ✖；不支援的格式講清楚；壞的螢幕錄影不擋', { skip: ffSkip }, async () => {
   const { probeMedia, decodeIssues } = await imp('lib/ff.mjs');
   const { sourceEnd, pickAudioTrack } = await imp('media.mjs');
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-rel-src-'));
+  const dir = tmpDir(null, 'hf-rel-src-');
   const base = shortClip(path.join(dir, 'base.mp4'), { seconds: 4 });
   // 截斷（moov 在前，ffprobe 還是說 4 秒）
   const cut = path.join(dir, 'cut.mp4');
@@ -505,7 +507,7 @@ test('aeFailure：Timeline is empty 不要叫人查參數名稱；其他失敗�
 });
 
 test('joinMain：音軌、畫面的起點偏移照實保留（音畫不會差那麼多）', { skip: ffSkip }, async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-rel-sync-'));
+  const dir = tmpDir(null, 'hf-rel-sync-');
   const sync = path.join(dir, 'sync.mp4');
   let r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', "color=black:s=160x90:r=30:d=8,drawbox=enable='lt(mod(t,3),0.2)':c=white:t=fill", '-f', 'lavfi', '-i', "aevalsrc='if(lt(mod(t,3),0.2),0.8*sin(2*PI*1000*t),0)':s=48000:d=8", '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '30', '-c:a', 'aac', sync], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
@@ -531,7 +533,7 @@ test('joinMain：音軌、畫面的起點偏移照實保留（音畫不會差那
 
 test('講稿不是 UTF-8：srt-align、prep 都 ✖，字幕不會變亂碼；BOM＋CRLF、UTF-16（有 BOM）照常', async () => {
   const { readScript } = await imp('lib/script-file.mjs');
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-rel-enc-'));
+  const dir = tmpDir(null, 'hf-rel-enc-');
   const f = path.join(dir, '講稿.md');
   const text = '# 標題\n第一句話\n第二句話\n';
   fs.writeFileSync(f, text);
@@ -564,7 +566,7 @@ test('講稿不是 UTF-8：srt-align、prep 都 ✖，字幕不會變亂碼；BO
 
 test('atomic：writeAtomic 失敗舊檔不動、不留暫存；rewriteIfSame 內容變了就不寫；withLock 互斥、鎖太舊當沒有', async () => {
   const { writeAtomic, rewriteIfSame, withLock } = await imp('lib/atomic.mjs');
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-rel-at-'));
+  const dir = tmpDir(null, 'hf-rel-at-');
   const f = path.join(dir, 'plan.json');
   writeAtomic(f, 'A');
   assert.equal(fs.readFileSync(f, 'utf8'), 'A');
@@ -626,7 +628,7 @@ test('平行 --check-draft：快取不會掉別人寫的；--check 不會蓋掉�
 test('sweepStaleProfiles：開找臉 Chrome 的行程不在了 → 收掉那個 Chrome、刪 profile；主人還在的不動', { skip: process.platform === 'win32' }, async () => {
   const { sweepStaleProfiles } = await imp('lib/landmarks.mjs');
   const { spawn } = await import('node:child_process');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-rel-lm-'));
+  const tmp = tmpDir(null, 'hf-rel-lm-');
   const dead = path.join(tmp, 'look-lm-dead'), mine = path.join(tmp, 'look-lm-mine');
   fs.mkdirSync(dead); fs.mkdirSync(mine);
   // 假 Chrome：命令列帶著 profile 名稱

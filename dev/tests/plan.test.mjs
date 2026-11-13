@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { lib, imp, makeSrt, cueStart, cueEnd } from './helpers.mjs';
+import { lib, imp, makeSrt, cueStart, cueEnd, tmpDir } from './helpers.mjs';
 
 const { resolvePlan, pipGeometry, formatReport } = await imp('lib/plan.mjs');
 const { buildMain } = await imp('lib/main.mjs');
@@ -217,8 +217,8 @@ test('fx 字卡動態：host id 唯一（card-NN-k）、vars 檢查、bg 決定�
   assert.match(res.errors.join('\n'), /vars\.nope：fx 29 沒有這個變數（可用：.*number/);
 });
 
-test('custom：檔案要存在、data-composition-id 和檔名一致', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-custom-'));
+test('custom：檔案要存在、data-composition-id 和檔名一致', (t) => {
+  const dir = tmpDir(t, 'hf-custom-');
   fs.mkdirSync(path.join(dir, 'compositions'));
   fs.writeFileSync(path.join(dir, 'compositions', 'x-flow.html'), `<!doctype html><html><body><template><div id="x-flow" data-composition-id="x-flow2"></div><script>window.__timelines['x-flow2'] = 1;</script></template></body></html>`);
   const res = run([

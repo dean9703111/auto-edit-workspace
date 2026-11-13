@@ -3,16 +3,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { TEMPLATE as REAL_TEMPLATE, WORKSPACE, imp } from './helpers.mjs';
+import { TEMPLATE as REAL_TEMPLATE, WORKSPACE, imp, tmpDir as tmpFor } from './helpers.mjs';
 
 // kit/look.json 預設關（color 0、slim 0）；下面的測試要的是「預設開」的行為，用一份 look.json 改成 0.8／0.6 的模板（其他檔都連回真的模板）
 function templateWithLookOn() {
-  const t = fs.mkdtempSync(path.join(os.tmpdir(), 'look-tpl-'));
+  const t = tmpFor(null, 'look-tpl-');   // 整個檔跑完才清
   for (const f of fs.readdirSync(REAL_TEMPLATE)) if (f !== 'kit') fs.symlinkSync(path.join(REAL_TEMPLATE, f), path.join(t, f));
   fs.mkdirSync(path.join(t, 'kit'));
   for (const f of fs.readdirSync(path.join(REAL_TEMPLATE, 'kit'))) if (f !== 'look.json') fs.symlinkSync(path.join(REAL_TEMPLATE, 'kit', f), path.join(t, 'kit', f));
@@ -30,7 +29,7 @@ const { chromeCandidates } = await imp('lib/audit-browser.mjs');
 const HAS_FFMPEG = !spawnSync('ffmpeg', ['-version']).error;
 const HAS_CHROME = chromeCandidates().length > 0;
 const DEMO = path.join(WORKSPACE, 'projects', 'example', 'assets', 'camera', '示範口播.mp4');
-const tmpDir = (p = 'look-') => fs.mkdtempSync(path.join(os.tmpdir(), p));
+const tmpDir = (p = 'look-') => tmpFor(null, p);   // 掛在呼叫它的那個 test 結束時清
 const OK_PROBE = { assets: { ok: true, missing: [], bad: [] }, chrome: true };
 const sha256 = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 
@@ -286,7 +285,7 @@ test('ensureLook 判斷表：七列 × strict、key 與 report 原文、lookChec
   assert.deepEqual(L.lookCheck({ projectDir: d, plan: {}, templateDir: TEMPLATE, probe: OK_PROBE }).warnings, ['講者瘦臉略過：臉寬中位數 43 px < 60 px（畫面太小，瘦臉效果不到 1 px），只調光']);
   // 3：還在跑
   L.writeState(d, { run: { pid: process.pid, phase: 'detect' } });
-  assert.throws(() => run(d, {}, true), /^Error: 瘦臉還在跑（pid \d+；status 顯示「完成」再 build）→ node shared\/template\/tools\/look\.mjs status --project \S+$/);
+  assert.throws(() => run(d, {}, true), /^Error: 瘦臉還在跑（pid \d+；跑這條會接著等，做完再 build）→ node shared\/template\/tools\/look\.mjs run --project \S+$/);
   assert.match(run(d, {}, false).report[1], /^⚠ 講者瘦臉還在跑/);
   // 設定錯 → strict 丟 validateLook 的訊息
   assert.throws(() => run(d, { look: { color: 3 } }, true), /look\.color 要是 0–1 的數字/);
@@ -437,7 +436,7 @@ test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行�
     assert.equal(r.code, 2, bad.join(' '));
     assert.match(r.lines[0], /^✖ .*→ /, '每則 ✖ 都要有 → 改法（C-07）');
   }
-  assert.equal((await cli(['nope'])).lines[0], '✖ 沒有 run／preview／status／clear／ensure 以外的子指令「nope」 → 看用法：node shared/template/tools/look.mjs --help');
+  assert.equal((await cli(['nope'])).lines[0], '✖ 沒有 run／preview／status／clear／ensure／default／cancel 以外的子指令「nope」 → 看用法：node shared/template/tools/look.mjs --help');
   assert.equal((await cli(['status', 'x'])).lines[0], '✖ 看不懂的參數「x」 → 看用法：node shared/template/tools/look.mjs --help');
   assert.equal((await cli(['status', '--zzz'])).lines[0], '✖ 沒有 --zzz 這個參數 → 看用法：node shared/template/tools/look.mjs --help');
   assert.equal((await cli(['run', '--every', '3'])).lines[0], '✖ --every 只能是 1 或 2，現在是「3」 → 改成 --every 1 或 --every 2');
@@ -453,7 +452,7 @@ test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行�
   freshState(d2);
   fs.writeFileSync(path.join(d2, 'work', 'look-preview.jpg'), 'x');
   r = await cli(['status', '--project', d2]);
-  assert.ok(r.lines.includes('瘦臉底片：✔ 最新（work/rough-look.mp4，瘦臉 0.6、美顏 0，640×360）'), r.lines.join('\n'));
+  assert.ok(r.lines.includes('瘦臉底片：✓ 最新（work/rough-look.mp4，瘦臉 0.6、美顏 0，640×360）'), r.lines.join('\n'));
   // 沒有 plan.json：look 好了 → 構圖預覽，不叫人 build（C-01）；指令單獨一行（C-02）
   assert.match(r.lines.at(-2), /^→ 下一步：look 好了；接著跑構圖分析，再開剪輯台，把構圖台網址/);
   assert.match(r.lines.at(-1), /^node shared\/template\/tools\/qc\.mjs framing --project \S+$/);
@@ -472,19 +471,19 @@ test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行�
 // 指令單獨一行、可以整行複製執行：只有 node／npx 開頭、沒有全形說明黏在後面（C-02）
 const bareCmd = (c) => assert.match(c, /^(node shared\/template\/tools\/[\w-]+\.mjs|npx hyperframes) [^\s（）。；，、]+( [^\s（）。；，、]+)*$/, c);
 
-test('lookNextStep（C-01、C-02、C-06）：還沒好 → 修／等／重跑／run（超過 2 分鐘帶 --background）／ensure／Chrome；好了 → 構圖預覽 → status.mjs，plan 有段落才 build', { skip: !HAS_FFMPEG && '沒有 ffmpeg' }, async () => {
+test('lookNextStep（C-01、C-02、C-06）：還沒好 → 修／等／重跑／run（超過 2 分鐘提醒「⏳ 還在跑」就再跑同一條）／ensure／Chrome；好了 → 構圖預覽 → status.mjs，plan 有段落才 build', { skip: !HAS_FFMPEG && '沒有 ffmpeg' }, async () => {
   const ns = (dir, plan = {}, probe = OK_PROBE) => { const s = L.lookNextStep({ projectDir: dir, plan, templateDir: TEMPLATE, probe }); bareCmd(s.cmd); assert.ok(!s.note.includes('\n')); return s; };
-  // 120 秒、30 fps：3600 格 → 偵測＋變形預估 3 分（> 2 → --background）；landmark 快取還在時只變形，預估 1 分
+  // 120 秒、30 fps：3600 格 → 偵測＋變形預估 3 分（> 2 → 說明多一句「⏳ 還在跑」就再跑同一條）；landmark 快取還在時只變形，預估 1 分
   const dir = tmpDir('look-next-'), work = path.join(dir, 'work');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   assert.equal(spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=gray:s=64x64:r=30', '-t', '120', '-c:v', 'libx264', '-preset', 'ultrafast', path.join(work, 'rough.mp4')]).status, 0);
   let s = ns(dir);
   assert.deepEqual([s.step, s.done], ['run', false]);
-  assert.equal(s.note, '瘦臉底片要重做（還沒跑過），預估 3 分（Windows 約 ×1.5–3），超過 2 分鐘所以在背景跑，之後每 30 秒跑一次 look.mjs status');
-  assert.match(s.cmd, /^node shared\/template\/tools\/look\.mjs run --project \S+ --background$/);
+  assert.equal(s.note, '瘦臉底片要重做（還沒跑過），預估 3 分（Windows 約 ×1.5–3）；印「⏳ 還在跑」就再跑同一條（會接著等）');
+  assert.match(s.cmd, /^node shared\/template\/tools\/look\.mjs run --project \S+$/);
   assert.equal(L.nextLines(s)[0], `→ 下一步：${s.note}`);
   assert.throws(() => L.ensureLook({ projectDir: dir, plan: {}, templateDir: TEMPLATE, probe: OK_PROBE }),
-    /^Error: 瘦臉底片不是最新的（還沒跑過；預估 3 分，超過 2 分鐘就在背景跑，用 look\.mjs status 看進度；不要瘦臉就在 plan\.json 寫 "look": \{ "slim": 0 \}）→ 先跑 node shared\/template\/tools\/look\.mjs run --project \S+ --background$/);
+    /^Error: 瘦臉底片不是最新的（還沒跑過；預估 3 分，印「⏳ 還在跑」就再跑同一條（會接著等）；不要瘦臉就在 plan\.json 寫 "look": \{ "slim": 0 \}）→ 先跑 node shared\/template\/tools\/look\.mjs run --project \S+$/);
   // 只改 slim（landmark 還是最新）→ 只重做變形：預估 1 分、前景跑（C-06）
   freshState(dir);
   s = ns(dir, { look: { slim: 0.8 } });
@@ -497,7 +496,7 @@ test('lookNextStep（C-01、C-02、C-06）：還沒好 → 修／等／重跑／
   L.writeState(dir, { run: { pid: process.pid, phase: 'render' } });
   s = ns(dir, { look: { slim: 0.8 } });
   assert.deepEqual([s.step, s.done], ['wait', false]);
-  assert.match(s.cmd, /^node shared\/template\/tools\/look\.mjs status --project \S+$/);
+  assert.match(s.cmd, /^node shared\/template\/tools\/look\.mjs run --project \S+$/);
   L.writeState(dir, { run: { pid: process.pid, phase: 'done' } });
   assert.equal(ns(dir, { look: { slim: 0.8 } }, { assets: { ok: false, missing: ['face_landmarker.task'], bad: [] }, chrome: true }).cmd, 'node shared/template/tools/look.mjs ensure --download');
   assert.equal(ns(dir, { look: { slim: 0.8 } }, { ...OK_PROBE, chrome: false }).cmd, 'npx hyperframes browser ensure');
@@ -597,7 +596,7 @@ test('CLI ensure：缺檔 ✖ 退出 1；--download 從本機假來源補、sha2
     fs.writeFileSync(path.join(v, 'manifest.json'), JSON.stringify(manifest(`${base}/b.wasm`)));
     r = await cli(['ensure', '--template', t, '--download']);
     assert.equal(r.code, 0, r.lines.join('\n'));
-    assert.equal(r.lines.at(-1), '✔ 2 個檔都對');
+    assert.equal(r.lines.at(-1), '✓ 2 個檔都對');
   } finally { srv.close(); }
 });
 

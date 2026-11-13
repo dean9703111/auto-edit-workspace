@@ -2,19 +2,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { imp, WORKSPACE } from './helpers.mjs';
+import { imp, WORKSPACE, tmpDir } from './helpers.mjs';
 
 const { probeCaps, formatCaps, hyperframesVersion, versionLine, redact } = await imp('caps.mjs');
 
 const fakeRoot = (pinned, installed) => {
-  const r = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-caps-'));
+  const r = tmpDir(null, 'hf-caps-');   // 掛在呼叫它的那個 test 結束時清
   if (pinned) fs.writeFileSync(path.join(r, 'package.json'), JSON.stringify({ private: true, devDependencies: { hyperframes: pinned } }));
   if (installed) { fs.mkdirSync(path.join(r, 'node_modules', 'hyperframes'), { recursive: true }); fs.writeFileSync(path.join(r, 'node_modules', 'hyperframes', 'package.json'), JSON.stringify({ version: installed })); }
   return r;
 };
-const chrome = path.join(os.tmpdir(), 'fake-chrome-headless-shell');
+const chrome = path.join(tmpDir(null, 'hf-caps-chrome-'), 'fake-chrome-headless-shell');   // 整個檔跑完才清
 fs.writeFileSync(chrome, '');
 const runner = (table) => (cmd, args) => {
   const k = [cmd, ...args].join(' ');

@@ -15,16 +15,19 @@
  *         講者：⚠ …                 （只有 shared/setting.json 還沒設定或格式不對時才印：提醒設定講者資料，lib/speaker.mjs）
  *         摘要：⚠ …                 （有初剪、還沒寫或格式不對的 work/摘要.md 時才印；不擋流程，lib/summary.mjs）
  *         偏好：…                   （有 shared/偏好.md「照做」的規則、或各專案回饋裡有還沒問過使用者的「以後都…」時才印；見 --prefs）
+ *         素材：⚠ …                 （assets/、講稿.md 和 media.mjs prep 記的清單 work/.jobs/assets-manifest.json 比，有檔被改過或不見了才印；多出新檔不算、舊專案沒有清單不印）
+ *         Skill：⚠ …                （裝好的 Skill 和 .agents/skills/ 不一樣才印，附重裝指令 node setup/install-skills.mjs；--init 也印）
  *       最後幾行是要做的事：
  *         沒有停點在等：「→ 下一步：<說明>」，下面每一行都是可以整行複製執行的指令（好幾行就依序跑）；這一步是 AI 自己做的事（寫分鏡表）就沒有指令
- *         有停點在等：「使用者回覆「…」：」和回覆後要跑的指令（縮排兩格），最後兩行是 AGENTS.md 格式的「⏸ 停點 …」「請回：…」；
+ *         有停點在等：「使用者回覆「…」：」和回覆後要跑的指令（縮排兩格）、一行「等使用者回覆：…」，最後兩行是 AGENTS.md 格式的「⏸ 停點 …」「請回：…」；
  *                     網址要剪輯台：開著就直接填好，沒開就先印「⏸ 停點 …<網址>…」，再印「→ 下一步」和開剪輯台的指令
  *   node shared/template/tools/status.mjs --project projects/<專案> --mark "<停點>" --state <待回覆|通過|修改後重停|略過> [--said "使用者原話"] [--back "寫回哪裡"] [--json]
  *       work/製作進度.md 的停點紀錄加一列（時間工具蓋、只新增不改舊列），印那一列。<停點> 可以寫「② 構圖」「②」「構圖」「③ 分鏡表（s12 v2）」。
  *       ② 通過或略過時，開工決策表的「構圖」一起填（plan.json frame 的倍率，或「不裁切」）。
  *   node shared/template/tools/status.mjs --project projects/<專案> --init [--format portrait|landscape] [--json]
  *       建 work/製作進度.md，自動填開工決策表（主軌種類、版式、有沒有講稿、有沒有螢幕錄影／圖片、長度、有沒有業配段）；已經有這個檔就只補空的欄。
- *       --format：使用者說了「直式」「短影片」「橫式」「長片」才加（會蓋掉已經寫的版式）；沒加就看 ffprobe 主軌寬高。media.mjs prep 也呼叫這個（initProgress）。
+ *       --format：使用者說了「直式」「短影片」「橫式」「長片」才加（會蓋掉已經寫的版式；plan.json 已經有了就連它的 format 一起改，印「✓ plan.json：format＝…」）；
+ *       沒加就看 ffprobe 主軌寬高。media.mjs prep 也呼叫這個（initProgress）。
  *   node shared/template/tools/status.mjs --project projects/<專案> --timeline [--json]
  *       時間軸：各階段產物第一次出現（建立時間）與最後修改的時間，加上 work/製作進度.md 停點紀錄的時間，
  *       算出總時長、等使用者回覆的時間、AI 在做事的時間，和最久的幾段（找「哪裡花最久」用；舊專案也能看）。
@@ -41,36 +44,47 @@
  *       子代理一次最多派幾個（1–16，預設 10；不用 --project）：寫進 shared/setting.json，之後工具印的派工那一行都照這個數字。
  *       使用者說「子代理一次派 6 個」「子代理只能開 2 個」時跑；1＝一次只派一個。
  *
- * 判斷依據：work/ 裡各階段產物在不在、修改時間先後（例：storyboard.md 比 plan.json 新＝還在分鏡表；
+ * 判斷依據：work/ 裡各階段產物在不在、工具做完一步時記的標記 work/.jobs/state.json（lib/progress.mjs markStep：srt-align、snap-srt、screen-sync、
+ * map-merge、merge-drafts、storyboard、apply-storyboard、build、qc；記了那一步就比它記下的檔案內容，例：plan.json 在上次 build 之後改過＝要重 build），
+ * 沒記過的步驟（舊專案）照舊看備份檔在不在、修改時間先後（例：storyboard.md 比 plan.json 新＝還在分鏡表；
  * storyboard.md 是 versions.mjs accept／use 寫的不算），以及 work/製作進度.md 的「## 停點紀錄」表（同一個停點以最後一列為準，
  * 狀態「待回覆」「修改後重停」＝卡在這裡；改版的停點寫「③ 分鏡表（s12 v2）」）。work/versions/ 有沒做完的改版提案時，目前在印「改版／…」；
  * 回饋輪開著（versions.mjs begin 之後、finish 之前）時印「回饋輪 r<N>…」；背景工作（work/.jobs/）還在跑時，下一步是同一條指令（會接著等）。
  * 沒有講者的專案（hasCamera 是 false：主軌全是聲音或邊錄邊講的螢幕錄影，rough.mp4 全黑）跳過 ② 構圖和講者框。
+ * ② 構圖：還沒給使用者看印 build.mjs --framing；在等回覆印 --framing-done（「用建議的」加 --use suggested）；② 通過還沒量講者框也印 --framing-done。
  * assets/screen、assets/images 有檔、work/media/notes/ 還沒有每個素材的筆記時，先做素材盤點（排在 ② 之前）。
- * --json：只印一個 JSON（project、stage、at、skill、next、cmd、cmds、nextStop、waiting、stopLine、after、needEditor、round、job、camera、feedback、evidence、format、formatSource、speaker；
- * cmd＝cmds 的第一條，沒有指令時是 null；speaker＝set／off／unset／bad）。
+ * 要派子代理做動畫時（③ 通過、動畫還沒做），「→ 下一步」上面先印「→ 派工：…」，下面每一行（縮排兩格）是一則照抄給子代理的派工訊息。
+ * --json：只印一個 JSON（project、stage、at、skill、next、cmd、cmds、dispatch、nextStop、waiting、stopLine、after、needEditor、round、job、camera、feedback、evidence、format、formatSource、speaker、summary；
+ * cmd＝cmds 的第一條，沒有指令時是 null；dispatch＝{ note, msgs }（派工的說明與那幾則訊息），沒有要派工時是 null；speaker＝set／off／unset／bad；
+ * summary＝work/摘要.md 的檢查（和文字模式「摘要：⚠ …」同一個判斷）：還沒有初剪（work/rough.srt）是 null，否則 { state: ok／none／bad, chars, errors, line }，line＝那一行 ⚠（ok 時是 null））。
+ * --said（舊寫法 --say 也收）。--mark、--init、--timeline、--summary、--prefs、--prefs-add、--prefs-skip、--prefs-drop、--agents 一次只能用一個。
  * --project：同 build.mjs。
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { findProject } from './build.mjs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { findProject } from './lib/project.mjs';
 import { VIDEO_EXT, AUDIO_EXT, probeMedia } from './lib/ff.mjs';
 import { lookNextStep, projArg } from './lib/look.mjs';
-import { narrationOf, mainCandidates } from './media.mjs';
+import { narrationOf, mainCandidates } from './lib/rough/main-track.mjs';
 import { resolveFormat, formatLine, formatErrors, probeDims, canvasOf } from './lib/canvas.mjs';
 import { pendingRevisions, storyboardByVersions, nextRound, openRound } from './versions.mjs';
 import { readSpeaker, SET_CMD } from './lib/speaker.mjs';
 import { agentLimit, saveAgentLimit, SETTINGS_FILE } from './lib/agents.mjs';
 import { readSummary, SUMMARY_MAX } from './lib/summary.mjs';
-import { ensureProgress, setFact, appendStop, progressFile, STOP_STATES } from './lib/progress.mjs';
+import { ensureProgress, setFact, appendStop, progressFile, STOP_STATES, readSteps, stepChanged } from './lib/progress.mjs';
+import { storyboardDirty } from './lib/storyboard-state.mjs';
 import { jobState } from './lib/job.mjs';
 import { untouchedSample } from './lib/plan.mjs';
 import { designFileOf, isBlankDesign } from './lib/custom-fill.mjs';
 import { readPrefs, prefsFile, prefKey } from './lib/prefs.mjs';
+import { STOP, stopLines } from './lib/stops.mjs';
+import { writeAtomic } from './lib/atomic.mjs';
+import { next, dispatch, cmdLine } from './lib/say.mjs';
+import { splitFlag, valueOf, oneOf, saidOf, isMain } from './lib/cli.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const STOPS = ['① 剪輯清單', '② 構圖', '③ 分鏡表', '④ 完成影片預覽', '⑤ 剪輯台', '⑥ 背景預覽'];
+const STOPS = [STOP.cuts, STOP.framing, STOP.storyboard, STOP.final, STOP.editor, STOP.bg];
 const NEWER = 1000;   // 修改時間差 1 秒以內視為同時（同一次 build 寫出的檔）
 const WAIT_STATES = ['待回覆', '修改後重停'];   // 「修改後重停」＝改好又停下來等回覆
 const TOOLS = 'node shared/template/tools';
@@ -399,10 +413,16 @@ export function projectStatus(project) {
   const camera = hasCamera(project);
   const plan = W('hyperframes', 'plan.json'), index = W('hyperframes', 'index.html'), story = W('storyboard.md'), finalMp4 = P('output', 'final.mp4'), sheet = P('output', 'qc', 'qc-sheet.jpg');
   const workFiles = (() => { try { return fs.readdirSync(W()); } catch { return []; } })();
+  // 032 C10：工具做完一步記在 work/.jobs/state.json（lib/progress.mjs markStep）。記過的步驟照標記判斷（複製專案、雲端同步後修改時間會亂）；
+  // 沒記過（舊專案、還沒接上標記的工具）照舊看備份檔在不在、誰的修改時間比較新
+  const steps = readSteps(project)?.steps ?? {};
+  const changedSince = (step, rel) => stepChanged(project, steps[step], rel);   // true／false；這一步沒記過或沒記這個檔＝null
+  const marks = (step, rel) => Object.hasOwn(steps[step]?.inputs ?? {}, rel);
+  const MARKED = '（work/.jobs/state.json）';
   // srt-align 跑過＝有 rough.srt.align-*；snap-srt 跑過＝有 rough.srt.bak-*（srt-split 的備份叫 rough.srt.split-*，不算；A-02）
   // F8：有 transcript.json 時 srt-align 已經是詞級時間，snap-srt 不用跑；只有沒有 transcript.json 才要 snap-srt
-  const aligned = workFiles.some((f) => f.startsWith('rough.srt.align-'));
-  const snapped = workFiles.some((f) => f.startsWith('rough.srt.bak-'));
+  const aligned = !!steps['srt-align'] || workFiles.some((f) => f.startsWith('rough.srt.align-'));
+  const snapped = !!steps['snap-srt'] || workFiles.some((f) => f.startsWith('rough.srt.bak-'));
   const words = has(W('transcript.json'));
   let planJson = null;
   try { planJson = has(plan) ? JSON.parse(fs.readFileSync(plan, 'utf8')) : null; } catch { planJson = null; }
@@ -421,7 +441,8 @@ export function projectStatus(project) {
   const SAID = ' --said "<使用者原話>"';
 
   // 各階段的指令
-  const prep = tool('media.mjs prep'), rough = tool('media.mjs rough'), editor = tool('editor.mjs'), framing = tool('qc.mjs framing'), speaker = tool('qc.mjs speaker', ' --write'), scaffold = tool('build.mjs', ' --scaffold'), mapMerge = tool('build.mjs', ' --map-merge'), merge = tool('build.mjs', ' --merge-drafts'), storyCmd = tool('build.mjs', ' --storyboard'), apply = tool('build.mjs', ' --apply-storyboard'), review = tool('build.mjs', ' --review'), deliver = tool('deliver.mjs');
+  // ② 構圖（032 A2）：--framing 量構圖、開構圖台、記 ② 待回覆；--framing-done 記 ② 通過、量講者框、切章（瘦臉過期會先重跑）
+  const prep = tool('media.mjs prep'), rough = tool('media.mjs rough'), editor = tool('editor.mjs'), framing = tool('build.mjs', ' --framing'), framingDone = tool('build.mjs', ' --framing-done'), scaffold = tool('build.mjs', ' --scaffold'), mapMerge = tool('build.mjs', ' --map-merge'), merge = tool('build.mjs', ' --merge-drafts'), storyCmd = tool('build.mjs', ' --storyboard'), apply = tool('build.mjs', ' --apply-storyboard'), review = tool('build.mjs', ' --review'), deliver = tool('deliver.mjs');
   const begin = `${TOOLS}/versions.mjs begin --project ${A} --seg <段 id> --say "<使用者原話>"`, finish = `${TOOLS}/versions.mjs finish --project ${A}`;
   const afterRough = camera ? '② 構圖' : '③ 分鏡表';
   const bgNote = '長片在背景跑；印「再跑一次同一條指令」就再跑同一行，會接著等，不會重跑';
@@ -434,18 +455,22 @@ export function projectStatus(project) {
   const partKeys = (pack?.parts || []).map((x) => x.key).filter(Boolean);
   const draftMissing = partKeys.filter((k) => !has(W('drafts', `${k}.json`)));
   const mergedAt = stat(W('drafts', '_merged.json'))?.mtimeMs ?? 0;
-  const merged = !!pack && Array.isArray(planJson?.scenes) && planJson.scenes.length > 0 && mergedAt > 0 && partKeys.every((k) => (stat(W('drafts', `${k}.json`))?.mtimeMs ?? Infinity) <= mergedAt + NEWER);
+  // 合併過：記過 merge-drafts 就看每份草稿在合併之後有沒有改過；沒記過看 _merged.json 是不是比每份草稿新
+  const draftsMerged = steps['merge-drafts'] ? partKeys.every((k) => changedSince('merge-drafts', `work/drafts/${k}.json`) === false)
+    : mergedAt > 0 && partKeys.every((k) => (stat(W('drafts', `${k}.json`))?.mtimeMs ?? Infinity) <= mergedAt + NEWER);
+  const merged = !!pack && Array.isArray(planJson?.scenes) && planJson.scenes.length > 0 && draftsMerged;
   const designMissing = (planJson?.scenes || []).filter((x) => x?.design && !has(W('designs', `${x.id}.md`))).map((x) => x.id);
   // 語意地圖（specs/024，index.json 有 semanticMap 的包）：第一回合地圖 → --map-merge 全片校正通過（_map.json 比每份地圖新）→ 第二回合草稿
   const mapFlow = !!pack?.semanticMap && draftMissing.length > 0;
   const mapMissing = mapFlow ? partKeys.filter((k) => !has(W('drafts', `${k}.map.md`))) : [];
   let mapOk = false;
-  try { const st = JSON.parse(fs.readFileSync(W('drafts', '_map.json'), 'utf8')); mapOk = !!st.passed && partKeys.every((k) => (stat(W('drafts', `${k}.map.md`))?.mtimeMs ?? Infinity) <= (stat(W('drafts', '_map.json'))?.mtimeMs ?? 0) + NEWER); } catch { mapOk = false; }
+  if (steps['map-merge']) mapOk = !!steps['map-merge'].passed && partKeys.every((k) => changedSince('map-merge', `work/drafts/${k}.map.md`) === false);
+  else try { const st = JSON.parse(fs.readFileSync(W('drafts', '_map.json'), 'utf8')); mapOk = !!st.passed && partKeys.every((k) => (stat(W('drafts', `${k}.map.md`))?.mtimeMs ?? Infinity) <= (stat(W('drafts', '_map.json'))?.mtimeMs ?? 0) + NEWER); } catch { mapOk = false; }
   const list8 = (a) => `${a.slice(0, 8).join('、')}${a.length > 8 ? '…' : ''}`;
   const s9 = camera && !logged('② 構圖') && !boxed && !pack
-    ? { at: '剪好看／停點 ② 構圖（構圖台還沒給使用者看）', skill: 'auto-edit-storyboard 步驟 3', next: '開構圖台、記停點 ②，把構圖台網址、work/look-preview.jpg（有的話）和 qc.mjs framing 印的「建議：…」那一行貼給使用者，停下來（依序跑下面 2 行）', stop: '② 構圖', cmds: [editor, mark('② 構圖', '待回覆')] }
+    ? { at: '剪好看／停點 ② 構圖（構圖台還沒給使用者看）', skill: 'auto-edit-storyboard 步驟 3', next: '量構圖、開構圖台、記停點 ②，一條指令做完；把它印的回報段（構圖台網址、建議那一行、work/look-preview.jpg）貼給使用者，停下來', stop: '② 構圖', cmds: [framing] }
     : camera && !boxed
-      ? { at: '剪好看／② 通過，量講者框', skill: 'auto-edit-storyboard 步驟 4', next: '量講者框，再產生分鏡素材（依序跑下面 2 行）', stop: '③ 分鏡表', cmds: [speaker, scaffold] }
+      ? { at: '剪好看／② 通過，量講者框', skill: 'auto-edit-storyboard 步驟 4', next: '量講者框、產生分鏡素材，一條指令做完（瘦臉過期會先重跑；印「還在跑」就再跑同一條）', stop: '③ 分鏡表', cmds: [framingDone] }
       : !pack
         ? { at: camera ? '剪好看／產生分鏡素材' : '剪好看／產生分鏡素材（沒有講者：跳過 ② 構圖和講者框）', skill: 'auto-edit-storyboard 步驟 4', next: '產生 work/分鏡素材/（共用.md、語意.md、每章一份 chNN.md）', stop: '③ 分鏡表', cmds: [scaffold] }
         : mapFlow && mapMissing.length
@@ -463,15 +488,29 @@ export function projectStatus(project) {
     ? { at: '剪好看／③ 通過，把分鏡表的修改套回 plan.json', skill: 'auto-edit-storyboard 步驟 8', next: '把網頁改的字、音效、金句套回 plan.json', stop: '④ 完成影片預覽', cmds: [apply] }
     : { at: '剪好看／停點 ③ 分鏡表', skill: 'auto-edit-storyboard 步驟 7', next: '截圖、產生分鏡表、開分鏡表頁、記停點 ③，一條指令做完', stop: '③ 分鏡表', cmds: [storyCmd] };
   // --apply-storyboard 沒改到字時 plan.json 的時間不變：看它記下的時間，套過之後沒再改就不算「比 plan.json 新」
-  let sbAt = 0;
-  try { sbAt = Number(JSON.parse(fs.readFileSync(W('hyperframes', '.cache', 'storyboard.json'), 'utf8')).at) || 0; } catch { /* 舊專案沒有這個檔 */ }
+  let sbRec = null;
+  try { sbRec = JSON.parse(fs.readFileSync(W('hyperframes', '.cache', 'storyboard.json'), 'utf8')); } catch { /* 舊專案沒有這個檔 */ }
+  const sbAt = Number(sbRec?.at) || 0;
   const storyApplied = passed('③ 分鏡表') && has(story) && sbAt >= stat(story).mtimeMs;
+  // 分鏡表還沒套回：記過 storyboard／apply-storyboard 就看「沒套回過、套回之後又整份重產、或有人改過」。有人改過先看 storyboard-state 的雜湊
+  // （--review、回饋輪這些工具照正本重寫時會同步記，不算改過）；沒有雜湊紀錄才看套回時記的指紋。沒記過標記看 storyboard.md 是不是比 plan.json 新
+  const storyMarked = !!(steps.storyboard || steps['apply-storyboard']);
+  const applied = steps['apply-storyboard'];
+  const edited = () => (sbRec?.hash ? storyboardDirty({ project, out: W('hyperframes') }) : changedSince('apply-storyboard', 'work/storyboard.md') !== false);
+  const storyNewer = () => (storyMarked
+    ? has(story) && (!applied || String(steps.storyboard?.at ?? '') > String(applied.at) || edited())
+    : newer(story, plan));
+  const storyPending = () => storyNewer() && !storyboardByVersions(project) && (storyMarked || !storyApplied);
+  // build 過之後 plan.json 有沒有改過；final.mp4 驗收過之後有沒有換過；初剪重做之後螢幕錄影同步要不要重算（沒記過照舊比修改時間）
+  const planStale = () => changedSince('build', 'work/hyperframes/plan.json') ?? newer(plan, index);
+  const finalStale = () => changedSince('qc', 'output/final.mp4') ?? newer(finalMp4, sheet);
+  const syncStale = () => changedSince('screen-sync', 'work/cuts.v1.json') ?? newer(W('cuts.v1.json'), W('screen-sync.json'));
   const noStopYet = sl.rows.length > 0 && !logged('③ 分鏡表') && !logged('④ 完成影片預覽') && !logged('⑤ 剪輯台');
 
   // 定稿（--review：build、audit、完成態拼圖、開預覽、記 ④ 待回覆），或（④ 通過）輸出
   const s12 = passed('④ 完成影片預覽')
     ? { at: '輸出／④ 通過', skill: 'auto-edit-deliver', next: `輸出完成影片：測試片段、整支 render、驗收，一條指令做完（${bgNote}）`, stop: '無', cmds: [deliver] }
-    : { at: '剪好看／定稿，停點 ④ 完成影片預覽', skill: 'auto-edit-review A1–A4', next: 'build、audit、完成態拼圖、開完成影片預覽、記停點 ④，一條指令做完；有 ✖ 照 → 改了再跑一次。之後打開它印的拼圖，只找 FAIL（REVIEW.md §2），都修好才把停點那兩行貼給使用者', stop: '④ 完成影片預覽', cmds: [review] };
+    : { at: '剪好看／定稿，停點 ④ 完成影片預覽', skill: 'auto-edit-review 流程 A', next: 'build、audit、完成態拼圖、開完成影片預覽、記停點 ④，一條指令做完；有 ✖ 照 → 改了再跑一次。之後打開它印的拼圖，只找 FAIL（REVIEW.md §2），都修好才把停點那兩行貼給使用者', stop: '④ 完成影片預覽', cmds: [review] };
 
   // 素材盤點（排在 ② 之前：看素材是機器和子代理的事，不用等使用者）
   const inv = !has(story) ? inventoryTodo(project) : [];
@@ -491,14 +530,14 @@ export function projectStatus(project) {
     ['S5', () => !aligned && !has(plan), '剪乾淨／字幕斷句', 'auto-edit-rough 步驟 2', has(W('cutpoints.json')) ? '跑 media.mjs srt-align --dry-run 看斷句表，合理再去掉 --dry-run；之後只改錯字' : `接著做字幕斷句、剪接點（${bgNote}）`, afterRough, '沒有 work/rough.srt.align-*（srt-align 還沒跑）', [has(W('cutpoints.json')) ? tool('media.mjs srt-align', ' --dry-run') : rough]],
     ['S6', () => !words && !snapped, '剪乾淨／字幕對齊', 'auto-edit-rough 步驟 2', '跑 media.mjs snap-srt --dry-run，看表合理再去掉 --dry-run（只跑一次）', afterRough, '沒有 work/transcript.json（字幕時間是整句按字數估的）、也沒有 work/rough.srt.bak-*（snap-srt 還沒跑；srt-split 的備份叫 rough.srt.split-*，不算）', [tool('media.mjs snap-srt', ' --dry-run')]],
     ['S7', () => !has(W('cutpoints.json')), '剪乾淨／剪接點', 'auto-edit-rough 步驟 2', `接著做剪接點（${bgNote}）`, afterRough, '沒有 work/cutpoints.json', [rough]],
-    ['S7s', () => scrMain && (!has(W('screen-sync.json')) || newer(W('cuts.v1.json'), W('screen-sync.json'))), '剪乾淨／螢幕錄影同步', 'auto-edit-rough 步驟 2', '跑 media.mjs screen-sync（邊錄邊講的螢幕錄影：算出初剪後每段在錄影的秒數；寫好 plan.json 草稿後再加 --write-plan）', afterRough, has(W('screen-sync.json')) ? 'work/cuts.v1.json 比 work/screen-sync.json 新（初剪重做過）' : 'work/main.json 有邊錄邊講的螢幕錄影、還沒有 work/screen-sync.json', [tool('media.mjs screen-sync')]],
+    ['S7s', () => scrMain && (!has(W('screen-sync.json')) || syncStale()), '剪乾淨／螢幕錄影同步', 'auto-edit-rough 步驟 2', '跑 media.mjs screen-sync（邊錄邊講的螢幕錄影：算出初剪後每段在錄影的秒數；寫好 plan.json 草稿後再加 --write-plan）', afterRough, has(W('screen-sync.json')) ? (marks('screen-sync', 'work/cuts.v1.json') ? `work/cuts.v1.json 在上次螢幕錄影同步之後改過（初剪重做過）${MARKED}` : 'work/cuts.v1.json 比 work/screen-sync.json 新（初剪重做過）') : 'work/main.json 有邊錄邊講的螢幕錄影、還沒有 work/screen-sync.json', [tool('media.mjs screen-sync')]],
     ['S7m', () => inv.length > 0, '剪好看／素材盤點', 'auto-edit-screen 步驟 1', invNext, afterRough, `assets/screen、assets/images 有 ${inv.length} 個素材在 work/media/notes/ 還沒有筆記`, scanned ? [] : [tool('media.mjs scan')]],
-    ['S8', () => camera && !has(W('構圖預覽.jpg')), '剪好看／構圖', 'auto-edit-storyboard 步驟 1、3', '跑構圖分析、開構圖台、記停點 ②，把構圖台網址、work/look-preview.jpg（有的話）和「建議：…」那一行貼給使用者，停下來（依序跑下面 3 行）。初剪好了就接這一步，不用等使用者說「剪好看」；使用者明說只要「剪乾淨」才停在初剪', '② 構圖', `沒有 work/構圖預覽.jpg${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`, [framing, editor, mark('② 構圖', '待回覆')]],
+    ['S8', () => camera && !has(W('構圖預覽.jpg')), '剪好看／構圖', 'auto-edit-storyboard 步驟 3', '量構圖、開構圖台、記停點 ②，一條指令做完；把它印的回報段（構圖台網址、建議那一行、work/look-preview.jpg）貼給使用者，停下來。初剪好了就接這一步，不用等使用者說「剪好看」；使用者明說只要「剪乾淨」才停在初剪', '② 構圖', `沒有 work/構圖預覽.jpg${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`, [framing]],
     ['S9', () => !has(story), s9.at, s9.skill, s9.next, s9.stop, '沒有 work/storyboard.md', s9.cmds],
-    ['S10', () => !has(plan) || (newer(story, plan) && !storyboardByVersions(project) && !storyApplied) || noStopYet, s10.at, s10.skill, s10.next, s10.stop, has(plan) ? (newer(story, plan) ? 'work/storyboard.md 比 work/hyperframes/plan.json 新' : '停點紀錄還沒有 ③') : '沒有 work/hyperframes/plan.json', s10.cmds],
-    ['S11', () => !has(index) || newer(plan, index), s12.at, s12.skill, s12.next, s12.stop, `${has(index) ? 'plan.json 比 index.html 新' : '沒有 work/hyperframes/index.html'}${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`, s12.cmds],
+    ['S10', () => !has(plan) || storyPending() || noStopYet, s10.at, s10.skill, s10.next, s10.stop, has(plan) ? (storyNewer() ? (storyMarked ? `work/storyboard.md 產生或改過之後還沒套回 plan.json${MARKED}` : 'work/storyboard.md 比 work/hyperframes/plan.json 新') : '停點紀錄還沒有 ③') : '沒有 work/hyperframes/plan.json', s10.cmds],
+    ['S11', () => !has(index) || planStale(), s12.at, s12.skill, s12.next, s12.stop, `${has(index) ? (marks('build', 'work/hyperframes/plan.json') ? `plan.json 在上次 build 之後改過${MARKED}` : 'plan.json 比 index.html 新') : '沒有 work/hyperframes/index.html'}${lookTodo ? `；講者調光瘦臉還沒好（look.mjs 的下一步：${lookTodo.step}）` : ''}`, s12.cmds],
     ['S12', () => !has(finalMp4), s12.at, s12.skill, s12.next, s12.stop, '沒有 output/final.mp4', s12.cmds],
-    ['S13', () => !has(sheet) || newer(finalMp4, sheet), '交付／驗收', 'auto-edit-deliver', `跑驗收（內容沒變不會重新 render；${bgNote}）`, '無', has(sheet) ? 'final.mp4 比 qc-sheet.jpg 新' : '沒有 output/qc/qc-sheet.jpg', [deliver]],
+    ['S13', () => !has(sheet) || finalStale(), '交付／驗收', 'auto-edit-deliver', `跑驗收（內容沒變不會重新 render；${bgNote}）`, '無', has(sheet) ? (marks('qc', 'output/final.mp4') ? `final.mp4 在上次驗收之後換過${MARKED}` : 'final.mp4 比 qc-sheet.jpg 新') : '沒有 output/qc/qc-sheet.jpg', [deliver]],
     ['S14', () => true, '完成', 'auto-edit-review 流程 B', `等使用者的修改要求：要改一段就跑 ${begin}`, '無', '完成影片與驗收截圖都在', []],
   ];
   const hit = T.find(([, cond]) => cond());
@@ -506,7 +545,8 @@ export function projectStatus(project) {
   ev.push(why);
   // 構圖預覽（S8）與 build（S11）前，講者調光瘦臉還沒好 → 下一步直接用 lookNextStep 的說明＋指令（指令單獨一行，C-01）
   if (lookTodo && ['S8', 'S11'].includes(stage)) { next = lookTodo.note; cmds = [lookTodo.cmd]; }
-  // ③ 通過後動畫還沒做：內容設計動畫、照範例改的 x 檔都一段一個子代理
+  // ③ 通過後動畫還沒做：內容設計動畫、照範例改的 x 檔都一段一個子代理（派工訊息走「→ 派工：」，不放在「→ 下一步」下面）
+  let toDispatch = null;
   if (['S11', 'S12'].includes(stage) && motion.length && !passed('④ 完成影片預覽')) {
     at = `剪好看／做動畫（還沒做：${list8(motion)}）`;
     skill = 'auto-edit-motion 步驟 1–2';
@@ -517,7 +557,8 @@ export function projectStatus(project) {
       [dz.filter((id) => !scripted(id)), `你是設計師，負責 ${A} 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design.md 寫鏡位腳本、接著做動畫（不用等確認）。`],
       [motion.filter((id) => !isDz(id)), '照 .agents/skills/auto-edit-motion/references/worker-brief.md 改 <段> 的動畫檔。'],
     ].filter(([ids]) => ids.length).map(([ids, l]) => `（${ids.join('、')}）${l}`);
-    next = `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（一次最多 ${agentLimit(path.resolve(HERE, '..', '..'))} 個，回來再派下一批）；派工訊息只送下面對應的那一行（換掉 <段>，不要另外加要求）：\n  ${lines.join('\n  ')}\n全部回來才跑下一行`;
+    toDispatch = { note: `做 ${motion.length} 段動畫：一段派一個子代理，同一則回覆一次派出（一次最多 ${agentLimit(path.resolve(HERE, '..', '..'))} 個，回來再派下一批）；派工訊息只送下面對應的那一行（換掉 <段>，不要另外加要求）`, msgs: lines };
+    next = `${motion.length} 段動畫照上面「→ 派工：」派出，全部回來才跑下一行`;
     nextStop = '④ 完成影片預覽';
     cmds = [review];
     ev.push(`plan.json 的 ${list8(motion)} 動畫還沒做（x 檔不在、還是範例原文，或內容設計動畫還是占位）`);
@@ -525,6 +566,7 @@ export function projectStatus(project) {
   // 改版（停點 ④ 之後）：work/versions/<段>/v<N>/ 只有提案 分鏡.md、還沒存進做好的檔
   const round = openRound(project);
   const revs = round || ['S11', 'S12', 'S13', 'S14'].includes(stage) ? pendingRevisions(project) : [];
+  if (revs.length || round) toDispatch = null;
   if (revs.length) {
     const names = revs.map((r) => `${r.id} v${r.v}`).join('、'), ids = revs.map((r) => r.id).join(',');
     const done = revs.every((r) => r.state === '已確認');
@@ -546,6 +588,7 @@ export function projectStatus(project) {
   // 背景工作還在跑：下一步就是同一條指令
   const job = pendingJob(project);
   if (job) {
+    toDispatch = null;
     at = `${at}（背景工作 ${job.name} ${job.state === 'running' ? '還在跑' : '做完了，結果還沒看'}）`;
     next = `再跑一次同一條指令會${job.state === 'running' ? '接著等' : '印出結果'}，不會重跑（work/.jobs/${job.name}.log）`;
     cmds = [job.cmd];
@@ -562,53 +605,53 @@ export function projectStatus(project) {
     at = `${phase}／停點 ${w.label}（待回覆）`;
     nextStop = w.stop;
     cmds = [];
+    toDispatch = null;
     const rev = w.stop === '③ 分鏡表' ? [...w.label.matchAll(/([A-Za-z0-9-]+) v(\d+)/g)] : [];
     const urls = editorUrls(project);
-    const look = has(W('look-preview.jpg')) ? ' 和 work/look-preview.jpg' : '';
     const u = (k, zh) => urls?.[k] ?? `<${zh}>`;
     const redo = () => mark(w.stop, '修改後重停', SAID);
     if (rev.length) {
       const ids = rev.map((m) => m[1]).join(',');
-      skill = 'auto-edit-review D1–D2';
+      skill = 'auto-edit-review 流程 D（references/revise.md 第 1–2 步）';
       next = `等使用者看 ${rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`).join('、')}；回覆「可以」後跑 versions.mjs accept --seg ${ids}，再照 auto-edit-motion 做（要改就改那份 分鏡.md 再停一次）`;
-      stopLine = `⏸ 停點 ${w.label}｜請看 ${rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`).join(' 和 ')}\n請回：「可以」或要改的拍`;
+      stopLine = stopLines.revise(w.label, rev.map((m) => `work/versions/${m[1]}/v${m[2]}/分鏡.md`));
       after = [{ when: '回覆「可以」', cmds: [`${TOOLS}/versions.mjs accept --project ${A} --seg ${ids} --say "<使用者原話>"`] }, { when: '要改的拍：改那份 分鏡.md，重貼停點', cmds: [mark(w.label, '修改後重停', SAID)] }];
     } else {
       const table = {
         '① 剪輯清單': {
           skill: 'auto-edit-rough 步驟 1–2', urlKey: 'cuts',
           next: '等使用者在剪輯清單頁（editor.mjs 印的「剪輯清單：」網址）勾好後回覆；回覆後先重新讀 cuts.md（只剪「剪」欄是 [x] 的列），再輸出初剪',
-          line: () => `⏸ 停點 ① 剪輯清單｜請看 ${u('cuts', '剪輯清單網址')}\n請回：勾好後說「可以」，或要改的列`,
+          line: () => stopLines.cuts(u('cuts', '剪輯清單網址')),
           after: [{ when: '回覆「可以」「改好了」（工具照 cuts.md 的「剪」欄剪，會記 ① 通過）', cmds: [`${rough}${SAID}`] }, { when: '指名要改的列：改 work/cuts.md 那一列的「剪」，重貼停點（改主軌順序、補錄照 auto-edit-rough「停點」那張表）', cmds: [redo()] }],
         },
         '② 構圖': {
           skill: 'auto-edit-storyboard 步驟 3–4', urlKey: 'framing',
-          next: '等使用者在構圖台拖好框（自動存，剪輯台直接寫進 plan.json 的 frame）後說「調好了」；說「用建議的」就跑 qc.mjs framing --write。之後跑 qc.mjs speaker --write 量講者框',
-          line: () => `⏸ 停點 ② 構圖｜請看 ${u('framing', '構圖台網址')}${look}\n請回：拖好框說「調好了」（會自動存），或說「用建議的」`,
-          after: [{ when: '回覆「調好了」', cmds: [mark(w.stop, '通過', SAID), speaker, scaffold] }, { when: '回覆「用建議的」', cmds: [`${TOOLS}/qc.mjs framing --project ${A} --write`, mark(w.stop, '通過', SAID), speaker, scaffold] }],
+          next: '等使用者在構圖台拖好框（自動存，剪輯台直接寫進 plan.json 的 frame）後回覆；回覆後跑對應的那一條：記 ② 通過、量講者框、產生分鏡素材，一條指令做完（印「還在跑」就再跑同一條）',
+          line: () => stopLines.framing(u('framing', '構圖台網址'), { look: has(W('look-preview.jpg')) }),
+          after: [{ when: '回覆「調好了」', cmds: [`${framingDone}${SAID}`] }, { when: '回覆「用建議的」', cmds: [`${framingDone} --use suggested${SAID}`] }, { when: '回覆倍率（例「1.3 倍」）', cmds: [`${framingDone} --use <倍率>${SAID}`] }],
         },
         '③ 分鏡表': {
           skill: 'auto-edit-storyboard 步驟 7–8', urlKey: 'storyboard',
           next: '等使用者在分鏡表頁（editor.mjs 印的「分鏡表：」網址）改好後回覆；回覆「可以」或「改好了」就跑 --apply-storyboard：有「想換成」「補充說明」的段照它印的重做、重截再停一次，都沒有才記 ③ 通過',
-          line: () => `⏸ 停點 ③ 分鏡表｜請看 ${u('storyboard', '分鏡表網址')}\n請回：改好後說「可以」，或要改的地方`,
+          line: () => stopLines.storyboard(u('storyboard', '分鏡表網址')),
           after: [{ when: '回覆「可以」「改好了」（工具讀 work/storyboard.md：有「想換成」「補充說明」就印要求、照它印的改；沒有才套回 plan.json、記 ③ 通過）', cmds: [`${apply}${SAID}`] }, { when: '指名要改（「s05 換成側邊欄」）：改 plan.json 那段，重截那幾段、重貼停點', cmds: [`${storyCmd} --only <段 id>`] }],
         },
         '④ 完成影片預覽': {
           skill: 'auto-edit-review 流程 A、B', urlKey: 'final',
           next: '等使用者看完成影片預覽（editor.mjs 印的「完成影片預覽：」網址）；要改就開一輪回饋，說可以就輸出完成影片',
-          line: () => `⏸ 停點 ④ 完成影片預覽｜請看 ${u('final', '完成影片預覽網址')}\n請回：要改的段落（例：s05 往左移）或「可以了，輸出完成影片」`,
-          after: [{ when: '回覆「可以了，輸出完成影片」（deliver 會記 ④ 通過）', cmds: [`${deliver} --said "<使用者原話>"`] }, { when: '指名段＋具體改法（「s05 往左移」「照修改單改」）', cmds: [begin] }, { when: '指名段但只說要更好（「s12 重新設計」）', cmds: [begin, `${TOOLS}/versions.mjs new --project ${A} --seg <段 id> --note "<使用者原話>"`] }, { when: '「s12 用 v1」「退回上一版」', cmds: [begin, `${TOOLS}/versions.mjs use --project ${A} --seg <段 id> --ver v<N>`, finish] }],
+          line: () => stopLines.final(u('final', '完成影片預覽網址')),
+          after: [{ when: '回覆「可以了，輸出完成影片」（deliver 會記 ④ 通過）', cmds: [`${deliver} --said "<使用者原話>"`] }, { when: '指名段＋具體改法（「s05 往左移」「照修改單改」）', cmds: [begin] }, { when: '指名段但只說要更好（「s12 重新設計」；new 沒開輪會自己開、自己記停點）', cmds: [`${TOOLS}/versions.mjs new --project ${A} --seg <段 id> --note "<使用者原話>"`] }, { when: '「s12 用 v1」「退回上一版」（use 沒開輪會一次做完）', cmds: [`${TOOLS}/versions.mjs use --project ${A} --seg <段 id> --ver v<N> --said "<使用者原話>"`] }],
         },
         '⑤ 剪輯台': {
           skill: 'auto-edit-review 流程 C', urlKey: 'main',
           next: '等使用者在剪輯台調完說「調好了」；之後重新讀 plan.json 與 rough.srt 再定稿',
-          line: () => `⏸ 停點 ⑤ 剪輯台｜請看 ${u('main', '剪輯台網址')}\n請回：調完說「調好了」（會自動存）`,
+          line: () => stopLines.editor(u('main', '剪輯台網址')),
           after: [{ when: '回覆「調好了」（先重新讀 plan.json 與 rough.srt）', cmds: [mark(w.stop, '通過', SAID), review] }, { when: '「照修改單改」（讀 work/feedback/editor-requests.md）', cmds: [begin] }],
         },
         '⑥ 背景預覽': {
           skill: 'auto-edit-style 步驟 2–4', urlKey: null,
           next: '等使用者看三張背景圖；說可以才複製進 shared/template/',
-          line: () => '⏸ 停點 ⑥ 背景預覽｜請看 <暫存資料夾>/preview.jpg 和 <暫存資料夾>/zones-fs.jpg\n請回：「可以」或「重做」',
+          line: () => stopLines.bg('<暫存資料夾>'),
           after: [{ when: '回覆「可以」（再照 auto-edit-style 把圖放進 shared/template/）', cmds: [mark(w.stop, '通過', SAID)] }],
         },
       }[w.stop];
@@ -621,18 +664,17 @@ export function projectStatus(project) {
     }
     ev.unshift(`work/製作進度.md 停點紀錄最後一列「${w.time}｜${w.label}｜${w.state}」`);
   }
-  return { project, stage, at, skill, next, cmd: cmds[0] ?? null, cmds, nextStop, waiting, stopLine, after, needEditor, round: round ? `r${round.n}` : null, job: job?.name ?? null, camera, feedback: `r${nextRound(project)}`, evidence: ev };
+  return { project, stage, at, skill, next, cmd: cmds[0] ?? null, cmds, dispatch: toDispatch, nextStop, waiting, stopLine, after, needEditor, round: round ? `r${round.n}` : null, job: job?.name ?? null, camera, feedback: `r${nextRound(project)}`, evidence: ev };
 }
 
 // 預設輸出的最後幾行：要做的事（→ 下一步＋指令；有停點在等時，回覆後要跑的指令＋停點那兩行）
+// 「→ 下一步」下面只放指令；停點在等（剪輯台開著）時停點那兩行是最後兩行（和 report() 回報段一致），上面一行是一般說明
 export function actionLines(s) {
-  if (!s.stopLine) {
-    return [`→ 下一步：${s.next}`, ...s.cmds];
-  }
+  if (!s.stopLine) return [...(s.dispatch ? dispatch(s.dispatch.note, ...s.dispatch.msgs) : []), ...next(s.next, ...s.cmds)];
   const L = [];
   for (const a of s.after) { L.push(`使用者${a.when}：`); for (const c of a.cmds) L.push(`  ${c}`); }
-  if (s.needEditor) return [...L, s.stopLine, '→ 下一步：剪輯台沒開：跑下一行拿網址，把上面那兩行的 <…網址> 換成它印的，貼給使用者（回覆最後兩行是那個停點），然後等回覆', ...s.cmds];
-  return [...L, '→ 下一步：等使用者回覆；回覆最後兩行照抄下面兩行（這行不是指令）', s.stopLine];
+  if (s.needEditor) return [...L, s.stopLine, ...next('剪輯台沒開：跑下一行拿網址，把上面那兩行的 <…網址> 換成它印的，貼給使用者（回覆最後兩行是那個停點），然後等回覆', ...s.cmds)];
+  return [...L, '等使用者回覆：回覆的最後兩行照抄下面這兩行', s.stopLine];
 }
 
 // ---------- 跨集偏好（025）：各專案回饋輪的「建議改規則」→ 使用者確認 → shared/偏好.md ----------
@@ -641,7 +683,7 @@ const PREFS_HEAD = ['# 剪輯偏好', '', '使用者說過「以後都…」、�
 function writePrefs(root, prefs) {
   const row = (x) => `- ${x.text}${x.from ? `（${x.from}）` : ''}`;
   const L = [...PREFS_HEAD, '## 照做', '', ...(prefs.keep.length ? prefs.keep.map(row) : ['（還沒有）']), '', '## 不採用', '', ...(prefs.skip.length ? prefs.skip.map(row) : ['（還沒有）']), ''];
-  fs.writeFileSync(prefsFile(root), L.join('\n'));
+  writeAtomic(prefsFile(root), L.join('\n'));
 }
 // 各專案 work/feedback/r<N>.md 的「建議改規則：…」（同一行，或下面接著的「- 」列）；「無」和工具留的提示（原話有…）不算
 export function collectRuleNotes(root) {
@@ -676,7 +718,8 @@ export function prefsLines(root) {
   prefs.keep.forEach((x, i) => L.push(`  ${i + 1}. ${x.text}${x.from ? `（${x.from}）` : ''}`));
   L.push(`還沒問過使用者的「以後都…」：${pend.length} 條${pend.length ? '（各專案 work/feedback/ 的「建議改規則」）' : ''}`);
   for (const x of pend) L.push(`  ${x.id}. ${x.text}（${x.from}）`);
-  if (pend.length) L.push('→ 下一步：把上面這幾條唸給使用者，問哪幾條以後每一集都照做；要照做的跑第一行、不要的跑第二行（編號用逗號隔開，這兩行的編號換成他說的）', `${PREFS_CMD} --prefs-add "${pend.map((x) => x.id).join(',')}"`, `${PREFS_CMD} --prefs-skip "${pend[0].id}"`);
+  // 編號一律加雙引號：PowerShell 會把逗號拆開
+  if (pend.length) L.push(...next('把上面這幾條唸給使用者，問哪幾條以後每一集都照做；要照做的跑第一行、不要的跑第二行（編號用逗號隔開，這兩行的編號換成他說的）', cmdLine('status.mjs', ['--prefs-add', { raw: `"${pend.map((x) => x.id).join(',')}"` }]), cmdLine('status.mjs', ['--prefs-skip', { raw: `"${pend[0].id}"` }])));
   return L;
 }
 const today = () => { const d = new Date(), q = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${q(d.getMonth() + 1)}-${q(d.getDate())}`; };
@@ -706,27 +749,71 @@ export function prefsDrop(root, arg) {
 }
 
 const SUMMARY_HOW = `讀 work/rough.srt，寫 ${SUMMARY_MAX} 字內的影片摘要（一到兩句描述＋2–6 個列點；格式見 .agents/skills/auto-edit-rough/SKILL.md 步驟 3）`;
-const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'back', 'format', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents'];
-function parseFlags(argv) {
+const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'say', 'back', 'format', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents'];
+const BOOL_FLAGS = ['help', 'json', 'timeline', 'init', 'prefs', 'summary'];
+// 一次只能做一件（--state、--said、--back 跟著 --mark；--format 跟著 --init；--json、--project 是修飾）
+const MODES = ['mark', 'init', 'timeline', 'summary', 'prefs', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents'];
+export function parseFlags(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--help') { flags.help = true; continue; }
-    if (a === '--json') { flags.json = true; continue; }
-    if (a === '--timeline') { flags.timeline = true; continue; }
-    if (a === '--init') { flags.init = true; continue; }
-    if (a === '--prefs') { flags.prefs = true; continue; }
-    if (a === '--summary') { flags.summary = true; continue; }
-    const m = /^--([\w-]+)(?:=([\s\S]*))?$/.exec(a);
-    if (!m || !VALUE_FLAGS.includes(m[1])) throw new Error(`沒有 ${a} 這個參數（用 --help 看用法）`);
-    const v = m[2] ?? argv[++i];
-    if (v == null) throw new Error(`--${m[1]} 後面要接值（用 --help 看用法）`);
-    flags[m[1]] = v;
+    const [k, inline] = /^--[\w-]/.test(a) ? splitFlag(a) : [null];
+    if (BOOL_FLAGS.includes(k) && inline === undefined) { flags[k] = true; continue; }
+    if (!VALUE_FLAGS.includes(k)) throw new Error(`沒有 ${a} 這個參數（用 --help 看用法）`);
+    try { [flags[k], i] = valueOf(argv, i, k, inline); } catch (e) { throw new Error(`${e.message}（用 --help 看用法）`); }
   }
+  oneOf(flags, MODES);
   return flags;
 }
 
-function cli() {
+// ---------- 032：別的工具提供的檢查（素材清單 A10、Skill 安裝 D3、plan.json 設定 A9③）----------
+// 檔還不在、或沒有那個函式（舊版、升級到一半）就跳過那一項，不讓 status 壞掉
+async function optionalFn(file, name) {
+  try { const m = await import(pathToFileURL(file).href); return typeof m[name] === 'function' ? m[name] : null; } catch { return null; }
+}
+
+// A10：assets/、講稿.md 和 media.mjs prep 記的清單比（diff＝lib/assets-manifest.mjs 的 diffManifest；null＝舊專案沒有清單，不印）
+export function assetsWarnLine(diff, label) {
+  const changed = diff?.changed || [], missing = diff?.missing || [];
+  if (!changed.length && !missing.length) return null;
+  const few = (a, what) => (a.length > 3 ? `${a.slice(0, 3).join('、')} 等 ${a.length} 個${what}` : `${a.join('、')} ${what}`);
+  const what = [changed.length ? few(changed, '被改過') : '', missing.length ? few(missing, '不見了') : ''].filter(Boolean).join('；');
+  return `素材：⚠ ${what}（和 media.mjs prep 記的清單比）→ 素材只能讀，不要再動它；問使用者是不是故意換的，是的話要照新素材重剪就跑 ${TOOLS}/media.mjs prep --project ${projArg(label)} --again`;
+}
+
+// D3：裝好的 Skill 和 .agents/skills/ 對不上（r＝setup/install-skills.mjs 的 checkInstalled()；實測 5–25 毫秒，每次 status 都跑）。
+// 第一筆自己帶「→ 怎麼改」（例：同名不是它裝的）就用它的，沒帶就是重裝指令
+export function skillsWarnLine(r) {
+  if (!r || r.ok !== false) return null;
+  const s = (r.stale || []).filter(Boolean).map((x) => String(x).replace(/^✖\s*/, ''));
+  const first = s[0] ?? '裝好的 Skill 和 .agents/skills/ 不一樣', i = first.indexOf('→');
+  const head = i < 0 ? first : first.slice(0, i).trim(), own = i < 0 ? '' : first.slice(i + 1).trim();
+  const fix = !own ? 'node setup/install-skills.mjs' : own.includes('install-skills.mjs') ? own : `${own}，再跑 node setup/install-skills.mjs`;
+  return `Skill：⚠ ${head}${s.length > 1 ? `…（共 ${s.length} 處）` : ''} → ${fix}`;
+}
+
+async function skillsLine(root) {
+  const check = await optionalFn(path.join(root, 'setup', 'install-skills.mjs'), 'checkInstalled');
+  if (!check) return null;
+  try { return skillsWarnLine(await check()); } catch { return null; }
+}
+
+async function assetsLine(project, label) {
+  const diff = await optionalFn(path.join(HERE, 'lib', 'assets-manifest.mjs'), 'diffManifest');
+  if (!diff) return null;
+  try { return assetsWarnLine(await diff(project), label); } catch { return null; }
+}
+
+// A9③：--init --format 時 plan.json 已經有了就一起改 format（不然開工決策表和 plan.json 兩個來源對不上）
+export async function initFormat(project, flag) {
+  if (flag == null || !fs.existsSync(path.join(project, 'work', 'hyperframes', 'plan.json'))) return null;
+  const format = resolveFormat({ flag }).format;
+  const setPlan = await optionalFn(path.join(HERE, 'lib', 'plan-set.mjs'), 'setPlan');
+  if (!setPlan) return null;
+  try { return { changes: await setPlan(project, { format }) }; } catch (e) { return { error: String(e.message).startsWith('✖') ? e.message : `✖ ${e.message}` }; }
+}
+
+async function cli() {
   const flags = parseFlags(process.argv.slice(2));
   if (flags.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
   const root = path.resolve(HERE, '..', '..', '..');
@@ -745,18 +832,23 @@ function cli() {
   const project = findProject(flags, root);
   const label = labelOf(project);
   if (flags.mark != null || flags.state != null) {
-    const row = markStop(project, { stop: flags.mark, state: flags.state, said: flags.said, back: flags.back });
+    const row = markStop(project, { stop: flags.mark, state: flags.state, said: saidOf(flags), back: flags.back });
     if (flags.json) console.log(JSON.stringify({ project: label, row }, null, 2));
     else console.log(row);
     return 0;
   }
   if (flags.init) {
+    const pf = await initFormat(project, flags.format);   // 先改 plan.json，initProgress 比對版式時才是新的
+    if (pf?.error) { console.log(pf.error); return 1; }
     const r = initProgress(project, { format: flags.format ?? null });
     const after = projectStatus(project);
-    if (flags.json) { console.log(JSON.stringify({ project: label, file: posix(path.relative(process.cwd(), r.file)), created: r.created, facts: r.facts, warnings: r.warnings }, null, 2)); return 0; }
+    if (flags.json) { console.log(JSON.stringify({ project: label, file: posix(path.relative(process.cwd(), r.file)), created: r.created, facts: r.facts, warnings: r.warnings, ...(pf ? { plan: pf.changes } : {}) }, null, 2)); return 0; }
     console.log(`製作進度：${posix(path.relative(process.cwd(), r.file))}（${r.created ? '新建' : '已經有，只補空的欄'}）`);
+    for (const c of pf?.changes || []) console.log(`✓ plan.json：${c.key}＝${c.to}（原本 ${c.from ?? '沒寫'}）`);
     for (const [k, v] of Object.entries(r.facts)) console.log(`${k}：${v || '（空）'}`);
     for (const w of r.warnings) console.log(`⚠ ${w}`);
+    const sk = await skillsLine(root);
+    if (sk) console.log(sk);
     for (const l of actionLines(after)) console.log(l);
     return 0;
   }
@@ -778,17 +870,19 @@ function cli() {
   try { plan = JSON.parse(fs.readFileSync(path.join(project, 'work', 'hyperframes', 'plan.json'), 'utf8')); } catch { plan = null; }
   const fmt = resolveFormat({ projectDir: project, plan });
   const sp = readSpeaker(path.join(root, 'shared', 'template'));
-  if (flags.json) { console.log(JSON.stringify({ ...s, project: label, format: fmt.format, formatSource: fmt.source, speaker: sp.state }, null, 2)); return 0; }
-  const spLine = sp.state === 'unset' ? `講者：⚠ 還沒設定（14 講者介紹會用示範人物林大寶）→ 跟使用者要姓名與頭銜後跑 ${SET_CMD}；不放講者介紹跑 node shared/template/tools/brand.mjs speaker off`
-    : sp.state === 'bad' ? `講者：⚠ shared/setting.json ${sp.error} → ${SET_CMD}` : null;
   const sm = fs.existsSync(path.join(project, 'work', 'rough.srt')) ? readSummary(project) : null;
   const smLine = sm?.state === 'none' ? `摘要：⚠ 還沒寫 work/摘要.md（生成背景圖時參考）→ ${SUMMARY_HOW}，寫完跑 node shared/template/tools/status.mjs --project ${label} --summary`
     : sm?.state === 'bad' ? `摘要：⚠ work/摘要.md ${sm.errors[0]}` : null;
+  // --json 的 summary：和上面那一行同一個判斷（一鍵檢查不用自己看檔在不在）
+  const summary = sm ? { state: sm.state, chars: sm.chars, errors: sm.errors, line: smLine } : null;
+  if (flags.json) { console.log(JSON.stringify({ ...s, project: label, format: fmt.format, formatSource: fmt.source, speaker: sp.state, summary }, null, 2)); return 0; }
+  const spLine = sp.state === 'unset' ? `講者：⚠ 還沒設定（14 講者介紹會用示範人物林大寶）→ 跟使用者要姓名與頭銜後跑 ${SET_CMD}；不放講者介紹跑 node shared/template/tools/brand.mjs speaker off`
+    : sp.state === 'bad' ? `講者：⚠ shared/setting.json ${sp.error} → ${SET_CMD}` : null;
   const pf = readPrefs(root), pfPend = pendingPrefs(root, pf).length;
   const pfLine = pfPend ? `偏好：⚠ 有 ${pfPend} 條「以後都…」還沒問使用者（照做 ${pf.keep.length} 條）→ 回報時問他，指令：${PREFS_CMD} --prefs` : pf.keep.length ? `偏好：${pf.keep.length} 條（shared/偏好.md；寫分鏡、改段落前先讀）` : null;
-  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `Skill：${s.skill}`, `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : []), ...(smLine ? [smLine] : []), ...(pfLine ? [pfLine] : []), ...actionLines(s)]) console.log(l);
+  const asLine = await assetsLine(project, label), skLine = await skillsLine(root);
+  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `Skill：${s.skill}`, `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : []), ...(smLine ? [smLine] : []), ...(pfLine ? [pfLine] : []), ...(asLine ? [asLine] : []), ...(skLine ? [skLine] : []), ...actionLines(s)]) console.log(l);
   return 0;
 }
 
-const isMain = () => { try { return !!process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url)); } catch { return false; } };
-if (isMain()) { try { process.exitCode = cli(); } catch (e) { console.error(`✖ ${e.message}`); process.exitCode = 1; } }
+if (isMain(import.meta.url)) cli().then((code) => { process.exitCode = code; }, (e) => { console.error(`✖ ${e.message}`); process.exitCode = 1; });

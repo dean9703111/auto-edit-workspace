@@ -23,14 +23,26 @@
 //   findKw(text, kw)          → { i, len } | null（字元位置；先精確、再不分大小寫、再忽略空白）
 //   textWidth(s)              → 字數（全形 1、半形 0.5，不四捨五入）
 //   r3(x)                     → 四捨五入到毫秒
+//   r3Round(x)                → 四捨五入到毫秒的另一種算法（見下面的說明；兩種不能互換）
+//   clock1(t)／clock2(t)      → 「分:秒.1 位」／「分:秒.2 位」（不先四捨五入）；clock2r(t) 先四捨五入到 0.01 秒再拆分秒
 //   floorFrame(x, fps)        → 往下對齊到 1/fps 秒
 
 import { foldZh } from './zh.mjs';
 import { cueByN } from './srt.mjs';
 
 export const FPS = 30;
+// 032 C9：四捨五入到毫秒的唯一出處，兩種算法都在這裡（工具裡原本各抄一份，約 20 份）。
+//   r3：照數字在電腦裡的真值（toFixed）：1.2345 存成 1.23449999…，得 1.234
+//   r3Round：先乘 1000 再 Math.round：1.2345×1000 剛好是 1234.5，得 1.235；負數的 .5 往大的那邊（−0.0625 → −0.062，r3 是 −0.063）
+// 兩種只在「剛好落在 0.0005 邊界附近」的值不一樣（例如兩個毫秒值的中點），但寫進檔案、印給人看的數字就會差 1 毫秒：
+// 每支工具照它原本用的那一種匯入，不要互換（dev/tests/032-p3d.test.mjs 逐位元組比對）
 export const r3 = (n) => +Number(n).toFixed(3);
+export const r3Round = (n) => Math.round(n * 1000) / 1000;
 export const floorFrame = (t, fps = FPS) => r3(Math.floor(t * fps + 1e-6) / fps);
+// 時間碼（給人看的）：不先四捨五入，59.96 秒印成 0:60.0（照舊，不改輸出）；clock2r 先四捨五入到 0.01 秒，59.996 → 1:00.00
+export const clock1 = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;
+export const clock2 = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+export const clock2r = (t) => { const r = Math.round(t * 100) / 100; return `${Math.floor(r / 60)}:${(r % 60).toFixed(2).padStart(5, '0')}`; };
 
 export const TIME_HELP = '時間寫法：#12（第 12 句開頭）、#12e（第 12 句結尾）、#12+0.3、+1.2（本段起點後 1.2 秒，只用在 at／beats）、12.5（秒數，只用在 from／to）、#12@詞（第 12 句裡「詞」開口的位置，#12e@詞＝詞講完）';
 

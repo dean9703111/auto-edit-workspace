@@ -1,20 +1,19 @@
 ---
 name: auto-edit-style
-description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「講者設定成…」「不要講者介紹」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
+description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。配樂照 references/music.md、拆參考片照 references/reference-video.md 做。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「講者設定成…」「不要講者介紹」「生成配樂」「換配樂」「這集不要底樂」「用我自己的音樂」「拆這支參考片」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
 version: 0.1.0
 ---
 # 換風格
 
 規則在 AGENTS.md；本檔只寫這一階段的指令、判準、停點、退路。
-衝突時：使用者當下的話 > AGENTS.md > shared/style.md > USAGE.md > USAGE-reference.md > 本 Skill；派工時派工訊息 > 本 Skill。
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
-| 色碼、色名或使用者的圖 | `brand.mjs`、`caps.mjs`、生圖、`brand.mjs bg`、ffmpeg | `kit/brand.css`、`kit/pip-frame.png`、`bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（＋`kit/look.json`） | 三張背景 ffprobe 尺寸對、使用者在停點 ⑥ 同意 | ⑥ 背景預覽 |
-| 「換暗色」「換主題」 | 步驟 6 | 這一集 plan.json 第一層的 `theme` | `--check`、build 0 個 ✖ | — |
+| 色碼、色名或使用者的圖 | `brand.mjs`、`caps.mjs`、生圖、`brand.mjs bg` | `kit/brand.css`、`kit/pip-frame.png`、`bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（＋`kit/look.json`） | `brand.mjs bg --verify` 0 個 ✖、使用者在停點 ⑥ 同意 | ⑥ 背景預覽 |
+| 「換暗色」「換主題」 | 步驟 6 | 這一集 plan.json 第一層的 `theme` | build 0 個 ✖ | — |
 | 「有哪些風格」「這集用 XX 風格」「整個換成 XX」 | 步驟 7 | 這一集 plan.json 第一層的 `style`，或 `brand.mjs use` 換掉 `shared/template/` 那幾個檔 | `brand.mjs list` 的 ● 是對的那包、build 0 個 ✖ | — |
 
-路由規則的唯一定義：USAGE-reference.md R9.3；背景圖規格與留空區：R9.2。這支 Skill 會動到 `shared/`，只透過工具寫這幾樣（AGENTS.md 規則 1）：`brand.mjs` 寫 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`bg-*.jpg`，`brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪），`brand.mjs speaker` 寫 `shared/setting.json`；手動只改 `kit/look.json` 的 `color`、`slim`（步驟 5）。
+路由規則的唯一定義：USAGE-reference.md R9.3；背景圖規格與留空區：R9.2。這支 Skill 會動到 `shared/`，只透過工具寫這幾樣（AGENTS.md 規則 1）：`brand.mjs` 寫 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`bg-*.jpg`，`brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪），`brand.mjs speaker` 寫 `shared/setting.json`，`look.mjs default` 寫 `kit/look.json`（步驟 5）。這一集的 plan.json 設定一律用 `build.mjs --set`／`--unset` 改，不手改。
 
 ## 開始前
 
@@ -28,7 +27,6 @@ version: 0.1.0
 | 使用者說「做一個風格包」「換成我的風格」 | 步驟 1–4，第 4 步存成新的一包 |
 | 使用者說「生成配樂」「做配樂」「換配樂」「加底樂」「這集不要底樂」「用我自己的音樂」 | 不做下面的步驟，改照 `references/music.md`（選用；沒人要求就不加底樂、不裝 ACE-Step） |
 | 使用者說「拆這支參考片」「分析這支影片怎麼剪」 | 不做下面的步驟，改照 `references/reference-video.md`（只出報告，不改 `shared/`） |
-| 會做到步驟 4（換背景、做風格包） | 開工先跑 `node shared/template/tools/brand.mjs list`，記下 ● 在哪一包；沒有 ● 就先跑 `node shared/template/tools/brand.mjs pack 原本-<YYYYMMDD>` 把目前的存起來，再做步驟 1，步驟 4 的 `use` 才不會卡住 |
 
 ## 步驟
 
@@ -54,12 +52,12 @@ node shared/template/tools/caps.mjs
 **3. 生成到暫存資料夾、驗證、預覽 → 停點 ⑥**（每條路的指令在 `references/image-routing.md`）
 
 ```
-node shared/template/tools/brand.mjs bg --html <暫存資料夾>/bg-fs.html --kind fs --out <暫存資料夾>
-ffprobe -v error -show_entries stream=width,height -of csv=p=0 <暫存資料夾>/bg-fs.jpg
+node shared/template/tools/brand.mjs bg --tmp
+node shared/template/tools/brand.mjs bg --verify <暫存資料夾>
 ```
 
-做法、常見的狀況：`references/background.md`「3. 生成到暫存資料夾、驗證、預覽」。
-完成判準：三張尺寸是 `1920,1080`／`960,1080`／`1920,1080`；`zones-fs.jpg`、`preview.jpg` 存在；留空區乾淨（HTML 路線看 `brand.mjs bg` 每張印 `✔ 留空區乾淨`；其他路線看 `zones-fs.jpg`、`zones-side.jpg`、`zones-ch.jpg` 的框裡沒有裝飾，references 第 5 節）。
+第 1 行開暫存資料夾、印完整路徑（後面的 `<暫存資料夾>` 都換成它）；三張做好後跑第 2 行：驗尺寸、重做 zones 圖、量留空區、產生 `preview.jpg`，最後印回報段和停點 ⑥ 那兩行。做法、常見的狀況：`references/background.md`「3. 生成到暫存資料夾、驗證、預覽」。
+完成判準：`--verify` 0 個 ✖、最後兩行是停點 ⑥；留空區有 ⚠ 照那一行的 → 做。
 
 **4. ⑥ 同意後：存成風格包、套用，重跑 build**
 
@@ -75,23 +73,21 @@ node shared/template/tools/build.mjs --project projects/<專案>
 **5. 講者調光、瘦臉的預設**（使用者說「以後都要調光」「預設瘦一點」「預設不要調光」時；預設兩個都是 0＝關）
 
 ```
-node shared/template/tools/look.mjs status --project projects/<專案>
+node shared/template/tools/look.mjs default --color 0.8 --slim 0.6
 ```
 
-改 `shared/template/kit/look.json` 的 `color`（0–1）或 `slim`（0–1.2），其他鍵不動；只想改這一集（「這集要調光、瘦臉」）就寫 plan.json 第一層的 `look`（建議 `{ "color": 0.8, "slim": 0.6 }`），不要改這個檔。改了 `slim` 照 `look.mjs status` 的「→ 下一步」重跑 `look.mjs run`：「→ 下一步：<說明>」下面那一行（最後一行）就是指令，整行複製、單獨一行執行。
-完成判準：`look.mjs status` 的「設定」那一行是新的值。
-常見錯誤：把 `color`、`slim` 以外的鍵也改了 → 把那幾個鍵改回原本的值。
+只寫使用者說的那幾個（`--color` 0–1、`--slim` 0–1.2、`--beauty` 0–1；0＝關），它只改 `shared/template/kit/look.json` 那幾個鍵；不帶值＝印目前的預設。只想改這一集（「這集要調光、瘦臉」）不要跑這條，改用 `node shared/template/tools/build.mjs --project projects/<專案> --set "look.color=0.8;look.slim=0.6"`（這集都不要：`--set look=off`）。改了瘦臉或美顏，有專案時照 `node shared/template/tools/look.mjs status --project projects/<專案>` 印的「→ 下一步」重跑 `look.mjs run`。
+完成判準：印 `✓ kit/look.json：…` 和「設定：…」那一行是新的值。
 
 **6. 換主題（亮／暗）**（使用者說「換暗色」「換主題」「改回亮色」時）
 
 ```
-node shared/template/tools/build.mjs --project projects/<專案> --check
+node shared/template/tools/build.mjs --project projects/<專案> --set theme=dark
 node shared/template/tools/build.mjs --project projects/<專案>
 ```
 
-先重新讀 plan.json（剪輯台可能改過），只改第一層的 `"theme"`：`"dark"`＝暗色（石墨黑底、玻璃卡）；`"light"`＝亮色（預設，不寫也是亮色）。只換顏色 token，版面與動態不變；這一步不改 `shared/`，不用停點 ⑥。
-完成判準：`--check`、build 都 0 個 ✖；回報寫改成哪個主題、改的是哪個 plan.json。
-常見錯誤：寫成 `"theme": "暗"`、或寫進某一段的 scene 裡 → 只能是 `"light"` 或 `"dark"`，寫在 plan.json 第一層。
+`dark`＝暗色（石墨黑底、玻璃卡）；改回亮色寫 `theme=light`。只換顏色 token，版面與動態不變；這一步不改 `shared/`，不用停點 ⑥。第 2 行照 `--set` 印的「→ 下一步」跑。
+完成判準：印 `✓ plan.json：theme＝…`、build 0 個 ✖；回報寫改成哪個主題、改的是哪個專案。
 
 **7. 風格包：列出、這一集用、整個工作區換**
 
@@ -101,9 +97,8 @@ node shared/template/tools/brand.mjs use <名稱>
 node shared/template/tools/build.mjs --project projects/<專案>
 ```
 
-先跑 list 把清單貼給使用者（內建「預設」橘色、示範「藍圖」藍色；也可以請他打開 `shared/template/index.html`，上方「風格」選單可以直接預覽每一包、亮／暗）。只換這一集：重新讀 plan.json，在第一層寫 `"style": "<名稱>"`（不跑 use）；換回工作區目前的就刪掉 `style`。整個工作區換：跑 use（之後每集都用它）。這一步不用停點 ⑥（風格包已經是使用者同意過的檔）。
+先跑 list 把清單貼給使用者（內建「預設」橘色、示範「藍圖」藍色；也可以請他打開 `shared/template/index.html`，上方「風格」選單可以直接預覽每一包、亮／暗）。只換這一集：`node shared/template/tools/build.mjs --project projects/<專案> --set style=<名稱>`（不跑 use；名稱照 list 抄）；換回工作區目前的：`--unset style`。整個工作區換：跑 use（之後每集都用它；目前的設定不屬於任何包時，它會先自動存成「原本-<YYYYMMDD>」）。這一步不用停點 ⑥（風格包已經是使用者同意過的檔）。
 完成判準：只換一集時 build 印 `風格包：<名稱>`；整個換時 list 的 ● 在那一包；build 0 個 ✖。
-常見錯誤：`✖ style：找不到風格包` → 名稱照 list 抄（資料夾名，含中文）；use 說「不屬於任何包」→ 先 pack 存起來，不要直接加 `--force`（步驟 4 換過主色的例外寫在步驟 4）。
 
 **8. 講者資料**（使用者說「講者設定成 <姓名>，頭銜 …」「不要講者介紹」，或 `status.mjs`／`--check` 印「還沒設定講者」而使用者給了資料時）
 
@@ -123,7 +118,7 @@ node shared/template/tools/brand.mjs speaker
 請回：「可以」或「重做」
 ```
 
-停點 ⑥ 不能略過：背景圖放進 `shared/` 一定要使用者同意（AGENTS.md 規則 1）。暫存資料夾寫完整路徑。
+停點 ⑥ 不能略過：背景圖放進 `shared/` 一定要使用者同意（AGENTS.md 規則 1）。這兩行照抄 `brand.mjs bg --verify` 印的（暫存資料夾已經是完整路徑）。
 
 生成配樂（`references/music.md`）也停在 ⑥，用這兩行（`music.mjs gen` 會印，照抄）：
 
@@ -142,9 +137,9 @@ node shared/template/tools/brand.mjs speaker
 - [ ] 用了哪個色碼已回報
 - [ ] 能力表已貼
 - [ ] 沒有安裝工具、沒有幫使用者登入任何服務
-- [ ] 三張圖先在暫存資料夾，尺寸 1920×1080／960×1080／1920×1080
-- [ ] 背景圖、新的風格包在停點 ⑥ 通過才寫進 `shared/`（步驟 1 換主色、開工時存 `原本-<YYYYMMDD>` 不用等 ⑥）
-- [ ] `shared/` 只動了本檔開頭列的那幾樣；換主題只改了 plan.json 第一層的 `theme`、單集換風格只改了 `style`
+- [ ] `preview.jpg` 親眼看過：三張像同一套、留空區的框裡沒有裝飾
+- [ ] 背景圖、新的風格包在停點 ⑥ 通過才 `pack`、`use`（步驟 1 換主色不用等 ⑥）
+- [ ] `shared/` 只透過本檔開頭列的工具寫；plan.json 只用 `--set`／`--unset` 改
 
 ## 退路表
 
@@ -158,7 +153,7 @@ node shared/template/tools/brand.mjs speaker
 
 ## 工具呼叫預算
 
-最多 15 次。超過就停下來回報卡在哪。
+最多 15 次。超過就停下來回報卡在哪；工具印「→ 停手」也一樣停，把它上面還在的 ✖ 原文回報。
 
 ## 回報格式
 
@@ -166,9 +161,8 @@ node shared/template/tools/brand.mjs speaker
 主色：<色碼>（<色名>）；對比 <brand.mjs 原文>
 能力表：<貼 caps.mjs 的表>
 走的路：<使用者的圖／Codex／mmx／HTML>，理由：<一句>
-主題（只在換主題時）：<light／dark>，改了 projects/<專案>/work/hyperframes/plan.json；build ✖ 0
-三張背景：<暫存資料夾>/bg-fs.jpg 1920×1080、bg-side.jpg 960×1080、bg-ch.jpg 1920×1080
-<停點 ⑥ 那一行原文，暫存資料夾寫完整路徑>
+主題（只在換主題時）：<--set 印的 ✓ 那一行>；build ✖ 0
+<brand.mjs bg --verify 印的回報段（三張背景、留空區、停點 ⑥ 那兩行），照貼>
 ```
 
 ⑥ 通過後：`存成風格包：shared/template/styles/<名稱>/；套用：<整個工作區（brand.mjs use）／只有這一集（plan.json style）>`＋`→ 重新打開 shared/template/index.html，上方「風格」選 <名稱> 預覽`。

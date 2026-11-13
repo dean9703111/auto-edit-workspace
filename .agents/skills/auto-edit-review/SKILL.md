@@ -6,7 +6,6 @@ version: 0.2.0
 # 定稿、審查、回饋輪、剪輯台
 
 規則在 AGENTS.md；本檔只寫這一階段的指令、判準、停點、退路。
-衝突時：使用者當下的話 > AGENTS.md > shared/style.md > USAGE.md > USAGE-reference.md > 本 Skill；派工時派工訊息 > 本 Skill。
 
 | 輸入 | 指令 | 產出 | 完成判準 | 停點 |
 |---|---|---|---|---|
@@ -33,18 +32,18 @@ version: 0.2.0
 node shared/template/tools/build.mjs --project projects/<專案> --review
 ```
 
-一條做完：build、量全部動畫、完成態拼圖、開完成影片預覽（不 render）、記停點。內容沒變的段會沿用上次的量測和截圖；懷疑沒量到加 `--no-reuse`。**同一則回覆一次打開它印的所有拼圖頁**，只找 FAIL（REVIEW.md §2），不用每段寫 PASS。回覆附上六行、提醒「請看字幕有沒有對到嘴」。
-完成判準：印 `audit：✖ 0`、停點 ④ 那一行；拼圖沒有 FAIL，或 FAIL 都修好重跑過。內容設計動畫段的 ✖ 把原文交回做那段的子代理。使用者要求看全片逐格才跑：`(cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review)`（長片要好幾分鐘）。
+一條做完：build、量全部動畫、完成態拼圖、開完成影片預覽（不 render）、記停點，最後印回報段（停點 ④ 那兩行在最後）。內容沒變的段會沿用上次的量測和截圖；懷疑沒量到加 `--no-reuse`。**同一則回覆一次打開它印的所有拼圖頁**，只找 FAIL（REVIEW.md §2），不用每段寫 PASS。
+完成判準：印 `audit：✖ 0`、停點 ④ 那兩行；拼圖沒有 FAIL，或 FAIL 都修好重跑過。內容設計動畫段的 ✖ 把原文交回做那段的子代理。使用者要求看全片逐格才跑：`(cd projects/<專案>/work/hyperframes && npx hyperframes snapshot --review)`（長片要好幾分鐘）。
 
-**B. 回饋輪**（停點 ④ 收到修改時。**流程 F**＝使用者說「照修改單改」、貼上「照剪輯台修改單改這 N 段（…）」或「# 剪輯台修改單」：一樣走 B，改法照 `work/feedback/editor-requests.md` 直接做、不出提案、不停 ③，要手改動畫的段一段一個子代理同時派出，開始與做完用 `editor.mjs --requests-state` 回報剪輯台；標籤解讀、派工、回報讀 `references/editor-requests.md`）
+**B. 回饋輪**（停點 ④ 收到修改時。**流程 F**＝使用者說「照修改單改」、貼上「照剪輯台修改單改這 N 段（…）」或「# 剪輯台修改單」：一樣走 B，第 1 行改用 `node shared/template/tools/versions.mjs begin --project projects/<專案> --requests`，改法照 `work/feedback/editor-requests.md` 直接做、不出提案、不停 ③，要手改動畫的段一段一個子代理同時派出；剪輯台的「生成中」「已改完」「失敗」由 `begin`、`finish` 自己標；標籤解讀、派工、回報讀 `references/editor-requests.md`）
 
 ```
-node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段,段> --say "使用者原話"
+node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段,段> --said "使用者原話"
 node shared/template/tools/versions.mjs finish --project projects/<專案>
 ```
 
-三步：① `begin` 備份、存改前版本、開 `work/feedback/r<N>.md`，只印這幾段的 plan（不用讀整份）。② 改那幾段（文字、位置、時間改 plan.json；模板動畫改 `slots`；內容設計動畫檔裡的東西、`slots` 做不到的模板改動，一段派一個子代理照 `.agents/skills/auto-edit-motion/references/worker-brief.md` 改，同一則回覆一次派出、全部回來才跑 ③；主代理不自己改動畫檔）。「s05」直接找 id；「1:10 那段」「這段」照 USAGE.md 2.6 換成段 id。③ `finish` build、量、存改後版本、寫驗證、記停點，印要看的那張圖，打開看一次。有 ✖ 它會停，改完再跑一次 `finish`。
-完成判準：`finish` 印停點 ④ 那一行；要看的那張圖看過；流程 F 修改單每一段在 r<N>.md「改了哪幾段」都有一列 `- <段 id>：<做了什麼或沒做的理由>`，也用 `--requests-state` 回報了 `done` 或 `failed`。
+三步：① `begin` 備份、存改前版本、開 `work/feedback/r<N>.md`，只印這幾段的 plan（不用讀整份）。② 改那幾段（文字、位置、時間改 plan.json；模板動畫改 `slots`；模板換成內容設計動畫用 `node shared/template/tools/build.mjs --project projects/<專案> --to-design <段>`，照它「→ 派工：」下面那一行派設計師；內容設計動畫檔裡的東西、`slots` 做不到的模板改動，一段派一個子代理照 `.agents/skills/auto-edit-motion/references/worker-brief.md` 改，同一則回覆一次派出、全部回來才跑 ③；主代理不自己改動畫檔）。「s05」直接找 id；「1:10 那段」「這段」跑 `node shared/template/tools/build.mjs --project projects/<專案> --show 1:10` 找段 id。③ `finish` build、量、存改後版本、寫驗證、記停點，印要看的那張圖，打開看一次，最後印回報段。有 ✖ 它會停，改完再跑一次 `finish`。
+完成判準：`finish` 印停點 ④ 那兩行；要看的那張圖看過；流程 F 修改單每一段在 r<N>.md「改了哪幾段」都有一列 `- <段 id>：<做了什麼或沒做的理由>`。
 常見錯誤：「規則」類的回饋（「以後金句都放左邊」）去改了 `shared/` → 只記在 r<N>.md 的「建議改規則」；使用者沒說怎麼改、只說要更好 → 改走流程 D；不知道怎麼歸類 → `references/feedback-round.md`。
 
 **C. 剪輯台 → 停點 ⑤**（EDITOR.md「一、給 AI」；剪輯台會改哪些欄位看其中「3. 剪輯台會寫哪些欄位」）
@@ -54,30 +53,27 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 node shared/template/tools/editor.mjs --status --project projects/<專案>
 ```
 
-第 1 行在背景啟動；第 2 行確認網址。使用者說「調好了」：直接跑流程 A（`--review` 會讀剪輯台存的最新檔，不用整份重讀 plan.json、rough.srt）；之後要改哪一段，再用 `build.mjs --show <段>` 讀那一段（剪輯台增刪字幕時會重對 plan.json 的句號，`work/storyboard.md` 的句號可能過期，以 plan.json 為準）。不要關剪輯台，停點 ④ 的網址就是它。
+第 1 行在背景啟動；第 2 行確認網址。使用者說「調好了」：直接跑流程 A（`--review` 會讀剪輯台存的最新檔，不用整份重讀 plan.json、rough.srt）；之後要改哪一段，再用 `build.mjs --show <段>` 讀那一段（剪輯台增刪字幕時會重對 plan.json 的句號）。不要關剪輯台，停點 ④ 的網址就是它。
 完成判準：`--status` 印出網址；「調好了」之後 `--review` 0 個 ✖。
 
 **D. 改版**（使用者指名一段要重新設計、更完善、換個動畫；步驟在 `references/revise.md`）
 
 ```
-node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段> --say "使用者原話"
-node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段> --note "「使用者原話」"
+node shared/template/tools/versions.mjs new --project projects/<專案> --seg <段> --note "使用者原話"
 ```
 
-提案寫在 `work/versions/<段>/v<N>/分鏡.md`，停點 ③ 確認才動手。**重新設計要回到內容，不是換一支模板**：設計師照 `.agents/skills/auto-edit-motion/references/design.md` 重想這段要傳達什麼。沒指名段（「動畫都更細節一點」）先列出動畫段、每段一句可以改的方向，問要改哪幾段。
+沒有開著的回饋輪會自己開一輪；存現在的樣子、開提案 `work/versions/<段>/v<N>/分鏡.md`、記停點 ③（<段> v<N>）待回覆，最後印停點那兩行。提案寫在那份分鏡.md，停點 ③ 確認才動手。**重新設計要回到內容，不是換一支模板**：設計師照 `.agents/skills/auto-edit-motion/references/design.md` 重想這段要傳達什麼。沒指名段（「動畫都更細節一點」）先列出動畫段、每段一句可以改的方向，問要改哪幾段。
 完成判準：分鏡.md 沒有範本那一行「（寫 1–5 條」；回覆最後兩行是改版的停點 ③。
 常見錯誤：直接改了 storyboard.md 或 x 檔 → 提案只寫在 v<N>/分鏡.md，使用者說「可以」後才 `accept`。
 
 **E. 退回某一版**（「s12 用 v1」「退回上一版」）
 
 ```
-node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段> --say "使用者原話"
-node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v1
-node shared/template/tools/versions.mjs finish --project projects/<專案>
+node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v1 --said "使用者原話"
 ```
 
-三行都要跑：沒有 `begin` 的 `finish` 會 ✖，或把這次退回算進上一輪。不確定有哪幾版先跑 `versions.mjs list --project projects/<專案> --seg <段>`（「上一版」＝標「← 目前」的前一版）；use 會先把現在的樣子存起來再換回去。
-完成判準：工具印「退回 v1」；`finish` 0 個 ✖。
+沒有開著的回饋輪：一條做完（自己開一輪、換回去、`finish`），最後印回報段和停點 ④ 那兩行。回饋輪開著（同一輪還有別的修改）：只換回去，其他改完再跑 `versions.mjs finish`。不確定有哪幾版先跑 `node shared/template/tools/versions.mjs list --project projects/<專案> --seg <段>`（「上一版」＝標「← 目前」的前一版）；use 會先把現在的樣子存起來再換回去。
+完成判準：工具印「退回 v1」；0 個 ✖，印停點 ④ 那兩行。
 常見錯誤：印 `⚠ 字幕在 v1 之後改過` → 看 `finish` 的「文字對時」，先跑 `node shared/template/tools/build.mjs --project projects/<專案> --autofix --only <段>` 讓工具照 → 改，剩下的 ✖ 再手改那段的 `#N@詞`。
 
 ## 停點
@@ -103,12 +99,12 @@ node shared/template/tools/versions.mjs finish --project projects/<專案>
 
 ## 自我核對
 
-- [ ] build、audit 0 個 ✖
 - [ ] 拼圖一次看完，有 FAIL 的修好了
-- [ ] 回饋輪用 `versions.mjs begin`／`finish`，沒有手動備份、複製版本
+- [ ] 回饋輪用 `versions.mjs`（`begin`／`finish`、`new`、`use`），沒有手動備份、複製版本
 - [ ] 改版先停在停點 ③（<段> v<N>），使用者說「可以」才 accept、才動手
 - [ ] 沒蓋掉剪輯台存的設定
 - [ ] 「規則」類的修改只記在 r<N>.md，沒改 `shared/`
+- [ ] 回報段照貼，⚠ 逐項補了理由、「拼圖：」那一行補了 FAIL（或「沒有 FAIL」）
 
 ## 退路表
 
@@ -122,21 +118,25 @@ node shared/template/tools/versions.mjs finish --project projects/<專案>
 | `✖ work/rough.mp4 在 … 是全黑，但素材沒有純聲音檔 → 初剪壞了…` | 不要改 plan.json 繞過；照訊息跑 `verify-rough`，照它印的重做初剪 | 停下來回報 |
 | `⚠ build 會停下來：瘦臉底片不是最新的（…）→ 先跑 … look.mjs run …` | 照它的 → 跑 `look.mjs`，再跑一次 | 停下來回報 |
 | `✖ <段> 的 v<N> 分鏡還在等使用者確認 → …` | 使用者已經說「可以」就照 → 跑 accept；不改了就照 → 跑 use | 停下來回報 |
-| 回饋某一項工具呼叫超過 6 次 | 停下來回報那一項卡在哪 | — |
+| `→ 停手：…已經連續 N 次沒過` | 不要再改，把它上面還在的 ✖ 原文回報，說明卡在哪一項 | — |
 
 ## 工具呼叫預算
 
-流程 A 最多 8 次（不含內容設計動畫）；回饋輪每一項最多 6 次；改版開提案到停點 ③ 每段 6 次、確認後到停點 ④ 12 次（不含動畫）。超過就停下來回報卡在哪。
+工具印「→ 停手」就停，把它上面還在的 ✖ 原文回報；同一個 ✖ 改 2 次還在也一樣（AGENTS.md 規則 9）。讀文件、派子代理、印 ⏳ 之後再跑同一條都不算。
 
 ## 回報格式
 
+流程 A（`--review`）、流程 B 和 E（`finish`、`use`）：照貼工具最後印的「── 回報（照貼；要你判斷的另外補一行）──」那一段，停點 ④ 那兩行在最後，不改字。只補它要你判斷的：
+
+- ⚠ 逐項寫「改了」或保留的理由。
+- 「拼圖：」那一行：看完寫 FAIL 的段與問題；沒有就寫「沒有 FAIL」。
+- 流程 D 做完：再加「這版要改什麼」那幾條。
+
+沒有回報段的（流程 C 開剪輯台、流程 D 開提案）：
+
 ```
-預覽好了：<N> 段；audit ✖ 0、⚠ <N>（⚠ 逐項：改了／保留的理由）
-人聲響度 …、音效比例 …、剪接點微淡化 …、講者調光 …、講者瘦臉 …、結尾配樂 …（--review 印的六行）
-拼圖：<FAIL 的段與問題；沒有寫「沒有 FAIL」>
-請看字幕有沒有對到嘴；說「輸出」才 render。
-還可以專門設計的段：<--review 印的那一句；沒印就省略>
-<停點 ④ 那一行原文>
+剪輯台開好了：<剪輯台網址>（流程 C）／<段> 改版提案 v<N>：<「這版要改什麼」那幾條>（流程 D）
+<停點 ⑤，或停點 ③（<段> v<N>）那兩行原文>
 ```
 
 ## 什麼時候讀 references/

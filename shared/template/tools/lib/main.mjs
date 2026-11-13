@@ -482,8 +482,8 @@ ${cueScript}${portrait ? `  ${regionsScript(C)}\n` : ''}  <script src="${base}ki
 ${footCss}    #footage video { position: absolute; left: 0; top: 0; width: ${W}px; height: ${H}px; object-fit: cover; }
 ${portrait ? `    /* 講者面板 x 0–1080、y 900–1920（lib/canvas.mjs 的 pip.box，決定 1：分割線 y 900） */
     .pip { position: absolute; left: ${PB[0]}px; top: ${PB[1]}px; width: ${PB[2]}px; height: ${PB[3]}px; overflow: hidden; z-index: 40; }`
-    : `    /* 子母畫面本體 x 1424–1856、y 594–918（432×324，4:3），和 lib/media.mjs 的 PIP_ZONE、pip-frame.png 同一組數字 */
-    .pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }`}
+    : `    /* 子母畫面本體 x ${PB[0]}–${PB[0] + PB[2]}、y ${PB[1]}–${PB[1] + PB[3]}（${PB[2]}×${PB[3]}，4:3），和 lib/media.mjs 的 PIP_ZONE、pip-frame.png 同一組數字 */
+    .pip { position: absolute; left: ${PB[0]}px; top: ${PB[1]}px; width: ${PB[2]}px; height: ${PB[3]}px; overflow: hidden; border-radius: 6px; z-index: 40; }`}
     .pip video { position: absolute; }
     .pip-frame { z-index: 41; }
 ${bg ? indent(bgCss(`${base}assets/`, bg), 4) + '\n' : ''}  </style>
@@ -543,6 +543,7 @@ export function buildPreview({ scene, parts, D, sub, pipStyle, cues = [], wide =
     tl.push(`tl.fromTo('#footage', { x: 480 }, { x: 0, duration: ${PUSH}, ease: SceneMotion.pushEase, immediateRender: false }, ${n3(D - PUSH)});`);
   }
   const st = pipStyle;
+  const PB = CANVAS.landscape.pip.box;   // 子母畫面本體（032 C7：數字只在 lib/canvas.mjs）
   return `<!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -562,7 +563,7 @@ ${KIT_LINKS.map((l) => `<link rel="stylesheet" href="../${l}">`).join('\n')}
   #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
   .fill { position: absolute; inset: 0; }
   #scene { position: absolute; inset: 0; z-index: ${opaque ? 30 : 20}; }
-  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip { position: absolute; left: ${PB[0]}px; top: ${PB[1]}px; width: ${PB[2]}px; height: ${PB[3]}px; overflow: hidden; border-radius: 6px; z-index: 40; }
   #pip img { position: absolute; left: ${st.left}px; top: ${st.top}px; width: ${st.width}px; height: ${st.height}px; }
   #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
   #cap { z-index: 60; }

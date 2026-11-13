@@ -8,7 +8,7 @@
  *       列曲庫：工作區的（shared/music/）和這一集的（work/music/），標出預設的底樂。
  *   node shared/template/tools/music.mjs gen [--style <風格>] [--prompt "<英文描述>"] [--seconds 90] [--n 3] [--project projects/<專案>]
  *       用 ACE-Step 生成 n 首純音樂候選（服務沒開會自己開，做完自己關），調好響度，寫一頁可以播放的試聽頁。
- *       風格：輕快科技（預設）、溫暖敘事、沉穩專業、活力教學。使用者自己給描述才寫 --prompt（英文效果最好）。
+ *       風格：輕快科技（預設）、溫暖敘事、沉穩專業、活力教學。使用者自己給描述才寫 --prompt（英文效果最好；和 --style 不能一起用）。
  *       沒裝 ACE-Step：印怎麼裝（setup/ACE-Step 配樂.md，選用），結束碼 2。
  *   node shared/template/tools/music.mjs keep <第幾首> --name <曲名> [--project projects/<專案>] [--from <候選資料夾>]
  *       把試聽後挑中的那一首存進曲庫（沒寫 --project＝工作區曲庫，每一集都能用；寫了＝只有這一集）。
@@ -21,6 +21,7 @@
  *
  * 曲名：小寫英文開頭，只用小寫英數和 -（例 bed-calm-tech）。已經在曲庫的曲名不覆寫。
  * 用在影片上：plan.json 第一層 "bed": { "music": "<曲名>" }（整支片的底樂）、"outro": { "from": "#N", "music": "<曲名>" }（片尾配樂）。
+ * 旗標也可以寫成 --旗標=值（只在第一個 = 切，例 --credit="a=b"）；要值的旗標後面沒接值（或接著另一個旗標）、不認得的旗標都 ✖。
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -30,6 +31,9 @@ import { fileURLToPath } from 'node:url';
 import { readSettings, writeSetting } from './lib/settings.mjs';
 import { ACE, BED, NAME_RE, LIB_LUFS, loadMusic, musicDirs, registerTrack, normalizeTrack, aceHealth, aceGenerate, aceDownload } from './lib/music.mjs';
 import { probeDuration } from './lib/ff.mjs';
+import { stopLines } from './lib/stops.mjs';
+import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
+import { next, cmdLine } from './lib/say.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..', '..');
@@ -46,12 +50,21 @@ export const STYLES = {
 const SUFFIX = 'instrumental, no vocals, steady volume, seamless loop, background underscore for a talking video';
 export const promptOf = ({ style = '輕快科技', prompt = null }) => `${prompt ? String(prompt).trim() : STYLES[style]}, ${SUFFIX}`;
 
+const VALUE_FLAGS = ['project', 'style', 'prompt', 'seconds', 'n', 'name', 'from', 'credit', 'image', 'seed'];
+const BOOL_FLAGS = ['json', 'help'];
+// lib/cli.mjs 的寫法：--旗標=值 只在第一個 = 切；要值的旗標缺值（或下一個是另一個旗標）✖，不再默默當成 true；不認得的旗標 ✖
 function parse(argv) {
   const f = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a.startsWith('--')) { const k = a.slice(2); f[k] = argv[i + 1] !== undefined && !argv[i + 1].startsWith('--') ? argv[++i] : true; } else f._.push(a);
+    if (!String(a).startsWith('--')) { f._.push(a); continue; }
+    const [k, inline] = splitFlag(a);
+    if (VALUE_FLAGS.includes(k)) [f[k], i] = valueOf(argv, i, k, inline);
+    else if (BOOL_FLAGS.includes(k)) f[k] = true;
+    else throw new Error(`沒有 --${k} 這個參數 → 看用法：node shared/template/tools/music.mjs --help`);
   }
+  // --prompt 會整個取代 --style 的描述：兩個都給時以前默默不管 --style
+  oneOf(f, ['style', 'prompt']);
   return f;
 }
 function projectOf(f) {
@@ -150,10 +163,9 @@ async function gen(f) {
     fs.writeFileSync(path.join(dir, 'candidates.json'), `${JSON.stringify(meta, null, 2)}\n`);
     fs.writeFileSync(path.join(dir, '試聽.html'), auditionHtml(meta));
     console.log(`✓ ${meta.tracks.length} 首候選（${Math.round((Date.now() - t0) / 1000)} 秒）：${rel(dir)}`);
-    console.log(`→ 下一步：把停點那兩行貼給使用者；他說「用第 N 首」就跑（曲名自己取，小寫英文和 -）：`);
-    console.log(`node shared/template/tools/music.mjs keep <N> --name <曲名>${projectDir ? ` --project ${rel(projectDir)}` : ''}`);
-    console.log(`⏸ 停點 ⑥ 配樂試聽｜請看 ${path.join(dir, '試聽.html')}`);
-    console.log('請回：「用第 N 首」或「重做」');
+    // keep 要等使用者選了第幾首才能跑（<N>、<曲名> 要換掉）：寫進說明，「→ 下一步」下面不放還不能跑的指令
+    for (const l of next(`把停點那兩行貼給使用者；他說「用第 N 首」就跑（曲名自己取，小寫英文和 -）：${cmdLine('music.mjs', ['keep', { raw: '<N>' }, '--name', { raw: '<曲名>' }, ...(projectDir ? ['--project', rel(projectDir)] : [])])}`)) console.log(l);
+    console.log(stopLines.music(path.join(dir, '試聽.html')));
     return 0;
   } catch (e) {
     console.log(`✖ ${e.message}`);
@@ -188,9 +200,11 @@ function keep(f) {
   registerTrack(target, name, { kind: 'bgm', zh: `${meta.style || '自訂'}（ACE-Step 生成）`, source: { engine: meta.engine, model: t.model, prompt: meta.prompt, seed: t.seed, seconds: meta.seconds, created: meta.created } });
   fs.copyFileSync(path.join(dir, t.file), path.join(target, `${name}.wav`));
   console.log(`✓ 存進${projectDir ? '這一集的' : '工作區'}曲庫：${rel(path.join(target, `${name}.wav`))}（${Math.round(t.dur)} 秒）`);
-  console.log(projectDir
-    ? `→ 下一步：這一集的 plan.json 第一層寫 "bed": { "music": "${name}" }，再跑 build`
-    : `→ 下一步：每一集都用它當底樂就跑下面那一條；只用在某一集就在那集 plan.json 第一層寫 "bed": { "music": "${name}" }\nnode shared/template/tools/music.mjs use ${name}`);
+  // 單集的底樂用 build.mjs --set 寫進 plan.json（不用手改 JSON）；它會接著印 build 那一條
+  const L = projectDir
+    ? next('這一集用它當底樂就跑下面那一條（寫進 plan.json 第一層的 bed.music，再照它印的跑 build）', cmdLine('build.mjs', ['--project', rel(projectDir), '--set', `bed.music=${name}`]))
+    : next(`每一集都用它當底樂就跑下面那一條；只用在某一集就跑 node shared/template/tools/build.mjs --project projects/<專案> --set bed.music=${name}`, cmdLine('music.mjs', ['use', name]));
+  for (const l of L) console.log(l);
   return 0;
 }
 
@@ -232,7 +246,9 @@ function acestep(f) {
 }
 
 async function main() {
-  const f = parse(process.argv.slice(2)), cmd = f._[0];
+  let f;
+  try { f = parse(process.argv.slice(2)); } catch (e) { console.log(`✖ ${e.message}`); return 1; }
+  const cmd = f._[0];
   if (!cmd || f.help) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').match(/\/\*\*([\s\S]*?)\*\//)[1].replace(/^ \* ?/gm, '').trim()); return 0; }
   try {
     if (cmd === 'status') return await status();
@@ -247,4 +263,5 @@ async function main() {
   } catch (e) { console.log(`✖ ${e.message}`); return 1; }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) process.exit(await main());
+// 經 symlink 執行也算（lib/cli.mjs 的 isMain 用 realpath 比）：以前直接比路徑，從 symlink 跑什麼都不做
+if (isMain(import.meta.url)) process.exit(await main());

@@ -74,10 +74,10 @@
 | `素材/聲音/` | `assets/voice/` |
 | `素材/螢幕錄影/` | `assets/screen/` |
 | `素材/圖片/` | `assets/images/` |
-| `完成影片/` | `output/` |
-| `完成影片/測試片段/` | `output/test-clips/` |
-| `完成影片/驗收截圖/` | `output/qc/` |
-| `完成影片/剪映/` | `output/capcut/` |
+| `成片/` | `output/` |
+| `成片/測試片段/` | `output/test-clips/` |
+| `成片/驗收截圖/` | `output/qc/` |
+| `成片/剪映/` | `output/capcut/` |
 | `work/版本/` | `work/versions/` |
 | `work/回饋/` | `work/feedback/` |
 | `work/觀影/` | `work/observe/` |

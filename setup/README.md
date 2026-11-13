@@ -15,7 +15,7 @@
 | auto-editor | 剪掉空白和停頓 |
 | HyperFrames Skill、auto-editor Skill | 裝到 `~/.minimax/skills/`（實體檔在 `~/.agents/skills/`，`~/.minimax/skills/` 是連結，兩邊都不要刪） |
 | 工作區的 HyperFrames（`npm install`） | 照工作區根目錄 `package.json` 裝固定版本到 `node_modules/`；之後 `npx hyperframes` 都用這一版 |
-| 9 支 auto-edit Skill | `node setup/install-skills.mjs` 從 `.agents/skills/` 複製到 `.claude/skills/`（Claude Code）與 `~/.minimax/skills/`（MiniMax Code） |
+| 9 支 auto-edit Skill | `node setup/install-skills.mjs` 從 `.agents/skills/` 複製到 `.claude/skills/`（Claude Code）與 `~/.minimax/skills/`（MiniMax Code）；子代理定義 `.agents/agents/auto-edit-worker.md` 一起複製到 `.claude/agents/`（Claude Code） |
 | HyperFrames 渲染用的瀏覽器 | 不用另外裝。S6 的 doctor 顯示 Chrome ✗ 時用 `npx -y hyperframes browser ensure` 下載，第一次 render 也會自動下載；放在 `~/.cache/hyperframes/chrome`，約 200 MB |
 | 臉部偵測檔（MediaPipe，約 18.7 MB） | 瘦臉用。已經在 `shared/template/vendor/mediapipe/`，不用裝；S5 只檢查檔案完整 |
 | 人物去背模型（選用，約 170 MB） | 只有用到「講者站在動畫前面」的模板（`x-wall`、`x-magazine`、`x-breakout`）才需要。不在安裝清單裡：build 用到時會說，問過使用者再跑 `node shared/template/tools/media.mjs matte-setup`，下載到 `~/.cache/hyperframes/background-removal/` |
@@ -30,7 +30,7 @@
 3. 開始前把這一輪要做的步驟一次列給使用者，問一次（最後一行 `❓ 請回：「可以開始」或要拿掉的步驟編號`）。同意後照做，不再逐項問。
 4. 檢測顯示已經有的，不重裝、不升級。
 5. 不用 sudo。要輸入電腦密碼的步驟（Mac 安裝 Homebrew）交給使用者在終端機執行，你等他說「好了」再驗證。Windows 的 winget 由你執行，執行前先提醒使用者等一下跳出視窗要按「是」。
-6. 不改 `projects/*/assets/`、`projects/*/講稿.md`、`shared/`，也不在工作區留下任何檔案（例外：S3 的 `node_modules/`、`package-lock.json`，S4 的 `.claude/skills/auto-edit-*`）。
+6. 不改 `projects/*/assets/`、`projects/*/講稿.md`、`shared/`，也不在工作區留下任何檔案（例外：S3 的 `node_modules/`、`package-lock.json`，S4 的 `.claude/skills/auto-edit-*`、`.claude/agents/auto-edit-worker.md`）。
 7. 只裝上面表格裡的東西。
 8. 同一步失敗兩次就停：印出 ❌、一句原因、下一步，再查 `troubleshooting.md`。不要自己改用別的安裝方式（pip、從原始碼編譯等）。這份手冊沒寫到的狀況，把錯誤訊息原文給使用者看，不要猜。
 9. 會跑很久的指令（Homebrew、`brew install ffmpeg`、winget）照你的工具規則用背景執行，跑完再驗證。
@@ -67,7 +67,7 @@
 | status | 意思 | 怎麼做 |
 |---|---|---|
 | `ok` | 可以用 | 跳過 |
-| `missing`、`too_old` | 沒裝、版本太舊 | 做 `step` 那一步 |
+| `missing`、`too_old` | 沒裝、版本太舊（`skill_auto_edit` 是 `too_old`＝裝好的複本和 `.agents/` 不一樣） | 做 `step` 那一步 |
 | `not_in_path` | 檔案在，但路徑沒設定 | 做 `step` 那一步（Mac 多半是 M2） |
 | `restart` | 裝好了，這個視窗還看不到 | 重開 MiniMax Code（Mac `M8`，Windows `W9`） |
 | `blocked` | Windows 的 PowerShell 擋住 npx | Windows `W2` |
@@ -113,9 +113,9 @@ S1–S9 的指令都可以加 PATH 前綴（Mac：`export PATH="/opt/homebrew/bi
 驗證：`node -p "require('./node_modules/hyperframes/package.json').version"` 印出的版本和 `package.json` 的 `devDependencies.hyperframes` 一樣；`node shared/template/tools/caps.mjs` 的 HyperFrames 那一列是「可用」（這時 Chrome 那一列還沒好是正常的，S6 處理）。失敗看 `troubleshooting.md`「共用」。
 
 **S4 安裝 9 支 auto-edit Skill**（`skill_auto_edit` 是 `ok` 就跳過）：`node setup/install-skills.mjs`（只想看會做什麼：加 `--dry-run`；只比對不寫檔：加 `--check`；只裝一個位置：`--target project` 或 `--target user`；給程式讀：加 `--json`）。
-驗證：最後一行 `✔ 完成：9 支 × 2 個位置…`，結束碼 0。印 `✖ 衝突` 時看 `troubleshooting.md`「共用」。
+驗證：最後一行 `✓ 完成：9 支 × 2 個位置…；子代理 1 個（.claude/agents/）…`，結束碼 0。印 `✖ 衝突` 時看 `troubleshooting.md`「共用」。
 
-**S5 臉部偵測檔**（瘦臉用；`mediapipe` 是 `ok` 就跳過，`missing` 不擋其他步驟）：`node shared/template/tools/look.mjs ensure`。驗證：最後一行 `✔ 4 個檔都對`。出現 ✖：先 `git checkout -- shared/template/vendor/mediapipe`（下載 ZIP 的使用者：重新下載工作區），再跑一次；還是 ✖ 就照那一行的 → 做（`--download` 會下載約 18.7 MB，算安裝：先把指令和用途告訴使用者，同意才跑）。不想處理也可以跳過，之後剪片只調光、不瘦臉。
+**S5 臉部偵測檔**（瘦臉用；`mediapipe` 是 `ok` 就跳過，`missing` 不擋其他步驟）：`node shared/template/tools/look.mjs ensure`。驗證：最後一行 `✓ 4 個檔都對`。出現 ✖：先 `git checkout -- shared/template/vendor/mediapipe`（下載 ZIP 的使用者：重新下載工作區），再跑一次；還是 ✖ 就照那一行的 → 做（`--download` 會下載約 18.7 MB，算安裝：先把指令和用途告訴使用者，同意才跑）。不想處理也可以跳過，之後剪片只調光、不瘦臉。
 
 **S6 HyperFrames 自我檢查**：`npx -y hyperframes doctor`。驗證：`Node.js`、`FFmpeg`、`FFprobe`、`Chrome`、`whisper-cpp` 這五行是 ✓。其他行（Version、TTS、BGM、Docker、Docker running）是 ✗、最後顯示 `Some checks failed` 都正常，不用處理，也不要去裝 Python 或 Docker。`Chrome` 是 ✗：執行 `npx -y hyperframes browser ensure`，再跑一次 doctor。
 

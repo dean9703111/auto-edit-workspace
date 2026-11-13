@@ -37,18 +37,18 @@
 | `.agents/skills/`、`setup/`、`shared/` | Skill、環境手冊、模板與工具、音效、配樂 | 只能讀（例外見規則 1） |
 | `dev/`、`.specify/`、`specs/` | 作者維護用 | 剪片時不讀、不執行 |
 
-**接手**：我說「繼續」或你不確定做到哪，跑 `node shared/template/tools/status.mjs --project projects/<專案>`，照它印的做；有待回覆的停點就重貼那個停點。它印 ⚠（講者還沒設定、有偏好還沒問）時在回報裡問我，不擋流程，也不要自己編（怎麼記下來：`auto-edit-longform` 步驟 1）。
+**接手**：我說「繼續」或你不確定做到哪，跑 `node shared/template/tools/status.mjs --project projects/<專案>`，照它印的做；有待回覆的停點就重貼那個停點。它印 ⚠（講者還沒設定、有偏好還沒問、素材被改過）時在回報裡問我，不擋流程，也不要自己編（怎麼記下來：`auto-edit-longform` 步驟 1）；印「Skill：⚠」照它印的指令做（要安裝的先照規則 3 問我）。
 
 ## 規則
 
-1. `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 不覆寫、不移動、不刪除。要改 `shared/` 裡的設定（主色、背景、風格包、講者、偏好、子代理數量、配樂），只透過那支 Skill 寫的工具指令（`brand.mjs`、`music.mjs`、`status.mjs --prefs-add`、`--agents`），不手動改檔。刪除 `work/` 以外的檔案前先問我。
+1. `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 不覆寫、不移動、不刪除。要改 `shared/` 裡的設定（主色、背景、風格包、講者、調光瘦臉預設、偏好、子代理數量、配樂），只透過那支 Skill 寫的工具指令（`brand.mjs`、`music.mjs`、`look.mjs default`、`status.mjs --prefs-add`、`--agents`），不手動改檔。刪除 `work/` 以外的檔案前先問我。
 2. 停點只有六個（下面的表）。我說「不用停」「跑到停點 N」才連跑。
 3. 安裝新工具前，先告訴我指令和用途，等我同意；照 `setup/` 手冊做時整份清單問一次。
 4. 字幕以 `講稿.md` 為準，工具（`media.mjs srt-align`）照講稿排：不自己拆句、併句。要改字就在剪輯台或 `work/rough.srt` 改那一則，只改字；不改 `講稿.md`。用繁體中文，技術名詞保留英文，中英文之間加半形空格。沒有講稿時不補標點、不猜內容。
 5. 文件之間照上面的優先序；同一層互相矛盾才問我。
 6. 每次交付都附驗證（工具印的 ✓／⚠ 原文就是驗證，不另外再驗一次）和可以點的連結：`<deliver-assets><media type="video" src="/絕對路徑/…/output/final.mp4" /></deliver-assets>`（type：image、file、audio、video）。交付＝初剪完成（`work/rough.mp4`）、輸出完成影片（`output/final.mp4`、`output/qc/qc-sheet.jpg`）。
 7. `work/` 的中間檔都保留（`work/.look/` 是快取，可以 `look.mjs clear`）。
-8. 每階段的回報最多 15 行；子代理只回一行（細節寫 `work/reports/`）。主代理的工具呼叫超過那支 Skill 的「工具呼叫預算」就停下來回報卡在哪（讀文件、印 ⏳ 之後再跑同一條不算）。子代理的上限由工具數：驗收或檢查的指令印「→ 停手」就停下來回報，不再改。
+8. 每階段的回報最多 15 行；子代理只回一行（細節寫 `work/reports/`）。工具印「→ 停手」就停下來回報卡在哪，不再改（主代理、子代理都一樣；次數由工具數）；工具沒在數的步驟照那支 Skill 的「工具呼叫預算」（讀文件、印 ⏳ 之後再跑同一條不算）。
 9. 工具是黑盒子：不讀 `shared/template/tools/`、`kit/*.js` 的原始碼。工具的訊息照做；看不懂、或和你看到的事實不一樣，就把原文回報給我，不要改別的地方讓它過。✖ 全修，同一個 ✖ 改 2 次還在就停下來回報；⚠ 只修一輪，留下的寫進回報。
 10. 我在剪輯台改過的文字、斷句、時間以我改的為準。改 plan.json 或 rough.srt 之前先重新讀那一段。
 11. 我說「以後都…」這類規則：這集照做，記在 `work/feedback/r<N>.md` 的「建議改規則」；我確認要每一集都照做，才用 `status.mjs --prefs-add` 寫進 `shared/偏好.md`。
@@ -98,19 +98,19 @@
 
 ## 進度紀錄
 
-`work/製作進度.md` 由工具寫（`media.mjs prep`、`build.mjs --storyboard`、`--review`、`deliver.mjs` 都會自己記停點），不手動編輯。工具沒記的停點用 `node shared/template/tools/status.mjs --project projects/<專案> --mark "<停點>" --state <待回覆｜通過｜修改後重停｜略過> --said "我的原話"` 補。
+`work/製作進度.md` 由工具寫（`media.mjs prep`、`build.mjs --storyboard`、`--review`、`deliver.mjs` 都會自己記停點），不手動編輯；`work/.jobs/state.json`（工具做完一步記的標記，`status.mjs` 照它判斷做到哪）也一樣。工具沒記的停點用 `node shared/template/tools/status.mjs --project projects/<專案> --mark "<停點>" --state <待回覆｜通過｜修改後重停｜略過> --said "我的原話"` 補。
 
 ## 子代理分工
 
 獨立的工作分給子代理平行做，主代理負責 plan.json、派工、整合與驗收。什麼工作怎麼派、子代理能寫哪些檔：`.agents/skills/auto-edit-longform/references/subagents.md`（要派工時才讀）。
 
-- 派工訊息照抄工具印的那一行，不自己加要求（多加的會蓋過文件）。同一則回覆一次全部派出，一次最多幾個照工具印的數字；平台開不了那麼多就照開得了的分批，並在回報裡告訴我。
+- 派工訊息照抄工具在「→ 派工：」下面印的那幾行（一行一則），不自己加要求（多加的會蓋過文件）。同一則回覆一次全部派出，一次最多幾個照工具印的數字；平台開不了那麼多就照開得了的分批，並在回報裡告訴我。
 - 派出後等子代理回報，不寫 `sleep` 迴圈等檔案，不替它寫它的檔。全部回來才合併或 build；audit 有 ✖ 把原文交回那個子代理，同一段交回 2 次還有 ✖ 就回報給我。
 - 你是子代理時：只照派工訊息指到的那一份文件做，只寫它列的檔，只回一行。
 
 ## 工具注意事項
 
-- 工具印「→ 下一步：」時，下面那幾行就是指令：整行複製、依序執行。結束碼 75（印「⏳ 還在跑」）就再跑同一條，會接著等、不會重跑。長片（15–30 分鐘、400–900 句）是常態：能一條做完的不拆步驟。
+- 工具印「→ 下一步：」時，下面那幾行就是指令：整行複製、依序執行。印「→ 派工：」時，下面每一行（縮排兩格）是一則派工訊息，原樣交給子代理，不是指令。結束碼 75（印「⏳ 還在跑」）就再跑同一條，會接著等、不會重跑（`look.mjs run`、`capcut.mjs` 也一樣，不用 `--background`）。長片（15–30 分鐘、400–900 句）是常態：能一條做完的不拆步驟。
 - 完成影片一律用 `build.mjs` 產生、用 `deliver.mjs` 輸出；找不到合適的工具時照 `shared/template/USAGE.md`，不自己另寫腳本。參數以工具的 `--help` 為準。
 - 改 plan.json 的一段：`node shared/template/tools/build.mjs --project projects/<專案> --show <段>` 看現況，`grep -n '"id": "<段>"' projects/<專案>/work/hyperframes/plan.json` 找行號，只讀那一段的行、用 Edit 改；不整份重寫。
 - hyperframes 的指令在子殼裡跑：`(cd projects/<專案>/work/hyperframes && npx hyperframes …)`。缺工具照 `setup/` 的手冊裝。

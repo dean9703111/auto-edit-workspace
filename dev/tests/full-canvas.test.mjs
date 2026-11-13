@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { lib, imp, makeSrt } from './helpers.mjs';
+import { lib, imp, makeSrt, tmpDir } from './helpers.mjs';
 
 const { resolvePlan } = await imp('lib/plan.mjs');
 const { mediaGeometry, mediaCorner, VIEW } = await imp('lib/media.mjs');
@@ -20,7 +20,7 @@ const cues = parseSrt(makeSrt({ n: 12 }));
 const VD = 44;
 const byId = (res, id) => res.items.find((x) => x.id === id);
 
-const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-full-'));
+const pdir = tmpDir(null, 'hf-full-');   // 整個檔跑完才清
 fs.mkdirSync(path.join(pdir, 'assets', 'screen'), { recursive: true });
 fs.writeFileSync(path.join(pdir, 'assets', 'screen', 'v.mp4'), '');
 const go = (scenes, info = { width: 1920, height: 1080, duration: 60, hasAudio: false }, voiceOnly = [[10, 30]]) => resolvePlan({

@@ -7,14 +7,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { WORKSPACE, TEMPLATE, imp } from './helpers.mjs';
+import { WORKSPACE, TEMPLATE, imp, tmpDir } from './helpers.mjs';
 
 const SFX = path.join(WORKSPACE, 'shared', 'sfx');
 const MAKE = path.join(WORKSPACE, 'dev', 'tools', 'make-sfx.mjs');
 const kit = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8'));
 const sources = JSON.parse(fs.readFileSync(path.join(SFX, 'sources.json'), 'utf8'));
 const hasFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0;
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'sfx-test-'));
+const tmp = () => tmpDir(null, 'sfx-test-');   // 掛在呼叫它的那個 test 結束時清
 const sha = (p) => createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 const make = (...args) => spawnSync(process.execPath, [MAKE, ...args], { encoding: 'utf8' });
 

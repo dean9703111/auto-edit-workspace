@@ -1,0 +1,11 @@
+#!/bin/sh
+# 提交前跑文件一致性測試（docs.test，約 1 秒）；沒過就擋下這次提交，免得文件和工具對不上的版本進到 main。
+# 啟用（每個 clone 一次，在工作區根目錄）：git config core.hooksPath dev/hooks
+# 臨時略過：git commit --no-verify
+cd "$(git rev-parse --show-toplevel)" || exit 1
+if ! out=$(node --test dev/tests/docs.test.mjs 2>&1); then
+  # 只留沒過的項目、說明與「→」修法（拿掉堆疊與斷言物件）
+  printf '%s\n' "$out" | sed -n '/failing tests/,$p' | grep -E '^✖|^  (AssertionError|→)|^    [^ ]' | grep -vE '^    (generatedMessage|code|actual|expected|operator|diff):'
+  echo "✖ 文件一致性測試沒過，這次沒有提交 → 照上面每一項的「→」改好再提交（只想先存檔：git commit --no-verify）"
+  exit 1
+fi

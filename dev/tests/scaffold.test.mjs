@@ -384,16 +384,23 @@ test('023 brief：前後段寫出用到的插圖與朝向（模板看 slots.part
   fs.rmSync(p, { recursive: true, force: true });
 });
 
-test('023 dropBeatSheets：勾成內容設計動畫的段拿掉模板那張動畫分鏡（換一行指到鏡位腳本），別段不動；audit 讀不到那張表', async () => {
-  const F = await imp('lib/flow.mjs');
+test('032 B6 refreshBeatTables（取代 023 dropBeatSheets）：勾成內容設計動畫的段，模板那張動畫分鏡換成「拍點正本」那一行；別段、別的行不動；再跑一次不變', async () => {
+  const S = await imp('lib/beat-source.mjs');
   const { parseBeatSheets } = await imp('lib/audit-beats.mjs');
   const md = ['### x1｜#1–#2e', '', '截圖觀察：無', '', '#### 動畫分鏡 x1', '', '| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |', '|---|---|---|---|---|---|', '| 0 | 段起點 | 主卡 | 開場 | 標題 | — |', '', '### x2｜#3–#4e', '', '#### 動畫分鏡 x2', '', '| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |', '|---|---|---|---|---|---|', '| 0 | 段起點 | 主卡 | 開場 | 標題 | — |', '', '## 需要我決定的事', ''].join('\n');
-  const next = F.dropBeatSheets(md, ['x1']);
+  const segs = [{ id: 'x1', type: 'custom', design: true }, { id: 'x2', type: 'custom', template: 'x-point' }];
+  const blockOf = (s) => (s.id === 'x1' ? '- 拍點正本：work/designs/x1.md' : S.beatBlocksOf(md, 'x2'));
+  const r = S.refreshBeatTables(md, segs, blockOf);
+  assert.deepEqual(r.changed, ['x1']);
   assert.ok(parseBeatSheets(md).has('x1'));
-  assert.ok(!parseBeatSheets(next).has('x1'));
-  assert.ok(parseBeatSheets(next).has('x2'));
-  assert.match(next, /截圖觀察：無\n\n動畫分鏡：改成內容設計動畫，鏡位腳本看 work\/designs\/x1\.md（設計師寫）\n\n### x2/);
-  assert.equal(F.dropBeatSheets(md, []), md);
+  assert.ok(!parseBeatSheets(r.md).has('x1'));
+  assert.ok(parseBeatSheets(r.md).has('x2'));
+  assert.match(r.md, /截圖觀察：無\n\n- 拍點正本：work\/designs\/x1\.md\n\n### x2/);
+  assert.deepEqual(S.refreshBeatTables(r.md, segs, blockOf).changed, [], '再跑一次不變');
+  assert.equal(S.refreshBeatTables(md, segs, blockOf, { only: ['x2'] }).md, md, 'only 只動指定的段');
+  // 032 之前 dropBeatSheets 留下的那一行也換掉
+  const old = md.replace(/#### 動畫分鏡 x1\n\n(\|[^\n]*\n)+/, '動畫分鏡：改成內容設計動畫，鏡位腳本看 work/designs/x1.md（設計師寫）\n');
+  assert.match(S.refreshBeatTables(old, segs, blockOf).md, /截圖觀察：無\n\n- 拍點正本：work\/designs\/x1\.md\n\n### x2/);
 });
 
 test('023 resetRuns：只清指定段的 audit 次數（換人接手從第 1 次算起），草稿和別段的不動；沒有檔不出錯', async () => {
@@ -438,11 +445,11 @@ test('022 --design-status：還沒動手／腳本寫好／動畫做了＋audit �
   assert.equal(r.status, 0, r.stderr);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(p, 'work', 'hyperframes', '.cache', 'check-runs.json'), 'utf8')), { 'audit:d3': 2 }, '023：要重派的段次數歸零，別段不動');
   assert.match(r.stdout, /d1：還沒動手（派出 30 分鐘）　⚠ 超過 20 分鐘沒進度/);
-  assert.match(r.stdout, /→ 下一步：停掉原本負責 d1、d4 的設計師，重派[\s\S]*（d4）你是設計師[^\n]*用 edit 接著改，不要整份重寫[\s\S]*（d1）你是設計師[^\n]*照 \.agents\/skills\/auto-edit-motion\/references\/design\.md 寫鏡位腳本、接著做動畫/);
+  assert.match(r.stdout, /→ 派工：停掉原本負責 d1、d4 的設計師，重派[\s\S]*（d4）你是設計師[^\n]*用 edit 接著改，不要整份重寫[\s\S]*（d1）你是設計師[^\n]*照 \.agents\/skills\/auto-edit-motion\/references\/design\.md 寫鏡位腳本、接著做動畫/);
   // 023：重派之後從重派起算，新設計師還沒寫檔也不會馬上又被判卡住
   const again = spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), '--project', p, '--design-status'], { encoding: 'utf8' });
-  assert.match(again.stdout, /d1：還沒動手（重派 0 分鐘）\n/);
-  assert.match(again.stdout, /d4：動畫做了（最後改動 25 分鐘前）\n/);
+  assert.match(again.stdout, /d1：還沒動手（重派 0 分鐘）｜第 2 次派工 0 分鐘、最後活動 0 分鐘前\n/);   // 032 B5：有派工紀錄的段多印派工、最後活動
+  assert.match(again.stdout, /d4：動畫做了（最後改動 25 分鐘前）｜第 2 次派工 0 分鐘、最後活動 0 分鐘前\n/);
   assert.doesNotMatch(again.stdout, /停掉原本負責/);
   assert.equal(F.designStatus(pathsFrom({ project: p }), Date.now() + 21 * 60000)[0].stalled, true, '重派後 20 分鐘還是沒動才再判卡住');
   fs.rmSync(p, { recursive: true });
@@ -757,7 +764,7 @@ test('026 檢查次數的上限由工具數：草稿檢查到第 5 次還有 ✖
   for (let i = 0; i < 3; i++) { F.runCount(P, 'audit:d1'); F.runCount(P, 'audit-try:d1'); }
   F.runCount(P, 'audit-try:d2');
   assert.deepEqual(F.resetRuns(P, ['d1', 'd2']).sort(), ['d1', 'd2']);
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(P.out, '.cache', 'check-runs.json'), 'utf8')), {});
+  assert.deepEqual([F.runCount(P, 'audit:d1'), F.runCount(P, 'audit-try:d1'), F.runCount(P, 'audit-try:d2')], [1, 1, 1], '032 C2：次數改成一個 key 一個檔，歸零後從 1 算起');
   fs.rmSync(p, { recursive: true, force: true });
   const src = fs.readFileSync(path.join(TOOLS, 'audit.mjs'), 'utf8');
   assert.match(src, /export const AUDIT_TRY_MAX = 6;/);

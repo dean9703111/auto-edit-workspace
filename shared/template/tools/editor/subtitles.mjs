@@ -11,7 +11,8 @@
 //   { op: 'delete', n, bind? }                   刪掉第 n 句；plan.json 有時間綁到它時 bind 要是 'prev'（改綁前一句）或 'next'（改綁後一句）
 //
 // 句號重新對應（契約第 5 節）：句數一變就把字幕重新編號 1…N，plan.json 的時間欄位（任何物件的 from／to／at／until、
-// beats 的值、清單項目的 at，含「#N±秒」）照新句號改寫；slots／vars 的文字一律不動。
+// beats 的值、清單項目的 at，含「#N±秒」）、slots 裡整串是句號寫法的字串（模板的 openAt、hitAt…）、plan.moods 的 at 照新句號改寫；
+// slots 裡的文字（夾著「#1」的也一樣）、vars 一律不動。
 //   分割第 k 句：#k 不變、#ke → #(k+1)e、> k 的 +1
 //   在第 k 句後新增：> k 的 +1
 //   合併 k、k+1：#(k+1) → #k+（k+1 起點 − k 起點）、#ke → #k+（k 結尾 − k 起點）、#(k+1)e → #ke、> k+1 的 −1
@@ -274,7 +275,8 @@ function mapItem(item, fn) {
   if (!isObj(item)) return item;
   let out = null;
   for (const [k, v] of Object.entries(item)) {
-    if (!TIME_KEYS.has(k)) continue;
+    // at 這類時間欄位，和整串剛好是句號寫法的字串欄位（fill.json type "at" 的 noteAt…）；夾在文字裡的 #1 不動
+    if (!TIME_KEYS.has(k) && typeof v !== 'string') continue;
     const nv = mapTimeValue(v, fn);
     if (nv !== v) { out ??= { ...item }; out[k] = nv; }
   }
@@ -286,7 +288,10 @@ function mapSlots(slots, fn) {
     let nv = v;
     if (Array.isArray(v)) { const a = v.map((x) => mapItem(x, fn)); if (a.some((x, i) => x !== v[i])) nv = a; }
     else if (isObj(v)) nv = mapItem(v, fn);             // 例如 QA 的 "a": { "text": "…", "at": "#14" }
-    if (nv !== v) { out ??= { ...slots }; out[k] = nv; }  // 文字（字串）一律不動，裡面寫了「#1」也一樣
+    // 字串：整串剛好是句號寫法（#N、#Ne、#N±秒、#N@詞）＝模板的時間欄位（fill.json type "at"：openAt、hitAt、path、flow…），
+    // 和清單項目的 at 用同一個對應（032 P3d：以前漏掉，剪輯台改字幕後模板段的拍指到錯的句子）。文字裡夾著「#1」不動
+    else if (typeof v === 'string') nv = mapTimeValue(v, fn);
+    if (nv !== v) { out ??= { ...slots }; out[k] = nv; }
   }
   return out ?? slots;
 }
@@ -308,10 +313,19 @@ function mapSeg(o, fn) {
   return out ?? o;
 }
 // fn(ref, segId) → 新 ref（或 null＝不動）；沒變的物件原樣回傳（=== 比得出來）
+// plan.moods（第一層的情緒點，lib/moods.mjs）的 at 也換（032 P3d）；segId 寫成 moods[i]
 export function mapPlanTimes(plan, fn) {
   if (!isObj(plan) || !Array.isArray(plan.scenes)) return plan;
   const scenes = plan.scenes.map((s) => mapSeg(s, (r) => fn(r, isObj(s) ? s.id : null)));
-  return scenes.some((s, i) => s !== plan.scenes[i]) ? { ...plan, scenes } : plan;
+  const moods = Array.isArray(plan.moods) ? plan.moods.map((m, i) => {
+    if (!isObj(m) || typeof m.at !== 'string') return m;
+    const at = mapTimeValue(m.at, (r) => fn(r, `moods[${i}]`));
+    return at === m.at ? m : { ...m, at };
+  }) : plan.moods;
+  const scenesChanged = scenes.some((s, i) => s !== plan.scenes[i]);
+  const moodsChanged = Array.isArray(moods) && moods.some((m, i) => m !== plan.moods[i]);
+  if (!scenesChanged && !moodsChanged) return plan;
+  return { ...plan, ...(scenesChanged ? { scenes } : {}), ...(moodsChanged ? { moods } : {}) };
 }
 export function remapPlan(plan, op, cuesBefore) {
   if (!STRUCT.has(op.op)) return plan;

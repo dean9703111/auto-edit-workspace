@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { chromeCandidates } from './audit-browser.mjs';
 import { lut3dFilter, writeJpg, tmpFor, sweepTmp } from './ff.mjs';
 import { canvas, fillRect, blit, text } from './raster.mjs';
+import { next } from './say.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_TEMPLATE = path.resolve(HERE, '..', '..');
@@ -305,12 +306,13 @@ function decide({ projectDir, plan, templateDir, probe = {} }) {
   const base = { L, P, st, proj, footage: P.rough, slimApplied: 0, beautyApplied: 0 };
   if (L.color === 0 && !faceOn(L)) return { ...base, row: 1 };
   if (!faceOn(L)) return { ...base, row: 2 };
-  const statusCmd = `node shared/template/tools/look.mjs status --project ${projArg(proj)}`;
+  // 等它做完：look.mjs run 在背景工作（lib/job.mjs）裡跑，再下一次同一條會接著等、不會重做（不用每 30 秒查 status）
+  const waitCmd = `node shared/template/tools/look.mjs run --project ${projArg(proj)}`;
   // 指令一律放在 → 後面、行尾，整段可以直接複製執行（審查 C-02）
   if (isRunning(st)) {
     const pid = st.run.pid;
-    return { ...base, row: 3, warn: `⚠ 講者瘦臉還在跑（look.mjs run，pid ${pid}；status 顯示「完成」再 build）→ ${statusCmd}`,
-      error: `瘦臉還在跑（pid ${pid}；status 顯示「完成」再 build）→ ${statusCmd}` };
+    return { ...base, row: 3, waitCmd, warn: `⚠ 講者瘦臉還在跑（look.mjs run，pid ${pid}；跑這條會接著等，做完再 build）→ ${waitCmd}`,
+      error: `瘦臉還在跑（pid ${pid}；跑這條會接著等，做完再 build）→ ${waitCmd}` };
   }
   const mSha = modelSha(templateDir);
   const sum = st.landmarks?.summary;
@@ -331,12 +333,13 @@ function decide({ projectDir, plan, templateDir, probe = {} }) {
   }
   if (!chromeOk) return { ...base, row: 6, warn: '⚠ 講者瘦臉略過：找不到 HyperFrames 的 Chrome，只調光 → npx hyperframes browser ensure' };
   const reason = staleReason(st, P, mSha, L.slim, L.beauty) || '還沒跑過';
-  // 預估看 landmark 快取（只改 slim 時只重做變形）；超過 2 分鐘直接給 --background 的指令（審查 C-06、C-02）
+  // 預估看 landmark 快取（只改 slim 時只重做變形）（審查 C-06）。不再給 --background：run 本來就在背景工作裡跑，
+  // 前景最多等 9 分鐘，等不到印「⏳ 還在跑」，再跑同一條接著等（C3）
   let est = null;
   try { const v = probeVideo(P.rough); est = estimateMinutes({ frames: v.frames, width: v.width, height: v.height, detect: !landmarksFresh(st, P, mSha) }); } catch { /* 沒有 rough.mp4 時不預估 */ }
   const bg = est != null && est > 2;
-  const runCmd = `node shared/template/tools/look.mjs run --project ${projArg(proj)}${bg ? ' --background' : ''}`;
-  const estNote = est == null ? '' : bg ? `；預估 ${est} 分，超過 2 分鐘就在背景跑，用 look.mjs status 看進度` : `；預估 ${est} 分`;
+  const runCmd = waitCmd;
+  const estNote = est == null ? '' : bg ? `；預估 ${est} 分，印「⏳ 還在跑」就再跑同一條（會接著等）` : `；預估 ${est} 分`;
   return { ...base, row: 7, reason, est, bg, runCmd,
     error: `瘦臉底片不是最新的（${reason}${estNote}；不要瘦臉就在 plan.json 寫 "look": { "slim": 0 }）→ 先跑 ${runCmd}`,
     warn: `⚠ 瘦臉還沒套到底片（${reason}），這次先用 work/rough.mp4 → ${runCmd}` };
@@ -391,7 +394,7 @@ export function lookCheck({ projectDir, plan = {}, templateDir = DEFAULT_TEMPLAT
 //   step  'fix'｜'wait'｜'retry'｜'run'｜'ensure'｜'chrome'（look 還沒好，done＝false）
 //         'framing'｜'build'｜'next'（look 好了，done＝true）
 //   note  說明（印在「→ 下一步：」後面）；cmd  可以整行複製執行的指令（單獨一行，後面不接任何字）
-// 順序：look run（或 --background）→ 構圖分析（qc.mjs framing）→ 構圖台 → 停點 ②；plan.json 還沒有 scenes 時不會叫人 build。
+// 順序：look run（還在跑就再跑同一條接著等）→ 構圖分析（qc.mjs framing）→ 構圖台 → 停點 ②；plan.json 還沒有 scenes 時不會叫人 build。
 export const FRAMING_PREVIEW = '構圖預覽.jpg';
 export function lookNextStep({ projectDir, plan = {}, templateDir = DEFAULT_TEMPLATE, probe } = {}) {
   const proj = projectLabel(projectDir, templateDir);
@@ -400,14 +403,14 @@ export function lookNextStep({ projectDir, plan = {}, templateDir = DEFAULT_TEMP
   if (errs.length) return { step: 'fix', done: false, note: `plan.json 的 look 寫錯（${errs[0]}）；改好再看一次`, cmd: statusCmd };
   let d;
   try { d = decide({ projectDir, plan, templateDir, probe }); } catch (e) { return { step: 'fix', done: false, note: `${e.message}；改好再看一次`, cmd: statusCmd }; }
-  if (d.row === 3) return { step: 'wait', done: false, note: '瘦臉還在跑；每 30 秒看一次，看到「執行：完成」再往下', cmd: statusCmd };
+  if (d.row === 3) return { step: 'wait', done: false, note: '瘦臉還在跑；跑這條會接著等（最多 9 分鐘），印「⏳ 還在跑」就再跑同一條', cmd: d.waitCmd };
   if (d.row === 6) {
     return d.warn.includes('Chrome')
       ? { step: 'chrome', done: false, note: '找不到 HyperFrames 的 Chrome，裝好再跑瘦臉', cmd: 'npx hyperframes browser ensure' }
       : { step: 'ensure', done: false, note: '少臉部偵測的檔；照 AGENTS.md 規則 3 先告訴使用者要下載約 18 MB，同意再跑', cmd: 'node shared/template/tools/look.mjs ensure --download' };
   }
   if (d.row === 7) {
-    const est = d.est == null ? '' : `，預估 ${d.est} 分（Windows 約 ×1.5–3）${d.bg ? '，超過 2 分鐘所以在背景跑，之後每 30 秒跑一次 look.mjs status' : ''}`;
+    const est = d.est == null ? '' : `，預估 ${d.est} 分（Windows 約 ×1.5–3）${d.bg ? '；印「⏳ 還在跑」就再跑同一條（會接著等）' : ''}`;
     return d.st.run?.phase === 'failed'
       ? { step: 'retry', done: false, note: `上次失敗（原因在 work/.look/run.log 最後幾行）；重跑一次${est}，第二次失敗就停下來回報`, cmd: d.runCmd }
       : { step: 'run', done: false, note: `瘦臉底片要重做（${d.reason}）${est}`, cmd: d.runCmd };
@@ -418,7 +421,7 @@ export function lookNextStep({ projectDir, plan = {}, templateDir = DEFAULT_TEMP
   if (cards && (!look || cards.mtimeMs >= look.mtimeMs)) return { step: 'next', done: true, note: 'look 和構圖預覽都做好了；照專案進度往下', cmd: `node shared/template/tools/status.mjs --project ${projArg(proj)}` };
   return { step: 'framing', done: true, note: 'look 好了；接著跑構圖分析，再開剪輯台，把構圖台網址和 work/look-preview.jpg 一起給使用者（停點 ②）', cmd: `node shared/template/tools/qc.mjs framing --project ${projArg(proj)}` };
 }
-export const nextLines = (ns) => [`→ 下一步：${ns.note}`, ns.cmd];
+export const nextLines = (ns) => next(ns.note, ns.cmd);
 // 指令裡的專案路徑：有空白或 shell 特殊字元就加雙引號（zsh、PowerShell 都吃），整行複製才跑得動
 export const projArg = (p) => (/[\s"'&|;()<>$`]/.test(p) ? `"${p}"` : p);
 

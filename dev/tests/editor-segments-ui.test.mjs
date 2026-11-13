@@ -1,14 +1,18 @@
 // 剪輯頁（瀏覽器）：長片找段：右側分頁（段落、字幕）、現在播到哪一段、網址跳段、沒有卡片的地方也能寫修改單
-import { test, before, after } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import puppeteer from 'puppeteer-core';
 import { startEditor } from '../../shared/template/tools/editor.mjs';
 import { findChrome } from '../../shared/template/tools/lib/audit-browser.mjs';
-import { TEMPLATE } from './helpers.mjs';
+import { TEMPLATE, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都要開瀏覽器：沒有 Chrome、ffmpeg 或 puppeteer-core（hyperframes 順帶裝的，不在 package.json）就全部略過，用到才載入
+const noUi = await missingTools('chrome', 'ffmpeg', 'puppeteer');
+const test = skipAll(nodeTest, noUi);
+const puppeteer = noUi ? null : (await import('puppeteer-core')).default;
 
 let root, work, editor, browser, page;
 const errors = [];
@@ -22,6 +26,7 @@ const SEGS = [
 const srt = Array.from({ length: 10 }, (_, i) => `${i + 1}\n00:00:${String(i * 2 + 1).padStart(2, '0')},000 --> 00:00:${String(i * 2 + 2).padStart(2, '0')},800\n第 ${i + 1} 句字幕${i === 5 ? '手機' : ''}\n`).join('\n');
 
 before(async () => {
+  if (noUi) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-seg-ui-'));
   const project = path.join(root, 'projects', 'demo');
   work = path.join(project, 'work');
@@ -41,7 +46,7 @@ before(async () => {
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.itemsView?.length >= 4 && window.__editor.reportReady, { timeout: 60000 });
 });
-after(async () => { await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
+after(async () => { if (noUi) return; await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
 
 const side = (name) => page.click(`.side-tabs [data-side="${name}"]`);
 const seek = (t) => page.evaluate((x) => window.__editor.seek(x), t);

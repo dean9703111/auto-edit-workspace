@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
-import { TEMPLATE, imp } from './helpers.mjs';
+import { TEMPLATE, imp, tmpDir, needs } from './helpers.mjs';
 
 const C = await imp('lib/canvas.mjs');
 const { CANVAS, canvasOf, stageTransform, stagePoint, regionsOf, regionsScript, resolveFormat, formatLine } = C;
@@ -38,7 +38,8 @@ test('橫式＝現行常數（接線前後橫式輸出不變的保證）', async
   assert.deepEqual(L.media.view, VIEW);
   const [px, py, pw, ph] = L.pip.box;
   assert.equal(pw / ph, L.pip.aspect);
-  assert.ok(read('tools/lib/main.mjs').includes(`.pip { position: absolute; left: ${px}px; top: ${py}px; width: ${pw}px; height: ${ph}px;`));
+  // 032 C7：main.mjs 的子母畫面 CSS 直接讀 pip.box（PB＝C.pip.box），不再自己寫一份數字；產生出來的值由 examples.test 比對
+  assert.ok(read('tools/lib/main.mjs').includes('.pip { position: absolute; left: ${PB[0]}px; top: ${PB[1]}px; width: ${PB[2]}px; height: ${PB[3]}px;'), `main.mjs 的 .pip 要讀 pip.box（${px},${py} ${pw}×${ph}）`);
   assert.deepEqual(Object.values(L.stage), [null, null, null]);
   // 具名區域＝kit/scene-motion.js 的 REGIONS（motion.md §1 橫式預設）
   const src = read('kit/scene-motion.js').match(/var REGIONS = (\{[^\n]*\});/);
@@ -119,8 +120,8 @@ test('stageTransform（FR-011＋spike 三句）：fs＝translate(-61.7px, 129.82
   assert.deepEqual(stagePoint(null, [5, 6]), [5, 6]);
 });
 
-test('resolveFormat：--format > plan.json > 製作進度.md「版式」列 > 主軌寬高比（work/main.mp4 → assets/camera 第一支 → assets/voice = 橫式）；formatLine', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'canvas-'));
+test('resolveFormat：--format > plan.json > 製作進度.md「版式」列 > 主軌寬高比（work/main.mp4 → assets/camera 第一支 → assets/voice = 橫式）；formatLine', (t) => {
+  const dir = tmpDir(t, 'canvas-');
   const calls = [];
   const probe = (f) => { calls.push(path.relative(dir, f)); return f.endsWith('main.mp4') ? { w: 1080, h: 1920 } : { w: 1920, h: 1080 }; };
   const R = (o) => resolveFormat({ projectDir: dir, probe, ...o });
@@ -147,9 +148,10 @@ test('resolveFormat：--format > plan.json > 製作進度.md「版式」列 > �
   assert.equal(formatLine({ format: 'landscape', detail: 'work/main.mp4 1920×1080' }), '版式：橫式 1920×1080（來源：work/main.mp4 1920×1080）');
 });
 
-test('probeDims：手機直拍（1920×1080＋rotation −90）轉回顯示方向 1080×1920', async () => {
+test('probeDims：手機直拍（1920×1080＋rotation −90）轉回顯示方向 1080×1920', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
   const { spawnSync } = await import('node:child_process');
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'canvas-rot-'));
+  const dir = tmpDir(t, 'canvas-rot-');
   const a = path.join(dir, 'a.mp4'), b = path.join(dir, 'b.mp4');
   const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=192x108:rate=30', '-t', '0.2', '-c:v', 'libx264', '-preset', 'ultrafast', a]);
   assert.equal(r.status, 0, String(r.stderr));

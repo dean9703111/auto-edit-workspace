@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { r3 } from './time.mjs';
 
 export const MAX_DIRTY_SHARE = 0.4;   // 要重畫的超過片長四成：整支重來比較划算
 export const MAX_WINDOW_SEC = 120;    // 單一時間窗的上限（plan 資料夾上限 2 GB，影格最多約 400 KB）
@@ -32,7 +33,6 @@ const ROOT_FILES = ['hyperframes.json', 'meta.json', 'fx-kit.js'];
 const RENDER_DIRS = ['compositions', 'kit', 'assets', 'illus-local'];
 export const NOT_IN_FINAL = /^compositions\/(?:test-clip|captions-test|capcut-[^/]+|inc-audio|final-nocaps)\.html$/;   // 測試片段、剪映素材、重混聲音、不燒字幕的合成不進完成影片的指紋
 const statOf = (f) => { try { return fs.statSync(f); } catch { return null; } };
-const r3 = (x) => +Number(x).toFixed(3);
 
 function listFiles(root, rel = '') {
   let names;

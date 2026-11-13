@@ -1,12 +1,16 @@
 // 插入素材（type: "media"）、只有聲音的區間（blackdetect）；media.mjs 的指令與 --check --json 的格式測試在 media-cli.test.mjs
 // 測試素材全部用 ffmpeg lavfi 現場產生；假工作區的 shared/template 用 symlink 指到真的模板
-import { test, before } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE, makeSrt, hasChrome } from './helpers.mjs';
+import { TOOLS, TEMPLATE, makeSrt, hasChrome, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都靠 before 用 ffmpeg 做的假專案：沒有 ffmpeg 就全部略過，before 也不做
+const noFf = await missingTools('ffmpeg');
+const test = skipAll(nodeTest, noFf);
 
 const BUILD = path.join(TOOLS, 'build.mjs');
 const MEDIA = path.join(TOOLS, 'media.mjs');
@@ -24,6 +28,7 @@ const REC = 'assets/screen/操作示範.mp4';
 const IMG = 'assets/images/架構圖.png';
 
 before(() => {
+  if (noFf) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-media-'));
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   tpl = path.join(root, 'shared', 'template');
@@ -47,6 +52,7 @@ before(() => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   fs.copyFileSync(path.join(proj, 'work', 'main.mp4'), path.join(proj, 'work', 'rough.mp4'));
 });
+after(() => { if (root) fs.rmSync(root, { recursive: true, force: true }); });
 
 test('只有聲音的區間：blackdetect 抓到 8–12；沒被蓋住超過 1 秒 ✖，訊息叫 AI 跑 media.mjs scan', () => {
   writePlan([]);

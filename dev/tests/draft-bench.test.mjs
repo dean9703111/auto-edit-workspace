@@ -46,7 +46,8 @@ test('--dry：不呼叫 mmx，兩種寫法都組得出提示；沒有分鏡素�
   fs.writeFileSync(path.join(D, 'ch01.md'), '#1 第一句\n');
   fs.writeFileSync(path.join(D, '寫法.md'), '## 字卡\n\n**07 key-point**（重點字卡，最短 3.5 秒）：重點\n\n```json\n{"id":"s01","scene":"key-point","from":"#N","to":"#Me","slots":{"key":"<≤12 字>"}}\n```\n');
   const out = path.join(p, 'r.json');
-  const r = spawnSync(process.execPath, [BENCH, '--project', p, '--runs', '1', '--dry', '--out', out], { encoding: 'utf8' });
+  // bench 會在系統暫存開 draft-bench-*（留給人看）：測試時指到 p 裡，跟著 p 一起清
+  const r = spawnSync(process.execPath, [BENCH, '--project', p, '--runs', '1', '--dry', '--out', out], { encoding: 'utf8', env: { ...process.env, TMPDIR: p } });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /\| 一次寫整份 \|[\s\S]*\| 大綱 → 骨架 \|/);
   assert.match(r.stdout, /提示長度：一次寫整份 第 1 次 \d+ 字/);

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE, hasChrome } from './helpers.mjs';
+import { TOOLS, TEMPLATE, hasChrome, needs, missingTools } from './helpers.mjs';
 
 const MEDIA = path.join(TOOLS, 'media.mjs');
 const M = await import(MEDIA);
@@ -14,6 +14,8 @@ const X = await import(path.join(TOOLS, 'lib', 'transcript-map.mjs'));
 const F = await import(path.join(TOOLS, 'lib', 'rough-flow.mjs'));
 
 const hasAe = spawnSync('auto-editor', ['--version'], { encoding: 'utf8' }).status === 0;
+// 端到端那幾個要 auto-editor，合成短片要 ffmpeg：缺一個就略過
+const aeSkip = (!hasAe && '沒有 auto-editor') || await missingTools('ffmpeg');
 let root, tpl;
 const ff = (args) => { const r = spawnSync('ffmpeg', ['-y', '-v', 'error', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
 // rough 跑完會開預覽（背景處理底片、開剪輯台）：測試不開
@@ -251,7 +253,7 @@ const e2eWords = () => [
   ...say('接著選擇要用的解析度', 15.7, 0.18),
 ];
 
-test('prep（--no-editor、假逐字稿）：一條指令到停點 ①；cuts.md、ng-scan.md、製作進度都寫好；再跑一次不覆蓋使用者的勾選', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('prep（--no-editor、假逐字稿）：一條指令到停點 ①；cuts.md、ng-scan.md、製作進度都寫好；再跑一次不覆蓋使用者的勾選', { skip: aeSkip }, () => {
   const p = e2eProject('flow');
   const tj = writeJson(path.join(root, 'flow-words.json'), e2eWords());
   const r = cli(['prep', '--no-editor', '--transcript', tj], 'flow');
@@ -282,7 +284,7 @@ test('prep（--no-editor、假逐字稿）：一條指令到停點 ①；cuts.md
   fs.writeFileSync(path.join(p, 'work', 'cuts.md'), cuts);   // 還原給下一個測試
 });
 
-test('rough：① 通過後一條指令到字幕與剪接點；有講稿換算逐字稿不重轉；紀錄通過、印回報數字；做完再跑要 --again', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('rough：① 通過後一條指令到字幕與剪接點；有講稿換算逐字稿不重轉；紀錄通過、印回報數字；做完再跑要 --again', { skip: aeSkip }, () => {
   const p = path.join(root, 'projects', 'flow');
   assert.ok(fs.existsSync(path.join(p, 'work', 'cuts.md')), '接上一個測試');
   const r = cli(['rough', '--no-editor', '--said', '可以'], 'flow');
@@ -340,7 +342,7 @@ test('rough：① 通過後一條指令到字幕與剪接點；有講稿換算�
   assert.match(pg.stdout, /✖ work\/rough\.mp4 已經存在（初剪做過了）→ 先問使用者要不要重剪/);
 });
 
-test('rough：transcript-main.json 不能換算（media.mjs transcribe 直接轉整支的）→ 走對 rough.mp4 轉的路（--transcript 代替 whisper）', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('rough：transcript-main.json 不能換算（media.mjs transcribe 直接轉整支的）→ 走對 rough.mp4 轉的路（--transcript 代替 whisper）', { skip: aeSkip }, () => {
   const p = e2eProject('flowplain');
   assert.equal(cli(['prep', '--no-editor', '--transcript', writeJson(path.join(root, 'plain.json'), e2eWords())], 'flowplain').status, 0);
   fs.writeFileSync(path.join(p, 'work', '.cache', 'transcript-main-of.json'), JSON.stringify({ mappable: false }));
@@ -350,7 +352,7 @@ test('rough：transcript-main.json 不能換算（media.mjs transcribe 直接轉
   assert.match(r.stdout, /✓ 逐字稿：對 rough\.mp4 轉/);
 });
 
-test('rough：剪輯清單頁已經開著（正常流程）→ 一樣印字幕預覽網址，指向同一個剪輯台', { skip: !hasAe && '沒有 auto-editor' }, async (t) => {
+test('rough：剪輯清單頁已經開著（正常流程）→ 一樣印字幕預覽網址，指向同一個剪輯台', { skip: aeSkip }, async (t) => {
   const p = e2eProject('flowopen');
   const run = (tool, ...args) => spawnSync(process.execPath, [tool, ...args, '--template', tpl, '--project', 'projects/flowopen'], { encoding: 'utf8', cwd: root });
   t.after(() => { run(path.join(TOOLS, 'editor.mjs'), '--stop'); });
@@ -379,7 +381,7 @@ test('rough：剪輯清單頁已經開著（正常流程）→ 一樣印字幕�
   assert.notEqual(jobState(p, 'prepare').state, 'running');
 });
 
-test('rough：直式專案建的 plan.json 帶 format，後面的 build 不會說版式對不上', { skip: !hasAe && '沒有 auto-editor' }, async () => {
+test('rough：直式專案建的 plan.json 帶 format，後面的 build 不會說版式對不上', { skip: aeSkip }, async () => {
   const p = mkProj('flowportrait');
   talkClip(path.join(p, 'assets', 'camera', 'a.mp4'), 18, [[1, 4], [4.3, 7.2], [7.8, 9.2], [12.5, 15.4], [15.7, 17.5]], '180x320');
   fs.writeFileSync(path.join(p, '講稿.md'), SCRIPT);
@@ -403,7 +405,7 @@ test('rough：直式專案建的 plan.json 帶 format，後面的 build 不會�
   assert.notEqual(jobState(p, 'prepare').state, 'running');
 });
 
-test('rough：verify-rough ✖ 就停、印修法與重做指令；不寫字幕與剪接點', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('rough：verify-rough ✖ 就停、印修法與重做指令；不寫字幕與剪接點', { skip: aeSkip }, () => {
   const p = e2eProject('flowbad');
   const tj = writeJson(path.join(root, 'flowbad-words.json'), e2eWords());
   assert.equal(cli(['prep', '--no-editor', '--transcript', tj], 'flowbad').status, 0);
@@ -423,7 +425,7 @@ test('rough：verify-rough ✖ 就停、印修法與重做指令；不寫字幕�
   assert.ok(!fs.existsSync(path.join(p, 'work', 'cutpoints.json')));
 });
 
-test('rough：剪掉比例過高 → ⚠（不擋），修法是 --edit 放寬重跑', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('rough：剪掉比例過高 → ⚠（不擋），修法是 --edit 放寬重跑', { skip: aeSkip }, () => {
   const p = mkProj('flowhigh');
   talkClip(path.join(p, 'assets', 'camera', 'a.mp4'), 20, [[1, 3], [10, 11]]);   // 20 秒只有 3 秒有聲音
   fs.writeFileSync(path.join(p, '講稿.md'), '# 稿\n\n大家好歡迎來到工程師下班有約\n');
@@ -435,7 +437,7 @@ test('rough：剪掉比例過高 → ⚠（不擋），修法是 --edit 放寬�
   assert.match(r.stdout.trim().split('\n').at(-1), /status\.mjs --project/);
 });
 
-test('rough：沒有講稿 → 不換算（對 rough.mp4 的逐字稿）；prep 的候選全部待確認', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('rough：沒有講稿 → 不換算（對 rough.mp4 的逐字稿）；prep 的候選全部待確認', { skip: aeSkip }, () => {
   const p = mkProj('flowns');
   talkClip(path.join(p, 'assets', 'camera', 'a.mp4'), 12, [[1, 3], [4.2, 7.5], [8.2, 11]]);
   const words = [...say('今天要分享一個超好用的工具', 1, 0.15), ...say('今天要分享一個超好用的免費工具', 4.2, 0.2), ...say('我們開始吧大家準備好', 8.2, 0.25)];
@@ -454,7 +456,7 @@ test('rough：沒有講稿 → 不換算（對 rough.mp4 的逐字稿）；prep 
   assert.match(fs.readFileSync(path.join(p, 'work', 'rough.srt'), 'utf8'), /今天要分享一個超好用的免費工具/);
 });
 
-test('prep：多支主軌沒給 --order → 照檔名接；有講稿時用 scriptOrder 建議順序寫進 cuts.md；給 --order 重接、重寫清單、舊清單備份、紀錄修改後重停', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('prep：多支主軌沒給 --order → 照檔名接；有講稿時用 scriptOrder 建議順序寫進 cuts.md；給 --order 重接、重寫清單、舊清單備份、紀錄修改後重停', { skip: aeSkip }, () => {
   const p = mkProj('flowmulti');
   talkClip(path.join(p, 'assets', 'camera', 'b1.mp4'), 5, [[0.5, 4.5]]);
   talkClip(path.join(p, 'assets', 'camera', 'b2.mp4'), 5, [[0.5, 4.5]]);
@@ -487,7 +489,7 @@ test('prep：多支主軌沒給 --order → 照檔名接；有講稿時用 scrip
   assert.match(keep.stdout, /沿用現成的/);
 });
 
-test('prep --skip-stop（使用者說不用停）：待確認的列不剪、紀錄略過、下一步是 rough', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('prep --skip-stop（使用者說不用停）：待確認的列不剪、紀錄略過、下一步是 rough', { skip: aeSkip }, () => {
   const p = e2eProject('flowskip');
   const words = e2eWords();
   // 多講一段（講稿外）
@@ -503,7 +505,7 @@ test('prep --skip-stop（使用者說不用停）：待確認的列不剪、紀�
   assert.ok(cm.ng.filter((x) => x.pending).every((x) => !x.cut));
 });
 
-test('prep：--wait 0 開了就回（結束碼 75、最後一行是同一條指令）；再跑一次接著等、不重跑', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('prep：--wait 0 開了就回（結束碼 75、最後一行是同一條指令）；再跑一次接著等、不重跑', { skip: aeSkip }, () => {
   const p = e2eProject('flowjob');
   const tj = writeJson(path.join(root, 'job.json'), e2eWords());
   const r = cli(['prep', '--no-editor', '--wait', '0', '--transcript', tj], 'flowjob');
@@ -518,7 +520,7 @@ test('prep：--wait 0 開了就回（結束碼 75、最後一行是同一條指�
   assert.equal(fs.readFileSync(path.join(p, 'work', '製作進度.md'), 'utf8').match(/① 剪輯清單 \| 待回覆/g).length, 1, '只跑了一次');
 });
 
-test('prep：開工決策表、停點紀錄之外，素材同時掃好（圖片 contact sheet、一行統計）', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('prep：開工決策表、停點紀錄之外，素材同時掃好（圖片 contact sheet、一行統計）', { skip: aeSkip }, () => {
   const p = e2eProject('flowscan');
   ff(['-f', 'lavfi', '-i', 'color=c=0x3B82F6:s=400x300', '-frames:v', '1', path.join(p, 'assets', 'images', '架構圖.png')]);
   const r = cli(['prep', '--no-editor', '--transcript', writeJson(path.join(root, 'scan.json'), e2eWords())], 'flowscan');
@@ -530,7 +532,7 @@ test('prep：開工決策表、停點紀錄之外，素材同時掃好（圖片 
   assert.match(again.stdout, /沒換，沿用/);
 });
 
-test('prep：純聲音主軌又沒有任何素材 → ① 就提醒', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('prep：純聲音主軌又沒有任何素材 → ① 就提醒', { skip: aeSkip }, () => {
   const p = mkProj('flowvoice');
   ff(['-f', 'lavfi', '-i', "aevalsrc='0.4*sin(2*PI*440*t)*(between(t,0.5,5)+between(t,6,9))':s=48000:d=10", '-c:a', 'aac', path.join(p, 'assets', 'voice', 'v.m4a')]);
   const r = cli(['prep', '--no-editor', '--transcript', writeJson(path.join(root, 'voice.json'), say('今天要分享一個超好用的工具', 0.5, 0.3))], 'flowvoice');
@@ -544,7 +546,7 @@ test('prep：純聲音主軌又沒有任何素材 → ① 就提醒', { skip: !h
   assert.match(rr.stdout.trim().split('\n').at(-1), /status\.mjs --project/);
 });
 
-test('prep：開剪輯清單頁（真的啟動 editor.mjs）→ 停點那一行是網址', { skip: !hasAe && '沒有 auto-editor' }, () => {
+test('prep：開剪輯清單頁（真的啟動 editor.mjs）→ 停點那一行是網址', { skip: aeSkip }, () => {
   e2eProject('flowpage');
   const r = cli(['prep', '--transcript', writeJson(path.join(root, 'page.json'), e2eWords())], 'flowpage');
   try {
@@ -575,7 +577,8 @@ test('rough：還沒有 cuts.md ✖ 指向 prep；transcribe：沒有 main.mp4 �
 });
 
 // ---------- scan：圖片 contact sheet、只印一行 ----------
-test('scan：圖片每 12 張一頁、每格標檔名、寫進 index.md／index.json；只印統計一行；同時跑多支錄影', async () => {
+test('scan：圖片每 12 張一頁、每格標檔名、寫進 index.md／index.json；只印統計一行；同時跑多支錄影', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
   const p = mkProj('scanimg');
   for (let i = 1; i <= 14; i++) ff(['-f', 'lavfi', '-i', `color=c=0x${(0x202020 + i * 0x0a0a0a).toString(16)}:s=${200 + i * 10}x${150 + i * 5}`, '-frames:v', '1', path.join(p, 'assets', 'images', `截圖 ${String(i).padStart(2, '0')}.png`)]);
   for (const n of ['a', 'b', 'images']) ff(['-f', 'lavfi', '-i', 'testsrc=size=160x90:rate=10:d=3', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', path.join(p, 'assets', 'screen', `${n}.mp4`)]);
@@ -610,7 +613,8 @@ test('scan：圖片每 12 張一頁、每格標檔名、寫進 index.md／index.
 });
 
 // ---------- frame 多個時間 ----------
-test('frame --at 多個時間：同時截、每張一行；任一個超過素材長度 ✖；可以寫 1:03', () => {
+test('frame --at 多個時間：同時截、每張一行；任一個超過素材長度 ✖；可以寫 1:03', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
   const p = mkProj('frames');
   ff(['-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=10:d=8', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', path.join(p, 'assets', 'screen', 'rec.mp4')]);
   const r = cli(['frame', '--src', 'assets/screen/rec.mp4', '--at', '1,2.5,0:05', '--grid'], 'frames');
@@ -645,7 +649,8 @@ test('srt-align：預設只印有標記的列和統計，--verbose 才印每一�
   assert.ok(v.stdout.length > q.stdout.length * 3);
 });
 
-test('editForLevel：小聲的錄音靜音門檻自動降，音量正常用預設', () => {
+test('editForLevel：小聲的錄音靜音門檻自動降，音量正常用預設', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'edit-level-'));
   const wav = (name, db) => { const f = path.join(dir, name); const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `sine=frequency=440:duration=1,volume=${db}dB`, f]); assert.equal(r.status, 0); return f; };
   try {

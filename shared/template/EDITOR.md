@@ -14,14 +14,14 @@
 
 使用者說「打開剪輯台」時，是停點 ⑤（`AGENTS.md`「停點總表」）；流程照 `.agents/skills/auto-edit-review/SKILL.md` 流程 C。給網址時回覆最後兩行照停點 ⑤ 的固定格式。
 
-停點 ①（剪輯清單）也用剪輯台：寫好 `work/cuts.md` 後啟動，把印出的「剪輯清單」網址（`…/cuts`）給使用者，最後兩行照停點 ① 的固定格式（`.agents/skills/auto-edit-rough/SKILL.md` 步驟 5）。剪輯清單頁只要有 `work/cuts.md`（試聽要 `work/main.mp4`），只寫 cuts.md NG 表的「剪」欄（`[x]` 剪、`[ ]` 不剪；舊格式沒有這一欄就加在最前面）；cuts.md 被 AI 改過會擋下存檔並重新載入；有 `work/rough.mp4` 之後只能看。
+停點 ①（剪輯清單）也用剪輯台：寫好 `work/cuts.md` 後啟動，把印出的「剪輯清單」網址（`…/cuts`）給使用者，最後兩行照停點 ① 的固定格式（`.agents/skills/auto-edit-rough/SKILL.md` 的「停點」一節）。剪輯清單頁只要有 `work/cuts.md`（試聽要 `work/main.mp4`），只寫 cuts.md NG 表的「剪」欄（`[x]` 剪、`[ ]` 不剪；舊格式沒有這一欄就加在最前面）；cuts.md 被 AI 改過會擋下存檔並重新載入；有 `work/rough.mp4` 之後只能看。
 
 初剪完成（`media.mjs rough`）也用剪輯台：工具會建好只有 `version` 的 plan.json、在背景處理底片、開好剪輯台，印出「字幕預覽」網址，照抄給使用者就好，這不是停點，不用等他看完。還沒排段落時頁面顯示「初剪預覽」，可以看字幕、改字（自動存），「更新預覽」「輸出完成影片」先停用。
 
-停點 ③（分鏡表）也用剪輯台：寫好 `work/storyboard.md` 後啟動，把印出的「分鏡表」網址（`…/storyboard`）給使用者，最後兩行照停點 ③ 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md`）。分鏡表頁只寫 `work/storyboard.md` 改到的那幾行：畫面文字「」裡的字、動畫分鏡「畫面上出現什麼」裡「」內的字、金句的卡上文字與勾選（`☑`／`☐`）、`- 音效：`、要求欄 `- 想換成：`、`- 補充說明：`，以及「需要我決定的事」每一項底下的 `   - 回答：`（`--apply-storyboard` 會印「作者回答」，照做）；其他欄位、表頭、段標題都不能改。檔案被 AI 改過會擋下存檔並重新載入，沒存到的文字留在頁面上；製作進度的「③ 分鏡表」最後一列是「通過」或「略過」之後只能看。使用者說「可以」後，有要求欄的段要先重做再停一次（`auto-edit-storyboard`「停點」）。
+停點 ③（分鏡表）也用剪輯台：寫好 `work/storyboard.md` 後啟動，把印出的「分鏡表」網址（`…/storyboard`）給使用者，最後兩行照停點 ③ 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md`）。分鏡表頁只寫 `work/storyboard.md` 改到的那幾行：畫面文字「」裡的字、內容設計動畫（和其他拍點正本在 `work/designs/` 的段）的動畫分鏡「畫面上出現什麼」裡「」內的字（`--apply-storyboard` 寫回那份鏡位腳本；模板動畫的字在畫面文字改，表上是唯讀）、金句的卡上文字與勾選（`☑`／`☐`）、`- 音效：`、要求欄 `- 想換成：`、`- 補充說明：`，以及「需要我決定的事」每一項底下的 `   - 回答：`（`--apply-storyboard` 會印「作者回答」，照做）；其他欄位、表頭、段標題都不能改。檔案被 AI 改過會擋下存檔並重新載入，沒存到的文字留在頁面上；製作進度的「③ 分鏡表」最後一列是「通過」或「略過」之後只能看。使用者說「可以」後，有要求欄的段要先重做再停一次（`auto-edit-storyboard`「停點」）。
 停點 ④（完成影片預覽）也用剪輯台：`build.mjs --review`、`versions.mjs finish` 已經開好剪輯台，停點 ④ 那一行的網址就是完成影片預覽（`…/?view=final`），不用再跑 `editor.mjs`；打不開才跑 `editor.mjs --status`。頁面會直接開在完成影片預覽；還沒 build 或找不到播放器時停在快速試聽並提示原因。不帶參數的網址也一樣：有成品就開完成影片預覽，`?view=sim` 才開快速試聽。
 
-停點 ②（構圖）也用剪輯台：啟動後印的「構圖台」網址（`…/framing`）給使用者，最後兩行照停點 ② 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 2）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
+停點 ②（構圖）也用剪輯台：`build.mjs --framing` 會開好剪輯台，回報段的停點 ② 那兩行裡就是「構圖台」網址（`…/framing`），照貼給使用者（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 3）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
 
 開之前要有：
 
@@ -84,6 +84,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 | | `sfx` | 只會寫 `null`（使用者按了靜音）；取消靜音時換回原本的值（記在 `.editor/memory.json`），原本沒寫就拿掉 |
 | scene 的 `slots`、fx 的 `vars`、模板動畫（`type: "custom"`＋`template`）的 `slots` | 文字值 | 改字（含清單項目的 `text`、QA 的 `{ "text", "at" }` 裡的 `text`；字數上限照情境的 `max`）；清單只能刪項目、不能加（剪輯台不顯示「新增一項」）；模板動畫只能改 `custom/<模板>.fill.json` 標成文字的欄位，圖示、時間、結構和項目數都不能動。改了字的段，按「更新預覽」時自動跑 `audit.mjs --only <那幾段>`，✖／⚠ 列在剪輯台檢查清單（`[段] 版面：…`） |
 | `work/feedback/editor-requests.md` | 修改單 | 「修改單」按「複製給 AI」時整份覆寫、只寫待改的段（剪貼簿只放一行指令「照剪輯台修改單改這 N 段（<這個檔>）：…」）：每段的 id、動畫是什麼、檔案（自訂動畫、錄影；路徑從工作區根目錄寫起，例 `projects/<專案>/work/hyperframes/compositions/x-….html`）、完成影片時間、plan.json 起訖、做法（動畫段才有：使用者沒勾「重新設計」＝在現有的動畫上改；勾了＝設計師從空白畫布重畫，只有這種段的子代理要載入 `hyperframes` skill）、要改的標籤、描述、對應字幕（`#N 文字`）。使用者說「照修改單改」就照 `auto-edit-review` 流程 F 做 |
+| `work/designs/<段>.md`、那段的動畫檔 | 句號 | 增刪字幕（分割、新增、合併、刪除）時：拍點正本在 `work/designs/` 的段，鏡位腳本「講到」欄的 `#N` 和動畫檔 `P.at`／`P.sfx` 的句號照同一個操作重對，各自先備份 `<檔>.align-<時間>`（照 plan.json 產生的模板動畫不用，下次 build 會跟上） |
 | `type: "media"` 的段 | `from`／`to`／`in`／`anchor` | 使用者拖邊緣裁剪或整段移動：對到字幕邊界寫 `"#N"`／`"#Ne"` 並把 `anchor` 換成那句的開頭；沒對到寫秒數並拿掉 `anchor`；拖左緣時 `in` 跟著變（畫面內容不跑；有變速、定格的段改寫 `retime`／`hold`，每一區的速度不變）；寫了 `to` 就拿掉 `duration` |
 | | `speed`／`hold`／`retime`／`in`／`out` | 畫面速度（屬性的「畫面速度」）。整段同速寫 `in`＋`speed`（0.5–4）；整段定格寫 `hold`；分區或超過 4 倍寫 `retime`（`at` 是 `+秒`，時間沒動的點留原本的寫法，例 `#21@詞`）；互斥的欄位自動拿掉，`out` 只會被拿掉。你寫的 `retime` 也會顯示在這裡，使用者看得到、改得了 |
 | | `enter`／`exit`／`volume` | 進出場（`cut`／`fade`／`slide`／`zoom`）；原聲 `null`（靜音）或 dB |
@@ -111,7 +112,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 
 - 起點那句的 `anchor` 本來對得上、改完對不上時，換成新起點那句的開頭幾個字。
 - `rough.srt` 和 `plan.json` **一起寫**（兩個都先寫暫存檔再改名）；任一個被改過就兩個都不寫。
-- 增刪之後 `work/storyboard.md` 裡的句號會過期，**以 `plan.json` 為準**。
+- 拍點正本在 `work/designs/` 的段（內容設計動畫、手改過的模板動畫、手寫的動畫檔）：鏡位腳本「講到」欄和那支動畫檔的 `P.at` 照同一個操作一起重對（各自先備份 `.align-<時間>`）；`work/storyboard.md` 的動畫分鏡是副本，下次 `--review` 跟著更新。
 
 ### 5. 跟剪輯台一起改 plan.json 與字幕
 
@@ -333,7 +334,7 @@ AI 寫的、工具自動決定的、你自己改的，都畫在同一個地方�
 
 AI 回報狀態：`GET /api/requests/status` 讀取 `requests.revision`；`POST /api/requests/status` 傳 JSON `{ "revision": "讀到的版本", "ids": ["s01"], "state": "generating" }`。狀態可用 `generating`、`done`、`failed`，可加 `message` 與 `round`；`done` 只在 build、audit 通過後回報。版本不符回 409，整批不寫；不在修改單的 id 或格式錯誤回 400。狀態存於 `work/feedback/editor-requests-status.json`，重新啟動剪輯仍保留；重新複製後舊版本狀態不再套用。
 
-AI 也可從工作區根目錄執行（剪輯未開啟仍可回報，與 API 寫同一份狀態；什麼時候跑哪一行照 `.agents/skills/auto-edit-review/references/editor-requests.md` 第 5 節）：
+照修改單改時，`versions.mjs begin --requests` 會標「生成中」、`versions.mjs finish` 會標「已改完」或「失敗」，AI 不用另外回報。要手動補報才從工作區根目錄跑下面這幾行（剪輯未開啟仍可回報，與 API 寫同一份狀態）：
 
 ```sh
 node shared/template/tools/editor.mjs --project projects/<專案> --requests-state status

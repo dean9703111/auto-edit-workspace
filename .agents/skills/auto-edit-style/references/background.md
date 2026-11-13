@@ -10,15 +10,12 @@
 
 ## 3. 生成到暫存資料夾、驗證、預覽
 
-生圖很久，有能派子代理的工具就照 `references/bg-worker.md` 每張圖派一個工人，同一則回覆一次全部派出；全部回來後由你驗證、出預覽。沒有才自己一張一張做。下面的指令是工人（或你自己）照著跑的。
+生圖很久，有能派子代理的工具就照 `references/bg-worker.md` 每張圖派一個工人，同一則回覆一次全部派出；全部回來後由你跑 `brand.mjs bg --verify`。沒有才自己一張一張做。
 
-第 1 行是 HTML 路線（USAGE-reference.md R9.4；`--kind` 依序 `fs`、`side`、`ch` 各跑一次，三張都有才產生 `preview.jpg`）；其他路線照 references 的指令，再用 references 的 ffmpeg 指令產生 `zones-fs.jpg`、`preview.jpg`。`--out` 不能是 `shared/template/` 裡面。
-
-常見錯誤：尺寸不對 → 用 references 第 1 節的 `scale…crop` 指令裁成對的尺寸。
+每條路最後都是 `brand.mjs bg` 寫出 `bg-<種類>.jpg`：HTML 路線用 `--html`（USAGE-reference.md R9.4）；使用者的圖、生圖路線的成品（尺寸不對也一樣）用 `--image`，它會縮放裁成對的尺寸。`--out` 一律是暫存資料夾，不能是 `shared/template/` 裡面。三張都有了才跑 `--verify`。
 
 ## 4. ⑥ 同意後：存成風格包、套用，重跑 build
 
-第 1 行把主色、外框、三張背景（暫存資料夾有 `bg-*-dark.jpg` 也一起）存進 `shared/template/styles/<名稱>/`；第 2 行換掉整個工作區（使用者只要這一集就跳過，改照步驟 7 寫 plan.json 的 `style`）。這兩行就是「同意後放進 shared/template/」，不要另外 cp 背景圖。包名：使用者有說就用；沒說用「<主色名>-<YYYYMMDD>」（例 `綠色-20261109`），回報寫出來。沒換主色就拿掉 `--color`。
-`use` 停下來說「不屬於任何包」：這次跑過步驟 1，開工時 ● 在某一包（或開工時已經先存成 `原本-<YYYYMMDD>`），就加 `--force` 再跑一次 use（只蓋掉這次換主色的半成品）；其他情況先 `brand.mjs pack <新名稱>` 把目前的存起來再 use。
+第 1 行把主色、外框、三張背景（暫存資料夾有 `bg-*-dark.jpg` 也一起）存進 `shared/template/styles/<名稱>/`；第 2 行換掉整個工作區（使用者只要這一集就跳過，改照步驟 7 用 `--set style=<名稱>`）。這兩行就是「同意後放進 shared/template/」，不要另外 cp 背景圖。包名：使用者有說就用；沒說用「<主色名>-<YYYYMMDD>」（例 `綠色-20261109`），回報寫出來。沒換主色就拿掉 `--color`。`use` 遇到目前的設定不屬於任何包，會先自動存成「原本-<YYYYMMDD>」再換，把它印的存在哪一句寫進回報。
 
 常見錯誤：使用者說「重做」→ 回步驟 3，只重派要重做的那張；同一條路重做 2 次還不行就換下一條路（R9.3）。

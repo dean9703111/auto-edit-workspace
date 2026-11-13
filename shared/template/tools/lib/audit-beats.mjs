@@ -4,8 +4,8 @@
 //   對齊（beatFindings）：同一個句號的幾拍（#35、#35＋0.7、#35＋1.2）是一組，檔裡有一個 P.at 落在其中任一拍 ±0.5 s 就算對上
 //     （組內其他拍用「上一拍 + 秒數」接，和「完成態停太短」的建議一致）；每個用句號的 P.at 都要落在某一拍 ±0.5 s 內，不然算多出來
 //   movesOf(cell)                       → 「動態」欄拆出的動作名（拿掉括號、＋0.15 這類時間、「同拍 N」）
-//   beatFindings({ item, sheet, marks, cuesOut, html, file }) → [finding]（✖ 缺拍／多出來的 P.at／語彙不存在；⚠ 用了動作但檔裡沒有那個原語）
-//   noSheetFinding(item)                → ⚠ 沒有動畫分鏡
+//   beatFindings({ item, sheet, marks, cuesOut, html, file, owner, src }) → [finding]（✖ 缺拍／多出來的 P.at／語彙不存在；⚠ 用了動作但檔裡沒有那個原語）
+//   noSheetFinding(item, file, { owner, src }) → ⚠ 沒有動畫分鏡（owner、src＝拍點正本在哪，lib/beat-source.mjs；032 B6 起 audit 只讀正本）
 //   「講到」欄寫「段起點 #N」的那一拍是隱含的一拍（開場由 ENTER／build 做，不必有 P.at）：#N 在段首 ±0.5 s 內就算對上
 //   示意動畫（x-scene）的分鏡多兩欄「插圖元件（狀態）」「位置」：插圖元件只能是畫廊的 22 個、ILLUS.register 過的、illus-local/ 有檔的（契約 illus.md §5.6）；「—」＝圖示組合，不查
 //   parseIllusLists(md)                 → Map(段 id → { line, rows: [{ name, source, how, line }] })：「#### 插圖清單 <段 id>」（舊名「素材清單」也認）
@@ -59,6 +59,7 @@ export function movesOf(cell) {
 
 // 「講到」欄：`#38@兩支`、`#38@兩支`+0.3、#15e、#12@錄影 −0.2；段起點、拍 2＋1.2 這種相對寫法不算綁句
 const REF_RE = /#(\d+)(e?)(?:@([^`\s＋+−\-（(｜|，,；;]+))?`?\s*(?:([＋+−-])\s*(\d+(?:\.\d+)?))?/g;
+export const BEAT_REF_SOURCE = REF_RE.source;   // lib/beat-remap.mjs 重對句號用同一條規則（要 new RegExp(…, 'g')，不共用 lastIndex）
 export function refsOf(cell) {
   for (const m of String(cell || '').matchAll(REF_RE)) {
     const ref = `#${m[1]}${m[2]}${m[3] ? `@${m[3]}` : ''}`;
@@ -92,15 +93,6 @@ export function parseBeatSheets(md) {
     out.set(id, sheet);
   }
   return out;
-}
-
-// 這段用哪張動畫分鏡表：storyboard.md 的（使用者確認過、剪輯台改過）為準；內容設計動畫的 work/designs/<段>.md 比 storyboard.md 新
-// （③ 勾了才寫、或改動畫時設計師改了拍）就用它。design＝{ text, newer }；回傳 { sheet, list }
-export function pickBeatSheet(id, { sheets = new Map(), lists = new Map(), design = null } = {}) {
-  const d = design ? { sheet: parseBeatSheets(design.text).get(id) ?? null, list: parseIllusLists(design.text).get(id) ?? null } : { sheet: null, list: null };
-  if (d.sheet) d.sheet.src = `work/designs/${id}.md`;
-  if (design?.newer && d.sheet) return { sheet: d.sheet, list: d.list ?? lists.get(id) ?? null };
-  return { sheet: sheets.get(id) ?? d.sheet, list: lists.get(id) ?? d.list };
 }
 
 // 「插圖元件（狀態）」欄：phoneTripod（rec）、badge（check）；router → 名稱（拿掉括號裡的狀態；— 是沒有）
@@ -153,7 +145,14 @@ const closest = (w) => {
   return best || '彈出';
 };
 
-export function noSheetFinding(item, file) {
+// owner、src（032 B6，lib/beat-source.mjs）：拍點正本在哪。script＝work/designs/<段>.md（子代理自己就能補）；plan＝照 plan.json 產生（fill.json 沒有分鏡樣板）
+export function noSheetFinding(item, file, { owner, src } = {}) {
+  if (owner === 'script') return { id: item.id, label: item.label, level: 'warn', rule: 'beats-none', el: null, t: item.start, kind: 'beats',
+    msg: `沒有動畫分鏡：${src} 沒有「${BEAT_TITLE} ${item.id}」（${file || item.label}）`,
+    fix: `在 ${src} 寫一張表（表頭固定「| ${BEAT_HEADER.join(' | ')} |」，示意動畫多「 ${BEAT_HEADER_ILLUS.join(' | ')} |」兩欄），拍型照 shared/template/BEATS.md §3；audit 照這張表對拍` };
+  if (owner === 'plan') return { id: item.id, label: item.label, level: 'warn', rule: 'beats-none', el: null, t: item.start, kind: 'beats',
+    msg: `沒有動畫分鏡：${file || item.label} 是照 plan.json 產生的，模板沒有分鏡樣板`,
+    fix: '主代理先跑 build；子代理把這行原文交回主代理' };
   return { id: item.id, label: item.label, level: 'warn', rule: 'beats-none', el: null, t: item.start, kind: 'beats',
     msg: `沒有動畫分鏡：work/storyboard.md 沒有「${BEAT_TITLE} ${item.id}」（${file || item.label}）`,
     fix: /x-design-/.test(String(file || ''))
@@ -161,8 +160,10 @@ export function noSheetFinding(item, file) {
       : `照 shared/template/BEATS.md §3 這個情境的預設拍型，在 storyboard.md 這段底下寫一張表，表頭固定「| ${BEAT_HEADER.join(' | ')} |」，給人在停點 ③ 確認後再做動畫` };
 }
 
+const PLAN_FIX = '動畫檔和 plan.json 的 slots 對不上：主代理先跑 build；子代理把這行原文交回主代理';
 // sheet＝parseBeatSheets 的一段；marks＝collectMotionInPage 的 marks（段內秒數）；cuesOut＝build --check 的完成影片秒數字幕；html＝x-*.html 原文
-export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '', file = '', local = [], picIds = null }) {
+// owner、src（032 B6）：拍點正本在哪，缺拍／多出來的 P.at 的「→」照它指（script＝改 work/designs/<段>.md 那張；plan＝兩邊都從 slots 產生，對不上是還沒 build）
+export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '', file = '', local = [], picIds = null, owner, src }) {
   const out = [];
   const base = { id: item.id, label: item.label, kind: 'beats', el: null };
   const err = (rule, t, msg, fix, data = {}) => out.push({ ...base, level: 'error', rule, t: Math.round((item.start + t) * 1000) / 1000, msg, fix, data });
@@ -206,14 +207,18 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
     const x = g.slice().sort((a, b) => Math.abs(a.off) - Math.abs(b.off) || a.k - b.k)[0], b = near(x.t);
     const offLit = x.off ? `, ${x.off}` : '';
     err('beats-missing', x.t, `分鏡第 ${x.beat} 拍 ${lit(ref, x.off)}（${fmtT(item.start + x.t)}）在 ${name} 找不到對應的 P.at${b ? `（最近的 P.at('${b.m.ref}') 差 ${b.d.toFixed(2)}s，> ${BEAT_TOL}s）` : '（檔裡沒有任何用句號的 P.at）'}`,
-      `在 script 開頭加 const T${x.k + 1} = P.at('${ref}'${offLit})，照分鏡「動態」欄做這一拍；或把分鏡表這一列改成檔裡實際綁的句號`, { beat: x.beat, ref, off: x.off, t: Math.round(x.t * 1000) / 1000 });
+      owner === 'script' ? `在 script 開頭加 const T${x.k + 1} = P.at('${ref}'${offLit})，照 ${src} 那一列做；或把那一列改成檔裡實際綁的句號`
+        : owner === 'plan' ? PLAN_FIX
+          : `在 script 開頭加 const T${x.k + 1} = P.at('${ref}'${offLit})，照分鏡「動態」欄做這一拍；或把分鏡表這一列改成檔裡實際綁的句號`, { beat: x.beat, ref, off: x.off, t: Math.round(x.t * 1000) / 1000 });
   }
   for (const m of ms) {
     if (rows.some((x) => Math.abs(x.t - m.t) <= BEAT_TOL + 1e-6)) continue;
     const g = groups.get(m.ref);
     if (g && g.some((x) => Math.abs(x.t - m.t) <= 1.5 + 1e-6)) continue;   // 同一句同一個詞再晚一點（P.at('#22@發現', 1)、P.sfx 的 off）：是那一拍裡的小動作，不是多出來的拍
     err('beats-extra', m.t, `${name} 的 P.at('${m.ref}')（${fmtT(item.start + m.t)}）不在分鏡表${g ? `（分鏡表的 ${m.ref} 在第 ${g.map((x) => x.beat).join('、')} 拍，差 > ${BEAT_TOL}s）` : ''}`,
-      '分鏡表加一拍（寫出講到、出現什麼、動態），或刪掉這個 P.at；分鏡表改過要在停點 ③ 給人重看', { ref: m.ref, t: m.t });
+      owner === 'script' ? `${src} 那張表加一拍（講到、畫面上出現什麼、動態），或刪掉這個 P.at`
+        : owner === 'plan' ? PLAN_FIX
+          : '分鏡表加一拍（寫出講到、出現什麼、動態），或刪掉這個 P.at；分鏡表改過要在停點 ③ 給人重看', { ref: m.ref, t: m.t });
   }
   const code = String(html).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
   const seen = new Set();

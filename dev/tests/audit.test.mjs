@@ -1243,21 +1243,26 @@ test('freshRefsScript：頁面設定 window.__cues 時，用 build --check 現�
   assert.ok(!B.freshRefsScript({ x: { '#1@</script>': 1 } }).includes('@</script>'), '不能提早結束 script');
 });
 
-test('022 pickBeatSheet：storyboard 的表為準；內容設計動畫的 designs 比較新就用它（含插圖清單），訊息指到 designs 檔', () => {
+test('032 B6 拍點正本：內容設計動畫只讀 work/designs/<段>.md（storyboard.md 比較新、表不同也一樣；含插圖清單），訊息指到 designs 檔', async () => {
+  const S = await imp('lib/beat-source.mjs');
   const head = '| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |\n|---|---|---|---|---|---|';
   const sb = `### d1｜內容設計動畫\n\n#### 動畫分鏡 d1\n\n${head}\n| 1 | #1@舊 | 舊 | 彈出 | 均衡 | — |\n`;
   const dz = `概念：新\n\n#### 動畫分鏡 d1\n\n${head}\n| 1 | #1@新 | 新 | 彈出 | 均衡 | — |\n| 2 | #2@再 | 再 | 淡入 | 均衡 | — |\n\n#### 插圖清單 d1\n\n| 元件 | 來源 | 怎麼來 |\n|---|---|---|\n| router | 畫廊 | — |\n`;
-  const sheets = BT.parseBeatSheets(sb);
-  const old = BT.pickBeatSheet('d1', { sheets, design: { text: dz, newer: false } });
-  assert.equal(old.sheet.rows[0].what, '舊');
-  assert.equal(old.sheet.src, undefined);
-  const neu = BT.pickBeatSheet('d1', { sheets, design: { text: dz, newer: true } });
-  assert.deepEqual(neu.sheet.rows.map((r) => r.what), ['新', '再']);
-  assert.equal(neu.sheet.src, 'work/designs/d1.md');
-  assert.equal(neu.list.rows?.length ?? neu.list.length, 1);
-  const only = BT.pickBeatSheet('d1', { sheets: new Map(), design: { text: dz, newer: false } });
-  assert.equal(only.sheet.rows.length, 2, 'storyboard 沒有這張表就用 designs');
-  assert.equal(BT.pickBeatSheet('d1', { sheets: new Map() }).sheet, null);
+  const work = path.join(tmp(), 'projects', 'p', 'work');
+  const P = { project: path.dirname(work), out: path.join(work, 'hyperframes'), plan: path.join(work, 'hyperframes', 'plan.json'), templateDir: TEMPLATE };
+  fs.mkdirSync(path.join(work, 'designs'), { recursive: true });
+  fs.writeFileSync(path.join(work, 'designs', 'd1.md'), dz);
+  fs.writeFileSync(path.join(work, 'storyboard.md'), sb);
+  const later = new Date(Date.now() + 60_000);
+  fs.utimesSync(path.join(work, 'storyboard.md'), later, later);   // storyboard.md 比較新也不看
+  const seg = { id: 'd1', type: 'custom', design: true, from: '#1', to: '#2e' };
+  const s = S.beatSourceOf(P, seg);
+  assert.equal(s.owner, 'script');
+  assert.deepEqual(s.sheet.rows.map((r) => r.what), ['新', '再']);
+  assert.equal(s.sheet.src, 'work/designs/d1.md');
+  assert.equal(s.list.rows?.length ?? s.list.length, 1);
+  fs.renameSync(path.join(work, 'designs', 'd1.md'), path.join(work, 'designs', 'gone.md'));
+  assert.equal(S.beatSourceOf(P, seg).sheet, null, '沒有 designs 就是沒有表（不退回去讀 storyboard.md）');
 });
 
 test('P.* 的選擇器從最外層 id 開始 ✖（完成影片裡最外層 id 被拿掉，root.querySelectorAll 找不到）；走 GSAP 的舊原語、註解、tl.to 不算；範例全部乾淨', () => {

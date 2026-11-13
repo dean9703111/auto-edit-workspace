@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { imp, hasChrome, makeSrt, TEMPLATE, TOOLS } from './helpers.mjs';
+import { imp, hasChrome, makeSrt, TEMPLATE, TOOLS, missingTools, fixture as shared } from './helpers.mjs';
 
 const Q = await imp('qc.mjs');
 const items = [
@@ -239,6 +239,9 @@ test('observe 的純函式：時間格、格子標籤、字幕換完成影片秒
 // ---------- 需要 ffmpeg／Chrome／npx hyperframes 的端到端（找不到 Chrome 就略過）----------
 
 const CHROME = await hasChrome();
+// 這一節都要 ffmpeg 做片子；截圖、render 的另外要 Chrome：缺一個就略過
+const NO_FF = await missingTools('ffmpeg');
+const NO_UI = (!CHROME && '沒有 HyperFrames 的 Chrome，略過') || NO_FF;
 // 這個檔建立的暫存資料夾（fixture 有影片＋build 產物，一個 30–200 MB）：全部跑完一起刪，不留在系統暫存
 const TMP = [];
 const mkTmp = (prefix) => { const d = fs.mkdtempSync(path.join(os.tmpdir(), prefix)); TMP.push(d); return d; };
@@ -251,7 +254,9 @@ function fixture() {
   for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   const proj = path.join(root, 'projects', 'p1'), out = path.join(proj, 'work', 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
-  ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '12', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(proj, 'work', 'rough.mp4')]);
+  // 12 秒的片子這一輪只做一次，各專案複製一份（測試會改專案裡的檔）
+  const src = shared('qc-rough-12s.mp4', (f) => ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '12', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', f]));
+  fs.copyFileSync(src, path.join(proj, 'work', 'rough.mp4'));
   fs.writeFileSync(path.join(proj, 'work', 'rough.srt'), makeSrt({ n: 3 }));   // #1 1–4、#2 4.5–7.5、#3 8–11
   const qc = (...args) => spawnSync(process.execPath, [path.join(TOOLS, 'qc.mjs'), ...args, '--project', 'projects/p1'], { encoding: 'utf8', cwd: root });
   const build = (...args) => spawnSync(process.execPath, [path.join(TOOLS, 'build.mjs'), ...args, '--project', 'projects/p1'], { encoding: 'utf8', cwd: root });
@@ -270,7 +275,7 @@ test('motionStats：core 不被零星反光撐大，bbox 照舊包含', () => {
   assert.equal(Q.motionStats([a, a], w, h).core, null, '沒有動作');
 });
 
-test('speaker --write：建議框寫進 plan.json、保留其他欄位；已有的不覆寫，--force 才覆寫；--check 沒有段落不算錯、build 才擋', { timeout: 120000 }, () => {
+test('speaker --write：建議框寫進 plan.json、保留其他欄位；已有的不覆寫，--force 才覆寫；--check 沒有段落不算錯、build 才擋', { skip: NO_FF, timeout: 120000 }, () => {
   const F = fixture();
   const plan = path.join(F.out, 'plan.json'), readPlan = () => JSON.parse(fs.readFileSync(plan, 'utf8'));
   fs.writeFileSync(plan, JSON.stringify({ version: 1, look: false, frame: [160, 90, 1600, 900] }));
@@ -279,7 +284,7 @@ test('speaker --write：建議框寫進 plan.json、保留其他欄位；已有�
   const box = readPlan().speakerBox;
   assert.equal(box.length, 4);
   assert.deepEqual(readPlan().frame, [160, 90, 1600, 900], '其他欄位不動');
-  assert.match(r.stdout, /✔ speakerBox .* 已寫進/);
+  assert.match(r.stdout, /✓ speakerBox .* 已寫進/);
   assert.match(r.stdout, /build\.mjs --project projects\/p1 --scaffold$/m);
   fs.writeFileSync(plan, JSON.stringify({ ...readPlan(), speakerBox: [1, 2, 3, 4] }));
   r = F.qc('speaker', '--write');
@@ -301,7 +306,7 @@ test('speaker --write：建議框寫進 plan.json、保留其他欄位；已有�
   assert.match(r.stdout, /scenes 要寫成陣列/);
 });
 
-test('storyboard：✖ 原文（plan 有 ✖、還沒 build）；build 後截圖存成段 id、印出貼上用的 markdown', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 600000 }, () => {
+test('storyboard：✖ 原文（plan 有 ✖、還沒 build）；build 後截圖存成段 id、印出貼上用的 markdown', { skip: NO_UI, timeout: 600000 }, () => {
   const F = fixture();
   fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, look: false, speakerBox: [400, 80, 900, 700], scenes: [{ id: 's01', scene: 'nope', from: '#1', to: '#1e' }] }));
   let r = F.qc('storyboard');
@@ -332,10 +337,10 @@ test('storyboard：✖ 原文（plan 有 ✖、還沒 build）；build 後截圖
   assert.equal(s01.why, '抽屜抽出後 0.3 秒：「重點在這裡」（完成態）');
   assert.ok(t.stdout.split('\n').includes(`s01｜${Q.fmtT(s01.at)}｜${s01.why}｜storyboard-preview/s01.png`), t.stdout);
   assert.match(t.stdout, /^!\[s01\]\(storyboard-preview\/s01\.png\)$/m);
-  assert.match(t.stdout, /✔ \d+ 張都存好了：projects\/p1\/work\/storyboard-preview\//);
+  assert.match(t.stdout, /✓ \d+ 張都存好了：projects\/p1\/work\/storyboard-preview\//);
 });
 
-test('observe：每 0.5 秒一格的總表、靜止區間 6–16 秒、接縫條帶、index.md；其他檔不動；沒字幕只 ⚠', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 300000 }, () => {
+test('observe：每 0.5 秒一格的總表、靜止區間 6–16 秒、接縫條帶、index.md；其他檔不動；沒字幕只 ⚠', { skip: NO_UI, timeout: 300000 }, () => {
   const F = fixture();
   const clip = path.join(F.root, 'still22.mp4');
   ffmpeg(['-f', 'lavfi', '-i', "color=c=gray:s=1280x720:r=30:d=22,noise=alls=80:allf=t:enable='lt(t,6)+gte(t,16)'", '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', clip]);
@@ -381,7 +386,7 @@ test('observe：每 0.5 秒一格的總表、靜止區間 6–16 秒、接縫條
   assert.match(bad.stderr, /✖ --from／--to 要是完成影片秒數，而且 0 ≤ from < to ≤ 22（現在 from=30、to=22）→ 改成 0–22 之間、from < to 的完成影片秒數/);
 });
 
-test('framing／speaker 抽格套 look：kit 預設（調光 LUT＋瘦臉退回 rough.mp4 的 ⚠）與 plan.look false 都不出錯；兩次的預覽圖不同', { timeout: 120000 }, () => {
+test('framing／speaker 抽格套 look：kit 預設（調光 LUT＋瘦臉退回 rough.mp4 的 ⚠）與 plan.look false 都不出錯；兩次的預覽圖不同', { skip: NO_FF, timeout: 120000 }, () => {
   const F = fixture();
   const kit = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'look.json'), 'utf8'));
   const pv = path.join(F.proj, 'work', '構圖預覽.jpg');
@@ -404,7 +409,7 @@ test('framing／speaker 抽格套 look：kit 預設（調光 LUT＋瘦臉退回 
   if (kit.color > 0) assert.ok(!withLook.equals(fs.readFileSync(pv)), '套 LUT 的預覽圖要跟不套的不同');
 });
 
-test('storyboard：rough.mp4 有一段全黑、專案沒有聲音素材 → 子母畫面段沒有小視窗 ✖（不用 build、不截圖）；放了聲音素材就不判', { timeout: 120000 }, () => {
+test('storyboard：rough.mp4 有一段全黑、專案沒有聲音素材 → 子母畫面段沒有小視窗 ✖（不用 build、不截圖）；放了聲音素材就不判', { skip: NO_FF, timeout: 120000 }, () => {
   const F = fixture();
   // 0–8 秒有畫面、8–12 秒全黑（聲音正常）
   ffmpeg(['-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30:d=8', '-f', 'lavfi', '-i', 'color=c=black:s=1280x720:r=30:d=4', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:d=12',
@@ -423,7 +428,7 @@ test('storyboard：rough.mp4 有一段全黑、專案沒有聲音素材 → 子�
   assert.match(t.stderr, /✖ 還沒 build/);
 });
 
-test('storyboard：03 側邊欄截在退場前、fx 29 截在數字停住時；同一段張數變了，舊截圖自動清掉', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 600000 }, () => {
+test('storyboard：03 側邊欄截在退場前、fx 29 截在數字停住時；同一段張數變了，舊截圖自動清掉', { skip: NO_UI, timeout: 600000 }, () => {
   const F = fixture();
   fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, look: false, speakerBox: [400, 80, 900, 700], scenes: [
     { id: 's01', scene: 'side-panel', from: 1, to: 7, slots: { eyebrow: '流程', title: '三個重點', items: ['第一個重點 ｜icon=check', '第二個重點 ｜icon=check', '第三個重點 ｜icon=check'] } },
@@ -445,7 +450,7 @@ test('storyboard：03 側邊欄截在退場前、fx 29 截在數字停住時；�
   assert.ok(!fs.existsSync(path.join(dir, 's01-1.png')) && fs.existsSync(path.join(dir, 's09.png')));
 });
 
-test('storyboard：catalog 的 done 是 "label" 的 fx（27 打字機）截在時間軸的 done 標記：「自動剪輯」打完、還沒開始擦', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 600000 }, () => {
+test('storyboard：catalog 的 done 是 "label" 的 fx（27 打字機）截在時間軸的 done 標記：「自動剪輯」打完、還沒開始擦', { skip: NO_UI, timeout: 600000 }, () => {
   const F = fixture();
   fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, look: false, speakerBox: [400, 80, 900, 700], scenes: [
     { id: 's01', type: 'fx', fx: 27, from: 1, to: 6, vars: { text: '自動剪輯', alt: 'Auto Edit' } }] }));
@@ -505,7 +510,7 @@ test('字幕樣式（F8，純函式）：取樣只挑中文 ≥ 4 字 ≥ 0.6 �
   assert.equal(Q.judge({ width: 1920, height: 1080, fps: 30, hasAudio: true, dur: 10, expected: 10, loud: { i: -14, tp: -2 }, freezes: [], blacks: [], silences: [], items: [], cuts: [] }).checks.some((c) => /^cap/.test(c.key)), false);
 });
 
-test('主題：plan.json 的 theme（"dark" 才是暗色）；qc-sheet 最上面標 theme，暗色深底、亮色淺底', () => {
+test('主題：plan.json 的 theme（"dark" 才是暗色）；qc-sheet 最上面標 theme，暗色深底、亮色淺底', { skip: NO_FF }, () => {
   const dir = mkTmp('hf-qc-theme-');
   const plan = path.join(dir, 'plan.json');
   fs.writeFileSync(plan, JSON.stringify({ version: 1, theme: 'dark', scenes: [] }));
@@ -524,7 +529,7 @@ test('主題：plan.json 的 theme（"dark" 才是暗色）；qc-sheet 最上面
   }
 });
 
-test('storyboard：v2 原語的拍點（P.spot 抬起、P.slide 抽屜）各截一張；P.idle 微動不算動畫；抽屜之後沒變就是完成態', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 600000 }, () => {
+test('storyboard：v2 原語的拍點（P.spot 抬起、P.slide 抽屜）各截一張；P.idle 微動不算動畫；抽屜之後沒變就是完成態', { skip: NO_UI, timeout: 600000 }, () => {
   const F = fixture();
   fs.mkdirSync(path.join(F.out, 'compositions'), { recursive: true });
   fs.writeFileSync(path.join(F.out, 'compositions', 'x-v2.html'), `<!doctype html><html><head><meta charset="UTF-8"></head><body>
@@ -567,7 +572,7 @@ test('storyboard：v2 原語的拍點（P.spot 抬起、P.slide 抽屜）各截�
     ['x01-1.png', 3.1, '焦點抬起：「第一站」'], ['x01-2.png', 4.6, '焦點抬起：「第二站」'], ['x01-3.png', 6, '抽屜抽出後 0.3 秒：「抽屜重點」（完成態）']]);
 });
 
-test('暗色主題回歸（T115，fixture dev/tests/fixtures/theme-dark 的段落）：build 出 data-theme="dark" → render → qc final 量到字幕底板 956–1074、字高 71 ± 3，qc-sheet 標 theme: dark', { skip: !CHROME && '沒有 HyperFrames 的 Chrome，略過', timeout: 900000 }, () => {
+test('暗色主題回歸（T115，fixture dev/tests/fixtures/theme-dark 的段落）：build 出 data-theme="dark" → render → qc final 量到字幕底板 956–1074、字高 71 ± 3，qc-sheet 標 theme: dark', { skip: NO_UI, timeout: 900000 }, () => {
   const F = fixture();
   const FIX = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'fixtures', 'theme-dark', 'plan.json'), 'utf8'));
   const seg = (id) => FIX.scenes.find((s) => s.id === id);
@@ -615,7 +620,7 @@ test('直式 final（純函式）：尺寸照畫布 1080×1920；講者面板的
   assert.equal(Q.captionStyleChecks({ samples: [{ n: 1, text: '直式字幕', top: 956, bottom: 1074, ink: 71 }] }, C)[0].level, 'warn');
 });
 
-test('直式 qc-sheet：每格 9:16（一列 6 格）、格上 unsafe[] 是紅色半透明框；橫式不畫', () => {
+test('直式 qc-sheet：每格 9:16（一列 6 格）、格上 unsafe[] 是紅色半透明框；橫式不畫', { skip: NO_FF }, () => {
   const dir = mkTmp('hf-qc-sheet-v-');
   const mp4 = path.join(dir, 'v.mp4');
   ffmpeg(['-f', 'lavfi', '-i', 'color=c=0x808080:s=360x640:rate=30', '-t', '3', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', mp4]);
@@ -656,7 +661,7 @@ test('直式 framing（純函式）：三個倍率的 9:16 框；1.0＝原畫面
   assert.equal(Q.chinFromLandmarks({ project: os.tmpdir() }, 1080, 1920), null);
 });
 
-test('直式 framing／speaker（CLI）：第一行印版式；構圖預覽三格 9:16、表上三個倍率；動作範圍圖是 1080×1920', { timeout: 180000 }, () => {
+test('直式 framing／speaker（CLI）：第一行印版式；構圖預覽三格 9:16、表上三個倍率；動作範圍圖是 1080×1920', { skip: NO_FF, timeout: 180000 }, () => {
   const F = fixture();
   // 540×960 的直拍：灰底上一個左右上下晃的白塊（講者）
   ffmpeg(['-f', 'lavfi', '-i', 'color=c=0x404040:s=540x960:rate=30:d=12', '-f', 'lavfi', '-i', 'color=c=white:s=140x500:rate=30:d=12',
@@ -684,7 +689,7 @@ test('直式 framing／speaker（CLI）：第一行印版式；構圖預覽三�
   assert.equal(dims(path.join(F.proj, 'work', '場地照-8格.jpg')), `${4 * 360 + 5 * 10},${2 * (640 + 30) + 3 * 10}`);
 });
 
-test('直式 final（CLI）：1080×1920 完成影片格式 ✔、qc-sheet 9:16；同一支片在橫式專案 ✖ 尺寸', { timeout: 180000 }, () => {
+test('直式 final（CLI）：1080×1920 完成影片格式 ✔、qc-sheet 9:16；同一支片在橫式專案 ✖ 尺寸', { skip: NO_FF, timeout: 180000 }, () => {
   const F = fixture();
   const final = path.join(F.proj, 'output', 'final.mp4');
   fs.mkdirSync(path.dirname(final), { recursive: true });
@@ -692,7 +697,7 @@ test('直式 final（CLI）：1080×1920 完成影片格式 ✔、qc-sheet 9:16�
   fs.writeFileSync(path.join(F.out, 'plan.json'), JSON.stringify({ version: 1, format: 'portrait', look: false, scenes: [] }));
   let r = F.qc('final');
   assert.equal(r.stdout.split('\n')[0], '版式：直式 1080×1920（來源：plan.json）');
-  assert.match(r.stdout, /^✔ 格式 1080×1920、30\.00fps、有音軌$/m);
+  assert.match(r.stdout, /^✓ 格式 1080×1920、30\.00fps、有音軌$/m);
   assert.match(r.stdout, /直式每格 9:16，紅色半透明框是平台介面區/);
   r = F.qc('final', '--json');
   const j = JSON.parse(r.stdout);

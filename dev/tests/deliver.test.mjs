@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import { TEMPLATE, TOOLS, imp, hasChrome } from './helpers.mjs';
+import { TEMPLATE, TOOLS, imp, hasChrome, fixture } from './helpers.mjs';
 
 const D = await imp('lib/deliver.mjs');
 const CLI = await imp('deliver.mjs');
@@ -89,7 +89,7 @@ test('參數：--prerender／--cancel／--wait／--said；看不懂的帶 → �
   assert.throws(() => CLI.parseDeliverArgs(['x']), /看不懂的參數「x」→ 看用法/);
   assert.throws(() => CLI.parseDeliverArgs(['--wait', 'abc']), /--wait 要寫數字.*→ 例：--wait 300/);
   assert.throws(() => CLI.parseDeliverArgs(['--quality', 'best']), /--quality 只能是.*→ 交付一律用 looks/);
-  assert.throws(() => CLI.parseDeliverArgs(['--prerender', '--cancel']), /只能選一個 → 看用法/);
+  assert.throws(() => CLI.parseDeliverArgs(['--prerender', '--cancel']), /--prerender 和 --cancel 不能一起用 →/);
 });
 
 // ---------- 內容指紋 ----------
@@ -754,7 +754,7 @@ test('結束時印：檔案路徑、長度、✖／⚠、驗收截圖；失敗�
   const cwd = process.cwd();
   const ok = { ...D.newJob(), ok: true, source: 'prerender', warnings: ['音量偏小'], errors: [], qc: { errors: 0, warnings: 1, format: { width: 1920, height: 1080, fps: 30, hasAudio: true }, duration: { actual: 155.2 }, sheet: 'x' } };
   const text = CLI.finishLines(P, ok, { size: 38.5 * 1024 ** 2 }).join('\n');
-  assert.match(text, new RegExp(`✔ 完成影片：${path.relative(cwd, F.final).split(path.sep).join('/').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}（2:35\\.2（155\\.2 秒），1920×1080、30fps、有音軌，39 MB）`));
+  assert.match(text, new RegExp(`✓ 完成影片：${path.relative(cwd, F.final).split(path.sep).join('/').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}（2:35\\.2（155\\.2 秒），1920×1080、30fps、有音軌，39 MB）`));
   assert.match(text, /來源：預先 render（沒有重新 render）/);
   assert.match(text, /驗收：0 個 ✖、1 個 ⚠\n⚠ 音量偏小\n驗收截圖：.*qc-sheet\.jpg/);
   assert.match(text, /→ 完成/);
@@ -780,8 +780,9 @@ function realProject() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-deliver-real-'));
   const project = path.join(root, 'projects', 'demo'), work = path.join(project, 'work'), out = path.join(work, 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
-  const ff = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=44100', '-t', '10', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', path.join(work, 'rough.mp4')]);
-  assert.equal(ff.status, 0, String(ff.stderr));
+  // 10 秒主軌這一輪只做一次，各專案複製一份
+  const src = fixture('deliver-real-10s.mp4', (f) => { const ff = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=44100', '-t', '10', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', f]); assert.equal(ff.status, 0, String(ff.stderr)); });
+  fs.copyFileSync(src, path.join(work, 'rough.mp4'));
   const cue = (i, a, b, t) => `${i}\n00:00:0${a},000 --> 00:00:${String(b).padStart(2, '0')},000\n${t}\n`;
   fs.writeFileSync(path.join(work, 'rough.srt'), [cue(1, 1, 3, '第一句字幕'), cue(2, 3, 6, '第二句字幕'), cue(3, 6, 9, '第三句字幕')].join('\n'));
   fs.writeFileSync(path.join(out, 'plan.json'), JSON.stringify({ version: 1, speakerBox: [700, 200, 1220, 1000], look: { color: 0, slim: 0 }, check: { textSync: false }, scenes: [{ id: 's01', scene: 'concept', from: 2, to: 6.5, slots: { text: '**測試**：短片' } }] }, null, 2));
@@ -809,7 +810,7 @@ test('實跑：deliver.mjs 一條指令跑完（build、測試片段、整支、
     assert.ok(fs.existsSync(path.join(R.project, 'output', 'test-clips', 'test-clip.mp4')));
     assert.ok(fs.existsSync(path.join(R.project, 'output', 'qc', 'qc-sheet.jpg')));
     assert.equal(fs.existsSync(path.join(R.work, 'final-rendering.mp4')), false);
-    assert.match(out, /✔ 完成影片：.*final\.mp4（0:10\.0（10\.0 秒），1920×1080、30fps、有音軌/);
+    assert.match(out, /✓ 完成影片：.*final\.mp4（0:10\.0（10\.0 秒），1920×1080、30fps、有音軌/);
     assert.match(out, /驗收截圖：.*qc-sheet\.jpg/);
     assert.match(out, /^人聲響度 /m);
     assert.doesNotMatch(out, /@hf-progress|\[INFO\]|█/, 'render 的 log 不進 agent 的輸出');
@@ -887,7 +888,7 @@ test('實跑：capcut.mjs --background 接 status --wait：不用輪詢、做完
     let st = cap('status', '--project', R.project, '--wait', '500');
     assert.equal(st.status, 0, st.stdout + st.stderr + fs.readFileSync(path.join(R.project, 'output', 'capcut', 'capcut.log'), 'utf8'));
     assert.equal(st.stdout.trim().split('\n').length, 2, `只印結果和下一步：${st.stdout}`);
-    assert.match(st.stdout, /✔ 做完了：2／2 支\n→ 清單：/);
+    assert.match(st.stdout, /✓ 做完了：2／2 支\n→ 清單：/);
     const dir = path.join(R.project, 'output', 'capcut');
     const files = fs.readdirSync(dir);
     assert.ok(files.includes('主軌.mp4') && files.includes('字幕.srt') && files.includes('清單.md'), files.join('、'));
@@ -900,7 +901,7 @@ test('實跑：capcut.mjs --background 接 status --wait：不用輪詢、做完
     assert.match(fs.readFileSync(path.join(dir, 'render.log'), 'utf8'), /^\[主軌\.mp4\] /m, 'render.log 每行帶檔名');
     const again = cap('--project', R.project);
     assert.equal(again.status, 0, again.stdout);
-    assert.match(again.stdout, /✔ 2 支都好了（2 支沒變、略過）/);
+    assert.match(again.stdout, /✓ 2 支都好了（2 支沒變、略過）/);
   } finally { fs.rmSync(R.root, { recursive: true, force: true }); }
 });
 

@@ -61,28 +61,30 @@
 
 動態（時長、緩動、錯拍、哪些預設看起來像機器做的）照 skill 的 `motion.md`「Motion craft」那一節。
 
-畫布檔已經有骨架（`<template>`、根元素 `#x-design-<段>`、`tl`、`P`、結尾的 `P.end()`）。把占位的 `data-design-blank` 元素刪掉，在骨架中間加自己的 `<style>`、元素和動畫，其他不動（段長由 `P.end()` 對齊，`data-duration` 不用改）。先寫出每拍主要動作的第一版就跑驗收，之後用 edit 改；語法對不對讓 audit 說，不用先在心裡驗證。
+畫布檔已經有骨架（`<template>`、根元素 `#x-design-<段>`、舞台 `#xd<段>-stage`、`tl`、`P`、結尾的 `P.end()`）。把舞台裡占位的 `data-design-blank` 元素刪掉，內容放進舞台；自己的 `<style>` 和動畫加在骨架中間，其他不動（段長由 `P.end()` 對齊，`data-duration` 不用改）。先寫出每拍主要動作的第一版就跑驗收，之後用 edit 改；語法對不對讓 audit 說，不用先在心裡驗證。
 
 **這個工作區的寫法**：
 
 - **綁句**：每拍一行 `const T1 = P.at('#13@每週');`，拿到段內秒數，當 GSAP 的位置參數；同一拍後面的動作寫 `T1 + 0.4`，要整拍往後挪寫 `P.at('#13@每週', 0.3)`。括號裡寫字串字面值（工具會直接讀這一行），只綁鏡位腳本表上的那幾拍；拍要改，先改 `work/designs/<段>.md` 的表。音效 `P.sfx('success', '#15@省下')`。
 - **進場**用 `tl.from`／`tl.fromTo`（工具會在進場前把元素藏好，所以不用 CSS `opacity: 0`）。
 - **一拍的節奏**：主角在 `Tn` 進場、配角在 `Tn + 0.4`，一拍的動作在拍點後 1 秒內做完，然後靜止到下一拍。audit 量的就是每一拍之後、和最後一幕有沒有停夠。
-- **版面**：最外層容器 `position: absolute`，放在 brief「畫布」寫的範圍裡，內容上下置中；裡面用一般 CSS 排。自己的 id、class 用 `xd<段>-` 開頭，CSS 選擇器以 `#x-design-<段>` 開頭。
+- **版面**：舞台 `#xd<段>-stage` 已經照 brief「畫布」寫的範圍擺好，裡面的東西整組自動上下置中；沒有講者的全螢幕段會自動移到畫面正中間。內容放進舞台、用一般 CSS 排（flex、grid），不用自己算 top。自己的 id、class 用 `xd<段>-` 開頭，CSS 選擇器以 `#x-design-<段>` 開頭。
 - **顏色**只用 token（使用者換主色、換亮暗主題時才會跟著變）：`var(--brand)`（主色，只給焦點）、`var(--sc-fs-ink)`、`var(--sc-fs-card)`、`var(--sc-fs-card-line)`、`var(--sc-warn)`、`var(--sc-good)`、`var(--v2-node)`、`var(--v2-line)`、`var(--v2-card)`，陰影 `var(--v2-card-shadow)`。字型用頁面預設的。
 - **時間軸要能跳到任何一秒重播**：不用 `onUpdate`／`onComplete`、計時器、亂數、無限循環；狀態切換用淡出舊的、淡入新的，不補間顏色。
 - **作者的偏好**：落地之後就靜止，拍與拍之間不加微動（呼吸、漂浮）；不做大位移飛入；div 不轉非 90 度的角度（斜邊會鋸齒）。
 
 ```html
 <style>
-  #x-design-s0108 #xds0108-stage { position: absolute; left: 120px; top: 150px; width: 1180px; height: 708px; }
-  #x-design-s0108 #xds0108-week { position: absolute; left: 60px; top: 250px; display: flex; gap: 20px; }
+  #x-design-s0108 #xds0108-row { display: flex; align-items: center; gap: 120px; }
+  #x-design-s0108 #xds0108-week { display: flex; gap: 20px; }
   #x-design-s0108 .xds0108-cell { width: 84px; height: 200px; border-radius: 16px; background: var(--brand); }
-  #x-design-s0108 #xds0108-num { position: absolute; left: 860px; top: 190px; font-size: 300px; line-height: 1; font-weight: 800; color: var(--sc-fs-ink); }
+  #x-design-s0108 #xds0108-num { font-size: 300px; line-height: 1; font-weight: 800; color: var(--sc-fs-ink); }
 </style>
-<div id="xds0108-stage">
-  <div id="xds0108-week"><div class="xds0108-cell"></div><!-- 共七格 --></div>
-  <div id="xds0108-num">7</div>
+<div id="xds0108-stage">  <!-- 骨架原本就有的舞台：占位那一行換成下面的內容 -->
+  <div id="xds0108-row">
+    <div id="xds0108-week"><div class="xds0108-cell"></div><!-- 共七格 --></div>
+    <div id="xds0108-num">7</div>
+  </div>
 </div>
 <script>
     const T1 = P.at('#13@每週');
@@ -117,7 +119,8 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段> --
 |---|---|
 | 動畫檔不存在 | `node shared/template/tools/build.mjs --project projects/<專案> --design-canvas <段>` 補一份空白畫布 |
 | → 叫你重跑 build、snapshot | 那是主代理的事；你改好動畫檔、重跑驗收那一條就好 |
-| 同一個 ✖ 改兩次還在、工具印「→ 停手」（驗收次數到上限），或 → 要你改 plan.json、storyboard.md | 停手回報那行原文（那兩個檔只有主代理能改） |
+| `✖ plan.json 比 index.html 新，這次量不準` | 你不能 build：停手，把那一行原文交回主代理 |
+| 同一個 ✖ 改兩次還在、工具印「→ 停手」（驗收次數到上限），或 → 要你改 plan.json | 停手回報那行原文（plan.json 只有主代理能改） |
 
 只寫自己這段的檔：`work/designs/<段>.md`、`compositions/x-design-<段>.html`、`compositions/components/`（registry 裝的）、`illus-local/` 自己新畫的那一個、`work/reports/<段>.md`。
 

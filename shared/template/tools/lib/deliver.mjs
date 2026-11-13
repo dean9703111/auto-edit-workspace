@@ -10,6 +10,7 @@
 //   contentFingerprint(P, opts)     完成影片的內容由什麼決定（plan.json、rough.srt、合成、kit、assets、畫質）；同指紋＝render 出來一樣
 //   prerenderInfo(P)／cancelPrerender(P)／prerenderBlocked(P)  預先 render 的狀態、取消（連 Chrome 一起收）、這台電腦該不該跑
 //   finalIsCurrent(P, fp)           output/final.mp4 就是這個指紋 render 出來的（不用重做）
+//   verifiedOf(P, fp)               上次驗收過的結果（同一支 final.mp4、同一個指紋、驗收截圖還在）：內容沒變再輸出一次就沿用，不重跑 qc.mjs final
 //   killTree(pid)                   收掉整棵行程樹。render 的 Chrome worker 各自開 process group（puppeteer 的 detached），只殺 group 會留孤兒
 //   lockHolder(P)                   現在誰在輸出（剪輯台或 deliver.mjs；同時只能一個）
 //   recordStopPassed(project, …)    停點紀錄記 ④ 通過（最後一列已經是通過就不重複）
@@ -25,7 +26,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { hfArgs, hfLocal } from './hf.mjs';
-import { jobState, clearJob, STILL_RUNNING } from './job.mjs';
+import { jobState, clearJob, runToolUntilDone } from './job.mjs';
 import { appendStop, progressFile } from './progress.mjs';
 import { lookNeedsRun } from './look.mjs';
 import { speakerGate } from './speaker.mjs';
@@ -67,6 +68,7 @@ const rm = (f) => { try { fs.rmSync(f, { force: true }); } catch { /* 下次會�
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sha1 = (b) => createHash('sha1').update(b).digest('hex');
 const gb = (b) => (b / 1024 ** 3).toFixed(1);
+const elapsed = (ms) => { const s = Math.round(ms / 1000); return s >= 60 ? `${Math.floor(s / 60)} 分 ${s % 60} 秒` : `${s} 秒`; };
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
 function writeJson(f, o) {
   fs.mkdirSync(path.dirname(f), { recursive: true });
@@ -154,6 +156,21 @@ export function contentFingerprint(P, { quality = QUALITY, fps = FPS, resolution
 export function finalIsCurrent(P, fp) {
   const F = deliverPaths(P.project), memo = readJson(F.memo), st = statOf(F.final);
   return !!(memo && st && memo.fingerprint === fp && memo.size === st.size && memo.mtimeMs === Math.floor(st.mtimeMs));
+}
+
+// 驗收過的結果記在指紋紀錄旁邊（剪輯台按鈕、deliver.mjs 都走 runDeliver，留下的一樣）：只留回報要用的欄位
+// speaker：講者介紹的判斷（speakerGate）：講者資料改了，畫面上的名字就不一定和上次驗收時一樣
+function writeVerified(P, fp, qc, speaker = null) {
+  const F = deliverPaths(P.project), memo = readJson(F.memo);
+  if (!memo || memo.fingerprint !== fp) return;
+  const keep = { ok: qc.ok, errors: qc.errors, warnings: qc.warnings, checks: qc.checks || [], format: qc.format || null, duration: qc.duration || null, sheet: qc.sheet || null };
+  try { writeJson(F.memo, { ...memo, verified: { fingerprint: fp, speaker, at: new Date().toISOString(), qc: keep } }); } catch { /* 沒記到就是下次重跑驗收 */ }
+}
+export function verifiedOf(P, fp, { speaker = null } = {}) {
+  const F = deliverPaths(P.project), v = readJson(F.memo)?.verified;
+  if (!v || v.fingerprint !== fp || !v.qc || v.qc.ok === false || !finalIsCurrent(P, fp) || (v.speaker ?? null) !== speaker) return null;
+  if (v.qc.sheet && !statOf(F.sheet)) return null;   // 驗收截圖被刪了：重跑驗收才有圖可以附
+  return v;
 }
 
 // content：這支影片當下的內容（captureState）：下次改一段時拿來比，判斷能不能只重畫改到的地方
@@ -600,9 +617,12 @@ export async function runDeliver(P, job, deps) {
       const first = items.find((x) => x.type !== 'media');
       const start = first?.out?.start ?? first?.start ?? 0;   // out.start＝完成影片秒數（有 edit.cuts 時 start 是 rough.mp4 秒數）
       say(`2/4 ${STEPS[1][1]}：${start} 秒起 ${TEST_SECONDS} 秒`);
-      let tested;
-      do { tested = await nodeTool('build.mjs', ['--project', P.project, '--template', P.templateDir, '--test', `${start},${TEST_SECONDS}`, ...(nocaps ? ['--nocaps'] : [])]); } while (tested.code === STILL_RUNNING);
+      // build 回 75＝底片還在背景編碼：再跑一次會接著等（有總上限，卡住不會永遠等）
+      const tested = await runToolUntilDone(path.join(TOOLS, 'build.mjs'), ['--project', P.project, '--template', P.templateDir, '--test', `${start},${TEST_SECONDS}`, ...(nocaps ? ['--nocaps'] : [])], {
+        run, cwd: P.root, onData: addLog, onWait: ({ sec }) => say(`  （底片還在處理，已等 ${elapsed(sec * 1000)}，接著等）`),
+      });
       if (job.canceled) return;
+      if (tested.timedOut) return fail(`測試片段等底片處理等了 ${elapsed(Date.now() - job.startedAt)} 還沒好。`, [lastLine(tested)], `看 ${path.relative(P.root, path.join(P.project, 'work', '.jobs'))} 裡最新的 .log；還在動就再跑一次這條指令，不動就停下來回報`);
       if (tested.code !== 0) return fail('測試片段產生失敗：照下面的訊息修改（看不懂就整段貼給 AI）。', [lastLine(tested)], '照訊息改 plan.json，再跑一次這條指令');
       fs.mkdirSync(path.dirname(F.clip), { recursive: true });
       const clipRender = await hfRender(P, run, { args: ['render', '-c', 'compositions/test-clip.html', '--sdr', '--quality', 'draft', '-o', F.clip], logFile: F.log, title: '測試片段', env: deps.renderEnv, onChunk: addLog });
@@ -642,20 +662,31 @@ export async function runDeliver(P, job, deps) {
     }
 
     job.step = 'qc';
-    say(`4/4 ${STEPS[3][1]}（qc.mjs final）`);
-    const qc = await nodeTool('qc.mjs', ['final', '--project', P.project, '--json', ...(is4k ? ['--scale', '2'] : []), ...(nocaps ? ['--no-captions'] : [])]);
-    if (job.canceled) return;
+    // 驗收只看畫面和聲音，不知道名字對不對：畫面上還是示範人物就講清楚，不能只說「通過」
+    const demo = deps.speakerGate ? deps.speakerGate() : P.templateDir ? speakerGate(P.templateDir, readJson(P.plan)) : null;
+    // 講者資料（shared/setting.json）也算進「上次驗收的結果還能不能用」：換了講者就重跑驗收
+    const speakerKey = JSON.stringify(demo ? { needed: !!demo.needed, state: demo.state ?? null, name: demo.name ?? null, titles: demo.titles ?? [], segments: demo.segments ?? [] } : null);
+    // 內容沒變、這支 final.mp4 上次驗收過（剪輯台按過輸出也算）：沿用那次的結果，不重跑驗收（A9⑥）
+    const prior = job.source === 'same' && !deps.force ? verifiedOf(P, fp, { speaker: speakerKey }) : null;
     let report = null;
-    try { report = JSON.parse(qc.stdout); } catch { /* 下面當成驗收沒有跑完 */ }
-    if (!report) return fail('影片輸出好了，但驗收沒有跑完：把下面的訊息貼給 AI。', [lastLine(qc)], `單獨跑 node shared/template/tools/qc.mjs final --project "${path.relative(P.root, P.project)}" 看錯誤`);
+    if (prior) {
+      job.reused = true;
+      report = prior.qc;
+      say(`4/4 ${STEPS[3][1]}：沿用上次的結果（內容沒變，同一支 final.mp4）`);
+    } else {
+      say(`4/4 ${STEPS[3][1]}（qc.mjs final）`);
+      const qc = await nodeTool('qc.mjs', ['final', '--project', P.project, '--json', ...(is4k ? ['--scale', '2'] : []), ...(nocaps ? ['--no-captions'] : [])]);
+      if (job.canceled) return;
+      try { report = JSON.parse(qc.stdout); } catch { /* 下面當成驗收沒有跑完 */ }
+      if (!report) return fail('影片輸出好了，但驗收沒有跑完：把下面的訊息貼給 AI。', [lastLine(qc)], `單獨跑 node shared/template/tools/qc.mjs final --project "${path.relative(P.root, P.project)}" 看錯誤`);
+    }
     // qc.mjs final --json 的 errors、warnings 是數字；每一則的文字在 checks 裡
     const said = (level) => (report.checks || []).filter((c) => c.level === level).map((c) => c.text);
     job.qc = report;
     job.warnings = said('warn');
-    // 驗收只看畫面和聲音，不知道名字對不對：畫面上還是示範人物就講清楚，不能只說「通過」
-    const demo = deps.speakerGate ? deps.speakerGate() : P.templateDir ? speakerGate(P.templateDir, readJson(P.plan)) : null;
     if (demo?.needed) job.warnings.unshift(`講者介紹還是示範人物「${demo.demo}」（${demo.segments.join('、')}）→ 跟 AI 說姓名與頭銜，或在剪輯頁設定後再輸出一次`);
     if (report.ok === false) return fail('影片輸出好了，但驗收沒過：把下面的 ✖ 貼給 AI，或修改後再輸出一次。', said('error'), '照 ✖ 後面的 → 修好，再跑一次這條指令（內容沒變只會重跑驗收；要重新 render 加 --force）');
+    if (!prior) writeVerified(P, fp, report, speakerKey);
     recordStopPassed(P.project, { said: deps.said });
     // YouTube 說明欄文字：寫不出來不影響交件（章節不到 3 個、沒用配樂就不產生檔案）
     // deps.checkJson＝() → build --check --json 的結果（deliver.mjs、剪輯台傳 planCheckJson；沒傳就不寫）
@@ -668,7 +699,7 @@ export async function runDeliver(P, job, deps) {
       }
     } catch { /* 沒有章節資料就不寫 */ }
     job.ok = true;
-    job.message = demo?.needed ? `完成影片輸出好了，但講者介紹還是示範人物「${demo.demo}」，上片前要改。` : '完成影片輸出好了，驗收也通過了。';
+    job.message = demo?.needed ? `完成影片輸出好了，但講者介紹還是示範人物「${demo.demo}」，上片前要改。` : prior ? '完成影片已經是最新的（內容沒變，沿用上次的驗收結果）。' : '完成影片輸出好了，驗收也通過了。';
     if (!plain) job.message += `（${optionsLabel(opts)}）`;
   } catch (e) {
     if (!job.canceled) fail(`輸出中斷：${e.message}`, [], `看 ${path.relative(P.root, F.log)} 最後幾行；重跑一次這條指令`);
@@ -793,7 +824,9 @@ const issuesOf = (text) => ({ errors: text.split(/\r?\n/).filter((l) => /^✖/.t
 
 export function cliDeps(P, job, { nice = 0, say = () => {} } = {}) {
   const run = spawnRunner(job, { nice });
-  const tool = (name, args) => run(process.execPath, [path.join(TOOLS, name), ...args], { cwd: P.root });
+  // 工具回 75＝它在等自己的背景工作（瘦臉、底片編碼）：再跑一次接著等，有總上限；等的時候印一行，背景工作的 log 才不會看起來卡住
+  const tool = (name, args) => runToolUntilDone(path.join(TOOLS, name), args, { run, cwd: P.root, onWait: ({ sec }) => say(`  （${name} 還在跑，已等 ${elapsed(sec * 1000)}，接著等）`) });
+  const timedOut = (name, r) => ({ ...r, stdout: `${r.stdout || ''}\n✖ ${name} 等到上限還沒做完 → 看 work/.jobs/ 裡最新的 .log；還在動就再跑一次這條指令，不動就停下來回報` });
   const base = ['--project', P.project, '--template', P.templateDir];
   return {
     run,
@@ -801,12 +834,12 @@ export function cliDeps(P, job, { nice = 0, say = () => {} } = {}) {
       // 瘦臉底片過期：先跑 look.mjs run（和剪輯台「重新產生」一樣；build 自己只會停下來報錯）
       if (lookNeedsRun({ projectDir: P.project, plan: readJson(P.plan) || {}, templateDir: P.templateDir })) {
         say('講者瘦臉：先偵測臉部、套用瘦臉（look.mjs run，長片要幾分鐘）…');
-        let lr;
-        do { lr = await tool('look.mjs', ['run', ...base]); } while (lr.code === STILL_RUNNING);
+        let lr = await tool('look.mjs', ['run', ...base]);
+        if (lr.timedOut) lr = timedOut('look.mjs run', lr);
         if (lr.code !== 0) { const text = `${lr.stdout}\n${lr.stderr}`; return [200, { ok: false, log: text, message: lastLine(lr), issues: issuesOf(text) }]; }
       }
-      let r;
-      do { r = await tool('build.mjs', base); } while (r.code === STILL_RUNNING);
+      let r = await tool('build.mjs', base);
+      if (r.timedOut) r = timedOut('build.mjs', r);
       const text = `${r.stdout}\n${r.stderr}`;
       return [200, { ok: r.code === 0, log: text, message: lastLine(r), issues: issuesOf(text) }];
     },

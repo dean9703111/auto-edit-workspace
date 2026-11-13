@@ -137,7 +137,7 @@ test('status --wait：做完就回來（不等到逾時）、逾時結束碼 75�
     assert.ok(Date.now() - t0 < 5000, '做完就回來');
     r = status();
     assert.equal(r.code, 0);
-    assert.match(r.text, /✔ 做完了：3／3 支\n→ 清單：projects\/x\/output\/capcut\/清單\.md/);
+    assert.match(r.text, /✓ 做完了：3／3 支\n→ 清單：projects\/x\/output\/capcut\/清單\.md/);
 
     // 逾時
     write({ pid: worker.pid, current: 'b.mov' });   // 舊版的 state：current 是字串

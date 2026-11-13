@@ -102,7 +102,9 @@ test('改版：new 開提案 → 範本沒改不能 accept、提案沒確認不�
   assert.deepEqual(JSON.parse(read(p, 'work/hyperframes/.cache/check-runs.json')), {}, '023：確認改版後接著做的人從第 1 次 audit 算起');
   const sb = read(p, 'work/storyboard.md');
   assert.match(sb, /兩個面向＋蓋章 \| 彈出；蓋章/);
-  assert.equal(sb.replace('兩個面向＋蓋章 | 彈出；蓋章', '兩個面向 | 彈出'), SB, 'storyboard.md 只換 s12 那一節');
+  // 032 B6：s12 是手寫的動畫檔（拍點正本在 work/designs/）：提案的表寫進鏡位腳本，分鏡表那一節多一行指到它
+  assert.equal(sb.replace('兩個面向＋蓋章 | 彈出；蓋章', '兩個面向 | 彈出'), SB.replace('- 截圖觀察：對比卡\n\n#### 動畫分鏡 s12', '- 截圖觀察：對比卡\n\n- 拍點正本：work/designs/s12.md\n\n#### 動畫分鏡 s12'), 'storyboard.md 只換 s12 那一節');
+  assert.match(read(p, 'work/designs/s12.md'), /\| 1 \| #1@主持人 \| 兩個面向＋蓋章 \| 彈出；蓋章 \|/);
   assert.ok(V.storyboardByVersions(p));
   const s = projectStatus(p);
   assert.notEqual(s.stage, 'S10', 'accept 寫的 storyboard.md 不算停點 ③');
@@ -145,7 +147,7 @@ test('use：先存現在的樣子，再把 plan.json 那段、x 檔、svg、stor
   fs.rmSync(p, { recursive: true });
 });
 
-test('022 修改動畫走預覽：design／template 段存動畫檔與鏡位腳本；只改 html 也算改；new／use 不 render、預覽.jpg 用 audit 拼圖；designs 的拍較新就寫回 storyboard', () => {
+test('022 修改動畫走預覽：design／template 段存動畫檔與鏡位腳本；只改 html 也算改；new／use 不 render、預覽.jpg 用 audit 拼圖；storyboard 的動畫分鏡從 designs 重產', async () => {
   const p = mk(), c = ctx(p);
   c.flags = {};   // 不加 --no-preview：預設也不能 render
   const plan = JSON.parse(read(p, 'work/hyperframes/plan.json'));
@@ -177,13 +179,15 @@ test('022 修改動畫走預覽：design／template 段存動畫檔與鏡位腳�
   assert.ok(!fs.readdirSync(path.join(p, 'work', 'versions', 'd20'), { recursive: true }).some((f) => String(f).endsWith('.mp4')), '全程沒有 mp4');
   touch(p, 'work/hyperframes/compositions/x-design-d20.html', D1.replace('設計 1', '設計 3'), 5);
   assert.equal(V.freshSheet(c.P, 'd20'), null, '動畫比拼圖新：拼圖不算現在的樣子');
-  // 4. 設計師改了 designs/d20.md 的拍 → 寫回 storyboard 那一節；storyboard 比較新就不動
+  // 4. 設計師改了 designs/d20.md 的拍 → storyboard 那一節的動畫分鏡從正本重產（032 B6：取代 syncDesignSheet，不比修改時間）；別段不動
   touch(p, 'work/designs/d20.md', `# d20\n\n概念：一\n\n${beat('路由器＋手機')}\n`, 1);
-  assert.equal(V.syncDesignSheet(c.P, 'd20'), true);
+  const BS = await imp('lib/beat-source.mjs');
+  const planNow = JSON.parse(read(p, 'work/hyperframes/plan.json'));
+  assert.deepEqual(BS.refreshStoryboard(c.P, planNow, { only: ['d20'] }).changed, ['d20']);
   const sb = read(p, 'work/storyboard.md');
-  assert.match(sb, /### d20｜內容設計動畫（全幕）\n- 概念：一\n\n#### 動畫分鏡 d20\n\n\| 拍 [^\n]*\n\|---[^\n]*\n\| 1 \| #1@主持人 \| 路由器＋手機 \| 彈出/);
+  assert.match(sb, /### d20｜內容設計動畫（全幕）\n- 概念：一\n\n- 拍點正本：work\/designs\/d20\.md\n\n#### 動畫分鏡 d20\n\n\| 拍 [^\n]*\n\|---[^\n]*\n\| 1 \| #1@主持人 \| 路由器＋手機 \| 彈出/);
   assert.match(sb, /### s12｜x-a（全幕）[\s\S]*兩個面向 \| 彈出/, '別段不動');
-  assert.equal(V.syncDesignSheet(c.P, 'd20'), false, '寫回之後 storyboard 比較新');
+  assert.deepEqual(BS.refreshStoryboard(c.P, planNow, { only: ['d20'] }).changed, [], '再跑一次不動');
   // 5. use v1：html、鏡位腳本都還原；不 render
   V.useVersion(c.P, c.flags, 'd20', 'v1', logTo(c));
   assert.equal(read(p, 'work/hyperframes/compositions/x-design-d20.html'), D1);
@@ -230,7 +234,7 @@ test('CLI：--help、指令名稱、--seg 必填、list --json', () => {
   assert.match(runV('--help').stdout, /versions\.mjs save --project/);
   const bad = runV('redo', '--project', '.');
   assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /沒有「redo」這個指令：只有 begin、finish、save、new、accept、use、list →/);
+  assert.match(bad.stderr, /沒有「redo」這個指令：只有 begin、finish、save、new、accept、use、list、compare →/);
   const p = mk();
   const noSeg = runV('save', '--project', p);
   assert.match(noSeg.stderr, /save 要加 --seg <段 id>/);

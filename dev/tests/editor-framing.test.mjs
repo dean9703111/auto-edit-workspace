@@ -1,11 +1,15 @@
 // 構圖存檔 → 自動產生底片 → 已開啟的剪輯同步（含未儲存的調整）。
-import { test, before, after } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TEMPLATE, TOOLS, imp, hasChrome } from './helpers.mjs';
+import { TEMPLATE, TOOLS, imp, hasChrome, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都要 ffmpeg（before 做底片、構圖存檔會重產底片）：沒有就全部略過，before 也不做
+const noFf = await missingTools('ffmpeg');
+const test = skipAll(nodeTest, noFf);
 
 const { startEditor } = await imp('editor.mjs');
 let root, project, out, planFile, editor;
@@ -27,6 +31,7 @@ const waitForUpdate = async () => {
 };
 
 before(async () => {
+  if (noFf) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-editor-framing-'));
   fs.mkdirSync(path.join(root, 'shared'), { recursive: true });
   fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
@@ -93,7 +98,7 @@ test('構圖下方直接預覽動畫：未儲存的框即時更新，橫直式�
     t.diagnostic(`同頁動畫預覽：${root}/同頁動畫預覽.png`);
   } finally { fs.writeFileSync(planFile, original); await browser.close(); }
 });
-after(async () => { await editor?.ctx.framingJob; await editor?.close(); });
+after(async () => { await editor?.ctx.framingJob; await editor?.close(); if (root) fs.rmSync(root, { recursive: true, force: true }); });
 
 test('構圖：沒有完成影片只存設定；已有完成影片自動更新；連續儲存採最後一個框；不變、衝突和錯誤皆保留正確狀態', async () => {
   let state = await get('/api/state');

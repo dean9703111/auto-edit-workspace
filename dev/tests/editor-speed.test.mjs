@@ -5,12 +5,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import puppeteer from 'puppeteer-core';
 import { startEditor } from '../../shared/template/tools/editor.mjs';
 import { findChrome } from '../../shared/template/tools/lib/audit-browser.mjs';
 import { sanitizeSegments } from '../../shared/template/tools/editor/server/write.mjs';
 import { modelOf, fieldsOf, knotsOf, cutAt, setRate, freezeAt, joinAt, zoneAt, speedLabel } from '../../shared/template/tools/editor/speed.mjs';
-import { TEMPLATE } from './helpers.mjs';
+import { TEMPLATE, missingTools } from './helpers.mjs';
+
+// 開瀏覽器的那幾個測試：沒有 Chrome、ffmpeg 或 puppeteer-core（hyperframes 順帶裝的，不在 package.json）就略過，用到才載入；純函式的照跑
+const noUi = await missingTools('chrome', 'ffmpeg', 'puppeteer');
+const puppeteer = noUi ? null : (await import('puppeteer-core')).default;
 
 // ---------- 轉換 ----------
 test('欄位 → 分區：原速、整段倍速、out、定格、變速', () => {
@@ -88,6 +91,7 @@ const srt = Array.from({ length: 10 }, (_, i) => `${i + 1}\n00:00:${String(i * 2
 const planFile = () => path.join(work, 'hyperframes', 'plan.json');
 const savedSeg = () => JSON.parse(fs.readFileSync(planFile(), 'utf8')).scenes.find((s) => s.id === 'm1');
 before(async () => {
+  if (noUi) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-speed-'));
   const project = path.join(root, 'projects', 'demo');
   work = path.join(project, 'work');
@@ -110,13 +114,13 @@ before(async () => {
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.itemsView?.some((x) => x.id === 'm1'), { timeout: 60000 });
 });
-after(async () => { await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
+after(async () => { if (noUi) return; await browser?.close(); await editor?.close(); fs.rmSync(root, { recursive: true, force: true }); });
 
 const clickAct = (act, r) => page.evaluate((a, x) => { document.querySelector(`[data-act="${a}"]${x != null ? `[data-r="${x}"]` : ''}`).click(); }, act, r);
 const zones = () => page.$$eval('#spStrip .sp-zone', (a) => a.map((b) => b.textContent));
 const knots = () => page.evaluate(() => window.__editor.itemsView.find((x) => x.id === 'm1').knots);
 
-test('剪輯台：在播放頭切開、選速度、定格、恢復原速；預覽馬上照新速度走；存檔寫回 plan.json', async () => {
+test('剪輯台：在播放頭切開、選速度、定格、恢復原速；預覽馬上照新速度走；存檔寫回 plan.json', { skip: noUi }, async () => {
   await page.evaluate(() => window.__editor.select({ kind: 'media', id: 'm1' }));
   await page.click('.side-tabs [data-side="insp"]');
   await page.waitForSelector('#spStrip');
@@ -178,7 +182,7 @@ test('顯示：AI 寫的變速和轉場都讀得出來', async () => {
   assert.deepEqual([transitionOf(media, { enter: 'whip', exit: 'whip' }).inText, transitionOf(media, { exit: 'whip' }).outText, transitionOf(media, { enter: 'tilt' }).inText], ['甩鏡', '甩鏡', '斜躺擺平']);
 });
 
-test('AI 寫好的變速和轉場：重新載入就看得到（不用先改過）；預覽照變速走', async () => {
+test('AI 寫好的變速和轉場：重新載入就看得到（不用先改過）；預覽照變速走', { skip: noUi }, async () => {
   fs.writeFileSync(planFile(), JSON.stringify({ version: 1, scenes: [
     { id: 's1', scene: 'key-point', from: '#1', to: '#3e', slots: { lead: '先看', key: '這一段' } },
     { id: 'm1', type: 'media', src: 'assets/screen/demo.mp4', from: '#4', to: '#9e', retime: [{ at: '#4', src: 2 }, { at: '#5', src: 2 }, { at: '#7', src: 10 }] },
@@ -207,7 +211,7 @@ test('AI 寫好的變速和轉場：重新載入就看得到（不用先改過�
   assert.deepEqual(errors, []);
 });
 
-test('預覽：子母畫面跟完成影片一樣在錄影裡面', async () => {
+test('預覽：子母畫面跟完成影片一樣在錄影裡面', { skip: noUi }, async () => {
   fs.writeFileSync(planFile(), JSON.stringify({ version: 1, scenes: [{ id: 'm1', type: 'media', src: 'assets/screen/demo.mp4', from: '#2', to: '#6e' }] }));
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.reportReady && window.__editor.itemsView.some((x) => x.id === 'm1' && x.pipShift), { timeout: 60000 });

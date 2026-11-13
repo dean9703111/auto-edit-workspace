@@ -22,6 +22,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { run, probeDuration } from './ff.mjs';
+import { r3 } from './time.mjs';
+import { LOUD } from './audio.mjs';
 
 export const MUSIC_FILE = 'music.json';
 export const LIB_LUFS = -20;              // 曲庫的檔一律調到這個響度（true peak ≤ −2），之後各種用途只要乘一個固定倍數
@@ -34,7 +36,6 @@ export const BED = {
 };
 const RATE = 48000;
 const DUCK_RATIO = 1.32;
-const r3 = (n) => +Number(n).toFixed(3);
 const dB = (d) => Math.pow(10, d / 20);
 const isObj = (j) => j && typeof j === 'object' && !Array.isArray(j);
 export const NAME_RE = /^[a-z][a-z0-9-]{1,39}$/;
@@ -56,7 +57,7 @@ export function loadMusic({ sharedDir, projectDir = null }) {
     if (!dir) continue;
     for (const [name, e] of Object.entries(readRegistry(dir))) {
       if (!isObj(e) || !NAME_RE.test(name)) continue;
-      out[name] = { fadeIn: 3, fadeOut: 2, volume: +dB(OUTRO_DB - (LIB_LUFS + 14)).toFixed(3), targetDb: OUTRO_DB, ...e, kind: 'bgm', file: path.join(dir, `${name}.wav`), scope };
+      out[name] = { fadeIn: 3, fadeOut: 2, volume: +dB(OUTRO_DB - (LIB_LUFS - LOUD.I)).toFixed(3), targetDb: OUTRO_DB, ...e, kind: 'bgm', file: path.join(dir, `${name}.wav`), scope };
     }
   }
   return out;

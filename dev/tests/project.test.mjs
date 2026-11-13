@@ -1,11 +1,11 @@
 // 專案資料夾：--project 解析、預設路徑、完成影片資料夾、測試片段的 render 指令
-import { test, before } from 'node:test';
+import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE, makeSrt, imp } from './helpers.mjs';
+import { TOOLS, TEMPLATE, makeSrt, imp, needs } from './helpers.mjs';
 
 const BUILD = path.join(TOOLS, 'build.mjs');
 const { pathsFrom, findProject } = await imp('build.mjs');
@@ -20,6 +20,7 @@ before(() => {
   for (const n of Object.keys(JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'sfx.json'), 'utf8')))) fs.copyFileSync(path.join(TEMPLATE, '..', 'sfx', 'ding.wav'), path.join(root, 'shared', 'sfx', `${n}.wav`));
   fs.mkdirSync(path.join(root, 'projects', 'example', 'work', 'hyperframes'), { recursive: true });
 });
+after(() => { if (root) fs.rmSync(root, { recursive: true, force: true }); });
 
 test('只有一個專案：不寫 --project 也找得到；預設路徑都在專案的 work/，音效在 shared/sfx', () => {
   const P = pathsFrom({ template: tpl }, root);
@@ -54,7 +55,8 @@ test('--list 不需要專案（projects/ 有好幾個也不出錯）', () => {
   fs.rmSync(path.join(root, 'projects', 'EP3'), { recursive: true });
 });
 
-test('build --project：產生到專案的 work/hyperframes，建好 output/、output/test-clips/、output/qc/，測試片段指令寫進 output/test-clips/', () => {
+test('build --project：產生到專案的 work/hyperframes，建好 output/、output/test-clips/、output/qc/，測試片段指令寫進 output/test-clips/', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
   const proj = path.join(root, 'projects', 'example');
   const work = path.join(proj, 'work');
   const v = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',

@@ -14,6 +14,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { render } from './mustache.mjs';
+import { CANVAS } from './canvas.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -132,7 +133,8 @@ export function checkRefs({ style, css = '', body, timeline }, rootId) {
 
 function chtagParts(chapter, fullscreen, portrait = false) {
   // 直式（canvas.mjs 的 badge）：疊加情境的角標在左上 x 60、y 250；全畫面家族的子合成仍是 1920×1080（舞台縮放），位置不變
-  const pos = fullscreen ? 'left: 1424px; top: 150px; width: 432px;' : portrait ? 'left: 60px; top: 250px;' : 'right: 96px; top: 56px;';
+  const [px, , pw] = CANVAS.landscape.pip.box;   // 全畫面段的角標和小視窗同一欄（x、寬）
+  const pos = fullscreen ? `left: ${px}px; top: 150px; width: ${pw}px;` : portrait ? 'left: 60px; top: 250px;' : 'right: 96px; top: 56px;';
   return {
     style: `#cBadge { position: absolute; ${pos} }\n`,
     body: `<div id="cBadge" class="sc-chtag">\n  <div class="sc-chtag__shell"><span class="sc-chtag__num">${esc(chapter.num)}</span></div>\n  <div class="sc-chtag__band"><span class="sc-chtag__name">${esc(chapter.name)}</span></div>\n</div>\n`,

@@ -1,16 +1,19 @@
-import { test } from 'node:test';
+import { test as nodeTest } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import puppeteer from 'puppeteer-core';
 import { startEditor } from '../../shared/template/tools/editor.mjs';
 import { findChrome } from '../../shared/template/tools/lib/audit-browser.mjs';
-import { TEMPLATE } from './helpers.mjs';
+import { TEMPLATE, missingTools, skipAll, tmpDir } from './helpers.mjs';
 
-test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態符合實際動作', async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'editor-requests-ui-'));
+// 整個檔都要開瀏覽器：沒有 Chrome、ffmpeg 或 puppeteer-core（hyperframes 順帶裝的，不在 package.json）就全部略過，用到才載入
+const noUi = await missingTools('chrome', 'ffmpeg', 'puppeteer');
+const test = skipAll(nodeTest, noUi);
+const puppeteer = noUi ? null : (await import('puppeteer-core')).default;
+
+test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態符合實際動作', async (t) => {
+  const root = tmpDir(t, 'editor-requests-ui-');
   const project = path.join(root, 'projects/example'), work = path.join(project, 'work');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   fs.mkdirSync(path.join(root, 'shared'));
@@ -41,7 +44,7 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     assert.equal(await page.$$('.rq-sent').then((x) => x.length), 0);
     await page.click('[data-rq="copy"]');
     await page.waitForFunction(() => document.querySelector('.rq-sent')?.textContent === '已複製');
-    assert.match(await page.evaluate(() => window.copiedRequest), /--requests-state generating --request-revision [a-f0-9]{40} --ids s01,s02/);
+    assert.match(await page.evaluate(() => window.copiedRequest), /node shared\/template\/tools\/versions\.mjs begin --project "projects\/example" --requests/, '032 C6：剪輯台的狀態由 versions.mjs begin --requests、finish 回報');
     // 029：沒勾「重新設計」＝在現有的動畫上改，提示詞寫明不用載入 hyperframes skill；修改單每段有「做法」那一行
     assert.match(await page.evaluate(() => window.copiedRequest), /這次沒有要重新設計的段：都在現有的動畫上改，不用載入 hyperframes skill。/);
     assert.equal((fs.readFileSync(path.join(work, 'feedback/editor-requests.md'), 'utf8').match(/- 做法：在現有的動畫上改（沒勾「重新設計」）/g) || []).length, 2);

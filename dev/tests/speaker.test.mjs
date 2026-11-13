@@ -2,10 +2,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE, WORKSPACE, imp, lib } from './helpers.mjs';
+import { TOOLS, TEMPLATE, WORKSPACE, imp, lib, tmpDir } from './helpers.mjs';
 
 const S = await imp('lib/speaker.mjs');
 const { resolveScene } = await imp('lib/scenes.mjs');
@@ -14,7 +13,7 @@ const scene = (scenes, k) => scenes.find((s) => s.key === k);
 
 // 假的 shared/：<tmp>/shared/template/kit（brand.mjs --kit 用）＋ <tmp>/shared/setting.json（data 放在 speaker；字串＝整個檔的原文）
 function fakeShared(data) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'speaker-'));
+  const dir = tmpDir(null, 'speaker-');   // 掛在呼叫它的那個 test 結束時清
   const tpl = path.join(dir, 'shared', 'template');
   fs.mkdirSync(path.join(tpl, 'kit'), { recursive: true });
   if (data !== undefined) fs.writeFileSync(path.join(dir, 'shared', 'setting.json'), typeof data === 'string' ? data : JSON.stringify({ speaker: data }));

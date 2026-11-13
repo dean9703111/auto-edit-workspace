@@ -1,6 +1,6 @@
 // 剪輯 editor.mjs：讀狀態、只寫允許的欄位、拒絕其他欄位、修改時間衝突、Range、port 被佔用、背景執行與關閉；
 // v2：字幕增刪與句號重新對應（plan.json＋rough.srt 一起寫）、rough.srt 衝突、gains／sfxVolume／音效靜音還原、media 拖曳欄位、卡片文字、響度與縮圖
-import { test, before, after } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -8,7 +8,11 @@ import path from 'node:path';
 import net from 'node:net';
 import http from 'node:http';
 import { spawnSync, spawn } from 'node:child_process';
-import { TOOLS, TEMPLATE, makeSrt, imp } from './helpers.mjs';
+import { TOOLS, TEMPLATE, makeSrt, imp, tmpDir, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都靠 before 用 ffmpeg 做的底片：沒有 ffmpeg 就全部略過，before 也不做
+const noFf = await missingTools('ffmpeg');
+const test = skipAll(nodeTest, noFf);
 
 const EDITOR = path.join(TOOLS, 'editor.mjs');
 const E = await imp('editor.mjs');
@@ -33,6 +37,7 @@ async function base() { const s = await (await get('/api/state')).json(); return
 
 // 假工作區：shared/template 用 symlink 指到真的模板；專案有 6 秒的 rough.mp4、字幕、剪接點、plan.json、一支螢幕錄影
 before(async () => {
+  if (noFf) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-editor-'));
   fs.mkdirSync(path.join(root, 'shared'), { recursive: true });
   fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'), 'dir');
@@ -252,7 +257,7 @@ test('CLI：非互動 shell 自動轉背景、印出網址；--status 查得到�
   assert.ok(!fs.existsSync(path.join(proj2, 'work', 'hyperframes', '.editor', 'server.json')));
 });
 
-test('純函式：surgical 寫入保留 CRLF 與排版；檢查報告（契約 3.3 的假報告）與文字報告的降級解析；播放器從 npx 快取動態找最新版', () => {
+test('純函式：surgical 寫入保留 CRLF 與排版；檢查報告（契約 3.3 的假報告）與文字的 ✖／⚠；播放器從 npx 快取動態找最新版', (t) => {
   const crlf = PLAN_TEXT.replace(/\n/g, '\r\n');
   const s = E.applySave(crlf, { edit: { fadeIn: 1 } });
   assert.deepEqual(s.errors, []);
@@ -265,11 +270,8 @@ test('純函式：surgical 寫入保留 CRLF 與排版；檢查報告（契約 3
   assert.deepEqual(E.parseReport(`專案：projects/example\n${JSON.stringify(mock)}\n`), mock);
   assert.equal(E.parseReport('通過：3 段，2 個提醒（⚠）。'), null);
   assert.deepEqual(E.issuesFromText('✖ [s01] 錯 → 改\n⚠ [s02] 提醒\n通過'), { errors: ['[s01] 錯 → 改'], warnings: ['[s02] 提醒'] });
-  const items = E.itemsFromText('id｜情境｜起–迄｜長度｜音效時間｜警告\ns01｜06 一般字卡｜0:04.50–0:11.00｜6.5s｜pop 0:04.62｜⚠ 1（rough 0:07.00–0:13.50）\ns02｜fx 29｜0:15.00–0:18.00｜3s｜—｜—',
-    { scenes: [{ id: 's01' }, { id: 's02', type: 'fx' }] });
-  assert.deepEqual(items.map((i) => [i.id, i.type, i.start, i.end, i.warnings]), [['s01', 'scene', 7, 13.5, 1], ['s02', 'fx', 15, 18, 0]]);
   // 播放器只用 roots（工作區、專案）的 node_modules，照順序第一個找到的；不比版本新舊、不掃 npx 快取
-  const roots = ['ws', 'out', 'proj'].map((n) => fs.mkdtempSync(path.join(os.tmpdir(), `hf-${n}-`)));
+  const roots = ['ws', 'out', 'proj'].map((n) => tmpDir(t, `hf-${n}-`));
   for (const [r, ver] of [[roots[0], '0.8.221'], [roots[1], '0.9.3'], [roots[2], '0.9.9']]) {
     const d = path.join(r, 'node_modules', 'hyperframes');
     fs.mkdirSync(path.join(d, 'dist'), { recursive: true });
@@ -280,7 +282,7 @@ test('純函式：surgical 寫入保留 CRLF 與排版；檢查報告（契約 3
   assert.equal(E.findPlayer({ roots }).version, '0.8.221', '第一個 root（工作區）優先，即使後面有更新的版本');
   fs.rmSync(path.join(roots[0], 'node_modules', 'hyperframes', 'dist', 'hyperframe.runtime.iife.js'));
   assert.equal(E.findPlayer({ roots }).version, '0.9.3', '缺 runtime 的不算');
-  assert.equal(E.findPlayer({ roots: [fs.mkdtempSync(path.join(os.tmpdir(), 'hf-empty-'))] }), null);
+  assert.equal(E.findPlayer({ roots: [tmpDir(t, 'hf-empty-')] }), null);
 });
 
 // ---------- v2：字幕與新欄位（另一個專案：4 句 CRLF 字幕、資訊卡、清單、字卡動態、media）----------
@@ -329,7 +331,7 @@ async function setup2() {
   url2 = ed2.url;
 }
 function reset2() { fs.writeFileSync(srt2File, SRT2); fs.writeFileSync(plan2File, PLAN2); }
-after(async () => { await ed2?.close(); });
+after(async () => { await ed2?.close(); if (root) fs.rmSync(root, { recursive: true, force: true }); });   // 最後一個 after：兩個剪輯台都關了才清
 
 test('字幕分割＋合併一起存：plan.json 的 #N 照規則重新對應（文字裡的 #1 不動）、rough.srt 重新編號、CRLF 保留、沒改的句子原封不動', async () => {
   await setup2(); reset2();

@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { isMain } from './lib/cli.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '..', '..', '..');
@@ -120,10 +121,9 @@ export function formatCaps(r) {
   return lines.join('\n');
 }
 
-const isMain = () => { try { return !!process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(import.meta.url)); } catch { return false; } };
-if (isMain()) {
+if (isMain(import.meta.url)) {
   const argv = process.argv.slice(2);
-  const bad = argv.find((a) => !['--json', '--help'].includes(a));
+  const bad = argv.find((a) => !['--json', '--help'].includes(a));   // 只有兩個開關、都不接值，不用 lib/cli.mjs 的切法
   if (bad) { console.error(`✖ 沒有 ${bad} 這個參數（用 --help 看用法）`); process.exitCode = 1; }
   else if (argv.includes('--help')) console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, ''));
   else {

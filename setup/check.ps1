@@ -383,13 +383,35 @@ try {
         else { $hfLocal.Status = 'ok'; $hfLocal.Note = '' }
     }
 
-    # 9 支 auto-edit Skill（S4：node setup/install-skills.mjs）
+    # 9 支 auto-edit Skill＋子代理定義（S4：node setup/install-skills.mjs）
+    # 檔案都在之後，有 Node 22 就跑 install-skills.mjs --check --json 比對內容（sha256）：.agents/ 改過、複本還是舊的也算沒好
     $aeMissing = @()
     foreach ($n in @('longform', 'setup', 'rough', 'storyboard', 'screen', 'motion', 'review', 'deliver', 'style')) {
         if (-not (Test-File ($skillRoot + '\auto-edit-' + $n + '\SKILL.md'))) { $aeMissing += ('auto-edit-' + $n) }
     }
     $aeSkill = @{ Status = 'ok'; Note = '' }
+    $aeScript = $wsRoot + '\setup\install-skills.mjs'
     if ($aeMissing.Count -gt 0) { $aeSkill.Status = 'missing'; $aeSkill.Note = '少了 ' + ($aeMissing -join '、') + '（README 共用步驟 S4）' }
+    elseif ($node.Path -and (@('ok', 'restart', 'not_in_path') -contains $node.Status) -and (Test-File $aeScript)) {
+        $aeOut = Invoke-Quiet $node.Path ('"' + $aeScript + '" --check --json')
+        $aeJson = $null
+        foreach ($line in ($aeOut -split "`r?`n")) {
+            if ($line.StartsWith('{')) { try { $aeJson = $line | ConvertFrom-Json } catch { } }
+        }
+        if (-not $aeJson) { $aeSkill.Note = '檔案都在；install-skills.mjs 沒辦法比對內容' }
+        elseif (-not $aeJson.ok) {
+            $aeBad = @()
+            foreach ($e in @($aeJson.errors)) { if ($e) { $aeBad += [string]$e } }
+            foreach ($it in (@($aeJson.items) + @($aeJson.agents))) {
+                if (-not $it) { continue }
+                if ($it.status -eq 'conflict') { $aeBad += ([string]$it.show + ' 不是 install-skills 裝的（同名）→ 改名或移走它') }
+                elseif ($it.status -eq 'missing') { $aeBad += ([string]$it.show + ' 還沒裝') }
+                elseif ($it.status -eq 'stale') { $aeBad += ([string]$it.show + ' 和 .agents\ 的正本不同') }
+            }
+            $aeSkill.Status = 'too_old'
+            $aeSkill.Note = ($aeBad -join '；') + '（README 共用步驟 S4）'
+        }
+    }
 
     # 臉部偵測檔（S5：look.mjs ensure；瘦臉是選用，missing 不算進 todo）
     $mpDir = $wsRoot + '\shared\template\vendor\mediapipe'

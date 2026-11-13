@@ -315,7 +315,7 @@ AI 剪得再好，也救不回糊掉的畫面和聽不清楚的聲音。開錄�
 | 換主色 | 「把主色換成深綠」 | `brand.mjs "#RRGGBB"` 換色、算好字的對比，重畫子母畫面外框 |
 | 換背景圖 | 「換背景」 | 你給圖就縮放裁切成全畫面、側邊欄、章節轉場三種尺寸；沒給圖就照這台電腦能用的工具產生。先給你看並排預覽和留空區，同意才換 |
 
-自己動手的話：`node shared/template/tools/brand.mjs list`、`use <名稱>`、`pack <名稱> --color "#RRGGBB" --bg <資料夾>`。換整個工作區前，如果目前的設定不屬於任何一包，工具會先停下來請你存起來，不會弄丟。細節在 `shared/template/USAGE-reference.md` R9。
+自己動手的話：`node shared/template/tools/brand.mjs list`、`use <名稱>`、`pack <名稱> --color "#RRGGBB" --bg <資料夾>`。換整個工作區前，如果目前的設定不屬於任何一包，工具會先自動存成「原本-<日期>」一包，不會弄丟。細節在 `shared/template/USAGE-reference.md` R9。
 
 ### 講者調光、瘦臉、美顏（選用）
 
@@ -346,7 +346,7 @@ AI 剪得再好，也救不回糊掉的畫面和聽不清楚的聲音。開錄�
 
 需要 Apple 晶片的 Mac 或有 NVIDIA 顯卡的電腦。安裝步驟在 [setup/ACE-Step 配樂.md](setup/ACE-Step%20配樂.md)。
 
-自己動手的話：`node shared/template/tools/music.mjs status` 看有沒有裝、曲庫有幾首；`list` 列曲庫；`add <聲音檔> --name <曲名>` 放自己的音樂；`gen --style 溫暖敘事` 生成；`use <曲名>` 設成每一集的底樂。某一集單獨指定，在那集 `plan.json` 第一層寫 `"bed": { "music": "<曲名>" }`。生成的曲子存在 `shared/music/`，只在你的電腦，不進版控。
+自己動手的話：`node shared/template/tools/music.mjs status` 看有沒有裝、曲庫有幾首；`list` 列曲庫；`add <聲音檔> --name <曲名>` 放自己的音樂；`gen --style 溫暖敘事` 生成；`use <曲名>` 設成每一集的底樂。某一集單獨指定：`node shared/template/tools/build.mjs --project projects/<專案> --set bed.music=<曲名>`。生成的曲子存在 `shared/music/`，只在你的電腦，不進版控。
 
 ## 搭配剪映（選用）
 

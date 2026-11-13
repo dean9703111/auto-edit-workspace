@@ -1,12 +1,16 @@
 // media.mjs 的指令（main／scan／frame、ng-snap／cutpoints／srt-split）與 build --check --json（002 擁有；從 media.test.mjs 搬來的部分照原樣）
 // 測試素材全部用 ffmpeg lavfi 現場產生；假工作區的 shared/template 用 symlink 指到真的模板
-import { test, before } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE, makeSrt } from './helpers.mjs';
+import { TOOLS, TEMPLATE, makeSrt, tmpDir, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都靠 before 用 ffmpeg 做的假專案：沒有 ffmpeg 就全部略過，before 也不做
+const noFf = await missingTools('ffmpeg');
+const test = skipAll(nodeTest, noFf);
 
 const BUILD = path.join(TOOLS, 'build.mjs');
 const MEDIA = path.join(TOOLS, 'media.mjs');
@@ -23,6 +27,7 @@ const REC = 'assets/screen/操作示範.mp4';
 const IMG = 'assets/images/架構圖.png';
 
 before(() => {
+  if (noFf) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-media-'));
   fs.mkdirSync(path.join(root, 'shared', 'sfx'), { recursive: true });
   tpl = path.join(root, 'shared', 'template');
@@ -42,6 +47,7 @@ before(() => {
   fs.writeFileSync(path.join(proj, 'work', 'rough.srt'), makeSrt({ n: 5 }));   // #5＝15–18
   fs.writeFileSync(path.join(proj, 'work', 'cutpoints.json'), JSON.stringify({ cuts: [{ at: 8, kind: 'pause' }, { at: 12, kind: 'ng' }] }));
 });
+after(() => { if (root) fs.rmSync(root, { recursive: true, force: true }); });
 test('media.mjs main：照檔名接主軌，聲音檔配純黑畫面，寫 work/main.json', () => {
   const r = node(MEDIA, ['main']);
   assert.equal(r.status, 0, r.stdout + r.stderr);
@@ -296,43 +302,14 @@ test('cutpoints：保留段累加成 rough.mp4 秒數、和 NG 重疊的標 ng�
   assert.match(node(MEDIA, ['cutpoints'], 'pc').stderr, /找不到 work\/cuts\.v1\.json（也沒有 work\/cuts\.v1）/);
 });
 
-test('srt-split：標點優先、沒有標點斷在中間 ⚠、時間依字數比例首尾相接、句號連號、CRLF 原樣、備份；plan.json 用到句號 ✖', async () => {
-  const { splitText } = await import(MEDIA);
-  assert.deepEqual(splitText('接著我們把逐字稿丟進去，讓它幫我們找出 NG').parts, ['接著我們把逐字稿丟進去，', '讓它幫我們找出 NG']);
-  assert.deepEqual(splitText('短句').parts, ['短句']);
-  const long = splitText('一二三四五六七八九十，一二三四五六七八九十，一二三四五六七八九十');
-  assert.ok(long.parts.length === 3 && !long.forced, JSON.stringify(long));
+test('srt-split 收掉了（032 C8：沒有 Skill 引用、走不到）：印「沒有這個指令」的 ✖，rough.srt 不動', () => {
   const p = mkProj('ps');
-  const srt = ['1', '00:00:01,000 --> 00:00:06,000', '接著我們把逐字稿丟進去，讓它幫我們找出 NG', '', '2', '00:00:06,500 --> 00:00:07,500', '短句', '', '3', '00:00:08,000 --> 00:00:12,200', '這一段沒有標點所以斷在中間的地方給大家看看', ''].join('\r\n');
+  const srt = ['1', '00:00:01,000 --> 00:00:06,000', '接著我們把逐字稿丟進去，讓它幫我們找出 NG', ''].join('\r\n');
   const file = path.join(p, 'work', 'rough.srt');
   fs.writeFileSync(file, srt);
-  let r = node(MEDIA, ['srt-split', '--dry-run'], 'ps');
-  assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /共 3 則，超過 18 字 2 則/);
-  assert.match(r.stdout, /⚠ 沒有標點，斷在第 10 字/);
-  assert.equal(fs.readFileSync(file, 'utf8'), srt, '--dry-run 不寫');
-  r = node(MEDIA, ['srt-split'], 'ps');
-  assert.equal(r.status, 0, r.stderr);
-  const out2 = fs.readFileSync(file, 'utf8');
-  assert.ok(out2.includes('\r\n') && !/[^\r]\n/.test(out2), 'CRLF 原樣');
-  const { parseSrt } = await import(path.join(TOOLS, 'lib', 'srt.mjs'));
-  const cues = parseSrt(out2);
-  assert.deepEqual(cues.map((c) => c.n), [1, 2, 3, 4, 5]);
-  assert.deepEqual(cues.map((c) => c.text), ['接著我們把逐字稿丟進去，', '讓它幫我們找出 NG', '短句', '這一段沒有標點所以斷', '在中間的地方給大家看看']);
-  assert.equal(cues[0].start, 1); assert.equal(cues[1].end, 6); assert.equal(cues[0].end, cues[1].start);
-  assert.ok(Math.abs(cues[0].end - (1 + 5 * 12 / 20.5)) < 0.002, `比例分配：${cues[0].end}`);
-  // 備份叫 rough.srt.split-<時間戳>：.bak-<時間戳> 留給 snap-srt（status 的 S6 靠它判斷，A-02）
-  assert.equal(fs.readdirSync(path.join(p, 'work')).filter((f) => f.startsWith('rough.srt.bak-')).length, 0);
-  const baks = fs.readdirSync(path.join(p, 'work')).filter((f) => f.startsWith('rough.srt.split-'));
-  assert.equal(baks.length, 1);
-  assert.equal(fs.readFileSync(path.join(p, 'work', baks[0]), 'utf8'), srt, '備份一字不差');
-  assert.match(node(MEDIA, ['srt-split'], 'ps').stdout, /沒有超過 18 字的字幕，沒有寫任何檔/);
-  fs.mkdirSync(path.join(p, 'work', 'hyperframes'), { recursive: true });
-  fs.writeFileSync(path.join(p, 'work', 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, scenes: [{ id: 's01', scene: 'concept', from: '#3' }] }));
-  fs.writeFileSync(file, srt);
-  const bad = node(MEDIA, ['srt-split'], 'ps');
-  assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /plan\.json 已經用到句號（#N），拆句會讓後面的句號全部位移 → 改在剪輯台分割字幕/);
+  const r = node(MEDIA, ['srt-split'], 'ps');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /✖ 沒有「srt-split」這個指令：只有 /);
   assert.equal(fs.readFileSync(file, 'utf8'), srt);
 });
 
@@ -645,9 +622,9 @@ test('screen-sync：照 main.json＋cuts.v1.json 算 sync 段（不超過錄影�
   assert.ok(fs.readdirSync(path.join(p, 'work', 'hyperframes')).some((f) => f.startsWith('plan.json.sync-')));
 });
 
-test('transcriptFresh：初剪重輸出（長度差 ≤ 0.2 秒）照用 srt-align 記下的逐字稿；長度變了或逐字稿換過 → 要重轉', async () => {
+test('transcriptFresh：初剪重輸出（長度差 ≤ 0.2 秒）照用 srt-align 記下的逐字稿；長度變了或逐字稿換過 → 要重轉', async (t) => {
   const { transcriptFresh, noteTranscript } = await import(path.join(TOOLS, 'lib', 'ff.mjs'));
-  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-tjf-'));
+  const d = tmpDir(t, 'hf-tjf-');
   const tj = path.join(d, 'transcript.json'), rough = path.join(d, 'rough.mp4');
   clip(rough, 1);
   const t0 = new Date(Date.now() - 120000), t1 = new Date(Date.now() - 60000);

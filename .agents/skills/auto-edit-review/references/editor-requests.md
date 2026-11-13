@@ -4,11 +4,10 @@
 
 修改單就是使用者確認過的改法：**直接做**，不開 `versions.mjs new`、不寫分鏡提案、不停停點 ③，也不要跑 `build.mjs --storyboard`（它會記一筆停點 ③）。這仍是一輪回饋，照這個順序：
 
-1. `node shared/template/tools/versions.mjs begin --project projects/<專案> --seg <段,段> --say "照修改單改"`（`--seg` 只放 plan.json 有的段，見第 1 節）。
-2. 回報剪輯台「生成中」（第 5 節）。
-3. 照第 2、3 節改；要派的段同一則回覆一次派出。
-4. 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`，build、audit 由它一次做完，不用另外跑。
-5. `finish` 0 個 ✖ 後回報剪輯台「已改完」或「失敗」（第 5 節），補 r<N>.md（第 4 節）。
+1. `node shared/template/tools/versions.mjs begin --project projects/<專案> --requests`：段號、版本從修改單讀（plan.json 沒有的段自己略過，見第 1 節），剪輯台那幾段標「生成中」。
+2. 照第 2、3 節改；要派的段同一則回覆一次派出。
+3. 沒做的段、新增的段先寫進 r<N>.md（第 4 節）。
+4. 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`：build、audit 一次做完，剪輯台有改到的段標「已改完」、沒改到的標「失敗」（理由取 r<N>.md 那一列），不用另外跑 `editor.mjs --requests-state`。
 
 剪貼簿那行是剪輯台自動產生的。舊版寫「每段派一個子代理平行改，全部回來後 build、audit」：一樣照上面的順序做，只有第 3 節寫要派的段才派。
 
@@ -18,9 +17,9 @@
 
 段號是 `t<秒>`（例 `t1095`）、寫著「這裡現在沒有段落」的，是要新增一段：
 
-- `begin` 的 `--seg` 不放它（plan.json 沒有這段，放了會 ✖）。修改單只有這種段時，`--seg` 放它前一段的 id，只用來開這一輪；`finish` 印「⚠ <前一段> 和改之前一樣」是正常的。
+- `begin --requests` 不把它放進這一輪（plan.json 沒有這段）。修改單只有這種段時它會 ✖，照它的 → 加 `--seg <前一段的 id>`，只用來開這一輪；`finish` 印「⚠ <前一段> 和改之前一樣」是正常的。
 - 照時間和字幕在前後兩段之間加一段，id 用前一段加一個字母（例 `s05b`），畫面照第 3 節分工。
-- 回報剪輯台、寫 r<N>.md 都用修改單的段號 `t1095`（第 4、5 節）。
+- 寫 r<N>.md 用修改單的段號 `t1095`（第 4 節），`finish` 照那一列回報剪輯台。
 
 ## 2. 標籤怎麼解讀
 
@@ -57,8 +56,8 @@
 | 在現有的動畫上改 | 模板動畫、字卡、資訊卡：「換一種動畫」「以圖像展示為主」 | 換 `build.mjs --list` 裡另一個模板（不和前後段同一個）：你改 plan.json 那段的 `template`／`scene`＋`slots`（欄位用 `build.mjs --spec <模板>` 查），不用派 |
 | 在現有的動畫上改 | 模板動畫：其他 `slots` 做不到的改動 | 一段一個子代理改那支 `<模板>-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md` |
 | 在現有的動畫上改 | 已經是內容設計動畫（`"design": true`）的段，不管哪個標籤 | 一段一個子代理用 edit 改那支 `x-design-<段>.html`，派工照 `.agents/skills/auto-edit-motion/references/worker-brief.md`（拍變了一起改 `work/designs/<段>.md`） |
-| 重新設計 | 模板動畫、字卡、資訊卡 | 你把那段改成 `"design": true`（拿掉 `template`／`scene`／`fx`、`slots`），跑 `node shared/template/tools/build.mjs --project projects/<專案>`（要整個 build，不是只跑 `--check`：設計師驗收時截的才是新的畫面），確認 `work/briefs/<段>.md` 有了再派工。派工那一句：`你是設計師，負責 projects/<專案> 的內容設計動畫 <段>。照 .agents/skills/auto-edit-motion/references/design.md 寫鏡位腳本、接著做動畫（不用等確認）。`，後面接下面的「修改單」那幾行 |
-| 重新設計 | 已經是內容設計動畫的段 | 你跑 `node shared/template/tools/build.mjs --project projects/<專案> --design-canvas <段> --reset`（舊的腳本和動畫會備份），再照上一列的那一句派設計師 |
+| 重新設計 | 模板動畫、字卡、資訊卡 | 你跑 `node shared/template/tools/build.mjs --project projects/<專案> --to-design <段,段>`（換成內容設計動畫、補 brief、build 一次做完），派工照抄它「→ 派工：」下面那一行，後面接下面的「修改單」那幾行 |
+| 重新設計 | 已經是內容設計動畫的段 | 你跑 `node shared/template/tools/build.mjs --project projects/<專案> --design-canvas <段> --reset`（舊的腳本和動畫會備份），再跑上一列的 `--to-design <段>` 拿派工那一行 |
 | （不看做法） | 錄影段的 `marks`、`moves`、`side`、`steps`、換成動畫 | 你自己改 plan.json；換一段錄影照 `auto-edit-screen` 的筆記挑 |
 
 舊的修改單沒有「做法」那一行：當成「在現有的動畫上改」。
@@ -69,33 +68,18 @@
 修改單（使用者確認過的改法，直接做，不用新分鏡）：
 要改：<標籤>
 描述：<使用者原話>
-現在的動畫分鏡：照 work/storyboard.md 這段（grep -n -A30 "動畫分鏡 <段 id>" projects/<專案>/work/storyboard.md），照上面的改法改；拍變了改 work/designs/<段 id>.md 那張表（內容設計動畫段），不要改 storyboard.md
+現在的動畫分鏡：node shared/template/tools/build.mjs --project projects/<專案> --show <段 id> 印的那張，照上面的改法改；拍變了改它寫的正本
 ```
 
 重新設計的段不附「現在的動畫分鏡」那行（那是舊的拍），設計師照鏡位腳本重想。
 
-不 render：改完用 `versions.mjs finish` 驗證，作者在它印的完成影片預覽網址看會動的樣子。比較影片要兩版都有預覽：使用者說修改時就說要比較，`begin`、`finish` 都加 `--preview`；改完才要比較，先跟他說「舊版沒有預覽影片，兩版各要 render 一次（一段約 25 秒）」，他說好再照 `references/feedback-round.md` 第 1 節的四行做。
+不 render：改完用 `versions.mjs finish` 驗證，作者在它印的完成影片預覽網址看會動的樣子。要比較影片照 `references/feedback-round.md` 第 1 節。
 
 收件、整合照 AGENTS.md「子代理分工」第 2 條。
 
 ## 4. 驗收與紀錄
 
-- 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`（build、量、存改後版本、寫驗證、記停點 ④），打開它印的圖，只看改到的段。
-- `finish` 會自己填 `work/feedback/r<N>.md` 的「分類」改法和「改了哪幾段」（`- <段 id>：<改了什麼>（v1 → v2）`），不用重寫。你只補三種：沒做的段加一列 `- <段 id>：沒做，<理由>`；新增的段加一列 `- t1095：新增 s05b，<做了什麼>`；工具寫得太籠統（例「改了」）就用 edit 改那一列冒號後面的字。id 照修改單的寫、一段一列（剪輯台讀這一列，把修改單上那段標「✓ 已改」、可以點「看結果」）。
-- 回報每段一行「<段>：<做了什麼>」，加「剪輯台的修改單可以按『清空修改單』」，最後兩行是停點 ④。
-- 工具呼叫預算：每段算回饋輪的一項（6 次）；動畫段的子代理由工具數驗收次數（第 6 次還有 ✖ 印「→ 停手」）。
-
-## 5. 回報剪輯台
-
-剪輯台上那段要等你回報才標「生成中」「已改完」「生成失敗」。`--ids` 寫修改單的段號（含 `t<秒>`），逗號分開不要空格：
-
-```
-node shared/template/tools/editor.mjs --project projects/<專案> --requests-state status
-node shared/template/tools/editor.mjs --project projects/<專案> --requests-state generating --request-revision <revision> --ids <段,段>
-node shared/template/tools/editor.mjs --project projects/<專案> --requests-state done --request-revision <revision> --ids <段,段> --round r<N>
-node shared/template/tools/editor.mjs --project projects/<專案> --requests-state failed --request-revision <revision> --ids <段> --message "<沒做的理由>"
-```
-
-- `begin` 之後跑第 1 行，抄它印的 `"revision"` 的值（剪貼簿那行已經帶 `--request-revision <值>` 就直接用那個）；再跑第 2 行。
-- `finish` 0 個 ✖ 後跑第 3 行（改好的段）；沒做的段跑第 4 行。
-- 印 `修改單版本已更新` → 使用者重新複製過修改單：停下來，重讀 `work/feedback/editor-requests.md`，問使用者要不要照新的改。
+- `finish` 之前，在 `work/feedback/r<N>.md`「改了哪幾段」補兩種：沒做的段加一列 `- <段 id>：沒做，<理由>`；新增的段加一列 `- t1095：新增 s05b，<做了什麼>`。id 照修改單的寫、一段一列：`finish` 照這一列在剪輯台標「已改完」或「失敗」（理由就是冒號後面的字）。
+- 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`（build、量、存改後版本、寫驗證、記停點 ④、回報剪輯台），打開它印的圖，只看改到的段。改到的段它會自己填「改了哪幾段」；寫得太籠統（例「改了」）就用 edit 改那一列冒號後面的字。
+- 照貼 `finish` 印的回報段（每段一行、「清空修改單」那句、停點 ④ 都在裡面）；回報段沒列到的段（新增的、沒做的）補一行「<段>：<做了什麼或沒做的理由>」。
+- `begin` 或 `finish` 印「⚠ 剪輯台修改單…」：照它的 → 停下來，重讀 `work/feedback/editor-requests.md`，問使用者要不要照新的改。

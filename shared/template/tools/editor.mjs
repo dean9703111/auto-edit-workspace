@@ -8,12 +8,17 @@
  *                                      在終端機裡執行則留在前景，按 Ctrl+C 關閉
  *   node shared/template/tools/editor.mjs --status [--project …]   查剪輯開著沒、網址是什麼
  *   node shared/template/tools/editor.mjs --stop [--project …]     關掉剪輯
+ *   node shared/template/tools/editor.mjs --project … --json        給別的工具：沒開就在背景開，只印一行 JSON（{ main, cuts, framing, storyboard, final, … }），不印別的
  *   node shared/template/tools/editor.mjs --project … --requests-state generating --request-revision <版本> --ids s01,x02
- *                                      AI 逐段回報生成狀態；完成用 done（build、audit 後），失敗用 failed --message <原因>
+ *                                      AI 逐段回報生成狀態；完成用 done（build、audit 後），失敗用 failed --message <原因>；查目前的版本與狀態用 --requests-state status
+ *                                      --round r<N>：done 時記是哪一輪回饋改好的（剪輯台那段顯示「✓ 已改完（r<N>）」，「看結果」跳到那段）
+ *                                      （versions.mjs begin --requests、finish 會自己回報這幾個狀態；這幾行是手動補報用）
  *   node shared/template/tools/editor.mjs --project … --design-request <需求 id> --design-state generating
  *                                      AI 背景生圖狀態；九張存檔後用 done，失敗用 failed --message <原因>，查詢用 --design-state status
  *
  * 選項：--port 4400、--open（順便開瀏覽器）、--foreground（一律前景）、--background（一律背景）；測試用：--template <shared/template 資料夾>
+ * 給別的工具：import { ensureEditor } from './editor.mjs'；await ensureEditor(P) → { main, cuts, framing, storyboard, final, … }（沒開就在背景開，網址直接回傳、不印東西）；
+ * 同步的呼叫端用 lib/editor-urls.mjs 的 editorUrlsSync(project)（跑上面的 --json）
  * 剪輯只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／out（只能拿掉）／speed／hold／retime／anchor、任何段的 sfxVolume 與 sfx: null、
  * slots／vars 的文字值（含模板動畫的 slots）、第一層的 look（講者調光與瘦臉）、theme 與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
  * 剪輯清單頁只寫 work/cuts.md NG 表的「剪」欄（[x]／[ ]；沒有這一欄就加在最前面），有 work/rough.mp4 之後只能看。
@@ -27,9 +32,11 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { pathsFrom } from './build.mjs';
-import { jobState } from './lib/job.mjs';
-import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots } from './editor/server/write.mjs';
+import { pathsFrom } from './lib/project.mjs';
+import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
+import { cmdLine } from './lib/say.mjs';
+import { jobState, runToolUntilDone } from './lib/job.mjs';
+import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, remapScriptsAfterSave } from './editor/server/write.mjs';
 import * as subtitles from './editor/subtitles.mjs';
 import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, lookNeedsRun, LOOK_LIMITS, isRunning, ensureBlendedLut, lookNextStep } from './lib/look.mjs';
 import { footageVf, lut3dFilter } from './lib/ff.mjs';
@@ -43,9 +50,13 @@ import { speakerInfo, doSpeakerSave } from './editor/server/speaker.mjs';
 import { flowState } from './editor/server/flow.mjs';
 import { storyboardOptions } from './editor/server/storyboard-options.mjs';
 import { listFillSpecs } from './lib/custom-fill.mjs';
+import { requestsInfo, doRequestsStatus, doRequests } from './editor/server/requests.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
+import { r3 } from './lib/time.mjs';
+import { LOUD } from './lib/audio.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, subtitles };
+export { requestsInfo, doRequestsStatus, doRequests };   // 修改單（實作在 editor/server/requests.mjs，versions.mjs 也用）
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.join(HERE, 'editor');
@@ -56,12 +67,12 @@ const DEFAULT_PORT = 4400;
 const PORT_TRIES = 20;
 const PEAK_RATE = 100;          // 波形：每秒 100 個峰值
 const PEAK_SR = 8000;           // 算波形時先降到 8 kHz 單聲道
-const TARGET_LUFS = -14;        // 人聲標準化的目標響度
+const TARGET_LUFS = LOUD.I;     // 人聲標準化的目標響度（lib/audio.mjs）
 const THUMB_W = 160, THUMB_H = 90, THUMB_MAX = 400;   // 縮圖條：每格 160×90，一支影片最多 400 格
 const VALUE_FLAGS = ['project', 'port', 'template', 'requests-state', 'request-revision', 'ids', 'message', 'round', 'design-state', 'design-request'];
-const BOOL_FLAGS = ['stop', 'status', 'open', 'foreground', 'background', 'help'];
+const BOOL_FLAGS = ['stop', 'status', 'json', 'open', 'foreground', 'background', 'help'];
+const MODES = ['stop', 'status', 'json', 'requests-state', 'design-state'];   // 一次只能做一件；--open、--port 這些修飾旗標照舊能搭配
 
-const r3 = (n) => +Number(n).toFixed(3);
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
 const sha = (s) => crypto.createHash('sha1').update(s).digest('hex');
@@ -84,16 +95,12 @@ export function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) throw new Error(`看不懂的參數「${a}」（用 --help 看用法）`);
-    const eq = a.indexOf('=');
-    const k = eq > 0 ? a.slice(2, eq) : a.slice(2);
-    const inline = eq > 0 ? a.slice(eq + 1) : undefined;
-    if (VALUE_FLAGS.includes(k)) {
-      const v = inline ?? argv[++i];
-      if (v == null) throw new Error(`--${k} 後面要接值`);
-      flags[k] = v;
-    } else if (BOOL_FLAGS.includes(k)) flags[k] = true;
+    const [k, inline] = splitFlag(a);
+    if (VALUE_FLAGS.includes(k)) [flags[k], i] = valueOf(argv, i, k, inline);
+    else if (BOOL_FLAGS.includes(k)) flags[k] = true;
     else throw new Error(`沒有 --${k} 這個參數（用 --help 看用法）`);
   }
+  oneOf(flags, MODES);
   if (flags.port != null) {
     const p = Number(flags.port);
     if (!Number.isInteger(p) || p < 1 || p > 65535) throw new Error(`--port 要是 1–65535 的整數，現在是「${flags.port}」→ 例如 --port 4400`);
@@ -257,24 +264,6 @@ export function issuesFromText(text) {
     else if (s.startsWith('⚠')) warnings.push(s.replace(/^⚠\s*/, ''));
   }
   return { errors, warnings };
-}
-
-// 降級用：build.mjs 還不支援 --json 時，從文字報告的表格（id｜情境｜起–迄｜長度｜音效時間｜警告）抓段落位置
-export function itemsFromText(text, plan) {
-  const segs = new Map((Array.isArray(plan?.scenes) ? plan.scenes : []).filter((x) => isObj(x) && x.id).map((x) => [String(x.id), x]));
-  const sec = (m) => { const [mm, ss] = m.split(':'); return r3(Number(mm) * 60 + Number(ss)); };
-  const items = [];
-  for (const l of String(text).split(/\r?\n/)) {
-    const m = l.match(/^\s*([^｜\s]+)｜([^｜]*)｜(\d+:\d+(?:\.\d+)?)–(\d+:\d+(?:\.\d+)?)｜[^｜]*｜[^｜]*｜?\s*(.*)$/);
-    if (!m || !segs.has(m[1])) continue;
-    const seg = segs.get(m[1]);
-    const w = (m[5].match(/⚠\s*(\d+)/) || [])[1];
-    // 有 edit.cuts 時表格是完成影片時間，rough 時間寫在「（rough 0:04.50–0:11.00）」裡；剪輯要的是 rough 時間
-    const rough = l.match(/rough\s*(\d+:\d+(?:\.\d+)?)–(\d+:\d+(?:\.\d+)?)/);
-    const [a, b] = rough ? [rough[1], rough[2]] : [m[3], m[4]];
-    items.push({ id: m[1], type: seg.type ?? 'scene', label: m[2].trim(), start: sec(a), end: sec(b), warnings: w ? Number(w) : 0, ...(seg.src ? { src: seg.src } : {}) });
-  }
-  return items;
 }
 
 export function parseReport(stdout) {
@@ -469,10 +458,10 @@ async function getReport(ctx, { fresh = false } = {}) {
     const report = parseReport(r.stdout);
     const text = `${r.stdout}\n${r.stderr}`;
     if (report) return { key, report, error: null, issues: { errors: report.errors || [], warnings: report.warnings || [] } };
-    const items = itemsFromText(r.stdout, readPlan(P.plan).data);
+    // build --check --json 不管 plan.json 對不對都印 JSON；讀不到只會是 build 本身出錯（當掉、被砍）
     return {
-      key, report: null, fallback: items.length ? { items } : null, log: text.trim().slice(-4000), issues: issuesFromText(text),
-      error: 'build.mjs --check --json 沒有回傳報告（build.mjs 可能還沒更新到支援 --json，或檢查途中出錯）→ 段落位置暫時看不到；按「更新預覽」看完整訊息，或請 AI 跑 build',
+      key, report: null, log: text.trim().slice(-4000), issues: issuesFromText(text),
+      error: 'build.mjs --check --json 沒有回傳報告（檢查途中出錯）→ 段落位置暫時看不到；按「更新預覽」看完整訊息，或請 AI 跑 build',
     };
   })();
   ctx.reportJob = { key, promise };
@@ -749,7 +738,7 @@ async function getState(ctx) {
     cutpoints: readCutpoints(ctx.cutpointsFile),
     sfxMemory: readMemory(ctx),
     schema: schema ? { scenes: schema.scenes, fx: schema.fx, sounds: schema.sounds, custom: schema.custom || [], error: schema.error } : null,
-    report: rep ? { ready: true, data: rep.report, fallback: rep.fallback ?? null, error: rep.error, issues: rep.issues, log: rep.log ?? null } : { ready: false },
+    report: rep ? { ready: true, data: rep.report, error: rep.error, issues: rep.issues, log: rep.log ?? null } : { ready: false },
     requests: requestsInfo(P.project),
     unsaved: readUnsaved(ctx).at(-1) ?? null,
     speaker: speakerInfo(ctx, plan.data),
@@ -761,7 +750,7 @@ async function getState(ctx) {
   };
 }
 
-const reportOut = (rep) => ({ ready: true, data: rep.report, fallback: rep.fallback ?? null, error: rep.error, issues: rep.issues, log: rep.log ?? null });
+const reportOut = (rep) => ({ ready: true, data: rep.report, error: rep.error, issues: rep.issues, log: rep.log ?? null });
 
 async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   // quick：寫完檔就回，檢查（長片要 9 秒）由頁面另外要；不帶 quick（AI、測試）照舊附上檢查結果
@@ -826,6 +815,10 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   } catch (e) {
     for (const [tmp] of tmps) try { fs.unlinkSync(tmp); } catch { /* 已經不在 */ }
     throw e;
+  }
+  // B6：拆句、併句這類結構改動，拍點正本在 work/designs/<段>.md 的段（內容設計段、手改的模板段），鏡位腳本「講到」和動畫檔的 P.at 跟著換句號（各自先備份 .align-*）
+  if (wantSrt && r.srtText != null) {
+    try { remapScriptsAfterSave(P, { planBefore: text, srtTextBefore: srt.text, ops: body.srt.ops, videoDur }); } catch (e) { console.error(`⚠ 鏡位腳本、動畫檔的句號沒有跟著換（${e.message}）→ 跑 build.mjs --project ${posix(path.relative(P.root, P.project))} --review 看哪幾段要改`); }
   }
   if (JSON.stringify(r.memory || {}) !== JSON.stringify(memory)) {
     try { fs.mkdirSync(ctx.editorDir, { recursive: true }); fs.writeFileSync(ctx.memoryFile, JSON.stringify({ sfx: r.memory || {} }, null, 2) + '\n'); } catch { /* 記不住只影響「還原音效」 */ }
@@ -990,61 +983,6 @@ export function auditIssues(json) {
   return { errors, warnings };
 }
 
-// 修改單（剪輯左側「複製給 AI」）：整份覆寫 work/feedback/editor-requests.md；AI 聽到「照修改單改」就讀這個檔
-// 修改單改完了沒：editor-requests.md 上次複製的時間與裡面的段；AI 照修改單改完，r<N>.md「改了哪幾段」每段寫一列
-//   「- <段 id>：<做了什麼>」（auto-edit-review references/editor-requests.md）。比修改單新的 r<N>.md 寫到的段＝已改，剪輯標「已改」、可以點「看結果」
-export function requestsInfo(project) {
-  const fb = path.join(project, 'work', 'feedback'), file = path.join(fb, 'editor-requests.md');
-  let at;
-  try { at = fs.statSync(file).mtimeMs; } catch { return null; }
-  const markdown = fs.readFileSync(file, 'utf8');
-  const revision = sha(`${at}:${markdown}`);
-  const ids = [...markdown.matchAll(/^## \d+\. (\S+)/gm)].map((m) => m[1]);
-  const saved = readJson(path.join(fb, 'editor-requests-status.json'));
-  const states = saved?.revision === revision && isObj(saved.states) ? saved.states : {};
-  const rounds = fs.readdirSync(fb).filter((f) => /^r\d+\.md$/.test(f)).map((f) => ({ f, t: fs.statSync(path.join(fb, f)).mtimeMs }))
-    .filter((x) => x.t > at).sort((a, b) => a.t - b.t);
-  const done = {};
-  for (const { f } of rounds) {
-    const sec = fs.readFileSync(path.join(fb, f), 'utf8').split(/^## 改了哪幾段[ \t]*$/m)[1]?.split(/^## /m)[0] || '';
-    for (const m of sec.matchAll(/^- (\S+?)：(.+)$/gm)) if (ids.includes(m[1])) done[m[1]] = { round: f.slice(0, -3), note: m[2].trim() };
-  }
-  // 有明確回報的段以 API 為準，避免回饋紀錄尚在撰寫就提早顯示完成。
-  for (const id of ids) if (Object.hasOwn(states, id)) {
-    if (states[id].state === 'done') done[id] = { round: states[id].round || done[id]?.round || 'AI', note: states[id].message || done[id]?.note || '生成完成，已通過 build、audit' };
-    else delete done[id];
-  }
-  return { at: Math.round(at), revision, ids, done, states };
-}
-
-// AI 明確回報才顯示生成中；版本必填，舊任務不能改到使用者重新複製的修改單。
-export function doRequestsStatus(ctx, body) {
-  const q = requestsInfo(ctx.P.project);
-  if (!q) return [404, { message: '還沒有修改單，請先在剪輯複製給 AI' }];
-  if (body?.revision !== q.revision) return [409, { message: '修改單版本已更新，請重新讀取最新修改單' }];
-  const { state, ids, message = '', round = '' } = body;
-  if (!['generating', 'done', 'failed'].includes(state) || !Array.isArray(ids) || !ids.length || ids.some((id) => typeof id !== 'string' || !q.ids.includes(id))
-    || typeof message !== 'string' || message.length > 2000 || typeof round !== 'string' || round.length > 80) return [400, { message: '請提供有效的 state（generating／done／failed）、修改單段落 ids 與文字訊息' }];
-  const now = Date.now();
-  const states = { ...q.states, ...Object.fromEntries(ids.map((id) => [id, { state, message, round, at: now }])) };
-  const file = path.join(ctx.P.project, 'work', 'feedback', 'editor-requests-status.json');
-  fs.writeFileSync(`${file}.tmp`, JSON.stringify({ revision: q.revision, states }, null, 2) + '\n');
-  fs.renameSync(`${file}.tmp`, file);
-  return [200, { ok: true, requests: requestsInfo(ctx.P.project) }];
-}
-
-export function doRequests(ctx, body) {
-  const md = body?.markdown;
-  if (typeof md !== 'string' || !md.trim()) return [400, { error: 'empty', message: '修改單是空的' }];
-  if (md.length > 200000) return [400, { error: 'toolong', message: '修改單太長（超過 20 萬字）' }];
-  const dir = path.join(ctx.P.project, 'work', 'feedback');
-  fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, 'editor-requests.md');
-  fs.writeFileSync(`${file}.tmp`, md.endsWith('\n') ? md : `${md}\n`);
-  fs.renameSync(`${file}.tmp`, file);
-  return [200, { ok: true, file: path.relative(ctx.P.root, file).split(path.sep).join('/'), requests: requestsInfo(ctx.P.project) }];
-}
-
 // 同時有手動產生或連續存構圖時排隊，最後一定用最新設定再產生一次。
 function requestFramingBuild(ctx) {
   ctx.framingPending = true;
@@ -1067,7 +1005,8 @@ function requestFramingBuild(ctx) {
 }
 
 // 給頁面看的重新產生狀態：現在在做哪一步（白話）、已經多久、上次重新處理底片花多久（這台電腦、這支影片的實際值，沒有就不寫）
-const BUILD_PHASES = [[/偵測臉部|套用瘦臉|look\.mjs/, '偵測臉部、套用瘦臉'], [/量人聲響度|重新編碼底片/, '重新處理影片底片']];
+// 比對的是 build 的進度行（「重新編碼底片…」「量人聲響度…」），不是六行摘要（摘要只認 lib/build-summary.mjs）
+const BUILD_PHASES = [[/偵測臉部|套用瘦臉|look\.mjs/, '偵測臉部、套用瘦臉'], [/重新編碼底片|量人聲響度/, '重新處理影片底片']];
 const buildTimesFile = (ctx) => path.join(ctx.editorDir, 'build-times.json');
 const framingDecidedFile = (ctx) => path.join(ctx.editorDir, 'framing-decided');
 function buildBrief(ctx) {
@@ -1082,6 +1021,19 @@ function rememberBuildTime(ctx) {
   try { fs.writeFileSync(buildTimesFile(ctx), `${JSON.stringify({ encodeSeconds: Math.round((b.finishedAt - b.startedAt) / 1000) })}\n`); } catch { /* 只是給下次估時間用 */ }
 }
 
+// look.mjs run、build.mjs 在等自己的背景工作時回 75（前景最多等約 9 分鐘）：再跑同一條會接著等，不是失敗。
+// 用 lib/job.mjs 的 runToolUntilDone 反覆跑到不是 75（有總上限，背景工作卡住不會永遠等）；輸出照樣接進重新產生的 log
+async function untilDone(ctx, file, args) {
+  const r = await runToolUntilDone(file, args, {
+    cwd: ctx.P.root,
+    run: (_node, a, o) => runNode(a, o),   // 沿用 runNode：關掉顏色碼，log 才解析得出 ✖／⚠
+    onData: (s) => { ctx.build.log += s; },
+    onWait: ({ sec }) => { ctx.build.log += `（${path.basename(file)} 還在跑，已經等了 ${Math.max(1, Math.round(sec / 60))} 分鐘，接著等）\n`; },
+  });
+  if (r.timedOut) ctx.build.log += `⚠ ${path.basename(file)} 等到上限還沒跑完 → 在對話跟 AI 說，請它跑 node shared/template/tools/${path.basename(file)} 看卡在哪\n`;
+  return r;
+}
+
 async function doBuild(ctx, body = {}) {
   if (ctx.build.running) return [409, { error: 'busy', message: '已經在更新預覽了，等它跑完' }];
   const P = ctx.P;
@@ -1091,14 +1043,13 @@ async function doBuild(ctx, body = {}) {
   const planData = readPlan(P.plan).data;
   if (lookNeedsRun({ projectDir: P.project, plan: isObj(planData) ? planData : {}, templateDir: P.templateDir })) {
     ctx.build.log += '講者瘦臉：先偵測臉部、套用瘦臉（look.mjs run）…\n';
-    const lr = await runNode([LOOK, 'run', '--project', P.project, '--template', P.templateDir], { cwd: P.root, onData: (s) => { ctx.build.log += s; } });
+    const lr = await untilDone(ctx, LOOK, ['run', '--project', P.project, '--template', P.templateDir]);
     if (lr.code !== 0) {
       Object.assign(ctx.build, { running: false, code: lr.code, ok: false, finishedAt: Date.now() });
       return [200, { ok: false, code: lr.code, log: ctx.build.log, issues: issuesFromText(ctx.build.log), seconds: r3((ctx.build.finishedAt - ctx.build.startedAt) / 1000) }];
     }
   }
-  let r;
-  do { r = await runNode([BUILD, '--project', P.project, '--template', P.templateDir], { cwd: P.root, onData: (s) => { ctx.build.log += s; } }); } while (r.code === 75);   // 底片還在編碼：接著等
+  const r = await untilDone(ctx, BUILD, ['--project', P.project, '--template', P.templateDir]);   // 底片還在編碼：接著等
   const issues = issuesFromText(ctx.build.log);
   let audit = null;
   if (r.code === 0 && auditIds.length) {
@@ -1412,6 +1363,47 @@ export async function stopEditor(stateFile, project) {
   return s;
 }
 
+// 各頁網址（CLI 印的、ensureEditor 回傳的都是這一份）
+export const editorPages = (url) => ({ main: url, cuts: new URL('cuts', url).href, framing: new URL('framing', url).href, storyboard: new URL('storyboard', url).href, final: new URL('?view=final', url).href });
+
+// 開著的剪輯台：後端是舊版就關掉（回傳原本的 port，重開時沿用，使用者開著的分頁網址不變）
+async function liveEditor(stateFile, project) {
+  const running = await runningEditor(stateFile, project);
+  if (!running || running.revision === SERVER_REVISION) return { running, restarted: false, port: running?.port ?? null };
+  await stopEditor(stateFile, project);
+  return { running: null, restarted: true, port: running.port };
+}
+
+// 剪輯台沒開就在背景開（子行程跑 --foreground，寫好 .editor/server.json 才算開好），回傳各頁網址；不印東西。
+// 別的工具要網址就呼叫這個（不用跑 editor.mjs 再比對它印的字）。開不起來丟 Error，訊息帶 log 最後幾行。
+//   → { main, cuts, framing, storyboard, final, url, port, pid, started（這次才開的）, restarted（舊版後端換掉了）, log }
+export async function ensureEditor(P, { port } = {}) {
+  if (!P?.project) throw new Error('要指定專案：加 --project projects/<專案>');
+  const stateFile = path.join(P.out, '.editor', 'server.json');
+  const live = await liveEditor(stateFile, P.project);
+  if (live.running) return { ...editorPages(live.running.url), url: live.running.url, port: live.running.port, pid: live.running.pid, started: false, restarted: false, log: null };
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true });
+  const logFile = path.join(path.dirname(stateFile), 'editor.log');
+  const usePort = port ?? live.port;
+  const args = [fileURLToPath(import.meta.url), '--project', P.project, '--template', P.templateDir, ...(usePort ? ['--port', String(usePort)] : []), '--foreground'];
+  const fd = fs.openSync(logFile, 'w');
+  const child = spawn(process.execPath, args, { cwd: P.root, detached: true, stdio: ['ignore', fd, fd], windowsHide: true, env: { ...process.env, AUTO_EDIT_EDITOR_CHILD: '1' } });
+  let exited = null;
+  child.on('exit', (c) => { exited = c ?? 1; });
+  child.unref();
+  fs.closeSync(fd);
+  const t0 = Date.now();
+  while (Date.now() - t0 < 20000) {
+    await sleep(120);
+    const s = readJson(stateFile);
+    if (s?.pid === child.pid && s.url) return { ...editorPages(s.url), url: s.url, port: s.port, pid: s.pid, started: true, restarted: live.restarted, log: logFile };
+    if (exited !== null) break;
+  }
+  let tail = '';
+  try { tail = fs.readFileSync(logFile, 'utf8').trim().split('\n').slice(-8).join('\n'); } catch { /* 沒有 log */ }
+  throw new Error(`剪輯沒有啟動成功${exited === null ? '（等了 20 秒）' : ''}${tail ? `：\n${tail}` : ''}`);
+}
+
 function openBrowser(url) {
   const [cmd, args] = process.platform === 'darwin' ? ['open', [url]] : process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]] : ['xdg-open', [url]];
   try { spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true }).unref(); } catch { /* 開不了就算了，網址已經印出來 */ }
@@ -1424,8 +1416,11 @@ async function cli() {
   const P = pathsFrom(flags, process.cwd());
   const rel = (f) => posix(path.relative(process.cwd(), f)) || '.';
   const stateFile = path.join(P.out, '.editor', 'server.json');
-  const self = posix(path.relative(process.cwd(), path.resolve(process.argv[1] || fileURLToPath(import.meta.url))));
-  const stopCmd = `node ${self} --stop --project ${rel(P.project)}`;
+  const stopCmd = cmdLine('editor.mjs', ['--stop', '--project', rel(P.project)]);
+  if (flags.json) {
+    // 給同步的呼叫端（lib/editor-urls.mjs）：只印一行 JSON；開不起來印到 stderr、結束碼 1
+    try { console.log(JSON.stringify(await ensureEditor(P, { port: flags.port }))); return 0; } catch (e) { console.error(`✖ ${e.message}`); return 1; }
+  }
   if (flags['design-state']) {
     try {
       const result = flags['design-state'] === 'status' ? designRequestStatus({ P }) : setDesignRequestStatus({ P }, { requestId: flags['design-request'], state: flags['design-state'], message: flags.message });
@@ -1449,67 +1444,47 @@ async function cli() {
     console.log(s ? `已關閉剪輯（${s.url}）` : `剪輯本來就沒有開（專案 ${rel(P.project)}）`);
     return 0;
   }
-  let running = await runningEditor(stateFile, P.project);
-  if (running && running.revision !== SERVER_REVISION) {
-    console.log('剪輯服務已有新版，正在更新並重新啟動…');
-    flags.port ??= running.port;
-    await stopEditor(stateFile, P.project);
-    running = null;
-  }
-  if (running) {
-    console.log(`剪輯已經開著：${running.url}`);
-    console.log(`剪輯清單：${new URL('cuts', running.url).href}`);
-    console.log(`構圖：${new URL('framing', running.url).href}`);
-    console.log(`分鏡表：${new URL('storyboard', running.url).href}`);
-    console.log(`完成影片預覽：${new URL('?view=final', running.url).href}`);
+  const live = await liveEditor(stateFile, P.project);
+  if (live.restarted) { console.log('剪輯服務已有新版，正在更新並重新啟動…'); flags.port ??= live.port; }
+  if (live.running) {
+    const u = editorPages(live.running.url);
+    console.log(`剪輯已經開著：${u.main}`);
+    console.log(`剪輯清單：${u.cuts}`);
+    console.log(`構圖：${u.framing}`);
+    console.log(`分鏡表：${u.storyboard}`);
+    console.log(`完成影片預覽：${u.final}`);
     console.log(`專案：${rel(P.project)}（要重開先關掉：${stopCmd}）`);
-    if (flags.open) openBrowser(running.url);
+    if (flags.open) openBrowser(live.running.url);
     return 0;
   }
   const background = !process.env.AUTO_EDIT_EDITOR_CHILD && (flags.background || (!flags.foreground && !process.stdout.isTTY));
   if (background) {
-    fs.mkdirSync(path.dirname(stateFile), { recursive: true });
-    const logFile = path.join(path.dirname(stateFile), 'editor.log');
-    const fd = fs.openSync(logFile, 'w');
-    const args = [fileURLToPath(import.meta.url), ...argv.filter((a) => a !== '--background' && a !== '--open'), ...(flags.port && !argv.some((a) => a === '--port' || a.startsWith('--port=')) ? ['--port', String(flags.port)] : []), '--foreground'];
-    const child = spawn(process.execPath, args, { cwd: process.cwd(), detached: true, stdio: ['ignore', fd, fd], windowsHide: true, env: { ...process.env, AUTO_EDIT_EDITOR_CHILD: '1' } });
-    let exited = null;
-    child.on('exit', (c) => { exited = c ?? 1; });
-    child.unref();
-    fs.closeSync(fd);
-    const t0 = Date.now();
-    while (Date.now() - t0 < 20000) {
-      await sleep(120);
-      const s = readJson(stateFile);
-      if (s?.pid === child.pid && s.url) {
-        console.log(`剪輯：${s.url}`);
-        console.log(`剪輯清單：${new URL('cuts', s.url).href}`);
-        console.log(`構圖：${new URL('framing', s.url).href}`);
-        console.log(`分鏡表：${new URL('storyboard', s.url).href}`);
-        console.log(`完成影片預覽：${new URL('?view=final', s.url).href}`);
-        console.log(`專案：${rel(P.project)}`);
-        console.log(`已在背景執行（log：${rel(logFile)}）。關閉：${stopCmd}`);
-        if (flags.open) openBrowser(s.url);
-        return 0;
-      }
-      if (exited !== null) break;
-    }
-    let tail = '';
-    try { tail = fs.readFileSync(logFile, 'utf8').trim().split('\n').slice(-8).join('\n'); } catch { /* 沒有 log */ }
-    console.error(`✖ 剪輯沒有啟動成功${exited === null ? '（等了 20 秒）' : ''}${tail ? `：\n${tail}` : ''}`);
-    return 1;
+    let u;
+    try { u = await ensureEditor(P, { port: flags.port }); } catch (e) { console.error(`✖ ${e.message}`); return 1; }
+    console.log(`剪輯：${u.main}`);
+    console.log(`剪輯清單：${u.cuts}`);
+    console.log(`構圖：${u.framing}`);
+    console.log(`分鏡表：${u.storyboard}`);
+    console.log(`完成影片預覽：${u.final}`);
+    console.log(`專案：${rel(P.project)}`);
+    console.log(`已在背景執行（log：${rel(u.log)}）。關閉：${stopCmd}`);
+    if (flags.open) openBrowser(u.main);
+    return 0;
   }
   const ed = await startEditor({ flags });
   const shutdown = async () => { await ed.close(); process.exit(0); };
   ed.ctx.onShutdown = shutdown;
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+  // 專案資料夾不見了（測試的暫存專案被清掉、專案被搬走）就自己結束：不然 server.json 跟著不見，--stop 找不到它，port 4400–4419 會被孤兒服務佔滿
+  setInterval(() => { if (!fs.existsSync(P.project)) { console.log(`專案資料夾不見了（${P.project}），剪輯台自己關閉`); shutdown(); } }, Number(process.env.AUTO_EDIT_EDITOR_WATCH_MS) || 30000).unref();
   if (ed.port !== (flags.port ?? DEFAULT_PORT)) console.log(`port ${flags.port ?? DEFAULT_PORT} 被佔用，改用 ${ed.port}`);
-  console.log(`剪輯：${ed.url}`);
-  console.log(`剪輯清單：${new URL('cuts', ed.url).href}`);
-  console.log(`構圖：${new URL('framing', ed.url).href}`);
-  console.log(`分鏡表：${new URL('storyboard', ed.url).href}`);
-  console.log(`完成影片預覽：${new URL('?view=final', ed.url).href}`);
+  const u = editorPages(ed.url);
+  console.log(`剪輯：${u.main}`);
+  console.log(`剪輯清單：${u.cuts}`);
+  console.log(`構圖：${u.framing}`);
+  console.log(`分鏡表：${u.storyboard}`);
+  console.log(`完成影片預覽：${u.final}`);
   console.log(`專案：${rel(P.project)}`);
   console.log(ed.ctx.player.available ? `播放器：HyperFrames ${ed.ctx.player.version ?? ''}` : `播放器：不能用（${ed.ctx.player.reason}），只有即時模擬`);
   console.log(process.env.AUTO_EDIT_EDITOR_CHILD ? `背景執行中。關閉：${stopCmd}` : '按 Ctrl+C 關閉');
@@ -1518,9 +1493,6 @@ async function cli() {
 }
 
 // 用 realpath 比對：從 symlink 路徑執行時（例如測試用的假工作區）也要跑得起來
-const isMain = (() => {
-  try { return !!process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url)); } catch { return false; }
-})();
-if (isMain) {
+if (isMain(import.meta.url)) {
   cli().then((code) => { if (code != null) process.exitCode = code; }, (e) => { console.error(`✖ ${e.message}`); process.exitCode = 1; });
 }

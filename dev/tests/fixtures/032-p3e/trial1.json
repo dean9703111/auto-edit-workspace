@@ -1,0 +1,8817 @@
+{
+ "items": [
+  {
+   "idx": 0,
+   "id": "s01",
+   "seg": {
+    "id": "s01",
+    "scene": "speaker",
+    "from": 0,
+    "to": 4.5,
+    "anchor": "嗨",
+    "slots": {}
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s01 speaker]",
+   "type": "scene",
+   "scene": "$scene:speaker",
+   "key": "speaker",
+   "label": "14 講者介紹",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s01-speaker",
+   "file": "compositions/s01-speaker.html",
+   "start": 0,
+   "end": 4.5,
+   "planEnd": 4.5,
+   "rough0": [
+    0,
+    4.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.5,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "講師",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "name": "林大寶",
+     "name_len": 3,
+     "name_lines": [
+      3
+     ],
+     "titles": [
+      {
+       "text": "影音創作者",
+       "text_len": 5,
+       "text_lines": [
+        5
+       ],
+       "at": 0.6
+      },
+      {
+       "text": "科技部落客",
+       "text_len": 5,
+       "text_lines": [
+        5
+       ],
+       "at": 0.7
+      },
+      {
+       "text": "線上課程講師",
+       "text_len": 6,
+       "text_lines": [
+        6
+       ],
+       "at": 0.8
+      }
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {
+     "titles": [
+      0.6,
+      0.7,
+      0.8
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "sfx": {
+    "name": "sparkle",
+    "at": 0,
+    "volume": 0.575,
+    "event": 0.1
+   }
+  },
+  {
+   "idx": 1,
+   "id": "s02",
+   "seg": {
+    "id": "s02",
+    "scene": "two-sides",
+    "from": 4.5,
+    "to": 8.5,
+    "anchor": "如果你打算拍",
+    "slots": {
+     "cards": [
+      {
+       "text": "YouTube",
+       "icon": "youtube"
+      },
+      {
+       "text": "Podcast",
+       "icon": "podcast"
+      },
+      {
+       "text": "線上課程",
+       "icon": "graduation-cap"
+      },
+      {
+       "text": "訪談節目",
+       "icon": "mic"
+      }
+     ]
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s02 的 cards[3]「訪談節目」在 0:05.75 出現，「訪談節目」0:07.50（#5）才講到 → slots.cards[3].at 寫 \"#5@訪談節目\""
+   ],
+   "warnings": [
+    "文字對時：s02 的 cards[1]「Podcast」在 0:05.05 出現，「Podcast」0:05.74（#5）才講到 → slots.cards[1].at 寫 \"#5@Podcast\"",
+    "文字對時：s02 的 cards[2]「線上課程」在 0:05.40 出現，「線上課程」0:06.40（#5）才講到 → slots.cards[2].at 寫 \"#5@線上課程\""
+   ],
+   "where": "[s02 two-sides]",
+   "type": "scene",
+   "scene": "$scene:two-sides",
+   "key": "two-sides",
+   "label": "05 兩側",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "s02-two-sides",
+   "file": "compositions/s02-two-sides.html",
+   "start": 4.5,
+   "end": 8.5,
+   "planEnd": 8.5,
+   "rough0": [
+    4.5,
+    8.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "cards": [
+      {
+       "text": "YouTube",
+       "text_text": "YouTube",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m10 15 5-3-5-3z\" /> </svg>",
+       "at": 0.2
+      },
+      {
+       "text": "Podcast",
+       "text_text": "Podcast",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M16.85 18.58a9 9 0 1 0-9.7 0\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M8 14a5 5 0 1 1 8 0\" /> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"11\" r=\"1\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M13 17a1 1 0 1 0-2 0l.5 4.5a.5.5 0 1 0 1 0Z\" /> </svg>",
+       "at": 0.55
+      },
+      {
+       "text": "線上課程",
+       "text_text": "線上課程",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M22 10v6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\" /> </svg>",
+       "at": 0.9
+      },
+      {
+       "text": "訪談節目",
+       "text_text": "訪談節目",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" /> </svg>",
+       "at": 1.25
+      }
+     ]
+    },
+    "beats": {},
+    "listTimes": {
+     "cards": [
+      0.2,
+      0.55,
+      0.9,
+      1.25
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 2,
+   "id": "s03",
+   "seg": {
+    "id": "s03",
+    "scene": "key-point",
+    "from": 8.5,
+    "to": "#9e",
+    "anchor": "並且跟我一樣",
+    "slots": {
+     "lead": "固定機位錄影",
+     "key": "強烈建議儲存這支影片",
+     "icon": "smartphone"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s03 的 lead「固定機位錄影」在 0:08.50 出現，「機位錄影」0:10.54（#7）才講到 → from 寫 \"#7@機位錄影\"",
+    "文字對時：s03 的 key「強烈建議儲存這支影片」在 0:08.65 出現，「儲存這支」0:13.18（#8）才講到 → beats.keyAt 寫 \"#8@儲存這支\""
+   ],
+   "warnings": [],
+   "where": "[s03 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s03-key-point",
+   "file": "compositions/s03-key-point.html",
+   "start": 8.5,
+   "end": 15.28,
+   "planEnd": 14.88,
+   "rough0": [
+    8.5,
+    14.88
+   ],
+   "handoff": "s04",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.78,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+     "lead": "固定機位錄影",
+     "lead_len": 6,
+     "lead_lines": [
+      6
+     ],
+     "key": "強烈建議儲存這支影片",
+     "key_len": 10,
+     "key_lines": [
+      10
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 3,
+   "id": "s04",
+   "seg": {
+    "id": "s04",
+    "scene": "concept",
+    "from": "#10",
+    "to": "#11e",
+    "anchor": "分享一個節省",
+    "slots": {
+     "tag": "工具",
+     "icon": "wrench",
+     "text": "**免費工具**省下超多時間"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s04 的 text「免費工具省下超多時間」在 0:14.88 出現，「免費工具」0:16.96（#10）才講到 → beats.in 寫 \"#10@免費工具\""
+   ],
+   "warnings": [],
+   "where": "[s04 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s04-concept",
+   "file": "compositions/s04-concept.html",
+   "start": 14.88,
+   "end": 19.695,
+   "planEnd": 19.295,
+   "rough0": [
+    14.88,
+    19.295
+   ],
+   "handoff": "s05",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.815,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "工具",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" /> </svg>",
+     "text": "<span class=\"sc-kw\">免費工具</span>省下超多時間",
+     "text_text": "免費工具省下超多時間",
+     "text_len": 10,
+     "text_lines": [
+      10
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 24,
+   "id": "c01",
+   "seg": {
+    "id": "c01",
+    "scene": "chapter-tag",
+    "from": "#11",
+    "to": "#13e",
+    "anchor": "過去正式開拍前",
+    "slots": {
+     "num": "01",
+     "name": "錄完要檢查"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[c01 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "c01-chapter-tag",
+   "file": "compositions/c01-chapter-tag.html",
+   "start": 17.882,
+   "end": 22.65,
+   "planEnd": 22.65,
+   "rough0": [
+    17.882,
+    22.65
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.768,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "01",
+     "name": "錄完要檢查",
+     "name_len": 5,
+     "name_lines": [
+      5
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 4,
+   "id": "s05",
+   "seg": {
+    "id": "s05",
+    "scene": "concept",
+    "from": "#12",
+    "to": "#14e",
+    "anchor": "我都要先試錄",
+    "slots": {
+     "tag": "拍前",
+     "icon": "video",
+     "text": "開拍前先**試錄**一小段"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s05 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s05-concept",
+   "file": "compositions/s05-concept.html",
+   "start": 19.295,
+   "end": 24.312,
+   "planEnd": 23.912,
+   "rough0": [
+    19.295,
+    23.912
+   ],
+   "handoff": "s06",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.017,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "拍前",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" /> </svg>",
+     "text": "開拍前先<span class=\"sc-kw\">試錄</span>一小段",
+     "text_text": "開拍前先試錄一小段",
+     "text_len": 9,
+     "text_lines": [
+      9
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 5,
+   "id": "s06",
+   "seg": {
+    "id": "s06",
+    "scene": "key-point",
+    "tone": "warn",
+    "from": "#15",
+    "to": "#16e",
+    "anchor": "而正式開拍後",
+    "slots": {
+     "lead": "每錄完一段",
+     "key": "跑到手機旁邊檢查",
+     "icon": "smartphone"
+    }
+   },
+   "errors": [
+    "文字對時：s06 的 key「跑到手機旁邊檢查」在 0:24.06 出現，「跑到手機」0:26.43（#16）才講到 → beats.keyAt 寫 \"#16@跑到手機\""
+   ],
+   "warnings": [
+    "文字對時：s06 的 lead「每錄完一段」在 0:23.91 出現，「每錄完一」0:24.80（#15）才講到 → from 寫 \"#15@每錄完一\""
+   ],
+   "where": "[s06 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s06-key-point",
+   "file": "compositions/s06-key-point.html",
+   "start": 23.912,
+   "end": 29.093,
+   "planEnd": 28.693,
+   "rough0": [
+    23.912,
+    28.693
+   ],
+   "handoff": "s07",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.181,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+     "lead": "每錄完一段",
+     "lead_len": 5,
+     "lead_lines": [
+      5
+     ],
+     "key": "跑到手機旁邊檢查",
+     "key_len": 8,
+     "key_lines": [
+      8
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": "warn",
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "sfx": {
+    "name": "alert",
+    "at": 24.077,
+    "volume": 0.569,
+    "event": 24.062
+   }
+  },
+  {
+   "idx": 6,
+   "id": "s07",
+   "seg": {
+    "id": "s07",
+    "scene": "key-point",
+    "tone": "warn",
+    "from": "#17",
+    "to": "#20e",
+    "anchor": "確認動作與聲音",
+    "slots": {
+     "lead": "手機畫面太小",
+     "key": "放到電腦才看得出",
+     "icon": "monitor"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s07 的 lead「手機畫面太小」在 0:28.69 出現，「手機畫面」0:32.15（#18）才講到 → from 寫 \"#18@手機畫面\"",
+    "文字對時：s07 的 key「放到電腦才看得出」在 0:28.84 出現，「到電腦」0:34.84（#20）才講到 → beats.keyAt 寫 \"#20@到電腦\""
+   ],
+   "warnings": [
+    "[s07 key-point] 和前一段（s06）用同一個模板 → 換一個模板或併成一段",
+    "[s07 key-point] 連續 5 段都是下方字卡（s03、s04、s05、s06、s07）→ 中間換一段情境動畫（style.md「情境動畫優先」）或別的版面"
+   ],
+   "where": "[s07 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s07-key-point",
+   "file": "compositions/s07-key-point.html",
+   "start": 28.693,
+   "end": 37.164,
+   "planEnd": 37.164,
+   "rough0": [
+    28.693,
+    37.164
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 8.471,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\" /> </svg>",
+     "lead": "手機畫面太小",
+     "lead_len": 6,
+     "lead_lines": [
+      6
+     ],
+     "key": "放到電腦才看得出",
+     "key_len": 8,
+     "key_lines": [
+      8
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": "warn",
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 7,
+   "id": "s08",
+   "seg": {
+    "id": "s08",
+    "scene": "keywords",
+    "from": "#21",
+    "to": "#22e",
+    "anchor": "像腳架不穩",
+    "slots": {
+     "items": [
+      {
+       "text": "腳架不穩",
+       "icon": "triangle-alert"
+      },
+      {
+       "text": "衣服太薄",
+       "icon": "shirt",
+       "at": "#22"
+      }
+     ]
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s08 keywords]",
+   "type": "scene",
+   "scene": "$scene:keywords",
+   "key": "keywords",
+   "label": "12 關鍵詞條列",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "s08-keywords",
+   "file": "compositions/s08-keywords.html",
+   "start": 37.164,
+   "end": 43.53,
+   "planEnd": 43.03,
+   "rough0": [
+    37.164,
+    43.03
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": false,
+   "notes": [],
+   "coveredBy": "s09",
+   "D": 6.366,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "cover",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "items": [
+      {
+       "text": "腳架不穩",
+       "text_text": "腳架不穩",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 9v4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 17h.01\" /> </svg>",
+       "at": 0.2
+      },
+      {
+       "text": "衣服太薄",
+       "text_text": "衣服太薄",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z\" /> </svg>",
+       "at": 3.096
+      }
+     ],
+     "itemsHasIcon": true
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.2,
+      3.096
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 8,
+   "id": "s09",
+   "seg": {
+    "id": "s09",
+    "type": "custom",
+    "src": "compositions/x-past-flow.html",
+    "layout": "fullscreen",
+    "from": "#23",
+    "to": "#27e",
+    "anchor": "而我過去的拍片流程",
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s09 custom]",
+   "type": "custom",
+   "key": "custom",
+   "label": "custom x-past-flow.html",
+   "compId": "x-past-flow",
+   "file": "compositions/x-past-flow.html",
+   "refList": [
+    "#24",
+    "#25",
+    "#27"
+   ],
+   "sfxBeats": [],
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 43.03,
+   "end": 52.557,
+   "planEnd": 52.557,
+   "rough0": [
+    43.03,
+    52.557
+   ],
+   "fadeIn": true,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s10b",
+   "D": 9.527,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "cut",
+   "pipPieces": [
+    {
+     "s": 43.03,
+     "e": 52.557,
+     "ms": 43.03,
+     "enter": "fly",
+     "exitDur": 0.4,
+     "exit": "fade"
+    }
+   ],
+   "cueRefs": {
+    "#24": 44.436,
+    "#25": 46.98,
+    "#27": 50.323
+   },
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 9,
+   "id": "s10b",
+   "seg": {
+    "id": "s10b",
+    "type": "fx",
+    "fx": 34,
+    "bg": "dark",
+    "from": "#28",
+    "to": "#29+0.3",
+    "anchor": "非常崩潰",
+    "vars": {
+     "text": "崩潰"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s10b fx 34]",
+   "type": "fx",
+   "fxDef": "$fx:34",
+   "key": "fx-34",
+   "label": "fx 34 故障切片",
+   "bg": "dark",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "vars": {
+    "text": "崩潰",
+    "bg": "dark",
+    "accent": "#F6630F"
+   },
+   "compId": "card-34-1",
+   "file": "compositions/fx-34-glitch-slices.html",
+   "start": 52.557,
+   "end": 55.65,
+   "planEnd": 55.65,
+   "rough0": [
+    52.557,
+    55.65
+   ],
+   "fadeIn": false,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 3.093,
+   "txIn": "cut",
+   "prev": "pip",
+   "txOut": "fade",
+   "pipPieces": [],
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 10,
+   "id": "s11",
+   "seg": {
+    "id": "s11",
+    "scene": "concept",
+    "from": "#29+0.3",
+    "to": "#30e",
+    "anchor": "需要用到多機拍攝",
+    "slots": {
+     "tag": "多機",
+     "icon": "video",
+     "text": "**多機**：橫拍長片、直拍短影音"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s11 的 text「多機：橫拍長片、直拍短影音」在 0:55.65 出現，「短影音」0:59.90（#30）才講到 → beats.in 寫 \"#30@短影音\""
+   ],
+   "warnings": [],
+   "where": "[s11 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s11-concept",
+   "file": "compositions/s11-concept.html",
+   "start": 55.65,
+   "end": 60.81,
+   "planEnd": 60.81,
+   "rough0": [
+    55.65,
+    60.81
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.16,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "多機",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" /> </svg>",
+     "text": "<span class=\"sc-kw\">多機</span>：橫拍長片、直拍短影音",
+     "text_text": "多機：橫拍長片、直拍短影音",
+     "text_len": 13,
+     "text_lines": [
+      13
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 25,
+   "id": "c02",
+   "seg": {
+    "id": "c02",
+    "scene": "chapter-tag",
+    "from": "#29+0.3",
+    "to": "#30e",
+    "anchor": "需要用到多機拍攝",
+    "slots": {
+     "num": "02",
+     "name": "多機難同步"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[c02 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "c02-chapter-tag",
+   "file": "compositions/c02-chapter-tag.html",
+   "start": 55.65,
+   "end": 60.81,
+   "planEnd": 60.81,
+   "rough0": [
+    55.65,
+    60.81
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.16,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "02",
+     "name": "多機難同步",
+     "name_len": 5,
+     "name_lines": [
+      5
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 11,
+   "id": "s12",
+   "seg": {
+    "id": "s12",
+    "scene": "keywords",
+    "from": "#31",
+    "to": "#32e",
+    "anchor": "所以一支橫著錄",
+    "slots": {
+     "items": [
+      {
+       "text": "橫拍長片",
+       "icon": "smartphone"
+      },
+      {
+       "text": "直拍短片",
+       "icon": "smartphone",
+       "at": "#32"
+      }
+     ]
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s12 keywords]",
+   "type": "scene",
+   "scene": "$scene:keywords",
+   "key": "keywords",
+   "label": "12 關鍵詞條列",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "s12-keywords",
+   "file": "compositions/s12-keywords.html",
+   "start": 60.81,
+   "end": 64.911,
+   "planEnd": 64.911,
+   "rough0": [
+    60.81,
+    64.911
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.101,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "items": [
+      {
+       "text": "橫拍長片",
+       "text_text": "橫拍長片",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+       "at": 0.2
+      },
+      {
+       "text": "直拍短片",
+       "text_text": "直拍短片",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+       "at": 2.1
+      }
+     ],
+     "itemsHasIcon": true
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.2,
+      2.1
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 12,
+   "id": "s13",
+   "seg": {
+    "id": "s13",
+    "scene": "concept",
+    "from": "#33",
+    "to": "#35e",
+    "anchor": "或者錄訪談節目時",
+    "slots": {
+     "tag": "訪談",
+     "icon": "mic",
+     "text": "**主持人、來賓**各用一支手機"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s13 的 text「主持人、來賓各用一支手機」在 1:04.91 出現，「各用一支」1:08.16（#34）才講到 → beats.in 寫 \"#34@各用一支\""
+   ],
+   "warnings": [],
+   "where": "[s13 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s13-concept",
+   "file": "compositions/s13-concept.html",
+   "start": 64.911,
+   "end": 72.543,
+   "planEnd": 72.143,
+   "rough0": [
+    64.911,
+    72.143
+   ],
+   "handoff": "s14",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 7.632,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "訪談",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" /> </svg>",
+     "text": "<span class=\"sc-kw\">主持人、來賓</span>各用一支手機",
+     "text_text": "主持人、來賓各用一支手機",
+     "text_len": 12,
+     "text_lines": [
+      12
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 13,
+   "id": "s14",
+   "seg": {
+    "id": "s14",
+    "scene": "concept",
+    "from": "#36",
+    "to": "#37e",
+    "anchor": "但我們馬上就會遇到",
+    "slots": {
+     "tag": "單機",
+     "icon": "smartphone",
+     "text": "單機：用**手勢**控制開始與結束"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s14 的 text「單機：用手勢控制開始與結束」在 1:12.14 出現，「控制開始」1:17.04（#38）才講到 → beats.in 寫 \"#38@控制開始\""
+   ],
+   "warnings": [
+    "[s14 concept] 和前一段（s13）用同一個模板 → 換一個模板或併成一段"
+   ],
+   "where": "[s14 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s14-concept",
+   "file": "compositions/s14-concept.html",
+   "start": 72.143,
+   "end": 77.72,
+   "planEnd": 77.22,
+   "rough0": [
+    72.143,
+    77.22
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": false,
+   "notes": [],
+   "coveredBy": "s15",
+   "D": 5.577,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "cover",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "單機",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+     "text": "單機：用<span class=\"sc-kw\">手勢</span>控制開始與結束",
+     "text_text": "單機：用手勢控制開始與結束",
+     "text_len": 13,
+     "text_lines": [
+      13
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 14,
+   "id": "s15",
+   "seg": {
+    "id": "s15",
+    "type": "custom",
+    "src": "compositions/x-multi-problems.html",
+    "layout": "fullscreen",
+    "from": "#38",
+    "to": "#44+0.8",
+    "anchor": "控制開始跟結束",
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s15 custom]",
+   "type": "custom",
+   "key": "custom",
+   "label": "custom x-multi-problems.html",
+   "compId": "x-multi-problems",
+   "file": "compositions/x-multi-problems.html",
+   "refList": [
+    "#40",
+    "#41",
+    "#42"
+   ],
+   "sfxBeats": [],
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 77.22,
+   "end": 90.166,
+   "planEnd": 90.166,
+   "rough0": [
+    77.22,
+    90.166
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 12.946,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "retract",
+   "pipPieces": [
+    {
+     "s": 77.22,
+     "e": 90.166,
+     "ms": 77.22,
+     "enter": "fly",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "cueRefs": {
+    "#40": 81.02,
+    "#41": 84.4,
+    "#42": 87.08
+   },
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 15,
+   "id": "s16",
+   "seg": {
+    "id": "s16",
+    "scene": "concept",
+    "from": "#44+0.8",
+    "to": "#45e",
+    "anchor": "驗收成果的時候也一樣",
+    "slots": {
+     "tag": "驗收",
+     "icon": "footprints",
+     "text": "驗收要在兩支手機間**走來走去**"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s16 的 text「驗收要在兩支手機間走來走去」在 1:30.17 出現，「手機間走」1:32.09（#45）才講到 → beats.in 寫 \"#45@手機間走\""
+   ],
+   "warnings": [],
+   "where": "[s16 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s16-concept",
+   "file": "compositions/s16-concept.html",
+   "start": 90.166,
+   "end": 95.93,
+   "planEnd": 95.53,
+   "rough0": [
+    90.166,
+    95.53
+   ],
+   "handoff": "s17",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.764,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "驗收",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M16 17h4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M4 13h4\" /> </svg>",
+     "text": "驗收要在兩支手機間<span class=\"sc-kw\">走來走去</span>",
+     "text_text": "驗收要在兩支手機間走來走去",
+     "text_len": 13,
+     "text_lines": [
+      13
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 16,
+   "id": "s17",
+   "seg": {
+    "id": "s17",
+    "scene": "key-point",
+    "tone": "warn",
+    "from": "#46",
+    "to": "#48",
+    "anchor": "當要拍攝的段落很多時",
+    "slots": {
+     "lead": "拍攝段落很多時",
+     "key": "走動耗體力",
+     "icon": "activity"
+    }
+   },
+   "errors": [
+    "文字對時：s17 的 key「走動耗體力」在 1:35.68 出現，「耗體力」1:39.25（#47）才講到 → beats.keyAt 寫 \"#47@耗體力\""
+   ],
+   "warnings": [
+    "文字對時：s17 的 lead「拍攝段落很多時」在 1:35.53 出現，「段落很多」1:36.27（#46）才講到 → from 寫 \"#46@段落很多\""
+   ],
+   "where": "[s17 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s17-key-point",
+   "file": "compositions/s17-key-point.html",
+   "start": 95.53,
+   "end": 100.43,
+   "planEnd": 100.03,
+   "rough0": [
+    95.53,
+    100.03
+   ],
+   "handoff": "s18",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.9,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2\" /> </svg>",
+     "lead": "拍攝段落很多時",
+     "lead_len": 7,
+     "lead_lines": [
+      7
+     ],
+     "key": "走動耗體力",
+     "key_len": 5,
+     "key_lines": [
+      5
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": "warn",
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "sfx": {
+    "name": "alert",
+    "at": 95.695,
+    "volume": 0.569,
+    "event": 95.68,
+    "src": "alert-2",
+    "srcAt": 95.694,
+    "srcVolume": 0.569
+   }
+  },
+  {
+   "idx": 17,
+   "id": "s18",
+   "seg": {
+    "id": "s18",
+    "scene": "concept",
+    "from": "#48",
+    "to": "#51e",
+    "anchor": "為了解決以上問題",
+    "slots": {
+     "tag": "找工具",
+     "icon": "search",
+     "text": "試過**多機錄影工具**都不順手"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s18 的 text「試過多機錄影工具都不順手」在 1:40.03 出現，「多機錄影」1:44.98（#50）才講到 → beats.in 寫 \"#50@多機錄影\""
+   ],
+   "warnings": [],
+   "where": "[s18 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s18-concept",
+   "file": "compositions/s18-concept.html",
+   "start": 100.03,
+   "end": 108.92,
+   "planEnd": 108.52,
+   "rough0": [
+    100.03,
+    108.52
+   ],
+   "handoff": "s19",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 8.89,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "找工具",
+     "tag_len": 3,
+     "tag_lines": [
+      3
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"11\" cy=\"11\" r=\"8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m21 21-4.3-4.3\" /> </svg>",
+     "text": "試過<span class=\"sc-kw\">多機錄影工具</span>都不順手",
+     "text_text": "試過多機錄影工具都不順手",
+     "text_len": 12,
+     "text_lines": [
+      12
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 26,
+   "id": "c03",
+   "seg": {
+    "id": "c03",
+    "scene": "chapter-tag",
+    "from": "#48",
+    "to": "#50e",
+    "anchor": "為了解決以上問題",
+    "slots": {
+     "num": "03",
+     "name": "自製錄影工具"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[c03 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "c03-chapter-tag",
+   "file": "compositions/c03-chapter-tag.html",
+   "start": 100.03,
+   "end": 106.76,
+   "planEnd": 106.76,
+   "rough0": [
+    100.03,
+    106.76
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.73,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "03",
+     "name": "自製錄影工具",
+     "name_len": 6,
+     "name_lines": [
+      6
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 18,
+   "id": "s19",
+   "seg": {
+    "id": "s19",
+    "scene": "key-point",
+    "tone": "good",
+    "from": "#52",
+    "to": "#53e",
+    "anchor": "我乾脆根據自己",
+    "slots": {
+     "lead": "自己的工作流",
+     "key": "自己設計一套工具",
+     "icon": "lightbulb"
+    }
+   },
+   "errors": [
+    "文字對時：s19 的 lead「自己的工作流」在 1:48.52 出現，「的工作流」1:50.16（#53）才講到 → from 寫 \"#53@的工作流\""
+   ],
+   "warnings": [],
+   "where": "[s19 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s19-key-point",
+   "file": "compositions/s19-key-point.html",
+   "start": 108.52,
+   "end": 112.613,
+   "planEnd": 112.113,
+   "rough0": [
+    108.52,
+    112.113
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": false,
+   "notes": [],
+   "coveredBy": "s20",
+   "D": 4.093,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "cover",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 18h6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 22h4\" /> </svg>",
+     "lead": "自己的工作流",
+     "lead_len": 6,
+     "lead_lines": [
+      6
+     ],
+     "key": "自己設計一套工具",
+     "key_len": 8,
+     "key_lines": [
+      8
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": "good",
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "sfx": {
+    "name": "success",
+    "at": 108.566,
+    "volume": 0.692,
+    "event": 108.67
+   }
+  },
+  {
+   "idx": 19,
+   "id": "s20",
+   "seg": {
+    "id": "s20",
+    "type": "custom",
+    "src": "compositions/x-tool-flow.html",
+    "layout": "fullscreen",
+    "from": "#54",
+    "to": "#57e",
+    "anchor": "現在當手機掃碼",
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s20 custom]",
+   "type": "custom",
+   "key": "custom",
+   "label": "custom x-tool-flow.html",
+   "compId": "x-tool-flow",
+   "file": "compositions/x-tool-flow.html",
+   "refList": [
+    "#54",
+    "#55",
+    "#56"
+   ],
+   "sfxBeats": [],
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 112.113,
+   "end": 120.436,
+   "planEnd": 120.436,
+   "rough0": [
+    112.113,
+    120.436
+   ],
+   "fadeIn": true,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s21",
+   "D": 8.323,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "swap",
+   "pipPieces": [
+    {
+     "s": 112.113,
+     "e": 120.436,
+     "ms": 112.113,
+     "enter": "fly",
+     "exitDur": 0,
+     "exit": "none"
+    }
+   ],
+   "cueRefs": {
+    "#54": 112.113,
+    "#55": 114.571,
+    "#56": 116.22
+   },
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 20,
+   "id": "s21",
+   "seg": {
+    "id": "s21",
+    "scene": "fs-list",
+    "from": "#58",
+    "to": "#61e",
+    "anchor": "多支手機就能同步",
+    "slots": {
+     "title": "同步錄影與回傳",
+     "items": [
+      {
+       "text": "按下開始，多機同步錄影",
+       "icon": "circle-play"
+      },
+      {
+       "text": "按下結束，影片回傳電腦",
+       "icon": "hard-drive-download",
+       "at": "#60"
+      },
+      {
+       "text": "馬上播放檢查",
+       "icon": "monitor-play",
+       "at": "#61"
+      }
+     ]
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s21 的 items[0]「按下開始，多機同步錄影」在 2:00.94 出現，「按下開始」1:59.35（#57）就講到了，晚了 1.59s → slots.items[0].at 寫 \"#57@按下開始\"",
+    "文字對時：s21 的 items[1]「按下結束，影片回傳電腦」在 2:05.04 出現，「按下結束」2:02.72（#59）就講到了，晚了 2.32s → slots.items[1].at 寫 \"#59@按下結束\""
+   ],
+   "warnings": [
+    "[s21 fs-list] 最後一個內容在第 6.739s，到退場只停 1.302s，建議 ≥ 1.5s（把 to 往後延）"
+   ],
+   "where": "[s21 fs-list]",
+   "type": "scene",
+   "scene": "$scene:fs-list",
+   "key": "fs-list",
+   "label": "04a 全畫面清單",
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "compId": "s21-fs-list",
+   "file": "compositions/s21-fs-list.html",
+   "start": 120.436,
+   "end": 128.777,
+   "planEnd": 128.777,
+   "rough0": [
+    120.436,
+    128.777
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s22",
+   "D": 8.341,
+   "txIn": "swap",
+   "prev": "fullscreen",
+   "txOut": "cut",
+   "pipPieces": [
+    {
+     "s": 120.436,
+     "e": 128.777,
+     "ms": 120.436,
+     "enter": "none",
+     "exitDur": 0.4,
+     "exit": "fade"
+    }
+   ],
+   "resolved": {
+    "ctx": {
+     "title": "同步錄影與回傳",
+     "title_len": 7,
+     "title_lines": [
+      7
+     ],
+     "items": [
+      {
+       "text": "按下開始，多機同步錄影",
+       "text_text": "按下開始，多機同步錄影",
+       "text_len": 11,
+       "text_lines": [
+        11
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"10\" /> <polygon class=\"stroke-draw\" pathLength=\"1\" points=\"10 8 16 12 10 16 10 8\" /> </svg>",
+       "at": 0.5
+      },
+      {
+       "text": "按下結束，影片回傳電腦",
+       "text_text": "按下結束，影片回傳電腦",
+       "text_len": 11,
+       "text_lines": [
+        11
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2v8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 6-4 4-4-4\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M6 18h.01\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 18h.01\" /> </svg>",
+       "at": 4.604
+      },
+      {
+       "text": "馬上播放檢查",
+       "text_text": "馬上播放檢查",
+       "text_len": 6,
+       "text_lines": [
+        6
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.64z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 17v4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M8 21h8\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"3\" width=\"20\" height=\"14\" rx=\"2\" /> </svg>",
+       "at": 6.739
+      }
+     ],
+     "itemsHasIcon": true
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.5,
+      4.604,
+      6.739
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": [
+     "[s21 fs-list] 最後一個內容在第 6.739s，到退場只停 1.302s，建議 ≥ 1.5s（把 to 往後延）"
+    ]
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 21,
+   "id": "s22",
+   "seg": {
+    "id": "s22",
+    "type": "fx",
+    "fx": 4,
+    "bg": "dark",
+    "from": "#62",
+    "to": "#63e",
+    "anchor": "而這個工具",
+    "sfx": null,
+    "vars": {
+     "text": "1 小時"
+    }
+   },
+   "errors": [
+    "文字對時：s22 的 fx vars.text「1 小時」在 2:08.78 出現，「一個小時」2:12.87（#64）才講到 → from 寫 \"#64@一個小時\""
+   ],
+   "warnings": [],
+   "where": "[s22 fx 4]",
+   "type": "fx",
+   "fxDef": "$fx:04",
+   "key": "fx-04",
+   "label": "fx 04 衝刺縮放",
+   "bg": "dark",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "vars": {
+    "text": "1 小時",
+    "bg": "dark",
+    "accent": "#F6630F"
+   },
+   "compId": "card-04-1",
+   "file": "compositions/fx-04-punch-zoom.html",
+   "start": 128.777,
+   "end": 133.87,
+   "planEnd": 133.87,
+   "rough0": [
+    128.777,
+    133.87
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s23",
+   "D": 5.093,
+   "txIn": "cut",
+   "prev": "pip",
+   "txOut": "cut",
+   "pipPieces": [],
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 22,
+   "id": "s23",
+   "seg": {
+    "id": "s23",
+    "scene": "fs-list",
+    "from": "#64",
+    "to": "#71e",
+    "anchor": "這集影片我會分成",
+    "slots": {
+     "title": "本集三個部分",
+     "items": [
+      {
+       "text": "實際操作這個工具",
+       "icon": "wrench"
+      },
+      {
+       "text": "安裝工具與網路設定",
+       "icon": "settings",
+       "at": "#68"
+      },
+      {
+       "text": "AI Coding 做出原型",
+       "icon": "bot",
+       "at": "#70"
+      }
+     ]
+    }
+   },
+   "errors": [
+    "文字對時：s23 的 items[0]「實際操作這個工具」在 2:14.37 出現，「實際操作」2:16.60（#65）才講到 → slots.items[0].at 寫 \"#65@實際操作\""
+   ],
+   "warnings": [
+    "文字對時：s23 的 title「本集三個部分」在 2:13.87 出現，「三個部分」2:15.19（#64）才講到 → from 寫 \"#64@三個部分\"",
+    "文字對時：s23 的 items[1]「安裝工具與網路設定」在 2:22.23 出現，「安裝工具」2:23.37（#68）才講到 → slots.items[1].at 寫 \"#68@安裝工具\"",
+    "文字對時：s23 的 items[2]「AI Coding 做出原型」在 2:26.24 出現，「AI Coding」2:27.20（#71）才講到 → slots.items[2].at 寫 \"#71@AI Coding\""
+   ],
+   "where": "[s23 fs-list]",
+   "type": "scene",
+   "scene": "$scene:fs-list",
+   "key": "fs-list",
+   "label": "04a 全畫面清單",
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "compId": "s23-fs-list",
+   "file": "compositions/s23-fs-list.html",
+   "start": 133.87,
+   "end": 150.32,
+   "planEnd": 150.32,
+   "rough0": [
+    133.87,
+    150.32
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s24",
+   "D": 16.45,
+   "txIn": "cut",
+   "prev": "pip",
+   "txOut": "cut",
+   "pipPieces": [
+    {
+     "s": 133.87,
+     "e": 150.32,
+     "ms": 133.87,
+     "enter": "fade",
+     "exitDur": 0.4,
+     "exit": "fade"
+    }
+   ],
+   "resolved": {
+    "ctx": {
+     "title": "本集三個部分",
+     "title_len": 6,
+     "title_lines": [
+      6
+     ],
+     "items": [
+      {
+       "text": "實際操作這個工具",
+       "text_text": "實際操作這個工具",
+       "text_len": 8,
+       "text_lines": [
+        8
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" /> </svg>",
+       "at": 0.5
+      },
+      {
+       "text": "安裝工具與網路設定",
+       "text_text": "安裝工具與網路設定",
+       "text_len": 9,
+       "text_lines": [
+        9
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"3\" /> </svg>",
+       "at": 8.36
+      },
+      {
+       "text": "AI Coding 做出原型",
+       "text_text": "AI Coding 做出原型",
+       "text_len": 9,
+       "text_lines": [
+        9
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 8V4H8\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M2 14h2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20 14h2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 13v2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 13v2\" /> </svg>",
+       "at": 12.37
+      }
+     ],
+     "itemsHasIcon": true
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.5,
+      8.36,
+      12.37
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 27,
+   "id": "c04",
+   "seg": {
+    "id": "c04",
+    "scene": "chapter-tag",
+    "from": "#64",
+    "to": "#66e",
+    "anchor": "這集影片我會分成",
+    "slots": {
+     "num": "04",
+     "name": "本集大綱"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [
+    "[c04 chapter-tag] 02 章節角標整段（2:13.87–2:20.17）被 s23 蓋住，畫面看不到，只當章節起點用 → 要看到角標就把它的 from 移到疊加段，或刪掉這段只留 chapterBadge"
+   ],
+   "where": "[c04 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "c04-chapter-tag",
+   "file": "compositions/c04-chapter-tag.html",
+   "start": 133.87,
+   "end": 140.17,
+   "planEnd": 140.17,
+   "rough0": [
+    133.87,
+    140.17
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.3,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "04",
+     "name": "本集大綱",
+     "name_len": 4,
+     "name_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 23,
+   "id": "s24",
+   "seg": {
+    "id": "s24",
+    "type": "fx",
+    "fx": 27,
+    "bg": "dark",
+    "from": "#72",
+    "to": "#72e",
+    "anchor": "以及在實際應用中",
+    "vars": {
+     "text": "用 AI Coding 一小時做出原型",
+     "alt": "AI Coding"
+    }
+   },
+   "errors": [
+    "文字對時：s24 的 fx vars.text「用 AI Coding 一小時做出原型」在 2:30.32 出現，「AI Coding」2:27.20（#71）就講到了，晚了 3.12s → from 寫 \"#71@AI Coding\""
+   ],
+   "warnings": [],
+   "where": "[s24 fx 27]",
+   "type": "fx",
+   "fxDef": "$fx:27",
+   "key": "fx-27",
+   "label": "fx 27 打字機",
+   "bg": "dark",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "vars": {
+    "text": "用 AI Coding 一小時做出原型",
+    "alt": "AI Coding",
+    "bg": "dark",
+    "accent": "#F6630F"
+   },
+   "compId": "card-27-1",
+   "file": "compositions/fx-27-typewriter.html",
+   "start": 150.32,
+   "end": 153.44,
+   "planEnd": 153.44,
+   "rough0": [
+    150.32,
+    153.44
+   ],
+   "fadeIn": false,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 3.12,
+   "txIn": "cut",
+   "prev": "pip",
+   "txOut": "fade",
+   "pipPieces": [],
+   "sfxExtra": [],
+   "badgeBox": null
+  }
+ ],
+ "allItems": [
+  {
+   "idx": 0,
+   "id": "s01",
+   "seg": {
+    "id": "s01",
+    "scene": "speaker",
+    "from": 0,
+    "to": 4.5,
+    "anchor": "嗨",
+    "slots": {}
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s01 speaker]",
+   "type": "scene",
+   "scene": "$scene:speaker",
+   "key": "speaker",
+   "label": "14 講者介紹",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s01-speaker",
+   "file": "compositions/s01-speaker.html",
+   "start": 0,
+   "end": 4.5,
+   "planEnd": 4.5,
+   "rough0": [
+    0,
+    4.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.5,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "講師",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "name": "林大寶",
+     "name_len": 3,
+     "name_lines": [
+      3
+     ],
+     "titles": [
+      {
+       "text": "影音創作者",
+       "text_len": 5,
+       "text_lines": [
+        5
+       ],
+       "at": 0.6
+      },
+      {
+       "text": "科技部落客",
+       "text_len": 5,
+       "text_lines": [
+        5
+       ],
+       "at": 0.7
+      },
+      {
+       "text": "線上課程講師",
+       "text_len": 6,
+       "text_lines": [
+        6
+       ],
+       "at": 0.8
+      }
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {
+     "titles": [
+      0.6,
+      0.7,
+      0.8
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "sfx": {
+    "name": "sparkle",
+    "at": 0,
+    "volume": 0.575,
+    "event": 0.1
+   }
+  },
+  {
+   "idx": 1,
+   "id": "s02",
+   "seg": {
+    "id": "s02",
+    "scene": "two-sides",
+    "from": 4.5,
+    "to": 8.5,
+    "anchor": "如果你打算拍",
+    "slots": {
+     "cards": [
+      {
+       "text": "YouTube",
+       "icon": "youtube"
+      },
+      {
+       "text": "Podcast",
+       "icon": "podcast"
+      },
+      {
+       "text": "線上課程",
+       "icon": "graduation-cap"
+      },
+      {
+       "text": "訪談節目",
+       "icon": "mic"
+      }
+     ]
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s02 的 cards[3]「訪談節目」在 0:05.75 出現，「訪談節目」0:07.50（#5）才講到 → slots.cards[3].at 寫 \"#5@訪談節目\""
+   ],
+   "warnings": [
+    "文字對時：s02 的 cards[1]「Podcast」在 0:05.05 出現，「Podcast」0:05.74（#5）才講到 → slots.cards[1].at 寫 \"#5@Podcast\"",
+    "文字對時：s02 的 cards[2]「線上課程」在 0:05.40 出現，「線上課程」0:06.40（#5）才講到 → slots.cards[2].at 寫 \"#5@線上課程\""
+   ],
+   "where": "[s02 two-sides]",
+   "type": "scene",
+   "scene": "$scene:two-sides",
+   "key": "two-sides",
+   "label": "05 兩側",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "s02-two-sides",
+   "file": "compositions/s02-two-sides.html",
+   "start": 4.5,
+   "end": 8.5,
+   "planEnd": 8.5,
+   "rough0": [
+    4.5,
+    8.5
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "cards": [
+      {
+       "text": "YouTube",
+       "text_text": "YouTube",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m10 15 5-3-5-3z\" /> </svg>",
+       "at": 0.2
+      },
+      {
+       "text": "Podcast",
+       "text_text": "Podcast",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M16.85 18.58a9 9 0 1 0-9.7 0\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M8 14a5 5 0 1 1 8 0\" /> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"11\" r=\"1\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M13 17a1 1 0 1 0-2 0l.5 4.5a.5.5 0 1 0 1 0Z\" /> </svg>",
+       "at": 0.55
+      },
+      {
+       "text": "線上課程",
+       "text_text": "線上課程",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M22 10v6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\" /> </svg>",
+       "at": 0.9
+      },
+      {
+       "text": "訪談節目",
+       "text_text": "訪談節目",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" /> </svg>",
+       "at": 1.25
+      }
+     ]
+    },
+    "beats": {},
+    "listTimes": {
+     "cards": [
+      0.2,
+      0.55,
+      0.9,
+      1.25
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 2,
+   "id": "s03",
+   "seg": {
+    "id": "s03",
+    "scene": "key-point",
+    "from": 8.5,
+    "to": "#9e",
+    "anchor": "並且跟我一樣",
+    "slots": {
+     "lead": "固定機位錄影",
+     "key": "強烈建議儲存這支影片",
+     "icon": "smartphone"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s03 的 lead「固定機位錄影」在 0:08.50 出現，「機位錄影」0:10.54（#7）才講到 → from 寫 \"#7@機位錄影\"",
+    "文字對時：s03 的 key「強烈建議儲存這支影片」在 0:08.65 出現，「儲存這支」0:13.18（#8）才講到 → beats.keyAt 寫 \"#8@儲存這支\""
+   ],
+   "warnings": [],
+   "where": "[s03 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s03-key-point",
+   "file": "compositions/s03-key-point.html",
+   "start": 8.5,
+   "end": 15.28,
+   "planEnd": 14.88,
+   "rough0": [
+    8.5,
+    14.88
+   ],
+   "handoff": "s04",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.78,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+     "lead": "固定機位錄影",
+     "lead_len": 6,
+     "lead_lines": [
+      6
+     ],
+     "key": "強烈建議儲存這支影片",
+     "key_len": 10,
+     "key_lines": [
+      10
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 3,
+   "id": "s04",
+   "seg": {
+    "id": "s04",
+    "scene": "concept",
+    "from": "#10",
+    "to": "#11e",
+    "anchor": "分享一個節省",
+    "slots": {
+     "tag": "工具",
+     "icon": "wrench",
+     "text": "**免費工具**省下超多時間"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s04 的 text「免費工具省下超多時間」在 0:14.88 出現，「免費工具」0:16.96（#10）才講到 → beats.in 寫 \"#10@免費工具\""
+   ],
+   "warnings": [],
+   "where": "[s04 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s04-concept",
+   "file": "compositions/s04-concept.html",
+   "start": 14.88,
+   "end": 19.695,
+   "planEnd": 19.295,
+   "rough0": [
+    14.88,
+    19.295
+   ],
+   "handoff": "s05",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.815,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "工具",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" /> </svg>",
+     "text": "<span class=\"sc-kw\">免費工具</span>省下超多時間",
+     "text_text": "免費工具省下超多時間",
+     "text_len": 10,
+     "text_lines": [
+      10
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 4,
+   "id": "s05",
+   "seg": {
+    "id": "s05",
+    "scene": "concept",
+    "from": "#12",
+    "to": "#14e",
+    "anchor": "我都要先試錄",
+    "slots": {
+     "tag": "拍前",
+     "icon": "video",
+     "text": "開拍前先**試錄**一小段"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s05 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s05-concept",
+   "file": "compositions/s05-concept.html",
+   "start": 19.295,
+   "end": 24.312,
+   "planEnd": 23.912,
+   "rough0": [
+    19.295,
+    23.912
+   ],
+   "handoff": "s06",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.017,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "拍前",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" /> </svg>",
+     "text": "開拍前先<span class=\"sc-kw\">試錄</span>一小段",
+     "text_text": "開拍前先試錄一小段",
+     "text_len": 9,
+     "text_lines": [
+      9
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 5,
+   "id": "s06",
+   "seg": {
+    "id": "s06",
+    "scene": "key-point",
+    "tone": "warn",
+    "from": "#15",
+    "to": "#16e",
+    "anchor": "而正式開拍後",
+    "slots": {
+     "lead": "每錄完一段",
+     "key": "跑到手機旁邊檢查",
+     "icon": "smartphone"
+    }
+   },
+   "errors": [
+    "文字對時：s06 的 key「跑到手機旁邊檢查」在 0:24.06 出現，「跑到手機」0:26.43（#16）才講到 → beats.keyAt 寫 \"#16@跑到手機\""
+   ],
+   "warnings": [
+    "文字對時：s06 的 lead「每錄完一段」在 0:23.91 出現，「每錄完一」0:24.80（#15）才講到 → from 寫 \"#15@每錄完一\""
+   ],
+   "where": "[s06 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s06-key-point",
+   "file": "compositions/s06-key-point.html",
+   "start": 23.912,
+   "end": 29.093,
+   "planEnd": 28.693,
+   "rough0": [
+    23.912,
+    28.693
+   ],
+   "handoff": "s07",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.181,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+     "lead": "每錄完一段",
+     "lead_len": 5,
+     "lead_lines": [
+      5
+     ],
+     "key": "跑到手機旁邊檢查",
+     "key_len": 8,
+     "key_lines": [
+      8
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": "warn",
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "sfx": {
+    "name": "alert",
+    "at": 24.077,
+    "volume": 0.569,
+    "event": 24.062
+   }
+  },
+  {
+   "idx": 6,
+   "id": "s07",
+   "seg": {
+    "id": "s07",
+    "scene": "key-point",
+    "tone": "warn",
+    "from": "#17",
+    "to": "#20e",
+    "anchor": "確認動作與聲音",
+    "slots": {
+     "lead": "手機畫面太小",
+     "key": "放到電腦才看得出",
+     "icon": "monitor"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s07 的 lead「手機畫面太小」在 0:28.69 出現，「手機畫面」0:32.15（#18）才講到 → from 寫 \"#18@手機畫面\"",
+    "文字對時：s07 的 key「放到電腦才看得出」在 0:28.84 出現，「到電腦」0:34.84（#20）才講到 → beats.keyAt 寫 \"#20@到電腦\""
+   ],
+   "warnings": [
+    "[s07 key-point] 和前一段（s06）用同一個模板 → 換一個模板或併成一段",
+    "[s07 key-point] 連續 5 段都是下方字卡（s03、s04、s05、s06、s07）→ 中間換一段情境動畫（style.md「情境動畫優先」）或別的版面"
+   ],
+   "where": "[s07 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s07-key-point",
+   "file": "compositions/s07-key-point.html",
+   "start": 28.693,
+   "end": 37.164,
+   "planEnd": 37.164,
+   "rough0": [
+    28.693,
+    37.164
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 8.471,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\" /> </svg>",
+     "lead": "手機畫面太小",
+     "lead_len": 6,
+     "lead_lines": [
+      6
+     ],
+     "key": "放到電腦才看得出",
+     "key_len": 8,
+     "key_lines": [
+      8
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": "warn",
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 7,
+   "id": "s08",
+   "seg": {
+    "id": "s08",
+    "scene": "keywords",
+    "from": "#21",
+    "to": "#22e",
+    "anchor": "像腳架不穩",
+    "slots": {
+     "items": [
+      {
+       "text": "腳架不穩",
+       "icon": "triangle-alert"
+      },
+      {
+       "text": "衣服太薄",
+       "icon": "shirt",
+       "at": "#22"
+      }
+     ]
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s08 keywords]",
+   "type": "scene",
+   "scene": "$scene:keywords",
+   "key": "keywords",
+   "label": "12 關鍵詞條列",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "s08-keywords",
+   "file": "compositions/s08-keywords.html",
+   "start": 37.164,
+   "end": 43.53,
+   "planEnd": 43.03,
+   "rough0": [
+    37.164,
+    43.03
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": false,
+   "notes": [],
+   "coveredBy": "s09",
+   "D": 6.366,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "cover",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "items": [
+      {
+       "text": "腳架不穩",
+       "text_text": "腳架不穩",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 9v4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 17h.01\" /> </svg>",
+       "at": 0.2
+      },
+      {
+       "text": "衣服太薄",
+       "text_text": "衣服太薄",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z\" /> </svg>",
+       "at": 3.096
+      }
+     ],
+     "itemsHasIcon": true
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.2,
+      3.096
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 8,
+   "id": "s09",
+   "seg": {
+    "id": "s09",
+    "type": "custom",
+    "src": "compositions/x-past-flow.html",
+    "layout": "fullscreen",
+    "from": "#23",
+    "to": "#27e",
+    "anchor": "而我過去的拍片流程",
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s09 custom]",
+   "type": "custom",
+   "key": "custom",
+   "label": "custom x-past-flow.html",
+   "compId": "x-past-flow",
+   "file": "compositions/x-past-flow.html",
+   "refList": [
+    "#24",
+    "#25",
+    "#27"
+   ],
+   "sfxBeats": [],
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 43.03,
+   "end": 52.557,
+   "planEnd": 52.557,
+   "rough0": [
+    43.03,
+    52.557
+   ],
+   "fadeIn": true,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s10b",
+   "D": 9.527,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "cut",
+   "pipPieces": [
+    {
+     "s": 43.03,
+     "e": 52.557,
+     "ms": 43.03,
+     "enter": "fly",
+     "exitDur": 0.4,
+     "exit": "fade"
+    }
+   ],
+   "cueRefs": {
+    "#24": 44.436,
+    "#25": 46.98,
+    "#27": 50.323
+   },
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 9,
+   "id": "s10b",
+   "seg": {
+    "id": "s10b",
+    "type": "fx",
+    "fx": 34,
+    "bg": "dark",
+    "from": "#28",
+    "to": "#29+0.3",
+    "anchor": "非常崩潰",
+    "vars": {
+     "text": "崩潰"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s10b fx 34]",
+   "type": "fx",
+   "fxDef": "$fx:34",
+   "key": "fx-34",
+   "label": "fx 34 故障切片",
+   "bg": "dark",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "vars": {
+    "text": "崩潰",
+    "bg": "dark",
+    "accent": "#F6630F"
+   },
+   "compId": "card-34-1",
+   "file": "compositions/fx-34-glitch-slices.html",
+   "start": 52.557,
+   "end": 55.65,
+   "planEnd": 55.65,
+   "rough0": [
+    52.557,
+    55.65
+   ],
+   "fadeIn": false,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 3.093,
+   "txIn": "cut",
+   "prev": "pip",
+   "txOut": "fade",
+   "pipPieces": [],
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 10,
+   "id": "s11",
+   "seg": {
+    "id": "s11",
+    "scene": "concept",
+    "from": "#29+0.3",
+    "to": "#30e",
+    "anchor": "需要用到多機拍攝",
+    "slots": {
+     "tag": "多機",
+     "icon": "video",
+     "text": "**多機**：橫拍長片、直拍短影音"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s11 的 text「多機：橫拍長片、直拍短影音」在 0:55.65 出現，「短影音」0:59.90（#30）才講到 → beats.in 寫 \"#30@短影音\""
+   ],
+   "warnings": [],
+   "where": "[s11 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s11-concept",
+   "file": "compositions/s11-concept.html",
+   "start": 55.65,
+   "end": 60.81,
+   "planEnd": 60.81,
+   "rough0": [
+    55.65,
+    60.81
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.16,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "band",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "多機",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" /> </svg>",
+     "text": "<span class=\"sc-kw\">多機</span>：橫拍長片、直拍短影音",
+     "text_text": "多機：橫拍長片、直拍短影音",
+     "text_len": 13,
+     "text_lines": [
+      13
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 11,
+   "id": "s12",
+   "seg": {
+    "id": "s12",
+    "scene": "keywords",
+    "from": "#31",
+    "to": "#32e",
+    "anchor": "所以一支橫著錄",
+    "slots": {
+     "items": [
+      {
+       "text": "橫拍長片",
+       "icon": "smartphone"
+      },
+      {
+       "text": "直拍短片",
+       "icon": "smartphone",
+       "at": "#32"
+      }
+     ]
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s12 keywords]",
+   "type": "scene",
+   "scene": "$scene:keywords",
+   "key": "keywords",
+   "label": "12 關鍵詞條列",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "s12-keywords",
+   "file": "compositions/s12-keywords.html",
+   "start": 60.81,
+   "end": 64.911,
+   "planEnd": 64.911,
+   "rough0": [
+    60.81,
+    64.911
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.101,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "items": [
+      {
+       "text": "橫拍長片",
+       "text_text": "橫拍長片",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+       "at": 0.2
+      },
+      {
+       "text": "直拍短片",
+       "text_text": "直拍短片",
+       "text_len": 4,
+       "text_lines": [
+        4
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+       "at": 2.1
+      }
+     ],
+     "itemsHasIcon": true
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.2,
+      2.1
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 12,
+   "id": "s13",
+   "seg": {
+    "id": "s13",
+    "scene": "concept",
+    "from": "#33",
+    "to": "#35e",
+    "anchor": "或者錄訪談節目時",
+    "slots": {
+     "tag": "訪談",
+     "icon": "mic",
+     "text": "**主持人、來賓**各用一支手機"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s13 的 text「主持人、來賓各用一支手機」在 1:04.91 出現，「各用一支」1:08.16（#34）才講到 → beats.in 寫 \"#34@各用一支\""
+   ],
+   "warnings": [],
+   "where": "[s13 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s13-concept",
+   "file": "compositions/s13-concept.html",
+   "start": 64.911,
+   "end": 72.543,
+   "planEnd": 72.143,
+   "rough0": [
+    64.911,
+    72.143
+   ],
+   "handoff": "s14",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 7.632,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "訪談",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" /> </svg>",
+     "text": "<span class=\"sc-kw\">主持人、來賓</span>各用一支手機",
+     "text_text": "主持人、來賓各用一支手機",
+     "text_len": 12,
+     "text_lines": [
+      12
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 13,
+   "id": "s14",
+   "seg": {
+    "id": "s14",
+    "scene": "concept",
+    "from": "#36",
+    "to": "#37e",
+    "anchor": "但我們馬上就會遇到",
+    "slots": {
+     "tag": "單機",
+     "icon": "smartphone",
+     "text": "單機：用**手勢**控制開始與結束"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s14 的 text「單機：用手勢控制開始與結束」在 1:12.14 出現，「控制開始」1:17.04（#38）才講到 → beats.in 寫 \"#38@控制開始\""
+   ],
+   "warnings": [
+    "[s14 concept] 和前一段（s13）用同一個模板 → 換一個模板或併成一段"
+   ],
+   "where": "[s14 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s14-concept",
+   "file": "compositions/s14-concept.html",
+   "start": 72.143,
+   "end": 77.72,
+   "planEnd": 77.22,
+   "rough0": [
+    72.143,
+    77.22
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": false,
+   "notes": [],
+   "coveredBy": "s15",
+   "D": 5.577,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "cover",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "單機",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+     "text": "單機：用<span class=\"sc-kw\">手勢</span>控制開始與結束",
+     "text_text": "單機：用手勢控制開始與結束",
+     "text_len": 13,
+     "text_lines": [
+      13
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 14,
+   "id": "s15",
+   "seg": {
+    "id": "s15",
+    "type": "custom",
+    "src": "compositions/x-multi-problems.html",
+    "layout": "fullscreen",
+    "from": "#38",
+    "to": "#44+0.8",
+    "anchor": "控制開始跟結束",
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s15 custom]",
+   "type": "custom",
+   "key": "custom",
+   "label": "custom x-multi-problems.html",
+   "compId": "x-multi-problems",
+   "file": "compositions/x-multi-problems.html",
+   "refList": [
+    "#40",
+    "#41",
+    "#42"
+   ],
+   "sfxBeats": [],
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 77.22,
+   "end": 90.166,
+   "planEnd": 90.166,
+   "rough0": [
+    77.22,
+    90.166
+   ],
+   "fadeIn": true,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 12.946,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "retract",
+   "pipPieces": [
+    {
+     "s": 77.22,
+     "e": 90.166,
+     "ms": 77.22,
+     "enter": "fly",
+     "exitDur": 0,
+     "exit": "layer"
+    }
+   ],
+   "cueRefs": {
+    "#40": 81.02,
+    "#41": 84.4,
+    "#42": 87.08
+   },
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 15,
+   "id": "s16",
+   "seg": {
+    "id": "s16",
+    "scene": "concept",
+    "from": "#44+0.8",
+    "to": "#45e",
+    "anchor": "驗收成果的時候也一樣",
+    "slots": {
+     "tag": "驗收",
+     "icon": "footprints",
+     "text": "驗收要在兩支手機間**走來走去**"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s16 的 text「驗收要在兩支手機間走來走去」在 1:30.17 出現，「手機間走」1:32.09（#45）才講到 → beats.in 寫 \"#45@手機間走\""
+   ],
+   "warnings": [],
+   "where": "[s16 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s16-concept",
+   "file": "compositions/s16-concept.html",
+   "start": 90.166,
+   "end": 95.93,
+   "planEnd": 95.53,
+   "rough0": [
+    90.166,
+    95.53
+   ],
+   "handoff": "s17",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.764,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "驗收",
+     "tag_len": 2,
+     "tag_lines": [
+      2
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M16 17h4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M4 13h4\" /> </svg>",
+     "text": "驗收要在兩支手機間<span class=\"sc-kw\">走來走去</span>",
+     "text_text": "驗收要在兩支手機間走來走去",
+     "text_len": 13,
+     "text_lines": [
+      13
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 16,
+   "id": "s17",
+   "seg": {
+    "id": "s17",
+    "scene": "key-point",
+    "tone": "warn",
+    "from": "#46",
+    "to": "#48",
+    "anchor": "當要拍攝的段落很多時",
+    "slots": {
+     "lead": "拍攝段落很多時",
+     "key": "走動耗體力",
+     "icon": "activity"
+    }
+   },
+   "errors": [
+    "文字對時：s17 的 key「走動耗體力」在 1:35.68 出現，「耗體力」1:39.25（#47）才講到 → beats.keyAt 寫 \"#47@耗體力\""
+   ],
+   "warnings": [
+    "文字對時：s17 的 lead「拍攝段落很多時」在 1:35.53 出現，「段落很多」1:36.27（#46）才講到 → from 寫 \"#46@段落很多\""
+   ],
+   "where": "[s17 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s17-key-point",
+   "file": "compositions/s17-key-point.html",
+   "start": 95.53,
+   "end": 100.43,
+   "planEnd": 100.03,
+   "rough0": [
+    95.53,
+    100.03
+   ],
+   "handoff": "s18",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.9,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2\" /> </svg>",
+     "lead": "拍攝段落很多時",
+     "lead_len": 7,
+     "lead_lines": [
+      7
+     ],
+     "key": "走動耗體力",
+     "key_len": 5,
+     "key_lines": [
+      5
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": "warn",
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "sfx": {
+    "name": "alert",
+    "at": 95.695,
+    "volume": 0.569,
+    "event": 95.68,
+    "src": "alert-2",
+    "srcAt": 95.694,
+    "srcVolume": 0.569
+   }
+  },
+  {
+   "idx": 17,
+   "id": "s18",
+   "seg": {
+    "id": "s18",
+    "scene": "concept",
+    "from": "#48",
+    "to": "#51e",
+    "anchor": "為了解決以上問題",
+    "slots": {
+     "tag": "找工具",
+     "icon": "search",
+     "text": "試過**多機錄影工具**都不順手"
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s18 的 text「試過多機錄影工具都不順手」在 1:40.03 出現，「多機錄影」1:44.98（#50）才講到 → beats.in 寫 \"#50@多機錄影\""
+   ],
+   "warnings": [],
+   "where": "[s18 concept]",
+   "type": "scene",
+   "scene": "$scene:concept",
+   "key": "concept",
+   "label": "06 一般字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s18-concept",
+   "file": "compositions/s18-concept.html",
+   "start": 100.03,
+   "end": 108.92,
+   "planEnd": 108.52,
+   "rough0": [
+    100.03,
+    108.52
+   ],
+   "handoff": "s19",
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 8.89,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "handoff",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "tag": "找工具",
+     "tag_len": 3,
+     "tag_lines": [
+      3
+     ],
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"11\" cy=\"11\" r=\"8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m21 21-4.3-4.3\" /> </svg>",
+     "text": "試過<span class=\"sc-kw\">多機錄影工具</span>都不順手",
+     "text_text": "試過多機錄影工具都不順手",
+     "text_len": 12,
+     "text_lines": [
+      12
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": []
+  },
+  {
+   "idx": 18,
+   "id": "s19",
+   "seg": {
+    "id": "s19",
+    "scene": "key-point",
+    "tone": "good",
+    "from": "#52",
+    "to": "#53e",
+    "anchor": "我乾脆根據自己",
+    "slots": {
+     "lead": "自己的工作流",
+     "key": "自己設計一套工具",
+     "icon": "lightbulb"
+    }
+   },
+   "errors": [
+    "文字對時：s19 的 lead「自己的工作流」在 1:48.52 出現，「的工作流」1:50.16（#53）才講到 → from 寫 \"#53@的工作流\""
+   ],
+   "warnings": [],
+   "where": "[s19 key-point]",
+   "type": "scene",
+   "scene": "$scene:key-point",
+   "key": "key-point",
+   "label": "07 重點字卡",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": true,
+   "z": 20,
+   "compId": "s19-key-point",
+   "file": "compositions/s19-key-point.html",
+   "start": 108.52,
+   "end": 112.613,
+   "planEnd": 112.113,
+   "rough0": [
+    108.52,
+    112.113
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": false,
+   "notes": [],
+   "coveredBy": "s20",
+   "D": 4.093,
+   "txIn": "band",
+   "prev": "speaker",
+   "txOut": "cover",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 18h6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 22h4\" /> </svg>",
+     "lead": "自己的工作流",
+     "lead_len": 6,
+     "lead_lines": [
+      6
+     ],
+     "key": "自己設計一套工具",
+     "key_len": 8,
+     "key_lines": [
+      8
+     ]
+    },
+    "beats": {
+     "in": 0,
+     "keyAt": 0.15
+    },
+    "listTimes": {},
+    "tone": "good",
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "sfx": {
+    "name": "success",
+    "at": 108.566,
+    "volume": 0.692,
+    "event": 108.67
+   }
+  },
+  {
+   "idx": 19,
+   "id": "s20",
+   "seg": {
+    "id": "s20",
+    "type": "custom",
+    "src": "compositions/x-tool-flow.html",
+    "layout": "fullscreen",
+    "from": "#54",
+    "to": "#57e",
+    "anchor": "現在當手機掃碼",
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[s20 custom]",
+   "type": "custom",
+   "key": "custom",
+   "label": "custom x-tool-flow.html",
+   "compId": "x-tool-flow",
+   "file": "compositions/x-tool-flow.html",
+   "refList": [
+    "#54",
+    "#55",
+    "#56"
+   ],
+   "sfxBeats": [],
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "start": 112.113,
+   "end": 120.436,
+   "planEnd": 120.436,
+   "rough0": [
+    112.113,
+    120.436
+   ],
+   "fadeIn": true,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s21",
+   "D": 8.323,
+   "txIn": "wipe",
+   "prev": "speaker",
+   "txOut": "swap",
+   "pipPieces": [
+    {
+     "s": 112.113,
+     "e": 120.436,
+     "ms": 112.113,
+     "enter": "fly",
+     "exitDur": 0,
+     "exit": "none"
+    }
+   ],
+   "cueRefs": {
+    "#54": 112.113,
+    "#55": 114.571,
+    "#56": 116.22
+   },
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 20,
+   "id": "s21",
+   "seg": {
+    "id": "s21",
+    "scene": "fs-list",
+    "from": "#58",
+    "to": "#61e",
+    "anchor": "多支手機就能同步",
+    "slots": {
+     "title": "同步錄影與回傳",
+     "items": [
+      {
+       "text": "按下開始，多機同步錄影",
+       "icon": "circle-play"
+      },
+      {
+       "text": "按下結束，影片回傳電腦",
+       "icon": "hard-drive-download",
+       "at": "#60"
+      },
+      {
+       "text": "馬上播放檢查",
+       "icon": "monitor-play",
+       "at": "#61"
+      }
+     ]
+    },
+    "sfx": null
+   },
+   "errors": [
+    "文字對時：s21 的 items[0]「按下開始，多機同步錄影」在 2:00.94 出現，「按下開始」1:59.35（#57）就講到了，晚了 1.59s → slots.items[0].at 寫 \"#57@按下開始\"",
+    "文字對時：s21 的 items[1]「按下結束，影片回傳電腦」在 2:05.04 出現，「按下結束」2:02.72（#59）就講到了，晚了 2.32s → slots.items[1].at 寫 \"#59@按下結束\""
+   ],
+   "warnings": [
+    "[s21 fs-list] 最後一個內容在第 6.739s，到退場只停 1.302s，建議 ≥ 1.5s（把 to 往後延）"
+   ],
+   "where": "[s21 fs-list]",
+   "type": "scene",
+   "scene": "$scene:fs-list",
+   "key": "fs-list",
+   "label": "04a 全畫面清單",
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "compId": "s21-fs-list",
+   "file": "compositions/s21-fs-list.html",
+   "start": 120.436,
+   "end": 128.777,
+   "planEnd": 128.777,
+   "rough0": [
+    120.436,
+    128.777
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s22",
+   "D": 8.341,
+   "txIn": "swap",
+   "prev": "fullscreen",
+   "txOut": "cut",
+   "pipPieces": [
+    {
+     "s": 120.436,
+     "e": 128.777,
+     "ms": 120.436,
+     "enter": "none",
+     "exitDur": 0.4,
+     "exit": "fade"
+    }
+   ],
+   "resolved": {
+    "ctx": {
+     "title": "同步錄影與回傳",
+     "title_len": 7,
+     "title_lines": [
+      7
+     ],
+     "items": [
+      {
+       "text": "按下開始，多機同步錄影",
+       "text_text": "按下開始，多機同步錄影",
+       "text_len": 11,
+       "text_lines": [
+        11
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"10\" /> <polygon class=\"stroke-draw\" pathLength=\"1\" points=\"10 8 16 12 10 16 10 8\" /> </svg>",
+       "at": 0.5
+      },
+      {
+       "text": "按下結束，影片回傳電腦",
+       "text_text": "按下結束，影片回傳電腦",
+       "text_len": 11,
+       "text_lines": [
+        11
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2v8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 6-4 4-4-4\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M6 18h.01\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 18h.01\" /> </svg>",
+       "at": 4.604
+      },
+      {
+       "text": "馬上播放檢查",
+       "text_text": "馬上播放檢查",
+       "text_len": 6,
+       "text_lines": [
+        6
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.64z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 17v4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M8 21h8\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"3\" width=\"20\" height=\"14\" rx=\"2\" /> </svg>",
+       "at": 6.739
+      }
+     ],
+     "itemsHasIcon": true
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.5,
+      4.604,
+      6.739
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": [
+     "[s21 fs-list] 最後一個內容在第 6.739s，到退場只停 1.302s，建議 ≥ 1.5s（把 to 往後延）"
+    ]
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 21,
+   "id": "s22",
+   "seg": {
+    "id": "s22",
+    "type": "fx",
+    "fx": 4,
+    "bg": "dark",
+    "from": "#62",
+    "to": "#63e",
+    "anchor": "而這個工具",
+    "sfx": null,
+    "vars": {
+     "text": "1 小時"
+    }
+   },
+   "errors": [
+    "文字對時：s22 的 fx vars.text「1 小時」在 2:08.78 出現，「一個小時」2:12.87（#64）才講到 → from 寫 \"#64@一個小時\""
+   ],
+   "warnings": [],
+   "where": "[s22 fx 4]",
+   "type": "fx",
+   "fxDef": "$fx:04",
+   "key": "fx-04",
+   "label": "fx 04 衝刺縮放",
+   "bg": "dark",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "vars": {
+    "text": "1 小時",
+    "bg": "dark",
+    "accent": "#F6630F"
+   },
+   "compId": "card-04-1",
+   "file": "compositions/fx-04-punch-zoom.html",
+   "start": 128.777,
+   "end": 133.87,
+   "planEnd": 133.87,
+   "rough0": [
+    128.777,
+    133.87
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s23",
+   "D": 5.093,
+   "txIn": "cut",
+   "prev": "pip",
+   "txOut": "cut",
+   "pipPieces": [],
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 22,
+   "id": "s23",
+   "seg": {
+    "id": "s23",
+    "scene": "fs-list",
+    "from": "#64",
+    "to": "#71e",
+    "anchor": "這集影片我會分成",
+    "slots": {
+     "title": "本集三個部分",
+     "items": [
+      {
+       "text": "實際操作這個工具",
+       "icon": "wrench"
+      },
+      {
+       "text": "安裝工具與網路設定",
+       "icon": "settings",
+       "at": "#68"
+      },
+      {
+       "text": "AI Coding 做出原型",
+       "icon": "bot",
+       "at": "#70"
+      }
+     ]
+    }
+   },
+   "errors": [
+    "文字對時：s23 的 items[0]「實際操作這個工具」在 2:14.37 出現，「實際操作」2:16.60（#65）才講到 → slots.items[0].at 寫 \"#65@實際操作\""
+   ],
+   "warnings": [
+    "文字對時：s23 的 title「本集三個部分」在 2:13.87 出現，「三個部分」2:15.19（#64）才講到 → from 寫 \"#64@三個部分\"",
+    "文字對時：s23 的 items[1]「安裝工具與網路設定」在 2:22.23 出現，「安裝工具」2:23.37（#68）才講到 → slots.items[1].at 寫 \"#68@安裝工具\"",
+    "文字對時：s23 的 items[2]「AI Coding 做出原型」在 2:26.24 出現，「AI Coding」2:27.20（#71）才講到 → slots.items[2].at 寫 \"#71@AI Coding\""
+   ],
+   "where": "[s23 fs-list]",
+   "type": "scene",
+   "scene": "$scene:fs-list",
+   "key": "fs-list",
+   "label": "04a 全畫面清單",
+   "opaque": true,
+   "pip": true,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "compId": "s23-fs-list",
+   "file": "compositions/s23-fs-list.html",
+   "start": 133.87,
+   "end": 150.32,
+   "planEnd": 150.32,
+   "rough0": [
+    133.87,
+    150.32
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "seamTo": "s24",
+   "D": 16.45,
+   "txIn": "cut",
+   "prev": "pip",
+   "txOut": "cut",
+   "pipPieces": [
+    {
+     "s": 133.87,
+     "e": 150.32,
+     "ms": 133.87,
+     "enter": "fade",
+     "exitDur": 0.4,
+     "exit": "fade"
+    }
+   ],
+   "resolved": {
+    "ctx": {
+     "title": "本集三個部分",
+     "title_len": 6,
+     "title_lines": [
+      6
+     ],
+     "items": [
+      {
+       "text": "實際操作這個工具",
+       "text_text": "實際操作這個工具",
+       "text_len": 8,
+       "text_lines": [
+        8
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" /> </svg>",
+       "at": 0.5
+      },
+      {
+       "text": "安裝工具與網路設定",
+       "text_text": "安裝工具與網路設定",
+       "text_len": 9,
+       "text_lines": [
+        9
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"3\" /> </svg>",
+       "at": 8.36
+      },
+      {
+       "text": "AI Coding 做出原型",
+       "text_text": "AI Coding 做出原型",
+       "text_len": 9,
+       "text_lines": [
+        9
+       ],
+       "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 8V4H8\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M2 14h2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20 14h2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 13v2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 13v2\" /> </svg>",
+       "at": 12.37
+      }
+     ],
+     "itemsHasIcon": true
+    },
+    "beats": {},
+    "listTimes": {
+     "items": [
+      0.5,
+      8.36,
+      12.37
+     ]
+    },
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 23,
+   "id": "s24",
+   "seg": {
+    "id": "s24",
+    "type": "fx",
+    "fx": 27,
+    "bg": "dark",
+    "from": "#72",
+    "to": "#72e",
+    "anchor": "以及在實際應用中",
+    "vars": {
+     "text": "用 AI Coding 一小時做出原型",
+     "alt": "AI Coding"
+    }
+   },
+   "errors": [
+    "文字對時：s24 的 fx vars.text「用 AI Coding 一小時做出原型」在 2:30.32 出現，「AI Coding」2:27.20（#71）就講到了，晚了 3.12s → from 寫 \"#71@AI Coding\""
+   ],
+   "warnings": [],
+   "where": "[s24 fx 27]",
+   "type": "fx",
+   "fxDef": "$fx:27",
+   "key": "fx-27",
+   "label": "fx 27 打字機",
+   "bg": "dark",
+   "opaque": true,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 30,
+   "vars": {
+    "text": "用 AI Coding 一小時做出原型",
+    "alt": "AI Coding",
+    "bg": "dark",
+    "accent": "#F6630F"
+   },
+   "compId": "card-27-1",
+   "file": "compositions/fx-27-typewriter.html",
+   "start": 150.32,
+   "end": 153.44,
+   "planEnd": 153.44,
+   "rough0": [
+    150.32,
+    153.44
+   ],
+   "fadeIn": false,
+   "fadeOut": true,
+   "exitFade": true,
+   "notes": [],
+   "D": 3.12,
+   "txIn": "cut",
+   "prev": "pip",
+   "txOut": "fade",
+   "pipPieces": [],
+   "sfxExtra": [],
+   "badgeBox": null
+  },
+  {
+   "idx": 24,
+   "id": "c01",
+   "seg": {
+    "id": "c01",
+    "scene": "chapter-tag",
+    "from": "#11",
+    "to": "#13e",
+    "anchor": "過去正式開拍前",
+    "slots": {
+     "num": "01",
+     "name": "錄完要檢查"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[c01 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "c01-chapter-tag",
+   "file": "compositions/c01-chapter-tag.html",
+   "start": 17.882,
+   "end": 22.65,
+   "planEnd": 22.65,
+   "rough0": [
+    17.882,
+    22.65
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 4.768,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "01",
+     "name": "錄完要檢查",
+     "name_len": 5,
+     "name_lines": [
+      5
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 25,
+   "id": "c02",
+   "seg": {
+    "id": "c02",
+    "scene": "chapter-tag",
+    "from": "#29+0.3",
+    "to": "#30e",
+    "anchor": "需要用到多機拍攝",
+    "slots": {
+     "num": "02",
+     "name": "多機難同步"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[c02 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "c02-chapter-tag",
+   "file": "compositions/c02-chapter-tag.html",
+   "start": 55.65,
+   "end": 60.81,
+   "planEnd": 60.81,
+   "rough0": [
+    55.65,
+    60.81
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 5.16,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "02",
+     "name": "多機難同步",
+     "name_len": 5,
+     "name_lines": [
+      5
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 26,
+   "id": "c03",
+   "seg": {
+    "id": "c03",
+    "scene": "chapter-tag",
+    "from": "#48",
+    "to": "#50e",
+    "anchor": "為了解決以上問題",
+    "slots": {
+     "num": "03",
+     "name": "自製錄影工具"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [],
+   "where": "[c03 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "c03-chapter-tag",
+   "file": "compositions/c03-chapter-tag.html",
+   "start": 100.03,
+   "end": 106.76,
+   "planEnd": 106.76,
+   "rough0": [
+    100.03,
+    106.76
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.73,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "03",
+     "name": "自製錄影工具",
+     "name_len": 6,
+     "name_lines": [
+      6
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "noHost": true
+  },
+  {
+   "idx": 27,
+   "id": "c04",
+   "seg": {
+    "id": "c04",
+    "scene": "chapter-tag",
+    "from": "#64",
+    "to": "#66e",
+    "anchor": "這集影片我會分成",
+    "slots": {
+     "num": "04",
+     "name": "本集大綱"
+    },
+    "sfx": null
+   },
+   "errors": [],
+   "warnings": [
+    "[c04 chapter-tag] 02 章節角標整段（2:13.87–2:20.17）被 s23 蓋住，畫面看不到，只當章節起點用 → 要看到角標就把它的 from 移到疊加段，或刪掉這段只留 chapterBadge"
+   ],
+   "where": "[c04 chapter-tag]",
+   "type": "scene",
+   "scene": "$scene:chapter-tag",
+   "key": "chapter-tag",
+   "label": "02 章節角標",
+   "opaque": false,
+   "pip": false,
+   "side": false,
+   "lower": false,
+   "z": 20,
+   "compId": "c04-chapter-tag",
+   "file": "compositions/c04-chapter-tag.html",
+   "start": 133.87,
+   "end": 140.17,
+   "planEnd": 140.17,
+   "rough0": [
+    133.87,
+    140.17
+   ],
+   "fadeIn": false,
+   "fadeOut": false,
+   "exitFade": true,
+   "notes": [],
+   "D": 6.3,
+   "txIn": "overlay",
+   "prev": "speaker",
+   "txOut": "overlay",
+   "pipPieces": [],
+   "resolved": {
+    "ctx": {
+     "num": "04",
+     "name": "本集大綱",
+     "name_len": 4,
+     "name_lines": [
+      4
+     ]
+    },
+    "beats": {
+     "in": 0
+    },
+    "listTimes": {},
+    "tone": null,
+    "errors": [],
+    "warnings": []
+   },
+   "chapter": null,
+   "sfxExtra": [],
+   "noHost": true
+  }
+ ],
+ "errors": [
+  "文字對時：s02 的 cards[3]「訪談節目」在 0:05.75 出現，「訪談節目」0:07.50（#5）才講到 → slots.cards[3].at 寫 \"#5@訪談節目\"",
+  "文字對時：s03 的 lead「固定機位錄影」在 0:08.50 出現，「機位錄影」0:10.54（#7）才講到 → from 寫 \"#7@機位錄影\"",
+  "文字對時：s03 的 key「強烈建議儲存這支影片」在 0:08.65 出現，「儲存這支」0:13.18（#8）才講到 → beats.keyAt 寫 \"#8@儲存這支\"",
+  "文字對時：s04 的 text「免費工具省下超多時間」在 0:14.88 出現，「免費工具」0:16.96（#10）才講到 → beats.in 寫 \"#10@免費工具\"",
+  "文字對時：s06 的 key「跑到手機旁邊檢查」在 0:24.06 出現，「跑到手機」0:26.43（#16）才講到 → beats.keyAt 寫 \"#16@跑到手機\"",
+  "文字對時：s07 的 lead「手機畫面太小」在 0:28.69 出現，「手機畫面」0:32.15（#18）才講到 → from 寫 \"#18@手機畫面\"",
+  "文字對時：s07 的 key「放到電腦才看得出」在 0:28.84 出現，「到電腦」0:34.84（#20）才講到 → beats.keyAt 寫 \"#20@到電腦\"",
+  "文字對時：s11 的 text「多機：橫拍長片、直拍短影音」在 0:55.65 出現，「短影音」0:59.90（#30）才講到 → beats.in 寫 \"#30@短影音\"",
+  "文字對時：s13 的 text「主持人、來賓各用一支手機」在 1:04.91 出現，「各用一支」1:08.16（#34）才講到 → beats.in 寫 \"#34@各用一支\"",
+  "文字對時：s14 的 text「單機：用手勢控制開始與結束」在 1:12.14 出現，「控制開始」1:17.04（#38）才講到 → beats.in 寫 \"#38@控制開始\"",
+  "文字對時：s16 的 text「驗收要在兩支手機間走來走去」在 1:30.17 出現，「手機間走」1:32.09（#45）才講到 → beats.in 寫 \"#45@手機間走\"",
+  "文字對時：s17 的 key「走動耗體力」在 1:35.68 出現，「耗體力」1:39.25（#47）才講到 → beats.keyAt 寫 \"#47@耗體力\"",
+  "文字對時：s18 的 text「試過多機錄影工具都不順手」在 1:40.03 出現，「多機錄影」1:44.98（#50）才講到 → beats.in 寫 \"#50@多機錄影\"",
+  "文字對時：s19 的 lead「自己的工作流」在 1:48.52 出現，「的工作流」1:50.16（#53）才講到 → from 寫 \"#53@的工作流\"",
+  "文字對時：s21 的 items[0]「按下開始，多機同步錄影」在 2:00.94 出現，「按下開始」1:59.35（#57）就講到了，晚了 1.59s → slots.items[0].at 寫 \"#57@按下開始\"",
+  "文字對時：s21 的 items[1]「按下結束，影片回傳電腦」在 2:05.04 出現，「按下結束」2:02.72（#59）就講到了，晚了 2.32s → slots.items[1].at 寫 \"#59@按下結束\"",
+  "文字對時：s22 的 fx vars.text「1 小時」在 2:08.78 出現，「一個小時」2:12.87（#64）才講到 → from 寫 \"#64@一個小時\"",
+  "文字對時：s23 的 items[0]「實際操作這個工具」在 2:14.37 出現，「實際操作」2:16.60（#65）才講到 → slots.items[0].at 寫 \"#65@實際操作\"",
+  "文字對時：s24 的 fx vars.text「用 AI Coding 一小時做出原型」在 2:30.32 出現，「AI Coding」2:27.20（#71）就講到了，晚了 3.12s → from 寫 \"#71@AI Coding\""
+ ],
+ "warnings": [
+  "音效稀疏：0:24.08–1:35.69（72 秒：s09、s15）沒有主音效 → 在這段裡找踩坑句配 alert、結果句配 success（落在句尾前 0.1–0.2 秒）；情境動畫在那一拍寫 P.sfx('success', '#N@詞')；錄影段寫 \"sfx\": { \"name\": \"success\", \"at\": \"#Ne-0.1\" }",
+  "版面節奏：子母畫面只連續 12.6 秒（s09、s10b，0:43–0:55），至少要 45 秒：切進去馬上又切回講者，畫面會晃 → 把前後相鄰的段也換成全畫面的模板（或併成一段），讓子母畫面連續 ≥ 45 秒；湊不到就把這幾段改成疊在講者上的字卡",
+  "版面節奏：子母畫面只連續 12.9 秒（s15，1:17–1:30），至少要 45 秒：切進去馬上又切回講者，畫面會晃 → 把前後相鄰的段也換成全畫面的模板（或併成一段），讓子母畫面連續 ≥ 45 秒；湊不到就把這幾段改成疊在講者上的字卡",
+  "版面節奏：子母畫面只連續 38.2 秒（s20–s23，1:52–2:30），至少要 45 秒：切進去馬上又切回講者，畫面會晃 → 把前後相鄰的段也換成全畫面的模板（或併成一段），讓子母畫面連續 ≥ 45 秒；湊不到就把這幾段改成疊在講者上的字卡",
+  "版面節奏：子母畫面只連續 3.1 秒（s24，2:30–2:33），至少要 45 秒：切進去馬上又切回講者，畫面會晃 → 把前後相鄰的段也換成全畫面的模板（或併成一段），讓子母畫面連續 ≥ 45 秒；湊不到就把這幾段改成疊在講者上的字卡",
+  "文字對時：s02 的 cards[1]「Podcast」在 0:05.05 出現，「Podcast」0:05.74（#5）才講到 → slots.cards[1].at 寫 \"#5@Podcast\"",
+  "文字對時：s02 的 cards[2]「線上課程」在 0:05.40 出現，「線上課程」0:06.40（#5）才講到 → slots.cards[2].at 寫 \"#5@線上課程\"",
+  "文字對時：s06 的 lead「每錄完一段」在 0:23.91 出現，「每錄完一」0:24.80（#15）才講到 → from 寫 \"#15@每錄完一\"",
+  "[s07 key-point] 和前一段（s06）用同一個模板 → 換一個模板或併成一段",
+  "[s07 key-point] 連續 5 段都是下方字卡（s03、s04、s05、s06、s07）→ 中間換一段情境動畫（style.md「情境動畫優先」）或別的版面",
+  "[s14 concept] 和前一段（s13）用同一個模板 → 換一個模板或併成一段",
+  "文字對時：s17 的 lead「拍攝段落很多時」在 1:35.53 出現，「段落很多」1:36.27（#46）才講到 → from 寫 \"#46@段落很多\"",
+  "[s21 fs-list] 最後一個內容在第 6.739s，到退場只停 1.302s，建議 ≥ 1.5s（把 to 往後延）",
+  "文字對時：s23 的 title「本集三個部分」在 2:13.87 出現，「三個部分」2:15.19（#64）才講到 → from 寫 \"#64@三個部分\"",
+  "文字對時：s23 的 items[1]「安裝工具與網路設定」在 2:22.23 出現，「安裝工具」2:23.37（#68）才講到 → slots.items[1].at 寫 \"#68@安裝工具\"",
+  "文字對時：s23 的 items[2]「AI Coding 做出原型」在 2:26.24 出現，「AI Coding」2:27.20（#71）才講到 → slots.items[2].at 寫 \"#71@AI Coding\"",
+  "[c04 chapter-tag] 02 章節角標整段（2:13.87–2:20.17）被 s23 蓋住，畫面看不到，只當章節起點用 → 要看到角標就把它的 from 移到疊加段，或刪掉這段只留 chapterBadge"
+ ],
+ "globals": {
+  "speakerBox": [
+   740,
+   245,
+   1270,
+   910
+  ],
+  "sideShift": 432,
+  "pipCrop": "auto",
+  "pip": {
+   "crop": {
+    "x": 495.16666666666674,
+    "y": 195.12500000000006,
+    "w": 1019.6666666666665,
+    "h": 764.7499999999999
+   },
+   "style": {
+    "left": -210,
+    "top": -83,
+    "width": 813,
+    "height": 458
+   }
+  },
+  "speakerSide": "center",
+  "panelSide": "left",
+  "cardSide": "left",
+  "sideLine": "講者位置：中（中心 x 1005）→ 字卡靠左、半螢幕面板在左、講者右移 432"
+ },
+ "edit": {
+  "cuts": [],
+  "fadeIn": 0,
+  "fadeOut": 0,
+  "volume": {
+   "voice": 0,
+   "sfx": 0,
+   "media": 0
+  },
+  "gains": [],
+  "joins": []
+ },
+ "editActive": false,
+ "tm": {
+  "cuts": [],
+  "keep": [
+   [
+    0,
+    153.543
+   ]
+  ],
+  "outDur": 153.543,
+  "identity": true,
+  "map": "$fn",
+  "joinsOut": [],
+  "unmapStart": "$fn",
+  "unmapEnd": "$fn"
+ },
+ "outDur": 153.543,
+ "roughDur": 153.543,
+ "cuesOut": {
+  "$array": [
+   {
+    "n": 1,
+    "start": 0.16,
+    "end": 0.51,
+    "text": "嗨!"
+   },
+   {
+    "n": 2,
+    "start": 0.51,
+    "end": 2.01,
+    "text": "大家好!"
+   },
+   {
+    "n": 3,
+    "start": 2.01,
+    "end": 4.36,
+    "text": "我是鼎淵，歡迎來到工程師下班有約。"
+   },
+   {
+    "n": 4,
+    "start": 4.36,
+    "end": 5.71,
+    "text": "如果你打算拍 YouTube、"
+   },
+   {
+    "n": 5,
+    "start": 5.71,
+    "end": 8.28,
+    "text": "Podcast、線上課程或訪談節目"
+   },
+   {
+    "n": 6,
+    "start": 8.28,
+    "end": 9.324,
+    "text": "並且跟我一樣使用手"
+   },
+   {
+    "n": 7,
+    "start": 9.324,
+    "end": 11.24,
+    "text": "機在固定的機位錄影，"
+   },
+   {
+    "n": 8,
+    "start": 11.24,
+    "end": 13.731,
+    "text": "我強烈建議你儲存這支影片，"
+   },
+   {
+    "n": 9,
+    "start": 13.731,
+    "end": 14.88,
+    "text": "因為接下來要"
+   },
+   {
+    "n": 10,
+    "start": 14.88,
+    "end": 17.882,
+    "text": "分享一個節省我超多時間的免費工具。"
+   },
+   {
+    "n": 11,
+    "start": 17.882,
+    "end": 19.295,
+    "text": "過去正式開拍前，"
+   },
+   {
+    "n": 12,
+    "start": 19.295,
+    "end": 21.061,
+    "text": "我都要先試錄一小段，"
+   },
+   {
+    "n": 13,
+    "start": 21.061,
+    "end": 22.65,
+    "text": "確認畫面、聲音符合"
+   },
+   {
+    "n": 14,
+    "start": 22.85,
+    "end": 23.912,
+    "text": "自己的需求。"
+   },
+   {
+    "n": 15,
+    "start": 23.912,
+    "end": 26.214,
+    "text": "而正式開拍後，每錄完一段，"
+   },
+   {
+    "n": 16,
+    "start": 26.214,
+    "end": 28.693,
+    "text": "我都要跑到手機旁邊播放影片，"
+   },
+   {
+    "n": 17,
+    "start": 28.693,
+    "end": 31.44,
+    "text": "以此確認動作與聲音足夠"
+   },
+   {
+    "n": 18,
+    "start": 31.44,
+    "end": 33.21,
+    "text": "流暢。但畢竟手機畫面較小，"
+   },
+   {
+    "n": 19,
+    "start": 33.21,
+    "end": 36.2,
+    "text": "很多小毛病是把影片放"
+   },
+   {
+    "n": 20,
+    "start": 36.2,
+    "end": 37.164,
+    "text": "到電腦上才會發現的，"
+   },
+   {
+    "n": 21,
+    "start": 37.164,
+    "end": 40.26,
+    "text": "像腳架不穩造成畫面輕微"
+   },
+   {
+    "n": 22,
+    "start": 40.26,
+    "end": 43.03,
+    "text": "晃動，或自己穿的衣服太薄有激凸問題。"
+   },
+   {
+    "n": 23,
+    "start": 43.03,
+    "end": 44.436,
+    "text": "而我過去的拍片流程，"
+   },
+   {
+    "n": 24,
+    "start": 44.436,
+    "end": 46.98,
+    "text": "是先把影片上傳到雲端備份，再下載到"
+   },
+   {
+    "n": 25,
+    "start": 46.98,
+    "end": 48.089,
+    "text": "電腦，"
+   },
+   {
+    "n": 26,
+    "start": 48.089,
+    "end": 50.323,
+    "text": "所以很多小問題是在自己以"
+   },
+   {
+    "n": 27,
+    "start": 50.323,
+    "end": 52.557,
+    "text": "為可以收工的時候才發現，"
+   },
+   {
+    "n": 28,
+    "start": 52.557,
+    "end": 55.35,
+    "text": "非常崩潰。另外，有些時候我們會"
+   },
+   {
+    "n": 29,
+    "start": 55.35,
+    "end": 58.325,
+    "text": "需要用到多機拍攝。以這隻影片來說，"
+   },
+   {
+    "n": 30,
+    "start": 58.325,
+    "end": 60.81,
+    "text": "因為我想一次拍好長影片跟短影音，"
+   },
+   {
+    "n": 31,
+    "start": 60.81,
+    "end": 62.91,
+    "text": "所以一支橫著錄"
+   },
+   {
+    "n": 32,
+    "start": 62.91,
+    "end": 64.911,
+    "text": "長影片，另一支直的錄短影音。"
+   },
+   {
+    "n": 33,
+    "start": 64.911,
+    "end": 66.557,
+    "text": "或者錄訪談節目時，"
+   },
+   {
+    "n": 34,
+    "start": 66.557,
+    "end": 69.45,
+    "text": "主持人跟來賓可以各用一支手機拍，這樣"
+   },
+   {
+    "n": 35,
+    "start": 69.45,
+    "end": 72.143,
+    "text": "對話時就能切到正在講話的人。"
+   },
+   {
+    "n": 36,
+    "start": 72.143,
+    "end": 74.436,
+    "text": "但我們馬上就會遇到一個問題，"
+   },
+   {
+    "n": 37,
+    "start": 74.436,
+    "end": 77.22,
+    "text": "如果只用一支手機錄影，可以用手勢來"
+   },
+   {
+    "n": 38,
+    "start": 77.22,
+    "end": 78.543,
+    "text": "控制開始跟結束，"
+   },
+   {
+    "n": 39,
+    "start": 78.543,
+    "end": 81.02,
+    "text": "但如果要用兩支以上的手機同時錄影，"
+   },
+   {
+    "n": 40,
+    "start": 81.02,
+    "end": 84.33,
+    "text": "就很難讓它們同時啟動。一旦開始的時間"
+   },
+   {
+    "n": 41,
+    "start": 84.4,
+    "end": 87.08,
+    "text": "不同步，後續剪輯影片、"
+   },
+   {
+    "n": 42,
+    "start": 87.08,
+    "end": 88.64,
+    "text": "校正聲音的過程就會讓人崩潰。"
+   },
+   {
+    "n": 43,
+    "start": 88.64,
+    "end": 89.366,
+    "text": "而停止錄影，"
+   },
+   {
+    "n": 44,
+    "start": 89.366,
+    "end": 92.09,
+    "text": "驗收成果的時候也一樣，我需要在兩支"
+   },
+   {
+    "n": 45,
+    "start": 92.09,
+    "end": 95.53,
+    "text": "手機間走來走去，個別確認畫面跟聲音。"
+   },
+   {
+    "n": 46,
+    "start": 95.53,
+    "end": 98.1,
+    "text": "當要拍攝的段落很多時，"
+   },
+   {
+    "n": 47,
+    "start": 98.1,
+    "end": 99.64,
+    "text": "這些走動其實很耗體力。"
+   },
+   {
+    "n": 48,
+    "start": 100.03,
+    "end": 102.008,
+    "text": "為了解決以上問題，"
+   },
+   {
+    "n": 49,
+    "start": 102.008,
+    "end": 104.721,
+    "text": "我上網搜尋了許多電腦控制手機，"
+   },
+   {
+    "n": 50,
+    "start": 104.721,
+    "end": 106.76,
+    "text": "以及多機錄影的工具，"
+   },
+   {
+    "n": 51,
+    "start": 106.76,
+    "end": 108.52,
+    "text": "但用起來都不順手，所以"
+   },
+   {
+    "n": 52,
+    "start": 108.52,
+    "end": 110.222,
+    "text": "我乾脆根據自己實際"
+   },
+   {
+    "n": 53,
+    "start": 110.222,
+    "end": 112.113,
+    "text": "的工作流設計了一套。"
+   },
+   {
+    "n": 54,
+    "start": 112.113,
+    "end": 114.571,
+    "text": "現在當手機掃碼連上電腦後，"
+   },
+   {
+    "n": 55,
+    "start": 114.571,
+    "end": 116.22,
+    "text": "就能即時顯示拍攝畫面，"
+   },
+   {
+    "n": 56,
+    "start": 116.22,
+    "end": 118.61,
+    "text": "讓我確認畫面的角度、"
+   },
+   {
+    "n": 57,
+    "start": 118.61,
+    "end": 120.436,
+    "text": "光暗。在電腦上按下開始時，"
+   },
+   {
+    "n": 58,
+    "start": 120.436,
+    "end": 122.576,
+    "text": "多支手機就能同步開始錄影，"
+   },
+   {
+    "n": 59,
+    "start": 122.576,
+    "end": 124.88,
+    "text": "按下結束後，除了停止錄影外，"
+   },
+   {
+    "n": 60,
+    "start": 125.04,
+    "end": 127.175,
+    "text": "影片還會直接回傳到電腦，"
+   },
+   {
+    "n": 61,
+    "start": 127.175,
+    "end": 128.777,
+    "text": "讓我馬上播放檢查。"
+   },
+   {
+    "n": 62,
+    "start": 128.777,
+    "end": 131.98,
+    "text": "而這個工具從萌生想法到完成產品原型，"
+   },
+   {
+    "n": 63,
+    "start": 131.98,
+    "end": 133.87,
+    "text": "前後只花了"
+   },
+   {
+    "n": 64,
+    "start": 133.87,
+    "end": 135.79,
+    "text": "一個小時。這集影片我會分成三個部分，"
+   },
+   {
+    "n": 65,
+    "start": 135.79,
+    "end": 138.49,
+    "text": "先帶大家實際操作這個工具，"
+   },
+   {
+    "n": 66,
+    "start": 138.49,
+    "end": 140.17,
+    "text": "包含新增專案、下載 APP、配對"
+   },
+   {
+    "n": 67,
+    "start": 140.37,
+    "end": 142.23,
+    "text": "手機、調整解析度等細節，"
+   },
+   {
+    "n": 68,
+    "start": 142.23,
+    "end": 143.935,
+    "text": "接著說明如何安裝工具，"
+   },
+   {
+    "n": 69,
+    "start": 143.935,
+    "end": 146.24,
+    "text": "以及網路設定要注意的事項，"
+   },
+   {
+    "n": 70,
+    "start": 146.24,
+    "end": 147.2,
+    "text": "最後分享我如何用"
+   },
+   {
+    "n": 71,
+    "start": 147.2,
+    "end": 150.32,
+    "text": "AI Coding 在短時間完成產品原型，"
+   },
+   {
+    "n": 72,
+    "start": 150.32,
+    "end": 153.44,
+    "text": "以及在實際應用中一次次迭代的心得"
+   }
+  ],
+  "$props": {
+   "approx": {
+    "$set": []
+   },
+   "voiceMoved": {
+    "$set": []
+   },
+   "words": [
+    {
+     "text": "嗨!",
+     "start": 0.16,
+     "end": 0.51
+    },
+    {
+     "text": "大家好!",
+     "start": 0.51,
+     "end": 1.09
+    },
+    {
+     "text": "我是",
+     "start": 1.11,
+     "end": 1.3
+    },
+    {
+     "text": "鼎",
+     "start": 1.3,
+     "end": 1.6
+    },
+    {
+     "text": "淵",
+     "start": 1.6,
+     "end": 1.86
+    },
+    {
+     "text": "歡迎",
+     "start": 2.08,
+     "end": 2.34
+    },
+    {
+     "text": "來到",
+     "start": 2.34,
+     "end": 2.71
+    },
+    {
+     "text": "工",
+     "start": 2.79,
+     "end": 2.97
+    },
+    {
+     "text": "程",
+     "start": 2.97,
+     "end": 3.18
+    },
+    {
+     "text": "師",
+     "start": 3.18,
+     "end": 3.39
+    },
+    {
+     "text": "下",
+     "start": 3.39,
+     "end": 3.6
+    },
+    {
+     "text": "班",
+     "start": 3.6,
+     "end": 3.76
+    },
+    {
+     "text": "有",
+     "start": 3.97,
+     "end": 4.02
+    },
+    {
+     "text": "約",
+     "start": 4.02,
+     "end": 4.24
+    },
+    {
+     "text": "如",
+     "start": 4.24,
+     "end": 4.4
+    },
+    {
+     "text": "你",
+     "start": 4.4,
+     "end": 4.46
+    },
+    {
+     "text": "打",
+     "start": 4.46,
+     "end": 4.57
+    },
+    {
+     "text": "算",
+     "start": 4.57,
+     "end": 4.68
+    },
+    {
+     "text": "拍",
+     "start": 4.68,
+     "end": 4.78
+    },
+    {
+     "text": "Youtube、",
+     "start": 4.8,
+     "end": 5.74
+    },
+    {
+     "text": "Podcast",
+     "start": 5.74,
+     "end": 6.08
+    },
+    {
+     "text": "線",
+     "start": 6.4,
+     "end": 6.41
+    },
+    {
+     "text": "上",
+     "start": 6.41,
+     "end": 6.58
+    },
+    {
+     "text": "課",
+     "start": 6.58,
+     "end": 7.03
+    },
+    {
+     "text": "程",
+     "start": 7.11,
+     "end": 7.26
+    },
+    {
+     "text": "或",
+     "start": 7.26,
+     "end": 7.43
+    },
+    {
+     "text": "放",
+     "start": 7.43,
+     "end": 7.6
+    },
+    {
+     "text": "單",
+     "start": 7.6,
+     "end": 7.77
+    },
+    {
+     "text": "節目",
+     "start": 7.77,
+     "end": 8.08
+    },
+    {
+     "text": "並",
+     "start": 8.08,
+     "end": 8.32
+    },
+    {
+     "text": "且",
+     "start": 8.32,
+     "end": 8.42
+    },
+    {
+     "text": "跟我",
+     "start": 8.42,
+     "end": 8.68
+    },
+    {
+     "text": "一樣",
+     "start": 8.68,
+     "end": 8.95
+    },
+    {
+     "text": "使",
+     "start": 9.03,
+     "end": 9.14
+    },
+    {
+     "text": "用",
+     "start": 9.14,
+     "end": 9.31
+    },
+    {
+     "text": "手",
+     "start": 9.32,
+     "end": 9.53
+    },
+    {
+     "text": "機",
+     "start": 9.6,
+     "end": 9.76
+    },
+    {
+     "text": "在",
+     "start": 9.76,
+     "end": 9.89
+    },
+    {
+     "text": "固",
+     "start": 9.89,
+     "end": 10.28
+    },
+    {
+     "text": "定",
+     "start": 10.28,
+     "end": 10.41
+    },
+    {
+     "text": "的",
+     "start": 10.41,
+     "end": 10.54
+    },
+    {
+     "text": "機",
+     "start": 10.54,
+     "end": 10.63
+    },
+    {
+     "text": "位",
+     "start": 10.68,
+     "end": 10.8
+    },
+    {
+     "text": "錄",
+     "start": 10.8,
+     "end": 11.19
+    },
+    {
+     "text": "影",
+     "start": 11.19,
+     "end": 11.36
+    },
+    {
+     "text": "讓",
+     "start": 11.36,
+     "end": 11.52
+    },
+    {
+     "text": "我",
+     "start": 11.52,
+     "end": 11.68
+    },
+    {
+     "text": "強",
+     "start": 11.68,
+     "end": 11.84
+    },
+    {
+     "text": "烈",
+     "start": 11.84,
+     "end": 12.32
+    },
+    {
+     "text": "建",
+     "start": 12.32,
+     "end": 12.48
+    },
+    {
+     "text": "議",
+     "start": 12.48,
+     "end": 12.64
+    },
+    {
+     "text": "你",
+     "start": 12.64,
+     "end": 12.73
+    },
+    {
+     "text": "儲",
+     "start": 12.8,
+     "end": 13.21
+    },
+    {
+     "text": "成",
+     "start": 13.41,
+     "end": 13.44
+    },
+    {
+     "text": "這",
+     "start": 13.44,
+     "end": 13.6
+    },
+    {
+     "text": "支",
+     "start": 13.6,
+     "end": 13.76
+    },
+    {
+     "text": "影片",
+     "start": 13.76,
+     "end": 14.16
+    },
+    {
+     "text": "因為",
+     "start": 14.32,
+     "end": 14.4
+    },
+    {
+     "text": "接下來",
+     "start": 14.4,
+     "end": 14.76
+    },
+    {
+     "text": "要",
+     "start": 14.76,
+     "end": 14.88
+    },
+    {
+     "text": "分享",
+     "start": 14.88,
+     "end": 15.12
+    },
+    {
+     "text": "一個",
+     "start": 15.12,
+     "end": 15.35
+    },
+    {
+     "text": "節",
+     "start": 15.35,
+     "end": 15.52
+    },
+    {
+     "text": "省",
+     "start": 15.52,
+     "end": 16
+    },
+    {
+     "text": "我",
+     "start": 16,
+     "end": 16.15
+    },
+    {
+     "text": "超",
+     "start": 16.23,
+     "end": 16.32
+    },
+    {
+     "text": "多",
+     "start": 16.32,
+     "end": 16.48
+    },
+    {
+     "text": "時間",
+     "start": 16.48,
+     "end": 16.73
+    },
+    {
+     "text": "的",
+     "start": 16.8,
+     "end": 16.96
+    },
+    {
+     "text": "免",
+     "start": 16.96,
+     "end": 17.44
+    },
+    {
+     "text": "費",
+     "start": 17.44,
+     "end": 17.6
+    },
+    {
+     "text": "工",
+     "start": 17.6,
+     "end": 17.76
+    },
+    {
+     "text": "具",
+     "start": 17.76,
+     "end": 17.92
+    },
+    {
+     "text": "過去",
+     "start": 18.08,
+     "end": 18.26
+    },
+    {
+     "text": "正",
+     "start": 18.26,
+     "end": 18.43
+    },
+    {
+     "text": "式",
+     "start": 18.43,
+     "end": 18.6
+    },
+    {
+     "text": "開",
+     "start": 18.6,
+     "end": 18.71
+    },
+    {
+     "text": "拍",
+     "start": 18.79,
+     "end": 18.94
+    },
+    {
+     "text": "前",
+     "start": 18.94,
+     "end": 19.11
+    },
+    {
+     "text": "我",
+     "start": 19.28,
+     "end": 19.33
+    },
+    {
+     "text": "到",
+     "start": 19.33,
+     "end": 19.54
+    },
+    {
+     "text": "前",
+     "start": 19.54,
+     "end": 19.75
+    },
+    {
+     "text": "事",
+     "start": 19.75,
+     "end": 19.91
+    },
+    {
+     "text": "如",
+     "start": 19.99,
+     "end": 20.17
+    },
+    {
+     "text": "一",
+     "start": 20.17,
+     "end": 20.38
+    },
+    {
+     "text": "小",
+     "start": 20.38,
+     "end": 20.59
+    },
+    {
+     "text": "段",
+     "start": 20.59,
+     "end": 20.8
+    },
+    {
+     "text": "卻",
+     "start": 20.96,
+     "end": 21.2
+    },
+    {
+     "text": "用",
+     "start": 21.2,
+     "end": 21.33
+    },
+    {
+     "text": "畫",
+     "start": 21.33,
+     "end": 21.46
+    },
+    {
+     "text": "面",
+     "start": 21.46,
+     "end": 21.59
+    },
+    {
+     "text": "的",
+     "start": 21.59,
+     "end": 21.72
+    },
+    {
+     "text": "聲",
+     "start": 21.72,
+     "end": 21.85
+    },
+    {
+     "text": "音",
+     "start": 21.85,
+     "end": 22.04
+    },
+    {
+     "text": "符",
+     "start": 22.04,
+     "end": 22.55
+    },
+    {
+     "text": "合",
+     "start": 22.55,
+     "end": 22.65
+    },
+    {
+     "text": "自己",
+     "start": 22.85,
+     "end": 23.06
+    },
+    {
+     "text": "的",
+     "start": 23.06,
+     "end": 23.23
+    },
+    {
+     "text": "需",
+     "start": 23.23,
+     "end": 23.4
+    },
+    {
+     "text": "求",
+     "start": 23.4,
+     "end": 23.6
+    },
+    {
+     "text": "而",
+     "start": 23.76,
+     "end": 23.8
+    },
+    {
+     "text": "正",
+     "start": 23.8,
+     "end": 24
+    },
+    {
+     "text": "式",
+     "start": 24,
+     "end": 24.2
+    },
+    {
+     "text": "開",
+     "start": 24.2,
+     "end": 24.39
+    },
+    {
+     "text": "拍",
+     "start": 24.47,
+     "end": 24.6
+    },
+    {
+     "text": "後",
+     "start": 24.6,
+     "end": 24.79
+    },
+    {
+     "text": "每",
+     "start": 24.8,
+     "end": 24.96
+    },
+    {
+     "text": "錄",
+     "start": 24.96,
+     "end": 25.44
+    },
+    {
+     "text": "完",
+     "start": 25.44,
+     "end": 25.45
+    },
+    {
+     "text": "一",
+     "start": 25.65,
+     "end": 25.76
+    },
+    {
+     "text": "段",
+     "start": 25.76,
+     "end": 25.92
+    },
+    {
+     "text": "我",
+     "start": 26.08,
+     "end": 26.09
+    },
+    {
+     "text": "都",
+     "start": 26.09,
+     "end": 26.26
+    },
+    {
+     "text": "要",
+     "start": 26.26,
+     "end": 26.43
+    },
+    {
+     "text": "跑",
+     "start": 26.43,
+     "end": 26.6
+    },
+    {
+     "text": "到",
+     "start": 26.6,
+     "end": 26.71
+    },
+    {
+     "text": "手",
+     "start": 26.79,
+     "end": 26.94
+    },
+    {
+     "text": "機",
+     "start": 26.94,
+     "end": 27.11
+    },
+    {
+     "text": "旁",
+     "start": 27.11,
+     "end": 27.62
+    },
+    {
+     "text": "邊",
+     "start": 27.62,
+     "end": 27.76
+    },
+    {
+     "text": "播",
+     "start": 27.76,
+     "end": 27.97
+    },
+    {
+     "text": "放",
+     "start": 27.97,
+     "end": 28.13
+    },
+    {
+     "text": "影片",
+     "start": 28.13,
+     "end": 28.48
+    },
+    {
+     "text": "以",
+     "start": 28.64,
+     "end": 28.66
+    },
+    {
+     "text": "此",
+     "start": 28.66,
+     "end": 28.84
+    },
+    {
+     "text": "確",
+     "start": 28.84,
+     "end": 29.02
+    },
+    {
+     "text": "認",
+     "start": 29.02,
+     "end": 29.2
+    },
+    {
+     "text": "動",
+     "start": 29.2,
+     "end": 29.38
+    },
+    {
+     "text": "作",
+     "start": 29.38,
+     "end": 29.56
+    },
+    {
+     "text": "與",
+     "start": 29.59,
+     "end": 29.74
+    },
+    {
+     "text": "聲",
+     "start": 29.74,
+     "end": 29.85
+    },
+    {
+     "text": "音",
+     "start": 29.92,
+     "end": 30.1
+    },
+    {
+     "text": "足",
+     "start": 30.1,
+     "end": 30.28
+    },
+    {
+     "text": "夠",
+     "start": 30.28,
+     "end": 30.33
+    },
+    {
+     "text": "流",
+     "start": 30.53,
+     "end": 30.64
+    },
+    {
+     "text": "暢",
+     "start": 30.64,
+     "end": 31.28
+    },
+    {
+     "text": "畢",
+     "start": 31.44,
+     "end": 31.68
+    },
+    {
+     "text": "竟",
+     "start": 31.68,
+     "end": 32.07
+    },
+    {
+     "text": "手",
+     "start": 32.15,
+     "end": 32.21
+    },
+    {
+     "text": "機",
+     "start": 32.21,
+     "end": 32.34
+    },
+    {
+     "text": "畫",
+     "start": 32.34,
+     "end": 32.47
+    },
+    {
+     "text": "面",
+     "start": 32.47,
+     "end": 32.6
+    },
+    {
+     "text": "比較",
+     "start": 32.6,
+     "end": 32.87
+    },
+    {
+     "text": "小",
+     "start": 32.87,
+     "end": 33.04
+    },
+    {
+     "text": "很多",
+     "start": 33.2,
+     "end": 33.39
+    },
+    {
+     "text": "小",
+     "start": 33.39,
+     "end": 33.56
+    },
+    {
+     "text": "毛",
+     "start": 33.56,
+     "end": 33.73
+    },
+    {
+     "text": "病",
+     "start": 33.73,
+     "end": 33.92
+    },
+    {
+     "text": "是",
+     "start": 33.92,
+     "end": 34.1
+    },
+    {
+     "text": "把",
+     "start": 34.1,
+     "end": 34.28
+    },
+    {
+     "text": "影片",
+     "start": 34.28,
+     "end": 34.64
+    },
+    {
+     "text": "放",
+     "start": 34.64,
+     "end": 34.84
+    },
+    {
+     "text": "到",
+     "start": 34.84,
+     "end": 34.89
+    },
+    {
+     "text": "電",
+     "start": 35.09,
+     "end": 35.15
+    },
+    {
+     "text": "腦",
+     "start": 35.15,
+     "end": 35.48
+    },
+    {
+     "text": "上",
+     "start": 35.48,
+     "end": 35.6
+    },
+    {
+     "text": "才",
+     "start": 35.6,
+     "end": 35.84
+    },
+    {
+     "text": "會",
+     "start": 35.95,
+     "end": 36.28
+    },
+    {
+     "text": "發現",
+     "start": 36.28,
+     "end": 36.96
+    },
+    {
+     "text": "的",
+     "start": 36.96,
+     "end": 37.04
+    },
+    {
+     "text": "像",
+     "start": 37.04,
+     "end": 37.12
+    },
+    {
+     "text": "腳",
+     "start": 37.12,
+     "end": 37.22
+    },
+    {
+     "text": "架",
+     "start": 37.22,
+     "end": 37.62
+    },
+    {
+     "text": "部",
+     "start": 37.62,
+     "end": 37.75
+    },
+    {
+     "text": "門",
+     "start": 37.75,
+     "end": 37.88
+    },
+    {
+     "text": "吻",
+     "start": 37.88,
+     "end": 38.32
+    },
+    {
+     "text": "造",
+     "start": 38.32,
+     "end": 38.49
+    },
+    {
+     "text": "成",
+     "start": 38.49,
+     "end": 38.66
+    },
+    {
+     "text": "畫",
+     "start": 38.66,
+     "end": 38.8
+    },
+    {
+     "text": "面",
+     "start": 38.8,
+     "end": 39.01
+    },
+    {
+     "text": "輕",
+     "start": 39.01,
+     "end": 39.17
+    },
+    {
+     "text": "微",
+     "start": 39.17,
+     "end": 39.34
+    },
+    {
+     "text": "晃",
+     "start": 39.34,
+     "end": 39.76
+    },
+    {
+     "text": "動",
+     "start": 39.87,
+     "end": 40.03
+    },
+    {
+     "text": "或",
+     "start": 40.03,
+     "end": 40.24
+    },
+    {
+     "text": "自己",
+     "start": 40.24,
+     "end": 40.36
+    },
+    {
+     "text": "穿",
+     "start": 40.36,
+     "end": 40.62
+    },
+    {
+     "text": "的",
+     "start": 40.64,
+     "end": 40.73
+    },
+    {
+     "text": "衣",
+     "start": 40.73,
+     "end": 41.01
+    },
+    {
+     "text": "服",
+     "start": 41.01,
+     "end": 41.1
+    },
+    {
+     "text": "太",
+     "start": 41.1,
+     "end": 41.17
+    },
+    {
+     "text": "薄",
+     "start": 41.19,
+     "end": 41.45
+    },
+    {
+     "text": "有",
+     "start": 41.52,
+     "end": 41.67
+    },
+    {
+     "text": "極",
+     "start": 41.67,
+     "end": 42.12
+    },
+    {
+     "text": "圖",
+     "start": 42.13,
+     "end": 42.55
+    },
+    {
+     "text": "問題",
+     "start": 42.6,
+     "end": 42.88
+    },
+    {
+     "text": "而",
+     "start": 43.04,
+     "end": 43.05
+    },
+    {
+     "text": "我",
+     "start": 43.05,
+     "end": 43.22
+    },
+    {
+     "text": "過去",
+     "start": 43.22,
+     "end": 43.57
+    },
+    {
+     "text": "的",
+     "start": 43.57,
+     "end": 43.67
+    },
+    {
+     "text": "拍",
+     "start": 43.75,
+     "end": 43.91
+    },
+    {
+     "text": "片",
+     "start": 43.91,
+     "end": 44.07
+    },
+    {
+     "text": "流",
+     "start": 44.08,
+     "end": 44.24
+    },
+    {
+     "text": "程",
+     "start": 44.25,
+     "end": 44.48
+    },
+    {
+     "text": "是",
+     "start": 44.48,
+     "end": 44.64
+    },
+    {
+     "text": "先",
+     "start": 44.64,
+     "end": 44.72
+    },
+    {
+     "text": "把",
+     "start": 44.93,
+     "end": 45.12
+    },
+    {
+     "text": "影片",
+     "start": 45.12,
+     "end": 45.48
+    },
+    {
+     "text": "上",
+     "start": 45.48,
+     "end": 45.62
+    },
+    {
+     "text": "傳",
+     "start": 45.62,
+     "end": 45.68
+    },
+    {
+     "text": "到",
+     "start": 45.79,
+     "end": 45.87
+    },
+    {
+     "text": "雲",
+     "start": 45.87,
+     "end": 46.21
+    },
+    {
+     "text": "端",
+     "start": 46.21,
+     "end": 46.55
+    },
+    {
+     "text": "備",
+     "start": 46.55,
+     "end": 46.66
+    },
+    {
+     "text": "份",
+     "start": 46.66,
+     "end": 46.8
+    },
+    {
+     "text": "再",
+     "start": 46.8,
+     "end": 46.96
+    },
+    {
+     "text": "下",
+     "start": 46.96,
+     "end": 47.04
+    },
+    {
+     "text": "載",
+     "start": 47.04,
+     "end": 47.41
+    },
+    {
+     "text": "到",
+     "start": 47.41,
+     "end": 47.53
+    },
+    {
+     "text": "電",
+     "start": 47.53,
+     "end": 47.59
+    },
+    {
+     "text": "腦",
+     "start": 47.67,
+     "end": 48.08
+    },
+    {
+     "text": "所以",
+     "start": 48.24,
+     "end": 48.35
+    },
+    {
+     "text": "很多",
+     "start": 48.35,
+     "end": 48.62
+    },
+    {
+     "text": "小",
+     "start": 48.62,
+     "end": 48.75
+    },
+    {
+     "text": "問題",
+     "start": 48.75,
+     "end": 49.04
+    },
+    {
+     "text": "是",
+     "start": 49.04,
+     "end": 49.2
+    },
+    {
+     "text": "在",
+     "start": 49.2,
+     "end": 49.4
+    },
+    {
+     "text": "自己",
+     "start": 49.4,
+     "end": 49.68
+    },
+    {
+     "text": "以",
+     "start": 49.68,
+     "end": 49.8
+    },
+    {
+     "text": "為",
+     "start": 49.8,
+     "end": 49.92
+    },
+    {
+     "text": "可以",
+     "start": 49.92,
+     "end": 50.21
+    },
+    {
+     "text": "收",
+     "start": 50.21,
+     "end": 50.35
+    },
+    {
+     "text": "工",
+     "start": 50.35,
+     "end": 50.49
+    },
+    {
+     "text": "的時候",
+     "start": 50.49,
+     "end": 50.88
+    },
+    {
+     "text": "才",
+     "start": 50.99,
+     "end": 51.15
+    },
+    {
+     "text": "發現",
+     "start": 51.23,
+     "end": 51.76
+    },
+    {
+     "text": "真的是",
+     "start": 51.92,
+     "end": 52.32
+    },
+    {
+     "text": "非常",
+     "start": 52.32,
+     "end": 52.69
+    },
+    {
+     "text": "崩",
+     "start": 52.69,
+     "end": 53.24
+    },
+    {
+     "text": "潰",
+     "start": 53.24,
+     "end": 53.84
+    },
+    {
+     "text": "另外",
+     "start": 54,
+     "end": 54.18
+    },
+    {
+     "text": "有",
+     "start": 54.18,
+     "end": 54.35
+    },
+    {
+     "text": "些",
+     "start": 54.35,
+     "end": 54.52
+    },
+    {
+     "text": "時候",
+     "start": 54.52,
+     "end": 54.88
+    },
+    {
+     "text": "我們",
+     "start": 54.88,
+     "end": 55.2
+    },
+    {
+     "text": "會",
+     "start": 55.2,
+     "end": 55.35
+    },
+    {
+     "text": "需要",
+     "start": 55.35,
+     "end": 55.67
+    },
+    {
+     "text": "用",
+     "start": 55.67,
+     "end": 55.69
+    },
+    {
+     "text": "到",
+     "start": 55.89,
+     "end": 56
+    },
+    {
+     "text": "多",
+     "start": 56,
+     "end": 56.16
+    },
+    {
+     "text": "機",
+     "start": 56.16,
+     "end": 56.31
+    },
+    {
+     "text": "拍",
+     "start": 56.36,
+     "end": 56.48
+    },
+    {
+     "text": "攝",
+     "start": 56.48,
+     "end": 56.91
+    },
+    {
+     "text": "以",
+     "start": 56.91,
+     "end": 57.12
+    },
+    {
+     "text": "這",
+     "start": 57.12,
+     "end": 57.28
+    },
+    {
+     "text": "支",
+     "start": 57.28,
+     "end": 57.44
+    },
+    {
+     "text": "影片",
+     "start": 57.44,
+     "end": 57.75
+    },
+    {
+     "text": "來說",
+     "start": 57.83,
+     "end": 58.08
+    },
+    {
+     "text": "因為",
+     "start": 58.24,
+     "end": 58.36
+    },
+    {
+     "text": "我想",
+     "start": 58.36,
+     "end": 58.63
+    },
+    {
+     "text": "要",
+     "start": 58.64,
+     "end": 58.78
+    },
+    {
+     "text": "一次",
+     "start": 58.78,
+     "end": 59.06
+    },
+    {
+     "text": "拍",
+     "start": 59.06,
+     "end": 59.2
+    },
+    {
+     "text": "好",
+     "start": 59.2,
+     "end": 59.34
+    },
+    {
+     "text": "長",
+     "start": 59.34,
+     "end": 59.45
+    },
+    {
+     "text": "影片",
+     "start": 59.52,
+     "end": 59.76
+    },
+    {
+     "text": "跟",
+     "start": 59.76,
+     "end": 59.9
+    },
+    {
+     "text": "短",
+     "start": 59.9,
+     "end": 60.32
+    },
+    {
+     "text": "影",
+     "start": 60.32,
+     "end": 60.46
+    },
+    {
+     "text": "音",
+     "start": 60.46,
+     "end": 60.64
+    },
+    {
+     "text": "所以",
+     "start": 60.8,
+     "end": 60.89
+    },
+    {
+     "text": "一",
+     "start": 60.89,
+     "end": 61.01
+    },
+    {
+     "text": "支",
+     "start": 61.01,
+     "end": 61.13
+    },
+    {
+     "text": "手",
+     "start": 61.13,
+     "end": 61.25
+    },
+    {
+     "text": "機",
+     "start": 61.25,
+     "end": 61.37
+    },
+    {
+     "text": "是",
+     "start": 61.37,
+     "end": 61.43
+    },
+    {
+     "text": "橫",
+     "start": 61.51,
+     "end": 61.86
+    },
+    {
+     "text": "著",
+     "start": 61.86,
+     "end": 61.98
+    },
+    {
+     "text": "錄",
+     "start": 61.98,
+     "end": 62.35
+    },
+    {
+     "text": "長",
+     "start": 62.35,
+     "end": 62.47
+    },
+    {
+     "text": "影片",
+     "start": 62.47,
+     "end": 62.8
+    },
+    {
+     "text": "另外",
+     "start": 62.96,
+     "end": 63.05
+    },
+    {
+     "text": "一",
+     "start": 63.05,
+     "end": 63.17
+    },
+    {
+     "text": "支",
+     "start": 63.17,
+     "end": 63.29
+    },
+    {
+     "text": "則",
+     "start": 63.29,
+     "end": 63.41
+    },
+    {
+     "text": "是",
+     "start": 63.41,
+     "end": 63.53
+    },
+    {
+     "text": "直",
+     "start": 63.53,
+     "end": 63.59
+    },
+    {
+     "text": "的",
+     "start": 63.67,
+     "end": 63.77
+    },
+    {
+     "text": "錄",
+     "start": 63.77,
+     "end": 64.14
+    },
+    {
+     "text": "短",
+     "start": 64.14,
+     "end": 64.51
+    },
+    {
+     "text": "影",
+     "start": 64.51,
+     "end": 64.63
+    },
+    {
+     "text": "音",
+     "start": 64.63,
+     "end": 64.65
+    },
+    {
+     "text": "或者",
+     "start": 64.96,
+     "end": 65.1
+    },
+    {
+     "text": "錄",
+     "start": 65.1,
+     "end": 65.55
+    },
+    {
+     "text": "訪",
+     "start": 65.55,
+     "end": 65.99
+    },
+    {
+     "text": "談",
+     "start": 66,
+     "end": 66.15
+    },
+    {
+     "text": "節目",
+     "start": 66.15,
+     "end": 66.45
+    },
+    {
+     "text": "時",
+     "start": 66.45,
+     "end": 66.63
+    },
+    {
+     "text": "主",
+     "start": 66.63,
+     "end": 66.8
+    },
+    {
+     "text": "持",
+     "start": 66.8,
+     "end": 66.94
+    },
+    {
+     "text": "人",
+     "start": 66.94,
+     "end": 67.09
+    },
+    {
+     "text": "跟",
+     "start": 67.09,
+     "end": 67.24
+    },
+    {
+     "text": "來",
+     "start": 67.24,
+     "end": 67.39
+    },
+    {
+     "text": "賓",
+     "start": 67.39,
+     "end": 67.83
+    },
+    {
+     "text": "可以",
+     "start": 67.84,
+     "end": 68.16
+    },
+    {
+     "text": "各",
+     "start": 68.16,
+     "end": 68.31
+    },
+    {
+     "text": "用",
+     "start": 68.31,
+     "end": 68.46
+    },
+    {
+     "text": "一",
+     "start": 68.46,
+     "end": 68.49
+    },
+    {
+     "text": "支",
+     "start": 68.69,
+     "end": 68.76
+    },
+    {
+     "text": "手",
+     "start": 68.76,
+     "end": 68.91
+    },
+    {
+     "text": "機",
+     "start": 68.91,
+     "end": 69.06
+    },
+    {
+     "text": "拍",
+     "start": 69.06,
+     "end": 69.28
+    },
+    {
+     "text": "這樣",
+     "start": 69.44,
+     "end": 69.66
+    },
+    {
+     "text": "對",
+     "start": 69.66,
+     "end": 69.85
+    },
+    {
+     "text": "話",
+     "start": 69.85,
+     "end": 70.03
+    },
+    {
+     "text": "時",
+     "start": 70.04,
+     "end": 70.23
+    },
+    {
+     "text": "就",
+     "start": 70.23,
+     "end": 70.42
+    },
+    {
+     "text": "能",
+     "start": 70.42,
+     "end": 70.61
+    },
+    {
+     "text": "切",
+     "start": 70.61,
+     "end": 70.79
+    },
+    {
+     "text": "到",
+     "start": 70.79,
+     "end": 70.99
+    },
+    {
+     "text": "正",
+     "start": 70.99,
+     "end": 71.12
+    },
+    {
+     "text": "在",
+     "start": 71.33,
+     "end": 71.37
+    },
+    {
+     "text": "講",
+     "start": 71.37,
+     "end": 71.56
+    },
+    {
+     "text": "話",
+     "start": 71.56,
+     "end": 71.75
+    },
+    {
+     "text": "的人",
+     "start": 71.75,
+     "end": 72.08
+    },
+    {
+     "text": "那麼",
+     "start": 72.32,
+     "end": 72.43
+    },
+    {
+     "text": "馬",
+     "start": 72.43,
+     "end": 72.56
+    },
+    {
+     "text": "上",
+     "start": 72.56,
+     "end": 72.69
+    },
+    {
+     "text": "就會",
+     "start": 72.69,
+     "end": 72.95
+    },
+    {
+     "text": "遇",
+     "start": 73.03,
+     "end": 73.35
+    },
+    {
+     "text": "到",
+     "start": 73.36,
+     "end": 73.49
+    },
+    {
+     "text": "一個",
+     "start": 73.49,
+     "end": 73.76
+    },
+    {
+     "text": "問題",
+     "start": 73.76,
+     "end": 74
+    },
+    {
+     "text": "如果",
+     "start": 74.24,
+     "end": 74.33
+    },
+    {
+     "text": "只",
+     "start": 74.33,
+     "end": 74.45
+    },
+    {
+     "text": "用",
+     "start": 74.45,
+     "end": 74.57
+    },
+    {
+     "text": "一",
+     "start": 74.57,
+     "end": 74.69
+    },
+    {
+     "text": "支",
+     "start": 74.69,
+     "end": 74.81
+    },
+    {
+     "text": "手",
+     "start": 74.81,
+     "end": 74.87
+    },
+    {
+     "text": "機",
+     "start": 74.95,
+     "end": 75.05
+    },
+    {
+     "text": "錄",
+     "start": 75.05,
+     "end": 75.42
+    },
+    {
+     "text": "影",
+     "start": 75.42,
+     "end": 75.59
+    },
+    {
+     "text": "可以",
+     "start": 75.76,
+     "end": 75.96
+    },
+    {
+     "text": "用",
+     "start": 75.96,
+     "end": 76.14
+    },
+    {
+     "text": "手",
+     "start": 76.14,
+     "end": 76.32
+    },
+    {
+     "text": "勢",
+     "start": 76.32,
+     "end": 76.86
+    },
+    {
+     "text": "來",
+     "start": 76.86,
+     "end": 76.97
+    },
+    {
+     "text": "控",
+     "start": 77.04,
+     "end": 77.22
+    },
+    {
+     "text": "制",
+     "start": 77.22,
+     "end": 77.4
+    },
+    {
+     "text": "開始",
+     "start": 77.4,
+     "end": 77.76
+    },
+    {
+     "text": "跟",
+     "start": 77.76,
+     "end": 77.94
+    },
+    {
+     "text": "結",
+     "start": 77.94,
+     "end": 78.07
+    },
+    {
+     "text": "束",
+     "start": 78.12,
+     "end": 78.32
+    },
+    {
+     "text": "但",
+     "start": 78.32,
+     "end": 78.48
+    },
+    {
+     "text": "如果",
+     "start": 78.48,
+     "end": 78.77
+    },
+    {
+     "text": "用",
+     "start": 78.77,
+     "end": 78.92
+    },
+    {
+     "text": "到",
+     "start": 78.92,
+     "end": 79.07
+    },
+    {
+     "text": "兩",
+     "start": 79.07,
+     "end": 79.22
+    },
+    {
+     "text": "支",
+     "start": 79.22,
+     "end": 79.37
+    },
+    {
+     "text": "以上",
+     "start": 79.37,
+     "end": 79.67
+    },
+    {
+     "text": "的",
+     "start": 79.67,
+     "end": 79.82
+    },
+    {
+     "text": "手",
+     "start": 79.82,
+     "end": 79.97
+    },
+    {
+     "text": "機",
+     "start": 79.97,
+     "end": 80.15
+    },
+    {
+     "text": "同",
+     "start": 80.15,
+     "end": 80.18
+    },
+    {
+     "text": "時",
+     "start": 80.37,
+     "end": 80.4
+    },
+    {
+     "text": "錄",
+     "start": 80.4,
+     "end": 80.76
+    },
+    {
+     "text": "影",
+     "start": 80.76,
+     "end": 80.88
+    },
+    {
+     "text": "就",
+     "start": 81.04,
+     "end": 81.05
+    },
+    {
+     "text": "很",
+     "start": 81.05,
+     "end": 81.22
+    },
+    {
+     "text": "難",
+     "start": 81.22,
+     "end": 81.39
+    },
+    {
+     "text": "讓",
+     "start": 81.39,
+     "end": 81.56
+    },
+    {
+     "text": "他們",
+     "start": 81.56,
+     "end": 81.9
+    },
+    {
+     "text": "同",
+     "start": 81.9,
+     "end": 82.07
+    },
+    {
+     "text": "時",
+     "start": 82.07,
+     "end": 82.24
+    },
+    {
+     "text": "啟",
+     "start": 82.24,
+     "end": 82.72
+    },
+    {
+     "text": "動",
+     "start": 82.93,
+     "end": 82.96
+    },
+    {
+     "text": "一",
+     "start": 82.96,
+     "end": 83.12
+    },
+    {
+     "text": "旦",
+     "start": 83.12,
+     "end": 83.48
+    },
+    {
+     "text": "開始",
+     "start": 83.48,
+     "end": 83.74
+    },
+    {
+     "text": "的",
+     "start": 83.74,
+     "end": 83.87
+    },
+    {
+     "text": "時間",
+     "start": 83.87,
+     "end": 84.13
+    },
+    {
+     "text": "不同",
+     "start": 84.13,
+     "end": 84.33
+    },
+    {
+     "text": "步",
+     "start": 84.4,
+     "end": 84.56
+    },
+    {
+     "text": "或",
+     "start": 84.56,
+     "end": 84.72
+    },
+    {
+     "text": "許",
+     "start": 84.72,
+     "end": 84.82
+    },
+    {
+     "text": "剪",
+     "start": 84.82,
+     "end": 85.21
+    },
+    {
+     "text": "接",
+     "start": 85.21,
+     "end": 85.34
+    },
+    {
+     "text": "影片",
+     "start": 85.34,
+     "end": 85.6
+    },
+    {
+     "text": "校",
+     "start": 85.6,
+     "end": 85.78
+    },
+    {
+     "text": "正",
+     "start": 85.78,
+     "end": 85.93
+    },
+    {
+     "text": "聲",
+     "start": 86,
+     "end": 86.14
+    },
+    {
+     "text": "音",
+     "start": 86.14,
+     "end": 86.32
+    },
+    {
+     "text": "的",
+     "start": 86.32,
+     "end": 86.41
+    },
+    {
+     "text": "過",
+     "start": 86.61,
+     "end": 86.68
+    },
+    {
+     "text": "程",
+     "start": 86.68,
+     "end": 86.88
+    },
+    {
+     "text": "就會",
+     "start": 87.04,
+     "end": 87.2
+    },
+    {
+     "text": "讓",
+     "start": 87.2,
+     "end": 87.36
+    },
+    {
+     "text": "人",
+     "start": 87.36,
+     "end": 87.52
+    },
+    {
+     "text": "崩",
+     "start": 87.52,
+     "end": 88
+    },
+    {
+     "text": "潰",
+     "start": 88,
+     "end": 88.48
+    },
+    {
+     "text": "而",
+     "start": 88.48,
+     "end": 88.64
+    },
+    {
+     "text": "停",
+     "start": 88.64,
+     "end": 88.72
+    },
+    {
+     "text": "止",
+     "start": 88.72,
+     "end": 88.83
+    },
+    {
+     "text": "錄",
+     "start": 88.84,
+     "end": 89.21
+    },
+    {
+     "text": "影",
+     "start": 89.21,
+     "end": 89.27
+    },
+    {
+     "text": "驗",
+     "start": 89.35,
+     "end": 89.7
+    },
+    {
+     "text": "收",
+     "start": 89.7,
+     "end": 89.82
+    },
+    {
+     "text": "成",
+     "start": 89.82,
+     "end": 89.94
+    },
+    {
+     "text": "骨",
+     "start": 89.94,
+     "end": 90.3
+    },
+    {
+     "text": "的時候",
+     "start": 90.3,
+     "end": 90.68
+    },
+    {
+     "text": "也",
+     "start": 90.68,
+     "end": 90.8
+    },
+    {
+     "text": "一樣",
+     "start": 90.8,
+     "end": 91.12
+    },
+    {
+     "text": "我",
+     "start": 91.12,
+     "end": 91.28
+    },
+    {
+     "text": "需要",
+     "start": 91.28,
+     "end": 91.61
+    },
+    {
+     "text": "在",
+     "start": 91.61,
+     "end": 91.77
+    },
+    {
+     "text": "多",
+     "start": 91.77,
+     "end": 91.91
+    },
+    {
+     "text": "支",
+     "start": 91.99,
+     "end": 92.09
+    },
+    {
+     "text": "手",
+     "start": 92.09,
+     "end": 92.25
+    },
+    {
+     "text": "機",
+     "start": 92.25,
+     "end": 92.41
+    },
+    {
+     "text": "間",
+     "start": 92.41,
+     "end": 92.63
+    },
+    {
+     "text": "走",
+     "start": 92.63,
+     "end": 92.84
+    },
+    {
+     "text": "來",
+     "start": 92.84,
+     "end": 92.96
+    },
+    {
+     "text": "走",
+     "start": 93.17,
+     "end": 93.24
+    },
+    {
+     "text": "去",
+     "start": 93.24,
+     "end": 93.44
+    },
+    {
+     "text": "個",
+     "start": 93.6,
+     "end": 93.65
+    },
+    {
+     "text": "別",
+     "start": 93.65,
+     "end": 93.86
+    },
+    {
+     "text": "確",
+     "start": 93.86,
+     "end": 94.07
+    },
+    {
+     "text": "認",
+     "start": 94.07,
+     "end": 94.23
+    },
+    {
+     "text": "畫",
+     "start": 94.31,
+     "end": 94.49
+    },
+    {
+     "text": "面",
+     "start": 94.49,
+     "end": 94.7
+    },
+    {
+     "text": "與",
+     "start": 94.7,
+     "end": 94.91
+    },
+    {
+     "text": "聲",
+     "start": 94.91,
+     "end": 95.12
+    },
+    {
+     "text": "音",
+     "start": 95.12,
+     "end": 95.28
+    },
+    {
+     "text": "但",
+     "start": 95.28,
+     "end": 95.52
+    },
+    {
+     "text": "要",
+     "start": 95.52,
+     "end": 95.62
+    },
+    {
+     "text": "拍",
+     "start": 95.62,
+     "end": 95.75
+    },
+    {
+     "text": "攝",
+     "start": 95.75,
+     "end": 96.14
+    },
+    {
+     "text": "的",
+     "start": 96.14,
+     "end": 96.27
+    },
+    {
+     "text": "段",
+     "start": 96.27,
+     "end": 96.4
+    },
+    {
+     "text": "落",
+     "start": 96.4,
+     "end": 96.55
+    },
+    {
+     "text": "很多",
+     "start": 96.56,
+     "end": 96.88
+    },
+    {
+     "text": "時",
+     "start": 96.88,
+     "end": 97.04
+    },
+    {
+     "text": "其實",
+     "start": 97.2,
+     "end": 97.44
+    },
+    {
+     "text": "這些",
+     "start": 97.44,
+     "end": 97.83
+    },
+    {
+     "text": "走",
+     "start": 97.91,
+     "end": 98.04
+    },
+    {
+     "text": "動",
+     "start": 98.04,
+     "end": 98.23
+    },
+    {
+     "text": "非常",
+     "start": 98.25,
+     "end": 98.64
+    },
+    {
+     "text": "耗",
+     "start": 98.64,
+     "end": 99.24
+    },
+    {
+     "text": "費",
+     "start": 99.24,
+     "end": 99.44
+    },
+    {
+     "text": "體",
+     "start": 99.44,
+     "end": 99.64
+    },
+    {
+     "text": "力",
+     "start": 99.64,
+     "end": 99.84
+    },
+    {
+     "text": "而",
+     "start": 100,
+     "end": 100.02
+    },
+    {
+     "text": "我",
+     "start": 100.02,
+     "end": 100.2
+    },
+    {
+     "text": "為",
+     "start": 100.2,
+     "end": 100.38
+    },
+    {
+     "text": "了",
+     "start": 100.38,
+     "end": 100.56
+    },
+    {
+     "text": "解",
+     "start": 100.56,
+     "end": 100.74
+    },
+    {
+     "text": "決",
+     "start": 100.74,
+     "end": 100.92
+    },
+    {
+     "text": "以上",
+     "start": 100.92,
+     "end": 101.29
+    },
+    {
+     "text": "的",
+     "start": 101.29,
+     "end": 101.47
+    },
+    {
+     "text": "問題",
+     "start": 101.47,
+     "end": 101.92
+    },
+    {
+     "text": "我",
+     "start": 101.92,
+     "end": 102.08
+    },
+    {
+     "text": "上",
+     "start": 102.08,
+     "end": 102.18
+    },
+    {
+     "text": "網",
+     "start": 102.18,
+     "end": 102.31
+    },
+    {
+     "text": "搜",
+     "start": 102.31,
+     "end": 102.7
+    },
+    {
+     "text": "尋",
+     "start": 102.7,
+     "end": 103.09
+    },
+    {
+     "text": "了",
+     "start": 103.09,
+     "end": 103.22
+    },
+    {
+     "text": "許",
+     "start": 103.22,
+     "end": 103.29
+    },
+    {
+     "text": "多",
+     "start": 103.36,
+     "end": 103.52
+    },
+    {
+     "text": "電",
+     "start": 103.52,
+     "end": 103.66
+    },
+    {
+     "text": "腦",
+     "start": 103.66,
+     "end": 104.08
+    },
+    {
+     "text": "控",
+     "start": 104.08,
+     "end": 104.22
+    },
+    {
+     "text": "制",
+     "start": 104.22,
+     "end": 104.36
+    },
+    {
+     "text": "手",
+     "start": 104.36,
+     "end": 104.5
+    },
+    {
+     "text": "機",
+     "start": 104.5,
+     "end": 104.64
+    },
+    {
+     "text": "以及",
+     "start": 104.8,
+     "end": 104.98
+    },
+    {
+     "text": "多",
+     "start": 104.98,
+     "end": 105.15
+    },
+    {
+     "text": "機",
+     "start": 105.15,
+     "end": 105.32
+    },
+    {
+     "text": "錄",
+     "start": 105.32,
+     "end": 105.83
+    },
+    {
+     "text": "影",
+     "start": 105.83,
+     "end": 106
+    },
+    {
+     "text": "的",
+     "start": 106,
+     "end": 106.17
+    },
+    {
+     "text": "工",
+     "start": 106.17,
+     "end": 106.34
+    },
+    {
+     "text": "具",
+     "start": 106.34,
+     "end": 106.48
+    },
+    {
+     "text": "但",
+     "start": 106.72,
+     "end": 106.73
+    },
+    {
+     "text": "用",
+     "start": 106.73,
+     "end": 106.9
+    },
+    {
+     "text": "起來",
+     "start": 106.9,
+     "end": 107.25
+    },
+    {
+     "text": "都",
+     "start": 107.25,
+     "end": 107.35
+    },
+    {
+     "text": "不",
+     "start": 107.43,
+     "end": 107.59
+    },
+    {
+     "text": "順",
+     "start": 107.59,
+     "end": 108.11
+    },
+    {
+     "text": "手",
+     "start": 108.11,
+     "end": 108.32
+    },
+    {
+     "text": "所以",
+     "start": 108.48,
+     "end": 108.52
+    },
+    {
+     "text": "我",
+     "start": 108.52,
+     "end": 108.62
+    },
+    {
+     "text": "乾",
+     "start": 108.62,
+     "end": 108.72
+    },
+    {
+     "text": "脆",
+     "start": 108.72,
+     "end": 109.04
+    },
+    {
+     "text": "根",
+     "start": 109.04,
+     "end": 109.28
+    },
+    {
+     "text": "據",
+     "start": 109.28,
+     "end": 109.51
+    },
+    {
+     "text": "自己",
+     "start": 109.52,
+     "end": 109.84
+    },
+    {
+     "text": "實",
+     "start": 109.84,
+     "end": 110
+    },
+    {
+     "text": "際",
+     "start": 110,
+     "end": 110.16
+    },
+    {
+     "text": "的",
+     "start": 110.16,
+     "end": 110.17
+    },
+    {
+     "text": "工作",
+     "start": 110.37,
+     "end": 110.64
+    },
+    {
+     "text": "流",
+     "start": 110.64,
+     "end": 110.79
+    },
+    {
+     "text": "設",
+     "start": 110.84,
+     "end": 110.94
+    },
+    {
+     "text": "計",
+     "start": 110.94,
+     "end": 111.08
+    },
+    {
+     "text": "一",
+     "start": 111.08,
+     "end": 111.12
+    },
+    {
+     "text": "套",
+     "start": 111.23,
+     "end": 111.68
+    },
+    {
+     "text": "現在",
+     "start": 111.84,
+     "end": 111.89
+    },
+    {
+     "text": "手",
+     "start": 111.89,
+     "end": 111.99
+    },
+    {
+     "text": "機",
+     "start": 111.99,
+     "end": 112.09
+    },
+    {
+     "text": "掃",
+     "start": 112.09,
+     "end": 112.4
+    },
+    {
+     "text": "碼",
+     "start": 112.4,
+     "end": 112.71
+    },
+    {
+     "text": "臉",
+     "start": 112.71,
+     "end": 113.02
+    },
+    {
+     "text": "上",
+     "start": 113.02,
+     "end": 113.05
+    },
+    {
+     "text": "電",
+     "start": 113.12,
+     "end": 113.22
+    },
+    {
+     "text": "腦",
+     "start": 113.22,
+     "end": 113.52
+    },
+    {
+     "text": "後",
+     "start": 113.53,
+     "end": 113.76
+    },
+    {
+     "text": "就",
+     "start": 113.92,
+     "end": 113.95
+    },
+    {
+     "text": "能",
+     "start": 113.95,
+     "end": 114.14
+    },
+    {
+     "text": "及",
+     "start": 114.14,
+     "end": 114.33
+    },
+    {
+     "text": "時",
+     "start": 114.33,
+     "end": 114.51
+    },
+    {
+     "text": "顯",
+     "start": 114.52,
+     "end": 114.71
+    },
+    {
+     "text": "示",
+     "start": 114.71,
+     "end": 114.9
+    },
+    {
+     "text": "拍",
+     "start": 114.9,
+     "end": 115.09
+    },
+    {
+     "text": "攝",
+     "start": 115.09,
+     "end": 115.6
+    },
+    {
+     "text": "畫",
+     "start": 115.81,
+     "end": 115.85
+    },
+    {
+     "text": "面",
+     "start": 115.85,
+     "end": 116.08
+    },
+    {
+     "text": "讓",
+     "start": 116.24,
+     "end": 116.27
+    },
+    {
+     "text": "我",
+     "start": 116.27,
+     "end": 116.46
+    },
+    {
+     "text": "確",
+     "start": 116.46,
+     "end": 116.65
+    },
+    {
+     "text": "認",
+     "start": 116.65,
+     "end": 116.83
+    },
+    {
+     "text": "畫",
+     "start": 116.84,
+     "end": 117.03
+    },
+    {
+     "text": "面",
+     "start": 117.03,
+     "end": 117.22
+    },
+    {
+     "text": "的",
+     "start": 117.22,
+     "end": 117.41
+    },
+    {
+     "text": "角",
+     "start": 117.41,
+     "end": 117.59
+    },
+    {
+     "text": "度",
+     "start": 117.59,
+     "end": 117.84
+    },
+    {
+     "text": "光",
+     "start": 117.84,
+     "end": 117.93
+    },
+    {
+     "text": "暗",
+     "start": 118.13,
+     "end": 118.48
+    },
+    {
+     "text": "在",
+     "start": 118.48,
+     "end": 118.64
+    },
+    {
+     "text": "電",
+     "start": 118.64,
+     "end": 118.8
+    },
+    {
+     "text": "腦",
+     "start": 118.8,
+     "end": 119.27
+    },
+    {
+     "text": "按",
+     "start": 119.35,
+     "end": 119.45
+    },
+    {
+     "text": "下",
+     "start": 119.45,
+     "end": 119.61
+    },
+    {
+     "text": "開始",
+     "start": 119.61,
+     "end": 119.94
+    },
+    {
+     "text": "時",
+     "start": 119.94,
+     "end": 120.16
+    },
+    {
+     "text": "多",
+     "start": 120.32,
+     "end": 120.33
+    },
+    {
+     "text": "支",
+     "start": 120.33,
+     "end": 120.5
+    },
+    {
+     "text": "手",
+     "start": 120.5,
+     "end": 120.67
+    },
+    {
+     "text": "機",
+     "start": 120.67,
+     "end": 120.84
+    },
+    {
+     "text": "就",
+     "start": 120.84,
+     "end": 120.95
+    },
+    {
+     "text": "能",
+     "start": 121.03,
+     "end": 121.18
+    },
+    {
+     "text": "同",
+     "start": 121.18,
+     "end": 121.35
+    },
+    {
+     "text": "步",
+     "start": 121.35,
+     "end": 121.52
+    },
+    {
+     "text": "開始",
+     "start": 121.52,
+     "end": 121.86
+    },
+    {
+     "text": "錄",
+     "start": 121.86,
+     "end": 122.37
+    },
+    {
+     "text": "影",
+     "start": 122.37,
+     "end": 122.56
+    },
+    {
+     "text": "按",
+     "start": 122.72,
+     "end": 122.75
+    },
+    {
+     "text": "下",
+     "start": 122.75,
+     "end": 122.94
+    },
+    {
+     "text": "結",
+     "start": 122.94,
+     "end": 123.13
+    },
+    {
+     "text": "束",
+     "start": 123.13,
+     "end": 123.31
+    },
+    {
+     "text": "後",
+     "start": 123.32,
+     "end": 123.52
+    },
+    {
+     "text": "除",
+     "start": 123.52,
+     "end": 123.67
+    },
+    {
+     "text": "了",
+     "start": 123.67,
+     "end": 123.82
+    },
+    {
+     "text": "停",
+     "start": 123.82,
+     "end": 123.93
+    },
+    {
+     "text": "止",
+     "start": 124,
+     "end": 124.12
+    },
+    {
+     "text": "錄",
+     "start": 124.12,
+     "end": 124.57
+    },
+    {
+     "text": "影",
+     "start": 124.61,
+     "end": 124.72
+    },
+    {
+     "text": "外",
+     "start": 124.72,
+     "end": 124.88
+    },
+    {
+     "text": "影片",
+     "start": 125.04,
+     "end": 125.16
+    },
+    {
+     "text": "還",
+     "start": 125.16,
+     "end": 125.3
+    },
+    {
+     "text": "會",
+     "start": 125.3,
+     "end": 125.43
+    },
+    {
+     "text": "直接",
+     "start": 125.44,
+     "end": 125.67
+    },
+    {
+     "text": "回",
+     "start": 125.75,
+     "end": 125.86
+    },
+    {
+     "text": "傳",
+     "start": 125.86,
+     "end": 126
+    },
+    {
+     "text": "到",
+     "start": 126,
+     "end": 126.14
+    },
+    {
+     "text": "電",
+     "start": 126.14,
+     "end": 126.25
+    },
+    {
+     "text": "腦",
+     "start": 126.32,
+     "end": 126.72
+    },
+    {
+     "text": "讓",
+     "start": 126.88,
+     "end": 126.91
+    },
+    {
+     "text": "我",
+     "start": 126.91,
+     "end": 127.1
+    },
+    {
+     "text": "馬",
+     "start": 127.1,
+     "end": 127.29
+    },
+    {
+     "text": "上",
+     "start": 127.29,
+     "end": 127.47
+    },
+    {
+     "text": "播",
+     "start": 127.48,
+     "end": 127.67
+    },
+    {
+     "text": "放",
+     "start": 127.67,
+     "end": 127.86
+    },
+    {
+     "text": "檢",
+     "start": 127.86,
+     "end": 128.43
+    },
+    {
+     "text": "查",
+     "start": 128.43,
+     "end": 128.56
+    },
+    {
+     "text": "而",
+     "start": 128.8,
+     "end": 128.81
+    },
+    {
+     "text": "這個",
+     "start": 128.81,
+     "end": 129.16
+    },
+    {
+     "text": "工",
+     "start": 129.16,
+     "end": 129.33
+    },
+    {
+     "text": "具",
+     "start": 129.33,
+     "end": 129.52
+    },
+    {
+     "text": "從",
+     "start": 129.52,
+     "end": 129.65
+    },
+    {
+     "text": "萌",
+     "start": 129.65,
+     "end": 130.01
+    },
+    {
+     "text": "生",
+     "start": 130.08,
+     "end": 130.18
+    },
+    {
+     "text": "想",
+     "start": 130.18,
+     "end": 130.31
+    },
+    {
+     "text": "法",
+     "start": 130.31,
+     "end": 130.47
+    },
+    {
+     "text": "到",
+     "start": 130.47,
+     "end": 130.49
+    },
+    {
+     "text": "完成",
+     "start": 130.69,
+     "end": 131.06
+    },
+    {
+     "text": "產",
+     "start": 131.06,
+     "end": 131.27
+    },
+    {
+     "text": "品",
+     "start": 131.27,
+     "end": 131.44
+    },
+    {
+     "text": "原",
+     "start": 131.55,
+     "end": 131.69
+    },
+    {
+     "text": "型",
+     "start": 131.69,
+     "end": 131.92
+    },
+    {
+     "text": "前",
+     "start": 132.08,
+     "end": 132.11
+    },
+    {
+     "text": "後",
+     "start": 132.11,
+     "end": 132.3
+    },
+    {
+     "text": "只",
+     "start": 132.3,
+     "end": 132.49
+    },
+    {
+     "text": "花",
+     "start": 132.49,
+     "end": 132.67
+    },
+    {
+     "text": "了",
+     "start": 132.68,
+     "end": 132.87
+    },
+    {
+     "text": "一個",
+     "start": 132.87,
+     "end": 133.26
+    },
+    {
+     "text": "小時",
+     "start": 133.26,
+     "end": 133.68
+    },
+    {
+     "text": "這",
+     "start": 133.84,
+     "end": 133.88
+    },
+    {
+     "text": "期",
+     "start": 133.88,
+     "end": 134.08
+    },
+    {
+     "text": "影片",
+     "start": 134.08,
+     "end": 134.47
+    },
+    {
+     "text": "我",
+     "start": 134.55,
+     "end": 134.66
+    },
+    {
+     "text": "會",
+     "start": 134.66,
+     "end": 134.83
+    },
+    {
+     "text": "分",
+     "start": 134.84,
+     "end": 135.02
+    },
+    {
+     "text": "成",
+     "start": 135.02,
+     "end": 135.19
+    },
+    {
+     "text": "三",
+     "start": 135.19,
+     "end": 135.38
+    },
+    {
+     "text": "個",
+     "start": 135.38,
+     "end": 135.52
+    },
+    {
+     "text": "部分",
+     "start": 135.73,
+     "end": 135.92
+    },
+    {
+     "text": "先",
+     "start": 136.08,
+     "end": 136.09
+    },
+    {
+     "text": "帶",
+     "start": 136.09,
+     "end": 136.26
+    },
+    {
+     "text": "大家",
+     "start": 136.26,
+     "end": 136.6
+    },
+    {
+     "text": "實",
+     "start": 136.6,
+     "end": 136.71
+    },
+    {
+     "text": "際",
+     "start": 136.79,
+     "end": 136.94
+    },
+    {
+     "text": "操",
+     "start": 136.94,
+     "end": 137.45
+    },
+    {
+     "text": "作",
+     "start": 137.45,
+     "end": 137.62
+    },
+    {
+     "text": "這個",
+     "start": 137.62,
+     "end": 137.76
+    },
+    {
+     "text": "工",
+     "start": 137.97,
+     "end": 138.13
+    },
+    {
+     "text": "具",
+     "start": 138.13,
+     "end": 138.32
+    },
+    {
+     "text": "包",
+     "start": 138.32,
+     "end": 138.48
+    },
+    {
+     "text": "含",
+     "start": 138.48,
+     "end": 138.72
+    },
+    {
+     "text": "新",
+     "start": 138.72,
+     "end": 138.82
+    },
+    {
+     "text": "增",
+     "start": 138.82,
+     "end": 139.11
+    },
+    {
+     "text": "專",
+     "start": 139.19,
+     "end": 139.22
+    },
+    {
+     "text": "案",
+     "start": 139.22,
+     "end": 139.36
+    },
+    {
+     "text": "下",
+     "start": 139.36,
+     "end": 139.41
+    },
+    {
+     "text": "載",
+     "start": 139.43,
+     "end": 139.56
+    },
+    {
+     "text": "EPI",
+     "start": 139.56,
+     "end": 140
+    },
+    {
+     "text": "配",
+     "start": 140,
+     "end": 140.16
+    },
+    {
+     "text": "對",
+     "start": 140.16,
+     "end": 140.17
+    },
+    {
+     "text": "手",
+     "start": 140.37,
+     "end": 140.52
+    },
+    {
+     "text": "機",
+     "start": 140.52,
+     "end": 140.72
+    },
+    {
+     "text": "調",
+     "start": 140.72,
+     "end": 140.88
+    },
+    {
+     "text": "整",
+     "start": 140.88,
+     "end": 141.04
+    },
+    {
+     "text": "解",
+     "start": 141.04,
+     "end": 141.2
+    },
+    {
+     "text": "析",
+     "start": 141.2,
+     "end": 141.69
+    },
+    {
+     "text": "度",
+     "start": 141.69,
+     "end": 141.85
+    },
+    {
+     "text": "等",
+     "start": 141.85,
+     "end": 142.01
+    },
+    {
+     "text": "細",
+     "start": 142.01,
+     "end": 142.17
+    },
+    {
+     "text": "節",
+     "start": 142.17,
+     "end": 142.4
+    },
+    {
+     "text": "接",
+     "start": 142.4,
+     "end": 142.56
+    },
+    {
+     "text": "著",
+     "start": 142.56,
+     "end": 142.72
+    },
+    {
+     "text": "說",
+     "start": 142.72,
+     "end": 142.88
+    },
+    {
+     "text": "明",
+     "start": 142.88,
+     "end": 143.04
+    },
+    {
+     "text": "如何",
+     "start": 143.04,
+     "end": 143.37
+    },
+    {
+     "text": "安",
+     "start": 143.37,
+     "end": 143.53
+    },
+    {
+     "text": "裝",
+     "start": 143.53,
+     "end": 143.69
+    },
+    {
+     "text": "工",
+     "start": 143.69,
+     "end": 143.85
+    },
+    {
+     "text": "具",
+     "start": 143.85,
+     "end": 144.08
+    },
+    {
+     "text": "以及",
+     "start": 144.24,
+     "end": 144.35
+    },
+    {
+     "text": "網",
+     "start": 144.35,
+     "end": 144.48
+    },
+    {
+     "text": "路",
+     "start": 144.48,
+     "end": 144.61
+    },
+    {
+     "text": "設",
+     "start": 144.61,
+     "end": 144.74
+    },
+    {
+     "text": "定",
+     "start": 144.74,
+     "end": 144.87
+    },
+    {
+     "text": "要",
+     "start": 144.87,
+     "end": 145
+    },
+    {
+     "text": "注意",
+     "start": 145,
+     "end": 145.27
+    },
+    {
+     "text": "的",
+     "start": 145.27,
+     "end": 145.4
+    },
+    {
+     "text": "事",
+     "start": 145.4,
+     "end": 145.53
+    },
+    {
+     "text": "項",
+     "start": 145.53,
+     "end": 145.92
+    },
+    {
+     "text": "最後",
+     "start": 146.16,
+     "end": 146.32
+    },
+    {
+     "text": "分享",
+     "start": 146.32,
+     "end": 146.64
+    },
+    {
+     "text": "我",
+     "start": 146.64,
+     "end": 146.79
+    },
+    {
+     "text": "如何",
+     "start": 146.87,
+     "end": 147.12
+    },
+    {
+     "text": "用",
+     "start": 147.12,
+     "end": 147.19
+    },
+    {
+     "text": "AI",
+     "start": 147.2,
+     "end": 147.33
+    },
+    {
+     "text": "Codec",
+     "start": 147.33,
+     "end": 147.68
+    },
+    {
+     "text": "在",
+     "start": 147.84,
+     "end": 147.86
+    },
+    {
+     "text": "短",
+     "start": 147.86,
+     "end": 148.41
+    },
+    {
+     "text": "時間",
+     "start": 148.41,
+     "end": 148.77
+    },
+    {
+     "text": "完成",
+     "start": 148.78,
+     "end": 149.15
+    },
+    {
+     "text": "產",
+     "start": 149.15,
+     "end": 149.33
+    },
+    {
+     "text": "品",
+     "start": 149.33,
+     "end": 149.51
+    },
+    {
+     "text": "原",
+     "start": 149.51,
+     "end": 149.53
+    },
+    {
+     "text": "型",
+     "start": 149.73,
+     "end": 149.92
+    },
+    {
+     "text": "以及",
+     "start": 150.08,
+     "end": 150.32
+    },
+    {
+     "text": "在",
+     "start": 150.32,
+     "end": 150.52
+    },
+    {
+     "text": "實",
+     "start": 150.52,
+     "end": 150.71
+    },
+    {
+     "text": "際",
+     "start": 150.79,
+     "end": 150.92
+    },
+    {
+     "text": "應",
+     "start": 150.92,
+     "end": 151.11
+    },
+    {
+     "text": "用",
+     "start": 151.12,
+     "end": 151.29
+    },
+    {
+     "text": "中",
+     "start": 151.36,
+     "end": 151.52
+    },
+    {
+     "text": "一次",
+     "start": 151.52,
+     "end": 151.75
+    },
+    {
+     "text": "次",
+     "start": 151.97,
+     "end": 152.2
+    },
+    {
+     "text": "疊",
+     "start": 152.2,
+     "end": 152.72
+    },
+    {
+     "text": "帶",
+     "start": 152.72,
+     "end": 152.89
+    },
+    {
+     "text": "的",
+     "start": 152.89,
+     "end": 152.99
+    },
+    {
+     "text": "心",
+     "start": 153.07,
+     "end": 153.23
+    },
+    {
+     "text": "得",
+     "start": 153.23,
+     "end": 153.44
+    }
+   ]
+  }
+ },
+ "voiceOnly": [],
+ "voiceOut": [],
+ "voiceGaps": [],
+ "footage": null,
+ "editFx": null,
+ "cutpoints": [],
+ "voiceMoved": [],
+ "moods": [],
+ "zooms": null,
+ "rhythm": "continuous",
+ "uncovered": [],
+ "spokenLen": 153.28,
+ "chapters": [
+  {
+   "id": "c01",
+   "kind": "tag",
+   "num": "01",
+   "cue": null,
+   "title": "錄完要檢查",
+   "start": 17.882,
+   "end": 22.65,
+   "gap": null,
+   "placement": null,
+   "captionsClipped": [],
+   "badge": [
+    [
+     17.882,
+     43.03
+    ]
+   ]
+  },
+  {
+   "id": "c02",
+   "kind": "tag",
+   "num": "02",
+   "cue": null,
+   "title": "多機難同步",
+   "start": 55.65,
+   "end": 60.81,
+   "gap": null,
+   "placement": null,
+   "captionsClipped": [],
+   "badge": [
+    [
+     55.65,
+     77.22
+    ],
+    [
+     90.166,
+     100.03
+    ]
+   ]
+  },
+  {
+   "id": "c03",
+   "kind": "tag",
+   "num": "03",
+   "cue": null,
+   "title": "自製錄影工具",
+   "start": 100.03,
+   "end": 106.76,
+   "gap": null,
+   "placement": null,
+   "captionsClipped": [],
+   "badge": [
+    [
+     100.03,
+     112.113
+    ]
+   ]
+  },
+  {
+   "id": "c04",
+   "kind": "tag",
+   "num": "04",
+   "cue": null,
+   "title": "本集大綱",
+   "start": 133.87,
+   "end": 140.17,
+   "gap": null,
+   "placement": null,
+   "captionsClipped": [],
+   "badge": []
+  }
+ ],
+ "blackout": [],
+ "sfxBudget": {
+  "count": {
+   "sparkle": 1,
+   "alert": 2,
+   "success": 1
+  },
+  "over": [],
+  "dense": [],
+  "sparse": [
+   {
+    "from": 24.077,
+    "to": 95.695
+   }
+  ],
+  "loud": [],
+  "levels": {
+   "main": [
+    -6.9,
+    -5.2,
+    -6.8
+   ],
+   "extra": null
+  },
+  "perMinuteAvg": 1.6,
+  "warnings": [
+   "⚠ 音效稀疏：0:24.08–1:35.69（72 秒：s09、s15）沒有主音效 → 在這段裡找踩坑句配 alert、結果句配 success（落在句尾前 0.1–0.2 秒）；情境動畫在那一拍寫 P.sfx('success', '#N@詞')；錄影段寫 \"sfx\": { \"name\": \"success\", \"at\": \"#Ne-0.1\" }"
+  ],
+  "lines": [
+   "音效次數：success 1、alert 2、sparkle 1／6、shine 0／3、thunder 0／3",
+   "音效密度：主音效平均 1.6 顆／分（上限：任一分鐘 ≤ 5 顆，超過才 ⚠），附加音效 0 顆"
+  ],
+  "designOver": false
+ },
+ "outro": {
+  "music": null
+ },
+ "bed": null,
+ "chapterBadge": true,
+ "badges": [
+  {
+   "id": "c01",
+   "k": 1,
+   "num": "01",
+   "name": "錄完要檢查",
+   "start": 17.882,
+   "end": 55.65,
+   "hide": [
+    [
+     43.03,
+     55.65
+    ]
+   ],
+   "show": [
+    [
+     17.882,
+     43.03
+    ]
+   ],
+   "sweep": true
+  },
+  {
+   "id": "c02",
+   "k": 2,
+   "num": "02",
+   "name": "多機難同步",
+   "start": 55.65,
+   "end": 100.03,
+   "hide": [
+    [
+     77.22,
+     90.166
+    ]
+   ],
+   "show": [
+    [
+     55.65,
+     77.22
+    ],
+    [
+     90.166,
+     100.03
+    ]
+   ],
+   "sweep": true
+  },
+  {
+   "id": "c03",
+   "k": 3,
+   "num": "03",
+   "name": "自製錄影工具",
+   "start": 100.03,
+   "end": 133.87,
+   "hide": [
+    [
+     112.113,
+     133.87
+    ]
+   ],
+   "show": [
+    [
+     100.03,
+     112.113
+    ]
+   ],
+   "sweep": true
+  }
+ ],
+ "theme": "light",
+ "style": null,
+ "format": "landscape",
+ "canvas": {
+  "format": "landscape",
+  "W": 1920,
+  "H": 1080,
+  "fps": 30,
+  "unsafe": [],
+  "textSafe": [
+   [
+    0,
+    120,
+    1920,
+    870
+   ]
+  ],
+  "caption": {
+   "font": 76,
+   "line": 71,
+   "weight": 400,
+   "stroke": 0,
+   "pad": [
+    24,
+    37,
+    23
+   ],
+   "bottom": 6,
+   "box": [
+    40,
+    956,
+    1880,
+    1074
+   ],
+   "zone": [
+    0,
+    920,
+    1920,
+    1080
+   ],
+   "maxChars": 18,
+   "maxW": 1840
+  },
+  "lowerThird": {
+   "left": 120,
+   "bottom": 220,
+   "rect": [
+    120,
+    536,
+    1020,
+    860
+   ]
+  },
+  "centerCard": {
+   "rect": [
+    510,
+    536,
+    1410,
+    860
+   ]
+  },
+  "badge": {
+   "rect": [
+    1200,
+    56,
+    1824,
+    168
+   ],
+   "side": "right",
+   "dx": 16
+  },
+  "pip": {
+   "box": [
+    1424,
+    594,
+    432,
+    324
+   ],
+   "zone": [
+    1424,
+    581,
+    1888,
+    951
+   ],
+   "aspect": 1.3333333333333333,
+   "frame": "kit/pip-frame.png"
+  },
+  "stage": {
+   "fs": null,
+   "fx": null,
+   "ch": null
+  },
+  "media": {
+   "view": {
+    "contain": [
+     0,
+     0,
+     1920,
+     940
+    ],
+    "cover": [
+     0,
+     0,
+     1920,
+     1080
+    ]
+   }
+  },
+  "framing": {
+   "aspect": 1.7777777777777777,
+   "headTop": 120
+  },
+  "minTextPx": 30,
+  "regions": {
+   "band": [
+    120,
+    600,
+    1680,
+    260
+   ],
+   "panelTop": [
+    120,
+    150,
+    1180,
+    708
+   ],
+   "pip": [
+    1424,
+    594,
+    432,
+    324
+   ],
+   "badge": [
+    1560,
+    40,
+    320,
+    100
+   ],
+   "captions": [
+    0,
+    920,
+    1920,
+    160
+   ],
+   "safe": [
+    96,
+    54,
+    1728,
+    972
+   ],
+   "full": [
+    120,
+    40,
+    1680,
+    860
+   ]
+  }
+ }
+}

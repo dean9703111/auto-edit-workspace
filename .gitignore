@@ -21,6 +21,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 .claude/
+# Codex 的本機設定（子代理定義的正本在 .agents/agents/）
+.codex/
 .playwright-mcp/
 
 # 官網組站的輸出（node dev/tools/build-site.mjs）

@@ -46,11 +46,11 @@
 
 ## 檢查迴圈（Loop）
 每一輪實作結束都跑同一個迴圈，直到全部過關才交付：
-1. `node --test dev/tests/*.test.mjs` 全綠。
-2. `node dev/check-all.mjs`：文件一致性、`build.mjs --check` 範例 0 ✖、build、`audit.mjs` 0 ✖、`qc.mjs final` 0 ✖。
-3. 弱模型試跑：用較弱的模型（Sonnet 或更弱）只讀 AGENTS.md 與 Skill，從「剪乾淨」跑到停點 ③，記錄卡住的地方（`dev/loop/round-N.md`）。
+1. `npm test`（整套單元測試）全綠。
+2. `node dev/check-all.mjs`：照 `status.mjs --json` 印的指令從素材一路跑到停點 ④（橫式、直式各一輪；要 AI 寫的檔用 `dev/loop/fixtures/` 的固定檔），每步 0 ✖；結果自動加一行到 `dev/loop/check-log.md`。
+3. 弱模型試跑：用較弱的模型（Sonnet 或更弱）只讀 AGENTS.md 與 Skill，從「剪乾淨」跑到停點 ③，記錄卡住的地方。
 4. 審查員（只讀）對照 spec 的驗收條件逐項打勾，P0 問題清零。
-5. 有問題就修、回到 1。每輪結果寫進 `dev/loop/round-N.md`。
+5. 有問題就修、回到 1。一鍵檢查的結果由工具寫進 `dev/loop/check-log.md`；弱模型試跑與審查的發現另外記在 `dev/loop/`。
 
 ## 治理
 - 改規則先改 `specs/<編號>/spec.md`，再改程式與文件；spec 的驗收條件就是迴圈第 4 步的檢查表。

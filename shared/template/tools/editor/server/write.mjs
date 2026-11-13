@@ -13,6 +13,8 @@ import { replay, parseRef, refTime, RULES } from '../subtitles.mjs';
 import { visibleLen, richPlain, splitItem, parseAttrs, findSceneDef, findFxDef } from '../text.mjs';
 import { LOOK_LIMITS } from '../../lib/look.mjs';
 import { textFields } from '../../lib/storyboard-gen.mjs';
+import { opsMapper, remapScripts } from '../../lib/beat-remap.mjs';
+import { r3 } from '../../lib/time.mjs';
 
 export { visibleLen, richPlain };
 
@@ -28,7 +30,6 @@ export const LIMITS = Object.freeze({
   srt: RULES,
 });
 
-const r3 = (n) => +Number(n).toFixed(3);
 const r2 = (n) => Math.round(n * 100) / 100;
 const r1 = (n) => Math.round(n * 10) / 10;
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -648,6 +649,22 @@ export function applySave(planText, body, ctx = {}) {
   }
   const srtText = srtChanged ? writeSrt(ctx.srtText, cues, { renumber: structural }) : null;
   return { text, srtText: srtText === ctx.srtText ? null : srtText, plan: next, edit, cues: srtChanged ? cues.map(({ n, start, end, text: t }) => ({ n, start, end, text: t })) : cues0.map(({ n, start, end, text: t }) => ({ n, start, end, text: t })), memory: s.memory, anchors, notes, errors: [] };
+}
+
+// 032 B6 §4.7：字幕的結構操作（分割、插入、合併、刪除）存好 plan.json、rough.srt 之後呼叫（editor.mjs）：
+// 拍點正本在 work/designs/ 的段（內容設計動畫、手改的模板段、手寫 src），鏡位腳本「講到」欄和動畫檔的 P.at 照同一串 op 重對句號，
+// 各自先備份 <檔>.align-<時間>。plan.json 裡的句號 applySave 已經對好；照 plan.json 產生的模板動畫下次 build 會跟上。
+// P＝build.mjs pathsFrom 的 { project, out }；planBefore＝存檔前的 plan.json（文字或物件，owner 照它判斷）；srtTextBefore＝存檔前的 rough.srt
+// → { scripts, anims }：改到的檔（相對專案）
+export function remapScriptsAfterSave(P, { planBefore, srtTextBefore, ops, videoDur = null, lib = null, now = new Date() } = {}) {
+  const none = { scripts: [], anims: [] };
+  if (!Array.isArray(ops) || !ops.length || srtTextBefore == null || planBefore == null) return none;
+  const cues = parseSrtBlocks(srtTextBefore).blocks.map(({ n, start, end, text }) => ({ n, start, end, text }));
+  const mp = opsMapper(cues, ops, { videoDur });
+  if (!mp.structural) return none;
+  let plan = planBefore;
+  if (typeof plan === 'string') { try { plan = JSON.parse(plan); } catch { return none; } }
+  return remapScripts(P, plan, mp, { lib, now, tag: 'align' });
 }
 
 // ---------- rough.srt ----------

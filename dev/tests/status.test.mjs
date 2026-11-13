@@ -5,12 +5,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, imp } from './helpers.mjs';
+import { TOOLS, imp, fixture, tmpDir } from './helpers.mjs';
 
 const { projectStatus, readStopLog, initProgress, markStop, normalizeStop, hasCamera, inventoryTodo, actionLines, editorUrls, readFacts, mainKindText } = await imp('status.mjs');
 const { progressFile } = await imp('lib/progress.mjs');
 const mk = () => {
-  const p = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-status-'));
+  const p = tmpDir(null, 'hf-status-');   // 掛在呼叫它的那個 test 結束時清（測試裡自己先清的照舊）
   for (const d of ['camera', 'voice', 'screen', 'images']) fs.mkdirSync(path.join(p, 'assets', d), { recursive: true });
   return p;
 };
@@ -90,7 +90,7 @@ test('停點紀錄：同一停點以最後一列為準；待回覆的停點蓋�
   assert.ok(r.stdout.includes('⏸ 停點 ③ 分鏡表｜請看 <分鏡表網址>\n請回：改好後說「可以」，或要改的地方\n'), '重貼停點那兩行（照 AGENTS.md）');
   assert.match(lines.at(-1), /editor\.mjs --project /, '剪輯台沒開：最後一行是開剪輯台的指令');
   const j = JSON.parse(spawnSync(process.execPath, [path.join(TOOLS, 'status.mjs'), '--project', p, '--json'], { encoding: 'utf8' }).stdout);
-  assert.deepEqual(Object.keys(j), ['project', 'stage', 'at', 'skill', 'next', 'cmd', 'cmds', 'nextStop', 'waiting', 'stopLine', 'after', 'needEditor', 'round', 'job', 'camera', 'feedback', 'evidence', 'format', 'formatSource', 'speaker']);
+  assert.deepEqual(Object.keys(j), ['project', 'stage', 'at', 'skill', 'next', 'cmd', 'cmds', 'dispatch', 'nextStop', 'waiting', 'stopLine', 'after', 'needEditor', 'round', 'job', 'camera', 'feedback', 'evidence', 'format', 'formatSource', 'speaker', 'summary']);
   assert.ok(['set', 'off', 'unset', 'bad'].includes(j.speaker));
   assert.deepEqual(snapshot(p), before, '跑完前後檔案與修改時間不變');
   fs.rmSync(p, { recursive: true });
@@ -138,10 +138,8 @@ test('C-01：構圖預覽（S8）前講者調光瘦臉還沒好 → 下一步＝
   const s = projectStatus(p);
   assert.equal(s.stage, 'S8');
   if (ns.done) {
-    assert.match(s.cmd, /qc\.mjs framing --project /);
-    assert.equal(s.cmds.length, 3, 'qc framing、editor、記停點 ②');
-    assert.match(s.cmds[1], /editor\.mjs --project /);
-    assert.match(s.cmds[2], /status\.mjs --project .* --mark "② 構圖" --state 待回覆$/);
+    assert.match(s.cmd, /build\.mjs --project .* --framing$/);
+    assert.equal(s.cmds.length, 1, '032 A2：build.mjs --framing 一條做完量構圖、開構圖台、記停點 ②');
     assert.match(s.next, /不用等使用者說「剪好看」/);
   } else { assert.equal(s.next, ns.note); assert.equal(s.cmd, ns.cmd); }
 });
@@ -225,16 +223,15 @@ test('下一步的指令：開工 prep → ① 通過 rough → 初剪好 framin
   for (const f of ['work/rough.srt.align-1', 'work/transcript.json', 'work/cutpoints.json']) touch(p, f);
   touch(p, 'work/rough.srt', '1\n00:00:01,000 --> 00:00:02,000\n短句\n');
   assert.equal(st().stage, 'S8');
-  assert.deepEqual(st().cmds.map((c) => c.split(' ')[1].split('/').pop()), ['qc.mjs', 'editor.mjs', 'status.mjs']);
+  assert.deepEqual(st().cmds.map((c) => c.split(' ').slice(1).join(' ').replace(/--project \S+ /, '')), ['shared/template/tools/build.mjs --framing']);
   touch(p, 'work/構圖預覽.jpg');
   assert.equal(st().stage, 'S9');
-  assert.match(st().cmd, /editor\.mjs --project /, '構圖預覽做好了、② 還沒記：開構圖台、記停點');
+  assert.match(st().cmd, /build\.mjs --project .* --framing$/, '構圖預覽做好了、② 還沒記：開構圖台、記停點（032 A2）');
   log(`| ${at} | ① 剪輯清單 | 通過 | 「可以」 | work/cuts.md |`, `| ${at} | ② 構圖 | 待回覆 | — | — |`);
-  assert.deepEqual(st().after[0].cmds.map((c) => /status\.mjs/.test(c) ? 'mark' : /qc\.mjs speaker .*--write$/.test(c) ? 'speaker' : /--scaffold$/.test(c) ? 'scaffold' : c), ['mark', 'speaker', 'scaffold']);
+  assert.deepEqual(st().after.map((a) => a.cmds.map((c) => c.replace(/--project \S+ /, ''))), [['node shared/template/tools/build.mjs --framing-done --said "<使用者原話>"'], ['node shared/template/tools/build.mjs --framing-done --use suggested --said "<使用者原話>"'], ['node shared/template/tools/build.mjs --framing-done --use <倍率> --said "<使用者原話>"']]);
   log(`| ${at} | ① 剪輯清單 | 通過 | 「可以」 | work/cuts.md |`, `| ${at} | ② 構圖 | 通過 | 「調好了」 | plan.json |`);
   assert.equal(st().at, '剪好看／② 通過，量講者框');
-  assert.match(st().cmds[0], /qc\.mjs speaker --project .* --write$/);
-  assert.match(st().cmds[1], /build\.mjs --project .* --scaffold$/);
+  assert.deepEqual(st().cmds.map((c) => c.replace(/--project \S+ /, '')), ['node shared/template/tools/build.mjs --framing-done'], '② 通過還沒量講者框：--framing-done 接著做完');
   touch(p, 'work/hyperframes/plan.json', JSON.stringify({ version: 1, speakerBox: [1, 2, 3, 4] }), 600);
   assert.match(st().cmd, /build\.mjs --project .* --scaffold$/, '講者框有了：只差分鏡素材');
   touch(p, 'work/分鏡素材/index.json', JSON.stringify({ parts: [{ key: 'ch01' }, { key: 'ch02' }] }));
@@ -263,6 +260,11 @@ test('下一步的指令：開工 prep → ① 通過 rough → 初剪好 framin
   assert.match(st().at, /做動畫（還沒做：s02）/, '內容設計動畫還沒做');
   assert.match(st().cmd, /--review$/);
   assert.equal(st().skill, 'auto-edit-motion 步驟 1–2');
+  const motionL = actionLines(st());
+  assert.match(motionL[0], /^→ 派工：做 1 段動畫：一段派一個子代理/, '派工訊息走「→ 派工」');
+  assert.match(motionL[1], /^  （s02）你是設計師/);
+  assert.match(motionL.at(-2), /^→ 下一步：1 段動畫照上面「→ 派工：」派出，全部回來才跑下一行$/);
+  assert.match(motionL.at(-1), /--review$/);
   touch(p, 'work/hyperframes/compositions/x-design-s02.html', '<template>做好了</template>');
   assert.equal(st().stage, 'S11');
   assert.match(st().cmd, /--review$/);
@@ -272,6 +274,7 @@ test('下一步的指令：開工 prep → ① 通過 rough → 初剪好 framin
   log(`| ${at} | ③ 分鏡表 | 通過 | 「可以」 | plan.json |`, `| ${at} | ④ 完成影片預覽 | 待回覆 | — | — |`);
   assert.match(st().after[0].cmds[0], /deliver\.mjs --project .* --said "<使用者原話>"$/, '輸出：deliver 自己記 ④ 通過');
   assert.match(st().after[1].cmds[0], /versions\.mjs begin --project .* --seg <段 id> --say "<使用者原話>"$/);
+  assert.deepEqual(st().after.slice(2).map((a) => a.cmds.map((c) => c.replace(/--project \S+ /, ''))), [['node shared/template/tools/versions.mjs new --seg <段 id> --note "<使用者原話>"'], ['node shared/template/tools/versions.mjs use --seg <段 id> --ver v<N> --said "<使用者原話>"']], '重新設計、退回一版：各一條（new、use 沒開輪會自己開）');
   log(`| ${at} | ③ 分鏡表 | 通過 | 「可以」 | plan.json |`, `| ${at} | ④ 完成影片預覽 | 通過 | 「可以了」 | output/final.mp4 |`);
   assert.match(st().cmd, /^node shared\/template\/tools\/deliver\.mjs --project /);
   assert.equal(st().skill, 'auto-edit-deliver');
@@ -384,8 +387,9 @@ test('有停點在等：重貼 AGENTS.md 那一行；剪輯台開著填網址、
   assert.equal(s.needEditor, false);
   assert.equal(s.stopLine, '⏸ 停點 ① 剪輯清單｜請看 http://127.0.0.1:4412/cuts\n請回：勾好後說「可以」，或要改的列');
   L = actionLines(s);
-  assert.equal(L.at(-1), s.stopLine);
-  assert.match(L.at(-2), /^→ 下一步：等使用者回覆/);
+  assert.equal(L.at(-1), s.stopLine, '停點那兩行是最後兩行');
+  assert.equal(L.at(-2), '等使用者回覆：回覆的最後兩行照抄下面這兩行', '上面是一般說明，不是「→ 下一步」（下面接的不是指令）');
+  assert.ok(!L.some((l) => l.startsWith('→ 下一步')), '停點在等、剪輯台開著：沒有「→ 下一步」');
   // 死掉的 pid：當作沒開
   touch(p, 'work/hyperframes/.editor/server.json', JSON.stringify({ pid: 2 ** 30, url: 'http://127.0.0.1:4412/' }));
   assert.equal(editorUrls(p), null);
@@ -481,15 +485,20 @@ test('--mark：加一列、時間工具蓋、印那一列；停點寫法都認�
 // ---------- --init ----------
 
 const ffmpeg = spawnSync('ffmpeg', ['-version']).status === 0;
+// 同樣的素材這一輪只做一次（檔名帶副檔名：ffmpeg 照副檔名選格式），各專案複製一份
 const clip = (f, size, secs = 2) => {
   fs.mkdirSync(path.dirname(f), { recursive: true });
-  const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `testsrc=size=${size}:rate=10`, '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=16000', '-t', String(secs), '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', f]);
-  assert.equal(r.status, 0, String(r.stderr));
+  fs.copyFileSync(fixture(`status-clip-${size}-${secs}s${path.extname(f)}`, (o) => {
+    const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `testsrc=size=${size}:rate=10`, '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=16000', '-t', String(secs), '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', o]);
+    assert.equal(r.status, 0, String(r.stderr));
+  }), f);
 };
 const voice = (f, secs = 3) => {
   fs.mkdirSync(path.dirname(f), { recursive: true });
-  const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=16000', '-t', String(secs), '-c:a', 'aac', f]);
-  assert.equal(r.status, 0, String(r.stderr));
+  fs.copyFileSync(fixture(`status-voice-${secs}s${path.extname(f)}`, (o) => {
+    const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=16000', '-t', String(secs), '-c:a', 'aac', o]);
+    assert.equal(r.status, 0, String(r.stderr));
+  }), f);
 };
 
 test('mainKindText：只有真人／真人＋聲音（混用）／只有聲音，並寫各幾支', () => {

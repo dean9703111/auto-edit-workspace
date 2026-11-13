@@ -23,7 +23,7 @@
 
 import { PIP_ZONE } from './media.mjs';
 import { CANVAS as CANVASES, stageTransform } from './canvas.mjs';
-import { parseTime, cueSeconds } from './time.mjs';
+import { parseTime, cueSeconds, r3Round as r3, clock2 } from './time.mjs';
 
 export const CANVAS = [1920, 1080];
 export const CAPTION_Y = 920;       // 字幕區從 y 920 起（R4.1；check --caption-zone 的 y0=0.852）
@@ -55,8 +55,7 @@ export const HOLD_MIN = 1.2, TAIL_MIN = 1.5;            // 完成態停留、最
 export const MERGE_WIN = 0.6, SWAP_WIN = 0.15, EMPH_PX = 8, BUSY_GAP = 0.05, STILL_MIN = 0.4, STILL_MAX = 8;   // 初值；STILL_MIN 出自 OV/AW:L215
 
 const r1 = (n) => Math.round(n * 10) / 10;
-const r3 = (n) => Math.round(n * 1000) / 1000;
-export const fmtT = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+export const fmtT = clock2;
 
 // ---------- 段落與取樣 ----------
 
@@ -612,9 +611,12 @@ export function judgeLayout(meas, ctx) {
       // 全螢幕的內容設計動畫：已經撐滿上下（畫布允許 y 40–900，角標左邊可以用到頂）就不算不平衡
       const filled = ctx.item.wide && ctx.item.seg?.design && U[3] - U[1] >= FULL.tall && U[1] >= FULL.top - 1 && U[3] <= FULL.y[1] + 1;
       if (!filled && Math.abs(diff) > VBAL_MAX + 1e-6) {
-        const k = Math.abs(Math.round((down - up) / 2));
+        const k = Math.abs(Math.round((down - up) / 2)), dir = diff < 0 ? 1 : -1, each = Math.round((up + down) / 2);
+        // 032 B8：印移完的目標（內容 y 幾到幾、上下留白各幾 px），照抄就能改；內容設計動畫的畫布有舞台容器，放進去就自動置中
+        const goal = each >= 0 ? `上下留白各 ${each}px` : `上下各超出 ${-each}px（內容比內容區高，先縮小再置中）`;
+        const stage = ctx.item.seg?.design ? `；畫布有 #xd${ctx.item.id}-stage 舞台的，內容放進舞台就自動上下置中` : '';
         push('warn', 'vbalance', null, `垂直不平衡：內容 y ${ri(U[1])}–${ri(U[3])}，上留白 ${ri(up)}px、下留白 ${ri(down)}px（內容區 y ${CT}–${CB}，差 ${ri(Math.abs(diff))}px，超過 ${VBAL_MAX}px）`,
-          `整組往${diff < 0 ? '下' : '上'}移 ${k}px（每個頂層元素的 top 都 ${diff < 0 ? '+' : '−'}${k}）`, { up: r1(up), down: r1(down) });
+          `整組往${diff < 0 ? '下' : '上'}移 ${k}px（每個頂層元素的 top 都 ${diff < 0 ? '+' : '−'}${k}）→ 移完內容在 y ${ri(U[1] + dir * k)}–${ri(U[3] + dir * k)}，${goal}${stage}`, { up: r1(up), down: r1(down), move: dir * k, target: each });
       }
     }
     // ⚠ 全螢幕的內容設計動畫：沒有講者，畫面可以用滿，還擠在一邊或太小就是沒用到（舊習慣是左邊 1180、右邊留給小視窗）

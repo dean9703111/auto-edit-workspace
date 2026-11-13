@@ -9,6 +9,7 @@
 // 舊版把講者資料放在 shared/講者.json：setting.json 還沒有 speaker 時照舊讀它，下一次寫設定時一起搬進 setting.json（舊檔留著，不會再被讀）。
 import fs from 'node:fs';
 import path from 'node:path';
+import { writeAtomic } from './atomic.mjs';
 
 export const SETTINGS_FILE = 'setting.json';
 export const SETTINGS_EXAMPLE = 'setting.example.json';
@@ -42,6 +43,6 @@ export function writeSetting(sharedDir, key, value) {
   const next = { ...data };
   if (value === undefined) delete next[key]; else next[key] = value;
   fs.mkdirSync(sharedDir, { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
+  writeAtomic(file, `${JSON.stringify(next, null, 2)}\n`);
   return file;
 }

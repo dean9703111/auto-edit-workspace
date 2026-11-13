@@ -1,0 +1,7560 @@
+{
+ "meta": {
+  "hash": "a90478596d3f8974"
+ },
+ "value": {
+  "items": [
+   {
+    "idx": 0,
+    "id": "s0101",
+    "seg": {
+     "id": "s0101",
+     "scene": "chapter",
+     "at": "#1",
+     "slots": {
+      "num": "01",
+      "title": "多機錄影工具",
+      "sub": "手機多機同步錄影"
+     },
+     "story": {
+      "say": "開場章節角標：多機錄影工具",
+      "why": "每一章開頭（含總結章），用全畫面幕交代章號與章名"
+     }
+    },
+    "errors": [],
+    "warnings": [
+     "[s0101 chapter] #1 前的空檔只有 0.16s（< 2s），章節 2.5s 會壓到 #1 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/example，照它印的指令重剪"
+    ],
+    "where": "[s0101 chapter]",
+    "type": "scene",
+    "scene": "$scene:chapter",
+    "key": "chapter",
+    "label": "01 章節轉場",
+    "opaque": true,
+    "pip": false,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "compId": "s0101-chapter",
+    "file": "compositions/s0101-chapter.html",
+    "D": 2.5,
+    "start": 0.16,
+    "chapterNote": "空檔 0.16s < 2s，從 #1 起點開始蓋 2.5s",
+    "chInfo": {
+     "cue": 1,
+     "gap": 0.16,
+     "placement": "cover"
+    },
+    "end": 2.66,
+    "planEnd": 2.66,
+    "rough0": [
+     0.16,
+     2.66
+    ],
+    "fadeIn": true,
+    "fadeOut": true,
+    "exitFade": true,
+    "notes": [
+     "字幕避開章節：#1 整句不顯示、#2 晚 0.58s 出現"
+    ],
+    "txIn": "chapter",
+    "prev": "speaker",
+    "txOut": "fade",
+    "pipPieces": [],
+    "resolved": {
+     "ctx": {
+      "num": "01",
+      "title": "多機錄影工具",
+      "title_len": 6,
+      "title_lines": [
+       6
+      ],
+      "sub": "手機多機同步錄影",
+      "sub_len": 8,
+      "sub_lines": [
+       8
+      ]
+     },
+     "beats": {
+      "titleAt": 0.45,
+      "subAt": 0.6
+     },
+     "listTimes": {},
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "sfx": {
+     "name": "chapter",
+     "at": 0.622,
+     "volume": 1,
+     "event": 0.61
+    }
+   },
+   {
+    "idx": 1,
+    "id": "s0102",
+    "seg": {
+     "id": "s0102",
+     "scene": "speaker",
+     "from": "#1",
+     "to": "#7@接下來要",
+     "anchor": "嗨！大家好我",
+     "slots": {},
+     "story": {
+      "say": "講者第一次自我介紹",
+      "why": "講者第一次自我介紹，一集只用一次"
+     }
+    },
+    "errors": [],
+    "warnings": [
+     "[s0102 speaker] 音效 sparkle（0.113s）和 s0101 明寫的音效只差 0.509s（< 3s），已拿掉（段上明寫的優先）"
+    ],
+    "where": "[s0102 speaker]",
+    "type": "scene",
+    "scene": "$scene:speaker",
+    "key": "speaker",
+    "label": "14 講者介紹",
+    "opaque": false,
+    "pip": false,
+    "side": false,
+    "lower": true,
+    "z": 20,
+    "compId": "s0102-speaker",
+    "file": "compositions/s0102-speaker.html",
+    "start": 0.16,
+    "end": 14.79,
+    "planEnd": 14.39,
+    "rough0": [
+     0.16,
+     14.39
+    ],
+    "handoff": "s0103",
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "D": 14.63,
+    "txIn": "band",
+    "prev": "speaker",
+    "txOut": "handoff",
+    "pipPieces": [],
+    "resolved": {
+     "ctx": {
+      "tag": "講師",
+      "tag_len": 2,
+      "tag_lines": [
+       2
+      ],
+      "name": "林鼎淵",
+      "name_len": 3,
+      "name_lines": [
+       3
+      ],
+      "titles": [
+       {
+        "text": "外商工程師",
+        "text_len": 5,
+        "text_lines": [
+         5
+        ],
+        "at": 0.6
+       },
+       {
+        "text": "暢銷書作家",
+        "text_len": 5,
+        "text_lines": [
+         5
+        ],
+        "at": 0.7
+       },
+       {
+        "text": "企業內訓講師",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 0.8
+       }
+      ]
+     },
+     "beats": {
+      "in": 0
+     },
+     "listTimes": {
+      "titles": [
+       0.6,
+       0.7,
+       0.8
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "sfx": null,
+    "sfxDropped": {
+     "name": "sparkle",
+     "at": 0.113,
+     "volume": 0.575,
+     "event": 0.26
+    }
+   },
+   {
+    "idx": 2,
+    "id": "s0103",
+    "seg": {
+     "id": "s0103",
+     "scene": "key-point",
+     "from": "#7@接下來要",
+     "to": "#8e",
+     "anchor": "因為接下來要分享",
+     "slots": {
+      "key": "免費工具",
+      "lead": "接下來要分享",
+      "icon": "star"
+     },
+     "beats": {
+      "keyAt": "#8@免費工具"
+     },
+     "story": {
+      "say": "分享一個省時間的免費工具，建議先儲存",
+      "why": "這是開場唯一要觀眾記住的重點：這集有免費工具",
+      "designIdea": "主角第一次亮相：一台手機和一台電腦之間拉出一條線，線上跑著一段影片",
+      "designWhy": "開場第一次讓主角（手機＋電腦）現身，觀眾要一眼知道這支片的主角是什麼"
+     },
+     "tone": "good"
+    },
+    "errors": [],
+    "warnings": [
+     "[s0103 key-point] 最後一個內容在第 2.61s，到退場只停 1.06s，建議 ≥ 1.5s（把 to 往後延）"
+    ],
+    "where": "[s0103 key-point]",
+    "type": "scene",
+    "scene": "$scene:key-point",
+    "key": "key-point",
+    "label": "07 重點字卡",
+    "opaque": false,
+    "pip": false,
+    "side": false,
+    "lower": true,
+    "z": 20,
+    "compId": "s0103-key-point",
+    "file": "compositions/s0103-key-point.html",
+    "start": 14.39,
+    "end": 18.36,
+    "planEnd": 17.96,
+    "rough0": [
+     14.39,
+     17.96
+    ],
+    "handoff": "s0104",
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "D": 3.97,
+    "txIn": "band",
+    "prev": "speaker",
+    "txOut": "handoff",
+    "pipPieces": [],
+    "resolved": {
+     "ctx": {
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" /> </svg>",
+      "lead": "接下來要分享",
+      "lead_len": 6,
+      "lead_lines": [
+       6
+      ],
+      "key": "免費工具",
+      "key_len": 4,
+      "key_lines": [
+       4
+      ]
+     },
+     "beats": {
+      "in": 0,
+      "keyAt": 2.61
+     },
+     "listTimes": {},
+     "tone": "good",
+     "errors": [],
+     "warnings": [
+      "[s0103 key-point] 最後一個內容在第 2.61s，到退場只停 1.06s，建議 ≥ 1.5s（把 to 往後延）"
+     ]
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "sfx": null,
+    "sfxDropped": {
+     "name": "success",
+     "at": 16.896,
+     "volume": 0.692,
+     "event": 17
+    }
+   },
+   {
+    "idx": 3,
+    "id": "s0104",
+    "seg": {
+     "id": "s0104",
+     "scene": "steps",
+     "from": "#9",
+     "to": "#11e",
+     "anchor": "過去正式開拍",
+     "slots": {
+      "steps": [
+       {
+        "text": "先**試錄**一小段",
+        "at": "#10@先試錄一"
+       },
+       {
+        "text": "確認**畫面**與聲音",
+        "at": "#11@畫面"
+       }
+      ]
+     },
+     "story": {
+      "say": "開拍前先試錄一小段的兩個動作",
+      "why": "講解依序講 2–4 個操作步驟，同一個位置一步換一步"
+     }
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[s0104 steps]",
+    "type": "scene",
+    "scene": "$scene:steps",
+    "key": "steps",
+    "label": "08 Step 字卡",
+    "opaque": false,
+    "pip": false,
+    "side": false,
+    "lower": true,
+    "z": 20,
+    "compId": "s0104-steps",
+    "file": "compositions/s0104-steps.html",
+    "start": 17.96,
+    "end": 23.6,
+    "planEnd": 23.6,
+    "rough0": [
+     17.96,
+     23.6
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "D": 5.64,
+    "txIn": "band",
+    "prev": "speaker",
+    "txOut": "band",
+    "pipPieces": [],
+    "resolved": {
+     "ctx": {
+      "steps": [
+       {
+        "text": "先<span class=\"sc-kw\">試錄</span>一小段",
+        "text_text": "先試錄一小段",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 1.627
+       },
+       {
+        "text": "確認<span class=\"sc-kw\">畫面</span>與聲音",
+        "text_text": "確認畫面與聲音",
+        "text_len": 7,
+        "text_lines": [
+         7
+        ],
+        "at": 3.24
+       }
+      ],
+      "stepsHasIcon": false
+     },
+     "beats": {
+      "in": 0
+     },
+     "listTimes": {
+      "steps": [
+       1.627,
+       3.24
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": []
+   },
+   {
+    "idx": 4,
+    "id": "x0105",
+    "seg": {
+     "id": "x0105",
+     "type": "custom",
+     "template": "x-breakout",
+     "from": "#12",
+     "to": "#14e",
+     "anchor": "而正式開拍後",
+     "slots": {
+      "tag": "跑到手機旁",
+      "openAt": "#12@拍",
+      "hitAt": "#13@旁邊"
+     },
+     "story": {
+      "say": "錄完每段要跑回手機旁播放檢查",
+      "why": "講者露臉，開場第一句或整支片情緒最高的那一下：講者先被裝進白邊相框，講到那個詞的"
+     },
+     "src": "compositions/x-breakout-x0105.html",
+     "layout": "overlay"
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[x0105 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-breakout-x0105.html",
+    "compId": "x-breakout-x0105",
+    "file": "compositions/x-breakout-x0105.html",
+    "refList": [
+     "#12@拍",
+     "#13@旁邊"
+    ],
+    "sfxBeats": [
+     {
+      "name": "impact",
+      "ref": "#13@旁邊",
+      "off": 0
+     }
+    ],
+    "opaque": false,
+    "pip": false,
+    "side": false,
+    "lower": false,
+    "z": 20,
+    "start": 23.6,
+    "end": 31.82,
+    "planEnd": 31.32,
+    "rough0": [
+     23.6,
+     31.32
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": false,
+    "notes": [],
+    "coveredBy": "s0106",
+    "D": 8.22,
+    "txIn": "overlay",
+    "prev": "speaker",
+    "txOut": "cover",
+    "pipPieces": [],
+    "cueRefs": {
+     "#12@拍": 24.2,
+     "#13@旁邊": 26.94
+    },
+    "sfxExtra": [
+     {
+      "name": "impact",
+      "at": 26.839,
+      "volume": 0.62,
+      "event": 26.94,
+      "beat": true
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "id": "s0106",
+    "seg": {
+     "id": "s0106",
+     "scene": "fs-list",
+     "from": "#15",
+     "to": "#19e",
+     "anchor": "但畢竟手機畫",
+     "slots": {
+      "title": "手機上看不到的問題",
+      "items": [
+       {
+        "text": "螢幕太小，**小毛病**看不到",
+        "at": "#16@小毛病"
+       },
+       {
+        "text": "腳架不穩，畫面**晃動**",
+        "at": "#18@腳架不穩"
+       },
+       {
+        "text": "衣服太薄，有**激凸**問題",
+        "at": "#19@衣服"
+       }
+      ]
+     },
+     "story": {
+      "say": "手機畫面小看不到的問題",
+      "why": "資訊量大的 3–4 項清單，一項一句話，需要觀眾逐項看完"
+     }
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[s0106 fs-list]",
+    "type": "scene",
+    "scene": "$scene:fs-list",
+    "key": "fs-list",
+    "label": "04a 全畫面清單",
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "compId": "s0106-fs-list",
+    "file": "compositions/s0106-fs-list.html",
+    "start": 31.32,
+    "end": 42.92,
+    "planEnd": 42.92,
+    "rough0": [
+     31.32,
+     42.92
+    ],
+    "fadeIn": true,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0107",
+    "D": 11.6,
+    "txIn": "wipe",
+    "prev": "speaker",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 31.32,
+      "e": 42.92,
+      "ms": 31.32,
+      "enter": "fly",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "resolved": {
+     "ctx": {
+      "title": "手機上看不到的問題",
+      "title_len": 9,
+      "title_lines": [
+       9
+      ],
+      "items": [
+       {
+        "text": "螢幕太小，<span class=\"sc-kw\">小毛病</span>看不到",
+        "text_text": "螢幕太小，小毛病看不到",
+        "text_len": 11,
+        "text_lines": [
+         11
+        ],
+        "at": 1.93
+       },
+       {
+        "text": "腳架不穩，畫面<span class=\"sc-kw\">晃動</span>",
+        "text_text": "腳架不穩，畫面晃動",
+        "text_len": 9,
+        "text_lines": [
+         9
+        ],
+        "at": 5.68
+       },
+       {
+        "text": "衣服太薄，有<span class=\"sc-kw\">激凸</span>問題",
+        "text_text": "衣服太薄，有激凸問題",
+        "text_len": 10,
+        "text_lines": [
+         10
+        ],
+        "at": 9.26
+       }
+      ],
+      "itemsHasIcon": false
+     },
+     "beats": {},
+     "listTimes": {
+      "items": [
+       1.93,
+       5.68,
+       9.26
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1500,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 6,
+    "id": "x0107",
+    "seg": {
+     "id": "x0107",
+     "type": "custom",
+     "template": "x-architecture",
+     "from": "#20",
+     "to": "#24e",
+     "anchor": "而我過去的拍",
+     "slots": {
+      "title": "影片的來回",
+      "source": "手機",
+      "sourceIcon": "smartphone",
+      "target": "電腦",
+      "targetIcon": "laptop",
+      "relay": "雲端",
+      "relayIcon": "cloud",
+      "path": "#21@雲端",
+      "flow": "#21@電腦"
+     },
+     "story": {
+      "say": "影片上傳雲端再下載，小問題在收工時才發現",
+      "why": "把影片在三個裝置間繞一圈的荒謬用一條線講清楚",
+      "designIdea": "痛點頂點：手機把影片丟進雲端，雲端再丟回電腦，電腦螢幕上跳出晃動與激凸兩個紅框",
+      "designWhy": "痛點的頂點是靠三個裝置的繞路撐起來的，模板講不出那種繞的感覺"
+     },
+     "src": "compositions/x-architecture-x0107.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [
+     "[x0107 custom] 動畫分鏡：第 4 拍（0:45.53）到第 5 拍（0:47.44）只隔 1.91s，範例檔頭【D 下限】相鄰兩拍至少 2.5s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）"
+    ],
+    "where": "[x0107 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-architecture-x0107.html",
+    "compId": "x-architecture-x0107",
+    "file": "compositions/x-architecture-x0107.html",
+    "refList": [
+     "#21@雲端",
+     "#21@電腦"
+    ],
+    "sfxBeats": [],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 42.92,
+    "end": 53.88,
+    "planEnd": 53.88,
+    "rough0": [
+     42.92,
+     53.88
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0108",
+    "D": 10.96,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 42.92,
+      "e": 53.88,
+      "ms": 42.92,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "cueRefs": {
+     "#21@雲端": 45.53,
+     "#21@電腦": 47.44
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1500,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 7,
+    "id": "x0108",
+    "seg": {
+     "id": "x0108",
+     "type": "custom",
+     "template": "x-route",
+     "from": "#25",
+     "to": "#32e",
+     "anchor": "另外有些時候",
+     "slots": {
+      "title": "多機拍攝的兩種情境",
+      "icon": "map",
+      "items": [
+       {
+        "text": "橫長影片",
+        "note": "一支手機",
+        "at": "#28@橫"
+       },
+       {
+        "text": "直短影音",
+        "note": "另一支",
+        "at": "#29@直"
+       },
+       {
+        "text": "訪談節目",
+        "note": "主持人來賓",
+        "at": "#30@訪談"
+       }
+      ]
+     },
+     "story": {
+      "say": "多機拍攝的兩種情境",
+      "why": "從哪裡到哪裡：2–4 個地點有先後（「從台北出發，先到台中，再到高雄」「這趟去了"
+     },
+     "src": "compositions/x-route-x0108.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [
+     "[x0108 custom] 動畫分鏡：第 1 拍（1:01.47）到第 2 拍（1:03.45）只隔 1.98s，範例檔頭【D 下限】相鄰兩拍至少 2.4s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）",
+     "[x0108 custom] 動畫分鏡：第 2 拍（1:03.45）到第 3 拍（1:05.51）只隔 2.06s，範例檔頭【D 下限】相鄰兩拍至少 2.4s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）"
+    ],
+    "where": "[x0108 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-route-x0108.html",
+    "compId": "x-route-x0108",
+    "file": "compositions/x-route-x0108.html",
+    "refList": [
+     "#28@橫",
+     "#29@直",
+     "#30@訪談"
+    ],
+    "sfxBeats": [
+     {
+      "name": "ding",
+      "ref": "#30@訪談",
+      "off": 0
+     }
+    ],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 53.88,
+    "end": 72.24,
+    "planEnd": 72.24,
+    "rough0": [
+     53.88,
+     72.24
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "s0109",
+    "D": 18.36,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 53.88,
+      "e": 72.24,
+      "ms": 53.88,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "cueRefs": {
+     "#28@橫": 61.47,
+     "#29@直": 63.45,
+     "#30@訪談": 65.51
+    },
+    "sfxExtra": [
+     {
+      "name": "ding",
+      "at": 65.533,
+      "volume": 0.73,
+      "event": 65.51,
+      "beat": true
+     }
+    ],
+    "badgeBox": [
+     1540,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 8,
+    "id": "s0109",
+    "seg": {
+     "id": "s0109",
+     "scene": "fs-compare",
+     "from": "#33",
+     "to": "#40e",
+     "anchor": "但我們馬上就",
+     "slots": {
+      "title": "一支和多支差在哪",
+      "leftHead": "一支手機",
+      "leftIcon": "smartphone",
+      "left": [
+       {
+        "text": "手勢就能開始"
+       },
+       {
+        "text": "自己操作就好"
+       }
+      ],
+      "rightHead": "多支手機",
+      "rightIcon": "monitor-smartphone",
+      "right": [
+       {
+        "text": "難同時啟動"
+       },
+       {
+        "text": "剪輯校正崩潰"
+       }
+      ]
+     },
+     "beats": {
+      "leftAt": "#34@一支",
+      "rightAt": "#37@同時啟動"
+     },
+     "story": {
+      "say": "一支手機與多支手機的對比",
+      "why": "全片的對比軸，左右並列最清楚",
+      "designIdea": "對比視覺化：左邊一支手機被手勢點亮就能開始，右邊多支手機各自亮起、開始時間彼此錯開",
+      "designWhy": "一支與多支的差別是整支片的對比軸，模板的並排清單說不出開始時間錯開的那種亂"
+     }
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[s0109 fs-compare]",
+    "type": "scene",
+    "scene": "$scene:fs-compare",
+    "key": "fs-compare",
+    "label": "04b 全畫面對照",
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "compId": "s0109-fs-compare",
+    "file": "compositions/s0109-fs-compare.html",
+    "start": 72.24,
+    "end": 88.48,
+    "planEnd": 88.48,
+    "rough0": [
+     72.24,
+     88.48
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0110",
+    "D": 16.24,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 72.24,
+      "e": 88.48,
+      "ms": 72.24,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "resolved": {
+     "ctx": {
+      "title": "一支和多支差在哪",
+      "title_len": 8,
+      "title_lines": [
+       8
+      ],
+      "leftHead": "一支手機",
+      "leftHead_text": "一支手機",
+      "leftHead_len": 4,
+      "leftHead_lines": [
+       4
+      ],
+      "leftIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+      "rightHead": "多支手機",
+      "rightHead_text": "多支手機",
+      "rightHead_len": 4,
+      "rightHead_lines": [
+       4
+      ],
+      "rightIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 19v-3.96 3.15\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M7 19h5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"6\" height=\"10\" x=\"16\" y=\"12\" rx=\"2\" /> </svg>",
+      "left": [
+       {
+        "text": "手勢就能開始",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 2.29
+       },
+       {
+        "text": "自己操作就好",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 2.29
+       }
+      ],
+      "right": [
+       {
+        "text": "難同時啟動",
+        "text_len": 5,
+        "text_lines": [
+         5
+        ],
+        "at": 9.63
+       },
+       {
+        "text": "剪輯校正崩潰",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 9.63
+       }
+      ]
+     },
+     "beats": {
+      "leftAt": 2.29,
+      "rightAt": 9.63
+     },
+     "listTimes": {
+      "left": [
+       2.29,
+       2.29
+      ],
+      "right": [
+       9.63,
+       9.63
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1540,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 9,
+    "id": "x0110",
+    "seg": {
+     "id": "x0110",
+     "type": "custom",
+     "template": "x-scene",
+     "from": "#41",
+     "to": "#51e",
+     "anchor": "而停止錄影驗",
+     "slots": {
+      "title": "走來走去",
+      "parts": [
+       {
+        "id": "a",
+        "illus": "personBust",
+        "label": "人在手機間跑"
+       },
+       {
+        "id": "b",
+        "illus": "phone",
+        "label": "兩支手機"
+       },
+       {
+        "id": "c",
+        "illus": "laptop",
+        "label": "自己設計一套"
+       }
+      ],
+      "links": [
+       "a>b",
+       "b>c"
+      ],
+      "beats": [
+       {
+        "at": "#42@走來走去",
+        "in": [
+         "a"
+        ],
+        "focus": "a"
+       },
+       {
+        "at": "#47@手機",
+        "in": [
+         "b"
+        ],
+        "focus": "b"
+       },
+       {
+        "at": "#49@順手",
+        "in": [
+         "c"
+        ],
+        "focus": "c"
+       }
+      ]
+     },
+     "story": {
+      "say": "停止後要兩支手機間走來走去確認，網上的工具都不順手，乾脆自己設計一套",
+      "why": "講解在描述具體的動作、物件或過程（手機、腳架、電腦、雲端、人走動、傳檔），主角是"
+     },
+     "src": "compositions/x-scene-x0110.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[x0110 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-scene-x0110.html",
+    "compId": "x-scene-x0110",
+    "file": "compositions/x-scene-x0110.html",
+    "refList": [
+     "#42@走來走去",
+     "#47@手機",
+     "#49@順手"
+    ],
+    "sfxBeats": [],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 88.48,
+    "end": 111.64,
+    "planEnd": 111.64,
+    "rough0": [
+     88.48,
+     111.64
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0111",
+    "D": 23.16,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 88.48,
+      "e": 111.64,
+      "ms": 88.48,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "cueRefs": {
+     "#42@走來走去": 92.6,
+     "#47@手機": 104.07,
+     "#49@順手": 107.38
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1260,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 10,
+    "id": "x0111",
+    "seg": {
+     "id": "x0111",
+     "type": "custom",
+     "template": "x-process-trace",
+     "from": "#52",
+     "to": "#59@播放檢查",
+     "anchor": "現在當手機掃",
+     "slots": {
+      "title": "一次按下全部同步",
+      "items": [
+       {
+        "text": "畫面",
+        "icon": "monitor",
+        "at": "#54@畫面"
+       },
+       {
+        "text": "開始",
+        "icon": "play",
+        "at": "#55@開始"
+       },
+       {
+        "text": "同步",
+        "icon": "monitor-smartphone",
+        "at": "#56@同步"
+       },
+       {
+        "text": "結束",
+        "icon": "file-video",
+        "at": "#57@結束"
+       }
+      ]
+     },
+     "story": {
+      "say": "掃碼連電腦、即時畫面、同步開始、結束回傳",
+      "why": "解法四個動作像電路板上的四站，一路跑到底",
+      "designIdea": "主角亮相：手機掃碼連上電腦，畫面即時同步，開始鍵一按多支手機同時亮紅燈，結束後影片直接飛回電腦",
+      "designWhy": "解法的核心體驗就是一次按下、全部同步、影片直接回來，這值得專門做一畫"
+     },
+     "src": "compositions/x-process-trace-x0111.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [
+     "[x0111 custom] 動畫分鏡：第 5 拍（1:59.39）到第 6 拍（2:00.93）只隔 1.54s，範例檔頭【D 下限】相鄰兩拍至少 2.8s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）",
+     "[x0111 custom] 動畫分鏡：第 6 拍（2:00.93）到第 7 拍（2:02.69）只隔 1.76s，範例檔頭【D 下限】相鄰兩拍至少 2.8s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）"
+    ],
+    "where": "[x0111 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-process-trace-x0111.html",
+    "compId": "x-process-trace-x0111",
+    "file": "compositions/x-process-trace-x0111.html",
+    "refList": [
+     "#54@畫面",
+     "#55@開始",
+     "#56@同步",
+     "#57@結束"
+    ],
+    "sfxBeats": [],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 111.64,
+    "end": 127.296,
+    "planEnd": 127.296,
+    "rough0": [
+     111.64,
+     127.296
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "s0112",
+    "D": 15.656,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 111.64,
+      "e": 127.296,
+      "ms": 111.64,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "cueRefs": {
+     "#54@畫面": 116.626,
+     "#55@開始": 119.386,
+     "#56@同步": 120.926,
+     "#57@結束": 122.686
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1260,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 11,
+    "id": "s0112",
+    "seg": {
+     "id": "s0112",
+     "scene": "fs-list",
+     "from": "#59@播放檢查",
+     "to": "#61e+1.3",
+     "anchor": "讓我馬上播放",
+     "slots": {
+      "title": "馬上就能播放檢查",
+      "items": [
+       {
+        "text": "**馬上**播放檢查",
+        "at": "#59@播放"
+       },
+       {
+        "text": "從**萌生想法**到原型",
+        "at": "#60@萌生"
+       },
+       {
+        "text": "只花**一個小時**",
+        "at": "#61@小時"
+       }
+      ]
+     },
+     "story": {
+      "say": "影片回傳後馬上檢查，整套工具只花一個小時",
+      "why": "最後把回傳與一小時並排落定",
+      "designIdea": "一個小時的沙漏從萌生想法一路漏到完成原型，數字落在原型上",
+      "designWhy": "一小時是全片最強的數字落點，值得一個專屬的畫面"
+     }
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[s0112 fs-list]",
+    "type": "scene",
+    "scene": "$scene:fs-list",
+    "key": "fs-list",
+    "label": "04a 全畫面清單",
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "compId": "s0112-fs-list",
+    "file": "compositions/s0112-fs-list.html",
+    "start": 127.296,
+    "end": 135.046,
+    "planEnd": 135.046,
+    "rough0": [
+     127.296,
+     135.046
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0113",
+    "D": 7.75,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 127.296,
+      "e": 135.046,
+      "ms": 127.296,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "resolved": {
+     "ctx": {
+      "title": "馬上就能播放檢查",
+      "title_len": 8,
+      "title_lines": [
+       8
+      ],
+      "items": [
+       {
+        "text": "<span class=\"sc-kw\">馬上</span>播放檢查",
+        "text_text": "馬上播放檢查",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 0
+       },
+       {
+        "text": "從<span class=\"sc-kw\">萌生想法</span>到原型",
+        "text_text": "從萌生想法到原型",
+        "text_len": 8,
+        "text_lines": [
+         8
+        ],
+        "at": 2.111
+       },
+       {
+        "text": "只花<span class=\"sc-kw\">一個小時</span>",
+        "text_text": "只花一個小時",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 5.93
+       }
+      ],
+      "itemsHasIcon": false
+     },
+     "beats": {},
+     "listTimes": {
+      "items": [
+       0,
+       2.111,
+       5.93
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1260,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 12,
+    "id": "x0113",
+    "seg": {
+     "id": "x0113",
+     "type": "custom",
+     "template": "x-timeline",
+     "from": "#62+1.3",
+     "to": "#70e",
+     "anchor": "這集影片我會",
+     "slots": {
+      "title": "本集三個部分",
+      "items": [
+       {
+        "text": "實作",
+        "desc": "操作工具",
+        "icon": "smartphone",
+        "at": "#64@下載"
+       },
+       {
+        "text": "安裝",
+        "desc": "設定網路",
+        "icon": "wrench",
+        "at": "#66@安裝"
+       },
+       {
+        "text": "AI",
+        "desc": "迭代原型",
+        "icon": "code",
+        "at": "#68@AI"
+       }
+      ]
+     },
+     "story": {
+      "say": "本集分成三個部分的大綱",
+      "why": "有時間先後的 3–4 個點（年份、版本、階段，或「這集分成三個部分」的本集大綱）"
+     },
+     "src": "compositions/x-timeline-x0113.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[x0113 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-timeline-x0113.html",
+    "compId": "x-timeline-x0113",
+    "file": "compositions/x-timeline-x0113.html",
+    "refList": [
+     "#64@下載",
+     "#66@安裝",
+     "#68@AI"
+    ],
+    "sfxBeats": [],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 135.046,
+    "end": 153.156,
+    "planEnd": 153.156,
+    "rough0": [
+     135.046,
+     153.156
+    ],
+    "fadeIn": false,
+    "fadeOut": true,
+    "exitFade": true,
+    "notes": [],
+    "D": 18.11,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "fade",
+    "tailFade": true,
+    "pipPieces": [
+     {
+      "s": 135.046,
+      "e": 153.156,
+      "ms": 135.046,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "layer"
+     }
+    ],
+    "cueRefs": {
+     "#64@下載": 139.017,
+     "#66@安裝": 143.126,
+     "#68@AI": 146.946
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1540,
+     56,
+     1824,
+     136
+    ]
+   }
+  ],
+  "allItems": [
+   {
+    "idx": 0,
+    "id": "s0101",
+    "seg": {
+     "id": "s0101",
+     "scene": "chapter",
+     "at": "#1",
+     "slots": {
+      "num": "01",
+      "title": "多機錄影工具",
+      "sub": "手機多機同步錄影"
+     },
+     "story": {
+      "say": "開場章節角標：多機錄影工具",
+      "why": "每一章開頭（含總結章），用全畫面幕交代章號與章名"
+     }
+    },
+    "errors": [],
+    "warnings": [
+     "[s0101 chapter] #1 前的空檔只有 0.16s（< 2s），章節 2.5s 會壓到 #1 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/example，照它印的指令重剪"
+    ],
+    "where": "[s0101 chapter]",
+    "type": "scene",
+    "scene": "$scene:chapter",
+    "key": "chapter",
+    "label": "01 章節轉場",
+    "opaque": true,
+    "pip": false,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "compId": "s0101-chapter",
+    "file": "compositions/s0101-chapter.html",
+    "D": 2.5,
+    "start": 0.16,
+    "chapterNote": "空檔 0.16s < 2s，從 #1 起點開始蓋 2.5s",
+    "chInfo": {
+     "cue": 1,
+     "gap": 0.16,
+     "placement": "cover"
+    },
+    "end": 2.66,
+    "planEnd": 2.66,
+    "rough0": [
+     0.16,
+     2.66
+    ],
+    "fadeIn": true,
+    "fadeOut": true,
+    "exitFade": true,
+    "notes": [
+     "字幕避開章節：#1 整句不顯示、#2 晚 0.58s 出現"
+    ],
+    "txIn": "chapter",
+    "prev": "speaker",
+    "txOut": "fade",
+    "pipPieces": [],
+    "resolved": {
+     "ctx": {
+      "num": "01",
+      "title": "多機錄影工具",
+      "title_len": 6,
+      "title_lines": [
+       6
+      ],
+      "sub": "手機多機同步錄影",
+      "sub_len": 8,
+      "sub_lines": [
+       8
+      ]
+     },
+     "beats": {
+      "titleAt": 0.45,
+      "subAt": 0.6
+     },
+     "listTimes": {},
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "sfx": {
+     "name": "chapter",
+     "at": 0.622,
+     "volume": 1,
+     "event": 0.61
+    }
+   },
+   {
+    "idx": 1,
+    "id": "s0102",
+    "seg": {
+     "id": "s0102",
+     "scene": "speaker",
+     "from": "#1",
+     "to": "#7@接下來要",
+     "anchor": "嗨！大家好我",
+     "slots": {},
+     "story": {
+      "say": "講者第一次自我介紹",
+      "why": "講者第一次自我介紹，一集只用一次"
+     }
+    },
+    "errors": [],
+    "warnings": [
+     "[s0102 speaker] 音效 sparkle（0.113s）和 s0101 明寫的音效只差 0.509s（< 3s），已拿掉（段上明寫的優先）"
+    ],
+    "where": "[s0102 speaker]",
+    "type": "scene",
+    "scene": "$scene:speaker",
+    "key": "speaker",
+    "label": "14 講者介紹",
+    "opaque": false,
+    "pip": false,
+    "side": false,
+    "lower": true,
+    "z": 20,
+    "compId": "s0102-speaker",
+    "file": "compositions/s0102-speaker.html",
+    "start": 0.16,
+    "end": 14.79,
+    "planEnd": 14.39,
+    "rough0": [
+     0.16,
+     14.39
+    ],
+    "handoff": "s0103",
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "D": 14.63,
+    "txIn": "band",
+    "prev": "speaker",
+    "txOut": "handoff",
+    "pipPieces": [],
+    "resolved": {
+     "ctx": {
+      "tag": "講師",
+      "tag_len": 2,
+      "tag_lines": [
+       2
+      ],
+      "name": "林鼎淵",
+      "name_len": 3,
+      "name_lines": [
+       3
+      ],
+      "titles": [
+       {
+        "text": "外商工程師",
+        "text_len": 5,
+        "text_lines": [
+         5
+        ],
+        "at": 0.6
+       },
+       {
+        "text": "暢銷書作家",
+        "text_len": 5,
+        "text_lines": [
+         5
+        ],
+        "at": 0.7
+       },
+       {
+        "text": "企業內訓講師",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 0.8
+       }
+      ]
+     },
+     "beats": {
+      "in": 0
+     },
+     "listTimes": {
+      "titles": [
+       0.6,
+       0.7,
+       0.8
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "sfx": null,
+    "sfxDropped": {
+     "name": "sparkle",
+     "at": 0.113,
+     "volume": 0.575,
+     "event": 0.26
+    }
+   },
+   {
+    "idx": 2,
+    "id": "s0103",
+    "seg": {
+     "id": "s0103",
+     "scene": "key-point",
+     "from": "#7@接下來要",
+     "to": "#8e",
+     "anchor": "因為接下來要分享",
+     "slots": {
+      "key": "免費工具",
+      "lead": "接下來要分享",
+      "icon": "star"
+     },
+     "beats": {
+      "keyAt": "#8@免費工具"
+     },
+     "story": {
+      "say": "分享一個省時間的免費工具，建議先儲存",
+      "why": "這是開場唯一要觀眾記住的重點：這集有免費工具",
+      "designIdea": "主角第一次亮相：一台手機和一台電腦之間拉出一條線，線上跑著一段影片",
+      "designWhy": "開場第一次讓主角（手機＋電腦）現身，觀眾要一眼知道這支片的主角是什麼"
+     },
+     "tone": "good"
+    },
+    "errors": [],
+    "warnings": [
+     "[s0103 key-point] 最後一個內容在第 2.61s，到退場只停 1.06s，建議 ≥ 1.5s（把 to 往後延）"
+    ],
+    "where": "[s0103 key-point]",
+    "type": "scene",
+    "scene": "$scene:key-point",
+    "key": "key-point",
+    "label": "07 重點字卡",
+    "opaque": false,
+    "pip": false,
+    "side": false,
+    "lower": true,
+    "z": 20,
+    "compId": "s0103-key-point",
+    "file": "compositions/s0103-key-point.html",
+    "start": 14.39,
+    "end": 18.36,
+    "planEnd": 17.96,
+    "rough0": [
+     14.39,
+     17.96
+    ],
+    "handoff": "s0104",
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "D": 3.97,
+    "txIn": "band",
+    "prev": "speaker",
+    "txOut": "handoff",
+    "pipPieces": [],
+    "resolved": {
+     "ctx": {
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" /> </svg>",
+      "lead": "接下來要分享",
+      "lead_len": 6,
+      "lead_lines": [
+       6
+      ],
+      "key": "免費工具",
+      "key_len": 4,
+      "key_lines": [
+       4
+      ]
+     },
+     "beats": {
+      "in": 0,
+      "keyAt": 2.61
+     },
+     "listTimes": {},
+     "tone": "good",
+     "errors": [],
+     "warnings": [
+      "[s0103 key-point] 最後一個內容在第 2.61s，到退場只停 1.06s，建議 ≥ 1.5s（把 to 往後延）"
+     ]
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "sfx": null,
+    "sfxDropped": {
+     "name": "success",
+     "at": 16.896,
+     "volume": 0.692,
+     "event": 17
+    }
+   },
+   {
+    "idx": 3,
+    "id": "s0104",
+    "seg": {
+     "id": "s0104",
+     "scene": "steps",
+     "from": "#9",
+     "to": "#11e",
+     "anchor": "過去正式開拍",
+     "slots": {
+      "steps": [
+       {
+        "text": "先**試錄**一小段",
+        "at": "#10@先試錄一"
+       },
+       {
+        "text": "確認**畫面**與聲音",
+        "at": "#11@畫面"
+       }
+      ]
+     },
+     "story": {
+      "say": "開拍前先試錄一小段的兩個動作",
+      "why": "講解依序講 2–4 個操作步驟，同一個位置一步換一步"
+     }
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[s0104 steps]",
+    "type": "scene",
+    "scene": "$scene:steps",
+    "key": "steps",
+    "label": "08 Step 字卡",
+    "opaque": false,
+    "pip": false,
+    "side": false,
+    "lower": true,
+    "z": 20,
+    "compId": "s0104-steps",
+    "file": "compositions/s0104-steps.html",
+    "start": 17.96,
+    "end": 23.6,
+    "planEnd": 23.6,
+    "rough0": [
+     17.96,
+     23.6
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "D": 5.64,
+    "txIn": "band",
+    "prev": "speaker",
+    "txOut": "band",
+    "pipPieces": [],
+    "resolved": {
+     "ctx": {
+      "steps": [
+       {
+        "text": "先<span class=\"sc-kw\">試錄</span>一小段",
+        "text_text": "先試錄一小段",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 1.627
+       },
+       {
+        "text": "確認<span class=\"sc-kw\">畫面</span>與聲音",
+        "text_text": "確認畫面與聲音",
+        "text_len": 7,
+        "text_lines": [
+         7
+        ],
+        "at": 3.24
+       }
+      ],
+      "stepsHasIcon": false
+     },
+     "beats": {
+      "in": 0
+     },
+     "listTimes": {
+      "steps": [
+       1.627,
+       3.24
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": []
+   },
+   {
+    "idx": 4,
+    "id": "x0105",
+    "seg": {
+     "id": "x0105",
+     "type": "custom",
+     "template": "x-breakout",
+     "from": "#12",
+     "to": "#14e",
+     "anchor": "而正式開拍後",
+     "slots": {
+      "tag": "跑到手機旁",
+      "openAt": "#12@拍",
+      "hitAt": "#13@旁邊"
+     },
+     "story": {
+      "say": "錄完每段要跑回手機旁播放檢查",
+      "why": "講者露臉，開場第一句或整支片情緒最高的那一下：講者先被裝進白邊相框，講到那個詞的"
+     },
+     "src": "compositions/x-breakout-x0105.html",
+     "layout": "overlay"
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[x0105 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-breakout-x0105.html",
+    "compId": "x-breakout-x0105",
+    "file": "compositions/x-breakout-x0105.html",
+    "refList": [
+     "#12@拍",
+     "#13@旁邊"
+    ],
+    "sfxBeats": [
+     {
+      "name": "impact",
+      "ref": "#13@旁邊",
+      "off": 0
+     }
+    ],
+    "opaque": false,
+    "pip": false,
+    "side": false,
+    "lower": false,
+    "z": 20,
+    "start": 23.6,
+    "end": 31.82,
+    "planEnd": 31.32,
+    "rough0": [
+     23.6,
+     31.32
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": false,
+    "notes": [],
+    "coveredBy": "s0106",
+    "D": 8.22,
+    "txIn": "overlay",
+    "prev": "speaker",
+    "txOut": "cover",
+    "pipPieces": [],
+    "cueRefs": {
+     "#12@拍": 24.2,
+     "#13@旁邊": 26.94
+    },
+    "sfxExtra": [
+     {
+      "name": "impact",
+      "at": 26.839,
+      "volume": 0.62,
+      "event": 26.94,
+      "beat": true
+     }
+    ]
+   },
+   {
+    "idx": 5,
+    "id": "s0106",
+    "seg": {
+     "id": "s0106",
+     "scene": "fs-list",
+     "from": "#15",
+     "to": "#19e",
+     "anchor": "但畢竟手機畫",
+     "slots": {
+      "title": "手機上看不到的問題",
+      "items": [
+       {
+        "text": "螢幕太小，**小毛病**看不到",
+        "at": "#16@小毛病"
+       },
+       {
+        "text": "腳架不穩，畫面**晃動**",
+        "at": "#18@腳架不穩"
+       },
+       {
+        "text": "衣服太薄，有**激凸**問題",
+        "at": "#19@衣服"
+       }
+      ]
+     },
+     "story": {
+      "say": "手機畫面小看不到的問題",
+      "why": "資訊量大的 3–4 項清單，一項一句話，需要觀眾逐項看完"
+     }
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[s0106 fs-list]",
+    "type": "scene",
+    "scene": "$scene:fs-list",
+    "key": "fs-list",
+    "label": "04a 全畫面清單",
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "compId": "s0106-fs-list",
+    "file": "compositions/s0106-fs-list.html",
+    "start": 31.32,
+    "end": 42.92,
+    "planEnd": 42.92,
+    "rough0": [
+     31.32,
+     42.92
+    ],
+    "fadeIn": true,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0107",
+    "D": 11.6,
+    "txIn": "wipe",
+    "prev": "speaker",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 31.32,
+      "e": 42.92,
+      "ms": 31.32,
+      "enter": "fly",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "resolved": {
+     "ctx": {
+      "title": "手機上看不到的問題",
+      "title_len": 9,
+      "title_lines": [
+       9
+      ],
+      "items": [
+       {
+        "text": "螢幕太小，<span class=\"sc-kw\">小毛病</span>看不到",
+        "text_text": "螢幕太小，小毛病看不到",
+        "text_len": 11,
+        "text_lines": [
+         11
+        ],
+        "at": 1.93
+       },
+       {
+        "text": "腳架不穩，畫面<span class=\"sc-kw\">晃動</span>",
+        "text_text": "腳架不穩，畫面晃動",
+        "text_len": 9,
+        "text_lines": [
+         9
+        ],
+        "at": 5.68
+       },
+       {
+        "text": "衣服太薄，有<span class=\"sc-kw\">激凸</span>問題",
+        "text_text": "衣服太薄，有激凸問題",
+        "text_len": 10,
+        "text_lines": [
+         10
+        ],
+        "at": 9.26
+       }
+      ],
+      "itemsHasIcon": false
+     },
+     "beats": {},
+     "listTimes": {
+      "items": [
+       1.93,
+       5.68,
+       9.26
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1500,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 6,
+    "id": "x0107",
+    "seg": {
+     "id": "x0107",
+     "type": "custom",
+     "template": "x-architecture",
+     "from": "#20",
+     "to": "#24e",
+     "anchor": "而我過去的拍",
+     "slots": {
+      "title": "影片的來回",
+      "source": "手機",
+      "sourceIcon": "smartphone",
+      "target": "電腦",
+      "targetIcon": "laptop",
+      "relay": "雲端",
+      "relayIcon": "cloud",
+      "path": "#21@雲端",
+      "flow": "#21@電腦"
+     },
+     "story": {
+      "say": "影片上傳雲端再下載，小問題在收工時才發現",
+      "why": "把影片在三個裝置間繞一圈的荒謬用一條線講清楚",
+      "designIdea": "痛點頂點：手機把影片丟進雲端，雲端再丟回電腦，電腦螢幕上跳出晃動與激凸兩個紅框",
+      "designWhy": "痛點的頂點是靠三個裝置的繞路撐起來的，模板講不出那種繞的感覺"
+     },
+     "src": "compositions/x-architecture-x0107.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [
+     "[x0107 custom] 動畫分鏡：第 4 拍（0:45.53）到第 5 拍（0:47.44）只隔 1.91s，範例檔頭【D 下限】相鄰兩拍至少 2.5s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）"
+    ],
+    "where": "[x0107 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-architecture-x0107.html",
+    "compId": "x-architecture-x0107",
+    "file": "compositions/x-architecture-x0107.html",
+    "refList": [
+     "#21@雲端",
+     "#21@電腦"
+    ],
+    "sfxBeats": [],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 42.92,
+    "end": 53.88,
+    "planEnd": 53.88,
+    "rough0": [
+     42.92,
+     53.88
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0108",
+    "D": 10.96,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 42.92,
+      "e": 53.88,
+      "ms": 42.92,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "cueRefs": {
+     "#21@雲端": 45.53,
+     "#21@電腦": 47.44
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1500,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 7,
+    "id": "x0108",
+    "seg": {
+     "id": "x0108",
+     "type": "custom",
+     "template": "x-route",
+     "from": "#25",
+     "to": "#32e",
+     "anchor": "另外有些時候",
+     "slots": {
+      "title": "多機拍攝的兩種情境",
+      "icon": "map",
+      "items": [
+       {
+        "text": "橫長影片",
+        "note": "一支手機",
+        "at": "#28@橫"
+       },
+       {
+        "text": "直短影音",
+        "note": "另一支",
+        "at": "#29@直"
+       },
+       {
+        "text": "訪談節目",
+        "note": "主持人來賓",
+        "at": "#30@訪談"
+       }
+      ]
+     },
+     "story": {
+      "say": "多機拍攝的兩種情境",
+      "why": "從哪裡到哪裡：2–4 個地點有先後（「從台北出發，先到台中，再到高雄」「這趟去了"
+     },
+     "src": "compositions/x-route-x0108.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [
+     "[x0108 custom] 動畫分鏡：第 1 拍（1:01.47）到第 2 拍（1:03.45）只隔 1.98s，範例檔頭【D 下限】相鄰兩拍至少 2.4s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）",
+     "[x0108 custom] 動畫分鏡：第 2 拍（1:03.45）到第 3 拍（1:05.51）只隔 2.06s，範例檔頭【D 下限】相鄰兩拍至少 2.4s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）"
+    ],
+    "where": "[x0108 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-route-x0108.html",
+    "compId": "x-route-x0108",
+    "file": "compositions/x-route-x0108.html",
+    "refList": [
+     "#28@橫",
+     "#29@直",
+     "#30@訪談"
+    ],
+    "sfxBeats": [
+     {
+      "name": "ding",
+      "ref": "#30@訪談",
+      "off": 0
+     }
+    ],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 53.88,
+    "end": 72.24,
+    "planEnd": 72.24,
+    "rough0": [
+     53.88,
+     72.24
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "s0109",
+    "D": 18.36,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 53.88,
+      "e": 72.24,
+      "ms": 53.88,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "cueRefs": {
+     "#28@橫": 61.47,
+     "#29@直": 63.45,
+     "#30@訪談": 65.51
+    },
+    "sfxExtra": [
+     {
+      "name": "ding",
+      "at": 65.533,
+      "volume": 0.73,
+      "event": 65.51,
+      "beat": true
+     }
+    ],
+    "badgeBox": [
+     1540,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 8,
+    "id": "s0109",
+    "seg": {
+     "id": "s0109",
+     "scene": "fs-compare",
+     "from": "#33",
+     "to": "#40e",
+     "anchor": "但我們馬上就",
+     "slots": {
+      "title": "一支和多支差在哪",
+      "leftHead": "一支手機",
+      "leftIcon": "smartphone",
+      "left": [
+       {
+        "text": "手勢就能開始"
+       },
+       {
+        "text": "自己操作就好"
+       }
+      ],
+      "rightHead": "多支手機",
+      "rightIcon": "monitor-smartphone",
+      "right": [
+       {
+        "text": "難同時啟動"
+       },
+       {
+        "text": "剪輯校正崩潰"
+       }
+      ]
+     },
+     "beats": {
+      "leftAt": "#34@一支",
+      "rightAt": "#37@同時啟動"
+     },
+     "story": {
+      "say": "一支手機與多支手機的對比",
+      "why": "全片的對比軸，左右並列最清楚",
+      "designIdea": "對比視覺化：左邊一支手機被手勢點亮就能開始，右邊多支手機各自亮起、開始時間彼此錯開",
+      "designWhy": "一支與多支的差別是整支片的對比軸，模板的並排清單說不出開始時間錯開的那種亂"
+     }
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[s0109 fs-compare]",
+    "type": "scene",
+    "scene": "$scene:fs-compare",
+    "key": "fs-compare",
+    "label": "04b 全畫面對照",
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "compId": "s0109-fs-compare",
+    "file": "compositions/s0109-fs-compare.html",
+    "start": 72.24,
+    "end": 88.48,
+    "planEnd": 88.48,
+    "rough0": [
+     72.24,
+     88.48
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0110",
+    "D": 16.24,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 72.24,
+      "e": 88.48,
+      "ms": 72.24,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "resolved": {
+     "ctx": {
+      "title": "一支和多支差在哪",
+      "title_len": 8,
+      "title_lines": [
+       8
+      ],
+      "leftHead": "一支手機",
+      "leftHead_text": "一支手機",
+      "leftHead_len": 4,
+      "leftHead_lines": [
+       4
+      ],
+      "leftIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
+      "rightHead": "多支手機",
+      "rightHead_text": "多支手機",
+      "rightHead_len": 4,
+      "rightHead_lines": [
+       4
+      ],
+      "rightIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 19v-3.96 3.15\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M7 19h5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"6\" height=\"10\" x=\"16\" y=\"12\" rx=\"2\" /> </svg>",
+      "left": [
+       {
+        "text": "手勢就能開始",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 2.29
+       },
+       {
+        "text": "自己操作就好",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 2.29
+       }
+      ],
+      "right": [
+       {
+        "text": "難同時啟動",
+        "text_len": 5,
+        "text_lines": [
+         5
+        ],
+        "at": 9.63
+       },
+       {
+        "text": "剪輯校正崩潰",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 9.63
+       }
+      ]
+     },
+     "beats": {
+      "leftAt": 2.29,
+      "rightAt": 9.63
+     },
+     "listTimes": {
+      "left": [
+       2.29,
+       2.29
+      ],
+      "right": [
+       9.63,
+       9.63
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1540,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 9,
+    "id": "x0110",
+    "seg": {
+     "id": "x0110",
+     "type": "custom",
+     "template": "x-scene",
+     "from": "#41",
+     "to": "#51e",
+     "anchor": "而停止錄影驗",
+     "slots": {
+      "title": "走來走去",
+      "parts": [
+       {
+        "id": "a",
+        "illus": "personBust",
+        "label": "人在手機間跑"
+       },
+       {
+        "id": "b",
+        "illus": "phone",
+        "label": "兩支手機"
+       },
+       {
+        "id": "c",
+        "illus": "laptop",
+        "label": "自己設計一套"
+       }
+      ],
+      "links": [
+       "a>b",
+       "b>c"
+      ],
+      "beats": [
+       {
+        "at": "#42@走來走去",
+        "in": [
+         "a"
+        ],
+        "focus": "a"
+       },
+       {
+        "at": "#47@手機",
+        "in": [
+         "b"
+        ],
+        "focus": "b"
+       },
+       {
+        "at": "#49@順手",
+        "in": [
+         "c"
+        ],
+        "focus": "c"
+       }
+      ]
+     },
+     "story": {
+      "say": "停止後要兩支手機間走來走去確認，網上的工具都不順手，乾脆自己設計一套",
+      "why": "講解在描述具體的動作、物件或過程（手機、腳架、電腦、雲端、人走動、傳檔），主角是"
+     },
+     "src": "compositions/x-scene-x0110.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[x0110 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-scene-x0110.html",
+    "compId": "x-scene-x0110",
+    "file": "compositions/x-scene-x0110.html",
+    "refList": [
+     "#42@走來走去",
+     "#47@手機",
+     "#49@順手"
+    ],
+    "sfxBeats": [],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 88.48,
+    "end": 111.64,
+    "planEnd": 111.64,
+    "rough0": [
+     88.48,
+     111.64
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0111",
+    "D": 23.16,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 88.48,
+      "e": 111.64,
+      "ms": 88.48,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "cueRefs": {
+     "#42@走來走去": 92.6,
+     "#47@手機": 104.07,
+     "#49@順手": 107.38
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1260,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 10,
+    "id": "x0111",
+    "seg": {
+     "id": "x0111",
+     "type": "custom",
+     "template": "x-process-trace",
+     "from": "#52",
+     "to": "#59@播放檢查",
+     "anchor": "現在當手機掃",
+     "slots": {
+      "title": "一次按下全部同步",
+      "items": [
+       {
+        "text": "畫面",
+        "icon": "monitor",
+        "at": "#54@畫面"
+       },
+       {
+        "text": "開始",
+        "icon": "play",
+        "at": "#55@開始"
+       },
+       {
+        "text": "同步",
+        "icon": "monitor-smartphone",
+        "at": "#56@同步"
+       },
+       {
+        "text": "結束",
+        "icon": "file-video",
+        "at": "#57@結束"
+       }
+      ]
+     },
+     "story": {
+      "say": "掃碼連電腦、即時畫面、同步開始、結束回傳",
+      "why": "解法四個動作像電路板上的四站，一路跑到底",
+      "designIdea": "主角亮相：手機掃碼連上電腦，畫面即時同步，開始鍵一按多支手機同時亮紅燈，結束後影片直接飛回電腦",
+      "designWhy": "解法的核心體驗就是一次按下、全部同步、影片直接回來，這值得專門做一畫"
+     },
+     "src": "compositions/x-process-trace-x0111.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [
+     "[x0111 custom] 動畫分鏡：第 5 拍（1:59.39）到第 6 拍（2:00.93）只隔 1.54s，範例檔頭【D 下限】相鄰兩拍至少 2.8s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）",
+     "[x0111 custom] 動畫分鏡：第 6 拍（2:00.93）到第 7 拍（2:02.69）只隔 1.76s，範例檔頭【D 下限】相鄰兩拍至少 2.8s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）"
+    ],
+    "where": "[x0111 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-process-trace-x0111.html",
+    "compId": "x-process-trace-x0111",
+    "file": "compositions/x-process-trace-x0111.html",
+    "refList": [
+     "#54@畫面",
+     "#55@開始",
+     "#56@同步",
+     "#57@結束"
+    ],
+    "sfxBeats": [],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 111.64,
+    "end": 127.296,
+    "planEnd": 127.296,
+    "rough0": [
+     111.64,
+     127.296
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "s0112",
+    "D": 15.656,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 111.64,
+      "e": 127.296,
+      "ms": 111.64,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "cueRefs": {
+     "#54@畫面": 116.626,
+     "#55@開始": 119.386,
+     "#56@同步": 120.926,
+     "#57@結束": 122.686
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1260,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 11,
+    "id": "s0112",
+    "seg": {
+     "id": "s0112",
+     "scene": "fs-list",
+     "from": "#59@播放檢查",
+     "to": "#61e+1.3",
+     "anchor": "讓我馬上播放",
+     "slots": {
+      "title": "馬上就能播放檢查",
+      "items": [
+       {
+        "text": "**馬上**播放檢查",
+        "at": "#59@播放"
+       },
+       {
+        "text": "從**萌生想法**到原型",
+        "at": "#60@萌生"
+       },
+       {
+        "text": "只花**一個小時**",
+        "at": "#61@小時"
+       }
+      ]
+     },
+     "story": {
+      "say": "影片回傳後馬上檢查，整套工具只花一個小時",
+      "why": "最後把回傳與一小時並排落定",
+      "designIdea": "一個小時的沙漏從萌生想法一路漏到完成原型，數字落在原型上",
+      "designWhy": "一小時是全片最強的數字落點，值得一個專屬的畫面"
+     }
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[s0112 fs-list]",
+    "type": "scene",
+    "scene": "$scene:fs-list",
+    "key": "fs-list",
+    "label": "04a 全畫面清單",
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "compId": "s0112-fs-list",
+    "file": "compositions/s0112-fs-list.html",
+    "start": 127.296,
+    "end": 135.046,
+    "planEnd": 135.046,
+    "rough0": [
+     127.296,
+     135.046
+    ],
+    "fadeIn": false,
+    "fadeOut": false,
+    "exitFade": true,
+    "notes": [],
+    "seamTo": "x0113",
+    "D": 7.75,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "swap",
+    "pipPieces": [
+     {
+      "s": 127.296,
+      "e": 135.046,
+      "ms": 127.296,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "none"
+     }
+    ],
+    "resolved": {
+     "ctx": {
+      "title": "馬上就能播放檢查",
+      "title_len": 8,
+      "title_lines": [
+       8
+      ],
+      "items": [
+       {
+        "text": "<span class=\"sc-kw\">馬上</span>播放檢查",
+        "text_text": "馬上播放檢查",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 0
+       },
+       {
+        "text": "從<span class=\"sc-kw\">萌生想法</span>到原型",
+        "text_text": "從萌生想法到原型",
+        "text_len": 8,
+        "text_lines": [
+         8
+        ],
+        "at": 2.111
+       },
+       {
+        "text": "只花<span class=\"sc-kw\">一個小時</span>",
+        "text_text": "只花一個小時",
+        "text_len": 6,
+        "text_lines": [
+         6
+        ],
+        "at": 5.93
+       }
+      ],
+      "itemsHasIcon": false
+     },
+     "beats": {},
+     "listTimes": {
+      "items": [
+       0,
+       2.111,
+       5.93
+      ]
+     },
+     "tone": null,
+     "errors": [],
+     "warnings": []
+    },
+    "chapter": {
+     "start": 0.16,
+     "num": "01",
+     "name": "多機錄影工具",
+     "sub": "手機多機同步錄影"
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1260,
+     56,
+     1824,
+     136
+    ]
+   },
+   {
+    "idx": 12,
+    "id": "x0113",
+    "seg": {
+     "id": "x0113",
+     "type": "custom",
+     "template": "x-timeline",
+     "from": "#62+1.3",
+     "to": "#70e",
+     "anchor": "這集影片我會",
+     "slots": {
+      "title": "本集三個部分",
+      "items": [
+       {
+        "text": "實作",
+        "desc": "操作工具",
+        "icon": "smartphone",
+        "at": "#64@下載"
+       },
+       {
+        "text": "安裝",
+        "desc": "設定網路",
+        "icon": "wrench",
+        "at": "#66@安裝"
+       },
+       {
+        "text": "AI",
+        "desc": "迭代原型",
+        "icon": "code",
+        "at": "#68@AI"
+       }
+      ]
+     },
+     "story": {
+      "say": "本集分成三個部分的大綱",
+      "why": "有時間先後的 3–4 個點（年份、版本、階段，或「這集分成三個部分」的本集大綱）"
+     },
+     "src": "compositions/x-timeline-x0113.html",
+     "layout": "fullscreen"
+    },
+    "errors": [],
+    "warnings": [],
+    "where": "[x0113 custom]",
+    "type": "custom",
+    "key": "custom",
+    "label": "custom x-timeline-x0113.html",
+    "compId": "x-timeline-x0113",
+    "file": "compositions/x-timeline-x0113.html",
+    "refList": [
+     "#64@下載",
+     "#66@安裝",
+     "#68@AI"
+    ],
+    "sfxBeats": [],
+    "opaque": true,
+    "pip": true,
+    "side": false,
+    "lower": false,
+    "z": 30,
+    "start": 135.046,
+    "end": 153.156,
+    "planEnd": 153.156,
+    "rough0": [
+     135.046,
+     153.156
+    ],
+    "fadeIn": false,
+    "fadeOut": true,
+    "exitFade": true,
+    "notes": [],
+    "D": 18.11,
+    "txIn": "swap",
+    "prev": "fullscreen",
+    "txOut": "fade",
+    "tailFade": true,
+    "pipPieces": [
+     {
+      "s": 135.046,
+      "e": 153.156,
+      "ms": 135.046,
+      "enter": "none",
+      "exitDur": 0,
+      "exit": "layer"
+     }
+    ],
+    "cueRefs": {
+     "#64@下載": 139.017,
+     "#66@安裝": 143.126,
+     "#68@AI": 146.946
+    },
+    "sfxExtra": [],
+    "badgeBox": [
+     1540,
+     56,
+     1824,
+     136
+    ]
+   }
+  ],
+  "errors": [],
+  "warnings": [
+   "音效稀疏：1:05.53–2:13.13（68 秒：x0108、x0110、x0111）沒有主音效 → 在這段裡挑一句情緒最強的，plan.json 的 moods 加一個點（例 { \"at\": \"#N@詞\", \"kind\": \"pain\" }；類別 pain 痛點、win 解法、turn 反轉、land 落定、quote 金句），或在分鏡表的「情緒點」加一列",
+   "#N@詞 有 1 個用字數比例估（詞級逐字稿在那句附近找不到這些詞），可能差 1 秒：#10@先試錄一（#10 逐字稿聽成「我到前事如一小段」） → 詞照字幕原文挑 2–4 個字；逐字稿聽成別的字時換相鄰的詞",
+   "[s0101 chapter] #1 前的空檔只有 0.16s（< 2s），章節 2.5s 會壓到 #1 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/example，照它印的指令重剪",
+   "[s0102 speaker] 音效 sparkle（0.113s）和 s0101 明寫的音效只差 0.509s（< 3s），已拿掉（段上明寫的優先）",
+   "[s0103 key-point] 最後一個內容在第 2.61s，到退場只停 1.06s，建議 ≥ 1.5s（把 to 往後延）",
+   "[x0107 custom] 動畫分鏡：第 4 拍（0:45.53）到第 5 拍（0:47.44）只隔 1.91s，範例檔頭【D 下限】相鄰兩拍至少 2.5s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）",
+   "[x0108 custom] 動畫分鏡：第 1 拍（1:01.47）到第 2 拍（1:03.45）只隔 1.98s，範例檔頭【D 下限】相鄰兩拍至少 2.4s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）",
+   "[x0108 custom] 動畫分鏡：第 2 拍（1:03.45）到第 3 拍（1:05.51）只隔 2.06s，範例檔頭【D 下限】相鄰兩拍至少 2.4s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）",
+   "[x0111 custom] 動畫分鏡：第 5 拍（1:59.39）到第 6 拍（2:00.93）只隔 1.54s，範例檔頭【D 下限】相鄰兩拍至少 2.8s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）",
+   "[x0111 custom] 動畫分鏡：第 6 拍（2:00.93）到第 7 拍（2:02.69）只隔 1.76s，範例檔頭【D 下限】相鄰兩拍至少 2.8s → 同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）"
+  ],
+  "globals": {
+   "speakerBox": [
+    723,
+    236,
+    1265,
+    927
+   ],
+   "sideShift": 448,
+   "pipCrop": "auto",
+   "pip": {
+    "crop": {
+     "x": 464.23333333333335,
+     "y": 184.175,
+     "w": 1059.5333333333333,
+     "h": 794.65
+    },
+    "style": {
+     "left": -189,
+     "top": -75,
+     "width": 783,
+     "height": 440
+    }
+   },
+   "speakerSide": "center",
+   "panelSide": "left",
+   "cardSide": "left",
+   "sideLine": "講者位置：中（中心 x 994）→ 字卡靠左、半螢幕面板在左、講者右移 448"
+  },
+  "edit": {
+   "cuts": [],
+   "fadeIn": 0,
+   "fadeOut": 0,
+   "volume": {
+    "voice": 0,
+    "sfx": 0,
+    "media": 0
+   },
+   "gains": [],
+   "joins": []
+  },
+  "editActive": false,
+  "tm": {
+   "cuts": [],
+   "keep": [
+    [
+     0,
+     153.267
+    ]
+   ],
+   "outDur": 153.267,
+   "identity": true,
+   "map": "$fn",
+   "joinsOut": [],
+   "unmapStart": "$fn",
+   "unmapEnd": "$fn"
+  },
+  "outDur": 153.267,
+  "roughDur": 153.267,
+  "cuesOut": {
+   "$array": [
+    {
+     "n": 1,
+     "start": 0.16,
+     "end": 2.08,
+     "text": "嗨！大家好我是鼎淵"
+    },
+    {
+     "n": 2,
+     "start": 2.08,
+     "end": 4.24,
+     "text": "歡迎來到工程師下班有約"
+    },
+    {
+     "n": 3,
+     "start": 4.24,
+     "end": 6.36,
+     "text": "如果你打算拍 YouTube、Podcast"
+    },
+    {
+     "n": 4,
+     "start": 6.36,
+     "end": 8.04,
+     "text": "線上課程或訪談節目"
+    },
+    {
+     "n": 5,
+     "start": 8.04,
+     "end": 11.48,
+     "text": "並且跟我一樣使用手機在固定的機位錄影"
+    },
+    {
+     "n": 6,
+     "start": 11.48,
+     "end": 14.32,
+     "text": "我強烈建議你儲存這支影片"
+    },
+    {
+     "n": 7,
+     "start": 14.32,
+     "end": 15.32,
+     "text": "因為接下來要分享一個"
+    },
+    {
+     "n": 8,
+     "start": 15.32,
+     "end": 17.96,
+     "text": "節省我超多時間的免費工具"
+    },
+    {
+     "n": 9,
+     "start": 17.96,
+     "end": 19.12,
+     "text": "過去正式開拍前"
+    },
+    {
+     "n": 10,
+     "start": 19.12,
+     "end": 20.8,
+     "text": "我都要先試錄一小段"
+    },
+    {
+     "n": 11,
+     "start": 20.8,
+     "end": 23.6,
+     "text": "確認畫面、聲音符合自己的需求"
+    },
+    {
+     "n": 12,
+     "start": 23.6,
+     "end": 25.92,
+     "text": "而正式開拍後每錄完一段"
+    },
+    {
+     "n": 13,
+     "start": 25.92,
+     "end": 28.48,
+     "text": "我都要跑到手機旁邊播放影片"
+    },
+    {
+     "n": 14,
+     "start": 28.48,
+     "end": 31.32,
+     "text": "以此確認動作與聲音足夠流暢"
+    },
+    {
+     "n": 15,
+     "start": 31.32,
+     "end": 33.08,
+     "text": "但畢竟手機畫面較小"
+    },
+    {
+     "n": 16,
+     "start": 33.08,
+     "end": 33.79,
+     "text": "很多小毛病"
+    },
+    {
+     "n": 17,
+     "start": 33.79,
+     "end": 36.84,
+     "text": "是把影片放到電腦上才會發現的"
+    },
+    {
+     "n": 18,
+     "start": 36.84,
+     "end": 39.92,
+     "text": "像腳架不穩造成畫面輕微晃動"
+    },
+    {
+     "n": 19,
+     "start": 39.92,
+     "end": 42.92,
+     "text": "或自己穿的衣服太薄有激凸問題"
+    },
+    {
+     "n": 20,
+     "start": 42.92,
+     "end": 44.32,
+     "text": "而我過去的拍片流程"
+    },
+    {
+     "n": 21,
+     "start": 44.32,
+     "end": 48.08,
+     "text": "是先把影片上傳到雲端備份再下載到電腦"
+    },
+    {
+     "n": 22,
+     "start": 48.08,
+     "end": 48.92,
+     "text": "所以很多小問題"
+    },
+    {
+     "n": 23,
+     "start": 48.92,
+     "end": 52.17,
+     "text": "是在自己以為可以收工的時候才發現"
+    },
+    {
+     "n": 24,
+     "start": 52.17,
+     "end": 53.88,
+     "text": "非常崩潰"
+    },
+    {
+     "n": 25,
+     "start": 53.88,
+     "end": 56.79,
+     "text": "另外有些時候我們會需要用到多機拍攝"
+    },
+    {
+     "n": 26,
+     "start": 56.79,
+     "end": 58.08,
+     "text": "以這隻影片來說"
+    },
+    {
+     "n": 27,
+     "start": 58.08,
+     "end": 60.76,
+     "text": "因為我想想一次拍好長影片跟短影音"
+    },
+    {
+     "n": 28,
+     "start": 60.76,
+     "end": 62.88,
+     "text": "所以一支橫著錄長影片"
+    },
+    {
+     "n": 29,
+     "start": 62.88,
+     "end": 64.92,
+     "text": "另一支直的錄短影音"
+    },
+    {
+     "n": 30,
+     "start": 64.92,
+     "end": 66.56,
+     "text": "或者錄訪談節目時"
+    },
+    {
+     "n": 31,
+     "start": 66.56,
+     "end": 69.44,
+     "text": "主持人跟來賓可以各用一支手機拍"
+    },
+    {
+     "n": 32,
+     "start": 69.44,
+     "end": 72.24,
+     "text": "這樣對話時就能切到正在講話的人"
+    },
+    {
+     "n": 33,
+     "start": 72.24,
+     "end": 74.2,
+     "text": "但我們馬上就會遇到一個問題"
+    },
+    {
+     "n": 34,
+     "start": 74.2,
+     "end": 75.72,
+     "text": "如果只用一支手機錄影"
+    },
+    {
+     "n": 35,
+     "start": 75.72,
+     "end": 78.28,
+     "text": "可以用手勢控制開始跟結束"
+    },
+    {
+     "n": 36,
+     "start": 78.28,
+     "end": 81,
+     "text": "但如果要用兩支以上的手機同時錄影"
+    },
+    {
+     "n": 37,
+     "start": 81,
+     "end": 82.96,
+     "text": "就很難讓它們同時啟動"
+    },
+    {
+     "n": 38,
+     "start": 82.96,
+     "end": 84.52,
+     "text": "一旦開始的時間不同步"
+    },
+    {
+     "n": 39,
+     "start": 84.52,
+     "end": 87.04,
+     "text": "後續剪輯影片、校正聲音的過程"
+    },
+    {
+     "n": 40,
+     "start": 87.04,
+     "end": 88.48,
+     "text": "就會讓人崩潰"
+    },
+    {
+     "n": 41,
+     "start": 88.48,
+     "end": 91.08,
+     "text": "而停止錄影驗收成果的時候也一樣"
+    },
+    {
+     "n": 42,
+     "start": 91.08,
+     "end": 93.6,
+     "text": "我需要在兩支手機間走來走去"
+    },
+    {
+     "n": 43,
+     "start": 93.6,
+     "end": 95.28,
+     "text": "個別確認畫面跟聲音"
+    },
+    {
+     "n": 44,
+     "start": 95.28,
+     "end": 97.41,
+     "text": "當要拍攝的段落很多時"
+    },
+    {
+     "n": 45,
+     "start": 97.41,
+     "end": 100,
+     "text": "這些走動其實很耗體力"
+    },
+    {
+     "n": 46,
+     "start": 100,
+     "end": 101.84,
+     "text": "為了解決以上問題"
+    },
+    {
+     "n": 47,
+     "start": 101.84,
+     "end": 104.52,
+     "text": "我上網搜尋了許多電腦控制手機"
+    },
+    {
+     "n": 48,
+     "start": 104.52,
+     "end": 106.52,
+     "text": "以及多機錄影的工具"
+    },
+    {
+     "n": 49,
+     "start": 106.52,
+     "end": 108.24,
+     "text": "但用起來都不順手"
+    },
+    {
+     "n": 50,
+     "start": 108.24,
+     "end": 108.8,
+     "text": "所以我乾脆"
+    },
+    {
+     "n": 51,
+     "start": 108.8,
+     "end": 111.64,
+     "text": "根據自己實際的工作流設計了一套"
+    },
+    {
+     "n": 52,
+     "start": 111.64,
+     "end": 113.72,
+     "text": "現在當手機掃碼連上電腦後"
+    },
+    {
+     "n": 53,
+     "start": 113.72,
+     "end": 116.066,
+     "text": "就能即時顯示拍攝畫面"
+    },
+    {
+     "n": 54,
+     "start": 116.066,
+     "end": 118.266,
+     "text": "讓我確認畫面的角度、光暗"
+    },
+    {
+     "n": 55,
+     "start": 118.266,
+     "end": 120.066,
+     "text": "在電腦上按下開始時"
+    },
+    {
+     "n": 56,
+     "start": 120.066,
+     "end": 122.506,
+     "text": "多支手機就能同步開始錄影"
+    },
+    {
+     "n": 57,
+     "start": 122.506,
+     "end": 124.866,
+     "text": "按下結束後除了停止錄影外"
+    },
+    {
+     "n": 58,
+     "start": 124.866,
+     "end": 126.586,
+     "text": "影片還會直接回傳到電腦"
+    },
+    {
+     "n": 59,
+     "start": 126.586,
+     "end": 128.266,
+     "text": "讓我馬上播放檢查"
+    },
+    {
+     "n": 60,
+     "start": 128.266,
+     "end": 131.946,
+     "text": "而這個工具從萌生想法到完成產品原型"
+    },
+    {
+     "n": 61,
+     "start": 131.946,
+     "end": 133.746,
+     "text": "前後只花了一個小時"
+    },
+    {
+     "n": 62,
+     "start": 133.746,
+     "end": 135.866,
+     "text": "這集影片我會分成三個部分"
+    },
+    {
+     "n": 63,
+     "start": 135.866,
+     "end": 138.147,
+     "text": "先帶大家實際操作這個工具"
+    },
+    {
+     "n": 64,
+     "start": 138.147,
+     "end": 139.867,
+     "text": "包含新增專案、下載 APP"
+    },
+    {
+     "n": 65,
+     "start": 139.867,
+     "end": 142.176,
+     "text": "配對手機、調整解析度等細節"
+    },
+    {
+     "n": 66,
+     "start": 142.176,
+     "end": 143.906,
+     "text": "接著說明如何安裝工具"
+    },
+    {
+     "n": 67,
+     "start": 143.906,
+     "end": 146.066,
+     "text": "以及網路設定要注意的事項"
+    },
+    {
+     "n": 68,
+     "start": 146.066,
+     "end": 147.666,
+     "text": "最後分享我如何用 AI Coding"
+    },
+    {
+     "n": 69,
+     "start": 147.666,
+     "end": 149.946,
+     "text": "在短時間完成產品原型"
+    },
+    {
+     "n": 70,
+     "start": 149.946,
+     "end": 153.156,
+     "text": "以及在實際應用中一次次迭代的心得"
+    }
+   ],
+   "$props": {
+    "approx": {
+     "$set": [
+      "#10@先試錄一"
+     ]
+    },
+    "voiceMoved": {
+     "$set": [
+      "#8@免費工具",
+      "#8@免費"
+     ]
+    },
+    "words": [
+     {
+      "text": "嗨",
+      "start": 0.16,
+      "end": 0.39
+     },
+     {
+      "text": "大家好",
+      "start": 0.39,
+      "end": 0.79
+     },
+     {
+      "text": "我是",
+      "start": 0.87,
+      "end": 1.08
+     },
+     {
+      "text": "鼎",
+      "start": 1.08,
+      "end": 1.5
+     },
+     {
+      "text": "淵",
+      "start": 1.5,
+      "end": 1.85
+     },
+     {
+      "text": "歡迎",
+      "start": 2.08,
+      "end": 2.34
+     },
+     {
+      "text": "來到",
+      "start": 2.34,
+      "end": 2.71
+     },
+     {
+      "text": "工",
+      "start": 2.79,
+      "end": 2.97
+     },
+     {
+      "text": "程",
+      "start": 2.97,
+      "end": 3.18
+     },
+     {
+      "text": "師",
+      "start": 3.18,
+      "end": 3.39
+     },
+     {
+      "text": "下",
+      "start": 3.39,
+      "end": 3.6
+     },
+     {
+      "text": "班",
+      "start": 3.6,
+      "end": 3.76
+     },
+     {
+      "text": "有",
+      "start": 3.97,
+      "end": 4.02
+     },
+     {
+      "text": "約",
+      "start": 4.02,
+      "end": 4.24
+     },
+     {
+      "text": "如",
+      "start": 4.24,
+      "end": 4.4
+     },
+     {
+      "text": "影",
+      "start": 4.4,
+      "end": 4.44
+     },
+     {
+      "text": "打",
+      "start": 4.44,
+      "end": 4.54
+     },
+     {
+      "text": "算",
+      "start": 4.54,
+      "end": 4.64
+     },
+     {
+      "text": "拍",
+      "start": 4.64,
+      "end": 4.74
+     },
+     {
+      "text": "Youtube、",
+      "start": 4.74,
+      "end": 5.62
+     },
+     {
+      "text": "Podcast",
+      "start": 5.68,
+      "end": 6.08
+     },
+     {
+      "text": "線",
+      "start": 6.36,
+      "end": 6.37
+     },
+     {
+      "text": "上",
+      "start": 6.37,
+      "end": 6.54
+     },
+     {
+      "text": "課",
+      "start": 6.54,
+      "end": 6.99
+     },
+     {
+      "text": "程",
+      "start": 7.07,
+      "end": 7.23
+     },
+     {
+      "text": "或",
+      "start": 7.23,
+      "end": 7.39
+     },
+     {
+      "text": "放",
+      "start": 7.41,
+      "end": 7.56
+     },
+     {
+      "text": "單",
+      "start": 7.57,
+      "end": 7.73
+     },
+     {
+      "text": "節目",
+      "start": 7.73,
+      "end": 8.04
+     },
+     {
+      "text": "並",
+      "start": 8.04,
+      "end": 8.32
+     },
+     {
+      "text": "且",
+      "start": 8.32,
+      "end": 8.42
+     },
+     {
+      "text": "跟我",
+      "start": 8.42,
+      "end": 8.68
+     },
+     {
+      "text": "一樣",
+      "start": 8.68,
+      "end": 8.95
+     },
+     {
+      "text": "使",
+      "start": 9.03,
+      "end": 9.08
+     },
+     {
+      "text": "用",
+      "start": 9.08,
+      "end": 9.2
+     },
+     {
+      "text": "手",
+      "start": 9.2,
+      "end": 9.48
+     },
+     {
+      "text": "機",
+      "start": 9.48,
+      "end": 9.76
+     },
+     {
+      "text": "在",
+      "start": 9.76,
+      "end": 9.89
+     },
+     {
+      "text": "固",
+      "start": 9.89,
+      "end": 10.28
+     },
+     {
+      "text": "定",
+      "start": 10.28,
+      "end": 10.41
+     },
+     {
+      "text": "的",
+      "start": 10.41,
+      "end": 10.54
+     },
+     {
+      "text": "機",
+      "start": 10.54,
+      "end": 10.63
+     },
+     {
+      "text": "位",
+      "start": 10.68,
+      "end": 10.8
+     },
+     {
+      "text": "錄",
+      "start": 10.8,
+      "end": 11.19
+     },
+     {
+      "text": "影",
+      "start": 11.19,
+      "end": 11.23
+     },
+     {
+      "text": "讓",
+      "start": 11.23,
+      "end": 11.48
+     },
+     {
+      "text": "我",
+      "start": 11.48,
+      "end": 11.64
+     },
+     {
+      "text": "強",
+      "start": 11.64,
+      "end": 11.8
+     },
+     {
+      "text": "烈",
+      "start": 11.8,
+      "end": 12.29
+     },
+     {
+      "text": "建",
+      "start": 12.29,
+      "end": 12.45
+     },
+     {
+      "text": "議",
+      "start": 12.45,
+      "end": 12.61
+     },
+     {
+      "text": "你",
+      "start": 12.61,
+      "end": 12.77
+     },
+     {
+      "text": "儲",
+      "start": 12.77,
+      "end": 13.17
+     },
+     {
+      "text": "成",
+      "start": 13.37,
+      "end": 13.42
+     },
+     {
+      "text": "這",
+      "start": 13.42,
+      "end": 13.58
+     },
+     {
+      "text": "支",
+      "start": 13.58,
+      "end": 13.74
+     },
+     {
+      "text": "影片",
+      "start": 13.74,
+      "end": 14.12
+     },
+     {
+      "text": "因為",
+      "start": 14.32,
+      "end": 14.39
+     },
+     {
+      "text": "接下來",
+      "start": 14.39,
+      "end": 14.73
+     },
+     {
+      "text": "要",
+      "start": 14.73,
+      "end": 14.84
+     },
+     {
+      "text": "分享",
+      "start": 14.84,
+      "end": 15.07
+     },
+     {
+      "text": "一個",
+      "start": 15.07,
+      "end": 15.32
+     },
+     {
+      "text": "節",
+      "start": 15.32,
+      "end": 15.48
+     },
+     {
+      "text": "省",
+      "start": 15.48,
+      "end": 15.93
+     },
+     {
+      "text": "我",
+      "start": 15.93,
+      "end": 16.08
+     },
+     {
+      "text": "超",
+      "start": 16.08,
+      "end": 16.23
+     },
+     {
+      "text": "多",
+      "start": 16.23,
+      "end": 16.38
+     },
+     {
+      "text": "時間",
+      "start": 16.38,
+      "end": 16.68
+     },
+     {
+      "text": "的",
+      "start": 16.69,
+      "end": 16.83
+     },
+     {
+      "text": "免",
+      "start": 16.84,
+      "end": 17.17
+     },
+     {
+      "text": "費",
+      "start": 17.37,
+      "end": 17.45
+     },
+     {
+      "text": "工",
+      "start": 17.45,
+      "end": 17.6
+     },
+     {
+      "text": "具",
+      "start": 17.6,
+      "end": 17.79
+     },
+     {
+      "text": "過去",
+      "start": 17.96,
+      "end": 18.13
+     },
+     {
+      "text": "正",
+      "start": 18.13,
+      "end": 18.29
+     },
+     {
+      "text": "式",
+      "start": 18.29,
+      "end": 18.45
+     },
+     {
+      "text": "開",
+      "start": 18.45,
+      "end": 18.59
+     },
+     {
+      "text": "拍",
+      "start": 18.67,
+      "end": 18.77
+     },
+     {
+      "text": "前",
+      "start": 18.77,
+      "end": 18.95
+     },
+     {
+      "text": "我",
+      "start": 19.12,
+      "end": 19.17
+     },
+     {
+      "text": "到",
+      "start": 19.17,
+      "end": 19.38
+     },
+     {
+      "text": "前",
+      "start": 19.38,
+      "end": 19.59
+     },
+     {
+      "text": "事",
+      "start": 19.59,
+      "end": 19.75
+     },
+     {
+      "text": "如",
+      "start": 19.83,
+      "end": 20.01
+     },
+     {
+      "text": "一",
+      "start": 20.01,
+      "end": 20.22
+     },
+     {
+      "text": "小",
+      "start": 20.22,
+      "end": 20.43
+     },
+     {
+      "text": "段",
+      "start": 20.43,
+      "end": 20.64
+     },
+     {
+      "text": "卻",
+      "start": 20.8,
+      "end": 21.06
+     },
+     {
+      "text": "用",
+      "start": 21.06,
+      "end": 21.19
+     },
+     {
+      "text": "畫",
+      "start": 21.2,
+      "end": 21.34
+     },
+     {
+      "text": "面",
+      "start": 21.34,
+      "end": 21.43
+     },
+     {
+      "text": "的",
+      "start": 21.51,
+      "end": 21.62
+     },
+     {
+      "text": "聲",
+      "start": 21.62,
+      "end": 21.76
+     },
+     {
+      "text": "音",
+      "start": 21.76,
+      "end": 21.92
+     },
+     {
+      "text": "符",
+      "start": 21.92,
+      "end": 22.4
+     },
+     {
+      "text": "合",
+      "start": 22.4,
+      "end": 22.49
+     },
+     {
+      "text": "自己",
+      "start": 22.69,
+      "end": 22.9
+     },
+     {
+      "text": "的",
+      "start": 22.9,
+      "end": 23.06
+     },
+     {
+      "text": "需",
+      "start": 23.06,
+      "end": 23.22
+     },
+     {
+      "text": "求",
+      "start": 23.22,
+      "end": 23.44
+     },
+     {
+      "text": "而",
+      "start": 23.6,
+      "end": 23.63
+     },
+     {
+      "text": "正",
+      "start": 23.63,
+      "end": 23.82
+     },
+     {
+      "text": "式",
+      "start": 23.82,
+      "end": 24.01
+     },
+     {
+      "text": "開",
+      "start": 24.01,
+      "end": 24.2
+     },
+     {
+      "text": "拍",
+      "start": 24.2,
+      "end": 24.39
+     },
+     {
+      "text": "後",
+      "start": 24.39,
+      "end": 24.59
+     },
+     {
+      "text": "每",
+      "start": 24.59,
+      "end": 24.76
+     },
+     {
+      "text": "錄",
+      "start": 24.76,
+      "end": 25.25
+     },
+     {
+      "text": "完",
+      "start": 25.25,
+      "end": 25.29
+     },
+     {
+      "text": "一",
+      "start": 25.49,
+      "end": 25.57
+     },
+     {
+      "text": "段",
+      "start": 25.57,
+      "end": 25.76
+     },
+     {
+      "text": "我",
+      "start": 25.92,
+      "end": 25.93
+     },
+     {
+      "text": "都",
+      "start": 25.93,
+      "end": 26.1
+     },
+     {
+      "text": "要",
+      "start": 26.1,
+      "end": 26.27
+     },
+     {
+      "text": "跑",
+      "start": 26.27,
+      "end": 26.44
+     },
+     {
+      "text": "到",
+      "start": 26.44,
+      "end": 26.55
+     },
+     {
+      "text": "手",
+      "start": 26.63,
+      "end": 26.78
+     },
+     {
+      "text": "機",
+      "start": 26.78,
+      "end": 26.94
+     },
+     {
+      "text": "旁",
+      "start": 26.94,
+      "end": 27.46
+     },
+     {
+      "text": "邊",
+      "start": 27.46,
+      "end": 27.6
+     },
+     {
+      "text": "播",
+      "start": 27.6,
+      "end": 27.81
+     },
+     {
+      "text": "放",
+      "start": 27.81,
+      "end": 27.97
+     },
+     {
+      "text": "影片",
+      "start": 27.97,
+      "end": 28.32
+     },
+     {
+      "text": "以",
+      "start": 28.48,
+      "end": 28.5
+     },
+     {
+      "text": "此",
+      "start": 28.5,
+      "end": 28.68
+     },
+     {
+      "text": "確",
+      "start": 28.68,
+      "end": 28.86
+     },
+     {
+      "text": "認",
+      "start": 28.86,
+      "end": 29.04
+     },
+     {
+      "text": "動",
+      "start": 29.04,
+      "end": 29.22
+     },
+     {
+      "text": "作",
+      "start": 29.22,
+      "end": 29.4
+     },
+     {
+      "text": "與",
+      "start": 29.4,
+      "end": 29.58
+     },
+     {
+      "text": "聲",
+      "start": 29.58,
+      "end": 29.7
+     },
+     {
+      "text": "音",
+      "start": 29.76,
+      "end": 29.94
+     },
+     {
+      "text": "足",
+      "start": 29.94,
+      "end": 30.12
+     },
+     {
+      "text": "夠",
+      "start": 30.12,
+      "end": 30.17
+     },
+     {
+      "text": "流",
+      "start": 30.37,
+      "end": 30.48
+     },
+     {
+      "text": "暢",
+      "start": 30.48,
+      "end": 31.12
+     },
+     {
+      "text": "畢",
+      "start": 31.32,
+      "end": 31.56
+     },
+     {
+      "text": "竟",
+      "start": 31.56,
+      "end": 31.95
+     },
+     {
+      "text": "手",
+      "start": 32.03,
+      "end": 32.09
+     },
+     {
+      "text": "機",
+      "start": 32.09,
+      "end": 32.22
+     },
+     {
+      "text": "畫",
+      "start": 32.22,
+      "end": 32.34
+     },
+     {
+      "text": "面",
+      "start": 32.34,
+      "end": 32.48
+     },
+     {
+      "text": "比較",
+      "start": 32.48,
+      "end": 32.75
+     },
+     {
+      "text": "小",
+      "start": 32.75,
+      "end": 32.92
+     },
+     {
+      "text": "很多",
+      "start": 33.08,
+      "end": 33.25
+     },
+     {
+      "text": "小",
+      "start": 33.25,
+      "end": 33.41
+     },
+     {
+      "text": "毛",
+      "start": 33.41,
+      "end": 33.57
+     },
+     {
+      "text": "病",
+      "start": 33.57,
+      "end": 33.71
+     },
+     {
+      "text": "是",
+      "start": 33.79,
+      "end": 34
+     },
+     {
+      "text": "把",
+      "start": 34,
+      "end": 34.18
+     },
+     {
+      "text": "影片",
+      "start": 34.18,
+      "end": 34.56
+     },
+     {
+      "text": "封",
+      "start": 34.56,
+      "end": 34.77
+     },
+     {
+      "text": "到",
+      "start": 34.77,
+      "end": 34.97
+     },
+     {
+      "text": "電",
+      "start": 34.97,
+      "end": 35
+     },
+     {
+      "text": "腦",
+      "start": 35,
+      "end": 35.36
+     },
+     {
+      "text": "上",
+      "start": 35.36,
+      "end": 35.48
+     },
+     {
+      "text": "才",
+      "start": 35.48,
+      "end": 35.72
+     },
+     {
+      "text": "會",
+      "start": 35.84,
+      "end": 36.14
+     },
+     {
+      "text": "發現",
+      "start": 36.14,
+      "end": 36.8
+     },
+     {
+      "text": "的",
+      "start": 36.8,
+      "end": 36.84
+     },
+     {
+      "text": "像",
+      "start": 36.84,
+      "end": 37
+     },
+     {
+      "text": "腳",
+      "start": 37,
+      "end": 37.1
+     },
+     {
+      "text": "架",
+      "start": 37.1,
+      "end": 37.49
+     },
+     {
+      "text": "部",
+      "start": 37.49,
+      "end": 37.62
+     },
+     {
+      "text": "門",
+      "start": 37.62,
+      "end": 37.75
+     },
+     {
+      "text": "吻",
+      "start": 37.75,
+      "end": 38.16
+     },
+     {
+      "text": "造",
+      "start": 38.16,
+      "end": 38.34
+     },
+     {
+      "text": "成",
+      "start": 38.34,
+      "end": 38.52
+     },
+     {
+      "text": "畫",
+      "start": 38.52,
+      "end": 38.68
+     },
+     {
+      "text": "面",
+      "start": 38.68,
+      "end": 38.89
+     },
+     {
+      "text": "輕",
+      "start": 38.89,
+      "end": 39.06
+     },
+     {
+      "text": "微",
+      "start": 39.06,
+      "end": 39.24
+     },
+     {
+      "text": "晃",
+      "start": 39.24,
+      "end": 39.78
+     },
+     {
+      "text": "動",
+      "start": 39.78,
+      "end": 39.92
+     },
+     {
+      "text": "或",
+      "start": 39.92,
+      "end": 40.16
+     },
+     {
+      "text": "自己",
+      "start": 40.16,
+      "end": 40.25
+     },
+     {
+      "text": "穿",
+      "start": 40.25,
+      "end": 40.5
+     },
+     {
+      "text": "的",
+      "start": 40.5,
+      "end": 40.57
+     },
+     {
+      "text": "衣",
+      "start": 40.58,
+      "end": 40.79
+     },
+     {
+      "text": "服",
+      "start": 40.87,
+      "end": 40.91
+     },
+     {
+      "text": "太",
+      "start": 40.91,
+      "end": 40.99
+     },
+     {
+      "text": "薄",
+      "start": 40.99,
+      "end": 41.32
+     },
+     {
+      "text": "有",
+      "start": 41.32,
+      "end": 41.48
+     },
+     {
+      "text": "極",
+      "start": 41.48,
+      "end": 41.85
+     },
+     {
+      "text": "圖",
+      "start": 42.05,
+      "end": 42.44
+     },
+     {
+      "text": "問題",
+      "start": 42.44,
+      "end": 42.76
+     },
+     {
+      "text": "而",
+      "start": 42.92,
+      "end": 42.93
+     },
+     {
+      "text": "我",
+      "start": 42.93,
+      "end": 43.1
+     },
+     {
+      "text": "過去",
+      "start": 43.1,
+      "end": 43.44
+     },
+     {
+      "text": "的",
+      "start": 43.44,
+      "end": 43.55
+     },
+     {
+      "text": "拍",
+      "start": 43.63,
+      "end": 43.78
+     },
+     {
+      "text": "片",
+      "start": 43.78,
+      "end": 43.94
+     },
+     {
+      "text": "流",
+      "start": 43.94,
+      "end": 44.12
+     },
+     {
+      "text": "程",
+      "start": 44.12,
+      "end": 44.32
+     },
+     {
+      "text": "是",
+      "start": 44.32,
+      "end": 44.48
+     },
+     {
+      "text": "先",
+      "start": 44.48,
+      "end": 44.62
+     },
+     {
+      "text": "把",
+      "start": 44.62,
+      "end": 44.77
+     },
+     {
+      "text": "影片",
+      "start": 44.77,
+      "end": 45.07
+     },
+     {
+      "text": "上",
+      "start": 45.07,
+      "end": 45.22
+     },
+     {
+      "text": "傳",
+      "start": 45.22,
+      "end": 45.37
+     },
+     {
+      "text": "到",
+      "start": 45.37,
+      "end": 45.51
+     },
+     {
+      "text": "雲",
+      "start": 45.53,
+      "end": 45.97
+     },
+     {
+      "text": "端",
+      "start": 45.97,
+      "end": 46.42
+     },
+     {
+      "text": "備",
+      "start": 46.42,
+      "end": 46.57
+     },
+     {
+      "text": "份",
+      "start": 46.57,
+      "end": 46.72
+     },
+     {
+      "text": "再",
+      "start": 46.72,
+      "end": 46.88
+     },
+     {
+      "text": "下",
+      "start": 46.88,
+      "end": 46.96
+     },
+     {
+      "text": "載",
+      "start": 46.96,
+      "end": 47.32
+     },
+     {
+      "text": "到",
+      "start": 47.32,
+      "end": 47.44
+     },
+     {
+      "text": "電",
+      "start": 47.44,
+      "end": 47.51
+     },
+     {
+      "text": "腦",
+      "start": 47.59,
+      "end": 47.91
+     },
+     {
+      "text": "所以",
+      "start": 48.08,
+      "end": 48.2
+     },
+     {
+      "text": "很多",
+      "start": 48.2,
+      "end": 48.47
+     },
+     {
+      "text": "小",
+      "start": 48.48,
+      "end": 48.62
+     },
+     {
+      "text": "問題",
+      "start": 48.62,
+      "end": 48.92
+     },
+     {
+      "text": "是",
+      "start": 48.92,
+      "end": 49.07
+     },
+     {
+      "text": "在",
+      "start": 49.07,
+      "end": 49.24
+     },
+     {
+      "text": "自己",
+      "start": 49.24,
+      "end": 49.48
+     },
+     {
+      "text": "以",
+      "start": 49.48,
+      "end": 49.62
+     },
+     {
+      "text": "為",
+      "start": 49.62,
+      "end": 49.75
+     },
+     {
+      "text": "可以",
+      "start": 49.76,
+      "end": 50.04
+     },
+     {
+      "text": "收",
+      "start": 50.04,
+      "end": 50.2
+     },
+     {
+      "text": "工",
+      "start": 50.2,
+      "end": 50.36
+     },
+     {
+      "text": "的時候",
+      "start": 50.36,
+      "end": 50.72
+     },
+     {
+      "text": "才",
+      "start": 50.84,
+      "end": 51
+     },
+     {
+      "text": "發現",
+      "start": 51.11,
+      "end": 51.6
+     },
+     {
+      "text": "真的是",
+      "start": 51.76,
+      "end": 52.17
+     },
+     {
+      "text": "非常",
+      "start": 52.17,
+      "end": 52.55
+     },
+     {
+      "text": "崩",
+      "start": 52.55,
+      "end": 53.11
+     },
+     {
+      "text": "潰",
+      "start": 53.12,
+      "end": 53.72
+     },
+     {
+      "text": "另外",
+      "start": 53.88,
+      "end": 54.06
+     },
+     {
+      "text": "有",
+      "start": 54.06,
+      "end": 54.23
+     },
+     {
+      "text": "些",
+      "start": 54.23,
+      "end": 54.4
+     },
+     {
+      "text": "時候",
+      "start": 54.4,
+      "end": 54.76
+     },
+     {
+      "text": "我們",
+      "start": 54.76,
+      "end": 55.07
+     },
+     {
+      "text": "會",
+      "start": 55.07,
+      "end": 55.22
+     },
+     {
+      "text": "需要",
+      "start": 55.22,
+      "end": 55.53
+     },
+     {
+      "text": "用",
+      "start": 55.53,
+      "end": 55.57
+     },
+     {
+      "text": "到",
+      "start": 55.77,
+      "end": 55.83
+     },
+     {
+      "text": "多",
+      "start": 55.83,
+      "end": 55.98
+     },
+     {
+      "text": "機",
+      "start": 55.98,
+      "end": 56.13
+     },
+     {
+      "text": "拍",
+      "start": 56.13,
+      "end": 56.28
+     },
+     {
+      "text": "攝",
+      "start": 56.28,
+      "end": 56.79
+     },
+     {
+      "text": "以",
+      "start": 56.79,
+      "end": 56.96
+     },
+     {
+      "text": "這",
+      "start": 56.96,
+      "end": 57.12
+     },
+     {
+      "text": "支",
+      "start": 57.12,
+      "end": 57.28
+     },
+     {
+      "text": "影片",
+      "start": 57.28,
+      "end": 57.59
+     },
+     {
+      "text": "來說",
+      "start": 57.67,
+      "end": 57.92
+     },
+     {
+      "text": "因為",
+      "start": 58.08,
+      "end": 58.21
+     },
+     {
+      "text": "我想",
+      "start": 58.21,
+      "end": 58.49
+     },
+     {
+      "text": "要",
+      "start": 58.5,
+      "end": 58.64
+     },
+     {
+      "text": "一次",
+      "start": 58.64,
+      "end": 58.93
+     },
+     {
+      "text": "拍",
+      "start": 58.93,
+      "end": 59.07
+     },
+     {
+      "text": "好",
+      "start": 59.07,
+      "end": 59.21
+     },
+     {
+      "text": "長",
+      "start": 59.21,
+      "end": 59.3
+     },
+     {
+      "text": "影片",
+      "start": 59.36,
+      "end": 59.64
+     },
+     {
+      "text": "跟",
+      "start": 59.64,
+      "end": 59.76
+     },
+     {
+      "text": "短",
+      "start": 59.97,
+      "end": 60.21
+     },
+     {
+      "text": "影",
+      "start": 60.21,
+      "end": 60.35
+     },
+     {
+      "text": "音",
+      "start": 60.35,
+      "end": 60.6
+     },
+     {
+      "text": "所以",
+      "start": 60.76,
+      "end": 60.84
+     },
+     {
+      "text": "一",
+      "start": 60.84,
+      "end": 60.96
+     },
+     {
+      "text": "支",
+      "start": 60.96,
+      "end": 61.08
+     },
+     {
+      "text": "手",
+      "start": 61.08,
+      "end": 61.2
+     },
+     {
+      "text": "機",
+      "start": 61.2,
+      "end": 61.32
+     },
+     {
+      "text": "是",
+      "start": 61.32,
+      "end": 61.39
+     },
+     {
+      "text": "橫",
+      "start": 61.47,
+      "end": 61.79
+     },
+     {
+      "text": "著",
+      "start": 61.81,
+      "end": 61.92
+     },
+     {
+      "text": "錄",
+      "start": 61.92,
+      "end": 62.28
+     },
+     {
+      "text": "長",
+      "start": 62.28,
+      "end": 62.4
+     },
+     {
+      "text": "影片",
+      "start": 62.4,
+      "end": 62.72
+     },
+     {
+      "text": "另外",
+      "start": 62.88,
+      "end": 62.97
+     },
+     {
+      "text": "一",
+      "start": 62.97,
+      "end": 63.09
+     },
+     {
+      "text": "支",
+      "start": 63.09,
+      "end": 63.21
+     },
+     {
+      "text": "則",
+      "start": 63.21,
+      "end": 63.33
+     },
+     {
+      "text": "是",
+      "start": 63.33,
+      "end": 63.45
+     },
+     {
+      "text": "直",
+      "start": 63.45,
+      "end": 63.51
+     },
+     {
+      "text": "的",
+      "start": 63.59,
+      "end": 63.69
+     },
+     {
+      "text": "錄",
+      "start": 63.69,
+      "end": 64.06
+     },
+     {
+      "text": "短",
+      "start": 64.06,
+      "end": 64.43
+     },
+     {
+      "text": "影",
+      "start": 64.43,
+      "end": 64.54
+     },
+     {
+      "text": "音",
+      "start": 64.54,
+      "end": 64.57
+     },
+     {
+      "text": "或者",
+      "start": 64.92,
+      "end": 65.06
+     },
+     {
+      "text": "錄",
+      "start": 65.06,
+      "end": 65.51
+     },
+     {
+      "text": "訪",
+      "start": 65.51,
+      "end": 65.95
+     },
+     {
+      "text": "談",
+      "start": 65.97,
+      "end": 66.11
+     },
+     {
+      "text": "節目",
+      "start": 66.11,
+      "end": 66.41
+     },
+     {
+      "text": "時",
+      "start": 66.41,
+      "end": 66.56
+     },
+     {
+      "text": "主",
+      "start": 66.56,
+      "end": 66.72
+     },
+     {
+      "text": "持",
+      "start": 66.72,
+      "end": 66.88
+     },
+     {
+      "text": "人",
+      "start": 66.88,
+      "end": 67.04
+     },
+     {
+      "text": "跟",
+      "start": 67.04,
+      "end": 67.2
+     },
+     {
+      "text": "來",
+      "start": 67.2,
+      "end": 67.35
+     },
+     {
+      "text": "賓",
+      "start": 67.43,
+      "end": 67.84
+     },
+     {
+      "text": "可以",
+      "start": 67.84,
+      "end": 68.16
+     },
+     {
+      "text": "各",
+      "start": 68.16,
+      "end": 68.32
+     },
+     {
+      "text": "用",
+      "start": 68.32,
+      "end": 68.41
+     },
+     {
+      "text": "一",
+      "start": 68.61,
+      "end": 68.64
+     },
+     {
+      "text": "支",
+      "start": 68.64,
+      "end": 68.8
+     },
+     {
+      "text": "手",
+      "start": 68.8,
+      "end": 68.96
+     },
+     {
+      "text": "機",
+      "start": 68.96,
+      "end": 69.12
+     },
+     {
+      "text": "拍",
+      "start": 69.12,
+      "end": 69.28
+     },
+     {
+      "text": "這樣",
+      "start": 69.44,
+      "end": 69.6
+     },
+     {
+      "text": "對",
+      "start": 69.6,
+      "end": 69.76
+     },
+     {
+      "text": "話",
+      "start": 69.76,
+      "end": 69.92
+     },
+     {
+      "text": "時",
+      "start": 69.92,
+      "end": 70.07
+     },
+     {
+      "text": "就",
+      "start": 70.15,
+      "end": 70.28
+     },
+     {
+      "text": "能",
+      "start": 70.28,
+      "end": 70.47
+     },
+     {
+      "text": "切",
+      "start": 70.49,
+      "end": 70.66
+     },
+     {
+      "text": "到",
+      "start": 70.72,
+      "end": 70.88
+     },
+     {
+      "text": "正",
+      "start": 70.88,
+      "end": 71.08
+     },
+     {
+      "text": "在",
+      "start": 71.08,
+      "end": 71.13
+     },
+     {
+      "text": "講",
+      "start": 71.33,
+      "end": 71.48
+     },
+     {
+      "text": "話",
+      "start": 71.48,
+      "end": 71.68
+     },
+     {
+      "text": "的人",
+      "start": 71.68,
+      "end": 72.08
+     },
+     {
+      "text": "那麼",
+      "start": 72.24,
+      "end": 72.36
+     },
+     {
+      "text": "馬",
+      "start": 72.36,
+      "end": 72.5
+     },
+     {
+      "text": "上",
+      "start": 72.5,
+      "end": 72.63
+     },
+     {
+      "text": "就會",
+      "start": 72.64,
+      "end": 72.87
+     },
+     {
+      "text": "遇",
+      "start": 72.95,
+      "end": 73.34
+     },
+     {
+      "text": "到",
+      "start": 73.34,
+      "end": 73.46
+     },
+     {
+      "text": "一個",
+      "start": 73.52,
+      "end": 73.76
+     },
+     {
+      "text": "問題",
+      "start": 73.76,
+      "end": 73.92
+     },
+     {
+      "text": "如果",
+      "start": 74.2,
+      "end": 74.29
+     },
+     {
+      "text": "只",
+      "start": 74.29,
+      "end": 74.41
+     },
+     {
+      "text": "用",
+      "start": 74.41,
+      "end": 74.53
+     },
+     {
+      "text": "一",
+      "start": 74.53,
+      "end": 74.65
+     },
+     {
+      "text": "支",
+      "start": 74.65,
+      "end": 74.77
+     },
+     {
+      "text": "手",
+      "start": 74.77,
+      "end": 74.83
+     },
+     {
+      "text": "機",
+      "start": 74.91,
+      "end": 75.01
+     },
+     {
+      "text": "錄",
+      "start": 75.01,
+      "end": 75.38
+     },
+     {
+      "text": "影",
+      "start": 75.38,
+      "end": 75.55
+     },
+     {
+      "text": "可以",
+      "start": 75.72,
+      "end": 75.92
+     },
+     {
+      "text": "用",
+      "start": 75.92,
+      "end": 76.1
+     },
+     {
+      "text": "手",
+      "start": 76.1,
+      "end": 76.28
+     },
+     {
+      "text": "勢",
+      "start": 76.28,
+      "end": 76.82
+     },
+     {
+      "text": "來",
+      "start": 76.82,
+      "end": 76.94
+     },
+     {
+      "text": "控",
+      "start": 77,
+      "end": 77.18
+     },
+     {
+      "text": "制",
+      "start": 77.18,
+      "end": 77.36
+     },
+     {
+      "text": "開始",
+      "start": 77.36,
+      "end": 77.72
+     },
+     {
+      "text": "跟",
+      "start": 77.72,
+      "end": 77.9
+     },
+     {
+      "text": "結",
+      "start": 77.9,
+      "end": 78.03
+     },
+     {
+      "text": "束",
+      "start": 78.08,
+      "end": 78.28
+     },
+     {
+      "text": "但",
+      "start": 78.28,
+      "end": 78.44
+     },
+     {
+      "text": "如果",
+      "start": 78.44,
+      "end": 78.7
+     },
+     {
+      "text": "用",
+      "start": 78.7,
+      "end": 78.83
+     },
+     {
+      "text": "到",
+      "start": 78.84,
+      "end": 78.98
+     },
+     {
+      "text": "兩",
+      "start": 78.98,
+      "end": 79.07
+     },
+     {
+      "text": "支",
+      "start": 79.15,
+      "end": 79.26
+     },
+     {
+      "text": "以上",
+      "start": 79.26,
+      "end": 79.54
+     },
+     {
+      "text": "的",
+      "start": 79.54,
+      "end": 79.66
+     },
+     {
+      "text": "手",
+      "start": 79.72,
+      "end": 79.81
+     },
+     {
+      "text": "機",
+      "start": 79.81,
+      "end": 80
+     },
+     {
+      "text": "同",
+      "start": 80,
+      "end": 80.12
+     },
+     {
+      "text": "時",
+      "start": 80.12,
+      "end": 80.33
+     },
+     {
+      "text": "錄",
+      "start": 80.33,
+      "end": 80.7
+     },
+     {
+      "text": "影",
+      "start": 80.7,
+      "end": 80.84
+     },
+     {
+      "text": "就",
+      "start": 81,
+      "end": 81.01
+     },
+     {
+      "text": "很",
+      "start": 81.01,
+      "end": 81.18
+     },
+     {
+      "text": "難",
+      "start": 81.18,
+      "end": 81.35
+     },
+     {
+      "text": "讓",
+      "start": 81.35,
+      "end": 81.52
+     },
+     {
+      "text": "他們",
+      "start": 81.52,
+      "end": 81.87
+     },
+     {
+      "text": "同",
+      "start": 81.87,
+      "end": 82.03
+     },
+     {
+      "text": "時",
+      "start": 82.05,
+      "end": 82.2
+     },
+     {
+      "text": "啟",
+      "start": 82.21,
+      "end": 82.68
+     },
+     {
+      "text": "動",
+      "start": 82.89,
+      "end": 82.96
+     },
+     {
+      "text": "一",
+      "start": 82.96,
+      "end": 83.12
+     },
+     {
+      "text": "旦",
+      "start": 83.12,
+      "end": 83.44
+     },
+     {
+      "text": "開始",
+      "start": 83.44,
+      "end": 83.68
+     },
+     {
+      "text": "的",
+      "start": 83.68,
+      "end": 83.75
+     },
+     {
+      "text": "時間",
+      "start": 83.83,
+      "end": 84.04
+     },
+     {
+      "text": "不同",
+      "start": 84.04,
+      "end": 84.32
+     },
+     {
+      "text": "步",
+      "start": 84.32,
+      "end": 84.52
+     },
+     {
+      "text": "或",
+      "start": 84.52,
+      "end": 84.68
+     },
+     {
+      "text": "許",
+      "start": 84.68,
+      "end": 84.82
+     },
+     {
+      "text": "剪",
+      "start": 84.82,
+      "end": 85.28
+     },
+     {
+      "text": "接",
+      "start": 85.28,
+      "end": 85.43
+     },
+     {
+      "text": "影片",
+      "start": 85.43,
+      "end": 85.74
+     },
+     {
+      "text": "校",
+      "start": 85.74,
+      "end": 85.88
+     },
+     {
+      "text": "正",
+      "start": 85.89,
+      "end": 86.03
+     },
+     {
+      "text": "聲",
+      "start": 86.04,
+      "end": 86.19
+     },
+     {
+      "text": "音",
+      "start": 86.19,
+      "end": 86.34
+     },
+     {
+      "text": "的",
+      "start": 86.34,
+      "end": 86.37
+     },
+     {
+      "text": "過",
+      "start": 86.57,
+      "end": 86.64
+     },
+     {
+      "text": "程",
+      "start": 86.64,
+      "end": 86.88
+     },
+     {
+      "text": "就會",
+      "start": 87.04,
+      "end": 87.2
+     },
+     {
+      "text": "讓",
+      "start": 87.2,
+      "end": 87.36
+     },
+     {
+      "text": "人",
+      "start": 87.36,
+      "end": 87.52
+     },
+     {
+      "text": "崩",
+      "start": 87.52,
+      "end": 88
+     },
+     {
+      "text": "潰",
+      "start": 88,
+      "end": 88.48
+     },
+     {
+      "text": "而",
+      "start": 88.48,
+      "end": 88.64
+     },
+     {
+      "text": "停",
+      "start": 88.64,
+      "end": 88.72
+     },
+     {
+      "text": "止",
+      "start": 88.72,
+      "end": 88.84
+     },
+     {
+      "text": "錄",
+      "start": 88.84,
+      "end": 89.2
+     },
+     {
+      "text": "影",
+      "start": 89.2,
+      "end": 89.27
+     },
+     {
+      "text": "驗",
+      "start": 89.35,
+      "end": 89.67
+     },
+     {
+      "text": "收",
+      "start": 89.69,
+      "end": 89.8
+     },
+     {
+      "text": "成",
+      "start": 89.8,
+      "end": 89.86
+     },
+     {
+      "text": "骨",
+      "start": 89.92,
+      "end": 90.28
+     },
+     {
+      "text": "的時候",
+      "start": 90.28,
+      "end": 90.65
+     },
+     {
+      "text": "也",
+      "start": 90.65,
+      "end": 90.77
+     },
+     {
+      "text": "一樣",
+      "start": 90.77,
+      "end": 91.08
+     },
+     {
+      "text": "我",
+      "start": 91.08,
+      "end": 91.24
+     },
+     {
+      "text": "需要",
+      "start": 91.24,
+      "end": 91.57
+     },
+     {
+      "text": "在",
+      "start": 91.57,
+      "end": 91.73
+     },
+     {
+      "text": "多",
+      "start": 91.73,
+      "end": 91.87
+     },
+     {
+      "text": "支",
+      "start": 91.95,
+      "end": 92.05
+     },
+     {
+      "text": "手",
+      "start": 92.05,
+      "end": 92.21
+     },
+     {
+      "text": "機",
+      "start": 92.21,
+      "end": 92.37
+     },
+     {
+      "text": "間",
+      "start": 92.37,
+      "end": 92.59
+     },
+     {
+      "text": "走",
+      "start": 92.6,
+      "end": 92.81
+     },
+     {
+      "text": "來",
+      "start": 92.81,
+      "end": 92.92
+     },
+     {
+      "text": "走",
+      "start": 93.13,
+      "end": 93.23
+     },
+     {
+      "text": "去",
+      "start": 93.23,
+      "end": 93.44
+     },
+     {
+      "text": "個",
+      "start": 93.6,
+      "end": 93.65
+     },
+     {
+      "text": "別",
+      "start": 93.65,
+      "end": 93.86
+     },
+     {
+      "text": "確",
+      "start": 93.86,
+      "end": 94.07
+     },
+     {
+      "text": "認",
+      "start": 94.07,
+      "end": 94.23
+     },
+     {
+      "text": "畫",
+      "start": 94.31,
+      "end": 94.49
+     },
+     {
+      "text": "面",
+      "start": 94.49,
+      "end": 94.7
+     },
+     {
+      "text": "與",
+      "start": 94.7,
+      "end": 94.91
+     },
+     {
+      "text": "聲",
+      "start": 94.91,
+      "end": 95.12
+     },
+     {
+      "text": "音",
+      "start": 95.12,
+      "end": 95.28
+     },
+     {
+      "text": "但",
+      "start": 95.28,
+      "end": 95.56
+     },
+     {
+      "text": "要",
+      "start": 95.56,
+      "end": 95.64
+     },
+     {
+      "text": "拍",
+      "start": 95.64,
+      "end": 95.76
+     },
+     {
+      "text": "攝",
+      "start": 95.76,
+      "end": 96.13
+     },
+     {
+      "text": "的",
+      "start": 96.13,
+      "end": 96.19
+     },
+     {
+      "text": "段",
+      "start": 96.27,
+      "end": 96.37
+     },
+     {
+      "text": "落",
+      "start": 96.37,
+      "end": 96.55
+     },
+     {
+      "text": "很多",
+      "start": 96.55,
+      "end": 96.88
+     },
+     {
+      "text": "時",
+      "start": 96.88,
+      "end": 97.04
+     },
+     {
+      "text": "其實",
+      "start": 97.2,
+      "end": 97.41
+     },
+     {
+      "text": "這些",
+      "start": 97.41,
+      "end": 97.78
+     },
+     {
+      "text": "走",
+      "start": 97.78,
+      "end": 97.96
+     },
+     {
+      "text": "動",
+      "start": 97.96,
+      "end": 98.13
+     },
+     {
+      "text": "非常",
+      "start": 98.15,
+      "end": 98.51
+     },
+     {
+      "text": "耗",
+      "start": 98.51,
+      "end": 98.89
+     },
+     {
+      "text": "費",
+      "start": 99.09,
+      "end": 99.24
+     },
+     {
+      "text": "體",
+      "start": 99.24,
+      "end": 99.42
+     },
+     {
+      "text": "力",
+      "start": 99.42,
+      "end": 99.64
+     },
+     {
+      "text": "而",
+      "start": 99.8,
+      "end": 99.82
+     },
+     {
+      "text": "我",
+      "start": 99.82,
+      "end": 100
+     },
+     {
+      "text": "為",
+      "start": 100,
+      "end": 100.18
+     },
+     {
+      "text": "了",
+      "start": 100.18,
+      "end": 100.36
+     },
+     {
+      "text": "解",
+      "start": 100.36,
+      "end": 100.54
+     },
+     {
+      "text": "決",
+      "start": 100.54,
+      "end": 100.72
+     },
+     {
+      "text": "以上",
+      "start": 100.72,
+      "end": 101.09
+     },
+     {
+      "text": "的",
+      "start": 101.09,
+      "end": 101.27
+     },
+     {
+      "text": "問題",
+      "start": 101.27,
+      "end": 101.48
+     },
+     {
+      "text": "我",
+      "start": 101.84,
+      "end": 101.88
+     },
+     {
+      "text": "上",
+      "start": 101.88,
+      "end": 102.08
+     },
+     {
+      "text": "網",
+      "start": 102.08,
+      "end": 102.28
+     },
+     {
+      "text": "說",
+      "start": 102.28,
+      "end": 102.47
+     },
+     {
+      "text": "學",
+      "start": 102.55,
+      "end": 102.68
+     },
+     {
+      "text": "了",
+      "start": 102.68,
+      "end": 102.87
+     },
+     {
+      "text": "許",
+      "start": 102.89,
+      "end": 103.06
+     },
+     {
+      "text": "多",
+      "start": 103.12,
+      "end": 103.28
+     },
+     {
+      "text": "電",
+      "start": 103.28,
+      "end": 103.41
+     },
+     {
+      "text": "腦",
+      "start": 103.41,
+      "end": 103.81
+     },
+     {
+      "text": "控",
+      "start": 103.81,
+      "end": 103.94
+     },
+     {
+      "text": "制",
+      "start": 103.94,
+      "end": 104.07
+     },
+     {
+      "text": "手",
+      "start": 104.07,
+      "end": 104.15
+     },
+     {
+      "text": "機",
+      "start": 104.2,
+      "end": 104.36
+     },
+     {
+      "text": "以及",
+      "start": 104.52,
+      "end": 104.72
+     },
+     {
+      "text": "多",
+      "start": 104.72,
+      "end": 104.9
+     },
+     {
+      "text": "機",
+      "start": 104.9,
+      "end": 105.08
+     },
+     {
+      "text": "錄",
+      "start": 105.08,
+      "end": 105.62
+     },
+     {
+      "text": "影",
+      "start": 105.62,
+      "end": 105.74
+     },
+     {
+      "text": "的",
+      "start": 105.8,
+      "end": 105.98
+     },
+     {
+      "text": "工",
+      "start": 105.98,
+      "end": 106.16
+     },
+     {
+      "text": "具",
+      "start": 106.16,
+      "end": 106.21
+     },
+     {
+      "text": "但",
+      "start": 106.52,
+      "end": 106.53
+     },
+     {
+      "text": "用",
+      "start": 106.53,
+      "end": 106.7
+     },
+     {
+      "text": "起來",
+      "start": 106.7,
+      "end": 107.04
+     },
+     {
+      "text": "都",
+      "start": 107.04,
+      "end": 107.15
+     },
+     {
+      "text": "不",
+      "start": 107.23,
+      "end": 107.38
+     },
+     {
+      "text": "順",
+      "start": 107.38,
+      "end": 107.88
+     },
+     {
+      "text": "手",
+      "start": 107.88,
+      "end": 108.08
+     },
+     {
+      "text": "所以",
+      "start": 108.24,
+      "end": 108.28
+     },
+     {
+      "text": "我",
+      "start": 108.28,
+      "end": 108.38
+     },
+     {
+      "text": "乾",
+      "start": 108.38,
+      "end": 108.48
+     },
+     {
+      "text": "脆",
+      "start": 108.48,
+      "end": 108.8
+     },
+     {
+      "text": "根",
+      "start": 108.8,
+      "end": 109.04
+     },
+     {
+      "text": "據",
+      "start": 109.04,
+      "end": 109.27
+     },
+     {
+      "text": "自己",
+      "start": 109.29,
+      "end": 109.58
+     },
+     {
+      "text": "實",
+      "start": 109.58,
+      "end": 109.73
+     },
+     {
+      "text": "際",
+      "start": 109.73,
+      "end": 109.88
+     },
+     {
+      "text": "的",
+      "start": 109.88,
+      "end": 109.93
+     },
+     {
+      "text": "工作",
+      "start": 110.13,
+      "end": 110.33
+     },
+     {
+      "text": "流",
+      "start": 110.33,
+      "end": 110.48
+     },
+     {
+      "text": "設",
+      "start": 110.48,
+      "end": 110.64
+     },
+     {
+      "text": "計",
+      "start": 110.64,
+      "end": 110.8
+     },
+     {
+      "text": "一",
+      "start": 110.8,
+      "end": 110.88
+     },
+     {
+      "text": "套",
+      "start": 111,
+      "end": 111.47
+     },
+     {
+      "text": "現在",
+      "start": 111.64,
+      "end": 111.69
+     },
+     {
+      "text": "手",
+      "start": 111.69,
+      "end": 111.79
+     },
+     {
+      "text": "機",
+      "start": 111.79,
+      "end": 111.89
+     },
+     {
+      "text": "掃",
+      "start": 111.89,
+      "end": 112.2
+     },
+     {
+      "text": "碼",
+      "start": 112.2,
+      "end": 112.51
+     },
+     {
+      "text": "臉",
+      "start": 112.51,
+      "end": 112.82
+     },
+     {
+      "text": "上",
+      "start": 112.82,
+      "end": 112.86
+     },
+     {
+      "text": "電",
+      "start": 112.92,
+      "end": 113.02
+     },
+     {
+      "text": "腦",
+      "start": 113.02,
+      "end": 113.32
+     },
+     {
+      "text": "後",
+      "start": 113.33,
+      "end": 113.56
+     },
+     {
+      "text": "就",
+      "start": 113.72,
+      "end": 113.75
+     },
+     {
+      "text": "能",
+      "start": 113.75,
+      "end": 113.94
+     },
+     {
+      "text": "及",
+      "start": 113.94,
+      "end": 114.13
+     },
+     {
+      "text": "時",
+      "start": 114.13,
+      "end": 114.32
+     },
+     {
+      "text": "顯",
+      "start": 114.32,
+      "end": 114.51
+     },
+     {
+      "text": "示",
+      "start": 114.51,
+      "end": 114.7
+     },
+     {
+      "text": "拍",
+      "start": 114.7,
+      "end": 114.89
+     },
+     {
+      "text": "攝",
+      "start": 114.89,
+      "end": 115.4
+     },
+     {
+      "text": "畫",
+      "start": 115.61,
+      "end": 115.65
+     },
+     {
+      "text": "面",
+      "start": 115.65,
+      "end": 115.8
+     },
+     {
+      "text": "讓",
+      "start": 116.066,
+      "end": 116.086
+     },
+     {
+      "text": "我",
+      "start": 116.086,
+      "end": 116.266
+     },
+     {
+      "text": "確",
+      "start": 116.266,
+      "end": 116.446
+     },
+     {
+      "text": "認",
+      "start": 116.446,
+      "end": 116.626
+     },
+     {
+      "text": "畫",
+      "start": 116.626,
+      "end": 116.806
+     },
+     {
+      "text": "面",
+      "start": 116.806,
+      "end": 116.986
+     },
+     {
+      "text": "的",
+      "start": 116.986,
+      "end": 117.166
+     },
+     {
+      "text": "角",
+      "start": 117.166,
+      "end": 117.286
+     },
+     {
+      "text": "度、",
+      "start": 117.346,
+      "end": 117.746
+     },
+     {
+      "text": "光",
+      "start": 117.746,
+      "end": 117.956
+     },
+     {
+      "text": "暗",
+      "start": 117.956,
+      "end": 118.266
+     },
+     {
+      "text": "在",
+      "start": 118.266,
+      "end": 118.426
+     },
+     {
+      "text": "電",
+      "start": 118.426,
+      "end": 118.586
+     },
+     {
+      "text": "腦",
+      "start": 118.586,
+      "end": 119.056
+     },
+     {
+      "text": "按",
+      "start": 119.136,
+      "end": 119.226
+     },
+     {
+      "text": "下",
+      "start": 119.226,
+      "end": 119.386
+     },
+     {
+      "text": "開始",
+      "start": 119.386,
+      "end": 119.646
+     },
+     {
+      "text": "時",
+      "start": 119.706,
+      "end": 119.906
+     },
+     {
+      "text": "多",
+      "start": 120.066,
+      "end": 120.076
+     },
+     {
+      "text": "支",
+      "start": 120.076,
+      "end": 120.246
+     },
+     {
+      "text": "手",
+      "start": 120.246,
+      "end": 120.416
+     },
+     {
+      "text": "機",
+      "start": 120.416,
+      "end": 120.586
+     },
+     {
+      "text": "就",
+      "start": 120.586,
+      "end": 120.696
+     },
+     {
+      "text": "能",
+      "start": 120.776,
+      "end": 120.926
+     },
+     {
+      "text": "同",
+      "start": 120.926,
+      "end": 121.086
+     },
+     {
+      "text": "步",
+      "start": 121.086,
+      "end": 121.266
+     },
+     {
+      "text": "開始",
+      "start": 121.266,
+      "end": 121.606
+     },
+     {
+      "text": "錄",
+      "start": 121.606,
+      "end": 122.116
+     },
+     {
+      "text": "影",
+      "start": 122.116,
+      "end": 122.346
+     },
+     {
+      "text": "按",
+      "start": 122.506,
+      "end": 122.516
+     },
+     {
+      "text": "下",
+      "start": 122.516,
+      "end": 122.686
+     },
+     {
+      "text": "結",
+      "start": 122.686,
+      "end": 122.856
+     },
+     {
+      "text": "束",
+      "start": 122.856,
+      "end": 123.026
+     },
+     {
+      "text": "後",
+      "start": 123.026,
+      "end": 123.216
+     },
+     {
+      "text": "除",
+      "start": 123.216,
+      "end": 123.386
+     },
+     {
+      "text": "了",
+      "start": 123.386,
+      "end": 123.536
+     },
+     {
+      "text": "停",
+      "start": 123.556,
+      "end": 123.706
+     },
+     {
+      "text": "止",
+      "start": 123.706,
+      "end": 123.856
+     },
+     {
+      "text": "錄",
+      "start": 123.866,
+      "end": 124.196
+     },
+     {
+      "text": "影",
+      "start": 124.396,
+      "end": 124.506
+     },
+     {
+      "text": "外",
+      "start": 124.506,
+      "end": 124.706
+     },
+     {
+      "text": "影片",
+      "start": 124.866,
+      "end": 124.966
+     },
+     {
+      "text": "還",
+      "start": 124.966,
+      "end": 125.096
+     },
+     {
+      "text": "會",
+      "start": 125.096,
+      "end": 125.226
+     },
+     {
+      "text": "直接",
+      "start": 125.226,
+      "end": 125.486
+     },
+     {
+      "text": "回",
+      "start": 125.486,
+      "end": 125.616
+     },
+     {
+      "text": "傳",
+      "start": 125.616,
+      "end": 125.746
+     },
+     {
+      "text": "到",
+      "start": 125.746,
+      "end": 125.876
+     },
+     {
+      "text": "電",
+      "start": 125.876,
+      "end": 126.006
+     },
+     {
+      "text": "腦",
+      "start": 126.006,
+      "end": 126.426
+     },
+     {
+      "text": "讓",
+      "start": 126.586,
+      "end": 126.626
+     },
+     {
+      "text": "我",
+      "start": 126.626,
+      "end": 126.826
+     },
+     {
+      "text": "馬",
+      "start": 126.826,
+      "end": 127.026
+     },
+     {
+      "text": "上",
+      "start": 127.026,
+      "end": 127.216
+     },
+     {
+      "text": "播",
+      "start": 127.296,
+      "end": 127.426
+     },
+     {
+      "text": "放",
+      "start": 127.426,
+      "end": 127.616
+     },
+     {
+      "text": "檢",
+      "start": 127.636,
+      "end": 128.226
+     },
+     {
+      "text": "查",
+      "start": 128.226,
+      "end": 128.266
+     },
+     {
+      "text": "而",
+      "start": 128.266,
+      "end": 128.627
+     },
+     {
+      "text": "這個",
+      "start": 128.627,
+      "end": 128.947
+     },
+     {
+      "text": "工",
+      "start": 128.947,
+      "end": 129.107
+     },
+     {
+      "text": "具",
+      "start": 129.107,
+      "end": 129.257
+     },
+     {
+      "text": "從",
+      "start": 129.337,
+      "end": 129.407
+     },
+     {
+      "text": "萌",
+      "start": 129.407,
+      "end": 129.827
+     },
+     {
+      "text": "生",
+      "start": 129.827,
+      "end": 129.967
+     },
+     {
+      "text": "想",
+      "start": 129.967,
+      "end": 130.107
+     },
+     {
+      "text": "法",
+      "start": 130.107,
+      "end": 130.267
+     },
+     {
+      "text": "到",
+      "start": 130.267,
+      "end": 130.307
+     },
+     {
+      "text": "完成",
+      "start": 130.517,
+      "end": 130.927
+     },
+     {
+      "text": "產",
+      "start": 130.927,
+      "end": 131.137
+     },
+     {
+      "text": "品",
+      "start": 131.137,
+      "end": 131.267
+     },
+     {
+      "text": "原",
+      "start": 131.387,
+      "end": 131.547
+     },
+     {
+      "text": "型",
+      "start": 131.667,
+      "end": 131.786
+     },
+     {
+      "text": "前",
+      "start": 131.946,
+      "end": 131.986
+     },
+     {
+      "text": "後",
+      "start": 131.986,
+      "end": 132.186
+     },
+     {
+      "text": "只",
+      "start": 132.186,
+      "end": 132.386
+     },
+     {
+      "text": "花",
+      "start": 132.386,
+      "end": 132.576
+     },
+     {
+      "text": "了",
+      "start": 132.656,
+      "end": 132.786
+     },
+     {
+      "text": "一個",
+      "start": 132.786,
+      "end": 133.166
+     },
+     {
+      "text": "小時",
+      "start": 133.226,
+      "end": 133.586
+     },
+     {
+      "text": "這",
+      "start": 133.746,
+      "end": 133.786
+     },
+     {
+      "text": "期",
+      "start": 133.786,
+      "end": 133.986
+     },
+     {
+      "text": "影片",
+      "start": 133.986,
+      "end": 134.376
+     },
+     {
+      "text": "我",
+      "start": 134.456,
+      "end": 134.546
+     },
+     {
+      "text": "會",
+      "start": 134.546,
+      "end": 134.706
+     },
+     {
+      "text": "分",
+      "start": 134.706,
+      "end": 134.866
+     },
+     {
+      "text": "成",
+      "start": 134.866,
+      "end": 134.966
+     },
+     {
+      "text": "三",
+      "start": 135.026,
+      "end": 135.186
+     },
+     {
+      "text": "個",
+      "start": 135.186,
+      "end": 135.346
+     },
+     {
+      "text": "部分",
+      "start": 135.346,
+      "end": 135.706
+     },
+     {
+      "text": "先",
+      "start": 135.866,
+      "end": 135.876
+     },
+     {
+      "text": "帶",
+      "start": 135.876,
+      "end": 136.046
+     },
+     {
+      "text": "大家",
+      "start": 136.046,
+      "end": 136.386
+     },
+     {
+      "text": "實",
+      "start": 136.386,
+      "end": 136.496
+     },
+     {
+      "text": "際",
+      "start": 136.576,
+      "end": 136.726
+     },
+     {
+      "text": "操",
+      "start": 136.726,
+      "end": 137.226
+     },
+     {
+      "text": "作",
+      "start": 137.226,
+      "end": 137.406
+     },
+     {
+      "text": "這個",
+      "start": 137.406,
+      "end": 137.546
+     },
+     {
+      "text": "工",
+      "start": 137.756,
+      "end": 137.916
+     },
+     {
+      "text": "具",
+      "start": 137.916,
+      "end": 138.147
+     },
+     {
+      "text": "包",
+      "start": 138.147,
+      "end": 138.307
+     },
+     {
+      "text": "含",
+      "start": 138.307,
+      "end": 138.477
+     },
+     {
+      "text": "新",
+      "start": 138.477,
+      "end": 138.557
+     },
+     {
+      "text": "增",
+      "start": 138.557,
+      "end": 138.807
+     },
+     {
+      "text": "專",
+      "start": 138.807,
+      "end": 138.887
+     },
+     {
+      "text": "案",
+      "start": 138.887,
+      "end": 139.017
+     },
+     {
+      "text": "下",
+      "start": 139.017,
+      "end": 139.107
+     },
+     {
+      "text": "載",
+      "start": 139.107,
+      "end": 139.337
+     },
+     {
+      "text": "EPA",
+      "start": 139.357,
+      "end": 139.707
+     },
+     {
+      "text": "配",
+      "start": 139.867,
+      "end": 139.887
+     },
+     {
+      "text": "對",
+      "start": 139.887,
+      "end": 140.067
+     },
+     {
+      "text": "手",
+      "start": 140.067,
+      "end": 140.247
+     },
+     {
+      "text": "機",
+      "start": 140.247,
+      "end": 140.427
+     },
+     {
+      "text": "調",
+      "start": 140.427,
+      "end": 140.607
+     },
+     {
+      "text": "整",
+      "start": 140.607,
+      "end": 140.787
+     },
+     {
+      "text": "解",
+      "start": 140.787,
+      "end": 140.967
+     },
+     {
+      "text": "析",
+      "start": 140.967,
+      "end": 141.507
+     },
+     {
+      "text": "度",
+      "start": 141.507,
+      "end": 141.557
+     },
+     {
+      "text": "等",
+      "start": 141.757,
+      "end": 141.867
+     },
+     {
+      "text": "細",
+      "start": 141.867,
+      "end": 142.047
+     },
+     {
+      "text": "節",
+      "start": 142.047,
+      "end": 142.176
+     },
+     {
+      "text": "接",
+      "start": 142.176,
+      "end": 142.386
+     },
+     {
+      "text": "著",
+      "start": 142.386,
+      "end": 142.526
+     },
+     {
+      "text": "說",
+      "start": 142.526,
+      "end": 142.676
+     },
+     {
+      "text": "明",
+      "start": 142.676,
+      "end": 142.826
+     },
+     {
+      "text": "如何",
+      "start": 142.826,
+      "end": 143.126
+     },
+     {
+      "text": "安",
+      "start": 143.126,
+      "end": 143.276
+     },
+     {
+      "text": "裝",
+      "start": 143.276,
+      "end": 143.416
+     },
+     {
+      "text": "工",
+      "start": 143.436,
+      "end": 143.576
+     },
+     {
+      "text": "具",
+      "start": 143.576,
+      "end": 143.736
+     },
+     {
+      "text": "以及",
+      "start": 143.906,
+      "end": 144.046
+     },
+     {
+      "text": "網",
+      "start": 144.046,
+      "end": 144.196
+     },
+     {
+      "text": "路",
+      "start": 144.196,
+      "end": 144.346
+     },
+     {
+      "text": "設",
+      "start": 144.346,
+      "end": 144.496
+     },
+     {
+      "text": "定",
+      "start": 144.496,
+      "end": 144.646
+     },
+     {
+      "text": "要",
+      "start": 144.646,
+      "end": 144.796
+     },
+     {
+      "text": "注意",
+      "start": 144.796,
+      "end": 145.096
+     },
+     {
+      "text": "的",
+      "start": 145.096,
+      "end": 145.246
+     },
+     {
+      "text": "事",
+      "start": 145.246,
+      "end": 145.396
+     },
+     {
+      "text": "項",
+      "start": 145.396,
+      "end": 145.906
+     },
+     {
+      "text": "之後",
+      "start": 146.066,
+      "end": 146.156
+     },
+     {
+      "text": "分享",
+      "start": 146.156,
+      "end": 146.406
+     },
+     {
+      "text": "我",
+      "start": 146.406,
+      "end": 146.526
+     },
+     {
+      "text": "如何",
+      "start": 146.526,
+      "end": 146.776
+     },
+     {
+      "text": "用",
+      "start": 146.776,
+      "end": 146.946
+     },
+     {
+      "text": "AI",
+      "start": 146.946,
+      "end": 147.086
+     },
+     {
+      "text": "Codex",
+      "start": 147.086,
+      "end": 147.506
+     },
+     {
+      "text": "在",
+      "start": 147.666,
+      "end": 147.696
+     },
+     {
+      "text": "短",
+      "start": 147.696,
+      "end": 148.266
+     },
+     {
+      "text": "時間",
+      "start": 148.266,
+      "end": 148.646
+     },
+     {
+      "text": "完成",
+      "start": 148.646,
+      "end": 149.016
+     },
+     {
+      "text": "產",
+      "start": 149.026,
+      "end": 149.216
+     },
+     {
+      "text": "品",
+      "start": 149.216,
+      "end": 149.346
+     },
+     {
+      "text": "原",
+      "start": 149.556,
+      "end": 149.596
+     },
+     {
+      "text": "型",
+      "start": 149.596,
+      "end": 149.786
+     },
+     {
+      "text": "以及",
+      "start": 149.946,
+      "end": 150.176
+     },
+     {
+      "text": "在",
+      "start": 150.176,
+      "end": 150.356
+     },
+     {
+      "text": "實",
+      "start": 150.366,
+      "end": 150.556
+     },
+     {
+      "text": "際",
+      "start": 150.556,
+      "end": 150.746
+     },
+     {
+      "text": "應",
+      "start": 150.746,
+      "end": 150.936
+     },
+     {
+      "text": "用",
+      "start": 150.936,
+      "end": 151.126
+     },
+     {
+      "text": "中",
+      "start": 151.126,
+      "end": 151.346
+     },
+     {
+      "text": "一次",
+      "start": 151.346,
+      "end": 151.626
+     },
+     {
+      "text": "次",
+      "start": 151.836,
+      "end": 151.916
+     },
+     {
+      "text": "迭",
+      "start": 151.916,
+      "end": 152.486
+     },
+     {
+      "text": "代",
+      "start": 152.486,
+      "end": 152.586
+     },
+     {
+      "text": "的",
+      "start": 152.696,
+      "end": 152.866
+     },
+     {
+      "text": "心",
+      "start": 152.866,
+      "end": 153.056
+     },
+     {
+      "text": "得",
+      "start": 153.056,
+      "end": 153.156
+     }
+    ],
+    "pauses": [
+     [
+      1.85,
+      2.04
+     ],
+     [
+      4.09,
+      4.36
+     ],
+     [
+      5.49,
+      5.71
+     ],
+     [
+      7.99,
+      8.28
+     ],
+     [
+      11.15,
+      11.44
+     ],
+     [
+      13.99,
+      14.27
+     ],
+     [
+      16.76,
+      17
+     ],
+     [
+      17.65,
+      17.93
+     ],
+     [
+      20.45,
+      20.73
+     ],
+     [
+      23.25,
+      23.55
+     ],
+     [
+      25.63,
+      25.86
+     ],
+     [
+      28.17,
+      28.43
+     ],
+     [
+      31.02,
+      31.31
+     ],
+     [
+      32.79,
+      33.06
+     ],
+     [
+      35.89,
+      36.07
+     ],
+     [
+      36.67,
+      36.98
+     ],
+     [
+      39.84,
+      40.12
+     ],
+     [
+      42.62,
+      42.89
+     ],
+     [
+      46.58,
+      46.85
+     ],
+     [
+      47.74,
+      48.1
+     ],
+     [
+      51.47,
+      51.73
+     ],
+     [
+      52.12,
+      52.31
+     ],
+     [
+      53.54,
+      53.83
+     ],
+     [
+      56.71,
+      56.92
+     ],
+     [
+      60.38,
+      60.72
+     ],
+     [
+      62.55,
+      62.79
+     ],
+     [
+      64.61,
+      64.86
+     ],
+     [
+      66.34,
+      66.66
+     ],
+     [
+      69.09,
+      69.36
+     ],
+     [
+      71.93,
+      72.2
+     ],
+     [
+      73.84,
+      74.15
+     ],
+     [
+      75.53,
+      75.69
+     ],
+     [
+      78.11,
+      78.38
+     ],
+     [
+      80.67,
+      80.93
+     ],
+     [
+      81.68,
+      81.85
+     ],
+     [
+      82.77,
+      83.05
+     ],
+     [
+      86.72,
+      86.99
+     ],
+     [
+      88.28,
+      88.56
+     ],
+     [
+      90.88,
+      91.16
+     ],
+     [
+      95.18,
+      95.48
+     ],
+     [
+      97.89,
+      98.05
+     ],
+     [
+      98.92,
+      99.07
+     ],
+     [
+      99.41,
+      99.71
+     ],
+     [
+      103.11,
+      103.35
+     ],
+     [
+      106.16,
+      106.45
+     ],
+     [
+      106.94,
+      107.09
+     ],
+     [
+      107.87,
+      108.13
+     ],
+     [
+      111.23,
+      111.58
+     ],
+     [
+      113.41,
+      113.65
+     ],
+     [
+      115.66,
+      115.95
+     ],
+     [
+      118.04,
+      118.34
+     ],
+     [
+      119.74,
+      120
+     ],
+     [
+      122.14,
+      122.43
+     ],
+     [
+      123.55,
+      123.7
+     ],
+     [
+      124.48,
+      124.77
+     ],
+     [
+      128.25,
+      128.53
+     ],
+     [
+      131.52,
+      131.82
+     ],
+     [
+      133.34,
+      133.64
+     ],
+     [
+      137.95,
+      138.23
+     ],
+     [
+      141.51,
+      141.69
+     ],
+     [
+      141.99,
+      142.31
+     ],
+     [
+      145.66,
+      145.98
+     ],
+     [
+      149.55,
+      149.85
+     ]
+    ]
+   }
+  },
+  "voiceOnly": [],
+  "voiceOut": [],
+  "voiceGaps": [],
+  "footage": null,
+  "editFx": null,
+  "cutpoints": [
+   {
+    "at": 4.233,
+    "kind": "pause"
+   },
+   {
+    "at": 11.3,
+    "kind": "pause"
+   },
+   {
+    "at": 14.133,
+    "kind": "pause"
+   },
+   {
+    "at": 17.8,
+    "kind": "pause"
+   },
+   {
+    "at": 20.6,
+    "kind": "pause"
+   },
+   {
+    "at": 31.167,
+    "kind": "pause"
+   },
+   {
+    "at": 36.833,
+    "kind": "pause"
+   },
+   {
+    "at": 42.767,
+    "kind": "pause"
+   },
+   {
+    "at": 53.7,
+    "kind": "pause"
+   },
+   {
+    "at": 60.533,
+    "kind": "pause"
+   },
+   {
+    "at": 66.5,
+    "kind": "pause"
+   },
+   {
+    "at": 72.067,
+    "kind": "pause"
+   },
+   {
+    "at": 78.233,
+    "kind": "pause"
+   },
+   {
+    "at": 80.8,
+    "kind": "pause"
+   },
+   {
+    "at": 82.9,
+    "kind": "pause"
+   },
+   {
+    "at": 88.433,
+    "kind": "pause"
+   },
+   {
+    "at": 91.033,
+    "kind": "pause"
+   },
+   {
+    "at": 95.333,
+    "kind": "pause"
+   },
+   {
+    "at": 99.567,
+    "kind": "pause"
+   },
+   {
+    "at": 111.4,
+    "kind": "pause"
+   },
+   {
+    "at": 115.8,
+    "kind": "ng"
+   },
+   {
+    "at": 122.3,
+    "kind": "pause"
+   },
+   {
+    "at": 128.4,
+    "kind": "pause"
+   },
+   {
+    "at": 131.667,
+    "kind": "pause"
+   },
+   {
+    "at": 133.5,
+    "kind": "pause"
+   },
+   {
+    "at": 138.1,
+    "kind": "pause"
+   },
+   {
+    "at": 142.133,
+    "kind": "pause"
+   },
+   {
+    "at": 145.833,
+    "kind": "pause"
+   },
+   {
+    "at": 149.7,
+    "kind": "pause"
+   }
+  ],
+  "voiceMoved": [
+   "#8@免費工具",
+   "#8@免費"
+  ],
+  "moods": [
+   {
+    "i": 0,
+    "kind": "win",
+    "event": 17,
+    "zoom": false,
+    "sfx": {
+     "name": "success",
+     "at": 17.76,
+     "volume": 0.692,
+     "event": 17,
+     "mood": true,
+     "tail": true
+    },
+    "dropped": null,
+    "off": false
+   },
+   {
+    "i": 1,
+    "kind": "pain",
+    "event": 52.55,
+    "zoom": false,
+    "sfx": {
+     "name": "alert",
+     "at": 52.565,
+     "volume": 0.569,
+     "event": 52.55,
+     "mood": true
+    },
+    "dropped": null,
+    "off": false
+   },
+   {
+    "i": 2,
+    "kind": "land",
+    "event": 133.226,
+    "zoom": true,
+    "sfx": {
+     "name": "impact",
+     "at": 133.125,
+     "volume": 0.617,
+     "event": 133.226,
+     "mood": true,
+     "src": "impact-2",
+     "srcAt": 133.117,
+     "srcVolume": 0.617
+    },
+    "dropped": null,
+    "off": false
+   }
+  ],
+  "zooms": {
+   "origin": "994px 443px",
+   "list": []
+  },
+  "rhythm": "continuous",
+  "uncovered": [],
+  "spokenLen": 152.996,
+  "chapters": [
+   {
+    "id": "s0101",
+    "kind": "chapter",
+    "num": "01",
+    "cue": 1,
+    "title": "多機錄影工具",
+    "start": 0.16,
+    "end": 2.66,
+    "gap": 0.16,
+    "placement": "cover",
+    "captionsClipped": [
+     1,
+     2
+    ],
+    "badge": [
+     [
+      2.66,
+      153.267
+     ]
+    ]
+   }
+  ],
+  "blackout": [
+   [
+    0.16,
+    2.66
+   ]
+  ],
+  "sfxBudget": {
+   "count": {
+    "chapter": 1,
+    "success": 1,
+    "impact": 2,
+    "alert": 1,
+    "ding": 1
+   },
+   "over": [],
+   "dense": [],
+   "sparse": [
+    {
+     "from": 65.533,
+     "to": 133.125
+    }
+   ],
+   "loud": [],
+   "levels": {
+    "main": [
+     -8.7,
+     -2,
+     -6.2
+    ],
+    "extra": null
+   },
+   "perMinuteAvg": 2.3,
+   "warnings": [
+    "⚠ 音效稀疏：1:05.53–2:13.13（68 秒：x0108、x0110、x0111）沒有主音效 → 在這段裡挑一句情緒最強的，plan.json 的 moods 加一個點（例 { \"at\": \"#N@詞\", \"kind\": \"pain\" }；類別 pain 痛點、win 解法、turn 反轉、land 落定、quote 金句），或在分鏡表的「情緒點」加一列"
+   ],
+   "lines": [
+    "音效次數：ding 1、success 1、alert 1、impact 2、chapter 1、sparkle 0／6、shine 0／3、thunder 0／3",
+    "音效密度：主音效平均 2.3 顆／分（上限：任一分鐘 ≤ 5 顆，超過才 ⚠），附加音效 0 顆",
+    "情緒點：3 個（音效 3 顆；模板預設音效讓位 1 顆）",
+    "講者爆衝推近：0 次；moods[2]（#61@小時 落定） 的推近拿掉：那一刻講者被整張幕、側邊欄蓋住，或只有聲音"
+   ],
+   "designOver": true
+  },
+  "outro": null,
+  "bed": null,
+  "chapterBadge": true,
+  "badges": [
+   {
+    "id": "s0101",
+    "k": 1,
+    "num": "01",
+    "name": "多機錄影工具",
+    "start": 2.66,
+    "end": 153.267,
+    "hide": [],
+    "show": [
+     [
+      2.66,
+      153.267
+     ]
+    ],
+    "subs": [
+     {
+      "at": 17.96,
+      "name": "錄完要檢查"
+     },
+     {
+      "at": 53.88,
+      "name": "多支手機"
+     },
+     {
+      "at": 100,
+      "name": "自己設計的多機錄影工具"
+     },
+     {
+      "at": 133.746,
+      "name": "本集大綱"
+     }
+    ]
+   }
+  ],
+  "theme": "light",
+  "style": null,
+  "format": "landscape",
+  "canvas": {
+   "format": "landscape",
+   "W": 1920,
+   "H": 1080,
+   "fps": 30,
+   "unsafe": [],
+   "textSafe": [
+    [
+     0,
+     120,
+     1920,
+     870
+    ]
+   ],
+   "caption": {
+    "font": 76,
+    "line": 71,
+    "weight": 400,
+    "stroke": 0,
+    "pad": [
+     24,
+     37,
+     23
+    ],
+    "bottom": 6,
+    "box": [
+     40,
+     956,
+     1880,
+     1074
+    ],
+    "zone": [
+     0,
+     920,
+     1920,
+     1080
+    ],
+    "maxChars": 18,
+    "maxW": 1840
+   },
+   "lowerThird": {
+    "left": 120,
+    "bottom": 220,
+    "rect": [
+     120,
+     536,
+     1020,
+     860
+    ]
+   },
+   "centerCard": {
+    "rect": [
+     510,
+     536,
+     1410,
+     860
+    ]
+   },
+   "badge": {
+    "rect": [
+     1200,
+     56,
+     1824,
+     168
+    ],
+    "side": "right",
+    "dx": 16
+   },
+   "pip": {
+    "box": [
+     1424,
+     594,
+     432,
+     324
+    ],
+    "zone": [
+     1424,
+     581,
+     1888,
+     951
+    ],
+    "aspect": 1.3333333333333333,
+    "frame": "kit/pip-frame.png"
+   },
+   "stage": {
+    "fs": null,
+    "fx": null,
+    "ch": null
+   },
+   "media": {
+    "view": {
+     "contain": [
+      0,
+      0,
+      1920,
+      940
+     ],
+     "cover": [
+      0,
+      0,
+      1920,
+      1080
+     ]
+    }
+   },
+   "framing": {
+    "aspect": 1.7777777777777777,
+    "headTop": 120
+   },
+   "minTextPx": 30,
+   "regions": {
+    "band": [
+     120,
+     600,
+     1680,
+     260
+    ],
+    "panelTop": [
+     120,
+     150,
+     1180,
+     708
+    ],
+    "pip": [
+     1424,
+     594,
+     432,
+     324
+    ],
+    "badge": [
+     1560,
+     40,
+     320,
+     100
+    ],
+    "captions": [
+     0,
+     920,
+     1920,
+     160
+    ],
+    "safe": [
+     96,
+     54,
+     1728,
+     972
+    ],
+    "full": [
+     120,
+     40,
+     1680,
+     860
+    ]
+   }
+  }
+ }
+}

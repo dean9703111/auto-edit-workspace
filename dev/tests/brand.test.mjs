@@ -2,11 +2,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { spawnSync } from 'node:child_process';
-import { TOOLS, TEMPLATE, imp, hasChrome } from './helpers.mjs';
+import { TOOLS, TEMPLATE, imp, hasChrome, tmpDir, needs } from './helpers.mjs';
 
 const { brandColors, rewriteBrandCss, drawPipFrame, drawPipFrameV, contrast, parseHex, darkTokens, DARK } = await imp('brand.mjs');
 const KIT = path.join(TEMPLATE, 'kit');
@@ -113,7 +112,7 @@ test('pip-frame-v.png（009 FR-130）：1080×1920，y 897–903 是主色線，
 });
 
 test('CLI：寫進指定 kit 資料夾，印出對比與紅色系警告', () => {
-  const kit = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-brand-'));
+  const kit = tmpDir(null, 'hf-brand-');
   fs.copyFileSync(path.join(KIT, 'brand.css'), path.join(kit, 'brand.css'));
   const r = spawnSync(process.execPath, [path.join(TOOLS, 'brand.mjs'), '#E53935', '--kit', kit], { encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
@@ -153,8 +152,8 @@ test('bg 的純函式：injectHead 插在 <head> 後面（沒有 head 就放最�
   assert.deepEqual(Object.fromEntries(Object.entries(BG_KINDS).map(([k, v]) => [k, [v.w, v.h]])), { fs: [1920, 1080], side: [960, 1080], ch: [1920, 1080] });
 });
 
-test('bg 的 ✖：--kind 不對、--html 找不到、--out 在 shared/template 裡；--help 有 bg 用法；沒給色碼的提示', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-bg-'));
+test('bg 的 ✖：--kind 不對、--html 找不到、--out 在 shared/template 裡；--help 有 bg 用法；沒給色碼的提示', (t) => {
+  const dir = tmpDir(t, 'hf-bg-');
   const html = path.join(dir, 'bg-fs.html');
   fs.writeFileSync(html, '<div></div>');
   let r = bg('--html', html, '--kind', 'xx');
@@ -172,19 +171,20 @@ test('bg 的 ✖：--kind 不對、--html 找不到、--out 在 shared/template 
   assert.match(r.stderr, /要給一個色碼.*；背景圖用 brand\.mjs bg --html/);
 });
 
-test('bg：三種版面截成正確尺寸；留空區乾淨 ✔、有線 ⚠；三張到齊產生 1600×720 預覽；不寫 shared/template', { skip: !(await hasChrome()) && '沒有 HyperFrames 的 Chrome，略過', timeout: 120000 }, () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-bg-'));
+test('bg：三種版面截成正確尺寸；留空區乾淨 ✓、有線 ⚠；三張到齊產生 1600×720 預覽；不寫 shared/template', { skip: !(await hasChrome()) && '沒有 HyperFrames 的 Chrome，略過', timeout: 120000 }, async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
+  const dir = tmpDir(t, 'hf-bg-');
   const mtimes = () => ['bg-fs.jpg', 'bg-side.jpg', 'bg-ch.jpg'].map((f) => (fs.existsSync(path.join(TEMPLATE, f)) ? fs.statSync(path.join(TEMPLATE, f)).mtimeMs : 0));
   const before = mtimes();
   const page = (k, extra = '') => { const f = path.join(dir, `bg-${k}.html`); fs.writeFileSync(f, `<!doctype html><html><head><style>body{background:#FBF4EA}${extra}</style></head><body><div class="d"></div></body></html>`); return f; };
   let r = bg('--html', page('fs', '.d{position:absolute;left:40px;top:40px;width:40px;height:40px;background:var(--brand)}'), '--kind', 'fs');
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /bg-fs\.jpg（1920×1080 ✔）/);
-  assert.match(r.stdout, /✔ 留空區乾淨（紅、藍、黃框裡沒有裝飾）/);
+  assert.match(r.stdout, /bg-fs\.jpg（1920×1080 ✓）/);
+  assert.match(r.stdout, /✓ 留空區乾淨（紅、藍、黃框裡沒有裝飾）/);
   assert.match(r.stdout, /還沒做：side、ch → 各寫一個 HTML，跑 --kind side、--kind ch/);
   r = bg('--html', page('side', '.d{position:absolute;left:0;top:500px;width:960px;height:4px;background:#333}'), '--kind', 'side');
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /bg-side\.jpg（960×1080 ✔）/);
+  assert.match(r.stdout, /bg-side\.jpg（960×1080 ✓）/);
   assert.match(r.stdout, /⚠ 紅框（側邊欄文字區）裡有 0\.5\d% 的像素是裝飾（和框內中位亮度差 > 40）→ 裝飾移到框外，重跑這個指令/);
   r = bg('--html', page('ch'), '--kind', 'ch');
   assert.equal(r.status, 0, r.stderr);
@@ -199,7 +199,8 @@ test('bg：三種版面截成正確尺寸；留空區乾淨 ✔、有線 ⚠；�
   assert.deepEqual(mtimes(), before, 'shared/template 的背景圖不能被改');
 });
 
-test('暗色底圖（T115，design-system §10）：shared/template/bg-{fs,side,ch}-dark.jpg 尺寸和亮色同一組；留空區裡只有光暈的邊（量到 fs 9.0%、side 3.0%、ch 1.9%，換圖變更雜就 fail）', async () => {
+test('暗色底圖（T115，design-system §10）：shared/template/bg-{fs,side,ch}-dark.jpg 尺寸和亮色同一組；留空區裡只有光暈的邊（量到 fs 9.0%、side 3.0%、ch 1.9%，換圖變更雜就 fail）', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
   const { BG_KINDS, decorRatio } = await imp('brand.mjs');
   const { rawFrame } = await imp('lib/ff.mjs');
   const limit = { fs: 0.1, side: 0.035, ch: 0.025 };
@@ -222,7 +223,7 @@ test('暗色底圖（T115，design-system §10）：shared/template/bg-{fs,side,
 // ---------- 風格包（list／use／pack）----------
 
 function tmpTemplate() {
-  const t = fs.mkdtempSync(path.join(os.tmpdir(), 'brand-pack-'));
+  const t = tmpDir(null, 'brand-pack-');
   fs.mkdirSync(path.join(t, 'kit'));
   for (const f of ['brand.css', 'pip-frame.png', 'pip-frame-v.png']) fs.copyFileSync(path.join(KIT, f), path.join(t, 'kit', f));
   for (const f of ['bg-fs.jpg', 'bg-side.jpg', 'bg-ch.jpg']) fs.copyFileSync(path.join(TEMPLATE, f), path.join(t, f));
@@ -230,7 +231,8 @@ function tmpTemplate() {
 }
 const brandCli = (t, ...args) => spawnSync(process.execPath, [path.join(TOOLS, 'brand.mjs'), ...args, '--kit', path.join(t, 'kit')], { encoding: 'utf8' });
 
-test('風格包：pack 存目前的／照色碼建、styles.js、list 標目前那包、use 換檔、不屬於任何包時 use 停下來、同名 ✖', () => {
+test('風格包：pack 存目前的／照色碼建、styles.js、list 標目前那包、use 換檔、不屬於任何包時 use 先自動存起來、同名 ✖', async (ctx) => {
+  if (!(await needs(ctx, 'ffmpeg'))) return;
   const t = tmpTemplate();
   let r = brandCli(t, 'pack', '甲', '--note', '原本的');
   assert.equal(r.status, 0, r.stdout + r.stderr);
@@ -249,17 +251,20 @@ test('風格包：pack 存目前的／照色碼建、styles.js、list 標目前�
   assert.match(r.stdout, /換成風格包「乙」（原本：甲）：shared\/template\/kit\/brand\.css、/);
   assert.ok(fs.readFileSync(path.join(t, 'kit', 'brand.css')).equals(fs.readFileSync(path.join(t, 'styles', '乙', 'brand.css'))));
   assert.match(brandCli(t, 'list').stdout, /● 乙/);
-  // 手改過、不屬於任何包 → use 停下來；--force 才蓋
+  // 手改過、不屬於任何包 → use 先自動存成「原本-<YYYYMMDD>」再換（032 A9⑦）；--force 不存直接蓋
   fs.appendFileSync(path.join(t, 'kit', 'brand.css'), '\n/* 手改 */\n');
   r = brandCli(t, 'use', '甲');
-  assert.equal(r.status, 1);
-  assert.match(r.stderr, /不屬於任何風格包，直接換會弄丟 → 先存起來：node shared\/template\/tools\/brand\.mjs pack <新名稱>/);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /先存成風格包「原本-\d{8}」.*要換回來：node shared\/template\/tools\/brand\.mjs use 原本-\d{8}/);
+  fs.appendFileSync(path.join(t, 'kit', 'brand.css'), '\n/* 手改 */\n');
   assert.equal(brandCli(t, 'use', '甲', '--force').status, 0);
+  assert.equal(fs.readdirSync(path.join(t, 'styles')).filter((d) => d.startsWith('原本-')).length, 1, '--force 不存');
   assert.match(brandCli(t, 'pack', '甲').stderr, /風格包「甲」已經有了/);
   assert.match(brandCli(t, 'use', '丙').stderr, /找不到風格包「丙」/);
 });
 
-test('風格包：工作區附的「預設」和現在的 shared/template/ 一樣；「藍圖」亮暗六張背景尺寸對', () => {
+test('風格包：工作區附的「預設」和現在的 shared/template/ 一樣；「藍圖」亮暗六張背景尺寸對', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
   const { listPacks, samePack } = await_styles;
   const packs = listPacks(TEMPLATE);
   assert.deepEqual(packs.map((p) => p.dir), ['預設', '藍圖']);

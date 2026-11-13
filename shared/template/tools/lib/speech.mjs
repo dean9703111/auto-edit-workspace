@@ -6,8 +6,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { r3Round as r3 } from './time.mjs';
 
-const r3 = (n) => Math.round(n * 1000) / 1000;
 export const SPEECH = {
   minSilence: 0.15,  // 短於這個的空檔算咬字間隙，不當成停頓（中文字與字之間常有 0.05–0.1 秒的低能量；實測 0.1 會把一句話切成碎片）
   minSpeech: 0.08,   // 短於這個的聲響（喀嗒、呼吸）不算說話

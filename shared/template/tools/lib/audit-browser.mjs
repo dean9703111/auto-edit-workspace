@@ -190,18 +190,32 @@ function launchChrome(chrome, userDir, W = 1920, H = 1080) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Chrome 的使用者資料夾：close() 沒來得及跑（行程被中斷、測試先結束）時，行程結束前再清一次，不留 hf-audit-* 在暫存
+const liveDirs = new Set();
+let dirHook = false;
+function trackDir(dir) {
+  liveDirs.add(dir);
+  if (!dirHook) { dirHook = true; process.on('exit', () => { for (const d of liveDirs) { try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* 盡力 */ } } }); }
+}
+const exited = (cp) => cp.exitCode != null || cp.signalCode != null;
+const waitExit = (cp, ms) => (exited(cp) ? Promise.resolve() : Promise.race([new Promise((r) => cp.once('exit', r)), sleep(ms)]));
+
 // 一個 Chrome（CDP）：開分頁、把本機 HTML 排成圖
 export async function openBrowser({ chrome, W = 1920, H = 1080 }) {
   const userDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-audit-'));
+  trackDir(userDir);
   let proc = null, cdp = null;
   const close = async () => {
     try { cdp?.close(); } catch { /* 忽略 */ }
-    if (proc && proc.exitCode == null) {
+    if (proc && !exited(proc)) {
       proc.kill();
-      await Promise.race([new Promise((r) => proc.once('exit', r)), sleep(3000)]);
+      await waitExit(proc, 3000);
+      // 3 秒還沒結束：Chrome 會在資料夾刪掉之後再寫回檔案（留下 hf-audit-*），強制結束再刪
+      if (!exited(proc)) { try { proc.kill('SIGKILL'); } catch { /* 已經結束 */ } await waitExit(proc, 1000); }
     }
-    // Chrome 剛結束時 Windows 可能還鎖著檔，刪不掉就留在暫存資料夾
+    // Chrome 剛結束時 Windows 可能還鎖著檔，刪不掉就留給行程結束時再清
     for (let k = 0; k < 5; k++) { try { fs.rmSync(userDir, { recursive: true, force: true }); break; } catch { await sleep(300); } }
+    if (!fs.existsSync(userDir)) liveDirs.delete(userDir);
   };
   try {
     const l = await launchChrome(chrome, userDir, W, H);

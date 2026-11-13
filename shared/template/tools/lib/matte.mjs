@@ -11,9 +11,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { r3Round as r3 } from './time.mjs';
 
 export const MATTE = { dir: 'assets/matte', quality: 'balanced', model: 'u2net_human_seg', sizeMb: 170 };
-const r3 = (n) => Math.round(n * 1000) / 1000;
 
 export function matteWeights(home = os.homedir()) {
   const file = path.join(home, '.cache', 'hyperframes', 'background-removal', 'models', `${MATTE.model}.onnx`);

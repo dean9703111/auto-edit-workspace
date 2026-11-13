@@ -1,0 +1,27 @@
+# 自動檢查：push、pull request 時，在 Ubuntu 與 Windows（Node 22）跑不用 ffmpeg／Chrome 的那一批測試（npm run test:fast，清單在 package.json）。
+# 只用 Node 內建模組，不 npm ci。官網（pages.yml）也呼叫這一份（workflow_call），過了才部署。
+name: 檢查
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Windows 的 git 預設把換行換成 CRLF；文件測試照 \n 切行，checkout 前先關掉
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm run test:fast

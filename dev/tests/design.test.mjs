@@ -1,11 +1,15 @@
-import { test, before, after } from 'node:test';
+import { test as nodeTest, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { TEMPLATE, imp, hasChrome } from './helpers.mjs';
+import { TEMPLATE, imp, hasChrome, missingTools, skipAll } from './helpers.mjs';
+
+// 整個檔都靠 before 用 ffmpeg 做的底片與參考圖：沒有 ffmpeg 就全部略過，before 也不做
+const noFf = await missingTools('ffmpeg');
+const test = skipAll(nodeTest, noFf);
 
 const { startEditor } = await imp('editor.mjs');
 let root, project, work, out, editor, image, sharedHash;
@@ -27,6 +31,7 @@ async function dragFiles(page, selector, type, files) {
   }, { selector, type, files });
 }
 before(async () => {
+  if (noFf) return;
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-design-'));
   fs.mkdirSync(path.join(root, 'shared'), { recursive: true }); fs.symlinkSync(TEMPLATE, path.join(root, 'shared', 'template'));
   project = path.join(root, 'projects', 'design'); work = path.join(project, 'work'); out = path.join(work, 'hyperframes'); fs.mkdirSync(out, { recursive: true });
@@ -40,7 +45,7 @@ before(async () => {
   sharedHash = hash(path.join(TEMPLATE, 'kit', 'brand.css'));
   editor = await startEditor({ flags: { project, template: TEMPLATE }, cwd: root, port: 0, writeState: false });
 });
-after(async () => { await editor?.ctx.framingJob; await editor?.close(); });
+after(async () => { await editor?.ctx.framingJob; await editor?.close(); if (root) fs.rmSync(root, { recursive: true, force: true }); });
 
 test('原本背景：未生成就能選，逐類還原並保留主色、其他背景與深色版本', async () => {
   const initial = await get('/api/design');
