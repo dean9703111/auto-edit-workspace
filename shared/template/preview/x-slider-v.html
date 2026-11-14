@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-slider 前後拉桿｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-slider.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-slider { position: absolute; inset: 0; }
+    #x-slider .fill { position: absolute; inset: 0; }
+    /* 標題：子母畫面 left 120、top 108 */
+    #x-slider #xsl-title { position: absolute; left: 120px; top: 108px; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 大框：子母畫面 left 120、1160×663（右緣 1280）；沒有標題 top 164（上下置中在內容區 y 120–870），有標題 top 206（卡底 869）；
+       截圖區內距 10＋框 2 → 1136×639（16:9） */
+    #x-slider #xsl-card { position: absolute; left: 120px; top: 164px; width: 1160px; height: 663px; box-sizing: border-box;
+                          border: 2px solid var(--sc-fs-card-line); border-radius: 24px; background: var(--sc-fs-card); box-shadow: var(--v2-card-shadow); }
+    #x-slider #xsl-title + #xsl-card { top: 206px; }
+    #x-slider #xsl-screen { position: absolute; left: 10px; top: 10px; right: 10px; bottom: 10px; border-radius: 14px; overflow: hidden; background: var(--sc-fs-node); }
+    /* 三層：之前（整張）→ 之後（clip-path 右邊界＝拉桿 x，script 畫）→ 拉桿 */
+    #x-slider .xsl-layer { position: absolute; inset: 0; }
+    #x-slider .xsl-shot { position: absolute; inset: 0; }
+    #x-slider .xsl-shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    /* 膠囊：kit 的 .sc-pill（高 72、字 40；左右內距收窄到 20／24，4 個字寬 232）；之前＝卡色底（右上），之後＝主色底（左上） */
+    #x-slider .xsl-tag { position: absolute; top: 24px; padding: 0 24px 0 20px; box-shadow: var(--v2-card-shadow); }
+    #x-slider #xsl-tagb { right: 24px; background: var(--sc-fs-card); color: var(--sc-fs-ink); --sc-accent: var(--sc-fs-mute); }
+    #x-slider #xsl-taga { left: 24px; background: var(--brand); color: var(--brand-ink); --sc-accent: var(--brand-ink); }
+    /* 拉桿：寬 0 的錨點在 x＝0，script 用 translateX 推到拉桿位置；直線 6 px、圓鈕 88 在截圖區正中 */
+    #x-slider #xsl-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 0; }
+    #x-slider #xsl-line { position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; background: var(--brand); outline: 2px solid var(--sc-fs-card); box-shadow: var(--v2-card-shadow); }
+    #x-slider #xsl-knob { position: absolute; left: -44px; top: 276px; width: 88px; height: 88px; box-sizing: border-box; border-radius: 44px;
+                          border: 4px solid var(--sc-fs-card); background: var(--brand); color: var(--brand-ink); box-shadow: var(--v2-card-shadow);
+                          display: grid; place-items: center; }
+    #x-slider #xsl-knob svg { width: 44px; height: 24px; display: block; }
+    /* 全寬（沒有講者）：沒有標題時大框放大到 1272×726、置中（x 324–1596）、top 140（右上角小節角標 y ≤ 136 之下，卡底 866），截圖區 1248×702；
+       有標題時高度不夠放大，大框和子母畫面一樣 1160×663，整組置中（x 380–1540） */
+    #x-slider[data-wide] #xsl-title { left: 380px; }
+    #x-slider[data-wide] #xsl-card { left: 324px; top: 140px; width: 1272px; height: 726px; }
+    #x-slider[data-wide] #xsl-title + #xsl-card { left: 380px; top: 206px; width: 1160px; height: 663px; }
+    /* 圓鈕在截圖區正中、寫死整數 px（截圖區高 639 的一半是 319.5，用 calc(50%) 會落在半像素）：(639 − 88) ÷ 2 ≈ 276；全寬沒有標題 (702 − 88) ÷ 2 ＝ 307 */
+    #x-slider[data-wide] #xsl-knob { top: 307px; }
+    #x-slider[data-wide] #xsl-title + #xsl-card #xsl-knob { top: 276px; }
+  </style>
+  <div id="x-slider" data-composition-id="x-slider" data-width="1920" data-height="1080" data-duration="10.5"
+       data-cues-sample='{"start":0,"D":10.5,"cues":{"601":[0.3,2.8],"602":[3.0,5.8],"603":[6.0,10.5]},"refs":{"#601@調光前":0.6,"#602@調光後":3.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xsl-title" class="sc-t56 sc-w900" data-wide-keep><span class="sc-opt">同一個畫面</span></div>
+    <div id="xsl-card" data-wide-keep>
+      <div id="xsl-screen" data-layout-allow-overlap>
+        <div id="xsl-lb" class="xsl-layer" data-layout-allow-overlap>
+          <div id="xsl-before" class="xsl-shot"><img src="../preview/shots/slider-before.jpg" alt=""></div>
+          <span id="xsl-tagb" class="sc-pill xsl-tag"><span class="sc-opt">調光前</span></span>
+        </div>
+        <div id="xsl-la" class="xsl-layer" data-layout-allow-overlap>
+          <div id="xsl-after" class="xsl-shot"><img src="../preview/shots/slider-after.jpg" alt=""></div>
+          <span id="xsl-taga" class="sc-pill xsl-tag"><span class="sc-opt">調光後</span></span>
+        </div>
+        <div id="xsl-bar" data-layout-allow-overlap>
+          <i id="xsl-line"></i>
+          <div id="xsl-knob"><svg viewBox="0 0 36 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3 L4 10 L11 17" /><path d="M25 3 L32 10 L25 17" /></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const ROOT = document.getElementById('x-slider'), WIDE = !!ROOT.closest('[data-wide]');
+    if (WIDE) ROOT.setAttribute('data-wide', '');      // 全寬版型：CSS 的 [data-wide] 那幾行接手
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-slider'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const TS = P.at('#601@調光前');                     // 講到「之前」：大框長出（不綁＝段起點）
+    const TW = P.at('#602@調光後');                     // 講到「之後」：拉桿快甩
+    P.sfx('impact', '#602@調光後');                     // 快甩那一下一顆（句號和 TW 一樣）；慢掃沒有音效
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 拉桿（以下都不用改）：位置是時間的純函式（截圖區寬的 %），杆子 translateX 和「之後」那層的 clip-path 右邊界用同一個整數 px。
+    // KEYS：[從預備起算的秒數, 位置 %, 這一段的曲線]：停 8% → 0.15 秒往左預備到 6.5% → 0.4 秒快甩到 76% → 0.4 秒回彈到 70% → 停 0.6 秒 → 1.6 秒慢掃回 40%
+    const SW = WIDE && !$q('#xsl-title').length ? 1248 : 1136;   // 截圖區寬（16:9；只有「全寬、沒有標題」放大）
+    const KEYS = [[0, 8], [0.15, 6.5, 'sine'], [0.55, 76, 'out'], [0.95, 70, 'sine'], [1.55, 70], [3.15, 40, 'inOut']];
+    const LEAD = 0.15, TOTAL = KEYS[KEYS.length - 1][0];
+    const EASE = { out: function (s) { return 1 - Math.pow(1 - s, 3); }, sine: function (s) { return (1 - Math.cos(Math.PI * s)) / 2; },
+                   inOut: function (s) { return s < 0.5 ? 4 * s * s * s : 1 - Math.pow(-2 * s + 2, 3) / 2; } };
+    const posAt = function (tau) {
+      if (tau <= 0) return KEYS[0][1];
+      for (var i = 1; i < KEYS.length; i++) {
+        const a = KEYS[i - 1], b = KEYS[i];
+        if (tau < b[0]) return b[2] ? a[1] + (b[1] - a[1]) * EASE[b[2]]((tau - a[0]) / (b[0] - a[0])) : a[1];
+      }
+      return KEYS[KEYS.length - 1][1];
+    };
+    const BAR = $q('#xsl-bar')[0], LA = $q('#xsl-la')[0], KNOB = $q('#xsl-knob')[0];
+    const paint = function (r) {
+      const tau = r * TOTAL, x = Math.round(posAt(tau) / 100 * SW);
+      BAR.style.transform = 'translateX(' + x + 'px)';
+      LA.style.clipPath = 'inset(0 ' + (SW - x) + 'px 0 0)';
+      // 圓鈕：照速度（%／秒）橫向拉長，最多 1.18 倍；預備＋快甩時被捏住微縮 6%；停下來兩個都回 1
+      const v = tau > 0 && tau < TOTAL ? Math.abs(posAt(tau + 0.01) - posAt(tau - 0.01)) / 0.02 : 0;
+      const u = tau / (LEAD + 0.4), press = u > 0 && u < 1 ? 1 - 0.06 * Math.sin(Math.PI * u) : 1;
+      const sx = Math.round(press * (1 + Math.min(v / 170, 1) * 0.18) * 1000) / 1000, sy = Math.round(press * 1000) / 1000;
+      KNOB.style.transform = sx !== 1 || sy !== 1 ? 'scale(' + sx + ', ' + sy + ')' : '';
+    };
+    let prog = 0;
+    Object.defineProperty(BAR, 'xslPos', { configurable: true, get: function () { return prog; }, set: function (r) { prog = r; paint(r); } });
+    paint(0);
+
+    // 拍 1 講到「之前」（不綁＝段起點）：大框進場（看 ENTER；從小視窗長出晚 0.3 秒，講者先飛進小視窗）→ ＋0.8「之前」膠囊彈出；標題 0.5 秒起逐字上浮
+    if (ENTER === 'grow') P.grow('#xsl-card', TS + 0.3);
+    else { P.wipe('#xsl-card', TS, { dir: 'up', dur: 0.8 }); P.pop('#xsl-card', TS, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xsl-title .sc-opt', 0.5, { stagger: 0.035 });
+    P.pop('#xsl-tagb', TS + 0.8, { from: 0.6, dy: 0 });
+
+    // 拍 2 講到「之後」：−0.15 往左預備 → 快甩到 76% → 回彈到 70%（一個動作）；＋0.05「之後」膠囊彈出（拉桿這時已經掃過它）
+    // 拍 3 TW + 1.4：慢掃回 40%（同一個動作的後半），TW + 3.0 定格到段尾
+    P.morph(BAR, TW - LEAD, { xslPos: 1 }, { from: { xslPos: 0 }, dur: TOTAL, ease: 'none' });
+    P.pop('#xsl-taga', TW + 0.05, { from: 0.6, dy: 0 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-slider'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-slider";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

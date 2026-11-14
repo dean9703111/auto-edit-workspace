@@ -188,14 +188,25 @@ test('--list 印出 18 情境＋40 字卡動態；--json 可解析', () => {
   assert.equal(j.fx.length, 40);
 });
 
-test('--gallery 產生 18 頁預覽＋04 家族 4 頁全寬示意（獨立頁，連 ../kit 與 ../bg.jpg）', async () => {
+test('--gallery 產生 18 頁預覽＋04 家族 4 頁全寬示意＋15／09／06／11 全幕版 4 頁＋01 本集地圖 1 頁（獨立頁，連 ../kit 與 ../bg.jpg）', async () => {
   const { runGallery } = await imp('build.mjs');
   const tdir = path.join(dir, 'tpl');
   fs.mkdirSync(tdir);
   for (const sub of ['kit', 'scenes']) fs.cpSync(path.join(TEMPLATE, sub), path.join(tdir, sub), { recursive: true });
   const r = runGallery(tdir);
   assert.deepEqual(r.problems, []);
-  assert.equal(r.made.filter((f) => f.endsWith('.html')).length, 22);
+  assert.equal(r.made.filter((f) => f.endsWith('.html')).length, 27);
+  // 036 本集地圖：四章的第二章（上一章打勾、這一章白底號碼、章號牌 02／04）
+  const map = fs.readFileSync(path.join(tdir, 'preview', '01-chapter-map.html'), 'utf8');
+  assert.match(map, /<div id="scene" data-wide>/);
+  assert.match(map, /CHAPTER 02<b>／04<\/b>/);
+  assert.equal((map.match(/class="mp-st /g) || []).length, 4);
+  // 全幕版：沒有講者小視窗、#scene 寫 data-wide，用模板的 @body-full
+  const full = fs.readFileSync(path.join(tdir, 'preview', '15-quote-full.html'), 'utf8');
+  assert.match(full, /<div id="scene" data-wide>/);
+  assert.doesNotMatch(full, /<div id="pip">/);
+  assert.match(full, /id="pv-qfText"/);
+  for (const k of ['09-qa', '06-concept', '11-summary']) assert.ok(r.made.some((f) => f.endsWith(`${k}-full.html`)), k);
   // 全寬示意：沒有講者小視窗、#scene 寫 data-wide；04a 放主視覺（筆電）並先掛插圖元件
   const wide = fs.readFileSync(path.join(tdir, 'preview', '04a-fs-list-wide.html'), 'utf8');
   assert.match(wide, /<div id="scene" data-wide>/);
@@ -297,7 +308,7 @@ test('--check --json schema 2：必有的鍵與型別；planHash 跟著 plan.jso
   const r = node('--check', '--json');
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'moods', 'edit', 'paths']);
+  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'moods', 'edit', 'paths']);
   assert.equal(j.schema, 2);
   assert.equal(j.theme, 'light');
   assert.match(j.planHash, /^[0-9a-f]{8}$/);
@@ -329,7 +340,7 @@ test('--check --json 出錯時（plan.json 不存在）也印齊 schema 2 的鍵
   const r = spawnSync(process.execPath, [BUILD, '--template', TEMPLATE, '--plan', path.join(dir, 'nope.json'), '--srt', path.join(work, 'rough.srt'), '--video', path.join(work, 'rough.mp4'), '--out', out, '--check', '--json'], { encoding: 'utf8' });
   assert.equal(r.status, 1);
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'moods', 'edit', 'paths']);
+  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'moods', 'edit', 'paths']);
   assert.equal(j.ok, false);
 });
 

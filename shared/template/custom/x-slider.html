@@ -1,0 +1,175 @@
+<!-- 預設拍型：C 對比（BEATS.md §3 C 的變體；同一個畫面前後兩張截圖疊在一起：拉桿停在左邊 → 講到「之後」快甩揭出 → 慢掃回 40% 看差別） -->
+<!doctype html>
+<!--
+  x-slider：前後拉桿（第二層 custom，layout: "fullscreen"；同一個畫面「之前／之後」兩張截圖疊在一起，一支拉桿左右拉，杆子左邊是之後、右邊是之前）
+
+  【適用的講解】
+  同一個畫面處理前後的差別：「這是調光前，臉偏暗；這是調光後，整個亮起來」「去背前、去背後」「舊版介面、新版介面」。
+  畫面邏輯：講到「之前」時大框長出，拉桿停在左邊 8%（幾乎全是之前那張），右上「之前」膠囊彈出；
+  講到「之後」那一刻拉桿往左預備一下、快甩到 76% 再回彈到 70%（之後那張揭出來，宣告變了），左上「之後」膠囊彈出；
+  停 0.6 秒，拉桿慢慢掃回 40%（兩張各佔一邊，看清差在哪），定格到段尾。杆子和揭示的邊界是同一個值，不會錯位。
+
+  【不要用在哪裡】
+  - 兩張不是同一個畫面、同一個構圖（換了機位、版面不同）：疊起來讀成兩頁，對比失效 → 用 x-before-after 或 04b 並排。
+  - 差別是數字（時間、成本）：用 x-before-after、x-versus。
+  - 要看的差別很小、截圖縮成 1136 寬就看不出來：先裁切放大那一塊再放進來，或用螢幕錄影段加放大鏡。
+  - 不是截圖、是做法的不同：用 x-before-after、x-fix。
+
+  【要改的地方】
+  1. 截圖：#xsl-before、#xsl-after 裡的 <img>（欄位 before／after；填資料時工具整個換成 assets/shots/ 的圖）。
+     兩張要同尺寸、同構圖；16:9 剛好填滿，其他比例照 object-fit: contain 留邊，兩張一樣留，杆子照樣對得上。
+  2. 文字：上方標題 #xsl-title（選填，≤ 12 字；不要就整個拿掉，連 P.chars 那一行）、兩個膠囊 #xsl-tagb（之前，≤ 4 字）、#xsl-taga（之後，≤ 4 字）。
+  3. 綁句：<script> 開頭 TS、TW 的句號與詞（見【綁句欄位】），P.sfx 的句號跟著 TW 改。
+  4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改。
+  拉桿的位置（8% → 76% → 70% → 40%）、快慢都在 script 的 KEYS，通常不用改。這支沒有圖示（兩張截圖就是主角）。
+
+  【綁句欄位】
+  TS = P.at('#601@調光前')：講到「之前」那個詞的時刻（選填），大框在這一刻進場（從小視窗長出時晚 0.3 秒）；＋0.8「之前」膠囊彈出。
+  不綁就是段起點（填資料時整行換成 const TS = 0;）。
+  TW = P.at('#602@調光後')：講到「之後」那個詞的時刻，拉桿從 TW − 0.15 往左預備、TW 快甩、TW + 0.4 衝到 76%、TW + 0.8 回彈落在 70%；
+  ＋0.05「之後」膠囊彈出；配一顆 impact（P.sfx('impact', '#602@調光後')，句號和 TW 一樣）。
+  慢掃不另外綁句：TW + 1.4 起 1.6 秒掃回 40%，沒有音效。
+  「之前」「之後」在句中間或句尾時一定用 @詞，不要綁句首。「@詞」要寫成字串字面值（P.at('#602@調光後')，不要用變數組字串），build 才算得到。
+
+  【D 下限】
+  TS ≥ 0（選填：不綁＝段起點 0）；TS 也不要超過 1.5（大框在 TS 才長出，之前畫面只有標題；太晚就把段的起點往後挪）
+  TW ≥ TS + 2.5（大框進場（從小視窗長出時晚 0.3 秒）、＋0.8 膠囊彈出，停 1.2 秒）
+  D ≥ TW + 5.0（快甩回彈 0.8 秒、停 0.6 秒、慢掃 1.6 秒到 TW + 3.0＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：大框進場看 script 的 ENTER；離場由 build 處理。大框不是 .sc-wcard（data-wide-keep：全寬時 kit 不搬它，照下面的 [data-wide] 排）。
+  子母畫面：大框 #xsl-card left 120、1160×663（右緣 1280，避開右下子母畫面）；沒有標題 top 164（上下置中在內容區 y 120–870），
+  有標題時標題 #xsl-title left 120、top 108（56 字），大框 top 206（卡底 869）。
+  全寬（沒有講者：script 看到外層的 data-wide，在 root 也加 data-wide）：沒有標題時大框放大到 1272×726、left 324（置中在 x 960）、
+  top 140（右上角小節角標 y ≤ 136 之下，卡底 866）；有標題時高度放不下更大的框，大框維持 1160×663、標題和大框都 left 380（整組置中）。
+  大框：白卡（--sc-fs-card、2 px 細框、--v2-card-shadow），內距 10 → 截圖區 #xsl-screen 16:9（1136×639；全寬沒有標題 1248×702，圓角 14、超出裁掉）。
+  截圖區裡三層：之前 #xsl-lb（整張）→ 之後 #xsl-la（clip-path 右邊界＝拉桿 x）→ 拉桿 #xsl-bar（translateX＝拉桿 x，同一個值）。
+  拉桿：主色直線 6 px（兩側 2 px 卡色描邊）＋直徑 88 的主色圓鈕（4 px 卡色框、左右兩個小箭頭）在截圖區正中；快甩時圓鈕照速度橫向拉長（最多 1.18 倍），停下來回 1。
+  膠囊（kit 的 .sc-pill，高 72、字 40，左右內距收窄到 20／24）：之前在 #xsl-lb 右上（right 24、top 24，卡色底），之後在 #xsl-la 左上（left 24、top 24，主色底），
+  各自被分界線一起裁。4 個字的膠囊寬 232：拉桿衝到 76% 時離「之前」膠囊左緣還有 17 px（全寬 44 px），不會蓋到。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-slider 前後拉桿</title></head>
+<body>
+<template id="x-slider-template">
+  <style>
+    #x-slider { position: absolute; inset: 0; }
+    #x-slider .fill { position: absolute; inset: 0; }
+    /* 標題：子母畫面 left 120、top 108 */
+    #x-slider #xsl-title { position: absolute; left: 120px; top: 108px; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 大框：子母畫面 left 120、1160×663（右緣 1280）；沒有標題 top 164（上下置中在內容區 y 120–870），有標題 top 206（卡底 869）；
+       截圖區內距 10＋框 2 → 1136×639（16:9） */
+    #x-slider #xsl-card { position: absolute; left: 120px; top: 164px; width: 1160px; height: 663px; box-sizing: border-box;
+                          border: 2px solid var(--sc-fs-card-line); border-radius: 24px; background: var(--sc-fs-card); box-shadow: var(--v2-card-shadow); }
+    #x-slider #xsl-title + #xsl-card { top: 206px; }
+    #x-slider #xsl-screen { position: absolute; left: 10px; top: 10px; right: 10px; bottom: 10px; border-radius: 14px; overflow: hidden; background: var(--sc-fs-node); }
+    /* 三層：之前（整張）→ 之後（clip-path 右邊界＝拉桿 x，script 畫）→ 拉桿 */
+    #x-slider .xsl-layer { position: absolute; inset: 0; }
+    #x-slider .xsl-shot { position: absolute; inset: 0; }
+    #x-slider .xsl-shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    /* 膠囊：kit 的 .sc-pill（高 72、字 40；左右內距收窄到 20／24，4 個字寬 232）；之前＝卡色底（右上），之後＝主色底（左上） */
+    #x-slider .xsl-tag { position: absolute; top: 24px; padding: 0 24px 0 20px; box-shadow: var(--v2-card-shadow); }
+    #x-slider #xsl-tagb { right: 24px; background: var(--sc-fs-card); color: var(--sc-fs-ink); --sc-accent: var(--sc-fs-mute); }
+    #x-slider #xsl-taga { left: 24px; background: var(--brand); color: var(--brand-ink); --sc-accent: var(--brand-ink); }
+    /* 拉桿：寬 0 的錨點在 x＝0，script 用 translateX 推到拉桿位置；直線 6 px、圓鈕 88 在截圖區正中 */
+    #x-slider #xsl-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 0; }
+    #x-slider #xsl-line { position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; background: var(--brand); outline: 2px solid var(--sc-fs-card); box-shadow: var(--v2-card-shadow); }
+    #x-slider #xsl-knob { position: absolute; left: -44px; top: 276px; width: 88px; height: 88px; box-sizing: border-box; border-radius: 44px;
+                          border: 4px solid var(--sc-fs-card); background: var(--brand); color: var(--brand-ink); box-shadow: var(--v2-card-shadow);
+                          display: grid; place-items: center; }
+    #x-slider #xsl-knob svg { width: 44px; height: 24px; display: block; }
+    /* 全寬（沒有講者）：沒有標題時大框放大到 1272×726、置中（x 324–1596）、top 140（右上角小節角標 y ≤ 136 之下，卡底 866），截圖區 1248×702；
+       有標題時高度不夠放大，大框和子母畫面一樣 1160×663，整組置中（x 380–1540） */
+    #x-slider[data-wide] #xsl-title { left: 380px; }
+    #x-slider[data-wide] #xsl-card { left: 324px; top: 140px; width: 1272px; height: 726px; }
+    #x-slider[data-wide] #xsl-title + #xsl-card { left: 380px; top: 206px; width: 1160px; height: 663px; }
+    /* 圓鈕在截圖區正中、寫死整數 px（截圖區高 639 的一半是 319.5，用 calc(50%) 會落在半像素）：(639 − 88) ÷ 2 ≈ 276；全寬沒有標題 (702 − 88) ÷ 2 ＝ 307 */
+    #x-slider[data-wide] #xsl-knob { top: 307px; }
+    #x-slider[data-wide] #xsl-title + #xsl-card #xsl-knob { top: 276px; }
+  </style>
+  <div id="x-slider" data-composition-id="x-slider" data-width="1920" data-height="1080" data-duration="10.5"
+       data-cues-sample='{"start":0,"D":10.5,"cues":{"601":[0.3,2.8],"602":[3.0,5.8],"603":[6.0,10.5]},"refs":{"#601@調光前":0.6,"#602@調光後":3.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <!-- @if title { -->
+    <div id="xsl-title" class="sc-t56 sc-w900" data-wide-keep><span class="sc-opt" data-fill="title">同一個畫面</span></div>
+    <!-- @} -->
+    <div id="xsl-card" data-wide-keep>
+      <div id="xsl-screen" data-layout-allow-overlap>
+        <div id="xsl-lb" class="xsl-layer" data-layout-allow-overlap>
+          <div id="xsl-before" class="xsl-shot" data-fill="before"><img src="../preview/shots/slider-before.jpg" alt=""></div>
+          <span id="xsl-tagb" class="sc-pill xsl-tag"><span class="sc-opt" data-fill="beforeLabel">調光前</span></span>
+        </div>
+        <div id="xsl-la" class="xsl-layer" data-layout-allow-overlap>
+          <div id="xsl-after" class="xsl-shot" data-fill="after"><img src="../preview/shots/slider-after.jpg" alt=""></div>
+          <span id="xsl-taga" class="sc-pill xsl-tag"><span class="sc-opt" data-fill="afterLabel">調光後</span></span>
+        </div>
+        <div id="xsl-bar" data-layout-allow-overlap>
+          <i id="xsl-line"></i>
+          <div id="xsl-knob"><svg viewBox="0 0 36 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3 L4 10 L11 17" /><path d="M25 3 L32 10 L25 17" /></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const ROOT = document.getElementById('x-slider'), WIDE = !!ROOT.closest('[data-wide]');
+    if (WIDE) ROOT.setAttribute('data-wide', '');      // 全寬版型：CSS 的 [data-wide] 那幾行接手
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-slider'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const TS = P.at('#601@調光前');                     // 講到「之前」：大框長出（不綁＝段起點）   // @sub !showAt: const TS = 0;
+    const TW = P.at('#602@調光後');                     // 講到「之後」：拉桿快甩
+    P.sfx('impact', '#602@調光後');                     // 快甩那一下一顆（句號和 TW 一樣）；慢掃沒有音效
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 拉桿（以下都不用改）：位置是時間的純函式（截圖區寬的 %），杆子 translateX 和「之後」那層的 clip-path 右邊界用同一個整數 px。
+    // KEYS：[從預備起算的秒數, 位置 %, 這一段的曲線]：停 8% → 0.15 秒往左預備到 6.5% → 0.4 秒快甩到 76% → 0.4 秒回彈到 70% → 停 0.6 秒 → 1.6 秒慢掃回 40%
+    const SW = WIDE && !$q('#xsl-title').length ? 1248 : 1136;   // 截圖區寬（16:9；只有「全寬、沒有標題」放大）
+    const KEYS = [[0, 8], [0.15, 6.5, 'sine'], [0.55, 76, 'out'], [0.95, 70, 'sine'], [1.55, 70], [3.15, 40, 'inOut']];
+    const LEAD = 0.15, TOTAL = KEYS[KEYS.length - 1][0];
+    const EASE = { out: function (s) { return 1 - Math.pow(1 - s, 3); }, sine: function (s) { return (1 - Math.cos(Math.PI * s)) / 2; },
+                   inOut: function (s) { return s < 0.5 ? 4 * s * s * s : 1 - Math.pow(-2 * s + 2, 3) / 2; } };
+    const posAt = function (tau) {
+      if (tau <= 0) return KEYS[0][1];
+      for (var i = 1; i < KEYS.length; i++) {
+        const a = KEYS[i - 1], b = KEYS[i];
+        if (tau < b[0]) return b[2] ? a[1] + (b[1] - a[1]) * EASE[b[2]]((tau - a[0]) / (b[0] - a[0])) : a[1];
+      }
+      return KEYS[KEYS.length - 1][1];
+    };
+    const BAR = $q('#xsl-bar')[0], LA = $q('#xsl-la')[0], KNOB = $q('#xsl-knob')[0];
+    const paint = function (r) {
+      const tau = r * TOTAL, x = Math.round(posAt(tau) / 100 * SW);
+      BAR.style.transform = 'translateX(' + x + 'px)';
+      LA.style.clipPath = 'inset(0 ' + (SW - x) + 'px 0 0)';
+      // 圓鈕：照速度（%／秒）橫向拉長，最多 1.18 倍；預備＋快甩時被捏住微縮 6%；停下來兩個都回 1
+      const v = tau > 0 && tau < TOTAL ? Math.abs(posAt(tau + 0.01) - posAt(tau - 0.01)) / 0.02 : 0;
+      const u = tau / (LEAD + 0.4), press = u > 0 && u < 1 ? 1 - 0.06 * Math.sin(Math.PI * u) : 1;
+      const sx = Math.round(press * (1 + Math.min(v / 170, 1) * 0.18) * 1000) / 1000, sy = Math.round(press * 1000) / 1000;
+      KNOB.style.transform = sx !== 1 || sy !== 1 ? 'scale(' + sx + ', ' + sy + ')' : '';
+    };
+    let prog = 0;
+    Object.defineProperty(BAR, 'xslPos', { configurable: true, get: function () { return prog; }, set: function (r) { prog = r; paint(r); } });
+    paint(0);
+
+    // 拍 1 講到「之前」（不綁＝段起點）：大框進場（看 ENTER；從小視窗長出晚 0.3 秒，講者先飛進小視窗）→ ＋0.8「之前」膠囊彈出；標題 0.5 秒起逐字上浮
+    if (ENTER === 'grow') P.grow('#xsl-card', TS + 0.3);
+    else { P.wipe('#xsl-card', TS, { dir: 'up', dur: 0.8 }); P.pop('#xsl-card', TS, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xsl-title .sc-opt', 0.5, { stagger: 0.035 });   // @if title
+    P.pop('#xsl-tagb', TS + 0.8, { from: 0.6, dy: 0 });
+
+    // 拍 2 講到「之後」：−0.15 往左預備 → 快甩到 76% → 回彈到 70%（一個動作）；＋0.05「之後」膠囊彈出（拉桿這時已經掃過它）
+    // 拍 3 TW + 1.4：慢掃回 40%（同一個動作的後半），TW + 3.0 定格到段尾
+    P.morph(BAR, TW - LEAD, { xslPos: 1 }, { from: { xslPos: 0 }, dur: TOTAL, ease: 'none' });
+    P.pop('#xsl-taga', TW + 0.05, { from: 0.6, dy: 0 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-slider'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

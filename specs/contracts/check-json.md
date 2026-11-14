@@ -29,7 +29,8 @@
 | `formatSource` | `"flag"`／`"plan"`／`"progress"`／`"media"`／`"default"` | 必有（出錯時 `null`） | — | 版式從哪裡來（`default`＝沒有專案資料夾、什麼都讀不到時的橫式） | 新（009 FR-006） | 007 |
 | `versions` | 物件 | 必有 | — | `{ hyperframes: { pinned, installed, ok } }`；`pinned` 是根目錄 package.json 的值、`installed` 是 `node_modules/hyperframes/package.json` 的 `version` 或 `null` | 新（FR-050） | 007 |
 | `videoDur` | 數字 | 必有（出錯時 `null`） | rough | rough.mp4 長度（對齊格） | 現行 | 004、006 |
-| `outputDur` | 數字 | 必有（出錯時 `null`） | 完成影片 | 完成影片長度 | 現行 | 004 final |
+| `outputDur` | 數字 | 必有（出錯時 `null`） | 完成影片 | 完成影片長度（有片尾卡時含片尾卡＝`resolvePlan().finalDur`，033） | 現行 | 004 final |
+| `ending` | 物件或 `null` | 必有（出錯、沒設定片尾、這一集關掉、直式時 `null`） | 完成影片 | 片尾模板（033，`lib/ending.mjs`）：`{ at, dur, quote, quoteFrom, subscribe, notes }`；`at`＝影片（講者）結束、片尾卡從這裡接 `dur` 秒（只有訂閱動畫時 `dur` 是 0）；`quote`＝片尾金句（分段用「，」接）、`quoteFrom`＝來源；`subscribe`＝訂閱動畫跟的句號或 `null`；`notes`＝沒放的原因 | 新（033） | 004 qc final（片尾卡不判凍結／黑畫面／無聲）、停點 ③ |
 | `voiceOnly` | `[[起, 迄]]` | 必有 | rough | 只有聲音的區間（rough.mp4 全黑）。專案沒有純聲音素材時一律是 `[]`（全黑改列在 `roughBlack`） | 現行 | 006 |
 | `roughBlack` | `[[起, 迄]]` | 必有 | rough | 初剪壞掉的全黑區間：rough.mp4 全黑、但 `素材/聲音/` 是空的而且 `work/main.json` 沒有 `kind: "voice"`；相鄰 ≤ 0.1 s 的黑段併成一段。不是空的時候 `errors` 一定有 §2.4 那則 ✖ | 新（round 2，F2） | 004 qc final |
 | `voiceUncovered` | 物件[]（§2.1） | 必有 | rough＋完成影片 | 只有聲音、而且沒被 media 段或不透明全畫面蓋住的區間（長度 > 0.1 s 才列，FR-029） | 新 | 006（紅色斜線）、004 |
@@ -281,7 +282,7 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
 { "schema": 2, "ok": false, "errors": ["<訊息>"], "warnings": [], "planHash": null, "rhythm": null, "theme": null,
   "format": null, "canvas": null, "formatSource": null,
   "versions": { "hyperframes": { "pinned": null, "installed": null, "ok": false } },
-  "videoDur": null, "outputDur": null, "voiceOnly": [], "roughBlack": [], "voiceUncovered": [], "uncovered": [], "cutpoints": [],
+  "videoDur": null, "outputDur": null, "ending": null, "voiceOnly": [], "roughBlack": [], "voiceUncovered": [], "uncovered": [], "cutpoints": [],
   "chapters": [], "items": [], "sfxCount": {}, "sfxBudget": { "perMinuteAvg": 0, "over": [], "dense": [], "loud": [] },
   "outro": null, "edit": null, "paths": {} }
 ```

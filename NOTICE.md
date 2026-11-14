@@ -61,6 +61,20 @@
 - 版權：Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
 - 說明：字型只轉成 woff2 格式，沒有修改字形設計。不得單獨販售這個字型
 
+### 字幕可選的字體
+
+- 檔案：`shared/template/kit/fonts/` 底下（下表）；取自 Google Fonts 的 GitHub（https://github.com/google/fonts），原檔照用、沒有修改
+- 授權：都是 SIL Open Font License 1.1，全文見同資料夾的 `OFL-<字體>.txt`。可以商用，不得單獨販售
+- 說明：build 只把這一集選到的字體（和它的授權檔）複製進專案
+
+| 字體 | 檔案 | 出處 |
+|---|---|---|
+| 思源宋體 Noto Serif TC | `NotoSerifTC-VF.ttf` | https://fonts.google.com/noto/specimen/Noto+Serif+TC |
+| 霞鶩文楷 LXGW WenKai TC | `LXGWWenKaiTC-Regular.ttf`、`LXGWWenKaiTC-Bold.ttf` | https://github.com/lxgw/LxgwWenkaiTC |
+| jf open 粉圓 Huninn | `Huninn-Regular.ttf` | https://github.com/justfont/open-huninn-font |
+| 霞鶩漫黑 LXGW Marker Gothic | `LXGWMarkerGothic-Regular.ttf` | https://github.com/lxgw/LxgwMarkerGothic |
+| 芫荽 Iansui | `Iansui-Regular.ttf` | https://github.com/ButTaiwan/iansui |
+
 ### lucide 圖示
 
 - 檔案：`shared/template/kit/icons.json`（把 lucide 的 SVG 合併成一個檔）

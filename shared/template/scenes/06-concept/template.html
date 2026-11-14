@@ -28,3 +28,36 @@ P.pop('#gCard .sc-icon', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.
 P.icon('#gCard .sc-icon', {{{in}}} + 0.3);
 P.chars('#gCard .sc-lt__body .sc-opt', {{{in}}} + 0.22);
 {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}
+<!-- @style-full -->
+/* 全幕版（034；shotcraft brace-expand）：圖示＋標籤一列 → { 名詞 } 花括號彈開 → 定義一行打字。內容區（y 40–900）置中：
+   標籤列 y 200–296、括號組 1680×232（中心 y 470）、定義 56／700 y 640。正文寫「名詞：定義」＝括號裡放名詞；沒有全形冒號＝括號裡放標籤、定義放整句。
+   名詞字級 min(112, 1200 ÷ 字數)。 */
+#cfTop { position: absolute; left: 120px; right: 120px; top: 200px; height: 96px; display: flex; align-items: center; justify-content: center; gap: 24px; }
+#cfIcon { --d: 96px; --i: 56px; }
+#cfTag { font-size: 44px; line-height: 60px; font-weight: 700; color: var(--sc-fs-mute); white-space: nowrap; }
+#cfBrace { position: absolute; left: 120px; top: 354px; width: 1680px; height: 232px; }
+#cfTerm { font-size: {{#text_head}}min(112px, calc(1200px / {{text_headlen}})){{/text_head}}{{^text_head}}112px{{/text_head}}; line-height: 136px; font-weight: 900; color: var(--sc-fs-ink); }
+#cfTerm .sc-kw { color: var(--brand); }
+#cfDef { position: absolute; left: 120px; right: 120px; top: 640px; text-align: center; white-space: nowrap; font-size: 56px; line-height: 76px; font-weight: 700; color: var(--sc-fs-ink); }
+#cfDef .sc-kw { color: var(--brand); font-weight: 900; }
+<!-- @body-full -->
+<div id="cfTop" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  {{#icon}}<span id="cfIcon" class="sc-icon">{{{icon}}}</span>{{/icon}}
+  <span id="cfTag">{{tag}}</span>
+</div>
+<div id="cfBrace" class="sc-brace">
+  <svg class="sc-brace__l" viewBox="0 0 96 232" aria-hidden="true"><path pathLength="1" d="M74 12 C44 12 46 28 46 58 L46 92 C46 106 38 116 18 116 C38 116 46 126 46 140 L46 174 C46 204 44 220 74 220" /></svg>
+  <svg class="sc-brace__r" viewBox="0 0 96 232" aria-hidden="true"><path pathLength="1" d="M22 12 C52 12 50 28 50 58 L50 92 C50 106 58 116 78 116 C58 116 50 126 50 140 L50 174 C50 204 52 220 22 220" /></svg>
+  <div class="sc-brace__text"><span id="cfTerm">{{#text_head}}{{{text_head}}}{{/text_head}}{{^text_head}}{{tag}}{{/text_head}}</span></div>
+</div>
+<div id="cfDef">{{{text_tail}}}</div>
+<!-- @timeline-full -->
+/* 全幕版：圖示彈出＋描線、標籤上浮 → 括號合著描出、0.45 秒後彈開把名詞拉開 → 定義跟著講解打字（每秒 12 字）。
+   前一段是講者晚 0.35 秒開始，前一段也是全畫面 0.1 秒開始；離場由 build 負責 */
+const T0 = {{{in}}} + (P.prev() === 'speaker' ? 0.35 : 0.1);
+{{#icon}}P.pop('#cfIcon', T0, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+P.icon('#cfIcon', T0 + 0.15);{{/icon}}
+P.rise('#cfTag', T0 + 0.1);
+P.brace('#cfBrace', T0 + 0.3, { open: T0 + 0.75 });
+P.in('#cfDef', T0 + 1.75, { dur: 0.05 });
+P.type('#cfDef', T0 + 1.8, { cps: 12 });

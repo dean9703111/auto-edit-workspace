@@ -1,0 +1,147 @@
+{
+  "template": "x-scroll-brake",
+  "prefix": "xsb",
+  "beat": "E",
+  "layout": "fullscreen",
+  "when": "先講數量很多、再點名只留下一個（「這一年我試了三十個工具，大部分用一次就刪掉了，最後留下來的只有這一個」）：左邊數字滾到項數，右邊 12–30 項的長清單越捲越快、急剎停在留下的那一項，準星咬住、其他列退暗",
+  "slots": {
+    "title": {
+      "label": "視窗標題（這張清單是什麼，例「試過的 AI 工具」）",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "eyebrow": {
+      "label": "左邊數字上面的小標（例「這一年」）",
+      "type": "text",
+      "max": 6,
+      "required": true
+    },
+    "unit": {
+      "label": "數字下面的單位（例「個 AI 剪輯工具」；數字換成 1 之後還是這一行）",
+      "type": "text",
+      "max": 7,
+      "required": true
+    },
+    "items": {
+      "label": "清單的每一項（12–30 項；數字會滾到項數，所以項數要和講的數量一樣）",
+      "type": "list",
+      "min": 12,
+      "maxItems": 30,
+      "required": true,
+      "const": "ITEMS",
+      "pluck": "text",
+      "item": {
+        "text": {
+          "label": "名稱（用通用的類別名，例「自動字幕」「去背工具」）",
+          "type": "text",
+          "max": 6,
+          "required": true
+        }
+      }
+    },
+    "pick": {
+      "label": "留下的是第幾項（從 1 數；8 起，最多到倒數第 4 項：停在正中、下面要有列墊著）",
+      "type": "number",
+      "min": 8,
+      "max": 27,
+      "const": "PICK",
+      "required": true
+    },
+    "keep": {
+      "label": "停點列右邊的膠囊（例「留下的」）",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "eyebrowEnd": {
+      "label": "急剎後換上的小標（選填，例「最後留下」；沒寫就不換）",
+      "type": "text",
+      "max": 6
+    },
+    "countAt": {
+      "label": "講到數量那個詞的時間（數字剛好滾到項數）",
+      "type": "at",
+      "ref": "TC",
+      "required": true
+    },
+    "brakeAt": {
+      "label": "講到「留下的就是這一個」那個詞的時間（急剎停在那一項、impact；清單在它前 3.6 秒自己開始捲）；要比 countAt 晚 4.4 秒以上",
+      "type": "at",
+      "ref": "TB",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "試過的 AI 工具",
+    "eyebrow": "這一年",
+    "unit": "個 AI 剪輯工具",
+    "items": [
+      { "text": "自動字幕" }, { "text": "去背工具" }, { "text": "AI 配音" }, { "text": "剪輯外掛" }, { "text": "自動調色" },
+      { "text": "縮圖產生" }, { "text": "音效庫" }, { "text": "轉逐字稿" }, { "text": "翻譯字幕" }, { "text": "影片摘要" },
+      { "text": "畫面放大" }, { "text": "降噪工具" }, { "text": "自動運鏡" }, { "text": "短影音切片" }, { "text": "字卡模板" },
+      { "text": "語音克隆" }, { "text": "影片生成" }, { "text": "背景音樂" }, { "text": "自動上片" }, { "text": "標題產生" },
+      { "text": "留言分析" }, { "text": "美顏濾鏡" }, { "text": "自動對嘴" }, { "text": "雲端剪輯" }, { "text": "腳本助手" },
+      { "text": "畫面修復" }, { "text": "自動剪 NG" }, { "text": "動態字卡" }, { "text": "素材管理" }, { "text": "數據報表" }
+    ],
+    "pick": 27,
+    "keep": "留下的",
+    "eyebrowEnd": "最後留下",
+    "countAt": "#561@三十",
+    "brakeAt": "#563@這一個"
+  },
+  "sampleMin": {
+    "title": "試過的 AI 工具",
+    "eyebrow": "這一年",
+    "unit": "個剪輯工具",
+    "items": [
+      { "text": "自動字幕" }, { "text": "去背工具" }, { "text": "AI 配音" }, { "text": "剪輯外掛" }, { "text": "自動調色" },
+      { "text": "縮圖產生" }, { "text": "音效庫" }, { "text": "轉逐字稿" }, { "text": "自動剪 NG" }, { "text": "影片摘要" },
+      { "text": "畫面放大" }, { "text": "降噪工具" }
+    ],
+    "pick": 9,
+    "keep": "留下的",
+    "countAt": "#561@三十",
+    "brakeAt": "#563@這一個"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "視窗卡「{title}」＋清單；左邊小標「{eyebrow}」、數字 0、單位「{unit}」",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）；＋0.5 擦開（計數，由左）",
+      "focus": "標題"
+    },
+    {
+      "beat": "1",
+      "at": "`{countAt}`",
+      "show": "數字從 0 滾到 {n}；清單第一屏 5 列",
+      "moves": "−1.2 數字滾動（0 → {n}）；−0.4 錯拍彈出（第一屏 5 列）",
+      "focus": "數字"
+    },
+    {
+      "beat": "2",
+      "at": "`{brakeAt}`",
+      "show": "清單往上捲、越捲越快（縱向動態模糊），急剎停在第 {pick} 項；四角準星；其他列退暗、停點列抬起換主色框；膠囊「{keep}」",
+      "moves": "−3.6 游標移動（清單往上捲、加速；最早在拍 1 後 1.9 秒）；游標移動（急剎衝過頭 24 px → 0.4 秒回正）；彈出（四角準星，從外圍收攏）；＋0.12 退焦（其他列 → 0.38）；＋0.12 淡入（主色框）；＋0.3 彈出（膠囊）",
+      "focus": "第 {pick} 項",
+      "sfx": "impact"
+    },
+    {
+      "if": "eyebrowEnd",
+      "beat": "收",
+      "at": "`{brakeAt}`＋0.45",
+      "show": "小標換成「{eyebrowEnd}」、數字換成主色的 1；完成態停到段尾",
+      "moves": "淡出（小標「{eyebrow}」）；淡入（小標「{eyebrowEnd}」）；淡出（數字 {n}）；＋0.05 彈出（1）",
+      "focus": "1"
+    },
+    {
+      "if": "!eyebrowEnd",
+      "beat": "收",
+      "at": "`{brakeAt}`＋0.45",
+      "show": "數字換成主色的 1；完成態停到段尾",
+      "moves": "淡出（數字 {n}）；＋0.05 彈出（1）",
+      "focus": "1"
+    }
+  ]
+}

@@ -11,3 +11,11 @@
 /* 直式（字幕子合成 root 帶 data-format="portrait"，1080×1920）：樣式完全同上，只換位置（決定 2）：
    底板 118 高置中在字幕帶 y 1280–1420 裡＝y 1291–1409（lib/canvas.mjs 的 caption.zone／box）：講者面板的臉（940–1280）下面、平台介面（1440 起）上面；每則最多 10 字（底板寬 ≤ 834，x 123–957）。 */
 [data-format="portrait"] .cg { bottom: 511px; }
+/* 035 字幕樣式可調（specs/035-caption-style）：字幕 root 帶 data-cap 才用下面的變數（build 照 plan.json captionStyle／shared/setting.json captions 寫）；
+   不帶＝上面 F8 原樣。字級、行高、內距、底板下緣照 76 px 的比例縮放（lib/caption-style.mjs captionGeom）。 */
+[data-cap] .cg { bottom: var(--cap-bottom); }
+[data-cap] .cg > span { font-family: var(--cap-family); font-weight: var(--cap-weight); font-size: var(--cap-size); line-height: var(--cap-line); padding: var(--cap-pad); }
+[data-cap="outline"] .cg > span, [data-cap="yellow"] .cg > span { background: none; -webkit-text-stroke: var(--cap-stroke) #000000; paint-order: stroke fill; }
+[data-cap="yellow"] .cg > span { color: #FFD60A; }
+[data-cap="light"] .cg > span { background: rgba(255, 255, 255, 0.92); color: #111111; }
+[data-cap="brand"] .cg > span { background: var(--brand); color: var(--brand-ink); }

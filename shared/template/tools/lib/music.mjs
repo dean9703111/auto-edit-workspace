@@ -96,7 +96,7 @@ export function normalizeTrack(src, dst, { lufs = LIB_LUFS } = {}) {
   return { dur: r3(probeDuration(dst)), lufs: measureLufs(dst) };
 }
 
-// 底樂鋪到哪：片頭到片尾；有片尾配樂就在它起播的地方淡出（兩首不疊在一起）
+// 底樂鋪到哪：片頭到片尾（outDur＝含片尾卡的總長）；有片尾配樂就在它起播的地方淡出（兩首不疊在一起）
 export function bedPlan(bed, { outDur, outroAt = null }) {
   if (!bed?.music) return null;
   const end = outroAt != null && outroAt > 0 ? Math.min(outDur, outroAt + BED.fadeOut) : outDur;
@@ -136,7 +136,8 @@ export function renderBedClip(src, dstDir, { dur, gainDb, lift = BED.lift, key =
     args.push('-i', key);
     // 壓縮器用人聲當 key：門檻 −36 dB、壓縮比 1.32。主軌的人聲已經調到 −14 LUFS（講話時 RMS 約 −18 dB），高出門檻約 18 dB → 壓掉約 6 dB（＝lift）；
     // 30 ms 壓下去、600 ms 慢慢回來（句子之間的短停頓不會忽大忽小）。講得大聲壓多一點、小聲壓少一點
-    fc.push(`[1:a]aresample=${RATE},atrim=duration=${p.dur},asetpts=PTS-STARTPTS[k]`,
+    // apad：主軌比底樂短（片尾卡接在影片後面，033）時補靜音到同長，後面沒人講話＝回升 lift dB
+    fc.push(`[1:a]aresample=${RATE},apad=whole_dur=${p.dur},atrim=duration=${p.dur},asetpts=PTS-STARTPTS[k]`,
       `[lvl][k]sidechaincompress=threshold=${dB(-36).toFixed(4)}:ratio=${DUCK_RATIO}:attack=30:release=600:makeup=1:detection=rms[duck0]`);
     cur = '[duck0]';
   }

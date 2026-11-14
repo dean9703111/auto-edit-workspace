@@ -1,0 +1,112 @@
+{
+  "template": "x-recap",
+  "prefix": "xrcp",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "結尾回顧這一集講過的 2–4 件事，而且每一件前面都有一段畫面（「最後整理一下今天講的四件事：…」）：那幾段的截圖＋標籤從畫面外飛進來合影，講到哪一件那張聚焦打勾，最後回均衡",
+  "slots": {
+    "title": {
+      "label": "標題（例「今天講了這 4 件事」）",
+      "type": "text",
+      "max": 10,
+      "required": true
+    },
+    "items": {
+      "label": "回顧的每一件（2–4 件，照講的順序）",
+      "type": "list",
+      "min": 2,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "shot": {
+          "label": "截圖：這一集前面講這件事的那一段的 id（例「s0106」，取那一段的完成態截圖；要在這一段之前；別章的段 id 看 work/drafts/<chNN>.outline.md 的第一欄），或素材裡的圖片 assets/images/…",
+          "type": "shot",
+          "required": true
+        },
+        "label": {
+          "label": "標籤（用口播裡的詞，例「照規則剪」）",
+          "type": "text",
+          "max": 6,
+          "required": true
+        },
+        "at": {
+          "label": "講到這一件的時間（那一張聚焦、打勾）；相鄰兩件至少差 2.5 秒，第一件離段起點至少 3.3 秒",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    }
+  },
+  "sample": {
+    "title": "今天講了這 4 件事",
+    "items": [
+      { "shot": "assets/images/recap-1.jpg", "label": "AI 找 NG", "at": "#582@NG" },
+      { "shot": "assets/images/recap-2.jpg", "label": "照規則剪", "at": "#583@規則" },
+      { "shot": "assets/images/recap-3.jpg", "label": "看完預覽", "at": "#584@預覽" },
+      { "shot": "assets/images/recap-4.jpg", "label": "經驗變資產", "at": "#585@資產" }
+    ]
+  },
+  "sampleMin": {
+    "title": "今天講了這 2 件事",
+    "items": [
+      { "shot": "assets/images/recap-1.jpg", "label": "AI 找 NG", "at": "#582@NG" },
+      { "shot": "assets/images/recap-3.jpg", "label": "看完預覽", "at": "#584@預覽" }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "標題「{title}」；{n} 張截圖＋標籤（序號＋名稱）",
+      "moves": "開場（依前段）；＋0.5 逐字上浮（標題）；＋0.8 游標移動（{n} 張截圖連標籤從畫面外四個方向飛進來合影，每張 0.9 秒，錯拍 0.12）；＋0.8 淡入（截圖，錯拍 0.12）",
+      "focus": "整體"
+    },
+    {
+      "each": "items",
+      "beat": 1,
+      "to": 1,
+      "at": "`{at}`",
+      "show": "第 1 張「{label}」聚焦、右上角打勾",
+      "moves": "−0.1 聚焦（第 1 張）；−0.1 退焦（其他標籤 → 0.42）；彈出（打勾徽章）；＋0.1 描圈打勾",
+      "focus": "第 1 張「{label}」"
+    },
+    {
+      "each": "items",
+      "beat": 2,
+      "from": 2,
+      "to": 2,
+      "if": "items>=3",
+      "at": "`{at}`",
+      "show": "第 {n} 張「{label}」聚焦、右上角打勾",
+      "moves": "−0.1 聚焦（第 {n} 張）；走過（前面幾張）；−0.1 退焦（標籤 {n} → 1，亮回）；彈出（打勾徽章）；＋0.1 描圈打勾",
+      "focus": "第 {n} 張「{label}」"
+    },
+    {
+      "each": "items",
+      "beat": 3,
+      "from": 3,
+      "to": 3,
+      "if": "items>=4",
+      "at": "`{at}`",
+      "show": "第 {n} 張「{label}」聚焦、右上角打勾",
+      "moves": "−0.1 聚焦（第 {n} 張）；走過（前面幾張）；−0.1 退焦（標籤 {n} → 1，亮回）；彈出（打勾徽章）；＋0.1 描圈打勾",
+      "focus": "第 {n} 張「{label}」"
+    },
+    {
+      "beat": "{n}",
+      "at": "`{last.at}`",
+      "show": "最後一張「{last.label}」聚焦、右上角打勾",
+      "moves": "−0.1 聚焦（第 {n} 張）；走過（前面幾張）；−0.1 退焦（標籤 {n} → 1，亮回）；彈出（打勾徽章）；＋0.1 描圈打勾",
+      "focus": "第 {n} 張「{last.label}」",
+      "sfx": "success"
+    },
+    {
+      "beat": "收",
+      "at": "`{last.at}`＋2.0",
+      "show": "{n} 張都打勾；完成態停到段尾",
+      "moves": "回均衡",
+      "focus": "整體"
+    }
+  ]
+}

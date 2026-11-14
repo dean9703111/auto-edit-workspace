@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-scroll-brake 長清單急剎｜預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs）：custom/x-scroll-brake.html 的 <template> 原樣放進來，時間用 root 的 data-cues-sample；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #cut { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 35; }   /* 講者去背圖（有 preview/speaker-cutout.png 才有）：疊在 overlay 動畫上面，示意「講者站在動畫前面」的模板 */
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene">
+
+  <style>
+    #x-scroll-brake { position: absolute; inset: 0; }
+    #x-scroll-brake .fill { position: absolute; inset: 0; }
+    #x-scroll-brake .xsb-defs { position: absolute; left: 0; top: 0; }
+    /* 左：計數（子母畫面 x 120–520；全寬 x 120–680）。大數字自己一層（只改亮度、不縮放）：清單捲動時整頁重畫，240 px 的字邊緣才不會差一個色階 */
+    #x-scroll-brake #xsb-count { position: absolute; left: 120px; top: 300px; width: 400px; height: 424px; }
+    #x-scroll-brake #xsb-eye, #x-scroll-brake #xsb-eye2 { position: absolute; left: 0; top: 0; }
+    #x-scroll-brake #xsb-num, #x-scroll-brake #xsb-num2 { position: absolute; left: 0; top: 92px; font-size: 240px; line-height: 240px; font-weight: 900;
+                                                         white-space: nowrap; will-change: opacity; }
+    #x-scroll-brake #xsb-num { color: var(--sc-fs-ink); }
+    #x-scroll-brake #xsb-num2 { color: var(--brand); }
+    #x-scroll-brake #xsb-unit { position: absolute; left: 0; top: 348px; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 右：視窗卡 left 560、top 150、740×720（右緣 1300）；標題列 128；清單區在標題列下 24、卡底上 24（高 540，一屏 5 列；捲動時列在這兩條線被切掉） */
+    #x-scroll-brake #xsb-card { position: absolute; left: 560px; top: 150px; width: 740px; height: 720px; box-sizing: border-box; }
+    #x-scroll-brake #xsb-card .sc-wcard__bar { height: 128px; box-sizing: border-box; }
+    #x-scroll-brake #xsb-view { position: absolute; left: 0; right: 0; top: 152px; bottom: 24px; overflow: hidden; }
+    #x-scroll-brake #xsb-list { position: absolute; left: 40px; right: 40px; top: 0; }
+    /* 一列：高 96、間距 12（列距 108）；第 k 列（從 1 數）上緣＝108 ×（k − 1） */
+    #x-scroll-brake .xsb-row { position: relative; height: 96px; margin-bottom: 12px; box-sizing: border-box; display: flex; align-items: center; gap: 24px;
+                               padding: 0 32px 0 24px; border-radius: 16px; background: var(--sc-fs-node); border: 2px solid var(--sc-fs-card-line); }
+    #x-scroll-brake .xsb-chip { position: relative; flex: none; width: 64px; height: 64px; border-radius: 32px; display: grid; place-items: center;
+                                background: var(--v2-node-tint); color: var(--sc-fs-ink); font-size: 40px; line-height: 64px; font-weight: 900; font-variant-numeric: tabular-nums; }
+    #x-scroll-brake .xsb-on { position: absolute; left: 0; top: 0; width: 64px; height: 64px; border-radius: 32px; display: grid; place-items: center;
+                              background: var(--brand); color: var(--brand-ink); opacity: 0; }
+    #x-scroll-brake .xsb-name { color: var(--sc-fs-ink); white-space: nowrap; }
+    /* 停點列：主色框（抬起時淡入）＋膠囊（kit 的 .sc-pill 換成主色底、白點，靠右） */
+    #x-scroll-brake .xsb-ring { position: absolute; left: -2px; top: -2px; right: -2px; bottom: -2px; border: 4px solid var(--brand); border-radius: 18px;
+                                box-shadow: var(--v2-card-shadow); pointer-events: none; opacity: 0; }
+    #x-scroll-brake #xsb-keep { position: absolute; right: 24px; top: 10px; background: var(--brand); color: var(--brand-ink); --sc-accent: var(--brand-ink); }
+    /* 四角準星：框住停點列、四邊外擴 24（停點列在畫面 y 526–622） */
+    #x-scroll-brake #xsb-lock { position: absolute; left: 578px; top: 502px; width: 704px; height: 144px; pointer-events: none; }
+    #x-scroll-brake .xsb-cn { position: absolute; width: 44px; height: 44px; box-sizing: border-box; border: 0 solid var(--brand); }
+    #x-scroll-brake #xsb-c1 { left: 0; top: 0; border-top-width: 6px; border-left-width: 6px; border-top-left-radius: 10px; }
+    #x-scroll-brake #xsb-c2 { right: 0; top: 0; border-top-width: 6px; border-right-width: 6px; border-top-right-radius: 10px; }
+    #x-scroll-brake #xsb-c3 { left: 0; bottom: 0; border-bottom-width: 6px; border-left-width: 6px; border-bottom-left-radius: 10px; }
+    #x-scroll-brake #xsb-c4 { right: 0; bottom: 0; border-bottom-width: 6px; border-right-width: 6px; border-bottom-right-radius: 10px; }
+    /* 全寬（沒有講者）：計數寬 560、視窗卡 x 760–1800 */
+    #x-scroll-brake[data-wide] #xsb-count { width: 560px; }
+    #x-scroll-brake[data-wide] #xsb-card { left: 760px; width: 1040px; }
+    #x-scroll-brake[data-wide] #xsb-lock { left: 778px; width: 1004px; }
+  </style>
+  <div id="x-scroll-brake" data-composition-id="x-scroll-brake" data-width="1920" data-height="1080" data-duration="11.6"
+       data-cues-sample='{"start":0,"D":11.6,"cues":{"561":[0.4,4.2],"562":[4.4,6.0],"563":[6.2,9.4]},"refs":{"#561@三十":1.9,"#563@這一個":8.5}}'>
+    <div class="sc-surface-fs fill"></div>
+    <svg class="xsb-defs" width="0" height="0" aria-hidden="true"><filter id="xsb-blur" x="0" y="-2%" width="100%" height="104%" color-interpolation-filters="sRGB"><feGaussianBlur id="xsb-blurk" stdDeviation="0 0" /></filter></svg>
+    <div id="xsb-count">
+      <div id="xsb-eye" class="sc-pill"><span class="sc-opt">這一年</span></div>
+      <div id="xsb-eye2" class="sc-pill"><span class="sc-opt">最後留下</span></div>
+      <div id="xsb-num">0</div>
+      <div id="xsb-num2">1</div>
+      <div id="xsb-unit" class="sc-t56 sc-w900"><span class="sc-opt">個 AI 剪輯工具</span></div>
+    </div>
+    <div id="xsb-card" class="sc-wcard">
+      <div class="sc-wcard__bar"><span class="sc-opt">試過的 AI 工具</span></div>
+      <div id="xsb-view" data-layout-allow-overflow>
+        <div id="xsb-list"></div>
+      </div>
+    </div>
+    <span id="xsb-keep" class="sc-pill"><span class="sc-opt">留下的</span></span>
+    <div id="xsb-lock" data-layout-allow-overlap><i id="xsb-c1" class="xsb-cn"></i><i id="xsb-c2" class="xsb-cn"></i><i id="xsb-c3" class="xsb-cn"></i><i id="xsb-c4" class="xsb-cn"></i></div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    const ITEMS = ["自動字幕","去背工具","AI 配音","剪輯外掛","自動調色","縮圖產生","音效庫","轉逐字稿","翻譯字幕","影片摘要","畫面放大","降噪工具","自動運鏡","短影音切片","字卡模板","語音克隆","影片生成","背景音樂","自動上片","標題產生","留言分析","美顏濾鏡","自動對嘴","雲端剪輯","腳本助手","畫面修復","自動剪 NG","動態字卡","素材管理","數據報表"];   // 只改這一行：12–30 項，每項 ≤ 6 字
+    const PICK = 27;                                   // 留下的是第幾項（從 1 數；8 起，最多到倒數第 4 項）
+
+    // 0. 依 ITEMS 長出每一列（以下都不用改；載入時算一次，只用常數、不量版面，每次結果相同）
+    const ROOT = document.getElementById('x-scroll-brake'), WIDE = !!ROOT.closest('[data-wide]');
+    if (WIDE) ROOT.setAttribute('data-wide', '');      // 全寬版型：CSS 的 [data-wide] 那幾行接手
+    const N = ITEMS.length, K = Math.max(1, Math.min(PICK, N));
+    const LIST = $q('#xsb-list')[0], VIEW = $q('#xsb-view')[0], BLUR = $q('#xsb-blurk')[0];
+    const el = function (tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+    const rows = ITEMS.map(function (name, i) {
+      const r = el('div', 'xsb-row'), no = String(i + 1).padStart(2, '0'), chip = el('span', 'xsb-chip', no);
+      r.id = 'xsb-r' + (i + 1);
+      r.appendChild(chip); r.appendChild(el('span', 'xsb-name sc-t40 sc-w700', String(name)));
+      if (i + 1 === K) { chip.appendChild(el('span', 'xsb-on', no)); r.appendChild(el('i', 'xsb-ring')); r.appendChild($q('#xsb-keep')[0]); }
+      LIST.appendChild(r);
+      return r;
+    });
+    const pickRow = rows[K - 1], others = rows.filter(function (r, i) { return i !== K - 1; });
+    const firstScreen = rows.slice(0, 5);              // 清單區 540 高：一開始看得到前 5 列
+    // 停點列的中線對到清單區正中：第 K 列上緣 108(K−1)、列高 96、清單區半高 270
+    const dist = 108 * (K - 1) + 48 - 270;
+
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-scroll-brake'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const TC = P.at('#561@三十');                       // 講到數量：數字落在項數
+    const TB = P.at('#563@這一個');                     // 講到「這一個」：急剎
+    P.sfx('impact', '#563@這一個');                     // 急剎那一格一顆（句號和 TB 一樣）
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 急剎（以下都不用改）：清單往上捲 dist，加速（速度 ∝ 時間²）→ 等速 0.35 秒 → 0.45 秒猛減速衝過頭 24 px（TB 那一格）→ 0.4 秒回正。
+    // 位置與縱向模糊都是時間的閉式解（純函式，不讀上一格）；用 P.morph 推清單元素上的進度屬性 xsbScroll（0→1），每次 render 照它重畫，建立時先畫 0
+    const brake = function (s0, tb) {
+      const ta = Math.max(1.0, tb - s0 - 0.8), start = tb - 0.8 - ta, over = 24, tc = 0.35, tbk = 0.45, settle = 0.4, total = ta + tc + tbk + settle;
+      const vmax = (dist + over) / (ta / 3 + tc + tbk / 3), xa = vmax * ta / 3, xc = xa + vmax * tc;
+      const at = function (tau) {   // → [位置 px, 速度 px／秒]
+        if (tau <= 0) return [0, 0];
+        if (tau < ta) return [vmax * tau * tau * tau / (3 * ta * ta), vmax * (tau / ta) * (tau / ta)];
+        if (tau < ta + tc) return [xa + vmax * (tau - ta), vmax];
+        if (tau < ta + tc + tbk) { const s = (tau - ta - tc) / tbk; return [xc + vmax * tbk / 3 * (1 - Math.pow(1 - s, 3)), vmax * (1 - s) * (1 - s)]; }
+        const u = Math.min(1, (tau - ta - tc - tbk) / settle), e = (1 - Math.cos(Math.PI * u)) / 2;
+        return [dist + over * (1 - e), u < 1 ? over * Math.PI / 2 * Math.sin(Math.PI * u) / settle : 0];
+      };
+      const paint = function (r) {
+        const pv = at(r * total), y = Math.round(pv[0]), perFrame = pv[1] / 30, b = Math.max(0, Math.min(22, perFrame * 0.45));
+        LIST.style.transform = y > 0 ? 'translateY(' + (-y) + 'px)' : '';   // 整數 px：字不糊、每次 seek 點陣一樣
+        BLUR.setAttribute('stdDeviation', '0 ' + b.toFixed(2));
+        VIEW.style.filter = perFrame >= 1 && b > 0.3 ? 'url(#xsb-blur)' : '';   // 模糊掛在清單區，停下來就拿掉
+      };
+      let prog = 0;
+      Object.defineProperty(LIST, 'xsbScroll', { configurable: true, get: function () { return prog; }, set: function (r) { prog = r; paint(r); } });
+      paint(0);
+      P.morph(LIST, start, { xsbScroll: 1 }, { from: { xsbScroll: 0 }, dur: total, ease: 'none' });
+    };
+
+    // 拍 0 開場：視窗卡進場（看 ENTER）→ 標題逐字上浮；左邊計數由左擦開
+    if (ENTER === 'grow') P.grow('#xsb-card', 0.3);
+    else { P.wipe('#xsb-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xsb-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.chars('#xsb-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
+    P.wipe('#xsb-count', 0.5, { dir: 'left', dur: 0.6 });
+
+    // 拍 1 講到數量：數字提早 1.2 秒從 0 滾、落在項數；清單第一屏提早 0.4 秒錯拍彈出（一組算一個）
+    P.count('#xsb-num', TC - 1.2, { from: 0, to: N, dur: 1.2 });
+    P.pop(firstScreen, TC - 0.4, { from: 0.96, dy: 16, dur: 0.45, stagger: 0.12 });
+
+    // 拍 2 這一個：TB 前 3.6 秒（最早 TC + 1.9）開始捲、越捲越快，講到時急剎衝過頭 → 回正
+    brake(Math.max(TC + 1.9, TB - 3.6), TB);
+    // 急剎那一格：四角準星從外圍收攏咬住（x 收 0.3 倍、y 收 1.2 倍的距離，back.out）；＋0.12 其他列退暗、停點列抬起換主色框；＋0.3 膠囊彈出
+    P.in('#xsb-lock', TB, { dur: 0.15 });
+    $q('.xsb-cn').forEach(function (c, i) {
+      const sx = i % 2 ? 1 : -1, sy = i < 2 ? -1 : 1, w = WIDE ? 1004 : 704;
+      P.morph(c, TB, { x: 0, y: 0 }, { from: { x: Math.round(sx * (w / 2 - 22) * 0.3), y: Math.round(sy * 50 * 1.2) }, dur: 0.36, ease: 'back.out(2.2)' });
+    });
+    P.dim(others, TB + 0.12, { to: 0.38 });
+    P.morph(pickRow, TB + 0.12, { scale: 1.02 }, { from: { scale: 1 }, dur: 0.3, ease: 'power3.out' });
+    P.in('.xsb-ring', TB + 0.12, { dur: 0.2 });
+    P.in('.xsb-on', TB + 0.12, { dur: 0.2 });
+    P.pop('#xsb-keep', TB + 0.3, { from: 0.6, dy: 0 });
+
+    // 收：左邊小標換成急剎後的那一句、數字換成主色的 1（淡出 → 彈出重拍）；完成態停到段尾
+    P.swap('#xsb-eye', '#xsb-eye2', TB + 0.45);
+    P.out('#xsb-num', TB + 0.45, { dur: 0.2 });
+    P.pop('#xsb-num2', TB + 0.5, { from: 0.7, dy: 0 });
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-scroll-brake'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker.jpg" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame.png" alt="">
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-scroll-brake";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#scene, #pip, #pipf', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#scene, #pip, #pipf', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

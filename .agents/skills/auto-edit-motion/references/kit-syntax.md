@@ -15,6 +15,9 @@
 | 淡入、淡出、換內容 | `P.in(sel, at, {dur, stagger})`、`P.out(sel, at)`、`P.swap(舊, 新, at)` |
 | 逐字 | `P.chars(sel, at, {mode, stagger})`（mode：rise、pop、drop） |
 | 打字 | `P.type(sel, at, {cps})` |
+| 逐詞壓印 | `P.press(sel, at, {stagger})`：詞從放大、微糊壓到定位（每詞 0.14 秒；沒寫 `<wbr>` 就自動斷詞，`<span>` 整個一個詞）；at 給陣列＝每個詞一個時刻；`P.pressDone`＝最後一個詞落定的秒數 |
+| 翻面 | `P.flip(卡片, T − P.FLIP_LEAD)`：卡片裡兩個子元素 `data-flip="front"`、`data-flip="back"`，背面剛好在 T 露出；一張卡只翻一次 |
+| 括號揭示 | `P.brace(sel, at, {open})`：`class="sc-brace"`（固定寬高）裡放 `.sc-brace__l`、`.sc-brace__r` 兩條括號 svg 和 `.sc-brace__text`（樣子照抄 `scenes/06-concept/template.html` 的 `@body-full`）；at 描出、open（預設 at＋0.45）彈開 |
 | 數字滾動 | `P.count(sel, at, {from, to, dur, prefix, suffix, ease})`（一格一格跳寫 `ease: 'none'`） |
 | 描線 | 整個插圖畫出來 `P.draw(sel, at, {dur})`；單一線條 `P.stroke(sel, at, {dur, stagger})` |
 | 彗星描線 | `P.comet(線, at, {dur})`（描完是實線；沒有 stagger，錯拍就分開呼叫） |

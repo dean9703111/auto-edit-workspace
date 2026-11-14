@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 金句字卡（全寬）｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg-fs.jpg、../bg-side.jpg、../bg-ch.jpg（或單一 ../bg.jpg）後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：各版面先用自己的 ../bg-*.jpg，沒有就用 ../bg.jpg，都沒有只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  [data-wide] .sc-surface-fs { background-image: var(--sc-fs-pattern); }
+  .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-quote #pv-qfArea { position: absolute; left: 120px; right: 120px; top: 40px; bottom: 180px; display: flex; align-items: center; justify-content: center; --qf: min(128px, calc(1440px / 11)); }
+  #pv-quote #pv-qfRow { display: flex; align-items: flex-start; gap: 48px; }
+  #pv-quote #pv-qfMark { flex: none; width: calc(var(--qf) * 1.25); height: var(--qf); margin-top: calc(var(--qf) * 0.12); }
+  #pv-quote #pv-qfMark path { fill: var(--brand); }
+  #pv-quote #pv-qfCol { display: flex; flex-direction: column; align-items: flex-start; }
+  #pv-quote #pv-qfText { font-size: var(--qf); line-height: 1.19; font-weight: 900; color: var(--sc-fs-ink); white-space: nowrap; }
+  #pv-quote #pv-qfText .sc-kw { position: relative; color: var(--brand); }
+  #pv-quote #pv-qfBy { display: flex; align-items: center; gap: 24px; margin-top: 48px; height: 60px; }
+  #pv-quote #pv-qfRule { display: block; width: 64px; height: 6px; border-radius: 3px; background: var(--brand); }
+  #pv-quote #pv-qfBy .sc-opt { font-size: 44px; line-height: 60px; font-weight: 700; color: var(--sc-fs-mute); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene" data-wide>
+    <div id="pv-quote" class="fill">
+      <div class="sc-surface-fs fill"></div>
+      <div id="pv-aWrap" class="fill">
+        <div id="pv-qfArea" data-layout="free">
+          <div id="pv-qfRow">
+            <svg id="pv-qfMark" viewBox="0 0 160 128" aria-hidden="true">
+              <path d="M62 8 C30 16 8 42 8 78 L8 120 L66 120 L66 66 L34 66 C36 46 48 32 68 26 Z" />
+              <path d="M148 8 C116 16 94 42 94 78 L94 120 L152 120 L152 66 L120 66 C122 46 134 32 154 26 Z" />
+            </svg>
+            <div id="pv-qfCol">
+              <div id="pv-qfText">把解決問題的經驗<br>變成可以重複使用的資產</div>
+              <div id="pv-qfBy"><i id="pv-qfRule"></i><span class="sc-opt">大寶</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cg" id="cap"><span>工具會一直更新，這個思維會跟著你</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"quote","duration":6,"cues":[{"sound":"sparkle","at":0.1}]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-quote'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 6;
+    /* 全幕版：引號彈出 → 金句逐詞壓印（每詞 0.14；斷詞照瀏覽器的中文斷詞）→ 關鍵詞（**…**）螢光筆 → 出處短線擦開、字上浮。
+       前一段是講者（色帶擦開）晚 0.35 秒開始，前一段也是全畫面（換卡不換景、上推）0.1 秒開始；離場由 build 負責 */
+    const T0 = 0 + (P.prev() === 'speaker' ? 0.35 : 0.1);
+    P.pop('#pv-qfMark', T0, { from: 0.3, dy: 0, ease: P.V2.EASE.emph });
+    P.press('#pv-qfText', T0 + 0.3);
+    P.marker('#pv-qfText .sc-kw', P.pressDone + 0.1);
+    P.wipe('#pv-qfRule', P.pressDone + 0.45, { dir: 'left', dur: 0.4 });
+    P.rise('#pv-qfBy .sc-opt', P.pressDone + 0.55);
+    tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.to('#scene', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 5.5);
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

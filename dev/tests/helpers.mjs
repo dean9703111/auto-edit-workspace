@@ -7,6 +7,7 @@ import { after } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 process.env.AUTO_EDIT_NO_LOCAL_SFX ??= '1';   // 測試不看本機的自備音效（shared/sfx-local/ 每個人不一樣），結果才不會跟著機器變
+process.env.AUTO_EDIT_NO_LOCAL_BRAND ??= '1';   // 也不看本機的片尾模板、片尾配樂預設（shared/setting.json 的 ending、music.outro；033）
 const here = path.dirname(fileURLToPath(import.meta.url));
 // 兩種擺法都能跑：agent-skills 的 video/minimax/素材/tools/template-tests/（工作區在 ../../workspace）、
 // 獨立 repo auto-edit-workspace 的 dev/tests/（工作區就是 ../..）

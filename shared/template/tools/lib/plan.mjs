@@ -4,8 +4,9 @@
 //     canvas：lib/canvas.mjs 的版式設定（build 照 resolveFormat 決定後傳入；沒傳就看 plan.json 的 format）。結果多 format、canvas；
 //     直式：座標檢查用 1080×1920、講者面板（pipGeometry 第三個參數）、03／05 ✖、footprint 與角標照 canvas、臉超出講者面板 ⚠（FR-041）
 //     → { items, errors, warnings, globals, edit, editActive, tm, outDur, cuesOut, voiceOnly, voiceOut, voiceGaps, footage, editFx,
-//         rhythm, uncovered, spokenLen, chapters, blackout, sfxBudget, outro, theme }
+//         rhythm, uncovered, spokenLen, chapters, blackout, sfxBudget, outro, ending, finalDur, theme }
 //     （rhythm／uncovered／chapters／blackout／outro／theme：specs/002-pipeline-timing；sfxBudget：005 的 lib/audio.mjs）
+//     ending＝片尾模板（033，lib/ending.mjs；shared/setting.json 沒設定＝null）；finalDur＝完成影片總長＝outDur＋片尾卡秒數（沒有片尾卡＝outDur）
 //     theme＝"light"（預設）或 "dark"（specs/010-motion-v2/design-system.md §10；build 換 bg-*-dark.jpg、所有合成的 <html> 加 data-theme="dark"）
 //     style＝風格包名稱（shared/template/styles/<名稱>/，lib/styles.mjs；不寫＝shared/template/ 目前的主色與背景）；這裡只檢查型別，包在不在由 build 查
 //     lib = { scenes, icons, fx, consts, sfx, accent }
@@ -21,12 +22,12 @@
 //   pipGeometry(pipCrop, speakerBox, canvas) → { crop:{x,y,w,h}, style:{left,top,width,height}[, box] }（canvas 直式時是講者面板，多回傳 box＝pip.box）
 //   formatReport(result, { videoDur, tail }) → 文字報告（每段一列：id｜情境｜起–迄｜長度｜音效時間｜警告；之後是長度、節奏、沒有畫面的區間、只有聲音、音效次數、轉場與主題）
 //   jsonItems(result)／jsonTop(result, { clip }) → --check --json 的 items 與第一層新欄位（specs/contracts/check-json.md schema 2）
-//   outroClip(outro, len, outDur)／outroLine(outro, clip) → 結尾配樂的起播點與報告行
+//   outroClip(outro, len, finalDur)／outroLine(outro, clip) → 結尾配樂的起播點與報告行（finalDur＝含片尾卡的總長）
 //   子母畫面片段 pipPieces[] 帶 enter（fly／fade／none）、exit（layer／fade／none）、exitDur、slideFrom（接上一段時從哪滑過來）；擦入擦出 wipeIn／wipeOut、preroll／postroll；media 疊化 xfade
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { findScene, suggestScenes, resolveScene } from './scenes.mjs';
+import { findScene, suggestScenes, resolveScene, fullScene, mapScene, chapterMapCtx, MAP } from './scenes.mjs';
 import { readCustom } from './assemble.mjs';
 import { findCue, norm, cueByN } from './srt.mjs';
 import { parseTime, cueSeconds, r3, floorFrame, TIME_HELP, FPS, normText, wordTime, textWidth, onVoice, voicedAt } from './time.mjs';
@@ -36,6 +37,7 @@ import { SFX_RULES, SFX_SWAP, rotateSfx, sfxBudget, thinMainSfx, LOUD } from './
 import { LOCAL_ROLES, sfxActual, wavSeconds } from './sfx-local.mjs';
 import { BED } from './music.mjs';
 import { validateMoods, moodCues, moodSound, zoomSpans, MOOD_KINDS } from './moods.mjs';
+import { sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle } from './caption-style.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, CANVAS, canvasOf, LAYOUT } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
@@ -43,23 +45,27 @@ import { floorRules, atConsts, faceZone, coverWarn, FACE_WARN } from './audit-ru
 import { layoutFindings, modeOfLayout } from './layout-rhythm.mjs';
 import { sideLayout, SIDES } from './speaker-side.mjs';
 import { readScript } from './script-file.mjs';
+import { resolveEnding } from './ending.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
-const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'moods', 'scenes'];
+const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'ending', 'chapterBadge', 'chapterMap', 'sections', 'check', 'look', 'theme', 'captionStyle', 'style', 'edit', 'moods', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
 const BED_KEYS = ['music', 'volume'];
 const KEYS = {
-  scene: ['id', 'type', 'scene', 'from', 'to', 'duration', 'at', 'anchor', 'slots', 'beats', 'tone', 'sfx', 'sfxExtra', 'css', 'chtag', 'pip', 'sfxVolume', 'note', 'story'],
+  scene: ['id', 'type', 'scene', 'from', 'to', 'duration', 'at', 'anchor', 'slots', 'beats', 'tone', 'sfx', 'sfxExtra', 'css', 'chtag', 'pip', 'full', 'enter', 'sfxVolume', 'note', 'story'],
   fx: ['id', 'type', 'fx', 'from', 'to', 'duration', 'anchor', 'bg', 'vars', 'sfx', 'sfxExtra', 'sfxVolume', 'note', 'story'],
-  custom: ['id', 'type', 'src', 'template', 'design', 'slots', 'layout', 'from', 'to', 'duration', 'anchor', 'sfx', 'sfxExtra', 'pip', 'sfxVolume', 'clicks', 'note', 'story'],
+  custom: ['id', 'type', 'src', 'template', 'design', 'slots', 'layout', 'from', 'to', 'duration', 'anchor', 'sfx', 'sfxExtra', 'pip', 'enter', 'sfxVolume', 'clicks', 'note', 'story'],
   media: [...MEDIA_KEYS, 'story'],
 };
 const DECLICK = 0.02;      // 剪接點兩側的人聲淡入淡出（避免爆音）
 const VOICE_ERR = 1;       // 只有聲音的區間沒被蓋住超過 1 秒就 ✖
 const VOICE_WARN = 0.1;      // 沒被蓋住超過 0.1 秒就 ⚠（舊值 0.5）
 const PIP_MIN = 0.5;        // 子母畫面片段短於 0.5 秒就不放（只會閃一下）
+const FULL_AT = 0.5;        // 034：有全幕版的疊加字卡，一半以上的時間落在只有聲音的區間就自動換成全幕版
+const SCREEN_SETTLE = 0.7;  // 034：全畫面段進場後 0.7 秒內不推畫面（進場還在動）
+const PUSH_NEAR = 1.0;      // 034：小節的第一句在這一段起點前後 1 秒內＝這一段是小節開頭（前後都是全畫面就用上推）
 const FADE = 0.5;          // 不透明幕淡入淡出
 const FX_REPEAT_MAX = 2;    // 同一張字卡動態一集最多幾次（shared/style.md「節奏」）
 const TEMPLATE_MAX = { 'x-wordcut': 1, 'x-wall': 2, 'x-magazine': 1, 'x-breakout': 1 };   // 吸睛的模板動畫一集最多幾次（shared/style.md「節奏」）
@@ -423,10 +429,16 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const FOOT = footprintsOf(C), BAD = badgeOf(C);
   const rhythm = plan.rhythm ?? 'continuous';
   if (!RHYTHMS.includes(rhythm)) errors.push(`rhythm 只能是 "continuous"（預設，照 style.md 連續覆蓋）或 "spaced"（要留露臉空檔），現在是 ${JSON.stringify(plan.rhythm)} → 刪掉 rhythm，或改成 "continuous"／"spaced"`);
+  if (plan.chapterMap !== undefined && typeof plan.chapterMap !== 'boolean') errors.push(`chapterMap 只能是 true（每個 01 章節轉場換成本集地圖）或 false，現在是 ${JSON.stringify(plan.chapterMap)} → 不要地圖就刪掉這個欄位`);
   if (plan.chapterBadge !== undefined && typeof plan.chapterBadge !== 'boolean') errors.push(`chapterBadge 只能是 true 或 false（不寫＝true：章節角標自動常駐右上角），現在是 ${JSON.stringify(plan.chapterBadge)} → 不要常駐角標就寫 false，否則刪掉這個欄位`);
   const badgeOn = plan.chapterBadge !== false;
   if (plan.theme !== undefined && !THEMES.includes(plan.theme)) errors.push(`theme 只能是 "light"（預設，米白底、白卡）或 "dark"（石墨黑底、玻璃卡），現在是 ${JSON.stringify(plan.theme)} → 改成 "light"／"dark"，或刪掉這個欄位（＝亮色）`);
   const theme = plan.theme === 'dark' ? 'dark' : 'light';
+  // 035 字幕樣式（這一集；以後每集的預設在 shared/setting.json 的 captions，build 合起來，lib/caption-style.mjs）
+  if (plan.captionStyle !== undefined) errors.push(...sanitizeCaptionStyle(plan.captionStyle, 'captionStyle').errors.map((e) => `${e} → 改好，或刪掉這個欄位（＝用預設）`));
+  const capRes = resolveCaptionStyle({ plan, settings: { captions: lib.captionDefault ?? undefined }, format: C.format });
+  if (capRes.errors.length && (plan.captionStyle === undefined || plan.captionStyle === null)) warnings.push(...capRes.errors.map((e) => `${e} → 先用原本的字幕樣式；用 brand.mjs captions 重設預設`));
+  warnings.push(...capRes.notes.map((n) => `字幕樣式：${n}`));
   if (plan.style !== undefined && (typeof plan.style !== 'string' || !plan.style.trim())) errors.push(`style 要寫風格包的名稱（shared/template/styles/ 底下的資料夾名，例 "預設"），現在是 ${JSON.stringify(plan.style)} → 改成名稱，或刪掉這個欄位（＝用 shared/template/ 目前的主色與背景）`);
   const style = typeof plan.style === 'string' && plan.style.trim() ? plan.style.trim() : null;
   // check：只給示意／預覽用的 plan 關規則（示意卡的文字跟字幕無關）；正式 plan.json 寫了 build 會 ⚠
@@ -500,7 +512,9 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   // 後面各節拆成收 ctx 的小函式（032 C10）：要用的值都放在這裡，各節算出來的再掛回 ctx。
   // 順序不能換：後面的節讀前面寫在各段上的值（end、pipPieces、sfx…），✖／⚠ 的先後也照這個順序
   const ctx = { plan, lib, icons, consts, sfxConf, sfxDir, outDir, projectDir, projectRel, cutpoints, errors, warnings, items, timed, cues, videoDur, tm, ne, edit, mapAbs, voiceOut, speakerBox, sideShift, pipCrop, sl, C, portrait, FOOT, BAD, rhythm, badgeOn, textSyncOn, waitLead };
-  // 起迄、接縫、轉場、子母畫面
+  // 全幕版（034）、起迄、接縫、轉場、子母畫面
+  fullCards(ctx);
+  chapterMapCards(ctx);
   chapterTagCovered(ctx);
   lowerThirdHandoff(ctx);
   opaqueSeams(ctx);
@@ -510,6 +524,8 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   wideLayout(ctx);
   // 小節角標、章節、每一段的內容
   ctx.sections = parseSections(ctx);
+  pushSeams(ctx);
+  diveSeams(ctx);
   ctx.secBadgeFor = sectionBadgeBox(ctx);
   ctx.chapters = chapterHeads(ctx);
   segmentContent(ctx);
@@ -530,6 +546,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   // 章節、配樂、角標
   const { chapterList, blackout } = chapterSpans(ctx);
   ctx.chapterList = chapterList;
+  const ending = ctx.ending = resolveEnding(ctx);
   const outro = ctx.outro = resolveOutro(ctx);
   const bed = resolveBed(ctx);
   const badges = chapterBadges(ctx);
@@ -546,7 +563,9 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     edit, editActive: ne.active, tm, outDur: videoDur, roughDur, cuesOut: cues, voiceOnly, voiceOut, voiceGaps, footage, editFx, cutpoints, voiceMoved: [...(cues.voiceMoved || [])],
     moods: moodItems.map((m) => ({ i: m.mood.i, kind: m.mood.kind, event: m.mood.event, zoom: m.mood.zoom, sfx: m.sfx, dropped: m.sfxDropped?.name ?? null, off: m.mood.sfxOff })), zooms,
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro, bed,
+    ending, finalDur: r3(videoDur + (ending?.dur || 0)),
     chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
+    captionStyle: capRes.isDefault ? null : capRes.style, captionFrom: capRes.from,
   };
 }
 
@@ -566,6 +585,8 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
   it.type = type;
   if (!KEYS[type]) { err(`type 只能是 "scene"（預設）、"fx"、"custom" 或 "media"，現在是「${type}」→ 改成其中一個（第一層情境不寫 type）`); return it; }
   for (const k of Object.keys(seg)) if (!KEYS[type].includes(k)) err(`沒有「${k}」這個欄位（type=${type} 可用：${KEYS[type].join('、')}）`);
+  // 036 穿窗：只寫在後一段；接縫合不合（前後都是全畫面）在 diveSeams 判斷
+  if (type !== 'media' && seg.enter !== undefined && seg.enter !== 'dive') err(`enter 只能寫 "dive"（穿窗：前一段最後聚焦的元素變成一扇窗、長成這一段），現在是 ${JSON.stringify(seg.enter)} → 不要穿窗就刪掉 enter`);
 
   // --- 種類 ---
   if (type === 'scene') {
@@ -583,6 +604,8 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
     it.compId = `${seg.id}-${scene.key}`;
     it.file = `compositions/${it.compId}.html`;
     if (seg.chtag && !(scene.addons || []).includes('chtag')) err(`chtag：「${scene.zh}」不能加章節角標`);
+    if (seg.full !== undefined && typeof seg.full !== 'boolean') err(`full 只能是 true（換成全幕版）或 false（不自動換），現在是 ${JSON.stringify(seg.full)}`);
+    else if (seg.full === true && !scene.hasFull) err(`full：「${scene.zh}」沒有全幕版（有的：${scenes.filter((s) => s.hasFull).map((s) => `${s.num} ${s.zh}`).join('、')}）→ 拿掉 full，或換成全畫面的模板`);
   } else if (type === 'fx') {
     const def = fx.find((f) => f.no === Number(seg.fx));
     if (!def) { err(`fx：沒有第 ${JSON.stringify(seg.fx)} 號字卡動態（1–40，清單跑 build.mjs --list）`); return it; }
@@ -887,6 +910,40 @@ function settleEdges({ timed, videoDur }) {
   }
 }
 
+// resolvePlan 的一節（034）：疊加字卡的全幕版。有全幕版的情境（template.html 有 @style-full／@body-full／@timeline-full）
+// 一半以上的時間落在只有聲音的區間、或寫了 "full": true，就換成全幕版：不透明的整張畫面，和 04 家族同一層、同一套接法（換卡不換景、擦入擦出、上推）。
+// plan.json、分鏡、剪輯台照舊寫原本的情境；it.scene 換成全幕版的複本（family fullscreen、直式用舞台縮放、底是 fs 底），後面各節照全畫面處理
+function fullCards({ timed, voiceOut }) {
+  for (const it of timed) {
+    if (it.type !== 'scene' || !it.scene.hasFull || it.seg.full === false) continue;
+    const len = it.end - it.start;
+    const dark = voiceOut.reduce((s, [a, b]) => s + Math.max(0, Math.min(b, it.end) - Math.max(a, it.start)), 0);
+    if (it.seg.full !== true && !(len > 0 && dark / len >= FULL_AT)) continue;
+    it.scene = fullScene(it.scene);
+    it.full = true; it.opaque = true; it.pip = false; it.lower = false; it.z = 30;
+    it.label = `${it.label}（全幕版）`;
+    it.pipNote = it.seg.full === true ? '全幕版（"full": true）' : '全幕版（這段沒有講者）';
+  }
+}
+
+// resolvePlan 的一節（036）：本集地圖。第一層 "chapterMap": true → 每一個 01 章節轉場換成地圖版：整集的章排在一張平面地圖上，
+// 鏡頭從上一章推到這一章（章名、章號從各個 01 段收；版面數字 scenes.mjs chapterMapCtx）。章數不在 3–8 ⚠ 照舊
+function chapterMapCards({ plan, timed, warnings, portrait }) {
+  if (plan.chapterMap !== true) return;
+  if (portrait) { warnings.push('chapterMap：直式不做本集地圖（地圖是照橫式排的），照舊用一般的章節轉場 → 刪掉 chapterMap'); return; }
+  const heads = timed.filter((x) => x.type === 'scene' && x.key === 'chapter' && x.scene?.hasMap && x.start != null).sort((a, b) => a.start - b.start);
+  if (heads.length < MAP.min || heads.length > MAP.max) {
+    warnings.push(`chapterMap：這一集有 ${heads.length} 個 01 章節轉場，本集地圖要 ${MAP.min}–${MAP.max} 章，照舊用一般的章節轉場 → ${heads.length < MAP.min ? '章太少不用地圖' : '章太多排不下'}，刪掉 chapterMap`);
+    return;
+  }
+  const list = heads.map((x) => ({ num: x.seg.slots?.num, title: String(x.seg.slots?.title ?? '') }));
+  heads.forEach((it, k) => {
+    it.scene = mapScene(it.scene);
+    Object.defineProperty(it, 'mapCtx', { value: chapterMapCtx(list, k), enumerable: false, configurable: true });
+    it.label = `${it.label}（本集地圖 ${k + 1}／${heads.length}）`;
+  });
+}
+
 // resolvePlan 的一節：子母畫面切成幾片（各段寫 pipPieces、pipNote）
 function pipPieces({ timed, tm, voiceOut, videoDur }) {
   // --- 子母畫面的片段：只有聲音的區間不顯示（那裡沒有講者），接點（cut）切開讓 data-media-start 跟著跳 ---
@@ -906,6 +963,7 @@ function wideLayout({ timed, portrait }) {
   for (const a of timed) {
     if (portrait || !a.opaque || a.pipPieces.length || !(a.type === 'custom' || (a.type === 'scene' && a.scene?.family === 'fullscreen'))) continue;
     a.wide = true;
+    if (a.full) continue;   // 全幕版本來就是整張畫面的排法，pipNote 在 fullCards 寫好了
     a.pipNote = `${a.pipNote ? `${a.pipNote}；` : ''}全寬版型（主卡 1680、內容區 1676×580：插圖放大、站距拉開，style.md「全寬」）`;
     if (a.type === 'scene' && a.scene.key === 'fs-list' && !a.seg.slots?.visual) a.warnings.push(`${a.where} 全寬（沒有子母畫面小視窗）的清單右半邊會空 → slots 加 "visual": "<畫廊插圖元件>"（右邊的主視覺，講到每一項重拍一下；例 "laptop"、"phone"）`);
   }
@@ -931,6 +989,35 @@ function parseSections({ plan, cues, errors, warnings }) {
     });
   }
   return sections;
+}
+
+// resolvePlan 的一節（034）：上推。前後都是全畫面（換卡不換景）、後一段是小節（sections）的開頭 → 改成上推：
+// 新的一頁連底色從下緣推上來、把前一頁頂出去（main.mjs）。同一小節裡照舊換卡不換景；不新增 plan.json 欄位
+function pushSeams({ timed, sections }) {
+  if (!sections.length) return;
+  const byId = new Map(timed.map((x) => [x.id, x]));
+  for (const a of timed) {
+    const b = a.txOut === 'swap' ? byId.get(a.seamTo) : null;
+    if (!b || b.txIn !== 'swap' || !sections.some((s) => Math.abs(s.at - b.start) <= PUSH_NEAR)) continue;
+    a.txOut = 'push'; b.txIn = 'push';
+  }
+}
+
+// resolvePlan 的一節（036）：穿窗。後一段寫 "enter": "dive"、接縫是全畫面接全畫面（換卡不換景或上推）→ 前一段最後聚焦的元素變成一扇窗、長成後一段（main.mjs）。
+// 一集最多 DIVE_MAX 次、相鄰兩個接縫不都穿窗、直式不做（舞台縮放的座標對不上），不合的 ⚠ 照舊
+const DIVE_MAX = 3;
+function diveSeams({ timed, warnings, portrait }) {
+  let n = 0;
+  for (const b of timed) {
+    if (b.seg?.enter !== 'dive') continue;
+    const a = timed.find((x) => x.seamTo === b.id);
+    const w = (m) => warnings.push(`${b.where} enter "dive"：${m}`);
+    if (portrait) { w('直式不做穿窗，照舊換卡 → 刪掉 enter'); continue; }
+    if (!a || !['swap', 'push'].includes(a.txOut) || !['swap', 'push'].includes(b.txIn)) { w('前一段要是全畫面、而且直接接上這一段（沒有講者、中間沒有空檔），這裡不是，照舊 → 刪掉 enter，或把前一段的 to 接到這一段的 from'); continue; }
+    if (a.txIn === 'dive') { w(`${a.id} 已經是穿窗進來的，相鄰兩個接縫不都穿窗，照舊 → 刪掉其中一個的 enter`); continue; }
+    if (++n > DIVE_MAX) { w(`一集最多穿窗 ${DIVE_MAX} 次，這是第 ${n} 次，照舊 → 只留最重要的 ${DIVE_MAX} 個`); continue; }
+    a.txOut = 'dive'; b.txIn = 'dive';
+  }
 }
 
 // resolvePlan 的一節：小節角標在每一段的框（回傳 secBadgeFor(it) → { box, side, names } 或 null；錄影段、全寬段的位置算一次就記住）
@@ -979,8 +1066,8 @@ function sectionBadgeBox({ badgeOn, sections, portrait, timed, BAD }) {
 
 // resolvePlan 的一節：章節轉場（沒有副標 ⚠；回傳 chapters：給 chtag 的章號與章名）
 function chapterHeads({ timed }) {
-  // 章節轉場沒有副標：只剩章號和章名（「結語」兩個字），畫面很空
-  for (const ch of timed.filter((x) => x.key === 'chapter' && !String(x.seg.slots?.sub ?? '').trim())) {
+  // 章節轉場沒有副標：只剩章號和章名（「結語」兩個字），畫面很空（本集地圖版不放副標，不提醒）
+  for (const ch of timed.filter((x) => x.key === 'chapter' && !x.mapCtx && !String(x.seg.slots?.sub ?? '').trim())) {
     ch.warnings.push(`${ch.where} 沒有副標（slots.sub）：只有章號和章名，畫面很空 → 補一句 ≤ 12 字、講這一章要做什麼（講稿 ## 章名冒號後面那句可以直接用）`);
   }
   // --- 章節（給 chtag）---
@@ -997,6 +1084,7 @@ function segmentContent({ timed, cues, icons, consts, chapters, badgeOn, tm, C, 
       const sc = it.scene;
       if (sc.duration?.min && sc.bindsSrt !== false && it.D < sc.duration.min - 1e-6) it.errors.push(`${it.where} 段長 ${it.D}s，「${sc.zh}」至少 ${sc.duration.min}s → to 往後延到至少 ${fmt(it.start + sc.duration.min)}（${r3(it.start + sc.duration.min)}s）或換情境`);
       const r = resolveScene({ scene: sc, seg: it.seg, cues, icons, consts, t0: it.start, D: it.D, where: it.where });
+      if (it.mapCtx) Object.assign(r.ctx, it.mapCtx);   // 036 本集地圖：各站、路線、鏡頭
       it.resolved = r;
       it.errors.push(...r.errors);
       it.warnings.push(...r.warnings);
@@ -1276,8 +1364,10 @@ function voiceOnlyGaps({ timed, voiceOut, tm, projectDir, projectRel, errors, wa
         ? `→ 邊錄邊講的螢幕錄影還沒放進 plan.json：跑 node shared/template/tools/media.mjs screen-sync --project ${projectRel} --write-plan`
         : `→ 跑 node shared/template/tools/media.mjs scan --project ${projectRel}，看 work/media/ 的 contact sheet，配一段螢幕錄影或圖片（"type": "media"，from／to 蓋住這段），或用不透明的全畫面情境蓋住`;
       // 這裡排的是疊在講者上的字卡：沒有講者，底下是黑的。直接講是哪一段，不用去猜
-      const overlays = timed.filter((x) => !x.opaque && x.key !== 'chapter-tag' && x.start < b - 0.05 && x.end > a + 0.05).map((x) => `${x.id}（${x.label || x.key}）`);
-      const swap = overlays.length ? `（${overlays.slice(0, 4).join('、')}${overlays.length > 4 ? ` 等 ${overlays.length} 段` : ''}疊在講者上，這裡沒有講者，要換成全畫面的模板或內容設計動畫）` : '';
+      const ov = timed.filter((x) => !x.opaque && x.key !== 'chapter-tag' && x.start < b - 0.05 && x.end > a + 0.05);
+      const overlays = ov.map((x) => `${x.id}（${x.label || x.key}）`);
+      const fullable = ov.filter((x) => x.scene?.hasFull).map((x) => x.id);   // 034：有全幕版的寫 "full": true 就好
+      const swap = overlays.length ? `（${overlays.slice(0, 4).join('、')}${overlays.length > 4 ? ` 等 ${overlays.length} 段` : ''}疊在講者上，這裡沒有講者，要換成全畫面的模板或內容設計動畫${fullable.length ? `；${fullable.join('、')} 有全幕版，那一段加 "full": true` : ''}）` : '';
       if (len > VOICE_ERR) errors.push(`${where} 有 ${len}s 沒有畫面（全黑，講者不在）${swap}${fix}`);
       else {
         // 前後有沒有不透明段（A-06）：前面沒有 → 把後一段的 from 提早到區間起點；後面沒有 → 把前一段的 to 延到區間終點
@@ -1367,7 +1457,7 @@ function crossSegmentWarnings({ rhythm, timed, cues, voiceOut, warnings, speaker
     for (const it of timed) {
       if (it.side && sideShift > 0 && sl.panelSide === 'left' && speakerBox[2] + sideShift > C.W) it.warnings.push(`${it.where} 講者右移 ${sideShift} 後右緣到 ${speakerBox[2] + sideShift}，超出畫面 → plan.json 設 "sideShift": 0（講者本來就在面板外），或改用 04a 全畫面清單`);
       if (it.side && sideShift > 0 && sl.panelSide === 'right' && speakerBox[0] - sideShift < 0) it.warnings.push(`${it.where} 講者左移 ${sideShift} 後左緣到 ${speakerBox[0] - sideShift}，超出畫面 → plan.json 設 "sideShift": 0（講者本來就在面板外），或改用 04a 全畫面清單`);
-      let fam = it.scene ? (FOOT[it.key] || FOOT[it.scene.family]) : null;
+      let fam = it.scene && !it.full ? (FOOT[it.key] || FOOT[it.scene.family]) : null;   // 全幕版蓋住講者是故意的，不比碰撞
       if (!fam) continue;
       // 027：講者在左時，下方字卡、關鍵詞靠右、半螢幕的面板在右 → 版位左右鏡像
       const mirrored = !portrait && (it.side ? sl.panelSide === 'right' : sl.cardSide === 'right' && (it.lower || it.key === 'keywords'));
@@ -1442,12 +1532,15 @@ function moodZooms({ moodItems, timed, voiceOut, tm, cutpoints, mapAbs, edit, vi
     };
     const cutPts = [...new Set([...tm.joinsOut, ...cutpoints.map((c) => c.at).filter((x) => Number.isFinite(x)).map(mapAbs), ...(edit.joins || []).map((j) => tm.map(j.at))])]
       .filter((p) => p > 0 && p < videoDur).sort((p, q) => p - q);
-    const zr = zoomSpans(moodItems.map((m) => m.mood), { cues, cutPoints: cutPts, videoDur, speakerVisible, blockedUntil });
+    // 034 畫面推近：講者看不到、整段落在同一個沒有子母畫面的全畫面段（情境、情境動畫；不含章節、錄影段）裡、離進場 ≥ 0.7 秒才推（橫式）
+    const screenAt = (a, b) => (portrait ? null : timed.find((x) => x.opaque && (x.type === 'scene' || x.type === 'custom') && x.key !== 'chapter' && !x.pipPieces?.length && x.start + SCREEN_SETTLE <= a + 1e-9 && b <= x.end + 1e-9)?.id ?? null);
+    const zr = zoomSpans(moodItems.map((m) => m.mood), { cues, cutPoints: cutPts, videoDur, speakerVisible, blockedUntil, screenAt });
     const box = speakerBox;
     const origin = box ? `${Math.round((box[0] + box[2]) / 2)}px ${Math.round(box[1] + (box[3] - box[1]) * 0.3)}px` : `${LAYOUT[C.format].pushOrigin[0]}px ${LAYOUT[C.format].pushOrigin[1]}px`;
     const punches = editFx?.punches || [];
-    zooms = { origin, list: zr.zooms.map((z) => ({ ...z, base: punches.some((p) => z.a >= p.a - 1e-9 && z.a < p.b) ? PUNCH : 1 })) };
-    budget.lines.push(`講者爆衝推近：${zr.zooms.length} 次${zr.zooms.length ? `（${zr.zooms.map((z) => fmt(z.a)).join('、')}）` : ''}${zr.notes.length ? `；${zr.notes.slice(0, 3).join('；')}${zr.notes.length > 3 ? `…等 ${zr.notes.length} 則` : ''}` : ''}`);
+    zooms = { origin, list: zr.zooms.map((z) => (z.screen ? z : { ...z, base: punches.some((p) => z.a >= p.a - 1e-9 && z.a < p.b) ? PUNCH : 1 })) };
+    const sp = zr.zooms.filter((z) => !z.screen), sc = zr.zooms.filter((z) => z.screen);
+    budget.lines.push(`講者爆衝推近：${sp.length} 次${sp.length ? `（${sp.map((z) => fmt(z.a)).join('、')}）` : ''}${sc.length ? `；畫面推近 ${sc.length} 次（${sc.map((z) => `${fmt(z.a)} ${z.screen}`).join('、')}）` : ''}${zr.notes.length ? `；${zr.notes.slice(0, 3).join('；')}${zr.notes.length > 3 ? `…等 ${zr.notes.length} 則` : ''}` : ''}`);
   }
   return zooms;
 }
@@ -1482,34 +1575,42 @@ function chapterSpans({ timed, cues }) {
 }
 
 // resolvePlan 的一節：結尾配樂（回傳 outro；角標停在 outro 起點，所以也掛在 ctx.outro）
-function resolveOutro({ plan, sfxConf, sfxDir, cues, videoDur, edit, errors }) {
+// 曲名沒寫＝工作區預設（shared/setting.json 的 music.outro，music.mjs outro 寫的；033）；from 沒寫＝只播片尾最後 OUTRO_AUTO 秒（含片尾卡，auto: true）
+export const OUTRO_AUTO = 30;
+function resolveOutro({ plan, lib, sfxConf, sfxDir, cues, videoDur, ending, edit, errors, warnings }) {
   // --- 結尾配樂 outro（005 的 contracts/sfx.md §6；長度要量 wav，build 用 outroClip() 算起播點）---
-  let outro = null;
-  if (plan.outro !== undefined) {
-    const o = plan.outro;
-    if (!o || typeof o !== 'object' || Array.isArray(o)) errors.push(`outro 要寫成物件，例如 "outro": { "from": "#120" }，現在是 ${JSON.stringify(o)} → 照例子改，不要結尾配樂就刪掉 outro`);
-    else {
-      for (const k of Object.keys(o)) if (!OUTRO_KEYS.includes(k)) errors.push(`outro 不能有「${k}」→ 只能寫 ${OUTRO_KEYS.join('、')}`);
-      const music = o.music === undefined ? null : o.music;   // 預設不配（2026-11-02 作者）：要配樂就寫 kit/sfx.json 裡 kind: "bgm" 的名稱
-      let ok = true;
-      if (music !== null && sfxConf[music]?.kind !== 'bgm') { ok = false; errors.push(`outro.music：「${music}」不是配樂（可用：${bgmNames(sfxConf).join('、') || '（kit/sfx.json 沒有 kind: "bgm"）'}）→ 改成可用的配樂名稱，或寫 null 不配`); }
-      const t = parseTime(o.from);
-      let start = null;
-      if (t.error || t.kind !== 'cue' || t.end || t.off) { ok = false; errors.push(`outro.from：要寫 "#N" 或 "#N@詞"（結語金句講完後那一句），現在是 ${JSON.stringify(o.from)} → 改成收尾那一句的句號，例 "#120"`); }
-      else { const c = cueSeconds(t, cues); if (c.error) { ok = false; errors.push(`outro.from：${c.error}`); } else start = r3(c.sec); }
-      if (o.volume !== undefined && !(isNum(o.volume) && o.volume >= -20 && o.volume <= 6)) { ok = false; errors.push(`outro.volume 要是 −20～+6 的 dB 數字（0＝預設），現在是 ${JSON.stringify(o.volume)} → 改成 −20～+6 之間的數字，或刪掉這個欄位用預設`); }
-      if (o.fadeOut !== undefined && !(isNum(o.fadeOut) && o.fadeOut >= 0 && o.fadeOut <= 10)) { ok = false; errors.push(`outro.fadeOut 要是 0–10 的秒數（不寫＝用 kit/sfx.json 的 fadeOut），現在是 ${JSON.stringify(o.fadeOut)} → 改成 0–10 之間的秒數，或刪掉這個欄位用預設`); }
-      if (music && ok && sfxDir && !fs.existsSync(sfxConf[music].file || path.join(sfxDir, `${music}.wav`))) { ok = false; errors.push(`outro：音效檔 shared/sfx/${music}.wav 不存在 → shared/sfx/ 要有完整的 ${Object.keys(sfxConf).length} 個檔（kit/sfx.json 列的每一顆；見 shared/template/USAGE-reference.md R5.2）`); }
-      if (music === null) outro = { music: null };
-      else if (ok && start != null) {
-        const conf = sfxConf[music];
-        outro = { music, file: conf.file ?? null, credit: conf.credit ?? null, from: String(o.from), start, end: videoDur, span: r3(videoDur - start), fadeIn: conf.fadeIn ?? 0,
-          fadeOut: Math.max(o.fadeOut ?? conf.fadeOut ?? 0, edit.fadeOut || 0), gain: (conf.volume ?? 1) * dB(o.volume ?? 0) * dB(edit.volume?.sfx ?? 0),
-          relDb: r3((conf.targetDb ?? 0) + (o.volume ?? 0) + (edit.volume?.sfx ?? 0) - (edit.volume?.voice ?? 0)) };
-      }
-    }
+  const finalDur = r3(videoDur + (ending?.dur || 0));
+  const dflt = lib.outroDefault ?? null;
+  const o = plan.outro !== undefined ? plan.outro : dflt ? {} : undefined;
+  if (o === undefined) return null;
+  if (!o || typeof o !== 'object' || Array.isArray(o)) { errors.push(`outro 要寫成物件，例如 "outro": { "from": "#120" }，現在是 ${JSON.stringify(o)} → 照例子改，不要結尾配樂就寫 "outro": { "music": null }`); return null; }
+  for (const k of Object.keys(o)) if (!OUTRO_KEYS.includes(k)) errors.push(`outro 不能有「${k}」→ 只能寫 ${OUTRO_KEYS.join('、')}`);
+  const fromSetting = o.music === undefined;
+  const music = fromSetting ? dflt : o.music;   // 沒寫曲名也沒有工作區預設＝不配（2026-11-02 作者）
+  let ok = true;
+  if (music !== null && sfxConf[music]?.kind !== 'bgm') {
+    ok = false;
+    if (fromSetting) warnings.push(`結尾配樂：工作區預設的「${music}」不是曲庫裡的配樂（可用：${bgmNames(sfxConf).join('、') || '沒有'}），這一集沒配 → node shared/template/tools/music.mjs outro <曲名> 重新設定，或 music.mjs outro none 取消`);
+    else errors.push(`outro.music：「${music}」不是配樂（可用：${bgmNames(sfxConf).join('、') || '（kit/sfx.json 沒有 kind: "bgm"）'}）→ 改成可用的配樂名稱，或寫 null 不配`);
   }
-  return outro;
+  let start = null;
+  const auto = o.from === undefined;
+  if (auto) start = r3(Math.max(0, finalDur - OUTRO_AUTO));
+  else {
+    const t = parseTime(o.from);
+    if (t.error || t.kind !== 'cue' || t.end || t.off) { ok = false; errors.push(`outro.from：要寫 "#N" 或 "#N@詞"（結語金句講完後那一句），現在是 ${JSON.stringify(o.from)} → 改成收尾那一句的句號，例 "#120"；不寫＝只播片尾最後 ${OUTRO_AUTO} 秒`); }
+    else { const c = cueSeconds(t, cues); if (c.error) { ok = false; errors.push(`outro.from：${c.error}`); } else start = r3(c.sec); }
+  }
+  if (o.volume !== undefined && !(isNum(o.volume) && o.volume >= -20 && o.volume <= 6)) { ok = false; errors.push(`outro.volume 要是 −20～+6 的 dB 數字（0＝預設），現在是 ${JSON.stringify(o.volume)} → 改成 −20～+6 之間的數字，或刪掉這個欄位用預設`); }
+  if (o.fadeOut !== undefined && !(isNum(o.fadeOut) && o.fadeOut >= 0 && o.fadeOut <= 10)) { ok = false; errors.push(`outro.fadeOut 要是 0–10 的秒數（不寫＝用 kit/sfx.json 的 fadeOut），現在是 ${JSON.stringify(o.fadeOut)} → 改成 0–10 之間的秒數，或刪掉這個欄位用預設`); }
+  if (music && ok && sfxDir && !fs.existsSync(sfxConf[music].file || path.join(sfxDir, `${music}.wav`))) { ok = false; errors.push(`outro：音效檔 shared/sfx/${music}.wav 不存在 → shared/sfx/ 要有完整的 ${Object.keys(sfxConf).length} 個檔（kit/sfx.json 列的每一顆；見 shared/template/USAGE-reference.md R5.2）`); }
+  if (music === null) return { music: null };
+  if (!ok || start == null) return null;
+  const conf = sfxConf[music];
+  return { music, file: conf.file ?? null, credit: conf.credit ?? null, from: auto ? null : String(o.from), auto, source: fromSetting ? '工作區預設' : 'plan.json',
+    start, end: finalDur, span: r3(finalDur - start), fadeIn: conf.fadeIn ?? 0,
+    fadeOut: Math.max(o.fadeOut ?? conf.fadeOut ?? 0, ending?.dur > 0 ? 0 : edit.fadeOut || 0), gain: (conf.volume ?? 1) * dB(o.volume ?? 0) * dB(edit.volume?.sfx ?? 0),
+    relDb: r3((conf.targetDb ?? 0) + (o.volume ?? 0) + (edit.volume?.sfx ?? 0) - (edit.volume?.voice ?? 0)) };
 }
 
 // resolvePlan 的一節：底樂（回傳 bed；錯誤、提醒推進 ctx.errors／ctx.warnings）
@@ -1574,7 +1675,7 @@ function chapterBadges({ timed, secBadgeFor, badgeOn, sections, BAD, portrait, v
     for (const [a, b] of hideAll) { const l = merged[merged.length - 1]; if (l && a - l[1] <= BADGE.minGap + 1e-9) l[1] = Math.max(l[1], b); else merged.push([a, b]); }
     chs.forEach((c, i) => {
       const nextCut = chs[i + 1]?.cut ?? videoDur;
-      const stop = outro?.start != null && outro.start > c.at + 1e-6 ? outro.start : videoDur;
+      const stop = outro?.start != null && !outro.auto && outro.start > c.at + 1e-6 ? outro.start : videoDur;   // 只播最後 30 秒的（沒寫 from）不是內容的段落，角標照常到片尾
       const s = r3(c.at), e = r3(Math.min(nextCut, stop, videoDur));
       if (e - s < BADGE.minShow) return;
       const hide = merged.map(([a, b]) => [r3(Math.max(a, s)), r3(Math.min(b, e))]).filter(([a, b]) => b - a > 1e-3);
@@ -1683,12 +1784,12 @@ function rollRoom(it, side) {
 }
 
 // 轉場語彙（specs/010-motion-v2/design-system.md §5）：每段的進場 txIn／退場 txOut，main.mjs 照這兩個值做，--check --json 的 items[].out.tx 報出來
-//   txIn ：band（疊加卡進場）｜wipe（色帶帶路擦開＋講者飛進子母畫面）｜swap（換卡不換景：背景不動，新卡在段內進場）
+//   txIn ：band（疊加卡進場）｜wipe（色帶帶路擦開＋講者飛進子母畫面）｜swap（換卡不換景：背景不動，新卡在段內進場）｜push（034 上推：小節開頭，新的一頁連底色從下面推上來）
 //          ｜chapter（主色色塊從左下斜擦）｜side（側推）｜fade（淡入：不透明字卡動態）｜media（素材自己的 enter）｜wipeIn（旁白段擦入）｜cut｜overlay（其他透明段，模板自己進場）
-//   txOut：band（卡片收回、講者推回）｜retract（色帶反向收、子母畫面淡出）｜swap（舊卡擦掉）｜cover（停在完成態被下一張幕蓋過）｜hold（墊在下一段下面）
+//   txOut：band（卡片收回、講者推回）｜retract（色帶反向收、子母畫面淡出）｜swap（舊卡擦掉）｜push（被下一頁頂出去）｜cover（停在完成態被下一張幕蓋過）｜hold（墊在下一段下面）
 //          ｜handoff（下方字卡換卡）｜fade｜media｜wipeOut｜side｜cut｜overlay
-export const TX_IN = ['band', 'wipe', 'swap', 'chapter', 'side', 'fade', 'media', 'wipeIn', 'cut', 'overlay'];
-export const TX_OUT = ['band', 'retract', 'swap', 'cover', 'hold', 'handoff', 'fade', 'media', 'wipeOut', 'side', 'cut', 'overlay'];
+export const TX_IN = ['band', 'wipe', 'swap', 'push', 'dive', 'chapter', 'side', 'fade', 'media', 'wipeIn', 'cut', 'overlay'];
+export const TX_OUT = ['band', 'retract', 'swap', 'push', 'dive', 'cover', 'hold', 'handoff', 'fade', 'media', 'wipeOut', 'side', 'cut', 'overlay'];
 // it.prev：給模板與情境動畫選進場（host 與情境子合成 root 的 data-prev、window.__cues.segs[id].prev；contracts/motion.md §3.1）
 //   speaker＝前面露講者（色帶擦開，卡從小視窗長出 P.grow）｜fullscreen＝前一段也是全畫面、同背景（換卡不換景）｜pip＝前一段是別的幕（插入素材、不透明字卡動態、章節），小視窗已在
 export const PREVS = ['speaker', 'fullscreen', 'pip'];
@@ -1747,23 +1848,25 @@ function pipMotion(timed, { tm, voiceOut, punches = [] }) {
 }
 
 // 結尾配樂的實際起播點與長度（len＝配樂檔長度；specs/contracts/sfx.md §6.2）
-export function outroClip(outro, len, outDur) {
+export function outroClip(outro, len, finalDur) {
   if (!outro?.music || !(len > 0)) return null;
   const aligned = len >= outro.span - 1e-3 ? 'from' : 'end';
-  const at = aligned === 'from' ? outro.start : r3(Math.max(0, outDur - len));
-  const dur = r3(aligned === 'from' ? outro.span : Math.min(len, outDur));
+  const at = aligned === 'from' ? outro.start : r3(Math.max(0, finalDur - len));
+  const dur = r3(aligned === 'from' ? outro.span : Math.min(len, finalDur));
   return { at, dur, from: 0, aligned, fadeIn: r3(Math.min(outro.fadeIn, dur / 3)), fadeOut: r3(Math.min(outro.fadeOut, dur / 3)), gain: outro.gain, len: r3(len) };
 }
 
 // 「結尾配樂：…」那一行（原文 specs/contracts/cli-005.md §3.4）
 export function outroLine(outro, clip) {
   // 沒寫 outro（沒人決定過）也印一行：停點回報貼這行，使用者才知道可以配片尾配樂
-  if (!outro) return '結尾配樂：沒配（預設不配；要配就在 plan.json 第一層寫 "outro": { "from": "#N" }，N＝結語金句講完後那一句；確定不配寫 "outro": { "music": null }）';
-  if (!outro.music) return '結尾配樂：outro 沒寫 music（或寫 null），不配';
+  if (!outro) return '結尾配樂：沒配（預設不配；每一集都配：node shared/template/tools/music.mjs outro <曲名>；只配這一集：build.mjs --set "outro.music=<曲名>"，從結語金句講完那一句起播再加 outro.from=#N；確定不配：--set outro.music=none）';
+  if (!outro.music) return '結尾配樂：這一集不配（outro.music 寫了 null，或 outro 沒寫曲名、工作區也沒有預設）';
   if (!clip) return null;
   const credit = outro.credit ? `；這首要在影片說明欄標示出處：${outro.credit}` : '';
-  if (clip.aligned === 'end') return `結尾配樂：${outro.music} 只有 ${clip.len.toFixed(1)} 秒，比 outro.from（${outro.from}，${fmt(outro.start)}）到片尾的 ${outro.span.toFixed(1)} 秒短，改從 ${fmt(clip.at)} 起播、對齊片尾${credit}`;
-  return `結尾配樂：${outro.music} 從 ${fmt(clip.at)} 起播 ${clip.dur.toFixed(1)} 秒（淡入 ${String(+clip.fadeIn.toFixed(2))} 秒、淡出 ${String(+clip.fadeOut.toFixed(2))} 秒，比人聲小 ${(-outro.relDb).toFixed(1)} dB）${credit}`;
+  const name = outro.source === '工作區預設' ? `${outro.music}（工作區預設）` : `${outro.music} `;
+  if (clip.aligned === 'end') return `結尾配樂：${name}只有 ${clip.len.toFixed(1)} 秒，比${outro.auto ? `片尾最後 ${OUTRO_AUTO} 秒短（沒寫 outro.from）` : ` outro.from（${outro.from}，${fmt(outro.start)}）到片尾的 ${outro.span.toFixed(1)} 秒短`}，改從 ${fmt(clip.at)} 起播、對齊片尾${credit}`;
+  const why = outro.auto ? `沒寫 outro.from，只播片尾最後 ${OUTRO_AUTO} 秒；要從結語金句講完那一句起播：build.mjs --set "outro.from=#N"；` : '';
+  return `結尾配樂：${name}從 ${fmt(clip.at)} 起播 ${clip.dur.toFixed(1)} 秒（${why}淡入 ${String(+clip.fadeIn.toFixed(2))} 秒、淡出 ${String(+clip.fadeOut.toFixed(2))} 秒，比人聲小 ${(-outro.relDb).toFixed(1)} dB）${credit}`;
 }
 
 // --check --json 的 items：時間換回 rough.mp4 的秒數（剪輯台用 rough.mp4 的時間軸）。
@@ -1861,6 +1964,7 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
     const cut = r3(res.tm.cuts.reduce((s, [a, b]) => s + b - a, 0));
     lines.push(`影片長度 ${fmt(res.outDur)}（${res.outDur}s）＝ rough.mp4 ${res.roughDur}s − cuts ${cut}s（${res.tm.cuts.length} 段）；上表時間是完成影片的秒數（rough.mp4 的秒數寫在括號）`);
   } else if (videoDur != null) lines.push(`影片長度 ${fmt(videoDur)}（${videoDur}s）`);
+  if (res.ending?.dur > 0) lines.push(`片尾卡 ${res.ending.dur}s 接在影片後面：完成影片總長 ${fmt(res.finalDur)}（${res.finalDur}s）`);
   // 節奏與沒有畫面的區間（原文 specs/contracts/cli-002.md §1.3）
   lines.push(res.rhythm === 'spaced'
     ? '節奏：spaced（留露臉空檔：開場前 30 秒最多一張、兩段之間至少露臉 3 秒）'
@@ -1883,9 +1987,10 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
   if (res.sfxBudget) lines.push(...res.sfxBudget.lines);
   // 轉場與主題（design-system.md §5、§10；每段的值在 --check --json 的 items[].out.tx）
   const txCount = (k, v) => res.items.filter((it) => it[k] === v).map((it) => it.id);
-  const txParts = [['txIn', 'wipe', '色帶擦開'], ['txIn', 'swap', '換卡不換景'], ['txOut', 'retract', '色帶收回'], ['txIn', 'band', '疊加卡'], ['txIn', 'chapter', '章節擦入']]
+  const txParts = [['txIn', 'wipe', '色帶擦開'], ['txIn', 'swap', '換卡不換景'], ['txIn', 'push', '上推'], ['txIn', 'dive', '穿窗'], ['txOut', 'retract', '色帶收回'], ['txIn', 'band', '疊加卡'], ['txIn', 'chapter', '章節擦入']]
     .map(([k, v, zh]) => [zh, txCount(k, v)]).filter(([, ids]) => ids.length).map(([zh, ids]) => `${zh} ${ids.length}（${ids.join('、')}）`);
   lines.push(`轉場：${txParts.join('；') || '無'}｜主題：${res.theme === 'dark' ? '暗色（theme: "dark"）' : '亮色'}${res.style ? `｜風格包：${res.style}` : ''}`);
+  if (res.captionStyle) lines.push(`字幕樣式：${describeCaptionStyle(res.captionStyle)}（${res.captionFrom === 'plan' ? '這一集 plan.json captionStyle' : '預設 shared/setting.json captions'}）`);
   lines.push(...tail.filter(Boolean));
   return lines.join('\n');
 }

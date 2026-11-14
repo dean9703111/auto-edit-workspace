@@ -6,6 +6,7 @@
 //   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整完成影片；時間是完成影片時間）
 // 兩者對外都用 rough.mp4 的秒數（app.t）。
 import { clamp, cutIndexAt, outOf, roughOf, effectsAt, dbToGain, gainAt, MEDIA_TRANS } from './model.mjs';
+import { CAP_VARS } from '/lib/caption-style.mjs';
 
 export class SimPreview {
   constructor(els, app) {
@@ -315,9 +316,26 @@ export class PlayerPreview {
     const want = this.app.theme === 'dark' ? 'dark' : 'light';
     if (root && root.getAttribute('data-theme') !== want) root.setAttribute('data-theme', want);
   }
+  // 035 字幕樣式：改播放器 iframe 裡字幕 root 的 data-cap 與 --cap-* 變數（build 寫在 compositions/captions.html 的 root），
+  // 字體另外宣告 @font-face（/kit/fonts/，剪輯台服務供應）；不用重新產生就看得到
+  applyCaption() {
+    let doc = null;
+    try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
+    const root = doc?.querySelector('#captions, #captions-test');
+    if (!root || !this.app.capPreview) return;
+    const c = this.app.capPreview(), key = JSON.stringify(c.style);
+    if (root.dataset.capKey === key) return;
+    root.dataset.capKey = key;
+    for (const k of CAP_VARS) root.style.removeProperty(k);
+    if (c.root) { root.dataset.cap = c.root.look; for (const [k, v] of c.root.vars) root.style.setProperty(k, v); } else delete root.dataset.cap;
+    let face = doc.getElementById('capFace');
+    if (!face) { face = doc.createElement('style'); face.id = 'capFace'; doc.head.appendChild(face); }
+    if (face.textContent !== c.face) face.textContent = c.face;
+  }
   tick() {
     if (!this.p) return;
     this.applyTheme();
+    this.applyCaption();
     const ct = this.p.currentTime;
     if (Number.isFinite(ct) && this.ready) this.outT = ct;
     const paused = this.p.paused;

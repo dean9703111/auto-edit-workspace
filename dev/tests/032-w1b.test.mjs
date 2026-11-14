@@ -74,7 +74,7 @@ test('setPlan：每種鍵的對與錯；只回傳有變的鍵；錯的值整批�
   assert.equal(keys[keys.length - 1], 'scenes', '新的第一層鍵放在 scenes 前面');
 });
 
-test('setPlan：只寫底樂音量時補上工作區預設的曲名（沒有預設就 ✖）；片尾配樂的曲名要和 from 一起寫', (t) => {
+test('setPlan：只寫底樂音量時補上工作區預設的曲名（沒有預設就 ✖）；片尾配樂可以只寫曲名（033：沒寫 from＝只播片尾最後 30 秒）', (t) => {
   const p = project(t, { plan: { version: 1, scenes: [] } });
   const fake = path.join(p.root, 'fake', 'shared', 'template');
   fs.mkdirSync(fake, { recursive: true });
@@ -82,8 +82,8 @@ test('setPlan：只寫底樂音量時補上工作區預設的曲名（沒有預�
   fs.writeFileSync(path.join(fake, '..', 'setting.json'), JSON.stringify({ music: { bed: 'bed-calm' } }));
   assert.deepEqual(S.setPlan(p.proj, { 'bed.volume': 3 }, { templateDir: fake }), [{ key: 'bed.volume', from: undefined, to: 3 }, { key: 'bed.music', from: undefined, to: 'bed-calm' }]);
   assert.deepEqual(p.readPlan().bed, { music: 'bed-calm', volume: 3 }, '只寫音量會把預設的底樂關掉：曲名一起寫');
-  assert.throws(() => S.setPlan(p.proj, { 'outro.music': 'bgm-cylinder-five' }), msg(/^✖ outro\.music 要和 outro\.from 一起寫.*→ 能寫的：outro\.from（/));
-  assert.deepEqual(S.setPlan(p.proj, { 'outro.from': '#3', 'outro.music': 'bgm-cylinder-five' }).map((c) => c.key), ['outro.from', 'outro.music']);
+  assert.deepEqual(S.setPlan(p.proj, { 'outro.music': 'bgm-cylinder-five' }).map((c) => c.key), ['outro.music']);
+  assert.deepEqual(S.setPlan(p.proj, { 'outro.from': '#3', 'outro.music': 'bgm-cylinder-five' }).map((c) => c.key), ['outro.from']);
 });
 
 test('setPlan：保留原本的縮排與換行（4 格、tab、CRLF）', (t) => {
@@ -101,7 +101,7 @@ test('unsetPlan：拿掉鍵、空的 bed／outro 不留；還沒有 plan.json �
     { key: 'style', from: '藍圖', to: undefined }, { key: 'bed.music', from: 'bgm-cylinder-five', to: undefined }, { key: 'outro', from: { from: '#3', music: 'bgm-cylinder-five' }, to: undefined }]);
   assert.deepEqual(p.readPlan(), { version: 1, scenes: [] });
   assert.deepEqual(S.unsetPlan(p.proj, ['style']), [], '沒有就不動');
-  assert.throws(() => S.unsetPlan(p.proj, ['scenes']), msg(/^✖ plan\.json 沒有「scenes」這個設定可以拿掉 → 能寫的：.*、bed、outro$/));
+  assert.throws(() => S.unsetPlan(p.proj, ['scenes']), msg(/^✖ plan\.json 沒有「scenes」這個設定可以拿掉 → 能寫的：.*、bed、outro、captionStyle$/));
   const q = project(t);
   assert.throws(() => S.setPlan(q.proj, { 'bed.music': 'none' }), msg(/^✖ 還沒有 plan\.json，bed\.music 要等產生分鏡素材.*→ 能寫的：theme（light／dark）、style（/));
   assert.ok(!fs.existsSync(q.planFile));

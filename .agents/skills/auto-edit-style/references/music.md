@@ -15,6 +15,10 @@
 | 「每一集都用這首」 | `node shared/template/tools/music.mjs use <曲名>` |
 | 「這集不要底樂」 | `node shared/template/tools/build.mjs --project projects/<專案> --set bed.music=none`，照它印的下一步跑 build |
 | 「以後都不要底樂」 | `node shared/template/tools/music.mjs use none` |
+| 「每一集片尾都配這首」 | `node shared/template/tools/music.mjs outro <曲名>`（曲庫的或內建的 `bgm-cylinder-five`；那集沒寫起播句就只播片尾最後 30 秒） |
+| 「片尾配樂從結語金句講完那句開始」 | `node shared/template/tools/build.mjs --project projects/<專案> --set outro.from=#N`，照它印的下一步跑 build |
+| 「這集片尾不要配樂」 | `node shared/template/tools/build.mjs --project projects/<專案> --set outro.music=none` |
+| 「以後片尾都不要配樂」 | `node shared/template/tools/music.mjs outro none` |
 | 「底樂大聲一點／小聲一點」 | `node shared/template/tools/build.mjs --project projects/<專案> --set bed.volume=3`（dB，−12～+12；一次調 3，小聲寫 `-3`），照它印的下一步跑 build |
 
 ## 步驟 A：放自己的音樂
@@ -38,7 +42,8 @@
 |---|---|
 | 這一集當底樂 | `node shared/template/tools/build.mjs --project projects/<專案> --set bed.music=<曲名>` |
 | 每一集都當底樂 | `node shared/template/tools/music.mjs use <曲名>`（plan.json 不用寫） |
-| 當片尾配樂 | `node shared/template/tools/build.mjs --project projects/<專案> --set "outro.from=#N;outro.music=<曲名>"`（N＝結語金句講完後那一句） |
+| 這一集當片尾配樂 | `node shared/template/tools/build.mjs --project projects/<專案> --set "outro.from=#N;outro.music=<曲名>"`（N＝結語金句講完後那一句；不寫 from＝只播片尾最後 30 秒） |
+| 每一集都當片尾配樂 | `node shared/template/tools/music.mjs outro <曲名>` |
 
 沒講清楚就問一次：「要每一集都用，還是只用在這一集？」
 

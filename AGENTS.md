@@ -15,8 +15,8 @@
 | 預覽後的修改、「打開剪輯台」、「s12 重新設計」「s12 用 v1」、「照修改單改」 | `auto-edit-review` |
 | 「可以了，輸出完成影片」「輸出剪映素材」（剪輯台已經輸出過就不要重做） | `auto-edit-deliver` |
 | 「做封面」「做縮圖」 | `auto-edit-deliver` 的 `references/cover.md` |
-| 「換風格」「換主色」「換背景」「換暗色」「講者設定成…」 | `auto-edit-style` |
-| 「生成配樂」「換配樂」「這集不要底樂」「用我自己的音樂」 | `auto-edit-style` 的 `references/music.md` |
+| 「換風格」「換主色」「換背景」「換暗色」「換字幕樣式」「講者設定成…」「設定片尾」 | `auto-edit-style` |
+| 「生成配樂」「換配樂」「這集不要底樂」「用我自己的音樂」「片尾配樂」 | `auto-edit-style` 的 `references/music.md` |
 | 「拆這支參考片」（要給影片檔的路徑） | `auto-edit-style` 的 `references/reference-video.md` |
 | 「子代理一次派 N 個」 | 不用 Skill：`node shared/template/tools/status.mjs --agents <N>` |
 
@@ -41,7 +41,7 @@
 
 ## 規則
 
-1. `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 不覆寫、不移動、不刪除。要改 `shared/` 裡的設定（主色、背景、風格包、講者、調光瘦臉預設、偏好、子代理數量、配樂），只透過那支 Skill 寫的工具指令（`brand.mjs`、`music.mjs`、`look.mjs default`、`status.mjs --prefs-add`、`--agents`），不手動改檔。刪除 `work/` 以外的檔案前先問我。
+1. `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 不覆寫、不移動、不刪除。要改 `shared/` 裡的設定（主色、背景、風格包、講者、片尾、調光瘦臉預設、偏好、子代理數量、配樂），只透過那支 Skill 寫的工具指令（`brand.mjs`、`music.mjs`、`look.mjs default`、`status.mjs --prefs-add`、`--agents`），不手動改檔。刪除 `work/` 以外的檔案前先問我。
 2. 停點只有六個（下面的表）。我說「不用停」「跑到停點 N」才連跑。
 3. 安裝新工具前，先告訴我指令和用途，等我同意；照 `setup/` 手冊做時整份清單問一次。
 4. 字幕以 `講稿.md` 為準，工具（`media.mjs srt-align`）照講稿排：不自己拆句、併句。要改字就在剪輯台或 `work/rough.srt` 改那一則，只改字；不改 `講稿.md`。用繁體中文，技術名詞保留英文，中英文之間加半形空格。沒有講稿時不補標點、不猜內容。

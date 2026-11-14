@@ -58,6 +58,10 @@ const EXAMPLES = {
   // 027 補情境：短版一句重點（子母畫面區塊中間的重點句不用切回講者；one＝整段只有一拍，只綁一句、【D 下限】兩條）、留言卡、路線地圖、程式碼改前改後（沒有主卡：視窗 #xcd-win）、排名長條圖
   'x-point': { pre: 'xpt', range: [461, 462], one: true }, 'x-comment': { pre: 'xcm', range: [471, 474] }, 'x-route': { pre: 'xrt', range: [481, 485] },
   'x-code-diff': { pre: 'xcd', range: [491, 495], card: 'xcd-win' }, 'x-rank': { pre: 'xrk', range: [501, 507] },
+  // 034 全螢幕：長清單急剎（沒有圖示）、提示詞長出樹
+  'x-scroll-brake': { pre: 'xsb', range: [561, 563], noIcon: true }, 'x-prompt-tree': { pre: 'xptr', range: [571, 575] },
+  // 036 截圖欄位（type shot）：回顧牆、截圖接力（沒有圖示）、前後拉桿（沒有圖示）
+  'x-recap': { pre: 'xrcp', range: [581, 585], card: 'xrcp-title' }, 'x-relay': { pre: 'xrl', range: [591, 595], noIcon: true }, 'x-slider': { pre: 'xsl', range: [601, 603], noIcon: true },
 };
 const COUNT = Object.keys(EXAMPLES).length;
 process.env.AUTO_EDIT_MATTE = 'box';   // 人物去背：測試不下載、不跑模型（lib/matte.mjs 的 boxRemove）
@@ -374,6 +378,9 @@ function cueText(n, word, a, b, ref) {
 }
 function makeProject(dir, gap = 1.0) {
   for (const d of ['assets/camera', 'assets/voice', 'assets/screen', 'assets/images', 'work/hyperframes/compositions', 'output']) fs.mkdirSync(path.join(dir, d), { recursive: true });
+  // 036 截圖欄位的示意圖：模板原文寫 ../preview/shots/<檔>（相對主合成 index.html ＝ work/preview/shots/）
+  const shots = path.join(TEMPLATE, 'preview', 'shots');
+  if (fs.existsSync(shots)) fs.cpSync(shots, path.join(dir, 'work', 'preview', 'shots'), { recursive: true });
   const srt = [], scenes = [], segs = [];
   let S = 1.0;
   for (const [k, [name]] of Object.entries(EXAMPLES).entries()) {

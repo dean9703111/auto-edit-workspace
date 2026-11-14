@@ -906,6 +906,7 @@ body, #root {
   --v2-lt-key-shadow:10px 10px 0 0 #000000;
   --v2-tx-b:         #0C0E12;
   /* 舊情境 token 的暗色值（x-*.html、04 系列直接吃這些） */
+  --sc-fs-bg:        #0E1014;   /* 全寬段（沒有講者）拿掉背景圖只留底色：暗色要是深底（亮色 theme.css 是淺暖底） */
   --sc-fs-card:      #15181E;
   --sc-fs-card-line: rgba(255, 255, 255, 0.12);
   --sc-fs-ink:       #F3EFEA;
@@ -978,6 +979,15 @@ body, #root {
             letter-spacing: 0.06em; white-space: nowrap; pointer-events: none; opacity: 0;
             -webkit-mask-image: var(--v2-stamp-ink); mask-image: var(--v2-stamp-ink); -webkit-mask-size: var(--v2-stamp-ink-size); mask-size: var(--v2-stamp-ink-size);
             -webkit-mask-composite: source-in; mask-composite: intersect; }
+/* 034 翻面（P.flip 自動插在兩面裡）：翻轉中的壓暗層與側棱受光；靜止時透明 */
+.sc-flip-shade, .sc-flip-band { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; z-index: 3; }
+.sc-flip-shade { background: var(--v2-ink); }
+/* 034 括號揭示（P.brace 的對象）：.sc-brace 固定寬高；兩條括號由 P.brace 用 transform 定位；字置中、垂直置中 */
+.sc-brace { position: relative; }
+.sc-brace__l, .sc-brace__r { position: absolute; left: 0; top: 0; width: 96px; height: 232px; overflow: visible; transform-origin: 50% 50%; opacity: 0; }
+.sc-brace__l path, .sc-brace__r path { fill: none; stroke: var(--brand); stroke-width: 12px; stroke-linecap: round; stroke-linejoin: round; }
+.sc-brace__text { position: absolute; left: 0; right: 0; top: 50%; translate: 0 -50%; text-align: center; white-space: nowrap; visibility: hidden; }
+.sc-brace__text > span { display: inline-block; }
 
 /* 015 馬克筆（P.draw 自動插；筆尖在 .sc-pen 的 0,0） */
 .sc-pen { position: absolute; width: 0; height: 0; z-index: 60; pointer-events: none; filter: var(--v2-pen-shadow); }

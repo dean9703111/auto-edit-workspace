@@ -14,6 +14,7 @@ import { writeAtomic } from './atomic.mjs';
 import { listPacks } from './styles.mjs';
 import { loadMusic } from './music.mjs';
 import { LOOK_LIMITS } from './look.mjs';
+import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT } from './caption-style.mjs';
 import { readSettings } from './settings.mjs';
 import { ok, fail, next, cmdLine } from './say.mjs';
 import { runToolUntilDoneSync } from './job.mjs';
@@ -44,17 +45,28 @@ const KEYS = {
   format: { hint: () => 'portrait／landscape', parse: pick(['portrait', 'landscape'], { 直式: 'portrait', 橫式: 'landscape' }), early: true },
   speakerSide: { hint: () => 'left／center／right', parse: pick(['left', 'center', 'right']) },
   chapterBadge: { hint: () => 'true／false', parse: (v) => (v === true || v === 'true' ? true : v === false || v === 'false' ? false : BAD) },
+  chapterMap: { hint: () => 'true／false', parse: (v) => (v === true || v === 'true' ? true : v === false || v === 'false' ? false : BAD) },   // 036 本集地圖
   look: { hint: () => 'off', parse: (v) => (v === false || v === 'off' ? false : BAD), early: true },
   'look.color': { hint: () => `${LOOK_LIMITS.color.join('–')}`, parse: num(...LOOK_LIMITS.color), early: true },
   'look.slim': { hint: () => `${LOOK_LIMITS.slim.join('–')}`, parse: num(...LOOK_LIMITS.slim), early: true },
   'look.beauty': { hint: () => `${LOOK_LIMITS.beauty.join('–')}`, parse: num(...LOOK_LIMITS.beauty), early: true },
   'bed.music': { hint: trackHint, parse: track },
   'bed.volume': { hint: () => '−12–12 dB', parse: num(-12, 12) },
-  'outro.from': { hint: () => '#N＝結語金句講完後那一句', parse: (v) => (/^#\d+(@\S+)?$/.test(String(v).trim()) ? String(v).trim() : BAD) },
+  'outro.from': { hint: () => '#N＝結語金句講完後那一句（不寫＝只播片尾最後 30 秒）', parse: (v) => (/^#\d+(@\S+)?$/.test(String(v).trim()) ? String(v).trim() : BAD) },
   'outro.music': { hint: trackHint, parse: track },
+  // 片尾模板（033，lib/ending.mjs）：工作區在 shared/setting.json 設定，這裡只做這一集的例外
+  ending: { hint: () => 'false＝這一集不要片尾', parse: (v) => (v === false || v === 'false' || v === 'off' ? false : BAD) },
+  'ending.quote': { hint: () => '片尾金句的字／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : String(v).trim() ? String(v).trim() : BAD) },
+  'ending.subscribe': { hint: () => '#N＝講到「訂閱」的那一句／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : /^#\d+$/.test(String(v).trim()) ? String(v).trim() : BAD) },
+  // 字幕樣式（035，lib/caption-style.mjs）：以後每集的預設用 brand.mjs captions；這裡只改這一集，沒寫的欄位照預設
+  'captionStyle.look': { hint: () => Object.keys(CAP_LOOKS).join('／'), parse: pick(Object.keys(CAP_LOOKS)), early: true },
+  'captionStyle.font': { hint: () => Object.keys(CAP_FONTS).join('／'), parse: pick(Object.keys(CAP_FONTS)), early: true },
+  'captionStyle.size': { hint: () => `${CAP_SIZE.min}–${CAP_SIZE.max}`, parse: num(CAP_SIZE.min, CAP_SIZE.max), early: true },
+  'captionStyle.weight': { hint: () => Object.keys(CAP_WEIGHTS).join('／'), parse: (v) => (CAP_WEIGHTS[Number(v)] ? Number(v) : BAD), early: true },
+  'captionStyle.lift': { hint: () => `往上移幾 px（往下寫負的）：橫式 ${CAP_LIFT.landscape.min}–${CAP_LIFT.landscape.max}、直式 ${CAP_LIFT.portrait.min}–${CAP_LIFT.portrait.max}，0＝原位`, parse: (v) => { const n = num(CAP_LIFT.portrait.min, CAP_LIFT.landscape.max)(v); return n === BAD ? BAD : Math.round(n); }, early: true },
 };
-// --unset 另外收整個 bed、outro（回到工作區預設的底樂、不配片尾配樂）
-const UNSET_ONLY = ['bed', 'outro'];
+// --unset 另外收整個 bed、outro、captionStyle（回到工作區預設的底樂、片尾配樂、字幕樣式）；ending 本身就在 KEYS（--unset ending＝回到工作區的片尾設定）
+const UNSET_ONLY = ['bed', 'outro', 'captionStyle'];
 
 function context(templateDir, project) {
   let packs = null, bgm = null;
@@ -136,15 +148,12 @@ function applyPlan(project, { set = {}, unset = [] }, { templateDir = DEFAULT_TE
     plan = setPath(plan, k, v);
     changes.push({ key: k, from, to: v });
   }
-  // plan.json 的 bed／outro 整個蓋過預設：只寫音量會把工作區預設的底樂關掉、只寫曲名 --check 會 ✖，這裡先補齊或擋下
+  // plan.json 的 bed 整個蓋過預設：只寫音量會把工作區預設的底樂關掉，這裡先補齊或擋下（outro 只寫音量照樣用工作區預設的曲名，033）
   if ('bed.volume' in vals && isObj(plan.bed) && plan.bed.music === undefined) {
     const dflt = readSettings(path.resolve(templateDir, '..')).data?.music?.bed;
     if (!dflt) throw new Error(`✖ 這一集還沒有底樂，bed.volume 沒有對象 → 能寫的：先寫 ${allowed(c, ['bed.music'])}，例 --set "bed.music=<曲名>;bed.volume=3"`);
     plan.bed = { music: dflt, ...plan.bed };
     changes.push({ key: 'bed.music', from: undefined, to: dflt });
-  }
-  if (('outro.music' in vals || 'outro.from' in vals) && isObj(plan.outro) && plan.outro.music && !plan.outro.from) {
-    throw new Error(`✖ outro.music 要和 outro.from 一起寫（片尾配樂從哪一句起播）→ 能寫的：${allowed(c, ['outro.from'])}，例 --set "outro.from=#N;outro.music=<曲名>"`);
   }
   if (!changes.length) return [];
   // 縮排、換行照原檔（和 build.mjs --autofix 寫回同一套）

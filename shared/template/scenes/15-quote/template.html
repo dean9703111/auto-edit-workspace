@@ -32,3 +32,38 @@ P.pop('#gCard .qt-q', {{{in}}} + 0.18, { from: 0.3, dy: 0, ease: P.V2.EASE.emph 
 P.chars('#gCard .qt-body > div:first-child', {{{in}}} + 0.3, { stagger: 0.035 });
 {{#by}}P.drift('#gCard .qt-by', {{{in}}} + 1.2, { dx: -16 * P.U });{{/by}}
 {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}
+<!-- @style-full -->
+/* 全幕版（034；這段沒有講者、或寫 "full": true 時 build 自動換，shotcraft paper-title-card）：沒有卡，主色大引號＋大字金句在內容區（x 120–1800、y 40–900）置中。
+   字級照最長那一行算：min(128, 1440 ÷ 字數)（16 字 90px）；引號寬 1.25 倍字級、和字距 48；出處 44／700 前面一條主色短線。 */
+#qfArea { position: absolute; left: 120px; right: 120px; top: 40px; bottom: 180px; display: flex; align-items: center; justify-content: center; --qf: min(128px, calc(1440px / {{text_maxline}})); }
+#qfRow { display: flex; align-items: flex-start; gap: 48px; }
+#qfMark { flex: none; width: calc(var(--qf) * 1.25); height: var(--qf); margin-top: calc(var(--qf) * 0.12); }
+#qfMark path { fill: var(--brand); }
+#qfCol { display: flex; flex-direction: column; align-items: flex-start; }
+#qfText { font-size: var(--qf); line-height: 1.19; font-weight: 900; color: var(--sc-fs-ink); white-space: nowrap; }
+#qfText .sc-kw { position: relative; color: var(--brand); }
+#qfBy { display: flex; align-items: center; gap: 24px; margin-top: 48px; height: 60px; }
+#qfRule { display: block; width: 64px; height: 6px; border-radius: 3px; background: var(--brand); }
+#qfBy .sc-opt { font-size: 44px; line-height: 60px; font-weight: 700; color: var(--sc-fs-mute); white-space: nowrap; }
+<!-- @body-full -->
+<div id="qfArea" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <div id="qfRow">
+    <svg id="qfMark" viewBox="0 0 160 128" aria-hidden="true">
+      <path d="M62 8 C30 16 8 42 8 78 L8 120 L66 120 L66 66 L34 66 C36 46 48 32 68 26 Z" />
+      <path d="M148 8 C116 16 94 42 94 78 L94 120 L152 120 L152 66 L120 66 C122 46 134 32 154 26 Z" />
+    </svg>
+    <div id="qfCol">
+      <div id="qfText">{{{text}}}</div>
+      {{#by}}<div id="qfBy"><i id="qfRule"></i><span class="sc-opt">{{by}}</span></div>{{/by}}
+    </div>
+  </div>
+</div>
+<!-- @timeline-full -->
+/* 全幕版：引號彈出 → 金句逐詞壓印（每詞 0.14；斷詞照瀏覽器的中文斷詞）→ 關鍵詞（**…**）螢光筆 → 出處短線擦開、字上浮。
+   前一段是講者（色帶擦開）晚 0.35 秒開始，前一段也是全畫面（換卡不換景、上推）0.1 秒開始；離場由 build 負責 */
+const T0 = {{{in}}} + (P.prev() === 'speaker' ? 0.35 : 0.1);
+P.pop('#qfMark', T0, { from: 0.3, dy: 0, ease: P.V2.EASE.emph });
+P.press('#qfText', T0 + 0.3);
+P.marker('#qfText .sc-kw', P.pressDone + 0.1);
+{{#by}}P.wipe('#qfRule', P.pressDone + 0.45, { dir: 'left', dur: 0.4 });
+P.rise('#qfBy .sc-opt', P.pressDone + 0.55);{{/by}}

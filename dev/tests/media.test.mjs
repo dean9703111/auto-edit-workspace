@@ -79,10 +79,14 @@ test('media 段欄位檢查：src、in＋段長、座標範圍、紅框同時 �
   assert.match(e, /moves\[0\]\.to \[0, 0, 9999, 10\] 超出素材範圍 640×400/);
   assert.match(e, /沒有「bogus」這個欄位（type=media 可用：/);
   // 透明的下方字卡在素材播放期間出現 → 會被蓋住 ✖；兩張不透明幕重疊 ✖
-  writePlan([m({}), { id: 's01', scene: 'concept', from: '#3', to: '#3e', slots: { text: '被蓋住' } }, { id: 's02', scene: 'fs-list', from: 10, to: 16, slots: { title: '清單', items: ['一', '二', '三'] } }]);
+  //   s01 落在只有聲音的 8–12：06 有全幕版，預設自動換成不透明的全幕版 → 和 m01 是兩張整張幕重疊；寫 "full": false 才是疊在講者上的透明卡 → 被素材蓋住
+  const s02 = { id: 's02', scene: 'fs-list', from: 10, to: 16, slots: { title: '清單', items: ['一', '二', '三'] } };
+  writePlan([m({}), { id: 's01', scene: 'concept', from: '#3', to: '#3e', full: false, slots: { text: '被蓋住' } }, s02]);
   const e2 = checkJson().j.errors.join('\n');
   assert.match(e2, /\[s01 concept\] 在插入素材 m01（0:07\.00–0:13\.00）播放期間出現，會被素材蓋住看不到/);
   assert.match(e2, /\[s02 fs-list\] 和 m01 時間重疊 3s：整張幕/);
+  writePlan([m({}), { id: 's01', scene: 'concept', from: '#3', to: '#3e', slots: { text: '被蓋住' } }, s02]);
+  assert.match(checkJson().j.errors.join('\n'), /\[s01 concept\] 和 m01 時間重疊 3s：整張幕/);
 });
 
 test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關鍵影格、放在主合成；子母畫面避開只有聲音的區間；紅框、運鏡、放大鏡', () => {

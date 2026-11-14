@@ -1,0 +1,163 @@
+{
+  "template": "x-prompt-tree",
+  "prefix": "xptr",
+  "beat": "H",
+  "layout": "fullscreen",
+  "when": "講「我只打一句話，AI 就把整份結構長出來」（「幫我規劃一支十分鐘的教學影片，它就把整份大綱長出來，分成三個章節，每一章還有要講的重點」）：輸入膠囊逐字打出提示詞、送出後鏡頭拉回，底下長出根節點 → 2–3 個章節 → 每章 0–2 個重點，最後彈出總結膠囊",
+  "slots": {
+    "prompt": {
+      "label": "提示詞（用講的那句原話，例「幫我規劃一支 10 分鐘的教學影片」；不要放 emoji）",
+      "type": "text",
+      "max": 22,
+      "required": true
+    },
+    "root": {
+      "label": "根節點：AI 生成的東西叫什麼（例「10 分鐘教學影片」）",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "branches": {
+      "label": "章節（2–3 個，照講的順序；每章 0–2 個重點，要有 leafAt 才會長出來）",
+      "type": "list",
+      "min": 2,
+      "maxItems": 3,
+      "required": true,
+      "const": "TREE",
+      "toArray": [
+        "text",
+        "leaf1",
+        "leaf2"
+      ],
+      "item": {
+        "text": {
+          "label": "章節名稱（例「開場與目標」）",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "leaf1": {
+          "label": "這一章的重點 1（選填，例「這集目標」）",
+          "type": "text",
+          "max": 4
+        },
+        "leaf2": {
+          "label": "這一章的重點 2（選填）",
+          "type": "text",
+          "max": 4
+        }
+      }
+    },
+    "sum": {
+      "label": "總結膠囊（選填，要和 sumAt 一起寫；例「3 章・6 個重點」）",
+      "type": "text",
+      "max": 7,
+      "with": ["sumAt"]
+    },
+    "typeAt": {
+      "label": "講到提示詞那個詞的時間（開始逐字打出）",
+      "type": "at",
+      "ref": "TT",
+      "required": true
+    },
+    "rootAt": {
+      "label": "下一句的開頭（「它就把整份大綱長出來」：按下送出、鏡頭拉回、長出根節點；通常寫 #N）；要比 typeAt 晚 3.2 秒以上，提示詞才打得完",
+      "type": "at",
+      "ref": "TR",
+      "required": true
+    },
+    "branchAt": {
+      "label": "講到章節數那個詞的時間（例「分成三個章節」的「三個」）；要比 rootAt 晚 2.8 秒以上",
+      "type": "at",
+      "ref": "TB",
+      "required": true
+    },
+    "leafAt": {
+      "label": "講到「每一章的重點」的時間（選填，沒寫就不長重點）；要比 branchAt 晚 2.2 秒以上",
+      "type": "at",
+      "ref": "TL"
+    },
+    "sumAt": {
+      "label": "講總結那一句的時間（選填，要和 sum 一起寫）；要比 leafAt 晚 2.3 秒以上（沒有 leafAt 時比 branchAt 晚 2 秒以上）",
+      "type": "at",
+      "ref": "TM",
+      "with": ["sum"]
+    }
+  },
+  "sample": {
+    "prompt": "幫我規劃一支 10 分鐘的教學影片",
+    "root": "10 分鐘教學影片",
+    "branches": [
+      { "text": "開場與目標", "leaf1": "這集目標", "leaf2": "成品展示" },
+      { "text": "實際操作", "leaf1": "匯入素材", "leaf2": "一鍵剪輯" },
+      { "text": "常見錯誤", "leaf1": "字幕錯位", "leaf2": "音量太小" }
+    ],
+    "sum": "3 章・6 個重點",
+    "typeAt": "#571@幫我",
+    "rootAt": "#572",
+    "branchAt": "#573@三個",
+    "leafAt": "#574",
+    "sumAt": "#575"
+  },
+  "sampleMin": {
+    "prompt": "幫我列出這支影片的大綱",
+    "root": "影片大綱",
+    "branches": [
+      { "text": "為什麼要做" },
+      { "text": "怎麼做" }
+    ],
+    "sum": "共 2 個部分",
+    "typeAt": "#571@幫我",
+    "rootAt": "#572",
+    "branchAt": "#573@三個",
+    "sumAt": "#575"
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "鏡頭推近在輸入膠囊（左邊星光、右邊主色送出鈕）",
+      "moves": "開場（依前段）；＋0.5 鏡頭跟焦點（推近輸入膠囊）；＋0.5 彈出（輸入膠囊）；＋0.7 圖示描線（星光、送出鈕）",
+      "focus": "輸入膠囊"
+    },
+    {
+      "beat": "1",
+      "at": "`{typeAt}`",
+      "show": "提示詞逐字打出「{prompt}」；膠囊亮主色框",
+      "moves": "打字；淡入（主色框）",
+      "focus": "正在打的字"
+    },
+    {
+      "beat": "2",
+      "at": "`{rootAt}`",
+      "show": "按下送出；鏡頭拉回 1 倍；膠囊底下牽一條線，長出根節點「{root}」",
+      "moves": "重拍（送出鈕）；＋0.1 鏡頭跟焦點（1.1 秒拉回 1 倍，膠囊＋根節點在正中）；＋0.2 描線（膠囊到根節點）；＋0.55 彈出（根節點）；＋0.6 淡出（主色框）",
+      "focus": "根節點",
+      "sfx": "click"
+    },
+    {
+      "beat": "3",
+      "at": "`{branchAt}`",
+      "show": "根節點牽出 {n} 條直角線，{n} 個章節卡（主色左邊條＋編號）",
+      "moves": "−0.4 彗星描線（章節的線，一起出發）；−0.4 鏡頭跟焦點（整棵樹往上帶）；錯拍彈出（章節卡）",
+      "focus": "章節卡"
+    },
+    {
+      "if": "leafAt",
+      "beat": "4",
+      "at": "`{leafAt}`",
+      "show": "每一章底下長出重點膠囊",
+      "moves": "−0.2 描線（重點的線）；−0.2 鏡頭回正；＋0.05 錯拍彈出（重點膠囊）",
+      "focus": "重點膠囊"
+    },
+    {
+      "if": "sumAt",
+      "beat": "收",
+      "at": "`{sumAt}`",
+      "show": "根節點右邊彈出「{sum}」；完成態停到段尾",
+      "moves": "彈出（總結膠囊）；重拍（根節點）",
+      "focus": "總結膠囊",
+      "sfx": "success"
+    }
+  ]
+}

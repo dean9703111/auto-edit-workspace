@@ -31,6 +31,9 @@ export const MOOD_KINDS = Object.freeze({
 });
 export const MOOD_KEYS = ['at', 'kind', 'sfx', 'zoom'];
 export const MOOD_ZOOM = Object.freeze({ scale: 1.25, dur: 0.2, minHold: 0.8, maxHold: 2.5, perMinute: 1 });
+// 034 畫面推近：那一刻沒有講者、被全畫面段蓋住時改推那一段的畫面（字幕、角標不動）：提早 lead 出發、in 秒推到 scale、停 hold、out 秒回正；
+//   每分鐘的次數和講者推近共用（MOOD_ZOOM.perMinute）
+export const SCREEN_PUNCH = Object.freeze({ scale: 1.1, lead: 0.05, in: 0.12, hold: 0.55, out: 0.6 });
 const KIND_LIST = Object.entries(MOOD_KINDS).map(([k, v]) => `"${k}"（${v.zh}）`).join('、');
 
 export function moodSound(kind, override) {
@@ -88,15 +91,25 @@ export function moodCues(moods, { cues, sfxConf = {}, videoDur = Infinity, frame
 
 // 講者爆衝推近的區間：詞開口 0.2 秒推到 1.25 倍，停到這句講完（最多 2.5 秒、遇到接點或整張幕就提早收），收的時候直接切回。
 //   speakerVisible(t) → 講者那一刻是不是滿版看得到；blockedUntil(a, b) → [a, b] 之間第一個蓋住講者的時間（沒有回 null）
-export function zoomSpans(list, { cues, cutPoints = [], videoDur, speakerVisible = () => true, blockedUntil = () => null } = {}) {
+//   screenAt(a, b) → 034：講者看不到時，[a, b] 整段都在同一個可以推的全畫面段裡就回那一段的 id（推那一段的畫面：{ screen: id }），不行回 null
+export function zoomSpans(list, { cues, cutPoints = [], videoDur, speakerVisible = () => true, blockedUntil = () => null, screenAt = () => null } = {}) {
   const zooms = [], notes = [];
   const want = list.filter((x) => x.zoom).sort((a, b) => b.rank - a.rank || a.event - b.event);
   const perMin = new Map();
+  const SP = SCREEN_PUNCH, spLen = SP.in + SP.hold + SP.out;
   for (const x of want) {
     const a = x.event;
-    if (!speakerVisible(a)) { notes.push(`${x.where} 的推近拿掉：那一刻講者被整張幕、側邊欄蓋住，或只有聲音`); continue; }
+    const screen = speakerVisible(a) ? null : screenAt(r3(a - SP.lead), r3(a - SP.lead + spLen));
+    if (!speakerVisible(a) && !screen) { notes.push(`${x.where} 的推近拿掉：那一刻講者被整張幕、側邊欄蓋住，或只有聲音（全畫面段有講者小視窗、剛進場、快結束、或是章節、錄影段，也不推畫面）`); continue; }
     const k = Math.floor(a / 60);
     if ((perMin.get(k) || 0) >= MOOD_ZOOM.perMinute) { notes.push(`${x.where} 的推近拿掉：同一分鐘已經推近 ${MOOD_ZOOM.perMinute} 次（留情緒比較強的）`); continue; }
+    if (screen) {
+      const s = r3(a - SP.lead), e = r3(s + spLen);
+      if (zooms.some((z) => s < z.b && e > z.a)) { notes.push(`${x.where} 的推近拿掉：和前一次推近重疊`); continue; }
+      perMin.set(k, (perMin.get(k) || 0) + 1);
+      zooms.push({ a: s, b: e, scale: SP.scale, dur: SP.in, hold: SP.hold, out: SP.out, screen, event: r3(a), where: x.where, i: x.i });
+      continue;
+    }
     const cue = cues.find((c) => c.n === x.n);
     let b = Math.min(cue ? cue.end : a + MOOD_ZOOM.maxHold, a + MOOD_ZOOM.maxHold, videoDur);
     const cut = cutPoints.find((p) => p > a + 1e-3);

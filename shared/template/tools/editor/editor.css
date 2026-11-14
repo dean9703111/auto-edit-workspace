@@ -228,6 +228,11 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .ov-safe .title { position: absolute; inset: 5% 5%; border: 1px solid rgba(255,212,0,.7); }
 .ov-speaker { position: absolute; border: 2px dashed #7DB4FF; pointer-events: none; background: rgba(125,180,255,.06); }
 .ov-speaker span { position: absolute; left: 4px; top: 2px; font-size: 12px; font-weight: 700; color: #7DB4FF; background: rgba(7,11,20,.7); padding: 0 5px; border-radius: 3px; }
+/* 035 字幕上下拖曳：字幕那一條（位置由 app.js 的 placeCapDrag 照 captionGeom 放），滑過出現虛線框和現在的位置 */
+.cap-drag { position: absolute; left: 12%; right: 12%; cursor: ns-resize; touch-action: none; border: 1px dashed transparent; border-radius: 6px; }
+.cap-drag:hover, .cap-drag:focus-visible, .cap-drag.dragging { border-color: rgba(255,212,0,.85); background: rgba(255,212,0,.07); outline: none; }
+.cap-drag-tag { position: absolute; right: 4px; bottom: calc(100% + 4px); font-size: 12px; font-weight: 700; color: #FFD400; background: rgba(7,11,20,.78); padding: 1px 6px; border-radius: 3px; white-space: nowrap; opacity: 0; pointer-events: none; }
+.cap-drag:hover .cap-drag-tag, .cap-drag:focus-visible .cap-drag-tag, .cap-drag.dragging .cap-drag-tag { opacity: 1; }
 .stage-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--mute); background: var(--bg2); font-size: 15px; }
 .stage-empty b { color: var(--ink); display: block; font-size: 17px; margin-bottom: 6px; }
 
@@ -300,6 +305,12 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .chip-t { font-size: 12px; padding: 0 6px; border-radius: 4px; background: var(--card2); border: 1px solid var(--line); color: var(--mute); }
 .emph-btn { margin-left: 6px; padding: 0 8px; font-weight: 700; color: var(--brand, #F6630F); }
 .seg-btns { display: flex; gap: 4px; }
+/* 035 字幕樣式（整支 → 字幕）：五種樣式、五種粗細按鈕會換行；「之後的影片也用這個」勾選 */
+.cap-looks, .cap-weights { flex-wrap: wrap; }
+.ip-sub { margin: 14px 0 6px; font-size: 13px; font-weight: 700; }
+.ip-sub .dim { font-weight: 400; margin-left: 6px; }
+.ip-check { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; font-size: 13px; cursor: pointer; }
+.ip-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .seg-btns button { flex: 1; padding: 4px 6px; font-size: 13px; }
 .seg-btns button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .cut-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }

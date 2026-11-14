@@ -232,7 +232,7 @@ export function diffStates(a, b) {
   for (const k of keys) {
     if (a.sigs?.[k] === b.sigs?.[k]) continue;
     if (k.startsWith('compositions/')) changedComps.push(k);
-    else if (k.startsWith('assets/media/')) { if (a.sigs?.[k] != null && b.sigs?.[k] != null) changedMedia.push(k); }   // 新增、拿掉的檔：有用到的段一定也變了
+    else if (k.startsWith('assets/media/') || k.startsWith('assets/shots/')) { if (a.sigs?.[k] != null && b.sigs?.[k] != null) changedMedia.push(k); }   // 新增、拿掉的檔：有用到的段一定也變了
     else if (!(k.startsWith('illus-local/') && a.sigs?.[k] == null)) return full(`${k} 變了`);   // 新畫的線稿：舊內容沒用到它
   }
   const CA = classify(A, a.sigs), CB = classify(B, b.sigs);
@@ -324,7 +324,7 @@ export function reviewHashes(state, items, { scenes = [], sheets = {}, extra = {
     for (const o of owners) { if (!byOwner.has(o)) byOwner.set(o, []); byOwner.get(o).push(l); }
   }
   const hosted = new Set([...c.timed.values()].flatMap((t) => t.files));
-  const perSeg = (k) => hosted.has(k) || k === 'compositions/captions.html' || k.startsWith('assets/media/') || k.startsWith('illus-local/');   // 字幕：殼算共用（cap.shell），一則一則算在那個時間的段
+  const perSeg = (k) => hosted.has(k) || k === 'compositions/captions.html' || k.startsWith('assets/media/') || k.startsWith('assets/shots/') || k.startsWith('illus-local/');   // 字幕：殼算共用（cap.shell），一則一則算在那個時間的段
   const common = Object.entries(state.sigs || {}).filter(([k]) => !perSeg(k)).sort((x, y) => (x[0] < y[0] ? -1 : 1));   // 沒對應段落的合成檔算共用
   const usedBy = (f) => [...String(readComp(f)).matchAll(/(?:assets\/media|illus-local)\/[^"'\s)]+/g)].map((m) => `${m[0]}=${state.sigs?.[m[0]] ?? ''}`);
   const global = sha(JSON.stringify([state.hf, p.head, p.rootOpen, p.shell, c.rest, c.footage, c.capHost, cap?.shell ?? null, common, persistent, extra]));
