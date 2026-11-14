@@ -48,11 +48,13 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "name": "林大寶",
      "name_len": 3,
      "name_lines": [
       3
      ],
+     "name_maxline": 3,
      "titles": [
       {
        "text": "影音創作者",
@@ -60,6 +62,7 @@
        "text_lines": [
         5
        ],
+       "text_maxline": 5,
        "at": 0.6
       },
       {
@@ -68,6 +71,7 @@
        "text_lines": [
         5
        ],
+       "text_maxline": 5,
        "at": 0.7
       },
       {
@@ -76,6 +80,7 @@
        "text_lines": [
         6
        ],
+       "text_maxline": 6,
        "at": 0.8
       }
      ]
@@ -176,9 +181,13 @@
        "text": "YouTube",
        "text_text": "YouTube",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "YouTube",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m10 15 5-3-5-3z\" /> </svg>",
        "at": 0.2
       },
@@ -186,9 +195,13 @@
        "text": "Podcast",
        "text_text": "Podcast",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "Podcast",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M16.85 18.58a9 9 0 1 0-9.7 0\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M8 14a5 5 0 1 1 8 0\" /> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"11\" r=\"1\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M13 17a1 1 0 1 0-2 0l.5 4.5a.5.5 0 1 0 1 0Z\" /> </svg>",
        "at": 0.55
       },
@@ -196,9 +209,13 @@
        "text": "線上課程",
        "text_text": "線上課程",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "線上課程",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M22 10v6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\" /> </svg>",
        "at": 0.9
       },
@@ -206,9 +223,13 @@
        "text": "訪談節目",
        "text_text": "訪談節目",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "訪談節目",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" /> </svg>",
        "at": 1.25
       }
@@ -288,11 +309,13 @@
      "lead_lines": [
       6
      ],
+     "lead_maxline": 6,
      "key": "強烈建議儲存這支影片",
      "key_len": 10,
      "key_lines": [
       10
-     ]
+     ],
+     "key_maxline": 10
     },
     "beats": {
      "in": 0,
@@ -362,13 +385,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" /> </svg>",
      "text": "<span class=\"sc-kw\">免費工具</span>省下超多時間",
      "text_text": "免費工具省下超多時間",
      "text_len": 10,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "<span class=\"sc-kw\">免費工具</span>省下超多時間",
      "text_lines": [
       10
-     ]
+     ],
+     "text_maxline": 10
     },
     "beats": {
      "in": 0
@@ -433,7 +461,8 @@
      "name_len": 5,
      "name_lines": [
       5
-     ]
+     ],
+     "name_maxline": 5
     },
     "beats": {
      "in": 0
@@ -501,13 +530,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" /> </svg>",
      "text": "開拍前先<span class=\"sc-kw\">試錄</span>一小段",
      "text_text": "開拍前先試錄一小段",
      "text_len": 9,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "開拍前先<span class=\"sc-kw\">試錄</span>一小段",
      "text_lines": [
       9
-     ]
+     ],
+     "text_maxline": 9
     },
     "beats": {
      "in": 0
@@ -579,11 +613,13 @@
      "lead_lines": [
       5
      ],
+     "lead_maxline": 5,
      "key": "跑到手機旁邊檢查",
      "key_len": 8,
      "key_lines": [
       8
-     ]
+     ],
+     "key_maxline": 8
     },
     "beats": {
      "in": 0,
@@ -664,11 +700,13 @@
      "lead_lines": [
       6
      ],
+     "lead_maxline": 6,
      "key": "放到電腦才看得出",
      "key_len": 8,
      "key_lines": [
       8
-     ]
+     ],
+     "key_maxline": 8
     },
     "beats": {
      "in": 0,
@@ -744,9 +782,13 @@
        "text": "腳架不穩",
        "text_text": "腳架不穩",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "腳架不穩",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 9v4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 17h.01\" /> </svg>",
        "at": 0.2
       },
@@ -754,9 +796,13 @@
        "text": "衣服太薄",
        "text_text": "衣服太薄",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "衣服太薄",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z\" /> </svg>",
        "at": 3.096
       }
@@ -953,13 +999,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" /> </svg>",
      "text": "<span class=\"sc-kw\">多機</span>：橫拍長片、直拍短影音",
      "text_text": "多機：橫拍長片、直拍短影音",
      "text_len": 13,
+     "text_head": "多機",
+     "text_headlen": 2,
+     "text_tail": "橫拍長片、直拍短影音",
      "text_lines": [
       13
-     ]
+     ],
+     "text_maxline": 13
     },
     "beats": {
      "in": 0
@@ -1024,7 +1075,8 @@
      "name_len": 5,
      "name_lines": [
       5
-     ]
+     ],
+     "name_maxline": 5
     },
     "beats": {
      "in": 0
@@ -1099,9 +1151,13 @@
        "text": "橫拍長片",
        "text_text": "橫拍長片",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "橫拍長片",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
        "at": 0.2
       },
@@ -1109,9 +1165,13 @@
        "text": "直拍短片",
        "text_text": "直拍短片",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "直拍短片",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
        "at": 2.1
       }
@@ -1188,13 +1248,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" /> </svg>",
      "text": "<span class=\"sc-kw\">主持人、來賓</span>各用一支手機",
      "text_text": "主持人、來賓各用一支手機",
      "text_len": 12,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "<span class=\"sc-kw\">主持人、來賓</span>各用一支手機",
      "text_lines": [
       12
-     ]
+     ],
+     "text_maxline": 12
     },
     "beats": {
      "in": 0
@@ -1265,13 +1330,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
      "text": "單機：用<span class=\"sc-kw\">手勢</span>控制開始與結束",
      "text_text": "單機：用手勢控制開始與結束",
      "text_len": 13,
+     "text_head": "單機",
+     "text_headlen": 2,
+     "text_tail": "用<span class=\"sc-kw\">手勢</span>控制開始與結束",
      "text_lines": [
       13
-     ]
+     ],
+     "text_maxline": 13
     },
     "beats": {
      "in": 0
@@ -1405,13 +1475,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M16 17h4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M4 13h4\" /> </svg>",
      "text": "驗收要在兩支手機間<span class=\"sc-kw\">走來走去</span>",
      "text_text": "驗收要在兩支手機間走來走去",
      "text_len": 13,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "驗收要在兩支手機間<span class=\"sc-kw\">走來走去</span>",
      "text_lines": [
       13
-     ]
+     ],
+     "text_maxline": 13
     },
     "beats": {
      "in": 0
@@ -1483,11 +1558,13 @@
      "lead_lines": [
       7
      ],
+     "lead_maxline": 7,
      "key": "走動耗體力",
      "key_len": 5,
      "key_lines": [
       5
-     ]
+     ],
+     "key_maxline": 5
     },
     "beats": {
      "in": 0,
@@ -1566,13 +1643,18 @@
      "tag_lines": [
       3
      ],
+     "tag_maxline": 3,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"11\" cy=\"11\" r=\"8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m21 21-4.3-4.3\" /> </svg>",
      "text": "試過<span class=\"sc-kw\">多機錄影工具</span>都不順手",
      "text_text": "試過多機錄影工具都不順手",
      "text_len": 12,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "試過<span class=\"sc-kw\">多機錄影工具</span>都不順手",
      "text_lines": [
       12
-     ]
+     ],
+     "text_maxline": 12
     },
     "beats": {
      "in": 0
@@ -1637,7 +1719,8 @@
      "name_len": 6,
      "name_lines": [
       6
-     ]
+     ],
+     "name_maxline": 6
     },
     "beats": {
      "in": 0
@@ -1708,11 +1791,13 @@
      "lead_lines": [
       6
      ],
+     "lead_maxline": 6,
      "key": "自己設計一套工具",
      "key_len": 8,
      "key_lines": [
       8
-     ]
+     ],
+     "key_maxline": 8
     },
     "beats": {
      "in": 0,
@@ -1880,14 +1965,19 @@
      "title_lines": [
       7
      ],
+     "title_maxline": 7,
      "items": [
       {
        "text": "按下開始，多機同步錄影",
        "text_text": "按下開始，多機同步錄影",
        "text_len": 11,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "按下開始，多機同步錄影",
        "text_lines": [
         11
        ],
+       "text_maxline": 11,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"10\" /> <polygon class=\"stroke-draw\" pathLength=\"1\" points=\"10 8 16 12 10 16 10 8\" /> </svg>",
        "at": 0.5
       },
@@ -1895,9 +1985,13 @@
        "text": "按下結束，影片回傳電腦",
        "text_text": "按下結束，影片回傳電腦",
        "text_len": 11,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "按下結束，影片回傳電腦",
        "text_lines": [
         11
        ],
+       "text_maxline": 11,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2v8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 6-4 4-4-4\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M6 18h.01\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 18h.01\" /> </svg>",
        "at": 4.604
       },
@@ -1905,9 +1999,13 @@
        "text": "馬上播放檢查",
        "text_text": "馬上播放檢查",
        "text_len": 6,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "馬上播放檢查",
        "text_lines": [
         6
        ],
+       "text_maxline": 6,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.64z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 17v4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M8 21h8\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"3\" width=\"20\" height=\"14\" rx=\"2\" /> </svg>",
        "at": 6.739
       }
@@ -2072,14 +2170,19 @@
      "title_lines": [
       6
      ],
+     "title_maxline": 6,
      "items": [
       {
        "text": "實際操作這個工具",
        "text_text": "實際操作這個工具",
        "text_len": 8,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "實際操作這個工具",
        "text_lines": [
         8
        ],
+       "text_maxline": 8,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" /> </svg>",
        "at": 0.5
       },
@@ -2087,9 +2190,13 @@
        "text": "安裝工具與網路設定",
        "text_text": "安裝工具與網路設定",
        "text_len": 9,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "安裝工具與網路設定",
        "text_lines": [
         9
        ],
+       "text_maxline": 9,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"3\" /> </svg>",
        "at": 8.36
       },
@@ -2097,9 +2204,13 @@
        "text": "AI Coding 做出原型",
        "text_text": "AI Coding 做出原型",
        "text_len": 9,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "AI Coding 做出原型",
        "text_lines": [
         9
        ],
+       "text_maxline": 9,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 8V4H8\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M2 14h2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20 14h2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 13v2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 13v2\" /> </svg>",
        "at": 12.37
       }
@@ -2176,7 +2287,8 @@
      "name_len": 4,
      "name_lines": [
       4
-     ]
+     ],
+     "name_maxline": 4
     },
     "beats": {
      "in": 0
@@ -2298,11 +2410,13 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "name": "林大寶",
      "name_len": 3,
      "name_lines": [
       3
      ],
+     "name_maxline": 3,
      "titles": [
       {
        "text": "影音創作者",
@@ -2310,6 +2424,7 @@
        "text_lines": [
         5
        ],
+       "text_maxline": 5,
        "at": 0.6
       },
       {
@@ -2318,6 +2433,7 @@
        "text_lines": [
         5
        ],
+       "text_maxline": 5,
        "at": 0.7
       },
       {
@@ -2326,6 +2442,7 @@
        "text_lines": [
         6
        ],
+       "text_maxline": 6,
        "at": 0.8
       }
      ]
@@ -2426,9 +2543,13 @@
        "text": "YouTube",
        "text_text": "YouTube",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "YouTube",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m10 15 5-3-5-3z\" /> </svg>",
        "at": 0.2
       },
@@ -2436,9 +2557,13 @@
        "text": "Podcast",
        "text_text": "Podcast",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "Podcast",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M16.85 18.58a9 9 0 1 0-9.7 0\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M8 14a5 5 0 1 1 8 0\" /> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"11\" r=\"1\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M13 17a1 1 0 1 0-2 0l.5 4.5a.5.5 0 1 0 1 0Z\" /> </svg>",
        "at": 0.55
       },
@@ -2446,9 +2571,13 @@
        "text": "線上課程",
        "text_text": "線上課程",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "線上課程",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M22 10v6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\" /> </svg>",
        "at": 0.9
       },
@@ -2456,9 +2585,13 @@
        "text": "訪談節目",
        "text_text": "訪談節目",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "訪談節目",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" /> </svg>",
        "at": 1.25
       }
@@ -2538,11 +2671,13 @@
      "lead_lines": [
       6
      ],
+     "lead_maxline": 6,
      "key": "強烈建議儲存這支影片",
      "key_len": 10,
      "key_lines": [
       10
-     ]
+     ],
+     "key_maxline": 10
     },
     "beats": {
      "in": 0,
@@ -2612,13 +2747,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" /> </svg>",
      "text": "<span class=\"sc-kw\">免費工具</span>省下超多時間",
      "text_text": "免費工具省下超多時間",
      "text_len": 10,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "<span class=\"sc-kw\">免費工具</span>省下超多時間",
      "text_lines": [
       10
-     ]
+     ],
+     "text_maxline": 10
     },
     "beats": {
      "in": 0
@@ -2685,13 +2825,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" /> </svg>",
      "text": "開拍前先<span class=\"sc-kw\">試錄</span>一小段",
      "text_text": "開拍前先試錄一小段",
      "text_len": 9,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "開拍前先<span class=\"sc-kw\">試錄</span>一小段",
      "text_lines": [
       9
-     ]
+     ],
+     "text_maxline": 9
     },
     "beats": {
      "in": 0
@@ -2763,11 +2908,13 @@
      "lead_lines": [
       5
      ],
+     "lead_maxline": 5,
      "key": "跑到手機旁邊檢查",
      "key_len": 8,
      "key_lines": [
       8
-     ]
+     ],
+     "key_maxline": 8
     },
     "beats": {
      "in": 0,
@@ -2848,11 +2995,13 @@
      "lead_lines": [
       6
      ],
+     "lead_maxline": 6,
      "key": "放到電腦才看得出",
      "key_len": 8,
      "key_lines": [
       8
-     ]
+     ],
+     "key_maxline": 8
     },
     "beats": {
      "in": 0,
@@ -2928,9 +3077,13 @@
        "text": "腳架不穩",
        "text_text": "腳架不穩",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "腳架不穩",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 9v4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 17h.01\" /> </svg>",
        "at": 0.2
       },
@@ -2938,9 +3091,13 @@
        "text": "衣服太薄",
        "text_text": "衣服太薄",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "衣服太薄",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z\" /> </svg>",
        "at": 3.096
       }
@@ -3137,13 +3294,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\" /> </svg>",
      "text": "<span class=\"sc-kw\">多機</span>：橫拍長片、直拍短影音",
      "text_text": "多機：橫拍長片、直拍短影音",
      "text_len": 13,
+     "text_head": "多機",
+     "text_headlen": 2,
+     "text_tail": "橫拍長片、直拍短影音",
      "text_lines": [
       13
-     ]
+     ],
+     "text_maxline": 13
     },
     "beats": {
      "in": 0
@@ -3217,9 +3379,13 @@
        "text": "橫拍長片",
        "text_text": "橫拍長片",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "橫拍長片",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
        "at": 0.2
       },
@@ -3227,9 +3393,13 @@
        "text": "直拍短片",
        "text_text": "直拍短片",
        "text_len": 4,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "直拍短片",
        "text_lines": [
         4
        ],
+       "text_maxline": 4,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
        "at": 2.1
       }
@@ -3306,13 +3476,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /> <line class=\"stroke-draw\" pathLength=\"1\" x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\" /> </svg>",
      "text": "<span class=\"sc-kw\">主持人、來賓</span>各用一支手機",
      "text_text": "主持人、來賓各用一支手機",
      "text_len": 12,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "<span class=\"sc-kw\">主持人、來賓</span>各用一支手機",
      "text_lines": [
       12
-     ]
+     ],
+     "text_maxline": 12
     },
     "beats": {
      "in": 0
@@ -3383,13 +3558,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
      "text": "單機：用<span class=\"sc-kw\">手勢</span>控制開始與結束",
      "text_text": "單機：用手勢控制開始與結束",
      "text_len": 13,
+     "text_head": "單機",
+     "text_headlen": 2,
+     "text_tail": "用<span class=\"sc-kw\">手勢</span>控制開始與結束",
      "text_lines": [
       13
-     ]
+     ],
+     "text_maxline": 13
     },
     "beats": {
      "in": 0
@@ -3523,13 +3703,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M16 17h4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M4 13h4\" /> </svg>",
      "text": "驗收要在兩支手機間<span class=\"sc-kw\">走來走去</span>",
      "text_text": "驗收要在兩支手機間走來走去",
      "text_len": 13,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "驗收要在兩支手機間<span class=\"sc-kw\">走來走去</span>",
      "text_lines": [
       13
-     ]
+     ],
+     "text_maxline": 13
     },
     "beats": {
      "in": 0
@@ -3601,11 +3786,13 @@
      "lead_lines": [
       7
      ],
+     "lead_maxline": 7,
      "key": "走動耗體力",
      "key_len": 5,
      "key_lines": [
       5
-     ]
+     ],
+     "key_maxline": 5
     },
     "beats": {
      "in": 0,
@@ -3684,13 +3871,18 @@
      "tag_lines": [
       3
      ],
+     "tag_maxline": 3,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"11\" cy=\"11\" r=\"8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m21 21-4.3-4.3\" /> </svg>",
      "text": "試過<span class=\"sc-kw\">多機錄影工具</span>都不順手",
      "text_text": "試過多機錄影工具都不順手",
      "text_len": 12,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "試過<span class=\"sc-kw\">多機錄影工具</span>都不順手",
      "text_lines": [
       12
-     ]
+     ],
+     "text_maxline": 12
     },
     "beats": {
      "in": 0
@@ -3760,11 +3952,13 @@
      "lead_lines": [
       6
      ],
+     "lead_maxline": 6,
      "key": "自己設計一套工具",
      "key_len": 8,
      "key_lines": [
       8
-     ]
+     ],
+     "key_maxline": 8
     },
     "beats": {
      "in": 0,
@@ -3932,14 +4126,19 @@
      "title_lines": [
       7
      ],
+     "title_maxline": 7,
      "items": [
       {
        "text": "按下開始，多機同步錄影",
        "text_text": "按下開始，多機同步錄影",
        "text_len": 11,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "按下開始，多機同步錄影",
        "text_lines": [
         11
        ],
+       "text_maxline": 11,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"10\" /> <polygon class=\"stroke-draw\" pathLength=\"1\" points=\"10 8 16 12 10 16 10 8\" /> </svg>",
        "at": 0.5
       },
@@ -3947,9 +4146,13 @@
        "text": "按下結束，影片回傳電腦",
        "text_text": "按下結束，影片回傳電腦",
        "text_len": 11,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "按下結束，影片回傳電腦",
        "text_lines": [
         11
        ],
+       "text_maxline": 11,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 2v8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m16 6-4 4-4-4\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M6 18h.01\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 18h.01\" /> </svg>",
        "at": 4.604
       },
@@ -3957,9 +4160,13 @@
        "text": "馬上播放檢查",
        "text_text": "馬上播放檢查",
        "text_len": 6,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "馬上播放檢查",
        "text_lines": [
         6
        ],
+       "text_maxline": 6,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 7.75a.75.75 0 0 1 1.142-.638l3.664 2.249a.75.75 0 0 1 0 1.278l-3.664 2.25a.75.75 0 0 1-1.142-.64z\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 17v4\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M8 21h8\" /> <rect class=\"stroke-draw\" pathLength=\"1\" x=\"2\" y=\"3\" width=\"20\" height=\"14\" rx=\"2\" /> </svg>",
        "at": 6.739
       }
@@ -4124,14 +4331,19 @@
      "title_lines": [
       6
      ],
+     "title_maxline": 6,
      "items": [
       {
        "text": "實際操作這個工具",
        "text_text": "實際操作這個工具",
        "text_len": 8,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "實際操作這個工具",
        "text_lines": [
         8
        ],
+       "text_maxline": 8,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\" /> </svg>",
        "at": 0.5
       },
@@ -4139,9 +4351,13 @@
        "text": "安裝工具與網路設定",
        "text_text": "安裝工具與網路設定",
        "text_len": 9,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "安裝工具與網路設定",
        "text_lines": [
         9
        ],
+       "text_maxline": 9,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"3\" /> </svg>",
        "at": 8.36
       },
@@ -4149,9 +4365,13 @@
        "text": "AI Coding 做出原型",
        "text_text": "AI Coding 做出原型",
        "text_len": 9,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "AI Coding 做出原型",
        "text_lines": [
         9
        ],
+       "text_maxline": 9,
        "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 8V4H8\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"16\" height=\"12\" x=\"4\" y=\"8\" rx=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M2 14h2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M20 14h2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 13v2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 13v2\" /> </svg>",
        "at": 12.37
       }
@@ -4284,7 +4504,8 @@
      "name_len": 5,
      "name_lines": [
       5
-     ]
+     ],
+     "name_maxline": 5
     },
     "beats": {
      "in": 0
@@ -4350,7 +4571,8 @@
      "name_len": 5,
      "name_lines": [
       5
-     ]
+     ],
+     "name_maxline": 5
     },
     "beats": {
      "in": 0
@@ -4416,7 +4638,8 @@
      "name_len": 6,
      "name_lines": [
       6
-     ]
+     ],
+     "name_maxline": 6
     },
     "beats": {
      "in": 0
@@ -4484,7 +4707,8 @@
      "name_len": 4,
      "name_lines": [
       4
-     ]
+     ],
+     "name_maxline": 4
     },
     "beats": {
      "in": 0
@@ -8586,6 +8810,8 @@
   "music": null
  },
  "bed": null,
+ "ending": null,
+ "finalDur": 153.543,
  "chapterBadge": true,
  "badges": [
   {

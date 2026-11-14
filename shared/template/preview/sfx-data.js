@@ -1,155 +1,134 @@
 // build.mjs --gallery 產生，不要手改
 window.__SFX_DATA = {
-  "generated": "2026-11-12T11:34:28.357Z",
+  "generated": "2026-11-13T18:44:56.280Z",
   "sounds": {
     "ding": {
       "kind": "sfx",
       "zh": "提示「滴」",
       "use": "提醒、小技巧、總結、答案揭曉",
       "event": "卡片出現那一格",
-      "peak": 0.01,
-      "volume": 0.733,
+      "peak": 0.065,
+      "volume": 0.716,
       "targetDb": -8.7,
       "additive": false,
       "maxPerVideo": null,
-      "variants": [
-        {
-          "file": "ding-2",
-          "peak": 0.011,
-          "volume": 0.733
-        },
-        {
-          "file": "ding-3",
-          "peak": 0.009,
-          "volume": 0.733
-        }
-      ]
+      "variants": [],
+      "seconds": 0.993,
+      "local": true
     },
     "success": {
       "kind": "sfx",
       "zh": "完成音",
       "use": "解法、成果、完成、問題解決",
       "event": "綠勾或結果出現那一格",
-      "peak": 0.137,
-      "volume": 0.692,
+      "peak": 0.114,
+      "volume": 0.367,
       "targetDb": -5.2,
       "additive": false,
       "maxPerVideo": null,
-      "variants": [
-        {
-          "file": "success-2",
-          "peak": 0.145,
-          "volume": 0.692
-        },
-        {
-          "file": "success-3",
-          "peak": 0.129,
-          "volume": 0.692
-        }
-      ]
+      "variants": [],
+      "seconds": 1.934,
+      "local": true
     },
     "alert": {
       "kind": "sfx",
       "zh": "錯誤「嗶嗶」",
       "use": "千萬不要、踩坑、錯誤、限制",
       "event": "紅章或警告出現那一格",
-      "peak": 0.018,
-      "volume": 0.569,
+      "peak": 0.006,
+      "volume": 0.372,
       "targetDb": -6.9,
       "additive": false,
       "maxPerVideo": null,
-      "variants": [
-        {
-          "file": "alert-2",
-          "peak": 0.019,
-          "volume": 0.569
-        },
-        {
-          "file": "alert-3",
-          "peak": 0.017,
-          "volume": 0.569
-        }
-      ]
+      "variants": [],
+      "seconds": 0.316,
+      "local": true
     },
     "impact": {
       "kind": "sfx",
       "zh": "綜藝「咚咚」",
       "use": "重點句、蓋章、重擊、數字或金句落定",
       "event": "落定、蓋章落地那一格（第一下）",
-      "peak": 0.134,
-      "volume": 0.617,
+      "peak": 0.102,
+      "volume": 0.716,
       "targetDb": -6.2,
       "additive": false,
       "maxPerVideo": null,
-      "variants": [
-        {
-          "file": "impact-2",
-          "peak": 0.142,
-          "volume": 0.617
-        },
-        {
-          "file": "impact-3",
-          "peak": 0.126,
-          "volume": 0.617
-        }
-      ]
+      "variants": [],
+      "seconds": 1.08,
+      "local": true
     },
     "click": {
       "kind": "sfx",
       "zh": "滑鼠點擊",
       "use": "螢幕錄影或情境動畫裡看得到游標按下的地方，一下一顆",
       "event": "游標按下那一格",
-      "peak": 0.015,
-      "volume": 0.422,
+      "peak": 0.181,
+      "volume": 0.407,
       "targetDb": -19.6,
       "additive": true,
-      "maxPerVideo": null
+      "maxPerVideo": null,
+      "seconds": 0.336,
+      "variants": [],
+      "local": true
     },
     "chapter": {
       "kind": "sfx",
       "zh": "章節「嘭」",
       "use": "章節轉場（01）",
       "event": "章名落定那一格（01 的 titleAt＝段起點＋0.45 s）",
-      "peak": 0.021,
-      "volume": 1,
-      "targetDb": -2,
+      "peak": 0.055,
+      "volume": 0.716,
+      "targetDb": 3.2,
       "roleDb": 3.2,
       "additive": false,
-      "maxPerVideo": null
+      "maxPerVideo": null,
+      "seconds": 1.128,
+      "variants": [],
+      "local": true
     },
     "sparkle": {
       "kind": "sfx",
       "zh": "閃粉",
       "use": "入場、介紹主角（14 講者介紹）、金句閃亮（15）",
       "event": "主角或金句出現完成那一格",
-      "peak": 0.18,
-      "volume": 0.575,
+      "peak": 0.258,
+      "volume": 0.468,
       "targetDb": -6.8,
       "additive": false,
-      "maxPerVideo": 6
+      "maxPerVideo": 6,
+      "seconds": 2.743,
+      "variants": [],
+      "local": true
     },
     "shine": {
       "kind": "sfx",
       "zh": "閃亮登場",
       "use": "轉折亮點：本集最得意的設計、關鍵詞大字進場",
       "event": "關鍵詞到位那一格",
-      "peak": 0.699,
-      "volume": 0.668,
+      "peak": 0.659,
+      "volume": 0.359,
       "targetDb": -5.5,
       "additive": false,
-      "maxPerVideo": 3
+      "maxPerVideo": 3,
+      "seconds": 2.665,
+      "variants": [],
+      "local": true
     },
     "thunder": {
       "kind": "sfx",
       "zh": "打雷",
       "use": "負面情緒：壓力、焦慮、晴天霹靂（15 金句 tone warn 預設）",
       "event": "負面問句或壞消息出現那一格",
-      "peak": 0.2,
-      "volume": 1,
-      "targetDb": -2,
+      "peak": 0.112,
+      "volume": 0.668,
+      "targetDb": 0.6,
       "roleDb": 0.6,
       "additive": false,
-      "maxPerVideo": 3
+      "maxPerVideo": 3,
+      "seconds": 1.215,
+      "variants": [],
+      "local": true
     },
     "bgm-cylinder-five": {
       "kind": "bgm",
@@ -164,6 +143,62 @@ window.__SFX_DATA = {
       "fadeIn": 3.2,
       "fadeOut": 1.85,
       "credit": "Music: \"Cylinder Five\" by Chris Zabriskie (http://chriszabriskie.com/cylinders/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
+    },
+    "checkin": {
+      "kind": "sfx",
+      "zh": "過關音",
+      "use": "步驟做完、畫面上看得到成了（配對完成、上傳成功、版號正確）",
+      "event": "結果出現那一格",
+      "additive": false,
+      "maxPerVideo": 5,
+      "peak": 0.357,
+      "seconds": 1.567,
+      "volume": 0.26,
+      "targetDb": -6,
+      "variants": [],
+      "local": true
+    },
+    "question": {
+      "kind": "sfx",
+      "zh": "疑問「啊？」",
+      "use": "傻眼、結果和預期相反；一集最多一次",
+      "event": "那句話講完",
+      "additive": false,
+      "maxPerVideo": 1,
+      "peak": 0.233,
+      "seconds": 1.071,
+      "volume": 0.716,
+      "targetDb": 3.6,
+      "variants": [],
+      "local": true
+    },
+    "tick": {
+      "kind": "sfx",
+      "zh": "秒針",
+      "use": "錄影的等待快轉（那幾秒沒人講話）：工具自動配，響到結果出現前 0.2 秒、接一顆 ding；不用自己寫",
+      "event": "快轉開始",
+      "additive": false,
+      "maxPerVideo": null,
+      "peak": 0.372,
+      "seconds": 32.235,
+      "volume": 0.822,
+      "targetDb": -16.6,
+      "variants": [],
+      "local": true
+    },
+    "wow": {
+      "kind": "sfx",
+      "zh": "哇嗚",
+      "use": "結果比預期好的驚喜；一集最多一次",
+      "event": "結果出現那一格",
+      "additive": false,
+      "maxPerVideo": 1,
+      "peak": 0.217,
+      "seconds": 0.888,
+      "volume": 0.716,
+      "targetDb": -3.5,
+      "variants": [],
+      "local": true
     }
   },
   "scenes": {

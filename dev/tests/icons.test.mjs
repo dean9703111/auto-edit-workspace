@@ -93,7 +93,8 @@ test('custom 範例的 .sc-icon 都是 icons.json 的原文（x-checklist、x-sc
   // x-checklist：勾就是圖示；x-scene 系列：主角是 kit/illus.js 的插圖元件。examples.test 也檢查它們檔頭寫「這支沒有圖示」
   const NOICON = new Set(['x-checklist.html', 'x-scene.html', 'x-scene-example-rec.html', 'x-scene-example-outline.html',
     'x-callout-parts.html', 'x-checklist-ai.html', 'x-ring-facets.html', 'x-trend-blocks.html', 'x-crowd.html', 'x-desk.html',
-    'x-folder.html', 'x-receipt.html', 'x-wordcut.html', 'x-tags.html', 'x-wall.html', 'x-magazine.html', 'x-breakout.html']);   // 015：主角是插圖、圈圈、方塊或小人；x-folder 的資料夾／檔案圖示照種類從 #xfld-stamps 複製（下一個測試驗原文）
+    'x-folder.html', 'x-receipt.html', 'x-wordcut.html', 'x-tags.html', 'x-wall.html', 'x-magazine.html', 'x-breakout.html',
+    'x-scroll-brake.html']);   // 034：清單每列左邊是編號圓，不是圖示   // 015：主角是插圖、圈圈、方塊或小人；x-folder 的資料夾／檔案圖示照種類從 #xfld-stamps 複製（下一個測試驗原文）
   const dir = path.join(TEMPLATE, 'custom');
   const raw = JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'kit', 'icons.json'), 'utf8'));
   const norm = (s) => s.replace(/\s+/g, '').replace(/class="[^"]*"/g, '').replace(/(width|height)="[^"]*"/g, '');

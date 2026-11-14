@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>影片情境庫：18 種情境模板與情境動畫預覽｜auto-edit-workspace</title>
-<meta name="description" content="AI 自動剪輯工作區的情境庫：章節轉場、半版側邊欄、全畫面清單、流程、比較、金句等 18 種情境模板與 17 支情境動畫，可即時預覽、切換風格包與亮暗主題。">
+<meta name="description" content="AI 自動剪輯工作區的情境庫：章節轉場、半版側邊欄、全畫面清單、流程、比較、金句等 18 種情境模板與 48 支情境動畫，可即時預覽、切換風格包與亮暗主題。">
 <link rel="canonical" href="https://deanlin.net/auto-edit-workspace/shared/template/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="auto-edit-workspace">
 <meta property="og:locale" content="zh_TW">
 <meta property="og:url" content="https://deanlin.net/auto-edit-workspace/shared/template/">
 <meta property="og:title" content="影片情境庫：18 種情境模板與情境動畫預覽｜auto-edit-workspace">
-<meta property="og:description" content="AI 自動剪輯工作區的情境庫：章節轉場、半版側邊欄、全畫面清單、流程、比較、金句等 18 種情境模板與 17 支情境動畫，可即時預覽、切換風格包與亮暗主題。">
+<meta property="og:description" content="AI 自動剪輯工作區的情境庫：章節轉場、半版側邊欄、全畫面清單、流程、比較、金句等 18 種情境模板與 48 支情境動畫，可即時預覽、切換風格包與亮暗主題。">
 <meta property="og:image" content="https://deanlin.net/auto-edit-workspace/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F6630F'/%3E%3Cpath d='M25 19l21 13-21 13z' fill='%23fff'/%3E%3C/svg%3E">
@@ -404,6 +404,60 @@
           <div class="body">
             <div class="title"><span class="no">04d</span><h4>全寬表格</h4><code>fs-table</code></div>
             <dl><dt>全寬時</dt><dd>表格寬 1580</dd></dl>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- 034 全幕版（沒有講者的字卡）：四張一組；build 自動切換（plan.mjs fullCards → scene.json 不變、template.html 的 @…-full 三節） -->
+    <article class="card group">
+      <div class="body">
+        <div class="title"><span class="no">全幕</span><h3>全幕版：沒有講者的字卡（4 種）</h3><code>自動</code></div>
+        <dl>
+          <dt>什麼時候</dt><dd>金句、問答、一般字卡、總結有一半以上落在只有聲音的段，沒有講者可以疊：build 自動換成同一個模板的全幕版（整張畫面、和全畫面段同一套接法），plan.json 照舊寫</dd>
+          <dt>有講者也想用</dt><dd>那一段寫 <code>"full": true</code></dd>
+          <dt>一起出現的</dt><dd>前後都是全畫面、後一段是新小節開頭時整頁「上推」；情緒點推近落在這種段改成整張畫面推近 1.1 倍</dd>
+        </dl>
+      </div>
+      <div class="subgrid">
+        <div class="sub">
+          <div class="pv" style="background-image:url('gallery/15-quote-full.jpg')">
+            <iframe src="preview/15-quote-full.html" loading="lazy" title="15 全幕金句 預覽" tabindex="-1"></iframe>
+            <a class="open" href="preview/15-quote-full.html" target="_blank" rel="noopener" aria-label="新分頁開啟 15 全幕金句"><span>全尺寸 ↗</span></a>
+          </div>
+          <div class="body">
+            <div class="title"><span class="no">15</span><h4>全幕金句</h4><code>quote</code></div>
+            <dl><dt>全幕時</dt><dd>主色大引號＋大字逐詞壓印，關鍵詞螢光筆；字級照最長那一行算</dd></dl>
+          </div>
+        </div>
+        <div class="sub">
+          <div class="pv" style="background-image:url('gallery/09-qa-full.jpg')">
+            <iframe src="preview/09-qa-full.html" loading="lazy" title="09 全幕問答 預覽" tabindex="-1"></iframe>
+            <a class="open" href="preview/09-qa-full.html" target="_blank" rel="noopener" aria-label="新分頁開啟 09 全幕問答"><span>全尺寸 ↗</span></a>
+          </div>
+          <div class="body">
+            <div class="title"><span class="no">09</span><h4>全幕問答</h4><code>qa</code></div>
+            <dl><dt>全幕時</dt><dd>大卡寫問題，講到答案時翻面成主色的答案</dd></dl>
+          </div>
+        </div>
+        <div class="sub">
+          <div class="pv" style="background-image:url('gallery/06-concept-full.jpg')">
+            <iframe src="preview/06-concept-full.html" loading="lazy" title="06 全幕名詞 預覽" tabindex="-1"></iframe>
+            <a class="open" href="preview/06-concept-full.html" target="_blank" rel="noopener" aria-label="新分頁開啟 06 全幕名詞"><span>全尺寸 ↗</span></a>
+          </div>
+          <div class="body">
+            <div class="title"><span class="no">06</span><h4>全幕名詞</h4><code>concept</code></div>
+            <dl><dt>全幕時</dt><dd><code>{ 名詞 }</code> 花括號彈開把名詞拉開，定義跟著打字（正文寫「名詞：定義」）</dd></dl>
+          </div>
+        </div>
+        <div class="sub">
+          <div class="pv" style="background-image:url('gallery/11-summary-full.jpg')">
+            <iframe src="preview/11-summary-full.html" loading="lazy" title="11 全幕總結 預覽" tabindex="-1"></iframe>
+            <a class="open" href="preview/11-summary-full.html" target="_blank" rel="noopener" aria-label="新分頁開啟 11 全幕總結"><span>全尺寸 ↗</span></a>
+          </div>
+          <div class="body">
+            <div class="title"><span class="no">11</span><h4>全幕總結</h4><code>summary</code></div>
+            <dl><dt>全幕時</dt><dd>大圓圈描圈打勾＋兩行大字，關鍵詞螢光筆</dd></dl>
           </div>
         </div>
       </div>
@@ -1364,6 +1418,36 @@
           <dt>畫面上</dt><dd>排行榜：名次徽章和空軌道先在 → 講到哪一項，那一列擦開、長條長到比例、數字數上去（照數字自動排名，第一名主色）→ 講到結論，第一名亮著、其他退焦</dd>
         </dl>
         <div class="limits"><span>版面：子母畫面</span><span>3–5 項</span><span>名稱 ≤ 6 字、數字 0–99999</span><span>圖示 1 個</span><span>綁句 T1–T5／TOP</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-scroll-brake.html" loading="lazy" title="x-scroll-brake 長清單急剎 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-scroll-brake.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-scroll-brake 長清單急剎"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>長清單急剎</h3><code>x-scroll-brake</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>先講數量很多、再點名只留下一個（「這一年我試了三十個工具，大部分用一次就刪掉了，最後留下來的只有這一個」）</dd>
+          <dt>不要用在</dt><dd class="avoid">只有 3–5 項（用 x-rank、04a）；留下的不只一個（用 x-checklist）；清單的名字要一個一個讀到（用 04a 或拆段）；講的數字和列得出來的項數不一樣（用 x-numbers）</dd>
+          <dt>畫面上</dt><dd>左邊大數字滾到項數、右邊長清單第一屏錯拍彈出 → 清單越捲越快 → 講到「這一個」時急剎停在留下的那一項，四角準星咬住、其他列退暗、左邊的數字換成主色的 1</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>沒有講者時全寬</span><span>12–30 項，每項 ≤ 6 字</span><span>沒有圖示</span><span>綁句 TC／TB</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-prompt-tree.html" loading="lazy" title="x-prompt-tree 提示詞長出樹 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-prompt-tree.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-prompt-tree 提示詞長出樹"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>提示詞長出樹</h3><code>x-prompt-tree</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>「我只打一句話，AI 就把整份結構長出來」（「幫我規劃一支十分鐘的教學影片，它就把整份大綱長出來，分成三個章節，每一章還有要講的重點」）</dd>
+          <dt>不要用在</dt><dd class="avoid">已經存在的大綱、架構圖（用 x-architecture、04a）；超過 3 章或每章超過 2 個重點（用 04a、x-checklist 或拆段）；只秀提示詞（用 x-prompt）、AI 回一段話（用 x-prompt-chat）；只有一層分岔（用 x-branch）</dd>
+          <dt>畫面上</dt><dd>輸入膠囊逐字打出提示詞 → 送出、鏡頭拉回，底下長出根節點 → 2–3 個章節 → 每章 0–2 個重點，每長一層鏡頭往上帶 → 根節點旁彈出總結膠囊</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>沒有講者時全寬</span><span>提示詞 ≤ 22 字、2–3 章</span><span>章 ≤ 5 字、重點 ≤ 4 字</span><span>綁句 TT／TR／TB／TL／TM</span></div>
       </div>
     </article>
 

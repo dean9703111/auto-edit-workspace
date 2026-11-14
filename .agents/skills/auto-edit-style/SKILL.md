@@ -1,6 +1,6 @@
 ---
 name: auto-edit-style
-description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。配樂照 references/music.md、拆參考片照 references/reference-video.md 做。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「講者設定成…」「不要講者介紹」「生成配樂」「換配樂」「這集不要底樂」「用我自己的音樂」「拆這支參考片」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
+description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。配樂照 references/music.md、拆參考片照 references/reference-video.md 做。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「講者設定成…」「不要講者介紹」「設定片尾」「片尾換這張圖」「不要片尾」「生成配樂」「換配樂」「這集不要底樂」「片尾配樂」「用我自己的音樂」「拆這支參考片」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
 version: 0.1.0
 ---
 # 換風格
@@ -13,7 +13,7 @@ version: 0.1.0
 | 「換暗色」「換主題」 | 步驟 6 | 這一集 plan.json 第一層的 `theme` | build 0 個 ✖ | — |
 | 「有哪些風格」「這集用 XX 風格」「整個換成 XX」 | 步驟 7 | 這一集 plan.json 第一層的 `style`，或 `brand.mjs use` 換掉 `shared/template/` 那幾個檔 | `brand.mjs list` 的 ● 是對的那包、build 0 個 ✖ | — |
 
-路由規則的唯一定義：USAGE-reference.md R9.3；背景圖規格與留空區：R9.2。這支 Skill 會動到 `shared/`，只透過工具寫這幾樣（AGENTS.md 規則 1）：`brand.mjs` 寫 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`bg-*.jpg`，`brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪），`brand.mjs speaker` 寫 `shared/setting.json`，`look.mjs default` 寫 `kit/look.json`（步驟 5）。這一集的 plan.json 設定一律用 `build.mjs --set`／`--unset` 改，不手改。
+路由規則的唯一定義：USAGE-reference.md R9.3；背景圖規格與留空區：R9.2。這支 Skill 會動到 `shared/`，只透過工具寫這幾樣（AGENTS.md 規則 1）：`brand.mjs` 寫 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`bg-*.jpg`，`brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪），`brand.mjs speaker`、`brand.mjs ending` 寫 `shared/setting.json`（`ending` 另外把檔案複製進 `shared/brand/`），`look.mjs default` 寫 `kit/look.json`（步驟 5）。這一集的 plan.json 設定一律用 `build.mjs --set`／`--unset` 改，不手改。
 
 ## 開始前
 
@@ -110,6 +110,16 @@ node shared/template/tools/brand.mjs speaker
 寫 `shared/setting.json`（不進版控；14 講者介紹不寫 `name`、`titles` 就用它，15 金句不寫 `by` 用 `short`）。頭銜用逗號或「、」分開；只改頭銜就只給 `--titles`。不要講者介紹：`brand.mjs speaker off`。姓名、頭銜一定是使用者給的，不要從講稿或頻道名猜；這一步不用停點 ⑥。
 完成判準：第 2 行印 `講者：<姓名>…`；有專案時重跑 build 0 個 ✖、沒有「還沒設定講者」的 ⚠。
 常見錯誤：`✖ 講者資料不對：… 最多 6 字` → 把超過的頭銜唸給使用者、請他給短一點的，不要自己縮。
+
+**9. 片尾模板**（使用者說「設定片尾」「片尾換這張圖」「片尾不要金句」「以後不要片尾」「這集不要片尾」「片尾金句改成…」）
+
+```
+node shared/template/tools/brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote]
+node shared/template/tools/brand.mjs ending
+```
+
+影片結束後接一張片尾卡（黑底、圖置中、右邊一個字一個字打出片尾金句），講到「訂閱」那句放訂閱動畫；檔案複製進 `shared/brand/`、寫 `shared/setting.json`（都不進版控）。預設沒有片尾。片尾金句每集自動取講稿最後的 `>` 引言，沒有就用最後一張金句字卡。只改一項就只給那個旗標；以後不要：`brand.mjs ending off`。只有這一集：`build.mjs --project projects/<專案> --set ending=false`（不要片尾）、`--set "ending.quote=<句子>"`（換金句；`none`＝不放）、`--set ending.subscribe=#N`（訂閱動畫跟哪一句）。直式、剪映素材不放。這一步不用停點 ⑥。
+完成判準：第 2 行印 `片尾卡：<圖>…`；有專案時重跑 build 印 `片尾卡：影片結束後接 … 秒`。
 
 ## 停點
 

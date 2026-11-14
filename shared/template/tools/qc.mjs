@@ -294,8 +294,8 @@ export function locateItem([a, b], items, cuts = []) {
 // 有小視窗的全畫面段也扣：小視窗很小、講者停一下整張畫面就幾乎不變，31 分鐘的片子會報十幾則雜訊。講者底片凍結在滿版的地方查得到
 const stillByDesign = (it) => isChapterItem(it) || (it?.opaque && (it.type === 'scene' || it.type === 'custom'));
 const stillHoles = (items, cuts) => (items || []).filter(stillByDesign).map((it) => [roughToFinal(it.start, cuts) - 0.15, roughToFinal(it.shownEnd ?? it.end, cuts) + 0.15]);
-export function freezeIssues(freezes, items, cuts = [], minDur = LIMITS.freeze) {
-  const holes = stillHoles(items, cuts);
+export function freezeIssues(freezes, items, cuts = [], minDur = LIMITS.freeze, extra = []) {
+  const holes = [...stillHoles(items, cuts), ...extra];
   const out = [];
   for (const fz of freezes) for (const [a, b] of subtractRanges(fz, holes)) if (b - a >= minDur - 1e-6) out.push([a, b]);
   return out;
@@ -303,7 +303,8 @@ export function freezeIssues(freezes, items, cuts = [], minDur = LIMITS.freeze) 
 
 // ---------- 純函式：判定 ----------
 
-// facts：{ width, height, fps, vfr, hasAudio, dur, expected, loud:{i,tp}, freezes, blacks, silences, items, cuts }
+// facts：{ width, height, fps, vfr, hasAudio, dur, expected, loud:{i,tp}, freezes, blacks, silences, items, cuts, tail }
+// tail＝片尾卡 { at, dur }（033；build --check --json 的 ending）：從講者淡出到黑（at − 0.5）到片尾，本來就靜止、黑底、可能沒聲音，凍結／黑畫面／無聲都不判
 // 回傳 { checks:[{ key, level:'ok'|'warn'|'error', text }], errors, warnings, ok }
 export function judge(f) {
   const L = LIMITS, checks = [];
@@ -342,8 +343,10 @@ export function judge(f) {
   const where = (rg) => `（${itemName(locateItem(rg, f.items, f.cuts))}）`;
   const rng = ([a, b]) => `${fmtT(a)}–${fmtT(b)}`;
 
-  const fz = freezeIssues(f.freezes || [], f.items, f.cuts);
-  if (!fz.length) add('freeze', 'ok', `沒有 ≥ ${L.freeze} 秒的畫面凍結（章節轉場、無小視窗全畫面段已排除）`);
+  const tailHole = f.tail?.dur > 0 ? [[f.tail.at - 0.65, f.tail.at + f.tail.dur + 0.15]] : [];
+  const notTail = (list) => list.flatMap((rg) => subtractRanges(rg, tailHole));
+  const fz = freezeIssues(f.freezes || [], f.items, f.cuts, L.freeze, tailHole);
+  if (!fz.length) add('freeze', 'ok', `沒有 ≥ ${L.freeze} 秒的畫面凍結（章節轉場、無小視窗全畫面段${tailHole.length ? '、片尾卡' : ''}已排除）`);
   for (const rg of fz) add('freeze', 'warn', `${rng(rg)} 畫面凍結 ${r1(rg[1] - rg[0])} 秒${where(rg)} → 看 qc-sheet.jpg 與該段起點截圖；螢幕錄影先確認素材有在動，重 render 該段；多半是 seek 卡住或素材本身靜止`);
 
   if (Array.isArray(f.pipMissing)) {
@@ -356,11 +359,11 @@ export function judge(f) {
   if (f.captionStyle) for (const c of captionStyleChecks(f.captionStyle, captionSpec(f.canvas))) add('captions', c.level, c.text);
   if (Array.isArray(f.cues) && f.cues.length) for (const c of captionTextChecks(f.cues)) add('captext', c.level, c.text);
 
-  const bl = (f.blacks || []).filter(([a, b]) => b - a >= L.black - 1e-6);
+  const bl = notTail(f.blacks || []).filter(([a, b]) => b - a >= L.black - 1e-6);
   if (!bl.length) add('black', 'ok', `沒有 ≥ ${L.black} 秒的黑畫面`);
   for (const rg of bl) add('black', 'warn', `${rng(rg)} 黑畫面 ${r1(rg[1] - rg[0])} 秒${where(rg)} → 可能掉圖，或只有聲音的區間沒用 media 段蓋住；截該段確認`);
 
-  const sl = (f.silences || []).filter(([a, b]) => b - a >= L.silence - 1e-6);
+  const sl = notTail(f.silences || []).filter(([a, b]) => b - a >= L.silence - 1e-6);
   if (!f.hasAudio) { /* 沒音軌已在格式判成 ✖ */ }
   else if (!sl.length) add('silence', 'ok', `沒有 ≥ ${L.silence} 秒的無聲區間`);
   for (const rg of f.hasAudio ? sl : []) add('silence', 'warn', `${rng(rg)} 沒有聲音 ${r1(rg[1] - rg[0])} 秒${where(rg)} → 可能是漏剪的停頓；刻意留白就不用理它`);
@@ -498,8 +501,8 @@ function expectedFromBuild(P, flags) {
   const { json: j, error } = checkJsonOf(P, flags);
   if (!j) return { error: `build --check --json 沒有輸出 JSON：${error}` };
   const black = { voiceOnly: j.voiceOnly || [], roughBlack: j.roughBlack || [] };
-  if (!j.ok) return { error: `build --check 有 ✖：${(j.errors || []).slice(0, 2).join('；')}`, items: j.items || [], cuts: j.edit?.cuts || [], ...black };
-  return { expected: j.outputDur, items: j.items || [], cuts: j.edit?.cuts || [], ...black };
+  if (!j.ok) return { error: `build --check 有 ✖：${(j.errors || []).slice(0, 2).join('；')}`, items: j.items || [], cuts: j.edit?.cuts || [], tail: j.ending ?? null, ...black };
+  return { expected: j.outputDur, items: j.items || [], cuts: j.edit?.cuts || [], tail: j.ending ?? null, ...black };
 }
 
 // 凍結與黑畫面用每秒 10 格、一半解析度量（門檻是 3 秒、0.5 秒，不用 30 格全解析；實測 15 分鐘片快 5 倍以上，凍結的起點與全解析相同或差 < 0.1 秒）
@@ -612,7 +615,7 @@ export async function finalCheck(P, flags) {
   } finally { if (S) await S.close(); }
   const theme = themeOf(P);
   const { statics, frames, ...measured } = det;
-  const facts = { scale: Number(flags.scale) || 1, width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, dur, expected: exp.expected ?? null, items: exp.items || [], cuts: exp.cuts || [], pipMissing: pipMiss, cues, captionStyle, theme, canvas: cv, stills, covered, project: `projects/${path.basename(P.project)}`, fileArg: flags.file ? ` --file ${rel(file)} --offset 0` : '', ...measured };
+  const facts = { scale: Number(flags.scale) || 1, width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, dur, expected: exp.expected ?? null, items: exp.items || [], cuts: exp.cuts || [], tail: exp.tail ?? null, pipMissing: pipMiss, cues, captionStyle, theme, canvas: cv, stills, covered, project: `projects/${path.basename(P.project)}`, fileArg: flags.file ? ` --file ${rel(file)} --offset 0` : '', ...measured };
   const verdict = judge(facts);
   if (exp.error) verdict.checks.splice(2, 0, { key: 'build', level: 'warn', text: `${exp.error} → 時間對不到段落、長度也沒有預期值，先修好專案再重跑 qc` }), verdict.warnings++;
   let sheet = null;

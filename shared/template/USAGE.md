@@ -221,8 +221,9 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `pipCrop` | | `"auto"` 或 `[x, y, w, h]` | 子母畫面裁切哪一塊（R4） |
 | `avoid` | | 情境 key 陣列 | 使用者說「不要用 XX」時寫進來，用了會出錯 |
 | `rhythm` | | `"continuous"`（預設）或 `"spaced"` | 卡片節奏。`continuous`＝連續覆蓋（style.md）：報「沒有畫面的區間」與「講者會閃一下」；只有使用者說要留露臉空檔時才寫 `"spaced"` |
-| `outro` | | 物件 | 結尾配樂：`{ "from": "#N" }`（從第 N 句起播到片尾，淡入淡出自動；`music`、`volume`、`fadeOut` 選填）。使用者要片尾配樂時才寫（R5.2） |
+| `outro` | | 物件 | 結尾配樂：`{ "from": "#N", "music": "<曲名>" }`（從第 N 句起播到片尾，淡入淡出自動；`volume`、`fadeOut` 選填）。`music` 沒寫＝工作區預設（`music.mjs outro`），`from` 沒寫＝只播片尾最後 30 秒；這一集不配寫 `{ "music": null }`。用 `build.mjs --set` 改（R5.2） |
 | `bed` | | 物件 | 底樂（選用）：`{ "music": "<曲名>" }` 整支片墊一首配樂，講話時自動壓低，片頭淡入、片尾（或片尾配樂起播前）淡出；`volume` 選填（dB）。這一集不要寫 `{ "music": null }`。曲名看 `music.mjs list`；使用者要底樂時才寫（`auto-edit-style` 的 `references/music.md`） |
+| `ending` | | `false` 或物件 | 片尾模板（工作區用 `brand.mjs ending` 設定才有）：`false`＝這一集不要片尾卡、訂閱動畫；`{ "quote": "<句子>" }` 換這一集的片尾金句（`null`＝不放）、`{ "subscribe": "#N" }` 指定訂閱動畫跟哪一句（`null`＝不放）。沒寫就照工作區設定（金句取講稿最後的 `>` 引言、沒有就用最後一張金句字卡；訂閱動畫找最後四分之一講到「訂閱」的那句）。用 `build.mjs --set ending=false`、`--set "ending.quote=…"` 改 |
 | `chapterBadge` | | `true`（預設）或 `false` | 章節角標自動常駐右上角：章節開始（01 章節轉場結束；沒有 01 時是 02 章節角標段開始）一直到下一章或片尾配樂，子母畫面、全幕時自動淡出。不要常駐才寫 `false`（回到舊的行為：02 段只顯示那幾秒、`chtag` 附件照舊）。使用者說不要角標時才寫（`--set chapterBadge=false`） |
 | `sections` | | 陣列 | 小節角標：`[{ "at": "#N", "name": "STEP 1｜設定資料夾" }]`（講稿 `###` 小節的第一句、小節名 ≤ 12 字）。有寫時右上角角標改成「章號＋目前小節」（寬度跟著小節名），子母畫面、全幕、錄影段也露出（橫式錄影段：旁邊有空位就放空位，沒有就貼錄影畫面右上角；錄影的 `steps` 和小節名重複時不畫、⚠ 請刪掉；說明卡、箭頭自動避開，紅框被蓋到 ⚠）。講稿有 `###` 而沒寫時 `--check` 會 ⚠ 並印出可以直接貼的整行 |
 | `theme` | | `"light"`（預設，不寫）或 `"dark"` | 主題：暗色時 build 換 `bg-*-dark.jpg`、所有合成 `<html data-theme="dark">`；只換顏色 token，版面與動態不變。剪輯台可以切；AI 只在使用者明說「暗色」時寫（`auto-edit-style` 步驟 6） |

@@ -131,6 +131,15 @@
                                      ref 寫成字串字面值（例 const T1 = P.sfx('success', '#38@兩支')），build 靜態解析出 <audio>（motion.md §3）
      P.stick(sel, at, {rot, from, twist, dur, stagger})  貼上：貼紙（class="sc-sticker"）從放大、多歪一點拍到定位；rot＝貼好後的角度（預設 -4 度）
      P.peel(sel, at, {rot, dur, stagger})  撕走：貼紙往右上掀起、淡掉（退場）；rot 要和 P.stick 的一樣
+     ── 034 全幕版（specs/034-fullscreen；15／09／06 的全幕版用，custom 也可以用）──
+     P.press(sel, at, {stagger, from, dy, blur, dur, ease})  逐詞壓印：詞從放大 from（1.12）、略高 dy（0.08em）、微糊 blur（0.05em）壓到定位，
+                                     0.32s back.out(1.3)。詞＝<wbr> 隔開的段；沒寫 <wbr> 就用瀏覽器的中文斷詞（標點、「的了嗎」黏前一個詞，<span> 整個一個詞）。
+                                     at＝數字（每詞間隔 stagger 0.14）或陣列（每個詞一個時刻）。P.pressDone＝最後一個詞落定的秒數
+     P.flip(card, at, {lift, persp, peak})  翻面：card 裡 [data-flip="front"]、[data-flip="back"] 兩面，沿 Y 軸翻 180°（後仰 → 翻過頭 → 彈簧落定，共 1.27s），
+                                     離地 lift（60u）、面壓暗、側棱受光。背面露出比 at 晚 P.FLIP_LEAD 秒：寫 P.flip(card, T − P.FLIP_LEAD)。
+                                     背面標 data-flip-num 的元素從 1.08 收到 1。一張卡只翻一次
+     P.brace(set, at, {open, draw, gap})  括號揭示：set（.sc-brace，固定寬高）裡兩條括號 .sc-brace__l／__r 先以 0.4 倍合著描出（at），
+                                     open（at＋0.45）彈簧彈開＋放大到 1，.sc-brace__text 被括號內緣「拉開」。一組只揭示一次
      P.prev()                        前一段是什麼：'speaker'｜'fullscreen'｜'pip'（data-prev → __cues.segs[id].prev；單獨開檔＝'speaker'）。
                                      custom 開場：const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow'（手寫 'grow'／'swap' 也可以）
      P.V2                            時間與曲線表：IN 0.5／SHELL 0.6／EMPH 0.2／OUT 0.3／MOVE 1.0／GROUP 0.12；CH 逐字間隔；EASE.in／emph／move／tx／out／idle
@@ -285,6 +294,56 @@
   // 綁句（cues.md v1 §4）：時間取到毫秒，免得 0.30000000000000004 讓截圖時刻對不齊
   var r3 = function (n) { return Math.round(n * 1000) / 1000; };
   var r2 = function (n) { return Math.round(n * 100) / 100; };
+
+  // 034 翻面（P.flip）與括號揭示（P.brace）的純函式：角度、彈簧都是時間的閉式解，不讀現在時間
+  var springOf = function (k, c) {
+    var w = Math.sqrt(k), z = c / (2 * w), wd = w * Math.sqrt(1 - z * z);
+    return function (t) { return t <= 0 ? 0 : 1 - Math.exp(-z * w * t) * (Math.cos(wd * t) + (z * w / wd) * Math.sin(wd * t)); };
+  };
+  var BRACE_SPRING = springOf(130, 14);
+  var FLIPC = (function () {
+    var PRE = 0.133, TURN = 0.533, SETTLE = 0.6, out3 = function (x) { return 1 - Math.pow(1 - x, 3); };
+    var bez = function (x1, y1, x2, y2) {
+      return function (x) {
+        var t = x;
+        for (var i = 0; i < 8; i++) {
+          var cx = 3 * x1 * t * (1 - t) * (1 - t) + 3 * x2 * t * t * (1 - t) + t * t * t - x;
+          var d = 3 * x1 * (1 - t) * (1 - 3 * t) + 3 * x2 * t * (2 - 3 * t) + 3 * t * t;
+          if (Math.abs(d) < 1e-6) break; t = Math.max(0, Math.min(1, t - cx / d));
+        }
+        return 3 * y1 * t * (1 - t) * (1 - t) + 3 * y2 * t * t * (1 - t) + t * t * t;
+      };
+    };
+    var turn = bez(0.55, 0, 0.3, 1), land = springOf(190, 15), num = springOf(160, 18), DUR = PRE + TURN + SETTLE;
+    var angle = function (tt, peak) {
+      if (tt <= 0) return 0;
+      if (tt < PRE) return -10 * out3(tt / PRE);
+      if (tt < PRE + TURN) return -10 + (peak + 10) * turn((tt - PRE) / TURN);
+      if (tt < DUR) return peak - (peak - 180) * land(tt - PRE - TURN);
+      return 180;
+    };
+    var a = PRE, b = PRE + TURN;
+    for (var i = 0; i < 30; i++) { var m = (a + b) / 2; if (angle(m, 194) >= 90) b = m; else a = m; }
+    return { PRE: PRE, TURN: TURN, DUR: DUR, angle: angle, num: num, lead: Math.round(b * 100) / 100 };
+  })();
+  var flipPaint = function (c, tt, o) {
+    var th = FLIPC.angle(tt, o.peak), rad = th * Math.PI / 180, lift = o.lift * Math.sin(Math.max(0, Math.min(Math.PI, rad)));
+    var showBack = th >= 90, face = showBack ? c.back : c.front, hid = showBack ? c.front : c.back, rot = showBack ? th - 180 : th;
+    face.style.visibility = ''; hid.style.visibility = 'hidden'; hid.style.transform = '';
+    face.style.transform = Math.abs(rot) < 1e-4 && lift < 1e-3 ? '' : 'perspective(' + o.persp + 'px) translateZ(' + r3(lift) + 'px) rotateY(' + r3(rot) + 'deg)';
+    var a = showBack ? 180 - th : th, sh = (1 - Math.abs(Math.cos(rad))) * (showBack ? 0.3 : 0.35);
+    var band = Math.max(0, 1 - Math.abs(a - 90) / 34), pos = -20 + 140 * Math.max(0, Math.min(1, (a - 56) / 68));
+    [c.front, c.back].forEach(function (f) {
+      var on = f === face;
+      f.__shade.style.opacity = on && sh > 0.001 ? String(r3(sh)) : '';
+      f.__band.style.cssText = on && band > 0.01 ? 'opacity:' + r3(band * (showBack ? 0.45 : 0.55)) +
+        ';background:linear-gradient(100deg, rgba(255,255,255,0) ' + r3(pos - 12) + '%, rgba(255,255,255,0.9) ' + r3(pos) + '%, rgba(255,255,255,0) ' + r3(pos + 12) + '%)' : '';
+    });
+    if (c.num) {
+      var s = tt >= FLIPC.DUR ? 1 : 1.08 - 0.08 * FLIPC.num(tt - (FLIPC.PRE + FLIPC.TURN - 0.067));
+      c.num.style.transform = Math.abs(s - 1) < 1e-4 ? '' : 'scale(' + r3(s) + ')';
+    }
+  };
   var CUE_RE = /^#(\d+)(e)?([+-]\d+(?:\.\d+)?)?$/;
   var WHY_NO_CUE = function (n, m) { return '字幕沒有第 ' + n + ' 句（window.__cues 有 ' + m + ' 句）'; };
   var WHY_NO_WORD = '「@詞」沒有被 build 預先算到 → 把 ref 寫成字串字面值 P.at(\'#N@詞\')，再跑 build';
@@ -1185,6 +1244,110 @@
     P.peel = function (sel, at, o) {
       var rot = opt(o, 'rot', -4);
       mv(q(sel), at, { opacity: 1, scale: 1, rotation: rot, x: 0, y: 0 }, { opacity: 0, scale: 1.08, rotation: rot + 16, x: 90 * U, y: -120 * U }, opt(o, 'dur', 0.4), V2.EASE.out, opt(o, 'stagger', 0));
+      return P;
+    };
+    // ── 034 全幕版（shotcraft paper-title-card／card-flip-reveal／brace-expand）──
+    // 逐詞壓印：每個詞從放大、略高、微糊壓到定位（back.out 落地略壓過頭）。詞＝<wbr> 隔開的段；沒有 <wbr> 就用瀏覽器的中文斷詞，
+    //   標點和「的、了、嗎…」黏在前一個詞，<span>（關鍵詞）整個算一個詞，<br> 照樣換行。at＝數字（每詞間隔 stagger）或陣列（每詞一個時刻）。
+    //   P.pressDone＝最後一個詞落定的秒數（螢光筆、出處接在它後面）
+    var GLUE = /^[\s，。、！？；：,.!?;:）」』】…—\-的了嗎呢吧著過]+$/;
+    var prepWords = function (el) {
+      if (el.__scWords) return el.__scWords;
+      var doc = el.ownerDocument, groups = [[]], wbr = !!el.querySelector('wbr');
+      var SEG = !wbr && typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('zh-Hant', { granularity: 'word' }) : null;
+      var cut = function () { if (groups[groups.length - 1].length) groups.push([]); };
+      var add = function (n) { groups[groups.length - 1].push(n); };
+      Array.prototype.slice.call(el.childNodes).forEach(function (c) {
+        if (c.nodeType === 1 && c.tagName === 'WBR') { el.removeChild(c); cut(); return; }
+        if (c.nodeType === 1 && c.tagName === 'BR') { cut(); return; }
+        if (wbr || (c.nodeType !== 3 && c.nodeType !== 1)) { add(c); return; }
+        if (c.nodeType === 1) { cut(); add(c); return; }
+        var parts = SEG ? Array.from(SEG.segment(c.nodeValue), function (s) { return s.segment; }) : (c.nodeValue.match(/[A-Za-z0-9][A-Za-z0-9.,%'’\-]*|\s+|[\s\S]{1,2}/g) || []);
+        parts.forEach(function (s) {
+          var tn = doc.createTextNode(s); el.insertBefore(tn, c);
+          if (!GLUE.test(s)) cut();
+          add(tn);
+        });
+        el.removeChild(c);
+      });
+      el.__scWords = groups.filter(function (g) { return g.length && NONWS.test(g.map(function (n) { return n.textContent; }).join('')); }).map(function (g) {
+        var s = doc.createElement('span'); s.setAttribute('data-sc-w', ''); s.style.display = 'inline-block';
+        g[0].parentNode.insertBefore(s, g[0]); g.forEach(function (n) { s.appendChild(n); });
+        return s;
+      });
+      return el.__scWords;
+    };
+    P.pressDone = 0;
+    P.press = function (sel, at, o) {
+      var from = opt(o, 'from', 1.12), dur = opt(o, 'dur', 0.32), st = opt(o, 'stagger', 0.14);
+      var Ez = gsap.parseEase(opt(o, 'ease', 'back.out(1.3)')), Eo = gsap.parseEase('power2.out');
+      q(sel).forEach(function (el) {
+        var ws = prepWords(el), fs = parseFloat(getComputedStyle(el).fontSize) || 96;
+        var list = Array.isArray(at) ? at : ws.map(function (_, i) { return at + i * st; });
+        if (list.length !== ws.length) throw new Error('P.press：' + nameOf(el) + ' 有 ' + ws.length + ' 個詞，at 給了 ' + list.length + ' 個時刻 → 給一個數字（照 stagger 錯拍），或給和詞數一樣多的時刻');
+        var dy = opt(o, 'dy', 0.08) * fs, bl = opt(o, 'blur', 0.05) * fs;
+        ws.forEach(function (w, i) {
+          fn(w, list[i], dur, function (t, r) {
+            if (r >= 1) { t.style.opacity = ''; t.style.transform = ''; t.style.filter = ''; return; }
+            var e = Ez(r), a = Eo(Math.min(1, r * 1.6));
+            t.style.opacity = String(r3(a));
+            t.style.transform = 'translateY(' + r2(-(1 - e) * dy) + 'px) scale(' + r3(from - (from - 1) * e) + ')';
+            t.style.filter = 'blur(' + r2((1 - a) * bl) + 'px)';
+          });
+          P.pressDone = Math.max(P.pressDone, r3(list[i] + dur));
+        });
+      });
+      return P;
+    };
+    // 翻面：卡片（裡面 [data-flip="front"]、[data-flip="back"] 兩面）沿 Y 軸翻 180°：0.133s 反向後仰 → 0.533s 翻到 194° → 彈簧 0.6s 落回 180°；
+    //   翻轉中離地抬起 lift（60u）、面依角度壓暗、側棱一道窄光掃過。背面露出（過 90°）晚出發 P.FLIP_LEAD 秒：綁句寫 P.flip(card, T − P.FLIP_LEAD)。
+    //   背面裡標 data-flip-num 的元素翻過來時從 1.08 收到 1。3D 只在翻轉那 1.3 秒存在，靜止時 transform 是空字串；一張卡只翻一次
+    P.FLIP_LEAD = FLIPC.lead;
+    P.flip = function (sel, at, o) {
+      var lift = opt(o, 'lift', 60) * U, persp = opt(o, 'persp', 1600), peak = opt(o, 'peak', 194);
+      q(sel).forEach(function (card, i) {
+        if (card.__scFlip) throw new Error('P.flip：同一張卡只能翻一次（' + nameOf(card) + '）');
+        var c = { front: card.querySelector(':scope > [data-flip="front"]'), back: card.querySelector(':scope > [data-flip="back"]') };
+        if (!c.front || !c.back) throw new Error('P.flip：' + nameOf(card) + ' 裡要有 [data-flip="front"] 和 [data-flip="back"] 兩個子元素');
+        c.num = c.back.querySelector('[data-flip-num]');
+        [c.front, c.back].forEach(function (f) { relPos(f); f.__shade = mk(f, 'sc-flip-shade'); f.__band = mk(f, 'sc-flip-band'); f.appendChild(f.__shade); f.appendChild(f.__band); });
+        card.__scFlip = c;
+        fn(card, at + i * opt(o, 'stagger', 0.4), FLIPC.DUR, function (t, p) { flipPaint(c, p * FLIPC.DUR, { lift: lift, persp: persp, peak: peak }); });
+      });
+      return P;
+    };
+    // 括號揭示：sel＝括號組（.sc-brace：裡面 .sc-brace__l、.sc-brace__r 兩條括號 svg 和 .sc-brace__text）。at：兩條括號以 0.4 倍、內緣貼在一起描出來（draw 0.35s）；
+    //   open（預設 at＋0.45）：彈簧（約 9% 過衝、1.0s）往兩邊彈開、同時放大 0.4→1；字和括號共用縮放，可見寬度綁在括號內緣（字是被拉開的，不自己淡入）。
+    //   括號組要固定寬高（中心＝盒子中心）；字寬在字型載入後量。彈開後 transform、clip-path 寫回空字串
+    P.brace = function (sel, at, o) {
+      var open = opt(o, 'open', at + 0.45), drawDur = opt(o, 'draw', 0.35), gap = opt(o, 'gap', 30);
+      q(sel).forEach(function (set) {
+        var bl = set.querySelector('.sc-brace__l'), br = set.querySelector('.sc-brace__r'), tx = set.querySelector('.sc-brace__text');
+        if (!bl || !br || !tx) throw new Error('P.brace：' + nameOf(set) + ' 裡要有 .sc-brace__l、.sc-brace__r、.sc-brace__text');
+        var st = { app: 0, ex: 0 }, half = 0, BW = bl.offsetWidth || 96, BH = bl.offsetHeight || 232, Ed = gsap.parseEase('power2.inOut');
+        var pl = bl.querySelector('path'), pr = br.querySelector('path');
+        var measure = function () { var w = (tx.firstElementChild || tx).offsetWidth / 2; if (w > 0 && document.fonts && document.fonts.status === 'loaded') half = w; return w; };
+        var paint = function () {
+          var a = Ed(Math.min(1, st.app)), ex = st.ex >= 1 ? 1 : BRACE_SPRING(st.ex * 1.0), sc = 0.4 + 0.6 * ex, C = half || measure();
+          var W = set.offsetWidth, H = set.offsetHeight, cx = C * ex * sc + (26 + gap) * sc;
+          [[bl, pl, -1], [br, pr, 1]].forEach(function (b) {
+            b[0].style.opacity = st.app > 0 ? '1' : '0';
+            b[0].style.transform = 'translate(' + r2(W / 2 + b[2] * cx - BW / 2) + 'px, ' + r2(H / 2 - BH / 2) + 'px) scale(' + r3(sc) + ')';
+            if (st.app >= 1) { b[1].style.strokeDasharray = 'none'; b[1].style.strokeDashoffset = '0'; }
+            else { b[1].style.strokeDasharray = '1 2'; b[1].style.strokeDashoffset = String(r3(1 - a)); }
+          });
+          if (st.ex >= 1) { tx.style.transform = ''; tx.style.clipPath = ''; tx.style.visibility = 'visible'; return; }
+          var h = C * ex;
+          tx.style.visibility = ex > 0.001 ? 'visible' : 'hidden';   // CSS 先藏好（.sc-brace__text visibility hidden），開了才寫 visible
+          tx.style.transform = 'scale(' + r3(sc) + ')';
+          tx.style.clipPath = 'inset(-40px ' + r2(W / 2 - h) + 'px -40px ' + r2(W / 2 - h) + 'px)';
+        };
+        if (!pl.getAttribute('pathLength')) pl.setAttribute('pathLength', '1');
+        if (!pr.getAttribute('pathLength')) pr.setAttribute('pathLength', '1');
+        fn(bl, at, drawDur, function (t, p) { st.app = p; paint(); });
+        fn(br, open, 1.0, function (t, p) { st.ex = p; paint(); });
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { half = 0; paint(); });
+      });
       return P;
     };
     // 音效拍點：宣告這一拍的音效並回傳秒數（＝P.at(ref, off)）；ref 寫成字串字面值，build 靜態解析出 <audio>（motion.md §3）

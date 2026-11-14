@@ -50,10 +50,14 @@ const KEYS = {
   'look.beauty': { hint: () => `${LOOK_LIMITS.beauty.join('–')}`, parse: num(...LOOK_LIMITS.beauty), early: true },
   'bed.music': { hint: trackHint, parse: track },
   'bed.volume': { hint: () => '−12–12 dB', parse: num(-12, 12) },
-  'outro.from': { hint: () => '#N＝結語金句講完後那一句', parse: (v) => (/^#\d+(@\S+)?$/.test(String(v).trim()) ? String(v).trim() : BAD) },
+  'outro.from': { hint: () => '#N＝結語金句講完後那一句（不寫＝只播片尾最後 30 秒）', parse: (v) => (/^#\d+(@\S+)?$/.test(String(v).trim()) ? String(v).trim() : BAD) },
   'outro.music': { hint: trackHint, parse: track },
+  // 片尾模板（033，lib/ending.mjs）：工作區在 shared/setting.json 設定，這裡只做這一集的例外
+  ending: { hint: () => 'false＝這一集不要片尾', parse: (v) => (v === false || v === 'false' || v === 'off' ? false : BAD) },
+  'ending.quote': { hint: () => '片尾金句的字／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : String(v).trim() ? String(v).trim() : BAD) },
+  'ending.subscribe': { hint: () => '#N＝講到「訂閱」的那一句／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : /^#\d+$/.test(String(v).trim()) ? String(v).trim() : BAD) },
 };
-// --unset 另外收整個 bed、outro（回到工作區預設的底樂、不配片尾配樂）
+// --unset 另外收整個 bed、outro（回到工作區預設的底樂、片尾配樂）；ending 本身就在 KEYS（--unset ending＝回到工作區的片尾設定）
 const UNSET_ONLY = ['bed', 'outro'];
 
 function context(templateDir, project) {
@@ -136,15 +140,12 @@ function applyPlan(project, { set = {}, unset = [] }, { templateDir = DEFAULT_TE
     plan = setPath(plan, k, v);
     changes.push({ key: k, from, to: v });
   }
-  // plan.json 的 bed／outro 整個蓋過預設：只寫音量會把工作區預設的底樂關掉、只寫曲名 --check 會 ✖，這裡先補齊或擋下
+  // plan.json 的 bed 整個蓋過預設：只寫音量會把工作區預設的底樂關掉，這裡先補齊或擋下（outro 只寫音量照樣用工作區預設的曲名，033）
   if ('bed.volume' in vals && isObj(plan.bed) && plan.bed.music === undefined) {
     const dflt = readSettings(path.resolve(templateDir, '..')).data?.music?.bed;
     if (!dflt) throw new Error(`✖ 這一集還沒有底樂，bed.volume 沒有對象 → 能寫的：先寫 ${allowed(c, ['bed.music'])}，例 --set "bed.music=<曲名>;bed.volume=3"`);
     plan.bed = { music: dflt, ...plan.bed };
     changes.push({ key: 'bed.music', from: undefined, to: dflt });
-  }
-  if (('outro.music' in vals || 'outro.from' in vals) && isObj(plan.outro) && plan.outro.music && !plan.outro.from) {
-    throw new Error(`✖ outro.music 要和 outro.from 一起寫（片尾配樂從哪一句起播）→ 能寫的：${allowed(c, ['outro.from'])}，例 --set "outro.from=#N;outro.music=<曲名>"`);
   }
   if (!changes.length) return [];
   // 縮排、換行照原檔（和 build.mjs --autofix 寫回同一套）

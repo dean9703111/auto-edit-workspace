@@ -1,6 +1,6 @@
 {
  "meta": {
-  "hash": "a90478596d3f8974"
+  "hash": "f453ad4bccae87b9"
  },
  "value": {
   "items": [
@@ -69,11 +69,13 @@
       "title_lines": [
        6
       ],
+      "title_maxline": 6,
       "sub": "手機多機同步錄影",
       "sub_len": 8,
       "sub_lines": [
        8
-      ]
+      ],
+      "sub_maxline": 8
      },
      "beats": {
       "titleAt": 0.45,
@@ -153,11 +155,13 @@
       "tag_lines": [
        2
       ],
+      "tag_maxline": 2,
       "name": "林鼎淵",
       "name_len": 3,
       "name_lines": [
        3
       ],
+      "name_maxline": 3,
       "titles": [
        {
         "text": "外商工程師",
@@ -165,6 +169,7 @@
         "text_lines": [
          5
         ],
+        "text_maxline": 5,
         "at": 0.6
        },
        {
@@ -173,6 +178,7 @@
         "text_lines": [
          5
         ],
+        "text_maxline": 5,
         "at": 0.7
        },
        {
@@ -181,6 +187,7 @@
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 0.8
        }
       ]
@@ -280,11 +287,13 @@
       "lead_lines": [
        6
       ],
+      "lead_maxline": 6,
       "key": "免費工具",
       "key_len": 4,
       "key_lines": [
        4
-      ]
+      ],
+      "key_maxline": 4
      },
      "beats": {
       "in": 0,
@@ -375,18 +384,26 @@
         "text": "先<span class=\"sc-kw\">試錄</span>一小段",
         "text_text": "先試錄一小段",
         "text_len": 6,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "先<span class=\"sc-kw\">試錄</span>一小段",
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 1.627
        },
        {
         "text": "確認<span class=\"sc-kw\">畫面</span>與聲音",
         "text_text": "確認畫面與聲音",
         "text_len": 7,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "確認<span class=\"sc-kw\">畫面</span>與聲音",
         "text_lines": [
          7
         ],
+        "text_maxline": 7,
         "at": 3.24
        }
       ],
@@ -568,32 +585,45 @@
       "title_lines": [
        9
       ],
+      "title_maxline": 9,
       "items": [
        {
         "text": "螢幕太小，<span class=\"sc-kw\">小毛病</span>看不到",
         "text_text": "螢幕太小，小毛病看不到",
         "text_len": 11,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "螢幕太小，<span class=\"sc-kw\">小毛病</span>看不到",
         "text_lines": [
          11
         ],
+        "text_maxline": 11,
         "at": 1.93
        },
        {
         "text": "腳架不穩，畫面<span class=\"sc-kw\">晃動</span>",
         "text_text": "腳架不穩，畫面晃動",
         "text_len": 9,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "腳架不穩，畫面<span class=\"sc-kw\">晃動</span>",
         "text_lines": [
          9
         ],
+        "text_maxline": 9,
         "at": 5.68
        },
        {
         "text": "衣服太薄，有<span class=\"sc-kw\">激凸</span>問題",
         "text_text": "衣服太薄，有激凸問題",
         "text_len": 10,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "衣服太薄，有<span class=\"sc-kw\">激凸</span>問題",
         "text_lines": [
          10
         ],
+        "text_maxline": 10,
         "at": 9.26
        }
       ],
@@ -690,7 +720,7 @@
     "D": 10.96,
     "txIn": "swap",
     "prev": "fullscreen",
-    "txOut": "swap",
+    "txOut": "push",
     "pipPieces": [
      {
       "s": 42.92,
@@ -792,7 +822,7 @@
     "notes": [],
     "seamTo": "s0109",
     "D": 18.36,
-    "txIn": "swap",
+    "txIn": "push",
     "prev": "fullscreen",
     "txOut": "swap",
     "pipPieces": [
@@ -916,19 +946,28 @@
       "title_lines": [
        8
       ],
+      "title_maxline": 8,
       "leftHead": "一支手機",
       "leftHead_text": "一支手機",
       "leftHead_len": 4,
+      "leftHead_head": "",
+      "leftHead_headlen": 0,
+      "leftHead_tail": "一支手機",
       "leftHead_lines": [
        4
       ],
+      "leftHead_maxline": 4,
       "leftIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
       "rightHead": "多支手機",
       "rightHead_text": "多支手機",
       "rightHead_len": 4,
+      "rightHead_head": "",
+      "rightHead_headlen": 0,
+      "rightHead_tail": "多支手機",
       "rightHead_lines": [
        4
       ],
+      "rightHead_maxline": 4,
       "rightIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 19v-3.96 3.15\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M7 19h5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"6\" height=\"10\" x=\"16\" y=\"12\" rx=\"2\" /> </svg>",
       "left": [
        {
@@ -937,6 +976,7 @@
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 2.29
        },
        {
@@ -945,6 +985,7 @@
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 2.29
        }
       ],
@@ -955,6 +996,7 @@
         "text_lines": [
          5
         ],
+        "text_maxline": 5,
         "at": 9.63
        },
        {
@@ -963,6 +1005,7 @@
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 9.63
        }
       ]
@@ -1308,32 +1351,45 @@
       "title_lines": [
        8
       ],
+      "title_maxline": 8,
       "items": [
        {
         "text": "<span class=\"sc-kw\">馬上</span>播放檢查",
         "text_text": "馬上播放檢查",
         "text_len": 6,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "<span class=\"sc-kw\">馬上</span>播放檢查",
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 0
        },
        {
         "text": "從<span class=\"sc-kw\">萌生想法</span>到原型",
         "text_text": "從萌生想法到原型",
         "text_len": 8,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "從<span class=\"sc-kw\">萌生想法</span>到原型",
         "text_lines": [
          8
         ],
+        "text_maxline": 8,
         "at": 2.111
        },
        {
         "text": "只花<span class=\"sc-kw\">一個小時</span>",
         "text_text": "只花一個小時",
         "text_len": 6,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "只花<span class=\"sc-kw\">一個小時</span>",
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 5.93
        }
       ],
@@ -1530,11 +1586,13 @@
       "title_lines": [
        6
       ],
+      "title_maxline": 6,
       "sub": "手機多機同步錄影",
       "sub_len": 8,
       "sub_lines": [
        8
-      ]
+      ],
+      "sub_maxline": 8
      },
      "beats": {
       "titleAt": 0.45,
@@ -1614,11 +1672,13 @@
       "tag_lines": [
        2
       ],
+      "tag_maxline": 2,
       "name": "林鼎淵",
       "name_len": 3,
       "name_lines": [
        3
       ],
+      "name_maxline": 3,
       "titles": [
        {
         "text": "外商工程師",
@@ -1626,6 +1686,7 @@
         "text_lines": [
          5
         ],
+        "text_maxline": 5,
         "at": 0.6
        },
        {
@@ -1634,6 +1695,7 @@
         "text_lines": [
          5
         ],
+        "text_maxline": 5,
         "at": 0.7
        },
        {
@@ -1642,6 +1704,7 @@
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 0.8
        }
       ]
@@ -1741,11 +1804,13 @@
       "lead_lines": [
        6
       ],
+      "lead_maxline": 6,
       "key": "免費工具",
       "key_len": 4,
       "key_lines": [
        4
-      ]
+      ],
+      "key_maxline": 4
      },
      "beats": {
       "in": 0,
@@ -1836,18 +1901,26 @@
         "text": "先<span class=\"sc-kw\">試錄</span>一小段",
         "text_text": "先試錄一小段",
         "text_len": 6,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "先<span class=\"sc-kw\">試錄</span>一小段",
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 1.627
        },
        {
         "text": "確認<span class=\"sc-kw\">畫面</span>與聲音",
         "text_text": "確認畫面與聲音",
         "text_len": 7,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "確認<span class=\"sc-kw\">畫面</span>與聲音",
         "text_lines": [
          7
         ],
+        "text_maxline": 7,
         "at": 3.24
        }
       ],
@@ -2029,32 +2102,45 @@
       "title_lines": [
        9
       ],
+      "title_maxline": 9,
       "items": [
        {
         "text": "螢幕太小，<span class=\"sc-kw\">小毛病</span>看不到",
         "text_text": "螢幕太小，小毛病看不到",
         "text_len": 11,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "螢幕太小，<span class=\"sc-kw\">小毛病</span>看不到",
         "text_lines": [
          11
         ],
+        "text_maxline": 11,
         "at": 1.93
        },
        {
         "text": "腳架不穩，畫面<span class=\"sc-kw\">晃動</span>",
         "text_text": "腳架不穩，畫面晃動",
         "text_len": 9,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "腳架不穩，畫面<span class=\"sc-kw\">晃動</span>",
         "text_lines": [
          9
         ],
+        "text_maxline": 9,
         "at": 5.68
        },
        {
         "text": "衣服太薄，有<span class=\"sc-kw\">激凸</span>問題",
         "text_text": "衣服太薄，有激凸問題",
         "text_len": 10,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "衣服太薄，有<span class=\"sc-kw\">激凸</span>問題",
         "text_lines": [
          10
         ],
+        "text_maxline": 10,
         "at": 9.26
        }
       ],
@@ -2151,7 +2237,7 @@
     "D": 10.96,
     "txIn": "swap",
     "prev": "fullscreen",
-    "txOut": "swap",
+    "txOut": "push",
     "pipPieces": [
      {
       "s": 42.92,
@@ -2253,7 +2339,7 @@
     "notes": [],
     "seamTo": "s0109",
     "D": 18.36,
-    "txIn": "swap",
+    "txIn": "push",
     "prev": "fullscreen",
     "txOut": "swap",
     "pipPieces": [
@@ -2377,19 +2463,28 @@
       "title_lines": [
        8
       ],
+      "title_maxline": 8,
       "leftHead": "一支手機",
       "leftHead_text": "一支手機",
       "leftHead_len": 4,
+      "leftHead_head": "",
+      "leftHead_headlen": 0,
+      "leftHead_tail": "一支手機",
       "leftHead_lines": [
        4
       ],
+      "leftHead_maxline": 4,
       "leftIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M12 18h.01\" /> </svg>",
       "rightHead": "多支手機",
       "rightHead_text": "多支手機",
       "rightHead_len": 4,
+      "rightHead_head": "",
+      "rightHead_headlen": 0,
+      "rightHead_tail": "多支手機",
       "rightHead_lines": [
        4
       ],
+      "rightHead_maxline": 4,
       "rightIcon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 19v-3.96 3.15\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M7 19h5\" /> <rect class=\"stroke-draw\" pathLength=\"1\" width=\"6\" height=\"10\" x=\"16\" y=\"12\" rx=\"2\" /> </svg>",
       "left": [
        {
@@ -2398,6 +2493,7 @@
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 2.29
        },
        {
@@ -2406,6 +2502,7 @@
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 2.29
        }
       ],
@@ -2416,6 +2513,7 @@
         "text_lines": [
          5
         ],
+        "text_maxline": 5,
         "at": 9.63
        },
        {
@@ -2424,6 +2522,7 @@
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 9.63
        }
       ]
@@ -2769,32 +2868,45 @@
       "title_lines": [
        8
       ],
+      "title_maxline": 8,
       "items": [
        {
         "text": "<span class=\"sc-kw\">馬上</span>播放檢查",
         "text_text": "馬上播放檢查",
         "text_len": 6,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "<span class=\"sc-kw\">馬上</span>播放檢查",
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 0
        },
        {
         "text": "從<span class=\"sc-kw\">萌生想法</span>到原型",
         "text_text": "從萌生想法到原型",
         "text_len": 8,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "從<span class=\"sc-kw\">萌生想法</span>到原型",
         "text_lines": [
          8
         ],
+        "text_maxline": 8,
         "at": 2.111
        },
        {
         "text": "只花<span class=\"sc-kw\">一個小時</span>",
         "text_text": "只花一個小時",
         "text_len": 6,
+        "text_head": "",
+        "text_headlen": 0,
+        "text_tail": "只花<span class=\"sc-kw\">一個小時</span>",
         "text_lines": [
          6
         ],
+        "text_maxline": 6,
         "at": 5.93
        }
       ],
@@ -7356,12 +7468,14 @@
     "音效次數：ding 1、success 1、alert 1、impact 2、chapter 1、sparkle 0／6、shine 0／3、thunder 0／3",
     "音效密度：主音效平均 2.3 顆／分（上限：任一分鐘 ≤ 5 顆，超過才 ⚠），附加音效 0 顆",
     "情緒點：3 個（音效 3 顆；模板預設音效讓位 1 顆）",
-    "講者爆衝推近：0 次；moods[2]（#61@小時 落定） 的推近拿掉：那一刻講者被整張幕、側邊欄蓋住，或只有聲音"
+    "講者爆衝推近：0 次；moods[2]（#61@小時 落定） 的推近拿掉：那一刻講者被整張幕、側邊欄蓋住，或只有聲音（全畫面段有講者小視窗、剛進場、快結束、或是章節、錄影段，也不推畫面）"
    ],
    "designOver": true
   },
   "outro": null,
   "bed": null,
+  "ending": null,
+  "finalDur": 153.267,
   "chapterBadge": true,
   "badges": [
    {

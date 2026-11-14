@@ -156,7 +156,10 @@ test('分鏡素材：chNN 開頭列出這一份裡沒有講者的句子；共用
   assert.match(clipped, /沒有講者的句子：#1–#4\*\*/);
   assert.doesNotMatch(K.renderPart(part(), { cues: many, videoDur: VD }), /沒有講者的句子/);
   const common = (voiceOnly) => K.renderCommon({ project: 'p', format: { label: '橫式' }, videoDur: VD, cues: many, assets: { screen: 0, images: 0 }, notes: [], parts: [part()], voiceOnly, hasCamera: true });
-  assert.match(common([[10, 20]]), /\| 07 重點字卡、15 金句 \| 字卡動態加 `"bg": "light"`/);
+  assert.match(common([[10, 20]]), /\| 07 重點字卡 \| `x-point`；字卡動態加 `"bg": "light"`/);
+  // 034：15、09、06、11 有全幕版，照樣寫（不在替換表裡換掉）
+  assert.match(common([[10, 20]]), /15 金句、09 QA、06 一般字卡、11 總結例外：照樣寫，build 自動換成整張畫面的全幕版/);
+  assert.doesNotMatch(common([[10, 20]]), /\| 09 QA/);
   assert.doesNotMatch(common([]), /原本想用/);
 });
 

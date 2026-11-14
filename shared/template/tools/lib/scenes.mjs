@@ -20,10 +20,11 @@ import { iconHint } from './icon-alias.mjs';
 // ---------- 載入 ----------
 
 // template.html 的四節：@style、@style-portrait（直式時接在 @style 後面，009 FR-050；橫式不讀）、@body、@timeline
+// 034 全幕版（疊加字卡在沒有講者的段換成不透明的整張畫面）：@style-full、@body-full、@timeline-full 三節一起寫，取代上面的 style／body／timeline
 function splitTemplate(text) {
-  const out = { style: '', stylePortrait: '', body: '', timeline: '' };
-  const key = { 'style-portrait': 'stylePortrait' };
-  const parts = text.split(/<!--\s*@(style-portrait|style|body|timeline)\s*-->/);
+  const out = { style: '', stylePortrait: '', body: '', timeline: '', styleFull: '', bodyFull: '', timelineFull: '' };
+  const key = { 'style-portrait': 'stylePortrait', 'style-full': 'styleFull', 'body-full': 'bodyFull', 'timeline-full': 'timelineFull' };
+  const parts = text.split(/<!--\s*@(style-portrait|style-full|body-full|timeline-full|style|body|timeline)\s*-->/);
   for (let i = 1; i < parts.length; i += 2) out[key[parts[i]] || parts[i]] = parts[i + 1].replace(/^\r?\n/, '').replace(/\s+$/, '') + '\n';
   return out;
 }
@@ -38,9 +39,18 @@ export function loadScenes(templateDir) {
     if (!statSync(dir).isDirectory() || !existsSync(jf)) continue;
     const json = JSON.parse(readFileSync(jf, 'utf8'));
     const tf = path.join(dir, 'template.html');
-    scenes.push({ ...json, dirName: name, num: name.split('-')[0], dir, template: splitTemplate(existsSync(tf) ? readFileSync(tf, 'utf8') : '') });
+    const template = splitTemplate(existsSync(tf) ? readFileSync(tf, 'utf8') : '');
+    // hasFull：有全幕版（034）；只認三節都寫了的
+    scenes.push({ ...json, dirName: name, num: name.split('-')[0], dir, template, hasFull: !!(template.styleFull.trim() && template.bodyFull.trim() && template.timelineFull.trim()) });
   }
   return scenes.sort((a, b) => a.num.localeCompare(b.num, 'en', { numeric: true }));
+}
+
+// 034 全幕版：同一個情境換成全幕版的複本（family fullscreen、直式用舞台縮放、fs 底；模板換成 @style-full／@body-full／@timeline-full）。
+// plan.mjs 的 fullCards（這段沒有講者或寫 "full": true）和 --gallery 的 <編號>-<key>-full.html 預覽頁共用
+export function fullScene(s) {
+  const t = s.template;
+  return { ...s, family: 'fullscreen', portrait: 'stage', surface: 'fs', fullOf: s.family, template: { style: t.styleFull, stylePortrait: '', body: t.bodyFull, timeline: t.timelineFull } };
 }
 
 export function findScene(scenes, ref) {
@@ -234,10 +244,17 @@ export function resolveScene(opts) {
         if (decl.maxLines != null && lines.length > decl.maxLines) err(`${label}：${lines.length} 行，最多 ${decl.maxLines} 行 → 少用一個 //`);
         if (decl.maxLine != null) lines.forEach((ln, i) => { const l = visibleLen(ln); if (l > decl.maxLine) err(`${label}：第 ${i + 1} 行「${richPlain(ln)}」${l} 字，每行上限 ${decl.maxLine} → 縮文案或用 // 換斷行位置（斷在語意處）`); });
       }
-      if (t === 'rich') { out[key] = richHtml(s); out[`${key}_text`] = richPlain(s); out[`${key}_len`] = len; }
-      else { out[key] = s; out[`${key}_len`] = len; }
+      if (t === 'rich') {
+        out[key] = richHtml(s); out[`${key}_text`] = richPlain(s); out[`${key}_len`] = len;
+        // 034 全幕版：「名詞：定義」拆成 _head（名詞）、_tail（定義）；沒有全形冒號時 _head 是空字串、_tail 是整句
+        const ci = s.indexOf('：');
+        out[`${key}_head`] = ci > 0 ? richHtml(s.slice(0, ci).replace(/^\*\*(.*)\*\*$/, '$1')) : '';
+        out[`${key}_headlen`] = ci > 0 ? Math.max(1, visibleLen(s.slice(0, ci))) : 0;
+        out[`${key}_tail`] = richHtml(ci > 0 ? s.slice(ci + 1).trim() : s);
+      } else { out[key] = s; out[`${key}_len`] = len; }
       // 每一行的字數（// 斷行），給 scene.json 的 rules 用（例：有圖示時每行上限要少幾字）
       out[`${key}_lines`] = s.split('//').map((ln) => visibleLen(ln));
+      out[`${key}_maxline`] = Math.max(1, ...out[`${key}_lines`]);   // 034 全幕版用最長那一行定字級
     } else if (t === 'icon') {
       const name = String(value).trim();
       // "none"：不放圖示（只有非必填的圖示欄位可以；模板用 {{#icon}}…{{/icon}} 包住圖示）

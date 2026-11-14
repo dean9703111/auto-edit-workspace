@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { loadScenes, loadIcons, loadFx, motionConsts } from './scenes.mjs';
 import { loadMusic } from './music.mjs';
 import { readSettings } from './settings.mjs';
+import { readEndingSetting } from './ending.mjs';
 import { syncLocalSfx } from './sfx-local.mjs';
 
 // tools/ 資料夾（pathsFrom 沒給 --template 時，模板＝tools/ 的上一層）
@@ -60,6 +61,9 @@ export function loadLib(templateDir, projectDir = null) {
     scenes: loadScenes(templateDir), icons: loadIcons(templateDir), fx: loadFx(templateDir),
     consts: motionConsts(kit), sfx: (() => { const k = read(path.join(kit, 'sfx.json'), {}); return { ...k, ...syncLocalSfx(sharedDir, { kit: k }), ...loadMusic({ sharedDir, projectDir }) }; })(), accent,   // 自備音效（shared/sfx-local/，030）蓋過內建的同名音效
     musicDefault: readSettings(sharedDir).data.music?.bed ?? null,
+    // 片尾配樂的預設曲名（music.mjs outro）、片尾模板（brand.mjs ending）：每個人本機不一樣，測試用 AUTO_EDIT_NO_LOCAL_BRAND=1 關掉（033）
+    outroDefault: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readSettings(sharedDir).data.music?.outro ?? null,
+    ending: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readEndingSetting(sharedDir),
     customDir: path.join(templateDir, 'custom'),
   };
 }

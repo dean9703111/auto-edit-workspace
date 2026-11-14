@@ -16,11 +16,15 @@
  *       把自己的音樂放進曲庫（不用 ACE-Step）：去頭尾靜音、調響度。要標出處的寫 --credit。
  *   node shared/template/tools/music.mjs use <曲名>|none
  *       設定每一集預設的底樂（寫 shared/setting.json 的 music.bed）；none＝取消。某一集不要：那集 plan.json 寫 "bed": { "music": null }。
+ *   node shared/template/tools/music.mjs outro <曲名>|none
+ *       設定每一集預設的片尾配樂（寫 shared/setting.json 的 music.outro）；none＝取消。曲名可以是曲庫的，或內建的 bgm-cylinder-five。
+ *       那一集沒寫 outro.from 就只播片尾最後 30 秒（有片尾卡時含片尾卡）；要從結語金句講完那句起播：build.mjs --set "outro.from=#N"。
+ *       某一集不要：build.mjs --set outro.music=none（寫進那集 plan.json 的 "outro": { "music": null }）。
  *   node shared/template/tools/music.mjs acestep <ACE-Step 資料夾> [--image <映像檔.sparseimage>]
  *       記下 ACE-Step 裝在哪（寫 shared/setting.json 的 music.acestep）；裝在外接硬碟的映像檔裡就加 --image，生成前會自己掛上。
  *
  * 曲名：小寫英文開頭，只用小寫英數和 -（例 bed-calm-tech）。已經在曲庫的曲名不覆寫。
- * 用在影片上：plan.json 第一層 "bed": { "music": "<曲名>" }（整支片的底樂）、"outro": { "from": "#N", "music": "<曲名>" }（片尾配樂）。
+ * 用在影片上：plan.json 第一層 "bed": { "music": "<曲名>" }（整支片的底樂）、"outro": { "from": "#N", "music": "<曲名>" }（片尾配樂；from 不寫＝最後 30 秒）。
  * 旗標也可以寫成 --旗標=值（只在第一個 = 切，例 --credit="a=b"）；要值的旗標後面沒接值（或接著另一個旗標）、不認得的旗標都 ✖。
  */
 import fs from 'node:fs';
@@ -113,8 +117,9 @@ function listLib(f) {
   if (f.json) { console.log(JSON.stringify({ default: def, tracks: rows }, null, 2)); return 0; }
   if (!rows.length) { console.log(`曲庫是空的（shared/music/${projectDir ? `、${rel(path.join(projectDir, 'work', 'music'))}` : ''}）→ 生成：music.mjs gen；放自己的音樂：music.mjs add <聲音檔> --name <曲名>`); return 0; }
   console.log('曲名｜範圍｜長度｜來源｜說明');
-  for (const r of rows) console.log(`${r.name}${r.isDefault ? '（每一集預設的底樂）' : ''}｜${r.scope === 'shared' ? '工作區' : '這一集'}｜${r.exists ? `${r.secs} 秒` : '✖ 檔案不在'}｜${r.from}｜${r.zh}`);
-  console.log(`用法：plan.json 第一層寫 "bed": { "music": "<曲名>" }（整支片的底樂）或 "outro": { "from": "#N", "music": "<曲名>" }（片尾配樂）；每一集都用同一首：music.mjs use <曲名>`);
+  const outroDef = settings().outro || null;
+  for (const r of rows) console.log(`${r.name}${r.isDefault ? '（每一集預設的底樂）' : ''}${r.name === outroDef ? '（每一集預設的片尾配樂）' : ''}｜${r.scope === 'shared' ? '工作區' : '這一集'}｜${r.exists ? `${r.secs} 秒` : '✖ 檔案不在'}｜${r.from}｜${r.zh}`);
+  console.log(`用法：plan.json 第一層寫 "bed": { "music": "<曲名>" }（整支片的底樂）或 "outro": { "from": "#N", "music": "<曲名>" }（片尾配樂）；每一集都用同一首：music.mjs use <曲名>（底樂）、music.mjs outro <曲名>（片尾配樂）`);
   return 0;
 }
 
@@ -125,6 +130,7 @@ async function status() {
   console.log(`ACE-Step 服務：${h.ok ? `開著（${ACE.url}）` : '沒開（music.mjs gen 會自己開、做完自己關）'}`);
   console.log(`工作區曲庫：${Object.keys(lib).length} 首${Object.keys(lib).length ? `（${Object.keys(lib).join('、')}）` : ''}`);
   console.log(`每一集預設的底樂：${s.bed || '沒設定（不配）'}`);
+  console.log(`每一集預設的片尾配樂：${s.outro || '沒設定（不配）'}`);
   return 0;
 }
 
@@ -235,6 +241,21 @@ function use(f) {
   return 0;
 }
 
+// 片尾配樂的預設（033）：曲庫（工作區的）或 kit/sfx.json 內建的配樂都可以；不用到 20 秒（片尾配樂不循環，短的會對齊片尾）
+function outroDefault(f) {
+  const name = f._[1];
+  if (!name) { console.log('✖ 要給曲名：music.mjs outro <曲名>；取消預設：music.mjs outro none'); return 1; }
+  if (name === 'none') { setMusic({ outro: undefined }); console.log('✓ 取消每一集預設的片尾配樂（之後只有 plan.json 寫了 outro.music 的那一集才有）'); return 0; }
+  let kit = {};
+  try { kit = JSON.parse(fs.readFileSync(path.resolve(HERE, '..', 'kit', 'sfx.json'), 'utf8')); } catch { /* 讀不到內建清單：只看曲庫 */ }
+  const e = loadMusic({ sharedDir: SHARED })[name] || (kit[name]?.kind === 'bgm' ? { file: path.join(SHARED, 'sfx', `${name}.wav`) } : null);
+  if (!e) { console.log(`✖ 沒有「${name}」這首 → music.mjs list 看工作區曲庫；內建的有 ${Object.keys(kit).filter((k) => kit[k]?.kind === 'bgm').join('、') || '（沒有）'}（這一集的曲庫不能當每一集的預設）`); return 1; }
+  if (!fs.existsSync(e.file)) { console.log(`✖ 「${name}」的檔案不在（${rel(e.file)}）→ 換一首`); return 1; }
+  setMusic({ outro: name });
+  console.log(`✓ 之後每一集都用 ${name} 當片尾配樂（下次 build 生效）：沒寫 outro.from 的那集只播片尾最後 30 秒；某一集不要：build.mjs --project projects/<專案> --set outro.music=none`);
+  return 0;
+}
+
 function acestep(f) {
   const dir = f._[1] ? path.resolve(process.cwd(), f._[1]) : null;
   if (!dir || !fs.existsSync(path.join(dir, 'pyproject.toml'))) { console.log(`✖ 「${f._[1] || ''}」不是 ACE-Step 的資料夾（裡面要有 pyproject.toml）→ 照 ${SETUP_DOC} 裝好再設定`); return 1; }
@@ -257,8 +278,9 @@ async function main() {
     if (cmd === 'keep') return keep(f);
     if (cmd === 'add') return add(f);
     if (cmd === 'use') return use(f);
+    if (cmd === 'outro') return outroDefault(f);
     if (cmd === 'acestep') return acestep(f);
-    console.log(`✖ 沒有「${cmd}」這個子指令 → status、list、gen、keep、add、use、acestep（--help 看說明）`);
+    console.log(`✖ 沒有「${cmd}」這個子指令 → status、list、gen、keep、add、use、outro、acestep（--help 看說明）`);
     return 1;
   } catch (e) { console.log(`✖ ${e.message}`); return 1; }
 }

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 QA 字卡（全寬）｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg-fs.jpg、../bg-side.jpg、../bg-ch.jpg（或單一 ../bg.jpg）後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：各版面先用自己的 ../bg-*.jpg，沒有就用 ../bg.jpg，都沒有只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  [data-wide] .sc-surface-fs { background-image: var(--sc-fs-pattern); }
+  .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-qa #pv-qfCard { position: absolute; left: 280px; top: 190px; width: 1360px; height: 560px; }
+  #pv-qa .qf-face { position: absolute; inset: 0; box-sizing: border-box; border-radius: 28px; overflow: hidden; }
+  #pv-qa .qf-front { background: var(--v2-card); color: var(--v2-ink); border: 2px solid var(--v2-card-line); box-shadow: var(--v2-card-shadow); }
+  #pv-qa .qf-back { background: var(--brand); color: var(--brand-ink); box-shadow: var(--sc-lift); }
+  #pv-qa .qf-badge { position: absolute; left: 72px; top: 56px; width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; font-size: 64px; font-weight: 900; line-height: 1; }
+  #pv-qa .qf-front .qf-badge { background: var(--v2-ink); color: var(--v2-card); }
+  #pv-qa .qf-back .qf-badge { background: var(--brand-ink); color: var(--brand); }
+  #pv-qa .qf-label { position: absolute; left: 208px; top: 78px; font-size: 44px; line-height: 60px; font-weight: 700; white-space: nowrap; }
+  #pv-qa .qf-front .qf-label { color: var(--v2-mute); }
+  #pv-qa .qf-back .qf-label { color: var(--brand-ink); opacity: 0.85; }
+  #pv-qa #pv-qfQ { position: absolute; left: 72px; top: 220px; width: 1216px; font-size: 72px; line-height: 100px; font-weight: 900; }
+  #pv-qa #pv-qfA { position: absolute; left: 72px; right: 72px; top: 236px; height: 220px; display: flex; align-items: center; white-space: nowrap; transform-origin: 0% 50%;
+         font-size: min(96px, calc(1216px / 9)); line-height: 1.2; font-weight: 900; }
+  #pv-qa #pv-qfA .sc-kw { color: inherit; box-shadow: inset 0 -0.2em 0 color-mix(in srgb, var(--brand-ink) 32%, transparent); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene" data-wide>
+    <div id="pv-qa" class="fill">
+      <div class="sc-surface-fs fill"></div>
+      <div id="pv-aWrap" class="fill">
+        <div id="pv-qfCard" data-layout="free">
+          <div class="qf-face qf-front" data-flip="front">
+            <div id="pv-qfQb" class="qf-badge">Q</div>
+            <div id="pv-qfQl" class="qf-label">問答</div>
+            <div id="pv-qfQ"><span class="sc-opt">AI 剪完就能直接上傳嗎？</span></div>
+          </div>
+          <div class="qf-face qf-back" data-flip="back">
+            <div class="qf-badge">A</div>
+            <div class="qf-label">我的回答</div>
+            <div id="pv-qfA" data-flip-num><span class="sc-opt">不行，<span class="sc-kw">三道關</span>都要看</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cg" id="cap"><span>錯誤必須由人類來承擔</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"qa","duration":7,"cues":[{"sound":"ding","at":1.9,"volume":0.8}]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-qa'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 7;
+    /* 全幕版：大卡彈出 → Q 徽章彈出、小標淡入 → 問題逐字上浮 → 講到答案（aAt）時翻面（提早 P.FLIP_LEAD 出發，背面剛好在 aAt 露出；ding 照 scene.json）。
+       前一段是講者晚 0.35 秒開始，前一段也是全畫面 0.1 秒開始；離場由 build 負責 */
+    const T0 = 0 + (P.prev() === 'speaker' ? 0.35 : 0.1);
+    P.pop('#pv-qfCard', T0, { from: 0.94, dy: 40 });
+    P.pop('#pv-qfQb', T0 + 0.25, { from: 0.4, dy: 0 });
+    P.in('#pv-qfQl', T0 + 0.35);
+    P.chars('#pv-qfQ .sc-opt', T0 + 0.45, { stagger: 0.035 });
+    P.flip('#pv-qfCard', Math.max(T0 + 0.9, 1.9 - P.FLIP_LEAD));
+    tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.to('#scene', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 6.5);
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

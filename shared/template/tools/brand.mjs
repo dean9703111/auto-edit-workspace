@@ -28,6 +28,13 @@
  *                                                       設定（頭銜 1–3 個，用逗號或「、」分開；--short 是金句出處，不給＝姓名）
  *   brand.mjs speaker off                               關閉：不放講者介紹
  *
+ * 片尾模板（shared/setting.json 的 ending，素材在 shared/brand/，都不進版控；lib/ending.mjs）：
+ *   brand.mjs ending                                    看目前的設定
+ *   brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote|--quote]
+ *                                                       設定：影片結束後接片尾卡（這張圖＋片尾金句），講到「訂閱」那句放訂閱動畫；
+ *                                                       檔案複製進 shared/brand/。只改一項就只給那一個旗標（例 --seconds 8）
+ *   brand.mjs ending off                                關掉片尾（拿掉設定；shared/brand/ 的檔留著）
+ *
  * 背景圖（輸出都在暫存資料夾，不寫 shared/template/：使用者同意後才 pack --bg、use；auto-edit-style 步驟 2–4）：
  *   brand.mjs bg --tmp                                                    開一個暫存資料夾、印完整路徑
  *   brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]       HTML 路線：用 HyperFrames 的 Chrome 截成 bg-<kind>.jpg，
@@ -43,7 +50,8 @@ import zlib from 'node:zlib';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { listPacks, packsJs, samePack, copyIfDiff, templatePathOf, PACK_KIT, PACK_BG, STYLES_DIR, DEFAULT_PACK } from './lib/styles.mjs';
 import { readSpeaker, validateSpeaker, SPEAKER_FILE, SET_CMD } from './lib/speaker.mjs';
-import { writeSetting } from './lib/settings.mjs';
+import { readSettings, writeSetting } from './lib/settings.mjs';
+import { readEndingSetting, ENDING, BRAND_DIR } from './lib/ending.mjs';
 import { ok, warn, fail, next, cmdLine, report } from './lib/say.mjs';
 import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
 import { stopLines } from './lib/stops.mjs';
@@ -371,6 +379,15 @@ const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與
   node shared/template/tools/brand.mjs speaker off
       關閉：不放講者介紹。
 
+  node shared/template/tools/brand.mjs ending
+      看片尾模板的設定（shared/setting.json 的 ending；素材在 shared/brand/，不進版控）。
+  node shared/template/tools/brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote|--quote]
+      設定片尾：影片結束後接 --seconds 秒的片尾卡（黑底、這張圖置中、右邊打出片尾金句；金句取講稿最後的 > 引言，
+      沒有就用最後一張金句字卡），講到「訂閱」那句放訂閱動畫（gif／webm／mov）。檔案複製進 shared/brand/。
+      只改一項就只給那個旗標（例 brand.mjs ending --seconds 8）；--no-quote＝片尾卡只放圖。直式、剪映素材不放。
+  node shared/template/tools/brand.mjs ending off
+      關掉片尾（拿掉設定，shared/brand/ 的檔留著）。某一集不要：build.mjs --set ending=false
+
   背景圖（三張：fs 1920×1080、side 960×1080、ch 1920×1080；暗色是 bg-<kind>-dark.jpg）。輸出都先放暫存資料夾，
   不能在 shared/template/ 裡；使用者看過 preview.jpg 同意（停點 ⑥）後，用 pack --bg 存成風格包、use 套用，不要自己複製。
 
@@ -670,6 +687,67 @@ function speakerCli(args) {
   return 0;
 }
 
+// ---------- 片尾模板（033）----------
+
+const END_CMD = 'node shared/template/tools/brand.mjs ending <圖檔> [--subscribe <動畫檔>]';
+// 放進 shared/brand/：已經在裡面就不動；同名不同內容不蓋（請使用者改檔名）
+function intoBrand(sharedDir, file, exts, what) {
+  const src = path.resolve(process.cwd(), String(file));
+  if (!fs.existsSync(src) || !fs.statSync(src).isFile()) throw new Error(`找不到${what} ${file} → 寫檔案的路徑，例 ${END_CMD}`);
+  if (!exts.includes(path.extname(src).toLowerCase())) throw new Error(`${what}要是 ${exts.join(' ')}，${path.basename(src)} 不是`);
+  const dir = path.join(sharedDir, BRAND_DIR), dst = path.join(dir, path.basename(src));
+  if (path.resolve(src) === path.resolve(dst)) return path.basename(dst);
+  if (fs.existsSync(dst) && !fs.readFileSync(dst).equals(fs.readFileSync(src))) throw new Error(`shared/${BRAND_DIR}/ 已經有另一個 ${path.basename(src)} → 把檔名改一下再設定（不蓋掉原本的檔）`);
+  fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dst)) fs.copyFileSync(src, dst);
+  return path.basename(dst);
+}
+
+function endingCli(args) {
+  const o = { _: [] };
+  for (let i = 0; i < args.length; i++) {
+    if (!String(args[i]).startsWith('--')) { o._.push(args[i]); continue; }
+    const [k, inline] = splitFlag(args[i]);
+    if (['seconds', 'subscribe', 'kit'].includes(k)) [o[k], i] = takeValue(args, i, k, inline, `例：${END_CMD}`);
+    else if (k === 'quote' || k === 'no-quote') o.quote = k === 'quote';
+    else throw new Error(`brand.mjs ending 沒有 --${k} 這個參數 → 例：${END_CMD}；關掉：brand.mjs ending off`);
+  }
+  const sharedDir = path.resolve(templateOf(o.kit ? path.resolve(o.kit) : undefined), '..');
+  const cur = readSettings(sharedDir).data.ending;
+  if (o._[0] === 'off') {
+    if (o._.length > 1 || o.seconds != null || o.subscribe != null || o.quote != null) throw new Error('brand.mjs ending off 後面不用再寫別的');
+    writeSetting(sharedDir, 'ending', undefined);
+    console.log(ok(`已關掉片尾（拿掉 shared/setting.json 的 ending；shared/${BRAND_DIR}/ 的檔留著）`));
+    console.log(`要再打開：${END_CMD}`);
+    return 0;
+  }
+  if (o._.length > 1) throw new Error(`brand.mjs ending 只收一張圖 → 例：${END_CMD}`);
+  if (!o._.length && o.seconds == null && o.subscribe == null && o.quote == null) {
+    const e = readEndingSetting(sharedDir);
+    if (!e) { console.log(`片尾：沒設定（預設沒有）→ 設定：${END_CMD}`); return 0; }
+    console.log(`片尾卡：${e.image ? `${path.basename(e.image)}，${e.seconds} 秒，${e.quote ? '右邊放片尾金句（講稿最後的 > 引言，沒有就用最後一張金句字卡）' : '只放圖'}` : '沒有'}｜訂閱動畫：${e.subscribe ? path.basename(e.subscribe) : '沒有'}｜shared/setting.json、shared/${BRAND_DIR}/`);
+    for (const p of e.problems) console.log(`⚠ ${p}`);
+    return e.problems.length ? 1 : 0;
+  }
+  const want = { ...(cur && typeof cur === 'object' && !Array.isArray(cur) ? cur : {}) };
+  if (o._.length) want.image = intoBrand(sharedDir, o._[0], ['.jpg', '.jpeg', '.png', '.webp'], '片尾圖');
+  if (o.subscribe != null) want.subscribe = o.subscribe === 'none' ? undefined : intoBrand(sharedDir, o.subscribe, ['.gif', '.webm', '.mov', '.mp4'], '訂閱動畫');
+  if (o.seconds != null) {
+    const n = Number(o.seconds);
+    if (!(n >= ENDING.min && n <= ENDING.max)) throw new Error(`--seconds 要是 ${ENDING.min}–${ENDING.max} 秒（剪映是 ${ENDING.seconds}），現在是 ${o.seconds}`);
+    want.seconds = Math.round(n * 30) / 30 === n ? n : Math.round(n * 30) / 30;   // 對齊影格（30fps），完成影片才能逐格接
+  }
+  if (o.quote != null) want.quote = o.quote;
+  if (!want.image && !want.subscribe) throw new Error(`還沒有片尾圖也沒有訂閱動畫 → 至少給一個：${END_CMD}`);
+  const clean = Object.fromEntries(Object.entries({ image: want.image, seconds: want.seconds ?? ENDING.seconds, quote: want.quote ?? true, subscribe: want.subscribe }).filter(([, v]) => v !== undefined));
+  writeSetting(sharedDir, 'ending', clean);
+  const e = readEndingSetting(sharedDir);
+  console.log(ok(`已設定片尾（shared/setting.json，不進版控）：${clean.image ? `片尾卡 ${clean.image} ${clean.seconds} 秒${clean.quote ? '＋片尾金句' : '（只放圖）'}` : '沒有片尾卡'}｜訂閱動畫：${clean.subscribe || '沒有'}`));
+  for (const p of e?.problems || []) console.log(`⚠ ${p}`);
+  console.log('之後每一集 build 就會放（直式、剪映素材不放）；某一集不要：build.mjs --project projects/<專案> --set ending=false');
+  return 0;
+}
+
 // ---------- CLI ----------
 
 // 直式講者面板（009 FR-130）：1080×1920 透明，y 897–903 一條 6px 主色線（上半資訊面板／下半講者面板的分隔線，canvas.mjs pip.frame）
@@ -697,6 +775,7 @@ async function cli() {
   if (args[0] === 'bg') return bgCli(args.slice(1));
   if (['list', 'use', 'pack'].includes(args[0])) return packCli(args[0], args.slice(1));
   if (args[0] === 'speaker') return speakerCli(args.slice(1));
+  if (args[0] === 'ending') return endingCli(args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
     if (!String(args[i]).startsWith('--')) { color = args[i]; continue; }

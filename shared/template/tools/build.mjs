@@ -92,7 +92,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseSrt, formatSrt } from './lib/srt.mjs';
 import { floorFrame, r3, clock2, clock2r } from './lib/time.mjs';
-import { resolveScene, sampleSeg } from './lib/scenes.mjs';
+import { resolveScene, sampleSeg, fullScene } from './lib/scenes.mjs';
 import { assembleScene, sceneParts, hashOf, verifyHash } from './lib/assemble.mjs';
 import { buildCaptions, captionWarnings } from './lib/captions.mjs';
 import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
@@ -105,6 +105,7 @@ import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
 import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip, LOUD_TEXT } from './lib/audio.mjs';
 import { bedPlan, renderBedClip, bedLine } from './lib/music.mjs';
+import { prepareEnding, endingLines } from './lib/ending.mjs';
 import { ensureLook, lookCheck } from './lib/look.mjs';
 import { ensureMattes } from './lib/matte.mjs';
 import { hyperframesVersion, versionLine } from './caps.mjs';
@@ -361,6 +362,14 @@ export function runGallery(templateDir, { only = null } = {}) {
       const wfile = path.join(outDir, `${scene.num}-${scene.key}-wide.html`);
       fs.writeFileSync(wfile, buildPreview({ scene, parts: wparts, D, sub: scene.sample?.sub, pipStyle, cues, wide: true }));
       made.push(wfile);
+    }
+    // 034 全幕版示意（這段沒有講者時 build 自動換）：15、09、06、11 各一張 <編號>-<key>-full.html
+    if (scene.hasFull) {
+      const fs2 = fullScene(scene);
+      const fparts = sceneParts({ scene: fs2, ctx: r.ctx, beats: r.beats, id: 'pv', D, tone: null, exitFade: true });
+      const ffile = path.join(outDir, `${scene.num}-${scene.key}-full.html`);
+      fs.writeFileSync(ffile, buildPreview({ scene: fs2, parts: fparts, D, sub: scene.sample?.sub, pipStyle, cues, wide: true }));
+      made.push(ffile);
     }
   }
   // 第二層情境動畫（custom/x-*.html）的預覽頁：003 的 buildCustomPreview（還沒有時略過）
@@ -736,7 +745,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
       const report = {
         schema: 2, ok: !res.errors.length, errors: res.errors, warnings: [...res.warnings, ...capW],
         planHash, rhythm: top.rhythm, theme: top.theme, format: C.format, canvas: [C.W, C.H], formatSource: fmt.source, versions,
-        videoDur, outputDur: res.outDur ?? videoDur,
+        videoDur, outputDur: res.finalDur ?? res.outDur ?? videoDur, ending: endingJson(res),
         voiceOnly, roughBlack: rb.black, voiceUncovered: top.voiceUncovered, uncovered: top.uncovered, cutpoints: cp.list, chapters: top.chapters,
         items: res.tm ? jsonItems(res) : [],
         sfxCount: top.sfxCount, sfxBudget: top.sfxBudget, outro: top.outro, moods: top.moods ?? [],
@@ -747,7 +756,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     }
     printIssues(res, log, flags);
     for (const w of capW) log(`⚠ ${w}`);
-    log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip), ...bedTail(res, clip)] }, flags));
+    log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip), ...bedTail(res, clip), ...endingLines(res.ending)] }, flags));
     log(res.errors.length ? `\n未通過：${res.errors.length} 個錯誤（✖），${res.warnings.length + capW.length} 個提醒（⚠）。照 → 後面的建議改 plan.json 再跑一次。` : `\n通過：${res.items.length} 段，${res.warnings.length + capW.length} 個提醒（⚠）。`);
     return { ok: !res.errors.length, res };
   }
@@ -847,10 +856,14 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   else if (bgMissDark.length) log(`⚠ 暗色背景圖 ${bgMissDark.map((f) => `shared/template/${f}`).join('、')} 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/`);
   // 插入素材的檔（放大鏡的逐格要先抽好，主合成才知道每一格用哪一張）
   const mediaN = prepareMedia(res.items, P.out, log);
+  // 片尾模板（033）：片尾卡的圖複製進 assets/brand/、訂閱動畫轉成透明 webm（同檔不重做）
+  let ending;
+  try { ending = prepareEnding(res.ending, P.out); } catch (e) { log(`✖ 片尾：${e.message} → 換一個檔：node shared/template/tools/brand.mjs ending --subscribe <檔>，或這一集不要片尾：build.mjs --set ending=false`); return { ok: false, res }; }
+  const finalDur = res.finalDur ?? outDur;
   // 結尾配樂：量 wav 長度決定起播點，淡入淡出與增益烤進檔案（005 的 renderBgmClip，同參數不重做）
   const clip = outroClipOf(res, P);
-  // 底樂（選用）：鋪滿整支片、照人聲壓低；有剪輯台剪段時主軌的時間對不上，改成整段固定音量
-  const bp = bedPlan(res.bed, { outDur, outroAt: clip ? clip.at : null });
+  // 底樂（選用）：鋪滿整支片（含片尾卡）、照人聲壓低；有剪輯台剪段時主軌的時間對不上，改成整段固定音量
+  const bp = bedPlan(res.bed, { outDur: finalDur, outroAt: clip ? clip.at : null });
   let bed = null;
   if (bp) {
     let r;
@@ -867,7 +880,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const mt = ensureMattes({ outDir: P.out, root: path.resolve(HERE, '..', '..', '..'), items: res.items, tm: res.tm, assetVideo, log, speakerBox: res.globals.speakerBox });
   if (mt.made || mt.reused) log(`人物去背層：${mt.made + mt.reused} 段（新做 ${mt.made}、沿用 ${mt.reused}）`);
   if (mt.problems.length) { for (const x of mt.problems) log(`✖ [${x.id}] ${x.msg}`); return { ok: false, res }; }
-  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, panelSide: res.globals.panelSide, cardSide: res.globals.cardSide, speakerSide: res.globals.speakerSide, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, bed, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null };
+  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, panelSide: res.globals.panelSide, cardSide: res.globals.cardSide, speakerSide: res.globals.speakerSide, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, bed, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null, ending };
   const main = buildMain({ ...mainOpts, captions: cap });
   let test = null;
   if (flags.test) {
@@ -881,7 +894,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     test.t0 = t0;
   }
   // 不燒字幕的完成影片（--nocaps，deliver.mjs --no-captions）：整支、拿掉字幕層；放 compositions/ 底下（根目錄會變第二個 root），路徑同測試片段
-  const nocaps = flags.nocaps ? buildMain({ ...mainOpts, captions: null, test: { t0: 0, len: outDur } }) : null;
+  const nocaps = flags.nocaps ? buildMain({ ...mainOpts, captions: null, test: { t0: 0, len: finalDur } }) : null;
   // 剪映素材（--capcut）：每段一支透明底的合成（時間窗＝那一段），加一支主軌；render 交給 capcut.mjs
   const capcut = flags.capcut ? capcutParts(res, { mainOpts, outDur, captions: cap, format: C.format }) : null;
   if (capcut) for (const c of capcut.comps) files.push([c.file, c.html]);
@@ -953,7 +966,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   // 032 C10：寫完專案的 index.html 記一筆（一般 build、--storyboard、--review 都走這裡）；--out 指到別處時不是這個專案的產物，不記
   if (P.project && path.resolve(P.out) === path.join(P.project, 'work', 'hyperframes')) markStep(P.project, 'build');
 
-  log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip), ...bedTail(res, clip)] }, flags));
+  log('', reportText(res, { videoDur, tail: [outroLine(res.outro, clip), ...bedTail(res, clip), ...endingLines(res.ending)] }, flags));
   log(`\n產生：${W.res.written.length} 個檔（沒變 ${W.res.same.length}）；kit 更新 ${kitN} 個檔${mediaN ? `；插入素材更新 ${mediaN} 個` : ''}${removed.length ? `；刪掉舊檔 ${removed.join('、')}` : ''}`);
   if (W.res.skipped.length) log(`⚠ 這些檔被手改過，沒有覆寫：${W.res.skipped.join('、')} → 把改動搬進 plan.json 後加 --force`);
   if (test) {
@@ -1111,7 +1124,7 @@ function showAt(P, flags) {
 export function errorJson(message) {
   return { schema: 2, ok: false, errors: [message], warnings: [], planHash: null, rhythm: null, theme: null, format: null, canvas: null, formatSource: null,
     versions: { hyperframes: { pinned: null, installed: null, ok: false } },
-    videoDur: null, outputDur: null, voiceOnly: [], roughBlack: [], voiceUncovered: [], uncovered: [], cutpoints: [],
+    videoDur: null, outputDur: null, ending: null, voiceOnly: [], roughBlack: [], voiceUncovered: [], uncovered: [], cutpoints: [],
     chapters: [], items: [], sfxCount: {}, sfxBudget: { perMinuteAvg: 0, over: [], dense: [], loud: [] },
     outro: null, moods: [], edit: null, paths: {} };
 }
@@ -1119,7 +1132,14 @@ export function errorJson(message) {
 // 底樂的報告行：有設定（plan.json 的 bed 或工作區預設）才印，沒設定的人看不到這一行
 function bedTail(res, clip) {
   if (!res.bed) return [];
-  return [bedLine(res.bed, bedPlan(res.bed, { outDur: res.outDur, outroAt: clip ? clip.at : null }), { ducked: !res.tm?.cuts?.length })];
+  return [bedLine(res.bed, bedPlan(res.bed, { outDur: res.finalDur ?? res.outDur, outroAt: clip ? clip.at : null }), { ducked: !res.tm?.cuts?.length })];
+}
+
+// --check --json 的 ending（033）：qc 用 at、dur 排除片尾卡的靜止與無聲；停點 ③ 用 quote、subscribe 問使用者
+function endingJson(res) {
+  const e = res.ending;
+  if (!e || e.off) return null;
+  return { at: res.outDur, dur: e.dur, quote: e.card?.quote?.lines.join('，') ?? null, quoteFrom: e.card?.quote?.from ?? null, subscribe: e.subscribe?.n ?? null, notes: e.notes };
 }
 
 // 結尾配樂的起播點：量 shared/sfx/<music>.wav 的長度（一次 ffprobe）
@@ -1127,7 +1147,7 @@ function outroClipOf(res, P) {
   if (!res.outro?.music) return null;
   const f = res.outro.file || path.join(P.sfx, `${res.outro.music}.wav`);
   if (!fs.existsSync(f)) return null;
-  return outroClip(res.outro, probeDuration(f), res.outDur);
+  return outroClip(res.outro, probeDuration(f), res.finalDur ?? res.outDur);
 }
 
 // 用 realpath 比對（lib/cli.mjs）：從 symlink 路徑執行時（例如 shared/template 是連結）也要跑，不能靜默 exit 0

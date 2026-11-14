@@ -61,11 +61,13 @@
      "title_lines": [
       2
      ],
+     "title_maxline": 2,
      "sub": "先看問題",
      "sub_len": 4,
      "sub_lines": [
       4
-     ]
+     ],
+     "sub_maxline": 4
     },
     "beats": {
      "titleAt": 0.45,
@@ -141,13 +143,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 18h6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 22h4\" /> </svg>",
      "text": "先講概念",
      "text_text": "先講概念",
      "text_len": 4,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "先講概念",
      "text_lines": [
       4
-     ]
+     ],
+     "text_maxline": 4
     },
     "beats": {
      "in": 0
@@ -220,11 +227,13 @@
      "lead_lines": [
       2
      ],
+     "lead_maxline": 2,
      "key": "放到電腦",
      "key_len": 4,
      "key_lines": [
       4
-     ]
+     ],
+     "key_maxline": 4
     },
     "beats": {
      "in": 0,
@@ -308,18 +317,26 @@
        "text": "甲",
        "text_text": "甲",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "甲",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 0.2
       },
       {
        "text": "乙",
        "text_text": "乙",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "乙",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 0.7
       }
      ],
@@ -1354,7 +1371,8 @@
      "name_len": 3,
      "name_lines": [
       3
-     ]
+     ],
+     "name_maxline": 3
     },
     "beats": {
      "in": 0
@@ -1434,35 +1452,51 @@
      "title": "三件事",
      "title_text": "三件事",
      "title_len": 3,
+     "title_head": "",
+     "title_headlen": 0,
+     "title_tail": "三件事",
      "title_lines": [
       3
      ],
+     "title_maxline": 3,
      "items": [
       {
        "text": "一",
        "text_text": "一",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "一",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 1.3
       },
       {
        "text": "二",
        "text_text": "二",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "二",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 1.9
       },
       {
        "text": "三",
        "text_text": "三",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "三",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 2.5
       }
      ],
@@ -1555,32 +1589,45 @@
      "title_lines": [
       2
      ],
+     "title_maxline": 2,
      "items": [
       {
        "text": "一",
        "text_text": "一",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "一",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 0.5
       },
       {
        "text": "二",
        "text_text": "二",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "二",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 0.85
       },
       {
        "text": "三",
        "text_text": "三",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "三",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 1.2
       }
      ],
@@ -2046,12 +2093,17 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "text": "最後一句",
      "text_text": "最後一句",
      "text_len": 4,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "最後一句",
      "text_lines": [
       4
-     ]
+     ],
+     "text_maxline": 4
     },
     "beats": {
      "in": 0
@@ -2129,13 +2181,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"10\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m9 12 2 2 4-4\" /> </svg>",
      "text": "總結一下",
      "text_text": "總結一下",
      "text_len": 4,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "總結一下",
      "text_lines": [
       4
-     ]
+     ],
+     "text_maxline": 4
     },
     "beats": {
      "in": 0
@@ -2223,11 +2280,13 @@
      "title_lines": [
       2
      ],
+     "title_maxline": 2,
      "sub": "先看問題",
      "sub_len": 4,
      "sub_lines": [
       4
-     ]
+     ],
+     "sub_maxline": 4
     },
     "beats": {
      "titleAt": 0.45,
@@ -2303,13 +2362,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M9 18h6\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"M10 22h4\" /> </svg>",
      "text": "先講概念",
      "text_text": "先講概念",
      "text_len": 4,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "先講概念",
      "text_lines": [
       4
-     ]
+     ],
+     "text_maxline": 4
     },
     "beats": {
      "in": 0
@@ -2382,11 +2446,13 @@
      "lead_lines": [
       2
      ],
+     "lead_maxline": 2,
      "key": "放到電腦",
      "key_len": 4,
      "key_lines": [
       4
-     ]
+     ],
+     "key_maxline": 4
     },
     "beats": {
      "in": 0,
@@ -2470,18 +2536,26 @@
        "text": "甲",
        "text_text": "甲",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "甲",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 0.2
       },
       {
        "text": "乙",
        "text_text": "乙",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "乙",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 0.7
       }
      ],
@@ -3516,7 +3590,8 @@
      "name_len": 3,
      "name_lines": [
       3
-     ]
+     ],
+     "name_maxline": 3
     },
     "beats": {
      "in": 0
@@ -3596,35 +3671,51 @@
      "title": "三件事",
      "title_text": "三件事",
      "title_len": 3,
+     "title_head": "",
+     "title_headlen": 0,
+     "title_tail": "三件事",
      "title_lines": [
       3
      ],
+     "title_maxline": 3,
      "items": [
       {
        "text": "一",
        "text_text": "一",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "一",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 1.3
       },
       {
        "text": "二",
        "text_text": "二",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "二",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 1.9
       },
       {
        "text": "三",
        "text_text": "三",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "三",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 2.5
       }
      ],
@@ -3717,32 +3808,45 @@
      "title_lines": [
       2
      ],
+     "title_maxline": 2,
      "items": [
       {
        "text": "一",
        "text_text": "一",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "一",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 0.5
       },
       {
        "text": "二",
        "text_text": "二",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "二",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 0.85
       },
       {
        "text": "三",
        "text_text": "三",
        "text_len": 1,
+       "text_head": "",
+       "text_headlen": 0,
+       "text_tail": "三",
        "text_lines": [
         1
        ],
+       "text_maxline": 1,
        "at": 1.2
       }
      ],
@@ -4208,12 +4312,17 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "text": "最後一句",
      "text_text": "最後一句",
      "text_len": 4,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "最後一句",
      "text_lines": [
       4
-     ]
+     ],
+     "text_maxline": 4
     },
     "beats": {
      "in": 0
@@ -4291,13 +4400,18 @@
      "tag_lines": [
       2
      ],
+     "tag_maxline": 2,
      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"> <circle class=\"stroke-draw\" pathLength=\"1\" cx=\"12\" cy=\"12\" r=\"10\" /> <path class=\"stroke-draw\" pathLength=\"1\" d=\"m9 12 2 2 4-4\" /> </svg>",
      "text": "總結一下",
      "text_text": "總結一下",
      "text_len": 4,
+     "text_head": "",
+     "text_headlen": 0,
+     "text_tail": "總結一下",
      "text_lines": [
       4
-     ]
+     ],
+     "text_maxline": 4
     },
     "beats": {
      "in": 0
@@ -4330,7 +4444,7 @@
   "sections[0] 要寫 { \"at\": \"#N\", \"name\": \"小節名\" }，現在是 {\"at\":\"#9@字幕\",\"name\":\"\"}",
   "outro 不能有「extra」→ 只能寫 from、music、volume、fadeOut",
   "outro.music：「nope」不是配樂（可用：bgm-cylinder-five）→ 改成可用的配樂名稱，或寫 null 不配",
-  "outro.from：要寫 \"#N\" 或 \"#N@詞\"（結語金句講完後那一句），現在是 \"3\" → 改成收尾那一句的句號，例 \"#120\"",
+  "outro.from：要寫 \"#N\" 或 \"#N@詞\"（結語金句講完後那一句），現在是 \"3\" → 改成收尾那一句的句號，例 \"#120\"；不寫＝只播片尾最後 30 秒",
   "outro.volume 要是 −20～+6 的 dB 數字（0＝預設），現在是 99 → 改成 −20～+6 之間的數字，或刪掉這個欄位用預設",
   "bed 不能有「loop」→ 只能寫 music、volume",
   "bed.music：「nope」不是曲庫裡的配樂（可用：bgm-cylinder-five） → 改成可用的曲名（node shared/template/tools/music.mjs list），或寫 null 不配",
@@ -4926,6 +5040,8 @@
  },
  "outro": null,
  "bed": null,
+ "ending": null,
+ "finalDur": 105,
  "chapterBadge": true,
  "badges": [
   {

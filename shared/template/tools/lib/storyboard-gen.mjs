@@ -232,6 +232,20 @@ export const chapterOfFn = (parts = []) => (seg) => {
   return p ? p.title : '—';
 };
 
+// 停點 ③ 的結尾配樂、片尾問句（033）：outro、ending＝build --check --json 的同名欄位
+export function outroAsk(plan, outro) {
+  if (outro?.music) return `結尾配樂：${outro.music}${plan.outro?.music ? '' : '（工作區預設）'}，${plan.outro?.from ? `從 ${plan.outro.from} 起` : '只播片尾最後 30 秒；要從結語金句講完那一句起播就告訴我句號'}，要換嗎`;
+  if (plan.outro?.music === null) return '結尾配樂：這一集不配，要配嗎';
+  return '結尾要不要配樂：要的話告訴我從哪一句起';
+}
+export function endingAsks(ending) {
+  if (!ending) return [];
+  const L = [];
+  if (ending.quote) L.push(`片尾金句：「${ending.quote}」（${ending.quoteFrom}），要改嗎`);
+  for (const n of ending.notes || []) if (/片尾金句|訂閱動畫/.test(n) && !n.includes("這一集不放")) L.push(n.replace(/ → .*$/, '').replace(/（要放就.*）$/, '') + '，要放的話告訴我');
+  return L;
+}
+
 export function renderStoryboard(ctx) {
   const { project, plan, items = new Map(), merged = {}, parts = [], voiceOnly = [], designs = new Map() } = ctx;
   const segs = (plan.scenes || []).slice();
@@ -266,7 +280,8 @@ export function renderStoryboard(ctx) {
   }
   L.push('## 需要我決定的事', '');
   const { ask, ai } = tidyDecide(merged.decide || [], { cues: ctx.cues });
-  if (!plan.outro) ask.push('結尾要不要配樂：要的話告訴我從哪一句起');
+  if (!plan.outro || ctx.outro?.music) ask.push(outroAsk(plan, ctx.outro));
+  ask.push(...endingAsks(ctx.ending));
   ask.forEach((d, i) => L.push(`${i + 1}. ${cell(d)}`));
   L.push('');
   if (ai.length) {

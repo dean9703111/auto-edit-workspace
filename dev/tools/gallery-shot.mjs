@@ -14,7 +14,7 @@ const PREVIEW = path.join(TPL, 'preview'), OUT = path.join(TPL, 'gallery');
 const { findChrome } = await import(path.join(TPL, 'tools', 'lib', 'audit-browser.mjs'));
 
 const only = process.argv[2] ? process.argv[2].split(',') : null;
-const scenes = fs.readdirSync(path.join(TPL, 'scenes')).flatMap((d) => [d, `${d}-wide`]).filter((d) => fs.existsSync(path.join(PREVIEW, `${d}.html`)) && (!only || only.includes(d))).sort();   // -wide：全寬版型示意（04 家族）
+const scenes = fs.readdirSync(path.join(TPL, 'scenes')).flatMap((d) => [d, `${d}-wide`, `${d}-full`]).filter((d) => fs.existsSync(path.join(PREVIEW, `${d}.html`)) && (!only || only.includes(d))).sort();   // -wide：全寬版型示意（04 家族）；-full：全幕版示意（034：15、09、06、11）
 if (!scenes.length) { console.error(`✖ 沒有可截的情境${only ? `（${only.join('、')}）` : ''}`); process.exit(1); }
 
 const chrome = findChrome();

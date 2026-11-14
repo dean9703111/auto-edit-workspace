@@ -16,7 +16,7 @@ const agentsOf = (P) => agentLimit(path.resolve(P.templateDir, '..'));   // 子�
 import { parseMap, checkMap, mapOptions, mergeMaps, designVsMap, rowSeconds } from './semantic-map.mjs';
 import { RHYTHM, MODE_ZH, modeOfHead, layoutFindings, layoutPlanLine } from './layout-rhythm.mjs';
 import { listFillSpecs, designFileOf, illusNames, isBlankDesign, blankFor } from './custom-fill.mjs';
-import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn, tidyDecide } from './storyboard-gen.mjs';
+import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn, tidyDecide, outroAsk, endingAsks } from './storyboard-gen.mjs';
 import { appendStop, lastStopOf, markStep } from './progress.mjs';
 import { bumpTry, resetTry, mainTry, stopLine, lastBeat } from './tries.mjs';
 import { STOP, stopLines } from './stops.mjs';
@@ -210,7 +210,7 @@ export function runScaffold(P, flags, { loadLib, slotSummary, voiceOnlyOf }) {
   const input = {
     project: rel(P.project), format: { label: `${fmt.format === 'portrait' ? '直式' : '橫式'} ${canvasOf(fmt.format).W}×${canvasOf(fmt.format).H}`, portrait: fmt.format === 'portrait' },
     videoDur, cues, scriptMd, plan, outline, parts, hasCamera, kinds,
-    scenes: lib.scenes.map((s) => ({ ...s, summary: slotSummary(s) })).filter((s) => hasCamera || ['chapter', 'fullscreen'].includes(s.family)),
+    scenes: lib.scenes.map((s) => ({ ...s, summary: slotSummary(s) })).filter((s) => hasCamera || s.hasFull || ['chapter', 'fullscreen'].includes(s.family)),   // 034：15、09、06、11 有全幕版，沒有講者也能用
     // 直式不提供的（規格 portrait: none）、沒有講者時疊在講者上的（layout: overlay）不列，寫分鏡的人就不會挑到
     fillSpecs: listFillSpecs(lib.customDir).filter((f) => !(fmt.format === 'portrait' && f.portrait === 'none') && (hasCamera || f.layout !== 'overlay')).map((f) => ({ ...f, floors: floorRules(readOpt(path.join(lib.customDir, `${f.template}.html`))) })),
     illus: illusNames(path.join(P.templateDir, 'kit')), speaker: readSpeaker(P.templateDir), fx: lib.fx,
@@ -1209,7 +1209,7 @@ function genContext(P, plan, j, shotsList, lib) {
   const sbText = readOpt(sbFile(P));
   const beats = new Map((plan.scenes || []).filter((s) => s?.type === 'custom' && s.id).map((s) => [s.id, beatBlock(P, s, { lib, sbText })]));
   return {
-    project: path.basename(P.project), plan, merged, parts, cues, shots, moodTimes: j.moods || [],
+    project: path.basename(P.project), plan, merged, parts, cues, shots, moodTimes: j.moods || [], outro: j.outro ?? null, ending: j.ending ?? null,
     items: new Map((j.items || []).map((x) => [x.id, x])), voiceOnly: j.voiceOnly || [],
     scenes: lib.scenes, specs: new Map(listFillSpecs(lib.customDir).map((f) => [f.template, f])), designs: loadDesigns(P, plan), beats,
   };
@@ -1299,12 +1299,12 @@ function storyboardRun(P, flags, { loadLib }, { fixed = null } = {}) {
   const unc = (j.uncovered || []).map((u) => (Array.isArray(u) ? u : [u.from ?? u.start, u.to ?? u.end])).filter(([a, z]) => z > a);
   const uncLine = unc.length ? `${unc.slice(0, 4).map(([a, z]) => `${clock(a)}–${clock(z)}`).join('、')}${unc.length > 4 ? `…共 ${unc.length} 段` : ''}` : '無';
   const asks = tidyDecide(ctx.merged?.decide || [], { cues: ctx.cues }).ask.filter((x) => !/結尾.*配樂/.test(x)).slice(0, 2);
-  const outro = plan.outro ? `結尾配樂：${plan.outro.music || '（沒寫曲名）'}${plan.outro.from ? `，從 ${plan.outro.from} 起` : ''}，要換嗎` : '結尾要不要配樂：要的話從哪一句起';
+  const outro = [outroAsk(plan, j.outro), ...endingAsks(j.ending)];
   const lines = [
     `分鏡表好了：${plan.scenes.length} 段（模板 ${tpl}、media ${media}${designs ? `、內容設計動畫 ${designs}` : ''}），內容設計動畫候選 ${dp.cands.length} 段，金句候選 ${quotes} 則，情緒點 ${moods} 個`,
     `內容設計動畫：${designPlanLine(dp)}；候選 ${dp.cands.length} 段，看分鏡表`,
     `驗證：build --check → ✖ ${(j.errors || []).length}、⚠ ${warn.length}${fixed != null ? `（自動修好 ${fixed} 處）` : ''}；沒有畫面的區間：${uncLine}`,
-    `要你決定：${[...asks, outro].map((x, i) => `${i + 1}. ${x}`).join('；')}`,
+    `要你決定：${[...asks, ...outro].map((x, i) => `${i + 1}. ${x}`).join('；')}`,
   ];
   for (const l of reportBlock(lines, { stop: stopLines.storyboard(url) })) console.log(l);
   return 0;

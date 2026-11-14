@@ -588,7 +588,7 @@ test('情境動畫綁句：P.at 的句號換成秒數；註解不算；不是句
 test('outro：錯誤原文 5 種；起點、對齊片尾、淡入淡出取 min；報告行', () => {
   const e = (o) => run([], { outro: o }).errors;
   assert.ok(e({ from: '#11', music: 'ding' }).includes('outro.music：「ding」不是配樂（可用：bgm-cylinder-five）→ 改成可用的配樂名稱，或寫 null 不配'));
-  assert.ok(e({ from: '12' }).includes('outro.from：要寫 "#N" 或 "#N@詞"（結語金句講完後那一句），現在是 "12" → 改成收尾那一句的句號，例 "#120"'));
+  assert.ok(e({ from: '12' }).includes('outro.from：要寫 "#N" 或 "#N@詞"（結語金句講完後那一句），現在是 "12" → 改成收尾那一句的句號，例 "#120"；不寫＝只播片尾最後 30 秒'));
   assert.ok(e({ from: '#11', volume: 9 }).includes('outro.volume 要是 −20～+6 的 dB 數字（0＝預設），現在是 9 → 改成 −20～+6 之間的數字，或刪掉這個欄位用預設'));
   assert.ok(e({ from: '#11', fadeOut: 11 }).includes('outro.fadeOut 要是 0–10 的秒數（不寫＝用 kit/sfx.json 的 fadeOut），現在是 11 → 改成 0–10 之間的秒數，或刪掉這個欄位用預設'));
   assert.ok(e({ from: '#11', gain: 1 }).includes('outro 不能有「gain」→ 只能寫 from、music、volume、fadeOut'));
@@ -596,7 +596,7 @@ test('outro：錯誤原文 5 種；起點、對齊片尾、淡入淡出取 min�
   const none = run([], { outro: { from: '#11' } });
   assert.deepEqual(none.errors, []);
   assert.equal(none.outro.music, null);
-  assert.equal(outroLine(none.outro, null), '結尾配樂：outro 沒寫 music（或寫 null），不配');
+  assert.equal(outroLine(none.outro, null), '結尾配樂：這一集不配（outro.music 寫了 null，或 outro 沒寫曲名、工作區也沒有預設）');
   const res = run([], { outro: { from: '#11', music: 'bgm-cylinder-five' } });
   assert.deepEqual(res.errors, []);
   const B = L.sfx['bgm-cylinder-five'];
@@ -607,7 +607,7 @@ test('outro：錯誤原文 5 種；起點、對齊片尾、淡入淡出取 min�
   assert.deepEqual([short.aligned, short.at, short.dur], ['end', 39, 5]);
   assert.equal(outroLine(res.outro, short), `結尾配樂：bgm-cylinder-five 只有 5.0 秒，比 outro.from（#11，0:36.00）到片尾的 8.0 秒短，改從 0:39.00 起播、對齊片尾；這首要在影片說明欄標示出處：${B.credit}`);
   assert.match(outroLine(res.outro, long), /^結尾配樂：bgm-cylinder-five 從 0:36\.00 起播 8\.0 秒（淡入 2\.67 秒、淡出 1\.85 秒，比人聲小 11\.0 dB）；這首要在影片說明欄標示出處：Music: "Cylinder Five" by Chris Zabriskie/);
-  assert.equal(outroLine(run([], { outro: { from: '#11', music: null } }).outro, null), '結尾配樂：outro 沒寫 music（或寫 null），不配');
+  assert.equal(outroLine(run([], { outro: { from: '#11', music: null } }).outro, null), '結尾配樂：這一集不配（outro.music 寫了 null，或 outro 沒寫曲名、工作區也沒有預設）');
 });
 
 test('custom 的 clicks：+秒與句號各一顆 click（附加音效）；超出段 ✖；sfxExtra false 不加', () => {

@@ -31,3 +31,26 @@ P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
 P.check('#gCard .sc-icon', {{{in}}} + 0.3);{{/icon}}
 P.chars('#gCard .sm-text', {{{in}}} + 0.22, { stagger: 0.02 });
 {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}
+<!-- @style-full -->
+/* 全幕版（034）：大圓圈打勾＋標籤＋兩行大字，在內容區（y 40–900）置中：圖示圓 240（y 150–390）、標籤 44／700 主色、正文 80／900 置中（兩行 208）。
+   沒有圖示（"icon": "none"）就只有標籤和正文。 */
+#sfArea { position: absolute; left: 120px; right: 120px; top: 40px; bottom: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; }
+#sfIcon { --d: 240px; --i: 136px; }
+#sfTag { font-size: 44px; line-height: 60px; font-weight: 700; color: var(--brand); white-space: nowrap; }
+#sfText { font-size: 80px; line-height: 104px; font-weight: 900; color: var(--sc-fs-ink); text-align: center; white-space: nowrap; }
+#sfText .sc-kw { position: relative; color: var(--brand); }
+<!-- @body-full -->
+<div id="sfArea" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  {{#icon}}<span id="sfIcon" class="sc-icon">{{{icon}}}</span>{{/icon}}
+  <div id="sfTag">{{tag}}</div>
+  <div id="sfText" class="sc-opt">{{{text}}}</div>
+</div>
+<!-- @timeline-full -->
+/* 全幕版：圖示圓彈出 → 描圈打勾（ding 照 scene.json 在 in＋0.1）→ 標籤上浮 → 正文逐字上浮 → 關鍵詞螢光筆。
+   前一段是講者晚 0.35 秒開始，前一段也是全畫面 0.1 秒開始；離場由 build 負責 */
+const T0 = {{{in}}} + (P.prev() === 'speaker' ? 0.35 : 0.1);
+{{#icon}}P.pop('#sfIcon', T0, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+P.check('#sfIcon', T0 + 0.2, { dur: 0.6 });{{/icon}}
+P.rise('#sfTag', T0 + 0.3);
+P.chars('#sfText', T0 + 0.45, { stagger: 0.03 });
+P.marker('#sfText .sc-kw', T0 + 1.5);

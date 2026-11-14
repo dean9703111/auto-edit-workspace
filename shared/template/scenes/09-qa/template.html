@@ -40,3 +40,42 @@ P.dim('#rowQ', {{{aAt}}}, { to: 0.62 });
 P.pop('#rowA .sc-lt__mark', {{{aAt}}}, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
 P.chars('#rowA .sc-kw', {{{aAt}}} + 0.12, { mode: 'pop' });
 {{#exitFade}}P.wipeOut('#qaCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#qaCard', D - 0.8, { dir: 'left' });{{/exitFade}}
+<!-- @style-full -->
+/* 全幕版（034；shotcraft card-flip-reveal）：一張 1360×560 的大卡置中（x 280–1640、y 190–750），正面問題、講到答案時翻面成答案。
+   正面白卡：Q 徽章 104 圓＋小標 44／700；問題 72／900、最多兩行（寬 1216）。背面主色卡：A 徽章、「我的回答」、答案 900 字級 min(96, 1216 ÷ 字數)。 */
+#qfCard { position: absolute; left: 280px; top: 190px; width: 1360px; height: 560px; }
+.qf-face { position: absolute; inset: 0; box-sizing: border-box; border-radius: 28px; overflow: hidden; }
+.qf-front { background: var(--v2-card); color: var(--v2-ink); border: 2px solid var(--v2-card-line); box-shadow: var(--v2-card-shadow); }
+.qf-back { background: var(--brand); color: var(--brand-ink); box-shadow: var(--sc-lift); }
+.qf-badge { position: absolute; left: 72px; top: 56px; width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; font-size: 64px; font-weight: 900; line-height: 1; }
+.qf-front .qf-badge { background: var(--v2-ink); color: var(--v2-card); }   /* 字色用卡片色：--brand-ink 在淺主色時是深色，會和墨色底同色 */
+.qf-back .qf-badge { background: var(--brand-ink); color: var(--brand); }
+.qf-label { position: absolute; left: 208px; top: 78px; font-size: 44px; line-height: 60px; font-weight: 700; white-space: nowrap; }
+.qf-front .qf-label { color: var(--v2-mute); }
+.qf-back .qf-label { color: var(--brand-ink); opacity: 0.85; }
+#qfQ { position: absolute; left: 72px; top: 220px; width: 1216px; font-size: 72px; line-height: 100px; font-weight: 900; }
+#qfA { position: absolute; left: 72px; right: 72px; top: 236px; height: 220px; display: flex; align-items: center; white-space: nowrap; transform-origin: 0% 50%;
+       font-size: min(96px, calc(1216px / {{a_len}})); line-height: 1.2; font-weight: 900; }
+#qfA .sc-kw { color: inherit; box-shadow: inset 0 -0.2em 0 color-mix(in srgb, var(--brand-ink) 32%, transparent); }
+<!-- @body-full -->
+<div id="qfCard" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+  <div class="qf-face qf-front" data-flip="front">
+    <div id="qfQb" class="qf-badge">Q</div>
+    <div id="qfQl" class="qf-label">{{tag}}</div>
+    <div id="qfQ"><span class="sc-opt">{{q}}</span></div>
+  </div>
+  <div class="qf-face qf-back" data-flip="back">
+    <div class="qf-badge">A</div>
+    <div class="qf-label">我的回答</div>
+    <div id="qfA" data-flip-num><span class="sc-opt">{{{a}}}</span></div>
+  </div>
+</div>
+<!-- @timeline-full -->
+/* 全幕版：大卡彈出 → Q 徽章彈出、小標淡入 → 問題逐字上浮 → 講到答案（aAt）時翻面（提早 P.FLIP_LEAD 出發，背面剛好在 aAt 露出；ding 照 scene.json）。
+   前一段是講者晚 0.35 秒開始，前一段也是全畫面 0.1 秒開始；離場由 build 負責 */
+const T0 = {{{in}}} + (P.prev() === 'speaker' ? 0.35 : 0.1);
+P.pop('#qfCard', T0, { from: 0.94, dy: 40 });
+P.pop('#qfQb', T0 + 0.25, { from: 0.4, dy: 0 });
+P.in('#qfQl', T0 + 0.35);
+P.chars('#qfQ .sc-opt', T0 + 0.45, { stagger: 0.035 });
+P.flip('#qfCard', Math.max(T0 + 0.9, {{{aAt}}} - P.FLIP_LEAD));

@@ -7,3 +7,4 @@
 | 2026-11-13 03:00 | 032-arch-optimizations | 3646eff＋未提交的改動 | npm run test:fast ✖4s（pass 270） | 橫式：準備✓0s ①✓28s 固定檔 ②✓3s ③✓1m54s 固定檔 ④✓15s<br>直式：準備✓6s ①✓26s 固定檔 ②✓3s ③✓39s 固定檔 ④✓14s | — | 4m16s | ✖ |
 | 2026-11-13 03:06 | 032-arch-optimizations | 3646eff＋未提交的改動 | 沒跑 | 橫式：準備✓0s ①✓25s 固定檔 ②✓3s ③✓1m53s 固定檔 ④✓15s 輸出✓2m23s | --deliver --no-portrait --skip-tests | 5m00s | ✓ |
 | 2026-11-13 05:30 | 032-arch-optimizations | 3646eff＋未提交的改動 | 沒跑 | 橫式：準備✓0s ①✓19s 固定檔 ②✓3s ③✓1m26s 固定檔 ④✓12s<br>直式：準備✓2s ①✓18s 固定檔 ②✓3s ③✓31s 固定檔 ④✓13s | --skip-tests | 3m10s | ✓ |
+| 2026-11-14 03:07 | main | 95b9047＋未提交的改動 | 沒跑 | 橫式：準備✓0s ①✓20s 固定檔 ②✓3s ③✓1m25s 固定檔 ④✓12s render✓7s<br>直式：準備✓2s ①✓18s 固定檔 ②✓3s ③✓32s 固定檔 ④✓13s | --render --skip-tests | 3m18s | ✓ |
