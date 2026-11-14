@@ -93,6 +93,7 @@
 | 轉場 | 色帶收回 | 色帶反向收、pip 淡出 | build 自動 | 全畫面 → 講者 |
 | 轉場 | 換卡不換景 | 背景不動，舊卡擦掉、新卡擦開上浮 | 新卡＝`P.wipe`＋`P.pop`；舊卡＝build 補 `P.wipeOut` | 全畫面 → 全畫面 |
 | 轉場 | 上推 | 新的一頁連底色從下緣推上來，把前一頁頂出去 | build 自動 | 全畫面 → 全畫面，後一段是新小節（`sections`）的開頭 |
+| 轉場 | 穿窗 | 前一段最後聚焦的元素變成圓窗、長成全畫面，後一段從窗裡長出來 | 後一段寫 `"enter": "dive"`，build 做 | 全畫面 → 全畫面，後一段放大講前一段的某個東西（一集 ≤ 3 次） |
 | 轉場 | 章節擦入 | 章節幕斜擦滿版、角標橫向擦開（不加色塊） | `P.wipe` | 01 章節、02 角標 |
 | 轉場 | 章號重拍 | 章號從 1.3 倍砸下來 | `P.pop({from: 1.3})` | 01 章節、02 角標 |
 
@@ -128,7 +129,7 @@
 
 ### C 對比
 
-以前 vs 現在、A vs B。情境：`x-before-after`、`x-versus`、`x-fix`、`x-ui-mock-tidy`（亂 → 一鍵歸位）、`x-crowd-queue`（兩排人比快慢）、04b。
+以前 vs 現在、A vs B。情境：`x-before-after`、`x-versus`、`x-fix`、`x-ui-mock-tidy`（亂 → 一鍵歸位）、`x-crowd-queue`（兩排人比快慢）、`x-slider`（同一個畫面前後兩張截圖，拉桿揭出）、04b。
 
 | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
 |---|---|---|---|---|---|
@@ -143,7 +144,7 @@
 
 ### D 清單
 
-3–5 條並列重點。情境：`x-checklist`、`x-checklist-ai`、`x-warnings`、`x-callout`、`x-callout-phone`、`x-callout-parts`、`x-folder`（資料夾樹）、`x-tags`（重點詞浮標，疊在講者上）、`x-stack`、`x-stack-podium`、`x-ring-facets`、04a、04d。
+3–5 條並列重點。情境：`x-checklist`、`x-checklist-ai`、`x-warnings`、`x-callout`、`x-callout-phone`、`x-callout-parts`、`x-folder`（資料夾樹）、`x-tags`（重點詞浮標，疊在講者上）、`x-stack`、`x-stack-podium`、`x-ring-facets`、`x-relay`（一個主體 × 多種能力，截圖膠片）、`x-recap`（結尾回顧，前面幾段的截圖合影）、04a、04d。
 
 | 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |
 |---|---|---|---|---|---|

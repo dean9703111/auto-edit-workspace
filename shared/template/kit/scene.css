@@ -906,6 +906,7 @@ body, #root {
   --v2-lt-key-shadow:10px 10px 0 0 #000000;
   --v2-tx-b:         #0C0E12;
   /* 舊情境 token 的暗色值（x-*.html、04 系列直接吃這些） */
+  --sc-fs-bg:        #0E1014;   /* 全寬段（沒有講者）拿掉背景圖只留底色：暗色要是深底（亮色 theme.css 是淺暖底） */
   --sc-fs-card:      #15181E;
   --sc-fs-card-line: rgba(255, 255, 255, 0.12);
   --sc-fs-ink:       #F3EFEA;

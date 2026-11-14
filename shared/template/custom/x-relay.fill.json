@@ -1,0 +1,113 @@
+{
+  "template": "x-relay",
+  "prefix": "xrl",
+  "beat": "D",
+  "layout": "fullscreen",
+  "when": "一個主體 × 多種能力，每種能力素材裡都有一張截圖（「剪輯台可以改字幕、調音量，還能換卡片」）：左邊截圖膠片一格一格往上換，右邊主體名詞不動、能力那個詞原位接力換掉，詞對準中間那張截圖",
+  "slots": {
+    "subject": {
+      "label": "主體名詞（不動的那一個，例「剪輯台」）",
+      "type": "text",
+      "max": 8,
+      "required": true
+    },
+    "items": {
+      "label": "每一種能力（3–4 項，照講到的順序；每項一張截圖）",
+      "type": "list",
+      "min": 3,
+      "maxItems": 4,
+      "required": true,
+      "item": {
+        "shot": {
+          "label": "這種能力的截圖（素材裡的圖片檔 assets/images/… 或 assets/screen/…；16:9 最好，其他比例會被裁成 16:9）",
+          "type": "shot",
+          "from": "image",
+          "required": true
+        },
+        "word": {
+          "label": "能力（動詞片語，照口播的寫法，例「改字幕」）",
+          "type": "text",
+          "max": 5,
+          "required": true
+        },
+        "note": {
+          "label": "能力詞下面一行小字說明（選填，例「打錯字直接改」）",
+          "type": "text",
+          "max": 14
+        },
+        "at": {
+          "label": "講到這種能力那個詞的時間（膠片提早 0.3 秒往上換一格，講到時詞出來）；相鄰兩項至少差 2.5 秒",
+          "type": "at",
+          "ref": "T{n}",
+          "required": true
+        }
+      }
+    }
+  },
+  "sample": {
+    "subject": "AI 剪輯",
+    "items": [
+      { "shot": "assets/images/relay-1.jpg", "word": "轉逐字稿", "note": "先把講解轉成文字", "at": "#592@轉逐字稿" },
+      { "shot": "assets/images/relay-2.jpg", "word": "找出 NG", "note": "講錯的句子自動標出來", "at": "#593@找出" },
+      { "shot": "assets/images/relay-3.jpg", "word": "剪好看", "note": "字卡、動畫一次配好", "at": "#594@剪好看" },
+      { "shot": "assets/images/relay-4.jpg", "word": "一句就改", "note": "說一句話就能改", "at": "#595@一句" }
+    ]
+  },
+  "sampleMin": {
+    "subject": "AI 剪輯",
+    "items": [
+      { "shot": "assets/images/relay-1.jpg", "word": "轉逐字稿", "at": "#592@轉逐字稿" },
+      { "shot": "assets/images/relay-2.jpg", "word": "找出 NG", "at": "#593@找出" },
+      { "shot": "assets/images/relay-3.jpg", "word": "剪好看", "at": "#594@剪好看" }
+    ]
+  },
+  "sheet": [
+    {
+      "beat": "0",
+      "at": "段起點",
+      "show": "左邊截圖膠片（第 1 張在中間，上下露出相鄰的截圖，全部退暗）；右邊主體「{subject}」",
+      "moves": "開場（依前段）；預覽態（膠片）；＋0.6 逐字上浮（主體）",
+      "focus": "主體"
+    },
+    {
+      "each": "items",
+      "to": 1,
+      "if": "note",
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "第 1 張截圖亮起、主色亮框；主體下面出現「{word}」，再下一行說明「{note}」",
+      "moves": "聚焦（第 1 張截圖，其他退暗）；逐字上浮（「{word}」）；＋0.12 逐字上浮（說明）",
+      "focus": "「{word}」"
+    },
+    {
+      "each": "items",
+      "to": 1,
+      "if": "!note",
+      "beat": 1,
+      "at": "`{at}`",
+      "show": "第 1 張截圖亮起、主色亮框；主體下面出現「{word}」",
+      "moves": "聚焦（第 1 張截圖，其他退暗）；逐字上浮（「{word}」）",
+      "focus": "「{word}」"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "if": "note",
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "膠片往上換一格，第 {n} 張截圖到中間亮起；「{prev.word}」換成「{word}」，說明換成「{note}」",
+      "moves": "−0.3 淡出（「{prev.word}」往上、上一則說明）；−0.3 游標移動（膠片往上捲一格，0.6 秒）；−0.3 聚焦（第 {n} 張截圖）；逐字上浮（「{word}」）；＋0.12 逐字上浮（說明）",
+      "focus": "「{word}」"
+    },
+    {
+      "each": "items",
+      "from": 2,
+      "if": "!note",
+      "beat": 2,
+      "at": "`{at}`",
+      "show": "膠片往上換一格，第 {n} 張截圖到中間亮起；「{prev.word}」換成「{word}」",
+      "moves": "−0.3 淡出（「{prev.word}」往上）；−0.3 游標移動（膠片往上捲一格，0.6 秒）；−0.3 聚焦（第 {n} 張截圖）；逐字上浮（「{word}」）",
+      "focus": "「{word}」"
+    }
+  ]
+}

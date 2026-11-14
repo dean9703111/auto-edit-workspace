@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>影片情境庫：18 種情境模板與情境動畫預覽｜auto-edit-workspace</title>
-<meta name="description" content="AI 自動剪輯工作區的情境庫：章節轉場、半版側邊欄、全畫面清單、流程、比較、金句等 18 種情境模板與 48 支情境動畫，可即時預覽、切換風格包與亮暗主題。">
+<meta name="description" content="AI 自動剪輯工作區的情境庫：章節轉場、半版側邊欄、全畫面清單、流程、比較、金句等 18 種情境模板與 51 支情境動畫，可即時預覽、切換風格包與亮暗主題。">
 <link rel="canonical" href="https://deanlin.net/auto-edit-workspace/shared/template/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="auto-edit-workspace">
 <meta property="og:locale" content="zh_TW">
 <meta property="og:url" content="https://deanlin.net/auto-edit-workspace/shared/template/">
 <meta property="og:title" content="影片情境庫：18 種情境模板與情境動畫預覽｜auto-edit-workspace">
-<meta property="og:description" content="AI 自動剪輯工作區的情境庫：章節轉場、半版側邊欄、全畫面清單、流程、比較、金句等 18 種情境模板與 48 支情境動畫，可即時預覽、切換風格包與亮暗主題。">
+<meta property="og:description" content="AI 自動剪輯工作區的情境庫：章節轉場、半版側邊欄、全畫面清單、流程、比較、金句等 18 種情境模板與 51 支情境動畫，可即時預覽、切換風格包與亮暗主題。">
 <meta property="og:image" content="https://deanlin.net/auto-edit-workspace/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F6630F'/%3E%3Cpath d='M25 19l21 13-21 13z' fill='%23fff'/%3E%3C/svg%3E">
@@ -252,6 +252,22 @@
           <dt>怎麼進場</dt><dd>背景與號卡第一格就在，章名板 0.45 秒、副標 0.6 秒起淡入，字從板子下緣浮出；有圖示時，章名出現後把號卡上方的大圖示描出來，固定 2.5 秒</dd>
         </dl>
         <div class="limits"><span>章名 ≤ 10 字</span><span>副標 ≤ 12 字</span><span>圖示選填</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="pv" style="background-image:url('gallery/01-chapter-map.jpg')">
+        <iframe src="preview/01-chapter-map.html" loading="lazy" title="01 章節轉場：本集地圖 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/01-chapter-map.html" target="_blank" rel="noopener" aria-label="新分頁開啟 01 章節轉場：本集地圖"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">01</span><h3>章節轉場：本集地圖</h3><code>chapterMap</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>長片有 3–8 章，想讓觀眾知道現在第幾章、還剩幾章：plan.json 第一層寫 <code>"chapterMap": true</code>，每個 01 自動換成地圖版（01 照舊寫）</dd>
+          <dt>不要用在</dt><dd class="avoid">少於 3 章或超過 8 章、直式（照舊用一般的章節轉場）</dd>
+          <dt>畫面上</dt><dd>整集的章排在一條路線上，前面的章打勾；鏡頭從上一章推到這一章、路線描過去，這一章的站彈出 → 章號牌（CHAPTER 02／04）＋章名。不放副標、圖示</dd>
+        </dl>
+        <div class="limits"><span>3–8 章</span><span>章名 ≤ 10 字</span><span>只有橫式</span></div>
       </div>
     </article>
 
@@ -1448,6 +1464,52 @@
           <dt>畫面上</dt><dd>輸入膠囊逐字打出提示詞 → 送出、鏡頭拉回，底下長出根節點 → 2–3 個章節 → 每章 0–2 個重點，每長一層鏡頭往上帶 → 根節點旁彈出總結膠囊</dd>
         </dl>
         <div class="limits"><span>版面：子母畫面</span><span>沒有講者時全寬</span><span>提示詞 ≤ 22 字、2–3 章</span><span>章 ≤ 5 字、重點 ≤ 4 字</span><span>綁句 TT／TR／TB／TL／TM</span></div>
+      </div>
+    </article>
+    <!-- 036：放真的截圖（slot type "shot"：這一集前面某一段的 id，或素材裡的圖片檔） -->
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-recap.html" loading="lazy" title="x-recap 回顧牆 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-recap.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-recap 回顧牆"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>回顧牆</h3><code>x-recap</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>結尾回顧這一集講過的 2–4 件事，每一件前面都有一段畫面（「最後整理一下今天講的四件事：…」）</dd>
+          <dt>不要用在</dt><dd class="avoid">前面沒有對得上的畫面（用 11 總結、x-checklist）；超過 4 件（挑 4 件，或用 04a）</dd>
+          <dt>畫面上</dt><dd>那幾段的截圖連標籤從畫面外飛進來合影 → 講到哪一件那張聚焦、打勾，講過的留著、還沒講的退焦 → 最後回均衡。截圖寫段 id 就好，build 用分鏡表停點 ③ 截好的完成畫面</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>沒有講者時全寬</span><span>2–4 件，標籤 ≤ 6 字</span><span>截圖：段 id 或圖片</span><span>綁句 T1–T4</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-relay.html" loading="lazy" title="x-relay 截圖接力 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-relay.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-relay 截圖接力"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>截圖接力</h3><code>x-relay</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>一個主體 × 多種能力，每種能力素材裡都有一張截圖（「剪輯台可以改字幕、調音量，還能換卡片」）</dd>
+          <dt>不要用在</dt><dd class="avoid">沒有截圖（用 04a、x-checklist）；能力之間有先後（用 x-process）；要看清操作過程（插入螢幕錄影）</dd>
+          <dt>畫面上</dt><dd>左邊截圖膠片一格一格往上換，右邊主體名詞不動、能力那個詞原位接力換掉，詞對準中間那張截圖</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>沒有講者時全寬</span><span>3–4 項，主體 ≤ 8 字、能力 ≤ 5 字</span><span>截圖：圖片檔</span><span>綁句 T1–T4</span></div>
+      </div>
+    </article>
+    <article class="card">
+      <div class="pv">
+        <iframe src="preview/x-slider.html" loading="lazy" title="x-slider 前後拉桿 預覽" tabindex="-1"></iframe>
+        <a class="open" href="preview/x-slider.html" target="_blank" rel="noopener" aria-label="新分頁開啟 x-slider 前後拉桿"><span>全尺寸 ↗</span></a>
+      </div>
+      <div class="body">
+        <div class="title"><span class="no">④</span><h3>前後拉桿</h3><code>x-slider</code></div>
+        <dl>
+          <dt>什麼時候用</dt><dd>同一個畫面處理前後的差別（「這是調光前，這是調光後」「去背前、去背後」「舊版介面、新版介面」），素材裡有前後兩張同構圖的截圖</dd>
+          <dt>不要用在</dt><dd class="avoid">兩張不同的畫面（用 04b）；有數字在變（用 x-before-after、x-numbers）；程式改前改後（用 x-code-diff）</dd>
+          <dt>畫面上</dt><dd>兩張截圖疊在一起，拉桿停在左邊 → 講到「之後」快甩揭出、回彈 → 慢慢掃回 40% 看清差在哪</dd>
+        </dl>
+        <div class="limits"><span>版面：子母畫面</span><span>沒有講者時全寬</span><span>標籤 ≤ 4 字、標題 ≤ 12 字</span><span>截圖：圖片檔 2 張</span><span>綁句 TS／TW</span></div>
       </div>
     </article>
 

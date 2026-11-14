@@ -51,7 +51,7 @@
  *   node shared/template/tools/build.mjs --project projects/<專案> --set "theme=dark;look.slim=0.6"
  *                                                     只改 plan.json 第一層的設定（每次重新讀檔、只動這幾個鍵、照原本的縮排寫回），印「✓ plan.json：theme＝dark（原本 light）」和下一步：
  *                                                     theme（light／dark）、style（shared/template/styles/ 的資料夾名）、format（portrait／landscape）、speakerSide（left／center／right）、
- *                                                     chapterBadge（true／false）、look（off）、look.color（0–1）、look.slim（0–1.2）、look.beauty（0–1）、
+ *                                                     chapterBadge（true／false）、chapterMap（true／false：每個 01 章節轉場換成本集地圖）、look（off）、look.color（0–1）、look.slim（0–1.2）、look.beauty（0–1）、
  *                                                     bed.music（曲庫的曲名；none＝這一集不配）、bed.volume（−12～12 dB）、outro.from（#N）、outro.music（曲名；none＝不配）。
  *                                                     鍵或值不對 ✖ 並列出能寫的。還沒有 plan.json 時 theme、style、format、look* 會先建 { "version": 1 } 再寫
  *   node shared/template/tools/build.mjs --project projects/<專案> --unset "style;format"   拿掉這幾個設定（回到預設）；另外收 bed、outro（整個拿掉：底樂回到工作區預設、不配片尾配樂）
@@ -92,7 +92,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseSrt, formatSrt } from './lib/srt.mjs';
 import { floorFrame, r3, clock2, clock2r } from './lib/time.mjs';
-import { resolveScene, sampleSeg, fullScene } from './lib/scenes.mjs';
+import { resolveScene, sampleSeg, fullScene, mapScene, chapterMapCtx } from './lib/scenes.mjs';
 import { assembleScene, sceneParts, hashOf, verifyHash } from './lib/assemble.mjs';
 import { buildCaptions, captionWarnings } from './lib/captions.mjs';
 import { CAP_FONTS, EXTRA_FONT_FILES, fontFiles, fontLicense } from './lib/caption-style.mjs';
@@ -120,6 +120,7 @@ import { autofixPlan, summaryLines } from './lib/autofix.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
 import { jobState, runJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib/job.mjs';
 import { materializeFills, readFillSpec, renderSheet } from './lib/custom-fill.mjs';
+import { checkShots, prepareShots, shotHint } from './lib/shots.mjs';
 import { splitFlag, valueOf, oneOf, saidOf, isMain } from './lib/cli.mjs';
 import { fail, next as nextLines } from './lib/say.mjs';
 import { planSetCmd, toDesignCmd } from './lib/plan-set.mjs';
@@ -226,6 +227,7 @@ const limitOf = (d) => {
   if (d.required) p.push('必填');
   if (d.type === 'rich') p.push('rich');
   if (d.type === 'icon') p.push('圖示名');
+  if (d.type === 'shot') p.push(shotHint(d));
   if (d.max != null) p.push(`≤${d.max}`);
   if (d.maxLines != null) p.push(`≤${d.maxLines} 行`);
   if (d.maxLine != null) p.push(`每行 ≤${d.maxLine}`);
@@ -371,6 +373,15 @@ export function runGallery(templateDir, { only = null } = {}) {
       const ffile = path.join(outDir, `${scene.num}-${scene.key}-full.html`);
       fs.writeFileSync(ffile, buildPreview({ scene: fs2, parts: fparts, D, sub: scene.sample?.sub, pipStyle, cues, wide: true }));
       made.push(ffile);
+    }
+    // 036 本集地圖示意（plan.json "chapterMap": true）：01 一張 <編號>-<key>-map.html（四章的第二章：上一章打勾、鏡頭推到這一章）
+    if (scene.hasMap) {
+      const ms = mapScene(scene);
+      const chs = [{ num: '01', title: '錄影準備' }, { num: '02', title: String(seg.slots?.title ?? '') }, { num: '03', title: '剪好看' }, { num: '04', title: '輸出影片' }];
+      const mparts = sceneParts({ scene: ms, ctx: { ...r.ctx, ...chapterMapCtx(chs, 1) }, beats: r.beats, id: 'pv', D, tone: null, exitFade: true });
+      const mfile = path.join(outDir, `${scene.num}-${scene.key}-map.html`);
+      fs.writeFileSync(mfile, buildPreview({ scene: ms, parts: mparts, D, sub: scene.sample?.sub, pipStyle, cues, wide: true }));
+      made.push(mfile);
     }
   }
   // 第二層情境動畫（custom/x-*.html）的預覽頁：003 的 buildCustomPreview（還沒有時略過）
@@ -697,6 +708,10 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   lib.scenes = applySpeaker(lib.scenes, speaker);
   // 情境動畫模板段（template＋slots）：產生 compositions/<模板>-<段>.html，之後和手寫的 x 檔走同一條路（lib/custom-fill.mjs）
   const fills = materializeFills({ plan, outDir: P.out, lib, prune: !flags.check });
+  // 036 截圖欄位（slot type shot）：圖片檔、前面某一段的完成態截圖；檔在不在、段對不對在這裡查，轉檔在下面 prepareShots
+  const shots = checkShots({ plan, lib, projectDir: P.project });
+  fills.errors.push(...shots.errors);
+  fills.warnings.push(...shots.warnings);
   // 032 B6：每段的動畫分鏡照拍點正本（模板段＝slots，手寫段＝work/designs/<段>.md），手改模板段第一次被發現就建鏡位腳本
   for (const n of attachBeats({ plan, P, lib, prune: !flags.check }).notes) log(n);
   const planHash = createHash('sha1').update(fs.readFileSync(P.plan)).digest('hex').slice(0, 8);
@@ -858,6 +873,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   else if (bgMissDark.length) log(`⚠ 暗色背景圖 ${bgMissDark.map((f) => `shared/template/${f}`).join('、')} 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/`);
   // 插入素材的檔（放大鏡的逐格要先抽好，主合成才知道每一格用哪一張）
   const mediaN = prepareMedia(res.items, P.out, log);
+  try { prepareShots({ jobs: shots.jobs, out: P.out, log }); } catch (e) { log(`✖ ${e.message} → 換一張圖（.png .jpg .webp）`); return { ok: false, res }; }
   // 片尾模板（033）：片尾卡的圖複製進 assets/brand/、訂閱動畫轉成透明 webm（同檔不重做）
   let ending;
   try { ending = prepareEnding(res.ending, P.out); } catch (e) { log(`✖ 片尾：${e.message} → 換一個檔：node shared/template/tools/brand.mjs ending --subscribe <檔>，或這一集不要片尾：build.mjs --set ending=false`); return { ok: false, res }; }

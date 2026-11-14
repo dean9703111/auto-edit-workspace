@@ -1,0 +1,106 @@
+{
+  "template": "x-slider",
+  "prefix": "xsl",
+  "beat": "C",
+  "layout": "fullscreen",
+  "when": "同一個畫面處理前後的差別（「這是調光前，這是調光後」「去背前、去背後」「舊版介面、新版介面」）：兩張同構圖的截圖疊在一起，拉桿停在左邊，講到「之後」快甩揭出、再慢掃回 40% 看清差在哪",
+  "slots": {
+    "title": {
+      "label": "上方一行標題（選填，例「同一個畫面」；用口播裡有的話）",
+      "type": "text",
+      "max": 12
+    },
+    "before": {
+      "label": "之前的截圖（assets/images/… 或 assets/screen/… 的圖片；和 after 同尺寸、同構圖）",
+      "type": "shot",
+      "from": "image",
+      "required": true
+    },
+    "after": {
+      "label": "之後的截圖（和 before 同尺寸、同構圖，只差處理前後）",
+      "type": "shot",
+      "from": "image",
+      "required": true
+    },
+    "beforeLabel": {
+      "label": "之前那張的膠囊（右上，例「調光前」）",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "afterLabel": {
+      "label": "之後那張的膠囊（左上，例「調光後」）",
+      "type": "text",
+      "max": 4,
+      "required": true
+    },
+    "showAt": {
+      "label": "講到「之前」那個詞的時間（選填：大框在這一刻長出；不寫＝段起點）；離段起點不要超過 1.5 秒",
+      "type": "at",
+      "ref": "TS"
+    },
+    "swipeAt": {
+      "label": "講到「之後」那個詞的時間（拉桿快甩揭出之後那張、impact）；要比 showAt（沒寫就是段起點）晚 2.5 秒以上，段尾要比它晚 5 秒以上",
+      "type": "at",
+      "ref": "TW",
+      "required": true
+    }
+  },
+  "sample": {
+    "title": "同一個畫面",
+    "before": "assets/images/slider-before.jpg",
+    "after": "assets/images/slider-after.jpg",
+    "beforeLabel": "調光前",
+    "afterLabel": "調光後",
+    "showAt": "#601@調光前",
+    "swipeAt": "#602@調光後"
+  },
+  "sampleMin": {
+    "before": "assets/images/slider-before.jpg",
+    "after": "assets/images/slider-after.jpg",
+    "beforeLabel": "調光前",
+    "afterLabel": "調光後",
+    "swipeAt": "#602@調光後"
+  },
+  "sheet": [
+    {
+      "if": "title",
+      "beat": "0",
+      "at": "段起點",
+      "show": "標題「{title}」",
+      "moves": "＋0.5 逐字上浮（標題）",
+      "focus": "標題"
+    },
+    {
+      "if": "showAt",
+      "beat": "1",
+      "at": "`{showAt}`",
+      "show": "大框：兩張截圖疊在一起，拉桿停在左邊 8%（幾乎全是「{beforeLabel}」）；右上膠囊「{beforeLabel}」",
+      "moves": "開場（依前段）；＋0.5 彈出（「{beforeLabel}」膠囊）",
+      "focus": "「{beforeLabel}」"
+    },
+    {
+      "if": "!showAt",
+      "beat": "1",
+      "at": "段起點",
+      "show": "大框：兩張截圖疊在一起，拉桿停在左邊 8%（幾乎全是「{beforeLabel}」）；右上膠囊「{beforeLabel}」",
+      "moves": "開場（依前段）；＋0.5 彈出（「{beforeLabel}」膠囊）",
+      "focus": "「{beforeLabel}」"
+    },
+    {
+      "beat": "2",
+      "at": "`{swipeAt}`",
+      "show": "拉桿快甩：「{afterLabel}」那張從左邊揭出來；左上膠囊「{afterLabel}」",
+      "moves": "−0.15 游標移動（拉桿往左預備 → 快甩到 76% → 0.4 秒回彈到 70%）；＋0.05 彈出（「{afterLabel}」膠囊）",
+      "focus": "「{afterLabel}」",
+      "sfx": "impact"
+    },
+    {
+      "beat": "3",
+      "at": "`{swipeAt}`＋1.4",
+      "show": "拉桿慢慢掃回 40%：左邊「{afterLabel}」、右邊「{beforeLabel}」，看清差在哪；定格停到段尾",
+      "moves": "游標移動（拉桿，1.6 秒慢掃回 40%）",
+      "focus": "分界線"
+    }
+  ]
+}

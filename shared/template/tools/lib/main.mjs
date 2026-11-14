@@ -45,7 +45,10 @@ export const V2TX = {
   fly: 0.75, land: 0.62, pop: 0.35,    // 子母畫面飛入（power3.inOut）、外框淡入
   pipSlide: 0.6,                       // 全畫面段和錄影段相接：小視窗滑進／滑出錄影（power3.inOut）
   push: 0.87,                          // 034 上推：新的一頁連底色從下緣推上來（expo.out：0.4 秒到 95%，「哐」一聲落位）
+  dive: 1.33,                          // 036 穿窗：窗從前一段的元素長成全畫面（power3.inOut：先慢後快再慢，短於 1 秒看不出鑽進去）
 };
+// 036 穿窗：新的一段從 0.42 倍長到 1（和窗同一個進度），舊的一段朝窗放大到 2.4 倍（鏡頭鑽進去）；窗框一圈主色＋落影（兩幕同底色時看得出是窗）
+const DIVE = { from: 0.42, zoom: 2.4, ease: 'power3.inOut', ring: 'box-shadow: 0 0 0 3px var(--brand), 0 18px 60px color-mix(in srgb, var(--sc-fs-ink) 28%, transparent)' };
 // 034 上推、畫面推近寫在 host 的 CSS 個別屬性 translate／scale（變數 --ty、--pz），不碰 host 的 transform（直式的舞台縮放）
 const PUSH_SHADOW = 'box-shadow: 0 -12px 56px color-mix(in srgb, var(--sc-fs-ink) 22%, transparent)';
 const PUNCH_ORIGIN = '960px 470px';   // 畫面推近找不到目標時的中心：全寬內容區（y 40–900）的中心
@@ -62,13 +65,34 @@ export const PUNCH_AIM_JS = `  function punchAim(id, t) {
     try { return aimAt(host, sub, t); } finally { if (hidden) host.style.display = shown; }
   }
   function aimAt(host, sub, t) {
+    var best = aimBox(host, sub, t, 2.5);
+    if (!best) return '${PUNCH_ORIGIN}';
+    var cx = Math.max(0, Math.min(1920, (best[0] + best[2]) / 2)), cy = Math.max(0, Math.min(1080, (best[1] + best[3]) / 2));
+    return Math.round(cx) + 'px ' + Math.round(cy) + 'px';
+  }
+  // 036 穿窗的窗：前一段結尾前 4 秒內最後開始動的元素（同上的規則）；同一段只量一次（亂序跳格也一樣）
+  var diveMemo = {};
+  function diveAt(id, t) {
+    if (diveMemo[id]) return diveMemo[id];
+    var host = document.getElementById('el-' + id), sub = host && window.__timelines[host.getAttribute('data-composition-id')], b = null;
+    if (sub && sub.getChildren) {
+      var shown = host.style.display, hidden = getComputedStyle(host).display === 'none';
+      if (hidden) host.style.display = 'block';
+      try { b = aimBox(host, sub, t, 4); } finally { if (hidden) host.style.display = shown; }
+    }
+    var x = b ? Math.max(0, Math.min(1920, (b[0] + b[2]) / 2)) : 960, y = b ? Math.max(0, Math.min(1080, (b[1] + b[3]) / 2)) : 470;
+    var r0 = b ? Math.max(48, Math.min(360, Math.sqrt(Math.pow(b[2] - b[0], 2) + Math.pow(b[3] - b[1], 2)) / 2)) : 120;
+    var far = Math.max(Math.hypot(x, y), Math.hypot(1920 - x, y), Math.hypot(x, 1080 - y), Math.hypot(1920 - x, 1080 - y));
+    return (diveMemo[id] = { x: Math.round(x) + 'px', y: Math.round(y) + 'px', r0: Math.round(r0) + 'px', r1: Math.ceil(far + 16) + 'px' });
+  }
+  function aimBox(host, sub, t, back) {
     var abs = function (n) { var x = 0, y = 0; while (n) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } return [x, y]; };
     var h0 = abs(host), best = null, bt = -1e9;
     sub.getChildren(true, true, false).forEach(function (tw) {
       if (tw.duration() < 0.01 || (!tw.vars.runBackwards && (tw.vars.opacity === 0 || tw.vars.autoAlpha === 0))) return;   // from() 的 vars 是起始值，不算淡出
       var s = tw.startTime(), p = tw.parent;
       while (p && p !== sub) { s = p.startTime() + s / (p.timeScale() || 1); p = p.parent; }
-      if (s > t + 0.25 || s < t - 2.5 || s < bt) return;
+      if (s > t + 0.25 || s < t - back || s < bt) return;
       var u = null;
       tw.targets().forEach(function (el) {
         while (el && el.nodeType === 1 && !(el instanceof HTMLElement)) el = el.parentNode;
@@ -80,9 +104,7 @@ export const PUNCH_AIM_JS = `  function punchAim(id, t) {
       });
       if (u) { best = u; bt = s; }
     });
-    if (!best) return '${PUNCH_ORIGIN}';
-    var cx = Math.max(0, Math.min(1920, (best[0] + best[2]) / 2)), cy = Math.max(0, Math.min(1080, (best[1] + best[3]) / 2));
-    return Math.round(cx) + 'px ' + Math.round(cy) + 'px';
+    return best;
   }
 `;
 const SWAP_KEEP = 'inset(96px 516px 186px 96px)', SWAP_GONE = 'inset(96px 1824px 186px 96px)';   // 換卡：只留內容區 x 96–1404、y 96–894，再往左擦掉
@@ -277,6 +299,7 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
     return it.type === 'custom' && it.opaque ? stageTransform('fs', C) : null;
   };
   // 全寬版型：橫式、不透明的全畫面段（04 家族、custom fullscreen）整段沒有子母畫面小視窗（只有聲音的區間）→ 主卡拉到 1680（kit/scene-motion.js widen）
+  let aimJs = false;   // 有畫面推近、穿窗才在主時間軸的 script 放 punchAim／diveAt（PUNCH_AIM_JS）
   const screenZ = new Set((zooms?.list || []).filter((z) => z.screen).map((z) => z.screen));   // 034 畫面推近的段
   const wideOf = (it, pieces) => !portrait && it.opaque && !pieces.length && (it.type === 'custom' || (it.type === 'scene' && it.scene?.family === 'fullscreen'));
   for (const it of list) {
@@ -311,16 +334,32 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
       // 034 上推：被頂出去的那一頁多留 0.87s（和新的一頁一起往上走）
       const pushOut = it.txOut === 'push' && it.fullEnd ? r3(Math.min(V2TX.push, DUR - it.e)) : 0;
       const pushed = it.txIn === 'push' || pushOut > 0, punched = screenZ.has(it.id);
-      const motionCss = `${pushed ? '; translate: 0 var(--ty, 0px)' : ''}${it.txIn === 'push' ? `; ${PUSH_SHADOW}` : ''}${punched ? `; scale: var(--pz, 1); --po: ${PUNCH_ORIGIN}; transform-origin: var(--po)` : ''}`;
+      // 036 穿窗：被鑽進去的那一頁多留 1.33 秒（朝窗放大、被窗蓋過去）；新的一頁裁成圓窗、從 0.42 倍長大
+      const diveOut = it.txOut === 'dive' && it.fullEnd ? r3(Math.min(V2TX.dive, DUR - it.e)) : 0;
+      const diveFrom = it.txIn === 'dive' ? byId.get(list.find((x) => x.seamTo === it.id)?.id) || null : null;
+      const dv = '--dx, 960px) var(--dy, 470px';
+      const diveCss = it.txIn === 'dive' ? `; clip-path: circle(calc(var(--dR, 0px) / var(--dk, 1)) at var(${dv})); scale: var(--dk, 1); transform-origin: var(${dv})`
+        : diveOut > 0 && !punched ? `; scale: var(--dz, 1); transform-origin: var(${dv})` : '';
+      const motionCss = `${pushed ? '; translate: 0 var(--ty, 0px)' : ''}${it.txIn === 'push' ? `; ${PUSH_SHADOW}` : ''}${punched ? `; scale: var(--pz, 1); --po: ${PUNCH_ORIGIN}; transform-origin: var(--po)` : ''}${diveCss}`;
       // 直式：舞台縮放的幕下面墊整張畫布的純色底（縮放後露出的頂端；spike D-1：同一張背景圖兩種比例會出現兩次裝飾線，所以不用圖）
       if (bd) hosts.push(`  <div id="bd-${it.id}" class="clip" data-start="${n3(it.s)}" data-duration="${n3(d + pushOut)}" data-track-index="${track++}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:${it.type === 'fx' ? FX_BG[it.bg] : it.key === 'chapter' ? 'var(--sc-ch-bg)' : 'var(--sc-fs-bg)'};z-index:${it.z - 1}${pushed ? '; translate: 0 var(--ty, 0px)' : ''}"></div>`);
       const [hw, hh] = portrait && !st ? [W, H] : [1920, 1080];
       hosts.push(`  <div id="el-${it.id}" data-composition-id="${it.compId}" data-composition-src="${it.file}"${varAttr}
-       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut + pushOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${sideAttr(it)}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}${motionCss}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
+       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut + pushOut + diveOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${sideAttr(it)}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}${motionCss}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
       // 人物去背層（lib/matte.mjs）：這一段的講者（帶透明通道）疊在動畫上面，動畫就在講者後面；外層 div 不帶時間屬性（影片本身的 opacity 會被框架蓋掉）
       if (it.matte?.file) hosts.push(`  <div id="matte-${it.id}" data-layout-ignore style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:${it.z + 1};pointer-events:none${it.matte.clip ? `;clip-path:${it.matte.clip}` : ''}">
     <video id="mattev-${it.id}" src="${base}${it.matte.file}" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-media-start="${n3(Math.max(0, it.s + (test ? t0 : 0) - it.start))}" data-track-index="${track++}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></video>
   </div>`);
+      if (it.txIn === 'dive') {
+        // 窗的位置、大小：播放到這一格才量前一段（diveAt，PUNCH_AIM_JS）；窗框是另一層，墊在新的一頁下面
+        const aId = diveFrom?.id, at = diveFrom ? n3(r3(diveFrom.e - diveFrom.s)) : '0', q = (k) => `() => diveAt('${aId}', ${at}).${k}`;
+        hosts.push(`  <div id="dvr-${it.id}" class="clip" data-layout-ignore data-start="${n3(it.s)}" data-duration="${n3(V2TX.dive)}" data-track-index="${track++}" style="position:absolute;left:calc(var(--dx, 960px) - var(--dR, 0px));top:calc(var(--dy, 470px) - var(--dR, 0px));width:calc(2 * var(--dR, 0px));height:calc(2 * var(--dR, 0px));border-radius:50%;${DIVE.ring};z-index:${it.z + swapDepth(it)};pointer-events:none"></div>`);
+        const targets = [`#el-${it.id}`, `#dvr-${it.id}`, ...(diveFrom ? [`#el-${aId}`] : [])].join(', ');
+        tl.push(`tl.set('${targets}', { '--dx': ${q('x')}, '--dy': ${q('y')} }, ${n3(it.s)});`);
+        tl.push(`tl.fromTo('#el-${it.id}, #dvr-${it.id}', { '--dR': ${q('r0')}, '--dk': ${DIVE.from} }, { '--dR': ${q('r1')}, '--dk': 1, duration: ${V2TX.dive}, ease: '${DIVE.ease}', immediateRender: false }, ${n3(it.s)});`);
+        aimJs = true;
+      }
+      if (diveOut > 0 && !punched) tl.push(`tl.fromTo('#el-${it.id}', { '--dz': 1 }, { '--dz': ${DIVE.zoom}, duration: ${diveOut}, ease: '${DIVE.ease}', immediateRender: false }, ${n3(it.e)});`);
       if (it.txIn === 'push') tl.push(`tl.fromTo('${sel}', { '--ty': '${H}px' }, { '--ty': '0px', duration: ${V2TX.push}, ease: 'expo.out', immediateRender: false }, ${n3(it.s)});`);
       if (pushOut > 0) tl.push(`tl.fromTo('${sel}', { '--ty': '0px' }, { '--ty': '-${H}px', duration: ${pushOut}, ease: 'expo.out', immediateRender: false }, ${n3(it.e)});`);
       if (swapOut > 0) {
@@ -433,7 +472,6 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
     if (fades) overlays.push('  <div id="edit-fade"></div>');
   }
   // 情緒點的講者爆衝推近（plan.json moods[].zoom）：0.2 秒推到 1.25 倍，停到句尾直接切回（punch 放大中的回到 1.08）
-  let aimJs = false;   // 有畫面推近才在主時間軸的 script 放 punchAim
   if (zooms?.list?.length) {
     let n = 0;
     for (const z of zooms.list) {

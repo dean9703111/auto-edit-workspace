@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x-recap 回顧牆｜直式預覽</title>
+<!-- build.mjs --gallery 產生（tools/lib/custom-preview.mjs，format: portrait）：custom/x-recap.html 的 <template> 原樣放進來，舞台縮放 0.8475 倍進上半面板（直式只顯示 x 120–1300、y 130–880）；改 custom 檔後重跑 --gallery -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<script>window.__regions = {"full":[60,240,960,1020],"band":[60,880,880,360],"panelTop":[0,0,1080,900],"panelBottom":[0,900,1080,1020],"pip":[0,900,1080,1020],"badge":[60,250,624,112],"captions":[0,1280,1080,140],"safe":[60,240,960,1200]};</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img, #pip img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+  #bd { position: absolute; inset: 0; z-index: 29; }
+  #scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 30; transform: translate(-61.7px, 129.825px) scale(0.8475); transform-origin: 0 0; }
+  #pip { position: absolute; left: 0px; top: 900px; width: 1080px; height: 1020px; overflow: hidden; z-index: 40; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 41; }
+  #pv-label { position: absolute; left: 24px; top: 924px; z-index: 42; padding: 6px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font: 700 28px/40px system-ui, sans-serif; }
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), var(--sc-fs-pattern); background-size: cover, 1920px 1080px; background-position: center, 0 0; background-repeat: no-repeat; }
+</style>
+<script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <div id="bd" class="sc-surface-fs"></div>
+  <div id="scene">
+
+  <style>
+    #x-recap { position: absolute; inset: 0; }
+    #x-recap .fill { position: absolute; inset: 0; }
+    #x-recap #xrcp-wall { position: absolute; inset: 0; }
+    /* 標題：置中在內容區（子母畫面 x 120–1300、全寬 x 120–1800）；top 由程式照張數給 */
+    #x-recap #xrcp-title { position: absolute; left: 120px; top: 250px; width: 1180px; height: 100px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-recap[data-wide] #xrcp-title { width: 1680px; }
+    /* 一張：白框＋框下的標籤列；left／top／寬高由程式照張數給（只用常數，不量版面） */
+    #x-recap .xrcp-slot { position: absolute; left: 138px; top: 398px; width: 360px; }
+    #x-recap .xrcp-frame { position: relative; width: 360px; height: 211px; box-sizing: border-box; padding: 8px; border-radius: 18px;
+                          background: var(--v2-card); border: 2px solid var(--v2-card-line); box-shadow: var(--v2-card-shadow); }
+    /* 截圖：填資料時整個換成 <img>，樣式寫在外層和 img 上 */
+    #x-recap .xrcp-shot { width: 100%; height: 100%; border-radius: 10px; overflow: hidden; }
+    #x-recap .xrcp-shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    /* 打勾徽章：疊在框內右上角（不出框） */
+    #x-recap .xrcp-ok { position: absolute; right: 16px; top: 16px; --d: 64px; --i: 40px; box-shadow: var(--v2-card-shadow); }
+    #x-recap[data-wide][data-n="2"] .xrcp-ok { --d: 80px; --i: 48px; }
+    /* 標籤列：序號圓 56＋名稱 40／700，置中在框下 */
+    #x-recap .xrcp-label { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 24px; height: 56px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-recap .xrcp-no { flex: none; width: 56px; height: 56px; border-radius: 28px; display: grid; place-items: center;
+                       background: var(--sc-fs-ink); color: var(--sc-fs-card); font-size: 32px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
+  </style>
+  <div id="x-recap" data-composition-id="x-recap" data-width="1920" data-height="1080" data-duration="17"
+       data-cues-sample='{"start":0,"D":17,"cues":{"581":[0.4,3.4],"582":[3.6,6.2],"583":[6.4,9.0],"584":[9.2,11.8],"585":[12.0,17.0]},"refs":{"#582@NG":4.0,"#583@規則":6.8,"#584@預覽":9.6,"#585@資產":12.4}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrcp-wall">
+      <div id="xrcp-title" class="sc-t72 sc-w900"><span class="sc-opt">今天講了這 4 件事</span></div>
+      <div id="xrcp-s1" class="xrcp-slot">
+        <div id="xrcp-f1" class="xrcp-frame">
+          <div class="xrcp-shot"><img src="../preview/shots/recap-1.jpg" alt=""></div>
+          <span id="xrcp-k1" class="xrcp-ok sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span>
+        </div>
+        <div class="xrcp-label sc-t40 sc-w700"><span class="xrcp-no">01</span><span class="sc-opt">AI 找 NG</span></div>
+      </div>
+      <div id="xrcp-s2" class="xrcp-slot">
+        <div id="xrcp-f2" class="xrcp-frame">
+          <div class="xrcp-shot"><img src="../preview/shots/recap-2.jpg" alt=""></div>
+          <span id="xrcp-k2" class="xrcp-ok sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span>
+        </div>
+        <div class="xrcp-label sc-t40 sc-w700"><span class="xrcp-no">02</span><span class="sc-opt">照規則剪</span></div>
+      </div>
+      <div id="xrcp-s3" class="xrcp-slot">
+        <div id="xrcp-f3" class="xrcp-frame">
+          <div class="xrcp-shot"><img src="../preview/shots/recap-3.jpg" alt=""></div>
+          <span id="xrcp-k3" class="xrcp-ok sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span>
+        </div>
+        <div class="xrcp-label sc-t40 sc-w700"><span class="xrcp-no">03</span><span class="sc-opt">看完預覽</span></div>
+      </div>
+      <div id="xrcp-s4" class="xrcp-slot">
+        <div id="xrcp-f4" class="xrcp-frame">
+          <div class="xrcp-shot"><img src="../preview/shots/recap-4.jpg" alt=""></div>
+          <span id="xrcp-k4" class="xrcp-ok sc-icon" data-layout-allow-overlap><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span>
+        </div>
+        <div class="xrcp-label sc-t40 sc-w700"><span class="xrcp-no">04</span><span class="sc-opt">經驗變資產</span></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+
+    // 0. 版面（以下到 tl 之前都不用改）：照張數（數 .xrcp-slot，2–4）和有沒有講者小視窗（外層 data-wide）排；載入時算一次，只用常數、不量版面
+    const ROOT = document.getElementById('x-recap'), WIDE = !!ROOT.closest('[data-wide]');
+    if (WIDE) ROOT.setAttribute('data-wide', '');      // 全寬版型：CSS 的 [data-wide] 那幾行接手
+    const SLOTS = Array.prototype.slice.call(ROOT.querySelectorAll('.xrcp-slot')), N = Math.max(2, Math.min(4, SLOTS.length));
+    ROOT.setAttribute('data-n', String(N));
+    // [框寬, 框高, 欄距, 欄數, 標題頂, 標題底到框, 框到標籤, 列距]（框的圖＝框寬 − 20 × 框高 − 20，16:9）
+    const LAY = WIDE
+      ? { 2: [772, 443, 64, 2, 130, 56, 24, 0], 3: [516, 299, 40, 3, 202, 56, 24, 0], 4: [392, 229, 24, 4, 237, 56, 24, 0] }
+      : { 2: [540, 313, 52, 2, 200, 48, 24, 0], 3: [360, 211, 32, 3, 250, 48, 24, 0], 4: [436, 254, 40, 2, 58, 40, 16, 32] };
+    // 合影進場：每一張從畫面外 [dx, dy] 直線飛進來（左半從左、右半從右、中間從下；不經過標題、角標、子母畫面小視窗）
+    const DIRS = WIDE
+      ? { 2: [[-640, -140], [680, 100]], 3: [[-560, -220], [0, 200], [600, -200]], 4: [[-460, -300], [-200, 260], [640, -240], [700, 160]] }
+      : { 2: [[-600, -160], [600, -160]], 3: [[-520, -180], [0, 200], [560, -200]], 4: [[-520, -120], [560, -40], [-560, 40], [600, 20]] };
+    const L = LAY[N], W = L[0], H = L[1], GAP = L[2], COLS = L[3];
+    const X0 = (WIDE ? 960 : 710) - (COLS * W + (COLS - 1) * GAP) / 2, Y0 = L[4] + 100 + L[5], ROW = H + L[6] + 56 + L[7];
+    ROOT.querySelector('#xrcp-title').style.top = L[4] + 'px';
+    SLOTS.forEach(function (s, i) {
+      s.style.left = (X0 + (i % COLS) * (W + GAP)) + 'px';
+      s.style.top = (Y0 + Math.floor(i / COLS) * ROW) + 'px';
+      s.style.width = W + 'px';
+      const f = s.querySelector('.xrcp-frame');
+      f.style.width = W + 'px'; f.style.height = H + 'px';
+      s.querySelector('.xrcp-label').style.marginTop = L[6] + 'px';
+    });
+    const F = SLOTS.map(function (s, i) { return '#xrcp-f' + (i + 1); }), ALL = F.join(', ');
+    const LABS = SLOTS.map(function (s) { return s.querySelector('.xrcp-label'); });
+
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-recap'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#582@NG'), T2 = P.at('#583@規則'), T3 = P.at('#584@預覽'), T4 = P.at('#585@資產');   // 講到每一件的時刻（照講的順序）
+    const K = [T1, T2, T3, T4];
+    P.sfx('success', '#585@資產');                     // 最後一件打勾配 success（句號和最後一張一樣）
+
+    // 拍 0 開場：0.5 秒起標題逐字上浮；0.8 秒起截圖連標籤從畫面外飛進來合影（每張 0.9 秒 expo.out、前 0.25 秒淡入、錯拍 0.12，只位移不旋轉）
+    P.chars('#xrcp-title .sc-opt', 0.5, { stagger: 0.035 });
+    P.in(SLOTS, 0.8, { dur: 0.25, stagger: 0.12 });   // 一組算一個新元素（同一個呼叫錯拍）
+    SLOTS.forEach(function (s, i) {
+      const d = DIRS[N][i];
+      P.morph(s, 0.8 + i * 0.12, { x: 0, y: 0 }, { from: { x: d[0], y: d[1] }, dur: 0.9, ease: 'expo.out' });
+    });
+
+    // 拍 1…N 講到哪一件：提早 0.1 秒那一張聚焦（放大抬起、亮框；講過的走過、還沒講的退焦，標籤跟著亮暗）；講到那一刻徽章彈出、＋0.1 描圈打勾
+    P.dim(LABS.slice(1), T1 - 0.1, { to: 0.42 });
+
+    // 拍 1 第 1 件
+    P.spot(ALL, '#xrcp-f1', T1 - 0.1);
+    P.pop('#xrcp-k1', T1, { from: 0.4, dy: 0 });
+    P.check('#xrcp-k1', T1 + 0.1);
+
+    // 拍 2 第 2 件：講過的那張走過（打勾留著），這一張聚焦、標籤亮回
+    P.spot(ALL, '#xrcp-f2', T2 - 0.1, { done: '#xrcp-f1' });
+    P.dim([LABS[1]], T2 - 0.1, { to: 1 });
+    P.pop('#xrcp-k2', T2, { from: 0.4, dy: 0 });
+    P.check('#xrcp-k2', T2 + 0.1);
+
+    // 拍 3 第 3 件：同拍 2（2 張時刪掉這一段，見檔頭）
+    P.spot(ALL, '#xrcp-f3', T3 - 0.1, { done: '#xrcp-f1, #xrcp-f2' });
+    P.dim([LABS[2]], T3 - 0.1, { to: 1 });
+    P.pop('#xrcp-k3', T3, { from: 0.4, dy: 0 });
+    P.check('#xrcp-k3', T3 + 0.1);
+
+    // 拍 4 第 4 件：同拍 2（2、3 張時刪掉這一段，見檔頭）
+    P.spot(ALL, '#xrcp-f4', T4 - 0.1, { done: '#xrcp-f1, #xrcp-f2, #xrcp-f3' });
+    P.dim([LABS[3]], T4 - 0.1, { to: 1 });
+    P.pop('#xrcp-k4', T4, { from: 0.4, dy: 0 });
+    P.check('#xrcp-k4', T4 + 0.1);
+
+    // 收：最後一件講完 2.0 秒回均衡（全部亮回、每一張都打勾；段太短時最早提前到講完 1.2 秒），完成態停到段尾
+    const TZ = K[K.length - 1];
+    P.spot(ALL, null, Math.max(TZ + 1.2, Math.min(TZ + 2.0, P.dur() - 2.6)));
+
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-recap'] = tl;
+  })();
+  </script>
+
+  </div>
+  <div id="pip"><img src="speaker-v.jpg" onerror="this.onerror=null;this.src='speaker.jpg'" alt=""></div>
+  <img id="pipf" src="../kit/pip-frame-v.png" alt="">
+  <div id="pv-label">講者面板（示意）</div>
+</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1920); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var key = "x-recap";
+  var start = function () {
+    var inner = window.__timelines[key];
+    if (!inner) { document.title = key + '｜script 出錯（看 console）'; return; }
+    var D = inner.duration();
+    var tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    tl.fromTo('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.add(inner.paused(false), 0);
+    tl.to('#bd, #scene, #pip, #pipf, #pv-label', { opacity: 0, duration: 0.5, ease: 'sine.in' }, Math.max(0.5, D - 0.5));
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：x-process.html?t=13.9）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: key, duration: Math.round(D * 1000) / 1000, cues: [] }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

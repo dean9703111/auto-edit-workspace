@@ -21,10 +21,11 @@ import { iconHint } from './icon-alias.mjs';
 
 // template.html 的四節：@style、@style-portrait（直式時接在 @style 後面，009 FR-050；橫式不讀）、@body、@timeline
 // 034 全幕版（疊加字卡在沒有講者的段換成不透明的整張畫面）：@style-full、@body-full、@timeline-full 三節一起寫，取代上面的 style／body／timeline
+// 036 地圖版（只有 01 章節轉場）：@style-map、@body-map、@timeline-map，plan.json 第一層 "chapterMap": true 時換上（chapterMapCtx 給的資料）
 function splitTemplate(text) {
-  const out = { style: '', stylePortrait: '', body: '', timeline: '', styleFull: '', bodyFull: '', timelineFull: '' };
-  const key = { 'style-portrait': 'stylePortrait', 'style-full': 'styleFull', 'body-full': 'bodyFull', 'timeline-full': 'timelineFull' };
-  const parts = text.split(/<!--\s*@(style-portrait|style-full|body-full|timeline-full|style|body|timeline)\s*-->/);
+  const out = { style: '', stylePortrait: '', body: '', timeline: '', styleFull: '', bodyFull: '', timelineFull: '', styleMap: '', bodyMap: '', timelineMap: '' };
+  const key = { 'style-portrait': 'stylePortrait', 'style-full': 'styleFull', 'body-full': 'bodyFull', 'timeline-full': 'timelineFull', 'style-map': 'styleMap', 'body-map': 'bodyMap', 'timeline-map': 'timelineMap' };
+  const parts = text.split(/<!--\s*@(style-portrait|style-full|body-full|timeline-full|style-map|body-map|timeline-map|style|body|timeline)\s*-->/);
   for (let i = 1; i < parts.length; i += 2) out[key[parts[i]] || parts[i]] = parts[i + 1].replace(/^\r?\n/, '').replace(/\s+$/, '') + '\n';
   return out;
 }
@@ -41,7 +42,7 @@ export function loadScenes(templateDir) {
     const tf = path.join(dir, 'template.html');
     const template = splitTemplate(existsSync(tf) ? readFileSync(tf, 'utf8') : '');
     // hasFull：有全幕版（034）；只認三節都寫了的
-    scenes.push({ ...json, dirName: name, num: name.split('-')[0], dir, template, hasFull: !!(template.styleFull.trim() && template.bodyFull.trim() && template.timelineFull.trim()) });
+    scenes.push({ ...json, dirName: name, num: name.split('-')[0], dir, template, hasFull: !!(template.styleFull.trim() && template.bodyFull.trim() && template.timelineFull.trim()), hasMap: !!(template.styleMap.trim() && template.bodyMap.trim() && template.timelineMap.trim()) });
   }
   return scenes.sort((a, b) => a.num.localeCompare(b.num, 'en', { numeric: true }));
 }
@@ -51,6 +52,36 @@ export function loadScenes(templateDir) {
 export function fullScene(s) {
   const t = s.template;
   return { ...s, family: 'fullscreen', portrait: 'stage', surface: 'fs', fullOf: s.family, template: { style: t.styleFull, stylePortrait: '', body: t.bodyFull, timeline: t.timelineFull } };
+}
+
+// 036 地圖版：01 章節轉場換成「本集地圖」的複本（章節底、直式照舊舞台縮放；模板換成 @style-map／@body-map／@timeline-map）
+export function mapScene(s) {
+  const t = s.template;
+  return { ...s, mapOf: s.key, template: { style: t.styleMap, stylePortrait: '', body: t.bodyMap, timeline: t.timelineMap } };
+}
+
+// 036 本集地圖的版面（模板只畫，數字都在這裡算）：各章是一條曲線上的站，站距 MAP.gap、上下交錯；
+//   鏡頭結束時這一章的站在畫面 MAP.at、放大 MAP.scale；開始時是上一章的站在同一個位置（第一章：整張地圖縮到畫面裡）。
+//   相機＝外層 #mpCam 靜態擺在開始的位置，裡層 #mpWorld 用 P.cam 推（推的量＝結束 ∘ 開始的反函數；兩層同大小、原點都是中心）
+//   畫面分兩半：上半 y 170–590 是地圖（這一章的站在 (700, 330)，左右鄰站在 x ±575、上下錯開 ±75，站名牌底 ≤ 590），下半 y 600–832 是章號牌＋章名
+// 站距 gap、上下兩排 top／bottom（世界座標）；鏡頭放大 scale 把這一章放到畫面 at：下一排的站名（站下 84）落在 y 590 以內（下半是章號牌＋章名）、後兩站的站名不出 x 1800
+export const MAP = { min: 3, max: 8, gap: 460, x0: 300, top: 460, bottom: 560, scale: 1.1, at: [640, 320], over: 1600 };
+export function chapterMapCtx(list, k) {
+  const n = list.length, W = 2 * MAP.x0 + (n - 1) * MAP.gap, H = 1080, ox = W / 2, oy = H / 2;
+  const st = list.map((c, i) => ({ n: i + 1, num: String(c.num ?? i + 1).padStart(2, '0'), title: c.title, x: MAP.x0 + i * MAP.gap, y: i % 2 ? MAP.bottom : MAP.top, done: i < k, cur: i === k, todo: i > k }));
+  const seg = (a, b) => ` C ${a.x + MAP.gap / 2} ${a.y}, ${b.x - MAP.gap / 2} ${b.y}, ${b.x} ${b.y}`;
+  const path = (to) => st.slice(0, to + 1).reduce((d, p, i) => (i ? d + seg(st[i - 1], p) : `M ${p.x} ${p.y}`), '');
+  // 把世界座標 (wx, wy) 放到畫面 (px, py)、放大 s 的相機（繞 (ox, oy)）
+  const cam = (wx, wy, s, px, py) => ({ x: px - ox - (wx - ox) * s, y: py - oy - (wy - oy) * s, s });
+  const [px, py] = MAP.at;
+  const to = cam(st[k].x, st[k].y, MAP.scale, px, py);
+  const span = (n - 1) * MAP.gap + 360, s0 = Math.min(1, MAP.over / span);
+  const from = k ? cam(st[k - 1].x, st[k - 1].y, MAP.scale, px, py) : cam((st[0].x + st[n - 1].x) / 2, (MAP.top + MAP.bottom) / 2, s0, 960, py);
+  const r = (v) => Math.round(v * 1000) / 1000;
+  // 路線：全程虛線；走過的（到上一章）實線；上一章 → 這一章這一段在片頭描出來
+  const pathNew = k ? `M ${st[k - 1].x} ${st[k - 1].y}${seg(st[k - 1], st[k])}` : '';
+  return { mapW: W, mapOx: ox, stations: st, total: String(n).padStart(2, '0'), curNum: st[k].num, pathAll: path(n - 1), pathPrev: k > 1 ? path(k - 1) : '', pathNew,
+    cam0: `translate(${r(from.x)}px, ${r(from.y)}px) scale(${r(from.s)})`, camX: r((to.x - from.x) / from.s), camY: r((to.y - from.y) / from.s), camS: r(to.s / from.s), first: k === 0 };
 }
 
 export function findScene(scenes, ref) {

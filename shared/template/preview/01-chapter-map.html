@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 章節轉場（全寬）｜預覽</title>
+<!-- build.mjs --gallery 產生：用 scene.json 的 sample 填模板，講者是 speaker.jpg；換主色或放 ../bg-fs.jpg、../bg-side.jpg、../bg-ch.jpg（或單一 ../bg.jpg）後重新整理就會更新 -->
+<link rel="stylesheet" href="../kit/fonts.css">
+<link rel="stylesheet" href="../kit/brand.css">
+<link rel="stylesheet" href="../kit/scene.css">
+<link rel="stylesheet" href="../kit/illus.css">
+<link rel="stylesheet" href="../kit/theme.css">
+<link rel="stylesheet" href="../kit/captions.css">
+<script src="../kit/style-switch.js"></script>
+<script src="../kit/gsap.min.js"></script>
+<script src="../kit/scene-motion.js"></script>
+<script src="../kit/illus.js"></script>
+<script src="../kit/scene-layout.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; transform-origin: 0 0; }
+  #footage { position: absolute; inset: 0; }
+  #footage img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; object-fit: cover; }
+  .fill { position: absolute; inset: 0; }
+  #scene { position: absolute; inset: 0; z-index: 30; }
+  #pip { position: absolute; left: 1424px; top: 594px; width: 432px; height: 324px; overflow: hidden; border-radius: 6px; z-index: 40; }
+  #pip img { position: absolute; left: -220px; top: -10px; width: 873px; height: 491px; }
+  #pipf { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 41; }
+  #cap { z-index: 60; }
+  /* 背景圖：各版面先用自己的 ../bg-*.jpg，沒有就用 ../bg.jpg，都沒有只顯示底紋（不必重新產生預覽頁） */
+  .sc-surface-fs { background-image: url("../bg-fs.jpg"), url("../bg.jpg"), var(--sc-fs-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  [data-wide] .sc-surface-fs { background-image: var(--sc-fs-pattern); }
+  .sc-surface-ch { background-image: url("../bg-ch.jpg"), url("../bg.jpg"), var(--sc-ch-pattern); background-size: cover, cover, 1920px 1080px; background-position: center, center, 0 0; background-repeat: no-repeat; }
+  .sc-surface-side { background-image: url("../bg-side.jpg"), url("../bg.jpg"), var(--sc-side-pattern); background-size: cover, 1920px auto, 960px 1080px; background-position: center, 0 50%, 0 0; background-repeat: no-repeat; }
+  #pv-chapter #pv-mpView { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; }
+  #pv-chapter #pv-mpCam, #pv-chapter #pv-mpWorld { position: absolute; left: 0; top: 0; width: 1980px; height: 1080px; transform-origin: 990px 540px; }
+  #pv-chapter #pv-mpCam { transform: translate(409px, -132px) scale(1.1); }
+  #pv-chapter #pv-mpSvg { position: absolute; left: 0; top: 0; overflow: visible; }
+  #pv-chapter #pv-mpSvg path { fill: none; stroke-linecap: round; }
+  #pv-chapter .mp-case path { stroke: var(--sc-ch-sub-line); }
+  #pv-chapter .mp-ink path { stroke: var(--sc-ch-sub-bg); }
+  #pv-chapter .mp-case .mp-all { stroke-width: 14; stroke-dasharray: 0.01 22; }
+  #pv-chapter .mp-ink .mp-all { stroke-width: 8; stroke-dasharray: 0.01 22; }
+  #pv-chapter .mp-case .mp-done { stroke-width: 16; }
+  #pv-chapter .mp-ink .mp-done { stroke-width: 8; }
+  #pv-chapter .mp-st { position: absolute; width: 0; height: 0; }
+  #pv-chapter .mp-dot { position: absolute; left: -64px; top: -64px; width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--sc-ch-sub-bg); color: var(--sc-ch-sub-ink); box-shadow: inset 0 0 0 3px var(--sc-ch-sub-line); font-size: 56px; font-weight: 900; line-height: 1; }
+  #pv-chapter .mp-dot svg { display: block; width: 64px; height: 64px; }
+  #pv-chapter .mp-st.is-cur .mp-dot { background: var(--sc-ch-title-bg); color: var(--sc-ch-title-ink); box-shadow: 0 0 0 8px var(--sc-ch-sub-bg), var(--sc-lift); }
+  #pv-chapter .mp-st.is-todo .mp-dot, #pv-chapter .mp-st.is-todo .mp-name span { color: color-mix(in srgb, var(--sc-ch-sub-ink) 55%, var(--sc-ch-sub-bg)); }
+  #pv-chapter .mp-name { position: absolute; left: -230px; top: 84px; width: 460px; display: flex; justify-content: center; }
+  #pv-chapter .mp-name span { padding: 6px 20px; border-radius: 12px; background: var(--sc-ch-sub-bg); color: var(--sc-ch-sub-ink); box-shadow: inset 0 0 0 2px var(--sc-ch-sub-line); font-size: 36px; font-weight: 700; line-height: 44px; white-space: nowrap; }
+  #pv-chapter #pv-mpHead { position: absolute; left: 160px; top: 600px; display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+  #pv-chapter .mp-tag { height: 56px; padding: 0 22px; border-radius: 12px; display: flex; align-items: center; gap: 4px; background: var(--sc-ch-sub-bg); color: var(--sc-ch-sub-ink);
+    box-shadow: inset 0 0 0 2px var(--sc-ch-sub-line); font-size: 34px; font-weight: 700; letter-spacing: 0.12em; white-space: nowrap; }
+  #pv-chapter .mp-tag b { font-weight: 700; opacity: 0.6; letter-spacing: 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="footage"><img src="speaker.jpg" alt=""></div>
+  <div id="scene" data-wide>
+    <div id="pv-chapter" class="fill">
+      <div class="sc-surface-ch fill"></div>
+      <div id="pv-aWrap" class="fill">
+        <div id="pv-mpView" data-layout="free" data-layout-allow-overflow>
+          <div id="pv-mpCam"><div id="pv-mpWorld">
+            <svg id="pv-mpSvg" width="1980" height="1080" viewBox="0 0 1980 1080" aria-hidden="true">
+              <g class="mp-case"><path class="mp-all" d="M 300 460 C 530 460, 530 560, 760 560 C 990 560, 990 460, 1220 460 C 1450 460, 1450 560, 1680 560"/><path class="mp-done mp-new" d="M 300 460 C 530 460, 530 560, 760 560" pathLength="1"/></g>
+              <g class="mp-ink"><path class="mp-all" d="M 300 460 C 530 460, 530 560, 760 560 C 990 560, 990 460, 1220 460 C 1450 460, 1450 560, 1680 560"/><path class="mp-done mp-new" d="M 300 460 C 530 460, 530 560, 760 560" pathLength="1"/></g>
+            </svg>
+            <div class="mp-st is-done" style="left:300px;top:460px">
+              <span class="mp-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span class="mp-name"><span>錄影準備</span></span>
+            </div>
+            <div class="mp-st is-cur" id="pv-mpCur" style="left:760px;top:560px">
+              <span class="mp-dot">02</span>
+              
+            </div>
+            <div class="mp-st is-todo" style="left:1220px;top:460px">
+              <span class="mp-dot">03</span>
+              <span class="mp-name"><span>剪好看</span></span>
+            </div>
+            <div class="mp-st is-todo" style="left:1680px;top:560px">
+              <span class="mp-dot">04</span>
+              <span class="mp-name"><span>輸出影片</span></span>
+            </div>
+          </div></div>
+        </div>
+        <div id="pv-mpHead" data-layout="free">
+          <div id="pv-mpTag" class="mp-tag">CHAPTER 02<b>／04</b></div>
+          <div id="pv-mpTitle" class="sc-slant sc-slant--white sc-t112 sc-w900" style="--h: 160px"><span class="sc-opt">先剪乾淨</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cg" id="cap"><span>接下來，我們先把影片剪乾淨</span></div>
+</div>
+<script>
+window.__PREVIEW = {"key":"chapter","duration":2.5,"cues":[{"sound":"chapter","at":0.45}]};
+</script>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  function fit() { var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080); stage.style.transform = 'scale(' + s + ')'; }
+  window.addEventListener('resize', fit); fit();
+  var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+  var start = function () {
+    const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 });
+    var pv = window.__PREVIEW;
+    const P = SceneMotion(tl, document.getElementById('pv-chapter'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const D = 2.5;
+    /* 地圖版：背景、地圖第一格就在（build 整幕淡入）。0.1 起鏡頭從上一章推到這一章（1.0s power3.inOut；第一章從整張地圖推進來），
+       同時上一章 → 這一章的路線描出來 → 0.95 這一章的站重拍彈出＋漣漪 → 章號牌彈出、章名板由左擦開＋逐字（照 titleAt 往後 0.55 起）；HF 不淡出 */
+    P.cam('#pv-mpWorld', 0.1, { x: -460, y: -100, scale: 1, dur: 1.0 });
+    P.stroke('#pv-mpSvg .mp-new', 0.25, { dur: 0.8 });
+    P.pop('#pv-mpCur .mp-dot', 0.95, { from: 1.3, dy: 0, ease: 'back.out(2)' });
+    P.ripple('#pv-mpCur .mp-dot', 1.0);
+    P.pop('#pv-mpTag', 0.45 + 0.55);
+    P.wipe('#pv-mpTitle', 0.45 + 0.65, { dir: 'left', dur: P.V2.SHELL });
+    P.chars('#pv-mpTitle .sc-opt', 0.45 + 0.8);
+    tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);
+    tl.to('#scene', { opacity: 0, duration: 0.5, ease: 'sine.in' }, 2);
+    P.end(D);
+    // 截圖用：網址加 ?t=秒數 就停在那一刻（例：03-side-panel.html?t=3）
+    var t = Number(new URLSearchParams(location.search).get('t'));
+    if (t > 0) tl.pause(t);
+    // 重播協定：父頁（音效預覽）送 hf-preview-replay → 從頭播，並回 hf-preview-started
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'hf-preview-replay') return;
+      tl.restart();
+      (e.source || parent).postMessage({ type: 'hf-preview-started', key: pv.key }, '*');
+    });
+    parent.postMessage({ type: 'hf-preview-ready', key: pv.key, duration: pv.duration, cues: pv.cues }, '*');
+  };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+})();
+</script>
+</body>
+</html>

@@ -45,6 +45,7 @@ const KEYS = {
   format: { hint: () => 'portrait／landscape', parse: pick(['portrait', 'landscape'], { 直式: 'portrait', 橫式: 'landscape' }), early: true },
   speakerSide: { hint: () => 'left／center／right', parse: pick(['left', 'center', 'right']) },
   chapterBadge: { hint: () => 'true／false', parse: (v) => (v === true || v === 'true' ? true : v === false || v === 'false' ? false : BAD) },
+  chapterMap: { hint: () => 'true／false', parse: (v) => (v === true || v === 'true' ? true : v === false || v === 'false' ? false : BAD) },   // 036 本集地圖
   look: { hint: () => 'off', parse: (v) => (v === false || v === 'off' ? false : BAD), early: true },
   'look.color': { hint: () => `${LOOK_LIMITS.color.join('–')}`, parse: num(...LOOK_LIMITS.color), early: true },
   'look.slim': { hint: () => `${LOOK_LIMITS.slim.join('–')}`, parse: num(...LOOK_LIMITS.slim), early: true },

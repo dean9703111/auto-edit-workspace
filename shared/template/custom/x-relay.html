@@ -1,0 +1,170 @@
+<!-- 預設拍型：D 清單（BEATS.md §3 D；一項一拍＝膠片往上換一格、焦點換到那張截圖、能力詞原位接力換掉） -->
+<!doctype html>
+<!--
+  x-relay：截圖接力（第二層 custom，layout: "fullscreen"；左邊截圖膠片一格一格往上換，右邊主體名詞不動、能力那個詞原位接力換掉）
+
+  【適用的講解】
+  「一個主體 × 多種能力」，每一種能力素材裡都有一張截圖：例「剪輯台可以改字幕，也可以調音量，還能換卡片」。
+  畫面邏輯：左邊是一條等高的截圖膠片（中間那張是焦點，上下露出相鄰的截圖、退暗縮小），右邊上面是主體名詞（不動），下面一行是能力詞。
+  開場膠片先停在預覽態（全部退暗）；講到第 1 種能力時第 1 張截圖亮起、主色亮框，能力詞逐字上浮；之後每講到一種能力：
+  舊詞先往上淡出 → 膠片往上捲一格（只有這 0.6 秒在動）、焦點換到下一張 → 新詞逐字上浮（後進，不疊影）。
+  能力詞的垂直中心對準中間那張截圖的中線；膠片是一圈（第 1 張上面露出最後一張、最後一張下面露出第 1 張），頭尾不會空一塊。
+
+  【不要用在哪裡】
+  - 沒有截圖、只有能力名稱：用 x-checklist、04a 清單。
+  - 能力之間有先後、是步驟：用 x-process、04c 流程。
+  - 只有 2 種能力：用 x-versus、04b；超過 4 種：拆兩段。
+  - 截圖是會動的錄影：用 media 段（整段放錄影），這裡只放圖片。
+  - 要比同一個畫面的前後：用 x-slider。
+
+  【要改的地方】
+  1. 文字：主體 #xrl-subj（≤ 8 字，例「剪輯台」）、每一項的能力詞 .xrl-word（≤ 5 字，動詞片語，例「改字幕」）、
+     說明 .xrl-note（選填，≤ 14 字；不要就整行刪掉，script 裡那一項的兩行 #xrl-nN 一起刪）。放不下就縮文案，不縮字。
+  2. 截圖：每一張 .xrl-img 裡的 <img src>（素材裡的圖片檔，16:9 最好；其他比例會被裁切成 16:9）。
+     #xrl-c0（膠片最上面露出的那張）＝最後一項的截圖、#xrl-c9（最下面露出的那張）＝第 1 項的截圖，改圖時一起改。
+  3. 綁句：<script> 開頭 T1–T4 的句號與詞（見【綁句欄位】）。
+  4. 開場：<script> 的 ENTER 預設自動判斷（前一段也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出），通常不用改。
+  項數是 3：刪掉 #xrl-c4、#xrl-w4、#xrl-n4，script 開頭的「, T4 = P.at(…)」與「第 4 種能力」那一段，#xrl-c0 的圖換成第 3 項的。
+  膠片捲動的距離、焦點、退暗都由程式算，不寫座標。這支沒有圖示（截圖就是主角）、沒有音效（條列逐條不配音效，style.md「音效」）。
+
+  【綁句欄位】
+  T1 = P.at('#592@轉逐字稿')、T2 = P.at('#593@找出')、T3 = P.at('#594@剪好看')、T4 = P.at('#595@一句')：講到那一種能力那個詞的時刻。
+  T1：第 1 張截圖亮起、能力詞逐字上浮（說明晚 0.12 秒）。T2 起：提早 0.3 秒舊詞往上淡出、膠片往上捲一格、焦點換到這一張，講到時新詞逐字上浮。
+  能力詞在句中間或句尾時一定用 @詞，不要綁句首；剛好是那句的第一個詞才寫 P.at('#593')。
+  「@詞」要寫成字串字面值（P.at('#593@找出')，不要用變數組字串），build 才算得到；要再晚一點加第二個參數：P.at('#593@找出', 0.3)。
+  相鄰兩項至少差 2.5 秒（新詞與說明忙到 ＋1.0、停 1.2 秒，下一項提早 0.3 秒出發）；太近就綁後面一句。
+  audit 會比對：這一拍出現的字（能力詞）在別句才講到時，印 ⚠ 綁句對不上，照它給的 P.at 改。
+
+  【D 下限】
+  T1 ≥ 2.0（膠片視窗 0.3 秒長出（或 0 秒擦開）、0.6 秒起主體逐字上浮，1.5 秒做完，停一下才出第 1 個詞）
+  T2 ≥ T1 + 2.5；T3 ≥ T2 + 2.5；T4 ≥ T3 + 2.5
+  D ≥ T4 + 2.8（最後一個詞與說明做到 T4 ＋ 1.0（只有 3 項時是 T3）＋最後一幕停 1.5 秒＋build 加的淡出 0.5 秒；D＝plan.json 這段的長度）
+  結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
+
+  【版面】
+  fullscreen：膠片視窗進場看 script 的 ENTER（'grow' 0.3 秒從子母畫面長出、'swap' 0 秒由下擦開上浮）；離場由 build 處理。沒有主卡：#xrl-card 是膠片視窗。
+  子母畫面：膠片視窗 #xrl-card left 72、top 60、664×840（y 60–900，overflow: hidden 切掉露出的上下兩張；左右多留 48 給落影與亮框，
+  截圖卡 x 120–688），膠片 #xrl-strip 在視窗裡 left 48、由上往下排卡（間距 40）。截圖卡 568×330（白卡 --sc-fs-card、2 px 細框、內距 10、
+  圓角 16、落影 --v2-card-shadow；裡面的截圖 544×306＝16:9、圓角 8、object-fit: cover），一格＝330＋40＝370。
+  焦點那張的中線在畫面 y 480（卡 315–645）；上下各露出 215 px。退暗＝P.spot 的預覽態與聚焦（亮度 0.4、縮 0.96），焦點那張不放大不抬起（中線對齊）。
+  右邊字都靠左對齊 x 740：主體 64 字 top 310、能力詞 112 字 top 406（字面中線 y 480，對準截圖中線）、說明 40 字 top 550。
+  最長的字（主體 8 字 512、能力詞 5 字 560、說明 14 字 560）右緣 ≤ 1300，避開右下子母畫面，直式舞台窗也放得下。
+  全寬（沒有講者：script 看到外層的 data-wide，在 root 也加 data-wide）：視窗寬 888、截圖卡 792×456（截圖 768×432，x 120–912）、一格 496，
+  膠片 top −304；字靠左 x 1000：主體 80 字 top 276、能力詞 144 字 top 388、說明 48 字 top 564（最長右緣 1720）。
+  畫面上不放東西的地方：右上角小節角標（x ≥ 1440、y 16–136）、字幕區（y ≥ 920）。
+-->
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>x-relay 截圖接力</title></head>
+<body>
+<template id="x-relay-template">
+  <style>
+    #x-relay { position: absolute; inset: 0; }
+    #x-relay .fill { position: absolute; inset: 0; }
+    /* 膠片視窗：x 72–736、y 60–900（截圖卡 x 120–688，左右多留 48 給落影與亮框）；上下露出的卡在視窗邊被切掉 */
+    #x-relay #xrl-card { position: absolute; left: 72px; top: 60px; width: 664px; height: 840px; overflow: hidden; }
+    /* 膠片：卡由上往下排、間距 40（一格 370）；第 1 張（#xrl-c1）的上緣在視窗裡 255＝畫面 315，中線 480 */
+    #x-relay #xrl-strip { position: absolute; left: 48px; top: -115px; display: flex; flex-direction: column; gap: 40px; }
+    #x-relay .xrl-shot { position: relative; flex: none; width: 568px; height: 330px; box-sizing: border-box; padding: 10px;
+                          border: 2px solid var(--sc-fs-card-line); border-radius: 16px; background: var(--sc-fs-card); box-shadow: var(--v2-card-shadow); }
+    #x-relay .xrl-img { width: 100%; height: 100%; border-radius: 8px; overflow: hidden; }
+    #x-relay .xrl-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* 右邊：主體（不動）＋能力詞（同一個位置接力）＋說明，都靠左 x 740；能力詞的字面中線對準截圖中線 y 480 */
+    #x-relay #xrl-subj { position: absolute; left: 740px; top: 310px; white-space: nowrap; color: var(--sc-fs-ink); }
+    #x-relay .xrl-word { position: absolute; left: 740px; top: 406px; white-space: nowrap; color: var(--sc-fs-kw); }
+    #x-relay .xrl-note { position: absolute; left: 740px; top: 550px; white-space: nowrap; }
+    /* 全寬（沒有講者）：截圖卡 792×456（x 120–912）、一格 496；字靠左 x 1000、放大 */
+    #x-relay[data-wide] #xrl-card { width: 888px; }
+    #x-relay[data-wide] #xrl-strip { top: -304px; }
+    #x-relay[data-wide] .xrl-shot { width: 792px; height: 456px; }
+    #x-relay[data-wide] #xrl-subj { left: 1000px; top: 276px; font-size: 80px; line-height: 104px; }
+    #x-relay[data-wide] .xrl-word { left: 1000px; top: 388px; font-size: 144px; line-height: 168px; }
+    #x-relay[data-wide] .xrl-note { left: 1000px; top: 564px; font-size: 48px; line-height: 66px; }
+  </style>
+  <div id="x-relay" data-composition-id="x-relay" data-width="1920" data-height="1080" data-duration="13.4"
+       data-cues-sample='{"start":0,"D":13.4,"cues":{"591":[0.3,2.0],"592":[2.1,4.6],"593":[4.7,7.2],"594":[7.3,9.8],"595":[9.9,13.0]},"refs":{"#592@轉逐字稿":2.3,"#593@找出":4.9,"#594@剪好看":7.5,"#595@一句":10.1}}'>
+    <div class="sc-surface-fs fill"></div>
+    <div id="xrl-card" data-layout-allow-overflow>
+      <div id="xrl-strip">
+        <!-- 膠片是一圈：最上面露出最後一項的截圖（c0）、最下面露出第 1 項的截圖（c9） -->
+        <div id="xrl-c0" class="xrl-shot"><div class="xrl-img" data-fill="items.4.shot"><img src="../preview/shots/relay-4.jpg" alt=""></div></div> <!-- @sub n==3: <div id="xrl-c0" class="xrl-shot"><div class="xrl-img" data-fill="items.3.shot"><img src="../preview/shots/relay-3.jpg" alt=""></div></div> -->
+        <div id="xrl-c1" class="xrl-shot"><div class="xrl-img" data-fill="items.1.shot"><img src="../preview/shots/relay-1.jpg" alt=""></div></div>
+        <div id="xrl-c2" class="xrl-shot"><div class="xrl-img" data-fill="items.2.shot"><img src="../preview/shots/relay-2.jpg" alt=""></div></div>
+        <div id="xrl-c3" class="xrl-shot"><div class="xrl-img" data-fill="items.3.shot"><img src="../preview/shots/relay-3.jpg" alt=""></div></div>
+        <div id="xrl-c4" class="xrl-shot"><div class="xrl-img" data-fill="items.4.shot"><img src="../preview/shots/relay-4.jpg" alt=""></div></div> <!-- @if n>=4 -->
+        <div id="xrl-c9" class="xrl-shot"><div class="xrl-img" data-fill="items.1.shot"><img src="../preview/shots/relay-1.jpg" alt=""></div></div>
+      </div>
+    </div>
+    <div id="xrl-subj" class="sc-t64 sc-w900" data-fill="subject">AI 剪輯</div>
+    <div id="xrl-w1" class="xrl-word sc-t112 sc-w900" data-fill="items.1.word">轉逐字稿</div>
+    <div id="xrl-w2" class="xrl-word sc-t112 sc-w900" data-fill="items.2.word">找出 NG</div>
+    <div id="xrl-w3" class="xrl-word sc-t112 sc-w900" data-fill="items.3.word">剪好看</div>
+    <div id="xrl-w4" class="xrl-word sc-t112 sc-w900" data-fill="items.4.word">一句就改</div> <!-- @if n>=4 -->
+    <div id="xrl-n1" class="xrl-note sc-t40 sc-w700 sc-gray" data-fill="items.1.note">先把講解轉成文字</div> <!-- @if items.1.note -->
+    <div id="xrl-n2" class="xrl-note sc-t40 sc-w700 sc-gray" data-fill="items.2.note">講錯的句子自動標出來</div> <!-- @if items.2.note -->
+    <div id="xrl-n3" class="xrl-note sc-t40 sc-w700 sc-gray" data-fill="items.3.note">字卡、動畫一次配好</div> <!-- @if items.3.note -->
+    <div id="xrl-n4" class="xrl-note sc-t40 sc-w700 sc-gray" data-fill="items.4.note">說一句話就能改</div> <!-- @if n>=4 && items.4.note -->
+  </div>
+  <script>
+  (function () {
+    var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
+    // 版型（以下都不用改）：全寬時 CSS 的 [data-wide] 那幾行接手；一格＝卡高＋間距 40
+    const ROOT = document.getElementById('x-relay'), WIDE = !!ROOT.closest('[data-wide]');
+    if (WIDE) ROOT.setAttribute('data-wide', '');
+    const STEP = WIDE ? 496 : 370;
+    const CARDS = '#xrl-strip .xrl-shot';               // 膠片上全部的卡（含頭尾露出的那兩張）
+
+    const tl = gsap.timeline({ paused: true });
+    const P = SceneMotion(tl, document.getElementById('x-relay'));
+    [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
+    [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
+    const T1 = P.at('#592@轉逐字稿'), T2 = P.at('#593@找出'), T3 = P.at('#594@剪好看'), T4 = P.at('#595@一句');   // 講到每一種能力那個詞的時刻  // @sub n==3: const T1 = P.at('#592@轉逐字稿'), T2 = P.at('#593@找出'), T3 = P.at('#594@剪好看');
+    const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+
+    // 拍 0 開場：膠片視窗進場（看 ENTER），膠片停在預覽態（全部退暗到 0.4、縮 0.96）；＋0.6 主體逐字上浮
+    if (ENTER === 'grow') P.grow('#xrl-card', 0.3);
+    else { P.wipe('#xrl-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xrl-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
+    P.spot(CARDS, 'none', 0, { dim: 0.4, dur: 0.01 });
+    P.chars('#xrl-subj', 0.6);
+
+    // 拍 1 第 1 種能力：第 1 張截圖亮起（主色亮框；不放大不抬起，中線對準能力詞），能力詞逐字上浮；＋0.12 說明逐字上浮
+    P.spot(CARDS, '#xrl-c1', T1, { scale: 1, lift: 0, dim: 0.4 });
+    P.chars('#xrl-w1', T1);
+    P.chars('#xrl-n1', T1 + 0.12, { stagger: 0.02 });   // @if items.1.note
+
+    // 拍 2 第 2 種能力：−0.3 舊詞往上淡出（先出）、膠片往上捲一格（0.6 秒）、焦點換到第 2 張 → 講到時新詞逐字上浮（後進）
+    P.out('#xrl-w1', T2 - 0.3, { dur: 0.25 });
+    P.morph('#xrl-w1', T2 - 0.3, { y: -32 }, { from: { y: 0 }, dur: 0.25, ease: 'power2.in' });
+    P.out('#xrl-n1', T2 - 0.3, { dur: 0.25 });   // @if items.1.note
+    P.morph('#xrl-strip', T2 - 0.3, { y: -STEP }, { from: { y: 0 }, dur: 0.6, ease: 'power3.inOut' });
+    P.spot(CARDS, '#xrl-c2', T2 - 0.3, { scale: 1, lift: 0, dim: 0.4, dur: 0.6 });
+    P.chars('#xrl-w2', T2);
+    P.chars('#xrl-n2', T2 + 0.12, { stagger: 0.02 });   // @if items.2.note
+
+    // 拍 3 第 3 種能力：同拍 2
+    P.out('#xrl-w2', T3 - 0.3, { dur: 0.25 });
+    P.morph('#xrl-w2', T3 - 0.3, { y: -32 }, { from: { y: 0 }, dur: 0.25, ease: 'power2.in' });
+    P.out('#xrl-n2', T3 - 0.3, { dur: 0.25 });   // @if items.2.note
+    P.morph('#xrl-strip', T3 - 0.3, { y: -2 * STEP }, { from: { y: -STEP }, dur: 0.6, ease: 'power3.inOut' });
+    P.spot(CARDS, '#xrl-c3', T3 - 0.3, { scale: 1, lift: 0, dim: 0.4, dur: 0.6 });
+    P.chars('#xrl-w3', T3);
+    P.chars('#xrl-n3', T3 + 0.12, { stagger: 0.02 });   // @if items.3.note
+
+    // @if n>=4 {
+    // 拍 4 第 4 種能力：同拍 2（3 項時刪掉這一段，見檔頭）
+    P.out('#xrl-w3', T4 - 0.3, { dur: 0.25 });
+    P.morph('#xrl-w3', T4 - 0.3, { y: -32 }, { from: { y: 0 }, dur: 0.25, ease: 'power2.in' });
+    P.out('#xrl-n3', T4 - 0.3, { dur: 0.25 });   // @if items.3.note
+    P.morph('#xrl-strip', T4 - 0.3, { y: -3 * STEP }, { from: { y: -2 * STEP }, dur: 0.6, ease: 'power3.inOut' });
+    P.spot(CARDS, '#xrl-c4', T4 - 0.3, { scale: 1, lift: 0, dim: 0.4, dur: 0.6 });
+    P.chars('#xrl-w4', T4);
+    P.chars('#xrl-n4', T4 + 0.12, { stagger: 0.02 });   // @if items.4.note
+    // @}
+
+    // 收：最後一張截圖＋最後一個能力詞停到段尾（焦點留在最後一張，不回均衡：膠片的完成態就是「講到的那一張在中間」）
+    P.end();                                           // 長度＝plan.json 這段的長度
+    window.__timelines['x-relay'] = tl;
+  })();
+  </script>
+</template>
+</body>
+</html>

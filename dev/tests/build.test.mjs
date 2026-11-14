@@ -188,14 +188,19 @@ test('--list 印出 18 情境＋40 字卡動態；--json 可解析', () => {
   assert.equal(j.fx.length, 40);
 });
 
-test('--gallery 產生 18 頁預覽＋04 家族 4 頁全寬示意＋15／09／06／11 全幕版 4 頁（獨立頁，連 ../kit 與 ../bg.jpg）', async () => {
+test('--gallery 產生 18 頁預覽＋04 家族 4 頁全寬示意＋15／09／06／11 全幕版 4 頁＋01 本集地圖 1 頁（獨立頁，連 ../kit 與 ../bg.jpg）', async () => {
   const { runGallery } = await imp('build.mjs');
   const tdir = path.join(dir, 'tpl');
   fs.mkdirSync(tdir);
   for (const sub of ['kit', 'scenes']) fs.cpSync(path.join(TEMPLATE, sub), path.join(tdir, sub), { recursive: true });
   const r = runGallery(tdir);
   assert.deepEqual(r.problems, []);
-  assert.equal(r.made.filter((f) => f.endsWith('.html')).length, 26);
+  assert.equal(r.made.filter((f) => f.endsWith('.html')).length, 27);
+  // 036 本集地圖：四章的第二章（上一章打勾、這一章白底號碼、章號牌 02／04）
+  const map = fs.readFileSync(path.join(tdir, 'preview', '01-chapter-map.html'), 'utf8');
+  assert.match(map, /<div id="scene" data-wide>/);
+  assert.match(map, /CHAPTER 02<b>／04<\/b>/);
+  assert.equal((map.match(/class="mp-st /g) || []).length, 4);
   // 全幕版：沒有講者小視窗、#scene 寫 data-wide，用模板的 @body-full
   const full = fs.readFileSync(path.join(tdir, 'preview', '15-quote-full.html'), 'utf8');
   assert.match(full, /<div id="scene" data-wide>/);

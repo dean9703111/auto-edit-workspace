@@ -35,3 +35,62 @@ P.chars('#chTitle .sc-opt', {{{titleAt}}} + 0.15);
 P.icon('#chIcon', {{{titleAt}}} + 0.15, { dur: 0.9 });{{/icon}}
 {{#sub}}P.wipe('#chSub', {{{subAt}}}, { dir: 'left', dur: P.V2.SHELL });
 P.chars('#chSub .sc-opt', {{{subAt}}} + 0.15);{{/sub}}
+<!-- @style-map -->
+/* 036 本集地圖（plan.json 第一層 "chapterMap": true；各站、路線、鏡頭的數字都由 tools/lib/scenes.mjs chapterMapCtx 算好，這裡只畫）。
+   整集的章是一條曲線上的站：前面的章深底打勾、這一章白底號碼、後面的章字淡一點；站名是深底白字的小牌（章節底常是主色背景圖，不用主色當底）。
+   上半 y 170–590 是地圖：外層 #mpCam 靜態擺在開始的位置（上一章的站；第一章是整張地圖），裡層 #mpWorld 用 P.cam 推到這一章（兩層同大小、原點在中心）。
+   下半 y 600–832 是章號牌（CHAPTER 02／05）＋章名斜板（和一般章節轉場同一套）。地圖版不放副標、圖示（下半放不下） */
+#mpView { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; }
+#mpCam, #mpWorld { position: absolute; left: 0; top: 0; width: {{mapW}}px; height: 1080px; transform-origin: {{mapOx}}px 540px; }
+#mpCam { transform: {{cam0}}; }
+#mpSvg { position: absolute; left: 0; top: 0; overflow: visible; }
+/* 路線畫兩層（和站一樣）：底下一層淡框線、上面一層深色線 → 亮底看深線、暗底看框線。全程是點線，走過的實線 */
+#mpSvg path { fill: none; stroke-linecap: round; }
+.mp-case path { stroke: var(--sc-ch-sub-line); }
+.mp-ink path { stroke: var(--sc-ch-sub-bg); }
+.mp-case .mp-all { stroke-width: 14; stroke-dasharray: 0.01 22; }
+.mp-ink .mp-all { stroke-width: 8; stroke-dasharray: 0.01 22; }
+.mp-case .mp-done { stroke-width: 16; }
+.mp-ink .mp-done { stroke-width: 8; }
+.mp-st { position: absolute; width: 0; height: 0; }
+.mp-dot { position: absolute; left: -64px; top: -64px; width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--sc-ch-sub-bg); color: var(--sc-ch-sub-ink); box-shadow: inset 0 0 0 3px var(--sc-ch-sub-line); font-size: 56px; font-weight: 900; line-height: 1; }
+.mp-dot svg { display: block; width: 64px; height: 64px; }
+.mp-st.is-cur .mp-dot { background: var(--sc-ch-title-bg); color: var(--sc-ch-title-ink); box-shadow: 0 0 0 8px var(--sc-ch-sub-bg), var(--sc-lift); }
+/* 後面的章：底不透明（路線不透出來），字淡一點 */
+.mp-st.is-todo .mp-dot, .mp-st.is-todo .mp-name span { color: color-mix(in srgb, var(--sc-ch-sub-ink) 55%, var(--sc-ch-sub-bg)); }
+.mp-name { position: absolute; left: -230px; top: 84px; width: 460px; display: flex; justify-content: center; }
+.mp-name span { padding: 6px 20px; border-radius: 12px; background: var(--sc-ch-sub-bg); color: var(--sc-ch-sub-ink); box-shadow: inset 0 0 0 2px var(--sc-ch-sub-line); font-size: 36px; font-weight: 700; line-height: 44px; white-space: nowrap; }
+#mpHead { position: absolute; left: 160px; top: 600px; display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.mp-tag { height: 56px; padding: 0 22px; border-radius: 12px; display: flex; align-items: center; gap: 4px; background: var(--sc-ch-sub-bg); color: var(--sc-ch-sub-ink);
+  box-shadow: inset 0 0 0 2px var(--sc-ch-sub-line); font-size: 34px; font-weight: 700; letter-spacing: 0.12em; white-space: nowrap; }
+.mp-tag b { font-weight: 700; opacity: 0.6; letter-spacing: 0; }
+<!-- @body-map -->
+<div id="mpView" data-layout="free" data-layout-allow-overflow>
+  <div id="mpCam"><div id="mpWorld">
+    <svg id="mpSvg" width="{{mapW}}" height="1080" viewBox="0 0 {{mapW}} 1080" aria-hidden="true">
+      <g class="mp-case"><path class="mp-all" d="{{pathAll}}"/>{{#pathPrev}}<path class="mp-done" d="{{pathPrev}}"/>{{/pathPrev}}{{#pathNew}}<path class="mp-done mp-new" d="{{pathNew}}" pathLength="1"/>{{/pathNew}}</g>
+      <g class="mp-ink"><path class="mp-all" d="{{pathAll}}"/>{{#pathPrev}}<path class="mp-done" d="{{pathPrev}}"/>{{/pathPrev}}{{#pathNew}}<path class="mp-done mp-new" d="{{pathNew}}" pathLength="1"/>{{/pathNew}}</g>
+    </svg>
+    {{#stations}}
+    <div class="mp-st{{#done}} is-done{{/done}}{{#cur}} is-cur{{/cur}}{{#todo}} is-todo{{/todo}}"{{#cur}} id="mpCur"{{/cur}} style="left:{{x}}px;top:{{y}}px">
+      <span class="mp-dot">{{#done}}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>{{/done}}{{^done}}{{num}}{{/done}}</span>
+      {{^cur}}<span class="mp-name"><span>{{title}}</span></span>{{/cur}}
+    </div>
+    {{/stations}}
+  </div></div>
+</div>
+<div id="mpHead" data-layout="free">
+  <div id="mpTag" class="mp-tag">CHAPTER {{curNum}}<b>／{{total}}</b></div>
+  <div id="mpTitle" class="sc-slant sc-slant--white sc-t112 sc-w900" style="--h: 160px"><span class="sc-opt">{{title}}</span></div>
+</div>
+<!-- @timeline-map -->
+/* 地圖版：背景、地圖第一格就在（build 整幕淡入）。0.1 起鏡頭從上一章推到這一章（1.0s power3.inOut；第一章從整張地圖推進來），
+   同時上一章 → 這一章的路線描出來 → 0.95 這一章的站重拍彈出＋漣漪 → 章號牌彈出、章名板由左擦開＋逐字（照 titleAt 往後 0.55 起）；HF 不淡出 */
+P.cam('#mpWorld', 0.1, { x: {{camX}}, y: {{camY}}, scale: {{camS}}, dur: 1.0 });
+{{#pathNew}}P.stroke('#mpSvg .mp-new', 0.25, { dur: 0.8 });{{/pathNew}}
+P.pop('#mpCur .mp-dot', 0.95, { from: 1.3, dy: 0, ease: 'back.out(2)' });
+P.ripple('#mpCur .mp-dot', 1.0);
+P.pop('#mpTag', {{{titleAt}}} + 0.55);
+P.wipe('#mpTitle', {{{titleAt}}} + 0.65, { dir: 'left', dur: P.V2.SHELL });
+P.chars('#mpTitle .sc-opt', {{{titleAt}}} + 0.8);

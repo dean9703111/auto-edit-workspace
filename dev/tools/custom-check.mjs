@@ -128,6 +128,12 @@ function runProject(name, spec, html) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'custom-check-'));
   const proj = path.join(dir, 'p1'), out = path.join(proj, 'work', 'hyperframes');
   fs.mkdirSync(out, { recursive: true });
+  // 036 截圖欄位：範例寫的 assets/images/<檔> 從 shared/template/preview/shots/ 複製（模板單獨開時的示意圖也是這幾張）
+  const SHOTS = path.join(TEMPLATE, 'preview', 'shots');
+  if (fs.existsSync(SHOTS) && JSON.stringify(spec.slots || {}).includes('"shot"')) {
+    fs.mkdirSync(path.join(proj, 'assets', 'images'), { recursive: true });
+    for (const f of fs.readdirSync(SHOTS)) fs.copyFileSync(path.join(SHOTS, f), path.join(proj, 'assets', 'images', f));
+  }
   const sample = JSON.parse(html.match(/data-cues-sample='([^']+)'/)?.[1] || '{}');
   const nums = Object.keys(sample.cues || {}).map(Number).sort((a, b) => a - b);
   if (!nums.length) return [`模板沒有 data-cues-sample`];
@@ -174,7 +180,10 @@ function runProject(name, spec, html) {
   if (shots && !bad.length) {
     tool('qc.mjs', 'storyboard', '--project', proj, '--only', scenes.map((x) => x.id).join(','));
     fs.mkdirSync(shots, { recursive: true });
-    for (const x of scenes) { const png = path.join(proj, 'work', 'storyboard-preview', `${x.id}.png`); if (fs.existsSync(png)) fs.copyFileSync(png, path.join(shots, `${name}-${x.id}.png`)); }
+    // qc storyboard 一段可能存好幾張（<id>.png 或 <id>-1.png、<id>-2.png…）：全部帶走，檔名保留 -N
+    const sbDir = path.join(proj, 'work', 'storyboard-preview');
+    const sbFiles = fs.existsSync(sbDir) ? fs.readdirSync(sbDir) : [];
+    for (const x of scenes) for (const f of sbFiles.filter((f) => f === `${x.id}.png` || new RegExp(`^${x.id}-\\d+\\.png$`).test(f))) fs.copyFileSync(path.join(sbDir, f), path.join(shots, `${name}-${f}`));
   }
   if (args.includes('--keep')) console.log(`  暫存專案留在 ${proj}`);
   else try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* 暫存 */ }

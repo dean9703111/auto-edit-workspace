@@ -14,6 +14,7 @@
 //   renderCommon(input)、renderSnippets(input)、renderPart(part, input) → 共用.md、.spec.md（工具用）、chNN.md
 import { normText, textWidth } from './time.mjs';
 import { moodCandidates, moodTarget, MOOD_KINDS } from './moods.mjs';
+import { shotHint, shotHolder } from './shots.mjs';
 
 export const CHAPTER_MIN_VIDEO = 180;   // 不到 3 分鐘的影片不用 01 章節轉場
 const SKIP_LINE = (l) => l.startsWith('>') || l.startsWith('<!--') || l.includes('`') || /^[-*_]{3,}$/.test(l) || /^[（(].*[）)]$/.test(l);
@@ -144,6 +145,7 @@ const holder = (name, d) => {
   if (d.type === 'number') return '01';
   if (d.type === 'icon') return '<英文圖示名，例 smartphone>';
   if (d.type === 'illus') return '<畫廊元件>';
+  if (d.type === 'shot') return shotHolder(d);
   return d.max != null ? `<≤${d.max} 字>` : `<${d.label || name}>`;
 };
 
@@ -455,7 +457,7 @@ export function fillSummary(f) {
 }
 function fillSummaryBody(f) {
   if (f.generator === 'scene') return 'title（≤10）；parts 每個 { id, illus|pic|icon|src|wave, opts, label ≤10, row, side, pre, stand, w, h }（也可以 { id, layout, gap, parts: […] } 疊成一組）；links ["a>b", "a-b"]；beats 每拍 { at, in, line, state, move, count, wave, check, focus, dim, sfx, peel }（state 寫 [元件 id, 原本的狀態, 換成的狀態]，例 ["b","blank","play"]＝b 的螢幕從 blank 換成 play；不換狀態就不寫）；route（路線圖）；sticker: true（貼紙風格：元件一張一張貼上，最後一拍可以寫 { at, peel: true } 整組撕走）';
-  const limit = (d) => [d.required ? '必填' : '選填', d.max != null ? `≤${d.max}` : '', d.type === 'icon' ? '圖示名' : d.type === 'at' ? '#N@詞' : d.type === 'number' ? '數字' : d.type === 'enum' ? (d.options || []).join('／') : ''].filter(Boolean).join('、');
+  const limit = (d) => [d.required ? '必填' : '選填', d.max != null ? `≤${d.max}` : '', d.type === 'icon' ? '圖示名' : d.type === 'shot' ? shotHint(d) : d.type === 'at' ? '#N@詞' : d.type === 'number' ? '數字' : d.type === 'enum' ? (d.options || []).join('／') : ''].filter(Boolean).join('、');
   return Object.entries(f.slots || {}).map(([k, d]) => {
     if (d.type !== 'list') return `${k}（${d.label ? `${d.label}：` : ''}${limit(d)}）`;
     const range = `${d.min ?? 1}–${d.maxItems ?? '?'} 項`;

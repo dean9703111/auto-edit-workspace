@@ -4,7 +4,7 @@
 //
 // 規格檔 custom/<模板>.fill.json：
 //   { "template": "x-process", "prefix": "xproc", "beat": "A", "layout": "fullscreen", "when": "什麼時候用（一句話）",
-//     "slots": { "<名稱>": { "label": "…", "type": "text|number|icon|at|enum|list", "max": 10, "required": true, "with": ["<一組要一起寫的欄位>"],（number 也可以寫 min、max）
+//     "slots": { "<名稱>": { "label": "…", "type": "text|number|icon|at|enum|list|shot", "max": 10, "required": true, "with": ["<一組要一起寫的欄位>"],（number 也可以寫 min、max）
 //                "const": "RING"（把 script 的 const RING = …; 換成這個值）, "ref": "T{n}"（at：換掉 Tn = P.at('…') 的句號）,
 //                list：{ "min": 3, "maxItems": 4, "item": { "text": {…}, "icon": {…}, "at": { "type": "at", "ref": "T{n}" } } } } },
 //     "sample": {…}（和模板原文相同的值，測試用它驗證標記沒有改到模板）,
@@ -33,6 +33,7 @@ import { textWidth } from './time.mjs';
 import { BEAT_HEADER, BEAT_HEADER_ILLUS } from './audit-beats.mjs';
 import { rewriteIfSame, withLock } from './atomic.mjs';
 import { iconHint } from './icon-alias.mjs';
+import { shotRel, isShotImage, isShotSeg } from './shots.mjs';
 import { loadPics, findPics, picSrc } from './pics.mjs';
 
 const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 16);
@@ -93,6 +94,10 @@ export function validateSlots(spec, slots, { icons } = {}) {
       if (icons && !icons.get(String(v))) errors.push(`${label}：找不到圖示「${v}」（kit/icons.json；${iconHint(v, icons.names || [])}）`);
     } else if (t === 'at') {
       if (typeof v !== 'string' || !/^#\d+/.test(v)) errors.push(`${label}：要寫句號（#N、#N@詞），現在是「${v}」`);
+    } else if (t === 'shot') {
+      // 036 截圖：圖片檔（assets/images、assets/screen 的 .png .jpg .webp）或這一集某一段的 id；檔在不在、段在不在 build 查（lib/shots.mjs）
+      const okImg = isShotImage(v) && d.from !== 'segment', okSeg = isShotSeg(v) && d.from !== 'image';
+      if (!okImg && !okSeg) errors.push(`${label}：${d.from === 'segment' ? '要寫這一集前面某一段的 id（例 "s0106"）' : d.from === 'image' ? '要寫圖片檔（assets/images/…、assets/screen/… 的 .png .jpg .webp）' : '寫圖片檔（assets/images/… 的 .png .jpg .webp）或這一集某一段的 id（例 "s0106"）'}，現在是「${v}」`);
     } else if (t === 'enum') {
       if (!(d.options || []).includes(v)) errors.push(`${label}：要是 ${(d.options || []).join('／')} 其中之一，現在是「${v}」`);
     }
@@ -190,6 +195,8 @@ function fillElements(body, spec, slots, { icons, keepIcons }, errors) {
       errors.push(`data-fill="${key}" 沒有值：選填欄位要用 @if 包住`);
       return all;
     }
+    // 036 截圖：換成 <img>（檔由 build 產生在 assets/shots/，lib/shots.mjs）；keepIcons（範例比對）時留著模板原本的示意圖
+    if (d.type === 'shot') return keepIcons ? `${open}${inner}</${tag}>` : `${open}<img src="${esc(shotRel(String(v)))}" alt=""></${tag}>`;
     if (d.type === 'icon') {
       if (keepIcons) return `${open}${inner}</${tag}>`;
       const svg = icons?.get(String(v));

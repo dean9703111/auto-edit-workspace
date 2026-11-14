@@ -208,7 +208,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 ### 3.2 第一層欄位
 
-`theme`、`style`、`format`、`speakerSide`、`chapterBadge`、`look`、`bed`、`outro`、`captionStyle` 這幾個設定用 `node shared/template/tools/build.mjs --project projects/<專案> --set "<鍵>=<值>"` 改（好幾個用 `;` 隔開，例 `--set "theme=dark;look.slim=0.6"`；拿掉用 `--unset "<鍵>"`；能寫的鍵和值看 `build.mjs --help`），不手改 plan.json。
+`theme`、`style`、`format`、`speakerSide`、`chapterBadge`、`chapterMap`、`look`、`bed`、`outro`、`captionStyle` 這幾個設定用 `node shared/template/tools/build.mjs --project projects/<專案> --set "<鍵>=<值>"` 改（好幾個用 `;` 隔開，例 `--set "theme=dark;look.slim=0.6"`；拿掉用 `--unset "<鍵>"`；能寫的鍵和值看 `build.mjs --help`），不手改 plan.json。
 
 | 欄位 | 必填 | 值 | 說明 |
 |---|---|---|---|
@@ -225,6 +225,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `bed` | | 物件 | 底樂（選用）：`{ "music": "<曲名>" }` 整支片墊一首配樂，講話時自動壓低，片頭淡入、片尾（或片尾配樂起播前）淡出；`volume` 選填（dB）。這一集不要寫 `{ "music": null }`。曲名看 `music.mjs list`；使用者要底樂時才寫（`auto-edit-style` 的 `references/music.md`） |
 | `ending` | | `false` 或物件 | 片尾模板（工作區用 `brand.mjs ending` 設定才有）：`false`＝這一集不要片尾卡、訂閱動畫；`{ "quote": "<句子>" }` 換這一集的片尾金句（`null`＝不放）、`{ "subscribe": "#N" }` 指定訂閱動畫跟哪一句（`null`＝不放）。沒寫就照工作區設定（金句取講稿最後的 `>` 引言、沒有就用最後一張金句字卡；訂閱動畫找最後四分之一講到「訂閱」的那句）。用 `build.mjs --set ending=false`、`--set "ending.quote=…"` 改 |
 | `chapterBadge` | | `true`（預設）或 `false` | 章節角標自動常駐右上角：章節開始（01 章節轉場結束；沒有 01 時是 02 章節角標段開始）一直到下一章或片尾配樂，子母畫面、全幕時自動淡出。不要常駐才寫 `false`（回到舊的行為：02 段只顯示那幾秒、`chtag` 附件照舊）。使用者說不要角標時才寫（`--set chapterBadge=false`） |
+| `chapterMap` | | `true` 或 `false`（預設，不寫） | 本集地圖：每個 01 章節轉場換成地圖版（整集的章排在一條路線上，前面的章打勾、鏡頭從上一章推到這一章，下面是章號牌＋章名；章名、章號從各個 01 段收，不放副標、圖示）。01 要有 3–8 個、橫式才換，其他 ⚠ 照舊。使用者說「要本集地圖」「章節要看得到進度」時才寫（`--set chapterMap=true`） |
 | `sections` | | 陣列 | 小節角標：`[{ "at": "#N", "name": "STEP 1｜設定資料夾" }]`（講稿 `###` 小節的第一句、小節名 ≤ 12 字）。有寫時右上角角標改成「章號＋目前小節」（寬度跟著小節名），子母畫面、全幕、錄影段也露出（橫式錄影段：旁邊有空位就放空位，沒有就貼錄影畫面右上角；錄影的 `steps` 和小節名重複時不畫、⚠ 請刪掉；說明卡、箭頭自動避開，紅框被蓋到 ⚠）。講稿有 `###` 而沒寫時 `--check` 會 ⚠ 並印出可以直接貼的整行 |
 | `theme` | | `"light"`（預設，不寫）或 `"dark"` | 主題：暗色時 build 換 `bg-*-dark.jpg`、所有合成 `<html data-theme="dark">`；只換顏色 token，版面與動態不變。剪輯台可以切；AI 只在使用者明說「暗色」時寫（`auto-edit-style` 步驟 6） |
 | `captionStyle` | | 物件 | 這一集的字幕樣式 `{ "look": "outline", "font": "wenkai", "size": 84, "weight": 700, "lift": 120 }`（只寫要改的，沒寫的照預設；`lift`＝往上移幾 px，橫式 0–400、直式 −350–350）。以後每集的預設在 `shared/setting.json`（`brand.mjs captions` 設定，位置橫式、直式分開記）；都沒有＝深底白字、思源黑體 76 px、原位。值的範圍看 `style.md`「字幕樣式可以換」。剪輯台「整支 → 字幕」可以調（字幕在預覽畫面上直接拖上下）；AI 只在使用者說「這集字幕…」時用 `--set "captionStyle.look=outline"`、`--set "captionStyle.lift=120"` 改（`auto-edit-style` 步驟 10） |
