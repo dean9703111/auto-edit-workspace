@@ -101,7 +101,7 @@ test('unsetPlan：拿掉鍵、空的 bed／outro 不留；還沒有 plan.json �
     { key: 'style', from: '藍圖', to: undefined }, { key: 'bed.music', from: 'bgm-cylinder-five', to: undefined }, { key: 'outro', from: { from: '#3', music: 'bgm-cylinder-five' }, to: undefined }]);
   assert.deepEqual(p.readPlan(), { version: 1, scenes: [] });
   assert.deepEqual(S.unsetPlan(p.proj, ['style']), [], '沒有就不動');
-  assert.throws(() => S.unsetPlan(p.proj, ['scenes']), msg(/^✖ plan\.json 沒有「scenes」這個設定可以拿掉 → 能寫的：.*、bed、outro$/));
+  assert.throws(() => S.unsetPlan(p.proj, ['scenes']), msg(/^✖ plan\.json 沒有「scenes」這個設定可以拿掉 → 能寫的：.*、bed、outro、captionStyle$/));
   const q = project(t);
   assert.throws(() => S.setPlan(q.proj, { 'bed.music': 'none' }), msg(/^✖ 還沒有 plan\.json，bed\.music 要等產生分鏡素材.*→ 能寫的：theme（light／dark）、style（/));
   assert.ok(!fs.existsSync(q.planFile));

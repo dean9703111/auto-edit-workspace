@@ -1,6 +1,6 @@
 ---
 name: auto-edit-style
-description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。配樂照 references/music.md、拆參考片照 references/reference-video.md 做。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「講者設定成…」「不要講者介紹」「設定片尾」「片尾換這張圖」「不要片尾」「生成配樂」「換配樂」「這集不要底樂」「片尾配樂」「用我自己的音樂」「拆這支參考片」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
+description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。配樂照 references/music.md、拆參考片照 references/reference-video.md 做。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「換字幕樣式」「字幕改白字黑框」「字幕大一點」「換字幕字體」「講者設定成…」「不要講者介紹」「設定片尾」「片尾換這張圖」「不要片尾」「生成配樂」「換配樂」「這集不要底樂」「片尾配樂」「用我自己的音樂」「拆這支參考片」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
 version: 0.1.0
 ---
 # 換風格
@@ -11,9 +11,10 @@ version: 0.1.0
 |---|---|---|---|---|
 | 色碼、色名或使用者的圖 | `brand.mjs`、`caps.mjs`、生圖、`brand.mjs bg` | `kit/brand.css`、`kit/pip-frame.png`、`bg-fs.jpg`、`bg-side.jpg`、`bg-ch.jpg`（＋`kit/look.json`） | `brand.mjs bg --verify` 0 個 ✖、使用者在停點 ⑥ 同意 | ⑥ 背景預覽 |
 | 「換暗色」「換主題」 | 步驟 6 | 這一集 plan.json 第一層的 `theme` | build 0 個 ✖ | — |
+| 「換字幕樣式」「字幕改白字黑框」「字幕大一點」「換字幕字體」「字幕往上移」 | 步驟 10 | 以後每集：`shared/setting.json` 的 `captions`；只有這一集：plan.json 第一層的 `captionStyle` | brand.mjs 印 `✓ 字幕樣式預設：…`；有專案時 build 印 `字幕樣式：…` | — |
 | 「有哪些風格」「這集用 XX 風格」「整個換成 XX」 | 步驟 7 | 這一集 plan.json 第一層的 `style`，或 `brand.mjs use` 換掉 `shared/template/` 那幾個檔 | `brand.mjs list` 的 ● 是對的那包、build 0 個 ✖ | — |
 
-路由規則的唯一定義：USAGE-reference.md R9.3；背景圖規格與留空區：R9.2。這支 Skill 會動到 `shared/`，只透過工具寫這幾樣（AGENTS.md 規則 1）：`brand.mjs` 寫 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`bg-*.jpg`，`brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪），`brand.mjs speaker`、`brand.mjs ending` 寫 `shared/setting.json`（`ending` 另外把檔案複製進 `shared/brand/`），`look.mjs default` 寫 `kit/look.json`（步驟 5）。這一集的 plan.json 設定一律用 `build.mjs --set`／`--unset` 改，不手改。
+路由規則的唯一定義：USAGE-reference.md R9.3；背景圖規格與留空區：R9.2。這支 Skill 會動到 `shared/`，只透過工具寫這幾樣（AGENTS.md 規則 1）：`brand.mjs` 寫 `kit/brand.css`、`kit/pip-frame.png`、`kit/pip-frame-v.png`、`bg-*.jpg`，`brand.mjs pack` 新增 `shared/template/styles/<名稱>/`（已經有的包不改、不刪），`brand.mjs speaker`、`brand.mjs ending`、`brand.mjs captions` 寫 `shared/setting.json`（`ending` 另外把檔案複製進 `shared/brand/`），`look.mjs default` 寫 `kit/look.json`（步驟 5）。這一集的 plan.json 設定一律用 `build.mjs --set`／`--unset` 改，不手改。
 
 ## 開始前
 
@@ -25,6 +26,7 @@ version: 0.1.0
 | 使用者說「換暗色」「換主題」「改回亮色」 | 只做步驟 6 |
 | 使用者說「有哪些風格」「這集用 XX 風格」「換回預設」 | 只做步驟 7 |
 | 使用者說「做一個風格包」「換成我的風格」 | 步驟 1–4，第 4 步存成新的一包 |
+| 使用者說「換字幕樣式」「字幕改白字黑框」「字幕大一點」「換字幕字體」 | 只做步驟 10 |
 | 使用者說「生成配樂」「做配樂」「換配樂」「加底樂」「這集不要底樂」「用我自己的音樂」 | 不做下面的步驟，改照 `references/music.md`（選用；沒人要求就不加底樂、不裝 ACE-Step） |
 | 使用者說「拆這支參考片」「分析這支影片怎麼剪」 | 不做下面的步驟，改照 `references/reference-video.md`（只出報告，不改 `shared/`） |
 
@@ -120,6 +122,16 @@ node shared/template/tools/brand.mjs ending
 
 影片結束後接一張片尾卡（黑底、圖置中、右邊一個字一個字打出片尾金句），講到「訂閱」那句放訂閱動畫；檔案複製進 `shared/brand/`、寫 `shared/setting.json`（都不進版控）。預設沒有片尾。片尾金句每集自動取講稿最後的 `>` 引言，沒有就用最後一張金句字卡。只改一項就只給那個旗標；以後不要：`brand.mjs ending off`。只有這一集：`build.mjs --project projects/<專案> --set ending=false`（不要片尾）、`--set "ending.quote=<句子>"`（換金句；`none`＝不放）、`--set ending.subscribe=#N`（訂閱動畫跟哪一句）。直式、剪映素材不放。這一步不用停點 ⑥。
 完成判準：第 2 行印 `片尾卡：<圖>…`；有專案時重跑 build 印 `片尾卡：影片結束後接 … 秒`。
+
+**10. 字幕樣式**（使用者說「換字幕樣式」「字幕改白字黑框」「字幕大一點」「字幕粗一點」「換字幕字體」「字幕往上移」「短影音字幕往上」）
+
+```
+node shared/template/tools/brand.mjs captions
+node shared/template/tools/brand.mjs captions [--look outline] [--font wenkai] [--size 84] [--weight 700] [--lift-landscape 0] [--lift-portrait 120]
+```
+
+第 1 行印目前的預設和每個參數能寫的值；第 2 行只給使用者說要改的那幾項（「白字黑框」＝`--look outline`、「黃字」＝`yellow`、「白底」＝`light`、「主色底」＝`brand`；「大一點」＝目前的字級 ＋8，上限 96；「粗一點」＝往上一級；「往上移一點」＝目前的位置 ＋60 px，短影音、直式用 `--lift-portrait`，長片、橫式用 `--lift-landscape`，往下寫負的 `--lift-portrait=-80`）。整支影片的字幕一起變，寫 `shared/setting.json`，以後每集照它；上下位置橫式、直式分開記。只有這一集：`build.mjs --project projects/<專案> --set "captionStyle.look=outline"`（鍵：`captionStyle.look／font／size／weight／lift`；拿掉：`--unset captionStyle`）。回到原本：`brand.mjs captions off`。使用者想邊看邊調時，請他開剪輯台「整支 → 字幕」。這一步不用停點 ⑥。
+完成判準：印 `✓ 字幕樣式預設：…`（或 `--set` 的 ✓）；有專案時重跑 build 印 `字幕樣式：…`，把那一行貼給使用者。
 
 ## 停點
 

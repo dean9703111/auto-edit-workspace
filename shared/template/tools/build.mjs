@@ -95,6 +95,7 @@ import { floorFrame, r3, clock2, clock2r } from './lib/time.mjs';
 import { resolveScene, sampleSeg, fullScene } from './lib/scenes.mjs';
 import { assembleScene, sceneParts, hashOf, verifyHash } from './lib/assemble.mjs';
 import { buildCaptions, captionWarnings } from './lib/captions.mjs';
+import { CAP_FONTS, EXTRA_FONT_FILES, fontFiles, fontLicense } from './lib/caption-style.mjs';
 import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
 import { buildMain, buildPreview, KIT_LINKS, withTheme } from './lib/main.mjs';
 import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, encodeRetime, redactImage, blackDetect, extractFrames, rawFrame, writeJpg, transcriptFresh } from './lib/ff.mjs';
@@ -729,7 +730,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     const res = resolvePlan(ctx(videoDur, voiceOnly));
     const spk = speakerIssues(speaker, res);
     res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res), ...spk.errors);
-    const capW = captionWarnings(cues, C);
+    const capW = captionWarnings(cues, C, res.captionStyle);
     res.errors.unshift(...fills.errors);
     res.warnings.unshift(...fills.warnings, ...cp.warnings, ...boxWarnings(plan, src, C), ...textSyncOffWarnings(P, plan), ...spk.warnings);
     if (P.project && res.tm) {
@@ -799,7 +800,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     if (!(l.startsWith('⚠ ') && res.warnings.includes(l.slice(2)))) log(l);
   }
   printIssues(res, log, flags);
-  for (const w of captionWarnings(cues, C)) log(`⚠ ${w}`);
+  for (const w of captionWarnings(cues, C, res.captionStyle)) log(`⚠ ${w}`);
   if (res.errors.length) {
     log(`\n未通過：${res.errors.length} 個錯誤，沒有產生任何檔案。照 → 後面的建議改 plan.json 再跑一次。`);
     return { ok: false, res };
@@ -826,7 +827,8 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     // 字卡動態裡寫的是相對路徑 fx-kit.js：render 以子合成檔的位置解析（compositions/），HyperFrames 播放器以專案根目錄解析，兩處都放
     files.push(['fx-kit.js', kit]);
   }
-  const cap = buildCaptions(capCues, { duration: outDur, blackout: res.blackout || [], canvas: C });
+  const capStyle = res.captionStyle;   // 035 字幕樣式（預設＝null）
+  const cap =buildCaptions(capCues, { duration: outDur, blackout: res.blackout || [], canvas: C, style: capStyle });
   files.push([cap.file, cap.html]);
   const bgOne = fs.existsSync(path.join(P.templateDir, 'bg.jpg'));
   // 風格包（plan.json "style"）：包裡有的檔先用，沒有的退回 shared/template/ 目前那一份
@@ -888,7 +890,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     if (!m) throw new Error('--test 要寫成「起點,秒數」，例如 --test 41,4');
     const t0 = Number(m[1]), len = Number(m[2]);
     if (t0 >= outDur) throw new Error(`--test 起點 ${t0}s 超過影片長度 ${outDur}s`);
-    const capT = buildCaptions(capCues, { duration: r3(Math.min(len, outDur - t0)), offset: t0, compId: 'captions-test', blackout: res.blackout || [], canvas: C });
+    const capT = buildCaptions(capCues, { duration: r3(Math.min(len, outDur - t0)), offset: t0, compId: 'captions-test', blackout: res.blackout || [], canvas: C, style: capStyle });
     files.push([capT.file, capT.html]);
     test = buildMain({ ...mainOpts, captions: capT, test: { t0, len } });
     test.t0 = t0;
@@ -925,7 +927,11 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   if (P.project) for (const d of OUTPUT_DIRS) fs.mkdirSync(path.join(P.project, d), { recursive: true });
   // kit 的畫廊與給工人看的風格說明不進專案（illus-gallery.jpg 1.7 MB）；illus.js／illus.css 照常複製
   const kitSkip = ['icons.json', 'illus-gallery.html', 'illus-gallery.jpg', 'illus-style.md', 'style-switch.js'];
-  let kitN = copyDir(path.join(P.templateDir, 'kit'), path.join(P.out, 'kit'), [...kitSkip, ...PACK_KIT]);
+  // 035：字幕另外的字體只複製這一集選到的那一個（每個 3–17 MB），授權檔也一樣
+  const capFont = capStyle ? CAP_FONTS[capStyle.font] : null;
+  const capKeep = new Set([...fontFiles(capStyle).map((x) => x.file), ...(capFont?.files.length ? [fontLicense(capFont)] : [])]);
+  const fontSkip = EXTRA_FONT_FILES.filter((f) => !capKeep.has(f));
+  let kitN = copyDir(path.join(P.templateDir, 'kit'), path.join(P.out, 'kit'), [...kitSkip, ...PACK_KIT, ...fontSkip]);
   // 主色與外框：風格包的（沒有就 shared/template/kit/ 的）；比內容，換包時同樣大小的 brand.css 也會換
   for (const f of PACK_KIT) {
     const src = localDesign && fs.existsSync(path.join(localDesign.dir, f)) ? path.join(localDesign.dir, f) : pack && fs.existsSync(path.join(pack, f)) ? path.join(pack, f) : path.join(P.templateDir, 'kit', f);

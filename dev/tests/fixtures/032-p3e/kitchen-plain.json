@@ -5012,5 +5012,7 @@
     860
    ]
   }
- }
+ },
+ "captionStyle": null,
+ "captionFrom": "default"
 }

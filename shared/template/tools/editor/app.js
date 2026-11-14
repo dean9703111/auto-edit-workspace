@@ -10,6 +10,7 @@ import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
 import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate, freezeAt, joinAt, isPlain, trimModel } from './speed.mjs';
 import { transitionOf, speedSummary } from './motion.mjs';
 import { SimPreview, PlayerPreview } from './preview.js';
+import { CAP_LOOKS, CAP_FONTS, CAP_WEIGHTS, CAP_SIZE, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, captionGeom, captionRootVars, captionFontFace, describeCaptionStyle, CAP_VARS, CAP_LIFT, clampLift, describeLift } from '/lib/caption-style.mjs';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -40,7 +41,7 @@ const app = {
   edit: defaultEdit(), savedEdit: defaultEdit(), base: null, sfxMemory: {}, canStash: false,
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
   report: null, reportReady: false, auditIssues: null, hiddenChecks: new Set(), requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
-  voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
+  voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cap: null, savedCap: null, capDefault: true, cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
   side: 'insp', t: 0, mode: 'sim', stopAt: null, outDur: 0, ver: 0, drawRequested: true, rate: 0, loud: null,
@@ -152,8 +153,8 @@ app.snapCandidates = () => {
 // ---------- 快照、復原 ----------
 const editableScenes = () => app.scenes;
 // 快照記著它是對哪一版檔案算的（base）：自動存檔之後檔案已經往前走，復原時要先把檔案換回那一版
-const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme });
-const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme });
+const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap });
+const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap });
 const isDirty = () => app.savedSnap !== '' && dirtySnap() !== app.savedSnap;
 
 function normalize() {
@@ -193,7 +194,7 @@ app.gestureEnd = (commit = true) => {
 function restore(s) {
   const o = JSON.parse(s);
   app.edit = normEdit(o.edit);
-  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme;
+  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap;
   app.lastCoalesce = null;
   if (app.selection?.kind === 'cue' && !app.cues.some((c) => c.n === app.selection.id)) app.selection = null;
   changed({ inspector: true });
@@ -346,6 +347,7 @@ function changed({ inspector = false } = {}) {
   recompute();
   if (timeline.setAnimRows(app.animRows)) rebuildHeads();
   updateLookCss();
+  applyCapPreview();
   if (app.selection && !selectionExists(app.selection)) app.selection = null;
   renderHeader(); renderTimes(); renderStatus(); renderHeads(); renderCapButtons();
   if (inspector && !typingInInspector()) renderInspector();
@@ -776,6 +778,8 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   app.look = clone(app.savedLook);
   app.savedTheme = normTheme(app.plan0.theme);
   app.theme = app.savedTheme;
+  app.savedCap = normCap(app.plan0.captionStyle);
+  app.cap = clone(app.savedCap);
   app.scenes = clone(Array.isArray(app.plan0.scenes) ? app.plan0.scenes : []);
   app.cues = clone(app.cues0);
   app.srtOps = [];
@@ -830,6 +834,7 @@ function applyKept(kept) {
   app.edit = normEdit({ ...app.savedEdit, ...(kept.edit || {}) });
   if ('look' in kept) app.look = kept.look;
   if ('theme' in kept) app.theme = kept.theme;
+  if ('cap' in kept) app.cap = kept.cap;
   if (kept.ops?.length && kept.srtHash === app.base.srtHash) {
     const rr = replay(app.cues0, { scenes: app.scenes }, kept.ops, { videoDur: app.dur });
     if (!rr.errors.length) { app.cues = rr.cues; app.scenes = rr.plan.scenes; app.srtOps = kept.ops; } else toast(`字幕的修改套不上最新的檔案，已放棄：${rr.errors[0]}`, 'warn', 6000);
@@ -1181,17 +1186,20 @@ function applySaved(d, { keepLocal = false, sentOps = 0, fallbackEdit = null } =
   app.savedEdit = normEdit(d.edit || fallbackEdit);
   app.savedLook = normLook(app.plan0.look);
   app.savedTheme = normTheme(app.plan0.theme);
+  app.savedCap = normCap(app.plan0.captionStyle);
   if (d.look) app.server.look = d.look;
+  if (d.captionStyle) app.server.captionStyle = d.captionStyle;
   if (keepLocal) {
     app.srtOps = app.srtOps.slice(sentOps);
     // 正在拖的快照也要換基準：沒拖動就放開會還原成快照，不能把已經存好的字幕操作再送一次
     if (app.gesture) { const g = JSON.parse(app.gesture); g.ops = g.ops.slice(sentOps); g.base = app.base; app.gesture = JSON.stringify(g); }
-    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme });
+    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap });
     return;
   }
   app.edit = clone(app.savedEdit);
   app.look = clone(app.savedLook);
   app.theme = app.savedTheme;
+  app.cap = clone(app.savedCap);
   app.scenes = clone(app.plan0.scenes || []);
   app.cues = clone(app.cues0);
   app.srtOps = [];
@@ -1219,6 +1227,7 @@ async function saveOnce({ notify, retry = 0 }) {
   if (app.srtOps.length) body.srt = { ops: app.srtOps };
   if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}) } : null;   // 美顏 0＝關，不寫
   if (app.theme !== app.savedTheme) body.theme = app.theme;
+  if (!same(app.cap, app.savedCap)) body.captionStyle = app.cap;
   const sentSnap = dirtySnap(), sentOps = app.srtOps.length;
   app.busy = true;
   app.inFlight = true;
@@ -1380,7 +1389,8 @@ function keepState() {
   for (const k of Object.keys(app.edit)) if (!same(app.edit[k], app.savedEdit[k])) edit[k] = clone(app.edit[k]);
   return { edit, segs: raw, ops: clone(app.srtOps), srtHash: app.base?.srtHash ?? null,
     ...(!same(app.look, app.savedLook) ? { look: clone(app.look) } : {}),
-    ...(app.theme !== app.savedTheme ? { theme: app.theme } : {}) };
+    ...(app.theme !== app.savedTheme ? { theme: app.theme } : {}),
+    ...(!same(app.cap, app.savedCap) ? { cap: clone(app.cap) } : {}) };
 }
 const keepIfDirty = () => (isDirty() ? keepState() : null);
 
@@ -1698,6 +1708,90 @@ function renderNext() {
   el.hidden = !html;
 }
 
+// ---------- 字幕樣式（035；plan.json 第一層 "captionStyle"＝這一集，shared/setting.json 的 captions＝以後每集的預設；lib/caption-style.mjs）----------
+// 一組設定管整支影片的每一則字幕。改了快速預覽、完成影片預覽馬上變（改字幕圖層的 data-cap 與 --cap-* 變數）；按「更新預覽」才做進去
+// 上下位置（lift，px，往上為正）：在預覽畫面上直接拖字幕，或用滑桿；預設橫式、直式分開記（setting.json 的 captions.lift.landscape／portrait）
+const normCap = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? sanitizeCaptionStyle(v).style ?? null : null);
+const capSetting = () => app.server?.captionStyle?.setting ?? undefined;
+const capFmt = () => (app.canvas().format === 'portrait' ? 'portrait' : 'landscape');
+const capFmtZh = () => (capFmt() === 'portrait' ? '直式' : '橫式');
+function capEff() { return resolveCaptionStyle({ plan: { captionStyle: app.cap ?? undefined }, settings: { captions: capSetting() }, format: capFmt() }).style; }
+// 快速預覽（#simCapLayer）與完成影片預覽（preview.js 的 applyCaption）共用：root 的 data-cap、--cap-* 變數、字體的 @font-face
+app.capPreview = () => { const st = capEff(); const c = app.canvas(); return { style: st, root: captionRootVars(st, c), face: captionFontFace(st, '/kit/fonts/'), geom: captionGeom(st, c) }; };
+function applyCapPreview() {
+  const L = $('#simCapLayer');
+  if (!L) return;
+  const p = app.capPreview();
+  for (const k of CAP_VARS) L.style.removeProperty(k);
+  if (p.root) { L.dataset.cap = p.root.look; for (const [k, v] of p.root.vars) L.style.setProperty(k, v); } else delete L.dataset.cap;
+  let face = document.getElementById('capFace');
+  if (!face) { face = document.createElement('style'); face.id = 'capFace'; document.head.appendChild(face); }
+  if (face.textContent !== p.face) face.textContent = p.face;
+  const cap = $('#simCaption');
+  if (cap && app.canvas().captionBottom != null) cap.style.bottom = `${p.geom.bottom}px`;
+  placeCapDrag(p.geom);
+}
+let capDefaultTimer = null;
+function pushCapDefault() {
+  clearTimeout(capDefaultTimer);
+  if (!app.capDefault) return;
+  capDefaultTimer = setTimeout(async () => {
+    const r = await api('POST', '/api/caption-default', { style: capEff(), format: capFmt() });
+    if (r.ok && r.data?.captionStyle) app.server.captionStyle = r.data.captionStyle;
+    else toast(r.data?.message || '預設存不進 shared/setting.json', 'warn', 5000);
+  }, 600);
+}
+function setCap(patch, opts = {}) {
+  const r = sanitizeCaptionStyle({ ...capEff(), ...patch });
+  if (!r.style) { toast(r.errors[0], 'warn', 5000); return; }
+  for (const n of r.notes) toast(n, 'warn', 3500);
+  if (mutate(() => { app.cap = r.style; }, { inspector: true, ...opts })) pushCapDefault();
+  else renderInspector();
+}
+function inspCapStyle() {
+  const st = capEff(), c = app.canvas(), portrait = c.format === 'portrait', LL = CAP_LIFT[capFmt()];
+  const font = CAP_FONTS[st.font];
+  const looks = Object.entries(CAP_LOOKS).map(([k, v]) => `<button class="${st.look === k ? 'on' : ''}" data-act="capLook" data-v="${k}" aria-pressed="${st.look === k}" data-tip="${esc(v.note)}">${v.zh}</button>`).join('');
+  const fonts = Object.entries(CAP_FONTS).map(([k, f]) => `<option value="${k}"${st.font === k ? ' selected' : ''}>${f.zh}</option>`).join('');
+  const weights = Object.entries(CAP_WEIGHTS).map(([w, z]) => {
+    const okW = font.weights.includes(Number(w));
+    return `<button class="${st.weight === Number(w) ? 'on' : ''}${okW ? '' : ' is-disabled'}" data-act="capWeight" data-v="${w}" aria-pressed="${st.weight === Number(w)}" data-why="${okW ? '' : esc(`${font.zh}沒有「${z}」`)}" data-tip="${okW ? '' : esc(`${font.zh}沒有「${z}」`)}">${z}</button>`;
+  }).join('');
+  const from = app.cap ? '這一集' : capSetting() ? '預設（shared/setting.json）' : '原本的';
+  return `<div class="ip-sub">字幕樣式 <span class="dim">${from}</span></div>
+    <div class="seg-btns cap-looks" role="group" aria-label="字幕樣式">${looks}</div>
+    <div class="ip-row"><label>字體</label><select aria-label="字幕字體" data-f="capFont">${fonts}</select></div>
+    ${sliderRow('大小', 'capSize', st.size, { min: CAP_SIZE.min, max: CAP_SIZE.max, step: 2, out: `${st.size} px`, def: CAP_SIZE.def, tip: `字級（px），預設 ${CAP_SIZE.def}${portrait ? `；直式最大 ${CAP_SIZE.portraitMax}（一則 10 字要放得下）` : ''}` })}
+    <div class="ip-row"><label>粗細</label><div class="seg-btns cap-weights" role="group" aria-label="字幕粗細">${weights}</div></div>
+    ${sliderRow('上下位置', 'capLift', st.lift, { min: LL.min, max: LL.max, step: 2, out: describeLift(st.lift), def: 0, tip: `往右＝往上。${capFmtZh()}可以 ${LL.min < 0 ? `往下 ${-LL.min}、` : ''}往上 ${LL.max} px；也可以在預覽畫面上直接拖字幕` })}
+    <label class="ip-check"><input type="checkbox" data-f="capDefault"${app.capDefault ? ' checked' : ''}> 之後的影片也用這個（位置只記${capFmtZh()}）</label>
+    <div class="ip-btns"><button class="small ghost" data-act="capLift0"${st.lift ? '' : ' disabled'} data-tip="上下位置回到原位（雙擊預覽畫面上的字幕也可以）">回到原位</button><button class="small ghost" data-act="capReset" data-tip="深底白字、思源黑體 76 px 一般、原位（照剪映量的）">回到原本的樣子</button></div>
+    <p class="ip-note">整支影片的字幕一起變。字幕可以在預覽畫面上直接拖上下（方向鍵微調，Shift 一次 10 px）；橫式、直式的位置分開記。按「更新預覽」才會做進去。字體都是開源字體（SIL OFL），可以商用。</p>`;
+}
+// 預覽畫面上的字幕框（#capDrag）：滑過出現虛線框，拖上下＝改上下位置；放開才進復原清單、寫預設
+function placeCapDrag(g) {
+  const el = $('#capDrag');
+  if (!el) return;
+  const { H } = app.canvas(), LL = CAP_LIFT[capFmt()];
+  el.style.top = `${((g.top - 12) / H) * 100}%`;
+  el.style.height = `${((g.h + 24) / H) * 100}%`;
+  const label = `字幕${describeLift(g.lift)}（${capFmtZh()}）`;
+  el.firstElementChild.textContent = label;
+  el.setAttribute('aria-valuemin', String(LL.min));
+  el.setAttribute('aria-valuemax', String(LL.max));
+  el.setAttribute('aria-valuenow', String(g.lift));
+  el.setAttribute('aria-valuetext', label);
+}
+const capDrag = { start: null };
+function capDragEnd(commit) {
+  const d = capDrag.start;
+  if (!d) return;
+  capDrag.start = null;
+  $('#capDrag').classList.remove('dragging');
+  app.gestureEnd(commit);
+  if (commit && capEff().lift !== d.lift) pushCapDefault();
+}
+
 // ---------- 主題（亮／暗；plan.json 第一層 "theme"，specs/010-motion-v2/design-system.md §10）----------
 // 不寫＝亮色。完成影片預覽在切換時直接改播放器 iframe 的 <html data-theme>（build 也是寫在主合成的 <html>），不用重新產生就看得到配色
 const normTheme = (v) => (v === 'dark' ? 'dark' : 'light');
@@ -1837,9 +1931,10 @@ function inspWhole() {
     <p class="ip-note">點主軌上緣的菱形可以單獨設定：空心＝無、白＝過黑、黃＝放大。</p>`)}
   ${foldSec('cuts', `剪掉的範圍：${e.cuts.length ? `${e.cuts.length} 段，共 ${fmtSec(cutTotal(e.cuts))}` : '沒有'}`, `
     <ol class="cut-list">${e.cuts.length ? e.cuts.map(([a, b], i) => `<li data-i="${i}"><span class="rng" data-act="gocut" data-i="${i}">${fmt(a, 1)} – ${fmt(b, 1)}</span><span class="dim">${fmtSec(b - a)}</span><button class="small ghost" data-act="restore" data-i="${i}">恢復</button></li>`).join('') : '<li class="empty">還沒有剪掉任何範圍</li>'}</ol>`)}
-  ${foldSec('caps', `字幕：${app.cues.length} 句${longCaps ? `，${longCaps} 句太長` : ''}`, `
+  ${foldSec('caps', `字幕：${app.cues.length} 句${longCaps ? `，${longCaps} 句太長` : ''}｜${describeCaptionStyle(capEff())}`, `
     <div class="ip-row"><span class="k">句數</span><span class="v">${app.cues.length} 句${longCaps ? `，<span class="warn-ink">${longCaps} 句超過 ${capMax()} 字</span>` : ''}</span></div>
-    <div class="ip-btns"><button class="small" data-act="find">尋找與取代</button></div>`)}`;
+    <div class="ip-btns"><button class="small" data-act="find">尋找與取代</button></div>
+    ${inspCapStyle()}`)}`;
 }
 function inspCue(c) {
   if (!c) return '';
@@ -2235,6 +2330,10 @@ function onInspInput(e) {
     outEl(f).textContent = lookOut(k, num); outEl(f).classList.toggle('changed', r2(num) !== lookKit()[k]);
     return;
   }
+  if (f === 'capSize') { outEl(f).textContent = `${num} px`; outEl(f).classList.toggle('changed', num !== CAP_SIZE.def); setCap({ size: num }, { coalesce: f, inspector: false }); return; }
+  if (f === 'capLift') { outEl(f).textContent = describeLift(num); outEl(f).classList.toggle('changed', num !== 0); setCap({ lift: num }, { coalesce: f, inspector: false }); return; }
+  if (f === 'capFont') { setCap({ font: el.value }); return; }
+  if (f === 'capDefault') { app.capDefault = el.checked; if (el.checked) pushCapDefault(); return; }
   if (f === 'fadeIn' || f === 'fadeOut') { mutate(() => { app.edit[f] = num; }, { coalesce: f }); outEl(f).textContent = num ? `${num.toFixed(1)} 秒` : '不淡'; return; }
   if (f === 'sfxVolume' && s) { setSeg(s.id, { sfxVolume: num === 0 ? undefined : num }, { coalesce: `sfxv-${s.id}` }); outEl(f).textContent = fmtDb(num); return; }
   if (f === 'mediaVol' && s) { setSeg(s.id, { volume: num }, { coalesce: `mv-${s.id}` }); outEl(f).textContent = fmtDb(num); return; }
@@ -2317,6 +2416,10 @@ function onInspClick(e) {
     case 'gapReq': setRequestsOpen(true); break;
     case 'lookReset': mutate(() => { app.look = null; }, { inspector: true }); return refreshFaces(0);
     case 'theme': mutate(() => { app.theme = normTheme(b.dataset.v); }, { inspector: true }); return;
+    case 'capLook': return setCap({ look: b.dataset.v });
+    case 'capWeight': return setCap({ weight: Number(b.dataset.v) });
+    case 'capReset': return setCap({ ...CAP_DEFAULT });
+    case 'capLift0': return setCap({ lift: 0 });
     case 'bulk': return bulkJoins(b.dataset.v);
     case 'restore': return restoreCut(Number(b.dataset.i));
     case 'gocut': { const c = app.edit.cuts[Number(b.dataset.i)]; app.select({ kind: 'cut', id: Number(b.dataset.i) }); app.seek(c[0]); timeline.ensureVisible(c[0], false); return; }
@@ -2950,6 +3053,40 @@ $('#tcInput').addEventListener('keydown', (e) => {
 $('#tcInput').addEventListener('blur', () => { $('#tcInput').hidden = true; $('#tc').hidden = false; tcShown = ''; renderTimes(); });
 // 時間軸上的字幕編輯框
 $('#capEditor').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); closeCapEditor(true); } else if (e.key === 'Escape') { e.preventDefault(); closeCapEditor(false); } e.stopPropagation(); });
+// 035 字幕上下拖曳：螢幕上移動幾 px 換成畫布 px（畫布高 ÷ 預覽框高），2 px 一格，離原位 12 px 內吸回原位；Esc 取消
+{
+  const el = $('#capDrag');
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || historyBlocked()) return;
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    el.focus({ preventScroll: true });
+    capDrag.start = { y: e.clientY, lift: capEff().lift, scale: app.canvas().H / ($('#stageBox').clientHeight || 1) };
+    app.gestureBegin();
+    el.classList.add('dragging');
+  });
+  el.addEventListener('pointermove', (e) => {
+    const d = capDrag.start;
+    if (!d) return;
+    let lift = Math.round((d.lift + (d.y - e.clientY) * d.scale) / 2) * 2;
+    if (Math.abs(lift) <= 12) lift = 0;
+    lift = clampLift(lift, capFmt());
+    if (lift === capEff().lift) return;
+    app.cap = { ...capEff(), lift };
+    applyCapPreview();
+  });
+  el.addEventListener('pointerup', () => capDragEnd(true));
+  el.addEventListener('pointercancel', () => capDragEnd(true));
+  el.addEventListener('lostpointercapture', () => capDragEnd(true));
+  el.addEventListener('dblclick', () => setCap({ lift: 0 }));
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && capDrag.start) { e.preventDefault(); e.stopPropagation(); capDragEnd(false); return; }
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault(); e.stopPropagation();
+    const step = (e.shiftKey ? 10 : 2) * (e.key === 'ArrowUp' ? 1 : -1);
+    setCap({ lift: clampLift(capEff().lift + step, capFmt()) }, { coalesce: 'capLift' });
+  });
+}
 $('#capEditor').addEventListener('blur', () => closeCapEditor(true));
 // 縮放
 $('#zoom').addEventListener('input', (e) => timeline.setZoom01(Number(e.target.value) / 1000));

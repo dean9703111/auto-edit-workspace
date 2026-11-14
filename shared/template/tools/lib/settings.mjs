@@ -5,6 +5,7 @@
 //     "music": { "bed": "<曲名>", "outro": "<曲名>", "acestep": {…} },             每一集預設的底樂、片尾配樂（music.mjs use／outro）、ACE-Step 在哪
 //     "ending": { "image": "book-cover.jpg", "seconds": 9.9, "quote": true, "subscribe": "subscribe.gif" } }
 //                                                                                 片尾模板：片尾卡的圖、長度、要不要片尾金句、訂閱動畫（檔案在 shared/brand/；brand.mjs ending；lib/ending.mjs）
+//     "captions": { "look": "outline", "font": "wenkai", "size": 84, "weight": 700 }   以後每集的字幕樣式（brand.mjs captions、剪輯台；lib/caption-style.mjs；只存和原本不一樣的欄位）
 //
 //   readSettings(sharedDir)             → { data, file, error }：檔案不在＝{}；不是合法 JSON＝error（data 是 {}）
 //   writeSetting(sharedDir, key, value) → file：只改這一個 key，其他設定留著；value 是 undefined 就拿掉；檔案壞了丟錯（不蓋掉使用者的檔）

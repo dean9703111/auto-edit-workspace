@@ -35,6 +35,12 @@
  *                                                       檔案複製進 shared/brand/。只改一項就只給那一個旗標（例 --seconds 8）
  *   brand.mjs ending off                                關掉片尾（拿掉設定；shared/brand/ 的檔留著）
  *
+ * 字幕樣式（035；shared/setting.json 的 captions＝以後每集的預設，這一集另外寫 plan.json captionStyle 或在剪輯台調；lib/caption-style.mjs）：
+ *   brand.mjs captions                                  看目前的預設與可選的值
+ *   brand.mjs captions [--look outline] [--font wenkai] [--size 84] [--weight 700] [--lift-landscape 0] [--lift-portrait 120]
+ *                                                       設定（只給要改的；沒給的照目前的預設）；上下位置橫式、直式分開記
+ *   brand.mjs captions off                              回到原本的深底白字（拿掉設定）
+ *
  * 背景圖（輸出都在暫存資料夾，不寫 shared/template/：使用者同意後才 pack --bg、use；auto-edit-style 步驟 2–4）：
  *   brand.mjs bg --tmp                                                    開一個暫存資料夾、印完整路徑
  *   brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]       HTML 路線：用 HyperFrames 的 Chrome 截成 bg-<kind>.jpg，
@@ -52,6 +58,7 @@ import { listPacks, packsJs, samePack, copyIfDiff, templatePathOf, PACK_KIT, PAC
 import { readSpeaker, validateSpeaker, SPEAKER_FILE, SET_CMD } from './lib/speaker.mjs';
 import { readSettings, writeSetting } from './lib/settings.mjs';
 import { readEndingSetting, ENDING, BRAND_DIR } from './lib/ending.mjs';
+import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle } from './lib/caption-style.mjs';
 import { ok, warn, fail, next, cmdLine, report } from './lib/say.mjs';
 import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
 import { stopLines } from './lib/stops.mjs';
@@ -387,6 +394,17 @@ const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與
       只改一項就只給那個旗標（例 brand.mjs ending --seconds 8）；--no-quote＝片尾卡只放圖。直式、剪映素材不放。
   node shared/template/tools/brand.mjs ending off
       關掉片尾（拿掉設定，shared/brand/ 的檔留著）。某一集不要：build.mjs --set ending=false
+
+  node shared/template/tools/brand.mjs captions
+      看字幕樣式的預設（shared/setting.json 的 captions）和每個參數可選的值。
+  node shared/template/tools/brand.mjs captions [--look outline] [--font wenkai] [--size 84] [--weight 700] [--lift-landscape 0] [--lift-portrait 120]
+      設定以後每集的字幕樣式（整支影片的每一則字幕一起變；只給要改的）。--look：box 深底白字（原本）、outline 白字黑框、
+      yellow 黃字黑框、light 白底黑字、brand 主色底；--font：noto-sans 思源黑體（內建）、noto-serif 思源宋體、wenkai 霞鶩文楷、
+      huninn jf open 粉圓、marker 霞鶩漫黑、iansui 芫荽（都是 SIL OFL，放在 kit/fonts/）；--size 60–96（直式最大 76）；
+      --weight 300／400／500／700／900（字體沒有的換成最近的）；--lift-landscape 橫式往上移 0–400 px；--lift-portrait 直式往上移
+      -350–350 px（往下寫負的：--lift-portrait=-80）。這一集不一樣：剪輯台「整支 → 字幕」（字幕可以直接拖上下）或 plan.json "captionStyle"。
+  node shared/template/tools/brand.mjs captions off
+      回到原本的深底白字、原位。
 
   背景圖（三張：fs 1920×1080、side 960×1080、ch 1920×1080；暗色是 bg-<kind>-dark.jpg）。輸出都先放暫存資料夾，
   不能在 shared/template/ 裡；使用者看過 preview.jpg 同意（停點 ⑥）後，用 pack --bg 存成風格包、use 套用，不要自己複製。
@@ -748,6 +766,67 @@ function endingCli(args) {
   return 0;
 }
 
+// ---------- 字幕樣式（035）----------
+
+const CAP_CMD = 'node shared/template/tools/brand.mjs captions --look outline --font noto-sans --size 76 --weight 700 --lift-portrait 120';
+const LIFT_FLAGS = { 'lift-landscape': 'landscape', 'lift-portrait': 'portrait' };
+function captionsCli(args) {
+  const o = { _: [] };
+  for (let i = 0; i < args.length; i++) {
+    if (!String(args[i]).startsWith('--')) { o._.push(args[i]); continue; }
+    const [k, inline] = splitFlag(args[i]);
+    if (['look', 'font', 'size', 'weight', 'kit', ...Object.keys(LIFT_FLAGS)].includes(k)) [o[k], i] = takeValue(args, i, k, inline, `例：${CAP_CMD}`);
+    else if (k !== 'help') throw new Error(`brand.mjs captions 沒有 --${k} 這個參數 → 例：${CAP_CMD}；回到原本：brand.mjs captions off`);
+  }
+  const kitDir = o.kit ? path.resolve(o.kit) : path.resolve(HERE, '..', 'kit');
+  const sharedDir = path.resolve(kitDir, '..', '..');
+  const cur = readSettings(sharedDir).data.captions;
+  const keys = ['look', 'font', 'size', 'weight', ...Object.keys(LIFT_FLAGS)];
+  if (o._[0] === 'off') {
+    if (o._.length > 1 || keys.some((k) => o[k] != null)) throw new Error('brand.mjs captions off 後面不用再寫別的');
+    writeSetting(sharedDir, 'captions', undefined);
+    console.log(ok('字幕樣式回到原本的深底白字、原位（拿掉 shared/setting.json 的 captions）；已經在 plan.json 寫了 captionStyle 的那幾集照它的'));
+    return 0;
+  }
+  if (o._.length) throw new Error(`brand.mjs captions 不收「${o._.join(' ')}」→ 例：${CAP_CMD}`);
+  if (keys.every((k) => o[k] == null)) {
+    for (const [fmt, zh] of [['landscape', '橫式'], ['portrait', '直式']]) {
+      const r = resolveCaptionStyle({ settings: { captions: cur }, format: fmt });
+      console.log(`字幕樣式預設（${zh}）：${describeCaptionStyle(r.style)}${r.from === 'setting' ? '（shared/setting.json 的 captions）' : '（原本的，沒設定）'}`);
+      if (fmt === 'landscape') for (const e of r.errors) console.log(`⚠ ${e}`);
+    }
+    console.log(`  --look            ${Object.entries(CAP_LOOKS).map(([k, v]) => `${k}（${v.zh}）`).join('、')}`);
+    console.log(`  --font            ${Object.entries(CAP_FONTS).map(([k, v]) => `${k}（${v.zh}）`).join('、')}`);
+    console.log(`  --size            ${CAP_SIZE.min}–${CAP_SIZE.max}（預設 ${CAP_SIZE.def}；直式最大 ${CAP_SIZE.portraitMax}）`);
+    console.log(`  --weight          ${Object.entries(CAP_WEIGHTS).map(([k, v]) => `${k}（${v}）`).join('、')}（字體沒有的換成最近的）`);
+    console.log(`  --lift-landscape  橫式往上移幾 px，${CAP_LIFT.landscape.min}–${CAP_LIFT.landscape.max}（0＝原位，貼著畫面底）`);
+    console.log(`  --lift-portrait   直式往上移幾 px，${CAP_LIFT.portrait.min}–${CAP_LIFT.portrait.max}（往下寫負的，例 --lift-portrait=-80）`);
+    console.log(`這一集不一樣：剪輯台「整支 → 字幕」調（字幕可以直接拖上下），或 plan.json 第一層寫 "captionStyle"`);
+    return 0;
+  }
+  const base = cur && typeof cur === 'object' && !Array.isArray(cur) ? cur : {};
+  const { lift: baseLift, ...want } = base;
+  for (const k of ['look', 'font']) if (o[k] != null) want[k] = String(o[k]);
+  for (const k of ['size', 'weight']) if (o[k] != null) want[k] = Number(o[k]);
+  const r = sanitizeCaptionStyle(want, '字幕樣式');
+  if (r.errors.length) throw new Error(r.errors.join('；'));
+  const lift = { ...(baseLift && typeof baseLift === 'object' ? baseLift : {}) };
+  for (const [flag, fmt] of Object.entries(LIFT_FLAGS)) {
+    if (o[flag] == null) continue;
+    const n = Number(o[flag]), L = CAP_LIFT[fmt];
+    if (!Number.isFinite(n) || n < L.min || n > L.max) throw new Error(`--${flag} 是字幕往上移幾 px，${L.min}–${L.max}（0＝原位），現在是「${o[flag]}」`);
+    lift[fmt] = Math.round(n);
+  }
+  const clean = Object.fromEntries(Object.entries(r.style).filter(([k, v]) => k !== 'lift' && v !== CAP_DEFAULT[k]));
+  const liftSet = Object.fromEntries(Object.entries(lift).filter(([, v]) => v));
+  if (Object.keys(liftSet).length) clean.lift = liftSet;
+  writeSetting(sharedDir, 'captions', Object.keys(clean).length ? clean : undefined);
+  for (const n of r.notes) console.log(`⚠ ${n}`);
+  for (const [fmt, zh] of [['landscape', '橫式'], ['portrait', '直式']]) console.log(ok(`字幕樣式預設（${zh}）：${describeCaptionStyle(resolveCaptionStyle({ settings: { captions: clean }, format: fmt }).style)}`));
+  console.log('寫在 shared/setting.json（不進版控）。之後每一集 build 就照這個；已經在 plan.json 寫了 captionStyle 的那幾集照它的。看樣子：剪輯台「整支 → 字幕」，或 build 後的完成影片預覽');
+  return 0;
+}
+
 // ---------- CLI ----------
 
 // 直式講者面板（009 FR-130）：1080×1920 透明，y 897–903 一條 6px 主色線（上半資訊面板／下半講者面板的分隔線，canvas.mjs pip.frame）
@@ -776,6 +855,7 @@ async function cli() {
   if (['list', 'use', 'pack'].includes(args[0])) return packCli(args[0], args.slice(1));
   if (args[0] === 'speaker') return speakerCli(args.slice(1));
   if (args[0] === 'ending') return endingCli(args.slice(1));
+  if (args[0] === 'captions') return captionsCli(args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
     if (!String(args[i]).startsWith('--')) { color = args[i]; continue; }

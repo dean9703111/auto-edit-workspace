@@ -64,6 +64,8 @@ export function loadLib(templateDir, projectDir = null) {
     // 片尾配樂的預設曲名（music.mjs outro）、片尾模板（brand.mjs ending）：每個人本機不一樣，測試用 AUTO_EDIT_NO_LOCAL_BRAND=1 關掉（033）
     outroDefault: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readSettings(sharedDir).data.music?.outro ?? null,
     ending: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readEndingSetting(sharedDir),
+    // 035 字幕樣式的預設（brand.mjs captions、剪輯台勾「之後的影片也用這個」）；這一集的 plan.json captionStyle 優先
+    captionDefault: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readSettings(sharedDir).data.captions ?? null,
     customDir: path.join(templateDir, 'custom'),
   };
 }

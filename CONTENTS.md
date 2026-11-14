@@ -22,7 +22,7 @@
 | 背景圖 | 亮色 3 張（全畫面 `bg-fs.jpg`、側邊欄 `bg-side.jpg`、章節轉場 `bg-ch.jpg`）＋暗色 3 張（`bg-*-dark.jpg`） | `shared/template/` | 說「換背景」，AI 縮放你給的圖，或用 Codex／HTML 產生，先給你看預覽再換 |
 | 講者調光、瘦臉、美顏 | 選用，預設關閉；建議值調光 0.8、瘦臉 0.6、美顏 0.5 | `shared/template/kit/look.json`（工具 `look.mjs`） | 構圖台、剪輯台都有開關和強度滑桿。臉部偵測在本機做、不上傳 |
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
-| 字型 | 3 套（Noto Sans TC、Google Sans Flex、等寬的 JetBrains Mono） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
+| 字型 | 3 套（Noto Sans TC、Google Sans Flex、等寬的 JetBrains Mono）＋字幕可選的 5 套（思源宋體、霞鶩文楷、jf open 粉圓、霞鶩漫黑、芫荽，約 60 MB） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
 | 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；常用的四個各有兩個升降半音的變體，同一顆在一集裡輪著放、不會一模一樣地重複；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處）。想用自己的音效：同名的 `.wav` 放進 `shared/sfx-local/`（不進版控）就會取代內建的，另外認得 tick、checkin、question、wow 四個自備角色 | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
 | 範例專案 | 原始講解 1 支、講稿、場地照 | `projects/example/`（`projects/` 底下只有它進版控，其他專案都不進） | 第一次照著做就有完成影片 |
 
@@ -41,7 +41,7 @@
 | `editor.mjs` 剪輯台 | 網頁介面：初剪的字幕預覽（字幕疊在畫面上，只有聲音的黑屏也看得到）、裁剪、調音量、淡入淡出與轉場、改字幕、改字卡上的字（完成影片預覽即時換字）、構圖台拖框、分鏡表（長片先看縮圖總覽）、修改單（選段寫想怎麼改，一行指令交給 AI）。所有修改自動存，存完還能復原。說明在 `shared/template/EDITOR.md` |
 | `versions.mjs` 段落版本 | 每一段留 v1、v2…，說「s12 用 v1」就退回；回饋輪 `begin`、`finish` 自動備份、存版本、寫紀錄；`finish --preview` 出左右對照影片 |
 | `deliver.mjs` 輸出 | 一條做完：測試片段、整支 render、驗收，有 3 個以上章節時寫 `output/youtube.txt`（YouTube 說明欄用的章節時間戳與配樂出處）；背景跑，停點 ④ 時就先低優先權 render，內容沒變就直接接手 |
-| `brand.mjs` 換風格 | 換色時自動檢查顏色看不看得清楚；`bg` 把 HTML 截成背景圖並檢查留空區；`list`／`use`／`pack` 列出、套用、建立風格包；`speaker` 設定講者 |
+| `brand.mjs` 換風格 | 換色時自動檢查顏色看不看得清楚；`bg` 把 HTML 截成背景圖並檢查留空區；`list`／`use`／`pack` 列出、套用、建立風格包；`speaker` 設定講者；`captions` 設定字幕樣式（5 種樣式、6 種字體、大小、粗細、上下位置；位置橫式、直式分開記） |
 | `capcut.mjs` 剪映素材 | 把完成影片拆成主軌 MP4、每段一支有透明通道的 MOV、字幕 SRT 和排法清單 |
 | `music.mjs` 配樂（選用） | 整支片的底樂：`add` 放自己的音樂、`gen` 用 ACE-Step 1.5 在本機生成 3 首候選並開試聽頁、`keep` 存進曲庫、`use` 設成每一集預設、`list`／`status` 看曲庫與安裝狀態。沒裝 ACE-Step 也能用自己的音樂 |
 | `look.mjs` 講者 | 偵測講者的臉、產生瘦臉與美顏底片和對照圖 `work/look-preview.jpg` |

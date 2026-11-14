@@ -20,6 +20,7 @@
 | `tools/build-icons.mjs` | 把 svg 圖示資料夾合併成 `icons.json` | `node dev/tools/build-icons.mjs <out.json> <dir1> <dir2> …` |
 | `tools/illus-gallery-shot.mjs` | 重截 `shared/template/kit/illus-gallery.jpg`（`kit/illus-gallery.html` 的整頁截圖，寬 1920）；illus.js／illus.css 改了或換了主色後重跑 | `node dev/tools/illus-gallery-shot.mjs`（要 HyperFrames 的 Chrome 與 ffmpeg） |
 | `tools/gallery-shot.mjs` | 重截 `shared/template/gallery/<情境>.jpg`（情境庫卡片、官網預覽的底圖，1280×720）；換了講者示意圖、主色、背景圖或改了模板之後重跑 | `node dev/tools/gallery-shot.mjs [01-chapter,14-speaker]`（要 HyperFrames 的 Chrome 與 ffmpeg） |
+| `tools/caption-sheet.mjs` | 重截 `shared/template/gallery/caption-styles.jpg`（情境庫「換字幕樣式」卡的五種樣式＋六種字體一覽，1280×720）；改了 `kit/captions.css`、字體表或主色之後重跑 | `node dev/tools/caption-sheet.mjs`（要 HyperFrames 的 Chrome 與 ffmpeg） |
 | `tools/og-image.mjs`、`tools/og/og-image.html` | 重截官網分享預覽圖 `dev/site/og-image.jpg`（1200×630）；來源是 `og/og-image.html`，重截情境庫縮圖後跟著重跑 | `node dev/tools/og-image.mjs`（要 HyperFrames 的 Chrome 與 ffmpeg） |
 | `tools/make-sfx.mjs` | 產生 `shared/sfx/` 的音效（CC0 素材加工或 AI 生成）、A/B 試聽檔、回寫 sources.json 與 `kit/sfx.json`（作者用，只要 Node 與 ffmpeg） | `node dev/tools/make-sfx.mjs --help`；試聽檔一定要寫在工作區外面（`--out`） |
 | `tools/pics-build.mjs`、`pics/catalog.tsv` | 圖庫產生器：`dev/pics/catalog.tsv` 列的線條圖示（Tabler、Lucide）換成工作區的線稿畫風，寫進 `shared/template/kit/pics/` | `node dev/tools/pics-build.mjs --tabler <Tabler Icons 的 icons/outline 資料夾> [--check] [--sheet <png>]` |

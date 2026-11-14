@@ -5283,5 +5283,7 @@
     1200
    ]
   }
- }
+ },
+ "captionStyle": null,
+ "captionFrom": "default"
 }

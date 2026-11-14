@@ -45,6 +45,20 @@
 - 技術名詞保留英文原文，中英文之間加半形空格（例：用 MiniMax Code 剪片）
 - 實作在 `shared/template/kit/captions.css`，由 `build.mjs` 套用
 
+### 字幕樣式可以換
+
+上面是預設（照剪映量的 F8）。整支影片的字幕可以一起換，一組設定管每一則（不能只換某一則）：
+
+- 樣式：深底白字（預設）、白字黑框、黃字黑框、白底黑字、主色底（字色照 `--brand-ink`，淺主色自動用深字）。沒有「白字只加陰影」：全畫面動畫多是淺底，會看不清楚
+- 字體：思源黑體（內建，預設）、思源宋體、霞鶩文楷、jf open 粉圓、霞鶩漫黑、芫荽。後五個是 Google Fonts 上的 SIL OFL 開源字體（可以商用），都放在 `shared/template/kit/fonts/`，build 只複製選到的那一個進專案
+- 大小：60–96 px（預設 76）。行高、內距照 76 px 的比例縮放，底板下緣不動（橫式 y 1074），96 px 時底板頂 y 925，還在字幕區裡；直式最大 76（一則 10 字要放得下）
+- 粗細：細 300、一般 400、中 500、粗 700、特粗 900。字體沒有的粗細換成最近的：思源黑體、思源宋體五種都有；霞鶩文楷只有一般、粗；粉圓、漫黑、芫荽只有一般
+- 黑框：字級 × 0.12，畫在字外面（不吃字）
+- 上下位置（`lift`，px，往上為正）：橫式 0–400（原位已經貼底，只能往上）；直式 −350–350（原位在講者面板中間 y 1350）。短影音畫面下方有平台按鈕、標題時往上移。預設橫式、直式分開記（`shared/setting.json` 的 `captions.lift.landscape`／`portrait`）。字幕區檢查（y ≥ 920 不放卡片）照原位算，往上移時注意別蓋到卡片
+- 改哪裡：剪輯台「整支 → 字幕」（這一集；字幕可以在預覽畫面上直接拖上下；勾「之後的影片也用這個」同時設成預設，位置只記這個版式）；`brand.mjs captions --look … --font … --size … --weight … --lift-landscape … --lift-portrait …`（以後每集的預設，寫 `shared/setting.json`）；這一集也可以 `build.mjs --set "captionStyle.look=outline"`、`--set "captionStyle.lift=120"`
+- 這一集 plan.json 的 `captionStyle` 優先，沒寫的欄位照預設；都沒設定＝上面的 F8，輸出和以前一樣
+- 剪映素材只出 SRT，字幕樣式不會跟過去（在剪映自己套）
+
 ## 直式
 
 版式在開工決定一次（`auto-edit-longform`「版式」），plan.json 第一層寫 `"format": "portrait"`。下面的數字只寫在這裡和 `shared/template/tools/lib/canvas.mjs`（`CANVAS.portrait`），兩邊要一致。

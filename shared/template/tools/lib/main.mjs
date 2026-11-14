@@ -31,6 +31,7 @@ import { mediaParts, EXIT } from './media.mjs';
 import { CANVAS, stageTransform, regionsScript } from './canvas.mjs';
 import { fxStage } from './speaker-side.mjs';
 import { endingParts } from './ending.mjs';
+import { captionFontFace } from './caption-style.mjs';
 
 const FADE = 0.5;
 const PUSH = 0.7;
@@ -533,6 +534,8 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
   if (segCut && footVideo) footVideo = footVideo.replace(/ data-has-audio="true"/g, ' muted');
   const capTrack = captions ? track++ : null;
   const bgColor = segCut ? 'transparent' : '#000';
+  // 035 字幕樣式：選了另外的字體（文楷、粉圓…）才在這裡宣告 @font-face（檔案 build 只複製選到的那一個進 kit/fonts/）
+  const capFace = captions?.style ? captionFontFace(captions.style, `${base}kit/fonts/`) : '';
   const html = `<!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -555,7 +558,7 @@ ${portrait ? `    /* 講者面板 x 0–1080、y 900–1920（lib/canvas.mjs 的
     .pip { position: absolute; left: ${PB[0]}px; top: ${PB[1]}px; width: ${PB[2]}px; height: ${PB[3]}px; overflow: hidden; border-radius: 6px; z-index: 40; }`}
     .pip video { position: absolute; }
     .pip-frame { z-index: 41; }
-${bg ? indent(bgCss(`${base}assets/`, bg), 4) + '\n' : ''}${endP.css}  </style>
+${bg ? indent(bgCss(`${base}assets/`, bg), 4) + '\n' : ''}${endP.css}${capFace ? indent(capFace, 4) + '\n' : ''}  </style>
 </head>
 <body>
 <!-- build.mjs 產生；要改請改 plan.json 再重跑 build（手改會被雜湊保護擋下）-->

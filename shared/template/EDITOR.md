@@ -75,6 +75,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 | 第一層 | `look` | 講者調光、瘦臉、美顏 `{ "color": 0–1, "slim": 0–1.2, "beauty": 0–1 }`，color、slim 都寫、beauty 有開才寫（剪輯台「講者」或構圖台下面都能調）；按「恢復預設」整個拿掉。改 `slim` 後按「更新預覽」，剪輯台會先跑 `look.mjs run` 再 build；構圖台按「偵測臉部」只在背景跑 `look.mjs run` |
 | 第一層 | `frame` | 構圖的裁切框 `[x, y, w, h]`（畫布座標，比例和畫布一樣，最多放大 2 倍）；拖回整個畫面＝拿掉。換框時已經有的 `speakerBox`、`pipCrop`（陣列）會換算成新框裡同一塊畫面（`pipCrop` 換算後出界就改回 `"auto"`），存檔回應的 `notes` 會列出來。構圖頁自動存檔（`/api/framing/save` 帶 `update: false`）不帶起更新，已有完成影片時頁面顯示「更新預覽」，按了才重新處理底片（`/api/framing/update`）；沒帶 `update: false` 的呼叫照舊自動更新 |
 | 第一層 | `theme` | 主題 `"light"`（亮，預設）或 `"dark"`（暗）；屬性面板「主題」的亮／暗。原本沒寫又選亮＝不寫；原本有就原地換值。完成影片預覽切換時馬上換色看（改播放器裡 `<html data-theme>`），按「更新預覽」才進完成影片 |
+| 第一層 | `captionStyle` | 這一集的字幕樣式 `{ "look", "font", "size", "weight", "lift" }`（五個都寫）；屬性面板「整支 → 字幕」的樣式、字體、大小、粗細、上下位置，「回到原本的樣子」寫回深底白字、原位那一組（不拿掉，所以預設改了也不會套到這一集）。上下位置也可以在預覽畫面上直接拖字幕（`#capDrag`：2 px 一格、離原位 12 px 內吸回原位；方向鍵 ±2、Shift ±10；雙擊回原位；Esc 取消拖曳），放開才進復原清單。勾「之後的影片也用這個」（預設勾）時同時寫 `shared/setting.json` 的 `captions`（`/api/caption-default`，帶 `format`：位置只記這個版式的 `lift.landscape` 或 `lift.portrait`，另一個不動）。快速預覽、完成影片預覽馬上換（改字幕圖層的 `data-cap` 與 `--cap-*` 變數），按「更新預覽」才進完成影片 |
 | 第一層 `edit` | `cuts` | 剪掉的範圍 `[[起點, 終點], …]`，**rough.mp4 的秒數**；片頭片尾的裁剪是 `[0, t]`、`[t, 影片長度]`；存檔時會排序、合併重疊的範圍 |
 | | `fadeIn`／`fadeOut` | 開頭淡入、結尾淡出的秒數（0＝不淡） |
 | | `volume.voice`／`.sfx`／`.media` | 人聲（主軌）、全部音效、插入素材原聲的增益，dB（−60～+12；−60＝靜音） |
@@ -91,7 +92,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 | `work/rough.srt` | 字幕文字、起訖時間、新增／分割／合併／刪除 | 見下一節 |
 
 - `edit` 每次都整個寫（沒調的欄位寫預設值）；原本沒有 `edit` 時，插在 `scenes` 前面。
-- `look`、`theme` 原本沒有時，插在 `edit` 前面（沒有 `edit` 就插在 `scenes` 前面）；兩個都新插時順序是 `look`、`theme`。
+- `look`、`theme`、`captionStyle` 原本沒有時，插在 `edit` 前面（沒有 `edit` 就插在 `scenes` 前面）；都新插時順序是 `look`、`theme`、`captionStyle`。
 - `joins` 的 `at`：使用者剪掉的範圍寫**起點**（`cuts` 的第一個數字）；剪乾淨時的剪接點寫 `work/cutpoints.json` 裡的 `at`。片頭、片尾的裁剪不算剪接點。
 - 剪輯台會拒絕其他任何欄位（例如 media 段的 `src`、段落的 `scene`、slots 新增欄位、清單的 `at` 或圖示、第一層的 `format`）。這些請 AI 改；`format` 存檔時原封不動。
 - 清單項目變多會被擋（「比原本多（原本 N 項）→ 剪輯台不能加項目」）：要加項目、換動畫、重新排版請使用者寫進修改單。字變長擠壞版面時，更新預覽後的 audit 會列在檢查清單。

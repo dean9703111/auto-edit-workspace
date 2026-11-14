@@ -37,6 +37,7 @@ import { SFX_RULES, SFX_SWAP, rotateSfx, sfxBudget, thinMainSfx, LOUD } from './
 import { LOCAL_ROLES, sfxActual, wavSeconds } from './sfx-local.mjs';
 import { BED } from './music.mjs';
 import { validateMoods, moodCues, moodSound, zoomSpans, MOOD_KINDS } from './moods.mjs';
+import { sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle } from './caption-style.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, CANVAS, canvasOf, LAYOUT } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
@@ -47,7 +48,7 @@ import { readScript } from './script-file.mjs';
 import { resolveEnding } from './ending.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
-const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'ending', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'style', 'edit', 'moods', 'scenes'];
+const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'ending', 'chapterBadge', 'sections', 'check', 'look', 'theme', 'captionStyle', 'style', 'edit', 'moods', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
@@ -432,6 +433,11 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const badgeOn = plan.chapterBadge !== false;
   if (plan.theme !== undefined && !THEMES.includes(plan.theme)) errors.push(`theme 只能是 "light"（預設，米白底、白卡）或 "dark"（石墨黑底、玻璃卡），現在是 ${JSON.stringify(plan.theme)} → 改成 "light"／"dark"，或刪掉這個欄位（＝亮色）`);
   const theme = plan.theme === 'dark' ? 'dark' : 'light';
+  // 035 字幕樣式（這一集；以後每集的預設在 shared/setting.json 的 captions，build 合起來，lib/caption-style.mjs）
+  if (plan.captionStyle !== undefined) errors.push(...sanitizeCaptionStyle(plan.captionStyle, 'captionStyle').errors.map((e) => `${e} → 改好，或刪掉這個欄位（＝用預設）`));
+  const capRes = resolveCaptionStyle({ plan, settings: { captions: lib.captionDefault ?? undefined }, format: C.format });
+  if (capRes.errors.length && (plan.captionStyle === undefined || plan.captionStyle === null)) warnings.push(...capRes.errors.map((e) => `${e} → 先用原本的字幕樣式；用 brand.mjs captions 重設預設`));
+  warnings.push(...capRes.notes.map((n) => `字幕樣式：${n}`));
   if (plan.style !== undefined && (typeof plan.style !== 'string' || !plan.style.trim())) errors.push(`style 要寫風格包的名稱（shared/template/styles/ 底下的資料夾名，例 "預設"），現在是 ${JSON.stringify(plan.style)} → 改成名稱，或刪掉這個欄位（＝用 shared/template/ 目前的主色與背景）`);
   const style = typeof plan.style === 'string' && plan.style.trim() ? plan.style.trim() : null;
   // check：只給示意／預覽用的 plan 關規則（示意卡的文字跟字幕無關）；正式 plan.json 寫了 build 會 ⚠
@@ -556,6 +562,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro, bed,
     ending, finalDur: r3(videoDur + (ending?.dur || 0)),
     chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
+    captionStyle: capRes.isDefault ? null : capRes.style, captionFrom: capRes.from,
   };
 }
 
@@ -1942,6 +1949,7 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
   const txParts = [['txIn', 'wipe', '色帶擦開'], ['txIn', 'swap', '換卡不換景'], ['txIn', 'push', '上推'], ['txOut', 'retract', '色帶收回'], ['txIn', 'band', '疊加卡'], ['txIn', 'chapter', '章節擦入']]
     .map(([k, v, zh]) => [zh, txCount(k, v)]).filter(([, ids]) => ids.length).map(([zh, ids]) => `${zh} ${ids.length}（${ids.join('、')}）`);
   lines.push(`轉場：${txParts.join('；') || '無'}｜主題：${res.theme === 'dark' ? '暗色（theme: "dark"）' : '亮色'}${res.style ? `｜風格包：${res.style}` : ''}`);
+  if (res.captionStyle) lines.push(`字幕樣式：${describeCaptionStyle(res.captionStyle)}（${res.captionFrom === 'plan' ? '這一集 plan.json captionStyle' : '預設 shared/setting.json captions'}）`);
   lines.push(...tail.filter(Boolean));
   return lines.join('\n');
 }

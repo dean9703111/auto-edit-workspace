@@ -47,6 +47,8 @@ import { cutsState, saveCuts } from './editor/server/cuts.mjs';
 import { storyboardState, saveStoryboard, storyboardImage } from './editor/server/storyboard.mjs';
 import { startExport, cancelExport, exportState, exportBusy, exportFile, prerenderState, revealFinal } from './editor/server/export.mjs';
 import { speakerInfo, doSpeakerSave } from './editor/server/speaker.mjs';
+import { readSettings, writeSetting } from './lib/settings.mjs';
+import { CAP_DEFAULT, clampLift, sanitizeCaptionStyle } from './lib/caption-style.mjs';
 import { flowState } from './editor/server/flow.mjs';
 import { storyboardOptions } from './editor/server/storyboard-options.mjs';
 import { listFillSpecs } from './lib/custom-fill.mjs';
@@ -742,6 +744,7 @@ async function getState(ctx) {
     requests: requestsInfo(P.project),
     unsaved: readUnsaved(ctx).at(-1) ?? null,
     speaker: speakerInfo(ctx, plan.data),
+    captionStyle: captionInfo(ctx),
     preview: { player: { available: ctx.player.available, version: ctx.player.version ?? null, reason: ctx.player.reason ?? null }, composition: '/composition/index.html', ...builtInfo(ctx, plan) },
     build: buildBrief(ctx),
     prerender: prerenderState(ctx),
@@ -751,6 +754,29 @@ async function getState(ctx) {
 }
 
 const reportOut = (rep) => ({ ready: true, data: rep.report, error: rep.error, issues: rep.issues, log: rep.log ?? null });
+
+// 035 字幕樣式：以後每集的預設（shared/setting.json 的 captions；上下位置 lift 橫式、直式分開記）；這一集的在 plan.json captionStyle（/api/save）
+// 測試用 ctx.speakerTemplate 指到暫存的 shared/template（和講者資料一樣），不動真的 shared/setting.json
+const capTemplate = (ctx) => ctx.speakerTemplate || ctx.P.templateDir;
+function captionInfo(ctx) {
+  const setting = process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' && !ctx.speakerTemplate ? null : readSettings(path.resolve(capTemplate(ctx), '..')).data.captions ?? null;
+  return { setting };
+}
+// 預設：樣式（look／font／size／weight）整組換；lift 只換這一集版式的那一個，另一個版式的留著
+function doCaptionDefault(ctx, body) {
+  const sharedDir = path.resolve(capTemplate(ctx), '..');
+  if (body?.style === null) { writeSetting(sharedDir, 'captions', undefined); return [200, { ok: true, captionStyle: captionInfo(ctx) }]; }
+  const r = sanitizeCaptionStyle(body?.style);
+  if (!r.style) return [400, { error: 'badstyle', message: r.errors[0] || '要送 { "style": {…}, "format": "landscape" } 或 { "style": null }' }];
+  const fmt = body?.format === 'portrait' ? 'portrait' : 'landscape';
+  const cur = readSettings(sharedDir).data.captions;
+  const lift = { ...(isObj(cur?.lift) ? cur.lift : {}), [fmt]: clampLift(r.style.lift, fmt) };
+  const clean = Object.fromEntries(Object.entries(r.style).filter(([k, v]) => k !== 'lift' && v !== CAP_DEFAULT[k]));
+  const liftSet = Object.fromEntries(Object.entries(lift).filter(([, v]) => v));
+  if (Object.keys(liftSet).length) clean.lift = liftSet;
+  writeSetting(sharedDir, 'captions', Object.keys(clean).length ? clean : undefined);
+  return [200, { ok: true, captionStyle: captionInfo(ctx) }];
+}
 
 async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   // quick：寫完檔就回，檢查（長片要 9 秒）由頁面另外要；不帶 quick（AI、測試）照舊附上檢查結果
@@ -1146,6 +1172,7 @@ async function handle(ctx, req, res) {
     if (p === '/api/export/cancel') { const [s, o] = cancelExport(ctx); return sendJson(res, s, o); }
     if (p === '/api/export/reveal') { const [s, o] = revealFinal(ctx, ctx.exportDeps?.reveal ? { spawnFn: ctx.exportDeps.reveal } : {}); return sendJson(res, s, o); }
     if (p === '/api/speaker') { const [s, o] = doSpeakerSave(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/caption-default') { const [s, o] = doCaptionDefault(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
@@ -1245,6 +1272,8 @@ async function handle(ctx, req, res) {
     const f = safeJoin(UI_DIR, p.slice('/editor/'.length));
     return f ? sendFile(req, res, f) : sendText(res, 404, '找不到檔案');
   }
+  // 035：字幕樣式的表與幾何（沒有 node 的 import），剪輯台頁面和 build 用同一支
+  if (p === '/lib/caption-style.mjs') return sendFile(req, res, path.join(HERE, 'lib', 'caption-style.mjs'), { type: 'text/javascript; charset=utf-8' });
   if (p.startsWith('/kit/')) {
     const f = safeJoin(path.join(P.templateDir, 'kit'), p.slice('/kit/'.length));
     return f ? sendFile(req, res, f) : sendText(res, 404, '找不到檔案');
