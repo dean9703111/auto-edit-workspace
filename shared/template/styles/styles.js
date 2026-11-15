@@ -8,6 +8,13 @@ window.STYLE_PACKS = [
     "dark": true
   },
   {
+    "dir": "橘色-20261116-2",
+    "name": "橘色-20261116-2",
+    "brand": "#F6630F",
+    "note": "PPA AI 工作流：橘色主色、米白底，AI 助手節點連信箱／資料夾／齒輪／清單的線稿；章節幕線稿全白",
+    "dark": false
+  },
+  {
     "dir": "藍圖",
     "name": "藍圖",
     "brand": "#2563EB",
