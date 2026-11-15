@@ -17,7 +17,17 @@ import { spawnSync } from 'node:child_process';
 import { r3Round as r3 } from './time.mjs';
 import { steadyMatte, STEADY } from './matte-steady.mjs';
 
-export const MATTE = { dir: 'assets/matte', quality: 'balanced', model: 'u2net_human_seg', sizeMb: 170 };
+// choke＝去背後邊緣往內收幾 px 再柔化 0.7 px（作者 2026-11-15 短影片4 r5「去背後左側還是有殘留的痕跡」：模型的半透明邊混了原本的深色背景，
+// 疊到亮底上變成一圈深色毛邊；2 px 剛好收乾淨，3 px 開始吃到袖口）。只對真的模型做；測試替身不做
+export const MATTE = { dir: 'assets/matte', quality: 'balanced', model: 'u2net_human_seg', sizeMb: 170, choke: 2 };
+
+function chokeMatte(src, out, px = MATTE.choke) {
+  const ero = Array.from({ length: px }, () => 'erosion').join(',');
+  const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-c:v', 'libvpx-vp9', '-i', src,
+    '-filter_complex', `[0:v]format=yuva420p,split[c][a];[a]alphaextract,${ero},gblur=sigma=0.7[m];[c][m]alphamerge,format=yuva420p`,
+    '-an', '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-b:v', '0', '-crf', '24', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '4', '-auto-alt-ref', '0', out], { encoding: 'utf8' });
+  return { ok: r.status === 0 && fs.existsSync(out) && fs.statSync(out).size > 0, message: String(r.stderr || '').trim().split('\n').slice(-1)[0] };
+}
 
 export function matteWeights(home = os.homedir()) {
   const file = path.join(home, '.cache', 'hyperframes', 'background-removal', 'models', `${MATTE.model}.onnx`);
@@ -110,7 +120,8 @@ export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log =
     const range = matteRange(it, tm);
     if (!st || !range) { res.problems.push({ id: it.id, msg: !st ? '底片還沒編碼好' : '這一段跨過剪輯台裁掉的地方，沒辦法去背 → 把段的起迄移到同一段連續的畫面裡，或換成不用去背的模板' }); continue; }
     const wantSteady = steady && matteSteadyOf(it, outDir);
-    const key = createHash('sha1').update(`${st.size}:${Math.round(st.mtimeMs)}:${range.start}:${range.end}:${MATTE.model}:${MATTE.quality}${wantSteady ? `:steady${STEADY.version}` : ''}`).digest('hex').slice(0, 10);
+    const wantChoke = !remove && MATTE.choke > 0;
+    const key = createHash('sha1').update(`${st.size}:${Math.round(st.mtimeMs)}:${range.start}:${range.end}:${MATTE.model}:${MATTE.quality}${wantSteady ? `:steady${STEADY.version}` : ''}${wantChoke ? `:choke${MATTE.choke}` : ''}`).digest('hex').slice(0, 10);
     const name = `${it.id}-${key}.webm`, file = path.join(dir, name);
     live.add(name);
     if ((matteFrontOf(it, outDir) || []).some((r) => !frontOk(r))) { res.problems.push({ id: it.id, msg: 'data-matte-front 看不懂 → 寫成 "x,y,寬,高"（畫面座標的數字，寬高 > 0），好幾塊用分號隔開，例：data-matte-front="60,560,300,400; 720,560,300,400"' }); continue; }
@@ -133,6 +144,12 @@ export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log =
       const tmp2 = path.join(dir, `.tmp2-${name}`);
       const s = steadyMatte({ clip, matte: tmp, out: tmp2 });
       if (s.changed) { fs.renameSync(tmp2, tmp); log(`去背：${it.id} 有貼著人的東西一下算進來、一下不算，已經穩定成整段一致（data-matte="steady"）`); } else { fs.rmSync(tmp2, { force: true }); log(s.ok ? `去背：${it.id} 寫了 data-matte="steady"，但沒有找到整塊一起跳的東西，照用模型原本的結果` : `⚠ 去背：${it.id} 沒辦法做穩定（${s.message}），先用模型原本的結果`); }
+    }
+    if (wantChoke) {
+      // 收邊做不成不擋：照用沒收邊的結果
+      const tmp3 = path.join(dir, `.tmp3-${name}`);
+      const c = chokeMatte(tmp, tmp3);
+      if (c.ok) fs.renameSync(tmp3, tmp); else { fs.rmSync(tmp3, { force: true }); log(`⚠ 去背：${it.id} 邊緣收不了（${c.message}），先用模型原本的結果`); }
     }
     fs.rmSync(clip, { force: true });
     fs.renameSync(tmp, file);

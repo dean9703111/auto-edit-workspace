@@ -41,7 +41,7 @@ export const CANVAS = {
     centerCard: { rect: [510, 536, 1410, 860] },
     badge: { rect: [1200, 56, 1824, 168], side: 'right', dx: 16 },
     pip: { box: [1424, 594, 432, 324], zone: [1424, 581, 1888, 951], aspect: 4 / 3, frame: 'kit/pip-frame.png' },
-    stage: { fs: null, fx: null, ch: null },
+    stage: { fs: null, fx: null, ch: null, full: null },
     media: { view: { contain: [0, 0, 1920, 940], cover: [0, 0, 1920, 1080] } },
     framing: { aspect: 16 / 9, headTop: 120 },
     minTextPx: 30,
@@ -64,6 +64,8 @@ export const CANVAS = {
       fs: { window: [120, 130, 1300, 880], to: [40, 240], scale: 0.8475 },
       fx: { opaque: { top: 416, scale: 0.5625 }, clear: { top: 766, scale: 0.5625 } },
       ch: { window: [160, 260, 1760, 870], scale: 0.625, centerY: 860 },
+      // 053 全幕版（034）縮進上半：全幕版排在 regions.full（120–1800 × 40–900），整張縮成 1000 寬放進上半（y 240–900）
+      full: { window: [120, 40, 1800, 900], to: [40, 314], scale: 0.5952 },
     },
     media: { view: { contain: [0, 240, 1080, 900], cover: [0, 0, 1080, 900], containFull: [0, 240, 1080, 1260], coverFull: [0, 0, 1080, 1920] } },
     framing: { aspect: 9 / 16, headTop: [380, 520], chinMax: 860 },

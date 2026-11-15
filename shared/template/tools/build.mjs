@@ -51,7 +51,7 @@
  *   node shared/template/tools/build.mjs --project projects/<專案> --set "theme=dark;look.slim=0.6"
  *                                                     只改 plan.json 第一層的設定（每次重新讀檔、只動這幾個鍵、照原本的縮排寫回），印「✓ plan.json：theme＝dark（原本 light）」和下一步：
  *                                                     theme（light／dark）、style（shared/template/styles/ 的資料夾名）、format（portrait／landscape）、speakerSide（left／center／right）、
- *                                                     chapterBadge（true／false）、chapterMap（true／false：每個 01 章節轉場換成本集地圖）、look（off）、look.color（0–1）、look.slim（0–1.2）、look.beauty（0–1）、
+ *                                                     chapterBadge（true／false）、chapterMap（true／false：每個 01 章節轉場換成本集地圖）、look（off）、look.color（0–1）、look.slim（0–1.2）、look.beauty（0–1）、look.belly（0–1：瘦小腹）、
  *                                                     bed.music（曲庫的曲名；none＝這一集不配）、bed.volume（−12～12 dB）、outro.from（#N）、outro.music（曲名；none＝不配）、
  *                                                     captionMarks（重點字幕的句號，逗號隔開，例 --set "captionMarks=#6,#7@關鍵詞,#13"：#N＝這一則字幕用主色底的重點樣式、#N@詞＝只有那幾個字；整份換掉；全部拿掉用 --unset captionMarks）。
  *                                                     鍵或值不對 ✖ 並列出能寫的。還沒有 plan.json 時 theme、style、format、look* 會先建 { "version": 1 } 再寫
@@ -99,6 +99,7 @@ import { buildCaptions, captionWarnings } from './lib/captions.mjs';
 import { CAP_FONTS, EXTRA_FONT_FILES, fontFiles, fontLicense } from './lib/caption-style.mjs';
 import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
 import { buildMain, buildPreview, KIT_LINKS, withTheme } from './lib/main.mjs';
+import { prepareTail, liveSource } from './lib/tail.mjs';
 import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, encodeRetime, redactImage, blackDetect, extractFrames, rawFrame, writeJpg, transcriptFresh } from './lib/ff.mjs';
 import { speechPauses } from './lib/speech.mjs';
 import { hfShim } from './lib/hf.mjs';
@@ -725,7 +726,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const assetVideo = path.join(P.out, 'assets', 'rough.mp4');
   const cp = readCutpoints(P);
   // 聲音處理（響度標準化＋剪接點微淡化）的戳記：來源、剪接點、參數任一變了就重新編碼底片
-  const audioOpts = { loudnorm: !flags['no-loudnorm'], declick: !flags['no-declick'] };
+  const audioOpts = { loudnorm: !flags['no-loudnorm'], declick: !flags['no-declick'], level: plan.edit?.level === true };
   const stampFile = path.join(P.out, '.cache', 'footage-audio.json');
   const stamp = readStamp(stampFile);
   const wantKey = fs.existsSync(footSrc) ? audioKey({ src: footSrc, cutpoints: cp.list.map((c) => c.at), ...audioOpts, frame: plan.frame ?? null, look: look?.key ?? null, format: C.format }) : null;
@@ -792,7 +793,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   let encoded = false, audioInfo = null;
   if (look) for (const l of look.report) log(l);
   if (!fresh) {
-    log(`重新編碼底片 → ${rel(assetVideo)}（30fps、每秒一個關鍵影格${audioOpts.loudnorm ? `、人聲調到 ${LOUD_TEXT}` : ''}${audioOpts.declick && cp.list.length ? '、剪接點微淡化' : ''}）…`);
+    log(`重新編碼底片 → ${rel(assetVideo)}（30fps、每秒一個關鍵影格${audioOpts.loudnorm ? `、人聲調到 ${LOUD_TEXT}` : ''}${audioOpts.declick && cp.list.length ? '、剪接點微淡化' : ''}${audioOpts.level ? '、人聲大小聲拉平' : ''}）…`);
     audioInfo = encodeFootagePolished(footSrc, assetVideo, { cacheDir: path.join(P.out, '.cache'), cutpoints: cp.list.map((c) => c.at), ...audioOpts, crop: frameCrop(plan, footSrc), lut: look?.lut ?? null, canvas: C,
       onMeasure: () => log('量人聲響度（第一次會花一點時間，之後用快取）…') });
     fs.mkdirSync(path.dirname(stampFile), { recursive: true });
@@ -883,6 +884,25 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   // 片尾模板（033）：片尾卡的圖複製進 assets/brand/、訂閱動畫轉成透明 webm（同檔不重做）
   let ending;
   try { ending = prepareEnding(res.ending, P.out); } catch (e) { log(`✖ 片尾：${e.message} → 換一個檔：node shared/template/tools/brand.mjs ending --subscribe <檔>，或這一集不要片尾：build.mjs --set ending=false`); return { ok: false, res }; }
+  // 片尾（052）：講完接原始錄影 tail.dur 秒（不定格），主合成讓畫面和聲音一起淡出；原始錄影接不上（或講者有瘦臉底片）才凍結最後一格；兩種都做不出來就照舊在片尾暗掉
+  let tail = null;
+  if (res.tail) {
+    const last = res.footage?.clips?.at(-1);
+    const roughEnd = last ? last.ms + (last.e - last.s) : outDur;
+    const lookFoot = path.resolve(footSrc) !== path.resolve(P.video);
+    const src = P.project && !lookFoot ? liveSource({ projectDir: P.project, roughEnd, dur: res.tail.dur }) : { why: lookFoot ? '講者用的是瘦臉底片，原始錄影接上去臉會變' : '沒有專案資料夾' };
+    const live = src.source ? { source: src.source, from: src.from, crop: frameCrop(plan, src.source), lut: look?.lut ?? null, canvas: C, gainDb: audioInfo?.gainDb ?? 0 } : null;
+    const base = { asset: assetVideo, outDir: P.out, at: r3(roughEnd - 1 / 30), dur: res.tail.dur };
+    let made = prepareTail({ ...base, live });
+    if (made.error && made.retry) { log(`⚠ 片尾接原始錄影做不出來（${made.error}）→ 改成最後一格定格再淡出`); made = prepareTail(base); }
+    else if (!live) log(`⚠ 片尾接不上原始錄影（${src.why}）→ 最後一格定格再淡出`);
+    if (made.error) { log(`⚠ 片尾做不出來（${made.error}）→ 這次照舊在片尾最後 ${res.tail.fade} 秒暗掉`); res.finalDur = r3(res.finalDur - res.tail.dur); res.tail = null; }
+    else {
+      res.tail = { ...res.tail, live: made.live, voiceFade: made.live ? 0 : res.tail.voiceFade };
+      if (made.made) log(`片尾：${made.live ? `接原始錄影 ${res.tail.dur} 秒` : `最後一格定格 ${res.tail.dur} 秒`} → ${rel(path.join(P.out, made.file))}`);
+      tail = { ...res.tail, file: made.file };
+    }
+  }
   const finalDur = res.finalDur ?? outDur;
   // 結尾配樂：量 wav 長度決定起播點，淡入淡出與增益烤進檔案（005 的 renderBgmClip，同參數不重做）
   const clip = outroClipOf(res, P);
@@ -904,7 +924,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const mt = ensureMattes({ outDir: P.out, root: path.resolve(HERE, '..', '..', '..'), items: res.items, tm: res.tm, assetVideo, log, speakerBox: res.globals.speakerBox });
   if (mt.made || mt.reused) log(`人物去背層：${mt.made + mt.reused} 段（新做 ${mt.made}、沿用 ${mt.reused}）`);
   if (mt.problems.length) { for (const x of mt.problems) log(`✖ [${x.id}] ${x.msg}`); return { ok: false, res }; }
-  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, panelSide: res.globals.panelSide, cardSide: res.globals.cardSide, speakerSide: res.globals.speakerSide, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, bed, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null, ending };
+  const mainOpts = { items: res.items, videoDur: outDur, pip: res.globals.pip, sideShift: res.globals.sideShift, panelSide: res.globals.panelSide, cardSide: res.globals.cardSide, speakerSide: res.globals.speakerSide, speakerBox: res.globals.speakerBox, bg, footage: res.footage, editFx: res.editFx, cues: res.cuesOut, outro, bed, badges: res.badges || [], canvas: C, moods: res.moods || [], zooms: res.zooms || null, ending, tail, userSfx: res.userSfx || [] };
   const main = buildMain({ ...mainOpts, captions: cap });
   let test = null;
   if (flags.test) {

@@ -5069,6 +5069,8 @@
   "gainDb": -18.005
  },
  "ending": null,
+ "tail": null,
+ "portraitLayout": null,
  "finalDur": 105,
  "chapterBadge": true,
  "badges": [
@@ -5215,7 +5217,8 @@
   "stage": {
    "fs": null,
    "fx": null,
-   "ch": null
+   "ch": null,
+   "full": null
   },
   "media": {
    "view": {

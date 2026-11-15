@@ -140,3 +140,61 @@ export function layoutPlanLine(rows, plan, { startOf, secsOf } = {}) {
   });
   return blocks.map((b) => `${fmt(b.start)}–${fmt(b.end)} ${MODE_ZH[b.mode]}${b.mode === 'card' ? '' : `（#${b.a}–#${b.z}）`}`).join('｜');
 }
+
+// 053 直式版面節奏：直式短影片只有兩種版面，「切一半」（上面資訊、下面講者：上下分割、全畫面縮進上半、錄影段）和「全身」（講者滿版，卡疊在講者身上）。
+// 作者 2026-11-15：「不要一直交叉使用，若進入一個情境，至少要停留 12 秒，然後 1 分鐘最多切換 3 次，否則觀感上會不舒服」
+//   portraitRuns(segs, { total })     → 從 0 到 total 的版面區塊 [{ state: split｜full, start, end, ids }]；segs＝[{ id, start, end, split }]（split＝這一段是整張幕）
+//                                       整張幕之間只隔 ≤ join 秒的當成同一個「切一半」（中間那一下講者滿版不算一次切換）
+//   portraitFindings(segs, { total }) → 違反兩條的地方 [{ rule: 'stay'｜'switch', msg, fix }]
+export const PORTRAIT_RHYTHM = { stay: 12, switches: 3, window: 60, join: 1 };
+export const STATE_ZH = { split: '切一半', full: '全身' };
+
+export function portraitRuns(segs, { total, R = PORTRAIT_RHYTHM } = {}) {
+  const splits = [];
+  for (const s of [...segs].filter((x) => x.split && x.end > x.start).sort((a, b) => a.start - b.start)) {
+    const last = splits[splits.length - 1];
+    if (last && s.start - last.end <= R.join + 1e-6) { last.end = Math.max(last.end, s.end); last.ids.push(s.id); }
+    else splits.push({ state: 'split', start: s.start, end: s.end, ids: [s.id] });
+  }
+  const full = (a, b) => ({ state: 'full', start: a, end: b, ids: segs.filter((x) => !x.split && x.start < b - 1e-6 && x.end > a + 1e-6).map((x) => x.id) });
+  const runs = [];
+  let t = 0;
+  for (const s of splits) {
+    // 片頭 join 秒內就開始的切一半：從第 0 格算
+    if (s.start - t > R.join + 1e-6) runs.push(full(t, s.start), { ...s }); else runs.push({ ...s, start: t });
+    t = s.end;
+  }
+  const end = Number.isFinite(total) ? total : t;
+  if (end - t > 1e-6) {
+    const last = runs[runs.length - 1];
+    if (last && last.state === 'split' && end - t <= R.join + 1e-6) last.end = end; else runs.push(full(t, end));
+  }
+  return runs;
+}
+
+export function portraitFindings(segs, { total, R = PORTRAIT_RHYTHM } = {}) {
+  const runs = portraitRuns(segs, { total, R }), out = [];
+  const ids = (r) => (r.ids.length > 3 ? `${r.ids[0]}–${r.ids[r.ids.length - 1]}` : r.ids.join('、') || '沒有段');
+  runs.forEach((r, i) => {
+    const secs = r1(r.end - r.start);
+    if (runs.length < 2 || secs >= R.stay - TOL) return;
+    const other = STATE_ZH[r.state === 'split' ? 'full' : 'split'];
+    const fix = r.state === 'split'
+      ? `把 ${ids(r)} 換成疊在講者身上的（全身：疊加的模板、字卡、"layout": "overlay" 的設計段），或把前後相鄰的段也做成切一半、連成 ≥ ${R.stay} 秒`
+      : `把 ${ids(r)} 也做成切一半（上下分割）、和前後接成一塊，或把前後的切一半改成疊在講者身上，讓全身連續 ≥ ${R.stay} 秒`;
+    out.push({ rule: 'stay', start: r.start, end: r.end, secs,
+      msg: `${STATE_ZH[r.state]}只停 ${secs} 秒（${fmt(r.start)}–${fmt(r.end)}，${ids(r)}）就切回${other}，至少要 ${R.stay} 秒`, fix });
+  });
+  const at = runs.slice(1).map((r) => r.start);
+  for (let i = 0; i + R.switches < at.length; i++) {
+    if (at[i + R.switches] - at[i] >= R.window - 1e-6) continue;
+    const n = at.filter((x) => x >= at[i] - 1e-6 && x < at[i] + R.window).length;
+    out.push({ rule: 'switch', start: at[i], end: at[i + R.switches], secs: null,
+      msg: `${fmt(at[i])} 起 1 分鐘內切換 ${n} 次（${runs.slice(1).filter((r) => r.start >= at[i] - 1e-6 && r.start < at[i] + R.window).map((r) => `${fmt(r.start)}→${STATE_ZH[r.state]}`).join('、')}），最多 ${R.switches} 次`,
+      fix: '把中間短的那一塊併進前後同一種版面（例：夾在兩個切一半中間的全身段也做成切一半），少切幾次' });
+    break;
+  }
+  return out;
+}
+
+export const portraitLine = (runs) => runs.map((r) => `${fmt(r.start)}–${fmt(r.end)} ${STATE_ZH[r.state]}`).join('｜');

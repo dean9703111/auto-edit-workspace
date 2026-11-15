@@ -158,23 +158,27 @@ test('A9② look.mjs default：不帶值印目前的預設（和 status 的「�
   const { tpl, file } = lookTemplate(t);
   let r = node('look.mjs', ['default', '--template', tpl]);
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.equal(r.stdout, '設定：調光 關、瘦臉 關、美顏 關（來源：kit/look.json）\n');
+  assert.equal(r.stdout, '設定：調光 關、瘦臉 關、美顏 關、瘦小腹 關（來源：kit/look.json）\n');
   r = node('look.mjs', ['default', '--template', tpl, '--slim', '0.6', '--color', '0.8']);
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.equal(r.stdout, '✓ kit/look.json：調光 0 → 0.8、瘦臉 0 → 0.6\n設定：調光 0.8、瘦臉 0.6、美顏 關（來源：kit/look.json）\n');
+  assert.equal(r.stdout, '✓ kit/look.json：調光 0 → 0.8、瘦臉 0 → 0.6\n設定：調光 0.8、瘦臉 0.6、美顏 關、瘦小腹 關（來源：kit/look.json）\n');
   assert.equal(fs.readFileSync(file, 'utf8'), '{\n  "color": 0.8,\n  "slim": 0.6,\n  "lut": "look/jianying-smart.cube"\n}\n');
   r = node('look.mjs', ['default', '--template', tpl, '--beauty=0.5']);
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { color: 0.8, slim: 0.6, lut: 'look/jianying-smart.cube', beauty: 0.5 });
   r = node('look.mjs', ['default', '--template', tpl, '--slim', '0.6']);
-  assert.match(r.stdout, /^✓ kit\/look\.json 本來就是這個值，沒有改\n設定：調光 0\.8、瘦臉 0\.6、美顏 0\.5/);
+  assert.match(r.stdout, /^✓ kit\/look\.json 本來就是這個值，沒有改\n設定：調光 0\.8、瘦臉 0\.6、美顏 0\.5、瘦小腹 關/);
+  // 瘦小腹（051）：沒有的鍵加在最後，其他不動
+  r = node('look.mjs', ['default', '--template', tpl, '--belly', '0.5']);
+  assert.equal(r.stdout, '✓ kit/look.json：瘦小腹 0 → 0.5\n設定：調光 0.8、瘦臉 0.6、美顏 0.5、瘦小腹 0.5（來源：kit/look.json）\n');
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { color: 0.8, slim: 0.6, lut: 'look/jianying-smart.cube', beauty: 0.5, belly: 0.5 });
   assert.deepEqual(fs.readdirSync(path.join(tpl, 'kit')), ['look.json'], '沒有留下暫存檔');
 });
 
 test('A9② look.mjs default：超出範圍、不是數字 ✖（附 → 例）、檔案不動；其他子指令的旗標不能混用', (t) => {
   const { tpl, file } = lookTemplate(t);
   const before = fs.readFileSync(file, 'utf8');
-  for (const [k, v, range] of [['slim', '1.5', '0–1.2'], ['color', '-0.1', '0–1'], ['beauty', 'abc', '0–1']]) {
+  for (const [k, v, range] of [['slim', '1.5', '0–1.2'], ['color', '-0.1', '0–1'], ['beauty', 'abc', '0–1'], ['belly', '1.2', '0–1']]) {
     const r = node('look.mjs', ['default', '--template', tpl, `--${k}`, v]);
     assert.equal(r.status, 1, `${k}=${v}`);
     assert.match(r.stdout, new RegExp(`^✖ --${k} 要是 ${range} 的數字，現在是「${v.replace('.', '\\.')}」 → 例：--${k} `));
@@ -183,7 +187,7 @@ test('A9② look.mjs default：超出範圍、不是數字 ✖（附 → 例）�
   const r = node('look.mjs', ['default', '--template', tpl, '--every', '2']);
   assert.equal(r.status, 2);
   assert.match(r.stdout, /default 不能加 --every/);
-  assert.match(node('look.mjs', ['--help']).stdout, /look\.mjs default \[--color 0–1\] \[--slim 0–1\.2\] \[--beauty 0–1\]/);
+  assert.match(node('look.mjs', ['--help']).stdout, /look\.mjs default \[--color 0–1\] \[--slim 0–1\.2\] \[--beauty 0–1\] \[--belly 0–1\]/);
 });
 
 // ---------- look.mjs cancel、capcut.mjs --cancel ----------

@@ -1,8 +1,8 @@
 // 臉部 landmark 偵測：HyperFrames 的 chrome-headless-shell ＋ MediaPipe Tasks Vision（CPU），Node 只用內建 http＋WebSocket（CDP）
-// 契約：specs/contracts/look.md §5.1、§6.1、§6.2
+// 契約：specs/contracts/look.md §5.1、§6.1、§6.2；姿勢（瘦小腹用，§9）在同一個頁面、同一趟解碼裡每 POSE_EVERY 格跑一次
 //
-//   openDetector({ vendorDir, chrome })            → { locate(frames), detect(...), close() }（同一個 Chrome 先找臉再逐格偵測）
-//   detectLandmarks({ video, every, detector, onProgress }) → { frames, black, msPerFrame, … }（座標換回來源像素）
+//   openDetector({ vendorDir, chrome, pose })      → { locate(frames), detect(...), close() }（同一個 Chrome 先找臉再逐格偵測；pose＝true 才載姿勢模型）
+//   detectLandmarks({ video, every, detector, onProgress, face, pose }) → { frames, black, msPerFrame, poses, … }（座標換回來源像素）
 //   locateFaces({ video, times, detector })         → [{ t, fw, center, n } | null]
 //   PAGE_HTML                                        頁面原始碼（測試可以讀）
 
@@ -12,24 +12,36 @@ import path from 'node:path';
 import http from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
 import { findChrome } from './audit-browser.mjs';
-import { POINTS, DETECT_W, ROI_SCALE, ROI_SIZE, SEARCH_GAP, DETECT_CFG, probeVideo } from './look.mjs';
+import { POINTS, DETECT_W, ROI_SCALE, ROI_SIZE, SEARCH_GAP, DETECT_CFG, POSE_CFG, POSE_POINTS, POSE_EVERY, POSE_MODEL, probeVideo } from './look.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const r1 = (n) => Math.round(n * 10) / 10;
+const r2 = (n) => Math.round(n * 100) / 100;
 
 // ---------- 頁面（在 Chrome 裡跑；沒有任何 ${} 插值，設定由 __lmStart(cfg) 傳進來） ----------
 
 export const PAGE_HTML = `<!doctype html><meta charset="utf-8"><body><script type="module">
-import { FilesetResolver, FaceLandmarker } from '/tv/vision_bundle.mjs';
+import { FilesetResolver, FaceLandmarker, PoseLandmarker } from '/tv/vision_bundle.mjs';
 const report = (u, body) => fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-let lm;
+let lm, pl = null;
 try {
   const files = await FilesetResolver.forVisionTasks('/tv/wasm');
   const cfg0 = await (await fetch('/config')).json();
   lm = await FaceLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: '/model.task', delegate: 'CPU' }, runningMode: 'IMAGE',
     numFaces: cfg0.numFaces, minFaceDetectionConfidence: cfg0.minFaceDetectionConfidence, minFacePresenceConfidence: cfg0.minFacePresenceConfidence });
+  if (cfg0.pose) pl = await PoseLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: '/pose.task', delegate: 'CPU' }, runningMode: 'IMAGE',
+    numPoses: cfg0.pose.numPoses, minPoseDetectionConfidence: cfg0.pose.minPoseDetectionConfidence, minPosePresenceConfidence: cfg0.pose.minPosePresenceConfidence });
 } catch (e) { window.__lmError = String(e && e.message || e); }
-let ms = 0, calls = 0;
+let ms = 0, calls = 0, pms = 0, pcalls = 0;
+// 姿勢：整張偵測畫面丟進去，只留 pts 那幾個點（偵測畫面的像素）和它們的可見度
+function poseOf(img, pts) {
+  const t = performance.now(); const r = pl.detect(img); pms += performance.now() - t; pcalls++;
+  const L = r.landmarks && r.landmarks[0];
+  if (!L) return null;
+  const p = [], v = [];
+  for (const i of pts) { p.push(L[i].x * img.width, L[i].y * img.height); v.push(L[i].visibility || 0); }
+  return { p, v };
+}
 const fwOf = (L) => Math.hypot(L[234][0] - L[454][0], L[234][1] - L[454][1]);
 const centerOf = (L) => [(L[1][0] + L[168][0]) / 2, (L[1][1] + L[168][1]) / 2];
 async function detectRect(img, sx, sy, side, roiSize) {
@@ -78,10 +90,16 @@ window.__lmLocate = async (count, cfg) => {
 };
 window.__lmStart = (cfg) => { (async () => {
   try {
-    let prev = null, nextSearch = 0, batch = [];
-    for (let i = 0; ; i += cfg.every) {
+    let prev = null, nextSearch = 0, batch = [], pbatch = [];
+    const pe = cfg.pose && pl ? cfg.pose.every : 0;
+    if (!cfg.face && !pe) throw new Error('沒有要偵測的東西（臉、姿勢都沒開，或姿勢模型沒有載入）');
+    for (let i = 0; ; i++) {
+      const doFace = cfg.face && i % cfg.every === 0, doPose = pe > 0 && i % pe === 0;
+      if (!doFace && !doPose) continue;
       const img = await frameImage('/frame?i=' + i);
       if (img === null) break;
+      if (doPose) pbatch.push([i, img === 0 ? 0 : poseOf(img, cfg.pose.points)]);
+      if (!doFace) { if (pbatch.length >= 30) { await report('/result', { f: [], p: pbatch }); pbatch = []; } continue; }
       let res = null;
       if (img === 0) res = 0;
       else {
@@ -97,10 +115,10 @@ window.__lmStart = (cfg) => { (async () => {
         if (face) { prev = { fw: fwOf(face), c: centerOf(face) }; res = pack(face, n, cfg.points); } else prev = null;
       }
       batch.push([i, res]);
-      if (batch.length >= 30) { await report('/result', batch); batch = []; }
+      if (batch.length >= 30) { await report('/result', { f: batch, p: pbatch }); batch = []; pbatch = []; }
     }
-    if (batch.length) await report('/result', batch);
-    await report('/done', { msPerCall: calls ? ms / calls : 0, calls });
+    if (batch.length + pbatch.length) await report('/result', { f: batch, p: pbatch });
+    await report('/done', { msPerCall: calls ? ms / calls : 0, calls, poseMsPerCall: pcalls ? pms / pcalls : 0, poseCalls: pcalls });
   } catch (e) { await report('/error', { message: String(e && e.stack || e) }); }
 })(); return true; };
 window.__lmReady = true;
@@ -194,7 +212,7 @@ export function sweepStaleProfiles(dir = os.tmpdir(), maxAgeMs = 24 * 3600 * 100
   return n;
 }
 
-export async function openDetector({ vendorDir, chrome, log = () => {} } = {}) {
+export async function openDetector({ vendorDir, chrome, pose = false, log = () => {} } = {}) {
   const exe = findChrome({ chrome });
   sweepStaleProfiles();
   const userDir = fs.mkdtempSync(path.join(os.tmpdir(), 'look-lm-'));
@@ -215,11 +233,12 @@ export async function openDetector({ vendorDir, chrome, log = () => {} } = {}) {
       return;
     }
     if (u.pathname === '/') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(PAGE_HTML); }
-    if (u.pathname === '/config') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(DETECT_CFG)); }
+    if (u.pathname === '/config') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ...DETECT_CFG, pose: pose ? POSE_CFG : null })); }
     if (u.pathname === '/frame' && H.frame) return H.frame(Number(u.searchParams.get('i')), res);
     if (u.pathname === '/locate' && H.locate) return H.locate(Number(u.searchParams.get('k')), res);
     let f = null;
     if (u.pathname === '/model.task') f = path.join(vendorDir, 'face_landmarker.task');
+    else if (u.pathname === '/pose.task') f = path.join(vendorDir, POSE_MODEL);
     else if (u.pathname === '/tv/vision_bundle.mjs') f = path.join(vendorDir, 'vision_bundle.mjs');
     else if (/^\/tv\/wasm\/vision_wasm_internal\.(js|wasm)$/.test(u.pathname)) f = path.join(vendorDir, 'wasm', path.basename(u.pathname));
     if (!f || !fs.existsSync(f)) { res.writeHead(404); return res.end(); }
@@ -267,7 +286,7 @@ export async function openDetector({ vendorDir, chrome, log = () => {} } = {}) {
       await sleep(200);
     }
     log(`  Chrome 載入 MediaPipe：${((Date.now() - t0) / 1000).toFixed(1)} 秒`);
-    return { exe, H, evalJs, pageErrors, close };
+    return { exe, H, evalJs, pageErrors, close, pose: !!pose };
   } catch (e) { await close(); throw e; }
 }
 
@@ -313,10 +332,12 @@ export async function locateFaces({ video, times, detector }) {
 }
 
 // 逐格偵測：回傳 frames（null／0／{ p, b, n }，來源像素、一位小數；--every 2 的奇數格先不填，由呼叫端內插）
-export async function detectLandmarks({ video, every = 1, detector, onProgress = () => {} }) {
+// pose＝true 再多回 poses（每 POSE_EVERY 格一筆：null／0／{ p, v }，p 是肩、髖 4 點的來源像素）；face＝false 只跑姿勢（frames 是 null）
+export async function detectLandmarks({ video, every = 1, detector, onProgress = () => {}, face = true, pose = false }) {
+  if (pose && !detector.pose) throw new Error('姿勢模型沒有載入 → openDetector 要帶 pose: true');
   const V = probeVideo(video), D = detectSize(V.width, V.height), k = V.width / D.w;
   const total = V.frames;
-  const frames = [], black = [];
+  const frames = [], black = [], poseAt = [];
   const queue = [];        // [i, buf]
   let ended = false, waiting = null, lastTouch = Date.now(), done = null, failed = null, received = 0;
   const t0 = Date.now();
@@ -342,8 +363,12 @@ export async function detectLandmarks({ video, every = 1, detector, onProgress =
     res.writeHead(200, { 'content-type': 'application/octet-stream', 'x-w': String(D.w), 'x-h': String(D.h) }); res.end(buf);
   };
   detector.H.result = (batch) => {
-    for (const [i, r] of batch || []) {
+    for (const [i, r] of batch?.f || []) {
       frames[i] = r && typeof r === 'object' ? { p: r.p.map((v) => r1(v * k)), b: r.b.map((v) => r1(v * k)), n: r.n } : r;
+      received = Math.max(received, i + 1);
+    }
+    for (const [i, r] of batch?.p || []) {
+      poseAt[i] = r && typeof r === 'object' ? { p: r.p.map((v) => r1(v * k)), v: r.v.map(r2) } : r;
       received = Math.max(received, i + 1);
     }
     onProgress({ done: Math.min(received, total), total, elapsed: (Date.now() - t0) / 1000 });
@@ -352,7 +377,7 @@ export async function detectLandmarks({ video, every = 1, detector, onProgress =
     detector.H.done = (b) => { done = b || {}; resolve(); };
     detector.H.error = (b) => { failed = `Chrome 載不了 MediaPipe（${String(b?.message || '頁面錯誤').split('\n')[0]}）`; resolve(); };
   });
-  await detector.evalJs(`window.__lmStart(${JSON.stringify({ every, roiScale: ROI_SCALE, roiSize: ROI_SIZE, searchGap: SEARCH_GAP, points: POINTS })})`);
+  await detector.evalJs(`window.__lmStart(${JSON.stringify({ face, every, roiScale: ROI_SCALE, roiSize: ROI_SIZE, searchGap: SEARCH_GAP, points: POINTS, pose: pose ? { every: POSE_EVERY, points: POSE_POINTS } : null })})`);
   const watchdog = new Promise((resolve) => {
     const iv = setInterval(() => {
       if (done || failed) { clearInterval(iv); return resolve(); }
@@ -369,5 +394,8 @@ export async function detectLandmarks({ video, every = 1, detector, onProgress =
     else if (frames[i] === undefined) frames[i] = null;
   }
   frames.length = n;
-  return { frames, black, msPerFrame: done.msPerCall || 0, calls: done.calls || 0, elapsedSec: (Date.now() - t0) / 1000, detectWidth: D.w, video: V };
+  // 姿勢：第 j 筆＝第 j × POSE_EVERY 格
+  const poses = pose ? Array.from({ length: Math.ceil(n / POSE_EVERY) }, (_, j) => (black[j * POSE_EVERY] ? 0 : poseAt[j * POSE_EVERY] ?? null)) : null;
+  return { frames: face ? frames : null, frameCount: n, black, poses, msPerFrame: done.msPerCall || 0, calls: done.calls || 0, poseMsPerCall: done.poseMsPerCall || 0, poseCalls: done.poseCalls || 0,
+    elapsedSec: (Date.now() - t0) / 1000, detectWidth: D.w, video: V };
 }

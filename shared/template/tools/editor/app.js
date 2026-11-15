@@ -1,8 +1,8 @@
-// 剪輯台主程式：載入狀態、以選取為中心的屬性面板、時間軸操作（裁剪、分割、音量線、字幕）、復原、自動存檔、更新預覽、鍵盤
+// 剪輯台主程式：載入狀態、以選取為中心的屬性面板、時間軸操作（裁剪、分割、音量線、字幕、音效）、右鍵選單（選單元件在 menu.js）、復原、自動存檔、更新預覽、鍵盤
 import { groupIssues, issueId, hideKey, plainText, splitHidden } from './issues.mjs';
 import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
-  fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss,
+  fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss, ownSfx, sortOwnSfx, ownSfxView,
 } from './model.mjs';
 import { applyCueOp, remapPlan, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
 import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef, toggleEmph } from './text.mjs';
@@ -10,6 +10,7 @@ import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
 import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate, freezeAt, joinAt, isPlain, trimModel } from './speed.mjs';
 import { transitionOf, speedSummary } from './motion.mjs';
 import { SimPreview, PlayerPreview } from './preview.js';
+import { openMenu, closeMenu } from './menu.js';
 import { CAP_LOOKS, CAP_FONTS, CAP_WEIGHTS, CAP_SIZE, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, captionGeom, captionRootVars, captionFontFace, describeCaptionStyle, CAP_VARS, CAP_LIFT, clampLift, describeLift, parseCaptionMarks, fmtCaptionMarks } from '/lib/caption-style.mjs';
 
 const $ = (s) => document.querySelector(s);
@@ -171,6 +172,7 @@ function normalize() {
   app.edit.cuts = mergeCuts(app.edit.cuts);
   cleanJoins(app.edit, app.cutpoints, app.dur);
   app.edit.gains = app.edit.gains.filter((g) => g.to - g.from >= 0.05).sort((a, b) => a.from - b.from);
+  sortOwnSfx(app.edit.sfx);
   app.splits = [...new Set(app.splits.map(r3))].filter((t) => t > 0.001 && t < app.dur - 0.001 && cutIndexAt(t, app.edit.cuts) < 0 && !app.edit.cuts.some(([a, b]) => Math.abs(t - a) < 0.01 || Math.abs(t - b) < 0.01)).sort((a, b) => a - b);
 }
 // 復原、重做正在換檔案（等伺服器那一下）：先不收新的修改，不然回應到了會被換掉、重做也拿不回來
@@ -313,17 +315,28 @@ function recompute() {
     const curMuted = sc?.sfx === null;
     const savedSegDb = Number.isFinite(sb?.sfxVolume) ? sb.sfxVolume : 0, curSegDb = Number.isFinite(sc?.sfxVolume) ? sc.sfxVolume : 0;
     const dGlobal = app.edit.volume.sfx - app.savedEdit.volume.sfx;
+    // 050 剛換了一顆、還沒存：檢查報告還是舊的那一顆，先照新的名稱顯示和試聽（音量照那一顆的預設）
+    const swap = sc && sb && !same(sc.sfx, sb.sfx) ? sfxNameOf(sc.sfx) : null;
+    const swapDb = swap ? ownSfxView({ at: 0, db: curSegDb }, soundConf(swap), app.edit.volume.sfx).db : null;
     (it.sfx || []).forEach((m, j) => {
       const main = j === 0 && !savedMuted;
-      const db = m.db == null ? null : m.db - savedSegDb + curSegDb + dGlobal;
-      sv.push({ id: `${it.id}:${j}`, segId: it.id, name: m.name, at: r3(m.at + (it.ds || 0)), main, muted: main && curMuted, db, gain: db == null ? 0 : dbToGain(db) });
+      const now = main && swap && swap !== m.name;
+      const db = now ? swapDb : m.db == null ? null : m.db - savedSegDb + curSegDb + dGlobal;
+      sv.push({ id: `${it.id}:${j}`, segId: it.id, name: now ? swap : m.name, at: r3(m.at + (it.ds || 0)), main, muted: main && curMuted, db, gain: db == null ? 0 : dbToGain(db) });
     });
-    if (savedMuted && sc && app.sfxMemory[it.id] && !sv.some((m) => m.segId === it.id && m.main)) {
-      // 存檔時已經靜音：在段落開頭放一顆灰色標記，點了可以取消靜音
+    if (sc && !sv.some((m) => m.segId === it.id && m.main)) {
+      // 這段現在看不到主音效的標記：剛選了一顆（原本不放、或存檔時是靜音）→ 先放在段落開頭，檢查報告出來換成真的位置；
+      // 存檔時已經靜音 → 在段落開頭放一顆灰色標記，點了可以取消靜音
       const mem = app.sfxMemory[it.id];
-      sv.push({ id: `${it.id}:muted`, segId: it.id, name: mem?.value || '音效', at: it.start, main: true, muted: curMuted, db: null, gain: 0, ghost: true });
+      if (swap) sv.push({ id: `${it.id}:new`, segId: it.id, name: swap, at: it.start, main: true, muted: false, db: swapDb, gain: dbToGain(swapDb) });
+      else if (savedMuted && mem) sv.push({ id: `${it.id}:muted`, segId: it.id, name: sfxNameOf(mem.value) || '音效', at: it.start, main: true, muted: curMuted, db: null, gain: 0, ghost: true });
     }
   }
+  // 050 自己加的音效（edit.sfx）：at 是聽到的那一刻，標記從音效檔開始播的地方畫起（和 AI 放的同一種畫法）
+  app.edit.sfx.forEach((x, i) => {
+    const v = ownSfxView(x, soundConf(x.sound), app.edit.volume.sfx);
+    sv.push({ id: `own:${i}`, user: i, name: x.sound, at: v.start, hit: x.at, main: false, muted: false, db: v.db, gain: dbToGain(v.db) });
+  });
   app.sfxView = sv.sort((a, b) => a.at - b.at);
 }
 // 這段沒有寫在講什麼時的名稱：不露檔名（x-design-d0101.html）和版型編號（07 重點字卡）
@@ -374,6 +387,7 @@ function selectionExists(s) {
     case 'piece': return app.pieces.some((p) => p.key === s.id);
     case 'join': return app.points.some((p) => Math.abs(p.at - s.id) < 1e-6);
     case 'sfx': return app.sfxView.some((m) => m.segId === s.id);
+    case 'usfx': return !!app.edit.sfx[s.id];
     default: return true;
   }
 }
@@ -417,11 +431,18 @@ function restoreCut(i) {
   app.select(null);
   toast(`已恢復 ${fmt(c[0])}–${fmt(c[1])}`);
 }
+// 主軌能不能在 t 切開（不能的原因：按 B 時跳提示，右鍵選單那一項灰掉）
+function splitMainWhy(t = app.t) {
+  t = frameSnap(t);
+  if (cutIndexAt(t, app.edit.cuts) >= 0) return '播放頭在剪掉的範圍裡，不用再切';
+  if (t <= 0.01 || t >= app.dur - 0.01) return '播放頭在開頭或結尾，沒有東西可以切';
+  if (app.splits.some((x) => Math.abs(x - t) < 0.01)) return '這裡已經切開了';
+  return '';
+}
 function splitMain(t = app.t) {
   t = frameSnap(t);
-  if (cutIndexAt(t, app.edit.cuts) >= 0) { toast('播放頭在剪掉的範圍裡，不用再切', 'warn'); return; }
-  if (t <= 0.01 || t >= app.dur - 0.01) { toast('播放頭在開頭或結尾，沒有東西可以切', 'warn'); return; }
-  if (app.splits.some((x) => Math.abs(x - t) < 0.01)) { toast('這裡已經切開了', 'warn', 1500); return; }
+  const why = splitMainWhy(t);
+  if (why) { toast(why, 'warn', why === '這裡已經切開了' ? 1500 : 3200); return; }
   mutate(() => { app.splits.push(t); });
   toast('已在播放頭切開主軌：點選要拿掉的那段，按 Delete', 'ok', 3500);
 }
@@ -574,17 +595,92 @@ function setSeg(id, patch, opts = {}) {
     app.scenes = app.scenes.slice(); app.scenes[i] = o;
   }, opts);
 }
+// ---------- 音效（050：換一顆、還原、自己加） ----------
+// 可以選的音效（/api/state 的 schema.sfx：shared/sfx 與 shared/sfx-local 裡這台機器有的；名稱、中文名、預設音量、峰值）
+const soundList = () => app.server?.schema?.sfx || [];
+const soundConf = (name) => soundList().find((x) => x.name === name) || null;
+const soundZh = (name) => soundConf(name)?.zh || name;
+const soundsWhy = () => (soundList().length ? '' : `讀不到音效清單${app.server?.schema?.error ? `（${app.server.schema.error}）` : ''} → 請 AI 看一下，修好後重新整理這一頁`);
+const sfxNameOf = (v) => (typeof v === 'string' ? v : isObj(v) && typeof v.name === 'string' ? v.name : null);
+// 伺服器記著的「剪輯台動手之前的值」（.editor/memory.json）：存檔裡現在的值不是剪輯台最後寫的那個（之後 AI 又改過）就不算數
+function sfxMem(segId, sb = savedSceneById(segId)) {
+  const m = app.sfxMemory[segId];
+  return m && sb && 'sfx' in sb && same(sb.sfx, m.set ?? null) ? m : null;
+}
+// 這一段原本的主音效（AI 寫的）：音效名稱、{ name, at }、null（AI 設定不放）；undefined＝沒寫（照情境預設）
+function sfxOrig(segId) {
+  const sb = savedSceneById(segId), mem = sfxMem(segId, sb);
+  if (mem) return mem.had ? mem.value : undefined;
+  return sb && 'sfx' in sb ? sb.sfx : undefined;
+}
 function toggleSfxMute(segId) {
   const sc = sceneById(segId);
   if (!sc) return;
   if (sc.sfx === null) {
     const sb = savedSceneById(segId);
-    const mem = app.sfxMemory[segId];
+    const mem = sfxMem(segId, sb);
     // 還原：存檔前靜音的照原值還原；存檔後靜音的照伺服器記住的值（沒記到就拿掉 sfx＝情境預設音效）
-    const orig = sb && sb.sfx !== null ? (('sfx' in sb) ? sb.sfx : undefined) : mem?.had ? mem.value : undefined;
+    const orig = sb && sb.sfx !== null ? (('sfx' in sb) ? sb.sfx : undefined) : mem?.had ? mem.value ?? undefined : undefined;
     setSeg(segId, { sfx: orig }, { inspector: true });
     toast(`${segId} 的音效已取消靜音`, 'ok', 1800);
   } else { setSeg(segId, { sfx: null }, { inspector: true }); toast(`${segId} 的音效已靜音（Delete／雙擊可以切換）`, 'ok', 1800); }
+}
+// 換這一段的主音效：寫 plan.json 那一段的 "sfx": "<名稱>"；AI 原本指定了落點（{ name, at }）就只換名稱、落點照舊
+function swapSegSfx(segId, name) {
+  const sc = sceneById(segId);
+  if (!sc) return;
+  const keep = [sc.sfx, sfxOrig(segId)].find(isObj);
+  if (setSeg(segId, { sfx: keep ? { name, at: keep.at } : name }, { inspector: true })) toast(`${segId} 的音效換成「${soundZh(name)}」（⌘／Ctrl＋Z 可以復原）`, 'ok', 2600);
+  playSound(name, Number.isFinite(sc.sfxVolume) ? sc.sfxVolume : 0);
+}
+// 還原成 AI 原本放的（原本沒寫就拿掉欄位＝照情境預設；原本是 null 就回到不放）
+function restoreSegSfx(segId) {
+  const sc = sceneById(segId);
+  if (!sc) return;
+  const orig = sfxOrig(segId);
+  if (same(sc.sfx, orig)) { toast('現在就是原本的音效', 'warn', 2000); return; }
+  if (setSeg(segId, { sfx: orig }, { inspector: true })) toast(`${segId} 的音效已還原成原本的`, 'ok', 2000);
+}
+// 先聽聽看：選單的 ▶、選了之後、屬性的「試聽」。音量照那一顆的預設＋這一顆（這一段）的調整＋整支的音效音量
+let auditionEl = null;
+function playSound(name, db = 0) {
+  app.auditioned = name;   // 實測用
+  try { auditionEl?.pause(); } catch { /* 上一顆已經播完 */ }
+  auditionEl = new Audio(`/sfx/${encodeURIComponent(name)}.wav`);
+  auditionEl.volume = clamp((soundConf(name)?.volume ?? 0.5) * dbToGain(db + app.edit.volume.sfx), 0, 1);
+  auditionEl.play().catch(() => { /* 找不到檔、或瀏覽器還不讓這一頁出聲：不擋操作 */ });
+}
+// 自己加的音效（edit.sfx）：在 t（rough.mp4 秒數）放一顆，那一刻聽到
+function addOwnSfx(t, name) {
+  const at = clamp(frameSnap(t), 0, app.dur);
+  if (app.edit.sfx.some((x) => x.sound === name && Math.abs(x.at - at) < 0.05)) { toast(`這裡已經有一顆「${soundZh(name)}」了`, 'warn', 2500); return; }
+  if (!mutate(() => { app.edit.sfx.push(ownSfx(at, name)); })) return;
+  app.select({ kind: 'usfx', id: app.edit.sfx.findIndex((x) => x.sound === name && x.at === at) }, { lane: 'sfx' });
+  playSound(name);
+  toast(`已在 ${fmt(at, 1)} 加一顆「${soundZh(name)}」：左右拖改時間、上下拖調音量，Delete 移除`, 'ok', 4000);
+}
+// 改自己加的那一顆（換一顆、改時間、調音量）：改完照時間重排，選取跟著那一顆走
+function setOwnSfx(i, patch, opts = {}) {
+  const x = app.edit.sfx[i];
+  if (!x) return false;
+  const next = ownSfx(clamp(patch.at ?? x.at, 0, app.dur), patch.sound ?? x.sound, patch.db ?? x.db ?? 0);
+  const ok = mutate(() => { delete x.db; Object.assign(x, next); }, opts);
+  const k = app.edit.sfx.indexOf(x);
+  if (ok && k >= 0 && k !== i && app.isSelected('usfx', i)) app.select({ kind: 'usfx', id: k }, { lane: 'sfx' });
+  return ok;
+}
+function swapOwnSfx(i, name) {
+  const x = app.edit.sfx[i];
+  if (!x) return;
+  setOwnSfx(i, { sound: name }, { inspector: true });
+  playSound(name, x.db || 0);
+}
+function removeOwnSfx(i) {
+  const x = app.edit.sfx[i];
+  if (!x) return;
+  mutate(() => { app.edit.sfx.splice(i, 1); });
+  app.select(null);
+  toast(`已移除 ${fmt(x.at, 1)} 的「${soundZh(x.sound)}」（⌘／Ctrl＋Z 可以復原）`, 'ok', 3000);
 }
 
 // ---------- 播放 ----------
@@ -773,6 +869,7 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
     app.gesture = null;
   }
   const kept = keep ? keep() : null;
+  closeMenu();   // 開著的右鍵選單是照舊資料列的：重新載入就收掉
   app.saveBlocked = false;
   app.server = s;
   app.hiddenChecks = new Set(Array.isArray(s.hiddenChecks) ? s.hiddenChecks : []);
@@ -1152,7 +1249,8 @@ function renderHeader() {
 }
 function editForSave() {
   const e = app.edit;
-  return { cuts: e.cuts.map(([a, b]) => [r3(a), r3(b)]), fadeIn: e.fadeIn, fadeOut: e.fadeOut, volume: { ...e.volume }, gains: e.gains.map((g) => ({ ...g })), joins: e.joins.map((j) => ({ ...j })) };
+  return { cuts: e.cuts.map(([a, b]) => [r3(a), r3(b)]), fadeIn: e.fadeIn, fadeOut: e.fadeOut, volume: { ...e.volume }, gains: e.gains.map((g) => ({ ...g })), joins: e.joins.map((j) => ({ ...j })),
+    ...(e.sfx.length ? { sfx: e.sfx.map((x) => ({ ...x })) } : {}), ...(e.level ? { level: true } : {}) };   // 自己加的音效：一顆都沒有就不寫這個欄位；拉平人聲：關著不寫
 }
 // 跟「存檔時的 plan.json＋目前的字幕操作」比，哪些段落欄位改了
 function segmentDiff() {
@@ -1167,7 +1265,8 @@ function segmentDiff() {
     for (const k of keys) {
       if (same(sc[k], b[k])) continue;
       rd[k] = sc[k];
-      if (k === 'sfx') d.sfx = sc.sfx === null ? null : { restore: true };
+      // 音效：靜音＝null；拿掉欄位、或改回原本的值＝還原（伺服器照它記的還原）；其他＝換一顆（050）
+      if (k === 'sfx') d.sfx = sc.sfx === null ? null : sc.sfx === undefined || same(sc.sfx, sfxOrig(sc.id)) ? { restore: true } : sc.sfx;
       else if (sc[k] === undefined) { if (k === 'sfxVolume' || k === 'anchor' || SPEED_KEYS.includes(k)) d[k] = null; }
       else d[k] = sc[k];
     }
@@ -1247,7 +1346,7 @@ async function saveOnce({ notify, retry = 0 }) {
   const body = { quick: true, base: { ...app.base }, edit: editForSave(), ...(app.canStash ? { saveId } : {}) };
   if (Object.keys(segments).length) body.segments = segments;
   if (app.srtOps.length) body.srt = { ops: app.srtOps };
-  if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}) } : null;   // 美顏 0＝關，不寫
+  if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}), ...(app.look.belly > 0 ? { belly: r2(app.look.belly) } : {}) } : null;   // 美顏 0＝關，不寫
   if (app.theme !== app.savedTheme) body.theme = app.theme;
   if (!same(app.cap, app.savedCap)) body.captionStyle = app.cap;
   // 重點字幕整份送（句號是字幕操作做完之後的）。同時有字幕操作時一定送：頁面上的句號已經換過，光和存檔時的清單比數字會比錯
@@ -1319,13 +1418,20 @@ async function saveOnce({ notify, retry = 0 }) {
   app.saveErrors = null;
   // 檢查還沒回來之前，時間軸上的段停在現在算好的位置（不會因為基準換了跳回去）
   const views = new Map(app.itemsView.map((v) => [v.id, v]));
-  app.items = app.items.map((it) => {
-    const v = views.get(it.id);
-    return v ? { ...it, start: v.start, end: v.end, shownEnd: it.shownEnd != null ? v.vend : null, sfx: (it.sfx || []).map((m) => ({ ...m, at: r3(m.at + (v.ds || 0)) })) } : it;
-  });
+  // 音效也一樣：照現在畫面上的標記（換過的名稱、新選的那一顆；靜音的主音效拿掉），主音效排第一個
+  const marks = (id) => app.sfxView.filter((m) => m.segId === id && !(m.main && m.muted)).sort((a, b) => Number(b.main) - Number(a.main) || a.at - b.at);
+  const shown = new Map(app.items.map((it) => [it.id, marks(it.id)]));
   // 存檔途中又改了（或正在拖曳）：畫面上的留著，下一輪再存
   const keepLocal = dirtySnap() !== sentSnap || !!app.gesture;
   applySaved(d, { keepLocal, sentOps, fallbackEdit: body.edit });
+  // 標記的音量是「現在畫面上的」：扣掉還沒存的那一段調整（這段的音量、整支的音效音量），下次重算才不會多算一次
+  const segDb = (x) => (Number.isFinite(x?.sfxVolume) ? x.sfxVolume : 0);
+  app.items = app.items.map((it) => {
+    const v = views.get(it.id);
+    if (!v) return it;
+    const unsaved = segDb(sceneById(it.id)) - segDb(savedSceneById(it.id)) + app.edit.volume.sfx - app.savedEdit.volume.sfx;
+    return { ...it, start: v.start, end: v.end, shownEnd: it.shownEnd != null ? v.vend : null, sfx: shown.get(it.id).map((m) => ({ name: m.name, at: m.at, db: m.db == null ? null : m.db - unsaved })) };
+  });
   for (const id of textChanged) app.pendingAudit.add(id);
   if (app.server.preview.built) app.server.preview.stale = true;
   changed({ inspector: false });
@@ -1527,6 +1633,7 @@ function selLabel(s) {
     case 'join': return '剪接點';
     case 'gain': return '人聲範圍音量';
     case 'sfx': return `${s.id} 的音效`;
+    case 'usfx': return `自己加的音效「${soundZh(app.edit.sfx[s.id]?.sound)}」`;
     case 'gap': return '沒有字卡的講解';
     default: return '';
   }
@@ -1855,35 +1962,35 @@ function inspTheme() {
     <p class="ip-note">字卡和全畫面動畫的配色。在完成影片預覽馬上看得到；按「更新預覽」才會做進去。</p>`;
 }
 
-// ---------- 講者（調光、瘦臉、美顏；contracts/look.md §7）----------
-const lookKit = () => ({ beauty: 0, ...(app.server?.look?.kit || { color: 0.8, slim: 0.6 }) });
-const LOOK_ON = { color: 0.8, slim: 0.6, beauty: 0.5 };   // 「打開」時沒有上一次的值、kit 也是 0 → 用這個
+// ---------- 講者（調光、瘦臉、美顏、瘦小腹；contracts/look.md §7、§9）----------
+const lookKit = () => ({ beauty: 0, belly: 0, ...(app.server?.look?.kit || { color: 0.8, slim: 0.6 }) });
+const LOOK_ON = { color: 0.8, slim: 0.6, beauty: 0.5, belly: 0.5 };   // 「打開」時沒有上一次的值、kit 也是 0 → 用這個
 // plan.json 的 look → 剪輯的值（null＝沒寫，用 kit 預設；false＝兩個都 0）
 function normLook(v) {
   if (v === undefined || v === null) return null;
-  if (v === false) return { color: 0, slim: 0, beauty: 0 };
+  if (v === false) return { color: 0, slim: 0, beauty: 0, belly: 0 };
   if (!isObj(v)) return null;
   const k = lookKit();
-  return { color: Number.isFinite(v.color) ? v.color : k.color, slim: Number.isFinite(v.slim) ? v.slim : k.slim, beauty: Number.isFinite(v.beauty) ? v.beauty : (k.beauty || 0) };
+  return { color: Number.isFinite(v.color) ? v.color : k.color, slim: Number.isFinite(v.slim) ? v.slim : k.slim, beauty: Number.isFinite(v.beauty) ? v.beauty : (k.beauty || 0), belly: Number.isFinite(v.belly) ? v.belly : (k.belly || 0) };
 }
 const lookEff = () => app.look || { ...lookKit() };
 const lookOut = (k, v) => (v > 0 ? Number(v).toFixed(2) : '關');
 function updateLookCss() { app.lookCss = lookCss(lookEff().color, app.server?.look?.baked?.color ?? 0); }
 let faceTimer = null;
 // 前／後對照圖：面板重畫時先放上一次拿到的圖（格子固定大小、不會先縮再撐開），新圖到了再換
-const faceShown = { before: { url: '', src: '' }, after: { url: '', src: '' } };
+const faceShown = { before: { url: '', src: '' }, after: { url: '', src: '' }, bodyBefore: { url: '', src: '' }, bodyAfter: { url: '', src: '' } };   // body＊＝瘦小腹的軀幹對照
 const faceSrc = (k) => (faceShown[k].src ? ` src="${faceShown[k].src}"` : '');
 function refreshFaces(delay = 300) {
   clearTimeout(faceTimer);
   faceTimer = setTimeout(() => {
-    const box = $('#lookFaces');
-    if (!box || app.selection) return;
-    const lm = app.server?.look?.landmarks;
-    if (!lm?.ready || lm.slimOk === false) return;
-    const t = r3(app.t), e = lookEff(), s = r2(e.slim), bt = r2(e.beauty || 0);
-    for (const img of box.querySelectorAll('img')) {
-      const k = img.dataset.k, after = k === 'after';
-      const url = `/api/look/face?t=${t}&slim=${after ? s : 0}${after && bt > 0 ? `&beauty=${bt}` : ''}`;
+    // 兩組對照：#lookFaces（臉：瘦臉、美顏）、#lookBody（軀幹：瘦小腹）；面板沒畫出來的那一組就沒有 img
+    const imgs = [...document.querySelectorAll('#lookFaces img, #lookBody img')];
+    if (!imgs.length || app.selection) return;
+    const t = r3(app.t), e = lookEff(), s = r2(e.slim), bt = r2(e.beauty || 0), bl = r2(e.belly || 0);
+    for (const img of imgs) {
+      const k = img.dataset.k, after = k === 'after', boxId = img.closest('.look-faces').id;
+      const url = k === 'bodyBefore' ? `/api/look/body?t=${t}&belly=0` : k === 'bodyAfter' ? `/api/look/body?t=${t}&belly=${bl}`
+        : `/api/look/face?t=${t}&slim=${after ? s : 0}${after && bt > 0 ? `&beauty=${bt}` : ''}`;
       if (faceShown[k].url === url) continue;
       faceShown[k].url = url;
       // 格子一直在（固定大小）；新圖到了才換掉舊圖；這一格沒有臉就印一行原因、留著舊圖
@@ -1893,22 +2000,22 @@ function refreshFaces(delay = 300) {
           const u = URL.createObjectURL(await r.blob());
           if (faceShown[k].src) URL.revokeObjectURL(faceShown[k].src);
           faceShown[k].src = u;
-          const cur = $('#lookFaces');
+          const cur = document.getElementById(boxId);
           const el = cur?.querySelector(`img[data-k="${k}"]`);
           if (el) el.src = u;
           const msg = cur?.querySelector('.look-msg');
           if (msg) msg.textContent = '';
-        } else { const j = await r.json().catch(() => ({})); const msg = $('#lookFaces .look-msg'); if (msg) msg.textContent = j.message || '這一格看不到臉'; }
+        } else { const j = await r.json().catch(() => ({})); const msg = document.getElementById(boxId)?.querySelector('.look-msg'); if (msg) msg.textContent = j.message || '這一格看不到臉'; }
       }).catch(() => {});
     }
-    for (const img of box.querySelectorAll('img')) img.style.filter = app.lookCss;
+    for (const img of imgs) img.style.filter = app.lookCss;
   }, delay);
 }
 function inspLook() {
   const L = app.server?.look;
   if (!L) return '';
   if (L.error) return `<p class="ip-warn">${esc(L.error)}</p>`;
-  const e = { beauty: 0, ...lookEff() }, lim = { beauty: [0, 1], ...(L.limits || { color: [0, 1], slim: [0, 1.2], step: 0.05 }) }, kit = lookKit();
+  const e = { beauty: 0, belly: 0, ...lookEff() }, lim = { beauty: [0, 1], belly: [0, 1], ...(L.limits || { color: [0, 1], slim: [0, 1.2], step: 0.05 }) }, kit = lookKit();
   // 和構圖頁一樣：左邊勾選開關，右邊滑桿調強度
   const row = (k, label, max, tip) => `<div class="ip-slider look" data-tip="${esc(tip)}"><label><input type="checkbox" data-look-on="${k}"${e[k] > 0 ? ' checked' : ''} aria-label="${label}開關"> ${label}</label><input type="range" data-f="look.${k}" aria-label="${label}強度" min="0" max="${max}" step="${lim.step}" value="${e[k]}"><output data-out="look.${k}" class="${e[k] !== kit[k] ? 'changed' : ''}">${lookOut(k, e[k])}</output></div>`;
   const lm = L.landmarks || {};
@@ -1918,15 +2025,21 @@ function inspLook() {
     noface: '抽樣 12 格都沒偵測到臉，這支只調光；確定畫面裡有講者，請 AI 重新偵測臉部。',
     rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉（不到 80%），自動關掉瘦臉，完成影片只調光；請 AI 看 work/look-preview.jpg。`,
   };
-  const faces = !lm.ready ? '<p class="ip-note">要看瘦臉的前後對照，先到「構圖」頁按「偵測臉部」（長片要二、三十分鐘，在背景跑）。</p>'
+  const faces = !lm.ready ? (e.belly > 0 && !(e.slim > 0 || e.beauty > 0) ? '' : '<p class="ip-note">要看瘦臉的前後對照，先到「構圖」頁按「偵測臉部」（長片要二、三十分鐘，在背景跑）。</p>')   // 只開瘦小腹：不用偵測臉
     : lm.slimOk === false ? `<p class="ip-note">${esc(skip[lm.reason] || '這支略過瘦臉，完成影片只調光。')}</p>`
       : `<div id="lookFaces" class="look-faces"><figure><img data-k="before" alt="原本"${faceSrc('before')}><figcaption>前</figcaption></figure><figure><img data-k="after" alt="瘦臉後"${faceSrc('after')}><figcaption>後（瘦臉 ${lookOut('slim', e.slim)}${e.beauty > 0 ? `、美顏 ${lookOut('slim', e.beauty)}` : ''}）</figcaption></figure><p class="look-msg ip-note"></p></div>`;
+  // 瘦小腹的軀幹前後對照：開了才放；還沒偵測姿勢、或這支略過時各印一行原因
+  const po = L.pose || {};
+  const body = !(e.belly > 0) ? '' : !po.ready ? '<p class="ip-note">要看瘦小腹的前後對照，先到「構圖」頁按「偵測臉部」（會一起偵測姿勢，在背景跑）。</p>'
+    : po.bellyOk === false ? `<p class="ip-note">${esc(`這支略過瘦小腹：${po.why || '偵測不到姿勢'}。`)}</p>`
+      : `<div id="lookBody" class="look-faces"><figure><img data-k="bodyBefore" alt="原本"${faceSrc('bodyBefore')}><figcaption>前</figcaption></figure><figure><img data-k="bodyAfter" alt="瘦小腹後"${faceSrc('bodyAfter')}><figcaption>後（瘦小腹 ${lookOut('belly', e.belly)}）</figcaption></figure><p class="look-msg ip-note"></p></div>`;
   setTimeout(() => refreshFaces(0), 0);
   return `${row('color', '調光', lim.color[1], '亮一點、膚色紅潤一點（剪映「智能調色」）；拖的時候畫面馬上變，是近似效果，完成影片會更準')}
     ${row('slim', '瘦臉', lim.slim[1], '臉頰到下巴的輪廓往內收；按「更新預覽」才會做進去（長片第一次要幾分鐘）')}
     ${row('beauty', '美顏', lim.beauty[1], '磨皮、膚色提亮、淡化黑眼圈，越往右越明顯；和瘦臉一起做進底片，按「更新預覽」才會做進去；快速試聽看不到，看下面「後」那張臉')}
-    <div class="ip-btns"><button class="small" data-act="lookReset"${app.look ? '' : ' disabled'} data-tip="回到每支影片共用的設定（調光 ${kit.color}、瘦臉 ${kit.slim}、美顏 ${kit.beauty}）">恢復預設</button></div>
-    ${faces}`;
+    ${row('belly', '瘦小腹', lim.belly[1], '腰（肋骨下緣到髖）往身體中線收，建議 0.50；手擺在肚子前面會跟著窄一點、腰旁邊的東西會微微變形；和瘦臉一起做進底片，按「更新預覽」才會做進去')}
+    <div class="ip-btns"><button class="small" data-act="lookReset"${app.look ? '' : ' disabled'} data-tip="回到每支影片共用的設定（調光 ${kit.color}、瘦臉 ${kit.slim}、美顏 ${kit.beauty}、瘦小腹 ${kit.belly}）">恢復預設</button></div>
+    ${faces}${body}`;
 }
 
 // ---------- 屬性面板 ----------
@@ -1953,6 +2066,7 @@ function renderInspector() {
   else if (s.kind === 'join') { const p = app.points.find((q) => Math.abs(q.at - s.id) < 1e-6); kind = '剪接點（轉場）'; title = `${fmt(p.at, 1)}　${KIND_ZH[p.kind]}`; body = inspJoin(p); }
   else if (s.kind === 'gain') { const g = app.edit.gains[s.id]; kind = '人聲範圍音量'; title = rangeTitle(g.from, g.to); body = inspGain(s.id); }
   else if (s.kind === 'sfx') { const it = app.itemsView.find((x) => x.id === s.id); kind = `音效　${s.id}`; title = it?.title || s.id; body = inspSfxOnly(it, sceneById(s.id)); }
+  else if (s.kind === 'usfx') { const x = app.edit.sfx[s.id]; kind = '自己加的音效'; title = `${soundZh(x.sound)}　${fmt(x.at, 1)}`; body = inspOwnSfx(s.id); }
   else if (s.kind === 'gap') { const g = gapInfo(s.id); kind = '沒有字卡的講解'; title = rangeTitle(g.start, g.end); body = `<section class="ip-sec"><p class="ip-note">這段只有講者，沒有字卡或動畫。想加畫面就寫進修改單；留給講者不用管。</p><div class="ip-btns"><button class="small" data-act="gapReq">✎ 這裡想加畫面</button></div></section>`; }
   $('#inspKind').innerHTML = `${chip ? `<span class="chip" style="background:${chip}"></span>` : ''}${esc(kind)}`;
   $('#inspTitle').textContent = title;
@@ -1966,11 +2080,12 @@ function inspWhole() {
   const L = app.loud;
   const longCaps = app.cues.filter((c) => visibleLen(c.text) > capMax()).length;
   const lookNow = lookEff();
-  const lookLabel = [lookNow.color > 0 && '調光', lookNow.slim > 0 && '瘦臉', lookNow.beauty > 0 && '美顏'].filter(Boolean).join('、') || '都關';
+  const lookLabel = [lookNow.color > 0 && '調光', lookNow.slim > 0 && '瘦臉', lookNow.beauty > 0 && '美顏', lookNow.belly > 0 && '瘦小腹'].filter(Boolean).join('、') || '都關';
   return `${foldSec('look', `講者：${lookLabel}`, inspLook())}${foldSec('sound', `聲音：人聲 ${fmtDb(e.volume.voice)}`, `
     ${sliderRow('人聲', 'vol.voice', e.volume.voice, { out: fmtDb(e.volume.voice), tip: '講者的聲音（主軌）整條的音量' })}
     ${sliderRow('音效', 'vol.sfx', e.volume.sfx, { out: fmtDb(e.volume.sfx), tip: '全部音效一起調' })}
     ${sliderRow('素材原聲', 'vol.media', e.volume.media, { out: fmtDb(e.volume.media), tip: '素材有開原聲的才算' })}
+    <label class="ip-check" data-tip="小聲的句子拉近大聲的，聽起來不會忽大忽小；按「更新預覽」重新處理底片後才聽得到"><input type="checkbox" data-f="level"${e.level ? ' checked' : ''}> 拉平人聲大小聲</label>
     <div class="ip-btns"><button data-act="loud" data-tip="量整支人聲的音量（剪掉的範圍不算），調到 YouTube 常用的標準（${app.server?.targetLufs ?? -14} LUFS）">把人聲調到 YouTube 標準音量</button></div>
     ${L ? `<div class="ip-result">${L.error ? `<span class="err-ink">${esc(L.error)}</span>` : `量到 <b>${L.integrated} LUFS</b>（峰值 ${L.truePeak ?? '—'} dBFS）→ 人聲設成 <b>${fmtDb(L.suggest)}</b>${L.raw !== L.suggest ? `（要 ${fmtDb(L.raw)}，超出範圍）` : ''}`}</div>` : ''}
     ${pk != null && pk > 0 ? `<p class="ip-warn">⚠ 可能爆音：人聲最大峰值 ${fmtDb(r2(pk))} → 把人聲往下調，或按上面的標準音量</p>` : ''}
@@ -2019,15 +2134,29 @@ function sfxSection(it, sc) {
   const marks = app.sfxView.filter((m) => m.segId === sc.id);
   const muted = sc.sfx === null;
   const v = Number.isFinite(sc.sfxVolume) ? sc.sfxVolume : 0;
-  const mem = app.sfxMemory[sc.id];
+  const mem = sfxMem(sc.id);
   return `<section class="ip-sec"><h3>音效</h3>
     ${marks.length ? `<div class="chips">${marks.map((m) => `<span class="chip-t">${m.main ? '主' : '附加'}・${esc(m.name)}${m.muted ? '（靜音）' : ''} ${fmt(m.at, 1)}</span>`).join('')}</div>` : `<p class="ip-note">${app.reportReady ? '這段沒有音效' : '音效位置要等檢查報告'}</p>`}
     <div class="ip-btns"><button class="small toggle${muted ? ' on' : ''}" data-act="sfxMute" aria-pressed="${muted}">${!muted ? '靜音主音效' : mem || savedSceneById(sc.id)?.sfx !== null ? '主音效已靜音（按一下還原）' : 'AI 設定這段不放主音效（按一下加回預設音效）'}</button></div>
-    ${muted && mem?.had && mem.value ? `<p class="ip-note">還原會換回 AI 原本寫的「${esc(mem.value)}」。</p>` : ''}
+    <div class="ip-btns"><button class="small${soundsWhy() ? ' is-disabled' : ''}" data-act="sfxSwap" data-why="${esc(soundsWhy())}" data-tip="換這段的主音效（可以先試聽），落點不變">換一顆音效…</button><button class="small ghost${same(sc.sfx, sfxOrig(sc.id)) ? ' is-disabled' : ''}" data-act="sfxRestore" data-why="現在就是原本的音效">還原成原本的</button></div>
+    ${muted && mem?.had && sfxNameOf(mem.value) ? `<p class="ip-note">還原會換回 AI 原本寫的「${esc(sfxNameOf(mem.value))}」。</p>` : ''}
     ${sliderRow('這段音量', 'sfxVolume', v, { out: fmtDb(v), tip: '這段的主音效和附加音效一起調（疊在整支的音效音量上）' })}
   </section>`;
 }
 function inspSfxOnly(it, sc) { return `${sfxSection(it, sc)}<section class="ip-sec"><div class="ip-btns"><button class="small" data-act="selItem" data-id="${esc(sc?.id)}">看這段的其他屬性</button></div></section>`; }
+// 050 自己加的音效（edit.sfx 的第 i 顆）
+function inspOwnSfx(i) {
+  const x = app.edit.sfx[i], db = x.db || 0;
+  return `<section class="ip-sec">
+    <div class="ip-row"><span class="k">音效</span><span class="v">${esc(soundZh(x.sound))}　<span class="dim">${esc(x.sound)}</span></span></div>
+    <div class="ip-row"><label>時間</label><input class="tcv" aria-label="這顆音效的時間" data-f="ownAt" value="${fmtTC(x.at)}" data-tip="那一刻聽到這顆音效。時:分:秒:格，或直接打秒數"></div>
+    ${sliderRow('音量', 'ownDb', db, { out: fmtDb(db), tip: '這一顆比預設再大聲或小聲多少（疊在整支的音效音量上）' })}
+    <div class="ip-btns"><button class="small${soundsWhy() ? ' is-disabled' : ''}" data-act="ownSwap" data-why="${esc(soundsWhy())}">換一顆音效…</button><button class="small ghost" data-act="ownPlay">▶ 試聽</button><button class="small danger" data-act="ownDel">移除（Delete）</button></div>
+    ${cutIndexAt(x.at, app.edit.cuts) >= 0 ? '<p class="ip-warn">⚠ 這顆落在剪掉的範圍裡，完成影片不會出聲 → 拖到別的地方，或恢復那一段</p>' : ''}
+    ${soundConf(x.sound) || soundsWhy() ? '' : `<p class="ip-warn">⚠ 這台電腦沒有「${esc(x.sound)}」這顆音效，完成影片會做不出來 → 換一顆，或移除</p>`}
+    <p class="ip-note">這顆是你自己加的：不受「相距 3 秒」「每分鐘幾顆」的規則限制，AI 不會動它。在時間軸上左右拖改時間、上下拖調音量；按右鍵可以換一顆。</p>
+  </section>`;
+}
 // 這段實際的進場、出場（工具照前後段決定的）
 function transitionRows(it) {
   const tr = it && transitionOf(it);
@@ -2379,7 +2508,7 @@ function onInspInput(e) {
   const num = Number(el.value);
   const outEl = (k) => $(`#inspBody [data-out="${k}"]`);
   if (f?.startsWith('vol.')) { const k = f.slice(4); mutate(() => { app.edit.volume[k] = num; }, { coalesce: f }); outEl(f).textContent = fmtDb(num); outEl(f).classList.toggle('changed', num !== 0); app.loud = null; return; }
-  if (f === 'look.color' || f === 'look.slim' || f === 'look.beauty') {
+  if (f === 'look.color' || f === 'look.slim' || f === 'look.beauty' || f === 'look.belly') {
     const k = f.slice(5);
     mutate(() => { app.look = { ...lookEff(), [k]: r2(num) }; }, { coalesce: f });
     outEl(f).textContent = lookOut(k, num); outEl(f).classList.toggle('changed', r2(num) !== lookKit()[k]);
@@ -2389,10 +2518,12 @@ function onInspInput(e) {
   if (f === 'capLift') { outEl(f).textContent = describeLift(num); outEl(f).classList.toggle('changed', num !== 0); setCap({ lift: num }, { coalesce: f, inspector: false }); return; }
   if (f === 'capFont') { setCap({ font: el.value }); return; }
   if (f === 'capDefault') { app.capDefault = el.checked; if (el.checked) pushCapDefault(); return; }
+  if (f === 'level') { mutate(() => { app.edit.level = el.checked; }); return; }
   if (f === 'fadeIn' || f === 'fadeOut') { mutate(() => { app.edit[f] = num; }, { coalesce: f }); outEl(f).textContent = num ? `${num.toFixed(1)} 秒` : '不淡'; return; }
   if (f === 'sfxVolume' && s) { setSeg(s.id, { sfxVolume: num === 0 ? undefined : num }, { coalesce: `sfxv-${s.id}` }); outEl(f).textContent = fmtDb(num); return; }
   if (f === 'mediaVol' && s) { setSeg(s.id, { volume: num }, { coalesce: `mv-${s.id}` }); outEl(f).textContent = fmtDb(num); return; }
   if (f === 'gainDb' && s) { mutate(() => { app.edit.gains[s.id].db = num; }, { coalesce: `g-${s.id}` }); outEl(f).textContent = fmtDb(num); return; }
+  if (f === 'ownDb' && s?.kind === 'usfx') { setOwnSfx(s.id, { db: num }, { coalesce: `own-${s.id}` }); outEl(f).textContent = fmtDb(num); outEl(f).classList.toggle('changed', num !== 0); return; }
   if (el.id === 'capText') {
     const n = Number(el.dataset.n);
     const len = visibleLen(el.value);
@@ -2452,11 +2583,16 @@ function onInspChange(e) {
     if (t == null) { toast('看不懂這個時間：寫成 00:00:12:05 或 12.2', 'warn'); renderInspector(); return; }
     setCue(s.id, f === 'capStart' ? { start: r3(t) } : { end: r3(t) });
     renderInspector();
+  } else if (f === 'ownAt') {
+    const t = parseTC(el.value);
+    if (t == null || t > app.dur) { toast(t == null ? '看不懂這個時間：寫成 00:00:12:05 或 12.2' : '超過影片長度了', 'warn'); renderInspector(); return; }
+    setOwnSfx(s.id, { at: t });
+    renderInspector();
   } else if (f === 'joinDur') {
     const p = app.points.find((q) => Math.abs(q.at - (s.kind === 'join' ? s.id : app.edit.cuts[s.id]?.[0])) < 1e-6);
     if (p) setJoin(p, 'dip', Number(el.value) || DIP_DEFAULT);
   } else if (el.id === 'capText' || el.dataset.path || el.dataset.list) renderCapButtons();
-  if (f === 'look.slim' || f === 'look.color' || f === 'look.beauty') { renderInspector(); refreshFaces(0); }
+  if (f === 'look.slim' || f === 'look.color' || f === 'look.beauty' || f === 'look.belly') { renderInspector(); refreshFaces(0); }
   if (el.type === 'range') el.blur();
 }
 function onInspClick(e) {
@@ -2492,6 +2628,11 @@ function onInspClick(e) {
     case 'seekAt': { const t = Number(b.dataset.t); app.seek(t); timeline.ensureVisible(t, false); if (app.server?.preview?.built && app.mode !== 'player' && app.server.preview.player?.available) setMode('player', { focus: t }); return; }
     case 'playerItem': if (it) setMode('player', { focus: it.start + 0.3 }); return;
     case 'sfxMute': return toggleSfxMute(s.id);
+    case 'sfxSwap': return menuBelow(b, soundItems(segSoundNow(s.id), (name) => swapSegSfx(s.id, name)), '換一顆音效', e.detail === 0);
+    case 'sfxRestore': return restoreSegSfx(s.id);
+    case 'ownSwap': return menuBelow(b, soundItems(app.edit.sfx[s.id].sound, (name) => swapOwnSfx(s.id, name)), '換一顆音效', e.detail === 0);
+    case 'ownPlay': { const x = app.edit.sfx[s.id]; return playSound(x.sound, x.db || 0); }
+    case 'ownDel': return removeOwnSfx(s.id);
     case 'selItem': { const sc = sceneById(b.dataset.id); return app.select({ kind: segType(sc) === 'media' ? 'media' : 'item', id: b.dataset.id }); }
     case 'spZone': case 'spRate': case 'spCut': case 'spFreeze': case 'spJoin': case 'spReset': return speedAction(act, b, s);
     case 'mediaVolOn': { const sc = sceneById(s.id); return setSeg(s.id, { volume: sc.volume == null ? 0 : null }, { inspector: true }); }
@@ -2559,6 +2700,7 @@ function deleteSelection() {
     case 'cue': return deleteCue();
     case 'gain': mutate(() => { app.edit.gains.splice(s.id, 1); }); return app.select(null);
     case 'sfx': return toggleSfxMute(s.id);
+    case 'usfx': return removeOwnSfx(s.id);
     case 'join': { const p = app.points.find((q) => Math.abs(q.at - s.id) < 1e-6); if (p) setJoin(p, 'none'); return; }
     case 'media': case 'item': toast('字卡、動畫和素材不能在這裡刪 → 要拿掉請寫進修改單；只想不要它的聲音，可以把音效或原聲靜音', 'warn', 4500); return;
     default:
@@ -2568,11 +2710,10 @@ function deleteSelection() {
 // ---------- 時間軸互動（timeline.js 呼叫）----------
 const snapT = (t, e, opts) => timeline.snap(t, e, opts);
 function lockedToast(lane) { toast(`「${TRACK_NAMES[lane]}」軌已鎖定 → 點軌頭的鎖頭解鎖`, 'warn', 2500); }
-app.tlClick = (h, e) => {
+// 選到時間軸上的那個東西、播放頭移過去（點一下、按右鍵都走這裡）
+function selectHit(h) {
   const lane = h.lane;
   app.selLane = lane;
-  if (app.tool === 'split' && (lane === 'main' || lane === 'voice')) { splitMain(snapT(h.t, e).t); return; }
-  if (app.tool === 'split' && lane === 'cap' && h.cue) { app.seek(h.t); app.select({ kind: 'cue', id: h.cue.n }, { lane }); splitCue(); return; }
   app.seek(h.t);
   switch (h.kind) {
     case 'item': return app.select({ kind: 'item', id: h.item.id }, { lane });
@@ -2583,9 +2724,17 @@ app.tlClick = (h, e) => {
     case 'cue': case 'capEdge': return app.select({ kind: 'cue', id: h.cue.n }, { lane });
     case 'gainVol': case 'gainEdge': case 'gainBody': return app.select({ kind: 'gain', id: h.gain }, { lane });
     case 'sfx': return app.select({ kind: 'sfx', id: h.sfx.segId }, { lane });
+    case 'usfx': return app.select({ kind: 'usfx', id: h.sfx.user }, { lane });
     case 'noCard': return app.select({ kind: 'gap', id: gapId(h.span[0]) }, { lane });
     default: return app.select(null, { lane });
   }
+}
+app.tlClick = (h, e) => {
+  const lane = h.lane;
+  app.selLane = lane;
+  if (app.tool === 'split' && (lane === 'main' || lane === 'voice')) { splitMain(snapT(h.t, e).t); return; }
+  if (app.tool === 'split' && lane === 'cap' && h.cue) { app.seek(h.t); app.select({ kind: 'cue', id: h.cue.n }, { lane }); splitCue(); return; }
+  selectHit(h);
 };
 app.tlDouble = (h) => {
   if (h.kind === 'cue') openCapEditor(h.cue.n);
@@ -2617,14 +2766,15 @@ app.tlTip = (h) => {
     case 'voiceVol': return `人聲音量 ${fmtDb(app.edit.volume.voice)}：上下拖整條${selValid() && h.t >= app.sel.a && h.t <= app.sel.b ? '\n（在選取範圍裡拖＝只調這一段）' : ''}${lk}`;
     case 'voiceBody': return '拖曳選一段範圍（剪掉或單獨調音量）';
     case 'mood': return `情緒點：${h.mood.zh}${h.mood.sfx ? `　音效「${h.mood.sfx}」` : h.mood.off ? '（不出聲）' : `（讓位給更強的音效${h.mood.dropped ? `，原本是 ${h.mood.dropped}` : ''}）`}${h.mood.zoom ? '　講者推近' : ''}\n要改：分鏡表的「情緒點」勾選表，或跟 AI 說（寫進修改單）`;
-    case 'sfx': return `${h.sfx.segId} 的${h.sfx.main ? '主' : '附加'}音效「${h.sfx.name}」${h.sfx.muted ? '（靜音）' : h.sfx.db != null ? ` ${fmtDb(r2(h.sfx.db))}` : ''}\n上下拖調這段音量、雙擊靜音${lk}`;
+    case 'sfx': return `${h.sfx.segId} 的${h.sfx.main ? '主' : '附加'}音效「${h.sfx.name}」${h.sfx.muted ? '（靜音）' : h.sfx.db != null ? ` ${fmtDb(r2(h.sfx.db))}` : ''}\n上下拖調這段音量、雙擊靜音；按右鍵換一顆${lk}`;
+    case 'usfx': { const x = app.edit.sfx[h.sfx.user]; return `自己加的音效「${soundZh(x.sound)}」　${fmt(x.at, 1)}　${fmtDb(x.db || 0)}\n左右拖改時間、上下拖調音量；Delete 移除、按右鍵換一顆${lk}`; }
     default: return null;
   }
 };
 app.tlDown = (h, e) => {
   const lane = h.lane;
   if (app.tool === 'split') return null;
-  const editKinds = ['mediaL', 'mediaR', 'media', 'mediaVol', 'head', 'tail', 'cutEdge', 'capEdge', 'gainVol', 'gainEdge', 'voiceVol', 'sfx'];
+  const editKinds = ['mediaL', 'mediaR', 'media', 'mediaVol', 'head', 'tail', 'cutEdge', 'capEdge', 'gainVol', 'gainEdge', 'voiceVol', 'sfx', 'usfx'];
   if (editKinds.includes(h.kind) && app.trackLocked(lane)) { return { move: () => null, up: (moved) => { if (moved) lockedToast(lane); } }; }
   if (editKinds.includes(h.kind) && app.historyBusy) { historyBlocked(); return { move: () => null, up: () => {} }; }
   switch (h.kind) {
@@ -2637,6 +2787,7 @@ app.tlDown = (h, e) => {
     case 'gainEdge': return dragGainEdge(h.gain, h.edge);
     case 'voiceVol': return selValid() && h.t >= app.sel.a && h.t <= app.sel.b ? dragNewGain() : dragVoiceVol();
     case 'sfx': return dragSfx(h.sfx);
+    case 'usfx': return dragOwnSfx(h);
     case 'piece': case 'voiceBody': case 'cut': case 'gainBody': return dragRange(h.t, e);
     default: return null;
   }
@@ -2870,6 +3021,252 @@ function dragSfx(m) {
     up(moved) { app.gestureEnd(moved); if (moved) app.select({ kind: 'sfx', id }, { lane: 'sfx' }); },
   };
 }
+// 050 自己加的音效：左右拖＝改時間（吸附字幕、段落邊緣）、上下拖＝調這一顆的音量；一次只動一個方向（先動的那個）
+function dragOwnSfx(h) {
+  const x = app.edit.sfx[h.sfx.user];
+  const at0 = x.at, db0 = x.db || 0;
+  let axis = null;
+  app.gestureBegin();
+  return {
+    move(t, y, e, px) {
+      axis ??= Math.abs(px - h.x) >= Math.abs(y - h.y) ? 'time' : 'db';
+      if (axis === 'time') x.at = clamp(frameSnap(snapT(at0 + (t - h.t), e, { exclude: [at0] }).t), 0, app.dur);
+      else { const v = clamp(Math.round((db0 + (h.y - y) / 2) * 2) / 2, -60, 12); if (v) x.db = v; else delete x.db; }
+      recompute();
+      return axis === 'time' ? `${soundZh(x.sound)} ${fmtFine(x.at)}${cutIndexAt(x.at, app.edit.cuts) >= 0 ? '\n這裡是剪掉的範圍：不會出聲' : ''}` : `${soundZh(x.sound)} ${fmtDb(x.db || 0)}`;
+    },
+    // 放開：照時間重排之後，選取跟著這一顆走（沒拖動＝還原，順序沒變）
+    up(moved) { app.gestureEnd(moved); const i = app.edit.sfx.indexOf(x); if (moved) app.select({ kind: 'usfx', id: i >= 0 ? i : h.sfx.user }, { lane: 'sfx' }); },
+  };
+}
+
+// ---------- 右鍵選單（050）----------
+// 選單只是入口：每一項呼叫上面現有的同一個動作（同一條 mutate、同一套復原與自動存檔），這裡不另外做事。
+// 現在不能做的灰掉、寫原因；沒有現成動作的（刪一段字卡、換一段素材）帶進修改單給 AI
+const ROUGH_WHY = '初剪預覽階段還不能：分鏡做好、排了段落之後再來';
+const KEY_FIND = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘F' : 'Ctrl+F';
+const lockWhy = (lane) => (app.trackLocked(lane) ? `「${TRACK_NAMES[lane]}」軌已鎖定 → 點軌頭的鎖頭解鎖` : '');
+const blockedToast = (why) => toast(`現在不能用：${why}`, 'warn', 3500);
+const gainWhy = (a, b) => (b - a < 0.1 ? '範圍太短' : app.edit.gains.some((g) => g.from < b - 0.0005 && g.to > a + 0.0005) ? '這個範圍和已有的人聲音量調整重疊 → 先刪掉或縮小舊的' : '');
+const cutWhy = (a, b) => (b - a > app.dur - 0.6 ? '不能把整支影片都剪掉' : '');
+// 音效清單（子選單）：點一項＝選它；▶ 或空白鍵先聽聽看。cur＝現在用的那一顆（打勾）
+function soundItems(cur, pick) {
+  return soundList().map((x) => ({ label: x.zh, hint: x.name, check: x.name === cur, play: () => playSound(x.name), run: () => pick(x.name) }));
+}
+// 這一段現在響的主音效（靜音＝null；段上沒寫＝檢查報告裡的那一顆）
+function segSoundNow(segId) {
+  const sc = sceneById(segId);
+  if (!sc || sc.sfx === null) return null;
+  return sfxNameOf(sc.sfx) ?? app.sfxView.find((m) => m.segId === segId && m.main)?.name ?? null;
+}
+// 屬性面板的「換一顆音效…」：同一份音效清單，開在按鈕下面
+function menuBelow(btn, items, head, focus = false) {
+  const r = btn.getBoundingClientRect();
+  openMenu({ x: r.left, y: r.bottom + 4, items, head, focus, blocked: blockedToast });
+}
+function focusInsp(sel) { setSide('insp'); setTimeout(() => { const f = $(`#inspBody ${sel}`); f?.focus(); if (f?.tagName === 'INPUT' && f.type !== 'range') f.select(); }, 30); }
+// 把要求帶進修改單（tag＝修改單上現成的選項；note＝加一行描述），打開修改單讓使用者補充
+function askInRequests(id, { tag = null, note = null } = {}) {
+  if (tag || note) rqEdit(id, (r) => { if (tag && !r.tags.includes(tag)) r.tags = [...r.tags, tag]; if (note && !r.note.includes(note)) r.note = r.note.trim() ? `${r.note.trim()}\n${note}` : note; });
+  setRequestsOpen(true);
+  setTimeout(() => $('#rqNote')?.focus(), 20);
+}
+function askAtGap(lane, opts) {
+  const id = gapId(app.t);
+  app.select({ kind: 'gap', id }, { lane });
+  askInRequests(id, opts);
+}
+// 這一段的主音效：換一顆、靜音、還原成原本的（字卡／動畫上按右鍵、音效軌上按右鍵都是這三項）
+function segSfxItems(segId, { delKey = false } = {}) {
+  const sc = sceneById(segId);
+  if (!sc) return [];
+  const lk = lockWhy('sfx');
+  return [
+    { label: '換一顆音效', sub: soundItems(segSoundNow(segId), (name) => swapSegSfx(segId, name)), off: lk || soundsWhy() },
+    { label: '靜音', check: sc.sfx === null, key: delKey ? 'Delete' : '', off: lk, run: () => toggleSfxMute(segId) },
+    { label: '還原成原本的', off: lk || (same(sc.sfx, sfxOrig(segId)) ? '現在就是原本的音效' : ''), run: () => restoreSegSfx(segId) },
+  ];
+}
+const joinItems = (p) => { const type = joinFor(app.edit, p)?.type || 'none', lk = lockWhy('main'); return JOIN_TYPES.map(([v, l]) => ({ label: l, check: v === type, off: lk, run: () => setJoin(p, v) })); };
+// 空白處的選單最下面：這一軌的靜音、鎖定（和軌頭的按鈕同一個動作）
+function trackItems(lane) {
+  const out = [];
+  if (['media', 'voice', 'sfx'].includes(lane)) out.push({ label: '靜音這一軌', check: app.trackMuted(lane), run: () => toggleTrackMute(lane) });
+  if (lane !== 'anim') out.push({ label: '鎖定這一軌', check: app.trackLocked(lane), run: () => toggleTrackLock(lane) });
+  return out.length ? [{ sep: true }, ...out] : [];
+}
+// h＝timeline.hit() 的結果（或鍵盤開的時候照選取組出來的）；「這裡」＝播放頭（按右鍵時播放頭已經移到指標的位置）→ { head, items }
+function ctxMenu(h, { range = false } = {}) {
+  const lane = h.lane, rough = roughStage() ? ROUGH_WHY : '';
+  const play = (a, b, label = '▶ 播放') => ({ label, run: () => playFrom(a, b) });
+  const splitHere = { label: '在這裡分割', key: 'B', off: lockWhy('main') || splitMainWhy(app.t), run: () => splitMain(app.t) };
+  if (range) {
+    const { a, b } = app.sel;
+    return { head: `選取範圍　${fmt(a, 1)} – ${fmt(b, 1)}`, items: [
+      { label: '剪掉這段', key: 'Delete', danger: true, off: lockWhy('main') || cutWhy(a, b), run: () => cutRange(a, b) },
+      { label: '調整這段人聲音量', off: lockWhy('voice') || gainWhy(a, b), run: addGainForSelection },
+      play(a, b),
+    ] };
+  }
+  switch (h.kind) {
+    case 'cue': case 'capEdge': {
+      const c = h.cue, lk = lockWhy('cap'), why = (st) => lk || (st.ok ? '' : st.why);
+      return { head: `字幕　第 ${c.n} 句`, items: [
+        { label: '改字', key: 'Enter', off: lk, run: () => openCapEditor(c.n) },
+        { label: '在播放頭分割', key: 'B', off: why(capSplitInfo(c)), run: splitCue },
+        { label: '與下一句合併', off: why(canMerge(app.cues, c.n)), run: () => mergeCue(c) },
+        { label: '在後面新增一句', off: why(insertInfo('after', c)), run: () => insertCue('after', c) },
+        { label: '在前面新增一句', off: why(insertInfo('before', c)), run: () => insertCue('before', c) },
+        { sep: true },
+        { label: '重點字幕', check: app.isMark(c.n), key: 'H', off: lk, run: () => toggleMark(c.n) },
+        play(c.start, c.end, '▶ 播這句'),
+        { sep: true },
+        { label: '刪除', key: 'Delete', danger: true, off: lk || (app.cues.length <= 1 ? '只剩一句字幕，不能刪' : ''), run: () => deleteCue(c) },
+      ] };
+    }
+    case 'item': {
+      const it = h.item, sc = sceneById(it.id), type = segType(sc);
+      const noText = $('#inspBody [data-path], #inspBody [data-list]') ? '' : type === 'custom' && !sc?.template ? '這段動畫的字畫在動畫裡 → 要改請寫進修改單' : '這段沒有可以在這裡改的文字 → 要改請寫進修改單';
+      return { head: `${type === 'custom' ? '動畫' : TYPE_ZH[type] || '段落'}　${it.id}`, items: [
+        { label: '改這段的文字', off: noText, run: () => focusInsp('[data-path], #inspBody [data-list]') },
+        { label: '寫進修改單…', run: () => askInRequests(it.id) },
+        play(it.start, it.end, '▶ 播這段'),
+        { sep: true }, { group: '這段的音效' },
+        ...segSfxItems(it.id),
+        { sep: true },
+        { label: '換一種動畫（寫進修改單）', run: () => askInRequests(it.id, { tag: '換一種動畫' }) },
+        { label: '拿掉這一段（寫進修改單）', run: () => askInRequests(it.id, { note: '拿掉這一段' }) },
+      ] };
+    }
+    case 'noCard': return { head: '只有講者的講解', items: [{ label: '這裡想加畫面（寫進修改單）…', off: rough, run: () => askInRequests(gapId(h.span[0])) }] };
+    case 'media': case 'mediaL': case 'mediaR': case 'mediaVol': {
+      const it = h.item, img = it.mediaKind === 'image';
+      return { head: `素材　${it.id}`, items: [
+        { label: '看屬性', run: () => setSide('insp') },
+        { label: '寫進修改單…', run: () => askInRequests(it.id) },
+        play(it.start, it.end, '▶ 播這段'),
+        { sep: true },
+        { label: `換一${img ? '張圖片' : '段錄影'}（寫進修改單）`, run: () => askInRequests(it.id, img ? { note: '換一張圖片' } : { tag: '換一段錄影' }) },
+        { label: '拿掉這一段（寫進修改單）', run: () => askInRequests(it.id, { note: '拿掉這一段' }) },
+      ] };
+    }
+    case 'join': { const p = h.point; return { head: `剪接點　${fmt(p.at, 1)}`, items: [{ group: '接點轉場' }, ...joinItems(p), { sep: true }, play(p.at - 2, p.end + 2, '▶ 試看這個接點')] }; }
+    case 'cut': case 'cutEdge': {
+      const i = h.cutIndex ?? h.cut.i, [a, b] = app.edit.cuts[i];
+      const p = app.points.find((q) => q.kind === 'cut' && Math.abs(q.at - a) < 1e-6);
+      return { head: `剪掉的範圍　${fmt(a, 1)} – ${fmt(b, 1)}`, items: [
+        { label: '恢復這一段', key: 'Delete', off: lockWhy('main'), run: () => restoreCut(i) },
+        { label: '接點轉場', sub: p ? joinItems(p) : [], off: p ? '' : '片頭、片尾的裁剪不算剪接點，沒有轉場' },
+        play(a - 2, b + 2, '▶ 試聽接點'),
+      ] };
+    }
+    case 'piece': {
+      const p = h.piece;
+      return { head: `主軌片段　${fmt(p.a, 1)} – ${fmt(p.b, 1)}`, items: [
+        splitHere,
+        { label: '剪掉這一段', key: 'Delete', danger: true, off: lockWhy('main') || cutWhy(p.a, p.b), run: () => cutRange(p.a, p.b) },
+        { label: '調整這段人聲音量', off: lockWhy('voice') || gainWhy(p.a, p.b), run: addGainForSelection },
+        play(p.a, p.b),
+        ...trackItems('main'),
+      ] };
+    }
+    case 'gainVol': case 'gainEdge': case 'gainBody': {
+      const g = app.edit.gains[h.gain], lk = lockWhy('voice');
+      return { head: `人聲範圍音量　${fmt(g.from, 1)} – ${fmt(g.to, 1)}`, items: [
+        { label: '調整這段人聲音量', hint: fmtDb(g.db), off: lk, run: () => focusInsp('[data-f="gainDb"]') },
+        { label: '清掉這段的調整', key: 'Delete', off: lk, run: deleteSelection },
+        play(g.from, g.to),
+      ] };
+    }
+    case 'sfx': {
+      const m = h.sfx, v = sceneById(m.segId)?.sfxVolume;
+      return { head: `${m.segId} 的${m.main ? '主' : '附加'}音效　${m.name}`, items: [
+        ...(m.main ? [] : [{ note: '這顆是附加音效（跟著畫面的拍點），不能單獨換或移除；下面三項改的是這段的主音效' }, { sep: true }]),
+        { group: '這段的主音效' },
+        ...segSfxItems(m.segId, { delKey: true }),
+        { sep: true },
+        { label: '調整這段音量', hint: fmtDb(Number.isFinite(v) ? v : 0), off: lockWhy('sfx'), run: () => focusInsp('[data-f="sfxVolume"]') },
+        { label: '▶ 試聽', run: () => playSound(m.name) },
+        { label: '看這段的其他屬性', run: () => { app.select({ kind: segType(sceneById(m.segId)) === 'media' ? 'media' : 'item', id: m.segId }); setSide('insp'); } },
+      ] };
+    }
+    case 'usfx': {
+      const i = h.sfx.user, x = app.edit.sfx[i], lk = lockWhy('sfx');
+      return { head: `自己加的音效　${soundZh(x.sound)}`, items: [
+        { label: '換一顆音效', sub: soundItems(x.sound, (name) => swapOwnSfx(i, name)), off: lk || soundsWhy() },
+        { label: '調整音量', hint: fmtDb(x.db || 0), off: lk, run: () => focusInsp('[data-f="ownDb"]') },
+        { label: '▶ 試聽', run: () => playSound(x.sound, x.db || 0) },
+        { sep: true },
+        { label: '移除', key: 'Delete', danger: true, off: lk, run: () => removeOwnSfx(i) },
+      ] };
+    }
+    default:
+  }
+  // 空白處＝那一軌的選單
+  if (lane === 'cap') return { head: '字幕軌', items: [
+    { label: '在這裡新增一句', off: lockWhy('cap') || (app.gapAt(app.t) ? '' : '這裡沒有 ≥ 0.5 秒的空檔（新增字幕只能放在兩句之間的空檔）'), run: () => insertCue('after', null, app.t) },
+    { label: '尋找與取代…', key: KEY_FIND, run: openFind },
+    ...trackItems('cap'),
+  ] };
+  if (lane === 'anim') return { head: '字卡／動畫軌', items: [{ label: '這裡想加字卡或動畫（寫進修改單）…', off: rough, run: () => askAtGap('anim') }] };
+  if (lane === 'media') return { head: '素材軌', items: [{ label: '這裡想放錄影或圖片（寫進修改單）…', off: rough, run: () => askAtGap('media', { tag: '放錄影或圖片' }) }, ...trackItems('media')] };
+  if (lane === 'main') return { head: '主軌畫面軌', items: [splitHere, ...trackItems('main')] };
+  if (lane === 'voice') return { head: '人聲軌', items: [
+    { label: '調整這段人聲音量', off: lockWhy('voice') || '先在人聲軌拖曳選一段範圍（或按 I、O 設入點、出點），再對那一段按右鍵', run: addGainForSelection },
+    { label: '把人聲調到 YouTube 標準音量', run: normalizeVoice },
+    ...trackItems('voice'),
+  ] };
+  // 音效軌：空白處、情緒點（只能看）
+  return { head: h.kind === 'mood' ? `情緒點：${h.mood.zh}` : '音效軌', items: [
+    ...(h.kind === 'mood' ? [{ note: `情緒點的音效在這裡不能改 → 到分鏡表的「情緒點」取消勾選，或跟 AI 說「${mmssOf(outOf(h.mood.at, app.edit.cuts))} 的情緒點不要音效」` }, { sep: true }] : []),
+    { label: '在這裡加音效', sub: soundItems(null, (name) => addOwnSfx(app.t, name)), off: lockWhy('sfx') || rough || (cutIndexAt(app.t, app.edit.cuts) >= 0 ? '這裡是剪掉的範圍，加了也不會出聲' : '') || soundsWhy() },
+    ...trackItems('sfx'),
+  ] };
+}
+// 在時間軸上按右鍵（timeline.js 呼叫）：先選到指標下的東西（和點一下一樣），再在指標旁開選單。
+// 指標在拖出來的選取範圍裡（主軌、人聲）＝那個範圍的選單，不改選
+app.tlContext = (h, e) => {
+  if (!TRACK_NAMES[h.lane]) return;
+  closeCapEditor(true);
+  const range = selValid() && (h.lane === 'main' || h.lane === 'voice') && h.t >= app.sel.a && h.t <= app.sel.b && ['piece', 'voiceBody', 'voiceVol', undefined].includes(h.kind);
+  if (range) { app.selLane = h.lane; app.seek(h.t); renderHeads(); } else selectHit(h);
+  openMenu({ x: e.clientX, y: e.clientY, ...ctxMenu(h, { range }), blocked: blockedToast });
+};
+// 鍵盤開選單（Shift＋F10、選單鍵）：照選到的東西組一個「點到的位置」；沒選東西就看選到的那一軌、播放頭的位置
+function hitOfSelection() {
+  const s = app.selection, near = (a, b) => (app.t >= a && app.t <= b ? app.t : a);
+  if (!s) {
+    const L = timeline.L[app.selLane];
+    if (!TRACK_NAMES[app.selLane]) return null;
+    timeline.ensureVisible(app.t, false);
+    return timeline.hit(timeline.xOf(app.t), (L[0] + L[1]) / 2);
+  }
+  switch (s.kind) {
+    case 'cue': { const c = selectedCue(); return c && { lane: 'cap', kind: 'cue', cue: c, t: near(c.start, c.end) }; }
+    case 'item': case 'media': { const it = app.itemsView.find((x) => x.id === s.id); return it && { lane: s.kind === 'media' ? 'media' : 'anim', kind: s.kind, item: it, t: near(it.start, it.end) }; }
+    case 'cut': { const c = app.edit.cuts[s.id]; return c && { lane: 'main', kind: 'cut', cutIndex: s.id, t: near(c[0], c[1]) }; }
+    case 'piece': { const p = app.pieces.find((q) => q.key === s.id); return p && { lane: 'main', kind: 'piece', piece: p, t: near(p.a, p.b) }; }
+    case 'range': return { lane: app.selLane === 'voice' ? 'voice' : 'main', range: true, t: near(app.sel.a, app.sel.b) };
+    case 'join': { const p = app.points.find((q) => Math.abs(q.at - s.id) < 1e-6); return p && { lane: 'main', kind: 'join', point: p, t: p.at }; }
+    case 'gain': { const g = app.edit.gains[s.id]; return g && { lane: 'voice', kind: 'gainBody', gain: s.id, t: near(g.from, g.to) }; }
+    case 'sfx': { const m = app.sfxView.find((x) => x.segId === s.id && x.main) || app.sfxView.find((x) => x.segId === s.id); return m && { lane: 'sfx', kind: 'sfx', sfx: m, t: m.at }; }
+    case 'usfx': { const m = app.sfxView.find((x) => x.user === s.id); return m && { lane: 'sfx', kind: 'usfx', sfx: m, t: m.at }; }
+    case 'gap': { const g = gapInfo(s.id); return { lane: 'anim', kind: 'noCard', span: [g.start, g.end], t: near(g.start, g.end) }; }
+    default: return null;
+  }
+}
+let ctxKeyAt = 0;   // 剛用鍵盤開了自己的選單：瀏覽器跟著送來的 contextmenu 不再跳它自己的選單
+function openSelMenu() {
+  const h = hitOfSelection();
+  if (!h) { toast('先點時間軸上的一個東西（或一條軌），再按 Shift＋F10 或選單鍵開選單', 'warn', 3500); return; }
+  if (!app.selection) selectHit(h);
+  timeline.ensureVisible(h.t, false);
+  timeline.draw();
+  const r = $('#tlCanvas').getBoundingClientRect(), box = $('.tl-body').getBoundingClientRect(), L = timeline.L[h.lane];
+  ctxKeyAt = performance.now();
+  openMenu({ x: r.left + clamp(timeline.xOf(h.t), 8, timeline.cssW - 8), y: clamp(r.top + (L[0] + L[1]) / 2, box.top + 4, box.bottom - 4), ...ctxMenu(h, { range: !!h.range }), focus: true, blocked: blockedToast });
+}
+document.addEventListener('contextmenu', (e) => { if (performance.now() - ctxKeyAt < 800) e.preventDefault(); });
 
 // ---------- 尋找與取代 ----------
 function openFind() { $('#dlgFind').showModal(); $('#findText').focus(); renderFind(); }
@@ -3061,17 +3458,19 @@ $('#inspBody').addEventListener('error', (e) => { if (e.target.tagName === 'IMG'
 $('#inspBody').addEventListener('dblclick', (e) => { const r = e.target.closest('input[type="range"]'); if (!r) return; r.value = r.dataset.f === 'fadeIn' || r.dataset.f === 'fadeOut' ? '0' : '0'; r.dispatchEvent(new Event('input', { bubbles: true })); });
 const caretTrack = (e) => { if (e.target.id === 'capText') e.target.dataset.caret = String(e.target.selectionStart); };
 for (const ev of ['keyup', 'click', 'select']) $('#inspBody').addEventListener(ev, caretTrack);
-// 軌頭
+// 軌頭（靜音、鎖定：軌頭的按鈕和右鍵選單都呼叫這兩支）
+function toggleTrackMute(k) {
+  mutate(() => {
+    if (app.trackMuted(k)) app.edit.volume[k] = app.tracks[k].prev ?? 0;
+    else { app.tracks[k].prev = app.edit.volume[k]; app.edit.volume[k] = -60; }
+  }, { inspector: true });
+  toast(`${TRACK_NAMES[k]}${app.trackMuted(k) ? '已靜音（完成影片也不會有）' : '取消靜音'}`, 'ok', 1500);
+}
+function toggleTrackLock(k) { app.tracks[k].lock = !app.tracks[k].lock; renderHeads(); timeline.invalidate(); }
 $('#tlHeads').addEventListener('click', (e) => {
   const m = e.target.closest('[data-mute]'), l = e.target.closest('[data-lock]');
-  if (m) {
-    const k = m.dataset.mute;
-    mutate(() => {
-      if (app.trackMuted(k)) app.edit.volume[k] = app.tracks[k].prev ?? 0;
-      else { app.tracks[k].prev = app.edit.volume[k]; app.edit.volume[k] = -60; }
-    }, { inspector: true });
-    toast(`${TRACK_NAMES[k]}${app.trackMuted(k) ? '已靜音（完成影片也不會有）' : '取消靜音'}`, 'ok', 1500);
-  } else if (l) { const k = l.dataset.lock; app.tracks[k].lock = !app.tracks[k].lock; renderHeads(); timeline.invalidate(); }
+  if (m) toggleTrackMute(m.dataset.mute);
+  else if (l) toggleTrackLock(l.dataset.lock);
   else { const th = e.target.closest('.th'); if (th && TRACK_NAMES[th.dataset.lane]) { app.selLane = th.dataset.lane; renderHeads(); timeline.invalidate(); } }
 });
 // 軌頭的 dB：上下拖＝調整（每 2px 0.5 dB），點一下＝輸入數字
@@ -3701,6 +4100,8 @@ document.addEventListener('keydown', (e) => {
     case 'Enter': if (selectedCue()) { e.preventDefault(); openCapEditor(selectedCue().n); } break;
     case 'h': toggleMark(); break;   // 038 重點字幕：選到的那一句（沒選就是播放頭所在的那一句）
     case 'Delete': case 'Backspace': e.preventDefault(); deleteSelection(); break;
+    case 'ContextMenu': e.preventDefault(); openSelMenu(); break;   // 050 選單鍵、Shift＋F10：選到的東西的選單（和按右鍵同一份）
+    case 'F10': if (!e.shiftKey) return; e.preventDefault(); openSelMenu(); break;
     case 'Escape': app.sel = { a: null, b: null }; app.select(null); setTool('select'); break;
     case '+': case '=': timeline.zoomTo(timeline.pps * 1.6); break;
     case '-': case '_': timeline.zoomTo(timeline.pps / 1.6); break;

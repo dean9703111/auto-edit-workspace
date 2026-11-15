@@ -20,7 +20,7 @@
  * 選項：--port 4400、--open（順便開瀏覽器）、--foreground（一律前景）、--background（一律背景）；測試用：--template <shared/template 資料夾>
  * 給別的工具：import { ensureEditor } from './editor.mjs'；await ensureEditor(P) → { main, cuts, framing, storyboard, final, … }（沒開就在背景開，網址直接回傳、不印東西）；
  * 同步的呼叫端用 lib/editor-urls.mjs 的 editorUrlsSync(project)（跑上面的 --json）
- * 剪輯只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／out（只能拿掉）／speed／hold／retime／anchor、任何段的 sfxVolume 與 sfx: null、
+ * 剪輯只寫：plan.json 的 edit（含使用者自己加的音效 edit.sfx）、media 段的 enter／exit／volume／from／to／in／out（只能拿掉）／speed／hold／retime／anchor、任何段的 sfxVolume 與 sfx（換一顆的名稱、null＝靜音）、
  * slots／vars 的文字值（含模板動畫的 slots）、第一層的 look（講者調光與瘦臉）、theme、captionStyle（字幕樣式）、captionMarks（重點字幕的句號）與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
  * 剪輯清單頁只寫 work/cuts.md NG 表的「剪」欄（[x]／[ ]；沒有這一欄就加在最前面），有 work/rough.mp4 之後只能看。
  * 分鏡表頁只寫 work/storyboard.md 改到的那幾行（段落內容、表格的格與列、整段原始 Markdown）；製作進度的停點 ③ 通過之後只能看。
@@ -39,7 +39,7 @@ import { cmdLine } from './lib/say.mjs';
 import { jobState, runToolUntilDone } from './lib/job.mjs';
 import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, remapScriptsAfterSave } from './editor/server/write.mjs';
 import * as subtitles from './editor/subtitles.mjs';
-import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, lookNeedsRun, LOOK_LIMITS, isRunning, ensureBlendedLut, lookNextStep } from './lib/look.mjs';
+import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, bodyImage, bellySkipWhy, faceOn, lookNeedsRun, LOOK_LIMITS, isRunning, ensureBlendedLut, lookNextStep } from './lib/look.mjs';
 import { footageVf, lut3dFilter } from './lib/ff.mjs';
 import { CANVAS } from './lib/canvas.mjs';
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
@@ -58,6 +58,7 @@ import { requestsInfo, doRequestsStatus, doRequests } from './editor/server/requ
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
 import { r3 } from './lib/time.mjs';
 import { LOUD } from './lib/audio.mjs';
+import { LOCAL_ROLES, localSfxDir } from './lib/sfx-local.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, subtitles };
 export { requestsInfo, doRequestsStatus, doRequests };   // 修改單（實作在 editor/server/requests.mjs，versions.mjs 也用）
@@ -521,8 +522,10 @@ async function getSchema(ctx) {
       fx: (j.fx || []).map((x) => ({ no: x.no, id: x.id, zh: x.zh, vars: x.vars || [] })),
       // 配樂（kind: "bgm"，例如 bgm-cylinder-five）不是音效，不列進音效清單
       sounds: Object.entries(j.sounds || {}).filter(([, v]) => v?.kind !== 'bgm').map(([k]) => k),
+      // 050 可以自己選的音效（換一顆、在任意時間加一顆）：名稱照 kit/sfx.json 與 shared/sfx-local；工具自動配的秒針不能自己選。volume、peak 給快速試聽和時間軸算音量、落點
+      sfx: Object.entries(j.sounds || {}).filter(([k, v]) => v?.kind !== 'bgm' && !LOCAL_ROLES[k]?.auto).map(([k, v]) => ({ name: k, zh: v.zh || k, use: v.use || '', volume: v.volume ?? 0.5, peak: v.peak || 0, ...(v.local ? { local: true } : {}) })),
       custom: customSchema(P),
-    } : { key, error: `讀不到 build.mjs --list --json（${(r.stderr || r.stdout).trim().slice(0, 200)}）→ 卡片文字欄位先用 plan.json 原本有的欄位`, scenes: [], fx: [], sounds: [], custom: customSchema(P) };
+    } : { key, error: `讀不到 build.mjs --list --json（${(r.stderr || r.stdout).trim().slice(0, 200)}）→ 卡片文字欄位先用 plan.json 原本有的欄位`, scenes: [], fx: [], sounds: [], sfx: [], custom: customSchema(P) };
     ctx.schema = data;
     return data;
   });
@@ -594,17 +597,19 @@ function lookState(ctx, planData) {
     let baked = null;
     if (pickVideo(P) === path.join(P.out, 'assets', 'rough.mp4')) {
       const k = readJson(path.join(P.out, '.cache', 'footage-audio.json'))?.key?.look;
-      baked = isObj(k) ? { color: isNum(k.color) ? k.color : 0, slim: isNum(k.slim) ? k.slim : 0, beauty: isNum(k.beauty) ? k.beauty : 0 } : { color: 0, slim: 0, beauty: 0 };
+      baked = isObj(k) ? { color: isNum(k.color) ? k.color : 0, slim: isNum(k.slim) ? k.slim : 0, beauty: isNum(k.beauty) ? k.beauty : 0, belly: isNum(k.belly) ? k.belly : 0 } : { color: 0, slim: 0, beauty: 0, belly: 0 };
     }
-    const sum = readState(P.project).landmarks?.summary;
+    const lst = readState(P.project), sum = lst.landmarks?.summary, psum = lst.pose?.summary;
     return {
-      kit: { color: kit.color, slim: kit.slim, beauty: kit.beauty }, plan: plan.look === undefined ? null : plan.look,
-      effective: { color: L.color, slim: L.slim, beauty: L.beauty, source: L.source }, baked,
-      limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, beauty: LOOK_LIMITS.beauty, step: LOOK_LIMITS.step },
+      kit: { color: kit.color, slim: kit.slim, beauty: kit.beauty, belly: kit.belly }, plan: plan.look === undefined ? null : plan.look,
+      effective: { color: L.color, slim: L.slim, beauty: L.beauty, belly: L.belly, source: L.source }, baked,
+      limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, beauty: LOOK_LIMITS.beauty, belly: LOOK_LIMITS.belly, step: LOOK_LIMITS.step },
       landmarks: sum ? { ready: true, rate: sum.rate, medianFaceWidth: sum.medianFaceWidth, slimOk: sum.slimOk !== false, reason: sum.reason ?? null } : { ready: false },
+      // 瘦小腹用的姿勢偵測（work/pose-landmarks.json）；why＝略過的原因（給面板直接印）
+      pose: psum ? { ready: true, rate: psum.rate, usable: psum.usable, bellyOk: psum.bellyOk !== false, why: psum.bellyOk === false ? bellySkipWhy(psum) : null } : { ready: false },
       lines,
     };
-  } catch (e) { return { error: e.message, limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, beauty: LOOK_LIMITS.beauty, step: LOOK_LIMITS.step } }; }
+  } catch (e) { return { error: e.message, limits: { color: LOOK_LIMITS.color, slim: LOOK_LIMITS.slim, beauty: LOOK_LIMITS.beauty, belly: LOOK_LIMITS.belly, step: LOOK_LIMITS.step } }; }
 }
 
 // 構圖的瘦臉進度（打開瘦臉才偵測：按「偵測臉部」→ POST /api/look/run，之後每 2 秒 GET /api/look/status）
@@ -626,7 +631,7 @@ async function doLookRun(ctx) {
   if (isRunning(readState(P.project))) return [200, { ok: true, already: true, ...lookRunState(ctx) }];
   const plan = readPlan(P.plan).data;
   const L = resolveLook({ plan: isObj(plan) ? plan : {}, templateDir: P.templateDir });
-  if (!(L.slim > 0 || L.beauty > 0)) return [400, { error: 'noslim', message: '瘦臉、美顏都是關的，不用偵測 → 先打開瘦臉或美顏並儲存，再按「偵測臉部」' }];
+  if (!faceOn(L)) return [400, { error: 'noslim', message: '瘦臉、美顏、瘦小腹都是關的，不用偵測 → 先打開其中一個並儲存，再按「偵測臉部」' }];
   const r = await runNode([LOOK, 'run', '--project', P.project, '--template', P.templateDir, '--background'], { cwd: P.root });
   if (r.code !== 0) return [500, { error: 'look', message: (r.stderr || r.stdout || '').trim().split('\n').slice(-3).join('\n') || `look.mjs run 結束碼 ${r.code}` }];
   return [200, { ok: true, ...lookRunState(ctx) }];
@@ -741,7 +746,7 @@ async function getState(ctx) {
     media, video, videoError, captions: srt.cues,
     cutpoints: readCutpoints(ctx.cutpointsFile),
     sfxMemory: readMemory(ctx),
-    schema: schema ? { scenes: schema.scenes, fx: schema.fx, sounds: schema.sounds, custom: schema.custom || [], error: schema.error } : null,
+    schema: schema ? { scenes: schema.scenes, fx: schema.fx, sounds: schema.sounds, sfx: schema.sfx || [], custom: schema.custom || [], error: schema.error } : null,
     report: rep ? { ready: true, data: rep.report, error: rep.error, issues: rep.issues, log: rep.log ?? null } : { ready: false },
     requests: requestsInfo(P.project),
     unsaved: readUnsaved(ctx).at(-1) ?? null,
@@ -1254,16 +1259,25 @@ async function handle(ctx, req, res) {
     return f && f.endsWith('.jpg') ? sendFile(req, res, f) : sendText(res, 404, '找不到檔案');
   }
   if (p.startsWith('/sfx/')) {
-    // 即時模擬播音效用：只開放 shared/sfx/ 的 .wav
+    // 即時模擬播音效、選音效前試聽用：只開放 shared/sfx/ 的 .wav；使用者自備的同名音效（shared/sfx-local/，030）先用，和 build 一樣
     const name = p.slice('/sfx/'.length);
     if (!/^[\w-]+\.wav$/.test(name)) return sendText(res, 404, '找不到檔案');
-    return sendFile(req, res, path.join(P.sfx, name));
+    const mine = path.join(localSfxDir(path.resolve(P.templateDir, '..')), name);
+    return sendFile(req, res, process.env.AUTO_EDIT_NO_LOCAL_SFX !== '1' && statOf(mine) ? mine : path.join(P.sfx, name));
   }
   if (p === '/api/report') { const rep = await getReport(ctx, { fresh: u.searchParams.has('fresh') }); return sendJson(res, 200, reportOut(rep)); }
   if (p === '/api/waveform') return sendJson(res, 200, await getPeaks(ctx));
   if (p === '/api/look/face') {
     try {
       const out = faceImage({ projectDir: P.project, t: Number(u.searchParams.get('t')) || 0, slim: Number(u.searchParams.get('slim')) || 0, beauty: Number(u.searchParams.get('beauty')) || 0, cache: (ctx.lookCache ??= {}) });
+      if (Buffer.isBuffer(out)) { res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store', 'Content-Length': out.length }); return res.end(out); }
+      return sendJson(res, 404, out);
+    } catch (e) { return sendJson(res, 500, { error: 'look', message: e.message }); }
+  }
+  // 瘦小腹的單格前後對照（軀幹特寫）：belly＝0 是「前」
+  if (p === '/api/look/body') {
+    try {
+      const out = bodyImage({ projectDir: P.project, t: Number(u.searchParams.get('t')) || 0, belly: Number(u.searchParams.get('belly')) || 0, cache: (ctx.lookCache ??= {}) });
       if (Buffer.isBuffer(out)) { res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store', 'Content-Length': out.length }); return res.end(out); }
       return sendJson(res, 404, out);
     } catch (e) { return sendJson(res, 500, { error: 'look', message: e.message }); }

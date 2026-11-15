@@ -14,7 +14,7 @@ import { readPrefs } from './prefs.mjs';
 import { agentLimit } from './agents.mjs';
 const agentsOf = (P) => agentLimit(path.resolve(P.templateDir, '..'));   // 子代理一次最多派幾個（shared/setting.json；預設 10）
 import { parseMap, checkMap, mapOptions, mergeMaps, designVsMap, rowSeconds } from './semantic-map.mjs';
-import { RHYTHM, MODE_ZH, modeOfHead, layoutFindings, layoutPlanLine } from './layout-rhythm.mjs';
+import { RHYTHM, MODE_ZH, modeOfHead, layoutFindings, layoutPlanLine, portraitFindings, PORTRAIT_RHYTHM } from './layout-rhythm.mjs';
 import { listFillSpecs, designFileOf, illusNames, isBlankDesign, blankFor } from './custom-fill.mjs';
 import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn, tidyDecide, outroAsk, endingAsks } from './storyboard-gen.mjs';
 import { appendStop, lastStopOf, markStep } from './progress.mjs';
@@ -307,6 +307,7 @@ export function mapCmd(P, key0) {
     const modeOf = (name) => modeOfHead(list.find((e) => e.name === name)?.text);
     const opts = mapOptions(rows, ctx.sitRows, list.map((e) => e.name), { secsOf, minOf: (name) => minOfSpec(list, name), fullOf: (name) => fullOfSpec(list, name), fx, ...(rhythmOn ? { modeOf, startOf } : {}) });
     if (opts.plan) console.log(`  版面安排（工具照規則排好了，照行首標的版面挑模板）：${layoutPlanLine(rows, opts.plan, { startOf, secsOf })}\n  規則：開頭 ${RHYTHM.intro} 秒用字卡（講者滿版露臉，卡疊在講者上）讓觀眾先認識講者；${MODE_ZH.pip}一次連續 ≥ ${RHYTHM.pip} 秒、${MODE_ZH.half} ≥ ${RHYTHM.half} 秒，中間不切回講者，畫面才不會一直晃。`);
+    if (ctx.idx?.hasCamera !== false && !rhythmOn) console.log(`  直式版面節奏：只有「切一半」（上下分割、全畫面模板、錄影段）和「全身」（講者滿版、卡疊在講者身上）兩種情境，進入一種至少停 ${PORTRAIT_RHYTHM.stay} 秒、1 分鐘最多切 ${PORTRAIT_RHYTHM.switches} 次；相鄰的行盡量同一種情境、連成一大塊，太短的那一塊併進前後（shared/style.md「直式」）`);
     for (const l of opts) console.log(`  ${l}`);
     for (const l of next(`照地圖寫大綱 ${rel(draftsDir(P))}/${key}.outline.md（模板從上面挑；地圖上是 A 的段寫候選構想，其他寫 —），再跑：`, cmdLine('build.mjs', ['--project', rel(P.project), '--outline', key]))) console.log(l);
   } else console.log('→ 第一回合完成：照 chapter-worker.md 回報一行，等主代理全片校正後的第二回合（不要先寫大綱）');
@@ -698,6 +699,12 @@ export function outlineCmd(P, file) {
   if ((readJson(path.join(packDir(P), 'index.json'))?.hasCamera !== false) && resolveFormat({ projectDir: P.project, plan: readJson(P.plan) || {} }).format !== 'portrait') {
     const lay = main.map((x) => ({ id: x.r.id, start: x.a, end: x.z, from: x.r.from, to: x.r.to, mode: x.snip?.type === 'fx' && x.snip?.bg ? 'pip' : modeOfHead(x.entry.text) })).map((x) => (x.mode === 'full' ? { ...x, mode: null } : x));
     for (const f of layoutFindings(lay)) errors.push(`版面節奏：${f.msg} → ${f.fix}`);
+  }
+  // 053 直式：切一半（整張幕）和全身（疊在講者上）進入一種至少停 12 秒、1 分鐘最多切 3 次。大綱這一步就提醒（⚠：設計段的版面這時還不一定看得出來）
+  if ((readJson(path.join(packDir(P), 'index.json'))?.hasCamera !== false) && resolveFormat({ projectDir: P.project, plan: readJson(P.plan) || {} }).format === 'portrait') {
+    const lay = main.map((x) => { const m = x.snip?.type === 'fx' ? (x.snip?.bg ? 'pip' : 'card') : modeOfHead(x.entry.text); return m ? { id: x.r.id, start: x.a, end: x.z, split: m !== 'card' } : null; }).filter(Boolean);
+    const total = lay.length ? Math.max(...lay.map((x) => x.end)) : 0;
+    for (const f of portraitFindings(lay, { total })) warns.push(`版面節奏（直式）：${f.msg} → ${f.fix}`);
   }
   for (let i = 1; i < main.length; i++) {
     const p = main[i - 1], s = main[i];

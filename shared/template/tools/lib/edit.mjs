@@ -1,8 +1,10 @@
 // plan.json 第一層 edit（剪輯台寫的設定）：檢查、正規化、rough.mp4 秒數 ↔ 完成影片秒數的對應
 //
 //   normalizeEdit(edit, { videoDur, cutpoints }) → { edit, errors, warnings, active }
-//     edit＝{ cuts:[[a,b]…]（排序合併後）, fadeIn, fadeOut, volume:{ voice, sfx, media }, gains:[{ from, to, db }], joins:[{ at, type, dur }] }
-//     active＝有任何會改變輸出的設定（沒有 edit、或全是預設值時 false → 輸出和沒寫 edit 一模一樣）
+//     edit＝{ cuts:[[a,b]…]（排序合併後）, fadeIn, fadeOut, volume:{ voice, sfx, media }, gains:[{ from, to, db }], joins:[{ at, type, dur }],
+//             sfx?:[{ at, sound, db? }]（050 作者在剪輯台自己加的音效，照 at 排；一顆都沒有就沒有這個鍵）,
+//             level?:true（人聲大小聲拉平：重新編碼底片時先拉平再調響度；關著就沒有這個鍵） }
+//     active＝有任何會改變輸出的設定（沒有 edit、或全是預設值時 false → 輸出和沒寫 edit 一模一樣；sfx 不算：它只多幾顆音效，底片照舊）
 //   timeMap(cuts, videoDur) → { cuts, keep, outDur, identity, map(t), unmapStart(o), unmapEnd(o), joinsOut }
 //     map：rough 秒數 → 完成影片秒數（落在 cut 裡的點收到 cut 的起點）
 //     unmapStart／unmapEnd：完成影片秒數 → rough 秒數（剛好在接點上時：Start 取接點後、End 取接點前）
@@ -11,8 +13,9 @@
 
 import { r3, clock2 } from './time.mjs';
 
-export const EDIT_KEYS = ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins'];
+export const EDIT_KEYS = ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins', 'sfx', 'level'];
 export const VOLUME_KEYS = ['voice', 'sfx', 'media'];
+export const SFX_NAME = /^[a-z][a-z0-9-]*$/;   // 音效名稱＝檔名（shared/sfx、shared/sfx-local 的 <名稱>.wav）
 export const JOIN_TYPES = ['none', 'dip', 'punch'];
 export const DIP = 0.3;          // dip 預設長度
 export const PUNCH = 1.08;       // punch 放大倍率
@@ -133,7 +136,31 @@ export function normalizeEdit(edit, { videoDur, cutpoints = [] } = {}) {
       out.joins.sort((a, b) => a.at - b.at);
     }
   }
-  const active = out.cuts.length > 0 || out.fadeIn > 0 || out.fadeOut > 0 || out.joins.some((j) => j.type !== 'none') || out.gains.some((g) => g.db !== 0) || VOLUME_KEYS.some((k) => out.volume[k] !== 0);
+
+  // --- 自己加的音效（050：作者在剪輯台任意時間放的；這裡只看格式，名稱在不在這台機器的音效清單由 plan.mjs 查）---
+  if (edit.sfx != null) {
+    if (!Array.isArray(edit.sfx)) err('sfx 要寫成陣列，例如 [{ "at": 41.2, "sound": "ding" }]（rough.mp4 的秒數；剪輯台的音效軌按右鍵「在這裡加音效」會自動寫）');
+    else {
+      const list = [];
+      edit.sfx.forEach((s, i) => {
+        if (!s || typeof s !== 'object' || Array.isArray(s)) { err(`sfx[${i}] 要是物件 { "at": 秒數, "sound": "音效名稱" }`); return; }
+        for (const k of Object.keys(s)) if (!['at', 'sound', 'db'].includes(k)) err(`sfx[${i}].${k}：沒有這個欄位（可用：at、sound、db）`);
+        if (!isNum(s.at) || s.at < 0) { err(`sfx[${i}].at 要是 rough.mp4 的秒數，現在是 ${JSON.stringify(s.at)}`); return; }
+        if (typeof s.sound !== 'string' || !SFX_NAME.test(s.sound)) { err(`sfx[${i}].sound 要是音效名稱（例 "ding"；跑 build.mjs --list 看有哪些），現在是 ${JSON.stringify(s.sound)}`); return; }
+        if (s.db != null && (!isNum(s.db) || s.db < -60 || s.db > 12)) { err(`sfx[${i}].db 要是 −60～+12 的 dB 數字（這一顆的音量，不寫＝預設），現在是 ${JSON.stringify(s.db)}`); return; }
+        if (videoDur != null && s.at > videoDur) { err(`sfx[${i}]：at ${s.at}s 超過 rough.mp4 長度 ${videoDur}s → 在剪輯台把這顆音效移除或往前拖`); return; }
+        list.push({ at: r3(s.at), sound: s.sound, ...(s.db ? { db: r3(s.db) } : {}) });
+      });
+      list.sort((a, b) => a.at - b.at);
+      if (list.length) out.sfx = list;
+    }
+  }
+  // --- 人聲大小聲拉平（只影響重新編碼底片；不算 active：時間、剪接都不變）---
+  if (edit.level != null) {
+    if (typeof edit.level !== 'boolean') err(`level 要是 true（拉平人聲大小聲）或 false，現在是 ${JSON.stringify(edit.level)}`);
+    else if (edit.level) out.level = true;
+  }
+  const active =out.cuts.length > 0 || out.fadeIn > 0 || out.fadeOut > 0 || out.joins.some((j) => j.type !== 'none') || out.gains.some((g) => g.db !== 0) || VOLUME_KEYS.some((k) => out.volume[k] !== 0);
   return { edit: out, errors, warnings, active };
 }
 

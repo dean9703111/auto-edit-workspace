@@ -107,6 +107,10 @@ test('快取戳記：來源、剪接點、開關任一改變就不相等', () =>
   assert.ok(!A.stampMatches({ key: k }, A.audioKey({ src, cutpoints: [1, 2] })));
   // 關掉淡化時，剪接點不進 key（改 cutpoints.json 不用重新編碼）
   assert.deepEqual(A.audioKey({ src, cutpoints: [1], declick: false }).points, []);
+  // 拉平人聲（edit.level）：開了 key 不同；關著和沒寫一樣（舊專案不會因此重新編碼）
+  const k2 = A.audioKey({ src, cutpoints: [1, 2] });
+  assert.ok(!A.stampMatches({ key: k2 }, A.audioKey({ src, cutpoints: [1, 2], level: true })));
+  assert.ok(A.stampMatches({ key: k2 }, A.audioKey({ src, cutpoints: [1, 2], level: false })));
 });
 
 test('報告：人聲響度一行、不再因人聲調幅提醒（音效比例只看 targetDb）、沒有 cutpoints.json 時說明', () => {
@@ -121,6 +125,8 @@ test('報告：人聲響度一行、不再因人聲調幅提醒（音效比例�
   assert.match(A.audioReportLines({ ...base, linear: false })[0], /動態模式/);
   assert.deepEqual(A.audioReportLines({ hasAudio: false, notes: [] }), []);
   assert.match(A.audioReportLines(base, { loudnorm: false, declick: false }).join('\n'), /--no-loudnorm[\s\S]*--no-declick/);
+  assert.ok(!A.audioReportLines(base).join('\n').includes('拉平'), '沒開 level 不印');
+  assert.match(A.audioReportLines({ ...base, level: true })[1], /^人聲大小聲拉平：開（plan\.json edit\.level/);
 });
 
 // ---- 音效政策（specs/contracts/sfx.md §4、§10；訊息原文 cli-005.md §3）----
@@ -322,6 +328,30 @@ test('整支流程：響度到 −14 LUFS（±1）、true peak ≤ −1、影片
   near(probeDuration(plain), probeDuration(dst), 1 / 30);
   // 暫存的 PCM 用完要清掉
   assert.ok(!fs.existsSync(path.join(cacheDir, 'declick.f32')));
+});
+
+test('拉平人聲（level）：小聲和大聲兩半的差距變小、整體仍到 −14 LUFS、長度不變、沒有剪接點也會做', { skip: SKIP }, () => {
+  const dir = tmp();
+  const clip = path.join(dir, 'steps.mp4');
+  // sine 的振幅是 1/8：前 4 秒峰值 0.1、後 4 秒 0.3，差約 9.5 dB（講話時句子之間常見的落差；最多拉 +15.6 dB，差更多的只會拉近一部分）
+  ff(['-f', 'lavfi', '-i', 'testsrc=s=320x180:r=30:d=8', '-f', 'lavfi', '-i', 'sine=f=300:r=48000:d=8',
+    '-filter_complex', "[1:a]volume='if(lt(t,4),0.8,2.4)':eval=frame[a]", '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip]);
+  const rms = (f, a, b) => {
+    const r = spawnSync('ffmpeg', ['-v', 'info', '-ss', String(a), '-t', String(b - a), '-i', f, '-vn', '-af', 'astats=measure_overall=RMS_level:measure_perchannel=none', '-f', 'null', '-'], { encoding: 'utf8' });
+    return Number(/RMS level dB:\s*(-?[\d.]+)/.exec(r.stderr)[1]);
+  };
+  const gap = (f) => rms(f, 5, 7.5) - rms(f, 1.5, 3.5);
+  const plain = path.join(dir, 'plain.mp4'), lv = path.join(dir, 'level.mp4');
+  A.encodeFootagePolished(clip, plain, { cacheDir: path.join(dir, '.c1') });
+  const info = A.encodeFootagePolished(clip, lv, { cacheDir: path.join(dir, '.c2'), level: true });
+  assert.equal(info.level, true);
+  assert.equal(info.cuts, 0);
+  assert.ok(gap(plain) > 8, `沒拉平的差距 ${gap(plain)}`);
+  assert.ok(gap(lv) < gap(plain) - 4, `拉平後差距 ${gap(lv)} 要比 ${gap(plain)} 小 4 dB 以上`);
+  near(info.after.i, -14, 1.5);
+  assert.ok(info.before.i < -14 - 1.5, '報告的「前」是原本的錄音');
+  near(probeDuration(lv), probeDuration(clip), 1 / 30);
+  assert.ok(!fs.readdirSync(path.join(dir, '.c2')).some((f) => f.endsWith('.f32')), '暫存的 PCM 用完要清掉');
 });
 
 test('沒有聲音的底片：略過並說明、不出錯；沒有剪接點：只做響度', { skip: SKIP }, () => {

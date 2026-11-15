@@ -178,7 +178,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 - 有插入螢幕錄影，而且 qc final 對錄影段有 ⚠、或 `qc-sheet.jpg` 看不出紅框位置時，才截那一格（`ffmpeg -v error -y -ss <秒數> -i projects/<專案>/output/final.mp4 -frames:v 1 projects/<專案>/output/qc/check-<秒數>s.jpg`），確認紅框框在對的地方。
 
 聲音由 build 處理，回報時把 build 印的這三行貼給使用者：
-- 人聲響度：重新編碼底片時，人聲調到 −14 LUFS、true peak ≤ −1 dBTP（YouTube 播放的基準），報告印 `人聲響度 −21.9 LUFS → −13.9 LUFS（true peak −7.1）`。量測結果有快取，素材沒變就不重量。完成影片的整體響度會落在 −14 ±1.5，因為音效、插入素材的聲音和結尾配樂也混在裡面。
+- 人聲響度：重新編碼底片時，人聲調到 −14 LUFS、true peak ≤ −1 dBTP（YouTube 播放的基準），報告印 `人聲響度 −21.9 LUFS → −13.9 LUFS（true peak −7.1）`。這只調整支的平均；句子之間忽大忽小要拉平，開 `edit.level`（6.1）。量測結果有快取，素材沒變就不重量。完成影片的整體響度會落在 −14 ±1.5，因為音效、插入素材的聲音和結尾配樂也混在裡面。
 - 音效比例：每顆音效的大小寫在 `shared/template/kit/sfx.json` 的 `targetDb`（相對人聲的 dB，上限照 `shared/style.md` 音效段）。報告印 `音效比例：主音效比人聲小 5.2–8.7 dB（中位 6.2）、附加音效小 19.6–19.6 dB；上限是比人聲小 3 dB`（用到章節、打雷這類設計上就比較大的音效時，寫成「主音效從比人聲小 8.7 dB 到小 2.0 dB」並註明照 kit/sfx.json）；有超過上限、又比那顆設計的大小還大的會 ⚠，列出段落和要再調低幾 dB → 在剪輯台調那一段的音效音量（`sfxVolume`）。用了 `--no-loudnorm` 時印「沒有檢查」。
 - 剪接點：`work/cutpoints.json` 的每個點，重新編碼時前後各淡 15 毫秒，消掉硬切的爆音（15 毫秒不會在底噪上挖出聽得到的凹洞）；剪輯台 `cuts` 的接點由 HyperFrames 淡 20 毫秒。有 `cutpoints.json` 時印 `剪接點微淡化：2 個接點，前後各 15 ms`；沒有時印「剪接點微淡化：略過（work/cutpoints.json 不存在；…）」，不是錯誤。
 - `--check` 最後另外印「音效次數」「音效密度」兩行；有 ⚠（某個音效超過每集上限、某一分鐘主音效太多）就照 → 處理，或在回報裡說明保留的理由。
@@ -214,7 +214,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 |---|---|---|---|
 | `version` | ✓ | `1` | 固定 |
 | `format` | 直式必填 | `"landscape"`、`"portrait"` | 版式（`auto-edit-longform`「版式」）：直式寫 `"portrait"`，橫式不寫。要和 `work/製作進度.md` 開工決策表的「版式」一樣，不一樣時 `--check` ✖ |
-| `look` | | `false` 或 `{ "color": 0–1, "slim": 0–1.2, "beauty": 0–1 }` | 講者調光、瘦臉、美顏（第 7 節；`beauty` 選填）。不寫＝用 `shared/template/kit/look.json`（預設都是 0＝關）；`false`＝都關。使用者要求才寫（要開建議 `--set "look.color=0.8;look.slim=0.6"`，美顏 `look.beauty=0.5`；都關 `--set look=off`），構圖台、剪輯台「講者」也會寫 |
+| `look` | | `false` 或 `{ "color": 0–1, "slim": 0–1.2, "beauty": 0–1, "belly": 0–1 }` | 講者調光、瘦臉、美顏、瘦小腹（第 7 節；`beauty`、`belly` 選填）。不寫＝用 `shared/template/kit/look.json`（預設都是 0＝關）；`false`＝都關。使用者要求才寫（要開建議 `--set "look.color=0.8;look.slim=0.6"`，美顏 `look.beauty=0.5`、瘦小腹 `look.belly=0.5`；都關 `--set look=off`），構圖台、剪輯台「講者」也會寫 |
 | `frame` | | `[x, y, w, h]` | 構圖裁切（2.2 第 0 步）：1920×1080 座標、16:9；底片照它裁切放大回 1920×1080。不寫＝原樣 |
 | `speakerBox` | 強烈建議 | `[x1, y1, x2, y2]` | 講者框（2.2）。有 `frame` 時是裁切後的座標。沒寫會提醒，也無法檢查碰撞 |
 | `sideShift` | | `0`–`960`，預設 `480` | 03 側邊欄時講者往右推多少 px（R4） |
@@ -436,7 +436,9 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `⚠ 講者瘦臉略過：找不到 HyperFrames 的 Chrome，只調光 → npx hyperframes browser ensure` | ⚠ | 照 `→` 跑，再 build |
 | `⚠ 講者瘦臉還在跑（look.mjs run，pid …；跑這條會接著等，做完再 build）→ node shared/template/tools/look.mjs run --project …` | ⚠ | 背景的 `look.mjs run` 還沒跑完：跑 → 後面那一條（會接著等，不用每 30 秒查 `look.mjs status`），做完再 build |
 | `⚠ 瘦臉還沒套到底片（…），這次先用 work/rough.mp4 → …` | ⚠ | 這次 build 先用沒瘦臉的底片；照 `→` 跑完 `look.mjs run` 再 build |
-| `look.slim 要是 0–1.2 的數字…` 這類 `look…` 開頭的訊息 | ✖ | 照訊息改 plan.json 的 `look`（只能寫 `color`、`slim`、`beauty`） |
+| `look.slim 要是 0–1.2 的數字…` 這類 `look…` 開頭的訊息 | ✖ | 照訊息改 plan.json 的 `look`（只能寫 `color`、`slim`、`beauty`、`belly`） |
+| `⚠ 講者瘦小腹略過：能做的格只有 N%…`／`姿勢偵測率 N%…`／`肩寬中位數 N px < 60 px…` | ⚠ | 半身取景（髖部在畫面外）、常側身、或人在畫面裡太小時是正常的：這支不瘦小腹，瘦臉、美顏照做；回報時說明。確定不要就寫 `"look": { "belly": 0 }` |
+| `⚠ 講者瘦小腹略過：找不到 shared/template/vendor/mediapipe/pose_landmarker_lite.task，只調光 → node shared/template/tools/look.mjs ensure` | ⚠ | 少姿勢偵測的檔：跑 `look.mjs ensure` 看缺什麼；要下載（約 6 MB）先問使用者，同意才跑 `look.mjs ensure --download` |
 | `✖ s21 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 1:56.14–2:33.51 是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project projects/<專案> 照它印的做`（`qc.mjs storyboard`、`qc.mjs final`；另一種是「講者小視窗在 m:ss.ss 就沒了（段到 …）」） | ✖ | 不是版面的問題，不要改 plan.json；照 → 重做初剪，再 build、再截圖。專案有 `assets/voice/` 的旁白時不會報 |
 | `⚠ <id> 是全畫面清單卻沒有講者小視窗 → 跑 node shared/template/tools/qc.mjs final --project … 看原因`（`qc.mjs observe`；`work/observe/index.md` 總表的「小視窗（子母畫面段）」欄是 `無`／`部分（m:ss.s 起沒有）`） | ⚠ | 照 → 跑 `qc.mjs final` 看原因，再照上一列做 |
 | `清掉同一段的舊截圖（這次張數變了）：…`（`qc.mjs storyboard`） | 資訊 | 不用處理；plan.json 已經沒有的段，舊圖留著並印 ⚠，不用就刪 |
@@ -597,9 +599,9 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 剪輯台（`shared/template/EDITOR.md`）是給使用者自己拖拉調整的網頁。它只寫 plan.json 的這幾個地方，AI 不主動改；**AI 要改 plan.json 前先重新讀檔，不要蓋掉使用者在剪輯台存的值**：
 
 - 第一層的 `edit`（下表）。
-- 第一層的 `look`（講者調光、瘦臉）：剪輯台一律兩個都寫，例如 `{ "color": 0.8, "slim": 0.5 }`；按「恢復預設」會整個拿掉。使用者在剪輯台改過，就以剪輯台的值為準。
+- 第一層的 `look`（講者調光、瘦臉）：剪輯台一律兩個都寫，例如 `{ "color": 0.8, "slim": 0.5 }`（美顏 `beauty`、瘦小腹 `belly` 有開才寫）；按「恢復預設」會整個拿掉。使用者在剪輯台改過，就以剪輯台的值為準。
 - 第一層的 `frame`（構圖台拖的框；停點 ② 還沒有 plan.json 時會新建）：換框時已經有的 `speakerBox`、`pipCrop`（陣列）會跟著換算成同一塊畫面，不用重量。
-- 任何段落的 `sfxVolume`、`"sfx": null`（靜音），以及 `slots`／`vars` 的文字。
+- 任何段落的 `sfxVolume`、`sfx`（使用者換了一顆＝音效名稱，靜音＝`null`），以及 `slots`／`vars` 的文字。
 - media 段的 `from`／`to`／`in`／`anchor`／`enter`／`exit`／`volume`。拖到字幕邊界時寫 `"#N"`／`"#Ne"`，沒對到字幕時寫秒數並拿掉 `anchor`；兩種都能直接 build。
 - `work/rough.srt` 的字幕文字與時間，也可能新增、分割、合併、刪除字幕；句子數量變了，剪輯台會把 plan.json 所有 `#N` 一起重新對好。
 
@@ -611,7 +613,9 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
   "fadeIn": 0.5, "fadeOut": 1.0,
   "volume": { "voice": 0, "sfx": -3, "media": 0 },
   "gains": [{ "from": 41.9, "to": 44.0, "db": 4 }],
-  "joins": [{ "at": 12.0, "type": "dip", "dur": 0.3 }, { "at": 20.5, "type": "punch" }]
+  "joins": [{ "at": 12.0, "type": "dip", "dur": 0.3 }, { "at": 20.5, "type": "punch" }],
+  "sfx": [{ "at": 33.4, "sound": "ding" }, { "at": 58.0, "sound": "success", "db": -3 }],
+  "level": true
 }
 ```
 
@@ -622,6 +626,8 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 | `volume.voice`／`sfx`／`media` | −60～+12 dB | 主軌人聲／全部音效／有開原聲的 media 段的總音量 |
 | `gains` | `[{ from, to, db }]`（`rough.mp4` 秒數） | 只調人聲某一段的音量，疊在 `volume.voice` 上；範圍不能重疊（✖） |
 | `joins` | `[{ at, type, dur? }]` | 接點轉場。`at` 要對到 `cuts` 的邊界或 `work/cutpoints.json` 的剪接點（±0.1 秒會自動吸附，否則 ⚠）。`type`：`"none"`、`"dip"`（過黑，`dur` 預設 0.3）、`"punch"`（接點後畫面放大 1.08 倍到下一個接點，講解跳接常用） |
+| `level` | `true`／不寫 | 拉平人聲大小聲：重新編碼底片時，先把小聲的句子拉近大聲的（每 0.2 秒看一次音量、約 2 秒平滑、最多拉 +15.6 dB），再調到 −14 LUFS。聽起來忽大忽小時開；build 報告多印「人聲大小聲拉平：開」。剪輯台「整支 → 聲音」的「拉平人聲大小聲」，或 `build.mjs --set edit.level=true` |
+| `sfx` | `[{ at, sound, db? }]`（`at` 是 `rough.mp4` 秒數） | 使用者在剪輯台自己加的音效：`at` 那一刻聽到 `sound` 這一顆（名稱同 R5.2；這台機器沒有的名稱 ✖），`db` 是這一顆的音量（−60～+12，不寫＝預設）。吃 `volume.sfx` 和整支的淡入淡出；落在 `cuts` 裡的不出聲。**不受 3 秒間隔、每分鐘密度、每集上限的規則限制**（6.3），AI 不新增、不刪、不改 |
 
 所有秒數都是 `rough.mp4` 的秒數（剪掉之前的時間軸）；沒有 `edit` 或欄位沒寫＝不做任何處理，輸出和沒有剪輯台時一模一樣。音量 0 dB＝原音量，最大 +12 dB。
 
@@ -636,6 +642,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 
 - 每一段都能寫 `"sfxVolume": -6`（dB）：這段的主音效與附加音效一起調，疊在 `kit/sfx.json` 的預設音量與 `edit.volume.sfx` 上。
 - `"sfx": null` 仍是拿掉這段的主音效。
+- 使用者在剪輯台自己加的音效在 `edit.sfx`（6.1），不屬於任何一段：`--check` 多印一行「自己加的音效：N 顆」，不算進「音效次數」「音效密度」，也不會讓附近的主音效被 3 秒規則拿掉；只有「音效稀疏」把它當成那裡已經有音效（使用者補過的地方不用再補）。
 - `--check` 報告的「音效時間」欄不顯示音量；要看最終音量用 `--check --json`（6.4）的 `items[].sfx[].volume`／`db`。
 
 ### 6.4 `--check --json`
@@ -648,13 +655,13 @@ node shared/template/tools/build.mjs --project projects/<專案> --check --json
 
 ## 7. 講者調光與瘦臉（look）
 
-講者畫面的調光（亮一點、膚色紅潤一點）和瘦臉是選用的，**預設關閉**（`shared/template/kit/look.json` 兩個都是 0），使用者在構圖台（停點 ②）或剪輯台「講者」開，或用說的；規則與限制看 `shared/style.md`「講者畫面」。
+講者畫面的調光（亮一點、膚色紅潤一點）和瘦臉是選用的，美顏、瘦小腹也是，**預設關閉**（`shared/template/kit/look.json` 兩個都是 0，`beauty`、`belly` 沒寫＝0），使用者在構圖台（停點 ②）或剪輯台「講者」開，或用說的；規則與限制看 `shared/style.md`「講者畫面」。
 
 | 誰做 | 什麼時候 | 做什麼 |
 |---|---|---|
 | build | 每次重新編碼底片 | 套調光的 LUT（`kit/look/jianying-smart.cube`，強度 `color`）。不用另外跑 |
-| `look.mjs run` | 剪乾淨之後、構圖之前；`rough.mp4` 換過或 `slim`、`beauty` 改過之後 | 偵測每一格的臉（`work/face-landmarks.json`）→ 做瘦臉底片 `work/rough-look.mp4` → 對照圖 `work/look-preview.jpg` |
-| build | `slim` 或 `beauty` > 0 | 用 `work/rough-look.mp4` 當底片；不是最新的就 ✖ 停下來，請你先跑 `look.mjs run` |
+| `look.mjs run` | 剪乾淨之後、構圖之前；`rough.mp4` 換過或 `slim`、`beauty`、`belly` 改過之後 | 偵測每一格的臉（`work/face-landmarks.json`；開了瘦小腹再每 3 格偵測一次姿勢，`work/pose-landmarks.json`）→ 做瘦臉底片 `work/rough-look.mp4` → 對照圖 `work/look-preview.jpg` |
+| build | `slim`、`beauty` 或 `belly` > 0 | 用 `work/rough-look.mp4` 當底片；不是最新的就 ✖ 停下來，請你先跑 `look.mjs run` |
 
 指令（完整說明：`node shared/template/tools/look.mjs --help`）：
 
@@ -662,8 +669,8 @@ node shared/template/tools/build.mjs --project projects/<專案> --check --json
 - 偵測＋瘦臉：`node shared/template/tools/look.mjs run --project projects/<專案>`（在背景跑、前景最多等 9 分鐘；印「⏳ 還在跑」就再跑同一條，會接著等、不會重做）
 - 取消背景的偵測：`node shared/template/tools/look.mjs cancel --project projects/<專案>`（瘦臉底片不換上去）
 - 只重畫對照圖：`node shared/template/tools/look.mjs preview --project projects/<專案>`
-- 檢查臉部偵測的檔案：`node shared/template/tools/look.mjs ensure`
-- 改工作區的預設（以後每一集都用）：`node shared/template/tools/look.mjs default --color 0.8 --slim 0.6`（只寫要改的；不帶值＝印目前的預設）
+- 檢查臉部、姿勢偵測的檔案：`node shared/template/tools/look.mjs ensure`
+- 改工作區的預設（以後每一集都用）：`node shared/template/tools/look.mjs default --color 0.8 --slim 0.6`（只寫要改的，還有 `--beauty`、`--belly`；不帶值＝印目前的預設）
 
 這一集的寫法（使用者要求才寫；用 `build.mjs --set`，只動寫到的鍵，其他照舊）：
 
@@ -673,6 +680,8 @@ node shared/template/tools/build.mjs --project projects/<專案> --check --json
 | 只要調光 | `--set look.color=0.8` |
 | 只要瘦臉 | `--set look.slim=0.6`（改完跑 `look.mjs run`） |
 | 要美顏（磨皮、提亮、淡化黑眼圈） | `--set look.beauty=0.5`（0–1；改完跑 `look.mjs run`） |
+| 要瘦小腹（縮小腹、腰收一點） | `--set look.belly=0.5`（0–1，建議 0.5；改完跑 `look.mjs run`。第一次會多偵測姿勢，少姿勢模型時照它印的 → 做） |
+| 小腹再收一點／不要那麼明顯 | `--set look.belly=0.7`／`0.3`（改完跑 `look.mjs run`） |
 | 調光淡一點 | `--set look.color=0.5` |
 | 瘦一點／不要那麼瘦 | `--set look.slim=0.8`／`0.3`（改完跑 `look.mjs run`） |
 | 都不要（kit 預設被改成開的時候） | `--set look=off` |
@@ -680,3 +689,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check --json
 - 自動略過瘦臉（只調光）：臉寬 < 60 px（畫面裡的臉太小）、抽樣 12 格都沒偵測到臉（確定有講者就加 `--force`）、偵測率 < 80 %、找不到臉部偵測的檔案或 Chrome。build 會印 ⚠ 和原因，不用處理。
 - 側臉時瘦臉自動減半、偵測不到的格自動淡掉，不會一格有一格沒有。
 - 對照圖的位移 ⚠（95 % 的格超過臉寬 6.5 %：p95 位移 ÷ 臉寬，用 slim 0.6／0.8／1.05 校準）表示太強，脖子與領口可能被拉彎：把 `slim` 調低。
+- 瘦小腹（`look.belly`）：用肩和髖定出軀幹，把肋骨下緣到髖這一段的畫面**水平**往身體中線收；`belly` 1 時腰的兩邊各收腰寬的 6 %。肩膀以上、髖以下不動，桌緣這種橫線不會動。
+  - 自動不做：髖部在畫面外（半身取景）、側身、彎腰超過 35°、沒偵測到人的格，前後幾格淡入淡出；整支有 20 % 以上的格不能做（或畫面裡的人太小、姿勢偵測率 < 80 %）就整支不做，build 印 `⚠ 講者瘦小腹略過：…`，瘦臉、美顏照做。
+  - 已知的限制（回報時告訴使用者）：手擺在肚子前面會跟著被收窄一點；腰旁邊的直線（門框、筆電邊緣）會微微彎；格紋、直條紋的衣服看得出變形。對照圖的 `⚠ 瘦小腹位移 ＝ 腰寬 N%（> 5%）` 表示收太多：把 `belly` 調低。
+  - 講者坐在桌子後面時，姿勢模型會把髖放在桌緣附近，所以收的是「肋骨下緣到桌緣」；看 `work/look-preview.jpg` 右邊兩欄（軀幹的前後）確認。

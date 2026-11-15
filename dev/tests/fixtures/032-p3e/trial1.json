@@ -8811,6 +8811,8 @@
  },
  "bed": null,
  "ending": null,
+ "tail": null,
+ "portraitLayout": null,
  "finalDur": 153.543,
  "chapterBadge": true,
  "badges": [
@@ -8972,7 +8974,8 @@
   "stage": {
    "fs": null,
    "fx": null,
-   "ch": null
+   "ch": null,
+   "full": null
   },
   "media": {
    "view": {

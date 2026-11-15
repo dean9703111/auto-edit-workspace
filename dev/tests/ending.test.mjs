@@ -74,7 +74,7 @@ test('ending：plan.json 寫 false／直式＝不放（總長不變）；沒設�
   assert.deepEqual(endingLines(off.ending), ['片尾：plan.json 寫了 "ending": false']);
   const portrait = run({ ending: conf, plan: { format: 'portrait' } });
   assert.equal(portrait.ending.off, '直式不放片尾卡和訂閱動畫');
-  assert.equal(portrait.finalDur, VD);
+  assert.equal(portrait.finalDur, VD + 1, '直式沒有片尾卡，只多 052 的片尾漸隱 1 秒');
   const noConf = run({ plan: { ending: { quote: 'x' } } });
   assert.equal(noConf.ending, null);
   assert.ok(noConf.warnings.some((w) => w.startsWith('plan.json 寫了 ending，但工作區沒有設定片尾')));

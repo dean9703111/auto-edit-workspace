@@ -251,8 +251,8 @@ const FX_BG = { dark: '#232733', light: 'var(--fx-light-bg, #f3efe6)', accent: '
 // cut（剪映素材，capcut.mjs）：要和 test 一起給（時間窗）
 //   { kind: 'seg', id, keepFootage }  只放這一段（含它的子母畫面與音效）；透明底、沒有字幕、角標、主軌聲音、剪輯台過黑／淡入淡出；
 //                                      keepFootage＝側邊欄段（講者被推到右邊）連底片一起放（靜音），剪映疊上去才對得起來
-//   { kind: 'main' }                  主軌：只有底片＋人聲＋剪輯台（跳接放大、過黑、淡入淡出）＋片尾配樂；沒有情境、字幕、角標、段落音效
-export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide = null, items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, bed = null, badges = [], canvas = null, cut = null, moods = [], zooms = null, speakerBox = null, ending = null }) {
+//   { kind: 'main' }                  主軌：只有底片＋人聲＋剪輯台（跳接放大、過黑、淡入淡出、使用者自己加的音效）＋片尾配樂；沒有情境、字幕、角標、段落音效
+export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide = null, items, videoDur, captions, pip, sideShift = 480, bg = false, test = null, footage = null, editFx = null, cues = null, outro = null, bed = null, badges = [], canvas = null, cut = null, moods = [], zooms = null, speakerBox = null, ending = null, tail = null, userSfx = [] }) {
   const C = canvas || CANVAS.landscape, portrait = C.format === 'portrait', W = C.W, H = C.H;
   const segCut = cut?.kind === 'seg', mainCut = cut?.kind === 'main';
   // 027 講者位置：面板在右時底片往左移；容器帶 data-panel-side／data-card-side，kit/scene.css、scene-motion.js 照它鏡像（預設在左時不加屬性，輸出和以前一樣）
@@ -264,7 +264,9 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
     captions = null;
     if (segCut) { outro = null; bed = null; editFx = editFx && { ...editFx, punches: [], dips: [], fadeIn: 0, fadeOut: 0 }; zooms = null; }
     moods = [];
+    if (segCut) userSfx = [];   // 自己加的音效（050）不屬於任何一段：跟著主軌走
     ending = null;   // 剪映素材不放片尾模板（作者剪映的預設組合裡已經有）
+    tail = null;     // 剪映素材也不做片尾停留（每段一支透明影片，沒有「整個畫面」）
   }
   const compName = segCut ? `capcut-${cut.id}` : mainCut ? 'capcut-main' : test ? 'test-clip' : 'main';
   const PB = C.pip.box;   // 子母畫面本體（橫式 1424,594、432×324）／講者面板（直式 0,900、1080×1020）
@@ -275,7 +277,9 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
   // root 不用 id="root"：字卡動態（fx-*.html）子合成的根就叫 #root，主合成寫 #root { background:#000 } 會套到它身上、把底片整個蓋黑
   const rootId = cut ? 'capcut-root' : test ? 'test-root' : 'main-root';
   // 片尾卡（033，lib/ending.mjs）接在影片後面：合成多 ending.dur 秒；底片、字幕照舊只到影片結束（FOOT）
-  const END = r3(videoDur + (ending?.dur > 0 ? ending.dur : 0));
+  // 片尾停留（049，plan.mjs 的 tail＋build 做好的 tail.file）：講完再停 tail.hold 秒（底片、講者面板凍結在最後一格，最後一段動畫停在完成態）才漸暗 tail.fade 秒
+  if (!tail?.file) tail = null;
+  const END = r3(videoDur + (ending?.dur > 0 ? ending.dur : 0) + (tail ? tail.dur : 0));
   const DUR = test ? r3(Math.min(test.len, END - t0)) : END;
   const FOOT = r3(Math.min(DUR, videoDur - t0));
   const skipped = [];
@@ -315,6 +319,7 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
     if (!portrait) return it.type === 'fx' && !it.opaque && speakerBox ? fxStage(speakerBox, C, { side: speakerSide }) : null;
     if (it.type === 'media') return null;
     if (it.type === 'fx') return stageTransform('fx', C, { clear: !it.opaque });
+    if (it.type === 'scene' && it.full) return stageTransform('full', C);   // 053 全幕版縮進上半（下面是講者）
     if (it.type === 'scene') return it.scene.portrait === 'stage' ? stageTransform(it.key === 'chapter' ? 'ch' : 'fs', C) : null;
     return it.type === 'custom' && it.opaque ? stageTransform('fs', C) : null;
   };
@@ -325,6 +330,8 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
   for (const it of list) {
     if (it.noHost) continue;
     const d = r3(it.e - it.s);
+    // 049：片尾的那一段跟著停留多留 tailExt 秒（停在完成態）
+    const tailExt = tail && it.tailFade && it.fullEnd ? r3(Math.max(0, Math.min(tail.dur, DUR - it.e))) : 0;
     // 子母畫面：只有聲音的區間不放、接點（cut）切開；沒有這些時就是整段一支（和舊版相同）
     const pieces = [];
     if (it.pip) {
@@ -367,12 +374,12 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
         : diveOut > 0 && !punched ? `; scale: var(--dz, 1); transform-origin: var(${dv})` : '';
       const motionCss = `${pushed ? '; translate: 0 var(--ty, 0px)' : ''}${it.txIn === 'push' ? `; ${PUSH_SHADOW}` : ''}${punched ? `; scale: var(--pz, 1); --po: ${PUNCH_ORIGIN}; transform-origin: var(--po)` : ''}${diveCss}`;
       // 直式：舞台縮放的幕下面墊整張畫布的純色底（縮放後露出的頂端；spike D-1：同一張背景圖兩種比例會出現兩次裝飾線，所以不用圖）
-      if (bd) hosts.push(`  <div id="bd-${it.id}" class="clip" data-start="${n3(it.s)}" data-duration="${n3(d + pushOut)}" data-track-index="${track++}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:${it.type === 'fx' ? FX_BG[it.bg] : it.key === 'chapter' ? 'var(--sc-ch-bg)' : 'var(--sc-fs-bg)'};z-index:${it.z - 1}${pushed ? '; translate: 0 var(--ty, 0px)' : ''}"></div>`);
+      if (bd) hosts.push(`  <div id="bd-${it.id}" class="clip" data-start="${n3(it.s)}" data-duration="${n3(d + pushOut + tailExt)}" data-track-index="${track++}" style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;background:${it.type === 'fx' ? FX_BG[it.bg] : it.key === 'chapter' ? 'var(--sc-ch-bg)' : 'var(--sc-fs-bg)'};z-index:${it.z - 1}${pushed ? '; translate: 0 var(--ty, 0px)' : ''}"></div>`);
       const [hw, hh] = portrait && !st ? [W, H] : [1920, 1080];
       hosts.push(`  <div id="el-${it.id}" data-composition-id="${it.compId}" data-composition-src="${it.file}"${varAttr}
-       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut + pushOut + diveOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${sideAttr(it)}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}${motionCss}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
+       data-start="${n3(it.s)}" data-duration="${n3(d + swapOut + pushOut + diveOut + tailExt)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${sideAttr(it)}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}${motionCss}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
       // 045：幕自己的底是不透明的，裝飾要疊在幕上面才看得到整條；只畫在平台介面區（y 0–240），內容不會排到那裡
-      if (bdTop) hosts.push(`  <div id="bdt-${it.id}" class="clip bd-top" data-layout-ignore data-start="${n3(it.s)}" data-duration="${n3(d + pushOut)}" data-track-index="${track++}" style="z-index:${it.z + swapDepth(it)}${pushed ? '; translate: 0 var(--ty, 0px)' : ''}"></div>`);
+      if (bdTop) hosts.push(`  <div id="bdt-${it.id}" class="clip bd-top" data-layout-ignore data-start="${n3(it.s)}" data-duration="${n3(d + pushOut + tailExt)}" data-track-index="${track++}" style="z-index:${it.z + swapDepth(it)}${pushed ? '; translate: 0 var(--ty, 0px)' : ''}"></div>`);
       // 人物去背層（lib/matte.mjs）：這一段的講者（帶透明通道）疊在動畫上面，動畫就在講者後面；外層 div 不帶時間屬性（影片本身的 opacity 會被框架蓋掉）
       if (it.matte?.file) hosts.push(`  <div id="matte-${it.id}" data-layout-ignore style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:${it.z + 1};pointer-events:none${it.matte.clip ? `;clip-path:${it.matte.clip}` : ''}">
     <video id="mattev-${it.id}" src="${base}${it.matte.file}" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-media-start="${n3(Math.max(0, it.s + (test ? t0 : 0) - it.start))}" data-track-index="${track++}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></video>
@@ -398,14 +405,18 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
     const [sdx, sdy] = (!portrait && it.media?.pipShift) || [0, 0], shifted = !!(sdx || sdy);
     for (const p of pieces) {
       const ps = pip.style, vTrack = track++;
+      // 049：一路到片尾那一段結束的這一片 → 講者面板（小視窗）跟著停留，換成凍結在最後一格的那一小段
+      const pTail = tailExt > 0 && Math.abs(p.s + p.d - it.e) < 0.02 ? tailExt : 0;
       // 直式的講者面板外框：上緣一條 6px 主色線（CSS，跟著 --brand；不用 png）
-      const frame = portrait ? `<div id="pipf-${it.id}${p.sfx}" class="clip pip-frame" data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-track-index="${track++}"
+      const frame = portrait ? `<div id="pipf-${it.id}${p.sfx}" class="clip pip-frame" data-start="${n3(p.s)}" data-duration="${n3(p.d + pTail)}" data-track-index="${track++}"
        style="position:absolute;left:${PB[0]}px;top:${PB[1] - 3}px;width:${PB[2]}px;height:6px;background:var(--brand)"></div>`
         : `<img id="pipf-${it.id}${p.sfx}" class="clip pip-frame" src="${base}kit/pip-frame.png" alt=""
-       data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-track-index="${track++}"${shifted ? ` data-layout-allow-overflow style="position:absolute;left:${sdx}px;top:${sdy}px"` : ''}>`;
+       data-start="${n3(p.s)}" data-duration="${n3(p.d + pTail)}" data-track-index="${track++}"${shifted ? ` data-layout-allow-overflow style="position:absolute;left:${sdx}px;top:${sdy}px"` : ''}>`;
       pips.push(`  <div class="pip${isRise(p) ? ' pip--rise' : ''}" id="pip-${it.id}${p.sfx}" data-layout-allow-overflow${shifted ? ` style="left:${PB[0] + sdx}px;top:${PB[1] + sdy}px"` : ''}>
     <video id="pipv-${it.id}${p.sfx}" src="${base}assets/rough.mp4" data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-media-start="${n3(p.ms)}"
-           data-track-index="${vTrack}" muted playsinline style="left:${ps.left}px;top:${ps.top}px;width:${ps.width}px;height:${ps.height}px"></video>
+           data-track-index="${vTrack}" muted playsinline style="left:${ps.left}px;top:${ps.top}px;width:${ps.width}px;height:${ps.height}px"></video>${pTail ? `
+    <video id="pipt-${it.id}${p.sfx}" src="${base}${tail.file}" data-start="${n3(p.s + p.d)}" data-duration="${n3(pTail)}"
+           data-track-index="${track++}" muted playsinline style="left:${ps.left}px;top:${ps.top}px;width:${ps.width}px;height:${ps.height}px"></video>` : ''}
   </div>
   ${frame}`);
       const [P, F] = ids(p);
@@ -508,9 +519,12 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
     if (fades) overlays.push('  <div id="edit-fade"></div>');
   }
   // 046 片尾漸暗：整個畫面（連字幕）FADE 秒暗到全黑。剪輯台設了片尾淡出（#edit-fade）、後面接片尾卡（#end-card 自己先暗下來）就不另外做
-  if (tailDark != null && tailDark > 0 && !(editFx?.fadeOut > 0) && !(ending?.dur > 0)) {
+  //   有片尾停留（049）時：講完先停 tail.hold 秒才開始暗，在整支的最後一格前暗完
+  if (tail) tailDark = r3(END - t0 - 1 / FPS);   // 052 直式最後是講者全身：沒有 tailFade 的段也照樣定格後漸暗
+  if (tailDark != null && tailDark > 0 && tailDark - FADE < DUR && !(editFx?.fadeOut > 0) && !(ending?.dur > 0)) {
     overlays.push('  <div id="tail-dark" data-layout-ignore style="position:absolute;inset:0;background:#000000;opacity:0;z-index:70;pointer-events:none"></div>');
-    tl.push(`tl.fromTo('#tail-dark', { opacity: 0 }, { opacity: 1, duration: ${n3(Math.min(FADE, tailDark))}, ease: 'sine.in' }, ${n3(Math.max(0, tailDark - FADE))});`);
+    const tf = tail ? tail.fade : FADE;   // 052 片尾：畫面和聲音一起在 tail.fade 秒內淡出
+    tl.push(`tl.fromTo('#tail-dark', { opacity: 0 }, { opacity: 1, duration: ${n3(Math.min(tf, tailDark))}, ease: '${tail ? 'none' : 'sine.in'}' }, ${n3(Math.max(0, tailDark - tf))});`);
   }
   // 情緒點的講者爆衝推近（plan.json moods[].zoom）：0.2 秒推到 1.25 倍，停到句尾直接切回（punch 放大中的回到 1.08）
   if (zooms?.list?.length) {
@@ -547,6 +561,12 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
     const at = r3((c.srcAt ?? c.at) - t0);
     if (at < 0 || at >= DUR) continue;
     sfx.push(`  <audio id="sfx-mood${m.i + 1}" src="${base}assets/sfx/${c.src ?? c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.srcVolume ?? c.volume}"></audio>`);
+  }
+  // 使用者在剪輯台自己加的音效（plan.json edit.sfx，050）：不屬於任何一段，id 用 sfx-own<N>（N＝edit.sfx 的第幾個）
+  for (const c of userSfx) {
+    const at = r3(c.at - t0);
+    if (at < 0 || at >= DUR) continue;
+    sfx.push(`  <audio id="sfx-own${c.i + 1}" src="${base}assets/sfx/${c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.volume}"></audio>`);
   }
   for (const it of items) {
     const cues = [[`sfx-${it.id}`, it.sfx], ...(it.sfxExtra || []).map((c, n) => [`sfx-${it.id}-e${n + 1}`, c])];
@@ -591,18 +611,25 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
     cueScript = `  <script>window.__cues = ${JSON.stringify(obj).replace(/</g, '\\u003c')};</script>\n`;
   }
   // 底片：沒有 edit 時整支一個 <video>；有 cuts／dip 時切成幾支（data-media-start 跳過剪掉的範圍）
+  // 049 片尾停留：底片播完接凍結在最後一格的那一小段（同一層、同一套位置；沒有聲音）
+  const tailAt = tail ? r3(videoDur - t0) : null;
+  const tailVideo = tail && !segCut && tailAt < DUR ? `
+    <video id="rough-tail" src="${base}${tail.file}" data-start="${n3(Math.max(0, tailAt))}" data-duration="${n3(r3(Math.min(tail.dur, DUR - Math.max(0, tailAt))))}" data-track-index="${track++}"${tail.live ? ` data-has-audio="true" data-fade-out="${n3(tail.fade)}"` : ' muted'} playsinline></video>` : '';   // 052：接原始錄影時帶聲音，聲音在 tail.fade 秒內淡出
+  // 052 片尾停留：人聲最後 voiceFade 秒淡出（底片切在尾音還沒收完的地方，硬停像聲音被剪斷）
+  const voiceEnd = tail?.voiceFade > 0 && t0 + FOOT >= videoDur - 1e-3;
   let footVideo;
   if (segCut && !cut.keepFootage) footVideo = '';
   else if (!footage) {
     footVideo = `    <video id="rough" src="${base}assets/rough.mp4" data-start="0" data-duration="${n3(FOOT)}"${test ? ` data-media-start="${n3(t0)}"` : ''}
-           data-track-index="0" data-has-audio="true" playsinline></video>`;
+           data-track-index="0" data-has-audio="true"${voiceEnd ? ` data-fade-out="${n3(tail.voiceFade)}"` : ''} playsinline></video>`;
   } else {
     const v = [];
     for (const c of footage.clips) {
       const s = Math.max(c.s, t0), e = Math.min(c.e, t0 + DUR);
       if (e - s < 1e-3) continue;
       const fi = Math.abs(s - c.s) < 1e-6 && c.fadeIn > 0 ? ` data-fade-in="${n3(c.fadeIn)}"` : '';
-      const fo = Math.abs(e - c.e) < 1e-6 && c.fadeOut > 0 ? ` data-fade-out="${n3(c.fadeOut)}"` : '';
+      const cFade = voiceEnd && Math.abs(c.e - videoDur) < 1e-3 ? Math.max(c.fadeOut, tail.voiceFade) : c.fadeOut;
+      const fo = Math.abs(e - c.e) < 1e-6 && cFade > 0 ? ` data-fade-out="${n3(cFade)}"` : '';
       const vol = c.volume != null ? ` data-volume="${c.volume}"` : '';
       v.push(`    <video id="rough${v.length ? `-${v.length + 1}` : ''}" src="${base}assets/rough.mp4" data-start="${n3(s - t0)}" data-duration="${n3(e - s)}" data-media-start="${n3(c.ms + (s - c.s))}"
            data-track-index="0" data-has-audio="true"${vol}${fi}${fo} playsinline></video>`);
@@ -647,7 +674,7 @@ ${portrait ? `    ${BD_TOP_CSS}\n` : ''}${bg ? indent(bgCss(`${base}assets/`, bg
 
   <!-- L0 底片 -->
   <div id="footage">
-${footVideo}
+${footVideo}${tailVideo}
   </div>
 
   <!-- L1／L2 情境與字卡動態（z-index：一般 20、不透明 30、透明字卡動態 50）-->

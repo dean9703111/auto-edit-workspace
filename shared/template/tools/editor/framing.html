@@ -109,13 +109,15 @@
     <div class="fr-update" id="updateBar" hidden><p>已經有完成影片了。新的構圖要更新預覽才看得到（長片要十幾分鐘）。</p><button id="btnUpdate" class="primary small">更新預覽</button></div>
     <p class="fr-msg" id="msg" role="status"></p>
     <details class="fr-sec" id="lookSec">
-      <summary id="lookSummary">講者調光、瘦臉、美顏（選用）</summary>
+      <summary id="lookSummary">講者調光、瘦臉、美顏、瘦小腹（選用）</summary>
       <div class="fr-lk"><label><input type="checkbox" id="colorOn" aria-label="調光開關">調光</label><input id="color" type="range" min="0" max="1" step="0.05" value="0" aria-label="調光強度"><output id="colorOut">關</output></div>
       <div class="fr-lk"><label><input type="checkbox" id="slimOn" aria-label="瘦臉開關">瘦臉</label><input id="slim" type="range" min="0" max="1.2" step="0.05" value="0" aria-label="瘦臉強度"><output id="slimOut">關</output></div>
       <div class="fr-lk" title="磨皮、膚色提亮、淡化黑眼圈（只動臉，眼睛、眉毛、嘴巴不動）"><label><input type="checkbox" id="beautyOn" aria-label="美顏開關">美顏</label><input id="beauty" type="range" min="0" max="1" step="0.05" value="0" aria-label="美顏強度"><output id="beautyOut">關</output></div>
+      <div class="fr-lk" title="腰（肋骨下緣到髖）往身體中線收；手擺在肚子前面會跟著窄一點、腰旁邊的東西會微微變形"><label><input type="checkbox" id="bellyOn" aria-label="瘦小腹開關">瘦小腹</label><input id="belly" type="range" min="0" max="1" step="0.05" value="0" aria-label="瘦小腹強度"><output id="bellyOut">關</output></div>
       <p class="fr-note" id="lookNote"></p>
       <button id="btnDetect" hidden>偵測臉部</button>
       <div id="faces" class="look-faces" hidden><figure><img data-k="before" alt="原本"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="套用後"><figcaption>後</figcaption></figure><p class="look-msg fr-note"></p></div>
+      <div id="bodies" class="look-faces" hidden><figure><img data-k="before" alt="原本的軀幹"><figcaption>前</figcaption></figure><figure><img data-k="after" alt="瘦小腹後"><figcaption>後（瘦小腹）</figcaption></figure><p class="look-msg fr-note"></p></div>
     </details>
     <details class="fr-sec" id="refSec">
       <summary>情境庫裡的講者換成你（選用）</summary>
