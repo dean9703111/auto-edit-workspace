@@ -1292,7 +1292,7 @@
    "D": 10,
    "txIn": "wipe",
    "prev": "speaker",
-   "txOut": "retract",
+   "txOut": "rise",
    "pipPieces": [
     {
      "s": 50,
@@ -1300,7 +1300,7 @@
      "ms": 50,
      "enter": "fade",
      "exitDur": 0,
-     "exit": "layer"
+     "exit": "rise"
     }
    ],
    "cueRefs": {
@@ -1322,7 +1322,8 @@
      "beat": true
     }
    ],
-   "badgeBox": null
+   "badgeBox": null,
+   "riseOut": true
   },
   {
    "idx": 8,
@@ -1578,7 +1579,7 @@
    "D": 10,
    "txIn": "wipe",
    "prev": "speaker",
-   "txOut": "retract",
+   "txOut": "rise",
    "pipPieces": [
     {
      "s": 73.5,
@@ -1586,7 +1587,7 @@
      "ms": 74.5,
      "enter": "fly",
      "exitDur": 0,
-     "exit": "layer"
+     "exit": "rise"
     }
    ],
    "resolved": {
@@ -1659,7 +1660,8 @@
     "sub": "先看問題"
    },
    "sfxExtra": [],
-   "badgeBox": null
+   "badgeBox": null,
+   "riseOut": true
   },
   {
    "idx": 11,
@@ -1931,7 +1933,7 @@
    "exitFade": true,
    "notes": [],
    "enterFx": "fade",
-   "exitFx": "fade",
+   "exitFx": "cut",
    "D": 10,
    "txIn": "media",
    "prev": "speaker",
@@ -1951,7 +1953,7 @@
      "ms": 92,
      "enter": "fade",
      "exitDur": 0,
-     "exit": "layer"
+     "exit": "rise"
     }
    ],
    "pipNote": "只有聲音的區間不放子母畫面",
@@ -2001,7 +2003,8 @@
     }
    },
    "sfxExtra": [],
-   "badgeBox": null
+   "badgeBox": null,
+   "riseOut": true
   },
   {
    "idx": 12,
@@ -3473,7 +3476,7 @@
    "D": 10,
    "txIn": "wipe",
    "prev": "speaker",
-   "txOut": "retract",
+   "txOut": "rise",
    "pipPieces": [
     {
      "s": 50,
@@ -3481,7 +3484,7 @@
      "ms": 50,
      "enter": "fade",
      "exitDur": 0,
-     "exit": "layer"
+     "exit": "rise"
     }
    ],
    "cueRefs": {
@@ -3503,7 +3506,8 @@
      "beat": true
     }
    ],
-   "badgeBox": null
+   "badgeBox": null,
+   "riseOut": true
   },
   {
    "idx": 8,
@@ -3759,7 +3763,7 @@
    "D": 10,
    "txIn": "wipe",
    "prev": "speaker",
-   "txOut": "retract",
+   "txOut": "rise",
    "pipPieces": [
     {
      "s": 73.5,
@@ -3767,7 +3771,7 @@
      "ms": 74.5,
      "enter": "fly",
      "exitDur": 0,
-     "exit": "layer"
+     "exit": "rise"
     }
    ],
    "resolved": {
@@ -3840,7 +3844,8 @@
     "sub": "先看問題"
    },
    "sfxExtra": [],
-   "badgeBox": null
+   "badgeBox": null,
+   "riseOut": true
   },
   {
    "idx": 11,
@@ -4112,7 +4117,7 @@
    "exitFade": true,
    "notes": [],
    "enterFx": "fade",
-   "exitFx": "fade",
+   "exitFx": "cut",
    "D": 10,
    "txIn": "media",
    "prev": "speaker",
@@ -4132,7 +4137,7 @@
      "ms": 92,
      "enter": "fade",
      "exitDur": 0,
-     "exit": "layer"
+     "exit": "rise"
     }
    ],
    "pipNote": "只有聲音的區間不放子母畫面",
@@ -4182,7 +4187,8 @@
     }
    },
    "sfxExtra": [],
-   "badgeBox": null
+   "badgeBox": null,
+   "riseOut": true
   },
   {
    "idx": 12,
@@ -4370,6 +4376,7 @@
   "[s07 quote] 段長 3s，「金句字卡」至少 4s → to 往後延到至少 1:38.50（98.5s）或換情境"
  ],
  "warnings": [
+  "直式還沒標重點字幕 → 照 style.md「重點字幕」挑 3–6 則（開場鉤子的關鍵句、每個要點的標題句、結論或金句、行動呼籲），跑 node shared/template/tools/build.mjs --project projects/p3e --set \"captionMarks=#N,#N,#N\"（#N 換成那幾則的句號）；剪輯台「字幕」分頁也可以點「重點」",
   "沒有畫面的區間共 2 段、6.50s → 照 style.md「連續覆蓋」補卡片或情境動畫，或把前一段的 to 延到下一段的 from（0 秒相接）；故意留給講者的就在 plan.json 寫 \"rhythm\": \"spaced\"",
   "講者面板的臉超出 y 940–1280（估計 y 940–1323，字幕框在 1291 起）→ 講者在畫面裡太大，面板放不下整張臉：拍遠一點，或 plan.json 寫 \"pipCrop\": [404, 175, 676, 638]，再看 qc.mjs storyboard 的上下分割段",
   "[c1 chapter] #2 前的空檔只有 0.50s（< 2s），章節 2.5s 會壓到 #2 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project projects/p3e，照它印的指令重剪",
@@ -5285,5 +5292,7 @@
   }
  },
  "captionStyle": null,
- "captionFrom": "default"
+ "captionFrom": "default",
+ "captionMarks": [],
+ "captionWords": []
 }

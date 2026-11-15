@@ -194,11 +194,12 @@ function classify(p, sigs) {
 function parseCaptions(text) {
   if (text == null) return null;
   const items = new Map();
-  for (const m of text.matchAll(/<div class="cg" id="(cg-\d+)"[^>]*>([\s\S]*?)<\/div>/g)) items.set(m[1], { text: m[2], times: [] });
+  // 038 重點字幕（class="cg cg--em"）：標或取消只算那一則變了（鍵多一個 em），不是整份的殼變了
+  for (const m of text.matchAll(/<div class="cg( cg--em)?" id="(cg-\d+)"[^>]*>([\s\S]*?)<\/div>/g)) items.set(m[2], { text: m[3], em: !!m[1], times: [] });
   for (const m of text.matchAll(/tl\.set\('#(cg-\d+)',[^;]*?,\s*([\d.]+)\);/g)) items.get(m[1])?.times.push(Number(m[2]));
-  const shell = text.replace(/<div class="cg"[\s\S]*?<\/div>\n?/g, '').replace(/^\s*tl\.set\('#cg-\d+'.*$\n?/gm, '').replace(/<!--[\s\S]*?-->/g, '');
+  const shell = text.replace(/<div class="cg(?: cg--em)?"[\s\S]*?<\/div>\n?/g, '').replace(/^\s*tl\.set\('#cg-\d+'.*$\n?/gm, '').replace(/<!--[\s\S]*?-->/g, '');
   const keys = new Map();
-  for (const it of items.values()) keys.set(`${it.text}|${it.times.join(',')}`, it);
+  for (const it of items.values()) keys.set(`${it.text}|${it.em ? 'em|' : ''}${it.times.join(',')}`, it);
   return { shell, keys };
 }
 

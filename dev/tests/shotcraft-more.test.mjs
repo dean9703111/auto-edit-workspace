@@ -13,7 +13,7 @@ const { sceneParts } = await imp('lib/assemble.mjs');
 const { resolveScene, sampleSeg, mapScene, chapterMapCtx, MAP } = await imp('lib/scenes.mjs');
 const { parseSrt } = await imp('lib/srt.mjs');
 const { validateSlots } = await imp('lib/custom-fill.mjs');
-const { isShotImage, isShotSeg, shotRel, shotSlots, checkShots, prepareShots } = await imp('lib/shots.mjs');
+const { isShotImage, isShotSeg, shotRel, shotSlots, checkShots, prepareShots, designImages, prepareDesignImages } = await imp('lib/shots.mjs');
 const L = await lib();
 const cues = parseSrt(makeSrt({ n: 12 }));   // 第 N 句 (N−1)×3.5＋1 起、長 3 秒
 const VD = 44;
@@ -106,6 +106,38 @@ test('prepareShots：圖片縮到 1920×1080 以內、段的截圖切字幕帶�
   jobs.delete('assets/shots/img-a.jpg');
   assert.equal(prepareShots({ jobs, out }), 0);
   assert.ok(!fs.existsSync(path.join(sd, 'img-a.jpg')), '沒用到的舊檔刪掉');
+});
+
+// ---------- 內容設計動畫裡的素材圖片（042） ----------
+
+test('內容設計動畫的 <img src="assets/images/…">：只掃 design 段的檔；圖不在、不是圖片檔 ✖；build 把圖縮好放到 work/hyperframes/ 的同一個路徑，沒變不重做、不用了就刪', async (t) => {
+  const dir = tmpDir(t), out = path.join(dir, 'work', 'hyperframes'), comp = path.join(out, 'compositions');
+  fs.mkdirSync(comp, { recursive: true });
+  fs.mkdirSync(path.join(dir, 'assets', 'images'), { recursive: true });
+  const plan = { scenes: [{ id: 'x01', type: 'custom', design: true }, { id: 'x02', type: 'custom', template: 'x-point' }, { id: 's03', scene: 'key-point' }] };
+  const html = (imgs) => `<template><div id="x"><div id="xdx01-stage">${imgs.map((v) => `<img class="b" src="${v}" alt="">`).join('')}<img src="https://example.com/a.png"></div></div></template>`;
+  fs.writeFileSync(path.join(comp, 'x-design-x01.html'), html(['assets/images/書封 A.png', 'assets/images/none.png', 'assets/screen/demo.mov']));
+  fs.writeFileSync(path.join(comp, 'x-design-x02.html'), html(['assets/images/別段.png']));   // 不是 design 段：不掃
+  fs.writeFileSync(path.join(dir, 'assets', 'images', '書封 A.png'), 'x');
+  const bad = designImages({ plan, projectDir: dir, outDir: out });
+  assert.equal(bad.errors.length, 2, bad.errors.join('\n'));
+  assert.match(bad.errors.join('\n'), /找不到 assets\/images\/none\.png/);
+  assert.match(bad.errors.join('\n'), /demo\.mov">：只能放圖片檔/);
+  assert.deepEqual([...bad.jobs.keys()], ['assets/images/書封 A.png']);
+  assert.deepEqual(designImages({ plan: { scenes: [] }, projectDir: dir, outDir: out }).jobs.size, 0);
+
+  if (!(await needs(t, 'ffmpeg'))) return;
+  const src = path.join(dir, 'assets', 'images', '書封 A.png');
+  assert.equal(spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=1500x2400', '-frames:v', '1', src]).status, 0);
+  fs.writeFileSync(path.join(comp, 'x-design-x01.html'), html(['assets/images/書封 A.png']));
+  const good = designImages({ plan, projectDir: dir, outDir: out });
+  assert.deepEqual(good.errors, []);
+  assert.equal(prepareDesignImages({ jobs: good.jobs, out }), 1);
+  const dst = path.join(out, 'assets', 'images', '書封 A.png');
+  assert.equal(spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', dst], { encoding: 'utf8' }).stdout.trim(), '675,1080');
+  assert.equal(prepareDesignImages({ jobs: good.jobs, out }), 0, '來源沒變不重做');
+  assert.equal(prepareDesignImages({ jobs: new Map(), out }), 0);
+  assert.ok(!fs.existsSync(dst), '不再用到的刪掉');
 });
 
 // ---------- 穿窗 ----------

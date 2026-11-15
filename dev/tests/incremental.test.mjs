@@ -72,6 +72,14 @@ test('diffStates：局部改動只重畫那段的時間', () => {
   d = I.diffStates(state(), state({ captions: CAPTIONS([['第一句改', 10, 12], ['第二句', 50, 52]]) }));
   assert.equal(d.full, null);
   assert.deepEqual(d.ranges, [[10, 12]]);
+  // 038 重點字幕：標或取消一則（class 多／少 cg--em）也只重畫那一則的時間，不算字幕的樣式變了
+  const em = CAPTIONS().replace('<div class="cg" id="cg-1"', '<div class="cg cg--em" id="cg-1"');
+  for (const [a, b] of [[CAPTIONS(), em], [em, CAPTIONS()]]) {
+    d = I.diffStates(state({ captions: a }), state({ captions: b, sigs: { 'compositions/captions.html': 'cc2' } }));
+    assert.equal(d.full, null);
+    assert.deepEqual(d.ranges, [[50, 52]]);
+  }
+  assert.deepEqual(I.diffStates(state({ captions: em }), state({ captions: em })).ranges, []);
   // 只改音效：不重畫，只重混聲音
   d = I.diffStates(state(), state({ sfx: [['b', 10]] }));
   assert.equal(d.full, null);

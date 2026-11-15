@@ -19,3 +19,15 @@
 [data-cap="yellow"] .cg > span { color: #FFD60A; }
 [data-cap="light"] .cg > span { background: rgba(255, 255, 255, 0.92); color: #111111; }
 [data-cap="brand"] .cg > span { background: var(--brand); color: var(--brand-ink); }
+/* 038 重點字幕（specs/038-caption-highlight）：plan.json captionMarks 指到的那幾則多一個 class cg--em（build 加；沒標就沒有這個 class）。
+   只換底板、字色、字重：主色底、字色照 --brand-ink、字重 700；字級、行高、內距、位置、直角、寬度貼字都照上面的一般字幕。
+   font-synthesis: none＝字體沒有 700（粉圓、漫黑、芫荽）就照原本的字重，不讓瀏覽器硬加粗（會糊）。
+   沒有底板的樣式（outline／yellow）重點那則照樣畫主色底、拿掉描邊；整支本來就是主色底（brand）時改成深底白字，才分得出來 */
+.cg.cg--em > span, [data-cap] .cg.cg--em > span { background: var(--brand); color: var(--brand-ink); font-weight: 700; font-synthesis: none; -webkit-text-stroke: 0; }
+[data-cap="brand"] .cg.cg--em > span { background: #111111; color: #FFFFFF; }
+/* 047 只標幾個字（plan.json captionMarks 寫 "#N@詞"）：那幾個字包成 <em class="cw">，和整則的重點字幕同一套顏色（主色底、--brand-ink 的字、字重 700），
+   那一則其他的字和底板照一般字幕。色塊比字高上下各多 0.12em、左右各多 0.06em（跟著字級縮放），不超出底板；
+   沒有底板的樣式（outline／yellow）一樣畫主色塊、拿掉描邊；整支是主色底（brand）時改成深底白字 */
+.cg > span > em.cw { display: inline-block; font-style: normal; background: var(--brand); color: var(--brand-ink); font-weight: 700; font-synthesis: none; -webkit-text-stroke: 0;
+                     padding: 0.12em 0.06em; margin: -0.12em 0; }
+[data-cap="brand"] .cg > span > em.cw { background: #111111; color: #FFFFFF; }

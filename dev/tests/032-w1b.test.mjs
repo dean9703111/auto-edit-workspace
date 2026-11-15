@@ -14,7 +14,7 @@ const NO_FF = !hasFfmpeg() && '沒有 ffmpeg';
 
 function tmp(t, prefix = 'w1b-') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
   return dir;
 }
 // 專案資料夾：<root>/projects/p1（shared/template 連到這份）；plan 給物件就寫成 2 格縮排，給字串照原文

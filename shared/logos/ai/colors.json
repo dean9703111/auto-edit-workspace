@@ -1,0 +1,112 @@
+{
+  "anthropic": {
+    "title": "Anthropic",
+    "hex": "#191919"
+  },
+  "canva": {
+    "title": "Canva",
+    "hex": "#00C4CC",
+    "note": "Simple Icons 這一版沒有記色碼；Canva 的品牌青綠"
+  },
+  "claude": {
+    "title": "Claude",
+    "hex": "#D97757"
+  },
+  "cursor": {
+    "title": "Cursor",
+    "hex": "#000000"
+  },
+  "deepseek": {
+    "title": "DeepSeek",
+    "hex": "#5786FE"
+  },
+  "dify": {
+    "title": "Dify",
+    "hex": "#0033FF"
+  },
+  "elevenlabs": {
+    "title": "ElevenLabs",
+    "hex": "#000000"
+  },
+  "figma": {
+    "title": "Figma",
+    "hex": "#F24E1E"
+  },
+  "githubcopilot": {
+    "title": "GitHub Copilot",
+    "hex": "#000000"
+  },
+  "googlecloud": {
+    "title": "Google Cloud",
+    "hex": "#4285F4"
+  },
+  "googlegemini": {
+    "title": "Google Gemini",
+    "hex": "#8E75B2"
+  },
+  "huggingface": {
+    "title": "Hugging Face",
+    "hex": "#FFD21E"
+  },
+  "langchain": {
+    "title": "LangChain",
+    "hex": "#7FC8FF"
+  },
+  "make": {
+    "title": "Make",
+    "hex": "#6D00CC"
+  },
+  "meta": {
+    "title": "Meta",
+    "hex": "#0467DF"
+  },
+  "mistralai": {
+    "title": "Mistral AI",
+    "hex": "#FA520F"
+  },
+  "n8n": {
+    "title": "n8n",
+    "hex": "#FF91AC"
+  },
+  "notebooklm": {
+    "title": "NotebookLM",
+    "hex": "#000000"
+  },
+  "notion": {
+    "title": "Notion",
+    "hex": "#000000"
+  },
+  "ollama": {
+    "title": "Ollama",
+    "hex": "#000000"
+  },
+  "openai": {
+    "title": "OpenAI（ChatGPT）",
+    "hex": "#10A37F",
+    "note": "Simple Icons 這一版沒有記色碼；這是 ChatGPT 常見的綠，官方標誌多用黑或白"
+  },
+  "perplexity": {
+    "title": "Perplexity",
+    "hex": "#1FB8CD"
+  },
+  "poe": {
+    "title": "Poe",
+    "hex": "#5D5CDE"
+  },
+  "replicate": {
+    "title": "Replicate",
+    "hex": "#000000"
+  },
+  "suno": {
+    "title": "Suno",
+    "hex": "#000000"
+  },
+  "x": {
+    "title": "X",
+    "hex": "#000000"
+  },
+  "zapier": {
+    "title": "Zapier",
+    "hex": "#FF4F00"
+  }
+}

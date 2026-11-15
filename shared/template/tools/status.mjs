@@ -17,6 +17,7 @@
  *         偏好：…                   （有 shared/偏好.md「照做」的規則、或各專案回饋裡有還沒問過使用者的「以後都…」時才印；見 --prefs）
  *         素材：⚠ …                 （assets/、講稿.md 和 media.mjs prep 記的清單 work/.jobs/assets-manifest.json 比，有檔被改過或不見了才印；多出新檔不算、舊專案沒有清單不印）
  *         Skill：⚠ …                （裝好的 Skill 和 .agents/skills/ 不一樣才印，附重裝指令 node setup/install-skills.mjs；--init 也印）
+ *         暫存：⚠ …                 （設定了 --tmp、那個資料夾現在用不了才印：這一次用系統暫存，不擋流程；lib/tmp.mjs）
  *       最後幾行是要做的事：
  *         沒有停點在等：「→ 下一步：<說明>」，下面每一行都是可以整行複製執行的指令（好幾行就依序跑）；這一步是 AI 自己做的事（寫分鏡表）就沒有指令
  *         有停點在等：「使用者回覆「…」：」和回覆後要跑的指令（縮排兩格）、一行「等使用者回覆：…」，最後兩行是 AGENTS.md 格式的「⏸ 停點 …」「請回：…」；
@@ -43,6 +44,11 @@
  *   node shared/template/tools/status.mjs --agents 6
  *       子代理一次最多派幾個（1–16，預設 10；不用 --project）：寫進 shared/setting.json，之後工具印的派工那一行都照這個數字。
  *       使用者說「子代理一次派 6 個」「子代理只能開 2 個」時跑；1＝一次只派一個。
+ *   node shared/template/tools/status.mjs --tmp /Volumes/auto-edit-tmp [--tmp-image /Volumes/video/auto-edit-tmp.sparseimage]
+ *       暫存資料夾改放別處（預設關閉＝系統暫存；不用 --project）：寫進 shared/setting.json 的 tmp，之後每支工具開跑時自己把暫存指過去
+ *       （render 的影格、抽格快取、瀏覽器設定檔）。那個資料夾用不了（硬碟沒接）就自動用回系統暫存，不擋流程，status 多印一行「暫存：⚠ …」。
+ *       --tmp-image（選填，macOS）：資料夾是這個映像檔掛起來的卷，沒掛時工具會自己先掛。--tmp off＝關掉，改回系統暫存。
+ *       使用者說「暫存放外接硬碟」「系統碟快滿了」時跑（資料夾要使用者給）。
  *
  * 判斷依據：work/ 裡各階段產物在不在、工具做完一步時記的標記 work/.jobs/state.json（lib/progress.mjs markStep：srt-align、snap-srt、screen-sync、
  * map-merge、merge-drafts、storyboard、apply-storyboard、build、qc；記了那一步就比它記下的檔案內容，例：plan.json 在上次 build 之後改過＝要重 build），
@@ -57,7 +63,7 @@
  * --json：只印一個 JSON（project、stage、at、skill、next、cmd、cmds、dispatch、nextStop、waiting、stopLine、after、needEditor、round、job、camera、feedback、evidence、format、formatSource、speaker、summary；
  * cmd＝cmds 的第一條，沒有指令時是 null；dispatch＝{ note, msgs }（派工的說明與那幾則訊息），沒有要派工時是 null；speaker＝set／off／unset／bad；
  * summary＝work/摘要.md 的檢查（和文字模式「摘要：⚠ …」同一個判斷）：還沒有初剪（work/rough.srt）是 null，否則 { state: ok／none／bad, chars, errors, line }，line＝那一行 ⚠（ok 時是 null））。
- * --said（舊寫法 --say 也收）。--mark、--init、--timeline、--summary、--prefs、--prefs-add、--prefs-skip、--prefs-drop、--agents 一次只能用一個。
+ * --said（舊寫法 --say 也收）。--mark、--init、--timeline、--summary、--prefs、--prefs-add、--prefs-skip、--prefs-drop、--agents、--tmp 一次只能用一個。
  * --project：同 build.mjs。
  */
 import fs from 'node:fs';
@@ -71,6 +77,7 @@ import { resolveFormat, formatLine, formatErrors, probeDims, canvasOf } from './
 import { pendingRevisions, storyboardByVersions, nextRound, openRound } from './versions.mjs';
 import { readSpeaker, SET_CMD } from './lib/speaker.mjs';
 import { agentLimit, saveAgentLimit, SETTINGS_FILE } from './lib/agents.mjs';
+import { saveTmp, tmpApplied, tmpWarnLine } from './lib/tmp.mjs';
 import { readSummary, SUMMARY_MAX } from './lib/summary.mjs';
 import { ensureProgress, setFact, appendStop, progressFile, STOP_STATES, readSteps, stepChanged } from './lib/progress.mjs';
 import { storyboardDirty } from './lib/storyboard-state.mjs';
@@ -749,10 +756,10 @@ export function prefsDrop(root, arg) {
 }
 
 const SUMMARY_HOW = `讀 work/rough.srt，寫 ${SUMMARY_MAX} 字內的影片摘要（一到兩句描述＋2–6 個列點；格式見 .agents/skills/auto-edit-rough/SKILL.md 步驟 3）`;
-const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'say', 'back', 'format', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents'];
+const VALUE_FLAGS = ['project', 'mark', 'state', 'said', 'say', 'back', 'format', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents', 'tmp', 'tmp-image'];
 const BOOL_FLAGS = ['help', 'json', 'timeline', 'init', 'prefs', 'summary'];
 // 一次只能做一件（--state、--said、--back 跟著 --mark；--format 跟著 --init；--json、--project 是修飾）
-const MODES = ['mark', 'init', 'timeline', 'summary', 'prefs', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents'];
+const MODES = ['mark', 'init', 'timeline', 'summary', 'prefs', 'prefs-add', 'prefs-skip', 'prefs-drop', 'agents', 'tmp'];
 export function parseFlags(argv) {
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
@@ -819,6 +826,13 @@ async function cli() {
   const root = path.resolve(HERE, '..', '..', '..');
   // 子代理一次最多派幾個：不看專案
   if (flags.agents != null) { const r = saveAgentLimit(path.join(root, 'shared'), flags.agents); console.log(`✓ 子代理一次最多派 ${r.n} 個（寫進 shared/${SETTINGS_FILE}；之後工具印的派工那一行都照這個數字）`); return 0; }
+  // 暫存資料夾放哪：不看專案
+  if (flags['tmp-image'] != null && flags.tmp == null) throw new Error('--tmp-image 要跟 --tmp <資料夾> 一起用');
+  if (flags.tmp != null) {
+    const r = saveTmp(path.join(root, 'shared'), flags.tmp, { image: flags['tmp-image'] ?? null });
+    console.log(r.off ? `✓ 暫存改回系統暫存（拿掉 shared/${SETTINGS_FILE} 的 tmp）` : `✓ 暫存改放 ${r.dir}${r.image ? `（沒掛上時會自己掛 ${r.image}）` : ''}（寫進 shared/${SETTINGS_FILE}；下一條指令開始生效，用不了時自動用回系統暫存）`);
+    return 0;
+  }
   // 跨集偏好：不看專案
   if (flags['prefs-add'] != null || flags['prefs-skip'] != null) {
     const what = flags['prefs-add'] != null ? 'add' : 'skip';
@@ -880,8 +894,8 @@ async function cli() {
     : sp.state === 'bad' ? `講者：⚠ shared/setting.json ${sp.error} → ${SET_CMD}` : null;
   const pf = readPrefs(root), pfPend = pendingPrefs(root, pf).length;
   const pfLine = pfPend ? `偏好：⚠ 有 ${pfPend} 條「以後都…」還沒問使用者（照做 ${pf.keep.length} 條）→ 回報時問他，指令：${PREFS_CMD} --prefs` : pf.keep.length ? `偏好：${pf.keep.length} 條（shared/偏好.md；寫分鏡、改段落前先讀）` : null;
-  const asLine = await assetsLine(project, label), skLine = await skillsLine(root);
-  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `Skill：${s.skill}`, `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : []), ...(smLine ? [smLine] : []), ...(pfLine ? [pfLine] : []), ...(asLine ? [asLine] : []), ...(skLine ? [skLine] : []), ...actionLines(s)]) console.log(l);
+  const asLine = await assetsLine(project, label), skLine = await skillsLine(root), tmpLine = tmpWarnLine(tmpApplied());
+  for (const l of [formatLine(fmt), `專案：${label}`, `目前在：${s.at}`, `Skill：${s.skill}`, `下一個停點：${s.nextStop}`, `待回覆停點：${s.waiting.length ? s.waiting.join('、') : '無'}`, `下一輪回饋編號：${s.feedback}`, `依據：${s.evidence.join('；')}`, ...(spLine ? [spLine] : []), ...(smLine ? [smLine] : []), ...(pfLine ? [pfLine] : []), ...(asLine ? [asLine] : []), ...(skLine ? [skLine] : []), ...(tmpLine ? [tmpLine] : []), ...actionLines(s)]) console.log(l);
   return 0;
 }
 

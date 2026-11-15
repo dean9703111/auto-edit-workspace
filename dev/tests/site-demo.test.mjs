@@ -54,7 +54,7 @@ test('示範：官網組好後頁面只用相對路徑，有接模擬層，工�
     assert.ok(html.indexOf('demo-api.js') < html.indexOf(`${page}.js`), '模擬層要先載入');
     for (const m of html.matchAll(/(?:src|href)="([^"#]+)"/g)) assert.ok(fs.existsSync(path.join(site, 'demo', m[1])), `${page}.html 連到的 ${m[1]} 不在網站上`);
   }
-  for (const f of ['demo-api.js', 'demo-core.mjs', 'storyboard-md.mjs', 'cuts.js', 'storyboard.js', 'editor.css', 'main.mp4', 'cuts.md', 'storyboard.md', 'options.json']) assert.ok(fs.existsSync(path.join(site, 'demo', f)), f);
+  for (const f of ['demo-api.js', 'demo-core.mjs', 'storyboard-md.mjs', 'cuts.js', 'storyboard.js', 'project-switch.js', 'project-switch.mjs', 'editor.css', 'main.mp4', 'cuts.md', 'storyboard.md', 'options.json']) assert.ok(fs.existsSync(path.join(site, 'demo', f)), f);
   assert.ok(!fs.existsSync(path.join(site, 'shared/template/tools')), 'tools 不上網站');
   const options = JSON.parse(fs.readFileSync(path.join(site, 'demo/options.json'), 'utf8'));
   for (const i of options.scenes.flatMap((g) => g.items)) if (i.preview) assert.ok(fs.existsSync(path.join(site, 'shared/template/preview', i.preview)), `範例 ${i.preview} 不在網站上`);

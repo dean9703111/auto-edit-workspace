@@ -18,8 +18,10 @@
 //               02 章節角標段（it.noHost）不放 host，只留音效
 //   v2 轉場（specs/010-motion-v2/design-system.md §5、§7；用哪一種看 plan.mjs 的 it.txIn／it.txOut）：
 //     wipe   色帶帶路擦開：主色帶 150、墨色細帶 48 由右往左 0.62s（expo.inOut），新的幕緊跟細帶右緣（host clip-path）；講者 0.75s 飛進子母畫面、0.62s 外框彈出
-//     retract 色帶反向由左往右收 0.5s、子母畫面 0.3s 淡出（片尾 1 秒內結束的段改淡出 0.5s、片尾前一格做完：plan.mjs 的 tailFade）；swap 換卡不換景：舊的幕多留 0.3s 疊在新的幕上，只留內容區、向左擦掉（新卡由段內 P.wipe＋P.pop）
+//     retract 色帶反向由左往右收 0.5s、子母畫面 0.3s 淡出（片尾 1 秒內結束的段不收：停在完成態、整個畫面 0.5s 漸暗、片尾前一格暗完：plan.mjs 的 tailFade）；swap 換卡不換景：舊的幕多留 0.3s 疊在新的幕上，只留內容區、向左擦掉（新卡由段內 P.wipe＋P.pop）
 //     chapter 主色色塊從左下斜擦滿版 0.45s，章節幕晚 0.08s 跟上；band 疊加卡進場時講者不縮放（不做慢推）
+//     rise   037 直式講者上浮（plan.mjs pipMotion：片段 exit＝'rise'）：上下分割結束、接著講者滿版 → 講者面板 0.75s 往上浮回原位（飛入的反向），
+//            面板的裁切框同時往四周打開到整張畫面，落位那一格和底下的講者逐像素重合；資訊幕不收、不淡出（被面板蓋過去，段結束時直接拿掉）
 //     主時間軸對 host 只動 opacity、clip-path（不動 x／y／scale：009 直式的舞台縮放寫在 host 的 CSS transform）；034 上推、畫面推近只動 CSS 變數 --ty／--pz（host 的 translate／scale 個別屬性）；常駐角標用 kit 的 P.wipe／P.pop／P.chars（同 02 模板）
 //   withTheme(html, theme)：theme＝"dark" 時在第一個 <html 加 data-theme="dark"（主合成與 build 產生的每個子合成都套；亮色原樣回傳）
 //   子母畫面片段的 enter（fly／fade／none）、exit（layer／fade／none）由 plan.mjs 的 pipMotion 決定；擦入擦出 wipeIn／wipeOut 是 host 的 clip-path
@@ -43,6 +45,7 @@ export const V2TX = {
   swapOut: 0.3,                        // 換卡不換景：舊卡擦掉（power2.in）
   chapter: 0.45,     // 章節幕斜擦（不加色塊：換背景會衝突）
   fly: 0.75, land: 0.62, pop: 0.35,    // 子母畫面飛入（power3.inOut）、外框淡入
+  rise: 0.75, riseLine: 0.2,           // 037 直式講者上浮（power3.inOut，飛入的反向）、面板上緣主色線淡出
   pipSlide: 0.6,                       // 全畫面段和錄影段相接：小視窗滑進／滑出錄影（power3.inOut）
   push: 0.87,                          // 034 上推：新的一頁連底色從下緣推上來（expo.out：0.4 秒到 95%，「哐」一聲落位）
   dive: 1.33,                          // 036 穿窗：窗從前一段的元素長成全畫面（power3.inOut：先慢後快再慢，短於 1 秒看不出鑽進去）
@@ -138,11 +141,27 @@ export function withTheme(html, theme) {
   return theme === 'dark' ? html.replace(/<html\b(?![^>]*\bdata-theme=)/, '<html data-theme="dark"') : html;
 }
 const WIDE_BG = '[data-wide] .sc-surface-fs { background-image: var(--sc-fs-pattern); }';
-export function bgCss(prefix, bg = { fs: "bg.jpg", side: "bg.jpg", ch: "bg.jpg" }) {
+// 045 直式上緣的裝飾：全畫面的幕縮放後，上半面板頂端（平台介面區 y 0–240）只剩墊底的純色，看起來是一塊沒設計的留白。
+//   幕的上面疊一層主色線條 #bdt-<id>（圓弧、點陣、視窗與手機的線稿，和橫式背景圖同一套語彙）：用遮罩畫，顏色是 var(--brand)，
+//   換主色、換亮暗主題都跟著變；全部畫在 y 240 以內，不會壓到內容。章節轉場（主色底）和字卡動態的底不放。
+const BD_TOP_SVG = "<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='300' viewBox='0 0 1080 300' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'>"
+  + "<circle cx='0' cy='0' r='118' fill='black' fill-opacity='.13' stroke='none'/><path d='M196 0A196 196 0 0 1 0 196' stroke-opacity='.8'/><circle cx='139' cy='139' r='9' fill='black' stroke='none'/>"
+  + "<rect x='232' y='44' width='16' height='16' rx='3' fill='black' stroke='none'/><rect x='258' y='70' width='11' height='11' rx='2' fill='black' fill-opacity='.45' stroke='none'/>"
+  + "<g stroke-opacity='.8'><rect x='318' y='52' width='188' height='118' rx='12'/><path d='M318 82H506'/><path d='M340 108H452M340 130H420' stroke-opacity='.55'/></g>"
+  + "<circle cx='337' cy='67' r='4.5' fill='black' stroke='none'/><circle cx='352' cy='67' r='4.5' fill='black' fill-opacity='.5' stroke='none'/><circle cx='367' cy='67' r='4.5' fill='black' fill-opacity='.3' stroke='none'/>"
+  + "<g stroke-opacity='.8'><rect x='606' y='62' width='66' height='116' rx='13'/><path d='M628 166H650'/></g><circle cx='639' cy='78' r='4' fill='black' stroke='none'/>"
+  + "<rect x='708' y='150' width='13' height='13' rx='2.5' fill='black' fill-opacity='.5' stroke='none'/><rect x='730' y='128' width='9' height='9' rx='2' fill='black' fill-opacity='.3' stroke='none'/>"
+  + `<g fill='black' fill-opacity='.7' stroke='none'>${[0, 1, 2, 3].map((r) => [0, 1, 2, 3, 4, 5].map((c) => `<circle cx='${776 + c * 22}' cy='${58 + r * 22}' r='3.5'/>`).join('')).join('')}</g>`
+  + "<circle cx='1080' cy='0' r='104' fill='black' fill-opacity='.13' stroke='none'/><path d='M902 0A178 178 0 0 0 1080 178' stroke-opacity='.8'/><circle cx='954' cy='126' r='8' fill='black' stroke='none'/></svg>";
+export const BD_TOP_CSS = `.bd-top { position: absolute; left: 0; top: 0; width: 1080px; height: 300px; background: var(--brand); -webkit-mask: url("data:image/svg+xml,${BD_TOP_SVG}") no-repeat 0 0 / 1080px 300px; mask: url("data:image/svg+xml,${BD_TOP_SVG}") no-repeat 0 0 / 1080px 300px; pointer-events: none; }`;
+// portrait（直式）：全畫面的幕是整張 1920×1080 縮小放進上半面板，背景圖頂端的裝飾線會變成橫在面板上的一條線、和上下墊的純色底接不起來
+//   → 直式的全畫面只用底色（和墊底 #bd-<id> 同一個 --sc-fs-bg），不放背景圖
+export function bgCss(prefix, bg = { fs: "bg.jpg", side: "bg.jpg", ch: "bg.jpg" }, { portrait = false } = {}) {
   const out = [];
-  if (bg.fs) out.push(`.sc-surface-fs { background-image: url("${prefix}${bg.fs}"); background-size: cover; background-position: center; }`);
+  if (bg.fs && portrait) out.push('.sc-surface-fs { background-image: none; }');
+  else if (bg.fs) out.push(`.sc-surface-fs { background-image: url("${prefix}${bg.fs}"); background-size: cover; background-position: center; }`);
   // 全寬段（沒有講者）的內容用滿整個畫面，背景圖右上的裝飾會和內容打架：只留底色
-  if (bg.fs) out.push(WIDE_BG);
+  if (bg.fs && !portrait) out.push(WIDE_BG);
   if (bg.ch) out.push(`.sc-surface-ch { background-image: url("${prefix}${bg.ch}"); background-size: cover; background-position: center; }`);
   if (bg.side) out.push(bg.side === "bg.jpg"
     ? `.sc-surface-side { background-image: url("${prefix}bg.jpg"); background-size: 1920px auto; background-position: 0 50%; }`
@@ -270,6 +289,7 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
   let track = 2;
   const hosts = [], pips = [], tl = [];
   const footTweens = [];
+  let tailDark = null;   // 046 片尾漸暗：最後一段動畫（plan.mjs 的 tailFade）暗完的時間
   const hasMedia = list.some((it) => it.type === 'media');
   const hasLens = list.some((it) => it.type === 'media' && it.media.lenses?.length);
   // 子母畫面飛入的起點：容器（左上 1424,594、432×324）放大 K 倍、平移到 pipCrop 的位置 → 第一格和底下的講者逐像素重合（plan.md P-05）
@@ -316,12 +336,17 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
       }
     }
     const ids = (p) => [`#pip-${it.id}${p.sfx}`, `#pipf-${it.id}${p.sfx}`];
+    // 037 講者上浮：這一段的講者面板往上浮回滿版（直式；測試片段切到一半的不做）
+    const isRise = (p) => portrait && p.exit === 'rise' && p.full;
+    const rising = pieces.some(isRise);
     // 出場 layer 的片段跟幕一起淡出（三層一起，不做放大回原位）
     const layerPip = pieces.filter((p) => p.exit === 'layer').flatMap(ids);
     const st = stageOf(it), bd = st && (it.type !== 'fx' || it.opaque);
-    const sel = bd ? `#el-${it.id}, #bd-${it.id}` : `#el-${it.id}`;   // 不透明幕的進退場（直式連底一起）
+    // 045 直式上緣的裝飾（BD_TOP_CSS）：章節轉場（主色底）、字卡動態、穿窗的段不放
+    const bdTop = bd && it.type !== 'fx' && it.key !== 'chapter' && it.txIn !== 'dive' && it.txOut !== 'dive';
+    const sel = bd ? `#el-${it.id}, #bd-${it.id}${bdTop ? `, #bdt-${it.id}` : ''}` : `#el-${it.id}`;   // 不透明幕的進退場（直式連底、連上緣的裝飾一起）
     if (it.type === 'media') {
-      const mp = mediaParts({ ...rolled(it, t0), pipIds: [] }, { off: t0, lim: t0 + DUR, base, nextTrack: () => track++, mediaDb: editFx?.mediaDb ?? 0, edit: editFx, outDur: videoDur, ...(portrait ? { canvas: C } : {}) });
+      const mp = mediaParts({ ...rolled(it, t0), pipIds: [], ...(rising ? { exitFx: 'cut' } : {}) }, { off: t0, lim: t0 + DUR, base, nextTrack: () => track++, mediaDb: editFx?.mediaDb ?? 0, edit: editFx, outDur: videoDur, ...(portrait ? { canvas: C } : {}) });
       hosts.push(mp.html);
       tl.push(...mp.tl);
       // 相鄰兩段 media：後一段疊化進來
@@ -346,6 +371,8 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
       const [hw, hh] = portrait && !st ? [W, H] : [1920, 1080];
       hosts.push(`  <div id="el-${it.id}" data-composition-id="${it.compId}" data-composition-src="${it.file}"${varAttr}
        data-start="${n3(it.s)}" data-duration="${n3(d + swapOut + pushOut + diveOut)}" data-track-index="${track++}" data-width="${hw}" data-height="${hh}"${it.prev ? ` data-prev="${it.prev}"` : ''}${sideAttr(it)}${st ? ` ${st.attr}` : ''} style="z-index:${it.z + swapDepth(it)}${st ? `; ${st.css}` : ''}${motionCss}"${wideOf(it, pieces) ? ' data-wide' : ''}></div>`);   // 沒有小視窗的全畫面段用全寬版型（kit widen）
+      // 045：幕自己的底是不透明的，裝飾要疊在幕上面才看得到整條；只畫在平台介面區（y 0–240），內容不會排到那裡
+      if (bdTop) hosts.push(`  <div id="bdt-${it.id}" class="clip bd-top" data-layout-ignore data-start="${n3(it.s)}" data-duration="${n3(d + pushOut)}" data-track-index="${track++}" style="z-index:${it.z + swapDepth(it)}${pushed ? '; translate: 0 var(--ty, 0px)' : ''}"></div>`);
       // 人物去背層（lib/matte.mjs）：這一段的講者（帶透明通道）疊在動畫上面，動畫就在講者後面；外層 div 不帶時間屬性（影片本身的 opacity 會被框架蓋掉）
       if (it.matte?.file) hosts.push(`  <div id="matte-${it.id}" data-layout-ignore style="position:absolute;left:0;top:0;width:${W}px;height:${H}px;z-index:${it.z + 1};pointer-events:none${it.matte.clip ? `;clip-path:${it.matte.clip}` : ''}">
     <video id="mattev-${it.id}" src="${base}${it.matte.file}" data-start="${n3(it.s)}" data-duration="${n3(d)}" data-media-start="${n3(Math.max(0, it.s + (test ? t0 : 0) - it.start))}" data-track-index="${track++}" muted playsinline style="position:absolute;left:0;top:0;width:${W}px;height:${H}px"></video>
@@ -376,7 +403,7 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
        style="position:absolute;left:${PB[0]}px;top:${PB[1] - 3}px;width:${PB[2]}px;height:6px;background:var(--brand)"></div>`
         : `<img id="pipf-${it.id}${p.sfx}" class="clip pip-frame" src="${base}kit/pip-frame.png" alt=""
        data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-track-index="${track++}"${shifted ? ` data-layout-allow-overflow style="position:absolute;left:${sdx}px;top:${sdy}px"` : ''}>`;
-      pips.push(`  <div class="pip" id="pip-${it.id}${p.sfx}" data-layout-allow-overflow${shifted ? ` style="left:${PB[0] + sdx}px;top:${PB[1] + sdy}px"` : ''}>
+      pips.push(`  <div class="pip${isRise(p) ? ' pip--rise' : ''}" id="pip-${it.id}${p.sfx}" data-layout-allow-overflow${shifted ? ` style="left:${PB[0] + sdx}px;top:${PB[1] + sdy}px"` : ''}>
     <video id="pipv-${it.id}${p.sfx}" src="${base}assets/rough.mp4" data-start="${n3(p.s)}" data-duration="${n3(p.d)}" data-media-start="${n3(p.ms)}"
            data-track-index="${vTrack}" muted playsinline style="left:${ps.left}px;top:${ps.top}px;width:${ps.width}px;height:${ps.height}px"></video>
   </div>
@@ -389,6 +416,13 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
         tl.push(`tl.fromTo('${F}', { opacity: 0 }, { opacity: 1, duration: ${V2TX.pop}, ease: 'sine.out' }, ${n3(p.s + V2TX.land)});`);
       } else if (p.enter === 'fade') tl.push(`tl.fromTo('${P}, ${F}', { opacity: 0 }, { opacity: 1, duration: ${PIP_FADE}, ease: 'sine.out' }, ${n3(p.s)});`);
       if (p.slideFrom) tl.push(`tl.fromTo('${P}, ${F}', { x: ${r3(p.slideFrom[0] - sdx)}, y: ${r3(p.slideFrom[1] - sdy)} }, { x: 0, y: 0, duration: ${r3(Math.min(V2TX.pipSlide, p.d))}, ease: 'power3.inOut' }, ${n3(p.s)});`);
+      if (isRise(p)) {
+        // 面板連裡面的講者回到滿版的位置（飛入的反向）；裁切框從面板大小往四周打開到整支影片 → 上緣一路蓋過資訊幕
+        const at = r3(Math.max(p.s, p.s + p.d - V2TX.rise));
+        const open = `inset(${ps.top}px ${r3(PB[2] - ps.left - ps.width)}px ${r3(PB[3] - ps.top - ps.height)}px ${ps.left}px)`;
+        tl.push(`tl.fromTo('${P}', { x: 0, y: 0, scale: 1, transformOrigin: '0 0', clipPath: 'inset(0px 0px 0px 0px)' }, { x: ${FLY.x}, y: ${FLY.y}, scale: ${FLY.k}, transformOrigin: '0 0', clipPath: '${open}', duration: ${V2TX.rise}, ease: 'power3.inOut', immediateRender: false }, ${n3(at)});`);
+        tl.push(`tl.fromTo('${F}', { opacity: 1 }, { opacity: 0, duration: ${V2TX.riseLine}, ease: 'sine.in', immediateRender: false }, ${n3(at)});`);
+      }
       if (p.exit === 'fade' && p.full) tl.push(`tl.fromTo('${P}, ${F}', { opacity: 1 }, { opacity: 0, duration: ${p.exitDur}, ease: 'sine.in', immediateRender: false }, ${n3(Math.max(p.s, p.s + p.d - p.exitDur))});`);
     }
     if (it.opaque && it.type !== 'media') {
@@ -403,10 +437,12 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
         tl.push(`tl.fromTo('${sel}', { clipPath: 'inset(0% 0% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% ${EDGE}%)', duration: ${V2TX.retract}, ease: 'expo.inOut', immediateRender: false }, ${n3(at)});`);
         bandPair(at, 'out');
         if (layerPip.length) tl.push(`tl.fromTo('${layerPip.join(', ')}', { opacity: 1 }, { opacity: 0, duration: ${V2TX.pipOut}, ease: 'sine.in', immediateRender: false }, ${n3(at)});`);
-      } else if (it.fadeOut && it.fullEnd) {
-        // 片尾的段（plan.mjs 的 tailFade：原本是色帶收回）：淡出在片尾前一格做完，最後一格不會停在半透明
+      } else if (it.fadeOut && it.fullEnd && it.txOut !== 'rise') {
+        // 片尾的段（plan.mjs 的 tailFade：原本是色帶收回）：幕和子母畫面停在完成態，整個畫面漸暗（下面的 #tail-dark），在片尾前一格暗完；
+        // 剪映素材（每段一支透明影片）沒有「整個畫面」，照舊這一段自己淡出
         const end = it.tailFade ? Math.min(it.e, r3(videoDur - t0 - 1 / FPS)) : it.e;
-        tl.push(`tl.to('${[sel, ...layerPip].join(', ')}', { opacity: 0, duration: ${FADE}, ease: 'sine.in' }, ${n3(Math.max(it.s, end - FADE))});`);
+        if (it.tailFade && !cut) tailDark = end;
+        else tl.push(`tl.to('${[sel, ...layerPip].join(', ')}', { opacity: 0, duration: ${FADE}, ease: 'sine.in' }, ${n3(Math.max(it.s, end - FADE))});`);
       }
     }
     // 旁白段擦入擦出：host 的 clip-path（z 31，壓在錄影上面）
@@ -470,6 +506,11 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
       }
     }
     if (fades) overlays.push('  <div id="edit-fade"></div>');
+  }
+  // 046 片尾漸暗：整個畫面（連字幕）FADE 秒暗到全黑。剪輯台設了片尾淡出（#edit-fade）、後面接片尾卡（#end-card 自己先暗下來）就不另外做
+  if (tailDark != null && tailDark > 0 && !(editFx?.fadeOut > 0) && !(ending?.dur > 0)) {
+    overlays.push('  <div id="tail-dark" data-layout-ignore style="position:absolute;inset:0;background:#000000;opacity:0;z-index:70;pointer-events:none"></div>');
+    tl.push(`tl.fromTo('#tail-dark', { opacity: 0 }, { opacity: 1, duration: ${n3(Math.min(FADE, tailDark))}, ease: 'sine.in' }, ${n3(Math.max(0, tailDark - FADE))});`);
   }
   // 情緒點的講者爆衝推近（plan.json moods[].zoom）：0.2 秒推到 1.25 倍，停到句尾直接切回（punch 放大中的回到 1.08）
   if (zooms?.list?.length) {
@@ -573,7 +614,7 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
   const capTrack = captions ? track++ : null;
   const bgColor = segCut ? 'transparent' : '#000';
   // 035 字幕樣式：選了另外的字體（文楷、粉圓…）才在這裡宣告 @font-face（檔案 build 只複製選到的那一個進 kit/fonts/）
-  const capFace = captions?.style ? captionFontFace(captions.style, `${base}kit/fonts/`) : '';
+  const capFace = captions?.style ? captionFontFace(captions.style, `${base}kit/fonts/`, { bold: captions.marks?.length > 0 || captions.words?.length > 0 }) : '';
   const html = `<!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -595,8 +636,10 @@ ${portrait ? `    /* 講者面板 x 0–1080、y 900–1920（lib/canvas.mjs 的
     : `    /* 子母畫面本體 x ${PB[0]}–${PB[0] + PB[2]}、y ${PB[1]}–${PB[1] + PB[3]}（${PB[2]}×${PB[3]}，4:3），和 lib/media.mjs 的 PIP_ZONE、pip-frame.png 同一組數字 */
     .pip { position: absolute; left: ${PB[0]}px; top: ${PB[1]}px; width: ${PB[2]}px; height: ${PB[3]}px; overflow: hidden; border-radius: 6px; z-index: 40; }`}
     .pip video { position: absolute; }
+    /* 037 講者上浮：裁切改用 clip-path（上浮時往四周打開；overflow 打不開） */
+    .pip--rise { overflow: visible; clip-path: inset(0px 0px 0px 0px); }
     .pip-frame { z-index: 41; }
-${bg ? indent(bgCss(`${base}assets/`, bg), 4) + '\n' : ''}${endP.css}${capFace ? indent(capFace, 4) + '\n' : ''}  </style>
+${portrait ? `    ${BD_TOP_CSS}\n` : ''}${bg ? indent(bgCss(`${base}assets/`, bg, { portrait }), 4) + '\n' : ''}${endP.css}${capFace ? indent(capFace, 4) + '\n' : ''}  </style>
 </head>
 <body>
 <!-- build.mjs 產生；要改請改 plan.json 再重跑 build（手改會被雜湊保護擋下）-->
@@ -617,7 +660,7 @@ ${captions ? `  <!-- L3 字幕 -->
   <div id="el-captions" data-composition-id="${captions.compId}" data-composition-src="${captions.file}"
        data-track-kind="captions" data-start="0" data-duration="${n3(FOOT)}" data-track-index="${capTrack}"
        data-width="${W}" data-height="${H}" style="z-index:60"></div>
-` : ''}${overlays.length ? `\n  <!-- 剪輯台：dip 過黑（字幕下面）、整支淡入淡出（連字幕一起）-->\n${overlays.join('\n')}\n` : ''}${endP.html.length ? `\n  <!-- 片尾模板：訂閱動畫、片尾卡（shared/setting.json 的 ending；lib/ending.mjs）-->\n${endP.html.join('\n')}\n` : ''}
+` : ''}${overlays.length ? `\n  <!-- 剪輯台：dip 過黑（字幕下面）、整支淡入淡出（連字幕一起）；片尾漸暗 -->\n${overlays.join('\n')}\n` : ''}${endP.html.length ? `\n  <!-- 片尾模板：訂閱動畫、片尾卡（shared/setting.json 的 ending；lib/ending.mjs）-->\n${endP.html.join('\n')}\n` : ''}
   <!-- L4 音效 -->
 ${sfx.join('\n')}
 </div>

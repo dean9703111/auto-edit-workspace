@@ -99,3 +99,120 @@ test('breakoutWindow：相框開口照講者框算（和 custom/x-breakout.html 
   const r = MT.ensureMattes({ outDir: out, root: out, items: b, assetVideo: asset, remove, speakerBox: null });
   assert.match(r.problems[0].msg, /plan\.json 還沒有 speakerBox/);
 });
+
+// ---------- 去背穩定（043，lib/matte-steady.mjs） ----------
+const ST = await imp('lib/matte-steady.mjs');
+
+// 30×12、40 格：x 14–17 是身體（一直算人），x 18–22／y 4–9 是椅子（前 15 格被算成人，之後不算），x 2–7／y 3–10 是另一塊（40 格裡只有 6 格沒算到），其他是背景
+function synth({ chairOn = (t) => t < 15, leftOff = (t) => t >= 30 && t < 36 } = {}) {
+  const w = 30, h = 12, n = 40, px = w * h, alpha = Buffer.alloc(n * px), luma = Buffer.alloc(n * px, 200);
+  const at = (t, x, y) => t * px + y * w + x;
+  for (let t = 0; t < n; t++) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (x >= 14 && x <= 17) { luma[at(t, x, y)] = 40; alpha[at(t, x, y)] = 255; }
+    if (x >= 18 && x <= 22 && y >= 4 && y <= 9) { luma[at(t, x, y)] = 110; alpha[at(t, x, y)] = chairOn(t) ? 255 : 0; }
+    if (x >= 2 && x <= 7 && y >= 3 && y <= 10) { luma[at(t, x, y)] = 90; alpha[at(t, x, y)] = leftOff(t) ? 0 : 255; }
+  }
+  return { w, h, n, px, alpha, luma, at };
+}
+
+test('analyzeMatte：會跳的整塊一起決定（不到七成算人就整塊不算、超過就整塊算），只換模型判錯的那幾格；身體、背景、經過的手都不碰', () => {
+  const d = synth();
+  // 手（從身體伸出來，連著身體）：第 5 格（椅子被算進人的時候）和第 22 格（椅子沒被算進人的時候）各經過椅子上緊鄰身體的一個位置
+  d.luma[d.at(5, 18, 5)] = 190;
+  d.luma[d.at(22, 18, 6)] = 190; d.alpha[d.at(22, 18, 6)] = 255;
+  // 第 8 格：椅子外側多冒出一小塊、和人分開的碎塊（只有這一格被算成人）
+  for (let t = 0; t < d.n; t++) d.luma[d.at(t, 24, 8)] = 110;
+  d.alpha[d.at(8, 24, 8)] = 255;
+  const r = ST.analyzeMatte(d);
+  const W = (t, x, y) => r.weights[d.at(t, x, y)], M = (x, y) => r.med[y * d.w + x];
+  assert.equal(r.wrong.length, 2, '兩塊（隔得夠遠，各自決定）');
+  assert.equal(M(20, 6), 0, '椅子 15/40 格算人：整塊不算');
+  assert.equal(M(3, 6), 255, '左邊那塊 34/40 格算人：整塊算');
+  assert.equal(W(3, 20, 6), 255, '椅子被算進人的那幾格：換掉');
+  assert.equal(W(20, 20, 7), 0, '模型本來就判對的格：不碰');
+  assert.equal(W(22, 18, 6), 0, '模型判對的格裡經過的手：不碰');
+  assert.ok(Math.abs(190 - r.bgMap[5 * d.w + 18]) > ST.STEADY.fine[1], '模型判錯的格裡經過的手：亮度和這裡的背景差很多，原尺寸比對時不會換');
+  assert.equal(W(32, 3, 6), 255, '左邊那塊漏掉的那幾格：補回來');
+  assert.equal(W(3, 15, 6), 0, '身體（不貼著椅子的地方）：不在要換的範圍裡');
+  assert.equal(W(3, 23, 6), 255, '椅子外面一圈也在要換的範圍裡（交界落在這一圈，換到哪個像素交給原尺寸的比對）');
+  assert.equal(W(3, 29, 0), 0, '遠處的背景：不碰');
+  assert.equal(r.force[d.at(8, 24, 8)], 255, '緊貼著換掉的地方、又和人分開的小碎塊：一起拿掉（不用過原尺寸的比對）');
+  assert.equal(r.force[d.at(20, 24, 8)], 0);
+  assert.equal(r.bgMap[6 * d.w + 20], 110, '椅子那裡的背景亮度');
+  assert.equal(r.changed, (15 + 6) / 40);
+  // 輪廓邊緣一格寬的細條（人自己在晃）：不當成會跳的東西
+  const thin = synth();
+  for (let t = 0; t < thin.n; t++) for (let y = 0; y < thin.h; y++) { thin.luma[thin.at(t, 13, y)] = 200; thin.alpha[thin.at(t, 13, y)] = t % 2 ? 255 : 0; }
+  const rt = ST.analyzeMatte(thin);
+  for (let t = 0; t < thin.n; t++) assert.equal(rt.weights[thin.at(t, 13, 1)], 0, `細條第 ${t} 格`);
+  // 參考遮罩：椅子的像素在模型判對的格裡不是人（0）；緊鄰椅子的身體像素一直是人（255）→ 永遠不會被切
+  const ref = ST.referenceAlpha({ alpha: d.alpha, rw: d.w, rh: d.h, n: d.n, owner: r.owner, w: d.w, h: d.h, wrong: r.wrong });
+  assert.equal(ref[6 * d.w + 20], 0);
+  assert.equal(ref[6 * d.w + 17], 255);
+  assert.equal(ref[6 * d.w + 3], 255, '左邊那塊在判對的格裡是人');
+});
+
+test('analyzeMatte：遮罩本來就穩（整段一致）→ changed 是 0，沒有要換的', () => {
+  const r = ST.analyzeMatte(synth({ chairOn: () => false, leftOff: () => false }));
+  assert.equal(r.changed, 0);
+  assert.ok(r.weights.every((v) => v === 0) && r.force.every((v) => v === 0));
+});
+
+test('steadyMatte：真的影片跑一次——椅子前半段被算進人、後半段沒有 → 穩定後整段都不算，身體不變；本來就穩的不重新編碼', (t) => {
+  if (spawnSync('ffmpeg', ['-version']).status !== 0) { t.skip('沒有 ffmpeg'); return; }
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-steady-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const clip = path.join(dir, 'clip.mp4'), matte = path.join(dir, 'matte.webm'), stable = path.join(dir, 'stable.webm'), out = path.join(dir, 'out.webm');
+  const ff = (args) => { const r = spawnSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
+  const body = 'drawbox=x=240:y=40:w=120:h=300:color=0x282828:t=fill', chair = 'drawbox=x=360:y=120:w=120:h=160';
+  ff(['-f', 'lavfi', '-i', `color=c=0xC8C8C8:s=640x360:r=30:d=1.6,${chair}:color=0x6E6E6E:t=fill,${body}`, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip]);
+  const mk = (file, chairExpr) => ff(['-i', clip, '-f', 'lavfi', '-i', `color=c=black:s=640x360:r=30:d=1.6,drawbox=x=240:y=40:w=120:h=300:color=white:t=fill${chairExpr ? `,${chair}:color=white:t=fill:enable='${chairExpr}'` : ''},format=gray`,
+    '-filter_complex', '[0:v][1:v]alphamerge,format=yuva420p', '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-b:v', '0', '-crf', '30', '-deadline', 'realtime', '-cpu-used', '8', '-auto-alt-ref', '0', file]);
+  mk(matte, 'lt(t,0.6)'); mk(stable, '');
+  const avg = (file, crop) => spawnSync('ffmpeg', ['-nostdin', '-v', 'error', '-c:v', 'libvpx-vp9', '-i', file, '-vf', `alphaextract,crop=${crop},signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-`, '-f', 'null', '-'], { encoding: 'utf8' })
+    .stdout.split('\n').filter((l) => l.includes('YAVG')).map((l) => Number(l.split('=')[1]));
+  assert.ok(Math.max(...avg(matte, '60:80:390:160')) > 200, '原本前半段椅子被算進人');
+  const r = ST.steadyMatte({ clip, matte, out });
+  assert.deepEqual({ ok: r.ok, changed: r.changed }, { ok: true, changed: true }, r.message);
+  const chairAfter = avg(out, '60:80:390:160'), bodyAfter = avg(out, '60:200:270:90');
+  assert.ok(chairAfter.length >= 45, `格數 ${chairAfter.length}`);
+  assert.ok(Math.max(...chairAfter) < 30, `穩定後椅子整段都不算人：${Math.max(...chairAfter)}`);
+  assert.ok(Math.min(...bodyAfter) > 225, `身體照舊：${Math.min(...bodyAfter)}`);
+  const same = ST.steadyMatte({ clip, matte: stable, out: path.join(dir, 'none.webm') });
+  assert.deepEqual({ ok: same.ok, changed: same.changed }, { ok: true, changed: false });
+  assert.ok(!fs.existsSync(path.join(dir, 'none.webm')), '本來就穩：不寫檔');
+});
+
+test('去背穩定預設不做：根元素寫 data-matte="steady" 的段才做（"1"、"window" 都不做）；屬性寫在 data-composition-id 前面或後面都認得', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-steady-attr-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(dir, 'compositions'));
+  const mk = (id, attrs) => { const file = `compositions/x-design-${id}.html`; fs.writeFileSync(path.join(dir, file), `<template>\n  <div id="x-design-${id}" ${attrs}>\n  </div>\n</template>\n`); return { id, type: 'custom', file, seg: {} }; };
+  const a = mk('a', 'data-composition-id="x-design-a" data-matte="steady"'), b = mk('b', 'data-matte="steady" data-composition-id="x-design-b"');
+  const c = mk('c', 'data-composition-id="x-design-c" data-matte="1"'), d = mk('d', 'data-composition-id="x-design-d" data-matte="window"'), e = mk('e', 'data-composition-id="x-design-e"');
+  assert.deepEqual([a, b, c, d, e].map((it) => MT.matteKindOf(it, dir)), ['full', 'full', 'full', 'window', null]);
+  assert.deepEqual([a, b, c, d, e].map((it) => MT.matteSteadyOf(it, dir)), [true, true, false, false, false]);
+});
+
+test('046 data-matte-front：寫的那幾塊範圍在去背層上開洞（裡面的東西在講者前面）；沒寫照舊整張；寫錯回報怎麼寫，不做去背', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-matte-front-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(dir, 'compositions'));
+  const asset = path.join(dir, 'assets', 'rough.mp4');
+  fs.mkdirSync(path.dirname(asset), { recursive: true });
+  const has = (() => { try { return spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=320x180:rate=30', '-t', '3', '-pix_fmt', 'yuv420p', asset], { encoding: 'utf8' }).status === 0; } catch { return false; } })();
+  if (!has) { t.skip('需要 ffmpeg'); return; }
+  const mk = (id, attrs) => { const file = `compositions/x-design-${id}.html`; fs.writeFileSync(path.join(dir, file), `<template>\n  <div id="x-design-${id}" data-composition-id="x-design-${id}" ${attrs}>\n  </div>\n</template>\n`); return { id, type: 'custom', file, seg: {}, start: 0.5, end: 1.5 }; };
+  const a = mk('a', 'data-matte="1" data-matte-front="50,515,890,735; 100, 1300, 200, 60"'), b = mk('b', 'data-matte="1"'), c = mk('c', 'data-matte="1" data-matte-front="50,515,890"'), d = mk('d', 'data-matte-front="1,2,3,4"');
+  assert.deepEqual(MT.matteFrontOf(a, dir), [[50, 515, 890, 735], [100, 1300, 200, 60]]);
+  assert.equal(MT.matteFrontOf(b, dir), null);
+  assert.equal(MT.matteFrontOf(d, dir), null, '沒寫 data-matte 的段不去背，也就沒有前後');
+  const remove = (clip, dst) => { fs.writeFileSync(dst, 'webm'); return { ok: true }; };
+  const r = MT.ensureMattes({ outDir: dir, root: dir, items: [a, b, c, d], assetVideo: asset, remove });
+  assert.equal(r.made, 2);
+  assert.equal(a.matte.clip, "path(evenodd,'M-9 -9H9999V9999H-9ZM50 515h890v735h-890ZM100 1300h200v60h-200Z')");
+  assert.equal(b.matte.clip, undefined);
+  assert.equal(c.matte, undefined);
+  assert.deepEqual(r.problems.map((p) => p.id), ['c']);
+  assert.match(r.problems[0].msg, /data-matte-front 看不懂 → 寫成 "x,y,寬,高"/);
+});

@@ -37,7 +37,7 @@ import { SFX_RULES, SFX_SWAP, rotateSfx, sfxBudget, thinMainSfx, LOUD } from './
 import { LOCAL_ROLES, sfxActual, wavSeconds } from './sfx-local.mjs';
 import { BED } from './music.mjs';
 import { validateMoods, moodCues, moodSound, zoomSpans, MOOD_KINDS } from './moods.mjs';
-import { sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle } from './caption-style.mjs';
+import { sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle, resolveCaptionMarks, describeCaptionMarks } from './caption-style.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, CANVAS, canvasOf, LAYOUT } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
@@ -48,7 +48,7 @@ import { readScript } from './script-file.mjs';
 import { resolveEnding } from './ending.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
-const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'ending', 'chapterBadge', 'chapterMap', 'sections', 'check', 'look', 'theme', 'captionStyle', 'style', 'edit', 'moods', 'scenes'];
+const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'ending', 'chapterBadge', 'chapterMap', 'sections', 'check', 'look', 'theme', 'captionStyle', 'captionMarks', 'style', 'edit', 'moods', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
@@ -79,6 +79,7 @@ const UNCOVERED_MIN = 1.0; // 沒有畫面的區間 > 1 秒才報
 const SWEEP_MIN = 1.0;     // 章節擦過：章節起點在片頭 1 秒後才掃（013）
 const FLASH = [0.05, 1.0]; // 兩段之間空 0.05–1 秒：講者會閃一下
 const PIP_FLY_MIN = 1.0;   // 子母畫面片段 ≥ 1 秒才飛入（太短就原地淡入）
+const PIP_RISE_MIN = 1.6;  // 037 直式講者上浮：片段 ≥ 1.6 秒才上浮（飛入 0.75＋上浮 0.75 不重疊；太短照舊跟著幕淡出）
 const PIP_FADE = 0.4;      // 子母畫面原地淡入淡出
 const WIPE = 0.45;         // 旁白段擦入擦出
 const ROLL = 0.5;          // 擦入擦出時底下的錄影多播／提早播
@@ -439,6 +440,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const capRes = resolveCaptionStyle({ plan, settings: { captions: lib.captionDefault ?? undefined }, format: C.format });
   if (capRes.errors.length && (plan.captionStyle === undefined || plan.captionStyle === null)) warnings.push(...capRes.errors.map((e) => `${e} → 先用原本的字幕樣式；用 brand.mjs captions 重設預設`));
   warnings.push(...capRes.notes.map((n) => `字幕樣式：${n}`));
+  // 038 重點字幕（captionMarks：["#6", "#7"]，lib/caption-style.mjs）：那幾則字幕用重點樣式。句號照 rough.srt（剪輯台剪掉的句子本來就不顯示）；
+  // 直式一則都沒標的 ⚠ 等排了段落才提醒（還沒寫分鏡時不催）
+  const markRes = resolveCaptionMarks(plan.captionMarks, cues, { portrait, hasScenes: Array.isArray(plan.scenes) && plan.scenes.length > 0, projectRel });
+  errors.push(...markRes.errors); warnings.push(...markRes.warnings);
   if (plan.style !== undefined && (typeof plan.style !== 'string' || !plan.style.trim())) errors.push(`style 要寫風格包的名稱（shared/template/styles/ 底下的資料夾名，例 "預設"），現在是 ${JSON.stringify(plan.style)} → 改成名稱，或刪掉這個欄位（＝用 shared/template/ 目前的主色與背景）`);
   const style = typeof plan.style === 'string' && plan.style.trim() ? plan.style.trim() : null;
   // check：只給示意／預覽用的 plan 關規則（示意卡的文字跟字幕無關）；正式 plan.json 寫了 build 會 ⚠
@@ -551,7 +556,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const bed = resolveBed(ctx);
   const badges = chapterBadges(ctx);
   // 子母畫面的動作、最後幾則提醒
-  pipMotion(timed, { tm, voiceOut, punches: editFx?.punches || [] });
+  pipMotion(timed, { tm, voiceOut, punches: editFx?.punches || [], portrait, videoDur });
   approxWordsWarning(ctx);
   const pip = speakerPip(ctx);
   layoutRhythmWarnings(ctx);
@@ -565,7 +570,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro, bed,
     ending, finalDur: r3(videoDur + (ending?.dur || 0)),
     chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
-    captionStyle: capRes.isDefault ? null : capRes.style, captionFrom: capRes.from,
+    captionStyle: capRes.isDefault ? null : capRes.style, captionFrom: capRes.from, captionMarks: markRes.marks, captionWords: markRes.words,
   };
 }
 
@@ -1788,13 +1793,14 @@ function rollRoom(it, side) {
 //          ｜chapter（主色色塊從左下斜擦）｜side（側推）｜fade（淡入：不透明字卡動態）｜media（素材自己的 enter）｜wipeIn（旁白段擦入）｜cut｜overlay（其他透明段，模板自己進場）
 //   txOut：band（卡片收回、講者推回）｜retract（色帶反向收、子母畫面淡出）｜swap（舊卡擦掉）｜push（被下一頁頂出去）｜cover（停在完成態被下一張幕蓋過）｜hold（墊在下一段下面）
 //          ｜handoff（下方字卡換卡）｜fade｜media｜wipeOut｜side｜cut｜overlay
+//          ｜rise（037 直式講者上浮：上下分割結束、接著講者滿版 → 講者面板往上浮回原位蓋過資訊幕，不做色帶收回；pipMotion 決定）
 export const TX_IN = ['band', 'wipe', 'swap', 'push', 'dive', 'chapter', 'side', 'fade', 'media', 'wipeIn', 'cut', 'overlay'];
-export const TX_OUT = ['band', 'retract', 'swap', 'push', 'dive', 'cover', 'hold', 'handoff', 'fade', 'media', 'wipeOut', 'side', 'cut', 'overlay'];
+export const TX_OUT = ['band', 'retract', 'rise', 'swap', 'push', 'dive', 'cover', 'hold', 'handoff', 'fade', 'media', 'wipeOut', 'side', 'cut', 'overlay'];
 // it.prev：給模板與情境動畫選進場（host 與情境子合成 root 的 data-prev、window.__cues.segs[id].prev；contracts/motion.md §3.1）
 //   speaker＝前面露講者（色帶擦開，卡從小視窗長出 P.grow）｜fullscreen＝前一段也是全畫面、同背景（換卡不換景）｜pip＝前一段是別的幕（插入素材、不透明字卡動態、章節），小視窗已在
 export const PREVS = ['speaker', 'fullscreen', 'pip'];
 const fsSurface = (x) => (x.type === 'custom' && x.opaque) || (x.type === 'scene' && x.scene?.family === 'fullscreen');
-// 片尾 TAIL 秒內結束的色帶收回：擦出做不完、最後一格會停在擦到一半 → 改淡出（tailFade；main.mjs 在片尾前一格做完）
+// 片尾 TAIL 秒內結束的色帶收回：擦出做不完、最後一格會停在擦到一半 → 不收（tailFade）：這一段延到片尾、停在完成態，main.mjs 讓整個畫面漸暗、在片尾前一格暗完
 const TAIL = 1;
 function assignTransitions(timed, videoDur = Infinity) {
   const byId = new Map(timed.map((x) => [x.id, x]));
@@ -1810,12 +1816,16 @@ function assignTransitions(timed, videoDur = Infinity) {
     a.txOut = a.type === 'media' ? 'media' : a.wipeOut ? 'wipeOut' : a.holdFor ? 'hold' : a.handoff ? 'handoff' : a.coveredBy ? 'cover' : a.side ? 'side'
       : a.opaque ? (a.fadeOut ? (fsSurface(a) ? 'retract' : 'fade') : next?.txIn === 'swap' ? 'swap' : 'cut')
       : a.lower ? 'band' : 'overlay';
-    if (a.txOut === 'retract' && videoDur - a.end <= TAIL + 1e-6) { a.txOut = 'fade'; a.tailFade = true; }
+    if (a.txOut === 'retract' && videoDur - a.end <= TAIL + 1e-6) {
+      a.txOut = 'fade'; a.tailFade = true;
+      // 046：停在完成態到片尾，main.mjs 讓整個畫面漸暗（使用者：「結尾如果有動畫，應該是要全部漸暗，而不是回到原本的畫面」）
+      if (a.end < videoDur) { a.end = videoDur; a.D = r3(a.end - a.start); }
+    }
   }
 }
 
 // 子母畫面每個片段的進場（fly／fade／none）與出場（layer／fade／none）（spec FR-022、FR-026）
-function pipMotion(timed, { tm, voiceOut, punches = [] }) {
+function pipMotion(timed, { tm, voiceOut, punches = [], portrait = false, videoDur = Infinity }) {
   const frame = 1 / FPS;
   const all = timed.flatMap((a) => (a.pipPieces || []).map((p) => ({ a, p })));
   const near = (x, y) => Math.abs(x - y) <= 0.001 + 1e-9;
@@ -1842,6 +1852,15 @@ function pipMotion(timed, { tm, voiceOut, punches = [] }) {
     if (all.some((q) => q.a !== a && near(q.p.s, p.e))) p.exit = 'none';
     else if (!last && isJoin(p.e)) p.exit = 'none';
     else if (last && a.pipExit) { p.exit = 'fade'; p.exitDur = a.pipExit; }
+    // 037 講者上浮（直式）：這一段結束後講者是滿版 → 講者面板往上浮回原位（main.mjs），資訊幕不收、被面板蓋過去。
+    //   片尾 TAIL 秒內結束的段不做（畫面要停在完成態）；錄影段只接預設的淡出（slide／zoom／whip 照舊）
+    else if (portrait && last && near(p.e, a.end) && a.fadeOut && !a.tailFade && videoDur - a.end > TAIL + 1e-6
+      && (a.type === 'media' ? a.exitFx === 'fade' : a.txOut === 'retract')
+      && p.e - p.s >= PIP_RISE_MIN - 1e-9 && speakerFull(r3(p.e + frame))) {
+      p.exit = 'rise';
+      if (a.type === 'media') a.exitFx = 'cut'; else a.txOut = 'rise';
+      a.riseOut = true;
+    }
     else if (last && near(p.e, a.end) && a.fadeOut) p.exit = 'layer';
     else { p.exit = 'fade'; p.exitDur = PIP_FADE; }
   }
@@ -1987,10 +2006,11 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
   if (res.sfxBudget) lines.push(...res.sfxBudget.lines);
   // 轉場與主題（design-system.md §5、§10；每段的值在 --check --json 的 items[].out.tx）
   const txCount = (k, v) => res.items.filter((it) => it[k] === v).map((it) => it.id);
-  const txParts = [['txIn', 'wipe', '色帶擦開'], ['txIn', 'swap', '換卡不換景'], ['txIn', 'push', '上推'], ['txIn', 'dive', '穿窗'], ['txOut', 'retract', '色帶收回'], ['txIn', 'band', '疊加卡'], ['txIn', 'chapter', '章節擦入']]
+  const txParts = [['txIn', 'wipe', '色帶擦開'], ['txIn', 'swap', '換卡不換景'], ['txIn', 'push', '上推'], ['txIn', 'dive', '穿窗'], ['txOut', 'retract', '色帶收回'], ['txOut', 'rise', '講者上浮'], ['txIn', 'band', '疊加卡'], ['txIn', 'chapter', '章節擦入']]
     .map(([k, v, zh]) => [zh, txCount(k, v)]).filter(([, ids]) => ids.length).map(([zh, ids]) => `${zh} ${ids.length}（${ids.join('、')}）`);
   lines.push(`轉場：${txParts.join('；') || '無'}｜主題：${res.theme === 'dark' ? '暗色（theme: "dark"）' : '亮色'}${res.style ? `｜風格包：${res.style}` : ''}`);
   if (res.captionStyle) lines.push(`字幕樣式：${describeCaptionStyle(res.captionStyle)}（${res.captionFrom === 'plan' ? '這一集 plan.json captionStyle' : '預設 shared/setting.json captions'}）`);
+  if (res.captionMarks?.length || res.captionWords?.length) lines.push(`重點字幕：${describeCaptionMarks(res.captionMarks || [], res.captionWords || [])}`);
   lines.push(...tail.filter(Boolean));
   return lines.join('\n');
 }

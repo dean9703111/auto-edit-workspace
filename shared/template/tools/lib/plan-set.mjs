@@ -14,7 +14,7 @@ import { writeAtomic } from './atomic.mjs';
 import { listPacks } from './styles.mjs';
 import { loadMusic } from './music.mjs';
 import { LOOK_LIMITS } from './look.mjs';
-import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT } from './caption-style.mjs';
+import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, fmtCaptionMarks, parseCaptionMarks } from './caption-style.mjs';
 import { readSettings } from './settings.mjs';
 import { ok, fail, next, cmdLine } from './say.mjs';
 import { runToolUntilDoneSync } from './job.mjs';
@@ -64,6 +64,15 @@ const KEYS = {
   'captionStyle.size': { hint: () => `${CAP_SIZE.min}–${CAP_SIZE.max}`, parse: num(CAP_SIZE.min, CAP_SIZE.max), early: true },
   'captionStyle.weight': { hint: () => Object.keys(CAP_WEIGHTS).join('／'), parse: (v) => (CAP_WEIGHTS[Number(v)] ? Number(v) : BAD), early: true },
   'captionStyle.lift': { hint: () => `往上移幾 px（往下寫負的）：橫式 ${CAP_LIFT.landscape.min}–${CAP_LIFT.landscape.max}、直式 ${CAP_LIFT.portrait.min}–${CAP_LIFT.portrait.max}，0＝原位`, parse: (v) => { const n = num(CAP_LIFT.portrait.min, CAP_LIFT.landscape.max)(v); return n === BAD ? BAD : Math.round(n); }, early: true },
+  // 重點字幕（038）：整份換掉；全部拿掉用 --unset captionMarks。句號在不在字幕裡由 build 檢查（⚠ 並略過）
+  // 047 只標幾個字：#N@詞（詞裡有空白也可以，所以有 @ 的時候只用逗號、頓號分開；同一則又寫整則又寫幾個字時整則為準）
+  captionMarks: { hint: () => '字幕句號，逗號隔開，例 #6,#7@關鍵詞,#13（#N＝整則用重點樣式、#N@詞＝只有那幾個字；整份換掉；全部拿掉用 --unset captionMarks）', parse: (v) => {
+    const raw = Array.isArray(v) ? v : String(v).split(String(v).includes('@') ? /[,，、]+/ : /[,，、\s]+/);
+    const parts = raw.map((x) => String(x).trim()).filter(Boolean).map((x) => (x.startsWith('#') ? x : `#${x}`));
+    if (!parts.length || parts.some((x) => !/^#[1-9]\d*(?:@.*\S.*)?$/.test(x))) return BAD;
+    const p = parseCaptionMarks(parts);
+    return p.errors.length ? BAD : fmtCaptionMarks(p.marks, p.words);
+  } },
 };
 // --unset 另外收整個 bed、outro、captionStyle（回到工作區預設的底樂、片尾配樂、字幕樣式）；ending 本身就在 KEYS（--unset ending＝回到工作區的片尾設定）
 const UNSET_ONLY = ['bed', 'outro', 'captionStyle'];

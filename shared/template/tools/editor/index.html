@@ -100,6 +100,7 @@
   </section>
 
   <aside class="inspector" id="inspector" aria-label="右側面板">
+    <div class="insp-resize" id="inspResize" role="separator" aria-orientation="vertical" aria-label="調整右側面板的寬度（方向鍵左右）" tabindex="0" title="左右拖可以調整右側面板的寬度；雙擊回到預設"></div>
     <div class="side-tabs" role="tablist" aria-label="右側面板">
       <button role="tab" data-side="insp" class="on" aria-selected="true">屬性</button>
       <button role="tab" data-side="segs" aria-selected="false">段落</button>
@@ -121,7 +122,7 @@
     </div>
     <div class="side-pane" id="sideCues" hidden>
       <div class="side-search"><input id="cueSearch" type="search" autocomplete="off" placeholder="找字幕的字或句號（例 手機、#120）" aria-label="找一句字幕"><span class="side-count" id="cueCount"></span></div>
-      <div class="side-tools"><button id="capAdd" class="small" data-tip="在播放頭所在的空檔新增一句字幕">＋ 新增一句</button><button id="capFind" class="small" data-tip="尋找與取代（⌘／Ctrl＋F）：一次修正整集重複的錯字">尋找與取代</button><span class="side-hint">點一句就能改字，改完自動存</span></div>
+      <div class="side-tools"><button id="capAdd" class="small" data-tip="在播放頭所在的空檔新增一句字幕">＋ 新增一句</button><button id="capFind" class="small" data-tip="尋找與取代（⌘／Ctrl＋F）：一次修正整集重複的錯字">尋找與取代</button><button id="cueMarksOnly" class="small toggle" aria-pressed="false" data-tip="重點字幕：點每一句右邊的「重點」（或選到那一句按 H），那一則改用主色底的重點樣式。按這裡只看標成重點的，再按一次看全部">重點 0 則</button><span class="side-hint">點一句就能改字，改完自動存</span></div>
       <ol class="side-list" id="cueList"></ol>
     </div>
     <div class="side-pane" id="sideIssues" hidden>
@@ -285,7 +286,7 @@
         <li><b>字卡／動畫</b>：字卡（藍、紫）、動畫（綠）。時間和版型寫進修改單給 AI 改；灰色斜線＝這裡只有講者，想加畫面可以點它。</li>
         <li><b>素材</b>：螢幕錄影和圖片。拖左右邊緣裁剪、拖中間移動；黃線是原聲音量，上下拖。</li>
         <li><b>主軌畫面</b>：拖頭尾的白色把手直接裁掉片頭片尾；按 B 在播放頭切開，點選切出的那段按 Delete 刪掉。菱形＝剪接點的轉場。變暗標「只有聲音」的地方沒有講者畫面；紅色斜線＝沒有畫面蓋住，要處理。</li>
-        <li><b>字幕</b>：雙擊改字、拖邊緣改時間；空檔夠大（≥ 0.5 秒）才能新增。</li>
+        <li><b>字幕</b>：雙擊改字、拖邊緣改時間；空檔夠大（≥ 0.5 秒）才能新增。上緣有一條主色的是重點字幕（右邊「字幕」分頁每一句的「重點」，或按 H）。</li>
         <li><b>人聲</b>：黃線是音量，上下拖整條；先拖曳選一段範圍，再拖範圍裡的黃線＝只調那一段。</li>
         <li><b>音效</b>：點一下看屬性，上下拖調音量，雙擊或 Delete 靜音。</li>
       </ul>
@@ -304,6 +305,7 @@
         <tr><td><kbd>B</kbd>／<kbd>⌘</kbd>／<kbd>Ctrl</kbd>＋<kbd>B</kbd></td><td>分割：在播放頭切開主軌；選著字幕時＝分割字幕</td></tr>
         <tr><td><kbd>Delete</kbd></td><td>刪除選到的東西（主軌片段／範圍＝剪掉；剪掉的範圍＝恢復；字幕＝刪除；音效＝靜音）</td></tr>
         <tr><td><kbd>Enter</kbd></td><td>編輯選到的字幕</td></tr>
+        <tr><td><kbd>H</kbd></td><td>重點字幕開／關：選到的那一句（沒選就是播放頭所在的那一句）改用主色底的重點樣式</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>取消選取</td></tr>
         <tr><td><kbd>S</kbd></td><td>吸附開／關（拖曳時按住 <kbd>Alt</kbd> 暫時不吸）</td></tr>
         <tr><td><kbd>＋</kbd> <kbd>−</kbd></td><td>時間軸放大／縮小</td></tr>
@@ -363,5 +365,6 @@
 <div id="toasts" class="toasts" aria-live="polite"></div>
 <script type="module" src="/editor/app.js"></script>
 <script type="module" src="/editor/flow.js"></script>
+<script type="module" src="/editor/project-switch.js"></script>
 </body>
 </html>

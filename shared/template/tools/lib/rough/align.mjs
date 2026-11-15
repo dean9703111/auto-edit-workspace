@@ -13,6 +13,7 @@ import { writeAtomic } from '../atomic.mjs';
 import { markStep } from '../progress.mjs';
 import { loadLib } from '../project.mjs';
 import { resolveFormat, canvasOf, CANVAS } from '../canvas.mjs';
+import { parseCaptionMarks, fmtCaptionMarks } from '../caption-style.mjs';
 import { refTime, fmtRef, parseRef, mapPlanTimes } from '../../editor/subtitles.mjs';
 import { r3, posixRel, backupPath, posix } from './util.mjs';
 import { SNAP } from './snap.mjs';
@@ -286,7 +287,7 @@ export function clausesFromSrt(cues) {
   return out;
 }
 
-// plan.json（含 outro.from）與情境動畫 P.at('#N…') 的句號照時間換到新字幕（srt-align 會重新斷句，句數會變）：
+// plan.json（含 outro.from、重點字幕 captionMarks）與情境動畫 P.at('#N…') 的句號照時間換到新字幕（srt-align 會重新斷句，句數會變）：
 //   #N@詞 → 新字幕裡有這個詞、離舊句最近的那一句（詞找不到就退成時間 ⚠）；#Ne → 結尾 ±0.15 秒有新句結尾就 #Me；
 //   其他 → 同一個秒數：±0.3 秒內有新句開頭就綁那一句，否則落在的那一句＋差。
 //   段落有 anchor、from 是句首（#N）時：from 改綁含 anchor 的新句開頭（±3 秒內），整段的其他時間跟著平移；別段寫同一個 "#N" 的（例前一段的 to）也一起換，0 秒相接不會斷。
@@ -345,7 +346,35 @@ export function remapPlanByTime(plan, oldCues, newCues) {
     const v = mapRefStr(out.outro.from, mp, 'outro');
     if (v !== out.outro.from) out = { ...out, outro: { ...out.outro, from: v } };
   }
+  // 038 重點字幕（captionMarks）照時間換到新字幕；格式不對的不動（build 會報 ✖）
+  const pm = parseCaptionMarks(out.captionMarks);
+  if ((pm.marks.length || pm.words.length) && !pm.errors.length) {
+    const next = fmtCaptionMarks(remapMarksByTime(pm.marks, oldCues, newCues), remapWordsByTime(pm.words, oldCues, newCues));
+    if (JSON.stringify(next) !== JSON.stringify(out.captionMarks)) {
+      if (next.length) out = { ...out, captionMarks: next };
+      else { const { captionMarks, ...rest } = out; out = rest; }
+    }
+  }
   return { plan: out, notes: mp.notes, mapper: mp };
+}
+// 重點字幕的句號照時間換：新的一則有一半以上落在舊的重點字幕裡，或舊的重點字幕有一半以上落在新的這一則裡，就是重點
+// （一則拆成兩則：兩則都是；兩則併成一則：併完也是；只是起迄微調：照舊）。舊句號不在舊字幕裡的拿掉
+export function remapMarksByTime(marks, oldCues, newCues) {
+  const old = marks.map((n) => oldCues.find((c) => c.n === n)).filter(Boolean);
+  const hit = (c) => old.some((o) => { const ov = Math.min(c.end, o.end) - Math.max(c.start, o.start); return ov > 1e-6 && (ov >= (c.end - c.start) / 2 || ov >= (o.end - o.start) / 2); });
+  return newCues.filter(hit).map((c) => c.n);
+}
+// 047 只標幾個字（{ n, word }）照時間換到新字幕：舊的那一則前後 2 秒內、文字裡有那幾個字的新字幕，挑離舊的那一則最近的；找不到就拿掉
+export function remapWordsByTime(words, oldCues, newCues) {
+  const out = [];
+  for (const w of words || []) {
+    const o = oldCues.find((c) => c.n === w.n);
+    if (!o) continue;
+    const mid = (o.start + o.end) / 2, d = (c) => Math.abs((c.start + c.end) / 2 - mid);
+    const c = newCues.filter((x) => String(x.text ?? '').includes(w.word) && x.start < o.end + 2 && x.end > o.start - 2).sort((x, y) => d(x) - d(y))[0];
+    if (c && !out.some((x) => x.n === c.n && x.word === w.word)) out.push({ n: c.n, word: w.word });
+  }
+  return out.sort((a, b) => a.n - b.n);
 }
 const hasRefs = (planText) => /"#\d+/.test(planText);
 const fmtS = clock2;

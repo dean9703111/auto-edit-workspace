@@ -208,7 +208,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 
 ### 3.2 第一層欄位
 
-`theme`、`style`、`format`、`speakerSide`、`chapterBadge`、`chapterMap`、`look`、`bed`、`outro`、`captionStyle` 這幾個設定用 `node shared/template/tools/build.mjs --project projects/<專案> --set "<鍵>=<值>"` 改（好幾個用 `;` 隔開，例 `--set "theme=dark;look.slim=0.6"`；拿掉用 `--unset "<鍵>"`；能寫的鍵和值看 `build.mjs --help`），不手改 plan.json。
+`theme`、`style`、`format`、`speakerSide`、`chapterBadge`、`chapterMap`、`look`、`bed`、`outro`、`captionStyle`、`captionMarks` 這幾個設定用 `node shared/template/tools/build.mjs --project projects/<專案> --set "<鍵>=<值>"` 改（好幾個用 `;` 隔開，例 `--set "theme=dark;look.slim=0.6"`；拿掉用 `--unset "<鍵>"`；能寫的鍵和值看 `build.mjs --help`），不手改 plan.json。
 
 | 欄位 | 必填 | 值 | 說明 |
 |---|---|---|---|
@@ -229,6 +229,7 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `sections` | | 陣列 | 小節角標：`[{ "at": "#N", "name": "STEP 1｜設定資料夾" }]`（講稿 `###` 小節的第一句、小節名 ≤ 12 字）。有寫時右上角角標改成「章號＋目前小節」（寬度跟著小節名），子母畫面、全幕、錄影段也露出（橫式錄影段：旁邊有空位就放空位，沒有就貼錄影畫面右上角；錄影的 `steps` 和小節名重複時不畫、⚠ 請刪掉；說明卡、箭頭自動避開，紅框被蓋到 ⚠）。講稿有 `###` 而沒寫時 `--check` 會 ⚠ 並印出可以直接貼的整行 |
 | `theme` | | `"light"`（預設，不寫）或 `"dark"` | 主題：暗色時 build 換 `bg-*-dark.jpg`、所有合成 `<html data-theme="dark">`；只換顏色 token，版面與動態不變。剪輯台可以切；AI 只在使用者明說「暗色」時寫（`auto-edit-style` 步驟 6） |
 | `captionStyle` | | 物件 | 這一集的字幕樣式 `{ "look": "outline", "font": "wenkai", "size": 84, "weight": 700, "lift": 120 }`（只寫要改的，沒寫的照預設；`lift`＝往上移幾 px，橫式 0–400、直式 −350–350）。以後每集的預設在 `shared/setting.json`（`brand.mjs captions` 設定，位置橫式、直式分開記）；都沒有＝深底白字、思源黑體 76 px、原位。值的範圍看 `style.md`「字幕樣式可以換」。剪輯台「整支 → 字幕」可以調（字幕在預覽畫面上直接拖上下）；AI 只在使用者說「這集字幕…」時用 `--set "captionStyle.look=outline"`、`--set "captionStyle.lift=120"` 改（`auto-edit-style` 步驟 10） |
+| `captionMarks` | 直式建議 | 字幕句號的陣列 | 重點字幕：`["#6", "#7", "#13"]` 這幾則字幕改用重點樣式（主色底、粗體；位置、大小照一般字幕），其他照原樣。只有幾個字是重點就寫 `"#N@詞"`（例 `"#7@關鍵詞"`：第 7 則裡只有這幾個字換成主色塊；照抄字幕原文，字幕裡找不到 ⚠ 並略過；同一則又寫 `"#N"` 時整則為準）。直式每支標 3–6 則、連續最多 2 則，挑哪幾句看 `style.md`「重點字幕」；橫式使用者要才標。用 `--set "captionMarks=#6,#7@關鍵詞,#13"` 寫（整份換掉；全部拿掉 `--unset captionMarks`），整則的剪輯台「字幕」分頁也可以點。格式不對 ✖；句號不在字幕裡 ⚠ 並略過；直式一則都沒標、超過 6 則、連續超過 2 則 ⚠。報告印「重點字幕：N 則（#6、#7…）；只標幾個字 M 則（#7「關鍵詞」…）」 |
 | `style` | | 風格包名稱，例 `"藍圖"` | 這一集用 `shared/template/styles/<名稱>/` 的主色、子母畫面外框、背景圖（亮暗都看包裡的；包裡沒有的檔用 `shared/template/` 目前的）。不寫＝工作區目前的。名稱照 `brand.mjs list`；AI 只在使用者說「這集用 XX 風格」時寫（`auto-edit-style` 步驟 7） |
 | `edit` | | 物件 | 剪輯台寫的設定（裁剪、淡入淡出、音量、轉場），AI 不主動寫（第 6 節） |
 | `moods` | 建議 | 陣列 | 情緒點（style.md「音效」）：`[{ "at": "#12@千萬不要", "kind": "pain" }]`。`kind` 只能是 `quote`（金句）、`turn`（反轉）、`pain`（痛點）、`win`（解法）、`land`（落定），各配一顆音效、峰值對齊 `@詞` 的開口；`"sfx": null`＝不出聲、`"sfx": "ding"`＝換一顆；`"zoom": true`＝講者畫面同時爆衝推近（每分鐘最多 1 次）。分章草稿寫、`--merge-drafts` 收進來；停點 ③ 分鏡表「情緒點」勾選表改 |
@@ -518,7 +519,7 @@ m01｜media 操作示範.mp4｜1:01.30–1:14.10｜12.8s｜—｜—（rough 1:0
 | `hold` | — | 定格：整段停在錄影第幾秒那一格（build 抽成一張圖；`in`／`out`／`speed`／`volume` 不用寫）；標註、放大鏡、運鏡照常 |
 | `retime` | — | 同一段裡變速、定格：`[{ "at": "#21", "src": 19 }, …]`，講到 `at` 時錄影在第 `src` 秒，兩點之間速度 build 算（下限 ×0.25、上限 ×16，5 秒內的跳過等待可到 ×600）；`src` 一樣＝定格。第一點之前、最後一點之後是正常速度。運鏡、紅框跨整段；不保留原聲；和 `in`／`out`／`speed`／`hold` 擇一 |
 | `redact` | — | 打碼：`[{ "box": [x, y, w, h], "at": "#21", "until": "#22e" }]`，框裡的東西模糊後燒進影片（放大鏡也看不到原文）；`at`、`until` 不寫＝整段。框要蓋住那段時間它會出現的所有位置，build 完在拼圖看一次 |
-| `fit` | `"contain"` | `contain`＝整張看得到，放在字幕帶上方（y 0–940），空白處是黑底；`cover`＝鋪滿 1920×1080，多的裁掉 |
+| `fit` | `"contain"` | `contain`＝整張看得到，放在字幕帶上方（y 0–940），空白處是黑底；`cover`＝鋪滿 1920×1080，多的裁掉（圖片上下多出來的裁在下面：上緣對齊，網頁截圖的頁首看得到；錄影照舊上下各裁一半） |
 | `pip` | `true` | 右下角子母畫面露臉（橫式會自動移進素材右下角，不用寫座標）；只有聲音的區間自動不放。`false`＝整段不露臉 |
 | `volume` | `null` | `null`＝素材靜音；寫 dB 數字（−60～+12）＝保留素材原聲 |
 | `enter`／`exit` | `"fade"` | `"cut"`、`"fade"`、`"slide"`（從右滑入、往左滑出）、`"zoom"`、`"whip"`（甩鏡：0.3 秒從右甩進、往左甩出，有動態模糊）；只能寫在 `enter`：`"tilt"`（斜躺擺平：面板從透視斜躺 0.65 秒擺平，錄影、圖片都可以，要 `fit` `"contain"`）、`"tape"`（紙膠帶貼上：只給圖片）。挑哪一種照 `shared/style.md`「螢幕錄影與圖片」 |

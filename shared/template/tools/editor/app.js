@@ -4,13 +4,13 @@ import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
   fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss,
 } from './model.mjs';
-import { applyCueOp, remapPlan, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
+import { applyCueOp, remapPlan, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
 import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef, toggleEmph } from './text.mjs';
 import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
 import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate, freezeAt, joinAt, isPlain, trimModel } from './speed.mjs';
 import { transitionOf, speedSummary } from './motion.mjs';
 import { SimPreview, PlayerPreview } from './preview.js';
-import { CAP_LOOKS, CAP_FONTS, CAP_WEIGHTS, CAP_SIZE, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, captionGeom, captionRootVars, captionFontFace, describeCaptionStyle, CAP_VARS, CAP_LIFT, clampLift, describeLift } from '/lib/caption-style.mjs';
+import { CAP_LOOKS, CAP_FONTS, CAP_WEIGHTS, CAP_SIZE, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, captionGeom, captionRootVars, captionFontFace, describeCaptionStyle, CAP_VARS, CAP_LIFT, clampLift, describeLift, parseCaptionMarks, fmtCaptionMarks } from '/lib/caption-style.mjs';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -28,9 +28,8 @@ const SEG_KEYS = { common: ['sfxVolume', 'sfx'], media: ['enter', 'exit', 'volum
 // 初剪預覽：plan.json 在了、還沒排段落。可以看字幕、改字；卡片和動畫要等分鏡
 const roughStage = () => !!app.server?.plan?.exists && !app.server.plan.error && !app.scenes.some(isObj);
 const SPEED_KEYS = ['in', 'out', 'speed', 'hold', 'retime'];   // 畫面速度的欄位：拿掉要明講（寫 null）
-const COACH_KEY = 'auto-edit-editor.coach.v2';
-const COACH_FINAL_KEY = 'auto-edit-editor.coach-final.v1';
-const COACH_ROUGH_KEY = 'auto-edit-editor.coach-rough.v1';
+// 提示卡：元素 id → 代號（記在 shared/setting.json 的 editor.seen；localStorage 的鍵是 auto-edit-editor.<代號>）。改了內容、想讓看過的人再看一次就換版號
+const HINTS = { coach: 'coach.v2', coachFinal: 'coach-final.v1', coachRough: 'coach-rough.v1' };
 const AUTOSAVE_MS = 1000;   // 停手多久就自動存
 const CHECK_MS = 4000;      // 存檔後多久跑檢查（長片一次要 9 秒，連續改的時候不要一直跑）
 
@@ -41,7 +40,7 @@ const app = {
   edit: defaultEdit(), savedEdit: defaultEdit(), base: null, sfxMemory: {}, canStash: false,
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
   report: null, reportReady: false, auditIssues: null, hiddenChecks: new Set(), requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
-  voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cap: null, savedCap: null, capDefault: true, cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
+  voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cap: null, savedCap: null, capDefault: true, marks: [], savedMarks: [], cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
   side: 'insp', t: 0, mode: 'sim', stopAt: null, outDur: 0, ver: 0, drawRequested: true, rate: 0, loud: null,
@@ -86,6 +85,17 @@ const storage = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* 私密視窗等：不記也沒關係 */ } },
 };
+// 提示卡只跳第一次（044）：關掉過的記在這台機器的 shared/setting.json（/api/hints），每支影片、每個 port 的剪輯台讀同一份。
+// 服務讀不到、寫不進去（還沒重開的舊服務、設定檔壞了）才退回這個瀏覽器自己記（localStorage，只管這個 port）；兩邊有一邊記了就不再跳
+let hintsSeen = new Set();
+const hintsReady = api('GET', '/api/hints').then((r) => { if (Array.isArray(r.data?.seen)) hintsSeen = new Set(r.data.seen); });
+const hintSeen = (el) => hintsSeen.has(HINTS[el]) || !!storage.get(`auto-edit-editor.${HINTS[el]}`);
+async function closeHint(el) {
+  $(`#${el}`).hidden = true;
+  hintsSeen.add(HINTS[el]);
+  const r = await api('POST', '/api/hints', { seen: HINTS[el] }, { keepalive: true });
+  if (!(r.ok && r.data?.ok)) storage.set(`auto-edit-editor.${HINTS[el]}`, '1');
+}
 const sceneById = (id) => app.scenes.find((s) => isObj(s) && s.id === id) || null;
 // 一段在講什麼：時間軸、段落清單、現在這段都用這一句，不用檔名
 const segTitle = (sc) => String(sc?.story?.say || sc?.story?.idea || '').trim();
@@ -153,8 +163,8 @@ app.snapCandidates = () => {
 // ---------- 快照、復原 ----------
 const editableScenes = () => app.scenes;
 // 快照記著它是對哪一版檔案算的（base）：自動存檔之後檔案已經往前走，復原時要先把檔案換回那一版
-const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap });
-const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap });
+const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks });
+const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks });
 const isDirty = () => app.savedSnap !== '' && dirtySnap() !== app.savedSnap;
 
 function normalize() {
@@ -194,7 +204,7 @@ app.gestureEnd = (commit = true) => {
 function restore(s) {
   const o = JSON.parse(s);
   app.edit = normEdit(o.edit);
-  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap;
+  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap; app.marks = o.marks ?? app.savedMarks;
   app.lastCoalesce = null;
   if (app.selection?.kind === 'cue' && !app.cues.some((c) => c.n === app.selection.id)) app.selection = null;
   changed({ inspector: true });
@@ -431,6 +441,7 @@ function doSrtOp(op, { quiet = false } = {}) {
     const after = remapPlan(before, op, app.cues);
     const fx = fixAnchors(before, after, app.cues, r.cues);
     app.scenes = fx.plan.scenes;
+    app.marks = remapMarks(app.marks, op, app.cues);   // 038 重點字幕跟著句號走（分割兩半都是、合併任一句是就是、刪除拿掉）
     app.cues = r.cues;
     pushSrtOp({ ...op });
     if (fx.changed.length && !quiet) toast(`${fx.changed.join('、')} 的出現時間已跟著字幕調整`, 'ok', 3500);
@@ -782,6 +793,8 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   app.cap = clone(app.savedCap);
   app.scenes = clone(Array.isArray(app.plan0.scenes) ? app.plan0.scenes : []);
   app.cues = clone(app.cues0);
+  app.savedMarks = normMarks(app.plan0.captionMarks, app.cues0);
+  app.marks = clone(app.savedMarks);
   app.srtOps = [];
   app.savedSnap = dirtySnap();
   if (kept) applyKept(kept);
@@ -835,10 +848,17 @@ function applyKept(kept) {
   if ('look' in kept) app.look = kept.look;
   if ('theme' in kept) app.theme = kept.theme;
   if ('cap' in kept) app.cap = kept.cap;
+  let opsOk = !kept.ops?.length;
   if (kept.ops?.length && kept.srtHash === app.base.srtHash) {
-    const rr = replay(app.cues0, { scenes: app.scenes }, kept.ops, { videoDur: app.dur });
-    if (!rr.errors.length) { app.cues = rr.cues; app.scenes = rr.plan.scenes; app.srtOps = kept.ops; } else toast(`字幕的修改套不上最新的檔案，已放棄：${rr.errors[0]}`, 'warn', 6000);
+    // 重點字幕（038）一起重播：檔案裡的標記照這幾步字幕操作換句號
+    const rr = replay(app.cues0, { scenes: app.scenes, captionMarks: fmtCaptionMarks(app.marks) }, kept.ops, { videoDur: app.dur });
+    if (!rr.errors.length) { app.cues = rr.cues; app.scenes = rr.plan.scenes; app.marks = normMarks(rr.plan.captionMarks, rr.cues); app.srtOps = kept.ops; opsOk = true; } else toast(`字幕的修改套不上最新的檔案，已放棄：${rr.errors[0]}`, 'warn', 6000);
   } else if (kept.ops?.length) toast('字幕檔被改過，那次沒存的字幕修改套不回去（要重做）', 'warn', 6000);
+  // 使用者標的重點字幕（句號是字幕操作做完之後的）：字幕檔被改過、或字幕操作套不回去時，句號對不上，跟著放棄
+  if (Array.isArray(kept.marks)) {
+    if (opsOk && kept.srtHash === app.base.srtHash) app.marks = kept.marks.filter((n) => app.cues.some((c) => c.n === n));
+    else if (!kept.ops?.length) toast('字幕檔被改過，還沒存的重點字幕標記套不回去（要重標）', 'warn', 6000);   // 有字幕操作時上面已經提示過
+  }
   for (const [id, patch] of Object.entries(kept.segs || {})) {
     const i = app.scenes.findIndex((x) => isObj(x) && x.id === id);
     if (i < 0 || !isObj(patch)) continue;
@@ -1187,19 +1207,21 @@ function applySaved(d, { keepLocal = false, sentOps = 0, fallbackEdit = null } =
   app.savedLook = normLook(app.plan0.look);
   app.savedTheme = normTheme(app.plan0.theme);
   app.savedCap = normCap(app.plan0.captionStyle);
+  app.savedMarks = normMarks(app.plan0.captionMarks, app.cues0);
   if (d.look) app.server.look = d.look;
   if (d.captionStyle) app.server.captionStyle = d.captionStyle;
   if (keepLocal) {
     app.srtOps = app.srtOps.slice(sentOps);
     // 正在拖的快照也要換基準：沒拖動就放開會還原成快照，不能把已經存好的字幕操作再送一次
     if (app.gesture) { const g = JSON.parse(app.gesture); g.ops = g.ops.slice(sentOps); g.base = app.base; app.gesture = JSON.stringify(g); }
-    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap });
+    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap, marks: app.savedMarks });
     return;
   }
   app.edit = clone(app.savedEdit);
   app.look = clone(app.savedLook);
   app.theme = app.savedTheme;
   app.cap = clone(app.savedCap);
+  app.marks = clone(app.savedMarks);
   app.scenes = clone(app.plan0.scenes || []);
   app.cues = clone(app.cues0);
   app.srtOps = [];
@@ -1228,6 +1250,8 @@ async function saveOnce({ notify, retry = 0 }) {
   if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}) } : null;   // 美顏 0＝關，不寫
   if (app.theme !== app.savedTheme) body.theme = app.theme;
   if (!same(app.cap, app.savedCap)) body.captionStyle = app.cap;
+  // 重點字幕整份送（句號是字幕操作做完之後的）。同時有字幕操作時一定送：頁面上的句號已經換過，光和存檔時的清單比數字會比錯
+  if (!same(app.marks, app.savedMarks) || (app.srtOps.length && (app.marks.length || app.savedMarks.length))) body.captionMarks = fmtCaptionMarks(app.marks);
   const sentSnap = dirtySnap(), sentOps = app.srtOps.length;
   app.busy = true;
   app.inFlight = true;
@@ -1390,7 +1414,8 @@ function keepState() {
   return { edit, segs: raw, ops: clone(app.srtOps), srtHash: app.base?.srtHash ?? null,
     ...(!same(app.look, app.savedLook) ? { look: clone(app.look) } : {}),
     ...(app.theme !== app.savedTheme ? { theme: app.theme } : {}),
-    ...(!same(app.cap, app.savedCap) ? { cap: clone(app.cap) } : {}) };
+    ...(!same(app.cap, app.savedCap) ? { cap: clone(app.cap) } : {}),
+    ...(!same(app.marks, app.savedMarks) || (app.srtOps.length && (app.marks.length || app.savedMarks.length)) ? { marks: clone(app.marks) } : {}) };
 }
 const keepIfDirty = () => (isDirty() ? keepState() : null);
 
@@ -1717,7 +1742,7 @@ const capFmt = () => (app.canvas().format === 'portrait' ? 'portrait' : 'landsca
 const capFmtZh = () => (capFmt() === 'portrait' ? '直式' : '橫式');
 function capEff() { return resolveCaptionStyle({ plan: { captionStyle: app.cap ?? undefined }, settings: { captions: capSetting() }, format: capFmt() }).style; }
 // 快速預覽（#simCapLayer）與完成影片預覽（preview.js 的 applyCaption）共用：root 的 data-cap、--cap-* 變數、字體的 @font-face
-app.capPreview = () => { const st = capEff(); const c = app.canvas(); return { style: st, root: captionRootVars(st, c), face: captionFontFace(st, '/kit/fonts/'), geom: captionGeom(st, c) }; };
+app.capPreview = () => { const st = capEff(); const c = app.canvas(); return { style: st, root: captionRootVars(st, c), face: captionFontFace(st, '/kit/fonts/', { bold: app.marks.length > 0 }), geom: captionGeom(st, c) }; };
 function applyCapPreview() {
   const L = $('#simCapLayer');
   if (!L) return;
@@ -1790,6 +1815,34 @@ function capDragEnd(commit) {
   $('#capDrag').classList.remove('dragging');
   app.gestureEnd(commit);
   if (commit && capEff().lift !== d.lift) pushCapDefault();
+}
+
+// ---------- 重點字幕（038；plan.json 第一層 "captionMarks"：["#6", "#7"]；kit/captions.css 的 .cg--em）----------
+// 指定的幾則字幕用重點樣式（主色底、粗體），其他照整支的字幕樣式。app.marks＝句號（數字、由小到大）；增刪字幕時跟著句號走（subtitles.mjs remapMarks）。
+// 在哪裡切換：「字幕」分頁每一句右邊的「重點」、選到字幕時屬性面板的「重點字幕」、鍵盤 H（選到的那一句；沒選就是播放頭所在的那一句）。
+// 快速試聽、完成影片預覽馬上換（preview.js）；按「更新預覽」才做進去
+const normMarks = (v, cues) => { const have = new Set((cues || []).map((c) => c.n)); return parseCaptionMarks(v).marks.filter((n) => have.has(n)); };
+app.isMark = (n) => app.marks.includes(n);
+app.markKey = () => `${app.marks.join(',')}|${app.cues.length}`;
+function toggleMark(n = (selectedCue() || app.captionAt(app.t))?.n) {
+  if (!app.cues.some((c) => c.n === n)) { toast('先點一句字幕（或把播放頭移到那一句），再按「重點」', 'warn', 3500); return false; }
+  const on = !app.isMark(n);
+  if (!mutate(() => { app.marks = on ? [...app.marks, n].sort((a, b) => a - b) : app.marks.filter((x) => x !== n); }, { inspector: true })) return false;
+  syncMarkRows();
+  toast(on ? `第 ${n} 句標成重點字幕（共 ${app.marks.length} 則）` : `第 ${n} 句取消重點（剩 ${app.marks.length} 則）`, 'ok', 1800);
+  return true;
+}
+// 字幕分頁正在改字時整份不重畫（游標會跑掉）：每一句的開關和上面的「重點 N 則」直接在原地換
+let marksOnly = false;   // 字幕分頁只看重點字幕
+function syncMarkRows() {
+  for (const row of $$('#cueList [data-cue]')) {
+    const on = app.isMark(Number(row.dataset.cue));
+    row.classList.toggle('em', on);
+    row.querySelector('[data-mark]')?.setAttribute('aria-pressed', String(on));
+  }
+  const b = $('#cueMarksOnly');
+  b.textContent = `重點 ${app.marks.length} 則`;
+  b.setAttribute('aria-pressed', String(marksOnly));
 }
 
 // ---------- 主題（亮／暗；plan.json 第一層 "theme"，specs/010-motion-v2/design-system.md §10）----------
@@ -1931,9 +1984,10 @@ function inspWhole() {
     <p class="ip-note">點主軌上緣的菱形可以單獨設定：空心＝無、白＝過黑、黃＝放大。</p>`)}
   ${foldSec('cuts', `剪掉的範圍：${e.cuts.length ? `${e.cuts.length} 段，共 ${fmtSec(cutTotal(e.cuts))}` : '沒有'}`, `
     <ol class="cut-list">${e.cuts.length ? e.cuts.map(([a, b], i) => `<li data-i="${i}"><span class="rng" data-act="gocut" data-i="${i}">${fmt(a, 1)} – ${fmt(b, 1)}</span><span class="dim">${fmtSec(b - a)}</span><button class="small ghost" data-act="restore" data-i="${i}">恢復</button></li>`).join('') : '<li class="empty">還沒有剪掉任何範圍</li>'}</ol>`)}
-  ${foldSec('caps', `字幕：${app.cues.length} 句${longCaps ? `，${longCaps} 句太長` : ''}｜${describeCaptionStyle(capEff())}`, `
+  ${foldSec('caps', `字幕：${app.cues.length} 句${longCaps ? `，${longCaps} 句太長` : ''}｜${describeCaptionStyle(capEff())}${app.marks.length ? `｜重點 ${app.marks.length} 則` : ''}`, `
     <div class="ip-row"><span class="k">句數</span><span class="v">${app.cues.length} 句${longCaps ? `，<span class="warn-ink">${longCaps} 句超過 ${capMax()} 字</span>` : ''}</span></div>
-    <div class="ip-btns"><button class="small" data-act="find">尋找與取代</button></div>
+    <div class="ip-row"><span class="k">重點字幕</span><span class="v">${app.marks.length ? `${app.marks.length} 則（${app.marks.slice(0, 8).map((n) => `#${n}`).join('、')}${app.marks.length > 8 ? '…' : ''}）` : '還沒標'}</span></div>
+    <div class="ip-btns"><button class="small" data-act="find">尋找與取代</button><button class="small" data-act="marksShow" data-tip="到「字幕」分頁：點每一句右邊的「重點」，那一則改用主色底的重點樣式">${app.marks.length ? '看重點字幕' : '標重點字幕'}</button></div>
     ${inspCapStyle()}`)}`;
 }
 function inspCue(c) {
@@ -1954,6 +2008,7 @@ function inspCue(c) {
       ${btn('capSplit', '✂ 分割（B）', sp)}${btn('capMerge', '與下一句合併', mg)}<button class="small danger" data-act="capDel">刪除</button>
     </div>
     <div class="ip-btns">${btn('capInsBefore', '＋ 前面新增', insB)}${btn('capInsAfter', '＋ 後面新增', insA)}<button class="small ghost" data-act="capPlay">▶ 播這句</button></div>
+    <div class="ip-btns"><button class="small toggle" data-act="capMark" aria-pressed="${app.isMark(c.n)}" data-tip="這一則改用主色底的重點樣式，其他字幕不變；再按一次取消。分割後兩半都是重點，合併後也是">重點字幕（H）</button><span class="dim">${app.isMark(c.n) ? '這一則用重點樣式' : `整支 ${app.marks.length} 則重點`}</span></div>
   </section>
   <section class="ip-sec"><h3>綁在這句的時間</h3>
     ${refs.length ? `<ul class="ref-list">${refs.map((r) => `<li>· <b>${esc(r.id)}</b>　${esc(r.ref)}</li>`).join('')}</ul><p class="ip-note">分割、合併、刪除時，這些句號會自動跟著改。</p>` : '<p class="ip-note">沒有字卡、動畫或素材綁在這句。</p>'}
@@ -2431,6 +2486,8 @@ function onInspClick(e) {
     case 'capInsAfter': return insertCue('after');
     case 'capInsBefore': return insertCue('before');
     case 'capPlay': { const c = selectedCue(); if (c) playFrom(c.start, c.end); return; }
+    case 'capMark': return toggleMark();
+    case 'marksShow': marksOnly = app.marks.length > 0; return setSide('cues');
     case 'playItem': if (it) playFrom(it.start, it.end); return;
     case 'seekAt': { const t = Number(b.dataset.t); app.seek(t); timeline.ensureVisible(t, false); if (app.server?.preview?.built && app.mode !== 'player' && app.server.preview.player?.available) setMode('player', { focus: t }); return; }
     case 'playerItem': if (it) setMode('player', { focus: it.start + 0.3 }); return;
@@ -2552,7 +2609,7 @@ app.tlTip = (h) => {
     case 'cut': { const [a, b] = app.edit.cuts[h.cutIndex]; return `剪掉 ${fmt(a, 1)} – ${fmt(b, 1)}（${fmtSec(b - a)}）\n點選後按 Delete 恢復`; }
     case 'join': { const j = joinFor(app.edit, h.point); return `剪接點 ${fmt(h.point.at, 1)}（${KIND_ZH[h.point.kind]}）\n轉場：${(JOIN_TYPES.find(([v]) => v === (j?.type || 'none')) || [])[1]}　點一下更改`; }
     case 'piece': return `主軌片段 ${fmt(h.piece.a, 1)} – ${fmt(h.piece.b, 1)}\n點選後按 Delete 剪掉；拖曳選範圍${app.voiceOnly.some(([a, b]) => h.t >= a && h.t <= b) ? '\n這裡只有聲音（沒有講者畫面）' : ''}`;
-    case 'cue': return `第 ${h.cue.n} 句　${h.cue.text}\n${fmt(h.cue.start, 1)} – ${fmt(h.cue.end, 1)}　${visibleLen(h.cue.text)} 字\n雙擊直接改字`;
+    case 'cue': return `第 ${h.cue.n} 句　${h.cue.text}\n${fmt(h.cue.start, 1)} – ${fmt(h.cue.end, 1)}　${visibleLen(h.cue.text)} 字${app.isMark(h.cue.n) ? '　重點字幕' : ''}\n雙擊直接改字`;
     case 'capEdge': return `拖曳調整第 ${h.cue.n} 句的${h.edge ? '結束' : '開始'}時間${lk}`;
     case 'gap': return `空檔 ${fmtSec(h.gap.hi - h.gap.lo)}：雙擊新增一句字幕`;
     case 'gainVol': return `這段人聲 ${fmtDb(app.edit.gains[h.gain].db)}：上下拖${lk}`;
@@ -2968,9 +3025,7 @@ $('#replText').addEventListener('input', renderFind);
 $('#findAll').addEventListener('click', replaceAll);
 $('#findClose').addEventListener('click', () => $('#dlgFind').close());
 $('#findList').addEventListener('click', (e) => { const li = e.target.closest('li[data-n]'); if (!li) return; const c = app.cues.find((q) => q.n === Number(li.dataset.n)); if (c) { app.seek(c.start); timeline.reveal(c.start, c.end); app.select({ kind: 'cue', id: c.n }, { lane: 'cap' }); } });
-$('#coachClose').addEventListener('click', () => { $('#coach').hidden = true; storage.set(COACH_KEY, '1'); });
-$('#coachFinalClose').addEventListener('click', () => { $('#coachFinal').hidden = true; storage.set(COACH_FINAL_KEY, '1'); });
-$('#coachRoughClose').addEventListener('click', () => { $('#coachRough').hidden = true; storage.set(COACH_ROUGH_KEY, '1'); });
+for (const el of Object.keys(HINTS)) $(`#${el}Close`).addEventListener('click', () => closeHint(el));
 // 屬性面板
 $('#inspBody').addEventListener('input', onInspInput);
 // 重點（**詞**）：最後一個有焦點的可強調輸入框；按鈕按下去不搶焦點，選取範圍才留得住
@@ -3388,6 +3443,38 @@ function fitLayout() {
   });
 }
 
+// ---------- 右側面板的寬度（048）：預覽和面板中間那條線左右拖；記在這個瀏覽器，沒拖過＝樣式表的預設（372px，窄螢幕 300px） ----------
+const INSP_KEY = 'auto-edit-editor.insp-w';
+const INSP_W = { min: 280, max: 720, keep: 480, step: 16 };   // keep＝預覽至少留多寬
+{
+  const ws = $('#workspace'), grip = $('#inspResize'), insp = $('#inspector');
+  const limit = () => Math.max(INSP_W.min, Math.min(INSP_W.max, window.innerWidth - INSP_W.keep));
+  const apply = (w) => { if (w > 0) ws.style.setProperty('--insp-w', `${Math.round(clamp(w, INSP_W.min, limit()))}px`); else ws.style.removeProperty('--insp-w'); };
+  const now = () => Math.round(insp.getBoundingClientRect().width);
+  const save = () => storage.set(INSP_KEY, ws.style.getPropertyValue('--insp-w') ? String(now()) : '');
+  apply(Number(storage.get(INSP_KEY)) || 0);
+  grip.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    grip.setPointerCapture(e.pointerId);
+    grip.classList.add('drag');
+    const x0 = e.clientX, w0 = now();
+    const mv = (ev) => apply(Math.max(INSP_W.min, w0 + (x0 - ev.clientX)));
+    const up = () => { grip.removeEventListener('pointermove', mv); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up); grip.classList.remove('drag'); save(); };
+    grip.addEventListener('pointermove', mv);
+    grip.addEventListener('pointerup', up);
+    grip.addEventListener('pointercancel', up);
+  });
+  grip.addEventListener('dblclick', () => { apply(0); save(); });
+  grip.addEventListener('keydown', (e) => {
+    const d = { ArrowLeft: INSP_W.step, ArrowRight: -INSP_W.step }[e.key];
+    if (!d) return;
+    e.preventDefault(); e.stopPropagation();
+    apply(Math.max(INSP_W.min, now() + d)); save();
+  });
+  // 視窗變窄：拖寬過的面板跟著縮，預覽不會被擠到看不見
+  window.addEventListener('resize', () => { if (ws.style.getPropertyValue('--insp-w')) apply(Number(storage.get(INSP_KEY)) || now()); });
+}
+
 // ---------- 右側面板：屬性、段落、字幕、修改單同一欄切換 ----------
 let sideTimer = null;
 function setSide(name, { open = true } = {}) {
@@ -3435,17 +3522,18 @@ let cueEditing = null;   // 字幕分頁正在改哪一句（點那句才進去�
 function renderCueList() {
   const raw = $('#cueSearch').value.trim(), q = raw.toLowerCase(), n = /^#?(\d+)$/.exec(raw)?.[1];
   const sel = app.selection?.kind === 'cue' ? app.selection.id : null;
-  const list = app.cues.filter((c) => !q || (n ? c.n === Number(n) : c.text.toLowerCase().includes(q)));
+  const list = app.cues.filter((c) => (!marksOnly || app.isMark(c.n)) && (!q || (n ? c.n === Number(n) : c.text.toLowerCase().includes(q))));
   const max = capMax();
-  // 正在這一頁改字：不重畫，不然游標會跑掉
-  if (document.activeElement?.classList.contains('cue-edit')) return;
-  // 正在改的那一句：字原地換成輸入框（不多一行）；離開就換回字
+  // 正在這一頁改字：不重畫，不然游標會跑掉（重點字幕的開關原地換）
+  if (document.activeElement?.classList.contains('cue-edit')) { syncMarkRows(); return; }
+  // 正在改的那一句：字原地換成輸入框（不多一行）；離開就換回字。每一句右邊是重點字幕的開關（038；實心＝重點，那一列左邊一條主色）
   $('#cueList').innerHTML = list.map((c) => {
-    const isSel = sel === c.n, over = visibleLen(c.text) > max;
+    const isSel = sel === c.n, over = visibleLen(c.text) > max, em = app.isMark(c.n);
     const text = cueEditing === c.n ? `<input class="cue-edit${over ? ' over' : ''}" value="${esc(c.text)}" data-orig="${esc(c.text)}" aria-label="改第 ${c.n} 句字幕">` : `<span class="x${over ? ' over' : ''}">${esc(c.text)}</span>`;
-    return `<li class="side-row cue${isSel ? ' sel' : ''}" data-cue="${c.n}"><span class="t">${mmssOf(outOf(c.start, app.edit.cuts))}</span>${text}</li>`;
-  }).join('') || '<li class="side-ch">沒有符合的字幕</li>';
-  $('#cueCount').textContent = q ? `找到 ${list.length} 句` : `${list.length} 句`;
+    return `<li class="side-row cue${isSel ? ' sel' : ''}${em ? ' em' : ''}" data-cue="${c.n}"><span class="t">${mmssOf(outOf(c.start, app.edit.cuts))}</span>${text}<button type="button" class="cue-mark" data-mark tabindex="-1" aria-pressed="${em}" aria-label="第 ${c.n} 句重點字幕" data-tip="重點字幕：這一則改用主色底的重點樣式（選到這一句時按 H）">重點</button></li>`;
+  }).join('') || `<li class="side-ch">${marksOnly && !q ? '還沒有重點字幕：按上面的「重點」回到全部，點任何一句右邊的「重點」' : '沒有符合的字幕'}</li>`;
+  $('#cueCount').textContent = q || marksOnly ? `找到 ${list.length} 句` : `${list.length} 句`;
+  syncMarkRows();
   markNowRow(true);
 }
 
@@ -3508,11 +3596,20 @@ $('#segList').addEventListener('click', (e) => {
   if (act === 'final' && it) { setMode('player', { focus: it.start + 0.05 }); return; }
   goToSeg(id);
 });
+$('#cueMarksOnly').addEventListener('click', () => { marksOnly = !marksOnly; renderCueList(); });
+// 重點字幕的開關：按下去不搶焦點（正在改字的那一句照樣可以標，游標留在原地）
+$('#cueList').addEventListener('mousedown', (e) => { if (e.target.closest('[data-mark]')) e.preventDefault(); });
 $('#cueList').addEventListener('click', (e) => {
   const row = e.target.closest('[data-cue]');
   if (!row || e.target.matches('.cue-edit')) return;
   const n = Number(row.dataset.cue), c = app.cues.find((x) => x.n === n);
   if (!c) return;
+  if (e.target.closest('[data-mark]')) {
+    // 沒在播放就跳到那一句，預覽畫面上馬上看得到重點樣式；播放中不打斷
+    if (!engine().playing && cueEditing == null) { app.seek(c.start); timeline.reveal(c.start, c.end); app.select({ kind: 'cue', id: n }, { lane: 'cap' }); }
+    toggleMark(n);
+    return;
+  }
   app.seek(c.start); timeline.reveal(c.start, c.end);
   app.select({ kind: 'cue', id: n }, { lane: 'cap' });
   cueEditing = n;
@@ -3602,6 +3699,7 @@ document.addEventListener('keydown', (e) => {
     case ']': neighborSeg(1); break;
     case 'f': $('#btnFull').click(); break;
     case 'Enter': if (selectedCue()) { e.preventDefault(); openCapEditor(selectedCue().n); } break;
+    case 'h': toggleMark(); break;   // 038 重點字幕：選到的那一句（沒選就是播放頭所在的那一句）
     case 'Delete': case 'Backspace': e.preventDefault(); deleteSelection(); break;
     case 'Escape': app.sel = { a: null, b: null }; app.select(null); setTool('select'); break;
     case '+': case '=': timeline.zoomTo(timeline.pps * 1.6); break;
@@ -3635,8 +3733,10 @@ window.addEventListener('beforeunload', (e) => {
   // 有成品就開在完成影片預覽：來這裡多半是要看片。?view=sim 才開快速試聽；還沒做過、沒有播放器時留在快速試聽（?view=final 會講原因）
   const view = new URLSearchParams(location.search).get('view'), pv = app.server?.preview;
   if (view === 'final' || (view !== 'sim' && pv?.built && pv?.player?.available)) await setMode('player');
-  if (roughStage()) { if (!storage.get(COACH_ROUGH_KEY)) $('#coachRough').hidden = false; }
-  else if (app.mode === 'player') { if (!storage.get(COACH_FINAL_KEY)) $('#coachFinal').hidden = false; }
-  else if (!storage.get(COACH_KEY)) $('#coach').hidden = false;
+  // 這一頁的提示卡：字幕預覽、完成影片預覽、剪輯台各一張，看過（關掉過）就不再跳
+  await hintsReady;
+  const hint = roughStage() ? 'coachRough' : app.mode === 'player' ? 'coachFinal' : 'coach';
+  if (!hintSeen(hint)) $(`#${hint}`).hidden = false;
+  app.started = true;   // 實測用：開場做完了（提示卡要不要跳已經決定）
   tryDeepLink();
 })();
