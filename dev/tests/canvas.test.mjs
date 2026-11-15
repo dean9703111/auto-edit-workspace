@@ -40,7 +40,7 @@ test('橫式＝現行常數（接線前後橫式輸出不變的保證）', async
   assert.equal(pw / ph, L.pip.aspect);
   // 032 C7：main.mjs 的子母畫面 CSS 直接讀 pip.box（PB＝C.pip.box），不再自己寫一份數字；產生出來的值由 examples.test 比對
   assert.ok(read('tools/lib/main.mjs').includes('.pip { position: absolute; left: ${PB[0]}px; top: ${PB[1]}px; width: ${PB[2]}px; height: ${PB[3]}px;'), `main.mjs 的 .pip 要讀 pip.box（${px},${py} ${pw}×${ph}）`);
-  assert.deepEqual(Object.values(L.stage), [null, null, null]);
+  assert.deepEqual(Object.values(L.stage), [null, null, null, null]);
   // 具名區域＝kit/scene-motion.js 的 REGIONS（motion.md §1 橫式預設）
   const src = read('kit/scene-motion.js').match(/var REGIONS = (\{[^\n]*\});/);
   assert.ok(src, 'scene-motion.js 找不到 REGIONS');

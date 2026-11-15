@@ -108,7 +108,7 @@
 | `tone` | 選填 | | | `"warn"`（警示紅）或 `"good"`（解方綠），只有 `--list` 標了 tone 的情境能用 |
 | `vars` | | ✓ | | 字卡動態的變數（R3） |
 | `bg` | | 選填 | | `"none"`（預設，透明疊在講者上）、`"dark"`、`"light"`、`"accent"`（不透明整張幕） |
-| `sfx` | 選填 | 選填 | 選填 | `kit/sfx.json` 裡 `kind` 是 `sfx` 的名稱之一（R5.2）或 `null`（不配）。不寫＝用預設（R5）；custom 不寫就不配 |
+| `sfx` | 選填 | 選填 | 選填 | `kit/sfx.json` 裡 `kind` 是 `sfx` 的名稱之一（R5.2）或 `null`（不配）。不寫＝用預設（R5）；custom 不寫就不配。使用者在剪輯台換一顆、靜音也是寫這個欄位，改之前先重新讀 |
 | `clicks` | | | 選填 | 畫面上看得到游標按下的時間 `["+3.2", "#21@安裝"]`，一下一顆 `click`（R5.2）；media 段也能寫 |
 | `sfxExtra` | 選填 | | | `false`＝關掉這段的附加音效（09 答案的 ding、情境動畫的 P.sfx 等）；不寫＝開（fx 沒有附加音效） |
 | `sfxVolume` | 選填 | 選填 | 選填 | 這段音效的音量（dB，−60～+12，0＝預設），主音效與附加音效一起調；疊在 `kit/sfx.json` 與 `edit.volume.sfx` 上。通常是剪輯台寫的（核心 6.3） |
@@ -186,7 +186,7 @@
 | `items[]` | 每一段：`start`／`end` 是 plan.json 寫的起迄；`shownEnd` 只在畫面上實際停留的時間不同時出現（下方字卡換卡、接不透明幕時自動延長或提早收）；整段被 cuts 剪掉的段不列出 |
 | `items[].sfx[]` | 主音效與附加音效：`at` 是音效檔開始播的時間，`volume` 是最終線性音量（0–3.98，已套 `sfx.json`、`sfxVolume`、`edit.volume.sfx`、淡入淡出），`db` 是同一個值換成 dB |
 | `items[]` 的 media 欄位 | `src`、`enter`、`exit`、`volume`（dB 或 `null`）、`kind`（`video`／`image`） |
-| `edit` | 正規化後的 `edit`：cuts 排序合併、`joins` 吸附到剪接點、沒寫的欄位補預設 |
+| `edit` | 正規化後的 `edit`：cuts 排序合併、`joins` 吸附到剪接點、沒寫的欄位補預設；使用者在剪輯台自己加了音效時多一個 `sfx`（照時間排，`at` 是聽到的那一刻；一顆都沒有就沒有這個鍵），這幾顆不在 `items[].sfx[]` 裡 |
 | `paths` | 工作區根目錄底下的相對路徑 |
 
 ### R2.7 圖示（圖示先行）
@@ -411,6 +411,12 @@
 - `"sfxExtra": false`：關掉這段的附加音效（含 `clicks`），主音效不受影響。
 - `"sfxVolume": -6`：這段音效（主音效＋附加音效）的音量，dB；疊在 `kit/sfx.json` 的預設音量與 `edit.volume.sfx` 上（剪輯台會寫）。
 - `"clicks": ["+3.2", "#21@安裝"]`（media、custom 段）：每一項一顆 `click`。時間寫法和紅框 `marks[].at` 一樣：`"+秒數"`＝本段起點後幾秒、`"#N"`／`"#N@詞"`＝綁字幕；只寫畫面上看得到游標按下的地方（錄影用 `media.mjs frame --grid` 確認）。
+
+**使用者自己加的音效**（plan.json 第一層 `edit.sfx`，剪輯台寫的，AI 不寫）
+
+- `"sfx": [{ "at": 33.4, "sound": "ding", "db": -3 }]`：使用者在剪輯台的音效軌按右鍵「在這裡加音效」放的。`at` 是 `rough.mp4` 的秒數（那一刻聽到，起點照下面的公式）、`sound` 是音效名稱、`db` 是這一顆的音量（選填）。
+- 不屬於任何一段：不進 3 秒間隔、每分鐘密度、每集上限的規則，也不算進「音效次數」；`--check` 另外印一行「自己加的音效：N 顆」。吃 `edit.volume.sfx` 和整支的淡入淡出，落在 `edit.cuts` 裡的不出聲。
+- 這台機器沒有那顆音效（例如換了電腦、沒有他的自備音效）時 ✖：請使用者在剪輯台換一顆或移除，不要自己改名稱。
 
 **結尾配樂**（plan.json 第一層）
 
@@ -849,7 +855,7 @@ node shared/template/tools/build.mjs --project projects/<專案>
 | 插入素材與剪輯台效果的樣式 | `shared/template/kit/media.css`、`kit/media.js` | 各 1 個 | build 用到時自動連；紅框、說明卡、聚光燈、STEP、箭頭、放大鏡、dip、淡入淡出 |
 | 換主色工具 | `shared/template/tools/brand.mjs` | 1 支 | 換主色、`bg` 做背景圖（`--tmp`、`--html`、`--image`、`--verify`；R9） |
 | 剪映素材 | `shared/template/tools/capcut.mjs` | 1 支 | 核心 2.7b。舊寫法 `node shared/template/tools/capcut.mjs --project projects/<專案> --background`（開了就回）＋`node shared/template/tools/capcut.mjs status --project projects/<專案> --wait` 還能用（同一個背景工作），文件不再用 |
-| 講者調光＋瘦臉 | `shared/template/tools/look.mjs`、`kit/look.json`、`kit/look/*.cube`、`vendor/mediapipe/` | 1 支＋設定 | 核心第 7 節 |
+| 講者調光＋瘦臉＋美顏＋瘦小腹 | `shared/template/tools/look.mjs`、`kit/look.json`、`kit/look/*.cube`、`vendor/mediapipe/`（臉部與姿勢模型） | 1 支＋設定 | 核心第 7 節 |
 | 分鏡素材 | `shared/template/tools/build.mjs --scaffold`、`tools/lib/scaffold.mjs` | 1 個旗標 | 排分鏡前產生 `work/分鏡素材/`（共用、寫法、每章一份）：字幕編號、章節、情境對照、每種情境的 plan.json 寫法 |
 | 進度、能力 | `shared/template/tools/status.mjs`、`caps.mjs` | 各 1 支 | 接手時看做到哪；換風格前看能用哪條生圖路線（R9.3） |
 | 風格規範 | `shared/style.md` | 1 份 | 字幕、節奏、字卡文字、音效、講者資料的唯一來源 |

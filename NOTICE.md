@@ -111,13 +111,13 @@
 - 修改：作者剪取原曲 0:00–0:20、統一響度、檔尾 2 秒淡出
 - 使用：預設不配，plan.json 的 `outro` 寫 `"music": "bgm-cylinder-five"` 才會用；用到的影片要在說明欄標示出處（文字在 `shared/template/kit/sfx.json` 的 `credit`，build 會印出來）
 
-### MediaPipe Tasks Vision 1.2.0 與 Face Landmarker 模型
+### MediaPipe Tasks Vision 1.2.0 與 Face Landmarker、Pose Landmarker 模型
 
-- 檔案：`shared/template/vendor/mediapipe/`（`vision_bundle.mjs`、`wasm/vision_wasm_internal.js`、`wasm/vision_wasm_internal.wasm`、`face_landmarker.task`）
+- 檔案：`shared/template/vendor/mediapipe/`（`vision_bundle.mjs`、`wasm/vision_wasm_internal.js`、`wasm/vision_wasm_internal.wasm`、`face_landmarker.task`、`pose_landmarker_lite.task`）
 - 授權：Apache License 2.0，全文見 `shared/template/vendor/mediapipe/LICENSE`
 - 版權：Copyright 2022–2023 The MediaPipe Authors（Google LLC）
-- 出處：程式庫 https://www.npmjs.com/package/@mediapipe/tasks-vision （1.2.0，原封不動的檔案）；模型 https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
-- 說明：只用來在本機偵測講者的臉部位置（瘦臉），不上傳任何畫面。檔案沒有修改；每個檔的大小與 sha256 在同資料夾的 `manifest.json`。模型的授權寫的是 Google 文件標示的 Apache-2.0，作者 push 前要再對一次 Face Landmarker model card 原文
+- 出處：程式庫 https://www.npmjs.com/package/@mediapipe/tasks-vision （1.2.0，原封不動的檔案）；臉部模型 https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task ；姿勢模型（2026-11-15 加入，瘦小腹用）https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+- 說明：只用來在本機偵測講者的臉部位置（瘦臉、美顏）與肩、髖的位置（瘦小腹），不上傳任何畫面。檔案沒有修改；每個檔的大小與 sha256 在同資料夾的 `manifest.json`。模型的授權寫的是 Google 文件標示的 Apache-2.0，作者 push 前要再對一次 Face Landmarker、Pose Landmarker model card 原文
 
 ### 人物去背模型（u2net_human_seg）
 

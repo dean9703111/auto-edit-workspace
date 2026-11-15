@@ -567,9 +567,9 @@ test('storyboard：v2 原語的拍點（P.spot 抬起、P.slide 抽屜）各截�
   assert.equal(b.status, 0, b.stdout + b.stderr);
   const r = F.qc('storyboard', '--json');
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  // 段起點 1 秒：a 抬起 1.5–2.0 → 3.1；b 抬起 3.0–3.5 → 4.6；抽屜 4.2–4.7、逐字到 4.91 → 4.7＋0.3＝6.0
+  // 段寫 from 1，但 052 片頭：整張幕在開頭 1.5 秒內開始 → 從第 0 格開始。a 抬起 1.5–2.0 → 2.1；b 抬起 3.0–3.5 → 3.6；抽屜 4.2–4.7、逐字到 4.91 → 4.7＋0.3＝5.0
   assert.deepEqual(JSON.parse(r.stdout).shots.map((x) => [x.file, x.at, x.why]), [
-    ['x01-1.png', 3.1, '焦點抬起：「第一站」'], ['x01-2.png', 4.6, '焦點抬起：「第二站」'], ['x01-3.png', 6, '抽屜抽出後 0.3 秒：「抽屜重點」（完成態）']]);
+    ['x01-1.png', 2.1, '焦點抬起：「第一站」'], ['x01-2.png', 3.6, '焦點抬起：「第二站」'], ['x01-3.png', 5, '抽屜抽出後 0.3 秒：「抽屜重點」（完成態）']]);
 });
 
 test('暗色主題回歸（T115，fixture dev/tests/fixtures/theme-dark 的段落）：build 出 data-theme="dark" → render → qc final 量到字幕底板 956–1074、字高 71 ± 3，qc-sheet 標 theme: dark', { skip: NO_UI, timeout: 900000 }, () => {

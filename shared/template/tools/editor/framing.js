@@ -16,13 +16,15 @@ let saved = null;    // plan.json 現在的 frame（null＝不裁切）
 let drag = null;
 let lastPreview = 0;
 let framingImageTimer = null;
-let look = { color: 0, slim: 0, beauty: 0 }, savedLook = { color: 0, slim: 0, beauty: 0 }, lookPrev = {}, poll = null, faceTimer = null;
+let look = { color: 0, slim: 0, beauty: 0, belly: 0 }, savedLook = { color: 0, slim: 0, beauty: 0, belly: 0 }, lookPrev = {}, poll = null, faceTimer = null;
 const AUTOSAVE_MS = 1000;   // 停手多久就自動存
 let touched = false, saveTimer = null, saving = null;   // touched：使用者動過（打開頁面還沒動，只是顯示，不寫檔；沒決定過構圖時例外，見 load）
 let saveFail = null;   // 上一次沒存成功：{ sig（那時候的內容）}。沒再改就不重送（連不到另外等 5 秒重試），狀態也留著
 const r2 = (v) => Math.round(Number(v) * 100) / 100;
-const sameLook = (a, b) => r2(a.color) === r2(b.color) && r2(a.slim) === r2(b.slim) && r2(a.beauty) === r2(b.beauty);
-const faceOn = (l) => l.slim > 0 || l.beauty > 0;   // 瘦臉或美顏要偵測臉部、做底片
+const sameLook = (a, b) => r2(a.color) === r2(b.color) && r2(a.slim) === r2(b.slim) && r2(a.beauty) === r2(b.beauty) && r2(a.belly) === r2(b.belly);
+const LOOK_KEYS = ['color', 'slim', 'beauty', 'belly'];
+const wantFace = (l) => l.slim > 0 || l.beauty > 0;   // 瘦臉或美顏要偵測臉部
+const faceOn = (l) => wantFace(l) || l.belly > 0;   // 再加瘦小腹（要偵測姿勢）：任一個開就要做底片
 
 const W = () => D.canvas.W, H = () => D.canvas.H;
 const portrait = () => D.canvas.format === 'portrait';
@@ -299,7 +301,7 @@ async function saveOnce() {
     await window.designWorkbench?.flush();
     const body = { base: { hash: D.plan.hash }, frame, update: false };   // 自動存檔不帶起更新預覽：底片重新編碼很久，等使用者按
     if (window.designWorkbench?.saveId) body.designId = window.designWorkbench.saveId;
-    if (!sameLook(look, savedLook)) body.look = { color: r2(look.color), slim: r2(look.slim), ...(look.beauty > 0 ? { beauty: r2(look.beauty) } : {}) };
+    if (!sameLook(look, savedLook)) body.look = { color: r2(look.color), slim: r2(look.slim), ...(look.beauty > 0 ? { beauty: r2(look.beauty) } : {}), ...(look.belly > 0 ? { belly: r2(look.belly) } : {}) };
     const post = () => fetch('/api/framing/save', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     r = await post();
     j = await r.json().catch(() => null);
@@ -345,7 +347,7 @@ async function saveOnce() {
 }
 
 // 框或調光被別人（AI）改過：換成最新的，手上這次沒存的不要了
-const lookOf = (d) => { const e = d.look?.look?.effective || d.look?.look?.kit || {}; return { color: r2(e.color || 0), slim: r2(e.slim || 0), beauty: r2(e.beauty || 0) }; };
+const lookOf = (d) => { const e = d.look?.look?.effective || d.look?.look?.kit || {}; return { color: r2(e.color || 0), slim: r2(e.slim || 0), beauty: r2(e.beauty || 0), belly: r2(e.belly || 0) }; };
 function adoptRemote(now) {
   Object.assign(D.plan, now.plan);
   D.look = now.look;
@@ -413,42 +415,46 @@ function watchPreview() {
 // ---------- 講者調光、瘦臉 ----------
 function initLook() {
   const L = D.look?.look || {};
-  const eff = L.effective || L.kit || { color: 0, slim: 0, beauty: 0 };
-  look = { color: r2(eff.color || 0), slim: r2(eff.slim || 0), beauty: r2(eff.beauty || 0) };
+  const eff = L.effective || L.kit || { color: 0, slim: 0, beauty: 0, belly: 0 };
+  look = { color: r2(eff.color || 0), slim: r2(eff.slim || 0), beauty: r2(eff.beauty || 0), belly: r2(eff.belly || 0) };
   savedLook = { ...look };
-  const lim = L.limits || { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], step: 0.05 };
-  for (const k of ['color', 'slim', 'beauty']) { $(k).max = String(lim[k][1]); $(k).step = String(lim.step); }
+  const lim = { belly: [0, 1], ...(L.limits || { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], step: 0.05 }) };
+  for (const k of LOOK_KEYS) { $(k).max = String(lim[k][1]); $(k).step = String(lim.step); }
   renderLook();
   if (D.look?.running) startPoll();
 }
 const lookOut = (k, v) => (v > 0 ? v.toFixed(2) : '關');
 function renderLook() {
-  for (const k of ['color', 'slim', 'beauty']) { $(k).value = String(look[k]); $(`${k}On`).checked = look[k] > 0; $(`${k}Out`).textContent = lookOut(k, look[k]); }
-  const S = D.look || {}, lm = S.look?.landmarks || {};
+  for (const k of LOOK_KEYS) { $(k).value = String(look[k]); $(`${k}On`).checked = look[k] > 0; $(`${k}Out`).textContent = lookOut(k, look[k]); }
+  const S = D.look || {}, lm = S.look?.landmarks || {}, po = S.look?.pose || {};   // po＝瘦小腹用的姿勢偵測
   const skip = { small: `畫面裡的臉太小（臉寬約 ${Math.round(lm.medianFaceWidth || 0)} px），瘦臉看不出來，完成影片只調光。`, noface: '抽樣都沒偵測到臉，這支只調光。', rate: `只有 ${Math.round((lm.rate || 0) * 100)}% 的格偵測到臉，自動關掉瘦臉，完成影片只調光。` };
   let note = '要開就勾選。調光拖滑桿，上面的畫面馬上變（近似效果，完成影片會更準）。';
-  const on = [look.color > 0 && '調光', look.slim > 0 && '瘦臉', look.beauty > 0 && '美顏'].filter(Boolean);
-  $('lookSummary').textContent = `講者調光、瘦臉、美顏：${on.length ? on.join('、') : '都關'}`;
-  const needDetect = faceOn(look) && !lm.ready;
+  const on = [look.color > 0 && '調光', look.slim > 0 && '瘦臉', look.beauty > 0 && '美顏', look.belly > 0 && '瘦小腹'].filter(Boolean);
+  $('lookSummary').textContent = `講者調光、瘦臉、美顏、瘦小腹：${on.length ? on.join('、') : '都關'}`;
+  const wantBody = look.belly > 0, bodySkip = wantBody && po.ready && po.bellyOk === false ? `這支略過瘦小腹：${po.why || '偵測不到姿勢'}。` : '';
+  const needDetect = (wantFace(look) && !lm.ready) || (wantBody && !po.ready);
   if (S.running) note = `正在${S.line}（在背景跑，可以繼續拖框；好了下面會出現前後對照）`;
-  else if (needDetect) note = `瘦臉、美顏要先偵測整支影片的臉，長片要二、三十分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
-  else if (faceOn(look) && lm.slimOk === false) note = skip[lm.reason] || '這支略過瘦臉，完成影片只調光。';
-  else if (faceOn(look)) note = '下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。';
+  else if (needDetect) note = `瘦臉、美顏${wantBody ? '、瘦小腹' : ''}要先偵測整支影片的臉${wantBody ? '和姿勢' : ''}，長片要二、三十分鐘（在背景跑）。${S.phase === 'failed' ? `${S.line}。` : ''}`;
+  else if (wantFace(look) && lm.slimOk === false) note = (skip[lm.reason] || '這支略過瘦臉，完成影片只調光。') + bodySkip;
+  else if (wantFace(look)) note = `下面是播放頭那一格的臉，左邊原本、右邊套用瘦臉、美顏後；換一格看就移動播放頭。${bodySkip}`;
+  else if (wantBody) note = bodySkip || '下面是播放頭那一格的軀幹，左邊原本、右邊瘦小腹後；換一格看就移動播放頭。';
   $('lookNote').textContent = note;
   $('btnDetect').hidden = !needDetect || !!S.running;
-  const showFaces = faceOn(look) && lm.ready && lm.slimOk !== false;
+  const showFaces = wantFace(look) && lm.ready && lm.slimOk !== false, showBody = wantBody && po.ready && po.bellyOk !== false;
   $('faces').hidden = !showFaces;
-  if (showFaces) refreshFaces(0);
+  $('bodies').hidden = !showBody;
+  if (showFaces || showBody) refreshFaces(0);
   drawPreview();
   dirty();
 }
 function refreshFaces(delay = 300) {
   clearTimeout(faceTimer);
   faceTimer = setTimeout(() => {
-    if ($('faces').hidden) return;
-    const t = Math.round(($('video').currentTime || 0) * 1000) / 1000, box = $('faces');
-    for (const img of box.querySelectorAll('img')) {
-      const after = img.dataset.k === 'after', url = `/api/look/face?t=${t}&slim=${after ? r2(look.slim) : 0}&beauty=${after ? r2(look.beauty) : 0}`;
+    const t = Math.round(($('video').currentTime || 0) * 1000) / 1000;
+    // 兩組前後對照：faces（臉：瘦臉、美顏）、bodies（軀幹：瘦小腹）；藏著的那一組不抓圖
+    for (const box of [$('faces'), $('bodies')]) for (const img of box.hidden ? [] : box.querySelectorAll('img')) {
+      const after = img.dataset.k === 'after';
+      const url = box.id === 'bodies' ? `/api/look/body?t=${t}&belly=${after ? r2(look.belly) : 0}` : `/api/look/face?t=${t}&slim=${after ? r2(look.slim) : 0}&beauty=${after ? r2(look.beauty) : 0}`;
       img.style.filter = lookCss(look.color, 0);
       if (img.dataset.url === url) continue;
       img.dataset.url = url;
@@ -461,7 +467,7 @@ function refreshFaces(delay = 300) {
   }, delay);
 }
 function setLook(k, v) { touched = true; look = { ...look, [k]: r2(v) }; renderLook(); }
-for (const k of ['color', 'slim', 'beauty']) {
+for (const k of LOOK_KEYS) {
   $(k).addEventListener('input', () => setLook(k, Number($(k).value)));
   $(`${k}On`).addEventListener('change', () => {
     if ($(`${k}On`).checked) setLook(k, lookPrev[k] || (k === 'color' ? 0.8 : k === 'slim' ? 0.6 : 0.5));

@@ -17,7 +17,7 @@ export function fmtFine(t) {
   return `${h ? `${h}:${p2(m % 60)}` : m}:${p2(s % 60)}:${p2(f % TC_FPS)}`;
 }
 export function defaultEdit() {
-  return { cuts: [], fadeIn: 0, fadeOut: 0, volume: { voice: 0, sfx: 0, media: 0 }, gains: [], joins: [] };
+  return { cuts: [], fadeIn: 0, fadeOut: 0, volume: { voice: 0, sfx: 0, media: 0 }, gains: [], joins: [], sfx: [], level: false };   // sfx：自己加的音效（050）；存檔時一顆都沒有就不寫；level：人聲大小聲拉平，關著不寫
 }
 
 export function mergeCuts(cuts) {
@@ -45,7 +45,20 @@ export function normEdit(e) {
     joins: (Array.isArray(e.joins) ? e.joins : []).filter((j) => j && typeof j.at === 'number' && ['dip', 'punch'].includes(j.type))
       .map((j) => (j.type === 'dip' ? { at: r3(j.at), type: 'dip', dur: num(j.dur, DIP_DEFAULT) } : { at: r3(j.at), type: 'punch' }))
       .sort((a, b) => a.at - b.at),
+    sfx: sortOwnSfx((Array.isArray(e.sfx) ? e.sfx : []).filter((x) => x && typeof x.at === 'number' && x.at >= 0 && typeof x.sound === 'string' && x.sound)
+      .map((x) => ownSfx(x.at, x.sound, x.db))),
+    level: e.level === true,   // 人聲大小聲拉平（存檔時關著就不寫）
   };
+}
+
+// 自己加的音效（edit.sfx，050）：{ at（rough.mp4 秒數，那一刻聽到）, sound, db? }；db 0＝預設音量，不寫
+export const ownSfx = (at, sound, db = 0) => { const v = clamp(Math.round((Number(db) || 0) * 10) / 10, -60, 12); return { at: r3(at), sound, ...(v ? { db: v } : {}) }; };
+export const sortOwnSfx = (list) => list.sort((a, b) => a.at - b.at);   // 就地排：拖曳中的那一顆還是同一個物件
+// 這顆音效在時間軸上從哪裡開始播、多大聲：at 是聽到的那一刻（峰值），檔案要提早 peak 秒開始（build 再晚 1 格，這裡不算）
+// conf＝/api/state 的 schema.sfx 那一筆（volume、peak）；找不到（清單還沒到、這台機器沒有這顆）時當 0.5 倍、峰值 0
+export function ownSfxView(s, conf, globalDb = 0) {
+  const db = 20 * Math.log10(conf?.volume > 0 ? conf.volume : 0.5) + (s.db || 0) + globalDb;
+  return { start: r3(Math.max(0, s.at - (conf?.peak || 0))), db: Math.round(db * 10) / 10 };
 }
 
 export const cutTotal = (cuts) => cuts.reduce((s, [a, b]) => s + (b - a), 0);

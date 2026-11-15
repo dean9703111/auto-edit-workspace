@@ -156,3 +156,69 @@ test('--test 片段遇到 cut：底片片段照片段起點裁切、淡入淡出
   assert.match(t, /<video id="rough-2" src="\.\.\/assets\/rough\.mp4" data-start="2" data-duration="3" data-media-start="21"/);
   assert.doesNotMatch(t, /edit-fade/, '片段沒碰到片尾，不放淡出');
 });
+
+// ---------- 050：使用者在剪輯台自己加的音效（edit.sfx）----------
+const mainOwn = (res, extra = {}) => buildMain({ items: res.items, videoDur: res.outDur, captions: { compId: 'captions', file: 'compositions/captions.html' }, pip: res.globals.pip, sideShift: res.globals.sideShift, footage: res.footage, editFx: res.editFx, userSfx: res.userSfx || [], ...extra }).html;
+
+test('edit.sfx：normalizeEdit 檢查格式、照時間排；一顆都沒有就沒有這個鍵（輸出和沒寫 edit 一樣）', () => {
+  const r = normalizeEdit({ sfx: [{ at: 30.0004, sound: 'impact', db: -3 }, { at: 12.5, sound: 'ding', db: 0 }] }, { videoDur: VD });
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(r.edit.sfx, [{ at: 12.5, sound: 'ding' }, { at: 30, sound: 'impact', db: -3 }], '照時間排；db 0 不寫');
+  assert.equal(r.active, false, '只多幾顆音效：底片照舊，不算 active');
+  assert.ok(!('sfx' in normalizeEdit({ sfx: [] }, { videoDur: VD }).edit));
+  assert.ok(!('sfx' in normalizeEdit({}, { videoDur: VD }).edit));
+  const bad = normalizeEdit({ sfx: [{ at: -1, sound: 'ding' }, { at: 3, sound: 'Ding!' }, { at: 4, sound: 'ding', db: 20 }, { at: 5, sound: 'ding', loop: true }, { at: 99, sound: 'ding' }, 'ding'] }, { videoDur: VD }).errors.join('\n');
+  for (const re of [/edit\.sfx\[0\]\.at 要是 rough\.mp4 的秒數/, /edit\.sfx\[1\]\.sound 要是音效名稱/, /edit\.sfx\[2\]\.db 要是 −60～\+12/, /edit\.sfx\[3\]\.loop：沒有這個欄位（可用：at、sound、db）/, /edit\.sfx\[4\]：at 99s 超過 rough\.mp4 長度 44s/, /edit\.sfx\[5\] 要是物件/]) assert.match(bad, re);
+  assert.match(normalizeEdit({ sfx: {} }, { videoDur: VD }).errors.join('\n'), /edit\.sfx 要寫成陣列/);
+});
+
+test('edit.sfx：build 混進音效（峰值對齊那一刻、吃 edit.volume.sfx 和自己的 db），不算進次數、密度與 3 秒間隔；報告多一行', async () => {
+  const { formatReport } = await imp('lib/plan.mjs');
+  // s01 的 ding 在 #2（4.5 秒）；自己加的三顆：緊貼著它的 impact（不到 3 秒）、20 秒的 ding（−6 dB）、30 秒的 success
+  const base = run(SCENES);
+  const res = run(SCENES, { volume: { voice: 0, sfx: -6, media: 0 }, sfx: [{ at: 5, sound: 'impact' }, { at: 20, sound: 'ding', db: -6 }, { at: 30, sound: 'success' }] });
+  assert.deepEqual(res.errors, []);
+  assert.ok(byId(res, 's01').sfx, '段上的主音效還在：自己加的不進 3 秒規則');
+  assert.deepEqual(res.userSfx.map((c) => [c.i, c.name, c.event]), [[0, 'impact', 5], [1, 'ding', 20], [2, 'success', 30]]);
+  const frame = 1 / 30, g6 = Math.pow(10, -6 / 20);
+  assert.equal(res.userSfx[0].at, +(5 - L.sfx.impact.peak + frame).toFixed(3), '起播＝那一刻 − 峰值 ＋ 1 格');
+  assert.equal(res.userSfx[0].volume, +(L.sfx.impact.volume * g6).toFixed(3), '吃 edit.volume.sfx');
+  assert.equal(res.userSfx[1].volume, +(L.sfx.ding.volume * g6 * g6).toFixed(3), '再疊自己的 db');
+  assert.deepEqual(res.sfxBudget.count, base.sfxBudget.count, '音效次數不算自己加的');
+  const rep = formatReport(res, { videoDur: VD });
+  assert.match(rep, /自己加的音效：3 顆（使用者在剪輯台加的 edit\.sfx；不算進上面的次數、密度，也不受 3 秒間隔限制）/);
+  assert.doesNotMatch(formatReport(base, { videoDur: VD }), /自己加的音效/, '沒加就沒有這一行');
+  assert.ok(!('userSfx' in base), '沒加：結果沒有這個鍵');
+  const html = mainOwn(res);
+  assert.match(html, new RegExp(`<audio id="sfx-own1" src="assets/sfx/impact\\.wav" data-start="${res.userSfx[0].at}" data-track-index="\\d+" data-volume="${res.userSfx[0].volume}"></audio>`));
+  assert.equal((html.match(/id="sfx-own\d+"/g) || []).length, 3);
+  assert.equal(mainOwn(base), main(base), '沒有自己加的音效：主合成一個字都不變');
+  // 剪映素材：自己加的不屬於任何一段，只跟著主軌
+  assert.doesNotMatch(mainOwn(res, { test: { t0: 0, len: res.outDur }, cut: { kind: 'seg', id: 's01' } }), /sfx-own/);
+  assert.match(mainOwn(res, { test: { t0: 0, len: res.outDur }, cut: { kind: 'main' } }), /sfx-own1/);
+});
+
+test('edit.sfx：時間跟著 cuts 換到完成影片；落在剪掉的範圍就不出聲；這台機器沒有的名稱 ✖；算進「音效稀疏」的空檔', () => {
+  const res = run(SCENES, { cuts: [[10, 14]], sfx: [{ at: 8, sound: 'ding' }, { at: 12, sound: 'ding' }, { at: 20, sound: 'ding' }] });
+  assert.deepEqual(res.errors, []);
+  assert.deepEqual(res.userSfx.map((c) => [c.i, c.event]), [[0, 8], [2, 16]], '第 2 顆在剪掉的 10–14 裡；20 秒 → 完成影片 16 秒');
+  assert.match(res.sfxBudget.lines.join('\n'), /自己加的音效：2 顆（.*；另外 1 顆落在剪掉的範圍裡，不出聲）/);
+  const bad = run(SCENES, { sfx: [{ at: 8, sound: 'whoosh' }, { at: 9, sound: 'bgm-cylinder-five' }, { at: 10, sound: 'tick' }] });
+  const all = bad.errors.join('\n');
+  assert.match(all, /edit\.sfx\[0\]（rough 0:08\.00 的 whoosh）：這台機器沒有「whoosh」這顆音效（可用：.*ding.*）→ 在剪輯台對它按右鍵換一顆或移除/);
+  assert.match(all, /edit\.sfx\[1\].*bgm-cylinder-five/);
+  assert.match(all, /edit\.sfx\[2\].*tick/);
+  // 音效稀疏：一支 150 秒的片只在開頭有一顆主音效；使用者在 60、115 秒各補一顆 → 空檔都不到 60 秒，不再叫 AI 補
+  const long = (edit) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], ...(edit ? { edit } : {}), scenes: SCENES }, cues, videoDur: 150, lib: L, outDir: os.tmpdir() });
+  assert.ok(long().warnings.some((w) => /音效稀疏/.test(w)));
+  assert.ok(!long({ sfx: [{ at: 60, sound: 'ding' }, { at: 115, sound: 'ding' }] }).warnings.some((w) => /音效稀疏/.test(w)));
+});
+
+test('edit.level：true 才寫進 edit（不算 active，時間不變）；false 不寫；不是布林 ✖', () => {
+  const on = normalizeEdit({ level: true }, { videoDur: VD });
+  assert.equal(on.edit.level, true);
+  assert.equal(on.active, false);
+  assert.deepEqual(on.errors, []);
+  assert.ok(!('level' in normalizeEdit({ level: false }, { videoDur: VD }).edit));
+  assert.match(normalizeEdit({ level: 'yes' }, { videoDur: VD }).errors.join('\n'), /edit\.level 要是 true/);
+});

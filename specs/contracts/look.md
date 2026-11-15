@@ -3,6 +3,7 @@
 - **擁有者**：006 look。**照它做**：002（build 呼叫 `ensureLook`、`lookCheck`；plan.mjs 驗證 `plan.look`）、005（`audioKey` 加 `look`、`encodeFootagePolished` 轉傳 `lut`）、004（`qc.mjs framing` 用套好的底片）、001（文件）、007（check-all 選用）。
 - **出處**：分析報告 `04-face-light.md`（下稱 04）§3、§4、§4.5、§4.6、§6；原型 `analysis/scripts/warp.mjs`、`tv_probe.mjs`、`make_video.py`；`specs/README.md` 定案列「瘦臉調光」。
 - 本檔的函式全部從 `shared/template/tools/lib/look.mjs` 匯出（`filterPath`、`lut3dFilter` 從 `lib/ff.mjs` 匯出）。數字的單一真相在本檔 §8 的常數表；程式照表寫，文件引用「照 contracts/look.md §8」。
+- **瘦小腹（`look.belly`，051）整個寫在 §9**：設定、姿勢模型與 `work/pose-landmarks.json`、位移場、不做的條件、report 與剪輯台的差異、常數。§1–§8 描述的是 `belly = 0` 的行為（不變）；§2 的「只能寫 color、slim」訊息現在是 `只能寫 color、slim、beauty、belly`，§3.2 的瘦臉行多 `、美顏：…、瘦小腹：…`（§9.6）。
 
 ## 1. 資料流（一張圖）
 
@@ -406,3 +407,100 @@ audioKey({ src, cutpoints, loudnorm, declick, frame, look })
 | 預估：變形＋編碼 | 14.5 ms／格 × max(1, rough-look 像素 ÷ 1920×1080) | 04 §4.5：Node 整條 14.5 ms（1080p）；像素外插是上限，T 任務實測後改 |
 | 預估：Windows | 印「Windows 約 ×1.5–3」 | 04 §4.5 最後一句 |
 | 預估公式 | 分鐘 ＝ 格數 × (26 ÷ every ＋ 變形 ms) ÷ 60000，無條件進位；landmark 還是最新（只改 slim）時不算偵測那項 | 本契約；審查 C-06 |
+
+## 9. 瘦小腹（`look.belly`，051）
+
+規格書：`specs/051-belly-slim/brief.md`。程式：`lib/look.mjs`「瘦小腹」那一節、`lib/landmarks.mjs`（姿勢偵測）。**belly ＝ 0（預設）時 §1–§8 的行為、輸出檔、花的時間都不變**（`rough-look.mp4` 逐位元相同；不需要姿勢模型）。
+
+### 9.1 設定
+
+| 欄位 | 範圍 | 意思 |
+|---|---|---|
+| `kit/look.json` 的 `belly`（選填，沒寫＝0） | 0–1 | 每支影片共用的預設；`look.mjs default --belly <0–1>` 改 |
+| plan.json `look.belly`（選填） | 0–1 | 這一集；0＝不做。剪輯台、構圖台有開才寫 |
+
+- 驗證訊息：`look.belly 要是 0–1 的數字（0＝不瘦小腹；腰往身體中線收，越大手臂與旁邊的東西越看得出變形），現在是 1.5`；多的鍵：`look 不能有「x」→ 只能寫 color、slim、beauty、belly`；kit：`kit/look.json 的 belly 要是 0–1 的數字，現在是 2 → 改成 0–1（預設 0＝不瘦小腹；要瘦小腹建議 0.5），或刪掉這個欄位`。
+- `faceOn(L)`＝`slim > 0 || beauty > 0 || belly > 0`（要做 `rough-look.mp4`、要跑 `look.mjs run`）。`needFace(L)`＝`slim > 0 || beauty > 0`（要偵測臉）；`needPose(L)`＝`belly > 0`（要偵測姿勢）。只開瘦小腹不偵測臉。
+- 戳記（§4）：`belly > 0` 而且實際有套才多一個 `belly` 鍵；`LOOK_VER` 不變（belly 0 的專案不重新編碼）。
+
+### 9.2 模型與偵測
+
+- 模型：MediaPipe PoseLandmarker **lite float16**，`shared/template/vendor/mediapipe/pose_landmarker_lite.task`（5,777,746 B，sha256 `59929e1d…574a`，Apache-2.0）。manifest 那一筆多一個 `"for": "belly"`：`assetsStatus(vendorDir, { pose })` 只有 `pose: true`（開了瘦小腹，或 `look.mjs ensure`）才把它算進來。
+- 缺這個檔而且 `belly > 0`：`look.mjs run` ✖ `shared/template/vendor/mediapipe/pose_landmarker_lite.task 不存在 → node shared/template/tools/look.mjs ensure --download（或 git checkout -- …）`；build（`ensureLook`）照 §3.1 第 6 列 ⚠ 略過；`lookNextStep` 的說明是 `少姿勢偵測的檔（瘦小腹用）；照 AGENTS.md 規則 3 先告訴使用者要下載約 6 MB，同意再跑`。工具不自己下載。
+- 偵測：和臉部同一個 Chrome、同一個頁面、同一趟解碼。`PoseLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: '/pose.task', delegate: 'CPU' }, runningMode: 'IMAGE', numPoses: 1, minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5 })`，只在 `/config` 的 `pose` 不是 null 時建立。整張偵測畫面（寬 ≤ 1280）丟進去，**每 `POSE_EVERY`（3）格一次**；全黑格記 `0`。
+- `detectLandmarks({ …, face, pose })`：`face: false` 只跑姿勢（頁面只要每 3 格的畫面）；回傳多 `poses`（第 j 筆＝第 j × 3 格）、`frameCount`、`poseMsPerCall`。臉部的結果不受姿勢偵測影響（測試比過一字不差）。
+
+### 9.3 `work/pose-landmarks.json`
+
+```json
+{
+  "version": 1,
+  "source": { "file": "rough.mp4", "size": 6696061, "mtimeMs": 1794752902851, "width": 640, "height": 360, "fps": "30/1", "fpsNum": 30, "frames": 4598, "duration": 153.267 },
+  "detector": { "name": "mediapipe-pose-landmarker", "model": "pose_landmarker_lite.task", "tasksVision": "1.2.0", "modelSha256": "59929e1d…", "delegate": "CPU",
+                "numPoses": 1, "minPoseDetectionConfidence": 0.5, "minPosePresenceConfidence": 0.5, "detectWidth": 640, "poseVer": 1 },
+  "points": [11, 12, 23, 24],
+  "every": 3,
+  "frameCount": 4598,
+  "samples": [ { "p": [387.7, 181.5, 307.5, 173, 357.5, 269.9, 315.6, 268.1], "v": [1, 1, 1, 0.99] }, null, 0 ],
+  "summary": { "sampled": 1533, "detected": 1533, "black": 0, "missing": 0, "rate": 1, "usable": 1, "medianShoulder": 83.6, "lookShoulder": 83.6, "bellyOk": true, "msPerCall": 26.6, "elapsedSec": 48 }
+}
+```
+
+| 欄位 | 規則 |
+|---|---|
+| `samples[j]` | 第 j × `every` 格：`null`＝沒偵測到人、`0`＝全黑格、物件＝偵測到 |
+| `p` | 左肩、右肩、左髖、右髖（MediaPipe 11、12、23、24）的 x、y，rough.mp4 像素、一位小數，**原始值** |
+| `v` | 四點的可見度（0–1，兩位小數） |
+| `summary.rate` | `detected ÷ (sampled − black)`；`usable`＝能做的筆數（§9.5 的 gate ≥ 0.5）÷ 同一個分母；`medianShoulder`＝肩寬中位數（rough.mp4 像素）、`lookShoulder` 換算到 rough-look 畫面 |
+| `summary.bellyOk` | `false` 的原因 `reason`：`rate`（rate < 0.80）、`small`（lookShoulder < 60 px）、`usable`（usable < 0.80） |
+
+- `work/.look/state.json` 多 `pose`：`{ size, mtimeMs, rough: { size, mtimeMs }, modelSha256, poseVer, every, summary }`；`footage` 在 `belly > 0` 時多 `belly`、`pose: { size, mtimeMs }`、`bellyDisp: { warped, medianDisp, maxDisp, maxDispRatio, maxDispAt, dispP95Ratio }`。
+- 姿勢「最新」（`poseFresh`）：`pose-landmarks.json` 的 size／mtime ＝ `state.pose`、`state.pose.rough` ＝ 現在的 rough.mp4、`modelSha256` ＝ manifest 的姿勢模型、`poseVer` ＝ `POSE_VER`。
+- 瘦臉底片「最新」（§5.3）多兩條：`belly` ＝ 實際要套的強度；`belly > 0` 時姿勢要最新而且 `state.footage.pose` ＝ 現在的姿勢檔。只開瘦小腹時不看臉部 landmark。過期原因多：`瘦小腹要的姿勢還沒偵測`、`work/pose-landmarks.json 不見了或被改過`、`姿勢偵測版本更新（POSE_VER a → b）`、`姿勢偵測模型換過`、`瘦小腹強度 0.5 → 0.8`。所以 belly 從 0 改成 > 0、底片換了、模型換了都會重跑；重跑時臉部 landmark 還是最新就只補偵測姿勢。
+
+### 9.4 位移場（`bellyField(p, s, W, H)`，和 §6.4 的 `field()` 同一個格式）
+
+- 軀幹：肩中點 `sm`、髖中點 `hm`、肩寬 `sw`、軀幹長 `len ＝ |hm − sm|`；腰的半寬 `a ＝ BELLY.half × sw`、腰寬 `2a`（回傳的 `fw`）。
+- 只有**水平**位移（反向取樣：輸出 (x, y) 取來源 (x + dx, y)）。中線 `xc(y)` 是肩中點到髖中點的連線；`t ＝ (y − sm.y) ÷ (hm.y − sm.y)`、`ρ ＝ (x − xc) ÷ a`：
+  `dx ＝ sign(ρ) × BELLY.max × s × 2a × band(t) × profile(|ρ|)`
+- `profile(ρ)`：`ρ ≤ inner` 時 ＝ ρ（等比例收，衣服上的圖案不變形），之後乘 `1 − smoothstep((ρ − inner) ÷ (reach − inner))` 平滑回到 0；除以最大值，峰值 1 落在 ρ ≈ 1（軀幹外緣）。
+- `band(t)`：`smoothstep(top)` × `(1 − smoothstep(bottom))`：t ≤ 0.35 是 0、0.6–0.85 是 1、≥ 1.05 是 0（肩膀以上、髖以下不動）。
+- ROI：x ＝ 中線 ± `reach × a`、y ＝ `top[0]`–`bottom[1]`（各多 2 px、夾在畫面內）；網格步距 `gridStep(2a)`。
+- 套用：`renderLookFootage`、對照圖、剪輯台都是「先瘦臉（`field`）再瘦小腹（`bellyField`）」各呼叫一次 `warpPlane`。兩塊 ROI 不重疊時等於兩個位移場相加（定案寫「相加」；重疊時差在二階小量，不值得為它把兩個場併成一張大網格）。
+- 每格的強度 `s ＝ belly × 權重(i)`；位移統計同瘦臉（`maxDisp ÷ 腰寬`）。`belly ≤ 1` 時每格最大位移 ≤ 腰寬 6 %。
+
+### 9.5 什麼時候不做、怎麼平滑（`loadPoseTrack`）
+
+1. 每個數字取前後三筆的中位數（單筆跳動去掉）→ 高斯平滑（σ ＝ `BELLY.smooth` 筆，只在連續偵測到的段落裡）。
+2. 每筆的 gate（`bellyGate`，0–1）：髖的 y ≥ 畫面高（半身取景）→ 0；肩寬（rough-look 畫面）< `minPx` → 0；其他＝`ramp(可見度最小值, vis)` × `ramp(肩寬 ÷ 軀幹長, side)` × `(1 − ramp(軀幹離垂直的角度, tilt))`。
+3. 內插到每一格（位置與 gate 都線性內插；沒偵測到的那筆 gate 是 0）→ `rampWeights(raw, FADE_FRAMES)` 前後 5 格淡入淡出。
+4. 整支：`poseSummary` 的 `bellyOk ＝ false` 時整支不做（§3.1 的第 4、5 列各自判斷：瘦臉略過不影響瘦小腹，反過來也是），report 是 `⚠ 講者瘦小腹略過：<原因>，<只調光｜瘦臉、美顏照做> → 看 work/look-preview.jpg；確定不要瘦小腹就在 plan.json 寫 "look": { "belly": 0 }`；原因＝`姿勢偵測率 62%（< 80%）`、`肩寬中位數 40 px < 60 px（畫面裡的人太小，腰收不到 1 px）`、`能做的格只有 3%（< 80%；髖部在畫面外、側身、彎腰的格不做）`。
+5. **被桌子擋住的髖偵測不出來**：示範口播（坐在桌子後面）四點的可見度都是 0.98–1.00，模型把髖放在桌緣附近；所以這種畫面會做，收的是肋骨下緣到桌緣（位移只有水平，桌緣不動）。髖在畫面外（把示範口播裁成半身）可見度是 0.03–0.3、y 超出畫面，兩個條件都會擋下來。
+
+### 9.6 report、對照圖、剪輯台
+
+- §3.2 的瘦臉行多一項：`講者瘦臉：0.6、美顏：關、瘦小腹：0.5（work/rough-look.mp4；偵測率 99.98%、臉寬中位數 172 px；姿勢偵測率 100.00%、肩寬中位數 320 px）`；都關：`講者瘦臉：關、美顏：關、瘦小腹：關（…）`。一邊略過時，那一邊的 ⚠ 接在這一行後面（瘦臉略過、瘦小腹照做時，⚠ 裡的「只調光」換成「瘦小腹照做」）。
+- 過期的 ✖：`不要瘦臉、瘦小腹就在 plan.json 寫 "look": { "slim": 0, "belly": 0 }`（只開一個就只寫那一個）；非 strict：`⚠ 瘦小腹還沒套到底片（…）`。
+- 對照圖（開了瘦小腹而且有姿勢檔）：每列多兩欄 360×360「軀幹放大：原本｜套用後＋腰線（綠＝估計的腰線、紅＝收進去之後）」；只開瘦小腹（沒有臉部 landmark）時不留臉部那一欄。印 `姿勢偵測率：…；能做瘦小腹的 …`、`瘦小腹每格最大位移（全部 N 格）：中位數 … px、最大 … px（m:ss.s），＝腰寬 …%（95% 的格 ≤ …%）`、`姿勢抖動（平滑去掉的量）：… px（肩寬 …%）`；⚠：`瘦小腹位移 ＝ 腰寬 N%（95% 的格；> 5%）→ 收太多…`、`能做瘦小腹的格 N%（< 95%）→ …會自動淡掉，不會跳`。
+- `/api/state` 的 `look`：`kit`、`effective`、`baked`、`limits` 多 `belly`；多 `pose: { ready, rate, usable, bellyOk, why }`（`ready`＝偵測過姿勢）。存檔 body 的 `look` 多選填的 `belly`（`look.belly 要是 0–1 的數字，現在是 …`；0 不寫）。
+- `GET /api/look/body?t=<秒>&belly=<0–1>`：軀幹特寫 JPEG（360×360；`belly=0` 是「前」）。錯誤（404 JSON）：`nopose`（`還沒偵測姿勢 → 請 AI 跑 node shared/template/tools/look.mjs run --project <專案>`）、`nobody`（`這一格不做瘦小腹（髖部在畫面外、側身、彎腰，或沒偵測到人）→ 換一格再看`）。
+- `POST /api/look/run`：三個都關時 400 `瘦臉、美顏、瘦小腹都是關的，不用偵測 → 先打開其中一個並儲存，再按「偵測臉部」`。
+
+### 9.7 常數（`lib/look.mjs`）
+
+| 常數 | 值 | 出處 |
+|---|---|---|
+| `POSE_VER` | 1 | 存的點或偵測參數改了就 +1 |
+| `POSE_MODEL`／`POSE_POINTS`／`POSE_EVERY` | `pose_landmarker_lite.task`／11、12、23、24／3 格 | 定案 2、3 |
+| `POSE_CFG` | numPoses 1、minPoseDetectionConfidence 0.5、minPosePresenceConfidence 0.5 | MediaPipe 預設 |
+| `BELLY.max` | 0.06（belly 1 時每邊收腰寬的 6 %） | 定案 4；示範口播看前後對照，1 還自然、0.5 要看差異圖才找得到 |
+| `BELLY.half` | 0.55（腰半寬 ÷ 肩寬） | 示範口播量到 0.59（肩寬 80.7 px、腰的輪廓 95 px） |
+| `BELLY.inner`／`reach` | 0.7／2（半寬的倍數） | 外緣附近最大、兩倍半寬回到 0 |
+| `BELLY.top`／`bottom` | 0.35–0.6／0.85–1.05（沿軀幹，0＝肩、1＝髖） | 肋骨下緣到髖 |
+| `BELLY.side` | 0.4–0.6（肩寬 ÷ 軀幹長） | 示範口播正面 0.74–1.05（中位數 0.92） |
+| `BELLY.tilt` | 25°–35° | 示範口播 −7°–5° |
+| `BELLY.vis` | 0.5–0.8 | 示範口播 0.98–1.00；裁成半身 0.03–0.3 |
+| `BELLY.minPx` | 60 px（肩寬，rough-look 畫面） | 同 `MIN_FACE_PX` 的道理 |
+| `BELLY.smooth` | 2 筆（0.2 秒） | 示範口播每格位移差（belly 1、寬 640）：σ 1 → 95 % 的格 ≤ 0.32 px、最大 0.99 px；σ 2 → 0.21／0.49；σ 3 → 0.14／0.32 |
+| `BELLY_DISP_WARN` | 腰寬的 5 %（看 95 百分位） | belly 約 0.85 以上；示範口播 belly 1 時腰旁邊的筆電邊緣被帶進去 6 px（寬 640） |
+| 預估 | 姿勢 26 ms／次（每 3 格一次）、只跑姿勢再加解碼 2 ms／格、瘦小腹變形 5 ms／格（1080p） | 2026-11-15 實測：640×360 4598 格只跑姿勢 48 秒；1280×720 600 格瘦臉＋美顏 28.2 秒 → 加瘦小腹 35.1 秒；1920×1080 600 格瘦臉 31.8 秒 → 加瘦小腹 42.6 秒（偵測 17 → 24 秒、變形 6 → 9 秒） |

@@ -50,11 +50,13 @@ const KEYS = {
   'look.color': { hint: () => `${LOOK_LIMITS.color.join('–')}`, parse: num(...LOOK_LIMITS.color), early: true },
   'look.slim': { hint: () => `${LOOK_LIMITS.slim.join('–')}`, parse: num(...LOOK_LIMITS.slim), early: true },
   'look.beauty': { hint: () => `${LOOK_LIMITS.beauty.join('–')}`, parse: num(...LOOK_LIMITS.beauty), early: true },
+  'look.belly': { hint: () => `${LOOK_LIMITS.belly.join('–')}`, parse: num(...LOOK_LIMITS.belly), early: true },
   'bed.music': { hint: trackHint, parse: track },
   'bed.volume': { hint: () => '−12–12 dB', parse: num(-12, 12) },
   'outro.from': { hint: () => '#N＝結語金句講完後那一句（不寫＝只播片尾最後 30 秒）', parse: (v) => (/^#\d+(@\S+)?$/.test(String(v).trim()) ? String(v).trim() : BAD) },
   'outro.music': { hint: trackHint, parse: track },
   // 片尾模板（033，lib/ending.mjs）：工作區在 shared/setting.json 設定，這裡只做這一集的例外
+  'edit.level': { hint: () => 'true＝拉平人聲大小聲（關掉用 --unset edit.level）', parse: (v) => (v === true || v === 'true' || v === 'on' ? true : BAD) },
   ending: { hint: () => 'false＝這一集不要片尾', parse: (v) => (v === false || v === 'false' || v === 'off' ? false : BAD) },
   'ending.quote': { hint: () => '片尾金句的字／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : String(v).trim() ? String(v).trim() : BAD) },
   'ending.subscribe': { hint: () => '#N＝講到「訂閱」的那一句／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : /^#\d+$/.test(String(v).trim()) ? String(v).trim() : BAD) },

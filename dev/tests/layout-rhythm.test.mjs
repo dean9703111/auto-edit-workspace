@@ -51,3 +51,26 @@ test('排版面：開頭 30 秒字卡；有全畫面模板的行連成 ≥ 45 �
   assert.deepEqual(L.planLayout(rows([[1, 0, 30, 'card', C], [2, 30, 16, 'half', ['half', 'card']], [3, 46, 10, 'half', ['half']]]), opt).map((x) => x.mode), ['card', 'half', 'card']);
   assert.deepEqual([L.RHYTHM.intro, L.RHYTHM.half, L.RHYTHM.pip], [30, 15, 45]);
 });
+
+// 053 直式版面節奏：切一半／全身進入一種至少停 12 秒、1 分鐘最多切 3 次（作者 2026-11-15）
+test('053 直式：區塊從 0 排到片尾；片頭 1 秒內開始的切一半從 0 算；整張幕相隔 ≤ 1 秒算同一塊', () => {
+  const seg = (id, start, end, split) => ({ id, start, end, split });
+  const runs = L.portraitRuns([seg('a', 0.15, 6.5, true), seg('b', 6.5, 12, false), seg('c', 12.4, 26, false), seg('d', 26.5, 37.5, true), seg('e', 38, 64, true)], { total: 64.8 });
+  assert.deepEqual(runs.map((r) => [r.state, r.start, r.end]), [['split', 0, 6.5], ['full', 6.5, 26.5], ['split', 26.5, 64.8]]);
+  assert.deepEqual(runs[1].ids, ['b', 'c']);
+  // 最後 ≤ 1 秒沒有段（片尾停留）併進最後的切一半
+  assert.equal(L.portraitRuns([seg('a', 0, 63.9, true)], { total: 64.5 }).length, 1);
+  assert.equal(L.portraitLine(runs), '0:00–0:06 切一半｜0:06–0:26 全身｜0:26–1:04 切一半');
+});
+
+test('053 直式：停不到 12 秒、1 分鐘切超過 3 次都報；只有一種情境不報', () => {
+  const seg = (id, start, end, split) => ({ id, start, end, split });
+  const f = L.portraitFindings([seg('a', 0, 6.5, true), seg('b', 6.5, 26.5, false), seg('c', 26.5, 37.5, true), seg('d', 37.5, 53, false), seg('e', 53, 65, true)], { total: 65 });
+  assert.deepEqual(f.filter((x) => x.rule === 'stay').map((x) => x.secs), [6.5, 11]);
+  assert.ok(f.some((x) => x.rule === 'switch' && /切換 4 次/.test(x.msg)), '6.5、26.5、37.5、53 四次都在一分鐘內');
+  assert.match(f.find((x) => x.rule === 'stay').fix, /疊在講者身上/);
+  // 11.6 秒在容差內不報；三次切換剛好不報
+  assert.deepEqual(L.portraitFindings([seg('a', 0, 11.6, true), seg('b', 11.6, 30, false), seg('c', 30, 50, true)], { total: 50 }), []);
+  assert.deepEqual(L.portraitFindings([seg('a', 0, 40, false)], { total: 40 }), []);
+  assert.deepEqual([L.PORTRAIT_RHYTHM.stay, L.PORTRAIT_RHYTHM.switches, L.PORTRAIT_RHYTHM.window], [12, 3, 60]);
+});

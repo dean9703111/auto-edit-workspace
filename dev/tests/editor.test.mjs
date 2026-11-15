@@ -592,10 +592,11 @@ const FACE58 = [[1.5,62.1],[1.3,30.7],[0.7,21.6],[-0.9,-18.3],[-4.2,-97.9],[1.7,
 
 test('講者：/api/state 的 look 區塊；存 look（插入、取代、恢復預設、擋錯），rhythm／outro 原樣保留；配樂不列進音效清單', async () => {
   const s = await (await get('/api/state')).json();
-  assert.deepEqual(s.look.kit, { color: 0, slim: 0, beauty: 0 }, '工作區預設：不調光、不瘦臉、不美顏（使用者要求才開）');
+  assert.deepEqual(s.look.kit, { color: 0, slim: 0, beauty: 0, belly: 0 }, '工作區預設：不調光、不瘦臉、不美顏、不瘦小腹（使用者要求才開）');
   assert.equal(s.look.plan, null);
-  assert.deepEqual(s.look.effective, { color: 0, slim: 0, beauty: 0, source: 'kit' });
-  assert.deepEqual(s.look.limits, { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], step: 0.05 });
+  assert.deepEqual(s.look.effective, { color: 0, slim: 0, beauty: 0, belly: 0, source: 'kit' });
+  assert.deepEqual(s.look.limits, { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], belly: [0, 1], step: 0.05 });
+  assert.deepEqual(s.look.pose, { ready: false }, '瘦小腹的姿勢還沒偵測');
   assert.equal(s.look.lines.length, 2);
   assert.match(s.look.lines[0], /^講者調光：關/);
   assert.ok(s.schema.sounds.includes('ding') && !s.schema.sounds.includes('bgm-cylinder-five'), s.schema.sounds.join(','));
@@ -606,7 +607,7 @@ test('講者：/api/state 的 look 區塊；存 look（插入、取代、恢復�
   let r = await post('/api/save', { base: await base(), look: { color: 0.5, slim: 0.3 } });
   assert.equal(r.status, 200, JSON.stringify(await r.clone().json()));
   let j = await r.json();
-  assert.deepEqual(j.look.effective, { color: 0.5, slim: 0.3, beauty: 0, source: 'plan' });
+  assert.deepEqual(j.look.effective, { color: 0.5, slim: 0.3, beauty: 0, belly: 0, source: 'plan' });
   const t1 = planNow();
   assert.match(t1, /\n  "look": \{ "color": 0\.5, "slim": 0\.3 \},\n  "(edit|scenes)": /);
   assert.equal(t1.replace(/  "look": \{[^}]*\},\n/, ''), withExtra);
@@ -847,7 +848,17 @@ test('構圖（server）：一起存講者調光瘦臉（look，還沒有 plan.j
     assert.equal((await r.json()).look.look.effective.color, 0.8);
     r = await post5('/api/look/run', {});
     assert.equal(r.status, 400);
-    assert.match((await r.json()).message, /瘦臉、美顏都是關的/);
+    assert.match((await r.json()).message, /瘦臉、美顏、瘦小腹都是關的/);
+    // 瘦小腹（051）：belly 有開才寫進 plan.json；還沒偵測姿勢時前後對照回 404＋怎麼做
+    r = await post5('/api/save', { base: { hash: JSON.parse(await (await fetch(u('/api/framing'))).text()).plan.hash }, frame: null, look: { color: 0.8, slim: 0, belly: 0.5 } });
+    assert.equal(r.status, 200, await r.clone().text());
+    assert.deepEqual(JSON.parse(fs.readFileSync(plan, 'utf8')).look, { color: 0.8, slim: 0, belly: 0.5 });
+    r = await fetch(u('/api/look/body?t=1&belly=0.5'));
+    assert.equal(r.status, 404);
+    assert.match((await r.json()).message, /^還沒偵測姿勢 → 請 AI 跑 node shared\/template\/tools\/look\.mjs run --project /);
+    r = await post5('/api/save', { base: { hash: JSON.parse(await (await fetch(u('/api/framing'))).text()).plan.hash }, frame: null, look: { color: 0.8, slim: 0 } });
+    assert.equal(r.status, 200, await r.clone().text());
+    assert.deepEqual(JSON.parse(fs.readFileSync(plan, 'utf8')).look, { color: 0.8, slim: 0 });
     assert.equal((await (await fetch(u('/api/look/status'))).json()).running, false);
     assert.equal((await post5('/api/refframe', { t: -1 })).status, 400);
     r = await post5('/api/refframe', { t: 1, frame: [182, 144, 1664, 936], color: 0.8 });

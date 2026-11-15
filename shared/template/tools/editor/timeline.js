@@ -27,7 +27,7 @@ const C = {
   bg: '#070B14', lane: '#0B1020', lane2: '#0D1426', sep: 'rgba(255,255,255,0.07)', text: '#FFFFFF', mute: 'rgba(255,255,255,0.66)', dim: 'rgba(255,255,255,0.38)',
   wave: 'rgba(160,200,255,0.70)', waveHot: '#FF5A5F', cut: 'rgba(7,11,20,0.72)', cutLine: '#FF5A5F', sel: 'rgba(255,212,0,0.16)', selLine: '#FFD400',
   play: '#FFD400', voice: 'rgba(255,255,255,0.22)', band: '#FFD400', bandDim: 'rgba(255,212,0,0.55)',
-  scene: '#3B82F6', fx: '#C792EA', custom: '#2FB36B', media: '#FF8A3D', cap: '#1E2740', capSel: '#2B3A63', sfx: '#4ADE9B',
+  scene: '#3B82F6', fx: '#C792EA', custom: '#2FB36B', media: '#FF8A3D', cap: '#1E2740', capSel: '#2B3A63', sfx: '#4ADE9B', own: 'rgba(255,255,255,0.88)',
 };
 const MOOD_COL = { quote: '#FFD400', turn: '#C792EA', pain: '#FF5A5F', win: '#4ADE9B', land: '#FF8A3D' };   // 情緒點（023）
 const DB_TOP = 12, DB_BOT = -30;     // 音量線的上下界（−30 以下畫在底線，標「靜音」）
@@ -47,6 +47,7 @@ export class Timeline {
     canvas.addEventListener('pointermove', (e) => this.move(e));
     canvas.addEventListener('pointerup', (e) => this.up(e));
     canvas.addEventListener('pointercancel', () => { this.drag?.h?.cancel?.(); this.drag = null; this.snapLine = null; this.invalidate(); });
+    canvas.addEventListener('contextmenu', (e) => this.context(e));
     canvas.addEventListener('dblclick', (e) => { const { x, y: yy } = this.local(e); const h = this.hit(x, yy); this.app.tlDouble?.(h, this.tOf(x), e); });
     canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.hover = null; this.tip.hidden = true; this.app.requestDraw(); } });
     canvas.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
@@ -511,15 +512,19 @@ export class Timeline {
         any = true;
         const x = X(m.at);
         const w = Math.max(12, Math.min(70, 0.6 * this.pps));
-        const sel = A.isSelected('sfx', m.segId);
+        // 050 自己加的（m.user＝edit.sfx 的第幾個）：空心、白色虛線框、名稱前面一個「＋」；AI 放的是綠色實心
+        const own = m.user != null;
+        const sel = own ? A.isSelected('usfx', m.user) : A.isSelected('sfx', m.segId);
         rr(x, y, w, h, 3);
-        g.fillStyle = m.muted ? 'rgba(255,255,255,0.08)' : m.main ? 'rgba(74,222,155,0.30)' : 'rgba(74,222,155,0.16)'; g.fill();
-        g.strokeStyle = sel ? '#FFD400' : m.muted ? 'rgba(255,255,255,0.35)' : C.sfx; g.lineWidth = sel ? 2 : 1; g.stroke();
+        g.fillStyle = own ? 'rgba(255,255,255,0.04)' : m.muted ? 'rgba(255,255,255,0.08)' : m.main ? 'rgba(74,222,155,0.30)' : 'rgba(74,222,155,0.16)'; g.fill();
+        g.strokeStyle = sel ? '#FFD400' : own ? C.own : m.muted ? 'rgba(255,255,255,0.35)' : C.sfx; g.lineWidth = sel ? 2 : own ? 1.3 : 1;
+        if (own && !sel) g.setLineDash([3, 2]);
+        g.stroke(); g.setLineDash([]);
         // 音量條（0 dB 在中間偏上）
-        if (!m.muted && m.db != null) { const k = clamp((m.db + 40) / 52, 0, 1); g.fillStyle = C.sfx; g.fillRect(x + 2, y + h - 2 - k * (h - 4), 3, k * (h - 4)); }
+        if (!m.muted && m.db != null) { const k = clamp((m.db + 40) / 52, 0, 1); g.fillStyle = own ? C.own : C.sfx; g.fillRect(x + 2, y + h - 2 - k * (h - 4), 3, k * (h - 4)); }
         if (w > 20) clipRect(x + 6, y, w - 8, h, () => {
           g.font = font(11, 700); g.textBaseline = 'middle'; g.fillStyle = m.muted ? C.dim : '#fff';
-          g.fillText(m.muted ? `🔇 ${m.name}` : m.name, x + 7, y + h / 2 + 0.5);
+          g.fillText(own ? `＋${m.name}` : m.muted ? `🔇 ${m.name}` : m.name, x + 7, y + h / 2 + 0.5);
         });
         if (m.muted) { g.strokeStyle = 'rgba(255,90,95,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x + 2, y + h - 2); g.lineTo(x + w - 2, y + 2); g.stroke(); }
       }
@@ -682,7 +687,7 @@ export class Timeline {
         const xa = this.xOf(m.at), w = Math.max(12, Math.min(70, 0.6 * this.pps));
         if (x >= xa - 3 && x <= xa + w + 3) { const d = Math.abs(x - xa); if (d < bd) { bd = d; best = m; } }
       }
-      if (best) { h.kind = 'sfx'; h.sfx = best; return h; }
+      if (best) { h.kind = best.user != null ? 'usfx' : 'sfx'; h.sfx = best; return h; }
       for (const m of A.moodView || []) if (Math.abs(this.xOf(m.at) - x) <= 8) { h.kind = 'mood'; h.mood = m; break; }
       return h;
     }
@@ -698,7 +703,7 @@ export class Timeline {
     switch (h.kind) {
       case 'mediaL': case 'mediaR': case 'head': case 'tail': case 'cutEdge': case 'capEdge': case 'gainEdge': return locked ? 'not-allowed' : 'col-resize';
       case 'mediaVol': case 'gainVol': case 'voiceVol': return locked ? 'not-allowed' : 'ns-resize';
-      case 'media': return locked ? 'pointer' : 'grab';
+      case 'media': case 'usfx': return locked ? 'pointer' : 'grab';
       case 'item': case 'join': case 'cue': case 'cut': case 'sfx': return 'pointer';
       case 'gap': return 'copy';
       default: return h.lane === 'main' || h.lane === 'voice' ? 'crosshair' : 'default';
@@ -717,6 +722,17 @@ export class Timeline {
     if (!h.lane) return;
     const handler = this.app.tlDown?.(h, e);   // app 回傳 { move(t, y, e) → 提示文字, up(moved, e), cancel() } 或 null
     this.drag = { mode: 'h', h: handler, hit: h, x0: x, y0: y, moved: false };
+  }
+  // 右鍵（050）：交給 app 選到指標下的東西、開選單。macOS 的 Ctrl＋點一下會先送一次按下：手上那個還沒動的拖曳先收掉，放開時才不會又當成點一下
+  context(e) {
+    e.preventDefault();
+    if (!this.dur) return;
+    const D = this.drag;
+    this.drag = null; this.snapLine = null; this.tip.hidden = true;
+    if (D?.mode === 'h') D.h?.up?.(false, e);
+    const { x, y } = this.local(e);
+    this.app.tlContext?.(this.hit(x, y), e);
+    this.invalidate();
   }
   ovMove(x) {
     const t = clamp(((x - PAD) / (this.cssW - PAD * 2)) * this.dur, 0, this.dur);

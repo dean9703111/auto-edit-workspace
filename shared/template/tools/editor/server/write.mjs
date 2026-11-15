@@ -1,6 +1,6 @@
 // 剪輯的寫入規則（純函式，沒有 I/O）：驗證存檔內容、只改允許的欄位、保留 plan.json 與 rough.srt 原本的排版
 //
-//   sanitizeEdit(edit, { videoDur })                  → { edit, errors }
+//   sanitizeEdit(edit, { videoDur, schema, keepSounds }) → { edit, errors }（edit.sfx 的音效名稱要在 schema.sfx 裡；keepSounds＝檔案裡原本就有的名稱，照留）
 //   sanitizeSegments(segments, plan, ctx)             → { updates: [[id, set, del]], memory, errors }
 //   applySave(planText, body, ctx)                     → { text, srtText, plan, edit, cues, memory, errors }（要寫的新內容；null＝不用寫）
 //   sanitizeLook(v)                                    → { look, errors }（第一層 look：講者調光與瘦臉；null＝恢復預設）
@@ -22,8 +22,8 @@ export { visibleLen, richPlain };
 export const LIMITS = Object.freeze({
   volume: [-60, 12], fade: [0, 10], dipDur: [0.05, 2], speed: [0.5, 4], minMedia: 1, capMax: 18,
   joinTypes: ['none', 'dip', 'punch'], enterExit: ['cut', 'fade', 'slide', 'zoom', 'whip'],
-  editKeys: ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins'], volumeKeys: ['voice', 'sfx', 'media'],
-  joinKeys: ['at', 'type', 'dur'], gainKeys: ['from', 'to', 'db'],
+  editKeys: ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins', 'sfx', 'level'], volumeKeys: ['voice', 'sfx', 'media'],
+  joinKeys: ['at', 'type', 'dur'], gainKeys: ['from', 'to', 'db'], sfxKeys: ['at', 'sound', 'db'],
   segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'out', 'speed', 'hold', 'retime', 'anchor'], segScene: ['slots'], segFx: ['vars'],
   bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme', 'captionStyle', 'captionMarks', 'frame'],
   themes: ['light', 'dark'],
@@ -43,7 +43,7 @@ export function defaultEdit() {
 
 // ---------- edit ----------
 
-export function sanitizeEdit(edit, { videoDur = null } = {}) {
+export function sanitizeEdit(edit, { videoDur = null, schema = null, keepSounds = [] } = {}) {
   const errors = [];
   if (!isObj(edit)) return { edit: null, errors: ['edit 要是物件 → 例如 { "cuts": [[12.0, 14.5]], "fadeIn": 0.5 }'] };
   for (const k of Object.keys(edit)) if (!LIMITS.editKeys.includes(k)) errors.push(`edit 不能有「${k}」→ 只能寫 ${LIMITS.editKeys.join('、')}`);
@@ -118,8 +118,38 @@ export function sanitizeEdit(edit, { videoDur = null } = {}) {
     });
     out.joins.sort((a, b) => a.at - b.at);
   }
+  // 050 自己加的音效：[{ at（rough.mp4 秒數）, sound, db? }]，照時間排；一顆都沒有就不寫這個欄位（和沒加過的 plan.json 一樣）
+  if (edit.sfx != null) {
+    if (!Array.isArray(edit.sfx)) errors.push('edit.sfx 要是陣列 → [{ "at": 41.2, "sound": "ding" }]（rough.mp4 的秒數）');
+    else {
+      const names = soundNames(schema);
+      const list = [];
+      edit.sfx.forEach((x, i) => {
+        const where = `edit.sfx 第 ${i + 1} 項`;
+        if (!isObj(x)) { errors.push(`${where}要是物件 → { "at": 41.2, "sound": "ding" }`); return; }
+        for (const k of Object.keys(x)) if (!LIMITS.sfxKeys.includes(k)) errors.push(`${where}不能有「${k}」→ 只能寫 at、sound、db`);
+        if (!isNum(x.at) || x.at < 0 || (videoDur != null && x.at > videoDur + 0.001)) { errors.push(`${where}的 at 要是影片範圍內的秒數，現在是 ${JSON.stringify(x.at)}`); return; }
+        if (typeof x.sound !== 'string' || !x.sound) { errors.push(`${where}的 sound 要是音效名稱，現在是 ${JSON.stringify(x.sound)}`); return; }
+        if (!names.includes(x.sound) && !keepSounds.includes(x.sound)) { errors.push(soundError(`${where}的 sound`, x.sound, names)); return; }
+        if (x.db != null && (!isNum(x.db) || x.db < LIMITS.volume[0] || x.db > LIMITS.volume[1])) { errors.push(`${where}的 db 要是 −60～+12 的數字，現在是 ${JSON.stringify(x.db)}`); return; }
+        list.push({ at: r3(x.at), sound: x.sound, ...(x.db ? { db: r1(x.db) } : {}) });
+      });
+      list.sort((a, b) => a.at - b.at);
+      if (list.length) out.sfx = list;
+    }
+  }
+  if (edit.level != null) {
+    if (typeof edit.level !== 'boolean') errors.push(`edit.level 要是 true 或 false（拉平人聲大小聲），現在是 ${JSON.stringify(edit.level)}`);
+    else if (edit.level) out.level = true;
+  }
   return { edit: out, errors };
 }
+
+// 可以選的音效（/api/state 的 schema.sfx：shared/sfx 與 shared/sfx-local 裡這台機器有的，不含配樂和工具自動配的秒針）
+const soundNames = (schema) => (Array.isArray(schema?.sfx) ? schema.sfx.map((x) => x?.name).filter((n) => typeof n === 'string') : []);
+const soundError = (what, name, names) => (names.length
+  ? `${what}「${name}」不在音效清單裡 → 只能用 ${names.join('、')}`
+  : `${what}「${name}」沒辦法確認：現在讀不到音效清單（build.mjs --list --json 跑不出來）→ 請 AI 看剪輯台的 log，修好後重新整理頁面再換`);
 
 // ---------- 時間（只認剪輯會寫的寫法：#N、#Ne、#N±秒、秒數）----------
 
@@ -255,16 +285,32 @@ export function sanitizeSegments(segments, plan, ctx = {}) {
         else if (!isNum(val) || val < LIMITS.volume[0] || val > LIMITS.volume[1]) errors.push(`段 ${id} 的 sfxVolume 要是 −60～+12 的 dB 數字，現在是 ${JSON.stringify(val)}`);
         else set.sfxVolume = r1(val);
       } else if (k === 'sfx') {
+        // 記著剪輯台動手之前的值（had＝原本有沒有寫 sfx、value）和剪輯台最後寫的值（set；沒有這個鍵＝null，靜音）。
+        // 現在的值不是剪輯台最後寫的那個（之後 AI 又改過）：那筆記錄不算數，以現在的值當原本的
+        const m0 = memory[id];
+        const mem = m0 && 'sfx' in seg && same(seg.sfx, m0.set ?? null) ? m0 : null;
+        const origin = mem ? { had: mem.had, value: mem.value } : { had: 'sfx' in seg, value: seg.sfx ?? null };
+        const write = (v) => {
+          set.sfx = v;
+          if (origin.had && same(origin.value, v)) delete memory[id];   // 改回原本的值：不用記了
+          else memory[id] = v === null ? origin : { ...origin, set: v };
+        };
         if (val === null) {
-          if (seg.sfx !== null) memory[id] = { had: 'sfx' in seg, value: seg.sfx ?? null };
-          set.sfx = null;
+          if (seg.sfx !== null) write(null); else set.sfx = null;
         } else if (isObj(val) && val.restore === true && Object.keys(val).length === 1) {
-          if (seg.sfx === null) {
-            const m = memory[id];
-            if (m?.had && m.value != null) set.sfx = m.value; else del.push('sfx');
+          if (mem || seg.sfx === null) {
+            if (mem?.had) set.sfx = mem.value; else del.push('sfx');
             delete memory[id];
           }
-        } else errors.push(`段 ${id} 的 sfx 只能設成 null（靜音）或 { "restore": true }（還原 AI 原本寫的音效）`);
+        } else if (typeof val === 'string' || (isObj(val) && typeof val.name === 'string' && 'at' in val && Object.keys(val).length === 2)) {
+          // 050 換一顆音效：寫名稱；原本是 { name, at }（AI 指定了落點）就只換 name，at 要和原本的一樣
+          const name = typeof val === 'string' ? val : val.name, names = soundNames(ctx.schema);
+          const ats = [seg.sfx, origin.value].filter(isObj).map((x) => x.at);
+          if (same(val, seg.sfx)) set.sfx = val;
+          else if (!names.includes(name)) errors.push(soundError(`段 ${id} 的 sfx`, name, names));
+          else if (isObj(val) && !ats.some((at) => same(at, val.at))) errors.push(`段 ${id} 的 sfx.at 不能在剪輯台改 → 剪輯台只換音效名稱；要改落點請 AI 改`);
+          else write(val);
+        } else errors.push(`段 ${id} 的 sfx 只能設成音效名稱（換一顆）、null（靜音）或 { "restore": true }（還原 AI 原本寫的音效）`);
       } else if (k === 'enter' || k === 'exit') {
         const ok = k === 'enter' ? [...LIMITS.enterExit, 'tape', 'tilt'] : LIMITS.enterExit;   // tape＝圖片紙膠帶貼上、tilt＝斜躺擺平，只能當進場（015）
         if (!ok.includes(val)) errors.push(`段 ${id} 的 ${k} 要是 ${ok.join('、')}，現在是 ${JSON.stringify(val)}`);
@@ -404,18 +450,20 @@ function scanJson(text, start) {
     return null;
   }
 }
-// 第一層 look（contracts/look.md §7.1）：{ color, slim } 兩個都要有、beauty（美顏 0–1）選填；null＝拿掉（回到 kit/look.json 預設）
+// 第一層 look（contracts/look.md §7.1）：{ color, slim } 兩個都要有、beauty（美顏 0–1）、belly（瘦小腹 0–1）選填；null＝拿掉（回到 kit/look.json 預設）
 export function sanitizeLook(v) {
   if (v === null) return { look: null, errors: [] };
   if (!isObj(v)) return { look: undefined, errors: ['look 要是 { "color": 0–1, "slim": 0–1.2 } 或 null（恢復預設）'] };
   const errors = [];
-  for (const k of Object.keys(v)) if (!['color', 'slim', 'beauty'].includes(k)) errors.push(`look 不能有「${k}」→ 只能寫 color、slim、beauty`);
+  for (const k of Object.keys(v)) if (!['color', 'slim', 'beauty', 'belly'].includes(k)) errors.push(`look 不能有「${k}」→ 只能寫 color、slim、beauty、belly`);
   const [c0, c1] = LOOK_LIMITS.color, [s0, s1] = LOOK_LIMITS.slim;
   if (!isNum(v.color) || v.color < c0 || v.color > c1) errors.push(`look.color 要是 ${c0}–${c1} 的數字，現在是 ${JSON.stringify(v.color)}`);
   if (!isNum(v.slim) || v.slim < s0 || v.slim > s1) errors.push(`look.slim 要是 ${s0}–${s1} 的數字，現在是 ${JSON.stringify(v.slim)}`);
   const [b0, b1] = LOOK_LIMITS.beauty;
   if ('beauty' in v && (!isNum(v.beauty) || v.beauty < b0 || v.beauty > b1)) errors.push(`look.beauty 要是 ${b0}–${b1} 的數字，現在是 ${JSON.stringify(v.beauty)}`);
-  return errors.length ? { look: undefined, errors } : { look: { color: r2(v.color), slim: r2(v.slim), ...(v.beauty > 0 ? { beauty: r2(v.beauty) } : {}) }, errors };
+  const [l0, l1] = LOOK_LIMITS.belly;
+  if ('belly' in v && (!isNum(v.belly) || v.belly < l0 || v.belly > l1)) errors.push(`look.belly 要是 ${l0}–${l1} 的數字，現在是 ${JSON.stringify(v.belly)}`);
+  return errors.length ? { look: undefined, errors } : { look: { color: r2(v.color), slim: r2(v.slim), ...(v.beauty > 0 ? { beauty: r2(v.beauty) } : {}), ...(v.belly > 0 ? { belly: r2(v.belly) } : {}) }, errors };
 }
 // 第一層 theme（design-system §10）：亮／暗；不寫＝亮色
 export function sanitizeTheme(v) {
@@ -568,7 +616,7 @@ export function applySave(planText, body, ctx = {}) {
   }
   let edit = null;
   if (body.edit !== undefined) {
-    const r = sanitizeEdit(body.edit, ctx);
+    const r = sanitizeEdit(body.edit, { ...ctx, keepSounds: (Array.isArray(plan.edit?.sfx) ? plan.edit.sfx : []).map((x) => x?.sound) });
     errors.push(...r.errors);
     edit = r.edit;
   }

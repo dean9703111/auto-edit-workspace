@@ -17,7 +17,7 @@
 | 工作區的 HyperFrames（`npm install`） | 照工作區根目錄 `package.json` 裝固定版本到 `node_modules/`；之後 `npx hyperframes` 都用這一版 |
 | 9 支 auto-edit Skill | `node setup/install-skills.mjs` 偵測這台電腦裝了哪些 Agent，在工作區建連到正本 `.agents/skills/` 的連結：`.claude/skills/`（Claude Code）、`.minimax/skills/`（MiniMax Code）；Codex、Cursor 直接讀 `.agents/skills/`。子代理定義 `.agents/agents/auto-edit-worker.md` 一起連到 `.claude/agents/`（Claude Code）。之後改正本不用重裝 |
 | HyperFrames 渲染用的瀏覽器 | 不用另外裝。S6 的 doctor 顯示 Chrome ✗ 時用 `npx -y hyperframes browser ensure` 下載，第一次 render 也會自動下載；放在 `~/.cache/hyperframes/chrome`，約 200 MB |
-| 臉部偵測檔（MediaPipe，約 18.7 MB） | 瘦臉用。已經在 `shared/template/vendor/mediapipe/`，不用裝；S5 只檢查檔案完整 |
+| 臉部偵測檔（MediaPipe，約 18.7 MB；加瘦小腹用的姿勢模型共約 24.5 MB） | 瘦臉、瘦小腹用。已經在 `shared/template/vendor/mediapipe/`，不用裝；S5 只檢查檔案完整 |
 | 人物去背模型（選用，約 170 MB） | 只有用到「講者站在動畫前面」的模板（`x-wall`、`x-magazine`、`x-breakout`）才需要。不在安裝清單裡：build 用到時會說，問過使用者再跑 `node shared/template/tools/media.mjs matte-setup`，下載到 `~/.cache/hyperframes/background-removal/` |
 | ACE-Step 1.5（選用，約 14 GB） | 只有使用者要「生成配樂」才需要。不在安裝清單裡：`music.mjs gen` 印「不能生成配樂」時，先告訴使用者要下載多大、問過再照 `ACE-Step 配樂.md` 裝。不裝也能用 `music.mjs add` 放自己的音樂 |
 
@@ -115,7 +115,7 @@ S1–S9 的指令都可以加 PATH 前綴（Mac：`export PATH="/opt/homebrew/bi
 **S4 安裝 9 支 auto-edit Skill**（`skill_auto_edit` 是 `ok` 就跳過）：`node setup/install-skills.mjs`（只想看會做什麼：加 `--dry-run`；只比對不寫檔：加 `--check`；不偵測、指定 Agent：`--agent claude,minimax`；給程式讀：加 `--json`）。它看家目錄有哪些 Agent 的設定資料夾（`.claude`、`.minimax`、`.codex`、`.cursor`），在工作區建連結：Mac 用 symlink、Windows 用 junction（一般帳號就能建，不用系統管理員）；這個磁碟建不了連結才改成複製。舊版裝在 `~/.minimax/skills/` 的 `auto-edit-*` 會自動移除（專案層優先），刪不掉時它會印要執行的指令，交給使用者執行。
 驗證：最後一行 `✓ 完成：9 支 × N 個 Agent（…）…`（只偵測到 Codex、Cursor 時是 `✓ Codex、Cursor 直接讀 .agents/skills/，不用裝`），結束碼 0。印 `✖ 衝突` 時看 `troubleshooting.md`「共用」。
 
-**S5 臉部偵測檔**（瘦臉用；`mediapipe` 是 `ok` 就跳過，`missing` 不擋其他步驟）：`node shared/template/tools/look.mjs ensure`。驗證：最後一行 `✓ 4 個檔都對`。出現 ✖：先 `git checkout -- shared/template/vendor/mediapipe`（下載 ZIP 的使用者：重新下載工作區），再跑一次；還是 ✖ 就照那一行的 → 做（`--download` 會下載約 18.7 MB，算安裝：先把指令和用途告訴使用者，同意才跑）。不想處理也可以跳過，之後剪片只調光、不瘦臉。
+**S5 臉部偵測檔**（瘦臉用；`mediapipe` 是 `ok` 就跳過，`missing` 不擋其他步驟）：`node shared/template/tools/look.mjs ensure`。驗證：最後一行 `✓ 5 個檔都對`（4 個臉部偵測的檔＋瘦小腹用的姿勢模型 `pose_landmarker_lite.task`）。出現 ✖：先 `git checkout -- shared/template/vendor/mediapipe`（下載 ZIP 的使用者：重新下載工作區），再跑一次；還是 ✖ 就照那一行的 → 做（`--download` 只下載缺的檔，全缺約 24.5 MB、只缺姿勢模型約 5.8 MB，算安裝：先把指令和用途告訴使用者，同意才跑）。不想處理也可以跳過，之後剪片只調光、不瘦臉；只缺姿勢模型時瘦臉照常，只是不能瘦小腹。
 
 **S6 HyperFrames 自我檢查**：`npx -y hyperframes doctor`。驗證：`Node.js`、`FFmpeg`、`FFprobe`、`Chrome`、`whisper-cpp` 這五行是 ✓。其他行（Version、TTS、BGM、Docker、Docker running）是 ✗、最後顯示 `Some checks failed` 都正常，不用處理，也不要去裝 Python 或 Docker。`Chrome` 是 ✗：執行 `npx -y hyperframes browser ensure`，再跑一次 doctor。
 

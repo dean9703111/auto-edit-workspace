@@ -991,6 +991,24 @@ test('相鄰兩段用同一個模板 ⚠（換一個或併成一段）；不同�
   assert.ok(!apart.items.some((it) => it.warnings.some((w) => /同一個模板/.test(w))));
 });
 
+test('052／053 直式：片頭 1.5 秒內的整張幕從第 0 格開始、不做進場；全幕版縮進上半、留講者；版面節奏 ⚠ 與報告那一行', async () => {
+  const { CANVAS } = await imp('lib/canvas.mjs');
+  const V = CANVAS.portrait;
+  const fs04 = (id, from, to) => ({ id, scene: 'fs-list', from, to, slots: { title: '清單', items: ['一', '二', '三'] } });
+  const P = (scenes, plan = {}) => resolvePlan({ plan: { version: 1, format: 'portrait', speakerBox: [300, 500, 780, 1100], scenes, ...plan }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), canvas: V });
+  const head = P([fs04('s01', '#1', '#4e')]);
+  const s01 = head.items.find((x) => x.id === 's01');
+  assert.deepEqual([s01.start, s01.fadeIn, s01.txIn, s01.pipPieces[0].enter], [0, false, 'cut', 'none']);
+  assert.ok(s01.notes.some((n) => /片頭/.test(n)) || cues[0].start === 0);
+  // 全幕版：直式 pip 保留（下面是講者）
+  const card = P([{ id: 's01', scene: 'concept', full: true, from: '#2', to: '#4e', slots: { text: '**X**：一句定義' } }]);
+  const c01 = card.items.find((x) => x.id === 's01');
+  assert.deepEqual([c01.full, c01.opaque, c01.pip], [true, true, true]);
+  // 版面節奏：切一半 #2–#4e 太短、又切回全身 → ⚠；報告有「版面（直式）」
+  assert.ok(card.warnings.some((w) => /版面節奏（直式）：切一半只停/.test(w)));
+  assert.match(card.portraitLayout, /切一半/);
+});
+
 test('037 直式講者上浮：上下分割結束、接著講者滿版 → 片段 exit＝rise、txOut＝rise，主合成做面板上浮、不做色帶收回；片尾的段、後面接別的幕、橫式都照舊', async () => {
   const { CANVAS } = await imp('lib/canvas.mjs');
   const V = CANVAS.portrait;
@@ -1016,6 +1034,14 @@ test('037 直式講者上浮：上下分割結束、接著講者滿版 → 片�
   // 片尾 1 秒內結束的段：不上浮，延到片尾、停在完成態（046：主合成讓整個畫面漸暗）
   const tail = byId(resolvePlan({ plan: { version: 1, format: 'portrait', speakerBox: [300, 500, 780, 1100], scenes: [fs04('s01', '#11', '#12e')] }, cues, videoDur: cueEnd(12) + 0.5, lib: L, outDir: os.tmpdir(), canvas: V }), 's01');
   assert.deepEqual([tail.pipPieces.map((p) => p.exit), tail.txOut, !!tail.riseOut, tail.tailFade, tail.end], [['layer'], 'fade', false, true, cueEnd(12) + 0.5]);
+  // 049 → 052 片尾：講完接 1 秒（build 接原始錄影；接不上才定格）一起淡出，總長多 1；剪輯台設了片尾淡出就不加
+  const tailPlan = { version: 1, format: 'portrait', speakerBox: [300, 500, 780, 1100], scenes: [fs04('s01', '#11', '#12e')] };
+  const tr = resolvePlan({ plan: tailPlan, cues, videoDur: cueEnd(12) + 0.5, lib: L, outDir: os.tmpdir(), canvas: V });
+  assert.deepEqual([tr.tail, tr.finalDur], [{ id: 's01', hold: 0, fade: 1, dur: 1, voiceFade: 0.2 }, cueEnd(12) + 1.5]);
+  const tf = resolvePlan({ plan: { ...tailPlan, edit: { fadeOut: 1 } }, cues, videoDur: cueEnd(12) + 0.5, lib: L, outDir: os.tmpdir(), canvas: V });
+  assert.deepEqual([tf.tail, tf.finalDur], [null, cueEnd(12) + 0.5]);
+  // 052：最後一段離片尾超過 1 秒（照舊收回到講者）也一樣講完定格再漸暗，只是不是哪一段動畫停著（id null）
+  assert.deepEqual(P([fs04('s01', '#2', '#4e')]).tail, { id: null, hold: 0, fade: 1, dur: 1, voiceFade: 0.2 }, '最後是講者全身：講完接 1 秒再漸暗');
   // 後面直接接另一張全畫面：小視窗不動（none）
   const two = P([fs04('s01', '#2', '#4e'), fs04('s02', '#5', '#7e')]);
   assert.equal(byId(two, 's01').pipPieces.at(-1).exit === 'rise', byId(two, 's01').end < byId(two, 's02').start - 1e-6, '中間有露出講者才上浮');

@@ -61,7 +61,7 @@ test('設定：kit/look.json 預設、validateLook 每則訊息、resolveLook �
   assert.deepEqual(L.validateLook(false), []);
   assert.deepEqual(L.validateLook({ color: 0.5, slim: 1.2 }), []);
   for (const bad of [null, true, 'x', [1]]) assert.deepEqual(L.validateLook(bad), ['plan.json 的 look 要是物件或 false → 例如 "look": { "color": 0.8, "slim": 0.6 }；要用預設就把 look 整個拿掉']);
-  assert.deepEqual(L.validateLook({ x: 1 }), ['look 不能有「x」→ 只能寫 color、slim、beauty']);
+  assert.deepEqual(L.validateLook({ x: 1 }), ['look 不能有「x」→ 只能寫 color、slim、beauty、belly']);
   assert.deepEqual(L.validateLook({ color: 1.5 }), ['look.color 要是 0–1 的數字（0＝不調光），現在是 1.5']);
   assert.deepEqual(L.validateLook({ slim: 2 }), ['look.slim 要是 0–1.2 的數字（0＝不瘦臉；超過 1.2 脖子與領口會被拉彎），現在是 2']);
   assert.equal(L.resolveLook({ plan: {}, templateDir: TEMPLATE }).source, 'kit');
@@ -72,7 +72,7 @@ test('設定：kit/look.json 預設、validateLook 每則訊息、resolveLook �
   const t = tmpDir();
   fs.mkdirSync(path.join(t, 'kit'));
   fs.writeFileSync(path.join(t, 'kit', 'look.json'), '{ "color": 0.8, "slim": 0.6, "lut": "x.cube", "eyes": 1 }');
-  assert.throws(() => L.readKitLook(t), /kit\/look\.json 不能有「eyes」→ 只能寫 color、slim、beauty、lut/);
+  assert.throws(() => L.readKitLook(t), /kit\/look\.json 不能有「eyes」→ 只能寫 color、slim、beauty、belly、lut/);
 });
 
 // ---------- LUT ----------
@@ -240,13 +240,13 @@ test('ensureLook 判斷表：七列 × strict、key 與 report 原文、lookChec
   // 1：全關
   let d = fakeProject();
   let r = run(d, { look: false }, true);
-  assert.deepEqual([r.lut, r.key, r.report], [null, null, ['講者調光：關（plan.json 的 look）', '講者瘦臉：關、美顏：關（plan.json 的 look）']]);
+  assert.deepEqual([r.lut, r.key, r.report], [null, null, ['講者調光：關（plan.json 的 look）', '講者瘦臉：關、美顏：關、瘦小腹：關（plan.json 的 look）']]);
   assert.equal(r.footage, path.join(d, 'work', 'rough.mp4'));
   // 2：只調光
   r = run(d, { look: { slim: 0 } }, true);
   assert.deepEqual(r.key, { v: 1, color: 0.8, lut: '56969a5a84ac', slim: 0, footage: 'rough.mp4' });
   assert.equal(path.basename(r.lut), 'lut-0.80-56969a5a.cube');
-  assert.deepEqual(r.report, ['講者調光：0.8（kit/look/jianying-smart.cube，build 重新編碼底片時 bake）', '講者瘦臉：關、美顏：關（plan.json 的 look）']);
+  assert.deepEqual(r.report, ['講者調光：0.8（kit/look/jianying-smart.cube，build 重新編碼底片時 bake）', '講者瘦臉：關、美顏：關、瘦小腹：關（plan.json 的 look）']);
   // 7：沒跑過、能跑 → strict 丟錯、非 strict ⚠
   // 指令放在 → 後面、行尾（C-02）；rough.mp4 是假檔時不預估
   assert.throws(() => run(d, {}, true), /^Error: 瘦臉底片不是最新的（還沒跑過；不要瘦臉就在 plan\.json 寫 "look": \{ "slim": 0 \}）→ 先跑 node shared\/template\/tools\/look\.mjs run --project \S+$/);
@@ -255,7 +255,7 @@ test('ensureLook 判斷表：七列 × strict、key 與 report 原文、lookChec
   assert.equal(r.key.slim, 0);
   assert.equal(L.lookNeedsRun({ projectDir: d, plan: {}, templateDir: TEMPLATE, probe: OK_PROBE }), true);
   const lc = L.lookCheck({ projectDir: d, plan: { look: { slim: 0.6, x: 1 } }, templateDir: TEMPLATE, probe: OK_PROBE });
-  assert.deepEqual(lc.errors, ['look 不能有「x」→ 只能寫 color、slim、beauty']);
+  assert.deepEqual(lc.errors, ['look 不能有「x」→ 只能寫 color、slim、beauty、belly']);
   assert.match(lc.warnings[0], /^build 會停下來：瘦臉底片不是最新的/);
   // 6：不能跑
   r = run(d, {}, true, { assets: { ok: false, missing: ['face_landmarker.task'], bad: [] }, chrome: true });
@@ -269,7 +269,7 @@ test('ensureLook 判斷表：七列 × strict、key 與 report 原文、lookChec
   r = run(d, {}, true);
   assert.equal(r.footage, path.join(d, 'work', 'rough-look.mp4'));
   assert.deepEqual(r.key, { v: 1, color: 0.8, lut: '56969a5a84ac', slim: 0.6, footage: 'rough-look.mp4' });
-  assert.equal(r.report[1], '講者瘦臉：0.6、美顏：關（work/rough-look.mp4；偵測率 99.98%、臉寬中位數 172 px）');
+  assert.equal(r.report[1], '講者瘦臉：0.6、美顏：關、瘦小腹：關（work/rough-look.mp4；偵測率 99.98%、臉寬中位數 172 px）');
   assert.equal(L.lookNeedsRun({ projectDir: d, plan: {}, templateDir: TEMPLATE, probe: OK_PROBE }), false);
   // 強度改了 → 過期原因
   assert.throws(() => run(d, { look: { slim: 0.8 } }, true), /瘦臉底片不是最新的（瘦臉強度 0\.6 → 0\.8；/);
@@ -430,7 +430,7 @@ async function cli(args, cwd = WORKSPACE) {
 test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行下一步、clear', async () => {
   let r = await cli(['--help']);
   assert.equal(r.code, 0);
-  assert.match(r.lines[0], /^講者調光、瘦臉、美顏（零依賴/);
+  assert.match(r.lines[0], /^講者調光、瘦臉、美顏、瘦小腹（零依賴/);
   for (const bad of [['nope'], ['run', '--every', '3'], ['ensure', '--project', 'x'], ['status', '--zzz'], [], ['status', 'x']]) {
     r = await cli(bad);
     assert.equal(r.code, 2, bad.join(' '));
@@ -443,12 +443,12 @@ test('CLI：--help、參數錯誤退出 2、run 不用跑、status 只印一行�
   const dir = fakeProject({ plan: { version: 1, look: { slim: 0 }, scenes: [] } });
   r = await cli(['run', '--project', dir]);
   assert.equal(r.code, 0);
-  assert.match(r.lines.at(-1), /^瘦臉、美顏都關閉（plan\.json 的 look slim = 0、beauty = 0）→ 不用跑；調光 0\.8 在 build 時 bake$/);
+  assert.match(r.lines.at(-1), /^瘦臉、美顏、瘦小腹都關閉（plan\.json 的 look slim = 0、beauty = 0、belly = 0）→ 不用跑；調光 0\.8 在 build 時 bake$/);
   const d2 = fakeProject();
   r = await cli(['status', '--project', d2]);
   assert.equal(r.code, 0);
   assert.equal(r.lines.filter((l) => l.startsWith('→ 下一步：')).length, 1, r.lines.join('\n'));
-  assert.equal(r.lines[1], '設定：調光 0.8、瘦臉 0.6、美顏 關（來源：kit/look.json）');
+  assert.equal(r.lines[1], '設定：調光 0.8、瘦臉 0.6、美顏 關、瘦小腹 關（來源：kit/look.json）');
   freshState(d2);
   fs.writeFileSync(path.join(d2, 'work', 'look-preview.jpg'), 'x');
   r = await cli(['status', '--project', d2]);
@@ -602,10 +602,15 @@ test('CLI ensure：缺檔 ✖ 退出 1；--download 從本機假來源補、sha2
 
 // ---------- 資產與真的偵測 ----------
 
-test('資產：vendor/mediapipe 的 4 個檔和 manifest 的大小與 sha256 一致；LICENSE 是 Apache-2.0 全文', () => {
+test('資產：vendor/mediapipe 的 5 個檔和 manifest 的大小與 sha256 一致；LICENSE 是 Apache-2.0 全文；姿勢模型只有瘦小腹（或 ensure）才算進來', () => {
   const v = path.join(TEMPLATE, 'vendor', 'mediapipe'), m = JSON.parse(fs.readFileSync(path.join(v, 'manifest.json'), 'utf8'));
-  assert.equal(m.files.length, 4);
-  assert.equal(m.files.reduce((s, f) => s + f.size, 0), 18715722);
+  assert.equal(m.files.length, 5);
+  assert.equal(m.files.reduce((s, f) => s + f.size, 0), 18715722 + 5777746);
+  assert.deepEqual(m.files.filter((f) => f.for === 'belly').map((f) => [f.path, f.url]), [[L.POSE_MODEL, 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task']]);
+  assert.equal(L.poseSha(TEMPLATE), '59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a');
+  // 沒開瘦小腹：只看原本的 4 個檔（姿勢模型不見了也不影響）；開了瘦小腹或 ensure：5 個
+  assert.deepEqual([L.assetsStatus(v).files.length, L.assetsStatus(v, { pose: true }).files.length], [4, 5]);
+  assert.equal(L.assetsStatus(v, { sha: true, pose: true }).ok, true);
   for (const f of m.files) {
     const file = path.join(v, f.path);
     assert.equal(fs.statSync(file).size, f.size, f.path);

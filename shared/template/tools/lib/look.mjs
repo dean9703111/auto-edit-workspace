@@ -13,6 +13,8 @@
 //   renderLookFootage({ projectDir, track, slim, onProgress }) 解碼 YUV → 變形 → x264（音軌 copy）→ work/rough-look.mp4
 //   lookPreview({ projectDir, templateDir, plan })             對照圖 work/look-preview.jpg ＋印的行
 //   faceImage({ projectDir, t, slim, cache })                  剪輯台「講者」面板的單格前後對照（JPEG）
+//   瘦小腹（look.belly；契約 §9）：bellyField 位移場（和瘦臉共用 warpPlane）、loadPoseTrack 讀 work/pose-landmarks.json、
+//   poseSummary 偵測率與能不能做、bodyImage 剪輯台的軀幹前後對照
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,9 +34,12 @@ export const DEFAULT_TEMPLATE = path.resolve(HERE, '..', '..');
 export const LOOK_VER = 1;
 export const LM_VER = 1;
 export const LUT_REF = 0.8;
-export const LOOK_LIMITS = { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], step: 0.05 };
-// 要做臉部底片（rough-look.mp4）：瘦臉或美顏任一個開
-export const faceOn = (L) => L.slim > 0 || L.beauty > 0;
+export const LOOK_LIMITS = { color: [0, 1], slim: [0, 1.2], beauty: [0, 1], belly: [0, 1], step: 0.05 };
+// 要做臉部底片（rough-look.mp4）：瘦臉、美顏、瘦小腹任一個開
+export const faceOn = (L) => L.slim > 0 || L.beauty > 0 || L.belly > 0;
+// 要偵測臉（瘦臉、美顏）／要偵測姿勢（瘦小腹）：只開瘦小腹的不跑臉部偵測，沒開瘦小腹的不需要姿勢模型
+export const needFace = (L) => L.slim > 0 || L.beauty > 0;
+export const needPose = (L) => L.belly > 0;
 export const H_TAB = [-0.10, 0.10, 0.25, 0.40, 0.55, 0.65, 0.75, 0.85, 0.90, 0.95, 1.00, 1.10];
 export const IN_TAB = [0.00, 0.75, 1.05, 1.15, 1.30, 1.65, 1.60, 1.45, 1.35, 1.20, 0.70, 0.70].map((v) => v / 100);
 export const UP_TAB = [0.00, 0.00, 0.15, 0.50, 1.05, 1.30, 1.50, 1.85, 2.00, 2.05, 2.15, 2.15].map((v) => v / 100);
@@ -58,8 +63,29 @@ export const LOOK_MAX_SIDE = 2560;
 export const ROI_SCALE = 3.25, ROI_SIZE = 384;
 export const SEARCH_GAP = 15;
 export const DETECT_CFG = { numFaces: 2, minFaceDetectionConfidence: 0.3, minFacePresenceConfidence: 0.3 };
+// 姿勢（瘦小腹用；契約 §9）：MediaPipe PoseLandmarker，只留左右肩（11、12）、左右髖（23、24）
+export const POSE_VER = 1;
+export const POSE_MODEL = 'pose_landmarker_lite.task';
+export const POSE_POINTS = [11, 12, 23, 24];
+export const POSE_EVERY = 3;
+export const POSE_CFG = { numPoses: 1, minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5 };
+// 瘦小腹的數字（契約 §9.4；2026-11-15 對示範口播看前後對照定的）：
+//   max     belly＝1 時每邊最大位移＝腰寬的 6 %（腰寬＝2 × half × 肩寬）
+//   half    腰的半寬＝肩寬（點 11–12 的距離）× 0.55（示範口播量到 0.59；寬一點窄一點位移場都是平滑的）
+//   reach   離中線多遠位移回到 0（半寬的倍數）；inner 以內等比例收（衣服上的圖案不變形）
+//   top／bottom  沿軀幹（0＝肩、1＝髖）：0.35 開始、0.6–0.85 全做、1.05 回到 0（肩膀以上、髖以下不動）
+//   side    肩寬 ÷ 軀幹長：≤ 0.4（側身）不做、≥ 0.6 全做；tilt 軀幹離垂直幾度：≥ 35 不做、≤ 25 全做
+//   vis     肩、髖四點可見度的最小值：≤ 0.5 不做、≥ 0.8 全做；minPx 肩寬（rough-look 畫面）小於這個不做
+//   smooth  時間平滑的 σ（單位：筆，一筆＝POSE_EVERY 格）：2 筆＝0.2 秒。示範口播每格的位移差（belly 1、畫面寬 640）
+//           σ 1 → 95% 的格 ≤ 0.32 px、最大 0.99 px；σ 2 → 0.21／0.49 px；σ 3 → 0.14／0.32 px（再大會跟不上身體晃動）
+export const BELLY = { max: 0.06, half: 0.55, inner: 0.7, reach: 2, top: [0.35, 0.6], bottom: [0.85, 1.05], side: [0.4, 0.6], tilt: [25, 35], vis: [0.5, 0.8], minPx: 60, smooth: 2 };
+// 位移 ⚠：每格「最大位移 ÷ 這格腰寬」的 95 百分位 > 5 %（＝belly 大約 0.85 以上）。示範口播 belly 1 時腰旁邊的筆電邊緣被帶進去 6 px（畫面寬 640），
+// 單看一格還自然、前後一比看得出來；0.5（3 px）要看差異圖才找得到
+export const BELLY_DISP_WARN = 0.05;
 // 偵測：04 §4.5 量到 tasks-vision 16.6 ms／次；2026-10-31 實測整條（傳 1280×720 RGBA＋ROI＋偵測）26 ms／格 → 用實測值
-export const EST = { detectMs: 26, warpMs: 14.5 };
+// 姿勢：2026-11-15 實測示範口播（640×360、4598 格）26 ms／次、每 3 格一次；只跑姿勢時整條（含解碼）10.3 ms／格；
+// 瘦小腹的變形：示範口播放大到 1920×1080、600 格，變形整段 6 秒 → 9 秒＝多 5 ms／格
+export const EST = { detectMs: 26, warpMs: 14.5, poseMs: 26, poseDecodeMs: 2, bellyMs: 5 };
 
 const r2 = (n) => Math.round(Number(n) * 100) / 100;
 const r1 = (n) => Math.round(Number(n) * 10) / 10;
@@ -77,34 +103,37 @@ export function readKitLook(templateDir = DEFAULT_TEMPLATE) {
   let j;
   try { j = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { throw new Error(`kit/look.json 讀不到：${e.message} → 從 git 還原 shared/template/kit/look.json`); }
   if (!isObj(j)) throw new Error('kit/look.json 要是物件 { "color", "slim", "lut" } → 從 git 還原 shared/template/kit/look.json');
-  for (const k of Object.keys(j)) if (!['color', 'slim', 'beauty', 'lut'].includes(k)) throw new Error(`kit/look.json 不能有「${k}」→ 只能寫 color、slim、beauty、lut`);
+  for (const k of Object.keys(j)) if (!['color', 'slim', 'beauty', 'belly', 'lut'].includes(k)) throw new Error(`kit/look.json 不能有「${k}」→ 只能寫 color、slim、beauty、belly、lut`);
   if ('beauty' in j && (!num(j.beauty) || j.beauty < 0 || j.beauty > 1)) throw new Error(`kit/look.json 的 beauty 要是 0–1 的數字，現在是 ${JSON.stringify(j.beauty)} → 改成 0–1（預設 0＝不美顏；要美顏建議 0.5），或刪掉這個欄位`);
+  if ('belly' in j && (!num(j.belly) || j.belly < 0 || j.belly > 1)) throw new Error(`kit/look.json 的 belly 要是 0–1 的數字，現在是 ${JSON.stringify(j.belly)} → 改成 0–1（預設 0＝不瘦小腹；要瘦小腹建議 0.5），或刪掉這個欄位`);
   if (!num(j.color) || j.color < 0 || j.color > 1) throw new Error(`kit/look.json 的 color 要是 0–1 的數字，現在是 ${JSON.stringify(j.color)} → 改成 0–1（預設 0＝不調光；要調光建議 0.8），或從 git 還原 shared/template/kit/look.json`);
   if (!num(j.slim) || j.slim < 0 || j.slim > 1.2) throw new Error(`kit/look.json 的 slim 要是 0–1.2 的數字，現在是 ${JSON.stringify(j.slim)} → 改成 0–1.2（預設 0＝不瘦臉；要瘦臉建議 0.6），或從 git 還原 shared/template/kit/look.json`);
   if (typeof j.lut !== 'string' || !j.lut) throw new Error('kit/look.json 的 lut 要是 kit/ 底下的 .cube 路徑，例如 "look/jianying-smart.cube" → 從 git 還原 shared/template/kit/look.json');
   const lutFile = path.join(templateDir, 'kit', j.lut);
-  return { color: r2(j.color), slim: r2(j.slim), beauty: r2(j.beauty ?? 0), lut: j.lut, lutFile };
+  return { color: r2(j.color), slim: r2(j.slim), beauty: r2(j.beauty ?? 0), belly: r2(j.belly ?? 0), lut: j.lut, lutFile };
 }
 
 export function validateLook(v) {
   if (v === undefined || v === false) return [];
   if (!isObj(v)) return ['plan.json 的 look 要是物件或 false → 例如 "look": { "color": 0.8, "slim": 0.6 }；要用預設就把 look 整個拿掉'];
   const out = [];
-  for (const k of Object.keys(v)) if (!['color', 'slim', 'beauty'].includes(k)) out.push(`look 不能有「${k}」→ 只能寫 color、slim、beauty`);
+  for (const k of Object.keys(v)) if (!['color', 'slim', 'beauty', 'belly'].includes(k)) out.push(`look 不能有「${k}」→ 只能寫 color、slim、beauty、belly`);
   if ('color' in v && (!num(v.color) || v.color < 0 || v.color > 1)) out.push(`look.color 要是 0–1 的數字（0＝不調光），現在是 ${JSON.stringify(v.color)}`);
   if ('slim' in v && (!num(v.slim) || v.slim < 0 || v.slim > 1.2)) out.push(`look.slim 要是 0–1.2 的數字（0＝不瘦臉；超過 1.2 脖子與領口會被拉彎），現在是 ${JSON.stringify(v.slim)}`);
   if ('beauty' in v && (!num(v.beauty) || v.beauty < 0 || v.beauty > 1)) out.push(`look.beauty 要是 0–1 的數字（0＝不美顏；磨皮、提亮、淡化黑眼圈），現在是 ${JSON.stringify(v.beauty)}`);
+  if ('belly' in v && (!num(v.belly) || v.belly < 0 || v.belly > 1)) out.push(`look.belly 要是 0–1 的數字（0＝不瘦小腹；腰往身體中線收，越大手臂與旁邊的東西越看得出變形），現在是 ${JSON.stringify(v.belly)}`);
   return out;
 }
 
 export function resolveLook({ plan, templateDir = DEFAULT_TEMPLATE } = {}) {
   const kit = readKitLook(templateDir);
   const v = plan?.look;
-  const base = { lutFile: kit.lutFile, lutRel: kit.lut, kit: { color: kit.color, slim: kit.slim, beauty: kit.beauty } };
-  if (v === false) return { ...base, color: 0, slim: 0, beauty: 0, source: 'off' };
-  if (!isObj(v)) return { ...base, color: kit.color, slim: kit.slim, beauty: kit.beauty, source: 'kit' };
+  const base = { lutFile: kit.lutFile, lutRel: kit.lut, kit: { color: kit.color, slim: kit.slim, beauty: kit.beauty, belly: kit.belly } };
+  if (v === false) return { ...base, color: 0, slim: 0, beauty: 0, belly: 0, source: 'off' };
+  if (!isObj(v)) return { ...base, color: kit.color, slim: kit.slim, beauty: kit.beauty, belly: kit.belly, source: 'kit' };
   const ok = (x, hi) => num(x) && x >= 0 && x <= hi;
-  return { ...base, color: ok(v.color, 1) ? r2(v.color) : kit.color, slim: ok(v.slim, 1.2) ? r2(v.slim) : kit.slim, beauty: ok(v.beauty, 1) ? r2(v.beauty) : kit.beauty, source: 'plan' };
+  return { ...base, color: ok(v.color, 1) ? r2(v.color) : kit.color, slim: ok(v.slim, 1.2) ? r2(v.slim) : kit.slim, beauty: ok(v.beauty, 1) ? r2(v.beauty) : kit.beauty,
+    belly: ok(v.belly, 1) ? r2(v.belly) : kit.belly, source: 'plan' };
 }
 const srcLabel = (L) => (L.source === 'kit' ? 'kit/look.json' : 'plan.json 的 look');
 
@@ -185,7 +214,7 @@ export function statePaths(projectDir) {
   const work = path.join(projectDir, 'work'), dir = path.join(work, '.look');
   return {
     work, dir, state: path.join(dir, 'state.json'), log: path.join(dir, 'run.log'),
-    rough: path.join(work, 'rough.mp4'), landmarks: path.join(work, 'face-landmarks.json'),
+    rough: path.join(work, 'rough.mp4'), landmarks: path.join(work, 'face-landmarks.json'), pose: path.join(work, 'pose-landmarks.json'),
     footage: path.join(work, 'rough-look.mp4'), preview: path.join(work, 'look-preview.jpg'),
   };
 }
@@ -221,12 +250,16 @@ export const vendorOf = (templateDir = DEFAULT_TEMPLATE) => path.join(templateDi
 export function modelSha(templateDir = DEFAULT_TEMPLATE) {
   return readManifest(vendorOf(templateDir))?.files?.find((f) => f.path === 'face_landmarker.task')?.sha256 || null;
 }
+export function poseSha(templateDir = DEFAULT_TEMPLATE) {
+  return readManifest(vendorOf(templateDir))?.files?.find((f) => f.path === POSE_MODEL)?.sha256 || null;
+}
 
 // sha＝true 才算 sha256（run／status／ensure）；build 只看大小
-export function assetsStatus(vendorDir, { sha = false } = {}) {
+// manifest 裡標了 "for": "belly" 的檔（姿勢模型）只有 pose＝true（瘦小腹開著，或 ensure 檢查全部）才算進來：沒開瘦小腹的人不需要它
+export function assetsStatus(vendorDir, { sha = false, pose = false } = {}) {
   const m = readManifest(vendorDir);
   if (!m || !Array.isArray(m.files)) return { ok: false, manifest: false, files: [], missing: ['manifest.json'], bad: [] };
-  const files = m.files.map((f) => {
+  const files = m.files.filter((f) => pose || f.for !== 'belly').map((f) => {
     const file = path.join(vendorDir, f.path), st = statOf(file);
     let state = 'ok';
     if (!st) state = 'missing';
@@ -241,22 +274,40 @@ export function landmarksFresh(st, P, mSha) {
   const L = st.landmarks;
   return !!L && sameStat(L, statOf(P.landmarks)) && sameStat(L.rough, statOf(P.rough)) && L.modelSha256 === mSha && L.lmVer === LM_VER;
 }
-export function footageFresh(st, P, mSha, slim, beauty = 0) {
-  const F = st.footage;
-  return landmarksFresh(st, P, mSha) && !!F && sameStat(F, statOf(P.footage)) && sameStat(F.rough, statOf(P.rough))
-    && sameStat(F.landmarks, statOf(P.landmarks)) && r2(F.slim) === r2(slim) && r2(F.beauty ?? 0) === r2(beauty) && F.lookVer === LOOK_VER;
+// 姿勢 landmark（work/pose-landmarks.json）最新：檔案沒被動過、rough.mp4 沒換、姿勢模型與 POSE_VER 沒變
+export function poseFresh(st, P, pSha) {
+  const L = st.pose;
+  return !!L && sameStat(L, statOf(P.pose)) && sameStat(L.rough, statOf(P.rough)) && L.modelSha256 === pSha && L.poseVer === POSE_VER;
 }
-export function staleReason(st, P, mSha, slim, beauty = 0) {
-  if (!st.landmarks && !st.footage) return '還沒跑過';
+// belly＝0（預設）時和以前完全一樣：要臉部 landmark 最新。belly > 0 再多要姿勢 landmark 最新；只開瘦小腹（slim、beauty 都 0）不看臉部 landmark
+export function footageFresh(st, P, mSha, slim, beauty = 0, belly = 0, pSha = null) {
+  const F = st.footage, face = slim > 0 || beauty > 0 || !(belly > 0);
+  return !!F && (!face || (landmarksFresh(st, P, mSha) && sameStat(F.landmarks, statOf(P.landmarks))))
+    && (!(belly > 0) || (poseFresh(st, P, pSha) && sameStat(F.pose, statOf(P.pose))))
+    && sameStat(F, statOf(P.footage)) && sameStat(F.rough, statOf(P.rough))
+    && r2(F.slim) === r2(slim) && r2(F.beauty ?? 0) === r2(beauty) && r2(F.belly ?? 0) === r2(belly) && F.lookVer === LOOK_VER;
+}
+export function staleReason(st, P, mSha, slim, beauty = 0, belly = 0, pSha = null) {
+  const face = slim > 0 || beauty > 0 || !(belly > 0);
+  if (!st.landmarks && !st.pose && !st.footage) return '還沒跑過';
   const rough = statOf(P.rough);
-  if ((st.landmarks && !sameStat(st.landmarks.rough, rough)) || (st.footage && !sameStat(st.footage.rough, rough))) return 'rough.mp4 換過（剪乾淨重做了）';
-  if (!st.landmarks || !sameStat(st.landmarks, statOf(P.landmarks))) return 'work/face-landmarks.json 不見了或被改過';
-  if (st.landmarks.lmVer !== LM_VER) return `偵測版本更新（LM_VER ${st.landmarks.lmVer} → ${LM_VER}）`;
-  if (st.landmarks.modelSha256 !== mSha) return '臉部偵測模型換過';
+  if ((st.landmarks && !sameStat(st.landmarks.rough, rough)) || (st.pose && !sameStat(st.pose.rough, rough)) || (st.footage && !sameStat(st.footage.rough, rough))) return 'rough.mp4 換過（剪乾淨重做了）';
+  if (face) {
+    if (!st.landmarks || !sameStat(st.landmarks, statOf(P.landmarks))) return 'work/face-landmarks.json 不見了或被改過';
+    if (st.landmarks.lmVer !== LM_VER) return `偵測版本更新（LM_VER ${st.landmarks.lmVer} → ${LM_VER}）`;
+    if (st.landmarks.modelSha256 !== mSha) return '臉部偵測模型換過';
+  }
+  if (belly > 0) {
+    if (!st.pose) return '瘦小腹要的姿勢還沒偵測';
+    if (!sameStat(st.pose, statOf(P.pose))) return 'work/pose-landmarks.json 不見了或被改過';
+    if (st.pose.poseVer !== POSE_VER) return `姿勢偵測版本更新（POSE_VER ${st.pose.poseVer} → ${POSE_VER}）`;
+    if (st.pose.modelSha256 !== pSha) return '姿勢偵測模型換過';
+  }
   if (!st.footage) return '瘦臉底片還沒做';
   if (r2(st.footage.slim) !== r2(slim)) return `瘦臉強度 ${fmtNum(st.footage.slim)} → ${fmtNum(slim)}`;
   if (r2(st.footage.beauty ?? 0) !== r2(beauty)) return `美顏強度 ${fmtNum(st.footage.beauty ?? 0)} → ${fmtNum(beauty)}`;
-  if (!sameStat(st.footage, statOf(P.footage)) || !sameStat(st.footage.landmarks, statOf(P.landmarks))) return 'work/rough-look.mp4 不見了或被改過';
+  if (r2(st.footage.belly ?? 0) !== r2(belly)) return `瘦小腹強度 ${fmtNum(st.footage.belly ?? 0)} → ${fmtNum(belly)}`;
+  if (!sameStat(st.footage, statOf(P.footage)) || (face && !sameStat(st.footage.landmarks, statOf(P.landmarks))) || (belly > 0 && !sameStat(st.footage.pose, statOf(P.pose)))) return 'work/rough-look.mp4 不見了或被改過';
   if (st.footage.lookVer !== LOOK_VER) return `look.mjs 版本更新（LOOK_VER ${st.footage.lookVer} → ${LOOK_VER}）`;
   return null;
 }
@@ -267,9 +318,10 @@ export function lookSize(w, h) {
   const k = LOOK_MAX_SIDE / long, even = (x) => Math.max(2, Math.round(x / 2) * 2);
   return { w: even(w * k), h: even(h * k), scaled: true };
 }
-export function estimateMinutes({ frames, width, height, every = 1, detect = true, warp = true }) {
-  const L = lookSize(width, height);
-  const ms = (detect ? EST.detectMs / every : 0) + (warp ? EST.warpMs * Math.max(1, (L.w * L.h) / (1920 * 1080)) : 0);
+// pose＝這次要偵測姿勢（每 POSE_EVERY 格一次）；belly＝變形時多做瘦小腹。兩個都不給時和以前算的一樣
+export function estimateMinutes({ frames, width, height, every = 1, detect = true, warp = true, pose = false, belly = false }) {
+  const L = lookSize(width, height), px = Math.max(1, (L.w * L.h) / (1920 * 1080));
+  const ms = (detect ? EST.detectMs / every : 0) + (pose ? EST.poseMs / POSE_EVERY + (detect ? 0 : EST.poseDecodeMs) : 0) + (warp ? (EST.warpMs + (belly ? EST.bellyMs : 0)) * px : 0);
   return Math.max(1, Math.ceil((frames * ms) / 60000));
 }
 
@@ -300,10 +352,18 @@ export function projectLabel(projectDir, templateDir = DEFAULT_TEMPLATE) {
 
 // ---------- ensureLook／lookCheck（contracts/look.md §3） ----------
 
+// 實際會套用的強度（decide 與 look.mjs status 共用）。略過各自判斷，一邊略過另一邊照做：
+//   臉（太小、沒有臉、偵測率低）→ 不瘦臉、不美顏；姿勢（偵測率低、能做的格太少、人太小）→ 不瘦小腹
+export function lookEffective(L, st, P, mSha, pSha) {
+  const lmOk = landmarksFresh(st, P, mSha), poOk = needPose(L) && poseFresh(st, P, pSha);
+  const faceSkip = needFace(L) && lmOk && st.landmarks?.summary?.slimOk === false, bellySkip = poOk && st.pose?.summary?.bellyOk === false;
+  return { lmOk, poOk, faceSkip, bellySkip, eff: { slim: faceSkip ? 0 : L.slim, beauty: faceSkip ? 0 : L.beauty, belly: bellySkip ? 0 : L.belly } };
+}
+
 function decide({ projectDir, plan, templateDir, probe = {} }) {
   const L = resolveLook({ plan, templateDir });
   const P = statePaths(projectDir), st = readState(projectDir), proj = projectLabel(projectDir, templateDir);
-  const base = { L, P, st, proj, footage: P.rough, slimApplied: 0, beautyApplied: 0 };
+  const base = { L, P, st, proj, footage: P.rough, slimApplied: 0, beautyApplied: 0, bellyApplied: 0, warns: [] };
   if (L.color === 0 && !faceOn(L)) return { ...base, row: 1 };
   if (!faceOn(L)) return { ...base, row: 2 };
   // 等它做完：look.mjs run 在背景工作（lib/job.mjs）裡跑，再下一次同一條會接著等、不會重做（不用每 30 秒查 status）
@@ -314,35 +374,48 @@ function decide({ projectDir, plan, templateDir, probe = {} }) {
     return { ...base, row: 3, waitCmd, warn: `⚠ 講者瘦臉還在跑（look.mjs run，pid ${pid}；跑這條會接著等，做完再 build）→ ${waitCmd}`,
       error: `瘦臉還在跑（pid ${pid}；跑這條會接著等，做完再 build）→ ${waitCmd}` };
   }
-  const mSha = modelSha(templateDir);
-  const sum = st.landmarks?.summary;
-  if (landmarksFresh(st, P, mSha) && sum && sum.slimOk === false) {
+  const mSha = modelSha(templateDir), pSha = poseSha(templateDir);
+  const wantFace = needFace(L), wantPose = needPose(L);
+  const sum = st.landmarks?.summary, psum = st.pose?.summary;
+  const { lmOk, poOk, faceSkip, bellySkip, eff } = lookEffective(L, st, P, mSha, pSha);
+  const warns = [];
+  if (faceSkip) {
     const warn = sum.reason === 'noface'
       ? `⚠ 講者瘦臉略過：抽樣 12 格都沒偵測到臉 → 這支只調光；確定有講者就跑 node shared/template/tools/look.mjs run --project ${projArg(proj)} --force`
       : sum.reason === 'small'
       ? `⚠ 講者瘦臉略過：臉寬中位數 ${Math.round(sum.lookFaceWidth ?? sum.medianFaceWidth)} px < ${MIN_FACE_PX} px（畫面太小，瘦臉效果不到 1 px），只調光`
       : `⚠ 講者瘦臉略過：偵測率 ${Math.round((sum.rate || 0) * 100)}%（< ${Math.round(RATE_OFF * 100)}%），只調光 → 看 work/look-preview.jpg；確定不要瘦臉就在 plan.json 寫 "look": { "slim": 0 }`;
-    return { ...base, row: 4, warn };
+    warns.push(eff.belly > 0 ? warn.replace('只調光', '瘦小腹照做') : warn);   // 瘦小腹照做時，底片不是「只調光」
   }
-  if (footageFresh(st, P, mSha, L.slim, L.beauty)) return { ...base, row: 5, footage: P.footage, slimApplied: L.slim, beautyApplied: L.beauty };
-  const assets = probe.assets ?? assetsStatus(vendorOf(templateDir));
+  if (bellySkip) warns.push(`⚠ 講者瘦小腹略過：${bellySkipWhy(psum)}，${needFace(eff) ? '瘦臉、美顏照做' : '只調光'} → 看 work/look-preview.jpg；確定不要瘦小腹就在 plan.json 寫 "look": { "belly": 0 }`);
+  if (!faceOn(eff)) return { ...base, row: 4, warn: warns[0], warns };
+  if (footageFresh(st, P, mSha, eff.slim, eff.beauty, eff.belly, pSha)) return { ...base, row: 5, footage: P.footage, slimApplied: eff.slim, beautyApplied: eff.beauty, bellyApplied: eff.belly, warns };
+  const assets = probe.assets ?? assetsStatus(vendorOf(templateDir), { pose: wantPose });
   const chromeOk = probe.chrome ?? chromeCandidates().length > 0;
+  const what = [wantFace && '瘦臉', wantPose && '瘦小腹'].filter(Boolean).join('、');
   if (!assets.ok) {
     const f = assets.missing[0] || assets.bad[0];
-    return { ...base, row: 6, warn: `⚠ 講者瘦臉略過：找不到 shared/template/vendor/mediapipe/${f}，只調光 → node shared/template/tools/look.mjs ensure` };
+    return { ...base, row: 6, missing: f, warn: `⚠ 講者${what}略過：找不到 shared/template/vendor/mediapipe/${f}，只調光 → node shared/template/tools/look.mjs ensure` };
   }
-  if (!chromeOk) return { ...base, row: 6, warn: '⚠ 講者瘦臉略過：找不到 HyperFrames 的 Chrome，只調光 → npx hyperframes browser ensure' };
-  const reason = staleReason(st, P, mSha, L.slim, L.beauty) || '還沒跑過';
+  if (!chromeOk) return { ...base, row: 6, warn: `⚠ 講者${what}略過：找不到 HyperFrames 的 Chrome，只調光 → npx hyperframes browser ensure` };
+  const reason = staleReason(st, P, mSha, eff.slim, eff.beauty, eff.belly, pSha) || '還沒跑過';
   // 預估看 landmark 快取（只改 slim 時只重做變形）（審查 C-06）。不再給 --background：run 本來就在背景工作裡跑，
   // 前景最多等 9 分鐘，等不到印「⏳ 還在跑」，再跑同一條接著等（C3）
   let est = null;
-  try { const v = probeVideo(P.rough); est = estimateMinutes({ frames: v.frames, width: v.width, height: v.height, detect: !landmarksFresh(st, P, mSha) }); } catch { /* 沒有 rough.mp4 時不預估 */ }
+  try { const v = probeVideo(P.rough); est = estimateMinutes({ frames: v.frames, width: v.width, height: v.height, detect: wantFace && !lmOk, pose: wantPose && !poOk, belly: eff.belly > 0 }); } catch { /* 沒有 rough.mp4 時不預估 */ }
   const bg = est != null && est > 2;
   const runCmd = waitCmd;
   const estNote = est == null ? '' : bg ? `；預估 ${est} 分，印「⏳ 還在跑」就再跑同一條（會接著等）` : `；預估 ${est} 分`;
+  const off = [wantFace && '"slim": 0', wantPose && '"belly": 0'].filter(Boolean).join(', ');
   return { ...base, row: 7, reason, est, bg, runCmd,
-    error: `瘦臉底片不是最新的（${reason}${estNote}；不要瘦臉就在 plan.json 寫 "look": { "slim": 0 }）→ 先跑 ${runCmd}`,
-    warn: `⚠ 瘦臉還沒套到底片（${reason}），這次先用 work/rough.mp4 → ${runCmd}` };
+    error: `瘦臉底片不是最新的（${reason}${estNote}；不要${what}就在 plan.json 寫 "look": { ${off} }）→ 先跑 ${runCmd}`,
+    warn: `⚠ ${what}還沒套到底片（${reason}），這次先用 work/rough.mp4 → ${runCmd}` };
+}
+// 瘦小腹略過的原因（poseSummary 的 reason）：rate＝姿勢偵測率低、small＝人太小、usable＝能做的格太少
+export function bellySkipWhy(ps) {
+  if (ps.reason === 'small') return `肩寬中位數 ${Math.round(ps.lookShoulder ?? ps.medianShoulder ?? 0)} px < ${BELLY.minPx} px（畫面裡的人太小，腰收不到 1 px）`;
+  if (ps.reason === 'rate') return `姿勢偵測率 ${Math.round((ps.rate || 0) * 100)}%（< ${Math.round(RATE_OFF * 100)}%）`;
+  return `能做的格只有 ${Math.round((ps.usable || 0) * 100)}%（< ${Math.round(RATE_OFF * 100)}%；髖部在畫面外、側身、彎腰的格不做）`;
 }
 
 // 關的時候是 kit 預設（沒人決定過）→ 括號裡多一句怎麼開，停點回報貼這兩行，使用者才知道有這個功能
@@ -356,18 +429,22 @@ export function ensureLook({ projectDir, plan = {}, log = () => {}, templateDir 
   if (errs.length && strict) throw new Error(errs[0]);
   const d = decide({ projectDir, plan, templateDir, probe });
   const { L, P } = d;
-  if (d.row === 1) return { footage: P.rough, lut: null, key: null, report: [colorLine(L), `講者瘦臉：關、美顏：關（${offLabel(L)}）`] };
+  const offLine = `講者瘦臉：關、美顏：關、瘦小腹：關（${offLabel(L)}）`;
+  if (d.row === 1) return { footage: P.rough, lut: null, key: null, report: [colorLine(L), offLine] };
   if (d.error && strict) throw new Error(d.error);
   const lut = ensureBlendedLut({ projectDir, lutFile: L.lutFile, color: L.color, log });
   const report = [colorLine(L)];
-  if (d.row === 2) report.push(`講者瘦臉：關、美顏：關（${offLabel(L)}）`);
+  if (d.row === 2) report.push(offLine);
   else if (d.row === 5) {
-    const s = d.st.landmarks?.summary || {};
-    report.push(`講者瘦臉：${L.slim > 0 ? fmtNum(L.slim) : '關'}、美顏：${L.beauty > 0 ? fmtNum(L.beauty) : '關'}（work/rough-look.mp4；偵測率 ${pct(s.rate || 0)}、臉寬中位數 ${Math.round(s.medianFaceWidth || 0)} px）`);
-  } else report.push(d.warn);
-  const footage = d.footage, slim = d.slimApplied, beauty = d.beautyApplied;
-  const key = L.color > 0 || slim > 0 || beauty > 0
-    ? { v: LOOK_VER, color: L.color, ...(L.color > 0 ? { lut: fileSha256(L.lutFile).slice(0, 12) } : {}), slim, ...(beauty > 0 ? { beauty } : {}), footage: path.basename(footage) }
+    const s = d.st.landmarks?.summary || {}, ps = d.st.pose?.summary || {}, on = (v) => (v > 0 ? fmtNum(v) : '關');
+    const facts = [needFace({ slim: d.slimApplied, beauty: d.beautyApplied }) && `偵測率 ${pct(s.rate || 0)}、臉寬中位數 ${Math.round(s.medianFaceWidth || 0)} px`,
+      d.bellyApplied > 0 && `姿勢偵測率 ${pct(ps.rate || 0)}、肩寬中位數 ${Math.round(ps.medianShoulder || 0)} px`].filter(Boolean).join('；');
+    report.push(`講者瘦臉：${on(d.slimApplied)}、美顏：${on(d.beautyApplied)}、瘦小腹：${on(d.bellyApplied)}（work/rough-look.mp4；${facts}）`, ...d.warns);
+  } else if (d.row === 4) report.push(...d.warns);
+  else report.push(d.warn);
+  const footage = d.footage, slim = d.slimApplied, beauty = d.beautyApplied, belly = d.bellyApplied;
+  const key = L.color > 0 || slim > 0 || beauty > 0 || belly > 0
+    ? { v: LOOK_VER, color: L.color, ...(L.color > 0 ? { lut: fileSha256(L.lutFile).slice(0, 12) } : {}), slim, ...(beauty > 0 ? { beauty } : {}), ...(belly > 0 ? { belly } : {}), footage: path.basename(footage) }
     : null;
   return { footage, lut, key, report };
 }
@@ -383,7 +460,8 @@ export function lookCheck({ projectDir, plan = {}, templateDir = DEFAULT_TEMPLAT
   const warnings = [];
   let d;
   try { d = decide({ projectDir, plan, templateDir, probe }); } catch (e) { return { errors: [...errors, e.message], warnings }; }
-  if ([3, 4, 6].includes(d.row)) warnings.push(d.warn.replace(/^⚠ /, ''));
+  if ([3, 6].includes(d.row)) warnings.push(d.warn.replace(/^⚠ /, ''));
+  if ([4, 5].includes(d.row)) warnings.push(...d.warns.map((w) => w.replace(/^⚠ /, '')));   // 5：瘦臉、瘦小腹只有一邊略過
   if (d.row === 7) warnings.push(`build 會停下來：${d.error}`);   // build 是 ✖（裁決 D4）；--check 仍只提醒，見 tasks.md C-14
   return { errors, warnings };
 }
@@ -407,7 +485,7 @@ export function lookNextStep({ projectDir, plan = {}, templateDir = DEFAULT_TEMP
   if (d.row === 6) {
     return d.warn.includes('Chrome')
       ? { step: 'chrome', done: false, note: '找不到 HyperFrames 的 Chrome，裝好再跑瘦臉', cmd: 'npx hyperframes browser ensure' }
-      : { step: 'ensure', done: false, note: '少臉部偵測的檔；照 AGENTS.md 規則 3 先告訴使用者要下載約 18 MB，同意再跑', cmd: 'node shared/template/tools/look.mjs ensure --download' };
+      : { step: 'ensure', done: false, note: d.missing === POSE_MODEL ? '少姿勢偵測的檔（瘦小腹用）；照 AGENTS.md 規則 3 先告訴使用者要下載約 6 MB，同意再跑' : '少臉部偵測的檔；照 AGENTS.md 規則 3 先告訴使用者要下載約 18 MB，同意再跑', cmd: 'node shared/template/tools/look.mjs ensure --download' };
   }
   if (d.row === 7) {
     const est = d.est == null ? '' : `，預估 ${d.est} 分（Windows 約 ×1.5–3）${d.bg ? '；印「⏳ 還在跑」就再跑同一條（會接著等）' : ''}`;
@@ -667,6 +745,119 @@ export function beautyFrame(cur, W, H, lm, lmHalf, b) {
   beautyChroma(cur, { w: cw, offset: W * H + cw * chh }, Mc, b);
 }
 
+// ---------- 瘦小腹（contracts/look.md §9） ----------
+// 肩（11、12）到髖（23、24）定出軀幹；肋骨下緣到髖這一段，畫面水平往軀幹中線收。只有水平位移：桌緣、地板線這種橫線完全不動。
+// 位移場和 field() 同一個格式，交給同一個 warpPlane（Y、U、V 或 RGB）。
+
+const sstep = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const ramp = (x, [a, b]) => sstep((x - a) / (b - a));   // a 以下 0、b 以上 1，中間平滑
+// 水平剖面：離中線 ρ（腰半寬的倍數）→ 位移比例。inner 以內＝ρ（等比例收），再往外平滑回到 0（reach）；除以最大值，峰值 1 落在 ρ ≈ 1（軀幹外緣）
+const bellyRaw = (rho) => (rho >= BELLY.reach ? 0 : rho * (1 - sstep((rho - BELLY.inner) / (BELLY.reach - BELLY.inner))));
+const BELLY_PEAK = (() => { let m = 0; for (let r = 0; r <= BELLY.reach; r += 0.005) m = Math.max(m, bellyRaw(r)); return m; })();
+export const bellyProfile = (rho) => bellyRaw(Math.abs(rho)) / BELLY_PEAK;
+// 垂直剖面：t＝沿軀幹的位置（0＝肩、1＝髖）；top 以上、bottom 以下是 0
+export const bellyBand = (t) => ramp(t, BELLY.top) * (1 - ramp(t, BELLY.bottom));
+
+// p＝[左肩 x, y, 右肩 x, y, 左髖 x, y, 右髖 x, y]（MediaPipe 的 11、12、23、24）
+export function bellyGeom(p) {
+  const sm = [(p[0] + p[2]) / 2, (p[1] + p[3]) / 2], hm = [(p[4] + p[6]) / 2, (p[5] + p[7]) / 2];
+  const sw = Math.hypot(p[0] - p[2], p[1] - p[3]), len = Math.hypot(hm[0] - sm[0], hm[1] - sm[1]);
+  return { sm, hm, sw, len, half: BELLY.half * sw, ratio: len > 0 ? sw / len : 0, tilt: (Math.abs(Math.atan2(hm[0] - sm[0], hm[1] - sm[1])) * 180) / Math.PI };
+}
+
+// 這一筆做幾成（0–1）：四點的可見度、髖在不在畫面裡、側身、軀幹歪斜、人夠不夠大。v＝可見度、height＝畫面高（和 p 同一個座標）、scale＝換算到 rough-look 畫面
+export function bellyGate(p, v, { height = 0, scale = 1 } = {}) {
+  const g = bellyGeom(p);
+  if (!(g.len > 0) || g.sw * scale < BELLY.minPx || (height && Math.max(p[5], p[7]) >= height)) return 0;
+  return ramp(Math.min(...v), BELLY.vis) * ramp(g.ratio, BELLY.side) * (1 - ramp(g.tilt, BELLY.tilt));
+}
+
+// 反向位移場（輸出 (x, y) 從來源 (x + dx, y) 取樣）；s＝這一格的強度（belly × 權重）。回傳的 fw 是腰寬（位移 ÷ fw 就是收了幾成）
+export function bellyField(p, s, W, H, step) {
+  if (!p || !(s > 0)) return null;
+  const g = bellyGeom(p), dy = g.hm[1] - g.sm[1], a = g.half;
+  if (!(dy > 1) || !(a > 1)) return null;
+  const D = BELLY.max * s * 2 * a;
+  const xcAt = (y) => g.sm[0] + ((y - g.sm[1]) / dy) * (g.hm[0] - g.sm[0]);
+  const yT = g.sm[1] + BELLY.top[0] * dy, yB = g.sm[1] + BELLY.bottom[1] * dy;
+  const x0 = Math.max(0, Math.floor(Math.min(xcAt(yT), xcAt(yB)) - BELLY.reach * a) - 2), x1 = Math.min(W, Math.ceil(Math.max(xcAt(yT), xcAt(yB)) + BELLY.reach * a) + 2);
+  const y0 = Math.max(0, Math.floor(yT) - 2), y1 = Math.min(H, Math.ceil(yB) + 2);
+  if (x1 - x0 < 2 || y1 - y0 < 2) return null;
+  step = step || gridStep(2 * a);
+  const gw = Math.ceil((x1 - x0) / step) + 2, gh = Math.ceil((y1 - y0) / step) + 2, G = new Float32Array(gw * gh * 2);
+  for (let gy = 0; gy < gh; gy++) {
+    const Y = y0 + gy * step, band = bellyBand((Y - g.sm[1]) / dy);
+    if (!(band > 0)) continue;
+    const xc = xcAt(Y);
+    for (let gx = 0; gx < gw; gx++) { const rho = (x0 + gx * step - xc) / a; G[(gy * gw + gx) * 2] = Math.sign(rho) * D * band * bellyProfile(rho); }
+  }
+  return { x0, y0, x1, y1, step, gw, gh, G, fw: 2 * a };
+}
+// 瘦小腹的位移統計（同 dispStats；r＝這格最大位移 ÷ 腰寬）
+export function bellyDispStats({ ptrack, belly, w, h, lookScale = 1, fps = 30, step = 1 }) {
+  const items = [];
+  for (let i = 0; i < ptrack.n; i += step) {
+    const s = belly * ptrack.weight(i); if (!(s > 0)) continue;
+    const F = bellyField(ptrack.pose(i, lookScale), s, w, h); if (!F) continue;
+    const m = maxDisp(F); items.push({ m, r: m / F.fw, t: i / fps });
+  }
+  return dispSummary(items);
+}
+export const bellyWarning = (p95) => (p95 > BELLY_DISP_WARN
+  ? `⚠ 瘦小腹位移 ＝ 腰寬 ${(p95 * 100).toFixed(2)}%（95% 的格；> ${r1(BELLY_DISP_WARN * 100)}%）→ 收太多，手臂和腰旁邊的東西看得出變形；把 belly 調低（plan.json 的 look.belly 或剪輯台「講者」）`
+  : null);
+
+// 單筆的跳動（偵測偶爾飄走一筆）：每個數字取前後三筆的中位數；段落邊緣用自己補
+function median3(frames) {
+  return frames.map((f, j) => {
+    if (!f) return null;
+    const a = frames[j - 1] || f, b = frames[j + 1] || f, o = new Float32Array(f.length);
+    for (let c = 0; c < f.length; c++) o[c] = Math.max(Math.min(a[c], f[c]), Math.min(Math.max(a[c], f[c]), b[c]));
+    return o;
+  });
+}
+
+// 讀 work/pose-landmarks.json（每 every 格一筆）→ 每一格的四點與權重：
+//   三筆中位數（去掉單筆跳動）→ 7 點高斯（smoothTrack，σ 1 筆）→ 每筆的 bellyGate → 線性內插到每一格 → 前後 FADE_FRAMES 格淡入淡出
+export function loadPoseTrack(src, { lookScale = 1, sigma = BELLY.smooth } = {}) {
+  const data = typeof src === 'string' ? JSON.parse(fs.readFileSync(src, 'utf8')) : src;
+  const S = Array.isArray(data.samples) ? data.samples : [], every = data.every || POSE_EVERY, m = S.length, n = data.frameCount ?? m * every;
+  const rawP = S.map((f) => (isObj(f) && Array.isArray(f.p) ? Float32Array.from(f.p) : null));
+  const sm = smoothTrack(median3(rawP), gaussKernel(sigma, Math.ceil(3 * sigma)));
+  const gate = new Float32Array(m);
+  let jit = 0, jn = 0;
+  for (let j = 0; j < m; j++) {
+    if (!sm[j]) continue;
+    gate[j] = bellyGate(sm[j], S[j].v || [1, 1, 1, 1], { height: data.source?.height || 0, scale: lookScale });
+    for (let k = 0; k < 8; k += 2) { jit += Math.hypot(sm[j][k] - rawP[j][k], sm[j][k + 1] - rawP[j][k + 1]); jn++; }
+  }
+  const raw = new Float32Array(n);
+  const near = (i) => { const j = Math.min(m - 1, Math.floor(i / every)); return [j, Math.min(m - 1, j + 1), Math.min(1, (i - j * every) / every)]; };
+  for (let i = 0; i < n && m; i++) { const [j, k, f] = near(i); raw[i] = (1 - f) * gate[j] + f * gate[k]; }
+  const w = rampWeights(raw, FADE_FRAMES);
+  const pose = (i, scale = lookScale) => {
+    if (!(i >= 0 && i < n) || !m) return null;
+    const [j, k, f] = near(i), A = sm[j] || sm[k], B = sm[k] || sm[j];
+    if (!A) return null;
+    const o = new Float32Array(8);
+    for (let c = 0; c < 8; c++) o[c] = (A[c] * (1 - f) + B[c] * f) * scale;
+    return o;
+  };
+  return { meta: data, n, every, gate, raw, w, jitter: jn ? jit / jn : 0, has: (i) => !!pose(i), pose, weight: (i) => (i >= 0 && i < n ? w[i] : 0) };
+}
+
+// 偵測完算一次：姿勢偵測率、能做的格（gate ≥ 0.5）占幾成、肩寬中位數，和整支做不做（bellyOk；不做的原因 reason）
+export function poseSummary(data, { lookScale = 1 } = {}) {
+  const S = Array.isArray(data.samples) ? data.samples : [], tr = loadPoseTrack(data, { lookScale });
+  const black = S.filter((f) => f === 0).length, det = S.filter((f) => isObj(f)).length, live = Math.max(1, S.length - black);
+  const sws = S.filter((f) => isObj(f)).map((f) => bellyGeom(f.p).sw).sort((a, b) => a - b), med = sws.length ? sws[sws.length >> 1] : 0;
+  let ok = 0; for (let j = 0; j < S.length; j++) if (tr.gate[j] >= 0.5) ok++;
+  const rate = det / live, usable = ok / live, r4 = (x) => Math.round(x * 10000) / 10000;
+  const reason = rate < RATE_OFF ? 'rate' : med * lookScale < BELLY.minPx ? 'small' : usable < RATE_OFF ? 'usable' : null;
+  return { sampled: S.length, detected: det, black, missing: S.length - black - det, rate: r4(rate), usable: r4(usable), medianShoulder: r1(med), lookShoulder: r1(med * lookScale),
+    bellyOk: !reason, ...(reason ? { reason } : {}) };
+}
+
 // ---------- 讀 landmark（contracts/look.md §6.3） ----------
 
 export function rampWeights(raw, F = FADE_FRAMES) {
@@ -679,17 +870,18 @@ export function rampWeights(raw, F = FADE_FRAMES) {
   return w;
 }
 
-const KERNEL = (() => { const k = [-3, -2, -1, 0, 1, 2, 3].map((d) => Math.exp(-(d * d) / 2)); const s = k.reduce((a, b) => a + b, 0); return k.map((x) => x / s); })();
-// frames：每格 Float32Array(116)（x、y 交錯）或 null；只在連續偵測到的段落裡平滑，邊緣用最近的值
-export function smoothTrack(frames) {
-  const n = frames.length, out = new Array(n).fill(null);
+const gaussKernel = (sigma, R) => { const k = Array.from({ length: 2 * R + 1 }, (_, i) => Math.exp(-((i - R) ** 2) / (2 * sigma * sigma))); const s = k.reduce((a, b) => a + b, 0); return k.map((x) => x / s); };
+const KERNEL = gaussKernel(1, 3);
+// frames：每格 Float32Array(116)（x、y 交錯）或 null；只在連續偵測到的段落裡平滑，邊緣用最近的值。K＝高斯權重（預設 7 點、σ 1 格）
+export function smoothTrack(frames, K = KERNEL) {
+  const n = frames.length, out = new Array(n).fill(null), R = (K.length - 1) / 2;
   let i = 0;
   while (i < n) {
     if (!frames[i]) { i++; continue; }
     let j = i; while (j + 1 < n && frames[j + 1]) j++;
     for (let t = i; t <= j; t++) {
       const o = new Float32Array(frames[t].length);
-      for (let k = -3; k <= 3; k++) { const f = frames[Math.min(j, Math.max(i, t + k))], wk = KERNEL[k + 3]; for (let c = 0; c < o.length; c++) o[c] += wk * f[c]; }
+      for (let k = -R; k <= R; k++) { const f = frames[Math.min(j, Math.max(i, t + k))], wk = K[k + R]; for (let c = 0; c < o.length; c++) o[c] += wk * f[c]; }
       out[t] = o;
     }
     i = j + 1;
@@ -740,7 +932,8 @@ export function loadTrack(src, { lookScale = 1 } = {}) {
 // ---------- 瘦臉底片（contracts/look.md §5.4、§6.1） ----------
 
 const tailStr = (s, n = 300) => String(s ?? '').trim().slice(-n);
-export function renderLookFootage({ projectDir, track, slim, beauty = 0, onProgress = () => {}, signal } = {}) {
+// belly > 0 再給 poseTrack（loadPoseTrack）：同一格先瘦臉、再瘦小腹（兩塊 ROI 不重疊，等於兩個位移場相加）；只開瘦小腹時 track 可以是 null
+export function renderLookFootage({ projectDir, track, slim, beauty = 0, belly = 0, poseTrack = null, onProgress = () => {}, signal } = {}) {
   const P = statePaths(projectDir), V = probeVideo(P.rough), S = lookSize(V.width, V.height);
   const pix = ['yuv420p', 'yuvj420p'].includes(V.pixFmt) ? V.pixFmt : 'yuv420p';
   const W = S.w, H = S.h, cw = W >> 1, chh = H >> 1, FS = W * H + 2 * cw * chh;
@@ -761,7 +954,7 @@ export function renderLookFootage({ projectDir, track, slim, beauty = 0, onProgr
       '-map', '0:v:0', '-map', '1:a:0?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-g', g, '-keyint_min', g, '-pix_fmt', pix, ...color,
       '-c:a', 'copy', '-movflags', '+faststart', tmp], { windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] });
     let decErr = '', encErr = '', failed = null, n = 0, warped = 0;
-    const disp = [];
+    const disp = [], bdisp = [];
     dec.stderr.on('data', (d) => { decErr += d; });
     enc.stderr.on('data', (d) => { encErr += d; });
     const fail = (msg) => { if (failed) return; failed = msg; try { dec.kill(); } catch { /* */ } try { enc.kill(); } catch { /* */ } };
@@ -773,7 +966,8 @@ export function renderLookFootage({ projectDir, track, slim, beauty = 0, onProgr
       while (p < chunk.length) {
         const k = Math.min(FS - off, chunk.length - p); chunk.copy(cur, off, p, p + k); off += k; p += k;
         if (off < FS) break;
-        const s = slim * track.weight(n), bt = beauty * track.weight(n), lm = s > 0 || bt > 0 ? track.lm(n, lookScale) : null;
+        const fwt = track ? track.weight(n) : 0;
+        const s = slim * fwt, bt = beauty * fwt, lm = s > 0 || bt > 0 ? track.lm(n, lookScale) : null;
         if (lm && bt > 0) beautyFrame(cur, W, H, lm, track.lm(n, lookScale / 2), bt);   // 美顏在變形之前（遮罩對原本的臉）
         if (lm && s > 0) {
           const F = field(lm, s, W, H);
@@ -782,6 +976,16 @@ export function renderLookFootage({ projectDir, track, slim, beauty = 0, onProgr
             warpPlane(cur, { w: cw, h: chh, ch: 1, offset: W * H }, F, 0.5);
             warpPlane(cur, { w: cw, h: chh, ch: 1, offset: W * H + cw * chh }, F, 0.5);
             const m = maxDisp(F); disp.push({ m, r: m / F.fw, t: n / V.fpsExact }); warped++;
+          }
+        }
+        const bs = belly > 0 && poseTrack ? belly * poseTrack.weight(n) : 0;
+        if (bs > 0) {
+          const F = bellyField(poseTrack.pose(n, lookScale), bs, W, H);
+          if (F) {
+            warpPlane(cur, { w: W, h: H, ch: 1, offset: 0 }, F, 1);
+            warpPlane(cur, { w: cw, h: chh, ch: 1, offset: W * H }, F, 0.5);
+            warpPlane(cur, { w: cw, h: chh, ch: 1, offset: W * H + cw * chh }, F, 0.5);
+            const m = maxDisp(F); bdisp.push({ m, r: m / F.fw, t: n / V.fpsExact });
           }
         }
         n++;
@@ -805,9 +1009,10 @@ export function renderLookFootage({ projectDir, track, slim, beauty = 0, onProgr
         return reject(new Error(bad));
       }
       renameRetry(tmp, P.footage);
-      const D = dispSummary(disp), r4 = (x) => Math.round(x * 10000) / 10000;
+      const D = dispSummary(disp), B = dispSummary(bdisp), r4 = (x) => Math.round(x * 10000) / 10000;
       resolve({ frames: n, warped, width: W, height: H, scaled: S.scaled, srcWidth: V.width, srcHeight: V.height, duration: a, diff: Math.abs(a - b),
         maxDisp: r1(D.mx), maxDispRatio: r4(D.mxR), maxDispAt: Math.round(D.mxAt * 1000) / 1000, medianDisp: r1(D.med), dispP95Ratio: r4(D.p95),
+        ...(belly > 0 ? { belly: { warped: B.n, maxDisp: r1(B.mx), maxDispRatio: r4(B.mxR), maxDispAt: Math.round(B.mxAt * 1000) / 1000, medianDisp: r1(B.med), dispP95Ratio: r4(B.p95) } } : {}),
         elapsedSec: (Date.now() - t0) / 1000 });
     });
   });
@@ -885,6 +1090,33 @@ export function faceCrop(rgb, W, H, lm, s, size = 360, { lines = false, beauty =
   return out;
 }
 
+// 軀幹特寫：from rgb 全圖（W×H），以胸到髖為中心的正方形（邊長 max(1.6 × 軀幹長, 2 × 肩寬)），縮成 size
+//   warp＝true 先照 s 收腰（剪輯台的單格對照）；false＝rgb 已經變形過，只裁切（對照圖）。lines：綠＝估計的腰線、紅＝收進去之後
+export function bodyCrop(rgb, W, H, p, s, size = 360, { lines = false, warp = true } = {}) {
+  const g = bellyGeom(p), side = Math.max(8, 1.6 * g.len, 2 * g.sw);
+  const cx = g.sm[0] + 0.6 * (g.hm[0] - g.sm[0]), cy = g.sm[1] + 0.6 * (g.hm[1] - g.sm[1]);
+  const m = Math.ceil(Math.max(side / 2, (BELLY.reach + 0.2) * g.half, 0.6 * g.len)) + 4;
+  const rx = Math.max(0, Math.floor(cx - m)), ry = Math.max(0, Math.floor(cy - m)), rw = Math.min(W, Math.ceil(cx + m)) - rx, rh = Math.min(H, Math.ceil(cy + m)) - ry;
+  const sub0 = Buffer.allocUnsafe(rw * rh * 3);
+  for (let y = 0; y < rh; y++) rgb.copy(sub0, y * rw * 3, ((ry + y) * W + rx) * 3, ((ry + y) * W + rx + rw) * 3);
+  if (warp && s > 0) warpPlane(sub0, { w: rw, h: rh, ch: 3 }, bellyField(Float32Array.from(p, (v, k) => v - (k % 2 ? ry : rx)), s, rw, rh), 1);
+  const out = resample(sub0, rw, rh, cx - side / 2 - rx, cy - side / 2 - ry, side, { w: size, h: size, data: Buffer.alloc(size * size * 3) });
+  if (lines) {
+    const map = (X, Y) => [((X - (cx - side / 2)) * size) / side, ((Y - (cy - side / 2)) * size) / side];
+    const dy = g.hm[1] - g.sm[1], D = BELLY.max * s * 2 * g.half;
+    for (const sgn of [-1, 1]) {
+      let a0 = null, b0 = null;
+      for (let t = BELLY.top[0]; t <= BELLY.bottom[1] + 1e-6; t += 0.05) {
+        const Y = g.sm[1] + t * dy, xc = g.sm[0] + t * (g.hm[0] - g.sm[0]);
+        const a = map(xc + sgn * g.half, Y), b = map(xc + sgn * (g.half - D * bellyBand(t)), Y);
+        if (a0) { line(out, a0[0], a0[1], a[0], a[1], [0, 255, 0]); if (s > 0) line(out, b0[0], b0[1], b[0], b[1], [255, 60, 60]); }
+        a0 = a; b0 = b;
+      }
+    }
+  }
+  return out;
+}
+
 export function jpgBuffer({ w, h, data }, quality = 3) {
   const r = spawnSync('ffmpeg', ['-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${w}x${h}`, '-i', 'pipe:0', '-frames:v', '1', '-q:v', String(quality), '-f', 'image2pipe', '-c:v', 'mjpeg', 'pipe:1'], { input: data, maxBuffer: 1 << 26 });
   if (r.error) throw r.error;
@@ -904,9 +1136,12 @@ export function lookPreview({ projectDir, templateDir = DEFAULT_TEMPLATE, plan =
   const lms = fs.existsSync(P.landmarks) ? JSON.parse(fs.readFileSync(P.landmarks, 'utf8')) : null;
   const reason0 = lms?.summary?.reason ?? st.landmarks?.summary?.reason;
   const small = reason0 === 'small' || reason0 === 'noface';
-  if (!lms && !small) throw new Error(`還沒偵測臉部 → 先跑 node shared/template/tools/look.mjs run --project ${projArg(projectLabel(projectDir, templateDir))}`);
+  // 瘦小腹開著才讀姿勢（work/pose-landmarks.json）：有它就多兩欄軀幹的前後；只開瘦小腹時沒有臉部 landmark 也畫得出來
+  const pdata = needPose(L) && fs.existsSync(P.pose) ? JSON.parse(fs.readFileSync(P.pose, 'utf8')) : null;
+  if (!lms && !small && !pdata) throw new Error(`還沒偵測${needPose(L) && !needFace(L) ? '姿勢' : '臉部'} → 先跑 node shared/template/tools/look.mjs run --project ${projArg(projectLabel(projectDir, templateDir))}`);
   const S = lookSize(V.width, V.height), lookScale = S.w / V.width;
   const track = lms && lms.frames?.length ? loadTrack(lms, { lookScale }) : null;
+  const ptrack = pdata?.samples?.length ? loadPoseTrack(pdata, { lookScale }) : null, bellyOn = !!ptrack && pdata.summary?.bellyOk !== false;
   const slimOn = L.slim > 0 && lms?.summary?.slimOk !== false && !!track;
   const dur = V.duration, n = track ? track.n : V.frames, fps = V.fpsExact;
   const nearest = (i) => { if (!track) return { i, ok: false }; for (let d = 0; d <= Math.round(2 * fps); d++) for (const j of [i - d, i + d]) if (track.has(j)) return { i: j, ok: true }; return { i, ok: false }; };
@@ -926,7 +1161,9 @@ export function lookPreview({ projectDir, templateDir = DEFAULT_TEMPLATE, plan =
   }
   // 欄寬依來源比例（009 FR-101）：直拍 360×640，其他 640×360
   const tall = V.height > V.width, pw = tall ? 360 : 640, ph = tall ? 640 : 360, fz = 360, gap = 10, bar = 30;
-  const Wc = gap + pw + gap + pw + gap + fz + gap, Hc = gap + picks.length * (bar + ph + gap);
+  // 只開瘦小腹（沒有臉部 landmark）時不留臉部那一欄；bx＝軀幹兩欄的起點
+  const faceColW = ptrack && !lms && !small ? 0 : fz + gap, bx = gap * 3 + pw * 2 + faceColW;
+  const Wc = bx + (ptrack ? 2 * (fz + gap) : 0), Hc = gap + picks.length * (bar + ph + gap);
   const c = canvas(Wc, Hc, [11, 16, 32]);
   const fit = (w, h) => { const k = Math.min(pw / w, ph / h); return [Math.max(2, Math.round((w * k) / 2) * 2), Math.max(2, Math.round((h * k) / 2) * 2)]; };
   const [tw, th] = fit(V.width, V.height);
@@ -940,11 +1177,18 @@ export function lookPreview({ projectDir, templateDir = DEFAULT_TEMPLATE, plan =
     const applied = Buffer.from(graded), bt = lm && L.beauty > 0 && lms?.summary?.slimOk !== false ? L.beauty * track.weight(pk.i) : 0;
     if (lm && bt > 0) { const M = beautyMasks(lm, V.width, V.height); for (let ch = 0; ch < 3; ch++) beautyPlane(applied, { w: V.width, h: V.height, ch: 3 }, M, bt, ch); }
     if (lm && s > 0) warpPlane(applied, { w: V.width, h: V.height, ch: 3 }, field(lm, s, V.width, V.height), 1);
+    const pp = ptrack ? ptrack.pose(pk.i, 1) : null, bs = bellyOn && pp ? L.belly * ptrack.weight(pk.i) : 0;
+    if (bs > 0) warpPlane(applied, { w: V.width, h: V.height, ch: 3 }, bellyField(pp, bs, V.width, V.height), 1);
     const panel = (buf) => { const o = { w: tw, h: th, data: Buffer.alloc(tw * th * 3) }; resampleRect(buf, V.width, V.height, o); return o; };
     blit(c, panel(orig), gap + (pw - tw) / 2 | 0, y0 + bar + ((ph - th) / 2 | 0));
     blit(c, panel(applied), gap * 2 + pw + ((pw - tw) / 2 | 0), y0 + bar + ((ph - th) / 2 | 0));
     if (lm) blit(c, faceCrop(graded, V.width, V.height, lm, s, fz, { lines: true, beauty: bt }), gap * 3 + pw * 2, y0 + bar);
-    else fillRect(c, gap * 3 + pw * 2, y0 + bar, fz, ph, [40, 20, 20]);
+    else if (faceColW) fillRect(c, gap * 3 + pw * 2, y0 + bar, fz, ph, [40, 20, 20]);
+    // 軀幹的前後（瘦小腹）：原本｜套用後＋腰線
+    if (ptrack && pp) {
+      blit(c, bodyCrop(graded, V.width, V.height, pp, 0, fz), bx, y0 + bar);
+      blit(c, bodyCrop(applied, V.width, V.height, pp, bs, fz, { lines: true, warp: false }), bx + fz + gap, y0 + bar);
+    } else if (ptrack) fillRect(c, bx, y0 + bar, fz * 2 + gap, ph, [40, 20, 20]);
   });
   writeJpg(c, P.preview, 2);
   // 印的行
@@ -952,13 +1196,35 @@ export function lookPreview({ projectDir, templateDir = DEFAULT_TEMPLATE, plan =
 
   const desc = picks.map((p, k) => (k < 3 ? `${p.label} ${mmss(p.i / fps)}` : mmss(p.i / fps)));
   const head = desc.slice(0, 3).join('、') + (desc.length > 3 ? `、頭偏離最大 ${desc.slice(3).join('／')}` : '');
-  if (small || !track) {
-    const fwv = Math.round(lms?.summary?.lookFaceWidth ?? st.landmarks?.summary?.lookFaceWidth ?? 0);
-    lines.push(`講者對照圖：work/look-preview.jpg（${picks.length} 列：只有調光 ${fmtNum(L.color)}；瘦臉略過：${reason0 === 'noface' ? '抽樣 12 格都沒偵測到臉' : `臉寬 ${fwv} px < ${MIN_FACE_PX} px`}）`);
+  const E = lookEffective(L, st, P, modelSha(templateDir), poseSha(templateDir)).eff;
+  const fresh = footageFresh(st, P, modelSha(templateDir), E.slim, E.beauty, E.belly, poseSha(templateDir));
+  const noFace = small || !track;
+  const faceWhy = reason0 === 'noface' ? '抽樣 12 格都沒偵測到臉' : `臉寬 ${Math.round(lms?.summary?.lookFaceWidth ?? st.landmarks?.summary?.lookFaceWidth ?? 0)} px < ${MIN_FACE_PX} px`;
+  if (noFace && !ptrack) {
+    lines.push(`講者對照圖：work/look-preview.jpg（${picks.length} 列：只有調光 ${fmtNum(L.color)}；瘦臉略過：${faceWhy}）`);
     return { file: P.preview, lines, warnings };
   }
+  const faceCol = !faceColW ? '' : noFace ? `｜臉部（${needFace(L) ? `瘦臉略過：${faceWhy}` : '沒開瘦臉、美顏'}）` : '｜臉部放大＋輪廓（綠＝原本、紅＝套用後）';
   lines.push(`講者對照圖：work/look-preview.jpg（${picks.length} 列：${head}）`);
-  lines.push(`  欄：原圖｜套用後（調光 ${fmtNum(L.color)}＋瘦臉 ${slimOn ? fmtNum(L.slim) : '0'}＋美顏 ${L.beauty > 0 && lms?.summary?.slimOk !== false ? fmtNum(L.beauty) : '0'}）｜臉部放大＋輪廓（綠＝原本、紅＝套用後）`);
+  lines.push(`  欄：原圖｜套用後（調光 ${fmtNum(L.color)}＋瘦臉 ${slimOn ? fmtNum(L.slim) : '0'}＋美顏 ${L.beauty > 0 && lms?.summary?.slimOk !== false && !!track ? fmtNum(L.beauty) : '0'}${ptrack ? `＋瘦小腹 ${bellyOn ? fmtNum(L.belly) : '0'}` : ''}）${faceCol}${ptrack ? '｜軀幹放大：原本｜套用後＋腰線（綠＝估計的腰線、紅＝收進去之後）' : ''}`);
+  if (ptrack) {
+    const ps = pdata.summary || {};
+    lines.push(`姿勢偵測率：${pct(ps.rate || 0)}（${ps.detected}／${(ps.sampled || 0) - (ps.black || 0)} 筆，每 ${ptrack.every} 格一筆；全黑 ${ps.black || 0} 筆不算）；能做瘦小腹的 ${pct(ps.usable || 0)}`);
+    if (!bellyOn) lines.push(`瘦小腹略過：${bellySkipWhy(ps)}`);
+    else {
+      // 和瘦臉的位移同一個做法：底片最新就用 renderLookFootage 逐格算好的（state.json 的 footage.bellyDisp），不是最新才抽樣估
+      const bd = st.footage?.bellyDisp, step = Math.max(1, Math.floor(ptrack.n / 600));
+      const D = fresh && num(bd?.dispP95Ratio)
+        ? { all: true, n: bd.warped, med: bd.medianDisp, mx: bd.maxDisp, mxAt: bd.maxDispAt, mxR: bd.maxDispRatio, p95: bd.dispP95Ratio }
+        : { all: step === 1, ...bellyDispStats({ ptrack, belly: L.belly, w: S.w, h: S.h, lookScale, fps, step }) };
+      lines.push(`瘦小腹每格最大位移（${D.all ? '全部' : '抽樣'} ${D.n} 格）：中位數 ${r1(D.med)} px、最大 ${r1(D.mx)} px（${mmss(D.mxAt)}），＝腰寬 ${(D.mxR * 100).toFixed(2)}%（95% 的格 ≤ ${(D.p95 * 100).toFixed(2)}%）`);
+      const w = bellyWarning(D.p95);
+      if (w) warnings.push(w);
+      lines.push(`姿勢抖動（平滑去掉的量）：${ptrack.jitter.toFixed(2)} px（肩寬 ${((ptrack.jitter / (ps.medianShoulder || 1)) * 100).toFixed(2)}%）`);
+      if ((ps.usable || 0) < RATE_WARN) warnings.push(`⚠ 能做瘦小腹的格 ${pct(ps.usable || 0)}（< ${RATE_WARN * 100}%）→ 髖部在畫面外、側身、彎腰的地方會自動淡掉，不會跳`);
+    }
+  }
+  if (noFace) return { file: P.preview, lines, warnings };
   const sum = lms.summary || {};
   lines.push(`偵測率：${pct(sum.rate || 0)}（${sum.detected}／${track.n - (sum.black || 0)} 格；全黑 ${sum.black || 0} 格不算）`);
   const gaps = []; let a = -1;
@@ -971,7 +1237,7 @@ export function lookPreview({ projectDir, templateDir = DEFAULT_TEMPLATE, plan =
   if (slimOn) {
     // 瘦臉底片是最新的：用 renderLookFootage 逐格算好的數字（和 state.json 一致）；不是最新（例如改了 slim 還沒 run）才抽樣 600 格估（審查 C-05）
     const ft = st.footage, step = Math.max(1, Math.floor(track.n / 600));
-    const D = footageFresh(st, P, modelSha(templateDir), L.slim) && num(ft?.dispP95Ratio)
+    const D = fresh && num(ft?.dispP95Ratio)
       ? { all: true, n: ft.warped ?? track.n, med: ft.medianDisp, mx: ft.maxDisp, mxAt: ft.maxDispAt, mxR: ft.maxDispRatio, p95: ft.dispP95Ratio }
       : { all: step === 1, ...dispStats({ track, slim: L.slim, w: S.w, h: S.h, lookScale, fps, step }) };
     lines.push(`每格最大位移（${D.all ? '全部' : '抽樣'} ${D.n} 格）：中位數 ${r1(D.med)} px、最大 ${r1(D.mx)} px（${mmss(D.mxAt)}），＝臉寬 ${(D.mxR * 100).toFixed(2)}%（95% 的格 ≤ ${(D.p95 * 100).toFixed(2)}%）`);
@@ -1021,4 +1287,27 @@ export function faceImage({ projectDir, t = 0, slim = 0, beauty = 0, cache = {} 
   }
   const s = Math.max(0, Math.min(1.2, Number(slim) || 0)) * track.weight(i), bt = Math.max(0, Math.min(1, Number(beauty) || 0)) * track.weight(i);
   return jpgBuffer(faceCrop(cache.frames.get(i), V.width, V.height, lm, s, 360, { beauty: bt }), 3);
+}
+
+// 剪輯台：瘦小腹的單格前後對照（軀幹特寫 JPEG；belly＝0 是「前」）。錯誤回 { error, message }，同 faceImage
+export function bodyImage({ projectDir, t = 0, belly = 0, cache = {} }) {
+  const P = statePaths(projectDir), st = statOf(P.pose), proj = projectLabel(projectDir);
+  if (!st) return { error: 'nopose', message: `還沒偵測姿勢 → 請 AI 跑 node shared/template/tools/look.mjs run --project ${projArg(proj)}` };
+  const key = `${st.size}|${st.mtimeMs}`;
+  if (cache.poseKey !== key) {
+    const data = JSON.parse(fs.readFileSync(P.pose, 'utf8'));
+    cache.pose = data.samples?.length ? loadPoseTrack(data, { lookScale: 1 }) : null;
+    cache.poseKey = key;
+  }
+  const track = cache.pose;
+  if (!track) return { error: 'nopose', message: `姿勢偵測沒有結果 → 請 AI 跑 node shared/template/tools/look.mjs run --project ${projArg(proj)}` };
+  const V = probeVideo(P.rough), i = Math.min(track.n - 1, Math.max(0, Math.round(t * V.fpsExact)));
+  const p = track.pose(i, 1);
+  if (!p || !(track.weight(i) > 0)) return { error: 'nobody', message: '這一格不做瘦小腹（髖部在畫面外、側身、彎腰，或沒偵測到人）→ 換一格再看' };
+  cache.frames ??= new Map();
+  if (!cache.frames.has(i)) {
+    if (cache.frames.size >= 4) cache.frames.delete(cache.frames.keys().next().value);
+    cache.frames.set(i, grabRgb(P.rough, { at: i / V.fpsExact }));
+  }
+  return jpgBuffer(bodyCrop(cache.frames.get(i), V.width, V.height, p, Math.max(0, Math.min(1, Number(belly) || 0)) * track.weight(i), 360), 3);
 }

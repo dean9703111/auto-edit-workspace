@@ -16,6 +16,7 @@
 //                          footageReset, scene?, fxDef?, vars?, media?, compId, file, resolved?, chapter?, sfx?, sfxExtra[], errors[], warnings[] }
 //                          sfx＝主音效 { name, at, volume, event }；sfxExtra＝跟動畫節拍的附加音效（同格式的陣列）
 //     footage＝底片要切成幾支 <video>（edit 有效時才有）；editFx＝dip／punch／整支淡入淡出
+//     userSfx＝使用者在剪輯台自己加的音效（edit.sfx，050）[{ i, name, at, event, volume }]，完成影片秒數；一顆都沒有就沒有這個鍵
 //     內部（032 C10）：resolvePlan 只做第一層檢查、時間對應、組 ctx，之後每一節是收 ctx 的小函式（resolveSegment、opaqueSeams、segmentSfx、
 //     moodsAndSfxBudget、resolveOutro、resolveBed、chapterBadges…），照呼叫順序排在 resolvePlan 後面；加一條規則只要讀那一節
 //   sceneSfxCues({ scene, resolved, D, tone, override, extraOn, sfxConf }) → { main, extra, errors }（rel＝相對段起點的畫面事件秒數）
@@ -42,7 +43,7 @@ import { validateLook } from './look.mjs';
 import { FORMATS, CANVAS, canvasOf, LAYOUT } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
 import { floorRules, atConsts, faceZone, coverWarn, FACE_WARN } from './audit-rules.mjs';
-import { layoutFindings, modeOfLayout } from './layout-rhythm.mjs';
+import { layoutFindings, modeOfLayout, portraitFindings, portraitRuns, portraitLine } from './layout-rhythm.mjs';
 import { sideLayout, SIDES } from './speaker-side.mjs';
 import { readScript } from './script-file.mjs';
 import { resolveEnding } from './ending.mjs';
@@ -81,6 +82,7 @@ const FLASH = [0.05, 1.0]; // 兩段之間空 0.05–1 秒：講者會閃一下
 const PIP_FLY_MIN = 1.0;   // 子母畫面片段 ≥ 1 秒才飛入（太短就原地淡入）
 const PIP_RISE_MIN = 1.6;  // 037 直式講者上浮：片段 ≥ 1.6 秒才上浮（飛入 0.75＋上浮 0.75 不重疊；太短照舊跟著幕淡出）
 const PIP_FADE = 0.4;      // 子母畫面原地淡入淡出
+const HEAD = 1.5;          // 052 片頭：整張幕（上下分割、全畫面）在影片開頭 1.5 秒內開始 → 從第 0 格就是這個版面，不做進場
 const WIPE = 0.45;         // 旁白段擦入擦出
 const ROLL = 0.5;          // 擦入擦出時底下的錄影多播／提早播
 const XFADE = 0.47;        // 相鄰兩段 media 之間的疊化
@@ -537,6 +539,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   mediaLedger(ctx);
   // 音效、情緒點
   segmentSfx(ctx);
+  const own = ctx.own = userSfx(ctx);
   const { moodItems, budget } = moodsAndSfxBudget(ctx);
   Object.assign(ctx, { moodItems, budget });
   // 跨段檢查
@@ -552,6 +555,10 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const { chapterList, blackout } = chapterSpans(ctx);
   ctx.chapterList = chapterList;
   const ending = ctx.ending = resolveEnding(ctx);
+  // 049 片尾停留：完成影片多 hold＋fade 秒。剪輯台設了片尾淡出（edit.fadeOut）、後面接片尾卡（它們自己會暗下來）就不加
+  const tailItem = timed.find((a) => a.tailFade);
+  //   052 直式：最後是講者全身（沒有動畫到片尾）也一樣講完定格再漸暗（作者：「結尾都是要用漸隱，要根據最後情境來決定」）
+  const tail = ctx.tail = (tailItem || (portrait && speakerBox)) && !(ending?.dur > 0) && !(edit.fadeOut > 0) ? { id: tailItem?.id ?? null, hold: TAIL_HOLD, fade: TAIL_FADE, dur: r3(TAIL_HOLD + TAIL_FADE), voiceFade: TAIL_VOICE_FADE } : null;
   const outro = ctx.outro = resolveOutro(ctx);
   const bed = resolveBed(ctx);
   const badges = chapterBadges(ctx);
@@ -567,8 +574,9 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     globals: { speakerBox, sideShift, pipCrop, pip, speakerSide: sl.side, panelSide: sl.panelSide, cardSide: sl.cardSide, sideLine: !portrait && speakerBox ? sl.zh : null },
     edit, editActive: ne.active, tm, outDur: videoDur, roughDur, cuesOut: cues, voiceOnly, voiceOut, voiceGaps, footage, editFx, cutpoints, voiceMoved: [...(cues.voiceMoved || [])],
     moods: moodItems.map((m) => ({ i: m.mood.i, kind: m.mood.kind, event: m.mood.event, zoom: m.mood.zoom, sfx: m.sfx, dropped: m.sfxDropped?.name ?? null, off: m.mood.sfxOff })), zooms,
+    ...(own.cues.length ? { userSfx: own.cues } : {}),   // 050 作者在剪輯台自己加的音效（完成影片秒數）；沒有就沒有這個鍵
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro, bed,
-    ending, finalDur: r3(videoDur + (ending?.dur || 0)),
+    ending, tail, portraitLayout: ctx.portraitLayout ?? null, finalDur: r3(videoDur + (ending?.dur || 0) + (tail?.dur || 0)),
     chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
     captionStyle: capRes.isDefault ? null : capRes.style, captionFrom: capRes.from, captionMarks: markRes.marks, captionWords: markRes.words,
   };
@@ -815,6 +823,12 @@ function lowerThirdHandoff({ timed }) {
 function opaqueSeams({ timed }) {
   // --- 接不透明幕：前段停在完成態（不透明接不透明＝接縫不淡）---
   for (const a of timed) { a.fadeIn = a.opaque; a.fadeOut = a.opaque; a.exitFade = true; a.notes = []; }
+  // 052 片頭：前面沒有畫面可以接，開場就擦開、講者飛進下半只會晃 → 從第 0 格就在版面上（段裡的動畫照做）。章節幕、錄影段照舊
+  for (const a of timed) {
+    if (!a.opaque || a.type === 'media' || a.key === 'chapter' || a.start > HEAD + 1e-9) continue;
+    if (a.start > 0) { a.start = 0; a.notes.push('片頭：從第 0 格就是這個版面（不擦開、講者不飛入）'); }
+    a.fadeIn = false; a.headStart = true;
+  }
   // 章節墊底：章節和前後的不透明幕相隔 ≤ 1 秒 → 前一段墊在章節下面、章節照常淡入；章節墊在後一段下面、後一段照常淡入
   for (const ch of timed.filter((x) => x.key === 'chapter')) {
     const chEnd = ch.end;
@@ -918,14 +932,15 @@ function settleEdges({ timed, videoDur }) {
 // resolvePlan 的一節（034）：疊加字卡的全幕版。有全幕版的情境（template.html 有 @style-full／@body-full／@timeline-full）
 // 一半以上的時間落在只有聲音的區間、或寫了 "full": true，就換成全幕版：不透明的整張畫面，和 04 家族同一層、同一套接法（換卡不換景、擦入擦出、上推）。
 // plan.json、分鏡、剪輯台照舊寫原本的情境；it.scene 換成全幕版的複本（family fullscreen、直式用舞台縮放、底是 fs 底），後面各節照全畫面處理
-function fullCards({ timed, voiceOut }) {
+function fullCards({ timed, voiceOut, portrait }) {
   for (const it of timed) {
     if (it.type !== 'scene' || !it.scene.hasFull || it.seg.full === false) continue;
     const len = it.end - it.start;
     const dark = voiceOut.reduce((s, [a, b]) => s + Math.max(0, Math.min(b, it.end) - Math.max(a, it.start)), 0);
     if (it.seg.full !== true && !(len > 0 && dark / len >= FULL_AT)) continue;
     it.scene = fullScene(it.scene);
-    it.full = true; it.opaque = true; it.pip = false; it.lower = false; it.z = 30;
+    // 053 直式：全幕版縮進上半、下面照樣是講者（＝切一半）；橫式照舊整張畫面、沒有小視窗
+    it.full = true; it.opaque = true; it.pip = portrait ? it.seg.pip !== false : false; it.lower = false; it.z = 30;
     it.label = `${it.label}（全幕版）`;
     it.pipNote = it.seg.full === true ? '全幕版（"full": true）' : '全幕版（這段沒有講者）';
   }
@@ -1245,8 +1260,32 @@ function segmentSfx({ timed, sfxConf, sfxDir, cues, videoDur }) {
   }
 }
 
+// resolvePlan 的一節：作者在剪輯台自己加的音效（edit.sfx，050）：at 是 rough.mp4 的秒數，那一刻聽到（峰值對齊，和其他音效同一條公式）。
+// 3 秒規則、每分鐘上限、每集上限、音效比例都不管它（那些管的是工具配的）；吃 edit.volume.sfx 和整支的淡入淡出。
+// 回傳 { cues: [{ i（edit.sfx 的第幾個）, name, at, event, volume }]（完成影片秒數）, total, silent: [不出聲的原因…] }
+function userSfx({ edit, sfxConf, sfxDir, tm, videoDur, errors }) {
+  const list = edit.sfx || [], cues = [];
+  const quiet = { cut: 0, late: 0, none: 0 };   // 落在剪掉的範圍裡、排到片尾之後、自備角色這台機器沒放也沒有替代
+  const env = (t) => Math.max(0, Math.min(1, edit.fadeIn > 0 ? t / edit.fadeIn : 1, edit.fadeOut > 0 ? (videoDur - t) / edit.fadeOut : 1));
+  list.forEach((s, i) => {
+    const where = `edit.sfx[${i}]（rough ${fmt(s.at)} 的 ${s.sound}）`;
+    if (!sfxOk(s.sound, sfxConf) || sfxConf[s.sound]?.kind === 'bgm') { errors.push(`${where}：這台機器沒有「${s.sound}」這顆音效（可用：${sfxNames(sfxConf).join('、')}）→ 在剪輯台對它按右鍵換一顆或移除（這是使用者在剪輯台加的，不要自己改名稱）`); return; }
+    const name = sfxConf[s.sound] ? s.sound : sfxActual(s.sound, sfxConf);   // 自備角色這台機器沒放：改用它的替代（null＝不出聲）
+    if (!name) { quiet.none++; return; }
+    const conf = sfxConf[name];
+    if (sfxDir && !conf.local && !fs.existsSync(path.join(sfxDir, `${name}.wav`))) { errors.push(`${where}：音效檔 shared/sfx/${name}.wav 不存在 → shared/sfx/ 要有完整的 ${Object.keys(sfxConf).length} 個檔（kit/sfx.json 列的每一顆；見 shared/template/USAGE-reference.md R5.2）`); return; }
+    if (tm.cuts.some(([a, b]) => s.at >= a - 1e-6 && s.at < b - 1e-6)) { quiet.cut++; return; }
+    const event = tm.identity ? s.at : tm.map(s.at);
+    const at = r3(Math.max(0, event - (conf.peak || 0) + 1 / FPS));
+    if (at >= videoDur) { quiet.late++; return; }
+    cues.push({ i, name, at, event: r3(event), volume: r3(Math.min(3.98, (conf.volume ?? 0.5) * dB(s.db ?? 0) * dB(edit.volume.sfx) * env(at))) });
+  });
+  const silent = [quiet.cut && `${quiet.cut} 顆落在剪掉的範圍裡`, quiet.late && `${quiet.late} 顆排到片尾之後`, quiet.none && `${quiet.none} 顆是這台機器沒放的自備音效`].filter(Boolean);
+  return { cues, total: list.length, silent };
+}
+
 // resolvePlan 的一節：情緒點的音效、3 秒規則、每分鐘上限、每集上限、剪輯台音量、輪替、音效政策（回傳 { moodItems, budget }）
-function moodsAndSfxBudget({ plan, cues, sfxConf, sfxDir, videoDur, timed, ne, edit, errors, warnings }) {
+function moodsAndSfxBudget({ plan, cues, sfxConf, sfxDir, videoDur, timed, ne, edit, errors, warnings, own }) {
   const frame = 1 / FPS;
   // --- 情緒點（moods，specs/023）：音效照講者的情緒，峰值對齊詞的開口 ---
   const moodRes = moodCues(Array.isArray(plan.moods) && !validateMoods(plan.moods, sfxConf).length ? plan.moods : [], { cues, sfxConf, videoDur, frame });
@@ -1317,7 +1356,8 @@ function moodsAndSfxBudget({ plan, cues, sfxConf, sfxDir, videoDur, timed, ne, e
     ...(it.sfxExtra || []).map((c) => ({ id: it.id, name: c.name, at: c.at, volume: c.volume, main: !!c.beat }))].filter(Boolean));
   // 音效稀疏的空檔裡，列出情境動畫與錄影段（這兩種要自己配：動畫寫 P.sfx、錄影寫 sfx；字卡照情境預設）
   const gapNote = (g) => { const ids = timed.filter((x) => (x.type === 'custom' || x.type === 'media') && x.start < g.to && x.end > g.from).map((x) => x.id); return ids.length > 8 ? `${ids.slice(0, 8).join('、')}…等 ${ids.length} 段` : ids.join('、'); };
-  const budget = sfxBudget(budgetCues, sfxConf, { voiceDb: edit.volume?.voice ?? 0, outDur: videoDur, fmt, gapNote, thinned: sfxThinned, moods: Array.isArray(plan.moods) });
+  const budget = sfxBudget(budgetCues, sfxConf, { voiceDb: edit.volume?.voice ?? 0, outDur: videoDur, fmt, gapNote, thinned: sfxThinned, moods: Array.isArray(plan.moods), own: own.cues.map((c) => c.event) });
+  if (own.total) budget.lines.push(`自己加的音效：${own.cues.length} 顆（使用者在剪輯台加的 edit.sfx；不算進上面的次數、密度，也不受 ${SFX_GAP} 秒間隔限制${own.silent.length ? `；另外 ${own.silent.join('、')}，不出聲` : ''}）`);
   if (Array.isArray(plan.moods)) {
     const withSfx = moodItems.filter((m) => m.sfx).length;
     budget.lines.push(`情緒點：${moodItems.length} 個（音效 ${withSfx} 顆${moodItems.length - withSfx ? `、不出聲 ${moodItems.length - withSfx} 個` : ''}；模板預設音效讓位 ${sfxYielded} 顆）${moodNotes.length ? `；${moodNotes.slice(0, 4).join('；')}${moodNotes.length > 4 ? `…等 ${moodNotes.length} 則` : ''}` : ''}`);
@@ -1582,9 +1622,9 @@ function chapterSpans({ timed, cues }) {
 // resolvePlan 的一節：結尾配樂（回傳 outro；角標停在 outro 起點，所以也掛在 ctx.outro）
 // 曲名沒寫＝工作區預設（shared/setting.json 的 music.outro，music.mjs outro 寫的；033）；from 沒寫＝只播片尾最後 OUTRO_AUTO 秒（含片尾卡，auto: true）
 export const OUTRO_AUTO = 30;
-function resolveOutro({ plan, lib, sfxConf, sfxDir, cues, videoDur, ending, edit, errors, warnings }) {
+function resolveOutro({ plan, lib, sfxConf, sfxDir, cues, videoDur, ending, tail = null, edit, errors, warnings }) {
   // --- 結尾配樂 outro（005 的 contracts/sfx.md §6；長度要量 wav，build 用 outroClip() 算起播點）---
-  const finalDur = r3(videoDur + (ending?.dur || 0));
+  const finalDur = r3(videoDur + (ending?.dur || 0) + (tail?.dur || 0));
   const dflt = lib.outroDefault ?? null;
   const o = plan.outro !== undefined ? plan.outro : dflt ? {} : undefined;
   if (o === undefined) return null;
@@ -1760,7 +1800,15 @@ function speakerPip({ pipCrop, speakerBox, portrait, C, timed, errors, warnings 
 }
 
 // resolvePlan 的一節：版面節奏（⚠ 推進 ctx.warnings）
-function layoutRhythmWarnings({ portrait, speakerBox, timed, voiceOut, warnings }) {
+function layoutRhythmWarnings(ctx) {
+  const { portrait, speakerBox, timed, voiceOut, warnings, videoDur } = ctx;
+  // 053 直式：「切一半」（整張幕）和「全身」（講者滿版）進入一種至少停 12 秒、1 分鐘最多切 3 次
+  if (portrait && speakerBox) {
+    const total = r3(videoDur + (ctx.tail?.dur || 0));   // 片尾停留（049）的定格也是最後那個版面
+    const segs = timed.map((x) => ({ id: x.id, start: x.start, end: x.id === ctx.tail?.id ? total : x.end, split: !!(x.opaque || x.side) }));
+    ctx.portraitLayout = portraitLine(portraitRuns(segs, { total }));
+    for (const f of portraitFindings(segs, { total })) warnings.push(`版面節奏（直式）：${f.msg} → ${f.fix}`);
+  }
   // 027 版面節奏（lib/layout-rhythm.mjs）：有講者的橫式，開頭 30 秒字卡、半螢幕 ≥ 15 秒、子母畫面 ≥ 45 秒。
   // 大綱那一步（--outline）是 ✖；這裡是 ⚠：之後在剪輯台、修改單改過的段也量得到，但不擋 build
   if (!portrait && speakerBox) {
@@ -1802,6 +1850,12 @@ export const PREVS = ['speaker', 'fullscreen', 'pip'];
 const fsSurface = (x) => (x.type === 'custom' && x.opaque) || (x.type === 'scene' && x.scene?.family === 'fullscreen');
 // 片尾 TAIL 秒內結束的色帶收回：擦出做不完、最後一格會停在擦到一半 → 不收（tailFade）：這一段延到片尾、停在完成態，main.mjs 讓整個畫面漸暗、在片尾前一格暗完
 const TAIL = 1;
+// 049 片尾停留：最後一段動畫到片尾（tailFade）時，講完再停 TAIL_HOLD 秒（畫面凍結在最後一格）才漸暗 FADE 秒
+export const TAIL_HOLD = 0;
+// 052 片尾：講完接原始錄影 TAIL_FADE 秒（不定格），畫面和聲音一起在這 TAIL_FADE 秒內淡出（作者：「結束後聲音跟畫面在一秒慢慢消失，而非畫面定格」）
+export const TAIL_FADE = 1;
+// 052 片尾停留時人聲最後 TAIL_VOICE_FADE 秒淡出：底片在最後一個字的尾音還沒收完的地方切掉，硬停會像聲音被剪斷
+export const TAIL_VOICE_FADE = 0.2;
 function assignTransitions(timed, videoDur = Infinity) {
   const byId = new Map(timed.map((x) => [x.id, x]));
   for (const b of timed) {
@@ -1845,6 +1899,7 @@ function pipMotion(timed, { tm, voiceOut, punches = [], portrait = false, videoD
       const [x0, y0] = before.a.media?.pipShift || [0, 0], [x1, y1] = a.media?.pipShift || [0, 0];
       if (x0 !== x1 || y0 !== y1) p.slideFrom = [x0, y0];
     } else if (p.s > a.start + 1e-3 && isJoin(p.s)) p.enter = 'none';
+    else if (a.headStart && near(p.s, a.start)) p.enter = 'none';   // 052 片頭：講者第 0 格就在面板裡
     // 甩鏡、斜躺擺平進場的錄影段：小視窗原地淡入（講者整張飛過去會蓋住進場）
     else if (p.e - p.s >= PIP_FLY_MIN - 1e-9 && speakerFull(r3(p.s - frame)) && !(near(p.s, a.start) && ['whip', 'tilt'].includes(a.enterFx))) p.enter = 'fly';
     else p.enter = 'fade';
@@ -1984,6 +2039,8 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
     lines.push(`影片長度 ${fmt(res.outDur)}（${res.outDur}s）＝ rough.mp4 ${res.roughDur}s − cuts ${cut}s（${res.tm.cuts.length} 段）；上表時間是完成影片的秒數（rough.mp4 的秒數寫在括號）`);
   } else if (videoDur != null) lines.push(`影片長度 ${fmt(videoDur)}（${videoDur}s）`);
   if (res.ending?.dur > 0) lines.push(`片尾卡 ${res.ending.dur}s 接在影片後面：完成影片總長 ${fmt(res.finalDur)}（${res.finalDur}s）`);
+  if (res.portraitLayout) lines.push(`版面（直式）：${res.portraitLayout}（切一半、全身各至少停 12 秒，1 分鐘最多切 3 次）`);
+  if (res.tail) lines.push(`片尾：${res.tail.id ? `最後一段動畫（${res.tail.id}）停在完成態，` : ''}講完${res.tail.live === false ? `最後一格定格 ${res.tail.dur}s（接不上原始錄影；人聲最後 ${res.tail.voiceFade}s 淡出）` : `接原始錄影 ${res.tail.dur}s（不定格）`}，畫面和聲音一起在 ${res.tail.fade}s 內淡出：完成影片總長 ${fmt(res.finalDur)}（${res.finalDur}s）；要自己決定怎麼收就在剪輯台設片尾淡出（edit.fadeOut）`);
   // 節奏與沒有畫面的區間（原文 specs/contracts/cli-002.md §1.3）
   lines.push(res.rhythm === 'spaced'
     ? '節奏：spaced（留露臉空檔：開場前 30 秒最多一張、兩段之間至少露臉 3 秒）'

@@ -10,7 +10,8 @@
 //   applyDipsToFile(file, { channels, rate, points, fade })   就地改 f32le 交錯 PCM（只讀寫接點附近，不載入整檔）
 //   measureLoudness(file, cacheFile, onMiss)  第一段：量整合響度（依檔案大小＋修改時間快取）
 //   audioKey(...)／readStamp／stampMatches  重新編碼的戳記：來源、剪接點、參數、構圖、look 都沒變就不重做
-//   encodeFootagePolished(src, dst, opts)  編碼主軌：先淡化剪接點、再 loudnorm，回傳報告用的數字（lut 原樣轉給 encodeFootage）
+//   LEVEL、LEVEL_VER                       人聲大小聲拉平的濾鏡（plan.json edit.level＝true 才用；dynaudnorm 每 0.2 秒看音量、約 2 秒平滑，最多拉 +15.6 dB）
+//   encodeFootagePolished(src, dst, opts)  編碼主軌：（level 時先拉平）淡化剪接點、再 loudnorm，回傳報告用的數字（lut 原樣轉給 encodeFootage）
 //   audioReportLines(info, { sfx })        build 報告要印的行（sfx＝sfxBudget() 的回傳，印「音效比例」）
 //   SFX_RULES                              音效政策的數字：主音效間隔 3 s、附加音效間隔 0.2 s、任一分鐘最多 5 顆、整支平均超過 3 顆／分提醒、上限比人聲小 3 dB
 //                                          （030：照作者五支剪映定剪，平均 2.3 顆／分、最新一支 3.2、單一分鐘最多 5–7；原本是每分鐘 2 顆）
@@ -29,6 +30,9 @@ export const LOUD = { I: -14, TP: -1, LRA: 11 };
 export const LOUD_TEXT = `${String(LOUD.I).replace('-', '−')} LUFS`;   // 訊息裡的寫法「−14 LUFS」（032 C7：數字只寫在 LOUD）
 export const CUT_FADE = 0.015;      // 剪接點前後各 15 ms（接點處最大跳變比硬切少約九成；30 ms 起接點附近的能量被吃掉過半，實驗見 USAGE.md 2.8；凹洞量測見 specs/005-sfx/research.md）
 export const AUDIO_VER = 1;
+// 11-16 作者聽 A/B（短影片3）選的：每 3 秒的響度起伏 7.8 dB → 5.1 dB，標準差 1.5 → 1.0
+export const LEVEL = 'highpass=f=70,dynaudnorm=f=200:g=11:p=0.9:m=6:s=0';
+export const LEVEL_VER = 1;
 const RATE = 48000;
 const r1 = (n) => +Number(n).toFixed(1);
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
@@ -121,9 +125,9 @@ export function applyDipsToFile(file, { channels = 2, rate = RATE, points, fade 
 // ---------- 快取戳記 ----------
 // frame（構圖裁切）、look（瘦臉調光，ensureLook().key，contracts/look.md §4）有才放進 key：沒用的舊專案，戳記不變、不必重新編碼
 // format＝版式（specs/009-vertical）：直式才寫進鍵（橫式的鍵和改版前一樣，舊專案不會因此重新編碼）
-export function audioKey({ src, cutpoints = [], loudnorm = true, declick = true, frame = null, look = null, format = null }) {
+export function audioKey({ src, cutpoints = [], loudnorm = true, declick = true, level = false, frame = null, look = null, format = null }) {
   const st = fs.statSync(src);
-  return { v: AUDIO_VER, size: st.size, mtimeMs: Math.round(st.mtimeMs), loudnorm: !!loudnorm, target: LOUD, declick: !!declick, fade: CUT_FADE, points: declick ? cleanPoints(cutpoints) : [], ...(frame ? { frame } : {}), ...(look ? { look } : {}), ...(format && format !== 'landscape' ? { format } : {}) };
+  return { v: AUDIO_VER, size: st.size, mtimeMs: Math.round(st.mtimeMs), loudnorm: !!loudnorm, target: LOUD, declick: !!declick, fade: CUT_FADE, points: declick ? cleanPoints(cutpoints) : [], ...(frame ? { frame } : {}), ...(look ? { look } : {}), ...(format && format !== 'landscape' ? { format } : {}), ...(level ? { level: LEVEL_VER } : {}) };
 }
 export function readStamp(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
@@ -138,10 +142,17 @@ const lufsOf = (file) => {
   return parseLoudnorm(r.stderr);
 };
 
-// 回傳 { hasAudio, before, after, linear, gainDb, cuts, fade, notes[] }
+// 量 f32le PCM 的響度（拉平之後的聲音不在檔案裡，不快取）
+function measureRaw(raw, channels = 2, target = LOUD) {
+  const r = run('ffmpeg', ['-hide_banner', '-nostats', '-f', 'f32le', '-ar', String(RATE), '-ac', String(channels), '-i', raw, '-af', `loudnorm=I=${target.I}:TP=${target.TP}:LRA=${target.LRA}:print_format=json`, '-f', 'null', '-']);
+  if (r.status !== 0) throw new Error(`ffmpeg 量響度失敗：${String(r.stderr).trim().slice(-300)}`);
+  return parseLoudnorm(r.stderr);
+}
+
+// 回傳 { hasAudio, level, before, after, linear, gainDb, cuts, fade, notes[] }
 // canvas＝畫布（canvas.mjs；specs/009-vertical FR-100）：原樣傳給 encodeFootage，直式沒有 frame 時縮到 1080×1920 置中裁切；不傳＝橫式
-export function encodeFootagePolished(src, dst, { cacheDir, cutpoints = [], loudnorm = true, declick = true, onMeasure = null, crop = null, lut = null, canvas = undefined } = {}) {
-  const info = { hasAudio: false, before: null, after: null, linear: null, gainDb: 0, cuts: 0, fade: 0, notes: [] };
+export function encodeFootagePolished(src, dst, { cacheDir, cutpoints = [], loudnorm = true, declick = true, level = false, onMeasure = null, crop = null, lut = null, canvas = undefined } = {}) {
+  const info = { hasAudio: false, level: false, before: null, after: null, linear: null, gainDb: 0, cuts: 0, fade: 0, notes: [] };
   const media = probeMedia(src);
   if (!media.hasAudio) {
     info.notes.push('rough.mp4 沒有聲音，略過響度標準化與剪接點淡化');
@@ -150,27 +161,33 @@ export function encodeFootagePolished(src, dst, { cacheDir, cutpoints = [], loud
   }
   info.hasAudio = true;
   let filter = null;
+  const useLoud = (m) => {
+    if (!m) { info.notes.push('rough.mp4 的聲音是靜音（量不到響度），略過響度標準化'); return; }
+    const p = loudnessPlan(m);
+    info.gainDb = p.gainDb; info.linear = p.linear;
+    filter = loudnormFilter(m);
+  };
   if (loudnorm) {
     const m = measureLoudness(src, path.join(cacheDir, 'loudness.json'), onMeasure);
-    if (!m) info.notes.push('rough.mp4 的聲音是靜音（量不到響度），略過響度標準化');
-    else {
-      const p = loudnessPlan(m);
-      info.before = { i: r1(m.i), tp: r1(m.tp) };
-      info.gainDb = p.gainDb; info.linear = p.linear;
-      filter = loudnormFilter(m);
-    }
+    if (m) info.before = { i: r1(m.i), tp: r1(m.tp) };   // 報告的「→ 前」一律是原本的錄音
+    if (!level) useLoud(m);
   }
   const points = declick ? cleanPoints(cutpoints, media.duration ?? Infinity) : [];
   let raw = null;
-  if (points.length) {
+  if (points.length || level) {
     fs.mkdirSync(cacheDir, { recursive: true });
     sweepTmp(cacheDir);
     raw = tmpFor(path.join(cacheDir, 'declick.f32'));   // 檔名帶 pid：同時兩條或上次的 ffmpeg 還在跑，也不會用到同一份聲音
     // aresample first_pts=0：音軌開頭有偏移時補靜音到 0，剪接點的秒數才對得上畫面
-    const r = run('ffmpeg', ['-y', '-v', 'error', '-i', src, '-vn', '-map', '0:a:0', '-af', `aresample=${RATE}:first_pts=0`, '-ac', '2', '-ar', String(RATE), '-f', 'f32le', raw]);
+    // level：抽出時先拉平大小聲（拉平在淡化剪接點之前：接點上的淡化不會被拉回來）
+    const r = run('ffmpeg', ['-y', '-v', 'error', '-i', src, '-vn', '-map', '0:a:0', '-af', `aresample=${RATE}:first_pts=0${level ? `,${LEVEL}` : ''}`, '-ac', '2', '-ar', String(RATE), '-f', 'f32le', raw]);
     if (r.status !== 0) throw new Error(`ffmpeg 抽出聲音失敗：${String(r.stderr).trim().slice(-300)}`);
-    info.fade = fadeLength(points);
-    info.cuts = applyDipsToFile(raw, { channels: 2, rate: RATE, points, fade: CUT_FADE });
+    info.level = !!level;
+    if (points.length) {
+      info.fade = fadeLength(points);
+      info.cuts = applyDipsToFile(raw, { channels: 2, rate: RATE, points, fade: CUT_FADE });
+    }
+    if (level && loudnorm && info.before) useLoud(measureRaw(raw));   // 拉平之後重量一次，線性增益才算得對
   }
   try {
     encodeFootage(src, dst, { audioFilter: filter, audioRaw: raw ? { file: raw, rate: RATE, channels: 2 } : null, crop, lut, canvas });
@@ -195,6 +212,7 @@ export function audioReportLines(info, { loudnorm = true, declick = true, cutpoi
     const a = info.after;
     lines.push(`人聲響度 ${n1(info.before.i)} LUFS → ${a ? n1(a.i) : n1(LOUD.I)} LUFS（true peak ${a ? n1(a.tp) : n1(LOUD.TP)}${info.linear ? '' : '；超過線性範圍，ffmpeg 改用動態模式，動態會稍微被壓縮'}）`);
   } else if (!loudnorm) lines.push('人聲響度：已用 --no-loudnorm 略過');
+  if (info.level) lines.push('人聲大小聲拉平：開（plan.json edit.level；小聲的句子拉近大聲的，最多 +15.6 dB；剪輯台「整支 → 聲音」可以關）');
   if (sfx) lines.push(...sfxLevelLines(sfx, { loudnorm }));
   if (declick && info.cuts) lines.push(`剪接點微淡化：${info.cuts} 個接點，前後各 ${Math.round(info.fade * 1000)} ms`);
   else if (declick && !cutpointsExist) lines.push('剪接點微淡化：略過（work/cutpoints.json 不存在；跑過 media.mjs rough 或 cutpoints 才會處理）');
@@ -269,7 +287,8 @@ export function thinMainSfx(items, sfxConf, perMinute = SFX_RULES.perMinute, { o
 }
 
 // cues：[{ id, name, at（完成影片秒數）, volume（最終線性音量）, main（是不是主音效）}]，已扣掉被 3 秒規則拿掉的
-export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, gapNote = null, thinned = 0, moods = false } = {}) {
+// own：作者在剪輯台自己加的音效的時間（edit.sfx，050）。次數、密度、比例都不算它；只有「音效稀疏」把它當成那裡已經有音效（作者補過的地方不再叫 AI 補）
+export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, gapNote = null, thinned = 0, moods = false, own = [] } = {}) {
   const R = SFX_RULES;
   const list = (cues || []).filter((c) => c && sfxConf[c.name] && sfxConf[c.name].kind !== 'bgm').sort((a, b) => a.at - b.at);
   const count = {};
@@ -305,7 +324,7 @@ export function sfxBudget(cues, sfxConf, { voiceDb = 0, outDur = 0, fmt = fmtT, 
   const sparse = [];
   if (outDur > 0) {
     let prev = 0;
-    for (const t of [...list.filter(isMain).map((c) => c.at), outDur]) { if (t - prev > R.sparseSec) sparse.push({ from: r3(prev), to: r3(t) }); prev = t; }
+    for (const t of [...[...list.filter(isMain).map((c) => c.at), ...own].sort((a, b) => a - b), outDur]) { if (t - prev > R.sparseSec) sparse.push({ from: r3(prev), to: r3(t) }); prev = t; }
   }
   const perMinuteAvg = outDur > 0 ? r1(nMain / (outDur / 60)) : 0;
   // 訊息

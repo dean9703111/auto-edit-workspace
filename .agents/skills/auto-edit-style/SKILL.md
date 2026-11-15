@@ -1,6 +1,6 @@
 ---
 name: auto-edit-style
-description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。配樂照 references/music.md、拆參考片照 references/reference-video.md 做。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「換字幕樣式」「字幕改白字黑框」「字幕大一點」「換字幕字體」「講者設定成…」「不要講者介紹」「設定片尾」「片尾換這張圖」「不要片尾」「生成配樂」「換配樂」「這集不要底樂」「片尾配樂」「用我自己的音樂」「拆這支參考片」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
+description: 換工作區的主色、背景圖、講者調光瘦臉的預設，或換這一集的主題（亮／暗）、風格包：brand.mjs 換主色；背景圖有使用者的圖就縮放裁切，沒有就先跑 caps.mjs 探測生圖能力再照路由表生成（Codex／mmx／HTML 截圖），三張圖驗尺寸、出預覽，使用者同意才放進 shared/template/。風格包（shared/template/styles/<名稱>/）用 brand.mjs list／use／pack 試用、套用、存包。配樂照 references/music.md、拆參考片照 references/reference-video.md 做。當使用者說「換風格」「換成我的風格」「換主色」「換背景」「生成背景圖」「以後都要調光」「預設不要調光」「以後都要瘦小腹」「瘦小腹」「換暗色」「換主題」「有哪些風格」「這集用 XX 風格」「做一個風格包」「換字幕樣式」「字幕改白字黑框」「字幕大一點」「換字幕字體」「講者設定成…」「不要講者介紹」「設定片尾」「片尾換這張圖」「不要片尾」「生成配樂」「換配樂」「這集不要底樂」「片尾配樂」「用我自己的音樂」「拆這支參考片」時使用。只想移動某張卡的位置、改某一集的版面時不要用（改用 auto-edit-review）。
 version: 0.1.0
 ---
 # 換風格
@@ -22,7 +22,7 @@ version: 0.1.0
 |---|---|
 | 只換主色 | 只做步驟 1 |
 | 使用者有上傳圖片 | 步驟 2 直接走「使用者的圖」那條路，不用探測 |
-| 使用者說「以後都要調光」「預設瘦一點」「預設不要調光」 | 只做步驟 5 |
+| 使用者說「以後都要調光」「預設瘦一點」「預設不要調光」「以後都要瘦小腹」「瘦小腹」「這集要瘦小腹」 | 只做步驟 5 |
 | 使用者說「換暗色」「換主題」「改回亮色」 | 只做步驟 6 |
 | 使用者說「有哪些風格」「這集用 XX 風格」「換回預設」 | 只做步驟 7 |
 | 使用者說「做一個風格包」「換成我的風格」 | 步驟 1–4，第 4 步存成新的一包 |
@@ -72,14 +72,15 @@ node shared/template/tools/build.mjs --project projects/<專案>
 做法、常見的狀況：`references/background.md`「4. ⑥ 同意後：存成風格包、套用，重跑 build」。
 完成判準：回報改了哪些檔、走的是哪一條路；有專案時 build 0 個 ✖。
 
-**5. 講者調光、瘦臉的預設**（使用者說「以後都要調光」「預設瘦一點」「預設不要調光」時；預設兩個都是 0＝關）
+**5. 講者調光、瘦臉、瘦小腹的預設**（使用者說「以後都要調光」「預設瘦一點」「預設不要調光」「以後都要瘦小腹」時；預設都是 0＝關）
 
 ```
 node shared/template/tools/look.mjs default --color 0.8 --slim 0.6
 ```
 
-只寫使用者說的那幾個（`--color` 0–1、`--slim` 0–1.2、`--beauty` 0–1；0＝關），它只改 `shared/template/kit/look.json` 那幾個鍵；不帶值＝印目前的預設。只想改這一集（「這集要調光、瘦臉」）不要跑這條，改用 `node shared/template/tools/build.mjs --project projects/<專案> --set "look.color=0.8;look.slim=0.6"`（這集都不要：`--set look=off`）。改了瘦臉或美顏，有專案時照 `node shared/template/tools/look.mjs status --project projects/<專案>` 印的「→ 下一步」重跑 `look.mjs run`。
+只寫使用者說的那幾個（`--color` 0–1、`--slim` 0–1.2、`--beauty` 0–1、`--belly` 0–1；0＝關；「以後都要瘦小腹」＝`node shared/template/tools/look.mjs default --belly 0.5`），它只改 `shared/template/kit/look.json` 那幾個鍵；不帶值＝印目前的預設。只想改這一集（「這集要調光、瘦臉」「瘦小腹」「這集要瘦小腹」）不要跑這條，改用 `node shared/template/tools/build.mjs --project projects/<專案> --set "look.color=0.8;look.slim=0.6"`（瘦小腹：`--set look.belly=0.5`；這集都不要：`--set look=off`）。改了瘦臉、美顏或瘦小腹，有專案時照 `node shared/template/tools/look.mjs status --project projects/<專案>` 印的「→ 下一步」重跑 `look.mjs run`。瘦小腹（`belly`）＝腰往身體中線收，建議 0.5；限制（手擺在肚子前面會跟著窄一點、腰旁邊的直線會微微彎、格紋衣服看得出來、半身取景不做）在 `shared/style.md`「講者畫面」，回報時告訴使用者，並請他看 `work/look-preview.jpg` 右邊兩欄。
 完成判準：印 `✓ kit/look.json：…` 和「設定：…」那一行是新的值。
+常見錯誤：`look.mjs status` 的下一步是「少姿勢偵測的檔（瘦小腹用）…」→ 照 AGENTS.md 規則 3 先告訴使用者要下載約 6 MB 的姿勢模型，同意才跑 `node shared/template/tools/look.mjs ensure --download`。
 
 **6. 換主題（亮／暗）**（使用者說「換暗色」「換主題」「改回亮色」時）
 

@@ -373,7 +373,7 @@ test('示意插圖（specs/contracts/illus.md §5.1）：主合成與 custom 預
   assert.ok(pv.indexOf('src="../kit/scene-motion.js"') < pv.indexOf('src="../kit/illus.js"'));
 });
 
-test('片尾離場（046）：最後一段 to＝片長 → 這一段不收、停在完成態，整個畫面 0.5 秒漸暗、片尾前一格暗完，沒有色帶收回；中間的全畫面段照舊色帶收回', () => {
+test('片尾離場（046、049）：最後一段 to＝片長 → 這一段不收、停在完成態，講完再停 1 秒（底片凍結在最後一格）才 0.5 秒漸暗、整支的最後一格前暗完，沒有色帶收回；中間的全畫面段照舊色帶收回；剪輯台設了片尾淡出就不停留', () => {
   const last = { id: 's05', scene: 'fs-list', from: '#12', to: 44, slots: { title: '收尾', items: ['一', '二', '三'] } };
   writePlan([...SCENES.filter((x) => x.id !== 's04'), last]);
   const chk = node('--check', '--json');
@@ -388,7 +388,21 @@ test('片尾離場（046）：最後一段 to＝片長 → 這一段不收、停
   // 44 − 1/30 − 0.5 ＝ 43.467：最後一格（43.967）已經全黑；幕自己不淡出（淡出會露出講者：「應該是要全部漸暗，而不是回到原本的畫面」）
   assert.doesNotMatch(html, /tl\.to\('#el-s05[^']*', \{ opacity: 0/, '最後一段不淡回講者');
   assert.match(html, /<div id="tail-dark" data-layout-ignore style="position:absolute;inset:0;background:#000000;opacity:0;z-index:70;pointer-events:none"><\/div>/);
-  assert.match(html, /tl\.fromTo\('#tail-dark', \{ opacity: 0 \}, \{ opacity: 1, duration: 0\.5, ease: 'sine\.in' \}, 43\.467\);/);
+  // 052 片尾：總長 44＋1；1 秒線性變暗從 45 − 1/30 − 1 ＝ 43.967 開始；fixture 沒有 cuts.v1.json → 接不上原始錄影，退回凍結最後一格（沒聲音）
+  assert.match(html, /tl\.fromTo\('#tail-dark', \{ opacity: 0 \}, \{ opacity: 1, duration: 1, ease: 'none' \}, 43\.967\);/);
+  assert.match(html, /<video id="rough-tail" src="assets\/tail-[0-9a-f]{10}\.mp4" data-start="44" data-duration="1" data-track-index="\d+" muted playsinline><\/video>/);
+  // 052：人聲最後 0.2 秒淡出（底片切在尾音上，硬停像被剪斷）
+  assert.match(html, /<video id="rough"[^>]*data-fade-out="0\.2"/);
+  assert.match(html, /id="main-root"[^>]*data-duration="45"/);
+  assert.match(r.stdout, /片尾：最後一段動畫（s05）停在完成態，講完最後一格定格 1s（接不上原始錄影；人聲最後 0\.2s 淡出），畫面和聲音一起在 1s 內淡出：完成影片總長 0:45\.00（45s）/);
+  const tailFile = html.match(/assets\/tail-[0-9a-f]{10}\.mp4/)[0];
+  assert.ok(fs.statSync(path.join(out, tailFile)).size > 0, '凍結的那一小段有做出來');
+  // 剪輯台設了片尾淡出：照剪輯台的，不另外停留
+  writePlanX({ scenes: [...SCENES.filter((x) => x.id !== 's04'), last], edit: { fadeOut: 1 } });
+  const fo = node();
+  assert.equal(fo.status, 0, fo.stdout + fo.stderr);
+  assert.doesNotMatch(read('index.html'), /rough-tail|tail-dark/);
+  assert.doesNotMatch(fo.stdout, /^片尾：/m);
   const bandsAfter = [...html.matchAll(/tl\.fromTo\('#tx\d+[ab]', \{ x: -?\d+ \}, \{ x: -?\d+, duration: [\d.]+, ease: 'expo\.inOut' \}, ([\d.]+)\);/g)].filter((m) => +m[1] > 40);
   assert.deepEqual(bandsAfter.map((m) => m[0]), [], '片尾沒有色帶');
   writePlan(SCENES);
@@ -618,7 +632,7 @@ test('直式（fixture dev/tests/fixtures/portrait，009 T002-V03–V06）：主
   const html = rd('index.html');
   // FR-021：root、viewport、底片、字幕 host 都是 1080×1920；window.__regions 注入具名區域
   assert.match(html, /<meta name="viewport" content="width=1080, height=1920">/);
-  assert.match(html, /id="main-root" data-composition-id="main" data-start="0" data-duration="44" data-width="1080" data-height="1920"/);
+  assert.match(html, /id="main-root" data-composition-id="main" data-start="0" data-duration="45" data-width="1080" data-height="1920"/);
   assert.match(html, /#footage video \{ position: absolute; left: 0; top: 0; width: 1080px; height: 1920px;/);
   assert.match(html, /id="el-captions"[\s\S]*?data-width="1080" data-height="1920"/);
   const reg = JSON.parse(html.match(/<script>window\.__regions = (\{.*\});<\/script>/)[1]);

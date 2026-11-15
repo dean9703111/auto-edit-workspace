@@ -1,6 +1,6 @@
 {
  "meta": {
-  "hash": "89de25fa7059e773"
+  "hash": "99337a8fd7786012"
  },
  "value": {
   "items": [
@@ -7475,7 +7475,15 @@
   "outro": null,
   "bed": null,
   "ending": null,
-  "finalDur": 153.267,
+  "tail": {
+   "id": "x0113",
+   "hold": 0,
+   "fade": 1,
+   "dur": 1,
+   "voiceFade": 0.2
+  },
+  "portraitLayout": null,
+  "finalDur": 154.267,
   "chapterBadge": true,
   "badges": [
    {
@@ -7602,7 +7610,8 @@
    "stage": {
     "fs": null,
     "fx": null,
-    "ch": null
+    "ch": null,
+    "full": null
    },
    "media": {
     "view": {

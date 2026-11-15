@@ -20,7 +20,7 @@
 | 風格包 | 2 包：「預設」（橘色 `#F6630F`、米白線稿）、「藍圖」（藍色 `#2563EB`、網格製圖線稿，示範用），亮色、暗色背景都有 | `shared/template/styles/<名稱>/` | 一包＝主色＋子母畫面外框＋背景圖。情境庫上方的「風格」可以直接預覽 |
 | 主色 | 1 個（工作區目前是「預設」的橘色） | `shared/template/kit/brand.css` | 說「換主色」，AI 用 `brand.mjs` 換色、算好字的對比、重畫子母畫面外框 |
 | 背景圖 | 亮色 3 張（全畫面 `bg-fs.jpg`、側邊欄 `bg-side.jpg`、章節轉場 `bg-ch.jpg`）＋暗色 3 張（`bg-*-dark.jpg`） | `shared/template/` | 說「換背景」，AI 縮放你給的圖，或用 Codex／HTML 產生，先給你看預覽再換 |
-| 講者調光、瘦臉、美顏 | 選用，預設關閉；建議值調光 0.8、瘦臉 0.6、美顏 0.5 | `shared/template/kit/look.json`（工具 `look.mjs`） | 構圖台、剪輯台都有開關和強度滑桿。臉部偵測在本機做、不上傳 |
+| 講者調光、瘦臉、美顏、瘦小腹 | 選用，預設關閉；建議值調光 0.8、瘦臉 0.6、美顏 0.5、瘦小腹 0.5 | `shared/template/kit/look.json`（工具 `look.mjs`） | 構圖台、剪輯台都有開關和強度滑桿。臉部偵測在本機做、不上傳 |
 | 圖示 | 1,500 多個（lucide） | `shared/template/kit/icons.json` | 分鏡寫圖示名稱 |
 | 字型 | 3 套（Noto Sans TC、Google Sans Flex、等寬的 JetBrains Mono）＋字幕可選的 5 套（思源宋體、霞鶩文楷、jf open 粉圓、霞鶩漫黑、芫荽，約 60 MB） | `shared/template/kit/fonts/` | 不用安裝，Mac 和 Windows 看起來一樣 |
 | 音效 | 9 個（ding、success、alert、impact、click、chapter、sparkle、shine、thunder），CC0 素材或 AI 生成；常用的四個各有兩個升降半音的變體，同一顆在一集裡輪著放、不會一模一樣地重複；片尾配樂 1 首（bgm-cylinder-five，CC BY 4.0，預設不配、用到要標示出處）。想用自己的音效：同名的 `.wav` 放進 `shared/sfx-local/`（不進版控）就會取代內建的，另外認得 tick、checkin、question、wow 四個自備角色 | `shared/sfx/` | 照 `shared/style.md` 的對照表，AI 自動對準動畫。每個聽起來像什麼、出處在 `shared/sfx/README.md` |
