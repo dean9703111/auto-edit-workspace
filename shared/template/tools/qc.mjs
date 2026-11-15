@@ -11,6 +11,8 @@
  *         子母畫面段沒有講者小視窗（rough.mp4 全黑、專案又沒有聲音素材＝初剪壞了）是 ✖（直式叫「上下分割段沒有講者面板」，判準相同）。
  *         字幕（F8，照作者剪映）：抽 5 則中文字幕，量底板 y 956–1074 ± 4（build 好的頁面）與字高 71 ± 3（完成影片的白字），
  *         不合是 ⚠；字幕含「，」「。」、一則不到 0.6 秒也是 ⚠。直式：尺寸要 1080×1920、底板照 lib/canvas.mjs 的 caption.box（y 1291–1409）。
+ *         重點字幕（plan.json captionMarks）：上面的抽樣不含這幾則（底板、字色不同）；另外印一行幾則，抽頭、中、尾最多 3 則看有沒有套上重點樣式、
+ *         位置和一般字幕一不一樣，不合是 ⚠（--json 的 captionMarks）。
  *       另存總覽圖 output/qc/qc-sheet.jpg（每 10 秒一格，長片拉長間隔到最多 80 格、整片都有；最上面標主題 theme: light／dark），給人或 AI 快速掃一眼；
  *         直式每格 9:16，格上疊 unsafe[]（平台介面區）的紅色半透明框。
  *       預期長度跑 build.mjs --check --json 取得（rough.mp4 − cuts）。
@@ -76,7 +78,7 @@ import { gateCheck } from './lib/audit-rules.mjs';
 import { hfArgs } from './lib/hf.mjs';
 import { drawGrid } from './lib/rough/scan.mjs';
 import { canvasOf, resolveFormat, formatLine } from './lib/canvas.mjs';
-import { captionGeom, describeCaptionStyle, isDefaultStyle, resolveCaptionStyle } from './lib/caption-style.mjs';
+import { captionGeom, describeCaptionStyle, isDefaultStyle, resolveCaptionStyle, parseCaptionMarks } from './lib/caption-style.mjs';
 import { readSettings } from './lib/settings.mjs';
 import { ok, next, cmdLine } from './lib/say.mjs';
 import { splitFlag, valueOf, isMain } from './lib/cli.mjs';
@@ -359,6 +361,8 @@ export function judge(f) {
 
   // 字幕（F8）：樣式量測與文字規則；沒有字幕檔時兩項都不判
   if (f.captionStyle) for (const c of captionStyleChecks(f.captionStyle, captionSpec(f.canvas, f.capStyle))) add('captions', c.level, c.text);
+  // 038 重點字幕：幾則、有沒有真的套上重點樣式（上面的字幕樣式抽樣不含這幾則：底板、字色不同）
+  if (f.captionMarks?.marks?.length) for (const c of captionMarkChecks(f.captionMarks, captionSpec(f.canvas, f.capStyle))) add('capmarks', c.level, c.text);
   if (Array.isArray(f.cues) && f.cues.length) for (const c of captionTextChecks(f.cues)) add('captext', c.level, c.text);
 
   const bl = notTail(f.blacks || []).filter(([a, b]) => b - a >= L.black - 1e-6);
@@ -460,6 +464,21 @@ export function captionStyleChecks(m, C = CAPTION) {
   return [{ level: 'warn', text: `字幕樣式和剪映（F8）不同：${fmtNs(bad)} 共 ${bad.length}／${s.length} 則；#${x.n}「${String(x.text).slice(0, 12)}」底板 y ${Math.round(x.top)}–${Math.round(x.bottom)}、字高 ${x.ink ?? '量不到'}（要 y ${C.top}–${C.bottom} ± ${C.tol}、字高 ${C.ink} ± ${C.inkTol}）→ 完成影片是 kit/captions.css 改版前 render 的就重新 build、render；重 render 還是這樣，回報維護者（shared/ 不要自己改）` }];
 }
 
+// 038 重點字幕（plan.json captionMarks）。m＝{ marks: [6, 7, 13]（完成影片裡有的那幾則）, samples: [{ n, text, top, bottom, em }]｜null（沒量：沒有 Chrome、還沒 build）, burned }
+// 重點那一則只換底板、字色、字重，位置和一般字幕同一套（C＝captionSpec）：量有沒有 cg--em、底板 y 對不對；字高不量（主色底上量不到白字）
+export function captionMarkChecks(m, C = CAPTION) {
+  const head = `重點字幕 ${m.marks.length} 則（${fmtNs(m.marks.map((n) => ({ n })), 12)}）`;
+  if (m.burned === false) return [{ level: 'ok', text: `${head}：這支沒有把字幕燒進影片，重點樣式不會出現（字幕檔只有字和時間）` }];
+  const s = m.samples;
+  if (!s) return [{ level: 'ok', text: `${head}（沒量樣式）` }];
+  if (!s.length) return [{ level: 'warn', text: `${head}：抽的時間點畫面上都沒有字幕 → 看 qc-sheet.jpg 那幾則字幕有沒有出現` }];
+  const plain = s.filter((x) => !x.em);
+  if (plain.length) return [{ level: 'warn', text: `${head}：${fmtNs(plain)} 在 build 好的頁面上是一般樣式，沒有套重點樣式 → 標完還沒重新產生：跑 build.mjs、重新 render 再驗收` }];
+  const off = s.filter((x) => Math.abs(x.top - C.top) > C.tol || Math.abs(x.bottom - C.bottom) > C.tol);
+  if (off.length) return [{ level: 'warn', text: `${head}：#${off[0].n}「${String(off[0].text).slice(0, 12)}」底板 y ${Math.round(off[0].top)}–${Math.round(off[0].bottom)}，和一般字幕（y ${C.top}–${C.bottom} ± ${C.tol}）不一樣 → 重點字幕只換顏色和粗細；重新 build、render 還是這樣，回報維護者（shared/ 不要自己改）` }];
+  return [{ level: 'ok', text: `${head}：主色底的重點樣式，位置和一般字幕一樣（量 ${s.length} 則：${fmtNs(s)}）；字幕樣式的抽樣不含這幾則` }];
+}
+
 // 字幕文字（F8 第 4 點）：含「，」「。」→ ⚠；一則不到 0.6 秒 → ⚠（剪映最短 0.73 秒）
 export function captionTextChecks(cues) {
   const out = [], punct = cues.filter((c) => /[，。]/.test(c.text)), short = cues.filter((c) => c.end - c.start < CAPTION.minDur - 1e-6);
@@ -477,9 +496,29 @@ function captionInPage() {
     const sp = cg.querySelector('span');
     const r = sp && sp.getBoundingClientRect();
     if (!r || r.height < 1) continue;
-    return { id: cg.id, text: sp.textContent, top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+    return { id: cg.id, text: sp.textContent, top: r.top, bottom: r.bottom, left: r.left, right: r.right, em: cg.classList.contains('cg--em') };
   }
   return null;
+}
+
+// 038 重點字幕的句號（plan.json captionMarks；格式不對當成沒標，build 會報 ✖）
+export function captionMarksOf(P) {
+  try { return parseCaptionMarks(JSON.parse(fs.readFileSync(P.plan, 'utf8')).captionMarks).marks; } catch { return []; }
+}
+// 047 只標幾個字的 [{ n, word }]（同一份 captionMarks 裡寫 "#N@詞" 的）
+export function captionWordsOf(P) {
+  try { return parseCaptionMarks(JSON.parse(fs.readFileSync(P.plan, 'utf8')).captionMarks).words; } catch { return []; }
+}
+// 重點字幕抽頭、中、尾最多 3 則，在 build 好的頁面看有沒有套 cg--em、底板在哪（session＝已經開好的頁面）
+export async function measureMarks(S, cues) {
+  const pick = cues.length <= 3 ? cues : [cues[0], cues[Math.floor(cues.length / 2)], cues[cues.length - 1]];
+  const samples = [];
+  for (const c of pick) {
+    await S.seek(r3((c.start + c.end) / 2));
+    const box = await S.evaluate(`(${captionInPage.toString()})()`);
+    if (box) samples.push({ n: c.n, text: box.text, top: Math.round(box.top * 10) / 10, bottom: Math.round(box.bottom * 10) / 10, em: !!box.em });
+  }
+  return samples;
 }
 
 // 底板位置從 build 好的頁面量（HyperFrames runtime＋同一個 seek），字高從完成影片那一格的白字量
@@ -629,8 +668,15 @@ export async function finalCheck(P, flags) {
   let S = null, covered = null;
   if (cues.length || segs.length) { try { if (fs.existsSync(path.join(P.out, 'index.html'))) S = await openSession({ dir: P.out, chrome: findChrome({ chrome: flags.chrome }), runtime: findRuntime({}).file, W: cv.W, H: cv.H }); } catch { S = null; } }
   let captionStyle = null;
+  // 038 重點字幕：底板、字色和一般字幕不同，字幕樣式的抽樣跳過它們，另外看有沒有套上重點樣式
+  const markSet = new Set(captionMarksOf(P));
+  const marked = cues.filter((c) => markSet.has(c.n));
+  const captionMarks = marked.length ? { marks: marked.map((c) => c.n), samples: null, burned: !flags['no-captions'] } : null;
   try {
-    if (!flags['no-captions']) captionStyle = await measureCaptions(P, flags, file, cues, cv, S);
+    // 047 只標幾個字的那幾則，底板裡多一塊主色：也不拿來量一般字幕的樣式
+    const wordSet = new Set(captionWordsOf(P).map((w) => w.n));
+    if (!flags['no-captions']) captionStyle = await measureCaptions(P, flags, file, cues.filter((c) => !markSet.has(c.n) && !wordSet.has(c.n)), cv, S);
+    if (S && captionMarks?.burned) captionMarks.samples = await measureMarks(S, marked);
     if (S && segs.length) {
       const warn = [], motion = await shotMotion(P, segs, flags, S);
       covered = shotPlan(segs, exp.expected ?? Infinity, motion, fxLabels(P, exp.items, motion, warn)).covers.map((c) => ({ id: c.id, by: c.by, msg: c.msg, from: c.from, to: c.to }));
@@ -638,7 +684,7 @@ export async function finalCheck(P, flags) {
   } finally { if (S) await S.close(); }
   const theme = themeOf(P);
   const { statics, frames, ...measured } = det;
-  const facts = { scale: Number(flags.scale) || 1, width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, dur, expected: exp.expected ?? null, items: exp.items || [], cuts: exp.cuts || [], tail: exp.tail ?? null, pipMissing: pipMiss, cues, captionStyle, capStyle: captionStyleOf(P, cv.format), theme, canvas: cv, stills, covered, project: `projects/${path.basename(P.project)}`, fileArg: flags.file ? ` --file ${rel(file)} --offset 0` : '', ...measured };
+  const facts = { scale: Number(flags.scale) || 1, width: info.width, height: info.height, fps: info.fps, vfr: info.vfr, hasAudio: info.hasAudio, dur, expected: exp.expected ?? null, items: exp.items || [], cuts: exp.cuts || [], tail: exp.tail ?? null, pipMissing: pipMiss, cues, captionStyle, captionMarks, capStyle: captionStyleOf(P, cv.format), theme, canvas: cv, stills, covered, project: `projects/${path.basename(P.project)}`, fileArg: flags.file ? ` --file ${rel(file)} --offset 0` : '', ...measured };
   const verdict = judge(facts);
   if (exp.error) verdict.checks.splice(2, 0, { key: 'build', level: 'warn', text: `${exp.error} → 時間對不到段落、長度也沒有預期值，先修好專案再重跑 qc` }), verdict.warnings++;
   let sheet = null;
@@ -1777,7 +1823,7 @@ export async function cli() {
         checks: r.checks, format: { width: f.width, height: f.height, fps: f.fps, hasAudio: f.hasAudio },
         duration: { actual: f.dur, expected: f.expected }, loudness: f.loud ? { lufs: f.loud.i, truePeak: f.loud.tp } : null,
         freezes: f.freezes, blacks: f.blacks, silences: f.silences, stills: f.stills, covered: f.covered, sheet: r.sheet ? rel(r.sheet.file) : null, theme: f.theme,
-        captions: f.captionStyle?.samples ?? null,
+        captions: f.captionStyle?.samples ?? null, captionMarks: f.captionMarks ?? null,
         canvas: { format: f.canvas.format, size: [f.canvas.W, f.canvas.H], source: r.fmt.source },
       }, null, 2));
     } else printFinal(P, r);

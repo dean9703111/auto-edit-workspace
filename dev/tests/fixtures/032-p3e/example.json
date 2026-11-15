@@ -1,6 +1,6 @@
 {
  "meta": {
-  "hash": "f453ad4bccae87b9"
+  "hash": "89de25fa7059e773"
  },
  "value": {
   "items": [
@@ -1481,7 +1481,7 @@
     "lower": false,
     "z": 30,
     "start": 135.046,
-    "end": 153.156,
+    "end": 153.267,
     "planEnd": 153.156,
     "rough0": [
      135.046,
@@ -1491,7 +1491,7 @@
     "fadeOut": true,
     "exitFade": true,
     "notes": [],
-    "D": 18.11,
+    "D": 18.221,
     "txIn": "swap",
     "prev": "fullscreen",
     "txOut": "fade",
@@ -1499,7 +1499,7 @@
     "pipPieces": [
      {
       "s": 135.046,
-      "e": 153.156,
+      "e": 153.267,
       "ms": 135.046,
       "enter": "none",
       "exitDur": 0,
@@ -2998,7 +2998,7 @@
     "lower": false,
     "z": 30,
     "start": 135.046,
-    "end": 153.156,
+    "end": 153.267,
     "planEnd": 153.156,
     "rough0": [
      135.046,
@@ -3008,7 +3008,7 @@
     "fadeOut": true,
     "exitFade": true,
     "notes": [],
-    "D": 18.11,
+    "D": 18.221,
     "txIn": "swap",
     "prev": "fullscreen",
     "txOut": "fade",
@@ -3016,7 +3016,7 @@
     "pipPieces": [
      {
       "s": 135.046,
-      "e": 153.156,
+      "e": 153.267,
       "ms": 135.046,
       "enter": "none",
       "exitDur": 0,
@@ -7671,6 +7671,8 @@
    }
   },
   "captionStyle": null,
-  "captionFrom": "default"
+  "captionFrom": "default",
+  "captionMarks": [],
+  "captionWords": []
  }
 }

@@ -33,7 +33,8 @@
 html, body { margin: 0; height: 100%; }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.5;
-  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto; height: 100vh; overflow: hidden;
+  /* 048：預覽那一列至少留 min(300px, 45vh)；時間軸那一列最多長到自己的內容高，放不下就縮、裡面上下捲（.tl-body） */
+  display: grid; grid-template-rows: auto auto minmax(min(300px, 45vh), 1fr) minmax(0, auto) auto; height: 100vh; overflow: hidden;
 }
 .topbar { grid-row: 1; }
 .banner { grid-row: 2; }
@@ -107,7 +108,8 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .banner .grow { flex: 1; }
 
 /* ---------- 預覽＋屬性 ---------- */
-.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0; }
+/* 048：右側面板的寬度可以拖（--insp-w，app.js 記在瀏覽器；沒拖過＝372px） */
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) var(--insp-w, 372px); min-height: 0; }
 /* 右側面板：屬性、段落、字幕、修改單同一欄切換（打開修改單不會把預覽擠小） */
 .side-tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--line); flex: none; }
 .side-tabs button { flex: 1; padding: 6px 2px; font-size: 13px; border: 0; border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; background: transparent; color: var(--mute); }
@@ -138,8 +140,14 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .side-row.k-design { border-left-color: var(--accent); }
 .side-row.k-media { border-left-color: var(--c-media); }
 .side-acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.side-row.cue { grid-template-columns: 44px minmax(0, 1fr); }
+.side-row.cue { grid-template-columns: 44px minmax(0, 1fr) auto; }
 .side-row.cue .x { white-space: normal; }
+/* 038 重點字幕：每一句右邊的開關（沒標時很淡，滑過或選到那一列才有框；標了是實心主色），標了的那一列左邊一條主色 */
+.side-row.cue.em { border-left-color: var(--accent); }
+.side-row.cue.em .x { color: var(--ink); }
+.cue-mark { align-self: start; padding: 0 8px; min-height: 22px; font-size: 12px; line-height: 20px; border-radius: 999px; background: transparent; border-color: transparent; color: var(--dim); }
+.side-row.cue:hover .cue-mark, .side-row.cue.sel .cue-mark, .side-row.cue.now .cue-mark { border-color: var(--line2); color: var(--mute); }
+.cue-mark[aria-pressed="true"], .side-row.cue .cue-mark[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
 .side-row.cue .cue-edit { width: 100%; margin: -3px 0; padding: 2px 6px; font-size: 13px; }
 .side-row.cue .over { color: var(--warn-kw); font-weight: 700; }
 .note-list { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; }
@@ -257,7 +265,10 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .inout { display: flex; gap: 6px; margin-left: auto; }
 
 /* ---------- 屬性面板 ---------- */
-.inspector { background: var(--bg2); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.inspector { background: var(--bg2); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; position: relative; }
+/* 預覽和右側面板中間那條線：左右拖調面板寬度（和 .tl-resize 同一套長相） */
+.insp-resize { position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; z-index: 4; touch-action: none; }
+.insp-resize:hover, .insp-resize:focus-visible, .insp-resize.drag { background: color-mix(in srgb, var(--accent) 45%, transparent); outline: none; }
 .insp-head { padding: 10px 16px 8px; border-bottom: 1px solid var(--line); }
 .insp-kind { font-size: 12px; color: var(--mute); display: flex; align-items: center; gap: 6px; }
 .insp-kind .chip { display: inline-block; width: 9px; height: 9px; border-radius: 2px; }
@@ -321,11 +332,11 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .ref-list li { padding: 2px 0; }
 
 /* ---------- 時間軸 ---------- */
-.timeline-wrap { background: var(--bg2); border-top: 1px solid var(--line); padding: 4px 12px 6px; position: relative; }
+.timeline-wrap { background: var(--bg2); border-top: 1px solid var(--line); padding: 4px 12px 6px; position: relative; display: flex; flex-direction: column; min-height: 0; }
 /* 預覽和時間軸中間那條線：上下拖調大小 */
 .tl-resize { position: absolute; left: 0; right: 0; top: -4px; height: 8px; cursor: row-resize; z-index: 4; touch-action: none; }
 .tl-resize:hover, .tl-resize:focus-visible { background: color-mix(in srgb, var(--accent) 45%, transparent); outline: none; }
-.tl-toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+.tl-toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; flex: none; }
 .tool-group { display: flex; align-items: center; gap: 4px; padding-right: 12px; border-right: 1px solid var(--line); }
 .tool { padding: 3px 9px; font-size: 13px; min-height: 28px; display: inline-flex; align-items: center; gap: 5px; background: transparent; }
 .tool kbd { font-size: 12px; }
@@ -334,7 +345,12 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .zoom input[type="range"] { width: 130px; }
 .follow { font-size: 13px; color: var(--mute); margin-left: 6px; display: flex; align-items: center; gap: 5px; cursor: pointer; min-height: 28px; }
 .follow input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
-.tl-body { display: grid; grid-template-columns: 176px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg); }
+/* 048：軌道比這一塊高（字卡分好幾排、把軌道拉高、視窗矮）時上下捲；捲軸一直看得到（自己畫的，不用系統那種滑過去才出現的） */
+.tl-body { display: grid; grid-template-columns: 176px minmax(0, 1fr); align-content: start; border: 1px solid var(--line); border-radius: 6px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 0 1 auto; background: var(--bg); }
+.tl-body::-webkit-scrollbar { width: 12px; }
+.tl-body::-webkit-scrollbar-track { background: var(--bg2); border-left: 1px solid var(--line); }
+.tl-body::-webkit-scrollbar-thumb { background-color: var(--dim); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
+.tl-body::-webkit-scrollbar-thumb:hover { background-color: var(--mute); }
 .tl-heads { background: var(--bg2); border-right: 1px solid var(--line); user-select: none; }
 .th { display: flex; align-items: center; gap: 4px; padding: 0 6px 0 8px; border-bottom: 1px solid rgba(255,255,255,.07); font-size: 12px; overflow: hidden; }
 .th .nm { font-weight: 500; color: var(--mute); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -416,6 +432,29 @@ a.fb-step:hover { background: var(--card); color: var(--ink); }
 .fb-count { display: none; font-size: 12.5px; color: var(--mute); white-space: nowrap; margin-left: 6px; }
 /* 視窗窄：其他步驟只留符號，旁邊寫走到第幾步 */
 @media (max-width: 1320px) { .fb-step:not(.on) .fb-label { display: none; } .fb-count { display: inline; } .next-step { font-size: 12.5px; padding: 3px 8px; } }
+/* 四頁共用的切換影片（project-switch.js）：同時開著兩個以上專案的剪輯台時，頁首的專案名稱本身就是切換鈕（右邊多一個小箭頭），點了在下面展開清單。
+   只開一個時沒有 .proj-switch，專案名稱照舊只是字 */
+.titles { position: relative; }   /* 選單（.proj-menu）對著它放 */
+.titles .sub.proj-switch { display: block; position: relative; width: fit-content; max-width: calc(16vw + 26px); margin: -1px 0 -1px -7px; padding: 1px 19px 1px 7px; border-radius: 6px; cursor: pointer; user-select: none; transition: background .12s, color .12s; }
+.proj-switch::after { content: ''; position: absolute; right: 7px; top: 50%; width: 5px; height: 5px; margin-top: -4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); opacity: .8; transition: transform .15s, margin-top .15s; }
+.proj-switch:hover, .proj-switch[aria-expanded="true"] { background: var(--card2); color: var(--ink); }
+.proj-switch:focus-visible { outline-offset: -2px; }   /* 緊貼在標題下面：焦點框畫在裡面，不壓到上面的字 */
+.proj-switch[aria-expanded="true"]::after { transform: rotate(-135deg); margin-top: -1px; }
+.proj-menu { position: absolute; left: -7px; top: calc(100% + 6px); z-index: 45; width: max-content; min-width: 208px; max-width: min(340px, calc(100vw - 72px)); padding: 6px; background: var(--card); border: 1px solid var(--line2); border-radius: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, .55); animation: proj-in .14s ease-out; }
+.proj-menu:focus { outline: none; }
+.proj-menu-head { padding: 2px 8px 6px; font-size: 12px; color: var(--dim); letter-spacing: .04em; }
+.proj-list { display: flex; flex-direction: column; gap: 2px; max-height: min(336px, calc(100vh - 120px)); overflow-y: auto; overscroll-behavior: contain; }
+.proj-opt { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 6px; padding: 7px 12px 7px 8px; border-radius: 6px; font-size: 13.5px; line-height: 1.35; color: var(--mute); cursor: pointer; }
+.proj-opt .ck { color: var(--accent-text); font-size: 13px; font-weight: 700; text-align: center; }
+.proj-opt .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-opt:hover, .proj-opt:focus-visible { background: var(--plate); color: var(--ink); }
+.proj-opt:focus-visible { outline-offset: -2px; }
+.proj-opt[aria-selected="true"] { color: var(--ink); font-weight: 700; background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.proj-opt[aria-selected="true"]:hover, .proj-opt[aria-selected="true"]:focus-visible { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+@keyframes proj-in { from { transform: translateY(-4px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .proj-menu { animation: none; } .proj-switch, .proj-switch::after { transition: none; } }
+/* 專案名稱多了箭頭、放不下時整列換行（和視窗窄的時候一樣），右邊的按鈕才不會被擠出視窗。class 由 project-switch.js 加：不用 :has()，不支援的瀏覽器才不會整列被擠出去 */
+.topbar.has-switch { flex-wrap: wrap; row-gap: 4px; }
 /* 存檔失敗的提醒：固定在視窗右下角，捲到哪都看得到（分鏡表、剪輯清單） */
 .notice { position: fixed; right: 16px; bottom: 16px; z-index: 40; width: min(380px, calc(100vw - 32px)); padding: 12px 14px; border-radius: 8px; background: var(--card2); border: 1px solid var(--warn); box-shadow: 0 8px 28px rgba(0, 0, 0, .5); font-size: 13.5px; line-height: 1.55; }
 .notice p { margin: 4px 0 0; color: var(--mute); }
@@ -515,7 +554,7 @@ ul.plain b, ol.plain b { color: var(--ink); }
   .tp-btns button.icon { padding-left: 4px; padding-right: 4px; }
 }
 @media (max-width: 1100px) {
-  .workspace { grid-template-columns: minmax(0, 1fr) 300px; }
+  .workspace { grid-template-columns: minmax(0, 1fr) var(--insp-w, 300px); }
   .topbar { flex-wrap: wrap; row-gap: 4px; padding-top: 6px; padding-bottom: 6px; }
   .actions { flex-wrap: wrap; justify-content: flex-end; }
   .mode-note { display: none; }
@@ -524,12 +563,13 @@ ul.plain b, ol.plain b { color: var(--ink); }
   .now-bar .k, .now-bar .i { display: none; }
   .side-row { grid-template-columns: 40px minmax(0, 1fr) auto; }
   .side-row .i { display: none; }
-  .side-row.cue { grid-template-columns: 40px minmax(0, 1fr); }
+  .side-row.cue { grid-template-columns: 40px minmax(0, 1fr) auto; }
   .follow { display: none; }
 }
 @media (max-width: 860px) {
   .workspace { grid-template-columns: minmax(0, 1fr); position: relative; }
   .inspector { position: fixed; top: 0; right: 0; bottom: 0; width: min(380px, 92vw); z-index: 30; transform: translateX(102%); transition: transform .15s; box-shadow: -8px 0 28px rgba(0, 0, 0, .5); }
+  .insp-resize { display: none; }
   .inspector.open { transform: none; }
   .side-toggle { display: inline-block; }
   .side-tabs button.side-close { display: block; flex: none; width: 34px; }

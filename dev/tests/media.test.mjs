@@ -810,6 +810,11 @@ test('直式：16:9 與 9:16 錄影放進上半資訊面板（y 240–900）；�
   assert.deepEqual(g(1280, 720, P), [0, 266, 1080, 608]);
   assert.deepEqual(g(360, 640, P), [355, 240, 371, 660]);
   assert.deepEqual(g(1280, 720, P, 'cover'), [-260, 0, 1600, 900]);
+  // 046 圖片＋cover：上下多出來的裁在下面（上緣對齊）；左右多出來的照舊兩邊各裁一半；沒帶 top（錄影）照舊上下置中
+  const gt = (w, h, F) => { const x = mediaGeometry({ width: w, height: h }, 'cover', F, { top: true }); return [x.left, x.top, x.width, x.height]; };
+  assert.deepEqual(g(1726, 1786, P, 'cover'), [0, -109, 1080, 1118]);
+  assert.deepEqual(gt(1726, 1786, P), [0, 0, 1080, 1118]);
+  assert.deepEqual(gt(1280, 720, P), [-260, 0, 1600, 900]);
   assert.deepEqual(g(360, 640, Pf), [253, 240, 574, 1020]);
   assert.deepEqual(P.safe, [60, 260, 1020, 880]);
   assert.deepEqual(Pf.safe, [60, 260, 1020, 1260]);

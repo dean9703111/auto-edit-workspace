@@ -9,6 +9,11 @@
 //   shotSlots(spec, slots)                           → [{ key: 'items[1].shot', value, from }]（規格裡 type shot 的欄位，清單逐項展開）
 //   checkShots({ plan, lib, projectDir })            → { errors, warnings, jobs }：檔在不在、段 id 對不對（build、--check 共用，不跑 ffmpeg）
 //   prepareShots({ jobs, out, log })                 → 這次做了幾張（ffmpeg；來源沒變就不重做，沒用到的舊檔刪掉）
+//
+// 內容設計動畫裡的素材圖片（042）：設計師在 compositions/x-design-<段>.html 直接寫 <img src="assets/images/書封.png">（assets/screen/ 的圖片檔也可以），
+// build 把那張圖縮到 1920×1080 以內，放到 work/hyperframes/ 底下同一個相對路徑，合成就讀得到（錄影不行，會動的畫面照舊用 media 段）。
+//   designImages({ plan, projectDir, outDir })       → { errors, jobs }：掃每個內容設計段的檔，圖在不在、是不是圖片檔
+//   prepareDesignImages({ jobs, out, log })          → 這次做了幾張（來源沒變不重做；不再用到的刪掉，清單記在 assets/design-images.json）
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -113,5 +118,49 @@ export function prepareShots({ jobs, out, log = () => {} }) {
   for (const f of fs.readdirSync(dir)) if (f.endsWith('.jpg') && !next[f]) fs.rmSync(path.join(dir, f), { force: true });
   const text = JSON.stringify(next, null, 2) + '\n';
   if (!fs.existsSync(idxFile) || fs.readFileSync(idxFile, 'utf8') !== text) fs.writeFileSync(idxFile, text);   // 沒變不重寫（局部重算看檔案簽名）
+  return made;
+}
+
+// ---------- 內容設計動畫裡的素材圖片（042） ----------
+const DESIGN_IMG_RE = /<img\b[^>]*?\ssrc="(assets\/(?:images|screen)\/[^"]+)"/g;
+const DESIGN_INDEX = 'assets/design-images.json';
+
+export function designImages({ plan, projectDir, outDir }) {
+  const errors = [], jobs = new Map();
+  for (const seg of Array.isArray(plan?.scenes) ? plan.scenes : []) {
+    if (!seg || seg.type !== 'custom' || !seg.design || !outDir) continue;
+    let html = '';
+    try { html = fs.readFileSync(path.join(outDir, 'compositions', `x-design-${seg.id}.html`), 'utf8'); } catch { continue; }
+    for (const m of html.matchAll(DESIGN_IMG_RE)) {
+      const v = m[1], where = `[${seg.id} custom x-design-${seg.id}.html] <img src="${v}">`;
+      if (!isShotImage(v)) { errors.push(`${where}：只能放圖片檔（.png .jpg .webp）→ 錄影用 media 段`); continue; }
+      const abs = projectDir ? path.join(projectDir, v) : null;
+      if (abs && !fs.existsSync(abs)) { errors.push(`${where}：找不到 ${v} → 檔名照 work/media/index.md 寫（相對專案資料夾）`); continue; }
+      if (abs) jobs.set(v, { src: abs, label: v });
+    }
+  }
+  return { errors, jobs };
+}
+
+export function prepareDesignImages({ jobs, out, log = () => {} }) {
+  const idxFile = path.join(out, DESIGN_INDEX);
+  let idx = {};
+  try { idx = JSON.parse(fs.readFileSync(idxFile, 'utf8')); } catch { idx = {}; }
+  if (!jobs.size && !Object.keys(idx).length) return 0;
+  const next = {};
+  let made = 0;
+  for (const [rel, job] of jobs) {
+    const dst = path.join(out, rel), key = `${job.src}|${sig(job.src)}`;
+    next[rel] = { key };
+    if (idx[rel]?.key === key && fs.existsSync(dst)) continue;
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    const r = run('ffmpeg', ['-y', '-v', 'error', '-i', job.src, '-vf', "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease", '-frames:v', '1', ...(/\.jpe?g$/i.test(rel) ? ['-q:v', '3'] : []), dst]);
+    if (r.status !== 0) throw new Error(`圖片 ${job.label} 轉不了：${String(r.stderr || '').trim().split('\n').pop()}`);
+    log(`素材圖片 ${job.label} → ${rel}`);
+    made++;
+  }
+  for (const rel of Object.keys(idx)) if (!next[rel]) fs.rmSync(path.join(out, rel), { force: true });
+  const text = JSON.stringify(next, null, 2) + '\n';
+  if (!fs.existsSync(idxFile) || fs.readFileSync(idxFile, 'utf8') !== text) fs.writeFileSync(idxFile, text);
   return made;
 }

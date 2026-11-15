@@ -156,7 +156,7 @@ export const MEDIA_FIELDS = [
   ['hold', '秒數', '—', '定格：整段停在錄影第幾秒那一格（in／out／speed 不用寫）；標註、放大鏡、運鏡照常'],
   ['retime', '[{ "at", "src" }]', '—', '同一段裡變速、定格：講到 at 時錄影要在第 src 秒，兩點之間自動算速度，src 一樣＝定格；運鏡、紅框跨整段不會斷。第一點之前、最後一點之後是正常速度（錄影用完就停在最後一格）；不保留原聲。和 in／out／speed／hold 擇一'],
   ['redact', '[{ "at", "until", "box": [x,y,w,h] }]', '—', '打碼：框裡的東西模糊後燒進影片（金鑰、密碼、個資）；at、until 不寫＝整段。放大鏡也看不到原文；框要蓋住這段時間裡它會出現的所有位置'],
-  ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方（16:9 縮到 87%），四周黑底；cover＝鋪滿畫面'],
+  ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方（16:9 縮到 87%），四周黑底；cover＝鋪滿畫面，多的裁掉（圖片上下多出來的裁在下面，上緣對齊）'],
   ['pip', 'true／false', 'true', '右下角子母畫面露臉；只有聲音的區間自動不放'],
   ['volume', 'null 或 −60～+12（dB）', 'null', 'null＝素材靜音；寫數字＝保留素材原聲'],
   ['enter／exit', TRANSITIONS.map((x) => `"${x}"`).join('／') + '（enter 另有 "tape"／"tilt"）', '"fade"', '進場／出場；接在別的整張幕後面時 fade 自動變 cut；"whip"＝0.3 秒橫向甩進／甩出（有水平動態模糊）；"tape"＝圖片縮小貼在全幕背景上、紙膠帶貼兩角（只給圖片、fit "contain"、橫式）；"tilt"＝面板從透視斜躺擺平（錄影、圖片都可以，fit "contain"，直式也可以）'],
@@ -182,12 +182,13 @@ function listDir(projectDir, dir) {
 // ---------- 幾何（純函式；測試直接驗 specs/contracts/media.md §1.1 的例題）----------
 
 // 素材 info（width、height）放進可見區（橫式 contain：字幕帶上方 1920×940；cover：鋪滿 1920×1080；直式見 mediaFrame）
-export function mediaGeometry(info, fit = 'contain', F = LAND) {
+//   top（046，圖片＋cover）：上下多出來的全部裁在下面，圖的上緣貼著可見區上緣（使用者：「螢幕類型如果是圖片，應該要置頂」：網頁截圖的頁首要看得到）
+export function mediaGeometry(info, fit = 'contain', F = LAND, { top = false } = {}) {
   const W = info.width, H = info.height;
   const [vx, vy, vw, vh] = F.view[fit];
   const k0 = fit === 'cover' ? Math.max(vw / W, vh / H) : Math.min(vw / W, vh / H);
   const dw = Math.round(W * k0), dh = Math.round(H * k0);
-  return { kx: dw / W, ky: dh / H, left: Math.round(vx + (vw - dw) / 2), top: Math.round(vy + (vh - dh) / 2), width: dw, height: dh };
+  return { kx: dw / W, ky: dh / H, left: Math.round(vx + (vw - dw) / 2), top: top && dh > vh ? vy : Math.round(vy + (vh - dh) / 2), width: dw, height: dh };
 }
 // 橫式錄影段的小節角標（plan.mjs、main.mjs）：w×h＝角標大小，dflt＝平常的位置 [右緣 x, 上緣 y]；回傳角標右緣 x 與上緣 y
 //   錄影旁邊放得下（窄的錄影、直式手機畫面）：放在空白處，不壓錄影（使用者：「有空間的狀態下，沒必要讓標題跟畫面重疊」）
@@ -541,7 +542,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
     warn(`直式錄影（${W}×${H}）在橫式影片只佔中間一條、兩邊空著 → 加 "side": { "title": "…", "items": [{ "at": "#N@詞", "text": "…" }] }：錄影靠左、右邊列步驟，講到哪一條亮哪一條`);
   }
   // 畫面位置（stage 座標＝沒有運鏡時的畫面座標：橫式 1920×1080、直式 1080×1920）
-  const G = m.geo = mediaGeometry(m.info, m.fit, F);
+  const G = m.geo = mediaGeometry(m.info, m.fit, F, { top: m.kind === 'image' && m.fit === 'cover' });
   // 子母畫面移進錄影裡（右側步驟清單：錄影靠左，小視窗在清單下面；tape：圖片貼在全幕背景上，小視窗和全畫面段一樣在畫布右下）
   const hasPip = it.pipPieces ? it.pipPieces.length > 0 : [s, (s + e) / 2, e - 0.01].some((t) => pipAt(t));
   m.pipShift = F.format !== 'portrait' && hasPip && !m.side && it.enterFx !== 'tape' ? pipShift(G) : null;

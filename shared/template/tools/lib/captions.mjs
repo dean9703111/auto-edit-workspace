@@ -1,15 +1,18 @@
 // 字幕子合成 compositions/captions.html（規格 §B.4）
 //
-//   buildCaptions(cues, { duration, offset, compId, blackout, canvas, style }) → { html, file, compId, shown, items, style }
+//   buildCaptions(cues, { duration, offset, compId, blackout, canvas, style, marks }) → { html, file, compId, shown, items, style, marks, words }
 //     items＝畫面上實際顯示的字幕 [{ n, text, a, b, spans: [[起, 迄]] }]（剪映素材的 字幕.srt 照這份寫）
 //     duration  主合成長度（秒）；超過的字幕截掉
 //     offset    測試片段的起點（--test）：所有字幕往前平移 offset 秒，落在 [0, duration) 外的略過
 //     blackout  [[起, 迄]]（完成影片秒數，章節轉場的 2.5 秒）：這些時間不放字幕，被切到的字幕提早收或晚出現（spec FR-007）
 //     canvas    lib/canvas.mjs 的版式設定（預設橫式）：直式時 root 1080×1920、帶 data-format="portrait"（kit/captions.css 換位置）
 //     style     035 字幕樣式（lib/caption-style.mjs；不給或預設＝F8，輸出和以前逐位元相同）：root 多 data-cap 與 --cap-* 變數
+//     marks     038 重點字幕的句號 [6, 7, 13]（plan.json captionMarks，resolvePlan 整理過）：那幾則的 div 多 class cg--em（kit/captions.css）；
+//               不給或空的＝輸出和以前逐位元相同。回傳的 marks＝畫面上真的有顯示的那幾則
+//     words     047 只標幾個字 [{ n: 7, word: '關鍵詞' }]：那一則的 <span> 裡，那幾個字包成 <em class="cw">（整則已經是重點的不包）
 //   captionWarnings(cues, canvas, style)  → 字數／寬度警告（--check 也印）；字數與寬度上限讀 canvas.caption.maxChars／maxW（橫式 18／1840、直式 10／834），估寬照字級
 //
-// 每則字幕 <div class="cg" id="cg-N"><span>…</span></div>，初始 opacity:0; visibility:hidden（inline，captions.css 沒寫），
+// 每則字幕 <div class="cg" id="cg-N"><span>…</span></div>（重點字幕是 class="cg cg--em"），初始 opacity:0; visibility:hidden（inline，captions.css 沒寫），
 // tl.set 開、tl.set 硬關；同一時間只顯示一則（前一則截到下一則起點）；0 秒開頭的挪到 0.1。
 
 import { stampHash } from './assemble.mjs';
@@ -50,8 +53,25 @@ export function captionWarnings(cues, canvas = null, style = null) {
   return out;
 }
 
-export function buildCaptions(cues, { duration, offset = 0, compId = 'captions', blackout = [], canvas = null, style = null }) {
+// 047 只標幾個字：text 裡每個 word 第一次出現的地方包成 <em class="cw">（kit/captions.css）；重疊的併成一段、字幕裡找不到的略過
+export function markWords(text, words) {
+  const t = String(text ?? '');
+  const ranges = [];
+  for (const w of words || []) { const i = w ? t.indexOf(w) : -1; if (i >= 0) ranges.push([i, i + w.length]); }
+  if (!ranges.length) return esc(t);
+  ranges.sort((x, y) => x[0] - y[0]);
+  const merged = [ranges[0].slice()];
+  for (const r of ranges.slice(1)) { const last = merged[merged.length - 1]; if (r[0] <= last[1]) last[1] = Math.max(last[1], r[1]); else merged.push(r.slice()); }
+  let out = '', at = 0;
+  for (const [a, b] of merged) { out += `${esc(t.slice(at, a))}<em class="cw">${esc(t.slice(a, b))}</em>`; at = b; }
+  return out + esc(t.slice(at));
+}
+
+export function buildCaptions(cues, { duration, offset = 0, compId = 'captions', blackout = [], canvas = null, style = null, marks = null, words = null }) {
   const portrait = canvas?.format === 'portrait';
+  const em = new Set(marks || []);
+  const cw = new Map();
+  for (const w of words || []) { if (!em.has(w.n)) cw.set(w.n, [...(cw.get(w.n) || []), w.word]); }
   const items = [];
   const sorted = [...cues].sort((a, b) => a.start - b.start);
   sorted.forEach((c, i) => {
@@ -66,7 +86,7 @@ export function buildCaptions(cues, { duration, offset = 0, compId = 'captions',
     const spans = subtract([a, b], blackout.map(([x, y]) => [x - offset, y - offset])).filter(([x, y]) => y - x >= 0.05).map(([x, y]) => [r3(x), r3(y)]);
     if (spans.length) items.push({ n: c.n, text: c.text, a: spans[0][0], b: spans[spans.length - 1][1], spans });
   });
-  const divs = items.map((it) => `    <div class="cg" id="cg-${it.n}" style="opacity:0;visibility:hidden"><span>${esc(it.text)}</span></div>`).join('\n');
+  const divs = items.map((it) => `    <div class="cg${em.has(it.n) ? ' cg--em' : ''}" id="cg-${it.n}" style="opacity:0;visibility:hidden"><span>${cw.has(it.n) ? markWords(it.text, cw.get(it.n)) : esc(it.text)}</span></div>`).join('\n');
   const sets = items.flatMap((it) => it.spans.map(([a, b]) => `    tl.set('#cg-${it.n}', { opacity: 1, visibility: 'visible' }, ${a});\n    tl.set('#cg-${it.n}', { opacity: 0, visibility: 'hidden' }, ${b});`)).join('\n');
   const html = `<!doctype html>
 <html lang="zh-Hant">
@@ -91,5 +111,5 @@ ${sets}
 </body>
 </html>
 `;
-  return { html: stampHash(html, `captions=${items.length}`), file: `compositions/${compId}.html`, compId, shown: items.length, items, style: isDefaultStyle(style) ? null : style };
+  return { html: stampHash(html, `captions=${items.length}`), file: `compositions/${compId}.html`, compId, shown: items.length, items, style: isDefaultStyle(style) ? null : style, marks: items.filter((it) => em.has(it.n)).map((it) => it.n), words: items.filter((it) => cw.has(it.n)).map((it) => it.n) };
 }

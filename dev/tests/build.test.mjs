@@ -373,7 +373,7 @@ test('示意插圖（specs/contracts/illus.md §5.1）：主合成與 custom 預
   assert.ok(pv.indexOf('src="../kit/scene-motion.js"') < pv.indexOf('src="../kit/illus.js"'));
 });
 
-test('片尾離場：最後一段 to＝片長 → 淡出 0.5 秒、片尾前一格做完，沒有色帶收回；中間的全畫面段照舊色帶收回', () => {
+test('片尾離場（046）：最後一段 to＝片長 → 這一段不收、停在完成態，整個畫面 0.5 秒漸暗、片尾前一格暗完，沒有色帶收回；中間的全畫面段照舊色帶收回', () => {
   const last = { id: 's05', scene: 'fs-list', from: '#12', to: 44, slots: { title: '收尾', items: ['一', '二', '三'] } };
   writePlan([...SCENES.filter((x) => x.id !== 's04'), last]);
   const chk = node('--check', '--json');
@@ -385,8 +385,10 @@ test('片尾離場：最後一段 to＝片長 → 淡出 0.5 秒、片尾前一�
   const html = read('index.html');
   assert.match(html, /tl\.fromTo\('#el-s03', \{ clipPath: 'inset\(0% 0% 0% 0%\)' \}, \{ clipPath: 'inset\(0% 0% 0% 110\.4%\)'/, '中間段照舊收回');
   assert.doesNotMatch(html, /tl\.fromTo\('#el-s05', \{ clipPath: 'inset\(0% 0% 0% 0%\)' \}/, '最後一段不擦出');
-  // 44 − 1/30 − 0.5 ＝ 43.467：最後一格（43.967）已經淡完
-  assert.match(html, /tl\.to\('#el-s05[^']*', \{ opacity: 0, duration: 0\.5, ease: 'sine\.in' \}, 43\.467\);/);
+  // 44 − 1/30 − 0.5 ＝ 43.467：最後一格（43.967）已經全黑；幕自己不淡出（淡出會露出講者：「應該是要全部漸暗，而不是回到原本的畫面」）
+  assert.doesNotMatch(html, /tl\.to\('#el-s05[^']*', \{ opacity: 0/, '最後一段不淡回講者');
+  assert.match(html, /<div id="tail-dark" data-layout-ignore style="position:absolute;inset:0;background:#000000;opacity:0;z-index:70;pointer-events:none"><\/div>/);
+  assert.match(html, /tl\.fromTo\('#tail-dark', \{ opacity: 0 \}, \{ opacity: 1, duration: 0\.5, ease: 'sine\.in' \}, 43\.467\);/);
   const bandsAfter = [...html.matchAll(/tl\.fromTo\('#tx\d+[ab]', \{ x: -?\d+ \}, \{ x: -?\d+, duration: [\d.]+, ease: 'expo\.inOut' \}, ([\d.]+)\);/g)].filter((m) => +m[1] > 40);
   assert.deepEqual(bandsAfter.map((m) => m[0]), [], '片尾沒有色帶');
   writePlan(SCENES);
@@ -625,7 +627,11 @@ test('直式（fixture dev/tests/fixtures/portrait，009 T002-V03–V06）：主
   // FR-022：04a 舞台縮放（transform 寫在 host 的 CSS、allow-overflow、子合成仍 1920×1080）＋整張畫布的純色底，進退場連底一起
   assert.match(html, /id="el-s03"[^>]*\n\s+data-start="18\.5" data-duration="6\.5" data-track-index="\d+" data-width="1920" data-height="1080" data-prev="speaker" data-layout-allow-overflow style="z-index:30; transform: translate\(-61\.7px, 129\.825px\) scale\(0\.8475\); transform-origin: 0 0;"/);
   assert.match(html, /<div id="bd-s03" class="clip" data-start="18\.5" data-duration="6\.5" data-track-index="\d+" style="position:absolute;left:0;top:0;width:1080px;height:1920px;background:var\(--sc-fs-bg\);z-index:29"><\/div>/);
-  assert.match(html, /tl\.fromTo\('#el-s03, #bd-s03', \{ clipPath: 'inset\(0% 0% 0% 110\.4%\)' \}/);
+  assert.match(html, /tl\.fromTo\('#el-s03, #bd-s03, #bdt-s03', \{ clipPath: 'inset\(0% 0% 0% 110\.4%\)' \}/);
+  // 045 上緣的裝飾：疊在幕上面的一層主色線條（遮罩＋var(--brand)），跟著幕一起進退場；字卡動態不放
+  assert.match(html, /<div id="bdt-s03" class="clip bd-top" data-layout-ignore data-start="18\.5" data-duration="6\.5" data-track-index="\d+" style="z-index:30"><\/div>/);
+  assert.match(html, /\.bd-top \{ position: absolute; left: 0; top: 0; width: 1080px; height: 300px; background: var\(--brand\); -webkit-mask: url\("data:image\/svg\+xml,<svg /);
+  assert.ok(!html.includes('id="bdt-s05"'));
   assert.doesNotMatch(html, /tl\.(fromTo|to|set)\('#el-s03'[^)]*\{ (x|y|scale):/, 'GSAP 對舞台 host 只動 opacity／clip-path');
   // 色帶掃過 1080 寬、高 1920
   assert.match(html, /class="v2-tx v2-tx--a" style="left:0;transform:translateX\(1080px\);height:1920px"/);

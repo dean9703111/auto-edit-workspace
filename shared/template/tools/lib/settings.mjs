@@ -6,6 +6,8 @@
 //     "ending": { "image": "book-cover.jpg", "seconds": 9.9, "quote": true, "subscribe": "subscribe.gif" } }
 //                                                                                 片尾模板：片尾卡的圖、長度、要不要片尾金句、訂閱動畫（檔案在 shared/brand/；brand.mjs ending；lib/ending.mjs）
 //     "captions": { "look": "outline", "font": "wenkai", "size": 84, "weight": 700 }   以後每集的字幕樣式（brand.mjs captions、剪輯台；lib/caption-style.mjs；只存和原本不一樣的欄位）
+//     "tmp": { "dir": "/Volumes/auto-edit-tmp", "image": "….sparseimage" }            暫存資料夾改放別處（status.mjs --tmp；lib/tmp.mjs；沒寫＝系統暫存）
+//     "editor": { "seen": ["coach-final.v1"] }                                       剪輯台已經看過（關掉過）的提示卡，所有專案共用，不再跳（editor/server/hints.mjs）
 //
 //   readSettings(sharedDir)             → { data, file, error }：檔案不在＝{}；不是合法 JSON＝error（data 是 {}）
 //   writeSetting(sharedDir, key, value) → file：只改這一個 key，其他設定留著；value 是 undefined 就拿掉；檔案壞了丟錯（不蓋掉使用者的檔）

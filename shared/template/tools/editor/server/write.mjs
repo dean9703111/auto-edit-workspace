@@ -12,7 +12,7 @@
 import { replay, parseRef, refTime, RULES } from '../subtitles.mjs';
 import { visibleLen, richPlain, splitItem, parseAttrs, findSceneDef, findFxDef } from '../text.mjs';
 import { LOOK_LIMITS } from '../../lib/look.mjs';
-import { sanitizeCaptionStyle } from '../../lib/caption-style.mjs';
+import { sanitizeCaptionStyle, parseCaptionMarks, fmtCaptionMarks } from '../../lib/caption-style.mjs';
 import { textFields } from '../../lib/storyboard-gen.mjs';
 import { opsMapper, remapScripts } from '../../lib/beat-remap.mjs';
 import { r3 } from '../../lib/time.mjs';
@@ -25,7 +25,7 @@ export const LIMITS = Object.freeze({
   editKeys: ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins'], volumeKeys: ['voice', 'sfx', 'media'],
   joinKeys: ['at', 'type', 'dur'], gainKeys: ['from', 'to', 'db'],
   segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'out', 'speed', 'hold', 'retime', 'anchor'], segScene: ['slots'], segFx: ['vars'],
-  bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme', 'captionStyle', 'frame'],
+  bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme', 'captionStyle', 'captionMarks', 'frame'],
   themes: ['light', 'dark'],
   frame: { maxZoom: 2, upscaleWarn: 3.5, edge: 40 },   // 構圖：最多放大 2 倍；來源像素放大超過 3.5 倍會變軟；講者動作範圍離邊 < 40px＝切到手勢
   srt: RULES,
@@ -463,7 +463,7 @@ function withTop(plan, key, value) {
   return out;
 }
 
-function surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, frame, speakerBox, pipCrop }) {
+function surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop }) {
   const ind = detectIndent(planText);
   const nl = /\r\n/.test(planText) ? '\r\n' : '\n';
   const fix = (s) => s.replace(/\n/g, nl);
@@ -505,6 +505,7 @@ function surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle,
     }
   };
   if (frame !== undefined) topKey('frame', frame);
+  if (captionMarks !== undefined) topKey('captionMarks', captionMarks);
   if (captionStyle !== undefined) topKey('captionStyle', captionStyle);
   if (theme !== undefined) topKey('theme', theme);
   if (look !== undefined) topKey('look', look);
@@ -606,6 +607,19 @@ export function applySave(planText, body, ctx = {}) {
     captionStyle = r.style;
     if (captionStyle === null ? !('captionStyle' in plan) : same(captionStyle, plan.captionStyle)) captionStyle = undefined;   // 沒變就不動
   }
+  // 038 重點字幕：頁面送整則的那一份清單（["#6", "#7"]，句號是字幕操作做完之後的；[]／null＝整則的都不標）。不在字幕裡的句號不寫。
+  // 沒送時，字幕增刪照樣把原本的標記重新對應（上面 replay 裡的 remapPlan 已經換好，在 planR.captionMarks）
+  let marksNext = planR.captionMarks;
+  if (body.captionMarks !== undefined) {
+    const r = parseCaptionMarks(body.captionMarks);
+    errors.push(...r.errors);
+    const have = srtIn ? new Set(cues.map((c) => c.n)) : null;
+    // 047 只標幾個字（"#N@詞"）頁面不管：檔案裡原本的（字幕增刪已經在 planR 換好句號）照留，只換整則的那幾個
+    const keep = parseCaptionMarks(planR.captionMarks);
+    const words = [...r.words, ...(keep.errors.length ? [] : keep.words)].filter((w) => !have || have.has(w.n));
+    const list = fmtCaptionMarks(have ? r.marks.filter((n) => have.has(n)) : r.marks, words.filter((w, i) => words.findIndex((x) => x.n === w.n && x.word === w.word) === i));
+    marksNext = list.length ? list : undefined;
+  }
   let frame;
   if (body.frame !== undefined) {
     const r = sanitizeFrame(body.frame, ctx.canvas);
@@ -618,6 +632,9 @@ export function applySave(planText, body, ctx = {}) {
   if (look !== undefined) next = withTop(next, 'look', look);
   if (theme !== undefined) next = withTop(next, 'theme', theme);
   if (captionStyle !== undefined) next = withTop(next, 'captionStyle', captionStyle);
+  if (!same(marksNext, planR.captionMarks)) next = withTop(next, 'captionMarks', marksNext ?? null);
+  // 和存檔前的文字比（字幕操作換過句號的也算）：有變才動那一個鍵；null＝拿掉
+  const captionMarks = same(next.captionMarks, plan.captionMarks) ? undefined : next.captionMarks ?? null;
   // 換框：speakerBox、pipCrop 是裁切後的座標，跟著換算（不用重量）
   const notes = [];
   let speakerBox, pipCrop;
@@ -650,8 +667,8 @@ export function applySave(planText, body, ctx = {}) {
   // plan.json：有變的段（剪輯改的＋句號重新對應的）才重寫
   const segIdx = (next.scenes || []).map((seg, i) => (same(seg, plan.scenes?.[i]) ? -1 : i)).filter((i) => i >= 0);
   let text = null;
-  if (edit || segIdx.length || look !== undefined || theme !== undefined || captionStyle !== undefined || frame !== undefined) {
-    try { text = surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, frame, speakerBox, pipCrop }); } catch { text = null; }
+  if (edit || segIdx.length || look !== undefined || theme !== undefined || captionStyle !== undefined || captionMarks !== undefined || frame !== undefined) {
+    try { text = surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop }); } catch { text = null; }
     if (text == null) {
       text = JSON.stringify(next, null, detectIndent(planText)) + '\n';
       if (/\r\n/.test(planText)) text = text.replace(/\n/g, '\r\n');

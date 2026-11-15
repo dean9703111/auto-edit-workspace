@@ -5284,5 +5284,7 @@
   }
  },
  "captionStyle": null,
- "captionFrom": "default"
+ "captionFrom": "default",
+ "captionMarks": [],
+ "captionWords": []
 }

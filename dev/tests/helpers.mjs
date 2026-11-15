@@ -16,6 +16,8 @@ export const WORKSPACE = fs.existsSync(path.join(legacy, 'shared', 'template')) 
 export const TEMPLATE = path.join(WORKSPACE, 'shared', 'template');
 export const TOOLS = path.join(TEMPLATE, 'tools');
 export const imp = (rel) => import(pathToFileURL(path.join(TOOLS, rel)).href);
+// 暫存資料夾照這台機器的設定（shared/setting.json 的 tmp，預設沒有＝系統暫存；041）：測試自己開的資料夾也放過去，和測試裡跑的工具同一個地方
+(await imp('lib/tmp.mjs')).applyTmp();
 
 const stamp = (t) => {
   const ms = Math.round(t * 1000);
@@ -58,7 +60,8 @@ export async function hasChrome() {
 //   before 開的資料夾照舊 mkdtemp，再在檔案最上層加 after(() => fs.rmSync(…)) 清）
 export function tmpDir(t, prefix = 'auto-edit-test-') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  const clean = () => fs.rmSync(dir, { recursive: true, force: true });
+  // 多試幾次：剛結束的子處理程序可能還在寫檔，暫存放在外接硬碟的映像檔時比較慢，一次刪不乾淨會丟 ENOTEMPTY
+  const clean = () => fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   if (typeof t?.after === 'function') t.after(clean); else after(clean);
   return dir;
 }

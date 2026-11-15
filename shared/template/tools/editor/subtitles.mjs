@@ -327,9 +327,54 @@ export function mapPlanTimes(plan, fn) {
   if (!scenesChanged && !moodsChanged) return plan;
   return { ...plan, ...(scenesChanged ? { scenes } : {}), ...(moodsChanged ? { moods } : {}) };
 }
+// 038 重點字幕（plan.captionMarks 的句號）在這一步之後變成什麼：marks＝[6, 7, 13]（數字），cues＝這一步之前的字幕
+//   分割第 k 句：兩半都是重點；插入：後面的順延；合併 k、k+1：任一句是重點，合併後就是重點；刪除第 k 句：標記拿掉
+// 沒變回傳同一個陣列（=== 比得出來）；本來就對不到的句號不動
+export function remapMarks(marks, op, cues) {
+  if (!Array.isArray(marks) || !marks.length || !STRUCT.has(op?.op)) return marks;
+  const k = op.op === 'insert' ? (op.after === 0 ? -1 : cues.findIndex((c) => c.n === op.after)) : cues.findIndex((c) => c.n === op.n);
+  if (k < 0 && op.op !== 'insert') return marks;
+  const out = [];
+  for (const n of marks) {
+    const idx = cues.findIndex((c) => c.n === n);
+    if (idx < 0) out.push(n);
+    else if (op.op === 'split') out.push(...(idx === k ? [k + 1, k + 2] : [idx > k ? idx + 2 : idx + 1]));
+    else if (op.op === 'insert') out.push(idx > k ? idx + 2 : idx + 1);
+    else if (op.op === 'merge') out.push(idx > k ? idx : idx + 1);
+    else if (idx !== k) out.push(idx > k ? idx : idx + 1);
+  }
+  const next = [...new Set(out)].sort((a, b) => a - b);
+  return next.length === marks.length && next.every((n, i) => n === marks[i]) ? marks : next;
+}
+// 047 只標幾個字（"#N@詞"）在這一步之後變成什麼：詞跟著文字走（和綁句的 "#N@詞" 同一套 remapKwRef：分割時跟到有那幾個字的那一半）；
+// 那一句被刪掉就拿掉。w＝{ n, word }；回傳 { n, word } 或 null
+export function remapWordMark(w, op, cues) {
+  if (!STRUCT.has(op?.op)) return w;
+  const idx = cues.findIndex((c) => c.n === w.n);
+  if (idx < 0) return w;
+  if (op.op === 'delete' && idx === cues.findIndex((c) => c.n === op.n)) return null;
+  return { n: remapKwRef({ n: w.n, end: false, off: 0, kw: w.word, kwFull: w.word }, op, cues, idx).n, word: w.word };
+}
+const MARK = /^#(\d+)(?:@(.+))?$/;
+// plan.json 的寫法（["#6", "#7@關鍵詞"]）照同一套換；全部被刪掉時拿掉整個欄位。格式不對的不動（build 會報 ✖）
+function remapPlanMarks(plan, op, cuesBefore) {
+  const v = plan?.captionMarks;
+  if (!Array.isArray(v) || !v.every((x) => typeof x === 'string' && MARK.test(x))) return plan;
+  const hit = v.map((x) => MARK.exec(x));
+  const nums = hit.filter((m) => m[2] === undefined).map((m) => Number(m[1]));
+  const words = hit.filter((m) => m[2] !== undefined).map((m) => ({ n: Number(m[1]), word: m[2] }));
+  const next = remapMarks(nums, op, cuesBefore);
+  const nextW = words.map((w) => remapWordMark(w, op, cuesBefore));
+  if (next === nums && nextW.every((w, i) => w && w.n === words[i].n)) return plan;
+  // 照句號排回一份清單：同一則整則的在前（和 lib/caption-style.mjs 的 fmtCaptionMarks 同一個順序）
+  const list = [...next.map((n) => ({ n, text: `#${n}`, k: 0 })), ...nextW.filter(Boolean).map((w, i) => ({ n: w.n, text: `#${w.n}@${w.word}`, k: 1 + i }))]
+    .sort((x, y) => x.n - y.n || x.k - y.k).map((x) => x.text);
+  const { captionMarks, ...rest } = plan;
+  return list.length ? { ...plan, captionMarks: list } : rest;
+}
 export function remapPlan(plan, op, cuesBefore) {
   if (!STRUCT.has(op.op)) return plan;
-  return mapPlanTimes(plan, (r) => remapRef(r, op, cuesBefore));
+  return remapPlanMarks(mapPlanTimes(plan, (r) => remapRef(r, op, cuesBefore)), op, cuesBefore);
 }
 // plan.json 裡綁到第 n 句（#n、#ne、含 ±秒）的地方 → [{ id, ref }]
 export function refsTo(plan, n) {

@@ -6,12 +6,16 @@
 //   ensureMattes({ outDir, root, items, tm, assetVideo, log, remove }) → { made, reused, problems: [{ id, msg }] }
 //       每個要去背的段：assets/matte/<段 id>-<指紋>.webm 在就沿用；不在就切出那一段、去背、寫檔；在 it 上寫 it.matte = { file }
 //       remove＝(clip, out) → { ok, message }（測試可以換掉；預設跑 npx hyperframes remove-background）
+//       根元素寫 data-matte="steady" 的段，用真的模型去背完再過一道去背穩定（lib/matte-steady.mjs：講者坐著、椅背這種貼著人的東西
+//       一下算進人、一下不算時用）。預設不做：講者站著、整個人會移動時，深色頭髮衣服配深色背景分不出是東西在跳還是人移開了，會誤切。
+//       steady: false 一律不做（測試的替身去背也不做）
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { r3Round as r3 } from './time.mjs';
+import { steadyMatte, STEADY } from './matte-steady.mjs';
 
 export const MATTE = { dir: 'assets/matte', quality: 'balanced', model: 'u2net_human_seg', sizeMb: 170 };
 
@@ -33,11 +37,15 @@ export function breakoutWindow(box) {
   return { left: Math.max(120, Math.round(x1) - 20), right: Math.min(1800, Math.round(x2) + 20), bottom: Math.min(880, Math.round(y2)), top0: Math.max(100, top - 40), top1: top + head + 10 };
 }
 const clipOf = (it, speakerBox, outDir) => {
-  if (matteKindOf(it, outDir) !== 'window') return null;
+  if (matteKindOf(it, outDir) !== 'window') {
+    // 046：根元素 data-matte-front 的幾塊範圍裡不放去背層（開洞）→ 那幾塊裡動畫的東西在講者前面（洞裡沒有東西時露出的是底片，同一個講者，看不出差別）
+    const front = matteFrontOf(it, outDir);
+    return front?.length ? `path(evenodd,'M-9 -9H9999V9999H-9Z${front.map(([x, y, w, h]) => `M${x} ${y}h${w}v${h}h${-w}Z`).join('')}')` : null;
+  }
   const w = breakoutWindow(speakerBox);
   return w ? `inset(0px ${1920 - w.right}px ${1080 - w.bottom}px ${w.left}px)` : null;   // 上面不裁：頭要從相框上緣冒出來
 };
-// 這一段要不要去背：合成檔根元素有 data-matte（"window"＝去背層裁在相框開口裡；其他值＝整張）。套模板、手改過的複本都認得；
+// 這一段要不要去背：合成檔根元素有 data-matte（"window"＝去背層裁在相框開口裡；其他值＝整張；"steady"＝整張＋去背穩定）。套模板、手改過的複本都認得；
 // 沒有檔可讀時（測試）看 seg.__matte（custom-fill 照規格的 matte 標的）
 const kindCache = new Map();
 export function matteKindOf(it, outDir) {
@@ -48,8 +56,27 @@ export function matteKindOf(it, outDir) {
   let st = null;
   try { st = fs.statSync(f); } catch { return null; }
   const k = `${f}:${st.mtimeMs}:${st.size}`;
-  if (!kindCache.has(k)) { const m = /<div id="[^"]+" data-composition-id="[^"]+"[^>]*\sdata-matte="([^"]*)"/.exec(fs.readFileSync(f, 'utf8')); kindCache.set(k, m ? (m[1] === 'window' ? 'window' : 'full') : null); }
+  // 根元素（帶 data-composition-id 的那個 div）上的 data-matte：寫在 data-composition-id 前面或後面都認得
+  if (!kindCache.has(k)) {
+    const html = fs.readFileSync(f, 'utf8'), m = /<div id="[^"]+"(?=[^>]*\sdata-composition-id=)[^>]*\sdata-matte="([^"]*)"/.exec(html);
+    kindCache.set(k, m ? (m[1] === 'window' ? 'window' : 'full') : null); steadyCache.set(k, !!m && m[1] === 'steady');
+    const fr = m && /<div id="[^"]+"(?=[^>]*\sdata-composition-id=)[^>]*\sdata-matte-front="([^"]*)"/.exec(html);
+    frontCache.set(k, fr ? fr[1].split(';').map((s) => s.trim()).filter(Boolean).map((s) => s.split(',').map((v) => Number(v.trim()))) : null);
+  }
   return kindCache.get(k);
+}
+// 這一段哪幾塊範圍要在講者前面：根元素 data-matte-front="x,y,寬,高; x,y,寬,高"（畫面座標）；沒寫回傳 null，寫錯的那一塊留著給 ensureMattes 報
+const frontCache = new Map();
+const frontOk = (r) => r.length === 4 && r.every(Number.isFinite) && r[2] > 0 && r[3] > 0;
+export function matteFrontOf(it, outDir) {
+  if (!matteKindOf(it, outDir) || !outDir || !it.file) return null;
+  try { const st = fs.statSync(path.join(outDir, it.file)); return frontCache.get(`${path.join(outDir, it.file)}:${st.mtimeMs}:${st.size}`) || null; } catch { return null; }
+}
+// 這一段要不要做去背穩定：根元素寫 data-matte="steady"
+const steadyCache = new Map();
+export function matteSteadyOf(it, outDir) {
+  if (!matteKindOf(it, outDir) || !outDir || !it.file) return false;
+  try { const st = fs.statSync(path.join(outDir, it.file)); return steadyCache.get(`${path.join(outDir, it.file)}:${st.mtimeMs}:${st.size}`) === true; } catch { return false; }
 }
 export const matteItems = (items, outDir = null) => (items || []).filter((it) => !!matteKindOf(it, outDir));
 
@@ -68,22 +95,25 @@ function boxRemove(clip, out) {
   return { ok: r.status === 0 && fs.existsSync(out), message: String(r.stderr).trim().slice(-200) };
 }
 
-export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log = () => {}, remove = null, weights = matteWeights(), speakerBox = null }) {
+export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log = () => {}, remove = null, weights = matteWeights(), speakerBox = null, steady = null }) {
   const list = matteItems(items, outDir), res = { made: 0, reused: 0, problems: [] };
   if (!list.length) return res;
   const dir = path.join(outDir, MATTE.dir);
   fs.mkdirSync(dir, { recursive: true });
   let st = null;
   try { st = fs.statSync(assetVideo); } catch { st = null; }
+  if (steady == null) steady = !remove && process.env.AUTO_EDIT_MATTE !== 'box';
   if (!remove && process.env.AUTO_EDIT_MATTE === 'box') remove = boxRemove;
   const run = remove || defaultRemove(root);
   const live = new Set();
   for (const it of list) {
     const range = matteRange(it, tm);
     if (!st || !range) { res.problems.push({ id: it.id, msg: !st ? '底片還沒編碼好' : '這一段跨過剪輯台裁掉的地方，沒辦法去背 → 把段的起迄移到同一段連續的畫面裡，或換成不用去背的模板' }); continue; }
-    const key = createHash('sha1').update(`${st.size}:${Math.round(st.mtimeMs)}:${range.start}:${range.end}:${MATTE.model}:${MATTE.quality}`).digest('hex').slice(0, 10);
+    const wantSteady = steady && matteSteadyOf(it, outDir);
+    const key = createHash('sha1').update(`${st.size}:${Math.round(st.mtimeMs)}:${range.start}:${range.end}:${MATTE.model}:${MATTE.quality}${wantSteady ? `:steady${STEADY.version}` : ''}`).digest('hex').slice(0, 10);
     const name = `${it.id}-${key}.webm`, file = path.join(dir, name);
     live.add(name);
+    if ((matteFrontOf(it, outDir) || []).some((r) => !frontOk(r))) { res.problems.push({ id: it.id, msg: 'data-matte-front 看不懂 → 寫成 "x,y,寬,高"（畫面座標的數字，寬高 > 0），好幾塊用分號隔開，例：data-matte-front="60,560,300,400; 720,560,300,400"' }); continue; }
     const clip0 = clipOf(it, speakerBox, outDir);
     if (matteKindOf(it, outDir) === 'window' && !clip0) { res.problems.push({ id: it.id, msg: '這個模板要講者框才知道相框放哪裡，plan.json 還沒有 speakerBox → 先跑 node shared/template/tools/qc.mjs speaker --project <專案> --write，或換一個模板' }); continue; }
     if (fs.existsSync(file) && fs.statSync(file).size > 0) { it.matte = { file: `${MATTE.dir}/${name}`, ...(clip0 ? { clip: clip0 } : {}) }; res.reused++; continue; }
@@ -97,8 +127,14 @@ export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log =
     if (cut.status !== 0) { res.problems.push({ id: it.id, msg: `切不出這一段的底片：${String(cut.stderr).trim().slice(-200)}` }); continue; }
     const tmp = path.join(dir, `.tmp-${name}`);
     const r = run(clip, tmp);
+    if (!r.ok) { fs.rmSync(clip, { force: true }); fs.rmSync(tmp, { force: true }); res.problems.push({ id: it.id, msg: `去背失敗：${r.message || '沒有產生檔案'} → 跑 npx hyperframes remove-background --info 看狀態；修不好就把這一段換成不用去背的模板` }); continue; }
+    if (wantSteady) {
+      // 穩定做不成（ffmpeg 出錯）不擋：照用模型原本的去背
+      const tmp2 = path.join(dir, `.tmp2-${name}`);
+      const s = steadyMatte({ clip, matte: tmp, out: tmp2 });
+      if (s.changed) { fs.renameSync(tmp2, tmp); log(`去背：${it.id} 有貼著人的東西一下算進來、一下不算，已經穩定成整段一致（data-matte="steady"）`); } else { fs.rmSync(tmp2, { force: true }); log(s.ok ? `去背：${it.id} 寫了 data-matte="steady"，但沒有找到整塊一起跳的東西，照用模型原本的結果` : `⚠ 去背：${it.id} 沒辦法做穩定（${s.message}），先用模型原本的結果`); }
+    }
     fs.rmSync(clip, { force: true });
-    if (!r.ok) { fs.rmSync(tmp, { force: true }); res.problems.push({ id: it.id, msg: `去背失敗：${r.message || '沒有產生檔案'} → 跑 npx hyperframes remove-background --info 看狀態；修不好就把這一段換成不用去背的模板` }); continue; }
     fs.renameSync(tmp, file);
     it.matte = { file: `${MATTE.dir}/${name}`, ...(clip0 ? { clip: clip0 } : {}) };
     res.made++;

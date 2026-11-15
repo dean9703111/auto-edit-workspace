@@ -6,6 +6,7 @@
  *                                      同一個服務有四頁：剪輯 /（停點 ⑤；加 ?view=final 直接開在完成影片預覽＝停點 ④）、剪輯清單 /cuts（停點 ①）、構圖 /framing（停點 ②）、分鏡表 /storyboard（停點 ③）
  *                                      非互動的 shell（AI 執行）會自己轉到背景：印出網址就結束，不用加 & 或 nohup；
  *                                      在終端機裡執行則留在前景，按 Ctrl+C 關閉
+ *                                      同時開著兩個以上專案的剪輯台（各開各的、各佔一個 port）時，每一頁的頁首多一個「切換影片」選單
  *   node shared/template/tools/editor.mjs --status [--project …]   查剪輯開著沒、網址是什麼
  *   node shared/template/tools/editor.mjs --stop [--project …]     關掉剪輯
  *   node shared/template/tools/editor.mjs --project … --json        給別的工具：沒開就在背景開，只印一行 JSON（{ main, cuts, framing, storyboard, final, … }），不印別的
@@ -20,7 +21,7 @@
  * 給別的工具：import { ensureEditor } from './editor.mjs'；await ensureEditor(P) → { main, cuts, framing, storyboard, final, … }（沒開就在背景開，網址直接回傳、不印東西）；
  * 同步的呼叫端用 lib/editor-urls.mjs 的 editorUrlsSync(project)（跑上面的 --json）
  * 剪輯只寫：plan.json 的 edit、media 段的 enter／exit／volume／from／to／in／out（只能拿掉）／speed／hold／retime／anchor、任何段的 sfxVolume 與 sfx: null、
- * slots／vars 的文字值（含模板動畫的 slots）、第一層的 look（講者調光與瘦臉）、theme 與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
+ * slots／vars 的文字值（含模板動畫的 slots）、第一層的 look（講者調光與瘦臉）、theme、captionStyle（字幕樣式）、captionMarks（重點字幕的句號）與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
  * 剪輯清單頁只寫 work/cuts.md NG 表的「剪」欄（[x]／[ ]；沒有這一欄就加在最前面），有 work/rough.mp4 之後只能看。
  * 分鏡表頁只寫 work/storyboard.md 改到的那幾行（段落內容、表格的格與列、整段原始 Markdown）；製作進度的停點 ③ 通過之後只能看。
  * 存檔前比對 plan.json 與 rough.srt，被別人（AI）改過就兩個都不寫。構圖在還沒有 plan.json 時（停點 ②）只存 frame，會先建一個 { "version": 1 }（直式加 format）。
@@ -32,7 +33,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { pathsFrom } from './lib/project.mjs';
+import { pathsFrom, projectLabel } from './lib/project.mjs';
 import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
 import { cmdLine } from './lib/say.mjs';
 import { jobState, runToolUntilDone } from './lib/job.mjs';
@@ -50,6 +51,7 @@ import { speakerInfo, doSpeakerSave } from './editor/server/speaker.mjs';
 import { readSettings, writeSetting } from './lib/settings.mjs';
 import { CAP_DEFAULT, clampLift, sanitizeCaptionStyle } from './lib/caption-style.mjs';
 import { flowState } from './editor/server/flow.mjs';
+import { hintsInfo, doHintSeen } from './editor/server/hints.mjs';
 import { storyboardOptions } from './editor/server/storyboard-options.mjs';
 import { listFillSpecs } from './lib/custom-fill.mjs';
 import { requestsInfo, doRequestsStatus, doRequests } from './editor/server/requests.mjs';
@@ -794,7 +796,7 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   const base = isObj(body?.base) ? body.base : {};
   const hash = st ? sha(text) : null;
   // 同一筆存檔送了兩次（關頁時瀏覽器先把第一次算失敗、頁面又補送一次；或一時連不到後重送）：第一次已經存好了，不是別人改的
-  const sig = frameOnly ? null : sha(JSON.stringify([base.hash ?? null, base.srtHash ?? null, body.edit ?? null, body.segments ?? null, body.srt ?? null, body.look ?? null, body.theme ?? null]));
+  const sig = frameOnly ? null : sha(JSON.stringify([base.hash ?? null, base.srtHash ?? null, body.edit ?? null, body.segments ?? null, body.srt ?? null, body.look ?? null, body.theme ?? null, body.captionMarks ?? null]));
   const duplicate = () => !!sig && !!st && (ctx.recentSaves || []).includes(sig);
   const planConflict = (h, m) => (!st ? base.hash != null : base.hash != null ? base.hash !== h : base.mtime == null || base.mtime !== m);
   if (planConflict(hash, st?.mtimeMs) && duplicate()) return [200, savedNow(ctx)];
@@ -1173,6 +1175,7 @@ async function handle(ctx, req, res) {
     if (p === '/api/export/reveal') { const [s, o] = revealFinal(ctx, ctx.exportDeps?.reveal ? { spawnFn: ctx.exportDeps.reveal } : {}); return sendJson(res, s, o); }
     if (p === '/api/speaker') { const [s, o] = doSpeakerSave(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/caption-default') { const [s, o] = doCaptionDefault(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/hints') { const [s, o] = doHintSeen(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
@@ -1192,6 +1195,7 @@ async function handle(ctx, req, res) {
   if (p === '/api/requests/status') return sendJson(res, 200, { requests: requestsInfo(P.project) });
   if (p === '/api/export') return sendJson(res, 200, exportState(ctx));
   if (p === '/api/speaker') return sendJson(res, 200, speakerInfo(ctx));
+  if (p === '/api/hints') return sendJson(res, 200, hintsInfo(ctx));
   if (p === '/api/flow') return sendJson(res, 200, flowState(ctx));
   if (p.startsWith('/output/')) {
     const f = exportFile(ctx, p.slice('/output/'.length));
@@ -1240,6 +1244,7 @@ async function handle(ctx, req, res) {
     return sendFile(req, res, f);
   }
   if (p === '/api/ping') return sendJson(res, 200, { ok: true, app: 'auto-edit-editor', project: P.project, pid: process.pid, revision: SERVER_REVISION });
+  if (p === '/api/editors') return sendJson(res, 200, { editors: await listEditors(ctx) });
   if (p === '/api/state') return sendJson(res, 200, await getState(ctx));
   if (p === '/api/framing') { const [s, o] = await getFraming(ctx); return sendJson(res, s, o); }
   if (p === '/api/look/status') return sendJson(res, 200, lookRunState(ctx));
@@ -1368,16 +1373,31 @@ async function ping(url, ms = 1500) {
   } catch { return null; }
 }
 
-// 狀態檔裡的剪輯還活著嗎（活著回狀態，死了順便清掉狀態檔）
-export async function runningEditor(stateFile, project) {
+// 狀態檔裡的剪輯還活著嗎（活著回狀態，死了順便清掉狀態檔；prune: false 只看不清，列別的專案時用）
+export async function runningEditor(stateFile, project, { prune = true } = {}) {
   const s = readJson(stateFile);
   if (!s?.url || !s?.pid) return null;
   if (pidAlive(s.pid)) {
     const p = await ping(s.url);
     if (p?.app === 'auto-edit-editor' && (!project || path.resolve(p.project) === path.resolve(project))) return { ...s, revision: p.revision ?? null };
   }
-  try { fs.unlinkSync(stateFile); } catch { /* 已經不在 */ }
+  if (prune) try { fs.unlinkSync(stateFile); } catch { /* 已經不在 */ }
   return null;
+}
+
+// 039 切換影片：和這個專案放在同一個資料夾（projects/）、現在開著剪輯台的專案，含這一個；照資料夾名稱排。
+// 別的專案看它自己的 .editor/server.json（--status 讀的那一份）：行程還在、那個網址回應的也是那個專案才算。
+// 過期的狀態檔不列也不刪：對方只是一時沒回應的話，刪了它就再也找不到自己開著的剪輯台
+export async function listEditors(ctx) {
+  const P = ctx.P, parent = path.dirname(P.project), self = path.basename(P.project);
+  const names = fs.readdirSync(parent).filter((n) => n !== self && !n.startsWith('.'));
+  const others = await Promise.all(names.map(async (name) => {
+    const dir = path.join(parent, name);
+    const s = await runningEditor(path.join(dir, 'work', 'hyperframes', '.editor', 'server.json'), dir, { prune: false });
+    return s && { project: projectLabel(P, dir), name, url: s.url, current: false };
+  }));
+  return [{ project: projectLabel(P, P.project), name: self, url: ctx.url, current: true }, ...others.filter(Boolean)]
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant', { numeric: true }));
 }
 
 export async function stopEditor(stateFile, project) {

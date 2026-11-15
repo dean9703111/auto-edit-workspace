@@ -431,6 +431,8 @@ export class Timeline {
         if (sel) { g.strokeStyle = '#FFD400'; g.lineWidth = 1.5; g.stroke(); }
         const long = c.len > 18;
         if (long) { g.fillStyle = '#FFD400'; g.fillRect(xa + 1, y + h - 2, Math.max(2, xb - xa - 2), 2); }
+        // 038 重點字幕：上緣一條主色（看得出整支標在哪裡、有沒有擠在一起）
+        if (A.isMark?.(c.n)) { g.fillStyle = (C.mark ??= getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#F6630F'); g.fillRect(xa + 1, y, Math.max(2, xb - xa - 2), 3); }
         // 放不下幾個字就不寫（只露一個字看不懂），滑上去有整句
         if (xb - xa > 44) clipRect(xa + 3, y, xb - xa - 6, h, () => {
           g.fillStyle = dead ? 'rgba(255,255,255,0.35)' : sel ? '#fff' : C.mute; g.textBaseline = 'middle';
@@ -772,6 +774,9 @@ export class Timeline {
   }
   wheel(e) {
     if (!this.dur) return;
+    // 048：軌道比時間軸那一塊高（外層 .tl-body 可以上下捲）時，上下滾交給它捲軌道；左右滾、按住 Shift 滾照舊是前後移動時間
+    const box = this.cv.closest('.tl-body');
+    if (box && box.scrollHeight > box.clientHeight + 1 && !e.ctrlKey && !e.metaKey && !e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
     e.preventDefault();
     if (e.ctrlKey || e.metaKey) { const { x } = this.local(e); this.zoomTo(this.pps * Math.exp(-e.deltaY * 0.0025), this.tOf(x)); }
     else {

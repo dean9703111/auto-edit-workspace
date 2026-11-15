@@ -130,7 +130,7 @@ export function portraitPlan(item, canvas = CANVASES.portrait, regions = null) {
     const top = canvas.unsafe.find((u) => u[1] <= 0)?.[3] ?? 0, bot = kind === 'fs' ? canvas.pip.box[1] : canvas.unsafe.find((u) => u[3] >= canvas.H && u[0] <= 0)?.[1] ?? canvas.H;
     const r1_ = (n) => Math.round(n * 10) / 10;
     const view = [Math.max(0, r1_(-st.tx / st.s)), Math.max(0, r1_((top - st.ty) / st.s)), Math.min(CANVAS[0], r1_((canvas.W - st.tx) / st.s)), Math.min(CANVAS[1], r1_((bot - st.ty) / st.s))];
-    return { unstage: true, W: CANVAS[0], H: CANVAS[1], stage: { kind, s: st.s, window: kind === 'fx' ? null : st.window, view: kind === 'fx' ? null : view, minFont: canvas.minTextPx } };
+    return { unstage: true, W: CANVAS[0], H: CANVAS[1], stage: { kind, s: st.s, tx: st.tx, ty: st.ty, window: kind === 'fx' ? null : st.window, view: kind === 'fx' ? null : view, minFont: canvas.minTextPx } };
   }
   const c = regions && Array.isArray(regions.captions) ? [regions.captions[0], regions.captions[1], regions.captions[0] + regions.captions[2], regions.captions[1] + regions.captions[3]] : canvas.caption.zone;
   return { unstage: false, W: canvas.W, H: canvas.H, geo: { captionY: c[1], captionEnd: c[3], contentBottom: canvas.lowerThird.rect[3], unsafe: canvas.unsafe, minFont: canvas.minTextPx } };
@@ -379,7 +379,9 @@ export function judgeSample(meas, ctx) {
   }
   // ⚠ 壓到講者（透明疊在講者上的版型）
   if (ctx.layout === 'overlay' && ctx.speakerBox) {
-    const box = shiftBox(ctx.speakerBox, ctx.item.side ? ctx.sideShift || 0 : 0);
+    // 直式縮放的段（透明字卡動態）量的是縮放前的 1920×1080 座標：講者框（直式畫面座標）先換到同一套座標再比，不然字在胸前會被當成蓋到臉
+    const sb = ST && ST.tx != null ? ctx.speakerBox.map((v, i) => r1((v - (i % 2 ? ST.ty : ST.tx)) / ST.s)) : ctx.speakerBox;
+    const box = shiftBox(sb, ctx.item.side ? ctx.sideShift || 0 : 0);
     const rs = content.filter(({ e }) => still(e)).map(({ r }) => r);
     const ratio = coverRatio(rs, box), face = coverRatio(rs, faceZone(box));
     if (coverWarn(ratio, face, ctx.speakerWarn ?? SPEAKER_WARN)) {

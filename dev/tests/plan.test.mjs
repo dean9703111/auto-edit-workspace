@@ -990,3 +990,36 @@ test('相鄰兩段用同一個模板 ⚠（換一個或併成一段）；不同�
   const apart = run([kp('s1', '#1', '#2e', '甲'), { id: 's2', scene: 'concept', from: '#3', to: '#4e', slots: { term: '名詞', desc: '說明' } }, kp('s3', '#5', '#6e', '丙')]);
   assert.ok(!apart.items.some((it) => it.warnings.some((w) => /同一個模板/.test(w))));
 });
+
+test('037 直式講者上浮：上下分割結束、接著講者滿版 → 片段 exit＝rise、txOut＝rise，主合成做面板上浮、不做色帶收回；片尾的段、後面接別的幕、橫式都照舊', async () => {
+  const { CANVAS } = await imp('lib/canvas.mjs');
+  const V = CANVAS.portrait;
+  const fs04 = (id, from, to) => ({ id, scene: 'fs-list', from, to, slots: { title: '清單', items: ['一', '二', '三'] } });
+  const P = (scenes) => resolvePlan({ plan: { version: 1, format: 'portrait', speakerBox: [300, 500, 780, 1100], scenes }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), canvas: V });
+  // 中間的段：後面是講者滿版 → 上浮
+  const res = P([fs04('s01', '#2', '#4e')]);
+  assert.deepEqual(res.errors, []);
+  const s1 = byId(res, 's01');
+  assert.deepEqual(s1.pipPieces.map((p) => [p.enter, p.exit]), [['fly', 'rise']]);
+  assert.deepEqual([s1.txIn, s1.txOut, s1.riseOut], ['wipe', 'rise', true]);
+  const { html } = buildMain({ items: res.items, videoDur: VD, captions: null, pip: res.globals.pip, canvas: V });
+  const g = res.globals.pip, at = String(Math.round((s1.end - 0.75) * 1000) / 1000).replace('.', '\\.');
+  // 面板回到滿版的位置（飛入的反向）＋裁切框打開到整支影片；上緣主色線淡出；資訊幕不擦、不淡
+  const open = `inset\\(${g.style.top}px [-\\d.]+px [-\\d.]+px ${g.style.left}px\\)`;
+  assert.match(html, new RegExp(`tl\\.fromTo\\('#pip-s01', \\{ x: 0, y: 0, scale: 1, transformOrigin: '0 0', clipPath: 'inset\\(0px 0px 0px 0px\\)' \\}, \\{ x: [-\\d.]+, y: [-\\d.]+, scale: [\\d.]+, transformOrigin: '0 0', clipPath: '${open}', duration: 0\\.75, ease: 'power3\\.inOut', immediateRender: false \\}, ${at}\\);`));
+  assert.match(html, new RegExp(`tl\\.fromTo\\('#pipf-s01', \\{ opacity: 1 \\}, \\{ opacity: 0, duration: 0\\.2, ease: 'sine\\.in', immediateRender: false \\}, ${at}\\);`));
+  assert.match(html, /<div class="pip pip--rise" id="pip-s01"/);
+  assert.match(html, /\.pip--rise \{ overflow: visible; clip-path: inset\(0px 0px 0px 0px\); \}/);
+  assert.doesNotMatch(html, /tl\.fromTo\('#el-s01, #bd-s01', \{ clipPath: 'inset\(0% 0% 0% 0%\)' \}, \{ clipPath: 'inset\(0% 0% 0% 110\.4%\)'/, '不做色帶收回');
+  assert.doesNotMatch(html, /tl\.to\('#el-s01, #bd-s01[^']*', \{ opacity: 0/, '資訊幕不淡出（被面板蓋過去）');
+  assert.match(formatReport(res), /轉場：.*講者上浮 1（s01）/);
+  // 片尾 1 秒內結束的段：不上浮，延到片尾、停在完成態（046：主合成讓整個畫面漸暗）
+  const tail = byId(resolvePlan({ plan: { version: 1, format: 'portrait', speakerBox: [300, 500, 780, 1100], scenes: [fs04('s01', '#11', '#12e')] }, cues, videoDur: cueEnd(12) + 0.5, lib: L, outDir: os.tmpdir(), canvas: V }), 's01');
+  assert.deepEqual([tail.pipPieces.map((p) => p.exit), tail.txOut, !!tail.riseOut, tail.tailFade, tail.end], [['layer'], 'fade', false, true, cueEnd(12) + 0.5]);
+  // 後面直接接另一張全畫面：小視窗不動（none）
+  const two = P([fs04('s01', '#2', '#4e'), fs04('s02', '#5', '#7e')]);
+  assert.equal(byId(two, 's01').pipPieces.at(-1).exit === 'rise', byId(two, 's01').end < byId(two, 's02').start - 1e-6, '中間有露出講者才上浮');
+  // 橫式不受影響
+  const ls = byId(run([fs04('s01', '#2', '#4e')]), 's01');
+  assert.deepEqual([ls.pipPieces.map((p) => p.exit), ls.txOut], [['layer'], 'retract']);
+});

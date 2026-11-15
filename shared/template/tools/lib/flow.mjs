@@ -832,8 +832,8 @@ export function checkDraft(P, file) {
   try { j = JSON.parse(r.stdout); } catch { console.log(`✖ 檢查沒有跑完：${(r.stderr || r.stdout).trim().split('\n').slice(-2).join(' ')}`); return 1; }
   const ids = new Set(segs.map((s) => s.id));
   const mine = (m) => { const x = String(m).match(/^\[([\w-]+)/); return !x || ids.has(x[1]); };
-  // 只留這一份自己要處理的：全片才看得出來的（空檔、音效密度）、主代理處理的（小節合併時寫、字幕到剪輯台改、設計師之後做）不算
-  const skip = /沒有畫面的區間|音效稀疏|音效密度|還沒排段落|只有聲音的區間|講稿有 \d+ 個小節|字幕不到|內容設計動畫還沒做|還沒設定講者|前的空檔只有/;
+  // 只留這一份自己要處理的：全片才看得出來的（空檔、音效密度）、主代理處理的（小節合併時寫、字幕到剪輯台改、設計師之後做、直式的重點字幕合併後才標）不算
+  const skip = /沒有畫面的區間|音效稀疏|音效密度|還沒排段落|只有聲音的區間|講稿有 \d+ 個小節|字幕不到|內容設計動畫還沒做|還沒設定講者|前的空檔只有|重點字幕|captionMarks/;
   const covers = (m) => { const x = String(m).match(/大約會蓋到講者框 (\d+)%/); return x && Number(x[1]) < 40 && !String(m).includes('臉'); };
   const parts = readJson(path.join(packDir(P), 'index.json'))?.parts || [];
   const part = parts.find((p) => p.key === path.basename(abs, '.json'));
@@ -1163,6 +1163,8 @@ function mergeRun(P, flags, deps) {
   if (hasMoods) console.log(`情緒點 ${moods.length} 個（${Object.entries(MOOD_KINDS).map(([k, v]) => `${v.zh} ${moods.filter((m) => m?.kind === k).length}`).join('、')}；推近 ${moods.filter((m) => m?.zoom === true).length} 次）`);
   if (summary) console.log(auditFail.length && /^通過：/.test(summary) ? `未通過：${auditFail.length} 個 ✖（第一拍來不及做完開場、拍落在段尾淡出之後：--check 只 ⚠，audit 會擋，合併就先擋）` : summary);
   if (r.status !== 0 || auditFail.length) { for (const l of next('照 ✖ 改（改那一份 work/drafts/chNN.json，再合併一次）', cmdLine('build.mjs', ['--project', rel(P.project), '--merge-drafts']))) console.log(l); return 1; }
+  // 038：直式還沒標重點字幕的那一行 ⚠ 照印（其他 ⚠ 只算個數）：主代理在貼停點 ③ 之前標（auto-edit-storyboard 步驟 5 第 5 點）
+  for (const l of lines.filter((x) => x.startsWith('⚠ 直式還沒標重點字幕'))) console.log(l);
   const todo = designs.filter((d) => !fs.existsSync(path.join(designsDir(P), `${d.id}.md`)));
   const sbCmd = cmdLine('build.mjs', ['--project', rel(P.project), '--storyboard']);
   if (todo.length) {

@@ -97,6 +97,7 @@ export class SimPreview {
     const txt = cue ? cue.text : '';
     const span = this.el.caption.firstElementChild || this.el.caption;
     if (span.textContent !== txt) { span.textContent = txt; this.el.caption.classList.toggle('off', !txt); }
+    this.el.caption.classList.toggle('cg--em', !!cue && !!A.isMark?.(cue.n));   // 038 重點字幕：和完成影片同一個 class（kit/captions.css）
     const mediaOn = this.tickMedia(t, fx.audio);
     this.tickHint(t, mediaOn || inCut);
     this.tickSfx(t);
@@ -323,7 +324,7 @@ export class PlayerPreview {
     try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
     const root = doc?.querySelector('#captions, #captions-test');
     if (!root || !this.app.capPreview) return;
-    const c = this.app.capPreview(), key = JSON.stringify(c.style);
+    const c = this.app.capPreview(), key = JSON.stringify([c.style, c.face]);   // face：有重點字幕時多帶粗體的字型檔（038）
     if (root.dataset.capKey === key) return;
     root.dataset.capKey = key;
     for (const k of CAP_VARS) root.style.removeProperty(k);
@@ -332,10 +333,28 @@ export class PlayerPreview {
     if (!face) { face = doc.createElement('style'); face.id = 'capFace'; doc.head.appendChild(face); }
     if (face.textContent !== c.face) face.textContent = c.face;
   }
+  // 038 重點字幕：照剪輯台現在的標記切換播放器裡每一則字幕的 cg--em（build 寫在 compositions/captions.html 的 <div class="cg" id="cg-N">）。
+  // 上次 build 之後才增刪、改字的那幾則（同一個句號的文字不一樣）不動：句號可能已經對不上，等「更新預覽」
+  applyMarks() {
+    const A = this.app;
+    let doc = null;
+    try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
+    const root = doc?.querySelector('#captions, #captions-test');
+    if (!root || !A.markKey) return;
+    const key = A.markKey();
+    if (root.dataset.markKey === key) return;
+    root.dataset.markKey = key;
+    const text = new Map(A.cues.map((c) => [c.n, c.text]));
+    for (const el of root.querySelectorAll('.cg')) {
+      const n = Number(el.id.slice(3));
+      if (text.get(n) === el.textContent) el.classList.toggle('cg--em', A.isMark(n));
+    }
+  }
   tick() {
     if (!this.p) return;
     this.applyTheme();
     this.applyCaption();
+    this.applyMarks();
     const ct = this.p.currentTime;
     if (Number.isFinite(ct) && this.ready) this.outT = ct;
     const paused = this.p.paused;

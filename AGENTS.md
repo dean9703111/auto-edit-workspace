@@ -19,6 +19,7 @@
 | 「生成配樂」「換配樂」「這集不要底樂」「用我自己的音樂」「片尾配樂」 | `auto-edit-style` 的 `references/music.md` |
 | 「拆這支參考片」（要給影片檔的路徑） | `auto-edit-style` 的 `references/reference-video.md` |
 | 「子代理一次派 N 個」 | 不用 Skill：`node shared/template/tools/status.mjs --agents <N>` |
+| 「暫存放外接硬碟」「暫存放到 <資料夾>」「暫存改回系統」 | 不用 Skill：`node shared/template/tools/status.mjs --tmp <資料夾>`（資料夾在映像檔裡加 `--tmp-image <映像檔>`；改回系統 `--tmp off`） |
 
 **讀文件要分層**：開工只讀本檔，和 `status.mjs` 印的那支 Skill 的那一步；Skill 指到的 references、`shared/` 的文件（`USAGE*.md`、`SITUATIONS.md`、`BEATS.md`、`style.md`、`EDITOR.md`、`REVIEW.md`）用到才讀，而且只讀指到的那一節（用標題或 `grep -n` 找）。`shared/偏好.md` 存在的話，寫分鏡、改段落前讀它的「照做」那一節。
 
@@ -41,7 +42,7 @@
 
 ## 規則
 
-1. `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 不覆寫、不移動、不刪除。要改 `shared/` 裡的設定（主色、背景、風格包、講者、片尾、調光瘦臉預設、偏好、子代理數量、配樂），只透過那支 Skill 寫的工具指令（`brand.mjs`、`music.mjs`、`look.mjs default`、`status.mjs --prefs-add`、`--agents`），不手動改檔。刪除 `work/` 以外的檔案前先問我。
+1. `projects/*/assets/`、`projects/*/講稿.md`、`shared/` 不覆寫、不移動、不刪除。要改 `shared/` 裡的設定（主色、背景、風格包、講者、片尾、調光瘦臉預設、偏好、子代理數量、暫存位置、配樂），只透過那支 Skill 寫的工具指令（`brand.mjs`、`music.mjs`、`look.mjs default`、`status.mjs --prefs-add`、`--agents`、`--tmp`），不手動改檔。刪除 `work/` 以外的檔案前先問我。
 2. 停點只有六個（下面的表）。我說「不用停」「跑到停點 N」才連跑。
 3. 安裝新工具前，先告訴我指令和用途，等我同意；照 `setup/` 手冊做時整份清單問一次。
 4. 字幕以 `講稿.md` 為準，工具（`media.mjs srt-align`）照講稿排：不自己拆句、併句。要改字就在剪輯台或 `work/rough.srt` 改那一則，只改字；不改 `講稿.md`。用繁體中文，技術名詞保留英文，中英文之間加半形空格。沒有講稿時不補標點、不猜內容。

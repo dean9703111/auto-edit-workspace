@@ -50,7 +50,7 @@ beforeEach(() => {
   fs.writeFileSync(path.join(project, 'work', 'hyperframes', 'plan.json'), JSON.stringify({ version: 1, scenes: [] }));
   fs.writeFileSync(path.join(project, 'work', '製作進度.md'), STOP_LOG);
 });
-afterEach(async () => { await editor?.close(); editor = null; fs.rmSync(root, { recursive: true, force: true }); });
+afterEach(async () => { await editor?.close(); editor = null; fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); });   // 多試幾次：背景的子處理程序可能還在寫檔（暫存放在外接硬碟時比較慢）
 
 test('輸出：照順序跑完，測試片段從第一張卡開始，整支換成 final.mp4，寫停點紀錄，檔案可以播', async () => {
   fs.writeFileSync(finalFile(), 'old-video');

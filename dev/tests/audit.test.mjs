@@ -741,12 +741,20 @@ test('009 直式：stageKindOf／portraitPlan（全畫面 custom 與 stage 情�
   assert.equal(R.stageKindOf({ type: 'scene', opaque: true, scene: '04a' }), 'fs', 'scene.json 沒寫 portrait 照編號');
   assert.equal(R.stageKindOf({ type: 'fx' }), 'fx');
   const fs_ = R.portraitPlan(item({ opaque: true, seg: { layout: 'fullscreen' } }), C.portrait);
-  assert.deepEqual(fs_, { unstage: true, W: 1920, H: 1080, stage: { kind: 'fs', s: 0.8475, window: [120, 130, 1300, 880], view: [72.8, 130, 1347.1, 908.8], minFont: 32 } }, 'view＝畫布左右緣、上 unsafe 線（y 240）、下講者面板頂（y 900）換回子合成座標');
+  assert.deepEqual(fs_, { unstage: true, W: 1920, H: 1080, stage: { kind: 'fs', s: 0.8475, tx: -61.7, ty: 129.825, window: [120, 130, 1300, 880], view: [72.8, 130, 1347.1, 908.8], minFont: 32 } }, 'view＝畫布左右緣、上 unsafe 線（y 240）、下講者面板頂（y 900）換回子合成座標');
   assert.equal(R.portraitPlan({ type: 'scene', opaque: true, scene: { no: '01', portrait: 'stage' } }, C.portrait).stage.s, 0.625);
   const ov = R.portraitPlan(item(), C.portrait);
   assert.deepEqual([ov.unstage, ov.W, ov.H, ov.geo.captionY, ov.geo.captionEnd, ov.geo.minFont], [false, 1080, 1920, 1280, 1420, 32]);
   assert.deepEqual(ov.geo.unsafe, C.portrait.unsafe);
   assert.deepEqual([R.portraitPlan(item(), C.portrait, { captions: [0, 1300, 1080, 100] }).geo.captionY, R.portraitPlan(item(), C.portrait, { captions: [0, 1300, 1080, 100] }).geo.captionEnd], [1300, 1400]);
+  // 046 透明字卡動態：量的是縮放前的座標（縮 0.5625、上緣 y 766），講者框要換到同一套座標再比。字在胸前（畫面 y 972–1134）不是蓋到臉；
+  // 同一組矩形如果直接拿直式的講者框比，會落在「臉的位置」（y 234–639）裡，誤報 ✖
+  const fxPlan = R.portraitPlan({ id: 'f', type: 'fx', seg: { bg: 'none' } }, C.portrait);
+  assert.deepEqual([fxPlan.stage.s, fxPlan.stage.tx, fxPlan.stage.ty], [0.5625, 0, 766]);
+  const word = el({ rect: [180, 410, 1740, 670], textRect: [180, 410, 1740, 670], fontSize: 260, desc: { id: 'fx-t' } });
+  const fxJudge = (stage) => R.judgeSample({ host: { start: 10 }, els: [word] }, { item: { id: 'f', label: 'fx 32', type: 'fx', start: 10, end: 13 }, t: 11.5, kind: 'done', layout: 'overlay', pipOn: false, speakerBox: [87, 234, 1034, 1396], sideShift: 0, W: 1920, H: 1080, stage });
+  assert.ok(!fxJudge(fxPlan.stage).some((x) => x.rule === 'speaker' && x.level === 'error'), '換算後不是蓋到臉');
+  assert.ok(fxJudge({ kind: 'fx', s: 0.5625, minFont: 32 }).some((x) => x.rule === 'speaker' && x.level === 'error'), '沒有換算（舊的量法）會誤報');
 });
 
 test('009 直式：✖ portrait-window（帶 id 的絕對定位元素超出舞台窗；量擺位外框，鏡頭推不算；allow-overflow、沒 id、非絕對定位不算）、⚠ 字級 × 0.8475 < 32', () => {
@@ -946,7 +954,7 @@ test('分鏡對齊：parseBeatSheets／movesOf／refsOf 讀原型分鏡表的寫
   assert.deepEqual(x.rows.map((r) => r.moves), [['換卡不換景', '逐字上浮', '背景環境'], ['錯拍彈出', '圖示描線'], ['彗星描線', '鏡頭跟焦點', '聚焦', '漣漪'], [], []]);
   assert.equal(x.rows[4].note, true);
   // 語彙：44 個（011 加游標移動、013 加蓋章、11-09 加換焦點；拿掉講者慢推、漂浮、虛線流動、背景環境），和給 AI 查的 shared/template/BEATS.md §2 逐列相同（名稱、「對應」欄第一個 P.*；沒寫 P.* 的是 build 內建）
-  assert.equal(BT.VOCAB.length, 52);   // 025：加「貼上」「撕走」；034：加「逐詞壓印」「括號揭示」「翻面」「畫面推近」「上推」；036：加「穿窗」
+  assert.equal(BT.VOCAB.length, 53);   // 025：加「貼上」「撕走」；034：加「逐詞壓印」「括號揭示」「翻面」「畫面推近」「上推」；036：加「穿窗」；037：加「講者上浮」
   const beatsMd = fs.readFileSync(path.join(TEMPLATE, 'BEATS.md'), 'utf8').split(/^## 2\./m)[1].split(/^## 3\./m)[0];
   const table = [...beatsMd.matchAll(/^\| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|/gm)].map((m) => [m[2].trim(), m[4].trim()]).filter(([n]) => n !== '名稱' && !/^-+$/.test(n));
   assert.deepEqual(table.map(([n, c]) => [n, (c.match(/P\.(\w+)/) || [])[1] || 'build']), BT.VOCAB.map((v) => [v.name, v.prim]));

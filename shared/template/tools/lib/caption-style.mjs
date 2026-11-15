@@ -13,6 +13,15 @@
 //   captionFontFace(style, base)                     → 選到另外的字體時的 @font-face（base＝kit 的相對路徑）；思源黑體回 ''
 //   fontFiles(style)                                 → 這個樣式要的字型檔（build 只把它們複製進專案）
 //   describeCaptionStyle(style)                      → 「白字黑框、霞鶩文楷 84 px 粗、往上 120 px」
+//
+// 038 重點字幕（specs/038-caption-highlight）：上面那一組管整支；另外可以指定幾則用重點樣式（主色底、粗體；kit/captions.css 的 .cg--em）。
+//   plan.json 第一層   "captionMarks": ["#6", "#7", "#13"]   字幕句號（和其他欄位的 #N 同一套）；沒寫＝都不標，輸出和沒有這個功能時逐位元相同
+//   CAP_MARKS                                        直式建議幾則、連續最多幾則（style.md「重點字幕」）
+//   parseCaptionMarks(v)                             → { marks: [6, 7, 13], errors }：格式不對 ✖；重複的略過、照句號排
+//   fmtCaptionMarks([6, 7])                          → ["#6", "#7"]（寫回 plan.json 的樣子）
+//   resolveCaptionMarks(v, cues, { portrait, … })    → { marks, errors, warnings }：句號不在字幕裡 ⚠ 並略過；連續太多、直式太多、直式一則都沒標 ⚠
+//   describeCaptionMarks([6, 7, 13])                 → 「3 則（#6、#7、#13）」
+//   fontFiles(style, { bold: true })                 → 有重點字幕時，字體另外有 700 的檔（霞鶩文楷）一起帶
 // 沒有 node 的 import：剪輯台的頁面也直接載這一支（editor.mjs 的 /lib/caption-style.mjs），兩邊同一套數字。
 export const CAP_LOOKS = Object.freeze({
   box: { zh: '深底白字', note: '原本的樣子（黑底 70%）' },
@@ -149,21 +158,103 @@ export function captionRootAttrs(style, canvas = null) {
   return ` data-cap="${r.look}" style="${r.vars.map(([k, v]) => `${k}: ${v}`).join('; ').replace(/"/g, '&quot;')}"`;
 }
 
-export function fontFiles(style) {
+// bold＝這一集有重點字幕（038）：字體另外有 700 的檔（霞鶩文楷）就一起帶，重點那幾則才是真的粗體
+export function fontFiles(style, { bold = false } = {}) {
   const f = CAP_FONTS[style?.font];
   if (!f || !f.files.length) return [];
   const exact = f.files.filter((x) => x.w === style.weight || typeof x.w === 'string');
-  return exact.length ? exact : [f.files[0]];
+  const list = exact.length ? exact : [f.files[0]];
+  const extra = bold ? f.files.filter((x) => x.w === CAP_EM.weight && !list.includes(x)) : [];
+  return [...list, ...extra];
 }
 
-export function captionFontFace(style, base = 'kit/fonts/') {
+export function captionFontFace(style, base = 'kit/fonts/', opts = {}) {
   const f = CAP_FONTS[style?.font];
   if (!f?.family) return '';
-  return fontFiles(style).map((x) => `@font-face { font-family: "${f.family}"; src: url("${base}${x.file}") format("truetype"); font-weight: ${x.w}; font-display: block; }`).join('\n');
+  return fontFiles(style, opts).map((x) => `@font-face { font-family: "${f.family}"; src: url("${base}${x.file}") format("truetype"); font-weight: ${x.w}; font-display: block; }`).join('\n');
 }
 
 export const describeLift = (n) => (!n ? '原位' : n > 0 ? `往上 ${n} px` : `往下 ${-n} px`);
 export function describeCaptionStyle(style) {
   const s = { ...CAP_DEFAULT, ...(style || {}) };
   return `${CAP_LOOKS[s.look].zh}、${CAP_FONTS[s.font].zh} ${s.size} px ${CAP_WEIGHTS[s.weight]}${s.lift ? `、${describeLift(s.lift)}` : ''}`;
+}
+
+// ---------- 038 重點字幕 ----------
+
+// 重點那一則的長相寫在 kit/captions.css 的 .cg--em：主色底、字色照 --brand-ink、字重 700（字體沒有 700 就照原本的字重，不做假粗體）；
+// 整支樣式本來就是主色底（look: "brand"）時，重點那則改成 #111111 底白字，才分得出來
+export const CAP_EM = Object.freeze({ weight: 700 });
+// 直式每支建議標幾則、連續最多幾則（style.md「重點字幕」）
+export const CAP_MARKS = Object.freeze({ portraitMin: 3, portraitMax: 6, run: 2 });
+// 047 只標幾個字："#N@詞"＝第 N 則字幕裡的「詞」用重點樣式（那一則其他的字照一般字幕）；同一則可以寫好幾個
+const MARK_RE = /^#(\d+)(?:@(.+))?$/;
+const MARK_EXAMPLE = '["#6", "#7@關鍵詞", "#13"]';
+const MARK_SET = 'node shared/template/tools/build.mjs --project';
+// marks＝整則的句號 [6, 13]、words＝只標幾個字的 [{ n: 7, word: '關鍵詞' }] → 照句號排的一份清單（同一則：整則的在前）
+export const fmtCaptionMarks = (marks, words = []) => [
+  ...(marks || []).map((n) => ({ n, text: `#${n}`, k: 0 })),
+  ...(words || []).map((w, i) => ({ n: w.n, text: `#${w.n}@${w.word}`, k: 1 + i })),
+].sort((x, y) => x.n - y.n || x.k - y.k).map((x) => x.text);
+const markList = (ns, k = 12) => `${ns.slice(0, k).map((n) => `#${n}`).join('、')}${ns.length > k ? '…' : ''}`;
+const wordList = (ws, k = 12) => `${ws.slice(0, k).map((w) => `#${w.n}「${w.word}」`).join('、')}${ws.length > k ? '…' : ''}`;
+export const describeCaptionMarks = (marks, words = []) => [
+  ...(marks.length ? [`${marks.length} 則（${markList(marks)}）`] : []),
+  ...(words.length ? [`只標幾個字 ${new Set(words.map((w) => w.n)).size} 則（${wordList(words)}）`] : []),
+].join('；');
+
+// plan.json 的 captionMarks → { marks: [6, 13]（整則的句號：去重、照句號排）, words: [{ n: 7, word: '關鍵詞' }]（只標幾個字的：去重、照句號排）, errors }；
+// undefined／null＝沒標。同一則又寫整則又寫幾個字：整則為準，那一則的 words 拿掉
+export function parseCaptionMarks(v, where = 'captionMarks') {
+  if (v === undefined || v === null) return { marks: [], words: [], errors: [] };
+  const how = `${where} 要寫成字幕句號的陣列，例 ${MARK_EXAMPLE}（"#N"＝整則用重點樣式、"#N@詞"＝只有那幾個字）`;
+  if (!Array.isArray(v)) return { marks: [], words: [], errors: [`${how}，現在是 ${JSON.stringify(v)}`] };
+  const hit = v.map((x) => (typeof x === 'string' ? MARK_RE.exec(x.trim()) : null));
+  const bad = v.filter((x, i) => !hit[i] || Number(hit[i][1]) < 1 || (hit[i][2] !== undefined && !hit[i][2].trim()));
+  if (bad.length) return { marks: [], words: [], errors: [`${how}，這幾個不是 "#N" 或 "#N@詞"：${bad.slice(0, 6).map((x) => JSON.stringify(x)).join('、')}${bad.length > 6 ? '…' : ''}`] };
+  const marks = [...new Set(hit.filter((m) => m[2] === undefined).map((m) => Number(m[1])))].sort((a, b) => a - b);
+  const whole = new Set(marks), seen = new Set(), words = [];
+  for (const m of hit) {
+    if (m[2] === undefined) continue;
+    const n = Number(m[1]), word = m[2].trim(), k = `${n}\0${word}`;
+    if (whole.has(n) || seen.has(k)) continue;
+    seen.add(k); words.push({ n, word });
+  }
+  words.sort((a, b) => a.n - b.n);
+  return { marks, words, errors: [] };
+}
+
+// 連續標了幾則：照字幕的順序看（cues 的第幾則），回傳超過 run 則的那幾串 [[6, 7, 8], …]
+export function markRuns(marks, cues, run = CAP_MARKS.run) {
+  const at = new Map((cues || []).map((c, i) => [c.n, i]));
+  const idx = marks.filter((n) => at.has(n)).sort((a, b) => at.get(a) - at.get(b));
+  const out = [];
+  let cur = [];
+  for (const n of idx) {
+    if (cur.length && at.get(n) === at.get(cur[cur.length - 1]) + 1) cur.push(n); else { if (cur.length > run) out.push(cur); cur = [n]; }
+  }
+  if (cur.length > run) out.push(cur);
+  return out;
+}
+
+// 整理＋檢查（build 的 resolvePlan 用）。portrait＝直式；hasScenes＝已經排了段落（還沒寫分鏡時不催）；projectRel＝印在指令裡的專案路徑
+export function resolveCaptionMarks(v, cues = [], { portrait = false, hasScenes = true, projectRel = 'projects/<專案>' } = {}) {
+  const p = parseCaptionMarks(v);
+  const setCmd = `${MARK_SET} ${projectRel} --set "captionMarks=#N,#N,#N"`;
+  if (p.errors.length) return { marks: [], words: [], errors: p.errors.map((e) => `${e} → 改好，或刪掉這個欄位（＝都不標）；用指令寫比較不會錯：${setCmd}`), warnings: [] };
+  const warnings = [];
+  const have = new Set((cues || []).map((c) => c.n));
+  const gone = [...new Set([...p.marks.filter((n) => !have.has(n)), ...p.words.filter((w) => !have.has(w.n)).map((w) => w.n)])].sort((a, b) => a - b);
+  const marks = p.marks.filter((n) => have.has(n));
+  // 只標幾個字的：那幾個字要照抄字幕原文（一字不差），字幕裡找不到就略過
+  const textOf = new Map((cues || []).map((c) => [c.n, String(c.text ?? '')]));
+  const words = p.words.filter((w) => have.has(w.n) && textOf.get(w.n).includes(w.word));
+  const lost = p.words.filter((w) => have.has(w.n) && !textOf.get(w.n).includes(w.word));
+  if (lost.length) warnings.push(`captionMarks 的 ${lost.slice(0, 6).map((w) => `"#${w.n}@${w.word}"（第 ${w.n} 則是「${textOf.get(w.n)}」）`).join('、')}${lost.length > 6 ? '…' : ''}：字幕裡沒有這幾個字，略過 → @ 後面照抄那一則字幕裡的字（一字不差），或拿掉`);
+  if (gone.length) warnings.push(`captionMarks 的 ${markList(gone)} 不在字幕裡（字幕${cues.length ? `是 #${cues[0].n}–#${cues[cues.length - 1].n}` : '還沒有'}），這${gone.length > 1 ? '幾' : '一'}則略過 → 從 captionMarks 拿掉，或換成現在的句號（剪輯台「字幕」分頁點「重點」會整份重寫）`);
+  const runs = markRuns(marks, cues);
+  if (runs.length) warnings.push(`重點字幕連續超過 ${CAP_MARKS.run} 則：${runs.map((r) => `#${r[0]}–#${r[r.length - 1]}（${r.length} 則）`).join('、')}，整段都是重點就沒有重點 → 每一串留最多 ${CAP_MARKS.run} 則：${setCmd}，或在剪輯台「字幕」分頁點掉`);
+  if (portrait && marks.length > CAP_MARKS.portraitMax) warnings.push(`重點字幕標了 ${marks.length} 則，直式一支最多 ${CAP_MARKS.portraitMax} 則（style.md「重點字幕」）→ 留最重要的 ${CAP_MARKS.portraitMax} 則：${setCmd}，或在剪輯台「字幕」分頁點掉`);
+  if (portrait && hasScenes && !marks.length && !words.length && cues.length) warnings.push(`直式還沒標重點字幕 → 照 style.md「重點字幕」挑 ${CAP_MARKS.portraitMin}–${CAP_MARKS.portraitMax} 則（開場鉤子的關鍵句、每個要點的標題句、結論或金句、行動呼籲），跑 ${setCmd}（#N 換成那幾則的句號）；剪輯台「字幕」分頁也可以點「重點」`);
+  return { marks, words, errors: [], warnings };
 }

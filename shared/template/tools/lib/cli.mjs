@@ -3,10 +3,12 @@
 //   valueOf(argv, i, key, inline)      → [值, 新的 i]；缺值、或下一個是另一個旗標就丟錯
 //   oneOf(flags, modes)                → 開著的那個模式（沒有＝null）；開了兩個以上丟錯
 //   saidOf(flags)                      → 使用者原話：--said 和 --say 都收
-//   isMain(import.meta.url)            → 這支檔是不是被直接執行（用 realpath 比，經 symlink 執行也算）
+//   isMain(import.meta.url)            → 這支檔是不是被直接執行（用 realpath 比，經 symlink 執行也算）；是的話順便把暫存資料夾指到設定的位置
+//                                        （lib/tmp.mjs：shared/setting.json 沒寫 tmp 就不動）。每支工具開跑前都會問這一句，所以放這裡，新工具不用記得加
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyTmp } from './tmp.mjs';
 
 export function splitFlag(a) {
   const s = String(a).replace(/^--/, '');
@@ -30,5 +32,8 @@ export function oneOf(flags, modes) {
 export const saidOf = (flags) => flags.said ?? flags.say ?? '';
 
 export function isMain(metaUrl) {
-  try { return !!process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(metaUrl)); } catch { return false; }
+  let main = false;
+  try { main = !!process.argv[1] && fs.realpathSync(path.resolve(process.argv[1])) === fs.realpathSync(fileURLToPath(metaUrl)); } catch { return false; }
+  if (main) applyTmp();
+  return main;
 }
