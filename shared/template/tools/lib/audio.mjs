@@ -33,6 +33,8 @@ export const AUDIO_VER = 1;
 // 11-16 作者聽 A/B（短影片3）選的：每 3 秒的響度起伏 7.8 dB → 5.1 dB，標準差 1.5 → 1.0
 export const LEVEL = 'highpass=f=70,dynaudnorm=f=200:g=11:p=0.9:m=6:s=0';
 export const LEVEL_VER = 1;
+// 接在「人聲響度」那一行後面（摘要只認六個字頭，lib/build-summary.mjs）
+const LEVEL_TEXT = '；大小聲已拉平（plan.json edit.level：小聲的句子拉近大聲的，最多 +15.6 dB；剪輯台「整支 → 聲音」可以關）';
 const RATE = 48000;
 const r1 = (n) => +Number(n).toFixed(1);
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
@@ -210,9 +212,8 @@ export function audioReportLines(info, { loudnorm = true, declick = true, cutpoi
   if (!info?.hasAudio) return lines;
   if (loudnorm && info.before) {
     const a = info.after;
-    lines.push(`人聲響度 ${n1(info.before.i)} LUFS → ${a ? n1(a.i) : n1(LOUD.I)} LUFS（true peak ${a ? n1(a.tp) : n1(LOUD.TP)}${info.linear ? '' : '；超過線性範圍，ffmpeg 改用動態模式，動態會稍微被壓縮'}）`);
-  } else if (!loudnorm) lines.push('人聲響度：已用 --no-loudnorm 略過');
-  if (info.level) lines.push('人聲大小聲拉平：開（plan.json edit.level；小聲的句子拉近大聲的，最多 +15.6 dB；剪輯台「整支 → 聲音」可以關）');
+    lines.push(`人聲響度 ${n1(info.before.i)} LUFS → ${a ? n1(a.i) : n1(LOUD.I)} LUFS（true peak ${a ? n1(a.tp) : n1(LOUD.TP)}${info.linear ? '' : '；超過線性範圍，ffmpeg 改用動態模式，動態會稍微被壓縮'}）${info.level ? LEVEL_TEXT : ''}`);
+  } else if (!loudnorm) lines.push(`人聲響度：已用 --no-loudnorm 略過${info.level ? LEVEL_TEXT : ''}`);
   if (sfx) lines.push(...sfxLevelLines(sfx, { loudnorm }));
   if (declick && info.cuts) lines.push(`剪接點微淡化：${info.cuts} 個接點，前後各 ${Math.round(info.fade * 1000)} ms`);
   else if (declick && !cutpointsExist) lines.push('剪接點微淡化：略過（work/cutpoints.json 不存在；跑過 media.mjs rough 或 cutpoints 才會處理）');

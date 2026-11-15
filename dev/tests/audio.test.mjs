@@ -126,7 +126,7 @@ test('報告：人聲響度一行、不再因人聲調幅提醒（音效比例�
   assert.deepEqual(A.audioReportLines({ hasAudio: false, notes: [] }), []);
   assert.match(A.audioReportLines(base, { loudnorm: false, declick: false }).join('\n'), /--no-loudnorm[\s\S]*--no-declick/);
   assert.ok(!A.audioReportLines(base).join('\n').includes('拉平'), '沒開 level 不印');
-  assert.match(A.audioReportLines({ ...base, level: true })[1], /^人聲大小聲拉平：開（plan\.json edit\.level/);
+  assert.match(A.audioReportLines({ ...base, level: true })[0], /^人聲響度 .*）；大小聲已拉平（plan\.json edit\.level/);
 });
 
 // ---- 音效政策（specs/contracts/sfx.md §4、§10；訊息原文 cli-005.md §3）----

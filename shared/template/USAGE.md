@@ -626,7 +626,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 | `volume.voice`／`sfx`／`media` | −60～+12 dB | 主軌人聲／全部音效／有開原聲的 media 段的總音量 |
 | `gains` | `[{ from, to, db }]`（`rough.mp4` 秒數） | 只調人聲某一段的音量，疊在 `volume.voice` 上；範圍不能重疊（✖） |
 | `joins` | `[{ at, type, dur? }]` | 接點轉場。`at` 要對到 `cuts` 的邊界或 `work/cutpoints.json` 的剪接點（±0.1 秒會自動吸附，否則 ⚠）。`type`：`"none"`、`"dip"`（過黑，`dur` 預設 0.3）、`"punch"`（接點後畫面放大 1.08 倍到下一個接點，講解跳接常用） |
-| `level` | `true`／不寫 | 拉平人聲大小聲：重新編碼底片時，先把小聲的句子拉近大聲的（每 0.2 秒看一次音量、約 2 秒平滑、最多拉 +15.6 dB），再調到 −14 LUFS。聽起來忽大忽小時開；build 報告多印「人聲大小聲拉平：開」。剪輯台「整支 → 聲音」的「拉平人聲大小聲」，或 `build.mjs --set edit.level=true` |
+| `level` | `true`／不寫 | 拉平人聲大小聲：重新編碼底片時，先把小聲的句子拉近大聲的（每 0.2 秒看一次音量、約 2 秒平滑、最多拉 +15.6 dB），再調到 −14 LUFS。聽起來忽大忽小時開；build 報告的「人聲響度」那一行後面多一句「大小聲已拉平」。剪輯台「整支 → 聲音」的「拉平人聲大小聲」，或 `build.mjs --set edit.level=true` |
 | `sfx` | `[{ at, sound, db? }]`（`at` 是 `rough.mp4` 秒數） | 使用者在剪輯台自己加的音效：`at` 那一刻聽到 `sound` 這一顆（名稱同 R5.2；這台機器沒有的名稱 ✖），`db` 是這一顆的音量（−60～+12，不寫＝預設）。吃 `volume.sfx` 和整支的淡入淡出；落在 `cuts` 裡的不出聲。**不受 3 秒間隔、每分鐘密度、每集上限的規則限制**（6.3），AI 不新增、不刪、不改 |
 
 所有秒數都是 `rough.mp4` 的秒數（剪掉之前的時間軸）；沒有 `edit` 或欄位沒寫＝不做任何處理，輸出和沒有剪輯台時一模一樣。音量 0 dB＝原音量，最大 +12 dB。
