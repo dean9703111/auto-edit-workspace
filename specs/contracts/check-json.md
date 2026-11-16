@@ -42,6 +42,7 @@
 | `sfxBudget` | 物件（§2.3） | 必有 | rough | `{ perMinuteAvg, over, dense, loud }`，`sfxBudget()` 的回傳去掉 `count`、`levels`、`warnings`、`lines` | 新（FR-058） | 006 |
 | `moods` | 物件[] | 必有（沒有情緒點＝`[]`） | rough | 情緒點（plan.json `moods`，023）：`{ i, kind, at, outAt, sfx, dropped, off, zoom }`；`i`＝moods 的第幾個、`at`＝rough.mp4 秒數（詞的開口）、`outAt`＝完成影片秒數、`sfx`＝最後出聲的音效（取捨拿掉＝`null`，`dropped` 寫原本那顆）、`off`＝寫了 `"sfx": null`、`zoom`＝這個點有推近 | 新（023） | 剪輯台音效軌、分鏡表情緒點表 |
 | `outro` | 物件或 `null` | 必有 | rough | `{ music, start, dur, aligned }`；沒寫 `outro` 或 `music: null` 時 `null`（`cli-005.md` §3.5） | 新（FR-054） | 004 final、006 |
+| `bed` | 物件或 `null` | 必有 | rough | 底樂（`lib/music.mjs` `bedJson`）：沒設定＝`null`；這一集不配＝`{ music: null }`；影片太短沒鋪＝`{ music, from, volume, relDb, muted, ducked: false, short: true }`；有鋪＝`{ music, from, volume, relDb, muted, ducked, start, end, outStart, outEnd, fadeIn, fadeOut, ducks }`：`volume`＝plan.json 的 `bed.volume`（dB，0＝曲庫檔原本的音量）、`relDb`＝沒人講話時比人聲大幾 dB（負＝小）、`muted`＝靜音（`volume` 是 −40，完成影片不放；範圍照樣給）、`start`／`end`＝rough.mp4 秒數（片尾卡那段在 rough.mp4 外面，`end` 停在主軌結尾）、`outStart`／`outEnd`＝完成影片秒數、`ducked`＝講話時壓低（有 `edit.cuts` 時整段固定音量＝`false`）、`ducks`＝壓低的區間 `[[起, 迄], …]`（rough.mp4 秒數；字幕第一句到最後一句扣掉 ≥ 1 秒的說話停頓） | 新（057） | 剪輯台背景音樂軌 |
 | `edit` | 物件 | 必有（出錯時 `null`） | rough | 正規化後的 `edit`（`normalizeEdit`，`edit.mjs`） | 現行 | 006 |
 | `paths` | `{ project, video, plan, out }` | 必有（出錯時 `{}`） | — | 相對工作區根目錄的路徑 | 現行 | 004、006 |
 
@@ -270,6 +271,7 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
   "sfxCount": { "pop": 3, "whoosh": 1, "tick": 3 },
   "sfxBudget": { "perMinuteAvg": 1.3, "over": [], "dense": [], "loud": [] },
   "outro": null,
+  "bed": null,
   "edit": { "cuts": [], "fadeIn": 0, "fadeOut": 0, "volume": { "voice": 0, "sfx": 0, "media": 0 }, "gains": [], "joins": [] },
   "paths": { "project": "projects/範例", "video": "projects/範例/work/rough.mp4", "plan": "projects/範例/work/hyperframes/plan.json", "out": "projects/範例/work/hyperframes" }
 }
@@ -285,7 +287,7 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
   "versions": { "hyperframes": { "pinned": null, "installed": null, "ok": false } },
   "videoDur": null, "outputDur": null, "ending": null, "voiceOnly": [], "roughBlack": [], "voiceUncovered": [], "uncovered": [], "cutpoints": [],
   "chapters": [], "items": [], "sfxCount": {}, "sfxBudget": { "perMinuteAvg": 0, "over": [], "dense": [], "loud": [] },
-  "outro": null, "edit": null, "paths": {} }
+  "outro": null, "bed": null, "edit": null, "paths": {} }
 ```
 
 結束碼：`ok` 是 `false` → 1，否則 0（現行）。
@@ -304,6 +306,7 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
 | 2 | 2026-11-07（沒有講者的全螢幕） | `items[].out` 加 `wide`、`badgeBox`（`tx` 後面）。加欄位不升 schema |
 | 2 | 2026-11-07（子母畫面移進錄影） | `items[].out` 加 `pipShift`（`pip` 後面）。加欄位不升 schema |
 | 2 | 2026-11-16（055） | media 段 `items[]` 加 `pip`（布林；橫式預設 `false`）；`out.annotations` 寫了 `start` 時加 `start`，`view.scale` 改成第一格的倍率。加欄位不升 schema |
+| 2 | 2026-11-16（057） | 加 `bed`（`outro` 後面）：剪輯台背景音樂軌用的底樂範圍、淡入淡出、壓低的區間；第二輪 `volume` 改成 0＝曲庫檔原本的音量（−40～+6）、`relDb` 改成沒人講話時和人聲比、加 `muted`。加欄位不升 schema |
 
 ## 7. 測試（002 的 `dev/tests/build.test.mjs`）
 

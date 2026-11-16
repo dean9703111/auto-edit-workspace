@@ -1,6 +1,6 @@
-// 時間軸（canvas）：照疊放順序由上到下——總覽、時間尺、動畫（資訊卡／字卡動態）、插入素材、主軌畫面、字幕、人聲、音效
+// 時間軸（canvas）：照疊放順序由上到下——總覽、時間尺、動畫（資訊卡／字卡動態）、插入素材、主軌畫面、字幕、人聲、音效、背景音樂
 // 這裡只管畫圖、點到什麼（hit test）、吸附；點下去／拖曳要做什麼由 app.js 的 app.tl* 決定。
-import { fmt, fmtTC, fmtSec, fmtDb, clamp, cutIndexAt, joinFor, dbToGain, gainAt } from './model.mjs';
+import { fmt, fmtTC, fmtSec, fmtDb, clamp, cutIndexAt, joinFor, dbToGain, gainAt, outOf, bedFadeAt } from './model.mjs';
 import { speedLabel } from './speed.mjs';
 import { transitionOf } from './motion.mjs';
 
@@ -15,10 +15,10 @@ function srcOf(it, t) {
   return K[i][1] + Math.max(0, d - K[i][0]) * rate;
 }
 
-export const LANES = [['ov', 12], ['ruler', 22], ['anim', 36], ['media', 34], ['main', 38], ['cap', 26], ['voice', 44], ['sfx', 24]];
+export const LANES = [['ov', 12], ['ruler', 22], ['anim', 36], ['media', 34], ['main', 38], ['cap', 26], ['voice', 44], ['sfx', 24], ['bed', 30]];
 // 視窗矮的時候軌道變薄，把高度留給影片（筆電、左右分割視窗）
-export const LANES_COMPACT = [['ov', 10], ['ruler', 18], ['anim', 28], ['media', 24], ['main', 28], ['cap', 22], ['voice', 28], ['sfx', 20]];
-export const TRACK_NAMES = { anim: '字卡／動畫', media: '素材', main: '主軌畫面', cap: '字幕', voice: '人聲', sfx: '音效' };
+export const LANES_COMPACT = [['ov', 10], ['ruler', 18], ['anim', 28], ['media', 24], ['main', 28], ['cap', 22], ['voice', 28], ['sfx', 20], ['bed', 22]];
+export const TRACK_NAMES = { anim: '字卡／動畫', media: '素材', main: '主軌畫面', cap: '字幕', voice: '人聲', sfx: '音效', bed: '背景音樂' };
 const DEFAULT_SPAN = 180;   // 打開時一屏看幾秒：長片整支擠在一屏，字都看不到，也點不準（要看整支按「看整支」）
 const REVEAL_SPAN = 60;     // 從清單、搜尋、檢查結果跳到某一段時，放大到前後各留約 30 秒
 const PAD = 10;
@@ -28,7 +28,10 @@ const C = {
   wave: 'rgba(160,200,255,0.70)', waveHot: '#FF5A5F', cut: 'rgba(7,11,20,0.72)', cutLine: '#FF5A5F', sel: 'rgba(255,212,0,0.16)', selLine: '#FFD400',
   play: '#FFD400', voice: 'rgba(255,255,255,0.22)', band: '#FFD400', bandDim: 'rgba(255,212,0,0.55)',
   scene: '#3B82F6', fx: '#C792EA', custom: '#2FB36B', media: '#FF8A3D', cap: '#1E2740', capSel: '#2B3A63', sfx: '#4ADE9B', own: 'rgba(255,255,255,0.88)',
+  bed: '#5EC8E5', bedBody: 'rgba(94,200,229,0.08)', bedFill: 'rgba(94,200,229,0.42)', bedFillLow: 'rgba(94,200,229,0.20)', bedWave: 'rgba(255,255,255,0.30)',
 };
+const BED_LOW = 0.55;   // 背景音樂軌：講話時壓低的地方，音量線畫在這個高度（滿＝1）
+const bedLevel = (db) => clamp((db + 30) / 36, 0.06, 1);   // 背景音樂軌：音量（bed.volume）→ 音量線的高度（+6＝滿、0 約八成、−30 以下貼底）
 const MOOD_COL = { quote: '#FFD400', turn: '#C792EA', pain: '#FF5A5F', win: '#4ADE9B', land: '#FF8A3D' };   // 情緒點（023）
 const DB_TOP = 12, DB_BOT = -30;     // 音量線的上下界（−30 以下畫在底線，標「靜音」）
 
@@ -541,6 +544,57 @@ export class Timeline {
       }
       if (!any && !A.sfxView.length) { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.reportReady ? '沒有音效' : '音效位置：檢查報告出來後才看得到', PAD + 6, (y0 + y1) / 2); }
     }
+
+    // ---- 背景音樂（057）：從鋪的起點畫到終點，音量線頭尾是淡入淡出的斜坡、講話時壓低的地方比較低（底色也比較暗）、整條的高度跟著音量；
+    //      有上一次 build 混好的 wav 就疊上它的波形（跟著滑桿的即時音量變大變小）。時間照 build 算的，剪掉的範圍只是變淡。
+    //      靜音（軌頭 🔇、音量最小值）：整條灰掉、不畫波形，曲名前面加 🔇（和音效靜音一樣） ----
+    {
+      const [y0, y1] = L.bed;
+      const B = A.bedView;
+      if (B?.kind !== 'on') { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(B?.text || '', PAD + 6, (y0 + y1) / 2); }
+      else if (vis(B.start, B.end)) {
+        const y = y0 + 3, h = y1 - y0 - 6, bot = y + h, cuts = A.edit.cuts;
+        const xa = X(B.start), xb = X(B.end), x0 = Math.max(0, Math.floor(xa)), x1 = Math.min(W, Math.ceil(xb));
+        const sel = A.selLane === 'bed', muted = !!A.trackMuted?.('bed'), vol = A.bedVol ?? 0, kv = bedLevel(vol);
+        rr(xa, y, Math.max(3, xb - xa), h, 4); g.fillStyle = muted ? 'rgba(255,255,255,0.05)' : C.bedBody; g.fill();
+        // 每一格（px）：rough 秒數 → 完成影片秒數 → 淡入淡出、壓低
+        const pk = muted ? null : A.bedPeaks, gain = dbToGain(A.bedLiveDb?.() ?? 0), mid = y + h / 2;
+        let di = 0;
+        const line = [];
+        for (let x = x0; x < x1; x++) {
+          const ta = this.t0 + (x - PAD) / this.pps, tb = ta + 1 / this.pps;
+          while (di < B.ducks.length && B.ducks[di][1] <= ta) di++;
+          const duck = di < B.ducks.length && B.ducks[di][0] < tb;
+          const cut = cutIndexAt(ta, cuts) >= 0;
+          // 音量（淡入淡出 × 壓低）：從底下往上填，講話時壓低的地方比較低、比較暗
+          const lv = bedFadeAt(outOf(ta, cuts), B) * (duck ? BED_LOW : 1) * kv, top = bot - 1 - lv * (h - 3);
+          if (!muted) { g.fillStyle = cut ? 'rgba(255,90,95,0.16)' : duck ? C.bedFillLow : C.bedFill; g.fillRect(x, top, 1, bot - top); }
+          line.push([x + 0.5, top]);
+          if (pk?.peaks?.length) {
+            const oa = outOf(ta, cuts) - (pk.at || 0), ob = Math.max(oa, outOf(tb, cuts) - (pk.at || 0));
+            const i0 = Math.max(0, Math.floor(oa * pk.rate)), i1 = Math.max(i0 + 1, Math.ceil(ob * pk.rate));
+            let m = 0;
+            for (let i = i0; i < i1 && i < pk.peaks.length; i++) if (pk.peaks[i] > m) m = pk.peaks[i];
+            const a = (m / (pk.scale || 1000)) * gain, db = a > 0 ? 20 * Math.log10(a) : -100;
+            const hw = clamp((db + 48) / 48, 0, 1) * (h / 2 - 1);
+            if (hw >= 0.5) { g.fillStyle = a >= 1 ? C.waveHot : C.bedWave; g.fillRect(x, mid - hw, 1, hw * 2); }
+          }
+        }
+        // 剪掉的範圍：完成影片沒有這幾秒（底樂照樣往下鋪），畫淡一點
+        for (const [a, b] of cuts) if (vis(a, b)) { g.fillStyle = C.cut; g.fillRect(Math.max(xa, X(a)), y, Math.min(xb, X(b)) - Math.max(xa, X(a)), h); }
+        if (line.length) { g.strokeStyle = muted ? 'rgba(255,255,255,0.22)' : C.bed; g.lineWidth = 1.5; g.beginPath(); line.forEach(([lx, ly], i) => (i ? g.lineTo(lx, ly) : g.moveTo(lx, ly))); g.stroke(); }
+        g.strokeStyle = sel ? '#FFFFFF' : muted ? 'rgba(255,255,255,0.35)' : 'rgba(94,200,229,0.75)'; g.lineWidth = sel ? 2 : 1; rr(xa + 0.5, y + 0.5, Math.max(2, xb - xa - 1), h - 1, 4); g.stroke();
+        // 曲名（＋音量）寫在看得到的那一段開頭；片尾卡那幾秒在 rough.mp4 外面，尾巴寫還有幾秒
+        const after = B.outEnd - outOf(this.dur, cuts);
+        const label = muted ? `🔇 ♪ ${B.music}　靜音` : `♪ ${B.music}${vol ? `　${fmtDb(vol)}` : ''}${B.ducked ? '' : '　整段固定音量'}`;
+        if (x1 - x0 > 40) clipRect(x0 + 4, y, x1 - x0 - 8, h, () => {
+          g.font = font(11, 700); g.textBaseline = 'top'; g.fillStyle = muted ? C.dim : '#fff'; g.shadowColor = '#000'; g.shadowBlur = 3;
+          g.fillText(label, Math.max(xa, 0) + 7, y + 2);
+          if (after > 0.5 && xb <= W && xb - xa > 160) { const tail = `片尾再 ${Math.round(after)} 秒 →`; g.fillText(tail, xb - 8 - g.measureText(tail).width, y + 2); }
+          g.shadowBlur = 0;
+        });
+      }
+    }
   }
 
   drawMainThumbs(g, y, h) {
@@ -681,6 +735,7 @@ export class Timeline {
       h.kind = 'voiceBody';
       return h;
     }
+    if (lane === 'bed') { h.kind = 'bed'; return h; }
     if (lane === 'sfx') {
       let best = null, bd = 9999;
       for (const m of A.sfxView) {
@@ -704,7 +759,7 @@ export class Timeline {
       case 'mediaL': case 'mediaR': case 'head': case 'tail': case 'cutEdge': case 'capEdge': case 'gainEdge': return locked ? 'not-allowed' : 'col-resize';
       case 'mediaVol': case 'gainVol': case 'voiceVol': return locked ? 'not-allowed' : 'ns-resize';
       case 'media': case 'usfx': return locked ? 'pointer' : 'grab';
-      case 'item': case 'join': case 'cue': case 'cut': case 'sfx': return 'pointer';
+      case 'item': case 'join': case 'cue': case 'cut': case 'sfx': case 'bed': return 'pointer';
       case 'gap': return 'copy';
       default: return h.lane === 'main' || h.lane === 'voice' ? 'crosshair' : 'default';
     }

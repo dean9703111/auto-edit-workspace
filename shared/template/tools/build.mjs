@@ -52,7 +52,7 @@
  *                                                     只改 plan.json 第一層的設定（每次重新讀檔、只動這幾個鍵、照原本的縮排寫回），印「✓ plan.json：theme＝dark（原本 light）」和下一步：
  *                                                     theme（light／dark）、style（shared/template/styles/ 的資料夾名）、format（portrait／landscape）、speakerSide（left／center／right）、
  *                                                     chapterBadge（true／false）、chapterMap（true／false：每個 01 章節轉場換成本集地圖）、look（off）、look.color（0–1）、look.slim（0–1.2）、look.beauty（0–1）、look.belly（0–1：瘦小腹）、
- *                                                     bed.music（曲庫的曲名；none＝這一集不配）、bed.volume（−12～12 dB）、outro.from（#N）、outro.music（曲名；none＝不配）、
+ *                                                     bed.music（曲庫的曲名；none＝這一集不配）、bed.volume（−40～+6 dB，0＝曲庫檔原本的音量、−40＝靜音）、outro.from（#N）、outro.music（曲名；none＝不配）、
  *                                                     captionMarks（重點字幕的句號，逗號隔開，例 --set "captionMarks=#6,#7@關鍵詞,#13"：#N＝這一則字幕用主色底的重點樣式、#N@詞＝只有那幾個字；整份換掉；全部拿掉用 --unset captionMarks）。
  *                                                     鍵或值不對 ✖ 並列出能寫的。還沒有 plan.json 時 theme、style、format、look* 會先建 { "version": 1 } 再寫
  *   node shared/template/tools/build.mjs --project projects/<專案> --unset "style;format"   拿掉這幾個設定（回到預設）；另外收 bed、outro（整個拿掉：底樂回到工作區預設、不配片尾配樂）
@@ -107,7 +107,7 @@ import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
 import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip, LOUD_TEXT } from './lib/audio.mjs';
-import { bedPlan, renderBedClip, bedLine } from './lib/music.mjs';
+import { bedPlan, renderBedClip, bedLine, bedDucks, bedJson, writeBedInfo } from './lib/music.mjs';
 import { prepareEnding, endingLines } from './lib/ending.mjs';
 import { ensureLook, lookCheck } from './lib/look.mjs';
 import { ensureMattes } from './lib/matte.mjs';
@@ -771,7 +771,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
         videoDur, outputDur: res.finalDur ?? res.outDur ?? videoDur, ending: endingJson(res),
         voiceOnly, roughBlack: rb.black, voiceUncovered: top.voiceUncovered, uncovered: top.uncovered, cutpoints: cp.list, chapters: top.chapters,
         items: res.tm ? jsonItems(res) : [],
-        sfxCount: top.sfxCount, sfxBudget: top.sfxBudget, outro: top.outro, moods: top.moods ?? [],
+        sfxCount: top.sfxCount, sfxBudget: top.sfxBudget, outro: top.outro, bed: res.tm ? bedJsonOf(res, clip, cues) : null, moods: top.moods ?? [],
         edit: res.edit ?? DEFAULT_EDIT(),
         paths: { project: projectDir ? projectLabel(P, projectDir) : null, video: fromRoot(P, fs.existsSync(P.video) ? P.video : src), plan: fromRoot(P, P.plan), out: fromRoot(P, P.out) },
       };
@@ -910,8 +910,8 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const finalDur = res.finalDur ?? outDur;
   // 結尾配樂：量 wav 長度決定起播點，淡入淡出與增益烤進檔案（005 的 renderBgmClip，同參數不重做）
   const clip = outroClipOf(res, P);
-  // 底樂（選用）：鋪滿整支片（含片尾卡）、照人聲壓低；有剪輯台剪段時主軌的時間對不上，改成整段固定音量
-  const bp = bedPlan(res.bed, { outDur: finalDur, outroAt: clip ? clip.at : null });
+  // 底樂（選用）：鋪滿整支片（含片尾卡）、照人聲壓低；有剪輯台剪段時主軌的時間對不上，改成整段固定音量；靜音（bed.volume 最小值）＝不放
+  const bp = res.bed?.muted ? null : bedPlan(res.bed, { outDur: finalDur, outroAt: clip ? clip.at : null });
   let bed = null;
   if (bp) {
     let r;
@@ -1015,6 +1015,8 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const generated = new Set();
   for (const [f, c] of files) { W.write(f, c); generated.add(f); }
   W.write('index.html', main.html); generated.add('index.html');
+  // 057 剪輯台的背景音樂軌：記下這次做進 index.html 的底樂和做進去的音量（滑桿即時試聽只補差的 dB）；靜音不動它（取消靜音時快速試聽還有上一條可以播）
+  if (!res.bed?.muted) writeBedInfo(P.out, bed && { file: bed.file, music: res.bed.music, volume: res.bed.volume ?? 0, at: bed.at, dur: bed.dur });
   // index.html 的修改時間＝最後一次 build：內容沒變也更新時間（剪輯台「完成影片預覽是舊的」、audit、status、qc 都拿它和 plan.json 比；
   //   剪輯台存檔時已經重新產生過，再跑 build 不重寫 index.html，舊時間會讓它們誤報「plan.json 比 index.html 新」）
   if (W.res.same.includes('index.html')) { const now = new Date(); fs.utimesSync(path.join(P.out, 'index.html'), now, now); }
@@ -1197,13 +1199,20 @@ export function errorJson(message) {
     versions: { hyperframes: { pinned: null, installed: null, ok: false } },
     videoDur: null, outputDur: null, ending: null, voiceOnly: [], roughBlack: [], voiceUncovered: [], uncovered: [], cutpoints: [],
     chapters: [], items: [], sfxCount: {}, sfxBudget: { perMinuteAvg: 0, over: [], dense: [], loud: [] },
-    outro: null, moods: [], edit: null, paths: {} };
+    outro: null, bed: null, moods: [], edit: null, paths: {} };
 }
 
 // 底樂的報告行：有設定（plan.json 的 bed 或工作區預設）才印，沒設定的人看不到這一行
 function bedTail(res, clip) {
   if (!res.bed) return [];
   return [bedLine(res.bed, bedPlan(res.bed, { outDur: res.finalDur ?? res.outDur, outroAt: clip ? clip.at : null }), { ducked: !res.tm?.cuts?.length })];
+}
+// --check --json 的 bed（057 剪輯台的背景音樂軌）：鋪的範圍、淡入淡出和上面那一行同一套算法；壓低的區間照字幕與 rough.mp4 量的說話停頓
+function bedJsonOf(res, clip, cues) {
+  if (!res.bed) return null;
+  const ducked = !res.tm?.cuts?.length;
+  return bedJson(res.bed, bedPlan(res.bed, { outDur: res.finalDur ?? res.outDur, outroAt: clip ? clip.at : null }),
+    { tm: res.tm, ducked, ducks: ducked && res.bed.music ? bedDucks(cues, cues.pauses) : [] });
 }
 
 // --check --json 的 ending（033）：qc 用 at、dur 排除片尾卡的靜止與無聲；停點 ③ 用 quote、subscribe 問使用者

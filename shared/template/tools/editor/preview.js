@@ -2,6 +2,7 @@
 //   SimPreview     「快速試聽」：播 rough.mp4，用 WebAudio 增益、黑色遮罩、CSS transform 即時模擬 cuts（播放時跳過）／音量（含範圍音量）／淡入淡出／dip／punch，
 //                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲，位置和完成影片同一個可見區（橫式 contain＝上方 1920×940，字幕帶空出來）；
 //                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去完成影片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
+//                  背景音樂播上一次 build 混好的 wav（057：跟著完成影片時間走，音量只補滑桿和做進 wav 的差）；
 //                  全部聲音最後經過 AnalyserNode 給音量表
 //   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整完成影片；時間是完成影片時間）
 // 兩者對外都用 rough.mp4 的秒數（app.t）。
@@ -15,6 +16,7 @@ export class SimPreview {
     this.audio = null;            // { ctx, voice, master, analyser, media: Map, sfxBus }
     this.mediaEls = new Map();
     this.sfxBuf = new Map();      // name → AudioBuffer | Promise | null
+    this.bed = null;              // 057 背景音樂：{ url, el, node }
     this.lastSkip = 0; this.lastT = 0;
     // 字幕：直接用 kit/captions.css（完成影片的樣式與數字），排在畫布大小（app.canvas().W×H）的圖層裡，再整層縮到預覽的大小
     if (els.capLayer && typeof ResizeObserver === 'function') {
@@ -63,7 +65,7 @@ export class SimPreview {
     this.lastT = this.v.currentTime;
     return this.v.play().catch(() => {});
   }
-  pause() { this.v.pause(); for (const m of this.mediaEls.values()) if (m.el.tagName === 'VIDEO') m.el.pause(); }
+  pause() { this.v.pause(); for (const m of this.mediaEls.values()) if (m.el.tagName === 'VIDEO') m.el.pause(); this.bed?.el.pause(); }
   seek(t) { this.v.currentTime = clamp(t, 0, this.v.duration || t); this.lastT = this.v.currentTime; }
   hide(on) { this.el.root.hidden = on; if (on) this.pause(); }
 
@@ -101,7 +103,42 @@ export class SimPreview {
     const mediaOn = this.tickMedia(t, fx.audio);
     this.tickHint(t, mediaOn || inCut);
     this.tickSfx(t);
+    this.tickBed(t);
     this.lastT = t;
+  }
+
+  // 057 背景音樂：app.bedPlay() 給上一次 build 混好的 wav（完成影片時間）和要補的增益；rough 秒數照剪掉的範圍換成完成影片秒數再對齊
+  // （跳過剪掉的範圍時完成影片時間是連續的，不用跳）。差超過 0.3 秒才重新對齊，拖播放頭也會跟上
+  tickBed(t) {
+    const b = this.playing ? this.app.bedPlay?.() : null;
+    if (this.bed && b && this.bed.url !== b.url) this.dropBed();
+    if (!b) { if (this.bed && !this.bed.el.paused) this.bed.el.pause(); return; }
+    const m = this.bed || this.makeBed(b.url), el = m.el;
+    const o = outOf(t, this.app.edit.cuts) - b.at, end = Number.isFinite(b.dur) ? b.dur : el.duration;
+    if (o < 0 || (Number.isFinite(end) && o >= end - 0.05)) { if (!el.paused) el.pause(); return; }
+    if (m.node) m.node.gain.setTargetAtTime(b.gain, this.audio.ctx.currentTime, 0.015); else el.volume = clamp(b.gain, 0, 1);
+    el.playbackRate = this.v.playbackRate || 1;
+    try { if (el.paused || Math.abs(el.currentTime - o) > 0.3) el.currentTime = o; } catch { /* 還沒載到 metadata */ }
+    if (el.paused) el.play().catch(() => {});
+  }
+  makeBed(url) {
+    const el = new Audio();
+    el.preload = 'auto';
+    el.src = url;
+    let node = null;
+    if (this.audio) {
+      try { const src = this.audio.ctx.createMediaElementSource(el); node = this.audio.ctx.createGain(); node.gain.value = 0; src.connect(node).connect(this.audio.master); } catch { node = null; }
+    }
+    this.bed = { url, el, node };
+    return this.bed;
+  }
+  dropBed() {
+    const m = this.bed;
+    if (!m) return;
+    m.el.pause();
+    try { m.node?.disconnect(); } catch { /* 已經斷了 */ }
+    m.el.removeAttribute('src'); m.el.load();
+    this.bed = null;
   }
 
   // 音效：播放中跨過標記的時間點就播（跳接、拖曳造成的大跳躍不算）

@@ -11,8 +11,12 @@
 //   registerTrack(dir, name, entry)           寫登錄檔（已經有的曲名不覆寫，丟錯）
 //   normalizeTrack(src, dst, opts)            去頭尾靜音、響度調到 LIB_LUFS、48 kHz 立體聲 16-bit → { dur, lufs }
 //   bedPlan(bed, { outDur, outroAt })          → { at: 0, dur, fadeIn, fadeOut }
-//   renderBedClip(src, dstDir, opts)          底樂：接成無縫循環、鋪滿 dur、照人聲壓低（key＝主軌檔，沒給就整段用壓低後的音量）、淡入淡出 → { file, dur }
+//   renderBedClip(src, dstDir, opts)          底樂：接成無縫循環、鋪滿 dur、音量 gainDb、照人聲壓低（key＝主軌檔，沒給就整段固定音量）、限幅、淡入淡出 → { file, dur }
 //   bedLine(bed, clip)                        build 報告那一行
+//   BED.volume                                plan.json 的 bed.volume 範圍（dB；0＝曲庫檔原本的音量，最小值＝靜音）
+//   bedDucks(cues, pauses)                    講話時壓低的區間（rough.mp4 秒數；剪輯台的背景音樂軌畫比較低、比較暗）
+//   bedJson(bed, clip, { tm, volume, ducked, ducks }) → build --check --json 的 bed（剪輯台的背景音樂軌，057）
+//   writeBedInfo(outDir, info)／readBedInfo(outDir)  上一次 build 做進 index.html 的底樂（work/hyperframes/.cache/bed.json；剪輯台即時試聽只補差的 dB）
 //
 // ACE-Step 1.5 的本機 API（https://github.com/ace-step/ACE-Step-1.5，docs/en/API.md）：
 //   aceHealth(url)                            → { ok, modelsReady } 或 { ok: false, why }
@@ -29,10 +33,12 @@ export const MUSIC_FILE = 'music.json';
 export const LIB_LUFS = -20;              // 曲庫的檔一律調到這個響度（true peak ≤ −2），之後各種用途只要乘一個固定倍數
 export const OUTRO_DB = -11;              // 片尾配樂比人聲（−14 LUFS）小幾 dB：和內建的 bgm-cylinder-five 一樣
 export const BED = {
-  db: -20,                                // 底樂在講話時比人聲小幾 dB（−14 − 20 ＝ −34 LUFS 上下：聽得到有音樂、蓋不到人聲）
-  lift: 6,                                // 沒人講話的空檔最多回升幾 dB（壓低＝sidechain，講話一開始 30 ms 內壓下去、停 0.6 秒後慢慢回來）
+  volume: [-40, 6],                       // plan.json 的 bed.volume（dB）：0＝曲庫檔原本的音量（LIB_LUFS，約比人聲小 6 dB），−40＝靜音（不放進完成影片；057 第二輪）
+  lift: 6,                                // 講話時壓低幾 dB（sidechain：講話一開始 30 ms 內壓下去、停 0.6 秒後慢慢回來；沒人講話＝曲庫檔＋bed.volume）
+  tp: -1,                                 // 輸出的 true peak 上限（dBTP）：曲庫檔 true peak ≤ −2，調大超過就限幅
   fadeIn: 2, fadeOut: 3, cross: 3,        // 片頭淡入、片尾（或接片尾配樂前）淡出、循環接點交叉淡化的秒數
   minLen: 20,                             // 曲子至少幾秒才能當底樂（太短循環聽得出來）
+  liftGap: 1,                             // 剪輯台畫「壓低」：停頓至少幾秒才畫成回升（壓縮器 600 ms 才放開，太短的停頓聽不出來）
 };
 const RATE = 48000;
 const DUCK_RATIO = 1.32;
@@ -105,13 +111,13 @@ export function bedPlan(bed, { outDur, outroAt = null }) {
   return { at: 0, dur, fadeIn: r3(Math.min(BED.fadeIn, dur / 3)), fadeOut: r3(Math.min(BED.fadeOut, dur / 3)) };
 }
 
-// src：曲庫的 wav（LIB_LUFS）；gainDb：講話時的音量（相對 LIB_LUFS 的 dB）；key：主軌（有人聲）的檔，給了就照人聲壓低、空檔回升 lift dB
+// src：曲庫的 wav（LIB_LUFS）；gainDb：沒人講話時的音量（套在曲庫檔上的 dB）；key：主軌（有人聲）的檔，給了就照人聲壓低 lift dB，沒給＝整段固定音量
 export function renderBedClip(src, dstDir, { dur, gainDb, lift = BED.lift, key = null, fadeIn = BED.fadeIn, fadeOut = BED.fadeOut, cross = BED.cross } = {}) {
   if (!(dur > 0)) throw new Error(`renderBedClip：dur 要是正數，現在是 ${dur}`);
   const st = fs.statSync(src), len = probeDuration(src);
   if (!(len >= BED.minLen)) throw new Error(`${path.basename(src)} 只有 ${r3(len)} 秒，當底樂至少要 ${BED.minLen} 秒 → 換一首長一點的`);
   const ks = key && fs.existsSync(key) ? fs.statSync(key) : null;
-  const p = { v: 1, dur: r3(dur), gainDb: +Number(gainDb).toFixed(2), lift: ks ? lift : 0, fadeIn: r3(fadeIn), fadeOut: r3(fadeOut), cross,
+  const p = { v: 2, dur: r3(dur), gainDb: +Number(gainDb).toFixed(2), lift: ks ? lift : 0, fadeIn: r3(fadeIn), fadeOut: r3(fadeOut), cross,
     src: [path.basename(src), st.size, Math.round(st.mtimeMs)], key: ks ? [ks.size, Math.round(ks.mtimeMs)] : null };
   const h = createHash('sha1').update(JSON.stringify(p)).digest('hex').slice(0, 12);
   const file = path.join(dstDir, `bed-${path.basename(src, path.extname(src))}-${h}.wav`);
@@ -128,8 +134,8 @@ export function renderBedClip(src, dstDir, { dur, gainDb, lift = BED.lift, key =
       `[tail][head]acrossfade=d=${r3(x)}:c1=tri:c2=tri[x]`, `[x][body]concat=n=2:v=0:a=1[unit]`, `[unit]aloop=loop=-1:size=${unit}[loop]`);
     cur = '[loop]';
   }
-  // 沒有 key：整段固定在講話時的音量。有 key：先放在「空檔的音量」（高 lift dB），人聲一出現就壓回講話時的音量
-  fc.push(`${cur}atrim=duration=${p.dur},asetpts=PTS-STARTPTS,volume=${(p.gainDb + p.lift).toFixed(2)}dB[lvl]`);
+  // 先放在沒人講話時的音量（曲庫檔＋gainDb）；有 key 時人聲一出現就壓低 lift dB，沒有 key＝整段固定音量
+  fc.push(`${cur}atrim=duration=${p.dur},asetpts=PTS-STARTPTS,volume=${p.gainDb.toFixed(2)}dB[lvl]`);
   cur = '[lvl]';
   const args = ['-y', '-v', 'error', '-i', src];
   if (ks) {
@@ -141,7 +147,8 @@ export function renderBedClip(src, dstDir, { dur, gainDb, lift = BED.lift, key =
       `[lvl][k]sidechaincompress=threshold=${dB(-36).toFixed(4)}:ratio=${DUCK_RATIO}:attack=30:release=600:makeup=1:detection=rms[duck0]`);
     cur = '[duck0]';
   }
-  const tail = [];
+  // 限幅：調大（最多 +6）時曲庫檔的 true peak（≤ −2）會超過；4 倍取樣後限在 BED.tp − 0.5，輸出的 true peak ≤ BED.tp（沒超過的地方不動）
+  const tail = [`aresample=${RATE * 4}`, `alimiter=limit=${dB(BED.tp - 0.5).toFixed(4)}:attack=5:release=50:level=0:latency=1`];
   if (p.fadeIn > 0) tail.push(`afade=t=in:st=0:d=${p.fadeIn}`);
   if (p.fadeOut > 0) tail.push(`afade=t=out:st=${r3(Math.max(0, p.dur - p.fadeOut))}:d=${p.fadeOut}`);
   tail.push(`aresample=${RATE}`);
@@ -152,12 +159,59 @@ export function renderBedClip(src, dstDir, { dur, gainDb, lift = BED.lift, key =
   return { file, dur: p.dur, ducked: !!ks };
 }
 
+const fmtDb = (d) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${String(+Math.abs(d).toFixed(1))} dB`;
 export function bedLine(bed, clip, { ducked = true } = {}) {
   if (!bed) return '底樂：沒配（選用；要整支片墊音樂就在 plan.json 第一層寫 "bed": { "music": "<曲名>" }，曲名用 node shared/template/tools/music.mjs list 看）';
   if (!bed.music) return '底樂：這一集不配（plan.json 的 bed.music 寫了 null）';
+  if (bed.muted) return `底樂：${bed.music} 靜音（bed.volume ${fmtDb(bed.volume)}＝靜音），完成影片不放；要放回來：剪輯台背景音樂軌的 🔇，或 --set bed.volume=0`;
   if (!clip) return `底樂：${bed.music} 沒放（影片太短）`;
   const mm = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-  return `底樂：${bed.music}（${bed.from}）鋪 0:00–${mm(clip.dur)}，講話時比人聲小 ${(-bed.relDb).toFixed(1)} dB${ducked ? `、空檔回升 ${BED.lift} dB` : '（這一集有剪輯台的剪段，整段固定音量）'}，淡入 ${clip.fadeIn} 秒、淡出 ${clip.fadeOut} 秒`;
+  const v = bed.volume ?? 0, rel = bed.relDb;
+  const vsVoice = Math.abs(rel) < 0.5 ? '約和人聲一樣大' : `約比人聲${rel > 0 ? '大' : '小'} ${String(+Math.abs(rel).toFixed(1))} dB`;
+  const vol = v ? `音量 ${fmtDb(v)}（${vsVoice}）` : `音量 0 dB（原本的音量，${vsVoice}）`;
+  return `底樂：${bed.music}${bed.from === 'plan.json' ? '' : `（${bed.from}）`} 鋪 0:00–${mm(clip.dur)}，${vol}，${ducked ? `講話時壓低 ${BED.lift} dB` : '整段固定音量（這一集有剪輯台的剪段）'}，淡入 ${clip.fadeIn} 秒、淡出 ${clip.fadeOut} 秒`;
+}
+
+// 講話時壓低的區間（rough.mp4 秒數）：第一句字幕開頭到最後一句結尾，扣掉至少 BED.liftGap 秒的停頓
+// （pauses＝build 量的說話停頓 cues.pauses；量不到就用字幕之間的空檔）
+export function bedDucks(cues = [], pauses = null) {
+  const list = (cues || []).filter((c) => Number.isFinite(c?.start) && Number.isFinite(c?.end) && c.end > c.start).sort((x, y) => x.start - y.start);
+  if (!list.length) return [];
+  const a = list[0].start, b = list.reduce((m, c) => Math.max(m, c.end), a);
+  const gaps = (Array.isArray(pauses) ? pauses : list.slice(1).map((c, i) => [list[i].end, c.start]))
+    .map(([x, y]) => [Math.max(a, x), Math.min(b, y)]).filter(([x, y]) => y - x >= BED.liftGap).sort((p, q) => p[0] - q[0]);
+  const out = [];
+  let t = a;
+  for (const [x, y] of gaps) { if (x > t) out.push([r3(t), r3(x)]); t = Math.max(t, y); }
+  if (b > t) out.push([r3(t), r3(b)]);
+  return out;
+}
+
+// build --check --json 的 bed（057 剪輯台的背景音樂軌）：沒設定＝null；這一集不配＝{ music: null }；影片太短沒鋪＝{ …, short: true }；
+// volume＝plan.json 的 bed.volume（0＝曲庫檔原本的音量）、relDb＝沒人講話時比人聲大幾 dB（負＝小）、muted＝靜音（volume 是最小值，完成影片不放；範圍照樣給，剪輯台畫暗的）；
+// 有鋪＝start／end（rough.mp4 秒數，時間軸畫的範圍；片尾卡那段在 rough.mp4 外面）、outStart／outEnd（完成影片秒數）、fadeIn／fadeOut（秒）、
+// ducked（講話時壓低；有剪輯台的剪段時整段固定音量＝false）、ducks（壓低的區間，rough.mp4 秒數）
+export function bedJson(bed, clip, { tm = null, ducked = true, ducks = [] } = {}) {
+  if (!bed) return null;
+  if (!bed.music) return { music: null };
+  const out = { music: bed.music, from: bed.from, volume: bed.volume ?? 0, relDb: bed.relDb, muted: !!bed.muted, ducked: !!(clip && ducked) };
+  if (!clip) return { ...out, short: true };
+  const back = (t, end) => (!tm || tm.identity ? r3(t) : end ? tm.unmapEnd(t) : tm.unmapStart(t));
+  const outEnd = r3(clip.at + clip.dur);
+  return { ...out, start: back(clip.at), end: back(Math.min(outEnd, tm?.outDur ?? outEnd), true), outStart: clip.at, outEnd, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, ducks: out.ducked ? ducks : [] };
+}
+
+// 上一次 build 做進 index.html 的底樂：{ v: 2, file（相對 work/hyperframes）, music, volume（做進 wav 的 bed.volume）, at, dur }（v：bed.volume 的刻度，057 第二輪改成 0＝原本的音量；舊的不算）；
+// 這次沒配就刪掉（靜音不動它：取消靜音時快速試聽還有上一條可以播）。剪輯台拖音量時，即時試聽只補「現在」和這裡記的差（下次 build 重混之後差＝0，不會疊兩次）
+const BED_INFO = path.join('.cache', 'bed.json'), BED_INFO_V = 2;
+export function writeBedInfo(outDir, info) {
+  const f = path.join(outDir, BED_INFO);
+  if (!info) { fs.rmSync(f, { force: true }); return; }
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, `${JSON.stringify({ v: BED_INFO_V, ...info })}\n`);
+}
+export function readBedInfo(outDir) {
+  try { const j = JSON.parse(fs.readFileSync(path.join(outDir, BED_INFO), 'utf8')); return isObj(j) && j.v === BED_INFO_V && typeof j.file === 'string' ? j : null; } catch { return null; }
 }
 
 // ---------- ACE-Step 1.5 ----------

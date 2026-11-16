@@ -308,7 +308,7 @@ test('--check --json schema 2：必有的鍵與型別；planHash 跟著 plan.jso
   const r = node('--check', '--json');
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'moods', 'edit', 'paths']);
+  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'bed', 'moods', 'edit', 'paths']);
   assert.equal(j.schema, 2);
   assert.equal(j.theme, 'light');
   assert.match(j.planHash, /^[0-9a-f]{8}$/);
@@ -340,7 +340,7 @@ test('--check --json 出錯時（plan.json 不存在）也印齊 schema 2 的鍵
   const r = spawnSync(process.execPath, [BUILD, '--template', TEMPLATE, '--plan', path.join(dir, 'nope.json'), '--srt', path.join(work, 'rough.srt'), '--video', path.join(work, 'rough.mp4'), '--out', out, '--check', '--json'], { encoding: 'utf8' });
   assert.equal(r.status, 1);
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'moods', 'edit', 'paths']);
+  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'bed', 'moods', 'edit', 'paths']);
   assert.equal(j.ok, false);
 });
 
@@ -450,6 +450,18 @@ test('底樂 bed（選用）：沒寫不印那一行；曲名不在曲庫、多�
   const short = node();
   assert.notEqual(short.status, 0);
   assert.match(short.stdout, /✖ 底樂（bgm-cylinder-five）：.*當底樂至少要 20 秒/);
+  // 057 第二輪：bed.volume 0＝曲庫檔原本的音量（−40～+6）；−40＝靜音，完成影片不放（所以不會去混那首太短的曲子）
+  writePlanX({ scenes: SCENES, bed: { music: 'bgm-cylinder-five', volume: 7 } });
+  assert.ok(JSON.parse(node('--check', '--json').stdout).errors.some((e) => /bed\.volume 要是 −40～\+6 的 dB 數字/.test(e)));
+  writePlanX({ scenes: SCENES, bed: { music: 'bgm-cylinder-five', volume: 6 } });
+  const loud = JSON.parse(node('--check', '--json').stdout).bed;
+  assert.deepEqual([loud.volume, loud.relDb, loud.muted], [6, 0, false], '+6：沒人講話時和人聲差不多大');
+  writePlanX({ scenes: SCENES, bed: { music: 'bgm-cylinder-five', volume: -40 } });
+  assert.equal(JSON.parse(node('--check', '--json').stdout).bed.muted, true);
+  const mute = node();
+  assert.equal(mute.status, 0, mute.stdout + mute.stderr);
+  assert.match(mute.stdout, /底樂：bgm-cylinder-five 靜音（bed\.volume −40 dB＝靜音），完成影片不放/);
+  assert.doesNotMatch(read('index.html'), /id="bgm-bed"/);
   writePlan(SCENES);
   assert.equal(node().status, 0);
 });

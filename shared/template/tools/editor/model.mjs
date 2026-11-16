@@ -177,6 +177,36 @@ export function joinOutTimes(edit, points, outDur) {
   return res;
 }
 
+// ---------- 背景音樂（057）----------
+// 時間軸「背景音樂」軌畫什麼。report＝build --check --json 的 bed（undefined＝檢查報告還沒好）；server＝/api/state 的 bed（plan.json 與工作區預設，報告還沒好時先用）
+//   kind：none＝沒有背景音樂、off＝這一集寫了不配、wait＝有曲子，位置等檢查報告、short＝影片太短沒鋪、on＝畫一條（帶 report 的範圍、淡入淡出、壓低的區間；muted＝靜音，畫暗的）
+export const BED_TEXT = { none: '沒有背景音樂', off: '這一集不配' };
+// bed.volume 的範圍（dB）：0＝曲庫檔原本的音量，最小值＝靜音（完成影片不放）。和 lib/music.mjs 的 BED.volume 同一組數字（頁面不能載 lib/music.mjs）
+export const BED_VOL = Object.freeze([-40, 6]);
+export const bedMutedAt = (v) => v <= BED_VOL[0];
+export function bedLane(report, server) {
+  if (report !== undefined) {
+    if (!report) return { kind: 'none', text: BED_TEXT.none };
+    if (!report.music) return { kind: 'off', text: BED_TEXT.off };
+    if (report.short) return { kind: 'short', music: report.music, text: `${report.music}：影片太短，沒有鋪背景音樂` };
+    return { ...report, kind: 'on', ducks: report.ducked && Array.isArray(report.ducks) ? report.ducks : [] };
+  }
+  if (server?.off) return { kind: 'off', text: BED_TEXT.off };
+  if (!server?.music) return { kind: 'none', text: BED_TEXT.none };
+  return { kind: 'wait', music: server.music, text: `${server.music}（位置等檢查報告）` };
+}
+// 音量滑桿能不能拖：有曲子才能（沒有、這一集不配都灰掉）
+export const bedHasMusic = (lane) => ['on', 'wait', 'short'].includes(lane?.kind);
+// 即時試聽要補幾 dB：上一次 build 的 wav 已經混了那時的 bed.volume，只補現在和那時的差；
+// 重新 build 之後差＝0，不會疊兩次。built＝/api/state 的 bed.built（沒有＝還沒做進預覽，回 0）。靜音由呼叫端處理（增益 0）
+export const bedLiveDb = (volume = 0, built = null) => (built ? volume - (built.volume || 0) : 0);
+// 完成影片第 o 秒的淡入淡出（0–1）：照 build 算好的 outStart／outEnd／fadeIn／fadeOut
+export function bedFadeAt(o, b) {
+  if (!b || !(o >= b.outStart) || !(o <= b.outEnd)) return 0;
+  const fi = b.fadeIn > 0 ? (o - b.outStart) / b.fadeIn : 1, fo = b.fadeOut > 0 ? (b.outEnd - o) / b.fadeOut : 1;
+  return clamp(Math.min(fi, fo, 1), 0, 1);
+}
+
 // 吸附：找最近的候選時間（px 門檻由呼叫端換算成秒）
 export function snapTime(t, candidates, tol) {
   let best = t, bd = tol;

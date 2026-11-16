@@ -291,6 +291,13 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .ip-slider > label { color: var(--mute); }
 .ip-slider output, .ip-slider input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; width: 62px; }
 .ip-slider output.changed { color: var(--accent-text); }
+/* 057 背景音樂：沒有底樂時灰掉；點時間軸的背景音樂軌時這一列亮起來 */
+.ip-slider.off > label, .ip-slider.off output { color: var(--dim); }
+.ip-slider.off input[type="range"] { opacity: .35; cursor: not-allowed; }
+.ip-slider.hot { outline: 1px solid var(--accent); outline-offset: 4px; border-radius: 4px; background: rgba(255, 212, 0, 0.07); }
+.ip-slider.flash { animation: bed-flash 1.1s ease-out; }
+@keyframes bed-flash { 0%, 40% { background: rgba(255, 212, 0, 0.28); } }
+.ip-note.bed-none { margin-top: 0; }
 .ip-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .ip-note { color: var(--mute); font-size: 12.5px; margin: 8px 0 0; line-height: 1.5; }
 .ip-warn { color: var(--accent-text); font-size: 12.5px; margin: 6px 0 0; }
@@ -363,6 +370,7 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .th button.lock.on { background: var(--plate); border-color: var(--accent); color: var(--accent-text); }
 .th input.db { cursor: ns-resize; width: 44px; padding: 0 3px; font-size: 12px; text-align: right; height: 20px; font-variant-numeric: tabular-nums; background: transparent; border-color: transparent; }
 .th input.db:hover, .th input.db:focus { background: var(--bg); border-color: var(--line2); }
+.th input.db:disabled, .th button:disabled { opacity: .35; cursor: not-allowed; }   /* 057 沒有背景音樂：數字、靜音灰掉 */
 .th .warnico { color: var(--warn-kw); font-weight: 900; cursor: help; }
 .th.sel { background: #111B33; }
 .tl { position: relative; overflow: hidden; user-select: none; touch-action: none; }

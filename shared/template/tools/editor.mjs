@@ -21,7 +21,7 @@
  * 給別的工具：import { ensureEditor } from './editor.mjs'；await ensureEditor(P) → { main, cuts, framing, storyboard, final, … }（沒開就在背景開，網址直接回傳、不印東西）；
  * 同步的呼叫端用 lib/editor-urls.mjs 的 editorUrlsSync(project)（跑上面的 --json）
  * 剪輯只寫：plan.json 的 edit（含使用者自己加的音效 edit.sfx）、media 段的 enter／exit／volume／from／to／in／out（只能拿掉）／speed／hold／retime／anchor、任何段的 sfxVolume 與 sfx（換一顆的名稱、null＝靜音）、
- * slots／vars 的文字值（含模板動畫的 slots）、第一層的 look（講者調光與瘦臉）、theme、captionStyle（字幕樣式）、captionMarks（重點字幕的句號）與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
+ * slots／vars 的文字值（含模板動畫的 slots）、第一層的 look（講者調光與瘦臉）、theme、captionStyle（字幕樣式）、captionMarks（重點字幕的句號）、bed.volume（背景音樂的音量）與 frame（構圖：/framing 拖框；換框時 speakerBox、pipCrop 跟著換算），以及 work/rough.srt（字幕文字、時間、增刪；增刪時 plan.json 的句號一起重新對應）。
  * 剪輯清單頁只寫 work/cuts.md NG 表的「剪」欄（[x]／[ ]；沒有這一欄就加在最前面），有 work/rough.mp4 之後只能看。
  * 分鏡表頁只寫 work/storyboard.md 改到的那幾行（段落內容、表格的格與列、整段原始 Markdown）；製作進度的停點 ③ 通過之後只能看。
  * 存檔前比對 plan.json 與 rough.srt，被別人（AI）改過就兩個都不寫。構圖在還沒有 plan.json 時（停點 ②）只存 frame，會先建一個 { "version": 1 }（直式加 format）。
@@ -59,6 +59,7 @@ import { designState, designAsset, designPreviews, setDesignColor, uploadDesign,
 import { r3 } from './lib/time.mjs';
 import { LOUD } from './lib/audio.mjs';
 import { LOCAL_ROLES, localSfxDir } from './lib/sfx-local.mjs';
+import { readBedInfo } from './lib/music.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, subtitles };
 export { requestsInfo, doRequestsStatus, doRequests };   // 修改單（實作在 editor/server/requests.mjs，versions.mjs 也用）
@@ -71,6 +72,7 @@ const AUDIT = path.join(HERE, 'audit.mjs');
 const DEFAULT_PORT = 4400;
 const PORT_TRIES = 20;
 const PEAK_RATE = 100;          // 波形：每秒 100 個峰值
+const BED_PEAK_RATE = 25;       // 背景音樂的波形：每秒 25 個就夠（只看大小起伏、壓低和淡入淡出）
 const PEAK_SR = 8000;           // 算波形時先降到 8 kHz 單聲道
 const TARGET_LUFS = LOUD.I;     // 人聲標準化的目標響度（lib/audio.mjs）
 const THUMB_W = 160, THUMB_H = 90, THUMB_MAX = 400;   // 縮圖條：每格 160×90，一支影片最多 400 格
@@ -428,7 +430,7 @@ function makeContext(P) {
     schema: null, schemaJob: null, thumbs: new Map(), loud: new Map(),
     token: crypto.randomBytes(16).toString('hex'),
     port: null, url: null, player: { available: false, reason: '還沒檢查' },
-    report: null, reportJob: null, peaks: null, peaksJob: null,
+    report: null, reportJob: null, peaks: null, peaksJob: null, bedPeaks: null, bedPeaksJob: null,
     build: { running: false, log: '', code: null, ok: null, startedAt: null, finishedAt: null },
     framingUpdate: null, framingJob: null, framingPending: false,
     exportJob: null, exportDeps: null,
@@ -476,27 +478,50 @@ async function getReport(ctx, { fresh = false } = {}) {
   return res;
 }
 
-async function getPeaks(ctx) {
-  const file = pickVideo(ctx.P);
-  if (!file) return { rate: PEAK_RATE, peaks: [], scale: 1000, error: '找不到 rough.mp4' };
+// which：'main'＝主軌（人聲軌）；'bed'＝上一次 build 混好的背景音樂 wav（057，完成影片時間）
+async function getPeaks(ctx, which = 'main') {
+  const bed = which === 'bed';
+  const file = bed ? bedFile(ctx) : pickVideo(ctx.P);
+  const rate = bed ? BED_PEAK_RATE : PEAK_RATE;
+  if (!file) return { rate, peaks: [], scale: 1000, error: bed ? '背景音樂還沒做進預覽（按「更新預覽」）' : '找不到 rough.mp4' };
   const st = statOf(file);
   const meta = { src: relRoot(ctx, file), size: st.size, mtimeMs: st.mtimeMs };
-  const cacheFile = path.join(ctx.editorDir, 'waveform.json');
-  if (ctx.peaks && ctx.peaks.src === meta.src && ctx.peaks.size === meta.size && ctx.peaks.mtimeMs === meta.mtimeMs) return ctx.peaks;
+  const slot = bed ? 'bedPeaks' : 'peaks', jobSlot = `${slot}Job`;
+  const cacheFile = path.join(ctx.editorDir, bed ? 'bed-waveform.json' : 'waveform.json');
+  if (ctx[slot] && ctx[slot].src === meta.src && ctx[slot].size === meta.size && ctx[slot].mtimeMs === meta.mtimeMs) return ctx[slot];
   const disk = readJson(cacheFile);
-  if (disk && disk.src === meta.src && disk.size === meta.size && disk.mtimeMs === meta.mtimeMs && Array.isArray(disk.peaks)) return (ctx.peaks = disk);
+  if (disk && disk.src === meta.src && disk.size === meta.size && disk.mtimeMs === meta.mtimeMs && Array.isArray(disk.peaks)) return (ctx[slot] = disk);
   const jobKey = `${meta.src}:${meta.size}:${meta.mtimeMs}`;
-  if (ctx.peaksJob?.key === jobKey) return ctx.peaksJob.promise;
-  const promise = computePeaks(file).then((r) => {
+  if (ctx[jobSlot]?.key === jobKey) return ctx[jobSlot].promise;
+  const promise = computePeaks(file, { rate }).then((r) => {
     const data = { ...meta, ...r };
     try { fs.mkdirSync(ctx.editorDir, { recursive: true }); fs.writeFileSync(cacheFile, JSON.stringify(data)); } catch { /* 快取寫不進去也沒關係 */ }
-    ctx.peaks = data;
+    ctx[slot] = data;
     return data;
-  }, (e) => ({ ...meta, rate: PEAK_RATE, peaks: [], scale: 1000, error: e.message }));
-  ctx.peaksJob = { key: jobKey, promise };
+  }, (e) => ({ ...meta, rate, peaks: [], scale: 1000, error: e.message }));
+  ctx[jobSlot] = { key: jobKey, promise };
   const res = await promise;
-  if (ctx.peaksJob?.promise === promise) ctx.peaksJob = null;
+  if (ctx[jobSlot]?.promise === promise) ctx[jobSlot] = null;
   return res;
+}
+
+// 057 背景音樂：plan.json 的 bed（沒寫就是工作區預設 shared/setting.json 的 music.bed）＋上一次 build 做進 index.html 的那一條
+//   { music, off（這一集寫了不配）, volume（plan.json 的 bed.volume）, built: { music, volume, at, dur, url } | null }
+//   built 的 volume＝做進 wav 的 bed.volume：頁面拖滑桿、軌頭數字時只補現在和它的差
+const bedDefaultOf = (P) => readSettings(path.resolve(P.templateDir, '..')).data?.music?.bed ?? null;
+function bedFile(ctx) {
+  const b = readBedInfo(ctx.P.out), f = b && safeJoin(ctx.P.out, b.file);
+  return f && statOf(f) ? f : null;
+}
+function bedInfo(ctx, plan) {
+  const P = ctx.P, b = isObj(plan) ? plan.bed : undefined;
+  const music = b === undefined ? bedDefaultOf(P) : isObj(b) && typeof b.music === 'string' && b.music ? b.music : null;
+  const built = readBedInfo(P.out), file = bedFile(ctx);
+  return {
+    music, off: b !== undefined && !music, volume: isObj(b) && isNum(b.volume) ? b.volume : 0,
+    built: built && file ? { music: built.music ?? null, volume: isNum(built.volume) ? built.volume : 0, at: isNum(built.at) ? built.at : 0, dur: isNum(built.dur) ? built.dur : null,
+      url: `/composition/${built.file.split('/').map(encodeURIComponent).join('/')}?v=${Math.floor(statOf(file).mtimeMs).toString(36)}` } : null,
+  };
 }
 
 // 模板動畫的欄位（custom/*.fill.json）與白話名稱：屬性面板依它列文字欄位、修改單和段落清單用名稱
@@ -741,6 +766,7 @@ async function getState(ctx) {
     plan: { exists: plan.exists, file: relRoot(ctx, P.plan), mtime: plan.mtime, hash: plan.hash, error: plan.error, data: plan.data },
     srt: { exists: srt.exists, file: relRoot(ctx, P.srt), mtime: srt.mtime, hash: srt.hash, eol: srt.eol },
     edit: isObj(plan.data?.edit) ? plan.data.edit : null,
+    bed: bedInfo(ctx, plan.data),
     look: lookState(ctx, plan.data),
     canvas: canvasInfo(P.project, plan.data),
     media, video, videoError, captions: srt.cues,
@@ -801,7 +827,7 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   const base = isObj(body?.base) ? body.base : {};
   const hash = st ? sha(text) : null;
   // 同一筆存檔送了兩次（關頁時瀏覽器先把第一次算失敗、頁面又補送一次；或一時連不到後重送）：第一次已經存好了，不是別人改的
-  const sig = frameOnly ? null : sha(JSON.stringify([base.hash ?? null, base.srtHash ?? null, body.edit ?? null, body.segments ?? null, body.srt ?? null, body.look ?? null, body.theme ?? null, body.captionMarks ?? null]));
+  const sig = frameOnly ? null : sha(JSON.stringify([base.hash ?? null, base.srtHash ?? null, body.edit ?? null, body.segments ?? null, body.srt ?? null, body.look ?? null, body.theme ?? null, body.captionMarks ?? null, body.bed ?? null]));
   const duplicate = () => !!sig && !!st && (ctx.recentSaves || []).includes(sig);
   const planConflict = (h, m) => (!st ? base.hash != null : base.hash != null ? base.hash !== h : base.mtime == null || base.mtime !== m);
   if (planConflict(hash, st?.mtimeMs) && duplicate()) return [200, savedNow(ctx)];
@@ -829,7 +855,7 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
     if (ctx.frameSession?.hash === hash) frameOrigin = ctx.frameSession.origin;
     else { const d0 = readPlan(P.plan).data; frameOrigin = isObj(d0) ? { frame: d0.frame ?? null, speakerBox: d0.speakerBox ?? null, pipCrop: d0.pipCrop ?? null } : null; }
   }
-  const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory, canvas: cv, frameOrigin });
+  const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory, canvas: cv, frameOrigin, bedDefault: bedDefaultOf(P) });
   if (r.errors.length) return reject(400, { error: 'invalid', errors: r.errors, message: r.errors.join('\n') }, 'invalid');
   // plan.json 與 rough.srt 一起寫：兩個都先寫暫存檔；rename 之前再比對一次，任一個被改過就兩個都不寫
   const writes = [];
@@ -1266,7 +1292,7 @@ async function handle(ctx, req, res) {
     return sendFile(req, res, process.env.AUTO_EDIT_NO_LOCAL_SFX !== '1' && statOf(mine) ? mine : path.join(P.sfx, name));
   }
   if (p === '/api/report') { const rep = await getReport(ctx, { fresh: u.searchParams.has('fresh') }); return sendJson(res, 200, reportOut(rep)); }
-  if (p === '/api/waveform') return sendJson(res, 200, await getPeaks(ctx));
+  if (p === '/api/waveform') return sendJson(res, 200, await getPeaks(ctx, u.searchParams.get('src') === 'bed' ? 'bed' : 'main'));
   if (p === '/api/look/face') {
     try {
       const out = faceImage({ projectDir: P.project, t: Number(u.searchParams.get('t')) || 0, slim: Number(u.searchParams.get('slim')) || 0, beauty: Number(u.searchParams.get('beauty')) || 0, cache: (ctx.lookCache ??= {}) });
