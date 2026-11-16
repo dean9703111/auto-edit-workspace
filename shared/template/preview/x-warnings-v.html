@@ -55,6 +55,9 @@
                                border: 4px solid var(--v2-node-line); border-radius: 20px; background: var(--v2-node); color: var(--sc-fs-ink); }
     #x-warnings .xwarn-fig { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; white-space: nowrap; }
     #x-warnings .xwarn-fig .sc-icon { --d: 160px; --i: 88px; }
+    /* 直式：版面同橫式（左清單、右示意區），字放大 1.2 倍（標題 76.8、列字與示意說明 62：52 × 1.2 取整數，列寬才不會落在半像素） */
+    #x-warnings[data-format="portrait"] #xwarn-card .sc-wcard__bar { font-size: 76.8px; line-height: 104px; padding-top: 12px; padding-bottom: 12px; }
+    #x-warnings[data-format="portrait"] .xwarn-txt, #x-warnings[data-format="portrait"] .xwarn-fig .sc-opt { font-size: 62px; line-height: 86px; --opt: 8px; }
   </style>
   <div id="x-warnings" data-composition-id="x-warnings" data-width="1920" data-height="1080" data-duration="12.8"
        data-cues-sample='{"start":0,"D":12.8,"cues":{"52":[2.6,5.0],"53":[5.2,7.6],"54":[7.8,10.2]},"refs":{"#52@金鑰":2.8,"#53@覆蓋":5.4,"#54@再看":8.0}}'>

@@ -420,16 +420,34 @@ test('P.rack：active 清楚、其他模糊＋稍淡（filter，不動 opacity�
   assert.throws(() => P.rack(g, { id: 'z', style: {} }, 5), (e) => e.message === 'P.rack：active 要是 group 裡的元素（#z）→ 改成那一組其中一個，或寫 null（全部回清楚）');
 });
 
-// ---------- P.type：DOM shim（只實作 spec FR-019 的 API）----------
+// ---------- P.type、P.wrapWords：DOM shim（只實作 spec FR-019 與 056 照詞換行用到的 API）----------
 function makeDom() {
   const doc = {};
-  class Text { constructor(v) { this.nodeType = 3; this.nodeValue = v; this.parentNode = null; this.ownerDocument = doc; } get textContent() { return this.nodeValue; } }
+  const sib = (n, d) => (n.parentNode ? n.parentNode.childNodes[n.parentNode.childNodes.indexOf(n) + d] || null : null);
+  class Text {
+    constructor(v) { this.nodeType = 3; this.nodeName = '#text'; this.nodeValue = v; this.parentNode = null; this.ownerDocument = doc; }
+    get textContent() { return this.nodeValue; }
+    get previousSibling() { return sib(this, -1); }
+    get nextSibling() { return sib(this, 1); }
+  }
   class El {
     constructor(tag) { this.nodeType = 1; this.tagName = tag.toUpperCase(); this.childNodes = []; this.parentNode = null; this.ownerDocument = doc; this.attrs = {}; this.style = { cssText: '' }; this.className = ''; }
+    get nodeName() { return this.tagName; }
+    get previousSibling() { return sib(this, -1); }
+    get nextSibling() { return sib(this, 1); }
     setAttribute(k, v) { this.attrs[k] = String(v); }
     getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }
     hasAttribute(k) { return k in this.attrs; }
+    appendChild(n) { return this.insertBefore(n, null); }
+    replaceChild(n, old) { this.insertBefore(n, old); return this.removeChild(old); }
+    querySelector(sel) { assert.equal(sel, ':scope > br', 'shim 只認 :scope > br'); return this.childNodes.find((c) => c.nodeName === 'BR') || null; }
+    closest(sel) {   // 只認 [屬性]（可用逗號列幾個）
+      const ks = sel.split(',').map((s) => s.trim().match(/^\[([\w-]+)\]$/)[1]);
+      for (let e = this; e && e.nodeType === 1; e = e.parentNode) if (ks.some((k) => e.hasAttribute(k))) return e;
+      return null;
+    }
     insertBefore(n, ref) {
+      if (n.nodeType === 11) { for (const c of [...n.childNodes]) this.insertBefore(c, ref); return n; }   // DocumentFragment：搬子節點
       if (n.parentNode) n.parentNode.removeChild(n);
       const i = ref ? this.childNodes.indexOf(ref) : this.childNodes.length;
       assert.ok(i >= 0, 'insertBefore 的參考節點不在這個元素裡');
@@ -441,6 +459,7 @@ function makeDom() {
   }
   doc.createElement = (t) => new El(t);
   doc.createTextNode = (v) => new Text(v);
+  doc.createDocumentFragment = () => { const f = new El('#document-fragment'); f.nodeType = 11; return f; };
   // 小型解析器：只認 <tag attr="v">、</tag>、<br>
   const parse = (html) => {
     const root = new El('div'), stack = [root];
@@ -523,6 +542,93 @@ test('P.type：cps、caret:false、空白跟著下一個字、只有空白的文
   seek(m.tl, 1.5, true); assert.deepEqual(D.tags(e), ['BR']);
 });
 
+// ---------- 056 P.wrapWords：直式照詞換行（06、08、09、10、11、15 的下方字卡與 09 全幕版共用；specs/056-format-templates/A.md）----------
+// 期望的詞用 Node 自己的 Intl.Segmenter 算（ICU 版本不同、斷詞可能不同），只寫死和斷詞無關的規則
+test('056 P.wrapWords：直式照詞包成不斷行的 span（標點、虛字黏前一個詞），橫式、沒有元素都不動；開頭註解有記錄', () => {
+  assert.ok(MOTION_SRC.includes('P.wrapWords('), '開頭註解沒記錄 P.wrapWords');
+  const D = makeDom();
+  const GLUE = /^[，。、；：！？）」』】…,.;:!?)的了嗎呢吧啊著過]+$/, SEG = new Intl.Segmenter('zh-Hant', { granularity: 'word' });
+  const words = (s) => {
+    const out = []; let open = false;
+    for (const { segment: w } of SEG.segment(s)) {
+      if (/^\s+$/.test(w)) { open = false; continue; }
+      if (GLUE.test(w) && open) out[out.length - 1] += w; else { out.push(w); open = true; }
+    }
+    return out;
+  };
+  const inComp = (w, h, inner) => D.parse(`<div data-composition-id="c" data-width="${w}" data-height="${h}"><div>${inner}</div></div>`).childNodes[0].childNodes[0];
+  const boxes = (el) => el.childNodes.filter((c) => c.nodeType === 1);
+  const TEXT = '把錄影剪乾淨的了，再交給 AI 處理。';
+  const el = inComp(1080, 1920, TEXT);   // 下方字卡：1080×1920 的子合成
+  const { P } = mk();
+  assert.equal(P.wrapWords(el), P, '回傳 P');
+  assert.equal(el.textContent, TEXT, '字不變');
+  assert.deepEqual(boxes(el).map((b) => b.textContent), words(TEXT));
+  assert.ok(boxes(el).every((b) => b.tagName === 'SPAN' && b.style.whiteSpace === 'nowrap'), '每個詞都是不斷行的 span');
+  assert.ok(boxes(el).every((b) => !/^[，。的了]/.test(b.textContent)), '標點、虛字不在詞首');
+  assert.ok(boxes(el).some((b) => /.，$/.test(b.textContent)) && /.。$/.test(boxes(el).at(-1).textContent), '逗號、句號黏前一個詞');
+  assert.deepEqual(el.childNodes.filter((c) => c.nodeType === 3).map((c) => c.nodeValue), [' ', ' '], '空白留著、不包');
+  const land = inComp(1920, 1080, TEXT);   // 橫式
+  mk().P.wrapWords(land);
+  assert.deepEqual(land.childNodes.map((c) => c.nodeType), [3], '橫式不動');
+  mk().P.wrapWords([]);   // 沒有元素：不丟錯
+});
+
+test('056 P.wrapWords：6 字以內的關鍵詞不拆、標點黏關鍵詞、收尾引號黏前一個詞；lines 每行一塊；colon 第一個冒號後換行；全幕版看 P.portrait', () => {
+  const D = makeDom();
+  const tall = (inner) => D.parse(`<div data-composition-id="c" data-width="1080" data-height="1920"><div>${inner}</div></div>`).childNodes[0].childNodes[0];
+  const nowrap = (n) => n.nodeType === 1 && n.tagName === 'SPAN' && n.style.whiteSpace === 'nowrap';
+  // 關鍵詞：≤ 6 字整個 nowrap，後面的逗號跟它包成一塊；> 6 字往裡面照詞包，自己不設 nowrap
+  const a = tall('<span class="sc-kw">說明書</span>，再看<span class="sc-kw">這是一個很長的關鍵詞</span>');
+  const [k1, k2] = a.childNodes.filter((c) => c.className === 'sc-kw');
+  mk().P.wrapWords(a);
+  assert.equal(a.textContent, '說明書，再看這是一個很長的關鍵詞');
+  assert.ok(nowrap(a.childNodes[0]) && a.childNodes[0].childNodes[0] === k1 && a.childNodes[0].textContent === '說明書，', '逗號黏在關鍵詞後面');
+  assert.equal(k1.style.whiteSpace, 'nowrap');
+  assert.deepEqual(k1.childNodes.map((c) => c.nodeType), [3], '短關鍵詞不拆');
+  assert.equal(k2.parentNode, a); assert.equal(k2.style.whiteSpace, undefined);
+  assert.ok(k2.childNodes.length > 1 && k2.childNodes.every(nowrap), '長關鍵詞往裡面照詞包');
+  // 引號：開頭的「不黏（它不是標點黏前），收尾的」跟前一個詞包成一塊
+  const q = tall('<span class="q">「</span>好的開始<span class="q">」</span>');
+  const [q1, q2] = q.childNodes.filter((c) => c.className === 'q');
+  mk().P.wrapWords(q);
+  assert.equal(q1.parentNode, q); assert.equal(q1.style.whiteSpace, 'nowrap');
+  const last = q.childNodes.at(-1);
+  assert.ok(nowrap(last) && last.childNodes.at(-1) === q2 && last.textContent.length > 1, '收尾引號黏前一個詞');
+  assert.equal(q.textContent, '「好的開始」');
+  // lines：「//」（<br>）斷開的每一行包成 display: block 一塊（6 字以內的一行整行不拆）；沒寫就留著 <br>
+  const l = tall('第一行寫得比較長一點<br>第二行');
+  mk().P.wrapWords(l, { lines: true });
+  assert.deepEqual(l.childNodes.map((c) => [c.tagName, c.style.display, c.textContent]), [['SPAN', 'block', '第一行寫得比較長一點'], ['SPAN', 'block', '第二行']]);
+  assert.ok(l.childNodes[0].childNodes.length > 1 && l.childNodes[0].childNodes.every(nowrap), '長的一行裡面照詞包');
+  assert.equal(l.childNodes[1].style.whiteSpace, 'nowrap', '6 字以內的一行整行不拆');
+  const l2 = tall('第一行<br>第二行');
+  mk().P.wrapWords(l2);
+  assert.ok(l2.childNodes.some((c) => c.nodeName === 'BR'), '沒寫 lines：<br> 照舊');
+  // colon：只在第一個全形冒號後面插一個 <br>；沒寫不插
+  const c = tall('名詞：這是定義：還有');
+  mk().P.wrapWords(c, { colon: true });
+  const br = c.childNodes.findIndex((n) => n.nodeName === 'BR');
+  assert.equal(c.childNodes.filter((n) => n.nodeName === 'BR').length, 1);
+  assert.equal(c.childNodes.slice(0, br).map((n) => n.textContent).join(''), '名詞：');
+  const c2 = tall('名詞：這是定義');
+  mk().P.wrapWords(c2, { colon: false });
+  assert.ok(!c2.childNodes.some((n) => n.nodeName === 'BR'));
+  // 全幕版：1920×1080 子合成縮進直式（P.portrait）也做；同一個元素在橫式不做
+  const wide = () => D.parse('<div data-composition-id="c" data-width="1920" data-height="1080"><div>問句寫在這裡嗎？</div></div>').childNodes[0].childNodes[0];
+  const root = () => { const at = { 'data-width': '1920', 'data-height': '1080' }; return { querySelectorAll: () => [], getAttribute: (k) => at[k] ?? null, hasAttribute: (k) => k in at, setAttribute: (k, v) => { at[k] = String(v); } }; };
+  const w1 = wide();
+  mk(root()).P.wrapWords(w1);
+  assert.deepEqual(w1.childNodes.map((n) => n.nodeType), [3], '橫式（沒有 __regions）不做');
+  globalThis.__regions = { panelTop: [0, 0, 1080, 900] };
+  try {
+    const w2 = wide(), m = mk(root());
+    assert.equal(m.P.portrait, true);
+    m.P.wrapWords(w2);
+    assert.ok(w2.childNodes.length > 1 && w2.childNodes.every(nowrap) && /.？$/.test(w2.childNodes.at(-1).textContent), 'P.portrait：照詞包、問號黏前一個詞');
+  } finally { delete globalThis.__regions; }
+});
+
 // ---------- 動態 v2（specs/010-motion-v2/design-system.md §11；specs/contracts/motion.md） ----------
 const V2_API = ['chars', 'wipe', 'wipeOut', 'slide', 'slideOut', 'pop', 'stick', 'peel', 'punch', 'dim', 'marker', 'strike', 'stamp', 'sheen', 'ripple', 'comet', 'flow', 'idle', 'spot', 'rack', 'cam', 'grow', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'sfx'];
 
@@ -591,6 +697,63 @@ test('009 直式：STAGED（window.__regions＋root 寬 > 高）用橫式區域�
     assert.deepEqual(camVars(root('1920', '1080')), { x: 0, y: 0, scale: 1.04, org: '50% 0%', panelTop: [120, 150, 1180, 708] }, '直式舞台縮放：橫式區域、只推近');
     assert.deepEqual(camVars(root('1080', '1920')), { x: -51, y: -5, scale: 1.04, org: '50% 50%', panelTop: [0, 0, 1080, 900] }, '直式原生（overlay 1080×1920）：讀 __regions、照常帶');
   } finally { delete globalThis.__regions; }
+});
+
+// 056 直式參數（specs/056-format-templates/0.md）：直式裡的 1920×1080 子合成，root 打 data-format="portrait"、P.portrait；
+// data-portrait-cam="free" 時 P.cam 照橫式推；直式原生（1080×1920）與橫式都不打
+test('056 直式：root 打 data-format="portrait"、P.portrait；data-portrait-cam="free" 時 P.cam 往焦點帶、原點 50% 50%；橫式與直式原生不打', () => {
+  const root = (w, h, extra = {}) => {
+    const a = { 'data-width': w, 'data-height': h, ...extra };
+    return { a, querySelectorAll: () => [], getAttribute: (k) => a[k] ?? null, hasAttribute: (k) => k in a, setAttribute: (k, v) => { a[k] = String(v); } };
+  };
+  const card = () => ({ style: {}, offsetLeft: 120, offsetTop: 150, offsetWidth: 1180, offsetHeight: 712, offsetParent: null });
+  const tgt = { style: {}, offsetLeft: 900, offsetTop: 300, offsetWidth: 200, offsetHeight: 200, offsetParent: null };
+  const run = (r) => {
+    const { tl, P } = mk(r);
+    P.cam([card()], 1, { to: [tgt], k: 0.12, scale: 1.04, dur: 0.9 });
+    const tw = tl.getChildren(true, true, false).find((k) => k.data && k.data.fn === 'cam');
+    return { portrait: P.portrait, format: r.a['data-format'] ?? null, x: tw.vars.x, y: tw.vars.y, org: tw.vars.transformOrigin };
+  };
+  assert.deepEqual(run(root('1920', '1080')), { portrait: false, format: null, x: -51, y: -5, org: '50% 50%' }, '橫式：不打屬性');
+  globalThis.__regions = { panelTop: [0, 0, 1080, 900] };
+  try {
+    assert.deepEqual(run(root('1920', '1080')), { portrait: true, format: 'portrait', x: 0, y: 0, org: '50% 0%' }, '直式舞台：打屬性、P.cam 照 009 只推近');
+    assert.deepEqual(run(root('1920', '1080', { 'data-portrait-cam': 'free' })), { portrait: true, format: 'portrait', x: -51, y: -5, org: '50% 50%' }, 'data-portrait-cam="free"：照橫式推');
+    assert.deepEqual(run(root('1080', '1920')), { portrait: false, format: null, x: -51, y: -5, org: '50% 50%' }, '直式原生 1080×1920：不打');
+    // 沒有 data-width 的容器（主合成的常駐角標 #chb）：不打
+    const bare = { a: {}, querySelectorAll: () => [], getAttribute: () => null, hasAttribute: () => false, setAttribute() { throw new Error('不該打屬性'); } };
+    assert.equal(mk(bare).P.portrait, false);
+    assert.equal(typeof globalThis.SceneMotion.portrait, 'function', 'ILLUS.mount 用的 SceneMotion.portrait');
+  } finally { delete globalThis.__regions; }
+});
+
+// 056：kit/scene-layout.js 的 portraitize：data-format="portrait" 時 data-<名>-portrait 搬到 data-<名>（含 root）；橫式不動
+test('056 SceneLayout.portraitize：直式把 data-*-portrait 搬到 data-*，橫式不動、重跑結果一樣', () => {
+  const el = (attrs) => {
+    const a = { ...attrs };
+    return { a, get attributes() { return Object.entries(a).map(([name, value]) => ({ name, value })); }, getAttribute: (k) => a[k] ?? null, setAttribute: (k, v) => { a[k] = String(v); } };
+  };
+  const sb = { console };
+  sb.window = sb;
+  sb.document = { documentElement: {} };
+  vm.createContext(sb);
+  vm.runInContext(fs.readFileSync(path.join(KIT, 'scene-layout.js'), 'utf8'), sb);
+  const L = sb.SceneLayout;
+  const mkRoot = (fmt) => {
+    const kids = [el({ id: 'rows', 'data-layout': 'row', 'data-layout-portrait': 'col', 'data-gap': 'xl', 'data-gap-portrait': 'md' }), el({ id: 'n', 'data-row': '2', 'data-row-portrait': '1' })];
+    const r = el({ 'data-width': '1920', ...(fmt ? { 'data-format': fmt } : {}), 'data-align-portrait': 'top' });
+    r.querySelectorAll = () => kids;
+    return { r, kids };
+  };
+  const land = mkRoot(null);
+  assert.equal(L.portraitize(land.r), false);
+  assert.equal(land.kids[0].a['data-layout'], 'row');
+  const por = mkRoot('portrait');
+  assert.equal(L.portraitize(por.r), true);
+  assert.deepEqual([por.r.a['data-align'], por.kids[0].a['data-layout'], por.kids[0].a['data-gap'], por.kids[1].a['data-row']], ['top', 'col', 'md', '1']);
+  assert.equal(por.kids[0].a['data-layout-portrait'], 'col', '-portrait 屬性留著');
+  L.portraitize(por.r);
+  assert.equal(por.kids[0].a['data-layout'], 'col', '重跑結果一樣');
 });
 
 // 縮放過又回到 1 的元素停在 V2.REST：單位矩陣的元素在 Chrome 裡反鋸齒會跟著 seek 先後不同（聚焦「走過」、回均衡、逐字彈出，亂序截圖差 300+ 個色值）

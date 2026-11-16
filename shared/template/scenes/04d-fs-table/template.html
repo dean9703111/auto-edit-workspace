@@ -25,6 +25,19 @@
 #fTbl[data-highlight="3"] > :nth-child(4),
 #fTbl[data-highlight="4"] > :nth-child(5),
 #fTbl[data-highlight="5"] > :nth-child(6) { box-shadow: inset 0 0 0 4px var(--sc-accent); }
+<!-- @style-portrait -->
+/* 直式（056）：整張 1920×1080 縮 0.8475 進上半面板，主卡位置、大小不變（1180×712 占滿舞台窗 x 120–1300、y 130–880）。
+   標題 64 → 76（畫面 64）；格字 44 → 72（畫面 61；行高 84）；列高不變（欄頭 112、≤ 3 列 128、4 列 96、5 列 84／欄頭 96：5 列＋欄頭 516 ≤ 580－2×32）。
+   一行放得下：2 欄 6 字（540－48＝492）、3 欄 4 字（312）、4 欄 3 字（222）；再長自動斷兩行（列跟著長高，上下平均），
+   斷兩行的列只放得下 2–3 列 → 直式寫 2–3 欄、每格 ≤ 4 字最穩（scene.json 的上限是橫式的：4 欄 4 字、3 欄 6 字）。 */
+#wCard .sc-wcard__bar { font-size: 76px; line-height: 100px; --opt: 8px; padding: 14px var(--sc-pad-card); }
+.fTr { height: auto; min-height: 128px; }
+.fTr.fHead { min-height: 112px; }
+#fTbl:has(.fTr:nth-child(5)) .fRow { height: auto; min-height: 96px; }
+#fTbl:has(.fTr:nth-child(6)) .fRow { height: auto; min-height: 84px; }
+#fTbl:has(.fTr:nth-child(6)) .fHead { height: auto; min-height: 96px; }
+.fTd { font-size: 72px; line-height: 84px; white-space: normal; text-wrap: balance; }
+.fTd > span { padding-bottom: 8px; }
 <!-- @body -->
 <div id="wCard" class="sc-wcard">
   <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>

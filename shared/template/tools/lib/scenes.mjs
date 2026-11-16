@@ -5,7 +5,7 @@
 //   findScene(scenes, ref)           → key／中文名／別名／編號／資料夾名都認；沒有回 null
 //   suggestScenes(scenes, ref)       → 相近名稱（錯誤訊息用）
 //   loadIcons(templateDir)           → { names, get(name) → svg|null }
-//   loadFx(templateDir)              → [{ no, slug, file, zh, en, category, when, bg, vars:[{id,type,label,default,options}] }]
+//   loadFx(templateDir)              → [{ no, slug, file, zh, en, category, when, bg, portrait, portraitMinPx, done（catalog 的完成態：timeline｜label）, vars:[{id,type,label,default,options}] }]
 //   motionConsts(kitDir)             → { OUT, BEAT, HOLD_END, IN, READ, DRIFT, PUSH }
 //   visibleLen / richHtml / richPlain
 //   resolveScene({ scene, seg, cues, icons, consts, t0, D, where }) → { ctx, beats, listTimes, tone, errors, warnings }
@@ -21,11 +21,12 @@ import { iconHint } from './icon-alias.mjs';
 
 // template.html 的四節：@style、@style-portrait（直式時接在 @style 後面，009 FR-050；橫式不讀）、@body、@timeline
 // 034 全幕版（疊加字卡在沒有講者的段換成不透明的整張畫面）：@style-full、@body-full、@timeline-full 三節一起寫，取代上面的 style／body／timeline
+//   056 全幕版的直式樣式 @style-full-portrait（選填）：直式時接在 @style-full 後面（全幕版直式整張縮 0.5952 進上半，字要寫 ≥ 81）
 // 036 地圖版（只有 01 章節轉場）：@style-map、@body-map、@timeline-map，plan.json 第一層 "chapterMap": true 時換上（chapterMapCtx 給的資料）
 function splitTemplate(text) {
-  const out = { style: '', stylePortrait: '', body: '', timeline: '', styleFull: '', bodyFull: '', timelineFull: '', styleMap: '', bodyMap: '', timelineMap: '' };
-  const key = { 'style-portrait': 'stylePortrait', 'style-full': 'styleFull', 'body-full': 'bodyFull', 'timeline-full': 'timelineFull', 'style-map': 'styleMap', 'body-map': 'bodyMap', 'timeline-map': 'timelineMap' };
-  const parts = text.split(/<!--\s*@(style-portrait|style-full|body-full|timeline-full|style-map|body-map|timeline-map|style|body|timeline)\s*-->/);
+  const out = { style: '', stylePortrait: '', body: '', timeline: '', styleFull: '', styleFullPortrait: '', bodyFull: '', timelineFull: '', styleMap: '', bodyMap: '', timelineMap: '' };
+  const key = { 'style-portrait': 'stylePortrait', 'style-full-portrait': 'styleFullPortrait', 'style-full': 'styleFull', 'body-full': 'bodyFull', 'timeline-full': 'timelineFull', 'style-map': 'styleMap', 'body-map': 'bodyMap', 'timeline-map': 'timelineMap' };
+  const parts = text.split(/<!--\s*@(style-full-portrait|style-portrait|style-full|body-full|timeline-full|style-map|body-map|timeline-map|style|body|timeline)\s*-->/);
   for (let i = 1; i < parts.length; i += 2) out[key[parts[i]] || parts[i]] = parts[i + 1].replace(/^\r?\n/, '').replace(/\s+$/, '') + '\n';
   return out;
 }
@@ -48,16 +49,17 @@ export function loadScenes(templateDir) {
 }
 
 // 034 全幕版：同一個情境換成全幕版的複本（family fullscreen、直式用舞台縮放、fs 底；模板換成 @style-full／@body-full／@timeline-full）。
-// plan.mjs 的 fullCards（這段沒有講者或寫 "full": true）和 --gallery 的 <編號>-<key>-full.html 預覽頁共用
+// 056：直式樣式換成 @style-full-portrait（沒寫就沒有）。plan.mjs 的 fullCards（這段沒有講者或寫 "full": true）和 --gallery 的 <編號>-<key>-full.html 預覽頁共用
 export function fullScene(s) {
   const t = s.template;
-  return { ...s, family: 'fullscreen', portrait: 'stage', surface: 'fs', fullOf: s.family, template: { style: t.styleFull, stylePortrait: '', body: t.bodyFull, timeline: t.timelineFull } };
+  return { ...s, family: 'fullscreen', portrait: 'stage', surface: 'fs', fullOf: s.family, template: { style: t.styleFull, stylePortrait: t.styleFullPortrait || '', body: t.bodyFull, timeline: t.timelineFull } };
 }
 
 // 036 地圖版：01 章節轉場換成「本集地圖」的複本（章節底、直式照舊舞台縮放；模板換成 @style-map／@body-map／@timeline-map）
 export function mapScene(s) {
   const t = s.template;
-  return { ...s, mapOf: s.key, template: { style: t.styleMap, stylePortrait: '', body: t.bodyMap, timeline: t.timelineMap } };
+  // 056：01 本身直式改成整張 1080×1920（scene.json "portrait": "move"）時，地圖版照舊舞台縮放（它沒有直式樣式）
+  return { ...s, mapOf: s.key, portrait: s.portrait === 'none' ? 'none' : 'stage', template: { style: t.styleMap, stylePortrait: '', body: t.bodyMap, timeline: t.timelineMap } };
 }
 
 // 036 本集地圖的版面（模板只畫，數字都在這裡算）：各章是一條曲線上的站，站距 MAP.gap、上下交錯；
@@ -132,7 +134,7 @@ export function loadFx(templateDir) {
       const m = readFileSync(file, 'utf8').match(/data-composition-variables='([\s\S]*?)'/);
       if (m) { try { vars = JSON.parse(m[1]); } catch { vars = []; } }
     }
-    return { no: Number(e.id), id: e.id, slug: e.slug, file, fileName: path.basename(e.file), zh: e.zh, en: e.en, category: e.category, when: e.when, bg: e.bg, tag: e.tag, sfx: e.sfx ?? null, portrait: e.portrait ?? 'ok', portraitMinPx: Number.isFinite(e.portraitMinPx) ? e.portraitMinPx : null, sem: Array.isArray(e.sem) ? e.sem : [], vars };
+    return { no: Number(e.id), id: e.id, slug: e.slug, file, fileName: path.basename(e.file), zh: e.zh, en: e.en, category: e.category, when: e.when, bg: e.bg, tag: e.tag, sfx: e.sfx ?? null, portrait: e.portrait ?? 'ok', portraitMinPx: Number.isFinite(e.portraitMinPx) ? e.portraitMinPx : null, done: e.done === 'label' ? 'label' : 'timeline', sem: Array.isArray(e.sem) ? e.sem : [], vars };
   });
 }
 

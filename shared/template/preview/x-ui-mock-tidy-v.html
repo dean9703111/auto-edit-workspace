@@ -69,6 +69,26 @@
     #x-ui-mock-tidy #xuit-n2 { left: 140px; top: 452px; transform: rotate(-3deg); }
     #x-ui-mock-tidy #xuit-n3 { left: 620px; top: 700px; transform: rotate(2deg); }
     #x-ui-mock-tidy .xuit-n .sc-icon { --d: 64px; --i: 36px; background: var(--sc-warn); color: var(--sc-on-warn); flex: none; }
+    /* 直式（056）：大視窗標題 76、其他字 72（畫面上 64／61）；大視窗 1180×736（top 136、標題列 136），小視窗散落 420×254（排整齊 534×254，script 的 MESSY／GRID） */
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-frame { top: 136px; height: 736px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-fbar { height: 136px; padding: 0 36px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-ftitle { font-size: 76px; line-height: 96px; --opt: 8px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-dtext { font-size: 72px; line-height: 92px; --opt: 8px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-ok { --d: 64px; --i: 40px; }
+    #x-ui-mock-tidy[data-format="portrait"] .xuit-w { width: 420px; height: 254px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-w1 { left: 168px; top: 204px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-w2 { left: 704px; top: 188px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-w3 { left: 240px; top: 564px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-w4 { left: 768px; top: 508px; }
+    #x-ui-mock-tidy[data-format="portrait"] .xuit-bar { height: 96px; padding: 0 24px; }
+    #x-ui-mock-tidy[data-format="portrait"] .xuit-name { font-size: 72px; line-height: 92px; --opt: 8px; }
+    #x-ui-mock-tidy[data-format="portrait"] .xuit-body { height: 158px; }
+    #x-ui-mock-tidy[data-format="portrait"] .xuit-n { width: max-content; height: 136px; padding: 0 32px; }
+    #x-ui-mock-tidy[data-format="portrait"] .xuit-ntext { font-size: 72px; line-height: 92px; --opt: 8px; }
+    #x-ui-mock-tidy[data-format="portrait"] .xuit-n .sc-icon { --d: 72px; --i: 40px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-n1 { left: 768px; top: 304px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-n2 { left: 144px; top: 424px; }
+    #x-ui-mock-tidy[data-format="portrait"] #xuit-n3 { left: 600px; top: 720px; }
   </style>
   <div id="x-ui-mock-tidy" data-composition-id="x-ui-mock-tidy" data-width="1920" data-height="1080" data-duration="12"
        data-cues-sample='{"start":0,"D":12,"cues":{"292":[3.0,5.6],"293":[5.8,8.2],"294":[8.4,11.2]},"refs":{"#292@通知":3.2,"#293@一鍵":6.1,"#294@同一個":8.8}}'>
@@ -102,11 +122,15 @@
     P.sfx('shine', '#293@一鍵');                       // 歸位（句號和 TIDY 一樣）
     P.sfx('success', '#294@同一個');                   // 完成（句號和 DONE 一樣）
     // 小視窗散落的位置與轉角（和 CSS 一樣）→ 排整齊的位置（2×2，寬 534）
-    const MESSY = [ { left: 170, top: 232, rotation: -6 }, { left: 600, top: 202, rotation: 4 }, { left: 260, top: 532, rotation: 5 }, { left: 760, top: 482, rotation: -5 } ];
-    const GRID = [ { left: 160, top: 278 }, { left: 726, top: 278 }, { left: 160, top: 560 }, { left: 726, top: 560 } ];
+    // 直式（P.portrait）：大視窗 1180×736、小視窗高 266，散落寬 420（和 CSS 的直式那幾行一樣）
+    const MESSY = P.portrait ? [ { left: 168, top: 204, rotation: -6 }, { left: 704, top: 188, rotation: 4 }, { left: 240, top: 564, rotation: 5 }, { left: 768, top: 508, rotation: -5 } ]
+      : [ { left: 170, top: 232, rotation: -6 }, { left: 600, top: 202, rotation: 4 }, { left: 260, top: 532, rotation: 5 }, { left: 760, top: 482, rotation: -5 } ];
+    const GRID = P.portrait ? [ { left: 160, top: 302 }, { left: 726, top: 302 }, { left: 160, top: 588 }, { left: 726, top: 588 } ]
+      : [ { left: 160, top: 278 }, { left: 726, top: 278 }, { left: 160, top: 560 }, { left: 726, top: 560 } ];
+    const MW = P.portrait ? 420 : 380;
     const fly = function (k, t) {   // 第 k 個小視窗（1 起算）飛進大視窗、轉正、變寬
       const a = MESSY[k - 1], b = GRID[k - 1];
-      P.morph('#xuit-w' + k, t, { left: b.left, top: b.top, width: 534, rotation: 0 }, { from: { left: a.left, top: a.top, width: 380, rotation: a.rotation }, dur: 0.7, ease: 'back.out(1.1)' });
+      P.morph('#xuit-w' + k, t, { left: b.left, top: b.top, width: 534, rotation: 0 }, { from: { left: a.left, top: a.top, width: MW, rotation: a.rotation }, dur: 0.7, ease: 'back.out(1.1)' });
     };
 
     // 拍 0 開場：4 個小視窗每 0.2 秒彈出一個（歪的、疊在一起）→ 圖示跟著描線

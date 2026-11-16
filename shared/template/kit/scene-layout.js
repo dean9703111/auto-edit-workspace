@@ -23,6 +23,10 @@
  *   元件的「錨點」＝它直接包著的插圖（[data-illus]／[data-illus-src]），沒有就是元件自己；中線對錨點。
  *   連接線端點在元件外框（含標籤）沿線方向的邊外 --sc-link-gap；直線的另一軸在兩個錨點重疊段的正中，L 形對各自錨點中線。
  *
+ * 直式（056）：root 帶 data-format="portrait" 時，排版前把 data-<名>-portrait 的值搬到 data-<名>：
+ *   <div id="x-rows" data-layout="row" data-layout-portrait="col" data-gap="xl" data-gap-portrait="md">  ← 直式改成直排、間距 md
+ *   SceneLayout.portraitize(root) 單獨做這一步（SceneMotion 建立時、ILLUS.mount 時已經叫過）
+ *
  * API：SceneLayout.apply(root, {force})、SceneLayout.measure(root, {free}) → 給 audit（lib/audit-layout.mjs）的 JSON；free: true＝沒有版面宣告的畫面也找手寫的連接線
  *      （容器、slot 外框／錨點／標籤、走位過的 slot 另帶排版時的外框 home、data-links 的線與手寫的連接線）、
  *      SceneLayout.box(el, ref) → el 相對 ref 的 [x, y, w, h]（版面座標，不含 transform）、SceneLayout.token(name)
@@ -261,10 +265,26 @@
     });
   }
 
+  // 056 直式：root 帶 data-format="portrait"（kit/scene-motion.js 在直式裡的 1920×1080 子合成打上）時，root 和裡面每個 data-<名>-portrait
+  // 的值搬到 data-<名>（data-layout、data-gap、data-justify、data-align、data-row…，和情境的 data-layout-portrait 同一個命名），再照常排版；
+  // 橫式（沒有 data-format）不動。-portrait 屬性留著，重跑結果一樣
+  var PORTRAIT_ATTR = /^data-(.+)-portrait$/;
+  function portraitize(root) {
+    if (!root || !root.getAttribute || root.getAttribute('data-format') !== 'portrait') return false;
+    [root].concat(Array.prototype.slice.call(root.querySelectorAll('*'))).forEach(function (el) {
+      Array.prototype.slice.call(el.attributes || []).forEach(function (a) {
+        var m = a.name.match(PORTRAIT_ATTR);
+        if (m && el.getAttribute('data-' + m[1]) !== a.value) el.setAttribute('data-' + m[1], a.value);
+      });
+    });
+    return true;
+  }
+
   function apply(root, o) {
     if (!root || !root.querySelectorAll) return;
     if (done.has(root) && !(o && o.force)) return;
     done.add(root);
+    portraitize(root);
     widen(root);
     var list = Array.prototype.slice.call(root.querySelectorAll('[data-layout]'));
     if (root.hasAttribute && root.hasAttribute('data-layout')) list.unshift(root);
@@ -362,7 +382,7 @@
     return out;
   }
 
-  window.SceneLayout = { apply: apply, measure: measure, box: box, token: token, widen: widen, SCALE_MAX: SCALE_MAX };
+  window.SceneLayout = { apply: apply, measure: measure, box: box, token: token, widen: widen, portraitize: portraitize, SCALE_MAX: SCALE_MAX };
   // ILLUS.mount 之後自動排一次（插圖換成 SVG 後大小才定）
   if (window.ILLUS && window.ILLUS.mount && !window.ILLUS.mount.__layout) {
     var mount = window.ILLUS.mount;

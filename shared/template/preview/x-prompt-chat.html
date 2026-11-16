@@ -64,13 +64,29 @@
     #x-prompt-chat #xpch-send { --d: 80px; --i: 40px; position: absolute; right: 12px; top: 12px; background: var(--brand); color: var(--brand-ink); }
     #x-prompt-chat #xpch-sky { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
     #x-prompt-chat #xpch-path { fill: none; stroke: none; }
+    /* 直式（056）：標題 80、問題／泡泡／回答 72（畫面上 68／61）；主卡 1180×732（top 139），三列 1080 寬、列距 24 */
+    #x-prompt-chat[data-format="portrait"] #xpch-card { top: 139px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-card .sc-wcard__bar { height: 112px; padding: 0 var(--sc-pad-card); font-size: 80px; line-height: 104px; --opt: 10px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-bico { --d: 80px; --i: 44px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-body { height: 620px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-urow { width: 1080px; height: 136px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-airow { width: 1080px; height: 232px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-user { padding: 20px 36px 24px; font-size: 72px; line-height: 92px; }   /* 光學置中寫在內距（script 拿掉 .sc-opt） */
+    #x-prompt-chat[data-format="portrait"] #xpch-ai { --d: 104px; --i: 56px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-bub { padding: 20px 36px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-reply { font-size: 72px; line-height: 92px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-dots { width: 192px; height: 112px; }
+    #x-prompt-chat[data-format="portrait"] .xpch-dot { width: 22px; height: 22px; border-radius: 11px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-box { width: 1080px; height: 140px; padding: 0 136px 0 44px; border-radius: 70px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-ask { font-size: 72px; line-height: 92px; }
+    #x-prompt-chat[data-format="portrait"] #xpch-send { --d: 96px; --i: 48px; right: 18px; top: 18px; }
   </style>
   <div id="x-prompt-chat" data-composition-id="x-prompt-chat" data-width="1920" data-height="1080" data-duration="14.6"
        data-cues-sample='{"start":0,"D":14.6,"cues":{"312":[1.6,4.4],"313":[4.6,7.9],"314":[8.0,13.0]},"refs":{"#313@送出":5.1,"#314@可以":8.2}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xpch-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span id="xpch-bico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> </svg></span><span class="sc-opt">問 AI 一句</span></div>
-      <div id="xpch-body" data-layout="col" data-justify="start" data-gap="lg">
+      <div id="xpch-body" data-layout="col" data-justify="start" data-gap="lg" data-gap-portrait="md">
         <div id="xpch-urow" data-slot><div id="xpch-user" class="sc-t40 sc-w700 sc-opt" data-snap-width>這段可以剪掉嗎？</div></div>
         <div id="xpch-airow" data-slot><span id="xpch-ai" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 8V4H8" /> <rect width="16" height="12" x="4" y="8" rx="2" /> <path d="M2 14h2" /> <path d="M20 14h2" /> <path d="M15 13v2" /> <path d="M9 13v2" /> </svg></span>
           <div id="xpch-say"><div id="xpch-bub" data-snap-width><div id="xpch-reply" class="sc-t40 sc-w700">可以，這段你重講了兩次，<br>保留第二次比較順就好。</div></div>
@@ -98,6 +114,7 @@
     const BODY = $q('#xpch-body')[0];
     const pos = function (el) { let x = 0, y = 0; for (let e = el; e && e !== BODY; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x, y]; };
     const SB = $q('#xpch-send')[0], UB = $q('#xpch-user')[0], sp = pos(SB), up = pos(UB);
+    if (P.portrait) UB.classList.remove('sc-opt');   // 直式：泡泡的內距 CSS 已經寫成上 20、下 24（光學置中），.sc-opt 再補會讓 audit 把字算低
     const sx = sp[0] + 40, sy = sp[1] + 40, ux = up[0] + UB.offsetWidth - 60, uy = up[1] + UB.offsetHeight + 12;
     $q('#xpch-path')[0].setAttribute('d', 'M' + sx + ' ' + sy + ' C' + (sx + 50) + ' ' + (sy - 120) + ' ' + (ux + 60) + ' ' + (uy + 80) + ' ' + ux + ' ' + uy);
 

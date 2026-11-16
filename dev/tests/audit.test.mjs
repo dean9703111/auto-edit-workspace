@@ -757,6 +757,24 @@ test('009 直式：stageKindOf／portraitPlan（全畫面 custom 與 stage 情�
   assert.ok(fxJudge({ kind: 'fx', s: 0.5625, minFont: 32 }).some((x) => x.rule === 'speaker' && x.level === 'error'), '沒有換算（舊的量法）會誤報');
 });
 
+// 056：直式 fx 的假 ✖ — bg 不寫照 build 當透明、只量 catalog 的完成態、02 角標沒有段、推出畫面的詞不算蓋到臉
+test('056 直式字卡動態：透明照 it.opaque、只量完成態（catalog 的 done）、noHost 不量、畫面外的部分不算蓋到講者', async () => {
+  const { CANVAS: C } = await imp('lib/canvas.mjs');
+  assert.equal(R.portraitPlan({ id: 'f', type: 'fx' }, C.portrait).stage.ty, 766, 'bg 不寫（item.opaque 沒有）＝透明，和 main.mjs stageOf 一樣');
+  assert.equal(R.portraitPlan({ id: 'f', type: 'fx', opaque: true, seg: { bg: 'dark' } }, C.portrait).stage.ty, 416);
+  assert.deepEqual(R.sampleTimes({ type: 'fx', start: 10, end: 14.5 }, { fxDone: 3.4 }), [{ t: 13.4, kind: 'done' }]);
+  assert.deepEqual(R.sampleTimes({ type: 'fx', start: 10, end: 14.5 }), [{ t: 13.9, kind: 'done' }], '找不到 done：段尾前 0.6 秒，不量中點');
+  assert.deepEqual(R.sampleTimes({ type: 'custom', start: 10, end: 18 }, { fxDone: 2 }), [{ t: 14, kind: 'mid' }, { t: 17.4, kind: 'done' }], '其他段照舊');
+  const pk = R.pickItems([{ id: 's02', type: 'scene', noHost: true }, { id: 's03', type: 'scene' }], { only: ['s02', 's03'] });
+  assert.deepEqual(pk.list.map((x) => x.id), ['s03']);
+  assert.match(pk.skipped.join(), /s02（章節角標/);
+  // 推出畫面上緣的詞（y < 0，子合成外面看不到）：換算後的講者框也在子合成上方，不能算蓋到臉
+  const fxPlan = R.portraitPlan({ id: 'f', type: 'fx' }, C.portrait);
+  const gone = el({ rect: [600, -500, 1300, -260], textRect: [600, -500, 1300, -260], fontSize: 200, desc: { id: 'fx-gone' } });
+  const out = R.judgeSample({ host: { start: 10 }, els: [gone] }, { item: { id: 'f', label: 'fx 05', type: 'fx', start: 10, end: 14 }, t: 13, kind: 'done', layout: 'overlay', pipOn: false, speakerBox: [300, 400, 780, 1400], sideShift: 0, W: 1920, H: 1080, stage: fxPlan.stage });
+  assert.ok(!out.some((x) => x.rule === 'speaker'), JSON.stringify(out.map((x) => x.msg)));
+});
+
 test('009 直式：✖ portrait-window（帶 id 的絕對定位元素超出舞台窗；量擺位外框，鏡頭推不算；allow-overflow、沒 id、非絕對定位不算）、⚠ 字級 × 0.8475 < 48（055 Q3）', () => {
   const st = { kind: 'fs', s: 0.8475, window: [120, 130, 1300, 880], minFont: 48 };
   const pj = (els, extra = {}) => R.judgeSample({ host: { start: 10 }, els, ...extra }, { item: item({ opaque: true, seg: { layout: 'fullscreen' } }), t: 17.4, kind: 'done', layout: 'fullscreen', pipOn: true, speakerBox: null, W: 1920, H: 1080, stage: st });

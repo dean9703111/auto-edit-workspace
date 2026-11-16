@@ -42,6 +42,10 @@
   內容區 #xars-body 是 data-layout="row" data-gap="lg"（kit/scene-layout.js）：寄件端 300×300、飛行區 #xars-air 220 寬（空的，留給紙飛機飛）、
   收件人清單 #xars-list（data-layout="col" data-gap="md"，每列 440×128），整組置中、垂直中線對齊，不寫 left／top。
   飛行路線 #xars-p1–p3 是 #xars-sky（整個內容區大小的 svg，疊在最上面）裡的弧線，script 照排好的寄件端右緣與收件人左緣算（各離 16），不用改。
+  直式：主卡位置不變（舞台縮放 0.8475），排法不變（寄件端、飛行區、收件人清單）（#x-architecture-send[data-format="portrait"]）：標題 76、寄件端與收件人 72、
+  「都收到」膠囊 40 → 64（畫面上 64／61／54）；寄件端 368×320（圖示 128）、飛行區 220 → 120、收件人每列 496×146（圖示 80、勾勾 72，3 字名稱到勾勾還有 36），
+  3 列＝486 高、上下各 47；368 ＋ 48 ＋ 120 ＋ 48 ＋ 496 ＝ 1080。直式上限（fill.json 的 portraitMax）：收件人名稱 ≤ 3 字（4 字擠掉勾勾）、
+  「都收到」≤ 3 字（標題 10 字 × 76 ＋ 膠囊要在標題列 1176 裡放得下）。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-architecture-send 紙飛機傳出去</title></head>
@@ -72,6 +76,16 @@
     /* 飛行路線：整個內容區大小，疊在最上面；線本體由 P.fly 藏起來，只留尾跡 */
     #x-architecture-send #xars-sky { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
     #x-architecture-send .xars-path { fill: none; stroke: none; }
+    /* 直式（056）：標題 76、寄件端與收件人 72、「都收到」膠囊 64（畫面上 64／61／54）；寄件端 368×320、飛行區 120、收件人 496×146 */
+    #x-architecture-send[data-format="portrait"] #xars-card .sc-wcard__bar > .sc-opt { font-size: 76px; }
+    #x-architecture-send[data-format="portrait"] #xars-done { height: 100px; padding: 0 36px 0 32px; gap: 16px; font-size: 64px; line-height: 80px; --opt: 8px; }
+    #x-architecture-send[data-format="portrait"] #xars-done::before { width: 18px; height: 18px; }
+    #x-architecture-send[data-format="portrait"] #xars-me { width: 368px; height: 320px; }
+    #x-architecture-send[data-format="portrait"] #xars-air { width: 120px; }
+    #x-architecture-send[data-format="portrait"] .xars-row { width: 496px; height: 146px; padding: 0 32px; }
+    #x-architecture-send[data-format="portrait"] .xars-row .xars-u { --d: 80px; --i: 44px; }
+    #x-architecture-send[data-format="portrait"] .xars-k { --d: 72px; --i: 44px; }
+    #x-architecture-send[data-format="portrait"] :is(#xars-mename, .xars-name) { font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-architecture-send" data-composition-id="x-architecture-send" data-width="1920" data-height="1080" data-duration="15.4"
        data-cues-sample='{"start":0,"D":15.4,"cues":{"302":[2.8,6.0],"303":[6.1,9.2],"304":[9.3,12.4],"305":[12.5,15.2]},"refs":{"#302@客戶":3.0,"#303@主管":6.2,"#304@字幕師":9.4,"#305@都收到":12.6}}'>

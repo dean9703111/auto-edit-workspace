@@ -52,6 +52,20 @@
     #x-crowd .xcrd-s { position: relative; color: var(--sc-fs-ink); white-space: nowrap; }
     #x-crowd .xcrd-num { display: flex; align-items: baseline; gap: 12px; }
     #x-crowd #xcrd-b .xcrd-num { color: var(--brand); }
+    /* 直式（056）：人群縮小、數字欄放寬、字放大；結論膠囊搬到人群下面（標題列放不下標題 80 字＋膠囊） */
+    #x-crowd[data-format="portrait"] #xcrd-card { top: 140px; }
+    #x-crowd[data-format="portrait"] #xcrd-card .sc-wcard__bar { height: 112px; padding: 12px var(--sc-pad-card); font-size: 80px; }
+    #x-crowd[data-format="portrait"] #xcrd-body { height: 616px; }
+    #x-crowd[data-format="portrait"] #xcrd-grid { width: 528px; height: 408px; grid-template-columns: repeat(5, 88px); grid-template-rows: repeat(2, 192px); column-gap: 22px; row-gap: 24px; align-content: start; }
+    #x-crowd[data-format="portrait"]:has(#xcrd-pill) #xcrd-grid { height: 552px; }
+    #x-crowd[data-format="portrait"] .xcrd-p, #x-crowd[data-format="portrait"] .xcrd-p > [data-illus] { width: 88px !important; height: 192px !important; }
+    #x-crowd[data-format="portrait"] #xcrd-stat { width: 504px; height: 552px; }
+    #x-crowd[data-format="portrait"] #xcrd-na, #x-crowd[data-format="portrait"] #xcrd-nb { font-size: 120px; line-height: 128px; }
+    #x-crowd[data-format="portrait"] .xcrd-num > .sc-t52 { font-size: 72px; line-height: 100px; }
+    #x-crowd[data-format="portrait"] #xcrd-la, #x-crowd[data-format="portrait"] #xcrd-lb { font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-crowd[data-format="portrait"] #xcrd-pill { position: absolute; left: 48px; right: 600px; bottom: 40px; width: max-content; margin: 0 auto;
+                                                  height: 96px; padding: 0 36px 0 32px; gap: 18px; font-size: 60px; line-height: 1; --opt: 6px; }
+    #x-crowd[data-format="portrait"] #xcrd-pill::before { width: 20px; height: 20px; }
   </style>
   <div id="x-crowd" data-composition-id="x-crowd" data-width="1920" data-height="1080" data-duration="11.8"
        data-cues-sample='{"start":0,"D":11.8,"cues":{"342":[1.5,4.0],"343":[4.2,6.8],"344":[7.0,10.6]},"refs":{"#342@10":1.8,"#343@7":4.6,"#344@開頭":7.4}}'>

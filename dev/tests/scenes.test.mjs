@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { lib, imp, makeSrt, cueStart, cueEnd } from './helpers.mjs';
 
-const { resolveScene, sampleSeg, visibleLen } = await imp('lib/scenes.mjs');
+const { resolveScene, sampleSeg, visibleLen, fullScene, mapScene, loadFx } = await imp('lib/scenes.mjs');
 const { assembleScene, sceneParts, prefixIds, scopeCss, verifyHash } = await imp('lib/assemble.mjs');
 const { parseSrt } = await imp('lib/srt.mjs');
 const { parseTime } = await imp('lib/time.mjs');
@@ -132,12 +132,12 @@ test('時間點太晚（完成態停不到 0.6 秒）出錯並給出 to 要延�
 });
 
 test('直式（009 FR-050／051）：18 個 scene.json 都有 portrait（move／stage／none）；@style-portrait 只在直式接上；12 直式改 free 橫排；橫式輸出不含直式的東西；--list 有直式欄', async () => {
-  const want = { chapter: 'stage', 'chapter-tag': 'move', 'side-panel': 'none', 'fs-list': 'stage', 'fs-compare': 'stage', 'fs-flow': 'stage', 'fs-table': 'stage', 'two-sides': 'none',
+  const want = { chapter: 'move', 'chapter-tag': 'move', 'side-panel': 'none', 'fs-list': 'stage', 'fs-compare': 'stage', 'fs-flow': 'stage', 'fs-table': 'stage', 'two-sides': 'none',
     concept: 'move', 'key-point': 'move', steps: 'move', qa: 'move', tips: 'move', summary: 'move', keywords: 'move', 'title-list': 'move', speaker: 'move', quote: 'move' };
   assert.deepEqual(Object.fromEntries(L.scenes.map((s) => [s.key, s.portrait])), want);
   // move 的疊加情境都有 @style-portrait（卡片換到 x 60、bottom 680；角標左上；12 改橫排）
   for (const s of L.scenes.filter((x) => x.portrait === 'move')) assert.ok(s.template.stylePortrait.trim(), `${s.key} 少了 @style-portrait`);
-  for (const s of L.scenes.filter((x) => x.portrait !== 'move')) assert.equal(s.template.stylePortrait, '', `${s.key} 不需要 @style-portrait`);
+  for (const s of L.scenes.filter((x) => x.portrait === 'none')) assert.equal(s.template.stylePortrait, '', `${s.key} 直式不提供，不需要 @style-portrait`);
   for (const s of L.scenes) assert.ok(!s.template.style.includes('@style-portrait') && !/left: 60px; bottom: 680px/.test(s.template.style), `${s.key} 的 @style 混進直式規則`);
   const kw = scene('keywords');
   const seg = { ...sampleSeg(kw), id: 's09' };
@@ -160,4 +160,47 @@ test('直式（009 FR-050／051）：18 個 scene.json 都有 portrait（move／
   assert.match(t, /\| # \| key \| 中文 \| 組別 \| 直式 \| 長度（秒） \|/);
   assert.match(t, /\| 03 \| side-panel \| [^|]+ \| [^|]+ \| 不提供 \|/);
   assert.match(t, /\| 04a \| fs-list \| [^|]+ \| [^|]+ \| 可（縮進上半） \|/);
+});
+
+// 056（specs/056-format-templates/0.md）：全幕版的直式樣式 @style-full-portrait、01 直式改整張時地圖版照舊舞台縮放、fx catalog 的 done
+test('056：@style-full-portrait 只在全幕版直式接上；01 改 portrait: move 時子合成 1080×1920、地圖版仍 stage；fx 的 done 預設 timeline', () => {
+  const base = scene('concept');
+  assert.ok(base.template.styleFull, '06 有全幕版');
+  const sc = { ...base, template: { ...base.template, styleFullPortrait: '#s09-root { --x-056: 1; }\n' } };
+  const full = fullScene(sc);
+  assert.equal(full.portrait, 'stage');
+  assert.equal(full.template.stylePortrait, sc.template.styleFullPortrait);
+  assert.equal(fullScene({ ...base, template: { ...base.template, styleFullPortrait: '' } }).template.stylePortrait, '', '沒寫 @style-full-portrait：全幕版直式不接任何東西（和以前一樣）');
+  const seg = { ...sampleSeg(base), id: 's09' };
+  const r = resolveScene({ scene: full, seg, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: seg.duration });
+  const opts = { scene: full, ctx: r.ctx, beats: r.beats, id: 's09', D: seg.duration };
+  assert.ok(!assembleScene(opts).html.includes('--x-056'), '橫式不接');
+  const port = assembleScene({ ...opts, format: 'portrait' }).html;
+  assert.ok(port.includes('--x-056'), '直式接上');
+  assert.match(port, /data-width="1920" data-height="1080"/, '全幕版直式仍是舞台縮放');
+  // 01：scene.json 改 "portrait": "move"（包 B）→ 直式子合成 1080×1920；地圖版沒有直式樣式，照舊 stage
+  const ch = scene('chapter');
+  const moved = { ...ch, portrait: 'move' };
+  const cseg = { ...sampleSeg(ch), id: 's01' };
+  const cr = resolveScene({ scene: moved, seg: cseg, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: cseg.duration });
+  assert.match(assembleScene({ scene: moved, ctx: cr.ctx, beats: cr.beats, id: 's01', D: cseg.duration, format: 'portrait' }).html, /data-width="1080" data-height="1920"/);
+  assert.equal(mapScene(moved).portrait, 'stage');
+  assert.equal(mapScene({ ...ch, portrait: 'none' }).portrait, 'none');
+  for (const f of L.fx) assert.ok(['timeline', 'label'].includes(f.done), `fx-${f.id} done=${f.done}`);
+});
+
+// 056：直式照詞換行收進 kit 的 P.wrapWords（kit/scene-motion.js），模板不再各貼一份 Intl.Segmenter；06 有「名詞：定義」才帶 colon: true
+test('056：照詞換行的模板都呼叫 P.wrapWords、不自己寫 Intl.Segmenter；06 的 colon 照有沒有「名詞：定義」', () => {
+  const src = (s) => s.template.timeline + s.template.timelineFull;
+  assert.deepEqual(L.scenes.filter((s) => src(s).includes('Intl.Segmenter')).map((s) => s.key), [], '照詞換行用 P.wrapWords，不要在模板裡再貼一份');
+  assert.deepEqual(L.scenes.filter((s) => src(s).includes('P.wrapWords(')).map((s) => s.key), ['concept', 'steps', 'qa', 'summary']);   // 10-tips、15-quote 的下方字卡 r1 退回 056 之前（specs/056-format-templates/r1.md）
+  assert.ok(scene('qa').template.timelineFull.includes("P.wrapWords('#qfQ .sc-opt')"), '09 全幕版的問句');
+  const sc = scene('concept'), seg = { ...sampleSeg(sc), id: 's09' };
+  const wrapLine = (text) => {
+    const r = resolveScene({ scene: sc, seg: { ...seg, slots: { ...seg.slots, text } }, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: seg.duration });
+    assert.deepEqual(r.errors, []);
+    return assembleScene({ scene: sc, ctx: r.ctx, beats: r.beats, id: 's09', D: seg.duration, format: 'portrait' }).html.match(/P\.wrapWords\([^\n]*/)[0];
+  };
+  assert.equal(wrapLine('**Skill**：工具附的使用說明書'), "P.wrapWords('#s09-gCard .sc-lt__body .sc-opt', { colon: true });");
+  assert.equal(wrapLine('這是一句沒有冒號的定義'), "P.wrapWords('#s09-gCard .sc-lt__body .sc-opt', { colon: false });");
 });

@@ -41,6 +41,9 @@
   三站的中心 x 是 230／590／950：手機 120×250、電腦 300×250 底邊站在 y 405；雲端 240×164 浮在上面（top 60），一條虛線柱子接到地上。
   地上的路是兩條虛線（#xdsk-r1 手機 → 雲端、#xdsk-r2 雲端 → 電腦，y 430 附近的小弧），檔案 64×77 沿著走（P.along）。
   這是 2.5D 的擺法，座標寫在 CSS（路的 svg 用 viewBox 對齊內容區座標）；#xdsk-world 是鏡頭（P.cam 推它，主卡不動；放大 1.04、往那一站帶 0.08，再大會被主卡裁掉）。
+  直式：站名寫在地台正面，正面只有 66 高放不下 72 字 → 地台拉高成 1056×290、top 300（script 把地台 svg 改成 preserveAspectRatio="none"：
+  頂面 y 300–490 變深、裝置的腳和路還在頂面上，正面 y 490–590 高 100），站名 72（畫面上 61）、寬 240、在正面置中（第 3 站往左 16，離正面右緣 ≥ 20）；
+  主卡填滿舞台窗（top 136，標題列 140／字 76、內容區 1176×600），整個場景往上 16（#xdsk-world top −16：直式鏡頭從上緣中點放大 1.04，地台下緣 574 → 581 還在內容區裡）。站名 3 字放得下，直式不用另設上限（不寫 portraitMax）。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-desk 地台上的裝置接力</title></head>
@@ -69,6 +72,16 @@
     #x-desk #xdsk-n1 { left: 130px; }
     #x-desk #xdsk-n2 { left: 490px; }
     #x-desk #xdsk-n3 { left: 850px; }
+    /* 直式（056）：主卡填滿舞台窗（y 136–880）；地台拉高（正面 83 高），站名 72（畫面上 61） */
+    #x-desk[data-format="portrait"] #xdsk-card { top: 136px; }
+    #x-desk[data-format="portrait"] #xdsk-card .sc-wcard__bar { height: 140px; font-size: 76px; line-height: 100px; }
+    #x-desk[data-format="portrait"] #xdsk-body { height: 600px; }
+    #x-desk[data-format="portrait"] #xdsk-world { top: -16px; height: 600px; }
+    #x-desk[data-format="portrait"] #xdsk-stage { top: 300px; height: 290px; }
+    #x-desk[data-format="portrait"] .xdsk-name { top: 494px; width: 240px; font-size: 72px; line-height: 84px; --opt: 8px; }
+    #x-desk[data-format="portrait"] #xdsk-n1 { left: 110px; }
+    #x-desk[data-format="portrait"] #xdsk-n2 { left: 470px; }
+    #x-desk[data-format="portrait"] #xdsk-n3 { left: 814px; }   /* 往左 16：正面右緣是斜的側面，72 字的「電腦」離右緣才有 20 */
   </style>
   <div id="x-desk" data-composition-id="x-desk" data-width="1920" data-height="1080" data-duration="14.6"
        data-cues-sample='{"start":0,"D":14.6,"cues":{"362":[2.8,5.6],"363":[5.7,8.2],"364":[8.3,13.6]},"refs":{"#362@手機":3.0,"#363@雲端":6.0,"#364@電腦":9.0}}'>
@@ -107,6 +120,7 @@
     P.sfx('success', '#364@電腦');                                               // 最後一站一顆 success（句號和 T3 一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const CAM = '#xdsk-world';                                  // 鏡頭推這一層（主卡不動）
+    if (P.portrait) $q('#xdsk-stage svg')[0].setAttribute('preserveAspectRatio', 'none');   // 直式：地台拉高（正面才放得下 72 字的站名）
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字 → 地台畫出 → 三個裝置畫出、站名彈出 → 地上的虛線畫出、往前流
     if (ENTER === 'grow') P.grow('#xdsk-card', 0.3);

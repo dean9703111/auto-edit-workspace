@@ -3,6 +3,9 @@
   "prefix": "xstk",
   "beat": "D",
   "layout": "fullscreen",
+  "portraitMax": {
+    "items.desc": 10
+  },
   "when": "由下往上的組成：3–4 層、從底層講起，每層一個名稱（可附一句說明），講到哪一層那一層從上方落下疊上去，講到「合起來」全部亮回",
   "slots": {
     "title": {

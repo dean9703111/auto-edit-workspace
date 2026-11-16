@@ -19,7 +19,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { pageSeekSource, pageMeasureSource, pageMotionSource } from './audit-page.mjs';
+import { pageSeekSource, pageMeasureSource, pageMotionSource, pageFxDoneSource } from './audit-page.mjs';
 import { hfLocal, HF_MISSING } from './hf.mjs';
 
 const WIN = process.platform === 'win32';
@@ -302,9 +302,11 @@ async function compositionPage(browser, { url, W, H, readyTimeout }) {
     // 003：custom 段的時間軸（__renderReady 之後就有）與 P.at 記下的綁句錯誤（specs/contracts/cues.md §4.4）
     async motion(opts) { return evaluate(pageMotionSource(opts)); },
     async cueErrors() { return evaluate('(window.__cueErrors || []).slice()'); },
+    async fxDone(opts) { return evaluate(pageFxDoneSource(opts)); },   // 056：字卡動態的完成態（段內秒數或 null）
     evaluate,
     async screenshot(file) {
-      const r = await S('Page.captureScreenshot', { format: 'jpeg', quality: 80 });
+      // 檔名 .png → PNG（逐像素比對用，dev/056/compare.mjs）；其他 JPEG 80
+      const r = await S('Page.captureScreenshot', /\.png$/i.test(file) ? { format: 'png' } : { format: 'jpeg', quality: 80 });
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, Buffer.from(r.data, 'base64'));
     },

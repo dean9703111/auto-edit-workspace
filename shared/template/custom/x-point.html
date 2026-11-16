@@ -28,9 +28,13 @@
   結尾寫 P.end()（不帶參數），長度自動等於 plan.json 這段的長度；root 的 data-duration 只給單獨開檔時用。
 
   【版面】
-  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 246、寬 1180、高 516（右緣 1300，避開右下子母畫面；在內容區 y 150–858 上下置中）。
-  卡內 free：圖示圓 240（圖示 132）left 96、top 138；文字區 left 400、寬 700：小標 top 104（高 64）、重點句 top 196（72 字）、補一句 top 318（44 字）；
-  沒有小標和補一句時重點句 top 212。重點句放不下就縮文案，不縮字。
+  fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、寬 1180（右緣 1300，避開右下子母畫面），高度貼著內容（上下內距 64），在內容區 y 150–858 上下置中（script 算 top）。
+  卡內一列（flex）：圖示圓 240（圖示 132）→ 間距 64 → 文字欄（靠左）：小標膠囊（48 字、高 80）→ 20 → 重點句 → 16 → 補一句（52 字），整組在卡裡左右置中。
+  重點句字級照字數放大（script 量）：填滿文字欄寬（卡寬 − 左右內距 72 − 圖示 − 間距），上限 112、下限 72（6 字 112、7 字 104、8 字 88、9 字 80）；全寬（主卡 1680）上限 144、補一句 60。
+  056 前是固定 1180×516、重點句 72，字只占卡片約 19%（主宣傳片 x0107 v2 被嫌「卡片空太多」）；改成字照寬放大、卡片貼著內容。
+  直式：主卡填滿舞台窗（top 136、1180×744），內容改成直排置中：圖示圓 176 → 小標膠囊（72 字、高 104）→ 重點句 → 補一句（64 字，畫面上 54）；
+  重點句照字數放大到填滿卡寬（左右各留 0.46 個字，audit 的內距 ≥ 0.45em），上限 176、下限 116（畫面上 ≥ 98；6 字 168、9 字 116）；#x-point[data-format="portrait"] 的 CSS＋script 的 P.portrait。
+  小標 6 字、重點句 9 字、補一句 14 字都放得下，直式不用另設上限（不寫 portraitMax）。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-point 全畫面的一句重點</title></head>
@@ -39,30 +43,38 @@
   <style>
     #x-point { position: absolute; inset: 0; }
     #x-point .fill { position: absolute; inset: 0; }
-    /* 主卡：左 120、頂 246、1180×516（右緣 1300，避開右下子母畫面） */
-    #x-point #xpt-card { position: absolute; left: 120px; top: 246px; width: 1180px; height: 516px; }
-    #x-point #xpt-ico { position: absolute; left: 96px; top: 138px; --d: 240px; --i: 132px; }
-    #x-point #xpt-tag { position: absolute; left: 400px; top: 104px; height: 64px; padding: 0 32px; }
-    #x-point #xpt-key { position: absolute; left: 400px; top: 196px; width: 700px; white-space: nowrap; color: var(--sc-fs-ink); }
-    #x-point #xpt-sub { position: absolute; left: 400px; top: 318px; width: 700px; white-space: nowrap; color: var(--sc-fs-mute); }
-    /* 沒有小標、也沒有補一句：重點句在卡片正中 */
-    #x-point #xpt-card[data-solo] #xpt-key { top: 212px; }
-    /* 全寬（沒有講者，主卡 1680）：字放大 */
-    #x-point #xpt-card[data-wide] #xpt-key { width: 1200px; font-size: 96px; line-height: 124px; top: 180px; }
-    #x-point #xpt-card[data-wide] #xpt-sub { width: 1200px; font-size: 52px; line-height: 72px; top: 326px; }
+    /* 主卡：左 120、寬 1180（右緣 1300，避開右下子母畫面）；高度貼著內容，script 在內容區 y 150–858 上下置中 */
+    #x-point #xpt-card { position: absolute; left: 120px; top: 246px; width: 1180px; box-sizing: border-box; padding: 64px 72px;
+                         display: flex; align-items: center; justify-content: center; gap: 64px; }
+    #x-point #xpt-ico { position: relative; --d: 240px; --i: 132px; }
+    #x-point #xpt-text { position: relative; display: flex; flex-direction: column; align-items: flex-start; }
+    #x-point #xpt-tag { position: relative; margin-bottom: 20px; height: 80px; padding: 0 36px 0 32px; font-size: 48px; line-height: 66px; --opt: 6px; }
+    #x-point #xpt-key { position: relative; white-space: nowrap; color: var(--sc-fs-ink); font-size: 112px; line-height: 1.2; --opt: 0.12em; }   /* 字級由 script 照字數放大（上限 112） */
+    #x-point #xpt-sub { position: relative; margin-top: 16px; white-space: nowrap; color: var(--sc-fs-mute); font-size: 52px; line-height: 72px; --opt: 6px; }
+    /* 全寬（沒有講者，主卡 1680）：補一句放大；重點句上限 144（script） */
+    #x-point #xpt-card[data-wide] #xpt-sub { font-size: 60px; line-height: 84px; --opt: 8px; }
+    /* 直式（056）：主卡填滿舞台窗（x 120–1300、y 136–880），內容直排置中；重點句上限 176（script），小標 72、補一句 64（畫面上 61、54） */
+    #x-point[data-format="portrait"] #xpt-card { top: 136px; height: 744px; padding: 40px 0; flex-direction: column; gap: 28px; }
+    #x-point[data-format="portrait"] #xpt-ico { --d: 176px; --i: 96px; }
+    #x-point[data-format="portrait"] #xpt-text { align-items: center; text-align: center; }
+    #x-point[data-format="portrait"] #xpt-tag { height: 104px; padding: 0 44px 0 40px; gap: 18px; font-size: 72px; line-height: 100px; --opt: 8px; margin-bottom: 16px; }
+    #x-point[data-format="portrait"] #xpt-tag::before { width: 20px; height: 20px; }
+    #x-point[data-format="portrait"] #xpt-sub { margin-top: 12px; font-size: 64px; line-height: 88px; --opt: 8px; }
   </style>
   <div id="x-point" data-composition-id="x-point" data-width="1920" data-height="1080" data-duration="6"
        data-cues-sample='{"start":0,"D":6,"cues":{"461":[0.8,3.2],"462":[3.3,5.8]},"refs":{"#461@確認":1.4}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xpt-card" class="sc-wcard" data-layout="free"> <!-- @sub !tag && !sub: <div id="xpt-card" class="sc-wcard" data-layout="free" data-solo> -->
       <span id="xpt-ico" class="sc-icon" data-fill="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /> </svg></span>
-      <!-- @if tag { -->
-      <div id="xpt-tag" class="sc-pill"><span class="sc-opt" data-fill="tag">重點</span></div>
-      <!-- @} -->
-      <div id="xpt-key" class="sc-t72 sc-w900"><span class="sc-opt" data-fill="key">先確認再開拍</span></div>
-      <!-- @if sub { -->
-      <div id="xpt-sub" class="sc-t44"><span class="sc-opt" data-fill="sub">省下重錄的時間</span></div>
-      <!-- @} -->
+      <div id="xpt-text">
+        <!-- @if tag { -->
+        <div id="xpt-tag" class="sc-pill"><span class="sc-opt" data-fill="tag">重點</span></div>
+        <!-- @} -->
+        <div id="xpt-key" class="sc-w900"><span class="sc-opt" data-fill="key">先確認再開拍</span></div>
+        <!-- @if sub { -->
+        <div id="xpt-sub"><span class="sc-opt" data-fill="sub">省下重錄的時間</span></div>
+        <!-- @} -->
+      </div>
     </div>
   </div>
   <script>
@@ -75,6 +87,20 @@
     const T1 = P.at('#461@確認');                      // 講到那句重點的時刻
     P.sfx('ding', '#461@確認');                        // 提示音（句號和 T1 一樣）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+
+    // 版面（載入時算一次，每次結果相同）：重點句照字數放大到填滿文字欄寬，主卡貼著內容、在內容區上下置中
+    const CARD = $q('#xpt-card')[0], KEY = $q('#xpt-key')[0], ICO = $q('#xpt-ico')[0];
+    const cs = getComputedStyle(CARD), padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const WIDE = CARD.hasAttribute('data-wide');
+    const KMAX = P.portrait ? 176 : WIDE ? 144 : 112, KMIN = P.portrait ? 116 : 72;
+    KEY.style.fontSize = '100px';
+    const k100 = KEY.scrollWidth / 100;   // 這句話每 1px 字級多寬
+    // 橫式：文字欄寬＝卡寬 − 左右內距 − 圖示 − 間距；直式：整張卡寬，左右各留 0.46 個字（audit 的內距 ≥ 0.45em）
+    const fit = P.portrait ? CARD.clientWidth / (k100 + 0.92) : (CARD.clientWidth - padX - ICO.offsetWidth - parseFloat(cs.columnGap || 0)) / k100;
+    const FS = Math.max(KMIN, Math.min(KMAX, Math.floor(fit / 4) * 4));
+    KEY.style.fontSize = FS + 'px';
+    KEY.style.lineHeight = 2 * Math.round(FS * (P.portrait ? 0.575 : 0.6)) + 'px';   // 行高取偶數：上下置中後的邊才落在整數像素
+    if (!P.portrait) { const R = P.region('panelTop'); CARD.style.top = Math.round(R[1] + R[3] / 2 - CARD.offsetHeight / 2) + 'px'; }
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 圖示彈出、小標淡入（先看得到這句話是哪一類）
     if (ENTER === 'grow') P.grow('#xpt-card', 0.3);

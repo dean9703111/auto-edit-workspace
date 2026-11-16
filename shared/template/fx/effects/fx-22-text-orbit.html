@@ -33,14 +33,22 @@
     const { D } = FXKit.setup(stage, v, 4);
 
     const P = 4, Pp = D / Math.max(1, Math.round(D / P));   // 整數週期：每週期繞一圈
-    const RX = 690, RY = 170, TILT = (-8 * Math.PI) / 180;
+    // 056 直式（window.__regions 有值＝直式專案，整張縮 0.5625）：中央圓 380 → 520、中央字 130／寬 300 → 150／寬 440（4 字 110，畫面 62）、
+    //   環繞字 150 → 170（最後方縮 0.55 → 93.5，畫面 52.6）、軌道 ry 170 → 190（前方的字不壓到中央字；透明時最下緣在畫面 y 1269，不進字幕保留帶）。橫式不變
+    const PT = !!window.__regions;
+    const RX = 690, RY = PT ? 190 : 170, TILT = (-8 * Math.PI) / 180;
+    if (PT) {
+      const core = document.querySelector('.fx-22-core');
+      Object.assign(core.style, { width: '520px', height: '520px', margin: '-260px 0 0 -260px' });
+      ell.setAttribute('ry', RY);
+    }
     coreT.textContent = v.text;
-    coreT.style.fontSize = FXKit.fitSize(v.text, 130, 300) + 'px';
+    coreT.style.fontSize = (PT ? FXKit.fitSize(v.text, 150, 440) : FXKit.fitSize(v.text, 130, 300)) + 'px';
 
     const base = [...v.text].filter((c) => c.trim());
     const chars = Array.from({ length: Math.ceil(8 / base.length) }, () => base).flat();
     const N = chars.length;
-    const fs = 150;
+    const fs = PT ? 170 : 150;
     const items = chars.map((ch, i) => {
       const el = document.createElement('div');
       el.className = 'fx-22-item';

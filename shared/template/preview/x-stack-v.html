@@ -52,13 +52,21 @@
                            border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
                            display: flex; align-items: center; justify-content: space-between; padding: 0 32px; white-space: nowrap; }
     #x-stack .xstk-left { display: flex; align-items: center; gap: 24px; }
+    /* 直式（056）：舞台縮 0.8475 → 標題 80；清單 0.8 倍：名稱 60（畫面上 51）、說明 48（41）、圖示 72、層高 96（寬不變）、層距 24；主卡拉到 y 136–876 */
+    #x-stack[data-format="portrait"] #xstk-card { top: 136px; }
+    #x-stack[data-format="portrait"] #xstk-card .sc-wcard__bar { font-size: 80px; line-height: 104px; padding-top: 12px; padding-bottom: 12px; }
+    #x-stack[data-format="portrait"] #xstk-body { height: 608px; }
+    #x-stack[data-format="portrait"] .xstk-layer { height: 96px; }
+    #x-stack[data-format="portrait"] .xstk-layer .sc-icon { --d: 72px; --i: 40px; }
+    #x-stack[data-format="portrait"] .xstk-name { font-size: 60px; line-height: 76px; --opt: 8px; }
+    #x-stack[data-format="portrait"] .xstk-desc { font-size: 48px; line-height: 64px; --opt: 6px; }
   </style>
   <div id="x-stack" data-composition-id="x-stack" data-width="1920" data-height="1080" data-duration="14.9"
        data-cues-sample='{"start":0,"D":14.9,"cues":{"111":[1.8,4.1],"112":[4.3,6.8],"113":[6.9,9.3],"114":[9.4,11.8],"115":[12.1,14.5]},"refs":{"#111@手機":2.0,"#112@區網":4.5,"#113@控制台":7.0,"#114@剪輯":9.5}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xstk-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">多機錄影工具的架構</span></div>
-      <div id="xstk-body" data-layout="col" data-gap="sm">
+      <div id="xstk-body" data-layout="col" data-gap="sm" data-gap-portrait="md" data-layout-allow-tight-portrait>
         <!-- 由上往下寫：l4 最上層 … l1 最底層（第 1 個講到）；data-layout="col" 照這個順序由上往下排。地基線不參與排版（沒有 data-slot） -->
         <div id="xstk-l4" class="xstk-layer" data-slot>
           <span class="xstk-left"><span id="xstk-ico4" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <circle cx="6" cy="6" r="3" /> <path d="M8.12 8.12 12 12" /> <path d="M20 4 8.12 15.88" /> <circle cx="6" cy="18" r="3" /> <path d="M14.8 14.8 20 20" /> </svg></span><span class="xstk-name sc-t52 sc-w900 sc-opt">剪輯流程</span></span>

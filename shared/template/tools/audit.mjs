@@ -358,6 +358,7 @@ export async function audit(flags, { log = console.log } = {}) {
   const plans = new Map();
   // custom 段：先讀時間軸（子合成掛上之後才有；第一次 seek 到第一段的起點），排靜止取樣、之後判節奏
   const motions = new Map();
+  const fxDone = new Map();   // 056：字卡動態的完成態（catalog 的 done，段內秒數）
   const customs = pick.list.filter((it) => it.type === 'custom' && it.compId);
   let cueErrs = [];
   try {
@@ -373,10 +374,14 @@ export async function audit(flags, { log = console.log } = {}) {
         motions.set(it.id, mo);
       }
     }
+    for (const it of pick.list.filter((x) => x.type === 'fx')) {
+      await S0.seek(it.start + 0.01);
+      fxDone.set(it.id, await S0.fxDone({ hostId: `el-${it.id}`, D: r3(it.end - it.start), kind: it.fxDef?.done || 'timeline' }));
+    }
   } catch (e) { await G.close(); throw e; }
   // 每段一組取樣（同一段都在同一頁量，段內照時間先後）；全部量完照時間排回去，順序和內容都和 --jobs 1 一樣
   const groups = pick.list.map((it) => {
-    const ts = sampleTimes(it);
+    const ts = sampleTimes(it, { fxDone: fxDone.get(it.id) ?? null });
     const still = it.type === 'custom' ? stillTimes(motions.get(it.id), it) : [];
     return { it, jobs: [...ts.map((s) => ({ it, ...s, floor: ts[0].kind === 'mid' && s.kind === 'done' ? ts[0].t : it.start })), ...still.map((s) => ({ it, ...s, floor: it.start }))].sort((a, b) => a.t - b.t) };
   });
@@ -390,7 +395,7 @@ export async function audit(flags, { log = console.log } = {}) {
   }
   const measureJob = async (S, j) => {
     const pl = plans.get(j.it.id), seg = segs.get(j.it.id), out = { t0: j.t, shot: null, sample: null, raw: [] };
-    const measureAt = async (t) => { await S.seek(t); return S.measure({ hostId: `el-${j.it.id}`, W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.unstage ? { unstage: true } : {}) }); };
+    const measureAt = async (t) => { await S.seek(t); return S.measure({ hostId: `el-${j.it.id}`, W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.unstage ? { unstage: true, ...(j.it.type === 'fx' ? { keepAllow: true } : {}) } : {}) }); };
     let m = await measureAt(j.t), at = j.t;
     // 完成態那一刻全部都在動（退場動畫比 0.6 秒長，例如 03 側邊欄推回 0.7 秒）：每次往前 0.3 秒找最後一個靜止的畫面，最多退到中點
     for (let k = 1; j.kind === 'done' && !m.missingHost && (m.els || []).length && !hasStill(m) && k <= 6; k++) {

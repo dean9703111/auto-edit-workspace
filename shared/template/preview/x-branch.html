@@ -59,6 +59,13 @@
     #x-branch .xbr-b .xbr-txt { position: relative; }
     /* 亮起：now＝目前這一條的底色（下一條亮起時淡掉）；主色亮框由 P.spot 自動加（.sc-spot） */
     #x-branch .xbr-now { position: absolute; inset: 0; border-radius: 16px; background: var(--v2-node-tint); }
+    /* 直式（056）：排法不變，字放大（標題 76、起點與分支 72，畫面上 64／61），框跟著字放大 */
+    #x-branch[data-format="portrait"] #xbr-card .sc-wcard__bar { font-size: 76px; }
+    #x-branch[data-format="portrait"] #xbr-root { width: 360px; height: 272px; }
+    #x-branch[data-format="portrait"] #xbr-rico { --d: 104px; --i: 60px; }
+    #x-branch[data-format="portrait"] .xbr-b { height: 148px; padding: 0 40px 0 36px; }
+    #x-branch[data-format="portrait"] .xbr-b .sc-icon { --d: 88px; --i: 48px; }
+    #x-branch[data-format="portrait"] :is(#xbr-root, .xbr-b) .sc-t52 { font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-branch" data-composition-id="x-branch" data-width="1920" data-height="1080" data-duration="14.6"
        data-cues-sample='{"start":0,"D":14.6,"cues":{"92":[3.6,6.2],"93":[6.4,9],"94":[9.2,12.6]},"refs":{"#92@長片":3.6,"#93@短影音":6.4,"#94@逐字稿":9.2}}'>

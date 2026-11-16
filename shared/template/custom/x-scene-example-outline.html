@@ -35,6 +35,9 @@
   fullscreen：主卡在 panelTop 區（x 120–1300、y 150–858），標題列 128、內容區 xsco-stage 1176×580。
   xsco-stage 是 data-layout="row" data-gap="xl"（kit/scene-layout.js，shared/style.md「版面」）：四站等距 96、底對齊（標籤同一條線）、整組置中；
   4 站一列每站寬 ≤ 216px（直的手機腳架可以更高）；路線畫在標籤下面 36px，站點在每站插圖的中線。
+  直式：主卡填滿舞台窗（script：top 136；標題列 140／字 76、內容區 1176×600）；站名 32 → 72（畫面上 61），四站一列放不下一行 4 字（4 × 288），
+  站名寬 2 字、斷成兩行（「實際／操作」「AI／開發」）；手機腳架 136×350 → 112×288（兩行站名＋路線才放得進 600）；螢幕上的 REC 小字藏起來（留紅點）。
+  一列 144＋216 × 3＋96 × 3＝1080；高 288＋16＋168＋路線 36＝508。#x-scene-example-outline[data-format="portrait"] 的 CSS。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-scene-example-outline 示意動畫參考：本集大綱</title></head>
@@ -61,6 +64,12 @@
     #x-scene-example-outline .xsco-side { flex-direction: row; gap: var(--sc-gap-sm); }
     #x-scene-example-outline .xsco-lbl { display: block; font-size: 32px; line-height: 40px; }   /* 標籤 32px：退到 0.96 時仍 ≥ 30px */
     #x-scene-example-outline .xsco-wv { width: 216px; height: 88px; }   /* 聲紋（選用）：P.wave 自動插跳動的條 */
+    /* 直式（056）：主卡填滿舞台窗（top 136，script 設），標題列 140／字 76、內容區 1176×600；標籤 72（畫面上 61） */
+    #x-scene-example-outline[data-format="portrait"] #xsco-card .sc-wcard__bar { height: 140px; font-size: 76px; line-height: 100px; }
+    #x-scene-example-outline[data-format="portrait"] #xsco-stage, #x-scene-example-outline[data-format="portrait"] .xsco-floor { height: 600px; }
+    #x-scene-example-outline[data-format="portrait"] .xsco-lbl { font-size: 72px; line-height: 84px; width: 2em; white-space: normal; text-align: center; }   /* 四字的站名斷成兩行（2 字一行） */
+    #x-scene-example-outline[data-format="portrait"] #xsco-s1 > [data-illus] { width: 112px !important; height: 288px !important; }   /* 手機腳架縮短：兩行站名＋路線才放得進 600 */
+    #x-scene-example-outline[data-format="portrait"] .il-rec text { display: none; }   /* 螢幕上的 REC 小字（畫面上 12px）藏起來，留紅點 */
   </style>
   <div id="x-scene-example-outline" data-composition-id="x-scene-example-outline" data-width="1920" data-height="1080" data-duration="20.5"
        data-cues-sample='{"start":0,"D":20.5,"cues":{"202":[2.5,5],"203":[5.5,8],"204":[8.5,11],"205":[11.5,14],"206":[14.5,17]},"refs":{"#202@實際操作":3.3,"#203@安裝":6,"#204@網路":9.1,"#205@AI":12.4,"#206@迭代":15.3}}'>
@@ -106,7 +115,7 @@
     const ROOT = document.getElementById('x-scene-example-outline');
     const R = P.region('panelTop');   // 主卡＝全畫面主卡區（design-system §2；直式由 window.__regions 蓋過）
     const CARD = document.getElementById('xsco-card');
-    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; if (!CARD.hasAttribute('data-wide')) CARD.style.width = R[2] + 'px';   // 全寬版型：kit 已把主卡拉到 1680，不要蓋回去
+    CARD.style.left = R[0] + 'px'; CARD.style.top = (P.portrait ? 136 : R[1]) + 'px'; if (!CARD.hasAttribute('data-wide')) CARD.style.width = R[2] + 'px';   // 全寬版型：kit 已把主卡拉到 1680，不要蓋回去
     const sel = function (id) { return '#' + id; };
     const stateSel = function (s) { return !s || s === 'blank' ? null : s === 'video' ? '.il-content' : '.il-' + s; };   // 狀態名 → 狀態群組
     // 位置由 data-layout 排好（kit/scene-layout.js；ILLUS.mount 之後自動跑一次），這裡只讀

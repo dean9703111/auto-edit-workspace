@@ -711,7 +711,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const speaker = readSpeaker(P.templateDir);
   lib.scenes = applySpeaker(lib.scenes, speaker);
   // 情境動畫模板段（template＋slots）：產生 compositions/<模板>-<段>.html，之後和手寫的 x 檔走同一條路（lib/custom-fill.mjs）
-  const fills = materializeFills({ plan, outDir: P.out, lib, prune: !flags.check });
+  const fills = materializeFills({ plan, outDir: P.out, lib, prune: !flags.check, format: fmt.format });
   // 036 截圖欄位（slot type shot）：圖片檔、前面某一段的完成態截圖；檔在不在、段對不對在這裡查，轉檔在下面 prepareShots
   const shots = checkShots({ plan, lib, projectDir: P.project });
   fills.errors.push(...shots.errors);

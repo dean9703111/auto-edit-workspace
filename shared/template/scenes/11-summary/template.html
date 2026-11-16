@@ -8,8 +8,16 @@
 .sm-body.sm-icon { flex-direction: row; align-items: center; justify-content: center; gap: var(--sc-gap-md); }
 .sm-body .sm-text { line-height: 84px; }
 <!-- @style-portrait -->
-/* 直式（canvas.mjs 的 centerCard：x 60–940、y 880–1240）：在 60–940 置中、bottom 680。 */
+/* 直式（canvas.mjs 的 centerCard：x 60–940、y 880–1240）：在 60–940 置中、bottom 680。
+   056：卡片撐滿卡片帶（外框寬 880＝主卡 872＋底板錯開 8，x 60–940）；徽章 88 → 104、標籤字 56 → 60；正文字級照最長一行
+   clamp(52, 650 ÷ 字數, 72)（沒有圖示 780 ÷ 字數；9 字 72），一行放不下才在詞與詞之間再折一行（timeline 開頭照詞包好）。
+   範例（兩行 9 字）外框 y 912–1240。 */
 #gCard { left: 60px; right: 140px; margin: 0 auto; bottom: 680px; }
+#gCard { width: 880px; }
+#gCard .sc-lt__tagin { font-size: 60px; }
+#gCard .sc-icon--88 { --d: 104px; --i: 56px; }
+#gCard .sm-text { min-width: 0; font-size: clamp(52px, calc({{#icon}}650px{{/icon}}{{^icon}}780px{{/icon}} / {{text_maxline}}), 72px); line-height: round(1.2em, 2px); --opt: 8px;
+  white-space: normal; text-wrap: balance; }
 <!-- @body -->
 <div id="gCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
@@ -29,6 +37,8 @@ P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, 
 P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
 {{#icon}}P.pop('#gCard .sc-icon', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
 P.check('#gCard .sc-icon', {{{in}}} + 0.3);{{/icon}}
+/* 056 直式：正文照詞換行（kit P.wrapWords；橫式不動），「//」斷開的每一行各自平衡 */
+P.wrapWords('#gCard .sm-text', { lines: true });
 P.chars('#gCard .sm-text', {{{in}}} + 0.22, { stagger: 0.02 });
 {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}
 <!-- @style-full -->
@@ -39,6 +49,14 @@ P.chars('#gCard .sm-text', {{{in}}} + 0.22, { stagger: 0.02 });
 #sfTag { font-size: 44px; line-height: 60px; font-weight: 700; color: var(--brand); white-space: nowrap; }
 #sfText { font-size: 80px; line-height: 104px; font-weight: 900; color: var(--sc-fs-ink); text-align: center; white-space: nowrap; }
 #sfText .sc-kw { position: relative; color: var(--brand); }
+<!-- @style-full-portrait -->
+/* 直式（056）：全幕版整張縮 0.5952 放進上半（舞台窗 x 120–1800、y 40–900 → 畫面 x 40–1040、y 314–826），字級照畫面上的大小回推（× 0.5952）：
+   圖示圓 240 → 220（圖示 124）、標籤 44 → 108（畫面上 64）、正文 80 → min(160, 1640 ÷ 最長一行字數)（9 字 160＝畫面上 95、15 字 109＝65），
+   間距 32 → 40；兩行 9 字整組約 812 高，在內容區 y 40–900 上下置中。 */
+#sfArea { gap: 40px; }
+#sfIcon { --d: 220px; --i: 124px; }
+#sfTag { font-size: 108px; line-height: 128px; }
+#sfText { font-size: min(160px, calc(1640px / {{text_maxline}})); line-height: round(1.2em, 2px); }
 <!-- @body-full -->
 <div id="sfArea" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   {{#icon}}<span id="sfIcon" class="sc-icon">{{{icon}}}</span>{{/icon}}

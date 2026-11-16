@@ -42,6 +42,10 @@
   #xcq-body 是 data-layout="col" data-gap="md"：兩條跑道各 1080×240（上慢、下快），整組置中。
   跑道裡左邊名稱欄 168 寬（圖示 56、名稱、時間由上往下），右邊跑道 832 寬：小人每人 88×210、間距 20，站在虛線地面上；終點旗 64 在最右邊。
   走路的路線由 script 照排好的位置算（看不見的 svg 線，P.along 沿它走），不寫座標。
+  直式：主卡 top 140、標題列 112（標題 80 字）、內容區 616（卡底 872）；每一排 1080×240，名稱欄放寬到 320、拿到框外（圖示 64＋名稱 76 字一行、時間 88 字在下一行；
+  76／88 字放在框裡要框高 ≥ 230；名稱 76 是因為退後的那排縮 0.96，畫面上仍 ≥ 60），框只圍跑道 736（小人 76×176、間距 16，整排 444；隊伍、地面、終點旗離框 20）。有結論膠囊時膠囊搬出標題列
+  （標題 80 字＋膠囊放不下），放在兩排下面置中（字 60、高 96，離卡底 40），這時每排高 200、內容區 496＋卡底內距 120（#x-crowd-queue[data-format="portrait"]:has(#xcq-pill)）。
+  畫面上：標題 68、名稱 64（退後時 62）、時間 75、膠囊 51。名稱 3 字、時間 4 字（88 字 ≤ 320）、膠囊 8 字都放得下，直式不用另設上限。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-crowd-queue 兩排人比快慢</title></head>
@@ -71,6 +75,27 @@
     #x-crowd-queue .xcq-p { position: relative; width: 88px; height: 210px; flex: none; }
     #x-crowd-queue .xcq-route { position: absolute; left: 0; top: 0; width: 832px; height: 232px; overflow: visible; }
     #x-crowd-queue .xcq-route path { fill: none; stroke: none; }
+    /* 直式（056）：名稱欄放寬、字放大（圖示＋名稱一行、時間下一行），小人縮小；結論膠囊搬到跑道下面（標題列放不下標題 80 字＋膠囊） */
+    #x-crowd-queue[data-format="portrait"] #xcq-card { top: 140px; }
+    #x-crowd-queue[data-format="portrait"] #xcq-card .sc-wcard__bar { height: 112px; padding: 12px var(--sc-pad-card); font-size: 80px; }
+    #x-crowd-queue[data-format="portrait"] #xcq-body { height: 616px; }
+    #x-crowd-queue[data-format="portrait"] .xcq-lab { width: 320px; display: grid; grid-template-columns: 64px auto; column-gap: 16px; align-items: center; justify-items: start; }
+    #x-crowd-queue[data-format="portrait"] .xcq-lab .sc-icon { --d: 64px; --i: 36px; }
+    #x-crowd-queue[data-format="portrait"] .xcq-name { font-size: 76px; line-height: 80px; --opt: 8px; }
+    #x-crowd-queue[data-format="portrait"] .xcq-time { grid-column: 1 / -1; font-size: 88px; line-height: 88px; --opt: 8px; }
+    #x-crowd-queue[data-format="portrait"] .xcq-lane { padding: 0; border: 0; background: none; }
+    #x-crowd-queue[data-format="portrait"] .xcq-track { width: 736px; height: 100%; box-sizing: border-box; border: 4px solid var(--v2-node-line); border-radius: 24px; background: var(--v2-node); }
+    #x-crowd-queue[data-format="portrait"] .xcq-ground { left: 20px; right: 20px; }
+    #x-crowd-queue[data-format="portrait"] .xcq-flag { right: 20px; }
+    #x-crowd-queue[data-format="portrait"] .xcq-route { width: 728px; height: 100%; }
+    #x-crowd-queue[data-format="portrait"] .xcq-q { left: 20px; width: 444px; height: 176px; gap: 16px; }
+    #x-crowd-queue[data-format="portrait"] .xcq-p, #x-crowd-queue[data-format="portrait"] .xcq-p > [data-illus] { width: 76px !important; height: 176px !important; }
+    #x-crowd-queue[data-format="portrait"]:has(#xcq-pill) #xcq-card { padding-bottom: 120px; }
+    #x-crowd-queue[data-format="portrait"]:has(#xcq-pill) #xcq-body { height: 496px; }
+    #x-crowd-queue[data-format="portrait"]:has(#xcq-pill) .xcq-lane { height: 200px; }
+    #x-crowd-queue[data-format="portrait"] #xcq-pill { position: absolute; left: 0; right: 0; bottom: 40px; width: max-content; margin: 0 auto;
+                                                       height: 96px; padding: 0 36px 0 32px; gap: 18px; font-size: 60px; line-height: 1; --opt: 6px; }
+    #x-crowd-queue[data-format="portrait"] #xcq-pill::before { width: 20px; height: 20px; }
   </style>
   <div id="x-crowd-queue" data-composition-id="x-crowd-queue" data-width="1920" data-height="1080" data-duration="12.6"
        data-cues-sample='{"start":0,"D":12.6,"cues":{"352":[2.6,6.3],"353":[6.4,9.3],"354":[9.4,12.4]},"refs":{"#352@手動":2.8,"#353@自動":6.6,"#354@快":9.6}}'>

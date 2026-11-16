@@ -70,6 +70,20 @@
     #x-trend #xtr-num { text-align: right; }
     /* 結論膠囊：標題列右端（不壓到圖表；標題列的主色底上用深色膠囊） */
     #x-trend #xtr-pill { margin-left: auto; }
+    /* 直式（056）：圖表區 1096×552、字放大（柱、標籤、提示框的位置由 script 的 G 算） */
+    #x-trend[data-format="portrait"] #xtr-card { top: 140px; }
+    #x-trend[data-format="portrait"] #xtr-card .sc-wcard__bar { height: 112px; padding: 8px 56px; font-size: 80px; }
+    #x-trend[data-format="portrait"] #xtr-pill { height: 86px; padding: 0 29px 0 25px; gap: 16px; font-size: 57px; line-height: 1; --opt: 5px; }   /* r1：0.9 倍（字停在直式下限 57） */
+    #x-trend[data-format="portrait"] #xtr-pill::before { width: 18px; height: 18px; }
+    #x-trend[data-format="portrait"] #xtr-body { height: 616px; }
+    #x-trend[data-format="portrait"] #xtr-chart, #x-trend[data-format="portrait"] .xtr-svg, #x-trend[data-format="portrait"] #xtr-plot { width: 1096px; height: 552px; }
+    #x-trend[data-format="portrait"] .xtr-col { top: 396px; height: 120px; }
+    #x-trend[data-format="portrait"] .xtr-lab { top: 468px; width: 200px; font-size: 60px; line-height: 84px; }
+    #x-trend[data-format="portrait"] #xtr-band { height: 432px; }
+    #x-trend[data-format="portrait"] #xtr-note { top: 0; height: 104px; border-radius: 52px; font-size: 60px; line-height: 1; --opt: 6px; }
+    #x-trend[data-format="portrait"] #xtr-tip { height: 168px; border-color: transparent; background: none; align-items: baseline; }   /* 單位和數字同基線 */
+    #x-trend[data-format="portrait"] #xtr-num { font-size: 116px; line-height: 160px; }
+    #x-trend[data-format="portrait"] #xtr-unit { font-size: 72px; line-height: 84px; --opt: 8px; }
   </style>
   <div id="x-trend" data-composition-id="x-trend" data-width="1920" data-height="1080" data-duration="16"
        data-cues-sample='{"start":0,"D":16,"cues":{"151":[1.6,4.6],"152":[4.7,8.2],"153":[8.3,10.8],"154":[10.9,15.4]},"refs":{"#151@200":1.8,"#152@Shorts":5.0,"#153@兩萬":8.6,"#154@翻":11.2}}'>
@@ -110,20 +124,25 @@
     const NOTE = 4;                                       // 選用：標註從第幾組開始（1 起算，≥ 3；這裡＝「9 月」）
 
     // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，不量版面，每次載入結果相同；圖表區本身的位置由 data-layout 排）──
+    // 圖表區常數（直式換一組：圖表區 1096×552、基線 456、柱寬 120、最高 260；提示框數字 116 字，每位 72、逗號 43，單位每字 72，高 168、離柱 28）
+    var G = P.portrait ? { W: 1096, H: 552, SPAN: 896, BW: 120, BASE: 456, HMAX: 260, LAB: 200, DIG: 72, COM: 43, UCH: 72, TIPH: 168, TGAP: 28 }
+                       : { W: 1064, H: 496, SPAN: 872, BW: 112, BASE: 424, HMAX: 280, LAB: 160, DIG: 32, COM: 19, UCH: 40, TIPH: 112, TGAP: 32 };
+    if (P.portrait) ['xtr-axis-svg', 'xtr-line-svg'].forEach(function (id) { document.getElementById(id).setAttribute('viewBox', '0 0 ' + G.W + ' ' + G.H); });
+    if (P.portrait) ['x2', G.W, 'y1', G.BASE, 'y2', G.BASE].forEach(function (v, i, a) { if (i % 2 === 0) document.getElementById('xtr-axis').setAttribute(v, a[i + 1]); });
     // 柱：寬 112、最高 280、最矮 16，底貼基線 y 424；第一根 left 40 起、最後一根 left 912 止，等距（除不盡的餘數兩邊平分）
-    var n = DATA.length, step = Math.floor(872 / (n - 1)), x0 = 40 + Math.floor((872 - step * (n - 1)) / 2);
+    var n = DATA.length, step = Math.floor(G.SPAN / (n - 1)), x0 = 40 + Math.floor((G.SPAN - step * (n - 1)) / 2);
     var vmax = Math.max.apply(null, DATA.map(function (d) { return d[1]; }));
     var cx = [], top = [];
     var plot = document.getElementById('xtr-plot');
     DATA.forEach(function (d, i) {
-      var left = x0 + i * step, h = Math.max(16, Math.round(d[1] / vmax * 280));
-      cx.push(left + 56); top.push(424 - h);
+      var left = x0 + i * step, h = Math.max(16, Math.round(d[1] / vmax * G.HMAX));
+      cx.push(left + G.BW / 2); top.push(G.BASE - h);
       var col = document.createElement('div');                       // 柱＝轉了 −90 度的量條：寬＝柱高，left＝柱中心
-      col.id = 'xtr-c' + i; col.className = 'xtr-col'; col.style.left = (left + 56) + 'px'; col.style.width = h + 'px';
+      col.id = 'xtr-c' + i; col.className = 'xtr-col'; col.style.left = (left + G.BW / 2) + 'px'; col.style.width = h + 'px';
       var fl = document.createElement('div'); fl.id = 'xtr-f' + i; fl.className = 'xtr-fill'; col.appendChild(fl);
       if (i === n - 1) { var hl = document.createElement('i'); hl.id = 'xtr-hl'; fl.appendChild(hl); }   // 最後一根的主色層
       var lab = document.createElement('div');
-      lab.id = 'xtr-l' + i; lab.className = 'xtr-lab sc-t40 sc-w700 sc-gray'; lab.style.left = (left + 56 - 80) + 'px'; lab.textContent = d[0];
+      lab.id = 'xtr-l' + i; lab.className = 'xtr-lab sc-t40 sc-w700 sc-gray'; lab.style.left = (left + G.BW / 2 - G.LAB / 2) + 'px'; lab.textContent = d[0];
       plot.appendChild(col); plot.appendChild(lab);
     });
     // 趨勢線：每根柱頂中點往上 12；端點小圓在最後一點
@@ -132,18 +151,24 @@
     end.style.left = (cx[n - 1] - 12) + 'px'; end.style.top = (top[n - 1] - 24) + 'px';
     // 提示框：數字寬＝位數 × 32＋逗號 × 19（52 px 字、等寬數字），單位每字 40；右緣 ≤ 1064（圖表區右緣），盡量置中在最後一根上方
     var last = DATA[n - 1][1], txt = String(last).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    var numW = txt.replace(/,/g, '').length * 32 + (txt.length - txt.replace(/,/g, '').length) * 19;
-    var unitW = Array.from(document.getElementById('xtr-unit').textContent.trim()).length * 40;
-    var tipW = 8 + 56 + numW + 8 + unitW, tipL = Math.min(cx[n - 1] - Math.round(tipW / 2), 1064 - tipW);
+    var numW = txt.replace(/,/g, '').length * G.DIG + (txt.length - txt.replace(/,/g, '').length) * G.COM;
+    var unitW = Array.from(document.getElementById('xtr-unit').textContent.trim()).length * G.UCH;
+    var tipW = 8 + 56 + numW + 8 + unitW, tipL = Math.min(cx[n - 1] - Math.round(tipW / 2), G.W - tipW);
+    if (P.portrait) tipL = x0 + (n - 1) * step + G.BW + 32 - tipW;   // 直式：字的右緣（框線 4＋內距 28 往內）對齊最後一根柱的右緣
     // 高過它蓋到的柱子（含左邊一根，趨勢線從那裡斜上來）32 px
     var minTop = Math.min.apply(null, top.filter(function (t, i) { return cx[i] >= tipL - step; }));
     var tip = document.getElementById('xtr-tip');
-    tip.style.width = tipW + 'px'; tip.style.left = tipL + 'px'; tip.style.top = Math.max(0, minTop - 32 - 112) + 'px';
+    var tipT = Math.max(0, minTop - G.TGAP - G.TIPH);
+    tip.style.width = tipW + 'px'; tip.style.left = tipL + 'px'; tip.style.top = tipT + 'px';
     document.getElementById('xtr-num').style.width = numW + 'px';
     // 標註位置：事件線（區段的左邊框）在 NOTE 那一組和前一組中間；區段從線到圖表區右緣；標籤右緣離線 16（選用，刪法見檔頭）
-    var rx = x0 + (NOTE - 1) * step - Math.round((step - 112) / 2);
-    var band = document.getElementById('xtr-band'); band.style.left = rx + 'px'; band.style.width = (1064 - rx) + 'px';
-    document.getElementById('xtr-note').style.right = (1064 - rx + 16) + 'px';
+    var rx = x0 + (NOTE - 1) * step - Math.round((step - G.BW) / 2);
+    var band = document.getElementById('xtr-band'); band.style.left = rx + 'px'; band.style.width = (G.W - rx) + 'px';
+    if (P.portrait) { band.style.top = (tipT + G.TIPH) + 'px'; band.style.height = (G.BASE - tipT - G.TIPH) + 'px'; }   // 直式：區段從提示框下面開始（提示框比區段寬，事件虛線才不會穿過數字）
+    var note = document.getElementById('xtr-note'), NR = (P.portrait ? Math.min(rx, tipL) : rx) - 16;   // 直式：提示框變寬，標籤也不超過它左緣
+    note.style.right = (G.W - NR) + 'px';
+    if (P.portrait) note.style.top = (tipT + 40) + 'px';   // 直式：標籤（高 104）的中線對齊數字字形的中線（字形約在提示框 y 47–135），底也剛好貼齊單位的底
+    if (P.portrait && NR < note.offsetWidth) { note.style.right = 'auto'; note.style.left = '0px'; }   // 直式字大：太靠左放不下就貼圖表區左緣（區段從提示框下面才開始，不會壓到事件虛線）
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮、標題圖示描線
     if (ENTER === 'grow') P.grow('#xtr-card', 0.3);
@@ -182,7 +207,7 @@
     P.pop('#xtr-pill', T3);
     P.chars('#xtr-pill .sc-opt', T3 + 0.12, { mode: 'drop' });
     P.dim('#xtr-tip', T3, { to: 0.6 });
-    P.spot('#xtr-pill', '#xtr-pill', T3 + 0.6, { scale: 1.06, lift: -8 });
+    P.spot('#xtr-pill', '#xtr-pill', T3 + 0.6, { scale: 1.06, lift: P.portrait ? 0 : -8 });   // 直式膠囊高 96，不抬（標題列 112 放不下抬 8）
 
     // 收：講完 2 秒回均衡（膠囊亮框收掉、提示框亮回）；完成態停到段尾
     const TR = T3 + 2.0;

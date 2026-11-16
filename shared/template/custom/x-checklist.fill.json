@@ -3,6 +3,9 @@
   "prefix": "xchk",
   "beat": "D",
   "layout": "fullscreen",
+  "portraitMax": {
+    "items.text": 12
+  },
   "when": "一組要確認、要完成的事（2–4 項，一項一句或一個詞，例「新增專案、下載 APP、配對手機、調整解析度」）；畫面先只有空框，講到哪項那一項寫出來、打勾，進度條跟著走",
   "slots": {
     "title": {

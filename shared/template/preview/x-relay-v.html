@@ -58,6 +58,13 @@
     #x-relay[data-wide] #xrl-subj { left: 1000px; top: 276px; font-size: 80px; line-height: 104px; }
     #x-relay[data-wide] .xrl-word { left: 1000px; top: 388px; font-size: 144px; line-height: 168px; }
     #x-relay[data-wide] .xrl-note { left: 1000px; top: 564px; font-size: 48px; line-height: 66px; }
+    /* 直式（056）：只看得到舞台窗 x 120–1300、y 130–880 → 膠片窄一點（截圖卡 480×280、一格 312）、右邊字放大（主體 80、能力詞 120、說明 60 可換兩行） */
+    #x-relay[data-format="portrait"] #xrl-card { top: 130px; width: 576px; height: 750px; }
+    #x-relay[data-format="portrait"] #xrl-strip { top: -77px; gap: 32px; }
+    #x-relay[data-format="portrait"] .xrl-shot { width: 480px; height: 280px; padding: 12px; }
+    #x-relay[data-format="portrait"] #xrl-subj { left: 648px; top: 321px; font-size: 80px; line-height: 104px; }
+    #x-relay[data-format="portrait"] .xrl-word { left: 648px; top: 433px; font-size: 120px; line-height: 144px; }
+    #x-relay[data-format="portrait"] .xrl-note { left: 648px; top: 585px; width: 652px; white-space: normal; font-size: 60px; line-height: 76px; }
   </style>
   <div id="x-relay" data-composition-id="x-relay" data-width="1920" data-height="1080" data-duration="13.4"
        data-cues-sample='{"start":0,"D":13.4,"cues":{"591":[0.3,2.0],"592":[2.1,4.6],"593":[4.7,7.2],"594":[7.3,9.8],"595":[9.9,13.0]},"refs":{"#592@轉逐字稿":2.3,"#593@找出":4.9,"#594@剪好看":7.5,"#595@一句":10.1}}'>
@@ -88,8 +95,9 @@
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     // 版型（以下都不用改）：全寬時 CSS 的 [data-wide] 那幾行接手；一格＝卡高＋間距 40
     const ROOT = document.getElementById('x-relay'), WIDE = !!ROOT.closest('[data-wide]');
+    const PORT = !!(window.SceneMotion && SceneMotion.portrait && SceneMotion.portrait(ROOT));   // 056 直式（縮進直式上半）：root 打上 data-format="portrait"，CSS 的直式那幾行接手
     if (WIDE) ROOT.setAttribute('data-wide', '');
-    const STEP = WIDE ? 496 : 370;
+    const STEP = PORT ? 312 : WIDE ? 496 : 370;
     const CARDS = '#xrl-strip .xrl-shot';               // 膠片上全部的卡（含頭尾露出的那兩張）
 
     const tl = gsap.timeline({ paused: true });

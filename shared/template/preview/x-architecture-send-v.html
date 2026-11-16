@@ -61,6 +61,16 @@
     /* 飛行路線：整個內容區大小，疊在最上面；線本體由 P.fly 藏起來，只留尾跡 */
     #x-architecture-send #xars-sky { position: absolute; left: 0; top: 0; width: 1176px; height: 580px; overflow: visible; }
     #x-architecture-send .xars-path { fill: none; stroke: none; }
+    /* 直式（056）：標題 76、寄件端與收件人 72、「都收到」膠囊 64（畫面上 64／61／54）；寄件端 368×320、飛行區 120、收件人 496×146 */
+    #x-architecture-send[data-format="portrait"] #xars-card .sc-wcard__bar > .sc-opt { font-size: 76px; }
+    #x-architecture-send[data-format="portrait"] #xars-done { height: 100px; padding: 0 36px 0 32px; gap: 16px; font-size: 64px; line-height: 80px; --opt: 8px; }
+    #x-architecture-send[data-format="portrait"] #xars-done::before { width: 18px; height: 18px; }
+    #x-architecture-send[data-format="portrait"] #xars-me { width: 368px; height: 320px; }
+    #x-architecture-send[data-format="portrait"] #xars-air { width: 120px; }
+    #x-architecture-send[data-format="portrait"] .xars-row { width: 496px; height: 146px; padding: 0 32px; }
+    #x-architecture-send[data-format="portrait"] .xars-row .xars-u { --d: 80px; --i: 44px; }
+    #x-architecture-send[data-format="portrait"] .xars-k { --d: 72px; --i: 44px; }
+    #x-architecture-send[data-format="portrait"] :is(#xars-mename, .xars-name) { font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-architecture-send" data-composition-id="x-architecture-send" data-width="1920" data-height="1080" data-duration="15.4"
        data-cues-sample='{"start":0,"D":15.4,"cues":{"302":[2.8,6.0],"303":[6.1,9.2],"304":[9.3,12.4],"305":[12.5,15.2]},"refs":{"#302@客戶":3.0,"#303@主管":6.2,"#304@字幕師":9.4,"#305@都收到":12.6}}'>

@@ -58,6 +58,12 @@
     #x-fix #xfix-st, #x-fix #xfix-sub { position: relative; }
     /* 光澤層：疊在解法卡內容上面、裁成卡的圓角（P.sheen 在裡面掃過；卡本身不裁，聚焦的亮框才不會被切掉） */
     #x-fix #xfix-gloss { position: absolute; inset: 0; border-radius: 16px; overflow: hidden; pointer-events: none; }
+    /* 直式：版面同橫式（左痛點 → 右解法），字放大 1.2 倍（標題 76.8、痛點與解法 62.4），副句 57（畫面上 48）；痛點列高跟著放大到 132、解法卡放大到 464×384 */
+    #x-fix[data-format="portrait"] #xfix-card .sc-wcard__bar { font-size: 76.8px; line-height: 104px; padding-top: 12px; padding-bottom: 12px; }
+    #x-fix[data-format="portrait"] .xfix-pain { height: 132px; }
+    #x-fix[data-format="portrait"] #xfix-sol { width: 464px; height: 384px; }
+    #x-fix[data-format="portrait"] .xfix-t, #x-fix[data-format="portrait"] #xfix-st { font-size: 62.4px; line-height: 86px; --opt: 8px; }
+    #x-fix[data-format="portrait"] #xfix-sub { font-size: 57px; line-height: 79px; --opt: 7px; }
   </style>
   <div id="x-fix" data-composition-id="x-fix" data-width="1920" data-height="1080" data-duration="15"
        data-cues-sample='{"start":0,"D":15,"cues":{"171":[1.4,3.9],"172":[4,6.4],"173":[6.5,9],"174":[9.1,12.4]},"refs":{"#171@不同步":1.6,"#172@走來走去":4.1,"#173@一支一支":6.6,"#174@自己":9.6}}'>

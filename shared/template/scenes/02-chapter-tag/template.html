@@ -3,8 +3,10 @@
 /* 迷你章節卡 .sc-chtag：右緣 1824（right 96）；頂 56（course）／176（yt：品牌橫幅盒到 y 100）。高 112、寬隨章名。排法 free：單一元件靠右上，沒有列／欄。 */
 #cBadge { position: absolute; right: 96px; top: {{#yt}}176{{/yt}}{{^yt}}56{{/yt}}px; }
 <!-- @style-portrait -->
-/* 直式（canvas.mjs 的 badge：左上 x 60、y 250；右上是平台按鈕列）。 */
+/* 直式（canvas.mjs 的 badge：左上 x 60、y 250；右上是平台按鈕列）。
+   056：章名 44 → 56（直式不縮放，畫面上就是 56；和號碼同大，帶高 112 不變）。成片的常駐角標由 lib/main.mjs 的 badgeParts 畫，那裡同一個字級 */
 #cBadge { left: 60px; right: auto; top: 250px; }
+#cBadge .sc-chtag__name { font-size: 56px; line-height: 72px; }
 <!-- @body -->
 <div id="cBadge" class="sc-chtag" data-layout="free">
   <div class="sc-chtag__shell"><span class="sc-chtag__num">{{num}}</span></div>

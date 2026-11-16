@@ -62,6 +62,29 @@
     /* 來源列：淡主色底、寬照字 */
     #x-news #xnews-src { position: absolute; left: 120px; top: 740px; width: max-content; height: 96px; box-sizing: border-box; padding: 0 32px; border-radius: 16px;
                          background: var(--v2-node-tint); color: var(--sc-fs-ink); display: flex; align-items: center; white-space: nowrap; }
+    /* 直式（056）：標題 76、說明 72、大數字 120、漲幅 80、來源 57（畫面上 64／61／102／68／48）；第一列 y 152–288、卡 y 304–696、來源 y 712–864 */
+    #x-news[data-format="portrait"] #xnews-tag { top: 152px; width: 168px; height: 136px; }
+    #x-news[data-format="portrait"] #xnews-tico { display: none; }
+    #x-news[data-format="portrait"] #xnews-tag b { font-size: 72px; line-height: 92px; --opt: 8px; }
+    #x-news[data-format="portrait"] #xnews-head { left: 288px; top: 152px; width: 1012px; height: 136px; padding: 0 36px; }
+    #x-news[data-format="portrait"] #xnews-htext { font-size: 76px; line-height: 96px; --opt: 8px; }
+    #x-news[data-format="portrait"] .xnews-card { top: 304px; height: 392px; }
+    #x-news[data-format="portrait"] #xnews-big { width: 660px; padding: 24px 56px; gap: 0; }
+    #x-news[data-format="portrait"] #xnews-bl, #x-news[data-format="portrait"] #xnews-bs { font-size: 72px; line-height: 92px; --opt: 8px; }
+    #x-news[data-format="portrait"] #xnews-num { font-size: 120px; line-height: 120px; --opt: 14px; }
+    #x-news[data-format="portrait"] #xnews-unit { font-size: 80px; line-height: 88px; --opt: 0px; }
+    #x-news[data-format="portrait"] #xnews-trend { left: 804px; width: 496px; padding: 24px 36px; gap: 12px; justify-content: space-between; }
+    #x-news[data-format="portrait"] #xnews-rhead { height: 92px; }
+    #x-news[data-format="portrait"] #xnews-rhead .sc-icon { --d: 56px; --i: 32px; }
+    #x-news[data-format="portrait"] #xnews-rl { font-size: 72px; line-height: 92px; --opt: 8px; }
+    #x-news[data-format="portrait"] #xnews-rv { position: absolute; left: 36px; top: 124px; margin: 0; font-size: 80px; line-height: 104px; --opt: 10px; }
+    #x-news[data-format="portrait"] #xnews-chart { width: 416px; height: 180px; }
+    #x-news[data-format="portrait"] #xnews-src { top: 712px; width: 1180px; height: auto; padding: 0; background: none; }
+    #x-news[data-format="portrait"] #xnews-stext { display: block; font-size: 57px; line-height: 72px; --opt: 8px; white-space: normal; text-wrap: balance; }
+    /* 直式沒有來源：第一列與卡往下 80（整組 y 232–776 置中）；沒有走勢：大數字卡 1180 寬 */
+    #x-news[data-format="portrait"]:not(:has(#xnews-src)) #xnews-tag, #x-news[data-format="portrait"]:not(:has(#xnews-src)) #xnews-head { top: 232px; }
+    #x-news[data-format="portrait"]:not(:has(#xnews-src)) .xnews-card { top: 384px; }
+    #x-news[data-format="portrait"]:not(:has(#xnews-trend)) #xnews-big { width: 1180px; align-items: center; }
   </style>
   <div id="x-news" data-composition-id="x-news" data-width="1920" data-height="1080" data-duration="11.6"
        data-cues-sample='{"start":0,"D":11.6,"cues":{"372":[2.2,5.0],"373":[5.1,8.4],"374":[8.5,11.4]},"refs":{"#372@兩倍":2.4,"#373@半年":5.2,"#374@官方":8.6}}'>
@@ -77,7 +100,7 @@
       <b id="xnews-bs" class="sc-t40 sc-w700 sc-opt">比去年同期</b>
     </div>
     <div id="xnews-trend" class="xnews-card">
-      <div id="xnews-rhead"><span id="xnews-rico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><b id="xnews-rl" class="sc-t40 sc-w700 sc-opt">近 6 個月</b><b id="xnews-rv" class="sc-t52 sc-w900 sc-opt">+120%</b></div>
+      <div id="xnews-rhead"><span id="xnews-rico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /> <polyline points="16 7 22 7 22 13" /> </svg></span><b id="xnews-rl" class="sc-t40 sc-w700 sc-opt">近 6 個月</b><b id="xnews-rv" class="sc-t52 sc-w900 sc-opt" data-layout-allow-overlap-portrait>+120%</b></div>
       <svg id="xnews-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 508 220">
         <path id="xnews-base" d="M8 216 L500 216" />
         <path id="xnews-area" d="M8 196 L100 170 L190 176 L280 120 L370 96 L500 24 L500 220 L8 220 Z" />

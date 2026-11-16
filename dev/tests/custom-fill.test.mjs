@@ -288,3 +288,33 @@ test('026 合計上限（lines）：幾格排在同一行的寬度加起來、�
   const read = (n) => JSON.parse(fs.readFileSync(path.join(TEMPLATE, 'custom', `${n}.fill.json`), 'utf8'));
   for (const n of ['x-metaphor', 'x-ring-facets', 'x-trend', 'x-terminal', 'x-prompt']) assert.ok(read(n).lines?.length, `${n} 要有 lines`);
 });
+
+// 056：fill.json 的 "portraitMax"（直式上限）：直式專案超過只 ⚠（materializeFills 帶 format: 'portrait'），橫式不查
+test('056 portraitMax：清單項數、文字字數、清單每項欄位；直式才 ⚠、橫式不報', () => {
+  const spec = { slots: { title: { type: 'text', max: 10 }, items: { type: 'list', item: { text: { type: 'text', max: 14 } } } }, portraitMax: { items: 3, 'items.text': 8, title: 6 } };
+  const w = F.portraitMaxWarnings(spec, { title: '一二三四五六七', items: [{ text: '一二三四五六七八九' }, { text: 'AB' }, { text: 'C' }, { text: 'D' }] });
+  assert.equal(w.length, 3, w.join('\n'));
+  assert.match(w[0], /slots\.items：直式最多 3 項，現在 4 項/);
+  assert.match(w[1], /slots\.items\[0\]\.text「一二三四五六七八九」9 字，直式上限 8/);
+  assert.match(w[2], /slots\.title「一二三四五六七」7 字，直式上限 6/);
+  assert.deepEqual(F.portraitMaxWarnings(spec, { title: '短', items: [{ text: 'A' }] }), []);
+  assert.deepEqual(F.portraitMaxWarnings({ slots: spec.slots }, { title: '一二三四五六七八九十' }), [], '沒寫 portraitMax 不查');
+  // materializeFills：format（或 plan.format）是 portrait 才查；照樣寫檔（只 ⚠）
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-fill-pm-'));
+  try {
+    const custom = path.join(dir, 'custom');
+    fs.mkdirSync(custom);
+    fs.copyFileSync(path.join(CUSTOM, 'x-process.html'), path.join(custom, 'x-process.html'));
+    fs.writeFileSync(path.join(custom, 'x-process.fill.json'), JSON.stringify({ ...JSON.parse(fs.readFileSync(path.join(CUSTOM, 'x-process.fill.json'), 'utf8')), portraitMax: { items: 2 } }));
+    const lib = { customDir: custom, icons };
+    const plan = () => ({ scenes: [{ id: 'x07', type: 'custom', template: 'x-process', slots: JSON.parse(JSON.stringify(three)), from: '#1', to: '#2e' }] });
+    const land = F.materializeFills({ plan: plan(), outDir: path.join(dir, 'a'), lib, kitDir });
+    assert.ok(!land.warnings.some((x) => x.includes('直式')), land.warnings.join('\n'));
+    const por = F.materializeFills({ plan: plan(), outDir: path.join(dir, 'b'), lib, kitDir, format: 'portrait' });
+    assert.deepEqual(por.errors, []);
+    assert.ok(por.warnings.some((x) => /x07.*slots\.items：直式最多 2 項，現在 3 項/.test(x)), por.warnings.join('\n'));
+    assert.ok(fs.existsSync(path.join(dir, 'b', 'compositions', 'x-process-x07.html')), '只 ⚠，照樣寫檔');
+    const byPlan = F.materializeFills({ plan: { format: 'portrait', ...plan() }, outDir: path.join(dir, 'c'), lib, kitDir });
+    assert.ok(byPlan.warnings.some((x) => x.includes('直式最多 2 項')), 'format 不給就看 plan.format');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

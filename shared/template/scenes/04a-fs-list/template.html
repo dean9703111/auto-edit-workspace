@@ -15,10 +15,22 @@
 #fVis { position: absolute; left: 1176px; top: 128px; width: 500px; height: 580px; display: none; place-items: center; }
 [data-wide] #fVis { display: grid; }
 #fVis > [data-illus] { width: 380px; height: 380px; }
+<!-- @style-portrait -->
+/* 直式（056）：整張 1920×1080 縮 0.8475 進上半面板（舞台窗 x 120–1300、y 130–880），主卡位置、大小不變（1180×712 正好占滿舞台窗）。
+   標題 64 → 76（畫面 64；14 字 1064＋左右內距 96 ≤ 1176，列高 128 不變）；項目 56 → 72（畫面 61）、行高 88＋光學 8＝一行列高 96；
+   方點 16 → 20、圖示圓 72 → 88（圖示 40 → 48）；列距 48 → 32（data-gap-portrait；4 列 4×96＋3×32＝480 ≤ 580－2×40）。
+   一行放得下：有圖示 13 字（88＋24＋13×72＝1048 ≤ 1080）、沒有圖示 14 字；再長自動斷兩行（上下平均，列高 184）：
+   3 列最多 1 列斷兩行、4 列都要一行，再多會超出卡身 → 直式每項寫 ≤ 13 字（scene.json 的 max 18 是橫式的）。
+   方點、圖示對齊第一行（一行的列和置中一樣：方點中心 48、圖示 4–92）。 */
+#wCard .sc-wcard__bar { font-size: 76px; line-height: 100px; --opt: 8px; padding: 14px var(--sc-pad-card); }
+#wBody > .sc-row { align-items: flex-start; white-space: normal; }
+#wBody > .sc-row > .sc-t56 { min-width: 0; font-size: 72px; line-height: 88px; --opt: 8px; text-wrap: balance; }
+#wBody .sc-dot { width: 20px; height: 20px; margin-top: 38px; }
+#wBody .sc-icon--72 { --d: 88px; --i: 48px; margin-top: 4px; }
 <!-- @body -->
 <div id="wCard" class="sc-wcard">
   <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>
-  <div id="wBody" data-layout="col" data-gap="lg" data-wide-keep>
+  <div id="wBody" data-layout="col" data-gap="lg" data-gap-portrait="32" data-wide-keep>
     {{#items}}
     <div id="fRow{{n}}" class="sc-row" data-slot>{{#itemsHasIcon}}<span class="sc-icon sc-icon--72">{{{icon}}}</span>{{/itemsHasIcon}}{{^itemsHasIcon}}<span class="sc-dot"></span>{{/itemsHasIcon}}<span class="sc-t56 sc-w500 sc-opt">{{{text}}}</span></div>
     {{/items}}

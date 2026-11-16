@@ -54,17 +54,29 @@
                                  display: flex; align-items: center; gap: 16px; padding: 0 28px; white-space: nowrap; }
     #x-callout-phone .xcph-tag .sc-icon { --d: 64px; --i: 36px; position: relative; }
     #x-callout-phone .xcph-tag .xcph-name { position: relative; }
+    /* 直式（056）：主卡填滿舞台窗（y 136–880）；手機在左（放大）、膠囊在右一欄（script 搬），字 72（畫面上 61） */
+    #x-callout-phone[data-format="portrait"] #xcph-card { top: 136px; }
+    #x-callout-phone[data-format="portrait"] #xcph-card .sc-wcard__bar { height: 140px; font-size: 76px; line-height: 100px; }
+    #x-callout-phone[data-format="portrait"] #xcph-body { height: 600px; }
+    #x-callout-phone[data-format="portrait"] #xcph-objwrap { width: 448px; height: 520px; }
+    #x-callout-phone[data-format="portrait"] #xcph-obj { left: 112px; top: 28px; width: 224px; height: 464px; }
+    #x-callout-phone[data-format="portrait"] #xcph-r1 { left: 90px; top: 126px; width: 268px; height: 268px; }
+    #x-callout-phone[data-format="portrait"] #xcph-r2 { left: 24px; top: 60px; width: 400px; height: 400px; }
+    #x-callout-phone[data-format="portrait"] #xcph-r3 { left: -36px; top: 0; width: 520px; height: 520px; }
+    #x-callout-phone[data-format="portrait"] .xcph-tag { width: 520px; height: 120px; border-radius: 60px; padding: 0 32px 0 24px; gap: 16px; }
+    #x-callout-phone[data-format="portrait"] .xcph-tag .sc-icon { --d: 72px; --i: 40px; }
+    #x-callout-phone[data-format="portrait"] .xcph-name { font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-callout-phone" data-composition-id="x-callout-phone" data-width="1920" data-height="1080" data-duration="15"
        data-cues-sample='{"start":0,"D":15,"cues":{"232":[1.9,4.3],"233":[4.4,6.8],"234":[6.9,9.3],"235":[9.4,11.8],"236":[12.2,14.6]},"refs":{"#232@下載":2.1,"#233@不用換卡":4.6,"#234@安卓":7.1,"#235@加值":9.6}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xcph-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">旅遊 eSIM 怎麼用</span></div>
-      <div id="xcph-body" data-layout="row" data-gap="md">
-        <div id="xcph-left" data-slot data-layout="col" data-gap="lg">
-          <div id="xcph-t1" class="xcph-tag" data-slot>
+      <div id="xcph-body" data-layout="row" data-gap="md" data-gap-portrait="lg">
+        <div id="xcph-left" data-slot data-layout="col" data-gap="lg" data-gap-portrait="sm">
+          <div id="xcph-t1" class="xcph-tag" data-slot data-layout-allow-tight-portrait="">
             <span id="xcph-ico1" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <polyline points="17 8 12 3 7 8" /> <line x1="12" x2="12" y1="3" y2="15" /> </svg></span><span id="xcph-n1" class="xcph-name sc-t52 sc-w900 sc-opt">下載就能用</span></div>
-          <div id="xcph-t3" class="xcph-tag" data-slot>
+          <div id="xcph-t3" class="xcph-tag" data-slot data-layout-allow-tight-portrait="">
             <span id="xcph-ico3" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <rect width="14" height="20" x="5" y="2" rx="2" ry="2" /> <path d="M12 18h.01" /> </svg></span><span id="xcph-n3" class="xcph-name sc-t52 sc-w900 sc-opt">安卓也能用</span></div>
         </div>
         <div id="xcph-objwrap" data-slot>
@@ -72,9 +84,9 @@
           <div id="xcph-obj" data-illus="phone" data-orient="portrait" data-screen="blank"></div>
         </div>
         <div id="xcph-right" data-slot data-layout="col" data-gap="lg">
-          <div id="xcph-t2" class="xcph-tag" data-slot>
+          <div id="xcph-t2" class="xcph-tag" data-slot data-layout-allow-tight-portrait="">
             <span id="xcph-ico2" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M20 6 9 17l-5-5" /> </svg></span><span id="xcph-n2" class="xcph-name sc-t52 sc-w900 sc-opt">不用換卡</span></div>
-          <div id="xcph-t4" class="xcph-tag" data-slot>
+          <div id="xcph-t4" class="xcph-tag" data-slot data-layout-allow-tight-portrait="">
             <span id="xcph-ico4" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg></span><span id="xcph-n4" class="xcph-name sc-t52 sc-w900 sc-opt">隨時加值</span></div>
         </div>
       </div>
@@ -86,6 +98,14 @@
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     const tl = gsap.timeline({ paused: true });
     const P = SceneMotion(tl, document.getElementById('x-callout-phone'));
+    // 直式：膠囊改成手機右邊一欄（照 1→4 的順序），手機搬到最前面，再重排一次（kit/scene-layout.js）
+    if (P.portrait) {
+      const COL = $q('#xcph-left')[0];
+      ['#xcph-t1', '#xcph-t2', '#xcph-t3', '#xcph-t4'].forEach(function (s) { const el = $q(s)[0]; if (el) COL.appendChild(el); });
+      COL.parentNode.insertBefore($q('#xcph-objwrap')[0], COL);
+      $q('#xcph-right')[0].style.display = 'none';   // 右欄空了（排版時已經寫了寬高，要藏起來才不佔位置）
+      SceneLayout.apply(document.getElementById('x-callout-phone'), { force: true });
+    }
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const T1 = P.at('#232@下載'), T2 = P.at('#233@不用換卡'), T3 = P.at('#234@安卓'), T4 = P.at('#235@加值');   // 講到每個功能的時刻
@@ -99,23 +119,23 @@
     else { P.wipe('#xcph-card', 0, { dir: 'up', dur: 0.8 }); P.pop('#xcph-card', 0, { from: 0.96, dy: 60, dur: 0.8, ease: P.V2.EASE.in }); }
     P.chars('#xcph-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     P.pop('#xcph-obj', 1.0, { from: 0.7 });
-    P.pop('#xcph-r1, #xcph-r2, #xcph-r3', 1.2, { stagger: 0.15, from: 0.6, dy: 0 });
+    P.pop('#xcph-r1, #xcph-r2, #xcph-r3', P.portrait ? 1.4 : 1.2, { stagger: 0.15, from: 0.6, dy: 0 });   // 直式手機在外框裡縮排（不再和外框同大），audit 算它是新元素：同心圓晚 0.2 秒，任何 1 秒內新元素 ≤ 2
     // 拍 1 第 1 個功能：手機送出一圈漣漪 → 膠囊彈出、＋0.12 字逐字、＋0.15 圖示描線 → ＋0.6 聚焦
     P.ripple('#xcph-obj', T1, { to: 1.8 });
     P.pop('#xcph-t1', T1, { from: 0.6, dy: 0 });  P.chars('#xcph-n1', T1 + 0.12);  P.icon('#xcph-ico1', T1 + 0.15);
-    P.spot('#xcph-t1', '#xcph-t1', T1 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    P.spot('#xcph-t1', '#xcph-t1', T1 + 0.6, { scale: 1.05, lift: P.portrait ? 0 : -8, dim: 0.6 });
     // 拍 2 第 2 個功能：同拍 1
     P.ripple('#xcph-obj', T2, { to: 1.8 });
     P.pop('#xcph-t2', T2, { from: 0.6, dy: 0 });  P.chars('#xcph-n2', T2 + 0.12);  P.icon('#xcph-ico2', T2 + 0.15);
-    P.spot('#xcph-t1, #xcph-t2', '#xcph-t2', T2 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    P.spot('#xcph-t1, #xcph-t2', '#xcph-t2', T2 + 0.6, { scale: 1.05, lift: P.portrait ? 0 : -8, dim: 0.6 });
     // 第 3 個功能（只有 2 個功能時刪掉這 3 行）
     P.ripple('#xcph-obj', T3, { to: 1.8 });
     P.pop('#xcph-t3', T3, { from: 0.6, dy: 0 });  P.chars('#xcph-n3', T3 + 0.12);  P.icon('#xcph-ico3', T3 + 0.15);
-    P.spot('#xcph-t1, #xcph-t2, #xcph-t3', '#xcph-t3', T3 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    P.spot('#xcph-t1, #xcph-t2, #xcph-t3', '#xcph-t3', T3 + 0.6, { scale: 1.05, lift: P.portrait ? 0 : -8, dim: 0.6 });
     // 第 4 個功能（3 個以下時刪掉這 3 行）
     P.ripple('#xcph-obj', T4, { to: 1.8 });
     P.pop('#xcph-t4', T4, { from: 0.6, dy: 0 });  P.chars('#xcph-n4', T4 + 0.12);  P.icon('#xcph-ico4', T4 + 0.15);
-    P.spot('#xcph-t1, #xcph-t2, #xcph-t3, #xcph-t4', '#xcph-t4', T4 + 0.6, { scale: 1.05, lift: -8, dim: 0.6 });
+    P.spot('#xcph-t1, #xcph-t2, #xcph-t3, #xcph-t4', '#xcph-t4', T4 + 0.6, { scale: 1.05, lift: P.portrait ? 0 : -8, dim: 0.6 });
     // 收：總結那一句 → 回均衡（膠囊全部亮回），手機畫面打勾、漣漪，完成態停到段尾
     P.spot(TAGS, null, ALL, { dur: 0.6 });
     P.in('#xcph-obj .il-check', ALL + 0.1);

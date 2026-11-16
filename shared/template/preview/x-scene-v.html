@@ -57,6 +57,11 @@
     #x-scene .xsc-side { flex-direction: row; gap: var(--sc-gap-sm); }
     #x-scene .xsc-lbl { display: block; font-size: 32px; line-height: 40px; }   /* 標籤 32px：退到 0.96 時仍 ≥ 30px */
     #x-scene .xsc-wv { width: 216px; height: 88px; }   /* 聲紋（選用）：P.wave 自動插跳動的條 */
+    /* 直式（056）：主卡填滿舞台窗（top 136，script 設），標題列 140／字 76、內容區 1176×600；標籤 72（畫面上 61） */
+    #x-scene[data-format="portrait"] #xsc-card .sc-wcard__bar { height: 140px; font-size: 76px; line-height: 100px; }
+    #x-scene[data-format="portrait"] #xsc-stage, #x-scene[data-format="portrait"] .xsc-floor { height: 600px; }
+    #x-scene[data-format="portrait"] .xsc-lbl { font-size: 72px; line-height: 88px; }
+    #x-scene[data-format="portrait"][data-xsc-tight] .xsc-lbl { font-size: 60px; line-height: 76px; }   /* 72 放不下時的退路（script 判斷） */
   </style>
   <div id="x-scene" data-composition-id="x-scene" data-width="1920" data-height="1080" data-duration="19.5"
        data-cues-sample='{"start":0,"D":19.5,"cues":{"182":[2.5,5],"183":[5.4,7.9],"184":[8.3,10.8],"185":[11.2,13.7],"186":[14.1,16.6]},"refs":{"#182@手機":2.9,"#183@雲端":5.8,"#184@電腦":9,"#185@播放":11.8,"#186@沒問題":14.6}}'>
@@ -103,7 +108,14 @@
     const ROOT = document.getElementById('x-scene');
     const R = P.region('panelTop');   // 主卡＝全畫面主卡區（design-system §2；直式由 window.__regions 蓋過）
     const CARD = document.getElementById('xsc-card');
-    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; if (!CARD.hasAttribute('data-wide')) CARD.style.width = R[2] + 'px';   // 全寬版型：kit 已把主卡拉到 1680，不要蓋回去
+    CARD.style.left = R[0] + 'px'; CARD.style.top = (P.portrait ? 136 : R[1]) + 'px'; if (!CARD.hasAttribute('data-wide')) CARD.style.width = R[2] + 'px';   // 全寬版型：kit 已把主卡拉到 1680，不要蓋回去
+    // 直式：標籤 72 放不下（元件多、標籤長，排出內容區的內距 40／32）時退回 60（畫面上 51）再排一次；
+    // parts 不在 fill.json 的 slots 裡，portraitMax 管不到標籤字數，只能在這裡退
+    if (P.portrait) {
+      const ST = document.getElementById('xsc-stage');
+      const over = function () { return Array.prototype.some.call(ST.querySelectorAll(':scope > [data-slot]'), function (el) { const b = window.SceneLayout.box(el, ST); return b[0] < 40 || b[0] + b[2] > ST.clientWidth - 40 || b[1] < 32 || b[1] + b[3] > ST.clientHeight - 32; }); };
+      if (over()) { ROOT.setAttribute('data-xsc-tight', ''); window.SceneLayout.apply(ROOT, { force: true }); }
+    }
     const sel = function (id) { return '#' + id; };
     const stateSel = function (s) { return !s || s === 'blank' ? null : s === 'video' ? '.il-content' : '.il-' + s; };   // 狀態名 → 狀態群組
     // 位置由 data-layout 排好（kit/scene-layout.js；ILLUS.mount 之後自動跑一次），這裡只讀

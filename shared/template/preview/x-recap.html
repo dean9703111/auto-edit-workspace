@@ -55,11 +55,18 @@
     #x-recap .xrcp-label { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 24px; height: 56px; white-space: nowrap; color: var(--sc-fs-ink); }
     #x-recap .xrcp-no { flex: none; width: 56px; height: 56px; border-radius: 28px; display: grid; place-items: center;
                        background: var(--sc-fs-ink); color: var(--sc-fs-card); font-size: 32px; line-height: 1; font-weight: 900; font-variant-numeric: tabular-nums; }
+    /* 直式（056）：標籤由 script 搬進框裡，疊在截圖下緣的深色帶上（白字 72 置中）、序號拿掉（script 刪掉）；標題 80、打勾徽章 88；
+       框的位置、大小由 script 的 LAY 直式那一組給 */
+    #x-recap[data-format="portrait"] #xrcp-title { font-size: 80px; line-height: 100px; }
+    #x-recap[data-format="portrait"] .xrcp-ok { --d: 88px; --i: 52px; }
+    #x-recap[data-format="portrait"] .xrcp-label { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 104px; margin-top: 0; padding: 0 8px;
+                                                   border-radius: 0 0 10px 10px; background: color-mix(in srgb, var(--sc-fs-ink) 80%, transparent);
+                                                   color: var(--sc-fs-card); font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-recap" data-composition-id="x-recap" data-width="1920" data-height="1080" data-duration="17"
        data-cues-sample='{"start":0,"D":17,"cues":{"581":[0.4,3.4],"582":[3.6,6.2],"583":[6.4,9.0],"584":[9.2,11.8],"585":[12.0,17.0]},"refs":{"#582@NG":4.0,"#583@規則":6.8,"#584@預覽":9.6,"#585@資產":12.4}}'>
     <div class="sc-surface-fs fill"></div>
-    <div id="xrcp-wall">
+    <div id="xrcp-wall" data-layout-allow-tight-portrait>
       <div id="xrcp-title" class="sc-t72 sc-w900"><span class="sc-opt">今天講了這 4 件事</span></div>
       <div id="xrcp-s1" class="xrcp-slot">
         <div id="xrcp-f1" class="xrcp-frame">
@@ -97,27 +104,35 @@
 
     // 0. 版面（以下到 tl 之前都不用改）：照張數（數 .xrcp-slot，2–4）和有沒有講者小視窗（外層 data-wide）排；載入時算一次，只用常數、不量版面
     const ROOT = document.getElementById('x-recap'), WIDE = !!ROOT.closest('[data-wide]');
+    const PORT = !!(window.SceneMotion && SceneMotion.portrait && SceneMotion.portrait(ROOT));   // 056 直式（縮進直式上半）：root 打上 data-format="portrait"，版面用下面直式那一組
     if (WIDE) ROOT.setAttribute('data-wide', '');      // 全寬版型：CSS 的 [data-wide] 那幾行接手
     const SLOTS = Array.prototype.slice.call(ROOT.querySelectorAll('.xrcp-slot')), N = Math.max(2, Math.min(4, SLOTS.length));
     ROOT.setAttribute('data-n', String(N));
     // [框寬, 框高, 欄距, 欄數, 標題頂, 標題底到框, 框到標籤, 列距]（框的圖＝框寬 − 20 × 框高 − 20，16:9）
-    const LAY = WIDE
+    const LAY = PORT ? { 2: [536, 310, 48, 2, 278, 44, 0, 0], 3: [472, 272, 56, 2, 136, 44, 0, 24], 4: [472, 272, 56, 2, 136, 44, 0, 24] }   // 直式：標籤疊在框裡，「框到標籤」不用
+      : WIDE
       ? { 2: [772, 443, 64, 2, 130, 56, 24, 0], 3: [516, 299, 40, 3, 202, 56, 24, 0], 4: [392, 229, 24, 4, 237, 56, 24, 0] }
       : { 2: [540, 313, 52, 2, 200, 48, 24, 0], 3: [360, 211, 32, 3, 250, 48, 24, 0], 4: [436, 254, 40, 2, 58, 40, 16, 32] };
     // 合影進場：每一張從畫面外 [dx, dy] 直線飛進來（左半從左、右半從右、中間從下；不經過標題、角標、子母畫面小視窗）
-    const DIRS = WIDE
+    const DIRS = PORT ? { 2: [[-600, -160], [600, -160]], 3: [[-520, -120], [560, -40], [0, 240]], 4: [[-520, -120], [560, -40], [-560, 40], [600, 20]] }
+      : WIDE
       ? { 2: [[-640, -140], [680, 100]], 3: [[-560, -220], [0, 200], [600, -200]], 4: [[-460, -300], [-200, 260], [640, -240], [700, 160]] }
       : { 2: [[-600, -160], [600, -160]], 3: [[-520, -180], [0, 200], [560, -200]], 4: [[-520, -120], [560, -40], [-560, 40], [600, 20]] };
     const L = LAY[N], W = L[0], H = L[1], GAP = L[2], COLS = L[3];
-    const X0 = (WIDE ? 960 : 710) - (COLS * W + (COLS - 1) * GAP) / 2, Y0 = L[4] + 100 + L[5], ROW = H + L[6] + 56 + L[7];
+    const X0 = (WIDE ? 960 : 710) - (COLS * W + (COLS - 1) * GAP) / 2, Y0 = L[4] + 100 + L[5], ROW = PORT ? H + L[7] : H + L[6] + 56 + L[7];
     ROOT.querySelector('#xrcp-title').style.top = L[4] + 'px';
     SLOTS.forEach(function (s, i) {
-      s.style.left = (X0 + (i % COLS) * (W + GAP)) + 'px';
+      s.style.left = (PORT && N === 3 && i === 2 ? 710 - W / 2 : X0 + (i % COLS) * (W + GAP)) + 'px';   // 直式 3 張：第三張置中在第二列
       s.style.top = (Y0 + Math.floor(i / COLS) * ROW) + 'px';
       s.style.width = W + 'px';
       const f = s.querySelector('.xrcp-frame');
       f.style.width = W + 'px'; f.style.height = H + 'px';
-      s.querySelector('.xrcp-label').style.marginTop = L[6] + 'px';
+      if (PORT) {   // 直式：標籤搬進框裡疊在截圖下緣（跟著框聚焦縮放；標籤帶刻意疊在截圖上），序號拿掉
+        const lab = s.querySelector('.xrcp-label');
+        lab.querySelector('.xrcp-no').remove();
+        f.appendChild(lab); lab.setAttribute('data-layout-allow-overlap', '');
+      }
+      else s.querySelector('.xrcp-label').style.marginTop = L[6] + 'px';
     });
     const F = SLOTS.map(function (s, i) { return '#xrcp-f' + (i + 1); }), ALL = F.join(', ');
     const LABS = SLOTS.map(function (s) { return s.querySelector('.xrcp-label'); });

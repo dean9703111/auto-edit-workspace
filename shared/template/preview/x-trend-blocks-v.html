@@ -59,6 +59,18 @@
                               color: var(--sc-fs-ink); white-space: nowrap; }
     #x-trend-blocks .xtrb-v--hot { color: var(--brand); }
     #x-trend-blocks .xtrb-lab { position: absolute; top: 440px; width: 200px; text-align: center; white-space: nowrap; }
+    /* 直式（056）：圖表區 1096×552、方塊與字放大（位置由 script 的 G 算） */
+    #x-trend-blocks[data-format="portrait"] #xtrb-card { top: 140px; }
+    #x-trend-blocks[data-format="portrait"] #xtrb-card .sc-wcard__bar { height: 112px; padding: 8px 56px; font-size: 80px; }
+    #x-trend-blocks[data-format="portrait"] #xtrb-key { height: 96px; padding: 0 32px 0 28px; gap: 16px; font-size: 60px; line-height: 1; --opt: 6px; }
+    #x-trend-blocks[data-format="portrait"] #xtrb-kb { width: 40px; height: 40px; border-radius: 8px; }
+    #x-trend-blocks[data-format="portrait"] #xtrb-body { height: 616px; }
+    #x-trend-blocks[data-format="portrait"] #xtrb-chart, #x-trend-blocks[data-format="portrait"] #xtrb-axis-svg, #x-trend-blocks[data-format="portrait"] #xtrb-plot { width: 1096px; height: 552px; }
+    #x-trend-blocks[data-format="portrait"] .xtrb-b { width: 64px; height: 64px; border-radius: 14px; }
+    #x-trend-blocks[data-format="portrait"] .xtrb-v { width: 240px; height: 96px; }
+    #x-trend-blocks[data-format="portrait"] .xtrb-v > span:first-child { font-size: 88px; line-height: 96px; }
+    #x-trend-blocks[data-format="portrait"] .xtrb-v > span + span { font-size: 60px; line-height: 72px; }
+    #x-trend-blocks[data-format="portrait"] .xtrb-lab { top: 480px; width: 240px; font-size: 60px; line-height: 72px; }
   </style>
   <div id="x-trend-blocks" data-composition-id="x-trend-blocks" data-width="1920" data-height="1080" data-duration="13.2"
        data-cues-sample='{"start":0,"D":13.2,"cues":{"282":[2.0,4.3],"283":[4.4,6.8],"284":[6.9,9.2],"285":[9.3,12.6]},"refs":{"#282@8":2.2,"#283@6":4.7,"#284@4":7.2,"#285@2":9.8}}'>
@@ -88,21 +100,25 @@
 
     // ── 以下由程式算，不用改（只用 DATA 與圖表區座標的常數，每次載入結果相同）──
     // 每一疊寬 128，第一疊 left 40、最後一疊 left 896，等距；第 i 格在第 floor(i/2) 層、左右第 i%2 格，一層高 68，最下層 top 356
-    var n = DATA.length, step = Math.floor(856 / (n - 1)), plot = document.getElementById('xtrb-plot');
+    // 圖表區常數（直式換一組：圖表區 1096×552、基線 468、方塊 64、左右間距 6、一層 70、最下層 top 396、數字框 240×96）
+    var G = P.portrait ? { W: 1096, H: 552, BASE: 468, SPAN: 882, DX: 70, DY: 70, BOT: 396, MID: 67, VW: 240, VH: 96 }
+                       : { W: 1064, H: 496, BASE: 424, SPAN: 856, DX: 68, DY: 68, BOT: 356, MID: 64, VW: 200, VH: 64 };
+    if (P.portrait) { var ax = document.getElementById('xtrb-axis'); document.getElementById('xtrb-axis-svg').setAttribute('viewBox', '0 0 ' + G.W + ' ' + G.H); ax.setAttribute('x2', G.W); ax.setAttribute('y1', G.BASE); ax.setAttribute('y2', G.BASE); }
+    var n = DATA.length, step = Math.floor(G.SPAN / (n - 1)), plot = document.getElementById('xtrb-plot');
     DATA.forEach(function (d, k) {
       var left = 40 + k * step, v = Math.max(1, Math.min(10, Math.round(d[1]))), rows = Math.ceil(v / 2), hot = k === n - 1;
       for (var i = 0; i < v; i++) {
         var b = document.createElement('i');
         b.className = 'xtrb-b xtrb-s' + k + (hot ? ' xtrb-hot' : '');
-        b.style.left = (left + (i % 2) * 68) + 'px'; b.style.top = (356 - Math.floor(i / 2) * 68) + 'px';
+        b.style.left = (left + (i % 2) * G.DX) + 'px'; b.style.top = (G.BOT - Math.floor(i / 2) * G.DY) + 'px';
         plot.appendChild(b);
       }
       var val = document.createElement('div');
       val.id = 'xtrb-v' + k; val.className = 'xtrb-v' + (hot ? ' xtrb-v--hot' : '');
-      val.style.left = (left + 64 - 100) + 'px'; val.style.top = (356 - (rows - 1) * 68 - 12 - 64) + 'px';
+      val.style.left = (left + G.MID - G.VW / 2) + 'px'; val.style.top = (G.BOT - (rows - 1) * G.DY - 12 - G.VH) + 'px';
       val.innerHTML = '<span id="xtrb-n' + k + '" class="sc-t52 sc-w900">0</span><span id="xtrb-u' + k + '" class="sc-t40 sc-w700">' + UNIT + '</span>';
       var lab = document.createElement('div');
-      lab.id = 'xtrb-l' + k; lab.className = 'xtrb-lab sc-t40 sc-w700 sc-gray'; lab.style.left = (left + 64 - 100) + 'px'; lab.textContent = d[0];
+      lab.id = 'xtrb-l' + k; lab.className = 'xtrb-lab sc-t40 sc-w700 sc-gray'; lab.style.left = (left + G.MID - G.VW / 2) + 'px'; lab.textContent = d[0];
       plot.appendChild(val); plot.appendChild(lab);
     });
     const stack = function (k, t) {   // 一組一拍：那一疊由下往上一格一格掉下來疊好（每格晚 0.06 秒），數字同時從 0 數到格數

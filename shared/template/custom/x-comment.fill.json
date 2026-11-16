@@ -3,6 +3,7 @@
   "prefix": "xcm",
   "beat": "H",
   "layout": "fullscreen",
+  "portraitMax": { "name": 7, "meta": 4.5, "quote": 11, "quote2": 11, "reply": 8 },
   "when": "轉述別人說的話：觀眾留言、私訊、網友的提問或評論（「有人留言問我…」「很多人私訊說…」）；留言卡逐字打出那句話，有回答的話講到回答時下面彈出回覆卡",
   "slots": {
     "name": {

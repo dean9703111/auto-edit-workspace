@@ -56,6 +56,26 @@ function load() {
   vm.runInContext(SRC, sb);
   return sb.ILLUS;
 }
+// 056：data-text-scale（直式寫 data-text-scale-portrait，mount 前由 SceneMotion.portrait 換上）：SVG 字放大、形狀不變；沒寫＝原樣
+test('056 data-text-scale：mount 時 SVG 字照倍數放大；mount(root) 先叫 SceneMotion.portrait(root)；直接呼叫元件不受影響', () => {
+  const sb = { console };
+  sb.window = sb;
+  sb.document = { querySelectorAll: () => [] };
+  vm.createContext(sb);
+  vm.runInContext(SRC, sb);
+  const seen = [];
+  sb.SceneMotion = { portrait: (r) => { seen.push(r); return true; } };
+  const el = (ds) => ({ dataset: { ...ds }, innerHTML: '', classList: { s: new Set(), add(c) { this.s.add(c); }, contains(c) { return this.s.has(c); } }, hasAttribute: (k) => k === 'data-illus' });
+  const a = el({ illus: 'recPill', textScale: '1.5' }), b = el({ illus: 'recPill' }), c = el({ illus: 'searchBar', text: '剪片', textScale: '2' });
+  const root = { querySelectorAll: () => [a, b, c] };
+  sb.ILLUS.mount(root);
+  assert.equal(seen[0], root);
+  assert.match(a.innerHTML, /font-size="36"[^>]*class="il-label">REC/);
+  assert.match(a.innerHTML, /font-size="36"[^>]*class="il-time"/);
+  assert.equal(b.innerHTML, sb.ILLUS.recPill(), '沒寫 data-text-scale：和直接呼叫一樣');
+  assert.match(c.innerHTML, /font-size="64"[^>]*class="il-text">剪片/);
+  assert.match(sb.ILLUS.recPill(), /font-size="24"/, '畫完 TK 回 1');
+});
 const classesOf = (svg) => new Set([...svg.matchAll(/class="([^"]+)"/g)].flatMap((m) => m[1].split(/\s+/)));
 const groupOf = (svg, cls) => (svg.match(new RegExp(`<g class="${cls}"[^>]*>`)) || [null])[0];
 const cssTokens = (block) => new Set([...block.matchAll(/(--il-[\w-]+)\s*:/g)].map((m) => m[1]));

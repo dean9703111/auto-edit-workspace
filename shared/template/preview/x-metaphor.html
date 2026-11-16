@@ -62,13 +62,29 @@
     #x-metaphor #xmeta-warn .sc-icon { --d: 72px; --i: 40px; background: var(--sc-warn); color: var(--sc-fs-ink); }
     /* 壞的那個詞：inline-block 才吃得到重拍的縮放 */
     #x-metaphor #xmeta-bad { display: inline-block; color: var(--sc-warn-kw); }
+    /* 直式（056，r1 卡裡縮 0.8）：主卡填滿舞台窗（y 136–880）、標題 76、名稱 60、限制句 58、結論句由 script 照字數放大到 ≤ 92，框和警示條跟著字 */
+    #x-metaphor[data-format="portrait"] #xmeta-card { top: 136px; }
+    #x-metaphor[data-format="portrait"] #xmeta-card .sc-wcard__bar { height: 140px; font-size: 76px; line-height: 100px; }
+    #x-metaphor[data-format="portrait"] #xmeta-body { height: 600px; }
+    #x-metaphor[data-format="portrait"] .xmeta-box { width: 416px; height: 200px; gap: 8px; }
+    #x-metaphor[data-format="portrait"] .xmeta-box .sc-icon { --d: 64px; --i: 36px; }
+    #x-metaphor[data-format="portrait"] .xmeta-name { font-size: 60px; line-height: 72px; --opt: 8px; }
+    #x-metaphor[data-format="portrait"] #xmeta-sum { height: 104px; font-size: 92px; line-height: 104px; }
+    #x-metaphor[data-format="portrait"] #xmeta-warn { width: max-content; height: 104px; padding: 0 32px; gap: 20px; }
+    #x-metaphor[data-format="portrait"] #xmeta-warn .sc-icon { --d: 56px; --i: 32px; }
+    #x-metaphor[data-format="portrait"] #xmeta-wtext { font-size: 58px; line-height: 74px; --opt: 6px; }
+    /* 直式的螢光筆（r1）：從字高 0.2 往下整塊塗滿，下緣和 kit 一樣（.sc-mk 的 % 量的是字框 1.45em，字墨在 21%–88%：34%＝字墨上緣往下 0.2 個字高）；
+       kit 預設只塗下半 40%，橫式照舊 */
+    #x-metaphor[data-format="portrait"] #xmeta-kw > .sc-mk { top: 34%; bottom: 4%; height: auto; left: 0; right: 0; }
+    /* r2：螢光筆左右比字寬 0.3 個字（kit 的 10 px 約 0.11 個字，多 0.2）；內距撐出塗的範圍、外距讓前後的字不被塗到；結論句的字級 script 量寬時已含這兩段 */
+    #x-metaphor[data-format="portrait"] #xmeta-kw { padding: 0 0.3em; margin: 0 0.1em; }
   </style>
   <div id="x-metaphor" data-composition-id="x-metaphor" data-width="1920" data-height="1080" data-duration="15.4"
        data-cues-sample='{"start":0,"D":15.4,"cues":{"22":[2,4.8],"23":[5,7.4],"24":[7.6,9.9],"25":[10.1,12.7]},"refs":{"#22@說明書":2,"#23@Skill":5,"#24@做事":7.6,"#25@寫錯":10.1}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xmeta-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">Skill 的比喻</span></div>
-      <div id="xmeta-body" data-layout="col" data-gap="md">
+      <div id="xmeta-body" data-layout="col" data-gap="md" data-gap-portrait="lg">
         <div id="xmeta-pair" data-slot data-layout="row" data-gap="xxl">
           <svg id="xmeta-arrow" data-links="xmeta-boxL>xmeta-boxR" data-link-class="xmeta-line" xmlns="http://www.w3.org/2000/svg"></svg>
           <div id="xmeta-boxL" class="xmeta-box" data-slot>
@@ -77,7 +93,7 @@
             <span id="xmeta-icoR" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /><path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" /></svg></span><span class="xmeta-name sc-t52 sc-w900 sc-opt">Skill</span></div>
         </div>
         <div id="xmeta-sum" class="sc-t64 sc-w900" data-slot>AI 照<span id="xmeta-kw" class="sc-kw">說明書</span>做事</div>
-        <div id="xmeta-warn" data-slot>
+        <div id="xmeta-warn" data-slot data-layout-allow-tight-portrait>
           <span id="xmeta-icoW" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg></span>
           <span id="xmeta-wtext" class="sc-t52 sc-w900 sc-opt"><span id="xmeta-bad">寫錯</span>了，照錯做</span>
         </div>
@@ -88,6 +104,13 @@
   (function () {
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     const tl = gsap.timeline({ paused: true });
+    // 直式：排版前先把結論句照字數放大（填滿卡寬的 0.8 倍，上限 92、左右各留 0.46 個字；SceneMotion 建立時才排版，所以要在它前面）
+    if (SceneMotion.portrait(document.getElementById('x-metaphor'))) {
+      const SUM = $q('#xmeta-sum')[0], W = $q('#xmeta-body')[0].clientWidth;
+      SUM.style.fontSize = '100px';
+      const fs = Math.max(76, Math.min(92, Math.floor(0.8 * W / (SUM.scrollWidth / 100 + 0.92) / 4) * 4));
+      SUM.style.fontSize = fs + 'px';
+    }
     const P = SceneMotion(tl, document.getElementById('x-metaphor'));
     [ 'in', 'out', 'drift', 'reveal', 'rise', 'maskUp', 'sideIn', 'sideOut', 'morph', 'push', 'count', 'bar', 'stroke', 'icon', 'check', 'type' ].forEach(function (k) { var f = P[k]; P[k] = function (s) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s); return f.apply(P, a); }; });
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
@@ -113,7 +136,7 @@
     P.chars('#xmeta-boxL .xmeta-name', T1 + 0.14);
     P.icon('#xmeta-icoL', T1 + 0.18);
     P.in('.xmeta-ghost', T1 + 0.3);
-    P.spot('#xmeta-boxL', '#xmeta-boxL', T1 + 0.6, { scale: 1.06, lift: -10 });
+    P.spot('#xmeta-boxL', '#xmeta-boxL', T1 + 0.6, { scale: 1.06, lift: P.portrait ? 0 : -10 });   // 直式不抬起（只放大）
     // 拍 2 技術概念：提早 0.6 秒箭頭（data-links 產生；箭頭頭在線描完時淡入）帶發光頭描過去 → 右框彈出、名稱逐字、圖示描線＋漣漪 → ＋0.6 聚焦右框、左框「走過」
     P.comet('#xmeta-boxL-xmeta-boxR', T2 - 0.6, { dur: 0.5 });
     P.cam('#xmeta-card', T2 - 0.2, { to: '#xmeta-boxR', k: 0.12, scale: 1.04, dur: 0.9 });
@@ -121,7 +144,7 @@
     P.chars('#xmeta-boxR .xmeta-name', T2 + 0.14);
     P.icon('#xmeta-icoR', T2 + 0.18);
     P.ripple('#xmeta-icoR', T2 + 0.05, { to: 2.4 });
-    P.spot(BOX, '#xmeta-boxR', T2 + 0.6, { scale: 1.06, lift: -10, done: '#xmeta-boxL' });
+    P.spot(BOX, '#xmeta-boxR', T2 + 0.6, { scale: 1.06, lift: P.portrait ? 0 : -10, done: '#xmeta-boxL' });
     // 拍 3 結論：鏡頭帶到結論句 → 逐字浮出 → ＋0.5 關鍵詞螢光筆 → ＋0.6 兩框收回焦點、整組退焦
     P.cam('#xmeta-card', T3 - 0.2, { to: '#xmeta-sum', k: 0.12, scale: 1.04, dur: 0.9 });
     P.chars('#xmeta-sum', T3);

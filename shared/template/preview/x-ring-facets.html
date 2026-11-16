@@ -57,6 +57,19 @@
                               display: flex; align-items: center; justify-content: center; }
     #x-ring-facets .xrf-name { position: relative; }
     #x-ring-facets .xrf-desc { position: relative; }
+    /* 直式（056）：字放大；清單拿掉框、說明收起來，只留編號＋面向名 */
+    #x-ring-facets[data-format="portrait"] #xrf-card { top: 140px; }
+    #x-ring-facets[data-format="portrait"] #xrf-card .sc-wcard__bar { height: 112px; padding: 12px var(--sc-pad-card); font-size: 80px; }
+    #x-ring-facets[data-format="portrait"] #xrf-body { height: 616px; }
+    #x-ring-facets[data-format="portrait"] #xrf-dial, #x-ring-facets[data-format="portrait"] #xrf-svg { width: 552px; height: 552px; }
+    #x-ring-facets[data-format="portrait"] .xrf-seg, #x-ring-facets[data-format="portrait"] .xrf-on { stroke-width: 95px; }   /* r1：環寬 1.8 倍，編號圓整顆在環帶裡 */
+    #x-ring-facets[data-format="portrait"] #xrf-topic { left: 132px; top: 196px; width: 288px; font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-ring-facets[data-format="portrait"] #xrf-topic:has(br) { font-size: 60px; line-height: 72px; }   /* 兩行主題：環變粗、內徑變小，兩行 72 字放不進 */
+    #x-ring-facets[data-format="portrait"] .xrf-bal { width: 80px; height: 80px; border-radius: 40px; font-size: 60px; line-height: 80px; }
+    #x-ring-facets[data-format="portrait"] .xrf-row { width: max-content; padding: 0; border: 0; background: none; gap: 24px; }
+    #x-ring-facets[data-format="portrait"] .xrf-num { width: 80px; height: 80px; border-radius: 40px; font-size: 60px; line-height: 80px; }
+    #x-ring-facets[data-format="portrait"] .xrf-name { font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-ring-facets[data-format="portrait"] .xrf-desc { display: none; }
   </style>
   <div id="x-ring-facets" data-composition-id="x-ring-facets" data-width="1920" data-height="1080" data-duration="15.4"
        data-cues-sample='{"start":0,"D":15.4,"cues":{"272":[2.2,4.6],"273":[4.8,7.2],"274":[7.3,9.7],"275":[9.8,12.2],"276":[12.5,14.9]},"refs":{"#272@內容":2.4,"#273@剪輯":5.0,"#274@聲音":7.5,"#275@畫面":10.0}}'>
@@ -98,7 +111,8 @@
 
     // 0. 環段與編號：照清單列數切（12 點鐘順時針、段間空 8°；以下都不用改，載入時算一次）
     const NS = 'http://www.w3.org/2000/svg', SVG = $q('#xrf-svg')[0], DIAL = $q('#xrf-dial')[0];
-    const ROWS = $q('#x-ring-facets .xrf-row'), N = ROWS.length, CX = 220, CY = 220, RR = 180, GAP = 8;
+    const ROWS = $q('#x-ring-facets .xrf-row'), N = ROWS.length, CX = 220, CY = 220, RR = P.portrait ? 172 : 180, GAP = 8, BALL = P.portrait ? 40 : 28;   // BALL＝編號圓半徑（直式 80 的圓）；直式環變粗，RR 縮到外緣貼齊框
+    const K = DIAL.offsetWidth / 440;                 // 圓環放大幾倍（svg 照 viewBox 440 縮放；直式 552），編號圓的位置跟著乘
     const at = function (deg) { const a = deg * Math.PI / 180; return [CX + RR * Math.sin(a), CY - RR * Math.cos(a)].map(function (v) { return Math.round(v * 10) / 10; }); };
     ROWS.forEach(function (row, i) {
       const a0 = i * 360 / N + GAP / 2, a1 = (i + 1) * 360 / N - GAP / 2, p0 = at(a0), p1 = at(a1), big = a1 - a0 > 180 ? 1 : 0;
@@ -106,7 +120,7 @@
       ['xrf-seg', 'xrf-on'].forEach(function (cls) { const p = document.createElementNS(NS, 'path'); p.setAttribute('class', cls); p.setAttribute('d', d); p.setAttribute('id', (cls === 'xrf-on' ? 'xrf-on' : 'xrf-sg') + (i + 1)); SVG.appendChild(p); });
       const m = at((a0 + a1) / 2), b = document.createElement('b');
       b.className = 'xrf-bal sc-t40 sc-w900'; b.id = 'xrf-b' + (i + 1); b.textContent = String(i + 1); b.setAttribute('data-layout-allow-overlap', '');
-      b.style.left = Math.round(m[0] - 28) + 'px'; b.style.top = Math.round(m[1] - 28) + 'px'; DIAL.appendChild(b);
+      b.style.left = Math.round(m[0] * K - BALL) + 'px'; b.style.top = Math.round(m[1] * K - BALL) + 'px'; DIAL.appendChild(b);
     });
     const LIST = ROWS.map(function (r) { return '#' + r.id; }).join(', ');
     const UPTO = function (k) { return ROWS.slice(0, k).map(function (r) { return '#' + r.id; }).join(', '); };   // 已經出現的列（還沒講到的列不參與聚焦）

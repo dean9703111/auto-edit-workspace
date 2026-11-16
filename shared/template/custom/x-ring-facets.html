@@ -38,6 +38,11 @@
   fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
   #xrf-body 是 data-layout="row" data-gap="xl"（kit/scene-layout.js）：左邊圓環 440×440、右邊清單（列 500×112，data-layout="col" data-gap="sm"），整組置中，不寫 left／top。
   環半徑 180、線寬 56，段與段之間空 8°；編號圓 56 在每段的正中；環段、編號位置都由 script 照列數算。
+  直式：主卡 top 140、標題列 112（標題 80 字）、內容區 616（卡底 872）；圓環放大到 552（svg 照 viewBox 縮放，編號圓位置乘 script 的 K），
+  環寬 95（viewBox 單位，畫面上約 119＝r1 作者要的 1.8 倍粗）、半徑 172（script 的 RR，外緣貼齊 552 的框），環上編號圓 80（60 字，script 的 BALL）整顆落在環帶裡；
+  中間主題 72 字（框 288 寬；環內徑約 312，4 字放得下），主題寫兩行（topic2）時 60 字、行高 72；清單列高 112、寬跟著字（max-content，整組才會置中）、拿掉框（72 字的框要 ≥ 140 高，四列放不下），
+  只留編號圓 80＋面向名 72 字，說明收起來（次要；名稱＋說明 72／60 字放不進一列）
+  （#x-ring-facets[data-format="portrait"]）。畫面上：標題 68、主題與面向名 61、編號 51。面向名 5 字 × 72 ＝ 360，放得下，直式不用另設上限。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-ring-facets 環形圖註解</title></head>
@@ -66,6 +71,19 @@
                               display: flex; align-items: center; justify-content: center; }
     #x-ring-facets .xrf-name { position: relative; }
     #x-ring-facets .xrf-desc { position: relative; }
+    /* 直式（056）：字放大；清單拿掉框、說明收起來，只留編號＋面向名 */
+    #x-ring-facets[data-format="portrait"] #xrf-card { top: 140px; }
+    #x-ring-facets[data-format="portrait"] #xrf-card .sc-wcard__bar { height: 112px; padding: 12px var(--sc-pad-card); font-size: 80px; }
+    #x-ring-facets[data-format="portrait"] #xrf-body { height: 616px; }
+    #x-ring-facets[data-format="portrait"] #xrf-dial, #x-ring-facets[data-format="portrait"] #xrf-svg { width: 552px; height: 552px; }
+    #x-ring-facets[data-format="portrait"] .xrf-seg, #x-ring-facets[data-format="portrait"] .xrf-on { stroke-width: 95px; }   /* r1：環寬 1.8 倍，編號圓整顆在環帶裡 */
+    #x-ring-facets[data-format="portrait"] #xrf-topic { left: 132px; top: 196px; width: 288px; font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-ring-facets[data-format="portrait"] #xrf-topic:has(br) { font-size: 60px; line-height: 72px; }   /* 兩行主題：環變粗、內徑變小，兩行 72 字放不進 */
+    #x-ring-facets[data-format="portrait"] .xrf-bal { width: 80px; height: 80px; border-radius: 40px; font-size: 60px; line-height: 80px; }
+    #x-ring-facets[data-format="portrait"] .xrf-row { width: max-content; padding: 0; border: 0; background: none; gap: 24px; }
+    #x-ring-facets[data-format="portrait"] .xrf-num { width: 80px; height: 80px; border-radius: 40px; font-size: 60px; line-height: 80px; }
+    #x-ring-facets[data-format="portrait"] .xrf-name { font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-ring-facets[data-format="portrait"] .xrf-desc { display: none; }
   </style>
   <div id="x-ring-facets" data-composition-id="x-ring-facets" data-width="1920" data-height="1080" data-duration="15.4"
        data-cues-sample='{"start":0,"D":15.4,"cues":{"272":[2.2,4.6],"273":[4.8,7.2],"274":[7.3,9.7],"275":[9.8,12.2],"276":[12.5,14.9]},"refs":{"#272@內容":2.4,"#273@剪輯":5.0,"#274@聲音":7.5,"#275@畫面":10.0}}'>
@@ -109,7 +127,8 @@
 
     // 0. 環段與編號：照清單列數切（12 點鐘順時針、段間空 8°；以下都不用改，載入時算一次）
     const NS = 'http://www.w3.org/2000/svg', SVG = $q('#xrf-svg')[0], DIAL = $q('#xrf-dial')[0];
-    const ROWS = $q('#x-ring-facets .xrf-row'), N = ROWS.length, CX = 220, CY = 220, RR = 180, GAP = 8;
+    const ROWS = $q('#x-ring-facets .xrf-row'), N = ROWS.length, CX = 220, CY = 220, RR = P.portrait ? 172 : 180, GAP = 8, BALL = P.portrait ? 40 : 28;   // BALL＝編號圓半徑（直式 80 的圓）；直式環變粗，RR 縮到外緣貼齊框
+    const K = DIAL.offsetWidth / 440;                 // 圓環放大幾倍（svg 照 viewBox 440 縮放；直式 552），編號圓的位置跟著乘
     const at = function (deg) { const a = deg * Math.PI / 180; return [CX + RR * Math.sin(a), CY - RR * Math.cos(a)].map(function (v) { return Math.round(v * 10) / 10; }); };
     ROWS.forEach(function (row, i) {
       const a0 = i * 360 / N + GAP / 2, a1 = (i + 1) * 360 / N - GAP / 2, p0 = at(a0), p1 = at(a1), big = a1 - a0 > 180 ? 1 : 0;
@@ -117,7 +136,7 @@
       ['xrf-seg', 'xrf-on'].forEach(function (cls) { const p = document.createElementNS(NS, 'path'); p.setAttribute('class', cls); p.setAttribute('d', d); p.setAttribute('id', (cls === 'xrf-on' ? 'xrf-on' : 'xrf-sg') + (i + 1)); SVG.appendChild(p); });
       const m = at((a0 + a1) / 2), b = document.createElement('b');
       b.className = 'xrf-bal sc-t40 sc-w900'; b.id = 'xrf-b' + (i + 1); b.textContent = String(i + 1); b.setAttribute('data-layout-allow-overlap', '');
-      b.style.left = Math.round(m[0] - 28) + 'px'; b.style.top = Math.round(m[1] - 28) + 'px'; DIAL.appendChild(b);
+      b.style.left = Math.round(m[0] * K - BALL) + 'px'; b.style.top = Math.round(m[1] * K - BALL) + 'px'; DIAL.appendChild(b);
     });
     const LIST = ROWS.map(function (r) { return '#' + r.id; }).join(', ');
     const UPTO = function (k) { return ROWS.slice(0, k).map(function (r) { return '#' + r.id; }).join(', '); };   // 已經出現的列（還沒講到的列不參與聚焦）

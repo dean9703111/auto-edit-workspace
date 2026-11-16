@@ -76,6 +76,19 @@
     #x-scroll-brake[data-wide] #xsb-count { width: 560px; }
     #x-scroll-brake[data-wide] #xsb-card { left: 760px; width: 1040px; }
     #x-scroll-brake[data-wide] #xsb-lock { left: 778px; width: 1004px; }
+    /* 直式（056）：上下排：計數一列在上（大數字 200、單位 80）、視窗卡在下（一屏 3 列；清單 0.8 倍：列高 100、間距 34、名稱 58）；列距、捲動距離由 script 的 PORT 那幾行換 */
+    #x-scroll-brake[data-format="portrait"] #xsb-count { top: 136px; width: 1180px; height: 208px; }
+    #x-scroll-brake[data-format="portrait"] #xsb-num, #x-scroll-brake[data-format="portrait"] #xsb-num2 { top: 0; width: 256px; text-align: right; font-size: 200px; line-height: 208px; }
+    #x-scroll-brake[data-format="portrait"] #xsb-eye, #x-scroll-brake[data-format="portrait"] #xsb-eye2 { left: 288px; top: 8px; height: 88px; font-size: 60px; }
+    #x-scroll-brake[data-format="portrait"] #xsb-unit { left: 288px; top: 108px; font-size: 80px; line-height: 100px; }
+    #x-scroll-brake[data-format="portrait"] #xsb-card { left: 120px; top: 360px; width: 1180px; height: 516px; }
+    #x-scroll-brake[data-format="portrait"] #xsb-card .sc-wcard__bar { height: 112px; font-size: 80px; line-height: 96px; padding-top: 8px; padding-bottom: 8px; }
+    #x-scroll-brake[data-format="portrait"] #xsb-view { top: 136px; bottom: 12px; }
+    #x-scroll-brake[data-format="portrait"] .xsb-row { height: 100px; margin-bottom: 34px; }
+    #x-scroll-brake[data-format="portrait"] .xsb-chip, #x-scroll-brake[data-format="portrait"] .xsb-on { width: 72px; height: 72px; border-radius: 36px; font-size: 48px; line-height: 72px; }
+    #x-scroll-brake[data-format="portrait"] .xsb-name { font-size: 58px; line-height: 72px; }
+    #x-scroll-brake[data-format="portrait"] #xsb-keep { top: 12px; height: 72px; font-size: 58px; line-height: 64px; }
+    #x-scroll-brake[data-format="portrait"] #xsb-lock { left: 138px; top: 612px; width: 1144px; height: 140px; }
   </style>
   <div id="x-scroll-brake" data-composition-id="x-scroll-brake" data-width="1920" data-height="1080" data-duration="11.6"
        data-cues-sample='{"start":0,"D":11.6,"cues":{"561":[0.4,4.2],"562":[4.4,6.0],"563":[6.2,9.4]},"refs":{"#561@三十":1.9,"#563@這一個":8.5}}'>
@@ -88,7 +101,7 @@
       <div id="xsb-num2">1</div>
       <div id="xsb-unit" class="sc-t56 sc-w900"><span class="sc-opt">個 AI 剪輯工具</span></div>
     </div>
-    <div id="xsb-card" class="sc-wcard">
+    <div id="xsb-card" class="sc-wcard" data-layout-allow-tight-portrait>
       <div class="sc-wcard__bar"><span class="sc-opt">試過的 AI 工具</span></div>
       <div id="xsb-view" data-layout-allow-overflow>
         <div id="xsb-list"></div>
@@ -105,6 +118,7 @@
 
     // 0. 依 ITEMS 長出每一列（以下都不用改；載入時算一次，只用常數、不量版面，每次結果相同）
     const ROOT = document.getElementById('x-scroll-brake'), WIDE = !!ROOT.closest('[data-wide]');
+    const PORT = !!(window.SceneMotion && SceneMotion.portrait && SceneMotion.portrait(ROOT));   // 056 直式（縮進直式上半）：root 打上 data-format="portrait"，上下排（見檔頭【版面】直式）
     if (WIDE) ROOT.setAttribute('data-wide', '');      // 全寬版型：CSS 的 [data-wide] 那幾行接手
     const N = ITEMS.length, K = Math.max(1, Math.min(PICK, N));
     const LIST = $q('#xsb-list')[0], VIEW = $q('#xsb-view')[0], BLUR = $q('#xsb-blurk')[0];
@@ -118,9 +132,9 @@
       return r;
     });
     const pickRow = rows[K - 1], others = rows.filter(function (r, i) { return i !== K - 1; });
-    const firstScreen = rows.slice(0, 5);              // 清單區 540 高：一開始看得到前 5 列
+    const firstScreen = rows.slice(0, PORT ? 3 : 5);   // 清單區 540 高：一開始看得到前 5 列（直式 368 高、3 列）
     // 停點列的中線對到清單區正中：第 K 列上緣 108(K−1)、列高 96、清單區半高 270
-    const dist = 108 * (K - 1) + 48 - 270;
+    const dist = PORT ? 134 * (K - 1) + 50 - 184 : 108 * (K - 1) + 48 - 270;   // 直式：列距 134、列高 100、清單區半高 184
 
     const tl = gsap.timeline({ paused: true });
     const P = SceneMotion(tl, document.getElementById('x-scroll-brake'));
@@ -171,7 +185,7 @@
     // 急剎那一格：四角準星從外圍收攏咬住（x 收 0.3 倍、y 收 1.2 倍的距離，back.out）；＋0.12 其他列退暗、停點列抬起換主色框；＋0.3 膠囊彈出
     P.in('#xsb-lock', TB, { dur: 0.15 });
     $q('.xsb-cn').forEach(function (c, i) {
-      const sx = i % 2 ? 1 : -1, sy = i < 2 ? -1 : 1, w = WIDE ? 1004 : 704;
+      const sx = i % 2 ? 1 : -1, sy = i < 2 ? -1 : 1, w = PORT ? 1144 : WIDE ? 1004 : 704;
       P.morph(c, TB, { x: 0, y: 0 }, { from: { x: Math.round(sx * (w / 2 - 22) * 0.3), y: Math.round(sy * 50 * 1.2) }, dur: 0.36, ease: 'back.out(2.2)' });
     });
     P.dim(others, TB + 0.12, { to: 0.38 });

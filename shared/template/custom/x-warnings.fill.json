@@ -3,6 +3,10 @@
   "prefix": "xwarn",
   "beat": "D",
   "layout": "fullscreen",
+  "portraitMax": {
+    "items.text": 6,
+    "items.fig": 6
+  },
   "when": "一組 2–3 條警告或注意事項，一條一句（「有三件事要小心：金鑰不要外流、原始檔別覆蓋、成品要自己看過再發」）；講到哪一條，左邊那一條彈出，右邊同一個位置換成那一條的示意（圖示加一句）",
   "slots": {
     "title": {

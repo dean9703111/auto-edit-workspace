@@ -39,6 +39,10 @@
   fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 150、寬 1180（右緣 1300），標題列 128、內容區 1176×580。
   #xcrd-body 是 data-layout="row" data-gap="lg"：左邊人群 688×508（CSS grid 5 欄 × 2 排，每人 112×244、欄距 32、排距 20），右邊數字欄 312×508（上：總數，下：主色的那幾個）。
   小人是 kit/illus.js 的 pgPerson（.il-hi＝主色軀幹，預設看不到）；script 第一行的 ILLUS.mount 不要動。
+  直式：主卡 top 140、標題列 112（標題 80 字）、內容區 616（卡底 872）；人群縮成 528 寬（每人 88×192、欄距 22、排距 24），數字欄放寬到 504
+  （數字 120 字＋「人」72 字、說明 72 字，兩組間距 40）；結論膠囊搬出標題列（標題 80 字＋膠囊放不下），放在人群下面置中（字 60、高 96，離卡底 40），
+  有膠囊時人群靠上（#x-crowd[data-format="portrait"]:has(#xcrd-pill)）。畫面上：標題 68、說明 61、數字 102、膠囊 51。
+  說明 7 字 × 72 ＝ 504 放得下；膠囊只有人群那一欄寬（528），直式 ≤ 6.5 字（fill.json 的 portraitMax；8 字會伸到右邊壓住說明）。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-crowd 人群比例</title></head>
@@ -60,6 +64,20 @@
     #x-crowd .xcrd-s { position: relative; color: var(--sc-fs-ink); white-space: nowrap; }
     #x-crowd .xcrd-num { display: flex; align-items: baseline; gap: 12px; }
     #x-crowd #xcrd-b .xcrd-num { color: var(--brand); }
+    /* 直式（056）：人群縮小、數字欄放寬、字放大；結論膠囊搬到人群下面（標題列放不下標題 80 字＋膠囊） */
+    #x-crowd[data-format="portrait"] #xcrd-card { top: 140px; }
+    #x-crowd[data-format="portrait"] #xcrd-card .sc-wcard__bar { height: 112px; padding: 12px var(--sc-pad-card); font-size: 80px; }
+    #x-crowd[data-format="portrait"] #xcrd-body { height: 616px; }
+    #x-crowd[data-format="portrait"] #xcrd-grid { width: 528px; height: 408px; grid-template-columns: repeat(5, 88px); grid-template-rows: repeat(2, 192px); column-gap: 22px; row-gap: 24px; align-content: start; }
+    #x-crowd[data-format="portrait"]:has(#xcrd-pill) #xcrd-grid { height: 552px; }
+    #x-crowd[data-format="portrait"] .xcrd-p, #x-crowd[data-format="portrait"] .xcrd-p > [data-illus] { width: 88px !important; height: 192px !important; }
+    #x-crowd[data-format="portrait"] #xcrd-stat { width: 504px; height: 552px; }
+    #x-crowd[data-format="portrait"] #xcrd-na, #x-crowd[data-format="portrait"] #xcrd-nb { font-size: 120px; line-height: 128px; }
+    #x-crowd[data-format="portrait"] .xcrd-num > .sc-t52 { font-size: 72px; line-height: 100px; }
+    #x-crowd[data-format="portrait"] #xcrd-la, #x-crowd[data-format="portrait"] #xcrd-lb { font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-crowd[data-format="portrait"] #xcrd-pill { position: absolute; left: 48px; right: 600px; bottom: 40px; width: max-content; margin: 0 auto;
+                                                  height: 96px; padding: 0 36px 0 32px; gap: 18px; font-size: 60px; line-height: 1; --opt: 6px; }
+    #x-crowd[data-format="portrait"] #xcrd-pill::before { width: 20px; height: 20px; }
   </style>
   <div id="x-crowd" data-composition-id="x-crowd" data-width="1920" data-height="1080" data-duration="11.8"
        data-cues-sample='{"start":0,"D":11.8,"cues":{"342":[1.5,4.0],"343":[4.2,6.8],"344":[7.0,10.6]},"refs":{"#342@10":1.8,"#343@7":4.6,"#344@開頭":7.4}}'>

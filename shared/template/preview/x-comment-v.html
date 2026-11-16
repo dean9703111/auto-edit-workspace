@@ -54,6 +54,22 @@
     #x-comment #xcm-reply { position: absolute; left: 280px; top: 602px; max-width: 1020px; height: 176px; box-sizing: border-box; padding: 0 48px;
                             display: flex; align-items: center; gap: 28px; white-space: nowrap; }
     #x-comment #xcm-rt { color: var(--sc-fs-ink); }
+    /* 直式（056）：名稱、留言、回覆、回覆標籤 72（畫面上 61），時間、讚數 60（次要，畫面上 51）；留言卡高 472，回覆時移到 top 184（script 的 P.portrait）
+       r2：留言卡改成 flex 一列（頭像、文字欄在流裡），寬跟著內容；頭像 240；回覆卡和留言卡左緣對齊，箭頭圓搬進回覆卡、和膠囊同高 104 */
+    #x-comment[data-format="portrait"] #xcm-card { top: 272px; width: max-content; height: 472px; box-sizing: border-box; padding: 0 48px 0 40px;
+                                                   display: flex; align-items: center; gap: 40px; }
+    #x-comment[data-format="portrait"] #xcm-ava { position: relative; left: auto; top: auto; --d: 240px; --i: 136px; }
+    #x-comment[data-format="portrait"] #xcm-col { position: relative; left: auto; top: auto; width: max-content; height: auto; }
+    #x-comment[data-format="portrait"] #xcm-name { font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-comment[data-format="portrait"] #xcm-meta { font-size: 60px; line-height: 84px; --opt: 8px; }
+    #x-comment[data-format="portrait"] #xcm-q { font-size: 72px; line-height: 92px; }
+    #x-comment[data-format="portrait"] #xcm-lk { --d: 64px; --i: 36px; }
+    #x-comment[data-format="portrait"] #xcm-ln { font-size: 60px; line-height: 84px; --opt: 8px; }
+    #x-comment[data-format="portrait"] #xcm-arr { position: relative; left: auto; top: auto; --d: 104px; --i: 56px; }
+    #x-comment[data-format="portrait"] #xcm-reply { left: 120px; top: 680px; max-width: 1180px; height: 152px; padding: 0 32px; gap: 20px; }
+    #x-comment[data-format="portrait"] #xcm-rtag { height: 104px; padding: 0 32px 0 28px; gap: 16px; font-size: 72px; line-height: 92px; --opt: 8px; }
+    #x-comment[data-format="portrait"] #xcm-rtag::before { width: 18px; height: 18px; }
+    #x-comment[data-format="portrait"] #xcm-rt { font-size: 72px; line-height: 100px; --opt: 8px; }
   </style>
   <div id="x-comment" data-composition-id="x-comment" data-width="1920" data-height="1080" data-duration="9.2"
        data-cues-sample='{"start":0,"D":9.2,"cues":{"471":[0.4,1.4],"472":[1.5,4.2],"473":[4.3,5.2],"474":[5.4,9.0]},"refs":{"#472@剪":1.6,"#474@其實":5.5}}'>
@@ -84,6 +100,7 @@
     const T1 = P.at('#472@剪');                        // 講到留言內容的第一個詞
     const T2 = P.at('#474@其實');                      // 講到回答的時刻
     P.sfx('ding', '#474@其實');                        // 回覆一顆提示音（句號和 T2 一樣）
+    if (P.portrait) document.getElementById('xcm-reply').prepend(document.getElementById('xcm-arr'));   // 直式：箭頭圓搬進回覆卡當第一格（兩張卡左緣對齊）
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
 
     // 拍 0 開場：留言卡進場（看 ENTER）→ 頭像彈出、圖示描線 → 名稱淡入（先看得到是誰說的）
@@ -99,7 +116,7 @@
     P.icon('#xcm-lk', T1 + 1.4);
 
     // 拍 2 回覆：留言卡往上讓位（top 318 → 190）、退焦 → ＋0.2 回覆箭頭、回覆卡彈出（字跟著卡一起出現）；完成態停到段尾
-    P.morph('#xcm-card', T2, { top: 190 }, { from: { top: 318 }, dur: 0.5, ease: P.V2.EASE.move });
+    P.morph('#xcm-card', T2, { top: P.portrait ? 184 : 190 }, { from: { top: P.portrait ? 272 : 318 }, dur: 0.5, ease: P.V2.EASE.move });   // 直式 272 → 184
     P.dim('#xcm-card', T2);
     P.pop('#xcm-arr', T2 + 0.2);
     P.pop('#xcm-reply', T2 + 0.2);

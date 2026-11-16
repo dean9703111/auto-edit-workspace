@@ -3,6 +3,7 @@
   "prefix": "xnews",
   "beat": "E",
   "layout": "fullscreen",
+  "portraitMax": { "headline": 12, "bigLabel": 7.5, "trendLabel": 4.5 },
   "when": "轉述一則新聞、公告、官方數據：有一個大數字和一段變化（YouTube 說 Shorts 觀看次數是去年的兩倍，這半年一路往上，官方部落格公布）。沒有主卡，快訊標籤＋標題條，大數字卡、走勢卡翻起來，最後亮出來源",
   "slots": {
     "tag": {

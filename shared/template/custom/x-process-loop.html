@@ -41,6 +41,9 @@
   #xprl-body 是 data-layout="free"（排版程式沒有圓形排法），站的位置由 script 照橢圓算好寫進去，不寫 left／top。
   弧線沿同一個橢圓、在兩站外框外 18 開始和結束，箭頭 18；虛線圓圈是整個橢圓。都由 script 算，不寫座標。
   3 站時橢圓中心下移到 y 336（script 的 CY；用填資料產生 3 站版時自動換成 336）：下排兩站才不和中間主題同一列（audit「同一列沒對齊」✖），整組上下留白也相等；4 站不變。
+  直式：主卡位置不變（舞台縮放 0.8475）；標題 76、站名與主題 72（畫面上 64／61）（#x-process-loop[data-format="portrait"]）；站 384×152（圖示 80）、主題 464×140 在正中。
+  4 站放四個角（左上起順時針：左上、右上、右下、左下；script 的 PG：橢圓 492×240、從 −135° 開始），站外框 x 48–1128、y 44–536，主題上下各空 24；
+  3 站上一下二（PG：橢圓 402×221、中心 y 341），主題上移到 y 216。站名 3 字、主題 4 字放得下，直式不用另設上限。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-process-loop 流程：循環</title></head>
@@ -70,6 +73,13 @@
                                 background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
     #x-process-loop #xprl-hub .sc-icon { --d: 64px; --i: 36px; position: relative; background: var(--brand-ink); color: var(--brand); }
     #x-process-loop #xprl-hub-text { position: relative; }
+    /* 直式（056）：標題 76、站名與主題 72（畫面上 64／61）；站 384×152、主題 464×140 在正中（位置由 script 的 PG 算） */
+    #x-process-loop[data-format="portrait"] #xprl-card .sc-wcard__bar { font-size: 76px; }
+    #x-process-loop[data-format="portrait"] .xprl-node { width: 384px; height: 152px; }
+    #x-process-loop[data-format="portrait"] .xprl-node .sc-icon, #x-process-loop[data-format="portrait"] #xprl-hub .sc-icon { --d: 80px; --i: 44px; }
+    #x-process-loop[data-format="portrait"] .xprl-name, #x-process-loop[data-format="portrait"] #xprl-hub-text { font-size: 72px; line-height: 90px; --opt: 8px; }
+    #x-process-loop[data-format="portrait"] #xprl-hub { left: 356px; top: 220px; width: 464px; height: 140px; border-radius: 70px; }
+    #x-process-loop[data-format="portrait"] #xprl-body:not(:has(> .xprl-node ~ .xprl-node ~ .xprl-node ~ .xprl-node)) #xprl-hub { top: 216px; }
   </style>
   <div id="x-process-loop" data-composition-id="x-process-loop" data-width="1920" data-height="1080" data-duration="18.8"
        data-cues-sample='{"start":0,"D":18.8,"cues":{"222":[3.2,5.7],"223":[6,8.5],"224":[8.8,11.3],"225":[11.6,14]},"refs":{"#222@拍片":3.2,"#223@上片":6,"#224@看數據":8.8,"#225@改腳本":11.6}}'>
@@ -107,8 +117,10 @@
     // 0. 版面（以下都不用改）：站排在橢圓上（從正上方順時針），弧線沿橢圓在兩站外框外開始、結束；只在載入時算一次，每次結果相同
     const NS = 'http://www.w3.org/2000/svg', SVG = $q('#xprl-lines')[0];
     const NODES = $q('#x-process-loop .xprl-node'), N = NODES.length, CX = 588, CY = 290, RX = 390, RY = 180, PAD = 18;  // @sub n==3: const NODES = $q('#x-process-loop .xprl-node'), N = NODES.length, CX = 588, CY = 336, RX = 390, RY = 180, PAD = 18;
-    const ang = function (k) { return -Math.PI / 2 + k * 2 * Math.PI / N; };
-    const pt = function (a) { return [CX + RX * Math.cos(a), CY + RY * Math.sin(a)]; };
+    // 直式（056）：4 站放四個角（左上起順時針，主題在正中）、3 站上一下二，橢圓跟著換（不用改）
+    const PG = !P.portrait ? null : N === 4 ? { a0: -3 * Math.PI / 4, cy: 290, rx: 492, ry: 240 } : { a0: -Math.PI / 2, cy: 341, rx: 402, ry: 221 };
+    const ang = function (k) { return (PG ? PG.a0 : -Math.PI / 2) + k * 2 * Math.PI / N; };
+    const pt = function (a) { return PG ? [CX + PG.rx * Math.cos(a), PG.cy + PG.ry * Math.sin(a)] : [CX + RX * Math.cos(a), CY + RY * Math.sin(a)]; };
     const box = NODES.map(function (el, k) {
       const c = pt(ang(k)), w = el.offsetWidth, h = el.offsetHeight, x = Math.round(c[0] - w / 2), y = Math.round(c[1] - h / 2);
       el.style.left = x + 'px'; el.style.top = y + 'px';

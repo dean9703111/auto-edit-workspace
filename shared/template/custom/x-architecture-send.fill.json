@@ -3,6 +3,7 @@
   "prefix": "xars",
   "beat": "A",
   "layout": "fullscreen",
+  "portraitMax": { "items.text": 3, "done": 3 },
   "when": "把一樣東西傳給 2–3 個人或地方（把連結傳給客戶、主管和字幕師）：講到誰，紙飛機就從寄件端飛向誰、到站打勾；講到「都收到」時全部亮回、結論膠囊彈出（all、done 一起填；沒有這一句就不填）",
   "slots": {
     "title": {

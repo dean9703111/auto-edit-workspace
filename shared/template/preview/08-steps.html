@@ -78,6 +78,8 @@ window.__PREVIEW = {"key":"steps","duration":8,"cues":[]};
     [ 'swap', 'axis' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const D = 8;
     /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 第 1 步上漂 → 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步停 ≥ 0.65＋1.2）→ 段尾向左擦掉 */
+    /* 056 直式：每一步照詞換行（kit P.wrapWords；橫式不動），兩行時只在詞與詞之間換行 */
+    P.wrapWords('#pv-gCard .st-body .sc-t54');
     const stepAt = [0.15, 2.75, 5.35];
     P.wipe('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dir: 'left', dur: P.V2.SHELL });
     P.drift('#pv-gCard .sc-lt__plate, #pv-gCard .sc-lt__card', 0, { dx: -40 * P.U, dur: P.V2.SHELL });

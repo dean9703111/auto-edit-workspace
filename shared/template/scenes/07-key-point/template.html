@@ -5,8 +5,19 @@
 /* 排法 free（kit/scene-layout.js 不排）：卡片＋抽屜（重點講到才抽出），卡寬隨字，沒有列／欄。 */
 #gCard { left: 120px; bottom: 220px; }
 <!-- @style-portrait -->
-/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60。
+   056：卡片和抽屜由左右改成上下兩層、撐滿卡片帶（外框寬 880＝卡寬 854＋落影內距 26，x 60–940）：卡片（徽章 88＋前句 54 → 64）在上，
+   重點條從卡片下緣抽出（上緣 20 藏在卡片後面，抽出方向照舊從左）、字級照字數 clamp(60, 760 ÷ 字數, 96)（12 字 63、6 字以內 96）；
+   標籤字 44 → 60。畫到的範圍：標籤頂 y 902 → 卡片 942–1110 → 重點條 1110–1230、落影到 1240。 */
 #gCard { left: 60px; bottom: 680px; }
+#gCard { bottom: 664px; width: 880px; padding-top: 40px; }
+#kTag { top: 0; height: 80px; padding: 0 40px 6px; font-size: 60px; line-height: 68px; }
+#gCard .v2-lt__row { flex-direction: column; align-items: stretch; }
+#kCard { height: 168px; padding: 56px 48px 24px 36px; }
+#kLead { font-size: 64px; line-height: 80px; --opt: 8px; }
+#gCard .v2-lt__drawer { margin: -20px -26px -26px 0; }
+#kSlab { height: 140px; padding: 20px 48px 4px; border-radius: 0 0 18px 18px; }
+#kWord { font-size: clamp(60px, calc(760px / {{key_len}}), 96px); line-height: round(1.2em, 2px); }
 <!-- @body -->
 <div id="gCard" class="v2-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <div id="kTag" class="v2-lt__tag"><span class="sc-opt">{{#tag}}{{tag}}{{/tag}}{{^tag}}{{#tone_warn}}注意{{/tone_warn}}{{^tone_warn}}重點{{/tone_warn}}{{/tag}}</span></div>

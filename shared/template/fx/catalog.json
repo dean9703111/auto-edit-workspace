@@ -494,7 +494,7 @@
       "tag": "Logo・標題",
       "bg": "accent",
       "portrait": "ok",
-      "portraitMinPx": 42,
+      "portraitMinPx": 52,
       "animText": "軌道環繞",
       "spec": "虛線橢圓軌道，文字沿軌道繞行，到前方時放大、到後方時縮小變淡並被遮擋",
       "desc": "沿虛線橢圓軌道繞行，前大後小有遮擋",

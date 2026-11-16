@@ -55,13 +55,17 @@
                             display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
     #x-callout .xcall-tag .sc-icon { --d: 64px; --i: 36px; position: relative; }
     #x-callout .xcall-tag .xcall-name { position: relative; }
+    /* 直式（056）：標題 76、標籤名稱 72（畫面上 64／61）；標籤改成圖示在上、名稱在下（360×220），欄距 72（#xcall-body 的 data-gap-portrait） */
+    #x-callout[data-format="portrait"] #xcall-card .sc-wcard__bar { font-size: 76px; }
+    #x-callout[data-format="portrait"] .xcall-tag { width: 360px; height: 220px; flex-direction: column; gap: 8px; border-radius: 20px; }
+    #x-callout[data-format="portrait"] .xcall-tag .xcall-name { font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-callout" data-composition-id="x-callout" data-width="1920" data-height="1080" data-duration="14.9"
        data-cues-sample='{"start":0,"D":14.9,"cues":{"101":[1.9,4.3],"102":[4.4,6.8],"103":[6.9,9.3],"104":[9.4,11.8],"105":[12.2,14.6]},"refs":{"#101@腳架不穩":2.1,"#102@衣服太薄":4.6,"#103@收音太遠":7.1,"#104@背光太暗":9.6}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xcall-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">錄影常見小毛病</span></div>
-      <div id="xcall-body" data-layout="row" data-gap="xl">
+      <div id="xcall-body" data-layout="row" data-gap="xl" data-gap-portrait="72">
         <svg id="xcall-lines" data-links="xcall-t1-xcall-obj xcall-t2-xcall-obj xcall-t3-xcall-obj xcall-t4-xcall-obj" data-link-class="xcall-line" xmlns="http://www.w3.org/2000/svg">
           <!-- 四條引線由 data-links 產生（id xcall-t1-xcall-obj …）；端點小圓的位置由 script 算 -->
           <circle id="xcall-d1" class="xcall-dot" r="10" />

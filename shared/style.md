@@ -99,9 +99,10 @@
 - 字幕：字級、字重、底板、內距和橫式同一套（本檔「字幕」）；每則最多 **10** 個字（置中後底板不壓到右側按鈕列）；字幕帶 y 1280–1420（講者胸前，底部按鈕列之上）
 - 構圖：講者頭頂落在 y 380–520、下巴 ≤ 860（停點 ② 的預覽一起看）
 - 文字最小 48 px（畫面上的像素；audit ⚠ `font`；2026-11-16 作者）。縮放進上半面板的段看「字級 × 縮放倍率」，所以寫字級的下限是：全畫面 custom（含內容設計動畫）與 04 家族 ≥ 57 px（縮 0.8475）、01 章節 ≥ 77 px（縮 0.625）、全幕版（`"full": true`）≥ 81 px（縮 0.5952）、字卡動態（fx）的大字 ≥ 86 px（縮 0.5625）；不縮放的段（疊加、上下分割的下方字卡）字級 ≥ 48 px。放不下就縮文案，不縮字。直式 `build --review` 的 audit 連模板段一起量；模板的字級是固定的，模板段報字太小就換內容設計動畫，或換成不縮放的版面
+- 模板與情境的直式（056，作者：橫式、直式各自有好的畫面）：同一支模板靠參數換成直式的樣子，不複製成兩個檔。縮進上半的情境動畫模板直式時 root 多 `data-format="portrait"`，可以換 CSS、換排版（`data-<名>-portrait`）、整支字級換成 60（root 寫 `data-portrait-type`，畫面上 51）、插圖字放大；直式放不下的項數、字數寫在 fill.json 的 `portraitMax`（超過 ⚠）。寫法見 `shared/template/USAGE-reference.md` R7.2「直式的樣子」，範例 `x-checklist`
 - 縮放的段裡帶 id 的元素擺位超出舞台窗 x 120–1300、y 130–880（01 是 x 160–1760、y 260–870）會被切到：audit ✖ `portrait-window`，把元素移回窗裡
 - 鏡頭推（`P.cam`）推近後，內容外框要留在子合成座標 x 72.8–1347.1、y 130–908.8 裡（容許 2 px）：超出是 audit ⚠ `portrait-cam` → 內容群縮小一級（`data-gap` 改小一級，或字級 −4），或這段不用 `P.cam`
-- 字卡動態（fx）在直式縮 0.5625 倍放中間：`shared/template/fx/catalog.json` 標 `"portrait": "band"` 的 14 張（07、09–18、21、31、33）只剩中間一條，`--check` 會 ⚠ → 換 `"portrait": "ok"` 的特效或拿掉；`"portrait": "ok"` 的卡直式小字也要 ≥ 48 px，catalog 的 `portraitMinPx` 不到 48 的（22 文字軌道環繞）`--check` 會 ⚠ → 換它列的同類特效；挑特效先打開 `shared/template/fx/index.html` 按「直式預覽」看
+- 字卡動態（fx）在直式縮 0.5625 倍放中間：`shared/template/fx/catalog.json` 標 `"portrait": "band"` 的 14 張（07、09–18、21、31、33）只剩中間一條，`--check` 會 ⚠ → 換 `"portrait": "ok"` 的特效或拿掉；`"portrait": "ok"` 的卡直式小字也要 ≥ 48 px，catalog 的 `portraitMinPx` 不到 48 的 `--check` 會 ⚠ → 換它列的同類特效；挑特效先打開 `shared/template/fx/index.html` 按「直式預覽」看
 - 錄影段：16:9 錄影在直式只有 1080 寬，一定要寫 `start` 讓第一格就推在操作區（第一格上半資訊窗超過 10% 是黑底，`--check` ⚠）；`start` 以外最多再動 1 次（畫面小，動兩次就晃，超過 ⚠），其他用紅框；手機直式錄影鋪滿（`"pip": false`＋`fit: "cover"`）；圖片鋪滿（`fit: "cover"`）時上緣對齊、多的裁在下面（網頁截圖的頁首看得到）
 
 ## 動畫視覺

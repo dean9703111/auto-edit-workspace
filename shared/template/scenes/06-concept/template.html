@@ -5,8 +5,17 @@
 /* 排法 free（kit/scene-layout.js 不排）：單列卡（圖示＋一句），卡寬隨字，沒有列／欄。 */
 #gCard { left: 120px; bottom: 220px; }
 <!-- @style-portrait -->
-/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。
+   056：卡片撐滿卡片帶（外框寬 880＝主卡 872＋底板錯開 8，x 60–940）；徽章 88 → 104、標籤字 56 → 60；正文可換兩行、字級照字數
+   （「名詞：定義」冒號後換行＝min(80, 650 ÷ 較長那行字數)；沒有冒號＝兩行平均 min(80, 1300 ÷ 字數)；最小 54，定義太長再折一行），
+   換行只在詞與詞之間（timeline 開頭照詞包好）。一行外框 y 972–1240、兩行約 896–1240、三行（54）約 884–1240。 */
 #gCard { left: 60px; bottom: 680px; }
+#gCard { width: 880px; }
+#gCard .sc-lt__tagin { font-size: 60px; }
+#gCard .sc-lt__row { min-height: 104px; }
+#gCard .sc-icon--88 { --d: 104px; --i: 56px; }
+#gCard .sc-t54 { flex: 1; min-width: 0; font-size: {{#text_head}}clamp(54px, calc(650px / max({{text_headlen}} + 1, {{text_len}} - {{text_headlen}} - 1)), 80px){{/text_head}}{{^text_head}}clamp(54px, calc(1300px / {{text_len}}), 80px){{/text_head}};
+  line-height: round(1.2em, 2px); --opt: 8px; white-space: normal; text-wrap: balance; }
 <!-- @body -->
 <div id="gCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
@@ -21,6 +30,8 @@
 </div>
 <!-- @timeline -->
 /* v2（shared/template/BEATS.md §2 的動作）：外殼（底板＋主卡）從左擦開＋左移 40u（0.6）→ 0.12 標籤彈出 → 0.18 徽章彈入、0.3 圖示描線 → 0.22 字逐字上浮；段尾：向左擦掉 0.3（接全畫面或章節時提早到 D−0.8，不被轉場切半張） */
+/* 056 直式：正文照詞換行（kit P.wrapWords；橫式不動），「名詞：定義」在冒號後換行 */
+P.wrapWords('#gCard .sc-lt__body .sc-opt', { colon: {{#text_head}}true{{/text_head}}{{^text_head}}false{{/text_head}} });
 P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
 P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
 P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
@@ -40,6 +51,19 @@ P.chars('#gCard .sc-lt__body .sc-opt', {{{in}}} + 0.22);
 #cfTerm .sc-kw { color: var(--brand); }
 #cfDef { position: absolute; left: 120px; right: 120px; top: 640px; text-align: center; white-space: nowrap; font-size: 56px; line-height: 76px; font-weight: 700; color: var(--sc-fs-ink); }
 #cfDef .sc-kw { color: var(--brand); font-weight: 900; }
+<!-- @style-full-portrait -->
+/* 直式（056）：全幕版整張縮 0.5952 放進上半（舞台窗 x 120–1800、y 40–900 → 畫面 x 40–1040、y 314–826），字級照畫面上的大小回推（× 0.5952）：
+   圖示 144＋標籤 108（畫面上 64）一列 y 80–224；括號組 y 252–592（括號 140×338，名詞左右各多 40 內距讓括號不貼字）、
+   名詞 min(360, 1300 ÷ 字數)（畫面上 ≤ 214，8 字 96）；定義 clamp(101, 1560 ÷ 字數, 170)（畫面上 60–101）從 y 644 起，
+   15 字以內一行（到 y 848），更長換兩行（101，到 y 886）。 */
+#cfTop { top: 80px; height: 144px; gap: 32px; }
+#cfIcon { --d: 144px; --i: 84px; }
+#cfTag { font-size: 108px; line-height: 128px; }
+#cfBrace { top: 252px; height: 340px; }
+#cfBrace .sc-brace__l, #cfBrace .sc-brace__r { width: 140px; height: 338px; }
+#cfTerm { font-size: {{#text_head}}min(360px, calc(1300px / {{text_headlen}})){{/text_head}}{{^text_head}}360px{{/text_head}}; line-height: 340px; padding: 0 40px; }
+#cfDef { top: 644px; font-size: clamp(101px, calc(1560px / max(1, {{#text_head}}{{text_len}} - {{text_headlen}} - 1{{/text_head}}{{^text_head}}{{text_len}}{{/text_head}})), 170px);
+  line-height: round(1.2em, 2px); white-space: normal; text-wrap: balance; }
 <!-- @body-full -->
 <div id="cfTop" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   {{#icon}}<span id="cfIcon" class="sc-icon">{{{icon}}}</span>{{/icon}}
