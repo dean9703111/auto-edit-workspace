@@ -13,7 +13,8 @@ import { DEFAULT_WAIT, STILL_RUNNING, runJob, waitJob, jobState, isJobChild, sta
 import { killTree } from './lib/deliver.mjs';
 import { cmdLine, next } from './lib/say.mjs';
 import { splitFlag, valueOf, isMain } from './lib/cli.mjs';
-import { clock2 } from './lib/time.mjs';
+import { clock2, r3 } from './lib/time.mjs';
+import { laneOf, makeDraft } from './lib/jianying-draft.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 const HERE = path.dirname(SELF);
@@ -29,6 +30,9 @@ const HELP = `剪映素材（主軌＋每段一支透明 MOV＋字幕 SRT；要 
   node shared/template/tools/capcut.mjs status --project projects/<專案> --wait [秒]  等到做完或逾時（預設 ${DEFAULT_WAIT} 秒）才印結果；結束碼 0 做完、1 失敗或中斷、${STILL_RUNNING} 還在跑（再跑一次接著等）
   node shared/template/tools/capcut.mjs --project projects/<專案> --cancel      取消背景的剪映素材（連 Chrome 一起收；做好的檔留著）
   node shared/template/tools/capcut.mjs --project projects/<專案> --dry-run     只產生合成和清單，不 render（先看會出幾支、多長）
+  node shared/template/tools/capcut.mjs draft --project projects/<專案> [--name <草稿名>] [--force]
+                                                                               素材做好後，直接排成剪映草稿（Mac 剪映專業版）：主軌、每段 .mov、字幕都放在時間軸對的位置，
+                                                                               剪映首頁就看得到（草稿名預設＝專案資料夾名）。剪映要先關掉；同名草稿已存在要加 --force（舊的先整個備份）
 
 選項：--only s05,s12（只做這幾段，不做主軌）、--no-main（不做主軌）、--force（已經做過、沒變的也重做）、
       --jobs <N>（同時 render 幾支，預設 ${DEFAULT_JOBS}）、--workers <N>（每支幾個 worker，預設自動：加起來不超過只跑一支時）
@@ -37,14 +41,14 @@ const HELP = `剪映素材（主軌＋每段一支透明 MOV＋字幕 SRT；要 
 字幕.srt 是完成影片畫面上實際顯示的字幕（剪映：文本 → 本地字幕 → 匯入）。章節角標不輸出（剪映用文字貼）。
 背景工作的 log 和 render.log 超過 ${STALL_MIN} 分鐘沒有新內容時，「⏳ 還在跑」／「進行中」下面多一行 ⚠ 和取消指令。`;
 
-const VALUE_FLAGS = ['project', 'only', 'template', 'jobs', 'workers'];
+const VALUE_FLAGS = ['project', 'only', 'template', 'jobs', 'workers', 'name'];
 const BOOL_FLAGS = ['background', 'dry-run', 'no-main', 'force', 'help', 'cancel'];
 const USAGE = '→ 看用法：node shared/template/tools/capcut.mjs --help';
 
 export function parseCapcutArgs(argv) {
   const flags = { cmd: 'run' };
   const rest = [...argv];
-  if (rest[0] === 'status') { flags.cmd = 'status'; rest.shift(); }
+  if (rest[0] === 'status' || rest[0] === 'draft') { flags.cmd = rest.shift(); }
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (!a.startsWith('--')) throw new Error(`看不懂的參數「${a}」${USAGE}`);
@@ -60,6 +64,11 @@ export function parseCapcutArgs(argv) {
   }
   for (const k of ['jobs', 'workers']) if (flags[k] != null && !/^[1-9]\d*$/.test(flags[k])) throw new Error(`--${k} 要寫正整數，現在是「${flags[k]}」→ 例：--${k} 2`);
   if (flags.cancel && (flags.cmd === 'status' || flags.background || flags['dry-run'])) throw new Error('--cancel 只能單獨用 → node shared/template/tools/capcut.mjs --project projects/<專案> --cancel');
+  if (flags.name != null && flags.cmd !== 'draft') throw new Error('--name 只用在 draft → node shared/template/tools/capcut.mjs draft --project projects/<專案> --name <草稿名>');
+  if (flags.cmd === 'draft') {
+    const extra = Object.keys(flags).filter((k) => !['cmd', 'project', 'name', 'force', 'help'].includes(k));
+    if (extra.length) throw new Error(`draft 不用 --${extra[0]} → node shared/template/tools/capcut.mjs draft --project projects/<專案> [--name <草稿名>] [--force]`);
+  }
   return flags;
 }
 
@@ -102,6 +111,25 @@ export function listMd(cc, { files, project }) {
   L.push('沒有輸出：章節角標（剪映用文字貼）。', '');
   return L.join('\n');
 }
+
+// 清單.json：機器讀的清單（capcut.mjs draft 照它排剪映草稿）。軌道建議：主軌／疊加 N（時間重疊就分軌）／字幕
+export function listJson(cc, { project }) {
+  const portrait = cc.format === 'portrait';
+  const movs = cc.segs.map((s, i) => ({ 檔名: segFile(s, i), 開始秒: r3(s.start), 長度: r3(s.duration) }));
+  const lane = laneOf(movs.map((m) => ({ start: m.開始秒, end: m.開始秒 + m.長度 })));
+  return {
+    專案: project, 寬: portrait ? 1080 : 1920, 高: portrait ? 1920 : 1080, fps: 30, 長度: r3(cc.duration),
+    檔案: [
+      { 檔名: '主軌.mp4', 開始秒: 0, 長度: r3(cc.main.duration), 軌道建議: '主軌' },
+      ...movs.map((m, i) => ({ ...m, 軌道建議: `疊加 ${lane[i] + 1}` })),
+      { 檔名: '字幕.srt', 開始秒: 0, 長度: r3(cc.duration), 軌道建議: '字幕' },
+    ],
+  };
+}
+const writeLists = (dir, cc, files, project) => {
+  fs.writeFileSync(path.join(dir, '清單.md'), listMd(cc, { files, project }));
+  fs.writeFileSync(path.join(dir, '清單.json'), JSON.stringify(listJson(cc, { project }), null, 2) + '\n');
+};
 
 // 同時有好幾支在跑：每一行加 [檔名]，render.log 才分得出是誰的
 function logPrefixer(tag, write) {
@@ -236,6 +264,7 @@ async function main() {
   const P = pathsFrom(flags);
   const rel = path.relative(process.cwd(), P.project).split(path.sep).join('/') || '.';
   const dir = path.join(P.project, 'output', 'capcut');
+  if (flags.cmd === 'draft') return makeDraft({ dir, name: flags.name ?? path.basename(P.project), force: !!flags.force, cmd: cmdLine('capcut.mjs', ['--project', rel]) });
   fs.mkdirSync(dir, { recursive: true });
   if (flags.cmd === 'status') {
     // 和 capcut.mjs --project 同一個背景工作（lib/job.mjs）：只等、不開工；只印結果和下一步
@@ -304,7 +333,7 @@ async function work(P, flags, dir, rel) {
   const projName = path.basename(P.project);
   say(`段落 ${cc.segs.length} 支 MOV${files.main ? '＋主軌' : ''}；這次要做 ${jobs.length} 支`);
   if (flags['dry-run']) {
-    fs.writeFileSync(path.join(dir, '清單.md'), listMd(cc, { files, project: projName }));
+    writeLists(dir, cc, files, projName);
     for (const j of jobs) say(`  ${j.out}（${j.comp}）`);
     say(`→ 清單：${rel}/output/capcut/清單.md、字幕：${rel}/output/capcut/字幕.srt（--dry-run 沒有 render）`);
     return 0;
@@ -337,7 +366,7 @@ async function work(P, flags, dir, rel) {
   state.done = true; save();
 
   // 3. 清單＋驗證
-  fs.writeFileSync(path.join(dir, '清單.md'), listMd(cc, { files, project: projName }));
+  writeLists(dir, cc, files, projName);
   const first = jobs.find((j) => j.out.endsWith('.mov') && fs.existsSync(path.join(dir, j.out)));
   if (fs.existsSync(path.join(dir, '主軌.mp4'))) say(`驗證 主軌.mp4：${probe(path.join(dir, '主軌.mp4'))}`);
   if (first) say(`驗證 ${first.out}：${probe(path.join(dir, first.out))}（yuva＝有透明通道）`);
