@@ -348,7 +348,9 @@
    "errors": [
     "文字對時：s04 的 text「免費工具省下超多時間」在 0:14.88 出現，「免費工具」0:16.96（#10）才講到 → beats.in 寫 \"#10@免費工具\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s04 concept] slots.tag「工具」和 slots.text「免費工具省下超多時間」都有「工具」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「工具」，上下兩行要互補"
+   ],
    "where": "[s04 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -493,7 +495,9 @@
     "sfx": null
    },
    "errors": [],
-   "warnings": [],
+   "warnings": [
+    "[s05 concept] slots.tag「拍前」和 slots.text「開拍前先試錄一小段」都有「拍前」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「拍前」，上下兩行要互補"
+   ],
    "where": "[s05 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -963,7 +967,9 @@
    "errors": [
     "文字對時：s11 的 text「多機：橫拍長片、直拍短影音」在 0:55.65 出現，「短影音」0:59.90（#30）才講到 → beats.in 寫 \"#30@短影音\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s11 concept] slots.tag「多機」和 slots.text「多機：橫拍長片、直拍短影音」都有「多機」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「多機」，上下兩行要互補"
+   ],
    "where": "[s11 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -1292,6 +1298,7 @@
     "文字對時：s14 的 text「單機：用手勢控制開始與結束」在 1:12.14 出現，「控制開始」1:17.04（#38）才講到 → beats.in 寫 \"#38@控制開始\""
    ],
    "warnings": [
+    "[s14 concept] slots.tag「單機」和 slots.text「單機：用手勢控制開始與結束」都有「單機」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「單機」，上下兩行要互補",
     "[s14 concept] 和前一段（s13）用同一個模板 → 換一個模板或併成一段"
    ],
    "where": "[s14 concept]",
@@ -1438,7 +1445,9 @@
    "errors": [
     "文字對時：s16 的 text「驗收要在兩支手機間走來走去」在 1:30.17 出現，「手機間走」1:32.09（#45）才講到 → beats.in 寫 \"#45@手機間走\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s16 concept] slots.tag「驗收」和 slots.text「驗收要在兩支手機間走來走去」都有「驗收」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「驗收」，上下兩行要互補"
+   ],
    "where": "[s16 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -1606,7 +1615,9 @@
    "errors": [
     "文字對時：s18 的 text「試過多機錄影工具都不順手」在 1:40.03 出現，「多機錄影」1:44.98（#50）才講到 → beats.in 寫 \"#50@多機錄影\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s18 concept] slots.tag「找工具」和 slots.text「試過多機錄影工具都不順手」都有「工具」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「工具」，上下兩行要互補"
+   ],
    "where": "[s18 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -1753,7 +1764,9 @@
    "errors": [
     "文字對時：s19 的 lead「自己的工作流」在 1:48.52 出現，「的工作流」1:50.16（#53）才講到 → from 寫 \"#53@的工作流\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s19 key-point] slots.lead「自己的工作流」和 slots.key「自己設計一套工具」都有「自己」，同一張卡講了兩次 → slots.lead 換成別的詞（例：行動、重點、提醒），或 slots.key 拿掉「自己」，上下兩行要互補"
+   ],
    "where": "[s19 key-point]",
    "type": "scene",
    "scene": "$scene:key-point",
@@ -2710,7 +2723,9 @@
    "errors": [
     "文字對時：s04 的 text「免費工具省下超多時間」在 0:14.88 出現，「免費工具」0:16.96（#10）才講到 → beats.in 寫 \"#10@免費工具\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s04 concept] slots.tag「工具」和 slots.text「免費工具省下超多時間」都有「工具」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「工具」，上下兩行要互補"
+   ],
    "where": "[s04 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -2788,7 +2803,9 @@
     "sfx": null
    },
    "errors": [],
-   "warnings": [],
+   "warnings": [
+    "[s05 concept] slots.tag「拍前」和 slots.text「開拍前先試錄一小段」都有「拍前」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「拍前」，上下兩行要互補"
+   ],
    "where": "[s05 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -3258,7 +3275,9 @@
    "errors": [
     "文字對時：s11 的 text「多機：橫拍長片、直拍短影音」在 0:55.65 出現，「短影音」0:59.90（#30）才講到 → beats.in 寫 \"#30@短影音\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s11 concept] slots.tag「多機」和 slots.text「多機：橫拍長片、直拍短影音」都有「多機」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「多機」，上下兩行要互補"
+   ],
    "where": "[s11 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -3520,6 +3539,7 @@
     "文字對時：s14 的 text「單機：用手勢控制開始與結束」在 1:12.14 出現，「控制開始」1:17.04（#38）才講到 → beats.in 寫 \"#38@控制開始\""
    ],
    "warnings": [
+    "[s14 concept] slots.tag「單機」和 slots.text「單機：用手勢控制開始與結束」都有「單機」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「單機」，上下兩行要互補",
     "[s14 concept] 和前一段（s13）用同一個模板 → 換一個模板或併成一段"
    ],
    "where": "[s14 concept]",
@@ -3666,7 +3686,9 @@
    "errors": [
     "文字對時：s16 的 text「驗收要在兩支手機間走來走去」在 1:30.17 出現，「手機間走」1:32.09（#45）才講到 → beats.in 寫 \"#45@手機間走\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s16 concept] slots.tag「驗收」和 slots.text「驗收要在兩支手機間走來走去」都有「驗收」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「驗收」，上下兩行要互補"
+   ],
    "where": "[s16 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -3834,7 +3856,9 @@
    "errors": [
     "文字對時：s18 的 text「試過多機錄影工具都不順手」在 1:40.03 出現，「多機錄影」1:44.98（#50）才講到 → beats.in 寫 \"#50@多機錄影\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s18 concept] slots.tag「找工具」和 slots.text「試過多機錄影工具都不順手」都有「工具」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「工具」，上下兩行要互補"
+   ],
    "where": "[s18 concept]",
    "type": "scene",
    "scene": "$scene:concept",
@@ -3914,7 +3938,9 @@
    "errors": [
     "文字對時：s19 的 lead「自己的工作流」在 1:48.52 出現，「的工作流」1:50.16（#53）才講到 → from 寫 \"#53@的工作流\""
    ],
-   "warnings": [],
+   "warnings": [
+    "[s19 key-point] slots.lead「自己的工作流」和 slots.key「自己設計一套工具」都有「自己」，同一張卡講了兩次 → slots.lead 換成別的詞（例：行動、重點、提醒），或 slots.key 拿掉「自己」，上下兩行要互補"
+   ],
    "where": "[s19 key-point]",
    "type": "scene",
    "scene": "$scene:key-point",
@@ -4752,11 +4778,18 @@
   "版面節奏：子母畫面只連續 3.1 秒（s24，2:30–2:33），至少要 45 秒：切進去馬上又切回講者，畫面會晃 → 把前後相鄰的段也換成全畫面的模板（或併成一段），讓子母畫面連續 ≥ 45 秒；湊不到就把這幾段改成疊在講者上的字卡",
   "文字對時：s02 的 cards[1]「Podcast」在 0:05.05 出現，「Podcast」0:05.74（#5）才講到 → slots.cards[1].at 寫 \"#5@Podcast\"",
   "文字對時：s02 的 cards[2]「線上課程」在 0:05.40 出現，「線上課程」0:06.40（#5）才講到 → slots.cards[2].at 寫 \"#5@線上課程\"",
+  "[s04 concept] slots.tag「工具」和 slots.text「免費工具省下超多時間」都有「工具」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「工具」，上下兩行要互補",
+  "[s05 concept] slots.tag「拍前」和 slots.text「開拍前先試錄一小段」都有「拍前」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「拍前」，上下兩行要互補",
   "文字對時：s06 的 lead「每錄完一段」在 0:23.91 出現，「每錄完一」0:24.80（#15）才講到 → from 寫 \"#15@每錄完一\"",
   "[s07 key-point] 和前一段（s06）用同一個模板 → 換一個模板或併成一段",
   "[s07 key-point] 連續 5 段都是下方字卡（s03、s04、s05、s06、s07）→ 中間換一段情境動畫（style.md「情境動畫優先」）或別的版面",
+  "[s11 concept] slots.tag「多機」和 slots.text「多機：橫拍長片、直拍短影音」都有「多機」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「多機」，上下兩行要互補",
+  "[s14 concept] slots.tag「單機」和 slots.text「單機：用手勢控制開始與結束」都有「單機」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「單機」，上下兩行要互補",
   "[s14 concept] 和前一段（s13）用同一個模板 → 換一個模板或併成一段",
+  "[s16 concept] slots.tag「驗收」和 slots.text「驗收要在兩支手機間走來走去」都有「驗收」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「驗收」，上下兩行要互補",
   "文字對時：s17 的 lead「拍攝段落很多時」在 1:35.53 出現，「段落很多」1:36.27（#46）才講到 → from 寫 \"#46@段落很多\"",
+  "[s18 concept] slots.tag「找工具」和 slots.text「試過多機錄影工具都不順手」都有「工具」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「工具」，上下兩行要互補",
+  "[s19 key-point] slots.lead「自己的工作流」和 slots.key「自己設計一套工具」都有「自己」，同一張卡講了兩次 → slots.lead 換成別的詞（例：行動、重點、提醒），或 slots.key 拿掉「自己」，上下兩行要互補",
   "[s21 fs-list] 最後一個內容在第 6.739s，到退場只停 1.302s，建議 ≥ 1.5s（把 to 往後延）",
   "文字對時：s23 的 title「本集三個部分」在 2:13.87 出現，「三個部分」2:15.19（#64）才講到 → from 寫 \"#64@三個部分\"",
   "文字對時：s23 的 items[1]「安裝工具與網路設定」在 2:22.23 出現，「安裝工具」2:23.37（#68）才講到 → slots.items[1].at 寫 \"#68@安裝工具\"",

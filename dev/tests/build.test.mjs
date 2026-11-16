@@ -733,7 +733,7 @@ test('style（風格包）：主色、外框、背景用 styles/<名稱>/ 的；
   fs.writeFileSync(planFile, JSON.stringify({ ...base, style: '沒有這包' }));
   const bad = node('--check');
   assert.equal(bad.status, 1);
-  assert.match(bad.stdout, /✖ style：找不到風格包「沒有這包」→ 現有：預設、藍圖/);
+  assert.match(bad.stdout, /✖ style：找不到風格包「沒有這包」→ 現有：預設、橘色-20261116-2、藍圖/);
   fs.writeFileSync(planFile, JSON.stringify({ ...base, style: 3 }));
   assert.match(node('--check').stdout, /✖ style 要寫風格包的名稱/);
   writePlan(SCENES);

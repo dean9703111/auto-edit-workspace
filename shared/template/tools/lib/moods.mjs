@@ -5,6 +5,7 @@
 //     { "at": "#12@千萬不要", "kind": "pain", "zoom": true },  // 痛點 → alert，講者畫面同時爆衝推近
 //     { "at": "#30@竟然", "kind": "turn", "sfx": null }        // 反轉，不要音效（只留標記或推近）
 //   ]
+//   情緒點和動畫的 P.sfx 相距不到 3 秒時情緒點不出聲（推近照留；lib/plan.mjs moodsAndSfxBudget，055 k23）
 //
 //   MOOD_KINDS                 五類：音效、取捨的強弱（rank 大的先留）
 //   validateMoods(moods, sfxConf)          → errors[]（欄位、類別、音效名稱）
@@ -24,7 +25,7 @@ import { LOCAL_ROLES, sfxActual } from './sfx-local.mjs';
 
 export const MOOD_KINDS = Object.freeze({
   quote: { zh: '金句', sound: 'sparkle', rank: 5 },
-  turn: { zh: '反轉', sound: 'shine', rank: 4 },
+  turn: { zh: '反轉', sound: 'ding', rank: 4 },     // 055 Q4：原本 shine（峰值 0.7 秒、拖尾長，短片裡突兀又大聲）；作者：「或許『丁』這類提示音就好」
   pain: { zh: '痛點', sound: 'alert', rank: 3 },
   win: { zh: '解法', sound: 'success', rank: 3 },
   land: { zh: '落定', sound: 'impact', rank: 2 },

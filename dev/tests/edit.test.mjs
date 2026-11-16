@@ -222,3 +222,34 @@ test('edit.level：true 才寫進 edit（不算 active，時間不變）；false
   assert.ok(!('level' in normalizeEdit({ level: false }, { videoDur: VD }).edit));
   assert.match(normalizeEdit({ level: 'yes' }, { videoDur: VD }).errors.join('\n'), /edit\.level 要是 true/);
 });
+
+test('055 k27：剪掉一段後字幕只剩不到 0.6 秒 ⚠（整則剪掉、本來就短的不報）；剪點兩邊還留超過 0.2 秒的停頓 ⚠ 並給新的 cuts', () => {
+  const go = (cuts, pauses = null, words = null) => {
+    const cs = parseSrt(makeSrt({ n: 12 }));
+    if (pauses) cs.pauses = pauses;
+    if (words) cs.words = words;
+    return resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], edit: { cuts }, scenes: [] }, cues: cs, videoDur: VD, lib: L, outDir: os.tmpdir() });
+  };
+  const short = (r) => r.warnings.filter((w) => w.startsWith('字幕 #'));
+  const seam = (r) => r.warnings.filter((w) => w.startsWith('剪點 '));
+  // (a) #3（8–11）剪掉 8–10.6 → 只剩 0.4 秒（短影片4：#29 被 [33.52, 34.5] 剪到 0.48 秒）
+  assert.deepEqual(short(go([[8, 10.6]])), ['字幕 #3「第 3 句字幕內容」剪掉一段（edit.cuts [8, 10.6]）後只剩 0.40 秒（< 0.6 秒）→ 在剪輯台把它併到相鄰那則，或把剪點收到字幕開頭（rough 0:08.00）']);
+  assert.deepEqual(short(go([[7.5, 11.2]])), [], '整則剪掉的不報');
+  assert.deepEqual(short(go([[8, 10]])), [], '剩 1 秒不報');
+  assert.deepEqual(short(go([])), [], '沒有 cuts 不報');
+  // (b) 停頓（人聲能量量的 cues.pauses，rough 秒數）
+  assert.deepEqual(seam(go([[12, 13]], [[11.6, 11.95], [13, 13.25]])), [
+    '剪點 0:12.00（edit.cuts [12, 13]）前面隔 0.05 秒還有 0.35 秒停頓 → 剪點的起點提早到 11.65（cuts 改成 [11.65, 13]），停頓跟著剪掉',
+    '剪點 0:12.00（edit.cuts [12, 13]）後面還有 0.25 秒停頓 → 剪點的迄點延到 13.2（cuts 改成 [12, 13.2]），停頓跟著剪掉',
+  ]);
+  assert.deepEqual(seam(go([[12, 13]], [[11.85, 12.05], [13, 13.1]])), [], '剩 0.15、0.1 秒不報');
+  // 短影片4 r10：cuts [33.6, 34.1] 剪剩一個字（0.16 秒）後面接 0.22 秒停頓 → 報；作者改成 [33.52, 34.5] → 不報
+  const P4 = [[32.17, 32.44], [33.48, 33.64], [33.88, 34.14], [34.3, 34.52]].map(([a, b]) => [a - 22, b - 22]);
+  assert.deepEqual(seam(go([[11.6, 12.1]], P4)), ['剪點 0:11.60（edit.cuts [11.6, 12.1]）後面隔 0.20 秒還有 0.22 秒停頓 → 剪點的迄點延到 12.47（cuts 改成 [11.6, 12.47]），剪剩的殘字和停頓跟著剪掉']);
+  assert.deepEqual(seam(go([[11.52, 12.5]], P4)), []);
+  // 片頭、片尾的 cut 只是裁掉，不是接點
+  assert.deepEqual(seam(go([[0, 1]], [[1, 1.4]])), []);
+  // 沒有停頓資料：用詞級逐字稿的空檔
+  const words = [{ text: '甲', start: 11.2, end: 11.5 }, { text: '乙', start: 12.0, end: 12.3 }, { text: '丙', start: 13.4, end: 13.7 }];
+  assert.deepEqual(seam(go([[12.4, 13]], null, words)), ['剪點 0:12.40（edit.cuts [12.4, 13]）後面還有 0.40 秒停頓 → 剪點的迄點延到 13.35（cuts 改成 [12.4, 13.35]），停頓跟著剪掉']);
+});

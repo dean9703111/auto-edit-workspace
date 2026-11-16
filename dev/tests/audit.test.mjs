@@ -741,10 +741,10 @@ test('009 直式：stageKindOf／portraitPlan（全畫面 custom 與 stage 情�
   assert.equal(R.stageKindOf({ type: 'scene', opaque: true, scene: '04a' }), 'fs', 'scene.json 沒寫 portrait 照編號');
   assert.equal(R.stageKindOf({ type: 'fx' }), 'fx');
   const fs_ = R.portraitPlan(item({ opaque: true, seg: { layout: 'fullscreen' } }), C.portrait);
-  assert.deepEqual(fs_, { unstage: true, W: 1920, H: 1080, stage: { kind: 'fs', s: 0.8475, tx: -61.7, ty: 129.825, window: [120, 130, 1300, 880], view: [72.8, 130, 1347.1, 908.8], minFont: 32 } }, 'view＝畫布左右緣、上 unsafe 線（y 240）、下講者面板頂（y 900）換回子合成座標');
+  assert.deepEqual(fs_, { unstage: true, W: 1920, H: 1080, stage: { kind: 'fs', s: 0.8475, tx: -61.7, ty: 129.825, window: [120, 130, 1300, 880], view: [72.8, 130, 1347.1, 908.8], minFont: 48 } }, 'view＝畫布左右緣、上 unsafe 線（y 240）、下講者面板頂（y 900）換回子合成座標');
   assert.equal(R.portraitPlan({ type: 'scene', opaque: true, scene: { no: '01', portrait: 'stage' } }, C.portrait).stage.s, 0.625);
   const ov = R.portraitPlan(item(), C.portrait);
-  assert.deepEqual([ov.unstage, ov.W, ov.H, ov.geo.captionY, ov.geo.captionEnd, ov.geo.minFont], [false, 1080, 1920, 1280, 1420, 32]);
+  assert.deepEqual([ov.unstage, ov.W, ov.H, ov.geo.captionY, ov.geo.captionEnd, ov.geo.minFont], [false, 1080, 1920, 1280, 1420, 48]);
   assert.deepEqual(ov.geo.unsafe, C.portrait.unsafe);
   assert.deepEqual([R.portraitPlan(item(), C.portrait, { captions: [0, 1300, 1080, 100] }).geo.captionY, R.portraitPlan(item(), C.portrait, { captions: [0, 1300, 1080, 100] }).geo.captionEnd], [1300, 1400]);
   // 046 透明字卡動態：量的是縮放前的座標（縮 0.5625、上緣 y 766），講者框要換到同一套座標再比。字在胸前（畫面 y 972–1134）不是蓋到臉；
@@ -757,8 +757,8 @@ test('009 直式：stageKindOf／portraitPlan（全畫面 custom 與 stage 情�
   assert.ok(fxJudge({ kind: 'fx', s: 0.5625, minFont: 32 }).some((x) => x.rule === 'speaker' && x.level === 'error'), '沒有換算（舊的量法）會誤報');
 });
 
-test('009 直式：✖ portrait-window（帶 id 的絕對定位元素超出舞台窗；量擺位外框，鏡頭推不算；allow-overflow、沒 id、非絕對定位不算）、⚠ 字級 × 0.8475 < 32', () => {
-  const st = { kind: 'fs', s: 0.8475, window: [120, 130, 1300, 880], minFont: 32 };
+test('009 直式：✖ portrait-window（帶 id 的絕對定位元素超出舞台窗；量擺位外框，鏡頭推不算；allow-overflow、沒 id、非絕對定位不算）、⚠ 字級 × 0.8475 < 48（055 Q3）', () => {
+  const st = { kind: 'fs', s: 0.8475, window: [120, 130, 1300, 880], minFont: 48 };
   const pj = (els, extra = {}) => R.judgeSample({ host: { start: 10 }, els, ...extra }, { item: item({ opaque: true, seg: { layout: 'fullscreen' } }), t: 17.4, kind: 'done', layout: 'fullscreen', pipOn: true, speakerBox: null, W: 1920, H: 1080, stage: st });
   const abs = (o) => ({ ...el(o), pos: 'absolute' });
   const out = abs({ rect: [1180, 300, 1380, 400], painted: true, desc: { id: 'xp-out' } });
@@ -777,11 +777,17 @@ test('009 直式：✖ portrait-window（帶 id 的絕對定位元素超出舞�
   assert.deepEqual(rules(pj([abs({ rect: [1299, 300, 1301.5, 400], painted: true, desc: { id: 'xp-edge' } })])), [], '容許 2px');
   const ch = R.judgeSample({ host: { start: 10 }, els: [abs({ rect: [100, 300, 400, 400], painted: true, desc: { id: 'c-t' } })] }, { item: item(), t: 1, kind: 'done', layout: 'fullscreen', stage: { kind: 'ch', s: 0.625, window: [160, 260, 1760, 870], minFont: 32 } });
   assert.match(ch[0].msg, /^直式時會被切到：#c-t/);
-  // 字級：36 × 0.8475 = 30.5 < 32 ⚠；38 不報；舞台段不量子母畫面
-  const small = el({ rect: [200, 300, 500, 340], textRect: [200, 300, 500, 340], fontSize: 36, desc: { id: 'xp-s' } });
-  assert.match(pj([small]).find((x) => x.rule === 'font').msg, /字太小：#xp-s 直式縮 0\.8475 倍後 30\.5px（< 32px）/);
-  assert.match(pj([small]).find((x) => x.rule === 'font').fix, /直式要寫 ≥ 38px（縮放前）/);
-  assert.ok(!pj([{ ...small, fontSize: 38 }]).some((x) => x.rule === 'font'));
+  // 字級（055 Q3 畫面上 48）：56 × 0.8475 = 47.5 < 48 ⚠；57 不報；舞台段不量子母畫面
+  const small = el({ rect: [200, 300, 500, 340], textRect: [200, 300, 500, 340], fontSize: 56, desc: { id: 'xp-s' } });
+  assert.match(pj([small]).find((x) => x.rule === 'font').msg, /字太小：#xp-s 直式縮 0\.8475 倍後 47\.5px（< 48px）/);
+  assert.match(pj([small]).find((x) => x.rule === 'font').fix, /直式要寫 ≥ 57px（縮放前；畫面上至少 48px）/);
+  assert.ok(!pj([small]).find((x) => x.rule === 'font').fix.includes('模板'), 'custom 段不寫模板那句');
+  assert.ok(!pj([{ ...small, fontSize: 57 }]).some((x) => x.rule === 'font'));
+  // 逐字拆開的 span（沒 id、同父層同字級）併成一則
+  const ch1 = (i, t) => el({ i, rect: [200 + 60 * i, 300, 252 + 60 * i, 352], textRect: [200 + 60 * i, 300, 252 + 60 * i, 352], fontSize: 52, parent: 9, desc: { id: '', cls: '', text: t, near: 'xp-n2' } });
+  const fc = pj([ch1(1, '接'), ch1(2, '上'), ch1(3, '工'), ch1(4, '具')]).filter((x) => x.rule === 'font');
+  assert.equal(fc.length, 1);
+  assert.match(fc[0].msg, /「接上工具」 直式縮 0\.8475 倍後 44\.1px/);
   assert.ok(!pj([el({ rect: [1500, 700, 1700, 800], painted: true })]).some((x) => x.rule === 'pip'));
 });
 
@@ -802,7 +808,7 @@ test('009 直式：⚠ portrait-cam（P.cam 每個停點換算的外框超出舞
   assert.equal(lay({ contentY: [130, 880] }).length, 0);
 });
 
-test('009 直式原生段（overlay）：✖ 字幕保留帶 y 1280–1420、✖ unsafe（上方／下方／右側按鈕列）、超出畫面量 1080×1920、字級 < 32；橫式訊息不變', async () => {
+test('009 直式原生段（overlay）：✖ 字幕保留帶 y 1280–1420、✖ unsafe（上方／下方／右側按鈕列）、超出畫面量 1080×1920、字級 < 48（055 Q3）；橫式訊息不變', async () => {
   const { CANVAS: C } = await imp('lib/canvas.mjs');
   const pl = R.portraitPlan(item(), C.portrait);
   const nj = (els) => R.judgeSample({ host: { start: 10 }, els }, { item: item(), t: 17.4, kind: 'done', layout: 'overlay', pipOn: false, speakerBox: null, W: pl.W, H: pl.H, geo: pl.geo });
@@ -817,7 +823,12 @@ test('009 直式原生段（overlay）：✖ 字幕保留帶 y 1280–1420、✖
   assert.match(nj([el({ rect: [700, 900, 1000, 1000], painted: true })])[0].msg, /進到右側按鈕列（x 940–1080、y 840–1440）/);
   assert.match(nj([el({ rect: [100, 1500, 600, 1600], painted: true })]).find((x) => x.rule === 'unsafe').msg, /進到下方 480px/);
   assert.match(nj([el({ rect: [900, 300, 1200, 400], painted: true })]).find((x) => x.rule === 'canvas').fix, /移回 1080×1920 以內/);
-  assert.match(nj([el({ rect: [100, 300, 600, 340], textRect: [100, 300, 600, 340], fontSize: 31 })]).find((x) => x.rule === 'font').msg, /31px（< 32px）/);
+  const f47 = nj([el({ rect: [100, 300, 600, 340], textRect: [100, 300, 600, 340], fontSize: 47 })]).find((x) => x.rule === 'font');
+  assert.match(f47.msg, /47px（< 48px）/);
+  assert.match(f47.fix, /^直式畫面上至少 48px；放不下就縮文案，不縮字$/, 'custom 段不寫模板那句');
+  assert.match(R.judgeSample({ host: { start: 10 }, els: [el({ rect: [100, 300, 600, 340], textRect: [100, 300, 600, 340], fontSize: 47 })] }, { item: { id: 's01', type: 'scene', label: '06 字卡', start: 10, end: 18 }, t: 17.4, kind: 'done', layout: 'overlay', W: pl.W, H: pl.H, geo: pl.geo }).find((x) => x.rule === 'font').fix,
+    /模板字級是固定的：換內容設計動畫，或換成不縮放的版面/, '055 C01：直式模板段的字太小，改法是換設計段');
+  assert.ok(!nj([el({ rect: [100, 300, 600, 340], textRect: [100, 300, 600, 340], fontSize: 48 })]).some((x) => x.rule === 'font'));
   // 橫式（沒有 geo／stage）訊息逐字不變
   assert.match(judge([el({ rect: [100, 880, 600, 960], painted: true, desc: { id: 'n' } })]).find((x) => x.rule === 'caption').msg, /^進字幕區：#n 下緣 y=960（字幕區 y ≥ 920）$/);
   assert.match(judge([el({ rect: [1700, 100, 2000, 200], textRect: [1700, 100, 2000, 200] })]).find((x) => x.rule === 'canvas').fix, /移回 1920×1080 以內/);
@@ -1314,6 +1325,10 @@ test('026 內容設計動畫：顏色寫死 ⚠（style、屬性、svg、GSAP �
   assert.match(f[0].fix, /var\(--brand-ink\)/);
   assert.deepEqual(A.designColorFindings({ item: { id: 's1', label: 'x' }, html, file: 'compositions/x-scene-s1.html' }), [], '模板檔不查（模板自己的檔由 dev 的檢查管）');
   assert.deepEqual(A.designColorFindings({ item: { id: 's1', label: 'x' }, html: '<style>#x-design-s1 .a { color: var(--sc-fs-ink); background: transparent; }</style>', file: 'x-design-s1.html' }), []);
+  // 055：工具標誌（data-logo 的元素裡的 svg、或 svg 自己寫 data-logo）填品牌色不算；標誌外框的色碼照算
+  const logo = `<div class="t" data-logo="openai" style="left:1px"><svg viewBox="0 0 24 24"><path fill="#10A37F" d="M1 1"/></svg></div>
+<svg data-logo="claude" viewBox="0 0 24 24"><path fill="#D97757" d="M1 1"/></svg><div data-logo="x" style="background:#123456"><svg><path fill="#000000"/></svg></div>`;
+  assert.deepEqual(A.colorLiterals(logo), ['#123456']);
 });
 
 test('026 內容設計動畫：旋轉了非 90 度 ⚠（CSS rotate、GSAP rotation）；90 的倍數、模板檔不算', async () => {

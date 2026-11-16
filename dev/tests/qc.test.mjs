@@ -108,7 +108,7 @@ test('sheetTimes／speakerTimes／padBox', () => {
 
 // ---------- 004：storyboard（分鏡截圖）、observe（觀影總表）、framing 建議欄 ----------
 
-test('shotPlan（沒有時間軸）：一般段尾前 0.6 秒；條列每組一張（下一條在進場後 0.9 秒內開始的併成一組）；錄影標註到位 +0.1 秒、< 0.3 秒併成一張；短段截中點', () => {
+test('shotPlan（沒有時間軸）：一般段尾前 0.6 秒；條列每組一張（下一條在進場後 0.9 秒內開始的併成一組）；錄影標註到位 +0.1 秒、紅框每框兩格（出現後 0.4 秒、消失前 0.4 秒，055）、< 0.3 秒併成一張；短段截中點', () => {
   const ann = { marks: [{ i: 0, at: 61, until: 66, ready: 61.4, path: [{ k: 0, at: 63, ready: 63.4 }] }],
     callouts: [{ i: 0, at: 61.2, until: 64, ready: 62.05, side: 'left', text: '打開 API 設定' }], spot: [], steps: [{ i: 0, at: 60, ready: 60.5, n: 1, text: '新增專案', carry: false }], arrows: [], lens: [] };
   const { shots, warnings } = Q.shotPlan([
@@ -122,14 +122,16 @@ test('shotPlan（沒有時間軸）：一般段尾前 0.6 秒；條列每組一�
   assert.match(at('s01.png').why, /完成態（段尾前 0\.6 秒）/);
   assert.deepEqual(shots.filter((s) => s.id === 's04').map((s) => [s.file, s.at, s.why]), [['s04-1.png', 32.5, '第 1 條'], ['s04-2.png', 37.4, '第 2–3 條']]);
   assert.deepEqual(warnings, []);
-  // m01：steps 60.6、marks 61.5、callouts 62.15、path 63.5（四個都相距 ≥ 0.3）
-  assert.deepEqual(shots.filter((s) => s.id === 'm01').map((s) => [s.file, s.at]), [['m01-1.png', 60.6], ['m01-2.png', 61.5], ['m01-3.png', 62.15], ['m01-4.png', 63.5]]);
+  // m01：steps 60.6、marks 出現後 61.4、callouts 62.15、path 63.5、marks 消失前 65.6（都相距 ≥ 0.3）
+  assert.deepEqual(shots.filter((s) => s.id === 'm01').map((s) => [s.file, s.at]), [['m01-1.png', 60.6], ['m01-2.png', 61.4], ['m01-3.png', 62.15], ['m01-4.png', 63.5], ['m01-5.png', 65.6]]);
+  assert.equal(at('m01-2.png').why, 'marks[0] 出現後 0.4 秒');
   assert.equal(at('m01-3.png').why, 'callouts[0]「打開 API 設定」到位');
   assert.equal(at('m01-4.png').why, 'marks[0].path[0] 到位');
+  assert.equal(at('m01-5.png').why, 'marks[0] 消失前');
   assert.equal(at('x1.png').at, 70.25);
   assert.equal(at('x1.png').why, '段很短，截中點');
   const merged = Q.shotPlan([{ id: 'm02', start: 0, end: 10, lists: [], annotations: { ...ann, steps: [], marks: [{ i: 0, at: 1, until: 9, ready: 1.4, path: [] }], callouts: [{ i: 0, at: 1, until: 9, ready: 1.5, text: 'A' }] } }], 20);
-  assert.deepEqual(merged.shots.map((s) => [s.file, s.at, s.why]), [['m02.png', 1.6, 'callouts[0]「A」到位']]);
+  assert.deepEqual(merged.shots.map((s) => [s.file, s.at, s.why]), [['m02-1.png', 1.6, 'callouts[0]「A」到位'], ['m02-2.png', 8.6, 'marks[0] 消失前']]);
 });
 
 test('完成態看時間軸（B-01）：03 側邊欄退場前 0.1 秒、fx 29 數字停住的那段、條列在那組進場完成後、循環動畫照段尾前 0.6 秒', () => {

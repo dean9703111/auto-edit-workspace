@@ -15,7 +15,8 @@ import { mainClips, CUT, parseMargin, parseCutsMd, mainSource, aeSilence, silenc
 // 講稿位置往回跳（從新位置一路講回前一次講到的地方或重講 ≥ 20 字、前一次在 90 秒內）＝重講：前一次講到這個位置起、到重講開口前，列成 NG 候選（留最後一次）。
 // 錨點之間空 ≥ 3 秒又有字的列「講稿外」。沒講稿：相鄰 3 句兩兩相像（兩字組重疊 ≥ 50%）的前一句列 NG 候選。章節（講稿 ##）第一句的開口時間印成章節空檔表。
 export const NGSCAN = { gap: 0.3, backChars: 3, tol: 2, minLen: 0.6, maxBack: 90, confirm: 3, step: 15, redo: 20, outsideGap: 3, charSec: 0.22, similar: 0.5, window: 3, stumble: 0.8, repeatMin: 3, repeatMinNoScript: 4, repeatMax: 40,
-  offExtra: 6, offRatio: 0.5, offLong: 12 };   // 講稿外：逐字稿比講稿多 ≥ 6 字，而且講稿字數 ≤ 逐字稿一半（或多 ≥ 12 字）才算真的講稿外；字數接近＝whisper 聽錯
+  offExtra: 6, offRatio: 0.5, offLong: 12,   // 講稿外：逐字稿比講稿多 ≥ 6 字，而且講稿字數 ≤ 逐字稿一半（或多 ≥ 12 字）才算真的講稿外；字數接近＝whisper 聽錯
+  edgeExtra: 2 };   // 055 D6 頭尾：講稿第一句之前、最後一句之後，逐字稿比講稿多 ≥ 2 字就算（試講、講完後的自言自語），標 edge、cuts.md 預設剪
 const pairsOf = (t) => { const cs = [...normText(t)], out = []; for (let i = 0; i + 1 < cs.length; i++) out.push(cs[i] + cs[i + 1]); return out; };
 
 // 講稿 → { lines（講解行）, chapters: [{ title, line（第幾行，0 起）}] }（## 是章節；### 是段落標題，不算）
@@ -216,14 +217,17 @@ function outsideRows(A, live, ng) {
     if (!tChars) continue;
     const extra = tChars - sChars;
     const real = extra >= NGSCAN.offExtra && (sChars <= tChars * NGSCAN.offRatio || extra >= NGSCAN.offLong);
-    if (!real && !(sp.gap >= NGSCAN.outsideGap && tChars >= 6)) continue;
-    let piece = chars;
-    if (real && sChars) {
+    // 055 D6：第一個錨點之前／最後一個錨點之後，多出來的字門檻放低（頭尾的話不是講稿內容就是試講、自言自語）
+    const side = sp === spans[0] ? 'head' : sp === spans[spans.length - 1] ? 'tail' : null;
+    const edgeOk = !!side && extra >= NGSCAN.edgeExtra;
+    if (!real && !edgeOk && !(sp.gap >= NGSCAN.outsideGap && tChars >= 6)) continue;
+    let piece = chars, best = null;
+    if ((real || edgeOk) && sChars) {
       const { map, same } = alignSeq([...S.slice(sp.s0, sp.s1)], chars.map((x) => x.c));
       const hit = new Uint8Array(chars.length);
       map.forEach((j, i) => { if (j >= 0 && same[i]) hit[j] = 1; });
       // 最長一段對不上的字（中間夾 1 個碰巧相同的字也算同一段）
-      let best = null, st = -1, end = -1;
+      let st = -1, end = -1;
       for (let k = 0; k <= chars.length; k++) {
         if (k < chars.length && (!hit[k] || (st >= 0 && k + 1 < chars.length && !hit[k + 1]))) { if (st < 0) st = k; if (!hit[k]) end = k; continue; }
         if (st >= 0 && (!best || end - st > best[1] - best[0])) best = [st, end];
@@ -231,9 +235,13 @@ function outsideRows(A, live, ng) {
       }
       if (best) piece = chars.slice(best[0], best[1] + 1);
     }
+    // 頭：多出來的字在這一段最前面（前面沒有對上講稿的字）＝講稿第一句之前；尾：在最後面＝最後一句之後
+    const edge = edgeOk && (!sChars || (best && (side === 'head' ? best[0] === 0 : best[1] === chars.length - 1))) ? side : null;
+    if (!real && !edge && !(sp.gap >= NGSCAN.outsideGap && tChars >= 6)) continue;
+    if (!real && !edge) piece = chars;   // 不是頭尾、也不是真的講稿外：照舊整段列給 ng-scan.md 看
     const after = T[T.indexOf(piece[piece.length - 1]) + 1];
     const lastT = piece[piece.length - 1].t;
-    rows.push({ start: r3(piece[0].t), end: r3(after ? Math.min(after.t, lastT + 1) : lastT + NGSCAN.charSec), text: piece.map((x) => x.o).join(''), tChars, sChars, real, line: lineAt[Math.min(Math.max(sp.s0, 0), S.length - 1)] + 1 });
+    rows.push({ start: r3(piece[0].t), end: r3(after ? Math.min(after.t, lastT + 1) : lastT + NGSCAN.charSec), text: piece.map((x) => x.o).join(''), tChars, sChars, real, edge, line: lineAt[Math.min(Math.max(sp.s0, 0), S.length - 1)] + 1 });
   }
   return rows;
 }
@@ -273,8 +281,8 @@ export function ngScan(P, { log = console.log, words = null } = {}) {
   if (sc) {
     const md = ['# ng-scan（media.mjs ng-scan 產生）：講稿每一行在 main.mp4 第一次（NG 以外）開口的秒數', '', '| 行 | 時間 | 講稿 |', '|---|---|---|',
       ...sc.lines.map((l, i) => `| ${i + 1} | ${r.lineTime.has(i) ? fmtC(r.lineTime.get(i)) : '—'} | ${l} |`)];
-    if (r.outside.length) md.push('', '## 講稿外判定（兩個錨點之間的字數）', '', '字數接近＝whisper 聽錯，不用管；講稿字數遠少＝真的多講，media.mjs prep 列進 cuts.md（不勾、待確認）。', '', '| 時間 | 逐字稿 | 字數（逐字稿／講稿） | 判定 |', '|---|---|---|---|',
-      ...r.outside.map((u) => `| ${fmtC(u.start)}–${fmtC(u.end)} | ${u.text.replace(/\|/g, '\\|')} | ${u.tChars}／${u.sChars} | ${u.real ? '講稿外' : 'whisper 聽錯'} |`));
+    if (r.outside.length) md.push('', '## 講稿外判定（兩個錨點之間的字數）', '', '字數接近＝whisper 聽錯，不用管；講稿字數遠少＝真的多講，media.mjs prep 列進 cuts.md（不勾、待確認）；講稿第一句之前、最後一句之後的（頭尾）預設勾。', '', '| 時間 | 逐字稿 | 字數（逐字稿／講稿） | 判定 |', '|---|---|---|---|',
+      ...r.outside.map((u) => `| ${fmtC(u.start)}–${fmtC(u.end)} | ${u.text.replace(/\|/g, '\\|')} | ${u.tChars}／${u.sChars} | ${u.edge ? '頭尾講稿外（預設剪）' : u.real ? '講稿外' : 'whisper 聽錯'} |`));
     fs.writeFileSync(path.join(work, 'ng-scan.md'), md.join('\n') + '\n');
   }
   log(`逐字稿 ${words.length} 個詞${sc ? `；講稿 ${sc.lines.length} 行，對到 ${r.anchors} 個錨點（講稿裡只出現一次的四字組）；每一行的開口時間寫在 work/ng-scan.md` : '；沒有講稿：只比相鄰句'}`);
@@ -286,7 +294,7 @@ export function ngScan(P, { log = console.log, words = null } = {}) {
   if (r.outside.length) {
     log('');
     log(`講稿外 ${r.outside.length} 處（講稿找不到的話：口誤、自言自語、臨場加的話，或 whisper 聽錯；聽了再決定，不確定就不剪）：`);
-    for (const u of r.outside.slice(0, 20)) log(`  ${fmtC(u.start)}–${fmtC(u.end)}  ${u.text.slice(0, 40)}（逐字稿 ${u.tChars} 字／講稿 ${u.sChars} 字：${u.real ? '講稿外' : '字數接近，多半是 whisper 聽錯'}）`);
+    for (const u of r.outside.slice(0, 20)) log(`  ${fmtC(u.start)}–${fmtC(u.end)}  ${u.text.slice(0, 40)}（逐字稿 ${u.tChars} 字／講稿 ${u.sChars} 字：${u.edge ? `講稿${u.edge === 'head' ? '第一句之前' : '最後一句之後'}，預設剪` : u.real ? '講稿外' : '字數接近，多半是 whisper 聽錯'}）`);
     if (r.outside.length > 20) log(`  …還有 ${r.outside.length - 20} 處`);
   }
   if (r.fillers?.length) {
@@ -321,7 +329,7 @@ export function ngSnap(P, { edit = CUT.edit, margin = CUT.margin, src = null, v1
   const sil = silencesOf(readV1(v1File), fps);
   const warnings = [], notes = [];
   const chs = chapterKeep(cm.chapters, sil, mSec);
-  const snapped = snapNg(cm.ng, sil, CUT.ngWin, chs.filter((c) => !c.none).map((c) => [...c.sil, c.keep[0]]));
+  const snapped = snapNg(cm.ng, sil, CUT.ngWin, chs.filter((c) => !c.none).map((c) => [...c.sil, c.keep[0]]), info.duration ?? null);
   let cutOut = mergeRanges(snapped.filter((r) => !r.skip).map((r) => [r.a, r.b]));
   for (const c of chs) {
     if (c.none || !c.keep) continue;

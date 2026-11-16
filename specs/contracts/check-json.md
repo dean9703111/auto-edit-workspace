@@ -213,6 +213,7 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 | `sfx` | `[{ name, at, volume, db }]` | 必有 | rough | 這段的主音效＋附加音效 | 現行 |
 | `warnings` | 整數 | 必有 | — | 這段的 ⚠ **則數**（文字在第一層 `warnings`） | 現行 |
 | `src`、`enter`、`exit`、`volume`、`kind` | — | 只有 media | — | 現行（`kind` 是 `video`／`image`） | 現行 |
+| `pip` | 布林 | 只有 media | — | 這段要不要講者小視窗：照 plan.json 的 `pip` 和版式預設算好的值（橫式沒寫＝`false`、直式沒寫＝`true`）。`qc.mjs` F2 的「該有小視窗」照這個判：`pip !== false` 才算（舊的 JSON 沒有這個鍵照舊算） | 新（055 Q1） |
 | `out` | 物件（§3.1） | 必有 | **完成影片** | 完成影片秒數的時間資訊 | 新（`contracts/media.md` §7＋本線） |
 
 ### 3.1 `items[].out`（完成影片秒數）
@@ -232,7 +233,7 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 |---|---|---|
 | `start`／`end` | 每段 | 畫面上實際的起迄（含自動延長、墊底；`it.start`／`it.end`） |
 | `lists` | 有條列的 scene | 每條進場的完成影片秒數（`it.start + it.resolved.listTimes[key][i]`，所有 key 攤平、依時間排序）；沒有條列時 `[]` |
-| `annotations` | media 段 | 004 `validateMedia()` 回傳的 `json`（`contracts/media.md` §4.1）；不是 media 時 `null` |
+| `annotations` | media 段 | 004 `validateMedia()` 回傳的 `json`（`contracts/media.md` §4.1）；不是 media 時 `null`。寫了 `start` 的段多 `start: { z, x, y }`（起始鏡位的倍率與位移，第一格就是這個鏡位）；`view.scale` 是第一格的倍率（素材縮放 × `start` 推近，沒寫 `start` 就是素材縮放） |
 | `pip` | 每段 | 子母畫面片段 `[{ start, end, enter, exit }]`：`enter` 是 `"fly"`／`"fade"`／`"none"`，`exit` 是 `"layer"`／`"fade"`／`"none"`（spec FR-022、FR-026）；沒有子母畫面時 `[]` |
 | `wipe` | 每段 | `{ in, out, preroll, postroll }`：`in`／`out` 布林（這段擦入／擦出，FR-030）；`preroll`／`postroll` 秒數（只有 media 段可能 > 0，FR-032） |
 | `refs` | custom 段 | build 從 `x-*.html` 掃出的 `P.at('…')` 與 `P.sfx('名', '…')` 的 ref 字面值 → 完成影片秒數（`contracts/cues.md` §2 的 `segs[id].refs`）；不是 custom 時 `{}` |
@@ -302,6 +303,7 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
 | 2 | 2026-10-31（009 直式） | 加 `format`、`canvas`、`formatSource`（`theme` 後面）；`items[].layoutZh` 直式多「上下分割」。`errors` 多版式一致性 ✖（`canvas.mjs` 的 `formatErrors`：plan.json 和開工決策表不同、開工決策表直式但 plan.json 沒寫、主軌直拍但版式橫式、直式專案給橫式素材）。加欄位不升 schema |
 | 2 | 2026-11-07（沒有講者的全螢幕） | `items[].out` 加 `wide`、`badgeBox`（`tx` 後面）。加欄位不升 schema |
 | 2 | 2026-11-07（子母畫面移進錄影） | `items[].out` 加 `pipShift`（`pip` 後面）。加欄位不升 schema |
+| 2 | 2026-11-16（055） | media 段 `items[]` 加 `pip`（布林；橫式預設 `false`）；`out.annotations` 寫了 `start` 時加 `start`，`view.scale` 改成第一格的倍率。加欄位不升 schema |
 
 ## 7. 測試（002 的 `dev/tests/build.test.mjs`）
 

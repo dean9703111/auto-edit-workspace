@@ -9,7 +9,9 @@
  *       不用讀整份 plan.json。r<N> 還沒 finish 時再跑一次＝同一輪加段（備份不重做；已經在這一輪的段不重存，只再印一次）。
  *       --said（舊寫法 --say 也收）：使用者原話。--preview：改之前的版本也出預覽.mp4（使用者要比較影片才加，一段約 25 秒；平常不 render，看完成影片預覽就好）。
  *   node shared/template/tools/versions.mjs begin --project projects/<專案> --requests [--seg s05,s06] [--said "照修改單改"]
- *       照剪輯台修改單改（work/feedback/editor-requests.md）：同上開一輪，另外把修改單上每一段在剪輯台標「生成中」（不用再跑 editor.mjs --requests-state）。
+ *       照剪輯台修改單改（work/feedback/editor-requests.md）：同上開一輪，另外把修改單上每一段在剪輯台標「生成中」（不用再跑 editor.mjs --requests-state）；
+ *       每一段的「要改」「描述」抄進 r<N>.md 的「原話」（例「- 修改單 s0101：「設計可以，但是元素在框內沒有左右至中」」）和分類表那一段的原話節錄
+ *       （修改單每次從剪輯台複製都整份蓋掉，作者的原話只留在 r<N>.md）。
  *       不給 --seg＝修改單裡 plan.json 有的段；--said 不給＝「照修改單改」。修改單的 t<秒> 段（要新增的段）plan.json 沒有，不放進這一輪的段，
  *       新增好在 r<N>.md「改了哪幾段」寫一列「- t<秒>：新增 <段 id>，…」，finish 照這一列回報。
  *   node shared/template/tools/versions.mjs finish --project projects/<專案> [--preview] [--no-change] [--prerender] [--json]
@@ -18,14 +20,16 @@
  *       有 ✖ 就停（結束碼 1，版本和停點都不記），改完再跑一次；連續 6 次沒過印「→ 停手」。finish 之後看截圖不對，改完也是再跑一次（使用者回覆之前都算同一輪）。
  *       改到的段存版本時，audit 拼好的完成態圖複製成那一版的 預覽.jpg（不 render）。
  *       begin --requests 開的這一輪：修改單上有改到的段在剪輯台標「已改完」，沒改到的標「失敗」（理由取 r<N>.md「改了哪幾段」那一列，沒有就寫「這段沒有改動」）。
+ *       「改到」除了 plan.json 那一段，也比：情境段手改過的動畫檔（compositions/<段>-<情境>.html）、模板段的動畫檔、
+ *       plan.json 第一層 moods（情緒點）與 edit（剪掉、音量、接點、自己加的音效）落在這段時間內的項目（「改了哪幾段」寫「手改 compositions/…」「情緒點 #19@系統 改了」）。
  *       --preview：改之後的版本也出預覽.mp4，上一版也有預覽時出比較影片（使用者要比較影片才加）。--no-change：確定這輪不用改（不然段都和改之前一樣會 ✖）。
  *       --prerender：過了之後在背景低優先權先 render 整支（預設不做：預覽不用 render，說「輸出」才 render）。
  *
  * ── 版本 ──
  *   node shared/template/tools/versions.mjs save --project projects/<專案> --seg s12[,s08] [--preview]
  *       把這段現在的樣子存成下一版 work/versions/<段>/v<N>/：段落.json（plan.json 那一段）、動畫檔（src，或內容設計動畫的
- *       x-design-<段>.html、模板動畫的 <模板>-<段>.html）與用到的 illus-local/*.svg、拍點正本在 work/designs/ 的段（內容設計動畫、手改的模板段）的 鏡位腳本.md（work/designs/<段>.md）、
- *       分鏡.md（storyboard.md 那一節）。只存檔、不 render（一段不到 1 秒）。
+ *       x-design-<段>.html、模板動畫的 <模板>-<段>.html、情境段手改過的 <段>-<情境>.html）與用到的 illus-local/*.svg、拍點正本在 work/designs/ 的段（內容設計動畫、手改的模板段）的 鏡位腳本.md（work/designs/<段>.md）、
+ *       分鏡.md（storyboard.md 那一節）、情緒點與剪輯.json（plan.json 第一層 moods、edit 落在這段時間內的項目；沒有就不存）。只存檔、不 render（一段不到 1 秒）。
  *       和某一版一模一樣就不另存（印「沒變」）；有已確認的提案（versions.mjs accept 過）就存進那一版。
  *       --preview：另外出 預覽.mp4（build --test＋render 這一段，6 秒的段約 25 秒）、預覽.jpg（預覽每 0.5 秒一格，最多 24 格）；
  *       上一個使用中的版本也有預覽時，再出 work/versions/<段>/比較-v<舊>-v<新>.mp4（左舊右新，上方標版本號，聲音用新版）。
@@ -38,7 +42,8 @@
  *       （拍點正本，audit 照它對拍），模板段記下確認的綁詞（finish 比對）。停點紀錄記「通過」，印出下一步。
  *   node shared/template/tools/versions.mjs use --project projects/<專案> --seg s12 --ver v1 [--said "使用者原話"]
  *       退回某一版：先 save 現在的樣子（不會弄丟），再把那一版的段落、動畫檔、svg、鏡位腳本、分鏡寫回 plan.json、compositions/、
- *       illus-local/、work/designs/、storyboard.md；沒做完的提案標成「放棄」。
+ *       illus-local/、work/designs/、storyboard.md（情境段現在是手改檔、那一版沒有＝拿掉手改檔，build 照 plan.json 重產）；沒做完的提案標成「放棄」。
+ *       第一層的情緒點、edit 是全片共用的，不換回（要換回照那一版的 情緒點與剪輯.json 手動改）。
  *       沒有開著的回饋輪：自己 begin → use → finish 一次做完（原話用 --said，沒給就寫「<段> 用 <版>」），印法和 finish 一樣（最後是停點 ④）。
  *       回饋輪開著：只換回去，接著跑 finish。
  *   node shared/template/tools/versions.mjs compare --project projects/<專案> --seg s12 [--a v1 --b v2]
@@ -68,7 +73,8 @@ import { appendRound, appendStop, progressFile } from './lib/progress.mjs';
 import { readStopLog } from './status.mjs';
 import { markStoryboardWritten } from './lib/storyboard-state.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
-import { designFileOf, fillFileOf } from './lib/custom-fill.mjs';
+import { designFileOf, fillFileOf, fillStateOf } from './lib/custom-fill.mjs';
+import { hashOf as stampHashOf, verifyHash } from './lib/assemble.mjs';
 import { resetRuns } from './lib/flow.mjs';
 import { STOP, stopLines } from './lib/stops.mjs';
 import { report as reportLines, warn, next, cmdLine } from './lib/say.mjs';
@@ -80,6 +86,8 @@ import { editorUrlsSync } from './lib/editor-urls.mjs';
 import { requestsInfo, doRequestsStatus } from './editor/server/requests.mjs';
 import { ensureBeatsV2, beatOwnerOf, beatSourceOf, beatBlocksOf, retireScript, refreshStoryboard, writeWholeTable, promisedOf, refList } from './lib/beat-source.mjs';
 import { r3Round as r3, clock2 } from './lib/time.mjs';
+import { seamsSync } from './lib/seams.mjs';
+import { mediaShotTimes } from './lib/media.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const DIR = 'versions';
@@ -138,12 +146,89 @@ const headOf = (md) => { const i = md.search(/^## 分鏡\s*$/m); return i < 0 ? 
 export const bodyOf = (md) => { const m = md.match(/^## 分鏡\s*$/m); return m ? md.slice(m.index + m[0].length).replace(/^\s*\n/, '').replace(/\s+$/, '') : null; };
 const sectionBlock = (snap) => `## 分鏡\n\n${snap.section ?? `（work/storyboard.md 沒有「### ${snap.id}」這一節）`}\n`;
 
+// ---------- 055 N10：版本也要記的「段外面」的東西 ----------
+// 情境段（scene）的動畫檔 compositions/<段>-<情境>.html 被手改過（build 不覆寫）：一起存、比對、退回。工具產生的不存（plan.json 就決定了它）
+export function handSceneFiles(P, id) {
+  const dir = path.join(P.out, 'compositions');
+  let names = [];
+  try { names = fs.readdirSync(dir).filter((f) => f.startsWith(`${id}-`) && f.endsWith('.html')); } catch { return []; }
+  const known = readJson(path.join(P.out, '.build-manifest.json'), {})?.files || {};
+  const out = [];
+  for (const f of names.sort()) {
+    const rel = `compositions/${f}`;
+    let c;
+    try { c = fs.readFileSync(path.join(dir, f), 'utf8'); } catch { continue; }
+    const v = verifyHash(c);
+    if (!v.stamped || !new RegExp(`(?:^|\\s)id=${esc(id)}\\s+scene=`).test(v.info)) continue;   // 不是這段的情境檔（別段的 id 剛好是前綴）
+    const tool = known[rel] ? stampHashOf(c) === known[rel] : v.ok;
+    if (!tool) out.push({ rel, content: c });
+  }
+  return out;
+}
+
+// 這段時間內的 plan.json 第一層 moods（情緒點）、edit（剪掉、音量、接點、自己加的音效）：時間照 build --check --json（rough.mp4 秒數）。
+// 同一份 plan.json＋字幕只算一次（finish 前後、list 每段都會叫）
+const timesMemo = new Map();
+function segTimes(P) {
+  let text;
+  try { text = fs.readFileSync(P.plan, 'utf8'); } catch { return null; }
+  const key = hashOf(`${text}\0${srtHash(P) ?? ''}`);
+  if (timesMemo.has(key)) return timesMemo.get(key);
+  let j = null;
+  try { j = checkProject(P.project, P.templateDir ? { template: P.templateDir } : {}); } catch { j = null; }
+  const v = j && Array.isArray(j.items) && j.items.length
+    ? { items: new Map(j.items.map((x) => [x.id, [x.start, x.end]])), moods: (j.moods || []).map((m) => ({ i: m.i, at: m.at })) } : null;
+  if (timesMemo.size > 8) timesMemo.clear();
+  timesMemo.set(key, v);
+  return v;
+}
+const AROUND_FILE = '情緒點與剪輯.json';
+export function aroundOf(P, plan, id) {
+  const e0 = plan?.edit && typeof plan.edit === 'object' ? plan.edit : {};
+  if (!(Array.isArray(plan?.moods) && plan.moods.length) && !['cuts', 'gains', 'joins', 'sfx'].some((k) => Array.isArray(e0[k]) && e0[k].length)) return null;   // 沒有就不用算時間（不跑 --check）
+  const T = segTimes(P), r = T?.items.get(id);
+  if (!r) return null;
+  const [a, b] = r, num = (x) => typeof x === 'number' && Number.isFinite(x);
+  const inR = (t) => num(t) && t >= a - 1e-6 && t < b - 1e-6;
+  const over = (x, y) => num(x) && num(y) && x < b - 1e-6 && y > a + 1e-6;
+  const out = {};
+  const moods = T.moods.filter((m) => inR(m.at)).map((m) => plan?.moods?.[m.i]).filter(Boolean);
+  if (moods.length) out.moods = moods;
+  const e = plan?.edit && typeof plan.edit === 'object' ? plan.edit : {};
+  const pick = (k, f) => { const l = Array.isArray(e[k]) ? e[k].filter(f) : []; if (l.length) out[k] = l; };
+  pick('cuts', (c) => Array.isArray(c) && over(c[0], c[1]));
+  pick('gains', (g) => g && over(g.from, g.to));
+  pick('joins', (x) => x && inR(x.at));
+  pick('sfx', (x) => x && inR(x.at));
+  return Object.keys(out).length ? out : null;
+}
+// 改了什麼（寫進 r<N>.md）：情緒點用 at 認、edit 的每一項比內容
+export function aroundChange(a, b) {
+  const out = [], A = a || {}, B = b || {};
+  const am = new Map((A.moods || []).map((m) => [String(m.at), JSON.stringify(m)])), bm = new Map((B.moods || []).map((m) => [String(m.at), JSON.stringify(m)]));
+  for (const [k, v] of bm) out.push(!am.has(k) ? `情緒點 ${k} 加了` : am.get(k) !== v ? `情緒點 ${k} 改了` : null);
+  for (const k of am.keys()) if (!bm.has(k)) out.push(`情緒點 ${k} 拿掉了`);
+  const ZH = { cuts: '剪掉', gains: '音量', joins: '接點', sfx: '自己加的音效' };
+  for (const k of Object.keys(ZH)) {
+    const x = (A[k] || []).map((v) => JSON.stringify(v)), y = (B[k] || []).map((v) => JSON.stringify(v));
+    const add = y.filter((v) => !x.includes(v)), del = x.filter((v) => !y.includes(v));
+    if (add.length) out.push(`edit.${k}（${ZH[k]}）加 ${add.join('、')}`);
+    if (del.length) out.push(`edit.${k}（${ZH[k]}）拿掉 ${del.join('、')}`);
+  }
+  return out.filter(Boolean);
+}
+
 // ---------- 這段現在的樣子 ----------
+// 055 N4：build 在手改檔的檔頭補記 t0=、d=（產生時的段起點、段長）不算改了
+const handBody = (x) => (x.hand ? x.content.replace(/^(<!-- auto-edit: [^\n]*?) t0=\S+ d=\S+(?= hash=)/m, '$1') : x.content);
 export function snapshotOf(P, id) {
   const plan = readJson(P.plan);
   if (!plan) throw new Error(`讀不到 ${rel(P.plan)} → 先跑 node shared/template/tools/build.mjs --project ${pj(P)} --check 看 plan.json 哪裡壞了`);
   const seg = (plan.scenes || []).find((s) => s && s.id === id);
   if (!seg) throw new Error(`plan.json 沒有「${id}」這一段 → 段 id 照 build.mjs --check 報告的第一欄（例 s12）；「1:10 那段」先對照報告的起–迄找 id`);
+  // 055 N10：這段時間內的情緒點、edit 項目（只改情緒點的回饋也算改了）；沒有就是 null，雜湊和以前一樣。
+  //   先算：要跑一次 build --check（同一份 plan.json 只跑一次），它順手做的事（模板動畫重產、拍點正本遷移）要在讀檔之前做完，前後兩次快照才一樣
+  const around = aroundOf(P, plan, id);
   const files = [];
   // 動畫檔：手寫的 src；內容設計動畫、模板動畫沒有 src，檔名照工具的規則（build 產生、設計師改的就是這支）
   const anim = seg.src || (seg.design ? designFileOf(seg) : seg.template ? fillFileOf(seg) : null);
@@ -151,13 +236,15 @@ export function snapshotOf(P, id) {
     const f = path.join(P.out, anim);
     if (fs.existsSync(f)) {
       const c = fs.readFileSync(f, 'utf8');
-      files.push({ rel: posix(anim), store: path.basename(anim), content: c });
+      files.push({ rel: posix(anim), store: path.basename(anim), content: c, ...(seg.template && !seg.src && fillStateOf({ seg, outDir: P.out, cur: c }) === 'hand' ? { hand: true } : {}) });
       for (const m of new Set([...c.matchAll(/illus-local\/[^"'`\s)]+?\.svg/g)].map((x) => x[0]))) {
         const s = path.join(P.out, m);
         if (fs.existsSync(s)) files.push({ rel: m, store: m, content: fs.readFileSync(s, 'utf8') });
       }
     }
   }
+  // 055 N10：情境段手改過的動畫檔（工具產生的不存）
+  if (!anim) for (const f of handSceneFiles(P, id)) files.push({ rel: f.rel, store: path.basename(f.rel), content: f.content, hand: true });
   // 拍點正本在 work/designs/ 的段（內容設計動畫、手改過的模板段，032 B6）：鏡位腳本也一起存，退回時才對得上
   if (seg.design || beatOwnerOf(P, seg).owner === 'script') {
     const d = path.join(P.project, 'work', 'designs', `${id}.md`);
@@ -166,10 +253,10 @@ export function snapshotOf(P, id) {
   const sb = path.join(P.project, 'work', 'storyboard.md');
   const section = fs.existsSync(sb) ? findSection(fs.readFileSync(sb, 'utf8'), id)?.text ?? null : null;
   const srt = fs.existsSync(P.srt) ? hashOf(fs.readFileSync(P.srt, 'utf8')) : null;
-  const hash = hashOf([JSON.stringify(seg), ...files.map((x) => `${x.rel}\0${x.content}`)].join('\0'));
+  const hash = hashOf([JSON.stringify(seg), ...files.map((x) => `${x.rel}\0${handBody(x)}`), ...(around ? [`${AROUND_FILE}\0${JSON.stringify(around)}`] : [])].join('\0'));
   // 不含鏡位腳本的雜湊（032 B6：accept 會把提案的表寫進鏡位腳本，「提案確認了、動畫還沒做」要只比段落和動畫檔）
-  const animHash = hashOf([JSON.stringify(seg), ...files.filter((x) => x.store !== '鏡位腳本.md').map((x) => `${x.rel}\0${x.content}`)].join('\0'));
-  return { id, seg, files, section, hash, animHash, srt };
+  const animHash = hashOf([JSON.stringify(seg), ...files.filter((x) => x.store !== '鏡位腳本.md').map((x) => `${x.rel}\0${handBody(x)}`)].join('\0'));
+  return { id, seg, files, section, hash, animHash, srt, around };
 }
 
 export const segDir = (project, id) => path.join(project, 'work', DIR, id);
@@ -225,8 +312,11 @@ function writeVersionFiles(dir, snap) {
     fs.mkdirSync(path.dirname(t), { recursive: true });
     fs.writeFileSync(t, f.content);
   }
+  const af = path.join(dir, AROUND_FILE);
+  if (snap.around) writeJson(af, snap.around); else fs.rmSync(af, { force: true });
 }
-const metaOf = (snap) => ({ hash: snap.hash, animHash: snap.animHash, srt: snap.srt, files: snap.files.map((f) => ({ rel: f.rel, store: f.store })) });
+const metaOf = (snap) => ({ hash: snap.hash, animHash: snap.animHash, srt: snap.srt, files: snap.files.map((f) => ({ rel: f.rel, store: f.store, ...(f.hand ? { hand: true } : {}) })) });
+const aroundIn = (dir) => readJson(path.join(dir, AROUND_FILE), null);
 
 // ---------- 預覽：build --test 這一段 → render → 拼格 ----------
 export function contactSheet(mp4, out, portrait = false) {
@@ -442,6 +532,12 @@ export function useVersion(P, flags, id, ver, log) {
     fs.copyFileSync(src, dst);
     restored.push(path.basename(f.rel));
   }
+  // 055 N10：情境段現在的動畫檔是手改的、那一版沒有（當時是工具產生的）→ 拿掉手改檔，build 照 plan.json 重產（現在的樣子上面已經存成一版）
+  for (const f of handSceneFiles(P, id)) {
+    if ((t.meta.files || []).some((x) => x.rel === f.rel)) continue;
+    fs.rmSync(path.join(P.out, ...f.rel.split('/')), { force: true });
+    restored.push(`${path.basename(f.rel)}（拿掉手改，build 照 plan.json 重產）`);
+  }
   // 032 B6：退回的那一版動畫檔是照 plan.json 產生的（沒手改）→ 現在的鏡位腳本不再是正本，搬到 .old/（不然下次手改會沿用過期的表）
   const lib = loadLib(P.templateDir, P.project);
   if (beatOwnerOf(P, seg, { lib }).owner === 'plan' && !(t.meta.files || []).some((f) => f.store === '鏡位腳本.md')) {
@@ -636,24 +732,41 @@ function editSection(md, title, fn) {
 }
 
 const ruleWord = (say) => RULE_RE.exec(say)?.[0] ?? null;
-const classRows = (say, ids, first) => ids.map((id, i) => `| ${first + i} | ${clip(cellOf(say) || '（同一輪）', 40)} | ${ruleWord(say) ? '可能是規則，請確認' : '個案'} | ${id} | ${ROUND_PH} |`);
-function feedbackSkeleton(n, say, ids) {
-  const rule = ruleWord(say);
-  return [`# 回饋 r${n}（${now()}）`, '', '## 原話', '', `「${say}」`, '', '## 分類', '',
-    '| # | 原話節錄 | 規則／個案 | 改哪一段 | 改法 |', '|---|---|---|---|---|', ...classRows(say, ids, 1), '',
+// texts：每段自己的原話（055 F1：修改單那一段的描述），沒有就用整輪的 say
+const classRows = (say, ids, first, texts = {}) => ids.map((id, i) => { const s = texts[id] || say; return `| ${first + i} | ${clip(cellOf(s) || '（同一輪）', 40)} | ${ruleWord(s) ? '可能是規則，請確認' : '個案'} | ${id} | ${ROUND_PH} |`; });
+function feedbackSkeleton(n, say, ids, quotes = [], texts = {}) {
+  const rule = ruleWord([say, ...Object.values(texts)].join('\n'));
+  return [`# 回饋 r${n}（${now()}）`, '', '## 原話', '', `「${say}」`, ...quotes, '', '## 分類', '',
+    '| # | 原話節錄 | 規則／個案 | 改哪一段 | 改法 |', '|---|---|---|---|---|', ...classRows(say, ids, 1, texts), '',
     `建議改規則：${rule ? `（原話有「${rule}」：這集照做，這裡寫一條建議，不改 shared/、AGENTS.md）` : '無'}`, '',
     '## 改了哪幾段', '', ROUND_PH, '', '## 驗證', '', ROUND_PH, ''].join('\n');
 }
-function feedbackAdd(md, say, ids) {
+function feedbackAdd(md, say, ids, quotes = [], texts = {}) {
   let out = md;
-  if (say) out = editSection(out, '原話', (b) => [...b, `「${say}」`]);
+  if (say || quotes.length) out = editSection(out, '原話', (b) => [...b, ...(say ? [`「${say}」`] : []), ...quotes.filter((q) => !b.includes(q))]);
   if (ids.length) out = editSection(out, '分類', (b) => {
     const last = b.reduce((k, l, i) => (l.trim().startsWith('|') ? i : k), -1);
     const nRows = b.filter((l) => /^\|\s*\d+\s*\|/.test(l.trim())).length;
-    return [...b.slice(0, last + 1), ...classRows(say, ids, nRows + 1), ...b.slice(last + 1)];
+    return [...b.slice(0, last + 1), ...classRows(say, ids, nRows + 1, texts), ...b.slice(last + 1)];
   });
   return out;
 }
+
+// 055 F1：剪輯台修改單（work/feedback/editor-requests.md）每一段的「要改」標籤與「描述」＝作者這一輪的原話。
+// 修改單每次從剪輯台複製都整份蓋掉，begin --requests 時就抄進 r<N>.md「原話」，之後查得到（以前只記「照修改單改」）
+//   → [{ id, tags: ['位置', …], note: '描述' }]（照修改單的順序；沒寫描述也沒勾要改的段不列）
+export function requestNotes(project) {
+  let md;
+  try { md = fs.readFileSync(path.join(project, 'work', 'feedback', 'editor-requests.md'), 'utf8'); } catch { return []; }
+  const parts = md.split(/^## \d+\. /m).slice(1);
+  return parts.map((p) => {
+    const id = (p.match(/^(\S+)/) || [])[1] || null;
+    const tags = ((p.match(/^- 要改：(.+)$/m) || [])[1] || '').split('、').map((x) => x.trim()).filter(Boolean);
+    const note = ((p.match(/^- 描述：(.+)$/m) || [])[1] || '').trim();
+    return { id, tags, note };
+  }).filter((x) => x.id && (x.note || x.tags.length));
+}
+const requestQuote = (r) => `- 修改單 ${r.id}${r.tags.length ? `（要改：${r.tags.join('、')}）` : ''}：${r.note ? `「${r.note}」` : '（沒寫描述）'}`;
 
 function updateRoundRow(project, name, segs, backup, file) {
   const f = progressFile(project);
@@ -680,6 +793,10 @@ export function beginRound(P, flags, idsIn, sayRaw, log = console.log) {
   const rq = flags.requests ? requestsInfo(project) : null;
   if (flags.requests && !rq?.ids.length) throw new Error(`${rq ? '剪輯台修改單裡沒有段' : '還沒有剪輯台修改單（work/feedback/editor-requests.md）'} → 請使用者在剪輯台「修改單」選段後按「複製給 AI」；不是照修改單改就拿掉 --requests`);
   const say = unquote(sayRaw) || (rq ? '照修改單改' : '');
+  // 055 F1：修改單每一段的描述（作者的原話）抄進 r<N>.md「原話」與分類表那一段的原話節錄
+  const rqNotes = rq ? requestNotes(project) : [];
+  const texts = Object.fromEntries(rqNotes.map((x) => [x.id, x.note || `要改：${x.tags.join('、')}`]));
+  const quotes = rqNotes.map(requestQuote);
   let ids = [...idsIn];
   const text = (() => { try { return fs.readFileSync(P.plan, 'utf8'); } catch { return null; } })();
   if (text == null) throw new Error(`讀不到 ${rel(P.plan)} → 回饋輪是停點 ④ 之後用的；plan.json 還沒寫就先照 status.mjs 的下一步做`);
@@ -705,15 +822,15 @@ export function beginRound(P, flags, idsIn, sayRaw, log = console.log) {
       // versions.mjs new 已經把現在的樣子存好了：提案卡著，這裡不能也不用再存
       before[id] = vers.filter((v) => v.complete).at(-1)?.n ?? null;
       log(`${id}：有還沒做完的提案 v${pend.n}，改之前的樣子是 v${before[id] ?? '?'}`);
-    } else before[id] = saveSeg(P, flags, id, log, { kind: `${name} 改之前`, note: say || null }).n;
+    } else before[id] = saveSeg(P, flags, id, log, { kind: `${name} 改之前`, note: (texts[id] ? `修改單：「${texts[id]}」` : say) || null }).n;
     kept.push(id);
   }
   resetRuns(P, fresh);   // 這一輪要改的段：改的人從第 1 次 audit 算起
   // r<N>.md（「改了哪幾段」finish 才寫：剪輯台看到那一列就標「已改」）
   const file = feedbackFile(project, n), fileRel = `work/feedback/${name}.md`, bakRel = `work/hyperframes/${path.basename(bak)}`;
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (cur && fs.existsSync(file)) fs.writeFileSync(file, feedbackAdd(fs.readFileSync(file, 'utf8'), say, fresh));
-  else fs.writeFileSync(file, feedbackSkeleton(n, say, ids));
+  if (cur && fs.existsSync(file)) fs.writeFileSync(file, feedbackAdd(fs.readFileSync(file, 'utf8'), say, fresh, quotes, texts));
+  else fs.writeFileSync(file, feedbackSkeleton(n, say, ids, quotes, texts));
   const segs = [...(cur?.segs || []), ...fresh];
   if (cur) updateRoundRow(project, name, segs, bakRel, fileRel);
   else appendRound(project, { round: name, file: fileRel, segs: segs.join('、'), backup: bakRel });
@@ -724,13 +841,14 @@ export function beginRound(P, flags, idsIn, sayRaw, log = console.log) {
     if (s4 === '待回覆' || (cur == null && s4 === '修改後重停')) appendStop(project, { stop: STOP4, state: '修改後重停', said: say, back: fileRel });
   }
   const requests = rq ? { revision: rq.revision, ids: rq.ids } : cur?.requests ?? null;
-  setRound(project, { n, segs, before, say: [...(cur?.say || []), ...(say ? [say] : [])], open: true, time: cur?.time || now(), srt: cur?.srt ?? srtHash(P), rows: cur?.rows || {}, ...(requests ? { requests } : {}) });
+  const segNotes = { ...(cur?.notes || {}), ...texts };
+  setRound(project, { n, segs, before, say: [...(cur?.say || []), ...(say ? [say] : [])], open: true, time: cur?.time || now(), srt: cur?.srt ?? srtHash(P), rows: cur?.rows || {}, ...(requests ? { requests } : {}), ...(Object.keys(segNotes).length ? { notes: segNotes } : {}) });
   const all = sceneSlices(text);
   const blocks = ids.map((id) => {
     const s = all.find((x) => x.id === id), seg = plan.scenes.find((x) => x?.id === id);
     return { id, from: s?.from ?? null, to: s?.to ?? null, text: s?.text ?? JSON.stringify(seg, null, 2), seg, x: seg?.type === 'custom' && seg.src ? `work/hyperframes/${seg.src}` : null, v: before[id] ?? null };
   });
-  const rule = ruleWord(say);
+  const rule = ruleWord([say, ...Object.values(texts)].join('\n'));
   // 剪輯台：修改單上每一段（含 plan.json 沒有的 t<秒>）標「生成中」；finish 再標已改完／失敗
   let rqOut = null;
   if (rq) {
@@ -1033,13 +1151,14 @@ function finishOnce(P, flags = {}, log = console.log, steps = {}) {
   if (au.errors.length) return fail(au.errors);
   let snaps = [];
   if (media.length) {
-    try { snaps = S.snapshot(P, media.map((id) => { const o = items.get(id).out; return { id, t: r3((o.start + o.end) / 2) }; })); } catch (e) { return fail([`✖ ${e.message}`]); }
+    try { snaps = S.snapshot(P, media.flatMap((id) => mediaShotTimes(items.get(id).out).map((t) => ({ id, t })))); } catch (e) { return fail([`✖ ${e.message}`]); }   // 055：每個紅框兩格（lib/media.mjs）
   }
+  notes.push(...(S.seams || seamsSync)(P, ids.filter((id) => items.has(id)), { template: flags.template ? path.resolve(flags.template) : null }));   // 055 N5／N6：改到的段前後換段閃一下、硬切回講者（lib/seams.mjs，只是 ⚠）
 
   // 3. 改之後的版本
   const savedLog = [], joined = (round.say || []).join('；') || null;
   const sheetOf = (id) => au.sheets.find((f) => path.basename(f) === `sheet-${id}.jpg`) || null;
-  const saved = new Map(info.map((s) => [s.id, saveSeg(P, flags, s.id, (l) => savedLog.push(l), { kind: `${name} 改之後`, note: joined, still: sheetOf(s.id) })]));
+  const saved = new Map(info.map((s) => [s.id, saveSeg(P, flags, s.id, (l) => savedLog.push(l), { kind: `${name} 改之後`, note: round.notes?.[s.id] ? `修改單：「${round.notes[s.id]}」` : joined, still: sheetOf(s.id) })]));
   for (const l of savedLog) if (l.startsWith('⚠')) notes.push(l);
 
   // 4. 要看的那張截圖
@@ -1064,8 +1183,15 @@ function finishOnce(P, flags = {}, log = console.log, steps = {}) {
     const parts = [];
     const d = beforeSeg ? describeChange(beforeSeg, s.snap.seg) : '新的段';
     if (d) parts.push(d);
-    const changedFiles = s.snap.files.filter((f) => !s.before || (() => { try { return fs.readFileSync(path.join(s.before.dir, ...f.store.split('/')), 'utf8') !== f.content; } catch { return true; } })()).map((f) => path.basename(f.rel));
+    const changedF = s.snap.files.filter((f) => !s.before || (() => { try { return handBody({ hand: f.hand, content: fs.readFileSync(path.join(s.before.dir, ...f.store.split('/')), 'utf8') }) !== handBody(f); } catch { return true; } })());
+    const changedFiles = changedF.filter((f) => !f.hand).map((f) => path.basename(f.rel));
     if (changedFiles.length) parts.push(`${changedFiles.join('、')} 改了`);
+    // 055 N10：手改的動畫檔、這段時間內的情緒點與 edit 也寫出來（以前只比 plan.json 這段，只改這些會印「沒變」）
+    parts.push(...changedF.filter((f) => f.hand).map((f) => `手改 ${f.rel}`));
+    if (s.before) {
+      parts.push(...(s.before.meta.files || []).filter((f) => f.hand && !s.snap.files.some((x) => x.rel === f.rel)).map((f) => `${f.rel} 拿掉手改（改回工具產生）`));
+      parts.push(...aroundChange(aroundIn(s.before.dir), s.snap.around));
+    }
     auto[s.id] = parts.join('；') || '改了';
     verText[s.id] = `${s.before ? `v${s.before.n} → ` : '→ '}v${v.n}${v.cmp ? `，比較：${rel(v.cmp)}` : ''}`;
   }
@@ -1134,7 +1260,7 @@ function finishOnce(P, flags = {}, log = console.log, steps = {}) {
   for (const l of dg.summary) log(l);
   if (toAudit.length) log(`audit --only ${toAudit.join(',')}：✖ 0、⚠ ${au.warns.length}`);
   for (const l of au.warns) log(l);
-  if (media.length) log(`錄影段（audit 不量）：${media.map((id) => { const o = items.get(id).out; return `${id} 截 ${fmtT((o.start + o.end) / 2)}`; }).join('、')}`);
+  if (media.length) log(`錄影段（audit 不量）：${media.map((id) => `${id} 截 ${mediaShotTimes(items.get(id).out).map(fmtT).join('、')}`).join('；')}`);
   log(`版本：${info.map((s) => { const a = saved.get(s.id).n; return s.same ? `${s.id} v${a}（沒變）` : `${s.id} ${s.before ? `v${s.before.n} → ` : '→ '}v${a}`; }).join('；')}`);
   for (const l of savedLog) if (/^\s+(預覽|比較)：/.test(l)) log(l.trim());
   if (flags.preview) for (const s of info) { const v = saved.get(s.id); if (!s.same && !v.cmp) log(`（${s.id} 沒有比較影片：改之前的版本沒有預覽；要比較就 begin、finish 都加 --preview）`); }

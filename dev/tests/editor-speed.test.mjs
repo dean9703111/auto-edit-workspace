@@ -212,7 +212,7 @@ test('AI 寫好的變速和轉場：重新載入就看得到（不用先改過�
 });
 
 test('預覽：子母畫面跟完成影片一樣在錄影裡面', { skip: noUi }, async () => {
-  fs.writeFileSync(planFile(), JSON.stringify({ version: 1, scenes: [{ id: 'm1', type: 'media', src: 'assets/screen/demo.mp4', from: '#2', to: '#6e' }] }));
+  fs.writeFileSync(planFile(), JSON.stringify({ version: 1, scenes: [{ id: 'm1', type: 'media', src: 'assets/screen/demo.mp4', from: '#2', to: '#6e', pip: true }] }));
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.reportReady && window.__editor.itemsView.some((x) => x.id === 'm1' && x.pipShift), { timeout: 60000 });
   assert.deepEqual(await page.evaluate(() => window.__editor.itemsView.find((x) => x.id === 'm1').pipShift), [-85, -3], '16:9 錄影');

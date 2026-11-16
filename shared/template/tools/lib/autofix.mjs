@@ -23,6 +23,7 @@
 //   merge     動畫分鏡的相鄰兩拍只隔不到範例的最小拍距：後一拍改綁前一拍的詞（同一句講到的兩個東西放同一拍）；不行就前一拍改綁後一拍的詞
 //             （拍和詞的對應看這段的動畫分鏡 __sheet；寫在 at／…At 欄的才改）
 //   tail      動畫分鏡的最後一拍到段尾不夠範例的下限（最後一幕太短）：和 hold 一樣把 to 往後延（後一段 0 秒相接就一起延它的 from）
+//   whip      連續 3 張以上的圖片快切，第二張起還是硬切或淡入（055 k15）：那一段寫 "enter": "whip"（甩鏡）
 // 每一處都要過：目標那一則消失、✖／⚠ 沒有多（只差秒數的算同一則）、沒有畫面的區間／#N@詞 估的個數／音效太密／音效稀疏沒變多、
 // 段數沒變少、透明字卡沒有被整張幕蓋住更久（延長、挪動不能把下一張卡的開頭藏在幕底下）。
 // 不能自動修的（#N@詞 估的、音效稀疏、蓋到講者這類要看畫面的）照舊報。
@@ -34,7 +35,7 @@ import { parseValue } from './scenes.mjs';
 import { KEEP_FIRST, SFX_RULES } from './audio.mjs';
 import { parseBeatSheets } from './audit-beats.mjs';
 
-export const KINDS = { textSync: '文字對時', overlap: '重疊', firstAt: '清單第一項比標題早', gap: '空檔', hold: '停留太短', sfx: '音效太密', merge: '拍距不足（併拍）', tail: '最後一幕太短' };
+export const KINDS = { textSync: '文字對時', overlap: '重疊', firstAt: '清單第一項比標題早', gap: '空檔', hold: '停留太短', sfx: '音效太密', merge: '拍距不足（併拍）', tail: '最後一幕太短', whip: '連續圖片甩鏡' };
 const ORDER = Object.keys(KINDS);
 const OVERLAP_MAX = 0.5, GAP_MAX = 3, HOLD_STEP = 0.05, NEAR = 0.45, EPS = 0.002;
 
@@ -320,6 +321,18 @@ function candidates(cur, opt) {
     if (!a || !b || a === b) return;
     out.push({ kind: 'merge', id: it.id, key: `mg|${it.id}|${m[3]}|early`, gone, apply: (pl) => (swapRef(segOf(pl, it.id), b, a) ? `${it.id}：第 ${m[3]} 拍併進第 ${m[2]} 拍（${fmtV(b)} 改成 ${fmtV(a)}；原本只隔 ${m[4]}s）` : null) });
     out.push({ kind: 'merge', id: it.id, key: `mg|${it.id}|${m[2]}|late`, gone, apply: (pl) => (swapRef(segOf(pl, it.id), a, b) ? `${it.id}：第 ${m[2]} 拍併進第 ${m[3]} 拍（${fmtV(a)} 改成 ${fmtV(b)}；原本只隔 ${m[4]}s）` : null) });
+  });
+
+  // whip（055 k15）：[m0109b media] 是連續 N 張快切圖片的第 k 張…進場…換圖太生硬 → 寫 "enter": "whip"
+  each(/^\[(\S+)[^\]]*\] 是連續 \d+ 張快切圖片的第 \d+ 張/, (it, m, w) => {
+    if (!it.seg || it.type !== 'media' || !ok(it.id)) return;
+    const was = it.seg.enter;
+    out.push({ kind: 'whip', id: it.id, key: `whip|${it.id}`, gone: msgGone(w), apply: (pl) => {
+      const s = segOf(pl, it.id);
+      if (!s) return null;
+      put(s, 'enter', 'whip', 'to');
+      return `${it.id}：進場${was ? `從 "${was}" ` : ''}改成 "whip"（連續圖片快切，甩鏡換圖）`;
+    } });
   });
 
   // sfx：同一分鐘超過 2 顆主音效（工具自動拿掉之後還超過的，都是段上寫明的）

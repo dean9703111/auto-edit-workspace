@@ -11,6 +11,7 @@
 //               不給或空的＝輸出和以前逐位元相同。回傳的 marks＝畫面上真的有顯示的那幾則
 //     words     047 只標幾個字 [{ n: 7, word: '關鍵詞' }]：那一則的 <span> 裡，那幾個字包成 <em class="cw">（整則已經是重點的不包）
 //   captionWarnings(cues, canvas, style)  → 字數／寬度警告（--check 也印）；字數與寬度上限讀 canvas.caption.maxChars／maxW（橫式 18／1840、直式 10／834），估寬照字級
+//   isShortCaption(cue, min)              → 這則字幕不到 CAPTION.minDur（0.6）秒（qc.mjs F8、lib/plan.mjs 剪點檢查共用）
 //
 // 每則字幕 <div class="cg" id="cg-N"><span>…</span></div>（重點字幕是 class="cg cg--em"），初始 opacity:0; visibility:hidden（inline，captions.css 沒寫），
 // tl.set 開、tl.set 硬關；同一時間只顯示一則（前一則截到下一則起點）；0 秒開頭的挪到 0.1。
@@ -25,6 +26,8 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 // 估寬（F8，kit/captions.css）：Noto Sans TC 76px 全形 76、半形約 0.52 em（40）、空白約 0.25 em（19），無字距，左右內距 37
 export const CAPTION = { font: 76, half: 40, space: 19, pad: 74, maxW: 1840, maxChars: 18, minDur: 0.6 };
+// 一則字幕太短（不到 minDur 秒，剪映最短 0.73 秒）：captionWarnings、resolvePlan 的剪點檢查（055 k27）、qc.mjs F8 同一個判斷
+export const isShortCaption = (c, min = CAPTION.minDur) => Number.isFinite(c?.start) && Number.isFinite(c?.end) && c.end - c.start < min - 1e-9;
 // g＝lib/caption-style.mjs 的 captionGeom（035：字級改了照比例估）；不給＝76 px
 export const captionWidth = (text, g = null) => {
   const m = g ? { font: g.size, space: g.space, half: g.half, pad: g.padW } : CAPTION;
@@ -48,7 +51,7 @@ export function captionWarnings(cues, canvas = null, style = null) {
   }
   const punct = cues.filter((c) => MID_PUNCT.test(c.text));
   if (punct.length) out.push(`字幕含句中標點「，。；：」：${listN(punct)} → 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在剪輯台改`);
-  const short = cues.filter((c) => Number.isFinite(c.start) && Number.isFinite(c.end) && c.end - c.start < CAPTION.minDur - 1e-9);
+  const short = cues.filter((c) => isShortCaption(c));
   if (short.length) out.push(`字幕不到 ${CAPTION.minDur} 秒：${listN(short)} → 在剪輯台和前後句合併，或把起迄拉長`);
   return out;
 }

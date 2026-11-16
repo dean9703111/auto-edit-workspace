@@ -313,3 +313,24 @@ test('--check-draft：合併時工具會自動修的（這裡是講者會閃一�
   assert.equal(fs.readFileSync(file, 'utf8'), before, '草稿本身不動（合併時才真的改進 plan.json）');
   fs.rmSync(file);
 });
+
+test('055 k15 whip：連續圖片快切第二張起寫 "enter": "whip"（原本 cut、沒寫的都改）；第一張不動；only 以外不動', () => {
+  const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'af-whip-'));
+  fs.mkdirSync(path.join(pdir, 'assets/images'), { recursive: true });
+  for (const n of ['a', 'b', 'c', 'd']) fs.writeFileSync(path.join(pdir, `assets/images/${n}.png`), '');
+  const cues = mkCues();
+  const check = (plan) => { cues.approx = new Set(); const res = resolvePlan({ plan, cues, videoDur: 30, lib: L, outDir: os.tmpdir(), projectDir: pdir, probe: () => ({ width: 1920, height: 1080 }) }); return { errors: res.errors, warnings: res.warnings, res }; };
+  const img = (id, n, i, enter) => ({ id, type: 'media', src: `assets/images/${n}.png`, from: `#3+${i * 1.5}`, to: `#3+${(i + 1) * 1.5}`, ...(enter ? { enter } : {}) });
+  const plan = P([img('m1', 'a', 0, 'cut'), img('m2', 'b', 1, 'cut'), img('m3', 'c', 2), img('m4', 'd', 3, 'fade')]);
+  const before = check(plan);
+  assert.equal(before.warnings.filter((w) => w.includes('張快切圖片')).length, 3);
+  const r = autofixPlan(plan, check);
+  assert.deepEqual(r.plan.scenes.map((s) => s.enter ?? null), ['cut', 'whip', 'whip', 'whip']);
+  assert.deepEqual(r.fixes.filter((f) => f.kind === 'whip').map((f) => f.what), ['m2：進場從 "cut" 改成 "whip"（連續圖片快切，甩鏡換圖）', 'm3：進場改成 "whip"（連續圖片快切，甩鏡換圖）', 'm4：進場從 "fade" 改成 "whip"（連續圖片快切，甩鏡換圖）']);
+  assert.ok(!r.result.warnings.some((w) => w.includes('張快切圖片')));
+  assert.deepEqual(Object.keys(r.plan.scenes[2]), ['id', 'type', 'src', 'from', 'to', 'enter'], 'enter 寫在 to 後面');
+  assert.match(summaryLines(r.fixes)[0], /連續圖片甩鏡 3/);
+  const only = autofixPlan(plan, check, { only: ['m3'] });
+  assert.deepEqual(only.plan.scenes.map((s) => s.enter ?? null), ['cut', 'cut', 'whip', 'fade']);
+  fs.rmSync(pdir, { recursive: true });
+});

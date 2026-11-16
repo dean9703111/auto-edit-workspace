@@ -36,7 +36,8 @@ import { cutpoints, cutCheck } from './rough/cutpoints.mjs';
 import { ngScan, chapterRows, ngSnap, utterances } from './rough/ngscan.mjs';
 import { waitRows, screenSync } from './rough/screen-sync.mjs';
 import { srtAlign, captionMax } from './rough/align.mjs';
-import { clock2r } from './time.mjs';
+import { roughResidual, residualLines } from './rough/residual.mjs';
+import { clock2r, r3 } from './time.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MEDIA = path.join(HERE, '..', 'media.mjs');
@@ -207,8 +208,10 @@ async function transcribeFlow(P, flags) {
 const cell = (s) => String(s ?? '').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|').trim();
 
 // NG 列（照時間排）：重講 [x]；真的講稿外 [ ]＋待確認；沒講稿的候選 [x]＋待確認（工具沒有講稿可以對，全部要人聽）；
+// 頭尾的講稿外（055 D6，ng-scan 標 edge）[x]、不寫待確認：主軌最前面到講稿第一句之前、最後一句之後到主軌最後（試講、講完後的自言自語）；
 // 贅字（025）[ ]、不寫待確認（預設不剪，不算「需要你決定」）；落在重講或講稿外那幾列裡面的不另外列
-export function cutRows({ ng = [], outside = [], script = null, fillers = [] }) {
+export const EDGE_REASON = '試講／講完後的自言自語';
+export function cutRows({ ng = [], outside = [], script = null, fillers = [], clips = [] }) {
   const rows = ng.map((g) => ({
     cut: true, start: g.start, end: g.end, text: g.text,
     reason: g.line ? `同一句講兩次：講稿第 ${g.line} 行在 ${clock(g.again)} 又講一次，留後面那次` : `同一句講兩次：${clock(g.again)} 又講一次，留後面那次`,
@@ -216,7 +219,13 @@ export function cutRows({ ng = [], outside = [], script = null, fillers = [] }) 
       : !script ? '沒有講稿，工具比對相鄰句找到的候選 → 請試聽，不是重講就取消勾選'
       : g.repeat != null && g.repeat < 5 ? '重複的字很少 → 請試聽：真的是卡住重講才剪，不是就取消勾選' : '',
   }));
-  for (const u of outside.filter((x) => x.real)) {
+  const total = clips?.length ? clips[clips.length - 1].end : null;
+  for (const u of outside.filter((x) => x.edge)) {
+    const head = u.edge === 'head';
+    rows.push({ cut: true, start: head ? 0 : u.start, end: !head && total > u.end ? r3(total) : u.end, text: u.text.slice(0, 40),
+      reason: `${EDGE_REASON}：講稿${head ? '第一句之前' : '最後一句之後'}的話，預設剪；要留就取消勾選`, pending: '' });
+  }
+  for (const u of outside.filter((x) => x.real && !x.edge)) {
     rows.push({ cut: false, start: u.start, end: u.end, text: u.text.slice(0, 40),
       reason: `講稿外：這一段逐字稿 ${u.tChars} 字、講稿只有 ${u.sChars} 字（講稿第 ${u.line} 行附近）`,
       pending: '講稿沒有這段話 → 請試聽：口誤、自言自語就勾起來剪；臨場加的話就不用動' });
@@ -464,10 +473,10 @@ export async function prepFlow(P, flags = {}) {
     const snap = ngSnap(P, { edit: level.edit, margin: flags.margin ?? CUT.margin, v1: flags.v1 ?? null, log: detail });
     const decide = decideList(rows, snap.warnings, pre);
     writeAtomic(cutsFile, cutsMarkdown({ rows, chapters: chOk, order: orderTable, decide, waits }));
-    const real = scan.outside.filter((u) => u.real).length, heard = scan.outside.length - real;
+    const edges = scan.outside.filter((u) => u.edge).length, real = scan.outside.filter((u) => u.real && !u.edge).length, heard = scan.outside.length - real - edges;
     const pending = rows.filter((r) => r.pending).length;
     const nFill = rows.filter((r) => /^贅字/.test(r.reason)).length;
-    cutsLine = `✓ 剪輯清單：work/cuts.md（NG ${rows.length} 列，其中待確認 ${pending} 列${waits.length ? `；邊錄邊講的等待 ${waits.length} 處，預設不勾` : ''}${chOk.length ? `；章節 ${chOk.length} 章` : ''}${nFill ? `；贅字 ${nFill} 處，預設不勾` : ''}）${scan.script ? `；講稿外 ${real} 處列進清單${heard ? `、${heard} 處字數接近是 whisper 聽錯（沒列，明細 work/ng-scan.md）` : ''}` : '；沒有講稿：相鄰句相似度找的候選，全部待確認'}`;
+    cutsLine = `✓ 剪輯清單：work/cuts.md（NG ${rows.length} 列，其中待確認 ${pending} 列${waits.length ? `；邊錄邊講的等待 ${waits.length} 處，預設不勾` : ''}${chOk.length ? `；章節 ${chOk.length} 章` : ''}${nFill ? `；贅字 ${nFill} 處，預設不勾` : ''}）${scan.script ? `；講稿外 ${real} 處列進清單${heard ? `、${heard} 處字數接近是 whisper 聽錯（沒列，明細 work/ng-scan.md）` : ''}${edges ? `；講稿第一句之前、最後一句之後的話 ${edges} 處預設剪` : ''}` : '；沒有講稿：相鄰句相似度找的候選，全部待確認'}`;
   }
 
   // 要使用者決定的事（細節都在 cuts.md）：剪輯清單那一行和這幾行放進最後的回報段（A3），不在前面先印一次
@@ -674,6 +683,10 @@ export async function roughFlow(P, flags = {}) {
   const nNg = cp.cuts.filter((c) => c.kind === 'ng').length;
   say(`✓ 剪接點：work/cutpoints.json（${cp.cuts.length} 個）`);
 
+  // 055 C20、C21：初剪做完再掃一次（NG 列沒剪乾淨、初剪逐字稿裡的重講和贅字、開頭講稿外的話）。只列出、不剪；掃不成不擋
+  let residual = [];
+  try { residual = residualLines(roughResidual(proj)); } catch (e) { detail(`初剪後的重講、贅字沒掃成（${e.message}）`); }
+
   // 邊錄邊講的螢幕錄影
   let syncLine = null;
   if (clips.some((c) => c.kind === 'screen')) {
@@ -699,6 +712,7 @@ export async function roughFlow(P, flags = {}) {
     `srt-align：${res.summary}；⚠：${(res.warnings || []).length ? (res.warnings || []).join(' ') : '無'}`,
     `剪接點 ${cp.cuts.length} 個：ng ${nNg}、pause ${cp.cuts.length - nNg}（表在 work/.jobs/rough-detail.log、work/cutpoints.json）`,
     `驗證：work/rough.mp4 → ${(roughInfo.duration ?? 0).toFixed(2)}s、${roughInfo.width}×${roughInfo.height}；verify-rough → ${verifyLine}`,
+    ...residual,
     ...(preview.url ? [`字幕預覽：${preview.url}（字幕疊在畫面上，只有聲音的黑屏也看得到；錯字直接改，會自動存）`] : []),
     `摘要：（寫好 work/摘要.md、跑 node shared/template/tools/status.mjs --project ${pj} --summary 之後，把它印的 ✓ 那一行換到這裡）`,
   ];

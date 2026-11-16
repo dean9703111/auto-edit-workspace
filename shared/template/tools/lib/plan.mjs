@@ -19,6 +19,8 @@
 //     userSfx＝使用者在剪輯台自己加的音效（edit.sfx，050）[{ i, name, at, event, volume }]，完成影片秒數；一顆都沒有就沒有這個鍵
 //     內部（032 C10）：resolvePlan 只做第一層檢查、時間對應、組 ctx，之後每一節是收 ctx 的小函式（resolveSegment、opaqueSeams、segmentSfx、
 //     moodsAndSfxBudget、resolveOutro、resolveBed、chapterBadges…），照呼叫順序排在 resolvePlan 後面；加一條規則只要讀那一節
+//     055（specs/055-feedback-guards-impl/C.md）：slotRepeats（標籤和大字重複）、imageBursts（連續圖片快切）、cutSeams（剪點旁的停頓與短字幕）；
+//     moodsAndSfxBudget 多了情緒點讓給動畫音效、同一顆不連響、兩顆疊在一起、上限拿掉的列出來；橫式 media 段預設不放小視窗
 //   sceneSfxCues({ scene, resolved, D, tone, override, extraOn, sfxConf }) → { main, extra, errors }（rel＝相對段起點的畫面事件秒數）
 //   pipGeometry(pipCrop, speakerBox, canvas) → { crop:{x,y,w,h}, style:{left,top,width,height}[, box] }（canvas 直式時是講者面板，多回傳 box＝pip.box）
 //   formatReport(result, { videoDur, tail }) → 文字報告（每段一列：id｜情境｜起–迄｜長度｜音效時間｜警告；之後是長度、節奏、沒有畫面的區間、只有聲音、音效次數、轉場與主題）
@@ -47,6 +49,8 @@ import { layoutFindings, modeOfLayout, portraitFindings, portraitRuns, portraitL
 import { sideLayout, SIDES } from './speaker-side.mjs';
 import { readScript } from './script-file.mjs';
 import { resolveEnding } from './ending.mjs';
+import { readFillSpec } from './custom-fill.mjs';
+import { isShortCaption, CAPTION as CAPTION_MIN } from './captions.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
 const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'ending', 'chapterBadge', 'chapterMap', 'sections', 'check', 'look', 'theme', 'captionStyle', 'captionMarks', 'style', 'edit', 'moods', 'scenes'];
@@ -87,6 +91,20 @@ const WIPE = 0.45;         // 旁白段擦入擦出
 const ROLL = 0.5;          // 擦入擦出時底下的錄影多播／提早播
 const XFADE = 0.47;        // 相鄰兩段 media 之間的疊化
 const LOWER = new Set(['lower-third']);
+// 055（specs/055-feedback-guards-impl/C.md）
+const BURST_RUN = 3;        // k15：連續幾段圖片快切算一串
+const BURST_MAX = 2.5;      // k15：每張 ≤ 幾秒算快切
+const BURST_JOIN = 0.1;     // k15：前一張結束到下一張開始最多空幾秒還算連續
+const BURST_STATIC = [undefined, 'cut', 'fade'];   // k15：這幾種進場算硬切（slide、zoom、whip、tape、tilt 本來就有動作）
+const SFX_STACK = 0.4;      // k24：兩顆音效（拿掉之後還出聲的）峰值相距不到 0.4 秒＝疊在一起
+const CUT_PAUSE = 0.2;      // k27：剪點兩邊還留著超過 0.2 秒的停頓就 ⚠
+const CUT_NEAR = 0.3;       // k27：剪點到那段停頓之間最多幾秒的聲音（剪剩的殘字）
+const REPEAT_ZH = 2;        // k7：中文連續幾個字算一個詞
+const REPEAT_EN = 3;        // k7：英文幾個字母以上算一個詞
+const REPEAT_LABELS = ['tag', 'eyebrow', 'lead'];   // k7：標籤那幾欄（和同一張卡的其他欄比）
+// k7：詞裡不算的虛字（「的事」「這堂」不算重複）；標籤只有幾個字，比單字時連「一、不、要、大、小」也不算
+const REPEAT_FUNC = new Set([...'的了是在和與及或就都也把被讓給對為而但從個這那嗎呢吧啊們著過之其所於並且每各你我他她它']);
+const REPEAT_TAG_FUNC = new Set([...REPEAT_FUNC, ...'一不沒有要會能可上下中大小多少好來去做說看想再又還已經得用到']);
 const LS = CANVAS.landscape;   // 032 C7：橫式畫布、下方字卡、置中卡、角標、子母畫面的數字只寫在 lib/canvas.mjs
 // 各情境大約佔的畫面範圍（§B.6；只用來提醒和講者框的碰撞，最後以 snapshot 為準）
 export const FOOTPRINT = {
@@ -512,13 +530,13 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const ids = new Set();
   const customSrc = new Map();
   const fxCount = {};
-  const segCtx = { ids, customSrc, fxCount, scenes, fx, accent, avoidSet, portrait, lib, outDir, projectDir, probe, projectRel, cues, roughCues, tm, mapAbs, videoDur, sfxConf };
+  const segCtx = { ids, customSrc, fxCount, scenes, fx, accent, avoidSet, portrait, C, lib, outDir, projectDir, probe, projectRel, cues, roughCues, tm, mapAbs, videoDur, sfxConf };
   const items = (plan.scenes ?? []).map((seg, idx) => resolveSegment(seg, idx, segCtx));
 
   const timed = items.filter((it) => it.start != null && it.end != null && it.opaque !== undefined).sort((a, b) => a.start - b.start || a.idx - b.idx);
   // 後面各節拆成收 ctx 的小函式（032 C10）：要用的值都放在這裡，各節算出來的再掛回 ctx。
   // 順序不能換：後面的節讀前面寫在各段上的值（end、pipPieces、sfx…），✖／⚠ 的先後也照這個順序
-  const ctx = { plan, lib, icons, consts, sfxConf, sfxDir, outDir, projectDir, projectRel, cutpoints, errors, warnings, items, timed, cues, videoDur, tm, ne, edit, mapAbs, voiceOut, speakerBox, sideShift, pipCrop, sl, C, portrait, FOOT, BAD, rhythm, badgeOn, textSyncOn, waitLead };
+  const ctx = { plan, lib, icons, consts, sfxConf, sfxDir, outDir, projectDir, projectRel, cutpoints, errors, warnings, items, timed, cues, roughCues, videoDur, tm, ne, edit, mapAbs, voiceOut, speakerBox, sideShift, pipCrop, sl, C, portrait, FOOT, BAD, rhythm, badgeOn, textSyncOn, waitLead };
   // 全幕版（034）、起迄、接縫、轉場、子母畫面
   fullCards(ctx);
   chapterMapCards(ctx);
@@ -544,6 +562,8 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   Object.assign(ctx, { moodItems, budget });
   // 跨段檢查
   mediaSurfaceOverlaps(ctx);
+  imageBursts(ctx);
+  cutSeams(ctx);
   const voiceGaps = voiceOnlyGaps(ctx);
   const { uncovered, spokenLen } = crossSegmentWarnings(ctx);
   // 剪輯台、講者推近、文字對時
@@ -584,7 +604,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
 
 // resolvePlan 的一節：一段 plan.json scenes[idx] → it（種類、起迄、anchor、音效欄位的格式；✖／⚠ 在 it.errors／it.warnings）。
 // ids、customSrc、fxCount 是各段共用的帳（id 重複、同一支 x 檔、字卡動態第幾張）
-function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent, avoidSet, portrait, lib, outDir, projectDir, probe, projectRel, cues, roughCues, tm, mapAbs, videoDur, sfxConf }) {
+function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent, avoidSet, portrait, C, lib, outDir, projectDir, probe, projectRel, cues, roughCues, tm, mapAbs, videoDur, sfxConf }) {
   const it = { idx, id: seg?.id, seg, errors: [], warnings: [] };
   const where = `[${seg?.id ?? `scenes[${idx}]`}${seg?.scene ? ` ${seg.scene}` : seg?.fx ? ` fx ${seg.fx}` : seg?.type === 'media' ? ' media' : seg?.type === 'custom' ? ' custom' : ''}]`;
   it.where = where;
@@ -627,6 +647,10 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
     if (portrait && def.portrait === 'band') {
       const alt = fx.filter((f) => f.category === def.category && f.portrait !== 'band').map((f) => f.id);
       warn(`fx-${def.id}（${def.zh}）直式只剩中間一條 → 換成 portrait: "ok" 的特效（${alt.length ? `同類可用：${alt.join('、')}` : `同類 ${def.category} 都是滿版，換別類`}）或拿掉`);
+    } else if (portrait && def.portraitMinPx != null && def.portraitMinPx < C.minTextPx) {
+      // 055 k1（054 C02）：catalog.json portraitMinPx＝直式畫面上最小那行字（縮 0.5625 倍後）；低於直式字級下限 → 換一支
+      const alt = fx.filter((f) => f.category === def.category && f.portrait !== 'band' && (f.portraitMinPx ?? 0) >= C.minTextPx).map((f) => f.id);
+      warn(`fx-${def.id}（${def.zh}）直式的小字只有 ${def.portraitMinPx}px（< ${C.minTextPx}px）→ 換成 portraitMinPx ≥ ${C.minTextPx} 的特效（${alt.length ? `同類可用：${alt.join('、')}` : `同類 ${def.category} 沒有，換別類`}）或拿掉`);
     }
     const bg = seg.bg ?? 'none';
     if (!['none', 'dark', 'light', 'accent'].includes(bg)) err(`bg 只能是 "none"（透明疊在講者上）、"dark"、"light"、"accent"（不透明整張幕），現在是「${bg}」`);
@@ -653,7 +677,8 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
     it.media = m;
     it.label = `media ${path.basename(m.src)}`;
     it.opaque = true;
-    it.pip = seg.pip !== false;
+    // 055 Q1（054 D1）：橫式的錄影、圖片段預設不放講者小視窗（擋住畫面、紅框畫不準），要露臉寫 "pip": true；直式的下半講者面板照舊
+    it.pip = portrait ? seg.pip !== false : seg.pip === true;
     it.side = false; it.lower = false;
     it.z = 30;
   } else {
@@ -794,7 +819,52 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
   if (seg.clicks !== undefined && !Array.isArray(seg.clicks)) err('clicks 要寫成陣列，例如 ["+3.2", "#21@安裝"] → 一顆點擊一個元素，只有一顆也要加 [ ]');
   if (seg.sfxVolume !== undefined && !(typeof seg.sfxVolume === 'number' && Number.isFinite(seg.sfxVolume) && seg.sfxVolume >= -60 && seg.sfxVolume <= 12)) err(`sfxVolume 要是 −60～+12 的 dB 數字（這段音效的音量，0＝預設），現在是 ${JSON.stringify(seg.sfxVolume)}`);
   if (seg.sfxExtra !== undefined && typeof seg.sfxExtra !== 'boolean') err(`sfxExtra 只能寫 false（關掉這段的附加音效）或 true，現在是 ${JSON.stringify(seg.sfxExtra)}`);
+  slotRepeats(it, lib);
   return it;
+}
+
+// 055 k7（054 C07）：同一張模板卡的標籤和大字講了同一個詞（作者：「上下都是『課程』，資訊重複了啊」）→ ⚠。
+//   比的是「標籤」那幾欄（REPEAT_LABELS：tag、eyebrow、lead）和同一張卡其他 text／rich 欄位（情境 scene.json、模板 custom/<模板>.fill.json）。
+//   大字和大字、單位和單位（x-numbers 的 unitA／unitB）、一句拆成幾段的（x-prompt）、清單項目（標題和項目本來就會用同一個詞）不比。
+//   詞＝連續 2 個中文字（不含虛字）、3 個字母以上的英文；tag 只有幾個字，有一個實字出現在別的欄位就算（「課程」和「這堂課」）
+function slotRepeats(it, lib) {
+  const seg = it.seg;
+  if (!seg?.slots || typeof seg.slots !== 'object' || Array.isArray(seg.slots)) return;
+  let decls = null;
+  if (it.type === 'scene' && it.scene) decls = it.scene.slots || {};
+  else if (it.type === 'custom' && typeof seg.template === 'string' && lib.customDir) { try { decls = readFillSpec(lib.customDir, seg.template)?.slots ?? null; } catch { decls = null; } }
+  if (!decls) return;
+  const plain = (v) => String(v ?? '').replace(/\*\*|\/\//g, '').trim();
+  const fields = [];
+  for (const [k, d] of Object.entries(decls)) {
+    if (!['text', 'rich'].includes(d?.type || 'text')) continue;
+    let v = seg.slots[k];
+    if (v && typeof v === 'object' && !Array.isArray(v)) v = v.text ?? v.value;
+    if (typeof v === 'string' && plain(v)) fields.push({ k, text: plain(v) });
+  }
+  if (!fields.some((f) => REPEAT_LABELS.includes(f.k)) || fields.length < 2) return;
+  const zh = (t) => (t.match(/[\u3400-\u9fff]+/g) || []).join(' ');
+  const words = (t) => {
+    const out = new Set();
+    for (const run of t.match(/[\u3400-\u9fff]+/g) || []) for (let i = 0; i + REPEAT_ZH <= run.length; i++) { const w = run.slice(i, i + REPEAT_ZH); if (![...w].some((ch) => REPEAT_FUNC.has(ch))) out.add(w); }
+    for (const w of t.match(new RegExp(`[A-Za-z]{${REPEAT_EN},}`, 'g')) || []) out.add(w.toLowerCase());
+    return out;
+  };
+  const short = (x) => (x.length > 14 ? `${x.slice(0, 14)}…` : x);
+  const done = new Set();
+  for (const a of fields.filter((f) => REPEAT_LABELS.includes(f.k))) {
+    for (const b of fields) {
+      const pair = [a.k, b.k].sort().join('|');
+      if (b === a || done.has(pair)) continue;
+      done.add(pair);
+      const wb = words(b.text);
+      let hit = [...words(a.text)].find((w) => wb.has(w));
+      // tag 只有幾個字：一個實字出現在另一欄就算
+      if (!hit && a.k === 'tag' && zh(a.text).replace(/ /g, '').length <= 6) hit = [...zh(a.text).replace(/ /g, '')].find((c) => !REPEAT_TAG_FUNC.has(c) && b.text.includes(c));
+      if (!hit) continue;
+      it.warnings.push(`${it.where} slots.${a.k}「${short(a.text)}」和 slots.${b.k}「${short(b.text)}」都有「${hit}」，同一張卡講了兩次 → slots.${a.k} 換成別的詞（例：行動、重點、提醒），或 slots.${b.k} 拿掉「${hit}」，上下兩行要互補`);
+    }
+  }
 }
 
 // resolvePlan 的一節：02 章節角標整段被整張幕蓋住（⚠）
@@ -1304,6 +1374,17 @@ function moodsAndSfxBudget({ plan, cues, sfxConf, sfxDir, videoDur, timed, ne, e
     const at = r3(Math.min(videoDur - 0.05, Math.max(m.sfx.at, x.cueEnd - SFX_RULES.tailLead)));
     if (at > m.sfx.at) { m.sfx = { ...m.sfx, at, tail: true }; }
   }
+  // 055 k23（054 D4）：情緒點和動畫的 P.sfx 相距不到 3 秒 → 情緒點不出聲（推近照留）。兩邊各自都對、合起來就是兩顆
+  //   （短影片4：情緒點 #5@焦慮 的 alert 加上動畫 P.sfx('alert', '#6@每個都要學')，作者：「一個就夠了吧」）。動畫拍點對齊畫面事件，留它
+  const beatCues = timed.flatMap((it) => (it.sfxExtra || []).filter((c) => c.beat && !sfxConf[c.name]?.additive).map((c) => ({ it, c })));
+  const yielded = [];
+  for (const m of moodItems) {
+    if (!m.sfx) continue;
+    const near = beatCues.filter((b) => Math.abs(b.c.at - m.sfx.at) < SFX_GAP).sort((p, q) => Math.abs(p.c.at - m.sfx.at) - Math.abs(q.c.at - m.sfx.at))[0];
+    if (!near) continue;
+    yielded.push(`${m.where}→${near.it.id} 的 ${near.c.name}（${fmt(near.c.event)}，相距 ${r3(Math.abs(near.c.at - m.sfx.at))} 秒）`);
+    m.sfxDropped = m.sfx; m.sfx = null;
+  }
   // 3 秒規則只管主音效；additive（click）疊在別的聲音上，不算。
   // 優先序：段上明寫的 sfx、章節 ＞ 情緒點（金句、反轉 ＞ 痛點、解法 ＞ 落定）＞ 模板預設；同一級留前一個
   const sfxPrio = (x) => (x.type === 'mood' ? 10 + x.mood.rank : x.seg?.sfx != null || x.sfx?.name === 'chapter' ? 100 : 0);
@@ -1329,8 +1410,29 @@ function moodsAndSfxBudget({ plan, cues, sfxConf, sfxDir, videoDur, timed, ne, e
     else it.warnings.push(`${it.where} 音效 ${it.sfx.name}（${it.sfx.at}s）和 ${last.id} 的音效只差 ${r3(it.sfx.at - last.sfx.at)}s（< ${SFX_GAP}s），已拿掉（只保留前一個） → 想留這顆，就在 ${last.id} 寫 "sfx": null`);
     it.sfxDropped = it.sfx; it.sfx = null;
   }
+  // 055 k23：同一顆非 additive 音效 3 秒內響兩次（不管來源：段上、模板、動畫 P.sfx、等待卡、情緒點）→ 拿掉後面那顆、⚠。
+  //   秒針（tick，有 dur 的連續音）不算；edit.sfx（作者在剪輯台自己加的）不動
+  const sounding = () => [...timed, ...moodItems].flatMap((it) => [it.sfx && { it, c: it.sfx }, ...(it.sfxExtra || []).map((c) => ({ it, c }))])
+    .filter((x) => x && !sfxConf[x.c.name]?.additive && !(x.c.dur > 0)).sort((a, b) => a.c.at - b.c.at);
+  const dropCue = (it, c) => { if (it.sfx === c) { it.sfxDropped = c; it.sfx = null; } else it.sfxExtra = (it.sfxExtra || []).filter((x) => x !== c); };
+  const kindOf = (x) => (x.it.type === 'mood' ? '情緒點' : x.c === x.it.sfx ? '段上的音效' : x.c.beat ? '動畫的 P.sfx' : x.c.wait ? '等待卡' : '模板的附加音效');
+  const nameOf = (x) => (x.it.type === 'mood' ? x.it.where : x.it.id);
+  const fixOf = (x) => (x.it.type === 'mood' ? `在 ${x.it.where.replace(/（.*$/, '')} 寫 "sfx": null` : x.c === x.it.sfx ? `在 ${x.it.id} 寫 "sfx": null` : x.c.beat ? `在 ${x.it.file ?? x.it.id} 拿掉那個 P.sfx` : `在 ${x.it.id} 寫 "sfxExtra": false`);
+  const lastSame = new Map();
+  for (const x of sounding()) {
+    const prev = lastSame.get(x.c.name);
+    if (prev && x.c.at - prev.c.at < SFX_GAP) {
+      x.it.warnings.push(`${x.it.where} 的 ${x.c.name}（${kindOf(x)}，${fmt(x.c.event ?? x.c.at)}）和 ${nameOf(prev)} 的 ${x.c.name}（${fmt(prev.c.event ?? prev.c.at)}）相距 ${r3(x.c.at - prev.c.at)} 秒（< ${SFX_GAP} 秒），同一顆音效連響兩次，已拿掉後面這顆 → 兩顆都要就把其中一顆換成別的音效；不要這顆就${fixOf(x)}`);
+      dropCue(x.it, x.c);
+      continue;
+    }
+    lastSame.set(x.c.name, x);
+  }
   // 任一分鐘最多 SFX_RULES.perMinute 顆主音效：工具照優先序留（情緒點照強弱），不用人一段一段寫 "sfx": null
+  //   055 k23：密度照實際出聲的算（上面讓位、重複拿掉的不算）；拿掉了誰列在報告（「每分鐘上限拿掉」那一行）
+  const beforeThin = [...timed, ...moodItems].flatMap((it) => [it.sfx && { it, c: it.sfx }, ...(it.sfxExtra || []).map((c) => ({ it, c }))]).filter(Boolean);
   const sfxThinned = thinMainSfx([...timed, ...moodItems], sfxConf, undefined, { outDur: videoDur });
+  const thinnedList = beforeThin.filter((x) => x.it.sfx !== x.c && !(x.it.sfxExtra || []).includes(x.c));
   for (const m of moodItems) if (m.sfxThinned) moodNotes.push(`${m.where} 的音效被每分鐘 ${SFX_RULES.perMinute} 顆的上限拿掉（那一分鐘有更強的）`);
   // 每集上限（sparkle 6、shine 3、thunder 3）：情緒點超過的，從後面的開始換成替代音效（shine、sparkle → ding；thunder → alert）
   const cnt = {};
@@ -1342,6 +1444,13 @@ function moodsAndSfxBudget({ plan, cues, sfxConf, sfxDir, videoDur, timed, ne, e
     cnt[n]--; cnt[to] = (cnt[to] || 0) + 1;
     m.sfx = { ...m.sfx, name: to, at: r3(Math.max(0, m.sfx.event - (sfxConf[to].peak || 0) + frame)), volume: sfxConf[to].volume ?? 0.5 };
     moodNotes.push(`${m.where} 的 ${n} 超過每集 ${max} 次，換成 ${to}`);
+  }
+  // 055 k24（054 C19）：拿掉之後還有兩顆音效的峰值相距不到 0.4 秒（例：模板的固定配對＋動畫音效）→ ⚠ 疊在一起
+  const live = sounding().map((x) => ({ ...x, peak: r3(x.c.at + (sfxConf[x.c.name]?.peak || 0)) })).sort((a, b) => a.peak - b.peak);
+  for (let i = 1; i < live.length; i++) {
+    const a = live[i - 1], b = live[i];
+    if (b.peak - a.peak >= SFX_STACK - 1e-9 || (a.it === b.it && a.c === b.c)) continue;
+    b.it.warnings.push(`${b.it.where} 的 ${b.c.name}（${kindOf(b)}，${fmt(b.peak)}）和 ${nameOf(a)} 的 ${a.c.name}（${kindOf(a)}）只差 ${r3(b.peak - a.peak)} 秒，兩顆音效疊在一起 → 留一顆：${fixOf(a) === fixOf(b) ? fixOf(b).replace('那個', '其中一個') : `${fixOf(b)}，或${fixOf(a)}`}`);
   }
   // edit：音效總增益＋整支淡入淡出期間跟著變小（音效很短，用起點那一刻的增益）
   if (ne.active && (edit.volume.sfx !== 0 || edit.fadeIn > 0 || edit.fadeOut > 0)) {
@@ -1357,6 +1466,11 @@ function moodsAndSfxBudget({ plan, cues, sfxConf, sfxDir, videoDur, timed, ne, e
   // 音效稀疏的空檔裡，列出情境動畫與錄影段（這兩種要自己配：動畫寫 P.sfx、錄影寫 sfx；字卡照情境預設）
   const gapNote = (g) => { const ids = timed.filter((x) => (x.type === 'custom' || x.type === 'media') && x.start < g.to && x.end > g.from).map((x) => x.id); return ids.length > 8 ? `${ids.slice(0, 8).join('、')}…等 ${ids.length} 段` : ids.join('、'); };
   const budget = sfxBudget(budgetCues, sfxConf, { voiceDb: edit.volume?.voice ?? 0, outDur: videoDur, fmt, gapNote, thinned: sfxThinned, moods: Array.isArray(plan.moods), own: own.cues.map((c) => c.event) });
+  if (thinnedList.length) {
+    const ls = thinnedList.map((x) => `${x.it.type === 'mood' ? x.it.where : x.it.id} 的 ${x.c.name} ${fmt(x.c.event ?? x.c.at)}${x.c.beat ? '（動畫拍點）' : ''}`);
+    budget.lines.push(`音效上限拿掉的：${ls.slice(0, 8).join('、')}${ls.length > 8 ? `…等 ${ls.length} 顆` : ''} → 想留哪一顆，就把同一分鐘別段的音效拿掉（段上寫 "sfx": null）；動畫拍點不要就在那段寫 "sfxExtra": false，結果才不會每次 build 不一樣`);
+  }
+  if (yielded.length) budget.lines.push(`情緒點讓給動畫音效：${yielded.slice(0, 4).join('；')}${yielded.length > 4 ? `…等 ${yielded.length} 個` : ''}（和動畫的 P.sfx 相距不到 ${SFX_GAP} 秒只出一顆；推近照留）`);
   if (own.total) budget.lines.push(`自己加的音效：${own.cues.length} 顆（使用者在剪輯台加的 edit.sfx；不算進上面的次數、密度，也不受 ${SFX_GAP} 秒間隔限制${own.silent.length ? `；另外 ${own.silent.join('、')}，不出聲` : ''}）`);
   if (Array.isArray(plan.moods)) {
     const withSfx = moodItems.filter((m) => m.sfx).length;
@@ -1364,6 +1478,58 @@ function moodsAndSfxBudget({ plan, cues, sfxConf, sfxDir, videoDur, timed, ne, e
   }
   warnings.push(...budget.warnings.map((w) => w.replace(/^[⚠✖]\s*/, '')));
   return { moodItems, budget };
+}
+
+// resolvePlan 的一節（055 k15，054 C18）：連續 3 張以上的圖片快切（每張 ≤ 2.5 秒），第二張起還是硬切或淡入 → ⚠（build.mjs --autofix 自動寫 "enter": "whip"）。
+//   作者：「這連續五個圖片的切換，應該要有轉場動畫，否則太生硬」（短影片1 r4）。只看整張幕這一層（疊在上面的透明字卡不打斷）；slide、zoom、whip、tape、tilt 本來就有動作，不報
+function imageBursts({ timed }) {
+  const layer = timed.filter((x) => x.opaque && x.start != null && x.end != null);
+  const isShot = (x) => x.type === 'media' && x.media?.kind === 'image' && (x.planEnd ?? x.end) - x.start <= BURST_MAX + 1e-6;
+  for (let i = 0; i < layer.length;) {
+    let j = i;
+    while (isShot(layer[j] ?? {}) && j + 1 < layer.length && isShot(layer[j + 1]) && layer[j + 1].start <= layer[j].end + BURST_JOIN) j++;
+    const run = isShot(layer[i]) ? layer.slice(i, j + 1) : [];
+    if (run.length >= BURST_RUN) {
+      run.slice(1).forEach((x, k) => {
+        const e = x.seg.enter;
+        if (!BURST_STATIC.includes(e)) return;
+        x.warnings.push(`${x.where} 是連續 ${run.length} 張快切圖片的第 ${k + 2} 張（每張 ≤ ${BURST_MAX} 秒），進場${e ? `寫 "${e}"` : '是預設的淡入'}，換圖太生硬 → 寫 "enter": "whip"（甩鏡；build.mjs --autofix 會自動寫）`);
+      });
+    }
+    i = Math.max(j, i) + 1;
+  }
+}
+
+// resolvePlan 的一節（055 k27）：剪輯台剪掉一段（edit.cuts）之後，剪點旁邊剩下的毛病 → ⚠（--check、build 都印）
+//   (a) 某則字幕被剪到只剩不到 0.6 秒（和 qc.mjs F8 同一個判斷；本來就短的由 captionWarnings 報）
+//   (b) 剪點兩邊還留著超過 0.2 秒的停頓（中間最多隔 0.3 秒剪剩的殘字）：人聲能量量到的停頓（cues.pauses），沒有就用詞級逐字稿的空檔
+function cutSeams({ tm, roughCues, cues, warnings }) {
+  if (!tm || tm.identity) return;
+  const roughEnd = tm.keep?.length ? tm.keep[tm.keep.length - 1][1] : Infinity;
+  const r2 = (x) => (Math.round(x * 100) / 100).toFixed(2);
+  const cutOf = (a, b) => tm.cuts.find(([x, y]) => x < b - 1e-6 && y > a + 1e-6);
+  const cw = (c) => `[${c[0]}, ${c[1]}]`;
+  cues.forEach((c, i) => {
+    const r = roughCues[i];
+    if (!r || !(c.end - c.start > 1e-3) || !isShortCaption(c) || isShortCaption(r)) return;
+    const k = cutOf(r.start, r.end);
+    if (!k) return;
+    warnings.push(`字幕 #${c.n}「${String(c.text).slice(0, 12)}」剪掉一段（edit.cuts ${cw(k)}）後只剩 ${r2(c.end - c.start)} 秒（< ${CAPTION_MIN.minDur} 秒）→ 在剪輯台把它併到相鄰那則，或把剪點收到字幕開頭（rough ${fmt(r.start)}）`);
+  });
+  let pauses = Array.isArray(roughCues.pauses) ? roughCues.pauses : null;
+  if (!pauses && Array.isArray(roughCues.words) && roughCues.words.length > 1) {
+    const w = roughCues.words;
+    pauses = w.slice(1).map((x, i) => [w[i].end, x.start]).filter(([a, b]) => b - a > 0.02);
+  }
+  if (!pauses?.length) return;
+  for (const k of tm.cuts) {
+    const [a, b] = k, at = fmt(tm.map(a));
+    if (a <= 1e-6 || b >= roughEnd - 1e-6) continue;   // 片頭片尾的 cut 只是裁掉，不是接點（和 timeMap 的 joinsOut 一樣）
+    const pb = pauses.find(([s, e]) => s < a - 1e-6 && e > a - CUT_NEAR && Math.min(e, a) - s > CUT_PAUSE + 1e-6);
+    if (pb) warnings.push(`剪點 ${at}（edit.cuts ${cw(k)}）前面${pb[1] < a - 0.02 ? `隔 ${r2(a - pb[1])} 秒` : ''}還有 ${r2(Math.min(pb[1], a) - pb[0])} 秒停頓 → 剪點的起點提早到 ${r3(pb[0] + 0.05)}（cuts 改成 [${r3(pb[0] + 0.05)}, ${b}]），停頓跟著剪掉`);
+    const pa = pauses.find(([s, e]) => e > b + 1e-6 && s < b + CUT_NEAR && e - Math.max(s, b) > CUT_PAUSE + 1e-6);
+    if (pa) warnings.push(`剪點 ${at}（edit.cuts ${cw(k)}）後面${pa[0] > b + 0.02 ? `隔 ${r2(pa[0] - b)} 秒` : ''}還有 ${r2(pa[1] - Math.max(pa[0], b))} 秒停頓 → 剪點的迄點延到 ${r3(pa[1] - 0.05)}（cuts 改成 [${a}, ${r3(pa[1] - 0.05)}]），${pa[0] > b + 0.02 ? '剪剩的殘字和' : ''}停頓跟著剪掉`);
+  }
 }
 
 // resolvePlan 的一節：插入素材和其他段的時間關係（✖／⚠ 推進各段）
@@ -1956,7 +2122,7 @@ export function jsonItems(res) {
     };
     // 畫面上實際停到哪裡（下方字卡換卡、接不透明幕時會自動延長或提早收）；和 end 一樣時不寫
     if (it.planEnd != null && Math.abs(it.planEnd - it.end) > 1e-3) o.shownEnd = back(it.end, true);
-    if (it.type === 'media') { o.src = it.media.src; o.enter = it.media.enter; o.exit = it.media.exit; o.volume = it.media.volume; o.kind = it.media.kind; }
+    if (it.type === 'media') { o.src = it.media.src; o.enter = it.media.enter; o.exit = it.media.exit; o.volume = it.media.volume; o.kind = it.media.kind; o.pip = !!it.pip; }   // pip：這段要不要講者小視窗（055 Q1：橫式預設不要；qc.mjs F2 照這個判）
     const layout = it.side ? 'side' : it.opaque && it.pipPieces?.length ? 'pip' : it.opaque ? 'full' : 'overlay';
     const lists = Object.values(it.resolved?.listTimes || {}).flat().filter(isNum).map((t) => r3(it.start + t)).sort((a, b) => a - b);
     return {

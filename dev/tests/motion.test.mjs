@@ -308,10 +308,76 @@ test('P.focus：之後 P.out 從目前亮度淡出（不跳回 1）；倒著寫�
   assert.throws(() => m.P.focus(g, g[1], 3), (e) => e.message === 'P.focus 要照時間先後寫：#x 在 5.4s 已經有亮度變化，這一行卻是 3s → 把這一行移到前面，或把時間改晚');
   assert.throws(() => m.P.out(g[0], 5.2), /P\.focus 要照時間先後寫：#x 在 5\.4s/);
   assert.throws(() => m.P.focus(g, { id: 'z' }, 8), (e) => e.message === 'P.focus 的第二個參數 #z 不在第一個參數那一組裡 → 改成那一組其中一個，或寫 null（全部恢復）');
-  // 沒被 focus 過的元素行為不變
+  // 055 N3：沒被 focus 過的元素也從那一刻的亮度出場（還在淡入時就淡出：從淡入到一半的亮度開始，不先跳到 1）
   const n = mk(); const c = {};
   n.P.in(c, 0.5); n.P.out(c, 0.6); n.P.end(2);
-  seek(n.tl, 0.6, true); assert.equal(Number(c.opacity), 1, '沒記過亮度的元素出場仍從 1 開始');
+  seek(n.tl, 0.6, true); near(Number(c.opacity), 0.309, '淡入 0.1 秒（sine.out）的亮度');
+  seek(n.tl, 0.3, true); assert.equal(Number(c.opacity), 0);
+  const n2 = mk(); const c2 = {};
+  n2.P.in(c2, 0.5); n2.P.out(c2, 3); n2.P.end(4);
+  seek(n2.tl, 3, true); assert.equal(Number(c2.opacity), 1, '進場完的元素照舊從 1 開始');
+});
+
+// 055 N3：壓暗過的元素（P.dim、自己寫的 tl.to、P.spot）出場不會先亮一下；任意順序 seek 結果一樣（hyperframes 逐格、亂序取格）
+test('P.out／swap／axis／peel：從那一刻的亮度淡出（壓暗過的不先亮一下）；亂序 seek（9.2 → 8.0 → 9.25）和照順序一樣', () => {
+  const scene = () => {
+    const { tl, P } = mk();
+    const a = { id: 'a' }, b = { id: 'b' }, c = { id: 'c' }, d = { id: 'd' }, e = { id: 'e' }, f = { id: 'f' }, g = [ITEM('g1'), ITEM('g2')];
+    P.pop([a, b, c, d, e, f], 0.5);
+    P.in(g, 0.5);
+    P.dim(a, 5);                                                  // 0.6
+    tl.to(b, { opacity: 0.25, duration: 0.3 }, 5);                // 設計師自己寫的壓暗
+    tl.set(c, { opacity: 0.5 }, 6);
+    P.spot(g, g[1], 6);                                           // g1 壓到 0.42
+    P.dim(d, 5); P.dim(d, 7, { to: 0.3 });                        // 從 0.6 再壓到 0.3（不先跳回 1）
+    P.out([a, b, c], 9.2);
+    P.swap(d, e, 9.2);
+    P.axis(f, e, 9.2);
+    P.out(g[0], 9.2);
+    P.end(10);
+    return { tl, list: [a, b, c, d, e, f, g[0]] };
+  };
+  const read = (s) => s.list.map((x) => Math.round(Number(x.opacity) * 1e3) / 1e3);
+  const seq = scene(), want = {};
+  for (const t of [7.9, 8.0, 9.2, 9.25, 9.3, 9.7]) { seek(seq.tl, t, true); want[t] = read(seq); }
+  assert.deepEqual(want[9.2].slice(0, 4), [0.6, 0.25, 0.5, 0.3], '出場第一格＝壓暗的亮度');
+  assert.equal(want[9.2][6], 0.42, 'P.spot 壓暗的 0.42');
+  for (const t of [9.25, 9.3]) want[t].forEach((v, i) => assert.ok(v <= want[9.2][i] + 1e-9 || i === 4, `${t}s 第 ${i} 個沒有變亮：${v} > ${want[9.2][i]}`));
+  assert.ok(want[9.7].every((v, i) => i === 4 || v === 0), '淡完');
+  for (const order of [[9.2, 8.0, 9.25], [9.7, 7.9, 9.3, 8.0, 9.2, 9.25], [9.25, 9.2, 9.3]]) {
+    const s = scene();
+    for (const t of order) { seek(s.tl, t, true); assert.deepEqual(read(s), want[t], `亂序 ${order.join('→')}：${t}s`); }
+  }
+  // P.peel 的貼紙被壓暗過也一樣
+  const { tl, P } = mk(); const st = { id: 'st' };
+  P.stick(st, 0.5); P.dim(st, 2, { to: 0.5 }); P.peel(st, 4); P.end(5);
+  seek(tl, 4, true); near(Number(st.opacity), 0.5, 'peel 從 0.5 開始');
+});
+
+test('P.spot（055 D7）：預設不插亮框、不發光，只做明暗＋縮放抬起；glow: true 才插 .sc-spot，之後沒帶 glow 的拍把框收掉', () => {
+  const made = [];
+  const doc = { createElement: (tag) => { const n = { tag, attrs: {}, style: {}, className: '', opacity: 1, setAttribute(k, v) { this.attrs[k] = v; } }; made.push(n); return n; } };
+  const EL = (id) => { const kids = []; return { id, opacity: 1, style: {}, ownerDocument: doc, kids,
+    querySelector: (s) => (s === ':scope > [data-sc-spot]' ? kids.find((k) => 'data-sc-spot' in k.attrs) || null : null), appendChild: (n) => kids.push(n) }; };
+  const saved = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = () => ({ position: 'absolute' });
+  try {
+    const { tl, P } = mk(); const g = [EL('a'), EL('b')];
+    P.spot(g, g[0], 1);
+    P.end(3);
+    assert.equal(made.length, 0, '預設不插 .sc-spot');
+    seek(tl, 2, true); near(Number(g[1].opacity), 0.42); near(Number(g[0].opacity), 1);
+    assert.ok(Number(g[0].scale) > 1.06, '焦點照舊放大');
+    const m = mk(); const h = [EL('c'), EL('d')];
+    m.P.spot(h, h[0], 1, { glow: true });
+    m.P.spot(h, h[1], 2);
+    m.P.end(4);
+    assert.equal(made.length, 2, 'glow: true 每個元素插一個 .sc-spot');
+    assert.equal(made[0].className, 'sc-spot');
+    seek(m.tl, 1.8, true); near(Number(h[0].kids[0].opacity), 1, 'glow 的框亮著');
+    seek(m.tl, 3.5, true); near(Number(h[0].kids[0].opacity), 0, '下一拍沒帶 glow：框收掉');
+    near(Number(h[1].kids[0].opacity), 0, '沒帶 glow 的焦點不亮框');
+  } finally { globalThis.getComputedStyle = saved; }
 });
 
 test('P.spot：上一個焦點還在轉場就接到下一拍 → 接在它後面、不丟錯（丟錯整段會空白）；倒著寫才丟錯', () => {
@@ -577,6 +643,7 @@ const V2_FIX = {
   idle: `<div id="t-idle" class="t-box" style="left:1160px;top:140px"></div>`,
   rack: `<div class="t-rack t-box" id="t-r1" style="left:1400px;top:40px"></div><div class="t-rack t-box" id="t-r2" style="left:1640px;top:40px"></div>`,
   spot: `<div class="t-spot t-box" id="t-s1" style="left:40px;top:500px"></div><div class="t-spot t-box" id="t-s2" style="left:280px;top:500px"></div><div class="t-spot t-box" id="t-s3" style="left:520px;top:500px"></div>`,
+  spotglow: `<div class="t-sg t-box" id="t-g1" style="left:40px;top:620px"></div><div class="t-sg t-box" id="t-g2" style="left:280px;top:620px"></div>`,
   cam: `<div id="t-cam" style="left:800px;top:480px;width:500px;height:300px"><div id="t-camtarget" class="t-box" style="left:380px;top:200px"></div></div>`,
   grow: `<div id="t-grow" class="t-box" style="left:1360px;top:300px;width:300px;height:160px"></div>`,
   draw: `<svg id="t-draw" style="left:40px;top:820px;width:240px;height:200px" viewBox="0 0 240 200"><rect x="20" y="20" width="200" height="120" rx="12" fill="#fff" stroke="#141414" stroke-width="4"/><path d="M40 170 L200 170" fill="none" stroke="#e06020" stroke-width="6" stroke-linecap="round"/><circle cx="120" cy="80" r="20" fill="#e06020"/><text x="120" y="192" text-anchor="middle" font-size="18">標籤</text></svg>`,
@@ -603,7 +670,8 @@ const V2_CODE = `
     P.comet('#t-comet', 1.0);
     P.flow('#t-flow', 0.5);
     P.idle('#t-idle', 1.0, { y: 6, scale: 0.05 });
-    P.pop('.t-spot', 0.5, { stagger: 0.12 }); P.spot('.t-spot', 'none', 1.5); P.spot('.t-spot', '#t-s1', 2.0); P.spot('.t-spot', '#t-s2', 3.0, { done: '#t-s1' }); P.spot('.t-spot', null, 4.0);
+    P.pop('.t-spot', 0.5, { stagger: 0.12 }); P.spot('.t-spot', 'none', 1.5, { glow: true }); P.spot('.t-spot', '#t-s1', 2.0, { glow: true }); P.spot('.t-spot', '#t-s2', 3.0, { done: '#t-s1', glow: true }); P.spot('.t-spot', null, 4.0, { glow: true });
+    P.pop('.t-sg', 0.5); P.spot('.t-sg', '#t-g1', 2.0); P.spot('.t-sg', '#t-g2', 3.0);
     P.rack('.t-rack', '#t-r1', 1.0); P.rack('.t-rack', '#t-r2', 2.4); P.rack('.t-rack', null, 4.0);
     P.cam('#t-cam', 2.8, { to: '#t-camtarget', k: 0.12, scale: 1.04 }); P.cam('#t-cam', 4.2, { x: 0, y: 0, scale: 1 });
     P.grow('#t-grow', 0.3);
@@ -663,6 +731,8 @@ test('v2：每個原語亂序 seek 和照順序 seek 的計算樣式相同、整
       for (const k of [...Object.keys(V2_FIX), 'pen']) assert.ok(times.some((t) => A[t].st[k] !== A[0].st[k]), `P.${k} 看起來沒有動`);
       assert.equal(await S.evaluate(`document.querySelectorAll('.sc-surface-fs .sc-amb, .sc-surface-fs .sc-dust').length`), 0);
       assert.equal(await S.evaluate(`document.querySelectorAll('[data-sc-ch]').length`), 10);
+      assert.equal(await S.evaluate(`document.querySelectorAll('.t-sg .sc-spot').length`), 0, 'P.spot 預設不插亮框（055 D7）');
+      assert.equal(await S.evaluate(`document.querySelectorAll('.t-spot .sc-spot').length`), 3, 'glow: true 才插');
       assert.deepEqual(await S.evaluate(`(window.SceneMotion.sfx['x-v2'] || window.SceneMotion.sfx['?']).map((x) => [x.name, x.ref, x.t])`), [['click', '#1', 2]]);
       assert.deepEqual(await S.cueErrors(), []);
     } finally { await S.close(); }

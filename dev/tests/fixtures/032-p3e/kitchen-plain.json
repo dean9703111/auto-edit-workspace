@@ -531,6 +531,8 @@
     "exit": "fade",
     "kenburns": false,
     "hasAnn": true,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": null,
     "file": {
@@ -577,10 +579,10 @@
      ],
      "avoid": [],
      "pip": [
-      1339,
-      578,
-      1803,
-      948
+      1424,
+      581,
+      1888,
+      951
      ],
      "pipWhy": "壓到右下角子母畫面",
      "bottom": 920,
@@ -597,7 +599,7 @@
       "cy": 450,
       "top": 40,
       "bottom": 900,
-      "pipLeft": 1235
+      "pipLeft": 1320
      }
     },
     "side": null,
@@ -609,10 +611,7 @@
      "width": 1671,
      "height": 940
     },
-    "pipShift": [
-     -85,
-     -3
-    ],
+    "pipShift": null,
     "pieces": [
      {
       "s": 25.5,
@@ -622,6 +621,7 @@
     ],
     "retime": null,
     "redact": [],
+    "start": null,
     "cams": [
      {
       "i": 0,
@@ -636,7 +636,14 @@
        "z": 2.1333,
        "x": -281.4,
        "y": -139.3
-      }
+      },
+      "box": [
+       100,
+       100,
+       1200,
+       675
+      ],
+      "asStart": false
      },
      {
       "i": 1,
@@ -651,7 +658,9 @@
        "z": 1,
        "x": 0,
        "y": 0
-      }
+      },
+      "box": null,
+      "asStart": false
      }
     ],
     "kb": false,
@@ -768,7 +777,7 @@
     "waits": []
    },
    "opaque": true,
-   "pip": true,
+   "pip": false,
    "side": false,
    "lower": false,
    "z": 30,
@@ -791,16 +800,7 @@
    "txIn": "media",
    "prev": "speaker",
    "txOut": "media",
-   "pipPieces": [
-    {
-     "s": 25.5,
-     "e": 39,
-     "ms": 25.5,
-     "enter": "fly",
-     "exitDur": 0,
-     "exit": "none"
-    }
-   ],
+   "pipPieces": [],
    "mediaReport": {
     "summary": "運鏡 2、紅框 1（跟捲動 1 次）、標註 1、STEP 2（第 1–2 步）",
     "json": {
@@ -955,6 +955,8 @@
     "exit": "fade",
     "kenburns": false,
     "hasAnn": true,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": null,
     "file": {
@@ -1001,10 +1003,10 @@
      ],
      "avoid": [],
      "pip": [
-      1339,
-      578,
-      1803,
-      948
+      1424,
+      581,
+      1888,
+      951
      ],
      "pipWhy": "壓到右下角子母畫面",
      "bottom": 920,
@@ -1021,7 +1023,7 @@
       "cy": 450,
       "top": 40,
       "bottom": 900,
-      "pipLeft": 1235
+      "pipLeft": 1320
      }
     },
     "side": null,
@@ -1033,12 +1035,10 @@
      "width": 1671,
      "height": 940
     },
-    "pipShift": [
-     -85,
-     -3
-    ],
+    "pipShift": null,
     "retime": null,
     "redact": [],
+    "start": null,
     "cams": [],
     "kb": false,
     "kbTo": {
@@ -1146,7 +1146,7 @@
     "waits": []
    },
    "opaque": true,
-   "pip": true,
+   "pip": false,
    "side": false,
    "lower": false,
    "z": 30,
@@ -1170,25 +1170,7 @@
    "txIn": "media",
    "prev": "speaker",
    "txOut": "media",
-   "pipPieces": [
-    {
-     "s": 39,
-     "e": 44,
-     "ms": 39,
-     "enter": "none",
-     "exitDur": 0.4,
-     "exit": "fade"
-    },
-    {
-     "s": 47,
-     "e": 49.5,
-     "ms": 47,
-     "enter": "fade",
-     "exitDur": 0,
-     "exit": "layer"
-    }
-   ],
-   "pipNote": "只有聲音的區間不放子母畫面",
+   "pipPieces": [],
    "mediaReport": {
     "summary": "聚光燈 1、箭頭 1、放大鏡 1；有標註，不做慢推",
     "json": {
@@ -1755,6 +1737,8 @@
      }
     ],
     "out": null,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": [
      "AI 處理中",
@@ -1806,9 +1790,9 @@
       {
        "box": [
         840,
-        172,
+        332,
         1800,
-        548
+        708
        ],
        "why": "壓到右側步驟清單"
       }
@@ -1853,7 +1837,7 @@
      ],
      "box": [
       840,
-      172,
+      332,
       960,
       376
      ]
@@ -1918,6 +1902,7 @@
       ]
      }
     ],
+    "start": null,
     "cams": [],
     "kb": false,
     "kbTo": {
@@ -1938,7 +1923,7 @@
     "waits": []
    },
    "opaque": true,
-   "pip": true,
+   "pip": false,
    "side": false,
    "lower": false,
    "z": 30,
@@ -1959,25 +1944,7 @@
    "txIn": "media",
    "prev": "speaker",
    "txOut": "media",
-   "pipPieces": [
-    {
-     "s": 85,
-     "e": 90,
-     "ms": 85,
-     "enter": "fly",
-     "exitDur": 0.4,
-     "exit": "fade"
-    },
-    {
-     "s": 92,
-     "e": 95,
-     "ms": 92,
-     "enter": "fade",
-     "exitDur": 0,
-     "exit": "layer"
-    }
-   ],
-   "pipNote": "只有聲音的區間不放子母畫面",
+   "pipPieces": [],
    "mediaReport": {
     "summary": "打碼 1 處、變速 0–0.5s ×1、0.5–3s ×15.6、3–6s ×0.333、6–10s ×1",
     "json": {
@@ -1989,7 +1956,7 @@
       "title": "配對手機",
       "box": [
        840,
-       172,
+       332,
        960,
        376
       ],
@@ -2759,6 +2726,8 @@
     "exit": "fade",
     "kenburns": false,
     "hasAnn": true,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": null,
     "file": {
@@ -2805,10 +2774,10 @@
      ],
      "avoid": [],
      "pip": [
-      1339,
-      578,
-      1803,
-      948
+      1424,
+      581,
+      1888,
+      951
      ],
      "pipWhy": "壓到右下角子母畫面",
      "bottom": 920,
@@ -2825,7 +2794,7 @@
       "cy": 450,
       "top": 40,
       "bottom": 900,
-      "pipLeft": 1235
+      "pipLeft": 1320
      }
     },
     "side": null,
@@ -2837,10 +2806,7 @@
      "width": 1671,
      "height": 940
     },
-    "pipShift": [
-     -85,
-     -3
-    ],
+    "pipShift": null,
     "pieces": [
      {
       "s": 25.5,
@@ -2850,6 +2816,7 @@
     ],
     "retime": null,
     "redact": [],
+    "start": null,
     "cams": [
      {
       "i": 0,
@@ -2864,7 +2831,14 @@
        "z": 2.1333,
        "x": -281.4,
        "y": -139.3
-      }
+      },
+      "box": [
+       100,
+       100,
+       1200,
+       675
+      ],
+      "asStart": false
      },
      {
       "i": 1,
@@ -2879,7 +2853,9 @@
        "z": 1,
        "x": 0,
        "y": 0
-      }
+      },
+      "box": null,
+      "asStart": false
      }
     ],
     "kb": false,
@@ -2996,7 +2972,7 @@
     "waits": []
    },
    "opaque": true,
-   "pip": true,
+   "pip": false,
    "side": false,
    "lower": false,
    "z": 30,
@@ -3019,16 +2995,7 @@
    "txIn": "media",
    "prev": "speaker",
    "txOut": "media",
-   "pipPieces": [
-    {
-     "s": 25.5,
-     "e": 39,
-     "ms": 25.5,
-     "enter": "fly",
-     "exitDur": 0,
-     "exit": "none"
-    }
-   ],
+   "pipPieces": [],
    "mediaReport": {
     "summary": "運鏡 2、紅框 1（跟捲動 1 次）、標註 1、STEP 2（第 1–2 步）",
     "json": {
@@ -3183,6 +3150,8 @@
     "exit": "fade",
     "kenburns": false,
     "hasAnn": true,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": null,
     "file": {
@@ -3229,10 +3198,10 @@
      ],
      "avoid": [],
      "pip": [
-      1339,
-      578,
-      1803,
-      948
+      1424,
+      581,
+      1888,
+      951
      ],
      "pipWhy": "壓到右下角子母畫面",
      "bottom": 920,
@@ -3249,7 +3218,7 @@
       "cy": 450,
       "top": 40,
       "bottom": 900,
-      "pipLeft": 1235
+      "pipLeft": 1320
      }
     },
     "side": null,
@@ -3261,12 +3230,10 @@
      "width": 1671,
      "height": 940
     },
-    "pipShift": [
-     -85,
-     -3
-    ],
+    "pipShift": null,
     "retime": null,
     "redact": [],
+    "start": null,
     "cams": [],
     "kb": false,
     "kbTo": {
@@ -3374,7 +3341,7 @@
     "waits": []
    },
    "opaque": true,
-   "pip": true,
+   "pip": false,
    "side": false,
    "lower": false,
    "z": 30,
@@ -3398,25 +3365,7 @@
    "txIn": "media",
    "prev": "speaker",
    "txOut": "media",
-   "pipPieces": [
-    {
-     "s": 39,
-     "e": 44,
-     "ms": 39,
-     "enter": "none",
-     "exitDur": 0.4,
-     "exit": "fade"
-    },
-    {
-     "s": 47,
-     "e": 49.5,
-     "ms": 47,
-     "enter": "fade",
-     "exitDur": 0,
-     "exit": "layer"
-    }
-   ],
-   "pipNote": "只有聲音的區間不放子母畫面",
+   "pipPieces": [],
    "mediaReport": {
     "summary": "聚光燈 1、箭頭 1、放大鏡 1；有標註，不做慢推",
     "json": {
@@ -3983,6 +3932,8 @@
      }
     ],
     "out": null,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": [
      "AI 處理中",
@@ -4034,9 +3985,9 @@
       {
        "box": [
         840,
-        172,
+        332,
         1800,
-        548
+        708
        ],
        "why": "壓到右側步驟清單"
       }
@@ -4081,7 +4032,7 @@
      ],
      "box": [
       840,
-      172,
+      332,
       960,
       376
      ]
@@ -4146,6 +4097,7 @@
       ]
      }
     ],
+    "start": null,
     "cams": [],
     "kb": false,
     "kbTo": {
@@ -4166,7 +4118,7 @@
     "waits": []
    },
    "opaque": true,
-   "pip": true,
+   "pip": false,
    "side": false,
    "lower": false,
    "z": 30,
@@ -4187,25 +4139,7 @@
    "txIn": "media",
    "prev": "speaker",
    "txOut": "media",
-   "pipPieces": [
-    {
-     "s": 85,
-     "e": 90,
-     "ms": 85,
-     "enter": "fly",
-     "exitDur": 0.4,
-     "exit": "fade"
-    },
-    {
-     "s": 92,
-     "e": 95,
-     "ms": 92,
-     "enter": "fade",
-     "exitDur": 0,
-     "exit": "layer"
-    }
-   ],
-   "pipNote": "只有聲音的區間不放子母畫面",
+   "pipPieces": [],
    "mediaReport": {
     "summary": "打碼 1 處、變速 0–0.5s ×1、0.5–3s ×15.6、3–6s ×0.333、6–10s ×1",
     "json": {
@@ -4217,7 +4151,7 @@
       "title": "配對手機",
       "box": [
        840,
-       172,
+       332,
        960,
        376
       ],

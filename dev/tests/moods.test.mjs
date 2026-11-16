@@ -2,6 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
+import fs from 'node:fs';
+import path from 'node:path';
 import { lib, imp, makeSrt, cueStart, cueEnd } from './helpers.mjs';
 
 const { resolvePlan, jsonTop } = await imp('lib/plan.mjs');
@@ -61,11 +63,11 @@ test('取捨（030）：模板的固定配對照常出聲，離情緒點不到 3
 test('取捨：3 秒內兩個情緒點留比較強的；一分鐘超過 5 顆照強弱拿（金句 > 痛點 > 落定）', () => {
   const near = run([], [{ at: '#2', kind: 'land' }, { at: '#2+1', kind: 'turn' }]);
   assert.equal(near.moods[0].sfx, null);
-  assert.equal(near.moods[1].sfx.name, 'shine');
+  assert.equal(near.moods[1].sfx.name, 'ding', '055 Q4：反轉預設是丁（原本 shine）');
   const three = run([], [{ at: '#2', kind: 'land' }, { at: '#5', kind: 'pain' }, { at: '#9', kind: 'quote' }]);
   assert.deepEqual(three.moods.map((m) => m.sfx?.name ?? null), ['impact', 'alert', 'sparkle'], '一分鐘 3 顆現在留得住');
   const dense = run([], [{ at: '#2', kind: 'land' }, { at: '#4', kind: 'pain' }, { at: '#6', kind: 'quote' }, { at: '#8', kind: 'win' }, { at: '#10', kind: 'turn' }, { at: '#12', kind: 'land' }]);
-  assert.deepEqual(dense.moods.map((m) => m.sfx?.name ?? null), ['impact', 'alert', 'sparkle', 'success', 'shine', null], '最弱的落定拿掉一顆（同一級留前面那個）');
+  assert.deepEqual(dense.moods.map((m) => m.sfx?.name ?? null), ['impact', 'alert', 'sparkle', 'success', 'ding', null], '最弱的落定拿掉一顆（同一級留前面那個）');
   assert.equal(dense.moods.filter((m) => m.sfx).length, 5, '同一分鐘 6 個情緒點 → 留 5 顆');
   assert.match(dense.sfxBudget.lines.join('\n'), /每分鐘 5 顆的上限/);
 });
@@ -80,8 +82,8 @@ test('030 反應音效：踩坑、解法不在動畫段裡打在句尾前 0.2 �
   assert.ok(!res.moods[3].sfx.tail, '打雷是氣氛，不挪到句尾');
 });
 
-test('每集上限：反轉超過 3 次，後面的 shine 換成 ding', () => {
-  const res = run([], [2, 20, 38, 56].map((n) => ({ at: `#${n}`, kind: 'turn' })));
+test('每集上限：shine 超過 3 次，後面的 shine 換成 ding', () => {
+  const res = run([], [2, 20, 38, 56].map((n) => ({ at: `#${n}`, kind: 'turn', sfx: 'shine' })));
   assert.deepEqual(res.moods.map((m) => m.sfx.name), ['shine', 'shine', 'shine', 'ding']);
   assert.equal(res.moods[3].sfx.at, r3(Math.max(0, res.moods[3].event - L.sfx.ding.peak + F)), '換音效後重新對峰值');
 });
@@ -190,4 +192,84 @@ test('031 段上寫自備角色：沒放改用內建的（question 不出聲）�
   assert.equal(byId(ok, 's03').sfx.name, 'success');
   const bad = run([kp('s01', '#3', { sfx: 'tick' })]);
   assert.match(bad.errors.join('\n'), /「tick」（秒針）是工具自動配的/);
+});
+
+// ---------- 055 k23、k24：情緒點和動畫音效 3 秒內只出一顆、同一顆不連響、疊在一起 ⚠、上限拿掉的列出來 ----------
+const beatDir = (body) => {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'moods-055-'));
+  fs.mkdirSync(path.join(out, 'compositions'), { recursive: true });
+  fs.writeFileSync(path.join(out, 'compositions', 'x-beat.html'), `<template id="x-beat-template"><div id="x-beat" data-composition-id="x-beat" data-width="1920" data-height="1080"></div>
+<script>
+  const tl = gsap.timeline({ paused: true }); const P = SceneMotion(tl);
+  ${body}
+  window.__timelines["x-beat"] = tl;
+</script></template>`);
+  return out;
+};
+const runIn = (out, scenes, moods) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes, ...(moods ? { moods } : {}) }, cues, videoDur: VD, lib: L, outDir: out });
+const xseg = (from, to, extra = {}) => ({ id: 'x01', type: 'custom', src: 'compositions/x-beat.html', layout: 'overlay', from, to, ...extra });
+
+test('055 Q4：情緒點反轉的預設音效是丁（橫式直式都一樣）', () => {
+  assert.equal(MOOD_KINDS.turn.sound, 'ding');
+  const { list } = moodCues([{ at: '#3', kind: 'turn' }], { cues, sfxConf: L.sfx, videoDur: VD });
+  assert.equal(list[0].sfx.name, 'ding');
+  assert.equal(list[0].sfx.at, r3(Math.max(0, list[0].event - L.sfx.ding.peak + F)), '峰值照丁的對齊');
+});
+
+test('055 k23（054 D4）：情緒點和動畫 P.sfx 相距不到 3 秒 → 情緒點不出聲、推近照留、報告寫讓給誰；相距 3 秒以上照常', () => {
+  const out = beatDir(`P.sfx('alert', '#5');`);
+  const res = runIn(out, [xseg('#4', '#6e')], [{ at: '#5', kind: 'pain', zoom: true }, { at: '#20', kind: 'win' }]);
+  assert.deepEqual(res.errors, []);
+  assert.equal(res.moods[0].sfx, null, '同一刻的 alert 只響動畫那一顆');
+  assert.equal(res.moods[0].dropped, 'alert');
+  assert.equal(res.moods[1].sfx.name, 'success', '離動畫很遠的照常');
+  assert.equal(res.items.find((x) => x.id === 'x01').sfxExtra.filter((c) => c.name === 'alert').length, 1);
+  assert.ok(res.zooms.list.some((z) => z.i === 0), '推近照留');
+  assert.ok(res.sfxBudget.lines.some((l) => /^情緒點讓給動畫音效：moods\[0\]（#5 痛點）→x01 的 alert（0:15\.00，相距 0 秒）（和動畫的 P\.sfx 相距不到 3 秒只出一顆；推近照留）$/.test(l)), res.sfxBudget.lines.join('\n'));
+  // 動畫拍點在情緒點前 1 秒也一樣（短影片4：#5@焦慮 的情緒點和 P.sfx('alert', '#6@每個都要學')）
+  const out2 = beatDir(`P.sfx('alert', '#5', 1);`);
+  const r2 = runIn(out2, [xseg('#4', '#6e')], [{ at: '#5', kind: 'quote' }]);
+  assert.equal(r2.moods[0].sfx, null);
+  assert.equal(r2.moods[0].dropped, 'sparkle');
+  // 相距剛好 3 秒以上：兩顆都留
+  const out3 = beatDir(`P.sfx('alert', '#4');`);
+  const r3x = runIn(out3, [xseg('#4', '#6e')], [{ at: '#5', kind: 'quote' }]);
+  assert.equal(r3x.moods[0].sfx.name, 'sparkle', '相距 3.5 秒');
+});
+
+test('055 k23：同一顆非 additive 音效 3 秒內響兩次（不管來源）→ 拿掉後面那顆、⚠；click 不算', () => {
+  const out = beatDir(`P.sfx('impact', '#5');\n  P.sfx('impact', '#5', 1.5);\n  P.sfx('click', '#5', 0.5);\n  P.sfx('click', '#5', 1);`);
+  const res = runIn(out, [xseg('#4', '#6e')]);
+  const x = res.items.find((i) => i.id === 'x01');
+  assert.deepEqual(x.sfxExtra.map((c) => c.name), ['impact', 'click', 'click'], '後面那顆 impact 拿掉，點擊照留');
+  assert.ok(res.warnings.some((w) => w === '[x01 custom] 的 impact（動畫的 P.sfx，0:16.50）和 x01 的 impact（0:15.00）相距 1.5 秒（< 3 秒），同一顆音效連響兩次，已拿掉後面這顆 → 兩顆都要就把其中一顆換成別的音效；不要這顆就在 compositions/x-beat.html 拿掉那個 P.sfx'), res.warnings.join('\n'));
+});
+
+test('055 k24（054 C19）：拿掉之後還有兩顆音效峰值相距 < 0.4 秒 → ⚠ 疊在一起；0.4 秒以上不報', async () => {
+  const out = beatDir(`P.sfx('success', '#5');\n  P.sfx('alert', '#5', 0.2);`);
+  const res = runIn(out, [xseg('#4', '#6e')]);
+  const w = res.warnings.filter((x) => x.includes('兩顆音效疊在一起'));
+  assert.equal(w.length, 1, res.warnings.join('\n'));
+  assert.match(w[0], /^\[x01 custom\] 的 alert（動畫的 P\.sfx，0:15\.2\d）和 x01 的 success（動畫的 P\.sfx）只差 0\.2 秒，兩顆音效疊在一起 → 留一顆：在 compositions\/x-beat\.html 拿掉其中一個 P\.sfx$/);
+  // deliver 的回報段也要帶（lib/build-summary.mjs isSfxWarn）
+  const { isSfxWarn } = await imp('lib/build-summary.mjs');
+  assert.ok(isSfxWarn(`⚠ ${w[0]}`));
+  const ok = runIn(beatDir(`P.sfx('success', '#5');\n  P.sfx('alert', '#5', 0.5);`), [xseg('#4', '#6e')]);
+  assert.ok(!ok.warnings.some((x) => x.includes('兩顆音效疊在一起')));
+});
+
+test('055 k23：每分鐘上限照實際出聲的算（讓位的情緒點不算）、拿掉的列出是哪一段哪一顆', () => {
+  // 一分鐘內 6 顆動畫拍點（都不一樣、相距 ≥ 3 秒）：上限 5 → 拿掉一顆，報告列出來
+  const body = [['impact', 2], ['success', 4], ['alert', 6], ['ding', 8], ['sparkle', 10], ['thunder', 12]].map(([n, k]) => `P.sfx('${n}', '#${k}');`).join('\n  ');
+  const out = beatDir(body);
+  const res = runIn(out, [xseg('#2', '#13e')]);
+  assert.equal(res.items.find((i) => i.id === 'x01').sfxExtra.length, 5);
+  const line = res.sfxBudget.lines.find((l) => l.startsWith('音效上限拿掉的：'));
+  assert.match(line ?? '', /^音效上限拿掉的：x01 的 \w+ \d:\d\d\.\d\d（動畫拍點） → 想留哪一顆/, res.sfxBudget.lines.join('\n'));
+  // 情緒點和動畫拍點同一刻：讓位之後只算一顆，不會再擠掉別的拍點（短影片2 x0107 的 impact 被吃掉）
+  const five = [['impact', 2], ['success', 4], ['alert', 6], ['ding', 8], ['sparkle', 10]].map(([n, k]) => `P.sfx('${n}', '#${k}');`).join('\n  ');
+  const r2 = runIn(beatDir(five), [xseg('#2', '#13e')], [{ at: '#2', kind: 'pain' }]);
+  assert.equal(r2.moods[0].sfx, null);
+  assert.equal(r2.items.find((i) => i.id === 'x01').sfxExtra.length, 5, '5 顆拍點都留著');
+  assert.ok(!r2.sfxBudget.lines.some((l) => l.startsWith('音效上限拿掉的：')));
 });

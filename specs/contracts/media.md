@@ -280,6 +280,8 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 
 直式（009 FR-082）而且錄影寬 > 高時，`json` 多一個鍵 `view: { scale, moves }`：`scale`＝錄影顯示寬 ÷ 素材寬（r3，1920 寬放進 1080 寬＝0.563），`moves`＝運鏡數；`qc.mjs storyboard` 用它判「介面字太小」（cli-004 §10）。橫式不加這個鍵。
 
+（055）寫了 `start` 的段：`view.scale` 是第一格的倍率（素材縮放 × `start` 推近）；`json` 多 `start: { z, x, y }`（起始鏡位的倍率與運鏡層位移，`mediaParts` 在段起點 `tl.set` 到 `#mst-<id>`）。
+
 `summary` 規則：依序 `運鏡 N`、`慢推`、`紅框 N`（有 path 加 `（跟捲動 K 次）`）、`標註 N`、`聚光燈 N`、`STEP N（第 a–b 步）`、`箭頭 N`（有拿掉的加 `（拿掉 K）`）、`放大鏡 N`，用「、」接；因標註關掉慢推時尾巴加 `；有標註，不做慢推`。全部沒有時是空字串。
 
 ---

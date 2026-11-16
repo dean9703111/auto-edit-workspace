@@ -41,11 +41,12 @@
  *   拍在段尾之後   custom 的 P.at 落在淡出（沒有淡出就是段尾）之後，播出時看不到
  *   開場來不及     custom 檔頭【D 下限】的第一拍下限（例 T1 ≥ 3.1）不成立：開場的主卡、骨架還沒做完，站就先出來（換了開場就把檔頭那一行改成新的下限）
  *   示意元件讀不到 data-illus-src 的檔不在 work/hyperframes/illus-local/、data-illus 不是畫廊的 22 個元件也沒 ILLUS.register（畫面上是空的）
+ *   大字被切掉     text-cut（055，只量內容設計段和手改過的模板檔）：data-layout-allow-overflow 的字一部分超出畫面左右下緣（直式縮放段：縮放後看得到的範圍）、或被會裁切的祖先切掉；allow-overflow 對字只放行頂到上緣；整列在框外（捲走了）、比框寬 1.5 倍（跑馬燈）不算
  * ⚠ 提醒
  *   壓到講者       透明版型（layout: "overlay"、下方字卡等）的內容蓋到 plan.json 的 speakerBox（面積比例；custom 與用 css 移位的段 ≥ 2%、
  *                  沒移位的模板 ≥ 40%；不管哪種段，蓋到臉的位置（框上緣往下約三成的中間，lib/audit-rules.mjs faceZone）≥ 5% 也報；
  *                  和 build 的碰撞提醒同門檻；03 側邊欄期間講者框加上 sideShift）
- *   字太小         文字 < 30px（直式：縮放的段 字級 × 縮放倍率 < 32px，全畫面 custom 是 0.8475；不縮放的段 < 32px）
+ *   字太小         文字 < 30px（直式：畫面上 < 48px；縮放的段 字級 × 縮放倍率 < 48px，全畫面 custom 縮 0.8475 要寫 ≥ 57px；模板段改法是換內容設計動畫）
  *   半像素邊       有底或有框的元素邊緣離整數 px ≥ 0.2（直邊與框線會糊，R8.4）
  *   段長不符       custom 檔寫死的 data-duration／const D 和 --check 報告的段長不同（結尾用 P.end() 不帶參數就不檢查）
  *   ── 下面只量 custom（R8 #6、style.md〈節奏〉）──
@@ -81,6 +82,17 @@
  *   標籤沒對齊插圖 layout-label：標籤中心和插圖中心差 > 4px（標籤在右邊的量上下）
  *   標籤不在同一條線 layout-label-row：同一列有標籤的元件，標籤上緣差 > 4px（row 預設底對齊；data-align="middle" 不量）
  *   連接線不對     layout-link：data-links 產生的與手寫的線（兩端各靠一個元件 ≤ 48px），端點離元件外框 < 4 或 > 32px、離邊中點（直線看兩個插圖重疊段的正中）> 8px、穿過別的元件
+ *   ── 055 作者回饋（只量內容設計段 design: true 和手改過的模板動畫檔；工具產生的 x-* 範本不量；量的是畫面 px，直式縮放段先乘縮放倍率）──
+ *   大字自動換行   text-wrap：字級 ≥ 120px、沒有 nowrap，排出來的行數比 <br> 多
+ *   線穿過字／卡片 line-cross：svg 裡只描邊的線（長 ≥ 40px，每 8px 取一點）落在字（外擴 4px）或有底卡片（外擴 12px）裡；線頭、線尾接著卡片的連接線、總長 < 80px 的箭頭頭和勾勾不算
+ *   卡片空太多     card-space：有底色的卡（≥ 300×200）裡字（含圖示）只占 < 30%，最大的字還能放大 ≥ 1.4 倍（完成態）
+ *   卡片寬度不一致 sibling-width：同一個父層 ≥ 3 張同 class、裝字的卡（高 ≥ 100），寬度最大／最小 > 1.1（完成態；一路變寬／變窄的金字塔不算）
+ *   內容沒置中     hcenter：完成態的卡、圖片、圖示（長寬 ≥ 40px）排成的一列（字不算），在色塊（寬 ≥ 240）裡左右留白差 > max(24, 寬 4%)；直式整組（連同排在旁邊的字）離舞台窗／安全區中心 > 48px
+ *   大字被講者擋太多 matte-glyph：去背的疊加段字級 ≥ 120 的字在中點、完成態和講者遮罩比，被擋 > 10% 的字超過 1 個、或一個字被擋 > 50%（還沒有去背檔就不量）
+ *   ── 055 下面三條：dup-word、text-heavy 也一樣（內容設計段、手改過的模板檔），bind-late 量所有 custom ──
+ *   同一個詞出現兩次 dup-word：完成態同一張卡裡上下相鄰的兩行字有同一個詞（2 字中文、3 字母以上英文；同一組並排的項目不算）
+ *   疊在講者身上的字太多 text-heavy：疊加段（不縮放）完成態 > 24 字（數字不算、英文一個詞算一字）
+ *   卡上的字比講的晚 bind-late：P.at('#N@詞') 那一拍出現的字，在第 N 句比「詞」更早就開始講，差 > 0.5 秒
  * ✖ 分鏡對齊（custom，有「#### 動畫分鏡 <段 id>」表的段）
  *   分鏡表表頭不對 表頭要是「| 拍 | 講到（綁句） | 畫面上出現什麼 | 動態（設計系統語彙） | 焦點 | 音效拍點 |」（示意動畫段後面多「插圖元件（狀態） | 位置 |」兩欄）
  *   缺拍           分鏡某一拍的綁句（#N@詞＋偏移；同一個句號的幾拍算一組）±0.5 秒內沒有 P.at（「段起點 #N」那一拍是開場，不用 P.at）
@@ -92,7 +104,8 @@
  * v2 微動（漂浮、呼吸、虛線流動、背景環境、慢推）不算「動作」：完成態停留、最後一幕、畫面沒有變化、靜止取樣都排除；
  * 同一個 P.* 呼叫（錯拍群組、逐字）算 1 個新元素；彗星頭、漣漪、聚焦光、光澤、螢光筆、劃線、背景層不量版面。
  * 正在補間的元素（進場、退場途中）不判；刻意的例外標 data-layout-allow-overflow／data-layout-allow-caption-zone／data-layout-ignore
- * （和 npx hyperframes check 同一組標記），以及 data-layout-allow-overlap／data-layout-allow-slack／data-layout-allow-tight／data-width-shared（只有 audit 認得）。
+ * （和 npx hyperframes check 同一組標記），以及 data-layout-allow-overlap／data-layout-allow-slack／data-layout-allow-tight／data-width-shared、
+ * data-allow-uneven（卡片不同寬）／data-allow-repeat（刻意重複的詞）／data-justify="start"／"end"（刻意靠一邊）（只有 audit 認得）。
  *
  * 選填：--chrome <路徑>（預設用 HyperFrames 下載的 chrome-headless-shell）、--runtime <hyperframe.runtime.iife.js>；測試用：--template <shared/template 資料夾>
  */
@@ -100,13 +113,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build, pathsFrom, projectLabel, loadLib } from './build.mjs';
-import { findChrome, findRuntime, openSessions, openBrowser, freshRefsScript } from './lib/audit-browser.mjs';
+import { findChrome, findRuntime, openSessions, openBrowser, freshRefsScript, matteAlphaAt } from './lib/audit-browser.mjs';
 import { createHash } from 'node:crypto';
 import { groupWarnings, runCount } from './lib/flow.mjs';
 import { contactSheet, poolOn } from './lib/raster.mjs';
 import { FULL, gateCheck, pickItems, sampleTimes, layoutOf, pipOnAt, speakerWarnOf, judgeSample, mergeFindings, formatFinding, customDuration, fmtT, CANVAS, portraitPlan,
-  judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings, rootSelectorFindings } from './lib/audit-rules.mjs';
-import { matteKindOf } from './lib/matte.mjs';
+  judgeLayout, judgeMotion, stillTimes, cueFindings, motionUnits, busySpans, cueTextFindings, atNames, staticFindings, floorFindings, fontShrinkFindings, rootSelectorFindings,
+  judgeFeedback, matteGlyphFindings, bindLateFindings } from './lib/audit-rules.mjs';
+import { matteKindOf, matteFrontOf } from './lib/matte.mjs';
 import { templateFor, formatReport as checkTable } from './lib/plan.mjs';
 import { beatFindings, noSheetFinding, illusListFindings } from './lib/audit-beats.mjs';
 import { loadPics, picOfSrc } from './lib/pics.mjs';
@@ -115,7 +129,8 @@ import { judgeLayoutRules } from './lib/audit-layout.mjs';
 import { resolveFormat, formatLine, canvasOf } from './lib/canvas.mjs';
 import { touchBeat } from './lib/tries.mjs';
 import { splitFlag, valueOf, isMain } from './lib/cli.mjs';
-import { ensureBeatsV2, beatSourceOf } from './lib/beat-source.mjs';
+import { ensureBeatsV2, beatSourceOf, libOf } from './lib/beat-source.mjs';
+import { fillStateOf } from './lib/custom-fill.mjs';
 import { r3Round as r3 } from './lib/time.mjs';
 
 const VALUE_FLAGS = ['project', 'only', 'chrome', 'runtime', 'template', 'format', 'jobs'];
@@ -258,6 +273,13 @@ async function shotSheets(G, P, shots, cv) {
 
 export async function audit(flags, { log = console.log } = {}) {
   const P = pathsFrom(flags);
+  // 055：手改過的模板動畫檔（build 印「手改過」的 compositions/x-*.html）和內容設計段一樣量作者回饋那幾條；工具產生的範本不量
+  const handMemo = new Map();
+  const handTpl = (it) => {
+    if (it.type !== 'custom' || it.seg?.design || !it.seg?.template) return false;
+    if (!handMemo.has(it.id)) { let st = 'tool'; try { st = fillStateOf({ seg: it.seg, outDir: P.out, lib: libOf(P) }); } catch { st = 'tool'; } handMemo.set(it.id, st === 'hand'); }
+    return handMemo.get(it.id);
+  };
   const project = P.project ? projectLabel(P, P.project) : rel(P.out);
   const index = path.join(P.out, 'index.html');
   // 009：版式（--format > plan.json format > 製作進度.md「版式」列 > 主軌寬高比）；直式時舞台縮放的段量子合成座標、其他段用 1080×1920 量
@@ -315,6 +337,12 @@ export async function audit(flags, { log = console.log } = {}) {
   if (root && (+root[1] !== cv.W || +root[2] !== cv.H)) report.warnings.push(`index.html 是 ${root[1]}×${root[2]}，版式是${portrait ? '直式' : '橫式'} ${cv.W}×${cv.H} → 用同一個版式重跑 build 再 audit（這次照 ${cv.W}×${cv.H} 的規則量）`);
 
   const dur = durationWarnings(pick.list, P.out);
+  // 055 C05：去背層在 index.html 的哪一支影片、從第幾秒開始（main.mjs 寫的 <video id="mattev-<段>" src data-start … data-media-start>）
+  const indexHtml = fs.readFileSync(index, 'utf8');
+  const matteVideoOf = (id) => {
+    const m = indexHtml.match(new RegExp(`<video id="mattev-${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}" src="([^"]+)" data-start="([\\d.]+)"[^>]*?data-media-start="([\\d.]+)"`));
+    return m ? { file: path.join(P.out, m[1]), start: Number(m[2]), ms: Number(m[3]) } : null;
+  };
   const chrome = findChrome({ chrome: flags.chrome });
   const rt = findRuntime({ runtime: flags.runtime });
   report.chrome = chrome;
@@ -397,6 +425,18 @@ export async function audit(flags, { log = console.log } = {}) {
       out.raw.push(...judgeLayoutRules(lay, { item: j.it, t: j.t }));
     }
     out.raw.push(...judgeIllus(m, { item: j.it, t: j.t, kind: j.kind, hasLayout: !!(lay && lay.containers.length) }));
+    // 055：作者回饋變成的檢查（大字被切／自己斷行、線穿過字、卡片空太多、卡片寬度不一致、沒置中、同一個詞兩次、疊在講者身上的字太多）
+    const fctx = { item: j.it, hand: handTpl(j.it), t: j.t, kind: j.kind, layout: seg.layout, W: pl ? pl.W : CANVAS[0], H: pl ? pl.H : CANVAS[1], ...(pl && pl.geo ? { geo: pl.geo } : {}), ...(pl && pl.stage ? { stage: pl.stage } : {}) };
+    out.raw.push(...judgeFeedback(m, fctx));
+    // 055 C05：去背的疊加內容設計段，大字（≥ 120px）在中點、完成態和那一刻的講者遮罩比；還沒有去背檔就跳過、記一行（x-wall 這類講者站在字牆前的模板不量）
+    if ((j.kind === 'done' || j.kind === 'mid') && j.it.type === 'custom' && (j.it.seg?.design || fctx.hand) && seg.layout === 'overlay' && (m.glyphs || []).length && matteKindOf(j.it, P.out) === 'full') {
+      const v = matteVideoOf(j.it.id);
+      if (!v || !fs.existsSync(v.file)) out.note = `${j.it.id}：還沒有去背檔（先 build），大字被講者擋多少沒量`;
+      else {
+        const a = matteAlphaAt(v.file, r3(j.t - v.start + v.ms));
+        if (a) out.raw.push(...matteGlyphFindings(m.glyphs, { ...a, W: cv.W, H: cv.H, holes: matteFrontOf(j.it, P.out) || [] }, fctx));
+      }
+    }
     if (j.kind === 'done' && !m.missingHost && !hasStill(m)) {
       out.raw.push({ id: j.it.id, label: j.it.label, level: 'warn', rule: 'empty', el: null, t: j.t, kind: j.kind,
         msg: `完成態沒有量到任何內容（${(m.els || []).length ? '全部還在動畫中' : '畫面上是空的'}）`, fix: `這條加 --shots --sheet 看 ${j.t} 秒那一格；內容要在段尾前 0.6 秒停在完成態（R6）` });
@@ -410,6 +450,7 @@ export async function audit(flags, { log = console.log } = {}) {
       segs.get(r.id).samples.push(r.sample);
       raw.push(...r.raw);
       if (r.shot) shots.push(r.shot);
+      if (r.note && !report.notes.includes(r.note)) report.notes.push(r.note);
     }
     if (shots.length) report.shots = shots.map((s) => rel(s.file));
     cueErrs = [...new Set((await Promise.all(G.sessions.map((S) => S.cueErrors()))).flat().map(String))].sort();
@@ -439,7 +480,9 @@ export async function audit(flags, { log = console.log } = {}) {
     const r = judgeMotion(motions.get(it.id), { item: it, fadeOut: !!it.fadeOut });
     motion.push(...r.findings);
     const src = it.file && path.join(P.out, it.file);
-    motion.push(...cueTextFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [], names: src && fs.existsSync(src) ? atNames(fs.readFileSync(src, 'utf8')) : {} }));
+    const atN = src && fs.existsSync(src) ? atNames(fs.readFileSync(src, 'utf8')) : {};
+    motion.push(...cueTextFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [], names: atN }));
+    motion.push(...bindLateFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [], names: atN }));   // 055 N7
     motion.push(...staticFindings(motions.get(it.id), { item: it, cuesOut: res.cuesOut || [] }));
     // 分鏡對齊：這段拍點正本的「#### 動畫分鏡 <段 id>」表和檔裡的 P.at 逐拍比（cli-003 §2.3d）。032 B6：只讀正本——
     // 模板段照 plan.json 的 slots 產生、手寫段讀 work/designs/<段>.md；不讀 storyboard.md（那是副本）、不比修改時間。手改模板段第一次被發現就建鏡位腳本

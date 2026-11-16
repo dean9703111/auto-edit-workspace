@@ -16,8 +16,9 @@
 .sKw--icon > svg { flex: none; display: block; width: 60px; height: 60px; margin-bottom: 8px; color: var(--sc-accent); }
 <!-- @style-portrait -->
 /* 直式（canvas.mjs 的 lowerThird 卡片帶 x 60–940、y 880–1240）：左直欄改成卡片帶內橫排、放不下就換行（板高不變）；
-   #kwList 直式排法是 free（data-layout-portrait），由這裡的 flex 排：板距 --sc-gap-md、各列底對齊、整組貼帶底。 */
-#kwList { left: 60px; top: auto; bottom: 680px; width: 880px; height: auto; display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-end; align-content: flex-end; gap: var(--sc-gap-md); }
+   #kwList 直式排法是 free（data-layout-portrait），由這裡的 flex 排：板距 --sc-gap-md、各列底對齊、整組貼帶底、每一列在帶內左右置中
+   （055：作者在短影片1 r8 說直式「視覺不要偏左」；橫式的 data-justify="start" 在 free 排法不作用）。 */
+#kwList { left: 60px; top: auto; bottom: 680px; width: 880px; height: auto; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; align-content: flex-end; gap: var(--sc-gap-md); }
 #kwList > .sKw { position: relative; }
 <!-- @body -->
 <div id="kwList" data-layout="col" data-layout-portrait="free" data-gap="md" data-justify="start" data-layout-allow-slack>
