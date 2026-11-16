@@ -15,7 +15,11 @@
 //         ownFont:{ fs, lh }（自己的文字裡字級最大的那一行）, centered, allowOverlap, allowSlack, allowTight, widthShared, parentInnerW, alpha,
 //         shapeRect（svg：裡面形狀的聯集，連接線圖層用它，不用整個 svg 的框）, anc:[所有有記錄的祖先，近的在前],
 //         il（011：kit/illus.js 掛的 .il>svg；rect／shapeRect 已四邊外擴描邊 2px）, ilName（那個元件的 data-illus 名） }
+//       disp（display）、allowUneven、allowRepeat、justify（055：卡片寬度、重複的詞、置中）
 //     另回傳 illus：host 裡 .il 元件的個數（judgeIllus 只量有元件的段）
+//     055 另回傳 bigText：字級 ≥ 120 的最內層區塊 [{ desc, fs, lines（排成幾行）, br（<br> 個數）, ws, moving, rect, allowOverflow }]（大字自己斷行）；
+//       glyphs：字級 ≥ 120 的每個字 [{ ch, r, moving, alpha, near }]（去背段比對講者遮罩）；
+//       lines：svg 裡只描邊的形狀每 8px 一點 [{ svg（els 索引）, tag, id, pts:[[x,y]…], closed, moving }]（線穿過字或卡片）
 //     另回傳 tops：custom root 與 .fill 直接底下的元素 [{ desc, pos, w, h, parent }]（給「未定位頂層」）
 //   collectMotionInPage({ hostId, compId }) → 不 seek，讀 window.__timelines[compId] 的每個 tween：
 //     { D, marks, tweens: [{ start, end, kind: 'enter'|'exit'|'draw'|'change', call, role, fn, targets: [{ key, parentKey, desc, chain, emph, box, il, line }] }] }；
@@ -25,7 +29,7 @@
 //     時間軸不存在回 null。kind 只認 fromTo（SceneMotion 全部是 fromTo）：opacity 起點 < 0.2 ≤ 終點＝enter、反過來＝exit、
 //     strokeDashoffset＝draw、clip-path 由 100% 揭開到 inset(0)＝enter，v2 的 P.wipe／P.slide＝enter、P.wipeOut／P.slideOut＝exit（看 tween data 的 fn），其他＝change。up＝目標從看不見變看得見或變亮：enter、draw、opacity 變大、
 //     scale／scaleX／scaleY 從 0 長出來（P.bar 的刪除線、進度條）；位移、換數字、退場、降亮度都不算；
-//     targets[].say＝目標自己（含子孫）的字；亮框（emph）沒字，取它亮起的那一項（最近一層有字的祖先）；刪除線、底線這類沒疊滿的線是 ''；
+//     targets[].all＝目標（含子孫）全部的字（前 40 個字，055 卡上的字比講的晚用）；targets[].say＝目標自己（含子孫）的字；亮框（emph）沒字，取它亮起的那一項（最近一層有字的祖先）；刪除線、底線這類沒疊滿的線是 ''；
 //     那一層有兩塊以上的字也是 ''（給「綁句對不上」比對字幕）。emph＝疊在父層上、四邊差 ≤ 8px、面積 ≥ 父層 80%（亮框）
 //   判斷「動畫進行中」：所有 window.__timelines 底下 0 < progress < 1 的 tween，它的目標與目標的子孫都算在動（量到的是暫態，不判定）。
 //   退出標記和 hyperframes check 一樣：data-layout-ignore（整個不量）、data-layout-allow-overflow（不判撐破／裁切）、
@@ -199,7 +203,7 @@ export function measureInPage({ hostId, W, H }) {
   };
 
   const all = [host, ...host.querySelectorAll('*')];
-  const idx = new Map();
+  const idx = new Map(), elOf = new Map();
   const V2_PARTS = '.sc-comet, .sc-ripple, .sc-spot, .sc-sheen, .sc-mk, .sc-strike';
   const els = [];
   for (const el of all) {
@@ -239,6 +243,7 @@ export function measureInPage({ hostId, W, H }) {
     if (!text && !painted && !media && !isBox) { idx.set(el, -2); continue; }   // 純排版用的 wrapper：不記，但祖先鏈照樣往上找
     const i = els.length;
     idx.set(el, i);
+    elOf.set(i, el);
     const off = el.offsetWidth || 0;
     // 011 示意插圖（kit/illus.js 掛的 .il>svg）：overflow visible、4px 描邊一半在 viewBox 外 → 量的框四邊外擴 2px（契約 illus.md §5.5）
     const il = tag === 'svg' && !!el.parentElement && el.parentElement.classList.contains('il');
@@ -288,7 +293,90 @@ export function measureInPage({ hostId, W, H }) {
       parentInnerW: r2(opInner),
       alpha: r2(opacityChain(el)),
       shapeRect: tag === 'svg' ? grow2(shapeRect(el)) : null,
+      // 055：卡片寬度不一致（data-allow-uneven）、同一個詞出現兩次（data-allow-repeat）、置中（data-justify、display）
+      disp: cs.display,
+      allowUneven: !!el.closest('[data-allow-uneven]'),
+      allowRepeat: !!el.closest('[data-allow-repeat]'),
+      justify: (() => { const j = el.closest('[data-justify]'); return j ? j.getAttribute('data-justify') || '' : ''; })(),
     });
+  }
+  // 055 C04：大字（字級 ≥ 120）排成幾行、寫了幾個 <br>（最內層、自己是區塊、裡面有字的元素；字可以在 inline-block 的子層裡）
+  const BIG = 120, INLINE = new Set(['inline', 'inline-block', 'contents', 'none']);
+  const bigCand = [];
+  for (const el of all) {
+    if (el === host || SKIP.has(el.tagName) || el instanceof SVGElement || el.closest('[data-layout-ignore], [data-layout-check="ignore"]') || el.closest(V2_PARTS)) continue;
+    const cs = getComputedStyle(el);
+    if (px(cs.fontSize) < BIG || INLINE.has(cs.display) || !(el.textContent || '').trim()) continue;
+    bigCand.push(el);
+  }
+  const bigText = [];
+  for (const el of bigCand) {
+    if (bigCand.some((o) => o !== el && el.contains(o))) continue;
+    const r = el.getBoundingClientRect();
+    if (!visible(el, r)) continue;
+    // 字都還沒出現（一個字一個 span、逐字進場前）不算
+    if (![el, ...el.querySelectorAll('*')].some((x) => Array.from(x.childNodes).some((c) => c.nodeType === 3 && (c.textContent || '').trim()) && opacityChain(x) >= 0.2)) continue;
+    const cs = getComputedStyle(el), rg = document.createRange();
+    rg.selectNodeContents(el);
+    const rs = Array.from(rg.getClientRects()).filter((x) => x.width > 0.5 && x.height > 0.5).sort((a, b) => a.top - b.top);
+    rg.detach && rg.detach();
+    const hs = rs.map((x) => x.height).sort((a, b) => a - b), mh = hs.length ? hs[Math.floor(hs.length / 2)] : 0;
+    const rows = [];
+    for (const x of rs) { const c = (x.top + x.bottom) / 2; if (!rows.length || Math.abs(c - rows[rows.length - 1]) > 0.5 * mh) rows.push(c); }
+    const own = Array.from(el.childNodes).filter((n) => n.nodeType === 3).map((n) => n.textContent || '').join('').replace(/\s+/g, ' ').trim();
+    bigText.push({ desc: { id: el.id || '', cls: clsOf(el), text: (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 12), near: el.id ? '' : nearId(el) }, own: !!own,
+      fs: px(cs.fontSize), lines: rows.length, br: el.querySelectorAll('br').length, ws: cs.whiteSpace, moving: isMoving(el), rect: box(r),
+      allowOverflow: !!el.closest('[data-layout-allow-overflow], [data-layout-bleed]') });
+  }
+  // 055 C05：大字逐字的框（去背段比對講者遮罩用；字級 ≥ 120，最多 300 個字）
+  const glyphs = [];
+  const tw = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+  for (let n = tw.nextNode(); n && glyphs.length < 300; n = tw.nextNode()) {
+    const p = n.parentElement, s = n.textContent || '';
+    if (!p || !s.trim() || SKIP.has(p.tagName) || p instanceof SVGElement || p.closest('[data-layout-ignore], [data-layout-check="ignore"]') || p.closest(V2_PARTS)) continue;
+    const pcs = getComputedStyle(p);
+    if (px(pcs.fontSize) < BIG || !visible(p, p.getBoundingClientRect())) continue;
+    const mv = isMoving(p), a = r2(opacityChain(p)), near = p.id || nearId(p);
+    if (canvas) canvas.font = `${pcs.fontStyle} ${pcs.fontWeight} ${pcs.fontSize} ${pcs.fontFamily}`;
+    let k = 0;
+    for (const ch of s) {
+      if (ch.trim()) {
+        const cr = document.createRange();
+        cr.setStart(n, k); cr.setEnd(n, k + ch.length);
+        const r = cr.getBoundingClientRect();
+        if (r.width > 0.5 && r.height > 0.5) {
+          // 字框上下是字型的 ascent＋descent（比字形高很多）：換成墨跡的上下緣
+          let t = r.top, b = r.bottom;
+          const mt = canvas ? canvas.measureText(ch) : null, fh = mt ? mt.fontBoundingBoxAscent + mt.fontBoundingBoxDescent : 0;
+          if (fh > 0) { const q = r.height / fh; t = r.top + (mt.fontBoundingBoxAscent - mt.actualBoundingBoxAscent) * q; b = Math.max(t, r.bottom - (mt.fontBoundingBoxDescent - mt.actualBoundingBoxDescent) * q); }
+          glyphs.push({ ch, r: [r2(r.left), r2(t), r2(r.right), r2(b)], moving: mv, alpha: a, near });
+        }
+      }
+      k += ch.length;
+    }
+  }
+  // 055 C03：自己畫的線（svg 裡只有描邊、沒有填色的 path／circle／line…，長 ≥ 40px）每 8px 取一點（套 getScreenCTM 換成畫面座標）
+  const lines = [];
+  for (const e of els) {
+    if (e.tag !== 'svg' || e.il) continue;
+    const svg = elOf.get(e.i);
+    if (!svg || svg.closest('.il, .sc-icon, [data-layout-allow-overlap]')) continue;
+    for (const sh of svg.querySelectorAll('path, circle, ellipse, line, polyline, polygon, rect')) {
+      if (sh.closest(V2_PARTS) || sh.closest('defs, clipPath, mask, marker, pattern, symbol')) continue;
+      const scs = getComputedStyle(sh);
+      if (scs.display === 'none' || scs.visibility === 'hidden' || !scs.stroke || scs.stroke === 'none' || alpha(scs.stroke) < 0.2 || px(scs.strokeWidth) <= 0) continue;
+      if (scs.fill && scs.fill !== 'none' && alpha(scs.fill) >= 0.05) continue;   // 有填色的是圖形，不是線
+      if (opacityChain(sh) < 0.2) continue;
+      let len = 0, m = null;
+      try { len = sh.getTotalLength(); m = sh.getScreenCTM(); } catch { continue; }
+      if (!m || !(len > 0)) continue;
+      const k = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) || 1;
+      if (len * k < 40) continue;
+      const nn = Math.min(400, Math.max(2, Math.ceil((len * k) / 8))), pts = [];
+      for (let j = 0; j <= nn; j++) { const p = sh.getPointAtLength((len * j) / nn); const q = new DOMPoint(p.x, p.y).matrixTransform(m); pts.push([r2(q.x), r2(q.y)]); }
+      const closed = /^(circle|ellipse|polygon|rect)$/i.test(sh.tagName) || Math.hypot(pts[0][0] - pts[nn][0], pts[0][1] - pts[nn][1]) < 2;
+      lines.push({ svg: e.i, tag: sh.tagName.toLowerCase(), id: sh.id || '', pts, closed, moving: isMoving(sh) });
+    }
   }
   // 祖先關係：最近的容器（自己就是有底有框盒時算自己，和 hyperframes check 的 nearestConstraint 一樣）、所有會裁切的祖先
   for (const e of els) {
@@ -333,6 +421,7 @@ export function measureInPage({ hostId, W, H }) {
     tops,
     host: { start: Number(host.getAttribute('data-start')), duration: Number(host.getAttribute('data-duration')), visible: hcs.display !== 'none' && hcs.visibility !== 'hidden', opacity: opacityChain(host), children: host.children.length },
     els: els.filter((e) => !e.host),
+    bigText, glyphs, lines,
     moving: moving.size,
     illus: host.querySelectorAll('.il').length,   // 011：有示意插圖元件的段才跑 judgeIllus
   };
@@ -435,6 +524,7 @@ export function collectMotionInPage({ hostId, compId }) {
       const svgShape = t instanceof SVGElement && t.tagName.toLowerCase() !== 'svg';
       const emph = !svgShape && emphOf(t);
       return { key: keyOf(t), parentKey: t.parentElement ? keyOf(t.parentElement) : null, desc: descOf(t), chain: chainOf(t), say: sayOf(t, emph),
+        all: svgShape ? '' : (t.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40),   // 055 N7：目標整塊的字（卡片裡分好幾塊也接起來）
         emph, box: svgShape ? null : [t.offsetLeft, t.offsetTop, t.offsetWidth, t.offsetHeight],
         // 011：il＝目標是示意元件或包著元件；line＝元件與圖示以外的線（連接線）
         il: !svgShape && !!(t.matches && (t.matches('.il') || t.querySelector('.il'))), line: svgShape && !t.closest('.il, .sc-icon') };

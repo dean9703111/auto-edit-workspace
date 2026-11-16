@@ -191,6 +191,98 @@ test('ng-scan：短的重講（前一次不到 8 字，錨點跳不回來）也�
   assert.deepEqual(M.ngScanRows(glued, { lines: null }).ng.map((g) => g.text), ['今天要分享一個']);
 });
 
+test('055 D6 頭尾：講稿第一句之前的試講、最後一句之後的自言自語標 edge，cutRows 預設剪（不寫待確認，頭從 0、尾到主軌最後）；中間的講稿外照舊待確認；聽錯開頭幾個字不算', () => {
+  let t = 0;
+  const seq = (s, gap = 0) => { t += gap; const w = say(s, t); t += [...s].length * 0.2; return w; };
+  const lines = LINES.slice(0, 4);
+  const aside = '不好意思手機剛剛響了我們等一下再繼續講下去';
+  const words = [...seq('三二一', 0.1), ...seq(lines[0], 0.4), ...seq(lines[1], 0.3), ...seq(aside, 0.3), ...seq(lines[2], 0.3), ...seq(lines[3], 0.3), ...seq('好吧', 0.8)];
+  const r = M.ngScanRows(words, { lines });
+  assert.deepEqual(r.outside.filter((u) => u.edge).map((u) => [u.edge, u.text]), [['head', '三二一'], ['tail', '好吧']], JSON.stringify(r.outside));
+  const rows = F.cutRows({ ...r, script: { lines }, clips: [{ end: 40 }] });
+  const head = rows.find((x) => x.text === '三二一'), tail = rows.find((x) => x.text === '好吧'), mid = rows.find((x) => x.text.startsWith('不好意思'));
+  assert.deepEqual([head.cut, head.pending, head.start], [true, '', 0]);
+  assert.ok(Math.abs(head.end - words.find((w) => w.text === '大').start) < 0.05, `頭剪到講稿第一句開口：${head.end}`);
+  assert.deepEqual([tail.cut, tail.pending, tail.end], [true, '', 40], '尾剪到主軌最後');
+  assert.match(head.reason, /^試講／講完後的自言自語：講稿第一句之前的話，預設剪/);
+  assert.match(tail.reason, /^試講／講完後的自言自語：講稿最後一句之後的話，預設剪/);
+  assert.deepEqual([mid.cut, !!mid.pending], [false, true], '中間的講稿外照舊不勾、待確認');
+  // 開頭幾個字被 whisper 聽錯（字數一樣）：不是試講
+  t = 0;
+  const heard = [...seq(`八${lines[0].slice(1)}`, 0.2), ...seq(lines[1], 0.3), ...seq(lines[2], 0.3), ...seq(lines[3], 0.3)];
+  assert.deepEqual(M.ngScanRows(heard, { lines }).outside.filter((u) => u.edge), []);
+});
+
+test('055 D6 ng-snap：起點在主軌最前面的列從 0 剪、終點在主軌最後的列剪到結尾，不往停頓對齊（以前起點 0 會被對到 0.6 秒的停頓，試講留在初剪）', () => {
+  const sil = [[0.6, 1.0], [4.8, 5.5], [24.5, 25.2], [29.5, 29.8]];
+  const [a, b, c] = M.snapNg([{ row: 1, start: 0, end: 5 }, { row: 2, start: 25, end: 30 }, { row: 3, start: 0.9, end: 5 }], sil, 1, [], 30);
+  assert.deepEqual([a.a, a.b, a.missStart], [0, 5.5, false]);
+  assert.deepEqual([b.a, b.b, b.missEnd], [24.5, 30, false]);
+  assert.deepEqual([c.a, c.b], [0.6, 5.5], '不在最前面的照舊對齊停頓');
+  const [d] = M.snapNg([{ row: 1, start: 25, end: 30 }], sil, 1, [], null);
+  assert.equal(d.b, 29.8, '不知道主軌多長：照舊');
+});
+
+// ---------- 055 C20／C21：初剪後再掃一次 ----------
+const RS = await import(pathToFileURL(path.join(TOOLS, 'lib', 'rough', 'residual.mjs')).href);
+// 30fps：留 0–0.6、剪 0.6–5（第 1 列從 0:00.00 起，對齊停頓後從 0.6 才剪）、留 5–20、剪 20–21.7（第 3 列 19.0 起，對齊後從 20 才剪）、留 21.7–30
+const RV1 = { version: '1', timebase: '30/1', chunks: [[0, 18, 1], [18, 150, 99999], [150, 600, 1], [600, 651, 99999], [651, 900, 1]] };
+const residualWords = () => [...say('三二', 0.1), ...say(LINES[0], 0.6), ...say(LINES[1], 3.6), ...say(LINES[2], 8.2), ...say('你只要決', 14.7), ...say(LINES[3], 15.7)];
+
+test('residualScan：NG 列對齊停頓後沒剪到的一截（有字）列成重講；落在前 1.5 秒的算開頭；初剪逐字稿裡的重講、贅字也列；開頭講稿第一句之前多出來的字也算', () => {
+  const ngRows = [{ row: 1, cut: true, start: 0, end: 5 }, { row: 2, cut: false, start: 6, end: 7 }, { row: 3, cut: true, start: 19.0, end: 21.6 }, { row: 4, cut: true, start: 25, end: 26, wait: true }];
+  const r = RS.residualScan({ words: residualWords(), lines: LINES.slice(0, 4), ngRows, v1: RV1, fps: 30 });
+  assert.deepEqual([r.head.start, r.head.end, r.head.text, r.head.row, r.head.kind], [0, 0.6, '三二', 1, 'ng']);
+  assert.deepEqual(r.repeats.map((x) => [x.start, x.end, x.text, x.row, x.did]), [[14.6, 15.6, '你只要決', 3, [20, 21.6]]]);
+  const L = RS.residualLines(r);
+  assert.equal(L[0], '⚠ 初剪開頭有講稿外的話：0:00.00–0:00.60「三二」（剪輯清單第 1 列對齊停頓後從原始錄影 0:00.60 才開始剪，前面 0.60 秒沒剪到） → 剪掉：剪輯台把片頭拖到 0.6 秒（或 plan.json 第一層 edit.cuts 加 [0, 0.6]）');
+  assert.equal(L[1], '⚠ 初剪後還留著 1 處重講：0:14.60–0:15.60「你只要決」（剪輯清單第 3 列對齊停頓後從原始錄影 0:20.00 才開始剪，前面 1.00 秒沒剪到） → 剪輯台把這幾段剪掉（或 plan.json 第一層 edit.cuts 加 [14.6, 15.6]）');
+  assert.equal(L.length, 2, '沒有贅字就不印那一行');
+  // 初剪的逐字稿沒有字（照 cuts.md 的時間丟掉了）：拿原始錄影的逐字稿看那一截講什麼；兩邊都沒有字＝只是停頓，不列
+  const noText = RS.residualScan({ words: residualWords().filter((w) => !'你只要決'.includes(w.text)), lines: LINES.slice(0, 4), ngRows, v1: RV1, fps: 30, mainWords: say('你只要', 19.1) });
+  assert.equal(noText.repeats[0].text, '你只要');
+  assert.deepEqual(RS.residualScan({ words: residualWords().filter((w) => !'你只要決'.includes(w.text)), lines: LINES.slice(0, 4), ngRows, v1: RV1, fps: 30 }).repeats, []);
+  // 初剪逐字稿裡的重講、贅字（沒有 v1 也照掃）
+  let t = 0;
+  const seq = (s, gap = 0) => { t += gap; const w = say(s, t); t += [...s].length * 0.2; return w; };
+  const lines = [LINES[0], '但畢竟手機畫面較小沒辦法看清楚', LINES[3]];
+  const r2 = RS.residualScan({ words: [...seq(LINES[0], 0.2), ...seq('但畢竟手', 0.3), ...seq('但畢竟手機畫面較小沒辦法看清楚', 0.8), ...seq('嗯嗯', 0.3), ...seq(LINES[3], 0.3)], lines });
+  assert.equal(r2.head, null);
+  assert.deepEqual(r2.repeats.map((x) => [x.kind, x.text, x.line]), [['scan', '但畢竟手', 2]]);
+  assert.deepEqual(r2.fillers.map((f) => f.filler), ['嗯嗯']);
+  assert.match(RS.residualLines(r2)[0], /^⚠ 初剪後還留著 1 處重講：0:0\d\.\d\d–0:0\d\.\d\d「但畢竟手」（講稿第 2 行講了兩次） → /);
+  assert.match(RS.residualLines(r2)[1], /^⚠ 初剪後還有 1 處贅字（照預設沒剪）：0:\d\d\.\d\d「嗯嗯」 → 使用者試聽後要剪就在剪輯台剪掉，不剪不用管$/);
+  // 開頭多出來的字（不是 NG 列留下來的）：講稿第一句之前、前 1.5 秒內
+  t = 0;
+  const r3 = RS.residualScan({ words: [...seq('好三二一', 0.1), ...seq(LINES[0], 0.3), ...seq(LINES[1], 0.3)], lines: LINES.slice(0, 2) });
+  assert.deepEqual([r3.head.start, r3.head.text], [0, '好三二一']);
+  t = 0;
+  assert.equal(RS.residualScan({ words: [...seq(`八${LINES[0].slice(1)}`, 0.1), ...seq(LINES[1], 0.3)], lines: LINES.slice(0, 2) }).head, null, '聽錯一個字不算');
+  // 初剪最前面是原始錄影單獨的一小段（0–0.6，後面直接接 5 秒）、兩份逐字稿都沒有字（whisper 沒聽到的試講）：也算開頭
+  const quiet = residualWords().filter((w) => !'三二'.includes(w.text));
+  const r4 = RS.residualScan({ words: quiet, lines: LINES.slice(0, 4), ngRows: [], v1: RV1, fps: 30, mainWords: [] });
+  assert.deepEqual([r4.head.kind, r4.head.start, r4.head.end, r4.head.next], ['orphan', 0, 0.6, 5]);
+  assert.match(RS.residualLines(r4)[0], /^⚠ 初剪開頭有講稿外的話：0:00\.00–0:00\.60（原始錄影 0:00\.00–0:00\.60 單獨一小段，後面直接接原始錄影 0:05\.00；逐字稿沒有字，多半是沒聽清楚的試講或雜音，聽一下） → 剪掉/);
+  assert.equal(RS.residualScan({ words: quiet, lines: LINES.slice(0, 4), ngRows: [], v1: RV1, fps: 30, mainWords: say('大家', 0.1) }).head, null, '原始錄影的逐字稿那裡有字：不是沒聽到的試講');
+  assert.equal(RS.residualScan({ words: quiet, lines: LINES.slice(0, 4), ngRows: [], v1: { ...RV1, chunks: [[0, 18, 1], [18, 30, 99999], [30, 600, 1]] }, fps: 30 }).head, null, '後面只剪掉一小段停頓：不算單獨一小段');
+});
+
+test('residualWarnings（build --check）：plan.json 的 edit.cuts 還沒蓋到的重講、開頭才報，一行；蓋到了不報；沒有初剪不報', () => {
+  const p = mkProj('residual');
+  const w = path.join(p, 'work');
+  fs.writeFileSync(path.join(p, '講稿.md'), ['# 稿', '', ...LINES.slice(0, 4)].join('\n'));
+  writeJson(path.join(w, 'transcript.json'), residualWords());
+  writeJson(path.join(w, 'cuts.v1.json'), RV1);
+  const rows = [{ cut: true, start: 0, end: 5, text: '前三次', reason: '重講', pending: '' }, { cut: true, start: 19.0, end: 21.6, text: '你只要決', reason: '重講', pending: '' }];
+  fs.writeFileSync(path.join(w, 'cuts.md'), F.cutsMarkdown({ rows }));
+  assert.deepEqual(RS.residualWarnings(p, {}), [], '還沒有 rough.mp4：不報');
+  fs.writeFileSync(path.join(w, 'rough.mp4'), '');
+  const [x] = RS.residualWarnings(p, {});
+  assert.match(x, /^初剪後還留著 2 處重講或試講沒剪：0:00\.00–0:00\.60「三二」（.*）、0:14\.60–0:15\.60「你只要決」（.*） → 剪輯台把這幾段剪掉（或 plan\.json 第一層 edit\.cuts 加 \[0, 0\.6\]、\[14\.6, 15\.6\]）$/);
+  assert.match(RS.residualWarnings(p, { edit: { cuts: [[0, 0.6]] } })[0], /^初剪後還留著 1 處重講或試講沒剪：0:14\.60/);
+  assert.deepEqual(RS.residualWarnings(p, { edit: { cuts: [[0, 0.6], [14.65, 15.6]] } }), [], '剪輯台剪掉了（蓋到大半）');
+});
+
 test('chapterKeep：表上時間比長停頓的終點晚一點點 → 用這個停頓，不要跳到句中的小停頓', () => {
   const sil = [[506.3, 511.67], [514.47, 514.77]];
   const [c] = M.chapterKeep([{ row: 1, title: 'x', t: 511.86 }], sil, 0.15);
@@ -297,6 +389,7 @@ test('rough：① 通過後一條指令到字幕與剪接點；有講稿換算�
   assert.match(r.stdout, /srt-align：共 \d+ 則（併 \d+ 次、拆出 \d+ 則）/);
   assert.match(r.stdout, /剪接點 \d+ 個：ng \d+、pause \d+/);
   assert.match(r.stdout, /驗證：work\/rough\.mp4 → [\d.]+s、320×180；verify-rough → ✓/);
+  assert.doesNotMatch(r.stdout, /初剪後還留著|初剪開頭有講稿外/, '重講剪乾淨了：055 的再掃一次不報');
   assert.match(r.stdout, /→ 下一步：接著做（有素材先盤點，再到 ② 構圖/);
   assert.match(r.stdout.trim().split('\n').at(-1), /status\.mjs --project/);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(p, 'work', 'hyperframes', 'plan.json'), 'utf8')), { version: 1 }, 'plan.json 先建起來，預覽改的字幕才有地方存');

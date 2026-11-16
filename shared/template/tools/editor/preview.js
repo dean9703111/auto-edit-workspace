@@ -256,10 +256,68 @@ function loadPlayerScript() {
   return playerScript;
 }
 
+// 055 N11：完成影片預覽播放時，沒有聲音的影片層（去背層 mattev-*、講者小視窗 pipv-*、錄影片段 mv-*）每一格對齊主時間（有聲音的講者底片）。
+// HyperFrames 的播放器自己只在差 0.04 秒以上才微調播放速度、差 0.5 秒以上才跳，去背層常常差 1–3 格（人物重影）；
+// 這裡用 requestVideoFrameCallback 看每一支「真的顯示出來的那一格」，和同一次畫面更新的底片那一格比，差超過 1 格就改 currentTime
+// （每支影片記住上次跳完還差多少，下次一起補：解碼、顯示要時間）；剪點前 0.5 秒先把下一支 seek 到開頭。
+// 有聲音的底片不動（它就是主時間，動了聲音會斷）。輸出完成影片不經過這裡（render 逐格抽影格，不會差）
+export const LAYER_SYNC = { frames: 1, cooldownMs: 300, settleMs: 150, preroll: 0.5, maxLead: 0.3, vsyncMs: 20 };
+
 export class PlayerPreview {
   constructor(host, app) {
     this.host = host; this.app = app;
     this.p = null; this.ready = false; this.outT = 0; this._playing = false; this.pendingSeek = null; this.failed = null;
+    this.layers = null;
+  }
+  // 播放器裡的影片：data-start／duration／media-start 換算成完成影片時間（剪輯台的 build 都是 1 倍速，變速已經做進素材檔）
+  scanLayers() {
+    let doc = null;
+    try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
+    const root = doc?.querySelector('[data-composition-id="main"]');
+    if (!root) return null;
+    const fps = Number(root.dataset.fps) || this.app.fps || 30;
+    const list = [...doc.querySelectorAll('video[data-start]')].map((el) => {
+      const start = Number(el.dataset.start) || 0;
+      const x = { el, start, end: start + (Number(el.dataset.duration) || Infinity), ms: Number(el.dataset.mediaStart) || 0,
+        master: el.dataset.hasAudio === 'true' || !el.muted, shown: null, fix: 0, last: 0, check: false };
+      // 顯示出來的那一格（完成影片時間）與那一次畫面更新的時間
+      if (typeof el.requestVideoFrameCallback === 'function') {
+        const cb = (_, md) => { if (x.dead) return; x.shown = { t: start + md.mediaTime - x.ms, at: md.expectedDisplayTime }; el.requestVideoFrameCallback(cb); };
+        el.requestVideoFrameCallback(cb);
+      }
+      return x;
+    });
+    return { fps, list, win: doc.defaultView };
+  }
+  dropLayers() { for (const x of this.layers?.list || []) x.dead = true; this.layers = null; }
+  syncLayers() {
+    if (!this.p || !this.ready || !this._playing) return;
+    const L = this.layers ||= this.scanLayers();
+    if (!L?.list.length) return;
+    const F = 1 / L.fps, now = performance.now();
+    // 主時間：正在播的有聲音底片顯示的那一格；沒有（只有聲音、片尾）就用播放器的時鐘
+    const m = L.list.find((x) => x.master && !x.el.paused && x.shown && x.shown.t >= x.start && x.shown.t < x.end);
+    const t = m ? m.shown.t + (now - m.shown.at) / 1000 : L.win?.__player?.getTime?.();
+    if (!Number.isFinite(t)) return;
+    for (const x of L.list) {
+      if (x.master) continue;
+      const el = x.el;
+      if (t >= x.start && t < x.end - F) {
+        if (el.paused || el.seeking || el.readyState < 2 || !x.shown || !m) continue;
+        // 同一次畫面更新的兩格比：這一支顯示的那一格比底片快（正）或慢（負）幾秒
+        if (Math.abs(x.shown.at - m.shown.at) > LAYER_SYNC.vsyncMs) continue;
+        const d = x.shown.t - m.shown.t;
+        // 上次跳完過了一下還差多少：下次一起補（解碼、顯示要時間）
+        if (x.check && now - x.last > LAYER_SYNC.settleMs) { x.fix = Math.min(LAYER_SYNC.maxLead, Math.max(-LAYER_SYNC.maxLead, x.fix - d)); x.check = false; }
+        if (Math.abs(d) > LAYER_SYNC.frames * F + 1e-3 && now - x.last > LAYER_SYNC.cooldownMs) {
+          try { el.currentTime = Math.max(0, el.currentTime - d + x.fix); x.last = now; x.check = true; } catch { /* 還不能跳 */ }
+        }
+      } else if (t < x.start && x.start - t <= LAYER_SYNC.preroll && el.paused && !el.seeking && Math.abs(el.currentTime - x.ms) > F / 2) {
+        // 剪點前 0.5 秒：下一支先載好、停在第一格
+        if (el.preload !== 'auto') el.preload = 'auto';
+        try { el.currentTime = x.ms; } catch { /* 還沒載到 metadata */ }
+      }
+    }
   }
   // 完成影片時間 ↔ rough 時間：用 plan.json 目前存的 cuts（plan 在上次 build 之後又改過時，頁面會提醒「完成影片預覽是舊的」）
   get cuts() { return this.app.savedEdit.cuts; }
@@ -275,6 +333,7 @@ export class PlayerPreview {
     p.setAttribute('src', src);
     p.addEventListener('ready', () => {
       this.ready = true;
+      this.dropLayers();
       this.applyTheme();
       if (this.pendingSeek != null) { p.seek(this.pendingSeek); this.outT = this.pendingSeek; this.pendingSeek = null; }
       this.app.onPlayerReady?.(p.duration);
@@ -295,7 +354,7 @@ export class PlayerPreview {
     this.p = p;
     this.ready = false;
   }
-  unmount() { if (this.p) { try { this.p.pause(); } catch { /* 已經停了 */ } this.p.remove(); } this.p = null; this.ready = false; this._playing = false; }
+  unmount() { if (this.p) { try { this.p.pause(); } catch { /* 已經停了 */ } this.p.remove(); } this.p = null; this.ready = false; this._playing = false; this.dropLayers(); }
   play() {
     if (!this.p) return;
     this._playing = true;
@@ -359,5 +418,6 @@ export class PlayerPreview {
     if (Number.isFinite(ct) && this.ready) this.outT = ct;
     const paused = this.p.paused;
     if (typeof paused === 'boolean' && this.ready) this._playing = !paused;
+    this.syncLayers();
   }
 }

@@ -26,7 +26,7 @@
 | 光澤、螢光筆 | `P.sheen(sel, at)`（元素要 overflow:hidden）、`P.marker(sel, at)` |
 | 重拍、漣漪 | `P.punch(sel, at)`、`P.ripple(sel, at, {to})`（to 是元素大小的倍數，預設 2.1） |
 | 蓋章 | `P.stamp(sel, at, {on})`：印章 `class="sc-stamp"`，on 是被蓋的元素，兩者是兄弟 |
-| 聚焦、回均衡、預覽態 | `P.spot(ALL, sel, at, {scale, lift, dim, done})`、`P.spot(ALL, null, at)`、`P.spot(ALL, 'none', at)`（ALL 是選擇器字串，只放已經進場的元素；新進場的元素 0.6 秒後才聚焦） |
+| 聚焦、回均衡、預覽態 | `P.spot(ALL, sel, at, {scale, lift, dim, done, glow})`、`P.spot(ALL, null, at)`、`P.spot(ALL, 'none', at)`（ALL 是選擇器字串，只放已經進場的元素；新進場的元素 0.6 秒後才聚焦）。預設只做明暗（放大一點、其他壓暗），不加框；`glow: true` 才加亮框，作者預設不要 |
 | 退焦 | `P.dim(sel, at, {to})`（`{to: 1}` 回來） |
 | 換焦點（柔焦） | `P.rack(ALL, sel, at, {blur, dim})`：sel 變清楚、ALL 裡其他的模糊（blur 6）稍淡（dim 0.75），0.45 秒；`P.rack(ALL, null, at)` 全部回清楚。一拍寫一行，照時間先後寫；同一組要輪流放大改用聚焦 |
 | 鏡頭 | 慢推 `P.cam('#xd<段 id>-group', T1 + 1.7, {scale: 1.04})`；跟焦點 `P.cam('#xd<段 id>-group', T3 - 0.2, {to: '#xd<段 id>-s3', k: 0.12})`；回正 `P.cam('#xd<段 id>-group', T5, {x: 0, y: 0, scale: 1})`。sel 只能是沒有底色、框線、陰影的群組 |

@@ -90,7 +90,7 @@ test('media 段欄位檢查：src、in＋段長、座標範圍、紅框同時 �
 });
 
 test('build：media 段蓋住只有聲音的區間；錄影轉 30fps＋每秒關鍵影格、放在主合成；子母畫面避開只有聲音的區間；紅框、運鏡、放大鏡', () => {
-  writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 13, in: 1, volume: -6, sfx: 'impact',
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 7, to: 13, in: 1, pip: true, volume: -6, sfx: 'impact',
     moves: [{ at: '+0.5', to: [0, 0, 320, 200], dur: 0.6 }, { at: '+3', to: 'full', dur: 0.6 }],
     marks: [{ at: '+1', until: '+2.5', box: [40, 40, 200, 100] }],
     lens: [{ at: '+4', until: '+5.5', box: [300, 150, 200, 100] }] }]);
@@ -146,7 +146,7 @@ test('子母畫面移進錄影：段的位置、回報；從全畫面段接過�
   const list = { title: '清單', items: ['一', '二', '三'] };
   writePlan([
     { id: 's01', scene: 'fs-list', from: 1, to: 5, slots: list },
-    { id: 'm01', type: 'media', src: REC, from: 5, to: 13, in: 0 },   // 5–8 有講者、8–12 只有聲音、12–13 有講者
+    { id: 'm01', type: 'media', src: REC, from: 5, to: 13, in: 0, pip: true },   // 5–8 有講者、8–12 只有聲音、12–13 有講者
     { id: 's02', scene: 'fs-list', from: 13, to: 17, slots: list },
   ]);
   const r = build();
@@ -167,15 +167,15 @@ test('子母畫面移進錄影：段的位置、回報；從全畫面段接過�
 test('子母畫面移進錄影：從講者飛進來落在新位置；tape、鋪滿、不露臉的段不移', () => {
   const voice = { id: 'm02', type: 'media', src: REC, from: 8, to: 12, in: 0 };   // 蓋住只有聲音的 8–12，這段沒有小視窗
   const flyOf = (html) => { const m = html.match(/tl\.fromTo\('#pip-m01', \{ x: (-?[\d.]+), y: (-?[\d.]+), scale: ([\d.]+), transformOrigin: '0 0' \}, \{ x: 0, y: 0, scale: 1,/); assert.ok(m, '要從講者飛進來'); return m.slice(1).map(Number); };
-  writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, fit: 'cover' }, voice]);
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, fit: 'cover', pip: true }, voice]);
   assert.equal(build().status, 0);
   const home = flyOf(read('index.html'));
   assert.doesNotMatch(read('index.html'), /id="pip-m01" data-layout-allow-overflow style=/, 'fit cover：小視窗本來就在錄影裡');
-  writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5 }, voice]);
+  writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, pip: true }, voice]);
   assert.equal(build().status, 0);
   const moved = flyOf(read('index.html'));
   assert.deepEqual([+(moved[0] - home[0]).toFixed(3), +(moved[1] - home[1]).toFixed(3), moved[2]], [169, 3, home[2]], '起點照舊對齊講者，終點是新位置');
-  writePlan([{ id: 'm01', type: 'media', src: IMG, from: 5, to: 7.5, enter: 'tape' }, voice]);
+  writePlan([{ id: 'm01', type: 'media', src: IMG, from: 5, to: 7.5, enter: 'tape', pip: true }, voice]);
   assert.equal(build().status, 0);
   assert.doesNotMatch(read('index.html'), /id="pip-m01" data-layout-allow-overflow style=/, 'tape：圖片貼在全幕背景上，小視窗和全畫面段一樣在畫布右下');
   writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, pip: false }, voice]);
@@ -185,7 +185,7 @@ test('子母畫面移進錄影：從講者飛進來落在新位置；tape、鋪�
 test('子母畫面移進錄影：紅框看的是新位置', () => {
   // REC 640×400 → 畫面 x = 208 + 2.35·x：小視窗（禁入區）移到 x 1255–1719、y 578–948
   const warnsOf = (box) => {
-    writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, marks: [{ at: '+0.5', until: '+2', box }] }, { id: 'm02', type: 'media', src: REC, from: 8, to: 12, in: 0 }]);
+    writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, pip: true, marks: [{ at: '+0.5', until: '+2', box }] }, { id: 'm02', type: 'media', src: REC, from: 8, to: 12, in: 0 }]);
     return JSON.stringify(checkJson().j);
   };
   assert.match(warnsOf([456, 300, 50, 40]), /marks\[0\].*被右下角的子母畫面擋住/, '畫面 x 1280–1397：只有移過來才擋到');
@@ -233,7 +233,7 @@ test('015 enter: "tape"：圖片縮小貼在全幕背景上（紙白邊、兩條
 });
 
 test('enter／exit "whip"：0.3 秒橫向甩進（右邊來、expo.out）、甩出（往左、expo.in），拉長＋模糊；到位拿掉 filter；不長出、不配音效', () => {
-  writePlan([{ id: 'm05', type: 'media', src: REC, from: 5, to: 13, in: 0, enter: 'whip', exit: 'whip' }]);
+  writePlan([{ id: 'm05', type: 'media', src: REC, from: 5, to: 13, in: 0, pip: true, enter: 'whip', exit: 'whip' }]);
   const r = build();
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const h = read('index.html');
@@ -246,7 +246,7 @@ test('enter／exit "whip"：0.3 秒橫向甩進（右邊來、expo.out）、甩�
   assert.doesNotMatch(h, /id="sfx-m05"/, '切到錄影不配音效');
   assert.match(r.stdout, /m05｜media 操作示範\.mp4｜0:05\.00–0:13\.00｜8s｜—/);
   // 前一段是不透明幕：墊在底下直到甩進完成（不露出講者），不報重疊；小視窗在接縫交棒、滑進錄影裡（不會同時有兩個）
-  writePlan([{ id: 's01', scene: 'fs-list', from: 1, to: 5, slots: { title: '清單', items: ['一', '二', '三'] } }, { id: 'm05', type: 'media', src: REC, from: 5, to: 13, in: 0, enter: 'whip' }]);
+  writePlan([{ id: 's01', scene: 'fs-list', from: 1, to: 5, slots: { title: '清單', items: ['一', '二', '三'] } }, { id: 'm05', type: 'media', src: REC, from: 5, to: 13, in: 0, pip: true, enter: 'whip' }]);
   const { r: c, j } = checkJson();
   assert.equal(c.status, 0, c.stdout + c.stderr);
   assert.equal(j.items.find((x) => x.id === 's01').out.end, 5.3);

@@ -111,6 +111,7 @@ import { bedPlan, renderBedClip, bedLine } from './lib/music.mjs';
 import { prepareEnding, endingLines } from './lib/ending.mjs';
 import { ensureLook, lookCheck } from './lib/look.mjs';
 import { ensureMattes } from './lib/matte.mjs';
+import { residualWarnings } from './lib/rough/residual.mjs';   // 055 C20：--check 印初剪後還沒剪的重講、試講
 import { hyperframesVersion, versionLine } from './caps.mjs';
 import { canvasOf, resolveFormat, formatLine, formatErrors, probeDims, captionZoneArg } from './lib/canvas.mjs';
 import { packDir, PACK_KIT, copyIfDiff } from './lib/styles.mjs';
@@ -130,6 +131,7 @@ import { framingCmd, framingDoneCmd } from './lib/framing-flow.mjs';
 import { attachBeats, ensureBeatsV2, migrateBeats } from './lib/beat-source.mjs';
 import { findProject, pathsFrom, loadLib, hasVoiceSource, projectLabel, fromRoot } from './lib/project.mjs';
 import { markStep } from './lib/progress.mjs';
+import { withTimes, shiftHand } from './lib/hand-shift.mjs';
 
 export { probeDuration, encodeFootage };
 // 032 C9：專案路徑與模板庫搬到 lib/project.mjs，這裡照舊匯出（別的工具、測試不用改）
@@ -752,7 +754,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     res.errors.unshift(...fmtErrors, ...rb.errors, ...styleErrors(P, res), ...spk.errors);
     const capW = captionWarnings(cues, C, res.captionStyle);
     res.errors.unshift(...fills.errors);
-    res.warnings.unshift(...fills.warnings, ...cp.warnings, ...boxWarnings(plan, src, C), ...textSyncOffWarnings(P, plan), ...spk.warnings);
+    res.warnings.unshift(...fills.warnings, ...cp.warnings, ...boxWarnings(plan, src, C), ...textSyncOffWarnings(P, plan), ...spk.warnings, ...residualWarnings(P.project, plan));
     if (P.project && res.tm) {
       const lc = lookCheck({ projectDir: P.project, plan, templateDir: P.templateDir });
       res.errors.push(...lc.errors.filter((e) => !res.errors.includes(e)));
@@ -830,11 +832,13 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
 
   // 產生內容（先全部組好，組不出來就不寫檔）
   const files = [];
+  const sceneOf = new Map();   // 055 N4：情境檔 → 段（手改檔照起點平移用）
   for (const it of res.items) {
     if (it.type !== 'scene' || it.noHost) continue;   // noHost：02 章節角標段由常駐角標取代（音效照放）
     try {
       const a = assembleScene({ scene: it.scene, ctx: it.resolved.ctx, beats: it.resolved.beats, id: it.id, D: it.D, tone: it.resolved.tone, exitFade: it.exitFade, chapter: it.chapter, css: it.seg.css || '', chtag: !!it.seg.chtag && !res.chapterBadge, prev: it.prev, format: C.format });
-      files.push([a.file, a.html]);
+      files.push([a.file, withTimes(a.html, it.start, it.D)]);   // 檔頭記產生時的段起點與段長（不算在雜湊裡）
+      sceneOf.set(a.file, it);
     } catch (e) { res.errors.push(`${it.where} ${e.message}`); }
   }
   if (res.errors.length) { printIssues({ errors: res.errors.slice(-1), warnings: [] }, log); return { ok: false, res }; }
@@ -961,6 +965,25 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     const cur = fs.readFileSync(idx, 'utf8');
     if (cur !== main.html && !W.isUntouched('index.html', cur)) {
       throw new Error(`${rel(idx)} 被手改過（可能是舊專案在 Studio 存檔）：把想要的改動搬進 plan.json（時間、slots、css），再加 --force 重跑；直接覆寫會蓋掉手改`);
+    }
+  }
+  // 055 N4：手改過的情境檔（下面不覆寫）：plan.json 的起點或段長改了 → 秒數照起點差平移、const D 換新段長（lib/hand-shift.mjs）；認不出的寫法 ✖
+  if (!flags.force) {
+    const shiftErr = [];
+    for (const [f, content] of files) {
+      const it = sceneOf.get(f), abs = path.join(P.out, f);
+      if (!it || !fs.existsSync(abs)) continue;
+      const cur = fs.readFileSync(abs, 'utf8');
+      if (cur === content || W.isUntouched(f, cur)) continue;
+      const r = shiftHand({ hand: cur, fresh: content, t0: it.start, d: it.D, id: it.id, file: f, where: it.where });
+      if (r.html != null && r.html !== cur) fs.writeFileSync(abs, r.html);   // 還是手改檔（雜湊對不上），下面照樣不覆寫
+      if (r.line) log(r.line);
+      shiftErr.push(...r.errors);
+    }
+    if (shiftErr.length) {
+      for (const e of shiftErr) log(`✖ ${e}`);
+      log(`\n未通過：${shiftErr.length} 個錯誤，其他檔案都沒有產生。照 → 後面的建議改好再跑一次。`);
+      return { ok: false, res };
     }
   }
 

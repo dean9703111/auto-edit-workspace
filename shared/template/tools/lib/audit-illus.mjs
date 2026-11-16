@@ -34,9 +34,11 @@ export function illusOf(html) {
 // 026 內容設計動畫：顏色只能用 token（style.md、USAGE-reference.md R8：使用者換主色、換亮暗主題時要跟著變）。
 // 設計師自己畫的圖形（CSS、inline svg）沒有 illus-lint 把關，寫死的色碼由這裡抓：
 //   <style> 的宣告值、style="…"、svg 的 fill／stroke 等屬性、script 裡 GSAP 的顏色屬性。選擇器（#xd…）、P.at('#12@詞') 不算。
+//   工具標誌（055，2026-11-16 作者：用真實的彩色標誌）：寫了 data-logo 的元素裡的 <svg> 填品牌色，不算寫死。
 const COLOR_LIT = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\([^)]*\)/g;
+const LOGO_SVG = /(<[a-z][^>]*\sdata-logo(?:="[^"]*")?[^>]*>\s*)<svg\b[\s\S]*?<\/svg>|<svg\b[^>]*\sdata-logo(?:="[^"]*")?[^>]*>[\s\S]*?<\/svg>/gi;
 export function colorLiterals(html) {
-  const s = String(html || '').replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const s = String(html || '').replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(LOGO_SVG, '$1');
   const out = [];
   const take = (text) => { for (const m of String(text).matchAll(COLOR_LIT)) out.push(m[0]); };
   for (const st of s.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)) for (const decl of st[1].matchAll(/\{([^{}]*)\}/g)) take(decl[1]);

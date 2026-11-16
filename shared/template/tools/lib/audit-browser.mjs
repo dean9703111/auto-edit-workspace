@@ -11,6 +11,7 @@
 //     同一個 server、count 個 Chrome 各開一頁，給併發量測與截圖用；每個 session 的介面和 openSession 回傳的一樣（實測多個 Chrome 比一個 Chrome 多分頁快：截圖不互卡）。
 //   openBrowser({ chrome }) → { shot({ file, out, width, height, quality }), close() }
 //     只開 Chrome、把本機 HTML 排成圖（拼圖、總表用）；比 raster.mjs 的 htmlShot 省掉每張冷開 Chrome（長片要排上百張）
+//   matteAlphaAt(file, t, { w, h }) → { w, h, data } | null：去背層 webm 第 t 秒的透明通道（ffmpeg，給「大字被講者擋太多」）
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -331,6 +332,14 @@ export async function openSessions({ dir, chrome, runtime, readyTimeout = 60000,
     await close();
     throw e;
   }
+}
+
+// 055 C05：去背層（assets/matte/*.webm，VP9 帶透明通道）第 t 秒的講者遮罩，縮成 w×h 的灰階（每格 0–255 的 alpha）。
+// 要用 libvpx-vp9 解碼才讀得到透明通道（ffmpeg 內建的 vp9 解碼器會丟掉）；讀不到回 null（不擋 audit）
+export function matteAlphaAt(file, t, { w = 270, h = 480 } = {}) {
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-ss', String(Math.max(0, t)), '-c:v', 'libvpx-vp9', '-i', file, '-frames:v', '1', '-vf', `alphaextract,scale=${w}:${h}`, '-f', 'rawvideo', '-pix_fmt', 'gray', '-'], { maxBuffer: w * h * 4 + 1024, timeout: 30000 });
+  if (r.status !== 0 || !r.stdout || r.stdout.length < w * h) return null;
+  return { w, h, data: new Uint8Array(r.stdout.buffer, r.stdout.byteOffset, w * h) };
 }
 
 export async function openSession(opts) {

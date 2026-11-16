@@ -267,7 +267,7 @@ test('風格包：工作區附的「預設」和現在的 shared/template/ 一�
   if (!(await needs(t, 'ffmpeg'))) return;
   const { listPacks, samePack } = await_styles;
   const packs = listPacks(TEMPLATE);
-  assert.deepEqual(packs.map((p) => p.dir), ['預設', '藍圖']);
+  assert.deepEqual(packs.map((p) => p.dir), ['預設', '橘色-20261116-2', '藍圖']);
   assert.ok(samePack(TEMPLATE, path.join(TEMPLATE, 'styles', '預設')), 'shared/template/ 的主色、外框、背景要和「預設」那包一樣（換過就 brand.mjs use 預設）');
   for (const p of packs) assert.equal(p.files.length, 9, `${p.dir}：${p.files.join('、')}`);
   for (const [f, w, h] of [['bg-fs', 1920, 1080], ['bg-side', 960, 1080], ['bg-ch', 1920, 1080]]) for (const s of ['', '-dark']) {

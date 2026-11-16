@@ -746,7 +746,8 @@ test('右側步驟清單（錄影段 side）：直式錄影靠左、清單卡在
   const probe = () => ({ width: 1080, height: 2410 });
   const go = (extra, voiceOnly = []) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes: [{ id: 'm1', type: 'media', src: 'assets/images/p.png', from: '#4', to: '#6e', ...extra }] }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pdir, probe, voiceOnly });
   const side = { title: '配對手機', items: [{ at: '#4', text: '打開 App' }, { at: '#5', text: '掃 QR Code' }] };
-  const a = go({ side });
+  // 055 Q1：橫式錄影段預設不放小視窗，要露臉寫 pip: true
+  const a = go({ side, pip: true });
   assert.deepEqual(a.errors, []);
   const m1 = byId(a, 'm1');
   // 1080×2410 放進左邊 [120, 0, 720, 940]：421×940、左 270；兩條、有講者小視窗 → 卡高 112＋200＋64＝376，在 y 160–560 置中
@@ -758,11 +759,12 @@ test('右側步驟清單（錄影段 side）：直式錄影靠左、清單卡在
   assert.ok(html.includes('<div id="msd-m1" class="clip mside"') && html.includes('<span class="mside__txt">掃 QR Code</span>'));
   assert.ok(html.includes(`tl.fromTo('#msdi-m1-2', { opacity: 0.4 }, { opacity: 1, duration: 0.3, ease: 'sine.out', immediateRender: false }, ${cueStart(5)});`), '講到第二條亮起');
   assert.ok(html.includes(`tl.fromTo('#msdi-m1-1', { opacity: 1 }, { opacity: 0.7, duration: 0.3, ease: 'sine.in', immediateRender: false }, ${cueStart(5)});`), '前一條變淡');
-  // 只有聲音（沒有小視窗）：卡在 y 160–880 置中
-  assert.deepEqual(byId(go({ side }, [[0, VD]]), 'm1').media.side.box, [840, 332, 960, 376]);
+  // 只有聲音（沒有小視窗）：卡在 y 160–880 置中；沒寫 pip（橫式預設不放）也一樣
+  assert.deepEqual(byId(go({ side, pip: true }, [[0, VD]]), 'm1').media.side.box, [840, 332, 960, 376]);
+  assert.deepEqual(byId(go({ side }), 'm1').media.side.box, [840, 332, 960, 376]);
   // 沒寫 side：⚠ 提醒；有小視窗時三條放不下 ✖
   assert.ok(byId(go({}), 'm1').warnings.some((w) => w.includes('直式錄影（1080×2410）在橫式影片只佔中間一條')));
-  const c = go({ side: { title: '配對手機', items: [{ at: '#4', text: '一' }, { at: '#5', text: '二' }, { at: '#6', text: '三' }] } });
+  const c = go({ pip: true, side: { title: '配對手機', items: [{ at: '#4', text: '一' }, { at: '#5', text: '二' }, { at: '#6', text: '三' }] } });
   assert.ok(c.errors.some((x) => x.includes('side 有 3 條放不下（有講者小視窗，清單在小視窗上方，最多 2 條）')), c.errors.join('\n'));
   fs.rmSync(pdir, { recursive: true });
 });
@@ -1048,4 +1050,104 @@ test('037 直式講者上浮：上下分割結束、接著講者滿版 → 片�
   // 橫式不受影響
   const ls = byId(run([fs04('s01', '#2', '#4e')]), 's01');
   assert.deepEqual([ls.pipPieces.map((p) => p.exit), ls.txOut], [['layer'], 'retract']);
+});
+
+// ---------- 055（specs/055-feedback-guards-impl/C.md）----------
+const mediaDir = () => {
+  const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-055-'));
+  fs.mkdirSync(path.join(pdir, 'assets/images'), { recursive: true });
+  fs.mkdirSync(path.join(pdir, 'assets/screen'), { recursive: true });
+  for (const n of ['a', 'b', 'c', 'd', 'e']) fs.writeFileSync(path.join(pdir, `assets/images/${n}.png`), '');
+  return pdir;
+};
+const probeImg = () => ({ width: 1920, height: 1080 });
+const runM = (pdir, scenes, extra = {}, canvas = null) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes, ...extra }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pdir, probe: probeImg, ...(canvas ? { canvas } : {}) });
+
+test('055 Q1（054 D1）：橫式的錄影、圖片段預設不放講者小視窗，寫 pip: true 才放；直式照舊有講者面板；--check --json 的 media 段帶 pip', async () => {
+  const { jsonItems } = await imp('lib/plan.mjs');
+  const { CANVAS } = await imp('lib/canvas.mjs');
+  const pdir = mediaDir();
+  const m = (extra = {}) => [{ id: 'm1', type: 'media', src: 'assets/images/a.png', from: '#3', to: '#4e', ...extra }];
+  const def = runM(pdir, m());
+  assert.deepEqual(def.errors, []);
+  assert.equal(byId(def, 'm1').pip, false);
+  assert.deepEqual(byId(def, 'm1').pipPieces, []);
+  assert.equal(jsonItems(def).find((x) => x.id === 'm1').pip, false);
+  assert.equal(jsonItems(def).find((x) => x.id === 'm1').layout, 'full');
+  const on = runM(pdir, m({ pip: true }));
+  assert.equal(byId(on, 'm1').pip, true);
+  assert.ok(byId(on, 'm1').pipPieces.length > 0);
+  assert.equal(jsonItems(on).find((x) => x.id === 'm1').pip, true);
+  // 錄影以外的子母畫面照舊（全畫面家族沒寫 pip 一樣有小視窗）
+  const fs04 = runM(pdir, [{ id: 's1', scene: 'fs-list', from: '#3', to: '#4e', slots: { title: '三件事', items: ['一', '二', '三'] } }]);
+  assert.equal(byId(fs04, 's1').pip, true);
+  // 直式：下半講者面板照舊
+  const v = runM(pdir, m(), { format: 'portrait' }, CANVAS.portrait);
+  assert.equal(byId(v, 'm1').pip, true);
+  assert.equal(byId(runM(pdir, m({ pip: false }), { format: 'portrait' }, CANVAS.portrait), 'm1').pip, false);
+  // qc.mjs F2：pip: false 的錄影段不算「該有小視窗」
+  const Q = await imp('qc.mjs');
+  assert.deepEqual(Q.pipCoverage(jsonItems(def), []).map((c) => c.id), []);
+  assert.deepEqual(Q.pipCoverage(jsonItems(on), []).map((c) => [c.id, c.state]), [['m1', '有']]);
+  fs.rmSync(pdir, { recursive: true });
+});
+
+test('055 k1（054 C02）：直式用到 portraitMinPx 低於直式字級下限的字卡動態 ⚠，列同類可用的；band 的照舊只報一條；橫式不報', async () => {
+  const { CANVAS } = await imp('lib/canvas.mjs');
+  const V = CANVAS.portrait;
+  for (const f of L.fx) assert.ok(Number.isInteger(f.portraitMinPx) && f.portraitMinPx > 0, `fx-${f.id} 要有 portraitMinPx`);
+  const low = L.fx.filter((f) => f.portrait !== 'band' && f.portraitMinPx < V.minTextPx).map((f) => f.id);
+  assert.deepEqual(low, ['22'], '量出來只有 22 文字軌道（中間小字 75px × 0.5625 ≈ 42px）');
+  const seg = (fx) => [{ id: 'f1', type: 'fx', fx, from: '#2', to: '#2e', vars: { text: '重點' } }];
+  const R = (fx, portrait) => resolvePlan({ plan: { version: 1, ...(portrait ? { format: 'portrait' } : {}), scenes: seg(fx) }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), ...(portrait ? { canvas: V } : {}) });
+  const small = (r) => r.warnings.filter((w) => w.includes('直式的小字只有'));
+  const def = L.fx.find((f) => f.id === '22');
+  const alt = L.fx.filter((f) => f.category === def.category && f.portrait !== 'band' && f.portraitMinPx >= V.minTextPx).map((f) => f.id);
+  assert.deepEqual(small(R(22, true)), [`[f1 fx 22] fx-22（${def.zh}）直式的小字只有 ${def.portraitMinPx}px（< ${V.minTextPx}px）→ 換成 portraitMinPx ≥ ${V.minTextPx} 的特效（同類可用：${alt.join('、')}）或拿掉`]);
+  assert.deepEqual(small(R(22, false)), [], '橫式不報');
+  assert.deepEqual(small(R(1, true)), [], '01 夠大');
+  assert.deepEqual(small(R(21, true)), [], 'band 的只報「直式只剩中間一條」');
+});
+
+test('055 k7（054 C07）：同一張模板卡的標籤（tag、eyebrow、lead）和別欄講同一個詞 ⚠（tag 一個實字也算）；虛字、大字之間、清單不比', () => {
+  const c = (slots, id = 's1') => ({ id, scene: 'concept', from: '#3', to: '#4e', slots });
+  const dup = (r) => r.warnings.filter((w) => w.includes('同一張卡講了兩次'));
+  // 短影片5 s0106 v2（作者：「上下都是『課程』，資訊重複了啊」）→ 報；v3 換成「行動」→ 不報
+  assert.deepEqual(dup(run([c({ tag: '課程', icon: 'graduation-cap', text: '想了解怎麼做到？**加入這堂課**' })])),
+    ['[s1 concept] slots.tag「課程」和 slots.text「想了解怎麼做到？加入這堂課」都有「課」，同一張卡講了兩次 → slots.tag 換成別的詞（例：行動、重點、提醒），或 slots.text 拿掉「課」，上下兩行要互補']);
+  assert.deepEqual(dup(run([c({ tag: '行動', icon: 'graduation-cap', text: '想了解怎麼做到？**加入這堂課**' })])), []);
+  // 兩個中文字的詞、英文 3 字母以上（不分大小寫）
+  assert.match(dup(run([c({ tag: '課程', text: '現在就**加入課程**' })]))[0] ?? '', /都有「課程」/);
+  assert.match(dup(run([{ id: 's2', scene: 'key-point', from: '#3', to: '#4e', slots: { lead: 'Token 不夠用？', key: '省 token 的三招' } }]))[0] ?? '', /slots\.lead「Token 不夠用？」和 slots\.key「省 token 的三招」都有「token」/);
+  // 虛字組成的詞不算（「的事」）；AI 兩個字母不算
+  assert.deepEqual(dup(run([{ id: 's3', scene: 'key-point', from: '#3', to: '#4e', slots: { lead: 'AI 交代的事', key: 'AI 大小事的夥伴' } }])), []);
+  // 清單（標題和項目本來就會用同一個詞）不比
+  assert.deepEqual(dup(run([{ id: 's4', scene: 'fs-list', from: '#3', to: '#4e', slots: { title: '自動化三件事', items: ['自動整理信件', '回信', '排程'] } }])), []);
+  // 模板動畫（custom-fill 的 slots；text 型別才比，icon 名稱不算）
+  const x = run([{ id: 'x07', type: 'custom', template: 'x-point', layout: 'overlay', from: '#3', to: '#4e', slots: { tag: '這堂課', key: '讓 AI 成為懂你', sub: '能分擔大小事的夥伴', icon: 'handshake', at: '#3' } }]);
+  assert.deepEqual(dup(x), [], '主宣傳片 x0107 現在的版本');
+  const x2 = run([{ id: 'x07', type: 'custom', template: 'x-point', layout: 'overlay', from: '#3', to: '#4e', slots: { tag: '課程', key: '加入課程', icon: 'handshake', at: '#3' } }]);
+  assert.match(dup(x2)[0] ?? '', /^\[x07 custom\] slots\.tag「課程」和 slots\.key「加入課程」都有「課程」/);
+  // 大字和大字（單位、一句拆成幾段）不比
+  const n = run([{ id: 'x08', type: 'custom', template: 'x-numbers', layout: 'fullscreen', from: '#3', to: '#4e', slots: { title: '每週花的時間', nameA: '手動整理', unitA: '小時', nameB: '自動整理', unitB: '小時' } }]);
+  assert.deepEqual(dup(n), []);
+});
+
+test('055 k15（054 C18）：連續 3 張以上圖片快切（每張 ≤ 2.5 秒），第二張起沒寫 enter、寫 cut／fade → ⚠；whip 等有動作的進場、兩張、太長的不報', () => {
+  const pdir = mediaDir();
+  const img = (id, n, from, to, enter) => ({ id, type: 'media', src: `assets/images/${n}.png`, from, to, ...(enter ? { enter } : {}) });
+  const burst = (enters) => runM(pdir, ['a', 'b', 'c', 'd'].map((n, i) => img(`m${i + 1}`, n, `#3+${i * 1.5}`, `#3+${(i + 1) * 1.5}`, enters[i])));
+  const ws = (r) => r.warnings.filter((w) => w.includes('張快切圖片'));
+  // 短影片1 m0109b–f v1：第一張 cut、後面都 cut → 第二張起都報
+  assert.deepEqual(ws(burst(['cut', 'cut', undefined, 'fade'])), [
+    '[m2 media] 是連續 4 張快切圖片的第 2 張（每張 ≤ 2.5 秒），進場寫 "cut"，換圖太生硬 → 寫 "enter": "whip"（甩鏡；build.mjs --autofix 會自動寫）',
+    '[m3 media] 是連續 4 張快切圖片的第 3 張（每張 ≤ 2.5 秒），進場是預設的淡入，換圖太生硬 → 寫 "enter": "whip"（甩鏡；build.mjs --autofix 會自動寫）',
+    '[m4 media] 是連續 4 張快切圖片的第 4 張（每張 ≤ 2.5 秒），進場寫 "fade"，換圖太生硬 → 寫 "enter": "whip"（甩鏡；build.mjs --autofix 會自動寫）',
+  ]);
+  // v2：第二張起 whip → 不報；有動作的進場（zoom）也不報
+  assert.deepEqual(ws(burst(['cut', 'whip', 'whip', 'zoom'])), []);
+  // 只有兩張、每張超過 2.5 秒：不報
+  assert.deepEqual(ws(runM(pdir, [img('m1', 'a', '#3', '#3+1.5'), img('m2', 'b', '#3+1.5', '#3+3')])), []);
+  assert.deepEqual(ws(runM(pdir, ['a', 'b', 'c'].map((n, i) => img(`m${i + 1}`, n, `#3+${i * 3}`, `#3+${(i + 1) * 3}`)))), []);
+  fs.rmSync(pdir, { recursive: true });
 });

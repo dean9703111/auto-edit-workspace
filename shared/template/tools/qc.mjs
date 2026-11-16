@@ -83,6 +83,7 @@ import { readSettings } from './lib/settings.mjs';
 import { ok, next, cmdLine } from './lib/say.mjs';
 import { splitFlag, valueOf, isMain } from './lib/cli.mjs';
 import { r3, clock1, clock2 } from './lib/time.mjs';
+import { markShots } from './lib/media.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const LAND = canvasOf('landscape');   // 橫式畫布 1920×1080（032 C7：尺寸只寫在 lib/canvas.mjs）
@@ -225,7 +226,7 @@ export function planScenes(P) {
 // 照 plan.mjs 的規則，這段應該有講者小視窗嗎：全畫面家族（04）、layout "fullscreen" 的 custom、media；plan 寫 pip: false 的不算
 export function wantsPip(it, seg = {}) {
   if (seg.pip === false) return false;
-  return (it.type === 'scene' && it.family === 'fullscreen') || (it.type === 'custom' && !!it.opaque) || it.type === 'media';
+  return (it.type === 'scene' && it.family === 'fullscreen') || (it.type === 'custom' && !!it.opaque) || (it.type === 'media' && it.pip !== false);   // 055 Q1：--check --json 的 media 段帶 pip（橫式預設 false）
 }
 
 const pipKind = (it) => (it.type === 'scene' ? String(it.label || '').replace(/^\S+\s+/, '') : it.type === 'custom' ? `全畫面情境動畫（${it.key ?? it.label}）` : `插入素材（${it.key ?? it.src ?? ''}）`);
@@ -1184,7 +1185,9 @@ export function shotPlan(segs, outputDur = Infinity, motion = null, labels = nul
       for (const k of ANN_ORDER) for (const a of g.annotations[k] || []) {
         const cap = (t) => Math.min(t, a.until != null ? a.until - SHOT.annUntil : Infinity, g.end - SHOT.endPad);
         const label = a.text != null ? `${k}[${a.i}]「${a.text}」到位` : `${k}[${a.i}] 到位`;
-        ev.push({ at: cap(a.ready + SHOT.ann), why: label });
+        // 紅框每個兩格（出現後 0.4 秒、開始淡出前 0.1 秒；lib/media.mjs markShots）：框有沒有貼齊、錄影有沒有捲走
+        if (k === 'marks') for (const x of markShots([a])) ev.push({ at: Math.min(x.at, g.end - SHOT.endPad), why: x.why });
+        else ev.push({ at: cap(a.ready + SHOT.ann), why: label });
         for (const p of a.path || []) ev.push({ at: cap(p.ready + SHOT.ann), why: `${k}[${a.i}].path[${p.k}] 到位` });
       }
       ev.sort((a, b) => a.at - b.at);

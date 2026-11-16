@@ -69,7 +69,9 @@ export const CANVAS = {
     },
     media: { view: { contain: [0, 240, 1080, 900], cover: [0, 0, 1080, 900], containFull: [0, 240, 1080, 1260], coverFull: [0, 0, 1080, 1920] } },
     framing: { aspect: 9 / 16, headTop: [380, 520], chinMax: 860 },
-    minTextPx: 32,
+    // 055 Q3（作者 2026-11-16 選 A）：直式畫面上的字至少 48 px（原本 32；作者嫌小的都在 32–47）。縮放段寫字下限＝ceil(48 ÷ 縮放倍率)：
+    // 全畫面家族與設計段 57、章節 77、全幕版 81、字卡動態 86
+    minTextPx: 48,
     // 上半資訊面板 1080×900、下半講者面板 1080×1020（決定 1）；band＝lowerThird.rect、badge＝badge.rect、captions＝caption.zone、safe＝textSafe 的外框
     regions: { full: [60, 240, 960, 1020], band: [60, 880, 880, 360], panelTop: [0, 0, 1080, 900], panelBottom: [0, 900, 1080, 1020], pip: [0, 900, 1080, 1020], badge: [60, 250, 624, 112], captions: [0, 1280, 1080, 140], safe: [60, 240, 960, 1200] },
   },

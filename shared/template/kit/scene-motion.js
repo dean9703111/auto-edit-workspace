@@ -15,7 +15,9 @@
 
    API（全部 seek-safe：只往 paused timeline 加 fromTo，絕對值、無隨機、無 repeat）
      P.in(sel, at, {dur, stagger})   淡入 opacity 0→1，IN 0.5s、sine.out；stagger＝同組依序間隔
-     P.out(sel, at, {dur, stagger})  淡出 opacity 1→0，OUT 0.3s、sine.in（所有情境的離場；v2 退場比進場快，design-system.md §3）
+     P.out(sel, at, {dur, stagger})  淡出：從元素在 at 那一刻的亮度淡到 0，OUT 0.3s、sine.in（所有情境的離場；v2 退場比進場快，design-system.md §3）。
+                                     被 P.dim／P.spot／P.focus 或自己寫的 tl.to(…, { opacity: .25 }) 壓暗過的元素從壓暗的亮度開始，不會先亮一下；
+                                     P.swap 的舊內容、P.axis 的舊內容、P.peel 也一樣
      P.swap(outSel, inSel, at, {dur})原地交叉淡化：同一時間 out（0.3）＋ in（0.5）——同位置換內容、沒有順序（全畫面子版型）
      P.sideIn(sel, at)               側邊欄面板 x −960 → 0，PUSH 0.7s、ease＝P.pushEase（面板在右時 x 960 → 0）
      P.sideOut(sel, at)              側邊欄面板 x 0 → −960，同上
@@ -87,7 +89,7 @@
      P.slideOut(sel, at, {to, dur})  抽屜收回：0.28s power2.in
      P.pop(sel, at, {from, dy, to, dur, stagger, ease})  彈出：縮放 from（0.82）→1＋上移 dy（28u）＋淡入到 to（1），back.out(1.6) 過衝落地
      P.punch(sel, at, {scale, dur})  重拍：0.12s 放大到 scale（1.06）再 0.45s 回彈（不和 spot／cam 用在同一元素）
-     P.dim(sel, at, {to, dur})       退焦：亮度到 to（0.6），0.4s sine.inOut；{to: 1} 回來（記住目前亮度）
+     P.dim(sel, at, {to, dur})       退焦：亮度從 at 那一刻的亮度到 to（0.6），0.4s sine.inOut；{to: 1} 回來
      P.rack(group, active, at, {blur, dim, dur})  換焦點（柔焦）：一組裡 active 變清楚，其他變模糊（blur 6u）＋稍淡（dim 0.75），0.45s sine.inOut；
                                      active＝null 全部回清楚。寫 CSS filter（blur＋opacity()），不動元素自己的 opacity：可以和 P.spot／P.dim 疊；
                                      清楚時 filter 是 none。只在拍點變、拍與拍之間不動；照時間先後寫（上一次還在轉場就接在它後面）
@@ -104,8 +106,10 @@
      P.idle(sel, at, {scale, period, phase, ramp, until})  呼吸（只給「等待中」的狀態，例對話的打字小點；停留畫面不用）（scale 比例，例 0.04＝±4 %；period 3.2s），頭尾 ramp（0.8s）漸入漸出；
                                      寫 CSS scale，不干擾進場位移。只給圖示、進度頭、數字；同一元素只掛一個。不做漂浮（卡片、焦點落定後不動）：
                                      y、x 不動作，沒寫 scale 就整個不做
-     P.spot(group, active, at, {scale, lift, dim, done, dur})  焦點 v2：active 放大 scale（1.07）＋抬起 lift（−10u）＋亮框發光（自動插 .sc-spot），
+     P.spot(group, active, at, {scale, lift, dim, done, dur, glow})  焦點 v2：active 放大 scale（1.07）＋抬起 lift（−10u），
                                      其他壓暗到 dim（0.42）縮到 0.96；active＝null 回均衡、'none'＝預覽態（全部壓暗）；done＝走過的（0.92、不縮）。
+                                     預設只做明暗（和縮放、抬起），不加框、不發光（作者：「不需要再多橘色外框，用明暗就足夠了」）；
+                                     glow: true＝active 另外插亮框發光（.sc-spot）。
                                      group 只放已經進場的元素；照時間先後寫（上一個 spot 還在轉場就接在它後面）；新進場的元素 0.6s 後才 spot
      P.cam(sel, at, {to, k, scale, x, y, dur, ease})  鏡頭：容器推拉搖（x、y 用 u），或 {to: 焦點元素, k: 0.12}＝往焦點帶 k 比例；1.0s power3.inOut。
                                      底版不動：有底色、框線或陰影的容器（主卡、視窗）不推（推了會撞右上角的角標），只推沒有底的內容群組。
@@ -439,10 +443,43 @@
       lv.set(el, { v: to, t: t + dur });
       return from;
     };
+    // 元素在 t 那一刻的亮度（055 N3）：照時間軸上已經排好的 opacity 補間算（P.* 排的、自己寫的 tl.to／set／fromTo 都算，含巢狀時間軸、錯拍）；
+    //   建立時算好寫進 fromTo 的起點（不在 seek 時讀現在的值）→ 逐格、任意順序 seek 結果都一樣。沒有補間碰過的元素＝1（和以前一樣）
+    var opNum = function (v) { var n = typeof v === 'number' ? v : typeof v === 'string' && /^\s*-?[\d.]+\s*$/.test(v) ? parseFloat(v) : NaN; return isFinite(n) ? n : null; };
+    var opTweens = function (el) {
+      var out = [], ord = 0, dflt = TL.vars && TL.vars.defaults && TL.vars.defaults.ease;
+      var walk = function (tlx, base) {
+        if (!tlx || !tlx.getChildren) return;
+        tlx.getChildren(false, true, true).forEach(function (k) {
+          var s = base + k.startTime();
+          if (k.getChildren) { walk(k, s); return; }
+          if (k.timeline && k.timeline.getChildren) { walk(k.timeline, s); return; }   // 錯拍的補間：GSAP 在裡面另開一條時間軸
+          if (!k.targets || k.targets().indexOf(el) < 0) return;
+          var v = k.vars || {}, key = 'opacity' in v ? 'opacity' : 'autoAlpha' in v ? 'autoAlpha' : null;
+          if (!key) return;
+          var to = opNum(v[key]), sa = v.startAt || null, from = sa && key in sa ? opNum(sa[key]) : null;
+          if (to == null || (sa && key in sa && from == null)) return;   // 函式、相對值（'+=0.2'）：算不出來，不當成亮度變化
+          out.push({ s: s, d: k.duration(), to: to, from: from, back: !!v.runBackwards, ease: gsap.parseEase(v.ease || dflt || 'power1.out'), o: ord++ });
+        });
+      };
+      walk(TL, 0);
+      return out.sort(function (a, b) { return a.s - b.s || a.o - b.o; });
+    };
+    var opAt = function (el, t) {
+      var v = 1;
+      opTweens(el).forEach(function (x) {
+        if (x.s > t + 1e-6) return;
+        var a = x.from != null ? x.from : x.back ? x.to : v, b = x.back ? v : x.to;   // tl.from：從寫的值回到原本的值
+        var p = x.d > 0 ? Math.min(1, (t - x.s) / x.d) : 1;
+        v = p >= 1 ? b : a + (b - a) * x.ease(p);
+      });
+      return r3(v);
+    };
     var fade = function (sel, at, from, to, dur, ease, stagger) {
       els(sel).forEach(function (el, i) {
-        var t = at + i * (stagger || 0), rf = level(el, t, to, dur);
-        tl.fromTo(el, { opacity: rf != null && to === 0 ? rf : from }, { opacity: to, duration: dur, ease: ease, immediateRender: first('opacity', el) }, t);
+        var t = at + i * (stagger || 0), f = to === 0 ? opAt(el, t) : from;   // 離場：從那一刻的亮度淡出，不從 1 開始（壓暗過的不會先亮一下）
+        level(el, t, to, dur);
+        tl.fromTo(el, { opacity: f }, { opacity: to, duration: dur, ease: ease, immediateRender: first('opacity', el) }, t);
       });
     };
     var push = function (sel, at, from, to) {
@@ -455,7 +492,7 @@
       var props = Object.keys(from);
       els(sel).forEach(function (el, i) {
         var at2 = at + i * (stagger || 0), f = Object.assign({}, from);
-        if ('opacity' in to) { var rf = level(el, at2, to.opacity, dur); if (rf != null && to.opacity === 0) f.opacity = rf; }
+        if ('opacity' in to) { if (to.opacity === 0) f.opacity = opAt(el, at2); level(el, at2, to.opacity, dur); }   // 離場（axis 的舊內容、peel）同 fade
         var t = { duration: dur, ease: ease, immediateRender: firstAll(props, el) };
         for (var k in to) t[k] = to[k];
         tl.fromTo(el, f, t, at2);
@@ -608,7 +645,7 @@
           tl.fromTo(el, { opacity: from }, { opacity: to, duration: dur, ease: 'sine.inOut', immediateRender: firstTime }, at);
         };
         items.forEach(function (el) {
-          var cur = lv.get(el) || { v: 1, t: -1 };
+          var cur = lv.get(el) || { v: opAt(el, at), t: -1 };   // 第一次 focus：從那一刻的亮度開始（被 P.dim／P.spot 壓暗過的不會先跳回 1）
           if (at < cur.t - 0.001) throw new Error('P.focus 要照時間先後寫：' + nameOf(el) + ' 在 ' + r3(cur.t) + 's 已經有亮度變化，這一行卻是 ' + r3(at) + 's → 把這一行移到前面，或把時間改晚');
           var target = act === null || el === act ? 1 : dim;
           if (target !== cur.v) tw(el, cur.v, target, first('opacity', el));
@@ -732,7 +769,7 @@
       if (!R) throw new Error('沒有這個區域：' + name + '（可用 ' + Object.keys(REGIONS).join('／') + '）');
       return R;
     };
-    var spotState = new Map(), camState = new Map(), dimState = new Map(), rackState = new Map();
+    var spotState = new Map(), camState = new Map(), rackState = new Map();
     var sfxList = [];
     (window.SceneMotion.sfx = window.SceneMotion.sfx || {})[comp || '?'] = sfxList;
     var dirClip = function (d) {
@@ -1090,27 +1127,29 @@
       if (opt(o, 'scale', 0)) wave(q(sel), at, o);
       return P;
     };
-    // 焦點 v2：active 放大＋抬起（lift u）＋亮框發光，其他壓暗縮小；null＝回均衡，'none'＝預覽態（全部壓暗）；
-    //   o.done＝走過的元素（亮度 0.92、留細框）。group 只放已經進場的元素，照時間先後寫
+    // 焦點 v2：active 放大＋抬起（lift u），其他壓暗縮小；null＝回均衡，'none'＝預覽態（全部壓暗）；
+    //   o.done＝走過的元素（亮度 0.92）。group 只放已經進場的元素，照時間先後寫。
+    //   預設只做明暗（D7：作者「不需要再多橘色外框，用明暗就足夠了」）；o.glow＝true 才插亮框發光（.sc-spot），之後不帶 glow 的拍把框收掉
     P.spot = function (group, active, at, o) {
       if (Array.isArray(active) && !active.length) active = 'none';   // 舊的 $q 包裝會把 'none' 變成空陣列
       var items = q(group), act = active == null || active === 'none' ? null : q(active)[0];
       if (active != null && active !== 'none' && (!act || items.indexOf(act) < 0)) throw new Error('P.spot：active 要是 group 裡的元素（' + active + '）');
-      var dim = opt(o, 'dim', 0.42), dur = opt(o, 'dur', 0.5), S = opt(o, 'scale', 1.07), lift = opt(o, 'lift', -10) * U;
+      var dim = opt(o, 'dim', 0.42), dur = opt(o, 'dur', 0.5), S = opt(o, 'scale', 1.07), lift = opt(o, 'lift', -10) * U, glow = !!(o && o.glow);
       var done = o && o.done ? q(o.done) : [];
       items.forEach(function (el) {
         var g = el.querySelector(':scope > [data-sc-spot]');
-        if (!g) { g = mk(el, 'sc-spot'); g.setAttribute('data-sc-spot', ''); el.appendChild(g); relPos(el); }
-        var cur = spotState.get(el) || { o: 1, s: 1, y: 0, g: 0, d: 0, t: -1, t0: -1 }, a = at;
+        if (!g && glow) { g = mk(el, 'sc-spot'); g.setAttribute('data-sc-spot', ''); el.appendChild(g); relPos(el); }
+        var cur = spotState.get(el) || { s: 1, y: 0, g: 0, d: 0, t: -1, t0: -1 }, a = at;
         if (a < cur.t - 0.001) {
           if (a < cur.t0 - 0.001) throw new Error('P.spot 要照時間先後寫：' + nameOf(el) + ' 在 ' + r3(cur.t0) + 's 已經有焦點變化，這一行是 ' + r3(a) + 's');
           a = cur.t;   // 上一個焦點還在轉場（兩拍太近）：接在它後面，不丟錯（丟錯整段會停在空白的初始畫面）
         }
-        var tg = el === act ? { o: 1, s: S, y: lift, g: 1, d: 0 }
+        var tg = el === act ? { o: 1, s: S, y: lift, g: glow ? 1 : 0, d: 0 }
           : done.indexOf(el) >= 0 ? { o: 0.92, s: 1, y: 0, g: 0, d: 1 }
           : active === 'none' || act ? { o: dim, s: 0.96, y: 0, g: 0, d: 0 } : { o: 1, s: 1, y: 0, g: 0, d: cur.d };
-        mv([el], a, { opacity: cur.o, scale: cur.s, y: cur.y }, { opacity: tg.o, scale: tg.s, y: tg.y }, dur, 'power3.out', 0);
-        mv([g], a, { opacity: cur.g }, { opacity: tg.g }, dur * 0.8, 'sine.inOut', 0);
+        // 亮度從那一刻的亮度開始（被 P.dim、tl.to 壓暗過的不會先跳回 1；只有 spot 動過時＝上一拍的目標）
+        mv([el], a, { opacity: opAt(el, a), scale: cur.s, y: cur.y }, { opacity: tg.o, scale: tg.s, y: tg.y }, dur, 'power3.out', 0);
+        if (g) mv([g], a, { opacity: cur.g }, { opacity: tg.g }, dur * 0.8, 'sine.inOut', 0);
         tg.t0 = a; tg.t = a + dur; spotState.set(el, tg);
       });
       return P;
@@ -1199,12 +1238,11 @@
       mv(q(sel), at, f, t, opt(o, 'dur', 0.28), V2.EASE.out, opt(o, 'stagger', 0));
       return P;
     };
-    // 退焦：壓暗到 to（預設 0.6、0.4s）；P.dim(sel, at, {to: 1}) 回來
+    // 退焦：壓暗到 to（預設 0.6、0.4s）；P.dim(sel, at, {to: 1}) 回來。起點是元素在 at 那一刻的亮度（被 P.spot、tl.to 壓暗過的也算，不會先跳回 1）
     P.dim = function (sel, at, o) {
       q(sel).forEach(function (el) {
-        var cur = dimState.has(el) ? dimState.get(el) : 1, to = opt(o, 'to', 0.6);
+        var cur = opAt(el, at), to = opt(o, 'to', 0.6);
         mv([el], at, { opacity: cur }, { opacity: to }, opt(o, 'dur', 0.4), 'sine.inOut', 0);
-        dimState.set(el, to);
       });
       return P;
     };

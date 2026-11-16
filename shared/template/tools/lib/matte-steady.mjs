@@ -23,6 +23,7 @@
 //       owner＝每個位置跟著哪一塊（−1＝沒有）；wrong[塊][格]＝1 是模型判錯的格；changed＝有換的格數占比（0＝本來就穩）
 //   referenceAlpha({ alpha, rw, rh, n, owner, w, h, wrong }) → rw×rh 的參考遮罩：每個像素在「它那一塊判對的格」裡算人的比例（0–255）；沒有塊的＝255
 //   steadyMatte({ clip, matte, out })       → { ok, changed, message }：changed 是 false 時沒有寫 out
+//   measureFlicker({ matte, video, start, dur }) → 只量不改（055 C22）：做好的去背檔裡還有沒有整塊一起跳的東西（檔尾那一節）
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -144,6 +145,7 @@ export function analyzeMatte({ alpha, luma, w, h, n }) {
       for (let t = 0; t < n; t++) { if (share[t] < 0) continue; known++; if (share[t] > 0.8) high++; else if (share[t] < 0.2) low++; else mixed++; }
     }
     const ok = list.length >= STEADY.minSize && known >= n * 0.5 && mixed <= known * STEADY.mixed && high >= known * STEADY.both && low >= known * STEADY.both;
+    blobs[b].ok = ok;
     const keepers = new Set(ok ? list : []);
     let sum = 0;
     for (const p of cells[b]) { if (keepers.has(p)) sum += frac[p]; else blobOf[p] = -1; }
@@ -224,7 +226,7 @@ export function analyzeMatte({ alpha, luma, w, h, n }) {
     }
     dropIslands({ alpha, gone, weights, force, med, o, w, px });
   }
-  return { med, weights, lend, force, bgMap, src, owner, wrong, changed: n ? changedFrames / n : 0 };
+  return { med, weights, lend, force, bgMap, src, owner, wrong, blobs, blobOf, changed: n ? changedFrames / n : 0 };
 }
 
 export function referenceAlpha({ alpha, rw, rh, n, owner, w, h, wrong }) {
@@ -326,4 +328,36 @@ export function steadyMatte({ clip, matte, out }) {
   } finally {
     for (const f of Object.values(files)) fs.rmSync(f, { force: true });
   }
+}
+
+// 055 C22 去背閃動檢查：只量、不改。量做好的去背檔（寫了 steady 的段量的是穩定後的結果）：用同一套 analyzeMatte 找「整塊一起跳」的東西
+// （和 steadyMatte 認定要換的是同一種），回傳每一塊在原尺寸的面積、外框、模型判錯的格（第幾格，0 起）。
+//   measureFlicker({ matte, video, start, dur }) → { ok, n, W, H, blobs: [{ area, box: [x, y, w, h], frames, first, last }], message }
+//       video＝去背切片的來源（build 的 assets/rough.mp4），start／dur＝那一段在來源的秒數（和 ensureMattes 切片時一樣）
+export function measureFlicker({ matte, video, start, dur }) {
+  const info = probe(matte);
+  if (!info) return { ok: false, n: 0, blobs: [], message: `讀不到 ${path.basename(matte)} 的寬高` };
+  const [w, h] = fit(info.W, info.H, STEADY.size), px = w * h;
+  const a = ff(['-c:v', 'libvpx-vp9', '-i', matte, '-vf', `alphaextract,scale=${w}:${h}:flags=area,format=gray`, '-f', 'rawvideo', '-']);
+  const y = ff(['-ss', String(start), '-i', video, '-t', String(dur), '-an', '-vf', `scale=${w}:${h}:flags=area,format=gray`, '-f', 'rawvideo', '-']);
+  if (a.status !== 0 || y.status !== 0) return { ok: false, n: 0, blobs: [], message: String((a.status !== 0 ? a : y).stderr).trim().split('\n').pop() };
+  const n = Math.min(Math.floor(a.stdout.length / px), Math.floor(y.stdout.length / px));
+  if (n < 3) return { ok: true, n, W: info.W, H: info.H, blobs: [], message: '' };
+  const A = analyzeMatte({ alpha: a.stdout, luma: y.stdout, w, h, n });
+  const kx = info.W / w, ky = info.H / h, blobs = [];
+  A.blobs.forEach((b, i) => {
+    if (!b.ok) return;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1, size = 0;
+    for (let p = 0; p < px; p++) {
+      if (A.blobOf[p] !== i) continue;
+      const x = p % w, yy = (p - x) / w;
+      size++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, yy); y1 = Math.max(y1, yy);
+    }
+    const bad = [];
+    for (let t = 0; t < n; t++) if (A.wrong[i][t]) bad.push(t);
+    if (!size || !bad.length) return;
+    blobs.push({ area: Math.round(size * kx * ky), box: [Math.round(x0 * kx), Math.round(y0 * ky), Math.round((x1 - x0 + 1) * kx), Math.round((y1 - y0 + 1) * ky)], frames: bad.length, first: bad[0], last: bad[bad.length - 1] });
+  });
+  blobs.sort((p, q) => q.area - p.area);
+  return { ok: true, n, W: info.W, H: info.H, fps: info.fps, blobs, message: '' };
 }

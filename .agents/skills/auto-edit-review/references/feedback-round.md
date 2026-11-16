@@ -6,9 +6,11 @@
 
 `versions.mjs begin` 算編號、備份 `plan.json.bak-r<N>`、存改前版本、開 `work/feedback/r<N>.md`；`versions.mjs finish` 存改後版本、填「分類」的改法和「改了哪幾段」、寫驗證。不用手動複製，也不用重寫工具填好的列（太籠統才用 edit 改那一列冒號後面的字）。
 
-要還原這一輪：把 `plan.json.bak-r<N>` 複製回 `plan.json`，再 build。只還原一段：`node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v<N>`（x 檔、svg 一起換回去）。
+照修改單改（`begin --requests`）時，工具把修改單每一段的「要改」「描述」寫進「原話」（`- 修改單 s0104（要改：版面）：「…」`），分類表那一段的原話節錄用它的描述；描述裡有「以後」這類字眼會標「可能是規則，請確認」並寫「建議改規則」。不用自己再抄修改單。
 
-每段的版本在 `work/versions/<段>/v<N>/`：`段落.json`（plan.json 那一段）、動畫的 html（手寫、內容設計、模板動畫都有）與 svg、內容設計動畫的 `鏡位腳本.md`、`分鏡.md`、`預覽.jpg`（audit 拼圖）。預設都不 render。
+要還原這一輪：把 `plan.json.bak-r<N>` 複製回 `plan.json`，再 build。只還原一段：`node shared/template/tools/versions.mjs use --project projects/<專案> --seg <段> --ver v<N>`（x 檔、svg、手改過的情境動畫檔一起換回去；那一版是工具產生的就拿掉現在的手改檔，build 重產）。`moods`、`edit` 是全片共用的，`use` 不還原：退回只改了情緒點或剪點的那一版，照那一版的 `情緒點與剪輯.json` 自己改回 plan.json。
+
+每段的版本在 `work/versions/<段>/v<N>/`：`段落.json`（plan.json 那一段）、動畫的 html（手寫、內容設計、模板動畫、手改過的情境動畫都有）與 svg、內容設計動畫的 `鏡位腳本.md`、`分鏡.md`、`預覽.jpg`（audit 拼圖）、`情緒點與剪輯.json`（plan.json 第一層 `moods`、`edit` 落在這段時間內的項目；沒有就不存）。預設都不 render。只改了手改的動畫檔、情緒點或 `edit.cuts`（plan.json 那一段沒動）也算改了：`finish` 版本 +1、剪輯台標「已改完」，「改了哪幾段」寫「手改 compositions/…」「情緒點 #19@系統 改了」這類。
 
 比較影片（`比較-v<舊>-v<新>.mp4`，左舊右新）要兩版都有 `預覽.mp4`。使用者說修改時就說要比較：`begin`、`finish` 都加 `--preview`。改完才要比較：跑下面這一條（沒給 `--a`／`--b`＝目前用的版和最新的另一版；沒有預覽的那一版先 render，一段約 25 秒；跑完換回原本用的版），把它印的比較影片路徑給使用者：
 
@@ -26,6 +28,7 @@ node shared/template/tools/versions.mjs compare --project projects/<專案> --se
 | 指名一個時間的音效或講者推近（「1:20 那聲太吵」「講到竟然要有音效」「這句講者推近」） | 個案 | `build.mjs --check` 的音效報告看那一顆是誰放的：「情緒點」那一行列的 → 改 plan.json 第一層 `moods`（不要＝刪那一項、換聲音＝`"sfx": "<名稱>"`、要推近＝`"zoom": true`、要新加＝`{ "at": "#N@詞", "kind": "<五類>" }`，style.md「情緒點」）；段上的 → 改那一段的 `sfx` |
 | 「s12 用 v1」「退回上一版」 | 個案（退回） | SKILL.md 流程 E；rN.md 的改法寫「退回 v1」 |
 | 「以後」「每次」「都」「全部的 X」 | 規則 | 這一集照做；在 rN.md「建議改規則」寫一條（一句完整的話，例「金句都放左邊」），**不改** `shared/`、AGENTS.md（AGENTS.md 規則 1）。之後 `status.mjs` 會提醒問使用者要不要每一集都照做（AGENTS.md 規則 11） |
+| 在講畫面或聲音的毛病（太小、太空、重疊、沒置中、被切、被擋、偏一邊、閃一下、太晃、太大聲、重複、對不上），就算沒有「以後」「都」（2026-11-16 作者） | 個案＋建議改規則 | 照個案改那一段；rN.md「建議改規則」也寫一條，一句完整的話，句尾註明要怎麼防：「（程式檢查）」工具可以量出來、「（改預設）」工具的預設值要換、「（文件）」只能寫進規範。例：「疊在講者身上的大字被擋最多一個字（程式檢查）」。工具已經有一樣的 ⚠ 時寫「（已有檢查：<⚠ 名稱>）」 |
 | 「這張卡」「我選的」 | 個案 | 請使用者說段號或大約第幾秒，再跑 `node shared/template/tools/build.mjs --project projects/<專案> --show <秒>`（例 `--show 1:15`）找段 |
 | 分不出來 | 個案 | 照個案改，rN.md 註明「可能是規則，請確認」 |
 | 一句話可以解成「刪掉」或「避開／挪開」（「擇一即可」「不要重疊」） | 個案 | 先做不刪的那個解讀（挪位置、錯開時間），回報另一種解讀讓使用者選；參考專案曾因刪掉 8 支箭頭白做一輪 |
@@ -48,9 +51,10 @@ node shared/template/tools/versions.mjs compare --project projects/<專案> --se
 | # | 原話節錄 | 規則／個案 | 改哪一段 | 改法 |
 |---|---|---|---|---|
 | 1 | s05 的金句卡往左移 | 個案 | s05 | css 往左 120px |
-| 2 | s09 字太多 | 個案 | s09 | key 縮成 10 字 |
+| 2 | s09 字太多 | 個案＋建議改規則 | s09 | key 縮成 10 字 |
 
 建議改規則：（沒有寫「無」）
+- 字卡一張只寫 8–14 字的重點，不照抄字幕（文件）
 
 ## 改了哪幾段
 
@@ -62,6 +66,8 @@ node shared/template/tools/versions.mjs compare --project projects/<專案> --se
 - build --check：✖ 0、⚠ 3
 - audit --only：✖ 0；拼圖 sheet-s05.jpg、sheet-s09.jpg 沒有 FAIL
 ```
+
+`finish` 的驗證還會量這一輪改到的段前後的換段：印 `⚠ … 換段前後畫面閃一下…` 或 `⚠ … 一格內消失、露出講者…`（style.md「節奏」的換段不閃）時，照 → 改那一段，再 `finish` 一次會重量那個換段；錄影段的截圖每個紅框兩張（剛出現、快消失），框和錄影一起看（REVIEW.md）。
 
 ## 4. 卡住時
 

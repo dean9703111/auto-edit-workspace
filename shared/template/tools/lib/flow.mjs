@@ -24,6 +24,7 @@ import { fail, cmdLine, next, dispatch, report as reportBlock } from './say.mjs'
 import { saidOf } from './cli.mjs';
 import { jobState, runToolUntilDoneSync } from './job.mjs';
 import { isSummaryLine } from './build-summary.mjs';
+import { isMatteFlickerLine } from './matte.mjs';
 import { editorUrlsSync } from './editor-urls.mjs';
 import { assetUsage } from './media.mjs';
 import { floorRules } from './audit-rules.mjs';
@@ -32,6 +33,7 @@ import { sbHash as sha, storyboardDirty, recordStoryboard } from './storyboard-s
 import { readScript } from './script-file.mjs';
 import { writeAtomic } from './atomic.mjs';
 import { captureState, reviewHashes } from './incremental.mjs';
+import { seamsLines } from './seams.mjs';
 import { formatFinding } from './audit-rules.mjs';
 import { hfLocal } from './hf.mjs';
 import { KINDS as FIX_KINDS } from './autofix.mjs';
@@ -1500,7 +1502,7 @@ export function reviewNow(P, flags = {}) {
     for (const s of scenes) if (s?.id) { const d = readOpt(path.join(designsDir(P), `${s.id}.md`)); if (d) sheets[s.id] = d; }
     const state = captureState(P, { hf: hfLocal()?.version ?? '?' });
     const h = reviewHashes(state, j.items || [], { scenes, sheets, readComp: (f) => readOpt(path.join(P.out, f)), extra: { tpl: P.templateDir ? treeSig(P.templateDir) : [], plan: rest, format: j.format, sample: !flags['all-sheets'] } });
-    return h && { ...h, customs: (j.items || []).filter((x) => x.type === 'custom').map((x) => x.id) };
+    return h && { ...h, customs: (j.items || []).filter((x) => x.type === 'custom' || (j.format === 'portrait' && x.type === 'scene')).map((x) => x.id) };   // 055 C01：直式連模板段一起量
   } catch { return null; }
 }
 // 和上次比：要重做哪幾段；不能重用（第一次、共用的變了、段被拿掉、變太多、上次的截圖不在了）回 null
@@ -1550,6 +1552,7 @@ async function reviewRun(P, flags, { loadLib } = {}) {
   // build 的六行摘要怎麼認只有 lib/build-summary.mjs 一份（build 改字頭時那裡跟著改）
   const six = bl.filter(isSummaryLine);
   for (const l of six) console.log(l);
+  for (const l of bl.filter(isMatteFlickerLine)) console.log(l.trim());   // 055 C22：去背閃動的 ⚠ 只有 build 量得到，照印
   const usage = assetUsageLine(P.project, readJson(P.plan)?.scenes);
   if (usage) console.log(usage);
   if (b.status !== 0) { for (const l of failOrTail(b)) console.log(l); console.log('✖ build 沒過 → 照 ✖ 改 plan.json，再跑一次'); return 1; }
@@ -1568,7 +1571,9 @@ async function reviewRun(P, flags, { loadLib } = {}) {
   dropReviewCache(P, delta);
   const redo = delta ? delta.changed.filter((id) => cur.customs.includes(id)) : null;
   const qcArgs = ['storyboard', '--project', P.project, '--json', '--sheet', ...(flags['all-sheets'] ? [] : ['--sample']), ...(P.templateArg || [])];
-  const auArgs = ['--project', P.project, '--json', ...(P.templateArg || [])];
+  // 055 C01：直式的模板段縮進上半後字級是固定的，也要量（等於 --all；字卡動態由 --check 的 portraitMinPx 管）
+  const auArgs = ['--project', P.project, '--json', ...(readJson(P.plan)?.format === 'portrait' ? ['--all'] : []), ...(P.templateArg || [])];
+  const seamsRun = seamsLines(P);   // 055 N5／N6：換段閃一下、硬切回講者（lib/seams.mjs；和 audit、拼圖一起跑，有時間上限，內容沒變的換段沿用上次）
   const [au0, qc0] = await Promise.all([
     redo && !redo.length ? null : runAsync('audit.mjs', [...auArgs, ...(redo ? ['--review', '--only', redo.join(',')] : [])]),
     delta && !delta.changed.length ? null : runAsync('qc.mjs', [...qcArgs, ...(delta ? ['--only', delta.changed.join(',')] : [])]),
@@ -1608,6 +1613,7 @@ async function reviewRun(P, flags, { loadLib } = {}) {
     if (!shots) console.log(`⚠ 完成態拼圖沒有跑完：${(qc.err || qc.out).trim().split('\n').slice(-1)[0] || ''}`);
   }
   console.log(`audit：✖ ${aE.length}、⚠ ${aWg.length}`);
+  for (const l of await seamsRun) console.log(l);
   if (shots?.sheets?.length) {
     const dir = rel(path.join(P.project, 'work', 'storyboard-preview'));
     console.log(`完成態拼圖 ${shots.sheets.length} 頁（${flags['all-sheets'] ? '全部' : '每種模板 1 格＋全部內容設計動畫；同一種模板版面固定，要全部看加 --all-sheets'}；同一則回覆一次打開，照 REVIEW.md 只找 FAIL）：`);

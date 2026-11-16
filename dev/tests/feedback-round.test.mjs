@@ -777,3 +777,98 @@ test('一輪回饋實際跑一次：begin → 改 plan → finish（真的 build
   assert.match(r2.stopLine, /<完成影片預覽網址>/, '剪輯台開不起來：留佔位');
   assert.ok(r2.warnings.some((w) => /剪輯台沒開起來.*editor\.mjs/.test(w)));
 });
+
+// ---------- 055 F1：修改單的描述寫進 r<N>.md「原話」 ----------
+const E = await imp('editor/server/requests.mjs');
+test('055 F1 begin --requests：修改單每一段的「要改」「描述」抄進「原話」與分類表；接著同一輪不重複；版本的原話也是那一段的描述', () => {
+  const p = mk();
+  const REQ = ['# 剪輯台修改單', '', '照剪輯台修改單改這 3 段', '', '## 1. s05　金句', '- 動畫：金句', '- 要改：文字、位置', '- 描述：設計可以，但是元素在框內沒有左右至中', '',
+    '## 2. s12　custom x-a.html', '- 描述：以後聚焦都不要橘色外框', '', '## 3. t1095', '- 這裡現在沒有段落：照時間和字幕新增一段', '- 描述：這裡加一張卡', '', '## 4. s08　概念', '- 動畫：概念', ''].join('\n');
+  touch(p, 'work/feedback/editor-requests.md', REQ, 120);
+  assert.deepEqual(V.requestNotes(p), [
+    { id: 's05', tags: ['文字', '位置'], note: '設計可以，但是元素在框內沒有左右至中' },
+    { id: 's12', tags: [], note: '以後聚焦都不要橘色外框' },
+    { id: 't1095', tags: [], note: '這裡加一張卡' },
+  ], '沒寫描述也沒勾要改的段（s08）不列');
+  const c = ctxOf(p);
+  const r = V.beginRound(c.P, { requests: true }, [], '', logTo(c));
+  assert.equal(r.rule, '以後', '描述裡的規則字眼也提醒');
+  const md = read(p, 'work/feedback/r1.md');
+  const said = sectionOf(md, '原話');
+  assert.match(said, /^「照修改單改」$/m);
+  assert.match(said, /^- 修改單 s05（要改：文字、位置）：「設計可以，但是元素在框內沒有左右至中」$/m);
+  assert.match(said, /^- 修改單 s12：「以後聚焦都不要橘色外框」$/m);
+  assert.match(said, /^- 修改單 t1095：「這裡加一張卡」$/m);
+  assert.doesNotMatch(said, /s08/);
+  const cls = sectionOf(md, '分類');
+  assert.match(cls, /^\| 1 \| 設計可以，但是元素在框內沒有左右至中 \| 個案 \| s05 \|/m, '原話節錄是那一段的描述');
+  assert.match(cls, /^\| 2 \| 以後聚焦都不要橘色外框 \| 可能是規則，請確認 \| s12 \|/m);
+  assert.match(cls, /^\| 3 \| 照修改單改 \| 個案 \| s08 \|/m, '沒寫描述的段用整輪的原話');
+  assert.match(md, /建議改規則：（原話有「以後」/);
+  assert.match(read(p, 'work/versions/s05/v1/分鏡.md'), /- 原話：修改單：「設計可以，但是元素在框內沒有左右至中」/);
+  // 同一輪再跑一次 begin --requests：原話不重複
+  V.beginRound(c.P, { requests: true }, [], '', logTo(c));
+  assert.equal(sectionOf(read(p, 'work/feedback/r1.md'), '原話').match(/修改單 s05/g).length, 1);
+  // 不是照修改單改：照舊只記使用者原話
+  const q = mk(); const d = ctxOf(q);
+  touch(q, 'work/feedback/editor-requests.md', REQ, 120);
+  V.beginRound(d.P, {}, ['s05'], 's05 字太多', logTo(d));
+  assert.doesNotMatch(read(q, 'work/feedback/r1.md'), /修改單 s05/);
+});
+
+// ---------- 055 N10：手改的情境動畫檔、這段時間內的情緒點與 edit 也算「改了」 ----------
+const ROUGH20 = () => fixture('round-rough-20s.mp4', (f) => spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
+  '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', f]));
+test('055 N10 finish：只改情緒點、只手改情境動畫檔也算改了（版本 +1、剪輯台標已改完、改法寫「情緒點 #2 改了」「手改 compositions/…」）；use 退回拿掉手改檔', { skip: spawnSync('ffmpeg', ['-version']).status !== 0 && '沒有 ffmpeg' }, async () => {
+  const { stampHash } = await imp('lib/assemble.mjs');
+  const p = mk([
+    { id: 's05', scene: 'quote', from: '#1', to: '#2e', slots: { text: '小毛病' } },
+    { id: 's08', scene: 'concept', from: '#3', to: '#4e', slots: { text: '第二張' } },
+  ]);
+  fs.copyFileSync(ROUGH20(), path.join(p, 'work', 'rough.mp4'));
+  editPlan(p, (j) => { j.moods = [{ at: '#2', kind: 'turn' }, { at: '#5', kind: 'win' }]; j.edit = { cuts: [[12, 12.5]] }; });
+  // s08 的情境檔：工具產生的（檔頭雜湊對得上、沒有 manifest）
+  const TOOL_HTML = stampHash('<!doctype html>\n<template id="s08-concept-template"><div id="s08-concept">P.pop(\'#a\', 1.2);</div></template>\n', 'id=s08 scene=concept');
+  touch(p, 'work/hyperframes/compositions/s08-concept.html', TOOL_HTML, 60);
+  touch(p, 'work/feedback/editor-requests.md', ['# 剪輯台修改單', '', '## 1. s05　金句', '- 描述：反轉音效換成丁', '', '## 2. s08　概念', '- 描述：三張卡改成單欄直排', ''].join('\n'), 120);
+  const c = ctxOf(p);
+  V.beginRound(c.P, { requests: true }, [], '', logTo(c));
+  assert.equal(fs.existsSync(path.join(p, 'work', 'versions', 's08', 'v1', 's08-concept.html')), false, '工具產生的情境檔不存');
+  assert.deepEqual(JSON.parse(read(p, 'work/versions/s05/v1/情緒點與剪輯.json')), { moods: [{ at: '#2', kind: 'turn' }] }, '這段時間內的情緒點（#5 不在這段）');
+  assert.deepEqual(JSON.parse(read(p, 'work/versions/s08/v1/情緒點與剪輯.json')), { cuts: [[12, 12.5]] });
+  // 只改 plan.json 第一層的情緒點（s05）、只手改情境檔（s08）
+  editPlan(p, (j) => { j.moods[0].sfx = 'ding'; });
+  touch(p, 'work/hyperframes/compositions/s08-concept.html', TOOL_HTML.replace("P.pop('#a', 1.2)", "P.pop('#a', 0.7)"));
+  const log = [];
+  const r = V.finishRound(c.P, {}, (l) => log.push(l), stepsOf().steps);
+  assert.equal(r.ok, true, log.join('\n'));
+  const out = log.join('\n');
+  assert.match(out, /版本：s05 v1 → v2；s08 v1 → v2/);
+  assert.doesNotMatch(out, /沒變/);
+  const md = read(p, 'work/feedback/r1.md'), done = sectionOf(md, '改了哪幾段');
+  assert.match(done, /^- s05：情緒點 #2 改了（v1 → v2）$/m);
+  assert.match(done, /^- s08：手改 compositions\/s08-concept\.html（v1 → v2）$/m);
+  assert.ok(fs.existsSync(path.join(p, 'work', 'versions', 's08', 'v2', 's08-concept.html')), '手改的情境檔存進版本');
+  assert.deepEqual(JSON.parse(read(p, 'work/versions/s08/v2/.meta.json')).files, [{ rel: 'compositions/s08-concept.html', store: 's08-concept.html', hand: true }]);
+  const q = E.requestsInfo(p);
+  assert.deepEqual([q.states.s05.state, q.states.s08.state], ['done', 'done'], '剪輯台標已改完，不是失敗');
+  // 下一輪：edit.cuts 改了也算
+  V.beginRound(c.P, {}, ['s08'], 's08 多剪一段', logTo(c));
+  editPlan(p, (j) => { j.edit.cuts.push([13, 13.5]); });
+  const r2 = V.finishRound(c.P, {}, () => {}, stepsOf().steps);
+  assert.equal(r2.ok, true);
+  assert.match(sectionOf(read(p, 'work/feedback/r2.md'), '改了哪幾段'), /^- s08：edit\.cuts（剪掉）加 \[13,13\.5\]（v2 → v3）$/m);
+  // build 在手改檔的檔頭補記 t0=、d=（055 N4）不算改了
+  const { withTimes } = await imp('lib/hand-shift.mjs');
+  const f8 = path.join(p, 'work', 'hyperframes', 'compositions', 's08-concept.html'), h0 = V.snapshotOf(c.P, 's08').hash;
+  fs.writeFileSync(f8, withTimes(fs.readFileSync(f8, 'utf8'), 3, 6.5));
+  assert.equal(V.snapshotOf(c.P, 's08').hash, h0);
+  // 退回 v1（當時情境檔是工具產生的）：手改檔拿掉，build 照 plan.json 重產
+  const lg = [];
+  V.useVersion(c.P, { 'no-preview': true }, 's08', 'v1', (l) => lg.push(l));
+  assert.equal(fs.existsSync(path.join(p, 'work', 'hyperframes', 'compositions', 's08-concept.html')), false);
+  assert.match(lg.join('\n'), /s08-concept\.html（拿掉手改，build 照 plan\.json 重產）/);
+  // 退回 v2：手改檔換回來
+  V.useVersion(c.P, { 'no-preview': true }, 's08', 'v2', () => {});
+  assert.match(read(p, 'work/hyperframes/compositions/s08-concept.html'), /P\.pop\('#a', 0\.7\)/);
+});

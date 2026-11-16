@@ -22,13 +22,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { parseTime, cueSeconds, r3, FPS, clock2 } from './time.mjs';
+import { parseTime, cueSeconds, r3, FPS, clock2, textWidth } from './time.mjs';
 import { probeMedia, VIDEO_EXT, IMAGE_EXT } from './ff.mjs';
 import { splitAtJoins, dB } from './edit.mjs';
 import { visibleLen, nearest, loadIcons } from './scenes.mjs';
 import { CANVAS } from './canvas.mjs';
 
-export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'retime', 'redact', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'wait', 'note'];
+export const MEDIA_KEYS = ['id', 'type', 'src', 'from', 'to', 'duration', 'anchor', 'in', 'out', 'speed', 'hold', 'retime', 'redact', 'fit', 'pip', 'volume', 'enter', 'exit', 'kenburns', 'start', 'moves', 'marks', 'lens', 'sfx', 'sfxVolume', 'callouts', 'spot', 'steps', 'arrows', 'clicks', 'sfxExtra', 'stepsSide', 'side', 'wait', 'note'];
 export const MEDIA_DIRS = ['assets/screen/', 'assets/images/'];
 export const TRANSITIONS = ['cut', 'fade', 'slide', 'zoom', 'whip'];
 export const ENTER = { cut: 0, fade: 0.5, slide: 0.6, zoom: 0.5, whip: 0.3, tape: 0.6, tilt: 0.65 };
@@ -48,8 +48,30 @@ const CAPTION_Y = 920;
 const MAX_FILE = [3840, 2160];
 const MARK = { pad: 6, sw: 4, draw: 0.4, out: 0.3, min: 0.5, hold: 1, max: 2, rx: 6 };
 const LENS = { delay: 0.28, pop: 0.6, back: 0.32, fade: 0.1, min: 1.2, zoom: 2, maxW: 1600, maxH: 720, cx: 960, cy: 450, border: 3, pad: 10, dflt: 3 };
-// 運鏡節奏（參考專案作者：「跳來跳去，眼睛受不了」→ 改慢推）：推近／拉回 ≥ 1.5 s，倍率 ≥ 2 時 ≥ 2.2 s；一段 ≤ 2 次；第一次離段起點 ≥ 0.8 s（先看全景）；相鄰兩框倍率比 ≤ 1.4
-const MOVE = { dur: 1.5, durBig: 2.2, big: 2, warnZoom: 4, warnPixel: 2.5, max: 2, lead: 0.8, ratio: 1.4 };
+// 運鏡節奏（參考專案作者：「跳來跳去，眼睛受不了」→ 改慢推）：推近／拉回 ≥ 1.5 s，倍率 ≥ 2 時 ≥ 2.2 s；一段 ≤ 2 次（直式 portraitMax 次，start 不算）；相鄰兩框倍率比 ≤ 1.4
+// 055 Q2：拿掉「第一次運鏡離段起點 ≥ 0.8 s（先看全景）」；一開始就要在重點上寫 start（起始鏡位）。startEps：moves[0] 在段起點這麼近、dur 也這麼短＝其實是起始鏡位
+const MOVE = { dur: 1.5, durBig: 2.2, big: 2, warnZoom: 4, warnPixel: 2.5, max: 2, portraitMax: 1, ratio: 1.4, startEps: 0.3 };
+// 055 錄影段檢查（specs/054 G11–G16、055 N8）的門檻
+// C10 直式第一格：上半資訊窗（y 240–900）沒被錄影蓋到的比例上限
+const BLACK_MAX = 0.1;
+// C12 推近切掉整頁：換頁事件的版面框寬 ≥ 錄影寬 page，推近後看得到的寬度不到版面寬的 keep
+const CUT_BLOCK = { page: 0.6, keep: 0.85 };
+// C13 工具頁從頁首開始：起點那一格離最近一次換頁已往下捲超過 px（素材像素），或正在往下捲；建議的起點留 hold 秒給頁首
+const PAGE_TOP = { px: 80, hold: 1 };
+// C14 紅框跟捲動：框出現期間捲動超過幾 px（素材像素）才算；C15 紅框綁詞：at 寫「+秒」「#N+秒」、偏移 ≥ bind 秒才提醒
+const MARK_SCROLL = { px: 40, bind: 1 };
+// 畫面事件偵測（lib/events.mjs）在一塊還在變（例：圖表畫出來）時開始捲，捲的頭幾格會算進那個變化、捲動要等它變完（settled）才記：
+// 捲動的 from 和前一個相交的變化的 settled 相差 ≤ near 秒時，紅框（C14、D3）把捲動當成最早從 from − back 秒開始（settle 0.4 秒＋一格取樣）
+const HIDDEN_SCROLL = { near: 0.15, back: 0.5 };
+// D3 最後一框多停的 1 秒碰到捲動、retime 快轉（> fast 倍）或跳接就停在那之前
+const MARK_STOP = { fast: 1.5, min: 0.05 };
+// C16 隱私：打碼框蓋住隱私框的比例下限；露出不到 tol 秒不算（取樣誤差）
+const PRIVACY = { cover: 0.9, tol: 0.1, step: 0.1 };
+// C17 慢放捲動：retime／speed 慢到 speed 倍以下、在完成影片裡捲了至少 min 秒。錄影本身格數多（60 fps）時慢到 30÷fps 倍以下才會少格（每格重複），門檻取小的
+const SLOW_SCROLL = { speed: 0.8, min: 0.5 };
+// N8 錄影停住太久：定格（retime 兩點 src 一樣）超過 max 秒、或慢放到 slow 倍以下又沒有畫面事件超過 slowMax 秒，那段有人講話（字幕至少 speech 秒），
+//   而且沒有紅框、說明卡、步驟、箭頭、放大鏡、聚光燈、運鏡在動
+const MEDIA_HOLD = { max: 2.5, slow: 0.5, slowMax: 4, speech: 0.5, step: 0.05 };
 const KB = 1.05;
 const DECLICK = 0.02;
 // 動態 v2（specs/010-motion-v2/design-system.md §5、§7）：從講者進來的錄影面板由小視窗位置長出（P.grow，0.3 s 起、kit 預設 0.8 s expo.out）；
@@ -157,11 +179,12 @@ export const MEDIA_FIELDS = [
   ['retime', '[{ "at", "src" }]', '—', '同一段裡變速、定格：講到 at 時錄影要在第 src 秒，兩點之間自動算速度，src 一樣＝定格；運鏡、紅框跨整段不會斷。第一點之前、最後一點之後是正常速度（錄影用完就停在最後一格）；不保留原聲。和 in／out／speed／hold 擇一'],
   ['redact', '[{ "at", "until", "box": [x,y,w,h] }]', '—', '打碼：框裡的東西模糊後燒進影片（金鑰、密碼、個資）；at、until 不寫＝整段。放大鏡也看不到原文；框要蓋住這段時間裡它會出現的所有位置'],
   ['fit', '"contain"／"cover"', '"contain"', 'contain＝整張看得到、放在字幕帶上方（16:9 縮到 87%），四周黑底；cover＝鋪滿畫面，多的裁掉（圖片上下多出來的裁在下面，上緣對齊）'],
-  ['pip', 'true／false', 'true', '右下角子母畫面露臉；只有聲音的區間自動不放'],
+  ['pip', 'true／false', '橫式 false、直式 true', '右下角子母畫面露臉（055：橫式錄影、圖片段預設不放，要露臉寫 true）；只有聲音的區間自動不放'],
   ['volume', 'null 或 −60～+12（dB）', 'null', 'null＝素材靜音；寫數字＝保留素材原聲'],
   ['enter／exit', TRANSITIONS.map((x) => `"${x}"`).join('／') + '（enter 另有 "tape"／"tilt"）', '"fade"', '進場／出場；接在別的整張幕後面時 fade 自動變 cut；"whip"＝0.3 秒橫向甩進／甩出（有水平動態模糊）；"tape"＝圖片縮小貼在全幕背景上、紙膠帶貼兩角（只給圖片、fit "contain"、橫式）；"tilt"＝面板從透視斜躺擺平（錄影、圖片都可以，fit "contain"，直式也可以）'],
-  ['moves', '[{ "at", "to": [x,y,w,h] 或 "full", "dur" }]', '—', '運鏡：推近到框、"full" 拉回全景；dur 預設 1 秒。圖片沒寫 moves 時自動慢推（"kenburns": false 關掉）'],
-  ['marks', '[{ "at", "until", "box": [x,y,w,h], "path": [{ "at", "box", "dur" }] }]', '—', '紅框：實線 4px、描線進場；同時最多 2 個（callouts 的框也算）、停留 < 0.5s 的拿掉、最後一框多停 1s；until 不寫＝到段尾。path＝錄影捲動時框跟著移（dur 預設 0.4 秒）'],
+  ['start', '[x,y,w,h]', '—', '起始鏡位：第一格就推在這一塊，沒有推的動作（一開始就在重點上，不先看全景）；框比畫面高時撐滿寬度、框的上緣對齊畫面上緣（裁掉左右空白）。有 start 的圖片不慢推；之後的 moves 從這裡推，"full" 拉回全景'],
+  ['moves', '[{ "at", "to": [x,y,w,h] 或 "full", "dur" }]', '—', `運鏡：推近到框、"full" 拉回全景；dur 預設 1 秒。一段最多 ${MOVE.max} 次（直式 start 以外最多 ${MOVE.portraitMax} 次）。圖片沒寫 moves、start 時自動慢推（"kenburns": false 關掉）`],
+  ['marks', '[{ "at", "until", "box": [x,y,w,h], "path": [{ "at", "box", "dur" }] }]', '—', '紅框：實線 4px、描線進場；同時最多 2 個（callouts 的框也算）、停留 < 0.5s 的拿掉、最後一框多停 1s（碰到捲動、快轉、跳接就停在那之前）；until 不寫＝到段尾。at 建議綁講到的詞（#N@詞）。path＝錄影捲動時框跟著移（dur 預設 0.4 秒）'],
   ['lens', '[{ "at", "until", "box": [x,y,w,h], "zoom" }]', '—', '放大鏡：從框的位置彈出到畫面中央偏上，zoom 預設 2（1.2–4）；至少 1.2 秒，until 不寫＝at＋3 秒'],
   ['callouts', '[{ "at", "until", "box": [x,y,w,h], "text", "icon", "side", "quick" }]', '—', '標註：紅框＋引線＋說明卡（text 1–12 字、icon 選填）；side 不寫＝自動挑放得下的那邊；完整可讀 ≥ 1.2s（quick ≥ 0.8s）；期間不能有運鏡'],
   ['spot', '[{ "at", "until", "box": [x,y,w,h] }]', '—', '聚光燈：其他地方壓暗 35%，只留框的地方；至少 2 秒、一次一個、不和放大鏡同時'],
@@ -386,7 +409,7 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
     if (!['contain', 'cover'].includes(seg.fit)) err(`fit 只能是 "contain"（整張看得到，放在字幕帶上方）或 "cover"（鋪滿畫面、多的裁掉），現在是 ${JSON.stringify(seg.fit)}`);
     else m.fit = seg.fit;
   }
-  if (seg.pip != null && typeof seg.pip !== 'boolean') err(`pip 只能寫 true（右下角子母畫面露臉，預設）或 false（整段不露臉），現在是 ${JSON.stringify(seg.pip)}`);
+  if (seg.pip != null && typeof seg.pip !== 'boolean') err(`pip 只能寫 true（右下角子母畫面露臉；直式預設）或 false（整段不露臉；橫式預設），現在是 ${JSON.stringify(seg.pip)}`);
   if (seg.volume != null) {
     if (!isNum(seg.volume) || seg.volume < -60 || seg.volume > 12) err(`volume 要寫 null（靜音，預設）或 −60～+12 的 dB 數字（保留素材原聲），現在是 ${JSON.stringify(seg.volume)}`);
     else if (kind === 'image' || !info.hasAudio) warn(`volume：${kind === 'image' ? '圖片' : `${src} 本身`}沒有聲音，已忽略`);
@@ -429,6 +452,13 @@ export function checkMediaSeg(seg, { projectDir, probe = probeMedia, err, warn }
     else if (seg.kenburns && hasAnn) warn('kenburns：有 callouts／spot／arrows 時不做慢推（標註要對準不動的畫面），已忽略');
     else m.kenburns = seg.kenburns;
   }
+  // 起始鏡位（055 Q2）：形狀在這裡驗，座標範圍等畫面幾何定了在 validateMedia 驗
+  m.startBox = null;
+  if (seg.start != null) {
+    if (!Array.isArray(seg.start) || seg.start.length !== 4 || !seg.start.every(isNum) || seg.start[2] <= 0 || seg.start[3] <= 0) err(`start 要寫 [x, y, w, h]（第一格就推在這一塊；素材本身的像素座標，用 media.mjs frame --grid 讀），現在是 ${JSON.stringify(seg.start)}`);
+    else m.startBox = seg.start;
+  }
+  m.projectDir = projectDir;   // 讀 work/media/<檔名>/events.json、work/media/notes/（055 檢查）
   for (const k of ['moves', 'marks', 'lens', 'callouts', 'spot', 'steps', 'arrows']) if (seg[k] != null && !Array.isArray(seg[k])) err(`${k} 要寫成陣列（[{ … }, { … }]）`);
   // 等待卡的說明（wait）：1–2 行，「｜」或換行分行；false＝不要等待卡
   m.waitOff = seg.wait === false; m.waitLines = null;
@@ -559,6 +589,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   mediaPieces(mc);
   Object.assign(mc, mediaHelpers(mc));        // tAt、inSeg、boxOf、keysOk
   mediaRetime(mc);
+  Object.assign(mc, mediaSource(mc));         // srcAt、segAt、ev（events.json）、markScrolls、stopSpans（055）
   mediaRedact(mc);
   mediaSideItems(mc);
   Object.assign(mc, mediaMoves(mc));          // camAt、moving
@@ -575,6 +606,7 @@ export function validateMedia(it, { cues, tm, pipAt = () => false, icons = null,
   capsuleCollisions(mc);
   badgeCollisions(mc);
   mediaWaits(mc);
+  mediaGuards(mc);
   return mediaReport(mc);
 }
 
@@ -695,6 +727,96 @@ function mediaRetime({ it, m, s, e, tm, tAt, inSeg, err }) {
   }
 }
 
+// ---------- 055：錄影的畫面事件與隱私筆記（media.mjs scan 寫的 events.json、盤點子代理寫的 work/media/notes/*.json）----------
+const jsonCache = new Map();
+function readJsonCached(file) {
+  let st;
+  try { st = fs.statSync(file); } catch { return null; }
+  const hit = jsonCache.get(file);
+  if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.data;
+  let data = null;
+  try { data = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { data = null; }
+  jsonCache.set(file, { mtimeMs: st.mtimeMs, size: st.size, data });
+  return data;
+}
+// work/media/<檔名>/events.json（檔名去掉副檔名；和工具資料夾撞名時是完整檔名，同 lib/rough/scan.mjs）；沒掃過、分析失敗回 null
+export function screenEventsOf(projectDir, src) {
+  if (!projectDir || !src) return null;
+  for (const d of [path.basename(src, path.extname(src)), path.basename(src)]) {
+    const ev = readJsonCached(path.join(projectDir, 'work', 'media', d, 'events.json'));
+    if (ev && !ev.failed && Array.isArray(ev.events)) return { events: ev.events, scrolls: ev.scrolls || [], waits: ev.waits || [] };
+  }
+  return null;
+}
+// 盤點筆記裡這個素材的 privacy：[{ from, to, box, what }]（錄影的秒數、素材像素；圖片或沒寫 from／to＝整段）。
+// 錄影的筆記是一個物件、圖片一批是陣列，都用 file 對素材
+export function privacyOf(projectDir, src) {
+  if (!projectDir || !src) return [];
+  const dir = path.join(projectDir, 'work', 'media', 'notes');
+  let files = [];
+  try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort(); } catch { return []; }
+  const out = [];
+  for (const f of files) {
+    const j = readJsonCached(path.join(dir, f));
+    for (const n of Array.isArray(j) ? j : j ? [j] : []) {
+      if (!n || String(n.file ?? '').replace(/\\/g, '/').replace(/^\.\//, '') !== src || !Array.isArray(n.privacy)) continue;
+      for (const p of n.privacy) {
+        if (p && Array.isArray(p.box) && p.box.length === 4 && p.box.every(isNum)) out.push({ from: isNum(p.from) ? p.from : null, to: isNum(p.to) ? p.to : null, box: p.box, what: String(p.what || '個資') });
+      }
+    }
+  }
+  return out;
+}
+
+// validateMedia 的一節（055）：段內時間 ↔ 錄影秒數（srcAt、segAt）、這支錄影的畫面事件（ev）、
+// 最後一框多停的那 1 秒不能落進去的區間（stopSpans：捲動、retime 快轉、跳接；完成影片秒數）
+const TM_ID = { unmapStart: (x) => x, map: (x) => x };   // 沒有剪接表（單元測試）＝完成影片秒數就是 rough 秒數
+function mediaSource({ m, s, e, tm: tm0 }) {
+  const tm = tm0 || TM_ID;
+  const r0 = tm.unmapStart(s);
+  const segOf = (rel) => r3(tm.map(r0 + rel));
+  const k = m.retime?.knots;
+  const isRec = m.hold != null || m.kind === 'video';
+  // 完成影片第 t 秒是錄影的第幾秒（圖片 null；定格＝hold）
+  const srcAt = (t) => {
+    if (m.hold != null) return m.hold;
+    if (m.kind !== 'video') return null;
+    const rel = tm.unmapStart(t) - r0;
+    if (!k) return r3(m.in + rel * m.speed);
+    if (rel <= k[0][0]) return k[0][1];
+    for (let i = 1; i < k.length; i++) if (rel <= k[i][0] + 1e-9) return r3(k[i - 1][1] + (k[i][1] - k[i - 1][1]) * (rel - k[i - 1][0]) / (k[i][0] - k[i - 1][0]));
+    return k[k.length - 1][1];
+  };
+  // 錄影第 src 秒第一次出現在段裡的哪一刻（段外、定格、圖片回 null）
+  const segAt = (src) => {
+    if (m.hold != null || m.kind !== 'video') return null;
+    let t = null;
+    if (!k) { const rel = (src - m.in) / m.speed; if (rel >= -1e-6) t = segOf(rel); }
+    else if (src >= k[0][1] - 1e-6) {
+      if (src <= k[0][1] + 1e-6) t = segOf(k[0][0]);
+      else for (let i = 1; i < k.length; i++) if (src <= k[i][1] + 1e-6 && k[i][1] > k[i - 1][1]) { t = segOf(k[i - 1][0] + (k[i][0] - k[i - 1][0]) * (src - k[i - 1][1]) / (k[i][1] - k[i - 1][1])); break; }
+    }
+    return t != null && t <= e + 1e-6 ? t : null;
+  };
+  const ev = isRec ? screenEventsOf(m.projectDir, m.src) : null;
+  // 紅框用的捲動（HIDDEN_SCROLL：緊接在變化之後記到的捲動，起點往前推）
+  const markScrolls = (ev?.scrolls || []).map((sc) => {
+    const pre = ev.events.find((x) => x.t < sc.from && Math.abs(x.settled - sc.from) <= HIDDEN_SCROLL.near + 1e-6 && x.box && hits(xyxy(x.box), xyxy(sc.box)));
+    return pre ? { ...sc, from: r3(Math.max(pre.t, sc.from - HIDDEN_SCROLL.back)) } : sc;
+  });
+  const stopSpans = [];
+  if (m.kind === 'video' && m.hold == null) {
+    const a0 = srcAt(s), b0 = srcAt(e);
+    for (const sc of markScrolls) {
+      if (Math.abs(sc.px) < MARK_SCROLL.px || sc.to <= a0 || sc.from >= b0) continue;
+      stopSpans.push([segAt(Math.max(sc.from, a0)) ?? s, segAt(Math.min(sc.to, b0)) ?? e]);
+    }
+    if (k) m.retime.speeds.forEach((sp, i) => { if (sp > MARK_STOP.fast) stopSpans.push([segOf(k[i][0]), segOf(k[i + 1][0])]); });
+    for (const p of (m.pieces || []).slice(1)) stopSpans.push([p.s, p.s]);
+  }
+  return { srcAt, segAt, segOf, ev, markScrolls, stopSpans };
+}
+
 // validateMedia 的一節：打碼（m.redact）
 function mediaRedact({ m, seg, s, tm, keysOk, boxOf, tAt, inSeg, err, warn }) {
   // --- 打碼（redact）：框的座標換成轉出來的檔案尺寸，時間換成檔案的秒數，轉檔時燒進去 ---
@@ -743,21 +865,41 @@ function mediaSideItems({ m, sd, keysOk, tAt, inSeg, err, warn }) {
 }
 
 // validateMedia 的一節：運鏡、慢推（m.cams、m.kb、m.kbTo；回傳 camAt(t)：那一刻的鏡頭、moving(a, b)：那段期間有沒有在動）
-function mediaMoves({ m, seg, s, e, G, W, H, VX, VY, VW, VH, FX, FY, FW, FH, toStage, keysOk, tAt, inSeg, boxOf, err, warn }) {
+function mediaMoves({ m, seg, s, e, F, G, W, H, VX, VY, VW, VH, FX, FY, FW, FH, toStage, keysOk, tAt, inSeg, boxOf, err, warn }) {
   // --- 運鏡 ---
   const ID = { z: 1, x: 0, y: 0 };
-  const camFor = (box) => {
+  // 框放進畫面（可見區 focus 置中）；zf＝指定倍率、top＝框的上緣對齊可見區上緣（起始鏡位撐滿寬度時）
+  const camFor = (box, { zf = null, top = false } = {}) => {
     const [X, Y, Wd, Ht] = toStage(box);
-    let z = Math.min(FW / Wd, FH / Ht);
+    let z = zf ?? Math.min(FW / Wd, FH / Ht);
     if (z < 1) z = 1;
-    let tx = FX + FW / 2 - z * (X + Wd / 2), ty = FY + FH / 2 - z * (Y + Ht / 2);
+    let tx = FX + FW / 2 - z * (X + Wd / 2), ty = top ? FY - z * Y : FY + FH / 2 - z * (Y + Ht / 2);
     const mw = z * G.width, mh = z * G.height;
     tx = mw >= VW ? Math.min(VX - z * G.left, Math.max(VX + VW - z * (G.left + G.width), tx)) : VX + (VW - mw) / 2 - z * G.left;
     ty = mh >= VH ? Math.min(VY - z * G.top, Math.max(VY + VH - z * (G.top + G.height), ty)) : VY + (VH - mh) / 2 - z * G.top;
     return { z: +z.toFixed(4), x: +tx.toFixed(1), y: +ty.toFixed(1) };
   };
+  const zoomWarn = (what, want) => {
+    if (want > MOVE.warnZoom) warn(`${what} 要放大 ${r3(want)} 倍，畫面會糊 → 框大一點，或改用放大鏡 lens`);
+    else if (want * G.kx > MOVE.warnPixel) warn(`${what} 放大後素材每個像素變 ${r3(want * G.kx)} 倍（素材 ${W}×${H}，超過 ${MOVE.warnPixel} 倍），字會糊 → 框大一點，或錄影時用更高的解析度`);
+  };
+  // 起始鏡位（055 Q2）：第一格就推在這一塊、沒有推的動作。框照 moves.to 的算法放進畫面；
+  // 框比可見區高、照比例放不進去（「框比畫面還大，推不近」）時改成撐滿寬度、框的上緣對齊可見區上緣：裁掉左右空白，上下多的裁在下面
+  m.start = null;
+  if (m.startBox) {
+    const box = boxOf(m.startBox, 'start');
+    if (box) {
+      const [, , Wd, Ht] = toStage(box);
+      const fit = Math.min(FW / Wd, FH / Ht), wide = FW / Wd;
+      if (fit >= 1 - 1e-6) { m.start = camFor(box); zoomWarn('start', fit); }
+      else if (wide > 1 + 1e-3) { m.start = camFor(box, { zf: wide, top: true }); m.start.cropped = true; zoomWarn('start', wide); }
+      else warn(`start 的框 [${m.startBox.join(', ')}] 寬高都比畫面大，推不近（第一格和沒寫 start 一樣）→ 只框要看的那一塊（至少比畫面窄），或拿掉 start`);
+      if (m.start) m.start.box = box;
+    }
+  }
+  const S0 = m.start ? { z: m.start.z, x: m.start.x, y: m.start.y } : ID;
   m.cams = [];
-  let prev = ID, prevEnd = -Infinity;
+  let prev = S0, prevEnd = -Infinity;
   (seg.moves || []).forEach((mv, i) => {
     const what = `moves[${i}]`;
     if (!keysOk(mv, what, ['at', 'to', 'dur'])) return;
@@ -768,36 +910,43 @@ function mediaMoves({ m, seg, s, e, G, W, H, VX, VY, VW, VH, FX, FY, FW, FH, toS
       if (!isNum(mv.dur) || mv.dur < 0.2 || mv.dur > 5) { err(`${what}.dur 要是 0.2–5 的秒數，現在是 ${JSON.stringify(mv.dur)}`); return; }
       dur = mv.dur;
     }
-    let to;
+    let to, box = null;
     if (mv.to === 'full') to = ID;
     else {
-      const box = boxOf(mv.to, `${what}.to`);
+      box = boxOf(mv.to, `${what}.to`);
       if (!box) return;
       to = camFor(box);
       const [, , Wd, Ht] = toStage(box);
       const want = Math.min(FW / Wd, FH / Ht);
-      if (want < 1) warn(`${what}.to 的框比畫面還大，推不近（已維持原大小）→ 框小一點，或寫 "full"`);
-      else if (want > MOVE.warnZoom) warn(`${what}.to 要放大 ${r3(want)} 倍，畫面會糊 → 框大一點，或改用放大鏡 lens`);
-      else if (want * G.kx > MOVE.warnPixel) warn(`${what}.to 放大後素材每個像素變 ${r3(want * G.kx)} 倍（素材 ${W}×${H}，超過 ${MOVE.warnPixel} 倍），字會糊 → 框大一點，或錄影時用更高的解析度`);
+      if (want < 1) warn(`${what}.to 的框比畫面還大，推不近（已維持原大小）→ 框小一點，或寫 "full"${i === 0 && FW / Wd > 1 + 1e-3 ? '；要一開始就裁掉左右空白，改寫成 "start"（框比畫面高時撐滿寬度）' : ''}`);
+      else zoomWarn(`${what}.to`, want);
     }
     const zoom = Math.max(prev.z, to.z), slow = zoom >= MOVE.big - 1e-6 ? MOVE.durBig : MOVE.dur;
+    // 段一開始就推、推得很快（0.2 秒硬推）：其實是起始鏡位（055 Q2）→ 建議改寫成 start，不算在運鏡次數裡
+    const asStart = i === 0 && !m.start && box && at < s + MOVE.startEps + 1e-6 && dur != null && dur <= MOVE.startEps + 1e-6;
     if (dur == null) dur = slow;
+    else if (asStart) warn(`${what} 在段起點就推（${dur}s），其實是起始鏡位 → 改寫成 "start": [${mv.to.join(', ')}]、拿掉這個 moves（第一格就在那一塊，沒有推的動作）`);
     else if (dur < slow - 1e-6) warn(`${what} ${dur}s 太快（${r3(zoom)} 倍要 ≥ ${slow}s），看的人眼睛跟不上 → dur 改 ${slow}，或不寫用預設`);
-    if (i === 0 && at < s + MOVE.lead - 1e-6) warn(`${what} 在段起點後 ${r3(at - s)}s 就動，觀眾還沒看清全景 → at 至少 "+${MOVE.lead}"`);
     if (prev !== ID && to !== ID && Math.max(prev.z, to.z) / Math.min(prev.z, to.z) > MOVE.ratio + 1e-6) warn(`${what} 從 ${r3(prev.z)} 倍直接換到 ${r3(to.z)} 倍，跳太大 → 先 "full" 拉回，或拆成兩段硬切`);
     if (at < prevEnd - 1e-6) { err(`${what}.at（${fmt(at)}）在上一個運鏡還沒結束（${fmt(prevEnd)}）時開始 → 往後挪，或把上一個的 dur 改短`); return; }
     if (at + dur > e + 1e-6) { warn(`${what} 在段尾之後才結束，dur 已縮成 ${r3(e - at)}s`); dur = r3(e - at); }
     if (dur < 0.2) return;
-    m.cams.push({ i, t0: at, dur: r3(dur), from: prev, to });
+    m.cams.push({ i, t0: at, dur: r3(dur), from: prev, to, box, asStart });
     prev = to; prevEnd = at + dur;
   });
-  if (m.cams.length > MOVE.max) warn(`moves 一段有 ${m.cams.length} 次運鏡（建議 ≤ ${MOVE.max}），畫面跳來跳去 → 留最重要的推近，其他改放大鏡 lens 或拆段`);
-  m.kb = m.kenburns && !m.cams.length;
+  // 次數不算 start、也不算段一開始的硬推（asStart）；直式畫面小，動兩次就晃（055 C11）
+  const counted = m.cams.filter((c) => !c.asStart), nMoves = counted.length;
+  // 一開始（1 秒內）就從全景推近的那一個，其實是起始鏡位
+  const early = !m.start && counted[0]?.box && counted[0].from === ID && counted[0].t0 - s <= 1 + 1e-6 ? counted[0] : null;
+  if (F.format === 'portrait' && nMoves > MOVE.portraitMax) warn(`moves 直式一段有 ${nMoves} 次運鏡（start 以外最多 ${MOVE.portraitMax} 次），畫面小、動兩次就晃 → ${early ? `moves[${early.i}] 一開始就推近，改寫成 "start": [${early.box.join(', ')}]；` : ''}留內容換位置的那一次，其他用紅框，或拆成兩段`);
+  else if (nMoves > MOVE.max) warn(`moves 一段有 ${nMoves} 次運鏡（建議 ≤ ${MOVE.max}），畫面跳來跳去 → 留最重要的推近，其他改放大鏡 lens 或拆段`);
+  m.kb = m.kenburns && !m.cams.length && !m.start;
   if (m.kenburns && m.cams.length && seg.kenburns === true) warn('kenburns：有 moves 時不做慢推（Ken Burns），已忽略');
+  else if (m.kenburns && m.start && seg.kenburns === true) warn('kenburns：有 start 時不做慢推（Ken Burns），已忽略');
   const kbTo = m.kbTo = { z: KB, x: +((G.left + G.width / 2) * (1 - KB)).toFixed(1), y: +((G.top + G.height / 2) * (1 - KB)).toFixed(1) };
   const camAt = (t) => {
     if (m.kb) { const p = Math.min(1, Math.max(0, (t - s) / Math.max(0.001, e - s))); return { z: 1 + (KB - 1) * p, x: kbTo.x * p, y: kbTo.y * p }; }
-    let c = ID;
+    let c = S0;
     for (const mv of m.cams) {
       if (t < mv.t0) break;
       if (t >= mv.t0 + mv.dur) { c = mv.to; continue; }
@@ -811,14 +960,17 @@ function mediaMoves({ m, seg, s, e, G, W, H, VX, VY, VW, VH, FX, FY, FW, FH, toS
 }
 
 // validateMedia 的一節：紅框的欄位與時間（回傳 marks；位置等說明卡驗完再算）
-function parseMarks({ seg, e, keysOk, tAt, inSeg, boxOf, err, warn }) {
+function parseMarks({ seg, s, e, cues, stopSpans, keysOk, tAt, inSeg, boxOf, err, warn }) {
   // --- 紅框 ---
-  const marks = [];
+  const marks = [], loose = [];
   (seg.marks || []).forEach((mk, i) => {
     const what = `marks[${i}]`;
     if (!keysOk(mk, what, ['at', 'until', 'box', 'path'])) return;
     const at = tAt(mk.at, `${what}.at`);
     if (at == null || !inSeg(at, `${what}.at`)) return;
+    // 055 C15：at 寫秒數（"+秒"、"#N+秒"）、離句子開頭（或段起點）≥ 1 秒 → 建議綁講到的詞
+    const pt = parseTime(mk.at);
+    if ((pt.kind === 'rel' || (pt.kind === 'cue' && pt.kw == null)) && Math.abs(pt.off) >= MARK_SCROLL.bind - 1e-6) loose.push({ i, raw: String(mk.at).trim(), at, n: pt.kind === 'cue' ? pt.n : null });
     let until = mk.until != null ? tAt(mk.until, `${what}.until`) : e;
     if (until == null) return;
     const box = boxOf(mk.box, `${what}.box`);
@@ -848,8 +1000,17 @@ function parseMarks({ seg, e, keysOk, tAt, inSeg, boxOf, err, warn }) {
     marks.push({ i, at, until, box, path });
   });
   if (marks.length) {
+    // 段尾最後一框講完再多停 1s；碰到捲動、retime 快轉（> ×1.5）、跳接就停在那之前（055 D3：多停的那 1 秒常落在快轉裡，框停在空的地方）
     const last = marks.reduce((a, b) => (b.until > a.until ? b : a));
-    if (last.until < e - 1e-6) last.until = r3(Math.min(e, last.until + MARK.hold));   // 段尾最後一框講完再多停 1s
+    if (last.until < e - 1e-6) {
+      let end = Math.min(e, last.until + MARK.hold);
+      for (const [a, b] of stopSpans || []) if (b > last.until + 1e-6 && a < end) end = Math.max(last.until, a);
+      if (end - last.until >= MARK_STOP.min - 1e-6) last.until = r3(end);
+    }
+  }
+  if (loose.length) {
+    const hint = loose.map((x) => { const w = wordNear(cues, x.at, x.n); return `marks[${x.i}] "${x.raw}"${w ? `（約講到 "${w}"）` : ''}`; });
+    warn(`${hint.join('、')} 的 at 寫秒數 → 紅框建議綁講到的詞（"#N@詞"），講到那個東西時框才出現，改字幕時間也跟得上`);
   }
   for (const mk of marks) {
     let prevEnd = mk.at + MARK.draw;
@@ -865,6 +1026,26 @@ function parseMarks({ seg, e, keysOk, tAt, inSeg, boxOf, err, warn }) {
     });
   }
   return marks;
+}
+
+// 完成影片第 t 秒大概講到哪個詞（照字數比例估）→ "#N@詞"；找不到回 null（055 C15 的建議）。n＝寫的句號（t 落在別句時用 t 那一句）
+const PUNCT = /[\s，。、！？：；,.!?:;「」『』（）()〈〉《》…—-]/;
+export function wordNear(cues, t, n = null) {
+  const list = cues || [];
+  const c = list.find((x) => t >= x.start - 1e-6 && t < x.end) || (n != null ? list.find((x) => x.n === n) : null);
+  if (!c || !(c.end > c.start) || !c.text) return null;
+  const chars = [...String(c.text)], total = textWidth(c.text);
+  if (!total) return null;
+  const p = Math.min(1, Math.max(0, (t - c.start) / (c.end - c.start))) * total;
+  let acc = 0, i = 0;
+  for (; i < chars.length - 1; i++) { const w = textWidth(chars[i]); if (acc + w > p) break; acc += w; }
+  while (i < chars.length - 1 && PUNCT.test(chars[i])) i++;
+  const alnum = (ch) => /[A-Za-z0-9]/.test(ch);
+  let a = i, b;
+  if (alnum(chars[i])) { while (a > 0 && alnum(chars[a - 1])) a--; b = i; while (b < chars.length && alnum(chars[b])) b++; }
+  else { b = a; while (b < chars.length && b - a < 2 && !PUNCT.test(chars[b]) && !alnum(chars[b])) b++; if (b - a < 2 && a > 0 && !PUNCT.test(chars[a - 1]) && !alnum(chars[a - 1])) a--; }
+  const w = chars.slice(a, b).join('');
+  return w ? `#${c.n}@${w}` : null;
 }
 
 // validateMedia 的一節：說明卡的欄位與時間（回傳 callouts；位置等運鏡、膠囊定了再擺）
@@ -1277,12 +1458,177 @@ function mediaWaits({ it, m, s, F, G, tm, cues, waitLead, warn }) {
   }
 }
 
+// validateMedia 的一節（055，specs/054 G11–G16、055 N8）：錄影段的畫面檢查，都是 ⚠：
+// 直式第一格黑底（C10）、推近切掉整頁（C12）、不是從頁首開始（C13）、紅框出現時在捲動（C14）、隱私沒打碼（C16）、慢放捲動（C17）、錄影停住太久（N8）
+// events.json（media.mjs scan）、盤點筆記沒有時，用到它們的那幾條不量
+function mediaGuards(mc) {
+  mediaBlack(mc);
+  mediaCutBlock(mc);
+  mediaPageTop(mc);
+  markScroll(mc);
+  mediaPrivacy(mc);
+  slowScroll(mc);
+  mediaHold(mc);
+}
+const r1 = (v) => Math.round(v * 10) / 10;
+const scrollWord = (px) => `往${px > 0 ? '下' : '上'}捲 ${Math.round(Math.abs(px))} px`;
+
+// C10：直式第一格（start 或全景），上半資訊窗（y 240–900）沒被錄影蓋到的比例 > 10%
+function mediaBlack({ m, s, F, G, camAt, warn }) {
+  if (F.format !== 'portrait' || !F.panel) return;
+  const win = xyxy(F.focus), R = xyxy(toScreen([G.left, G.top, G.width, G.height], camAt(s)));
+  const black = 1 - inter(R, win) / ((win[2] - win[0]) * (win[3] - win[1]));
+  if (black > BLACK_MAX + 1e-6) warn(`上半第一格有 ${Math.round(black * 100)}% 是黑底（${m.kind === 'video' || m.hold != null ? '錄影' : '圖片'}只蓋到 x ${ri(Math.max(win[0], R[0]))}–${ri(Math.min(win[2], R[2]))}、y ${ri(Math.max(win[1], R[1]))}–${ri(Math.min(win[3], R[3]))}）→ 寫 "start": [x,y,w,h] 推到操作區，或 "fit": "cover"`);
+}
+
+// C12：推近（start、moves）後畫面上看得到的錄影寬度，不到那一刻整頁版面（換頁事件的框，寬 ≥ 錄影 60%）寬度的 85%，
+// 而且停在這個鏡位的期間沒有紅框、說明卡、箭頭、聚光燈、放大鏡（＝在展示整頁，不是要看清某一塊）
+function mediaCutBlock({ m, s, e, W, G, VX, VW, srcAt, ev, warn }) {
+  if (!ev) return;
+  const pages = ev.events.filter((x) => x.kind === '換頁' && x.box?.[2] >= CUT_BLOCK.page * W);
+  if (!pages.length) return;
+  const shots = [...(m.start ? [{ name: 'start', a: s, t: s, cam: m.start }] : []), ...m.cams.filter((c) => c.box).map((c) => ({ name: `moves[${c.i}]`, a: c.t0, t: c.t0 + c.dur, cam: c.to }))];
+  const ann = [...m.marks, ...m.callouts, ...m.arrows, ...m.spots].map((x) => [x.at, x.until]).concat(m.lenses.map((x) => [x.la, x.lb]));
+  for (const x of shots) {
+    if (x.cam.z <= 1 + 1e-3) continue;
+    const next = m.cams.find((c) => c.t0 >= x.t - 1e-6), hold = [x.a, next ? next.t0 + next.dur : e];
+    if (ann.some(([a, b]) => a < hold[1] - 1e-6 && b > hold[0] + 1e-6)) continue;
+    const src = srcAt(x.t);
+    const pg = src == null ? null : [...pages].reverse().find((p) => p.t <= src + 1e-6);
+    if (!pg) continue;
+    const x0 = ((VX - x.cam.x) / x.cam.z - G.left) / G.kx, x1 = ((VX + VW - x.cam.x) / x.cam.z - G.left) / G.kx;
+    const [lx, , lw] = pg.box, keep = Math.max(0, Math.min(x1, lx + lw) - Math.max(x0, lx)) / lw;
+    if (keep < CUT_BLOCK.keep - 1e-6) warn(`${x.name} 推近後只看得到整頁版面寬度的 ${Math.round(keep * 100)}%（錄影第 ${r1(src)}s 那一頁 [${pg.box.join(', ')}]），整頁被切掉、看起來像網頁破版 → 展示整頁不推近（拿掉這個${x.name === 'start' ? ' start' : '運鏡'}）；要看某一塊就框整欄`);
+  }
+}
+
+// C13：段的起點那一格頁面正在往下捲（頁首一閃就不見）；或離最近一次換頁（沒有就從錄影開頭）已經往下捲超過 80 px、
+// 而且這段沒有紅框、說明卡、箭頭、聚光燈、放大鏡（有指著下面某一塊時，從那裡開始是刻意的）→ 頁首看不到。
+// 只算整頁的捲動（捲動框寬 ≥ 錄影 60%；視窗裡一小塊清單的捲動不算）；定格（hold、retime 一開始就停住）只看已經捲了多少
+function mediaPageTop({ m, s, e, W, srcAt, ev, warn }) {
+  const scrolls = (ev?.scrolls || []).filter((c) => c.box?.[2] >= CUT_BLOCK.page * W);
+  if (!scrolls.length) return;
+  const src0 = srcAt(s);
+  if (src0 == null) return;
+  // 捲動中途被標成「換頁」的（捲動時整片在變）不算換頁
+  const pg = [...ev.events].reverse().find((p) => p.kind === '換頁' && p.t <= src0 + 1e-6 && !scrolls.some((c) => p.t > c.from + 1e-6 && p.t < c.to - 1e-6));
+  const base = pg ? pg.t : 0, list = scrolls.filter((c) => c.from >= base - 1e-6 && c.from < src0 - 1e-6);
+  const px = list.reduce((a, c) => a + c.px * (c.to > src0 ? (src0 - c.from) / Math.max(1e-6, c.to - c.from) : 1), 0);
+  // 「正在捲」要錄影在起點真的往下播（定格、retime 一開始就停住的只看已經捲了多少）
+  const plays = m.hold == null && srcAt(Math.min(e, s + 0.3)) > src0 + 0.05;
+  const now = plays ? list.find((c) => c.to > src0 + 1e-6 && c.px > PAGE_TOP.px) : null;
+  const pointed = [m.marks, m.callouts, m.arrows, m.spots, m.lenses].some((x) => x?.length);
+  if ((px <= PAGE_TOP.px || pointed) && !now) return;
+  const first = list[0], fix = r1(Math.min(first.from, Math.max(pg ? Math.min(pg.settled, pg.t + 0.5) : 0, first.from - PAGE_TOP.hold)));
+  const what = !now ? `起點那一格（錄影第 ${r1(src0)}s）頁面已經往下捲了 ${Math.round(px)} px，頁首看不到` : `起點那一格（錄影第 ${r1(src0)}s）頁面正在往下捲（${now.from}–${now.to}s 捲 ${now.px} px），頁首一閃就不見`;
+  warn(`${what}${pg ? `（${pg.t}s 換頁之後）` : ''} → ${m.retime ? 'retime 第一點的 src' : m.hold != null ? 'hold' : 'in'} 改成 ${fix}（換頁後、捲動前），網頁、工具頁從剛打開、停在最上方的那一格開始播`);
+}
+
+// C14：紅框出現期間（含最後一框多停的那段）錄影在捲動、捲動的範圍碰到紅框、紅框沒有 path → 框停在空的地方
+function markScroll({ m, marks, srcAt, segAt, markScrolls, warn }) {
+  if (!markScrolls?.length || m.kind !== 'video' || m.hold != null) return;
+  for (const mk of marks) {
+    if (mk.path.length) continue;
+    const sa = srcAt(mk.at), sb = srcAt(mk.until);
+    for (const sc of markScrolls) {
+      if (sc.to <= sa + 1e-6 || sc.from >= sb - 1e-6 || !hits(xyxy(sc.box), xyxy(mk.box))) continue;
+      const px = sc.px * Math.min(1, (Math.min(sc.to, sb) - Math.max(sc.from, sa)) / Math.max(1e-6, sc.to - sc.from));
+      if (Math.abs(px) < MARK_SCROLL.px) continue;
+      const t0 = segAt(Math.max(sc.from, sa)), t1 = segAt(Math.min(sc.to, sb));
+      const fix = sc.from > sa + 1e-6 && t0 != null ? `until 收在 ${fmt(t0)} 之前` : `at 延到捲完（${fmt(t1 ?? mk.until)}）之後`;
+      warn(`marks[${mk.i}]（${fmt(mk.at)}–${fmt(mk.until)}）出現期間錄影${scrollWord(px)}（錄影 ${r1(Math.max(sc.from, sa))}–${r1(Math.min(sc.to, sb))}s），框會停在空的地方 → 加 path 跟過去，或 ${fix}`);
+      break;
+    }
+  }
+}
+
+// C16：盤點筆記記的隱私（帳號、家目錄路徑、頭像、email、通知），播到時在畫面上、又沒被 redact 蓋住（≥ 90%）
+function mediaPrivacy({ m, s, e, F, tm: tm0, srcAt, camAt, toStage, warn }) {
+  const items = privacyOf(m.projectDir, m.src);
+  if (!items.length) return;
+  const tm = tm0 || TM_ID;
+  const rec = m.kind === 'video' || m.hold != null, moving = m.kind === 'video' && m.hold == null;
+  const r0 = tm.unmapStart(s);
+  const fileAt = (t) => (m.retime ? r3(tm.unmapStart(t) - r0) : r3(m.in / m.speed + (tm.unmapStart(t) - r0)));
+  const rdBox = (b) => xyxy([b[0] / m.file.sx, b[1] / m.file.sy, b[2] / m.file.sx, b[3] / m.file.sy]);
+  for (const p of items) {
+    const pb = xyxy(p.box), area = p.box[2] * p.box[3];
+    let a = null, b = null, n = 0, sa = Infinity, sb = -Infinity;
+    for (let t = s; t < e - 1e-6; t = r3(t + PRIVACY.step)) {
+      const src = srcAt(t);
+      if (rec && src != null && ((p.from != null && src < p.from - 1e-6) || (p.to != null && src > p.to + 1e-6))) continue;
+      if (inter(xyxy(toScreen(toStage(p.box), camAt(t))), F.screen) <= 0) continue;   // 運鏡推走了，畫面上看不到
+      const ft = moving ? fileAt(t) : null;
+      if (m.redact.some((rd) => (ft == null || ((rd.at == null || ft >= rd.at - 0.05) && (rd.until == null || ft <= rd.until + 0.05))) && inter(rdBox(rd.box), pb) >= PRIVACY.cover * area)) continue;
+      n++; a ??= t; b = Math.min(e, t + PRIVACY.step);
+      if (src != null) { sa = Math.min(sa, src); sb = Math.max(sb, src); }
+    }
+    if (n * PRIVACY.step <= PRIVACY.tol + 1e-6) continue;
+    warn(`${rec ? `錄影 ${r1(sa)}–${r1(sb)} 秒` : '圖片'}露出「${p.what}」[${p.box.join(', ')}]（完成影片 ${fmt(a)}–${fmt(b)}）沒有打碼 → 加 "redact": [{ "at": "+${r1(a - s)}", "until": "+${r1(b - s)}", "box": [${p.box.join(', ')}] }]`);
+  }
+}
+
+// C17：慢放（retime 或 speed < ×0.8；60 fps 的錄影 < ×0.5）的那段錄影在捲動 → 看起來一格一格卡
+function slowScroll({ m, s, e, srcAt, segAt, ev, warn }) {
+  if (!ev?.scrolls.length || m.kind !== 'video' || m.hold != null) return;
+  const lim = Math.min(SLOW_SCROLL.speed, FPS / Math.max(FPS, m.info.fps || FPS)), spans = [];
+  if (m.retime) { const k = m.retime.knots; m.retime.speeds.forEach((sp, i) => { if (sp > 0 && sp < lim - 1e-6) spans.push({ sp, a: k[i][1], b: k[i + 1][1] }); }); }
+  else if (m.speed < lim - 1e-6) spans.push({ sp: m.speed, a: srcAt(s), b: srcAt(e) });
+  for (const x of spans) {
+    for (const sc of ev.scrolls) {
+      if (sc.from >= x.b - 1e-6 || sc.to <= x.a + 1e-6 || Math.abs(sc.px) < MARK_SCROLL.px) continue;
+      const t0 = segAt(Math.max(sc.from, x.a)) ?? s, t1 = segAt(Math.min(sc.to, x.b)) ?? e;
+      if (t1 - t0 < SLOW_SCROLL.min - 1e-6) continue;
+      warn(`${fmt(t0)}–${fmt(t1)} 錄影慢放 ×${x.sp} 又在捲動（錄影 ${sc.from}–${sc.to}s ${scrollWord(sc.px)}），看起來一格一格卡 → 捲動照原速，要看的地方停住（retime 兩點同一個 src）用紅框帶`);
+      break;
+    }
+  }
+}
+
+// N8：retime 定格超過 2.5 秒、或慢放到 ×0.5 以下而那段錄影沒有換頁、捲動（看起來也是停住）超過 4 秒；那段有人在講，
+// 而且最長一段沒有紅框、說明卡、步驟、箭頭、放大鏡、聚光燈、運鏡、等待卡 → 畫面沒有在動
+function mediaHold({ m, s, e, cues, segOf, ev, warn }) {
+  if (!m.retime || m.side) return;
+  const k = m.retime.knots;
+  const still = (a, b) => ev && !ev.events.some((x) => x.t > a + 1e-6 && x.t <= b + 1e-6) && !ev.scrolls.some((c) => c.from < b - 1e-6 && c.to > a + 1e-6);
+  const cand = [];
+  m.retime.speeds.forEach((sp, i) => {
+    const kind = sp === 0 ? 'freeze' : sp < MEDIA_HOLD.slow && still(k[i][1], k[i + 1][1]) ? 'slow' : null;
+    if (!kind) return;
+    const a = Math.max(s, segOf(k[i][0])), b = Math.min(e, segOf(k[i + 1][0])), last = cand[cand.length - 1];
+    if (last && a - last.b < 0.05) { last.b = b; last.src2 = k[i + 1][1]; if (kind === 'slow') { last.kind = 'slow'; last.sp = Math.min(last.sp ?? sp, sp); } }
+    else cand.push({ a, b, kind, src: k[i][1], src2: k[i + 1][1], ...(kind === 'slow' ? { sp } : {}) });
+  });
+  if (!cand.length) return;
+  const busy = [
+    ...m.marks.map((x) => [x.at, x.until]), ...m.callouts.map((x) => [x.at, x.until]), ...m.arrows.map((x) => [x.at, x.until]),
+    ...m.spots.map((x) => [x.at, x.until]), ...m.lenses.map((x) => [x.la, x.lb]), ...m.cams.map((x) => [x.t0, x.t0 + x.dur]),
+    ...m.waits.map((x) => [x.a, x.b]), ...(m.steps?.capsule ? [[m.steps.capsule.from, m.steps.capsule.to]] : []),
+  ].sort((p, q) => p[0] - q[0]);
+  for (const c of cand) {
+    let best = [c.a, c.a], at = c.a;
+    for (const [p, q] of busy) {
+      if (q <= at || p >= c.b) continue;
+      if (p - at > best[1] - best[0]) best = [at, p];
+      at = Math.max(at, q);
+    }
+    if (c.b - at > best[1] - best[0]) best = [at, c.b];
+    const len = best[1] - best[0], lim = c.kind === 'freeze' ? MEDIA_HOLD.max : MEDIA_HOLD.slowMax;
+    if (len <= lim + 1e-6) continue;
+    const talk = (cues || []).reduce((acc, q) => acc + Math.max(0, Math.min(best[1], q.end) - Math.max(best[0], q.start)), 0);
+    if (talk < MEDIA_HOLD.speech - 1e-6) continue;
+    const how = c.kind === 'freeze' ? `停在同一格 ${r1(len)} 秒（錄影第 ${c.src}s）` : `${r1(len)} 秒慢放到 ×${c.sp}、這段錄影（${c.src}–${c.src2}s）沒有換頁或捲動，看起來停住`;
+    warn(`錄影從 ${fmt(best[0])} 起${c.kind === 'freeze' ? '' : ' '}${how}，講者還在講、畫面沒有在動 → 接到下一段錄影的開頭（retime 的 src 往後接），或加紅框、說明卡`);
+  }
+}
+
 // validateMedia 的一節：報告那一行（summary）與 --check --json 的 media 欄（json）；錄影沒有標註、定格太久 ⚠
 function mediaReport({ m, seg, s, e, W, H, F, G, stepList, dropped, warn }) {
   // --- 報告與 JSON ---
   const pathN = m.marks.reduce((a, mk) => a + mk.path.length, 0);
   const nums = stepList.map((x) => x.n);
   const parts = [
+    m.start ? `起始鏡位 ${r3(m.start.z)} 倍${m.start.cropped ? '（撐滿寬度，框的下面裁掉）' : ''}` : '',
     m.cams.length ? `運鏡 ${m.cams.length}` : '', m.kb ? '慢推' : '',
     m.marks.length ? `紅框 ${m.marks.length}${pathN ? `（跟捲動 ${pathN} 次）` : ''}` : '',
     m.callouts.length ? `標註 ${m.callouts.length}` : '', m.spots.length ? `聚光燈 ${m.spots.length}` : '',
@@ -1316,14 +1662,35 @@ function mediaReport({ m, seg, s, e, W, H, F, G, stepList, dropped, warn }) {
   };
   // FR-082：錄影（含定格）畫面縮成原尺寸的幾倍、有幾個運鏡／放大鏡（qc storyboard：< 0.6、沒有 moves 和 lens、> 3 秒 ⚠ 介面字太小）
   // 直式只看橫的錄影；橫式也看（參考專案：3452×2016 的錄影縮到 1609×940，介面字只剩 8–10px，靠放大鏡補）
-  const rec = m.kind === 'video' || m.hold != null;
-  if (F.format === 'portrait' && rec && W > H) json.view = { scale: r3(G.kx), moves: m.cams.length, lens: m.lenses.length };
-  else if (F.format !== 'portrait' && rec) json.view = { scale: r3(G.kx), moves: m.cams.length, lens: m.lenses.length, landscape: true };
+  // 有起始鏡位時 scale 是第一格的倍率（素材縮放 × start 推近）
+  const rec = m.kind === 'video' || m.hold != null, scale = r3(G.kx * (m.start?.z ?? 1));
+  if (F.format === 'portrait' && rec && W > H) json.view = { scale, moves: m.cams.length, lens: m.lenses.length };
+  else if (F.format !== 'portrait' && rec) json.view = { scale, moves: m.cams.length, lens: m.lenses.length, landscape: true };
+  if (m.start) json.start = { z: m.start.z, x: m.start.x, y: m.start.y };
   return { summary, json };
 }
 
 // 過渡期別名（002 改成呼叫 validateMedia 之前 build 照常能跑）
 export const resolveMedia = validateMedia;
+
+// 驗收截圖（055 k19）：每個紅框兩格，出現後 0.4 秒（描完）、開始淡出前 0.1 秒，框和錄影一起看（框有沒有貼齊、錄影有沒有捲走）。
+// marks＝--check --json 的 annotations.marks（完成影片秒數）；兩格相距不到 merge 秒只截一格。qc.mjs storyboard、versions.mjs finish 共用
+export const MARK_SHOT = { after: MARK.draw, before: MARK.out + 0.1, merge: 0.3 };
+export function markShots(marks = []) {
+  const out = [];
+  for (const mk of marks || []) {
+    const a = r3(mk.at + MARK_SHOT.after), b = r3(mk.until - MARK_SHOT.before);
+    out.push({ at: a, why: `marks[${mk.i}] 出現後 ${MARK_SHOT.after} 秒` });
+    if (b - a >= MARK_SHOT.merge - 1e-6) out.push({ at: b, why: `marks[${mk.i}] 消失前` });
+  }
+  return out.sort((x, y) => x.at - y.at);
+}
+// versions.mjs finish 的錄影段截圖時間（完成影片秒數）：有紅框就每框兩格，沒有就截那段中間。o＝--check --json 那一段的 out
+export function mediaShotTimes(o) {
+  const lo = o.start + 0.05, hi = o.end - 0.05;
+  const ts = [...new Set(markShots(o.annotations?.marks).map((x) => r3(Math.min(hi, Math.max(lo, x.at)))))];
+  return ts.length ? ts : [r3((o.start + o.end) / 2)];
+}
 
 // ---------- build 要準備的檔 ----------
 
@@ -1591,6 +1958,8 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   // --- 運鏡（全部掛在 paused timeline：seek 到哪裡都一樣）---
   const st = `#mst-${id}`;
   const cam = (c) => `{ x: ${c.x}, y: ${c.y}, scale: ${c.z} }`;
+  // 起始鏡位（055 Q2）：段的第一格就在那裡（沒有推的動作）；之後的 moves 從這裡推
+  if (m.start) tl.push(`tl.set('${st}', { x: ${m.start.x}, y: ${m.start.y}, scale: ${m.start.z}, force3D: false }, ${sh(s)});`);
   if (m.kb) tl.push(`tl.fromTo('${st}', { x: 0, y: 0, scale: 1 }, { x: ${m.kbTo.x}, y: ${m.kbTo.y}, scale: ${KB}, duration: ${n3(it.end - s)}, ease: 'none', force3D: false }, ${sh(s)});`);
   m.cams.forEach((mv, n) => {
     tl.push(`tl.fromTo('${st}', ${cam(mv.from)}, { x: ${mv.to.x}, y: ${mv.to.y}, scale: ${mv.to.z}, duration: ${n3(mv.dur)}, ease: 'power2.inOut', force3D: false${n ? ', immediateRender: false' : ''} }, ${sh(mv.t0)});`);

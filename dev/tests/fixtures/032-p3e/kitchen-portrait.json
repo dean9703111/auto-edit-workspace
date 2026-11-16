@@ -504,6 +504,7 @@
    },
    "errors": [],
    "warnings": [
+    "[m1 media] moves 直式一段有 2 次運鏡（start 以外最多 1 次），畫面小、動兩次就晃 → moves[0] 一開始就推近，改寫成 \"start\": [100, 100, 1200, 675]；留內容換位置的那一次，其他用紅框，或拆成兩段",
     "[m1 media] 音效 success（25.396s）和 f1 的音效只差 0.573s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 f1 寫 \"sfx\": null",
     "[m1 media] 和前一段 f1 之間只空 0.50s，講者會閃一下 → f1 改 \"to\": \"#8\"（0 秒相接），或拉開到 1.0s 以上"
    ],
@@ -530,6 +531,8 @@
     "exit": "fade",
     "kenburns": false,
     "hasAnn": true,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": null,
     "file": {
@@ -624,6 +627,7 @@
     ],
     "retime": null,
     "redact": [],
+    "start": null,
     "cams": [
      {
       "i": 0,
@@ -638,7 +642,14 @@
        "z": 2.1333,
        "x": -90,
        "y": -391.5
-      }
+      },
+      "box": [
+       100,
+       100,
+       1200,
+       675
+      ],
+      "asStart": false
      },
      {
       "i": 1,
@@ -653,7 +664,9 @@
        "z": 1,
        "x": 0,
        "y": 0
-      }
+      },
+      "box": null,
+      "asStart": false
      }
     ],
     "kb": false,
@@ -956,6 +969,8 @@
     "exit": "fade",
     "kenburns": false,
     "hasAnn": true,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": null,
     "file": {
@@ -1043,6 +1058,7 @@
     "pipShift": null,
     "retime": null,
     "redact": [],
+    "start": null,
     "cams": [],
     "kb": false,
     "kbTo": {
@@ -1758,6 +1774,8 @@
      }
     ],
     "out": null,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": [
      "AI 處理中",
@@ -1897,6 +1915,7 @@
       ]
      }
     ],
+    "start": null,
     "cams": [],
     "kb": false,
     "kbTo": {
@@ -2688,6 +2707,7 @@
    },
    "errors": [],
    "warnings": [
+    "[m1 media] moves 直式一段有 2 次運鏡（start 以外最多 1 次），畫面小、動兩次就晃 → moves[0] 一開始就推近，改寫成 \"start\": [100, 100, 1200, 675]；留內容換位置的那一次，其他用紅框，或拆成兩段",
     "[m1 media] 音效 success（25.396s）和 f1 的音效只差 0.573s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 f1 寫 \"sfx\": null",
     "[m1 media] 和前一段 f1 之間只空 0.50s，講者會閃一下 → f1 改 \"to\": \"#8\"（0 秒相接），或拉開到 1.0s 以上"
    ],
@@ -2714,6 +2734,8 @@
     "exit": "fade",
     "kenburns": false,
     "hasAnn": true,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": null,
     "file": {
@@ -2808,6 +2830,7 @@
     ],
     "retime": null,
     "redact": [],
+    "start": null,
     "cams": [
      {
       "i": 0,
@@ -2822,7 +2845,14 @@
        "z": 2.1333,
        "x": -90,
        "y": -391.5
-      }
+      },
+      "box": [
+       100,
+       100,
+       1200,
+       675
+      ],
+      "asStart": false
      },
      {
       "i": 1,
@@ -2837,7 +2867,9 @@
        "z": 1,
        "x": 0,
        "y": 0
-      }
+      },
+      "box": null,
+      "asStart": false
      }
     ],
     "kb": false,
@@ -3140,6 +3172,8 @@
     "exit": "fade",
     "kenburns": false,
     "hasAnn": true,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": null,
     "file": {
@@ -3227,6 +3261,7 @@
     "pipShift": null,
     "retime": null,
     "redact": [],
+    "start": null,
     "cams": [],
     "kb": false,
     "kbTo": {
@@ -3942,6 +3977,8 @@
      }
     ],
     "out": null,
+    "startBox": null,
+    "projectDir": "<TMP>/X",
     "waitOff": false,
     "waitLines": [
      "AI 處理中",
@@ -4081,6 +4118,7 @@
       ]
      }
     ],
+    "start": null,
     "cams": [],
     "kb": false,
     "kbTo": {
@@ -4388,6 +4426,7 @@
   "[s02 key-point] 和前一段 s01 之間只空 0.50s，講者會閃一下 → s01 改 \"to\": \"#4\"（0 秒相接），或拉開到 1.0s 以上",
   "[k1 keywords] 和前一段 s02 之間只空 0.50s，講者會閃一下 → s02 改 \"to\": \"#5\"（0 秒相接），或拉開到 1.0s 以上",
   "[f1 fx 29] 和前一段 k1 之間只空 0.50s，講者會閃一下 → k1 改 \"to\": \"#7\"（0 秒相接），或拉開到 1.0s 以上",
+  "[m1 media] moves 直式一段有 2 次運鏡（start 以外最多 1 次），畫面小、動兩次就晃 → moves[0] 一開始就推近，改寫成 \"start\": [100, 100, 1200, 675]；留內容換位置的那一次，其他用紅框，或拆成兩段",
   "[m1 media] 音效 success（25.396s）和 f1 的音效只差 0.573s（< 3s），已拿掉（只保留前一個） → 想留這顆，就在 f1 寫 \"sfx\": null",
   "[m1 media] 和前一段 f1 之間只空 0.50s，講者會閃一下 → f1 改 \"to\": \"#8\"（0 秒相接），或拉開到 1.0s 以上",
   "[m2 media] kenburns：有 callouts／spot／arrows 時不做慢推（標註要對準不動的畫面），已忽略",
@@ -4961,6 +5000,7 @@
   "lines": [
    "音效次數：ding 1、success 1、alert 1、impact 1、click 3、chapter 1、sparkle 1／6、shine 0／3、thunder 0／3",
    "音效密度：主音效平均 3.4 顆／分（上限：任一分鐘 ≤ 5 顆，超過才 ⚠），附加音效 3 顆；每分鐘超過的已自動拿掉 2 顆",
+   "音效上限拿掉的：x1 的 ding 0:57.00（動畫拍點）、s08 的 ding 1:38.10 → 想留哪一顆，就把同一分鐘別段的音效拿掉（段上寫 \"sfx\": null）；動畫拍點不要就在那段寫 \"sfxExtra\": false，結果才不會每次 build 不一樣",
    "情緒點：5 個（音效 4 顆、不出聲 1 個；模板預設音效讓位 2 顆）",
    "講者爆衝推近：1 次（0:09.40）"
   ],
@@ -5259,7 +5299,7 @@
    ],
    "chinMax": 860
   },
-  "minTextPx": 32,
+  "minTextPx": 48,
   "regions": {
    "full": [
     60,

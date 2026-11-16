@@ -18,6 +18,7 @@ export const CUT = {
   longPause: 1.5,    // 表上時間前 early 秒內結束、這麼長的停頓＝就是這一章前面的停頓
   minKeep: 0.5,      // 保留區被 NG 吃到剩不到 0.5 秒就不保留
   ngKind: 0.3,       // cutpoints：剪掉的段和 NG 重疊 ≥ min(0.3 秒, NG 長度一半) 才算 ng
+  edge: 0.1,         // 055 D6：NG 列起點在主軌最前面這幾秒內＝從 0 剪、終點在最後這幾秒內＝剪到結尾（不往停頓對齊）
   edit: 'audio:-20dB', margin: '0.15sec',   // 剪乾淨的預設參數（G16：作者的停頓保留 0.3 秒）
 };
 // 小聲的錄音（旁白、領夾麥常見）：預設 -20dB 會把整支當成靜音（auto-editor：Timeline is empty）。
@@ -159,7 +160,9 @@ export function parseMargin(m) {
 // chapterSil＝章節開口用的停頓（chapterKeep 的 sil，可帶第 3 個值＝保留區起點）：終點「落在」這種停頓裡時改吸到保留區起點
 // （沒帶就吸停頓起點），不吃掉章節的保留區；保留區前那段停頓本來就會被剪，一起剪才不會在兩個剪點之間留下一兩格的殘片
 // （終點在停頓後面、NG 連下一句開頭一起剪時照常吸到停頓終點，由 ngSnap 報「吃掉章節的停頓」）
-export function snapNg(rows, sil, win = CUT.ngWin, chapterSil = []) {
+// 055 D6：主軌最前面起的列（起點 ≤ CUT.edge 秒）起點就是 0、到主軌最後的列（dur 給了、終點離結尾 ≤ CUT.edge 秒）終點就是結尾，不往停頓對齊
+// （以前起點 0 會被對到開頭那句話之後的停頓，試講的頭一兩個字就留在初剪裡：短影片5 開頭 0–0.6 秒的「把 AI」）
+export function snapNg(rows, sil, win = CUT.ngWin, chapterSil = [], dur = null) {
   const near = (x, idx) => {
     const inside = sil.find(([a, b]) => x >= a - 1e-9 && x <= b + 1e-9);
     if (inside) return inside;
@@ -172,7 +175,7 @@ export function snapNg(rows, sil, win = CUT.ngWin, chapterSil = []) {
     if (r.cut != null ? !r.cut : r.pending) return { ...r, skip: true };
     // 等待：本來就沒人講話，不用對齊停頓；留開頭 waitKeep 秒給 screen-sync 放快轉
     if (r.wait) return { ...r, a: r3(Math.min(r.end, r.start + waitKeep(r.end - r.start))), b: r3(r.end), missStart: false, missEnd: false, miss: false, toChapter: false };
-    const sa = near(r.start, 0), sb = near(r.end, 1);
+    const sa = r.start <= CUT.edge ? [0, 0] : near(r.start, 0), sb = dur > 0 && Math.abs(r.end - dur) <= CUT.edge ? [dur, dur] : near(r.end, 1);
     const ch = sb && chOf(sb);
     const toChapter = !!(ch && r.end >= sb[0] - 1e-9 && r.end <= sb[1] + 1e-9);
     let a = sa ? sa[0] : r.start, b = sb ? (toChapter ? (ch[2] ?? sb[0]) : sb[1]) : r.end;

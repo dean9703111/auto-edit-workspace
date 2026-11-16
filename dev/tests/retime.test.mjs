@@ -198,7 +198,7 @@ test('紅框全程查：平移出畫面、後來才被小視窗擋都 ⚠；說�
   writePlan([seg({ retime: undefined, in: 0, from: 1, to: 9, pip: false, marks: [{ at: '+1', until: '+7', box: [10, 10, 40, 20] }], moves: [{ at: '+2', to: [240, 140, 80, 50], dur: 1 }] })]);
   const w = checkJson().warnings.join('\n');
   assert.match(w, /marks\[0\] 在 0:\d+\.\d+ (整個跑到畫面外|有一部分在畫面外)/);
-  writePlan([seg({ in: 0, from: 1, to: 9, callouts: [{ at: '+1', until: '+5', box: [280, 170, 30, 20], text: '設定', side: 'top' }] })]);
+  writePlan([seg({ in: 0, from: 1, to: 9, pip: true, callouts: [{ at: '+1', until: '+5', box: [280, 170, 30, 20], text: '設定', side: 'top' }] })]);
   const j = checkJson();
   assert.match(j.warnings.concat(j.errors).join('\n'), /callouts\[0\] 的框被右下角的子母畫面擋住/);
 });

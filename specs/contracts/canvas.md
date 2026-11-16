@@ -37,7 +37,7 @@
 | `stage.ch` | `null` | `{ window: [160,260,1760,870], scale: 0.625, centerY: 860 }` | 01 章節 |
 | `media.view` | `{ contain: [0,0,1920,940], cover: [0,0,1920,1080] }` | `{ contain: [0,240,1080,900], cover: [0,0,1080,900], containFull: [0,240,1080,1260], coverFull: [0,0,1080,1920] }`（`Full`＝沒有講者面板） | lib/media.mjs `mediaFrame`（plan.mjs 呼叫 `validateMedia` 時傳 `canvas: C`；`contracts/media.md` §4） |
 | `framing` | `{ aspect: 16/9, headTop: 120 }` | `{ aspect: 9/16, headTop: [380,520], chinMax: 860 }` | qc framing、ff.mjs `frame` 寬高比 |
-| `minTextPx` | 30 | 32（輸出像素） | audit |
+| `minTextPx` | 30 | 48（畫面上的像素；055 Q3，原本 32） | audit、plan.mjs（fx `portraitMinPx`） |
 | `regions` | §5 | §5 | main、kit/scene-layout.js、P.region |
 
 ### 2.1 字幕（決定 2）

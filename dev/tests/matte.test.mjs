@@ -216,3 +216,52 @@ test('046 data-matte-front：寫的那幾塊範圍在去背層上開洞（裡面
   assert.deepEqual(r.problems.map((p) => p.id), ['c']);
   assert.match(r.problems[0].msg, /data-matte-front 看不懂 → 寫成 "x,y,寬,高"/);
 });
+
+// ---------- 去背閃動檢查（055 C22：只量不改） ----------
+test('flickerMessage：整塊一起跳的東西 ≥ 講者框 2% 才報；沒開 steady 建議坐著改 steady、站著換版面，開了 steady 的叫人看截圖；isMatteFlickerLine 認得兩種', () => {
+  const m = { W: 1920, H: 1080, n: 137, fps: '30/1', blobs: [{ area: 45936, box: [1176, 684, 198, 396], frames: 62, first: 0, last: 116 }, { area: 2340, box: [690, 930, 54, 150], frames: 33, first: 100, last: 136 }] };
+  const box = [487, 117, 1369, 1080];   // 主宣傳片的講者框：882×963
+  const w = MT.flickerMessage('s0101', m, { speakerBox: box });
+  assert.equal(w, 's0101 去背有一塊在閃（約講者框的 5%，在 x 1176–1374、y 684–1080，段內 0.0–3.9 秒裡跳了 62 格）→ 講者坐著不動就把 data-matte 改成 "steady"；站著走動就換不用去背的版面');
+  assert.equal(MT.flickerMessage('s0101', { ...m, blobs: m.blobs.slice(1) }, { speakerBox: box }), null, '穩定後剩的殘角（0.3%）不報');
+  assert.match(MT.flickerMessage('s0101', m, { speakerBox: box, steady: true }), /^s0101 寫了 data-matte="steady"，去背還有一塊在閃（.*）→ 看那幾秒的截圖確認；還在閃就換不用去背的版面$/);
+  assert.match(MT.flickerMessage('x1', m, {}), /約畫面的 4%/, '沒有講者框：拿畫面的一半當講者框');
+  assert.ok(MT.isMatteFlickerLine(`⚠ ${w}`) && MT.isMatteFlickerLine(`  ⚠ ${MT.flickerMessage('s0101', m, { speakerBox: box, steady: true })}`));
+  assert.ok(!MT.isMatteFlickerLine('⚠ [s0101] 字太小') && !MT.isMatteFlickerLine('人物去背層：2 段（新做 1、沿用 1）'));
+});
+
+test('ensureMattes 量閃動：椅子前半段被算進人 → warnings 一則（也印 ⚠）；同一支去背檔第二次直接用快取；遮罩本來就穩不報；flicker: false 不量', (t) => {
+  if (spawnSync('ffmpeg', ['-version']).status !== 0) { t.skip('沒有 ffmpeg'); return; }
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-flicker-'));
+  t.after(() => fs.rmSync(out, { recursive: true, force: true }));
+  const asset = path.join(out, 'assets', 'rough.mp4');
+  fs.mkdirSync(path.dirname(asset), { recursive: true });
+  const ff = (args) => { const r = spawnSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
+  const body = 'drawbox=x=240:y=40:w=120:h=300', chair = 'drawbox=x=360:y=120:w=120:h=160';
+  ff(['-f', 'lavfi', '-i', `color=c=0xC8C8C8:s=640x360:r=30:d=1.6,${chair}:color=0x6E6E6E:t=fill,${body}:color=0x282828:t=fill`, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', asset]);
+  const mk = (file, chairExpr) => ff(['-i', asset, '-f', 'lavfi', '-i', `color=c=black:s=640x360:r=30:d=1.6,${body}:color=white:t=fill${chairExpr ? `,${chair}:color=white:t=fill:enable='${chairExpr}'` : ''},format=gray`,
+    '-filter_complex', '[0:v][1:v]alphamerge,format=yuva420p', '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-b:v', '0', '-crf', '30', '-deadline', 'realtime', '-cpu-used', '8', '-auto-alt-ref', '0', file]);
+  const jumpy = path.join(out, 'jumpy.webm'), stable = path.join(out, 'stable.webm');
+  mk(jumpy, 'lt(t,0.6)'); mk(stable, '');
+  const removeWith = (src) => (clip, dst) => { fs.copyFileSync(src, dst); return { ok: true }; };
+  const logs = [];
+  const a = MT.ensureMattes({ outDir: out, root: out, items: [item('x1', 0, 1.6)], assetVideo: asset, remove: removeWith(jumpy), flicker: true, speakerBox: [240, 40, 360, 340], log: (l) => logs.push(l) });
+  assert.equal(a.warnings.length, 1, JSON.stringify(a));
+  assert.match(a.warnings[0], /^x1 去背有一塊在閃（約講者框的 \d+%，在 x 3\d\d–4\d\d、y 1\d\d–2\d\d，段內 0\.0–0\.\d 秒裡跳了 1\d 格）→ 講者坐著不動就把 data-matte 改成 "steady"/);
+  assert.ok(logs.includes(`⚠ ${a.warnings[0]}`), logs.join('\n'));
+  // 快取：同一支檔不重量（把快取裡的結果改掉，第二次就照快取報）
+  const cacheFile = path.join(out, MT.FLICKER.cache);
+  const c = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+  const name = Object.keys(c.files)[0];
+  c.files[name].m.blobs[0].frames = 99;
+  fs.writeFileSync(cacheFile, JSON.stringify(c));
+  const b = MT.ensureMattes({ outDir: out, root: out, items: [item('x1', 0, 1.6)], assetVideo: asset, remove: removeWith(jumpy), flicker: true, speakerBox: [240, 40, 360, 340] });
+  assert.equal(b.reused, 1);
+  assert.match(b.warnings[0], /跳了 99 格/, '沿用快取');
+  // 遮罩本來就穩：不報；flicker: false 不量
+  const s = MT.ensureMattes({ outDir: out, root: out, items: [item('x2', 0, 1.6)], assetVideo: asset, remove: removeWith(stable), flicker: true });
+  assert.deepEqual(s.warnings, []);
+  const off = MT.ensureMattes({ outDir: path.join(out, 'off'), root: out, items: [item('x3', 0, 1.6)], assetVideo: asset, remove: removeWith(jumpy) });
+  assert.deepEqual(off.warnings, [], '替身去背（測試）預設不量');
+  assert.ok(!fs.existsSync(path.join(out, 'off', MT.FLICKER.cache)));
+});

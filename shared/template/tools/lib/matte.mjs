@@ -9,13 +9,23 @@
 //       根元素寫 data-matte="steady" 的段，用真的模型去背完再過一道去背穩定（lib/matte-steady.mjs：講者坐著、椅背這種貼著人的東西
 //       一下算進人、一下不算時用）。預設不做：講者站著、整個人會移動時，深色頭髮衣服配深色背景分不出是東西在跳還是人移開了，會誤切。
 //       steady: false 一律不做（測試的替身去背也不做）
+//       055 C22：每個去背段做完（或沿用）都量一次閃動（只量不改，lib/matte-steady.mjs 的 measureFlicker）：做好的檔裡有整塊一起跳的東西、
+//       面積 ≥ 講者框的 FLICKER.minArea → res.warnings 多一則（也用 log 印 ⚠）。量過的檔記在 .cache/matte-flicker.json，同一支不重算。
+//       flicker: false 不量（預設和 steady 一樣：測試的替身去背不量）
+//   isMatteFlickerLine(line)                     → 這一行是不是去背閃動的 ⚠（build --review 只轉印摘要行，這一種也要轉印）
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { r3Round as r3 } from './time.mjs';
-import { steadyMatte, STEADY } from './matte-steady.mjs';
+import { steadyMatte, measureFlicker, STEADY } from './matte-steady.mjs';
+
+// 去背閃動（055 C22）：整塊一起跳的東西面積 ≥ 講者框的 2% 才報（主宣傳片 s0101 椅子 5.4%、x0105 2.5%；穩定後剩的殘角 ≤ 0.3%；
+// 站著的講者手臂晃過身體 ≤ 1.4%）。沒有講者框時拿畫面的一半當講者框。version：量法或門檻改了就加一（快取跟著作廢）
+export const FLICKER = { version: 1, minArea: 0.02, cache: '.cache/matte-flicker.json' };
+const FLICKER_RE = /^⚠ \S+ (?:寫了 data-matte="steady"，)?去背(?:還)?有一塊在閃/;
+export const isMatteFlickerLine = (line) => FLICKER_RE.test(String(line ?? '').trim());
 
 // choke＝去背後邊緣往內收幾 px 再柔化 0.7 px（作者 2026-11-15 短影片4 r5「去背後左側還是有殘留的痕跡」：模型的半透明邊混了原本的深色背景，
 // 疊到亮底上變成一圈深色毛邊；2 px 剛好收乾淨，3 px 開始吃到袖口）。只對真的模型做；測試替身不做
@@ -105,14 +115,16 @@ function boxRemove(clip, out) {
   return { ok: r.status === 0 && fs.existsSync(out), message: String(r.stderr).trim().slice(-200) };
 }
 
-export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log = () => {}, remove = null, weights = matteWeights(), speakerBox = null, steady = null }) {
-  const list = matteItems(items, outDir), res = { made: 0, reused: 0, problems: [] };
+export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log = () => {}, remove = null, weights = matteWeights(), speakerBox = null, steady = null, flicker = null }) {
+  const list = matteItems(items, outDir), res = { made: 0, reused: 0, problems: [], warnings: [] };
   if (!list.length) return res;
   const dir = path.join(outDir, MATTE.dir);
   fs.mkdirSync(dir, { recursive: true });
   let st = null;
   try { st = fs.statSync(assetVideo); } catch { st = null; }
   if (steady == null) steady = !remove && process.env.AUTO_EDIT_MATTE !== 'box';
+  if (flicker == null) flicker = !remove && process.env.AUTO_EDIT_MATTE !== 'box';
+  const done = [];   // 做好或沿用的段：最後一起量閃動
   if (!remove && process.env.AUTO_EDIT_MATTE === 'box') remove = boxRemove;
   const run = remove || defaultRemove(root);
   const live = new Set();
@@ -127,7 +139,7 @@ export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log =
     if ((matteFrontOf(it, outDir) || []).some((r) => !frontOk(r))) { res.problems.push({ id: it.id, msg: 'data-matte-front 看不懂 → 寫成 "x,y,寬,高"（畫面座標的數字，寬高 > 0），好幾塊用分號隔開，例：data-matte-front="60,560,300,400; 720,560,300,400"' }); continue; }
     const clip0 = clipOf(it, speakerBox, outDir);
     if (matteKindOf(it, outDir) === 'window' && !clip0) { res.problems.push({ id: it.id, msg: '這個模板要講者框才知道相框放哪裡，plan.json 還沒有 speakerBox → 先跑 node shared/template/tools/qc.mjs speaker --project <專案> --write，或換一個模板' }); continue; }
-    if (fs.existsSync(file) && fs.statSync(file).size > 0) { it.matte = { file: `${MATTE.dir}/${name}`, ...(clip0 ? { clip: clip0 } : {}) }; res.reused++; continue; }
+    if (fs.existsSync(file) && fs.statSync(file).size > 0) { it.matte = { file: `${MATTE.dir}/${name}`, ...(clip0 ? { clip: clip0 } : {}) }; res.reused++; done.push({ it, file, range, steady: wantSteady }); continue; }
     if (!remove && !weights.cached) {
       res.problems.push({ id: it.id, msg: `去背模型還沒下載（約 ${MATTE.sizeMb} MB，只下載一次）→ 先問使用者；同意就跑 node shared/template/tools/media.mjs matte-setup 再重跑這條 build；不同意就把這一段換成不用去背的模板（15 金句字卡、07 重點字卡）` });
       continue;
@@ -155,9 +167,55 @@ export function ensureMattes({ outDir, root, items, tm = null, assetVideo, log =
     fs.renameSync(tmp, file);
     it.matte = { file: `${MATTE.dir}/${name}`, ...(clip0 ? { clip: clip0 } : {}) };
     res.made++;
+    done.push({ it, file, range, steady: wantSteady });
   }
   // 同一段舊指紋的檔清掉（work/ 裡的中間產物；別段的不動）
   const ids = new Set(list.map((it) => it.id));
   for (const f of fs.readdirSync(dir)) { const m = /^(.+)-[0-9a-f]{10}\.webm$/.exec(f); if (m && ids.has(m[1]) && !live.has(f)) fs.rmSync(path.join(dir, f), { force: true }); }
+  if (flicker && done.length) {
+    for (const w of flickerWarnings({ outDir, done, assetVideo, speakerBox, log })) { res.warnings.push(w); log(`⚠ ${w}`); }
+  }
   return res;
+}
+
+// 055 C22：量每個去背檔（快取在 outDir/.cache/matte-flicker.json：檔名本身帶指紋，再對大小、時間、量法版本；不在了的檔順手清掉）
+function flickerWarnings({ outDir, done, assetVideo, speakerBox, log }) {
+  const cacheFile = path.join(outDir, FLICKER.cache);
+  let cache = {};
+  try { const j = JSON.parse(fs.readFileSync(cacheFile, 'utf8')); if (j.v === FLICKER.version && j.steady === STEADY.version) cache = j.files || {}; } catch { cache = {}; }
+  const next = {}, out = [];
+  for (const d of done) {
+    const name = path.basename(d.file);
+    let fst;
+    try { fst = fs.statSync(d.file); } catch { continue; }
+    const key = `${fst.size}:${Math.round(fst.mtimeMs)}`;
+    let m = cache[name]?.key === key ? cache[name].m : null;
+    if (!m) {
+      const r = measureFlicker({ matte: d.file, video: assetVideo, start: d.range.start, dur: r3(d.range.end - d.range.start) });
+      if (!r.ok) { log(`去背閃動檢查：${d.it.id} 量不到（${r.message}），略過`); continue; }
+      m = { W: r.W, H: r.H, n: r.n, fps: r.fps, blobs: r.blobs };
+    }
+    next[name] = { key, m };
+    const w = flickerMessage(d.it.id, m, { speakerBox, steady: d.steady });
+    if (w) out.push(w);
+  }
+  try {
+    fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+    fs.writeFileSync(cacheFile, `${JSON.stringify({ v: FLICKER.version, steady: STEADY.version, files: { ...Object.fromEntries(Object.entries(cache).filter(([f]) => fs.existsSync(path.join(outDir, MATTE.dir, f)))), ...next } }, null, 1)}\n`);
+  } catch { /* 記不下來只是下次重量 */ }
+  return out;
+}
+
+// 量到的結果 → ⚠ 一則（沒有夠大的塊回傳 null）。m＝{ W, H, n, fps, blobs }（measureFlicker 的結果）
+export function flickerMessage(id, m, { speakerBox = null, steady = false } = {}) {
+  const box = Array.isArray(speakerBox) && speakerBox.length === 4 ? speakerBox : null;
+  const ref = box ? Math.max(1, (box[2] - box[0]) * (box[3] - box[1])) : (m.W * m.H) / 2;
+  const b = (m.blobs || []).find((x) => x.area >= ref * FLICKER.minArea);
+  if (!b) return null;
+  const fps = (() => { const [a, c] = String(m.fps ?? '30').split('/').map(Number); return a > 0 ? a / (c > 0 ? c : 1) : 30; })();
+  const pct = Math.round((100 * b.area) / ref);
+  const where = `約${box ? '講者框' : '畫面'}的 ${pct}%，在 x ${b.box[0]}–${b.box[0] + b.box[2]}、y ${b.box[1]}–${b.box[1] + b.box[3]}，段內 ${(b.first / fps).toFixed(1)}–${((b.last + 1) / fps).toFixed(1)} 秒裡跳了 ${b.frames} 格`;
+  return steady
+    ? `${id} 寫了 data-matte="steady"，去背還有一塊在閃（${where}）→ 看那幾秒的截圖確認；還在閃就換不用去背的版面`
+    : `${id} 去背有一塊在閃（${where}）→ 講者坐著不動就把 data-matte 改成 "steady"；站著走動就換不用去背的版面`;
 }

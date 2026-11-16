@@ -107,6 +107,8 @@ node shared/template/tools/status.mjs --project projects/<專案>
 |---|---|---|
 | `⏳ … 還在跑` | 再跑一次同一條指令（會接著等） | — |
 | `⚠ 剪掉比例過高` | 把 ⚠ 原文貼給使用者，請他在字幕預覽聽開頭 1 分鐘，照常往下做 | — |
+| `⚠ 初剪後還留著 N 處重講：…`、`⚠ 初剪開頭有講稿外的話：…` | 回報段照貼給使用者，請他在剪輯台剪掉；他要你直接改，就照 → 加 plan.json 第一層 `edit.cuts`。不重跑初剪、不改 cuts.md（`references/ng-rules.md` 第 3 節） | — |
+| `⚠ 初剪後還有 N 處贅字（照預設沒剪）：…` | 照貼給使用者，他要剪才剪；照常往下做 | — |
 | 使用者說尾音被切 | `node shared/template/tools/media.mjs rough --project projects/<專案> --edit "audio:-26dB" --again` | 還切到改 `-30dB` |
 | 使用者說自言自語、小聲的雜音沒剪掉 | 同一條改 `--edit "audio:-16dB" --again` | 回報 |
 | plan.json 已經用 `#N` 時字幕改動 ✖ | 同一條加 `--remap-plan` | 回報 |
@@ -127,4 +129,4 @@ node shared/template/tools/status.mjs --project projects/<專案>
 
 ## 什麼時候讀 references/
 
-- `references/ng-rules.md`：看「待確認」拿不準是不是 NG 時才讀。
+- `references/ng-rules.md`：看「待確認」拿不準是不是 NG 時才讀；初剪回報有「初剪後還留著」「初剪開頭有講稿外的話」時讀第 3 節。

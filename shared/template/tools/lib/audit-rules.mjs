@@ -116,6 +116,7 @@ export const layoutOf = (item) => (item.type === 'custom' ? item.seg?.layout || 
 export function stageKindOf(item) {
   if (item.type === 'fx') return 'fx';
   if (item.type === 'custom') return layoutOf(item) === 'fullscreen' ? 'fs' : null;
+  if (item.type === 'scene' && item.full) return 'full';   // 053 全幕版縮進上半（main.mjs stageOf 同一個判斷）
   const sc = item.scene && typeof item.scene === 'object' ? item.scene : { no: item.scene };
   const no = String(sc.no || sc.num || '');
   if (sc.portrait ? sc.portrait !== 'stage' : !/^0(1|4)/.test(no)) return null;
@@ -127,7 +128,7 @@ export function portraitPlan(item, canvas = CANVASES.portrait, regions = null) {
   if (kind) {
     const st = stageTransform(kind, canvas, { clear: kind === 'fx' && item.seg?.bg === 'none' });
     // view＝舞台在直式畫面上看得到的範圍（子合成座標）：左右到畫布邊、上到 unsafe 頂帶下緣、下到講者面板頂（01 沒有面板：到 unsafe 底帶上緣）
-    const top = canvas.unsafe.find((u) => u[1] <= 0)?.[3] ?? 0, bot = kind === 'fs' ? canvas.pip.box[1] : canvas.unsafe.find((u) => u[3] >= canvas.H && u[0] <= 0)?.[1] ?? canvas.H;
+    const top = canvas.unsafe.find((u) => u[1] <= 0)?.[3] ?? 0, bot = kind === 'fs' || kind === 'full' ? canvas.pip.box[1] : canvas.unsafe.find((u) => u[3] >= canvas.H && u[0] <= 0)?.[1] ?? canvas.H;
     const r1_ = (n) => Math.round(n * 10) / 10;
     const view = [Math.max(0, r1_(-st.tx / st.s)), Math.max(0, r1_((top - st.ty) / st.s)), Math.min(CANVAS[0], r1_((canvas.W - st.tx) / st.s)), Math.min(CANVAS[1], r1_((bot - st.ty) / st.s))];
     return { unstage: true, W: CANVAS[0], H: CANVAS[1], stage: { kind, s: st.s, tx: st.tx, ty: st.ty, window: kind === 'fx' ? null : st.window, view: kind === 'fx' ? null : view, minFont: canvas.minTextPx } };
@@ -317,9 +318,10 @@ export function judgeSample(meas, ctx) {
     }
   }
   // ✖ 直式：進到平台介面蓋住的區域（unsafe[]：上方、下方、右側按鈕列）
+  // 055 C04：data-layout-allow-overflow 對文字只放行進頂部平台區（大字可以頂到上緣），下方與右側按鈕列照樣報
   for (const u of G.unsafe || []) {
     for (const { e, r } of content) {
-      if (!still(e) || e.allowOverflow) continue;
+      if (!still(e) || (e.allowOverflow && !(e.text && u[1] > 0))) continue;
       const x = intersect(r, u);
       if (!x || x[2] - x[0] <= 1 || x[3] - x[1] <= 1) continue;
       push('error', 'unsafe', e, `直式會被平台介面蓋住：${descText(e.desc)} x ${Math.round(r[0])}–${Math.round(r[2])}、y ${Math.round(r[1])}–${Math.round(r[3])}，進到${UNSAFE_ZH(u, W, H)}（x ${u[0]}–${u[2]}、y ${u[1]}–${u[3]}）`,
@@ -402,17 +404,24 @@ export function judgeSample(meas, ctx) {
         `移到講者框外（例：右緣 ≤ ${box[0]}，或左緣 ≥ ${box[2]}）；用 snapshot 看有沒有擋到臉與手勢，擋到就移位或改 layout: "fullscreen"，只壓到身體就保留、給使用者看預覽時點名`, { ratio: r3(ratio), face: r3(face), box });
     }
   }
-  // ⚠ 字太小
+  // ⚠ 字太小（055 C01：直式連模板段一起量；模板的字級是固定的，改法不同）
+  const tplFont = ctx.item.type !== 'custom' ? '；模板字級是固定的：換內容設計動畫，或換成不縮放的版面' : '';
+  // 逐字拆開的 span（同一個父層、同字級、沒有 id）併成一則（短影片1 x0108「接」「上」「工」「具」原本報四則）
+  const fontGroup = new Map();
   for (const e of els) {
     if (!e.text || !still(e)) continue;
     const size = e.fontSize * (e.scale > 0 && e.scale < 1 ? e.scale : 1);
+    const gk = !e.desc.id && e.desc.near && [...String(e.desc.text || '')].length <= 3 ? `${e.parent}|${e.desc.near}|${r1(size)}` : null;
+    if (gk && fontGroup.has(gk)) { const g = fontGroup.get(gk); g.f.msg = g.f.msg.replace(`「${g.text}」`, `「${(g.text += e.desc.text)}」`); continue; }
+    const n0 = out.length;
     if (ST) {
       const shown = size * ST.s;
-      if (shown < ST.minFont) push('warn', 'font', e, `字太小：${descText(e.desc)} 直式縮 ${ST.s} 倍後 ${r1(shown)}px（< ${ST.minFont}px）`, `直式要寫 ≥ ${Math.ceil(ST.minFont / ST.s)}px（縮放前）；正文 ≥ 52px、標籤 ≥ 38px（R8.5）；放不下就縮文案，不縮字`, { size: r1(shown) });
-      continue;
+      if (shown < ST.minFont) push('warn', 'font', e, `字太小：${descText(e.desc)} 直式縮 ${ST.s} 倍後 ${r1(shown)}px（< ${ST.minFont}px）`, `直式要寫 ≥ ${Math.ceil(ST.minFont / ST.s)}px（縮放前；畫面上至少 ${ST.minFont}px）；放不下就縮文案，不縮字${tplFont}`, { size: r1(shown) });
+    } else {
+      const min = G.minFont ?? MIN_FONT;
+      if (size < min) push('warn', 'font', e, `字太小：${descText(e.desc)} ${r1(size)}px（< ${min}px）`, `${ctx.geo ? `直式畫面上至少 ${min}px` : '正文 ≥ 52px、標籤 ≥ 38px（R8.5）'}；放不下就縮文案，不縮字${ctx.geo ? tplFont : ''}`, { size: r1(size) });
     }
-    const min = G.minFont ?? MIN_FONT;
-    if (size < min) push('warn', 'font', e, `字太小：${descText(e.desc)} ${r1(size)}px（< ${min}px）`, '正文 ≥ 52px、標籤 ≥ 38px（R8.5）；放不下就縮文案，不縮字', { size: r1(size) });
+    if (gk && out.length > n0) fontGroup.set(gk, { f: out[out.length - 1], text: String(e.desc.text || '') });
   }
   // ⚠ 半像素邊（卡片、框線）
   for (const e of els) {
@@ -648,6 +657,358 @@ export function judgeLayout(meas, ctx) {
       else if (ils.length && hero < DESIGN.HERO) push('warn', 'design-hero', null, `主角太小：最大的插圖長邊只有 ${ri(hero)}px（< ${DESIGN.HERO}px）`,
         '這一段在講的那個物件放大到長邊 300–480px（寬高照比例一起改），其他元件的位置跟著讓開（design.md「大小」）', { hero: ri(hero) });
     }
+  }
+  return out;
+}
+
+// ====================== 055：作者回饋變成的版面檢查（specs/054 G02–G08、specs/055 N1 N2） ======================
+// 門檻（畫面 px；直式縮放的段量的是縮放前的座標，比之前先乘縮放倍率）
+export const CARD_SPACE = { minW: 300, minH: 200, fill: 0.3, grow: 1.4, pad: 24 };    // N1 卡片空太多：字（含圖示）占卡片 < 30%（brief 初值 15%，主宣傳片 x0107 v2 量到 24%），而且內容還能整組放大 ≥ 1.4 倍
+export const SIBLING = { n: 3, ratio: 1.1, minH: 100 };                                // N2 custom 同一個父層 ≥ 3 張同 class、裝字的卡，寬度最大／最小 > 1.1（高 < 100 的膠囊、卡裡有圖片、一路變寬變窄 > 2% 的金字塔不算）
+export const LINE_CROSS = { pad: 4, card: 12, minRun: 2, minLen: 80 };                             // C03 線的取樣點落在字（外擴 4px）或卡片（外擴 12px：卡片有陰影，貼著線看起來就是壓到）裡，連續 ≥ 2 點算一處；線頭、線尾接著的卡片不算；總長 < 80px 的（箭頭頭、勾勾）本來就要碰目標，不量
+export const TEXT_CUT = { marquee: 1.5 };                                              // C04 比畫面（或裁切框）寬 1.5 倍以上的字列是跑馬燈、字牆，不算被切
+export const BIG_TEXT = 120;                                                           // C04、C05 大字：字級 ≥ 120px
+export const HCENTER = { minW: 240, tol: 24, tolPct: 0.04, rowPct: 0.25, inside: 0.8, region: 48, item: 40, side: 0.8 };   // C06 置中：完成態的卡、圖片、圖示（長寬都 ≥ 40）排成的一列，在色塊裡左右留白差 > max(24, 寬 4%)；直式東西整組（加上 ≥ 80% 在整組左右外面的字）離舞台窗／安全區中心 > 48
+export const DUP_STOP = /[的了是在和與及或也都就嗎呢吧很個一]/;                      // C07 2 字詞含這些字不算詞（「的人」「一個」）
+export const TEXT_HEAVY = 24;                                                          // C08 疊在講者身上的段：完成態可見的字（不算數字）> 24
+export const MATTE_GLYPH = { hit: 0.1, worst: 0.5, maxHit: 1, alpha: 128 };           // C05 一個字被講者擋 > 10% 算擋到；擋到 > 1 個字、或任何一個 > 50% 報
+export const BIND_LATE = 0.5;                                                          // N7 卡上的字在綁的詞之前就開始講，差 > 0.5 秒
+const fracIn = (r, b) => { const a = area(r); return a > 0 ? area(intersect(r, b)) / a : 0; };
+const cjkCount = (s) => (String(s).match(CJK_ONE) || []).length;
+const CJK_ONE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/gu;
+// 依上下範圍重疊分列（一列＝並排的一組）
+function rowsByY(list) {
+  const rows = [];
+  for (const x of [...list].sort((a, b) => a.r[1] - b.r[1])) {
+    const row = rows.find((w) => Math.min(w.U[3], x.r[3]) - Math.max(w.U[1], x.r[1]) > 0);
+    if (row) { row.items.push(x); row.U = unionOf([row.U, x.r]); } else rows.push({ items: [x], U: x.r.slice() });
+  }
+  // 合併後可能又和別列重疊：再併一輪
+  for (let k = 0; k < rows.length; k++) for (let j = k + 1; j < rows.length; j++) {
+    if (Math.min(rows[k].U[3], rows[j].U[3]) - Math.max(rows[k].U[1], rows[j].U[1]) > 0) { rows[k].items.push(...rows[j].items); rows[k].U = unionOf([rows[k].U, rows[j].U]); rows.splice(j, 1); j = k; }
+  }
+  return rows;
+}
+// 一段字切成詞：連續 2 字的中文（不含虛字）、3 個字母以上的英文
+export function wordsOf(s) {
+  const t = String(s).replace(/\*\*/g, ''), out = new Set();
+  for (const m of t.matchAll(/[A-Za-z][A-Za-z0-9+#]{2,}/g)) out.add(m[0].toLowerCase());
+  for (const run of t.match(CJK) || []) for (const w of subsOf(run, 2)) if (!DUP_STOP.test(w)) out.add(w);
+  return out;
+}
+const cut = (s, n = 10) => (String(s).length > n ? `${String(s).slice(0, n)}…` : String(s));
+
+// ctx＝judgeSample 的 ctx（item, t, kind, layout, W, H, geo, stage）；meas 另外帶 bigText／lines（audit-page 055）
+export function judgeFeedback(meas, ctx) {
+  const out = [];
+  if (!meas || meas.missingHost || !ctx.item) return out;
+  const it = ctx.item, ST = ctx.stage || null, s = ST ? ST.s : 1;
+  const W = ctx.W ?? CANVAS[0], H = ctx.H ?? CANVAS[1];
+  const base = { id: it.id, label: it.label, t: ctx.t, kind: ctx.kind };
+  const push = (level, rule, el, msg, fix, data = {}) => out.push({ ...base, level, rule, el, msg, fix, data });
+  const els = meas.els || [];
+  const byI = new Map(els.map((e) => [e.i, e]));
+  const shown = (e) => !e.moving && (e.alpha ?? 1) >= 0.2;
+  const done = ctx.kind === 'done', custom = it.type === 'custom';
+  // 只量內容設計段（design: true）和手改過的模板動畫檔（ctx.hand）：工具產生的 x-* 範本作者看過，跑馬燈、捲動清單、字牆、箭頭接框都是刻意的
+  if (!custom || !(it.seg?.design || ctx.hand)) return out;
+  const textBoxOf = (e) => clipTo(byI, e, inkBox(e));
+
+  // ✖ C04 大字被切掉：data-layout-allow-overflow 的字超出畫面左右下緣（直式縮放段：看得到的範圍）、或被會裁切的祖先切掉。
+  // 沒有 allow-overflow 的字已經由「超出畫面」「被裁掉」報過；allow-overflow 對字只放行頂部（進平台區）
+  const view = ST ? (ST.view || null) : [0, -1e9, W, H];
+  const cutBy = new Map();
+  for (const e of els) {
+    if (!e.text || !e.textRect || !shown(e) || !e.allowOverflow) continue;
+    const T = inkBox(e);
+    // 整個在框外（捲動清單捲走的列）看不到、不算被切；比框寬 1.5 倍以上的列是跑馬燈、字牆，刻意的
+    const partCut = (B) => { const o2 = overflowOf(T, B); return o2 && T[0] < B[2] && T[2] > B[0] && T[1] < B[3] && T[3] > B[1] && T[2] - T[0] <= TEXT_CUT.marquee * (B[2] - B[0]) ? o2 : null; };
+    let o = view ? partCut([view[0], -1e9, view[2], view[3]]) : null, by = '畫面';
+    if (!o) for (const k of e.clips || []) {
+      const K = byI.get(k);
+      if (!K || K.moving) continue;
+      o = partCut([K.clipX ? K.inner[0] : -1e9, K.clipY ? K.inner[1] : -1e9, K.clipX ? K.inner[2] : 1e9, K.clipY ? K.inner[3] : 1e9]);
+      if (o) { by = descText(boxDesc(K.desc)); break; }
+    }
+    if (!o) continue;
+    const key = e.desc.id || e.desc.near || e.desc.cls, g = cutBy.get(key) || { e, by, o: {}, text: '' };
+    for (const [k, v] of Object.entries(o)) g.o[k] = Math.max(g.o[k] || 0, v);
+    g.text += e.desc.text || '';
+    cutBy.set(key, g);
+  }
+  for (const [key, g] of cutBy) {
+    const d = { id: g.e.desc.id || g.e.desc.near || '', cls: g.e.desc.id || g.e.desc.near ? '' : g.e.desc.cls, text: '', near: '' };
+    const blk = (meas.bigText || []).find((b) => b.desc.id && b.desc.id === key);   // 一個字一個 span 的大字：印整行的字
+    if (blk && blk.desc.text) g.text = blk.desc.text;
+    const box = view ? `x ${ri(view[0])}–${ri(view[2])}${ST ? `、y ${ri(view[3])} 以上（直式縮 ${s} 倍後看得到的範圍）` : ''}` : '';
+    push('error', 'text-cut', d, `大字被切掉：${descText(d)}「${cut(g.text, 12)}」${g.by === '畫面' ? '超出畫面' : `被 ${g.by} 裁掉，超出`}${sides(g.o)}（data-layout-allow-overflow 只放行字頂到上緣，不放行字被切）`,
+      `縮小字級或拆成兩行（<br> 斷在語意處），整句留在${g.by === '畫面' ? ` ${box} 以內` : '框裡'}`, { overflow: g.o, key });
+  }
+  // ⚠ C04 大字自己斷行（custom；模板的欄位有每行字數上限、由 --check 管）：字級 ≥ 120、沒有 nowrap，排出來的行數比 <br> 多
+  for (const b of custom ? meas.bigText || [] : []) {
+    if (b.moving || /^(nowrap|pre)$/.test(b.ws) || b.lines <= b.br + 1) continue;
+    push('warn', 'text-wrap', b.desc, `大字自動換行：${descText({ ...b.desc, text: '' })}「${cut(b.desc.text, 12)}」排成 ${b.lines} 行（只寫了 ${b.br} 個 <br>）`,
+      '用 <br> 斷在語意處，或縮短、縮小一級', { lines: b.lines, br: b.br });
+  }
+
+  // ⚠ C03 線穿過字或卡片（自己畫的 svg 線；線頭、線尾接著的卡片不算，那是連接線）
+  const crossTargets = els.filter((e) => shown(e) && !e.bg && !e.full && !e.allowOverlap && ((e.text && e.textRect) || (e.painted && e.frame && !e.media)));
+  const byLine = new Map();
+  for (const L of meas.lines || []) {
+    const S = byI.get(L.svg);
+    if (L.moving || !S || S.moving || !L.pts || L.pts.length < 3) continue;
+    if (L.pts.slice(1).reduce((a, q, k) => a + Math.hypot(q[0] - L.pts[k][0], q[1] - L.pts[k][1]), 0) * s < LINE_CROSS.minLen) continue;   // 箭頭頭、勾勾
+    const n = L.pts.length;
+    for (const E of crossTargets) {
+      if (E === S || isAnc(byI, E, S) || isAnc(byI, S, E)) continue;
+      const b0 = E.text && !E.painted ? textBoxOf(E) : clipTo(byI, E, E.rect);
+      if (!b0) continue;
+      const p = E.text && !E.painted ? LINE_CROSS.pad : LINE_CROSS.card, b = [b0[0] - p, b0[1] - p, b0[2] + p, b0[3] + p];
+      const ins = L.pts.map(([x, y]) => x > b[0] && x < b[2] && y > b[1] && y < b[3]);
+      // 封閉的形狀（圓、多邊形）：從一個在外面的點開始繞，跨過起點的那一段才不會被切成兩處
+      const k0 = L.closed ? Math.max(0, ins.indexOf(false)) : 0;
+      let runs = 0, run = [];
+      // 只碰到外擴那一圈、而且沿著卡片一邊走超過半邊的＝地平線、底線（刻意貼著），不算
+      const along = (r) => {
+        const P = r.map((k) => L.pts[k]);
+        if (P.some(([x, y]) => x > b0[0] && x < b0[2] && y > b0[1] && y < b0[3])) return false;
+        const xs = P.map((q) => q[0]), ys = P.map((q) => q[1]), ex = Math.max(...xs) - Math.min(...xs), ey = Math.max(...ys) - Math.min(...ys);
+        return (P.every((q) => q[1] >= b0[3]) || P.every((q) => q[1] <= b0[1])) ? ex > 0.5 * (b0[2] - b0[0])
+          : (P.every((q) => q[0] >= b0[2]) || P.every((q) => q[0] <= b0[0])) ? ey > 0.5 * (b0[3] - b0[1]) : false;
+      };
+      const flush = () => { if (run.length >= LINE_CROSS.minRun && (L.closed || (run[0] !== 0 && run[run.length - 1] !== n - 1)) && !along(run)) runs++; run = []; };
+      for (let j = 0; j < n; j++) { const k = (k0 + j) % n; if (ins[k]) run.push(k); else flush(); }
+      flush();
+      if (!runs) continue;
+      const key = `${L.svg}|${L.tag}|${L.id}`, g = byLine.get(key) || { L, S, hits: [] };
+      g.hits.push({ E, runs });
+      byLine.set(key, g);
+    }
+  }
+  for (const g of byLine.values()) {
+    // 卡片和卡片裡的字都被穿過：只寫卡片
+    const hits = g.hits.filter((h) => !(h.E.text && !h.E.painted && g.hits.some((o) => o !== h && o.E.painted && isAnc(byI, o.E, h.E))));
+    const total = hits.reduce((a, h) => a + h.runs, 0);
+    const who = hits.slice(0, 3).map((h) => descText(h.E.painted ? boxDesc(h.E.desc) : h.E.desc)).join('、') + (hits.length > 3 ? ` 等 ${hits.length} 個` : '');
+    const lineD = { id: g.S.desc.id || '', cls: g.S.desc.id ? '' : g.S.desc.cls, text: '', near: g.S.desc.id ? '' : g.S.desc.near };
+    push('warn', 'line-cross', lineD, `線穿過字／卡片：${descText(lineD)} 的 <${g.L.tag}${g.L.id ? ` id="${g.L.id}"` : ''}> 穿過 ${who} ${total} 處`,
+      '把卡片移出線的範圍（至少隔 24px），或把線縮短；刻意疊的加 data-layout-allow-overlap', { n: total });
+  }
+
+  // ⚠ N1 卡片空太多（完成態；橫式直式都量；圖示、插圖算內容）
+  const contentBox = (x) => (x.text && !x.painted && !x.media ? textBoxOf(x) : clipTo(byI, x, drawnRect(x)));
+  for (const C of done ? els : []) {
+    if (!shown(C) || !C.painted || !C.frame || C.bg || C.full || C.round || C.kit || C.media) continue;
+    const cw = C.rect[2] - C.rect[0], ch = C.rect[3] - C.rect[1];
+    if (cw * s < CARD_SPACE.minW || ch * s < CARD_SPACE.minH) continue;
+    const inside = els.filter((x) => x !== C && shown(x) && !isAnc(byI, x, C) && ((x.text && x.textRect) || x.media || x.painted) && fracIn(x.text && !x.painted && !x.media ? inkBox(x) : x.rect, C.rect) >= 0.8);
+    const texts = inside.filter((x) => x.text && x.textRect);
+    if (!texts.length) continue;
+    const boxes = inside.map(contentBox).filter(Boolean);
+    const U = unionOf(boxes);
+    if (!U) continue;
+    const fill = coverRatio(boxes, C.rect);
+    const bw = bwOf(C), pd = padOf(C), pad = (k) => Math.max(pd[k], CARD_SPACE.pad / s);
+    const iw = cw - bw[0] - bw[2] - pad(0) - pad(2), ih = ch - bw[1] - bw[3] - pad(1) - pad(3);
+    const k = Math.min(iw / Math.max(1, U[2] - U[0]), ih / Math.max(1, U[3] - U[1]));
+    if (fill >= CARD_SPACE.fill || k < CARD_SPACE.grow) continue;
+    const fsMax = Math.max(...texts.map((x) => x.fontSize));
+    const M = Math.floor((fsMax * Math.min(k, 3)) / 1.1 / 2) * 2;
+    push('warn', 'card-space', boxDesc(C.desc), `卡片空太多：${descText(boxDesc(C.desc))}（${ri(cw)}×${ri(ch)}）裡的字只占 ${Math.round(fill * 100)}%，旁邊大片空白`,
+      `字可以放大到約 ${M}px（最大的字現在 ${ri(fsMax)}px），或卡片縮小到貼著內容（內距 ≥ ${CARD_SPACE.pad}px）`, { fill: r3(fill), grow: r3(k), font: fsMax, to: M });
+  }
+
+  // ⚠ N2 同一組卡片寬度不一致（完成態、custom）：同一個父層底下 ≥ 3 張同 class、有底色、裝字的卡（作者：列舉三件以上卡片同寬）。
+  //   卡裡有圖片的（照片牆，寬照比例）、寬度一路遞增／遞減的（金字塔、漏斗，刻意的形狀）不算；模板的寬度照字數排、由模板管
+  const sib = new Map();
+  const hasMedia = (C) => els.some((x) => x.media && x !== C && isAnc(byI, C, x));
+  for (const e of done && custom ? els : []) {
+    if (!shown(e) || !e.painted || !e.frame || e.bg || e.full || e.media || !e.desc.cls || (e.rect[3] - e.rect[1]) * s < SIBLING.minH) continue;
+    const k = `${e.parent}|${e.desc.cls}`;
+    if (!sib.has(k)) sib.set(k, []);
+    sib.get(k).push(e);
+  }
+  for (const g of sib.values()) {
+    if (g.length < SIBLING.n || g.some((e) => e.allowUneven || hasMedia(e))) continue;
+    const ws = g.map((e) => e.rect[2] - e.rect[0]), lo = Math.min(...ws), hi = Math.max(...ws);
+    if (!(lo > 0) || hi / lo <= SIBLING.ratio + 1e-9) continue;
+    const tall = Math.max(...g.map((e) => e.rect[3])) - Math.min(...g.map((e) => e.rect[1])) > Math.max(...g.map((e) => e.rect[2])) - Math.min(...g.map((e) => e.rect[0]));
+    const seq = [...g].sort((a, b) => (tall ? a.rect[1] - b.rect[1] : a.rect[0] - b.rect[0])).map((e) => e.rect[2] - e.rect[0]);
+    const step = seq.slice(1).map((w, k) => w - seq[k]);
+    if (step.every((d) => d > 0.02 * hi) || step.every((d) => d < -0.02 * hi)) continue;   // 一路變寬／變窄＝金字塔、漏斗
+    const P = byI.get(g[0].parent), pd = P ? boxDesc(P.desc) : { id: g[0].desc.near || '', cls: '', text: '', near: '' };
+    push('warn', 'sibling-width', pd, `同一組卡片寬度不一致：${P || pd.id ? descText(pd) : '最外層'} 底下 ${g.length} 張 .${g[0].desc.cls} 寬 ${ri(lo)}–${ri(hi)}px`,
+      `同寬（都改成 ${Math.ceil(hi)}px，取最寬的）；刻意不同寬加 data-allow-uneven`, { n: g.length, min: ri(lo), max: ri(hi), cls: g[0].desc.cls });
+  }
+
+  // ⚠ C06 沒置中（完成態；逐一出現的中途本來就偏一邊）：只看「東西」（有底色的卡、圖片、圖示、標誌）排成的列，字靠左靠右是排版、不管。
+  //   (1) 色塊（寬 ≥ 240）裡的那一列左右留白差 > max(24, 寬 4%)；(2) 直式（舞台縮放段、疊加段）東西整組（連同排在旁邊的字）離舞台窗／安全區中心 > 48
+  const items = (done ? els : []).filter((e) => shown(e) && !e.bg && !e.full && !e.kit && !e.title && (e.painted || e.media))
+    .map((e) => ({ e, r: clipTo(byI, e, drawnRect(e)) }))
+    .filter((x) => x.r && (x.r[2] - x.r[0]) * s >= HCENTER.item && (x.r[3] - x.r[1]) * s >= HCENTER.item);   // 底線、項目符號、分隔線這種裝飾（< 40px）不算一件東西
+  const topOf = (list) => list.filter((x) => !list.some((o) => o !== x && isAnc(byI, o.e, x.e)));
+  const justified = (e) => /^(start|end)$/.test(e.justify || '');
+  const off = (U, a, b) => ((U[0] + U[2]) / 2) - ((a + b) / 2);
+  const seenMem = new Set();
+  for (const C of els) {
+    // 色塊含當成背景的側欄（高撐滿、寬不滿：主宣傳片 s0101 左右兩塊）；整張的底不算
+    if (!shown(C) || !C.painted || !C.frame || C.full || C.round || C.media || justified(C) || (C.rect[2] - C.rect[0]) * s < HCENTER.minW || (C.rect[2] - C.rect[0]) >= 0.95 * W) continue;
+    const mem = topOf(items.filter((x) => x.e !== C && !isAnc(byI, x.e, C) && fracIn(x.r, C.rect) >= HCENTER.inside));
+    if (!mem.length || mem.some((x) => justified(x.e))) continue;
+    const mk = `${mem.map((x) => x.e.i).sort((a, b) => a - b)}|${Math.round(C.rect[0])}|${Math.round(C.rect[2])}`;
+    if (seenMem.has(mk)) continue;   // 疊在一起的兩層底（底色＋外框）裝同一組東西：只報一次
+    seenMem.add(mk);
+    const [i0, , i2] = C.inner, iw = i2 - i0;
+    let worst = null;
+    for (const row of rowsByY(mem)) {
+      const U = row.U, L = U[0] - i0, R = i2 - U[2];
+      if (U[2] - U[0] < HCENTER.rowPct * iw || L < -TOL || R < -TOL) continue;
+      const d = Math.abs(L - R);
+      if (d > Math.max(HCENTER.tol / s, HCENTER.tolPct * iw) && (!worst || d > worst.d)) worst = { d, L, R, U };
+    }
+    if (!worst) continue;
+    const K = Math.round(worst.d / 2), dir = worst.L < worst.R ? '右' : '左';
+    push('warn', 'hcenter', boxDesc(C.desc), `內容沒置中：${descText(boxDesc(C.desc))} 裡左 ${ri(worst.L)}、右 ${ri(worst.R)}px`,
+      `整組往${dir}移 ${K}px（每個元素的 left ${dir === '右' ? '+' : '−'}${K}）；刻意靠一邊加 data-justify="start"／"end"`, { L: r1(worst.L), R: r1(worst.R), move: dir === '右' ? K : -K });
+  }
+  if (ctx.geo || (ST && ST.window)) {
+    const inCard = (x) => els.some((C) => C !== x.e && shown(C) && C.painted && C.frame && !C.full && C.rect[2] - C.rect[0] < 0.95 * W && !isAnc(byI, x.e, C) && fracIn(x.r, C.rect) >= HCENTER.inside);
+    // 東西（卡、圖片、圖示）整組的聯集，加上排在整組旁邊的字（上下範圍有重疊、八成以上在整組左右外面：圖左字右是一組）；
+    // 疊在東西上面的大字不算（短影片4 s0101 標誌牆偏左、上面的大字置中，還是要報）；照片散在講者四周這種錯落排法聯集本來就置中
+    const objs = topOf(items.filter((x) => !inCard(x)));
+    const objU = objs.length ? unionOf(objs.map((x) => x.r)) : null;
+    const side = objU ? els.filter((e) => shown(e) && e.text && e.textRect && !objs.some((o) => isAnc(byI, o.e, e))).map((e) => e.textRect)
+      .filter((r) => Math.min(r[3], objU[3]) > Math.max(r[1], objU[1]) && (r[2] - r[0]) - Math.max(0, Math.min(r[2], objU[2]) - Math.max(r[0], objU[0])) >= HCENTER.side * (r[2] - r[0])) : [];
+    const U = objU && unionOf([objU, ...side]);
+    if (U && !objs.some((x) => justified(x.e))) {
+      const cy = (U[1] + U[3]) / 2;
+      const zone = ST ? [ST.window[0], ST.window[2]] : (() => { const z = (CANVASES.portrait.textSafe || []).find((r) => cy >= r[1] && cy < r[3]) || CANVASES.portrait.textSafe[0]; return [z[0], z[2]]; })();
+      const d = off(U, zone[0], zone[1]);
+      if (U[2] - U[0] >= Math.max(HCENTER.minW / s, HCENTER.rowPct * (zone[1] - zone[0])) && Math.abs(d) > HCENTER.region / s) {
+        const K = Math.round(Math.abs(d)), dir = d < 0 ? '右' : '左', mv = d < 0 ? K : -K;
+        const big = objs.reduce((a, x) => (area(x.r) > area(a.r) ? x : a));
+        const who = `${descText(big.e.painted ? boxDesc(big.e.desc) : big.e.desc)}${objs.length > 1 ? ` 等 ${objs.length} 個` : ''}`;
+        push('warn', 'hcenter', null, `內容沒置中：${who} x ${ri(U[0])}–${ri(U[2])}，中心 ${ri((U[0] + U[2]) / 2)}；${ST ? '舞台窗' : '安全區'} x ${zone[0]}–${zone[1]} 的中心是 ${ri((zone[0] + zone[1]) / 2)}（差 ${K}px）`,
+          `整組往${dir}移 ${K}px → 移完在 x ${ri(U[0] + mv)}–${ri(U[2] + mv)}；刻意靠一邊加 data-justify="start"／"end"`, { move: mv, box: U });
+      }
+    }
+  }
+
+  if (!custom || !done) return out;
+  const said = els.filter((e) => e.text && e.textRect && !e.moving && (e.alpha ?? 1) >= 0.5).map((e) => ({ e, t: String(e.desc.text || '') }));
+  // ⚠ C07 同一個詞出現兩次（設計段；模板 slots 由 --check 量）：同一張卡裡上下相鄰的兩行字有同一個詞（2 字以上的中文、3 字母以上的英文）
+  // 全文要完整的字：desc.text 只有前 10 個字，量測端的 own 文字一樣截斷，所以這裡比前 10 個字（標籤、大字都在這個長度內）
+  const W2 = said.filter((x) => !x.e.allowRepeat).map((x) => ({ ...x, w: wordsOf(x.t) }));
+  const cnt = new Map();
+  for (const x of W2) for (const w of x.w) cnt.set(w, (cnt.get(w) || 0) + 1);
+  const dupSeen = new Set();
+  const cardOf = (e) => { const c = ancsOf(byI, e).find((x) => x.painted && x.frame && !x.bg && !x.full); return c ? c.i : -1; };
+  for (let a = 0; a < W2.length; a++) for (let b = a + 1; b < W2.length; b++) {
+    const A = W2[a], B = W2[b];
+    if (A.e.parent === B.e.parent && A.e.desc.cls && A.e.desc.cls === B.e.desc.cls) continue;   // 同一組並排的項目（步驟 1、步驟 2）
+    // 同一張卡（或都不在卡裡）、上下相鄰的兩行（標籤和大字）：左右有重疊、上下間隔 ≤ 1.5 倍字級
+    if (cardOf(A.e) !== cardOf(B.e)) continue;
+    const ra = inkBox(A.e), rb = inkBox(B.e);
+    if (Math.min(ra[2], rb[2]) - Math.max(ra[0], rb[0]) <= 0 || Math.max(rb[1] - ra[3], ra[1] - rb[3]) > 1.5 * Math.max(A.e.fontSize, B.e.fontSize)) continue;
+    const ws = [...A.w].filter((w) => B.w.has(w) && cnt.get(w) === 2);
+    if (!ws.length) continue;
+    const k = `${elKey(A.e.desc)}|${elKey(B.e.desc)}`;
+    if (dupSeen.has(k)) continue;
+    dupSeen.add(k);
+    push('warn', 'dup-word', A.e.desc, `同一個詞出現兩次：${descText(A.e.desc)} 和 ${descText(B.e.desc)} 都有「${ws[0]}」`,
+      '標籤換成別的詞（例：行動、重點），或大字拿掉這個詞，上下兩行要搭得起來；刻意重複（口號）加 data-allow-repeat', { word: ws[0], with: B.e.desc });
+  }
+  // ⚠ C08 疊在講者身上的段字太多（直式縮放段不算：那是上半面板，不疊在講者身上）
+  if (ctx.layout === 'overlay' && !ST) {
+    let n = 0;
+    for (const { t } of said) n += cjkCount(t) + (t.match(/[A-Za-z][A-Za-z0-9+#.-]*/g) || []).length;
+    if (n > TEXT_HEAVY) push('warn', 'text-heavy', null, `疊在講者身上的字太多：完成態 ${n} 字（上限 ${TEXT_HEAVY}，不算數字）`,
+      '留一個大字或左右兩個對比，配圖示；其他交給字幕（shared/style.md「疊加段」）', { n });
+  }
+  return out;
+}
+
+// ⚠ C05 去背大字被講者擋太多：glyphs＝audit-page 的逐字框（畫面座標；直式縮放段要先換算）、mask＝那一刻的講者遮罩
+//   mask＝{ w, h, data（每格 0–255 的 alpha）, W, H（遮罩對到的畫面大小）, holes:[[x,y,w,h]…]（data-matte-front：講者不畫的地方） }
+export function matteGlyphFindings(glyphs, mask, ctx) {
+  const out = [];
+  if (!mask || !glyphs || !glyphs.length || !ctx.item) return out;
+  const it = ctx.item, ST = ctx.stage || null;
+  const toScreen = (r) => (ST && ST.tx != null ? [ST.tx + r[0] * ST.s, ST.ty + r[1] * ST.s, ST.tx + r[2] * ST.s, ST.ty + r[3] * ST.s] : r);
+  const kx = mask.w / mask.W, ky = mask.h / mask.H;
+  const inHole = (x, y) => (mask.holes || []).some(([hx, hy, hw, hh]) => x >= hx && x < hx + hw && y >= hy && y < hy + hh);
+  let headTop = null;
+  for (let y = 0; y < mask.h && headTop == null; y++) for (let x = 0; x < mask.w; x++) if (mask.data[y * mask.w + x] >= MATTE_GLYPH.alpha && !inHole((x + 0.5) / kx, (y + 0.5) / ky)) { headTop = Math.round(y / ky); break; }
+  const groups = new Map();
+  for (const g of glyphs) {
+    if (g.moving || (g.alpha ?? 1) < 0.5) continue;
+    const r = toScreen(g.r);
+    const x0 = Math.max(0, Math.floor(r[0] * kx)), x1 = Math.min(mask.w, Math.ceil(r[2] * kx)), y0 = Math.max(0, Math.floor(r[1] * ky)), y1 = Math.min(mask.h, Math.ceil(r[3] * ky));
+    let n = 0, hit = 0;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      n++;
+      if (mask.data[y * mask.w + x] >= MATTE_GLYPH.alpha && !inHole((x + 0.5) / kx, (y + 0.5) / ky)) hit++;
+    }
+    if (!n) continue;
+    const k = g.near || '', grp = groups.get(k) || [];
+    grp.push({ ch: g.ch, f: hit / n, r });
+    groups.set(k, grp);
+  }
+  const all = [...groups.values()].flat();
+  const hits = all.filter((x) => x.f > MATTE_GLYPH.hit);
+  const worst = hits.reduce((a, x) => (!a || x.f > a.f ? x : a), null);
+  if (!worst || (hits.length <= MATTE_GLYPH.maxHit && worst.f <= MATTE_GLYPH.worst)) return out;
+  const near = [...groups.entries()].find(([, g]) => g.includes(worst))?.[0] || '';
+  const top = Math.min(...hits.map((x) => x.r[1]));
+  out.push({ id: it.id, label: it.label, t: ctx.t, kind: ctx.kind, level: 'warn', rule: 'matte-glyph', el: { id: near, cls: '', text: '', near: '' },
+    msg: `大字被講者擋太多：${hits.map((x) => `「${x.ch}」`).join('')}${hits.length} 個字被擋，「${worst.ch}」擋 ${Math.round(worst.f * 100)}%${headTop != null ? `（講者頭頂在 y ${headTop}）` : ''}`,
+    fix: `字往上移到頭頂上方（被擋的字現在從 y ${ri(top)} 開始${headTop != null ? `，下緣要在 y ${headTop} 以上` : ''}），或左右移開；最多擋一個字、那個字最多擋一半`,
+    data: { n: hits.length, worst: r3(worst.f), headTop } });
+  return out;
+}
+
+// ⚠ N7 卡上的字比講的晚：拍綁 #N@詞，那一拍出現的字在第 N 句裡比「詞」更早就開始講（字裡有第 N 句比詞早的那幾個字），相差 > 0.5 秒
+export function bindLateFindings(motion, { item, cuesOut = [], names = {} } = {}) {
+  const out = [];
+  if (!motion || !item || item.type !== 'custom') return out;
+  const done = new Set();
+  for (const mk of motion.marks || []) {
+    const m = typeof mk.ref === 'string' && mk.ref.match(/^#(\d+)@(.+)$/);
+    if (!m || done.has(`${mk.ref}|${mk.t}`)) continue;
+    done.add(`${mk.ref}|${mk.t}`);
+    const N = Number(m[1]), cue = cuesOut.find((c) => c.n === N);
+    if (!cue) continue;
+    const kw = normSay(m[2]), line = normSay(cue.text), at = line.indexOf(kw);
+    if (!kw || at <= 0) continue;
+    const pk = parseTime(mk.ref), tk = pk.error ? null : cueSeconds(pk, cuesOut);
+    if (!tk || tk.error) continue;
+    let best = null;
+    for (const tw of motion.tweens || []) {
+      if (!tw.up || tw.start < mk.t - 0.05 || tw.start > mk.t + CUE_WIN) continue;
+      for (const tg of tw.targets) {
+        const raw = String(tg.all || tg.say || '').trim(), T = normSay(raw);
+        if (!T.includes(kw) || [...T].length < SAY_MIN || [...T].length > 20) continue;
+        // 第 N 句裡比「詞」早、也在卡上的字：從句子最前面找起，第一個 2 字（英文、數字整個詞）卡上也有的位置
+        let w = null;
+        for (let j = 0; j < at && !w; j++) {
+          for (let L = 4; L >= 2; L--) {
+            const x = line.slice(j, j + L);
+            if ([...x].length === L && T.includes(x) && !DUP_STOP.test(x[0])) { w = x; break; }
+          }
+        }
+        if (!w || line.indexOf(w) >= at) continue;
+        const pw = parseTime(`#${N}@${w}`), tw0 = pw.error ? null : cueSeconds(pw, cuesOut);
+        if (!tw0 || tw0.error) continue;
+        const late = r3(tk.sec - tw0.sec);
+        if (late > BIND_LATE && (!best || late > best.late)) best = { raw, w, late, t0: tw0.sec, tg };
+      }
+    }
+    if (!best) continue;
+    const name = names[mk.ref];
+    out.push({ id: item.id, label: item.label, level: 'warn', rule: 'bind-late', el: best.tg.desc, t: r3(item.start + mk.t), kind: 'motion',
+      msg: `卡上的字比講的晚：「${cut(best.raw, 12)}」在 #${N} 講到「${best.w}」（${fmtT(best.t0)}）就開始了，${name ? `${name} = ` : ''}P.at('${mk.ref}') 晚 ${best.late.toFixed(2)}s`,
+      fix: `綁 #${N}@${best.w}：${name ? `${name} 改` : '改成'} P.at('#${N}@${best.w}')（字一講到就出現；分鏡表那一拍一起改），改完重跑這條 audit`,
+      data: { ref: mk.ref, to: `#${N}@${best.w}`, late: best.late } });
   }
   return out;
 }
