@@ -153,6 +153,7 @@ node shared/template/tools/capcut.mjs --project projects/<專案>
 - 再逐支 render 到 `output/capcut/`：每段 `NN_<段>_<起點>.mov`（`--format mov`＝ProRes 4444、有透明通道、帶那段的音效）、`主軌.mp4`、`字幕.srt`（照畫面上實際顯示的時間）、`清單.md`。合成和底片都沒變的會略過；`--only s05,s12` 只做幾段；`--no-main` 不做主軌。
 - 每段約 30 秒 render、5 秒的段約 30 MB；預設同時 3 支（`--jobs N`）。
 - 不輸出：章節角標、疊加卡期間講者的慢推（剪映用文字、關鍵影格補）。
+- 也寫 `清單.json`（機器讀：檔名、開始秒、長度、軌道建議）。素材做好後 `node shared/template/tools/capcut.mjs draft --project projects/<專案>` 直接排成剪映草稿（Mac 剪映專業版）：主軌、每段 .mov（重疊的分軌）、字幕軌（白字黑邊）都在時間軸對的位置，剪映首頁找得到（草稿名預設＝專案資料夾名，`--name` 改）。剪映要先關掉；同名草稿已存在要加 `--force`（舊的先整個備份到 `~/Movies/JianyingPro/backups/`，剪映存過的草稿不換）。
 
 ### 2.8 驗收（附輸出給使用者）
 
