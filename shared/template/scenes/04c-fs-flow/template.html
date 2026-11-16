@@ -26,6 +26,17 @@
 #wBody[data-current="2"] #fNode2 .sc-t44,
 #wBody[data-current="3"] #fNode3 .sc-t44,
 #wBody[data-current="4"] #fNode4 .sc-t44 { color: var(--sc-accent); }
+<!-- @style-portrait -->
+/* 直式（056）：整張 1920×1080 縮 0.8475 進上半面板，主卡位置、大小不變（1180×712 占滿舞台窗 x 120–1300、y 130–880）。
+   上半面板是 1000×636 的橫長窗，流程照舊由左到右一列（改 2×2 要蛇形走 1→2→3→4，排版照 DOM 順序排不出來；直排 4 站只占卡寬一半）：
+   標題 64 → 76（畫面 64）；圖示圓 192 → 160（圖示 88），站距 96 不變 → 4 站 4×160＋3×96＝928；
+   站名 44 → 72（畫面 61；行高 84），名稱框＝圓左右各外擴 40（240 寬，一行 3 字），4–5 字自動斷兩行（上下平均）；
+   名稱一律留兩行高（2×84）＋ --sc-gap-md 掛在圓下方 → 圓＋名稱 352，在卡身 580 上下置中（站名第一行都在同一條線）。 */
+#wCard .sc-wcard__bar { font-size: 76px; line-height: 100px; --opt: 8px; padding: 14px var(--sc-pad-card); }
+#wBody { height: calc(580px - 168px - var(--sc-gap-md)); margin-bottom: calc(168px + var(--sc-gap-md)); }
+.fNode { width: 160px; height: 160px; }
+.fNode .sc-icon { --d: 160px; --i: 88px; }
+.fNode .sc-t44 { left: -40px; right: -40px; font-size: 72px; line-height: 84px; white-space: normal; text-wrap: balance; }
 <!-- @body -->
 <div id="wCard" class="sc-wcard">
   <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>

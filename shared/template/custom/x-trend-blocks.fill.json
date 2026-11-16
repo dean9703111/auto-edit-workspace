@@ -56,6 +56,11 @@
       }
     }
   },
+  "portraitMax": {
+    "items": 4,
+    "title": 7.5,
+    "key": 5
+  },
   "sample": {
     "title": "每集剪輯時間",
     "key": "＝ 1 小時",

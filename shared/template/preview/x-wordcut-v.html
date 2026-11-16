@@ -65,6 +65,14 @@
     /* 6 定格：主色底、主色上的字、底線 */
     #x-wordcut #xwc-p6 { background: var(--brand); color: var(--brand-ink); gap: 28px; }
     #x-wordcut #xwc-line { width: 480px; height: 16px; border-radius: 8px; background: var(--brand-ink); }
+    /* 直式（056）：視窗填滿舞台窗（x 120–1300、y 136–880）；大字字級由 script 照字數算（--xwc-fs，上限 320），副標 72（畫面上 61） */
+    #x-wordcut[data-format="portrait"] #xwc-card { top: 136px; height: 744px; }
+    #x-wordcut[data-format="portrait"] .xwc-w { font-size: var(--xwc-fs, 240px); }
+    #x-wordcut[data-format="portrait"] #xwc-p4 .xwc-w { font-size: 200px; }   /* 殘影疊三行：3 × 200 ＋上下內距 ≥ 0.28em 放得進 744 */
+    #x-wordcut[data-format="portrait"] #xwc-p5 .xwc-w { font-size: calc(var(--xwc-fs, 240px) * 0.8); }
+    #x-wordcut[data-format="portrait"] .xwc-cur { height: calc(var(--xwc-fs, 240px) * 0.8); }
+    #x-wordcut[data-format="portrait"] #xwc-line { width: 560px; }
+    #x-wordcut[data-format="portrait"] #xwc-sub { font-size: 72px; line-height: 100px; --opt: 8px; }
   </style>
   <div id="x-wordcut" data-composition-id="x-wordcut" data-width="1920" data-height="1080" data-duration="8.6"
        data-cues-sample='{"start":0,"D":8.6,"cues":{"411":[0.6,3.0],"412":[3.1,5.6],"413":[5.7,8.2]},"refs":{"#411@今天":1.0,"#412@剪片":3.6}}'>
@@ -89,6 +97,13 @@
     [ 'swap', 'axis', 'focus' ].forEach(function (k) { var f = P[k]; P[k] = function (s1, s2) { var a = Array.prototype.slice.call(arguments); a[0] = $q(s1); a[1] = $q(s2); return f.apply(P, a); }; });
     const OPEN = P.at('#411@今天'), HIT = P.at('#412@剪片');   // 講到引子／講到那個詞的時刻
     P.sfx('impact', '#412@剪片');     // 定格那一下的音效（句號和上一行一樣）
+    // 直式：大字照字數放大到約 1040 寬（上限 320、下限 240，8 的倍數）；載入時算一次
+    if (P.portrait) {
+      const CARD = $q('#xwc-card')[0], W6 = $q('#xwc-w6')[0];
+      CARD.style.setProperty('--xwc-fs', '100px');
+      const w100 = W6.scrollWidth;
+      CARD.style.setProperty('--xwc-fs', Math.max(240, Math.min(320, Math.floor(1040 / w100 * 100 / 8) * 8)) + 'px');
+    }
 
     // 拍 1 講到引子：視窗彈出（最底下那張報紙材質）
     P.pop('#xwc-card', OPEN, { from: 0.92, dy: 0, dur: 0.3 });

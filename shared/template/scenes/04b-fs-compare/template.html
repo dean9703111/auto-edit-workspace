@@ -25,6 +25,26 @@
 [data-wide] .fItem .sc-t44 { font-size: 56px; line-height: 76px; }
 [data-wide] .fCol:first-child { padding-right: var(--sc-gap-xl); }
 [data-wide] .fCol:last-child { padding-left: var(--sc-gap-xl); }
+<!-- @style-portrait -->
+/* 直式（056）：整張 1920×1080 縮 0.8475 進上半面板，主卡位置、大小不變（1180×712 占滿舞台窗 x 120–1300、y 130–880）。
+   字放大：標題 64 → 76（畫面 64）；欄頭 72 → 80（畫面 68）、圖示 56 → 64；項 44 → 72（畫面 61；行高 84＋光學 8）、方點 16 → 20 對齊第一行。
+   兩邊都 ≤ 2 項、每項 ≤ 7 字（多數情況；每項帶 data-len＝字數，CSS 照它選）→ 上下兩段：#fCmp 改成兩欄格線（欄頭欄 max-content｜項目欄），
+     上下兩段用 subgrid 共用同一條欄線（項目左緣對齊），欄頭在自己那一段上下置中、項目疊在右邊，兩段之間是橫的分隔線（上下各 40）。
+     欄頭最寬 480（6 字，或 5 字＋圖示）時項目欄 552：方點 44＋7 字 504 一行放得下 → 2＋2 項 2×200＋82＝482 ≤ 580－2×32。
+   有第 3 項（3＋3 項上下要 722 高）或有項目 > 7 字（上下兩段裡斷兩行就超出卡身）→ 照舊左右兩欄：欄內寬 491，一行 6 字、再長自動斷兩行（上下平均），
+     欄裡的間距 48 → 24；放得下 3 項都一行，或 2＋2 項都斷兩行（532，內距少 8）→ 直式每項寫 ≤ 7 字最好看（scene.json 的 max 10 是橫式的）。 */
+#wCard .sc-wcard__bar { font-size: 76px; line-height: 100px; --opt: 8px; padding: 14px var(--sc-pad-card); }
+.fCol { gap: var(--sc-gap-md); }
+.fHead .sc-t72, .fHead.sc-t72 { font-size: 80px; line-height: 104px; --opt: 10px; }
+.fHIcon, .fHIcon svg { width: 64px; height: 64px; }
+.fItem { align-items: flex-start; white-space: normal; }
+.fItem .sc-dot { width: 20px; height: 20px; margin-top: 36px; }
+.fItem .sc-t44 { min-width: 0; font-size: 72px; line-height: 84px; --opt: 8px; text-wrap: balance; }
+#fCmp:not(:has(.fItem:nth-child(4), [data-len="7.5"], [data-len="8"], [data-len="8.5"], [data-len="9"], [data-len="9.5"], [data-len="10"])) { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 40px 48px; }
+#fCmp:not(:has(.fItem:nth-child(4), [data-len="7.5"], [data-len="8"], [data-len="8.5"], [data-len="9"], [data-len="9.5"], [data-len="10"])) > .fCol { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; gap: 24px 48px; align-items: center; padding: 0; }
+#fCmp:not(:has(.fItem:nth-child(4), [data-len="7.5"], [data-len="8"], [data-len="8.5"], [data-len="9"], [data-len="9.5"], [data-len="10"])) .fHead { grid-column: 1; grid-row: 1 / span 2; }
+#fCmp:not(:has(.fItem:nth-child(4), [data-len="7.5"], [data-len="8"], [data-len="8.5"], [data-len="9"], [data-len="9.5"], [data-len="10"])) .fItem { grid-column: 2; }
+#fCmp:not(:has(.fItem:nth-child(4), [data-len="7.5"], [data-len="8"], [data-len="8.5"], [data-len="9"], [data-len="9.5"], [data-len="10"])) > .fLine { grid-column: 1 / -1; width: auto; height: 2px; }
 <!-- @body -->
 <div id="wCard" class="sc-wcard">
   <div class="sc-wcard__bar"><span class="sc-opt">{{title}}</span></div>
@@ -33,14 +53,14 @@
       <div id="fColL" class="fCol">
         {{#leftIcon}}<div class="fHead fHead--icon"><span class="fHIcon">{{{leftIcon}}}</span><span class="sc-t72 sc-w900 sc-optr">{{{leftHead}}}</span></div>{{/leftIcon}}{{^leftIcon}}<div class="fHead sc-t72 sc-w900">{{{leftHead}}}</div>{{/leftIcon}}
         {{#left}}
-        <div class="fItem"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">{{text}}</span></div>
+        <div class="fItem" data-len="{{text_len}}"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">{{text}}</span></div>
         {{/left}}
       </div>
       <div class="fLine"></div>
       <div id="fColR" class="fCol">
         {{#rightIcon}}<div class="fHead fHead--icon"><span class="fHIcon">{{{rightIcon}}}</span><span class="sc-t72 sc-w900 sc-optr">{{{rightHead}}}</span></div>{{/rightIcon}}{{^rightIcon}}<div class="fHead sc-t72 sc-w900">{{{rightHead}}}</div>{{/rightIcon}}
         {{#right}}
-        <div class="fItem"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">{{text}}</span></div>
+        <div class="fItem" data-len="{{text_len}}"><span class="sc-dot"></span><span class="sc-t44 sc-w500 sc-opt">{{text}}</span></div>
         {{/right}}
       </div>
     </div>

@@ -63,6 +63,30 @@
     #x-rank .xrk-bar { position: absolute; left: 320px; top: 18px; width: 480px; height: 36px; border-radius: 6px; background: var(--v2-mute); }
     #x-rank .xrk-val { position: absolute; right: 0; top: 3px; white-space: nowrap; color: var(--sc-fs-ink); }
     #x-rank .xrk-row[data-top] .xrk-bar { background: var(--brand); }
+    /* 直式（056）：字放大、列距 112；名稱欄 4 字寬、長條 400；主卡照列數在舞台窗上下置中 */
+    #x-rank[data-format="portrait"] #xrk-card { top: 136px; height: 740px; }
+    #x-rank[data-format="portrait"]:has(#xrk-r4):not(:has(#xrk-r5)) #xrk-card { top: 192px; height: 628px; }
+    #x-rank[data-format="portrait"]:not(:has(#xrk-r4)) #xrk-card { top: 248px; height: 516px; }
+    #x-rank[data-format="portrait"] #xrk-ico { --d: 88px; --i: 48px; left: 48px; top: 28px; }
+    #x-rank[data-format="portrait"] #xrk-title { left: 160px; top: 24px; font-size: 80px; line-height: 96px; --opt: 10px; }
+    #x-rank[data-format="portrait"] #xrk-unit { right: 48px; top: 24px; height: 96px; padding: 0 36px 0 32px; gap: 18px; font-size: 60px; line-height: 1; --opt: 6px; }
+    #x-rank[data-format="portrait"] #xrk-unit::before { width: 20px; height: 20px; }
+    #x-rank[data-format="portrait"] .xrk-badge { left: 48px; width: 80px; height: 80px; border-radius: 40px; font-size: 60px; line-height: 80px; --opt: 6px; }
+    #x-rank[data-format="portrait"] .xrk-track { left: 464px; width: 400px; height: 40px; border-radius: 8px; }
+    #x-rank[data-format="portrait"] #xrk-g1 { top: 168px; }
+    #x-rank[data-format="portrait"] #xrk-g2 { top: 280px; }
+    #x-rank[data-format="portrait"] #xrk-g3 { top: 392px; }
+    #x-rank[data-format="portrait"] #xrk-g4 { top: 504px; }
+    #x-rank[data-format="portrait"] #xrk-g5 { top: 616px; }
+    #x-rank[data-format="portrait"] #xrk-k1 { top: 188px; }
+    #x-rank[data-format="portrait"] #xrk-k2 { top: 300px; }
+    #x-rank[data-format="portrait"] #xrk-k3 { top: 412px; }
+    #x-rank[data-format="portrait"] #xrk-k4 { top: 524px; }
+    #x-rank[data-format="portrait"] #xrk-k5 { top: 636px; }
+    #x-rank[data-format="portrait"] .xrk-row { left: 152px; width: 976px; height: 96px; }
+    #x-rank[data-format="portrait"] .xrk-name { top: -4px; font-size: 72px; line-height: 96px; --opt: 8px; }
+    #x-rank[data-format="portrait"] .xrk-bar { left: 312px; top: 28px; width: 400px; height: 40px; border-radius: 8px; }
+    #x-rank[data-format="portrait"] .xrk-val { top: 0; font-size: 80px; line-height: 96px; }
   </style>
   <div id="x-rank" data-composition-id="x-rank" data-width="1920" data-height="1080" data-duration="16.4"
        data-cues-sample='{"start":0,"D":16.4,"cues":{"501":[0.4,1.4],"502":[1.6,3.6],"503":[3.7,5.7],"504":[5.8,7.8],"505":[7.9,9.9],"506":[10.0,12.2],"507":[12.4,16.2]},"refs":{"#502@輸出":1.8,"#503@音效":3.9,"#504@字卡":6.0,"#505@字幕":8.1,"#506@NG":10.2,"#507@一半":12.7}}'>
@@ -100,7 +124,7 @@
     const VALS = TEXT.map(function (t) { return parseFloat(t) || 0; }), DEC = TEXT.map(function (t) { return (t.split('.')[1] || '').length; });
     const PEAK = Math.max.apply(null, VALS) || 1, RATIO = VALS.map(function (v) { return Math.max(0.04, v / PEAK); });
     const ORDER = VALS.map(function (v, i) { return i; }).sort(function (a, b) { return VALS[b] - VALS[a] || a - b; });   // 第 k 名是第幾列
-    ORDER.forEach(function (i, k) { ROWS[i].style.top = (144 + k * 96) + 'px'; });
+    ORDER.forEach(function (i, k) { ROWS[i].style.top = (P.portrait ? 160 + k * 112 : 144 + k * 96) + 'px'; });   // 直式列距 112
     ROWS[ORDER[0]].setAttribute('data-top', '');
     const BEST = '#' + ROWS[ORDER[0]].id;              // 第一名那一列
     const REST = ORDER.slice(1).map(function (i) { return '#' + ROWS[i].id; }).join(', ');   // 其他列

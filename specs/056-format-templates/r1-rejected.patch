@@ -1,0 +1,537 @@
+diff --git a/shared/template/custom/x-code-diff.fill.json b/shared/template/custom/x-code-diff.fill.json
+index b7f398f..4fe672e 100644
+--- a/shared/template/custom/x-code-diff.fill.json
++++ b/shared/template/custom/x-code-diff.fill.json
+@@ -3,6 +3,7 @@
+   "prefix": "xcd",
+   "beat": "C",
+   "layout": "fullscreen",
++  "portraitMax": { "before": 2, "after": 2, "before.text": 12, "after.text": 12, "result": 14 },
+   "when": "程式、設定檔、指令的改前改後（「原本這行寫死…改成讀設定檔」）：編輯器視窗裡原本的 1–3 行標成刪除、退焦，改成的 1–3 行標成新增、逐字打出來；有結果再印一列結果",
+   "slots": {
+     "file": {
+diff --git a/shared/template/custom/x-code-diff.html b/shared/template/custom/x-code-diff.html
+index deca88e..524ff4b 100644
+--- a/shared/template/custom/x-code-diff.html
++++ b/shared/template/custom/x-code-diff.html
+@@ -42,6 +42,10 @@
+   高度＝標題列 88＋程式區（上下各留 32、每行 72）＋結果列 88（有才算），script 算好後在內容區 y 150–858 上下置中。
+   亮色暗色主題都是深色視窗。程式區：符號欄（「−」「+」）left 44、程式碼從 left 128 開始，等寬字 44、行高 72。
+   刪除帶、新增帶各蓋住自己那一組的每一行（左邊 8px 色條）。
++  直式：#x-code-diff[data-format="portrait"]：程式碼 44 → 72（等寬，畫面上 61，行高 90）、結果列 40 → 72（列高 132）、檔名 40 → 64（視窗外框的字，畫面上 54），標題列 112。
++  程式碼從 left 104 起、右內距 36：一行約 24 個半形字，超過就換行（續行縮 2 格），「−」「+」只標在每一行的第一個畫面行（script 照實際高度重寫 data-sg）。
++  視窗 1180 寬、高＝112＋程式區（上下 24＋行高合計）＋結果列 132，在舞台窗 y 130–880 置中；放不下（> 750）時先藏兩組一字不差的行（沒改到的行，例 save(video);）。
++  範例（藏掉 save 那一對、setting.json 那行換一次行）＝5 個畫面行，1180×742（有結果列時最多 5 個畫面行、沒有 6 行）。fill.json 的 portraitMax：兩組各 ≤ 2 行、每行 ≤ 12 字（24 個半形字，不換行）、結果 ≤ 14 字。
+ -->
+ <html lang="zh-Hant">
+ <head><meta charset="UTF-8"><title>x-code-diff 程式碼改前改後</title></head>
+@@ -69,6 +73,17 @@
+     /* 結果列：程式區下面，高 88 */
+     #x-code-diff #xcd-out { height: 88px; box-sizing: border-box; padding: 0 48px; border-top: 2px solid var(--v2-term-bar);
+                             display: flex; align-items: center; gap: 16px; color: var(--v2-term-ok); white-space: nowrap; }
++    /* 直式（056）：程式碼 72／行高 90（畫面上 61）、檔名 64；一行寫不下就換行（續行縮 2 格），視窗高度與「−」「+」由 script 照實際行數算（P.portrait） */
++    #x-code-diff[data-format="portrait"] #xcd-bar { height: 112px; padding: 0 40px; gap: 18px; }
++    #x-code-diff[data-format="portrait"] .xcd-dot { width: 22px; height: 22px; border-radius: 11px; }
++    #x-code-diff[data-format="portrait"] #xcd-tico { --d: 64px; --i: 40px; }
++    #x-code-diff[data-format="portrait"] #xcd-file { font-size: 64px; line-height: 80px; --opt: 8px; }
++    #x-code-diff[data-format="portrait"] #xcd-body { padding: 24px 0; }
++    #x-code-diff[data-format="portrait"] .xcd-band { font-size: 72px; }
++    #x-code-diff[data-format="portrait"] .xcd-band::before { left: 28px; line-height: 90px; }
++    #x-code-diff[data-format="portrait"] .xcd-code { padding: 0 36px 0 104px; font-size: 72px; line-height: 90px; }
++    #x-code-diff[data-format="portrait"] .xcd-ln { width: auto; height: auto; line-height: 90px; white-space: pre-wrap; padding-left: 2ch; text-indent: -2ch; }
++    #x-code-diff[data-format="portrait"] #xcd-out { height: 132px; padding: 0 40px; font-size: 72px; line-height: 90px; }
+   </style>
+   <div id="x-code-diff" data-composition-id="x-code-diff" data-width="1920" data-height="1080" data-duration="11"
+        data-cues-sample='{"start":0,"D":11,"cues":{"491":[0.4,1.4],"492":[1.6,4.0],"493":[4.2,7.4],"494":[7.6,10.6]},"refs":{"#492@寫死":1.9,"#493@設定檔":4.5,"#494@不用":7.9}}'>
+@@ -109,8 +124,25 @@
+     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出
+ 
+     // 視窗高度照行數算、上下置中（載入時算一次，不用改）：標題列 88＋程式區 64＋每行 72＋結果列 88
+-    const WIN = document.getElementById('xcd-win'), TALL = 152 + $q('.xcd-ln').length * 72 + (document.getElementById('xcd-out') ? 88 : 0);
+-    WIN.style.height = TALL + 'px'; WIN.style.top = Math.round(150 + (708 - TALL) / 2) + 'px';
++    const WIN = document.getElementById('xcd-win');
++    if (!P.portrait) { const TALL = 152 + $q('.xcd-ln').length * 72 + (document.getElementById('xcd-out') ? 88 : 0); WIN.style.height = TALL + 'px'; WIN.style.top = Math.round(150 + (708 - TALL) / 2) + 'px'; }
++    else {   // 直式：一行可能換成兩個畫面行 → 照實際高度算視窗高度（標題列 112＋程式區上下 24＋行高合計＋結果列 132），在舞台窗 y 130–880 置中
++      const tall = function () { return 112 + 48 + $q('#xcd-body .xcd-code')[0].offsetHeight + $q('#xcd-body .xcd-code')[1].offsetHeight + (document.getElementById('xcd-out') ? 132 : 0); };
++      if (tall() > 750) {   // 放不下：先藏兩組一字不差的行（沒改到的行），每組至少留一行
++        const olds = $q('#xcd-ocode .xcd-ln'), news = $q('#xcd-ncode .xcd-ln');
++        olds.forEach(function (o) {
++          const n = news.find(function (x) { return x.style.display !== 'none' && x.textContent.trim() === o.textContent.trim(); });
++          const left = function (a) { return a.filter(function (x) { return x.style.display !== 'none'; }).length; };
++          if (n && left(olds) > 1 && left(news) > 1) { o.style.display = 'none'; n.style.display = 'none'; }
++        });
++      }
++      [ ['#xcd-oband', '#xcd-ocode', '−'], ['#xcd-nband', '#xcd-ncode', '+'] ].forEach(function (g) {   // 「−」「+」只標每一行的第一個畫面行
++        const sg = $q(g[1] + ' .xcd-ln').filter(function (x) { return x.style.display !== 'none'; }).map(function (x) { return g[2] + '\n'.repeat(Math.max(1, Math.round(x.offsetHeight / 90)) - 1); });
++        $q(g[0])[0].setAttribute('data-sg', sg.join('\n'));
++      });
++      const TALL = tall();
++      WIN.style.height = TALL + 'px'; WIN.style.top = Math.round(130 + (750 - TALL) / 2) + 'px';
++    }
+ 
+     // 拍 0 開場：視窗進場（看 ENTER；原本的寫法跟著視窗一起出現）→ 檔名圖示描線、檔名逐字
+     if (ENTER === 'grow') P.grow('#xcd-win', 0.3);
+diff --git a/shared/template/custom/x-folder.fill.json b/shared/template/custom/x-folder.fill.json
+index d12f1ab..4840fbc 100644
+--- a/shared/template/custom/x-folder.fill.json
++++ b/shared/template/custom/x-folder.fill.json
+@@ -3,6 +3,9 @@
+   "prefix": "xfld",
+   "beat": "D",
+   "layout": "fullscreen",
++  "portraitMax": {
++    "items": 6
++  },
+   "when": "帶觀眾走過一個資料夾結構（3–9 列、最多 4 層，例「一支影片一個資料夾，統一放在 projects 底下」「assets 分四類：camera、voice、screen、images」）；像檔案總管的樹狀目錄，講到哪個資料夾、檔案那一列長出來、聚焦，上一層資料夾換成打開的圖示",
+   "slots": {
+     "title": {
+diff --git a/shared/template/custom/x-folder.html b/shared/template/custom/x-folder.html
+index df44d05..69315aa 100644
+--- a/shared/template/custom/x-folder.html
++++ b/shared/template/custom/x-folder.html
+@@ -58,6 +58,10 @@
+   全寬（沒有講者，主卡 1680）7 列以下 64／52／44／52／72、8 列 56／48／40／48／64，整棵樹一樣置中。
+   樹狀線（#xfld-lines，線寬 3、--v2-line）從上一層資料夾圖示的中線往下、圓角 10 轉進這一列圖示左邊 10；同一層的下一列接著上一列的線往下長。
+   聚焦放在那一格（縮排不算）：主色亮框（P.spot 自動加）＋淡色底（.xfld-hl），一格以左緣為原點放大 1.03，縮排和樹狀線不會跟著位移。
++  直式：舞台縮 0.8475（script 開頭用 SceneMotion.portrait(ROOT) 先知道是直式，#x-folder[data-format="portrait"]）：標題 80，主卡 top 136、卡底 876（內容區 1176×608），
++  樹的高度上限 536（上下各留 ≥ 36）。列高／一格高／名稱／註記／圖示／縮排照列數：5 列以下 104／96／80／64／80／80（名稱畫面上 68），6 列 88／80／72／60／72／72（61）；
++  直式最多 6 列（fill.json portraitMax items 6，超過 build --check ⚠：拆兩段）。超過時退一級排得下但字變小（7 列 72／64／60／60／56／64、8 列 64／56／60／60／52／56、
++  9 列 60／56／60／60／48／56，名稱與註記畫面上 51，聚焦壓暗縮 0.96 時 48.8）。
+ -->
+ <html lang="zh-Hant">
+ <head><meta charset="UTF-8"><title>x-folder 資料夾樹</title></head>
+@@ -93,6 +97,10 @@
+     /* 註記：灰字＋前面一顆灰點（不加框：40 字放進 56 高的列，框會撐破）；跟著那一格一起聚焦、退焦 */
+     #x-folder .xfld-note { position: relative; flex: none; display: flex; align-items: center; gap: 12px; margin-left: 4px; color: var(--sc-fs-mute); font-size: var(--xfld-nfs, 40px); line-height: max(var(--xfld-it, 56px), 1.25em); }
+     #x-folder .xfld-note::before { content: ""; flex: none; width: 12px; height: 12px; border-radius: 6px; background: currentColor; }
++    /* 直式（056）：標題 80；主卡拉到 y 136–876、內容區高 608（列高、字級由 script 照列數給，見檔頭【版面】） */
++    #x-folder[data-format="portrait"] #xfld-card { top: 136px; }
++    #x-folder[data-format="portrait"] #xfld-card .sc-wcard__bar { font-size: 80px; line-height: 104px; padding-top: 12px; padding-bottom: 12px; }
++    #x-folder[data-format="portrait"] #xfld-body { height: 608px; }
+   </style>
+   <div id="x-folder" data-composition-id="x-folder" data-width="1920" data-height="1080" data-duration="27.4"
+        data-cues-sample='{"start":0,"D":27.4,"cues":{"382":[1.6,4.0],"383":[4.1,6.4],"384":[6.5,8.9],"385":[9.0,11.3],"386":[11.4,13.7],"387":[13.8,16.2],"388":[16.3,18.7],"389":[18.8,21.2],"390":[21.3,23.6],"391":[23.8,25.6]},"refs":{"#382@example":1.8,"#383@講稿":4.3,"#384@assets":6.8,"#385@camera":9.3,"#386@voice":11.8,"#387@screen":14.3,"#388@images":16.8,"#389@work":19.3,"#390@output":21.8,"#391@自動產生":24.6}}'>
+@@ -124,9 +132,11 @@
+ 
+     // 0. 依 TREE 長出每一列（在 SceneMotion 之前：排版要量得到整棵樹的大小；以下都不用改，載入時算一次，每次結果相同）
+     const ROOT = document.getElementById('x-folder'), WIDE = !!ROOT.closest('[data-wide]');
+-    const N = TREE.length, ROWH = N >= 9 ? 56 : N === 8 ? 64 : 72;   // 列高：7 列以下 72、8 列 64、9 列 56
++    const PORT = !!(window.SceneMotion && SceneMotion.portrait && SceneMotion.portrait(ROOT));   // 056 直式（縮進直式上半）：root 打上 data-format="portrait"，列高、字級用下面直式那一組
++    const N = TREE.length, ROWH = PORT ? (N <= 5 ? 104 : N === 6 ? 88 : N === 7 ? 72 : N === 8 ? 64 : 60) : N >= 9 ? 56 : N === 8 ? 64 : 72;   // 列高：7 列以下 72、8 列 64、9 列 56（直式見檔頭）
+     // [一格高, 名稱字級, 註記字級, 圖示, 每層縮排]：9 列一律縮一級（一格比列高少 8，聚焦放大不壓到上下列）；全寬（沒有講者）放大
+-    const S = N >= 9 ? [48, 40, 38, 40, 56] : WIDE ? (N === 8 ? [56, 48, 40, 48, 64] : [64, 52, 44, 52, 72]) : [56, 44, 40, 44, 56];
++    const S = PORT ? (N <= 5 ? [96, 80, 64, 80, 80] : N === 6 ? [80, 72, 60, 72, 72] : N === 7 ? [64, 60, 60, 56, 64] : N === 8 ? [56, 60, 60, 52, 56] : [56, 60, 60, 48, 56])
++      : N >= 9 ? [48, 40, 38, 40, 56] : WIDE ? (N === 8 ? [56, 48, 40, 48, 64] : [64, 52, 44, 52, 72]) : [56, 44, 40, 44, 56];
+     const FS = S[1], NFS = S[2], ICON = S[3], IND = S[4];
+     const TREE_EL = $q('#xfld-tree')[0], STAMPS = $q('#xfld-stamps')[0];
+     ['it', 'fs', 'nfs', 'ic'].forEach(function (k, i) { TREE_EL.style.setProperty('--xfld-' + k, S[i] + 'px'); });
+diff --git a/shared/template/custom/x-terminal-code.fill.json b/shared/template/custom/x-terminal-code.fill.json
+index a8fa1ec..d92388b 100644
+--- a/shared/template/custom/x-terminal-code.fill.json
++++ b/shared/template/custom/x-terminal-code.fill.json
+@@ -3,6 +3,7 @@
+   "prefix": "xtc",
+   "beat": "H",
+   "layout": "fullscreen",
++  "portraitMax": { "result": 14 },
+   "when": "講一小段程式（≤ 6 行）在做什麼：深色編輯器，程式碼逐字打出 → 講到哪件事，那幾行底下亮起標示帶（1–2 條）→ 講到「執行」，底部結果列印出綠色勾；每行寫 text（純文字），要上色另寫 html（xtc-kw／xtc-fn／xtc-str／xtc-cm 的 span）",
+   "slots": {
+     "file": {
+diff --git a/shared/template/custom/x-terminal-code.html b/shared/template/custom/x-terminal-code.html
+index f4aaca3..e956cb1 100644
+--- a/shared/template/custom/x-terminal-code.html
++++ b/shared/template/custom/x-terminal-code.html
+@@ -42,6 +42,12 @@
+   fullscreen：視窗進場看 script 的 ENTER；離場由 build 處理。編輯器視窗 left 120、top 194、1180×624（右緣 1300，底 818），標題列 88；亮色暗色主題都是深色（--v2-term*）。
+   程式區高 448（上下內距 32、6 行 × 64）：左邊行號欄 96 寬（數字靠右），程式碼從 left 128 開始，字 40、等寬（.sc-mono）、行高固定 64，
+   所以第 n 行的 top＝32＋64 ×（n − 1），標示帶照這個算。結果列在程式區下面，高 88、上緣一條分隔線。
++  直式：#x-terminal-code[data-format="portrait"]：程式碼 40 → 72（等寬，畫面上 61，行高 90）、結果列 40 → 72（列高 132）、行號 40 → 60、檔名 40 → 64（次要，畫面上 51／54），標題列 112。
++  程式碼從 left 104 起、右內距 36：一行約 24 個半形字，超過就換行（續行縮 2 格）。script（P.portrait）把程式碼照 <br> 拆成一行一個 .xtc-ln、
++  行號跟著每一行的高度排、標示帶照標的那幾行的實際位置畫。程式區是 5 個畫面行的視窗（450，上下內距 24、clip-path 切掉內距；沒有結果列 6 行）：
++  全部放得下就不捲；放不下時打字時看第 1 行起，講到標示那一拍（H1、H2 前 0.2 秒、0.6 秒）往下捲到「標的那幾行＋前一行」（放不下前一行就從標的那一行起），
++  標示帶跟著程式碼一起捲（data-layout-allow-overflow-portrait：視窗外的行是刻意藏起來的）。範例 6 行換行後是 8 個畫面行：H1 不捲、H2 捲到第 3–6 行，視窗 1180×742。
++  結果 ≤ 14 字（fill.json 的 portraitMax，超過 ⚠）。
+ -->
+ <html lang="zh-Hant">
+ <head><meta charset="UTF-8"><title>x-terminal-code 程式碼打字</title></head>
+@@ -73,13 +79,23 @@
+     /* 結果列：程式區下面，高 88 */
+     #x-terminal-code #xtc-out { height: 88px; box-sizing: border-box; padding: 0 48px; border-top: 2px solid var(--v2-term-bar);
+                                 display: flex; align-items: center; gap: 16px; color: var(--v2-term-ok); white-space: nowrap; }
++    /* 直式（056）：程式碼 72／行高 90（畫面上 61）、行號 60、檔名 64；程式區是 5 個畫面行的視窗，script 拆行、排行號與標示帶、算捲動（P.portrait） */
++    #x-terminal-code[data-format="portrait"] #xtc-bar { height: 112px; padding: 0 40px; gap: 18px; }
++    #x-terminal-code[data-format="portrait"] .xtc-dot { width: 22px; height: 22px; border-radius: 11px; }
++    #x-terminal-code[data-format="portrait"] #xtc-tico { --d: 64px; --i: 40px; }
++    #x-terminal-code[data-format="portrait"] #xtc-file { font-size: 64px; line-height: 80px; --opt: 8px; }
++    #x-terminal-code[data-format="portrait"] #xtc-body { clip-path: inset(24px 0 24px 0); }
++    #x-terminal-code[data-format="portrait"] #xtc-gut { top: 24px; width: 72px; font-size: 60px; line-height: 90px; }
++    #x-terminal-code[data-format="portrait"] #xtc-code { top: 24px; left: 104px; right: 36px; font-size: 72px; line-height: 90px; white-space: normal; overflow-wrap: anywhere; }
++    #x-terminal-code[data-format="portrait"] .xtc-ln { padding-left: 2ch; text-indent: -2ch; }
++    #x-terminal-code[data-format="portrait"] #xtc-out { height: 132px; padding: 0 40px; font-size: 72px; line-height: 90px; }
+   </style>
+   <div id="x-terminal-code" data-composition-id="x-terminal-code" data-width="1920" data-height="1080" data-duration="15"
+        data-cues-sample='{"start":0,"D":15,"cues":{"332":[1.6,6.0],"333":[6.2,8.6],"334":[8.8,11.4],"335":[11.6,14.2]},"refs":{"#333@讀進來":6.4,"#334@剪掉":9.2,"#335@執行":12.0}}'>
+     <div class="sc-surface-fs fill"></div>
+     <div id="xtc-win">
+       <div id="xtc-bar"><i class="xtc-dot"></i><i class="xtc-dot"></i><i class="xtc-dot"></i><span id="xtc-tico" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M10 12.5 8 15l2 2.5" /> <path d="m14 12.5 2 2.5-2 2.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" /> </svg></span><span id="xtc-file" class="sc-t40 sc-w700 sc-mono sc-opt" data-fill="file">cut-retakes.mjs</span></div>
+-      <div id="xtc-body">
++      <div id="xtc-body" data-layout-allow-overflow-portrait>
+         <i id="xtc-h1" class="xtc-hl" data-layout-allow-overlap></i>
+         <i id="xtc-h2" class="xtc-hl" data-layout-allow-overlap></i> <!-- @if bands>=2 -->
+         <div id="xtc-gut" class="sc-t40 sc-w500 sc-mono">1
+@@ -121,6 +137,34 @@
+     const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), H2 = P.at('#334@剪掉'), RUN = P.at('#335@執行');   // 打字／兩段標示／執行  // @sub bands==1 && runAt: const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), RUN = P.at('#335@執行'); @@ bands==2 && !runAt: const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來'), H2 = P.at('#334@剪掉'); @@ bands==1 && !runAt: const TYPE = P.at('#332', 0.45), H1 = P.at('#333@讀進來');
+     P.sfx('success', '#335@執行');                     // 執行結果一顆 success（句號和 RUN 一樣）  // @if runAt
+     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
++    // 直式（載入時算一次）：程式碼照 <br> 拆成一行一個 .xtc-ln（換行後一行可能占兩個畫面行）→ 行號、標示帶照每一行的實際位置排 →
++    // 程式區只開 5 個畫面行（沒有結果列 6 行），放不下就在標示那一拍往下捲（SCROLL：[時間, 捲到哪]）
++    const SCROLL = [];
++    if (P.portrait) {
++      const LH = 90, CODE = $q('#xtc-code')[0], groups = [[]];
++      Array.prototype.slice.call(CODE.childNodes).forEach(function (n) { if (n.nodeName === 'BR') groups.push([]); else groups[groups.length - 1].push(n); });
++      while (CODE.firstChild) CODE.removeChild(CODE.firstChild);
++      const LNS = groups.map(function (g) { const d = document.createElement('div'); d.className = 'xtc-ln'; g.forEach(function (n) { d.appendChild(n); }); CODE.appendChild(d); return d; });
++      const GUT = $q('#xtc-gut')[0];
++      while (GUT.firstChild) GUT.removeChild(GUT.firstChild);
++      LNS.forEach(function (d, i) { const g = document.createElement('div'); g.style.height = d.offsetHeight + 'px'; g.textContent = String(i + 1); GUT.appendChild(g); });
++      const band = function (id) {   // 橫式 CSS 的 top／height（32＋64 ×（第幾行 − 1）、64 × 行數）換回第幾行，再照直式的行畫
++        const el = $q(id)[0];
++        if (!el) return null;
++        const cs = getComputedStyle(el), from = Math.round((parseFloat(cs.top) - 32) / 64), n = Math.max(1, Math.round(parseFloat(cs.height) / 64));
++        const a = LNS[Math.min(from, LNS.length - 1)], b = LNS[Math.min(from + n, LNS.length) - 1];
++        const top = a.offsetTop, bot = b.offsetTop + b.offsetHeight, prev = from > 0 ? LNS[from - 1].offsetTop : top;
++        el.style.top = (24 + top) + 'px'; el.style.height = (bot - top) + 'px';
++        return { top: top, bot: bot, prev: prev };
++      };
++      const B1 = band('#xtc-h1'), B2 = band('#xtc-h2');
++      const TOTAL = CODE.offsetHeight, HAS_OUT = !!document.getElementById('xtc-out'), VIEW = Math.min(TOTAL, (HAS_OUT ? 5 : 6) * LH);
++      const MAXS = TOTAL - VIEW, at = function (b) { return !b ? 0 : Math.min(MAXS, b.bot - b.prev <= VIEW ? b.prev : b.top); };
++      if (MAXS > 0) { SCROLL.push([H1 - 0.2, at(B1)]); if (B2) SCROLL.push([H2 - 0.2, at(B2)]); }
++      $q('#xtc-body')[0].style.height = (VIEW + 48) + 'px';
++      const TALL = 112 + VIEW + 48 + (HAS_OUT ? 132 : 0), WIN = $q('#xtc-win')[0];
++      WIN.style.height = TALL + 'px'; WIN.style.top = Math.round(130 + (750 - TALL) / 2) + 'px';
++    }
+ 
+     // 拍 0 開場：視窗進場（看 ENTER）→ 檔名圖示描線、檔名逐字 → 1.0 行號出現
+     if (ENTER === 'grow') P.grow('#xtc-win', 0.3);
+@@ -137,6 +181,11 @@
+     // 拍 4 執行：結果列由左往右印出（音效 success 見上面 P.sfx）  // @if runAt
+     P.wipe('#xtc-out', RUN, { dir: 'left', dur: 0.4 });   // @if runAt
+     P.punch('#xtc-res', RUN + 0.4, { scale: 1.04 });   // @if runAt
++    // 直式：放不下時講到標示那一拍往下捲（行號、程式碼、標示帶一起；捲到同一個位置就不動）
++    SCROLL.reduce(function (from, s) {
++      if (s[1] !== from) P.morph('#xtc-gut, #xtc-code, #xtc-h1, #xtc-h2', s[0], { y: -s[1] }, { from: { y: -from }, dur: 0.6, ease: P.V2.EASE.move });
++      return s[1];
++    }, 0);
+ 
+     P.end();                                           // 長度＝plan.json 這段的長度
+     window.__timelines['x-terminal-code'] = tl;
+diff --git a/shared/template/custom/x-terminal.fill.json b/shared/template/custom/x-terminal.fill.json
+index 7ab1959..763b008 100644
+--- a/shared/template/custom/x-terminal.fill.json
++++ b/shared/template/custom/x-terminal.fill.json
+@@ -3,6 +3,7 @@
+   "prefix": "xterm",
+   "beat": "H",
+   "layout": "fullscreen",
++  "portraitMax": { "doneText": 14 },
+   "when": "講「打一行指令，它就自己跑完」：深色終端機，指令逐字打出（路徑＋指令＋參數合計 ≤ 16 字）→ 轉圈處理中 → 講到每個步驟（1–2 個）印一行輸出 → 講到完成，轉圈換成綠色完成行",
+   "lines": [
+     {
+diff --git a/shared/template/custom/x-terminal.html b/shared/template/custom/x-terminal.html
+index 5aa08d5..2672246 100644
+--- a/shared/template/custom/x-terminal.html
++++ b/shared/template/custom/x-terminal.html
+@@ -40,6 +40,10 @@
+   fullscreen：視窗進場看 script 的 ENTER；離場由 build 處理。終端機視窗 left 120、top 222、1180×568（右緣 1300，底 790），標題列 88。
+   內容區上下內距 40、左右 48；每一行高 80（字 52、等寬字 .sc-mono），一共 5 行：第 1 行指令、第 2–3 行輸出、第 4 行轉圈／完成（同一行，先後出現）、第 5 行新的提示字元。
+   每一行的 top 寫在 CSS（40＋80 × 行號），不用 data-layout（終端機是固定行高的格子）。
++  直式：#x-terminal[data-format="portrait"]：指令、輸出、完成行 52 → 72（等寬，畫面上 61，行高 92）、視窗標題 40 → 64（視窗外框的字，畫面上 54），標題列 112。
++  內容區左右內距 40；指令那一行寫不下（字 72 一行約 25 個半形字，扣掉路徑和 $ 約 18 個）就在指令欄裡換行（接在 $ 後面對齊），
++  所以每一行的 top 由 script 照實際高度往下排（P.portrait），視窗高度＝112＋上下 32＋行高合計，在舞台窗 y 130–880 置中：
++  指令換一次行（範例）時 1180×728，不換行 1180×636。完成行 ≤ 14 字（fill.json 的 portraitMax，超過 ⚠）。
+ -->
+ <html lang="zh-Hant">
+ <head><meta charset="UTF-8"><title>x-terminal 終端機跑指令</title></head>
+@@ -74,6 +78,15 @@
+     #x-terminal .xterm-arc { fill: none; stroke: var(--v2-term-kw); stroke-width: 6px; stroke-linecap: round; stroke-dasharray: 80 44; }
+     /* 新提示字元後面的方塊游標（用字元，寬度跟著字） */
+     #x-terminal #xterm-caret { color: var(--v2-term-ink); }
++    /* 直式（056）：每行 72／行高 92（畫面上 61）、視窗標題 64；指令欄可以換行，每一行的 top 和視窗高度由 script 算（P.portrait） */
++    #x-terminal[data-format="portrait"] #xterm-bar { height: 112px; padding: 0 40px; gap: 18px; }
++    #x-terminal[data-format="portrait"] .xterm-dot { width: 22px; height: 22px; border-radius: 11px; }
++    #x-terminal[data-format="portrait"] #xterm-tico { --d: 64px; --i: 40px; }
++    #x-terminal[data-format="portrait"] #xterm-title { font-size: 64px; line-height: 80px; --opt: 8px; }
++    #x-terminal[data-format="portrait"] .xterm-ln { left: 40px; height: auto; gap: 24px; font-size: 72px; line-height: 92px; }
++    #x-terminal[data-format="portrait"] #xterm-l1 { right: 40px; align-items: flex-start; }
++    #x-terminal[data-format="portrait"] #xterm-cmd { flex: 1 1 0; min-width: 0; white-space: normal; }
++    #x-terminal[data-format="portrait"] #xterm-spin { width: 64px; height: 64px; }
+   </style>
+   <div id="x-terminal" data-composition-id="x-terminal" data-width="1920" data-height="1080" data-duration="15"
+        data-cues-sample='{"start":0,"D":15,"cues":{"322":[1.6,5.6],"323":[6.0,8.6],"324":[8.8,11.4],"325":[11.5,14.2]},"refs":{"#323@重講":6.6,"#324@字幕":9.2,"#325@完成":12.0}}'>
+@@ -104,6 +117,19 @@
+     const RUN = P.at('#322', 0.45), STEP1 = P.at('#323@重講'), STEP2 = P.at('#324@字幕'), DONE = P.at('#325@完成');   // 打指令／兩個步驟／完成  // @sub n==1: const RUN = P.at('#322', 0.45), STEP1 = P.at('#323@重講'), DONE = P.at('#325@完成');
+     P.sfx('success', '#325@完成');                     // 完成一顆 success（句號和 DONE 一樣）
+     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
++    if (P.portrait) {   // 直式：指令可能換行，每一行照實際高度往下排（轉圈行和完成行同一格），視窗高度跟著算、在舞台窗 y 130–880 置中（載入時算一次）
++      let y = 32;
++      [ '#xterm-l1', '#xterm-o1', '#xterm-o2', '#xterm-wl', '#xterm-l5' ].forEach(function (s) {
++        const el = $q(s)[0];
++        if (!el) return;
++        el.style.top = y + 'px';
++        if (s === '#xterm-wl') $q('#xterm-done')[0].style.top = y + 'px';
++        y += el.offsetHeight;
++      });
++      const TALL = 112 + y + 32, WIN = $q('#xterm-win')[0];
++      $q('#xterm-body')[0].style.height = (y + 32) + 'px';
++      WIN.style.height = TALL + 'px'; WIN.style.top = Math.round(130 + (750 - TALL) / 2) + 'px';
++    }
+ 
+     // 拍 0 開場：視窗進場（看 ENTER）→ 標題圖示描線、標題逐字 → 1.0 第一個提示字元出現
+     if (ENTER === 'grow') P.grow('#xterm-win', 0.3);
+diff --git a/shared/template/custom/x-ui-mock.html b/shared/template/custom/x-ui-mock.html
+index 9a17632..98fbd25 100644
+--- a/shared/template/custom/x-ui-mock.html
++++ b/shared/template/custom/x-ui-mock.html
+@@ -50,6 +50,11 @@
+   靠上（上內距 40）、左右置中（各 72）、間距 24。頁面標題內距 8／16（聚焦的亮框不貼字）、和按鈕同高 88、同一條中線；按鈕 208×88，排完在畫布 (896, 40)、中心 (1000, 84)。
+   游標在畫布裡，起點 left 560、top 360。
+   通知在視區裡、畫布外面（介面退焦時不變暗）；通知 left 40、top 360、高 112，疊在介面上是刻意的（data-layout-allow-overlap）。
++  直式：#x-ui-mock[data-format="portrait"]：側欄和第 3 列設定藏起來（放不下，焦點本來就在頁面標題和按鈕），頁面區拉滿畫布 1176 寬；
++  頁面標題 52 → 80（畫面上 68）、按鈕／兩列設定／通知 40–52 → 72（畫面上 61）、視窗標題 40 → 64（視窗外框的字，畫面上 54）。
++  視窗 1180×720（top 145，標題列 112），視區 1176×604；頁面區 data-gap-portrait="lg"、data-align-portrait="center"：標題列（按鈕 368×136 靠右）＋兩列設定 1080×136，
++  上下置中（各 48–56；列高 136＝字 92＋上下 22，聚焦時壓暗縮 0.96 內距仍 ≥ 20）。游標起點 (640, 470)，終點照排好的按鈕位置算（script 的 P.portrait）；通知 left 48、top 424、高 140。
++  鏡頭（P.cam）直式照舊從視窗上緣中點推 1.04：x 96–1324、y 145–894 還在看得到的範圍裡。
+ -->
+ <html lang="zh-Hant">
+ <head><meta charset="UTF-8"><title>x-ui-mock 示意介面操作</title></head>
+@@ -92,6 +97,25 @@
+                             padding: 0 40px 0 28px; border: 4px solid var(--sc-good); border-radius: 20px; background: var(--sc-fs-card); color: var(--sc-fs-ink);
+                             display: flex; align-items: center; gap: 20px; white-space: nowrap; }
+     #x-ui-mock #xui-tico { --d: 64px; --i: 36px; background: var(--sc-good); color: var(--sc-on-good); }
++    /* 直式（056）：藏側欄與第 3 列；頁面標題 80、按鈕／設定／通知 72、視窗標題 64（畫面上 68／61／54）；視窗 1180×720（top 145） */
++    #x-ui-mock[data-format="portrait"] #xui-win { top: 145px; height: 720px; }
++    #x-ui-mock[data-format="portrait"] #xui-chrome { height: 112px; padding: 0 40px; gap: 18px; }
++    #x-ui-mock[data-format="portrait"] .xui-dot { width: 18px; height: 18px; border-radius: 9px; }
++    #x-ui-mock[data-format="portrait"] #xui-wtitle { font-size: 64px; line-height: 80px; --opt: 8px; }
++    #x-ui-mock[data-format="portrait"] #xui-view { height: 604px; }
++    #x-ui-mock[data-format="portrait"] #xui-canvas { height: 604px; }
++    #x-ui-mock[data-format="portrait"] #xui-side, #x-ui-mock[data-format="portrait"] #xui-row3 { display: none; }
++    #x-ui-mock[data-format="portrait"] #xui-main { left: 0; width: 1176px; height: 604px; }
++    #x-ui-mock[data-format="portrait"] #xui-ptitle { top: 8px; font-size: 80px; line-height: 104px; --opt: 10px; }
++    #x-ui-mock[data-format="portrait"] #xui-btn { left: 712px; width: 368px; height: 136px; border-radius: 20px; }
++    #x-ui-mock[data-format="portrait"] #xui-btn .sc-opt { font-size: 72px; line-height: 92px; --opt: 8px; }
++    #x-ui-mock[data-format="portrait"] .xui-row { width: 1080px; height: 136px; padding: 0 36px; }
++    #x-ui-mock[data-format="portrait"] .xui-row .sc-opt { font-size: 72px; line-height: 92px; --opt: 8px; }
++    #x-ui-mock[data-format="portrait"] #xui-cursor { left: 640px; top: 470px; width: 64px; height: 64px; }
++    #x-ui-mock[data-format="portrait"] #xui-cursor svg { width: 64px; height: 64px; }
++    #x-ui-mock[data-format="portrait"] #xui-toast { left: 48px; top: 424px; height: 140px; padding: 0 40px 0 32px; }
++    #x-ui-mock[data-format="portrait"] #xui-ttext { font-size: 72px; line-height: 92px; --opt: 8px; }
++    #x-ui-mock[data-format="portrait"] #xui-tico { --d: 72px; --i: 40px; }
+   </style>
+   <div id="x-ui-mock" data-composition-id="x-ui-mock" data-width="1920" data-height="1080" data-duration="13.5"
+        data-cues-sample='{"start":0,"D":13.5,"cues":{"72":[2.8,5.5],"73":[5.7,8],"74":[8.2,10.8]},"refs":{"#72@匯出設定":2.8,"#73@匯出":5.7,"#74@完成":8.2}}'>
+@@ -105,7 +129,7 @@
+             <div id="xui-nav2" class="xui-nav" data-layout-allow-slack><span class="sc-t40 sc-w700 sc-opt" data-fill="nav.2.text">字幕</span></div>
+             <div id="xui-nav3" class="xui-nav" data-layout-allow-slack><span class="sc-t40 sc-w700 sc-opt" data-fill="nav.3.text">音效</span></div>
+           </div>
+-          <div id="xui-main" data-layout="col" data-gap="md" data-align="top">
++          <div id="xui-main" data-layout="col" data-gap="md" data-align="top" data-gap-portrait="lg" data-align-portrait="center">
+             <div id="xui-head" data-slot data-layout="free">
+               <div id="xui-ptitle" class="sc-t52 sc-w900 sc-opt" data-slot data-fill="pageTitle">匯出設定</div>
+               <div id="xui-btn" data-slot><span class="sc-t40 sc-w900 sc-opt" data-fill="button">匯出檔案</span></div>
+@@ -134,6 +158,11 @@
+     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
+     const UI = '#xui-nav1, #xui-nav2, #xui-nav3, #xui-ptitle, #xui-btn, #xui-row1, #xui-row2, #xui-row3';   // 介面元件（彈出順序＝聚焦的組）
+     const BTN = { left: 992, top: 76 };   // 游標終點＝按鈕中心各減 8（改了按鈕位置就改這兩個數字）
++    const CUR0 = P.portrait ? { left: 640, top: 470 } : { left: 560, top: 360 };   // 游標起點（和 CSS 一樣）
++    if (P.portrait) {   // 直式：按鈕位置由排版決定，游標終點照排好的位置算（箭尖在 svg 的 (8, 8)，直式游標 64 → 箭尖 (10.7, 10.7)）
++      const b = window.SceneLayout.box($q('#xui-btn')[0], $q('#xui-canvas')[0]);
++      BTN.left = Math.round(b[0] + b[2] / 2 - 11); BTN.top = Math.round(b[1] + b[3] / 2 - 11);
++    }
+ 
+     // 拍 0 開場：視窗進場（看 ENTER）→ 視窗標題逐字上浮
+     if (ENTER === 'grow') P.grow('#xui-win', 0.3);
+@@ -147,7 +176,7 @@
+     P.spot(UI, '#xui-ptitle', ZOOM, { scale: 1.06, lift: -8 });
+     P.in('#xui-cursor', ZOOM + 0.6);
+     // 拍 3 按下：游標提早 0.6 秒出發、CLICK 那一刻到按鈕；鏡頭帶到按鈕（提早 0.2）、按鈕聚焦、頁面標題「走過」、按鈕漣漪
+-    P.morph('#xui-cursor', CLICK - 0.6, BTN, { from: { left: 560, top: 360 }, dur: 0.6, ease: P.V2.EASE.move });
++    P.morph('#xui-cursor', CLICK - 0.6, BTN, { from: CUR0, dur: 0.6, ease: P.V2.EASE.move });
+     P.cam('#xui-win', CLICK - 0.2, { to: '#xui-btn', k: 0.12, scale: 1.04, dur: 0.9 });
+     P.spot(UI, '#xui-btn', CLICK, { scale: 1.07, lift: -10, done: '#xui-ptitle' });
+     P.ripple('#xui-btn', CLICK, { to: 1.8 });
+diff --git a/shared/template/scenes/09-qa/template.html b/shared/template/scenes/09-qa/template.html
+index afb97ce..ca18eb0 100644
+--- a/shared/template/scenes/09-qa/template.html
++++ b/shared/template/scenes/09-qa/template.html
+@@ -8,8 +8,21 @@
+ .qa-body { display: flex; flex-direction: column; gap: 15px; }
+ .qa-row { min-height: 68px; }
+ <!-- @style-portrait -->
+-/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
++/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。
++   056：卡片撐滿卡片帶（外框寬 880＝主卡 872＋底板錯開 8，x 60–940）；Q／A 方標 64 → 80（字 36 → 60）；標籤「問答」直式不放（Q／A 方標已經說明，省下 56 高給兩行問句）。
++   問句、答案字級照字數、盡量一行：問 clamp(52, 720 ÷ 字數, 64)、答 clamp(52, 670 ÷ 字數, 88)（文字寬 680）；放不下就換兩行
++   （只在詞與詞之間，timeline 開頭照詞包好）。範例（問 12 字 60、答 9 字 74，各一行）外框 y 974–1240；
++   問 18＋答 16 都到上限（各兩行 52）時約 868 起；卡高超過約 320 會報 ⚠ 壓到講者（只壓到身體）。 */
+ #qaCard { left: 60px; bottom: 680px; }
++#qaCard { width: 880px; padding-top: 0; }
++#qaCard .sc-lt__tag { display: none; }
++#qaCard .sc-lt__plate { top: 8px; }
++#qaCard .sc-lt__card { padding-top: 32px; }
++#qaCard .sc-lt__mark { width: 80px; height: 80px; padding-bottom: 6px; font-size: 60px; }
++#qaCard .qa-row { min-height: 80px; }
++#qaCard .qa-row > .sc-optr { flex: 1; min-width: 0; line-height: round(1.2em, 2px); --opt: 8px; white-space: normal; text-wrap: balance; }
++#rowQ > .sc-optr { font-size: clamp(52px, calc(720px / {{q_len}}), 64px); }
++#rowA > .sc-optr { font-size: clamp(52px, calc(670px / {{a_len}}), 88px); }
+ <!-- @body -->
+ <div id="qaCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+   <i class="sc-lt__plate"></i>
+@@ -35,6 +48,8 @@ P.wipe('#qaCard .sc-lt__plate, #qaCard .sc-lt__card', {{{in}}}, { dir: 'left', d
+ P.drift('#qaCard .sc-lt__plate, #qaCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+ P.pop('#qaCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+ P.pop('#rowQ .sc-lt__mark', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
++/* 056 直式：問句、答案照詞換行（kit P.wrapWords；橫式不動） */
++P.wrapWords('#rowQ .sc-optr, #rowA .sc-optr');
+ P.chars('#rowQ .sc-optr', {{{in}}} + 0.22);
+ P.dim('#rowQ', {{{aAt}}}, { to: 0.62 });
+ P.pop('#rowA .sc-lt__mark', {{{aAt}}}, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+@@ -57,6 +72,20 @@ P.chars('#rowA .sc-kw', {{{aAt}}} + 0.12, { mode: 'pop' });
+ #qfA { position: absolute; left: 72px; right: 72px; top: 236px; height: 220px; display: flex; align-items: center; white-space: nowrap; transform-origin: 0% 50%;
+        font-size: min(96px, calc(1216px / {{a_len}})); line-height: 1.2; font-weight: 900; }
+ #qfA .sc-kw { color: inherit; box-shadow: inset 0 -0.2em 0 color-mix(in srgb, var(--brand-ink) 32%, transparent); }
++<!-- @style-full-portrait -->
++/* 直式（056）：全幕版整張縮 0.5952 放進上半（舞台窗 x 120–1800、y 40–900 → 畫面 x 40–1040、y 314–826），大卡撐滿舞台窗 1680×860，字級照畫面上的大小回推（× 0.5952）：
++   徽章 176（字 108）＋小標 108（畫面上 64）一列在卡內 y 80–256；問句、答案放在卡內 y 280–780 上下置中、左右內距 72（字寬 1536）：
++   問 clamp(110, 1536 ÷ 字數, 150)（畫面上 65–89；12 字 128）盡量一行，放不下換兩行（只在詞與詞之間，timeline 開頭照詞包好）；
++   答 min(260, max(1530 ÷ 字數, min(2900 ÷ 字數, 170)))：9 字以內一行 ≥ 170（畫面上 ≥ 101），10–16 字兩行 170（斷在標點）。 */
++#qfCard { left: 120px; top: 40px; width: 1680px; height: 860px; }
++.qf-badge { left: 72px; top: 80px; width: 176px; height: 176px; font-size: 108px; }
++.qf-label { left: 288px; top: 104px; font-size: 108px; line-height: 128px; }
++#qfQ { left: 72px; right: 72px; width: auto; top: 280px; height: 500px; display: flex; align-items: center;
++  font-size: clamp(110px, calc(1536px / {{q_len}}), 150px); line-height: round(1.2em, 2px); }
++#qfQ > .sc-opt { text-wrap: balance; }
++#qfA { left: 72px; right: 72px; top: 280px; height: 500px; white-space: normal; word-break: keep-all; overflow-wrap: anywhere;
++  font-size: min(260px, max(calc(1530px / {{a_len}}), min(calc(2900px / {{a_len}}), 170px))); line-height: round(1.15em, 2px); }
++#qfA > .sc-opt { text-wrap: balance; }
+ <!-- @body-full -->
+ <div id="qfCard" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+   <div class="qf-face qf-front" data-flip="front">
+@@ -77,5 +106,7 @@ const T0 = {{{in}}} + (P.prev() === 'speaker' ? 0.35 : 0.1);
+ P.pop('#qfCard', T0, { from: 0.94, dy: 40 });
+ P.pop('#qfQb', T0 + 0.25, { from: 0.4, dy: 0 });
+ P.in('#qfQl', T0 + 0.35);
++/* 056 直式（縮進直式的全幕版）：問句照詞換行（kit P.wrapWords；橫式不動） */
++P.wrapWords('#qfQ .sc-opt');
+ P.chars('#qfQ .sc-opt', T0 + 0.45, { stagger: 0.035 });
+ P.flip('#qfCard', Math.max(T0 + 0.9, {{{aAt}}} - P.FLIP_LEAD));
+diff --git a/shared/template/scenes/10-tips/template.html b/shared/template/scenes/10-tips/template.html
+index cdf53b9..c9472bf 100644
+--- a/shared/template/scenes/10-tips/template.html
++++ b/shared/template/scenes/10-tips/template.html
+@@ -12,8 +12,19 @@
+ .tp-title .sc-sq svg { stroke-width: 3; }
+ .tp-desc { font-size: 40px; font-weight: 500; line-height: 46px; }
+ <!-- @style-portrait -->
+-/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
++/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。
++   056：卡片撐滿卡片帶（外框寬 880＝主卡 872＋底板錯開 8，x 60–940）；標籤「小技巧」直式不放（勾選方塊已經說明，省下 56 高給兩行說明，卡高才不會蓋住講者的手勢）。
++   勾選方塊 48 → 64；標題一行 clamp(50, 700 ÷ 字數, 72)（10 字 70、14 字 50）；說明 40 → clamp(48, 780 ÷ 最長一行字數, 52)（16 字以內一行一行放，
++   更長的那行在詞與詞之間再折一行，timeline 開頭照詞包好）。範例（標題 10 字、說明兩行 13 字）外框 y 932–1240。 */
+ #tipCard { left: 60px; bottom: 680px; }
++#tipCard { width: 880px; padding-top: 0; }
++#tipCard .sc-lt__tag { display: none; }
++#tipCard .sc-lt__plate { top: 8px; }
++#tipCard .sc-lt__card { padding-top: 32px; }
++#tipCard .tp-title { height: auto; min-height: 76px; }
++#tipCard .sc-sq--48 { --d: 64px; border-radius: 12px; }
++#tipCard .tp-title .tp-text { font-size: clamp(50px, calc(700px / {{title_len}}), 72px); line-height: round(1.2em, 2px); --opt: 8px; }
++#tipCard .tp-desc { font-size: clamp(48px, calc(780px / {{#desc}}{{desc_maxline}}{{/desc}}{{^desc}}1{{/desc}}), 52px); line-height: round(1.28em, 2px); white-space: normal; text-wrap: balance; }
+ <!-- @body -->
+ <div id="tipCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+   <i class="sc-lt__plate"></i>
+@@ -37,5 +48,7 @@ P.pop('#tipCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+ {{#icon}}P.pop('#tipCard .sc-sq', {{{in}}} + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
+ P.icon('#tipCard .sc-sq', {{{in}}} + 0.3);{{/icon}}
+ P.chars('#tipCard .tp-text', {{{in}}} + 0.22);
++/* 056 直式：說明照詞換行（kit P.wrapWords；橫式不動），「//」斷開的每一行各自平衡 */
++{{#desc}}P.wrapWords('#tipCard .tp-desc', { lines: true });{{/desc}}
+ {{#desc}}P.chars('#tipCard .tp-desc', {{{in}}} + 0.5, { stagger: 0.015 });{{/desc}}
+ {{#exitFade}}P.wipeOut('#tipCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#tipCard', D - 0.8, { dir: 'left' });{{/exitFade}}
+diff --git a/shared/template/scenes/14-speaker/template.html b/shared/template/scenes/14-speaker/template.html
+index e137e20..e478bcf 100644
+--- a/shared/template/scenes/14-speaker/template.html
++++ b/shared/template/scenes/14-speaker/template.html
+@@ -7,8 +7,21 @@
+ .spk-body { display: flex; flex-direction: column; gap: var(--sc-gap-sm); }
+ #spkCard .sc-lt__dots { --dots-h: 156px; }
+ <!-- @style-portrait -->
+-/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
++/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。
++   056：卡片撐滿卡片帶（外框寬 880＝主卡 872＋底板錯開 8，x 60–940）；標籤「講師」直式不放（姓名板就是焦點，省下 56 高給兩行頭銜）。
++   姓名板高 112 → 120、字 80 → 96（5 字 618 寬）；頭銜 40 → 56、放不下就換行（每個頭銜前面都有主色小方塊，換行後也整齊），
++   字距 0.04em → 0.02em，3 個 6 字頭銜最多兩行（兩個 6 字一行約 778 ≤ 文字寬 792）。範例外框 y 912–1240。 */
+ #spkCard { left: 60px; bottom: 680px; }
++#spkCard { width: 880px; padding-top: 0; }
++#spkCard .sc-lt__tag { display: none; }
++#spkCard .sc-lt__plate { top: 8px; }
++#spkCard .sc-lt__card { padding-top: 32px; }
++#spkCard .sc-lt__dots { --dots-h: 36px; }
++#spkCard .sc-lt__name { height: 120px; }
++#spkCard .sc-lt__name > span { font-size: 96px; line-height: 96px; --opt: 12px; }
++#spkCard .sc-lt__meta { height: auto; flex-wrap: wrap; row-gap: 8px; }
++#spkCard .sc-lt__metaitem > span { font-size: 56px; line-height: 64px; --opt: 6px; letter-spacing: 0.02em; text-indent: 0.01em; }
++#spkCard .sc-lt__metaitem:first-child::before { content: ""; flex: none; width: 10px; height: 10px; background: var(--sc-accent); }
+ <!-- @body -->
+ <div id="spkCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+   <i class="sc-lt__plate"></i>
+diff --git a/shared/template/scenes/15-quote/template.html b/shared/template/scenes/15-quote/template.html
+index 4c552ea..84db523 100644
+--- a/shared/template/scenes/15-quote/template.html
++++ b/shared/template/scenes/15-quote/template.html
+@@ -9,8 +9,17 @@
+ .qt-q { color: var(--sc-kw); font-weight: 900; }
+ .qt-by { text-align: right; font-size: 36px; font-weight: 500; line-height: 44px; }
+ <!-- @style-portrait -->
+-/* 直式（canvas.mjs 的 centerCard：x 60–940、y 880–1240）：在 60–940 置中、bottom 680。 */
++/* 直式（canvas.mjs 的 centerCard：x 60–940、y 880–1240）：在 60–940 置中、bottom 680。
++   056：卡片撐滿卡片帶（外框寬 880＝主卡 872＋底板錯開 8，x 60–940）；標籤「金句」直式不放（主色引號已經說明，省下 56 高，卡高才不會蓋住講者的手勢）。
++   金句字級照最長一行（含引號 +2）clamp(52, 780 ÷ (字數＋2), 72)（11 字 60、8 字以內 72），一行放不下才在詞與詞之間再折一行
++   （timeline 開頭照詞包好）；出處 36 → 48。範例（兩行、最長 11 字＋出處）外框 y 962–1240。 */
+ #gCard { left: 60px; right: 140px; margin: 0 auto; bottom: 680px; }
++#gCard { width: 880px; padding-top: 0; }
++#gCard .sc-lt__tag { display: none; }
++#gCard .sc-lt__plate { top: 8px; }
++#gCard .sc-lt__card { padding-top: 32px; }
++#gCard .qt-body > div:first-child { font-size: clamp(52px, calc(780px / ({{text_maxline}} + 2)), 72px); line-height: round(1.2em, 2px); --opt: 8px; white-space: normal; text-wrap: balance; }
++#gCard .qt-by { font-size: 48px; line-height: 60px; --opt: 6px; }
+ <!-- @body -->
+ <div id="gCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+   <i class="sc-lt__plate"></i>
+@@ -29,6 +38,8 @@ P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur
+ P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });
+ P.pop('#gCard .sc-lt__tag', {{{in}}} + 0.12, { from: 0.4, dy: 18 });
+ P.pop('#gCard .qt-q', {{{in}}} + 0.18, { from: 0.3, dy: 0, ease: P.V2.EASE.emph });
++/* 056 直式：金句照詞換行（kit P.wrapWords；橫式不動），收尾引號黏前一個詞，「//」斷開的每一行各自平衡 */
++P.wrapWords('#gCard .qt-body > div:first-child', { lines: true });
+ P.chars('#gCard .qt-body > div:first-child', {{{in}}} + 0.3, { stagger: 0.035 });
+ {{#by}}P.drift('#gCard .qt-by', {{{in}}} + 1.2, { dx: -16 * P.U });{{/by}}
+ {{#exitFade}}P.wipeOut('#gCard', D - P.V2.OUT, { dir: 'left' });{{/exitFade}}{{^exitFade}}P.wipeOut('#gCard', D - 0.8, { dir: 'left' });{{/exitFade}}
+@@ -45,6 +56,16 @@ P.chars('#gCard .qt-body > div:first-child', {{{in}}} + 0.3, { stagger: 0.035 })
+ #qfBy { display: flex; align-items: center; gap: 24px; margin-top: 48px; height: 60px; }
+ #qfRule { display: block; width: 64px; height: 6px; border-radius: 3px; background: var(--brand); }
+ #qfBy .sc-opt { font-size: 44px; line-height: 60px; font-weight: 700; color: var(--sc-fs-mute); white-space: nowrap; }
++<!-- @style-full-portrait -->
++/* 直式（056）：全幕版整張縮 0.5952 放進上半（舞台窗 x 120–1800、y 40–900 → 畫面 x 40–1040、y 314–826），字級照畫面上的大小回推（× 0.5952）：
++   引號移到金句上方（大小照舊 1.25 倍字級寬；左右並排會吃掉 1.25 倍字寬＋48），金句字級照最長那一行 min(170, 1640 ÷ 字數)（11 字 149＝畫面上 89、16 字 102＝61），
++   兩行 2.38 倍字級；出處 44 → 96（畫面上 57）、短線 96×8。整組（引號＋兩行＋出處，11 字約 690 高）在內容區上下左右置中、字靠左。 */
++#qfArea { --qf: min(170px, calc(1640px / {{text_maxline}})); }
++#qfRow { flex-direction: column; gap: 24px; }
++#qfMark { margin-top: 0; }
++#qfBy { gap: 32px; margin-top: 48px; height: 112px; }
++#qfRule { width: 96px; height: 8px; border-radius: 4px; }
++#qfBy .sc-opt { font-size: 96px; line-height: 112px; }
+ <!-- @body-full -->
+ <div id="qfArea" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
+   <div id="qfRow">

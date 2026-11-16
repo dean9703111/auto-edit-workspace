@@ -60,6 +60,17 @@
     #x-process-trace .xprt-led { position: absolute; right: 20px; top: 20px; width: 20px; height: 20px; border-radius: 10px; background: var(--v2-mute); }
     #x-process-trace .xprt-led i { position: absolute; inset: 0; border-radius: 10px; background: var(--brand); }
     #x-process-trace .xprt-now { position: absolute; inset: 0; border-radius: 16px; background: var(--brand); }
+    /* 直式（056）：標題 76、站名 72（畫面上 64／61）；4 站 2×2 的 U 形（1 左上 → 2 右上 → 3 右下 → 4 左下），3 站維持錯落、晶片 360×216、圖示 64 */
+    #x-process-trace[data-format="portrait"] #xprt-card .sc-wcard__bar { font-size: 76px; }
+    #x-process-trace[data-format="portrait"] .xprt-node .xprt-name { font-size: 72px; line-height: 90px; --opt: 8px; }
+    #x-process-trace[data-format="portrait"] .xprt-node { width: 360px; height: 216px; }
+    #x-process-trace[data-format="portrait"] #xprt-body:not(:has(> .xprt-node ~ .xprt-node ~ .xprt-node ~ .xprt-node)) .sc-icon { --d: 64px; --i: 36px; }
+    #x-process-trace[data-format="portrait"] .xprt-node:nth-of-type(odd) { margin-bottom: calc(216px + var(--sc-gap-md)); }
+    #x-process-trace[data-format="portrait"] .xprt-node:nth-of-type(even) { margin-top: calc(216px + var(--sc-gap-md)); }
+    #x-process-trace[data-format="portrait"] #xprt-body:has(> .xprt-node ~ .xprt-node ~ .xprt-node ~ .xprt-node) { display: grid; grid-template-columns: repeat(2, 492px); grid-template-rows: repeat(2, 176px); gap: 96px; place-content: center; }
+    #x-process-trace[data-format="portrait"] #xprt-body:has(> .xprt-node ~ .xprt-node ~ .xprt-node ~ .xprt-node) .xprt-node { width: 492px; height: 176px; margin: 0; flex-direction: row; gap: 24px; }
+    #x-process-trace[data-format="portrait"] .xprt-node:nth-of-type(3) { grid-area: 2 / 2; }
+    #x-process-trace[data-format="portrait"] .xprt-node:nth-of-type(4) { grid-area: 2 / 1; }
   </style>
   <div id="x-process-trace" data-composition-id="x-process-trace" data-width="1920" data-height="1080" data-duration="17.6"
        data-cues-sample='{"start":0,"D":17.6,"cues":{"212":[3.2,5.7],"213":[6,8.5],"214":[8.8,11.3],"215":[11.6,14]},"refs":{"#212@麥克風":3.2,"#213@錄音介面":6,"#214@電腦":8.8,"#215@剪輯軟體":11.6}}'>

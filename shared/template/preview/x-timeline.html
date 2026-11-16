@@ -62,6 +62,14 @@
     #x-timeline #xtl-head { position: absolute; width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; background: var(--v2-ink); border: 8px solid var(--brand); }
     /* 說明：軸下方置中一行（最多兩行，高固定 144，四個點一樣高才排得齊），和卡片同寬 */
     #x-timeline .xtl-cap { position: relative; height: 144px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 直式（056）：排法不變，標題 76、說明 60（畫面上 64／51；年份本來就是 72＝61）；說明都是一行時卡片 320、圖示 112，有兩行說明時卡片 272、圖示 96 */
+    #x-timeline[data-format="portrait"] #xtl-card .sc-wcard__bar { font-size: 76px; }
+    #x-timeline[data-format="portrait"] .xtl-node { height: 320px; gap: 24px; }
+    #x-timeline[data-format="portrait"] .xtl-node .sc-icon { --d: 112px; --i: 60px; }
+    #x-timeline[data-format="portrait"] .xtl-cap { height: 72px; font-size: 60px; line-height: 72px; }
+    #x-timeline[data-format="portrait"] #xtl-body:has(.xtl-cap br) .xtl-node { height: 272px; gap: 16px; }
+    #x-timeline[data-format="portrait"] #xtl-body:has(.xtl-cap br) .xtl-node .sc-icon { --d: 96px; --i: 52px; }
+    #x-timeline[data-format="portrait"] #xtl-body:has(.xtl-cap br) .xtl-cap { height: 144px; }
   </style>
   <div id="x-timeline" data-composition-id="x-timeline" data-width="1920" data-height="1080" data-duration="17.5"
        data-cues-sample='{"start":0,"D":17.5,"cues":{"131":[2.9,5.9],"132":[6.0,8.9],"133":[9.0,11.9],"134":[12.0,15.0]},"refs":{"#131@2019":3.1,"#132@2022":6.1,"#133@2024":9.1,"#134@今年":12.1}}'>

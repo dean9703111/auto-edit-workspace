@@ -70,13 +70,26 @@
     #x-versus .xvs-bar.xvs-lose { background: var(--sc-fs-node-line); }
     #x-versus .xvs-num.xvs-win { color: var(--sc-fs-kw); }
     #x-versus .xvs-num.xvs-lose { color: var(--sc-fs-mute); }
+    /* 直式（056）：版面不變（左右鏡像的對照本來就是由上往下一列一列），字放大、條縮短；數字 88、面向名與對手名 72、標題 80；面向名拿掉框（72 字的框要 138 高，三列放不下） */
+    #x-versus[data-format="portrait"] #xvs-card { top: 140px; }
+    #x-versus[data-format="portrait"] #xvs-card .sc-wcard__bar { height: 112px; padding: 12px var(--sc-pad-card); font-size: 80px; }
+    #x-versus[data-format="portrait"] #xvs-body { height: 616px; }
+    #x-versus[data-format="portrait"] #xvs-heads, #x-versus[data-format="portrait"] .xvs-head { height: 156px; }
+    #x-versus[data-format="portrait"] .xvs-row, #x-versus[data-format="portrait"] .xvs-lab { height: 104px; }
+    #x-versus[data-format="portrait"] .xvs-hname { font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-versus[data-format="portrait"] #xvs-vs { width: 104px; height: 104px; border-radius: 52px; }
+    #x-versus[data-format="portrait"] #xvs-vs .sc-opt { font-size: 60px; line-height: 84px; --opt: 8px; }
+    #x-versus[data-format="portrait"] .xvs-num { width: 196px; font-size: 88px; line-height: 104px; }
+    #x-versus[data-format="portrait"] .xvs-wa, #x-versus[data-format="portrait"] .xvs-bar { width: 152px; }
+    #x-versus[data-format="portrait"] .xvs-lab { width: 320px; border-color: transparent; background: none; }
+    #x-versus[data-format="portrait"] .xvs-lab .sc-opt { font-size: 72px; line-height: 100px; --opt: 8px; }
   </style>
   <div id="x-versus" data-composition-id="x-versus" data-width="1920" data-height="1080" data-duration="15.5"
        data-cues-sample='{"start":0,"D":15.5,"cues":{"141":[2.4,4.9],"142":[5,7.4],"143":[7.5,9.9],"144":[10,13]},"refs":{"#141@分鐘":2.6,"#142@步驟":5.1,"#143@月費":7.6,"#144@AI":10.1}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xvs-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">手動剪 vs AI 剪</span></div>
-      <div id="xvs-body" data-layout="col" data-gap="sm">
+      <div id="xvs-body" data-layout="col" data-gap="sm" data-gap-portrait="20">
         <div id="xvs-heads" data-slot data-layout="free">
           <div id="xvs-ha" class="xvs-head" data-slot><i class="xvs-tint"></i>
             <span id="xvs-icoa" class="sc-icon sc-icon--72"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" /> <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" /> <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" /> <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" /> </svg></span><span class="xvs-hname sc-t52 sc-w900 sc-opt" data-snap-width>手動剪</span></div>
@@ -117,7 +130,7 @@
     // 只改下面 DATA 這一行的數字（2–3 列）
     const DATA = [ { a: 180, b: 20, win: 'b' }, { a: 6, b: 2, win: 'b' }, { a: 0, b: 600, win: 'a' } ];
     const WINNER = "b";                                                            // 結論的贏家："a" 或 "b"
-    const MAXW = 236;                                                              // 每列較大的數字＝236 px（版面固定，不用改）
+    const MAXW = P.portrait ? 152 : 236;                                           // 每列較大的數字＝236 px（直式 152；版面固定，不用改）
     const HEADS = '#xvs-ha, #xvs-hb';
 
     // 0. 由 DATA 算每條長到軌道的幾成（整數 px ÷ 236，最短 8 px，數字 0 就是 0），並在建 tween 之前上色：贏＝主色、輸＝灰（靜態 class，不補間顏色）；

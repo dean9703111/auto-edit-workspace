@@ -83,6 +83,9 @@
         新原語用 root.querySelectorAll 選元素，不必加進 $q 包裝清單 ──
      P.chars(sel, at, {mode, stagger, dy, dur})  逐字：拆成 inline-block 的 span[data-sc-ch]（中文一字一格，英文單字、數字整個一格）後錯拍進場。mode 'rise'（上浮 0.6em、0.6s expo.out、間隔 0.03）
                                      ／'pop'（縮放 0.3→1＋上移 0.4em、back.out(1.8)、間隔 0.035）／'drop'（由上落下 0.55em、back.out(1.4)、間隔 0.045）
+     P.wrapWords(sel, {lines, colon})  056 照詞換行（直式才做：P.portrait，或元素所在的合成根高 > 寬；橫式不動）：文字照詞（Intl.Segmenter）包成不斷行的 span，
+                                     標點和「的了嗎呢吧啊著過」黏前一個詞、6 字以內的子元素（**關鍵詞**）不拆，之後 P.chars 拆字也只在詞與詞之間換行。
+                                     lines: true＝「//」斷開的每一行各自平衡；colon: true＝第一個全形冒號後換行。寫在 timeline 開頭、P.chars 之前
      P.wipe(sel, at, {dir, dur, stagger})   擦開：clip-path 由 dir（left／right／up／down）一側揭開，0.5s expo.out；四邊外擴 20% 不切落影與底板
      P.wipeOut(sel, at, {dir, dur})  擦掉：反向，0.3s power2.in（比進場快）
      P.slide(sel, at, {from, dur})   抽屜抽出：從自己盒子的一側（xPercent／yPercent ±100）整個滑進來；外層要 overflow:hidden
@@ -114,7 +117,8 @@
      P.cam(sel, at, {to, k, scale, x, y, dur, ease})  鏡頭：容器推拉搖（x、y 用 u），或 {to: 焦點元素, k: 0.12}＝往焦點帶 k 比例；1.0s power3.inOut。
                                      底版不動：有底色、框線或陰影的容器（主卡、視窗）不推（推了會撞右上角的角標），只推沒有底的內容群組。
                                      dur ≥ 2s 的慢推算微動；回正寫 P.cam(sel, at, {x: 0, y: 0, scale: 1})。
-                                     直式舞台縮放（STAGED）時 {to} 不往焦點帶，以容器上緣中點為原點推近（主卡推近 1.04 仍在畫面裡）
+                                     直式舞台縮放（STAGED）時 {to} 不往焦點帶，以容器上緣中點為原點推近（主卡推近 1.04 仍在畫面裡）；
+                                     056：root 寫 data-portrait-cam="free"（直式版面四周留了邊的模板）→ 直式也照橫式推，超出看得到的範圍 audit 報 ⚠ portrait-cam
      P.grow(sel, at, {from, dur, ease})  長出：卡片從區域 from（預設 'pip'，或 [x, y, w, h]）長成自己的大小，0.8s expo.out；卡片要固定寬高
      ── 015（specs/015-scene-styles/brief.md）白板、傳送、紙膠帶、聲紋、載入 ──
      P.draw(sel, at, {dur, pen})     馬克筆畫出：sel（插圖容器、svg 或單一形狀）裡的每一筆照文件順序依序畫出，筆尖（自動插 .sc-pen）跟著線頭走，
@@ -146,6 +150,9 @@
                                      open（at＋0.45）彈簧彈開＋放大到 1，.sc-brace__text 被括號內緣「拉開」。一組只揭示一次
      P.prev()                        前一段是什麼：'speaker'｜'fullscreen'｜'pip'（data-prev → __cues.segs[id].prev；單獨開檔＝'speaker'）。
                                      custom 開場：const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow'（手寫 'grow'／'swap' 也可以）
+     P.portrait                      056：這段是直式（1920×1080 子合成縮 0.8475 放進直式上半面板）。這時 root 已帶 data-format="portrait"（模板寫
+                                     #x-名稱[data-format="portrait"] … 的直式 CSS）、裡面的 data-<名>-portrait 已搬到 data-<名>（kit/scene-layout.js）；
+                                     script 只在排法、數量這種 CSS 做不到的地方分支（const COLS = P.portrait ? 2 : 4;）。橫式是 false
      P.V2                            時間與曲線表：IN 0.5／SHELL 0.6／EMPH 0.2／OUT 0.3／MOVE 1.0／GROUP 0.12；CH 逐字間隔；EASE.in／emph／move／tx／out／idle
    常數：P.IN 0.5／P.OUT 0.3（＝P.V2.OUT）／P.STEP 0.35／P.HOLD 0.6／P.PUSH 0.7／P.SHIFT 480／P.SIDE 960
          P.DRIFT 16／P.RISE 8／P.AXIS 12／P.REVEAL 0.55／P.MASK 0.6／P.AXIS_DUR 0.45／P.AXIS_LAG 0.1
@@ -372,6 +379,18 @@
     return cls ? tag + '.' + cls : tag;
   };
 
+  // 009：直式（有 window.__regions）裡的橫式子合成（root 寬 > 高）＝舞台縮放（STAGED），座標仍是 1920×1080
+  var stagedOf = function (root) { return !!window.__regions && !!root && !!root.getAttribute && (+root.getAttribute('data-width') || 1920) > (+root.getAttribute('data-height') || 1080); };
+  // 056：直式裡的 1920×1080 子合成（root 有 data-width 的合成根）→ root 打 data-format="portrait"，再把 data-<名>-portrait 搬到 data-<名>
+  //   （kit/scene-layout.js 的 portraitize）。模板的直式 CSS（#x-名稱[data-format="portrait"] …）、kit/scene.css 的直式字級表都看這個屬性；
+  //   橫式（沒有 __regions）什麼都不做。SceneMotion 建立時、ILLUS.mount(root) 時各叫一次（插圖掛上前就要知道直式的選項）；回傳是不是直式
+  var markPortrait = function (root) {
+    if (!stagedOf(root) || !root.hasAttribute || !root.hasAttribute('data-width')) return false;
+    if (root.getAttribute('data-format') !== 'portrait') root.setAttribute('data-format', 'portrait');
+    if (window.SceneLayout && window.SceneLayout.portraitize) window.SceneLayout.portraitize(root);
+    return true;
+  };
+
   window.SceneMotion = function (tl, root) {
     // 時間 < 0 一律當 0：GSAP 遇到負的位置會把已經排好的動畫全部往後推（綁句太早時 T - 0.9 這種算式會變負，整段跟講解對不上）
     var TL = tl, at0 = function (t) { return typeof t === 'number' && t < 0 ? 0 : t; };
@@ -382,6 +401,7 @@
     registerCount();
     registerType();
     registerFn();
+    var PORTRAIT = markPortrait(root);   // 056：要在量寬度、排版之前（直式的 CSS 與 -portrait 屬性先生效）
     snapWidths(root);
     if (window.SceneLayout) window.SceneLayout.apply(root);   // data-layout 排版（kit/scene-layout.js；mount 時算一次，不進 timeline）
     // 找自己是哪一段（cues.md §4.1）：host 的 id 去掉 el- → window.__cues.segs[id]；沒有就讀 root 的 data-cues-sample
@@ -761,7 +781,7 @@
       walk(el); el.__scChars = out; return out;
     };
     // 009：直式（有 window.__regions）裡的橫式子合成（root 寬 > 高）＝舞台縮放，座標仍是 1920×1080 → 用橫式區域；P.cam 不往焦點帶
-    var STAGED = !!window.__regions && !!root && !!root.getAttribute && (+root.getAttribute('data-width') || 1920) > (+root.getAttribute('data-height') || 1080);
+    var STAGED = stagedOf(root);
     var REGION = function (name) {
       if (Array.isArray(name)) return name;
       if (name === 'speaker') return window.__cues && Array.isArray(window.__cues.speaker) ? window.__cues.speaker : SPEAKER_SAMPLE;
@@ -778,6 +798,8 @@
     };
 
     P.V2 = V2; P.U = U; P.region = REGION; P.sfxCues = sfxList;
+    // 056：這段是直式（1920×1080 子合成縮進直式上半面板）。只有排法、數量這種 CSS 做不到的才在 script 分支：const COLS = P.portrait ? 2 : 4;
+    P.portrait = PORTRAIT;
     // 前一段是什麼（002 plan-fields.md §4、cues.md §2 segs[id].prev）：root 的 data-prev → host 的 data-prev → __cues.segs[id].prev → 'speaker'
     //   'speaker'＝前面露講者（主卡從子母畫面長出）、'fullscreen'＝前一段也是全畫面同背景（換卡不換景）、'pip'＝前一段是別的不透明幕（小視窗已在）
     P.prev = function () {
@@ -798,6 +820,48 @@
         else if (mode === 'drop') mv(cs, at, { opacity: 0, y: -dy }, { opacity: 1, y: 0 }, opt(o, 'dur', 0.55), 'back.out(1.4)', st);
         else mv(cs, at, { opacity: 0, y: dy }, { opacity: 1, y: 0 }, opt(o, 'dur', 0.6), V2.EASE.in, st);
       });
+      return P;
+    };
+    // 056 照詞換行：P.chars 拆成一字一格（inline-block）以後，瀏覽器在任何字之間都能換行、避頭點也失效。
+    //   直式才做（P.portrait＝縮進直式的全幕版，或元素所在的合成根高 > 寬＝1080×1920 的下方字卡）；橫式什麼都不做。
+    //   每個文字節點用 Intl.Segmenter 照詞包成 white-space: nowrap 的 span：標點和「的了嗎呢吧啊著過」黏在前一個詞
+    //   （整個是這些字的子元素，例收尾引號 <span>」</span>，也黏前一個詞）；6 字以內的子元素（**關鍵詞**）整個不拆，更長的往裡面照詞包。
+    //   lines: true＝「//」（<br>）斷開的每一行先各包成 display: block 的一塊、各自平衡；colon: true＝第一個全形冒號後面換行。
+    //   在 P.chars 之前呼叫（timeline 開頭）
+    var WRAP_GLUE = /^[，。、；：！？）」』】…,.;:!?)的了嗎呢吧啊著過]+$/;
+    P.wrapWords = function (sel, o) {
+      var list = q(sel), R = list[0] && list[0].closest ? list[0].closest('[data-composition-id]') : null;
+      var tall = !!R && +R.getAttribute('data-height') > +R.getAttribute('data-width');
+      if (!(PORTRAIT || tall) || typeof Intl === 'undefined' || !Intl.Segmenter) return P;
+      var SEG = new Intl.Segmenter('zh-Hant', { granularity: 'word' }), brk = !!opt(o, 'colon', false);
+      var box = function (doc) { var b = doc.createElement('span'); b.style.whiteSpace = 'nowrap'; return b; };
+      var walk = function (el) {
+        var doc = el.ownerDocument;
+        Array.prototype.slice.call(el.childNodes).forEach(function (c) {
+          if (c.nodeType === 1 && WRAP_GLUE.test(c.textContent) && c.previousSibling) { var b = box(doc); el.insertBefore(b, c.previousSibling); b.appendChild(b.nextSibling); b.appendChild(c); return; }
+          if (c.nodeType === 1) { if (c.textContent.length <= 6) c.style.whiteSpace = 'nowrap'; else walk(c); return; }
+          if (c.nodeType !== 3) return;
+          var f = doc.createDocumentFragment(), last = null;
+          Array.from(SEG.segment(c.nodeValue)).forEach(function (x) {
+            var s = x.segment, t = doc.createTextNode(s), g = WRAP_GLUE.test(s);
+            if (/^\s+$/.test(s)) { f.appendChild(t); last = null; return; }
+            if (g && !last && c.previousSibling && c.previousSibling.nodeType === 1 && c.previousSibling.tagName !== 'BR') { last = box(doc); el.insertBefore(last, c.previousSibling); last.appendChild(last.nextSibling); }
+            if (g && last) last.appendChild(t); else { last = box(doc); last.appendChild(t); f.appendChild(last); }
+            if (brk && s.indexOf('：') >= 0) { f.appendChild(doc.createElement('br')); last = null; brk = false; }
+          });
+          el.replaceChild(f, c);
+        });
+      };
+      var lines = function (el) {
+        if (!el.querySelector(':scope > br')) return;
+        var cur = null;
+        Array.prototype.slice.call(el.childNodes).forEach(function (c) {
+          if (c.nodeName === 'BR') { el.removeChild(c); cur = null; return; }
+          if (!cur) { cur = el.ownerDocument.createElement('span'); cur.style.display = 'block'; el.insertBefore(cur, c); }
+          cur.appendChild(c);
+        });
+      };
+      list.forEach(function (el) { if (opt(o, 'lines', false)) lines(el); walk(el); });
       return P;
     };
     // 螢光筆：字後一條主色帶由左掃過（自動插 <i class="sc-mk">）
@@ -1162,6 +1226,7 @@
       return (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(bg)) || (cs.backgroundImage && cs.backgroundImage !== 'none')
         || parseFloat(cs.borderTopWidth) > 0 || (cs.boxShadow && cs.boxShadow !== 'none');
     };
+    var CAM_FREE = PORTRAIT && root.getAttribute('data-portrait-cam') === 'free';
     P.cam = function (sel, at, o) {
       var dur = opt(o, 'dur', V2.MOVE);
       if (dur >= 2) CALL.role = 'micro';
@@ -1169,12 +1234,13 @@
         if (isBoard(el)) return;
         var cur = camState.get(el) || { x: 0, y: 0, s: 1 }, s = opt(o, 'scale', 1), x = opt(o, 'x', 0) * U, y = opt(o, 'y', 0) * U;
         // 直式舞台：只推近、不往焦點帶，原點放在容器上緣中點（主卡頂在舞台窗頂 y 130＝直式 unsafe 線，往上長會進平台介面；下面離講者面板還有 29–40px）
-        if (o && o.to && STAGED) { x = 0; y = 0; }
+        // 056：root 寫 data-portrait-cam="free"＝這支的直式版面四周有留邊，鏡頭照橫式推（往焦點帶、原點在中心）；推出看得到的範圍 audit 報 ⚠ portrait-cam
+        if (o && o.to && STAGED && !CAM_FREE) { x = 0; y = 0; }
         else if (o && o.to) {
           var t = q(o.to)[0], b = boxOf(t, el), cx = el.offsetWidth / 2, cy = el.offsetHeight / 2, k = opt(o, 'k', 0.12);
           x = -k * s * (b.x + b.w / 2 - cx); y = -k * s * (b.y + b.h / 2 - cy);
         }
-        var tg = { x: Math.round(x), y: Math.round(y), s: s }, org = STAGED ? '50% 0%' : '50% 50%';
+        var tg = { x: Math.round(x), y: Math.round(y), s: s }, org = STAGED && !CAM_FREE ? '50% 0%' : '50% 50%';
         mv([el], at, { x: cur.x, y: cur.y, scale: cur.s, transformOrigin: org }, { x: tg.x, y: tg.y, scale: tg.s, transformOrigin: org, force3D: false }, dur, opt(o, 'ease', V2.EASE.move), 0);
         camState.set(el, tg);
       });
@@ -1409,6 +1475,7 @@
     return P;
   };
   window.SceneMotion.V2 = V2C;
+  window.SceneMotion.portrait = markPortrait;   // 056：ILLUS.mount(root) 用（插圖掛上前先換直式的選項）
   window.SceneMotion.REGIONS = REGIONS;
   window.SceneMotion.pushEase = pushEase;
   window.SceneMotion.knots = E.slice();

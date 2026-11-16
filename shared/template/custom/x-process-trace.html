@@ -41,6 +41,9 @@
   晶片 272×216，上下錯落（單數站上排、雙數站下排，往下錯一站高＋--sc-gap-md），和 x-process 同一個排法（#xprt-body 是 data-layout="free"，站用 flex 排、整組置中），不寫 left／top。
   走線由 #xprt-lines 的 data-links 自動畫（kit/scene-layout.js）：從上一站右邊中點外 12 水平走到下一站中線，再直走到下一站，直角、不加箭頭（a-b）；
   兩端的焊點（圓）由 script 讀走線的端點加，不寫座標。針腳是晶片上下兩條虛線框（CSS），不用改。
+  直式：主卡位置不變（舞台縮放 0.8475）；標題 76、站名 72（畫面上 64／61）（#x-process-trace[data-format="portrait"]）。4 站排成 2×2 的 U 形
+  （1 左上 → 2 右上 → 3 右下 → 4 左下，CSS grid；晶片 492×176、圖示 88 在左、站名在右，欄距、列距 96，整組 1080×448 置中（上下 66：針腳 14 在晶片外，聚焦抬起後針腳離標題列仍 ≥ 24），走線都是直的）；
+  3 站維持上下錯落、晶片 360×216（3 × 360 ＝ 1080；圖示 64 在上、站名在下，整組上下各留 ≥ 50，聚焦抬起後離標題列仍 ≥ 24）。4 站站名 4 字 × 72 ＋ 圖示 88 ＋ 間距 24 ≤ 晶片寬，直式不用另設上限。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-process-trace 流程：電路板</title></head>
@@ -72,6 +75,17 @@
     #x-process-trace .xprt-led { position: absolute; right: 20px; top: 20px; width: 20px; height: 20px; border-radius: 10px; background: var(--v2-mute); }
     #x-process-trace .xprt-led i { position: absolute; inset: 0; border-radius: 10px; background: var(--brand); }
     #x-process-trace .xprt-now { position: absolute; inset: 0; border-radius: 16px; background: var(--brand); }
+    /* 直式（056）：標題 76、站名 72（畫面上 64／61）；4 站 2×2 的 U 形（1 左上 → 2 右上 → 3 右下 → 4 左下），3 站維持錯落、晶片 360×216、圖示 64 */
+    #x-process-trace[data-format="portrait"] #xprt-card .sc-wcard__bar { font-size: 76px; }
+    #x-process-trace[data-format="portrait"] .xprt-node .xprt-name { font-size: 72px; line-height: 90px; --opt: 8px; }
+    #x-process-trace[data-format="portrait"] .xprt-node { width: 360px; height: 216px; }
+    #x-process-trace[data-format="portrait"] #xprt-body:not(:has(> .xprt-node ~ .xprt-node ~ .xprt-node ~ .xprt-node)) .sc-icon { --d: 64px; --i: 36px; }
+    #x-process-trace[data-format="portrait"] .xprt-node:nth-of-type(odd) { margin-bottom: calc(216px + var(--sc-gap-md)); }
+    #x-process-trace[data-format="portrait"] .xprt-node:nth-of-type(even) { margin-top: calc(216px + var(--sc-gap-md)); }
+    #x-process-trace[data-format="portrait"] #xprt-body:has(> .xprt-node ~ .xprt-node ~ .xprt-node ~ .xprt-node) { display: grid; grid-template-columns: repeat(2, 492px); grid-template-rows: repeat(2, 176px); gap: 96px; place-content: center; }
+    #x-process-trace[data-format="portrait"] #xprt-body:has(> .xprt-node ~ .xprt-node ~ .xprt-node ~ .xprt-node) .xprt-node { width: 492px; height: 176px; margin: 0; flex-direction: row; gap: 24px; }
+    #x-process-trace[data-format="portrait"] .xprt-node:nth-of-type(3) { grid-area: 2 / 2; }
+    #x-process-trace[data-format="portrait"] .xprt-node:nth-of-type(4) { grid-area: 2 / 1; }
   </style>
   <div id="x-process-trace" data-composition-id="x-process-trace" data-width="1920" data-height="1080" data-duration="17.6"
        data-cues-sample='{"start":0,"D":17.6,"cues":{"212":[3.2,5.7],"213":[6,8.5],"214":[8.8,11.3],"215":[11.6,14]},"refs":{"#212@麥克風":3.2,"#213@錄音介面":6,"#214@電腦":8.8,"#215@剪輯軟體":11.6}}'>

@@ -51,6 +51,9 @@
   鏡頭跟焦點用 k 0.07（x-process 是 0.12）：分支上下相距 320，0.12 會把主卡帶上太多，垂直不平衡（上下留白差 > 40）。
   曲線與箭頭頭由 script 照版面算（data-links 只有直線／L 形，一分多的曲線用同一套 token）：起點框右緣外 --sc-link-gap、中線 → 分支左緣外 --sc-link-gap、中線，
   控制點 x 取兩端中點，箭頭頭 --sc-link-head；虛線預告層由 script 從每條曲線複製（不用手寫）。
+  直式：主卡位置不變（舞台縮放 0.8475）；排法不變（起點在左、分支由上往下），字放大：標題 76、起點與分支 72（畫面上 64／61）（#x-branch[data-format="portrait"]）；
+  起點 360×272（圖示 104）、分支高 148（圖示 88、左右內距 36／40）。3 支＝148 × 3 ＋ 24 × 2 ＝ 492，上下各 44（聚焦抬起後離標題列 ≥ 27）；
+  最長 5 字：起點 360 ＋ 曲線 160 ＋ 分支 556 ＝ 1076 ≤ 1080，直式不用另設上限。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-branch 一分多分支</title></head>
@@ -81,6 +84,13 @@
     #x-branch .xbr-b .xbr-txt { position: relative; }
     /* 亮起：now＝目前這一條的底色（下一條亮起時淡掉）；主色亮框由 P.spot 自動加（.sc-spot） */
     #x-branch .xbr-now { position: absolute; inset: 0; border-radius: 16px; background: var(--v2-node-tint); }
+    /* 直式（056）：排法不變，字放大（標題 76、起點與分支 72，畫面上 64／61），框跟著字放大 */
+    #x-branch[data-format="portrait"] #xbr-card .sc-wcard__bar { font-size: 76px; }
+    #x-branch[data-format="portrait"] #xbr-root { width: 360px; height: 272px; }
+    #x-branch[data-format="portrait"] #xbr-rico { --d: 104px; --i: 60px; }
+    #x-branch[data-format="portrait"] .xbr-b { height: 148px; padding: 0 40px 0 36px; }
+    #x-branch[data-format="portrait"] .xbr-b .sc-icon { --d: 88px; --i: 48px; }
+    #x-branch[data-format="portrait"] :is(#xbr-root, .xbr-b) .sc-t52 { font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-branch" data-composition-id="x-branch" data-width="1920" data-height="1080" data-duration="14.6"
        data-cues-sample='{"start":0,"D":14.6,"cues":{"92":[3.6,6.2],"93":[6.4,9],"94":[9.2,12.6]},"refs":{"#92@長片":3.6,"#93@短影音":6.4,"#94@逐字稿":9.2}}'>

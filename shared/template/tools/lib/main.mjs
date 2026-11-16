@@ -238,9 +238,11 @@ ${caps.map((x) => `    <div id="${x.cid}" class="sc-sectag"><span class="sc-sect
   </div>`;
     return { html, tl };
   }
+  // 056 直式：章名 44 → 56（不縮放，畫面上就是 56；和號碼同大，帶高 112 不變）；橫式照舊
+  const nameCss = C.format === 'portrait' ? ' style="font-size:56px;line-height:72px"' : '';
   const html = `  <div id="${id}" class="sc-chtag" data-chapter-badge="${n3(st)}–${n3(e)}" style="${pos};z-index:${BADGE_Z};opacity:0">
     <div class="sc-chtag__shell"><span class="sc-chtag__num">${esc(b.num)}</span></div>
-    <div class="sc-chtag__band"><span class="sc-chtag__name">${esc(b.name)}</span></div>
+    <div class="sc-chtag__band"><span class="sc-chtag__name"${nameCss}>${esc(b.name)}</span></div>
   </div>`;
   return { html, tl };
 }

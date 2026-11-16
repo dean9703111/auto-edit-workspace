@@ -55,6 +55,11 @@
       "ref": "TOP"
     }
   },
+  "portraitMax": {
+    "title": 8,
+    "items.text": 4,
+    "unit": 3
+  },
   "sample": {
     "title": "最花時間的步驟",
     "icon": "trophy",

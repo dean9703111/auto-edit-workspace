@@ -52,6 +52,17 @@
     #x-route .xrt-stop { position: absolute; left: 0; top: 0; width: 260px; display: flex; flex-direction: column; align-items: center; white-space: nowrap; }
     #x-route .xrt-name { margin-top: 8px; color: var(--sc-fs-ink); }
     #x-route .xrt-note { color: var(--sc-fs-mute); }
+    /* 直式（056）：主卡拉高到 742（y 134–876）、標題 76、地名 72、備註 60（畫面上 64／61／51）；站的位置由 script 換，高站（data-up）的字在圖釘上面 */
+    #x-route[data-format="portrait"] #xrt-card { top: 134px; height: 742px; }
+    #x-route[data-format="portrait"] #xrt-ico { top: 40px; --d: 80px; --i: 44px; }
+    #x-route[data-format="portrait"] #xrt-title { top: 32px; left: 160px; font-size: 76px; line-height: 96px; --opt: 8px; }
+    #x-route[data-format="portrait"] #xrt-map { top: 152px; height: 560px; }
+    #x-route[data-format="portrait"] #xrt-svg { height: 560px; }
+    #x-route[data-format="portrait"] .xrt-stop { width: 360px; }
+    #x-route[data-format="portrait"] .xrt-stop[data-up] > .sc-icon { order: 1; margin-top: 8px; }
+    #x-route[data-format="portrait"] .xrt-stop[data-up] > .xrt-name { margin-top: 0; }
+    #x-route[data-format="portrait"] .xrt-name { font-size: 72px; line-height: 90px; --opt: 8px; }
+    #x-route[data-format="portrait"] .xrt-note { font-size: 60px; line-height: 72px; --opt: 8px; }
   </style>
   <div id="x-route" data-composition-id="x-route" data-width="1920" data-height="1080" data-duration="12.6"
        data-cues-sample='{"start":0,"D":12.6,"cues":{"481":[0.4,1.4],"482":[1.5,3.9],"483":[4.0,6.4],"484":[6.5,8.9],"485":[9.0,12.4]},"refs":{"#482@台北":1.7,"#483@台中":4.2,"#484@台南":6.7,"#485@高雄":9.2}}'>
@@ -99,9 +110,23 @@
 
     // 照站數排位置（載入時算一次，不用改）：站的中心點一高一低，路線是連過每一站的平滑曲線
     const STOPS = $q('.xrt-stop'), N = STOPS.length;
-    const XS = N === 2 ? [220, 848] : N === 3 ? [160, 534, 908] : [130, 400, 670, 940], YS = [250, 110, 250, 110];
+    const XS = P.portrait ? (N === 2 ? [250, 818] : N === 3 ? [204, 534, 864] : [204, 424, 644, 864]) : N === 2 ? [220, 848] : N === 3 ? [160, 534, 908] : [130, 400, 670, 940];
+    // 直式：高站（單數）的字在圖釘上面、低站的字在圖釘下面；一排的字高＝地名 90（＋備註 72），離地圖上下緣 20、離圖釘 8
+    const MH = 560, LBL = function (i) { return 90 + (STOPS[i].querySelector('.xrt-note') ? 72 : 0); };
+    const rowH = function (k) { var m = 0; for (var i = k; i < N; i += 2) m = Math.max(m, LBL(i)); return m; };
+    const YU = 20 + rowH(1) + 8 + 36, YL = MH - 20 - rowH(0) - 8 - 36;
+    const YS = P.portrait ? [YL, YU, YL, YU] : [250, 110, 250, 110];
+    const HW = P.portrait ? 180 : 130, PR = 36;   // 站寬的一半（直式 360）、圖釘半徑
+    if (P.portrait) {   // 直式地圖 1068×560：viewBox 和格線跟著換
+      document.getElementById('xrt-svg').setAttribute('viewBox', '0 0 1068 560');
+      $q('#xrt-svg .xrt-grid')[0].setAttribute('d', 'M0 112H1068M0 224H1068M0 336H1068M0 448H1068M178 0V560M356 0V560M534 0V560M712 0V560M890 0V560');
+    }
     const LEG = function (i) { var m = (XS[i] + XS[i + 1]) / 2; return 'M' + XS[i] + ' ' + YS[i] + 'C' + m + ' ' + YS[i] + ' ' + m + ' ' + YS[i + 1] + ' ' + XS[i + 1] + ' ' + YS[i + 1]; };
-    STOPS.forEach(function (s, i) { s.style.left = (XS[i] - 130) + 'px'; s.style.top = (YS[i] - 36) + 'px'; });
+    STOPS.forEach(function (s, i) {
+      s.style.left = (XS[i] - HW) + 'px';
+      if (P.portrait && i % 2) { s.setAttribute('data-up', ''); s.style.top = 'auto'; s.style.bottom = (MH - YS[i] - PR) + 'px'; }
+      else s.style.top = (YS[i] - PR) + 'px';
+    });
     $q('.xrt-dot').forEach(function (c, i) { c.setAttribute('cx', XS[i]); c.setAttribute('cy', YS[i]); });
     $q('.xrt-leg').forEach(function (p, i) { p.setAttribute('d', LEG(i)); });
     document.getElementById('xrt-base').setAttribute('d', STOPS.slice(1).map(function (s, i) { return LEG(i); }).join(''));

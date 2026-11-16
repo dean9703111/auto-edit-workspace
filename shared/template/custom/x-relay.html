@@ -52,6 +52,10 @@
   全寬（沒有講者：script 看到外層的 data-wide，在 root 也加 data-wide）：視窗寬 888、截圖卡 792×456（截圖 768×432，x 120–912）、一格 496，
   膠片 top −304；字靠左 x 1000：主體 80 字 top 276、能力詞 144 字 top 388、說明 48 字 top 564（最長右緣 1720）。
   畫面上不放東西的地方：右上角小節角標（x ≥ 1440、y 16–136）、字幕區（y ≥ 920）。
+  直式（script 開頭用 SceneMotion.portrait(ROOT) 先知道是直式，#x-relay[data-format="portrait"]）：只看得到舞台窗 x 120–1300、y 130–880，膠片窄一點、字放大：
+    膠片視窗 left 72、top 130、576×750（截圖卡 480×280＝截圖 456×256，x 120–600）、一格 312，焦點那張中線 y 505（卡 365–645），上下各露出 203；
+    字靠左 x 648（欄寬 652）：主體 80 字 top 321（畫面上 68）、能力詞 120 字 top 433（畫面上 102，字面中線對準截圖中線）、說明 60 字 top 585（畫面上 51，超過 10 字換第二行）。
+    最長的字（主體 8 字 640、能力詞 5 字 600、說明 14 字兩行）都放得下，不寫 portraitMax。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-relay 截圖接力</title></head>
@@ -79,6 +83,13 @@
     #x-relay[data-wide] #xrl-subj { left: 1000px; top: 276px; font-size: 80px; line-height: 104px; }
     #x-relay[data-wide] .xrl-word { left: 1000px; top: 388px; font-size: 144px; line-height: 168px; }
     #x-relay[data-wide] .xrl-note { left: 1000px; top: 564px; font-size: 48px; line-height: 66px; }
+    /* 直式（056）：只看得到舞台窗 x 120–1300、y 130–880 → 膠片窄一點（截圖卡 480×280、一格 312）、右邊字放大（主體 80、能力詞 120、說明 60 可換兩行） */
+    #x-relay[data-format="portrait"] #xrl-card { top: 130px; width: 576px; height: 750px; }
+    #x-relay[data-format="portrait"] #xrl-strip { top: -77px; gap: 32px; }
+    #x-relay[data-format="portrait"] .xrl-shot { width: 480px; height: 280px; padding: 12px; }
+    #x-relay[data-format="portrait"] #xrl-subj { left: 648px; top: 321px; font-size: 80px; line-height: 104px; }
+    #x-relay[data-format="portrait"] .xrl-word { left: 648px; top: 433px; font-size: 120px; line-height: 144px; }
+    #x-relay[data-format="portrait"] .xrl-note { left: 648px; top: 585px; width: 652px; white-space: normal; font-size: 60px; line-height: 76px; }
   </style>
   <div id="x-relay" data-composition-id="x-relay" data-width="1920" data-height="1080" data-duration="13.4"
        data-cues-sample='{"start":0,"D":13.4,"cues":{"591":[0.3,2.0],"592":[2.1,4.6],"593":[4.7,7.2],"594":[7.3,9.8],"595":[9.9,13.0]},"refs":{"#592@轉逐字稿":2.3,"#593@找出":4.9,"#594@剪好看":7.5,"#595@一句":10.1}}'>
@@ -109,8 +120,9 @@
     var $q = function (s) { return typeof s === 'string' ? Array.prototype.slice.call(document.querySelectorAll(s)) : s; };
     // 版型（以下都不用改）：全寬時 CSS 的 [data-wide] 那幾行接手；一格＝卡高＋間距 40
     const ROOT = document.getElementById('x-relay'), WIDE = !!ROOT.closest('[data-wide]');
+    const PORT = !!(window.SceneMotion && SceneMotion.portrait && SceneMotion.portrait(ROOT));   // 056 直式（縮進直式上半）：root 打上 data-format="portrait"，CSS 的直式那幾行接手
     if (WIDE) ROOT.setAttribute('data-wide', '');
-    const STEP = WIDE ? 496 : 370;
+    const STEP = PORT ? 312 : WIDE ? 496 : 370;
     const CARDS = '#xrl-strip .xrl-shot';               // 膠片上全部的卡（含頭尾露出的那兩張）
 
     const tl = gsap.timeline({ paused: true });

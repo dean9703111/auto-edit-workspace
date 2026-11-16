@@ -44,6 +44,9 @@
   （kit/scene-layout.js，shared/style.md「版面」）：由上往下等距 24、中線對齊、整組在內容區置中（4 項：上下 48／44；第 1 列聚焦抬起後離標題列仍 ≥ 24），
   項數改了自動重排，不寫 left／top。列內左內距 28：空框 56×56（框 52、線寬 4）→ 間距 32 → 項目字（52 字）。目前這一項的淡色底（.xchk-now）和主色亮框（P.spot 自動加）疊在列上，不算新元素。
   進度區：軌道寬 800、高 24（進度區裡 y 24–48）；計數寬 224 靠右。項目字放不下就縮文案，不縮字。
+  直式：舞台縮 0.8475，字放大（#x-checklist[data-format="portrait"]）：標題 80（畫面上 68）、項目 76（畫面上 64；056 r1 作者：清單字 0.8 倍）；主卡 top 136、卡底 876（內容區 1176×608）。
+  計數搬進標題列右邊（script 的 P.portrait 那一行把 #xchk-n 移進標題列，白字 80，1.4 秒淡入），進度區只剩軌道（1080×24，清單最後一格）；
+  四列 1096×88、空框 72、間距 24（和橫式同樣 md）＋軌道＝472，上下各 68；項目 12 字 × 76 ＋ 列內 160 ≤ 1096 → fill.json portraitMax items.text 12（超過 build --check ⚠，縮文案）。
   靈感（只借技法）：koushikde-937635／_koushikde_／https://x.com/_koushikde_/status/2105730717455937635；mattbean-917572／mattbean／https://x.com/mattbean/status/2103146389412917572；n01ennn-597182／N01ennn／https://x.com/N01ennn/status/2108520767092597182
 -->
 <html lang="zh-Hant">
@@ -80,6 +83,17 @@
     #x-checklist #xchk-card[data-wide] .xchk-box { width: 64px; height: 64px; }
     #x-checklist #xchk-card[data-wide] #xchk-prog { width: 1384px; }
     #x-checklist #xchk-card[data-wide] #xchk-track { width: 1120px; }
+    /* 直式（056）：舞台縮 0.8475 → 標題 80、項目 76（畫面上 64）；主卡拉到 y 136–876，列拉寬到 1096、高 88、間距 24。
+       計數由 script 移進標題列（白字 80 靠右），進度區只剩軌道 1080×24 */
+    #x-checklist[data-format="portrait"] #xchk-card { top: 136px; }
+    #x-checklist[data-format="portrait"] #xchk-card .sc-wcard__bar { position: relative; font-size: 80px; line-height: 104px; padding-top: 12px; padding-bottom: 12px; }
+    #x-checklist[data-format="portrait"] #xchk-body { height: 608px; }
+    #x-checklist[data-format="portrait"] .xchk-row { width: 1096px; height: 88px; }
+    #x-checklist[data-format="portrait"] .xchk-t { font-size: 76px; line-height: 80px; --opt: 10px; }
+    #x-checklist[data-format="portrait"] .xchk-box { width: 72px; height: 72px; }
+    #x-checklist[data-format="portrait"] #xchk-prog { width: 1080px; height: 24px; }
+    #x-checklist[data-format="portrait"] #xchk-track { top: 0; width: 1080px; }
+    #x-checklist[data-format="portrait"] #xchk-n { right: 56px; top: 20px; width: 264px; font-size: 80px; line-height: 88px; color: var(--sc-fs-bar-ink); }
   </style>
   <div id="x-checklist" data-composition-id="x-checklist" data-width="1920" data-height="1080" data-duration="15.2"
        data-cues-sample='{"start":0,"D":15.2,"cues":{"121":[2.0,4.5],"122":[4.6,7.0],"123":[7.1,9.5],"124":[9.6,12.1],"125":[12.4,14.9]},"refs":{"#121@新增專案":2.3,"#122@下載":4.8,"#123@配對手機":7.3,"#124@調整解析度":9.8}}'>
@@ -124,6 +138,7 @@
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const ROWS = '#xchk-r1, #xchk-r2, #xchk-r3, #xchk-r4';   // 全部的列（3 項時拿掉 r4）  // @sub n==3: const ROWS = '#xchk-r1, #xchk-r2, #xchk-r3'; @@ n==2: const ROWS = '#xchk-r1, #xchk-r2';
     const N = $q('#x-checklist .xchk-row').length;    // 幾項＝上面 HTML 的列數，不用改
+    if (P.portrait) { $q('#xchk-card .sc-wcard__bar')[0].appendChild($q('#xchk-n')[0]); P.in('#xchk-n', 1.4); }   // 直式：計數移進標題列右邊（進度區只剩軌道），軌道之後 0.4 秒淡入（同一秒新元素 ≤ 2）
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
     if (ENTER === 'grow') P.grow('#xchk-card', 0.3);

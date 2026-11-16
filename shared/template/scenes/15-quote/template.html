@@ -45,6 +45,16 @@ P.chars('#gCard .qt-body > div:first-child', {{{in}}} + 0.3, { stagger: 0.035 })
 #qfBy { display: flex; align-items: center; gap: 24px; margin-top: 48px; height: 60px; }
 #qfRule { display: block; width: 64px; height: 6px; border-radius: 3px; background: var(--brand); }
 #qfBy .sc-opt { font-size: 44px; line-height: 60px; font-weight: 700; color: var(--sc-fs-mute); white-space: nowrap; }
+<!-- @style-full-portrait -->
+/* 直式（056）：全幕版整張縮 0.5952 放進上半（舞台窗 x 120–1800、y 40–900 → 畫面 x 40–1040、y 314–826），字級照畫面上的大小回推（× 0.5952）：
+   引號移到金句上方（大小照舊 1.25 倍字級寬；左右並排會吃掉 1.25 倍字寬＋48），金句字級照最長那一行 min(170, 1640 ÷ 字數)（11 字 149＝畫面上 89、16 字 102＝61），
+   兩行 2.38 倍字級；出處 44 → 96（畫面上 57）、短線 96×8。整組（引號＋兩行＋出處，11 字約 690 高）在內容區上下左右置中、字靠左。 */
+#qfArea { --qf: min(170px, calc(1640px / {{text_maxline}})); }
+#qfRow { flex-direction: column; gap: 24px; }
+#qfMark { margin-top: 0; }
+#qfBy { gap: 32px; margin-top: 48px; height: 112px; }
+#qfRule { width: 96px; height: 8px; border-radius: 4px; }
+#qfBy .sc-opt { font-size: 96px; line-height: 112px; }
 <!-- @body-full -->
 <div id="qfArea" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <div id="qfRow">

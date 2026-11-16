@@ -951,6 +951,23 @@ test('直式（009 FR-060）：fx/catalog.json portrait: "band" 的特效 ⚠「
   assert.deepEqual(band(R(7)), [], '橫式不報');
 });
 
+// 056：滿版流動字（band）橫式不寫 bg → 用 catalog 的底色（不透明整張幕，不再縮到講者旁被裁成方框）；明寫 "none" ⚠；直式、不是 band 的照舊透明
+test('056 band 字卡動態：橫式 bg 不寫＝catalog 的底色（不透明）；明寫 none ⚠；直式與 ok 類照舊透明', () => {
+  const seg = (fx, extra = {}) => ({ id: 'f1', type: 'fx', fx, from: '#2', to: '#2e', vars: { text: '重點' }, ...extra });
+  const R = (s, portrait) => resolvePlan({ plan: { version: 1, ...(portrait ? { format: 'portrait' } : {}), scenes: [s] }, cues, videoDur: VD, lib: L, outDir: os.tmpdir() });
+  const it = (r) => r.items.find((x) => x.id === 'f1');
+  for (const f of L.fx.filter((x) => x.portrait === 'band')) {
+    const r = R(seg(f.no));
+    assert.deepEqual([it(r).bg, it(r).opaque], [f.bg, true], `fx-${f.id}`);
+    assert.ok(!r.warnings.some((w) => w.includes('滿版流動字')), `fx-${f.id} 不寫 bg 不報`);
+  }
+  const none = R(seg(12, { bg: 'none' }));
+  assert.equal(it(none).opaque, false);
+  assert.ok(none.warnings.some((w) => /fx-12（.+）是滿版流動字，透明（bg: "none"）會縮到講者旁邊/.test(w)), none.warnings.join('\n'));
+  assert.equal(it(R(seg(12, { bg: 'dark' }))).bg, 'dark', '明寫的照寫的');
+  assert.equal(it(R(seg(1))).opaque, false, 'ok 類照舊透明');
+});
+
 test('025 只做橫式的模板動畫（規格 portrait: none）：四支新的疊加模板都標了、有替代建議', () => {
   const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'shared', 'template', 'custom');
   for (const n of ['x-tags', 'x-wall', 'x-magazine', 'x-breakout']) {
@@ -1097,12 +1114,14 @@ test('055 k1（054 C02）：直式用到 portraitMinPx 低於直式字級下限�
   const V = CANVAS.portrait;
   for (const f of L.fx) assert.ok(Number.isInteger(f.portraitMinPx) && f.portraitMinPx > 0, `fx-${f.id} 要有 portraitMinPx`);
   const low = L.fx.filter((f) => f.portrait !== 'band' && f.portraitMinPx < V.minTextPx).map((f) => f.id);
-  assert.deepEqual(low, ['22'], '量出來只有 22 文字軌道（中間小字 75px × 0.5625 ≈ 42px）');
+  assert.deepEqual(low, [], '056 起沒有低於下限的（22 文字軌道直式中間字放大到 52px）');
+  // 規則本身：拿 22 當例子，假裝它的直式小字只有 42px
+  const L2 = { ...L, fx: L.fx.map((f) => (f.id === '22' ? { ...f, portraitMinPx: 42 } : f)) };
   const seg = (fx) => [{ id: 'f1', type: 'fx', fx, from: '#2', to: '#2e', vars: { text: '重點' } }];
-  const R = (fx, portrait) => resolvePlan({ plan: { version: 1, ...(portrait ? { format: 'portrait' } : {}), scenes: seg(fx) }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), ...(portrait ? { canvas: V } : {}) });
+  const R = (fx, portrait) => resolvePlan({ plan: { version: 1, ...(portrait ? { format: 'portrait' } : {}), scenes: seg(fx) }, cues, videoDur: VD, lib: L2, outDir: os.tmpdir(), ...(portrait ? { canvas: V } : {}) });
   const small = (r) => r.warnings.filter((w) => w.includes('直式的小字只有'));
-  const def = L.fx.find((f) => f.id === '22');
-  const alt = L.fx.filter((f) => f.category === def.category && f.portrait !== 'band' && f.portraitMinPx >= V.minTextPx).map((f) => f.id);
+  const def = L2.fx.find((f) => f.id === '22');
+  const alt = L2.fx.filter((f) => f.category === def.category && f.portrait !== 'band' && f.portraitMinPx >= V.minTextPx).map((f) => f.id);
   assert.deepEqual(small(R(22, true)), [`[f1 fx 22] fx-22（${def.zh}）直式的小字只有 ${def.portraitMinPx}px（< ${V.minTextPx}px）→ 換成 portraitMinPx ≥ ${V.minTextPx} 的特效（同類可用：${alt.join('、')}）或拿掉`]);
   assert.deepEqual(small(R(22, false)), [], '橫式不報');
   assert.deepEqual(small(R(1, true)), [], '01 夠大');

@@ -1,7 +1,7 @@
 // audit.mjs 的判定規則（純函式，零依賴；瀏覽器量到的原始資料 → ✖／⚠ 訊息）
 //
 //   pickItems(items, { only, all })   → { list, skipped, errors }  要量哪幾段（預設只量 custom；--all 加上情境與字卡動態；media 不量）
-//   sampleTimes(item)                 → [{ t, kind: 'mid'|'done' }]  中點、完成態（段尾前 0.6 秒）
+//   sampleTimes(item, { fxDone })     → [{ t, kind: 'mid'|'done' }]  中點、完成態（段尾前 0.6 秒）；字卡動態只量完成態：fxDone＝catalog 的 done（段內秒數，null＝段尾前 0.6 秒）
 //   judgeSample(meas, ctx)            → findings[]  一個時間點、一段的判定
 //   mergeFindings(list)               → 同一段、同一規則、同一元素只留一筆（時間合併）
 //   customDuration(html)              → custom 檔裡寫的 data-duration、const D；autoEnd＝結尾寫 P.end()／用 P.dur()（長度自動等於段長）
@@ -73,10 +73,12 @@ export function pickItems(items, { only = null, all = false } = {}) {
     if (fx.length) skipped.push(`${fx.map((x) => x.id).join('、')}（字卡動態：特效本來就會飛出畫面或裁切，版面由模板保證；真的要量就用 --only 指名）`);
   }
   for (const it of list) if (it.type === 'media') skipped.push(`${it.id}（插入素材：錄影畫面不是版面，紅框與放大鏡由 build 檢查）`);
+  // 056：02 章節角標（plan.mjs 的 noHost）由主合成畫成常駐角標，沒有自己的 #el-<段>，指名了也不量（不然報「index.html 裡沒有」）
+  for (const it of list) if (it.noHost) skipped.push(`${it.id}（章節角標：由主合成畫成常駐角標，沒有自己的段）`);
   // 範例原文（剛複製、還沒做）不量；--only 指名的照量（量範例本身時用）
   const named = !!(only && only.length);
   if (!named) for (const it of list) if (it.sample) skipped.push(`${it.id}（${it.file} 還是範例原文、還沒做 → 照 auto-edit-motion 改完再量）`);
-  return { list: list.filter((x) => x.type !== 'media' && (named || !x.sample)), skipped, errors };
+  return { list: list.filter((x) => x.type !== 'media' && !x.noHost && (named || !x.sample)), skipped, errors };
 }
 
 // --only 的 build --check 怎麼算（平行工人互相不擋）：其他段的 ✖ 不影響指名段的量測，只算個數；指名段自己的 ✖ 與全域的 ✖ 才擋。
@@ -102,8 +104,10 @@ export function gateCheck(res, only = null) {
 // 壓到講者的門檻：custom 與用 css 移位的段要完全避開（R8.17），沒移位的模板照 build 的 15%
 export const speakerWarnOf = (item) => (item.type === 'custom' || (item.seg && item.seg.css) ? SPEAKER_WARN : SPEAKER_WARN_TEMPLATE);
 
-export function sampleTimes(item) {
+export function sampleTimes(item, { fxDone = null } = {}) {
   const s = item.start, e = item.end, D = e - s;
+  // 056：字卡動態只量完成態，時間照 fx/catalog.json 的 done（中點和段尾前 0.6 秒常常是字正在飛、正在退場）
+  if (item.type === 'fx') return [{ t: r3(Number.isFinite(fxDone) && fxDone > 0 && fxDone < D ? s + fxDone : Math.max(s + Math.min(0.5, D / 2), e - DONE_BEFORE)), kind: 'done' }];
   const mid = r3(s + D / 2);
   const done = r3(Math.max(s + Math.min(0.5, D / 2), e - DONE_BEFORE));
   return done - mid > 0.1 ? [{ t: mid, kind: 'mid' }, { t: done, kind: 'done' }] : [{ t: done, kind: 'done' }];
@@ -126,7 +130,8 @@ export function stageKindOf(item) {
 export function portraitPlan(item, canvas = CANVASES.portrait, regions = null) {
   const kind = stageKindOf(item);
   if (kind) {
-    const st = stageTransform(kind, canvas, { clear: kind === 'fx' && item.seg?.bg === 'none' });
+    // 056：字卡動態透不透明照 build 算好的（plan.mjs 的 it.opaque：bg 不寫＝透明），和 main.mjs 的 stageOf 一致
+    const st = stageTransform(kind, canvas, { clear: kind === 'fx' && !item.opaque });
     // view＝舞台在直式畫面上看得到的範圍（子合成座標）：左右到畫布邊、上到 unsafe 頂帶下緣、下到講者面板頂（01 沒有面板：到 unsafe 底帶上緣）
     const top = canvas.unsafe.find((u) => u[1] <= 0)?.[3] ?? 0, bot = kind === 'fs' || kind === 'full' ? canvas.pip.box[1] : canvas.unsafe.find((u) => u[3] >= canvas.H && u[0] <= 0)?.[1] ?? canvas.H;
     const r1_ = (n) => Math.round(n * 10) / 10;
@@ -384,7 +389,8 @@ export function judgeSample(meas, ctx) {
     // 直式縮放的段（透明字卡動態）量的是縮放前的 1920×1080 座標：講者框（直式畫面座標）先換到同一套座標再比，不然字在胸前會被當成蓋到臉
     const sb = ST && ST.tx != null ? ctx.speakerBox.map((v, i) => r1((v - (i % 2 ? ST.ty : ST.tx)) / ST.s)) : ctx.speakerBox;
     const box = shiftBox(sb, ctx.item.side ? ctx.sideShift || 0 : 0);
-    const rs = content.filter(({ e }) => still(e)).map(({ r }) => r);
+    // 056：畫面（子合成）外面的部分看不到，不算蓋到（直式字卡動態的講者框換算後在子合成上方，推出畫面的詞會被當成蓋到臉）
+    const rs = content.filter(({ e }) => still(e)).map(({ r }) => intersect(r, canvasBox)).filter(Boolean);
     const ratio = coverRatio(rs, box), face = coverRatio(rs, faceZone(box));
     if (coverWarn(ratio, face, ctx.speakerWarn ?? SPEAKER_WARN)) {
       // 依最外層的區塊分組（清單裡的每一項都算在清單上），面積大的在前
@@ -410,7 +416,8 @@ export function judgeSample(meas, ctx) {
   const fontGroup = new Map();
   for (const e of els) {
     if (!e.text || !still(e)) continue;
-    const size = e.fontSize * (e.scale > 0 && e.scale < 1 ? e.scale : 1);
+    const sc = e.fscale ?? e.scale;   // 056：立體轉過的字（fx-19 圓柱）用字高的縮放，不用被透視壓窄的字寬
+    const size = e.fontSize * (sc > 0 && sc < 1 ? sc : 1);
     const gk = !e.desc.id && e.desc.near && [...String(e.desc.text || '')].length <= 3 ? `${e.parent}|${e.desc.near}|${r1(size)}` : null;
     if (gk && fontGroup.has(gk)) { const g = fontGroup.get(gk); g.f.msg = g.f.msg.replace(`「${g.text}」`, `「${(g.text += e.desc.text)}」`); continue; }
     const n0 = out.length;
@@ -1260,7 +1267,7 @@ export function fontShrinkFindings({ item, html = '', tpl = '', file = '' } = {}
 // 而且留著 #<最外層 id> 才不會選到同一支範例在另一段的元素）；
 // v2 原語用 root.querySelectorAll 直接查（KIT_ROOT_QUERY）→ '#x-rack .card' 找不到：pop／dim 這類靜靜沒有動畫，
 // rack／spot 這類會丟錯、整段動畫消失（2026-11-09 在 snapshot 實測）。只擋這幾個，改法是拿掉開頭的 #<最外層 id>（root 底下查，不會跨段）
-export const KIT_ROOT_QUERY = new Set(['chars', 'marker', 'strike', 'stamp', 'punch', 'ripple', 'comet', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'flow', 'idle', 'spot', 'cam', 'grow', 'sheen', 'wipe', 'wipeOut', 'slide', 'slideOut', 'dim', 'rack', 'pop', 'stick', 'peel', 'press', 'flip', 'brace']);
+export const KIT_ROOT_QUERY = new Set(['chars', 'marker', 'strike', 'stamp', 'punch', 'ripple', 'comet', 'draw', 'along', 'fly', 'tape', 'hinge', 'wave', 'spin', 'flow', 'idle', 'spot', 'cam', 'grow', 'sheen', 'wipe', 'wipeOut', 'slide', 'slideOut', 'dim', 'rack', 'pop', 'stick', 'peel', 'press', 'flip', 'brace', 'wrapWords']);
 export function rootSelectorFindings({ item, html = '', file = '' } = {}) {
   const out = [];
   if (!item || !html) return out;

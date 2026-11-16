@@ -64,13 +64,27 @@
     #x-callout-parts .xcpa-num { width: 48px; height: 48px; flex: none; border-radius: 24px; background: var(--brand); color: var(--brand-ink);
                                  display: flex; align-items: center; justify-content: center; }
     #x-callout-parts .xcpa-name { position: relative; }
+    /* 直式（056）：主卡填滿舞台窗（y 136–880）；主體、編號圓、零件表放大，字 72（畫面上 61）、編號 64 */
+    #x-callout-parts[data-format="portrait"] #xcpa-card { top: 136px; }
+    #x-callout-parts[data-format="portrait"] #xcpa-card .sc-wcard__bar { height: 140px; font-size: 76px; line-height: 100px; }
+    #x-callout-parts[data-format="portrait"] #xcpa-body { height: 600px; }
+    #x-callout-parts[data-format="portrait"] #xcpa-grid, #x-callout-parts[data-format="portrait"] #xcpa-grid rect { height: 600px; }
+    #x-callout-parts[data-format="portrait"] #xcpa-objwrap { left: 58px; top: 34px; width: 416px; height: 532px; }
+    #x-callout-parts[data-format="portrait"] #xcpa-obj { left: 80px; top: 32px; }
+    #x-callout-parts[data-format="portrait"] #xcpa-lines { left: 80px; top: 32px; }
+    #x-callout-parts[data-format="portrait"] .xcpa-lbl { width: 360px; top: 448px; height: 84px; font-size: 72px; line-height: 84px; }
+    #x-callout-parts[data-format="portrait"] .xcpa-bal { width: 88px; height: 88px; border-radius: 44px; font-size: 64px; line-height: 88px; }
+    #x-callout-parts[data-format="portrait"] #xcpa-list { left: 634px; top: 40px; width: 484px; padding: 12px 24px; }
+    #x-callout-parts[data-format="portrait"] .xcpa-row { height: 116px; }
+    #x-callout-parts[data-format="portrait"] .xcpa-num { width: 72px; height: 72px; border-radius: 36px; font-size: 64px; line-height: 72px; }
+    #x-callout-parts[data-format="portrait"] .xcpa-name { font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-callout-parts" data-composition-id="x-callout-parts" data-width="1920" data-height="1080" data-duration="15.7"
        data-cues-sample='{"start":0,"D":15.7,"cues":{"242":[2.5,5.1],"243":[5.2,7.6],"244":[7.7,10.1],"245":[10.2,12.6],"246":[12.9,15.2]},"refs":{"#242@鏡頭":2.7,"#243@手機":5.4,"#244@雲台":7.9,"#245@三腳架":10.4}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xcpa-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">拍片架拆解</span></div>
-      <div id="xcpa-body" data-layout="row" data-gap="xxl">
+      <div id="xcpa-body" data-layout="row" data-gap="xxl" data-layout-portrait="free">
         <svg id="xcpa-grid" xmlns="http://www.w3.org/2000/svg" data-layout-ignore><defs><pattern id="xcpa-sq" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 L0 0 L0 40" /></pattern></defs><rect width="1176" height="580" fill="url(#xcpa-sq)" /></svg>
         <div id="xcpa-objwrap" data-slot>
           <div id="xcpa-obj" data-illus="phoneTripod" data-orient="portrait" data-screen="blank"></div>
@@ -83,10 +97,10 @@
           <i id="xcpa-p4" class="xcpa-pt" data-at="76,92"></i>
         </div>
         <div id="xcpa-list" data-slot>
-          <div id="xcpa-t1" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">1</span><span id="xcpa-n1" class="xcpa-name sc-t52 sc-w700 sc-opt">鏡頭</span></div>
-          <div id="xcpa-t2" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">2</span><span id="xcpa-n2" class="xcpa-name sc-t52 sc-w700 sc-opt">手機</span></div>
-          <div id="xcpa-t3" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">3</span><span id="xcpa-n3" class="xcpa-name sc-t52 sc-w700 sc-opt">雲台</span></div>
-          <div id="xcpa-t4" class="xcpa-row"><span class="xcpa-num sc-t40 sc-w900">4</span><span id="xcpa-n4" class="xcpa-name sc-t52 sc-w700 sc-opt">三腳架</span></div>
+          <div id="xcpa-t1" class="xcpa-row" data-layout-allow-tight-portrait=""><span class="xcpa-num sc-t40 sc-w900">1</span><span id="xcpa-n1" class="xcpa-name sc-t52 sc-w700 sc-opt">鏡頭</span></div>
+          <div id="xcpa-t2" class="xcpa-row" data-layout-allow-tight-portrait=""><span class="xcpa-num sc-t40 sc-w900">2</span><span id="xcpa-n2" class="xcpa-name sc-t52 sc-w700 sc-opt">手機</span></div>
+          <div id="xcpa-t3" class="xcpa-row" data-layout-allow-tight-portrait=""><span class="xcpa-num sc-t40 sc-w900">3</span><span id="xcpa-n3" class="xcpa-name sc-t52 sc-w700 sc-opt">雲台</span></div>
+          <div id="xcpa-t4" class="xcpa-row" data-layout-allow-tight-portrait=""><span class="xcpa-num sc-t40 sc-w900">4</span><span id="xcpa-n4" class="xcpa-name sc-t52 sc-w700 sc-opt">三腳架</span></div>
         </div>
       </div>
     </div>
@@ -106,17 +120,18 @@
     // 0. 部位 → 圓點、引線、編號圓（以下都不用改；載入時算一次，每次結果相同）
     const NS = 'http://www.w3.org/2000/svg', WRAP = $q('#xcpa-objwrap')[0], OBJ = $q('#xcpa-obj')[0], SVG = $q('#xcpa-lines')[0];
     const OW = OBJ.offsetWidth, OH = OBJ.offsetHeight, BX = OW + 48;
+    const OX = OBJ.offsetLeft, OY = OBJ.offsetTop, STEP = P.portrait ? 96 : 80;   // 直式：插圖在外框裡往右下移（主體名稱才放得下 72 字），編號圓 88 → 錯開 96
     let lastY = -999;
     $q('#x-callout-parts .xcpa-pt').forEach(function (pt, i) {
       const at = pt.getAttribute('data-at').split(',').map(Number), x = Math.round(OW * at[0] / 100), y = Math.round(OH * at[1] / 100);
-      const by = Math.max(y, lastY + 80); lastY = by;
+      const by = Math.max(y, lastY + STEP); lastY = by;
       const k = i + 1, line = document.createElementNS(NS, 'path'), dot = document.createElementNS(NS, 'circle');
       line.setAttribute('class', 'xcpa-lead'); line.setAttribute('id', 'xcpa-l' + k);
       line.setAttribute('d', 'M' + x + ' ' + y + (by !== y ? ' L' + (BX - 40) + ' ' + y + ' L' + (BX - 16) + ' ' + by : ' L' + (BX - 8) + ' ' + y));
       dot.setAttribute('class', 'xcpa-dot'); dot.setAttribute('id', 'xcpa-d' + k); dot.setAttribute('cx', x); dot.setAttribute('cy', y); dot.setAttribute('r', 10);
       SVG.appendChild(line); SVG.appendChild(dot);
       const b = document.createElement('b'); b.className = 'xcpa-bal sc-t40 sc-w900'; b.id = 'xcpa-b' + k; b.textContent = String(k);
-      b.setAttribute('data-layout-allow-overlap', ''); b.style.left = BX + 'px'; b.style.top = (by - 32) + 'px'; WRAP.appendChild(b);
+      b.setAttribute('data-layout-allow-overlap', ''); WRAP.appendChild(b); b.style.left = (OX + BX) + 'px'; b.style.top = (OY + by - b.offsetHeight / 2) + 'px';
     });
     const part = function (k, t) {   // 一個零件一拍：圓點描出 → 引線畫過去 → 編號圓彈出 → 那一列亮起
       P.stroke('#xcpa-d' + k, t, { dur: 0.2 });

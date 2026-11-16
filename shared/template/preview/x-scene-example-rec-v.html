@@ -56,19 +56,25 @@
     #x-scene-example-rec .xscr-side { flex-direction: row; gap: var(--sc-gap-sm); }
     #x-scene-example-rec .xscr-lbl { display: block; font-size: 32px; line-height: 40px; }   /* 標籤 32px：退到 0.96 時仍 ≥ 30px */
     #x-scene-example-rec .xscr-wv { width: 216px; height: 88px; }   /* 聲紋（選用）：P.wave 自動插跳動的條 */
+    /* 直式（056）：主卡填滿舞台窗（top 136，script 設），標題列 140／字 76、內容區 1176×600；標籤 72（畫面上 61） */
+    #x-scene-example-rec[data-format="portrait"] #xscr-card .sc-wcard__bar { height: 140px; font-size: 76px; line-height: 100px; }
+    #x-scene-example-rec[data-format="portrait"] #xscr-stage, #x-scene-example-rec[data-format="portrait"] .xscr-floor { height: 600px; }
+    #x-scene-example-rec[data-format="portrait"] .xscr-lbl { font-size: 72px; line-height: 88px; }
+    #x-scene-example-rec[data-format="portrait"] #xscr-pill > [data-illus] { width: 448px !important; height: 134px !important; }   /* 錄影膠囊放大 1.93 倍＋字 1.1 倍：REC、00:05 畫面上 50（字 1.2 倍 REC 會貼到時間） */
+    #x-scene-example-rec[data-format="portrait"] .il-rec text { display: none; }   /* 螢幕上的 REC 小字藏起來，留紅點 */
   </style>
   <div id="x-scene-example-rec" data-composition-id="x-scene-example-rec" data-width="1920" data-height="1080" data-duration="23"
        data-cues-sample='{"start":0,"D":23,"cues":{"192":[2.5,5],"193":[5.5,8],"194":[8.5,11],"195":[11.5,14],"196":[14.5,17],"197":[17.5,20]},"refs":{"#192@腳架":3.4,"#193@試錄":6.2,"#194@走到":9,"#195@播放":12,"#196@聲音":15.4,"#197@符合":18.1}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xscr-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">開拍前先試錄</span></div>
-      <div id="xscr-stage" data-layout="row" data-gap="xxl">
+      <div id="xscr-stage" data-layout="row" data-gap="xxl" data-gap-portrait="72">
         <svg id="xscr-floor" class="xscr-floor" data-layout-ignore xmlns="http://www.w3.org/2000/svg"><path d=""/></svg>
         <!-- ══ DATA 1：元件清單（一個元件一行；只改這裡）══ -->
         <div id="xscr-person" class="xscr-it xscr-pre xscr-stand" data-slot><div data-illus="pgPerson" style="width:160px;height:378px"></div><b class="xscr-lbl sc-w700">我</b></div>
         <div id="xscr-phone" class="xscr-it xscr-stand" data-slot><div data-illus="phoneTripod" data-orient="landscape" data-screen="blank" style="width:330px;height:380px"></div><b class="xscr-lbl sc-w700">手機</b></div>
         <div id="xscr-right" data-slot data-layout="col" data-gap="md">
-          <div id="xscr-pill" class="xscr-it" data-slot><div data-illus="recPill" style="width:232px;height:70px"></div></div>
+          <div id="xscr-pill" class="xscr-it" data-slot><div data-illus="recPill" data-text-scale-portrait="1.1" style="width:232px;height:70px"></div></div>
           <div id="xscr-wave" class="xscr-it" data-slot><div class="xscr-wv"></div><b class="xscr-lbl sc-w700">聲音</b></div>
           <div id="xscr-ok" class="xscr-it xscr-side" data-slot><div data-illus="badge" data-kind="check" style="width:88px;height:88px"></div><b class="xscr-lbl sc-w700">符合需求</b></div>
         </div>
@@ -105,7 +111,7 @@
     const ROOT = document.getElementById('x-scene-example-rec');
     const R = P.region('panelTop');   // 主卡＝全畫面主卡區（design-system §2；直式由 window.__regions 蓋過）
     const CARD = document.getElementById('xscr-card');
-    CARD.style.left = R[0] + 'px'; CARD.style.top = R[1] + 'px'; if (!CARD.hasAttribute('data-wide')) CARD.style.width = R[2] + 'px';   // 全寬版型：kit 已把主卡拉到 1680，不要蓋回去
+    CARD.style.left = R[0] + 'px'; CARD.style.top = (P.portrait ? 136 : R[1]) + 'px'; if (!CARD.hasAttribute('data-wide')) CARD.style.width = R[2] + 'px';   // 全寬版型：kit 已把主卡拉到 1680，不要蓋回去
     const sel = function (id) { return '#' + id; };
     const stateSel = function (s) { return !s || s === 'blank' ? null : s === 'video' ? '.il-content' : '.il-' + s; };   // 狀態名 → 狀態群組
     // 位置由 data-layout 排好（kit/scene-layout.js；ILLUS.mount 之後自動跑一次），這裡只讀

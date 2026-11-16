@@ -47,6 +47,10 @@
   點由 #xtl-body 的 data-layout="row" data-gap="md" 排（kit/scene-layout.js，shared/style.md「版面」）：等距、整組在內容區置中（4 點：左右約 54、上下 56／52；聚焦抬起後離標題列仍 ≥ 24），不寫 left／top。
   路線（橫軸，粗 14）、走過的主色路線、目前位置點（44，墨色心＋主色框，和 x-scene-example-outline 同一款）、站點（r 18）由 script 讀排好的位置算：路線在卡片底和說明頂的正中（離兩邊各 36），從第一點左緣到最後一點右緣；站點在每張卡片的中線。
   橫軸那層 svg 加 data-layout-ignore：它刻意橫過每個點，不是連接線（不量 shared/style.md「版面」第 7 條）。
+  直式：主卡位置不變（舞台縮放 0.8475），排法不變（時間由左往右，上半面板本身是 1000×636 的橫長框，4 點橫排放得下）（#x-timeline[data-format="portrait"]）：
+  標題 76、說明 52 → 60（畫面上 64／51；說明是次要字，4 字 × 60 ＝ 240 ≤ 點寬 248）、年份維持 72（畫面上 61；「2019」寬 176，再大卡片左右內距就不到 0.45 × 字級）；
+  說明都是一行（沒有 desc2）時說明高 144 → 72、卡片 256 → 320、圖示 88 → 112，一點高 320 ＋ 72 ＋ 72 ＝ 464，上下各 58；
+  有兩行說明（#xtl-body:has(.xtl-cap br)）時卡片 272、圖示 96，一點高 272 ＋ 72 ＋ 144 ＝ 488，上下各 46（聚焦抬起後離標題列 ≥ 27）；直式不用另設上限。
 -->
 <!-- 靈感（只借技法，不含程式與素材；同一份清單在 NOTICE.md）：rpa-dake-593915（rpa_dake，https://x.com/rpa_dake/status/2104466394859593915）；kloss-xyz-067876（kloss_xyz，https://x.com/kloss_xyz/status/2103652674336067876）；airobertdaily-416945（aiRobertDaily，https://x.com/aiRobertDaily/status/2108596616756416945） -->
 <html lang="zh-Hant">
@@ -81,6 +85,14 @@
     #x-timeline #xtl-head { position: absolute; width: 44px; height: 44px; box-sizing: border-box; border-radius: 22px; background: var(--v2-ink); border: 8px solid var(--brand); }
     /* 說明：軸下方置中一行（最多兩行，高固定 144，四個點一樣高才排得齊），和卡片同寬 */
     #x-timeline .xtl-cap { position: relative; height: 144px; text-align: center; white-space: nowrap; color: var(--sc-fs-ink); }
+    /* 直式（056）：排法不變，標題 76、說明 60（畫面上 64／51；年份本來就是 72＝61）；說明都是一行時卡片 320、圖示 112，有兩行說明時卡片 272、圖示 96 */
+    #x-timeline[data-format="portrait"] #xtl-card .sc-wcard__bar { font-size: 76px; }
+    #x-timeline[data-format="portrait"] .xtl-node { height: 320px; gap: 24px; }
+    #x-timeline[data-format="portrait"] .xtl-node .sc-icon { --d: 112px; --i: 60px; }
+    #x-timeline[data-format="portrait"] .xtl-cap { height: 72px; font-size: 60px; line-height: 72px; }
+    #x-timeline[data-format="portrait"] #xtl-body:has(.xtl-cap br) .xtl-node { height: 272px; gap: 16px; }
+    #x-timeline[data-format="portrait"] #xtl-body:has(.xtl-cap br) .xtl-node .sc-icon { --d: 96px; --i: 52px; }
+    #x-timeline[data-format="portrait"] #xtl-body:has(.xtl-cap br) .xtl-cap { height: 144px; }
   </style>
   <div id="x-timeline" data-composition-id="x-timeline" data-width="1920" data-height="1080" data-duration="17.5"
        data-cues-sample='{"start":0,"D":17.5,"cues":{"131":[2.9,5.9],"132":[6.0,8.9],"133":[9.0,11.9],"134":[12.0,15.0]},"refs":{"#131@2019":3.1,"#132@2022":6.1,"#133@2024":9.1,"#134@今年":12.1}}'>

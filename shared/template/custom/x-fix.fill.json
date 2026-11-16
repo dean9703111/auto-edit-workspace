@@ -3,6 +3,10 @@
   "prefix": "xfix",
   "beat": "C",
   "layout": "fullscreen",
+  "portraitMax": {
+    "pains.text": 6,
+    "sub": 7
+  },
   "when": "先講 2–3 個痛點，接著「所以我…」給一個解法，同一段 20 秒內講完：痛點逐條出現、講到解法前一起被劃掉，箭頭帶到解法卡",
   "slots": {
     "title": {

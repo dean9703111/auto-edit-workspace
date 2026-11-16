@@ -93,6 +93,8 @@ window.__PREVIEW = {"key":"qa","duration":7,"cues":[{"sound":"ding","at":1.9,"vo
     P.pop('#pv-qfCard', T0, { from: 0.94, dy: 40 });
     P.pop('#pv-qfQb', T0 + 0.25, { from: 0.4, dy: 0 });
     P.in('#pv-qfQl', T0 + 0.35);
+    /* 056 直式（縮進直式的全幕版）：問句照詞換行（kit P.wrapWords；橫式不動） */
+    P.wrapWords('#pv-qfQ .sc-opt');
     P.chars('#pv-qfQ .sc-opt', T0 + 0.45, { stagger: 0.035 });
     P.flip('#pv-qfCard', Math.max(T0 + 0.9, 1.9 - P.FLIP_LEAD));
     tl.fromTo('#scene', { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'sine.out' }, 0);

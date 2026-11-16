@@ -81,6 +81,8 @@ window.__PREVIEW = {"key":"summary","duration":6,"cues":[{"sound":"ding","at":0.
     P.pop('#pv-gCard .sc-lt__tag', 0 + 0.12, { from: 0.4, dy: 18 });
     P.pop('#pv-gCard .sc-icon', 0 + 0.18, { from: 0.2, dy: 0, ease: 'back.out(2.4)' });
     P.check('#pv-gCard .sc-icon', 0 + 0.3);
+    /* 056 直式：正文照詞換行（kit P.wrapWords；橫式不動），「//」斷開的每一行各自平衡 */
+    P.wrapWords('#pv-gCard .sm-text', { lines: true });
     P.chars('#pv-gCard .sm-text', 0 + 0.22, { stagger: 0.02 });
     P.wipeOut('#pv-gCard', D - P.V2.OUT, { dir: 'left' });
 

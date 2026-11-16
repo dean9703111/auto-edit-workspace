@@ -53,6 +53,9 @@
       "ref": "T3"
     }
   },
+  "portraitMax": {
+    "pill": 6.5
+  },
   "sample": {
     "title": "點進來的 10 個人",
     "totalLabel": "點進來看",

@@ -51,6 +51,10 @@
   檔案＝三條和直連重疊、不畫線的路徑（.xarch-file，script 載入時從直連複製），只看得到 P.comet 的發光頭：從手機右緣外出發、走到電腦左緣外，頭在裝置下面。
   劃掉的線（P.strike）在雲端框的中線、兩端各超出 4 px。
   鏡頭跟焦點用 k 0.09（x-process 是 0.12）：裝置在下排，0.12 會把主卡帶上 25 px，垂直不平衡（上下留白差 > 40）。
+  直式：主卡位置不變（舞台縮放 0.8475）；標題 76、雲端／裝置／結論 72（畫面上 64／61）（#x-architecture[data-format="portrait"]）。上中下三層：
+  雲端 y 40–184（高 144、寬跟著字）、結論膠囊 y 208–352（高 144）、兩個裝置 y 394–540（改成圖示在左、名稱在右，高 146、寬 ≥ 400，4 字時 476），
+  三層上下不重疊（裝置寬了，結論膠囊夾在裝置中間放不下）；經過雲端的線：裝置和雲端左右重疊時 helper 會畫成垂直直線（穿過結論），script 在直式照 L 形重算
+  （雲端左右緣外 → 裝置中線 → 裝置頂外），往下那段在裝置中線（x 248／928），6 字結論（x 292–884）也碰不到。名稱字數照橫式上限放得下，直式不用另設上限。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-architecture 資料怎麼走</title></head>
@@ -85,6 +89,15 @@
                                 background: var(--v2-node); color: var(--sc-fs-ink); display: flex; align-items: center; gap: 20px; white-space: nowrap; }
     #x-architecture #xarch-noico { --d: 64px; --i: 36px; background: var(--sc-warn); color: var(--sc-on-warn); }
     #x-architecture #xarch-not { position: relative; }
+    /* 直式（056）：標題 76、雲端／裝置／結論 72（畫面上 64／61）；上中下三層：雲端 40–184、結論 208–352、裝置 394–540（圖示在左、名稱在右） */
+    #x-architecture[data-format="portrait"] #xarch-card .sc-wcard__bar { font-size: 76px; }
+    #x-architecture[data-format="portrait"] .xarch-dev { height: 146px; width: max-content; min-width: 400px; padding: 0 32px; flex-direction: row; gap: 20px; }
+    #x-architecture[data-format="portrait"] .xarch-dev .sc-icon { --d: 88px; --i: 48px; }
+    #x-architecture[data-format="portrait"] #xarch-cloud { width: max-content; height: 144px; padding: 0 40px; }
+    #x-architecture[data-format="portrait"] #xarch-cico { --d: 80px; --i: 44px; }
+    #x-architecture[data-format="portrait"] #xarch-no { top: 208px; height: 144px; padding: 0 40px 0 32px; }
+    #x-architecture[data-format="portrait"] #xarch-noico { --d: 72px; --i: 40px; }
+    #x-architecture[data-format="portrait"] :is(#xarch-cloud, .xarch-dev, #xarch-no) .sc-t52 { font-size: 72px; line-height: 90px; --opt: 8px; }
   </style>
   <div id="x-architecture" data-composition-id="x-architecture" data-width="1920" data-height="1080" data-duration="14.6"
        data-cues-sample='{"start":0,"D":14.6,"cues":{"82":[3,5.6],"83":[5.7,9],"84":[9.1,12.8]},"refs":{"#82@直接":3.2,"#83@照片":5.8,"#84@不經過":9.2}}'>
@@ -118,6 +131,13 @@
 
     // 0. 線由 data-links 產生（kit/scene-layout.js，SceneMotion 建立時已畫好）。載入時只做兩件事（建 DOM、不進 timeline，每次結果相同）：
     //    經過雲端的上段把點反過來（helper 的 L 形先水平再垂直，只能從雲端畫到手機；虛線要從手機往雲端流），直連複製三條不畫線的檔案路徑
+    //    直式（056）：裝置變寬、和雲端左右重疊，helper 會改畫成垂直直線（穿過結論膠囊）→ 照橫式的 L 形重算（雲端左右緣外 → 裝置中線 → 裝置頂外）
+    if (P.portrait) ['a', 'b'].forEach(function (k) {
+      var L = window.SceneLayout, body = $q('#xarch-body')[0], g = L.token('link-gap'), c = L.box($q('#xarch-cloud')[0], body), d = L.box($q('#xarch-' + k)[0], body);
+      var x1 = Math.round(d[0] + d[2] / 2), y0 = Math.round(c[1] + c[3] / 2), x0 = x1 < c[0] ? c[0] - g : c[0] + c[2] + g;
+      var pts = [[x0, y0], [x1, y0], [x1, d[1] - g]], p = $q('#xarch-cloud-xarch-' + k)[0];
+      p.setAttribute('data-pts', JSON.stringify(pts)); p.setAttribute('d', 'M' + pts.map(function (q) { return q[0] + ' ' + q[1]; }).join(' L'));
+    });
     const up = $q('#xarch-cloud-xarch-a')[0], upPts = JSON.parse(up.getAttribute('data-pts')).reverse();
     up.setAttribute('d', 'M' + upPts.map(function (p) { return p[0] + ' ' + p[1]; }).join(' L'));
     ['xarch-f1', 'xarch-f2', 'xarch-f3'].forEach(function (id) {

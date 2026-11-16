@@ -20,9 +20,11 @@
 // 匯出：
 //   listFillSpecs(customDir)、readFillSpec(customDir, name)
 //   validateSlots(spec, slots, { icons }) → errors[]
+//   portraitMaxWarnings(spec, slots)  → warnings[]：056 直式上限（fill.json 的 "portraitMax"），直式專案超過時 ⚠（materializeFills 帶 format: 'portrait' 才查）
+//     "portraitMax": { "items": 3, "items.text": 8, "title": 8 }：清單名＝最多幾項；文字欄位＝最多幾個字（全形 1、半形 0.5）；<清單>.<欄位>＝清單每一項的那個欄位
 //   fillTemplate({ spec, html, id, slots, icons, rename, keepIcons, illus }) → { name, file, html, errors }
 //   renderSheet(spec, slots, id) → 「#### 動畫分鏡 <id>」那一節（markdown）
-//   materializeFills({ plan, outDir, lib, prune }) → { errors, warnings, written }：把 plan 裡的模板段、內容設計動畫段變成檔案（會在 seg 上寫 src、layout）
+//   materializeFills({ plan, outDir, lib, prune, format }) → { errors, warnings, written }（format 不給就看 plan.format）：把 plan 裡的模板段、內容設計動畫段變成檔案（會在 seg 上寫 src、layout）
 //   fillStateOf({ seg, outDir, lib }) → 'missing'｜'tool'｜'hand'：模板段的動畫檔是工具產生的還是手改過（032 B6）
 //   expandIcons(html, icons) → { html, missing }：<span data-icon="名稱"></span> 填成 SVG
 import fs from 'node:fs';
@@ -132,6 +134,27 @@ export function validateSlots(spec, slots, { icons } = {}) {
     }
   }
   return errors;
+}
+
+// 056：直式上限。橫式的上限（max、maxItems）照舊是 ✖；直式放得下的比較少，超過只 ⚠（畫面會擠、字會被縮，不擋 build）
+export function portraitMaxWarnings(spec, slots) {
+  const out = [], lim = isObj(spec?.portraitMax) ? spec.portraitMax : null, s = isObj(slots) ? slots : {};
+  if (!lim) return out;
+  const tail = '直式放不下 → 縮文案、拆成兩段，或直式換別的模板';
+  for (const [key, max] of Object.entries(lim)) {
+    if (!Number.isFinite(max)) continue;
+    const [k, f] = String(key).split('.');
+    const d = spec.slots?.[k], v = s[k];
+    if (!d || v == null) continue;
+    if (d.type === 'list' && Array.isArray(v)) {
+      if (!f) { if (v.length > max) out.push(`slots.${k}：直式最多 ${max} 項，現在 ${v.length} 項（${tail}）`); continue; }
+      v.forEach((it, i) => { const t = String(it?.[f] ?? '').replace(/\*\*/g, ''), w = textWidth(t); if (w > max) out.push(`slots.${k}[${i}].${f}「${t}」${w} 字，直式上限 ${max}（${tail}）`); });
+    } else if (!f) {
+      const t = String(v).replace(/\*\*/g, ''), w = textWidth(t);
+      if (w > max) out.push(`slots.${k}「${t}」${w} 字，直式上限 ${max}（${tail}）`);
+    }
+  }
+  return out;
 }
 
 // ---------- 條件與替換 ----------
@@ -671,7 +694,8 @@ export function expandIcons(html, icons) {
   return { html: out, missing };
 }
 
-export function materializeFills({ plan, outDir, lib, prune = false, kitDir = null }) {
+export function materializeFills({ plan, outDir, lib, prune = false, kitDir = null, format = null }) {
+  const portrait = (format || plan?.format) === 'portrait';
   const errors = [], warnings = [], written = [];
   const all = Array.isArray(plan?.scenes) ? plan.scenes.filter((x) => x && x.type === 'custom') : [];
   const segs = all.filter((x) => x.template);
@@ -701,6 +725,7 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
     const html = fs.readFileSync(path.join(lib.customDir, `${seg.template}.html`), 'utf8');
     const r = fillTemplate({ spec, html, id: seg.id, slots: seg.slots, icons: lib.icons, kitDir: kit, outDir });
     if (r.errors.length) { fail(r.errors); continue; }
+    if (portrait) for (const w of portraitMaxWarnings(spec, seg.slots)) warnings.push(`${where} ${w}`);
     Object.defineProperty(seg, '__sheet', { value: renderSheet(spec, seg.slots, seg.id), enumerable: false, configurable: true });
     live.add(file);
     const abs = path.join(outDir, file);

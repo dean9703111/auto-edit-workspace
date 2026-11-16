@@ -40,6 +40,9 @@
   fullscreen：主卡進場看 script 的 ENTER；離場由 build 處理。主卡 left 120、top 140、寬 1180（右緣 1300），標題列 128、內容區 1176×580（卡底 852）。
   層高 118，寬由下往上 960／800／640／480（越上層越窄），圖示 72＋名稱（52 字）置中；由 #xstp-body 的 data-layout="col" data-gap="none" 排（緊貼成一座台、中線對齊、整組置中），
   HTML 由上往下寫（l4 … l1），不寫 left／top。地面線比最底層左右各多 48，由 script 貼在 l1 底下（讀排好的位置）。翻起來的軸是每層的底邊。
+  直式：舞台縮 0.8475（#x-stack-podium[data-format="portrait"]）：標題 80（畫面上 68）；台座照 056 r1 作者的話縮成 0.9 倍：名稱 64（畫面上 54）、圖示 72；主卡 top 136、卡底 876（內容區 1176×608）。
+  層寬照舊 960／800／640／480，層高 118 → 108（四層 432，上下各 88，地面線在下內距裡；最上層的漣漪往上多 24）；層高放不下兩倍字級的上下內距，直式照膠囊算（#xstp-body 的 data-layout-allow-tight-portrait）。
+  最上層 4 字 × 64 ＋ 圖示 96 ＝ 352 ≤ 472，其他層 5 字也放得下，字數上限和橫式一樣，不寫 portraitMax。
 -->
 <html lang="zh-Hant">
 <head><meta charset="UTF-8"><title>x-stack-podium 台座堆疊</title></head>
@@ -68,13 +71,20 @@
     #x-stack-podium .xstp-name { position: relative; }
     /* 終點：最上層換主色（疊一層主色底，ALL 時淡入） */
     #x-stack-podium .xstp-top { position: absolute; inset: 0; border-radius: 4px; background: var(--brand); }
+    /* 直式（056）：舞台縮 0.8475 → 標題 80；台座 0.9 倍：名稱 64（畫面上 54）、圖示 72、層高 108（層寬不變）；主卡拉到 y 136–876 */
+    #x-stack-podium[data-format="portrait"] #xstp-card { top: 136px; }
+    #x-stack-podium[data-format="portrait"] #xstp-card .sc-wcard__bar { font-size: 80px; line-height: 104px; padding-top: 12px; padding-bottom: 12px; }
+    #x-stack-podium[data-format="portrait"] #xstp-body { height: 608px; }
+    #x-stack-podium[data-format="portrait"] .xstp-layer { height: 108px; }
+    #x-stack-podium[data-format="portrait"] .xstp-layer .sc-icon { --d: 72px; --i: 40px; }
+    #x-stack-podium[data-format="portrait"] .xstp-name { font-size: 64px; line-height: 80px; --opt: 8px; }
   </style>
   <div id="x-stack-podium" data-composition-id="x-stack-podium" data-width="1920" data-height="1080" data-duration="15"
        data-cues-sample='{"start":0,"D":15,"cues":{"262":[1.8,4.1],"263":[4.3,6.8],"264":[6.9,9.3],"265":[9.4,11.8],"266":[12.1,14.5]},"refs":{"#262@器材":2.0,"#263@剪輯":4.5,"#264@企劃":7.0,"#265@品牌":9.5}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xstp-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">做頻道的四層台階</span></div>
-      <div id="xstp-body" data-layout="col" data-gap="none">
+      <div id="xstp-body" data-layout="col" data-gap="none" data-layout-allow-tight-portrait>
         <!-- 由上往下寫：l4 最上層 … l1 最底層（第 1 個講到）；地面線不參與排版（沒有 data-slot） -->
         <!-- @if n>=4 { -->
         <div id="xstp-l4" class="xstp-layer" data-slot><i id="xstp-top4" class="xstp-top" data-layout-allow-overlap></i>

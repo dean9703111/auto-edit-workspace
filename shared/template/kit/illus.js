@@ -31,7 +31,10 @@
  *   要重畫（例：改了 data-screen）帶 {force:true}，那些元素的動畫狀態會重置。
  *   data-* 名稱即 opts 名稱：data-orient / data-screen / data-arrow / data-tone / data-bars
  *   / data-seed / data-color / data-angle / data-len / data-fill / data-kind / data-title
- *   / data-text / data-saved / data-sand。數字與布林（"true"）會自動轉型。
+ *   / data-text / data-saved / data-sand / data-text-scale。數字與布林（"true"）會自動轉型。
+ *   data-text-scale（056）：元件裡的 SVG 字（window 標題、searchBar、recPill 的 REC 與時間、bookmark、螢幕上的 REC）放大幾倍，形狀不變；
+ *     直式寫 data-text-scale-portrait="1.3"（直式裡的 1920×1080 子合成，mount 前換成 data-text-scale；橫式不讀）。
+ *     字放大後膠囊、搜尋列裝不下時，元素的寬度也要跟著加（模板的直式 CSS）；直式要畫面上 ≥ 48px，主要還是靠把整個元件放大
  * ILLUS.textWidth(str, fontSize) 估算文字寬（searchBar 游標位置用）。
  *
  * 通則
@@ -170,9 +173,11 @@
     for (var k in (a || {})) o[k] = a[k];
     return E('g', o, inner);
   }
+  // 056：TK＝這個元件的字放大幾倍（data-text-scale；直式寫 data-text-scale-portrait），mount 畫這個元件時設定，畫完回 1
+  var TK = 1;
   function T(x, y, str, size, fill, cls, anchor) {
     return E('text', {
-      x: x, y: y, 'font-size': size, 'font-family': FONT, 'font-weight': 700,
+      x: x, y: y, 'font-size': size * TK, 'font-family': FONT, 'font-weight': 700,
       fill: fill, 'text-anchor': anchor || 'start', 'class': cls
     }, esc(str));
   }
@@ -510,7 +515,7 @@
   function searchBar(o) {
     o = o || {};
     var txt = o.text == null ? '' : String(o.text);
-    var cx = 92 + textWidth(txt, 32) + 4;
+    var cx = 92 + textWidth(txt, 32 * TK) + 4;
     var s = R(2, 2, 636, 80, 40, { fill: BODY, s: 4 });
     s += C(46, 39, 13, { s: 4 }) + L(56, 49, 66, 59, { s: 4 });
     s += T(92, 53, txt, 32, WHITE, 'il-text');
@@ -539,7 +544,7 @@
     s += C(34, 30, 8, { 'class': 'il-dot', fill: RED });
     s += T(52, 39, 'REC', 24, WHITE, 'il-label');
     s += E('text', {
-      x: 112, y: 39, 'font-size': 24, 'font-family': FONT, 'font-weight': 700, fill: SUB,
+      x: 112, y: 39, 'font-size': 24 * TK, 'font-family': FONT, 'font-weight': 700, fill: SUB,
       'class': 'il-time', style: 'font-variant-numeric:tabular-nums'
     }, '00:00');
     return SVG('recPill', 200, 60, s);
@@ -655,9 +660,11 @@
     el.classList.add('il');
   }
 
-  var NUM = ['bars', 'seed', 'angle', 'len'], BOOL = ['fill', 'saved'];
+  var NUM = ['bars', 'seed', 'angle', 'len', 'textScale'], BOOL = ['fill', 'saved'];
   ILLUS.mount = function (root, opt) {
     root = root || document;
+    // 056：直式裡的 1920×1080 子合成先打 data-format="portrait"、把 data-<選項>-portrait 換上（kit/scene-motion.js、scene-layout.js），插圖照直式的選項畫
+    if (root !== document && window.SceneMotion && window.SceneMotion.portrait) window.SceneMotion.portrait(root);
     var force = !!(opt && opt.force);
     root.querySelectorAll('[data-illus], [data-illus-src]').forEach(function (el) {
       if (!force && el.classList.contains('il')) return;
@@ -672,7 +679,8 @@
         else if (BOOL.indexOf(k) >= 0) v = (v === 'true' || v === '' || v === '1');
         o[k] = v;
       }
-      el.innerHTML = COMP[name](o);
+      TK = o.textScale > 0 ? o.textScale : 1;
+      try { el.innerHTML = COMP[name](o); } finally { TK = 1; }
       el.classList.add('il');
     });
   };

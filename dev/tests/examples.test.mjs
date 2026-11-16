@@ -174,7 +174,9 @@ for (const [id, { pre, range, card, noIcon, overlay, one }] of Object.entries(EX
     for (const m of p.body.matchAll(/class="([^"]+)"/g)) for (const c of m[1].split(/\s+/)) assert.ok(c.startsWith('sc-') || c === 'fill' || c.startsWith(`${pre}-`), `class 沒加前綴：${c}`);
     const rules = p.css.replace(/\/\*[\s\S]*?\*\//g, '').split('}').map((x) => x.split('{')[0].trim()).filter(Boolean);
     assert.ok(rules.length > 3);
-    for (const rule of rules) for (const sel of rule.split(',')) assert.ok(sel.trim().startsWith(`#${id}`), `選擇器沒加範圍：${sel}`);
+    // 只在最外層的逗號切開（056 直式寫法：#x[data-format="portrait"]:has(.a, .b) 括號裡的逗號不算）
+    const topLevel = (r) => { const out = []; let d = 0, cur = ''; for (const ch of r) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && !d) { out.push(cur); cur = ''; } else cur += ch; } return [...out, cur]; };
+    for (const rule of rules) for (const sel of topLevel(rule)) assert.ok(sel.trim().startsWith(`#${id}`), `選擇器沒加範圍：${sel}`);
   });
 
   test(`${id}：只用 SceneMotion 現有方法、不自己寫補間；0.5 秒前不動`, () => {
@@ -189,10 +191,14 @@ for (const [id, { pre, range, card, noIcon, overlay, one }] of Object.entries(EX
     // 每個 P.xxx(sel, at …) 的 at：數字、拍點常數或「常數 ± 數字／P.BEAT」
     const beats = constsOf(p);
     const ats = [];
-    for (const m of p.code.matchAll(/\bP\.(?!at\b|end\b|dur\b|focus\b|swap\b|axis\b|sfx\b|spot\b|along\b)(\w+)\(\s*'[^']*'\s*,\s*([^,(){]+(?:\(\)[^,){]*)?)/g)) {   // 允許 P.dur()（overlay 自己退場：P.dur() - 0.3）
-      const v = Function(...Object.keys(beats), 'P', `return ${m[2]}`)(...Object.values(beats), PCONST);
-      assert.ok(Number.isFinite(v), `看不懂時間「${m[2]}」`);
-      ats.push(v);
+    // 允許 P.dur()（overlay 自己退場：P.dur() - 0.3）、一層括號（056 直式：T + (PORT ? 0.55 : 0.2)，橫式直式都算）
+    for (const m of p.code.matchAll(/\bP\.(?!at\b|end\b|dur\b|focus\b|swap\b|axis\b|sfx\b|spot\b|along\b)(\w+)\(\s*'[^']*'\s*,\s*((?:[^,(){]|\([^()]*\))+)/g)) {
+      const expr = m[2].trim();
+      for (const portrait of [false, true]) {
+        const v = Function(...Object.keys(beats), 'P', 'PORT', `return ${expr}`)(...Object.values(beats), { ...PCONST, portrait }, portrait);
+        assert.ok(Number.isFinite(v), `看不懂時間「${expr}」`);
+        ats.push(v);
+      }
     }
     assert.ok(ats.length >= 5);
     // v2（BEATS.md §3「開場」）：主卡進場就是轉場，寫 const ENTER 的範例從 0 秒開始；其他照舊 0.5 秒前不動（build 的淡入）
@@ -376,7 +382,9 @@ function cueText(n, word, a, b, ref) {
     if (a + textWidth(pre) / textWidth(text) * (b - a) >= ref - 1e-3) return text;
   }
 }
-function makeProject(dir, gap = 1.0) {
+// format＝'portrait'（056）：同一批模板排成直式專案（主軌 1080×1920、plan.json format: portrait）；疊加的模板（overlay）直式不提供，不放
+function makeProject(dir, gap = 1.0, format = 'landscape') {
+  const portrait = format === 'portrait';
   for (const d of ['assets/camera', 'assets/voice', 'assets/screen', 'assets/images', 'work/hyperframes/compositions', 'output']) fs.mkdirSync(path.join(dir, d), { recursive: true });
   // 036 截圖欄位的示意圖：模板原文寫 ../preview/shots/<檔>（相對主合成 index.html ＝ work/preview/shots/）
   const shots = path.join(TEMPLATE, 'preview', 'shots');
@@ -384,6 +392,7 @@ function makeProject(dir, gap = 1.0) {
   const srt = [], scenes = [], segs = [];
   let S = 1.0;
   for (const [k, [name]] of Object.entries(EXAMPLES).entries()) {
+    if (portrait && EXAMPLES[name].overlay) continue;
     const p = parse(name);
     const nums = Object.keys(p.sample.cues).map(Number).sort((a, b) => a - b);
     const wordOf = {};
@@ -408,11 +417,11 @@ function makeProject(dir, gap = 1.0) {
     return `#### 動畫分鏡 ${id}\n\n${HEAD}\n${rows.join('\n')}\n`;
   }).join('\n'));
   fs.writeFileSync(path.join(dir, 'work/rough.srt'), srt.map((x) => `${x.n}\n${stamp(x.a)} --> ${stamp(x.b)}\n${x.text}\n`).join('\n'));   // 序號就是句號 #N（lib/srt.mjs）
-  const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1920x1080:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=48000',
+  const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', `testsrc2=size=${portrait ? '1080x1920' : '1920x1080'}:rate=30`, '-f', 'lavfi', '-i', 'sine=frequency=330:sample_rate=48000',
     '-t', String(Math.ceil(S + 1)), '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(dir, 'work/rough.mp4')], { encoding: 'utf8' });
   if (r.status !== 0) throw new Error(r.stderr);
   fs.writeFileSync(path.join(dir, 'work/cutpoints.json'), JSON.stringify({ cuts: [] }, null, 2));
-  fs.writeFileSync(path.join(dir, 'work/hyperframes/plan.json'), JSON.stringify({ version: 1, speakerBox: [700, 200, 1220, 1000], look: { slim: 0 }, scenes }, null, 2));
+  fs.writeFileSync(path.join(dir, 'work/hyperframes/plan.json'), JSON.stringify({ version: 1, ...(portrait ? { format: 'portrait' } : {}), speakerBox: portrait ? [300, 400, 780, 1400] : [700, 200, 1220, 1000], look: { slim: 0 }, scenes }, null, 2));
   return segs;
 }
 
@@ -482,4 +491,29 @@ test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build →
     for (let i = 0; i < x.length; i++) if (Math.abs(x[i] - y[i]) > 4) bad++;
     assert.ok(bad <= x.length * 1e-5, `${t}s：亂序 seek 和照順序 seek 的畫面不同（${bad} 個色值差 > 4，上限 ${Math.floor(x.length * 1e-5)}：只容許圓角、光暈邊緣的反鋸齒）`);
   }
+});
+
+// 056 直式（specs/056-format-templates/0.md）：同一批模板排成直式專案 → --check 0 ✖ → build → audit 0 ✖。
+// 模板還沒照直式改完，⚠（字太小、垂直不平衡…）先不驗；包 A–G 改完再收緊成 0 ⚠。
+// PENDING_056：盤點時直式就有 ✖、還沒改到的模板（值＝負責的包）。這幾支的 ✖ 先放過；改好之後（直式 0 ✖）要從表上拿掉，不然這條會失敗
+const PENDING_056 = {};
+test(`整合（056 直式）：${COUNT} 支扣掉疊加的排進同一個直式專案 → --check 0 ✖ → build → audit 0 ✖`, { skip: !(ffmpeg && chrome) && '需要 ffmpeg 與 HyperFrames 的 Chrome（npx hyperframes browser ensure）', timeout: 600000 }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-examples-v-'));
+  tmps.push(dir);
+  const segs = makeProject(dir, 1.0, 'portrait');
+  const BUILD = path.join(TEMPLATE, 'tools', 'build.mjs'), AUDIT = path.join(TEMPLATE, 'tools', 'audit.mjs');
+  const chk = node([BUILD, '--project', dir, '--check']);
+  assert.equal(chk.status, 0, chk.stdout + chk.stderr);
+  assert.match(chk.stdout, /版式：直式 1080×1920/);
+  assert.doesNotMatch(chk.stdout, /✖/, chk.stdout);
+  const b = node([BUILD, '--project', dir]);
+  assert.equal(b.status, 0, b.stdout + b.stderr);
+  const au = node([AUDIT, '--project', dir, '--json', '--only', segs.map((x) => x.id).join(',')]);
+  const r = JSON.parse(au.stdout);
+  assert.equal(r.format, 'portrait');
+  assert.equal(r.segments.length, segs.length);
+  const nameOf = Object.fromEntries(segs.map((x) => [x.id, x.name]));
+  const errs = r.findings.filter((f) => f.level === 'error');
+  assert.deepEqual(errs.filter((f) => !PENDING_056[nameOf[f.id]]).map((f) => `${nameOf[f.id]} ${f.rule} ${f.msg}`), [], '直式要 0 ✖（PENDING_056 列的除外）');
+  for (const n of Object.keys(PENDING_056)) assert.ok(errs.some((f) => nameOf[f.id] === n), `${n} 直式已經 0 ✖ → 從 PENDING_056 拿掉（包 ${PENDING_056[n]}）`);
 });

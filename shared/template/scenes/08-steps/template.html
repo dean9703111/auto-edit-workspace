@@ -9,8 +9,17 @@
 .st-num { display: inline-grid; vertical-align: top; font-variant-numeric: tabular-nums; }
 .st-num > * { grid-area: 1 / 1; }
 <!-- @style-portrait -->
-/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。 */
+/* 直式（lib/canvas.mjs 的 lowerThird：卡片帶 x 60–940、y 880–1240）：子合成 1080×1920，左 60、bottom 680。
+   056：卡片撐滿卡片帶（外框寬 880＝主卡 872＋底板錯開 8，x 60–940，不進右側按鈕列 x ≥ 940）；正文 54 → 64／行高 80、可換兩行
+   （有圖示一行約 10 字、沒圖示約 12 字；每步上限 20 字＝最多兩行；只在詞與詞之間換行，timeline 開頭照詞包好），徽章 88 → 104、標籤字 56 → 60。
+   各步驟仍疊在同一格、撐滿卡寬，卡高取最高那步（一行外框 y 972–1240、兩行 916–1240）。 */
 #gCard { left: 60px; bottom: 680px; }
+#gCard { width: 880px; }
+#gCard .sc-lt__tagin { font-size: 60px; }
+#gCard .sc-lt__row { min-height: 104px; }
+#gCard .sc-icon--88 { --d: 104px; --i: 56px; }
+#gCard .sc-t54 { flex: 1; min-width: 0; font-size: 64px; line-height: 80px; --opt: 8px; white-space: normal; text-wrap: balance; }
+.st-body > * { justify-self: stretch; }
 <!-- @body -->
 <div id="gCard" class="sc-lt" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <i class="sc-lt__plate"></i>
@@ -31,6 +40,8 @@
 </div>
 <!-- @timeline -->
 /* v2（shared/template/BEATS.md §2 的動作）：外殼擦開＋左移 → 標籤彈出 → 第 1 步上漂 → 之後每一步：內容 P.axis 往左換、標籤數字 P.swap（每步停 ≥ 0.65＋1.2）→ 段尾向左擦掉 */
+/* 056 直式：每一步照詞換行（kit P.wrapWords；橫式不動），兩行時只在詞與詞之間換行 */
+P.wrapWords('#gCard .st-body .sc-t54');
 const stepAt = [{{#steps}}{{{at}}}{{^last}}, {{/last}}{{/steps}}];
 P.wipe('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dir: 'left', dur: P.V2.SHELL });
 P.drift('#gCard .sc-lt__plate, #gCard .sc-lt__card', {{{in}}}, { dx: -40 * P.U, dur: P.V2.SHELL });

@@ -46,6 +46,9 @@
     等距 16（一疊緊貼）、中線對齊、整組在內容區置中（4 層上下 40／44；最上層聚焦抬起後離標題列仍 ≥ 24），層數改了自動重排，不寫 left／top。
     地基線 1080×8（比層寬左右各多 16）由 script 貼在最底層 l1 下面 16（讀排好的位置，不寫座標）。
   主色亮框由 P.spot 自動加在層的外框上，不算新元素；層從上方 28 px 落下、back.out 過衝落地。
+  直式：舞台縮 0.8475（#x-stack[data-format="portrait"]）：標題 80（畫面上 68）；清單照 056 r1 作者的話縮成 0.8 倍：名稱 60（畫面上 51，沒聚焦的層縮 0.96 也有 48.8）、說明 48（41）、圖示 72；主卡 top 136、卡底 876（內容區 1176×608）。
+  層寬照舊 1048、高 112 → 96，間距 16 → 24（data-gap-portrait="md"；四層＝456，上下各 76，地基線在下內距裡）；層高放不下兩倍字級的上下內距，直式照膠囊算（#xstk-body 的 data-layout-allow-tight-portrait）。
+  名稱 6 字 × 60 ＋ 說明 10 字 × 48 ＋ 層內 192 ≤ 1048 → fill.json portraitMax items.desc 10（名稱照橫式上限 6 字；超過 build --check ⚠，縮文案）。
   靈感（只借技法）：techhalla-498547／techhalla／https://x.com/techhalla/status/2103411244468498547；gdgtify-130294／Gdgtify／https://x.com/Gdgtify/status/2105570411870130294；0xlangeai-597929／0xlangeai／https://x.com/0xlangeai/status/2106391068367597929
 -->
 <html lang="zh-Hant">
@@ -68,13 +71,21 @@
                            border-radius: 16px; background: var(--v2-node); color: var(--sc-fs-ink);
                            display: flex; align-items: center; justify-content: space-between; padding: 0 32px; white-space: nowrap; }
     #x-stack .xstk-left { display: flex; align-items: center; gap: 24px; }
+    /* 直式（056）：舞台縮 0.8475 → 標題 80；清單 0.8 倍：名稱 60（畫面上 51）、說明 48（41）、圖示 72、層高 96（寬不變）、層距 24；主卡拉到 y 136–876 */
+    #x-stack[data-format="portrait"] #xstk-card { top: 136px; }
+    #x-stack[data-format="portrait"] #xstk-card .sc-wcard__bar { font-size: 80px; line-height: 104px; padding-top: 12px; padding-bottom: 12px; }
+    #x-stack[data-format="portrait"] #xstk-body { height: 608px; }
+    #x-stack[data-format="portrait"] .xstk-layer { height: 96px; }
+    #x-stack[data-format="portrait"] .xstk-layer .sc-icon { --d: 72px; --i: 40px; }
+    #x-stack[data-format="portrait"] .xstk-name { font-size: 60px; line-height: 76px; --opt: 8px; }
+    #x-stack[data-format="portrait"] .xstk-desc { font-size: 48px; line-height: 64px; --opt: 6px; }
   </style>
   <div id="x-stack" data-composition-id="x-stack" data-width="1920" data-height="1080" data-duration="14.9"
        data-cues-sample='{"start":0,"D":14.9,"cues":{"111":[1.8,4.1],"112":[4.3,6.8],"113":[6.9,9.3],"114":[9.4,11.8],"115":[12.1,14.5]},"refs":{"#111@手機":2.0,"#112@區網":4.5,"#113@控制台":7.0,"#114@剪輯":9.5}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xstk-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">多機錄影工具的架構</span></div>
-      <div id="xstk-body" data-layout="col" data-gap="sm">
+      <div id="xstk-body" data-layout="col" data-gap="sm" data-gap-portrait="md" data-layout-allow-tight-portrait>
         <!-- 由上往下寫：l4 最上層 … l1 最底層（第 1 個講到）；data-layout="col" 照這個順序由上往下排。地基線不參與排版（沒有 data-slot） -->
         <!-- @if n>=4 { -->
         <div id="xstk-l4" class="xstk-layer" data-slot>   <!-- @sub !items.4.desc: <div id="xstk-l4" class="xstk-layer" data-slot data-layout-allow-slack> -->

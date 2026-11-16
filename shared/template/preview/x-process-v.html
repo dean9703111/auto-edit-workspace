@@ -58,6 +58,18 @@
     #x-process .xproc-node:nth-of-type(even) { margin-top: calc(232px + var(--sc-gap-md)); }
     /* 亮起：now＝目前這一站的底色（下一站亮起時淡掉）；主色亮框與「走過」的細框由 P.spot 自動加（.sc-spot） */
     #x-process .xproc-now { position: absolute; inset: 0; border-radius: 20px; background: var(--v2-node-tint); }
+    /* 直式（056）：標題 76、站名 72（畫面上 64／61）；4 站 2×2 的 U 形（1 左上 → 2 右上 → 3 右下 → 4 左下），3 站維持錯落、站 360×228、圖示 64 */
+    #x-process[data-format="portrait"] #xproc-card .sc-wcard__bar { font-size: 76px; }
+    #x-process[data-format="portrait"] .xproc-node .xproc-name { font-size: 72px; line-height: 90px; --opt: 8px; }
+    #x-process[data-format="portrait"] .xproc-node { width: 360px; height: 228px; gap: 12px; }
+    #x-process[data-format="portrait"] #xproc-body:not(:has(> .xproc-node ~ .xproc-node ~ .xproc-node ~ .xproc-node)) .sc-icon { --d: 64px; --i: 36px; }
+    #x-process[data-format="portrait"] .xproc-node:nth-of-type(odd) { margin-bottom: calc(228px + var(--sc-gap-md)); }
+    #x-process[data-format="portrait"] .xproc-node:nth-of-type(even) { margin-top: calc(228px + var(--sc-gap-md)); }
+    #x-process[data-format="portrait"] #xproc-body:has(> .xproc-node ~ .xproc-node ~ .xproc-node ~ .xproc-node) { display: grid; grid-template-columns: repeat(2, 492px); grid-template-rows: repeat(2, 188px); gap: 96px; place-content: center; }
+    #x-process[data-format="portrait"] #xproc-body:has(> .xproc-node ~ .xproc-node ~ .xproc-node ~ .xproc-node) .xproc-node { width: 492px; height: 188px; margin: 0; flex-direction: row; gap: 24px; }
+    #x-process[data-format="portrait"] #xproc-body:has(> .xproc-node ~ .xproc-node ~ .xproc-node ~ .xproc-node) .sc-icon { --d: 104px; --i: 60px; }
+    #x-process[data-format="portrait"] .xproc-node:nth-of-type(3) { grid-area: 2 / 2; }
+    #x-process[data-format="portrait"] .xproc-node:nth-of-type(4) { grid-area: 2 / 1; }
   </style>
   <div id="x-process" data-composition-id="x-process" data-width="1920" data-height="1080" data-duration="17"
        data-cues-sample='{"start":0,"D":17,"cues":{"12":[3.2,5.7],"13":[6,8.5],"14":[8.8,11.3],"15":[11.6,14]},"refs":{"#12@錄影":3.2,"#13@逐字稿":6,"#14@剪輯清單":8.8,"#15@初剪":11.6}}'>

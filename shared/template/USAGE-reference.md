@@ -107,7 +107,7 @@
 | `beats` | 選填 | | | 覆寫情境的內部時間點（`--list` 的 beats 欄） |
 | `tone` | 選填 | | | `"warn"`（警示紅）或 `"good"`（解方綠），只有 `--list` 標了 tone 的情境能用 |
 | `vars` | | ✓ | | 字卡動態的變數（R3） |
-| `bg` | | 選填 | | `"none"`（預設，透明疊在講者上）、`"dark"`、`"light"`、`"accent"`（不透明整張幕） |
+| `bg` | | 選填 | | `"none"`（預設，透明疊在講者上；滿版流動字的橫式預設見 R3）、`"dark"`、`"light"`、`"accent"`（不透明整張幕） |
 | `sfx` | 選填 | 選填 | 選填 | `kit/sfx.json` 裡 `kind` 是 `sfx` 的名稱之一（R5.2）或 `null`（不配）。不寫＝用預設（R5）；custom 不寫就不配。使用者在剪輯台換一顆、靜音也是寫這個欄位，改之前先重新讀 |
 | `clicks` | | | 選填 | 畫面上看得到游標按下的時間 `["+3.2", "#21@安裝"]`，一下一顆 `click`（R5.2）；media 段也能寫 |
 | `sfxExtra` | 選填 | | | `false`＝關掉這段的附加音效（09 答案的 ding、情境動畫的 P.sfx 等）；不寫＝開（fx 沒有附加音效） |
@@ -251,7 +251,7 @@
 
 - plan.json 寫 `"type": "fx", "fx": 編號`；40 種的名稱、vars、什麼時候用，跑 `--list` 看。效果看 `shared/template/fx/index.html`。
 - 直式：字卡動態縮 0.5625 倍放中間；`fx/catalog.json` 標 `"portrait": "band"` 的 14 張只剩中間一條，`--check` 會 ⚠（→ 換 `"portrait": "ok"` 的或拿掉）。挑之前在 `fx/index.html` 按「直式預覽」看（`shared/style.md`「直式」）。
-- `bg` 預設 `none`（透明疊在講者上）；`dark`／`light`／`accent` 是不透明整張幕（會蓋住講者，沒有子母畫面）。顏色自動用 `kit/brand.css` 的主色，不用寫 `accent`。
+- `bg` 預設 `none`（透明疊在講者上）；`dark`／`light`／`accent` 是不透明整張幕（會蓋住講者，沒有子母畫面）。滿版流動字（`fx/catalog.json` 標 `"portrait": "band"` 的 14 張）橫式不寫 `bg` 時用那張卡自己的底色（catalog 的 `bg`，整張幕）：透明會縮到講者旁邊、邊被切成方框；明寫 `"none"` ⚠（056）。顏色自動用 `kit/brand.css` 的主色，不用寫 `accent`。
 - vars 的值一律寫字串：`"vars": { "label": "做了", "number": "29", "unit": "支影片" }`（fx 29 數字計數：`label` 左側、`number`、`unit` 右側單位，選填）。寫了 fx 沒有的變數（例 fx 29 的 `vars.text`），`--check` 會 ✖ 並列出可用欄位。
 - **14、27、31、38** 用了另外的線上字型，第一次 render 需要網路（HyperFrames 會快取到 `~/.cache/hyperframes/fonts`），離線時避開。
 - **03、12、16、33** 有非 90 度的斜邊，1× render 會有鋸齒，少用。
@@ -517,6 +517,15 @@
 | `"overlay"` | 透明、疊在講者上 | 只在時間到時掛上、時間到拿掉，**不幫你淡入淡出** | 自己寫進場與退場（`P.out(..., P.dur() - P.OUT)`）；不放滿版底；不能壓到 speakerBox |
 
 - 直式：`fullscreen` 的子合成照樣用 1920×1080 寫，build 自動整張縮 0.8475 放進上半資訊窗（R4.7），內容一樣留在 x 120–1300、y 130–880；`overlay` 用 1080×1920 座標寫，文字留在文字安全區（`shared/style.md`「直式」）。
+- 直式的樣子（056）：同一支檔靠參數換，不複製成兩個檔。縮進上半的 1920×1080 子合成，直式時 root 自動多一個 `data-format="portrait"`（`P.portrait` 是 true；橫式、1080×1920 的 overlay 都沒有），用法：
+  - CSS：`#x-flow[data-format="portrait"] .xflow-row { height: 84px; }`（只在直式生效）。
+  - 排版屬性：任何 `data-<名>` 旁邊寫 `data-<名>-portrait`，直式時排版前換上，例 `data-layout="row" data-layout-portrait="col"`、`data-gap="xl" data-gap-portrait="md"`（root 上的也算）。
+  - 有框的列（膠囊、清單列、層）直式字放大到 60 以上，audit 報 ⚠「內距不足」（門檻量整行高，框要約 2 倍字級）時：容器寫 `data-layout-allow-tight-portrait`，只在直式放寬框內上下內距，橫式照舊要內距。範例：`custom/x-stack.html`。
+  - 字級：root 寫 `data-portrait-type`，`.sc-t30`–`.sc-t56` 直式換成 60（× 0.8475＝畫面上 51，聚焦壓暗縮 0.96 也還有 48）；60 以上不動。字變大後列高、圖示跟著用上面的 CSS 放大。
+  - 插圖（`kit/illus.js`）裡的字：`data-text-scale-portrait="1.3"`（寫 `data-text-scale` 就橫式也放大）。
+  - 換行：`P.chars` 拆成一字一格後，瀏覽器在任何字之間都能換行；直式要換行的字在 timeline 開頭、`P.chars` 之前寫 `P.wrapWords('.xflow-text')`（直式才照詞包成不斷行的 span：標點、「的了嗎」黏前一個詞，6 字以內的關鍵詞不拆；`{ lines: true }`＝`//` 斷開的每一行各自平衡，`{ colon: true }`＝第一個全形冒號後換行；橫式不動）。選擇器和 `P.chars` 一樣不要從最外層的 `#x-flow` 開始。
+  - 鏡頭：直式的 `P.cam` 只推近、不帶位移（原點上緣中間），因為卡頂貼在舞台窗上緣、離講者面板只剩 30–40 px，往焦點帶會出窗；直式版面左右上下都留得出邊時，root 寫 `data-portrait-cam="free"` 照橫式推，audit 的 ⚠ `portrait-cam` 量有沒有出界。
+  - 檔頭【版面】多寫一行「直式：…」（直式改了什麼、放得下幾項幾字）；直式放得比較少時，fill.json 寫 `"portraitMax": { "items": 3, "items.text": 10 }`（清單最多幾項、文字最多幾字），直式專案超過 `--check` ⚠。範例：`custom/x-checklist.html`。
 
 4. 子合成的長度不用手填：結尾寫 `P.end()`（不帶參數），長度自動等於 plan.json 這段的長度（build 把段長帶進子合成，`P.dur()`），`to` 改了不用改檔。root 的 `data-duration` 留著、寫估計值就好，不用和段長一致；`--check` 印 ⚠「data-duration 比段長短」時照 → 改成 ≥ 段長。
 

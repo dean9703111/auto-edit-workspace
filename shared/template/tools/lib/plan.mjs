@@ -652,7 +652,10 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
       const alt = fx.filter((f) => f.category === def.category && f.portrait !== 'band' && (f.portraitMinPx ?? 0) >= C.minTextPx).map((f) => f.id);
       warn(`fx-${def.id}（${def.zh}）直式的小字只有 ${def.portraitMinPx}px（< ${C.minTextPx}px）→ 換成 portraitMinPx ≥ ${C.minTextPx} 的特效（${alt.length ? `同類可用：${alt.join('、')}` : `同類 ${def.category} 沒有，換別類`}）或拿掉`);
     }
-    const bg = seg.bg ?? 'none';
+    // 056：滿版流動字（catalog portrait: "band"）在橫式透明時會被 027 的 fxStage 縮到講者旁、被子合成的框裁成方框
+    //   → 橫式 bg 不寫就用這張卡自己的底色（catalog 的 bg，不透明的整張幕、不蓋臉）；直式照舊（band 直式已經 ⚠）
+    const bg = seg.bg ?? (!portrait && def.portrait === 'band' && ['dark', 'light', 'accent'].includes(def.bg) ? def.bg : 'none');
+    if (!portrait && bg === 'none' && def.portrait === 'band') warn(`fx-${def.id}（${def.zh}）是滿版流動字，透明（bg: "none"）會縮到講者旁邊、邊被切成方框 → 拿掉 bg（橫式預設用這張卡自己的底色，整張幕）或換不是滿版的特效`);
     if (!['none', 'dark', 'light', 'accent'].includes(bg)) err(`bg 只能是 "none"（透明疊在講者上）、"dark"、"light"、"accent"（不透明整張幕），現在是「${bg}」`);
     it.bg = bg;
     it.opaque = bg !== 'none';

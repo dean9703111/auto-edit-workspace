@@ -3,6 +3,10 @@
   "prefix": "xcai",
   "beat": "D",
   "layout": "fullscreen",
+  "portraitMax": {
+    "items.text": 7,
+    "items.res": 5
+  },
   "when": "交給 AI（或工具）一條一條跑完的工作（2–4 項，每項有一個結果，例「讀完逐字稿 3,214 字、找出重講 12 處」）；每列先轉圈，講到哪項那一列打勾、右邊跳出結果，下一列接著轉",
   "slots": {
     "title": {

@@ -57,6 +57,20 @@ P.chars('#rowA .sc-kw', {{{aAt}}} + 0.12, { mode: 'pop' });
 #qfA { position: absolute; left: 72px; right: 72px; top: 236px; height: 220px; display: flex; align-items: center; white-space: nowrap; transform-origin: 0% 50%;
        font-size: min(96px, calc(1216px / {{a_len}})); line-height: 1.2; font-weight: 900; }
 #qfA .sc-kw { color: inherit; box-shadow: inset 0 -0.2em 0 color-mix(in srgb, var(--brand-ink) 32%, transparent); }
+<!-- @style-full-portrait -->
+/* 直式（056）：全幕版整張縮 0.5952 放進上半（舞台窗 x 120–1800、y 40–900 → 畫面 x 40–1040、y 314–826），大卡撐滿舞台窗 1680×860，字級照畫面上的大小回推（× 0.5952）：
+   徽章 176（字 108）＋小標 108（畫面上 64）一列在卡內 y 80–256；問句、答案放在卡內 y 280–780 上下置中、左右內距 72（字寬 1536）：
+   問 clamp(110, 1536 ÷ 字數, 150)（畫面上 65–89；12 字 128）盡量一行，放不下換兩行（只在詞與詞之間，timeline 開頭照詞包好）；
+   答 min(260, max(1530 ÷ 字數, min(2900 ÷ 字數, 170)))：9 字以內一行 ≥ 170（畫面上 ≥ 101），10–16 字兩行 170（斷在標點）。 */
+#qfCard { left: 120px; top: 40px; width: 1680px; height: 860px; }
+.qf-badge { left: 72px; top: 80px; width: 176px; height: 176px; font-size: 108px; }
+.qf-label { left: 288px; top: 104px; font-size: 108px; line-height: 128px; }
+#qfQ { left: 72px; right: 72px; width: auto; top: 280px; height: 500px; display: flex; align-items: center;
+  font-size: clamp(110px, calc(1536px / {{q_len}}), 150px); line-height: round(1.2em, 2px); }
+#qfQ > .sc-opt { text-wrap: balance; }
+#qfA { left: 72px; right: 72px; top: 280px; height: 500px; white-space: normal; word-break: keep-all; overflow-wrap: anywhere;
+  font-size: min(260px, max(calc(1530px / {{a_len}}), min(calc(2900px / {{a_len}}), 170px))); line-height: round(1.15em, 2px); }
+#qfA > .sc-opt { text-wrap: balance; }
 <!-- @body-full -->
 <div id="qfCard" data-layout="free"{{#tone}} data-tone="{{tone}}"{{/tone}}>
   <div class="qf-face qf-front" data-flip="front">
@@ -77,5 +91,7 @@ const T0 = {{{in}}} + (P.prev() === 'speaker' ? 0.35 : 0.1);
 P.pop('#qfCard', T0, { from: 0.94, dy: 40 });
 P.pop('#qfQb', T0 + 0.25, { from: 0.4, dy: 0 });
 P.in('#qfQl', T0 + 0.35);
+/* 056 直式（縮進直式的全幕版）：問句照詞換行（kit P.wrapWords；橫式不動） */
+P.wrapWords('#qfQ .sc-opt');
 P.chars('#qfQ .sc-opt', T0 + 0.45, { stagger: 0.035 });
 P.flip('#qfCard', Math.max(T0 + 0.9, {{{aAt}}} - P.FLIP_LEAD));

@@ -82,6 +82,10 @@
       "required": true
     }
   },
+  "portraitMax": {
+    "startText": 6.5,
+    "endText": 6.5
+  },
   "sample": {
     "title": "AI 剪掉多少 NG",
     "startAt": "#161@32",

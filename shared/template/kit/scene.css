@@ -15,6 +15,7 @@
                                主題有背景圖時由產生器在段內 style 另補 background-image
    字級／字重／字色（字級都是整數行高；字級是下限，空間夠就放大）
      .sc-t30 … .sc-t150        font-size＋整數 line-height，並設定光學置中量 --opt
+                               056 直式字級表：情境動畫模板的 root 寫 data-portrait-type，直式時 .sc-t30–56 → 60（畫面上 ≥ 48，聚焦壓暗縮 0.96 時也夠）
      .sc-w900／.sc-w700／.sc-w500   Heavy／Bold／Medium（只用這三個字重）
      .sc-kw                    關鍵詞色（--sc-kw）；在 .sc-side／.sc-wcard 裡自動改用該面板的關鍵詞色
      .sc-mute／.sc-gray        深底次要字／淺底（全畫面、側邊欄）次要字
@@ -240,6 +241,10 @@ body, #root {
 .sc-t80  { font-size: 80px;  line-height: 104px; --opt: 10px; }
 .sc-t112 { font-size: 112px; line-height: 136px; --opt: 14px; }
 .sc-t150 { font-size: 150px; line-height: 150px; --opt: 18px; }
+/* 056 直式字級表（情境動畫模板選用）：直式裡的 1920×1080 子合成縮 0.8475 放進上半面板（kit/scene-motion.js 替 root 打 data-format="portrait"），
+   root 寫 data-portrait-type 時，.sc-t30–.sc-t56 換成 .sc-t60 的大小（60 × 0.8475 ＝ 畫面上 51；P.spot 壓暗的列縮 0.96 也還有 48.8，
+   style.md「直式」的字級下限 48）；60 以上本來就夠大、不動。橫式沒有 data-format，對不到；沒寫 data-portrait-type 的模板也對不到 */
+[data-format="portrait"][data-portrait-type] :is(.sc-t30, .sc-t34, .sc-t36, .sc-t40, .sc-t44, .sc-t48, .sc-t52, .sc-t54, .sc-t56) { font-size: 60px; line-height: 84px; --opt: 8px; }
 
 .sc-w900 { font-weight: 900; }
 .sc-w700 { font-weight: 700; }

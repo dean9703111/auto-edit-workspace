@@ -58,13 +58,26 @@
     #x-before-after .xba-delta { position: absolute; right: -56px; top: -4px; height: 72px; padding: 0 24px; line-height: 1; box-sizing: border-box; display: flex; align-items: center;
                                  border-radius: 36px; background: var(--sc-good); color: var(--sc-on-accent); white-space: nowrap; transform: rotate(-4deg); }
     /* 箭頭：#xba-arrow 的 data-links 自動產生（kit/scene-layout.js；樣式是 scene.css 的 .sc-link） */
+    /* 直式：版面同橫式（左右兩欄、漲跌標在右欄右上角），字放大 1.1 倍（標題 70.4、名稱與單位 57.2、數字 123.2）；說明與漲跌標字 57（畫面上 48）。
+       說明 8 字放得下：欄寬 516、欄內靠左 26、兩欄間距 64；漲跌標往上移、壓在欄框上緣，名稱列往下移到 68（不碰右欄名稱）；主卡上移到 130、內容區高 616，欄上方多出空間給它 */
+    #x-before-after[data-format="portrait"] #xba-card { top: 130px; }
+    #x-before-after[data-format="portrait"] #xba-body { height: 616px; }
+    #x-before-after[data-format="portrait"] #xba-card .sc-wcard__bar { font-size: 70.4px; line-height: 96px; padding-top: 16px; padding-bottom: 16px; }
+    #x-before-after[data-format="portrait"] .xba-lab, #x-before-after[data-format="portrait"] .xba-u { font-size: 57.2px; line-height: 80px; --opt: 6px; }
+    #x-before-after[data-format="portrait"] .xba-col { width: 516px; }
+    #x-before-after[data-format="portrait"] .xba-head { left: 26px; top: 68px; }
+    #x-before-after[data-format="portrait"] .xba-num { left: 26px; top: 164px; }
+    #x-before-after[data-format="portrait"] .xba-v { font-size: 123.2px; }
+    #x-before-after[data-format="portrait"] .xba-track { left: 26px; top: 312px; width: 456px; }
+    #x-before-after[data-format="portrait"] .xba-note { left: 26px; top: 364px; font-size: 57px; line-height: 78px; --opt: 7px; }
+    #x-before-after[data-format="portrait"] .xba-delta { right: -24px; top: -22px; height: 103px; padding: 0 34px; border-radius: 52px; font-size: 57px; }
   </style>
   <div id="x-before-after" data-composition-id="x-before-after" data-width="1920" data-height="1080" data-duration="15"
        data-cues-sample='{"start":0,"D":15,"cues":{"32":[1.6,4.2],"33":[4.3,6.9],"34":[7,9.5],"35":[9.6,14.6]},"refs":{"#32@手動":1.8,"#33@逐句":4.4,"#34@AI":7.1,"#35@省下":9.7}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xba-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt">剪一集要多久</span></div>
-      <div id="xba-body" data-layout="row" data-gap="xl">
+      <div id="xba-body" data-layout="row" data-gap="xl" data-gap-portrait="64">
         <svg id="xba-arrow" data-links="xba-left>xba-right" xmlns="http://www.w3.org/2000/svg"></svg>
         <div id="xba-left" class="xba-col" data-slot>
           <div class="xba-head">

@@ -75,21 +75,36 @@
     #x-prompt-tree[data-wide] #xptr-root { left: 580px; width: 520px; height: 112px; font-size: 52px; line-height: 72px; }
     #x-prompt-tree[data-wide] .xptr-ch { width: 400px; padding: 0 28px 0 36px; gap: 20px; }
     #x-prompt-tree[data-wide] #xptr-sum { left: 1140px; }
+    /* 直式（056，r1 縮約 0.85、間距放鬆；r2 字上下置中、重點那排拉開）：靠左的大綱（位置由 script 的 PORT 分支寫）；群組＝舞台窗 1180×750、左右留 32；
+       根節點 60、其他 57；框裡的字 padding-bottom 8＝字面上移 4（中文字墨比行框中線低約 0.06em，量完態截圖上下留白才相等） */
+    #x-prompt-tree[data-format="portrait"] #xptr-card { top: 130px; height: 750px; }
+    #x-prompt-tree[data-format="portrait"] #xptr-inrow { left: 32px; right: auto; height: 100px; justify-content: flex-start; }
+    #x-prompt-tree[data-format="portrait"] #xptr-in { height: 100px; padding: 0 96px 0 84px; border-radius: 50px; }
+    #x-prompt-tree[data-format="portrait"] #xptr-txt { font-size: 57px; line-height: 72px; padding-bottom: 8px; }
+    #x-prompt-tree[data-format="portrait"] #xptr-spark { --d: 44px; --i: 44px; left: 26px; top: 26px; }
+    #x-prompt-tree[data-format="portrait"] #xptr-send { --d: 68px; --i: 38px; right: 14px; top: 14px; }
+    #x-prompt-tree[data-format="portrait"] #xptr-ring { border-radius: 50px; }
+    #x-prompt-tree[data-format="portrait"] #xptr-root { left: 32px; width: max-content; height: 108px; padding: 0 32px 8px; border-radius: 20px; font-size: 60px; line-height: 76px; }
+    #x-prompt-tree[data-format="portrait"] .xptr-ch { width: 416px; height: 112px; padding: 0 26px; gap: 10px; border-radius: 16px; }
+    #x-prompt-tree[data-format="portrait"] .xptr-no { width: 64px; height: 64px; border-radius: 32px; font-size: 57px; line-height: 64px; }
+    #x-prompt-tree[data-format="portrait"] .xptr-ch .sc-t44 { font-size: 57px; line-height: 72px; padding-bottom: 8px; }
+    #x-prompt-tree[data-format="portrait"] .xptr-lf { width: 276px; height: 80px; border-radius: 40px; padding: 0 24px 8px; font-size: 57px; line-height: 72px; }
+    #x-prompt-tree[data-format="portrait"] #xptr-sum { left: auto; right: 32px; height: 80px; border-radius: 40px; padding: 0 28px 8px; font-size: 57px; line-height: 72px; }
   </style>
-  <div id="x-prompt-tree" data-composition-id="x-prompt-tree" data-width="1920" data-height="1080" data-duration="15.4"
+  <div id="x-prompt-tree" data-composition-id="x-prompt-tree" data-width="1920" data-height="1080" data-duration="15.4" data-portrait-cam="free"
        data-cues-sample='{"start":0,"D":15.4,"cues":{"571":[0.4,4.6],"572":[5.0,7.0],"573":[7.2,9.4],"574":[10.2,12.2],"575":[12.6,14.6]},"refs":{"#571@幫我":1.8,"#573@三個":7.9}}'>
     <div class="sc-surface-fs fill"></div>
     <div id="xptr-card" data-wide-keep>
       <svg id="xptr-links" xmlns="http://www.w3.org/2000/svg" data-layout-ignore><path id="xptr-k0" class="xptr-k" d="" /></svg>
       <div id="xptr-inrow">
-        <div id="xptr-in" data-snap-width>
+        <div id="xptr-in" data-snap-width data-layout-allow-tight-portrait>
           <span id="xptr-spark" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path d="M20 3v4" /> <path d="M22 5h-4" /> <path d="M4 17v2" /> <path d="M5 18H3" /> </svg></span>
           <span id="xptr-txt" class="sc-t40 sc-w700">幫我規劃一支 10 分鐘的教學影片</span>
           <span id="xptr-send" class="sc-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="m5 12 7-7 7 7" /> <path d="M12 19V5" /> </svg></span>
           <i id="xptr-ring" data-layout-allow-overlap></i>
         </div>
       </div>
-      <div id="xptr-root" class="xptr-node sc-t48 sc-w900">10 分鐘教學影片</div>
+      <div id="xptr-root" class="xptr-node sc-t48 sc-w900" data-snap-width data-layout-allow-tight-portrait>10 分鐘教學影片</div>
       <div id="xptr-sum" class="sc-t40 sc-w900" data-snap-width data-layout-allow-tight>3 章・6 個重點</div>
     </div>
   </div>
@@ -114,17 +129,20 @@
     const ROOT = document.getElementById('x-prompt-tree'), WIDE = !!ROOT.closest('[data-wide]');
     if (WIDE) ROOT.setAttribute('data-wide', '');      // 全寬版型：CSS 的 [data-wide] 那幾行接手
     // 鏡頭群組裡的座標（和 CSS 同一組數字）：群組寬、膠囊字級與左右留白、膠囊／根節點／章節／重點的上緣（置中前）與高、章節寬與中心距
-    const lay = WIDE ? { gw: 1680, fs: 44, chrome: 200, pillY: 120, pillH: 104, rootY: 308, rootH: 112, chY: 524, chW: 400, step: 540, lfY: 704 }
+    // 直式（056，PORT）：群組＝舞台窗 1180×750（中線 y 375）；膠囊、根節點、每一列（章節＋重點，列距 step）由上往下靠左排
+    const PORT = P.portrait;
+    const lay = PORT ? { gw: 1180, fs: 57, chrome: 184, pillY: 0, pillH: 100, rootY: 140, rootH: 108, chY: 292, chW: 416, step: 148, lfY: 0 }
+              : WIDE ? { gw: 1680, fs: 44, chrome: 200, pillY: 120, pillH: 104, rootY: 308, rootH: 112, chY: 524, chW: 400, step: 540, lfY: 704 }
                      : { gw: 1180, fs: 40, chrome: 184, pillY: 110, pillH: 96, rootY: 272, rootH: 104, chY: 456, chW: 356, step: 404, lfY: 592 };
     const leavesOf = function (b) { return TL < 0 ? [] : b.slice(1).filter(function (t) { return t != null && String(t) !== ''; }); };
     // 整組上下置中：內容區 y 120–870（群組 80–830，中線 455）；樹的高度看每章最多幾個重點（子母畫面直排、間距 88，全寬一排）
     const most = Math.max.apply(null, TREE.map(function (b) { return leavesOf(b).length; }));
-    const bottom = most === 0 ? lay.chY + 104 : lay.lfY + (WIDE ? 0 : 88 * (most - 1)) + 72;
-    const oy = Math.round(455 - (lay.pillY + bottom) / 2);
+    const bottom = PORT ? lay.chY + TREE.length * lay.step - 36 : most === 0 ? lay.chY + 104 : lay.lfY + (WIDE ? 0 : 88 * (most - 1)) + 72;
+    const oy = Math.round((PORT ? 375 : 455) - (lay.pillY + bottom) / 2);
     ['pillY', 'rootY', 'chY', 'lfY'].forEach(function (k) { lay[k] += oy; });
     $q('#xptr-inrow')[0].style.top = lay.pillY + 'px';
     $q('#xptr-root')[0].style.top = lay.rootY + 'px';
-    $q('#xptr-sum').forEach(function (e) { e.style.top = (lay.rootY + (lay.rootH - 72) / 2) + 'px'; });
+    $q('#xptr-sum').forEach(function (e) { e.style.top = (lay.rootY + (lay.rootH - (PORT ? 80 : 72)) / 2) + 'px'; });
     const CAM = $q('#xptr-card')[0], LINKS = $q('#xptr-links')[0], NS = 'http://www.w3.org/2000/svg';
     const el = function (id, cls, text) { var e = document.createElement('div'); e.id = id; e.className = cls; if (text != null) e.textContent = text; return e; };
     const path = function (id, d) { var p = document.createElementNS(NS, 'path'); p.id = id; p.setAttribute('class', 'xptr-k'); p.setAttribute('d', d); LINKS.appendChild(p); return p; };
@@ -136,21 +154,27 @@
         + ' A16 16 0 0 ' + (s < 0 ? 0 : 1) + ' ' + x1 + ' ' + (mid + 16) + ' V' + y1;
     };
     const cx = lay.gw / 2, rootB = lay.rootY + lay.rootH, chB = lay.chY + 104;
-    $q('#xptr-k0')[0].setAttribute('d', 'M' + cx + ' ' + (lay.pillY + lay.pillH + 6) + ' V' + (lay.rootY - 6));
+    const SPX = 48;                                      // 直式：主幹的 x（膠囊、根節點左緣 32 往右 16）
+    $q('#xptr-k0')[0].setAttribute('d', 'M' + (PORT ? SPX : cx) + ' ' + (lay.pillY + lay.pillH + 6) + ' V' + (lay.rootY - 6));
     const chNodes = [], chLinks = [], lfNodes = [], lfLinks = [];
     TREE.forEach(function (b, i) {
-      const c = cx + Math.round((i - (TREE.length - 1) / 2) * lay.step), left = c - lay.chW / 2;
+      const c = cx + Math.round((i - (TREE.length - 1) / 2) * lay.step), left = PORT ? 72 : c - lay.chW / 2;
+      const top = PORT ? lay.chY + i * lay.step : lay.chY, mid = top + 56;   // 直式：第 i 列的上緣與中線
       const ch = el('xptr-c' + (i + 1), 'xptr-node xptr-ch');
-      ch.style.left = left + 'px'; ch.style.top = lay.chY + 'px';
+      ch.style.left = left + 'px'; ch.style.top = top + 'px';
       ch.setAttribute('data-width-shared', '');      // 章節卡等寬（樹左右對稱），短的章名右邊留白是刻意的
+      ch.setAttribute('data-layout-allow-tight-portrait', '');   // 直式字上移 4（光學置中），上內距照膠囊算
       ch.appendChild(el('xptr-n' + (i + 1), 'xptr-no sc-t40 sc-w900', String(i + 1)));
       ch.appendChild(el('xptr-t' + (i + 1), 'sc-t44 sc-w900', String(b[0])));
       CAM.appendChild(ch); chNodes.push(ch);
-      chLinks.push(path('xptr-k' + (i + 1), elbow(cx, rootB + 4, c, lay.chY - 4, (rootB + lay.chY) / 2)));
+      chLinks.push(path('xptr-k' + (i + 1), PORT ? 'M' + SPX + ' ' + (rootB + 4) + ' V' + (mid - 16) + ' A16 16 0 0 0 ' + (SPX + 16) + ' ' + mid + ' H' + (left - 4)
+                                                 : elbow(cx, rootB + 4, c, lay.chY - 4, (rootB + lay.chY) / 2)));
       const leaves = leavesOf(b);
       leaves.forEach(function (t, j) {
         var lx, ly, d;
-        if (WIDE) {   // 全寬：章節中線左右各 112（只有一個就在正下方）
+        if (PORT) {   // 直式：章節卡右邊一排（間距 60、48），短橫線從前一個接過來
+          lx = left + lay.chW + 60 + 324 * j; ly = top + 16; d = 'M' + (j ? lx - 44 : left + lay.chW + 4) + ' ' + mid + ' H' + (lx - 4);
+        } else if (WIDE) {   // 全寬：章節中線左右各 112（只有一個就在正下方）
           const lc = leaves.length === 1 ? c : c + (j ? 112 : -112);
           lx = lc - 104; ly = lay.lfY; d = elbow(c, chB + 4, lc, ly - 4, (chB + ly) / 2);
         } else {      // 子母畫面：章節卡下面直排（間距 88），線從編號圓下面往下、圓角轉進重點左邊
@@ -170,13 +194,16 @@
     // 鏡頭以群組中心（y 430）為原點縮放：膠囊中心 y＝pillY＋pillH／2 推到內容區正中（群組 y 455＝畫面 y 495）
     const camY = Math.round(455 - 430 - zoom * (lay.pillY + lay.pillH / 2 - 430));
     // 拉回 1 倍之後鏡頭跟著樹往上帶：每長出一層，膠囊到最下面那一層的中線都對到內容區正中；全部長完回 0（整棵樹本來就置中）
-    const follow = function (b) { return Math.round(455 - (lay.pillY + b) / 2); };
-    const camRoot = follow(rootB), camCh = follow(chB);
+    const follow = function (b) { return Math.round((PORT ? 375 : 455) - (lay.pillY + b) / 2); };
+    const camRoot = follow(rootB), camCh = follow(PORT ? lay.chY + TREE.length * lay.step - 36 : chB);   // 直式：章節一出來整棵樹就齊了（重點在同一列），回 0
+    // 直式：開場不推整個群組（樹長完會撐滿窗），只推輸入膠囊那一列：膠囊中心帶到群組正中（x 590、y 375），送出時回到左上
+    const pdx = Math.round(590 - (32 + (em * lay.fs + lay.chrome) / 2)), pdy = Math.round(375 - (lay.pillY + lay.pillH / 2));
     // 打字：每秒 8.5 字，送出前要停 1.3 秒；時間不夠就加快（最快 0.8 秒打完）
     const typeDur = Math.min(Array.from(prompt.replace(/\s+/g, '')).length / 8.5, Math.max(0.8, TR - TT - 1.3));
 
     // 拍 0 開場：鏡頭推近在輸入膠囊 → 膠囊彈出 → 星光、送出鈕描線
-    P.cam('#xptr-card', 0.5, { scale: zoom, x: 0, y: camY, dur: 0.01 });
+    if (PORT) P.cam('#xptr-inrow', 0.5, { scale: zoom, x: pdx, y: pdy, dur: 0.01 });
+    else P.cam('#xptr-card', 0.5, { scale: zoom, x: 0, y: camY, dur: 0.01 });
     P.pop('#xptr-in', 0.5, { from: 0.9, dy: 20 });
     P.icon('#xptr-spark, #xptr-send', 0.7, { stagger: 0.1 });
 
@@ -186,14 +213,16 @@
 
     // 拍 2 送出：送出鈕重拍 → ＋0.1 鏡頭 1.1 秒拉回 1 倍（膠囊＋根節點在正中）→ ＋0.2 膠囊底下描一條線 → ＋0.55 根節點從頂邊長出來；＋0.6 主色框收掉
     P.punch('#xptr-send', TR, { scale: 0.86 });
-    P.cam('#xptr-card', TR + 0.1, { x: 0, y: camRoot, scale: 1, dur: 1.1 });
-    P.stroke('#xptr-k0', TR + 0.2, { dur: 0.35 });
-    P.pop('#xptr-root', TR + 0.55, { from: 0.6, dy: -16 });
+    if (PORT) { P.cam('#xptr-inrow', TR + 0.1, { x: 0, y: 0, scale: 1, dur: 0.7 }); P.cam('#xptr-card', TR + 0.1, { x: 0, y: camRoot, scale: 1, dur: 0.7 }); }
+    else P.cam('#xptr-card', TR + 0.1, { x: 0, y: camRoot, scale: 1, dur: 1.1 });
+    P.stroke('#xptr-k0', TR + (PORT ? 0.55 : 0.2), { dur: PORT ? 0.3 : 0.35 });   // 直式膠囊從正中回到左上，線和根節點晚一點（不和移動中的膠囊疊到）
+    P.pop('#xptr-root', TR + (PORT ? 0.6 : 0.55), { from: 0.6, dy: -16 });
     P.out('#xptr-ring', TR + 0.6, { dur: 0.3 });
 
     // 拍 3 章節：彗星描線早 0.4 秒一起出發、鏡頭往上帶，線頭到的那一刻章節卡錯拍彈出（一組算一個）
     P.comet(chLinks, TB - 0.4, { dur: 0.45 });
-    P.cam('#xptr-card', TB - 0.4, { x: 0, y: camCh, scale: 1, dur: 1.0 });
+    if (PORT) P.cam('#xptr-card', TB - 0.5, { x: 0, y: camCh, scale: 1, dur: 0.45 });   // 直式章節卡一彈出就是最下面，鏡頭要先回正（不然第 3 章彈出時下緣會被切）
+    else P.cam('#xptr-card', TB - 0.4, { x: 0, y: camCh, scale: 1, dur: 1.0 });
     P.pop(chNodes, TB, { from: 0.6, dy: -16, stagger: 0.08 });
 
     // 拍 4 每章的重點：線早 0.2 秒描出、鏡頭回正，重點膠囊跟著錯拍長出來

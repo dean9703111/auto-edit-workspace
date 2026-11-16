@@ -70,6 +70,15 @@
     /* 圓鈕在截圖區正中、寫死整數 px（截圖區高 639 的一半是 319.5，用 calc(50%) 會落在半像素）：(639 − 88) ÷ 2 ≈ 276；全寬沒有標題 (702 − 88) ÷ 2 ＝ 307 */
     #x-slider[data-wide] #xsl-knob { top: 307px; }
     #x-slider[data-wide] #xsl-title + #xsl-card #xsl-knob { top: 276px; }
+    /* 直式（056）：標題 80、膠囊字 72（畫面上 68／61）；有標題時標題＋大框 x 184–1232、y 144–864，沒有標題大框 x 136–1284、y 176–832（都置中在舞台窗 x 120–1300、y 130–880） */
+    #x-slider[data-format="portrait"] #xsl-title { left: 184px; top: 144px; font-size: 80px; line-height: 104px; --opt: 10px; }
+    #x-slider[data-format="portrait"] #xsl-card { left: 136px; top: 176px; width: 1148px; height: 656px; }
+    #x-slider[data-format="portrait"] #xsl-title + #xsl-card { left: 184px; top: 264px; width: 1048px; height: 600px; }
+    #x-slider[data-format="portrait"] .xsl-tag { height: 104px; padding: 0 28px 0 24px; gap: 16px; font-size: 72px; line-height: 100px; --opt: 8px; }
+    #x-slider[data-format="portrait"] .xsl-tag::before { width: 18px; height: 18px; }
+    /* 圓鈕在截圖區正中：(632 − 88) ÷ 2 ＝ 272；有標題 (576 − 88) ÷ 2 ＝ 244 */
+    #x-slider[data-format="portrait"] #xsl-knob { top: 272px; }
+    #x-slider[data-format="portrait"] #xsl-title + #xsl-card #xsl-knob { top: 244px; }
   </style>
   <div id="x-slider" data-composition-id="x-slider" data-width="1920" data-height="1080" data-duration="10.5"
        data-cues-sample='{"start":0,"D":10.5,"cues":{"601":[0.3,2.8],"602":[3.0,5.8],"603":[6.0,10.5]},"refs":{"#601@調光前":0.6,"#602@調光後":3.4}}'>
@@ -108,8 +117,10 @@
 
     // 拉桿（以下都不用改）：位置是時間的純函式（截圖區寬的 %），杆子 translateX 和「之後」那層的 clip-path 右邊界用同一個整數 px。
     // KEYS：[從預備起算的秒數, 位置 %, 這一段的曲線]：停 8% → 0.15 秒往左預備到 6.5% → 0.4 秒快甩到 76% → 0.4 秒回彈到 70% → 停 0.6 秒 → 1.6 秒慢掃回 40%
-    const SW = WIDE && !$q('#xsl-title').length ? 1248 : 1136;   // 截圖區寬（16:9；只有「全寬、沒有標題」放大）
-    const KEYS = [[0, 8], [0.15, 6.5, 'sine'], [0.55, 76, 'out'], [0.95, 70, 'sine'], [1.55, 70], [3.15, 40, 'inOut']];
+    const SW = P.portrait ? $q('#xsl-screen')[0].offsetWidth : WIDE && !$q('#xsl-title').length ? 1248 : 1136;   // 截圖區寬（16:9；只有「全寬、沒有標題」放大；直式照 CSS 量）
+    // 直式：膠囊比較大，快甩的終點停在「之前」膠囊左緣再往左 56 px（圓鈕半徑 44＋留 12），回彈少 4%
+    const FAR = P.portrait ? Math.min(76, Math.floor(($q('#xsl-tagb')[0].offsetLeft - 56) / SW * 100)) : 76;
+    const KEYS = [[0, 8], [0.15, 6.5, 'sine'], [0.55, FAR, 'out'], [0.95, FAR - 6 + (P.portrait ? 2 : 0), 'sine'], [1.55, FAR - 6 + (P.portrait ? 2 : 0)], [3.15, 40, 'inOut']];
     const LEAD = 0.15, TOTAL = KEYS[KEYS.length - 1][0];
     const EASE = { out: function (s) { return 1 - Math.pow(1 - s, 3); }, sine: function (s) { return (1 - Math.cos(Math.PI * s)) / 2; },
                    inOut: function (s) { return s < 0.5 ? 4 * s * s * s : 1 - Math.pow(-2 * s + 2, 3) / 2; } };
@@ -122,9 +133,12 @@
       return KEYS[KEYS.length - 1][1];
     };
     const BAR = $q('#xsl-bar')[0], LA = $q('#xsl-la')[0], KNOB = $q('#xsl-knob')[0];
+    // 直式：拉桿的擺位寫在起點 8%（translateX 扣掉它）→ 圓鈕的擺位外框在截圖區裡，不出舞台窗（audit portrait-window 量擺位）
+    const BASE = P.portrait ? Math.round(KEYS[0][1] / 100 * SW) : 0;
+    if (BASE) BAR.style.left = BASE + 'px';
     const paint = function (r) {
       const tau = r * TOTAL, x = Math.round(posAt(tau) / 100 * SW);
-      BAR.style.transform = 'translateX(' + x + 'px)';
+      BAR.style.transform = 'translateX(' + (x - BASE) + 'px)';
       LA.style.clipPath = 'inset(0 ' + (SW - x) + 'px 0 0)';
       // 圓鈕：照速度（%／秒）橫向拉長，最多 1.18 倍；預備＋快甩時被捏住微縮 6%；停下來兩個都回 1
       const v = tau > 0 && tau < TOTAL ? Math.abs(posAt(tau + 0.01) - posAt(tau - 0.01)) / 0.02 : 0;

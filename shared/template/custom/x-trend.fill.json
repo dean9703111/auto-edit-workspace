@@ -100,6 +100,9 @@
       "ref": "T3"
     }
   },
+  "portraitMax": {
+    "pillText": 6.5
+  },
   "sample": {
     "title": "訂閱人數",
     "icon": "trending-up",

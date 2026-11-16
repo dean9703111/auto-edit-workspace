@@ -3,6 +3,7 @@
   "prefix": "xpch",
   "beat": "H",
   "layout": "fullscreen",
+  "portraitMax": { "ask": 12, "reply": 12, "reply2": 12 },
   "when": "演一次「問 AI 一句、AI 回一句」：輸入膠囊打出問題 → 講到「送出」紙飛機飛上去、問題變成右上角泡泡 → AI「輸入中」→ 講到回答，AI 泡泡彈出、回答逐字打出",
   "slots": {
     "title": {

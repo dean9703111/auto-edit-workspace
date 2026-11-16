@@ -2,7 +2,9 @@
 //
 //   pageSeekSource(t)            → 一段 JS：用 HyperFrames runtime 的 __player.renderSeek 跳到第 t 秒，等字型與兩格
 //   pageMeasureSource(opts)      → 一段 JS：量 #<hostId> 底下每個元素，回傳原始量測（判定在 audit-rules.mjs 做）
-//     opts＝{ hostId, W, H, unstage }（unstage：009 直式舞台縮放的段，先拿掉 stage transform 再量，見 unstageInPage）
+//     opts＝{ hostId, W, H, unstage, keepAllow }（unstage：009 直式舞台縮放的段，先拿掉 stage transform 再量，見 unstageInPage；
+//       keepAllow：056 字卡動態，host 的 data-layout-allow-overflow 留著）
+//   pageFxDoneSource({ hostId, D, kind }) → 一段 JS：字卡動態的完成態（段內秒數；fxDoneInPage）
 //     回傳 { host: { start, duration, visible }, els: [ … ], moving: N }，els 每一項：
 //       { i, tag, desc: { id, cls, text, near }, rect:[l,t,r,b], inner:[l,t,r,b], text:bool, textRect, inkRect, fontSize, scale,
 //         painted:bool, box:bool（可當「容器」的有底有框盒）, media:bool, full:bool, bg:bool（背景層）, shaped:bool（斜邊／旋轉縮放）,
@@ -265,6 +267,8 @@ export function measureInPage({ hostId, W, H }) {
       inkRect: rs.length ? ink(el, cs, rs) : null,
       fontSize: px(cs.fontSize),
       scale: off > 0 && tag !== 'svg' ? r2(r.width / off) : 1,
+      // 056：自己或祖先有立體轉動（matrix3d，例 fx-19 圓柱的 rotateY）：字寬被透視壓窄，字級改看字高的縮放（取寬高比例較大的）
+      ...((() => { if (!(off > 0) || tag === 'svg' || !text) return null; for (let n = el; n && n !== host; n = n.parentElement) if (/^matrix3d/.test(getComputedStyle(n).transform || '')) return { fscale: r2(Math.max(r.width / off, el.offsetHeight > 0 ? r.height / el.offsetHeight : 0)) }; return null; })()),
       // v2 微動（P.idle 寫 CSS translate／scale）：自己或祖先正在漂浮、呼吸，位置是小數不代表寫錯（半像素邊不判）
       micro: (() => { for (let n = el; n && n !== host; n = n.parentElement) { const c = getComputedStyle(n); if ((c.translate && c.translate !== 'none') || (c.scale && c.scale !== 'none')) return true; } return false; })(),
       whiteSpace: cs.whiteSpace,
@@ -548,7 +552,8 @@ export function unstageInPage(fn, opts) {
       undo.push([n, n.style.getPropertyValue('transform'), n.style.getPropertyPriority('transform')]);
       n.style.setProperty('transform', 'none', 'important');
     }
-    if (host.hasAttribute('data-layout-allow-overflow')) { undo.push([host, null, host.getAttribute('data-layout-allow-overflow')]); host.removeAttribute('data-layout-allow-overflow'); }
+    // 056：字卡動態（keepAllow）保留 host 的 data-layout-allow-overflow：飛出畫面、捲軸框外藏起來的字是特效本身（和橫式一樣不判撐破、裁切、超出畫面）
+    if (!opts.keepAllow && host.hasAttribute('data-layout-allow-overflow')) { undo.push([host, null, host.getAttribute('data-layout-allow-overflow')]); host.removeAttribute('data-layout-allow-overflow'); }
   }
   try {
     const m = fn(opts);
@@ -621,3 +626,20 @@ export function unstageInPage(fn, opts) {
 }
 export const pageMeasureSource = (opts) => (opts.unstage ? `(${unstageInPage.toString()})(${measureInPage.toString()}, ${JSON.stringify(opts)})` : `(${measureInPage.toString()})(${JSON.stringify(opts)})`);
 export const pageMotionSource = (opts) => `(${collectMotionInPage.toString()})(${JSON.stringify(opts)})`;
+
+// 056：字卡動態的完成態（fx/catalog.json effects[].done）→ 段內秒數；null＝找不到（照舊段尾前 0.6 秒）
+//   時間軸上有 label 'done' 就用它（catalog 寫 "label" 的卡）；"timeline"＝最後一塊動畫停住的那一刻：段尾前 0.35 秒內還在跑的補間是收尾退場，
+//   取它開始前 0.1 秒（和 dev/056/compare.mjs、盤點的截圖同一套）；整段都在動回 null
+export function fxDoneInPage({ hostId, D, kind }) {
+  const host = document.getElementById(hostId), comp = host && host.getAttribute('data-composition-id');
+  const tl = comp && window.__timelines && window.__timelines[comp];
+  if (!tl) return null;
+  if (tl.labels && tl.labels.done != null) return tl.labels.done;
+  if (kind === 'label' || typeof tl.getChildren !== 'function') return null;
+  const iv = [];
+  const walk = (t, off) => { for (const c of t.getChildren(false, true, true)) { const s = off + c.startTime(), e = s + c.totalDuration(); if (c.getChildren) walk(c, s); else if (c.totalDuration() > 0.05) iv.push([s, e]); } };
+  walk(tl, 0);
+  const exitAt = iv.filter(([s, e]) => e >= D - 0.35 && s > 0.3).reduce((m, [s]) => Math.min(m, s), D);
+  return exitAt < D - 0.3 && exitAt > 0.6 ? exitAt - 0.1 : null;
+}
+export const pageFxDoneSource = (opts) => `(${fxDoneInPage.toString()})(${JSON.stringify(opts)})`;

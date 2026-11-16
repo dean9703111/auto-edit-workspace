@@ -63,6 +63,17 @@
     #x-checklist-ai #xcai-fill { position: absolute; inset: 0; border-radius: 12px; background: var(--brand); }
     #x-checklist-ai #xcai-fillok { position: absolute; inset: 0; border-radius: 12px; background: var(--sc-good); }
     #x-checklist-ai #xcai-n { position: absolute; right: 0; top: 0; width: 224px; text-align: right; white-space: nowrap; }
+    /* 直式（056）：舞台縮 0.8475 → 標題 80、項目與結果 70（畫面上 59）；主卡拉到 y 136–876，列拉寬到 1096、高 88、間距 24。
+       計數由 script 移進標題列（白字 80 靠右），進度區只剩軌道 1080×24 */
+    #x-checklist-ai[data-format="portrait"] #xcai-card { top: 136px; }
+    #x-checklist-ai[data-format="portrait"] #xcai-card .sc-wcard__bar { position: relative; font-size: 80px; line-height: 104px; padding-top: 12px; padding-bottom: 12px; }
+    #x-checklist-ai[data-format="portrait"] #xcai-body { height: 608px; }
+    #x-checklist-ai[data-format="portrait"] .xcai-row { width: 1096px; height: 88px; }
+    #x-checklist-ai[data-format="portrait"] .xcai-t, #x-checklist-ai[data-format="portrait"] .xcai-res { font-size: 70px; line-height: 80px; --opt: 8px; }
+    #x-checklist-ai[data-format="portrait"] .xcai-box, #x-checklist-ai[data-format="portrait"] .xcai-box svg { width: 72px; height: 72px; }
+    #x-checklist-ai[data-format="portrait"] #xcai-prog { width: 1080px; height: 24px; }
+    #x-checklist-ai[data-format="portrait"] #xcai-track { top: 0; width: 1080px; }
+    #x-checklist-ai[data-format="portrait"] #xcai-n { right: 56px; top: 20px; width: 264px; font-size: 80px; line-height: 88px; color: var(--sc-fs-bar-ink); }
   </style>
   <div id="x-checklist-ai" data-composition-id="x-checklist-ai" data-width="1920" data-height="1080" data-duration="15.5"
        data-cues-sample='{"start":0,"D":15.5,"cues":{"252":[2.3,4.8],"253":[4.9,7.3],"254":[7.4,9.8],"255":[9.9,12.4],"256":[12.7,15.2]},"refs":{"#252@逐字稿":2.6,"#253@重講":5.1,"#254@剪輯清單":7.6,"#255@字幕":10.1}}'>
@@ -103,6 +114,7 @@
     const ENTER = P.prev() === 'fullscreen' ? 'swap' : 'grow';   // 預設看前一段（build 給）：也是全畫面＝'swap' 換卡不換景，其他＝'grow' 從子母畫面長出；要固定才改成 'grow' 或 'swap'
     const ROWS = '#xcai-r1, #xcai-r2, #xcai-r3, #xcai-r4';   // 全部的列（3 項時拿掉 r4）
     const N = $q('#x-checklist-ai .xcai-row').length;    // 幾項＝上面 HTML 的列數，不用改
+    if (P.portrait) $q('#xcai-card .sc-wcard__bar')[0].appendChild($q('#xcai-n')[0]);   // 直式：計數移進標題列右邊（進度區只剩軌道），下面和軌道同一個 P.in 淡入
 
     // 拍 0 開場：主卡進場（看 ENTER）→ 標題逐字上浮
     if (ENTER === 'grow') P.grow('#xcai-card', 0.3);
@@ -110,7 +122,7 @@
     P.chars('#xcai-card .sc-wcard__bar .sc-opt', 0.5, { stagger: 0.035 });
     // 拍 1 待辦清單：四列錯拍上浮（項目字和等待圈一起出來），進度區淡入；1.6 秒第 1 列開始轉
     P.pop(ROWS, 1.0, { stagger: 0.15, from: 0.96, dy: 24 });
-    P.in('#xcai-prog', 0.55);   // 進度條跟著主卡出現（和四列錯開，同一秒不超過 2 個新元素）
+    P.in(P.portrait ? '#xcai-prog, #xcai-n' : '#xcai-prog', 0.55);   // 進度條跟著主卡出現（和四列錯開，同一秒不超過 2 個新元素；直式計數在標題列，一起淡入）
     P.in('#xcai-s1', 1.6, { dur: 0.2 });  P.spin('#xcai-s1', 1.6, { until: T1 });
 
     // 拍 2 第 1 項：圈圈停下、換成主色圈＋勾 → ＋0.15 結果逐字跳出 → ＋0.3 計數 +1、進度條前進一格、下一列開始轉；這一列聚焦（淡色底，其他壓暗 0.6）
