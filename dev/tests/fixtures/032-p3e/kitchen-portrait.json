@@ -5026,8 +5026,9 @@
   "file": "<ROOT>/shared/sfx/bgm-cylinder-five.wav",
   "from": "plan.json",
   "credit": "Music: \"Cylinder Five\" by Chris Zabriskie (http://chriszabriskie.com/cylinders/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)",
-  "relDb": -25,
-  "gainDb": -18.005
+  "volume": -2,
+  "relDb": -9,
+  "gainDb": -2.005
  },
  "ending": null,
  "tail": null,

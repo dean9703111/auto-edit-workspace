@@ -3,6 +3,7 @@ import { groupIssues, issueId, hideKey, plainText, splitHidden } from './issues.
 import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
   fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss, ownSfx, sortOwnSfx, ownSfxView,
+  bedLane, bedHasMusic, bedLiveDb, BED_VOL, bedMutedAt,
 } from './model.mjs';
 import { applyCueOp, remapPlan, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
 import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef, toggleEmph } from './text.mjs';
@@ -42,7 +43,8 @@ const app = {
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
   report: null, reportReady: false, auditIssues: null, hiddenChecks: new Set(), requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cap: null, savedCap: null, capDefault: true, marks: [], savedMarks: [], cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
-  tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {} },
+  bedVol: 0, savedBedVol: 0, bedView: null, bedPeaks: null,   // 057 背景音樂：plan.json 的 bed.volume、時間軸那一軌（model.mjs bedLane）、上一次 build 的 wav 波形
+  tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {}, bed: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
   side: 'insp', t: 0, mode: 'sim', stopAt: null, outDur: 0, ver: 0, drawRequested: true, rate: 0, loud: null,
   // 畫布（009 FR-120）：/api/state 的 canvas（server 用 lib/canvas.mjs 算）；還沒載入時當橫式
@@ -128,7 +130,14 @@ app.gapAt = (t) => {
   return g.ok ? { after, lo: g.lo, hi: g.hi } : null;
 };
 app.trackLocked = (k) => !!app.tracks[k]?.lock;
-app.trackMuted = (k) => (k === 'voice' || k === 'sfx' || k === 'media') && app.edit.volume[k] <= -60;
+app.trackMuted = (k) => (k === 'bed' ? bedHasMusic(app.bedView) && bedMutedAt(app.bedVol) : (k === 'voice' || k === 'sfx' || k === 'media') && app.edit.volume[k] <= -60);
+// 057 背景音樂：即時試聽補幾 dB（音量和做進 wav 的差）；快速試聽播哪一條（曲子和這次的設定對得上才播：換了曲子、拿掉了要等更新預覽；靜音＝增益 0）
+app.bedLiveDb = () => bedLiveDb(app.bedVol, app.server?.bed?.built);
+app.bedPlay = () => {
+  const b = app.server?.bed?.built, v = app.bedView;
+  if (!b?.url || !bedHasMusic(v) || v.music !== b.music) return null;
+  return { url: b.url, at: b.at || 0, dur: b.dur, gain: app.trackMuted('bed') ? 0 : dbToGain(app.bedLiveDb()) };
+};
 app.isSelected = (kind, id) => app.selection?.kind === kind && app.selection.id === id;
 app.headTail = () => {
   const c = app.edit.cuts;
@@ -164,8 +173,8 @@ app.snapCandidates = () => {
 // ---------- 快照、復原 ----------
 const editableScenes = () => app.scenes;
 // 快照記著它是對哪一版檔案算的（base）：自動存檔之後檔案已經往前走，復原時要先把檔案換回那一版
-const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks });
-const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks });
+const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol });
+const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol });
 const isDirty = () => app.savedSnap !== '' && dirtySnap() !== app.savedSnap;
 
 function normalize() {
@@ -206,7 +215,7 @@ app.gestureEnd = (commit = true) => {
 function restore(s) {
   const o = JSON.parse(s);
   app.edit = normEdit(o.edit);
-  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap; app.marks = o.marks ?? app.savedMarks;
+  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap; app.marks = o.marks ?? app.savedMarks; app.bedVol = o.bedVol ?? app.savedBedVol;
   app.lastCoalesce = null;
   if (app.selection?.kind === 'cue' && !app.cues.some((c) => c.n === app.selection.id)) app.selection = null;
   changed({ inspector: true });
@@ -338,6 +347,8 @@ function recompute() {
     sv.push({ id: `own:${i}`, user: i, name: x.sound, at: v.start, hit: x.at, main: false, muted: false, db: v.db, gain: dbToGain(v.db) });
   });
   app.sfxView = sv.sort((a, b) => a.at - b.at);
+  // 057 背景音樂軌：檢查報告的 bed（build 算的範圍、淡入淡出、壓低）；報告還沒好先看 plan.json
+  app.bedView = bedLane(app.reportReady ? app.report?.data?.bed ?? null : undefined, app.server?.bed);
 }
 // 這段沒有寫在講什麼時的名稱：不露檔名（x-design-d0101.html）和版型編號（07 重點字卡）
 function segFallback(sc, o) {
@@ -888,6 +899,8 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   app.theme = app.savedTheme;
   app.savedCap = normCap(app.plan0.captionStyle);
   app.cap = clone(app.savedCap);
+  app.savedBedVol = normBedVol(app.plan0.bed);
+  app.bedVol = app.savedBedVol;
   app.scenes = clone(Array.isArray(app.plan0.scenes) ? app.plan0.scenes : []);
   app.cues = clone(app.cues0);
   app.savedMarks = normMarks(app.plan0.captionMarks, app.cues0);
@@ -927,6 +940,7 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   else renderRequests();
   renderFlowHere();
   if (!app.peaks) fetchPeaks();
+  fetchBedPeaks();
   pollExport();   // 順便更新「已輸出過」：內容改過就不算最新
   loadThumbs();
   sim.preloadSfx?.(s.schema?.sounds || []);
@@ -945,6 +959,7 @@ function applyKept(kept) {
   if ('look' in kept) app.look = kept.look;
   if ('theme' in kept) app.theme = kept.theme;
   if ('cap' in kept) app.cap = kept.cap;
+  if ('bedVol' in kept) app.bedVol = kept.bedVol;
   let opsOk = !kept.ops?.length;
   if (kept.ops?.length && kept.srtHash === app.base.srtHash) {
     // 重點字幕（038）一起重播：檔案裡的標記照這幾步字幕操作換句號
@@ -972,7 +987,7 @@ function offerUnsaved(u) {
   if (!u?.id || !isObj(u.keep) || unsavedSkip.has(u.id) || !app.server?.plan?.exists || app.server.plan.error) return;
   const when = new Date(u.at || Date.now());
   const segs = Object.keys(u.keep.segs || {}), ops = u.keep.ops?.length || 0;
-  const what = [segs.length ? `${segs.slice(0, 4).join('、')}${segs.length > 4 ? ` 等 ${segs.length} 段` : ''}` : '', ops ? `${ops} 處字幕` : '', Object.keys(u.keep.edit || {}).length || 'look' in u.keep || 'theme' in u.keep ? '剪輯設定' : ''].filter(Boolean).join('、');
+  const what = [segs.length ? `${segs.slice(0, 4).join('、')}${segs.length > 4 ? ` 等 ${segs.length} 段` : ''}` : '', ops ? `${ops} 處字幕` : '', Object.keys(u.keep.edit || {}).length || 'look' in u.keep || 'theme' in u.keep || 'bedVol' in u.keep ? '剪輯設定' : ''].filter(Boolean).join('、');
   // 不管套不套，伺服器那份都丟掉：套回去之後修改在這一頁上，照一般的自動存檔走（關頁沒存到會問）
   const done = () => { forgetUnsaved(u.id); banner(''); if (app.server?.video && roughStage()) renderRoughBanner(); };
   banner(`上次關掉這一頁時，最後一次修改沒存進去（${when.getMonth() + 1}/${when.getDate()} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}${what ? `，${esc(what)}` : ''}）：${UNSAVED_WHY[u.reason] || '那次沒存成功'}。要套回去嗎？`, 'error', [
@@ -992,6 +1007,16 @@ async function fetchPeaks() {
   else app.peaksHint = '波形讀取失敗';
   app.peakMax = null;
   renderHeads();
+  timeline.invalidate();
+}
+// 057 背景音樂軌的波形：上一次 build 混好的 wav（完成影片時間，從 built.at 開始）；換了一條才重拿
+async function fetchBedPeaks() {
+  const b = app.server?.bed?.built;
+  if (!b?.url) { app.bedPeaks = null; return; }
+  if (app.bedPeaks?.url === b.url) return;
+  const r = await api('GET', '/api/waveform?src=bed');
+  if (app.server?.bed?.built?.url !== b.url) return;
+  app.bedPeaks = r.ok && r.data?.peaks?.length ? { ...r.data, url: b.url, at: b.at || 0 } : null;
   timeline.invalidate();
 }
 async function loadThumbs() {
@@ -1307,13 +1332,14 @@ function applySaved(d, { keepLocal = false, sentOps = 0, fallbackEdit = null } =
   app.savedTheme = normTheme(app.plan0.theme);
   app.savedCap = normCap(app.plan0.captionStyle);
   app.savedMarks = normMarks(app.plan0.captionMarks, app.cues0);
+  app.savedBedVol = normBedVol(app.plan0.bed);
   if (d.look) app.server.look = d.look;
   if (d.captionStyle) app.server.captionStyle = d.captionStyle;
   if (keepLocal) {
     app.srtOps = app.srtOps.slice(sentOps);
     // 正在拖的快照也要換基準：沒拖動就放開會還原成快照，不能把已經存好的字幕操作再送一次
     if (app.gesture) { const g = JSON.parse(app.gesture); g.ops = g.ops.slice(sentOps); g.base = app.base; app.gesture = JSON.stringify(g); }
-    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap, marks: app.savedMarks });
+    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap, marks: app.savedMarks, bedVol: app.savedBedVol });
     return;
   }
   app.edit = clone(app.savedEdit);
@@ -1321,6 +1347,7 @@ function applySaved(d, { keepLocal = false, sentOps = 0, fallbackEdit = null } =
   app.theme = app.savedTheme;
   app.cap = clone(app.savedCap);
   app.marks = clone(app.savedMarks);
+  app.bedVol = app.savedBedVol;
   app.scenes = clone(app.plan0.scenes || []);
   app.cues = clone(app.cues0);
   app.srtOps = [];
@@ -1349,6 +1376,7 @@ async function saveOnce({ notify, retry = 0 }) {
   if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}), ...(app.look.belly > 0 ? { belly: r2(app.look.belly) } : {}) } : null;   // 美顏 0＝關，不寫
   if (app.theme !== app.savedTheme) body.theme = app.theme;
   if (!same(app.cap, app.savedCap)) body.captionStyle = app.cap;
+  if (app.bedVol !== app.savedBedVol) body.bed = { volume: app.bedVol };   // 057 背景音樂音量（plan.json 的 bed.volume；伺服器照 build.mjs --set 的規則檢查）
   // 重點字幕整份送（句號是字幕操作做完之後的）。同時有字幕操作時一定送：頁面上的句號已經換過，光和存檔時的清單比數字會比錯
   if (!same(app.marks, app.savedMarks) || (app.srtOps.length && (app.marks.length || app.savedMarks.length))) body.captionMarks = fmtCaptionMarks(app.marks);
   const sentSnap = dirtySnap(), sentOps = app.srtOps.length;
@@ -1521,6 +1549,7 @@ function keepState() {
     ...(!same(app.look, app.savedLook) ? { look: clone(app.look) } : {}),
     ...(app.theme !== app.savedTheme ? { theme: app.theme } : {}),
     ...(!same(app.cap, app.savedCap) ? { cap: clone(app.cap) } : {}),
+    ...(app.bedVol !== app.savedBedVol ? { bedVol: app.bedVol } : {}),
     ...(!same(app.marks, app.savedMarks) || (app.srtOps.length && (app.marks.length || app.savedMarks.length)) ? { marks: clone(app.marks) } : {}) };
 }
 const keepIfDirty = () => (isDirty() ? keepState() : null);
@@ -1663,20 +1692,26 @@ function renderHeads() {
     el.innerHTML = (timeline.lanes || LANES).map(([k, h], i) => {
       const hh = h + 1;
       if (k === 'ov' || k === 'ruler') return `<div class="th" style="height:${hh}px" data-lane="${k}">${k === 'ruler' ? '<span class="nm"><small>時間</small></span>' : ''}</div>`;
-      const vol = ['media', 'voice', 'sfx'].includes(k);
+      const vol = ['media', 'voice', 'sfx', 'bed'].includes(k);
+      // 背景音樂（057）：數字＝plan.json 的 bed.volume（0＝曲庫檔原本的音量，−40＝靜音），一格 1 dB；其他軌是 edit.volume（−60＝靜音）
+      const [lo, hi, st, tip] = k === 'bed' ? [...BED_VOL, 1, `背景音樂整首的音量（dB），0＝原本的音量，${BED_VOL[0]}＝靜音`] : [-60, 12, 0.5, `${TRACK_NAMES[k]}整條軌的音量（dB），−60＝靜音`];
       return `<div class="th" style="height:${hh}px" data-lane="${k}">
         <span class="nm">${TRACK_NAMES[k]}<small data-sub></small></span>
         ${k === 'voice' ? '<span class="warnico" data-clipwarn hidden data-tip="">!</span>' : ''}
-        ${vol ? `<input class="db" type="number" step="0.5" min="-60" max="12" data-db="${k}" aria-label="${TRACK_NAMES[k]}音量（dB）" data-tip="${TRACK_NAMES[k]}整條軌的音量（dB），−60＝靜音">
+        ${vol ? `<input class="db" type="number" step="${st}" min="${lo}" max="${hi}" data-db="${k}" aria-label="${TRACK_NAMES[k]}音量（dB）" data-tip="${tip}">
         <button class="mute" data-mute="${k}" aria-label="${TRACK_NAMES[k]}靜音" data-tip="靜音：這條軌整條不出聲，完成影片也一樣">${ICON_MUTE}</button>` : ''}
         ${k !== 'anim' ? `<button class="lock" data-lock="${k}" aria-label="鎖定${TRACK_NAMES[k]}軌" data-tip="鎖定：避免不小心拖到這條軌">${ICON_LOCK}</button>` : ''}
       </div>`;
     }).join('');
   }
-  for (const k of ['media', 'voice', 'sfx']) {
+  for (const k of ['media', 'voice', 'sfx', 'bed']) {
     const inp = el.querySelector(`[data-db="${k}"]`);
-    if (document.activeElement !== inp) inp.value = String(app.edit.volume[k]);
-    el.querySelector(`[data-mute="${k}"]`).classList.toggle('on', app.trackMuted(k));
+    if (!inp) continue;
+    const none = k === 'bed' && !bedHasMusic(app.bedView);   // 沒有背景音樂：數字和靜音灰掉
+    if (document.activeElement !== inp) inp.value = none ? '' : String(k === 'bed' ? app.bedVol : app.edit.volume[k]);
+    inp.disabled = none; inp.placeholder = none ? '—' : '';
+    const mb = el.querySelector(`[data-mute="${k}"]`);
+    mb.classList.toggle('on', app.trackMuted(k)); mb.disabled = none;
   }
   for (const b of el.querySelectorAll('[data-lock]')) { const on = app.trackLocked(b.dataset.lock); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); }
   for (const th of el.querySelectorAll('.th')) th.classList.toggle('sel', th.dataset.lane === app.selLane);
@@ -1952,6 +1987,37 @@ function syncMarkRows() {
   b.setAttribute('aria-pressed', String(marksOnly));
 }
 
+// ---------- 背景音樂（057；plan.json 第一層 bed.volume，−40～+6 dB，一格 1 dB，0＝曲庫檔原本的音量、−40＝靜音，規則和 build.mjs --set bed.volume 一樣）----------
+// 時間軸「背景音樂」軌的軌頭（數字、🔇、🔒）和這個滑桿是同一個值
+// 快速試聽拖的時候馬上跟著變（preview.js 播上一次 build 混好的 wav，只補差的 dB）；完成影片預覽和其他滑桿一樣，按「更新預覽」重混才聽得到。
+// 點時間軸的「背景音樂」軌：右側跳到「整支 → 聲音」，這一列亮起來
+function normBedVol(bed) { return isObj(bed) && Number.isFinite(bed.volume) ? clamp(bed.volume, ...BED_VOL) : 0; }
+function bedSlider() {
+  const on = bedHasMusic(app.bedView), v = app.bedVol;
+  const tip = on ? `「${app.bedView.music}」整首一起調；0＝原本的音量，${BED_VOL[0]}＝靜音。快速試聽馬上聽得到，完成影片預覽要按「更新預覽」` : '這一集沒有背景音樂';
+  return sliderRow('背景音樂', 'bedVol', v, { min: BED_VOL[0], max: BED_VOL[1], step: 1, out: on ? fmtDb(v) : '—', tip, cls: `${on ? '' : 'off'}${on && app.selLane === 'bed' ? ' hot' : ''}`.trim(), off: !on })
+    + (on ? '' : '<p class="ip-note bed-none">這一集沒有背景音樂</p>');
+}
+function revealBedSlider() {
+  app.folds.sound = true;
+  setSide('insp');
+  if (app.selection || !$('#inspBody [data-f="bedVol"]')) app.select(null, { lane: 'bed' });
+  const row = $('#inspBody [data-f="bedVol"]')?.closest('.ip-slider');
+  if (!row) return;
+  const fold = row.closest('details');
+  if (fold) fold.open = true;
+  row.scrollIntoView({ block: 'center' });
+  row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+}
+function bedTip() {
+  const B = app.bedView;
+  if (!B || B.kind === 'none') return '沒有背景音樂\n要配：跟 AI 說「生成配樂」或「用我自己的音樂」';
+  if (B.kind === 'off') return '這一集設定成不配背景音樂';
+  if (B.kind !== 'on') return `背景音樂「${B.music}」\n${B.kind === 'short' ? '影片太短，沒有鋪' : '位置等檢查報告出來才畫得出來'}\n點一下調音量`;
+  const vol = app.trackMuted('bed') ? '　靜音（完成影片不放）' : app.bedVol ? `　${fmtDb(app.bedVol)}` : '　0 dB（原本的音量）';
+  return `背景音樂「${B.music}」${vol}　${fmt(B.start, 0)} – ${fmt(B.end, 0)}\n淡入 ${B.fadeIn} 秒、淡出 ${B.fadeOut} 秒${B.ducked ? '；講話時壓低（暗的地方）' : '；這一集有剪段，整段固定音量'}\n點一下調音量（右邊「整支 → 聲音」）`;
+}
+
 // ---------- 主題（亮／暗；plan.json 第一層 "theme"，specs/010-motion-v2/design-system.md §10）----------
 // 不寫＝亮色。完成影片預覽在切換時直接改播放器 iframe 的 <html data-theme>（build 也是寫在主合成的 <html>），不用重新產生就看得到配色
 const normTheme = (v) => (v === 'dark' ? 'dark' : 'light');
@@ -2044,7 +2110,7 @@ function inspLook() {
 
 // ---------- 屬性面板 ----------
 const fmtTime = (v) => (typeof v === 'string' ? v : Number.isFinite(v) ? `${r2(v)} 秒` : '—');
-const sliderRow = (label, f, v, { min = -60, max = 12, step = 0.5, out, def = 0, tip = '' } = {}) => `<div class="ip-slider"${tip ? ` data-tip="${esc(tip)}"` : ''}><label>${label}</label><input type="range" aria-label="${esc(label)}" data-f="${f}" min="${min}" max="${max}" step="${step}" value="${v ?? def}"><output data-out="${f}" class="${(v ?? def) !== def ? 'changed' : ''}">${out}</output></div>`;
+const sliderRow = (label, f, v, { min = -60, max = 12, step = 0.5, out, def = 0, tip = '', cls = '', off = false } = {}) => `<div class="ip-slider${cls ? ` ${cls}` : ''}"${tip ? ` data-tip="${esc(tip)}"` : ''}><label>${label}</label><input type="range" aria-label="${esc(label)}" data-f="${f}" min="${min}" max="${max}" step="${step}" value="${v ?? def}"${off ? ' disabled' : ''}><output data-out="${f}" class="${(v ?? def) !== def ? 'changed' : ''}">${out}</output></div>`;
 // 整支影片的設定一項一區，可以收起來；標題帶現在的值，收著也看得到（開合記著，重畫不會跳回去）
 const FOLD_OPEN = { look: true, sound: true };
 app.folds = {};
@@ -2085,6 +2151,7 @@ function inspWhole() {
     ${sliderRow('人聲', 'vol.voice', e.volume.voice, { out: fmtDb(e.volume.voice), tip: '講者的聲音（主軌）整條的音量' })}
     ${sliderRow('音效', 'vol.sfx', e.volume.sfx, { out: fmtDb(e.volume.sfx), tip: '全部音效一起調' })}
     ${sliderRow('素材原聲', 'vol.media', e.volume.media, { out: fmtDb(e.volume.media), tip: '素材有開原聲的才算' })}
+    ${bedSlider()}
     <label class="ip-check" data-tip="小聲的句子拉近大聲的，聽起來不會忽大忽小；按「更新預覽」重新處理底片後才聽得到"><input type="checkbox" data-f="level"${e.level ? ' checked' : ''}> 拉平人聲大小聲</label>
     <div class="ip-btns"><button data-act="loud" data-tip="量整支人聲的音量（剪掉的範圍不算），調到 YouTube 常用的標準（${app.server?.targetLufs ?? -14} LUFS）">把人聲調到 YouTube 標準音量</button></div>
     ${L ? `<div class="ip-result">${L.error ? `<span class="err-ink">${esc(L.error)}</span>` : `量到 <b>${L.integrated} LUFS</b>（峰值 ${L.truePeak ?? '—'} dBFS）→ 人聲設成 <b>${fmtDb(L.suggest)}</b>${L.raw !== L.suggest ? `（要 ${fmtDb(L.raw)}，超出範圍）` : ''}`}</div>` : ''}
@@ -2508,6 +2575,7 @@ function onInspInput(e) {
   const num = Number(el.value);
   const outEl = (k) => $(`#inspBody [data-out="${k}"]`);
   if (f?.startsWith('vol.')) { const k = f.slice(4); mutate(() => { app.edit.volume[k] = num; }, { coalesce: f }); outEl(f).textContent = fmtDb(num); outEl(f).classList.toggle('changed', num !== 0); app.loud = null; return; }
+  if (f === 'bedVol') { if (!bedHasMusic(app.bedView)) return; mutate(() => { app.bedVol = clamp(Math.round(num), ...BED_VOL); }, { coalesce: f }); renderHeads(); outEl(f).textContent = fmtDb(app.bedVol); outEl(f).classList.toggle('changed', app.bedVol !== 0); return; }
   if (f === 'look.color' || f === 'look.slim' || f === 'look.beauty' || f === 'look.belly') {
     const k = f.slice(5);
     mutate(() => { app.look = { ...lookEff(), [k]: r2(num) }; }, { coalesce: f });
@@ -2726,6 +2794,7 @@ function selectHit(h) {
     case 'sfx': return app.select({ kind: 'sfx', id: h.sfx.segId }, { lane });
     case 'usfx': return app.select({ kind: 'usfx', id: h.sfx.user }, { lane });
     case 'noCard': return app.select({ kind: 'gap', id: gapId(h.span[0]) }, { lane });
+    case 'bed': app.folds.sound = true; app.select(null, { lane }); return revealBedSlider();
     default: return app.select(null, { lane });
   }
 }
@@ -2765,6 +2834,7 @@ app.tlTip = (h) => {
     case 'gainEdge': return `拖曳調整範圍${lk}`;
     case 'voiceVol': return `人聲音量 ${fmtDb(app.edit.volume.voice)}：上下拖整條${selValid() && h.t >= app.sel.a && h.t <= app.sel.b ? '\n（在選取範圍裡拖＝只調這一段）' : ''}${lk}`;
     case 'voiceBody': return '拖曳選一段範圍（剪掉或單獨調音量）';
+    case 'bed': return bedTip() + lk;
     case 'mood': return `情緒點：${h.mood.zh}${h.mood.sfx ? `　音效「${h.mood.sfx}」` : h.mood.off ? '（不出聲）' : `（讓位給更強的音效${h.mood.dropped ? `，原本是 ${h.mood.dropped}` : ''}）`}${h.mood.zoom ? '　講者推近' : ''}\n要改：分鏡表的「情緒點」勾選表，或跟 AI 說（寫進修改單）`;
     case 'sfx': return `${h.sfx.segId} 的${h.sfx.main ? '主' : '附加'}音效「${h.sfx.name}」${h.sfx.muted ? '（靜音）' : h.sfx.db != null ? ` ${fmtDb(r2(h.sfx.db))}` : ''}\n上下拖調這段音量、雙擊靜音；按右鍵換一顆${lk}`;
     case 'usfx': { const x = app.edit.sfx[h.sfx.user]; return `自己加的音效「${soundZh(x.sound)}」　${fmt(x.at, 1)}　${fmtDb(x.db || 0)}\n左右拖改時間、上下拖調音量；Delete 移除、按右鍵換一顆${lk}`; }
@@ -3091,7 +3161,7 @@ const joinItems = (p) => { const type = joinFor(app.edit, p)?.type || 'none', lk
 // 空白處的選單最下面：這一軌的靜音、鎖定（和軌頭的按鈕同一個動作）
 function trackItems(lane) {
   const out = [];
-  if (['media', 'voice', 'sfx'].includes(lane)) out.push({ label: '靜音這一軌', check: app.trackMuted(lane), run: () => toggleTrackMute(lane) });
+  if (['media', 'voice', 'sfx', 'bed'].includes(lane)) out.push({ label: '靜音這一軌', check: app.trackMuted(lane), off: lane === 'bed' && !bedHasMusic(app.bedView) ? '這一集沒有背景音樂' : '', run: () => toggleTrackMute(lane) });
   if (lane !== 'anim') out.push({ label: '鎖定這一軌', check: app.trackLocked(lane), run: () => toggleTrackLock(lane) });
   return out.length ? [{ sep: true }, ...out] : [];
 }
@@ -3216,6 +3286,7 @@ function ctxMenu(h, { range = false } = {}) {
     { label: '把人聲調到 YouTube 標準音量', run: normalizeVoice },
     ...trackItems('voice'),
   ] };
+  if (lane === 'bed') return { head: '背景音樂軌', items: [{ label: '調整背景音樂音量', off: lockWhy('bed') || (bedHasMusic(app.bedView) ? '' : '這一集沒有背景音樂'), run: revealBedSlider }, ...trackItems('bed')] };
   // 音效軌：空白處、情緒點（只能看）
   return { head: h.kind === 'mood' ? `情緒點：${h.mood.zh}` : '音效軌', items: [
     ...(h.kind === 'mood' ? [{ note: `情緒點的音效在這裡不能改 → 到分鏡表的「情緒點」取消勾選，或跟 AI 說「${mmssOf(outOf(h.mood.at, app.edit.cuts))} 的情緒點不要音效」` }, { sep: true }] : []),
@@ -3460,9 +3531,11 @@ const caretTrack = (e) => { if (e.target.id === 'capText') e.target.dataset.care
 for (const ev of ['keyup', 'click', 'select']) $('#inspBody').addEventListener(ev, caretTrack);
 // 軌頭（靜音、鎖定：軌頭的按鈕和右鍵選單都呼叫這兩支）
 function toggleTrackMute(k) {
+  if (k === 'bed' && !bedHasMusic(app.bedView)) return toast('這一集沒有背景音樂', 'warn');
+  const get = () => (k === 'bed' ? app.bedVol : app.edit.volume[k]), set = (v) => { if (k === 'bed') app.bedVol = v; else app.edit.volume[k] = v; };
   mutate(() => {
-    if (app.trackMuted(k)) app.edit.volume[k] = app.tracks[k].prev ?? 0;
-    else { app.tracks[k].prev = app.edit.volume[k]; app.edit.volume[k] = -60; }
+    if (app.trackMuted(k)) set(app.tracks[k].prev ?? 0);
+    else { app.tracks[k].prev = get(); set(k === 'bed' ? BED_VOL[0] : -60); }
   }, { inspector: true });
   toast(`${TRACK_NAMES[k]}${app.trackMuted(k) ? '已靜音（完成影片也不會有）' : '取消靜音'}`, 'ok', 1500);
 }
@@ -3476,23 +3549,26 @@ $('#tlHeads').addEventListener('click', (e) => {
 // 軌頭的 dB：上下拖＝調整（每 2px 0.5 dB），點一下＝輸入數字
 $('#tlHeads').addEventListener('pointerdown', (e) => {
   const inp = e.target.closest('input.db');
-  if (!inp || e.button !== 0) return;
-  const k = inp.dataset.db, y0 = e.clientY, v0 = app.edit.volume[k];
+  if (!inp || inp.disabled || e.button !== 0) return;
+  const k = inp.dataset.db, bed = k === 'bed', y0 = e.clientY, v0 = bed ? app.bedVol : app.edit.volume[k];
   let moved = false;
   const mv = (ev) => {
     if (!moved && Math.abs(ev.clientY - y0) < 3) return;
     if (!moved) { moved = true; app.gestureBegin(); inp.blur(); }
     ev.preventDefault();
-    app.edit.volume[k] = clamp(Math.round((v0 + (y0 - ev.clientY) / 4) * 2) / 2, -60, 12);
-    inp.value = String(app.edit.volume[k]);
+    // 背景音樂一格 1 dB（−40～+6）；其他軌一格 0.5 dB（−60～+12）
+    const v = bed ? clamp(Math.round(v0 + (y0 - ev.clientY) / 4), ...BED_VOL) : clamp(Math.round((v0 + (y0 - ev.clientY) / 4) * 2) / 2, -60, 12);
+    if (bed) app.bedVol = v; else app.edit.volume[k] = v;
+    inp.value = String(v);
     recompute(); timeline.invalidate();
   };
-  const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); if (moved) { app.gestureEnd(true); renderHeads(); } };
+  const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); if (moved) { app.gestureEnd(true); renderHeads(); if (bed) renderInspector(); } };
   window.addEventListener('pointermove', mv);
   window.addEventListener('pointerup', up);
 });
 $('#tlHeads').addEventListener('change', (e) => {
   const k = e.target.dataset.db; if (!k) return;
+  if (k === 'bed') { const v = clamp(Math.round(Number(e.target.value) || 0), ...BED_VOL); mutate(() => { app.bedVol = v; }, { inspector: true }); e.target.blur(); return; }
   const v = clamp(Number(e.target.value) || 0, -60, 12);
   mutate(() => { app.edit.volume[k] = v; }, { inspector: true });
   e.target.blur();

@@ -38,7 +38,7 @@ import { normalizeEdit, timeMap, remapCues, splitAtJoins, subtract, dB, PUNCH } 
 import { MEDIA_KEYS, ENTER, WAIT, checkMediaSeg, validateMedia, newStepState, textPx, mediaCorner, mediaOverlaps } from './media.mjs';
 import { SFX_RULES, SFX_SWAP, rotateSfx, sfxBudget, thinMainSfx, LOUD } from './audio.mjs';
 import { LOCAL_ROLES, sfxActual, wavSeconds } from './sfx-local.mjs';
-import { BED } from './music.mjs';
+import { BED, LIB_LUFS } from './music.mjs';
 import { validateMoods, moodCues, moodSound, zoomSpans, MOOD_KINDS } from './moods.mjs';
 import { sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle, resolveCaptionMarks, describeCaptionMarks } from './caption-style.mjs';
 import { validateLook } from './look.mjs';
@@ -1843,15 +1843,18 @@ function resolveBed({ plan, lib, sfxConf, sfxDir, edit, errors, warnings }) {
         const msg = `「${music}」不是曲庫裡的配樂（可用：${bgmNames(sfxConf).join('、') || '沒有'}）`;
         if (fromPlan) errors.push(`bed.music：${msg} → 改成可用的曲名（node shared/template/tools/music.mjs list），或寫 null 不配`);
         else warnings.push(`底樂：工作區預設的${msg}，這一集沒配 → node shared/template/tools/music.mjs use <曲名> 重新設定，或 music.mjs use none 取消預設`);
-      } else if (b.volume !== undefined && !(isNum(b.volume) && b.volume >= -12 && b.volume <= 12)) errors.push(`bed.volume 要是 −12～+12 的 dB 數字（0＝預設），現在是 ${JSON.stringify(b.volume)} → 改成數字或拿掉`);
+      } else if (b.volume !== undefined && !(isNum(b.volume) && b.volume >= BED.volume[0] && b.volume <= BED.volume[1])) errors.push(`bed.volume 要是 −40～+6 的 dB 數字（0＝曲庫檔原本的音量，−40＝靜音），現在是 ${JSON.stringify(b.volume)} → 改成數字或拿掉`);
       else {
         const file = conf.file || (sfxDir ? path.join(sfxDir, `${music}.wav`) : null);
         if (file && !fs.existsSync(file)) errors.push(`bed：配樂檔 ${music}.wav 不存在 → node shared/template/tools/music.mjs list 看曲庫，換一首或重新生成`);
         else {
-          // 檔案本身的響度（LUFS）＝ −14 ＋ targetDb − 音量倍數換成的 dB（片尾配樂的設定反推回去）；底樂講話時要落在 −14 ＋ BED.db
-          const fileLufs = LOUD.I + (conf.targetDb ?? 0) - 20 * Math.log10(conf.volume || 1);
-          const relDb = r3(BED.db + (b.volume ?? 0) + (edit.volume?.sfx ?? 0) - (edit.volume?.voice ?? 0));
-          bed = { music, file, from: fromPlan ? 'plan.json' : '工作區預設', credit: conf.credit ?? null, relDb, gainDb: r3(LOUD.I + BED.db + (b.volume ?? 0) + (edit.volume?.sfx ?? 0) - fileLufs) };
+          // 檔案本身的響度（LUFS）＝ −14 ＋ targetDb − 音量倍數換成的 dB（片尾配樂的設定反推回去；曲庫的檔都是 LIB_LUFS）。
+          // 057 第二輪：bed.volume＝套在曲庫檔上的 dB（0＝原本的音量）＝沒人講話時的音量，講話時再壓低 BED.lift；不跟著「音效」（剪輯台有自己的背景音樂軌）
+          // relDb＝沒人講話時比人聲（−14 LUFS＋edit.volume.voice）大幾 dB；volume 是最小值＝靜音（muted，完成影片不放）
+          const fileLufs = LOUD.I + (conf.targetDb ?? 0) - 20 * Math.log10(conf.volume || 1), volume = b.volume ?? 0;
+          const relDb = r3(LIB_LUFS + volume - LOUD.I - (edit.volume?.voice ?? 0));
+          bed = { music, file, from: fromPlan ? 'plan.json' : '工作區預設', credit: conf.credit ?? null, volume, relDb, gainDb: r3(LIB_LUFS + volume - fileLufs),
+            ...(volume <= BED.volume[0] ? { muted: true } : {}) };
         }
       }
     }

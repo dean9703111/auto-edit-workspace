@@ -61,15 +61,34 @@ test('normalizeTrack：48 kHz 立體聲、響度調到 −20 LUFS；renderBedCli
   const m1 = fs.statSync(a.file).mtimeMs;
   assert.equal(M.renderBedClip(lib, out, { dur: 75, gainDb: -14 }).file, a.file);
   assert.equal(fs.statSync(a.file).mtimeMs, m1, '同參數不重做');
-  // 有人聲（這裡用另一個音當 key）：講話時壓低，整體比固定音量那一版高不超過 lift
+  // 有人聲（這裡用另一個音當 key）：沒人講話時是 gainDb（＝固定音量那一版），講話時壓低，所以整體比固定音量小、最多小 lift 上下（057 第二輪）
   const key = tone(path.join(tmp, 'key.wav'), 75, 440);
   const b = M.renderBedClip(lib, out, { dur: 75, gainDb: -14, key });
   assert.equal(b.ducked, true);
   assert.notEqual(b.file, a.file);
   const d = M.measureLufs(b.file) - lufs;
-  assert.ok(d > -6 && d < M.BED.lift + 0.5, `壓低後和固定音量差 ${d.toFixed(1)} dB`);
+  assert.ok(d < -1 && d > -(M.BED.lift + 1.5), `壓低後和固定音量差 ${d.toFixed(1)} dB`);
   const short = tone(path.join(tmp, 'short.wav'), 8);
   assert.throws(() => M.renderBedClip(short, out, { dur: 30, gainDb: -14 }), /當底樂至少要 20 秒/);
+});
+
+test('renderBedClip 調大不爆音：曲庫檔 +6 dB（bed.volume 上限）時限幅，輸出的 true peak ≤ −1；沒超過的不動', async (t) => {
+  if (!(await needs(t, 'ffmpeg'))) return;
+  const { parseLoudnorm } = await imp('lib/audio.mjs');
+  const meas = (f) => parseLoudnorm(spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', f, '-af', 'loudnorm=print_format=json', '-f', 'null', '-'], { encoding: 'utf8' }).stderr);
+  // 尖峰多的曲子：小聲的底音＋每 0.5 秒一下 3 ms 的高音（響度調到 −20 LUFS 之後，尖峰頂到曲庫的上限 −2）
+  const raw = path.join(tmp, 'peaky-raw.wav'), lib = path.join(tmp, 'peaky.wav');
+  const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', "aevalsrc='0.1*sin(2*PI*220*t)+0.9*sin(2*PI*1000*t)*lt(mod(t,0.5),0.003)':s=48000:d=30", '-ac', '2', raw], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  M.normalizeTrack(raw, lib);
+  const src = meas(lib);
+  assert.ok(src.tp + 6 > M.BED.tp + 4, `這首加 6 dB 不限幅會超過：曲庫檔 true peak ${src.tp}`);
+  const out = path.join(tmp, 'assets-tp');
+  for (const gainDb of [0, 6]) {
+    const m = meas(M.renderBedClip(lib, out, { dur: 40, gainDb }).file);
+    assert.ok(m.tp <= M.BED.tp + 0.05, `+${gainDb} dB：true peak ${m.tp}`);
+    if (gainDb === 0) assert.ok(Math.abs(m.tp - src.tp) < 0.3 && Math.abs(m.i - src.i) < 0.5, `0 dB＝原本的音量，不動：${JSON.stringify(m)}（曲庫檔 ${JSON.stringify(src)}）`);
+  }
 });
 
 test('music.mjs：沒有子指令印說明；list 空曲庫說怎麼放；gen 風格打錯、keep 沒有候選、use 不在曲庫都 ✖ 並說怎麼改', () => {

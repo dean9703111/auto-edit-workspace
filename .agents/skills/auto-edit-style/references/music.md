@@ -19,7 +19,7 @@
 | 「片尾配樂從結語金句講完那句開始」 | `node shared/template/tools/build.mjs --project projects/<專案> --set outro.from=#N`，照它印的下一步跑 build |
 | 「這集片尾不要配樂」 | `node shared/template/tools/build.mjs --project projects/<專案> --set outro.music=none` |
 | 「以後片尾都不要配樂」 | `node shared/template/tools/music.mjs outro none` |
-| 「底樂大聲一點／小聲一點」 | `node shared/template/tools/build.mjs --project projects/<專案> --set bed.volume=3`（dB，−12～+12；一次調 3，小聲寫 `-3`），照它印的下一步跑 build |
+| 「底樂大聲一點／小聲一點」 | `node shared/template/tools/build.mjs --project projects/<專案> --set bed.volume=3`（dB，−40～+6；0＝曲庫檔原本的音量、−40＝靜音。一次調 3 dB：照 plan.json 現在的 `bed.volume`（沒寫＝0）加減 3，例 現在 0 → 大聲寫 `3`、小聲寫 `-3`），照它印的下一步跑 build。使用者想自己邊聽邊調：剪輯台「整支 → 聲音 → 背景音樂」或背景音樂軌的軌頭也能調（寫同一個 `bed.volume`） |
 
 ## 步驟 A：放自己的音樂
 

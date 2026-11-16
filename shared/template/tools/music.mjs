@@ -35,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 import { readSettings, writeSetting } from './lib/settings.mjs';
 import { ACE, BED, NAME_RE, LIB_LUFS, loadMusic, musicDirs, registerTrack, normalizeTrack, aceHealth, aceGenerate, aceDownload } from './lib/music.mjs';
 import { probeDuration } from './lib/ff.mjs';
+import { LOUD } from './lib/audio.mjs';
 import { stopLines } from './lib/stops.mjs';
 import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
 import { next, cmdLine } from './lib/say.mjs';
@@ -186,7 +187,7 @@ function auditionHtml(meta) {
 <style>body{font:16px/1.7 system-ui,"PingFang TC","Microsoft JhengHei",sans-serif;max-width:720px;margin:32px auto;padding:0 16px;color:#17212b;background:#f3f5f7}
 h1{font-size:24px}h2{font-size:18px;margin:0 0 8px}small{font-weight:400;color:#5b6875;margin-left:8px}section{background:#fff;border:1px solid #d5dce3;border-radius:10px;padding:16px;margin:12px 0}
 audio{width:100%}p{color:#5b6875}@media(prefers-color-scheme:dark){body{background:#10161c;color:#e6ecf1}section{background:#18212a;border-color:#2c3a47}p,small{color:#9aa8b5}}</style></head><body>
-<h1>配樂試聽</h1><p>${meta.style ? `風格：${esc(meta.style)}。` : ''}放進影片時會比這裡小聲很多（講話時比人聲小 ${-BED.db} dB）。聽完回覆「用第 N 首」或「重做」。</p>
+<h1>配樂試聽</h1><p>${meta.style ? `風格：${esc(meta.style)}。` : ''}放進影片時會調到曲庫的標準響度（${LIB_LUFS} LUFS，約比人聲小 ${LOUD.I - LIB_LUFS} dB），講話時再壓低 ${BED.lift} dB。聽完回覆「用第 N 首」或「重做」。</p>
 ${rows}
 <p>描述：${esc(meta.prompt)}</p></body></html>\n`;
 }

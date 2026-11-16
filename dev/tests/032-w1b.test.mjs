@@ -49,6 +49,7 @@ test('setPlan：每種鍵的對與錯；只回傳有變的鍵；錯的值整批�
     ['theme', 'dark', 'dark'], ['style', '藍圖', '藍圖'], ['format', '直式', 'portrait'], ['format', 'landscape', 'landscape'], ['speakerSide', 'left', 'left'],
     ['chapterBadge', 'false', false], ['look.color', '0.8', 0.8], ['look.slim', '1.2', 1.2], ['look.beauty', 0, 0], ['look.belly', '0.5', 0.5], ['look', 'off', false],
     ['bed.music', 'bgm-cylinder-five', 'bgm-cylinder-five'], ['bed.music', 'none', null], ['bed.volume', '-3', -3],
+    ['bed.volume', '-40', -40], ['bed.volume', '6', 6], ['bed.volume', '0', 0],   // 057 第二輪：0＝曲庫檔原本的音量，−40～+6
     ['outro.from', '#3', '#3'], ['outro.music', 'bgm-cylinder-five', 'bgm-cylinder-five'],
   ];
   for (const [k, v, want] of ok) {
@@ -57,7 +58,7 @@ test('setPlan：每種鍵的對與錯；只回傳有變的鍵；錯的值整批�
     assert.deepEqual(b ? p.readPlan()[a][b] : p.readPlan()[a], want, `${k}=${v}`);
   }
   const bad = [['theme', 'blue'], ['style', '沒有這包'], ['format', 'square'], ['speakerSide', 'up'], ['chapterBadge', 'yes'], ['look', 'on'],
-    ['look.color', '1.5'], ['look.slim', '1.3'], ['look.beauty', '-0.1'], ['look.belly', '1.1'], ['look.slim', ''], ['bed.music', 'nope'], ['bed.volume', '13'], ['outro.from', '120'], ['outro.music', 'nope']];
+    ['look.color', '1.5'], ['look.slim', '1.3'], ['look.beauty', '-0.1'], ['look.belly', '1.1'], ['look.slim', ''], ['bed.music', 'nope'], ['bed.volume', '13'], ['bed.volume', '-41'], ['bed.volume', '7'], ['outro.from', '120'], ['outro.music', 'nope']];
   const before = fs.readFileSync(p.planFile, 'utf8');
   for (const [k, v] of bad) {
     assert.throws(() => S.setPlan(p.proj, { [k]: v }), (e) => e.message.startsWith(`✖ ${k} 不能是「${v}」→ 能寫的：${k}（`), `${k}=${v}`);

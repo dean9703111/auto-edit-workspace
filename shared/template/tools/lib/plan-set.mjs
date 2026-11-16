@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeAtomic } from './atomic.mjs';
 import { listPacks } from './styles.mjs';
-import { loadMusic } from './music.mjs';
+import { loadMusic, BED } from './music.mjs';
 import { LOOK_LIMITS } from './look.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, fmtCaptionMarks, parseCaptionMarks } from './caption-style.mjs';
 import { readSettings } from './settings.mjs';
@@ -52,7 +52,7 @@ const KEYS = {
   'look.beauty': { hint: () => `${LOOK_LIMITS.beauty.join('–')}`, parse: num(...LOOK_LIMITS.beauty), early: true },
   'look.belly': { hint: () => `${LOOK_LIMITS.belly.join('–')}`, parse: num(...LOOK_LIMITS.belly), early: true },
   'bed.music': { hint: trackHint, parse: track },
-  'bed.volume': { hint: () => '−12–12 dB', parse: num(-12, 12) },
+  'bed.volume': { hint: () => '−40–6 dB，0＝原本的音量、−40＝靜音', parse: num(...BED.volume) },
   'outro.from': { hint: () => '#N＝結語金句講完後那一句（不寫＝只播片尾最後 30 秒）', parse: (v) => (/^#\d+(@\S+)?$/.test(String(v).trim()) ? String(v).trim() : BAD) },
   'outro.music': { hint: trackHint, parse: track },
   // 片尾模板（033，lib/ending.mjs）：工作區在 shared/setting.json 設定，這裡只做這一集的例外
