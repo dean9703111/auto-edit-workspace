@@ -27,7 +27,7 @@ async function setup(t, plan, { built = false } = {}) {
   fs.mkdirSync(shared);
   fs.symlinkSync(TEMPLATE, path.join(shared, 'template'), 'dir');
   fs.symlinkSync(path.join(WORKSPACE, 'shared', 'sfx'), path.join(shared, 'sfx'), 'dir');
-  fs.writeFileSync(path.join(shared, 'setting.json'), JSON.stringify({ editor: { seen: ['coach-rough.v1', 'coach-final.v1', 'coach.v2'] } }));
+  fs.writeFileSync(path.join(shared, 'setting.json'), JSON.stringify({ editor: { seen: ['coach-rough.v1', 'coach-final.v1', 'coach.v3'] } }));
   const project = path.join(root, 'projects', 'example'), work = path.join(project, 'work'), out = path.join(work, 'hyperframes');
   fs.mkdirSync(path.join(out, 'assets'), { recursive: true });
   const planFile = path.join(out, 'plan.json');

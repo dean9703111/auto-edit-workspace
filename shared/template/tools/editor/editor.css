@@ -53,6 +53,15 @@ button.primary { background: var(--accent); color: var(--on-accent); border-colo
 button.primary:hover:not(:disabled):not(.is-disabled) { background: color-mix(in srgb, var(--accent) 85%, #fff); border-color: var(--accent); }
 /* 停用的主要按鈕：不要主色加透明度（看起來像髒掉的顏色），和一般停用的一樣灰 */
 button.primary:disabled, button.primary.is-disabled { background: var(--plate); border-color: var(--line2); color: var(--mute); font-weight: 400; opacity: .6; }
+/* 058 還有改了、但完成影片預覽看不到的修改：「更新預覽」外面一圈柔和的光，約 2 秒一次慢慢呼吸；不想看動畫的人改成固定的光圈 */
+button.glow:not(:disabled):not(.is-disabled) { animation: glow-breathe 2s ease-in-out infinite; }
+@keyframes glow-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 4px 0 color-mix(in srgb, var(--accent) 25%, transparent); }
+  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 16px 3px color-mix(in srgb, var(--accent) 55%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.glow:not(:disabled):not(.is-disabled) { animation: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 10px 2px color-mix(in srgb, var(--accent) 40%, transparent); }
+}
 a { color: var(--accent-text); }
 button.danger { background: color-mix(in srgb, var(--warn) 22%, var(--plate)); border-color: color-mix(in srgb, var(--warn) 70%, transparent); }
 button.danger:hover:not(:disabled):not(.is-disabled) { background: color-mix(in srgb, var(--warn) 40%, var(--plate)); }
@@ -532,6 +541,11 @@ ul.plain b, ol.plain b { color: var(--ink); }
 .ip-slider.look { grid-template-columns: 82px minmax(0, 1fr) 62px; }
 .ip-slider.look label { display: flex; align-items: center; gap: 6px; color: var(--ink); cursor: pointer; }
 .ip-slider.look input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+/* 058 講者區：設定還沒做進完成影片預覽的那一行（字在左、小的「更新預覽」在右） */
+.look-pending { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 6px 8px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.look-pending .ip-note { margin: 0; flex: 1; }
+.look-pending .ip-note b { color: var(--ink); }
+.look-pending button { flex: none; }
 .look-faces { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .look-faces figure { margin: 0; text-align: center; }
 .look-faces img { display: block; width: 100%; max-width: 180px; margin: 0 auto; aspect-ratio: 1; object-fit: cover; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }

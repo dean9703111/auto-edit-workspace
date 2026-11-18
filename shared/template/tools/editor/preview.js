@@ -4,10 +4,12 @@
 //                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去完成影片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
 //                  背景音樂播上一次 build 混好的 wav（057：跟著完成影片時間走，音量只補滑桿和做進 wav 的差）；
 //                  全部聲音最後經過 AnalyserNode 給音量表
-//   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整完成影片；時間是完成影片時間）
+//   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整完成影片；時間是完成影片時間）；
+//                  058 聲音的滑桿（人聲、音效、素材原聲、背景音樂、範圍音量、各段音量）直接改播放器裡每個出聲元素的 data-volume，馬上聽得到
 // 兩者對外都用 rough.mp4 的秒數（app.t）。
 import { clamp, cutIndexAt, outOf, roughOf, effectsAt, dbToGain, gainAt, MEDIA_TRANS } from './model.mjs';
 import { CAP_VARS } from '/lib/caption-style.mjs';
+import { soundKind, liveScale } from './live-sound.mjs';
 
 export class SimPreview {
   constructor(els, app) {
@@ -300,11 +302,24 @@ function loadPlayerScript() {
 // 有聲音的底片不動（它就是主時間，動了聲音會斷）。輸出完成影片不經過這裡（render 逐格抽影格，不會差）
 export const LAYER_SYNC = { frames: 1, cooldownMs: 300, settleMs: 150, preroll: 0.5, maxLead: 0.3, vsyncMs: 20 };
 
+// 058 聲音即時生效。HyperFrames 播放器每一格照元素的 data-volume 設它自己 Web Audio 圖裡的增益（GainNode），所以這裡改 data-volume，不改 el.volume
+// （el.volume 每一格會被設回去；音效、背景音樂、走 Web Audio 的影片已經接在播放器自己的 AudioContext，從外面再接 createMediaElementSource 會丟 InvalidStateError）。
+// 值＝build 寫的 data-volume ×（現在的值 − 做進去的值）換成的倍數（editor/live-sound.mjs liveScale；做進去的值＝/api/state 的 preview.sound）。
+// 有聲音的影片（人聲、素材原聲）平常走原生播放，data-volume 到 1 就封頂；按播放之前把它們放進一個音量 1 的 audio group，
+// 播放器就改走 Web Audio，調大也聽得到（data-volume 大於 1 的影片本來就走這條）。瀏覽器還沒允許播放聲音時不放（不能因為這樣變成沒聲音）
+export const LIVE_GROUP = 'editor-live';
+// 字幕 root（applyCaption、applyMarks）：HyperFrames 0.9 把子合成接進主文件時，root 的 id 換成 data-hf-authored-id，
+// #captions 找不到（058 實測 0.9.28：字幕樣式、重點字幕在完成影片預覽原本沒有即時換），兩種都找
+const CAP_ROOT = '#captions, #captions-test, [data-hf-authored-id="captions"], [data-hf-authored-id="captions-test"]';
+const fmtVol = (v) => String(Math.round(Math.max(0, v) * 10000) / 10000);
+
 export class PlayerPreview {
   constructor(host, app) {
     this.host = host; this.app = app;
     this.p = null; this.ready = false; this.outT = 0; this._playing = false; this.pendingSeek = null; this.failed = null;
     this.layers = null;
+    this.sound = null;            // 058 { list: [{ el, k, raw, base, shown }] } | { fail: 原因 }
+    this.live = null;             // 058 聲音即時生效：{ on: true } | { on: false, why }；null＝還沒載好
   }
   // 播放器裡的影片：data-start／duration／media-start 換算成完成影片時間（剪輯台的 build 都是 1 倍速，變速已經做進素材檔）
   scanLayers() {
@@ -371,6 +386,8 @@ export class PlayerPreview {
     p.addEventListener('ready', () => {
       this.ready = true;
       this.dropLayers();
+      this.sound = null;   // 058 換了一支 index.html（更新預覽、換專案）：重新找出聲的元素、重新記 build 寫的 data-volume
+      this.applySound();
       this.applyTheme();
       if (this.pendingSeek != null) { p.seek(this.pendingSeek); this.outT = this.pendingSeek; this.pendingSeek = null; }
       this.app.onPlayerReady?.(p.duration);
@@ -391,9 +408,10 @@ export class PlayerPreview {
     this.p = p;
     this.ready = false;
   }
-  unmount() { if (this.p) { try { this.p.pause(); } catch { /* 已經停了 */ } this.p.remove(); } this.p = null; this.ready = false; this._playing = false; this.dropLayers(); }
+  unmount() { if (this.p) { try { this.p.pause(); } catch { /* 已經停了 */ } this.p.remove(); } this.p = null; this.ready = false; this._playing = false; this.dropLayers(); this.sound = null; this.live = null; }
   play() {
     if (!this.p) return;
+    this.routeSound();
     this._playing = true;
     const dur = this.p.duration || 0;
     if (dur && this.outT >= dur - 0.05) this.seekOut(0);
@@ -418,7 +436,7 @@ export class PlayerPreview {
   applyCaption() {
     let doc = null;
     try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
-    const root = doc?.querySelector('#captions, #captions-test');
+    const root = doc?.querySelector(CAP_ROOT);
     if (!root || !this.app.capPreview) return;
     const c = this.app.capPreview(), key = JSON.stringify([c.style, c.face]);   // face：有重點字幕時多帶粗體的字型檔（038）
     if (root.dataset.capKey === key) return;
@@ -435,7 +453,7 @@ export class PlayerPreview {
     const A = this.app;
     let doc = null;
     try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
-    const root = doc?.querySelector('#captions, #captions-test');
+    const root = doc?.querySelector(CAP_ROOT);
     if (!root || !A.markKey) return;
     const key = A.markKey();
     if (root.dataset.markKey === key) return;
@@ -446,8 +464,52 @@ export class PlayerPreview {
       if (text.get(n) === el.textContent) el.classList.toggle('cg--em', A.isMark(n));
     }
   }
+  // 058 播放器裡會出聲、剪輯台管得到音量的元素（editor/live-sound.mjs soundKind 認得的 id；沒聲音的影片層不算）
+  scanSound() {
+    let doc = null;
+    try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
+    if (!doc?.querySelector('[data-composition-id="main"]')) return { fail: '讀不到播放器裡的聲音', at: performance.now() };
+    const A = this.app, segIds = [...new Set([...(A.plan0?.scenes || []), ...(A.scenes || [])].map((s) => s?.id).filter((id) => typeof id === 'string'))];
+    const list = [];
+    for (const el of doc.querySelectorAll('audio[id], video[id]')) {
+      if (el.tagName === 'VIDEO' && (el.hasAttribute('muted') || (el.dataset.hasAudio ?? 'true') !== 'true')) continue;
+      const k = soundKind(el.id, segIds);
+      if (!k) continue;
+      const raw = el.getAttribute('data-volume'), v = Number.parseFloat(raw ?? '');
+      list.push({ el, k, raw, base: Number.isFinite(v) ? v : 1, shown: raw });
+    }
+    return { list };
+  }
+  // 每一格：照現在的值改 data-volume（變了才寫）。人聲照那一支現在播到 rough.mp4 的第幾秒算範圍音量
+  applySound() {
+    if (!this.p || !this.ready) return;
+    if (this.sound?.fail && performance.now() - this.sound.at > 1000) this.sound = null;   // 讀不到：過一秒再試
+    const S = this.sound ||= this.scanSound(), A = this.app, built = A.server?.preview?.sound;
+    const live = S.fail ? { on: false, why: S.fail } : !built ? { on: false, why: '這一版預覽沒有記做進去的音量，更新一次預覽就有（還是沒有就重新啟動剪輯台）' } : { on: true };
+    if (JSON.stringify(live) !== JSON.stringify(this.live)) { this.live = live; A.onLiveSound?.(); }
+    if (S.fail) return;
+    const now = built ? A.soundNow?.() : null;
+    for (const x of S.list) {
+      let t = 0;
+      if (x.k.kind === 'voice') {
+        const st = Number(x.el.dataset.start) || 0, d = Number(x.el.dataset.duration);
+        t = (Number(x.el.dataset.mediaStart) || 0) + clamp(this.outT - st, 0, Number.isFinite(d) ? Math.max(0, d - 1e-3) : Infinity);
+      }
+      const k = now ? liveScale(x.k, { built, now, t }) : null;
+      const want = k == null || Math.abs(k - 1) < 1e-6 ? x.raw : fmtVol(x.base * k);
+      if (want === x.shown) continue;
+      if (want == null) x.el.removeAttribute('data-volume'); else x.el.setAttribute('data-volume', want);
+      x.shown = want;
+    }
+  }
+  // 按播放之前（使用者點了才會播）：有聲音的影片放進音量 1 的 audio group，走 Web Audio（播放器開始播的時候才決定每支走哪條路）
+  routeSound() {
+    if (!this.live?.on || navigator.userActivation?.hasBeenActive === false) return;
+    for (const x of this.sound?.list || []) if (x.el.tagName === 'VIDEO' && !x.el.hasAttribute('data-audio-group')) x.el.setAttribute('data-audio-group', LIVE_GROUP);
+  }
   tick() {
     if (!this.p) return;
+    this.applySound();
     this.applyTheme();
     this.applyCaption();
     this.applyMarks();

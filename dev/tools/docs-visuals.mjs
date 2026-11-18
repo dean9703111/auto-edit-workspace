@@ -161,7 +161,7 @@ try{
   if(edVideo.status!==0)throw Error(edVideo.stderr);
   edEditor=await startEditor({flags:{project:edProject,template:TPL},cwd:root,port:0,writeState:false,previewDir:path.join(root,'preview')});
   await page.setViewport({width:1600,height:1000,deviceScaleFactor:1.25});
-  await page.evaluateOnNewDocument(()=>{for(const k of ['coach.v2','coach-final.v1','coach-rough.v1'])localStorage.setItem(`auto-edit-editor.${k}`,'1');});
+  await page.evaluateOnNewDocument(()=>{for(const k of ['coach.v3','coach-final.v1','coach-rough.v1'])localStorage.setItem(`auto-edit-editor.${k}`,'1');});
   await page.goto(edEditor.url,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.__editor?.reportReady&&window.__editor.itemsView.some(x=>x.id==='m01'&&x.knots),{timeout:90000});
   await page.evaluate(()=>window.__editor.select({kind:'media',id:'m01'}));

@@ -67,7 +67,7 @@ test('提示卡：A 專案關掉 → 另一個 port 的 B 專案不再跳；三�
   assert.deepEqual(await shown(), []);
 
   // 另外兩張也是同一套：各記各的代號
-  for (const [card, want] of [['coachFinal', ['coach-rough.v1', 'coach-final.v1']], ['coach', ['coach-rough.v1', 'coach-final.v1', 'coach.v2']]]) {
+  for (const [card, want] of [['coachFinal', ['coach-rough.v1', 'coach-final.v1']], ['coach', ['coach-rough.v1', 'coach-final.v1', 'coach.v3']]]) {
     await page.evaluate((id) => { document.getElementById(id).hidden = false; }, card);
     await page.click(`#${card}Close`);
     assert.deepEqual(await shown(), []);

@@ -25,7 +25,7 @@ async function setup(t, plan, { media = false } = {}) {
   fs.mkdirSync(shared);
   fs.symlinkSync(TEMPLATE, path.join(shared, 'template'), 'dir');
   fs.symlinkSync(path.join(WORKSPACE, 'shared', 'sfx'), path.join(shared, 'sfx'), 'dir');
-  fs.writeFileSync(path.join(shared, 'setting.json'), JSON.stringify({ editor: { seen: ['coach-rough.v1', 'coach-final.v1', 'coach.v2'] } }));   // 提示卡都看過了，不擋畫面
+  fs.writeFileSync(path.join(shared, 'setting.json'), JSON.stringify({ editor: { seen: ['coach-rough.v1', 'coach-final.v1', 'coach.v3'] } }));   // 提示卡都看過了，不擋畫面
   const project = path.join(root, 'projects', 'example'), work = path.join(project, 'work');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   const planFile = path.join(work, 'hyperframes', 'plan.json'), srtFile = path.join(work, 'rough.srt');
