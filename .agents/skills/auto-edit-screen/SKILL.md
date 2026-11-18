@@ -30,7 +30,7 @@ version: 0.1.0
 node shared/template/tools/media.mjs scan --project projects/<專案>
 ```
 
-每支錄影、每批圖片一個子代理，同一則回覆一次派出。錄影**只讀自己那支的 `work/media/<檔名>/events.md`**（哪一秒切頁、開視窗、哪一塊變了、哪裡在等、哪裡在捲）和 sheet；圖片看 `work/media/images/sheet-NN.jpg`。不用讀 `work/media/index.md`（那是總表）。寫 `work/media/notes/<檔名>.json`：
+每支錄影、每批圖片一個子代理。錄影**只讀自己那支的 `work/media/<檔名>/events.md`**（哪一秒切頁、開視窗、哪一塊變了、哪裡在等、哪裡在捲）和 sheet；圖片看 `work/media/images/sheet-NN.jpg`。不用讀 `work/media/index.md`（那是總表）。寫 `work/media/notes/<檔名>.json`：
 
 ```json
 { "file": "assets/screen/操作A.mp4", "summary": "安裝工具的完整操作", "moments": [ { "from": 3.5, "to": 18, "what": "打開設定頁、建立金鑰", "keywords": ["設定", "金鑰"] } ] }
@@ -81,7 +81,6 @@ node shared/template/tools/build.mjs --project projects/<專案> --check-draft <
 - [ ] 座標是素材原尺寸（從格線圖讀的）
 - [ ] 紅框、說明卡寫好後，用 `--box` 截那一刻看過一次
 - [ ] 段尾沒露出下一步；個資在盤點時記進 `privacy`，`--check` 沒有隱私的 ⚠；停住的畫面都寫了 `hold`
-- [ ] 當子代理時只寫自己那份筆記（盤點）或草稿（分章）
 
 ## 退路表
 
@@ -96,7 +95,7 @@ node shared/template/tools/build.mjs --project projects/<專案> --check-draft <
 
 ## 工具呼叫預算
 
-每支錄影最多 6 次。超過就停下來回報卡在哪；工具印「→ 停手」也一樣停。
+每支錄影最多 6 次。超過就停下來回報卡在哪。
 
 ## 回報格式
 

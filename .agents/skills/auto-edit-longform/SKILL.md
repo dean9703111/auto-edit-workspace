@@ -31,7 +31,6 @@ node shared/template/tools/status.mjs --project projects/<專案>
 它印目前階段、該讀哪支 Skill 的第幾步、**完整可貼的下一條指令**，有待回覆停點就印停點那兩行。照著做，不用另外查路由。第一次開工：`media.mjs prep`（或 `status.mjs --project projects/<專案> --init`）會自動填開工決策表；使用者說直式時，`prep` 加 `--format portrait`。
 完成判準：讀到 `目前在：`、`Skill：`、`→ 下一步：` 或待回覆的停點。
 它印 ⚠ 時在回報裡問使用者，不擋流程：「講者：⚠ 還沒設定」問姓名與頭銜（不要自己編）；「偏好：⚠ 有 N 條…還沒問使用者」跑 `node shared/template/tools/status.mjs --prefs` 把那幾條列出來，問哪幾條以後每一集都照做，回答後照它印的 `--prefs-add`、`--prefs-skip` 記下來（使用者說某一條不要了：`--prefs-drop "<第幾條>"`）。使用者問「為什麼這麼久」「時間花在哪」：跑 `status.mjs --project projects/<專案> --timeline`，照它印的回答。
-常見錯誤：把 Skill 整份讀完才動手 → 只讀 status 印的那一步。
 
 **2. 有待回覆的停點**
 
@@ -50,21 +49,12 @@ node shared/template/tools/status.mjs --project projects/<專案>
 
 status 和實際檔案不符時以產物為準，判斷表在 `references/progress-template.md`。
 完成判準：接著做的就是 status 印的那一步。
-常見錯誤：把 Skill 整份讀完才動手 → 只讀那一步。
 
 可以全自動、不用問的：轉逐字稿、`--check`、build、audit、`qc.mjs`、`status.mjs`。一定要停的：AGENTS.md「停點總表」的 ①–⑥。
 
 ## 版式（橫式／直式）
 
 開工時決定一次，`media.mjs prep` 寫進開工決策表「版式」：使用者說「短影片」「直式」「Shorts」「Reels」「抖音」→ `prep` 加 `--format portrait`；說「長片」「橫式」或都沒說 → 工具看主軌，寬 < 高才是直式。之後說「改成直式」：跑 `node shared/template/tools/status.mjs --project projects/<專案> --init --format portrait`（開工決策表的版式和 plan.json 的 `format` 一起改）；改橫式把 `portrait` 換成 `landscape`。不用記停點紀錄。`--check` 說兩邊版式不一樣時，照使用者要的版式跑同一條補齊，不要把 plan.json 改回原本的版式。直式素材做橫式：不支援，告訴使用者；橫式素材做直式：還不支援（`--check` 會 ✖），請使用者提供直拍素材。直式的數字（畫布、版面、字幕、安全區、構圖）看 `shared/style.md`「直式」。
-
-## 自我核對
-
-- [ ] 專案只有一個、確定了
-- [ ] 照 status 印的下一條做，沒有自己猜流程
-- [ ] 有待回覆停點時重貼了那一行
-- [ ] 沒讀寫其他專案的 `work/`
-- [ ] 回報最多 15 行
 
 ## 退路表
 

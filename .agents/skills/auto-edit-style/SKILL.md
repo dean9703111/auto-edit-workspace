@@ -136,19 +136,7 @@ node shared/template/tools/brand.mjs captions [--look outline] [--font wenkai] [
 
 ## 停點
 
-```
-⏸ 停點 ⑥ 背景預覽｜請看 <暫存資料夾>/preview.jpg 和 <暫存資料夾>/zones-fs.jpg
-請回：「可以」或「重做」
-```
-
-停點 ⑥ 不能略過：背景圖放進 `shared/` 一定要使用者同意（AGENTS.md 規則 1）。這兩行照抄 `brand.mjs bg --verify` 印的（暫存資料夾已經是完整路徑）。
-
-生成配樂（`references/music.md`）也停在 ⑥，用這兩行（`music.mjs gen` 會印，照抄）：
-
-```
-⏸ 停點 ⑥ 配樂試聽｜請看 <候選資料夾>/試聽.html
-請回：「用第 N 首」或「重做」
-```
+停點 ⑥ 的兩行照抄 `brand.mjs bg --verify` 印的（暫存資料夾已經是完整路徑）；生成配樂（`references/music.md`）也停在 ⑥，照抄 `music.mjs gen` 印的。
 
 | 使用者回 | 做什麼 |
 |---|---|
@@ -157,12 +145,8 @@ node shared/template/tools/brand.mjs captions [--look outline] [--font wenkai] [
 
 ## 自我核對
 
-- [ ] 用了哪個色碼已回報
-- [ ] 能力表已貼
 - [ ] 沒有安裝工具、沒有幫使用者登入任何服務
 - [ ] `preview.jpg` 親眼看過：三張像同一套、留空區的框裡沒有裝飾
-- [ ] 背景圖、新的風格包在停點 ⑥ 通過才 `pack`、`use`（步驟 1 換主色不用等 ⑥）
-- [ ] `shared/` 只透過本檔開頭列的工具寫；plan.json 只用 `--set`／`--unset` 改
 
 ## 退路表
 
@@ -176,7 +160,7 @@ node shared/template/tools/brand.mjs captions [--look outline] [--font wenkai] [
 
 ## 工具呼叫預算
 
-最多 15 次。超過就停下來回報卡在哪；工具印「→ 停手」也一樣停，把它上面還在的 ✖ 原文回報。
+最多 15 次。超過就停下來回報卡在哪。
 
 ## 回報格式
 

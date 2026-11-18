@@ -1066,7 +1066,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     log(`測試片段：${rel(path.join(P.out, TEST_FILE))}（${test.t0}s 起 ${test.duration}s）→ cd ${rel(P.out)} && npx hyperframes render -c ${TEST_FILE} --quality draft -o ${clip}`);
     for (const it of test.skipped) log(`⚠ ${it.id} 在 ${it.start}s 就開始了，測試片段不含這段（要看完整段，把起點改成 ${it.start}）`);
   }
-  // FR-032：字幕保留帶照版式（直式 y 1280–1420，不是畫面底部）；USAGE 2 第 8 步照這一行跑
+  // FR-032：字幕保留帶照版式（直式 y 1280–1420，不是畫面底部）
   log(`字幕保留帶檢查：cd ${rel(P.out)} && npx hyperframes check --caption-zone "${captionZoneArg(C)}"`);
   return { ok: true, res, written: W.res.written, skipped: W.res.skipped, removed };
 }
@@ -1174,7 +1174,7 @@ async function buildCli(flags, P) {
 
 // ---------- --show 收時間（032 A9④）----------
 // 使用者說「第 75 秒那張卡」：先換成那一秒所在的段再交給 showCmd。秒數是完成影片的（--check --json 的 out.start／out.end，
-// 和 --check 報告的「起–迄」欄同一套；USAGE.md 2.6 第 3 點）
+// 和 --check 報告的「起–迄」欄同一套）
 const CLOCK_RE = /^(?:(\d+):)?(\d+(?:\.\d+)?)$/;
 export function parseClock(s) {
   const m = String(s ?? '').trim().match(CLOCK_RE);

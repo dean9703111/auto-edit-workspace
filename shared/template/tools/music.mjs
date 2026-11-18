@@ -158,7 +158,7 @@ async function gen(f) {
   try {
     console.log(`生成 ${n} 首 ${seconds} 秒的純音樂（${f.prompt ? '自訂描述' : style}）…`);
     const t0 = Date.now();
-    const tracks = await aceGenerate(ACE.url, { prompt, seconds, n, seed: f.seed != null ? Number(f.seed) : null }, (s) => { if (s - last >= 60) { last = s; console.log(`⏳ 已經 ${Math.round(s / 60)} 分鐘…`); } });
+    const tracks = await aceGenerate(ACE.url, { prompt, seconds, n, seed: f.seed != null ? Number(f.seed) : null }, (s) => { if (s - last >= 60) { last = s; console.log(`生成中，已經 ${Math.round(s / 60)} 分鐘…`); } });
     const meta = { prompt, style: f.prompt ? null : style, seconds, engine: 'ACE-Step 1.5', created: new Date().toISOString(), tracks: [] };
     for (let i = 0; i < tracks.length; i++) {
       const raw = path.join(dir, `raw-${i + 1}.wav`), out = path.join(dir, `${i + 1}.wav`);

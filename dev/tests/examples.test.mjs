@@ -464,7 +464,7 @@ test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build →
     assert.ok(sg.motion.marks.length >= 2 && sg.motion.marks.every((m) => m.t >= 0 && m.t <= D), sg.id);
     assert.ok(sg.motion.busy.every(([a, b]) => a >= 0 && b <= D + 1e-6 && a <= b), `${sg.id} busy 要是段內秒數`);
   }
-  // 亂序 snapshot（R7.6 第 3 步）：每支截完成態、第一拍 + 1、中間拍 + 1；亂序與照順序的截圖逐像素相同
+  // 亂序 snapshot：每支截完成態、第一拍 + 1、中間拍 + 1；亂序與照順序的截圖逐像素相同
   const times = [];
   for (const { start, p } of segs) {
     const bs = Object.values(beatsOf(p)).sort((x, y) => x - y);

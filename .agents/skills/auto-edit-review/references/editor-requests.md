@@ -5,11 +5,9 @@
 修改單就是使用者確認過的改法：**直接做**，不開 `versions.mjs new`、不寫分鏡提案、不停停點 ③，也不要跑 `build.mjs --storyboard`（它會記一筆停點 ③）。這仍是一輪回饋，照這個順序：
 
 1. `node shared/template/tools/versions.mjs begin --project projects/<專案> --requests`：段號、版本從修改單讀（plan.json 沒有的段自己略過，見第 1 節），剪輯台那幾段標「生成中」。
-2. 照第 2、3 節改；要派的段同一則回覆一次派出。
+2. 照第 2、3 節改。
 3. 沒做的段、新增的段先寫進 r<N>.md（第 4 節）。
 4. 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`：build、audit 一次做完，剪輯台有改到的段標「已改完」、沒改到的標「失敗」（理由取 r<N>.md 那一列），不用另外跑 `editor.mjs --requests-state`。
-
-剪貼簿那行是剪輯台自動產生的。舊版寫「每段派一個子代理平行改，全部回來後 build、audit」：一樣照上面的順序做，只有第 3 節寫要派的段才派。
 
 ## 1. 讀修改單
 
@@ -45,8 +43,8 @@
 
 每段的「做法」那一行是使用者選的，照它走，不要自己換另一種：
 
-- **在現有的動畫上改**（沒勾「重新設計」，預設）：不要把這段改成 `"design": true`，派出去的子代理也不用載入 `hyperframes` skill。模板做得到多少就做多少；做完覺得這段還是要整段重畫才講得清楚，在回報裡寫一句「<段> 建議勾『重新設計』」，由使用者決定。
-- **重新設計**（使用者勾的）：設計師照 `design.md` 從空白畫布重畫（不用載入 `hyperframes` skill，做法都在 `design.md`、`craft.md`）。
+- **在現有的動畫上改**（沒勾「重新設計」，預設）：不要把這段改成 `"design": true`。模板做得到多少就做多少；做完覺得這段還是要整段重畫才講得清楚，在回報裡寫一句「<段> 建議勾『重新設計』」，由使用者決定。
+- **重新設計**（使用者勾的）：設計師照 `design.md` 從空白畫布重畫。
 
 先看這段在 plan.json 是哪一種（`build.mjs --show <段>`），再找對應的列；每段只會對到一列。
 
@@ -60,9 +58,7 @@
 | 重新設計 | 已經是內容設計動畫的段 | 你跑 `node shared/template/tools/build.mjs --project projects/<專案> --design-canvas <段> --reset`（舊的腳本和動畫會備份），再跑上一列的 `--to-design <段>` 拿派工那一行 |
 | （不看做法） | 錄影段的 `marks`、`moves`、`side`、`steps`、換成動畫 | 你自己改 plan.json；換一段錄影照 `auto-edit-screen` 的筆記挑 |
 
-舊的修改單沒有「做法」那一行：當成「在現有的動畫上改」。
-
-**同一則回覆一次全部派出**；派工訊息的「要改什麼」寫：
+派工訊息的「要改什麼」寫：
 
 ```
 修改單（使用者確認過的改法，直接做，不用新分鏡）：

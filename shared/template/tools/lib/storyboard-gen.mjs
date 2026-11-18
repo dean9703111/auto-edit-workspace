@@ -96,7 +96,7 @@ const layoutOf = (item) => item?.layoutZh || '—';
 
 // 內容設計動畫候選：草稿照常套模板，另外在 story 寫 designIdea（構想）、designWhy（為什麼值得設計）；③ 勾了才改成內容設計動畫
 export const isDesignPick = (seg) => !seg.design && seg.type !== 'media' && !!String(seg.story?.designIdea || '').trim();
-// 時間成本（建議初值，shared/style.md「內容設計動畫」）：一段約 12 分鐘、同時 4 段；建議先做的那幾段＝預估 ≤ 30 分鐘
+// 時間成本（建議初值）：一段約 12 分鐘、同時 4 段；建議先做的那幾段＝預估 ≤ 30 分鐘
 export const DESIGN_MIN = 12, DESIGN_PAR = 4, DESIGN_BUDGET = 30;
 export const designMinutes = (n) => Math.ceil(n / DESIGN_PAR) * DESIGN_MIN;
 // 要勾的話建議先做哪幾段：各章輪流（章照出現順序），同一章段長的先；加到下一段會超過預算就停。cands＝[{ id, part, secs }]

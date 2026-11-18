@@ -31,9 +31,8 @@ version: 0.2.0
 ls projects/<專案>/work/briefs/
 ```
 
-一段一個子代理，同一則回覆一次全部派出；段數多時一次最多幾個照「→ 派工：」那一行寫的，回來再派下一批。派工訊息**只送** `--apply-storyboard`（或 `--to-design`）印的「→ 派工：」下面那一行（換掉 `<段>`），不要加要求、範圍、檢查指令或完成判準：設計師要的都在 brief 和文件裡，多加的會蓋過文件（派工訊息優先），把設計師帶去翻原始資料。沒有能派子代理的工具才自己一段一段做。要新畫的物件由設計師在同一輪自己畫（一段最多一個，過 `illus-lint` 才用），不用另外派工人；只有使用者另外要求畫元件時才照 `references/illus-worker.md` 派。
+照 `--apply-storyboard`（或 `--to-design`）印的「→ 派工：」派。沒有能派子代理的工具才自己一段一段做。要新畫的物件由設計師在同一輪自己畫，不用另外派工人；只有使用者另外要求畫元件時才照 `references/illus-worker.md` 派。
 完成判準：每個 `design: true` 的段都派了。
-常見錯誤：一段一段派 → 慢好幾倍，要同一則回覆一次派出。
 
 **2. 收件**（主代理）
 
@@ -42,9 +41,8 @@ node shared/template/tools/build.mjs --project projects/<專案> --review
 ```
 
 全部回來才跑。它會 build、量全部動畫、出完成態拼圖，停在停點 ④（`auto-edit-review` 流程 A）。有 ✖ 就把那幾行原文交回做那段的子代理。
-還有段沒回來時，每收到一個完成通知就跑一次 `node shared/template/tools/build.mjs --project projects/<專案> --design-status`（不要寫 sleep 迴圈等檔案）。印「⚠ 超過 20 分鐘沒進度」的段，停掉原本那個，照它「→ 派工：」下面那一行重派一個新的；沒有 ⚠ 的段繼續等它回報，不要停它。要整段從頭重做（使用者要求重派、換了模型）：先停掉那一段的設計師，跑 `node shared/template/tools/build.mjs --project projects/<專案> --design-canvas <段,段> --reset`（舊的動畫檔和腳本備份到 `work/designs/.old/`、畫布換回空白），再照 `status.mjs` 印的「→ 派工：」下面那一行重派；不要自己搬動或刪除動畫檔，設計師會找不到畫布。主代理不自己寫 x-design 檔；使用者明說要你自己做時，先停掉那一段所有還在跑的設計師（含重派的），確認停了才動那個檔，不然兩邊會寫到同一個檔。
+還有段沒回來時，每收到一個完成通知就跑一次 `node shared/template/tools/build.mjs --project projects/<專案> --design-status`。印「⚠ 超過 20 分鐘沒進度」的段，停掉原本那個，照它「→ 派工：」下面那一行重派一個新的；沒有 ⚠ 的段繼續等它回報，不要停它。要整段從頭重做（使用者要求重派、換了模型）：先停掉那一段的設計師，跑 `node shared/template/tools/build.mjs --project projects/<專案> --design-canvas <段,段> --reset`（舊的動畫檔和腳本備份到 `work/designs/.old/`、畫布換回空白），再照 `status.mjs` 印的「→ 派工：」下面那一行重派；不要自己搬動或刪除動畫檔，設計師會找不到畫布。主代理不自己寫 x-design 檔；使用者明說要你自己做時，先停掉那一段所有還在跑的設計師（含重派的），確認停了才動那個檔，不然兩邊會寫到同一個檔。
 完成判準：`--review` 印出停點 ④ 那兩行。
-常見錯誤：每收一個就 build → 不用，全部回來才跑一次。
 
 **3. 手改模板動畫**（只有使用者要求模板做不到的改動才做）
 
@@ -59,11 +57,7 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段> --
 ## 自我核對
 
 - [ ] 內容設計動畫是從內容想出來的，不是某支模板的變形
-- [ ] 派工訊息是照抄「→ 派工：」下面那一行（綁句、版面、節奏由 audit 量，不寫進派工訊息）
-- [ ] 全部回來才跑一次 `--review`，沒有每收一個就 build
 - [ ] 拼圖親眼看過：動作看得到、構圖有主角、最重要的詞一眼看得到、遮住字幕看得懂
-- [ ] 要重做的段用 `--design-canvas <段> --reset`，沒有自己搬動或刪除動畫檔
-- [ ] 主代理沒有自己改 x-design 檔
 
 ## 退路表
 
@@ -74,10 +68,6 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段> --
 | 改動畫時 `✖ … 的 P.at('…')（…）不在分鏡表`（拍改了） | 改 `work/designs/<段>.md` 那張表（手改的模板段第一次 audit 時工具會建好） | 把原文交回主代理 |
 | 同一個 ✖ 改兩次還在，或 → 要改 plan.json | 停手，回報 `<段> ✖<N>｜卡在：<那行 ✖ 原文>`，主代理改 plan.json 後重派 | — |
 | 子代理交回 `plan.json 比 index.html 新，這次量不準` | 主代理跑 `node shared/template/tools/build.mjs --project projects/<專案>`，再請同一個子代理重跑驗收 | 回報 |
-
-## 工具呼叫預算
-
-工具印「→ 停手」就停，把它上面還在的 ✖ 原文回報；同一個 ✖ 改 2 次還在也一樣（AGENTS.md 規則 9）。讀文件、派子代理、查 `--design-status`、印 ⏳ 之後再跑同一條都不算。設計師子代理一樣：audit 數驗收次數，印「→ 停手」就把那行原文交回主代理。
 
 ## 回報格式
 
@@ -90,4 +80,4 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段> --
 - `references/illus-worker.md`：使用者另外要求畫線稿元件時才讀（內容設計動畫要的新物件由設計師自己畫）。
 - `references/worker-brief.md`：要手改動畫（步驟 3）時才讀。
 - `references/kit-syntax.md`：手改模板動畫（`x-<模板>-<段>.html`）時才讀；內容設計動畫用 GSAP，不用讀。
-- `references/craft.md`：設計師的畫法與動法（一頁，`references/design.md` 會叫他讀）。設計師和主代理都不用載入 `hyperframes` skill。
+- `references/craft.md`：設計師的畫法與動法（一頁，`references/design.md` 會叫他讀）。

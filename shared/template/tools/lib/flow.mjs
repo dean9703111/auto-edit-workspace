@@ -1452,7 +1452,7 @@ export function designCanvasCmd(P, ids, { reset = false } = {}) {
   return bad ? 1 : 0;
 }
 
-export const DESIGN_STALL_MIN = 20;   // 建議初值：一段約 12 分鐘（shared/style.md），20 分鐘還是空白畫布多半是卡住或被中斷
+export const DESIGN_STALL_MIN = 20;   // 建議初值：一段約 12 分鐘，20 分鐘還是空白畫布多半是卡住或被中斷
 // 舊版的重派時間（032 之前 --design-status 寫的）：專案還留著就照樣讀；新的都記在 work/.jobs/dispatch.json
 const redispatchFile = (P) => path.join(P.out, '.cache', 'design-redispatch.json');
 export function designStatus(P, now = Date.now()) {
