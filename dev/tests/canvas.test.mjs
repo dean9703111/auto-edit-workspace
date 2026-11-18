@@ -165,7 +165,7 @@ test('probeDims：手機直拍（1920×1080＋rotation −90）轉回顯示方�
 test('captionZoneArg（FR-032）、formatErrors（FR-004、決定 5）、字幕字數上限照版式（FR-031）', async () => {
   const { captionZoneArg, formatErrors } = await imp('lib/canvas.mjs');
   const { captionWarnings, buildCaptions } = await imp('lib/captions.mjs');
-  assert.equal(captionZoneArg(L), 'x0=0;y0=0.852;x1=1;y1=1;severity=error');   // USAGE 2 第 8 步原本的值
+  assert.equal(captionZoneArg(L), 'x0=0;y0=0.852;x1=1;y1=1;severity=error');   // 原本寫死的值
   assert.equal(captionZoneArg(V), 'x0=0;y0=0.667;x1=1;y1=0.74;severity=error');
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'fmt-err-'));
   fs.mkdirSync(path.join(d, 'work'));

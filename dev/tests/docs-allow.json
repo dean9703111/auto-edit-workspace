@@ -1,10 +1,5 @@
 [
   {
-    "file": "bg-worker.md",
-    "text": "最多 8 行",
-    "reason": "背景圖工人自己的回報格式上限：只交一張圖，回報給派工的主代理看，不是 AGENTS.md 規則 8 給使用者的回報"
-  },
-  {
     "file": "director.md",
     "text": "最多 2000 字",
     "reason": "導演子代理寫的視覺語言會貼進每段設計師的資料，要短"
@@ -13,6 +8,36 @@
     "file": "reviewer-brief.md",
     "text": "8 段",
     "reason": "逐格看截圖時才分給子代理的段數門檻（少於 8 段主代理自己看就快），只用在這份"
+  },
+  {
+    "file": "SITUATIONS.md",
+    "text": "（≥ 3.5 秒，它決定章節號碼和章名）",
+    "reason": "沒有 01 的短片放 02 章節角標的最短長度，只在選情境時用"
+  },
+  {
+    "file": "SITUATIONS.md",
+    "text": "兩邊差 20 倍以上",
+    "reason": "長條比較選型的判斷（小的那條只剩 8 px），只用在這張表"
+  },
+  {
+    "file": "SITUATIONS.md",
+    "text": "提示詞超過 22 字",
+    "reason": "提示詞模板放得下的長度，只用在選型"
+  },
+  {
+    "file": "SITUATIONS.md",
+    "text": "超過 6 行 → 螢幕錄影",
+    "reason": "終端機程式碼模板放得下的行數，只用在選型"
+  },
+  {
+    "file": "SITUATIONS.md",
+    "text": "講者面板不到 1.6 秒的段照舊淡出",
+    "reason": "說明 build 自動上推的條件，不是 AI 要遵守的門檻"
+  },
+  {
+    "file": "craft.md",
+    "text": "滾動 1.2–1.6 秒然後停住",
+    "reason": "設計師畫數字滾動的手感建議；P.count 的 dur 由設計師自己給，沒有工具門檻"
   },
   {
     "test": "T31",

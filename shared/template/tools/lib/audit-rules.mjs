@@ -30,7 +30,7 @@ export const CAPTION_Y = 920;       // 字幕區從 y 920 起（R4.1；check --c
 export const CONTENT_BOTTOM = 870;  // 內容區下緣（R4.1），改法建議移到這條線以上
 export const FS_RIGHT = 1380;       // 全畫面主內容右緣上限（R4.1、R7.2）
 export { PIP_ZONE };                // 子母畫面外框禁入區（lib/media.mjs，和 build 同一組數字）
-export const DONE_BEFORE = 0.6;     // 完成態＝段尾前 0.6 秒（完成態至少停 0.6s，USAGE 4.2）
+export const DONE_BEFORE = 0.6;     // 完成態＝段尾前 0.6 秒（完成態至少停 0.6s）
 export const MIN_FONT = 30;         // 字太小的門檻（R8.5 的下限是正文 52、標籤 38；30 以下一定看不清）
 export const SPEAKER_WARN = 0.02;   // custom 與用 css 移過位的段：蓋到講者框 ≥ 2% 就提醒（四邊已外擴 40px，碰到邊不算；R8.17）
 export const SPEAKER_WARN_TEMPLATE = 0.4;    // 沒移位的情境模板：蓋到講者框 ≥ 40%（手勢多半會被擋）才提醒；和 build --check 的碰撞提醒同一個門檻（R4.1）

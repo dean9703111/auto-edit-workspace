@@ -23,7 +23,7 @@
 
 **讀文件要分層**：開工只讀本檔，和 `status.mjs` 印的那支 Skill 的那一步；Skill 指到的 references、`shared/` 的文件（`USAGE*.md`、`SITUATIONS.md`、`BEATS.md`、`style.md`、`EDITOR.md`、`REVIEW.md`）用到才讀，而且只讀指到的那一節（用標題或 `grep -n` 找）。`shared/偏好.md` 存在的話，寫分鏡、改段落前讀它的「照做」那一節。
 
-優先序：我當下的話 > 本檔 > `shared/偏好.md` > `shared/style.md` > `shared/template/USAGE.md` > `USAGE-reference.md`、`SITUATIONS.md`、`REVIEW.md` > Skill；派工時派工訊息 > Skill。
+優先序：我當下的話 > 本檔 > `shared/偏好.md` > `shared/style.md`（數字與品味）> Skill（流程與指令）> `USAGE.md`、`USAGE-reference.md`、`SITUATIONS.md`、`BEATS.md`、`REVIEW.md`（欄位、語法、查表）；派工時派工訊息 > Skill。
 
 ## 專案
 

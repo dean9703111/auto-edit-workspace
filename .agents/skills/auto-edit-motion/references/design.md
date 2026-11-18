@@ -10,7 +10,7 @@
 | 這個工作區的做法：檔案、格式、綁句、驗收 | 這一份 |
 | 怎麼畫得好、動得好 | `craft.md`（同一個資料夾，一頁） |
 
-不用載入 `hyperframes` skill，也不用跑 `npx hyperframes` 的任何指令：骨架、check、snapshot、render 都由這個工作區的工具處理。秒數、範圍、放不放得下都由工具量，不用查逐字稿、plan 或工具的原始碼。模板（`shared/template/custom/`）和別段的動畫檔不要看：看過就會做得像它。圖示、圖庫線稿、registry 效果要用時才讀 `design-kit.md` 的那一節。
+不用載入 `hyperframes` skill：骨架、check、snapshot、render 都由這個工作區的工具處理。秒數、範圍、放不放得下都由工具量，不用查逐字稿、plan 或工具的原始碼。模板（`shared/template/custom/`）和別段的動畫檔不要看：看過就會做得像它。圖示、圖庫線稿、registry 效果要用時才讀 `design-kit.md` 的那一節。
 
 ## 做法（照順序，每一步做一次）
 
@@ -87,7 +87,7 @@
 </div>
 <script>
     const T1 = P.at('#13@每週');
-    tl.from('.xds0108-cell', { opacity: 0, scaleY: 0.4, transformOrigin: '50% 100%', duration: 0.4, ease: 'back.out(1.6)', stagger: 0.07 }, T1);
+    tl.from('.xds0108-cell', { opacity: 0, scaleY: 0.4, transformOrigin: '50% 100%', duration: 0.4, ease: 'back.out(1.6)', stagger: 0.12 }, T1);
     tl.from('#xds0108-num', { opacity: 0, y: 24, duration: 0.5, ease: 'expo.out' }, T1 + 0.4);
     const T2 = P.at('#15@省下');
     tl.to('.xds0108-cell:nth-child(n+2)', { opacity: 0, duration: 0.3, ease: 'power2.in' }, T2);

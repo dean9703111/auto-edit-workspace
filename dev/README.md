@@ -38,3 +38,36 @@
 `projects/測試/` 不進版控（`.gitignore` 只留 `projects/example/`）。
 
 **暫存目錄（外接硬碟）**：單元測試、合成專案與 hyperframes render 的暫存都走 `os.tmpdir()`，一小時可累積 30 GB。作者的外接硬碟是 ExFAT，直接當暫存會被 macOS 寫進 `._*` 隱藏檔、弄壞列目錄的測試，所以暫存放在硬碟上的 APFS 稀疏映像 `/Volumes/video/auto-edit-tmp.sparseimage`（`hdiutil create -size 300g -type SPARSE -fs APFS -volname auto-edit-tmp`，掛起來是 `/Volumes/auto-edit-tmp`）。`check-all.mjs` 看到映像檔沒掛就先 `hdiutil attach`，再把 `TMPDIR` 指到 `AUTO_EDIT_TMP` 或 `/Volumes/auto-edit-tmp`（子處理程序繼承）。其他指令預設不動（系統暫存）。要每支工具和測試都自己用外接硬碟，開一次設定就好（041，`lib/tmp.mjs`）：`node shared/template/tools/status.mjs --tmp /Volumes/auto-edit-tmp --tmp-image /Volumes/video/auto-edit-tmp.sparseimage`（寫 `shared/setting.json` 的 `tmp`；`--tmp off` 關掉）。開了之後工具開跑時（`lib/cli.mjs` 的 `isMain`）、測試載入 `helpers.mjs` 時把 `TMPDIR` 指過去，映像檔沒掛就先掛，掛不上就退回系統暫存；`AUTO_EDIT_TMP=off` 這一次不套用。沒開設定時，手動跑 `node --test dev/tests/*.test.mjs`、`npx hyperframes render` 要自己加前綴：`TMPDIR=/Volumes/auto-edit-tmp node --test …`（沒掛上不要加，路徑不存在每個指令都會失敗）。暫存資料夾（`hf-*`、`look-*`、`auto-edit-check-*`）用完要清，用 node 的 fs 遞迴刪除（本機 hook 會擋 shell 的刪除指令）。
+
+## Skill 與安裝
+
+- 9 支 auto-edit Skill 已經內建在 `.agents/skills/`（`AGENTS.md`「怎麼用這份檔」有對照表）。環境準備的 S4 用 `node setup/install-skills.mjs` 複製到 `.claude/skills/`（Claude Code）與 MiniMax Code 的使用者 Skill 資料夾；改了 `.agents/skills/` 之後重跑一次就會更新，`node setup/install-skills.mjs --check` 只比對不寫檔。
+- Skill 直接引用工作區的 `shared/template/USAGE.md`、`shared/template/USAGE-reference.md` 與 `shared/template/tools/build.mjs`，**不要把模板複製進 Skill**。理由：使用者換過的主色與背景圖都在工作區的 `shared/template/`，複製一份就不會跟著變。
+- 依賴：Node.js ≥ 22、ffmpeg／ffprobe（在 PATH 裡）、`npx hyperframes`（版本照根目錄 `package.json`，`npm install` 安裝）。`build.mjs` 本身零依賴。
+- build 用 `--project projects/<專案>`（或只寫名稱）指定專案；沒寫時，目前資料夾在某個專案裡就用它，`projects/` 只有一個專案就用那個，否則出錯並列出現有專案。路徑旗標（相對目前資料夾，會蓋過專案預設）：`--plan`、`--srt`、`--video`、`--out`、`--sfx`。預設是專案裡的 `work/hyperframes/plan.json`、`work/rough.srt`、`work/rough.mp4`、`work/hyperframes/`，音效是 `shared/sfx/`。
+- 專案結構：`projects/<專案>/講稿.md`、`assets/camera/`、`assets/voice/`（講解主軌）、`assets/screen/`、`assets/images/`（只讀）、`work/`（中間產物）、`output/`（`final.mp4`、`test-clips/`、`qc/`；build 會先建好這三個資料夾）。
+- build 結束碼：有 ✖ 錯誤時是 1，可以拿來判斷要不要往下跑。`--list --json` 印出機器可讀的情境、字卡動態、音效清單與 media 段欄位；`--check --json` 印出機器可讀的檢查報告（`USAGE-reference.md` R2.6）。
+- 素材：`node shared/template/tools/media.mjs scan|frame|main --project projects/<專案>`（`USAGE.md` 第 5 節）。也是零依賴，只用 ffmpeg／ffprobe。
+
+## 改模板或新增情境
+
+這一集只是想換個樣子，先用 `css` 移位（`USAGE-reference.md` R4.6）或第二層 custom（R7），不要改模板。改模板是 `shared/` 唯讀的例外，要先徵得使用者同意。
+
+**情境**：改 `shared/template/scenes/<NN-key>/template.html` 的 `<!-- @style -->`、`<!-- @body -->`、`<!-- @timeline -->` 三段，以及旁邊 `scene.json` 的 slots、beats、lists、rules、sfx、sample。`scene.json` 的 `sfx` 區塊長這樣。
+
+```json
+"sfx": { "main": { "sound": "sparkle", "at": "in + 0.1" },
+         "extra": [ { "sound": "ding", "at": "aAt", "volume": 0.8 } ] }
+```
+
+- `main.sound` 可寫字串，或 `{ "default": "ding", "warn": "alert", "good": "success" }` 依 tone 挑；`extra[].volume` 是該音效在 `kit/sfx.json` 預設音量的倍數（例：09 的 ding＝0.45×0.8）。
+- `at` 可寫：`start`、`end`、beat 名（`in`、`aAt`）、`清單名[i]`（第 i 項，例 `cards[0]`）、`清單名[i:]`（第 i 項起全部，例 `items[1:]`），後面可接 `± 秒數`（例 `in + 0.1`、`start - 0.15`）。
+
+**字卡動態**：改 `shared/template/fx/effects/fx-NN-*.html` 與 `fx/catalog.json`。`fx/renders/` 的預覽影片不會跟著變。
+
+**預覽與畫廊**
+
+- `node shared/template/tools/build.mjs --gallery --only <key>` 重產該情境的預覽。`--only` 不會更新 `preview/sfx-data.js`，改了音效要跑不帶 `--only` 的版本。
+- 新增情境要在 `shared/template/index.html` 手動加一張卡。
+
+改完一定跑一次 `--check`＋snapshot。

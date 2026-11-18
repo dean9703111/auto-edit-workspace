@@ -92,9 +92,7 @@ node shared/template/tools/brand.mjs speaker
 - [ ] 安裝清單只問一次
 - [ ] 沒有用系統管理員權限執行、沒幫使用者輸入密碼（`setup/README.md` 原則 5）
 - [ ] 只裝「要裝的東西」表裡的
-- [ ] 每一步都照「驗證」確認過
 - [ ] `npm install` 在工作區根目錄跑
-- [ ] 最後 `all_ok` 是 `true`，或總表標題是【環境準備未完成】
 
 ## 退路表
 
@@ -110,7 +108,7 @@ node shared/template/tools/brand.mjs speaker
 
 ## 工具呼叫預算
 
-同一步失敗 2 次就停（`setup/README.md` 原則 8）；工具印「→ 停手」也一樣停，把它上面還在的 ✖ 原文回報。
+同一步失敗 2 次就停（`setup/README.md` 原則 8）。
 
 ## 回報格式
 

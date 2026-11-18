@@ -118,10 +118,11 @@ test('T3 skills：每支 SKILL.md 最多 200 行', () => {
   noProblems(bad, 'SKILL.md 超過 200 行', '細節搬進 references/，SKILL.md 只留步驟、判準、停點、退路');
 });
 
-test('T4 skills：骨架（開頭一行、一覽表頭、必要標題、每步有指令和完成判準、自我核對 5–8 項）', () => {
+test('T4 skills：骨架（開頭一行、一覽表頭、必要標題、每步有指令和完成判準、自我核對最多 5 項）', () => {
   const L1 = '規則在 AGENTS.md；本檔只寫這一階段的指令、判準、停點、退路。';
   const HEAD = '| 輸入 | 指令 | 產出 | 完成判準 | 停點 |';
-  const H2 = ['## 步驟', '## 自我核對', '## 退路表', '## 工具呼叫預算', '## 回報格式'];
+  // 060：自我核對、工具呼叫預算改成選用（重述步驟、AGENTS.md 規則 8 的不要寫）
+  const H2 = ['## 步驟', '## 退路表', '## 回報格式'];
   const bad = [];
   for (const n of SKILLS.filter((x) => exists(skillMd(x)))) {
     const f = skillMd(n);
@@ -148,14 +149,14 @@ test('T4 skills：骨架（開頭一行、一覽表頭、必要標題、每步�
     // 026：「常見錯誤」不再每步必填。工具訊息自己會說怎麼改的不重抄；和工具訊息不一樣的判斷寫在退路表
     if (!nSteps) bad.push(`${f}：「## 步驟」裡找不到 **1. …** 這種步驟標題`);
     if (nCode < nSteps || nDone < nSteps) bad.push(`${f}：${nSteps} 個步驟，但指令區塊 ${nCode}、「完成判準：」${nDone}（每步都要有指令和完成判準）`);
-    const selfCheck = section(text, '## 自我核對') || '';
-    const items = (selfCheck.match(/^- \[ \]/gm) || []).length;
-    if (items < 5 || items > 8) bad.push(`${f}：自我核對 ${items} 項（要 5–8 項）`);
+    const selfCheck = section(text, '## 自我核對');
+    const items = ((selfCheck || '').match(/^- \[ \]/gm) || []).length;
+    if (selfCheck != null && (items < 1 || items > 5)) bad.push(`${f}：自我核對 ${items} 項（最多 5 項，只放步驟裡沒寫、要用眼睛判斷的；沒有就整節刪掉）`);
     const fallback = section(text, '## 退路表') || '';
     if (!fallback.includes('| 症狀（工具原文） | 做法 | 第二次還失敗 |')) bad.push(`${f}：退路表表頭要是「| 症狀（工具原文） | 做法 | 第二次還失敗 |」`);
-    const budget = section(text, '## 工具呼叫預算') || '';
-    // 032 A4：次數由工具數（lib/tries.mjs 的 MAIN_TRY_MAX），預算節一律寫「工具印「→ 停手」就停」，不再要求抄數字
-    if (!budget.includes('→ 停手')) bad.push(`${f}：工具呼叫預算要寫「工具印「→ 停手」就停」（次數由工具數，不用寫數字）`);
+    const budget = section(text, '## 工具呼叫預算');
+    // 060：「→ 停手」寫在 AGENTS.md 規則 8；預算節只給工具沒在數、數字和規則 8 不一樣的 Skill
+    if (budget != null && !/\d+\s*次/.test(budget)) bad.push(`${f}：工具呼叫預算只寫工具沒在數的次數（「最多 N 次」）；只是重述「→ 停手」就整節刪掉`);
   }
   noProblems(bad, 'SKILL.md 骨架不符 FR-004–FR-006、FR-009、FR-013、FR-014', '照 specs/001-skills-docs/skill-outline.md §0 的共用骨架補齊');
 });
@@ -184,12 +185,11 @@ test('T6 停點：AGENTS.md「停點總表」恰好 6 列、①–⑥', () => {
   check(JSON.stringify(rows) === JSON.stringify(want), `停點總表第一張表的第一欄是 ${JSON.stringify(rows)}，要是 ${JSON.stringify(want)}（shared/template/tools/lib/stops.mjs 的 STOP）→ 只有六列，名稱照 lib/stops.mjs`);
 });
 
-test('T7 停點：六個（＋③ 改版）最後兩行原文都在 AGENTS.md 與對應的 SKILL.md', () => {
+test('T7 停點：六個（＋③ 改版）最後兩行原文都在 AGENTS.md（060：Skill 不再抄）', () => {
   const agents = read('AGENTS.md');
   const bad = [];
   for (const s of [...STOPS, ...STOP_VARIANTS]) {
     if (!agents.includes(s.line)) bad.push(`AGENTS.md 少了停點 ${s.n} 的原文`);
-    if (exists(skillMd(s.skill)) && !read(skillMd(s.skill)).includes(s.line)) bad.push(`${skillMd(s.skill)} 少了停點 ${s.n} 的原文`);
   }
   noProblems(bad, '停點最後兩行和 shared/template/tools/lib/stops.mjs 不一致', '逐字照 lib/stops.mjs 的 stopLines 印出來的兩行貼上（<…> 保留原樣）；要改字先改 lib/stops.mjs');
 });
@@ -394,29 +394,19 @@ test('T24 文件引用的工具原文和程式一字不差（第 2 輪對齊）'
   const pairs = [
     [U, '是全黑，但素材沒有純聲音檔 → 初剪壞了：跑 node shared/template/tools/media.mjs verify-rough --project'],
     [SKR, '原片同位置不黑 → 初剪壞了'],
-    [U, 'chtag：不用寫，角標現在自動常駐 → 刪掉 "chtag": true（要舊的附件角標，plan.json 第一層寫 "chapterBadge": false）'],
-    [U, 'chapterBadge 只能是 true 或 false（不寫＝true：章節角標自動常駐右上角），現在是 '],
     [U, '個用字數比例估（'],
     [U, '對 rough.mp4 重轉詞級逐字稿：npx hyperframes transcribe'],
     [U, '文字對時：'],
     [U, '就講到了，晚了 '],
-    [U, '（上限：任一分鐘 ≤ '],
     [U, '清掉同一段的舊截圖（這次張數變了）：'],
     [U, '是全黑（原始素材不是）→ 初剪壞了，跑 node shared/template/tools/media.mjs verify-rough --project'],
     [R, '才講到、不是 #'],
     [U, '講者瘦臉略過：抽樣 12 格都沒偵測到臉 → 這支只調光；確定有講者就跑 '],
     [U, 'build 會停下來：'],
-    [U, 'rhythm 只能是 "continuous"（預設，照 style.md 連續覆蓋）或 "spaced"（要留露臉空檔），現在是 '],
-    [U, '→ 改成清單裡的名稱（跑 build.mjs --list 看每顆的用途），或寫 null 不放音效'],
-    [U, '→ 中間換一段情境動畫（style.md「情境動畫優先」）或別的版面'],
     ['AGENTS.md', '→ 下一步：'],
     [U, '→ 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在剪輯台改'],
-    [U, ' → 在剪輯台和前後句合併，或把起迄拉長'],
     [skillMd('auto-edit-motion'), '不在語彙表'],
     [skillMd('auto-edit-motion'), '分鏡表表頭不對'],
-    [U, '：音效名與 ref 要寫成字串字面值、off 寫數字（例 P.sfx(\'success\', \'#38@兩支\')、P.sfx(\'ding\', \'#41\', 0.2)；音效名只有小寫英數字與 -），build 才排得出音效 → 不要用變數或 + 組字串'],
-    [U, ' 不存在，先用亮色那張 → 換風格時暗色三張一起放進 shared/template/'],
-    [U, '｜主題：'],
     [skillMd('auto-edit-style'), '暗色主題標題列的白字對比只有'],
   ];
   const bad = [];
@@ -689,6 +679,7 @@ test('T31 指到的步驟、規則、AGENTS.md 章節都存在（032 D1）', () 
     .map((n) => [n, new Set([...(section(read(skillMd(n)), '## 步驟') || '').matchAll(/^\*\*([A-Z]\d*|\d+)\.\s/gm)].map((m) => m[1]))]));
   const agents = read('AGENTS.md');
   const heads = new Set([...agents.matchAll(/^#{2,} (.+)$/gm)].map((m) => m[1].trim()));
+  const skillHeads = new Map(SKILLS.filter((n) => exists(skillMd(n))).map((n) => { const t = read(skillMd(n)); return [n, [...t.matchAll(/^#+ (.+)$/gm), ...t.matchAll(/^\*\*(?:[A-Z]\d*|\d+)\.\s*([^*]+)\*\*/gm)].map((m) => m[1].trim())]; }));
   const rules = new Set([...(section(agents, '## 規則') || '').matchAll(/^(\d+)\. /gm)].map((m) => m[1]));
   const allow = allowOf('T31'), used = new Set();
   const bad = [];
@@ -727,6 +718,11 @@ test('T31 指到的步驟、規則、AGENTS.md 章節都存在（032 D1）', () 
       }
       for (const m of l.matchAll(/AGENTS\.md`?\s*(?:的\s*)?規則\s*(\d+)/g)) if (!rules.has(m[1])) bad.push(`${where} AGENTS.md 規則 ${m[1]}（只有 1–${rules.size}）`);
       for (const m of l.matchAll(/AGENTS\.md`?\s*(?:的\s*)?「([^」]+)」/g)) if (!heads.has(m[1])) bad.push(`${where} AGENTS.md「${m[1]}」不是 AGENTS.md 的標題`);
+      // 060：「auto-edit-rough「判準與數字」」這種節名也要是那支 Skill 真的有的標題或步驟名稱
+      for (const m of l.matchAll(/auto-edit-([a-z]+)(?:\/SKILL\.md)?`?\s*(?:的\s*)?「([^」]+)」/g)) {
+        const hs = skillHeads.get(`auto-edit-${m[1]}`);
+        if (hs && !hs.some((h) => h.includes(m[2]))) bad.push(`${where} auto-edit-${m[1]}「${m[2]}」不是那支 SKILL.md 的標題或步驟名稱`);
+      }
     });
   };
   const docs = have(['AGENTS.md', 'PROMPTS.md', 'README.md', 'CONTENTS.md', U, R, STYLE, SITU, REVIEW, EDITOR, BEATS, ...SETUP_MD]);
@@ -764,21 +760,18 @@ test('T32 音效數字和 lib/audio.mjs 的 SFX_RULES 一樣（032 D2）', async
 });
 
 // D2：USAGE.md 的 --check 範例只能出現 kit/sfx.json 有的音效（音效改名、拿掉之後範例不能還留著舊名字）
-test('T33 USAGE.md 範例裡的音效名都在 kit/sfx.json（032 D2）', () => {
+test('T33 SITUATIONS.md §3「音效事件」欄的音效名都在 kit/sfx.json（032 D2；060 USAGE 範例已刪，改守這一欄）', () => {
   const kit = new Set(Object.keys(JSON.parse(read('shared/template/kit/sfx.json'))));
+  const FIELDS = new Set(['sfx', 'all', 'clicks', 'reply']);   // 這一欄裡出現的欄位名，不是音效
+  const text = read(SITU);
+  const rows = text.slice(text.indexOf('## 3.'), text.indexOf('## 4.')).split('\n').filter((l) => l.startsWith('|'));
+  const idx = (rows[0] || '').split('|').map((c) => c.trim()).indexOf('音效事件');
+  check(idx > 0, 'SITUATIONS.md §3 的表頭找不到「音效事件」欄 → 欄名改了，更新 T33 的抓法');
   const names = [];
-  read(U).split('\n').forEach((l, i) => {
-    const add = (n) => names.push([n, i + 1]);
-    for (const m of l.matchAll(/音效 ([a-z][\w-]*)（/g)) add(m[1]);
-    for (const m of l.matchAll(/（([a-z][\w-]*) 已拿掉）/g)) add(m[1]);
-    for (const m of l.matchAll(/＋([a-z][\w-]*)×\d/g)) add(m[1]);
-    if (l.startsWith('音效次數：')) for (const m of l.slice(5).matchAll(/([a-z][\w-]*) \d+/g)) add(m[1]);
-    const cells = l.split('｜');
-    if (cells.length >= 6) for (const m of cells[4].matchAll(/(?:^|＋)([a-z][\w-]*)(?= \d+:\d\d|×\d)/g)) add(m[1]);
-  });
-  check(names.length > 0, 'USAGE.md 找不到任何 --check 範例裡的音效名 → 範例格式改了，更新 T33 的抓法');
-  noProblems(names.filter(([n]) => !kit.has(n)).map(([n, ln]) => `${U}:${ln} ${n}`), 'USAGE.md 範例裡有 kit/sfx.json 沒有的音效',
-    `換成 kit/sfx.json 有的（${[...kit].join('、')}）；範例最好重跑 build.mjs --check 貼實際輸出`);
+  for (const r of rows.slice(2)) for (const m of (r.split('|')[idx] || '').matchAll(/`([a-z][a-z0-9-]*)`/g)) if (!FIELDS.has(m[1])) names.push(m[1]);
+  check(names.length > 0, 'SITUATIONS.md §3「音效事件」欄找不到任何音效名 → 寫法改了，更新 T33 的抓法');
+  noProblems(names.filter((n) => !kit.has(n)), 'SITUATIONS.md「音效事件」欄有 kit/sfx.json 沒有的音效',
+    `換成 kit/sfx.json 有的（${[...kit].join('、')}）；是欄位名就加進 T33 的 FIELDS`);
 });
 
 // D4：AGENTS.md 路由表每一列的觸發語都要寫在那一列 Skill 的 description；同一句觸發語不能出現在兩支 Skill 的 description

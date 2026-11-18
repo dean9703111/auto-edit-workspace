@@ -21,7 +21,7 @@ export const BEAT_TOL = 0.5;   // 分鏡的綁句和 P.at 差 ≤ 0.5 s 算對�
 export const BEAT_HEADER = ['拍', '講到（綁句）', '畫面上出現什麼', '動態（設計系統語彙）', '焦點', '音效拍點'];
 export const BEAT_HEADER_ILLUS = ['插圖元件（狀態）', '位置'];   // 示意動畫段接在 BEAT_HEADER 後面的兩欄
 export const BEAT_TITLE = '#### 動畫分鏡';
-// shared/template/BEATS.md §2（＝design-system.md §14.1，之後拿掉講者慢推、漂浮）的 51 個具名動作 → 對應的 P.*（build＝main.mjs 內建，custom 檔裡不會出現）
+// shared/template/BEATS.md §2（＝design-system.md §14.1，之後拿掉講者慢推、漂浮）的具名動作 → 對應的 P.*（build＝main.mjs 內建，custom 檔裡不會出現）
 export const VOCAB = [
   ['進場', '擦開', 'wipe'], ['進場', '滑入', 'drift'], ['進場', '彈出', 'pop'], ['進場', '錯拍彈出', 'pop'], ['進場', '長出', 'grow'], ['進場', '抽屜抽出', 'slide'], ['進場', '淡入', 'in'], ['進場', '貼上', 'stick'],
   ['字', '逐字上浮', 'chars'], ['字', '逐字彈出', 'chars'], ['字', '逐字落下', 'chars'], ['字', '打字', 'type'], ['字', '數字滾動', 'count'], ['字', '逐詞壓印', 'press'], ['字', '括號揭示', 'brace'],
@@ -307,12 +307,12 @@ export function sheetPlanFindings({ item, sheet, cues = [], tplRules = [], endEx
     const d = g[i].t - g[i - 1].t;
     if (d < 0 || d >= gapMin - PLAN_TOL) continue;   // 倒過來的已經報拍序
     out.push({ msg: `第 ${g[i - 1].beat} 拍（${fmt(g[i - 1].t)}）到第 ${g[i].beat} 拍（${fmt(g[i].t)}）只隔 ${d.toFixed(2)}s，範例檔頭【D 下限】相鄰兩拍至少 ${gapMin}s`,
-      fix: '同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md「段太短」）' });
+      fix: '同一句講到的兩個東西放同一拍，或少一次狀態切換；還不夠就把段頭往前提（shared/template/BEATS.md §5.4「段太短」那一條）' });
   }
   const endMin = ends.length ? Math.min(...ends) + endExtra : null, last = g.reduce((x, y) => (y.t > x.t ? y : x));
   if (endMin != null && item.D - last.t < endMin - PLAN_TOL) {
     out.push({ msg: `最後一拍 ${last.ref}（${fmt(last.t)}）到段尾只剩 ${Math.max(0, item.D - last.t).toFixed(2)}s，範例檔頭【D 下限】要 ≥ ${endMin}s（回均衡、最後一幕、淡出）`,
-      fix: '最後一拍改綁早一點的詞或刪掉；不要把段尾延進下一個話題（shared/template/BEATS.md「段太短」）' });
+      fix: '最後一拍改綁早一點的詞或刪掉；不要把段尾延進下一個話題（shared/template/BEATS.md §5.4「段太短」那一條）' });
   }
   return out;
 }

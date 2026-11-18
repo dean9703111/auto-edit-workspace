@@ -3731,7 +3731,7 @@ document.addEventListener('pointerdown', () => { clearTimeout(tipTimer); $('#tip
 // ---------- 修改單（右側抽屜）：選段 → 點想怎麼改、寫描述（直接存）→ 累積多段 → 複製一行指令給 AI（待改的完整內容存 work/feedback/editor-requests.md）----------
 // 剪輯台只能改字、刪清單項目；要加項目、換動畫、重新排版都寫在這裡，AI 照「照剪輯台修改單改」直接改（每段一個子代理）
 // 一段一筆 { id, tags, note, redo?（重新設計：從空白重畫，029）, t（最後改的時間）, done?: { round, note } }：有勾或有描述才算一筆；改了就變回待改
-// 重新設計預設不勾：沒勾＝在現有的動畫上改（改資料、換模板、手改，不用載入 hyperframes skill）；勾了＝設計師子代理從空白畫布重畫（比較貼講解、比較久）
+// 重新設計預設不勾：沒勾＝在現有的動畫上改（改資料、換模板、手改）；勾了＝設計師子代理從空白畫布重畫（比較貼講解、比較久）
 const RQ_TAGS = {
   anim: ['流程更細節', '以圖像展示為主', '文字少一點', '畫出關係（箭頭、引線）', '換一種動畫', '動作慢一點', '跟講的話對齊', '更有質感'],
   media: ['播太快', '播太慢', '標註更清楚', '推近到操作區', '加步驟清單', '換成動畫', '換一段錄影', '跟講的話對齊'],
@@ -3877,8 +3877,8 @@ const rqCommand = (pending = rqPending()) => {
   const project = app.server?.project?.dir || '';
   const progress = `第一步跑 node shared/template/tools/versions.mjs begin --project ${JSON.stringify(project)} --requests`;
   const redo = pending.filter((r) => r.redo).map((r) => r.id);
-  // 哪幾段的子代理要載入 hyperframes skill 寫清楚：重新設計的段才要，其他段不用（載入一次很貴）
-  const how = redo.length ? `其中 ${redo.length} 段要重新設計（${redo.join(',')}）：這幾段派設計師照 design.md 從空白畫布重畫；其他段在現有的動畫上改。都不用載入 hyperframes skill。` : '這次沒有要重新設計的段：都在現有的動畫上改，不用載入 hyperframes skill。';
+  // 哪幾段要重新設計寫清楚：派設計師從空白重畫；其他段在現有的動畫上改
+  const how = redo.length ? `其中 ${redo.length} 段要重新設計（${redo.join(',')}）：這幾段派設計師照 design.md 從空白畫布重畫；其他段在現有的動畫上改。` : '這次沒有要重新設計的段：都在現有的動畫上改。';
   return `照剪輯台修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：照 auto-edit-review 流程 F 做（.agents/skills/auto-edit-review/references/editor-requests.md），不用先出提案，停在停點 ④。${how}${progress}`;
 };
 function rqMarkdown() {
@@ -3894,8 +3894,8 @@ function rqMarkdown() {
     else L.push(`- 動畫：${i.what}`, ...(i.file ? [`- 檔案：${i.file}`] : []), `- 完成影片時間：${rqTime(i)}（${app.server?.project?.dir || ''}/work/hyperframes/plan.json：${i.span}）`);
     if (i?.gap) L.push('- 這裡現在沒有段落：照時間和字幕新增一段（段號自己取），不是改既有的段；回報狀態時用上面的段號');
     if (i && !i.gap && rqKind(i.sc) === 'anim') L.push(r.redo
-      ? '- 做法：重新設計（使用者勾的）。這段改成 "design": true，派設計師子代理照 design.md 從空白畫布重畫（不用載入 hyperframes skill）'
-      : '- 做法：在現有的動畫上改（沒勾「重新設計」）。改 plan.json 的資料、換模板或手改那支檔；不要改成 "design": true，子代理不用載入 hyperframes skill');
+      ? '- 做法：重新設計（使用者勾的）。這段改成 "design": true，派設計師子代理照 design.md 從空白畫布重畫'
+      : '- 做法：在現有的動畫上改（沒勾「重新設計」）。改 plan.json 的資料、換模板或手改那支檔；不要改成 "design": true');
     if (r.tags.length) L.push(`- 要改：${r.tags.join('、')}`);
     if (r.note.trim()) L.push(`- 描述：${r.note.trim().replace(/\s*\n\s*/g, '／')}`);
     if (i?.subs.length) { L.push('- 對應字幕：'); for (const c of i.subs) L.push(`  - #${c.n} ${c.text}`); }

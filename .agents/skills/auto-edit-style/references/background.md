@@ -10,7 +10,7 @@
 
 ## 3. 生成到暫存資料夾、驗證、預覽
 
-生圖很久，有能派子代理的工具就照 `references/bg-worker.md` 每張圖派一個工人，同一則回覆一次全部派出；全部回來後由你跑 `brand.mjs bg --verify`。沒有才自己一張一張做。
+生圖很久，有能派子代理的工具就照 `references/bg-worker.md` 每張圖派一個工人；全部回來後由你跑 `brand.mjs bg --verify`。沒有才自己一張一張做。
 
 每條路最後都是 `brand.mjs bg` 寫出 `bg-<種類>.jpg`：HTML 路線用 `--html`（USAGE-reference.md R9.4）；使用者的圖、生圖路線的成品（尺寸不對也一樣）用 `--image`，它會縮放裁成對的尺寸。`--out` 一律是暫存資料夾，不能是 `shared/template/` 裡面。三張都有了才跑 `--verify`。
 

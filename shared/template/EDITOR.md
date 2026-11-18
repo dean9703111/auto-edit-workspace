@@ -1,6 +1,6 @@
 # 剪輯
 
-「剪輯」是一個在瀏覽器裡用的小工具：輸出完成影片之前，使用者自己裁剪、調聲音、改字幕和卡片上的文字、設轉場，不用一句一句跟 AI 講。結果寫回 `plan.json` 和 `work/rough.srt`，AI 之後重新產生完成影片。介面名稱為「剪輯」與「構圖」（舊稱剪輯台、構圖台）。
+「剪輯」是一個在瀏覽器裡用的小工具：輸出完成影片之前，使用者自己裁剪、調聲音、改字幕和卡片上的文字、設轉場，不用一句一句跟 AI 講。結果寫回 `plan.json` 和 `work/rough.srt`，AI 之後重新產生完成影片。
 
 - 程式：`shared/template/tools/editor.mjs`（頁面在 `shared/template/tools/editor/`）
 - 只需要 Node.js 22、ffmpeg／ffprobe；「完成影片預覽」另外用到 `npx hyperframes` 已經下載過的播放器。不用安裝任何套件，也不連網路。
@@ -14,14 +14,7 @@
 
 使用者說「打開剪輯台」時，是停點 ⑤（`AGENTS.md`「停點總表」）；流程照 `.agents/skills/auto-edit-review/SKILL.md` 流程 C。給網址時回覆最後兩行照停點 ⑤ 的固定格式。
 
-停點 ①（剪輯清單）也用剪輯台：寫好 `work/cuts.md` 後啟動，把印出的「剪輯清單」網址（`…/cuts`）給使用者，最後兩行照停點 ① 的固定格式（`.agents/skills/auto-edit-rough/SKILL.md` 的「停點」一節）。剪輯清單頁只要有 `work/cuts.md`（試聽要 `work/main.mp4`），只寫 cuts.md NG 表的「剪」欄（`[x]` 剪、`[ ]` 不剪；舊格式沒有這一欄就加在最前面）；cuts.md 被 AI 改過會擋下存檔並重新載入；有 `work/rough.mp4` 之後只能看。
-
-初剪完成（`media.mjs rough`）也用剪輯台：工具會建好只有 `version` 的 plan.json、在背景處理底片、開好剪輯台，印出「字幕預覽」網址，照抄給使用者就好，這不是停點，不用等他看完。還沒排段落時頁面顯示「初剪預覽」，可以看字幕、改字（自動存），「更新預覽」「輸出完成影片」先停用。
-
-停點 ③（分鏡表）也用剪輯台：寫好 `work/storyboard.md` 後啟動，把印出的「分鏡表」網址（`…/storyboard`）給使用者，最後兩行照停點 ③ 的固定格式（`.agents/skills/auto-edit-storyboard/SKILL.md`）。分鏡表頁只寫 `work/storyboard.md` 改到的那幾行：畫面文字「」裡的字、內容設計動畫（和其他拍點正本在 `work/designs/` 的段）的動畫分鏡「畫面上出現什麼」裡「」內的字（`--apply-storyboard` 寫回那份鏡位腳本；模板動畫的字在畫面文字改，表上是唯讀）、金句的卡上文字與勾選（`☑`／`☐`）、`- 音效：`、要求欄 `- 想換成：`、`- 補充說明：`，以及「需要我決定的事」每一項底下的 `   - 回答：`（`--apply-storyboard` 會印「作者回答」，照做）；其他欄位、表頭、段標題都不能改。檔案被 AI 改過會擋下存檔並重新載入，沒存到的文字留在頁面上；製作進度的「③ 分鏡表」最後一列是「通過」或「略過」之後只能看。使用者說「可以」後，有要求欄的段要先重做再停一次（`auto-edit-storyboard`「停點」）。
-停點 ④（完成影片預覽）也用剪輯台：`build.mjs --review`、`versions.mjs finish` 已經開好剪輯台，停點 ④ 那一行的網址就是完成影片預覽（`…/?view=final`），不用再跑 `editor.mjs`；打不開才跑 `editor.mjs --status`。頁面會直接開在完成影片預覽；還沒 build 或找不到播放器時停在快速試聽並提示原因。不帶參數的網址也一樣：有成品就開完成影片預覽，`?view=sim` 才開快速試聽。
-
-停點 ②（構圖）也用剪輯台：`build.mjs --framing` 會開好剪輯台，回報段的停點 ② 那兩行裡就是「構圖台」網址（`…/framing`），照貼給使用者（`.agents/skills/auto-edit-storyboard/SKILL.md` 步驟 3）。構圖台只要有 `work/rough.mp4`；還沒有 plan.json 時，存檔會新建一個只有 `version`（直式加 `format`）、`frame`（和構圖台調過的 `look`）的 plan.json。
+停點 ①（剪輯清單 `…/cuts`）、②（構圖台 `…/framing`）、③（分鏡表 `…/storyboard`）、④（完成影片預覽 `…/?view=final`）和初剪完成的「字幕預覽」（不是停點）也是這個剪輯台的頁面：網址由工具印，照那一步的 Skill 貼給使用者，不用另外跑 `editor.mjs`（打不開才跑 `editor.mjs --status`）。檔案被 AI 改過時，頁面會擋下存檔並重新載入。
 
 開之前要有：
 
@@ -56,8 +49,8 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 
 - 已經開著且後端版本相同時不開第二個，會印「剪輯已經開著：網址」。程式已更新時會更新服務並以原 port 重新啟動，避免新版頁面連到舊 API。
 - port 預設 4400，被佔用就自動往後找（最多 20 個），**以印出來的網址為準**。要指定就加 `--port 5400`。
-- 同時剪好幾支影片：每個專案各跑一次上面的指令，各開各的剪輯台、各佔一個 port。`projects/` 底下開著兩個以上時，每一頁（剪輯、剪輯清單、構圖、分鏡表）頁首的專案名稱自己變成「切換影片」的按鈕（右邊多一個小箭頭，點了在下面展開清單），不用另外設定；給使用者的網址照舊是那個專案印出來的那一個。清單來自 `GET /api/editors`，回 `{ "editors": [{ "project": "projects/<專案>", "name": "<專案>", "url": "http://127.0.0.1:4400/", "current": true }] }`：照每個專案自己的 `.editor/server.json`（`--status` 讀的那一份）找，剪輯台真的還開著才列。
-- 第一次打開的提示卡（字幕預覽、完成影片預覽、剪輯台各一張）只跳一次：使用者按掉的那一張記在 `shared/setting.json` 的 `editor.seen`（`GET /api/hints` 回 `{ "seen": ["coach-final.v1"] }`，按掉時頁面 `POST /api/hints` 送 `{ "seen": "<代號>" }`），這台機器所有專案、所有 port 的剪輯台讀同一份，不用另外設定。設定檔壞了或寫不進去時頁面照常用，改由那個瀏覽器自己記（只管那一個 port）。
+- 同時剪好幾支影片：每個專案各跑一次上面的指令，各開各的剪輯台、各佔一個 port。`projects/` 底下開著兩個以上時，每一頁（剪輯、剪輯清單、構圖、分鏡表）頁首的專案名稱自己變成「切換影片」的按鈕（右邊多一個小箭頭，點了在下面展開清單），不用另外設定；給使用者的網址照舊是那個專案印出來的那一個。
+- 第一次打開的提示卡按掉後記在 `shared/setting.json` 的 `editor.seen`，這台機器所有專案共用。
 - 只接受本機（127.0.0.1）的連線。加 `--open` 會順便用預設瀏覽器打開。
 
 | 要做的事 | 指令 |
@@ -90,7 +83,7 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 | 任何段（scene／fx／custom／media） | `sfxVolume` | 這段音效的音量（dB），0 就拿掉這個欄位 |
 | | `sfx` | 使用者換了一顆＝寫音效名稱（那段原本是 `{ "name", "at" }` 就只換 `name`，落點不動）；按了靜音＝`null`；還原成原本的＝換回剪輯台動手之前的值（記在 `.editor/memory.json`），原本沒寫就拿掉。名稱不在這台機器的音效清單裡會被擋 |
 | scene 的 `slots`、fx 的 `vars`、模板動畫（`type: "custom"`＋`template`）的 `slots` | 文字值 | 改字（含清單項目的 `text`、QA 的 `{ "text", "at" }` 裡的 `text`；字數上限照情境的 `max`）；清單只能刪項目、不能加（剪輯台不顯示「新增一項」）；模板動畫只能改 `custom/<模板>.fill.json` 標成文字的欄位，圖示、時間、結構和項目數都不能動。改了字的段，按「更新預覽」時自動跑 `audit.mjs --only <那幾段>`，✖／⚠ 列在剪輯台檢查清單（`[段] 版面：…`） |
-| `work/feedback/editor-requests.md` | 修改單 | 「修改單」按「複製給 AI」時整份覆寫、只寫待改的段（剪貼簿只放一行指令「照剪輯台修改單改這 N 段（<這個檔>）：…」）：每段的 id、動畫是什麼、檔案（自訂動畫、錄影；路徑從工作區根目錄寫起，例 `projects/<專案>/work/hyperframes/compositions/x-….html`）、完成影片時間、plan.json 起訖、做法（動畫段才有：使用者沒勾「重新設計」＝在現有的動畫上改；勾了＝設計師照 `design.md` 從空白畫布重畫，都不用載入 `hyperframes` skill）、要改的標籤、描述、對應字幕（`#N 文字`）。使用者說「照修改單改」就照 `auto-edit-review` 流程 F 做 |
+| `work/feedback/editor-requests.md` | 修改單 | 「修改單」按「複製給 AI」時整份覆寫、只寫待改的段（剪貼簿只放一行指令「照剪輯台修改單改這 N 段（<這個檔>）：…」）：每段的 id、動畫是什麼、檔案（自訂動畫、錄影；路徑從工作區根目錄寫起，例 `projects/<專案>/work/hyperframes/compositions/x-….html`）、完成影片時間、plan.json 起訖、做法（動畫段才有：使用者沒勾「重新設計」＝在現有的動畫上改；勾了＝設計師照 `design.md` 從空白畫布重畫）、要改的標籤、描述、對應字幕（`#N 文字`）。使用者說「照修改單改」就照 `auto-edit-review` 流程 F 做 |
 | `work/designs/<段>.md`、那段的動畫檔 | 句號 | 增刪字幕（分割、新增、合併、刪除）時：拍點正本在 `work/designs/` 的段，鏡位腳本「講到」欄的 `#N` 和動畫檔 `P.at`／`P.sfx` 的句號照同一個操作重對，各自先備份 `<檔>.align-<時間>`（照 plan.json 產生的模板動畫不用，下次 build 會跟上） |
 | `type: "media"` 的段 | `from`／`to`／`in`／`anchor` | 使用者拖邊緣裁剪或整段移動：對到字幕邊界寫 `"#N"`／`"#Ne"` 並把 `anchor` 換成那句的開頭；沒對到寫秒數並拿掉 `anchor`；拖左緣時 `in` 跟著變（畫面內容不跑；有變速、定格的段改寫 `retime`／`hold`，每一區的速度不變）；寫了 `to` 就拿掉 `duration` |
 | | `speed`／`hold`／`retime`／`in`／`out` | 畫面速度（屬性的「畫面速度」）。整段同速寫 `in`＋`speed`（0.5–4）；整段定格寫 `hold`；分區或超過 4 倍寫 `retime`（`at` 是 `+秒`，時間沒動的點留原本的寫法，例 `#21@詞`）；互斥的欄位自動拿掉，`out` 只會被拿掉。你寫的 `retime` 也會顯示在這裡，使用者看得到、改得了 |
@@ -125,20 +118,14 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 ### 5. 跟剪輯台一起改 plan.json 與字幕
 
 - 剪輯台存檔前會比對 `plan.json` 和 `work/rough.srt`：從頁面載入之後**任一個被改過**（通常是 AI 改的），就兩個都不存，跳出「檔案被改過了」讓使用者選「重新載入，保留我的調整」或「放棄我的調整」（字幕檔被改過時，還沒存的字幕修改要重做）。所以 AI 改的不會被剪輯台蓋掉。檔案被別人改過之後，復原清單會清掉，不會復原回 AI 改之前。
-- AI 要改 `plan.json` 或 `rough.srt` 之前**先重新讀檔**，不要用之前讀到的舊內容整份寫回去，否則會蓋掉使用者在剪輯台存的東西。
 - AI 改完不用通知剪輯台：頁面每 2.5 秒檢查一次，使用者沒有未存的調整就自動重新載入，有的話會在上方提示。
 - 使用者正在調的時候，AI 不要動 `edit` 和字幕。
 
-### 6. 使用者說「調好了」之後
-
-1. 直接跑 `node shared/template/tools/build.mjs --project projects/<專案> --review`（`auto-edit-review` 流程 A：build、audit、完成態拼圖）。它會讀剪輯台存的最新檔，不用先整份重讀 `plan.json`、`rough.srt`；之後要改哪一段，再用 `node shared/template/tools/build.mjs --project projects/<專案> --show <段>` 讀那一段。有 ✖ 就照 → 後面的建議修好再跑。
-2. 不要關剪輯台：停點 ④ 的網址就是它。回覆最後兩行照 `--review` 印的停點 ④；使用者說可以才照 `auto-edit-deliver` 輸出。有裁剪時，完成影片長度＝初剪長度 − 剪掉的範圍。
-
-### 7. 兩種預覽與自動降級
+### 6. 兩種預覽與自動降級
 
 | 模式 | 播什麼 | 什麼時候能用 |
 |---|---|---|
-| 完成影片預覽 | 用 HyperFrames 播放器 `<hyperframes-player>` 播 `work/hyperframes/index.html`＝上一次 build 的完整完成影片；聲音的設定（見下面「聲音即時生效」）改了直接改播放器裡的音量，其他修改要按「更新預覽」 | 找得到播放器，而且 build 過（這時是預設） |
+| 完成影片預覽 | 用 HyperFrames 播放器 `<hyperframes-player>` 播 `work/hyperframes/index.html`＝上一次 build 的完整完成影片；聲音的設定改了直接改播放器裡的音量，其他修改要按「更新預覽」 | 找得到播放器，而且 build 過（這時是預設） |
 | 快速試聽 | `work/hyperframes/assets/rough.mp4`（沒有就 `work/rough.mp4`），在瀏覽器裡即時套上目前的設定：跳過剪掉的範圍、各軌音量與人聲範圍音量、淡入淡出、過黑、放大、素材的進出場與原聲（示意）、音效（照檢查報告的時間播 `shared/sfx/`，使用者在 `shared/sfx-local/` 放了同名的就播他的；自己加的照 `edit.sfx`，剛換的那一顆馬上換）、背景音樂（上一次 build 混好的 wav，音量照滑桿補差；換了曲子要等更新預覽）、字幕文字；沒有字卡和動畫 | 一律可以用（還沒有成品時是預設） |
 
 直式專案（版式和 build 同一套判斷：plan.json `"format"` ＞ `work/製作進度.md`「版式」列 ＞ 主軌寬高比；`/api/state` 的 `canvas` 寫著結果與來源，數字都來自 `tools/lib/canvas.mjs`）：
@@ -148,21 +135,12 @@ node shared/template/tools/editor.mjs --project projects/<專案>
 - 剪輯台不寫 `format`；要換版式請 AI 照 `auto-edit-longform`「版式」改。
 - **上半面板的位置或內容要改**：改子合成（`compositions/…`）或 plan.json 再 build，不要手改 host 的 transform（會蓋掉直式的舞台縮放）。
 
-- 播放器的找法：用工作區 `node_modules/hyperframes` 那一份（根目錄 `package.json` 釘的版本，和 render 同一版），複製到 `work/hyperframes/.editor/player/`；版本換了（升級或降級）會重新複製。不去 npx 快取挑最新版，免得預覽和 render 出來的不一樣。
 - **找不到播放器時自動退回「快速試聽」**：「完成影片預覽」按鈕變灰，滑鼠移上去會寫原因。要恢復：在工作區根目錄跑 `npm install`，再 `--stop` 後重新啟動剪輯台。
 - 存檔後頁面會跑 `build.mjs --check --json` 取得段落位置、音效時間、只有聲音的區間、剪接點；跑不出 JSON 時退回讀文字報告（看得到段落位置，音效與只有聲音的區間要等報告恢復）。
 - 快速試聽的調光是 CSS 濾鏡近似（`brightness`／`contrast`／`saturate`），和完成影片的 LUT 不完全一樣，臉部很接近、牆面偏差較大；以完成影片預覽或 `work/look-preview.jpg` 為準。瘦臉沒有即時預覽，看屬性面板的「前／後」兩張臉。
+- 聲音（音量類的欄位）、字幕樣式、整則的重點字幕改了直接套進完成影片預覽，不用按「更新預覽」；剪段、加刪音效、換曲、`"#N@詞"`、主題、字卡文字照舊要更新預覽；輸出時一律用 plan.json 現在的值重新做。
 
-**聲音、字幕樣式、重點字幕即時生效（058）**：
-
-- **算聲音的欄位**：`edit.volume`（人聲、音效、素材原聲）、`edit.gains`（人聲範圍音量）、`edit.sfx[].db`（自己加的音效）、`bed.volume`、段的 `sfxVolume`、media 段 `volume` 的數字（開關原聲不算）。拉平人聲、剪段、加刪音效、換曲不算，照舊要「更新預覽」。欄位清單和算法在 `tools/editor/live-sound.mjs`，build、剪輯服務、頁面共用。
-- **字幕樣式、重點字幕**：第一層 `captionStyle`、`captionMarks` 裡整則的 `"#N"` 也直接套（`preview.js` 的 `applyCaption`、`applyMarks` 改播放器裡的字幕）。`"#N@詞"`、主題（背景圖是 build 寫死的）、字卡文字（打字時只是近似）不算。
-- **做進去的值**：build 寫 `work/hyperframes/.cache/live.json`＝這次做進 index.html 的聲音欄位，加上「plan.json 拿掉上面這些欄位、再加上字幕檔」的指紋。`/api/state`、`/api/version` 的 `preview` 多兩個欄位：`liveOnly`（跟上次 build 比只差這些）、`sound`（做進去的聲音）。舊版 build 沒寫這個檔，或 index.html 之後被換過，就當沒有：照舊要「更新預覽」。
-- **怎麼改播放器**：每個出聲的元素（`rough`、`sfx-*`、`bgm-bed`、`mv-*`）的 `data-volume` 改成「build 寫的值 ×（現在的值 − 做進去的值）換成的倍數」，播放器每一格照它設自己的 Web Audio 增益；重新 build 之後差是 0。人聲範圍音量照那一支現在播到 rough.mp4 的第幾秒算。按播放之前，有聲音的影片會放進一個音量 1 的 audio group，走 Web Audio，調大才聽得到。
-- **還是要「更新預覽」的情況**：做進去時是靜音、現在打開了（乘多少都還是靜音）；讀不到播放器裡的東西（預覽旁邊會寫「不能即時套用：原因」）。
-- **輸出不受影響**：「輸出完成影片」、`deliver.mjs` 照樣先 build，音量、字幕用 plan.json 現在的值重新做。
-
-### 8. 常見問題
+### 7. 常見問題
 
 | 狀況 | 處理 |
 |---|---|

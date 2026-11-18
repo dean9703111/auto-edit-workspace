@@ -12,7 +12,7 @@ version: 0.2.0
 | 停點 ④ 通過 | 步驟 1 | `output/final.mp4`、`output/test-clips/test-clip.mp4`、`output/qc/qc-sheet.jpg` | `deliver.mjs` 印 ✓ 完成影片；驗收 0 個 ✖ | — |
 | 「輸出剪映素材」 | 步驟 2 | `output/capcut/` | `capcut.mjs` 印「✓ N 支都好了」 | — |
 
-**不用輪詢、不用看 log**：`deliver.mjs`、`capcut.mjs` 都在背景跑，前景最多等 9 分鐘；結束碼 75 表示還在跑，再跑一次同一條會接著等，不會重跑。
+**不用輪詢、不用看 log**：`deliver.mjs`、`capcut.mjs` 都在背景跑，前景最多等 9 分鐘。
 
 ## 開始前
 
@@ -41,23 +41,19 @@ node shared/template/tools/deliver.mjs --project projects/<專案> --said "使�
 node shared/template/tools/capcut.mjs --project projects/<專案>
 ```
 
-在背景跑（同時 3 支）；印「⏳ 還在跑」就再跑同一條（會接著等、做過的不重做），不用每 30 秒查。只重做某幾段：`--only s05,s12`。產出都在 `output/capcut/`：`主軌.mp4`（講者＋人聲＋片尾配樂，沒有字卡和字幕）、每段一支 ProRes 4444 `.mov`（有透明通道，帶自己那段的音效）、`字幕.srt`、`清單.md`（每支放在剪映時間軸的哪一秒）。
+在背景跑（同時 3 支，做過的不重做）。只重做某幾段：`--only s05,s12`。產出都在 `output/capcut/`：`主軌.mp4`（講者＋人聲＋片尾配樂，沒有字卡和字幕）、每段一支 ProRes 4444 `.mov`（有透明通道，帶自己那段的音效）、`字幕.srt`、`清單.md`（每支放在剪映時間軸的哪一秒）。
 完成判準：印「✓ N 支都好了」和「→ 清單：…」那一行；把 `清單.md` 的路徑和怎麼排的四步貼給使用者。章節角標不輸出（使用者問起，請他在剪映用文字貼）。
 使用者要「直接排進剪映」「做成剪映草稿」（Mac）：素材做好後跑 `node shared/template/tools/capcut.mjs draft --project projects/<專案>`，印「✓ 剪映草稿：…」就把最後一行「→ 打開剪映，首頁找『…』」貼給使用者。印「✖ 剪映開著」請使用者關掉剪映再跑；同名草稿要換掉才加 `--force`（先問使用者）。
 
 ## 自我核對
 
-- [ ] 用 `deliver.mjs`、`capcut.mjs`，沒有自己拆開 render、輪詢 log
-- [ ] 回報段每個「⚠ 說明」的「刻意／要修：<理由>」都填了
 - [ ] `output/qc/qc-sheet.jpg` 親眼掃過（掉圖、卡片破版、錄影卡住）
-- [ ] build 那一行和停點 ④ 報過的一樣就刪了；有配樂就提醒使用者把出處那一句貼進說明欄
-- [ ] 標「要修」的 ⚠ 沒有在這一步改，最後一行改成 → 下一個停點：④
+- [ ] 有配樂就提醒使用者把出處那一句貼進說明欄
 
 ## 退路表
 
 | 症狀（工具原文） | 做法 | 第二次還失敗 |
 |---|---|---|
-| `⏳ … 還在跑` | 再跑一次同一條指令（會接著等） | — |
 | `✖ 長度 Ns，預期 Ns，差 Ns（> …s）→ 重新 build 再 render…` | 照 → 重新 build 再 render：再跑一次同一條 `deliver.mjs`（它會先 build；常見原因是 plan.json 比 index.html 新）。有 `edit.cuts` 時預期長度是 rough.mp4 減掉 cuts，不用自己算 | 停下來回報 |
 | `✖ <段> 是全畫面清單卻沒有講者小視窗：work/rough.mp4 在 …–… 是全黑（原始素材不是）→ 初剪壞了…` | 不交、不改 plan.json；照 → 跑 `verify-rough` 重做初剪 | 停下來回報 |
 | render 失敗、記憶體不足 | 看 `work/render.log` 最後幾行，再跑一次（記憶體 8GB 以下會自動單 worker，USAGE-reference.md R13） | 停下來回報：指令、log 最後 20 行、已經試過什麼 |
@@ -65,11 +61,6 @@ node shared/template/tools/capcut.mjs --project projects/<專案>
 | 剪映素材 `✖ N 支失敗` | 看 `output/capcut/render.log` 最後幾行，修好後同一條再跑一次（做過、沒變的會略過） | 停下來回報 |
 | `⚠ … 分鐘沒有新的輸出` | 再跑一次同一條；還是一樣就跑那一行印的取消指令（剪映素材：`node shared/template/tools/capcut.mjs --project projects/<專案> --cancel`），回報原文 | — |
 | qc final 的 ✖（格式、長度） | 照 `→` 改；格式不對多半是 render 用錯參數 | 停下來回報 |
-| 工具印「→ 停手」 | 停下來，把它上面還在的 ✖ 原文回報，說卡在哪 | — |
-
-## 工具呼叫預算
-
-`deliver.mjs` 由工具數：印「→ 停手」就停，把它上面還在的 ✖ 原文回報（印 ⏳ 之後再跑同一條不算）。剪映素材、封面：同一個 ✖ 改 2 次還在就停下來回報。
 
 ## 回報格式
 
