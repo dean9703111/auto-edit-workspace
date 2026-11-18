@@ -383,6 +383,23 @@ try {
         else { $hfLocal.Status = 'ok'; $hfLocal.Note = '' }
     }
 
+    # HyperFrames 的瀏覽器（S6：npx -y hyperframes browser ensure）
+    # 瘦臉、audit、分鏡截圖只認 HyperFrames 下載的 chrome-headless-shell（找法同 shared/template/tools/lib/audit-browser.mjs 的 chromeCandidates）；
+    # 系統裝的 Google Chrome 不算，doctor 卻會把它打 ✓，所以這裡直接看檔案
+    $hcRoots = @($env:USERPROFILE + '\.cache\hyperframes\chrome\chrome-headless-shell')
+    if ($env:LOCALAPPDATA) { $hcRoots += ($env:LOCALAPPDATA + '\hyperframes\chrome\chrome-headless-shell') }
+    $hc = @{ Status = 'missing'; Version = ''; Path = $hcRoots[0]; Note = '還沒下載（README 共用步驟 S6：npx -y hyperframes browser ensure，約 200 MB）；系統的 Google Chrome 不算' }
+    foreach ($hcRoot in $hcRoots) {
+        if ($hc.Status -eq 'ok') { break }
+        foreach ($hcVer in @(Get-ChildItem -LiteralPath $hcRoot -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending)) {
+            if ($hc.Status -eq 'ok') { break }
+            foreach ($hcInner in @(Get-ChildItem -LiteralPath $hcVer.FullName -Directory -ErrorAction SilentlyContinue)) {
+                $hcExe = $hcInner.FullName + '\chrome-headless-shell.exe'
+                if (Test-File $hcExe) { $hc.Status = 'ok'; $hc.Version = $hcVer.Name; $hc.Path = $hcExe; $hc.Note = ''; break }
+            }
+        }
+    }
+
     # 9 支 auto-edit Skill＋子代理定義（S4：node setup/install-skills.mjs）
     # 裝在哪要看這台電腦裝了哪些 Agent（工作區的 .claude\skills\、.minimax\skills\ 連到 .agents\skills\ 的正本），
     # 所以交給 install-skills.mjs --check --json 判斷：一支都沒裝＝missing，裝了但連結指錯、複本舊了、還有舊版的全域複本＝too_old
@@ -447,6 +464,7 @@ try {
     Add-Item 'skill_hyperframes' 'Skill：hyperframes' $skills['hyperframes'].Status '' $skills['hyperframes'].Path $skills['hyperframes'].Note $true 'S1'
     Add-Item 'skill_auto_editor' 'Skill：auto-editor' $skills['auto-editor'].Status '' $skills['auto-editor'].Path $skills['auto-editor'].Note $true 'S2'
     Add-Item 'hyperframes_local' '工作區的 HyperFrames' $hfLocal.Status $hfLocal.Version $hfLocal.Path $hfLocal.Note $true 'S3'
+    Add-Item 'hyperframes_chrome' 'HyperFrames 的瀏覽器' $hc.Status $hc.Version $hc.Path $hc.Note $true 'S6'
     Add-Item 'skill_auto_edit' 'Skill：auto-edit（9 支）' $aeSkill.Status '' $aeRoot $aeSkill.Note $true 'S4'
     Add-Item 'mediapipe' '臉部偵測檔（瘦臉用）' $mp.Status '' $mpDir $mp.Note $false 'S5'
     Add-Item 'whisper_model' '轉逐字稿模型' $model.Status '' $modelPath $model.Note $false ''

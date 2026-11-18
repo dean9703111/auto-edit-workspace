@@ -1268,6 +1268,12 @@ function storyboardRun(P, flags, { loadLib }, { fixed = null } = {}) {
   const q = tool('qc.mjs', ['storyboard', '--project', P.project, '--json', '--sheet', ...(only ? ['--only', only.join(',')] : []), ...(P.templateArg || [])]);
   let shots;
   try { shots = JSON.parse(q.stdout); } catch { console.log(`✖ 截圖沒有跑完：${(q.stderr || q.stdout).trim().split('\n').slice(-3).join(' ')}`); return 1; }
+  // qc 出錯也會印 JSON（ok: false、errors）：不能當成「截圖 0 張」照樣產生分鏡表，使用者在停點 ③ 會看到整頁「還沒有截圖」
+  if (shots?.ok === false) {
+    for (const e of [].concat(shots.errors || '截圖失敗（qc.mjs 沒有給原因）')) console.log(`✖ 截圖沒有跑完：${e}`);
+    console.log('→ 找不到 HyperFrames 的 Chrome 或 Chrome 沒有回應時：先跑 npx hyperframes browser ensure，再跑同一條');
+    return 1;
+  }
   const j = checkJson(P);
   const ctx = genContext(P, plan, j, shots.shots, lib);
   let md;
@@ -1610,7 +1616,8 @@ async function reviewRun(P, flags, { loadLib } = {}) {
       shots = null;
       try { shots = JSON.parse(qc.out); } catch { /* 下面報 */ }
     }
-    if (!shots) console.log(`⚠ 完成態拼圖沒有跑完：${(qc.err || qc.out).trim().split('\n').slice(-1)[0] || ''}`);
+    if (shots?.ok === false) { console.log(`⚠ 完成態拼圖沒有跑完：${[].concat(shots.errors || '').join('；')} → 找不到 HyperFrames 的 Chrome 或 Chrome 沒有回應時：先跑 npx hyperframes browser ensure`); shots = null; }
+    else if (!shots) console.log(`⚠ 完成態拼圖沒有跑完：${(qc.err || qc.out).trim().split('\n').slice(-1)[0] || ''}`);
   }
   console.log(`audit：✖ ${aE.length}、⚠ ${aWg.length}`);
   for (const l of await seamsRun) console.log(l);

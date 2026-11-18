@@ -48,6 +48,7 @@ Windows 的解法都**未在 Windows 實測**，照做後一定要再驗證。
 
 | 症狀 | 怎麼做 |
 |---|---|
+| 檢測的 `hyperframes_chrome` 是 `missing`，或剪片時印「找不到 HyperFrames 的 Chrome」（doctor 的 Chrome 卻是 ✓） | doctor 看到系統的 Google Chrome 也會打 ✓，但瘦臉、audit、分鏡截圖只認 HyperFrames 下載的 chrome-headless-shell。執行 `npx -y hyperframes browser ensure`，再用 `npx --no -- hyperframes browser path` 確認路徑在 `.cache/hyperframes/chrome/` 底下 |
 | doctor 的 Chrome 是 ✗ | 執行 `npx -y hyperframes browser ensure`，再跑一次 doctor。Windows ARM 電腦還是 ✗ 時，裝 Google Chrome（`winget install -e --id Google.Chrome --source winget --accept-source-agreements --accept-package-agreements`），HyperFrames 會改用它（未實測） |
 | `npx skills add` 停在 Cloning 或失敗 | 下載 Skill 要用 git。先確認檢測的 git 是 ✅；公司網路擋 GitHub 時換一個網路 |
 | Skill 裝好了，但輸入框「+ → Skills」看不到 | 重開 MiniMax Code。再確認 `~/.minimax/skills/hyperframes/SKILL.md` 存在（Windows 在 `%USERPROFILE%\.minimax\skills\`） |
