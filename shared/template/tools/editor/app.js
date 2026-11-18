@@ -11,6 +11,7 @@ import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
 import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate, freezeAt, joinAt, isPlain, trimModel } from './speed.mjs';
 import { transitionOf, speedSummary } from './motion.mjs';
 import { SimPreview, PlayerPreview } from './preview.js';
+import { soundOf, liveStrip, liveOk } from './live-sound.mjs';
 import { openMenu, closeMenu } from './menu.js';
 import { CAP_LOOKS, CAP_FONTS, CAP_WEIGHTS, CAP_SIZE, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, captionGeom, captionRootVars, captionFontFace, describeCaptionStyle, CAP_VARS, CAP_LIFT, clampLift, describeLift, parseCaptionMarks, fmtCaptionMarks } from '/lib/caption-style.mjs';
 
@@ -31,7 +32,7 @@ const SEG_KEYS = { common: ['sfxVolume', 'sfx'], media: ['enter', 'exit', 'volum
 const roughStage = () => !!app.server?.plan?.exists && !app.server.plan.error && !app.scenes.some(isObj);
 const SPEED_KEYS = ['in', 'out', 'speed', 'hold', 'retime'];   // 畫面速度的欄位：拿掉要明講（寫 null）
 // 提示卡：元素 id → 代號（記在 shared/setting.json 的 editor.seen；localStorage 的鍵是 auto-edit-editor.<代號>）。改了內容、想讓看過的人再看一次就換版號
-const HINTS = { coach: 'coach.v2', coachFinal: 'coach-final.v1', coachRough: 'coach-rough.v1' };
+const HINTS = { coach: 'coach.v3', coachFinal: 'coach-final.v1', coachRough: 'coach-rough.v1' };
 const AUTOSAVE_MS = 1000;   // 停手多久就自動存
 const CHECK_MS = 4000;      // 存檔後多久跑檢查（長片一次要 9 秒，連續改的時候不要一直跑）
 
@@ -176,6 +177,39 @@ const editableScenes = () => app.scenes;
 const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol });
 const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol });
 const isDirty = () => app.savedSnap !== '' && dirtySnap() !== app.savedSnap;
+// 058 還沒存的修改是不是只有直接套得上的（聲音：人聲、音效、素材原聲、背景音樂、範圍音量、各段音量；字幕樣式；整則的重點字幕。
+// editor/live-sound.mjs 的 liveStrip 拿掉的那幾個欄位；cap、marks 是頁面上的字幕樣式和重點字幕）
+const restSnap = (snap) => { const o = JSON.parse(snap), st = liveStrip({ edit: o.edit, scenes: o.scenes }); return JSON.stringify({ ...o, edit: st.edit, scenes: st.scenes, bedVol: undefined, cap: undefined, marks: undefined }); };
+const dirtyLiveOnly = () => isDirty() && restSnap(dirtySnap()) === restSnap(app.savedSnap);
+// 頁面上現在的聲音（還沒存的也算）：完成影片預覽照它和做進去的值（/api/state 的 preview.sound）的差改音量
+let soundCache = null;
+app.soundNow = () => {
+  if (soundCache?.ver !== app.ver) soundCache = { ver: app.ver, v: soundOf({ edit: app.edit, scenes: app.scenes, bed: { volume: app.bedVol } }) };
+  return soundCache.v;
+};
+// 還有改了、但完成影片預覽看不到的修改（「更新預覽」發光）：只差聲音、字幕樣式、重點字幕的不算（預覽裡直接改音量、改字幕）。
+// 做進去時是靜音、現在打開了（乘多少都還是靜音），或讀不到播放器裡的東西（退回原本的做法）時照樣要更新預覽
+function previewPending() {
+  const pv = app.server?.preview;
+  if (!pv?.built) return true;
+  const dirty = isDirty();
+  if (!pv.stale && !dirty) return false;
+  if (pv.stale && !pv.liveOnly) return true;
+  if (dirty && !dirtyLiveOnly()) return true;
+  if (app.mode === 'player' && player.live && !player.live.on) return true;
+  return !liveOk(pv.sound, app.soundNow());
+}
+// 只差直接套得上的、已經套進完成影片預覽
+const liveApplied = () => { const pv = app.server?.preview; return !!pv?.built && (pv.stale || isDirty()) && !previewPending(); };
+// /api/state、/api/version、存檔、復原回來的預覽狀態（built、stale、liveOnly、sound）；有變回傳 true
+function syncPreview(v) {
+  const pv = app.server?.preview;
+  if (!pv || !v) return false;
+  const keys = ['built', 'stale', 'builtMtime', 'liveOnly', 'sound'];
+  if (keys.every((k) => same(pv[k] ?? null, v[k] ?? null))) return false;
+  for (const k of keys) pv[k] = v[k] ?? null;
+  return true;
+}
 
 function normalize() {
   app.edit.cuts = mergeCuts(app.edit.cuts);
@@ -248,7 +282,8 @@ async function stepHistory(from, to, done) {
     }
     applySaved(r.data);
     app.saveSeq++;
-    if (app.server?.preview?.built) app.server.preview.stale = true;
+    if (r.data?.preview) syncPreview(r.data.preview);   // 058：伺服器順便說是不是只差直接套得上的
+    else if (app.server?.preview?.built) app.server.preview.stale = true;
     scheduleCheck();
   }
   to().push(here);
@@ -763,6 +798,7 @@ app.onVideoError = (m) => {
   };
   videoWait = setTimeout(check, 0);
 };
+app.onLiveSound = () => renderMode();   // 058 播放器裡的聲音接上了、或接不上（退回「按更新預覽才聽得到」）
 app.onPlayerReady = () => { renderMode(); if (app.pendingFocus != null) { player.seek(app.pendingFocus); app.t = app.pendingFocus; app.pendingFocus = null; } };
 app.onPlayerBlocked = () => toast('瀏覽器擋住了自動播放的聲音：在頁面上點一下，再按播放', 'warn', 5000);
 app.onPlayerError = (m) => {
@@ -1260,10 +1296,14 @@ function renderHeader() {
   $('#btnBuild').textContent = buildingHere ? '更新中…' : '更新預覽';
   $('#btnBuild').dataset.tip = `把修改做進完成影片預覽${lastBuildText()}。通常幾十秒；換了構圖或瘦臉要重新處理底片，長片要十幾分鐘`;
   setOff('#btnExport', app.exporting ? '' : rough ? '分鏡做好才能輸出' : noPlan || (buildingHere ? '正在更新預覽，等它跑完' : ''));
-  // 主要按鈕只有一個：預覽不是最新的＝更新預覽；是最新的＝輸出
-  const needBuild = !rough && canSave && !buildingHere && !app.exporting && (!pv?.built || pv?.stale || dirty);
+  // 主要按鈕只有一個：預覽不是最新的＝更新預覽；是最新的＝輸出。
+  // 058 只差聲音、字幕樣式、重點字幕（已經直接套進完成影片預覽）不算；還有要按才看得到的修改時，按鈕再加一圈慢慢呼吸的光（更新中不發光）
+  const needBuild = !rough && canSave && !buildingHere && !app.exporting && previewPending();
   $('#btnBuild').classList.toggle('primary', needBuild);
+  $('#btnBuild').classList.toggle('glow', needBuild);
   $('#btnExport').classList.toggle('primary', app.exporting || (!needBuild && !rough && canSave && !!pv?.built));
+  renderLookPending();
+  renderModeNote();
   if (app.busy || !app.server) return;
   if (app.saveBlocked) return;
   if (app.saveOffline) return;
@@ -1461,7 +1501,8 @@ async function saveOnce({ notify, retry = 0 }) {
     return { ...it, start: v.start, end: v.end, shownEnd: it.shownEnd != null ? v.vend : null, sfx: shown.get(it.id).map((m) => ({ name: m.name, at: m.at, db: m.db == null ? null : m.db - unsaved })) };
   });
   for (const id of textChanged) app.pendingAudit.add(id);
-  if (app.server.preview.built) app.server.preview.stale = true;
+  if (d.preview) syncPreview(d.preview);   // 058：伺服器順便說是不是只差直接套得上的（舊版服務沒有，照舊當成預覽不是最新的）
+  else if (app.server.preview.built) app.server.preview.stale = true;
   changed({ inspector: false });
   renderMode();
   if (notify) toast('存好了', 'ok', 1500);
@@ -1580,7 +1621,7 @@ async function pollVersion() {
     if (app.saveOffline) { app.saveOffline = false; renderHeader(); }
     const pv = app.server.preview;
     const rebuilt = v.built && pv.builtMtime !== v.builtMtime;
-    if (pv.built !== v.built || pv.stale !== v.stale || pv.builtMtime !== v.builtMtime) { pv.built = v.built; pv.stale = v.stale; pv.builtMtime = v.builtMtime; renderMode(); }
+    if (syncPreview(v)) renderMode();
     if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); }
     renderPrerender(v.prerender);
     syncOutsideBuild(v.build, v.framingUpdate);
@@ -1842,17 +1883,25 @@ function renderMode() {
   pbtn.classList.toggle('is-disabled', !avail || !built);
   pbtn.dataset.tip = !avail ? `完成影片預覽不能用：${pv?.player?.reason || ''}（已退回快速試聽）` : !built ? '還沒有完成影片：先按「更新預覽」' : '看完整的成品：字卡、動畫、字幕、音效都有';
   for (const b of $$('.seg button')) { const on = b.dataset.mode === app.mode; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
-  const note = $('#modeNote');
+  renderHeader();
+}
+// 預覽下面那一行（renderHeader 每次都重畫：058 改了聲音、改了瘦臉，這一行要跟著按鈕一起變，不能等存檔）
+function renderModeNote() {
+  const pv = app.server?.preview, note = $('#modeNote');
+  const avail = !!pv?.player?.available, built = !!pv?.built;
   const fin = app.finalInfo;
-  if (roughStage()) note.innerHTML = '';   // 上面的提示已經講了
+  let html;
+  if (roughStage()) html = '';   // 上面的提示已經講了
   else if (app.mode === 'player') {
-    note.innerHTML = pv?.stale || isDirty() ? `<span class="warn-ink">有新修改</span>，按「更新預覽」才看得到${esc(lastBuildText())}`
-      : fin?.exists && !fin.stale ? `已輸出過：<a href="${esc(fin.url)}" target="_blank" rel="noopener">播放完成影片</a>` : '';
+    const live = player.live;
+    html = liveApplied() ? '已即時套用；輸出時會一起做進去'
+      : pv?.stale || isDirty() ? `<span class="warn-ink">有新修改</span>，按「更新預覽」才看得到${live && !live.on ? `（不能即時套用：${esc(live.why)}）` : ''}${esc(lastBuildText())}`
+        : fin?.exists && !fin.stale ? `已輸出過：<a href="${esc(fin.url)}" target="_blank" rel="noopener">播放完成影片</a>` : '';
   } else {
-    note.innerHTML = !avail ? '<span class="mute">找不到播放器，只能用快速試聽</span>'
+    html = !avail ? '<span class="mute">找不到播放器，只能用快速試聽</span>'
       : !built ? `按「更新預覽」做一次，就看得到字卡和動畫${esc(lastBuildText())}` : '這裡沒有字卡和動畫，看完整畫面請切到完成影片預覽';
   }
-  renderHeader();
+  if (note.dataset.html !== html) { note.dataset.html = html; note.innerHTML = html; }
 }
 // 流程列要知道這一頁現在是字幕預覽，不是完成影片
 function renderFlowHere() {
@@ -1876,7 +1925,7 @@ function renderNext() {
 }
 
 // ---------- 字幕樣式（035；plan.json 第一層 "captionStyle"＝這一集，shared/setting.json 的 captions＝以後每集的預設；lib/caption-style.mjs）----------
-// 一組設定管整支影片的每一則字幕。改了快速預覽、完成影片預覽馬上變（改字幕圖層的 data-cap 與 --cap-* 變數）；按「更新預覽」才做進去
+// 一組設定管整支影片的每一則字幕。改了快速預覽、完成影片預覽馬上變（改字幕圖層的 data-cap 與 --cap-* 變數）；058 起不用「更新預覽」，輸出時一起做進去
 // 上下位置（lift，px，往上為正）：在預覽畫面上直接拖字幕，或用滑桿；預設橫式、直式分開記（setting.json 的 captions.lift.landscape／portrait）
 const normCap = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? sanitizeCaptionStyle(v).style ?? null : null);
 const capSetting = () => app.server?.captionStyle?.setting ?? undefined;
@@ -1933,7 +1982,7 @@ function inspCapStyle() {
     ${sliderRow('上下位置', 'capLift', st.lift, { min: LL.min, max: LL.max, step: 2, out: describeLift(st.lift), def: 0, tip: `往右＝往上。${capFmtZh()}可以 ${LL.min < 0 ? `往下 ${-LL.min}、` : ''}往上 ${LL.max} px；也可以在預覽畫面上直接拖字幕` })}
     <label class="ip-check"><input type="checkbox" data-f="capDefault"${app.capDefault ? ' checked' : ''}> 之後的影片也用這個（位置只記${capFmtZh()}）</label>
     <div class="ip-btns"><button class="small ghost" data-act="capLift0"${st.lift ? '' : ' disabled'} data-tip="上下位置回到原位（雙擊預覽畫面上的字幕也可以）">回到原位</button><button class="small ghost" data-act="capReset" data-tip="深底白字、思源黑體 76 px 一般、原位（照剪映量的）">回到原本的樣子</button></div>
-    <p class="ip-note">整支影片的字幕一起變。字幕可以在預覽畫面上直接拖上下（方向鍵微調，Shift 一次 10 px）；橫式、直式的位置分開記。按「更新預覽」才會做進去。字體都是開源字體（SIL OFL），可以商用。</p>`;
+    <p class="ip-note">整支影片的字幕一起變。字幕可以在預覽畫面上直接拖上下（方向鍵微調，Shift 一次 10 px）；橫式、直式的位置分開記。在完成影片預覽馬上看得到，輸出時會一起做進去。字體都是開源字體（SIL OFL），可以商用。</p>`;
 }
 // 預覽畫面上的字幕框（#capDrag）：滑過出現虛線框，拖上下＝改上下位置；放開才進復原清單、寫預設
 function placeCapDrag(g) {
@@ -1962,7 +2011,7 @@ function capDragEnd(commit) {
 // ---------- 重點字幕（038；plan.json 第一層 "captionMarks"：["#6", "#7"]；kit/captions.css 的 .cg--em）----------
 // 指定的幾則字幕用重點樣式（主色底、粗體），其他照整支的字幕樣式。app.marks＝句號（數字、由小到大）；增刪字幕時跟著句號走（subtitles.mjs remapMarks）。
 // 在哪裡切換：「字幕」分頁每一句右邊的「重點」、選到字幕時屬性面板的「重點字幕」、鍵盤 H（選到的那一句；沒選就是播放頭所在的那一句）。
-// 快速試聽、完成影片預覽馬上換（preview.js）；按「更新預覽」才做進去
+// 快速試聽、完成影片預覽馬上換（preview.js）；058 起不用「更新預覽」，輸出時一起做進去（上次 build 之後改過字的那幾則 applyMarks 不動，改字本身就要更新預覽）
 const normMarks = (v, cues) => { const have = new Set((cues || []).map((c) => c.n)); return parseCaptionMarks(v).marks.filter((n) => have.has(n)); };
 app.isMark = (n) => app.marks.includes(n);
 app.markKey = () => `${app.marks.join(',')}|${app.cues.length}`;
@@ -1989,12 +2038,12 @@ function syncMarkRows() {
 
 // ---------- 背景音樂（057；plan.json 第一層 bed.volume，−40～+6 dB，一格 1 dB，0＝曲庫檔原本的音量、−40＝靜音，規則和 build.mjs --set bed.volume 一樣）----------
 // 時間軸「背景音樂」軌的軌頭（數字、🔇、🔒）和這個滑桿是同一個值
-// 快速試聽拖的時候馬上跟著變（preview.js 播上一次 build 混好的 wav，只補差的 dB）；完成影片預覽和其他滑桿一樣，按「更新預覽」重混才聽得到。
+// 快速試聽拖的時候馬上跟著變（preview.js 播上一次 build 混好的 wav，只補差的 dB）；完成影片預覽也一樣馬上變（058：改播放器裡 bgm-bed 的 data-volume），輸出時重混。
 // 點時間軸的「背景音樂」軌：右側跳到「整支 → 聲音」，這一列亮起來
 function normBedVol(bed) { return isObj(bed) && Number.isFinite(bed.volume) ? clamp(bed.volume, ...BED_VOL) : 0; }
 function bedSlider() {
   const on = bedHasMusic(app.bedView), v = app.bedVol;
-  const tip = on ? `「${app.bedView.music}」整首一起調；0＝原本的音量，${BED_VOL[0]}＝靜音。快速試聽馬上聽得到，完成影片預覽要按「更新預覽」` : '這一集沒有背景音樂';
+  const tip = on ? `「${app.bedView.music}」整首一起調；0＝原本的音量，${BED_VOL[0]}＝靜音。快速試聽、完成影片預覽都馬上聽得到` : '這一集沒有背景音樂';
   return sliderRow('背景音樂', 'bedVol', v, { min: BED_VOL[0], max: BED_VOL[1], step: 1, out: on ? fmtDb(v) : '—', tip, cls: `${on ? '' : 'off'}${on && app.selLane === 'bed' ? ' hot' : ''}`.trim(), off: !on })
     + (on ? '' : '<p class="ip-note bed-none">這一集沒有背景音樂</p>');
 }
@@ -2020,12 +2069,13 @@ function bedTip() {
 
 // ---------- 主題（亮／暗；plan.json 第一層 "theme"，specs/010-motion-v2/design-system.md §10）----------
 // 不寫＝亮色。完成影片預覽在切換時直接改播放器 iframe 的 <html data-theme>（build 也是寫在主合成的 <html>），不用重新產生就看得到配色
+// （只有卡片的顏色：背景圖 bg-*-dark.jpg 是 build 寫在 index.html 的 CSS，要更新預覽才會換，所以 058 主題改了「更新預覽」照樣發光）
 const normTheme = (v) => (v === 'dark' ? 'dark' : 'light');
 function inspTheme() {
   // 用屬性面板的 .seg-btns（不能用 .seg：預覽模式切換會把所有 .seg button 的 on 重設）
   const b = (v, label, tip) => `<button class="${app.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}" aria-pressed="${app.theme === v}" data-tip="${esc(tip)}">${label}</button>`;
   return `<div class="seg-btns theme-seg" role="group" aria-label="主題">${b('light', '亮', '米白底、白卡（預設）')}${b('dark', '暗', '石墨黑底、玻璃卡')}</div>
-    <p class="ip-note">字卡和全畫面動畫的配色。在完成影片預覽馬上看得到；按「更新預覽」才會做進去。</p>`;
+    <p class="ip-note">字卡和全畫面動畫的配色。卡片的顏色在完成影片預覽馬上看得到；背景圖要按「更新預覽」才會換。</p>`;
 }
 
 // ---------- 講者（調光、瘦臉、美顏、瘦小腹；contracts/look.md §7、§9）----------
@@ -2104,8 +2154,41 @@ function inspLook() {
     ${row('slim', '瘦臉', lim.slim[1], '臉頰到下巴的輪廓往內收；按「更新預覽」才會做進去（長片第一次要幾分鐘）')}
     ${row('beauty', '美顏', lim.beauty[1], '磨皮、膚色提亮、淡化黑眼圈，越往右越明顯；和瘦臉一起做進底片，按「更新預覽」才會做進去；快速試聽看不到，看下面「後」那張臉')}
     ${row('belly', '瘦小腹', lim.belly[1], '腰（肋骨下緣到髖）往身體中線收，建議 0.50；手擺在肚子前面會跟著窄一點、腰旁邊的東西會微微變形；和瘦臉一起做進底片，按「更新預覽」才會做進去')}
+    ${lookPendingHtml()}
     <div class="ip-btns"><button class="small" data-act="lookReset"${app.look ? '' : ' disabled'} data-tip="回到每支影片共用的設定（調光 ${kit.color}、瘦臉 ${kit.slim}、美顏 ${kit.beauty}、瘦小腹 ${kit.belly}）">恢復預設</button></div>
     ${faces}${body}`;
+}
+
+// 058 講者的設定跟上次做進完成影片預覽的不一樣：滑桿下面一行提示＋一顆小的「更新預覽」（和右上角那顆做同一件事，也發光）。
+// 做進去的值＝/api/state 的 look.baked（build 重新處理底片時記的）；這一支略過瘦臉（臉太小、偵測不到）、略過瘦小腹時，那幾項 build 也不會做，不算。
+// 讀不到 baked（還沒有 build 過的底片）才退回「預覽不是最新的」
+function lookPendingWhat() {
+  const L = app.server?.look, pv = app.server?.preview;
+  if (!L || L.error || !pv?.built) return [];
+  const b = L.baked;
+  if (!b) return (pv.stale && !pv.liveOnly) || !same(app.look, app.savedLook) ? ['講者的設定'] : [];
+  const e = { beauty: 0, belly: 0, ...lookEff() }, lm = L.landmarks || {}, po = L.pose || {};
+  const faceSkip = lm.ready && lm.slimOk === false, bellySkip = po.ready && po.bellyOk === false;
+  const diff = (k) => Math.abs((Number(e[k]) || 0) - (Number(b[k]) || 0)) > 1e-3;
+  return [diff('color') && '調光', !faceSkip && diff('slim') && '瘦臉', !faceSkip && diff('beauty') && '美顏', !bellySkip && diff('belly') && '瘦小腹'].filter(Boolean);
+}
+function lookPendingHtml() {
+  const what = lookPendingWhat();
+  if (!what.length) return '<div id="lookPending" hidden></div>';
+  const busy = app.building || !!app.buildOutside, slow = app.server?.build?.slowSeconds;
+  const why = busy ? '正在更新，等它跑完' : app.exporting ? '正在輸出完成影片' : '';   // 和右上角那顆同一套：不能按就不發光
+  return `<div id="lookPending" class="look-pending"><p class="ip-note"><b>${esc(what.join('、'))}</b>還沒做進完成影片預覽：要重新處理影片底片，${slow ? `上次花 ${esc(fmtWait(slow))}` : '長片要十幾分鐘（第一次開瘦臉還要先偵測臉部）'}。</p>`
+    + `<button class="small${why ? ' is-disabled' : ' primary glow'}" data-act="build" data-why="${esc(why)}" aria-disabled="${!!why}">${busy ? '更新中…' : '更新預覽'}</button></div>`;
+}
+// 頂列重畫時（存檔、更新中、更新好了）一起更新這一行；沒變就不動（按鈕不會被換掉）
+let lookPendingShown = { box: null, html: '' };
+function renderLookPending() {
+  const box = $('#lookPending');
+  if (!box) return;
+  const html = lookPendingHtml();
+  if (box === lookPendingShown.box && html === lookPendingShown.html) return;
+  box.outerHTML = html;
+  lookPendingShown = { box: $('#lookPending'), html };
 }
 
 // ---------- 屬性面板 ----------
@@ -2148,9 +2231,9 @@ function inspWhole() {
   const lookNow = lookEff();
   const lookLabel = [lookNow.color > 0 && '調光', lookNow.slim > 0 && '瘦臉', lookNow.beauty > 0 && '美顏', lookNow.belly > 0 && '瘦小腹'].filter(Boolean).join('、') || '都關';
   return `${foldSec('look', `講者：${lookLabel}`, inspLook())}${foldSec('sound', `聲音：人聲 ${fmtDb(e.volume.voice)}`, `
-    ${sliderRow('人聲', 'vol.voice', e.volume.voice, { out: fmtDb(e.volume.voice), tip: '講者的聲音（主軌）整條的音量' })}
-    ${sliderRow('音效', 'vol.sfx', e.volume.sfx, { out: fmtDb(e.volume.sfx), tip: '全部音效一起調' })}
-    ${sliderRow('素材原聲', 'vol.media', e.volume.media, { out: fmtDb(e.volume.media), tip: '素材有開原聲的才算' })}
+    ${sliderRow('人聲', 'vol.voice', e.volume.voice, { out: fmtDb(e.volume.voice), tip: '講者的聲音（主軌）整條的音量；快速試聽、完成影片預覽都馬上聽得到' })}
+    ${sliderRow('音效', 'vol.sfx', e.volume.sfx, { out: fmtDb(e.volume.sfx), tip: '全部音效一起調；快速試聽、完成影片預覽都馬上聽得到' })}
+    ${sliderRow('素材原聲', 'vol.media', e.volume.media, { out: fmtDb(e.volume.media), tip: '素材有開原聲的才算；快速試聽、完成影片預覽都馬上聽得到' })}
     ${bedSlider()}
     <label class="ip-check" data-tip="小聲的句子拉近大聲的，聽起來不會忽大忽小；按「更新預覽」重新處理底片後才聽得到"><input type="checkbox" data-f="level"${e.level ? ' checked' : ''}> 拉平人聲大小聲</label>
     <div class="ip-btns"><button data-act="loud" data-tip="量整支人聲的音量（剪掉的範圍不算），調到 YouTube 常用的標準（${app.server?.targetLufs ?? -14} LUFS）">把人聲調到 YouTube 標準音量</button></div>
@@ -2671,6 +2754,7 @@ function onInspClick(e) {
   const it = s ? app.itemsView.find((x) => x.id === s.id) : null;
   switch (act) {
     case 'loud': return normalizeVoice();
+    case 'build': return buildFromButton();   // 058 講者區那顆小的「更新預覽」
     case 'rqOpen': setRequestsOpen(true); setTimeout(() => $('#rqNote')?.focus(), 20); return;
     case 'gapReq': setRequestsOpen(true); break;
     case 'lookReset': mutate(() => { app.look = null; }, { inspector: true }); return refreshFaces(0);

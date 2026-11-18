@@ -110,7 +110,7 @@ before(async () => {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('dialog', (d) => d.accept());   // 上一個測試留著沒存的改動：離開頁面時的確認
   await page.setViewport({ width: 1440, height: 900 });
-  await page.evaluateOnNewDocument(() => { localStorage.setItem('auto-edit-editor.coach.v2', '1'); localStorage.setItem('auto-edit-editor.coach-final.v1', '1'); });
+  await page.evaluateOnNewDocument(() => { localStorage.setItem('auto-edit-editor.coach.v3', '1'); localStorage.setItem('auto-edit-editor.coach-final.v1', '1'); });
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.itemsView?.some((x) => x.id === 'm1'), { timeout: 60000 });
 });

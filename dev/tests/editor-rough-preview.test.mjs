@@ -41,7 +41,7 @@ before(async () => {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('dialog', (d) => d.accept());
   await page.setViewport({ width: 1440, height: 900 });
-  await page.evaluateOnNewDocument(() => { for (const k of ['coach.v2', 'coach-final.v1', 'coach-rough.v1']) localStorage.setItem(`auto-edit-editor.${k}`, '1'); });
+  await page.evaluateOnNewDocument(() => { for (const k of ['coach.v3', 'coach-final.v1', 'coach-rough.v1']) localStorage.setItem(`auto-edit-editor.${k}`, '1'); });
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.reportReady, { timeout: 60000 });
 });

@@ -39,7 +39,7 @@ import { cmdLine } from './lib/say.mjs';
 import { jobState, runToolUntilDone } from './lib/job.mjs';
 import { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, remapScriptsAfterSave } from './editor/server/write.mjs';
 import * as subtitles from './editor/subtitles.mjs';
-import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, bodyImage, bellySkipWhy, faceOn, lookNeedsRun, LOOK_LIMITS, isRunning, ensureBlendedLut, lookNextStep } from './lib/look.mjs';
+import { ensureLook, resolveLook, readKitLook, readState, statePaths, faceImage, bodyImage, bellySkipWhy, faceOn, lookNeedsRun, LOOK_LIMITS, isRunning, ensureBlendedLut, lookNextStep, lookKey } from './lib/look.mjs';
 import { footageVf, lut3dFilter } from './lib/ff.mjs';
 import { CANVAS } from './lib/canvas.mjs';
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
@@ -60,6 +60,7 @@ import { r3 } from './lib/time.mjs';
 import { LOUD } from './lib/audio.mjs';
 import { LOCAL_ROLES, localSfxDir } from './lib/sfx-local.mjs';
 import { readBedInfo } from './lib/music.mjs';
+import { soundOf, liveFingerprint, liveOk, LIVE_INFO, LIVE_INFO_V } from './editor/live-sound.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, subtitles };
 export { requestsInfo, doRequestsStatus, doRequests };   // 修改單（實作在 editor/server/requests.mjs，versions.mjs 也用）
@@ -606,10 +607,23 @@ function mediaKind(src) {
   return ['.jpg', '.jpeg', '.png', '.webp'].includes(e) ? 'image' : 'video';
 }
 
+// 完成影片預覽是不是最新的：plan.json、字幕（058：改字幕的字也要更新預覽才看得到）、本集風格比 index.html 新就不是。
+// 058 liveOnly＝跟上一次 build 比只差直接套得上的欄位（聲音、字幕樣式、重點字幕；.cache/live.json 的指紋一樣、而且聲音的差在預覽裡套得上）：
+// 頁面直接改播放器，不用按「更新預覽」；sound＝那一次做進去的聲音（頁面算要補多少倍）。live.json 對不上這一份 index.html（舊版 build 沒寫、被換過）就當沒有
 function builtInfo(ctx, plan) {
-  const idx = statOf(path.join(ctx.P.out, 'index.html'));
-  const design = statOf(path.join(ctx.P.project, 'work', 'design', 'applied.json'));
-  return { built: !!idx, builtMtime: idx?.mtimeMs ?? null, stale: !!(idx && Math.max(plan.mtime || 0, design?.mtimeMs || 0) > idx.mtimeMs + 1) };
+  const P = ctx.P, idx = statOf(path.join(P.out, 'index.html'));
+  const design = statOf(path.join(P.project, 'work', 'design', 'applied.json')), srt = statOf(P.srt);
+  const stale = !!(idx && Math.max(plan.mtime || 0, srt?.mtimeMs || 0, design?.mtimeMs || 0) > idx.mtimeMs + 1);
+  const info = idx ? readJson(path.join(P.out, LIVE_INFO)) : null;
+  const ok = isObj(info) && info.v === LIVE_INFO_V && info.index === Math.floor(idx.mtimeMs) && isObj(info.sound) && typeof info.fp === 'string';
+  let liveOnly = false;
+  if (stale && ok && isObj(plan.data) && !(design && design.mtimeMs > idx.mtimeMs + 1)) {
+    const text = srt ? fs.readFileSync(P.srt, 'utf8') : '';
+    let look;
+    try { look = lookKey({ plan: plan.data, templateDir: P.templateDir }); } catch { look = undefined; }   // kit/look.json 讀不到：照 plan.json 原樣比
+    liveOnly = liveFingerprint(plan.data, text, sha, { bedDefault: bedDefaultOf(P), look }) === info.fp && liveOk(info.sound, soundOf(plan.data));
+  }
+  return { built: !!idx, builtMtime: idx?.mtimeMs ?? null, stale, liveOnly, sound: ok ? info.sound : null };
 }
 
 // 講者調光＋瘦臉（contracts/look.md §7.2）
@@ -903,6 +917,7 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   const rep = quick ? null : await getReport(ctx, { fresh: true });
   return [200, { ok: true, look: lookState(ctx, r.plan), wrote: { plan: r.text != null, srt: r.srtText != null }, plan: { mtime: nst.mtimeMs, hash: sha(fs.readFileSync(P.plan, 'utf8')), data: r.plan },
     srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: r.notes || [], edit: r.edit ?? r.plan.edit ?? null, anchors: r.anchors || [], sfxMemory: r.memory || {},
+    preview: builtInfo(ctx, readPlan(P.plan)),   // 058：存完馬上知道是不是只差直接套得上的欄位（不用等下一次輪詢，按鈕才不會閃一下）
     ...(rep ? { report: reportOut(rep) } : {}) }];
 }
 
@@ -912,7 +927,7 @@ function savedNow(ctx) {
   let plan;
   try { plan = JSON.parse(text); } catch { plan = readPlan(P.plan).data; }
   return { ok: true, duplicate: true, look: lookState(ctx, plan), wrote: { plan: false, srt: false }, plan: { mtime: nst.mtimeMs, hash: sha(text), data: plan },
-    srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: [], edit: plan.edit ?? null, anchors: [], sfxMemory: readMemory(ctx) };
+    srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, notes: [], edit: plan.edit ?? null, anchors: [], sfxMemory: readMemory(ctx), preview: builtInfo(ctx, readPlan(P.plan)) };
 }
 
 // 關頁時正在存的那一筆被擋下來（檔案剛好被 AI 或構圖頁改過、正在輸出、內容有錯）：頁面可能已經不在了，
@@ -989,7 +1004,8 @@ export function doRestore(ctx, body) {
   const nst = statOf(P.plan), nsrt = readSrt(P.srt);
   let plan;
   try { plan = JSON.parse(v.plan); } catch { plan = readPlan(P.plan).data; }
-  return [200, { ok: true, look: lookState(ctx, plan), plan: { mtime: nst.mtimeMs, hash: sha(v.plan), data: plan }, srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, edit: plan.edit ?? null, sfxMemory: readMemory(ctx) }];
+  return [200, { ok: true, look: lookState(ctx, plan), plan: { mtime: nst.mtimeMs, hash: sha(v.plan), data: plan }, srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, edit: plan.edit ?? null, sfxMemory: readMemory(ctx),
+    preview: builtInfo(ctx, readPlan(P.plan)) }];
 }
 
 async function doLoudness(ctx, body) {

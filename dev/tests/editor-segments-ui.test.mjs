@@ -42,7 +42,7 @@ before(async () => {
   page = await browser.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewport({ width: 1440, height: 900 });
-  await page.evaluateOnNewDocument(() => { localStorage.setItem('auto-edit-editor.coach.v2', '1'); localStorage.setItem('auto-edit-editor.coach-final.v1', '1'); });
+  await page.evaluateOnNewDocument(() => { localStorage.setItem('auto-edit-editor.coach.v3', '1'); localStorage.setItem('auto-edit-editor.coach-final.v1', '1'); });
   await page.goto(editor.url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__editor?.itemsView?.length >= 4 && window.__editor.reportReady, { timeout: 60000 });
 });

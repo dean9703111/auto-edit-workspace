@@ -136,6 +136,13 @@ export function resolveLook({ plan, templateDir = DEFAULT_TEMPLATE } = {}) {
     belly: ok(v.belly, 1) ? r2(v.belly) : kit.belly, source: 'plan' };
 }
 const srcLabel = (L) => (L.source === 'kit' ? 'kit/look.json' : 'plan.json 的 look');
+// 058 剪輯台判斷「跟上次 build 比只差聲音」用：look 寫法不同、做出來一樣（沒寫＝kit 預設；開了又關掉＝寫了和預設一樣的 0）算同一個。
+// 寫錯的照原樣回（build 會擋下來，不能當成一樣）
+export function lookKey({ plan, templateDir = DEFAULT_TEMPLATE } = {}) {
+  if (validateLook(plan?.look).length) return plan?.look;
+  const L = resolveLook({ plan, templateDir });
+  return { color: L.color, slim: L.slim, beauty: L.beauty, belly: L.belly };
+}
 
 // ---------- LUT ----------
 

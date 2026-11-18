@@ -39,7 +39,7 @@ test('切換影片：一個時是字、兩個時是切換鈕；展開、鍵盤�
   const page = await browser.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewport({ width: 1280, height: 800 });
-  await page.evaluateOnNewDocument(() => { for (const k of ['coach.v2', 'coach-final.v1', 'coach-rough.v1']) localStorage.setItem(`auto-edit-editor.${k}`, '1'); });
+  await page.evaluateOnNewDocument(() => { for (const k of ['coach.v3', 'coach-final.v1', 'coach-rough.v1']) localStorage.setItem(`auto-edit-editor.${k}`, '1'); });
   const listed = () => page.waitForResponse((r) => new URL(r.url()).pathname === '/api/editors');
   const refocus = async () => { const got = listed(); await page.evaluate(() => window.dispatchEvent(new Event('focus'))); await got; await page.evaluate(() => new Promise((r) => setTimeout(r, 50))); };
   const name = () => page.$eval('#projName', (n) => ({ text: n.textContent, cls: n.className, role: n.getAttribute('role'), tab: n.getAttribute('tabindex'), popup: n.getAttribute('aria-haspopup'), expanded: n.getAttribute('aria-expanded'), controls: n.getAttribute('aria-controls'), wrap: n.closest('.topbar').classList.contains('has-switch') }));

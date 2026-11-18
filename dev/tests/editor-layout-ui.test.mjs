@@ -22,7 +22,7 @@ test('右側面板可以拖寬度、時間軸放不下時自己上下捲（捲�
   fs.mkdirSync(shared);
   fs.symlinkSync(TEMPLATE, path.join(shared, 'template'), 'dir');
   // 提示卡都看過了：不擋住要拖的地方
-  fs.writeFileSync(path.join(shared, 'setting.json'), JSON.stringify({ editor: { seen: ['coach-rough.v1', 'coach-final.v1', 'coach.v2'] } }));
+  fs.writeFileSync(path.join(shared, 'setting.json'), JSON.stringify({ editor: { seen: ['coach-rough.v1', 'coach-final.v1', 'coach.v3'] } }));
   const project = path.join(root, 'projects', 'alpha'), work = path.join(project, 'work');
   fs.mkdirSync(path.join(work, 'hyperframes'), { recursive: true });
   fs.writeFileSync(path.join(work, 'hyperframes', 'plan.json'), '{\n  "version": 1\n}\n');

@@ -108,8 +108,9 @@ import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
 import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip, LOUD_TEXT } from './lib/audio.mjs';
 import { bedPlan, renderBedClip, bedLine, bedDucks, bedJson, writeBedInfo } from './lib/music.mjs';
+import { soundOf, liveFingerprint, LIVE_INFO, LIVE_INFO_V } from './editor/live-sound.mjs';
 import { prepareEnding, endingLines } from './lib/ending.mjs';
-import { ensureLook, lookCheck } from './lib/look.mjs';
+import { ensureLook, lookCheck, lookKey } from './lib/look.mjs';
 import { ensureMattes } from './lib/matte.mjs';
 import { residualWarnings } from './lib/rough/residual.mjs';   // 055 C20：--check 印初剪後還沒剪的重講、試講
 import { hyperframesVersion, versionLine } from './caps.mjs';
@@ -444,14 +445,25 @@ export function attachWords(cues, { transcript, video = null } = {}) {
 function loadInputs(P) {
   if (!fs.existsSync(P.plan)) throw new Error(`找不到 ${rel(P.plan)} → 先跑 build.mjs --scaffold 拿分鏡素材、寫草稿，再 --merge-drafts（格式見 shared/template/USAGE.md 3.2）`);
   let plan;
-  try { plan = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch (e) { throw new Error(`${rel(P.plan)} 不是合法的 JSON：${e.message}（JSON 不能有註解、最後一項後面不能有逗號）`); }
+  const planText = fs.readFileSync(P.plan, 'utf8');
+  try { plan = JSON.parse(planText); } catch (e) { throw new Error(`${rel(P.plan)} 不是合法的 JSON：${e.message}（JSON 不能有註解、最後一項後面不能有逗號）`); }
   if (!fs.existsSync(P.srt)) throw new Error(`找不到字幕 ${rel(P.srt)}`);
-  const cues = parseSrt(fs.readFileSync(P.srt, 'utf8'));
+  const srtText = fs.readFileSync(P.srt, 'utf8');
+  const cues = parseSrt(srtText);
   if (!cues.length) throw new Error(`${rel(P.srt)} 讀不到任何字幕句（格式要是 SRT）→ 跑 media.mjs rough --again 重新產生 work/rough.srt`);
   attachWords(cues, { transcript: path.join(path.dirname(P.srt), 'transcript.json'), video: P.video });
   // 說話中的停頓（rough.mp4 量一次、快取）：#N@詞 落在停頓裡就對到開口（lib/time.mjs）
   if (P.video && fs.existsSync(P.video)) { const sp = speechPauses(P.video, path.join(P.out, '.cache', 'speech-pauses.json')); if (sp) cues.pauses = sp.pauses; }
-  return { plan, cues };
+  return { plan, cues, planText, srtText };
+}
+
+// 058 上一次 build 做進 index.html 的聲音和指紋（work/hyperframes/.cache/live.json；剪輯台 editor.mjs 讀）：
+// index 記那時 index.html 的修改時間，對不上（index.html 後來又被換過）剪輯台就不用它
+const sha1 = (s) => createHash('sha1').update(s).digest('hex');
+function writeLiveInfo(outDir, { fp, sound }) {
+  const f = path.join(outDir, LIVE_INFO);
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, `${JSON.stringify({ v: LIVE_INFO_V, index: Math.floor(fs.statSync(path.join(outDir, 'index.html')).mtimeMs), fp, sound })}\n`);
 }
 
 // 長片的輸出會進模型的上下文：超過 30 段就不印逐段表、⚠ 最多 40 則（--table 看全部）
@@ -682,7 +694,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const json = !!(flags.check && flags.json);
   if (json) log = () => {};
   if (P.project) log(`專案：${rel(P.project)}`);
-  const { plan, cues } = loadInputs(P);
+  const { plan, cues, planText, srtText } = loadInputs(P);
   if (!flags.check && !flags.prepare && plan.scenes === undefined) throw new Error('plan.json 還沒有 scenes → 先跑 build.mjs --scaffold，照 work/分鏡素材/ 寫段落');
   // 背景的底片處理還在跑：等它，不要重複編碼（--scaffold 開的；長片約幾分鐘）。
   // 最多等 --wait 秒（預設 DEFAULT_WAIT），到了回 stillRunning，由 buildCli 印「⏳ 還在跑」、結束碼 75（032）
@@ -1020,6 +1032,13 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   // index.html 的修改時間＝最後一次 build：內容沒變也更新時間（剪輯台「完成影片預覽是舊的」、audit、status、qc 都拿它和 plan.json 比；
   //   剪輯台存檔時已經重新產生過，再跑 build 不重寫 index.html，舊時間會讓它們誤報「plan.json 比 index.html 新」）
   if (W.res.same.includes('index.html')) { const now = new Date(); fs.utimesSync(path.join(P.out, 'index.html'), now, now); }
+  // 058 剪輯台的即時生效：記下這次做進去的聲音（人聲、音效、素材原聲、背景音樂、範圍音量、各段的音量）和「拿掉這些欄位、字幕樣式、整則重點字幕之後」的指紋。
+  //   剪輯台拿它算完成影片預覽要補多少（只補差的倍數）、判斷「跟上次 build 比只差直接套得上的欄位」（聲音、字幕樣式、重點字幕；不用按更新預覽）。
+  //   用 build 開頭讀到的那一份 plan.json、字幕（build 途中被改過也是記這次做進去的）；index＝這一份對到的 index.html 時間
+  const planIn = JSON.parse(planText);
+  let lookIn;
+  try { lookIn = lookKey({ plan: planIn, templateDir: P.templateDir }); } catch { lookIn = undefined; }   // 和剪輯台同一個退路：照 plan.json 原樣
+  writeLiveInfo(P.out, { fp: liveFingerprint(planIn, srtText, sha1, { bedDefault: lib.musicDefault, look: lookIn }), sound: soundOf(planIn) });
   if (test) { W.write(TEST_FILE, test.html); generated.add(TEST_FILE); }
   if (nocaps) { W.write(NOCAPS_FILE, nocaps.html); generated.add(NOCAPS_FILE); fs.writeFileSync(path.join(P.out, NOCAPS_SRT), captionSrt(cap)); }
   if (capcut) {
