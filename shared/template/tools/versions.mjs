@@ -75,7 +75,7 @@ import { markStoryboardWritten } from './lib/storyboard-state.mjs';
 import { writeAtomic } from './lib/atomic.mjs';
 import { designFileOf, fillFileOf, fillStateOf } from './lib/custom-fill.mjs';
 import { hashOf as stampHashOf, verifyHash } from './lib/assemble.mjs';
-import { resetRuns } from './lib/flow.mjs';
+import { resetRuns, designTimingLine } from './lib/flow.mjs';
 import { STOP, stopLines } from './lib/stops.mjs';
 import { report as reportLines, warn, next, cmdLine } from './lib/say.mjs';
 import { mainTry, stopLine as stopHere } from './lib/tries.mjs';
@@ -1279,6 +1279,7 @@ function finishOnce(P, flags = {}, log = console.log, steps = {}) {
     '請看字幕有沒有對到嘴；說「輸出」才 render。',
     ...(rq?.line ? [`${rq.line}（剪輯台的修改單可以按「清空修改單」）`] : []),
     ...info.map((s) => (auto[s.id] == null ? `${s.id}：沒有改（和改之前一樣）` : `${s.id}：${auto[s.id]}（${verText[s.id]}）`)),
+    designTimingLine(P, info.filter((s) => readJson(P.plan)?.scenes?.find((x) => x?.id === s.id)?.design).map((s) => s.id)),
   ];
   for (const l of reportLines(lines, { stop: stopLine })) log(l);
   return report;

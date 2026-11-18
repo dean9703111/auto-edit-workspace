@@ -419,7 +419,7 @@ function cardHtml(s) {
   const say = o.summary || s.title.replace(s.id, '').replace(/^[\s｜|]+/, '');
   const portrait = state.format === 'portrait';
   const flag = hasWish(s) ? '<span class="flag wish">你改過</span>' : pending ? '<span class="flag">動畫還沒做</span>' : '';
-  return `<a class="sb-card${reading.seen.has(s.id) ? ' seen' : ''}${portrait ? ' portrait' : ''}" href="#sec-${esc(s.key)}" data-id="${esc(s.id)}" title="${esc(`${say}（${s.id}）`)}"><div class="thumb">${shot?.url ? `<img src="${esc(shot.url)}" alt="" loading="lazy">` : '<span>還沒有截圖</span>'}${flag}</div><div class="txt"><div class="say">${inline(say)}</div><div class="meta"><span>${esc(mmss(o.time))}　${KIND_ZH[kindOf(s)]}</span><span>${esc(s.id)}</span></div></div></a>`;
+  return `<a class="sb-card${reading.seen.has(s.id) ? ' seen' : ''}${portrait ? ' portrait' : ''}" href="#sec-${esc(s.key)}" data-id="${esc(s.id)}" title="${esc(`${say}（${s.id}）`)}"><div class="thumb">${shot?.url ? `<img src="${esc(shot.url)}" alt="" loading="lazy">` : '<span>還沒有截圖</span>'}${flag}</div><div class="txt"><div class="say">${inline(say)}</div><div class="meta"><span>${esc(mmss(o.time))}　${esc(currentScene(s)?.label || KIND_ZH[kindOf(s)])}</span><span>${esc(s.id)}</span></div></div></a>`;
 }
 function renderGrid() {
   const seg = state.sections.filter((x) => x.id);

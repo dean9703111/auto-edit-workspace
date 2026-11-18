@@ -767,6 +767,6 @@ test('026 檢查次數的上限由工具數：草稿檢查到第 5 次還有 ✖
   assert.deepEqual([F.runCount(P, 'audit:d1'), F.runCount(P, 'audit-try:d1'), F.runCount(P, 'audit-try:d2')], [1, 1, 1], '032 C2：次數改成一個 key 一個檔，歸零後從 1 算起');
   fs.rmSync(p, { recursive: true, force: true });
   const src = fs.readFileSync(path.join(TOOLS, 'audit.mjs'), 'utf8');
-  assert.match(src, /export const AUDIT_TRY_MAX = 6;/);
+  assert.match(src, /export const AUDIT_TRY_MAX = 4;/);
   assert.match(src, /→ 停手：這一段已經驗收 \$\{r\.stop\} 次還有 ✖/);
 });

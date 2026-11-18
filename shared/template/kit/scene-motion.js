@@ -397,7 +397,9 @@
     // 每個 tween 帶 data：{ sc: 第幾個 P.* 呼叫, role: enter｜focus｜accent｜micro, fn: 方法名 }（audit 用；motion.md §4）
     var CALL = { id: 0, depth: 0, role: null, fn: null };
     var tagV = function (v) { if (CALL.depth && v && !v.data) v.data = { sc: CALL.id, role: CALL.role, fn: CALL.fn }; return v; };
-    tl = { fromTo: function (a, b, c, t) { return TL.fromTo(a, b, tagV(c), at0(t)); }, to: function (a, b, t) { return TL.to(a, tagV(b), at0(t)); }, set: function (a, b, t) { return TL.set(a, tagV(b), at0(t)); } };
+    // 059：記下 kit 自己加的補間（rawHas 只看設計師直接寫在 tl 上的；GSAP 的 timeline.fromTo 回傳時間軸本身，用 recent() 拿剛加的那個）
+    var KIT = new WeakSet(), kit = function (r) { var k = TL.recent && TL.recent(); if (k) KIT.add(k); return r; };
+    tl = { fromTo: function (a, b, c, t) { return kit(TL.fromTo(a, b, tagV(c), at0(t))); }, to: function (a, b, t) { return kit(TL.to(a, tagV(b), at0(t))); }, set: function (a, b, t) { return kit(TL.set(a, tagV(b), at0(t))); } };
     registerCount();
     registerType();
     registerFn();
@@ -442,14 +444,36 @@
     var SHAPES = 'path, circle, rect, ellipse, line, polyline, polygon';
     var seen = {};
     var els = function (sel) { return gsap.utils.toArray(sel); };
+    // 059：直接寫在 tl 上的補間（內容設計動畫的 tl.from／tl.to／tl.set）沒登記在 seen：時間軸上同一元素同一屬性已經有補間，
+    //   kit 這個就不是第一個，不能 immediateRender。以前 tl.from 藏好的卡片再 P.strike（壓暗用 fromTo），
+    //   建立時就被設回不透明，整段從頭就看得到
+    var ALIAS = { opacity: ['opacity', 'autoAlpha'], autoAlpha: ['opacity', 'autoAlpha'] };
+    var rawHas = function (props, el) {
+      var keys = [];
+      props.forEach(function (p) { (ALIAS[p] || [p]).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); }); });
+      var hit = false;
+      var walk = function (tlx) {
+        if (hit || !tlx || !tlx.getChildren) return;
+        tlx.getChildren(false, true, true).forEach(function (k) {
+          if (hit || KIT.has(k)) return;   // kit 自己的補間已經記在 seen
+          if (k.getChildren) { walk(k); return; }
+          if (k.timeline && k.timeline.getChildren) { walk(k.timeline); return; }   // 錯拍的補間
+          if (!k.targets || k.targets().indexOf(el) < 0) return;
+          var v = k.vars || {};
+          hit = keys.some(function (key) { return key in v || !!(v.startAt && key in v.startAt); });
+        });
+      };
+      walk(TL);
+      return hit;
+    };
     // 同一元素同一屬性的第一個 tween 才 immediateRender
     var first = function (prop, el) {
       var s = seen[prop] || (seen[prop] = new Set());
-      var f = !s.has(el); s.add(el); return f;
+      var f = !s.has(el) && !rawHas([prop], el); s.add(el); return f;
     };
     // 多屬性：每個屬性都是第一次才 immediateRender（先全部查完再登記）
     var firstAll = function (props, el) {
-      var f = props.every(function (p) { return !(seen[p] && seen[p].has(el)); });
+      var f = props.every(function (p) { return !(seen[p] && seen[p].has(el)); }) && !rawHas(props, el);
       props.forEach(function (p) { first(p, el); });
       return f;
     };

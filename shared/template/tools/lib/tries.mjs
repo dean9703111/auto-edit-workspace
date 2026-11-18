@@ -52,4 +52,26 @@ export function lastBeat(project, id) {
   try { return Number(JSON.parse(fs.readFileSync(beatFile(project, id), 'utf8')).at) || 0; } catch { return 0; }
 }
 
+// 059 每段驗收的紀錄（時間、✖、⚠）：一段一個檔，平行的設計師各寫各的。--design-status、--review、finish 用它算「驗收 N 次、M 分鐘」
+//   logAudit(project, id, { e, w })   → 加一筆
+//   auditLog(project, id, since)      → since（毫秒）之後的那幾筆 [{ at, e, w }]
+const AUDIT_LOG_MAX = 50;
+const auditLogFile = (project, id) => path.join(beatsDir(project), `${encodeURIComponent(String(id))}.audits.json`);
+export function logAudit(project, id, { e = 0, w = 0 } = {}, at = Date.now()) {
+  try {
+    let list = [];
+    try { list = JSON.parse(fs.readFileSync(auditLogFile(project, id), 'utf8')); } catch { list = []; }
+    if (!Array.isArray(list)) list = [];
+    list.push({ at, e, w });
+    fs.mkdirSync(beatsDir(project), { recursive: true });
+    writeAtomic(auditLogFile(project, id), JSON.stringify(list.slice(-AUDIT_LOG_MAX)));
+  } catch { /* 只是紀錄 */ }
+}
+export function auditLog(project, id, since = 0) {
+  try {
+    const list = JSON.parse(fs.readFileSync(auditLogFile(project, id), 'utf8'));
+    return Array.isArray(list) ? list.filter((x) => Number(x.at) >= since) : [];
+  } catch { return []; }
+}
+
 export const stopLine = (n, what) => `→ 停手：${what}已經連續 ${n} 次沒過。不要再改，把上面還在的 ✖ 原文回報，說明卡在哪。`;

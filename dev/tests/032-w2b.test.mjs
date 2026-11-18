@@ -384,6 +384,10 @@ test('A3 回報段：照 deliver Skill 的回報格式，附 final.mp4 和驗收
   const posix = (f) => path.resolve(f).split(path.sep).join('/');
   assert.equal(R.at(-2), `<deliver-assets><media type="video" src="${posix(F.final)}" /><media type="image" src="${posix(F.sheet)}" /></deliver-assets>`);
   assert.equal(R.at(-1), '→ 完成（有標「要修」的 ⚠ 時改寫：→ 下一個停點：④ 完成影片預覽（說「改 <段>」開始））');
+  // 059：有剪輯台網址就附一行看片網址，放在附件那一行前面
+  const watched = CLI.finishLines(P, job, null, { watch: 'http://127.0.0.1:4400/output/final.mp4' });
+  assert.equal(watched.at(-3), '看完成影片 http://127.0.0.1:4400/output/final.mp4');
+  assert.ok(!R.some((l) => l.startsWith('看完成影片')), '沒給網址就不印');
   // 沒有 ⚠：最後一行就是「→ 完成」
   const clean = CLI.finishLines(P, { ...job, warnings: [], qc: { ...job.qc, warnings: 0, checks: [] } }, null);
   assert.equal(clean.at(-1), '→ 完成');

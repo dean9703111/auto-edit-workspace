@@ -127,7 +127,7 @@ import { loadPics, picOfSrc } from './lib/pics.mjs';
 import { judgeIllus, illusMotionFindings, illusNameFindings, illusSrcOwners, designColorFindings, designRotateFindings } from './lib/audit-illus.mjs';
 import { judgeLayoutRules } from './lib/audit-layout.mjs';
 import { resolveFormat, formatLine, canvasOf } from './lib/canvas.mjs';
-import { touchBeat } from './lib/tries.mjs';
+import { touchBeat, logAudit } from './lib/tries.mjs';
 import { splitFlag, valueOf, isMain } from './lib/cli.mjs';
 import { ensureBeatsV2, beatSourceOf, libOf } from './lib/beat-source.mjs';
 import { fillStateOf } from './lib/custom-fill.mjs';
@@ -529,18 +529,38 @@ export async function audit(flags, { log = console.log } = {}) {
   // ⚠ 只修一輪：同一段第 2 次起 0 個 ✖ 就可以交件，追 ⚠ 常常越改越多
   if (only && report.ok && P.out && !flags.review) {   // --review：build --review 只重量變了的段時帶，不算工人交件的次數
     const nth = Math.max(...only.map((id) => runCount(P, `audit:${id}`)));
+    report.nth = nth;
     if (nth >= 2 && findings.length) report.settled = true;
   }
   // 026 驗收次數的上限由工具數（子代理不用自己數工具呼叫）：同一段驗收到第 AUDIT_TRY_MAX 次還有 ✖ 就叫它停手回報。
   // 重派、改版確認、回饋輪開始時 resetRuns 會歸零
   if (only && P.out && !flags.review) {
     const tries = Math.max(...only.map((id) => runCount(P, `audit-try:${id}`)));
+    report.tries = tries;
     if (!report.ok && tries >= AUDIT_TRY_MAX) report.stop = tries;
   }
+  // 059：每段驗收一次記一筆（時間、✖、⚠），--design-status、--review、finish 印「驗收 N 次、M 分鐘」
+  if (only && P.project && !flags.review) for (const id of only) logAudit(P.project, id, { e: findings.filter((f) => f.id === id && f.level === 'error').length + report.errors.length, w: findings.filter((f) => f.id === id && f.level !== 'error').length });
   return report;
 }
 
-export const AUDIT_TRY_MAX = 6;
+// 059：弱模型一輪（想、改、驗收）要 2–3 分鐘；工具量得出來的版面問題已經自動處理（舞台縮放、只量完成態），還有 ✖ 改 4 次就交回主代理
+export const AUDIT_TRY_MAX = 4;
+// 第一次 0 個 ✖ 時要順手修掉的 ⚠（畫面撐不起來、顏色不跟主題）；其他 ⚠ 寫進報告就好
+const MUST_FIX = { 'design-sparse': '畫面太空', 'design-hero': '主角太小', 'design-color': '顏色寫死', 'design-rotate': '旋轉了非 90 度的角度' };
+
+// --only 的驗收最後一行：下一步只有一個，照做就好（弱模型看到「可以交件」還會再改一輪、再驗一次）
+export function nextLine(r) {
+  if (!r.only || !r.segments?.length) return null;
+  if (r.stop) return `→ 停手：這一段已經驗收 ${r.stop} 次還有 ✖。不要再改，把上面還在的 ✖ 原文回報主代理（回報格式照你那份說明的「停手」那一行）。`;
+  const ne = r.errors.length + r.findings.filter((f) => f.level === 'error').length;
+  if (ne) return `→ 改：用 edit 改上面 ✖ 那幾處（不要整份重寫），再跑同一條驗收${r.tries ? `（這是第 ${r.tries} 次；第 ${AUDIT_TRY_MAX} 次還有 ✖ 就停手）` : ''}。`;
+  const sheet = r.sheets?.[0]?.file;
+  if ((r.nth || 1) >= 2) return '→ 交件：⚠ 不用再修，也不要再跑驗收。留下的 ⚠ 寫進報告（一個一行：規則名稱＋為什麼留著），照你那份說明的「回報」回一行。';
+  const must = [...new Set(r.findings.filter((f) => MUST_FIX[f.rule]).map((f) => MUST_FIX[f.rule]))];
+  // 059 A/B：haiku 沒打開拼圖、反而去修一般的 ⚠（漏看了整段從頭就露出來的卡片）→ 寫明用看圖的工具打開、一般的 ⚠ 不用修
+  return `→ ${sheet ? `看拼圖：用看圖的工具打開 ${sheet} 看一次` : '看一次畫面'}${must.length ? `，用 edit 修掉「${must.join('」「')}」` : ''}：每一格的畫面和鏡位腳本那一拍對得上、有主角、最重要的詞一眼看得到、遮住字幕看得懂；${must.length ? '其他' : '上面的'} ⚠ 不用修。${must.length ? '改完再跑同一條驗收（下一次就是交件）' : '畫面不對就用 edit 改一次再跑同一條；都對就交件：留下的 ⚠ 寫進報告，照你那份說明的「回報」回一行，不用再跑'}。`;
+}
 
 // 預設只印 ✖、⚠ 與統計；verbose 才印全表、每張截圖、節奏備註（長片一段一行也有上百行）
 export function formatReport(r, { verbose = false } = {}) {
@@ -573,7 +593,7 @@ export function formatReport(r, { verbose = false } = {}) {
   if (r.segments.length) {
     const looks = r.shots?.length ? '' : r.only ? '要看畫面：這條加 --shots --sheet。' : '要看畫面：qc.mjs storyboard --sheet。';
     L.push('', ne ? `未通過：${ne} 個錯誤（✖），${nw} 個提醒（⚠）。照 → 後面的改法改 custom 檔（或 plan.json 後重跑 build），再跑一次 audit。` : `通過：${r.segments.length} 段，${nw} 個提醒（⚠）。${r.settled ? '可以交件，⚠ 不用再修。' : ''}audit 量的是幾何，畫面對不對還要看圖。${looks}`);
-    if (r.stop) L.push(`→ 停手：這一段已經驗收 ${r.stop} 次還有 ✖。不要再改，把上面還在的 ✖ 原文回報主代理（回報格式照你那份說明的「停手」那一行）。`);
+    if (r.stop && !r.only) L.push(`→ 停手：這一段已經驗收 ${r.stop} 次還有 ✖。不要再改，把上面還在的 ✖ 原文回報主代理（回報格式照你那份說明的「停手」那一行）。`);
     const bad = [...new Set(r.findings.flatMap((f) => f.at || []))].sort((a, b) => a - b).slice(0, 12);
     // 有 --only 的是工人（不能跑 snapshot）：看圖用 --shots --sheet
     if (bad.length && !r.only && !r.shots?.length) L.push(`看畫面：cd ${r.project}/work/hyperframes && npx hyperframes snapshot --at ${bad.map((t) => r3(t)).join(',')} --no-end -o ../../output/qc`);
@@ -582,6 +602,8 @@ export function formatReport(r, { verbose = false } = {}) {
     L.push('', `截圖拼成${r.sheets.length === 1 ? '一張' : ` ${r.sheets.length} 張`}（每格標時間；用看圖的工具打開，對照分鏡看每個動作有沒有真的看得到）：`, ...(verbose || r.sheets.length <= 12 ? r.sheets.map((s) => `  ${s.file}（${s.count} 格）`) : [`  ${r.sheets[0].file} …（共 ${r.sheets.length} 張，每段一張 sheet-<段 id>.jpg，都在 ${path.dirname(r.sheets[0].file)}）`]));
     if (verbose && r.shots?.length) L.push(...r.shots.map((f) => `  ${f}`));
   } else if (r.shots?.length) L.push('', `截圖 ${r.shots.length} 張（用看圖的工具打開，對照分鏡看每個動作有沒有真的看得到）：`, ...(verbose || r.shots.length <= 12 ? r.shots : [...r.shots.slice(0, 3), `…（共 ${r.shots.length} 張，都在 ${path.dirname(r.shots[0])}；--verbose 全列，或加 --sheet 拼成一張）`]).map((f) => `  ${f}`));
+  const nl = nextLine(r);
+  if (nl) L.push('', nl);
   return L.join('\n');
 }
 

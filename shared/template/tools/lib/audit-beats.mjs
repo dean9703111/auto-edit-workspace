@@ -189,7 +189,7 @@ export function beatFindings({ item, sheet, marks = [], cuesOut = [], html = '',
     const beat = row.beat || String(k + 1);
     for (const w of row.moves) {
       if (BY_NAME.has(w) || Object.hasOwn(VOCAB_RETIRED, w)) continue;
-      err('beats-vocab', 0, `分鏡第 ${beat} 拍的動態「${w}」不在語彙表（shared/template/BEATS.md §2）`, `改成語彙表的名稱，例如「${closest(w)}」；括號裡寫對象與參數，例「彈出（站）」`, { beat, word: w });
+      err('beats-vocab', 0, `分鏡第 ${beat} 拍的動態「${w}」不在語彙表（內容設計動畫：design.md「動態」那張表；模板段：shared/template/BEATS.md §2）`, `改成語彙表的名稱，例如「${closest(w)}」；括號裡寫對象與參數，例「彈出（站）」`, { beat, word: w });
     }
     for (const { ref, off } of row.refs) {
       const r = cueSec(ref, off);
@@ -289,7 +289,7 @@ export function sheetPlanFindings({ item, sheet, cues = [], tplRules = [], endEx
   for (const x of xs) {
     if (x.t <= item.D - 0.5 + 1e-6) continue;
     out.push({ msg: `第 ${x.beat} 拍 ${x.ref}${x.off ? `${x.off > 0 ? '＋' : '−'}${Math.abs(x.off)}` : ''}（${fmt(x.t)}）在段尾淡出之後（這段到 ${fmt(item.D)}），看不到`,
-      fix: '這一拍改綁這段裡講到的詞、縮短「＋秒數」，或刪掉；不要把段尾延進下一個話題（shared/template/BEATS.md「段太短」）' });
+      fix: '這一拍改綁這段裡講到的詞、縮短「＋秒數」，或刪掉；不要把段尾延進下一個話題（觀眾已經在聽下一件事，畫面還停在上一件會對不上）' });
   }
   if (!tplRules.length) return out;
   const open = tplRules.find((r) => !r.rhs && r.lhs !== 'D');

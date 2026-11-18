@@ -16,9 +16,10 @@ const agentsOf = (P) => agentLimit(path.resolve(P.templateDir, '..'));   // 子�
 import { parseMap, checkMap, mapOptions, mergeMaps, designVsMap, rowSeconds } from './semantic-map.mjs';
 import { RHYTHM, MODE_ZH, modeOfHead, layoutFindings, layoutPlanLine, portraitFindings, PORTRAIT_RHYTHM } from './layout-rhythm.mjs';
 import { listFillSpecs, designFileOf, illusNames, isBlankDesign, blankFor } from './custom-fill.mjs';
+import { loadPics, picSrc, PIC_SIZE } from './pics.mjs';
 import { renderStoryboard, renderSection, applyStoryboard, parseDesign, isDesignPick, designPlan, designPlanLine, chapterOfFn, tidyDecide, outroAsk, endingAsks } from './storyboard-gen.mjs';
 import { appendStop, lastStopOf, markStep } from './progress.mjs';
-import { bumpTry, resetTry, mainTry, stopLine, lastBeat } from './tries.mjs';
+import { bumpTry, resetTry, mainTry, stopLine, lastBeat, auditLog } from './tries.mjs';
 import { STOP, stopLines } from './stops.mjs';
 import { fail, cmdLine, next, dispatch, report as reportBlock } from './say.mjs';   // --review 裡 report 是 audit 報告的區域變數，所以改名
 import { saidOf } from './cli.mjs';
@@ -90,6 +91,17 @@ const changedLine = (f) => `已改檔：${rel(f)}（要再改先重新讀）`;
 // B5：派工的那一刻記下來（work/.jobs/dispatch.json：{ <段>: { n: 第幾次, at: 毫秒 } }），--design-status 從這一刻起算有沒有進度
 const dispatchFile = (P) => path.join(P.project, 'work', '.jobs', 'dispatch.json');
 export const readDispatch = (P) => readJson(dispatchFile(P), null) || {};
+// 059：這次派工之後驗收了幾次、花了幾分鐘（派工到最後一次驗收），給 --design-status、--review、finish 印；沒有派工紀錄的段算全部
+export function designTiming(P, id) {
+  const at = Number(readDispatch(P)[id]?.at) || 0, runs = auditLog(P.project, id, at);
+  if (!runs.length) return null;
+  const last = runs.at(-1), from = at || runs[0].at;
+  return { n: runs.length, e: last.e, w: last.w, min: Math.max(0, Math.round((last.at - from) / 60000)) };
+}
+export function designTimingLine(P, ids) {
+  const parts = ids.map((id) => { const t = designTiming(P, id); return t ? `${id} 驗收 ${t.n} 次、${t.min} 分鐘` : null; }).filter(Boolean);
+  return parts.length ? `內容設計動畫：${parts.join('；')}（派工到最後一次驗收）` : '';
+}
 // 內容設計動畫的派工那幾行（--apply-storyboard、build.mjs --to-design 共用，派工訊息只有這一份）：記下派工的時間，回傳要印的行
 // ③ 勾選才改成內容設計動畫的段還沒有鏡位腳本：同一個設計師先寫腳本、接著做動畫（使用者已經在 ③ 決定要做，不再停）
 export function dispatchLines(P, ids) {
@@ -1018,6 +1030,22 @@ export function illusUsed(P, seg) {
   return [...new Set(out)];
 }
 
+// 059：字幕講到、圖庫裡有的物件（A/B：沒去查圖庫的設計師把手機畫成空白方框；基準那支用了 9 張插圖）。
+//   比對圖庫每一項的中文名和關鍵字（2 字以上）是不是出現在這段字幕裡，照第一次講到的順序，最多 8 個
+const BRIEF_PICS_MAX = 8;
+export function briefPics(P, text) {
+  const lib = loadPics(path.join(P.templateDir, 'kit'));
+  if (!lib || !text) return '';
+  const hits = [];
+  for (const it of lib.items) {
+    const w = [it.zh, ...(it.tags || [])].filter((x) => x && x.length >= 2).map((x) => ({ x, at: text.indexOf(x) })).filter((x) => x.at >= 0).sort((p, q) => p.at - q.at)[0];
+    if (w) hits.push({ it, w: w.x, at: w.at, exact: w.x === it.zh });
+  }
+  if (!hits.length) return '';
+  const top = hits.sort((p, q) => p.at - q.at || q.exact - p.exact).slice(0, BRIEF_PICS_MAX);
+  return `## 圖庫裡有的物件（字幕講到的；畫面上有實物就用線稿，不要畫成空白方框）\n\n${top.map(({ it, w }) => `- 「${w}」→ ${it.zh}：<div data-illus-src="${picSrc(it)}" style="width:${PIC_SIZE}px;height:${PIC_SIZE}px"></div>`).join('\n')}\n\n沒列到的用詞找：\`node shared/template/tools/build.mjs --project ${rel(P.project)} --pics <詞>\``;
+}
+
 function writeBriefs(P, plan, cues, { items: given = null, onlyMissing = false } = {}) {
   let segs = (plan.scenes || []).filter((s) => s.design);
   if (onlyMissing) segs = segs.filter((s) => !fs.existsSync(path.join(briefsDir(P), `${s.id}.md`)));
@@ -1051,7 +1079,8 @@ function writeBriefs(P, plan, cues, { items: given = null, onlyMissing = false }
     const lines = briefCueLines(cues, a, z, t0, { words: cues.words?.length ? cues.words : null, end: Number.isFinite(+secs) ? +secs : null });
     const vision = visionFor(readOpt(path.join(packDir(P), '視覺語言.md')), a, z);
     const beat = beatAdvice(secs);
-    const body = `# ${s.id} 內容設計動畫\n\n段落：${s.from}–${s.to}（#Ne＝第 N 句結尾，#N@詞＝第 N 句講到那個詞；這段 ${secs} 秒）\n構想（草稿寫的，可以推翻）：${s.story?.idea || '—'}\n為什麼值得設計：${s.story?.why || '—'}\n前一段：${near(ordered[idx - 1])}\n後一段：${near(ordered[idx + 1])}\n\n${canvasNote(s, it, plan)}\n\n## 字幕（段內秒數＝從這段起點算；這段到 ${secs} 秒${cues.words?.length ? '；⟨2⟩＝講到這裡是段內第 2 秒' : ''}）\n\n${lines.join('\n')}${beat ? `\n\n## 拍點\n\n${beat}` : ''}\n\n## 音效（音效拍點欄只能寫這些名稱，或 —）\n\n${sfxList(P)}${vision ? `\n\n## 這集的視覺語言（全片一致用；只列和這一段有關的）\n\n${vision}` : ''}\n\n鏡位腳本寫到：work/designs/${s.id}.md\n動畫檔：work/hyperframes/${designFileOf(s)}\n`;
+    const pics = briefPics(P, inside.map((c) => c.text).join(' '));
+    const body = `# ${s.id} 內容設計動畫\n\n段落：${s.from}–${s.to}（#Ne＝第 N 句結尾，#N@詞＝第 N 句講到那個詞；這段 ${secs} 秒）\n構想（草稿寫的，可以推翻）：${s.story?.idea || '—'}\n為什麼值得設計：${s.story?.why || '—'}\n前一段：${near(ordered[idx - 1])}\n後一段：${near(ordered[idx + 1])}\n\n${canvasNote(s, it, plan)}\n\n## 字幕（段內秒數＝從這段起點算；這段到 ${secs} 秒${cues.words?.length ? '；⟨2⟩＝講到這裡是段內第 2 秒' : ''}）\n\n${lines.join('\n')}${beat ? `\n\n## 拍點\n\n${beat}` : ''}${pics ? `\n\n${pics}` : ''}\n\n## 音效（音效拍點欄只能寫這些名稱，或 —）\n\n${sfxList(P)}${vision ? `\n\n## 這集的視覺語言（全片一致用；只列和這一段有關的）\n\n${vision}` : ''}\n\n鏡位腳本寫到：work/designs/${s.id}.md\n動畫檔：work/hyperframes/${designFileOf(s)}\n`;
     const f = path.join(briefsDir(P), `${s.id}.md`);
     fs.writeFileSync(f, body);
     return { id: s.id, brief: rel(f) };
@@ -1445,7 +1474,8 @@ export function designStatus(P, now = Date.now()) {
       : hasScript ? `腳本寫好、動畫還沒動手（腳本 ${ago(mt(script))} 分鐘前）` : `還沒動手（${again ? '重派' : '派出'} ${ago(sentAt) ?? '?'} 分鐘）`;
     // 卡住：空白畫布從派出（或腳本寫好）起 20 分鐘沒動；或動畫做了一半，最後改動 20 分鐘前、之後沒有 audit 過（拼圖比檔舊）
     const stalled = last != null && ago(last) >= DESIGN_STALL_MIN && (blank || !audited);
-    const since = d ? `第 ${d.n} 次派工 ${ago(re)} 分鐘、最後活動 ${ago(last)} 分鐘前` : '';
+    const tm = designTiming(P, s.id);
+    const since = [d ? `第 ${d.n} 次派工 ${ago(re)} 分鐘、最後活動 ${ago(last)} 分鐘前` : '', tm ? `驗收 ${tm.n} 次（最後 ✖${tm.e} ⚠${tm.w}）` : ''].filter(Boolean).join('、');
     return { id: s.id, blank, script: hasScript, audited, idle: ago(last), state, stalled, since };
   });
 }
@@ -1649,6 +1679,7 @@ async function reviewRun(P, flags, { loadLib } = {}) {
     '請看字幕有沒有對到嘴；說「輸出」才 render。',
     later.length ? `還可以專門設計的段：${laterLine}` : '',
     beatsLine || '',
+    designTimingLine(P, (readJson(P.plan)?.scenes || []).filter((x) => x?.design).map((x) => x.id)),
   ];
   for (const l of reportBlock(lines, { stop: stopLines.final(url) })) console.log(l);
   return 0;

@@ -18,6 +18,7 @@ import { mainTry, stopLine } from './lib/tries.mjs';
 import { splitFlag, valueOf, oneOf, saidOf, isMain } from './lib/cli.mjs';
 import { isSummaryLine, isSfxWarn } from './lib/build-summary.mjs';
 import { clock1 } from './lib/time.mjs';
+import { editorUrlsSync } from './lib/editor-urls.mjs';
 
 const DELIVER_STALL_MIN = 20;   // render 一個百分比就要好幾分鐘（長片），比預設的 10 分鐘寬一點
 const HELP = `輸出完成影片（一條指令跑完測試片段、整支、驗收；要 Node 22、ffmpeg、HyperFrames）
@@ -77,7 +78,7 @@ const SOURCE = { render: '這次 render', incremental: '只重畫改到的地方
 
 // 回報段（A3）：照 auto-edit-deliver 的「回報格式」，工具知道的都填好；每個 ⚠ 的「刻意／要修」留給 AI 補。沒有停點，最後一行是「→ 完成」
 const shortWarn = (w) => { const s = String(w).replace(/^⚠\s*/, '').split(/\s*→\s/)[0]; return s.length > 90 ? `${s.slice(0, 89)}…` : s; };
-function reportLines(P, job, { avFacts, built }) {
+function reportLines(P, job, { avFacts, built, watch }) {
   const F = deliverPaths(P.project), q = job.qc || {};
   const okN = (q.checks || []).filter((c) => c.level === 'ok').length;
   const lines = [
@@ -88,13 +89,14 @@ function reportLines(P, job, { avFacts, built }) {
     built.length ? `${built.join('；')}（build 原文；和停點 ④ 報過的一樣就刪掉這行）` : null,
     q.sheet ? relTo(F.sheet) : null,
     job.youtube ? `YouTube 說明欄：${relTo(job.youtube.file)}（整段貼到說明欄）` : null,
+    watch ? `看完成影片 ${watch}` : null,
   ].filter(Boolean);
   const done = job.warnings.length ? '→ 完成（有標「要修」的 ⚠ 時改寫：→ 下一個停點：④ 完成影片預覽（說「改 <段>」開始））' : '→ 完成';
   return report(lines, { assets: [F.final, q.sheet ? F.sheet : null].filter(Boolean).map((f) => path.resolve(f)), stop: done });
 }
 
-// built：build 摘要那幾行（buildSummary），放進回報段
-export function finishLines(P, job, fileStat, { built = [] } = {}) {
+// built：build 摘要那幾行（buildSummary），放進回報段；watch：在瀏覽器播完成影片的網址（剪輯台的 /output/final.mp4）
+export function finishLines(P, job, fileStat, { built = [], watch = null } = {}) {
   const F = deliverPaths(P.project), L = [''];
   const q = job.qc, fmt = q?.format;
   if (job.ok || q) {
@@ -108,7 +110,7 @@ export function finishLines(P, job, fileStat, { built = [] } = {}) {
     for (const w of job.warnings) L.push(`⚠ ${w}`);
     if (q?.sheet) L.push(`驗收截圖：${relTo(F.sheet)}`);
     if (job.ok && job.youtube) L.push(`YouTube 說明欄：${relTo(job.youtube.file)}（${[job.youtube.chapters ? `章節時間戳 ${job.youtube.chapters} 個` : null, job.youtube.credit ? '配樂出處' : null].filter(Boolean).join('、')}；整段貼到說明欄）`);
-    if (job.ok) L.push(...reportLines(P, job, { avFacts, built }));
+    if (job.ok) L.push(...reportLines(P, job, { avFacts, built, watch }));
     else L.push(`→ ${job.fix}`);
     return L;
   }
@@ -136,7 +138,9 @@ async function deliverChild(P, flags) {
     },
   });
   const st = (() => { try { return fs.statSync(deliverPaths(P.project).final); } catch { return null; } })();
-  for (const l of finishLines(P, job, st, { built })) say(l);
+  // 做完附一個點了就能看片的網址（剪輯台沒開就在背景開；開不起來就只附檔案路徑）
+  const main = job.ok && st ? editorUrlsSync(P.project)?.main : null;
+  for (const l of finishLines(P, job, st, { built, watch: main ? new URL('output/final.mp4', main).href : null })) say(l);
   return job.ok ? 0 : 1;
 }
 

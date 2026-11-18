@@ -367,7 +367,7 @@ test('分鏡表（長片總覽）：8 段以上先看縮圖總覽；點一張看
   assert.equal(await page.$$eval('.sb-sec[id^="sec-s0"]:not([hidden])', (a) => a.length), 0, '總覽時不展開每一段');
   assert.deepEqual(await page.$$eval('.sb-gridch', (a) => a.map((x) => x.firstChild.textContent)), ['第 1 章', '第 2 章']);
   const card = await page.$eval('.sb-card[data-id="s03"]', (n) => n.innerText.replace(/\s+/g, ' '));
-  assert.match(card, /第 3 段在講什麼 0:15 動畫 s03/);
+  assert.match(card, /第 3 段在講什麼 0:15 重點字卡 s03/, '059：格狀卡片寫用的是哪個模板（以前只寫「動畫」）');
   assert.match(await page.$eval('#next', (n) => n.textContent), /可以/);
   // 決定和提醒分開，人稱一致
   const tasks = await page.$eval('#tasks', (n) => n.innerText.replace(/\s+/g, ' '));

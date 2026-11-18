@@ -3878,7 +3878,7 @@ const rqCommand = (pending = rqPending()) => {
   const progress = `第一步跑 node shared/template/tools/versions.mjs begin --project ${JSON.stringify(project)} --requests`;
   const redo = pending.filter((r) => r.redo).map((r) => r.id);
   // 哪幾段的子代理要載入 hyperframes skill 寫清楚：重新設計的段才要，其他段不用（載入一次很貴）
-  const how = redo.length ? `其中 ${redo.length} 段要重新設計（${redo.join(',')}）：只有這幾段的子代理要載入 hyperframes skill、從空白畫布重畫；其他段在現有的動畫上改，不用載入。` : '這次沒有要重新設計的段：都在現有的動畫上改，不用載入 hyperframes skill。';
+  const how = redo.length ? `其中 ${redo.length} 段要重新設計（${redo.join(',')}）：這幾段派設計師照 design.md 從空白畫布重畫；其他段在現有的動畫上改。都不用載入 hyperframes skill。` : '這次沒有要重新設計的段：都在現有的動畫上改，不用載入 hyperframes skill。';
   return `照剪輯台修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：照 auto-edit-review 流程 F 做（.agents/skills/auto-edit-review/references/editor-requests.md），不用先出提案，停在停點 ④。${how}${progress}`;
 };
 function rqMarkdown() {
@@ -3894,7 +3894,7 @@ function rqMarkdown() {
     else L.push(`- 動畫：${i.what}`, ...(i.file ? [`- 檔案：${i.file}`] : []), `- 完成影片時間：${rqTime(i)}（${app.server?.project?.dir || ''}/work/hyperframes/plan.json：${i.span}）`);
     if (i?.gap) L.push('- 這裡現在沒有段落：照時間和字幕新增一段（段號自己取），不是改既有的段；回報狀態時用上面的段號');
     if (i && !i.gap && rqKind(i.sc) === 'anim') L.push(r.redo
-      ? '- 做法：重新設計（使用者勾的）。這段改成 "design": true，派設計師子代理從空白畫布重畫；只有這種段的子代理要載入 hyperframes skill'
+      ? '- 做法：重新設計（使用者勾的）。這段改成 "design": true，派設計師子代理照 design.md 從空白畫布重畫（不用載入 hyperframes skill）'
       : '- 做法：在現有的動畫上改（沒勾「重新設計」）。改 plan.json 的資料、換模板或手改那支檔；不要改成 "design": true，子代理不用載入 hyperframes skill');
     if (r.tags.length) L.push(`- 要改：${r.tags.join('、')}`);
     if (r.note.trim()) L.push(`- 描述：${r.note.trim().replace(/\s*\n\s*/g, '／')}`);
