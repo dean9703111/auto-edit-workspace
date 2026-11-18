@@ -373,6 +373,18 @@ elif [ -n "$HF_PIN" ] && [ "$HF_LOCAL" != "$HF_PIN" ]; then HL_STATUS=too_old; H
 else HL_STATUS=ok; HL_NOTE=""; fi
 add_item hyperframes_local "工作區的 HyperFrames" "$HL_STATUS" "$HF_LOCAL" "$WS_ROOT/node_modules/hyperframes" "$HL_NOTE" 1 "S3"
 
+# HyperFrames 的瀏覽器（S6：npx -y hyperframes browser ensure）
+# 瘦臉、audit、分鏡截圖只認 HyperFrames 下載的 chrome-headless-shell（找法同 shared/template/tools/lib/audit-browser.mjs 的 chromeCandidates）；
+# 系統裝的 Google Chrome 不算，doctor 卻會把它打 ✓，所以這裡直接看檔案
+HC_ROOT="$HOME/.cache/hyperframes/chrome/chrome-headless-shell"
+HC_STATUS=missing; HC_VER=""; HC_PATH="$HC_ROOT"; HC_NOTE="還沒下載（README 共用步驟 S6：npx -y hyperframes browser ensure，約 200 MB）；系統的 Google Chrome 不算"
+for d in "$HC_ROOT"/*/*/; do
+  if [ -x "${d}chrome-headless-shell" ]; then
+    HC_STATUS=ok; HC_PATH="${d}chrome-headless-shell"; HC_VER=$(basename "$(dirname "$d")"); HC_NOTE=""; break
+  fi
+done
+add_item hyperframes_chrome "HyperFrames 的瀏覽器" "$HC_STATUS" "$HC_VER" "$HC_PATH" "$HC_NOTE" 1 "S6"
+
 # 9 支 auto-edit Skill＋子代理定義（S4：node setup/install-skills.mjs）
 # 裝在哪要看這台電腦裝了哪些 Agent（工作區的 .claude/skills/、.minimax/skills/ 連到 .agents/skills/ 的正本），
 # 所以交給 install-skills.mjs 的 checkInstalled() 判斷：一支都沒裝＝missing，裝了但連結指錯、複本舊了、還有舊版的全域複本＝too_old
