@@ -158,6 +158,23 @@ test('既有方法行為不變：P.in／P.rise 的起點與終點值', () => {
   seek(tl, 0.5, true); assert.equal(Number(a.opacity), 0);
 });
 
+// 059：內容設計動畫直接寫 tl.from／tl.fromTo 讓卡片進場，之後 P.strike（裡面用 P.dim 壓暗）——kit 以前只認得自己做過的補間，
+//   P.dim 的 fromTo 以為是第一個、建立時就 immediateRender 把卡片設回 1：照順序播（render）時整段從頭就看得到
+test('P.dim／P.strike 接在設計師自己寫的進場之後：照順序播到進場前還是藏著；kit 自己的第一個補間照舊 immediateRender', () => {
+  const { tl, P } = mk();
+  const card = { id: 'card' }, solo = { id: 'solo' };
+  P.pop([solo], 0.1);
+  tl.fromTo(card, { opacity: 0 }, { opacity: 1, duration: 0.5 }, 3);   // 設計師自己寫的進場
+  P.dim([card], 5, { to: 0.5 });
+  P.dim([solo], 5, { to: 0.5 });
+  P.end(8);
+  const at = (t) => { seek(tl, t, true); return [card, solo].map((x) => Math.round(Number(x.opacity) * 1e3) / 1e3); };
+  assert.deepEqual(at(1), [0, 1], '第一次照順序 seek 到進場前：卡片不能被 P.dim 設回 1');
+  assert.deepEqual(at(4), [1, 1]);
+  assert.deepEqual(at(6), [0.5, 0.5]);
+  assert.deepEqual(at(1), [0, 1], '從後面往回 seek 也一樣');
+});
+
 test('時間 < 0 當 0：綁句太早時 T - 0.9 變負，不會把前面排好的動畫往後推（P.tl 是原本的時間軸）', () => {
   const { tl, P } = mk();
   const a = {}, b = {};
@@ -1056,3 +1073,4 @@ test('SceneLayout 載入順序：主合成、畫廊、custom 預覽頁都是 sce
   assert.ok(at('src="../kit/scene-motion.js"') < at('src="../kit/illus.js"') && at('src="../kit/illus.js"') < at('src="../kit/scene-layout.js"'));
   assert.match(MOTION_SRC, /if \(window\.SceneLayout\) window\.SceneLayout\.apply\(root\);/, 'SceneMotion(tl, root) 建立時排一次');
 });
+

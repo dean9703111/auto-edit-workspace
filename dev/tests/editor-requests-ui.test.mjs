@@ -71,12 +71,12 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     await page.type('#rqNote', '重新調整');
     await page.waitForFunction(() => document.querySelector('#rqState')?.textContent.includes('待改：已存進修改單'));
     assert.equal(await page.$$('.rq-item.done').then((x) => x.length), 0);
-    // 029：勾了「重新設計」的段寫進修改單，複製的那一行寫明只有這幾段的子代理要載入 hyperframes skill
+    // 029：勾了「重新設計」的段寫進修改單，複製的那一行寫明這幾段派設計師從空白重畫（059：設計師也不載入 hyperframes skill，做法在 design.md、craft.md）
     assert.equal(await page.$eval('#rqTop [data-rq="redo"]', (el) => el.checked), false, '預設不勾');
     await page.click('#rqTop [data-rq="redo"]');
     await page.waitForSelector('.rq-item .chip-redo');
     await page.click('[data-rq="copy"]');
-    await page.waitForFunction(() => /其中 1 段要重新設計（s01）：只有這幾段的子代理要載入 hyperframes skill、從空白畫布重畫；其他段在現有的動畫上改，不用載入。/.test(window.copiedRequest || ''));
+    await page.waitForFunction(() => /其中 1 段要重新設計（s01）：這幾段派設計師照 design\.md 從空白畫布重畫；其他段在現有的動畫上改。都不用載入 hyperframes skill。/.test(window.copiedRequest || ''));
     assert.match(fs.readFileSync(path.join(work, 'feedback/editor-requests.md'), 'utf8'), /## 1\. s01[\s\S]*- 做法：重新設計（使用者勾的）[\s\S]*## 2\. s02[\s\S]*- 做法：在現有的動畫上改/);
     // 剪貼簿失敗時，存檔成功也不能宣稱已複製。
     await page.evaluate(() => {

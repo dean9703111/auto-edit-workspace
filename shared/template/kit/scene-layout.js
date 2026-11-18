@@ -290,6 +290,44 @@
     if (root.hasAttribute && root.hasAttribute('data-layout')) list.unshift(root);
     list.reverse().forEach(layOne);   // 反向文件順序＝先排裡面的群組，外面的才量得到它的大小
     Array.prototype.forEach.call(root.querySelectorAll('svg[data-links]'), drawLinks);
+    fitStage(root);
+  }
+
+  // 059 內容設計動畫的舞台（#xd<段>-stage）：裡面的東西超出可以用的範圍（會壓到小視窗、角標、字幕）就整組等比例縮到放得下、
+  // 置中，寫在舞台的 transform（不進 timeline，亂序 seek 不受影響）。設計師不用為了「超出／壓到」一輪一輪改尺寸。
+  // 可以用的範圍：一般＝舞台本身（brief 的主內容 x 120–1300、y 150–858）；沒有講者的全螢幕段（data-wide）＝brief 寫的 x 120–1800、y 40–900。
+  // 量的是 mount 當下（進場動畫還沒套上）的外框；寫了 data-layout-allow-overflow 的元素（刻意出血）不算。放得下就不動。
+  // 只有舞台標了 data-autofit 才做（059 之後的空白畫布才有）：之前做好、作者看過的動畫重新 build 不會被縮
+  var FIT_TOL = 2, FIT_WIDE = [120, 40, 1800, 900];
+  function fitStage(root) {
+    // 掛進 index.html 之後 runtime 會把根元素的 id 拿掉、改記在 data-hf-authored-id；單獨打開檔案時還是 id
+    var rid = root && root.getAttribute ? root.getAttribute('data-hf-authored-id') || root.id || '' : '';
+    if (rid.indexOf('x-design-') !== 0) return;
+    var st = root.querySelector('[id^="xd"][id$="-stage"][data-autofit]');
+    if (!st || !st.offsetWidth || !st.offsetHeight || !root.offsetWidth) return;
+    st.style.transform = '';
+    st.removeAttribute('data-fit');
+    // 座標都換成 root 的版面座標（預覽可能整個縮放過：除以 k0）
+    var RR = root.getBoundingClientRect(), k0 = RR.width / root.offsetWidth || 1;
+    var at = function (r) { return [(r.left - RR.left) / k0, (r.top - RR.top) / k0, (r.right - RR.left) / k0, (r.bottom - RR.top) / k0]; };
+    var S = at(st.getBoundingClientRect());
+    var Z = root.closest('[data-wide]') ? FIT_WIDE : S;
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    Array.prototype.forEach.call(st.querySelectorAll('*'), function (el) {
+      if (el.closest('[data-layout-allow-overflow]')) return;
+      var r = el.getBoundingClientRect();
+      if (!r.width && !r.height) return;
+      var b = at(r);
+      x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]);
+    });
+    if (!(x1 > x0 && y1 > y0)) return;
+    if (x0 >= Z[0] - FIT_TOL && y0 >= Z[1] - FIT_TOL && x1 <= Z[2] + FIT_TOL && y1 <= Z[3] + FIT_TOL) return;
+    var k = Math.floor(Math.min(1, (Z[2] - Z[0]) / (x1 - x0), (Z[3] - Z[1]) / (y1 - y0)) * 1000) / 1000;
+    // transform-origin 在舞台左上角：p' = S + t + k(p − S)；讓內容中心落在範圍中心
+    var tx = (Z[0] + Z[2]) / 2 - S[0] - k * ((x0 + x1) / 2 - S[0]), ty = (Z[1] + Z[3]) / 2 - S[1] - k * ((y0 + y1) / 2 - S[1]);
+    st.style.transformOrigin = '0 0';
+    st.style.transform = 'translate(' + Math.round(tx) + 'px, ' + Math.round(ty) + 'px) scale(' + k + ')';
+    st.setAttribute('data-fit', String(k));
   }
 
   // 給 audit：每個容器的外框與 slot（錨點、標籤），每條線的端點；座標都相對 root（版面座標）

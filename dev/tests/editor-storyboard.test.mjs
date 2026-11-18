@@ -154,6 +154,8 @@ test('分鏡表：下拉選單的選項來自工作區現有的情境與音效',
   assert.equal(key.value, '07 重點字卡');
   assert.ok(key.when);
   assert.ok(options.scenes.find((g) => g.name === '半畫面').items.some((i) => i.id === '03'));
+  // 059：04 家族的段號是 04a–04d（scene.json 的 no 已經帶字母，以前又接一次變成 04aa，分鏡表對不上「目前」也沒有看範例）
+  assert.deepEqual(options.scenes.find((g) => g.name === '子母畫面').items.filter((i) => i.id.startsWith('04')).map((i) => i.value), ['04a 全畫面清單', '04b 全畫面對照', '04c 全畫面流程', '04d 全畫面表格']);
   const proc = all.find((i) => i.id === 'x-process');
   assert.equal(proc.value, 'x-process 流程逐步亮起');
   assert.ok(!all.some((i) => i.id.includes('-example-')), '範例檔不是選項');

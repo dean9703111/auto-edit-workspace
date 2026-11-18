@@ -19,7 +19,8 @@ export function storyboardOptions(templateDir, { portrait = false } = {}) {
   for (const dir of fs.readdirSync(scenesDir).sort()) {
     const j = readJson(path.join(scenesDir, dir, 'scene.json'));
     if (!j?.zh || (portrait && j.portrait === 'none')) continue;
-    const no = String(j.no).padStart(2, '0') + (dir.match(/^\d+([a-z])-/)?.[1] ?? '');
+    // 段號照資料夾名（04a-fs-list → 04a）：scene.json 的 no 有的已經帶字母，不能再接一次
+    const no = dir.match(/^(\d+[a-z]?)-/)?.[1] ?? String(j.no).padStart(2, '0');
     groups.get(LAYOUT[j.family] || '疊加').push({ id: no, value: `${no} ${j.zh}`, label: j.zh, when: String(j.when || '').split('；')[0], preview: `${dir}.html` });
   }
   const customDir = path.join(templateDir, 'custom');

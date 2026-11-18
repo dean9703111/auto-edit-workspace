@@ -90,4 +90,4 @@ node shared/template/tools/audit.mjs --project projects/<專案> --only <段> --
 - `references/illus-worker.md`：使用者另外要求畫線稿元件時才讀（內容設計動畫要的新物件由設計師自己畫）。
 - `references/worker-brief.md`：要手改動畫（步驟 3）時才讀。
 - `references/kit-syntax.md`：手改模板動畫（`x-<模板>-<段>.html`）時才讀；內容設計動畫用 GSAP，不用讀。
-- `hyperframes` skill：設計師從空白畫布畫的通用做法（`references/design.md` 會說哪一步讀它的哪一份參考檔）。主代理派工不用載入。
+- `references/craft.md`：設計師的畫法與動法（一頁，`references/design.md` 會叫他讀）。設計師和主代理都不用載入 `hyperframes` skill。

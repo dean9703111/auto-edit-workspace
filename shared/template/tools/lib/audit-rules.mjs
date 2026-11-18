@@ -628,7 +628,10 @@ export function judgeLayout(meas, ctx) {
       const up = U[1] - CT, down = CB - U[3], diff = up - down;
       // 全螢幕的內容設計動畫：已經撐滿上下（畫布允許 y 40–900，角標左邊可以用到頂）就不算不平衡
       const filled = ctx.item.wide && ctx.item.seg?.design && U[3] - U[1] >= FULL.tall && U[1] >= FULL.top - 1 && U[3] <= FULL.y[1] + 1;
-      if (!filled && Math.abs(diff) > VBAL_MAX + 1e-6) {
+      // 059：內容設計動畫只量完成態。開場一拍一拍長出來（craft.md「一張圖慢慢長大」）時，只出現一部分本來就不置中；
+      // 以前每一格都量，設計師怎麼移都消不掉、來回改好幾輪
+      const partial = ctx.item.seg?.design && ctx.kind !== 'done';
+      if (!filled && !partial && Math.abs(diff) > VBAL_MAX + 1e-6) {
         const k = Math.abs(Math.round((down - up) / 2)), dir = diff < 0 ? 1 : -1, each = Math.round((up + down) / 2);
         // 032 B8：印移完的目標（內容 y 幾到幾、上下留白各幾 px），照抄就能改；內容設計動畫的畫布有舞台容器，放進去就自動置中
         const goal = each >= 0 ? `上下留白各 ${each}px` : `上下各超出 ${-each}px（內容比內容區高，先縮小再置中）`;

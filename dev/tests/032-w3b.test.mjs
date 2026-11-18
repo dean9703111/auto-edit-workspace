@@ -339,8 +339,8 @@ test('B8：空白畫布有上下置中的舞台（占位在裡面）；isBlankDe
   const CUSTOM = path.join(TEMPLATE, 'custom');
   const seg = { id: 'd01', type: 'custom', design: true, from: '#1', to: '#2e', story: { idea: '一個構想' } };
   const fresh = F.blankFor(CUSTOM, seg), old = F.blankFor(CUSTOM, seg, { stage: false });
-  assert.match(fresh, /#x-design-d01 #xdd01-stage \{ position: absolute; left: 120px; top: 120px; width: 1180px; height: 750px; display: flex; flex-direction: column; align-items: center; justify-content: center; \}/);
-  assert.match(fresh, /<div id="xdd01-stage">\s*<div id="xdd01-idea" data-design-blank[^\n]*一個構想[^\n]*<\/div>\s*<\/div>/);
+  assert.match(fresh, /#x-design-d01 #xdd01-stage \{ position: absolute; left: 120px; top: 150px; width: 1180px; height: 708px; display: flex; flex-direction: column; align-items: center; justify-content: center; \}/);
+  assert.match(fresh, /<div id="xdd01-stage" data-autofit>\s*<div id="xdd01-idea" data-design-blank[^\n]*一個構想[^\n]*<\/div>\s*<\/div>/);
   assert.doesNotMatch(fresh, /#xdd01-idea \{ position: absolute/, '占位跟著舞台置中');
   assert.doesNotMatch(old, /stage/);
   assert.ok(F.isBlankDesign(fresh) && F.isBlankDesign(old));
@@ -363,10 +363,12 @@ test('B8：垂直不平衡的改法印目標值（移完 y 幾到幾、上下留
   const R = await imp('lib/audit-rules.mjs');
   const el = (rect) => ({ i: 0, tag: 'div', desc: { id: 'c', cls: '', text: '', near: '' }, rect, inner: rect, painted: true, box: true, text: false, textRect: null, inkRect: null, fontSize: 52, scale: 1,
     whiteSpace: 'normal', media: false, full: false, bg: false, clipX: false, clipY: false, clips: [], parent: -1, anc: [], moving: false, alpha: 1, pad: [0, 0, 0, 0], bw: [0, 0, 0, 0], own: [], chars: 0 });
-  const lay = (rect, seg) => R.judgeLayout({ host: { start: 10 }, els: [el(rect)] }, { item: { id: 'd01', type: 'custom', label: 'x', start: 10, end: 18, D: 8, seg }, t: 17.4, kind: 'still', layout: 'fullscreen' }).filter((f) => f.rule === 'vbalance');
+  const lay = (rect, seg, kind = 'still') => R.judgeLayout({ host: { start: 10 }, els: [el(rect)] }, { item: { id: 'd01', type: 'custom', label: 'x', start: 10, end: 18, D: 8, seg }, t: 17.4, kind, layout: 'fullscreen' }).filter((f) => f.rule === 'vbalance');
   const [a] = lay([200, 120, 1200, 600], { layout: 'fullscreen' });
   assert.equal(a.fix, '整組往下移 135px（每個頂層元素的 top 都 +135）→ 移完內容在 y 255–735，上下留白各 135px');
   assert.deepEqual([a.data.move, a.data.target], [135, 135]);
-  const [b] = lay([200, 400, 1200, 860], { layout: 'fullscreen', design: true });
+  // 059：內容設計動畫只量完成態（開場一拍一拍長出來時本來就不置中）
+  assert.deepEqual(lay([200, 400, 1200, 860], { layout: 'fullscreen', design: true }), []);
+  const [b] = lay([200, 400, 1200, 860], { layout: 'fullscreen', design: true }, 'done');
   assert.equal(b.fix, '整組往上移 135px（每個頂層元素的 top 都 −135）→ 移完內容在 y 265–725，上下留白各 145px；畫布有 #xdd01-stage 舞台的，內容放進舞台就自動上下置中');
 });

@@ -656,25 +656,33 @@ export const isBlankDesign = (html) => !html || /<[a-zA-Z][^<>]*\sdata-design-bl
 // 拿掉構想文字後的樣子：比較兩份空白畫布是不是只差構想
 const blankShape = (html) => String(html).replace(/(<[a-zA-Z][^<>]*\sdata-design-blank\b[^<>]*>\s*<span[^<>]*>)[\s\S]*?(<\/span>)/, '$1$2');
 
-// 032 B8：舞台容器。內容放進 #xd-stage 就上下置中在內容區 y 120–870（x 120–1300；沒有講者的全螢幕段，kit 的 widen 會把這個
+// 032 B8：舞台容器。內容放進 #xd-stage 就上下置中在內容區（x 120–1300；沒有講者的全螢幕段，kit 的 widen 會把這個
 // 寬 1180 的頂層元素整塊移到正中間），子代理照著放就不會偏上（不用等 audit 報垂直不平衡再一格一格移）。
+// 059：範圍和 brief 的「主內容 x 120–1300、y 150–858」、audit 的 DESIGN.PIP 同一個框。以前是 y 120–870，右上角和小節角標（y 56–136）
+// 重疊，東西一放滿舞台就 ✖「壓到右上角的小節角標」；內容比舞台大時 kit/scene-layout.js 的 fitStage 整組縮到放得下
 // _blank.html 還沒有 xd-stage 時由這裡補上，占位一起放進舞台；_blank.html 的格式改過（對不到）就照原檔
-const STAGE_NOTE = '/* 舞台：內容放進 #xd-stage，整組自動上下置中（內容區 y 120–870、x 120–1300；沒有講者的全螢幕段會自動移到畫面正中間）。舞台裡用一般排版（flex、grid），不用自己算 top */';
-const STAGE_RULE = '#x-design #xd-stage { position: absolute; left: 120px; top: 120px; width: 1180px; height: 750px; display: flex; flex-direction: column; align-items: center; justify-content: center; }';
-export function withStage(html) {
+const STAGE_NOTE = '/* 舞台：內容放進 #xd-stage，整組自動上下置中、太大自動縮到放得下（內容區 x 120–1300、y 150–858；沒有講者的全螢幕段會自動移到畫面正中間）。舞台裡用一般排版（flex、grid），不用自己算 top */';
+const STAGE_RULE = '#x-design #xd-stage { position: absolute; left: 120px; top: 150px; width: 1180px; height: 708px; display: flex; flex-direction: column; align-items: center; justify-content: center; }';
+// 059 之前的舞台（y 120–870）：還是空白的舊畫布認得出來，build 時換成新的範圍
+const STAGE_V1 = {
+  note: '/* 舞台：內容放進 #xd-stage，整組自動上下置中（內容區 y 120–870、x 120–1300；沒有講者的全螢幕段會自動移到畫面正中間）。舞台裡用一般排版（flex、grid），不用自己算 top */',
+  rule: '#x-design #xd-stage { position: absolute; left: 120px; top: 120px; width: 1180px; height: 750px; display: flex; flex-direction: column; align-items: center; justify-content: center; }',
+};
+export function withStage(html, { v1 = false } = {}) {
   const s = String(html);
+  const note = v1 ? STAGE_V1.note : STAGE_NOTE, rule = v1 ? STAGE_V1.rule : STAGE_RULE;
   const fill = /(\n([ \t]*)#x-design \.fill \{[^\n]*\})/, idea = /\n([ \t]*)(<div id="xd-idea"[^\n]*<\/div>)/, ideaPos = '#x-design #xd-idea { position: absolute; left: 120px; top: 300px; ';
   if (s.includes('xd-stage') || !fill.test(s) || !idea.test(s) || !s.includes(ideaPos)) return s;
-  return s.replace(fill, (all, line, ind) => `${line}\n${ind}${STAGE_NOTE}\n${ind}${STAGE_RULE}`)
+  return s.replace(fill, (all, line, ind) => `${line}\n${ind}${note}\n${ind}${rule}`)
     .replace(ideaPos, '#x-design #xd-idea { ')
-    .replace(idea, (all, ind, el) => `\n${ind}<div id="xd-stage">\n${ind}  ${el}\n${ind}</div>`);
+    .replace(idea, (all, ind, el) => `\n${ind}<div id="xd-stage"${v1 ? '' : ' data-autofit'}>\n${ind}  ${el}\n${ind}</div>`);   // 059 data-autofit：kit 太大自動縮（只給新畫布，做好的舊動畫不動）
 }
 
 // 內容設計動畫的空白畫布：整個檔還是空白就跟著最新的構想更新；設計師動手之後工具不再覆寫
-// stage: false＝032 之前的舊骨架（沒有舞台）：materializeFills 認得它，還是空白就換成新的
+// stage: false＝032 之前的舊骨架（沒有舞台）、'v1'＝059 之前的舞台範圍：materializeFills 認得它們，還是空白就換成新的
 export function blankFor(customDir, seg, { stage = true } = {}) {
   const raw = fs.readFileSync(path.join(customDir, '_blank.html'), 'utf8');
-  const html = stage ? withStage(raw) : raw;
+  const html = stage ? withStage(raw, { v1: stage === 'v1' }) : raw;
   const idea = String(seg.story?.idea || '內容設計動畫（製作中）');
   // 疊在講者上的（layout: "overlay"）不要底圖
   return (seg.layout === 'overlay' ? html.replace(/\s*<div class="sc-surface-fs fill"><\/div>/, '') : html)
@@ -764,7 +772,7 @@ export function materializeFills({ plan, outDir, lib, prune = false, kitDir = nu
       // 032 之前的舊骨架（沒有舞台）還是空白的，也換成有舞台的新骨架
       const same = (b) => blankShape(cur) === blankShape(b);
       if (cur == null) { fs.writeFileSync(abs, blank); written.push(file); }
-      else if (cur !== blank && (same(blank) || same(blankFor(lib.customDir, seg, { stage: false }))) && rewriteIfSame(abs, cur, blank)) written.push(file);   // 設計師可能剛好在存：內容變了就不寫
+      else if (cur !== blank && (same(blank) || same(blankFor(lib.customDir, seg, { stage: false })) || same(blankFor(lib.customDir, seg, { stage: 'v1' }))) && rewriteIfSame(abs, cur, blank)) written.push(file);   // 設計師可能剛好在存：內容變了就不寫
       Object.defineProperty(seg, '__blank', { value: true, enumerable: false, configurable: true });
     }
     live.add(file);
