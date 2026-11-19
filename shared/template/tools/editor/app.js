@@ -994,6 +994,7 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   syncOutsideBuild(s.build, null);
   // 修改單：第一次載入讀這個專案存在瀏覽器的清單與開關；之後重新載入（AI 改了 plan.json）只重畫
   // 初剪預覽是來校字幕的：開在字幕分頁，不是主題和調光
+  loadRound();
   if (!rqLoaded) { rqLoaded = true; rqLoad(); let o = false; try { o = localStorage.getItem('editor-requests-open') === '1'; } catch { /* 預設收起 */ } setSide(roughStage() ? 'cues' : o ? 'rq' : 'insp', { open: false }); }
   else renderRequests();
   renderFlowHere();
@@ -1645,7 +1646,7 @@ async function pollVersion() {
     const pv = app.server.preview;
     const rebuilt = v.built && pv.builtMtime !== v.builtMtime;
     if (syncPreview(v)) renderMode();
-    if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); }
+    if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); loadRound(); }
     renderPrerender(v.prerender);
     syncOutsideBuild(v.build, v.framingUpdate);
     const changedOut = (v.plan.hash && app.base && v.plan.hash !== app.base.hash) || ((v.srt?.hash ?? null) !== (app.base?.srtHash ?? null));
@@ -3912,6 +3913,13 @@ function rqSync() {
     const d = rqExported(r) ? q.done[r.id] : null;
     if (d) { r.done = { round: d.round, note: d.note }; ch = true; }
   }
+  // 068：比最近一輪舊的已改完拿掉（紀錄在 r<N>.md）；修改單只留待改、生成中和這一輪的已改完
+  const rn = Number(app.round?.round?.slice(1)) || 0;
+  if (rn) {
+    const n0 = app.requests.length;
+    app.requests = app.requests.filter((r) => { const m = /^r(\d+)$/.exec(r.done?.round || ''); return !m || Number(m[1]) >= rn; });
+    if (app.requests.length !== n0) ch = true;
+  }
   if (ch) rqStore();
 }
 // 生成中的段 AI 已經在改：不算待改、不再複製（不然同一段會送兩次）；失敗的算回待改，可以再送
@@ -3952,6 +3960,66 @@ function rqTopHtml(id) {
     <textarea id="rqNote" rows="4" placeholder="自己描述（選填）：例如「三個步驟改成手機畫面一步步亮起」">${esc(app.requests.find((x) => x.id === id)?.note || '')}</textarea>
     <div id="rqState">${rqStateHtml(id)}</div>`;
 }
+// 三個分頁（待改／生成中／已改完）：貼齊面板上緣、三格等寬，一次只列一種，不用往下捲找（作者：要往下滑不好操作、要貼合上方不要懸浮）
+// 「這段想改」的編輯區只在待改分頁；從「✎ 寫進修改單」這類入口進來切回待改；記住上次看的分頁
+let rqTab = (() => { try { return ['pend', 'gen', 'done'].includes(localStorage.getItem('editor-requests-tab')) ? localStorage.getItem('editor-requests-tab') : 'pend'; } catch { return 'pend'; } })();
+function rqSetTab(k) { rqTab = k; try { localStorage.setItem('editor-requests-tab', k); } catch { /* 只是記住分頁 */ } }
+function rqTabsHtml() {
+  const tabs = [['pend', '待改', rqPending().length], ['gen', '生成中', app.requests.filter(rqGenerating).length], ['done', '已改完', rqRoundRows().length]];
+  return tabs.map(([k, t, n]) => `<button role="tab" data-rq="tab" data-tab="${k}" class="${k === rqTab ? 'on' : ''}" aria-selected="${k === rqTab}">${t}（${n}）</button>`).join('');
+}
+// 068 已改完＝最近一輪回饋的修改紀錄（伺服器讀 r<N>.md「改了哪幾段」、比對每段現在用哪一版），不是歷來全部；
+// 每段可以「用上一版」退回這一輪改之前、退回後也能「改回」（作者：已改完如果不想採納，希望用上一個版本也是有彈性的）
+let rqUseArm = '', roundLoading = null;
+const rqRoundRows = () => (app.round?.round ? app.round.rows : []);
+async function loadRound() {
+  if (roundLoading) return roundLoading;
+  roundLoading = (async () => {
+    const was = app.round?.job;
+    const r = await api('GET', '/api/round');
+    if (r.ok && r.data) app.round = r.data;
+    const j = app.round?.job;
+    if (was?.state === 'running' && j && j.at === was.at && j.state !== 'running') toast(j.message, j.state === 'done' ? 'ok' : 'warn', j.state === 'done' ? 6000 : 15000);
+    renderRequests();
+    if (j?.state === 'running') setTimeout(loadRound, 2000);
+  })().finally(() => { roundLoading = null; });
+  return roundLoading;
+}
+function rqRoundHtml(cur) {
+  const R = app.round;
+  if (!R) return '<p class="ip-note">讀取中…（要比對每段現在用哪一版，長片要幾秒）</p>';
+  if (!R.round) return '<p class="ip-note">還沒有改完的回饋輪</p>';
+  const busy = R.job?.state === 'running' ? R.job : null;
+  const why = busy ? `${busy.seg} 正在換版本，等它做完` : R.open ? `AI 正在改（${R.open} 還沒收尾），等它做完再換版本` : '';
+  const btn = (x, ver, text, tip) => {
+    if (busy?.seg === x.id) return '<span class="rq-sent generating" role="status">換版本中…</span>';
+    const k = `${x.id}:${ver}`, armed = rqUseArm === k;
+    return `<button class="small${armed ? ' primary' : ' ghost'}${why ? ' is-disabled' : ''}" data-rq="use" data-id="${esc(x.id)}" data-ver="${esc(ver)}" data-why="${esc(why)}" data-tip="${esc(tip)}">${armed ? `再按一次：換成 ${esc(ver)}` : text}</button>`;
+  };
+  const row = (x) => {
+    const i = rqInfo(x.id);
+    const lab = i ? esc(i.label) : '';
+    const tag = x.kind === 'new' ? '<span class="chip-t">新的段</span>' : x.kind === 'removed' ? '<span class="chip-t">拿掉了</span>'
+      : x.state === 'reverted' ? `<span class="rq-sent reverted" role="status">已退回 ${esc(x.before)}</span>` : x.state === 'later' ? '<span class="rq-sent" role="status" data-tip="這一輪之後又改過（剪輯台或 AI）">之後又改過</span>' : '';
+    const see = i ? `<button class="small ghost" data-rq="result" data-id="${esc(x.id)}" data-tip="切到完成影片預覽，跳到這段開頭">▶ 看結果</button>` : '';
+    const use = x.kind !== 'changed' || x.state === 'gone' || x.state === 'unknown' ? ''
+      : x.state === 'reverted' ? btn(x, x.after, `↪ 改回 ${esc(R.round)} 的版本`, `換回 ${R.round} 改的那一版（${x.after}）`)
+      : btn(x, x.before, '↩ 用上一版', `不採納 ${R.round} 的修改：換回改之前的 ${x.before}（現在的樣子會存成一版，可以再改回來；背景跑 build、audit 約 1 分鐘）`);
+    return `<li class="rq-item done${x.state === 'reverted' ? ' reverted' : ''}${x.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(x.id)}</b><span class="lab">${lab}</span>${tag}${see}${use}</div><div class="what" data-tip="${esc(x.note)}">${esc(x.note)}</div></li>`;
+  };
+  return `<p class="ip-note">${esc(R.round)}${R.time ? `（${esc(R.time)}）` : ''}改了 ${R.rows.length} 段。不採納就按「↩ 用上一版」：換回這一輪改之前的樣子，現在的樣子會留著，可以再改回來。${why ? `<br>${esc(why)}。` : ''}${R.listError ? `<br>讀不到各段的版本，先不能換：${esc(R.listError)}` : ''}</p><ul class="rq-list">${R.rows.map(row).join('')}</ul>`;
+}
+async function rqUse(b) {
+  const k = `${b.dataset.id}:${b.dataset.ver}`;
+  if (rqUseArm !== k) { rqUseArm = k; renderRequests(); return; }
+  rqUseArm = '';
+  const r = await api('POST', '/api/round/use', { seg: b.dataset.id, ver: b.dataset.ver });
+  if (!r.ok) { toast(r.data?.message || '換版本失敗', 'warn', 6000); renderRequests(); return; }
+  toast(`${b.dataset.id} 換成 ${b.dataset.ver}：背景跑 build、audit（約 1 分鐘），好了會通知`, 'ok', 5000);
+  app.round = { ...app.round, job: r.data.job };
+  renderRequests();
+  setTimeout(loadRound, 2000);
+}
 function rqListsHtml(cur) {
   const pend = rqPending(), gen = app.requests.filter(rqGenerating), done = app.requests.filter((r) => r.done);
   const lab = (r) => { const i = rqInfo(r.id); return i ? esc(i.label) : '<span class="gone">找不到這段（可能被 AI 改名或刪掉了）</span>'; };
@@ -3962,11 +4030,10 @@ function rqListsHtml(cur) {
   const item = (r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${badge(r)}${go(r)}${del(r)}</div>${failedWhy(r)}
     ${r.tags.length || r.redo ? `<div class="chips">${r.redo ? '<span class="chip-t chip-redo">重新設計</span>' : ''}${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`;
   const pi = pend.map(item).join(''), gi = gen.map(item).join('');
-  const di = done.map((r) => `<li class="rq-item done${r.id === cur ? ' cur' : ''}"><div class="h"><b>✓ ${esc(r.id)}</b><span class="lab">${lab(r)}</span><span class="rq-done">${esc(r.done.round)}</span>
-    <button class="small primary" data-rq="result" data-id="${esc(r.id)}" data-tip="切到完成影片預覽，跳到這段開頭">▶ 看結果</button>${del(r)}</div><div class="what" data-tip="${esc(r.done.note)}">${esc(r.done.note)}</div></li>`).join('');
-  return `<section class="ip-sec"><h3>待改（${pend.length}）</h3>${pi ? `<ul class="rq-list">${pi}</ul>` : `<p class="ip-note">${gen.length ? '沒有新的待改' : done.length ? '都改完了' : '還沒有'}</p>`}</section>`
-    + (gi ? `<section class="ip-sec"><h3>生成中（${gen.length}）</h3><p class="ip-note">AI 正在改，複製給 AI 不會再送這幾段；改了它的標籤或描述就回到待改</p><ul class="rq-list">${gi}</ul></section>` : '')
-    + (di ? `<section class="ip-sec"><h3>已改完（${done.length}）</h3><ul class="rq-list">${di}</ul></section>` : '');
+  const body = rqTab === 'gen' ? (gi ? `<p class="ip-note">AI 正在改，複製給 AI 不會再送這幾段；改了它的標籤或描述就回到待改</p><ul class="rq-list">${gi}</ul>` : '<p class="ip-note">沒有生成中的段</p>')
+    : rqTab === 'done' ? rqRoundHtml(cur)
+    : (pi ? `<ul class="rq-list">${pi}</ul>` : `<p class="ip-note">${gen.length ? '沒有新的待改（生成中的在「生成中」分頁）' : done.length ? '都改完了' : '還沒有'}</p>`);
+  return `<section class="ip-sec rq-lists">${body}</section>`;
 }
 function renderRequests() {
   rqSync();
@@ -3983,6 +4050,8 @@ function renderRequests() {
   // 正在打描述：不重畫輸入框（會丟游標、打斷注音），只更新狀態列
   if (document.activeElement?.id === 'rqNote' && top.dataset.id === (id || '')) $('#rqState').innerHTML = rqStateHtml(id);
   else { top.dataset.id = id || ''; top.innerHTML = rqTopHtml(id); }
+  top.hidden = rqTab !== 'pend';
+  $('#rqTabs').innerHTML = rqTabsHtml();
   $('#rqLists').innerHTML = rqListsHtml(id);
   $('#rqFoot').innerHTML = `<button class="primary${pend.length ? '' : ' is-disabled'}" data-rq="copy" data-why="${app.requests.length ? '沒有待改的段（生成中、已改完的不會再送）' : '修改單是空的'}">複製給 AI（${pend.length} 段待改）</button>
     <p class="ip-note" data-tip="完整內容存在 ${esc(app.server?.project?.dir || '')}/work/feedback/editor-requests.md">複製後貼給 AI；AI 開始改之後，這段會顯示「生成中」。</p>
@@ -4042,6 +4111,9 @@ function onRqClick(e) {
   if (b.classList.contains('is-disabled')) { if (b.dataset.why) toast(b.dataset.why, 'warn', 3000); return; }
   const act = b.dataset.rq;
   if (act !== 'clear') rqClearArm = false;
+  if (act === 'use') { rqUse(b); return; }
+  if (rqUseArm) { rqUseArm = ''; renderRequests(); }
+  if (act === 'tab') { rqSetTab(b.dataset.tab); $('#rqBody').scrollTop = 0; renderRequests(); if (rqTab === 'done') loadRound(); return; }
   if (act === 'tag') {
     const id = $('#rqTop').dataset.id, t = b.dataset.t;
     if (!id) return;
@@ -4077,7 +4149,8 @@ function onRqClick(e) {
     rqClearArm = false; app.requests = []; rqStore(); renderRequests();
   }
 }
-function setRequestsOpen(open) { setSide(open ? 'rq' : 'insp', { open }); }
+// write：從「寫進修改單」這類入口打開，切到待改分頁（上方「修改單」按鈕只是開關，留在上次看的分頁）
+function setRequestsOpen(open, write = true) { if (open && write) rqSetTab('pend'); setSide(open ? 'rq' : 'insp', { open }); }
 // 視窗窄時右側面板變抽屜：平常收起來，影片和時間軸都看得到
 function setDrawer(open) {
   $('#inspector').classList.toggle('open', open);
@@ -4329,6 +4402,7 @@ function tryDeepLink() {
   if (at != null) { app.seek(at); timeline.reveal(at, at); }
 }
 $('#rqBody').addEventListener('click', onRqClick);
+$('#rqTabs').addEventListener('click', onRqClick);
 $('#rqFoot').addEventListener('click', onRqClick);
 $('#rqBody').addEventListener('input', (e) => {
   const id = $('#rqTop').dataset.id;
@@ -4336,7 +4410,7 @@ $('#rqBody').addEventListener('input', (e) => {
   rqEdit(id, (r) => { r.note = e.target.value; });
   renderRequests();
 });
-$('#btnRequests').addEventListener('click', () => setRequestsOpen($('#requests').hidden));
+$('#btnRequests').addEventListener('click', () => setRequestsOpen($('#requests').hidden, false));
 
 document.addEventListener('keydown', (e) => {
   const tag = e.target.tagName;
