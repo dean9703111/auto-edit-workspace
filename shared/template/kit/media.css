@@ -3,24 +3,27 @@
 
 /* 整層：不計時的外框，進出場只動它（opacity／x／scale）；裡面的底、錄影、紅框各自計時 */
 .mlayer { position: absolute; inset: 0; transform-origin: 50% 50%; }
-.mbg { position: absolute; inset: 0; background: #000; }   /* 錄影、圖片四周一律黑底，不放主題背景圖（有錄影畫面框時例外：.mbg--frame 用主題的純底色，也不放背景圖） */
+.mbg { position: absolute; inset: 0; background: #000; }   /* 錄影、圖片四周預設黑底，不放主題背景圖；有沒有錄影畫面框都一樣（070：plan.json／shared/setting.json 的 screenBg） */
+.mbg--white { background: #FFFFFF; }   /* 070 screenBg "white"：四周白底 */
 /* enter "tape"（015）：例外，底是全幕的主題背景，圖片加紙白邊與落影，兩條紙膠帶貼在兩個上角（--v2-tape 和 P.tape 同一組） */
 .mbg--paper { background: var(--sc-fs-bg) var(--sc-fs-pattern) no-repeat 0 0 / 1920px 1080px; }
 .mimg--paper { box-shadow: 0 0 0 12px var(--v2-node), var(--v2-card-shadow); }
 .mtape { position: absolute; width: 132px; height: 40px; box-sizing: border-box; background: var(--v2-tape); border: 1px solid var(--v2-tape-line); box-shadow: var(--v2-tape-shadow); }
 /* 面板：錄影可見區大小的外框（動態 v2 由 P.grow 從小視窗長出）；stage 在裡面用 left／top 抵回畫面座標 */
 .mgrow { position: absolute; }
-/* 061 錄影畫面框（plan.json screenFrame、lib/screen-frame.mjs）：框外是主題的全畫面背景（build 另外加 class sc-surface-fs，
-   吃主合成 <style> 裡的 bg-fs.jpg；亮暗主題照 <html data-theme>）；面板＝框（位置、圓角寫在 style），超出的裁掉；框裡沒蓋到的黑底在 .mwin */
-.mbg--frame { background: var(--sc-fs-bg); }
+/* 061 錄影畫面框（plan.json screenFrame、lib/screen-frame.mjs）：框外是 .mbg 的底色（070 起預設黑底，screenBg "white" 白底）；
+   面板＝框（位置、圓角寫在 style），超出的裁掉；框裡沒蓋到的黑底在 .mwin */
 .mgrow--frame { overflow: hidden; }
 /* 框裡的黑底與框線（計時的 clip；面板本身不計時，不能有底色或陰影） */
 .mwin { position: absolute; inset: 0; background: #000; box-shadow: inset 0 0 0 1px var(--sc-fs-card-line); }
+.mwin--white { background: #FFFFFF; }   /* 070 screenBg "white"：框裡沒蓋到的地方也是純白，和框外同色 */
 /* 標註的焦點容器（P.dim 壓暗只動它） */
 .mfo { position: absolute; inset: 0; pointer-events: none; }
 /* 運鏡只動 stage（x／y／scale，transform-origin 0 0）；不要加 will-change，推近時字會糊（motion-recipes §6） */
 .mstage { position: absolute; left: 0; top: 0; width: var(--cw, 1920px); height: var(--ch, 1080px); transform-origin: 0 0; }
 .mstage video, .mstage .mimg { position: absolute; object-fit: fill; }
+/* 071 錄影換畫面疊化：換掉的那一格疊上前一格（舊畫面），GSAP 淡出＋模糊 */
+.mstage .mxf { position: absolute; object-fit: fill; pointer-events: none; }
 
 /* 紅框：實線 4px、上下左右等距，描線進場（pathLength=1）、描完閉環 */
 .mmarks { position: absolute; left: 0; top: 0; width: var(--cw, 1920px); height: var(--ch, 1080px); overflow: visible; pointer-events: none; }
@@ -36,14 +39,19 @@
 .mcbox { fill: none; stroke: var(--sc-warn); stroke-width: 4px; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
 .mclead path { fill: none; stroke: var(--sc-warn); stroke-width: 3px; stroke-dasharray: 1; stroke-dashoffset: 1; }
 .mclead circle { fill: var(--sc-warn); opacity: 0; }
-/* 箭頭：箭身 7px＋三角形箭頭，警示紅 */
-.marrow { opacity: 0; }
-.marrow line { stroke: var(--sc-warn); stroke-width: 7px; stroke-linecap: round; }
-.marrow polygon { fill: var(--sc-warn); }
+/* 箭頭（069 固定動畫）：三角形＋由粗漸細的箭身一個多邊形，警示紅、圓角，外圍一圈輕微紅光（貼身一層＋外擴一層） */
+.marrow { opacity: 0; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--sc-warn) 80%, transparent)) drop-shadow(0 0 12px color-mix(in srgb, var(--sc-warn) 45%, transparent)); }
+.marrow polygon { fill: var(--sc-warn); stroke: var(--sc-warn); stroke-width: 3px; stroke-linejoin: round; }
 /* 卡片層：說明卡（高 96、字 40px、可配圖示圓）與 STEP 步驟（直式左上一顆膠囊、橫式每一步一顆標籤） */
 .mcards { position: absolute; inset: 0; pointer-events: none; }
 .mcard { position: absolute; box-sizing: border-box; height: 96px; display: flex; align-items: center; gap: 20px; padding: 0 32px 0 14px; border-radius: 16px; background: var(--sc-card); border: 2px solid var(--sc-card-line); color: var(--sc-ink); font: 700 40px/56px var(--sc-font); white-space: nowrap; opacity: 0; }
 .mcard--plain { padding: 0 32px; }
+/* 069 tape 截圖下方一行字（caption）：說明卡樣式的膠囊，比說明卡大一號（r7：連結的字太小；尺寸和 lib/media.mjs CAPTION 同一組） */
+.mcapw { position: absolute; inset: 0; pointer-events: none; }
+.mcard--cap { height: 116px; border-radius: 999px; gap: 24px; padding: 0 40px 0 18px; font-size: 56px; line-height: 1; }
+.mcard--cap.mcard--plain { padding: 0 40px; }
+.mcard--cap .mic { width: 80px; height: 80px; }
+.mcard--cap .mic svg { width: 44px; height: 44px; }
 .mcard--top, .mcard--bottom { translate: -50% 0; }
 .mcard .mic { flex: none; width: 64px; height: 64px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; }
 .mcard .mic svg { width: 34px; height: 34px; }

@@ -27,6 +27,7 @@ version: 0.1.0
 | 使用者說「有哪些風格」「這集用 XX 風格」「換回預設」 | 只做步驟 7 |
 | 使用者說「做一個風格包」「換成我的風格」 | 步驟 1–4，第 4 步存成新的一包 |
 | 使用者說「換字幕樣式」「字幕改白字黑框」「字幕大一點」「換字幕字體」 | 只做步驟 10 |
+| 使用者說「錄影背景改白色」「錄影底改黑色」「錄影四周純白」 | 不做下面的步驟：以後每集 `node shared/template/tools/brand.mjs screen-bg white`（`black`＝純黑，預設；`off` 回到預設），只有這一集 `node shared/template/tools/build.mjs --project projects/<專案> --set screenBg=white`；有專案時重跑 build，回報 build 印的「錄影四周：…」那一行 |
 | 使用者說「生成配樂」「做配樂」「換配樂」「加底樂」「這集不要底樂」「用我自己的音樂」 | 不做下面的步驟，改照 `references/music.md`（選用；沒人要求就不加底樂、不裝 ACE-Step） |
 | 使用者說「拆這支參考片」「分析這支影片怎麼剪」 | 不做下面的步驟，改照 `references/reference-video.md`（只出報告，不改 `shared/`） |
 

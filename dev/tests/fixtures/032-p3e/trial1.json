@@ -9172,6 +9172,8 @@
    ]
   }
  },
+ "screenBg": "black",
+ "screenBgFrom": "default",
  "captionStyle": null,
  "captionFrom": "default",
  "captionMarks": [],

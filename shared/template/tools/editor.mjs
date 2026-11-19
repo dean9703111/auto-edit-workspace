@@ -55,7 +55,7 @@ import { flowState } from './editor/server/flow.mjs';
 import { hintsInfo, doHintSeen } from './editor/server/hints.mjs';
 import { storyboardOptions } from './editor/server/storyboard-options.mjs';
 import { listFillSpecs } from './lib/custom-fill.mjs';
-import { requestsInfo, doRequestsStatus, doRequests } from './editor/server/requests.mjs';
+import { requestsInfo, doRequestsStatus, doRequests, requestsList, doRequestsList } from './editor/server/requests.mjs';
 import { roundInfo, startUse } from './editor/server/rounds.mjs';
 import { writeLearn } from './lib/learn.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
@@ -752,6 +752,15 @@ async function getFraming(ctx) {
     project: { name: path.basename(P.project) } }];
 }
 
+// 073 頁面的程式（editor/ 底下的 js、css、html、mjs）最後改的時間：開著的分頁比對，換了就提示重新整理
+//   （作者更新剪輯台之後，舊分頁還跑舊程式：修改單存在瀏覽器、狀態不更新）
+function clientRev() {
+  const dir = path.join(HERE, 'editor');
+  let t = 0;
+  try { for (const f of fs.readdirSync(dir)) if (/\.(m?js|css|html)$/.test(f)) t = Math.max(t, fs.statSync(path.join(dir, f)).mtimeMs); } catch { /* 讀不到就不提示 */ }
+  return Math.round(t);
+}
+
 async function getState(ctx) {
   const P = ctx.P;
   const plan = readPlan(P.plan);
@@ -795,6 +804,7 @@ async function getState(ctx) {
     schema: schema ? { scenes: schema.scenes, fx: schema.fx, sounds: schema.sounds, sfx: schema.sfx || [], custom: schema.custom || [], error: schema.error } : null,
     report: rep ? { ready: true, data: rep.report, error: rep.error, issues: rep.issues, log: rep.log ?? null } : { ready: false },
     requests: requestsInfo(P.project),
+    client: clientRev(),
     unsaved: readUnsaved(ctx).at(-1) ?? null,
     speaker: speakerInfo(ctx, plan.data),
     captionStyle: captionInfo(ctx),
@@ -1238,6 +1248,7 @@ async function handle(ctx, req, res) {
     if (p === '/api/hints') { const [s, o] = doHintSeen(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
+    if (p === '/api/requests/list') { const [s, o] = doRequestsList(ctx, body); return sendJson(res, s, o); }
     // 068 已改完：換成這一輪改之前／之後那一版（versions.mjs use，背景跑；GET /api/round 看進度）
     if (p === '/api/round/use') { try { const [s, o] = await startUse(P, body); return sendJson(res, s, o); } catch (e) { return sendJson(res, 500, { message: e.message }); } }
     // 062：輸出過之後「整理這集的調整給 AI」：寫 work/feedback/learn.md，回傳要複製的那一行
@@ -1259,6 +1270,7 @@ async function handle(ctx, req, res) {
 
   if (p === '/' || p === '/index.html') return sendFile(req, res, path.join(UI_DIR, 'index.html'));
   if (p === '/api/requests/status') return sendJson(res, 200, { requests: requestsInfo(P.project) });
+  if (p === '/api/requests/list') return sendJson(res, 200, requestsList(P.project));
   // 068 已改完＝最近一輪回饋改了哪幾段、每段現在用哪一版
   if (p === '/api/round') { try { return sendJson(res, 200, await roundInfo(P)); } catch (e) { return sendJson(res, 500, { message: e.message }); } }
   if (p === '/api/export') return sendJson(res, 200, exportState(ctx));
@@ -1347,7 +1359,7 @@ async function handle(ctx, req, res) {
   }
   if (p === '/api/version') {
     const plan = readPlan(P.plan), srt = readSrt(P.srt);
-    return sendJson(res, 200, { plan: { exists: plan.exists, mtime: plan.mtime, hash: plan.hash }, srt: { exists: srt.exists, hash: srt.hash }, ...builtInfo(ctx, plan), build: buildBrief(ctx), framingUpdate: ctx.framingUpdate, requests: requestsInfo(P.project), prerender: prerenderState(ctx) });
+    return sendJson(res, 200, { plan: { exists: plan.exists, mtime: plan.mtime, hash: plan.hash }, srt: { exists: srt.exists, hash: srt.hash }, ...builtInfo(ctx, plan), build: buildBrief(ctx), framingUpdate: ctx.framingUpdate, requests: requestsInfo(P.project), requestsList: requestsList(P.project).rev, prerender: prerenderState(ctx), client: clientRev() });
   }
   if (p === '/api/build') return sendJson(res, 200, { ...ctx.build, ...buildBrief(ctx) });
   if (p.startsWith('/editor/')) {

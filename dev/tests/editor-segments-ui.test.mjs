@@ -90,7 +90,8 @@ test('字幕分頁：全部列得出來、搜尋、點一句就能直接改字',
   await page.waitForFunction(() => window.__editor.cues.find((c) => c.n === 6).text.endsWith('手機改'));
   assert.equal(await page.$('#cueList .cue-edit'), null, 'Enter 之後離開編輯');
   assert.match(await page.$eval('[data-cue="6"] .x', (n) => n.textContent), /手機改$/);
-  // 點進去再點別處：一樣離開編輯
+  // 點進去再點別處：一樣離開編輯（072 打字就直接換字，上面的等待馬上過；離開輸入框後 60 ms 還會重畫一次清單（renderSideSoon），等它畫完再點，不然點到換掉的那一列）
+  await sleep(120);
   await page.click('[data-cue="6"]');
   await page.waitForFunction(() => document.activeElement?.classList.contains('cue-edit'));
   await page.click('#cueCount');

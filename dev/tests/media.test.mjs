@@ -178,6 +178,9 @@ test('子母畫面移進錄影：從講者飛進來落在新位置；tape、鋪�
   writePlan([{ id: 'm01', type: 'media', src: IMG, from: 5, to: 7.5, enter: 'tape', pip: true }, voice]);
   assert.equal(build().status, 0);
   assert.doesNotMatch(read('index.html'), /id="pip-m01" data-layout-allow-overflow style=/, 'tape：圖片貼在全幕背景上，小視窗和全畫面段一樣在畫布右下');
+  // 072 有小視窗時截圖區右緣停在小視窗禁入區（x 1424）左邊 48：截圖往左、太寬才縮小，不被右下的講者壓住
+  const g = read('index.html').match(/<div id="mgr-m01" class="mgrow" style="left:(\d+)px;top:(\d+)px;width:(\d+)px;height:(\d+)px"/).slice(1).map(Number);
+  assert.ok(g[0] >= 200 && g[0] + g[2] <= 1424 - 48, `截圖在小視窗左邊：${g}`);
   writePlan([{ id: 'm01', type: 'media', src: REC, from: 5, to: 7.5, pip: false }, voice]);
   assert.equal(checkJson().j.items.find((x) => x.id === 'm01').out.pipShift, null);
 });
@@ -229,6 +232,32 @@ test('015 enter: "tape"：圖片縮小貼在全幕背景上（紙白邊、兩條
     writePlan([{ id: 'm04', type: 'media', from: 7, to: 13, ...seg }]);
     const c = build('--check');
     assert.match(c.stdout + c.stderr, re);
+  }
+});
+
+test('069 tape 的 caption：截圖縮小讓出下緣、下方一行說明卡樣式的膠囊（水平置中）、從下面浮上來；只給 tape、字數與欄位檢查', () => {
+  writePlan([{ id: 'm03', type: 'media', src: IMG, from: 7, to: 13, enter: 'tape', caption: { text: 'deanlin.net' } }]);
+  const r = build();
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const h = read('index.html');
+  const g = h.match(/<div id="mgr-m03" class="mgrow" style="left:(\d+)px;top:(\d+)px;width:(\d+)px;height:(\d+)px"/).slice(1).map(Number);
+  assert.ok(g[1] >= 130 && g[1] + g[3] <= 765, `截圖往下、讓出下緣：${g}`);
+  const c = h.match(/<div id="mcap-m03" class="mcard mcard--cap" style="left:(\d+)px;top:(\d+)px"><span class="mic"><svg[^]*?<\/svg><\/span><span class="mtxt">deanlin\.net<\/span><\/div>/);
+  assert.ok(c, '膠囊：說明卡樣式＋link 圖示');
+  assert.equal(Number(c[2]), g[1] + g[3] + 44, '離截圖下緣 44 px（紙白邊外還有 32）');
+  assert.ok(Number(c[2]) + 116 <= 930, '不碰字幕帶');
+  assert.equal(Number(c[1]) * 2 + 4 + 18 + 80 + 24 + 11 * 34 + 40, g[0] * 2 + g[2], '水平置中、寬照 56 px 字算');
+  assert.match(h, /<div id="mcw-m03" class="clip mcapw" data-start="7" data-duration="6"/);
+  assert.match(h, /tl\.fromTo\('#mcap-m03', \{ opacity: 0, y: 16 \}, \{ opacity: 1, y: 0, duration: 0\.4, ease: 'power2\.out' \}, 7\.6\);/);
+  for (const [seg, re] of [
+    [{ src: IMG, caption: { text: 'x' } }, /caption（截圖下方一行字）只給 enter "tape" 的圖片用 → 加 "enter": "tape"/],
+    [{ src: IMG, enter: 'tape', caption: { text: 'x', side: 'top' } }, /caption 要寫 \{ "text": "…", "at": "#N@詞", "icon": "link" \}/],
+    [{ src: IMG, enter: 'tape', caption: { text: '這是一段遠遠超過三十個字的截圖下方說明文字所以要改短一點才放得下喔' } }, /caption\.text 要寫一行、1–30 字/],
+    [{ src: IMG, enter: 'tape', caption: { text: 'x', icon: 'linkk' } }, /caption\.icon：找不到圖示「linkk」/],
+  ]) {
+    writePlan([{ id: 'm04', type: 'media', from: 7, to: 13, ...seg }]);
+    const k = build('--check');
+    assert.match(k.stdout + k.stderr, re);
   }
 });
 
@@ -505,7 +534,7 @@ test('build：說明卡、聚光燈、STEP、箭頭、紅框跟捲動的 DOM 與
   assert.match(html, /<div id="mcc-m01-1" class="mcard mcard--left" style="right:777px;top:93px"><span class="mic"><svg[^]*?<\/svg><\/span><span class="mtxt">打開 API 設定<\/span><\/div>/);
   assert.match(html, /<div id="mcc-m01-2" class="mcard mcard--right mcard--plain" style="left:601px;top:704px"><span class="mtxt">儲存<\/span><\/div>/);
   assert.match(html, /<g id="msp-m01-1" class="mspot"><mask id="mspm-m01-1">.*rx="12" fill="#000000"\/><\/mask><rect class="mspot-dim" width="1920" height="1080" mask="url\(#mspm-m01-1\)"\/><\/g>/);
-  assert.match(html, /<g id="mar-m01-1" class="marrow"><line [^>]+\/><polygon points="[\d., ]+"\/><\/g>/);
+  assert.match(html, /<g id="mar-m01-1" class="marrow"><polygon points="[\d., ]+"\/><\/g>/);
   assert.match(html, /<div id="mcd-m01" class="clip mcards" data-start="7" data-duration="6" data-track-index="\d+" data-layout-allow-overlap>/);
   assert.match(html, /<div id="mstep-m01-1" class="mstep"><span class="mnum">1<\/span><span class="mtxt">打開設定<\/span><\/div>/);
   assert.match(html, /<div id="mstep-m01-2" class="mstep"><span class="mnum">2<\/span><span class="mtxt">建立金鑰<\/span><\/div>/);
@@ -522,13 +551,15 @@ test('build：說明卡、聚光燈、STEP、箭頭、紅框跟捲動的 DOM 與
     "tl.fromTo('#mcb-m01-2, #mcl-m01-2, #mcc-m01-2', { opacity: 0 }, { opacity: 1, duration: 0.25, ease: 'power2.out' }, 10.2);",
     "tl.fromTo('#msp-m01-1', { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power1.inOut' }, 10);",
     "tl.fromTo('#msp-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.4, ease: 'power1.inOut', immediateRender: false }, 11.8);",
-    "tl.fromTo('#mar-m01-1', { opacity: 0, x: 8.49, y: -8.49 }, { opacity: 1, x: 0, y: 0, duration: 0.5, ease: 'power2.out' }, 10.6);",
-    "tl.fromTo('#mar-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.5, ease: 'sine.in', immediateRender: false }, 12.5);",
+    // 069 箭頭固定動畫：彈進來（0.4s）→ 到位後往目標輕戳兩來回 → until 前 0.3s 淡出
+    "tl.fromTo('#mar-m01-1', { x: 0, y: 0 }, { x: -5.66, y: 5.66, duration: 0.4, ease: 'sine.inOut', yoyo: true, repeat: 3, immediateRender: false }, 11);",
+    "tl.fromTo('#mar-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'sine.in', immediateRender: false }, 12.7);",
     "tl.fromTo('#msteps-m01-1', { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }, 7);",
     "tl.fromTo('#msteps-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.25, ease: 'power1.in', immediateRender: false }, 9);",
     "tl.fromTo('#msteps-m01-2', { opacity: 0 }, { opacity: 1, duration: 0.35, ease: 'power2.out' }, 9.1);",
   ];
   for (const l of lines) assert.ok(html.includes(l), `時間軸少了：${l}`);
+  assert.match(html, /tl\.fromTo\('#mar-m01-1', \{ opacity: 0, x: 28\.28, y: -28\.28, scale: 0\.7, svgOrigin: '[\d.]+ [\d.]+' \}, \{ opacity: 1, x: 0, y: 0, scale: 1, svgOrigin: '[\d.]+ [\d.]+', duration: 0\.4, ease: 'back\.out\(2\)' \}, 10\.6\);/);
   assert.match(html, /tl\.fromTo\('#mmk-m01-1', \{ attr: \{ x: 435, y: 462, width: 251, height: 134 \} \}, \{ attr: \{ x: 435, y: 603, width: 251, height: 134 \}, duration: 0\.6, ease: 'power2\.inOut', immediateRender: false \}, 8\);/);
   // --check --json 的 items 現在還沒有 out（002 加）；validateMedia 的 json 直接在 lib 測
   // 沒有標註的段不產生標註容器
@@ -536,6 +567,29 @@ test('build：說明卡、聚光燈、STEP、箭頭、紅框跟捲動的 DOM 與
   assert.equal(build().status, 0);
   const plain = read('index.html');
   assert.doesNotMatch(plain, /class="clip mann"|class="clip mcards"/);
+});
+
+test('069 箭頭接力：下一支 at 貼著上一支 until＝同一支箭頭換目標（同方向同長度滑過去）；每支 ≥ 0.6s、整串 ≥ 2.2s', () => {
+  const m = (o) => ({ id: 'm01', type: 'media', src: REC, from: 7, to: 13, ...o });
+  writePlan([m({ arrows: [{ at: '+1', until: '+1.7', to: [300, 100], from: 'ne' }, { at: '+1.7', until: '+4', to: [300, 200], from: 'ne' }] })]);
+  const { r, j } = checkJson();
+  assert.equal(r.status, 0, JSON.stringify(j.errors));
+  const b = build();
+  assert.equal(b.status, 0, b.stdout + b.stderr);
+  const html = read('index.html');
+  // 第一支彈進來、不淡出；在 8.7 整支滑到第二支的位置（往下 y 差），9.1 換成第二支；第二支不再彈進來，until 前 0.3s 淡出
+  assert.match(html, /tl\.fromTo\('#mar-m01-1', \{ opacity: 0, x: 28\.28, y: -28\.28, scale: 0\.7, /);
+  assert.match(html, /tl\.fromTo\('#mar-m01-1', \{ x: 0, y: 0 \}, \{ x: 0, y: [\d.]+, duration: 0\.4, ease: 'power2\.inOut', immediateRender: false \}, 8\.7\);/);
+  assert.ok(html.includes("tl.set('#mar-m01-1', { opacity: 0 }, 9.1);"));
+  assert.ok(html.includes("tl.set('#mar-m01-2', { opacity: 1, x: 0, y: 0 }, 9.1);"));
+  assert.ok(html.includes("tl.fromTo('#mar-m01-2', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'sine.in', immediateRender: false }, 10.7);"));
+  assert.doesNotMatch(html, /tl\.fromTo\('#mar-m01-2', \{ opacity: 0/);
+  assert.doesNotMatch(html, /tl\.fromTo\('#mar-m01-1', \{ opacity: 1 \}/);
+  // 接力太短：每支 < 0.6s ✖；整串 < 2.2s ✖
+  writePlan([m({ arrows: [{ at: '+1', until: '+1.4', to: [300, 100] }, { at: '+1.4', until: '+4', to: [300, 200] }] })]);
+  assert.match(checkJson().j.errors.join('\n'), /arrows\[0\] 只有 0\.4s（接力的每一支要 ≥ 0\.6s：彈進來或滑過來 0\.4＋停一下）→ at 提早或 until 延到 0:08\.60 之後/);
+  writePlan([m({ arrows: [{ at: '+1', until: '+1.7', to: [300, 100] }, { at: '+1.7', until: '+2.5', to: [300, 200] }] })]);
+  assert.match(checkJson().j.errors.join('\n'), /arrows\[0\]–arrows\[1\] 接力合起來只有 1\.5s（要 ≥ 2\.2s，觀眾才看得清箭頭指到哪）→ 最後一支的 until 延到 0:10\.20 之後/);
 });
 
 test('標註的 ✖／⚠ 訊息：每則都照契約原文、帶「→」改法', () => {

@@ -63,7 +63,7 @@ test('setPlan：每種鍵的對與錯；只回傳有變的鍵；錯的值整批�
   for (const [k, v] of bad) {
     assert.throws(() => S.setPlan(p.proj, { [k]: v }), (e) => e.message.startsWith(`✖ ${k} 不能是「${v}」→ 能寫的：${k}（`), `${k}=${v}`);
   }
-  assert.throws(() => S.setPlan(p.proj, { foo: 1 }), msg(/^✖ plan\.json 沒有「foo」這個設定可以寫 → 能寫的：theme（light／dark）、style（.*藍圖.*）、format/));
+  assert.throws(() => S.setPlan(p.proj, { foo: 1 }), msg(/^✖ plan\.json 沒有「foo」這個設定可以寫 → 能寫的：theme（light／dark）、screenBg（[^）]*）[^、]*）、style（.*藍圖.*）、format/));
   assert.throws(() => S.setPlan(p.proj, { theme: 'dark', speakerSide: 'up' }), /speakerSide/);
   assert.equal(fs.readFileSync(p.planFile, 'utf8'), before, '有一個不對就整批不寫');
   // 只回傳有變的；look 是 false 時寫 look.slim 換成物件
@@ -104,7 +104,7 @@ test('unsetPlan：拿掉鍵、空的 bed／outro 不留；還沒有 plan.json �
   assert.deepEqual(S.unsetPlan(p.proj, ['style']), [], '沒有就不動');
   assert.throws(() => S.unsetPlan(p.proj, ['scenes']), msg(/^✖ plan\.json 沒有「scenes」這個設定可以拿掉 → 能寫的：.*、bed、outro、captionStyle、screenFrame$/));
   const q = project(t);
-  assert.throws(() => S.setPlan(q.proj, { 'bed.music': 'none' }), msg(/^✖ 還沒有 plan\.json，bed\.music 要等產生分鏡素材.*→ 能寫的：theme（light／dark）、style（/));
+  assert.throws(() => S.setPlan(q.proj, { 'bed.music': 'none' }), msg(/^✖ 還沒有 plan\.json，bed\.music 要等產生分鏡素材.*→ 能寫的：theme（light／dark）、screenBg（.*?）、style（/));
   assert.ok(!fs.existsSync(q.planFile));
   assert.deepEqual(S.unsetPlan(q.proj, ['theme']), []);
   assert.ok(!fs.existsSync(q.planFile), '只有拿掉：不建檔');

@@ -93,9 +93,17 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     await page.click('[data-rq="tab"][data-tab="pend"]');
     await page.evaluate(() => window.__editor.select({ kind: 'item', id: 's01' }));
     await page.waitForSelector('#rqNote', { visible: true });
+    // r8：已改完的段，修改單上寫的標籤、描述清空（下次點到從空白開始），已改完的狀態照樣看得到
+    await page.waitForFunction(() => document.querySelector('#rqState')?.textContent.includes('已改完'));
+    assert.deepEqual(await page.evaluate(() => [document.querySelector('#rqNote').value, document.querySelectorAll('#rqTop .rq-tags .toggle.on').length, document.querySelector('#rqState')?.textContent.includes('已改完')]), ['', 0, true]);
     await page.type('#rqNote', '重新調整');
     await page.waitForFunction(() => document.querySelector('#rqState')?.textContent.includes('待改：已存進修改單'));
     assert.equal(await page.$eval('[data-rq="tab"][data-tab="pend"]', (el) => el.textContent), '待改（2）', '改了需求就回到待改；已改完那一輪的紀錄照留');
+    // 072 修改單存在專案裡（不是只在這個瀏覽器）
+    await page.waitForFunction(() => !window.__editor.requests.some((x) => x.id === 's01' && x.note !== '重新調整'));
+    await new Promise((r) => setTimeout(r, 300));
+    const saved = JSON.parse(fs.readFileSync(path.join(work, 'feedback/editor-requests-list.json'), 'utf8')).list.find((x) => x.id === 's01');
+    assert.deepEqual([saved.tags, saved.note, 'done' in saved], [[], '重新調整', false], '新的一筆不帶上一次的標籤');
     // 029：勾了「重新設計」的段寫進修改單，複製的那一行寫明這幾段派設計師從空白重畫
     assert.equal(await page.$eval('#rqTop [data-rq="redo"]', (el) => el.checked), false, '預設不勾');
     await page.click('#rqTop [data-rq="redo"]');
@@ -112,6 +120,35 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     });
     await page.click('[data-rq="copy"]');
     await page.waitForFunction(() => [...document.querySelectorAll('.rq-sent')].every((el) => el.textContent === '已存檔'));
+    // 072：另一個沒存過東西的瀏覽器（無痕）打開，修改單一樣；在那邊寫的草稿，原本的分頁幾秒內也看得到（不會被舊分頁蓋掉）
+    const other = await browser.createBrowserContext(), p2 = await other.newPage();
+    p2.on('pageerror', (e) => errors.push(e.message));
+    await p2.setViewport({ width: 1800, height: 1000 });
+    await p2.goto(editor.url);
+    await p2.waitForFunction(() => window.__editor?.requests?.length === 2);
+    assert.deepEqual(await p2.evaluate(() => window.__editor.requests.map((x) => [x.id, x.note])), await page.evaluate(() => window.__editor.requests.map((x) => [x.id, x.note])));
+    await p2.evaluate(() => { localStorage.setItem('editor-requests-open', '1'); });
+    await p2.evaluate(() => window.__editor.select({ kind: 'item', id: 's02' }));
+    await p2.evaluate(() => { document.querySelector('#coach').hidden = true; document.querySelector('.side-tabs [data-side="rq"]').click(); });
+    await p2.waitForSelector('#rqNote', { visible: true });
+    await p2.type('#rqNote', '另一個瀏覽器寫的草稿');
+    await page.waitForFunction(() => window.__editor.requests.find((x) => x.id === 's02')?.note === '另一個瀏覽器寫的草稿', { timeout: 10000 });
+    await other.close();
+    // 073 剪輯台的程式更新了（/api/version 的 client 換了）：開著的分頁跳出「重新整理」橫幅，不會一直跑舊程式
+    const ver = await page.evaluate(async () => (await (await fetch('/api/version')).json()).client);
+    assert.ok(Number.isFinite(ver) && ver > 0, `/api/version 帶 client：${ver}`);
+    assert.equal(await page.evaluate(() => document.querySelector('#banner').hidden), true);
+    await page.evaluate(() => {
+      const f = window.fetch;
+      window.fetch = async (u, o) => {
+        const r = await f(u, o);
+        if (!String(u).includes('/api/version')) return r;
+        const j = await r.json();
+        return new Response(JSON.stringify({ ...j, client: j.client + 1 }), { status: r.status, headers: { 'Content-Type': 'application/json' } });
+      };
+    });
+    await page.waitForFunction(() => !document.querySelector('#banner').hidden && /程式剛更新/.test(document.querySelector('#banner').textContent), { timeout: 10000 });
+    assert.match(await page.evaluate(() => document.querySelector('#banner button').textContent), /重新整理/);
     assert.deepEqual(errors, []);
     console.log(`修改單 UI 截圖：${screenshot}`);
   } finally {

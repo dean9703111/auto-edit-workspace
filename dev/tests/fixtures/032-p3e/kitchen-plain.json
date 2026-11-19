@@ -561,6 +561,7 @@
      "sx": 1,
      "sy": 1
     },
+    "bg": "black",
     "frame": {
      "format": "landscape",
      "W": 1920,
@@ -1045,6 +1046,7 @@
      "sx": 1,
      "sy": 1
     },
+    "bg": "black",
     "frame": {
      "format": "landscape",
      "W": 1920,
@@ -1222,7 +1224,8 @@
        664.16,
        275.15
       ],
-      "ready": 43.5
+      "body": "653.55,306.97 685.37,296.36 678.65,289.65 740.17,223.89 736.64,220.35 670.88,281.87 664.16,275.15",
+      "ready": 43.4
      }
     ],
     "waits": []
@@ -1273,7 +1276,7 @@
        "i": 0,
        "at": 43,
        "until": 46,
-       "ready": 43.5,
+       "ready": 43.4,
        "from": "ne"
       }
      ],
@@ -1850,6 +1853,7 @@
      "sx": 1,
      "sy": 1
     },
+    "bg": "black",
     "frame": {
      "format": "landscape",
      "W": 1920,
@@ -2871,6 +2875,7 @@
      "sx": 1,
      "sy": 1
     },
+    "bg": "black",
     "frame": {
      "format": "landscape",
      "W": 1920,
@@ -3355,6 +3360,7 @@
      "sx": 1,
      "sy": 1
     },
+    "bg": "black",
     "frame": {
      "format": "landscape",
      "W": 1920,
@@ -3532,7 +3538,8 @@
        664.16,
        275.15
       ],
-      "ready": 43.5
+      "body": "653.55,306.97 685.37,296.36 678.65,289.65 740.17,223.89 736.64,220.35 670.88,281.87 664.16,275.15",
+      "ready": 43.4
      }
     ],
     "waits": []
@@ -3583,7 +3590,7 @@
        "i": 0,
        "at": 43,
        "until": 46,
-       "ready": 43.5,
+       "ready": 43.4,
        "from": "ne"
       }
      ],
@@ -4160,6 +4167,7 @@
      "sx": 1,
      "sy": 1
     },
+    "bg": "black",
     "frame": {
      "format": "landscape",
      "W": 1920,
@@ -5181,6 +5189,8 @@
    ]
   }
  },
+ "screenBg": "black",
+ "screenBgFrom": "default",
  "captionStyle": null,
  "captionFrom": "default",
  "captionMarks": [],

@@ -122,7 +122,7 @@ function rolled(it, t0) {
   if (m.kind === 'video' && pieces?.length) {
     pieces = pieces.map((p) => ({ ...p }));
     if (pre) { pieces[0].s = r3(pieces[0].s - pre); pieces[0].fms = r3(Math.max(0, pieces[0].fms - pre)); }
-    if (post) pieces[pieces.length - 1].e = r3(pieces[pieces.length - 1].e + post);
+    if (post && !it.freezeTail) pieces[pieces.length - 1].e = r3(pieces[pieces.length - 1].e + post);   // 072 定格：錄影照原本播完，後面墊最後一格（mediaParts mft-）
   }
   return { ...it, start: r3(it.start - pre), end: r3(it.end + post), enterFx: it.xfade ? 'cut' : it.enterFx, media: { ...m, pieces } };
 }

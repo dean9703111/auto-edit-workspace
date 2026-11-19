@@ -558,6 +558,11 @@ test('擦入擦出：media↔動畫幕（只有聲音或有講者小視窗都擦
   // 講者段（有子母畫面小視窗）也擦；章節不擦
   const d = go([{ id: 'm1', type: 'media', src: 'assets/images/a.png', from: 4, to: 8 }, { id: 'f1', type: 'fx', fx: 29, bg: 'dark', from: 8, to: 9.5, vars: { number: '1' } }]);
   assert.equal(byId(d, 'f1').wipeIn, true);
+  // 072 變速錄影（retime：檔案後面沒有多的）接動畫：原本硬切 → 錄影最後一格定格 0.45 s 墊在下面，動畫照樣擦入
+  const e = go([{ id: 'm1', type: 'media', src: 'assets/screen/v.mp4', from: 10, to: 20, retime: [{ at: '+0', src: 0 }, { at: '+10', src: 5 }] }, base(2)[1], { id: 'm2', type: 'media', src: 'assets/images/b.png', from: 25, to: 30 }]);
+  assert.deepEqual(e.errors, []);
+  assert.deepEqual([byId(e, 'f1').wipeIn, byId(e, 'm1').postroll, byId(e, 'm1').freezeTail], [true, 0.45, 0.45]);
+  assert.match(formatReport(e), /從 m1 擦入 0\.45s（m1 的錄影後面沒有多的：最後一格定格 0\.45s 墊在下面）/);
   fs.rmSync(pdir, { recursive: true });
 });
 
