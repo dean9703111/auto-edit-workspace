@@ -13,6 +13,8 @@
 | 「剪好看」「做出完成影片」 | 依序 `auto-edit-storyboard` → `auto-edit-motion`（有內容設計動畫）→ `auto-edit-review` → `auto-edit-deliver`；有素材先 `auto-edit-screen` 盤點 |
 | 「配螢幕錄影」 | `auto-edit-screen` |
 | 預覽後的修改、「打開剪輯台」、「s12 重新設計」「s12 用 v1」、「照修改單改」 | `auto-edit-review` |
+| 「手機確認頁」「把每一段動畫最後一格發布成網頁」 | `auto-edit-review` 的 `references/mobile-site.md` |
+| 「整理這集的調整給 AI」「照這集的調整紀錄學我的習慣」 | `auto-edit-review` 的 `references/learn-habits.md` |
 | 「可以了，輸出完成影片」「輸出剪映素材」（剪輯台已經輸出過就不要重做） | `auto-edit-deliver` |
 | 「做封面」「做縮圖」 | `auto-edit-deliver` 的 `references/cover.md` |
 | 「換風格」「換主色」「換背景」「換暗色」「換字幕樣式」「講者設定成…」「設定片尾」 | `auto-edit-style` |

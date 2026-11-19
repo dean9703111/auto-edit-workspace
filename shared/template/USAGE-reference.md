@@ -46,7 +46,7 @@
 | `voiceOnly` | `rough.mp4` 全黑（只有聲音）的區間 |
 | `cutpoints` | `work/cutpoints.json` 的剪接點（沒有這個檔就是空陣列） |
 | `items[]` | 每一段：`start`／`end` 是 plan.json 寫的起迄；`shownEnd` 只在畫面上實際停留的時間不同時出現（下方字卡換卡、接不透明幕時自動延長或提早收）；整段被 cuts 剪掉的段不列出 |
-| `items[].sfx[]` | 主音效與附加音效：`at` 是音效檔開始播的時間，`volume` 是最終線性音量（0–3.98，已套 `sfx.json`、`sfxVolume`、`edit.volume.sfx`、淡入淡出），`db` 是同一個值換成 dB |
+| `items[].sfx[]` | 主音效與附加音效：`at` 是音效檔開始播的時間，`volume` 是最終線性音量（0–3.98，已套 `sfx.json`、`sfxVolume`、`edit.volume.sfx`、淡入淡出），`db` 是同一個值換成 dB；`key` 是這一顆的 id（`edit.sfxAdjust` 用，6.1）、`base` 是剪輯台拖之前的 `at`、`len` 是音效檔多長（秒）、`dur` 是裁過之後播多久 |
 | `items[]` 的 media 欄位 | `src`、`enter`、`exit`、`volume`（dB 或 `null`）、`kind`（`video`／`image`）、`pip`（這段要不要講者小視窗：照 plan.json 的 `pip` 和橫式／直式的預設算好的 `true`／`false`） |
 | `edit` | 正規化後的 `edit`：cuts 排序合併、`joins` 吸附到剪接點、沒寫的欄位補預設；使用者在剪輯台自己加了音效時多一個 `sfx`（照時間排，`at` 是聽到的那一刻；一顆都沒有就沒有這個鍵），這幾顆不在 `items[].sfx[]` 裡 |
 | `paths` | 工作區根目錄底下的相對路徑 |

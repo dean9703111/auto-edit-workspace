@@ -2,7 +2,7 @@
 //
 //   圖片檔   "assets/images/調光前.png"（也可以 assets/screen/ 底下的圖片）→ 縮到 1920×1080 以內
 //   段 id    "s0106" → 那一段的完成態截圖：work/storyboard-preview/<段>.png（一段有好幾張取最後一張 <段>-N.png，分鏡表停點 ③ 時工具截好的）；
-//            橫式切掉字幕帶（y 940 以下）再取 16:9 → 960×540。還沒截過 ⚠，先用一張空白圖
+//            橫式切掉字幕帶（y 940 以下）再取 16:9 → 960×540（有錄影畫面框 screenFrame 時切那個框）。還沒截過 ⚠，先用一張空白圖
 //   產生的檔一律是 work/hyperframes/assets/shots/<鍵>.jpg（鍵只看值，custom-fill 填模板時不用知道檔案在不在）
 //
 //   SHOT_DIR、isShotImage(v)、isShotSeg(v)、shotRel(v)  → 'assets/shots/<鍵>.jpg'
@@ -19,6 +19,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { run } from './ff.mjs';
 import { readFillSpec } from './custom-fill.mjs';
+import { frameForPlan } from './screen-frame.mjs';
 
 export const SHOT_DIR = 'assets/shots';
 const IMG_RE = /^assets\/(images|screen)\/.+\.(png|jpe?g|webp)$/i;
@@ -64,6 +65,8 @@ export function checkShots({ plan, lib, projectDir }) {
   const segs = Array.isArray(plan?.scenes) ? plan.scenes : [];
   const order = new Map(segs.map((x, i) => [x?.id, i]));
   const portrait = plan?.format === 'portrait';
+  // 061 錄影畫面框：段的截圖改切那個框（框在字幕上方、16:9）；沒設定照舊切 1671×940
+  const win = portrait ? null : frameForPlan({ plan, settings: { screenFrame: lib?.screenFrameDefault ?? undefined, captions: lib?.captionDefault ?? undefined } }).frame?.win ?? null;
   for (const seg of segs) {
     if (!seg || seg.type !== 'custom' || !seg.template) continue;
     const spec = readFillSpec(lib.customDir, seg.template);
@@ -81,7 +84,7 @@ export function checkShots({ plan, lib, projectDir }) {
         if (v === seg.id || order.get(v) > order.get(seg.id)) { errors.push(`${where}：「${v}」不在這一段前面 → 只能放已經出現過的段`); continue; }
         const src = projectDir ? segPreview(projectDir, v) : null;
         if (projectDir && !src) warnings.push(`${where}：「${v}」還沒有截圖（work/storyboard-preview/${v}*.png），先放空白圖 → 跑 node shared/template/tools/qc.mjs storyboard --project <專案> 後重新 build`);
-        if (projectDir) jobs.set(shotRel(v), { kind: 'segment', src, crop: !portrait, label: v });
+        if (projectDir) jobs.set(shotRel(v), { kind: 'segment', src, crop: !portrait, ...(win ? { win } : {}), label: v });
       } else {
         errors.push(`${where}：寫圖片檔（assets/images/…、assets/screen/… 的 .png .jpg .webp）或這一集某一段的 id（例 "s0106"），現在是 ${JSON.stringify(v)}`);
       }
@@ -103,11 +106,12 @@ export function prepareShots({ jobs, out, log = () => {} }) {
   let made = 0;
   for (const [rel, job] of jobs) {
     const name = path.basename(rel), dst = path.join(out, rel);
-    const key = `${job.kind}|${job.src ?? 'blank'}|${job.src ? sig(job.src) : ''}|${job.crop ? 'crop' : ''}`;
+    const key = `${job.kind}|${job.src ?? 'blank'}|${job.src ? sig(job.src) : ''}|${job.crop ? (job.win ? `crop:${job.win.join(',')}` : 'crop') : ''}`;
     next[name] = { key };
     if (idx[name]?.key === key && fs.existsSync(dst)) continue;
-    // 段的截圖：橫式切掉字幕帶（y 940 以下），中間取 16:9（1671×940）；圖片：縮到 1920×1080 以內，不放大
-    const vf = !job.src ? null : job.kind === 'segment' ? (job.crop ? 'crop=1671:940:124:0,scale=960:540' : 'scale=960:-2') : "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease";
+    // 段的截圖：橫式切掉字幕帶（y 940 以下），中間取 16:9（1671×940；有錄影畫面框時切那個框）；圖片：縮到 1920×1080 以內，不放大
+    const crop = job.win ? `crop=${job.win[2]}:${job.win[3]}:${job.win[0]}:${job.win[1]},scale=960:540` : 'crop=1671:940:124:0,scale=960:540';
+    const vf = !job.src ? null : job.kind === 'segment' ? (job.crop ? crop : 'scale=960:-2') : "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease";
     const args = job.src ? ['-y', '-v', 'error', '-i', job.src, '-vf', vf, '-frames:v', '1', '-q:v', '3', dst]
       : ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=0xE8E2D8:s=960x540', '-frames:v', '1', '-q:v', '3', dst];
     const r = run('ffmpeg', args);

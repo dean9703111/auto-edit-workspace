@@ -123,7 +123,7 @@ test('build：情緒點音效進 index.html（sfx-mood<N>）；推近寫成 #foo
   assert.match(html, /#footage \{ transform-origin: 960px 440px; \}/);
   // --check --json 的 moods（剪輯台音效軌、分鏡表情緒點表讀這個）
   const top = jsonTop(res);
-  assert.deepEqual(Object.keys(top.moods[0]), ['i', 'kind', 'at', 'outAt', 'sfx', 'dropped', 'off', 'zoom']);
+  assert.deepEqual(Object.keys(top.moods[0]), ['i', 'kind', 'at', 'outAt', 'sfx', 'dropped', 'off', 'zoom', 'cue']);   // 065 cue＝那一顆音效（剪輯台畫方塊、拖曳用）
   assert.deepEqual(top.moods.map((m) => [m.kind, m.sfx, m.zoom]), [['quote', 'sparkle', true], ['win', 'success', false]]);
   // 剪映分段（cut）：段落素材不帶情緒點音效
   const seg = buildMain({ items: res.items, videoDur: VD, captions: null, pip: res.globals.pip, moods: res.moods, zooms: res.zooms, cut: { kind: 'main' } });

@@ -52,6 +52,22 @@
  *   node shared/template/tools/versions.mjs list --project projects/<專案> [--seg s12] [--json]
  *       列出每段的版本、哪一版是目前的（和現在的 plan.json、x 檔一致）、比較影片。
  *
+ * ── 整理這集的調整、手機確認頁 ──
+ *   node shared/template/tools/versions.mjs learn --project projects/<專案> [--json]
+ *       整理這集的調整給 AI，寫成 work/feedback/learn.md：回饋輪 r<N>.md 的原話（同類歸在一起、標出現次數）、建議改規則（已經在 shared/偏好.md 的標「已是規則」）、
+ *       剪輯台手改（plan.json 的 edit、每段的音效與錄影速度、整支設定；rough.srt 和初剪字幕的差異，只寫摘要和常改的字）、改版紀錄（換模板、重新設計、退回）。
+ *       只讀，不改 plan.json、shared/。剪輯台輸出過之後的「整理這集的調整給 AI」、deliver.mjs 輸出後的回報，都給同一行貼給 AI 的指令。
+ *   node shared/template/tools/versions.mjs learn --project projects/<專案> --page
+ *       把 AI 寫的候選規則 work/feedback/learn-rules.json 做成選擇頁 work/feedback/learn-choices.html（固定模板 shared/template/site/choices.html，一個檔）：
+ *       照落點分組（偏好／改預設／程式檢查），每條寫現行、建議、代價、證據，選照做、不要、再想想；最下面「複製答案」，貼回的文字就是答案。
+ *   node shared/template/tools/versions.mjs site --project projects/<專案> [--round | --only s01,s02] [--json]
+ *       手機確認頁 work/site/index.html（固定模板 shared/template/site/review.html；圖片內嵌，這一個檔就是整包，可以直接發布成網頁）。
+ *       預設放全部段（字卡、動畫、錄影；錄影段標成錄影）；--round 只放最新一輪回饋改到的段；--only 指定段。
+ *       每段：段號、動畫是什麼、完成影片時間、最後一格（點了放大）、對應字幕、想怎麼改（和剪輯台修改單同一套標籤）、重新設計、想調整；填的存在那支手機。
+ *       最下面「複製提示詞」只收有填的段，產生和剪輯台「複製給 AI」同格式的整份修改單（開頭 # 剪輯台修改單）。
+ *       最後一格沿用完成態截圖（work/storyboard-preview/、work/audit-shots/），沒有或比那段的動畫檔、版本舊才用 qc.mjs storyboard --only 補截。
+ *       圖片壓成 JPEG，一張 ≤ 120 KB，整包盡量 ≤ 15 MB（段很多時每張再壓小一點）。
+ *
  * --project：同 build.mjs。版本只能用這支工具建、退回，不要手動複製或改 work/versions/ 裡的檔（分鏡.md 的提案除外）。
  * --no-preview：不 build、不 render（舊參數，現在每個指令預設就是這樣）。
  * 測試用：--template <shared/template 資料夾>
@@ -84,6 +100,8 @@ import { runToolUntilDoneSync } from './lib/job.mjs';
 import { isSummaryLine } from './lib/build-summary.mjs';
 import { editorUrlsSync } from './lib/editor-urls.mjs';
 import { requestsInfo, doRequestsStatus } from './editor/server/requests.mjs';
+import { LEARN, writeLearn, readRules, rulesPage, projectRel } from './lib/learn.mjs';
+import { buildSite } from './lib/review-site.mjs';
 import { ensureBeatsV2, beatOwnerOf, beatSourceOf, beatBlocksOf, retireScript, refreshStoryboard, writeWholeTable, promisedOf, refList } from './lib/beat-source.mjs';
 import { r3Round as r3, clock2 } from './lib/time.mjs';
 import { seamsSync } from './lib/seams.mjs';
@@ -95,8 +113,8 @@ const META = '.meta.json';
 const STATE = '.state.json';
 export const PREVIEW = { tail: 0.5, fps: 2, maxCells: 24, bar: 64, labelScale: 6 };
 const PLACEHOLDER = '（寫 1–5 條';
-const VALUE_FLAGS = ['project', 'seg', 'note', 'ver', 'template', 'say', 'said', 'a', 'b'];
-const BOOL_FLAGS = ['json', 'no-preview', 'preview', 'no-change', 'prerender', 'no-prerender', 'requests', 'help'];
+const VALUE_FLAGS = ['project', 'seg', 'note', 'ver', 'template', 'say', 'said', 'a', 'b', 'only'];
+const BOOL_FLAGS = ['json', 'no-preview', 'preview', 'no-change', 'prerender', 'no-prerender', 'requests', 'help', 'page', 'round'];
 
 const posix = (p) => p.split(path.sep).join('/');
 // 工作區（目前資料夾）外的路徑印絕對路徑（同 qc.mjs）
@@ -1056,19 +1074,25 @@ export function finishRound(P, flags = {}, log = console.log, steps = {}) {
 //   沒改到＝失敗，理由取 AI 在 r<N>.md 寫的那一列，沒有就寫「這段沒有改動」
 const rowMap = (sec) => new Map([...String(sec).matchAll(/^- (\S+?)：(.+)$/gm)].map((m) => [m[1], m[2].trim()]));
 function reportRequests(P, round, name, { auto, removed, aiRows, rows }) {
-  const q = requestsInfo(P.project);
-  if (!q || q.revision !== round.requests.revision) return { warn: warn('剪輯台修改單在這輪開始之後重新複製過（或被清空），剪輯台的狀態沒有改', '停下來重讀 work/feedback/editor-requests.md，問使用者要不要照新的改') };
+  const q = requestsInfo(P.project), rev = round.requests.revision;
+  // 這輪開始後使用者又複製了新的修改單：這輪還沒寫進新修改單的段被帶著走（carried），照舊用開輪那一版回報；
+  // 又寫進新修改單的段（使用者又改了）不回報，留給下一輪
+  const same = q?.revision === rev;
+  const mine = !q ? [] : same ? round.requests.ids.filter((x) => q.ids.includes(x)) : round.requests.ids.filter((x) => q.carried.includes(x) && q.states[x]?.revision === rev);
+  const again = q && !same ? round.requests.ids.filter((x) => q.ids.includes(x)) : [];
+  const reWarn = again.length ? warn(`剪輯台修改單在這輪開始之後重新複製過，${again.join('、')} 又寫進新的修改單，剪輯台的狀態沒有改`, '停下來重讀 work/feedback/editor-requests.md，問使用者要不要照新的改') : null;
+  if (!mine.length) return { warn: reWarn || warn('剪輯台修改單在這輪開始之後重新複製過（或被清空），剪輯台的狀態沒有改', '停下來重讀 work/feedback/editor-requests.md，問使用者要不要照新的改') };
   const done = [], failed = [];
-  for (const id of round.requests.ids.filter((x) => q.ids.includes(x))) {
+  for (const id of mine) {
     let ok, msg;
     if (removed.includes(id)) { ok = true; msg = '這段從 plan.json 拿掉了'; }
     else if (id in auto) { ok = auto[id] != null; msg = ok ? rows.get(id) ?? auto[id] : aiRows.get(id) ?? '這段沒有改動'; }
     else { const row = rows.get(id); ok = !!row && !/^沒(做|有改)/.test(row); msg = row ?? '這段沒有改動'; }
-    doRequestsStatus({ P }, { state: ok ? 'done' : 'failed', revision: q.revision, ids: [id], message: clip(msg, 300), round: name });
+    doRequestsStatus({ P }, { state: ok ? 'done' : 'failed', revision: rev, ids: [id], message: clip(msg, 300), round: name });
     (ok ? done : failed).push({ id, msg });
   }
   const line = `剪輯台修改單：${done.length ? `已改完 ${done.map((x) => x.id).join('、')}` : '沒有已改完的段'}${failed.length ? `；失敗 ${failed.map((x) => `${x.id}（${clip(x.msg, 30)}）`).join('、')}` : ''}`;
-  return { done, failed, line };
+  return { done, failed, line, ...(reWarn ? { note: reWarn } : {}) };
 }
 
 function finishOnce(P, flags = {}, log = console.log, steps = {}) {
@@ -1247,6 +1271,7 @@ function finishOnce(P, flags = {}, log = console.log, steps = {}) {
   if (flags.prerender) S.prerender(P, flags);
   const rq = round.requests ? reportRequests(P, round, name, { auto, removed, aiRows, rows: rowMap(sectionText(md, '改了哪幾段')) }) : null;
   if (rq?.warn) notes.push(rq.warn);
+  if (rq?.note) notes.push(rq.note);
 
   // 印
   report.ok = true;
@@ -1304,12 +1329,46 @@ export function parseArgs(argv) {
   return flags;
 }
 
+// ---------- learn（062）、site（063） ----------
+function learnCmd(P, flags) {
+  if (flags.page) {
+    const rules = readRules(P.project);
+    const r = rulesPage({ templateDir: P.templateDir, project: P.project, rel: projectRel(P.root, P.project), rules });
+    if (flags.json) { console.log(JSON.stringify({ file: rel(r.file), rules: rules.length }, null, 2)); return 0; }
+    const by = LEARN.where.map((w) => `${w} ${rules.filter((x) => x.where === w).length}`).join('、');
+    console.log(`✓ 選擇頁：${rel(r.file)}（${rules.length} 條：${by}）`);
+    console.log('→ 把這一頁給使用者（平台能發布網頁就發布、給網址；不能就給檔案路徑），請他每條選「照做／不要／再想想」，按最下面「複製答案」貼回來；貼回來再照 references/learn-habits.md 第 4 步做');
+    return 0;
+  }
+  const r = writeLearn({ root: P.root, project: P.project });
+  if (flags.json) { console.log(JSON.stringify({ file: r.rel, counts: r.counts, line: r.line }, null, 2)); return 0; }
+  const c = r.counts;
+  console.log(`✓ ${r.rel}：回饋 ${c.rounds} 輪、原話 ${c.quotes} 則、建議改規則 ${c.rules} 條（已是規則 ${c.known}）、剪輯台手改 ${c.edits} 項、字幕手改 ${c.subtitles} 處、換模板 ${c.swaps} 次、重新設計 ${c.redesigns} 段、退回 ${c.reverts} 次`);
+  if (!c.rounds && !c.edits && !c.subtitles && !c.swaps && !c.redesigns) { console.log('⚠ 這集沒有調整紀錄（沒開過回饋輪、剪輯台也沒手改）→ 跟使用者說「這集沒有可以學的調整」，不用做選擇頁'); return 0; }
+  for (const l of next(`讀 ${r.rel}，照 .agents/skills/auto-edit-review/references/learn-habits.md 第 2 步寫候選規則 ${rel(path.join(P.project, 'work', 'feedback', LEARN.rules))}，再跑下一行做成選擇頁`, cmdLine('versions.mjs', ['learn', '--project', rel(P.project), '--page']))) console.log(l);
+  return 0;
+}
+function siteCmd(P, flags) {
+  if (flags.round && flags.only) throw new Error('--round 和 --only 只能選一個 → 這一輪改到的段用 --round，指定段用 --only s01,s02');
+  const r = buildSite(P, flags, { log: flags.json ? () => {} : (s) => console.log(s) });
+  if (flags.json) { console.log(JSON.stringify({ file: r.rel, size: r.size, segs: r.segs, scope: r.scope, shot: r.need, missing: r.missing, old: r.old, warnings: r.warnings }, null, 2)); return 0; }
+  const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} MB`;
+  console.log(`✓ 手機確認頁：${r.rel}（${r.scope}：動畫與字卡 ${r.anim}、錄影 ${r.segs - r.anim}；${mb(r.size)}，最大一張 ${Math.round(r.biggest / 1024)} KB）`);
+  console.log(`最後一格：沿用 ${r.made - r.need.filter((id) => !r.missing.includes(id)).length} 張、補截 ${r.need.length} 段${r.missing.length ? `；沒有圖：${r.missing.join('、')}` : ''}`);
+  for (const w of r.warnings) console.log(`⚠ ${w}`);
+  console.log(`→ 把 ${r.rel} 發布成網頁（只有這一個檔；平台的 Site／Artifact 功能），網址給使用者；不能發布就給檔案路徑。使用者在手機填完按「複製提示詞」貼回來，照 auto-edit-review 流程 F 做`);
+  return 0;
+}
+
 export function cli(argv = process.argv.slice(2)) {
   if (!argv.length || argv.includes('--help')) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
   const flags = parseArgs(argv);
-  const CMDS = ['begin', 'finish', 'save', 'new', 'accept', 'use', 'list', 'compare'];
+  const CMDS = ['begin', 'finish', 'save', 'new', 'accept', 'use', 'list', 'compare', 'learn', 'site'];
   if (!CMDS.includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 ${CMDS.join('、')} → 改成其中一個（用 --help 看用法）`);
   const P = pathsFrom(flags);
+  // 062、063：只讀這集的紀錄、產生頁面，不動 plan.json（不跑下面的遷移）
+  if (flags.cmd === 'learn') return learnCmd(P, flags);
+  if (flags.cmd === 'site') return siteCmd(P, flags);
   // 032 B6：拍點正本的遷移（每個專案第一次自動做一次）
   if (P.project) for (const l of ensureBeatsV2(P, { lib: () => loadLib(P.templateDir, P.project) }).lines) if (!flags.json) console.log(l);
   const ids = String(flags.seg || '').split(/[,，、\s]+/).filter(Boolean);

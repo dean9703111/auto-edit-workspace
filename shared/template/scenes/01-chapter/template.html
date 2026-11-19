@@ -2,11 +2,13 @@
 <!-- @style -->
 /* 章節轉場：全畫面不透明幕 2.5s，背景＋章節號卡第一格就在，HF 不淡出。
    整組（號卡 280 ＋ 間距 48 ＋ 標題欄）以 margin:auto 水平置中、頂 400（course：垂直置中於 y 540）／450（yt：品牌橫幅在場，置中於可用區 y 100–1080 的中心 590）；
-   標題欄 = 主標板 160 ＋ 間距 20 ＋ 副標帶 100（向右錯開 40）＝ 號卡高 280（間距 20 是這樣推出來的，不換 token）；號卡到標題欄 --sc-gap-lg。
+   標題欄 = 主標板 160 ＋ 間距 20 ＋ 副標帶 100 ＝ 號卡高 280（間距 20 是這樣推出來的，不換 token）；號卡到標題欄 --sc-gap-lg。
+   章名板、副標帶同寬（取寬的那塊）、同一個左右緣、字置中；標題欄和號卡上下置中（沒有副標時章名板在號卡高度的正中間）。
    排法 free：號卡＋標題欄是一組手排的章節卡（data-snap-width 補偶數寬、margin auto 置中），不用 helper 排。寬度由 scene-motion 補成偶數，左緣是整數 px。 */
 #chGroup { position: absolute; left: 0; right: 0; top: {{#yt}}{{#icon}}560{{/icon}}{{^icon}}450{{/icon}}{{/yt}}{{^yt}}{{#icon}}510{{/icon}}{{^icon}}400{{/icon}}{{/yt}}px; margin: 0 auto; display: flex; align-items: flex-start; gap: var(--sc-gap-lg); width: max-content; }
-#chCol { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
-#chSub { margin-left: 40px; }
+#chCol { display: flex; flex-direction: column; align-items: stretch; justify-content: center; align-self: stretch; gap: 20px; }
+#chTitle, #chSub { width: auto; justify-content: center; }
+#chTitle .sc-opt, #chSub .sc-opt { text-align: center; }
 {{#icon}}
 /* 有圖示：圖示卡（180，深底白線、細框，和號卡同一套，任何背景都看得清楚）放在號卡正上方、左緣對齊號卡，間距 40（icon 頂 = 群組頂 −220）；
    整組（圖示 180 ＋ 40 ＋ 號卡 280 = 500）仍置中於 y 540（yt：590）→ course 290–790、yt 340–840（群組頂 510／560） */
@@ -23,8 +25,7 @@
    背景圖是 16:9：cover 時取右邊（右上圓弧＋點陣落在上方平台介面區、右下手機在下方，中間留給內容）。 */
 .sc-surface-ch { background-position: 100% 50%; }
 #chGroup { left: 140px; right: auto; top: 240px; width: 800px; height: 1000px; margin: 0; flex-wrap: wrap; justify-content: center; align-content: center; align-items: flex-start; gap: 64px 48px; }
-#chCol { flex: 0 0 100%; align-items: stretch; gap: 32px; }
-#chSub { margin-left: 0; }
+#chCol { flex: 0 0 100%; align-items: stretch; align-self: flex-start; justify-content: flex-start; gap: 32px; }
 #chTitle, #chSub { width: auto; height: auto; min-height: var(--h); justify-content: center; white-space: normal; }
 #chTitle .sc-opt, #chSub .sc-opt { text-align: center; text-wrap: balance; }
 #chSub { font-size: 64px; line-height: 88px; }

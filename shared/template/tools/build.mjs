@@ -53,9 +53,13 @@
  *                                                     theme（light／dark）、style（shared/template/styles/ 的資料夾名）、format（portrait／landscape）、speakerSide（left／center／right）、
  *                                                     chapterBadge（true／false）、chapterMap（true／false：每個 01 章節轉場換成本集地圖）、look（off）、look.color（0–1）、look.slim（0–1.2）、look.beauty（0–1）、look.belly（0–1：瘦小腹）、
  *                                                     bed.music（曲庫的曲名；none＝這一集不配）、bed.volume（−40～+6 dB，0＝曲庫檔原本的音量、−40＝靜音）、outro.from（#N）、outro.music（曲名；none＝不配）、
- *                                                     captionMarks（重點字幕的句號，逗號隔開，例 --set "captionMarks=#6,#7@關鍵詞,#13"：#N＝這一則字幕用主色底的重點樣式、#N@詞＝只有那幾個字；整份換掉；全部拿掉用 --unset captionMarks）。
+ *                                                     captionMarks（重點字幕的句號，逗號隔開，例 --set "captionMarks=#6,#7@關鍵詞,#13"：#N＝這一則字幕用主色底的重點樣式、#N@詞＝只有那幾個字；整份換掉；全部拿掉用 --unset captionMarks）、
+ *                                                     screenFrame.scale（錄影畫面框：橫式錄影、圖片段縮到畫面的幾倍，0.6–1 或 auto＝照字幕量到剛好不碰到）、screenFrame.inset（角標、子母畫面離框邊幾 px，0–80，預設 24），
+ *                                                     例 --set "screenFrame.scale=0.88;screenFrame.inset=24"；拿掉用 --unset screenFrame（回到 shared/setting.json 的預設，沒有預設＝不加框）。
  *                                                     鍵或值不對 ✖ 並列出能寫的。還沒有 plan.json 時 theme、style、format、look* 會先建 { "version": 1 } 再寫
- *   node shared/template/tools/build.mjs --project projects/<專案> --unset "style;format"   拿掉這幾個設定（回到預設）；另外收 bed、outro（整個拿掉：底樂回到工作區預設、不配片尾配樂）
+ *   node shared/template/tools/build.mjs --project projects/<專案> --unset "style;format"   拿掉這幾個設定（回到預設）；另外收 bed、outro、captionStyle、screenFrame（整個拿掉：回到工作區預設）
+ *   錄影畫面框（plan.json screenFrame）：這一集沒寫、shared/setting.json 有 screenFrame 時，build（不是 --check）第一次把解析好的值（auto 寫成量到的數字）記進 plan.json；
+ *                                                     build／--check 的摘要印「錄影畫面框：縮到 N%…」；字幕改了、框會疊到字幕時 ⚠ 並印重新量測的指令
  *   node shared/template/tools/build.mjs --project projects/<專案> --to-design s05,s12
  *                                                     把這幾段換成內容設計動畫（拿掉模板與欄位，先備份 plan.json）、補 work/briefs/、驗收次數歸零、build，印派工那一行；
  *                                                     已經是內容設計動畫的段不重做
@@ -126,8 +130,10 @@ import { jobState, runJob, isJobChild, DEFAULT_WAIT, STILL_RUNNING } from './lib
 import { materializeFills, readFillSpec, renderSheet } from './lib/custom-fill.mjs';
 import { checkShots, prepareShots, shotHint, designImages, prepareDesignImages } from './lib/shots.mjs';
 import { splitFlag, valueOf, oneOf, saidOf, isMain } from './lib/cli.mjs';
-import { fail, next as nextLines } from './lib/say.mjs';
-import { planSetCmd, toDesignCmd } from './lib/plan-set.mjs';
+import { ok, fail, next as nextLines } from './lib/say.mjs';
+import { readSettings } from './lib/settings.mjs';
+import { frameForPlan } from './lib/screen-frame.mjs';
+import { planSetCmd, toDesignCmd, setPlan } from './lib/plan-set.mjs';
 import { framingCmd, framingDoneCmd } from './lib/framing-flow.mjs';
 import { attachBeats, ensureBeatsV2, migrateBeats } from './lib/beat-source.mjs';
 import { findProject, pathsFrom, loadLib, hasVoiceSource, projectLabel, fromRoot } from './lib/project.mjs';
@@ -285,6 +291,7 @@ export function listText(lib) {
   lines.push('', '# 插入素材（"type": "media"：螢幕錄影或圖片，整張幕＋右下角子母畫面；用法見 shared/template/USAGE.md 第 5 節）', '',
     '| 欄位 | 值 | 預設 | 說明 |', '|---|---|---|---|');
   for (const r of MEDIA_FIELDS) lines.push(`| ${r[0]} | ${r[1]} | ${r[2]} | ${r[3]} |`);
+  lines.push('', '錄影畫面框（plan.json 第一層 "screenFrame": { "scale": 0.6–1 或 "auto", "inset": 24 }，不寫在段裡）：橫式的錄影、圖片段（side、tape 以外）縮進一個置中的框、框外是主題背景，角標離框上、右各 inset px，子母畫面在框的右下角；auto＝照字幕量到剛好不碰到。這一集：build.mjs --set "screenFrame.scale=auto;screenFrame.inset=24"；以後每集的預設：brand.mjs screen-frame');
   return lines.join('\n');
 }
 
@@ -440,6 +447,21 @@ export function attachWords(cues, { transcript, video = null } = {}) {
   if (Math.abs(lastW - lastC) > 2) { cues.wordsWhy = `work/transcript.json 的長度（${r3(lastW)}s）和 rough.srt（${r3(lastC)}s）對不上`; return cues; }
   cues.words = words.map((w) => ({ text: w.text, start: +w.start, end: +w.end })).sort((a, b) => a.start - b.start);
   return cues;
+}
+
+// 061 錄影畫面框：這一集還沒有 plan.json screenFrame、shared/setting.json 有 → 第一次 build 把解析好的值（auto 寫成量到的數字）記進 plan.json，
+//   之後照這一集的（以影片為單位記錄）。--check 不寫；直式不套；測試用 AUTO_EDIT_NO_LOCAL_BRAND=1 不看本機設定（和字幕樣式的預設一樣）
+function recordScreenFrame(P, flags, log) {
+  if (process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' || !fs.existsSync(P.plan)) return;
+  let plan;
+  try { plan = JSON.parse(fs.readFileSync(P.plan, 'utf8')); } catch { return; }   // 壞掉的 plan.json 交給 loadInputs 報
+  if (!plan || typeof plan !== 'object' || plan.screenFrame !== undefined || !Array.isArray(plan.scenes)) return;
+  const settings = readSettings(path.resolve(P.templateDir, '..')).data;
+  if (settings.screenFrame == null) return;
+  const r = frameForPlan({ plan, settings, format: resolveFormat({ projectDir: P.project, plan, flag: flags.format ?? null }).format });
+  if (!r.record) return;
+  const ch = setPlan(P.project, { 'screenFrame.scale': r.record.scale, 'screenFrame.inset': r.record.inset }, { templateDir: P.templateDir, plan: P.plan });
+  if (ch.length) log(ok(`plan.json：screenFrame＝${JSON.stringify(r.record)}（照 shared/setting.json 的 screenFrame 記下來${r.frame.auto ? `，量字幕上緣 y ${r.frame.capTop}` : ''}；之後這一集照這一份，要改用 build.mjs --set "screenFrame.scale=…"）`));
 }
 
 function loadInputs(P) {
@@ -694,6 +716,7 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   const json = !!(flags.check && flags.json);
   if (json) log = () => {};
   if (P.project) log(`專案：${rel(P.project)}`);
+  if (!flags.check && !flags.prepare) recordScreenFrame(P, flags, log);
   const { plan, cues, planText, srtText } = loadInputs(P);
   if (!flags.check && !flags.prepare && plan.scenes === undefined) throw new Error('plan.json 還沒有 scenes → 先跑 build.mjs --scaffold，照 work/分鏡素材/ 寫段落');
   // 背景的底片處理還在跑：等它，不要重複編碼（--scaffold 開的；長片約幾分鐘）。
@@ -781,6 +804,8 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
         schema: 2, ok: !res.errors.length, errors: res.errors, warnings: [...res.warnings, ...capW],
         planHash, rhythm: top.rhythm, theme: top.theme, format: C.format, canvas: [C.W, C.H], formatSource: fmt.source, versions,
         videoDur, outputDur: res.finalDur ?? res.outDur ?? videoDur, ending: endingJson(res),
+        // 061 錄影畫面框（沒設定＝null）：win＝[x, y, w, h]；capTop＝量到的字幕底板上緣；from＝plan（這一集）／setting（預設、還沒記進 plan）
+        screenFrame: res.screenFrame ? (({ scale, inset, auto, win, capTop, from }) => ({ scale, inset, auto, win, capTop, from }))(res.screenFrame) : null,
         voiceOnly, roughBlack: rb.black, voiceUncovered: top.voiceUncovered, uncovered: top.uncovered, cutpoints: cp.list, chapters: top.chapters,
         items: res.tm ? jsonItems(res) : [],
         sfxCount: top.sfxCount, sfxBudget: top.sfxBudget, outro: top.outro, bed: res.tm ? bedJsonOf(res, clip, cues) : null, moods: top.moods ?? [],
@@ -1216,7 +1241,7 @@ function showAt(P, flags) {
 export function errorJson(message) {
   return { schema: 2, ok: false, errors: [message], warnings: [], planHash: null, rhythm: null, theme: null, format: null, canvas: null, formatSource: null,
     versions: { hyperframes: { pinned: null, installed: null, ok: false } },
-    videoDur: null, outputDur: null, ending: null, voiceOnly: [], roughBlack: [], voiceUncovered: [], uncovered: [], cutpoints: [],
+    videoDur: null, outputDur: null, ending: null, screenFrame: null, voiceOnly: [], roughBlack: [], voiceUncovered: [], uncovered: [], cutpoints: [],
     chapters: [], items: [], sfxCount: {}, sfxBudget: { perMinuteAvg: 0, over: [], dense: [], loud: [] },
     outro: null, bed: null, moods: [], edit: null, paths: {} };
 }

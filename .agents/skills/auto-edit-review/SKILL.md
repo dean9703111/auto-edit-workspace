@@ -1,6 +1,6 @@
 ---
 name: auto-edit-review
-description: 分鏡表確認後的定稿與審查：build、audit、完成態拼圖、開完成影片預覽給使用者看；使用者看完給修改時開回饋輪 rN（先備份 plan.json、記原話與分類、改到的段存版本）；要一段重新設計時先出分鏡提案（work/versions/<段>/v<N>/）給使用者確認再做；退回某一版；使用者說「打開剪輯台」「調好了」時開關剪輯台。當分鏡表剛確認完，或使用者說「s05 的金句卡往左移」「這張卡…」「s12 的動畫想更完善」「s12 重新設計」「s12 用 v1」「打開剪輯台」「調好了」「照修改單改」時使用。還沒有確認分鏡表時不要用（改用 auto-edit-storyboard）；要輸出完成影片時不要用（改用 auto-edit-deliver）。
+description: 分鏡表確認後的定稿與審查：build、audit、完成態拼圖、開完成影片預覽給使用者看；使用者看完給修改時開回饋輪 rN（先備份 plan.json、記原話與分類、改到的段存版本）；要一段重新設計時先出分鏡提案（work/versions/<段>/v<N>/）給使用者確認再做；退回某一版；使用者說「打開剪輯台」「調好了」時開關剪輯台；整理這集的調整給 AI 學習慣（選擇頁，勾了才寫進偏好）；發布手機確認頁。當分鏡表剛確認完，或使用者說「s05 的金句卡往左移」「這張卡…」「s12 的動畫想更完善」「s12 重新設計」「s12 用 v1」「打開剪輯台」「調好了」「照修改單改」「整理這集的調整給 AI」「照這集的調整紀錄學我的習慣」「手機確認頁」「把每一段動畫最後一格發布成網頁」時使用。還沒有確認分鏡表時不要用（改用 auto-edit-storyboard）；要輸出完成影片時不要用（改用 auto-edit-deliver）。
 version: 0.2.0
 ---
 # 定稿、審查、回饋輪、剪輯台
@@ -13,6 +13,8 @@ version: 0.2.0
 | ④ 的修改；「照修改單改」（流程 F） | 流程 B | `work/feedback/r<N>.md`、改到的段的新版本 | `versions.mjs finish` 印停點 ④ | ④ 完成影片預覽 |
 | ④ 之後一段要重新設計（D）、退回舊版（E） | 流程 D、E | D：`work/versions/<段>/v<N>/分鏡.md` → 做好的 v<N>；E：那段換回舊版 | D：使用者確認過分鏡；E：build 0 個 ✖ | D：③ 分鏡表（<段> v<N>）→ ④；E：④ |
 | 「打開剪輯台」 | 流程 C | 剪輯台網址 | `editor.mjs --status` 印出網址 | ⑤ 剪輯台 |
+| 「整理這集的調整給 AI」、貼上「照這集的調整紀錄學我的習慣…」 | 流程 G | `work/feedback/learn.md`、選擇頁 | 勾了「照做」的偏好都寫進 `shared/偏好.md` | — |
+| 「手機確認頁」「把每一段動畫最後一格發布成網頁」 | 流程 H | `work/site/index.html`（發布成網頁） | 網址（或檔案路徑）給了使用者 | — |
 
 審查門檻的唯一定義：`shared/template/REVIEW.md`（數字照 style.md「審查門檻」）。
 
@@ -76,6 +78,25 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 完成判準：工具印「退回 v1」；0 個 ✖，印停點 ④ 那兩行。
 常見錯誤：印 `⚠ 字幕在 v1 之後改過` → 看 `finish` 的「文字對時」，先跑 `node shared/template/tools/build.mjs --project projects/<專案> --autofix --only <段>` 讓工具照 → 改，剩下的 ✖ 再手改那段的 `#N@詞`。
 
+**G. 整理這集的調整給 AI**（剪輯台輸出後的按鈕、`deliver.mjs` 回報裡那一行：「照這集的調整紀錄學我的習慣…」；步驟在 `references/learn-habits.md`）
+
+```
+node shared/template/tools/versions.mjs learn --project projects/<專案>
+node shared/template/tools/versions.mjs learn --project projects/<專案> --page
+```
+
+第 1 行寫 `work/feedback/learn.md`；照它寫候選規則 `work/feedback/learn-rules.json`，第 2 行做成選擇頁給使用者勾。貼回答案後，照做的偏好用 `status.mjs --prefs-add` 寫，改預設、程式檢查類只記成給工具作者的回饋，不自己改 `shared/`。
+完成判準：選擇頁給了使用者；答案回來後，勾「照做」的偏好都在 `shared/偏好.md`「照做」。
+
+**H. 發布手機確認頁**（「手機確認頁」「把每一段動畫最後一格發布成網頁」；細節在 `references/mobile-site.md`）
+
+```
+node shared/template/tools/versions.mjs site --project projects/<專案>
+```
+
+只放這一輪改的段加 `--round`、指定段加 `--only s01,s02`。把 `work/site/index.html` 這一個檔發布成網頁（平台的網頁發布功能），不要自己寫版面。貼回來的修改單照流程 F 做。
+完成判準：印 `✓ 手機確認頁`；網址（不能發布就是檔案路徑）給了使用者。
+
 ## 停點
 
 | 停點 | 使用者回 | 做什麼 |
@@ -118,9 +139,13 @@ node shared/template/tools/versions.mjs use --project projects/<專案> --seg <�
 <停點 ⑤，或停點 ③（<段> v<N>）那兩行原文>
 ```
 
+流程 G（選擇頁）、流程 H（手機確認頁）：最後兩行照 `references/learn-habits.md`、`references/mobile-site.md` 寫的。
+
 ## 什麼時候讀 references/
 
 - `references/feedback-round.md`：不確定修改該歸哪一類時才讀。
 - `references/revise.md`：流程 D 改版時才讀。
 - `references/editor-requests.md`：流程 F 照修改單改時才讀。
 - `references/reviewer-brief.md`：使用者要求逐格抽查、要派子代理看全片截圖時才讀。
+- `references/learn-habits.md`：流程 G 整理這集的調整給 AI 時才讀。
+- `references/mobile-site.md`：流程 H 發布手機確認頁時才讀。

@@ -44,6 +44,7 @@ import { footageVf, lut3dFilter } from './lib/ff.mjs';
 import { CANVAS } from './lib/canvas.mjs';
 import { resolveFormat, canvasOf } from './lib/canvas.mjs';
 import { mediaFrame, SIDE } from './lib/media.mjs';
+import { frameForPlan } from './lib/screen-frame.mjs';
 import { cutsState, saveCuts } from './editor/server/cuts.mjs';
 import { storyboardState, saveStoryboard, storyboardImage } from './editor/server/storyboard.mjs';
 import { startExport, cancelExport, exportState, exportBusy, exportFile, prerenderState, revealFinal } from './editor/server/export.mjs';
@@ -55,10 +56,11 @@ import { hintsInfo, doHintSeen } from './editor/server/hints.mjs';
 import { storyboardOptions } from './editor/server/storyboard-options.mjs';
 import { listFillSpecs } from './lib/custom-fill.mjs';
 import { requestsInfo, doRequestsStatus, doRequests } from './editor/server/requests.mjs';
+import { writeLearn } from './lib/learn.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
 import { r3 } from './lib/time.mjs';
 import { LOUD } from './lib/audio.mjs';
-import { LOCAL_ROLES, localSfxDir } from './lib/sfx-local.mjs';
+import { LOCAL_ROLES, localSfxDir, wavSeconds } from './lib/sfx-local.mjs';
 import { readBedInfo } from './lib/music.mjs';
 import { soundOf, liveFingerprint, liveOk, LIVE_INFO, LIVE_INFO_V } from './editor/live-sound.mjs';
 
@@ -549,7 +551,8 @@ async function getSchema(ctx) {
       // 配樂（kind: "bgm"，例如 bgm-cylinder-five）不是音效，不列進音效清單
       sounds: Object.entries(j.sounds || {}).filter(([, v]) => v?.kind !== 'bgm').map(([k]) => k),
       // 050 可以自己選的音效（換一顆、在任意時間加一顆）：名稱照 kit/sfx.json 與 shared/sfx-local；工具自動配的秒針不能自己選。volume、peak 給快速試聽和時間軸算音量、落點
-      sfx: Object.entries(j.sounds || {}).filter(([k, v]) => v?.kind !== 'bgm' && !LOCAL_ROLES[k]?.auto).map(([k, v]) => ({ name: k, zh: v.zh || k, use: v.use || '', volume: v.volume ?? 0.5, peak: v.peak || 0, ...(v.local ? { local: true } : {}) })),
+      //   065 seconds＝檔案有幾秒（時間軸照它畫方塊的長度、裁前後；自備的量過，內建的讀檔頭）
+      sfx: Object.entries(j.sounds || {}).filter(([k, v]) => v?.kind !== 'bgm' && !LOCAL_ROLES[k]?.auto).map(([k, v]) => ({ name: k, zh: v.zh || k, use: v.use || '', volume: v.volume ?? 0.5, peak: v.peak || 0, seconds: v.seconds ?? wavSeconds(path.join(P.sfx, `${k}.wav`)), ...(v.local ? { local: true } : {}) })),
       custom: customSchema(P),
     } : { key, error: `讀不到 build.mjs --list --json（${(r.stderr || r.stdout).trim().slice(0, 200)}）→ 卡片文字欄位先用 plan.json 原本有的欄位`, scenes: [], fx: [], sounds: [], sfx: [], custom: customSchema(P) };
     ctx.schema = data;
@@ -713,10 +716,12 @@ async function doRefFrame(ctx, body) {
 
 // 版式與畫布（009 FR-120）：和 build 同一套判斷（plan.json format > 製作進度.md「版式」> 主軌寬高比）；剪輯只讀，不寫 format
 // media：插入素材的可見區 [x, y, w, h]（lib/media.mjs mediaFrame 的 view；panel＝直式有講者面板），即時模擬照這個放，和完成影片一樣不壓字幕帶
-export function canvasInfo(projectDir, plan) {
+//   061 錄影畫面框（frame＝lib/screen-frame.mjs 解析好的；橫式才有）：可見區換成框 WIN，另外帶 media.frame＝[x, y, w, h]、media.radius
+export function canvasInfo(projectDir, plan, frame = null) {
   const r = resolveFormat({ projectDir, plan: isObj(plan) ? plan : null });
   const c = canvasOf(r.format);
-  const media = { panel: mediaFrame(c, { panel: true }).view, full: mediaFrame(c, { panel: false }).view, side: r.format === 'portrait' ? null : { contain: SIDE.view, cover: SIDE.view } };
+  const win = r.format !== 'portrait' && frame?.win ? frame.win : null, V = win ? { contain: win, cover: win } : null;
+  const media = { panel: V || mediaFrame(c, { panel: true }).view, full: V || mediaFrame(c, { panel: false }).view, side: r.format === 'portrait' ? null : { contain: SIDE.view, cover: SIDE.view }, ...(win ? { frame: win, radius: frame.radius } : {}) };
   return { format: r.format, source: r.detail, W: c.W, H: c.H, maxChars: c.caption.maxChars, captionBottom: c.caption.bottom, pip: c.pip.box, media };
 }
 
@@ -782,7 +787,7 @@ async function getState(ctx) {
     edit: isObj(plan.data?.edit) ? plan.data.edit : null,
     bed: bedInfo(ctx, plan.data),
     look: lookState(ctx, plan.data),
-    canvas: canvasInfo(P.project, plan.data),
+    canvas: canvasInfo(P.project, plan.data, screenFrameOf(ctx, plan.data)),
     media, video, videoError, captions: srt.cues,
     cutpoints: readCutpoints(ctx.cutpointsFile),
     sfxMemory: readMemory(ctx),
@@ -805,6 +810,13 @@ const reportOut = (rep) => ({ ready: true, data: rep.report, error: rep.error, i
 // 035 字幕樣式：以後每集的預設（shared/setting.json 的 captions；上下位置 lift 橫式、直式分開記）；這一集的在 plan.json captionStyle（/api/save）
 // 測試用 ctx.speakerTemplate 指到暫存的 shared/template（和講者資料一樣），不動真的 shared/setting.json
 const capTemplate = (ctx) => ctx.speakerTemplate || ctx.P.templateDir;
+// 061 錄影畫面框：和 build 同一套（plan.json screenFrame → shared/setting.json 的 screenFrame；auto 照這一集的字幕樣式量）；測試不看本機設定
+function screenFrameOf(ctx, plan) {
+  if (!isObj(plan)) return null;
+  const local = process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' && !ctx.speakerTemplate ? {} : readSettings(path.resolve(capTemplate(ctx), '..')).data;
+  const format = resolveFormat({ projectDir: ctx.P.project, plan }).format;
+  return frameForPlan({ plan, settings: { screenFrame: local.screenFrame ?? undefined, captions: local.captions ?? undefined }, format }).frame;
+}
 function captionInfo(ctx) {
   const setting = process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' && !ctx.speakerTemplate ? null : readSettings(path.resolve(capTemplate(ctx), '..')).data.captions ?? null;
   return { setting };
@@ -1225,6 +1237,10 @@ async function handle(ctx, req, res) {
     if (p === '/api/hints') { const [s, o] = doHintSeen(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
+    // 062：輸出過之後「整理這集的調整給 AI」：寫 work/feedback/learn.md，回傳要複製的那一行
+    if (p === '/api/learn') {
+      try { const r = writeLearn({ root: P.root, project: P.project }); return sendJson(res, 200, { ok: true, file: r.rel, line: r.line, counts: r.counts }); } catch (e) { return sendJson(res, 500, { error: 'learn', message: e.message }); }
+    }
     if (p === '/api/loudness') { const [s, o] = await doLoudness(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/check') { const rep = await getReport(ctx, { fresh: true }); return sendJson(res, 200, reportOut(rep)); }
     if (p === '/api/check/hidden') { const [s, o] = saveHidden(ctx, body); return sendJson(res, s, o); }
@@ -1335,6 +1351,8 @@ async function handle(ctx, req, res) {
   }
   // 035：字幕樣式的表與幾何（沒有 node 的 import），剪輯台頁面和 build 用同一支
   if (p === '/lib/caption-style.mjs') return sendFile(req, res, path.join(HERE, 'lib', 'caption-style.mjs'), { type: 'text/javascript; charset=utf-8' });
+  // 062／063：修改單的標籤與文字格式（手機確認頁內嵌同一支）
+  if (p === '/lib/requests-md.mjs') return sendFile(req, res, path.join(HERE, 'lib', 'requests-md.mjs'), { type: 'text/javascript; charset=utf-8' });
   if (p.startsWith('/kit/')) {
     const f = safeJoin(path.join(P.templateDir, 'kit'), p.slice('/kit/'.length));
     return f ? sendFile(req, res, f) : sendText(res, 404, '找不到檔案');

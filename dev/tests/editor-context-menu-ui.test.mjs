@@ -369,11 +369,11 @@ test('音效：換、靜音、還原某一段的主音效；在任意時間加�
   assert.equal(await app(() => window.__editor.auditioned), 'ding', '加了就聽得到是哪一顆');
   assert.equal(await page.$eval('#inspKind', (el) => el.textContent), '自己加的音效');
   await until(() => JSON.stringify(readPlan().edit?.sfx) === JSON.stringify(list), '自動存進 plan.json 的 edit.sfx');
-  // 左右拖＝改時間；上下拖＝調這一顆的音量
-  await drag('sfx', 20.05, 23.05);
+  // 左右拖＝改時間；上下拖＝調這一顆的音量（抓方塊中間：兩端是裁剪，065）
+  await drag('sfx', 20.4, 23.4);
   list = await own();
   assert.ok(Math.abs(list[0].at - 23) < 0.1, `左右拖 3 秒：${JSON.stringify(list)}`);
-  await drag('sfx', 23.05, 23.05, { dy: -8 });
+  await drag('sfx', 23.4, 23.4, { dy: -8 });
   list = await own();
   assert.deepEqual([list[0].db, Math.abs(list[0].at - 23) < 0.1], [4, true], '往上拖 8 px＝+4 dB，時間不動');
   await until(() => JSON.stringify(readPlan().edit?.sfx) === JSON.stringify(list), '拖完自動存');
@@ -382,7 +382,7 @@ test('音效：換、靜音、還原某一段的主音效；在任意時間加�
   await openSub('在這裡加音效');
   await pick('完成音', '#ctxSub');
   assert.deepEqual((await own()).map((x) => x.sound), ['ding', 'success']);
-  await drag('sfx', 23.05, 28.55);
+  await drag('sfx', 23.4, 28.9);
   s = await st();
   assert.deepEqual([s.edit.sfx.map((x) => x.sound), s.sel], [['success', 'ding'], { kind: 'usfx', id: 1 }]);
   // 按右鍵：換一顆、調整音量（跳到屬性的滑桿）、移除

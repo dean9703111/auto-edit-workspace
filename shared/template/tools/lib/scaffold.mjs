@@ -390,7 +390,7 @@ export function renderSnippets(input) {
   L.push('- 講「這是什麼、按這個」→ 紅框加說明卡：`"callouts":[{"at":"#21","box":[…],"text":"設定"}]`。');
   L.push('- 目標很小 → 箭頭：`"arrows":[{"at":"#25","to":[x,y]}]`。字太小 → 放大鏡：`"lens":[{"at":"#26","box":[…],"zoom":2}]`。只看一塊 → 聚光燈：`"spot":[{"at":"#28","until":"#29","box":[…]}]`。');
   L.push('- 要點之前推近 → 運鏡：`"moves":[{"at":"#20","to":[…]},{"at":"#22","to":"full"}]`；說明卡、聚光燈、箭頭出現的期間不能運鏡。');
-  L.push('- 一步一步的操作 → STEP 膠囊：`"steps":[{"at":"#20","text":"打開設定"}]`。');
+  L.push('- 一步一步的操作 → STEP 步驟：`"steps":[{"at":"#20","text":"打開設定"}]`（橫式貼在那一步的紅框、箭頭旁邊）。');
   L.push('- 畫面露出金鑰、密碼、個資 → 打碼：`"redact":[{"box":[…]}]`（模糊燒進影片，框要蓋住那段時間它會出現的所有位置）。', '');
   L.push('圖示名是 lucide 的英文名稱（例 smartphone、laptop、video、cloud、check），寫錯 `--check-draft` 會報；找名稱：`build.mjs --project <專案> --icons 手機,雲端`。', '');
   L.push('## 字卡與全畫面', '');

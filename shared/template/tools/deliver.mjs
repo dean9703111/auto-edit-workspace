@@ -19,6 +19,7 @@ import { splitFlag, valueOf, oneOf, saidOf, isMain } from './lib/cli.mjs';
 import { isSummaryLine, isSfxWarn } from './lib/build-summary.mjs';
 import { clock1 } from './lib/time.mjs';
 import { editorUrlsSync } from './lib/editor-urls.mjs';
+import { learnLine, projectRel } from './lib/learn.mjs';
 
 const DELIVER_STALL_MIN = 20;   // render 一個百分比就要好幾分鐘（長片），比預設的 10 分鐘寬一點
 const HELP = `輸出完成影片（一條指令跑完測試片段、整支、驗收；要 Node 22、ffmpeg、HyperFrames）
@@ -89,6 +90,8 @@ function reportLines(P, job, { avFacts, built, watch }) {
     built.length ? `${built.join('；')}（build 原文；和停點 ④ 報過的一樣就刪掉這行）` : null,
     q.sheet ? relTo(F.sheet) : null,
     job.youtube ? `YouTube 說明欄：${relTo(job.youtube.file)}（整段貼到說明欄）` : null,
+    // 062：想讓之後的影片更像使用者，整理這集的調整給 AI（剪輯台輸出後的「整理這集的調整給 AI」複製的是同一行）
+    `想讓之後的影片更像你，把這行貼給 AI：${learnLine(projectRel(P.root, P.project))}`,
     watch ? `看完成影片 ${watch}` : null,
   ].filter(Boolean);
   const done = job.warnings.length ? '→ 完成（有標「要修」的 ⚠ 時改寫：→ 下一個停點：④ 完成影片預覽（說「改 <段>」開始））' : '→ 完成';

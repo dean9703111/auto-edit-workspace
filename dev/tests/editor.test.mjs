@@ -554,8 +554,10 @@ test('修改單狀態 API：複製僅存檔；AI 逐段回報開始、失敗、�
   assert.equal(JSON.parse(cli.stdout).requests.states.x02.state, 'generating');
   const latest = await (await post2('/api/requests', { markdown: '# 修改單新版\n\n## 1. s01\n' })).json();
   assert.notEqual(latest.requests.revision, revision);
-  assert.deepEqual(latest.requests.states, {}, '新修改單不沿用舊狀態');
+  assert.deepEqual(Object.keys(latest.requests.states), ['x02'], '新修改單的段不沿用舊狀態；舊那一版還在生成中、沒寫進新修改單的 x02 帶著走');
+  assert.deepEqual([latest.requests.states.x02.carried, latest.requests.carried], [true, ['x02']]);
   assert.equal((await update({ ids: ['s01'], state: 'done' })).status, 409);
+  assert.equal((await update({ ids: ['x02'], state: 'done' })).status, 200, '帶著走的段用開輪那一版回報收得到');
 });
 
 test('人聲響度（ebur128，剪掉的範圍不算）與縮圖條（ffmpeg sprite，快取在 .editor/thumbs/）', async () => {

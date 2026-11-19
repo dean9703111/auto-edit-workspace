@@ -66,6 +66,8 @@ export function loadLib(templateDir, projectDir = null) {
     ending: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readEndingSetting(sharedDir),
     // 035 字幕樣式的預設（brand.mjs captions、剪輯台勾「之後的影片也用這個」）；這一集的 plan.json captionStyle 優先
     captionDefault: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readSettings(sharedDir).data.captions ?? null,
+    // 061 錄影畫面框的預設（brand.mjs screen-frame）；這一集的 plan.json screenFrame 優先，build 第一次照它寫進 plan.json
+    screenFrameDefault: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readSettings(sharedDir).data.screenFrame ?? null,
     customDir: path.join(templateDir, 'custom'),
   };
 }

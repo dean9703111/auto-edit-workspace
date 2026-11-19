@@ -6,6 +6,7 @@
 //     "ending": { "image": "book-cover.jpg", "seconds": 9.9, "quote": true, "subscribe": "subscribe.gif" } }
 //                                                                                 片尾模板：片尾卡的圖、長度、要不要片尾金句、訂閱動畫（檔案在 shared/brand/；brand.mjs ending；lib/ending.mjs）
 //     "captions": { "look": "outline", "font": "wenkai", "size": 84, "weight": 700 }   以後每集的字幕樣式（brand.mjs captions、剪輯台；lib/caption-style.mjs；只存和原本不一樣的欄位）
+//     "screenFrame": { "scale": "auto", "inset": 24 }                                 以後每集的錄影畫面框（brand.mjs screen-frame；lib/screen-frame.mjs；build 第一次照它寫進那一集的 plan.json）
 //     "tmp": { "dir": "/Volumes/auto-edit-tmp", "image": "….sparseimage" }            暫存資料夾改放別處（status.mjs --tmp；lib/tmp.mjs；沒寫＝系統暫存）
 //     "editor": { "seen": ["coach-final.v1"] }                                       剪輯台已經看過（關掉過）的提示卡，所有專案共用，不再跳（editor/server/hints.mjs）
 //

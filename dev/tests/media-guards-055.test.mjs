@@ -53,8 +53,8 @@ const run = (seg, { portrait = false, panel = true, start = 10, end = 20, cues =
 };
 const nextTrack = (() => { let n = 10; return () => n++; })();
 
-test('Q2 start：第一格就推在那一塊（tl.set 在段起點、沒有補間）；報告、json；不再要求第一次運鏡在 0.8 秒後；段起點 0.2 秒硬推建議改成 start', () => {
-  const a = run({ src: 'a.mp4', start: [240, 135, 480, 270] });
+test('Q2 start：直式第一格就推在那一塊（tl.set 在段起點、沒有補間；橫式改成先看全景再推近，066 另測）；報告、json；不再要求第一次運鏡在 0.8 秒後；段起點 0.2 秒硬推建議改成 start', () => {
+  const a = run({ src: 'a.mp4', start: [240, 135, 480, 270] }, { portrait: true });
   assert.deepEqual(a.errs, []);
   assert.equal(a.m.start.z, 2);
   assert.ok(!a.m.start.cropped);
@@ -65,16 +65,20 @@ test('Q2 start：第一格就推在那一塊（tl.set 在段起點、沒有補�
   const parts = L.mediaParts({ ...a.it, pipIds: [] }, { nextTrack });
   assert.ok(parts.tl.includes(`tl.set('#mst-v01', { x: ${a.m.start.x}, y: ${a.m.start.y}, scale: 2, force3D: false }, 10);`), parts.tl.join('\n'));
   assert.ok(!parts.tl.some((x) => /tl\.(fromTo|to)\('#mst-v01'/.test(x)), '沒有推的動作');
-  // start 之後再推：從 start 的鏡位出發
+  // start 之後再推：從 start 的鏡位出發（橫式第一個是開場推近，再來才是 moves）
   const b = run({ src: 'a.mp4', start: [240, 135, 480, 270], moves: [{ at: '+3', to: 'full' }] });
-  assert.deepEqual(b.m.cams[0].from, { z: 2, x: b.m.start.x, y: b.m.start.y });
+  assert.deepEqual(b.m.cams.find((c) => !c.open).from, { z: 2, x: b.m.start.x, y: b.m.start.y });
   // 第一次運鏡在段起點 0.2 秒就動：不再 ⚠「觀眾還沒看清全景」
   const c = run({ src: 'a.mp4', moves: [{ at: '+0.2', to: [240, 135, 480, 270], dur: 2.2 }] });
   assert.doesNotMatch(c.w, /還沒看清全景|0\.8/);
-  // 段起點 0.2 秒硬推：其實是起始鏡位 → 建議改寫成 start，不報「太快」、不算運鏡次數
-  const d = run({ src: 'a.mp4', moves: [{ at: '+0', to: [240, 135, 480, 270], dur: 0.2 }, { at: '+2', to: 'full' }, { at: '+5', to: [0, 0, 480, 270] }] });
-  assert.match(d.w, /moves\[0\] 在段起點就推（0\.2s），其實是起始鏡位 → 改寫成 "start": \[240, 135, 480, 270\]、拿掉這個 moves（第一格就在那一塊，沒有推的動作）/);
+  // 段起點 0.2 秒硬推：其實是起始鏡位 → 建議改寫成 start，不報「太快」、不算運鏡次數（橫式照起始鏡位先看全景再推，066）
+  const moves = [{ at: '+0', to: [240, 135, 480, 270], dur: 0.2 }, { at: '+2', to: 'full' }, { at: '+5', to: [0, 0, 480, 270] }];
+  const d = run({ src: 'a.mp4', moves });
+  assert.match(d.w, /moves\[0\] 在段起點就推（0\.2s）：橫式改成段頭先看全景 1\.2 秒、再推到這一塊（和 "start" 一樣）→ 改寫成 "start": \[240, 135, 480, 270\]、拿掉這個 moves/);
   assert.doesNotMatch(d.w, /太快|次運鏡/);
+  const dp = run({ src: 'hd.mp4', moves: moves.slice(0, 2) }, { portrait: true, end: 16 });
+  assert.match(dp.w, /moves\[0\] 在段起點就推（0\.2s），其實是起始鏡位 → 改寫成 "start": \[240, 135, 480, 270\]、拿掉這個 moves（第一格就在那一塊，沒有推的動作）/);
+  assert.doesNotMatch(dp.w, /太快|次運鏡/);
   // 慢推（kenburns）和 start 不併用
   const e = run({ src: 'a.mp4', start: [240, 135, 480, 270], kenburns: true });
   assert.equal(e.m.kb, false);
@@ -132,7 +136,9 @@ test('C12：推近後整頁版面（換頁事件的框）只看得到 < 85% ⚠�
   assert.match(b.w, /start 推近後只看得到整頁版面寬度的 57%.*（拿掉這個 start）/);
   assert.doesNotMatch(run({ src: 'cut.mp4', in: 2, start: [240, 135, 480, 270], marks: [{ at: '+1', until: '+3', box: [300, 200, 200, 80] }] }).w, /整頁版面/);
   assert.doesNotMatch(run({ src: 'cut.mp4', in: 2, start: [60, 30, 840, 480] }).w, /整頁版面/);
-  assert.doesNotMatch(run({ src: 'cut.mp4', in: 0.2, start: [240, 135, 480, 270] }).w, /整頁版面/, '起點還沒換到整頁（錄影第 1 秒才換頁）');
+  assert.doesNotMatch(run({ src: 'cut.mp4', in: 0.2, start: [240, 135, 480, 270] }, { portrait: true }).w, /整頁版面/, '直式起點還沒換到整頁（錄影第 1 秒才換頁）');
+  // 066 橫式先看全景再推近：量推完那一刻（錄影第 0.2＋1.2＋2.2＝3.6 秒，已經換頁）
+  assert.match(run({ src: 'cut.mp4', in: 0.2, start: [240, 135, 480, 270] }).w, /start 推近後只看得到整頁版面寬度的 57%（錄影第 3\.6s 那一頁/);
   events('cut2', { events: [{ t: 1, settled: 1.5, kind: '換頁', box: [0, 0, 300, 540] }] });
   assert.doesNotMatch(run({ src: 'cut2.mp4', in: 2, start: [240, 135, 480, 270] }).w, /整頁版面/, '換頁的框不到錄影寬 60%（不是整頁）');
 });
@@ -183,7 +189,9 @@ test('C16：盤點筆記的 privacy 播到時沒被 redact 蓋住 ⚠；有打�
   const a = run({ src: 'priv.mp4', in: 5 });
   assert.match(a.w, /錄影 5–8 秒露出「帳號名」\[700, 20, 200, 40\]（完成影片 0:10\.00–0:13\.\d+）沒有打碼 → 加 "redact": \[\{ "at": "\+0", "until": "\+3(\.\d)?", "box": \[700, 20, 200, 40\] \}\]/);
   assert.doesNotMatch(run({ src: 'priv.mp4', in: 5, redact: [{ at: '+0', until: '+3.2', box: [690, 15, 220, 50] }] }).w, /沒有打碼/);
-  assert.doesNotMatch(run({ src: 'priv.mp4', in: 5, start: [0, 270, 480, 270] }).w, /沒有打碼/, '推近後帳號名不在畫面上');
+  assert.doesNotMatch(run({ src: 'priv.mp4', in: 5, start: [0, 270, 480, 270] }, { portrait: true }).w, /沒有打碼/, '直式第一格就推近，帳號名不在畫面上');
+  // 066 橫式段頭先看全景：推走之前帳號名看得到
+  assert.match(run({ src: 'priv.mp4', in: 5, start: [0, 270, 480, 270] }).w, /錄影 5–6\.4 秒露出「帳號名」\[700, 20, 200, 40\]（完成影片 0:10\.00–0:11\.50）沒有打碼/);
   assert.doesNotMatch(run({ src: 'priv.mp4', in: 9 }).w, /沒有打碼/);
   assert.deepEqual(L.privacyOf(proj, 'assets/screen/priv.mp4'), [{ from: 5, to: 8, box: [700, 20, 200, 40], what: '帳號名' }]);
   assert.deepEqual(L.privacyOf(proj, 'assets/screen/a.mp4'), []);

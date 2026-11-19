@@ -168,7 +168,7 @@ test('edit.sfx：normalizeEdit 檢查格式、照時間排；一顆都沒有就�
   assert.ok(!('sfx' in normalizeEdit({ sfx: [] }, { videoDur: VD }).edit));
   assert.ok(!('sfx' in normalizeEdit({}, { videoDur: VD }).edit));
   const bad = normalizeEdit({ sfx: [{ at: -1, sound: 'ding' }, { at: 3, sound: 'Ding!' }, { at: 4, sound: 'ding', db: 20 }, { at: 5, sound: 'ding', loop: true }, { at: 99, sound: 'ding' }, 'ding'] }, { videoDur: VD }).errors.join('\n');
-  for (const re of [/edit\.sfx\[0\]\.at 要是 rough\.mp4 的秒數/, /edit\.sfx\[1\]\.sound 要是音效名稱/, /edit\.sfx\[2\]\.db 要是 −60～\+12/, /edit\.sfx\[3\]\.loop：沒有這個欄位（可用：at、sound、db）/, /edit\.sfx\[4\]：at 99s 超過 rough\.mp4 長度 44s/, /edit\.sfx\[5\] 要是物件/]) assert.match(bad, re);
+  for (const re of [/edit\.sfx\[0\]\.at 要是 rough\.mp4 的秒數/, /edit\.sfx\[1\]\.sound 要是音效名稱/, /edit\.sfx\[2\]\.db 要是 −60～\+12/, /edit\.sfx\[3\]\.loop：沒有這個欄位（可用：at、sound、db、trimIn、trimOut）/, /edit\.sfx\[4\]：at 99s 超過 rough\.mp4 長度 44s/, /edit\.sfx\[5\] 要是物件/]) assert.match(bad, re);
   assert.match(normalizeEdit({ sfx: {} }, { videoDur: VD }).errors.join('\n'), /edit\.sfx 要寫成陣列/);
 });
 

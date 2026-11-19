@@ -51,7 +51,8 @@ export function soundOf(plan) {
 }
 
 // 和沒寫 edit 一樣的預設值（lib/edit.mjs：全是預設值時輸出和沒寫 edit 一模一樣）：剪輯台存檔會補齊，不能因為這樣就算「不只差聲音」
-const EDIT_DEFAULTS = [['cuts', []], ['fadeIn', 0], ['fadeOut', 0], ['joins', []], ['sfx', []], ['level', false]];
+//   065 音效拖過、裁過（edit.sfxAdjust、edit.sfx 的 trimIn／trimOut）動到時間：照留，要更新預覽
+const EDIT_DEFAULTS = [['cuts', []], ['fadeIn', 0], ['fadeOut', 0], ['joins', []], ['sfx', []], ['sfxAdjust', []], ['level', false]];
 export function liveStrip(plan, { bedDefault = null, look } = {}) {
   const p = isObj(plan) ? JSON.parse(JSON.stringify(plan)) : {};
   if (look !== undefined) p.look = look;

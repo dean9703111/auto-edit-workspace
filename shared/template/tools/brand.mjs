@@ -41,6 +41,11 @@
  *                                                       設定（只給要改的；沒給的照目前的預設）；上下位置橫式、直式分開記
  *   brand.mjs captions off                              回到原本的深底白字（拿掉設定）
  *
+ * 錄影畫面框（061；shared/setting.json 的 screenFrame＝以後每集的預設，這一集是 plan.json screenFrame；lib/screen-frame.mjs）：
+ *   brand.mjs screen-frame                              看目前的預設與可選的值
+ *   brand.mjs screen-frame [--scale auto|0.6–1] [--inset 24]   設定（只給要改的）；新的一集第一次 build 把它記進那一集的 plan.json
+ *   brand.mjs screen-frame off                          拿掉預設（錄影回到字幕帶上方、四周黑底）
+ *
  * 背景圖（輸出都在暫存資料夾，不寫 shared/template/：使用者同意後才 pack --bg、use；auto-edit-style 步驟 2–4）：
  *   brand.mjs bg --tmp                                                    開一個暫存資料夾、印完整路徑
  *   brand.mjs bg --html <檔.html> --kind fs|side|ch [--out <資料夾>]       HTML 路線：用 HyperFrames 的 Chrome 截成 bg-<kind>.jpg，
@@ -59,6 +64,7 @@ import { readSpeaker, validateSpeaker, SPEAKER_FILE, SET_CMD } from './lib/speak
 import { readSettings, writeSetting } from './lib/settings.mjs';
 import { readEndingSetting, ENDING, BRAND_DIR } from './lib/ending.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle } from './lib/caption-style.mjs';
+import { FRAME, sanitizeScreenFrame, resolveScreenFrame, describeScreenFrame } from './lib/screen-frame.mjs';
 import { ok, warn, fail, next, cmdLine, report } from './lib/say.mjs';
 import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
 import { stopLines } from './lib/stops.mjs';
@@ -405,6 +411,16 @@ const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與
       -350–350 px（往下寫負的：--lift-portrait=-80）。這一集不一樣：剪輯台「整支 → 字幕」（字幕可以直接拖上下）或 plan.json "captionStyle"。
   node shared/template/tools/brand.mjs captions off
       回到原本的深底白字、原位。
+
+  node shared/template/tools/brand.mjs screen-frame
+      看錄影畫面框的預設（shared/setting.json 的 screenFrame）和可選的值。
+  node shared/template/tools/brand.mjs screen-frame [--scale auto] [--inset 24]
+      設定以後每集的錄影畫面框：橫式的錄影、圖片段縮進一個置中的框（框外是主題的純底色、不放背景圖，框有圓角），
+      --scale auto＝照字幕量到剛好不碰到（框下緣離字幕底板至少 12 px），或寫 0.6–1；--inset 0–80 px＝小節角標離框上、右的距離，
+      子母畫面離框右、下也是這個距離（預設 24）。新的一集第一次 build 會把它（auto 量成數字）記進那一集的 plan.json screenFrame；
+      這一集不一樣：build.mjs --set "screenFrame.scale=0.88;screenFrame.inset=24"。
+  node shared/template/tools/brand.mjs screen-frame off
+      拿掉預設：之後新的一集錄影照原本的樣子（字幕帶上方、四周黑底）；已經記在 plan.json 的那幾集照它的。
 
   背景圖（三張：fs 1920×1080、side 960×1080、ch 1920×1080；暗色是 bg-<kind>-dark.jpg）。輸出都先放暫存資料夾，
   不能在 shared/template/ 裡；使用者看過 preview.jpg 同意（停點 ⑥）後，用 pack --bg 存成風格包、use 套用，不要自己複製。
@@ -827,6 +843,52 @@ function captionsCli(args) {
   return 0;
 }
 
+// ---------- 錄影畫面框（061）----------
+
+const SF_CMD = 'node shared/template/tools/brand.mjs screen-frame --scale auto --inset 24';
+function screenFrameCli(args) {
+  const o = { _: [] };
+  for (let i = 0; i < args.length; i++) {
+    if (!String(args[i]).startsWith('--')) { o._.push(args[i]); continue; }
+    const [k, inline] = splitFlag(args[i]);
+    if (['scale', 'inset', 'kit'].includes(k)) [o[k], i] = takeValue(args, i, k, inline, `例：${SF_CMD}`);
+    else if (k !== 'help') throw new Error(`brand.mjs screen-frame 沒有 --${k} 這個參數 → 例：${SF_CMD}；拿掉預設：brand.mjs screen-frame off`);
+  }
+  const kitDir = o.kit ? path.resolve(o.kit) : path.resolve(HERE, '..', 'kit');
+  const sharedDir = path.resolve(kitDir, '..', '..');
+  const data = readSettings(sharedDir).data, cur = data.screenFrame;
+  // 量的時候照工作區的字幕預設（橫式）；每一集 build 時照那一集的字幕樣式再量
+  const capStyle = resolveCaptionStyle({ settings: { captions: data.captions }, format: 'landscape' }).style;
+  if (o._[0] === 'off') {
+    if (o._.length > 1 || o.scale != null || o.inset != null) throw new Error('brand.mjs screen-frame off 後面不用再寫別的');
+    writeSetting(sharedDir, 'screenFrame', undefined);
+    console.log(ok('錄影畫面框的預設拿掉了（shared/setting.json 的 screenFrame）：之後新的一集錄影照原本的樣子（字幕帶上方、四周黑底）；已經記在 plan.json screenFrame 的那幾集照它的'));
+    return 0;
+  }
+  if (o._.length) throw new Error(`brand.mjs screen-frame 不收「${o._.join(' ')}」→ 例：${SF_CMD}`);
+  if (o.scale == null && o.inset == null) {
+    const r = resolveScreenFrame({ settings: { screenFrame: cur }, capStyle, fix: 'node shared/template/tools/brand.mjs screen-frame --scale auto' });
+    console.log(`錄影畫面框預設：${r.frame ? `${describeScreenFrame(r.frame)}（shared/setting.json 的 screenFrame${r.frame.auto ? '；auto 照工作區的字幕預設量，每一集照那一集的字幕再量' : ''}）` : '沒設定（錄影放在字幕帶上方、四周黑底）'}`);
+    for (const w of r.warnings) console.log(`⚠ ${w}`);
+    console.log(`  --scale  auto（照字幕量到剛好不碰到：框下緣離字幕底板至少 ${FRAME.gap} px）或 ${FRAME.min}–${FRAME.max}（取到 ${FRAME.step}）`);
+    console.log(`  --inset  小節角標離框上、右，子母畫面離框右、下幾 px：${FRAME.insetMin}–${FRAME.insetMax}（預設 ${FRAME.inset}）`);
+    console.log('這一集不一樣：build.mjs --project projects/<專案> --set "screenFrame.scale=0.88;screenFrame.inset=24"；新的一集第一次 build 會把預設（auto 量成數字）記進那一集的 plan.json');
+    return 0;
+  }
+  const want = { ...(cur && typeof cur === 'object' && !Array.isArray(cur) ? cur : {}) };
+  if (o.scale != null) want.scale = String(o.scale).trim() === 'auto' ? 'auto' : String(o.scale).trim() === '' ? NaN : Number(o.scale);
+  if (o.inset != null) want.inset = String(o.inset).trim() === '' ? NaN : Number(o.inset);
+  const r = sanitizeScreenFrame(want, 'screenFrame');
+  if (r.errors.length) throw new Error(r.errors.map((e) => e.replace(/^screenFrame\.(scale|inset)/, '--$1')).join('；'));
+  const clean = { scale: r.frame.scale ?? 'auto', inset: r.frame.inset ?? FRAME.inset };
+  writeSetting(sharedDir, 'screenFrame', clean);
+  const res = resolveScreenFrame({ settings: { screenFrame: clean }, capStyle, fix: 'node shared/template/tools/brand.mjs screen-frame --scale auto' });
+  console.log(ok(`錄影畫面框預設：${describeScreenFrame(res.frame)}（${clean.scale === 'auto' ? '照工作區的字幕預設量；' : ''}shared/setting.json，不進版控）`));
+  for (const w of res.warnings) console.log(`⚠ ${w}`);
+  console.log('新的一集第一次 build 會把它（auto 量成數字）記進那一集的 plan.json；已經記了的那幾集照它的，要跟著換：build.mjs --project projects/<專案> --unset screenFrame 再 build');
+  return 0;
+}
+
 // ---------- CLI ----------
 
 // 直式講者面板（009 FR-130）：1080×1920 透明，y 897–903 一條 6px 主色線（上半資訊面板／下半講者面板的分隔線，canvas.mjs pip.frame）
@@ -856,6 +918,7 @@ async function cli() {
   if (args[0] === 'speaker') return speakerCli(args.slice(1));
   if (args[0] === 'ending') return endingCli(args.slice(1));
   if (args[0] === 'captions') return captionsCli(args.slice(1));
+  if (args[0] === 'screen-frame') return screenFrameCli(args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
     if (!String(args[i]).startsWith('--')) { color = args[i]; continue; }

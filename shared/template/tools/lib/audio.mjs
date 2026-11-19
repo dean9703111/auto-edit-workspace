@@ -238,7 +238,7 @@ export function rotateSfx(cues, sfxConf, has = () => true) {
   for (const c of [...cues].filter(Boolean).sort((a, b) => a.at - b.at)) {
     const conf = sfxConf[c.name], vs = conf?.variants?.filter((v) => has(v.file));   // 沒有檔的變體不排（自訂 --sfx 資料夾）
     delete c.src; delete c.srcAt; delete c.srcVolume;
-    if (!vs?.length) continue;
+    if (!vs?.length || c.trimmed) continue;   // 065 剪輯台裁過的用本尊（變體長度不一樣，裁的是本尊）
     const k = n[c.name] = (n[c.name] ?? -1) + 1, v = vs[k % (vs.length + 1) - 1];
     if (!v) continue;
     c.src = v.file;

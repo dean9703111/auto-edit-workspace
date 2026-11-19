@@ -308,7 +308,7 @@ test('--check --json schema 2：必有的鍵與型別；planHash 跟著 plan.jso
   const r = node('--check', '--json');
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'bed', 'moods', 'edit', 'paths']);
+  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'screenFrame', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'bed', 'moods', 'edit', 'paths']);
   assert.equal(j.schema, 2);
   assert.equal(j.theme, 'light');
   assert.match(j.planHash, /^[0-9a-f]{8}$/);
@@ -340,7 +340,7 @@ test('--check --json 出錯時（plan.json 不存在）也印齊 schema 2 的鍵
   const r = spawnSync(process.execPath, [BUILD, '--template', TEMPLATE, '--plan', path.join(dir, 'nope.json'), '--srt', path.join(work, 'rough.srt'), '--video', path.join(work, 'rough.mp4'), '--out', out, '--check', '--json'], { encoding: 'utf8' });
   assert.equal(r.status, 1);
   const j = JSON.parse(r.stdout);
-  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'bed', 'moods', 'edit', 'paths']);
+  assert.deepEqual(Object.keys(j), ['schema', 'ok', 'errors', 'warnings', 'planHash', 'rhythm', 'theme', 'format', 'canvas', 'formatSource', 'versions', 'videoDur', 'outputDur', 'ending', 'screenFrame', 'voiceOnly', 'roughBlack', 'voiceUncovered', 'uncovered', 'cutpoints', 'chapters', 'items', 'sfxCount', 'sfxBudget', 'outro', 'bed', 'moods', 'edit', 'paths']);
   assert.equal(j.ok, false);
 });
 
