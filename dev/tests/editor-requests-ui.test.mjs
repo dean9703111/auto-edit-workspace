@@ -56,13 +56,20 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
       assert.equal(r.status, 200);
     };
     await update(['s01'], 'generating');
+    // 068 三個分頁：生成中的段移到「生成中」分頁（待改分頁只剩 s02）
+    await page.waitForFunction(() => document.querySelector('[data-rq="tab"][data-tab="gen"]')?.textContent === '生成中（1）');
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.rq-tabs [data-rq="tab"]')].map((el) => [el.textContent, el.classList.contains('on')])), [['待改（1）', true], ['生成中（1）', false], ['已改完（0）', false]]);
+    await page.click('[data-rq="tab"][data-tab="gen"]');
     await page.waitForSelector('.rq-sent.generating');
     assert.equal(await page.$$('.rq-sent.generating').then((x) => x.length), 1);
     const screenshot = path.join(root, '生成中.png');
     await page.screenshot({ path: screenshot });
     // 生成中的段 AI 已經在改：複製給 AI 不再送（不然同一段送兩次），另列「生成中」；再複製後舊那一版的段帶著走、照舊顯示生成中、回報照舊收得到
     assert.equal(await page.$eval('[data-rq="copy"]', (el) => el.textContent), '複製給 AI（1 段待改）');
-    assert.match(await page.$eval('#rqLists', (el) => el.textContent), /生成中（1）/);
+    assert.match(await page.$eval('#rqTabs', (el) => el.textContent), /生成中（1）/);
+    // 分頁貼齊面板上緣、不在捲動區裡；「這段想改」只在待改分頁
+    assert.equal(await page.evaluate(() => document.querySelector('#rqTabs').parentElement.id), 'requests');
+    assert.equal(await page.$eval('#rqTop', (el) => el.hidden), true, '生成中分頁不放編輯區');
     await page.evaluate(() => { window.copiedRequest = ''; });
     await page.click('[data-rq="copy"]');
     await page.waitForFunction(() => /begin/.test(window.copiedRequest || ''));
@@ -72,20 +79,29 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     await page.waitForFunction(() => window.__editor.server?.requests?.carried?.includes('s01'));
     assert.equal(await page.$$('.rq-sent.generating').then((x) => x.length), 1);
     await update(['s01'], 'failed', '動畫檢查未通過');
+    await page.click('[data-rq="tab"][data-tab="pend"]');
     await page.waitForSelector('.rq-sent.failed');
+    // 068 已改完＝最近一輪回饋的修改紀錄（versions.mjs finish 寫的 r<N>.md「改了哪幾段」），每段可以用上一版
+    fs.writeFileSync(path.join(work, 'feedback/r1.md'), '# 回饋 r1（2026-11-19 12:00）\n\n## 原話\n\n「照修改單改」\n\n## 改了哪幾段\n\n- s01：已重做並通過 build、audit（v1 → v2）\n\n## 驗證\n');
     await update(['s01'], 'done', '已重做並通過 build、audit');
+    await page.click('[data-rq="tab"][data-tab="done"]');
     await page.waitForSelector('.rq-item.done');
     assert.match(await page.$eval('.rq-item.done', (el) => el.textContent), /已重做並通過 build、audit/);
+    assert.match(await page.$eval('#rqLists', (el) => el.textContent), /r1（2026-11-19 12:00）改了 1 段/);
+    await page.waitForFunction(() => document.querySelector('[data-rq="tab"][data-tab="done"]')?.textContent === '已改完（1）');
     // 改了需求後，舊批次的完成／生成狀態不再套到新需求。
+    await page.click('[data-rq="tab"][data-tab="pend"]');
     await page.evaluate(() => window.__editor.select({ kind: 'item', id: 's01' }));
-    await page.waitForSelector('#rqNote');
+    await page.waitForSelector('#rqNote', { visible: true });
     await page.type('#rqNote', '重新調整');
     await page.waitForFunction(() => document.querySelector('#rqState')?.textContent.includes('待改：已存進修改單'));
-    assert.equal(await page.$$('.rq-item.done').then((x) => x.length), 0);
+    assert.equal(await page.$eval('[data-rq="tab"][data-tab="pend"]', (el) => el.textContent), '待改（2）', '改了需求就回到待改；已改完那一輪的紀錄照留');
     // 029：勾了「重新設計」的段寫進修改單，複製的那一行寫明這幾段派設計師從空白重畫
     assert.equal(await page.$eval('#rqTop [data-rq="redo"]', (el) => el.checked), false, '預設不勾');
     await page.click('#rqTop [data-rq="redo"]');
+    await page.click('[data-rq="tab"][data-tab="pend"]');
     await page.waitForSelector('.rq-item .chip-redo');
+    assert.equal(await page.evaluate(() => localStorage.getItem('editor-requests-tab')), 'pend', '記住上次看的分頁');
     await page.click('[data-rq="copy"]');
     await page.waitForFunction(() => /其中 1 段要重新設計（s01）：這幾段派設計師照 design\.md 從空白畫布重畫；其他段在現有的動畫上改。/.test(window.copiedRequest || ''));
     assert.match(fs.readFileSync(path.join(work, 'feedback/editor-requests.md'), 'utf8'), /## 1\. s01[\s\S]*- 做法：重新設計（使用者勾的）[\s\S]*## 2\. s02[\s\S]*- 做法：在現有的動畫上改/);

@@ -56,6 +56,7 @@ import { hintsInfo, doHintSeen } from './editor/server/hints.mjs';
 import { storyboardOptions } from './editor/server/storyboard-options.mjs';
 import { listFillSpecs } from './lib/custom-fill.mjs';
 import { requestsInfo, doRequestsStatus, doRequests } from './editor/server/requests.mjs';
+import { roundInfo, startUse } from './editor/server/rounds.mjs';
 import { writeLearn } from './lib/learn.mjs';
 import { designState, designAsset, designPreviews, setDesignColor, uploadDesign, prepareDesignRequest, importDesignCandidate, restoreOriginalBackground, candidateAsset, applyDesign, discardDesign, removeReference, designRequestStatus, setDesignRequestStatus } from './editor/server/design.mjs';
 import { r3 } from './lib/time.mjs';
@@ -1237,6 +1238,8 @@ async function handle(ctx, req, res) {
     if (p === '/api/hints') { const [s, o] = doHintSeen(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests') { const [s, o] = doRequests(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/requests/status') { const [s, o] = doRequestsStatus(ctx, body); return sendJson(res, s, o); }
+    // 068 已改完：換成這一輪改之前／之後那一版（versions.mjs use，背景跑；GET /api/round 看進度）
+    if (p === '/api/round/use') { try { const [s, o] = await startUse(P, body); return sendJson(res, s, o); } catch (e) { return sendJson(res, 500, { message: e.message }); } }
     // 062：輸出過之後「整理這集的調整給 AI」：寫 work/feedback/learn.md，回傳要複製的那一行
     if (p === '/api/learn') {
       try { const r = writeLearn({ root: P.root, project: P.project }); return sendJson(res, 200, { ok: true, file: r.rel, line: r.line, counts: r.counts }); } catch (e) { return sendJson(res, 500, { error: 'learn', message: e.message }); }
@@ -1256,6 +1259,8 @@ async function handle(ctx, req, res) {
 
   if (p === '/' || p === '/index.html') return sendFile(req, res, path.join(UI_DIR, 'index.html'));
   if (p === '/api/requests/status') return sendJson(res, 200, { requests: requestsInfo(P.project) });
+  // 068 已改完＝最近一輪回饋改了哪幾段、每段現在用哪一版
+  if (p === '/api/round') { try { return sendJson(res, 200, await roundInfo(P)); } catch (e) { return sendJson(res, 500, { message: e.message }); } }
   if (p === '/api/export') return sendJson(res, 200, exportState(ctx));
   if (p === '/api/speaker') return sendJson(res, 200, speakerInfo(ctx));
   if (p === '/api/hints') return sendJson(res, 200, hintsInfo(ctx));

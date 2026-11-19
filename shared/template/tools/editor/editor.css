@@ -194,8 +194,17 @@ input[type="range"] { width: 100%; height: 24px; margin: 0; accent-color: var(--
 .rq-sent.generating { color: var(--accent); border-color: var(--accent); }
 .rq-sent.generating::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 4px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: rq-spin 1s linear infinite; }
 .rq-sent.failed, .rq-state.failed .ip-note { color: var(--warn-kw); }
+.rq-sent.reverted { color: var(--ink); border-color: var(--line2); background: var(--card); }
+.rq-item.done.reverted { border-color: var(--line2); }
+.rq-item.done.reverted .h b { color: var(--ink); }
 @keyframes rq-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .rq-sent.generating::before { animation: none; } }
+/* 068 修改單的三個分頁：貼齊面板上緣、三格等寬填滿，不跟著清單捲 */
+.rq-tabs { display: flex; flex: none; border-bottom: 1px solid var(--line); background: var(--bg2); }
+.rq-tabs button { flex: 1; min-width: 0; min-height: 0; padding: 9px 2px 7px; font-size: 13px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--mute); }
+.rq-tabs button:hover { background: var(--card); color: var(--ink); }
+.rq-tabs button.on { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent); background: var(--card); }
+.rq-top[hidden] { display: none; }
 .rq-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .rq-item { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; }
 .rq-item.cur { border-color: color-mix(in srgb, var(--accent) 70%, transparent); }
