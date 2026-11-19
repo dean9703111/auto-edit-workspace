@@ -16,6 +16,7 @@
  *   data-slot    參與排版的元件；本身也有 data-layout 的＝巢狀群組（大小＝裡面排好的外框）
  *   data-links   a>b（有箭頭）、a-b（沒箭頭），空白隔開；線畫在兩個元件外框邊的中點之間，端點離外框 --sc-link-gap，
  *                箭頭頭 --sc-link-head（另一條 path <a>-<b>-head，本體描完時淡入）；同列水平、同欄垂直（直線在兩個插圖重疊段的正中）、其他 L 形（先水平再垂直）；path id＝<a>-<b>（P.stroke 用）
+ *   data-link-gap-end  （072，選填）箭頭那一端離外框幾 px（預設＝--sc-link-gap）：目標聚焦時放大抬起（P.spot scale／lift）會長過去，箭頭插進去 → 寫長出去的量＋12（audit layout-link 上限 32）
  *
  * 規則：mount 時算一次（ILLUS.mount 之後、SceneMotion(tl, root) 建立時自動跑；{force:true} 重排），不進 timeline，
  *   亂序 seek 不受影響；量版面用 offsetWidth／offsetHeight（祖先縮放、進場的 transform 都不算）；插圖描邊外擴 2px 不算進外框；
@@ -172,20 +173,22 @@
 
   // 連接線：svg 疊在它的父元素上（0, 0、同大小）。端點在「元件外框」（slot，含標籤）沿線方向的邊外 --sc-link-gap，
   //   另一軸對「錨點」（插圖）的中線：水平線在插圖中線高度、不穿過底下的標籤；垂直線從標籤下面出發
-  function linkPts(SA, AA, SB, AB, gap) {
+  //   072 ge＝箭頭那一端離外框多遠（svg 的 data-link-gap-end；沒寫＝gap）：目標站聚焦時放大抬起會長過去，箭頭要多留
+  function linkPts(SA, AA, SB, AB, gap, ge) {
+    if (!(ge >= 0)) ge = gap;
     var e = function (q) { return { x0: q[0], y0: q[1], x1: q[0] + q[2], y1: q[1] + q[3], cx: q[0] + q[2] / 2, cy: q[1] + q[3] / 2 }; };
     var sa = e(SA), sb = e(SB), a = e(AA), b = e(AB);
     var over = function (p0, p1, q0, q1) { return Math.min(p1, q1) - Math.max(p0, q0); };
     if (over(a.y0, a.y1, b.y0, b.y1) > 0 && over(sa.x0, sa.x1, sb.x0, sb.x1) <= 0) {   // 同列：水平直線，y＝兩個插圖上下重疊段的正中（底對齊時＝矮的那個的中線）
       var y = Math.round((Math.max(a.y0, b.y0) + Math.min(a.y1, b.y1)) / 2);
-      return b.cx > a.cx ? [[sa.x1 + gap, y], [sb.x0 - gap, y]] : [[sa.x0 - gap, y], [sb.x1 + gap, y]];
+      return b.cx > a.cx ? [[sa.x1 + gap, y], [sb.x0 - ge, y]] : [[sa.x0 - gap, y], [sb.x1 + ge, y]];
     }
     if (over(a.x0, a.x1, b.x0, b.x1) > 0 && over(sa.y0, sa.y1, sb.y0, sb.y1) <= 0) {   // 同欄：垂直直線，x＝左右重疊段的正中
       var x = Math.round((Math.max(a.x0, b.x0) + Math.min(a.x1, b.x1)) / 2);
-      return b.cy > a.cy ? [[x, sa.y1 + gap], [x, sb.y0 - gap]] : [[x, sa.y0 - gap], [x, sb.y1 + gap]];
+      return b.cy > a.cy ? [[x, sa.y1 + gap], [x, sb.y0 - ge]] : [[x, sa.y0 - gap], [x, sb.y1 + ge]];
     }
     var sx = b.cx > a.cx ? sa.x1 + gap : sa.x0 - gap, sy = Math.round(a.cy), ex = Math.round(b.cx);   // L 形：先水平再垂直
-    return [[sx, sy], [ex, sy], [ex, b.cy > a.cy ? sb.y0 - gap : sb.y1 + gap]];
+    return [[sx, sy], [ex, sy], [ex, b.cy > a.cy ? sb.y0 - ge : sb.y1 + ge]];
   }
   function drawLinks(svg) {
     var spec = (svg.getAttribute('data-links') || '').trim();
@@ -203,7 +206,7 @@
       else for (var i = pair.indexOf('-'); i > 0 && !m; i = pair.indexOf('-', i + 1)) if (doc.getElementById(pair.slice(0, i)) && doc.getElementById(pair.slice(i + 1))) m = [pair, pair.slice(0, i), '-', pair.slice(i + 1)];
       var a = m && doc.getElementById(m[1]), b = m && doc.getElementById(m[3]);
       if (!a || !b) throw new Error('data-links 的「' + pair + '」找不到元件（寫成 元件id>元件id 或 元件id-元件id）');
-      var pts = linkPts(box(a, ref), box(anchorOf(a), ref), box(b, ref), box(anchorOf(b), ref), gap), id = m[1] + '-' + m[3];
+      var pts = linkPts(box(a, ref), box(anchorOf(a), ref), box(b, ref), box(anchorOf(b), ref), gap, arrow ? parseFloat(svg.getAttribute('data-link-gap-end')) : NaN), id = m[1] + '-' + m[3];
       var d = 'M' + pts.map(function (p) { return p[0] + ' ' + p[1]; }).join(' L');
       var mkPath = function (pid) {
         var el = doc.getElementById(pid);

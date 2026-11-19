@@ -250,6 +250,27 @@ test('A5 begin --requests／finish：修改單的段自動開輪、標「生成�
   assert.deepEqual(E.requestsInfo(p4).carried, ['s05', 's12', 't1095']);
 });
 
+test('r7 同一輪接著照新的修改單改（begin --requests 兩次）：finish 兩批都標已改完，前一批不會一直停在「生成中」', (t) => {
+  const p = mk(t);
+  const P = pathsFrom({ project: p });
+  touch(p, 'work/feedback/editor-requests.md', ['# 剪輯台修改單', '', '照剪輯台修改單改這 1 段', '', '## 1. s05　金句', '- 要改：文字少一點', ''].join('\n'), 120);
+  V.beginRound(P, { requests: true }, [], '', () => {});
+  // AI 還在改 s05，使用者又複製了只有 s12 的修改單，AI 接著同一輪改
+  touch(p, 'work/feedback/editor-requests.md', ['# 剪輯台修改單', '', '照剪輯台修改單改這 1 段', '', '## 1. s12　custom x-a.html', '- 要改：更有質感', ''].join('\n'), 60);
+  const b2 = V.beginRound(P, { requests: true }, [], '', () => {});
+  assert.equal(b2.continued, true);
+  let q = E.requestsInfo(p);
+  assert.deepEqual([q.ids, q.carried, q.states.s05.state, q.states.s12.state], [['s12'], ['s05'], 'generating', 'generating']);
+  editPlan(p, (j) => { j.scenes[0].slots.text = '短'; j.scenes[1].story = { say: '對比', why: '更有質感' }; });
+  const log = [];
+  const r = V.finishRound(P, {}, (l) => log.push(l), stepsOf().steps);
+  assert.equal(r.ok, true, log.join('\n'));
+  q = E.requestsInfo(p);
+  assert.deepEqual([q.states.s05.state, q.states.s05.round, q.states.s12.state], ['done', 'r1', 'done']);
+  assert.deepEqual([...r.requests.done].sort(), ['s05', 's12']);
+  assert.ok(!log.some((l) => /重新複製過/.test(l)), log.join('\n'));
+});
+
 test('A3／A4 finish：最後是回報段（工具知道的填好、停點那兩行只在最後出現一次）；連續沒過到上限印「→ 停手」，過了歸零', (t) => {
   const p = mk(t);
   const P = pathsFrom({ project: p });

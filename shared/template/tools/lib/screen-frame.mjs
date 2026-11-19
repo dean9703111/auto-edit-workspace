@@ -14,11 +14,16 @@
 //                                               { scale, inset, auto, win, capTop, gap, radius, measured, from: 'plan'|'setting' }；
 //                                               record＝plan 還沒有、照 setting 解析出來的 { scale, inset }（build 寫進 plan.json）
 //   frameForPlan({ plan, settings, format })  → 同上，字幕樣式照 plan.json captionStyle → setting 的 captions 自己解析（剪輯台、截圖欄位用）
+//   fitWin(win, info, fit)                    → 072：橫向素材（寬高比 ≥ 1.2、contain）的框照素材比例縮（全景剛好塞滿、沒有黑邊）；其他照原本的 win
 //   describeScreenFrame(frame)                → 「縮到 86%（量字幕上緣 y 956；1651×929、上 12），角標離框上、右各 24 px」
 //   frameLine(frame)                          → build／--check 摘要那一行（含出處）
 //
 // 字幕在 kit/captions.css 是 nowrap（一則一行），全片的底板上緣都是 captionGeom 的 top；重點字幕（cg--em）字級、行高、內距照一般字幕，高度一樣。
 import { captionGeom, resolveCaptionStyle, CAP_DEFAULT } from './caption-style.mjs';
+
+// 070 錄影、圖片段四周的底色（作者：「使用螢幕錄影時，背景白色還是黑色的選項，預設為黑色底」「能夠在 setting.json 上設定紀錄」「是指純白或純黑」）：
+//   plan.json screenBg（這一集）→ shared/setting.json screenBg（brand.mjs screen-bg）→ "black"；有沒有錄影畫面框都套用，框裡沒蓋到的地方同色
+export const SCREEN_BGS = Object.freeze(['black', 'white']);
 
 export const FRAME = Object.freeze({ W: 1920, H: 1080, min: 0.6, max: 1, step: 0.005, inset: 24, insetMin: 0, insetMax: 80, gap: 12, radius: 16 });
 const KEYS = ['scale', 'inset'];
@@ -44,6 +49,22 @@ export function sanitizeScreenFrame(v, where = 'screenFrame') {
     else errors.push(`${where}.inset 是角標、子母畫面離錄影框邊幾 px：${FRAME.insetMin}–${FRAME.insetMax}（預設 ${FRAME.inset}），現在是 ${JSON.stringify(v.inset)}`);
   }
   return { frame: errors.length ? null : frame, errors };
+}
+
+// 072（作者：「右上角的角標超過螢幕錄影的右側範圍，請優化，上與右應該一致；全部螢幕錄影的片段都檢查一次」）：
+//   3840×2280 這類比 16:9 窄一點的錄影放進 16:9 的框，全景兩邊各留一條黑邊，貼框右上的角標就跨在錄影邊上。
+//   橫向的錄影、圖片（寬高比 ≥ FIT_MIN、contain）框照素材的比例縮：全景剛好塞滿框，推近也不會比框寬，看得到的錄影邊＝框邊，
+//   角標離框上、右，子母畫面離框右、下都是 inset。cover、方形的圖、直式手機畫面照原本的框（兩邊空很多，縮框會讓角標、小視窗壓到素材）
+export const FIT_MIN = 1.2;
+export function fitWin(win, info, fit = 'contain') {
+  if (!win || fit === 'cover' || !(info?.width > 0) || !(info?.height > 0)) return win;
+  // 073 錄影自帶黑邊（info.content）：照黑邊裡的畫面比例
+  const [x0, y0, x1, y1] = info.content || [0, 0, info.width, info.height];
+  const [x, y, w, h] = win, a = (x1 - x0) / (y1 - y0);
+  if (a < FIT_MIN || Math.abs(a - w / h) < 0.005) return win;
+  if (a < w / h) { const nw = Math.round(h * a); return [x + Math.round((w - nw) / 2), y, nw, h]; }
+  const nh = Math.round(w / a);
+  return [x, y + Math.round((h - nh) / 2), w, nh];
 }
 
 export function frameWin(scale, inset = FRAME.inset) {

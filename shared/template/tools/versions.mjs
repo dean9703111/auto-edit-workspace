@@ -858,7 +858,10 @@ export function beginRound(P, flags, idsIn, sayRaw, log = console.log) {
     if (s5 && waiting(s5)) appendStop(project, { stop: STOP5, state: '通過', said: say, back: fileRel });
     if (s4 === '待回覆' || (cur == null && s4 === '修改後重停')) appendStop(project, { stop: STOP4, state: '修改後重停', said: say, back: fileRel });
   }
-  const requests = rq ? { revision: rq.revision, ids: rq.ids } : cur?.requests ?? null;
+  // 同一輪接著照新的修改單改：前一批（別的版本）記在 earlier，finish 每一批都回報（不然前一批在剪輯台一直停在「生成中」）
+  const prevReq = cur?.requests;
+  const earlier = rq && prevReq && prevReq.revision !== rq.revision ? [...(prevReq.earlier || []), { revision: prevReq.revision, ids: prevReq.ids }] : prevReq?.earlier || [];
+  const requests = rq ? { revision: rq.revision, ids: rq.ids, ...(earlier.length ? { earlier } : {}) } : prevReq ?? null;
   const segNotes = { ...(cur?.notes || {}), ...texts };
   setRound(project, { n, segs, before, say: [...(cur?.say || []), ...(say ? [say] : [])], open: true, time: cur?.time || now(), srt: cur?.srt ?? srtHash(P), rows: cur?.rows || {}, ...(requests ? { requests } : {}), ...(Object.keys(segNotes).length ? { notes: segNotes } : {}) });
   const all = sceneSlices(text);
@@ -1074,16 +1077,19 @@ export function finishRound(P, flags = {}, log = console.log, steps = {}) {
 //   沒改到＝失敗，理由取 AI 在 r<N>.md 寫的那一列，沒有就寫「這段沒有改動」
 const rowMap = (sec) => new Map([...String(sec).matchAll(/^- (\S+?)：(.+)$/gm)].map((m) => [m[1], m[2].trim()]));
 function reportRequests(P, round, name, { auto, removed, aiRows, rows }) {
-  const q = requestsInfo(P.project), rev = round.requests.revision;
+  const q = requestsInfo(P.project);
   // 這輪開始後使用者又複製了新的修改單：這輪還沒寫進新修改單的段被帶著走（carried），照舊用開輪那一版回報；
-  // 又寫進新修改單的段（使用者又改了）不回報，留給下一輪
-  const same = q?.revision === rev;
-  const mine = !q ? [] : same ? round.requests.ids.filter((x) => q.ids.includes(x)) : round.requests.ids.filter((x) => q.carried.includes(x) && q.states[x]?.revision === rev);
-  const again = q && !same ? round.requests.ids.filter((x) => q.ids.includes(x)) : [];
+  // 又寫進新修改單的段（使用者又改了）不回報，留給下一輪。同一輪接著照新修改單改（begin --requests 兩次）：每一批各自用自己那一版回報
+  const mine = [], again = [];
+  for (const b of [...(round.requests.earlier || []), round.requests]) {
+    const rev = b.revision, same = q?.revision === rev;
+    for (const x of !q ? [] : same ? b.ids.filter((y) => q.ids.includes(y)) : b.ids.filter((y) => q.carried.includes(y) && q.states[y]?.revision === rev)) if (!mine.some((m) => m.id === x)) mine.push({ id: x, rev });
+    if (q && !same) again.push(...b.ids.filter((y) => q.ids.includes(y) && (b === round.requests || !round.requests.ids.includes(y))));
+  }
   const reWarn = again.length ? warn(`剪輯台修改單在這輪開始之後重新複製過，${again.join('、')} 又寫進新的修改單，剪輯台的狀態沒有改`, '停下來重讀 work/feedback/editor-requests.md，問使用者要不要照新的改') : null;
   if (!mine.length) return { warn: reWarn || warn('剪輯台修改單在這輪開始之後重新複製過（或被清空），剪輯台的狀態沒有改', '停下來重讀 work/feedback/editor-requests.md，問使用者要不要照新的改') };
   const done = [], failed = [];
-  for (const id of mine) {
+  for (const { id, rev } of mine) {
     let ok, msg;
     if (removed.includes(id)) { ok = true; msg = '這段從 plan.json 拿掉了'; }
     else if (id in auto) { ok = auto[id] != null; msg = ok ? rows.get(id) ?? auto[id] : aiRows.get(id) ?? '這段沒有改動'; }

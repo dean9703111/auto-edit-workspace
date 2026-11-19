@@ -1,6 +1,7 @@
 // ffmpeg／ffprobe 小工具（零依賴；build.mjs 與 media.mjs 共用）
 //
 //   run(cmd, args, opts)                 → spawnSync 結果（找不到指令時丟出中文錯誤）
+//   sceneScores(file, ranges)            → [[秒數, 分數]]：每一格和前一格差多少（071 錄影換畫面疊化）
 //   probeDuration(file)                  → 秒數
 //   probeMedia(file)                     → { kind:'video'|'image'|'audio', duration, width, height, fps, vfr, hasAudio, hasVideo, audioCount }；width、height 是顯示方向（手機直拍的旋轉標記已算進去，ffmpeg 解碼時也會自動轉正）
 //   encodeFootage(src, dst, { audioFilter, audioRaw, crop, lut, canvas })  主軌底片：30fps CFR、每秒一個關鍵影格、聲音 AAC（聲音處理見 audio.mjs）；lut＝講者調光的 .cube
@@ -108,6 +109,46 @@ export function probeMedia(file) {
     hasAudio: !!a && !image, hasVideo: !!v, audioCount: image ? 0 : streams.filter((s) => s.codec_type === 'audio').length, hdr: v && !image ? hdrKind(v.color_transfer) : null,
   };
   return out;
+}
+
+// 073 錄影檔自帶的黑邊（作者：3840×2160 的檔、畫面只有中間 3644 寬，右上角標跨到黑邊上）：
+//   平均抽 BAR_SAMPLES 格關鍵影格跑 cropdetect，取聯集（任何一格的內容碰到邊就不算黑邊）；兩邊加起來不到寬（高）的 BAR_MIN 不算。
+//   回傳 [x0, y0, x1, y1]（來源像素，黑邊裡面的畫面）或 null。ffmpeg 解出來的大小和 info 不一樣（測試的假 probe）就不判。
+//   cacheFile：記檔案大小與修改時間，第二次直接讀
+const BAR_SAMPLES = 6, BAR_MIN = 0.01;
+const barMem = new Map();
+export function blackBars(file, { width: W, height: H, duration }, cacheFile = null) {
+  let st;
+  try { st = fs.statSync(file); } catch { return null; }
+  const key = `${st.size}|${Math.round(st.mtimeMs)}|${W}x${H}`;
+  if (barMem.get(file)?.key === key) return barMem.get(file).box;
+  let cache = {};
+  try { if (cacheFile) cache = JSON.parse(fs.readFileSync(cacheFile, 'utf8')) || {}; } catch { cache = {}; }
+  const name = path.basename(file);
+  if (cache[name]?.key === key) { barMem.set(file, cache[name]); return cache[name].box; }
+  let u = null, ok = true;
+  for (let k = 0; k < BAR_SAMPLES && ok; k++) {
+    const t = duration > 0 ? r3((duration * (k + 0.5)) / BAR_SAMPLES) : 0;
+    // 先只解關鍵影格（4K 長片快）；那一段沒有關鍵影格（短片）再照一般方式解
+    const cd = (fast) => String(run('ffmpeg', ['-hide_banner', '-v', 'info', ...(fast ? ['-skip_frame', 'nokey'] : []), '-ss', String(t), '-i', file, '-frames:v', '1', '-vf', 'cropdetect=limit=16:round=2:skip=0:reset=0', '-an', '-f', 'null', '-']).stderr || '');
+    let err = cd(true);
+    if (!/crop=/.test(err)) err = cd(false);
+    const dim = /Stream #\S+: Video: .*?, (\d{2,5})x(\d{2,5})/.exec(err);
+    if (!dim || +dim[1] !== W || +dim[2] !== H) { ok = false; break; }   // 解不出畫面（空檔）、大小對不上（旋轉、假 probe）：不判
+    const m = [...err.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)].pop();
+    if (!m) continue;   // 整格黑（淡入前）或讀不到：這一格不算
+    const [w, h, x, y] = m.slice(1, 5).map(Number);
+    u = u ? [Math.min(u[0], x), Math.min(u[1], y), Math.max(u[2], x + w), Math.max(u[3], y + h)] : [x, y, x + w, y + h];
+  }
+  let box = null;
+  if (ok && u && u[0] >= 0 && u[1] >= 0 && u[2] <= W && u[3] <= H && u[2] - u[0] > W / 2 && u[3] - u[1] > H / 2
+    && (u[0] + W - u[2] >= W * BAR_MIN || u[1] + H - u[3] >= H * BAR_MIN)) box = u;
+  const rec = { key, box };
+  barMem.set(file, rec);
+  if (cacheFile) {
+    try { fs.mkdirSync(path.dirname(cacheFile), { recursive: true }); fs.writeFileSync(cacheFile, JSON.stringify({ ...cache, [name]: rec }, null, 1)); } catch { /* 寫不進快取：下次再量 */ }
+  }
+  return box;
 }
 
 // 底片的裁切／縮放（FR-100）：
@@ -314,6 +355,19 @@ export function blackDetect(file, cacheFile = null, onMiss = null) {
 }
 
 // 一格畫面 → rgb24 Buffer（width／height 給了就縮放成那個大小）
+// 071 錄影換畫面：每一格和前一格差多少（ffmpeg scene 分數 0–1，縮到 320 寬算）；ranges＝[[起, 長]]（檔案秒數）→ [[檔案秒數, 分數]]
+export function sceneScores(file, ranges) {
+  const out = [];
+  for (const [ss, len] of ranges) {
+    const r = run('ffmpeg', ['-hide_banner', '-nostats', '-ss', String(ss), '-t', String(len), '-i', file, '-an', '-sn', '-dn', '-vf', "scale=320:-2,select='gte(scene\\,0)',metadata=print:key=lavfi.scene_score", '-f', 'null', '-']);
+    if (r.status !== 0) throw new Error(`ffmpeg 算畫面變化失敗：${tail(r.stderr)}`);
+    const t = [...String(r.stderr).matchAll(/pts_time:([\d.]+)/g)].map((x) => Number(x[1]));
+    const v = [...String(r.stderr).matchAll(/lavfi\.scene_score=([\d.]+)/g)].map((x) => Number(x[1]));
+    t.forEach((x, i) => out.push([Math.round((ss + x) * 1000) / 1000, v[i] ?? 0]));
+  }
+  return out.sort((a, b) => a[0] - b[0]);
+}
+
 export function rawFrame(file, { at = 0, width, height, hdr = null } = {}) {
   const args = ['-v', 'error'];
   if (at > 0) args.push('-ss', String(at));

@@ -11,7 +11,8 @@
 //   soundOf(plan)              聲音那幾個欄位的值（build 記在 work/hyperframes/.cache/live.json＝「做進去的值」；頁面拿現在的值來比）
 //   liveStrip(plan, { bedDefault, look })  拿掉上面那些欄位、其他照舊的 plan（指紋用：跟上次 build 比只差這些＝指紋一樣）；
 //                              look＝呼叫端算好的講者設定（lib/look.mjs lookKey：沒寫和寫了預設值算同一個），沒給就照 plan.json 原樣
-//   liveFingerprint(plan, srtText, hash, { bedDefault, look })  指紋：liveStrip 加上字幕檔（hash＝呼叫端給的雜湊函式，node 用 sha1）
+//   liveFingerprint(plan, srtText, hash, { bedDefault, look })  指紋：liveStrip 加上字幕檔的時間（srtTiming：只改字不算；hash＝呼叫端給的雜湊函式，node 用 sha1）
+//   第三輪（r8）：字幕只改字也直接套（preview.js applyText 換播放器裡那一則的字）
 //   liveOk(built, now)         這些差在預覽裡套得上嗎（做進去時是靜音的，乘多少都還是靜音：要重新 build）
 //   liveScale(id, ctx)         完成影片預覽裡這個出聲元素的 data-volume 要乘多少（null＝不是剪輯台管的聲音，不動）
 //
@@ -95,7 +96,10 @@ export function stableJson(v) {
   if (isObj(v)) return `{${Object.keys(v).sort().filter((k) => v[k] !== undefined).map((k) => `${JSON.stringify(k)}:${stableJson(v[k])}`).join(',')}}`;
   return JSON.stringify(v ?? null);
 }
-export const liveFingerprint = (plan, srtText, hash, opts) => hash(`${stableJson(liveStrip(plan, opts))}\n${hash(String(srtText ?? ''))}`);
+// r8（作者：「調整字幕應該要直接變更吧？不需要按更新預覽」）：字幕檔只算時間（每一則的起迄，則數跟著算進去），不算字：
+//   只改字頁面直接換播放器裡的字（preview.js applyText）；分割、合併、刪句、改時間會動到段落的位置，照樣要 build
+export const srtTiming = (srtText) => String(srtText ?? '').split(/\r?\n/).filter((l) => l.includes('-->')).map((l) => l.trim()).join('\n');
+export const liveFingerprint = (plan, srtText, hash, opts) => hash(`${stableJson(liveStrip(plan, opts))}\n${hash(srtTiming(srtText))}`);
 
 // 做進去時是靜音（或小到乘回來會差很多）的地方，現在打開了：預覽裡乘多少都還是靜音，要重新 build
 export function liveOk(b, n) {

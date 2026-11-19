@@ -471,6 +471,41 @@ export class PlayerPreview {
       if (text.get(n) === el.textContent) el.classList.toggle('cg--em', A.isMark(n));
     }
   }
+  // r8 字幕只改字（作者：「調整字幕應該要直接變更吧？不需要按更新預覽」）：播放器裡那一則字幕直接換成剪輯台現在的字
+  //   （build 寫在 compositions/captions.html 的 <div class="cg" id="cg-N"><span>…</span></div>）。每一則的時間和上次 build 一樣才換
+  //   （app.textLive；分割、合併、改時間等「更新預覽」）；第一次換之前記下 build 做進去的那一份，改回原本的字就還原（只標幾個字的 <em class="cw"> 照原本的字再包一次）
+  applyText() {
+    const A = this.app;
+    let doc = null;
+    try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
+    const root = doc?.querySelector(CAP_ROOT);
+    if (!root || !A.textLive) return;
+    const live = A.textLive(), key = `${live}|${A.ver}`;
+    if (root.dataset.textKey === key) return;
+    root.dataset.textKey = key;
+    const text = new Map(A.cues.map((c) => [c.n, c.text]));
+    for (const el of root.querySelectorAll('.cg')) {
+      const span = el.querySelector('span');
+      if (!span) continue;
+      if (el.dataset.builtHtml == null) el.dataset.builtHtml = span.innerHTML;
+      const built = doc.createElement('span');
+      built.innerHTML = el.dataset.builtHtml;
+      const want = live ? text.get(Number(el.id.slice(3))) : null;
+      if (want == null || want === built.textContent) { if (span.innerHTML !== el.dataset.builtHtml) span.innerHTML = el.dataset.builtHtml; continue; }
+      if (span.textContent === want) continue;
+      span.textContent = want;
+      for (const w of [...built.querySelectorAll('em.cw')].map((x) => x.textContent)) {
+        const node = [...span.childNodes].find((x) => x.nodeType === 3 && x.data.includes(w));
+        if (!node) continue;
+        const mid = node.splitText(node.data.indexOf(w));
+        mid.splitText(w.length);
+        const em = doc.createElement('em');
+        em.className = 'cw';
+        em.textContent = w;
+        mid.replaceWith(em);
+      }
+    }
+  }
   // 058 播放器裡會出聲、剪輯台管得到音量的元素（editor/live-sound.mjs soundKind 認得的 id；沒聲音的影片層不算）
   scanSound() {
     let doc = null;
@@ -519,6 +554,7 @@ export class PlayerPreview {
     this.applySound();
     this.applyTheme();
     this.applyCaption();
+    this.applyText();
     this.applyMarks();
     const ct = this.p.currentTime;
     if (Number.isFinite(ct) && this.ready) this.outT = ct;

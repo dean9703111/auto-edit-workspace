@@ -181,7 +181,9 @@ const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(
 const isDirty = () => app.savedSnap !== '' && dirtySnap() !== app.savedSnap;
 // 058 還沒存的修改是不是只有直接套得上的（聲音：人聲、音效、素材原聲、背景音樂、範圍音量、各段音量；字幕樣式；整則的重點字幕。
 // editor/live-sound.mjs 的 liveStrip 拿掉的那幾個欄位；cap、marks 是頁面上的字幕樣式和重點字幕）
-const restSnap = (snap) => { const o = JSON.parse(snap), st = liveStrip({ edit: o.edit, scenes: o.scenes }); return JSON.stringify({ ...o, edit: st.edit, scenes: st.scenes, bedVol: undefined, cap: undefined, marks: undefined }); };
+// 字幕只改字的操作（r8：完成影片預覽直接換字，preview.js applyText）；改時間、分割、合併、刪句不算
+const textOnlyOp = (o) => o?.op === 'set' && Object.keys(o).every((k) => k === 'op' || k === 'n' || k === 'text');
+const restSnap = (snap) => { const o = JSON.parse(snap), st = liveStrip({ edit: o.edit, scenes: o.scenes }); return JSON.stringify({ ...o, edit: st.edit, scenes: st.scenes, ops: (o.ops || []).filter((x) => !textOnlyOp(x)), bedVol: undefined, cap: undefined, marks: undefined }); };
 const dirtyLiveOnly = () => isDirty() && restSnap(dirtySnap()) === restSnap(app.savedSnap);
 // 頁面上現在的聲音（還沒存的也算）：完成影片預覽照它和做進去的值（/api/state 的 preview.sound）的差改音量
 let soundCache = null;
@@ -189,7 +191,7 @@ app.soundNow = () => {
   if (soundCache?.ver !== app.ver) soundCache = { ver: app.ver, v: soundOf({ edit: app.edit, scenes: app.scenes, bed: { volume: app.bedVol } }) };
   return soundCache.v;
 };
-// 還有改了、但完成影片預覽看不到的修改（「更新預覽」發光）：只差聲音、字幕樣式、重點字幕的不算（預覽裡直接改音量、改字幕）。
+// 還有改了、但完成影片預覽看不到的修改（「更新預覽」發光）：只差聲音、字幕樣式、重點字幕、字幕只改字的不算（預覽裡直接改音量、改字幕）。
 // 做進去時是靜音、現在打開了（乘多少都還是靜音），或讀不到播放器裡的東西（退回原本的做法）時照樣要更新預覽
 function previewPending() {
   const pv = app.server?.preview;
@@ -201,6 +203,8 @@ function previewPending() {
   if (app.mode === 'player' && player.live && !player.live.on) return true;
   return !liveOk(pv.sound, app.soundNow());
 }
+// r8 完成影片預覽能不能直接換字幕的字：每一則的時間和上次 build 一樣（伺服器說只差直接套得上的、還沒存的字幕操作都只改字）
+app.textLive = () => { const pv = app.server?.preview; return !!pv?.built && (!pv.stale || pv.liveOnly) && app.srtOps.every(textOnlyOp); };
 // 只差直接套得上的、已經套進完成影片預覽
 const liveApplied = () => { const pv = app.server?.preview; return !!pv?.built && (pv.stale || isDirty()) && !previewPending(); };
 // /api/state、/api/version、存檔、復原回來的預覽狀態（built、stale、liveOnly、sound）；有變回傳 true
@@ -631,7 +635,7 @@ function openCapEditor(n) {
   ed.style.left = `${xa}px`; ed.style.top = `${timeline.L.cap[0] + 3}px`;
   ed.style.width = `${Math.max(220, xb - xa)}px`;
   ed.value = c.text; ed.dataset.n = String(n); ed.hidden = false;
-  ed.focus(); ed.select();
+  ed.focus({ preventScroll: true }); ed.select();   // r8：原地改，不讓時間軸、頁面跟著捲
 }
 function closeCapEditor(commit) {
   const ed = $('#capEditor');
@@ -941,6 +945,7 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   closeMenu();   // 開著的右鍵選單是照舊資料列的：重新載入就收掉
   app.saveBlocked = false;
   app.server = s;
+  app.clientAt ??= s.client;   // 073 這一頁載入的是哪一版程式（之後重新讀狀態也不換）
   app.hiddenChecks = new Set(Array.isArray(s.hiddenChecks) ? s.hiddenChecks : []);
   app.base = { mtime: s.plan.mtime, hash: s.plan.hash, srtHash: s.srt?.hash ?? null };
   app.fps = s.video?.fps || 30;
@@ -995,7 +1000,7 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   // 修改單：第一次載入讀這個專案存在瀏覽器的清單與開關；之後重新載入（AI 改了 plan.json）只重畫
   // 初剪預覽是來校字幕的：開在字幕分頁，不是主題和調光
   loadRound();
-  if (!rqLoaded) { rqLoaded = true; rqLoad(); let o = false; try { o = localStorage.getItem('editor-requests-open') === '1'; } catch { /* 預設收起 */ } setSide(roughStage() ? 'cues' : o ? 'rq' : 'insp', { open: false }); }
+  if (!rqLoaded) { rqLoaded = true; rqLoad().then(() => renderRequests()); let o = false; try { o = localStorage.getItem('editor-requests-open') === '1'; } catch { /* 預設收起 */ } setSide(roughStage() ? 'cues' : o ? 'rq' : 'insp', { open: false }); }
   else renderRequests();
   renderFlowHere();
   if (!app.peaks) fetchPeaks();
@@ -1643,9 +1648,18 @@ async function pollVersion() {
     if (seq !== app.saveSeq || app.busy) return;   // 等回應的時候自己存了檔：這份版本資訊已經舊了，不是別人改的
     const v = r.data;
     if (app.saveOffline) { app.saveOffline = false; renderHeader(); }
+    // 073 剪輯台的程式更新了：這一頁還是舊的（修改單、狀態都可能不對），請使用者重新整理
+    if (v.client && app.clientAt && v.client !== app.clientAt && !app.clientNoticed) {
+      app.clientNoticed = true;
+      banner('剪輯台的程式剛更新：重新整理這一頁才會用到新版（修改單、調整都存在專案裡，不會不見）', '', [['重新整理', () => {
+        if (isDirty()) { toast('還有沒存好的調整：等上面顯示「已自動存檔」再按', 'warn', 4000); return; }
+        location.reload();
+      }, 'small primary']]);
+    }
     const pv = app.server.preview;
     const rebuilt = v.built && pv.builtMtime !== v.builtMtime;
     if (syncPreview(v)) renderMode();
+    if (rqLoaded && v.requestsList != null && v.requestsList !== rqRev) await rqRefresh();   // 072 別的分頁、別的瀏覽器存了修改單
     if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); loadRound(); }
     renderPrerender(v.prerender);
     syncOutsideBuild(v.build, v.framingUpdate);
@@ -3861,10 +3875,72 @@ document.addEventListener('pointerdown', () => { clearTimeout(tipTimer); $('#tip
 const rqKey = () => `editor-requests:${app.server?.project?.dir || ''}`;
 const rqKind = (sc) => rqKindOf(sc ? segType(sc) : null);
 let rqClearArm = false, rqMarks = '';
-function rqLoad() {
-  try { const v = JSON.parse(localStorage.getItem(rqKey()) || '[]'); app.requests = Array.isArray(v) ? v.filter((x) => isObj(x) && x.id) : []; } catch { app.requests = []; }
+// 072 修改單存在專案裡（work/feedback/editor-requests-list.json，server/requests.mjs），換瀏覽器、剪輯台換埠號、開好幾個分頁都是同一份。
+//   rqBase＝這個分頁上次和專案對齊時每段的樣子（JSON 字串）；存檔只送和它不一樣的段，帶著它當 base，專案裡那段被別的分頁改過就不蓋
+let rqBase = new Map(), rqRev = 0, rqSaving = null;
+const rqSnap = () => new Map(app.requests.map((r) => [r.id, JSON.stringify(r)]));
+// 換上專案裡那一份；snap（對齊之前這個分頁每段的樣子）之後這個分頁又改的段照留，下一次存檔再送
+function rqMerge(d, snap) {
+  const local = new Map(app.requests.map((r) => [r.id, r])), server = new Set(d.list.map((x) => x.id));
+  const mine = (id) => (local.has(id) ? JSON.stringify(local.get(id)) : null) !== (snap.get(id) ?? null);
+  const out = [];
+  for (const x of d.list) { if (!mine(x.id)) out.push(x); else if (local.has(x.id)) out.push(local.get(x.id)); }
+  for (const r of app.requests) if (!server.has(r.id) && mine(r.id)) out.push(r);
+  app.requests = out;
+  rqBase = new Map(d.list.map((x) => [x.id, JSON.stringify(x)]));
+  rqRev = d.rev;
 }
-function rqStore() { try { localStorage.setItem(rqKey(), JSON.stringify(app.requests)); } catch { /* 無痕視窗：只留在這個分頁 */ } }
+async function rqLoad() {
+  const r = await api('GET', '/api/requests/list');
+  if (!r.ok || !r.data) { toast(`讀不到修改單：${r.data?.message || r.status}`, 'err', 6000); return; }
+  rqMerge(r.data, new Map());
+  // 072 之前只存在瀏覽器：這個瀏覽器存過、專案裡還沒有的段搬進專案；存到了才清掉瀏覽器那一份（不然刪掉的段下次又會長回來）
+  let old = [];
+  try { const v = JSON.parse(localStorage.getItem(rqKey()) || '[]'); if (Array.isArray(v)) old = v.filter((x) => isObj(x) && typeof x.id === 'string' && x.id && !rqBase.has(x.id)); } catch { /* 讀不到就算了 */ }
+  if (old.length) {
+    app.requests.push(...old);
+    if (!(await rqStore())) return;
+    toast(`這個瀏覽器存的 ${old.length} 段修改單已經搬進專案（換瀏覽器、重新打開都看得到）`, 'ok', 5000);
+  }
+  try { localStorage.removeItem(rqKey()); } catch { /* 無痕視窗 */ }
+}
+// 別的分頁（或別的瀏覽器）存了：換上專案裡那一份（輪詢看到 requestsList 換了才讀；自己正在存就等下一次）
+async function rqRefresh() {
+  if (rqSaving) return;
+  const r = await api('GET', '/api/requests/list');
+  if (!r.ok || !r.data || rqSaving) return;
+  rqMerge(r.data, rqBase);
+  renderRequests();
+}
+function rqOps() {
+  const ops = [], ids = new Set();
+  for (const r of app.requests) { ids.add(r.id); const s = JSON.stringify(r); if (rqBase.get(r.id) !== s) ops.push({ id: r.id, item: JSON.parse(s), base: rqBase.get(r.id) ?? null }); }
+  for (const [id, b] of rqBase) if (!ids.has(id)) ops.push({ id, item: null, base: b });
+  return ops;
+}
+async function rqFlush() {
+  const ops = rqOps();
+  if (!ops.length) return true;
+  const snap = rqSnap();
+  const r = await api('POST', '/api/requests/list', { ops });
+  if (!r.ok || !r.data) { toast(`修改單沒有存到：${r.data?.message || r.status}`, 'err', 6000); return false; }
+  rqMerge(r.data, snap);
+  if (r.data.skipped?.length) toast(`${r.data.skipped.join('、')} 在別的分頁改過，換成那邊的版本`, 'warn', 5000);
+  return true;
+}
+// 一次只送一份：送出去還沒回來又改了，回來之後再送一次（base 才會是最新的）。回傳存到了沒
+function rqStore() {
+  if (rqSaving) { rqSaving.again = true; return rqSaving.done; }
+  const job = { again: false };
+  rqSaving = job;
+  job.done = (async () => {
+    let ok = true;
+    try { do { job.again = false; ok = await rqFlush(); } while (ok && job.again); } finally { rqSaving = null; }
+    renderRequests();
+    return ok;
+  })();
+  return job.done;
+}
 function rqSegOf(sel) { return sel && (sel.kind === 'item' || sel.kind === 'media' || sel.kind === 'sfx' || sel.kind === 'gap') ? sel.id : null; }
 // 沒有卡片的講解也能寫進修改單：段號用 t＋起點秒數
 const gapId = (t) => `t${Math.floor(t)}`;
@@ -3912,6 +3988,9 @@ function rqSync() {
   for (const r of app.requests) {
     const d = rqExported(r) ? q.done[r.id] : null;
     if (d) { r.done = { round: d.round, note: d.note }; ch = true; }
+    // r8 已改完的段：修改單上寫的標籤、描述清空（作者：「完成的修改單，該段落的字應該要清空，而不是下次點到時還在」）。
+    //   「已改完」分頁照 r<N>.md 列，不會少；要再改就從空白寫一筆新的待改
+    if (r.done && (r.tags.length || r.note || r.redo)) { r.tags = []; r.note = ''; delete r.redo; ch = true; }
   }
   // 068：比最近一輪舊的已改完拿掉（紀錄在 r<N>.md）；修改單只留待改、生成中和這一輪的已改完
   const rn = Number(app.round?.round?.slice(1)) || 0;
@@ -3941,7 +4020,7 @@ function rqStateHtml(id) {
   const r = app.requests.find((x) => x.id === id);
   if (!r) return '<p class="ip-note">點一個想怎麼改、或寫描述，就會存進修改單（不用按儲存）。</p>';
   const del = `<button class="small ghost" data-rq="del" data-id="${esc(id)}">拿掉這段</button>`;
-  if (r.done) return `<div class="rq-state done"><div><span class="rq-done">✓ 已改完（${esc(r.done.round)}）</span><div class="what">${esc(r.done.note)}</div><p class="ip-note">再點標籤或改描述＝變回待改，下次複製會再送。</p></div>
+  if (r.done) return `<div class="rq-state done"><div><span class="rq-done">✓ 已改完（${esc(r.done.round)}）</span><div class="what">${esc(r.done.note)}</div><p class="ip-note">要再改就點標籤或寫描述（從空白開始），會變成一筆新的待改。</p></div>
     <div class="ip-btns"><button class="small primary" data-rq="result" data-id="${esc(id)}">▶ 看結果</button>${del}</div></div>`;
   const status = rqStatus(r);
   return `<div class="rq-state ${status.cls}" role="status"><span class="ip-note">${esc(status.detail)}</span>${del}</div>`;
@@ -4338,6 +4417,8 @@ $('#segList').addEventListener('click', (e) => {
   goToSeg(id);
 });
 $('#cueMarksOnly').addEventListener('click', () => { marksOnly = !marksOnly; renderCueList(); });
+// 點一句跳過去：停在那一句裡面（r8）。停在起點的話，播放器對齊到前一格，完成影片預覽顯示的是上一句，邊改邊看會對不上
+const cueSeekT = (c) => Math.min(c.start + 0.05, (c.start + c.end) / 2);
 // 重點字幕的開關：按下去不搶焦點（正在改字的那一句照樣可以標，游標留在原地）
 $('#cueList').addEventListener('mousedown', (e) => { if (e.target.closest('[data-mark]')) e.preventDefault(); });
 $('#cueList').addEventListener('click', (e) => {
@@ -4347,16 +4428,16 @@ $('#cueList').addEventListener('click', (e) => {
   if (!c) return;
   if (e.target.closest('[data-mark]')) {
     // 沒在播放就跳到那一句，預覽畫面上馬上看得到重點樣式；播放中不打斷
-    if (!engine().playing && cueEditing == null) { app.seek(c.start); timeline.reveal(c.start, c.end); app.select({ kind: 'cue', id: n }, { lane: 'cap' }); }
+    if (!engine().playing && cueEditing == null) { app.seek(cueSeekT(c)); timeline.reveal(c.start, c.end); app.select({ kind: 'cue', id: n }, { lane: 'cap' }); }
     toggleMark(n);
     return;
   }
-  app.seek(c.start); timeline.reveal(c.start, c.end);
+  app.seek(cueSeekT(c)); timeline.reveal(c.start, c.end);
   app.select({ kind: 'cue', id: n }, { lane: 'cap' });
   cueEditing = n;
   renderCueList();
   const i = $('#cueList .cue-edit');
-  i?.focus(); i?.setSelectionRange(i.value.length, i.value.length);
+  i?.focus({ preventScroll: true }); i?.setSelectionRange(i.value.length, i.value.length);   // r8：點了就原地改，清單不捲動（作者：「畫面會有往上跳的問題」）
 });
 // 字幕分頁改字：打一個字就算數（會自動存），和屬性面板一樣；只是點進來沒打字，什麼都不會寫。Esc 回到點進來時的字
 const liveCue = (i) => { const n = Number(i.closest('[data-cue]').dataset.cue); if (i.value.trim()) setCue(n, { text: i.value }, { coalesce: `cap-${n}` }); };

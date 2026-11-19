@@ -42,6 +42,8 @@ const trackHint = (c) => [...c.bgm(), 'none'].join('／');
 // early：還沒有 plan.json 時也能寫（構圖台、換風格這幾步在分鏡之前；剪輯台構圖台也是先建 { "version": 1 }）
 const KEYS = {
   theme: { hint: () => 'light／dark', parse: pick(['light', 'dark']), early: true },
+  // 070 錄影、圖片段四周的底色（這一集；以後每集的預設用 brand.mjs screen-bg）
+  screenBg: { hint: () => 'black（錄影四周黑底，預設）／white（白底）', parse: pick(['black', 'white']), early: true },
   style: { hint: (c) => c.packs().join('／') || '（shared/template/styles/ 是空的）', parse: (v, c) => (c.packs().includes(String(v).trim()) ? String(v).trim() : BAD), early: true },
   format: { hint: () => 'portrait／landscape', parse: pick(['portrait', 'landscape'], { 直式: 'portrait', 橫式: 'landscape' }), early: true },
   speakerSide: { hint: () => 'left／center／right', parse: pick(['left', 'center', 'right']) },

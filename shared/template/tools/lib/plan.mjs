@@ -41,7 +41,7 @@ import { LOCAL_ROLES, sfxActual, wavSeconds } from './sfx-local.mjs';
 import { BED, LIB_LUFS } from './music.mjs';
 import { validateMoods, moodCues, moodSound, zoomSpans, MOOD_KINDS } from './moods.mjs';
 import { sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle, resolveCaptionMarks, describeCaptionMarks } from './caption-style.mjs';
-import { resolveScreenFrame, frameLine } from './screen-frame.mjs';
+import { resolveScreenFrame, frameLine, SCREEN_BGS } from './screen-frame.mjs';
 import { validateLook } from './look.mjs';
 import { FORMATS, CANVAS, canvasOf, LAYOUT } from './canvas.mjs';
 import { parseBeatSheets, sheetPlanFindings } from './audit-beats.mjs';
@@ -54,7 +54,7 @@ import { readFillSpec } from './custom-fill.mjs';
 import { isShortCaption, CAPTION as CAPTION_MIN } from './captions.mjs';
 
 // plan.json 第一層（順序＝文件與剪輯台存檔的順序；specs/contracts/plan-fields.md §1）
-const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'ending', 'chapterBadge', 'chapterMap', 'sections', 'check', 'look', 'theme', 'captionStyle', 'captionMarks', 'screenFrame', 'style', 'edit', 'moods', 'scenes'];
+const TOP_KEYS = ['version', 'format', 'frame', 'speakerBox', 'speakerSide', 'sideShift', 'pipCrop', 'avoid', 'rhythm', 'outro', 'bed', 'ending', 'chapterBadge', 'chapterMap', 'sections', 'check', 'look', 'theme', 'captionStyle', 'captionMarks', 'screenFrame', 'screenBg', 'style', 'edit', 'moods', 'scenes'];
 const RHYTHMS = ['continuous', 'spaced'];
 const THEMES = ['light', 'dark'];
 const OUTRO_KEYS = ['from', 'music', 'volume', 'fadeOut'];
@@ -468,6 +468,12 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const sfRes = resolveScreenFrame({ plan, settings: { screenFrame: lib.screenFrameDefault ?? undefined }, capStyle: capRes.style, canvas: C, projectRel });
   errors.push(...sfRes.errors); warnings.push(...sfRes.warnings);
   const screenFrame = sfRes.frame;
+  // 070 錄影四周的底色：這一集 plan.json screenBg → 預設 shared/setting.json screenBg（brand.mjs screen-bg）→ 黑底
+  const bgBad = (v) => v !== undefined && v !== null && !SCREEN_BGS.includes(v);
+  if (bgBad(plan.screenBg)) errors.push(`screenBg 只能是 "black"（預設，錄影、圖片四周黑底）或 "white"（白底），現在是 ${JSON.stringify(plan.screenBg)} → 改成 "black"／"white"，或刪掉這個欄位（＝照 shared/setting.json，沒設定＝黑底）`);
+  if (bgBad(lib.screenBgDefault)) warnings.push(`shared/setting.json 的 screenBg 只能是 "black" 或 "white"，現在是 ${JSON.stringify(lib.screenBgDefault)}，先用黑底 → node shared/template/tools/brand.mjs screen-bg black`);
+  const screenBg = SCREEN_BGS.includes(plan.screenBg) ? plan.screenBg : SCREEN_BGS.includes(lib.screenBgDefault) ? lib.screenBgDefault : 'black';
+  const screenBgFrom = SCREEN_BGS.includes(plan.screenBg) ? 'plan' : SCREEN_BGS.includes(lib.screenBgDefault) ? 'setting' : 'default';
   // 038 重點字幕（captionMarks：["#6", "#7"]，lib/caption-style.mjs）：那幾則字幕用重點樣式。句號照 rough.srt（剪輯台剪掉的句子本來就不顯示）；
   // 直式一則都沒標的 ⚠ 等排了段落才提醒（還沒寫分鏡時不催）
   const markRes = resolveCaptionMarks(plan.captionMarks, cues, { portrait, hasScenes: Array.isArray(plan.scenes) && plan.scenes.length > 0, projectRel });
@@ -544,7 +550,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
   const timed = items.filter((it) => it.start != null && it.end != null && it.opaque !== undefined).sort((a, b) => a.start - b.start || a.idx - b.idx);
   // 後面各節拆成收 ctx 的小函式（032 C10）：要用的值都放在這裡，各節算出來的再掛回 ctx。
   // 順序不能換：後面的節讀前面寫在各段上的值（end、pipPieces、sfx…），✖／⚠ 的先後也照這個順序
-  const ctx = { plan, lib, icons, consts, sfxConf, sfxDir, outDir, projectDir, projectRel, cutpoints, errors, warnings, items, timed, cues, roughCues, videoDur, tm, ne, edit, mapAbs, voiceOut, speakerBox, sideShift, pipCrop, sl, C, portrait, FOOT, BAD, rhythm, badgeOn, textSyncOn, waitLead, screenFrame, sfxLen };
+  const ctx = { plan, lib, icons, consts, sfxConf, sfxDir, outDir, projectDir, projectRel, cutpoints, errors, warnings, items, timed, cues, roughCues, videoDur, tm, ne, edit, mapAbs, voiceOut, speakerBox, sideShift, pipCrop, sl, C, portrait, FOOT, BAD, rhythm, badgeOn, textSyncOn, waitLead, screenFrame, screenBg, sfxLen };
   // 全幕版（034）、起迄、接縫、轉場、子母畫面
   fullCards(ctx);
   chapterMapCards(ctx);
@@ -605,7 +611,7 @@ export function resolvePlan({ plan, cues, videoDur, lib, outDir, sfxDir, project
     ...(own.cues.length ? { userSfx: own.cues } : {}),   // 050 作者在剪輯台自己加的音效（完成影片秒數）；沒有就沒有這個鍵
     rhythm: RHYTHMS.includes(rhythm) ? rhythm : 'continuous', uncovered, spokenLen, chapters: chapterList, blackout, sfxBudget: budget, outro, bed,
     ending, tail, portraitLayout: ctx.portraitLayout ?? null, finalDur: r3(videoDur + (ending?.dur || 0) + (tail?.dur || 0)),
-    chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C,
+    chapterBadge: badgeOn, badges, theme, style, format: C.format, canvas: C, screenBg, screenBgFrom,
     captionStyle: capRes.isDefault ? null : capRes.style, captionFrom: capRes.from, captionMarks: markRes.marks, captionWords: markRes.words,
     // 061 錄影畫面框：沒設定時不放這兩個鍵（結果和原本一樣）
     ...(screenFrame ? { screenFrame, screenFrameRecord: sfRes.record } : {}),
@@ -968,6 +974,12 @@ function opaqueSeams({ timed }) {
       if (room >= WIPE - 1e-6) {
         b.wipeIn = true; b.z = 31; a.postroll = r3(Math.min(ROLL, room));
         b.notes.push(`從 ${a.id} 擦入 ${WIPE}s（${a.id} 錄影多播 ${a.postroll.toFixed(2)}s）`);
+      } else if (a.media.kind === 'video') {
+        // 072（作者：「從上一個黑色到白色的畫面，應該要設計轉場，視覺才不會突兀，這個需要設計為全部的通例」）：
+        //   錄影後面沒有多的（變速段的檔案就是這一段）原本硬切，暗的錄影直接跳成亮的動畫。改成錄影最後一格定格 WIPE 秒墊在下面，動畫照樣擦入
+        //   （和反方向「動畫停在完成態蓋住錄影開頭再擦開」對稱）；build 抽最後一格（media.tail），main.mjs 不把錄影本身往後延
+        b.wipeIn = true; b.z = 31; a.postroll = WIPE; a.freezeTail = WIPE;
+        b.notes.push(`從 ${a.id} 擦入 ${WIPE}s（${a.id} 的錄影後面沒有多的：最後一格定格 ${WIPE}s 墊在下面）`);
       } else b.notes.push(`不擦入：${a.id} 的錄影只剩 ${Math.max(0, room).toFixed(2)}s → 錄影要多 0.5s 才有擦入（現在硬切）`);
     } else {
       if (!['fade', 'cut'].includes(b.media.enter)) continue;
@@ -1150,8 +1162,8 @@ function sectionBadgeBox({ badgeOn, sections, portrait, timed, BAD, screenFrame 
     for (const x of timed) {
       const i = x.type === 'media' && x.media?.fit !== 'cover' ? x.media?.info : null;
       if (!i?.width || i.width / i.height < 1.2 || x.seg?.side) continue;
-      const k = `${i.width}x${i.height}`;
-      tally.set(k, { width: i.width, height: i.height, d: (tally.get(k)?.d || 0) + x.end - x.start });
+      const k = `${i.width}x${i.height}${i.content ? `@${i.content.join(',')}` : ''}`;   // 073 錄影自帶黑邊：照黑邊裡的畫面算
+      tally.set(k, { width: i.width, height: i.height, ...(i.content ? { content: i.content } : {}), d: (tally.get(k)?.d || 0) + x.end - x.start });
     }
     return (frameCache = [...tally.values()].sort((p, q) => q.d - p.d)[0] || { width: LS.W, height: LS.H });
   };
@@ -1181,7 +1193,7 @@ function chapterHeads({ timed }) {
 }
 
 // resolvePlan 的一節：每一段的內容（情境套 slots、錄影的標註與運鏡、情境動畫綁句與動畫分鏡）；✖／⚠ 推進各段
-function segmentContent({ timed, cues, icons, consts, chapters, badgeOn, tm, C, secBadgeFor, waitLead, outDir, lib, screenFrame, sections }) {
+function segmentContent({ timed, cues, icons, consts, chapters, badgeOn, tm, C, secBadgeFor, waitLead, outDir, lib, screenFrame, screenBg, sections }) {
   // --- 內容 ---
   const steps = newStepState();   // media 的 STEP 編號跨段接續（依起點順序）
   // 換小節（右上角標換字）就從 1 重數：不然片子後半段會出現「35 手機下載 App」，和角標的 STEP 3 對不上（作者：左右兩邊都有步驟會混亂）
@@ -1202,7 +1214,7 @@ function segmentContent({ timed, cues, icons, consts, chapters, badgeOn, tm, C, 
       const sec = [...(sections || [])].reverse().find((x) => x.at <= it.start + 1e-6) || null;
       if (sec !== stepSec) { stepSec = sec; steps.n = 0; steps.byText.clear(); steps.last = null; }
       const pipAt = (t) => it.pipPieces.some((p) => t >= p.s - 1e-6 && t < p.e);
-      it.mediaReport = validateMedia(it, { cues, tm, pipAt, icons, steps, canvas: C, badge: secBadgeFor(it), frame: screenFrame, waitLead: it.seg.sfxExtra === false ? WAIT.lead : waitLead, err: (m) => it.errors.push(`${it.where} ${m}`), warn: (m) => it.warnings.push(`${it.where} ${m}`) });
+      it.mediaReport = validateMedia(it, { cues, tm, pipAt, icons, steps, canvas: C, badge: secBadgeFor(it), frame: screenFrame, screenBg, waitLead: it.seg.sfxExtra === false ? WAIT.lead : waitLead, err: (m) => it.errors.push(`${it.where} ${m}`), warn: (m) => it.warnings.push(`${it.where} ${m}`) });
     } else if (it.type === 'custom') {
       // 情境動畫綁句：x-*.html 裡的 P.at('#N…') 預先算成完成影片秒數（specs/contracts/cues.md §3）
       it.cueRefs = {};
@@ -2141,6 +2153,12 @@ function pipMotion(timed, { tm, voiceOut, punches = [], portrait = false, videoD
     && !voiceOut.some(([s, e]) => t >= s - 1e-9 && t < e)
     && !timed.some((x) => x.side && x.start <= t + 1e-9 && t < x.end - 1e-9)
     && !punches.some((p) => t >= p.a - 1e-9 && t < p.b);
+  // r7（作者：「右下的人不需要漸隱」）：剪接點落在兩段之間時，接點到下一段起點那一小片（< PIP_MIN）被濾掉，兩段的小視窗差 1 格
+  //   就變成淡出再淡入 → 下一段的片段往前接到接點（data-media-start 跟著往前；接點之後就是下一段的畫面），當成接續
+  for (const { a, p } of all) {
+    const q = all.find((x) => x.a !== a && isJoin(x.p.e) && p.s > x.p.e + 1e-9 && p.s - x.p.e < PIP_MIN && !all.some((y) => y.p !== p && y.p.s >= x.p.e - 1e-9 && y.p.s < p.s));
+    if (q) { const d = r3(p.s - q.p.e); p.s = q.p.e; p.ms = r3(p.ms - d); }
+  }
   for (const { a, p } of all) {
     const pieces = a.pipPieces, last = p === pieces[pieces.length - 1];
     const before = all.find((q) => q.a !== a && near(q.p.e, p.s));
@@ -2325,6 +2343,7 @@ export function formatReport(res, { videoDur, tail = [] } = {}) {
   if (res.captionStyle) lines.push(`字幕樣式：${describeCaptionStyle(res.captionStyle)}（${res.captionFrom === 'plan' ? '這一集 plan.json captionStyle' : '預設 shared/setting.json captions'}）`);
   if (res.captionMarks?.length || res.captionWords?.length) lines.push(`重點字幕：${describeCaptionMarks(res.captionMarks || [], res.captionWords || [])}`);
   if (res.screenFrame) lines.push(frameLine(res.screenFrame));
+  if (res.screenBg) lines.push(`錄影四周：${res.screenBg === 'white' ? '白底' : '黑底'}（${res.screenBgFrom === 'plan' ? '這一集 plan.json screenBg' : res.screenBgFrom === 'setting' ? '預設 shared/setting.json screenBg' : '預設；換白底：brand.mjs screen-bg white'}）`);
   lines.push(...tail.filter(Boolean));
   return lines.join('\n');
 }

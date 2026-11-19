@@ -104,10 +104,10 @@ import { CAP_FONTS, EXTRA_FONT_FILES, fontFiles, fontLicense } from './lib/capti
 import { resolvePlan, formatReport, pipGeometry, sceneSfxCues, jsonItems, jsonTop, outroClip, outroLine } from './lib/plan.mjs';
 import { buildMain, buildPreview, KIT_LINKS, withTheme } from './lib/main.mjs';
 import { prepareTail, liveSource } from './lib/tail.mjs';
-import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, encodeRetime, redactImage, blackDetect, extractFrames, rawFrame, writeJpg, transcriptFresh } from './lib/ff.mjs';
+import { run, probeDuration, probeMedia, encodeFootage, encodeMedia, encodeRetime, redactImage, blackDetect, extractFrames, rawFrame, writeJpg, transcriptFresh, sceneScores } from './lib/ff.mjs';
 import { speechPauses } from './lib/speech.mjs';
 import { hfShim } from './lib/hf.mjs';
-import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS } from './lib/media.mjs';
+import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS, SWITCH, pickSwitches, switchTimes } from './lib/media.mjs';
 import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
 import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip, LOUD_TEXT } from './lib/audio.mjs';
@@ -587,6 +587,7 @@ function prepareMedia(items, out, log) {
   if (!media.length && !fs.existsSync(dir)) return 0;
   const next = {};
   let made = 0;
+  const swapLog = [];
   for (const it of media) {
     const jobs = mediaJobs(it);
     const main = jobs.main;
@@ -611,6 +612,43 @@ function prepareMedia(items, out, log) {
         made++;
       }
       next[name] = { key };
+    }
+    // 071 錄影換畫面疊化：找整個換掉的那一格、抽前一格當舊畫面（同一份錄影、同一段範圍不重算）
+    if (main.type === 'video' && !it.media.noSwitch) {
+      const ranges = (it.media.pieces || []).map((p) => [p.fms, Math.round((p.e - p.s) * 1000) / 1000]);
+      const skey = JSON.stringify({ key, ranges, v: SWITCH });
+      const ck = `${name}#${it.id}.switches`;
+      let ts = idx[ck]?.skey === skey ? idx[ck].ts : null;
+      try {
+        if (!ts) { log(`找 ${it.id} 錄影換畫面的地方…`); ts = pickSwitches(sceneScores(abs, ranges)); }
+        next[ck] = { skey, ts };
+        it.media.swaps = [];
+        ts.forEach((t) => {
+          const at = switchTimes(it, [t])[0];
+          if (at == null) return;
+          const jpg = `${name.replace(/\.[^.]+$/, '')}-x${String(Math.round(t * 1000)).padStart(7, '0')}.jpg`, jabs = path.join(dir, jpg);
+          if (idx[jpg]?.key !== key || !fs.existsSync(jabs)) {
+            writeJpg({ w: main.w, h: main.h, data: rawFrame(abs, { at: Math.max(0, t - 1 / 30 - 0.005), width: main.w, height: main.h }) }, jabs, 3);
+            made++;
+          }
+          next[jpg] = { key };
+          it.media.swaps.push({ at, rel: `assets/media/${jpg}` });
+        });
+        if (it.media.swaps.length) swapLog.push(`${it.id} ${it.media.swaps.length}`);
+      } catch (err) { log(`⚠ ${it.id} 找錄影換畫面失敗，這段不疊化：${err.message}`); }
+    }
+    // 072 下一段動畫要擦入、錄影後面沒有多的（plan.mjs freezeTail）：抽錄影最後一格，播完後定格墊在下面
+    if (main.type === 'video' && it.freezeTail && it.media.pieces?.length) {
+      const p = it.media.pieces[it.media.pieces.length - 1];
+      let t = p.fms + (p.e - p.s) - 1 / 30 - 0.005;
+      try { t = Math.min(t, probeDuration(abs) - 0.08); } catch { /* 量不到長度就照算的 */ }   // 變速檔最後一格的時間可能比算的早一點
+      t = Math.max(0, Math.round(t * 1000) / 1000);
+      const jpg = `${name.replace(/\.[^.]+$/, '')}-${it.id}-tail${String(Math.round(t * 1000)).padStart(7, '0')}.jpg`, jabs = path.join(dir, jpg);
+      try {
+        if (idx[jpg]?.key !== key || !fs.existsSync(jabs)) { writeJpg({ w: main.w, h: main.h, data: rawFrame(abs, { at: t, width: main.w, height: main.h }) }, jabs, 3); made++; }
+        next[jpg] = { key };
+        it.media.tail = `assets/media/${jpg}`;
+      } catch (err) { log(`⚠ ${it.id} 抽最後一格失敗，接下一段動畫時錄影停在黑底上：${err.message}`); }
     }
     for (const lj of jobs.lenses) {
       const L = lj.lens;
@@ -640,6 +678,7 @@ function prepareMedia(items, out, log) {
       L.urls = Array.from({ length: Math.max(...map) + 1 }, (_, i) => `${lj.dir}/${file(i)}`);
     }
   }
+  if (swapLog.length) log(`錄影換畫面疊化：${swapLog.reduce((a, x) => a + Number(x.split(' ')[1]), 0)} 處（${swapLog.join('、')}）→ 哪一段不要：那一段寫 "switches": false`);
   if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) if (f !== 'index.json' && !f.startsWith('.') && !next[f]) fs.rmSync(path.join(dir, f), { recursive: true, force: true });
   if (media.length) { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(idxFile, JSON.stringify(next, null, 2) + '\n'); }
   else if (fs.existsSync(idxFile)) fs.rmSync(idxFile);

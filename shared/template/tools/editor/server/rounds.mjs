@@ -122,8 +122,9 @@ export async function startUse(P, body, { onDone, run = runNode } = {}) {
   const round = `r${V.nextRound(P.project)}`;
   const back = ver === row.before;
   const said = back ? `剪輯台：${seg} 不採納 ${info.round} 的修改，用上一版 ${ver}` : `剪輯台：${seg} 改回 ${info.round} 改的版本 ${ver}`;
-  writeReverts(P.project, { ...readReverts(P.project), [round]: { seg, ver, of: info.round, at: Date.now() } });
-  job = { seg, ver, round, of: info.round, back, state: 'running', message: '', at: Date.now() };
+  const at = Date.now();   // 退回紀錄和工作用同一個時間（兩次 Date.now() 可能差 1 ms）
+  writeReverts(P.project, { ...readReverts(P.project), [round]: { seg, ver, of: info.round, at } });
+  job = { seg, ver, round, of: info.round, back, state: 'running', message: '', at };
   const mine = job;
   (async () => {
     // 換之前先存現在的樣子（之後又改過的段才有一版可以換回；和某一版一樣就不另存）

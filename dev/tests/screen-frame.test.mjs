@@ -84,23 +84,67 @@ test('字幕改了、框疊到字幕：⚠ 附重新量測的指令（照字幕�
   assert.deepEqual(S.resolveScreenFrame({ plan: { screenFrame: { scale: 0.86 } } }).warnings, [], '預設字幕不碰到');
 });
 
-test('角標等距：有框時小節角標的右上角離框上緣、右緣都是 inset，不看素材寬窄；子母畫面在框的右下角、離框右下 inset，右緣和角標對齊', () => {
+test('角標等距：有框時小節角標的右上角離框上緣、右緣都是 inset；子母畫面在框的右下角、離框右下 inset，右緣和角標對齊；072 橫向素材的框照素材比例縮（全景沒有黑邊），方形、直式照原本的框', () => {
   for (const fr of [DEF, { ...DEF, ...S.resolveScreenFrame({ plan: { screenFrame: { scale: 0.8, inset: 40 } } }).frame }]) {
-    const [x, y, w, h] = fr.win;
-    for (const info of [{ width: 1920, height: 1080 }, { width: 1080, height: 2410 }, { width: 800, height: 600 }]) {
+    for (const info of [{ width: 1920, height: 1080 }, { width: 3840, height: 2280 }, { width: 1080, height: 2410 }, { width: 800, height: 800 }, { width: 800, height: 600 }]) {
+      const win = S.fitWin(fr.win, info, 'contain'), [x, y, w, h] = win;
       const c = M.mediaCorner(info, 'contain', { w: 300, h: 80, dflt: [1824, 56], frame: fr });
-      assert.deepEqual([y + fr.inset - y, x + w - c.right], [c.top - y, fr.inset], `${info.width}×${info.height}`);
-      assert.equal(c.top - y, x + w - c.right, '離上、離右一樣');
-      const G = M.mediaGeometry(info, 'contain', M.framedView(fr));
-      const [px, py, pw, ph] = M.pipRect(M.pipShift(G, fr));
+      assert.deepEqual([c.top - y, x + w - c.right], [fr.inset, fr.inset], `${info.width}×${info.height} 離上、離右一樣`);
+      const F = M.framedView({ ...fr, win });
+      const G = M.mediaGeometry(info, 'contain', F);
+      const [px, py, pw, ph] = M.pipRect(M.pipShift(G, { ...fr, win }));
       // 外框比本體多 9 px（brand.mjs drawPipFrame）
       assert.deepEqual([x + w - (px + pw + 9), y + h - (py + ph + 9)], [fr.inset, fr.inset], '子母畫面外框離框右、下 inset');
       assert.equal(px + pw + 9, c.right, '右緣和角標對齊');
+      const landscape = info.width / info.height >= S.FIT_MIN;
+      if (landscape) assert.ok(Math.abs(G.left - x) <= 1 && Math.abs(G.left + G.width - (x + w)) <= 1 && Math.abs(G.top - y) <= 1 && Math.abs(G.top + G.height - (y + h)) <= 1, `${info.width}×${info.height} 全景剛好塞滿框`);
+      else assert.deepEqual(win, fr.win, `${info.width}×${info.height} 照原本的框`);
     }
   }
+  // minimax-ep1 的錄影 3840×2280 放進 86% 的框（1651×929）：框縮成 1564×929、置中，角標不再跨在錄影邊上
+  assert.deepEqual(S.fitWin(DEF.win, { width: 3840, height: 2280 }, 'contain'), [DEF.win[0] + Math.round((DEF.win[2] - Math.round(DEF.win[3] * 3840 / 2280)) / 2), DEF.win[1], Math.round(DEF.win[3] * 3840 / 2280), DEF.win[3]]);
+  assert.deepEqual(S.fitWin(DEF.win, { width: 3840, height: 2280 }, 'cover'), DEF.win, 'cover 照原本');
+  assert.deepEqual(S.fitWin(DEF.win, { width: 2560, height: 900 }, 'contain').slice(0, 1), [DEF.win[0]], '比框寬：上下縮');
   // 沒有框：照原本（16:9 錄影 1671×940 的右上角離 16）
   assert.deepEqual(M.mediaCorner({ width: 1920, height: 1080 }, 'contain', { w: 400, h: 80, dflt: [1824, 56] }), { right: 1780, top: 16 });
   assert.deepEqual(M.pipShift(M.mediaGeometry({ width: 1920, height: 1080 }, 'contain')), [-85, -3]);
+});
+
+test('073 錄影自帶黑邊：量出黑邊裡的畫面（快取）、框照裡面的比例、角標和紅框對裡面的畫面、video 照整個檔案放（黑邊在框外被裁掉）', async (t) => {
+  const dir = project(t, []);
+  fs.mkdirSync(path.join(dir, 'assets/screen'), { recursive: true });
+  const mk = (name, vf) => {
+    const r = spawnSync('ffmpeg', ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=440x270:rate=10', '-t', '2', ...(vf ? ['-vf', vf] : []), '-pix_fmt', 'yuv420p', path.join(dir, 'assets/screen', name)]);
+    assert.equal(r.status, 0, String(r.stderr));
+  };
+  mk('bars.mp4', 'pad=480:270:20:0:black');
+  mk('clean.mp4', null);
+  const { blackBars, probeMedia } = await imp('lib/ff.mjs');
+  const cache = path.join(dir, 'work/hyperframes/.cache/media-bars.json');
+  assert.deepEqual(blackBars(path.join(dir, 'assets/screen/bars.mp4'), probeMedia(path.join(dir, 'assets/screen/bars.mp4')), cache), [20, 0, 460, 270]);
+  assert.equal(blackBars(path.join(dir, 'assets/screen/clean.mp4'), probeMedia(path.join(dir, 'assets/screen/clean.mp4')), cache), null, '沒有黑邊');
+  assert.deepEqual(Object.values(JSON.parse(fs.readFileSync(cache, 'utf8'))).map((x) => x.box), [[20, 0, 460, 270], null], '記在快取');
+  assert.equal(blackBars(path.join(dir, 'assets/screen/bars.mp4'), { width: 1920, height: 1080, duration: 2 }), null, '大小對不上（假 probe）不判');
+  const errs = [], warns = [];
+  const seg = { id: 'm1', type: 'media', src: 'assets/screen/bars.mp4', marks: [{ at: '+0.5', until: '+1.5', box: [20, 0, 440, 270] }] };
+  const media = M.checkMediaSeg(seg, { projectDir: dir, err: (x) => errs.push(x), warn: (x) => warns.push(x) });
+  assert.deepEqual(media.info.content, [20, 0, 460, 270]);
+  const it = { id: 'm1', seg, media, start: 2, end: 3.5, z: 20, enterFx: 'fade', exitFx: 'fade' };
+  M.validateMedia(it, { cues, tm: timeMap([], 60), pipAt: () => false, frame: DEF, err: (x) => errs.push(x), warn: (x) => warns.push(x) });
+  assert.deepEqual(errs, []);
+  // 框照裡面的畫面（440×270）的比例縮：1514×929、置中；看得到的畫面剛好塞滿框
+  const win = S.fitWin(DEF.win, media.info, 'contain'), G = it.media.geo;
+  assert.deepEqual(win, [204, 12, 1514, 929]);
+  assert.deepEqual(it.media.frame.win, win);
+  assert.deepEqual([G.left, G.top, G.width, G.height], win);
+  assert.deepEqual(G.el, [135, 12, 1652, 929], 'video 照整個檔案（含黑邊）放，左右黑邊落在框外');
+  // 角標離看得到的畫面上、右都是 24（作者：「參考點：到 MiniMax Code 官網下載頁…」那段）
+  assert.deepEqual(M.mediaCorner(media.info, 'contain', { w: 300, h: 80, frame: DEF }), { right: 204 + 1514 - 24, top: 12 + 24 });
+  // 紅框框整個畫面（來源像素 [20, 0, 440, 270]）＝框
+  assert.deepEqual(M.toStage(G, [20, 0, 440, 270]).map(Math.round), win);
+  const html = M.mediaParts({ ...it, pipIds: [] }, { nextTrack: (() => { let n = 10; return () => n++; })() }).html;
+  assert.match(html, /<div id="mgr-m1" class="mgrow mgrow--frame" style="left:204px;top:12px;width:1514px;height:929px;border-radius:16px"/);
+  assert.match(html, /<video id="mv-m1"[^>]*style="left:135px;top:12px;width:1652px;height:929px"><\/video>/s);
 });
 
 test('validateMedia＋mediaParts：可見區是框、推近塞滿框、標註和步驟標籤在框裡（左下角的標籤和角標同一個距離）、框外是主題背景、子母畫面在框裡', (t) => {
@@ -139,7 +183,7 @@ test('validateMedia＋mediaParts：可見區是框、推近塞滿框、標註和
   assert.ok(lx >= x && lx + lw <= x2 && ly >= y + 24 && ly + lh <= y2 - 24, `放大鏡 ${a.m.lenses[0].outer}`);
   // 子母畫面在框的右下角
   assert.deepEqual(a.m.pipShift, [1762 - 1865, 917 - 927]);
-  // DOM：框外是主題的純底色（不放背景圖）、面板＝框（圓角、裁掉）、stage 抵回畫面座標；放大鏡的壓暗只蓋框
+  // DOM：框外照 screenBg（070 預設純黑，不放背景圖）、面板＝框（圓角、裁掉）、stage 抵回畫面座標；放大鏡的壓暗只蓋框
   const html = M.mediaParts({ ...a.it, pipIds: [] }, { nextTrack: (() => { let n = 10; return () => n++; })() }).html;
   assert.match(html, /<div id="mbg-m1" class="clip mbg mbg--frame"/);
   assert.doesNotMatch(html, /mbg--frame sc-surface-fs/);
@@ -256,6 +300,60 @@ test('截圖欄位：有錄影畫面框時，段的截圖切那個框（沒設�
   assert.deepEqual(job(plan({ screenFrame: { scale: 'auto' } })).win, [135, 12, 1651, 929]);
   assert.deepEqual(job(plan(), { customDir, screenFrameDefault: { scale: 0.8, inset: 24 } }).win, [192, 12, 1536, 864]);
   assert.equal(job(plan({ format: 'portrait', screenFrame: { scale: 0.8 } })).win, undefined, '直式不套');
+});
+
+test('070 screenBg：錄影四周預設純黑；plan.json screenBg > shared/setting.json screenBg；white＝框外和框裡都純白；寫錯 ✖／⚠；--set、brand.mjs screen-bg', (t) => {
+  const dir = project(t);
+  const probe = () => ({ width: 1920, height: 1080, duration: 30, hasAudio: false });
+  const scenes = [{ id: 'm1', type: 'media', src: 'assets/screen/v.mp4', from: '#4', to: '#5e' }];
+  const go = (extra = {}, l = L) => resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes, ...extra }, cues, videoDur: VD, lib: l, outDir: os.tmpdir(), projectDir: dir, probe });
+  const html = (res) => M.mediaParts({ ...res.items.find((x) => x.id === 'm1'), pipIds: [] }, { nextTrack: (() => { let n = 10; return () => n++; })() }).html;
+  const line = (res) => formatReport(res, { videoDur: VD }).split('\n').find((x) => x.startsWith('錄影四周：'));
+  // 預設：純黑（沒有 mbg--white）
+  const def = go({ screenFrame: { scale: 'auto', inset: 24 } });
+  assert.deepEqual(def.errors, []);
+  assert.equal(def.screenBg, 'black');
+  assert.match(html(def), /<div id="mbg-m1" class="clip mbg mbg--frame"/);
+  assert.match(html(def), /<div id="mwb-m1" class="clip mwin"/);
+  assert.equal(line(def), '錄影四周：黑底（預設；換白底：brand.mjs screen-bg white）');
+  // 這一集白底：框外、框裡都純白
+  const w = go({ screenFrame: { scale: 'auto', inset: 24 }, screenBg: 'white' });
+  assert.match(html(w), /<div id="mbg-m1" class="clip mbg mbg--frame mbg--white"/);
+  assert.match(html(w), /<div id="mwb-m1" class="clip mwin mwin--white"/);
+  assert.equal(line(w), '錄影四周：白底（這一集 plan.json screenBg）');
+  // 沒有錄影畫面框也套用
+  assert.match(html(go({ screenBg: 'white' })), /<div id="mbg-m1" class="clip mbg mbg--white"/);
+  // 預設在 shared/setting.json；這一集寫了照這一集
+  const s = go({}, { ...L, screenBgDefault: 'white' });
+  assert.equal(line(s), '錄影四周：白底（預設 shared/setting.json screenBg）');
+  assert.equal(go({ screenBg: 'black' }, { ...L, screenBgDefault: 'white' }).screenBg, 'black');
+  // 寫錯：plan ✖、setting ⚠（先用黑底）
+  assert.ok(go({ screenBg: 'gray' }).errors.some((e) => e.includes('screenBg 只能是 "black"（預設，錄影、圖片四周黑底）或 "white"（白底），現在是 "gray"')));
+  const bad = go({}, { ...L, screenBgDefault: 'gray' });
+  assert.equal(bad.screenBg, 'black');
+  assert.ok(bad.warnings.some((x) => x.includes('shared/setting.json 的 screenBg 只能是 "black" 或 "white"')));
+  // build.mjs --set／--unset
+  const pd = tmpDir(t, 'sb-set-'), plan = path.join(pd, 'plan.json');
+  fs.writeFileSync(plan, JSON.stringify({ version: 1, scenes: [] }, null, 2) + '\n');
+  assert.deepEqual(setPlan(pd, { screenBg: 'white' }, { plan }).map((c) => [c.key, c.to]), [['screenBg', 'white']]);
+  assert.throws(() => setPlan(pd, { screenBg: 'gray' }, { plan }), /✖ screenBg 不能是「gray」/);
+  unsetPlan(pd, ['screenBg'], { plan });
+  assert.equal(JSON.parse(fs.readFileSync(plan, 'utf8')).screenBg, undefined);
+  // brand.mjs screen-bg：看、設定、寫錯 ✖、off；寫在暫存的 shared/setting.json
+  const root = tmpDir(t, 'sb-brand-'), kit = path.join(root, 'shared', 'template', 'kit');
+  fs.mkdirSync(kit, { recursive: true });
+  const run = (...a) => spawnSync(process.execPath, [path.join(TOOLS, 'brand.mjs'), 'screen-bg', ...a, '--kit', kit], { encoding: 'utf8' });
+  const setting = () => JSON.parse(fs.readFileSync(path.join(root, 'shared', 'setting.json'), 'utf8')).screenBg;
+  assert.match(run().stdout, /^錄影四周的底色預設：純黑（沒設定）/);
+  const a = run('white');
+  assert.equal(a.status, 0, a.stderr);
+  assert.match(a.stdout, /^✓ 錄影四周的底色預設：純白（shared\/setting\.json 的 screenBg/);
+  assert.equal(setting(), 'white');
+  const b = run('gray');
+  assert.equal(b.status, 1);
+  assert.match(b.stderr, /✖ brand\.mjs screen-bg 只收 black（純黑）或 white（純白），現在是「gray」/);
+  assert.equal(run('off').status, 0);
+  assert.equal(setting(), undefined);
 });
 
 test('build（不是 --check）第一次把 shared/setting.json 的 screenFrame 記進 plan.json（auto 記成量到的數字）；已經有的不動、--check 不寫', (t) => {

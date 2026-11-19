@@ -49,7 +49,7 @@ test('哪些欄位算聲音：人聲／音效／素材原聲、範圍音量、�
   assert.deepEqual(L.soundOf({ scenes: [{ id: 'm1', type: 'media', volume: false }] }).segs, {}, '原聲關著（volume false）不是音量');
 });
 
-test('指紋：只改聲音、字幕樣式、整則的重點字幕一樣；剪段、拉平人聲、加刪音效、換曲、開關原聲、講者、主題、只標幾個字的重點、字幕都不一樣；剪輯台補的預設值、沒寫 bed＝工作區預設那一首、look 寫法不同但做出來一樣都算同一個', () => {
+test('指紋：只改聲音、字幕樣式、整則的重點字幕一樣；剪段、拉平人聲、加刪音效、換曲、開關原聲、講者、主題、只標幾個字的重點、字幕的時間都不一樣（字幕只改字一樣，r8）；剪輯台補的預設值、沒寫 bed＝工作區預設那一首、look 寫法不同但做出來一樣都算同一個', () => {
   const a = fp(BASE);
   // 只差聲音
   for (const [name, fn] of [
@@ -83,7 +83,14 @@ test('指紋：只改聲音、字幕樣式、整則的重點字幕一樣；剪�
     ['瘦臉', (p) => { p.look = { slim: 0.6 }; }],
     ['主題（背景圖是 build 寫死的）', (p) => { p.theme = 'dark'; }],
   ]) assert.notEqual(fp(withPlan(fn)), a, name);
-  assert.notEqual(fp(BASE, 'y'), a, '字幕檔改了');
+  // r8：字幕只改字一樣（頁面直接換字）；改時間、增刪句子不一樣
+  const SRT = '1\n00:00:01,000 --> 00:00:04,000\n第一句\n\n2\n00:00:04,500 --> 00:00:07,000\n第二句\n';
+  const s0 = fp(BASE, SRT);
+  assert.equal(fp(BASE, SRT.replace('第一句', '改過的字')), s0, '字幕只改字');
+  assert.equal(fp(BASE, SRT.replace(/\n/g, '\r\n')), s0, '換行符號不同');
+  assert.notEqual(fp(BASE, SRT.replace('00:00:04,000', '00:00:04,200')), s0, '字幕改時間');
+  assert.notEqual(fp(BASE, SRT.split('\n\n')[0] + '\n'), s0, '少一句');
+  assert.equal(L.srtTiming(SRT), '00:00:01,000 --> 00:00:04,000\n00:00:04,500 --> 00:00:07,000');
 
   // 剪輯台第一次存檔會把 edit 補齊預設值：做出來一樣，不能因為這樣就要更新預覽
   const bare = { version: 1, scenes: [] };
@@ -186,7 +193,7 @@ function makeProject(t, plan) {
 
 const PLAN0 = { version: 1, look: false, rhythm: 'spaced', bed: { music: null }, edit: { sfx: [{ at: 1, sound: 'ding' }] }, scenes: [] };
 
-test('服務：preview.liveOnly＝跟上次 build 比只差聲音、字幕樣式、重點字幕（存檔回應也帶）；講者、剪段、字幕、加音效、主題都不算；舊版 build 沒有記錄就當不是', { skip: noFf, timeout: 240000 }, async (t) => {
+test('服務：preview.liveOnly＝跟上次 build 比只差聲音、字幕樣式、重點字幕（存檔回應也帶）；講者、剪段、字幕改時間、加音效、主題都不算（字幕只改字算，r8）；舊版 build 沒有記錄就當不是', { skip: noFf, timeout: 240000 }, async (t) => {
   const { P, planFile, build, writePlan } = makeProject(t, PLAN0);
   build();
   const info = JSON.parse(fs.readFileSync(path.join(P.out, L.LIVE_INFO), 'utf8'));
@@ -222,8 +229,10 @@ test('服務：preview.liveOnly＝跟上次 build 比只差聲音、字幕樣式
   ]) { writePlan(p); assert.deepEqual(await pv(), [true, false], name); }
   writePlan(sound);
   const srt = fs.readFileSync(P.srt, 'utf8');
-  fs.writeFileSync(P.srt, srt.replace(/\n\n$/, '\n').replace(/(\n\d\d:[^\n]+\n)([^\n]+)/, '$1改過的字'));
-  assert.deepEqual(await pv(), [true, false], '字幕改了（只改 rough.srt 也算過期）');
+  fs.writeFileSync(P.srt, srt.replace(/(\n\d\d:[^\n]+\n)([^\n]+)/, '$1改過的字'));
+  assert.deepEqual(await pv(), [true, true], 'r8 字幕只改字：過期但直接套得上（頁面直接換字）');
+  fs.writeFileSync(P.srt, srt.replace(/(\d\d:\d\d:\d\d,\d\d\d --> \d\d:\d\d:\d\d,)(\d)/, (m, a, d) => `${a}${(Number(d) + 1) % 10}`));
+  assert.deepEqual(await pv(), [true, false], '字幕改時間（只改 rough.srt 也算過期、要 build）');
   fs.writeFileSync(P.srt, srt);
   const t3 = new Date(Date.now() + 3000);
   fs.utimesSync(P.srt, t3, t3);

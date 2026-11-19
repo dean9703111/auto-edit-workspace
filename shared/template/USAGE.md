@@ -287,6 +287,8 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 | `pip` | 橫式 `false`、直式 `true` | 橫式錄影、圖片段預設不露臉；要露臉寫 `true`：右下角子母畫面，自動移進素材右下角，不用寫座標。直式下半是講者面板，不要露臉才寫 `false`。只有聲音的區間自動不放 |
 | `volume` | `null` | `null`＝素材靜音；寫 dB 數字（−60～+12）＝保留素材原聲 |
 | `enter`／`exit` | `"fade"` | `"cut"`、`"fade"`、`"slide"`（從右滑入、往左滑出）、`"zoom"`、`"whip"`（甩鏡：0.3 秒從右甩進、往左甩出，有動態模糊）；只能寫在 `enter`：`"tilt"`（斜躺擺平：面板從透視斜躺 0.65 秒擺平，錄影、圖片都可以，要 `fit` `"contain"`）、`"tape"`（紙膠帶貼上：只給圖片）。挑哪一種照 `shared/style.md`「螢幕錄影與圖片」 |
+| `switches` | 自動 | 錄影裡整個換畫面（例：送出指令後換到完成畫面）時，build 自動在那一格做 0.45 秒模糊疊化（換之前要停著，捲動、播影片不算；段頭段尾 0.6 秒內不做），build 印「錄影換畫面疊化：N 處」；寫 `false`＝這段不做 |
+| `caption` | — | 只給 `enter` `"tape"` 的圖片：截圖下方一行字（網址或一句說明，1–30 字、半形算半個），說明卡樣式的膠囊、水平置中；`{ "text": "deanlin.net", "icon": "link", "at": "#N@詞" }`，`icon` 不寫＝link（`"none"` 不放），`at` 不寫＝截圖貼好就浮上來。截圖會縮小一點讓出這一行 |
 | `start` | — | 起始鏡位 `[x, y, w, h]`（素材原尺寸的像素，和 `moves.to` 同一套）：橫式段頭先看全景 1.2 秒，再用運鏡的速度推到這一塊（≥ 2 倍 2.2 秒、以下 1.5 秒；不算運鏡次數）；推完要在第一個說明卡、箭頭、放大鏡、聚光燈、`moves` 之前，而且要在那一塊停 1 秒以上，放不下 build 先把全景縮到 0.5 秒、再把推的時間縮到 0.8 秒，還是放不下就不推（停在全景）並 ⚠。直式第一格就推在這一塊，沒有推的動作。段起點就要看某一塊時寫這個，不要用段起點的快速 `moves`（`--check` ⚠ 會叫你改寫；橫式照 `start` 處理）。之後的 `moves` 從這裡出發，`"full"` 拉回全景。框比畫面高時撐滿寬度、框的上緣對齊畫面上緣（左右空白裁掉、多的裁在下面），報告寫「起始鏡位 N 倍（撐滿寬度，框的下面裁掉）」。框的寬高都比畫面大推不近 ⚠。有 `start` 的圖片不慢推 |
 | `moves`／`marks`／`lens` | — | 運鏡、紅框（含跟捲動 `path`）、放大鏡（5.5） |
 | `callouts`／`spot`／`steps`／`arrows` | — | 說明卡、聚光燈、STEP 步驟、箭頭（5.5） |
@@ -297,7 +299,8 @@ node shared/template/tools/qc.mjs final --project projects/<專案>
 - `moves`／`marks`／`lens`／`callouts`／`spot`／`steps`／`arrows` 與 `path` 的 `at`／`until` 用 `"#N"`、`"#Ne"`、`"#N+0.5"`、`"+3"`（本段起點後 3 秒），要落在這段裡面。
 - 同一支錄影、後段的起點接上前段的終點：自動硬接，不疊化。連續兩段 media（或 media 接全畫面情境）剛好接上時，接縫自動不淡出；後一段用 `slide`／`zoom` 進場時，前一段會墊在底下直到進場完成。
 - 錄影一律轉成 30fps、每秒一個關鍵影格（`work/hyperframes/assets/media/`，素材沒變就不重轉），`<video>` 放在主合成；不要自己寫 custom 放錄影。
-- 錄影畫面框（plan.json 第一層 `screenFrame`，不寫在段裡）：橫式的錄影、圖片段（`side`、`tape` 以外）縮進一個置中的框，框外是主題的純底色（不放背景圖）；`contain`／`cover`、運鏡、放大鏡都在框裡（推近＝塞滿框），小節角標離框上、右各 `inset` px，子母畫面在框的右下角、離框右、下 `inset` px。`"scale": "auto"` 照這一集的字幕量到剛好不碰到（框下緣離字幕底板至少 12 px）。這一集：`node shared/template/tools/build.mjs --project projects/<專案> --set "screenFrame.scale=auto;screenFrame.inset=24"`（拿掉：`--unset screenFrame`）；以後每集的預設：`node shared/template/tools/brand.mjs screen-frame --scale auto --inset 24`，新的一集第一次 build 會把預設記進那一集的 plan.json。字幕改了、框疊到字幕時 `--check` ⚠ 並附重新量測的指令。
+- 錄影畫面框（plan.json 第一層 `screenFrame`，不寫在段裡）：橫式的錄影、圖片段（`side`、`tape` 以外）縮進一個置中的框，框外是主題的純底色（不放背景圖）；`contain`／`cover`、運鏡、放大鏡都在框裡（推近＝塞滿框）；橫式 `contain` 的素材框會收成素材的比例（例 3840×2280 不留左右黑邊；錄影檔自帶黑邊時 build 自動量，照黑邊裡的畫面收，報告寫「錄影自帶黑邊」），小節角標離「看得到的錄影」上、右各 `inset` px，子母畫面在它的右下角、離右、下 `inset` px。錄影接動畫一律擦入：變速段後面沒有多的畫面，build 把最後一格定格 0.45 秒墊在下面（報告寫「最後一格定格」）。`"scale": "auto"` 照這一集的字幕量到剛好不碰到（框下緣離字幕底板至少 12 px）。這一集：`node shared/template/tools/build.mjs --project projects/<專案> --set "screenFrame.scale=auto;screenFrame.inset=24"`（拿掉：`--unset screenFrame`）；以後每集的預設：`node shared/template/tools/brand.mjs screen-frame --scale auto --inset 24`，新的一集第一次 build 會把預設記進那一集的 plan.json。字幕改了、框疊到字幕時 `--check` ⚠ 並附重新量測的指令。
+- 錄影四周的底色（070，plan.json 第一層 `screenBg`）：`"black"`＝純黑（預設）、`"white"`＝純白；有沒有錄影畫面框都套用，框裡沒蓋到的地方同色（`tape` 的紙底不變）。這一集：`node shared/template/tools/build.mjs --project projects/<專案> --set screenBg=white`（拿掉：`--unset screenBg`）；以後每集的預設：`node shared/template/tools/brand.mjs screen-bg white`（寫 `shared/setting.json` 的 `screenBg`，`off` 回到純黑）。
 
 ### 5.4 座標怎麼讀（`frame --grid`）
 
@@ -321,7 +324,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 | 說明卡 `callouts` | `{ "at": "#21", "until": "#22e", "box": [x, y, w, h], "text": "打開 API 設定", "icon": "settings" }`；選填 `"side"`、`"quick": true` | 紅框＋引線＋說明卡。`text` 最多 12 字（✖）；`icon` 名稱用 `build.mjs --icons <關鍵字>` 查（不要打開 `kit/icons.json`）；`side` 不寫＝依序試右、左、下、上，自動挑放得下的那邊；寫了但放不下 ✖，訊息會告訴你改哪一邊。完整可讀一般至少 1.2 秒（`until − at ≥ 2.35` 秒）、`quick` 至少 0.8 秒（≥ 1.35 秒）（✖）。期間不能有運鏡（✖） |
 | 聚光燈 `spot` | `{ "at": "#21", "until": "#22e", "box": [x, y, w, h] }`；`until` 不寫＝到段尾 | 其他地方壓暗 35%，只留框的地方（外擴 8px、圓角）；淡入淡出各 0.4 秒。至少 2 秒、一次一個、不和放大鏡同時（✖）；期間不能有運鏡（✖） |
 | STEP 步驟 `steps` | `[{ "at": "#20", "text": "新增專案" }, { "at": "#23", "text": "連接 Gmail" }]` | 「號碼＋這一步在做什麼」。橫式：每一步貼在這一步（`at` 到下一步 `at`）出現的操作對象旁邊，依序找紅框 → 箭頭 → 說明卡 → 放大鏡 → 推近的框，貼在它的左上外緣（放不下換下緣、右側），跟著運鏡移動；找不到就放錄影可見區左下角（離錄影邊 32px，有錄影畫面框時離框 `inset`）；右上角留給小節角標。直式：錄影可見區左上角一顆膠囊；壓到紅框自動換右上（`stepsSide` 指定）。`text` 最多 12 字；依時間排、相鄰兩步至少 1.65 秒、最後一步離段尾至少 1.65 秒（✖）。號碼 build 自己算：全片接著數，和前面同字的沿用號碼；下一段接著同一步時第一步寫同樣的字、`at` 寫 `"+0"`，不會重播進場。壓到其他標註會 ⚠（橫式要它貼著哪裡，就在那一步加紅框） |
-| 箭頭 `arrows` | `{ "at": "#24", "to": [x, y] }`；選填 `"until"`（預設 `at` 後 3 秒）、`"from": "ne"`（箭尾方向） | 指小按鈕、小圖示。箭尖離 `to` 9px，箭身 120px（放不下用 96px）；`from` 不寫＝依序試 ne、nw、se、sw、e、w、n、s，挑第一個不壓到字、卡片、膠囊（直式）、紅框線、子母畫面的方向；寫了但放不下 ✖ 並建議方向；全部放不下就拿掉（⚠）。至少 2.2 秒、一次一支（✖）；放大鏡期間自動拿掉（⚠）；期間不能有運鏡（✖） |
+| 箭頭 `arrows` | `{ "at": "#24", "to": [x, y] }`；選填 `"until"`（預設 `at` 後 3 秒）、`"from": "ne"`（箭尾方向） | 指小按鈕、小圖示。箭尖離 `to` 9px，箭身 120px（放不下用 96px）；`from` 不寫＝依序試 ne、nw、se、sw、e、w、n、s，挑第一個不壓到字、卡片、膠囊（直式）、紅框線、子母畫面的方向；寫了但放不下 ✖ 並建議方向；全部放不下就拿掉（⚠）。至少 2.2 秒、一次一支（✖）。**接力**：下一支的 `at` 寫成上一支的 `until`＝同一支箭頭換目標（跟著講到的東西換指，例 `#45@Mac`→`#45@Windows`），同一個 `from` 就整支滑過去；接力的每一支 ≥ 0.6 秒、整串 ≥ 2.2 秒（✖）。樣子是固定的：由粗漸細、外圍輕微紅光，彈進來後往目標輕戳；放大鏡期間自動拿掉（⚠）；期間不能有運鏡（✖） |
 | 放大鏡 `lens` | `{ "at": "#23", "until": "#24", "box": [x, y, w, h], "zoom": 2 }`；`until` 不寫＝`at`＋3 秒 | 原區域描主色框 → 鏡片彈到畫面中央偏上、背景壓暗 → 縮回原位。至少 1.2 秒（✖）；一次一個（✖）；`zoom` 1.2–4；鏡片最大約 1600×720，框太大時自動降低倍率（降到 1.2 倍以下會 ⚠）；期間有運鏡會 ⚠（鏡片位置用 `at` 那一刻算） |
 
 - 紅框：位置相近、連續幾句講同一塊時，**一開始就畫一個涵蓋全部的大框**，不要一句一框反覆閃；框要等那個元素出現在錄影上才畫。

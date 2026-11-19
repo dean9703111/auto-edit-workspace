@@ -445,7 +445,7 @@ test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build →
   assert.equal(r.segments.length, COUNT);
   assert.deepEqual(r.findings.map((f) => `${f.level} ${f.id} ${f.rule} ${f.msg}`), [], '每支都要 0 ✖、0 ⚠');
   assert.equal(r.ok, true);
-  // x-process 的 data-links 端點符合 layout-link（第 7 條）：完成態量 SceneLayout.measure，三條線兩端離站的外框 12（--sc-link-gap）、在邊中點 ±8
+  // x-process 的 data-links 端點符合 layout-link（第 7 條）：完成態量 SceneLayout.measure，三條線起點離站的外框 12（--sc-link-gap）、箭頭那端 32（072 data-link-gap-end：下一站聚焦放大抬起不插進去）、在邊中點 ±8
   const AB = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'audit-browser.mjs')).href);
   const { judgeLayoutRules } = await import(pathToFileURL(path.join(TEMPLATE, 'tools', 'lib', 'audit-layout.mjs')).href);
   const xp = r.segments.find((sg) => /x-process\.html/.test(sg.label));
@@ -454,7 +454,7 @@ test(`整合：${COUNT} 支排進同一個專案 → --check 0 ✖ → build →
     await S.seek(xp.end - 0.6);
     const lay = JSON.parse(await S.evaluate(`JSON.stringify(window.SceneLayout.measure(document.getElementById('el-${xp.id}')))`));
     const rd = (p, b) => Math.hypot(Math.max(b[0] - p[0], 0, p[0] - b[2]), Math.max(b[1] - p[1], 0, p[1] - b[3]));
-    assert.deepEqual(lay.links.map((k) => [k.id, Math.round(rd(k.pts[0], k.boxA)), Math.round(rd(k.pts.at(-1), k.boxB))]), [['xproc-n1-xproc-n2', 12, 12], ['xproc-n2-xproc-n3', 12, 12], ['xproc-n3-xproc-n4', 12, 12]]);
+    assert.deepEqual(lay.links.map((k) => [k.id, Math.round(rd(k.pts[0], k.boxA)), Math.round(rd(k.pts.at(-1), k.boxB))]), [['xproc-n1-xproc-n2', 12, 32], ['xproc-n2-xproc-n3', 12, 32], ['xproc-n3-xproc-n4', 12, 32]]);
     assert.deepEqual(judgeLayoutRules(lay, { item: { id: xp.id }, t: 0 }).filter((f) => f.rule === 'layout-link'), []);
   } finally { await S.close(); }
   // segments[].motion（cli-003 §5）：units 是個數；marks、busy 是段內秒數

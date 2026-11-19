@@ -45,6 +45,8 @@
  *   brand.mjs screen-frame                              看目前的預設與可選的值
  *   brand.mjs screen-frame [--scale auto|0.6–1] [--inset 24]   設定（只給要改的）；新的一集第一次 build 把它記進那一集的 plan.json
  *   brand.mjs screen-frame off                          拿掉預設（錄影回到字幕帶上方、四周黑底）
+ * 錄影四周的底色（070；shared/setting.json 的 screenBg，這一集是 plan.json screenBg）：
+ *   brand.mjs screen-bg [black|white|off]               純黑（預設）／純白；不給值＝印目前的預設
  *
  * 背景圖（輸出都在暫存資料夾，不寫 shared/template/：使用者同意後才 pack --bg、use；auto-edit-style 步驟 2–4）：
  *   brand.mjs bg --tmp                                                    開一個暫存資料夾、印完整路徑
@@ -64,7 +66,7 @@ import { readSpeaker, validateSpeaker, SPEAKER_FILE, SET_CMD } from './lib/speak
 import { readSettings, writeSetting } from './lib/settings.mjs';
 import { readEndingSetting, ENDING, BRAND_DIR } from './lib/ending.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle } from './lib/caption-style.mjs';
-import { FRAME, sanitizeScreenFrame, resolveScreenFrame, describeScreenFrame } from './lib/screen-frame.mjs';
+import { FRAME, sanitizeScreenFrame, resolveScreenFrame, describeScreenFrame, SCREEN_BGS } from './lib/screen-frame.mjs';
 import { ok, warn, fail, next, cmdLine, report } from './lib/say.mjs';
 import { splitFlag, valueOf, oneOf, isMain } from './lib/cli.mjs';
 import { stopLines } from './lib/stops.mjs';
@@ -421,6 +423,10 @@ const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與
       這一集不一樣：build.mjs --set "screenFrame.scale=0.88;screenFrame.inset=24"。
   node shared/template/tools/brand.mjs screen-frame off
       拿掉預設：之後新的一集錄影照原本的樣子（字幕帶上方、四周黑底）；已經記在 plan.json 的那幾集照它的。
+
+  node shared/template/tools/brand.mjs screen-bg [black|white|off]
+      錄影、圖片段四周的底色（shared/setting.json 的 screenBg）：black＝純黑（預設）、white＝純白；不給值＝印目前的預設。
+      有沒有錄影畫面框都套用（框裡沒蓋到的地方同色）；這一集不一樣：build.mjs --set screenBg=white。
 
   背景圖（三張：fs 1920×1080、side 960×1080、ch 1920×1080；暗色是 bg-<kind>-dark.jpg）。輸出都先放暫存資料夾，
   不能在 shared/template/ 裡；使用者看過 preview.jpg 同意（停點 ⑥）後，用 pack --bg 存成風格包、use 套用，不要自己複製。
@@ -846,6 +852,40 @@ function captionsCli(args) {
 // ---------- 錄影畫面框（061）----------
 
 const SF_CMD = 'node shared/template/tools/brand.mjs screen-frame --scale auto --inset 24';
+// 070 錄影、圖片段四周的底色預設（shared/setting.json 的 screenBg）：black（純黑，預設）／white（純白）；這一集用 build.mjs --set screenBg=white
+const SB_CMD = 'node shared/template/tools/brand.mjs screen-bg white';
+function screenBgCli(args) {
+  const o = { _: [] };
+  for (let i = 0; i < args.length; i++) {
+    if (!String(args[i]).startsWith('--')) { o._.push(args[i]); continue; }
+    const [k, inline] = splitFlag(args[i]);
+    if (k === 'kit') [o.kit, i] = takeValue(args, i, k, inline, `例：${SB_CMD}`);
+    else if (k !== 'help') throw new Error(`brand.mjs screen-bg 沒有 --${k} 這個參數 → 例：${SB_CMD}`);
+  }
+  const kitDir = o.kit ? path.resolve(o.kit) : path.resolve(HERE, '..', 'kit');
+  const sharedDir = path.resolve(kitDir, '..', '..');
+  const cur = readSettings(sharedDir).data.screenBg;
+  const zh = (v) => (v === 'white' ? '純白' : '純黑');
+  if (!o._.length) {
+    console.log(`錄影四周的底色預設：${SCREEN_BGS.includes(cur) ? `${zh(cur)}（shared/setting.json 的 screenBg）` : '純黑（沒設定）'}`);
+    console.log('  black  純黑 #000000（預設）\n  white  純白 #FFFFFF');
+    console.log('有沒有錄影畫面框都套用（框裡沒蓋到的地方同色）；tape 貼紙底不變。這一集不一樣：build.mjs --project projects/<專案> --set screenBg=white');
+    return 0;
+  }
+  if (o._.length > 1) throw new Error(`brand.mjs screen-bg 只收一個值（black／white／off），現在是「${o._.join(' ')}」→ 例：${SB_CMD}`);
+  const v = o._[0];
+  if (v === 'off') {
+    writeSetting(sharedDir, 'screenBg', undefined);
+    console.log(ok('錄影四周的底色預設拿掉了（shared/setting.json 的 screenBg）：回到純黑；plan.json 寫了 screenBg 的那一集照它的'));
+    return 0;
+  }
+  if (!SCREEN_BGS.includes(v)) throw new Error(`brand.mjs screen-bg 只收 black（純黑）或 white（純白），現在是「${v}」→ 例：${SB_CMD}`);
+  writeSetting(sharedDir, 'screenBg', v);
+  console.log(ok(`錄影四周的底色預設：${zh(v)}（shared/setting.json 的 screenBg；以後每一集照它，plan.json 寫了 screenBg 的那一集照那一集的）`));
+  console.log('→ 有專案時重跑 build 才會換：node shared/template/tools/build.mjs --project projects/<專案>');
+  return 0;
+}
+
 function screenFrameCli(args) {
   const o = { _: [] };
   for (let i = 0; i < args.length; i++) {
@@ -919,6 +959,7 @@ async function cli() {
   if (args[0] === 'ending') return endingCli(args.slice(1));
   if (args[0] === 'captions') return captionsCli(args.slice(1));
   if (args[0] === 'screen-frame') return screenFrameCli(args.slice(1));
+  if (args[0] === 'screen-bg') return screenBgCli(args.slice(1));
   let kitDir, frame = true, color = null;
   for (let i = 0; i < args.length; i++) {
     if (!String(args[i]).startsWith('--')) { color = args[i]; continue; }

@@ -74,3 +74,36 @@ export function doRequests(ctx, body) {
   fs.renameSync(`${file}.tmp`, file);
   return [200, { ok: true, file: path.relative(ctx.P.root, file).split(path.sep).join('/'), requests: requestsInfo(ctx.P.project) }];
 }
+
+// 072 修改單清單本身（每段的標籤、描述、送出過哪一版、已改完）存在專案裡：work/feedback/editor-requests-list.json（{ rev, list }）。
+//   作者：「修改單只有草稿的，應該有紀錄吧？為何重新進入後就沒有顯示了？」：072 之前只存在打開剪輯台的那個瀏覽器
+//   （localStorage 跟著網址走），換瀏覽器、剪輯台換了埠號、舊分頁整份寫回去都會看不到剛寫的草稿。
+//   存檔只送改了的段：{ id, item }＝整段換成 item、{ id, item: null }＝拿掉；每段帶著這個分頁上次看到的那一份（base，JSON 字串，新的段是 null）。
+//   專案裡那一段已經被別的分頁改過（和 base 不一樣）就不套、列進 skipped；回傳現在的整份，頁面換上
+export function requestsList(project) {
+  const d = readJson(path.join(project, 'work', 'feedback', 'editor-requests-list.json'));
+  if (!isObj(d) || !Array.isArray(d.list)) return { exists: false, rev: 0, list: [] };
+  return { exists: true, rev: Number(d.rev) || 0, list: d.list.filter((x) => isObj(x) && typeof x.id === 'string' && x.id) };
+}
+export function doRequestsList(ctx, body) {
+  const ops = body?.ops;
+  if (!Array.isArray(ops) || ops.length > 5000 || ops.some((o) => !isObj(o) || typeof o.id !== 'string' || !o.id
+    || (o.item != null && (!isObj(o.item) || o.item.id !== o.id)) || (o.base != null && typeof o.base !== 'string'))) return [400, { message: '修改單的存檔格式不對（要 ops：[{ id, item, base }]）' }];
+  const cur = requestsList(ctx.P.project), list = [...cur.list], skipped = [];
+  for (const o of ops) {
+    const i = list.findIndex((x) => x.id === o.id);
+    if ((i < 0 ? null : JSON.stringify(list[i])) !== (o.base ?? null)) { skipped.push(o.id); continue; }
+    if (o.item) { if (i < 0) list.push(o.item); else list[i] = o.item; } else if (i >= 0) list.splice(i, 1);
+  }
+  const text = JSON.stringify(list);
+  if (text.length > 2000000) return [400, { message: '修改單太長（超過 200 萬字）' }];
+  let rev = cur.rev;
+  if (!cur.exists || text !== JSON.stringify(cur.list)) {
+    rev = Math.max(Date.now(), cur.rev + 1);
+    const dir = path.join(ctx.P.project, 'work', 'feedback'), file = path.join(dir, 'editor-requests-list.json');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(`${file}.tmp`, JSON.stringify({ rev, list }, null, 2) + '\n');
+    fs.renameSync(`${file}.tmp`, file);
+  }
+  return [200, { ok: true, exists: true, rev, list, skipped }];
+}

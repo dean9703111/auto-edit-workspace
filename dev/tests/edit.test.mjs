@@ -107,6 +107,23 @@ test('底片切片：cut 的地方換一支 <video>（data-media-start 跳過剪
   assert.equal(byId(res, 's02').pipPieces[0].exit, 'none');
 });
 
+test('r7 剪接點離下一段起點不到一片（0.02 s）：兩段的子母畫面接續，不淡出再淡入（下一段往前接到接點、data-media-start 跟著往前）', () => {
+  const scenes = [
+    { id: 'a1', scene: 'fs-list', from: '#2', to: '#4', slots: { title: '清單', items: ['一', '二', '三'] } },
+    { id: 'b1', scene: 'fs-list', from: '#4', to: '#5e', slots: { title: '清單二', items: ['一', '二', '三'] } },
+  ];
+  // #4 從 11.5 開始；剪掉 11.0–11.48 → 接點在完成影片 11.0，b1 從 11.02 開始（差 0.02 s）
+  const res = run(scenes, { cuts: [[11.0, 11.48]] });
+  const a = byId(res, 'a1').pipPieces, b = byId(res, 'b1').pipPieces;
+  assert.equal(a[a.length - 1].e, 11);
+  assert.deepEqual([b[0].s, b[0].ms], [11, 11.48], '往前接到接點，畫面是剪掉之後那一格');
+  assert.equal(a[a.length - 1].exit, 'none');
+  assert.equal(b[0].enter, 'none');
+  const html = main(res);
+  assert.doesNotMatch(html, /tl\.fromTo\('#pip-b1, #pipf-b1', \{ opacity: 0 \}/, '不淡入');
+  assert.doesNotMatch(html, /tl\.fromTo\('#pip-a1[^']*, #pipf-a1[^']*', \{ opacity: 1 \}, \{ opacity: 0, duration: 0\.4/, '不淡出');
+});
+
 test('dip／punch／整支淡入淡出／volume／gains：畫面用 GSAP，聲音用原生 data-fade-*、data-volume', () => {
   const res = run(SCENES, { cuts: [[20, 21]], fadeIn: 0.5, fadeOut: 1, volume: { voice: -6, sfx: -6, media: 0 },
     gains: [{ from: 30, to: 32, db: 9 }], joins: [{ at: 20, type: 'dip', dur: 0.4 }, { at: 10, type: 'punch' }] }, { cutpoints: [{ at: 10, kind: 'pause' }, { at: 15, kind: 'ng' }] });

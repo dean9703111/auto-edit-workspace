@@ -68,6 +68,8 @@ export function loadLib(templateDir, projectDir = null) {
     captionDefault: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readSettings(sharedDir).data.captions ?? null,
     // 061 錄影畫面框的預設（brand.mjs screen-frame）；這一集的 plan.json screenFrame 優先，build 第一次照它寫進 plan.json
     screenFrameDefault: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readSettings(sharedDir).data.screenFrame ?? null,
+    // 070 錄影四周的底色預設（brand.mjs screen-bg：black／white）；這一集的 plan.json screenBg 優先，沒設定＝黑底
+    screenBgDefault: process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? null : readSettings(sharedDir).data.screenBg ?? null,
     customDir: path.join(templateDir, 'custom'),
   };
 }

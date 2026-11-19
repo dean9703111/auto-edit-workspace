@@ -41,7 +41,7 @@
   標題列 128、內容區 1176×580（卡底 862，在字幕區 y 920 之上）。站 272×232，上下錯落：單數站在上排、雙數站在下排（往下錯一站高＋--sc-gap-md），
   相鄰兩站左右貼齊（不同排，不會碰到）；#xproc-body 是 data-layout="free"（排版程式沒有錯落排法，站用 flex 排、整組在內容區置中：4 站左右 60、上下 42；
   聚焦時放大抬起，離標題列仍 ≥ 24），不寫 left／top。連接線由 #xproc-lines 的 data-links 自動畫（kit/scene-layout.js，shared/style.md「版面」）：
-  從上一站右邊中點外 12 水平走到下一站中線，再直走到下一站的頂邊（底邊）外 12，箭頭 16；id＝<上一站>-<下一站>（例 xproc-n1-xproc-n2），站移動線跟著移，不寫座標。
+  從上一站右邊中點外 12 水平走到下一站中線，再直走到下一站的頂邊（底邊）外 32（072 data-link-gap-end：下一站聚焦放大 1.08、抬起 12，頂邊往箭頭長 21，箭頭還離 11；audit layout-link 上限 32），箭頭 16；id＝<上一站>-<下一站>（例 xproc-n1-xproc-n2），站移動線跟著移，不寫座標。
   直式：主卡位置不變（舞台縮放 0.8475）；標題 76、站名 72（畫面上 64／61）（#x-process[data-format="portrait"]）。4 站排成 2×2 的 U 形
   （1 左上 → 2 右上 → 3 右下 → 4 左下，CSS grid；站 492×188、圖示 104 在左、站名在右，欄距、列距 96（聚焦放大抬起後箭頭仍露出 50），整組 1080×472 置中，連接線都是直的）；
   3 站維持上下錯落、站 360×228（3 × 360 ＝ 1080；圖示 64 在上、間距 12、站名在下，整組上下各留 50，聚焦抬起後離標題列仍 ≥ 24，4 字 × 72 ＋ 左右內距 32 ≤ 站寬）。4 站站名 4 字 × 72 ＋ 圖示 104 ＋ 間距 24 ＋ 左右內距 32 ≤ 站寬，直式不用另設上限。
@@ -91,7 +91,7 @@
     <div id="xproc-card" class="sc-wcard">
       <div class="sc-wcard__bar"><span class="sc-opt" data-fill="title">從錄影到初剪</span></div>
       <div id="xproc-body" data-layout="free">
-        <svg id="xproc-lines" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3 xproc-n3>xproc-n4" xmlns="http://www.w3.org/2000/svg"></svg> <!-- @sub n==3: <svg id="xproc-lines" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3" xmlns="http://www.w3.org/2000/svg"></svg> -->
+        <svg id="xproc-lines" data-link-gap-end="32" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3 xproc-n3>xproc-n4" xmlns="http://www.w3.org/2000/svg"></svg> <!-- @sub n==3: <svg id="xproc-lines" data-link-gap-end="32" data-links="xproc-n1>xproc-n2 xproc-n2>xproc-n3" xmlns="http://www.w3.org/2000/svg"></svg> -->
         <div id="xproc-n1" class="xproc-node" data-slot><i id="xproc-now1" class="xproc-now"></i>
           <span id="xproc-ico1" class="sc-icon" data-fill="items.1.icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg></span><span class="xproc-name sc-t52 sc-w900 sc-opt" data-fill="items.1.text">錄影</span></div>
         <div id="xproc-n2" class="xproc-node" data-slot><i id="xproc-now2" class="xproc-now"></i>
