@@ -513,6 +513,8 @@ export function srtAlign(P, { dryRun = false, remapPlan = false, max = ALIGN.max
   if (srtText != null) { backup = backupPath(srtFile, now, 'align'); fs.copyFileSync(srtFile, backup); }
   const eol = srtText && srtText.includes('\r\n') ? '\r\n' : '\n';
   writeAtomic(srtFile, formatSrt(cues, { eol, bom: !!srtText && srtText.startsWith('﻿') }));
+  // 062：初剪字幕的底稿（之後剪輯台、AI 改了哪些字，versions.mjs learn 和它比）；存不下來只是少一份比對
+  try { fs.mkdirSync(path.join(work, '.cache'), { recursive: true }); fs.copyFileSync(srtFile, path.join(work, '.cache', 'rough-first.srt')); } catch { /* 只影響 learn 的字幕比對 */ }
   log(`已寫回 work/rough.srt（${cues.length} 則）${backup ? `；原檔備份在 ${posix(path.relative(P.project, backup))}` : ''}`);
   let remap = null;
   if (needRemap) {

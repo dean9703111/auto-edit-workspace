@@ -15,7 +15,7 @@
 | `arrows[].to` | **素材原尺寸像素** `[x, y]`（一個點） | — | 同上 |
 | 紅框 `marks`（含 `path`） | 畫在運鏡層 `#mst-<id>` 裡 | **跟**（框和錄影一起被推近） | 現行做法（`lib/media.mjs:258-271`） |
 | `callouts`（框、引線、卡片）、`spot`、`arrows` | 工具在 `at` 那一刻換成 **1920×1080 畫面座標**，畫在運鏡層外面 | **不跟**；所以 `[at, until]` 期間不能有運鏡（✖），有這三種標註的段自動不做慢推 | 卡片的字不能被運鏡放大變糊；TR 做法也是「錄影鏡頭在紅框期間必須靜止」（`TR/rec:L3-4`） |
-| `steps`（STEP 膠囊） | 固定在畫面左上 1920×1080 座標 | 不跟 | 位置固定才不會每段跳位（作者 r7 R2「膠囊每段眨一次」，`JY/PS:L95-103`） |
+| `steps`（STEP 步驟） | 直式：固定在畫面左上（上半安全區）；橫式（066）：每一步一個標籤，用錄影座標的一點（貼著的那個東西的角）加固定位移放在畫面座標的卡片層 | 直式不跟；橫式**跟**（每個運鏡配一個同時間、同 ease 的 x／y 補間；放在左下角的不跟） | 直式位置固定才不會每段跳位（作者 r7 R2「膠囊每段眨一次」，`JY/PS:L95-103`）；橫式右上已經有小節角標，左右兩邊都有步驟會亂（066 作者），改成跟著操作 |
 | 卡片、引線、箭頭長度與方向 | 工具算，**不寫在 plan.json** | — | 弱模型只給 `side`／`from` 方向字，不算像素 |
 
 ### 1.1 換算公式（`mediaGeometry`、`toStage`、`toScreen`，沿用 `lib/media.mjs:116-121,230`）
@@ -85,7 +85,7 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 | 夾回安全區 | 只沿著邊的方向平移（right／left 調 top、top／bottom 調中心 x），讓卡片落在安全區 **x 40–1880、y 40–900** | x 40–1880：`TR/rec:L15`；y 900＝字幕區 920（R4.1）− 20 |
 | 引線 | 3 px `--sc-warn`；框端 r 5 的紅點。卡片和框在該方向重疊 ≥ 16 px（各縮 8）→ 直線，取重疊區中點；否則一個直角（框邊中點 → 轉角 → 卡片近邊中點） | `TR/rec:L164-191`、`rec-overlay.css:106` |
 
-**放不下**：卡片（估算寬）超出安全區、壓到右下角子母畫面禁入區 `PIP_ZONE [1424, 581, 1888, 951]`（橫式錄影段的小視窗移進素材右下角，禁入區跟著 `pipShift` 移；`pipAt` 在 `at`、中點、`until − 0.01` 任一為真時才算）、壓到同時出現的 STEP 膠囊、同時出現的其他 callout 卡片或框、同時出現的 marks 紅框（矩形外擴 2 px）。
+**放不下**：卡片（估算寬）超出安全區、壓到右下角子母畫面禁入區 `PIP_ZONE [1424, 581, 1888, 951]`（橫式錄影段的小視窗移進素材右下角，禁入區跟著 `pipShift` 移；`pipAt` 在 `at`、中點、`until − 0.01` 任一為真時才算）、壓到同時出現的 STEP 膠囊（直式；橫式的步驟標籤在說明卡、箭頭擺好之後才放，由標籤避開）、同時出現的其他 callout 卡片或框、同時出現的 marks 紅框（矩形外擴 2 px）。
 
 **時序**（秒，相對 `at`）
 
@@ -114,7 +114,7 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 - 時序：`at` 淡入 0.4、`until − 0.4` 淡出 0.4（`power1.inOut`，`TR/rec:L124-125`）；`ready = at + 0.4`。
 - 層級：壓暗在紅框、引線、卡片、箭頭、STEP 膠囊**下面**（`TR/rec:L21`）。
 
-### 2.5 `steps`：STEP 膠囊（左上角步驟標籤）
+### 2.5 `steps`：STEP 步驟（直式：左上角膠囊；橫式：跟著操作的步驟標籤，066）
 
 ```json
 "steps": [ { "at": "#20", "text": "新增專案" }, { "at": "#23", "text": "連接 Gmail" } ]
@@ -130,6 +130,12 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 - 幾何（畫面座標）：膠囊左 48、上 40、高 80、全圓角、底 `--sc-card`、2 px `--sc-card-line`；每一步＝號碼圓 56（主色底、`--brand-ink`、32 px／700）＋間距 18＋字 40 px／行高 56／700；左內距 10、右 30。寬度＝這段最寬那一步（CSS grid 疊在同一格，自動取最寬，不跳寬）。估算寬＝`字寬 + 118`。出處 `TR/rec` `rec-overlay.css:12-41`、`TR/rec:L44-61`（寬＝`2 + 10 + 最寬 + 30 + 2`，`:53`）。
 - 時序：第一步（非接續）整顆膠囊 `at` 淡入＋x −24→0 0.5 s（power2.out，`TR/rec:L56`）；換步：舊的 `at` 淡出 0.25、新的 `at + 0.1` 淡入 0.35（`TR/rec:L59-60`）；`ready`＝第一步 `at + 0.5`、換步 `at + 0.45`、接續 `at`。膠囊跟 media 層一起退場。
 - 碰撞（⚠）：膠囊（`[48, 40, 48 + 估算寬, 120]`）和同時出現的 callout 框／卡片、`spot` 亮區、箭頭、紅框外緣重疊。
+- **橫式（066）**：上面的幾何、`stepsSide` 只給直式。橫式每一步一個標籤（同一個膠囊樣式，寬＝這一步的字寬 + 118）：
+  - 操作對象：這一步 `at` 到下一步 `at`（或段尾）之間出現（比 `at` 早 0.5 s 內也算）、在這一步裡至少露 0.5 s 的，依序找 `marks` 紅框 → `arrows`（箭頭和它指的點）→ `callouts` 的框 → `lens` 的框 → 這一步期間推近的 `moves`／`start` 框，同一種取最早出現的。
+  - 位置：貼在對象外側，依序試左上外緣（左緣對齊、底離框 12）→ 下緣 → 右側（離框 12）；標籤露出的整段期間（換步淡出那 0.25 s 也算），每個運鏡停下來的那一刻都要在可見區裡（安全區，有錄影畫面框時是框內 inset，∩ 錄影本身）、不壓小節角標、子母畫面、說明卡（框和卡片）、箭頭、放大鏡的鏡片、紅框（外擴 2 px）。
+  - 找不到對象、或三邊都放不下：錄影可見區左下角（左＝錄影左緣 + 32、不小於 48，底＝錄影下緣 − 32、不大於安全區下緣 900；有錄影畫面框時離框左、下 `inset`），不跟運鏡；這種標籤和同時出現的 callout 框／卡片、`spot` 亮區、箭頭、紅框重疊 ⚠（T7）。
+  - 時序：和膠囊一樣（第一步 `at` 淡入＋x −24→0 0.5 s；換步舊的那顆 `at` 淡出 0.25、新的那顆 `at + 0.1` 淡入 0.35；接續的第一格就在）。
+  - `stepsSide` 寫了 ⚠（T8），不影響位置。
 
 ### 2.6 `arrows`：箭頭
 
@@ -146,7 +152,7 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 
 - 幾何（畫面座標）：箭尖＝`to` 的畫面點往箭尾方向退 **9 px**（作者規則 6–12 px，`JY/WF:L60`）；箭身直線 4 px（G21）、長 120 px（放不下再試 96 px）、箭頭三角形長 22、寬 22，顏色 `--sc-warn`。長度 120／96、三角 22 是建議初值（作者剪映貼紙 scale 0.283→0.25→0.22，`JY/WF:L60`）。
 - 自動方向的試放順序：寫了 `from` 就先試它；不寫依序 `ne nw se sw e w n s`；每個方向先試 120 再試 96。
-- **放不下**：箭頭形狀的取樣點（箭尖、三角形兩角、箭身每 2 px 一點、左右各 2 px；紅框線環只有 4 px 寬，取樣要比它密）任一點超出安全區 x 40–1880、y 40–900，或落在：子母畫面禁入區（有子母畫面時）、同時出現的 callout 卡片或 STEP 膠囊（各外擴 4 px）、同時出現的紅框線上（marks、callouts 的框：矩形往外 2 px 與往內 2 px 之間）。目標已經被紅框框住時，箭頭一定會穿過框線 → 放不下（作者做法是箭尖改指紅框外緣，`JY/WF:L64`）。
+- **放不下**：箭頭形狀的取樣點（箭尖、三角形兩角、箭身每 2 px 一點、左右各 2 px；紅框線環只有 4 px 寬，取樣要比它密）任一點超出安全區 x 40–1880、y 40–900，或落在：子母畫面禁入區（有子母畫面時）、同時出現的 callout 卡片或 STEP 膠囊（直式；各外擴 4 px）、同時出現的紅框線上（marks、callouts 的框：矩形往外 2 px 與往內 2 px 之間）。目標已經被紅框框住時，箭頭一定會穿過框線 → 放不下（作者做法是箭尖改指紅框外緣，`JY/WF:L64`）。
 - 時序：`at` 淡入 0.5＋沿箭身方向從 12 px 外滑向目標；`until − 0.5` 淡出 0.5（`01 P2-4`「淡入淡出 0.5」）；`ready = at + 0.5`。
 - 同一時間最多 **1** 支（✖，建議初值）。放大鏡期間的箭頭拿掉（⚠，`JY/WF:L61`「放大鏡窗內的箭頭刪」）；碰到 HF 卡片、膠囊、紅框的像素不行（`JY/WF:L64`）。
 
@@ -209,7 +215,9 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 | T3 | ✖ | `steps[i].at（${fmt}）要晚於 steps[i−1]（${fmt}）→ 照時間先後排列` |
 | T4 | ✖ | `steps[i] 和前一步只差 ${d}s（要 ≥ 1.65s：換步 0.45＋停 1.2）→ 合併成一步，或把 at 往後挪到 ${fmt(need)} 之後` |
 | T5 | ✖ | `steps[i] 在段尾前 ${d}s 才出現（要 ≥ 1.65s）→ 提早 at，或移到下一段` |
-| T6 | ⚠ | `STEP 膠囊（x 48–${x2}、y 40–120）在 ${fmt(t)} 壓到 ${what} → 換 side／from、用 moves 把那一塊往下推，或錯開時間` |
+| T6 | ⚠ | `STEP 膠囊（x 48–${x2}、y 40–120）在 ${fmt(t)} 壓到 ${what} → 換 side／from、用 moves 把那一塊往下推，或錯開時間`（直式） |
+| T7 | ⚠ | `steps[i] 的步驟標籤「${text}」（錄影左下角 x ${x1}–${x2}、y ${y1}–${y2}）在 ${fmt(t)} 壓到 ${what} → 加一個紅框 marks 指出這一步在操作哪裡（標籤會貼在紅框旁邊），或錯開時間`（橫式，066） |
+| T8 | ⚠ | `stepsSide 橫式不用寫了：步驟標籤改成貼在這一步操作的東西旁邊（紅框、箭頭、說明卡、放大鏡、推近的框），沒有就放錄影左下角 → 拿掉 stepsSide`（橫式，066；直式照舊驗 `"left"`／`"right"`） |
 | R1 | ✖ | `arrows[i].to 要寫 [x, y]（箭頭要指的點，素材本身的像素座標，用 media.mjs frame --grid 讀），現在是 ${JSON} → 改成兩個數字的陣列` |
 | R2 | ✖ | `arrows[i].to [${x}, ${y}] 超出素材範圍 ${W}×${H} → 座標是素材原尺寸的像素（不是 1920×1080 的畫面座標），用 media.mjs frame --grid 重讀` |
 | R3 | ✖ | `arrows[i].from 只能是 "n"、"ne"、"e"、"se"、"s"、"sw"、"w"、"nw"（箭尾在箭尖的哪個方向；不寫＝自動挑），現在是 ${JSON} → 改成這 8 個之一，或刪掉 from` |
@@ -280,9 +288,10 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 
 直式（009 FR-082）而且錄影寬 > 高時，`json` 多一個鍵 `view: { scale, moves }`：`scale`＝錄影顯示寬 ÷ 素材寬（r3，1920 寬放進 1080 寬＝0.563），`moves`＝運鏡數；`qc.mjs storyboard` 用它判「介面字太小」（cli-004 §10）。橫式不加這個鍵。
 
-（055）寫了 `start` 的段：`view.scale` 是第一格的倍率（素材縮放 × `start` 推近）；`json` 多 `start: { z, x, y }`（起始鏡位的倍率與運鏡層位移，`mediaParts` 在段起點 `tl.set` 到 `#mst-<id>`）。
+（055）寫了 `start` 的段：`view.scale` 是起始鏡位的倍率（素材縮放 × `start` 推近）；`json` 多 `start: { z, x, y }`（起始鏡位的倍率與運鏡層位移，直式 `mediaParts` 在段起點 `tl.set` 到 `#mst-<id>`）。
+（066）橫式：`start`（和段起點的硬推 `moves[0]`）段頭先停全景，`json.start` 多 `at`（開始推的秒數）、`dur`（推幾秒），`mediaParts` 從全景補間過去（和一般運鏡同一種 `tl.fromTo`）；放不下不推時沒有 `json.start`。`view.moves` 不算開場推近。`steps[i]` 多 `tag: { side, target, box }`（`side`＝`top`／`bottom`／`right`／`corner`，`target`＝貼著的 `marks[0]` 之類或 `null`，`box`＝露出那一刻的畫面框 x1, y1, x2, y2）。
 
-`summary` 規則：依序 `運鏡 N`、`慢推`、`紅框 N`（有 path 加 `（跟捲動 K 次）`）、`標註 N`、`聚光燈 N`、`STEP N（第 a–b 步）`、`箭頭 N`（有拿掉的加 `（拿掉 K）`）、`放大鏡 N`，用「、」接；因標註關掉慢推時尾巴加 `；有標註，不做慢推`。全部沒有時是空字串。
+`summary` 規則：依序（有 `start` 時最前面 `起始鏡位 N 倍`，橫式加 `（先看全景 1.2 秒再推近）`）`運鏡 N`（不算開場推近）、`慢推`、`紅框 N`（有 path 加 `（跟捲動 K 次）`）、`標註 N`、`聚光燈 N`、`STEP N（第 a–b 步）`、`箭頭 N`（有拿掉的加 `（拿掉 K）`）、`放大鏡 N`，用「、」接；因標註關掉慢推時尾巴加 `；有標註，不做慢推`。全部沒有時是空字串。
 
 ---
 
@@ -295,7 +304,7 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 | marks | `[{ "at", "until", "box": [x,y,w,h], "path": [{ "at", "box", "dur" }] }]` | — | 紅框：實線 4px、描線進場；同時最多 2 個（callouts 的框也算）、停留 < 0.5s 的拿掉、最後一框多停 1s；until 不寫＝到段尾。path＝錄影捲動時框跟著移（dur 預設 0.4 秒） |
 | callouts | `[{ "at", "until", "box": [x,y,w,h], "text", "icon", "side", "quick" }]` | — | 標註：紅框＋引線＋說明卡（text 1–12 字、icon 選填）；side 不寫＝自動挑放得下的那邊；完整可讀 ≥ 1.2s（quick ≥ 0.8s）；期間不能有運鏡 |
 | spot | `[{ "at", "until", "box": [x,y,w,h] }]` | — | 聚光燈：其他地方壓暗 35%，只留框的地方；至少 2 秒、一次一個、不和放大鏡同時 |
-| steps | `[{ "at", "text" }]` | — | 左上角 STEP 膠囊（text 1–12 字）；號碼自動累加，同字沿用；相鄰兩步 ≥ 1.65 秒 |
+| steps | `[{ "at", "text" }]` | — | 步驟標籤（text 1–12 字）：橫式貼在這一步操作的東西旁邊、找不到放左下角（066），直式左上角 STEP 膠囊；號碼在同一個小節裡累加（plan.json 有 sections 時，換小節從 1 重數），同字沿用；相鄰兩步 ≥ 1.65 秒 |
 | arrows | `[{ "at", "until", "to": [x,y], "from" }]` | — | 箭頭：箭尖離 to 9px，from＝箭尾方向（n／ne／e／se／s／sw／w／nw，不寫＝自動）；放不下就拿掉；一次一支、至少 2.2 秒，until 不寫＝at＋3 秒 |
 
 | clicks | `["#21@安裝", "+3.2"]` | — | 錄影裡看得到游標按下的時間，一下配一顆 click 附加音效（不受 3 秒規則）；時間寫法同 at，要落在這段裡；"sfxExtra": false 會一起關掉 |
@@ -317,7 +326,8 @@ screen(rect, cam)  = [cam.x + cam.z·X, cam.y + cam.z·Y, cam.z·W, cam.z·H]   
 | └ 引線 | `g#mcl-<id>-<k>.mclead`（`path` `pathLength="1"`＋`circle` r 5） | | |
 | └ 箭頭 | `g#mar-<id>-<k>.marrow`（`line`＋`polygon`） | | |
 | 卡片層 | `div#mcd-<id>.clip.mcards` | 標註 SVG 之後 | 同上 |
-| └ STEP 膠囊 | `div#msteps-<id>.msteps` > `div#mstep-<id>-<k>.mstep`（`span.mnum`＋`span.mtxt`） | | |
+| └ STEP 膠囊（直式） | `div#msteps-<id>.msteps` > `div#mstep-<id>-<k>.mstep`（`span.mnum`＋`span.mtxt`） | | |
+| └ 步驟標籤（橫式，066） | 每一步 `div#mtag-<id>-<k>.mtag`（`style` 寫 left／top）> `div#msteps-<id>-<k>.msteps` > `div#mstep-<id>-<k>.mstep` | | |
 | └ 說明卡 | `div#mcc-<id>-<k>.mcard.mcard--<side>`（`span.mic`＋`span.mtxt`） | | |
 | 放大鏡 | 現行 `.mlz` | 最上層 | 現行 |
 
@@ -347,7 +357,9 @@ tl.fromTo('#msp-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.4, ease: 'powe
 // arrow k（UX、UY＝箭尾方向單位向量）
 tl.fromTo('#mar-m01-1', { opacity: 0, x: 12*UX, y: 12*UY }, { opacity: 1, x: 0, y: 0, duration: 0.5, ease: 'power2.out' }, AT);
 tl.fromTo('#mar-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.5, ease: 'sine.in', immediateRender: false }, UNTIL-0.5);
-// steps（第一步非接續；接續時第一行換成 tl.set('#msteps-m01', { opacity: 1 }, S) 並 tl.set 第一步 opacity 1）
+// steps 直式（第一步非接續；接續時第一行換成 tl.set('#msteps-m01', { opacity: 1 }, S) 並 tl.set 第一步 opacity 1）
+// 橫式（066）每一步一顆：第一步 tl.fromTo('#msteps-m01-1', { opacity: 0, x: -24 }, …, AT1)；換步舊的 '#msteps-m01-1' 淡出 0.25、新的 '#msteps-m01-2' AT2+0.1 淡入 0.35；
+//   貼著東西的標籤每個運鏡一行 tl.fromTo('#mtag-m01-k', { x, y }, { x, y, duration: DUR, ease: 'power2.inOut', immediateRender: false }, T0)
 tl.fromTo('#msteps-m01', { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }, AT1);
 tl.set('#mstep-m01-1', { opacity: 1 }, AT1);
 tl.fromTo('#mstep-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.25, ease: 'power1.in', immediateRender: false }, AT2);
@@ -372,6 +384,7 @@ CSS（`kit/media.css` 新增；顏色一律用 kit 變數，不寫死色碼，`#
 | `.mstep` | `grid-area:1 / 1; display:flex; align-items:center; gap:18px; height:76px; white-space:nowrap; opacity:0` |
 | `.mstep .mnum` | `flex:none; width:56px; height:56px; border-radius:50%; background:var(--brand); color:var(--brand-ink); font:700 32px/56px var(--sc-font); text-align:center` |
 | `.mstep .mtxt` | `font:700 40px/56px var(--sc-font); color:var(--sc-ink)` |
+| `.mtag`（066 橫式） | `position:absolute`；`.mtag > .msteps { position:relative; left:auto; top:auto }`；`.mtag .mstep { opacity:1 }`（淡入淡出做在 `.msteps`） |
 
 ---
 

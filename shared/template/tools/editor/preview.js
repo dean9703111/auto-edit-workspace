@@ -1,6 +1,7 @@
 // 兩種預覽
 //   SimPreview     「快速試聽」：播 rough.mp4，用 WebAudio 增益、黑色遮罩、CSS transform 即時模擬 cuts（播放時跳過）／音量（含範圍音量）／淡入淡出／dip／punch，
-//                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲，位置和完成影片同一個可見區（橫式 contain＝上方 1920×940，字幕帶空出來）；
+//                  插入素材（media 段）用疊在上面的 <video>／<img> 示意進出場與原聲，位置和完成影片同一個可見區（橫式 contain＝上方 1920×940，字幕帶空出來；
+//                  有錄影畫面框 screenFrame 時是那個框）；
 //                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去完成影片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
 //                  背景音樂播上一次 build 混好的 wav（057：跟著完成影片時間走，音量只補滑桿和做進 wav 的差）；
 //                  全部聲音最後經過 AnalyserNode 給音量表
@@ -153,10 +154,14 @@ export class SimPreview {
       if (cutIndexAt(m.at, this.app.edit.cuts) >= 0) continue;
       const buf = this.sfxBuf.get(m.name);
       if (buf instanceof AudioBuffer) {
-        const s = this.audio.ctx.createBufferSource(), gn = this.audio.ctx.createGain();
+        const ctx = this.audio.ctx, s = ctx.createBufferSource(), gn = ctx.createGain();
         s.buffer = buf; gn.gain.value = m.gain;
         s.connect(gn).connect(this.audio.sfxBus);
-        s.start();
+        // 065 裁過前後的：從檔案第 off 秒播 len 秒，裁過的那一端 10 ms 淡入／淡出（和 build 一樣）
+        const off = m.span?.trimIn || 0, len = m.span?.trimOut > 0 && m.len ? m.len : undefined, now = ctx.currentTime, F = 0.01;
+        if (off > 0) { gn.gain.setValueAtTime(0, now); gn.gain.linearRampToValueAtTime(m.gain, now + F); }
+        if (len) { gn.gain.setValueAtTime(m.gain, now + Math.max(F, len - F)); gn.gain.linearRampToValueAtTime(0, now + len); }
+        s.start(now, off, len);
       } else if (buf === undefined) this.loadSfx(m.name);
     }
   }
@@ -246,7 +251,9 @@ export class SimPreview {
   placeMedia(el, fit, panel, side = false) {
     const c = this.app.canvas?.() || {}, V = (side && c.media?.side?.[fit]) || c.media?.[panel ? 'panel' : 'full']?.[fit];
     const W = c.W || 1920, H = c.H || 1080, [x, y, w, h] = Array.isArray(V) ? V : [0, 0, W, H];
-    const css = `position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%;object-fit:${fit};`;
+    // 061 錄影畫面框（canvas.media.frame）：素材放進框裡，圓角照完成影片（換成元素寬高的百分比，跟著預覽大小縮放）
+    const r = !side && c.media?.frame && c.media.radius ? `border-radius:${(c.media.radius / w) * 100}% / ${(c.media.radius / h) * 100}%;` : '';
+    const css = `position:absolute;left:${(x / W) * 100}%;top:${(y / H) * 100}%;width:${(w / W) * 100}%;height:${(h / H) * 100}%;object-fit:${fit};${r}`;
     if (el.style.cssText !== css) el.style.cssText = css;
   }
   // 字卡和動畫只在完成影片預覽畫：只有聲音的地方（底片是黑的）在中間寫是哪一段；有講者的地方在角落講一聲，不然選到動畫卻看不到，會以為壞了

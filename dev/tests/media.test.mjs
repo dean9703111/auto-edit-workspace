@@ -497,8 +497,9 @@ test('build：說明卡、聚光燈、STEP、箭頭、紅框跟捲動的 DOM 與
   assert.equal(b.status, 0, b.stdout + b.stderr);
   const html = read('index.html');
   assert.match(html, /<svg id="man-m01" class="clip mann" data-start="7" data-duration="6" data-track-index="\d+" viewBox="0 0 1920 1080" data-layout-allow-overlap>/);
-  // STEP 膠囊在錄影可見區左上（錄影左緣 208＋32），不跨在錄影邊上
-  assert.match(html, /<div id="msteps-m01" class="msteps" style="left:240px;top:40px">/);
+  // 066 橫式步驟標籤：第一步貼在同時出現的紅框左上外緣（紅框 y 462 − 12 − 80）、第二步貼在箭頭下緣（上緣會壓到說明卡）
+  assert.match(html, /<div id="mtag-m01-1" class="mtag" style="left:435px;top:370px"><div id="msteps-m01-1" class="msteps">/);
+  assert.match(html, /<div id="mtag-m01-2" class="mtag" style="left:910px;top:250px"><div id="msteps-m01-2" class="msteps">/);
   assert.match(html, /<rect id="mcb-m01-1" class="mcbox" x="1199" y="110" width="251" height="63" rx="6" pathLength="1"\/>/);
   assert.match(html, /<g id="mcl-m01-1" class="mclead"><path d="M1199 141 L1143 141" pathLength="1"\/><circle cx="1199" cy="141" r="5"\/><\/g>/);
   assert.match(html, /<div id="mcc-m01-1" class="mcard mcard--left" style="right:777px;top:93px"><span class="mic"><svg[^]*?<\/svg><\/span><span class="mtxt">打開 API 設定<\/span><\/div>/);
@@ -523,10 +524,9 @@ test('build：說明卡、聚光燈、STEP、箭頭、紅框跟捲動的 DOM 與
     "tl.fromTo('#msp-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.4, ease: 'power1.inOut', immediateRender: false }, 11.8);",
     "tl.fromTo('#mar-m01-1', { opacity: 0, x: 8.49, y: -8.49 }, { opacity: 1, x: 0, y: 0, duration: 0.5, ease: 'power2.out' }, 10.6);",
     "tl.fromTo('#mar-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.5, ease: 'sine.in', immediateRender: false }, 12.5);",
-    "tl.fromTo('#msteps-m01', { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }, 7);",
-    "tl.set('#mstep-m01-1', { opacity: 1 }, 7);",
-    "tl.fromTo('#mstep-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.25, ease: 'power1.in', immediateRender: false }, 9);",
-    "tl.fromTo('#mstep-m01-2', { opacity: 0 }, { opacity: 1, duration: 0.35, ease: 'power2.out' }, 9.1);",
+    "tl.fromTo('#msteps-m01-1', { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }, 7);",
+    "tl.fromTo('#msteps-m01-1', { opacity: 1 }, { opacity: 0, duration: 0.25, ease: 'power1.in', immediateRender: false }, 9);",
+    "tl.fromTo('#msteps-m01-2', { opacity: 0 }, { opacity: 1, duration: 0.35, ease: 'power2.out' }, 9.1);",
   ];
   for (const l of lines) assert.ok(html.includes(l), `時間軸少了：${l}`);
   assert.match(html, /tl\.fromTo\('#mmk-m01-1', \{ attr: \{ x: 435, y: 462, width: 251, height: 134 \} \}, \{ attr: \{ x: 435, y: 603, width: 251, height: 134 \}, duration: 0\.6, ease: 'power2\.inOut', immediateRender: false \}, 8\);/);
@@ -591,17 +591,18 @@ test('標註的 ✖／⚠ 訊息：每則都照契約原文、帶「→」改法
     arrows: [{ at: '+1', to: [300, 50], from: 'n' }, { at: '+3.5', to: [300, 5] }] })]);
   const e3 = j3.errors.join('\n'), w3 = j3.warnings.join('\n');
   assert.match(e3, /steps\[1\] 在段尾前 1s 才出現（要 ≥ 1\.65s）→ 提早 at，或移到下一段/);
-  // 膠囊在錄影可見區左上（錄影 640×400 放成 1504×940、左緣 208 → x 240）；指定 left 才會壓到
-  assert.match(w3, /STEP 膠囊（x 240–478、y 40–120）在 0:07\.00 壓到 marks\[0\] 的紅框 → 換 side／from/);
-  // 沒寫 stepsSide：壓到紅框自動換到錄影右上（右緣 208＋1504−32）
+  // 066 橫式沒有固定的膠囊：stepsSide 沒有作用 ⚠；步驟標籤貼著紅框（上緣放不下 → 下緣），不會壓到
+  assert.match(w3, /stepsSide 橫式不用寫了：步驟標籤改成貼在這一步操作的東西旁邊（紅框、箭頭、說明卡、放大鏡、推近的框），沒有就放錄影左下角 → 拿掉 stepsSide/);
+  assert.doesNotMatch(w3, /STEP 膠囊|步驟標籤「/);
   const j3b = run([m({ marks: [{ at: '+0', until: '+3', box: [0, 0, 40, 20] }], steps: [{ at: '+0', text: '第一步' }] })]);
-  assert.doesNotMatch(j3b.warnings.join('\n'), /STEP 膠囊/, '換到右上就不會壓到');
-  // 有小節角標（sections）：橫式錄影段右上角露出角標 → 膠囊不自動換到右上（留左邊照樣 ⚠）；紅框在角標底下 ⚠
+  assert.doesNotMatch(j3b.warnings.join('\n'), /STEP 膠囊|步驟標籤「/, '貼著紅框就不會壓到');
+  assert.deepEqual(j3b.items.find((x) => x.id === 'm01').out.annotations.steps[0].tag, { side: 'bottom', target: 'marks[0]', box: [208, 67, 446, 147] });
+  // 有小節角標（sections）：橫式錄影段右上角露出角標（步驟標籤擺位置時避開）；紅框在角標底下 ⚠
   const tag = { id: 'c01', scene: 'chapter-tag', from: '#1', to: '#1e', slots: { num: '01', name: '測試' } };
   const j3c = run([tag, m({ marks: [{ at: '+0', until: '+3', box: [0, 0, 40, 20] }, { at: '+3.2', until: '+5', box: [600, 30, 40, 20] }], steps: [{ at: '+0', text: '第一步' }] })],
     { sections: [{ at: '#2', name: '第一節' }] });
   const w3c = j3c.warnings.join('\n');
-  assert.match(w3c, /STEP 膠囊（x 240–478、y 40–120）在 0:07\.00 壓到 marks\[0\] 的紅框/, '右上有角標，膠囊留在左邊');
+  assert.doesNotMatch(w3c, /STEP 膠囊|步驟標籤「/);
   assert.match(w3c, /marks\[1\] 的紅框在 0:10\.20 被右上角的小節角標（x 1452–1696、y 16–96）蓋住 → 用 moves 把那一塊推到畫面中間/);
   assert.match(e3, /arrows\[0\] 從 "n" 方向放會超出安全區 → 改 "from": "ne"（放得下）/);
   assert.match(w3, /arrows\[1\] 找不到不擋字的位置（超出安全區），已拿掉（作者規則：找不到位置就不放）→ 換一個 to/);

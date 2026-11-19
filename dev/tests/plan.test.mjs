@@ -728,7 +728,7 @@ test('小節角標在橫式錄影段：放不下就貼錄影畫面右上角（�
   // 1920×1080 contain 在 1920×940 裡：寬 1671、左 125 → 右緣 1796 − 16 = 1780；上緣 0 → 16
   assert.deepEqual(res.badges[0].spots, [{ id: 'm1', a: m1.start, z: m1.end, dx: 1780 - 1824, dy: 16 - 56 }]);
   assert.ok(m1.warnings.some((w) => w.includes('steps[0]「設定資料夾」和右上角的小節角標「STEP 1｜設定資料夾」重複')), m1.warnings.join('\n'));
-  assert.equal(m1.media.steps.capsule, null, '重複的 STEP 膠囊不畫');
+  assert.equal(m1.media.steps.list.length, 0, '重複的步驟不畫');
   const cap = buildCaptions(cues, { duration: VD });
   const { html } = buildMain({ items: res.items, videoDur: VD, captions: cap, pip: res.globals.pip, badges: res.badges });
   assert.ok(html.includes(`tl.fromTo('#chb-1', { x: 0, y: 0 }, { x: -44, y: -40, duration: 0.35, ease: 'sine.inOut', immediateRender: false }, ${m1.start});`), '錄影段開始滑過去');
@@ -736,6 +736,27 @@ test('小節角標在橫式錄影段：放不下就貼錄影畫面右上角（�
   // 直式手機畫面（1080×2410）：只有 421 寬、在畫面中間 → 角標放右邊空白處（平常的位置），不移
   dims = { width: 1080, height: 2410 };
   assert.equal(go().badges[0].spots, undefined);
+  fs.rmSync(pdir, { recursive: true });
+});
+
+test('步驟標籤號碼：同一個小節裡累加，換小節（右上角標換字）從 1 重數；沒有 sections 時整份累加', () => {
+  const pdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-stepsec-'));
+  fs.mkdirSync(path.join(pdir, 'assets/screen'), { recursive: true });
+  fs.writeFileSync(path.join(pdir, 'assets/screen/v.mp4'), '');
+  const probe = () => ({ width: 1920, height: 1080, duration: 60, hasAudio: false });
+  const scenes = [
+    { id: 'c01', scene: 'chapter-tag', from: '#2', to: '#3e', slots: { num: '01', name: '痛點' } },
+    { id: 'm1', type: 'media', src: 'assets/screen/v.mp4', from: '#4', to: '#5e', steps: [{ at: '#4', text: '開資料夾' }, { at: '#5', text: '選檔案' }] },
+    { id: 'm2', type: 'media', src: 'assets/screen/v.mp4', from: '#6', to: '#7e', steps: [{ at: '#6', text: '按輸出' }] },
+    { id: 'm3', type: 'media', src: 'assets/screen/v.mp4', from: '#8', to: '#9e', steps: [{ at: '#8', text: '等它跑完' }] },
+  ];
+  const nums = (sections) => {
+    const res = resolvePlan({ plan: { version: 1, speakerBox: [700, 200, 1220, 1000], scenes, ...(sections ? { sections } : {}) }, cues, videoDur: VD, lib: L, outDir: os.tmpdir(), projectDir: pdir, probe });
+    assert.deepEqual(res.errors, []);
+    return ['m1', 'm2', 'm3'].map((id) => byId(res, id).media.steps.list.map((x) => x.n));
+  };
+  assert.deepEqual(nums([{ at: '#4', name: '第一節' }, { at: '#8', name: '第二節' }]), [[1, 2], [3], [1]], '第二節的第一步從 1 開始');
+  assert.deepEqual(nums(null), [[1, 2], [3], [4]], '沒有 sections：整份累加（舊行為）');
   fs.rmSync(pdir, { recursive: true });
 });
 

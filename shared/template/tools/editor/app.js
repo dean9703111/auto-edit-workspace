@@ -3,6 +3,7 @@ import { groupIssues, issueId, hideKey, plainText, splitHidden } from './issues.
 import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
   fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss, ownSfx, sortOwnSfx, ownSfxView,
+  adjOf, setAdj, sfxSpan, SFX_MIN,
   bedLane, bedHasMusic, bedLiveDb, BED_VOL, bedMutedAt,
 } from './model.mjs';
 import { applyCueOp, remapPlan, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
@@ -13,6 +14,7 @@ import { transitionOf, speedSummary } from './motion.mjs';
 import { SimPreview, PlayerPreview } from './preview.js';
 import { soundOf, liveStrip, liveOk } from './live-sound.mjs';
 import { openMenu, closeMenu } from './menu.js';
+import { RQ_TAGS, RQ_REDO, RQ_REDO_NOTE, rqKindOf, rqTime, rqSpan, rqWhat, rqShown, rqFile, rqCommand as rqCommandOf, rqMarkdown as rqMarkdownOf, rqStamp } from '/lib/requests-md.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_WEIGHTS, CAP_SIZE, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, captionGeom, captionRootVars, captionFontFace, describeCaptionStyle, CAP_VARS, CAP_LIFT, clampLift, describeLift, parseCaptionMarks, fmtCaptionMarks } from '/lib/caption-style.mjs';
 
 const $ = (s) => document.querySelector(s);
@@ -155,7 +157,7 @@ app.fxCtx = () => {
   return fxCache;
 };
 let snapCache = null;
-app.snapCandidates = () => {
+app.snapCandidates = ({ play = false } = {}) => {
   if (!snapCache || snapCache.ver !== app.ver) {
     const c = [];
     for (const q of app.cues) { c.push({ t: q.start, kind: 'cueStart', n: q.n }, { t: q.end, kind: 'cueEnd', n: q.n }); }
@@ -165,7 +167,7 @@ app.snapCandidates = () => {
     for (const t of app.splits) c.push({ t, kind: 'split' });
     snapCache = { ver: app.ver, list: c };
   }
-  const extra = app.gesture ? [] : [{ t: app.t, kind: 'play' }];   // 拖曳時預覽會跟著邊緣走，播放頭不當吸附點
+  const extra = app.gesture && !play ? [] : [{ t: app.t, kind: 'play' }];   // 拖曳時預覽會跟著邊緣走，播放頭不當吸附點（065 拖音效時播放頭不動：play＝照樣吸）
   if (app.sel.a != null) extra.push({ t: app.sel.a, kind: 'item' });
   if (app.sel.b != null) extra.push({ t: app.sel.b, kind: 'item' });
   return snapCache.list.concat(extra);
@@ -366,7 +368,9 @@ function recompute() {
       const main = j === 0 && !savedMuted;
       const now = main && swap && swap !== m.name;
       const db = now ? swapDb : m.db == null ? null : m.db - savedSegDb + curSegDb + dGlobal;
-      sv.push({ id: `${it.id}:${j}`, segId: it.id, name: now ? swap : m.name, at: r3(m.at + (it.ds || 0)), main, muted: main && curMuted, db, gain: db == null ? 0 : dbToGain(db) });
+      // 065 拖過、裁過的：檢查報告的 base（沒拖之前檔案的起點）＋現在的 edit.sfxAdjust（還沒存的也算）；舊的報告沒有 key＝不能拖、不能裁
+      const sp = sfxSpan(r3((m.key ? m.base ?? m.at : m.at) + (it.ds || 0)), now ? soundConf(swap)?.seconds ?? null : m.len ?? null, m.key ? adjOf(app.edit, m.key) : null);
+      sv.push({ id: `${it.id}:${j}`, segId: it.id, key: m.key || null, name: now ? swap : m.name, at: sp.start, len: sp.dur, off: sp.off, span: sp, full: now ? soundConf(swap)?.seconds ?? null : m.len ?? null, main, muted: main && curMuted, db, gain: db == null ? 0 : dbToGain(db) });
     });
     if (sc && !sv.some((m) => m.segId === it.id && m.main)) {
       // 這段現在看不到主音效的標記：剛選了一顆（原本不放、或存檔時是靜音）→ 先放在段落開頭，檢查報告出來換成真的位置；
@@ -378,9 +382,17 @@ function recompute() {
   }
   // 050 自己加的音效（edit.sfx）：at 是聽到的那一刻，標記從音效檔開始播的地方畫起（和 AI 放的同一種畫法）
   app.edit.sfx.forEach((x, i) => {
-    const v = ownSfxView(x, soundConf(x.sound), app.edit.volume.sfx);
-    sv.push({ id: `own:${i}`, user: i, name: x.sound, at: v.start, hit: x.at, main: false, muted: false, db: v.db, gain: dbToGain(v.db) });
+    const v = ownSfxView(x, soundConf(x.sound), app.edit.volume.sfx), full = soundConf(x.sound)?.seconds ?? null, sp = sfxSpan(v.start, full, x);
+    sv.push({ id: `own:${i}`, user: i, name: x.sound, at: sp.start, len: sp.dur, off: sp.off, span: sp, full, hit: x.at, main: false, muted: false, db: v.db, gain: dbToGain(v.db) });
   });
+  // 065 情緒點的音效（檢查報告 moods[].cue）：和段落的音效一樣可以拖、可以裁（覆寫記在 edit.sfxAdjust 的 "mood:N"）；菱形照舊畫在情緒點上
+  const dMood = app.edit.volume.sfx - app.savedEdit.volume.sfx;
+  for (const m of app.moodView || []) {
+    const c = m.cue;
+    if (!c?.key || !Number.isFinite(c.at)) continue;
+    const sp = sfxSpan(c.base ?? c.at, c.len ?? null, adjOf(app.edit, c.key)), db = c.db == null ? null : c.db + dMood;
+    sv.push({ id: c.key, key: c.key, mood: m.i, moodZh: m.zh, moodKind: m.kind, name: c.name, at: sp.start, len: sp.dur, off: sp.off, span: sp, full: c.len ?? null, main: false, muted: false, db, gain: db == null ? 0 : dbToGain(db) });
+  }
   app.sfxView = sv.sort((a, b) => a.at - b.at);
   // 057 背景音樂軌：檢查報告的 bed（build 算的範圍、淡入淡出、壓低）；報告還沒好先看 plan.json
   app.bedView = bedLane(app.reportReady ? app.report?.data?.bed ?? null : undefined, app.server?.bed);
@@ -709,12 +721,22 @@ function addOwnSfx(t, name) {
 function setOwnSfx(i, patch, opts = {}) {
   const x = app.edit.sfx[i];
   if (!x) return false;
-  const next = ownSfx(clamp(patch.at ?? x.at, 0, app.dur), patch.sound ?? x.sound, patch.db ?? x.db ?? 0);
-  const ok = mutate(() => { delete x.db; Object.assign(x, next); }, opts);
+  // 065 裁過的照留；換成比較短的一顆、裁完不到 SFX_MIN 秒就不裁
+  const sound = patch.sound ?? x.sound, full = soundConf(sound)?.seconds ?? null;
+  let trim = { trimIn: patch.trimIn ?? x.trimIn, trimOut: patch.trimOut ?? x.trimOut };
+  if (full != null && full - (trim.trimIn || 0) - (trim.trimOut || 0) < SFX_MIN - 1e-9) trim = null;
+  const next = ownSfx(clamp(patch.at ?? x.at, 0, app.dur), sound, patch.db ?? x.db ?? 0, trim);
+  const ok = mutate(() => { delete x.db; delete x.trimIn; delete x.trimOut; Object.assign(x, next); }, opts);
   const k = app.edit.sfx.indexOf(x);
   if (ok && k >= 0 && k !== i && app.isSelected('usfx', i)) app.select({ kind: 'usfx', id: k }, { lane: 'sfx' });
   return ok;
 }
+// 065 還原拖過、裁過的：AI 配的（段落、情緒點）＝拿掉 edit.sfxAdjust 那一筆；自己加的＝不裁（時間是它自己的，沒有「原本的」）
+function resetSfxAdj(key) {
+  if (!adjOf(app.edit, key)) return;
+  if (mutate(() => { setAdj(app.edit, key, { shift: 0, trimIn: 0, trimOut: 0 }); }, { inspector: true })) toast('已還原成 AI 原本放的位置和長度（⌘／Ctrl＋Z 可以復原）', 'ok', 2500);
+}
+const resetOwnTrim = (i) => setOwnSfx(i, { trimIn: 0, trimOut: 0 }, { inspector: true });
 function swapOwnSfx(i, name) {
   const x = app.edit.sfx[i];
   if (!x) return;
@@ -1089,7 +1111,7 @@ function applyReport(rep0) {
   app.items = (d?.items || []).filter((it) => Number.isFinite(it.start) && Number.isFinite(it.end))
     .map((it) => ({ id: it.id, type: it.type || 'scene', label: it.label || '', start: it.start, end: it.end, shownEnd: Number.isFinite(it.shownEnd) ? it.shownEnd : null, src: it.src || null, warnings: it.warnings || 0, sfx: Array.isArray(it.sfx) ? it.sfx : [], out: it.out || null, enter: it.enter ?? null, exit: it.exit ?? null }));   // out、enter、exit：實際的轉場和畫面速度，介面要照這個顯示
   app.voiceOnly = Array.isArray(d?.voiceOnly) ? d.voiceOnly.filter((v) => Array.isArray(v) && v.length === 2) : [];
-  // 情緒點（plan.json moods，023）：音效軌上看得到，改在分鏡表或跟 AI 說（不屬於任何一段，這裡不拖不靜音）
+  // 情緒點（plan.json moods，023）：音效軌上看得到，要不要、換哪一顆改在分鏡表或跟 AI 說（不屬於任何一段，這裡不靜音）；065 出聲的那一顆可以拖、可以裁（edit.sfxAdjust）
   app.moodView = Array.isArray(d?.moods) ? d.moods.filter((m) => Number.isFinite(m?.at)).map((m) => ({ ...m, zh: MOOD_ZH[m.kind] || m.kind })) : [];
   // 002 的 check-json：voiceUncovered＝只有聲音、沒被蓋住（紅色斜線）；uncovered＝沒有任何卡片或素材的講解（灰色斜線）
   const spans = (arr) => (Array.isArray(arr) ? arr.filter((v) => Number.isFinite(v?.start) && Number.isFinite(v?.end) && v.end > v.start).map((v) => [v.start, v.end, v.level || null]) : []);
@@ -1135,6 +1157,7 @@ function renderExport(s) {
   $('#exportReveal').hidden = !ok;
   $('#exportVideo').hidden = !ok || !s.final?.url;
   $('#exportSheet').hidden = !ok || !s.final?.sheetUrl;
+  $('#exportLearn').hidden = !ok;
   app.finalLinks = { video: s.final?.url || null, sheet: s.final?.sheetUrl || null };
   if (setup) {
     const c = app.canvas(), portrait = c.format === 'portrait';
@@ -1315,7 +1338,7 @@ function renderHeader() {
 function editForSave() {
   const e = app.edit;
   return { cuts: e.cuts.map(([a, b]) => [r3(a), r3(b)]), fadeIn: e.fadeIn, fadeOut: e.fadeOut, volume: { ...e.volume }, gains: e.gains.map((g) => ({ ...g })), joins: e.joins.map((j) => ({ ...j })),
-    ...(e.sfx.length ? { sfx: e.sfx.map((x) => ({ ...x })) } : {}), ...(e.level ? { level: true } : {}) };   // 自己加的音效：一顆都沒有就不寫這個欄位；拉平人聲：關著不寫
+    ...(e.sfx.length ? { sfx: e.sfx.map((x) => ({ ...x })) } : {}), ...(e.sfxAdjust.length ? { sfxAdjust: e.sfxAdjust.map((x) => ({ ...x })) } : {}), ...(e.level ? { level: true } : {}) };   // 自己加的音效、拖過裁過的（065）：一筆都沒有就不寫這個欄位；拉平人聲：關著不寫
 }
 // 跟「存檔時的 plan.json＋目前的字幕操作」比，哪些段落欄位改了
 function segmentDiff() {
@@ -1901,6 +1924,8 @@ function renderModeNote() {
     html = !avail ? '<span class="mute">找不到播放器，只能用快速試聽</span>'
       : !built ? `按「更新預覽」做一次，就看得到字卡和動畫${esc(lastBuildText())}` : '這裡沒有字卡和動畫，看完整畫面請切到完成影片預覽';
   }
+  // 062：輸出過完成影片之後，把這集改過的地方整理給 AI（學你的習慣）
+  if (!roughStage() && fin?.exists) html += `${html ? ' ' : ''}<button class="small ghost" data-learn data-tip="把這集你改過的地方（回饋、剪輯台手改、改版）整理成 work/feedback/learn.md，複製一行指令；貼給 AI，它會整理成以後每一集都照做的規則給你勾">整理這集的調整給 AI</button>`;
   if (note.dataset.html !== html) { note.dataset.html = html; note.innerHTML = html; }
 }
 // 流程列要知道這一頁現在是字幕預覽，不是完成影片
@@ -2192,7 +2217,6 @@ function renderLookPending() {
 }
 
 // ---------- 屬性面板 ----------
-const fmtTime = (v) => (typeof v === 'string' ? v : Number.isFinite(v) ? `${r2(v)} 秒` : '—');
 const sliderRow = (label, f, v, { min = -60, max = 12, step = 0.5, out, def = 0, tip = '', cls = '', off = false } = {}) => `<div class="ip-slider${cls ? ` ${cls}` : ''}"${tip ? ` data-tip="${esc(tip)}"` : ''}><label>${label}</label><input type="range" aria-label="${esc(label)}" data-f="${f}" min="${min}" max="${max}" step="${step}" value="${v ?? def}"${off ? ' disabled' : ''}><output data-out="${f}" class="${(v ?? def) !== def ? 'changed' : ''}">${out}</output></div>`;
 // 整支影片的設定一項一區，可以收起來；標題帶現在的值，收著也看得到（開合記著，重畫不會跳回去）
 const FOLD_OPEN = { look: true, sound: true };
@@ -2285,8 +2309,10 @@ function sfxSection(it, sc) {
   const muted = sc.sfx === null;
   const v = Number.isFinite(sc.sfxVolume) ? sc.sfxVolume : 0;
   const mem = sfxMem(sc.id);
+  const moved = marks.filter((m) => m.key && adjOf(app.edit, m.key));   // 065 拖過、裁過的
   return `<section class="ip-sec"><h3>音效</h3>
-    ${marks.length ? `<div class="chips">${marks.map((m) => `<span class="chip-t">${m.main ? '主' : '附加'}・${esc(m.name)}${m.muted ? '（靜音）' : ''} ${fmt(m.at, 1)}</span>`).join('')}</div>` : `<p class="ip-note">${app.reportReady ? '這段沒有音效' : '音效位置要等檢查報告'}</p>`}
+    ${marks.length ? `<div class="chips">${marks.map((m) => `<span class="chip-t">${m.main ? '主' : '附加'}・${esc(m.name)}${m.muted ? '（靜音）' : ''} ${fmt(m.at, 1)}${moved.includes(m) ? '（拖過）' : ''}</span>`).join('')}</div>` : `<p class="ip-note">${app.reportReady ? '這段沒有音效' : '音效位置要等檢查報告'}</p>`}
+    ${moved.length ? `<div class="ip-btns"><button class="small ghost" data-act="sfxAdjReset" data-tip="拿掉你拖過、裁過的，回到 AI 原本放的位置和長度">還原位置和長度（${moved.length} 顆）</button></div>` : ''}
     <div class="ip-btns"><button class="small toggle${muted ? ' on' : ''}" data-act="sfxMute" aria-pressed="${muted}">${!muted ? '靜音主音效' : mem || savedSceneById(sc.id)?.sfx !== null ? '主音效已靜音（按一下還原）' : 'AI 設定這段不放主音效（按一下加回預設音效）'}</button></div>
     <div class="ip-btns"><button class="small${soundsWhy() ? ' is-disabled' : ''}" data-act="sfxSwap" data-why="${esc(soundsWhy())}" data-tip="換這段的主音效（可以先試聽），落點不變">換一顆音效…</button><button class="small ghost${same(sc.sfx, sfxOrig(sc.id)) ? ' is-disabled' : ''}" data-act="sfxRestore" data-why="現在就是原本的音效">還原成原本的</button></div>
     ${muted && mem?.had && sfxNameOf(mem.value) ? `<p class="ip-note">還原會換回 AI 原本寫的「${esc(sfxNameOf(mem.value))}」。</p>` : ''}
@@ -2301,10 +2327,11 @@ function inspOwnSfx(i) {
     <div class="ip-row"><span class="k">音效</span><span class="v">${esc(soundZh(x.sound))}　<span class="dim">${esc(x.sound)}</span></span></div>
     <div class="ip-row"><label>時間</label><input class="tcv" aria-label="這顆音效的時間" data-f="ownAt" value="${fmtTC(x.at)}" data-tip="那一刻聽到這顆音效。時:分:秒:格，或直接打秒數"></div>
     ${sliderRow('音量', 'ownDb', db, { out: fmtDb(db), tip: '這一顆比預設再大聲或小聲多少（疊在整支的音效音量上）' })}
+    ${x.trimIn || x.trimOut ? `<div class="ip-row"><span class="k">裁剪</span><span class="v">${x.trimIn ? `開頭裁 ${fmtSec(x.trimIn)}` : ''}${x.trimIn && x.trimOut ? '、' : ''}${x.trimOut ? `結尾裁 ${fmtSec(x.trimOut)}` : ''}　<button class="small ghost" data-act="ownTrimReset">不裁</button></span></div>` : ''}
     <div class="ip-btns"><button class="small${soundsWhy() ? ' is-disabled' : ''}" data-act="ownSwap" data-why="${esc(soundsWhy())}">換一顆音效…</button><button class="small ghost" data-act="ownPlay">▶ 試聽</button><button class="small danger" data-act="ownDel">移除（Delete）</button></div>
     ${cutIndexAt(x.at, app.edit.cuts) >= 0 ? '<p class="ip-warn">⚠ 這顆落在剪掉的範圍裡，完成影片不會出聲 → 拖到別的地方，或恢復那一段</p>' : ''}
     ${soundConf(x.sound) || soundsWhy() ? '' : `<p class="ip-warn">⚠ 這台電腦沒有「${esc(x.sound)}」這顆音效，完成影片會做不出來 → 換一顆，或移除</p>`}
-    <p class="ip-note">這顆是你自己加的：不受「相距 3 秒」「每分鐘幾顆」的規則限制，AI 不會動它。在時間軸上左右拖改時間、上下拖調音量；按右鍵可以換一顆。</p>
+    <p class="ip-note">這顆是你自己加的：不受「相距 3 秒」「每分鐘幾顆」的規則限制，AI 不會動它。在時間軸上左右拖改時間、拖兩端裁掉前段或後段、上下拖調音量；按右鍵可以換一顆。</p>
   </section>`;
 }
 // 這段實際的進場、出場（工具照前後段決定的）
@@ -2782,6 +2809,8 @@ function onInspClick(e) {
     case 'sfxMute': return toggleSfxMute(s.id);
     case 'sfxSwap': return menuBelow(b, soundItems(segSoundNow(s.id), (name) => swapSegSfx(s.id, name)), '換一顆音效', e.detail === 0);
     case 'sfxRestore': return restoreSegSfx(s.id);
+    case 'sfxAdjReset': { const keys = app.sfxView.filter((m) => m.segId === s.id && m.key && adjOf(app.edit, m.key)).map((m) => m.key); mutate(() => { for (const k of keys) setAdj(app.edit, k, { shift: 0, trimIn: 0, trimOut: 0 }); }, { inspector: true }); return; }
+    case 'ownTrimReset': return resetOwnTrim(s.id);
     case 'ownSwap': return menuBelow(b, soundItems(app.edit.sfx[s.id].sound, (name) => swapOwnSfx(s.id, name)), '換一顆音效', e.detail === 0);
     case 'ownPlay': { const x = app.edit.sfx[s.id]; return playSound(x.sound, x.db || 0); }
     case 'ownDel': return removeOwnSfx(s.id);
@@ -2920,15 +2949,16 @@ app.tlTip = (h) => {
     case 'voiceBody': return '拖曳選一段範圍（剪掉或單獨調音量）';
     case 'bed': return bedTip() + lk;
     case 'mood': return `情緒點：${h.mood.zh}${h.mood.sfx ? `　音效「${h.mood.sfx}」` : h.mood.off ? '（不出聲）' : `（讓位給更強的音效${h.mood.dropped ? `，原本是 ${h.mood.dropped}` : ''}）`}${h.mood.zoom ? '　講者推近' : ''}\n要改：分鏡表的「情緒點」勾選表，或跟 AI 說（寫進修改單）`;
-    case 'sfx': return `${h.sfx.segId} 的${h.sfx.main ? '主' : '附加'}音效「${h.sfx.name}」${h.sfx.muted ? '（靜音）' : h.sfx.db != null ? ` ${fmtDb(r2(h.sfx.db))}` : ''}\n上下拖調這段音量、雙擊靜音；按右鍵換一顆${lk}`;
-    case 'usfx': { const x = app.edit.sfx[h.sfx.user]; return `自己加的音效「${soundZh(x.sound)}」　${fmt(x.at, 1)}　${fmtDb(x.db || 0)}\n左右拖改時間、上下拖調音量；Delete 移除、按右鍵換一顆${lk}`; }
+    case 'sfx': if (h.edge != null) return sfxEdgeTip(h) + lk; return `${h.sfx.segId} 的${h.sfx.main ? '主' : '附加'}音效「${h.sfx.name}」${h.sfx.muted ? '（靜音）' : h.sfx.db != null ? ` ${fmtDb(r2(h.sfx.db))}` : ''}${sfxAdjTip(h.sfx)}\n${h.sfx.key ? '左右拖改時間、拖兩端裁剪、' : ''}上下拖調這段音量、雙擊靜音；按右鍵換一顆${lk}`;
+    case 'usfx': { if (h.edge != null) return sfxEdgeTip(h) + lk; const x = app.edit.sfx[h.sfx.user]; return `自己加的音效「${soundZh(x.sound)}」　${fmt(x.at, 1)}　${fmtDb(x.db || 0)}${sfxAdjTip(h.sfx)}\n左右拖改時間、拖兩端裁剪、上下拖調音量；Delete 移除、按右鍵換一顆${lk}`; }
+    case 'msfx': if (h.edge != null) return sfxEdgeTip(h) + lk; return `情緒點「${h.sfx.moodZh}」的音效「${h.sfx.name}」${sfxAdjTip(h.sfx)}\n左右拖改時間、拖兩端裁剪；不要這顆：分鏡表的「情緒點」勾選表，或跟 AI 說${lk}`;
     default: return null;
   }
 };
 app.tlDown = (h, e) => {
   const lane = h.lane;
   if (app.tool === 'split') return null;
-  const editKinds = ['mediaL', 'mediaR', 'media', 'mediaVol', 'head', 'tail', 'cutEdge', 'capEdge', 'gainVol', 'gainEdge', 'voiceVol', 'sfx', 'usfx'];
+  const editKinds = ['mediaL', 'mediaR', 'media', 'mediaVol', 'head', 'tail', 'cutEdge', 'capEdge', 'gainVol', 'gainEdge', 'voiceVol', 'sfx', 'usfx', 'msfx'];
   if (editKinds.includes(h.kind) && app.trackLocked(lane)) { return { move: () => null, up: (moved) => { if (moved) lockedToast(lane); } }; }
   if (editKinds.includes(h.kind) && app.historyBusy) { historyBlocked(); return { move: () => null, up: () => {} }; }
   switch (h.kind) {
@@ -2940,8 +2970,9 @@ app.tlDown = (h, e) => {
     case 'gainVol': return dragGainVol(h.gain);
     case 'gainEdge': return dragGainEdge(h.gain, h.edge);
     case 'voiceVol': return selValid() && h.t >= app.sel.a && h.t <= app.sel.b ? dragNewGain() : dragVoiceVol();
-    case 'sfx': return dragSfx(h.sfx);
-    case 'usfx': return dragOwnSfx(h);
+    case 'sfx': return h.edge != null ? dragSfxEdge(h) : dragSfx(h);
+    case 'usfx': return h.edge != null ? dragSfxEdge(h) : dragOwnSfx(h);
+    case 'msfx': return h.edge != null ? dragSfxEdge(h) : dragSfxMove(h);
     case 'piece': case 'voiceBody': case 'cut': case 'gainBody': return dragRange(h.t, e);
     default: return null;
   }
@@ -3155,14 +3186,17 @@ function dragGainEdge(i, edge) {
     up(moved) { app.gestureEnd(moved); },
   };
 }
-function dragSfx(m) {
-  const id = m.segId;
+// AI 配的音效（段落的）：上下拖＝調這段的音效音量；065 左右拖＝改這一顆的時間（edit.sfxAdjust）；一次只動一個方向（先動的那個）
+function dragSfx(h) {
+  const m = h.sfx, id = m.segId;
   const sc = sceneById(id);
   const v0 = Number.isFinite(sc?.sfxVolume) ? sc.sfxVolume : 0;
-  let y0 = null;
+  let y0 = null, axis = null, mover = null;
   app.gestureBegin();
   return {
-    move(t, y) {
+    move(t, y, e, px) {
+      axis ??= m.key && Math.abs(px - h.x) >= Math.abs(y - h.y) ? 'time' : 'db';
+      if (axis === 'time') return (mover ??= sfxMover(h))(t, e);
       if (y0 == null) y0 = y;
       const v = clamp(Math.round((v0 + (y0 - y) / 2) * 2) / 2, -60, 12);
       const i = app.scenes.findIndex((x) => x.id === id);
@@ -3184,14 +3218,92 @@ function dragOwnSfx(h) {
   return {
     move(t, y, e, px) {
       axis ??= Math.abs(px - h.x) >= Math.abs(y - h.y) ? 'time' : 'db';
-      if (axis === 'time') x.at = clamp(frameSnap(snapT(at0 + (t - h.t), e, { exclude: [at0] }).t), 0, app.dur);
+      let out = false;
+      if (axis === 'time') { const v = frameSnap(snapT(at0 + (t - h.t), e, { exclude: [at0], play: true }).t); out = v < 0 || v > app.dur; x.at = clamp(v, 0, app.dur); }
       else { const v = clamp(Math.round((db0 + (h.y - y) / 2) * 2) / 2, -60, 12); if (v) x.db = v; else delete x.db; }
       recompute();
-      return axis === 'time' ? `${soundZh(x.sound)} ${fmtFine(x.at)}${cutIndexAt(x.at, app.edit.cuts) >= 0 ? '\n這裡是剪掉的範圍：不會出聲' : ''}` : `${soundZh(x.sound)} ${fmtDb(x.db || 0)}`;
+      return axis === 'time' ? `${soundZh(x.sound)} ${fmtFine(x.at)}${cutIndexAt(x.at, app.edit.cuts) >= 0 ? '\n這裡是剪掉的範圍：不會出聲' : ''}${out ? '\n不能拖出影片' : ''}` : `${soundZh(x.sound)} ${fmtDb(x.db || 0)}`;
     },
     // 放開：照時間重排之後，選取跟著這一顆走（沒拖動＝還原，順序沒變）
     up(moved) { app.gestureEnd(moved); const i = app.edit.sfx.indexOf(x); if (moved) app.select({ kind: 'usfx', id: i >= 0 ? i : h.sfx.user }, { lane: 'sfx' }); },
   };
+}
+// ---------- 065 音效拖曳、裁前後 ----------
+// 一顆音效開始響的地方能拖到哪裡：段落的音效不能拖出那一段（剪映素材每段一支，拖出去那支就沒有這顆；build 也會擋），其他不能拖出影片。
+//   原本就在範圍外一點的（峰值對齊、提早一點開始）照原本的位置算
+function sfxRange(m) {
+  const it = m.segId ? app.itemsView.find((x) => x.id === m.segId) : null;
+  if (!it) return { lo: 0, hi: Math.max(0, app.dur - 1 / app.fps), it: null };
+  return { lo: Math.min(it.start, m.at), hi: Math.max((it.vend ?? it.end) - 1 / app.fps, m.at), it };
+}
+const outWhy = (it) => (it ? `\n不能拖出 ${it.id}（${fmt(it.start, 1)}–${fmt(it.vend ?? it.end, 1)}）：這顆音效跟著這一段` : '\n不能拖出影片');
+// 吸附（字幕邊界、段落邊界、剪接點、播放頭；拖音效時播放頭不跟著跑，所以也算）：那一刻聽到的地方（峰值，沒被裁掉時）、方塊的頭、方塊的尾，哪個離吸附點近吸哪個
+function snapSfx(s, { ti, peak, dur }, e) {
+  let best = null;
+  for (const v of [peak >= ti ? s - ti + peak : null, s, dur ? s + dur : null]) {
+    if (v == null) continue;
+    const r = snapT(v, e, { play: true });
+    if (r.snap && (!best || Math.abs(r.t - v) < best.d)) best = { d: Math.abs(r.t - v), ds: r.t - v, line: timeline.snapLine };
+  }
+  timeline.snapLine = best?.line ?? null;
+  return best ? s + best.ds : s;
+}
+// 左右拖 AI 配的那一顆（段落的、情緒點的）：改 edit.sfxAdjust 的 shift（比 AI 原本的位置晚幾秒）。回傳 move(t, e) → 提示文字
+function sfxMover(h) {
+  const m = h.sfx, key = m.key, at0 = m.at, a0 = adjOf(app.edit, key) || {}, sh0 = a0.shift || 0;
+  const peak = soundConf(m.name)?.peak || 0, { lo, hi, it } = sfxRange(m);
+  return (t, e) => {
+    let s = snapSfx(at0 + (t - h.t), { ti: a0.trimIn || 0, peak, dur: m.len }, e), why = '';
+    if (s < lo - 1e-6 || s > hi + 1e-6) { s = clamp(s, lo, hi); timeline.snapLine = null; why = outWhy(it); }
+    const sh = r3(sh0 + s - at0);
+    setAdj(app.edit, key, { shift: sh });
+    recompute();
+    return `${soundZh(m.name)}　${fmtFine(s)} 開始響　${Math.abs(sh) < 0.005 ? '在 AI 原本的位置' : `比原本${sh > 0 ? '晚' : '早'} ${Math.abs(sh).toFixed(2)} 秒`}${cutIndexAt(s, app.edit.cuts) >= 0 ? '\n這裡是剪掉的範圍：完成影片會在接點上響' : ''}${why}`;
+  };
+}
+// 情緒點的音效：只能左右拖（音量跟著整支的音效音量）
+function dragSfxMove(h) {
+  const mover = sfxMover(h);
+  app.gestureBegin();
+  return { move: (t, y, e) => mover(t, e), up(moved) { app.gestureEnd(moved); } };
+}
+// 拖方塊的左右邊緣＝裁掉音效檔的前段／後段：方塊變短，聲音從裁點開始、到裁點停（build 在裁過的那一端加 10 ms 淡入／淡出）。
+//   AI 配的寫 edit.sfxAdjust 的 trimIn／trimOut，自己加的寫那一顆的 trimIn／trimOut；裁完至少留 SFX_MIN 秒；往外拖到底＝不裁
+function dragSfxEdge(h) {
+  const m = h.sfx, edge = h.edge, own = m.user != null, full = m.full, x = own ? app.edit.sfx[m.user] : null;
+  const a0 = own ? x : adjOf(app.edit, m.key) || {}, ti0 = a0.trimIn || 0, to0 = a0.trimOut || 0, file = m.at - ti0;   // file＝檔案的起點（rough 秒數）
+  const { hi, it } = sfxRange(m);
+  app.gestureBegin();
+  if (own) app.select({ kind: 'usfx', id: m.user }, { lane: 'sfx' }); else if (m.segId) app.select({ kind: 'sfx', id: m.segId }, { lane: 'sfx' });
+  return {
+    move(t, y, e) {
+      const r = snapT(t, e, { play: true });
+      let ti = ti0, to = to0, why = '';
+      if (edge === 0) {
+        const max = Math.min(full - to0 - SFX_MIN, hi - file);
+        ti = r.t - file;
+        if (ti < 0 || ti > max) { if (ti > max) why = full - to0 - SFX_MIN <= hi - file ? `\n最短 ${SFX_MIN} 秒` : outWhy(it); ti = clamp(ti, 0, Math.max(0, max)); timeline.snapLine = null; }
+      } else {
+        const max = full - ti0 - SFX_MIN;
+        to = file + full - r.t;
+        if (to < 0 || to > max) { if (to > max) why = `\n最短 ${SFX_MIN} 秒`; to = clamp(to, 0, Math.max(0, max)); timeline.snapLine = null; }
+      }
+      ti = r3(ti); to = r3(to);
+      if (own) { for (const [k, v] of [['trimIn', ti], ['trimOut', to]]) if (v > 0) x[k] = v; else delete x[k]; }
+      else setAdj(app.edit, m.key, edge === 0 ? { trimIn: ti } : { trimOut: to });
+      recompute();
+      return `${soundZh(m.name)}　${edge === 0 ? `開頭裁掉 ${ti.toFixed(2)} 秒` : `結尾裁掉 ${to.toFixed(2)} 秒`}　剩 ${(full - ti - to).toFixed(2)} 秒${why}`;
+    },
+    up(moved) { app.gestureEnd(moved); },
+  };
+}
+const sfxEdgeTip = (h) => `拖曳裁掉「${soundZh(h.sfx.name)}」的${h.edge ? '結尾' : '開頭'}（往裡拖＝裁短，往外拖＝放回來）`;
+// 滑上去看得到這一顆拖過、裁過多少
+function sfxAdjTip(m) {
+  const a = m.user != null ? app.edit.sfx[m.user] : adjOf(app.edit, m.key);
+  if (!a) return '';
+  const parts = [m.user == null && a.shift ? `比原本${a.shift > 0 ? '晚' : '早'} ${Math.abs(a.shift).toFixed(2)} 秒` : '', a.trimIn ? `開頭裁 ${a.trimIn.toFixed(2)} 秒` : '', a.trimOut ? `結尾裁 ${a.trimOut.toFixed(2)} 秒` : ''].filter(Boolean);
+  return parts.length ? `\n${parts.join('、')}${m.user == null ? '（按右鍵可以還原）' : ''}` : '';
 }
 
 // ---------- 右鍵選單（050）----------
@@ -3341,6 +3453,7 @@ function ctxMenu(h, { range = false } = {}) {
         { sep: true },
         { label: '調整這段音量', hint: fmtDb(Number.isFinite(v) ? v : 0), off: lockWhy('sfx'), run: () => focusInsp('[data-f="sfxVolume"]') },
         { label: '▶ 試聽', run: () => playSound(m.name) },
+        ...(adjOf(app.edit, m.key) ? [{ label: '還原這一顆的位置和長度', off: lockWhy('sfx'), run: () => resetSfxAdj(m.key) }] : []),   // 065 拖過、裁過才有
         { label: '看這段的其他屬性', run: () => { app.select({ kind: segType(sceneById(m.segId)) === 'media' ? 'media' : 'item', id: m.segId }); setSide('insp'); } },
       ] };
     }
@@ -3350,8 +3463,17 @@ function ctxMenu(h, { range = false } = {}) {
         { label: '換一顆音效', sub: soundItems(x.sound, (name) => swapOwnSfx(i, name)), off: lk || soundsWhy() },
         { label: '調整音量', hint: fmtDb(x.db || 0), off: lk, run: () => focusInsp('[data-f="ownDb"]') },
         { label: '▶ 試聽', run: () => playSound(x.sound, x.db || 0) },
+        ...(x.trimIn || x.trimOut ? [{ label: '不裁（放回整顆）', off: lk, run: () => resetOwnTrim(i) }] : []),   // 065 裁過才有
         { sep: true },
         { label: '移除', key: 'Delete', danger: true, off: lk, run: () => removeOwnSfx(i) },
+      ] };
+    }
+    case 'msfx': {   // 065 情緒點的音效：拖過、裁過可以還原；不要這顆照舊到分鏡表或跟 AI 說
+      const m = h.sfx, mood = (app.moodView || []).find((x) => x.i === m.mood);
+      return { head: `情緒點：${m.moodZh}　${m.name}`, items: [
+        { note: `不要這顆音效 → 到分鏡表的「情緒點」取消勾選，或跟 AI 說「${mmssOf(outOf(mood?.at ?? m.at, app.edit.cuts))} 的情緒點不要音效」` }, { sep: true },
+        { label: '▶ 試聽', run: () => playSound(m.name) },
+        ...(adjOf(app.edit, m.key) ? [{ label: '還原這一顆的位置和長度', off: lockWhy('sfx'), run: () => resetSfxAdj(m.key) }] : []),
       ] };
     }
     default:
@@ -3497,6 +3619,8 @@ $('#exportStart').addEventListener('click', () => beginExport());
 for (const el of document.querySelectorAll('#exportSetup input')) el.addEventListener('change', () => renderExport({ steps: [], running: false }));
 $('#exportVideo').addEventListener('click', () => { if (app.finalLinks?.video) window.open(app.finalLinks.video, '_blank', 'noopener'); });
 $('#exportSheet').addEventListener('click', () => { if (app.finalLinks?.sheet) window.open(app.finalLinks.sheet, '_blank', 'noopener'); });
+$('#exportLearn').addEventListener('click', () => learnCopy());
+$('#modeNote').addEventListener('click', (e) => { if (e.target.closest('[data-learn]')) learnCopy(); });
 for (const sel of ['#logIssues', '#exportIssues']) $(sel).addEventListener('click', (e) => {
   const dlg = e.target.closest('dialog');
   if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }
@@ -3732,13 +3856,9 @@ document.addEventListener('pointerdown', () => { clearTimeout(tipTimer); $('#tip
 // 剪輯台只能改字、刪清單項目；要加項目、換動畫、重新排版都寫在這裡，AI 照「照剪輯台修改單改」直接改（每段一個子代理）
 // 一段一筆 { id, tags, note, redo?（重新設計：從空白重畫，029）, t（最後改的時間）, done?: { round, note } }：有勾或有描述才算一筆；改了就變回待改
 // 重新設計預設不勾：沒勾＝在現有的動畫上改（改資料、換模板、手改）；勾了＝設計師子代理從空白畫布重畫（比較貼講解、比較久）
-const RQ_TAGS = {
-  anim: ['流程更細節', '以圖像展示為主', '文字少一點', '畫出關係（箭頭、引線）', '換一種動畫', '動作慢一點', '跟講的話對齊', '更有質感'],
-  media: ['播太快', '播太慢', '標註更清楚', '推近到操作區', '加步驟清單', '換成動畫', '換一段錄影', '跟講的話對齊'],
-  gap: ['加一張字卡', '加一段動畫', '放錄影或圖片'],
-};
+// 標籤與修改單的文字格式在 lib/requests-md.mjs（手機確認頁共用同一份）
 const rqKey = () => `editor-requests:${app.server?.project?.dir || ''}`;
-const rqKind = (sc) => (!sc ? 'gap' : segType(sc) === 'media' ? 'media' : 'anim');
+const rqKind = (sc) => rqKindOf(sc ? segType(sc) : null);
 let rqClearArm = false, rqMarks = '';
 function rqLoad() {
   try { const v = JSON.parse(localStorage.getItem(rqKey()) || '[]'); app.requests = Array.isArray(v) ? v.filter((x) => isObj(x) && x.id) : []; } catch { app.requests = []; }
@@ -3763,22 +3883,15 @@ function rqInfo(id) {
   if (!sc) return null;
   const type = segType(sc);
   const def = type === 'scene' ? findSceneDef(app.server?.schema?.scenes, sc.scene) : type === 'fx' ? findFxDef(app.server?.schema?.fx, sc.fx) : null;
-  const what = type === 'scene' ? `資訊卡 ${sc.scene}${def?.zh ? `（${def.zh}）` : ''}`
-    : type === 'fx' ? `字卡動態 ${sc.fx}${def?.zh ? `（${def.zh}）` : ''}`
-    : type === 'custom' ? (sc.template ? `模板動畫 ${sc.template}（${customDef(sc)?.zh || ''}）` : customKind(sc))
-    : `${app.mediaSeg(id)?.kind === 'image' ? '圖片' : '螢幕錄影'} ${String(sc.src || '').split('/').pop()}`;
-  // 修改單寫從工作區根目錄起算的路徑（AI 在根目錄執行，不用猜相對誰）：custom 的 src 相對 work/hyperframes，media 的 src 相對專案
-  const pd = app.server?.project?.dir || '';
-  const file = !sc.src ? null : type === 'custom' ? `${pd}/work/hyperframes/${sc.src}` : type === 'media' ? `${pd}/${sc.src}` : null;
+  const names = { zh: def?.zh, customZh: customDef(sc)?.zh, image: type === 'media' ? app.mediaSeg(id)?.kind === 'image' : undefined };
   const subs = it ? app.cues.filter((c) => c.end > it.start + 0.05 && c.start < it.end - 0.05) : [];
-  const shown = type === 'custom' ? customKind(sc) : type === 'media' ? `素材：${String(sc.src || '').split('/').pop()}` : `字卡${def?.zh ? `：${def.zh}` : ''}`;
-  return { id, it, sc, type, label: it?.title || it?.label || '', what, shown, file, out: it ? [outOf(it.start, app.edit.cuts), outOf(it.end, app.edit.cuts)] : null,
-    span: `${fmtTime(sc.from ?? sc.at)} → ${fmtTime(sc.to ?? (sc.duration != null ? `+${sc.duration} 秒` : '預設長度'))}`, subs };
+  // 修改單寫從工作區根目錄起算的路徑（rqFile）：AI 在根目錄執行，不用猜相對誰
+  return { id, it, sc, type, label: it?.title || it?.label || '', what: rqWhat(sc, names), shown: rqShown(sc, names), file: rqFile(sc, app.server?.project?.dir || ''),
+    out: it ? [outOf(it.start, app.edit.cuts), outOf(it.end, app.edit.cuts)] : null, span: rqSpan(sc), subs };
 }
-const rqMs = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;   // 分:秒.十分之一（給 AI 看，不用格數）
-const rqTime = (inf) => (inf.out ? `${rqMs(inf.out[0])}–${rqMs(inf.out[1])}` : '—');
 // 存檔、剪貼簿複製、AI 生成是三件事，只有 API 的回報代表 AI 已開始。
-const rqExported = (r) => { const q = app.server?.requests; return !r.done && !!q && q.ids.includes(r.id) && q.at >= (r.t || 0); };
+// carried＝AI 還在改的時候又複製了新的修改單，舊那一版還在生成中的段（伺服器帶著走，照樣顯示生成中、改完記得到）
+const rqExported = (r) => { const q = app.server?.requests; return !r.done && !!q && (q.ids.includes(r.id) || !!q.carried?.includes(r.id)) && q.at >= (r.t || 0); };
 const rqProgress = (r) => rqExported(r) ? app.server.requests.states?.[r.id] : null;
 function rqStatus(r) {
   const p = rqProgress(r);
@@ -3801,7 +3914,9 @@ function rqSync() {
   }
   if (ch) rqStore();
 }
-const rqPending = () => app.requests.filter((r) => !r.done);
+// 生成中的段 AI 已經在改：不算待改、不再複製（不然同一段會送兩次）；失敗的算回待改，可以再送
+const rqGenerating = (r) => !r.done && rqProgress(r)?.state === 'generating';
+const rqPending = () => app.requests.filter((r) => !r.done && !rqGenerating(r));
 // 時間軸標記（timeline.js 畫）：✎ 待改、✓ 已改完
 app.rqMark = (id) => { const r = app.requests.find((x) => x.id === id); return r ? (r.done ? 'done' : 'todo') : null; };
 // 直接存：點標籤或打字就寫進清單；勾選和描述都清空就拿掉；改過的已改完段變回待改
@@ -3827,10 +3942,10 @@ function rqTopHtml(id) {
   const inf = id ? rqInfo(id) : null;
   if (!inf) return '<p class="ip-note">在時間軸或「段落」分頁點一段，在這裡點想怎麼改、或自己寫（直接存）；可以累積很多段，最後一起複製給 AI。</p>';
   const req = app.requests.find((x) => x.id === id), on = req?.tags || [];
-  const redo = rqKind(inf.sc) === 'anim' ? `<label class="rq-redo"><input type="checkbox" data-rq="redo"${req?.redo ? ' checked' : ''}> 重新設計這一段（從空白重畫，比較久）</label>
-    <p class="ip-note">沒勾：AI 在現有的動畫上改。勾了：另外請設計師從空白畫布重畫，比較貼講解，一段要多花幾分鐘。</p>` : '';
+  const redo = rqKind(inf.sc) === 'anim' ? `<label class="rq-redo"><input type="checkbox" data-rq="redo"${req?.redo ? ' checked' : ''}> ${RQ_REDO}</label>
+    <p class="ip-note">${RQ_REDO_NOTE}</p>` : '';
   // 對應字幕預設收起：選項比字幕重要，小視窗也要一眼看到
-  return `<div class="rq-seg"><div class="t">${esc(inf.it?.title || inf.label)}</div><div class="m">${esc(inf.shown)}<br>完成影片 ${rqTime(inf)}　${esc(inf.id)}</div></div>
+  return `<div class="rq-seg"><div class="t">${esc(inf.it?.title || inf.label)}</div><div class="m">${esc(inf.shown)}<br>完成影片 ${rqTime(inf.out)}　${esc(inf.id)}</div></div>
     ${inf.subs.length ? `<details class="rq-subwrap"><summary>這段的字幕（${inf.subs.length} 句）</summary><ul class="rq-subs">${inf.subs.map((c) => `<li><span class="n">#${c.n}</span>${esc(c.text)}</li>`).join('')}</ul></details>` : '<p class="ip-note">這段時間沒有字幕</p>'}
     <div class="rq-tags" role="group" aria-label="想怎麼改">${RQ_TAGS[rqKind(inf.sc)].map((t) => `<button class="toggle small${on.includes(t) ? ' on' : ''}" data-rq="tag" data-t="${esc(t)}" aria-pressed="${on.includes(t)}">${esc(t)}</button>`).join('')}</div>
     ${redo}
@@ -3838,17 +3953,19 @@ function rqTopHtml(id) {
     <div id="rqState">${rqStateHtml(id)}</div>`;
 }
 function rqListsHtml(cur) {
-  const pend = rqPending(), done = app.requests.filter((r) => r.done);
+  const pend = rqPending(), gen = app.requests.filter(rqGenerating), done = app.requests.filter((r) => r.done);
   const lab = (r) => { const i = rqInfo(r.id); return i ? esc(i.label) : '<span class="gone">找不到這段（可能被 AI 改名或刪掉了）</span>'; };
   const go = (r) => `<button class="small ghost" data-rq="go" data-id="${esc(r.id)}" data-tip="跳到這段">↗</button>`;
   const del = (r) => `<button class="small ghost" data-rq="del" data-id="${esc(r.id)}" data-tip="從修改單拿掉" aria-label="拿掉 ${esc(r.id)}">✕</button>`;
   const badge = (r) => { const s = rqStatus(r); return s.label ? `<span class="rq-sent ${s.cls}" role="status" data-tip="${esc(s.detail)}">${s.label}</span>` : ''; };
   const failedWhy = (r) => { const st = rqStatus(r); return st.cls === 'failed' ? `<div class="what err-ink">${esc(st.detail)}</div>` : ''; };
-  const pi = pend.map((r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${badge(r)}${go(r)}${del(r)}</div>${failedWhy(r)}
-    ${r.tags.length || r.redo ? `<div class="chips">${r.redo ? '<span class="chip-t chip-redo">重新設計</span>' : ''}${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`).join('');
+  const item = (r) => `<li class="rq-item${r.id === cur ? ' cur' : ''}"><div class="h"><b>${esc(r.id)}</b><span class="lab">${lab(r)}</span>${badge(r)}${go(r)}${del(r)}</div>${failedWhy(r)}
+    ${r.tags.length || r.redo ? `<div class="chips">${r.redo ? '<span class="chip-t chip-redo">重新設計</span>' : ''}${r.tags.map((t) => `<span class="chip-t">${esc(t)}</span>`).join('')}</div>` : ''}${r.note.trim() ? `<div class="note">${esc(r.note.trim())}</div>` : ''}</li>`;
+  const pi = pend.map(item).join(''), gi = gen.map(item).join('');
   const di = done.map((r) => `<li class="rq-item done${r.id === cur ? ' cur' : ''}"><div class="h"><b>✓ ${esc(r.id)}</b><span class="lab">${lab(r)}</span><span class="rq-done">${esc(r.done.round)}</span>
     <button class="small primary" data-rq="result" data-id="${esc(r.id)}" data-tip="切到完成影片預覽，跳到這段開頭">▶ 看結果</button>${del(r)}</div><div class="what" data-tip="${esc(r.done.note)}">${esc(r.done.note)}</div></li>`).join('');
-  return `<section class="ip-sec"><h3>待改（${pend.length}）</h3>${pi ? `<ul class="rq-list">${pi}</ul>` : `<p class="ip-note">${done.length ? '都改完了' : '還沒有'}</p>`}</section>`
+  return `<section class="ip-sec"><h3>待改（${pend.length}）</h3>${pi ? `<ul class="rq-list">${pi}</ul>` : `<p class="ip-note">${gen.length ? '沒有新的待改' : done.length ? '都改完了' : '還沒有'}</p>`}</section>`
+    + (gi ? `<section class="ip-sec"><h3>生成中（${gen.length}）</h3><p class="ip-note">AI 正在改，複製給 AI 不會再送這幾段；改了它的標籤或描述就回到待改</p><ul class="rq-list">${gi}</ul></section>` : '')
     + (di ? `<section class="ip-sec"><h3>已改完（${done.length}）</h3><ul class="rq-list">${di}</ul></section>` : '');
 }
 function renderRequests() {
@@ -3867,40 +3984,37 @@ function renderRequests() {
   if (document.activeElement?.id === 'rqNote' && top.dataset.id === (id || '')) $('#rqState').innerHTML = rqStateHtml(id);
   else { top.dataset.id = id || ''; top.innerHTML = rqTopHtml(id); }
   $('#rqLists').innerHTML = rqListsHtml(id);
-  $('#rqFoot').innerHTML = `<button class="primary${pend.length ? '' : ' is-disabled'}" data-rq="copy" data-why="${app.requests.length ? '沒有待改的段（已改完的不會再送）' : '修改單是空的'}">複製給 AI（${pend.length} 段待改）</button>
+  $('#rqFoot').innerHTML = `<button class="primary${pend.length ? '' : ' is-disabled'}" data-rq="copy" data-why="${app.requests.length ? '沒有待改的段（生成中、已改完的不會再送）' : '修改單是空的'}">複製給 AI（${pend.length} 段待改）</button>
     <p class="ip-note" data-tip="完整內容存在 ${esc(app.server?.project?.dir || '')}/work/feedback/editor-requests.md">複製後貼給 AI；AI 開始改之後，這段會顯示「生成中」。</p>
     ${app.requests.length ? `<button class="small ghost" data-rq="clear">${rqClearArm ? '再按一次清空' : '清空修改單'}</button>` : ''}`;
 }
 // 複製給 AI 的只有這一行（待改的完整內容存在 editor-requests.md，AI 讀檔）
 // 剪輯台的「生成中／已改完／失敗」由 versions.mjs begin --requests、finish 自己回報，這裡只給開輪那一條
-const rqCommand = (pending = rqPending()) => {
-  const project = app.server?.project?.dir || '';
-  const progress = `第一步跑 node shared/template/tools/versions.mjs begin --project ${JSON.stringify(project)} --requests`;
-  const redo = pending.filter((r) => r.redo).map((r) => r.id);
-  // 哪幾段要重新設計寫清楚：派設計師從空白重畫；其他段在現有的動畫上改
-  const how = redo.length ? `其中 ${redo.length} 段要重新設計（${redo.join(',')}）：這幾段派設計師照 design.md 從空白畫布重畫；其他段在現有的動畫上改。` : '這次沒有要重新設計的段：都在現有的動畫上改。';
-  return `照剪輯台修改單改這 ${pending.length} 段（${project}/work/feedback/editor-requests.md）：照 auto-edit-review 流程 F 做（.agents/skills/auto-edit-review/references/editor-requests.md），不用先出提案，停在停點 ④。${how}${progress}`;
-};
+const rqCommand = (pending = rqPending()) => rqCommandOf(app.server?.project?.dir || '', pending);
 function rqMarkdown() {
-  const now = new Date();
-  const p2 = (n) => String(n).padStart(2, '0');
-  const stamp = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}`;
-  const L = ['# 剪輯台修改單', '', rqCommand(), '',
-    `（${stamp} 從剪輯台複製）`];
-  rqPending().forEach((r, k) => {
+  const items = rqPending().map((r) => {
     const i = rqInfo(r.id);
-    L.push('', `## ${k + 1}. ${r.id}${i?.label ? `　${i.label}` : ''}`);
-    if (!i) { L.push('- plan.json 裡找不到這段（可能被改名或刪掉了）'); }
-    else L.push(`- 動畫：${i.what}`, ...(i.file ? [`- 檔案：${i.file}`] : []), `- 完成影片時間：${rqTime(i)}（${app.server?.project?.dir || ''}/work/hyperframes/plan.json：${i.span}）`);
-    if (i?.gap) L.push('- 這裡現在沒有段落：照時間和字幕新增一段（段號自己取），不是改既有的段；回報狀態時用上面的段號');
-    if (i && !i.gap && rqKind(i.sc) === 'anim') L.push(r.redo
-      ? '- 做法：重新設計（使用者勾的）。這段改成 "design": true，派設計師子代理照 design.md 從空白畫布重畫'
-      : '- 做法：在現有的動畫上改（沒勾「重新設計」）。改 plan.json 的資料、換模板或手改那支檔；不要改成 "design": true');
-    if (r.tags.length) L.push(`- 要改：${r.tags.join('、')}`);
-    if (r.note.trim()) L.push(`- 描述：${r.note.trim().replace(/\s*\n\s*/g, '／')}`);
-    if (i?.subs.length) { L.push('- 對應字幕：'); for (const c of i.subs) L.push(`  - #${c.n} ${c.text}`); }
+    return i ? { ...r, label: i.label, what: i.what, file: i.file, out: i.out, span: i.span, gap: !!i.gap, kind: rqKind(i.sc), subs: i.subs } : { ...r, missing: true };
   });
-  return L.join('\n') + '\n';
+  return rqMarkdownOf({ project: app.server?.project?.dir || '', stamp: rqStamp(), items });
+}
+// 寫進剪貼簿：瀏覽器不讓用 clipboard API 時退回舊方法；兩個都不行回 false
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* 下面退回舊方法 */ }
+  const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  ta.remove();
+  return ok;
+}
+// 062：輸出過之後「整理這集的調整給 AI」：伺服器寫 work/feedback/learn.md（回饋輪、剪輯台手改、改版紀錄），剪貼簿只放一行指令
+async function learnCopy() {
+  const r = await api('POST', '/api/learn', {});
+  if (!r.ok || !r.data?.line) { toast(`整理失敗：${r.data?.message || r.status}`, 'err', 7000); return; }
+  const c = r.data.counts || {};
+  const sum = `回饋 ${c.rounds ?? 0} 輪、剪輯台手改 ${c.edits ?? 0} 項、字幕 ${c.subtitles ?? 0} 處`;
+  if (await copyText(r.data.line)) toast(`整理好了（${sum}），存在 ${r.data.file}；指令已複製 → 貼給 AI`, 'ok', 7000);
+  else toast(`整理好了（${sum}），存在 ${r.data.file}，但沒辦法寫進剪貼簿 → 跟 AI 說「照這集的調整紀錄學我的習慣」`, 'warn', 8000);
 }
 // 先存檔（完整修改單），存成功才複製那一行指令：存失敗時剪貼簿不會指到舊檔
 async function rqCopy() {
@@ -3913,12 +4027,7 @@ async function rqCopy() {
   app.server.requests = r.data.requests;
   // 複製等待期間若有編輯，保留原本那批的段與版本，不把新需求誤標成已複製。
   const cmd = rqCommand(submitted);
-  let copied = false;
-  try { await navigator.clipboard.writeText(cmd); copied = true; } catch {
-    const ta = document.createElement('textarea'); ta.value = cmd; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
-    try { copied = document.execCommand('copy'); } catch { copied = false; }
-    ta.remove();
-  }
+  const copied = await copyText(cmd);
   if (copied) {
     for (const item of app.requests) if (snapshot.has(item.id) && snapshot.get(item.id) === item.t) item.copiedRevision = r.data.requests.revision;
     rqStore();

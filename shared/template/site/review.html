@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>__TITLE__</title>
+<!-- 手機確認頁（063）：固定模板，versions.mjs site 把資料（siteData）和修改單格式（lib/requests-md.mjs）塞進來，AI 不用寫版面。
+     直式 390 寬優先，桌機置中。每段：段號、動畫是什麼、完成影片時間、最後一格、對應字幕、想怎麼改、想調整；填的東西存在這支手機（localStorage，每個專案一份）。
+     最下面「複製提示詞」：只收有填的段，產生和剪輯台「複製給 AI」一樣格式的整份修改單（手機沒辦法寫檔，所以剪貼簿放整份）。 -->
+<style>
+:root {
+  --brand: #FFD400; --brand-ink: #0B1020; --brand-text: #FFD400;
+  /*__BRAND__*/
+  --bg: #070B14; --bg2: #0B1020; --card: #111A2E; --card2: #16213A;
+  --line: rgba(255, 255, 255, .10); --line2: rgba(255, 255, 255, .22);
+  --ink: #fff; --mute: rgba(255, 255, 255, .72); --dim: rgba(255, 255, 255, .5);
+  --accent: var(--brand); --on-accent: var(--brand-ink); --accent-text: var(--brand-text);
+  --anim: #2FB36B; --media: #FF8A3D; --warn: #FF5A5F;
+  --font: "Noto Sans TC", system-ui, -apple-system, "PingFang TC", "Segoe UI", "Microsoft JhengHei", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --bar: 76px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 60px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font); padding-bottom: calc(var(--bar) + env(safe-area-inset-bottom) + 24px); }
+button, textarea, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+.top { padding-top: 22px; padding-bottom: 10px; }
+.eyebrow { font: 600 12px var(--mono); letter-spacing: .12em; color: var(--accent-text); }
+h1 { font-size: 24px; line-height: 1.3; margin: 6px 0 6px; overflow-wrap: anywhere; letter-spacing: -.01em; }
+.meta, .scope, .how { margin: 0; color: var(--mute); font-size: 13px; }
+.scope { color: var(--ink); }
+.how { margin-top: 8px; color: var(--dim); }
+.nav { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.nav ol { list-style: none; margin: 0 auto; padding: 8px 16px; display: flex; gap: 6px; overflow-x: auto; max-width: 720px; scrollbar-width: none; }
+.nav ol::-webkit-scrollbar { display: none; }
+.nav a { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 16px; border: 1px solid var(--line2); color: var(--mute); text-decoration: none; font: 600 13px var(--mono); white-space: nowrap; }
+.nav a.on { border-color: var(--accent); color: var(--accent-text); }
+.nav a.on::after { content: '✎'; font-family: var(--font); font-weight: 400; }
+.list { display: grid; gap: 16px; padding-top: 14px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 16px; scroll-margin-top: 60px; }
+.card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sid { font: 700 26px/1.1 var(--mono); letter-spacing: -.02em; }
+.badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; color: #04120a; background: var(--anim); }
+.badge.media { background: var(--media); color: #1d0c00; }
+.time { margin-left: auto; font: 13px var(--mono); color: var(--mute); }
+.state { display: none; font-size: 12px; color: var(--on-accent); background: var(--accent); padding: 1px 8px; border-radius: 10px; }
+.card.on .state { display: inline-block; }
+.title { font-size: 16px; line-height: 1.5; margin: 10px 0 2px; font-weight: 700; }
+.what { margin: 0; font-size: 13px; color: var(--mute); }
+.shot { display: block; width: 100%; margin: 12px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #000; position: relative; }
+.shot img { display: block; width: 100%; height: auto; max-height: 62vh; object-fit: contain; }
+.shot .zoom { position: absolute; left: 6px; top: 6px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 14px; font-size: 15px; background: rgb(0 0 0 / .55); color: #fff; }
+.noshot { margin: 12px 0 0; padding: 22px 12px; border: 1px dashed var(--line2); border-radius: 8px; color: var(--dim); font-size: 13px; text-align: center; }
+.imgnote { margin: 6px 0 0; font-size: 12px; color: var(--warn); }
+details.subs { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+details.subs summary { cursor: pointer; color: var(--mute); font-size: 13px; padding: 4px 0; }
+details.subs ol { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+details.subs li { font-size: 14px; color: var(--ink); }
+details.subs b { font: 600 12px var(--mono); color: var(--dim); margin-right: 6px; }
+.ask { margin: 14px 0 6px; font-size: 13px; color: var(--mute); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 38px; padding: 6px 12px; border-radius: 19px; border: 1px solid var(--line2); background: var(--card2); font-size: 14px; line-height: 1.3; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.redo { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; font-size: 14px; }
+.redo input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+.redo small { display: block; color: var(--dim); font-size: 12px; }
+textarea { width: 100%; margin-top: 12px; min-height: 76px; resize: vertical; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line2); background: var(--bg2); font-size: 16px; line-height: 1.5; }
+textarea:focus-visible, .chip:focus-visible, .nav a:focus-visible, .bar button:focus-visible, .shot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: color-mix(in srgb, var(--bg2) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line2); padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); }
+.bar .wrap { display: flex; align-items: center; gap: 10px; }
+.bar p { margin: 0; flex: 1; min-width: 0; font-size: 13px; color: var(--mute); line-height: 1.4; }
+.bar p b { color: var(--ink); }
+.primary { flex: none; min-height: 48px; padding: 0 18px; border-radius: 10px; border: 0; background: var(--accent); color: var(--on-accent); font-size: 16px; font-weight: 700; }
+.primary:disabled { background: var(--card2); color: var(--dim); cursor: not-allowed; }
+.ghost { flex: none; min-height: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line2); background: transparent; color: var(--mute); font-size: 13px; }
+dialog { border: 0; padding: 0; background: transparent; color: var(--ink); max-width: none; max-height: none; }
+dialog::backdrop { background: rgb(0 0 0 / .88); }
+#zoom { width: 100vw; height: 100dvh; margin: 0; }
+#zoom button { all: unset; display: grid; place-items: center; width: 100%; height: 100%; cursor: zoom-out; }
+#zoom img { max-width: 100vw; max-height: 100dvh; object-fit: contain; }
+#manual { width: min(680px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--line2); border-radius: 12px; padding: 16px; }
+#manual p { margin: 0 0 8px; font-size: 14px; }
+#manual textarea { min-height: 50vh; font: 13px/1.5 var(--mono); }
+#manual .row { display: flex; justify-content: flex-end; margin-top: 10px; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--bar) + env(safe-area-inset-bottom) + 12px); transform: translateX(-50%); z-index: 20; background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 18px; font-size: 14px; max-width: calc(100vw - 32px); }
+.empty { color: var(--dim); text-align: center; padding: 40px 0; }
+@media (min-width: 760px) { body { font-size: 16px; } h1 { font-size: 30px; } .card { padding: 18px 20px 20px; } }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+<header class="wrap top">
+  <div class="eyebrow">手機確認頁</div>
+  <h1 id="proj"></h1>
+  <p class="meta" id="meta"></p>
+  <p class="scope" id="scope"></p>
+  <p class="how">每一段點想怎麼改、或寫想調整的地方（點截圖可以放大），會自動記在這支手機；全部看完按最下面「複製提示詞」，貼給 AI。</p>
+</header>
+<nav class="nav" aria-label="段落"><ol id="nav"></ol></nav>
+<main class="wrap list" id="list"></main>
+<footer class="bar">
+  <div class="wrap">
+    <button class="ghost" id="clear" hidden>清空</button>
+    <p id="barNote" role="status"></p>
+    <button class="primary" id="copy" disabled>複製提示詞</button>
+  </div>
+</footer>
+<dialog id="zoom" aria-label="放大的最後一格"><button type="button" id="zoomClose" aria-label="關閉放大"><img id="zoomImg" alt=""></button></dialog>
+<dialog id="manual" aria-label="手動複製">
+  <p>這個瀏覽器不讓網頁直接寫剪貼簿：長按下面的文字 → 全選 → 拷貝，再貼給 AI。</p>
+  <textarea id="manualText" readonly></textarea>
+  <div class="row"><button class="ghost" id="manualClose">關閉</button></div>
+</dialog>
+<script type="application/json" id="siteData">__SITE_DATA__</script>
+<script>
+/*__REQUESTS_MD__*/
+</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('siteData').textContent);
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const KEY = `auto-edit-site:${D.project}`;
+  let S = {};
+  try { const v = JSON.parse(localStorage.getItem(KEY) || '{}'); S = v && typeof v === 'object' ? v : {}; } catch { S = {}; }
+  const store = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* 無痕視窗：只留在這個分頁 */ } };
+  const ids = new Set(D.segs.map((s) => s.id));
+  for (const k of Object.keys(S)) if (!ids.has(k)) delete S[k];
+  const rec = (id) => (S[id] ||= { tags: [], note: '', redo: false });
+  const filled = (id) => { const x = S[id]; return !!x && ((x.tags || []).length > 0 || !!String(x.note || '').trim() || !!x.redo); };
+
+  document.title = `${D.name} 手機確認頁`;
+  $('#proj').textContent = D.name;
+  const by = ['字卡', '動畫', '錄影', '圖片'].map((b) => [b, D.segs.filter((s) => s.badge === b).length]).filter(([, n]) => n);
+  $('#meta').textContent = `輸出時間 ${D.generated}｜${D.segs.length} 段${by.length ? `（${by.map(([b, n]) => `${b} ${n}`).join('、')}）` : ''}`;
+  $('#scope').textContent = D.scope;
+
+  const card = (s) => {
+    const r = S[s.id] || { tags: [], note: '', redo: false };
+    const tags = RQ_TAGS[s.kind] || [];
+    const img = s.img
+      ? `<button type="button" class="shot" data-zoom="${esc(s.id)}" aria-label="放大 ${esc(s.id)} 的最後一格"><img src="${s.img}" alt="${esc(s.id)} 的最後一格" loading="lazy" decoding="async"${s.imgW ? ` width="${s.imgW}" height="${s.imgH}"` : ''}><span class="zoom" aria-hidden="true">⤢</span></button>`
+      : `<div class="noshot">${esc(s.imgNote || '這段沒有截圖')}</div>`;
+    return `<article class="card${filled(s.id) ? ' on' : ''}" id="seg-${esc(s.id)}" data-id="${esc(s.id)}">
+      <div class="head"><span class="sid">${esc(s.id)}</span><span class="badge ${s.kind}">${esc(s.badge)}</span><span class="state">已記下</span><span class="time">${esc(s.time)}</span></div>
+      <h2 class="title">${esc(s.title)}</h2>
+      <p class="what">${esc(s.shown)}</p>
+      ${img}${s.img && s.imgNote ? `<p class="imgnote">${esc(s.imgNote)}</p>` : ''}
+      ${s.subs.length ? `<details class="subs"><summary>對應字幕（${s.subs.length} 句）</summary><ol>${s.subs.map((c) => `<li><b>#${c.n}</b>${esc(c.text)}</li>`).join('')}</ol></details>` : ''}
+      <p class="ask">想怎麼改（可以點好幾個）</p>
+      <div class="chips" role="group" aria-label="${esc(s.id)} 想怎麼改">${tags.map((t) => `<button type="button" class="chip" data-tag="${esc(t)}" aria-pressed="${(r.tags || []).includes(t)}">${esc(t)}</button>`).join('')}</div>
+      ${s.kind === 'anim' ? `<label class="redo"><input type="checkbox" data-redo${r.redo ? ' checked' : ''}><span>${esc(RQ_REDO)}<small>${esc(RQ_REDO_NOTE)}</small></span></label>` : ''}
+      <textarea data-note rows="3" aria-label="${esc(s.id)} 想調整" placeholder="想調整（選填）：例如「三個步驟改成手機畫面一步步亮起」">${esc(r.note || '')}</textarea>
+    </article>`;
+  };
+  $('#list').innerHTML = D.segs.length ? D.segs.map(card).join('') : '<p class="empty">沒有段落</p>';
+  $('#nav').innerHTML = D.segs.map((s) => `<li><a href="#seg-${esc(s.id)}" data-nav="${esc(s.id)}">${esc(s.id)}</a></li>`).join('');
+
+  let clearArm = false;
+  const refresh = (id) => {
+    if (id) {
+      const on = filled(id);
+      document.getElementById(`seg-${id}`)?.classList.toggle('on', on);
+      document.querySelector(`[data-nav="${CSS.escape(id)}"]`)?.classList.toggle('on', on);
+    } else for (const s of D.segs) refresh(s.id);
+    const done = D.segs.filter((s) => filled(s.id));
+    const btn = $('#copy');
+    btn.disabled = !done.length;
+    btn.textContent = done.length ? `複製提示詞（${done.length} 段）` : '複製提示詞';
+    $('#barNote').innerHTML = done.length
+      ? `已填 <b>${done.length}</b> 段：${esc(done.slice(0, 6).map((s) => s.id).join('、'))}${done.length > 6 ? '…' : ''}`
+      : '還沒有填任何一段：每段點想怎麼改或寫想調整的地方，這個按鈕才能複製';
+    $('#clear').hidden = !done.length;
+    $('#clear').textContent = clearArm ? '再按一次' : '清空';
+  };
+  const changed = (id) => { const x = S[id]; if (x && !filled(id)) delete S[id]; else if (x) x.t = Date.now(); store(); refresh(id); };
+
+  $('#list').addEventListener('click', (e) => {
+    const z = e.target.closest('[data-zoom]');
+    if (z) { const s = D.segs.find((x) => x.id === z.dataset.zoom); $('#zoomImg').src = s.img; $('#zoomImg').alt = `${s.id} 的最後一格`; $('#zoom').showModal(); return; }
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    const id = chip.closest('.card').dataset.id, t = chip.dataset.tag, r = rec(id);
+    r.tags = r.tags.includes(t) ? r.tags.filter((x) => x !== t) : [...r.tags, t];
+    chip.setAttribute('aria-pressed', String(r.tags.includes(t)));
+    changed(id);
+  });
+  $('#list').addEventListener('change', (e) => {
+    if (!e.target.matches('[data-redo]')) return;
+    const id = e.target.closest('.card').dataset.id;
+    rec(id).redo = e.target.checked;
+    changed(id);
+  });
+  $('#list').addEventListener('input', (e) => {
+    if (!e.target.matches('[data-note]')) return;
+    const id = e.target.closest('.card').dataset.id;
+    rec(id).note = e.target.value;
+    changed(id);
+  });
+  $('#zoomClose').addEventListener('click', () => $('#zoom').close());
+
+  const toast = (msg) => {
+    const t = document.createElement('div');
+    t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+  };
+  const copyText = async (text) => {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* 下面退回舊方法 */ }
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    ta.remove();
+    return ok;
+  };
+  // 和剪輯台「複製給 AI」同一份格式（lib/requests-md.mjs）；手機沒辦法寫檔，整份放剪貼簿
+  const markdown = () => {
+    const items = D.segs.filter((s) => filled(s.id)).map((s) => {
+      const r = S[s.id];
+      return { id: s.id, label: s.title, what: s.what, file: s.file, out: s.out, span: s.span, gap: false, kind: s.kind, subs: s.subs, tags: r.tags || [], note: r.note || '', redo: !!r.redo };
+    });
+    return { items, text: rqMarkdown({ project: D.project, stamp: rqStamp(), items, source: '手機確認頁', pasted: true }) };
+  };
+  $('#copy').addEventListener('click', async () => {
+    const { items, text } = markdown();
+    if (!items.length) return;
+    if (await copyText(text)) toast(`已複製 ${items.length} 段的修改單，貼給 AI`);
+    else { $('#manualText').value = text; $('#manual').showModal(); $('#manualText').select(); }
+  });
+  $('#manualClose').addEventListener('click', () => $('#manual').close());
+  $('#clear').addEventListener('click', () => {
+    if (!clearArm) { clearArm = true; refresh(); setTimeout(() => { clearArm = false; refresh(); }, 4000); return; }
+    clearArm = false; S = {}; store();
+    $('#list').innerHTML = D.segs.map(card).join('');
+    refresh();
+  });
+  refresh();
+  window.__site = { data: D, state: () => S, markdown: () => markdown().text };
+})();
+</script>
+</body>
+</html>

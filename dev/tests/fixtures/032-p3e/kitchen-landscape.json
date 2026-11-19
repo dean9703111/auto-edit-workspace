@@ -89,8 +89,14 @@
     "name": "chapter",
     "at": 4.962,
     "volume": 0.794,
-    "event": 4.95
-   }
+    "event": 4.95,
+    "key": "c1",
+    "base": 4.962,
+    "len": 1.332
+   },
+   "sfxKeys": [
+    "c1"
+   ]
   },
   {
    "idx": 1,
@@ -170,7 +176,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 2,
@@ -252,11 +259,15 @@
    },
    "sfxExtra": [],
    "sfx": null,
+   "sfxKeys": [
+    "s02"
+   ],
    "sfxDropped": {
     "name": "impact",
     "at": 11.549,
     "volume": 0.617,
-    "event": 11.65
+    "event": 11.65,
+    "key": "s02"
    }
   },
   {
@@ -359,7 +370,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 4,
@@ -422,8 +434,14 @@
     "name": "ding",
     "at": 24.823,
     "volume": 0.582,
-    "event": 24.8
+    "event": 24.8,
+    "key": "f1",
+    "base": 24.823,
+    "len": 0.865
    },
+   "sfxKeys": [
+    "f1"
+   ],
    "badgeBox": [
     1620,
     56,
@@ -668,6 +686,7 @@
       "asStart": false
      }
     ],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -712,21 +731,32 @@
        "text": "按下儲存",
        "n": 1,
        "carry": false,
-       "ready": 33
+       "ready": 33,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "anchor": [
+         513.01,
+         191.86
+        ],
+        "off": [
+         0,
+         -92
+        ],
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ],
+        "from": 32.5,
+        "to": 39.47
+       }
       }
      ],
      "carry": false,
-     "capsule": {
-      "box": [
-       157,
-       40,
-       435,
-       120
-      ],
-      "side": "left",
-      "from": 32.5,
-      "to": 39.47
-     }
+     "capsule": null,
+     "from": 32.5
     },
     "callouts": [
      {
@@ -834,7 +864,17 @@
        "ready": 33,
        "n": 1,
        "text": "按下儲存",
-       "carry": false
+       "carry": false,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ]
+       }
       }
      ],
      "side": null,
@@ -865,15 +905,23 @@
      "name": "click",
      "at": 27.518,
      "volume": 0.334,
-     "event": 27.5
+     "event": 27.5,
+     "key": "m1:click",
+     "base": 27.518,
+     "len": 0.184
     }
    ],
    "sfx": null,
+   "sfxKeys": [
+    "m1",
+    "m1:click"
+   ],
    "sfxDropped": {
     "name": "success",
     "at": 25.396,
     "volume": 0.692,
-    "event": 25.5
+    "event": 25.5,
+    "key": "m1"
    },
    "badgeBox": [
     1392,
@@ -1034,6 +1082,7 @@
     "redact": [],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -1084,7 +1133,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [
@@ -1203,6 +1253,7 @@
     }
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": [
     1392,
     16,
@@ -1289,15 +1340,26 @@
      "name": "click",
      "at": 51.018,
      "volume": 0.334,
-     "event": 51
+     "event": 51,
+     "key": "x1:click",
+     "base": 51.018,
+     "len": 0.184
     },
     {
      "name": "click",
      "at": 53.718,
      "volume": 0.334,
      "event": 53.7,
-     "beat": true
+     "beat": true,
+     "key": "x1:click:2",
+     "base": 53.718,
+     "len": 0.184
     }
+   ],
+   "sfxKeys": [
+    "x1:click",
+    "x1:click:2",
+    "x1:ding"
    ],
    "badgeBox": [
     1436,
@@ -1376,6 +1438,7 @@
     "sub": "先看問題"
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "noHost": true
   },
   {
@@ -1507,7 +1570,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 10,
@@ -1637,6 +1701,7 @@
     "sub": "先看問題"
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": [
     1580,
     56,
@@ -1904,6 +1969,7 @@
     ],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -1915,7 +1981,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [],
@@ -2012,6 +2079,7 @@
     }
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": [
     1580,
     56,
@@ -2101,11 +2169,15 @@
    },
    "sfxExtra": [],
    "sfx": null,
+   "sfxKeys": [
+    "s07"
+   ],
    "sfxDropped": {
     "name": "sparkle",
     "at": 94.453,
     "volume": 0.575,
-    "event": 94.6
+    "event": 94.6,
+    "key": "s07"
    }
   },
   {
@@ -2190,11 +2262,15 @@
    },
    "sfxExtra": [],
    "sfx": null,
+   "sfxKeys": [
+    "s08"
+   ],
    "sfxDropped": {
     "name": "ding",
     "at": 98.123,
     "volume": 0.733,
-    "event": 98.1
+    "event": 98.1,
+    "key": "s08"
    }
   }
  ],
@@ -2288,8 +2364,14 @@
     "name": "chapter",
     "at": 4.962,
     "volume": 0.794,
-    "event": 4.95
-   }
+    "event": 4.95,
+    "key": "c1",
+    "base": 4.962,
+    "len": 1.332
+   },
+   "sfxKeys": [
+    "c1"
+   ]
   },
   {
    "idx": 1,
@@ -2369,7 +2451,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 2,
@@ -2451,11 +2534,15 @@
    },
    "sfxExtra": [],
    "sfx": null,
+   "sfxKeys": [
+    "s02"
+   ],
    "sfxDropped": {
     "name": "impact",
     "at": 11.549,
     "volume": 0.617,
-    "event": 11.65
+    "event": 11.65,
+    "key": "s02"
    }
   },
   {
@@ -2558,7 +2645,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 4,
@@ -2621,8 +2709,14 @@
     "name": "ding",
     "at": 24.823,
     "volume": 0.582,
-    "event": 24.8
+    "event": 24.8,
+    "key": "f1",
+    "base": 24.823,
+    "len": 0.865
    },
+   "sfxKeys": [
+    "f1"
+   ],
    "badgeBox": [
     1620,
     56,
@@ -2867,6 +2961,7 @@
       "asStart": false
      }
     ],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -2911,21 +3006,32 @@
        "text": "按下儲存",
        "n": 1,
        "carry": false,
-       "ready": 33
+       "ready": 33,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "anchor": [
+         513.01,
+         191.86
+        ],
+        "off": [
+         0,
+         -92
+        ],
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ],
+        "from": 32.5,
+        "to": 39.47
+       }
       }
      ],
      "carry": false,
-     "capsule": {
-      "box": [
-       157,
-       40,
-       435,
-       120
-      ],
-      "side": "left",
-      "from": 32.5,
-      "to": 39.47
-     }
+     "capsule": null,
+     "from": 32.5
     },
     "callouts": [
      {
@@ -3033,7 +3139,17 @@
        "ready": 33,
        "n": 1,
        "text": "按下儲存",
-       "carry": false
+       "carry": false,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ]
+       }
       }
      ],
      "side": null,
@@ -3064,15 +3180,23 @@
      "name": "click",
      "at": 27.518,
      "volume": 0.334,
-     "event": 27.5
+     "event": 27.5,
+     "key": "m1:click",
+     "base": 27.518,
+     "len": 0.184
     }
    ],
    "sfx": null,
+   "sfxKeys": [
+    "m1",
+    "m1:click"
+   ],
    "sfxDropped": {
     "name": "success",
     "at": 25.396,
     "volume": 0.692,
-    "event": 25.5
+    "event": 25.5,
+    "key": "m1"
    },
    "badgeBox": [
     1392,
@@ -3233,6 +3357,7 @@
     "redact": [],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -3283,7 +3408,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [
@@ -3402,6 +3528,7 @@
     }
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": [
     1392,
     16,
@@ -3488,15 +3615,26 @@
      "name": "click",
      "at": 51.018,
      "volume": 0.334,
-     "event": 51
+     "event": 51,
+     "key": "x1:click",
+     "base": 51.018,
+     "len": 0.184
     },
     {
      "name": "click",
      "at": 53.718,
      "volume": 0.334,
      "event": 53.7,
-     "beat": true
+     "beat": true,
+     "key": "x1:click:2",
+     "base": 53.718,
+     "len": 0.184
     }
+   ],
+   "sfxKeys": [
+    "x1:click",
+    "x1:click:2",
+    "x1:ding"
    ],
    "badgeBox": [
     1436,
@@ -3575,6 +3713,7 @@
     "sub": "先看問題"
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "noHost": true
   },
   {
@@ -3706,7 +3845,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 10,
@@ -3836,6 +3976,7 @@
     "sub": "先看問題"
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": [
     1580,
     56,
@@ -4103,6 +4244,7 @@
     ],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -4114,7 +4256,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [],
@@ -4211,6 +4354,7 @@
     }
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": [
     1580,
     56,
@@ -4300,11 +4444,15 @@
    },
    "sfxExtra": [],
    "sfx": null,
+   "sfxKeys": [
+    "s07"
+   ],
    "sfxDropped": {
     "name": "sparkle",
     "at": 94.453,
     "volume": 0.575,
-    "event": 94.6
+    "event": 94.6,
+    "key": "s07"
    }
   },
   {
@@ -4389,11 +4537,15 @@
    },
    "sfxExtra": [],
    "sfx": null,
+   "sfxKeys": [
+    "s08"
+   ],
    "sfxDropped": {
     "name": "ding",
     "at": 98.123,
     "volume": 0.733,
-    "event": 98.1
+    "event": 98.1,
+    "key": "s08"
    }
   }
  ],
@@ -4809,7 +4961,10 @@
     "volume": 0.452,
     "event": 9.4,
     "mood": true,
-    "tail": true
+    "key": "mood:1",
+    "tail": true,
+    "base": 10.8,
+    "len": 0.308
    },
    "dropped": null,
    "off": false
@@ -4825,7 +4980,10 @@
     "volume": 0.55,
     "event": 18.5,
     "mood": true,
-    "tail": true
+    "key": "mood:2",
+    "tail": true,
+    "base": 21.3,
+    "len": 1.317
    },
    "dropped": null,
    "off": false
@@ -4840,7 +4998,10 @@
     "at": 67.853,
     "volume": 0.457,
     "event": 68,
-    "mood": true
+    "mood": true,
+    "key": "mood:3",
+    "base": 67.853,
+    "len": 2.027
    },
    "dropped": null,
    "off": false
@@ -4864,7 +5025,10 @@
     "at": 94.399,
     "volume": 0.49,
     "event": 94.5,
-    "mood": true
+    "mood": true,
+    "key": "mood:5",
+    "base": 94.399,
+    "len": 0.643
    },
    "dropped": null,
    "off": false

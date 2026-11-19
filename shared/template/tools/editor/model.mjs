@@ -17,7 +17,7 @@ export function fmtFine(t) {
   return `${h ? `${h}:${p2(m % 60)}` : m}:${p2(s % 60)}:${p2(f % TC_FPS)}`;
 }
 export function defaultEdit() {
-  return { cuts: [], fadeIn: 0, fadeOut: 0, volume: { voice: 0, sfx: 0, media: 0 }, gains: [], joins: [], sfx: [], level: false };   // sfx：自己加的音效（050）；存檔時一顆都沒有就不寫；level：人聲大小聲拉平，關著不寫
+  return { cuts: [], fadeIn: 0, fadeOut: 0, volume: { voice: 0, sfx: 0, media: 0 }, gains: [], joins: [], sfx: [], sfxAdjust: [], level: false };   // sfx：自己加的音效（050）；sfxAdjust：AI 配的音效拖過、裁過的（065）；這兩個存檔時一筆都沒有就不寫；level：人聲大小聲拉平，關著不寫
 }
 
 export function mergeCuts(cuts) {
@@ -46,13 +46,45 @@ export function normEdit(e) {
       .map((j) => (j.type === 'dip' ? { at: r3(j.at), type: 'dip', dur: num(j.dur, DIP_DEFAULT) } : { at: r3(j.at), type: 'punch' }))
       .sort((a, b) => a.at - b.at),
     sfx: sortOwnSfx((Array.isArray(e.sfx) ? e.sfx : []).filter((x) => x && typeof x.at === 'number' && x.at >= 0 && typeof x.sound === 'string' && x.sound)
-      .map((x) => ownSfx(x.at, x.sound, x.db))),
+      .map((x) => ownSfx(x.at, x.sound, x.db, x))),
+    sfxAdjust: (Array.isArray(e.sfxAdjust) ? e.sfxAdjust : []).filter((a) => a && typeof a.id === 'string' && a.id)
+      .reduce((list, a) => setAdj({ sfxAdjust: list }, a.id, a).sfxAdjust, []),
     level: e.level === true,   // 人聲大小聲拉平（存檔時關著就不寫）
   };
 }
 
-// 自己加的音效（edit.sfx，050）：{ at（rough.mp4 秒數，那一刻聽到）, sound, db? }；db 0＝預設音量，不寫
-export const ownSfx = (at, sound, db = 0) => { const v = clamp(Math.round((Number(db) || 0) * 10) / 10, -60, 12); return { at: r3(at), sound, ...(v ? { db: v } : {}) }; };
+// 自己加的音效（edit.sfx，050）：{ at（rough.mp4 秒數，那一刻聽到）, sound, db?, trimIn?, trimOut? }；db 0＝預設音量、不裁＝0，都不寫
+export const ownSfx = (at, sound, db = 0, trim = null) => {
+  const v = clamp(Math.round((Number(db) || 0) * 10) / 10, -60, 12), ti = trimNum(trim?.trimIn), to = trimNum(trim?.trimOut);
+  return { at: r3(at), sound, ...(v ? { db: v } : {}), ...(ti ? { trimIn: ti } : {}), ...(to ? { trimOut: to } : {}) };
+};
+
+// ---------- 音效拖曳、裁前後（065）----------
+// AI 配的音效（段落的主音效、附加音效、動畫拍點、等待卡、情緒點）拖過、裁過的記在 edit.sfxAdjust：[{ id, shift?, trimIn?, trimOut? }]
+//   id＝檢查報告每一顆的 key（"s05"、"s05:ding"、"s05:ding:2"、"mood:3"）；shift＝往後幾秒（rough.mp4 時間軸）；trimIn／trimOut＝裁掉檔案的前段／後段
+// 自己加的（edit.sfx）裁前後一樣寫在那一顆的 trimIn／trimOut；改時間照舊改 at
+export const SFX_MIN = 0.1;      // 裁完至少留幾秒（和 lib/edit.mjs 的 SFX_MIN_LEN 同一個數字；頁面不載 lib/edit.mjs）
+export const SFX_TRIM_MAX = 10;  // 裁前、裁後各最多幾秒（同 lib/edit.mjs）
+const trimNum = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0.0005 ? clamp(r3(v), 0, SFX_TRIM_MAX) : 0);
+export const adjOf = (edit, id) => (id && Array.isArray(edit?.sfxAdjust) ? edit.sfxAdjust.find((a) => a.id === id) || null : null);
+// 改一顆的覆寫（patch 裡沒寫的欄位照舊；0＝拿掉那個欄位，全拿掉＝整筆拿掉＝還原）；照 id 排，回傳 edit
+export function setAdj(edit, id, patch) {
+  const list = (edit.sfxAdjust ||= []);
+  const i = list.findIndex((a) => a.id === id), old = i >= 0 ? list[i] : { id };
+  const shift = 'shift' in patch ? (Number.isFinite(patch.shift) ? r3(patch.shift) : 0) : old.shift || 0;
+  const ti = 'trimIn' in patch ? trimNum(patch.trimIn) : old.trimIn || 0, to = 'trimOut' in patch ? trimNum(patch.trimOut) : old.trimOut || 0;
+  const o = { id, ...(Math.abs(shift) > 0.0005 ? { shift } : {}), ...(ti ? { trimIn: ti } : {}), ...(to ? { trimOut: to } : {}) };
+  if (i >= 0) list.splice(i, 1);
+  if (Object.keys(o).length > 1) list.push(o);
+  list.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return edit;
+}
+// 一顆音效在時間軸上的範圍：file＝檔案的起點（rough.mp4 秒數，沒拖之前是 base）、len＝裁之前能播幾秒（不知道＝null）、a＝{ shift, trimIn, trimOut }
+//   → { file, start（開始響）, dur（播幾秒；不知道長度＝null）, off（從檔案第幾秒播）, trimIn, trimOut }
+export function sfxSpan(file, len, a = null) {
+  const ti = a?.trimIn || 0, to = a?.trimOut || 0, f = r3(file + (a?.shift || 0));
+  return { file: f, start: r3(f + ti), dur: len != null ? r3(Math.max(SFX_MIN, len - ti - to)) : null, off: ti, trimIn: ti, trimOut: to };
+}
 export const sortOwnSfx = (list) => list.sort((a, b) => a.at - b.at);   // 就地排：拖曳中的那一顆還是同一個物件
 // 這顆音效在時間軸上從哪裡開始播、多大聲：at 是聽到的那一刻（峰值），檔案要提早 peak 秒開始（build 再晚 1 格，這裡不算）
 // conf＝/api/state 的 schema.sfx 那一筆（volume、peak）；找不到（清單還沒到、這台機器沒有這顆）時當 0.5 倍、峰值 0

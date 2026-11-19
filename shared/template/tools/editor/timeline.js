@@ -23,6 +23,8 @@ const DEFAULT_SPAN = 180;   // 打開時一屏看幾秒：長片整支擠在一�
 const REVEAL_SPAN = 60;     // 從清單、搜尋、檢查結果跳到某一段時，放大到前後各留約 30 秒
 const PAD = 10;
 const MAX_PPS = 600;
+const SFX_EDGE = 6;          // 065 音效方塊兩端幾 px 內＝裁剪
+const SFX_EDGE_MIN_W = 24;   // 方塊比這個窄就只能整顆拖（放大時間軸才拖得到兩端）
 const C = {
   bg: '#070B14', lane: '#0B1020', lane2: '#0D1426', sep: 'rgba(255,255,255,0.07)', text: '#FFFFFF', mute: 'rgba(255,255,255,0.66)', dim: 'rgba(255,255,255,0.38)',
   wave: 'rgba(160,200,255,0.70)', waveHot: '#FF5A5F', cut: 'rgba(7,11,20,0.72)', cutLine: '#FF5A5F', sel: 'rgba(255,212,0,0.16)', selLine: '#FFD400',
@@ -165,13 +167,13 @@ export class Timeline {
   }
 
   // ---------- 吸附 ----------
-  // 回傳 { t, snap }；snap＝吸到的候選 { t, kind, n? }。按住 Alt 或吸附關閉時不吸。
-  snap(t, e, { exclude = [], tol = 8 } = {}) {
+  // 回傳 { t, snap }；snap＝吸到的候選 { t, kind, n? }。按住 Alt 或吸附關閉時不吸。play＝拖曳中也吸播放頭（065 拖音效）
+  snap(t, e, { exclude = [], tol = 8, play = false } = {}) {
     const A = this.app;
     this.snapLine = null;
     if (!A.snapOn || e?.altKey) return { t, snap: null };
     let best = null, bd = tol / this.pps;
-    for (const c of A.snapCandidates()) {
+    for (const c of A.snapCandidates({ play })) {
       if (exclude.some((x) => Math.abs(x - c.t) < 1e-6)) continue;
       const d = Math.abs(c.t - t);
       if (d < bd) { bd = d; best = c; }
@@ -511,36 +513,44 @@ export class Timeline {
       const y = y0 + 4, h = y1 - y0 - 8;
       let any = false;
       for (const m of A.sfxView) {
-        if (!vis(m.at - 1, m.at + 1)) continue;
+        if (!vis(m.at - 1, m.at + (m.len || 1) + 1)) continue;
         any = true;
         const x = X(m.at);
-        const w = Math.max(12, Math.min(70, 0.6 * this.pps));
-        // 050 自己加的（m.user＝edit.sfx 的第幾個）：空心、白色虛線框、名稱前面一個「＋」；AI 放的是綠色實心
-        const own = m.user != null;
-        const sel = own ? A.isSelected('usfx', m.user) : A.isSelected('sfx', m.segId);
+        const w = this.sfxW(m);
+        // 050 自己加的（m.user＝edit.sfx 的第幾個）：空心、白色虛線框、名稱前面一個「＋」；AI 放的是綠色實心；065 情緒點的音效（m.mood）用情緒點的顏色
+        const own = m.user != null, mc = m.mood != null ? MOOD_COL[m.moodKind] || C.sfx : null;
+        const sel = own ? A.isSelected('usfx', m.user) : m.mood != null ? false : A.isSelected('sfx', m.segId);
         rr(x, y, w, h, 3);
-        g.fillStyle = own ? 'rgba(255,255,255,0.04)' : m.muted ? 'rgba(255,255,255,0.08)' : m.main ? 'rgba(74,222,155,0.30)' : 'rgba(74,222,155,0.16)'; g.fill();
-        g.strokeStyle = sel ? '#FFD400' : own ? C.own : m.muted ? 'rgba(255,255,255,0.35)' : C.sfx; g.lineWidth = sel ? 2 : own ? 1.3 : 1;
+        g.fillStyle = own ? 'rgba(255,255,255,0.04)' : m.muted ? 'rgba(255,255,255,0.08)' : mc ? 'rgba(255,255,255,0.10)' : m.main ? 'rgba(74,222,155,0.30)' : 'rgba(74,222,155,0.16)'; g.fill();
+        g.strokeStyle = sel ? '#FFD400' : own ? C.own : m.muted ? 'rgba(255,255,255,0.35)' : mc || C.sfx; g.lineWidth = sel ? 2 : own ? 1.3 : 1;
         if (own && !sel) g.setLineDash([3, 2]);
         g.stroke(); g.setLineDash([]);
         // 音量條（0 dB 在中間偏上）
-        if (!m.muted && m.db != null) { const k = clamp((m.db + 40) / 52, 0, 1); g.fillStyle = own ? C.own : C.sfx; g.fillRect(x + 2, y + h - 2 - k * (h - 4), 3, k * (h - 4)); }
+        if (!m.muted && m.db != null) { const k = clamp((m.db + 40) / 52, 0, 1); g.fillStyle = own ? C.own : mc || C.sfx; g.fillRect(x + 2, y + h - 2 - k * (h - 4), 3, k * (h - 4)); }
         if (w > 20) clipRect(x + 6, y, w - 8, h, () => {
           g.font = font(11, 700); g.textBaseline = 'middle'; g.fillStyle = m.muted ? C.dim : '#fff';
-          g.fillText(own ? `＋${m.name}` : m.muted ? `🔇 ${m.name}` : m.name, x + 7, y + h / 2 + 0.5);
+          g.fillText(own ? `＋${m.name}` : m.muted ? `🔇 ${m.name}` : mc ? `${m.moodZh}・${m.name}` : m.name, x + 7, y + h / 2 + 0.5);
         });
         if (m.muted) { g.strokeStyle = 'rgba(255,90,95,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x + 2, y + h - 2); g.lineTo(x + w - 2, y + 2); g.stroke(); }
+        // 065 裁過的那一端：一條亮邊；滑鼠在可以裁的邊緣上：黃色把手
+        g.fillStyle = 'rgba(255,255,255,0.9)';
+        if (m.span?.trimIn > 0) g.fillRect(x, y + 1, 2, h - 2);
+        if (m.span?.trimOut > 0) g.fillRect(x + w - 2, y + 1, 2, h - 2);
+        const he = this.hover?.sfxEdge;
+        if (he && he.id === m.id) { g.fillStyle = '#FFD400'; g.fillRect(he.edge ? x + w - 3 : x, y - 1, 3, h + 2); }
       }
       // 情緒點（plan.json moods）：菱形＋類別，出聲的實心、讓位或不出聲的空心；講者推近的外圈加一圈
+      //   065 出聲的音效畫成方塊（上面），菱形縮小放在方塊上緣、不再寫類別（方塊上已經寫了）
       for (const m of A.moodView || []) {
         if (!vis(m.at - 1, m.at + 1)) continue;
         any = true;
-        const x = X(m.at), cy = y + h / 2, r = Math.min(7, h / 2 - 1), col = MOOD_COL[m.kind] || C.sfx;
+        const block = !!m.cue?.key;
+        const x = X(m.at), cy = block ? y + 1 : y + h / 2, r = block ? 4 : Math.min(7, h / 2 - 1), col = MOOD_COL[m.kind] || C.sfx;
         g.beginPath(); g.moveTo(x, cy - r); g.lineTo(x + r, cy); g.lineTo(x, cy + r); g.lineTo(x - r, cy); g.closePath();
         g.fillStyle = m.sfx ? col : 'rgba(0,0,0,0)'; g.fill();
         g.strokeStyle = col; g.lineWidth = 1.5; g.stroke();
         if (m.zoom) { g.beginPath(); g.arc(x, cy, r + 3, 0, Math.PI * 2); g.strokeStyle = col; g.lineWidth = 1; g.stroke(); }
-        if (this.pps > 25) { g.font = font(10.5, 700); g.textBaseline = 'middle'; g.fillStyle = m.sfx ? col : C.dim; g.fillText(m.zh || '', x + r + 4, cy + 0.5); }
+        if (this.pps > 25 && !block) { g.font = font(10.5, 700); g.textBaseline = 'middle'; g.fillStyle = m.sfx ? col : C.dim; g.fillText(m.zh || '', x + r + 4, cy + 0.5); }
       }
       if (!any && !A.sfxView.length) { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.reportReady ? '沒有音效' : '音效位置：檢查報告出來後才看得到', PAD + 6, (y0 + y1) / 2); }
     }
@@ -739,15 +749,23 @@ export class Timeline {
     if (lane === 'sfx') {
       let best = null, bd = 9999;
       for (const m of A.sfxView) {
-        const xa = this.xOf(m.at), w = Math.max(12, Math.min(70, 0.6 * this.pps));
+        const xa = this.xOf(m.at), w = this.sfxW(m);
         if (x >= xa - 3 && x <= xa + w + 3) { const d = Math.abs(x - xa); if (d < bd) { bd = d; best = m; } }
       }
-      if (best) { h.kind = best.user != null ? 'usfx' : 'sfx'; h.sfx = best; return h; }
+      if (best) {
+        h.kind = best.user != null ? 'usfx' : best.mood != null ? 'msfx' : 'sfx'; h.sfx = best;
+        // 065 兩端＝裁剪（知道檔案多長、方塊夠寬才有；AI 配的要有 key＝檢查報告新的格式）
+        const xa = this.xOf(best.at), w = this.sfxW(best);
+        if (best.full != null && (best.key || best.user != null) && w >= SFX_EDGE_MIN_W) { if (x <= xa + SFX_EDGE) h.edge = 0; else if (x >= xa + w - SFX_EDGE) h.edge = 1; }
+        return h;
+      }
       for (const m of A.moodView || []) if (Math.abs(this.xOf(m.at) - x) <= 8) { h.kind = 'mood'; h.mood = m; break; }
       return h;
     }
     return h;
   }
+  // 音效方塊有多寬（px）：065 照實際播的長度；不知道長度的照舊畫 0.6 秒寬（最寬 70 px）；最窄 12 px（看得到、點得到）
+  sfxW(m) { return Math.max(12, m.len != null ? m.len * this.pps : Math.min(70, 0.6 * this.pps)); }
 
   cursorFor(h) {
     if (!h.lane) return 'default';
@@ -758,8 +776,10 @@ export class Timeline {
     switch (h.kind) {
       case 'mediaL': case 'mediaR': case 'head': case 'tail': case 'cutEdge': case 'capEdge': case 'gainEdge': return locked ? 'not-allowed' : 'col-resize';
       case 'mediaVol': case 'gainVol': case 'voiceVol': return locked ? 'not-allowed' : 'ns-resize';
-      case 'media': case 'usfx': return locked ? 'pointer' : 'grab';
-      case 'item': case 'join': case 'cue': case 'cut': case 'sfx': case 'bed': return 'pointer';
+      case 'media': return locked ? 'pointer' : 'grab';
+      // 065 音效：兩端＝裁剪、本體＝拖曳（舊的檢查報告沒有 key 的 AI 音效只能上下拖音量）
+      case 'sfx': case 'usfx': case 'msfx': return h.edge != null ? (locked ? 'not-allowed' : 'col-resize') : locked || (h.kind === 'sfx' && !h.sfx.key) ? 'pointer' : 'grab';
+      case 'item': case 'join': case 'cue': case 'cut': case 'bed': return 'pointer';
       case 'gap': return 'copy';
       default: return h.lane === 'main' || h.lane === 'voice' ? 'crosshair' : 'default';
     }
@@ -812,9 +832,9 @@ export class Timeline {
       return;
     }
     const h = this.hit(x, y);
-    const prevMedia = this.hover?.mediaId, prevGap = this.hover?.gap;
-    this.hover = { x, y, mediaId: h.item?.type === 'media' ? h.item.id : null, gap: h.kind === 'gap' ? h.gap : null };
-    if (prevMedia !== this.hover.mediaId || prevGap?.lo !== this.hover.gap?.lo) this.invalidate();
+    const prevMedia = this.hover?.mediaId, prevGap = this.hover?.gap, prevEdge = this.hover?.sfxEdge;
+    this.hover = { x, y, mediaId: h.item?.type === 'media' ? h.item.id : null, gap: h.kind === 'gap' ? h.gap : null, sfxEdge: h.sfx && h.edge != null ? { id: h.sfx.id, edge: h.edge } : null };   // sfxEdge：065 滑鼠在音效方塊可以裁的那一端
+    if (prevMedia !== this.hover.mediaId || prevGap?.lo !== this.hover.gap?.lo || prevEdge?.id !== this.hover.sfxEdge?.id || prevEdge?.edge !== this.hover.sfxEdge?.edge) this.invalidate();
     this.cv.style.cursor = this.cursorFor(h);
     this.showTip(this.app.tlTip?.(h), x, y);
     this.app.requestDraw();

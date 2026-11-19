@@ -936,7 +936,9 @@ function canvasNote(seg, item, plan = {}) {
   }
   const it = item?.out || {};
   const badge = it.badgeBox ? `右上角小節角標 x ${Math.round(it.badgeBox[0])}–${Math.round(it.badgeBox[2])}、y ${Math.round(it.badgeBox[1])}–${Math.round(it.badgeBox[3])}` : '';
-  if (it.wide) return `## 畫布：全螢幕（這段沒有講者）\n\n內容用滿 x 120–1800、y 40–900，左右和縮到 87% 的螢幕錄影對齊（錄影在 x 125–1796、y 0–940），接到錄影不會跳。不用留小視窗；撐開整個寬度，不要擠在左邊。\n\n不能碰：y ≥ 920（字幕）${badge ? `、${badge}（這個角落空著，別的元素離它至少 16）` : ''}。底是純色，沒有背景圖。`;
+  // 061 錄影畫面框（out.frame＝[x, y, w, h]）：錄影放在框裡，告訴設計師框在哪
+  const fr = Array.isArray(it.frame) ? `內容用滿 x 120–1800、y 40–900（這一集的錄影放在錄影畫面框 x ${it.frame[0]}–${it.frame[0] + it.frame[2]}、y ${it.frame[1]}–${it.frame[1] + it.frame[3]} 裡，框外是主題背景）` : '內容用滿 x 120–1800、y 40–900，左右和縮到 87% 的螢幕錄影對齊（錄影在 x 125–1796、y 0–940）';
+  if (it.wide) return `## 畫布：全螢幕（這段沒有講者）\n\n${fr}，接到錄影不會跳。不用留小視窗；撐開整個寬度，不要擠在左邊。\n\n不能碰：y ≥ 920（字幕）${badge ? `、${badge}（這個角落空著，別的元素離它至少 16）` : ''}。底是純色，沒有背景圖。`;
   const [zx0, zy0, zx1, zy1] = canvasOf('landscape').pip.zone, pz = `x ${zx0}–${zx1}、y ${zy0}–${zy1}`;
   return `## 畫布：右下有講者小視窗\n\n主內容 x 120–1300、y 150–858。不能碰：小視窗 ${pz}；y ≥ 920（字幕）${badge ? `、${badge}` : ''}。`;
 }

@@ -31,6 +31,7 @@
 | `videoDur` | 數字 | 必有（出錯時 `null`） | rough | rough.mp4 長度（對齊格） | 現行 | 004、006 |
 | `outputDur` | 數字 | 必有（出錯時 `null`） | 完成影片 | 完成影片長度（有片尾卡時含片尾卡＝`resolvePlan().finalDur`，033） | 現行 | 004 final |
 | `ending` | 物件或 `null` | 必有（出錯、沒設定片尾、這一集關掉、直式時 `null`） | 完成影片 | 片尾模板（033，`lib/ending.mjs`）：`{ at, dur, quote, quoteFrom, subscribe, notes }`；`at`＝影片（講者）結束、片尾卡從這裡接 `dur` 秒（只有訂閱動畫時 `dur` 是 0）；`quote`＝片尾金句（分段用「，」接）、`quoteFrom`＝來源；`subscribe`＝訂閱動畫跟的句號或 `null`；`notes`＝沒放的原因 | 新（033） | 004 qc final（片尾卡不判凍結／黑畫面／無聲）、停點 ③ |
+| `screenFrame` | 物件或 `null` | 必有（出錯、沒設定、直式時 `null`） | 完成影片 | 錄影畫面框（061，`lib/screen-frame.mjs`）：`{ scale, inset, auto, win, capTop, from }`；`win`＝`[x, y, w, h]`（橫式錄影、圖片段放在這個框裡）；`capTop`＝量到的字幕底板上緣；`from`＝`"plan"`（這一集 plan.json）或 `"setting"`（shared/setting.json 的預設，下一次 build 記進 plan.json） | 新（061） | 停點 ④ |
 | `voiceOnly` | `[[起, 迄]]` | 必有 | rough | 只有聲音的區間（rough.mp4 全黑）。專案沒有純聲音素材時一律是 `[]`（全黑改列在 `roughBlack`） | 現行 | 006 |
 | `roughBlack` | `[[起, 迄]]` | 必有 | rough | 初剪壞掉的全黑區間：rough.mp4 全黑、但 `素材/聲音/` 是空的而且 `work/main.json` 沒有 `kind: "voice"`；相鄰 ≤ 0.1 s 的黑段併成一段。不是空的時候 `errors` 一定有 §2.4 那則 ✖ | 新（round 2，F2） | 004 qc final |
 | `voiceUncovered` | 物件[]（§2.1） | 必有 | rough＋完成影片 | 只有聲音、而且沒被 media 段或不透明全畫面蓋住的區間（長度 > 0.1 s 才列，FR-029） | 新 | 006（紅色斜線）、004 |
@@ -40,7 +41,7 @@
 | `items` | 物件[]（§3） | 必有（plan 沒解出時間時 `[]`） | 見 §3 | 每段 | 現行＋新 | 全部 |
 | `sfxCount` | `{ 名稱: 次數 }` | 必有 | — | 全片每種音效的次數（主＋附加；3 秒規則之後；不含配樂）＝005 `sfxBudget().count` | 新（FR-058） | 004、006 |
 | `sfxBudget` | 物件（§2.3） | 必有 | rough | `{ perMinuteAvg, over, dense, loud }`，`sfxBudget()` 的回傳去掉 `count`、`levels`、`warnings`、`lines` | 新（FR-058） | 006 |
-| `moods` | 物件[] | 必有（沒有情緒點＝`[]`） | rough | 情緒點（plan.json `moods`，023）：`{ i, kind, at, outAt, sfx, dropped, off, zoom }`；`i`＝moods 的第幾個、`at`＝rough.mp4 秒數（詞的開口）、`outAt`＝完成影片秒數、`sfx`＝最後出聲的音效（取捨拿掉＝`null`，`dropped` 寫原本那顆）、`off`＝寫了 `"sfx": null`、`zoom`＝這個點有推近 | 新（023） | 剪輯台音效軌、分鏡表情緒點表 |
+| `moods` | 物件[] | 必有（沒有情緒點＝`[]`） | rough | 情緒點（plan.json `moods`，023）：`{ i, kind, at, outAt, sfx, dropped, off, zoom }`；`i`＝moods 的第幾個、`at`＝rough.mp4 秒數（詞的開口）、`outAt`＝完成影片秒數、`sfx`＝最後出聲的音效（取捨拿掉＝`null`，`dropped` 寫原本那顆）、`off`＝寫了 `"sfx": null`、`zoom`＝這個點有推近；`cue`＝出聲的那一顆 `{ name, at, volume, db, dur?, key, base, len? }`（065，剪輯台畫方塊、拖曳用；不出聲＝`null`） | 新（023）；`cue` 新（065） | 剪輯台音效軌、分鏡表情緒點表 |
 | `outro` | 物件或 `null` | 必有 | rough | `{ music, start, dur, aligned }`；沒寫 `outro` 或 `music: null` 時 `null`（`cli-005.md` §3.5） | 新（FR-054） | 004 final、006 |
 | `bed` | 物件或 `null` | 必有 | rough | 底樂（`lib/music.mjs` `bedJson`）：沒設定＝`null`；這一集不配＝`{ music: null }`；影片太短沒鋪＝`{ music, from, volume, relDb, muted, ducked: false, short: true }`；有鋪＝`{ music, from, volume, relDb, muted, ducked, start, end, outStart, outEnd, fadeIn, fadeOut, ducks }`：`volume`＝plan.json 的 `bed.volume`（dB，0＝曲庫檔原本的音量）、`relDb`＝沒人講話時比人聲大幾 dB（負＝小）、`muted`＝靜音（`volume` 是 −40，完成影片不放；範圍照樣給）、`start`／`end`＝rough.mp4 秒數（片尾卡那段在 rough.mp4 外面，`end` 停在主軌結尾）、`outStart`／`outEnd`＝完成影片秒數、`ducked`＝講話時壓低（有 `edit.cuts` 時整段固定音量＝`false`）、`ducks`＝壓低的區間 `[[起, 迄], …]`（rough.mp4 秒數；字幕第一句到最後一句扣掉 ≥ 1 秒的說話停頓） | 新（057） | 剪輯台背景音樂軌 |
 | `edit` | 物件 | 必有（出錯時 `null`） | rough | 正規化後的 `edit`（`normalizeEdit`，`edit.mjs`） | 現行 | 006 |
@@ -211,7 +212,7 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 | `start` | 數字 | 必有 | rough | 起點 | 現行 |
 | `end` | 數字 | 必有 | rough | plan.json 寫的迄點（剪輯台拖邊緣用） | 現行 |
 | `shownEnd` | 數字 | 選填 | rough | 畫面上實際停到哪裡（換卡、墊底、被蓋過時才和 `end` 不同） | 現行 |
-| `sfx` | `[{ name, at, volume, db }]` | 必有 | rough | 這段的主音效＋附加音效 | 現行 |
+| `sfx` | `[{ name, at, volume, db, dur?, key, base, len? }]` | 必有 | rough | 這段的主音效＋附加音效；`key`＝這一顆的 id（`edit.sfxAdjust`）、`base`＝拖之前的 `at`、`len`＝檔案長度、`dur`＝裁過之後播多久 | 現行；`dur`／`key`／`base`／`len` 新（065） |
 | `warnings` | 整數 | 必有 | — | 這段的 ⚠ **則數**（文字在第一層 `warnings`） | 現行 |
 | `src`、`enter`、`exit`、`volume`、`kind` | — | 只有 media | — | 現行（`kind` 是 `video`／`image`） | 現行 |
 | `pip` | 布林 | 只有 media | — | 這段要不要講者小視窗：照 plan.json 的 `pip` 和版式預設算好的值（橫式沒寫＝`false`、直式沒寫＝`true`）。`qc.mjs` F2 的「該有小視窗」照這個判：`pip !== false` 才算（舊的 JSON 沒有這個鍵照舊算） | 新（055 Q1） |
@@ -234,7 +235,7 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 |---|---|---|
 | `start`／`end` | 每段 | 畫面上實際的起迄（含自動延長、墊底；`it.start`／`it.end`） |
 | `lists` | 有條列的 scene | 每條進場的完成影片秒數（`it.start + it.resolved.listTimes[key][i]`，所有 key 攤平、依時間排序）；沒有條列時 `[]` |
-| `annotations` | media 段 | 004 `validateMedia()` 回傳的 `json`（`contracts/media.md` §4.1）；不是 media 時 `null`。寫了 `start` 的段多 `start: { z, x, y }`（起始鏡位的倍率與位移，第一格就是這個鏡位）；`view.scale` 是第一格的倍率（素材縮放 × `start` 推近，沒寫 `start` 就是素材縮放） |
+| `annotations` | media 段 | 004 `validateMedia()` 回傳的 `json`（`contracts/media.md` §4.1）；不是 media 時 `null`。寫了 `start` 的段多 `start: { z, x, y }`（起始鏡位的倍率與位移；直式第一格就是這個鏡位，橫式段頭先看全景、再推到這個鏡位，多 `at`＝開始推的秒數、`dur`＝推幾秒，放不下不推時沒有 `start`，066）；`view.scale` 是起始鏡位的倍率（素材縮放 × `start` 推近，沒寫 `start` 就是素材縮放）、`view.moves` 不算開場推近；橫式的 `steps[i]` 多 `tag: { side, target, box }`（步驟標籤貼在哪、貼著誰、露出那一刻的畫面框，066） |
 | `pip` | 每段 | 子母畫面片段 `[{ start, end, enter, exit }]`：`enter` 是 `"fly"`／`"fade"`／`"none"`，`exit` 是 `"layer"`／`"fade"`／`"none"`（spec FR-022、FR-026）；沒有子母畫面時 `[]` |
 | `wipe` | 每段 | `{ in, out, preroll, postroll }`：`in`／`out` 布林（這段擦入／擦出，FR-030）；`preroll`／`postroll` 秒數（只有 media 段可能 > 0，FR-032） |
 | `refs` | custom 段 | build 從 `x-*.html` 掃出的 `P.at('…')` 與 `P.sfx('名', '…')` 的 ref 字面值 → 完成影片秒數（`contracts/cues.md` §2 的 `segs[id].refs`）；不是 custom 時 `{}` |
@@ -242,6 +243,7 @@ plan.json 寫了 "check": { "textSync": false }，這次沒檢查「文字對時
 | `pipShift` | media 段 | 子母畫面相對畫布右下的位移 `[dx, dy]`：橫式錄影段移進素材右下角（`lib/media.mjs` 的 `pipShift`）；沒有移（只碰到素材邊邊、鋪滿、`tape`、右側步驟清單、沒有小視窗）或其他段 `null` |
 | `wide` | 每段 | 布林：全寬版型（沒有講者的全畫面段：主卡 1680、背景只留底色；內容設計動畫用全螢幕畫布） |
 | `badgeBox` | 全畫面段 | 右上角小節角標的框 `[x0, y0, x1, y1]`，沒有小節（`sections`）時 `null` |
+| `frame` | 有錄影畫面框時的 media 段、全寬段 | 錄影畫面框 `[x, y, w, h]`（061；和第一層 `screenFrame.win` 相同；`side`、`tape` 的 media 段沒有）。沒有框時不出現這個鍵 |
 
 custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` §5）由 build 靜態解析成附加音效：出現在 `items[].sfx`（`sfx-<id>-e<n>` 的 `<audio>`），時間＝ref 的完成影片秒數＋off − 音效的 peak＋1 格；算進 `sfxCount`、`sfxBudget`（tick、click 以外的算主音效密度），不受主音效 3 秒規則；段的 `sfxExtra: false` 整段關掉、`sfxVolume` 一起調。
 
@@ -285,7 +287,7 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
 { "schema": 2, "ok": false, "errors": ["<訊息>"], "warnings": [], "planHash": null, "rhythm": null, "theme": null,
   "format": null, "canvas": null, "formatSource": null,
   "versions": { "hyperframes": { "pinned": null, "installed": null, "ok": false } },
-  "videoDur": null, "outputDur": null, "ending": null, "voiceOnly": [], "roughBlack": [], "voiceUncovered": [], "uncovered": [], "cutpoints": [],
+  "videoDur": null, "outputDur": null, "ending": null, "screenFrame": null, "voiceOnly": [], "roughBlack": [], "voiceUncovered": [], "uncovered": [], "cutpoints": [],
   "chapters": [], "items": [], "sfxCount": {}, "sfxBudget": { "perMinuteAvg": 0, "over": [], "dense": [], "loud": [] },
   "outro": null, "bed": null, "edit": null, "paths": {} }
 ```
@@ -307,6 +309,8 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
 | 2 | 2026-11-07（子母畫面移進錄影） | `items[].out` 加 `pipShift`（`pip` 後面）。加欄位不升 schema |
 | 2 | 2026-11-16（055） | media 段 `items[]` 加 `pip`（布林；橫式預設 `false`）；`out.annotations` 寫了 `start` 時加 `start`，`view.scale` 改成第一格的倍率。加欄位不升 schema |
 | 2 | 2026-11-16（057） | 加 `bed`（`outro` 後面）：剪輯台背景音樂軌用的底樂範圍、淡入淡出、壓低的區間；第二輪 `volume` 改成 0＝曲庫檔原本的音量（−40～+6）、`relDb` 改成沒人講話時和人聲比、加 `muted`。加欄位不升 schema |
+| 2 | 2026-11-19（061） | 加 `screenFrame`（`ending` 後面）；有框時 `items[].out` 加 `frame`。加欄位不升 schema |
+| 2 | 2026-11-19（066） | 橫式 `out.annotations.start` 加 `at`、`dur`（先看全景再推近），`view.scale` 改成起始鏡位的倍率；`out.annotations.steps[]` 加 `tag`。加欄位不升 schema |
 
 ## 7. 測試（002 的 `dev/tests/build.test.mjs`）
 

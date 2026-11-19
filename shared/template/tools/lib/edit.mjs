@@ -2,7 +2,8 @@
 //
 //   normalizeEdit(edit, { videoDur, cutpoints }) → { edit, errors, warnings, active }
 //     edit＝{ cuts:[[a,b]…]（排序合併後）, fadeIn, fadeOut, volume:{ voice, sfx, media }, gains:[{ from, to, db }], joins:[{ at, type, dur }],
-//             sfx?:[{ at, sound, db? }]（050 作者在剪輯台自己加的音效，照 at 排；一顆都沒有就沒有這個鍵）,
+//             sfx?:[{ at, sound, db?, trimIn?, trimOut? }]（050 作者在剪輯台自己加的音效，照 at 排；一顆都沒有就沒有這個鍵；065 trimIn／trimOut＝裁掉音效檔的前段／後段秒數）,
+//             sfxAdjust?:[{ id, shift?, trimIn?, trimOut? }]（065 AI 配的音效在剪輯台拖過、裁過的：id 見 SFX_ADJUST_ID；照 id 排；全是 0 的拿掉）,
 //             level?:true（人聲大小聲拉平：重新編碼底片時先拉平再調響度；關著就沒有這個鍵） }
 //     active＝有任何會改變輸出的設定（沒有 edit、或全是預設值時 false → 輸出和沒寫 edit 一模一樣；sfx 不算：它只多幾顆音效，底片照舊）
 //   timeMap(cuts, videoDur) → { cuts, keep, outDur, identity, map(t), unmapStart(o), unmapEnd(o), joinsOut }
@@ -13,9 +14,17 @@
 
 import { r3, clock2 } from './time.mjs';
 
-export const EDIT_KEYS = ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins', 'sfx', 'level'];
+export const EDIT_KEYS = ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins', 'sfx', 'sfxAdjust', 'level'];
 export const VOLUME_KEYS = ['voice', 'sfx', 'media'];
 export const SFX_NAME = /^[a-z][a-z0-9-]*$/;   // 音效名稱＝檔名（shared/sfx、shared/sfx-local 的 <名稱>.wav）
+// 065 音效拖曳、裁前後：AI 配的那一顆用 id 指（"s05"＝s05 的主音效、"s05:ding"＝s05 的第一顆附加 ding、"s05:ding:2"＝第二顆、"mood:3"＝plan.json moods 第 3 個情緒點）
+export const SFX_ADJUST_ID = /^(?:[a-z][a-z0-9_]*(?::[a-z][a-z0-9-]*(?::[1-9]\d*)?)?|mood:[1-9]\d*)$/i;
+export const SFX_ADJUST_KEYS = ['id', 'shift', 'trimIn', 'trimOut'];
+export const SFX_TRIM_MAX = 10;    // 裁前、裁後各最多幾秒
+export const SFX_SHIFT_MAX = 600;  // 位移最多幾秒（拖到別段、拖出影片 build 會 ⚠ 並略過位移）
+export const SFX_MIN_LEN = 0.1;    // 裁完至少要留幾秒
+export const SFX_TRIM_FADE = 0.01; // 裁過的那一端加多少秒淡入／淡出（避免爆音）
+const trimOk = (v) => v == null || (isNum(v) && v >= 0 && v <= SFX_TRIM_MAX);
 export const JOIN_TYPES = ['none', 'dip', 'punch'];
 export const DIP = 0.3;          // dip 預設長度
 export const PUNCH = 1.08;       // punch 放大倍率
@@ -144,15 +153,35 @@ export function normalizeEdit(edit, { videoDur, cutpoints = [] } = {}) {
       const list = [];
       edit.sfx.forEach((s, i) => {
         if (!s || typeof s !== 'object' || Array.isArray(s)) { err(`sfx[${i}] 要是物件 { "at": 秒數, "sound": "音效名稱" }`); return; }
-        for (const k of Object.keys(s)) if (!['at', 'sound', 'db'].includes(k)) err(`sfx[${i}].${k}：沒有這個欄位（可用：at、sound、db）`);
+        for (const k of Object.keys(s)) if (!['at', 'sound', 'db', 'trimIn', 'trimOut'].includes(k)) err(`sfx[${i}].${k}：沒有這個欄位（可用：at、sound、db、trimIn、trimOut）`);
         if (!isNum(s.at) || s.at < 0) { err(`sfx[${i}].at 要是 rough.mp4 的秒數，現在是 ${JSON.stringify(s.at)}`); return; }
         if (typeof s.sound !== 'string' || !SFX_NAME.test(s.sound)) { err(`sfx[${i}].sound 要是音效名稱（例 "ding"；跑 build.mjs --list 看有哪些），現在是 ${JSON.stringify(s.sound)}`); return; }
         if (s.db != null && (!isNum(s.db) || s.db < -60 || s.db > 12)) { err(`sfx[${i}].db 要是 −60～+12 的 dB 數字（這一顆的音量，不寫＝預設），現在是 ${JSON.stringify(s.db)}`); return; }
+        for (const k of ['trimIn', 'trimOut']) if (!trimOk(s[k])) { err(`sfx[${i}].${k} 要是 0–${SFX_TRIM_MAX} 的秒數（裁掉音效檔的${k === 'trimIn' ? '前' : '後'}段，不寫＝不裁），現在是 ${JSON.stringify(s[k])}`); return; }
         if (videoDur != null && s.at > videoDur) { err(`sfx[${i}]：at ${s.at}s 超過 rough.mp4 長度 ${videoDur}s → 在剪輯台把這顆音效移除或往前拖`); return; }
-        list.push({ at: r3(s.at), sound: s.sound, ...(s.db ? { db: r3(s.db) } : {}) });
+        list.push({ at: r3(s.at), sound: s.sound, ...(s.db ? { db: r3(s.db) } : {}), ...(s.trimIn > 0 ? { trimIn: r3(s.trimIn) } : {}), ...(s.trimOut > 0 ? { trimOut: r3(s.trimOut) } : {}) });
       });
       list.sort((a, b) => a.at - b.at);
       if (list.length) out.sfx = list;
+    }
+  }
+  // --- AI 配的音效拖過、裁過（065）：這裡只看格式；對不對得到那一顆、有沒有拖出那一段、裁完夠不夠長由 plan.mjs 查（要知道音效在哪、檔有多長）---
+  if (edit.sfxAdjust != null) {
+    if (!Array.isArray(edit.sfxAdjust)) err('sfxAdjust 要寫成陣列，例如 [{ "id": "s05", "shift": 0.4, "trimOut": 0.3 }]（剪輯台拖曳、裁剪 AI 配的音效會自動寫）');
+    else {
+      const byId = new Map();
+      edit.sfxAdjust.forEach((a, i) => {
+        if (!a || typeof a !== 'object' || Array.isArray(a)) { err(`sfxAdjust[${i}] 要是物件 { "id": "s05", "shift": 秒數, "trimIn": 秒數, "trimOut": 秒數 }`); return; }
+        for (const k of Object.keys(a)) if (!SFX_ADJUST_KEYS.includes(k)) err(`sfxAdjust[${i}].${k}：沒有這個欄位（可用：${SFX_ADJUST_KEYS.join('、')}）`);
+        if (typeof a.id !== 'string' || !SFX_ADJUST_ID.test(a.id)) { err(`sfxAdjust[${i}].id 要指到一顆音效："<段>"（主音效）、"<段>:<音效>"、"<段>:<音效>:<第幾顆>"（附加音效）或 "mood:<第幾個情緒點>"，現在是 ${JSON.stringify(a.id)}`); return; }
+        if (a.shift != null && (!isNum(a.shift) || Math.abs(a.shift) > SFX_SHIFT_MAX)) { err(`sfxAdjust[${i}].shift 要是 −${SFX_SHIFT_MAX}～+${SFX_SHIFT_MAX} 的秒數（往後拖是正、往前是負），現在是 ${JSON.stringify(a.shift)}`); return; }
+        for (const k of ['trimIn', 'trimOut']) if (!trimOk(a[k])) { err(`sfxAdjust[${i}].${k} 要是 0–${SFX_TRIM_MAX} 的秒數，現在是 ${JSON.stringify(a[k])}`); return; }
+        if (byId.has(a.id)) warn(`sfxAdjust[${i}]：和 sfxAdjust[${byId.get(a.id).i}] 都是 ${a.id}，只留後面這個`);
+        const o = { id: a.id, ...(a.shift ? { shift: r3(a.shift) } : {}), ...(a.trimIn > 0 ? { trimIn: r3(a.trimIn) } : {}), ...(a.trimOut > 0 ? { trimOut: r3(a.trimOut) } : {}) };
+        byId.set(a.id, { i, o });
+      });
+      const list = [...byId.values()].map((x) => x.o).filter((o) => Object.keys(o).length > 1).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+      if (list.length) out.sfxAdjust = list;
     }
   }
   // --- 人聲大小聲拉平（只影響重新編碼底片；不算 active：時間、剪接都不變）---

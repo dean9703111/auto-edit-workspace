@@ -37,7 +37,17 @@
       "ready": 33,
       "n": 1,
       "text": "按下儲存",
-      "carry": false
+      "carry": false,
+      "tag": {
+       "side": "top",
+       "target": "callouts[0]",
+       "box": [
+        813,
+        178,
+        1091,
+        258
+       ]
+      }
      }
     ],
     "side": null,
@@ -292,6 +302,7 @@
       "asStart": false
      }
     ],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -336,21 +347,32 @@
        "text": "按下儲存",
        "n": 1,
        "carry": false,
-       "ready": 33
+       "ready": 33,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "anchor": [
+         513.01,
+         191.86
+        ],
+        "off": [
+         0,
+         -92
+        ],
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ],
+        "from": 32.5,
+        "to": 39
+       }
       }
      ],
      "carry": false,
-     "capsule": {
-      "box": [
-       157,
-       40,
-       435,
-       120
-      ],
-      "side": "left",
-      "from": 32.5,
-      "to": 39
-     }
+     "capsule": null,
+     "from": 32.5
     },
     "callouts": [
      {
@@ -430,7 +452,17 @@
       "ready": 39,
       "n": 1,
       "text": "按下儲存",
-      "carry": true
+      "carry": true,
+      "tag": {
+       "side": "corner",
+       "target": null,
+       "box": [
+        157,
+        820,
+        435,
+        900
+       ]
+      }
      },
      {
       "i": 1,
@@ -438,7 +470,17 @@
       "ready": 42.45,
       "n": 2,
       "text": "完成",
-      "carry": false
+      "carry": false,
+      "tag": {
+       "side": "corner",
+       "target": null,
+       "box": [
+        157,
+        820,
+        355,
+        900
+       ]
+      }
      }
     ],
     "side": null,
@@ -673,6 +715,7 @@
       "asStart": false
      }
     ],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -689,7 +732,21 @@
        "text": "按下儲存",
        "n": 1,
        "carry": true,
-       "ready": 39
+       "ready": 39,
+       "tag": {
+        "side": "corner",
+        "target": null,
+        "anchor": null,
+        "off": null,
+        "box": [
+         157,
+         820,
+         435,
+         900
+        ],
+        "from": 39,
+        "to": 42.25
+       }
       },
       {
        "i": 1,
@@ -697,21 +754,26 @@
        "text": "完成",
        "n": 2,
        "carry": false,
-       "ready": 42.45
+       "ready": 42.45,
+       "tag": {
+        "side": "corner",
+        "target": null,
+        "anchor": null,
+        "off": null,
+        "box": [
+         157,
+         820,
+         355,
+         900
+        ],
+        "from": 42,
+        "to": 46
+       }
       }
      ],
      "carry": true,
-     "capsule": {
-      "box": [
-       157,
-       40,
-       435,
-       120
-      ],
-      "side": "left",
-      "from": 39,
-      "to": 46
-     }
+     "capsule": null,
+     "from": 39
     },
     "callouts": [],
     "spots": [],
@@ -913,6 +975,7 @@
     "redact": [],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -963,7 +1026,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [
@@ -1346,6 +1410,7 @@
     ],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -1357,7 +1422,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [],
@@ -1679,6 +1745,7 @@
       "asStart": false
      }
     ],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -1745,7 +1812,8 @@
       "side": "left",
       "from": 25.5,
       "to": 39
-     }
+     },
+     "from": 25.5
     },
     "callouts": [
      {
@@ -1993,6 +2061,7 @@
     "redact": [],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -2043,7 +2112,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [
@@ -2131,7 +2201,17 @@
       "ready": 26.5,
       "n": 4,
       "text": "下一步",
-      "carry": false
+      "carry": false,
+      "tag": {
+       "side": "corner",
+       "target": null,
+       "box": [
+        157,
+        820,
+        395,
+        900
+       ]
+      }
      }
     ],
     "side": null,
@@ -2383,6 +2463,7 @@
     "redact": [],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -2399,21 +2480,26 @@
        "text": "下一步",
        "n": 4,
        "carry": false,
-       "ready": 26.5
+       "ready": 26.5,
+       "tag": {
+        "side": "corner",
+        "target": null,
+        "anchor": null,
+        "off": null,
+        "box": [
+         157,
+         820,
+         395,
+         900
+        ],
+        "from": 26,
+        "to": 32.5
+       }
       }
      ],
      "carry": false,
-     "capsule": {
-      "box": [
-       157,
-       40,
-       395,
-       120
-      ],
-      "side": "left",
-      "from": 26,
-      "to": 32.5
-     }
+     "capsule": null,
+     "from": 26
     },
     "callouts": [],
     "spots": [
@@ -2452,7 +2538,7 @@
    "✖ lens[0] 只有 0.5s，放大鏡至少要 1.2s（彈出 0.6＋縮回 0.32＋看清楚的時間）→ until 往後延",
    "✖ steps[0].text 要寫 1–12 字（這一步在做什麼），現在是 \"\" → 補上這一步的動作",
    "✖ steps[2] 和前一步只差 0.1s（要 ≥ 1.65s：換步 0.45＋停 1.2）→ 合併成一步，或把 at 往後挪到 0:27.65 之後",
-   "✖ stepsSide 只能是 \"left\"（預設）或 \"right\"，現在是 \"up\"",
+   "⚠ stepsSide 橫式不用寫了：步驟標籤改成貼在這一步操作的東西旁邊（紅框、箭頭、說明卡、放大鏡、推近的框），沒有就放錄影左下角 → 拿掉 stepsSide",
    "✖ arrows[0].to [9000, 1] 超出素材範圍 2560×1440 → 座標是素材原尺寸的像素（不是 1920×1080 的畫面座標），用 media.mjs frame --grid 重讀"
   ]
  }

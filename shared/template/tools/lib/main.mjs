@@ -556,19 +556,21 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
   const needCss = hasMedia || overlays.length > 0;
 
   const sfx = [];
+  // 只播一段：dur／from（等待快轉的秒針：從第 from 秒播 dur 秒，lib/plan.mjs waitSpans；065 剪輯台裁過前後的也是），裁過的那一端 fadeIn／fadeOut（plan.mjs trimCue）
+  const clipAttrs = (c) => `${c.dur > 0 ? ` data-duration="${n3(c.dur)}"` : ''}${c.from > 0 ? ` data-media-start="${n3(c.from)}"` : ''}${c.fadeIn > 0 ? ` data-fade-in="${n3(c.fadeIn)}"` : ''}${c.fadeOut > 0 ? ` data-fade-out="${n3(c.fadeOut)}"` : ''}`;
   // 情緒點的音效（plan.json moods）：不屬於任何一段，id 用 sfx-mood<N>
   for (const m of moods) {
     const c = m.sfx;
     if (!c) continue;
     const at = r3((c.srcAt ?? c.at) - t0);
     if (at < 0 || at >= DUR) continue;
-    sfx.push(`  <audio id="sfx-mood${m.i + 1}" src="${base}assets/sfx/${c.src ?? c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.srcVolume ?? c.volume}"></audio>`);
+    sfx.push(`  <audio id="sfx-mood${m.i + 1}" src="${base}assets/sfx/${c.src ?? c.name}.wav" data-start="${n3(at)}"${clipAttrs(c)} data-track-index="${track++}" data-volume="${c.srcVolume ?? c.volume}"></audio>`);
   }
   // 使用者在剪輯台自己加的音效（plan.json edit.sfx，050）：不屬於任何一段，id 用 sfx-own<N>（N＝edit.sfx 的第幾個）
   for (const c of userSfx) {
     const at = r3(c.at - t0);
     if (at < 0 || at >= DUR) continue;
-    sfx.push(`  <audio id="sfx-own${c.i + 1}" src="${base}assets/sfx/${c.name}.wav" data-start="${n3(at)}" data-track-index="${track++}" data-volume="${c.volume}"></audio>`);
+    sfx.push(`  <audio id="sfx-own${c.i + 1}" src="${base}assets/sfx/${c.name}.wav" data-start="${n3(at)}"${clipAttrs(c)} data-track-index="${track++}" data-volume="${c.volume}"></audio>`);
   }
   for (const it of items) {
     const cues = [[`sfx-${it.id}`, it.sfx], ...(it.sfxExtra || []).map((c, n) => [`sfx-${it.id}-e${n + 1}`, c])];
@@ -576,9 +578,7 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
       if (!c) continue;
       const at = r3((c.srcAt ?? c.at) - t0);   // src＝同類變體輪到的檔（lib/audio.mjs rotateSfx）
       if (at < 0 || at >= DUR) continue;
-      // dur／from：只播一段（等待快轉的秒針：從第 from 秒播 dur 秒，lib/plan.mjs waitSpans）
-      const clip = c.dur > 0 ? ` data-duration="${n3(c.dur)}"${c.from > 0 ? ` data-media-start="${n3(c.from)}"` : ''}` : '';
-      sfx.push(`  <audio id="${id}" src="${base}assets/sfx/${c.src ?? c.name}.wav" data-start="${n3(at)}"${clip} data-track-index="${track++}" data-volume="${c.srcVolume ?? c.volume}"></audio>`);
+      sfx.push(`  <audio id="${id}" src="${base}assets/sfx/${c.src ?? c.name}.wav" data-start="${n3(at)}"${clipAttrs(c)} data-track-index="${track++}" data-volume="${c.srcVolume ?? c.volume}"></audio>`);
     }
   }
   // 底樂（選用；整支片一條，--test 的片段從中間開始時用 data-media-start 接上）

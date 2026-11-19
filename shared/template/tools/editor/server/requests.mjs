@@ -19,32 +19,44 @@ export function requestsInfo(project) {
   const revision = sha(`${at}:${markdown}`);
   const ids = [...markdown.matchAll(/^## \d+\. (\S+)/gm)].map((m) => m[1]);
   const saved = readJson(path.join(fb, 'editor-requests-status.json'));
-  const states = saved?.revision === revision && isObj(saved.states) ? saved.states : {};
+  // 每段的狀態記著它屬於哪一版修改單（舊檔沒寫就是檔頭那一版）。這一版的照舊；
+  // AI 還在改的時候使用者又複製了新的修改單：不在新修改單、還在生成中的段帶著走（carried），
+  // 剪輯台照樣顯示生成中、不會算回待改，AI 改完用開輪時那一版回報也記得到
+  const states = {}, carried = [];
+  for (const [id, st] of Object.entries(isObj(saved?.states) ? saved.states : {})) {
+    if (!isObj(st)) continue;
+    const rev = st.revision || saved.revision;
+    if (rev === revision) states[id] = { ...st, revision: rev };
+    else if (!ids.includes(id) && (st.state === 'generating' || st.carried)) { states[id] = { ...st, revision: rev, carried: true }; carried.push(id); }
+  }
+  const all = [...ids, ...carried];
   const rounds = fs.readdirSync(fb).filter((f) => /^r\d+\.md$/.test(f)).map((f) => ({ f, t: fs.statSync(path.join(fb, f)).mtimeMs }))
     .filter((x) => x.t > at).sort((a, b) => a.t - b.t);
   const done = {};
   for (const { f } of rounds) {
     const sec = fs.readFileSync(path.join(fb, f), 'utf8').split(/^## 改了哪幾段[ \t]*$/m)[1]?.split(/^## /m)[0] || '';
-    for (const m of sec.matchAll(/^- (\S+?)：(.+)$/gm)) if (ids.includes(m[1])) done[m[1]] = { round: f.slice(0, -3), note: m[2].trim() };
+    for (const m of sec.matchAll(/^- (\S+?)：(.+)$/gm)) if (all.includes(m[1])) done[m[1]] = { round: f.slice(0, -3), note: m[2].trim() };
   }
   // 有明確回報的段以 API 為準，避免回饋紀錄尚在撰寫就提早顯示完成。
-  for (const id of ids) if (Object.hasOwn(states, id)) {
+  for (const id of all) if (Object.hasOwn(states, id)) {
     if (states[id].state === 'done') done[id] = { round: states[id].round || done[id]?.round || 'AI', note: states[id].message || done[id]?.note || '生成完成，已通過 build、audit' };
     else delete done[id];
   }
-  return { at: Math.round(at), revision, ids, done, states };
+  return { at: Math.round(at), revision, ids, carried, done, states };
 }
 
 // AI 明確回報才顯示生成中；版本必填，舊任務不能改到使用者重新複製的修改單。
 export function doRequestsStatus(ctx, body) {
   const q = requestsInfo(ctx.P.project);
   if (!q) return [404, { message: '還沒有修改單，請先在剪輯複製給 AI' }];
-  if (body?.revision !== q.revision) return [409, { message: '修改單版本已更新，請重新讀取最新修改單' }];
-  const { state, ids, message = '', round = '' } = body;
-  if (!['generating', 'done', 'failed'].includes(state) || !Array.isArray(ids) || !ids.length || ids.some((id) => typeof id !== 'string' || !q.ids.includes(id))
+  const { state, ids, message = '', round = '' } = body || {};
+  // 舊版修改單帶著走的段（carried）用它自己那一版回報；其他段要用目前這一版
+  const old = body?.revision !== q.revision && Array.isArray(ids) && ids.length > 0 && ids.every((id) => q.carried.includes(id) && q.states[id]?.revision === body.revision);
+  if (body?.revision !== q.revision && !old) return [409, { message: '修改單版本已更新，請重新讀取最新修改單' }];
+  if (!['generating', 'done', 'failed'].includes(state) || !Array.isArray(ids) || !ids.length || ids.some((id) => typeof id !== 'string' || !(old ? q.carried : q.ids).includes(id))
     || typeof message !== 'string' || message.length > 2000 || typeof round !== 'string' || round.length > 80) return [400, { message: '請提供有效的 state（generating／done／failed）、修改單段落 ids 與文字訊息' }];
   const now = Date.now();
-  const states = { ...q.states, ...Object.fromEntries(ids.map((id) => [id, { state, message, round, at: now }])) };
+  const states = { ...q.states, ...Object.fromEntries(ids.map((id) => [id, { state, message, round, at: now, revision: body.revision, ...(old ? { carried: true } : {}) }])) };
   const file = path.join(ctx.P.project, 'work', 'feedback', 'editor-requests-status.json');
   fs.writeFileSync(`${file}.tmp`, JSON.stringify({ revision: q.revision, states }, null, 2) + '\n');
   fs.renameSync(`${file}.tmp`, file);

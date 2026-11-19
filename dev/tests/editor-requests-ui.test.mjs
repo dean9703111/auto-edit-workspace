@@ -60,6 +60,17 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     assert.equal(await page.$$('.rq-sent.generating').then((x) => x.length), 1);
     const screenshot = path.join(root, '生成中.png');
     await page.screenshot({ path: screenshot });
+    // 生成中的段 AI 已經在改：複製給 AI 不再送（不然同一段送兩次），另列「生成中」；再複製後舊那一版的段帶著走、照舊顯示生成中、回報照舊收得到
+    assert.equal(await page.$eval('[data-rq="copy"]', (el) => el.textContent), '複製給 AI（1 段待改）');
+    assert.match(await page.$eval('#rqLists', (el) => el.textContent), /生成中（1）/);
+    await page.evaluate(() => { window.copiedRequest = ''; });
+    await page.click('[data-rq="copy"]');
+    await page.waitForFunction(() => /begin/.test(window.copiedRequest || ''));
+    const md2 = fs.readFileSync(path.join(work, 'feedback/editor-requests.md'), 'utf8');
+    assert.match(md2, /## 1\. s02/);
+    assert.doesNotMatch(md2, /## \d+\. s01/);
+    await page.waitForFunction(() => window.__editor.server?.requests?.carried?.includes('s01'));
+    assert.equal(await page.$$('.rq-sent.generating').then((x) => x.length), 1);
     await update(['s01'], 'failed', '動畫檢查未通過');
     await page.waitForSelector('.rq-sent.failed');
     await update(['s01'], 'done', '已重做並通過 build、audit');

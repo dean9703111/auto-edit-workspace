@@ -218,13 +218,36 @@ test('A5 begin --requests／finish：修改單的段自動開輪、標「生成�
   editPlan(p3, (j) => { j.scenes[0].slots.text = '短'; });
   const lg = [];
   assert.equal(V.finishRound(P3, {}, (l) => lg.push(l), stepsOf().steps).ok, true);
-  assert.ok(lg.some((l) => /^⚠ 剪輯台修改單在這輪開始之後重新複製過.*→ 停下來重讀/.test(l)));
-  assert.deepEqual(E.requestsInfo(p3).states, {}, '新修改單的狀態不動');
+  assert.ok(lg.some((l) => /^⚠ 剪輯台修改單在這輪開始之後重新複製過，s05、s12 又寫進新的修改單.*→ 停下來重讀/.test(l)));
+  const q3 = E.requestsInfo(p3);
+  assert.deepEqual(Object.keys(q3.states), ['t1095'], '新修改單的段不動；舊那一版還在生成中、沒寫進新修改單的 t1095 帶著走、照舊回報');
+  assert.deepEqual([q3.states.t1095.state, q3.states.t1095.carried, q3.carried], ['failed', true, ['t1095']]);
   // 手動的 --requests-state 照舊能用
   const rev = E.requestsInfo(p3).revision;
   const m = spawnSync(process.execPath, [path.join(TOOLS, 'editor.mjs'), '--project', p3, '--requests-state', 'done', '--request-revision', rev, '--ids', 's05', '--round', 'r1'], { encoding: 'utf8' });
   assert.equal(m.status, 0, m.stderr);
   assert.equal(E.requestsInfo(p3).done.s05.round, 'r1');
+  // AI 還在改（生成中）的時候使用者只複製了新的待改段（剪輯台不再送生成中的段）：舊那一版的段帶著走、顯示生成中，finish 照舊標已改完
+  const p4 = mk(t);
+  const P4 = pathsFrom({ project: p4 });
+  touch(p4, 'work/feedback/editor-requests.md', REQ, 120);
+  V.beginRound(P4, { requests: true }, [], '', () => {});
+  touch(p4, 'work/feedback/editor-requests.md', ['# 剪輯台修改單', '', '照剪輯台修改單改這 1 段', '', '## 1. s99　新的', '- 要改：字大一點', ''].join('\n'), 60);
+  let q4 = E.requestsInfo(p4);
+  assert.deepEqual([q4.ids, q4.carried, q4.states.s05.state, q4.states.s99], [['s99'], ['s05', 's12', 't1095'], 'generating', undefined]);
+  editPlan(p4, (j) => { j.scenes[0].slots.text = '短'; });
+  const lg4 = [];
+  const r4 = V.finishRound(P4, {}, (l) => lg4.push(l), stepsOf().steps);
+  assert.equal(r4.ok, true, lg4.join('\n'));
+  assert.ok(!lg4.some((l) => /重新複製過/.test(l)), '帶著走的段照舊回報，不用停下來問');
+  q4 = E.requestsInfo(p4);
+  assert.deepEqual([q4.states.s05.state, q4.done.s05.round, q4.states.s12.state], ['done', 'r1', 'failed']);
+  assert.deepEqual(r4.requests.done, ['s05']);
+  // 回報後還是帶著走（剪輯台記得已改完）；新修改單的段可以照新的版本回報，舊的版本不能拿來改新段
+  const rev4 = q4.revision;
+  assert.equal(E.doRequestsStatus({ P: P4 }, { state: 'generating', revision: rev4, ids: ['s99'] })[0], 200);
+  assert.equal(E.doRequestsStatus({ P: P4 }, { state: 'done', revision: q4.states.s05.revision, ids: ['s99'] })[0], 409);
+  assert.deepEqual(E.requestsInfo(p4).carried, ['s05', 's12', 't1095']);
 });
 
 test('A3／A4 finish：最後是回報段（工具知道的填好、停點那兩行只在最後出現一次）；連續沒過到上限印「→ 停手」，過了歸零', (t) => {

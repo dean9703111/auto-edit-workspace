@@ -89,8 +89,14 @@
     "name": "chapter",
     "at": 4.962,
     "volume": 1,
-    "event": 4.95
-   }
+    "event": 4.95,
+    "key": "c1",
+    "base": 4.962,
+    "len": 1.332
+   },
+   "sfxKeys": [
+    "c1"
+   ]
   },
   {
    "idx": 1,
@@ -172,7 +178,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 2,
@@ -257,8 +264,14 @@
     "name": "impact",
     "at": 11.549,
     "volume": 0.617,
-    "event": 11.65
-   }
+    "event": 11.65,
+    "key": "s02",
+    "base": 11.549,
+    "len": 0.643
+   },
+   "sfxKeys": [
+    "s02"
+   ]
   },
   {
    "idx": 3,
@@ -360,7 +373,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 4,
@@ -423,8 +437,14 @@
     "name": "ding",
     "at": 24.823,
     "volume": 0.733,
-    "event": 24.8
+    "event": 24.8,
+    "key": "f1",
+    "base": 24.823,
+    "len": 0.865
    },
+   "sfxKeys": [
+    "f1"
+   ],
    "badgeBox": null
   },
   {
@@ -663,6 +683,7 @@
       "asStart": false
      }
     ],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -707,7 +728,27 @@
        "text": "打開設定",
        "n": 1,
        "carry": false,
-       "ready": 26
+       "ready": 26,
+       "tag": {
+        "side": "right",
+        "target": "marks[0]",
+        "anchor": [
+         455.12,
+         126.81
+        ],
+        "off": [
+         12,
+         0
+        ],
+        "box": [
+         467,
+         127,
+         745,
+         207
+        ],
+        "from": 25.5,
+        "to": 32.75
+       }
       },
       {
        "i": 1,
@@ -715,21 +756,32 @@
        "text": "按下儲存",
        "n": 2,
        "carry": false,
-       "ready": 32.95
+       "ready": 32.95,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "anchor": [
+         513.01,
+         191.86
+        ],
+        "off": [
+         0,
+         -92
+        ],
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ],
+        "from": 32.5,
+        "to": 39.47
+       }
       }
      ],
      "carry": false,
-     "capsule": {
-      "box": [
-       157,
-       40,
-       435,
-       120
-      ],
-      "side": "left",
-      "from": 25.5,
-      "to": 39.47
-     }
+     "capsule": null,
+     "from": 25.5
     },
     "callouts": [
      {
@@ -837,7 +889,17 @@
        "ready": 26,
        "n": 1,
        "text": "打開設定",
-       "carry": false
+       "carry": false,
+       "tag": {
+        "side": "right",
+        "target": "marks[0]",
+        "box": [
+         467,
+         127,
+         745,
+         207
+        ]
+       }
       },
       {
        "i": 1,
@@ -845,7 +907,17 @@
        "ready": 32.95,
        "n": 2,
        "text": "按下儲存",
-       "carry": false
+       "carry": false,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ]
+       }
       }
      ],
      "side": null,
@@ -876,15 +948,23 @@
      "name": "click",
      "at": 27.518,
      "volume": 0.42,
-     "event": 27.5
+     "event": 27.5,
+     "key": "m1:click",
+     "base": 27.518,
+     "len": 0.184
     }
    ],
    "sfx": null,
+   "sfxKeys": [
+    "m1",
+    "m1:click"
+   ],
    "sfxDropped": {
     "name": "success",
     "at": 25.396,
     "volume": 0.692,
-    "event": 25.5
+    "event": 25.5,
+    "key": "m1"
    },
    "badgeBox": null
   },
@@ -1040,6 +1120,7 @@
     "redact": [],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -1090,7 +1171,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [
@@ -1209,6 +1291,7 @@
     }
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": null
   },
   {
@@ -1290,14 +1373,20 @@
      "name": "click",
      "at": 51.018,
      "volume": 0.42,
-     "event": 51
+     "event": 51,
+     "key": "x1:click",
+     "base": 51.018,
+     "len": 0.184
     },
     {
      "name": "click",
      "at": 53.718,
      "volume": 0.42,
      "event": 53.7,
-     "beat": true
+     "beat": true,
+     "key": "x1:click:2",
+     "base": 53.718,
+     "len": 0.184
     },
     {
      "name": "ding",
@@ -1305,10 +1394,18 @@
      "volume": 0.73,
      "event": 57,
      "beat": true,
+     "key": "x1:ding",
+     "base": 57.023,
+     "len": 0.865,
      "src": "ding-2",
      "srcAt": 57.022,
      "srcVolume": 0.73
     }
+   ],
+   "sfxKeys": [
+    "x1:click",
+    "x1:click:2",
+    "x1:ding"
    ],
    "badgeBox": null
   },
@@ -1381,7 +1478,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 9,
@@ -1512,7 +1610,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 10,
@@ -1642,6 +1741,7 @@
     "sub": "先看問題"
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": null
   },
   {
@@ -1904,6 +2004,7 @@
     ],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -1915,7 +2016,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [],
@@ -2012,6 +2114,7 @@
     }
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": null
   },
   {
@@ -2099,8 +2202,14 @@
     "name": "sparkle",
     "at": 95.453,
     "volume": 0.575,
-    "event": 95.6
-   }
+    "event": 95.6,
+    "key": "s07",
+    "base": 95.453,
+    "len": 2.027
+   },
+   "sfxKeys": [
+    "s07"
+   ]
   },
   {
    "idx": 13,
@@ -2188,10 +2297,16 @@
     "at": 99.123,
     "volume": 0.733,
     "event": 99.1,
+    "key": "s08",
+    "base": 99.123,
+    "len": 0.865,
     "src": "ding-3",
     "srcAt": 99.124,
     "srcVolume": 0.733
-   }
+   },
+   "sfxKeys": [
+    "s08"
+   ]
   }
  ],
  "allItems": [
@@ -2284,8 +2399,14 @@
     "name": "chapter",
     "at": 4.962,
     "volume": 1,
-    "event": 4.95
-   }
+    "event": 4.95,
+    "key": "c1",
+    "base": 4.962,
+    "len": 1.332
+   },
+   "sfxKeys": [
+    "c1"
+   ]
   },
   {
    "idx": 1,
@@ -2367,7 +2488,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 2,
@@ -2452,8 +2574,14 @@
     "name": "impact",
     "at": 11.549,
     "volume": 0.617,
-    "event": 11.65
-   }
+    "event": 11.65,
+    "key": "s02",
+    "base": 11.549,
+    "len": 0.643
+   },
+   "sfxKeys": [
+    "s02"
+   ]
   },
   {
    "idx": 3,
@@ -2555,7 +2683,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 4,
@@ -2618,8 +2747,14 @@
     "name": "ding",
     "at": 24.823,
     "volume": 0.733,
-    "event": 24.8
+    "event": 24.8,
+    "key": "f1",
+    "base": 24.823,
+    "len": 0.865
    },
+   "sfxKeys": [
+    "f1"
+   ],
    "badgeBox": null
   },
   {
@@ -2858,6 +2993,7 @@
       "asStart": false
      }
     ],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -2902,7 +3038,27 @@
        "text": "打開設定",
        "n": 1,
        "carry": false,
-       "ready": 26
+       "ready": 26,
+       "tag": {
+        "side": "right",
+        "target": "marks[0]",
+        "anchor": [
+         455.12,
+         126.81
+        ],
+        "off": [
+         12,
+         0
+        ],
+        "box": [
+         467,
+         127,
+         745,
+         207
+        ],
+        "from": 25.5,
+        "to": 32.75
+       }
       },
       {
        "i": 1,
@@ -2910,21 +3066,32 @@
        "text": "按下儲存",
        "n": 2,
        "carry": false,
-       "ready": 32.95
+       "ready": 32.95,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "anchor": [
+         513.01,
+         191.86
+        ],
+        "off": [
+         0,
+         -92
+        ],
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ],
+        "from": 32.5,
+        "to": 39.47
+       }
       }
      ],
      "carry": false,
-     "capsule": {
-      "box": [
-       157,
-       40,
-       435,
-       120
-      ],
-      "side": "left",
-      "from": 25.5,
-      "to": 39.47
-     }
+     "capsule": null,
+     "from": 25.5
     },
     "callouts": [
      {
@@ -3032,7 +3199,17 @@
        "ready": 26,
        "n": 1,
        "text": "打開設定",
-       "carry": false
+       "carry": false,
+       "tag": {
+        "side": "right",
+        "target": "marks[0]",
+        "box": [
+         467,
+         127,
+         745,
+         207
+        ]
+       }
       },
       {
        "i": 1,
@@ -3040,7 +3217,17 @@
        "ready": 32.95,
        "n": 2,
        "text": "按下儲存",
-       "carry": false
+       "carry": false,
+       "tag": {
+        "side": "top",
+        "target": "callouts[0]",
+        "box": [
+         813,
+         178,
+         1091,
+         258
+        ]
+       }
       }
      ],
      "side": null,
@@ -3071,15 +3258,23 @@
      "name": "click",
      "at": 27.518,
      "volume": 0.42,
-     "event": 27.5
+     "event": 27.5,
+     "key": "m1:click",
+     "base": 27.518,
+     "len": 0.184
     }
    ],
    "sfx": null,
+   "sfxKeys": [
+    "m1",
+    "m1:click"
+   ],
    "sfxDropped": {
     "name": "success",
     "at": 25.396,
     "volume": 0.692,
-    "event": 25.5
+    "event": 25.5,
+    "key": "m1"
    },
    "badgeBox": null
   },
@@ -3235,6 +3430,7 @@
     "redact": [],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -3285,7 +3481,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [
@@ -3404,6 +3601,7 @@
     }
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": null
   },
   {
@@ -3485,14 +3683,20 @@
      "name": "click",
      "at": 51.018,
      "volume": 0.42,
-     "event": 51
+     "event": 51,
+     "key": "x1:click",
+     "base": 51.018,
+     "len": 0.184
     },
     {
      "name": "click",
      "at": 53.718,
      "volume": 0.42,
      "event": 53.7,
-     "beat": true
+     "beat": true,
+     "key": "x1:click:2",
+     "base": 53.718,
+     "len": 0.184
     },
     {
      "name": "ding",
@@ -3500,10 +3704,18 @@
      "volume": 0.73,
      "event": 57,
      "beat": true,
+     "key": "x1:ding",
+     "base": 57.023,
+     "len": 0.865,
      "src": "ding-2",
      "srcAt": 57.022,
      "srcVolume": 0.73
     }
+   ],
+   "sfxKeys": [
+    "x1:click",
+    "x1:click:2",
+    "x1:ding"
    ],
    "badgeBox": null
   },
@@ -3576,7 +3788,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 9,
@@ -3707,7 +3920,8 @@
     "name": "開始",
     "sub": "先看問題"
    },
-   "sfxExtra": []
+   "sfxExtra": [],
+   "sfxKeys": []
   },
   {
    "idx": 10,
@@ -3837,6 +4051,7 @@
     "sub": "先看問題"
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": null
   },
   {
@@ -4099,6 +4314,7 @@
     ],
     "start": null,
     "cams": [],
+    "open": null,
     "kb": false,
     "kbTo": {
      "z": 1.05,
@@ -4110,7 +4326,8 @@
     "steps": {
      "list": [],
      "carry": false,
-     "capsule": null
+     "capsule": null,
+     "from": null
     },
     "callouts": [],
     "spots": [],
@@ -4207,6 +4424,7 @@
     }
    },
    "sfxExtra": [],
+   "sfxKeys": [],
    "badgeBox": null
   },
   {
@@ -4294,8 +4512,14 @@
     "name": "sparkle",
     "at": 95.453,
     "volume": 0.575,
-    "event": 95.6
-   }
+    "event": 95.6,
+    "key": "s07",
+    "base": 95.453,
+    "len": 2.027
+   },
+   "sfxKeys": [
+    "s07"
+   ]
   },
   {
    "idx": 13,
@@ -4383,10 +4607,16 @@
     "at": 99.123,
     "volume": 0.733,
     "event": 99.1,
+    "key": "s08",
+    "base": 99.123,
+    "len": 0.865,
     "src": "ding-3",
     "srcAt": 99.124,
     "srcVolume": 0.733
-   }
+   },
+   "sfxKeys": [
+    "s08"
+   ]
   }
  ],
  "errors": [
