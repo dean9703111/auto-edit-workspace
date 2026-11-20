@@ -47,7 +47,7 @@ import { mediaFrame, SIDE } from './lib/media.mjs';
 import { frameForPlan } from './lib/screen-frame.mjs';
 import { cutsState, saveCuts } from './editor/server/cuts.mjs';
 import { storyboardState, saveStoryboard, storyboardImage } from './editor/server/storyboard.mjs';
-import { startExport, cancelExport, exportState, exportBusy, exportFile, prerenderState, revealFinal } from './editor/server/export.mjs';
+import { startExport, cancelExport, exportState, exportBusy, exportFile, prerenderState, revealFinal, playFinal } from './editor/server/export.mjs';
 import { speakerInfo, doSpeakerSave } from './editor/server/speaker.mjs';
 import { readSettings, writeSetting } from './lib/settings.mjs';
 import { CAP_DEFAULT, clampLift, sanitizeCaptionStyle } from './lib/caption-style.mjs';
@@ -1302,6 +1302,7 @@ async function handle(ctx, req, res) {
     }
     if (p === '/api/export/cancel') { const [s, o] = cancelExport(ctx); return sendJson(res, s, o); }
     if (p === '/api/export/reveal') { const [s, o] = revealFinal(ctx, ctx.exportDeps?.reveal ? { spawnFn: ctx.exportDeps.reveal } : {}); return sendJson(res, s, o); }
+    if (p === '/api/export/play') { const [s, o] = playFinal(ctx, ctx.exportDeps?.reveal ? { spawnFn: ctx.exportDeps.reveal } : {}); return sendJson(res, s, o); }
     if (p === '/api/speaker') { const [s, o] = doSpeakerSave(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/caption-default') { const [s, o] = doCaptionDefault(ctx, body); return sendJson(res, s, o); }
     if (p === '/api/hints') { const [s, o] = doHintSeen(ctx, body); return sendJson(res, s, o); }

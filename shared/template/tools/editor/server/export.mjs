@@ -89,14 +89,231 @@ export function prerenderState(ctx) {
   return { state: info.state, percent: info.percent ?? null, fresh: !plan || !info.startedAt || plan.mtimeMs <= info.startedAt + 1000 || prerenderCanPatch(ctx.P) };
 }
 
+// Windows：一次 PowerShell 做完「重用既有視窗 → 選起來 → 帶到前景」。
+// 不用 explorer.exe /select 的原因：每按一次會新開一個視窗（重複堆積），而且背景程序開的視窗拿不到前景權杖、使用者看不到。
+// 腳本用 COM 列舉檔案總管視窗（Shell.Application.Windows()）找同一個資料夾的視窗：留一個、關掉其餘的，再把檔案選起來；
+// 前景用 AttachThreadInput + ALT 授權（Windows 的前景視窗鎖）。腳本內容全英文：PowerShell 讀沒有 BOM 的 .ps1 會當成 ANSI，中文會壞掉。
+const REVEAL_PS1 = `param([string]$Path, [string]$Mode = 'reveal')
+# Mode=reveal: open the folder in Windows Explorer, reuse the window already on that folder (close the extra ones), select the file, bring it to the foreground.
+# Mode=play:   open the video with the default player and bring the player window to the foreground.
+$ErrorActionPreference = 'SilentlyContinue'
+$log = Join-Path (Split-Path -Parent $PSCommandPath) 'reveal.log'
+function Say($m) { try { Add-Content -LiteralPath $log -Value ((Get-Date -Format 'HH:mm:ss') + ' [' + $Mode + '] ' + $m) } catch {} }
+
+if (-not $Path) { Say 'no path'; exit 1 }
+if (-not (Test-Path -LiteralPath $Path)) { Say 'missing file'; exit 1 }
+$item = Get-Item -LiteralPath $Path
+$dir = $item.DirectoryName
+$dirKey = $dir.TrimEnd('\\').ToLower()
+
+Add-Type -TypeDefinition @"
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public class RevealNative {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int n);
+  [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint a, uint b, bool f);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr p);
+  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+  [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowTextW(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc cb, IntPtr l);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr h);
+  public delegate bool EnumProc(IntPtr h, IntPtr l);
+  // all visible top level windows (the player opens its own window)
+  public static IntPtr[] TopLevel() {
+    System.Collections.Generic.List<IntPtr> list = new System.Collections.Generic.List<IntPtr>();
+    EnumWindows(delegate(IntPtr h, IntPtr l) { if (IsWindowVisible(h)) list.Add(h); return true; }, IntPtr.Zero);
+    return list.ToArray();
+  }
+}
+"@
+
+# bring a window to the front (Windows locks the foreground for background processes)
+function Bring-Front($h) {
+  $fg = [RevealNative]::GetForegroundWindow()
+  $fgThread = [RevealNative]::GetWindowThreadProcessId($fg, [IntPtr]::Zero)
+  $myThread = [RevealNative]::GetCurrentThreadId()
+  $attached = $false
+  if ($fgThread -ne 0 -and $fgThread -ne $myThread) { [RevealNative]::AttachThreadInput($myThread, $fgThread, $true) | Out-Null; $attached = $true }
+  [RevealNative]::ShowWindow($h, 9) | Out-Null
+  [RevealNative]::BringWindowToTop($h) | Out-Null
+  $ok = [RevealNative]::SetForegroundWindow($h)
+  if (-not $ok) {
+    [RevealNative]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
+    [RevealNative]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+    [RevealNative]::SetWindowPos($h, [IntPtr](-1), 0, 0, 0, 0, 0x0003) | Out-Null
+    [RevealNative]::SetWindowPos($h, [IntPtr](-2), 0, 0, 0, 0, 0x0003) | Out-Null
+    $ok = [RevealNative]::SetForegroundWindow($h)
+  }
+  if ($attached) { [RevealNative]::AttachThreadInput($myThread, $fgThread, $false) | Out-Null }
+  return $ok
+}
+
+function Say-Foreground($h, $label) {
+  Start-Sleep -Milliseconds 300
+  $now = [RevealNative]::GetForegroundWindow()
+  $sb = New-Object System.Text.StringBuilder 512
+  [RevealNative]::GetWindowTextW($now, $sb, 512) | Out-Null
+  Say ($label + ' foreground: ' + $sb.ToString() + ' same=' + ($now -eq $h))
+}
+
+if ($Mode -eq 'play') {
+  # open with the default player, then find the window it opened and bring it to the front
+  $saved = 0
+  $savedFile = Join-Path (Split-Path -Parent $PSCommandPath) 'player-hwnd.txt'
+  try { $saved = [int64](Get-Content -LiteralPath $savedFile -Raw).Trim() } catch { $saved = 0 }
+  $before = @{}
+  foreach ($w in [RevealNative]::TopLevel()) { $before[[int64]$w] = $true }
+  $fgBefore = [RevealNative]::GetForegroundWindow()
+  Start-Process -FilePath $Path
+  Say 'player launched'
+  $target = 0
+  for ($i = 0; $i -lt 17; $i++) {
+    Start-Sleep -Milliseconds 300
+    foreach ($w in [RevealNative]::TopLevel()) {
+      if ($before.ContainsKey([int64]$w)) { continue }
+      if ($target -eq 0) { $target = $w }
+      $sb = New-Object System.Text.StringBuilder 512
+      [RevealNative]::GetWindowTextW($w, $sb, 512) | Out-Null
+      if ($sb.ToString() -like ('*' + $item.BaseName + '*')) { $target = $w; break }
+    }
+    if ($target -ne 0) { break }
+    # the player was already running: Windows raises the existing window, so the foreground changed
+    $fg = [RevealNative]::GetForegroundWindow()
+    if ($fg -ne $fgBefore -and -not $before.ContainsKey([int64]$fg)) { $target = $fg; break }
+  }
+  if ($target -eq 0 -and $saved -ne 0 -and [RevealNative]::IsWindow([IntPtr]$saved)) {
+    # the player is single instance: no new window, reuse the one from last time
+    $target = [IntPtr]$saved
+    Say 'reused the player window from last time'
+  }
+  if ($target -eq 0) { Say 'the player window was not found (the player was already open and Windows raised it)'; exit 0 }
+  $sb = New-Object System.Text.StringBuilder 512
+  [RevealNative]::GetWindowTextW($target, $sb, 512) | Out-Null
+  Say ('player window: ' + $sb.ToString())
+  $ok = Bring-Front $target
+  Say-Foreground $target 'player'
+  Say ('setfg=' + $ok)
+  try { Set-Content -LiteralPath $savedFile -Value ([int64]$target) -NoNewline } catch {}
+  exit 0
+}
+
+function Get-Matching($shell, $key) {
+  $res = @()
+  foreach ($w in @($shell.Windows())) {
+    try { $u = $w.LocationURL } catch { $u = $null }
+    if (-not $u) { continue }
+    if (-not $u.StartsWith('file:///')) { continue }
+    $p = $u.Substring(8)
+    try { $p = [uri]::UnescapeDataString($p) } catch {}
+    $p = $p.Replace('/', '\\').TrimEnd('\\').ToLower()
+    if ($p -eq $key) { $res += $w }
+  }
+  return $res
+}
+
+$shell = New-Object -ComObject Shell.Application
+$wins = @(Get-Matching $shell $dirKey)
+Say ('existing windows: ' + $wins.Count)
+if ($wins.Count -eq 0) {
+  Start-Process -FilePath 'explorer.exe' -ArgumentList ('/select,"{0}"' -f $Path)
+  Start-Sleep -Milliseconds 1500
+  $wins = @(Get-Matching $shell $dirKey)
+  Say ('windows after open: ' + $wins.Count)
+}
+if ($wins.Count -eq 0) { Say 'no window'; exit 2 }
+
+$keep = $wins[0]
+for ($i = 1; $i -lt $wins.Count; $i++) { try { $wins[$i].Quit() } catch {} }
+
+$selected = ''
+try {
+  $doc = $keep.Document
+  $fi = $doc.Folder.ParseName($item.Name)
+  if ($fi) { $doc.SelectItem($fi, 1) }
+  $sel = @($doc.SelectedItems())
+  if ($sel.Count -gt 0) { $selected = $sel[0].Path }
+} catch { $selected = 'ERR ' + $_.Exception.Message }
+Say ('selected: ' + $selected)
+
+try {
+  $h = [IntPtr]$keep.HWND
+  $ok = Bring-Front $h
+  Say-Foreground $h 'explorer'
+  Say ('setfg=' + $ok)
+} catch { Say ('fg ERR: ' + $_.Exception.Message) }
+exit 0
+`;
+
+// 開外部程式（播放／打開資料夾）：spawn 出去就不管了，結果寫在 work/hyperframes/.editor/reveal.log
+function spawnExternal(ctx, cmd, args, spawnFn) {
+  const note = (s) => {
+    try {
+      const file = path.join(ctx.editorDir, 'reveal.log');
+      const st = statOf(file);
+      if (st && st.size > 200 * 1024) fs.writeFileSync(file, `（太長，重來）\n`);
+      fs.appendFileSync(file, `${new Date().toISOString()} ${s}\n`);
+    } catch { /* 寫不進去就算了 */ }
+  };
+  note(`spawn ${cmd} ${args.join(' ')}`);
+  // Windows：伺服器是背景行程（沒有主控台），PowerShell 在這種情況下 stdio 用 ignore 或 detached 都會「啟動後立刻結束、什麼都沒做」；
+  // 改成 pipe 而且不 detached 才會真的執行腳本（mac／linux 維持原本的 detached）。
+  const win = process.platform === 'win32';
+  const child = spawnFn(cmd, args, win ? { stdio: ['ignore', 'pipe', 'pipe'], detached: false, windowsHide: true } : { stdio: 'ignore', detached: true, windowsHide: true });
+  child.on?.('error', (e) => note(`spawn error: ${e?.message || e}`));
+  child.stdout?.on?.('data', (d) => note(`stdout: ${String(d).trim().slice(0, 400)}`));
+  child.stderr?.on?.('data', (d) => note(`stderr: ${String(d).trim().slice(0, 400)}`));
+  child.on?.('exit', (code, sig) => { note(`exit code=${code} sig=${sig}`); child.stdout?.destroy?.(); child.stderr?.destroy?.(); });
+  child.unref?.();
+}
+
+// Windows 的 PowerShell 腳本（reveal.ps1）：Mode=reveal 打開資料夾並選起來、Mode=play 用預設播放器開影片
+function psScript(ctx) {
+  const ps = path.join(ctx.editorDir, 'reveal.ps1');
+  try {
+    fs.mkdirSync(ctx.editorDir, { recursive: true });
+    if (!statOf(ps) || fs.readFileSync(ps, 'utf8') !== REVEAL_PS1) fs.writeFileSync(ps, REVEAL_PS1);
+  } catch { return null; }
+  // 用絕對路徑叫 PowerShell：伺服器是背景程序，PATH 有時候沒有 System32
+  const psExe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  return { cmd: fs.existsSync(psExe) ? psExe : 'powershell.exe', args: ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ps] };
+}
+
 // 在 Finder／檔案總管打開完成影片所在的資料夾並選起來（只有本機頁面會呼叫，路徑固定是 output/final.mp4）
 export function revealFinal(ctx, { spawnFn = spawn } = {}) {
   const f = finalPath(ctx.P);
   if (!statOf(f)) return [404, { error: 'nofile', message: '還沒有完成影片' }];
-  const [cmd, args] = process.platform === 'darwin' ? ['open', ['-R', f]] : process.platform === 'win32' ? ['explorer', [`/select,${f}`]] : ['xdg-open', [path.dirname(f)]];
-  const child = spawnFn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true });
-  child.on?.('error', () => {});
-  child.unref?.();
+  let cmd, args;
+  if (process.platform === 'darwin') { cmd = 'open'; args = ['-R', f]; }
+  else if (process.platform === 'win32') {
+    const s = psScript(ctx);
+    if (s) { cmd = s.cmd; args = [...s.args, '-Path', f]; }
+    else { cmd = 'explorer'; args = [`/select,${f}`]; }   // 腳本寫不進去就退回舊做法（會新開視窗，但還看得到）
+  }
+  else { cmd = 'xdg-open'; args = [path.dirname(f)]; }
+  spawnExternal(ctx, cmd, args, spawnFn);
+  return [200, { ok: true, file: path.relative(ctx.P.project, f).split(path.sep).join('/') }];
+}
+
+// 用系統預設播放器開完成影片（不是開網頁分頁）：Windows 用預設程式（媒體播放器等）、mac 用 open、linux 用 xdg-open
+export function playFinal(ctx, { spawnFn = spawn } = {}) {
+  const f = finalPath(ctx.P);
+  if (!statOf(f)) return [404, { error: 'nofile', message: '還沒有完成影片' }];
+  let cmd, args;
+  if (process.platform === 'win32') {
+    const s = psScript(ctx);
+    if (s) { cmd = s.cmd; args = [...s.args, '-Mode', 'play', '-Path', f]; }
+    else { cmd = 'explorer'; args = [f]; }   // 退而求其次：讓檔案總管用預設程式開
+  }
+  else if (process.platform === 'darwin') { cmd = 'open'; args = [f]; }
+  else { cmd = 'xdg-open'; args = [f]; }
+  spawnExternal(ctx, cmd, args, spawnFn);
   return [200, { ok: true, file: path.relative(ctx.P.project, f).split(path.sep).join('/') }];
 }
 

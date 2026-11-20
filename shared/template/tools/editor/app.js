@@ -1934,7 +1934,7 @@ function renderModeNote() {
     const live = player.live;
     html = liveApplied() ? '已即時套用；輸出時會一起做進去'
       : pv?.stale || isDirty() ? `<span class="warn-ink">有新修改</span>，按「更新預覽」才看得到${live && !live.on ? `（不能即時套用：${esc(live.why)}）` : ''}${esc(lastBuildText())}`
-        : fin?.exists && !fin.stale ? `已輸出過：<a href="${esc(fin.url)}" target="_blank" rel="noopener">播放完成影片</a>` : '';
+        : fin?.exists && !fin.stale ? `已輸出過：<a href="#" data-play-final="1">播放完成影片</a>` : '';
   } else {
     html = !avail ? '<span class="mute">找不到播放器，只能用快速試聽</span>'
       : !built ? `按「更新預覽」做一次，就看得到字卡和動畫${esc(lastBuildText())}` : '這裡沒有字卡和動畫，看完整畫面請切到完成影片預覽';
@@ -3632,10 +3632,15 @@ $('#exportClose').addEventListener('click', () => $('#dlgExport').close());
 $('#dlgExport').addEventListener('close', () => { app.exportSetup = false; });
 $('#exportStart').addEventListener('click', () => beginExport());
 for (const el of document.querySelectorAll('#exportSetup input')) el.addEventListener('change', () => renderExport({ steps: [], running: false }));
-$('#exportVideo').addEventListener('click', () => { if (app.finalLinks?.video) window.open(app.finalLinks.video, '_blank', 'noopener'); });
+// 播放完成影片：用系統預設播放器開那支 mp4（不開網頁分頁；彈出式分頁會 ERR_FAILED）
+async function playFinalVideo() {
+  const r = await api('POST', '/api/export/play', {});
+  if (!r.ok) toast(r.data?.message || '打不開影片', 'err', 5000);
+}
+$('#exportVideo').addEventListener('click', playFinalVideo);
 $('#exportSheet').addEventListener('click', () => { if (app.finalLinks?.sheet) window.open(app.finalLinks.sheet, '_blank', 'noopener'); });
 $('#exportLearn').addEventListener('click', () => learnCopy());
-$('#modeNote').addEventListener('click', (e) => { if (e.target.closest('[data-learn]')) learnCopy(); });
+$('#modeNote').addEventListener('click', (e) => { if (e.target.closest('[data-learn]')) { learnCopy(); return; } if (e.target.closest('[data-play-final]')) { e.preventDefault(); playFinalVideo(); } });
 for (const sel of ['#logIssues', '#exportIssues']) $(sel).addEventListener('click', (e) => {
   const dlg = e.target.closest('dialog');
   if (e.target.closest('[data-chk-copy]')) { copyIssues(); return; }

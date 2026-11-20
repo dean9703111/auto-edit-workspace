@@ -48,6 +48,8 @@ node shared/template/tools/versions.mjs finish --project projects/<專案>
 完成判準：`finish` 印停點 ④ 那兩行；要看的那張圖看過；流程 F 修改單每一段在 r<N>.md「改了哪幾段」都有一列 `- <段 id>：<做了什麼或沒做的理由>`。
 常見錯誤：「規則」類的回饋（「以後金句都放左邊」）去改了 `shared/` → 只記在 r<N>.md 的「建議改規則」；使用者沒說怎麼改、只說要更好 → 改走流程 D；不知道怎麼歸類 → `references/feedback-round.md`。
 
+**換模板時的兩個坑（流程 B／D 都要先想）**：① 換模板會換版面——`fs-flow`（04a–04d）和 custom 情境動畫都是子母畫面，換完要對一次版面節奏：子母畫面一次連續要 ≥ 45 秒（`build.mjs --check --json` 每段的 `layoutZh`＝子母畫面），湊不到就把前後相鄰的段也換成同一個版面，或把這段改成疊在講者上的字卡；湊不出來就寫進回報讓使用者選，不要自己砍。② `slots` 的文字第一次就要綁到講者真的說過的那句（`#N@詞`）：fs-flow 的 `title`、每個節點的 `at` 都是；綁錯會是 ✖「文字對時」，會讓整輪 `finish` 失敗。改完照 `--autofix --only <段>` 讓工具先修，剩下的再手改。
+
 **C. 剪輯台 → 停點 ⑤**（EDITOR.md「一、給 AI」；剪輯台會改哪些欄位看其中「3. 剪輯台會寫哪些欄位」）
 
 ```
@@ -110,6 +112,7 @@ node shared/template/tools/versions.mjs site --project projects/<專案>
 ## 自我核對
 
 - [ ] 拼圖一次看完，有 FAIL 的修好了
+- [ ] 換過模板的段：版面節奏（子母畫面 ≥ 45 秒）與文字對時都過了（`finish` 0 個 ✖ 才算過）
 
 ## 退路表
 
