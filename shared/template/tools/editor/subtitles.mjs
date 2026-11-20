@@ -251,6 +251,23 @@ function remapKwRef(ref, op, cues, idx) {
   return keep(idx > k ? idx - 1 : idx);
 }
 
+// 074：只改字把詞搬到隔壁句（「…要你點頭」｜「它才往下做」→「…」｜「都要你點頭它才往下做」）時，"#N@詞" 跟著詞走：
+// 第 N 句（這串操作做完之後）已經沒有這個詞、而前一句或後一句只有一句有，就改綁那一句。兩句都有、都沒有就不動（build 會報 ✖）
+const hasKw = (c, r) => !!c && !!(findKw(c.text, r.kwFull) || (r.kw !== r.kwFull && findKw(c.text, r.kw)));
+export function followKw(ref, cues) {
+  if (!ref || ref.kw == null) return ref;
+  const k = cues.findIndex((c) => c.n === ref.n);
+  if (k < 0 || hasKw(cues[k], ref)) return ref;
+  const near = [cues[k - 1], cues[k + 1]].filter((c) => hasKw(c, ref));
+  return near.length === 1 ? { ...ref, n: near[0].n } : ref;
+}
+// 這一步有沒有可能讓詞換句：增刪字幕，或改了某一句的字
+export const movesWords = (op) => isObj(op) && (STRUCT.has(op.op) || (op.op === 'set' && op.text !== undefined));
+// 每做一步字幕操作就跟一次（頁面 doSrtOp／setCue、replay、beat-remap.mjs opsMapper 同一個時機，頁面算的和存檔算的才一樣）。cues＝這一步之後的字幕
+export function followPlanKw(plan, op, cues) {
+  return movesWords(op) ? mapPlanTimes(plan, (r) => followKw(r, cues)) : plan;
+}
+
 const TIME_KEYS = new Set(['from', 'to', 'at', 'until']);
 const SKIP_KEYS = new Set(['vars', 'note', 'anchor', 'css', 'src', 'label', 'id', 'type', 'scene', 'fx', 'layout', 'sfx']);
 const ATTRS_TAIL = /\s*[｜|]\s*((?:[\w.-]+=(?:"[^"]*"|\S+)\s*)+)$/;
@@ -426,6 +443,7 @@ export function replay(cues0, plan0, ops, { videoDur = null } = {}) {
     if (r.error) { errors.push(ops.length > 1 ? `第 ${j + 1} 個字幕操作：${r.error}` : r.error); break; }
     let next = plan;
     if (STRUCT.has(op.op)) { structural = true; next = remapPlan(plan, op, cues); }
+    next = followPlanKw(next, op, r.cues);   // 074：詞被改字搬到隔壁句就跟過去
     const fx = fixAnchors(plan, next, cues, r.cues);
     fx.changed.forEach((id) => anchors.add(id));
     plan = fx.plan;

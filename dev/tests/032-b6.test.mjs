@@ -404,7 +404,8 @@ test('步驟 5：剪輯台把 #63 分成兩句 → plan.json、鏡位腳本、�
   fs.writeFileSync(P.srt, s.srtText);
   const lib = B.loadLib(P.templateDir, P.project);
   const r = W.remapScriptsAfterSave(P, { planBefore: planText, srtTextBefore: srtText, ops, lib });
-  assert.deepEqual(r, { scripts: ['work/designs/x0113.md'], anims: [`work/hyperframes/${animRel}`] });
+  assert.deepEqual({ scripts: r.scripts, anims: r.anims }, { scripts: ['work/designs/x0113.md'], anims: [`work/hyperframes/${animRel}`] });
+  assert.deepEqual(r.changes.map((c) => c.file).sort(), [f, anim].sort(), '074：改之前、之後的內容記著（剪輯台復原時換回去）');
   assert.deepEqual([segOf(planOf(P), 'x0113').from, segOf(planOf(P), 'x0113').to], ['#62+1.3', '#71e']);
   assert.match(read(f), /\| 1 \| `#65@下載`＋0\.2 \|/);
   assert.match(read(anim), /P\.at\('#65@下載', 0\.2\)/);

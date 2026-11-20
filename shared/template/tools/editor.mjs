@@ -913,8 +913,9 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
     throw e;
   }
   // B6：拆句、併句這類結構改動，拍點正本在 work/designs/<段>.md 的段（內容設計段、手改的模板段），鏡位腳本「講到」和動畫檔的 P.at 跟著換句號（各自先備份 .align-*）
+  let scriptChanges = [];
   if (wantSrt && r.srtText != null) {
-    try { remapScriptsAfterSave(P, { planBefore: text, srtTextBefore: srt.text, ops: body.srt.ops, videoDur }); } catch (e) { console.error(`⚠ 鏡位腳本、動畫檔的句號沒有跟著換（${e.message}）→ 跑 build.mjs --project ${posix(path.relative(P.root, P.project))} --review 看哪幾段要改`); }
+    try { scriptChanges = remapScriptsAfterSave(P, { planBefore: text, srtTextBefore: srt.text, ops: body.srt.ops, videoDur }).changes || []; } catch (e) { console.error(`⚠ 鏡位腳本、動畫檔的句號沒有跟著換（${e.message}）→ 跑 build.mjs --project ${posix(path.relative(P.root, P.project))} --review 看哪幾段要改`); }
   }
   if (JSON.stringify(r.memory || {}) !== JSON.stringify(memory)) {
     try { fs.mkdirSync(ctx.editorDir, { recursive: true }); fs.writeFileSync(ctx.memoryFile, JSON.stringify({ sfx: r.memory || {} }, null, 2) + '\n'); } catch { /* 記不住只影響「還原音效」 */ }
@@ -922,7 +923,12 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   const nst = statOf(P.plan), nsrt = readSrt(P.srt);
   // 自動存檔之後還要能復原：存檔前後的檔案都記著（/api/restore）
   if (st) rememberVersion(ctx, hash, srt.hash, text, srt.text);
-  if (nst) { const after = fs.readFileSync(P.plan, 'utf8'); rememberVersion(ctx, sha(after), nsrt.hash, after, nsrt.text); }
+  if (nst) {
+    const after = fs.readFileSync(P.plan, 'utf8');
+    rememberVersion(ctx, sha(after), nsrt.hash, after, nsrt.text);
+    // 074：這次存檔順便改了鏡位腳本、動畫檔的句號：記下來，復原／重做回到這兩個版本時跟著換回去
+    if (scriptChanges.length && st) rememberScriptStep(ctx, versionKey(hash, srt.hash), versionKey(sha(after), nsrt.hash), scriptChanges);
+  }
   if (frameOnly) {
     const hash = nst ? sha(fs.readFileSync(P.plan, 'utf8')) : null;
     if (frameOrigin) ctx.frameSession = { hash, origin: frameOrigin };
@@ -998,6 +1004,58 @@ function rememberVersion(ctx, planHash, srtHash, plan, srt) {
     V.delete(k);
   }
 }
+// 074：存檔時順便重對過句號的鏡位腳本、動畫檔（work/designs/<段>.md、x-design-*.html）。plan.json、rough.srt 復原時，這些檔也要跟著回去，
+// 不然「分割 → 復原 → 再分割」動畫檔的句號會多加一次。一步＝{ from, to, files: [{ file, before, after }] }（from／to 是 versionKey）
+const SCRIPT_STEPS_MAX = 200;
+function rememberScriptStep(ctx, from, to, files) {
+  if (from === to) return;
+  const S = (ctx.scriptSteps ??= []);
+  S.push({ from, to, files: files.map(({ file, before, after }) => ({ file, before, after })) });
+  if (S.length > SCRIPT_STEPS_MAX) S.splice(0, S.length - SCRIPT_STEPS_MAX);
+}
+// 從 cur 到 target 要經過哪幾步（往回走用 before、往前走用 after）；找不到回 []
+function scriptPath(ctx, cur, target) {
+  const S = ctx.scriptSteps || [];
+  if (!S.length || cur === target) return [];
+  const prev = new Map([[cur, null]]), queue = [cur];
+  while (queue.length) {
+    const k = queue.shift();
+    if (k === target) break;
+    for (const s of S) {
+      for (const [a, b, back] of [[s.from, s.to, false], [s.to, s.from, true]]) {
+        if (a !== k || prev.has(b)) continue;
+        prev.set(b, { from: k, step: s, back });
+        queue.push(b);
+      }
+    }
+  }
+  if (!prev.has(target)) return [];
+  const path = [];
+  for (let k = target; prev.get(k); k = prev.get(k).from) path.unshift(prev.get(k));
+  return path;
+}
+// 照 scriptPath 換檔：檔案現在的內容要和那一步預期的一樣才換（AI 或別人之後又改過就不動，回報出來）
+function restoreScripts(ctx, cur, target) {
+  const restored = [], skipped = [];
+  for (const { step, back } of scriptPath(ctx, cur, target)) {
+    for (const f of step.files) {
+      const want = back ? f.after : f.before, put = back ? f.before : f.after;
+      let now = null;
+      try { now = fs.readFileSync(f.file, 'utf8'); } catch { now = null; }
+      const rel = posix(path.relative(ctx.P.project, f.file));
+      if (now !== want) { if (!skipped.includes(rel)) skipped.push(rel); continue; }
+      try { writeAtomicFile(f.file, put); if (!restored.includes(rel)) restored.push(rel); } catch { if (!skipped.includes(rel)) skipped.push(rel); }
+    }
+  }
+  if (skipped.length) console.error(`⚠ 復原時這些檔的句號沒有跟著換回去（存檔之後被改過）：${skipped.join('、')} → 跑 build.mjs --project ${posix(path.relative(ctx.P.root, ctx.P.project))} --check 看哪幾段要改`);
+  return { restored, skipped };
+}
+function writeAtomicFile(file, text) {
+  const tmp = `${file}.editor-${process.pid}.tmp`;
+  fs.writeFileSync(tmp, text);
+  fs.renameSync(tmp, file);
+}
+
 // 把檔案換回存過的版本：現在的檔案要和頁面認知的一樣（base），不然就是有人（AI）改過，不能蓋掉
 export function doRestore(ctx, body) {
   const P = ctx.P, base = isObj(body?.base) ? body.base : {}, to = isObj(body?.to) ? body.to : {};
@@ -1023,12 +1081,13 @@ export function doRestore(ctx, body) {
     for (const [tmp] of tmps) try { fs.unlinkSync(tmp); } catch { /* 已經不在 */ }
     throw e;
   }
+  const scripts = restoreScripts(ctx, versionKey(hash, srt.hash), versionKey(to.hash, to.srtHash));   // 074
   ctx.report = null;
   const nst = statOf(P.plan), nsrt = readSrt(P.srt);
   let plan;
   try { plan = JSON.parse(v.plan); } catch { plan = readPlan(P.plan).data; }
   return [200, { ok: true, look: lookState(ctx, plan), plan: { mtime: nst.mtimeMs, hash: sha(v.plan), data: plan }, srt: { mtime: nsrt.mtime, hash: nsrt.hash, eol: nsrt.eol }, captions: nsrt.cues, edit: plan.edit ?? null, sfxMemory: readMemory(ctx),
-    preview: builtInfo(ctx, readPlan(P.plan)) }];
+    scripts, preview: builtInfo(ctx, readPlan(P.plan)) }];
 }
 
 async function doLoudness(ctx, body) {
