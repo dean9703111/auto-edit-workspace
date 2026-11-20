@@ -3,12 +3,26 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { lib, imp, makeSrt, cueStart, cueEnd } from './helpers.mjs';
 
-const { resolveScene, sampleSeg, visibleLen, fullScene, mapScene, loadFx } = await imp('lib/scenes.mjs');
+const { resolveScene, sampleSeg, visibleLen, fullScene, mapScene, chapterMapCtx, loadFx } = await imp('lib/scenes.mjs');
 const { assembleScene, sceneParts, prefixIds, scopeCss, verifyHash } = await imp('lib/assemble.mjs');
 const { parseSrt } = await imp('lib/srt.mjs');
 const { parseTime } = await imp('lib/time.mjs');
 const L = await lib();
 const scene = (k) => L.scenes.find((s) => s.key === k);
+
+test('短章節用實際秒數縮放所有動作，正常章節維持原時間軸', () => {
+  const ch = scene('chapter'), seg = { ...sampleSeg(ch), id: 'c1' };
+  for (const variant of [ch, mapScene(ch)]) {
+    const r = resolveScene({ scene: variant, seg, cues: [], icons: L.icons, consts: L.consts, t0: 0, D: 1.8 });
+    if (variant.mapOf) Object.assign(r.ctx, chapterMapCtx([{ num: '01', title: '開始' }, { num: '02', title: '結語' }, { num: '03', title: '結束' }], 1));
+    const base = assembleScene({ scene: variant, ctx: r.ctx, beats: r.beats, id: 'c1', D: 2.5 }).html;
+    assert.doesNotMatch(base, /child\.startTime/);
+    const short = assembleScene({ scene: variant, ctx: { ...r.ctx, chapterTimeScale: 0.72 }, beats: r.beats, id: 'c1', D: 1.8 }).html;
+    assert.match(short, /child\.startTime\(child\.startTime\(\) \* 0\.72\)/);
+    assert.match(short, /child\.duration\(child\.duration\(\) \* 0\.72\)/);
+    assert.ok(short.indexOf('child.duration') < short.indexOf('P.end(D)'));
+  }
+});
 
 test('素材包有 18 個情境', () => {
   assert.equal(L.scenes.length, 18);
