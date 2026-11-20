@@ -6,7 +6,7 @@ import {
   adjOf, setAdj, sfxSpan, SFX_MIN,
   bedLane, bedHasMusic, bedLiveDb, BED_VOL, bedMutedAt,
 } from './model.mjs';
-import { applyCueOp, remapPlan, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
+import { applyCueOp, remapPlan, followPlanKw, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
 import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef, toggleEmph } from './text.mjs';
 import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
 import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate, freezeAt, joinAt, isPlain, trimModel } from './speed.mjs';
@@ -521,7 +521,7 @@ function doSrtOp(op, { quiet = false } = {}) {
   if (r.error) { toast(r.error, 'err', 5000); return false; }
   return mutate(() => {
     const before = { scenes: app.scenes };
-    const after = remapPlan(before, op, app.cues);
+    const after = followPlanKw(remapPlan(before, op, app.cues), op, r.cues);   // 074：詞被改字搬到隔壁句就跟過去
     const fx = fixAnchors(before, after, app.cues, r.cues);
     app.scenes = fx.plan.scenes;
     app.marks = remapMarks(app.marks, op, app.cues);   // 038 重點字幕跟著句號走（分割兩半都是、合併任一句是就是、刪除拿掉）
@@ -617,7 +617,7 @@ function setCue(n, patch, { coalesce = null } = {}) {
   if (r.error) { toast(r.error, 'err', 4000); return false; }
   return mutate(() => {
     const before = { scenes: app.scenes };
-    const fx = fixAnchors(before, before, app.cues, r.cues);
+    const fx = fixAnchors(before, followPlanKw(before, op, r.cues), app.cues, r.cues);
     app.scenes = fx.plan.scenes;
     app.cues = r.cues;
     pushSrtOp(op);
@@ -3587,7 +3587,7 @@ function replaceAll() {
       const r = applyCueOp(app.cues, op, { videoDur: app.dur });
       if (r.error) continue;
       const before = { scenes: app.scenes };
-      app.scenes = fixAnchors(before, before, app.cues, r.cues).plan.scenes;
+      app.scenes = fixAnchors(before, followPlanKw(before, op, r.cues), app.cues, r.cues).plan.scenes;
       app.cues = r.cues;
       app.srtOps.push(op);
     }

@@ -79,7 +79,9 @@ const HANDOFF = 0.4;       // 下方字卡換卡：前一張延到後一張起�
 const SFX_GAP = SFX_RULES.gapSec;          // 主音效之間的間隔（additive 的不算，005 的 contracts/sfx.md §4）
 const EXTRA_GAP = SFX_RULES.extraGapSec;   // 同一段內兩個音效起點的最小間隔（附加音效太近就丟掉後者）
 const CH_CENTER = 2.8;     // 章節前空檔 ≥ 2.8 秒就置中（2.5＋前後各 0.15）
-const CH_MIN = 2.0;        // 空檔 < 2 秒：章節會壓到人聲（⚠）
+const CH_MIN = 2.0;        // 舊版不足空檔的警告門檻；可讀的短空檔先走自動縮時
+const CH_SHORT_MIN = 1.5;  // 可讀的短章節：至少 1.5 秒空檔，前後各留 0.05 秒
+const CH_SHORT_PAD = 0.05;
 const CH_BRIDGE = 1.0;     // 章節和前後不透明幕相隔 ≤ 1 秒就墊底（不露出講者）
 const UNCOVERED_MIN = 1.0; // 沒有畫面的區間 > 1 秒才報
 const SWEEP_MIN = 1.0;     // 章節擦過：章節起點在片頭 1 秒後才掃（013）
@@ -758,7 +760,7 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
         if (!c) err(`at：字幕沒有第 ${t.n} 句`);
         else {
           const prev = [...cues].filter((x) => x.start < c.start).sort((a, b) => b.end - a.end)[0];
-          // 空檔 ≥ 2.8 s 置中；2.0–2.8 s 結尾貼齊 #N；< 2 s 從 #N 起點蓋（壓人聲 ⚠，回剪乾淨留 3 秒停頓）
+          // ≥ 2.8 s 置中；1.5–2.5 s 縮時且不壓人聲；2.5–2.8 s 貼齊；更短保留警告。
           const base = prev ? prev.end : 0;
           const gap = r3(c.start - base), g2 = gap.toFixed(2);
           let placement;
@@ -766,6 +768,11 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
             placement = 'centered';
             it.start = r3(base + (gap - fixed) / 2);
             it.chapterNote = `放在 #${t.n} 前的空檔（${g2}s），前後各留 ${((gap - fixed) / 2).toFixed(2)}s`;
+          } else if (gap >= CH_SHORT_MIN - 1e-6 && gap < fixed - 1e-6) {
+            placement = 'shortened';
+            it.D = r3(gap - 2 * CH_SHORT_PAD);
+            it.start = r3(base + CH_SHORT_PAD);
+            it.chapterNote = `放在 #${t.n} 前的空檔（${g2}s），章節自動縮短為 ${it.D.toFixed(2)}s，前後各留 ${CH_SHORT_PAD.toFixed(2)}s（不壓人聲）`;
           } else if (gap >= CH_MIN - 1e-6) {
             placement = 'flush';
             it.start = r3(Math.max(0, c.start - fixed));
@@ -776,7 +783,7 @@ function resolveSegment(seg, idx, { ids, customSrc, fxCount, scenes, fx, accent,
             it.chapterNote = `空檔 ${g2}s < 2s，從 #${t.n} 起點開始蓋 ${fixed}s`;
             warn(`#${t.n} 前的空檔只有 ${g2}s（< 2s），章節 ${fixed}s 會壓到 #${t.n} 的人聲 → 回剪乾淨保留 3 秒停頓：cuts.md 的章節空檔表加這一章，再跑 node shared/template/tools/media.mjs ng-snap --project ${projectRel}，照它印的指令重剪`);
           }
-          it.chInfo = { cue: t.n, gap, placement };
+          it.chInfo = { cue: t.n, gap, placement, duration: it.D };
         }
       }
     } else if (seg.from != null) it.start = abs(seg.from, 'from');
@@ -936,7 +943,7 @@ function opaqueSeams({ timed }) {
       }
     }
     const b = timed.filter((x) => x !== ch && x.opaque && x.start >= chEnd - 0.1 && x.start - chEnd <= CH_BRIDGE + 1e-6).sort((p, q) => p.start - q.start)[0];
-    if (b) {
+    if (b && ch.chInfo?.placement !== 'shortened') {
       ch.end = r3(b.start + FADE); ch.holdFor = b.id; ch.fadeOut = false; ch.exitFade = false;
       ch.notes.push(`墊在 ${b.id} 下面 ${FADE.toFixed(2)}s（不淡出）`);
     }
@@ -945,7 +952,8 @@ function opaqueSeams({ timed }) {
     if (!a.opaque) continue;
     const b = timed.find((x) => x !== a && x.opaque && x.start > a.start && x.start <= a.end + 0.1);
     if (!b || a.holdFor === b.id) continue;
-    a.fadeOut = false; b.fadeIn = false;
+    a.fadeOut = false;
+    if (!(b.key === 'chapter' && b.chInfo?.placement === 'shortened')) b.fadeIn = false;
     if (b.start > a.end) a.end = b.start;
     // 後面的素材用 slide／zoom／whip／tape／tilt 進場：前一段要墊在底下直到進場完成，不然中間會露出講者；
     //   小視窗在接縫交棒（不然墊底那 0.3–0.65 秒會同時有兩個小視窗）
@@ -1202,7 +1210,8 @@ function segmentContent({ timed, cues, icons, consts, chapters, badgeOn, tm, C, 
     if (it.type === 'scene') {
       const sc = it.scene;
       if (sc.duration?.min && sc.bindsSrt !== false && it.D < sc.duration.min - 1e-6) it.errors.push(`${it.where} 段長 ${it.D}s，「${sc.zh}」至少 ${sc.duration.min}s → to 往後延到至少 ${fmt(it.start + sc.duration.min)}（${r3(it.start + sc.duration.min)}s）或換情境`);
-      const r = resolveScene({ scene: sc, seg: it.seg, cues, icons, consts, t0: it.start, D: it.D, where: it.where });
+      const r = resolveScene({ scene: sc, seg: it.seg, cues, icons, consts, t0: it.start, D: it.chInfo?.placement === 'shortened' ? sc.duration.fixed : it.D, where: it.where });
+      if (it.chInfo?.placement === 'shortened') r.ctx.chapterTimeScale = it.chInfo.duration / (sc.duration?.fixed ?? 2.5);
       if (it.mapCtx) Object.assign(r.ctx, it.mapCtx);   // 036 本集地圖：各站、路線、鏡頭
       it.resolved = r;
       it.errors.push(...r.errors);
@@ -1290,6 +1299,11 @@ function segmentSfx({ timed, sfxConf, sfxDir, cues, videoDur }) {
       const c = sceneSfxCues({ scene: it.scene, resolved: it.resolved, D: it.D, tone: it.resolved?.tone ?? null, override: obj ? undefined : segName, extraOn: seg.sfxExtra !== false, sfxConf });
       it.errors.push(...c.errors.map((m) => `${it.where} ${m}`));
       main = c.main; extra = c.extra;
+      if (it.resolved?.ctx.chapterTimeScale < 1) {
+        const scale = it.resolved.ctx.chapterTimeScale;
+        if (main) main = { ...main, rel: r3(main.rel * scale) };
+        extra = extra.map((s) => ({ ...s, rel: r3(s.rel * scale) }));
+      }
       if (obj && segName && sfxConf[segName]) { const ev = evOf(seg.sfx.at, 'sfx.at'); main = ev != null ? { name: segName, rel: r3(ev - it.start) } : null; }
       else if (obj && segName === null) main = null;
     } else {
@@ -1862,7 +1876,7 @@ function chapterSpans({ timed, cues }) {
   const chapterList = [];
   const blackout = [];
   for (const ch of timed.filter((x) => x.key === 'chapter')) {
-    const len = ch.scene.duration?.fixed ?? ch.scene.duration?.default ?? 2.5;
+    const len = ch.chInfo?.duration ?? ch.scene.duration?.fixed ?? ch.scene.duration?.default ?? 2.5;
     const bs = ch.start, be = r3(ch.start + len);
     blackout.push([bs, be]);
     const clipped = [], words = [];

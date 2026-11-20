@@ -397,7 +397,7 @@ export function renderSnippets(input) {
   L.push('JSON 是最少要寫的欄位；`<…>` 換成內容，`#N@詞` 換成講到那個詞的句號和字幕原文裡的 2–4 個字。', '');
   for (const s of scenes) {
     const d = s.duration || {};
-    L.push(`**${s.num} ${s.key}**（${s.zh}，${FAMILY_LAYOUT[s.family] ?? '疊加'}，${d.fixed != null ? `固定 ${d.fixed} 秒` : `最短 ${d.min} 秒`}）${s.when ? `：${s.when}` : ''}`, '');
+    L.push(`**${s.num} ${s.key}**（${s.zh}，${FAMILY_LAYOUT[s.family] ?? '疊加'}，${s.key === 'chapter' ? `預設 ${d.fixed} 秒，空檔 1.5–2.5 秒自動縮時` : d.fixed != null ? `固定 ${d.fixed} 秒` : `最短 ${d.min} 秒`}）${s.when ? `：${s.when}` : ''}`, '');
     L.push('```json', sceneSnippet(s), '```');
     if (s.summary) L.push(`全部欄位（寫在 slots）：${s.summary}`);
     if (s.tone) L.push('語氣寫在段的第一層（和 slots 同層，不是 slots 裡）：`"tone": "warn"`、`"tone": "good"`');

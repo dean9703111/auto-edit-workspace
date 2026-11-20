@@ -171,6 +171,10 @@ export function sceneParts({ scene, ctx, beats, id, D, tone, exitFade = true, ch
   body = portrait ? body.replace(/\sdata-layout="[^"]*"(\s[^>]*?)?\sdata-layout-portrait="([^"]*)"/g, (m, mid = '', v) => ` data-layout="${v}"${mid}`)
     : body.replace(/\sdata-layout-portrait="[^"]*"/g, '');
   let timeline = render(scene.template.timeline, view);
+  // 章節空檔不足時，把既有動作等比例提早、加速；不用 timeScale，確保逐格 seek 也使用實際秒數。
+  if (scene.key === 'chapter' && ctx.chapterTimeScale > 0 && ctx.chapterTimeScale < 1) {
+    timeline += `tl.getChildren(false, true, true).forEach(function (child) {\n  child.startTime(child.startTime() * ${num(ctx.chapterTimeScale)});\n  child.duration(child.duration() * ${num(ctx.chapterTimeScale)});\n});\n`;
+  }
   if (chtag && chapter) {
     const p = chtagParts(chapter, scene.family === 'fullscreen', portrait);
     style += p.style; body += p.body; timeline += p.timeline;

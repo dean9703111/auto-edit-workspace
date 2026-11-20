@@ -141,6 +141,33 @@ test('章節轉場：空檔 3 s 置中 4.25；2.5 s 貼齊；0.5 s 從該句起�
   assert.match(formatReport(c), /字幕避開章節：#3 整句不顯示/);
 });
 
+test('短章節自動放進停頓：動畫與音效縮時、不裁字幕、接全幕也不延到人聲裡', () => {
+  for (const gap of [1.5, 1.9, 2, 2.49]) for (const next of [false, true]) {
+    const at = 4 + gap;
+    const gapCues = [{ n: 1, start: 1, end: 4, text: '上一章' }, { n: 2, start: at, end: 10, text: '新章第一句' }, { n: 3, start: 15, end: 18, text: '下一句' }];
+    const scenes = [
+      { id: 'prev', scene: 'fs-list', from: '#1', to: '#2', slots: { title: '上章', items: ['一', '二', '三'] } },
+      { id: 'c1', scene: 'chapter', at: '#2', slots: { num: '01', title: '開始', sub: '說明下一章' } },
+    ];
+    if (next) scenes.push({ id: 's1', scene: 'fs-list', from: '#2', to: '#3', slots: { title: '重點', items: ['一', '二', '三'] } });
+    const res = resolvePlan({ plan: { version: 1, scenes }, cues: gapCues, videoDur: 20, lib: L, outDir: os.tmpdir() });
+    const ch = byId(res, 'c1'), span = res.chapters[0];
+    assert.deepEqual(res.errors, []);
+    assert.equal(span.placement, 'shortened');
+    assert.equal(span.start, 4.05);
+    assert.equal(span.end, r3(at - 0.05));
+    assert.ok(ch.end <= at, `章節墊底不得延到 ${at} 秒以後：${ch.end}`);
+    assert.equal(ch.fadeIn, true, '章節進場保留斜擦，不能被前一張全幕卡改成硬切');
+    assert.deepEqual(span.captionsClipped, []);
+    assert.deepEqual(res.blackout, [[span.start, span.end]]);
+    const scale = r3(gap - 0.1) / 2.5;
+    assert.equal(ch.resolved.ctx.chapterTimeScale, scale);
+    const normalSfx = 0.45 * scale;
+    assert.ok(Math.abs(ch.sfx.event - (ch.start + normalSfx)) < 0.002, JSON.stringify(ch.sfx));
+    assert.ok(!res.warnings.some((w) => /會壓到.*人聲/.test(w)));
+  }
+});
+
 test('接不透明幕：側邊欄停在完成態、延到幕淡入結束，底片在那時歸位；全畫面接全畫面接縫不淡', () => {
   const res = run([
     { id: 's01', scene: 'side-panel', from: '#2', to: '#4e', slots: { title: '標題', items: ['一', '二', '三'] } },

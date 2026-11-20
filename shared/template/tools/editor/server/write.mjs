@@ -795,13 +795,13 @@ export function applySave(planText, body, ctx = {}) {
 // 拍點正本在 work/designs/ 的段（內容設計動畫、手改的模板段、手寫 src），鏡位腳本「講到」欄和動畫檔的 P.at 照同一串 op 重對句號，
 // 各自先備份 <檔>.align-<時間>。plan.json 裡的句號 applySave 已經對好；照 plan.json 產生的模板動畫下次 build 會跟上。
 // P＝build.mjs pathsFrom 的 { project, out }；planBefore＝存檔前的 plan.json（文字或物件，owner 照它判斷）；srtTextBefore＝存檔前的 rough.srt
-// → { scripts, anims }：改到的檔（相對專案）
+// → { scripts, anims, changes }：改到的檔（相對專案）；changes＝每個檔改之前、之後的內容（剪輯台復原時換回去，074）
 export function remapScriptsAfterSave(P, { planBefore, srtTextBefore, ops, videoDur = null, lib = null, now = new Date() } = {}) {
-  const none = { scripts: [], anims: [] };
+  const none = { scripts: [], anims: [], changes: [] };
   if (!Array.isArray(ops) || !ops.length || srtTextBefore == null || planBefore == null) return none;
   const cues = parseSrtBlocks(srtTextBefore).blocks.map(({ n, start, end, text }) => ({ n, start, end, text }));
   const mp = opsMapper(cues, ops, { videoDur });
-  if (!mp.structural) return none;
+  if (!mp.structural && !mp.movesWords) return none;   // 074：只改字也可能把詞搬到隔壁句
   let plan = planBefore;
   if (typeof plan === 'string') { try { plan = JSON.parse(plan); } catch { return none; } }
   return remapScripts(P, plan, mp, { lib, now, tag: 'align' });

@@ -272,7 +272,7 @@ export function listText(lib) {
   const lines = ['# 情境（type 不寫＝scene；"scene" 填 key；直式＝plan.json "format": "portrait" 時能不能用）', '', '| # | key | 中文 | 組別 | 直式 | 長度（秒） | 綁句 | slots（上限） | beats | 音效 | 什麼時候用 | 不要用在 |', '|---|---|---|---|---|---|---|---|---|---|---|---|'];
   for (const s of lib.scenes) {
     const d = s.duration || {};
-    const len = d.fixed != null ? `固定 ${d.fixed}` : `預設 ${d.default}${d.min ? `、最短 ${d.min}` : ''}`;
+    const len = s.key === 'chapter' ? `預設 ${d.fixed}；空檔 1.5–2.5 自動縮時` : d.fixed != null ? `固定 ${d.fixed}` : `預設 ${d.default}${d.min ? `、最短 ${d.min}` : ''}`;
     const beats = Object.entries(s.beats || {}).map(([k, b]) => `${k}（${b.label}，預設 ${b.default}）`).join('；') || '—';
     lines.push(`| ${s.num} | ${s.key} | ${s.zh} | ${s.family} | ${PORTRAIT_ZH[s.portrait] || '—'} | ${len} | ${s.bindsSrt === false ? 'at: "#N"' : 'from／to'} | ${slotSummary(s)}${s.tone ? '；tone: warn／good' : ''} | ${beats} | ${sfxSummary(s)} | ${s.when} | ${s.avoid || '—'} |`);
   }

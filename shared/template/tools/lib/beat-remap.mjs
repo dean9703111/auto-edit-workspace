@@ -3,11 +3,12 @@
 // mapper＝{ map(ref, 段 id) → 新 ref｜null }（ref 是 editor/subtitles.mjs parseRef 的格式）：media.mjs 的 refMapper（照時間）或 opsMapper（照剪輯台的 op）。
 //   remapCustomRefs(html, mapper, id)               → 新的 html（只換 <script> 裡、不在註解裡的；原本在 media.mjs）
 //   remapBeatTable(md, mapper, id)                  → 新的 markdown（只換「#### 動畫分鏡」表的「講到」欄，比對規則同 audit-beats.mjs 的 REF_RE）
-//   opsMapper(cues0, ops, { videoDur })             → mapper：一串字幕 op 依序重對（每一步用那一步之前的字幕，同 editor/subtitles.mjs replay）
-//   remapScripts(P, plan, mapper, { lib, now, tag }) → { scripts, anims }：plan＝重對之前的 plan（owner 照它判斷），改到的檔（相對專案）各自先備份 <檔>.<tag>-<時間>
+//   opsMapper(cues0, ops, { videoDur })             → mapper：一串字幕 op 依序重對（每一步用那一步之前的字幕，同 editor/subtitles.mjs replay；改字把詞搬到隔壁句時 #N@詞 跟過去）
+//   remapScripts(P, plan, mapper, { lib, now, tag }) → { scripts, anims, changes }：plan＝重對之前的 plan（owner 照它判斷），改到的檔（相對專案）各自先備份 <檔>.<tag>-<時間>；
+//                                                     changes＝[{ file（絕對路徑）, before, after }]，剪輯台復原／重做時照它把這些檔換回去（074）
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseRef, fmtRef, remapRef, applyCueOp } from '../editor/subtitles.mjs';
+import { parseRef, fmtRef, remapRef, applyCueOp, followKw, movesWords } from '../editor/subtitles.mjs';
 import { BEAT_REF_SOURCE } from './audit-beats.mjs';
 import { beatOwnerOf, scriptFileOf } from './beat-source.mjs';
 import { designFileOf, fillFileOf } from './custom-fill.mjs';
@@ -64,10 +65,12 @@ export function opsMapper(cues0, ops, { videoDur = null } = {}) {
   for (const op of Array.isArray(ops) ? ops : []) {
     const r = applyCueOp(cues, op, { videoDur });
     if (r.error) break;
-    steps.push([op, cues]);
+    steps.push([op, cues, r.cues]);
     cues = r.cues;
   }
-  return { structural: steps.some(([op]) => ['split', 'insert', 'merge', 'delete'].includes(op?.op)), map: (r) => steps.reduce((x, [op, c]) => remapRef(x, op, c), r) };
+  // 074：每一步之後，"#N@詞" 的詞被改字搬到隔壁句就跟過去（和 subtitles.mjs replay 同一個時機）
+  const step = (x, [op, c, after]) => { const y = remapRef(x, op, c); return movesWords(op) ? followKw(y, after) : y; };
+  return { structural: steps.some(([op]) => ['split', 'insert', 'merge', 'delete'].includes(op?.op)), movesWords: steps.some(([op]) => movesWords(op)), map: (r) => steps.reduce(step, r) };
 }
 
 const stampOf = (d) => { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };
@@ -76,7 +79,7 @@ const animOf = (seg) => (typeof seg.src === 'string' && seg.src ? seg.src : seg.
 
 // 拍點正本在 work/designs/ 的段：鏡位腳本「講到」欄＋那支動畫檔一起照 mapper 換。owner plan 的段不用（動畫檔下次 build 照新的 slots 重產）
 export function remapScripts(P, plan, mapper, { lib, now = new Date(), tag = 'align' } = {}) {
-  const scripts = [], anims = [];
+  const scripts = [], anims = [], changes = [];
   const relOf = (f) => path.relative(P.project || path.dirname(path.dirname(P.out)), f).split(path.sep).join('/');
   for (const seg of Array.isArray(plan?.scenes) ? plan.scenes : []) {
     if (!seg?.id || beatOwnerOf(P, seg, { lib }).owner !== 'script') continue;
@@ -89,7 +92,8 @@ export function remapScripts(P, plan, mapper, { lib, now = new Date(), tag = 'al
       fs.copyFileSync(file, backupOf(file, now, tag));
       writeAtomic(file, next);
       list.push(relOf(file));
+      changes.push({ file, before: text, after: next });
     }
   }
-  return { scripts, anims };
+  return { scripts, anims, changes };
 }
