@@ -4,7 +4,7 @@ import {
   defaultEdit, normEdit, mergeCuts, cutTotal, outOf, cutIndexAt, joinPoints, joinFor, cleanJoins, joinOutTimes,
   fmt, fmtTC, fmtFine, parseTC, fmtSec, fmtDb, fmtDbShort, clamp, r3, dbToGain, gainAt, JOIN_TOL, DIP_DEFAULT, TC_FPS, lookCss, ownSfx, sortOwnSfx, ownSfxView,
   adjOf, setAdj, sfxSpan, SFX_MIN,
-  bedLane, bedHasMusic, bedLiveDb, BED_VOL, bedMutedAt,
+  bedLane, bedHasMusic, bedLiveDb, BED_VOL, bedMutedAt, endingLane, outroLane, roughOf,
 } from './model.mjs';
 import { applyCueOp, remapPlan, followPlanKw, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
 import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef, toggleEmph } from './text.mjs';
@@ -46,6 +46,8 @@ const app = {
   splits: [], sel: { a: null, b: null }, selection: null, selLane: null,
   report: null, reportReady: false, auditIssues: null, hiddenChecks: new Set(), requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cap: null, savedCap: null, capDefault: true, marks: [], savedMarks: [], cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
+  endMotion: 'type', savedEndMotion: 'type',   // 077 片尾金句的文字動畫（plan.json 的 ending.motion；沒寫＝工作區預設）
+  endView: null, outroView: null, endDur: 0,   // 076 片尾：片尾卡（model.mjs endingLane）、片尾配樂（outroLane）、片尾卡接在影片後面幾秒（時間軸多畫這一段，只能看）
   bedVol: 0, savedBedVol: 0, bedView: null, bedPeaks: null,   // 057 背景音樂：plan.json 的 bed.volume、時間軸那一軌（model.mjs bedLane）、上一次 build 的 wav 波形
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {}, bed: {} },
   undoStack: [], redoStack: [], savedSnap: '', lastCoalesce: null, gesture: null, busy: false, building: false,
@@ -141,6 +143,15 @@ app.bedPlay = () => {
   if (!b?.url || !bedHasMusic(v) || v.music !== b.music) return null;
   return { url: b.url, at: b.at || 0, dur: b.dur, gain: app.trackMuted('bed') ? 0 : dbToGain(app.bedLiveDb()) };
 };
+// 076 片尾配樂：快速試聽播上一次 build 烤好的那一段（淡入淡出、音量都在檔案裡）；曲子和這次的設定對得上才播（換了曲子要等更新預覽）
+app.outroPlay = () => {
+  const b = app.server?.end?.outro, v = app.outroView;
+  if (!b?.url || !v || v.music !== b.music) return null;
+  return { url: b.url, at: b.at || 0, dur: b.dur, gain: 1 };
+};
+// 片尾卡的示意（快速試聽走到片尾卡那幾秒時放）：圖和金句照上一次 build 的；還沒 build 過就只有字
+app.endCard = () => (app.endView ? { dur: app.endView.dur, image: app.endView.image, lines: app.endView.lines, layout: app.server?.end?.layout || null, motion: app.endMotion } : null);
+app.endAt = () => app.dur + app.endDur;   // 時間軸的結尾（含片尾卡）
 app.isSelected = (kind, id) => app.selection?.kind === kind && app.selection.id === id;
 app.headTail = () => {
   const c = app.edit.cuts;
@@ -176,8 +187,8 @@ app.snapCandidates = ({ play = false } = {}) => {
 // ---------- 快照、復原 ----------
 const editableScenes = () => app.scenes;
 // 快照記著它是對哪一版檔案算的（base）：自動存檔之後檔案已經往前走，復原時要先把檔案換回那一版
-const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol });
-const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol });
+const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol, endMotion: app.endMotion });
+const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol, endMotion: app.endMotion });
 const isDirty = () => app.savedSnap !== '' && dirtySnap() !== app.savedSnap;
 // 058 還沒存的修改是不是只有直接套得上的（聲音：人聲、音效、素材原聲、背景音樂、範圍音量、各段音量；字幕樣式；整則的重點字幕。
 // editor/live-sound.mjs 的 liveStrip 拿掉的那幾個欄位；cap、marks 是頁面上的字幕樣式和重點字幕）
@@ -255,7 +266,7 @@ app.gestureEnd = (commit = true) => {
 function restore(s) {
   const o = JSON.parse(s);
   app.edit = normEdit(o.edit);
-  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap; app.marks = o.marks ?? app.savedMarks; app.bedVol = o.bedVol ?? app.savedBedVol;
+  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap; app.marks = o.marks ?? app.savedMarks; app.bedVol = o.bedVol ?? app.savedBedVol; app.endMotion = o.endMotion ?? app.savedEndMotion;
   app.lastCoalesce = null;
   if (app.selection?.kind === 'cue' && !app.cues.some((c) => c.n === app.selection.id)) app.selection = null;
   changed({ inspector: true });
@@ -400,6 +411,12 @@ function recompute() {
   app.sfxView = sv.sort((a, b) => a.at - b.at);
   // 057 背景音樂軌：檢查報告的 bed（build 算的範圍、淡入淡出、壓低）；報告還沒好先看 plan.json
   app.bedView = bedLane(app.reportReady ? app.report?.data?.bed ?? null : undefined, app.server?.bed);
+  // 076 片尾卡、片尾配樂：檢查報告的 ending／outro；報告還沒好先看上一次 build 做進預覽的（/api/state 的 end）
+  const rep = app.reportReady ? app.report?.data ?? null : undefined;
+  app.endView = endingLane(rep, app.server?.end);
+  app.outroView = outroLane(rep, app.server?.end);
+  const endDur = app.dur > 0 ? app.endView?.dur || 0 : 0;
+  if (endDur !== app.endDur) { app.endDur = endDur; app.requestDraw?.(); }
 }
 // 這段沒有寫在講什麼時的名稱：不露檔名（x-design-d0101.html）和版型編號（07 重點字卡）
 function segFallback(sc, o) {
@@ -758,7 +775,7 @@ function removeOwnSfx(i) {
 // ---------- 播放 ----------
 const engine = () => (app.mode === 'player' ? player : sim);
 app.seek = (t) => {
-  app.t = clamp(t, 0, app.dur || t);
+  app.t = clamp(t, 0, app.dur ? app.endAt() : t);   // 076 可以走進片尾卡那幾秒
   engine().seek(app.t);
   if (!app.selection) refreshFaces();
   app.stopAt = null;
@@ -964,6 +981,8 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   app.cap = clone(app.savedCap);
   app.savedBedVol = normBedVol(app.plan0.bed);
   app.bedVol = app.savedBedVol;
+  app.savedEndMotion = normEndMotion(app.plan0);
+  app.endMotion = app.savedEndMotion;
   app.scenes = clone(Array.isArray(app.plan0.scenes) ? app.plan0.scenes : []);
   app.cues = clone(app.cues0);
   app.savedMarks = normMarks(app.plan0.captionMarks, app.cues0);
@@ -988,7 +1007,7 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   else if (s.video && roughStage()) renderRoughBanner();
   else if (s.schema?.error) banner(esc(s.schema.error), '');
   else if (!kept) banner('');
-  timeline.setDuration(app.dur);
+  timeline.setDuration(app.dur, app.endDur);
   applyCanvas();
   renderOverlays();
   if (s.report.ready) applyReport(s.report); else { app.itemsHint = '檢查中…（第一次可能要幾秒）'; fetchReport(); }
@@ -1024,6 +1043,7 @@ function applyKept(kept) {
   if ('theme' in kept) app.theme = kept.theme;
   if ('cap' in kept) app.cap = kept.cap;
   if ('bedVol' in kept) app.bedVol = kept.bedVol;
+  if ('endMotion' in kept) app.endMotion = kept.endMotion;
   let opsOk = !kept.ops?.length;
   if (kept.ops?.length && kept.srtHash === app.base.srtHash) {
     // 重點字幕（038）一起重播：檔案裡的標記照這幾步字幕操作換句號
@@ -1051,7 +1071,7 @@ function offerUnsaved(u) {
   if (!u?.id || !isObj(u.keep) || unsavedSkip.has(u.id) || !app.server?.plan?.exists || app.server.plan.error) return;
   const when = new Date(u.at || Date.now());
   const segs = Object.keys(u.keep.segs || {}), ops = u.keep.ops?.length || 0;
-  const what = [segs.length ? `${segs.slice(0, 4).join('、')}${segs.length > 4 ? ` 等 ${segs.length} 段` : ''}` : '', ops ? `${ops} 處字幕` : '', Object.keys(u.keep.edit || {}).length || 'look' in u.keep || 'theme' in u.keep || 'bedVol' in u.keep ? '剪輯設定' : ''].filter(Boolean).join('、');
+  const what = [segs.length ? `${segs.slice(0, 4).join('、')}${segs.length > 4 ? ` 等 ${segs.length} 段` : ''}` : '', ops ? `${ops} 處字幕` : '', Object.keys(u.keep.edit || {}).length || 'look' in u.keep || 'theme' in u.keep || 'bedVol' in u.keep || 'endMotion' in u.keep ? '剪輯設定' : ''].filter(Boolean).join('、');
   // 不管套不套，伺服器那份都丟掉：套回去之後修改在這一頁上，照一般的自動存檔走（關頁沒存到會問）
   const done = () => { forgetUnsaved(u.id); banner(''); if (app.server?.video && roughStage()) renderRoughBanner(); };
   banner(`上次關掉這一頁時，最後一次修改沒存進去（${when.getMonth() + 1}/${when.getDate()} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}${what ? `，${esc(what)}` : ''}）：${UNSAVED_WHY[u.reason] || '那次沒存成功'}。要套回去嗎？`, 'error', [
@@ -1125,7 +1145,7 @@ function applyReport(rep0) {
   app.uncovered = spans(d?.uncovered);
   if (rough) { app.voiceUncovered = []; app.uncovered = []; }
   if (Array.isArray(d?.cutpoints) && d.cutpoints.length) app.cutpoints = d.cutpoints.filter((c) => Number.isFinite(c?.at)).map((c) => ({ at: c.at, kind: c.kind === 'ng' ? 'ng' : 'pause' }));
-  if (!app.dur && d?.videoDur) { app.dur = d.videoDur; timeline.setDuration(app.dur); }
+  if (!app.dur && d?.videoDur) { app.dur = d.videoDur; timeline.setDuration(app.dur, app.endDur); }
   app.itemsHint = rough ? '分鏡做好後，字卡和動畫會排在這裡' : d ? '還沒有字卡或動畫' : '看不到段落位置：檢查報告讀不到（點左下角的檢查結果）';
   renderCheck();
 }
@@ -1402,13 +1422,14 @@ function applySaved(d, { keepLocal = false, sentOps = 0, fallbackEdit = null } =
   app.savedCap = normCap(app.plan0.captionStyle);
   app.savedMarks = normMarks(app.plan0.captionMarks, app.cues0);
   app.savedBedVol = normBedVol(app.plan0.bed);
+  app.savedEndMotion = normEndMotion(app.plan0);
   if (d.look) app.server.look = d.look;
   if (d.captionStyle) app.server.captionStyle = d.captionStyle;
   if (keepLocal) {
     app.srtOps = app.srtOps.slice(sentOps);
     // 正在拖的快照也要換基準：沒拖動就放開會還原成快照，不能把已經存好的字幕操作再送一次
     if (app.gesture) { const g = JSON.parse(app.gesture); g.ops = g.ops.slice(sentOps); g.base = app.base; app.gesture = JSON.stringify(g); }
-    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap, marks: app.savedMarks, bedVol: app.savedBedVol });
+    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap, marks: app.savedMarks, bedVol: app.savedBedVol, endMotion: app.savedEndMotion });
     return;
   }
   app.edit = clone(app.savedEdit);
@@ -1417,6 +1438,7 @@ function applySaved(d, { keepLocal = false, sentOps = 0, fallbackEdit = null } =
   app.cap = clone(app.savedCap);
   app.marks = clone(app.savedMarks);
   app.bedVol = app.savedBedVol;
+  app.endMotion = app.savedEndMotion;
   app.scenes = clone(app.plan0.scenes || []);
   app.cues = clone(app.cues0);
   app.srtOps = [];
@@ -1445,6 +1467,7 @@ async function saveOnce({ notify, retry = 0 }) {
   if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}), ...(app.look.belly > 0 ? { belly: r2(app.look.belly) } : {}) } : null;   // 美顏 0＝關，不寫
   if (app.theme !== app.savedTheme) body.theme = app.theme;
   if (!same(app.cap, app.savedCap)) body.captionStyle = app.cap;
+  if (app.endMotion !== app.savedEndMotion) body.ending = { motion: app.endMotion };   // 077 片尾金句的文字動畫（plan.json 的 ending.motion；和工作區預設一樣的伺服器不寫）
   if (app.bedVol !== app.savedBedVol) body.bed = { volume: app.bedVol };   // 057 背景音樂音量（plan.json 的 bed.volume；伺服器照 build.mjs --set 的規則檢查）
   // 重點字幕整份送（句號是字幕操作做完之後的）。同時有字幕操作時一定送：頁面上的句號已經換過，光和存檔時的清單比數字會比錯
   if (!same(app.marks, app.savedMarks) || (app.srtOps.length && (app.marks.length || app.savedMarks.length))) body.captionMarks = fmtCaptionMarks(app.marks);
@@ -1620,6 +1643,7 @@ function keepState() {
     ...(app.theme !== app.savedTheme ? { theme: app.theme } : {}),
     ...(!same(app.cap, app.savedCap) ? { cap: clone(app.cap) } : {}),
     ...(app.bedVol !== app.savedBedVol ? { bedVol: app.bedVol } : {}),
+    ...(app.endMotion !== app.savedEndMotion ? { endMotion: app.endMotion } : {}),
     ...(!same(app.marks, app.savedMarks) || (app.srtOps.length && (app.marks.length || app.savedMarks.length)) ? { marks: clone(app.marks) } : {}) };
 }
 const keepIfDirty = () => (isDirty() ? keepState() : null);
@@ -1707,12 +1731,12 @@ function tcHtml(t) {
 let tcShown = '';
 function renderTimes() {
   if (document.activeElement !== $('#tcInput')) { const h = tcHtml(app.t); if (h !== tcShown) { tcShown = h; $('#tc').innerHTML = h; } }
-  $('#tcDur').textContent = fmt(app.dur, 0);
+  $('#tcDur').textContent = fmt(app.endAt(), 0);   // 076 含片尾卡那幾秒
   const anyCut = app.edit.cuts.length > 0;
   $('.tc-out').hidden = !anyCut;   // 沒剪掉東西時兩個時間一樣，不用印兩次
   if (anyCut) {
     $('#tcOut').textContent = cutIndexAt(app.t, app.edit.cuts) >= 0 ? '（剪掉）' : fmt(outOf(app.t, app.edit.cuts), 0);
-    $('#tcOutDur').textContent = fmt(app.outDur, 0);
+    $('#tcOutDur').textContent = fmt(app.outDur + app.endDur, 0);
   }
   renderNow();
 }
@@ -1725,7 +1749,8 @@ function renderStatus() {
   $('#stIssues .w').textContent = `⚠ ${warns}`; $('#stIssues .w').classList.toggle('has', !!warns);
   const vu = app.voiceUncovered.length;
   $('#stHint').textContent = app.checking ? '檢查中…（可以繼續改）' : vu ? `⚠ ${vu} 段只有聲音、沒被素材蓋住（主軌紅色斜線）` : '';
-  $('#stOut').textContent = `完成影片 ${fmt(app.outDur, 0)}${app.edit.cuts.length ? `（剪掉 ${fmtSec(cutTotal(app.edit.cuts))}）` : ''}`;
+  const stNotes = [app.edit.cuts.length ? `剪掉 ${fmtSec(cutTotal(app.edit.cuts))}` : '', app.endDur ? `含片尾卡 ${fmtSec(app.endDur)}` : ''].filter(Boolean);
+  $('#stOut').textContent = `完成影片 ${fmt(app.outDur + app.endDur, 0)}${stNotes.length ? `（${stNotes.join('、')}）` : ''}`;
   $('#stZoom').textContent = `時間軸一屏 ${fmtSpan(timeline.span())}　吸附${app.snapOn ? '開' : '關'}`;
   const s = app.selection;
   $('#stSel').textContent = s ? `已選：${selLabel(s)}` : '';
@@ -2107,10 +2132,48 @@ function bedTip() {
   return `背景音樂「${B.music}」${vol}　${fmt(B.start, 0)} – ${fmt(B.end, 0)}\n淡入 ${B.fadeIn} 秒、淡出 ${B.fadeOut} 秒${B.ducked ? '；講話時壓低（暗的地方）' : '；這一集有剪段，整段固定音量'}\n點一下調音量（右邊「整支 → 聲音」）`;
 }
 
+// 077 片尾卡的屬性：金句的文字動畫用下拉選單選（常見的幾種；選了存進這一集 plan.json 的 ending.motion，快速試聽馬上照新的示意，完成影片預覽要更新預覽）。
+// 圖、金句的字、秒數在這裡只能看
+function inspEnding() {
+  const E = app.endView;
+  if (!E) return '<section class="ip-sec"><p class="ip-note">這一集沒有片尾卡。</p></section>';
+  const dflt = endMotionDefault(), built = app.server?.end?.motionBuilt;
+  const opts = endMotions().map((m) => `<option value="${esc(m.id)}"${m.id === app.endMotion ? ' selected' : ''}>${esc(m.zh)}${m.id === dflt ? '（預設）' : ''}</option>`).join('');
+  const now = endMotions().find((m) => m.id === app.endMotion);
+  const stale = E.quote && built && built !== app.endMotion ? `<p class="ip-note">完成影片預覽裡還是「${esc(endMotionZh(built))}」：按「更新預覽」才會換；「快速試聽」已經是新的。</p>` : '';
+  return `<section class="ip-sec"><h3>片尾金句</h3>
+    <p class="ip-note">${E.quote ? `「${esc(E.quote)}」` : '這一集沒有放片尾金句，只有圖。'}</p>
+    ${E.quote ? `<div class="ip-row"><label>文字動畫</label><select aria-label="片尾金句的文字動畫" data-f="endMotion">${opts}</select></div>
+    <p class="ip-note">${esc(now?.tip || '')}</p>${stale}` : ''}
+  </section>
+  <section class="ip-sec"><p class="ip-note">片尾卡接在影片講完之後，圖、金句的字和秒數在這裡不能改：要換請跟 AI 說（例：「片尾金句改成…」「這集不要片尾」）。每一集都用同一種文字動畫，也跟 AI 說。</p></section>`;
+}
+
+// 076 片尾配樂、片尾卡的提示（滑上去、點一下都是這幾行）：在哪裡、多長、怎麼改
+function outroTip() {
+  const O = app.outroView;
+  if (!O) return '沒有片尾配樂';
+  const cuts = app.edit.cuts, a = roughOf(O.outStart, cuts), len = O.outEnd - O.outStart;
+  let card = Math.max(0, Math.min(app.endDur, O.outEnd - app.outDur));   // 有幾秒落在片尾卡（影片長度取到格，差不到 0.1 秒就當整張片尾卡）
+  if (app.endDur - card < 0.1) card = app.endDur;
+  const rel = O.relDb == null ? '' : `，設定上比人聲${O.relDb < 0 ? '小' : '大'} ${Math.abs(O.relDb).toFixed(1)} dB`;
+  return `片尾配樂「${O.music}」　${fmt(a, 0)} 起播 ${fmtSec(len)}${card > 0.05 ? `（最後 ${fmtSec(Math.min(card, len))}在片尾卡）` : ''}\n淡入 ${O.fadeIn} 秒、淡出 ${O.fadeOut} 秒${rel}${O.auto ? '；沒指定起播句，只播片尾最後 30 秒' : ''}\n要換曲子、改從哪一句起播、調音量：跟 AI 說（例：「片尾配樂從 #457 起播」「這集片尾不要配樂」）`;
+}
+function endingTip() {
+  const E = app.endView;
+  if (!E) return '沒有片尾卡';
+  return `片尾卡 ${fmtSec(E.dur)}：影片講完後接黑底的圖${E.quote ? `＋片尾金句「${E.quote}」` : ''}\n這幾秒不在錄影裡，只能看、不能剪；「完成影片預覽」會播出來，「快速試聽」放示意\n要換圖、改金句、這一集不要片尾：跟 AI 說（例：「片尾金句改成…」「這集不要片尾」）`;
+}
+
 // ---------- 主題（亮／暗；plan.json 第一層 "theme"，specs/010-motion-v2/design-system.md §10）----------
 // 不寫＝亮色。完成影片預覽在切換時直接改播放器 iframe 的 <html data-theme>（build 也是寫在主合成的 <html>），不用重新產生就看得到配色
 // （只有卡片的顏色：背景圖 bg-*-dark.jpg 是 build 寫在 index.html 的 CSS，要更新預覽才會換，所以 058 主題改了「更新預覽」照樣發光）
 const normTheme = (v) => (v === 'dark' ? 'dark' : 'light');
+// 077 片尾金句的文字動畫：這一集 plan.json 的 ending.motion；沒寫（或不認得）＝工作區預設（/api/state 的 end.motionDefault，沒設定＝打字機）
+const endMotions = () => app.server?.end?.motions || [];
+const endMotionDefault = () => app.server?.end?.motionDefault || 'type';
+const normEndMotion = (plan) => { const v = plan?.ending && typeof plan.ending === 'object' ? plan.ending.motion : undefined; return endMotions().some((m) => m.id === v) ? v : endMotionDefault(); };
+const endMotionZh = (id) => endMotions().find((m) => m.id === id)?.zh || id;
 function inspTheme() {
   // 用屬性面板的 .seg-btns（不能用 .seg：預覽模式切換會把所有 .seg button 的 on 重設）
   const b = (v, label, tip) => `<button class="${app.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}" aria-pressed="${app.theme === v}" data-tip="${esc(tip)}">${label}</button>`;
@@ -2255,6 +2318,7 @@ function renderInspector() {
   else if (s.kind === 'gain') { const g = app.edit.gains[s.id]; kind = '人聲範圍音量'; title = rangeTitle(g.from, g.to); body = inspGain(s.id); }
   else if (s.kind === 'sfx') { const it = app.itemsView.find((x) => x.id === s.id); kind = `音效　${s.id}`; title = it?.title || s.id; body = inspSfxOnly(it, sceneById(s.id)); }
   else if (s.kind === 'usfx') { const x = app.edit.sfx[s.id]; kind = '自己加的音效'; title = `${soundZh(x.sound)}　${fmt(x.at, 1)}`; body = inspOwnSfx(s.id); }
+  else if (s.kind === 'ending') { kind = '片尾卡'; title = app.endView ? `影片講完後接 ${fmtSec(app.endView.dur)}` : '這一集沒有片尾卡'; body = inspEnding(); }
   else if (s.kind === 'gap') { const g = gapInfo(s.id); kind = '沒有字卡的講解'; title = rangeTitle(g.start, g.end); body = `<section class="ip-sec"><p class="ip-note">這段只有講者，沒有字卡或動畫。想加畫面就寫進修改單；留給講者不用管。</p><div class="ip-btns"><button class="small" data-act="gapReq">✎ 這裡想加畫面</button></div></section>`; }
   $('#inspKind').innerHTML = `${chip ? `<span class="chip" style="background:${chip}"></span>` : ''}${esc(kind)}`;
   $('#inspTitle').textContent = title;
@@ -2710,6 +2774,7 @@ function onInspInput(e) {
   if (f === 'capSize') { outEl(f).textContent = `${num} px`; outEl(f).classList.toggle('changed', num !== CAP_SIZE.def); setCap({ size: num }, { coalesce: f, inspector: false }); return; }
   if (f === 'capLift') { outEl(f).textContent = describeLift(num); outEl(f).classList.toggle('changed', num !== 0); setCap({ lift: num }, { coalesce: f, inspector: false }); return; }
   if (f === 'capFont') { setCap({ font: el.value }); return; }
+  if (f === 'endMotion') { if (!endMotions().some((m) => m.id === el.value)) return; mutate(() => { app.endMotion = el.value; }, { inspector: true }); if (app.t <= app.dur) app.seek(app.dur + 0.4); return; }   // 077 選了就把播放頭帶到片尾卡，馬上看得到
   if (f === 'capDefault') { app.capDefault = el.checked; if (el.checked) pushCapDefault(); return; }
   if (f === 'level') { mutate(() => { app.edit.level = el.checked; }); return; }
   if (f === 'fadeIn' || f === 'fadeOut') { mutate(() => { app.edit[f] = num; }, { coalesce: f }); outEl(f).textContent = num ? `${num.toFixed(1)} 秒` : '不淡'; return; }
@@ -2923,12 +2988,16 @@ function selectHit(h) {
     case 'usfx': return app.select({ kind: 'usfx', id: h.sfx.user }, { lane });
     case 'noCard': return app.select({ kind: 'gap', id: gapId(h.span[0]) }, { lane });
     case 'bed': app.folds.sound = true; app.select(null, { lane }); return revealBedSlider();
+    // 076 片尾配樂、片尾卡：只能看；選起來（方塊亮白框）、說怎麼改
+    case 'outro': app.selLane = 'outro'; app.select(null, { lane: 'outro' }); return toast(outroTip().split('\n').slice(0, 2).join('　'), 'ok', 6000);
+    case 'ending': return app.select({ kind: 'ending', id: 'ending' }, { lane: 'ending' });   // 右邊「屬性」出片尾卡的設定（文字動畫）
     default: return app.select(null, { lane });
   }
 }
 app.tlClick = (h, e) => {
   const lane = h.lane;
   app.selLane = lane;
+  if (h.kind === 'ending') return selectHit(h);   // 076 片尾卡那幾秒不能切
   if (app.tool === 'split' && (lane === 'main' || lane === 'voice')) { splitMain(snapT(h.t, e).t); return; }
   if (app.tool === 'split' && lane === 'cap' && h.cue) { app.seek(h.t); app.select({ kind: 'cue', id: h.cue.n }, { lane }); splitCue(); return; }
   selectHit(h);
@@ -2963,6 +3032,8 @@ app.tlTip = (h) => {
     case 'voiceVol': return `人聲音量 ${fmtDb(app.edit.volume.voice)}：上下拖整條${selValid() && h.t >= app.sel.a && h.t <= app.sel.b ? '\n（在選取範圍裡拖＝只調這一段）' : ''}${lk}`;
     case 'voiceBody': return '拖曳選一段範圍（剪掉或單獨調音量）';
     case 'bed': return bedTip() + lk;
+    case 'outro': return outroTip();
+    case 'ending': return endingTip();
     case 'mood': return `情緒點：${h.mood.zh}${h.mood.sfx ? `　音效「${h.mood.sfx}」` : h.mood.off ? '（不出聲）' : `（讓位給更強的音效${h.mood.dropped ? `，原本是 ${h.mood.dropped}` : ''}）`}${h.mood.zoom ? '　講者推近' : ''}\n要改：分鏡表的「情緒點」勾選表，或跟 AI 說（寫進修改單）`;
     case 'sfx': if (h.edge != null) return sfxEdgeTip(h) + lk; return `${h.sfx.segId} 的${h.sfx.main ? '主' : '附加'}音效「${h.sfx.name}」${h.sfx.muted ? '（靜音）' : h.sfx.db != null ? ` ${fmtDb(r2(h.sfx.db))}` : ''}${sfxAdjTip(h.sfx)}\n${h.sfx.key ? '左右拖改時間、拖兩端裁剪、' : ''}上下拖調這段音量、雙擊靜音；按右鍵換一顆${lk}`;
     case 'usfx': { if (h.edge != null) return sfxEdgeTip(h) + lk; const x = app.edit.sfx[h.sfx.user]; return `自己加的音效「${soundZh(x.sound)}」　${fmt(x.at, 1)}　${fmtDb(x.db || 0)}${sfxAdjTip(h.sfx)}\n左右拖改時間、拖兩端裁剪、上下拖調音量；Delete 移除、按右鍵換一顆${lk}`; }
@@ -3519,6 +3590,7 @@ function ctxMenu(h, { range = false } = {}) {
 // 指標在拖出來的選取範圍裡（主軌、人聲）＝那個範圍的選單，不改選
 app.tlContext = (h, e) => {
   if (!TRACK_NAMES[h.lane]) return;
+  if (h.kind === 'ending' || h.kind === 'outro') { selectHit(h); return; }   // 076 只能看，沒有選單
   closeCapEditor(true);
   const range = selValid() && (h.lane === 'main' || h.lane === 'voice') && h.t >= app.sel.a && h.t <= app.sel.b && ['piece', 'voiceBody', 'voiceVol', undefined].includes(h.kind);
   if (range) { app.selLane = h.lane; app.seek(h.t); renderHeads(); } else selectHit(h);
@@ -3597,7 +3669,7 @@ function replaceAll() {
 }
 
 // ---------- 元件 ----------
-const sim = new SimPreview({ root: $('#sim'), video: $('#simVideo'), black: $('#simBlack'), caption: $('#simCaption'), capLayer: $('#simCapLayer'), cutBadge: $('#simCutBadge'), hint: $('#simHint'), media: $('#simMedia'), pip: $('#simPip') }, app);
+const sim = new SimPreview({ root: $('#sim'), video: $('#simVideo'), black: $('#simBlack'), caption: $('#simCaption'), capLayer: $('#simCapLayer'), cutBadge: $('#simCutBadge'), hint: $('#simHint'), end: $('#simEnd'), endLayer: $('#simEndLayer'), endImg: $('#simEndImg'), endQuote: $('#simEndQuote'), media: $('#simMedia'), pip: $('#simPip') }, app);
 const player = new PlayerPreview($('#playerHost'), app);
 const timeline = new Timeline($('#tlCanvas'), $('#tlTip'), app);
 app.pendingAudit = new Set();   // 改過字、還沒更新預覽的段：更新時量版面
@@ -3617,7 +3689,7 @@ $('#btnPlay').addEventListener('click', togglePlay);
 $('#btnPrevFrame').addEventListener('click', () => step(-1 / app.fps));
 $('#btnNextFrame').addEventListener('click', () => step(1 / app.fps));
 $('#btnHome').addEventListener('click', () => { step(0); app.seek(0); timeline.ensureVisible(0); });
-$('#btnEnd').addEventListener('click', () => { step(0); app.seek(app.dur); timeline.ensureVisible(app.dur); });
+$('#btnEnd').addEventListener('click', () => { step(0); app.seek(app.endAt()); timeline.ensureVisible(app.endAt()); });
 $('#btnJ').addEventListener('click', () => shuttle(-1));
 $('#btnL').addEventListener('click', () => shuttle(1));
 $('#btnIn').addEventListener('click', setIn);
@@ -4374,13 +4446,15 @@ function renderNow() {
   const seg = currentSeg(app.t);
   const gap = seg ? null : app.uncovered.find(([a, b]) => app.t >= a && app.t < b);
   const voice = !seg && !gap && app.voiceOnly.some(([a, b]) => app.t >= a && app.t < b);
-  const key = seg ? `s:${seg.id}:${seg.title}` : gap ? `g:${gap[0]}` : voice ? 'voice' : 'none';
+  const card = !seg && !gap && app.endDur > 0 && app.t > app.dur + 1e-3;   // 076 播放頭在片尾卡那幾秒
+  const key = seg ? `s:${seg.id}:${seg.title}` : gap ? `g:${gap[0]}` : card ? `end:${app.endView?.quote || ''}` : voice ? 'voice' : 'none';
   markNowRow();
   if (key === nowKey) return;
   nowKey = key;
   const bar = $('#nowBar');
   if (seg) bar.innerHTML = `<span class="k">現在</span><span class="x" title="${esc(seg.title)}">${esc(seg.title)}</span><button class="i small ghost" data-now="go" data-tip="選這段，看能改什麼">${esc(seg.id)}</button><button class="small" data-now="req">✎ 這段想改</button>`;
   else if (gap) bar.innerHTML = `<span class="k">現在</span><span class="x">這裡只有講者，沒有字卡</span><button class="small" data-now="gap">✎ 這裡想加畫面</button>`;
+  else if (card) bar.innerHTML = `<span class="k">現在</span><span class="x">片尾卡${app.endView?.quote ? `：${esc(app.endView.quote)}` : ''}</span>`;
   else bar.innerHTML = `<span class="k">現在</span><span class="x">${voice ? '這裡只有聲音' : '這裡只有講者'}</span>`;
 }
 function markNowRow(force = false) {
@@ -4537,7 +4611,7 @@ document.addEventListener('keydown', (e) => {
     case 'z': if (e.shiftKey) timeline.fit(); break;
     case '?': $('#dlgHelp').showModal(); break;
     case 'Home': e.preventDefault(); step(0); app.seek(0); timeline.ensureVisible(0); break;
-    case 'End': e.preventDefault(); step(0); app.seek(app.dur); timeline.ensureVisible(app.dur); break;
+    case 'End': e.preventDefault(); step(0); app.seek(app.endAt()); timeline.ensureVisible(app.endAt()); break;
     default: return;
   }
 });

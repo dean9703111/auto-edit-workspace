@@ -17,6 +17,7 @@
 //   bedDucks(cues, pauses)                    講話時壓低的區間（rough.mp4 秒數；剪輯台的背景音樂軌畫比較低、比較暗）
 //   bedJson(bed, clip, { tm, volume, ducked, ducks }) → build --check --json 的 bed（剪輯台的背景音樂軌，057）
 //   writeBedInfo(outDir, info)／readBedInfo(outDir)  上一次 build 做進 index.html 的底樂（work/hyperframes/.cache/bed.json；剪輯台即時試聽只補差的 dB）
+//   writeEndInfo(outDir, info)／readEndInfo(outDir)  上一次 build 做進 index.html 的片尾配樂與片尾卡（work/hyperframes/.cache/ending.json；076 剪輯台的快速試聽）
 //
 // ACE-Step 1.5 的本機 API（https://github.com/ace-step/ACE-Step-1.5，docs/en/API.md）：
 //   aceHealth(url)                            → { ok, modelsReady } 或 { ok: false, why }
@@ -80,8 +81,10 @@ export function registerTrack(dir, name, entry) {
 }
 
 // 量整體響度（LUFS）；量不到（全靜音）回 null
-export function measureLufs(file) {
-  const r = run('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-vn', '-af', 'ebur128=framelog=quiet', '-f', 'null', '-']);
+// part＝{ from, dur }：只量那一段（080 片尾配樂只播前面幾十秒，前奏比整首小聲時要照那一段算）
+export function measureLufs(file, part = null) {
+  const cut = part && part.dur > 0 ? ['-ss', String(part.from || 0), '-t', String(part.dur)] : [];
+  const r = run('ffmpeg', ['-hide_banner', '-nostats', ...cut, '-i', file, '-vn', '-af', 'ebur128=framelog=quiet', '-f', 'null', '-']);
   const m = String(r.stderr).match(/Integrated loudness:\s*\n\s*I:\s*(-?[\d.]+) LUFS/);
   return m ? Number(m[1]) : null;
 }
@@ -201,6 +204,24 @@ export function bedJson(bed, clip, { tm = null, ducked = true, ducks = [] } = {}
   return { ...out, start: back(clip.at), end: back(Math.min(outEnd, tm?.outDur ?? outEnd), true), outStart: clip.at, outEnd, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, ducks: out.ducked ? ducks : [] };
 }
 
+// 080 片尾配樂只播一段（clip：from、dur）：那一段比整首小聲（常見：前奏）就補回來，讓「比人聲小 N dB」說的是聽到的那一段。
+//   回傳要多乘的 dB（0＝不用補）。只補小聲的（那一段比整首大聲不壓）、最多補 PART_BOOST_MAX；量過記在 cacheDir/outro-part.json（同一個檔、同一段不重量）
+export const PART_BOOST_MAX = 12, PART_BOOST_MIN = 1.5;
+export function partBoostDb(file, clip, cacheDir = null) {
+  if (!file || !clip || !(clip.dur > 0)) return 0;
+  let st; try { st = fs.statSync(file); } catch { return 0; }
+  const key = `${path.basename(file)}|${st.size}|${Math.round(st.mtimeMs)}|${clip.from || 0}|${clip.dur}`;
+  const cf = cacheDir ? path.join(cacheDir, 'outro-part.json') : null;
+  let cache = {};
+  if (cf) { try { cache = JSON.parse(fs.readFileSync(cf, 'utf8')) || {}; } catch { cache = {}; } }
+  if (typeof cache[key] === 'number') return cache[key];
+  const whole = measureLufs(file), part = measureLufs(file, { from: clip.from || 0, dur: clip.dur });
+  const d = whole == null || part == null ? 0 : whole - part;
+  const boost = d >= PART_BOOST_MIN ? Math.round(Math.min(PART_BOOST_MAX, d) * 10) / 10 : 0;
+  if (cf) { try { fs.mkdirSync(cacheDir, { recursive: true }); fs.writeFileSync(cf, `${JSON.stringify({ [key]: boost })}\n`); } catch { /* 快取寫不了就每次量 */ } }
+  return boost;
+}
+
 // 上一次 build 做進 index.html 的底樂：{ v: 2, file（相對 work/hyperframes）, music, volume（做進 wav 的 bed.volume）, at, dur }（v：bed.volume 的刻度，057 第二輪改成 0＝原本的音量；舊的不算）；
 // 這次沒配就刪掉（靜音不動它：取消靜音時快速試聽還有上一條可以播）。剪輯台拖音量時，即時試聽只補「現在」和這裡記的差（下次 build 重混之後差＝0，不會疊兩次）
 const BED_INFO = path.join('.cache', 'bed.json'), BED_INFO_V = 2;
@@ -212,6 +233,19 @@ export function writeBedInfo(outDir, info) {
 }
 export function readBedInfo(outDir) {
   try { const j = JSON.parse(fs.readFileSync(path.join(outDir, BED_INFO), 'utf8')); return isObj(j) && j.v === BED_INFO_V && typeof j.file === 'string' ? j : null; } catch { return null; }
+}
+
+// 076 上一次 build 做進 index.html 的片尾：{ v: 1, outro: { file, music, at, dur, fadeIn, fadeOut } | null, ending: { at, dur, image, quote: [行] } | null }
+//   （file、image 相對 work/hyperframes；at 是完成影片秒數）。剪輯台的快速試聽用它播片尾配樂、放片尾卡的示意；兩樣都沒有就刪掉
+const END_INFO = path.join('.cache', 'ending.json'), END_INFO_V = 1;
+export function writeEndInfo(outDir, info) {
+  const f = path.join(outDir, END_INFO);
+  if (!info?.outro && !info?.ending) { fs.rmSync(f, { force: true }); return; }
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, `${JSON.stringify({ v: END_INFO_V, outro: info.outro ?? null, ending: info.ending ?? null })}\n`);
+}
+export function readEndInfo(outDir) {
+  try { const j = JSON.parse(fs.readFileSync(path.join(outDir, END_INFO), 'utf8')); return isObj(j) && j.v === END_INFO_V ? j : null; } catch { return null; }
 }
 
 // ---------- ACE-Step 1.5 ----------

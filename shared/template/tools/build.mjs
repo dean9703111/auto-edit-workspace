@@ -111,7 +111,7 @@ import { mediaJobs, MEDIA_KEYS, MEDIA_FIELDS, SWITCH, pickSwitches, switchTimes 
 import { DEFAULT_EDIT } from './lib/edit.mjs';
 import { readSpeaker, applySpeaker, speakerIssues } from './lib/speaker.mjs';
 import { encodeFootagePolished, audioKey, readStamp, stampMatches, audioReportLines, renderBgmClip, LOUD_TEXT } from './lib/audio.mjs';
-import { bedPlan, renderBedClip, bedLine, bedDucks, bedJson, writeBedInfo } from './lib/music.mjs';
+import { bedPlan, renderBedClip, bedLine, bedDucks, bedJson, writeBedInfo, writeEndInfo, partBoostDb } from './lib/music.mjs';
 import { soundOf, liveFingerprint, LIVE_INFO, LIVE_INFO_V } from './editor/live-sound.mjs';
 import { prepareEnding, endingLines } from './lib/ending.mjs';
 import { ensureLook, lookCheck, lookKey } from './lib/look.mjs';
@@ -1093,6 +1093,11 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
   W.write('index.html', main.html); generated.add('index.html');
   // 057 剪輯台的背景音樂軌：記下這次做進 index.html 的底樂和做進去的音量（滑桿即時試聽只補差的 dB）；靜音不動它（取消靜音時快速試聽還有上一條可以播）
   if (!res.bed?.muted) writeBedInfo(P.out, bed && { file: bed.file, music: res.bed.music, volume: res.bed.volume ?? 0, at: bed.at, dur: bed.dur });
+  // 076 剪輯台的片尾：記下這次做進 index.html 的片尾配樂（烤好淡入淡出與音量的那一段）和片尾卡（圖、金句、接在影片後面幾秒），快速試聽照它播
+  writeEndInfo(P.out, {
+    outro: outro && { file: outro.file, music: res.outro.music, at: outro.at, dur: outro.dur, fadeIn: clip.fadeIn, fadeOut: clip.fadeOut },
+    ending: ending?.card?.file && ending.dur > 0 ? { at: outDur, dur: ending.dur, image: ending.card.file, quote: ending.card.quote?.lines ?? [], motion: ending.card.motion ?? null } : null,
+  });
   // index.html 的修改時間＝最後一次 build：內容沒變也更新時間（剪輯台「完成影片預覽是舊的」、audit、status、qc 都拿它和 plan.json 比；
   //   剪輯台存檔時已經重新產生過，再跑 build 不重寫 index.html，舊時間會讓它們誤報「plan.json 比 index.html 新」）
   if (W.res.same.includes('index.html')) { const now = new Date(); fs.utimesSync(path.join(P.out, 'index.html'), now, now); }
@@ -1302,7 +1307,7 @@ function bedJsonOf(res, clip, cues) {
 function endingJson(res) {
   const e = res.ending;
   if (!e || e.off) return null;
-  return { at: res.outDur, dur: e.dur, quote: e.card?.quote?.lines.join('，') ?? null, quoteFrom: e.card?.quote?.from ?? null, subscribe: e.subscribe?.n ?? null, notes: e.notes };
+  return { at: res.outDur, dur: e.dur, quote: e.card?.quote?.lines.join('，') ?? null, quoteFrom: e.card?.quote?.from ?? null, motion: e.card?.quote ? e.card.motion ?? null : null, subscribe: e.subscribe?.n ?? null, notes: e.notes };   // motion＝片尾金句的文字動畫（077）
 }
 
 // 結尾配樂的起播點：量 shared/sfx/<music>.wav 的長度（一次 ffprobe）
@@ -1310,7 +1315,10 @@ function outroClipOf(res, P) {
   if (!res.outro?.music) return null;
   const f = res.outro.file || path.join(P.sfx, `${res.outro.music}.wav`);
   if (!fs.existsSync(f)) return null;
-  return outroClip(res.outro, probeDuration(f), res.finalDur ?? res.outDur);
+  const clip = outroClip(res.outro, probeDuration(f), res.finalDur ?? res.outDur);
+  // 080 只播的那一段比整首小聲（前奏）：補回來，增益和報告的「比人聲小 N dB」才是聽到的那一段
+  const boost = clip ? partBoostDb(f, clip, path.join(P.out, '.cache')) : 0;
+  return clip && boost > 0 ? { ...clip, gain: clip.gain * Math.pow(10, boost / 20), boost } : clip;
 }
 
 // 用 realpath 比對（lib/cli.mjs）：從 symlink 路徑執行時（例如 shared/template 是連結）也要跑，不能靜默 exit 0

@@ -1031,3 +1031,13 @@ body, #root {
 .v2-lt__drawer { position: relative; z-index: 1; margin: 20px 0 0 -24px; padding: 0 26px 26px 0; margin-bottom: -26px; overflow: hidden; }
 .v2-lt__key { position: relative; overflow: hidden; display: flex; align-items: center; height: 112px; padding: 0 48px 4px 64px; box-sizing: border-box;
   border-radius: 0 18px 18px 0; background: var(--v2-lt-key); color: var(--v2-lt-key-ink); box-shadow: var(--v2-lt-key-shadow); white-space: nowrap; }
+
+/* 078 上下置中要扣掉上方已有的背景元素（作者 2026-11-21）：有全畫面底（.sc-surface-fs）的橫式動畫，內容整組往下 42 px。
+   模板的主卡、空白畫布的舞台都寫 top 150（y 150–858）；上面有背景的流程線和右上角標（到 y 136），下面字幕底板從 y 956 才開始，
+   不移的話內容貼著上緣、下方空一截。移完主內容區是 y 192–900：到角標下緣、到字幕底板上緣各 56 px（audit 的 VBAL_Y、DESIGN.PIP 同一組數字）。
+   用 margin 不用 translate／transform：GSAP 動過的元素會把 translate 設成 none。直式（舞台縮放）不移；某一支要自己定就在檔裡寫 #<root> > … { margin-top: … } 蓋過 */
+:has(> .sc-surface-fs) > :not(.sc-surface-fs):not(.fill) { margin-top: var(--sc-vshift, 42px); }
+/* 不移的：直式（舞台縮放）；沒有講者的全螢幕段（[data-wide]：畫布是 y 40–900，kit/scene-layout.js 會自己置中、放不下會縮，再加位移會被擠回去撞到角標） */
+[data-format="portrait"]:has(> .sc-surface-fs) > :not(.sc-surface-fs):not(.fill),
+[data-wide] :has(> .sc-surface-fs) > :not(.sc-surface-fs):not(.fill), [data-wide]:has(> .sc-surface-fs) > :not(.sc-surface-fs):not(.fill) { margin-top: 0; }
+

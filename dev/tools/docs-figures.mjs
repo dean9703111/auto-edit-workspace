@@ -19,12 +19,16 @@ const { sideLayout } = await import(path.join(TOOLS, 'lib', 'speaker-side.mjs'))
 const { CANVAS } = await import(path.join(TOOLS, 'lib', 'canvas.mjs'));
 const { loadPics } = await import(path.join(TOOLS, 'lib', 'pics.mjs'));
 
-const C = { bg: '#090D17', card: '#121A2B', line: '#2D3950', text: '#F4F5F8', muted: '#B6C1D5', orange: '#FF791F', green: '#82D9B0', frame: '#0B111E', skin: '#C3CEDF', paper: '#F6ECE0' };
+const C = { bg: '#090D17', card: '#121A2B', line: '#2D3950', text: '#F4F5F8', muted: '#B6C1D5', orange: '#FF791F', green: '#82D9B0', frame: '#0B111E', skin: '#C3CEDF', paper: '#F6ECE0', wall: '#EDE8E0', desk: '#2B2B30' };
 const t = (x, y, s, size = 24, fill = C.text, weight = 500, anchor = 'start') => `<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" font-weight="${weight}" text-anchor="${anchor}">${s}</text>`;
 const box = (x, y, w, h, fill = C.card, r = 16, stroke = C.line) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" stroke="${stroke}"/>`;
-const svg = (w, h, title, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-labelledby="title"><title id="title">${title}</title><rect width="100%" height="100%" rx="24" fill="${C.bg}"/><g font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">${body}</g></svg>\n`;
-// 一個人（頭＋肩）：cx＝中心、by＝底、s＝大小
-const person = (cx, by, s) => `<circle cx="${cx}" cy="${by - s * 1.55}" r="${s * 0.42}" fill="${C.skin}"/><path d="M${cx - s * 0.95} ${by}q0 -${s} ${s * 0.95} -${s}t${s * 0.95} ${s}z" fill="${C.skin}"/>`;
+// 講者：情境庫預覽用的卡通講者（shared/template/preview/speaker-cutout.png 裁成半身，存在 dev/tools/figures/），整張圖只嵌一次、各處用 <use> 引用
+const BUST = { w: 307, h: 360, data: fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'figures', 'speaker-bust.webp')).toString('base64') };
+const svg = (w, h, title, body) => `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-labelledby="title"><title id="title">${title}</title><defs><image id="spk" width="${BUST.w}" height="${BUST.h}" href="data:image/webp;base64,${BUST.data}" xlink:href="data:image/webp;base64,${BUST.data}"/></defs><rect width="100%" height="100%" rx="24" fill="${C.bg}"/><g font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">${body}</g></svg>\n`;
+// 一個人（半身）：cx＝中心、by＝底、s＝大小（約等於肩寬的一半）
+const person = (cx, by, s) => { const k = (s * 2.5) / BUST.h; return `<use href="#spk" xlink:href="#spk" transform="translate(${(cx - (BUST.w * k) / 2).toFixed(1)} ${(by - BUST.h * k).toFixed(1)}) scale(${k.toFixed(4)})"/>`; };
+// 講者身後的牆與桌面（跟情境庫預覽的白牆一樣）
+const room = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${C.wall}"/><rect x="${x}" y="${y + h * 0.86}" width="${w}" height="${h * 0.14}" fill="${C.desk}"/>`;
 // 小畫面（16:9）：mode＝card｜half｜pip；side＝講者在哪一邊（left｜center｜right）
 function frame(x, y, w, mode, side = 'center') {
   const h = Math.round(w * 9 / 16), k = w / 1920;
@@ -34,13 +38,13 @@ function frame(x, y, w, mode, side = 'center') {
   const clip = `c${Math.round(x)}-${Math.round(y)}`;
   b += `<clipPath id="${clip}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10"/></clipPath><g clip-path="url(#${clip})">`;
   if (mode === 'card') {
-    b += person(x + sl.cx * k, y + h, h * 0.42);
+    b += room(x, y, w, h) + person(x + sl.cx * k, y + h, h * 0.42);
     const cw = 0.4 * w, cx = sl.cardSide === 'right' ? x + w - cw - 0.06 * w : x + 0.06 * w;
     b += box(cx, y + h * 0.56, cw, h * 0.24, C.paper, 6, 'none') + box(cx + 10, y + h * 0.56 + 10, cw * 0.38, 9, C.orange, 3, 'none') + `<path d="M${cx + 10} ${y + h * 0.56 + 34}h${cw - 20}" stroke="#A8A093" stroke-width="4" stroke-linecap="round"/>`;
   } else if (mode === 'half') {
     const pw = w / 2, px = sl.panelSide === 'right' ? x + pw : x;
     const shift = sl.shift * k;
-    b += person(x + sl.cx * k + shift, y + h, h * 0.42);
+    b += room(x, y, w, h) + person(x + sl.cx * k + shift, y + h, h * 0.42);
     b += `<rect x="${px}" y="${y}" width="${pw}" height="${h}" fill="${C.paper}"/><rect x="${sl.panelSide === 'right' ? px : px + pw - 5}" y="${y}" width="5" height="${h}" fill="${C.orange}"/>`;
     for (let i = 0; i < 3; i++) b += `<circle cx="${px + 22}" cy="${y + h * 0.3 + i * h * 0.2}" r="7" fill="${C.orange}"/><path d="M${px + 38} ${y + h * 0.3 + i * h * 0.2}h${pw - 62 - i * 14}" stroke="#A8A093" stroke-width="4" stroke-linecap="round"/>`;
   } else {
@@ -48,7 +52,7 @@ function frame(x, y, w, mode, side = 'center') {
     b += box(x + 0.06 * w, y + 0.16 * h, 0.6 * w, 0.62 * h, '#FFFFFF', 6, 'none') + box(x + 0.06 * w, y + 0.16 * h, 0.6 * w, 0.16 * h, C.orange, 6, 'none');
     for (let i = 0; i < 3; i++) b += `<rect x="${x + 0.1 * w + i * 0.18 * w}" y="${y + 0.44 * h}" width="${0.13 * w}" height="${0.22 * h}" rx="5" fill="#E8DFD2"/>`;
     const pw = 0.24 * w, ph = pw * 0.72, px = x + w - pw - 0.03 * w, py = y + h - ph - 0.05 * h;
-    b += box(px, py, pw, ph, '#1B2940', 5, C.orange) + person(px + pw / 2, py + ph, ph * 0.4);
+    b += box(px, py, pw, ph, C.wall, 5, C.orange) + `<clipPath id="${clip}p"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="5"/></clipPath><g clip-path="url(#${clip}p)">${room(px, py, pw, ph)}${person(px + pw / 2, py + ph, ph * 0.4)}</g><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="5" fill="none" stroke="${C.orange}" stroke-width="2"/>`;
   }
   return `${b}</g>`;
 }

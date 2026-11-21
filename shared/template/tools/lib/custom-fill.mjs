@@ -661,7 +661,7 @@ const blankShape = (html) => String(html).replace(/(<[a-zA-Z][^<>]*\sdata-design
 // 059：範圍和 brief 的「主內容 x 120–1300、y 150–858」、audit 的 DESIGN.PIP 同一個框。以前是 y 120–870，右上角和小節角標（y 56–136）
 // 重疊，東西一放滿舞台就 ✖「壓到右上角的小節角標」；內容比舞台大時 kit/scene-layout.js 的 fitStage 整組縮到放得下
 // _blank.html 還沒有 xd-stage 時由這裡補上，占位一起放進舞台；_blank.html 的格式改過（對不到）就照原檔
-const STAGE_NOTE = '/* 舞台：內容放進 #xd-stage，整組自動上下置中、太大自動縮到放得下（內容區 x 120–1300、y 150–858；沒有講者的全螢幕段會自動移到畫面正中間）。舞台裡用一般排版（flex、grid），不用自己算 top */';
+const STAGE_NOTE = '/* 舞台：內容放進 #xd-stage，整組自動上下置中、太大自動縮到放得下（內容區 x 120–1300、畫面上是 y 192–900：舞台寫 top 150，kit/scene.css 會把整組往下 42 px 避開上緣的裝飾和角標；沒有講者的全螢幕段會自動移到畫面正中間）。舞台裡用一般排版（flex、grid），不用自己算 top */';
 const STAGE_RULE = '#x-design #xd-stage { position: absolute; left: 120px; top: 150px; width: 1180px; height: 708px; display: flex; flex-direction: column; align-items: center; justify-content: center; }';
 // 059 之前的舞台（y 120–870）：還是空白的舊畫布認得出來，build 時換成新的範圍
 const STAGE_V1 = {

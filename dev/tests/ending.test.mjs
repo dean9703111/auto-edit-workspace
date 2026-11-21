@@ -9,7 +9,7 @@ import { lib, imp, makeSrt, cueStart, tmpDir, needs } from './helpers.mjs';
 const { resolvePlan, outroLine, OUTRO_AUTO } = await imp('lib/plan.mjs');
 const { buildMain } = await imp('lib/main.mjs');
 const { parseSrt } = await imp('lib/srt.mjs');
-const { quoteLines, readEndingSetting, endingParts, endingLines, ENDING, SUBSCRIBE } = await imp('lib/ending.mjs');
+const { quoteLines, readEndingSetting, endingParts, endingLines, ENDING, SUBSCRIBE, ENDING_MOTIONS, ENDING_MOTION, MOTION, endingMotionZh } = await imp('lib/ending.mjs');
 const { setPlan } = await imp('lib/plan-set.mjs');
 const Q = await imp('qc.mjs');
 const L0 = await lib();
@@ -79,7 +79,7 @@ test('ending：plan.json 寫 false／直式＝不放（總長不變）；沒設�
   assert.equal(noConf.ending, null);
   assert.ok(noConf.warnings.some((w) => w.startsWith('plan.json 寫了 ending，但工作區沒有設定片尾')));
   assert.ok(run({ ending: conf, plan: { ending: 'yes' } }).errors.some((e) => e.startsWith('ending 只能寫 false')));
-  assert.ok(run({ ending: conf, plan: { ending: { color: 1 } } }).errors.includes('ending 不能有「color」→ 只能寫 quote（片尾金句）、subscribe（訂閱動畫跟哪一句）'));
+  assert.ok(run({ ending: conf, plan: { ending: { color: 1 } } }).errors.includes('ending 不能有「color」→ 只能寫 quote（片尾金句）、subscribe（訂閱動畫跟哪一句）、motion（片尾金句的文字動畫）'));
 });
 
 test('訂閱動畫：最後四分之一第一句講到「訂閱」的晚 0.5 秒；找不到、太靠近片尾只留一行說明；plan.json 指定句號', async (t) => {
@@ -175,4 +175,66 @@ test('--set：ending=false、ending.quote、ending.subscribe（none＝null）；
   assert.deepEqual(read().ending, { quote: '再換' });
   assert.throws(() => setPlan(proj, { 'ending.subscribe': '12' }), /ending\.subscribe/);
   assert.throws(() => setPlan(proj, { ending: 'true' }), /ending/);
+});
+
+// ---------- 077 片尾金句的文字動畫 ----------
+test('片尾金句的文字動畫：五種可以選、預設打字機；工作區設定與這一集的 plan.json 都能指定（這一集的優先），寫錯有訊息', (t) => {
+  assert.deepEqual(ENDING_MOTIONS.map((m) => [m.id, m.zh]), [['type', '打字機'], ['fade', '淡入'], ['rise', '逐行浮出'], ['wipe', '由左擦開'], ['none', '直接出現']]);
+  assert.equal(ENDING_MOTION, 'type');
+  assert.deepEqual([endingMotionZh('rise'), endingMotionZh('x')], ['逐行浮出', 'x']);
+  // 工作區設定：沒寫＝打字機；寫了照它；不認得的列進 problems、先用打字機
+  assert.equal(readEndingSetting(shared(t, { image: 'cover.jpg' })).motion, 'type');
+  assert.equal(readEndingSetting(shared(t, { image: 'cover.jpg', motion: 'fade' })).motion, 'fade');
+  const bad = readEndingSetting(shared(t, { image: 'cover.jpg', motion: 'spin' }));
+  assert.equal(bad.motion, 'type');
+  assert.ok(bad.problems.some((p) => p.includes('片尾金句的文字動畫 "spin" 不認得') && p.includes('brand.mjs ending --motion')));
+  // 這一集：沒寫用工作區的；寫了蓋過；金句照樣取
+  const conf = readEndingSetting(shared(t, { image: 'cover.jpg', motion: 'fade' }));
+  assert.equal(run({ ending: conf, plan: { ending: { quote: '一句，兩句' } } }).ending.card.motion, 'fade');
+  const own = run({ ending: conf, plan: { ending: { quote: '一句，兩句', motion: 'wipe' } } });
+  assert.deepEqual([own.ending.card.motion, own.ending.card.quote.lines, own.errors], ['wipe', ['一句', '兩句'], []]);
+  assert.ok(run({ ending: conf, plan: { ending: { motion: 'spin' } } }).errors.some((e) => e.startsWith('ending.motion："spin" 不是可以用的文字動畫 → 改成 type（打字機）、fade（淡入）、rise（逐行浮出）、wipe（由左擦開）、none（直接出現） 其中一個')));
+  // 報告行：預設（打字機）不多寫，換了才寫
+  assert.ok(!endingLines(run({ ending: readEndingSetting(shared(t, { image: 'cover.jpg' })), plan: { ending: { quote: '一句' } } }).ending)[0].includes('文字動畫'));
+  assert.match(endingLines(own.ending)[0], /＋片尾金句「一句，兩句」，來源：plan\.json，文字動畫：由左擦開）/);
+});
+
+test('主合成：每一種文字動畫各自的寫法；打字機和以前一模一樣；最後都和圖一起淡出', (t) => {
+  const conf = readEndingSetting(shared(t, { image: 'cover.jpg' }));
+  const parts = (motion) => {
+    const res = run({ ending: conf, plan: { ending: { quote: '第一段，第二段', ...(motion ? { motion } : {}) } } });
+    return endingParts({ ...res.ending, card: { ...res.ending.card, file: 'assets/brand/ending-x.jpg' } }, { t0: 0, DUR: VD + ENDING.seconds, videoDur: VD, W: 1920, H: 1080, nextTrack: () => 1 });
+  };
+  const at = +(VD + ENDING.quote.at).toFixed(3), outAt = +(VD + ENDING.seconds - ENDING.image.fade).toFixed(3);
+  const type = parts(), dflt = parts('type');
+  assert.deepEqual(dflt, type, '寫 type 和不寫一樣');
+  assert.equal((type.html[0].match(/class="ec"/g) || []).length, 6);
+  assert.equal(type.css, '    #end-quote .ec { opacity: 0; }\n');
+  assert.ok(type.tl.some((l) => l.startsWith(`tl.to('#end-quote .ec', { opacity: 1, duration: 0.01, ease: 'none', stagger: `) && l.endsWith(`}, ${at});`)));
+  const fade = parts('fade');
+  assert.ok(!fade.html[0].includes('class="ec"') && fade.html[0].includes('第一段<br><br>第二段'));
+  assert.equal(fade.css, '    #end-quote { opacity: 0; }\n');
+  assert.ok(fade.tl.includes(`tl.to('#end-quote', { opacity: 1, duration: ${MOTION.fade}, ease: 'none' }, ${at});`));
+  const rise = parts('rise');
+  assert.ok(rise.html[0].includes('<span class="el">第一段</span><span class="el">第二段</span>'));
+  assert.ok(rise.css.includes('#end-quote .el { display: block; opacity: 0; }') && rise.css.includes(`#end-quote .el + .el { margin-top: ${ENDING.quote.line}px; }`));
+  assert.ok(rise.tl.includes(`tl.fromTo('#end-quote .el', { opacity: 0, y: ${MOTION.rise.y} }, { opacity: 1, y: 0, duration: ${MOTION.rise.dur}, ease: 'power2.out', stagger: ${MOTION.rise.gap} }, ${at});`));
+  const wipe = parts('wipe');
+  assert.ok(wipe.css.includes('#end-quote .el { display: block; clip-path: inset(0 100% 0 0); }'));
+  assert.ok(wipe.tl.includes(`tl.fromTo('#end-quote .el', { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: ${MOTION.wipe.dur}, ease: 'power2.inOut', stagger: ${MOTION.wipe.gap} }, ${at});`));
+  const none = parts('none');
+  assert.ok(none.tl.includes(`tl.set('#end-quote', { opacity: 1 }, ${at});`));
+  for (const p of [type, fade, rise, wipe, none]) assert.ok(p.tl.includes(`tl.to('#end-img, #end-quote', { opacity: 0, duration: ${ENDING.image.fade}, ease: 'none' }, ${outAt});`), '最後和圖一起淡出');
+});
+
+test('--set ending.motion：只收那五種；和 ending.quote 一起寫、分開寫都留著', (t) => {
+  const proj = tmpDir(t, 'ending-motion-set-');
+  fs.mkdirSync(path.join(proj, 'work', 'hyperframes'), { recursive: true });
+  fs.writeFileSync(path.join(proj, 'work', 'hyperframes', 'plan.json'), '{\n  "version": 1\n}\n');
+  const read = () => JSON.parse(fs.readFileSync(path.join(proj, 'work', 'hyperframes', 'plan.json'), 'utf8'));
+  setPlan(proj, { 'ending.quote': '一句話', 'ending.motion': 'fade' });
+  assert.deepEqual(read().ending, { quote: '一句話', motion: 'fade' });
+  setPlan(proj, { 'ending.motion': 'rise' });
+  assert.deepEqual(read().ending, { quote: '一句話', motion: 'rise' });
+  assert.throws(() => setPlan(proj, { 'ending.motion': 'spin' }), /ending\.motion/);
 });

@@ -239,6 +239,30 @@ export function bedFadeAt(o, b) {
   return clamp(Math.min(fi, fo, 1), 0, 1);
 }
 
+// ---------- 片尾（076）----------
+// 片尾卡接在影片後面，rough.mp4 沒有那幾秒：時間軸在結尾多畫 dur 秒，播放頭可以走進去看。
+// report＝build --check --json 整份（undefined＝檢查報告還沒好）；server＝/api/state 的 end（上一次 build 做進預覽的，報告還沒好時先用）
+//   endingLane → { dur, quote（金句，沒有＝''）, image（示意圖的網址，沒有＝null） }；沒有片尾卡＝null
+export function endingLane(report, server) {
+  const built = server?.ending || null;
+  const e = report !== undefined ? report?.ending : built;
+  if (!e || !(e.dur > 0)) return null;
+  const quote = Array.isArray(e.quote) ? e.quote.join('，') : typeof e.quote === 'string' ? e.quote : '';
+  return { dur: r3(e.dur), quote, image: built?.image || null, lines: Array.isArray(built?.quote) && built.quote.length ? built.quote : quote ? quote.split('，') : [] };
+}
+//   outroLane → { music, outStart, outEnd（完成影片秒數，含片尾卡那幾秒）, fadeIn, fadeOut, relDb, auto }；沒有片尾配樂（或舊的報告沒有範圍）＝null
+export function outroLane(report, server) {
+  if (report !== undefined) {
+    const o = report?.outro;
+    if (!o?.music || !(o.outEnd > o.outStart)) return null;
+    return { music: o.music, outStart: o.outStart, outEnd: o.outEnd, fadeIn: o.fadeIn || 0, fadeOut: o.fadeOut || 0, relDb: typeof o.relDb === 'number' ? o.relDb : null, auto: !!o.auto };
+  }
+  const b = server?.outro;
+  return b?.music && b.dur > 0 ? { music: b.music, outStart: b.at || 0, outEnd: r3((b.at || 0) + b.dur), fadeIn: b.fadeIn || 0, fadeOut: b.fadeOut || 0, relDb: null, auto: false } : null;
+}
+// 背景音樂軌沒有底樂時寫的那一行：有片尾配樂就說它在最後（不然寫「沒有背景音樂」，右邊卻畫著一條）
+export const bedNoneText = (lane, outro) => (outro && lane?.kind === 'none' ? '整支沒有鋪背景音樂，只有片尾配樂（在最後）' : lane?.text || '');
+
 // 吸附：找最近的候選時間（px 門檻由呼叫端換算成秒）
 export function snapTime(t, candidates, tol) {
   let best = t, bd = tol;
