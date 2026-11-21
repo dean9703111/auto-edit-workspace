@@ -1078,11 +1078,13 @@ export function build(flags, { log = console.log, delegateEncode = false, resolv
     const src = localDesign && fs.existsSync(path.join(localDesign.dir, f)) ? path.join(localDesign.dir, f) : pack && fs.existsSync(path.join(pack, f)) ? path.join(pack, f) : path.join(P.templateDir, 'kit', f);
     if (fs.existsSync(src) && copyIfDiff(src, path.join(P.out, 'kit', f))) kitN++;
   }
-  if (fs.existsSync(P.sfx)) for (const f of fs.readdirSync(P.sfx).filter((x) => x.endsWith('.wav'))) copyIfChanged(path.join(P.sfx, f), path.join(P.out, 'assets', 'sfx', f));
   // 自備音效蓋過內建的同名檔（--sfx 指到別的資料夾時不套；測試用 AUTO_EDIT_NO_LOCAL_SFX=1 關掉）
   const localSfx = localSfxDir(path.resolve(P.templateDir, '..'));
-  if (!flags.sfx && process.env.AUTO_EDIT_NO_LOCAL_SFX !== '1' && fs.existsSync(localSfx)) {
-    const mine = fs.readdirSync(localSfx).filter((x) => /^[a-z][a-z0-9-]*\.wav$/.test(x));
+  const useLocal = !flags.sfx && process.env.AUTO_EDIT_NO_LOCAL_SFX !== '1' && fs.existsSync(localSfx);
+  const mine = useLocal ? fs.readdirSync(localSfx).filter((x) => /^[a-z][a-z0-9-]*\.wav$/.test(x)) : [];
+  // 被自備蓋掉的就不先抄內建的：不然每次 build 都抄兩次、修改時間一直變，deliver 以為音效換了、整支重畫
+  if (fs.existsSync(P.sfx)) for (const f of fs.readdirSync(P.sfx).filter((x) => x.endsWith('.wav') && !mine.includes(x))) copyIfChanged(path.join(P.sfx, f), path.join(P.out, 'assets', 'sfx', f));
+  if (useLocal) {
     for (const f of mine) copyIfChanged(path.join(localSfx, f), path.join(P.out, 'assets', 'sfx', f));
     if (mine.length) log(`自備音效 ${mine.length} 顆（shared/sfx-local/）：${mine.map((f) => f.slice(0, -4)).join('、')}`);
   }

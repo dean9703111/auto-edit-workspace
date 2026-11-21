@@ -549,6 +549,13 @@ export function buildMain({ panelSide = 'left', cardSide = 'left', speakerSide =
       if (a >= 0) tl.push(`tl.fromTo('#footage', { scale: ${z.base} }, { scale: ${z.scale}, duration: ${n3(z.dur)}, ease: 'expo.out', immediateRender: false }, ${n3(a)});`);
       else tl.push(`tl.set('#footage', { scale: ${z.scale} }, 0);`);
       if (b < DUR) tl.push(`tl.set('#footage', { scale: ${z.base} }, ${n3(b)});`);
+      // 去背層疊在講者原畫面上：要用同一個中心一起推，不然會看到兩個講者（minimax-ep1 s0102b）
+      for (const m of list.filter((x) => x.matte?.file && x.s < b && x.e > Math.max(0, a))) {
+        const sel = `#matte-${m.id}`, org = `transformOrigin: '${zooms.origin}'`;
+        if (a >= 0) tl.push(`tl.fromTo('${sel}', { scale: ${z.base}, ${org} }, { scale: ${z.scale}, ${org}, duration: ${n3(z.dur)}, ease: 'expo.out', immediateRender: false }, ${n3(a)});`);
+        else tl.push(`tl.set('${sel}', { scale: ${z.scale}, ${org} }, 0);`);
+        if (b < DUR) tl.push(`tl.set('${sel}', { scale: ${z.base}, ${org} }, ${n3(b)});`);
+      }
       n++;
     }
     if (n && !footCss) footCss = `    #footage { transform-origin: ${zooms.origin}; }\n`;
