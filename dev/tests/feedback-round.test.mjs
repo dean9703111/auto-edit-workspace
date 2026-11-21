@@ -872,3 +872,47 @@ test('055 N10 finish：只改情緒點、只手改情境動畫檔也算改了（
   V.useVersion(c.P, { 'no-preview': true }, 's08', 'v2', () => {});
   assert.match(read(p, 'work/hyperframes/compositions/s08-concept.html'), /P\.pop\('#a', 0\.7\)/);
 });
+
+test('versions.mjs done：照修改單改的一輪，回來一段就 build、寫 r<N>.md 一列、剪輯台那段標已改完；別段 ✖ 先不標；這段 ✖ 交回；finish 照舊', () => {
+  const p = mk();
+  touch(p, 'work/feedback/editor-requests.md', ['# 剪輯台修改單', '', '## 1. s05　金句', '- 描述：字放大', '', '## 2. s08　概念', '- 描述：三張卡改成單欄直排', ''].join('\n'), 120);
+  const c = ctxOf(p);
+  V.beginRound(c.P, { requests: true }, [], '', logTo(c));
+  // 別段（s08）還在改、build 有它的 ✖：s05 先不標
+  const bad8 = { build() { return { ok: false, out: '✖ [s08 concept] slots.text 太長' }; } };
+  const l0 = [];
+  const r0 = V.doneSegs(c.P, { note: '字放大到 96' }, ['s05'], (l) => l0.push(l), { ...stepsOf().steps, ...bad8 });
+  assert.equal(r0.ok, false);
+  assert.match(l0.join('\n'), /⚠ build 沒過（別段的 ✖ 1 個/);
+  assert.equal(E.requestsInfo(p).states.s05.state, 'generating');
+  // 這段自己的 ✖：交回
+  const l1 = [];
+  const r1 = V.doneSegs(c.P, {}, ['s05'], (l) => l1.push(l), { ...stepsOf().steps, build() { return { ok: false, out: '✖ [s05 quote] slots.text 太長' }; } });
+  assert.deepEqual(r1.errors, ['✖ [s05 quote] slots.text 太長']);
+  assert.match(l1.join('\n'), /versions\.mjs done --project .* --seg s05/);
+  // 過了：r1.md 一列、剪輯台已改完，s08 還在生成中
+  editPlan(p, (j) => { seg(j, 's05').slots.text = '大毛病'; });
+  const l2 = [];
+  const r2 = V.doneSegs(c.P, { note: '字放大到 96' }, ['s05'], (l) => l2.push(l), stepsOf().steps);
+  assert.equal(r2.ok, true, l2.join('\n'));
+  assert.match(l2.join('\n'), /✓ s05 改好了：預覽已更新，剪輯台標「已改完」/);
+  assert.match(l2.join('\n'), /還在改：s08/);
+  assert.match(sectionOf(read(p, 'work/feedback/r1.md'), '改了哪幾段'), /^- s05：字放大到 96$/m);
+  const q = E.requestsInfo(p);
+  assert.equal(q.states.s05.state, 'done');
+  assert.equal(q.done.s05.note, '字放大到 96');
+  assert.equal(q.states.s08.state, 'generating');
+  // 最後一段回來：提示跑 finish
+  editPlan(p, (j) => { seg(j, 's08').slots.text = '單欄'; });
+  const l3 = [];
+  V.doneSegs(c.P, {}, ['s08'], (l) => l3.push(l), stepsOf().steps);
+  assert.match(l3.join('\n'), /修改單的段都回報了 → 下一步：.*versions\.mjs finish/);
+  // finish 照舊：版本、驗證，那一列補上版本號
+  const r = V.finishRound(c.P, {}, () => {}, stepsOf().steps);
+  assert.equal(r.ok, true);
+  assert.match(sectionOf(read(p, 'work/feedback/r1.md'), '改了哪幾段'), /^- s05：字放大到 96（v1 → v2）$/m);
+  assert.deepEqual([E.requestsInfo(p).states.s05.state, E.requestsInfo(p).states.s08.state], ['done', 'done']);
+  // 不是照修改單開的輪：✖
+  V.beginRound(c.P, {}, ['s12'], '改 s12', logTo(c));
+  assert.throws(() => V.doneSegs(c.P, {}, ['s12'], () => {}, stepsOf().steps), /不是照剪輯台修改單開的/);
+});

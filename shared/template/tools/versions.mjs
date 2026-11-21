@@ -14,6 +14,9 @@
  *       （修改單每次從剪輯台複製都整份蓋掉，作者的原話只留在 r<N>.md）。
  *       不給 --seg＝修改單裡 plan.json 有的段；--said 不給＝「照修改單改」。修改單的 t<秒> 段（要新增的段）plan.json 沒有，不放進這一輪的段，
  *       新增好在 r<N>.md「改了哪幾段」寫一列「- t<秒>：新增 <段 id>，…」，finish 照這一列回報。
+ *   node shared/template/tools/versions.mjs done --project projects/<專案> --seg s05[,s06] [--note "子代理回報的那一行"] [--json]
+ *       照修改單改的這一輪，一段改好就回報（子代理回來一段跑一次）：build（預覽換新）→ 這段沒有 ✖ → r<N>.md「改了哪幾段」寫「- <段>：<--note>」→
+ *       剪輯台那段標「已改完」（頁面跳提示）。別段還在改、build 沒過就先不標（印 ⚠）。不 audit、不存版本、不記停點：全部回來照舊跑 finish。
  *   node shared/template/tools/versions.mjs finish --project projects/<專案> [--preview] [--no-change] [--prerender] [--json]
  *       對這一輪做完：build（只印 ✖、⚠ 和六行摘要；沒改到的段的 ⚠ 只印數量）→ audit --only <改到的段> --shots（錄影段改用 snapshot --at 那段中間）→
  *       存改之後的版本 → 驗證與改法寫進 r<N>.md → 停點紀錄記 ④ 待回覆 → 印改到的段、✖／⚠、要看的那張截圖，最後是回報段（照貼，停點 ④ 那兩行在最後）。不跑全片 snapshot。
@@ -883,7 +886,7 @@ function printBegin(P, r, log = console.log) {
   log(`回饋 ${r.round}${r.continued ? '（接著同一輪）' : ''}：${r.segs.join('、')}`);
   log(`備份：${r.backup}｜紀錄：${r.file}、work/製作進度.md`);
   if (r.rule) log(`⚠ 原話有「${r.rule}」：可能是規則 → 這集照做，${r.file}「建議改規則」寫一條，不改 shared/、AGENTS.md`);
-  if (r.requests?.marked) log(`剪輯台修改單：${r.requests.ids.join('、')} 標成「生成中」（finish 會自己標已改完／失敗，不用跑 editor.mjs --requests-state）`);
+  if (r.requests?.marked) log(`剪輯台修改單：${r.requests.ids.join('、')} 標成「生成中」（回來一段就跑 ${TOOL} done --project ${pj(P)} --seg <段> --note "<回報那一行>"，剪輯台那段馬上標已改完；全部回來跑 finish）`);
   else if (r.requests) log(warn(`剪輯台修改單沒標成「生成中」：${r.requests.message || '不明原因'}`, '停下來重讀 work/feedback/editor-requests.md，問使用者要不要照新的改'));
   if (r.requests?.missing.length) log(warn(`修改單的 ${r.requests.missing.join('、')} plan.json 沒有`, `要新增的段（修改單寫「這裡現在沒有段落」）新增好在 ${r.file}「改了哪幾段」寫一列「- ${r.requests.missing[0]}：新增 <段 id>，<做了什麼>」再 finish；寫「plan.json 裡找不到這段」的不做，回報時問使用者是哪一段`));
   for (const b of r.blocks) {
@@ -1099,6 +1102,55 @@ function reportRequests(P, round, name, { auto, removed, aiRows, rows }) {
   }
   const line = `剪輯台修改單：${done.length ? `已改完 ${done.map((x) => x.id).join('、')}` : '沒有已改完的段'}${failed.length ? `；失敗 ${failed.map((x) => `${x.id}（${clip(x.msg, 30)}）`).join('、')}` : ''}`;
   return { done, failed, line, ...(reWarn ? { note: reWarn } : {}) };
+}
+
+// 一段改好就回報（照修改單改的這一輪；作者：「完成一個就知道一個」）：子代理每回來一段、或你自己改完一段，跑一次。
+//   build（預覽換新）→ 這段沒有 ✖ → r<N>.md「改了哪幾段」寫一列 → 剪輯台那段標「已改完」（頁面跳提示）。
+//   不 audit、不存版本、不記停點：全部回來照舊跑 finish（它會補驗證、改寫那一列、再回報一次）
+export function doneSegs(P, flags = {}, ids = [], log = console.log, steps = {}) {
+  const S = { ...REAL_STEPS, ...steps }, project = P.project;
+  const round = readState(project).round;
+  if (!round?.open || !round.requests || !fs.existsSync(feedbackFile(project, round.n))) throw new Error(`這一輪不是照剪輯台修改單開的 → done 只給「照修改單改」用（先跑 ${TOOL} begin --project ${pj(P)} --requests）；一般回饋輪改完直接跑 finish`);
+  const name = `r${round.n}`, batches = [...(round.requests.earlier || []), round.requests];
+  const revOf = (id) => batches.find((b) => b.ids.includes(id))?.revision ?? round.requests.revision;
+  const plan = readJson(P.plan) || {};
+  const allIds = (plan.scenes || []).map((s) => s?.id).filter(Boolean);
+  const inPlan = ids.filter((id) => allIds.includes(id));
+  const b = S.build(P, flags);
+  const dg = digestBuild(b.out, inPlan, allIds);
+  const mineErr = dg.errors.filter((e) => (e.match(/[A-Za-z0-9_-]+/g) || []).some((t) => inPlan.includes(t)));
+  if (mineErr.length) {
+    for (const e of mineErr.slice(0, ROUND.maxErrors)) log(e);
+    for (const l of next('照 → 改好這段，再跑一次同一條', cmdLine('versions.mjs', ['done', '--project', rel(project), '--seg', ids.join(',')]))) log(l);
+    return { ok: false, errors: mineErr };
+  }
+  if (!b.ok) {
+    log(`⚠ build 沒過（別段的 ✖ ${dg.errors.length} 個，多半是還在改的段）：預覽還沒換新，${ids.join('、')} 先不標已改完 → 等下一段回來再跑 done，或全部回來跑 finish`);
+    return { ok: false, errors: [] };
+  }
+  const note = String(flags.note || '').trim().replace(/\s+/g, ' ') || '改好了，預覽已更新（finish 補驗證）';
+  const file = feedbackFile(project, round.n);
+  let md = fs.readFileSync(file, 'utf8');
+  md = editSection(md, '改了哪幾段', (body) => {
+    const lines = body.filter((l) => l.trim() !== ROUND_PH);
+    for (const id of ids) {
+      const row = `- ${id}：${note}`, i = lines.findIndex((l) => new RegExp(`^- ${esc(id)}(：| )`).test(l));
+      if (i < 0) lines.push(row); else lines[i] = row;
+    }
+    return lines;
+  });
+  fs.writeFileSync(file, md);
+  const marked = [], stale = [];
+  for (const id of ids) {
+    const [st] = doRequestsStatus({ P }, { state: 'done', revision: revOf(id), ids: [id], message: clip(note, 300), round: name });
+    (st === 200 ? marked : stale).push(id);
+  }
+  for (const w of dg.warns) log(w);
+  if (marked.length) log(`✓ ${marked.join('、')} 改好了：預覽已更新，剪輯台標「已改完」`);
+  if (stale.length) log(warn(`剪輯台修改單在這輪開始之後重新複製過，${stale.join('、')} 的狀態沒有改`, '照舊做完其他段，finish 時一起看'));
+  const left = round.requests.ids.filter((id) => allIds.includes(id) && requestsInfo(project)?.states?.[id]?.state === 'generating');
+  log(left.length ? `還在改：${left.join('、')}（回來一段就再跑一次 done）` : `修改單的段都回報了 → 下一步：${finishCmd(P)}`);
+  return { ok: true, marked, stale, left };
 }
 
 function finishOnce(P, flags = {}, log = console.log, steps = {}) {
@@ -1369,7 +1421,7 @@ function siteCmd(P, flags) {
 export function cli(argv = process.argv.slice(2)) {
   if (!argv.length || argv.includes('--help')) { console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n?/, '').replace(/^ \* ?/gm, '')); return 0; }
   const flags = parseArgs(argv);
-  const CMDS = ['begin', 'finish', 'save', 'new', 'accept', 'use', 'list', 'compare', 'learn', 'site'];
+  const CMDS = ['begin', 'done', 'finish', 'save', 'new', 'accept', 'use', 'list', 'compare', 'learn', 'site'];
   if (!CMDS.includes(flags.cmd)) throw new Error(`沒有「${flags.cmd}」這個指令：只有 ${CMDS.join('、')} → 改成其中一個（用 --help 看用法）`);
   const P = pathsFrom(flags);
   // 062、063：只讀這集的紀錄、產生頁面，不動 plan.json（不跑下面的遷移）
@@ -1386,6 +1438,11 @@ export function cli(argv = process.argv.slice(2)) {
     if (flags.json) console.log(JSON.stringify({ ...r, project: pj(P) }, null, 2));
     else printBegin(P, r, log);
     return 0;
+  }
+  if (flags.cmd === 'done') {
+    const r = doneSegs(P, flags, ids, flags.json ? () => {} : log);
+    if (flags.json) console.log(JSON.stringify({ ...r, project: pj(P) }, null, 2));
+    return r.ok ? 0 : 1;
   }
   if (flags.cmd === 'finish') {
     const r = finishRound(P, flags, flags.json ? () => {} : log);

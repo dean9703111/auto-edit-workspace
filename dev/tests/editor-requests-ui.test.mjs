@@ -79,11 +79,14 @@ test('修改單 UI：複製、開始、失敗、完成及重新編輯的狀態�
     await page.waitForFunction(() => window.__editor.server?.requests?.carried?.includes('s01'));
     assert.equal(await page.$$('.rq-sent.generating').then((x) => x.length), 1);
     await update(['s01'], 'failed', '動畫檢查未通過');
+    // 完成一段就跳提示（versions.mjs done 每回來一段回報一次）：失敗的也跳，寫原因
+    await page.waitForFunction(() => [...document.querySelectorAll('#toasts .toast')].some((el) => el.textContent.includes('s01 沒改成：動畫檢查未通過')));
     await page.click('[data-rq="tab"][data-tab="pend"]');
     await page.waitForSelector('.rq-sent.failed');
     // 068 已改完＝最近一輪回饋的修改紀錄（versions.mjs finish 寫的 r<N>.md「改了哪幾段」），每段可以用上一版
     fs.writeFileSync(path.join(work, 'feedback/r1.md'), '# 回饋 r1（2026-11-19 12:00）\n\n## 原話\n\n「照修改單改」\n\n## 改了哪幾段\n\n- s01：已重做並通過 build、audit（v1 → v2）\n\n## 驗證\n');
     await update(['s01'], 'done', '已重做並通過 build、audit');
+    await page.waitForFunction(() => [...document.querySelectorAll('#toasts .toast')].some((el) => /^s01 改好了/.test(el.textContent) && el.querySelector('button')?.textContent === '▶ 看結果'));
     await page.click('[data-rq="tab"][data-tab="done"]');
     await page.waitForSelector('.rq-item.done');
     assert.match(await page.$eval('.rq-item.done', (el) => el.textContent), /已重做並通過 build、audit/);

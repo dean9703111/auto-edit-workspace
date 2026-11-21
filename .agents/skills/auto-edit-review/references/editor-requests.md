@@ -6,7 +6,7 @@
 
 1. `node shared/template/tools/versions.mjs begin --project projects/<專案> --requests`：段號、版本從修改單讀（plan.json 沒有的段自己略過，見第 1 節），剪輯台那幾段標「生成中」。
 2. 照第 2、3 節改。
-3. 沒做的段、新增的段先寫進 r<N>.md（第 4 節）。
+3. **回來一段就回報一段**：每個子代理回報（或你自己改完一段），馬上跑 `node shared/template/tools/versions.mjs done --project projects/<專案> --seg <段 id> --note "<子代理回報的那一行>"`：預覽換新、剪輯台那段標「已改完」並跳提示，使用者不用等全部改完。印 ✖ 就把原文交回那個子代理；印「⚠ build 沒過（別段的 ✖…）」照它的 → 等下一段。沒做的段、新增的段寫進 r<N>.md（第 4 節）。
 4. 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`：build、audit 一次做完，剪輯台有改到的段標「已改完」、沒改到的標「失敗」（理由取 r<N>.md 那一列），不用另外跑 `editor.mjs --requests-state`。
 
 ## 1. 讀修改單
@@ -75,6 +75,7 @@
 
 ## 4. 驗收與紀錄
 
+- 每一段回來就跑 `versions.mjs done --seg <段>`（第 3 步）；`done` 只 build、不 audit，驗收照舊在 `finish`。
 - `finish` 之前，在 `work/feedback/r<N>.md`「改了哪幾段」補兩種：沒做的段加一列 `- <段 id>：沒做，<理由>`；新增的段加一列 `- t1095：新增 s05b，<做了什麼>`。id 照修改單的寫、一段一列：`finish` 照這一列在剪輯台標「已改完」或「失敗」（理由就是冒號後面的字）。
 - 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`（build、量、存改後版本、寫驗證、記停點 ④、回報剪輯台），打開它印的圖，只看改到的段。改到的段它會自己填「改了哪幾段」；寫得太籠統（例「改了」）就用 edit 改那一列冒號後面的字。
 - 照貼 `finish` 印的回報段（每段一行、「清空修改單」那句、停點 ④ 都在裡面）；回報段沒列到的段（新增的、沒做的）補一行「<段>：<做了什麼或沒做的理由>」。

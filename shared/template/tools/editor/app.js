@@ -1684,7 +1684,12 @@ async function pollVersion() {
     const rebuilt = v.built && pv.builtMtime !== v.builtMtime;
     if (syncPreview(v)) renderMode();
     if (rqLoaded && v.requestsList != null && v.requestsList !== rqRev) await rqRefresh();   // 072 別的分頁、別的瀏覽器存了修改單
-    if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) { app.server.requests = v.requests ?? null; renderRequests(); loadRound(); }
+    if (JSON.stringify(v.requests ?? null) !== JSON.stringify(app.server.requests ?? null)) {
+      const was = app.server.requests?.states || {};
+      app.server.requests = v.requests ?? null;
+      renderRequests(); loadRound();
+      rqAnnounce(was, v.requests?.states || {});
+    }
     renderPrerender(v.prerender);
     syncOutsideBuild(v.build, v.framingUpdate);
     const changedOut = (v.plan.hash && app.base && v.plan.hash !== app.base.hash) || ((v.srt?.hash ?? null) !== (app.base?.srtHash ?? null));
@@ -4077,6 +4082,20 @@ function rqSync() {
     if (app.requests.length !== n0) ch = true;
   }
   if (ch) rqStore();
+}
+// 一段改好就跳提示（AI 每回來一段跑 versions.mjs done；作者：「完成一個就知道一個」）。剛打開頁面讀到的不算，只報這一頁看著它變的
+function rqAnnounce(was, now) {
+  const turned = (st) => Object.keys(now).filter((id) => now[id]?.state === st && was[id] && was[id].state !== st);
+  for (const id of turned('done')) {
+    const left = Object.values(now).filter((s) => s?.state === 'generating').length;
+    toast(`${id} 改好了${left ? `（還有 ${left} 段在改）` : '（修改單的段都改好了）'}`, 'ok', 12000, { actions: [['▶ 看結果', () => {
+      const it = app.itemsView.find((x) => x.id === id);
+      if (!it) { toast('找不到這段（可能被 AI 改名或刪掉了）', 'warn'); return; }
+      app.select({ kind: it.type === 'media' ? 'media' : 'item', id: it.id });
+      setMode('player', { focus: it.start + 0.05 });
+    }]] });
+  }
+  for (const id of turned('failed')) toast(`${id} 沒改成：${now[id].message || '看 AI 的回報'}`, 'warn', 12000);
 }
 // 生成中的段 AI 已經在改：不算待改、不再複製（不然同一段會送兩次）；失敗的算回待改，可以再送
 const rqGenerating = (r) => !r.done && rqProgress(r)?.state === 'generating';
