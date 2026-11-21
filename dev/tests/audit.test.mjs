@@ -336,12 +336,18 @@ test('judgeLayout：⚠ 右側空白過多（> 80px）；同一欄取最小、�
   assert.deepEqual(only(lay([box(0, mid, { centered: true })]), 'slack'), []);
 });
 
-test('judgeLayout：⚠ 垂直不平衡（全畫面、內容區 y 120–870、上下留白差 > 40px）', () => {
+test('judgeLayout：⚠ 垂直不平衡（全畫面；078 照角標下緣 y 136 到字幕上緣 y 956 量，上下留白差 > 40px；往下最多移到下緣 y 900）', () => {
   const blk = (y0, y1) => lel({ i: 0, rect: [40, y0, 1000, y1], painted: true, box: true });
   const f = only(lay([blk(120, 600)], { layout: 'fullscreen' }), 'vbalance');
-  assert.match(f[0].msg, /垂直不平衡：內容 y 120–600，上留白 0px、下留白 270px（內容區 y 120–870，差 270px，超過 40px）/);
-  assert.match(f[0].fix, /整組往下移 135px（每個頂層元素的 top 都 \+135）/);
-  assert.deepEqual(only(lay([blk(200, 790)], { layout: 'fullscreen' }), 'vbalance'), []);
+  assert.match(f[0].msg, /垂直不平衡：內容 y 120–600，上留白 -16px、下留白 356px（角標下緣到字幕上緣 y 136–956，差 372px，超過 40px）/);
+  assert.match(f[0].fix, /整組往下移 186px（每個頂層元素的 top 都 \+186）/);
+  assert.deepEqual(only(lay([blk(256, 836)], { layout: 'fullscreen' }), 'vbalance'), []);
+  // 模板主卡下移 42 之後（y 192–904）：上下各 56／52，不報；舊位置（y 150–862）要報往下
+  assert.deepEqual(only(lay([blk(192, 904)], { layout: 'fullscreen' }), 'vbalance'), []);
+  assert.match(only(lay([blk(150, 862)], { layout: 'fullscreen' }), 'vbalance')[0].fix, /整組往下移 38px/);
+  // 內容很高、下緣已經快到字幕區：往下移不了就不報；能移一點就只建議移到下緣 y 900
+  assert.deepEqual(only(lay([blk(150, 890)], { layout: 'fullscreen' }), 'vbalance'), []);
+  assert.match(only(lay([blk(140, 860)], { layout: 'fullscreen' }), 'vbalance')[0].fix, /整組往下移 40px/);
   assert.deepEqual(only(lay([blk(120, 600)]), 'vbalance'), []);   // overlay 不判
 });
 
@@ -819,11 +825,13 @@ test('009 直式：⚠ portrait-cam（P.cam 每個停點換算的外框超出舞
   assert.deepEqual(rules(pj({ camBoxes: { 'xproc-card': { box: [96.4, 150, 1323.6, 890.5], scale: 1.04 } } })), [], '直式推法（上緣中點為原點）在範圍內');
   assert.deepEqual(rules(pj({ camBoxes: { 'xproc-card': { box: [96.4, 124.8, 1374.6, 865.2], scale: 1.04 } } }, 'still')), [], '只在完成態判一次');
   assert.deepEqual(rules(pj({})), []);
-  // 垂直平衡：舞台段內容區換成舞台窗（鏡頭推近時卡底 890 不算失衡）；橫式照 120–870
+  // 垂直平衡：舞台段內容區換成舞台窗（鏡頭推近時卡底 890 不算失衡）；橫式照角標下緣到字幕上緣 136–956（078）
   const card = el({ rect: [96, 150, 1324, 890], painted: true, desc: { id: 'c' } });
   const lay = (ctx) => R.judgeLayout({ host: { start: 10 }, els: [card] }, { item: item({ opaque: true, seg: { layout: 'fullscreen' } }), t: 17.4, kind: 'still', layout: 'fullscreen', ...ctx }).filter((x) => x.rule === 'vbalance');
-  assert.equal(lay({}).length, 1);
+  assert.equal(lay({}).length, 0, '078 橫式照 y 136–956 量：下緣 890 已經快到字幕區，往下移不了，不報');
   assert.equal(lay({ contentY: [130, 880] }).length, 0);
+  const high = el({ rect: [96, 150, 1324, 800], painted: true, desc: { id: 'c' } });
+  assert.equal(R.judgeLayout({ host: { start: 10 }, els: [high] }, { item: item({ opaque: true, seg: { layout: 'fullscreen' } }), t: 17.4, kind: 'still', layout: 'fullscreen' }).filter((x) => x.rule === 'vbalance').length, 1, '橫式貼著上緣、下面空著要報');
 });
 
 test('009 直式原生段（overlay）：✖ 字幕保留帶 y 1280–1420、✖ unsafe（上方／下方／右側按鈕列）、超出畫面量 1080×1920、字級 < 48（055 Q3）；橫式訊息不變', async () => {

@@ -131,8 +131,8 @@ export function blackBars(file, { width: W, height: H, duration }, cacheFile = n
     const t = duration > 0 ? r3((duration * (k + 0.5)) / BAR_SAMPLES) : 0;
     // 先只解關鍵影格（4K 長片快）；那一段沒有關鍵影格（短片）再照一般方式解
     const cd = (fast) => String(run('ffmpeg', ['-hide_banner', '-v', 'info', ...(fast ? ['-skip_frame', 'nokey'] : []), '-ss', String(t), '-i', file, '-frames:v', '1', '-vf', 'cropdetect=limit=16:round=2:skip=0:reset=0', '-an', '-f', 'null', '-']).stderr || '');
-    let err = cd(true);
-    if (!/crop=/.test(err)) err = cd(false);
+    let err;
+    try { err = cd(true); if (!/crop=/.test(err)) err = cd(false); } catch { return null; }   // 沒有 ffmpeg（CI、還沒裝）：不量、不記快取，當作沒有黑邊
     const dim = /Stream #\S+: Video: .*?, (\d{2,5})x(\d{2,5})/.exec(err);
     if (!dim || +dim[1] !== W || +dim[2] !== H) { ok = false; break; }   // 解不出畫面（空檔）、大小對不上（旋轉、假 probe）：不判
     const m = [...err.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)].pop();

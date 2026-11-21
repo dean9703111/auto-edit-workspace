@@ -118,11 +118,11 @@ node shared/template/tools/brand.mjs speaker
 **9. 片尾模板**（使用者說「設定片尾」「片尾換這張圖」「片尾不要金句」「以後不要片尾」「這集不要片尾」「片尾金句改成…」）
 
 ```
-node shared/template/tools/brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote]
+node shared/template/tools/brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote] [--motion <文字動畫>]
 node shared/template/tools/brand.mjs ending
 ```
 
-影片結束後接一張片尾卡（黑底、圖置中、右邊一個字一個字打出片尾金句），講到「訂閱」那句放訂閱動畫；檔案複製進 `shared/brand/`、寫 `shared/setting.json`（都不進版控）。預設沒有片尾。片尾金句每集自動取講稿最後的 `>` 引言，沒有就用最後一張金句字卡。只改一項就只給那個旗標；以後不要：`brand.mjs ending off`。只有這一集：`build.mjs --project projects/<專案> --set ending=false`（不要片尾）、`--set "ending.quote=<句子>"`（換金句；`none`＝不放）、`--set ending.subscribe=#N`（訂閱動畫跟哪一句）。直式、剪映素材不放。這一步不用停點 ⑥。
+影片結束後接一張片尾卡（黑底、圖置中、右邊一個字一個字打出片尾金句），講到「訂閱」那句放訂閱動畫；檔案複製進 `shared/brand/`、寫 `shared/setting.json`（都不進版控）。預設沒有片尾。片尾金句每集自動取講稿最後的 `>` 引言，沒有就用最後一張金句字卡。只改一項就只給那個旗標；以後不要：`brand.mjs ending off`。只有這一集：`build.mjs --project projects/<專案> --set ending=false`（不要片尾）、`--set "ending.quote=<句子>"`（換金句；`none`＝不放）、`--set ending.subscribe=#N`（訂閱動畫跟哪一句）、`--set ending.motion=<名稱>`（片尾金句的文字動畫：`type` 打字機（預設）、`fade` 淡入、`rise` 逐行浮出、`wipe` 由左擦開、`none` 直接出現；使用者也可以在剪輯台點片尾卡自己選）。每一集都換文字動畫：`brand.mjs ending --motion <名稱>`。直式、剪映素材不放。這一步不用停點 ⑥。
 完成判準：第 2 行印 `片尾卡：<圖>…`；有專案時重跑 build 印 `片尾卡：影片結束後接 … 秒`。
 
 **10. 字幕樣式**（使用者說「換字幕樣式」「字幕改白字黑框」「字幕大一點」「字幕粗一點」「換字幕字體」「字幕往上移」「短影音字幕往上」）

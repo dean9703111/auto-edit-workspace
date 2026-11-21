@@ -30,7 +30,7 @@
  *
  * 片尾模板（shared/setting.json 的 ending，素材在 shared/brand/，都不進版控；lib/ending.mjs）：
  *   brand.mjs ending                                    看目前的設定
- *   brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote|--quote]
+ *   brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote|--quote] [--motion <文字動畫>]
  *                                                       設定：影片結束後接片尾卡（這張圖＋片尾金句），講到「訂閱」那句放訂閱動畫；
  *                                                       檔案複製進 shared/brand/。只改一項就只給那一個旗標（例 --seconds 8）
  *   brand.mjs ending off                                關掉片尾（拿掉設定；shared/brand/ 的檔留著）
@@ -64,7 +64,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { listPacks, packsJs, samePack, copyIfDiff, templatePathOf, PACK_KIT, PACK_BG, STYLES_DIR, DEFAULT_PACK } from './lib/styles.mjs';
 import { readSpeaker, validateSpeaker, SPEAKER_FILE, SET_CMD } from './lib/speaker.mjs';
 import { readSettings, writeSetting } from './lib/settings.mjs';
-import { readEndingSetting, ENDING, BRAND_DIR } from './lib/ending.mjs';
+import { readEndingSetting, ENDING, BRAND_DIR, ENDING_MOTIONS, ENDING_MOTION, endingMotionZh } from './lib/ending.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, describeCaptionStyle } from './lib/caption-style.mjs';
 import { FRAME, sanitizeScreenFrame, resolveScreenFrame, describeScreenFrame, SCREEN_BGS } from './lib/screen-frame.mjs';
 import { ok, warn, fail, next, cmdLine, report } from './lib/say.mjs';
@@ -396,10 +396,11 @@ const BG_HELP = `換主色與背景圖（零依賴，只用 Node 22、ffmpeg 與
 
   node shared/template/tools/brand.mjs ending
       看片尾模板的設定（shared/setting.json 的 ending；素材在 shared/brand/，不進版控）。
-  node shared/template/tools/brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote|--quote]
+  node shared/template/tools/brand.mjs ending <圖檔> [--seconds 9.9] [--subscribe <動畫檔>|none] [--no-quote|--quote] [--motion <文字動畫>]
       設定片尾：影片結束後接 --seconds 秒的片尾卡（黑底、這張圖置中、右邊打出片尾金句；金句取講稿最後的 > 引言，
       沒有就用最後一張金句字卡），講到「訂閱」那句放訂閱動畫（gif／webm／mov）。檔案複製進 shared/brand/。
       只改一項就只給那個旗標（例 brand.mjs ending --seconds 8）；--no-quote＝片尾卡只放圖。直式、剪映素材不放。
+      --motion＝片尾金句的文字動畫：${ENDING_MOTIONS.map((m) => `${m.id}（${m.zh}）`).join('／')}，沒寫＝${ENDING_MOTION}；只有這一集：build.mjs --set ending.motion=<名稱>，或在剪輯台點片尾卡選。
   node shared/template/tools/brand.mjs ending off
       關掉片尾（拿掉設定，shared/brand/ 的檔留著）。某一集不要：build.mjs --set ending=false
 
@@ -748,24 +749,24 @@ function endingCli(args) {
   for (let i = 0; i < args.length; i++) {
     if (!String(args[i]).startsWith('--')) { o._.push(args[i]); continue; }
     const [k, inline] = splitFlag(args[i]);
-    if (['seconds', 'subscribe', 'kit'].includes(k)) [o[k], i] = takeValue(args, i, k, inline, `例：${END_CMD}`);
+    if (['seconds', 'subscribe', 'kit', 'motion'].includes(k)) [o[k], i] = takeValue(args, i, k, inline, `例：${END_CMD}`);
     else if (k === 'quote' || k === 'no-quote') o.quote = k === 'quote';
     else throw new Error(`brand.mjs ending 沒有 --${k} 這個參數 → 例：${END_CMD}；關掉：brand.mjs ending off`);
   }
   const sharedDir = path.resolve(templateOf(o.kit ? path.resolve(o.kit) : undefined), '..');
   const cur = readSettings(sharedDir).data.ending;
   if (o._[0] === 'off') {
-    if (o._.length > 1 || o.seconds != null || o.subscribe != null || o.quote != null) throw new Error('brand.mjs ending off 後面不用再寫別的');
+    if (o._.length > 1 || o.seconds != null || o.subscribe != null || o.quote != null || o.motion != null) throw new Error('brand.mjs ending off 後面不用再寫別的');
     writeSetting(sharedDir, 'ending', undefined);
     console.log(ok(`已關掉片尾（拿掉 shared/setting.json 的 ending；shared/${BRAND_DIR}/ 的檔留著）`));
     console.log(`要再打開：${END_CMD}`);
     return 0;
   }
   if (o._.length > 1) throw new Error(`brand.mjs ending 只收一張圖 → 例：${END_CMD}`);
-  if (!o._.length && o.seconds == null && o.subscribe == null && o.quote == null) {
+  if (!o._.length && o.seconds == null && o.subscribe == null && o.quote == null && o.motion == null) {
     const e = readEndingSetting(sharedDir);
     if (!e) { console.log(`片尾：沒設定（預設沒有）→ 設定：${END_CMD}`); return 0; }
-    console.log(`片尾卡：${e.image ? `${path.basename(e.image)}，${e.seconds} 秒，${e.quote ? '右邊放片尾金句（講稿最後的 > 引言，沒有就用最後一張金句字卡）' : '只放圖'}` : '沒有'}｜訂閱動畫：${e.subscribe ? path.basename(e.subscribe) : '沒有'}｜shared/setting.json、shared/${BRAND_DIR}/`);
+    console.log(`片尾卡：${e.image ? `${path.basename(e.image)}，${e.seconds} 秒，${e.quote ? `右邊放片尾金句（講稿最後的 > 引言，沒有就用最後一張金句字卡）${e.motion !== ENDING_MOTION ? `，文字動畫：${endingMotionZh(e.motion)}` : ''}` : '只放圖'}` : '沒有'}｜訂閱動畫：${e.subscribe ? path.basename(e.subscribe) : '沒有'}｜shared/setting.json、shared/${BRAND_DIR}/`);
     for (const p of e.problems) console.log(`⚠ ${p}`);
     return e.problems.length ? 1 : 0;
   }
@@ -778,11 +779,15 @@ function endingCli(args) {
     want.seconds = Math.round(n * 30) / 30 === n ? n : Math.round(n * 30) / 30;   // 對齊影格（30fps），完成影片才能逐格接
   }
   if (o.quote != null) want.quote = o.quote;
+  if (o.motion != null) {
+    if (!ENDING_MOTIONS.some((m) => m.id === o.motion)) throw new Error(`--motion 要是 ${ENDING_MOTIONS.map((m) => `${m.id}（${m.zh}）`).join('、')} 其中一個，現在是 ${o.motion}`);
+    want.motion = o.motion === ENDING_MOTION ? undefined : o.motion;   // 預設（打字機）不寫
+  }
   if (!want.image && !want.subscribe) throw new Error(`還沒有片尾圖也沒有訂閱動畫 → 至少給一個：${END_CMD}`);
-  const clean = Object.fromEntries(Object.entries({ image: want.image, seconds: want.seconds ?? ENDING.seconds, quote: want.quote ?? true, subscribe: want.subscribe }).filter(([, v]) => v !== undefined));
+  const clean = Object.fromEntries(Object.entries({ image: want.image, seconds: want.seconds ?? ENDING.seconds, quote: want.quote ?? true, subscribe: want.subscribe, motion: want.motion }).filter(([, v]) => v !== undefined));
   writeSetting(sharedDir, 'ending', clean);
   const e = readEndingSetting(sharedDir);
-  console.log(ok(`已設定片尾（shared/setting.json，不進版控）：${clean.image ? `片尾卡 ${clean.image} ${clean.seconds} 秒${clean.quote ? '＋片尾金句' : '（只放圖）'}` : '沒有片尾卡'}｜訂閱動畫：${clean.subscribe || '沒有'}`));
+  console.log(ok(`已設定片尾（shared/setting.json，不進版控）：${clean.image ? `片尾卡 ${clean.image} ${clean.seconds} 秒${clean.quote ? `＋片尾金句${clean.motion ? `（文字動畫：${endingMotionZh(clean.motion)}）` : ''}` : '（只放圖）'}` : '沒有片尾卡'}｜訂閱動畫：${clean.subscribe || '沒有'}`));
   for (const p of e?.problems || []) console.log(`⚠ ${p}`);
   console.log('之後每一集 build 就會放（直式、剪映素材不放）；某一集不要：build.mjs --project projects/<專案> --set ending=false');
   return 0;

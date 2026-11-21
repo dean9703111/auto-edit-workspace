@@ -1,6 +1,6 @@
 // 時間軸（canvas）：照疊放順序由上到下——總覽、時間尺、動畫（資訊卡／字卡動態）、插入素材、主軌畫面、字幕、人聲、音效、背景音樂
 // 這裡只管畫圖、點到什麼（hit test）、吸附；點下去／拖曳要做什麼由 app.js 的 app.tl* 決定。
-import { fmt, fmtTC, fmtSec, fmtDb, clamp, cutIndexAt, joinFor, dbToGain, gainAt, outOf, bedFadeAt } from './model.mjs';
+import { fmt, fmtTC, fmtSec, fmtDb, clamp, cutIndexAt, joinFor, dbToGain, gainAt, outOf, roughOf, bedFadeAt, bedNoneText } from './model.mjs';
 import { speedLabel } from './speed.mjs';
 import { transitionOf } from './motion.mjs';
 
@@ -30,8 +30,11 @@ const C = {
   wave: 'rgba(160,200,255,0.70)', waveHot: '#FF5A5F', cut: 'rgba(7,11,20,0.72)', cutLine: '#FF5A5F', sel: 'rgba(255,212,0,0.16)', selLine: '#FFD400',
   play: '#FFD400', voice: 'rgba(255,255,255,0.22)', band: '#FFD400', bandDim: 'rgba(255,212,0,0.55)',
   scene: '#3B82F6', fx: '#C792EA', custom: '#2FB36B', media: '#FF8A3D', cap: '#1E2740', capSel: '#2B3A63', sfx: '#4ADE9B', own: 'rgba(255,255,255,0.88)',
+  outro: '#FFB454', outroBody: 'rgba(255,180,84,0.10)', outroFill: 'rgba(255,180,84,0.38)',
   bed: '#5EC8E5', bedBody: 'rgba(94,200,229,0.08)', bedFill: 'rgba(94,200,229,0.42)', bedFillLow: 'rgba(94,200,229,0.20)', bedWave: 'rgba(255,255,255,0.30)',
 };
+const OUTRO_LV = 0.42;  // 片尾配樂（076）：音量線畫在這個高度（滿＝1；它的音量不能在這裡調，畫低一點不壓到上面的曲名）
+const END_GRAB = 7;     // 片尾卡區段：離影片結尾這幾 px 以內還是算影片的（片尾把手、最後一句字幕的邊緣要拖得到）
 const BED_LOW = 0.55;   // 背景音樂軌：講話時壓低的地方，音量線畫在這個高度（滿＝1）
 const bedLevel = (db) => clamp((db + 30) / 36, 0.06, 1);   // 背景音樂軌：音量（bed.volume）→ 音量線的高度（+6＝滿、0 約八成、−30 以下貼底）
 const MOOD_COL = { quote: '#FFD400', turn: '#C792EA', pain: '#FF5A5F', win: '#4ADE9B', land: '#FF8A3D' };   // 情緒點（023）
@@ -42,7 +45,7 @@ export class Timeline {
     this.cv = canvas; this.tip = tip; this.app = app;
     this.ctx = canvas.getContext('2d');
     this.off = document.createElement('canvas');
-    this.dur = 0; this.pps = 50; this.t0 = 0; this.fitPps = 50;
+    this.dur = 0; this.vdur = 0; this.pps = 50; this.t0 = 0; this.fitPps = 50;   // dur＝時間軸的長度（076 含片尾卡那幾秒）；vdur＝rough.mp4 的長度（能編輯的範圍）
     this.staticDirty = true; this.drag = null; this.hover = null; this.snapLine = null;
     this.compact = false; this.scale = 1; this.animRows = 1;
     this.layoutLanes();
@@ -108,11 +111,14 @@ export class Timeline {
     this.clampView();
     this.invalidate();
   }
-  setDuration(d) {
-    this.dur = d || 0;
+  // extra＝接在影片後面的片尾卡秒數（076；rough.mp4 沒有這段，只能看）
+  setDuration(d, extra = 0) {
+    const keep = this._init && this.pps <= this.fitPps * 1.0001;   // 原本就是看整支：長度變了（多了片尾卡那幾秒）還是看整支
+    this.vdur = d || 0;
+    this.dur = this.vdur + (this.vdur > 0 && extra > 0 ? extra : 0);
     this.fitPps = this.dur > 0 ? (this.cssW - PAD * 2) / this.dur : 50;
     if (!this._init && this.dur > 0) { this.pps = Math.max(this.fitPps, (this.cssW - PAD * 2) / DEFAULT_SPAN); this.t0 = 0; this._init = true; }
-    else if (this.pps < this.fitPps) { this.pps = this.fitPps; this.t0 = 0; }
+    else if (keep || this.pps < this.fitPps) { this.pps = this.fitPps; this.t0 = 0; }
     this.clampView();
     this.invalidate();
   }
@@ -185,6 +191,9 @@ export class Timeline {
   // ---------- 繪圖 ----------
   draw() {
     if (!this.cssW) return;
+    // 076 片尾卡的秒數變了（檢查報告好了、開關片尾）：時間軸的長度跟著變
+    const extra = this.vdur > 0 ? this.app.endDur || 0 : 0;
+    if (Math.abs(this.vdur + extra - this.dur) > 1e-6) this.setDuration(this.vdur, extra);
     if (this.staticDirty) { this.drawStatic(); this.staticDirty = false; }
     const g = this.ctx, d = this.dpr, L = this.L, A = this.app;
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -252,6 +261,14 @@ export class Timeline {
     if (this.dur > 0) {
       const xe = X(this.dur);
       if (xe < W) { g.fillStyle = '#05080F'; g.fillRect(xe, L.anim[0], W - xe, H - L.anim[0]); }
+      // 076 片尾卡那幾秒：rough.mp4 外面，音效軌以上壓暗（不能編輯）；背景音樂軌照常（片尾配樂、底樂會鋪到這裡）
+      if (this.dur > this.vdur) {
+        const xa = X(this.vdur), xb = Math.min(W, xe);
+        if (xb > 0 && xa < W) {
+          g.fillStyle = '#080C16'; g.fillRect(xa, L.anim[0], xb - xa, L.sfx[1] - L.anim[0]);
+          g.fillStyle = 'rgba(255,255,255,0.30)'; g.fillRect(Math.round(xa), L.anim[0], 1, H - L.anim[0]);
+        }
+      }
     }
 
     // ---- 總覽 ----
@@ -260,6 +277,7 @@ export class Timeline {
       const OX = (t) => PAD + (t / this.dur) * (W - PAD * 2);
       for (const it of A.itemsView) { g.fillStyle = C[it.type] || C.scene; g.fillRect(OX(it.start), L.ov[0] + 2, Math.max(1, OX(it.end) - OX(it.start)), 3); }
       for (const [a, b] of A.edit.cuts) { g.fillStyle = 'rgba(224,32,42,0.9)'; g.fillRect(OX(a), L.ov[0] + 6, Math.max(1.5, OX(b) - OX(a)), 5); }
+      if (this.dur > this.vdur) { g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillRect(OX(this.vdur), L.ov[0] + 2, Math.max(1.5, OX(this.dur) - OX(this.vdur)), 3); }
       g.strokeStyle = 'rgba(255,212,0,0.85)'; g.lineWidth = 1;
       g.strokeRect(OX(this.t0) + 0.5, L.ov[0] + 0.5, Math.max(4, OX(Math.min(this.dur, this.t0 + this.span())) - OX(this.t0) - 1), L.ov[1] - L.ov[0] - 1);
     }
@@ -362,7 +380,7 @@ export class Timeline {
     {
       const [y0, y1] = L.main;
       const y = y0 + 3, h = y1 - y0 - 6;
-      const xa = X(0), xb = X(this.dur);
+      const xa = X(0), xb = X(this.vdur);
       clipRect(Math.max(0, xa), y, Math.min(W, xb) - Math.max(0, xa), h, () => this.drawMainThumbs(g, y, h));
       g.fillStyle = 'rgba(7,11,20,0.25)'; g.fillRect(Math.max(0, xa), y, Math.min(W, xb) - Math.max(0, xa), h);
       // 只有聲音：是正常狀態，只壓暗、寫字，不畫斜線。斜線留給要處理的（下面的紅色）
@@ -385,6 +403,17 @@ export class Timeline {
       g.fillStyle = '#FFFFFF';
       const hs = A.headTail();
       for (const [t, dir] of [[hs.head, 1], [hs.tail, -1]]) { const xx = X(t); if (xx < -6 || xx > W + 6) continue; g.globalAlpha = 0.9; g.fillRect(dir > 0 ? xx : xx - 4, y, 4, h); g.globalAlpha = 1; }
+      // 076 片尾卡：接在影片後面的黑底卡（圖＋金句），照實際秒數畫一塊；只能看，要改跟 AI 說
+      const E = A.endView;
+      if (E && this.dur > this.vdur && vis(this.vdur, this.dur)) {
+        const ea = X(this.vdur) + 2, eb = X(this.dur) - 1, sel = A.selLane === 'ending';
+        rr(ea, y, Math.max(3, eb - ea), h, 4); g.fillStyle = '#000'; g.fill();
+        g.strokeStyle = sel ? '#FFFFFF' : 'rgba(255,255,255,0.55)'; g.lineWidth = sel ? 2 : 1; rr(ea + 0.5, y + 0.5, Math.max(2, eb - ea - 1), h - 1, 4); g.stroke();
+        if (eb - ea > 44) clipRect(ea + 4, y, eb - ea - 8, h, () => {
+          g.font = font(11, 700); g.textBaseline = 'middle'; g.fillStyle = '#fff';
+          g.fillText(`片尾卡 ${fmtSec(E.dur)}${E.quote ? `｜${E.quote}` : ''}`, Math.max(ea, 0) + 7, y + h / 2);
+        });
+      }
     }
     // 剪掉的範圍（主軌、字幕、人聲一起）
     A.edit.cuts.forEach(([a, b], i) => {
@@ -459,7 +488,7 @@ export class Timeline {
       const base = A.edit.volume.voice, gains = A.edit.gains;
       if (P && P.peaks.length) {
         const rate = P.rate, pk = P.peaks, sc = P.scale || 1000;
-        for (let x = Math.max(0, Math.floor(X(0))); x < Math.min(W, X(this.dur)); x++) {
+        for (let x = Math.max(0, Math.floor(X(0))); x < Math.min(W, X(this.vdur)); x++) {
           const ta = this.t0 + (x - PAD) / this.pps, tb = ta + 1 / this.pps;
           const i0 = Math.floor(ta * rate), i1 = Math.max(i0 + 1, Math.ceil(tb * rate));
           let m = 0;
@@ -473,7 +502,7 @@ export class Timeline {
         }
       } else { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(A.peaksHint || '波形計算中…', PAD + 6, mid); }
       // 音量線：整條是人聲音量（volume.voice），範圍音量（gains）往上／往下一段
-      const xs = Math.max(0, X(0)), xe = Math.min(W, X(this.dur));
+      const xs = Math.max(0, X(0)), xe = Math.min(W, X(this.vdur));
       g.strokeStyle = C.bandDim; g.lineWidth = 1.5;
       g.beginPath();
       let cur = xs;
@@ -494,7 +523,7 @@ export class Timeline {
         g.fillStyle = C.band; for (const xx of [ga, gb]) { g.beginPath(); g.arc(xx, yg, 3.5, 0, Math.PI * 2); g.fill(); }
         if (gb - ga > 50) { g.font = font(11, 700); g.textBaseline = 'bottom'; g.fillText(fmtDb(gg.db), ga + 5, yg - 3); }
       }
-      if (Math.abs(base) > 0.05 && X(this.dur) - xs > 80) { g.font = font(11, 700); g.textBaseline = 'bottom'; g.fillStyle = C.bandDim; g.fillText(`人聲 ${fmtDb(base)}`, Math.max(xs, 0) + 6, yBase - 2); }
+      if (Math.abs(base) > 0.05 && X(this.vdur) - xs > 80) { g.font = font(11, 700); g.textBaseline = 'bottom'; g.fillStyle = C.bandDim; g.fillText(`人聲 ${fmtDb(base)}`, Math.max(xs, 0) + 6, yBase - 2); }
     }
 
     // ---- 選取範圍（主軌、字幕、人聲）----
@@ -561,10 +590,13 @@ export class Timeline {
     {
       const [y0, y1] = L.bed;
       const B = A.bedView;
-      if (B?.kind !== 'on') { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(B?.text || '', PAD + 6, (y0 + y1) / 2); }
-      else if (vis(B.start, B.end)) {
+      const O = A.outroView;   // 076 片尾配樂
+      // 底樂鋪到片尾卡結束：片尾卡那幾秒現在畫得出來，整條畫到那裡（沒有片尾卡區段時照舊停在影片結尾、尾巴寫還有幾秒）
+      const bedAfter = B?.kind === 'on' ? Math.max(0, B.outEnd - outOf(this.vdur, A.edit.cuts)) : 0, bedEnd = B?.kind === 'on' ? (this.dur > this.vdur && B.end >= this.vdur - 0.05 ? Math.min(this.dur, B.end + bedAfter) : B.end) : 0;
+      if (B?.kind !== 'on') { g.font = font(11.5); g.fillStyle = C.dim; g.textBaseline = 'middle'; g.fillText(bedNoneText(B, O), PAD + 6, (y0 + y1) / 2); }
+      else if (vis(B.start, bedEnd)) {
         const y = y0 + 3, h = y1 - y0 - 6, bot = y + h, cuts = A.edit.cuts;
-        const xa = X(B.start), xb = X(B.end), x0 = Math.max(0, Math.floor(xa)), x1 = Math.min(W, Math.ceil(xb));
+        const xa = X(B.start), xb = X(bedEnd), x0 = Math.max(0, Math.floor(xa)), x1 = Math.min(W, Math.ceil(xb));
         const sel = A.selLane === 'bed', muted = !!A.trackMuted?.('bed'), vol = A.bedVol ?? 0, kv = bedLevel(vol);
         rr(xa, y, Math.max(3, xb - xa), h, 4); g.fillStyle = muted ? 'rgba(255,255,255,0.05)' : C.bedBody; g.fill();
         // 每一格（px）：rough 秒數 → 完成影片秒數 → 淡入淡出、壓低
@@ -595,7 +627,7 @@ export class Timeline {
         if (line.length) { g.strokeStyle = muted ? 'rgba(255,255,255,0.22)' : C.bed; g.lineWidth = 1.5; g.beginPath(); line.forEach(([lx, ly], i) => (i ? g.lineTo(lx, ly) : g.moveTo(lx, ly))); g.stroke(); }
         g.strokeStyle = sel ? '#FFFFFF' : muted ? 'rgba(255,255,255,0.35)' : 'rgba(94,200,229,0.75)'; g.lineWidth = sel ? 2 : 1; rr(xa + 0.5, y + 0.5, Math.max(2, xb - xa - 1), h - 1, 4); g.stroke();
         // 曲名（＋音量）寫在看得到的那一段開頭；片尾卡那幾秒在 rough.mp4 外面，尾巴寫還有幾秒
-        const after = B.outEnd - outOf(this.dur, cuts);
+        const after = bedEnd > B.end ? 0 : bedAfter;
         const label = muted ? `🔇 ♪ ${B.music}　靜音` : `♪ ${B.music}${vol ? `　${fmtDb(vol)}` : ''}${B.ducked ? '' : '　整段固定音量'}`;
         if (x1 - x0 > 40) clipRect(x0 + 4, y, x1 - x0 - 8, h, () => {
           g.font = font(11, 700); g.textBaseline = 'top'; g.fillStyle = muted ? C.dim : '#fff'; g.shadowColor = '#000'; g.shadowBlur = 3;
@@ -603,6 +635,31 @@ export class Timeline {
           if (after > 0.5 && xb <= W && xb - xa > 160) { const tail = `片尾再 ${Math.round(after)} 秒 →`; g.fillText(tail, xb - 8 - g.measureText(tail).width, y + 2); }
           g.shadowBlur = 0;
         });
+      }
+      // 076 片尾配樂：從起播那一句畫到片尾卡結束（完成影片秒數換回時間軸；頭尾是淡入淡出的斜坡）。和底樂同一軌、顏色不同；音量、起播句不在這裡調
+      if (O) {
+        const cuts = A.edit.cuts, a = roughOf(O.outStart, cuts), b = Math.min(this.dur, roughOf(O.outEnd, cuts));
+        if (b > a && vis(a, b)) {
+          const y = y0 + 3, h = y1 - y0 - 6, bot = y + h;
+          const xa = X(a), xb = X(b), x0 = Math.max(0, Math.floor(xa)), x1 = Math.min(W, Math.ceil(xb)), sel = A.selLane === 'outro';
+          rr(xa, y, Math.max(3, xb - xa), h, 4); g.fillStyle = '#0B1020'; g.fill(); g.fillStyle = C.outroBody; g.fill();
+          const line = [];
+          for (let x = x0; x < x1; x++) {
+            const ta = this.t0 + (x - PAD) / this.pps;
+            const lv = bedFadeAt(outOf(ta, cuts), O) * OUTRO_LV, top = bot - 1 - lv * (h - 3);
+            g.fillStyle = cutIndexAt(ta, cuts) >= 0 ? 'rgba(255,90,95,0.16)' : C.outroFill; g.fillRect(x, top, 1, bot - top);
+            line.push([x + 0.5, top]);
+          }
+          if (line.length) { g.strokeStyle = C.outro; g.lineWidth = 1.5; g.beginPath(); line.forEach(([lx, ly], i) => (i ? g.lineTo(lx, ly) : g.moveTo(lx, ly))); g.stroke(); }
+          g.strokeStyle = sel ? '#FFFFFF' : 'rgba(255,180,84,0.8)'; g.lineWidth = sel ? 2 : 1; rr(xa + 0.5, y + 0.5, Math.max(2, xb - xa - 1), h - 1, 4); g.stroke();
+          if (x1 - x0 > 40) clipRect(x0 + 4, y, x1 - x0 - 8, h, () => {
+            // 曲名墊一塊深色底：音量線從字中間穿過去會像刪除線
+            g.font = font(11, 700); g.textBaseline = 'top';
+            const lab = `♪ 片尾配樂　${O.music}`, lx = Math.max(xa, 0) + 7;
+            g.fillStyle = 'rgba(11,16,32,0.86)'; g.fillRect(lx - 4, y + 1, g.measureText(lab).width + 8, Math.min(h - 2, 14));
+            g.fillStyle = '#fff'; g.fillText(lab, lx, y + 2);
+          });
+        }
       }
     }
   }
@@ -617,7 +674,7 @@ export class Timeline {
     }
     const { interval, cols, w, h: th, count } = T.meta;
     const tw = (h * w) / th;
-    const ta = Math.max(0, this.t0 - 1), tb = Math.min(this.dur, this.t0 + this.span() + 1);
+    const ta = Math.max(0, this.t0 - 1), tb = Math.min(this.vdur, this.t0 + this.span() + 1);
     const step = Math.max(interval, tw / this.pps);
     for (let t = Math.floor(ta / step) * step; t < tb; t += step) {
       const i = Math.min(count - 1, Math.floor(t / interval));
@@ -660,9 +717,14 @@ export class Timeline {
 
   // ---------- 點到什麼 ----------
   hit(x, y) {
-    const A = this.app, lane = this.laneAt(y), t = this.tOf(x), L = this.L;
+    const A = this.app, lane = this.laneAt(y), tx = this.tOf(x), L = this.L;
+    // 076 片尾卡那幾秒在 rough.mp4 外面：時間尺、總覽、背景音樂軌照實際時間；其他軌只能看（kind 'ending'），靠近影片結尾的幾 px 還是算影片的
+    const free = !lane || lane === 'ov' || lane === 'ruler' || lane === 'bed';
+    const past = this.dur > this.vdur && tx > this.vdur, inEnd = past && !free && x > this.xOf(this.vdur) + END_GRAB;
+    const t = past && !free && !inEnd ? this.vdur : tx;
     const h = { lane, t, x, y };
     if (!lane || lane === 'ov' || lane === 'ruler') return h;
+    if (inEnd) { h.kind = 'ending'; return h; }
     const near = (tt, px = 6) => Math.abs(this.xOf(tt) - x) <= px;
     if (lane === 'anim') {
       const nRows = Math.max(1, Math.min(3, A.animRows || 1));
@@ -698,7 +760,7 @@ export class Timeline {
         if (best) { h.kind = 'join'; h.point = best; return h; }
       }
       const ht = A.headTail();
-      if (near(ht.head, 7) && ht.head < this.dur - 0.05) { h.kind = 'head'; return h; }
+      if (near(ht.head, 7) && ht.head < this.vdur - 0.05) { h.kind = 'head'; return h; }
       if (near(ht.tail, 7) && ht.tail > 0.05) { h.kind = 'tail'; return h; }
     }
     if (lane === 'main' || lane === 'cap' || lane === 'voice') {
@@ -745,7 +807,11 @@ export class Timeline {
       h.kind = 'voiceBody';
       return h;
     }
-    if (lane === 'bed') { h.kind = 'bed'; return h; }
+    if (lane === 'bed') {
+      const O = A.outroView;
+      if (O && t >= roughOf(O.outStart, A.edit.cuts) && t <= roughOf(O.outEnd, A.edit.cuts)) { h.kind = 'outro'; return h; }
+      h.kind = 'bed'; return h;
+    }
     if (lane === 'sfx') {
       let best = null, bd = 9999;
       for (const m of A.sfxView) {
@@ -779,7 +845,7 @@ export class Timeline {
       case 'media': return locked ? 'pointer' : 'grab';
       // 065 音效：兩端＝裁剪、本體＝拖曳（舊的檢查報告沒有 key 的 AI 音效只能上下拖音量）
       case 'sfx': case 'usfx': case 'msfx': return h.edge != null ? (locked ? 'not-allowed' : 'col-resize') : locked || (h.kind === 'sfx' && !h.sfx.key) ? 'pointer' : 'grab';
-      case 'item': case 'join': case 'cue': case 'cut': case 'bed': return 'pointer';
+      case 'item': case 'join': case 'cue': case 'cut': case 'bed': case 'outro': case 'ending': return 'pointer';
       case 'gap': return 'copy';
       default: return h.lane === 'main' || h.lane === 'voice' ? 'crosshair' : 'default';
     }
@@ -824,7 +890,7 @@ export class Timeline {
       if (!D.moved && Math.abs(x - D.x0) < 3 && Math.abs(y - D.y0) < 3) return;
       D.moved = true;
       if (D.h?.move) {
-        const tip = D.h.move(this.tOf(x), y, e, x);
+        const tip = D.h.move(Math.min(this.tOf(x), this.vdur), y, e, x);
         this.showTip(tip, x, y);
         this.autoScroll(x);
         this.invalidate();

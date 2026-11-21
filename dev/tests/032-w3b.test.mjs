@@ -365,10 +365,10 @@ test('B8：垂直不平衡的改法印目標值（移完 y 幾到幾、上下留
     whiteSpace: 'normal', media: false, full: false, bg: false, clipX: false, clipY: false, clips: [], parent: -1, anc: [], moving: false, alpha: 1, pad: [0, 0, 0, 0], bw: [0, 0, 0, 0], own: [], chars: 0 });
   const lay = (rect, seg, kind = 'still') => R.judgeLayout({ host: { start: 10 }, els: [el(rect)] }, { item: { id: 'd01', type: 'custom', label: 'x', start: 10, end: 18, D: 8, seg }, t: 17.4, kind, layout: 'fullscreen' }).filter((f) => f.rule === 'vbalance');
   const [a] = lay([200, 120, 1200, 600], { layout: 'fullscreen' });
-  assert.equal(a.fix, '整組往下移 135px（每個頂層元素的 top 都 +135）→ 移完內容在 y 255–735，上下留白各 135px');
-  assert.deepEqual([a.data.move, a.data.target], [135, 135]);
+  assert.equal(a.fix, '整組往下移 186px（每個頂層元素的 top 都 +186）→ 移完內容在 y 306–786，上下留白各 170px');   // 078：照 y 136–956 量
+  assert.deepEqual([a.data.move, a.data.target], [186, 170]);
   // 059：內容設計動畫只量完成態（開場一拍一拍長出來時本來就不置中）
   assert.deepEqual(lay([200, 400, 1200, 860], { layout: 'fullscreen', design: true }), []);
   const [b] = lay([200, 400, 1200, 860], { layout: 'fullscreen', design: true }, 'done');
-  assert.equal(b.fix, '整組往上移 135px（每個頂層元素的 top 都 −135）→ 移完內容在 y 265–725，上下留白各 145px；畫布有 #xdd01-stage 舞台的，內容放進舞台就自動上下置中');
+  assert.equal(b.fix, '整組往上移 84px（每個頂層元素的 top 都 −84）→ 移完內容在 y 316–776，上下留白各 180px；畫布有 #xdd01-stage 舞台的，內容放進舞台就自動上下置中');
 });

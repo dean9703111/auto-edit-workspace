@@ -2223,7 +2223,7 @@ export function outroLine(outro, clip) {
   const name = outro.source === '工作區預設' ? `${outro.music}（工作區預設）` : `${outro.music} `;
   if (clip.aligned === 'end') return `結尾配樂：${name}只有 ${clip.len.toFixed(1)} 秒，比${outro.auto ? `片尾最後 ${OUTRO_AUTO} 秒短（沒寫 outro.from）` : ` outro.from（${outro.from}，${fmt(outro.start)}）到片尾的 ${outro.span.toFixed(1)} 秒短`}，改從 ${fmt(clip.at)} 起播、對齊片尾${credit}`;
   const why = outro.auto ? `沒寫 outro.from，只播片尾最後 ${OUTRO_AUTO} 秒；要從結語金句講完那一句起播：build.mjs --set "outro.from=#N"；` : '';
-  return `結尾配樂：${name}從 ${fmt(clip.at)} 起播 ${clip.dur.toFixed(1)} 秒（${why}淡入 ${String(+clip.fadeIn.toFixed(2))} 秒、淡出 ${String(+clip.fadeOut.toFixed(2))} 秒，比人聲小 ${(-outro.relDb).toFixed(1)} dB）${credit}`;
+  return `結尾配樂：${name}從 ${fmt(clip.at)} 起播 ${clip.dur.toFixed(1)} 秒（${why}淡入 ${String(+clip.fadeIn.toFixed(2))} 秒、淡出 ${String(+clip.fadeOut.toFixed(2))} 秒，比人聲小 ${(-outro.relDb).toFixed(1)} dB${clip.boost > 0 ? `；播的這一段比整首小聲，已補 ${clip.boost} dB` : ''}）${credit}`;
 }
 
 // --check --json 的 items：時間換回 rough.mp4 的秒數（剪輯台用 rough.mp4 的時間軸）。
@@ -2287,7 +2287,9 @@ export function jsonTop(res, { clip = null } = {}) {
       dense: b.dense,
       loud: b.loud.map((x) => ({ ...x, at: back(x.at) })),
     } : { perMinuteAvg: 0, over: [], dense: [], loud: [] },
-    outro: res.outro?.music && clip ? { music: res.outro.music, start: back(clip.at), dur: clip.dur, aligned: clip.aligned } : null,
+    // 076 剪輯台的片尾配樂：outStart／outEnd（完成影片秒數，含片尾卡那幾秒）、fadeIn／fadeOut（秒）、relDb（比人聲大幾 dB，負＝小）、auto（沒寫 outro.from）
+    outro: res.outro?.music && clip ? { music: res.outro.music, start: back(clip.at), dur: clip.dur, aligned: clip.aligned,
+      outStart: clip.at, outEnd: r3(clip.at + clip.dur), fadeIn: clip.fadeIn, fadeOut: clip.fadeOut, relDb: res.outro.relDb ?? null, auto: !!res.outro.auto } : null,
     // 情緒點（plan.json moods，023）：i＝moods 的第幾個；at＝rough.mp4 秒數；sfx＝最後出聲的音效（被取捨拿掉的是 null，dropped 寫原本那顆）
     moods: (res.moods || []).map((m) => ({ i: m.i, kind: m.kind, at: back(m.event), outAt: r3(m.event), sfx: m.sfx?.name ?? null, dropped: m.sfx ? null : m.dropped, off: !!m.off,
       zoom: !!(res.zooms?.list || []).find((z) => z.i === m.i), cue: m.sfx ? jsonCue(m.sfx, back) : null })),   // 065 cue＝那一顆音效（剪輯台畫方塊、拖曳用）

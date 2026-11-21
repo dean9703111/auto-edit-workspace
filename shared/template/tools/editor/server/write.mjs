@@ -9,6 +9,7 @@
 //   remapToFrame(rect, from, to, { W, H }, kind)       → 換框時 speakerBox（'box'）／pipCrop（'rect'）換算成新框裡同一塊畫面
 //   sanitizeTheme(v)                                   → { theme, errors }（第一層 theme："light"｜"dark"；null＝拿掉＝亮色；specs/010-motion-v2/design-system.md §10）
 //   sanitizeBed(v, plan, { bedDefault })              → { bed, errors }（第一層 bed 的 volume：背景音樂的音量；057）
+//   sanitizeEnding(v, plan, { motionDefault })        → { ending, errors }（第一層 ending 的 motion：片尾金句的文字動畫；077）
 //   parseSrtBlocks(text) / writeSrt(srtText, cues)     → rough.srt 讀寫（保留 CRLF／LF、BOM；沒改的句子原封不動）
 //   字幕增刪與句號重新對應的規則在 ../subtitles.mjs（頁面也用同一份）
 import { replay, parseRef, refTime, RULES } from '../subtitles.mjs';
@@ -19,6 +20,7 @@ import { textFields } from '../../lib/storyboard-gen.mjs';
 import { opsMapper, remapScripts } from '../../lib/beat-remap.mjs';
 import { r3 } from '../../lib/time.mjs';
 import { BED } from '../../lib/music.mjs';
+import { ENDING_MOTIONS, ENDING_MOTION } from '../../lib/ending.mjs';
 import { SFX_ADJUST_ID, SFX_ADJUST_KEYS, SFX_TRIM_MAX, SFX_SHIFT_MAX, SFX_MIN_LEN } from '../../lib/edit.mjs';
 
 export { visibleLen, richPlain };
@@ -29,7 +31,7 @@ export const LIMITS = Object.freeze({
   editKeys: ['cuts', 'fadeIn', 'fadeOut', 'volume', 'gains', 'joins', 'sfx', 'sfxAdjust', 'level'], volumeKeys: ['voice', 'sfx', 'media'],
   joinKeys: ['at', 'type', 'dur'], gainKeys: ['from', 'to', 'db'], sfxKeys: ['at', 'sound', 'db', 'trimIn', 'trimOut'], adjustKeys: SFX_ADJUST_KEYS,
   segCommon: ['sfxVolume', 'sfx'], segMedia: ['enter', 'exit', 'volume', 'from', 'to', 'in', 'out', 'speed', 'hold', 'retime', 'anchor'], segScene: ['slots'], segFx: ['vars'],
-  bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme', 'captionStyle', 'captionMarks', 'frame', 'bed'],
+  bodyKeys: ['base', 'edit', 'media', 'segments', 'srt', 'look', 'theme', 'captionStyle', 'captionMarks', 'frame', 'bed', 'ending'],
   bedVolume: BED.volume,  // 背景音樂的音量（dB；0＝曲庫檔原本的音量、最小值＝靜音）：和 build.mjs --set bed.volume 同一個範圍
   themes: ['light', 'dark'],
   frame: { maxZoom: 2, upscaleWarn: 3.5, edge: 40 },   // 構圖：最多放大 2 倍；來源像素放大超過 3.5 倍會變軟；講者動作範圍離邊 < 40px＝切到手勢
@@ -553,6 +555,21 @@ export function remapToFrame(rect, from, to, cv, kind = 'box') {
   if (x1 < -0.5 || y1 < -0.5 || x2 > W + 0.5 || y2 > H + 0.5) return 'auto';
   return [Math.round(Math.max(0, x1)), Math.round(Math.max(0, y1)), Math.round(x2 - x1), Math.round(y2 - y1)];
 }
+// 077 第一層 ending 的 motion（剪輯台點片尾卡 →「文字動畫」下拉選單）：送 { "motion": "<id>" }，id 是 lib/ending.mjs 的 ENDING_MOTIONS。
+// 原本寫的 quote、subscribe 照留；和工作區預設（motionDefault）一樣的不寫，ending 變成空的就整個拿掉。這一集關掉片尾（ending: false）不能改。
+// 回傳要寫的整個 ending；null＝拿掉；undefined＝不用動
+export function sanitizeEnding(v, plan, { motionDefault = ENDING_MOTION } = {}) {
+  if (!isObj(v)) return { ending: undefined, errors: ['ending 要寫成 { "motion": "<文字動畫>" }（片尾金句的文字動畫）'] };
+  const errors = [];
+  for (const k of Object.keys(v)) if (k !== 'motion') errors.push(`ending 在剪輯台只能改 motion（片尾金句的文字動畫），不能寫「${k}」→ 換金句、換圖請 AI 用 build.mjs --set ending.quote=…、brand.mjs ending`);
+  if (!ENDING_MOTIONS.some((m) => m.id === v.motion)) errors.push(`ending.motion 要是 ${ENDING_MOTIONS.map((m) => `${m.id}（${m.zh}）`).join('、')} 其中一個，現在是 ${JSON.stringify(v.motion)}`);
+  if (plan.ending === false) errors.push('這一集關掉了片尾（plan.json 的 ending 是 false），沒有片尾金句可以換動畫');
+  if (errors.length) return { ending: undefined, errors };
+  const next = { ...(isObj(plan.ending) ? plan.ending : {}) };
+  if (v.motion === motionDefault) delete next.motion; else next.motion = v.motion;
+  return { ending: Object.keys(next).length ? next : null, errors: [] };
+}
+
 // 第一層的 look／theme：null＝拿掉；原本有就原地換；沒有就插在 edit（沒有 edit 就 scenes）前面
 function withTop(plan, key, value) {
   if (value === null) { const o = { ...plan }; delete o[key]; return o; }
@@ -566,7 +583,7 @@ function withTop(plan, key, value) {
   return out;
 }
 
-function surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop, bed }) {
+function surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop, bed, ending }) {
   const ind = detectIndent(planText);
   const nl = /\r\n/.test(planText) ? '\r\n' : '\n';
   const fix = (s) => s.replace(/\n/g, nl);
@@ -609,6 +626,7 @@ function surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle,
   };
   if (frame !== undefined) topKey('frame', frame);
   if (bed !== undefined) topKey('bed', bed);
+  if (ending !== undefined) topKey('ending', ending);
   if (captionMarks !== undefined) topKey('captionMarks', captionMarks);
   if (captionStyle !== undefined) topKey('captionStyle', captionStyle);
   if (theme !== undefined) topKey('theme', theme);
@@ -731,6 +749,13 @@ export function applySave(planText, body, ctx = {}) {
     bed = r.bed;
     if (bed !== undefined && same(bed, plan.bed)) bed = undefined;   // 沒變就不動
   }
+  let ending;
+  if (body.ending !== undefined) {
+    const r = sanitizeEnding(body.ending, plan, { motionDefault: ctx.endingMotionDefault ?? ENDING_MOTION });
+    errors.push(...r.errors);
+    ending = r.ending;
+    if (ending === null ? !('ending' in plan) : ending !== undefined && same(ending, plan.ending)) ending = undefined;   // 沒變就不動
+  }
   let frame;
   if (body.frame !== undefined) {
     const r = sanitizeFrame(body.frame, ctx.canvas);
@@ -745,6 +770,7 @@ export function applySave(planText, body, ctx = {}) {
   if (captionStyle !== undefined) next = withTop(next, 'captionStyle', captionStyle);
   if (!same(marksNext, planR.captionMarks)) next = withTop(next, 'captionMarks', marksNext ?? null);
   if (bed !== undefined) next = withTop(next, 'bed', bed);
+  if (ending !== undefined) next = withTop(next, 'ending', ending);
   // 和存檔前的文字比（字幕操作換過句號的也算）：有變才動那一個鍵；null＝拿掉
   const captionMarks = same(next.captionMarks, plan.captionMarks) ? undefined : next.captionMarks ?? null;
   // 換框：speakerBox、pipCrop 是裁切後的座標，跟著換算（不用重量）
@@ -779,8 +805,8 @@ export function applySave(planText, body, ctx = {}) {
   // plan.json：有變的段（剪輯改的＋句號重新對應的）才重寫
   const segIdx = (next.scenes || []).map((seg, i) => (same(seg, plan.scenes?.[i]) ? -1 : i)).filter((i) => i >= 0);
   let text = null;
-  if (edit || segIdx.length || look !== undefined || theme !== undefined || captionStyle !== undefined || captionMarks !== undefined || frame !== undefined || bed !== undefined) {
-    try { text = surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop, bed }); } catch { text = null; }
+  if (edit || segIdx.length || look !== undefined || theme !== undefined || captionStyle !== undefined || captionMarks !== undefined || frame !== undefined || bed !== undefined || ending !== undefined) {
+    try { text = surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop, bed, ending }); } catch { text = null; }
     if (text == null) {
       text = JSON.stringify(next, null, detectIndent(planText)) + '\n';
       if (/\r\n/.test(planText)) text = text.replace(/\n/g, '\r\n');

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { lib, imp, makeSrt, tmpDir, TOOLS, TEMPLATE } from './helpers.mjs';
+import { lib, imp, makeSrt, tmpDir, TOOLS, TEMPLATE, hasFfmpeg } from './helpers.mjs';
 
 const S = await imp('lib/screen-frame.mjs');
 const M = await imp('lib/media.mjs');
@@ -110,7 +110,7 @@ test('角標等距：有框時小節角標的右上角離框上緣、右緣都�
   assert.deepEqual(M.pipShift(M.mediaGeometry({ width: 1920, height: 1080 }, 'contain')), [-85, -3]);
 });
 
-test('073 錄影自帶黑邊：量出黑邊裡的畫面（快取）、框照裡面的比例、角標和紅框對裡面的畫面、video 照整個檔案放（黑邊在框外被裁掉）', async (t) => {
+test('073 錄影自帶黑邊：量出黑邊裡的畫面（快取）、框照裡面的比例、角標和紅框對裡面的畫面、video 照整個檔案放（黑邊在框外被裁掉）', { skip: !hasFfmpeg() && '沒有 ffmpeg' }, async (t) => {
   const dir = project(t, []);
   fs.mkdirSync(path.join(dir, 'assets/screen'), { recursive: true });
   const mk = (name, vf) => {

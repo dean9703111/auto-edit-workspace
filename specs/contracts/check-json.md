@@ -30,7 +30,7 @@
 | `versions` | 物件 | 必有 | — | `{ hyperframes: { pinned, installed, ok } }`；`pinned` 是根目錄 package.json 的值、`installed` 是 `node_modules/hyperframes/package.json` 的 `version` 或 `null` | 新（FR-050） | 007 |
 | `videoDur` | 數字 | 必有（出錯時 `null`） | rough | rough.mp4 長度（對齊格） | 現行 | 004、006 |
 | `outputDur` | 數字 | 必有（出錯時 `null`） | 完成影片 | 完成影片長度（有片尾卡時含片尾卡＝`resolvePlan().finalDur`，033） | 現行 | 004 final |
-| `ending` | 物件或 `null` | 必有（出錯、沒設定片尾、這一集關掉、直式時 `null`） | 完成影片 | 片尾模板（033，`lib/ending.mjs`）：`{ at, dur, quote, quoteFrom, subscribe, notes }`；`at`＝影片（講者）結束、片尾卡從這裡接 `dur` 秒（只有訂閱動畫時 `dur` 是 0）；`quote`＝片尾金句（分段用「，」接）、`quoteFrom`＝來源；`subscribe`＝訂閱動畫跟的句號或 `null`；`notes`＝沒放的原因 | 新（033） | 004 qc final（片尾卡不判凍結／黑畫面／無聲）、停點 ③ |
+| `ending` | 物件或 `null` | 必有（出錯、沒設定片尾、這一集關掉、直式時 `null`） | 完成影片 | 片尾模板（033，`lib/ending.mjs`）：`{ at, dur, quote, quoteFrom, motion, subscribe, notes }`；`motion`＝片尾金句的文字動畫（077：`type fade rise wipe none`，沒有金句時 `null`）；`at`＝影片（講者）結束、片尾卡從這裡接 `dur` 秒（只有訂閱動畫時 `dur` 是 0）；`quote`＝片尾金句（分段用「，」接）、`quoteFrom`＝來源；`subscribe`＝訂閱動畫跟的句號或 `null`；`notes`＝沒放的原因 | 新（033） | 004 qc final（片尾卡不判凍結／黑畫面／無聲）、停點 ③ |
 | `screenFrame` | 物件或 `null` | 必有（出錯、沒設定、直式時 `null`） | 完成影片 | 錄影畫面框（061，`lib/screen-frame.mjs`）：`{ scale, inset, auto, win, capTop, from }`；`win`＝`[x, y, w, h]`（橫式錄影、圖片段放在這個框裡）；`capTop`＝量到的字幕底板上緣；`from`＝`"plan"`（這一集 plan.json）或 `"setting"`（shared/setting.json 的預設，下一次 build 記進 plan.json） | 新（061） | 停點 ④ |
 | `voiceOnly` | `[[起, 迄]]` | 必有 | rough | 只有聲音的區間（rough.mp4 全黑）。專案沒有純聲音素材時一律是 `[]`（全黑改列在 `roughBlack`） | 現行 | 006 |
 | `roughBlack` | `[[起, 迄]]` | 必有 | rough | 初剪壞掉的全黑區間：rough.mp4 全黑、但 `素材/聲音/` 是空的而且 `work/main.json` 沒有 `kind: "voice"`；相鄰 ≤ 0.1 s 的黑段併成一段。不是空的時候 `errors` 一定有 §2.4 那則 ✖ | 新（round 2，F2） | 004 qc final |
@@ -42,7 +42,7 @@
 | `sfxCount` | `{ 名稱: 次數 }` | 必有 | — | 全片每種音效的次數（主＋附加；3 秒規則之後；不含配樂）＝005 `sfxBudget().count` | 新（FR-058） | 004、006 |
 | `sfxBudget` | 物件（§2.3） | 必有 | rough | `{ perMinuteAvg, over, dense, loud }`，`sfxBudget()` 的回傳去掉 `count`、`levels`、`warnings`、`lines` | 新（FR-058） | 006 |
 | `moods` | 物件[] | 必有（沒有情緒點＝`[]`） | rough | 情緒點（plan.json `moods`，023）：`{ i, kind, at, outAt, sfx, dropped, off, zoom }`；`i`＝moods 的第幾個、`at`＝rough.mp4 秒數（詞的開口）、`outAt`＝完成影片秒數、`sfx`＝最後出聲的音效（取捨拿掉＝`null`，`dropped` 寫原本那顆）、`off`＝寫了 `"sfx": null`、`zoom`＝這個點有推近；`cue`＝出聲的那一顆 `{ name, at, volume, db, dur?, key, base, len? }`（065，剪輯台畫方塊、拖曳用；不出聲＝`null`） | 新（023）；`cue` 新（065） | 剪輯台音效軌、分鏡表情緒點表 |
-| `outro` | 物件或 `null` | 必有 | rough | `{ music, start, dur, aligned }`；沒寫 `outro` 或 `music: null` 時 `null`（`cli-005.md` §3.5） | 新（FR-054） | 004 final、006 |
+| `outro` | 物件或 `null` | 必有 | rough | `{ music, start, dur, aligned, outStart, outEnd, fadeIn, fadeOut, relDb, auto }`；沒寫 `outro` 或 `music: null` 時 `null`（`cli-005.md` §3.5）。`outStart`／`outEnd` 是完成影片秒數（含片尾卡那幾秒）、`fadeIn`／`fadeOut` 秒、`relDb` 設定上比人聲大幾 dB（負＝小）、`auto`＝沒寫 `outro.from`（076 剪輯台的片尾配樂） | 新（FR-054）；076 加後六個 | 004 final、006、剪輯台 |
 | `bed` | 物件或 `null` | 必有 | rough | 底樂（`lib/music.mjs` `bedJson`）：沒設定＝`null`；這一集不配＝`{ music: null }`；影片太短沒鋪＝`{ music, from, volume, relDb, muted, ducked: false, short: true }`；有鋪＝`{ music, from, volume, relDb, muted, ducked, start, end, outStart, outEnd, fadeIn, fadeOut, ducks }`：`volume`＝plan.json 的 `bed.volume`（dB，0＝曲庫檔原本的音量）、`relDb`＝沒人講話時比人聲大幾 dB（負＝小）、`muted`＝靜音（`volume` 是 −40，完成影片不放；範圍照樣給）、`start`／`end`＝rough.mp4 秒數（片尾卡那段在 rough.mp4 外面，`end` 停在主軌結尾）、`outStart`／`outEnd`＝完成影片秒數、`ducked`＝講話時壓低（有 `edit.cuts` 時整段固定音量＝`false`）、`ducks`＝壓低的區間 `[[起, 迄], …]`（rough.mp4 秒數；字幕第一句到最後一句扣掉 ≥ 1 秒的說話停頓） | 新（057） | 剪輯台背景音樂軌 |
 | `edit` | 物件 | 必有（出錯時 `null`） | rough | 正規化後的 `edit`（`normalizeEdit`，`edit.mjs`） | 現行 | 006 |
 | `paths` | `{ project, video, plan, out }` | 必有（出錯時 `{}`） | — | 相對工作區根目錄的路徑 | 現行 | 004、006 |
@@ -311,6 +311,8 @@ custom 段 `x-*.html` 的 `P.sfx('名', '#N…', off)`（`contracts/motion.md` �
 | 2 | 2026-11-16（057） | 加 `bed`（`outro` 後面）：剪輯台背景音樂軌用的底樂範圍、淡入淡出、壓低的區間；第二輪 `volume` 改成 0＝曲庫檔原本的音量（−40～+6）、`relDb` 改成沒人講話時和人聲比、加 `muted`。加欄位不升 schema |
 | 2 | 2026-11-19（061） | 加 `screenFrame`（`ending` 後面）；有框時 `items[].out` 加 `frame`。加欄位不升 schema |
 | 2 | 2026-11-19（066） | 橫式 `out.annotations.start` 加 `at`、`dur`（先看全景再推近），`view.scale` 改成起始鏡位的倍率；`out.annotations.steps[]` 加 `tag`。加欄位不升 schema |
+| 2 | 2026-11-21（076） | `outro` 加 `outStart outEnd fadeIn fadeOut relDb auto`：剪輯台把片尾配樂畫在背景音樂軌（含片尾卡那幾秒）。加欄位不升 schema |
+| 2 | 2026-11-21（077） | `ending` 加 `motion`：片尾金句的文字動畫（剪輯台的下拉選單）。加欄位不升 schema |
 
 ## 7. 測試（002 的 `dev/tests/build.test.mjs`）
 

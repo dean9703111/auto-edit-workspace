@@ -31,6 +31,7 @@ export const CONTENT_BOTTOM = 870;  // 內容區下緣（R4.1），改法建議�
 export const FS_RIGHT = 1380;       // 全畫面主內容右緣上限（R4.1、R7.2）
 export { PIP_ZONE };                // 子母畫面外框禁入區（lib/media.mjs，和 build 同一組數字）
 export const DONE_BEFORE = 0.6;     // 完成態＝段尾前 0.6 秒（完成態至少停 0.6s）
+export const URL_RE = /[a-z0-9][a-z0-9-]*\.[a-z]{2,}(\/[^\s]*)?$/i, URL_MIN_FONT = 40;   // 081 網址：畫面上至少 40px、不折行
 export const MIN_FONT = 30;         // 字太小的門檻（R8.5 的下限是正文 52、標籤 38；30 以下一定看不清）
 export const SPEAKER_WARN = 0.02;   // custom 與用 css 移過位的段：蓋到講者框 ≥ 2% 就提醒（四邊已外擴 40px，碰到邊不算；R8.17）
 export const SPEAKER_WARN_TEMPLATE = 0.4;    // 沒移位的情境模板：蓋到講者框 ≥ 40%（手勢多半會被擋）才提醒；和 build --check 的碰撞提醒同一個門檻（R4.1）
@@ -45,8 +46,12 @@ export const SLACK_MAX = 80, CENTER_TOL = 8, STRIP_TOL = 16;   // 右側空白�
 export const FULL = { x: [120, 1800], y: [112, 900], top: 40, tall: 640, cx: 960, off: 160, minW: 1100 };
 // 內容設計動畫的完成態要把主內容區用起來（2026-11-11 MiniMax 試跑：照元件表的下限尺寸擺，手機 120×250，畫面大半是空的）
 //   PIP＝右下有講者小視窗時的主內容區；FILL_MIN＝內容蓋到的面積（20px 格子，重疊只算一次）佔主內容區的比例下限；HERO＝最大那個插圖的長邊下限
-export const DESIGN = { PIP: [120, 150, 1300, 858], CELL: 20, FILL_MIN: 0.3, HERO: 300 };
+//   079：ROOMY＝還有空位的門檻（蓋不到這個比例）、BIG_TEXT＝主要文字的下限：有空位而且最大的字還小於它，就提醒放大（minimax-ep1 有 12 次「字太小、空間很夠」）
+export const DESIGN = { PIP: [120, 192, 1300, 900], CELL: 20, FILL_MIN: 0.3, HERO: 300, ROOMY: 0.5, BIG_TEXT: 56 };   // 078：kit/scene.css 整組下移 42 之後的範圍
 export const VBAL_MAX = 40, CONTENT_TOP = 120;          // 垂直平衡（OV/AW:L218）；內容區 y 120–870（R4.1）
+// 078 橫式的垂直平衡照「看得到的空位」量：上到右上角標的下緣（y 136，背景上緣的流程線也在這以上）、下到字幕底板的上緣（y 956）。
+//   以前照 y 120–870 量，內容會被推到貼著上緣裝飾、下方空一截（minimax-ep1 全片 32 段偏高約 42 px）。MAX＝往下移時下緣最多到哪（再下去會進字幕區）
+export const VBAL_Y = [136, 956], VBAL_BOTTOM_MAX = 900;
 export const PAD_X = [24, 0.45], PAD_Y = [14, 0.28];    // 內距門檻 max(24, 0.45×字級)、max(14, 0.28×字級)（R8 #6）
 export const LH_MIN = 1.25, LH_SKIP_FONT = 100;         // 行高 ≥ 1.25×字級（OV/PS:L27）；字級 ≥ 100 的數字不判
 export const DENSITY_MAX = 2, DENSITY_WIN = 1.0;        // 任何 1 秒內新元素 ≤ 2（TR/v3:L12-13）
@@ -430,6 +435,16 @@ export function judgeSample(meas, ctx) {
     }
     if (gk && out.length > n0) fontGroup.set(gk, { f: out[out.length - 1], text: String(e.desc.text || '') });
   }
+  // ⚠ 081 網址要完整一行、照畫面上的大小看得清楚（minimax-ep1 r24、r25：連結卡的網址被縮小、折行）
+  //   認得的樣子：字裡有「英數.英文」（code.minimax.io/about、deanlin.net）；畫面上的字級＝字級 × 縮放（舞台自動縮小也算）
+  for (const e of els) {
+    if (!e.text || !still(e) || !e.textRect) continue;
+    const txt = String(e.desc.text || '').trim();
+    if (!URL_RE.test(txt) || /\s/.test(txt)) continue;
+    const sc = e.fscale ?? e.scale, size = e.fontSize * (sc > 0 && sc < 1 ? sc : 1), h = e.textRect[3] - e.textRect[1];
+    if (h > e.fontSize * (sc > 0 ? sc : 1) * 1.9) push('warn', 'url', e, `網址折成兩行：${descText(e.desc)}（高 ${ri(h)}px，字級 ${r1(size)}px）`, '網址要完整一行：框加寬、white-space: nowrap，放不下就只留網域（不要縮字）', { h: ri(h) });
+    else if (size < URL_MIN_FONT) push('warn', 'url', e, `網址太小：${descText(e.desc)} 畫面上 ${r1(size)}px（< ${URL_MIN_FONT}px）`, `網址在畫面上至少 ${URL_MIN_FONT}px；被舞台自動縮小的話，把別的東西讓開或只留網域`, { size: r1(size) });
+  }
   // ⚠ 半像素邊（卡片、框線）
   for (const e of els) {
     if (!e.painted || e.full || e.shaped || !still(e)) continue;
@@ -623,20 +638,24 @@ export function judgeLayout(meas, ctx) {
     }
     const U = unionOf(rs);
     // 009 直式舞台縮放的段：內容區＝舞台窗的上下（y 130–880），其他照 R4.1 的 120–870
-    const [CT, CB] = ctx.contentY || [CONTENT_TOP, CONTENT_BOTTOM];
+    // 橫式（有沒有講者小視窗都一樣）照看得到的空位量；直式舞台縮放的段照舞台窗
+    const free = !ctx.contentY || !!ctx.item.wide;
+    const [CT, CB] = free ? VBAL_Y : ctx.contentY;
     if (U) {
       const up = U[1] - CT, down = CB - U[3], diff = up - down;
+      // 078 要往下移、但下緣已經快到字幕區（最多移到 y 900）：移不了就不算
+      const room = free ? VBAL_BOTTOM_MAX - U[3] : Infinity;
       // 全螢幕的內容設計動畫：已經撐滿上下（畫布允許 y 40–900，角標左邊可以用到頂）就不算不平衡
       const filled = ctx.item.wide && ctx.item.seg?.design && U[3] - U[1] >= FULL.tall && U[1] >= FULL.top - 1 && U[3] <= FULL.y[1] + 1;
       // 059：內容設計動畫只量完成態。開場一拍一拍長出來（craft.md「一張圖慢慢長大」）時，只出現一部分本來就不置中；
       // 以前每一格都量，設計師怎麼移都消不掉、來回改好幾輪
       const partial = ctx.item.seg?.design && ctx.kind !== 'done';
-      if (!filled && !partial && Math.abs(diff) > VBAL_MAX + 1e-6) {
-        const k = Math.abs(Math.round((down - up) / 2)), dir = diff < 0 ? 1 : -1, each = Math.round((up + down) / 2);
+      if (!filled && !partial && Math.abs(diff) > VBAL_MAX + 1e-6 && !(diff < 0 && room < VBAL_MAX / 2)) {
+        const k = Math.min(Math.abs(Math.round((down - up) / 2)), diff < 0 ? Math.max(0, Math.floor(room)) : Infinity), dir = diff < 0 ? 1 : -1, each = Math.round((up + down) / 2);
         // 032 B8：印移完的目標（內容 y 幾到幾、上下留白各幾 px），照抄就能改；內容設計動畫的畫布有舞台容器，放進去就自動置中
         const goal = each >= 0 ? `上下留白各 ${each}px` : `上下各超出 ${-each}px（內容比內容區高，先縮小再置中）`;
         const stage = ctx.item.seg?.design ? `；畫布有 #xd${ctx.item.id}-stage 舞台的，內容放進舞台就自動上下置中` : '';
-        push('warn', 'vbalance', null, `垂直不平衡：內容 y ${ri(U[1])}–${ri(U[3])}，上留白 ${ri(up)}px、下留白 ${ri(down)}px（內容區 y ${CT}–${CB}，差 ${ri(Math.abs(diff))}px，超過 ${VBAL_MAX}px）`,
+        push('warn', 'vbalance', null, `垂直不平衡：內容 y ${ri(U[1])}–${ri(U[3])}，上留白 ${ri(up)}px、下留白 ${ri(down)}px（${free ? '角標下緣到字幕上緣' : '內容區'} y ${CT}–${CB}，差 ${ri(Math.abs(diff))}px，超過 ${VBAL_MAX}px）`,
           `整組往${diff < 0 ? '下' : '上'}移 ${k}px（每個頂層元素的 top 都 ${diff < 0 ? '+' : '−'}${k}）→ 移完內容在 y ${ri(U[1] + dir * k)}–${ri(U[3] + dir * k)}，${goal}${stage}`, { up: r1(up), down: r1(down), move: dir * k, target: each });
       }
     }
@@ -664,6 +683,14 @@ export function judgeLayout(meas, ctx) {
       const hero = Math.max(0, ...ils.map((e) => Math.max(e.rect[2] - e.rect[0], e.rect[3] - e.rect[1])));
       if (boxes.length && k < DESIGN.FILL_MIN) push('warn', 'design-sparse', null, `畫面太空：完成態的內容只蓋到主內容區（x ${Z[0]}–${Z[2]}、y ${Z[1]}–${Z[3]}）的 ${Math.round(k * 100)}%（< ${DESIGN.FILL_MIN * 100}%）`,
         '主角放大到長邊 300–480px、配角 ≥ 180px、標籤字 36–44px，位置跟著拉開；不要多加東西湊滿（design.md「大小」）', { fill: Math.round(k * 1000) / 1000 });
+      else if (boxes.length && k < DESIGN.ROOMY) {
+        // 079 有空位、字還小：內容蓋不到主內容區的一半，而且畫面上最大的字 < 56px → 放大字和圖示（不是多加東西）
+        const big = Math.max(0, ...els.filter((e) => shown(e) && e.text).map((e) => e.fontSize * ((e.fscale ?? e.scale) > 0 && (e.fscale ?? e.scale) < 1 ? (e.fscale ?? e.scale) : 1)));
+        if (big > 0 && big < DESIGN.BIG_TEXT) push('warn', 'design-roomy', null, `有空位、字偏小：完成態的內容只蓋到主內容區的 ${Math.round(k * 100)}%（< ${DESIGN.ROOMY * 100}%），最大的字 ${ri(big)}px（< ${DESIGN.BIG_TEXT}px）`,
+          '字和圖示一起放大 1.2–1.5 倍（主要文字 ≥ 56px），位置跟著拉開；不要多加東西湊滿（design.md「大小」）', { fill: Math.round(k * 1000) / 1000, big: ri(big) });
+        else if (ils.length && hero < DESIGN.HERO) push('warn', 'design-hero', null, `主角太小：最大的插圖長邊只有 ${ri(hero)}px（< ${DESIGN.HERO}px）`,
+          '這一段在講的那個物件放大到長邊 300–480px（寬高照比例一起改），其他元件的位置跟著讓開（design.md「大小」）', { hero: ri(hero) });
+      }
       else if (ils.length && hero < DESIGN.HERO) push('warn', 'design-hero', null, `主角太小：最大的插圖長邊只有 ${ri(hero)}px（< ${DESIGN.HERO}px）`,
         '這一段在講的那個物件放大到長邊 300–480px（寬高照比例一起改），其他元件的位置跟著讓開（design.md「大小」）', { hero: ri(hero) });
     }

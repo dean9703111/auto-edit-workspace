@@ -16,6 +16,7 @@ import { loadMusic, BED } from './music.mjs';
 import { LOOK_LIMITS } from './look.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, fmtCaptionMarks, parseCaptionMarks } from './caption-style.mjs';
 import { readSettings } from './settings.mjs';
+import { ENDING_MOTIONS } from './ending.mjs';
 import { FRAME, sanitizeScreenFrame } from './screen-frame.mjs';
 import { ok, fail, next, cmdLine } from './say.mjs';
 import { runToolUntilDoneSync } from './job.mjs';
@@ -62,6 +63,7 @@ const KEYS = {
   'edit.level': { hint: () => 'true＝拉平人聲大小聲（關掉用 --unset edit.level）', parse: (v) => (v === true || v === 'true' || v === 'on' ? true : BAD) },
   ending: { hint: () => 'false＝這一集不要片尾', parse: (v) => (v === false || v === 'false' || v === 'off' ? false : BAD) },
   'ending.quote': { hint: () => '片尾金句的字／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : String(v).trim() ? String(v).trim() : BAD) },
+  'ending.motion': { hint: () => `片尾金句的文字動畫：${ENDING_MOTIONS.map((m) => `${m.id}（${m.zh}）`).join('／')}`, parse: (v) => (ENDING_MOTIONS.some((m) => m.id === v) ? v : BAD) },
   'ending.subscribe': { hint: () => '#N＝講到「訂閱」的那一句／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : /^#\d+$/.test(String(v).trim()) ? String(v).trim() : BAD) },
   // 字幕樣式（035，lib/caption-style.mjs）：以後每集的預設用 brand.mjs captions；這裡只改這一集，沒寫的欄位照預設
   'captionStyle.look': { hint: () => Object.keys(CAP_LOOKS).join('／'), parse: pick(Object.keys(CAP_LOOKS)), early: true },

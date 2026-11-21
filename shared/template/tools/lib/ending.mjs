@@ -3,7 +3,8 @@
 //
 //   setting.json  "ending": { "image": "book-cover.jpg", "seconds": 9.9, "quote": true, "subscribe": "subscribe.gif" }
 //                 image＝片尾卡的圖（沒寫＝沒有片尾卡）；seconds＝片尾卡長度；quote＝圖右邊放片尾金句；subscribe＝訂閱動畫（沒寫＝不放）
-//   plan.json     "ending": false（這一集不要）｜{ "quote": "<字>"｜null, "subscribe": "#N"｜null }（這一集換金句、指定訂閱那句；null＝這集不放）
+//                 motion＝片尾金句的文字動畫（077；ENDING_MOTIONS 的 id，沒寫＝打字機）
+//   plan.json     "ending": false（這一集不要）｜{ "quote": "<字>"｜null, "subscribe": "#N"｜null, "motion": "<id>" }（這一集換金句、指定訂閱那句、換文字動畫；null＝這集不放）
 //
 //   readEndingSetting(sharedDir)                    → null（沒設定）｜{ image, seconds, quote, subscribe, problems[] }（image、subscribe 是完整路徑）
 //   resolveEnding(ctx)                              → null（沒設定）｜{ off }｜{ dur, card, subscribe, notes[] }（resolvePlan 的一節；⚠ 推進 ctx.warnings）
@@ -29,6 +30,20 @@ export const ENDING = {
   quote: { at: 0.633, type: 5.23, fade: 0.5, left: 1300, top: 575, width: 580, size: 48, line: 73, maxLines: 6 },   // 片尾金句：書封右邊，晚 0.633 秒打字機進場 5.23 秒
   z: 80,                              // 蓋過字幕（60）和剪輯台的淡出（70）
 };
+// 077 片尾金句的文字動畫：剪輯台「片尾卡 → 文字動畫」的下拉選單、build.mjs --set ending.motion、brand.mjs ending --motion 都是這一組。
+// 預設打字機（剪映的复古打字机）；時間都從 quote.at 開始，最後和圖一起淡出
+export const ENDING_MOTIONS = [
+  { id: 'type', zh: '打字機', tip: '一個字一個字打出來（預設）' },
+  { id: 'fade', zh: '淡入', tip: '整段一起淡入' },
+  { id: 'rise', zh: '逐行浮出', tip: '一行一行由下往上浮出' },
+  { id: 'wipe', zh: '由左擦開', tip: '一行一行由左往右擦開' },
+  { id: 'none', zh: '直接出現', tip: '不做動畫，時間到字就在' },
+];
+export const ENDING_MOTION = 'type';
+export const MOTION = { fade: 0.8, rise: { dur: 0.6, gap: 0.5, y: 28 }, wipe: { dur: 0.9, gap: 0.6 } };   // 各種動畫的秒數（剪輯台的快速試聽示意用同一組）
+const MOTION_IDS = ENDING_MOTIONS.map((m) => m.id);
+export const endingMotionZh = (id) => ENDING_MOTIONS.find((m) => m.id === id)?.zh ?? String(id);
+const motionList = () => ENDING_MOTIONS.map((m) => `${m.id}（${m.zh}）`).join('、');
 export const SUBSCRIBE = { word: '訂閱', from: 0.75, lead: 0.5, dy: 0.18, fade: 0.5, min: 2, z: 56 };   // 最後四分之一第一句講到「訂閱」的、晚 0.5 秒出現；往下移畫面高的 0.18（剪映 y −0.36）；蓋在字卡上、字幕底下
 const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 const SUB_EXT = ['.gif', '.webm', '.mov', '.mp4'];
@@ -41,7 +56,7 @@ export function readEndingSetting(sharedDir) {
   const e = readSettings(sharedDir).data.ending;
   if (e === undefined || e === null) return null;
   const dir = path.join(sharedDir, BRAND_DIR), problems = [];
-  if (!isObj(e)) return { image: null, seconds: ENDING.seconds, quote: true, subscribe: null, problems: [`shared/setting.json 的 ending 要是物件 → 重新設定：${SET_CMD}`] };
+  if (!isObj(e)) return { image: null, seconds: ENDING.seconds, quote: true, subscribe: null, motion: ENDING_MOTION, problems: [`shared/setting.json 的 ending 要是物件 → 重新設定：${SET_CMD}`] };
   const file = (name, exts, what) => {
     if (name === undefined || name === null || name === '') return null;
     const f = path.join(dir, String(name));
@@ -51,9 +66,14 @@ export function readEndingSetting(sharedDir) {
   };
   const seconds = e.seconds === undefined ? ENDING.seconds : Number(e.seconds);
   if (!(seconds >= ENDING.min && seconds <= ENDING.max)) problems.push(`片尾卡長度 ${JSON.stringify(e.seconds)} 不對（要 ${ENDING.min}–${ENDING.max} 秒），先用 ${ENDING.seconds} 秒 → brand.mjs ending --seconds ${ENDING.seconds}`);
+  let motion = ENDING_MOTION;
+  if (e.motion !== undefined && e.motion !== null) {
+    if (MOTION_IDS.includes(e.motion)) motion = e.motion;
+    else problems.push(`片尾金句的文字動畫 ${JSON.stringify(e.motion)} 不認得（可用：${motionList()}），先用打字機 → brand.mjs ending --motion <名稱>`);
+  }
   return {
     image: file(e.image, IMAGE_EXT, '片尾圖'), seconds: seconds >= ENDING.min && seconds <= ENDING.max ? r3(seconds) : ENDING.seconds,
-    quote: e.quote !== false, subscribe: file(e.subscribe, SUB_EXT, '訂閱動畫'), problems,
+    quote: e.quote !== false, subscribe: file(e.subscribe, SUB_EXT, '訂閱動畫'), motion, problems,
   };
 }
 
@@ -90,7 +110,13 @@ export function resolveEnding({ plan, lib, cues, timed, projectDir, videoDur, po
   const pe = plan.ending;
   if (pe === false) return { off: 'plan.json 寫了 "ending": false', dur: 0 };
   if (pe !== undefined && !isObj(pe)) { errors.push(`ending 只能寫 false（這一集不要片尾）或物件 { "quote": "…", "subscribe": "#N" }，現在是 ${JSON.stringify(pe)} → 照例子改，或刪掉用工作區的設定`); return { off: 'plan.json 的 ending 寫錯', dur: 0 }; }
-  for (const k of Object.keys(pe || {})) if (!['quote', 'subscribe'].includes(k)) errors.push(`ending 不能有「${k}」→ 只能寫 quote（片尾金句）、subscribe（訂閱動畫跟哪一句）`);
+  for (const k of Object.keys(pe || {})) if (!['quote', 'subscribe', 'motion'].includes(k)) errors.push(`ending 不能有「${k}」→ 只能寫 quote（片尾金句）、subscribe（訂閱動畫跟哪一句）、motion（片尾金句的文字動畫）`);
+  // 片尾金句的文字動畫：這一集寫了就用這一集的，沒寫用工作區的預設
+  let motion = conf.motion ?? ENDING_MOTION;
+  if (pe && 'motion' in pe) {
+    if (MOTION_IDS.includes(pe.motion)) motion = pe.motion;
+    else errors.push(`ending.motion：${JSON.stringify(pe.motion)} 不是可以用的文字動畫 → 改成 ${motionList()} 其中一個，或刪掉用預設`);
+  }
   if (portrait) return { off: '直式不放片尾卡和訂閱動畫', dur: 0 };
   const notes = [];
   // 片尾卡＋金句
@@ -118,7 +144,7 @@ export function resolveEnding({ plan, lib, cues, timed, projectDir, videoDur, po
       } else if (!from) notes.push('片尾金句：講稿沒有 > 引言、也沒有金句字卡，片尾卡只放圖（要放就在 plan.json 寫 ending.quote）');
       else if (from.startsWith('plan.json 寫了 null')) notes.push('片尾金句：這一集不放（plan.json 的 ending.quote 寫了 null）');
     }
-    card = { image: conf.image, quote };
+    card = { image: conf.image, quote, motion };
   }
   // 訂閱動畫：最後四分之一第一句講到「訂閱」的
   let subscribe = null;
@@ -199,7 +225,10 @@ export function endingParts(ending, { t0 = 0, DUR, videoDur, base = '', W, H, ne
     const A = videoDur, end = r3(A + ending.dur), s = r3(A - ENDING.black - t0);
     if (s < DUR && end - t0 > 0) {
       const I = ENDING.image, Q = ENDING.quote, iw = Math.round(W * I.scale), ih = Math.round(H * I.scale);
-      const quote = card.quote ? card.quote.lines.map((l) => [...l].map((ch) => `<span class="ec">${esc(ch)}</span>`).join('')).join('<br><br>') : '';
+      // 金句的字：打字機一個字一個 <span class="ec">；逐行的動畫（浮出、擦開）一行一個 <span class="el">（行與行之間空一行）；其他整段一起
+      const mo = card.quote ? card.motion || ENDING_MOTION : null, byLine = mo === 'rise' || mo === 'wipe';
+      const quote = !card.quote ? '' : mo === 'type' ? card.quote.lines.map((l) => [...l].map((ch) => `<span class="ec">${esc(ch)}</span>`).join('')).join('<br><br>')
+        : byLine ? card.quote.lines.map((l) => `<span class="el">${esc(l)}</span>`).join('') : card.quote.lines.map(esc).join('<br><br>');
       html.push(`  <div id="end-card" class="clip" data-start="${n3(Math.max(0, s))}" data-duration="${n3(end - t0 - Math.max(0, s))}" data-track-index="${nextTrack()}" style="position:absolute;inset:0;background:#000;z-index:${ENDING.z};opacity:0">
     <img id="end-img" src="${base}${card.file}" alt="" style="position:absolute;left:${Math.round((W - iw) / 2)}px;top:${Math.round((H - ih) / 2)}px;width:${iw}px;height:${ih}px;object-fit:contain;opacity:0">${quote ? `
     <div id="end-quote" style="position:absolute;left:${Q.left}px;top:${Q.top}px;width:${Q.width}px;font:400 ${Q.size}px/${Q.line}px 'Noto Sans TC', sans-serif;color:#fff;word-break:break-all">${quote}</div>` : ''}
@@ -207,9 +236,24 @@ export function endingParts(ending, { t0 = 0, DUR, videoDur, base = '', W, H, ne
       tl.push(s >= 0 ? `tl.fromTo('#end-card', { opacity: 0 }, { opacity: 1, duration: ${ENDING.black}, ease: 'none' }, ${n3(s)});` : `tl.set('#end-card', { opacity: 1 }, 0);`);
       tl.push(`tl.fromTo('#end-img', { opacity: 0 }, { opacity: 1, duration: ${I.fade}, ease: 'none' }, ${n3(pos(A + I.at))});`);
       if (quote) {
-        css = '    #end-quote .ec { opacity: 0; }\n';
-        const n = card.quote.lines.join('').length, type = Math.min(Q.type, Math.max(1, ending.dur - Q.at - I.fade - 1));
-        tl.push(`tl.to('#end-quote .ec', { opacity: 1, duration: 0.01, ease: 'none', stagger: ${n3(type / n)} }, ${n3(pos(A + Q.at))});`);
+        const qa = n3(pos(A + Q.at)), nl = card.quote.lines.length;
+        if (mo === 'type') {
+          css = '    #end-quote .ec { opacity: 0; }\n';
+          const n = card.quote.lines.join('').length, type = Math.min(Q.type, Math.max(1, ending.dur - Q.at - I.fade - 1));
+          tl.push(`tl.to('#end-quote .ec', { opacity: 1, duration: 0.01, ease: 'none', stagger: ${n3(type / n)} }, ${qa});`);
+        } else if (mo === 'fade') {
+          css = '    #end-quote { opacity: 0; }\n';
+          tl.push(`tl.to('#end-quote', { opacity: 1, duration: ${MOTION.fade}, ease: 'none' }, ${qa});`);
+        } else if (mo === 'rise') {
+          css = `    #end-quote .el { display: block; opacity: 0; }\n    #end-quote .el + .el { margin-top: ${Q.line}px; }\n`;
+          tl.push(`tl.fromTo('#end-quote .el', { opacity: 0, y: ${MOTION.rise.y} }, { opacity: 1, y: 0, duration: ${MOTION.rise.dur}, ease: 'power2.out', stagger: ${MOTION.rise.gap} }, ${qa});`);
+        } else if (mo === 'wipe') {
+          css = `    #end-quote .el { display: block; clip-path: inset(0 100% 0 0); }\n    #end-quote .el + .el { margin-top: ${Q.line}px; }\n`;
+          tl.push(`tl.fromTo('#end-quote .el', { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: ${MOTION.wipe.dur}, ease: 'power2.inOut', stagger: ${nl > 1 ? MOTION.wipe.gap : 0} }, ${qa});`);
+        } else {
+          css = '    #end-quote { opacity: 0; }\n';
+          tl.push(`tl.set('#end-quote', { opacity: 1 }, ${qa});`);
+        }
       }
       tl.push(`tl.to('#end-img${quote ? ', #end-quote' : ''}', { opacity: 0, duration: ${I.fade}, ease: 'none' }, ${n3(pos(end - I.fade))});`);
     }
@@ -224,7 +268,7 @@ export function endingLines(ending) {
   const L = [];
   if (ending.card) {
     const q = ending.card.quote;
-    L.push(`片尾卡：影片結束後接 ${ending.dur} 秒（${path.basename(ending.card.image)}${q ? `＋片尾金句「${q.lines.join('，')}」，來源：${q.from}` : ''}）；講者最後 ${ENDING.black} 秒淡出到黑`);
+    L.push(`片尾卡：影片結束後接 ${ending.dur} 秒（${path.basename(ending.card.image)}${q ? `＋片尾金句「${q.lines.join('，')}」，來源：${q.from}${(ending.card.motion || ENDING_MOTION) !== ENDING_MOTION ? `，文字動畫：${endingMotionZh(ending.card.motion)}` : ''}` : ''}）；講者最後 ${ENDING.black} 秒淡出到黑`);
   }
   if (ending.subscribe) L.push(`訂閱動畫：#${ending.subscribe.n}${ending.subscribe.text ? `「${ending.subscribe.text}」` : ''}後 ${SUBSCRIBE.lead} 秒出現，播 ${ending.subscribe.dur} 秒`);
   return [...L, ...ending.notes];

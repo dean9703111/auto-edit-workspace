@@ -4,6 +4,8 @@
 //                  有錄影畫面框 screenFrame 時是那個框）；
 //                  只有聲音、沒有插入素材的地方（底片是黑的）在中間寫是哪一段、去完成影片預覽看；音效照檢查報告的時間點播 shared/sfx 的 wav；
 //                  背景音樂播上一次 build 混好的 wav（057：跟著完成影片時間走，音量只補滑桿和做進 wav 的差）；
+//                  片尾（076）：片尾配樂和背景音樂一樣播上一次 build 烤好的那一段；影片播完接著走片尾卡那幾秒（rough.mp4 沒有這段，用自己的時鐘），
+//                  畫面放片尾卡的示意（黑底、圖、金句照實際的時間淡入、打字、淡出），片尾配樂繼續播到結束；
 //                  全部聲音最後經過 AnalyserNode 給音量表
 //   PlayerPreview  用 HyperFrames 的 <hyperframes-player> 播 work/hyperframes/index.html（上一次 build 的完整完成影片；時間是完成影片時間）；
 //                  058 聲音的滑桿（人聲、音效、素材原聲、背景音樂、範圍音量、各段音量）直接改播放器裡每個出聲元素的 data-volume，馬上聽得到
@@ -20,22 +22,36 @@ export class SimPreview {
     this.mediaEls = new Map();
     this.sfxBuf = new Map();      // name → AudioBuffer | Promise | null
     this.bed = null;              // 057 背景音樂：{ url, el, node }
+    this.outro = null;            // 076 片尾配樂：同上
+    this.endT = null;             // 076 播放頭在片尾卡的第幾秒（null＝還在影片裡）
+    this.endPlaying = false; this.endClock = 0;
     this.lastSkip = 0; this.lastT = 0;
     // 字幕：直接用 kit/captions.css（完成影片的樣式與數字），排在畫布大小（app.canvas().W×H）的圖層裡，再整層縮到預覽的大小
     if (els.capLayer && typeof ResizeObserver === 'function') {
       new ResizeObserver(() => this.fitCaps()).observe(els.capLayer.parentElement);
       this.fitCaps();
     }
-    this.v.addEventListener('ended', () => app.onEnded?.());
+    this.v.addEventListener('ended', () => { if (!this.enterEnd()) app.onEnded?.(); });
     this.v.addEventListener('error', () => app.onVideoError?.('瀏覽器播不了 rough.mp4（格式不支援或檔案壞了）'));
   }
   fitCaps() {
     const L = this.el.capLayer, w = L?.parentElement?.clientWidth || 0;
     if (w) L.style.transform = `scale(${w / (this.app.canvas?.().W || 1920)})`;
+    if (w && this.el.endLayer) this.el.endLayer.style.transform = L.style.transform;   // 076 片尾卡的示意：同一個畫布大小的圖層
   }
+  // ---------- 076 片尾卡那幾秒（rough.mp4 外面）----------
+  get vdur() { return this.v.duration || this.app.dur || 0; }
+  get endDur() { return this.app.endDur || 0; }
+  // 影片播完（或片尾被剪掉、播到剪點）：有片尾卡就接著走，回傳 true
+  enterEnd() {
+    if (!(this.endDur > 0)) return false;
+    this.endT = 0; this.endPlaying = true; this.endClock = performance.now();
+    return true;
+  }
+  leaveEnd() { this.endT = null; this.endPlaying = false; }
   load(url) { if (this.v.getAttribute('src') !== url) { this.v.src = url; this.v.load(); } }
-  get time() { return this.v.currentTime || 0; }
-  get playing() { return !this.v.paused && !this.v.ended; }
+  get time() { return this.endT != null ? this.vdur + this.endT : this.v.currentTime || 0; }
+  get playing() { return this.endPlaying || (!this.v.paused && !this.v.ended); }
   ensureAudio() {
     if (this.audio) { if (this.audio.ctx.state === 'suspended') this.audio.ctx.resume(); return; }
     try {
@@ -61,6 +77,11 @@ export class SimPreview {
   }
   play() {
     this.ensureAudio();
+    // 076 在片尾卡裡：接著走；已經到底就從頭播
+    if (this.endT != null) {
+      if (this.endT < this.endDur - 0.02) { this.endPlaying = true; this.endClock = performance.now(); return Promise.resolve(); }
+      this.leaveEnd(); this.v.currentTime = 0;
+    }
     const cuts = this.app.edit.cuts;
     const ci = cutIndexAt(this.v.currentTime, cuts);
     if (ci >= 0) this.v.currentTime = cuts[ci][1];
@@ -68,19 +89,34 @@ export class SimPreview {
     this.lastT = this.v.currentTime;
     return this.v.play().catch(() => {});
   }
-  pause() { this.v.pause(); for (const m of this.mediaEls.values()) if (m.el.tagName === 'VIDEO') m.el.pause(); this.bed?.el.pause(); }
-  seek(t) { this.v.currentTime = clamp(t, 0, this.v.duration || t); this.lastT = this.v.currentTime; }
+  pause() { this.endPlaying = false; this.v.pause(); for (const m of this.mediaEls.values()) if (m.el.tagName === 'VIDEO') m.el.pause(); this.bed?.el.pause(); this.outro?.el.pause(); }
+  seek(t) {
+    const d = this.vdur;
+    if (this.endDur > 0 && d > 0 && t > d + 1e-3) {   // 076 拖進片尾卡：影片停在最後，時間照片尾卡的秒數
+      if (!this.v.paused) this.v.pause();
+      if (Math.abs(this.v.currentTime - d) > 0.05) this.v.currentTime = d;
+      this.endT = clamp(t - d, 0, this.endDur); this.endClock = performance.now();
+      this.lastT = d + this.endT;
+      return;
+    }
+    const was = this.endPlaying;
+    this.leaveEnd();
+    this.v.currentTime = clamp(t, 0, this.v.duration || t); this.lastT = this.v.currentTime;
+    if (was) this.v.play().catch(() => {});   // 播到片尾卡時往回拖：接著播影片
+  }
   hide(on) { this.el.root.hidden = on; if (on) this.pause(); }
 
   tick() {
     const A = this.app, v = this.v, E = A.edit;
+    if (this.endT != null) return this.tickEnd();
+    this.showEnd(null);
     let t = v.currentTime || 0;
     if (this.playing) {
       const ci = cutIndexAt(t + 0.01, E.cuts);
       if (ci >= 0 && performance.now() - this.lastSkip > 60) {
         const end = E.cuts[ci][1];
         this.lastSkip = performance.now();
-        if (end >= (v.duration || A.dur) - 0.03) { v.pause(); v.currentTime = Math.max(0, E.cuts[ci][0] - 0.001); }
+        if (end >= (v.duration || A.dur) - 0.03) { v.pause(); v.currentTime = Math.max(0, E.cuts[ci][0] - 0.001); if (this.enterEnd()) return this.tickEnd(); }   // 片尾被剪掉：播到剪點就接片尾卡
         else v.currentTime = end;
         t = end;
       }
@@ -112,19 +148,93 @@ export class SimPreview {
 
   // 057 背景音樂：app.bedPlay() 給上一次 build 混好的 wav（完成影片時間）和要補的增益；rough 秒數照剪掉的範圍換成完成影片秒數再對齊
   // （跳過剪掉的範圍時完成影片時間是連續的，不用跳）。差超過 0.3 秒才重新對齊，拖播放頭也會跟上
+  // 076 片尾配樂（app.outroPlay()）走同一套：兩條各自對齊、各自播
   tickBed(t) {
-    const b = this.playing ? this.app.bedPlay?.() : null;
-    if (this.bed && b && this.bed.url !== b.url) this.dropBed();
-    if (!b) { if (this.bed && !this.bed.el.paused) this.bed.el.pause(); return; }
-    const m = this.bed || this.makeBed(b.url), el = m.el;
+    this.tickMusic('bed', this.playing ? this.app.bedPlay?.() : null, t);
+    this.tickMusic('outro', this.playing ? this.app.outroPlay?.() : null, t);
+  }
+  tickMusic(slot, b, t) {
+    if (this[slot] && b && this[slot].url !== b.url) this.dropBed(slot);
+    if (!b) { if (this[slot] && !this[slot].el.paused) this[slot].el.pause(); return; }
+    const m = this[slot] || this.makeBed(b.url, slot), el = m.el;
     const o = outOf(t, this.app.edit.cuts) - b.at, end = Number.isFinite(b.dur) ? b.dur : el.duration;
     if (o < 0 || (Number.isFinite(end) && o >= end - 0.05)) { if (!el.paused) el.pause(); return; }
     if (m.node) m.node.gain.setTargetAtTime(b.gain, this.audio.ctx.currentTime, 0.015); else el.volume = clamp(b.gain, 0, 1);
-    el.playbackRate = this.v.playbackRate || 1;
+    el.playbackRate = this.endT != null ? 1 : this.v.playbackRate || 1;
     try { if (el.paused || Math.abs(el.currentTime - o) > 0.3) el.currentTime = o; } catch { /* 還沒載到 metadata */ }
     if (el.paused) el.play().catch(() => {});
   }
-  makeBed(url) {
+  // 片尾卡那幾秒：自己的時鐘往前走，到底就停；畫面放示意，人聲、字幕、素材都收掉，音樂（片尾配樂、鋪到片尾的背景音樂）照完成影片時間繼續
+  tickEnd() {
+    const A = this.app, d = this.vdur, now = performance.now();
+    if (!(this.endDur > 0)) { this.leaveEnd(); return; }   // 片尾卡拿掉了
+    if (this.endPlaying) {
+      this.endT = Math.min(this.endDur, this.endT + (now - this.endClock) / 1000);
+      if (this.endT >= this.endDur - 1e-3) { this.endT = this.endDur; this.endPlaying = false; A.onEnded?.(); }
+    }
+    this.endClock = now;
+    const t = d + this.endT;
+    this.el.cutBadge.hidden = true;
+    this.el.black.style.opacity = '1';
+    this.el.caption.classList.add('off');
+    for (const m of this.mediaEls.values()) { m.wrap.style.opacity = '0'; if (m.el.tagName === 'VIDEO' && !m.el.paused) m.el.pause(); }
+    this.el.pip.style.display = 'none';
+    if (this.el.hint) this.el.hint.hidden = true;
+    if (this.audio) this.audio.voice.gain.setTargetAtTime(0, this.audio.ctx.currentTime, 0.015);
+    this.showEnd(this.endT);
+    this.tickBed(t);
+    this.lastT = t;
+  }
+  // 片尾卡的示意：tt＝片尾卡的第幾秒（null＝收起來）。時間照 lib/ending.mjs 的數字（/api/state 的 end.layout）：圖淡入、金句照選的文字動畫出來（077：打字機、淡入、逐行浮出、由左擦開、直接出現）、最後一起淡出
+  showEnd(tt) {
+    const box = this.el.end;
+    if (!box) return;
+    const c = tt == null ? null : this.app.endCard?.();
+    if (!c) { if (!box.hidden) box.hidden = true; return; }
+    const L = c.layout || {}, I = L.image || { at: 0.1, fade: 0.5, scale: 0.63 }, Q = L.quote || { at: 0.633, type: 5.23, left: 1300, top: 575, width: 580, size: 48, line: 73 };
+    const M = L.motion || { fade: 0.8, rise: { dur: 0.6, gap: 0.5, y: 28 }, wipe: { dur: 0.9, gap: 0.6 } }, mo = c.motion || 'type', byLine = mo === 'rise' || mo === 'wipe';
+    const key = JSON.stringify([c.image, c.lines, L, mo]);
+    const q = this.el.endQuote;
+    if (box.dataset.key !== key) {
+      box.dataset.key = key; box.dataset.shown = '';
+      const { W, H } = this.app.canvas?.() || { W: 1920, H: 1080 }, iw = Math.round(W * I.scale), ih = Math.round(H * I.scale);
+      const img = this.el.endImg;
+      if (c.image) { img.src = c.image; img.hidden = false; Object.assign(img.style, { left: `${Math.round((W - iw) / 2)}px`, top: `${Math.round((H - ih) / 2)}px`, width: `${iw}px`, height: `${ih}px` }); } else { img.removeAttribute('src'); img.hidden = true; }
+      Object.assign(q.style, { left: `${Q.left}px`, top: `${Q.top}px`, width: `${Q.width}px`, fontSize: `${Q.size}px`, lineHeight: `${Q.line}px` });
+      q.textContent = '';
+      (c.lines || []).forEach((l, i) => {
+        if (byLine) {   // 一行一塊，行與行之間空一行
+          const el = document.createElement('span');
+          el.className = 'el'; el.textContent = l; el.style.display = 'block';
+          if (i) el.style.marginTop = `${Q.line}px`;
+          q.append(el);
+          return;
+        }
+        if (i) q.append(document.createElement('br'), document.createElement('br'));
+        if (mo === 'type') for (const ch of l) { const sp = document.createElement('span'); sp.className = 'ec'; sp.textContent = ch; q.append(sp); }
+        else q.append(document.createTextNode(l));
+      });
+    }
+    const fade = I.fade || 0.5, out = clamp((c.dur - tt) / fade, 0, 1), q0 = tt - (Q.at || 0);
+    this.el.endImg.style.opacity = String(Math.min(clamp((tt - (I.at || 0)) / fade, 0, 1), out));
+    let qop = out;
+    if (mo === 'type') {
+      const chars = q.querySelectorAll('.ec'), n = chars.length;
+      const type = Math.min(Q.type || 5.23, Math.max(1, c.dur - (Q.at || 0) - fade - 1)), shown = n ? Math.floor(clamp(q0 / type, 0, 1) * n + 1e-6) : 0;
+      if (box.dataset.shown !== String(shown)) { box.dataset.shown = String(shown); chars.forEach((el, i) => { el.style.opacity = i < shown ? '1' : '0'; }); }
+    } else if (mo === 'fade') qop = Math.min(out, clamp(q0 / M.fade, 0, 1));
+    else if (byLine) {
+      const els = q.querySelectorAll('.el'), R = M[mo], gap = mo === 'wipe' && els.length < 2 ? 0 : R.gap;
+      els.forEach((el, i) => {
+        const k = clamp((q0 - i * gap) / R.dur, 0, 1);
+        if (mo === 'rise') { const e = 1 - (1 - k) * (1 - k); el.style.opacity = String(e); el.style.transform = `translateY(${((1 - e) * R.y).toFixed(1)}px)`; }
+        else { const e = k < 0.5 ? 2 * k * k : 1 - 2 * (1 - k) * (1 - k); el.style.clipPath = `inset(0 ${(100 - e * 100).toFixed(1)}% 0 0)`; }
+      });
+    } else qop = q0 >= 0 ? out : 0;   // 直接出現
+    q.style.opacity = String(qop);
+    if (box.hidden) box.hidden = false;
+  }
+  makeBed(url, slot = 'bed') {
     const el = new Audio();
     el.preload = 'auto';
     el.src = url;
@@ -132,16 +242,16 @@ export class SimPreview {
     if (this.audio) {
       try { const src = this.audio.ctx.createMediaElementSource(el); node = this.audio.ctx.createGain(); node.gain.value = 0; src.connect(node).connect(this.audio.master); } catch { node = null; }
     }
-    this.bed = { url, el, node };
-    return this.bed;
+    this[slot] = { url, el, node };
+    return this[slot];
   }
-  dropBed() {
-    const m = this.bed;
+  dropBed(slot = 'bed') {
+    const m = this[slot];
     if (!m) return;
     m.el.pause();
     try { m.node?.disconnect(); } catch { /* 已經斷了 */ }
     m.el.removeAttribute('src'); m.el.load();
-    this.bed = null;
+    this[slot] = null;
   }
 
   // 音效：播放中跨過標記的時間點就播（跳接、拖曳造成的大跳躍不算）

@@ -15,26 +15,20 @@ const C = { bg:'#090D17', card:'#121A2B', line:'#2D3950', text:'#F4F5F8', muted:
 const text = (x,y,t,size=24,fill=C.text,weight=500) => `<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" font-weight="${weight}">${t}</text>`;
 const box = (x,y,w,h,fill=C.card,r=16,stroke=C.line) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" stroke="${stroke}"/>`;
 const line = (x1,y1,x2,y2,color=C.line,width=2) => `<path d="M${x1} ${y1}L${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round"/>`;
-const svg = (w,h,title,body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-labelledby="title"><title id="title">${title}</title><rect width="100%" height="100%" rx="24" fill="${C.bg}"/><g font-family="Noto Sans TC, PingFang TC, Microsoft JhengHei, sans-serif">${body}</g></svg>`;
+const svg = (w,h,title,body) => `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-labelledby="title"><title id="title">${title}</title><rect width="100%" height="100%" rx="24" fill="${C.bg}"/><g font-family="Noto Sans TC, PingFang TC, Microsoft JhengHei, sans-serif">${body}</g></svg>`;
 const num = (x,y,n) => `<circle cx="${x}" cy="${y}" r="18" fill="${C.orange}"/>${text(x-7,y+7,n,21,C.bg,800)}`;
 const arrow = (x,y,vertical=false) => `<path d="${vertical?`M${x} ${y-13}v26m-7-7 7 7 7-7`:`M${x-13} ${y}h26m-7-7 7 7-7 7`}" fill="none" stroke="${C.orange}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
-function mini(kind,x,y) {
-  let b=box(x,y,350,112,'#0B111E',10);
-  if(kind===0) for(let i=0;i<4;i++) b+=box(x+16+i*82,y+16,72,78,'#1B2940',8)+text(x+24+i*82,y+45,['講解','旁白','錄影','圖片'][i],18)+line(x+28+i*82,y+61,x+69+i*82,y+61,C.orange,3)+line(x+28+i*82,y+73,x+58+i*82,y+73,C.muted,2);
-  if(kind===1) {for(let i=0;i<28;i++){let h=12+(i*17%48); b+=line(x+18+i*11,y+53-h/2,x+18+i*11,y+53+h/2,i>8&&i<15?'#EF7D83':C.orange,5);} b+=box(x+109,y+17,76,70,'none',6,'#EF7D83')+text(x+120,y+101,'NG 剪掉，留下完整一句',16,C.muted);}
-  if(kind===2){b+=box(x+15,y+12,155,86,'#293449',5)+box(x+30,y+20,123,69,'none',0,C.orange); b+=`<circle cx="${x+94}" cy="${y+44}" r="13" fill="#C3CEDF"/><path d="M${x+66} ${y+83}q0-32 28-32t28 32" fill="#C3CEDF"/>`; b+=arrow(x+192,y+56)+box(x+216,y+17,113,78,'#EFE8DB',5)+box(x+226,y+30,58,15,C.orange,3)+box(x+297,y+66,23,22,'#354058',3)+text(x+229,y+66,'動畫預覽',14,'#323C4E');}
-  if(kind===3){for(let i=0;i<3;i++)b+=box(x+15+i*109,y+15,100,63,i===1?'#F6ECE0':'#26344C',5)+box(x+25+i*109,y+25,45,8,C.orange,2)+line(x+25+i*109,y+49,x+93+i*109,y+49,i===1?'#A8A093':C.muted,3)+text(x+34+i*109,y+100,['s01 開場','s02 流程','s03 重點'][i],15,C.muted);}
-  if(kind===4){b+=box(x+15,y+12,155,74,'#F4EADC',5)+box(x+28,y+25,78,15,C.orange,3)+box(x+121,y+55,36,23,'#314563',3); for(let i=0;i<3;i++) b+=box(x+190,y+14+i*27,140-i*18,14,i===1?C.orange:'#38577D',3); b+=text(x+22,y+103,'預覽 → 修改 → 再確認',16,C.muted);}
-  if(kind===5){b+=box(x+18,y+16,132,80,'#253950',6)+`<path d="M${x+70} ${y+38}l28 18-28 18z" fill="${C.orange}"/>`+arrow(x+184,y+56)+text(x+216,y+48,'final.mp4',23,C.text,700)+text(x+216,y+77,'也能帶去剪映',17,C.muted);}
-  return b;
-}
 const stages=[['放好素材','影片、聲音、錄影、圖片','有講稿也一起放進來'],['剪乾淨','找 NG、縮停頓、上字幕','① 看剪輯清單'],['構圖與風格','拖框、選主色與背景','② 看動畫，會自動存'],['確認分鏡','每段要配什麼畫面','③ 看分鏡表與截圖'],['預覽與修改','看完成影片，說一句話或自己調','④ 完成影片預覽；需要時開 ⑤ 剪輯'],['輸出與驗收','確認後輸出 MP4','選用：主軌＋透明 MOV＋SRT']];
+// 六步插畫：Codex 照情境庫的卡通講者生成（dev/tools/figures/workflow-<N>.webp，720×420，底色同卡片 #121A2B），直接嵌進 SVG
+const WF_IMG=[1,2,3,4,5,6].map(n=>fs.readFileSync(path.join(WS,`dev/tools/figures/workflow-${n}.webp`)).toString('base64'));
+const illus=(i,x,y)=>{const href=`data:image/webp;base64,${WF_IMG[i]}`;return `<image x="${x}" y="${y}" width="350" height="204" href="${href}" xlink:href="${href}"/>`;};
 function workflow(mobile=false){
-  const w=mobile?440:1320,h=mobile?2040:890;let b=text(32,48,'從素材到完成影片',mobile?31:38,C.text,800)+text(32,82,'先看整體流程，再跟 AI 一步一步做',mobile?19:23,C.muted);
-  stages.forEach(([title,desc,stop],i)=>{const x=mobile?24:32+(i%3)*426,y=mobile?110+i*313:116+Math.floor(i/3)*354;
-    b+=box(x,y,392,292)+num(x+33,y+37,String(i+1))+text(x+64,y+46,title,27,C.text,800)+mini(i,x+21,y+64)+text(x+21,y+211,desc,21)+text(x+21,y+253,stop,18,C.green);
-    if(mobile&&i<5)b+=arrow(220,y+302,true);
-    if(!mobile&&i%3<2)b+=arrow(x+409,y+146);
+  const CH=380,PITCH=mobile?400:404;
+  const w=mobile?440:1320,h=mobile?110+6*PITCH+50:116+PITCH+CH+70;let b=text(32,48,'從素材到完成影片',mobile?31:38,C.text,800)+text(32,82,'先看整體流程，再跟 AI 一步一步做',mobile?19:23,C.muted);
+  stages.forEach(([title,desc,stop],i)=>{const x=mobile?24:32+(i%3)*426,y=mobile?110+i*PITCH:116+Math.floor(i/3)*PITCH;
+    b+=box(x,y,392,CH)+num(x+33,y+37,String(i+1))+text(x+64,y+46,title,27,C.text,800)+illus(i,x+21,y+66)+text(x+21,y+306,desc,21)+text(x+21,y+346,stop,18,C.green);
+    if(mobile&&i<5)b+=arrow(220,y+CH+10,true);
+    if(!mobile&&i%3<2)b+=arrow(x+409,y+168);
   });
   b+=text(32,h-42,'換共用背景時，另看 ⑥ 背景預覽',mobile?18:22,C.muted);
   return svg(w,h,'素材、初剪、構圖、分鏡、預覽修改、輸出的六步流程',b);
@@ -57,6 +51,8 @@ function backgrounds(mobile=false){
   return svg(w,h,'複製設計指令給 AI，生成三組九張背景，按用途混搭，選了就自動套用',b);
 }
 for(const [name,body] of [['workflow.svg',workflow()],['workflow-mobile.svg',workflow(true)],['background-flow.svg',backgrounds()],['background-flow-mobile.svg',backgrounds(true)]])fs.writeFileSync(path.join(OUT,name),body);
+// --svg-only：只重產上面四張 SVG，不建示範專案、不重截介面
+if(process.argv.includes('--svg-only')){console.log('✓ dev/site/guides/：workflow、background-flow（含 -mobile）');process.exit(0);}
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'auto-edit-docs-'));
 const work=path.join(root,'projects','操作示範','work');fs.mkdirSync(path.join(work,'hyperframes'),{recursive:true});fs.mkdirSync(path.join(root,'shared'));fs.symlinkSync(TPL,path.join(root,'shared/template'));
 fs.writeFileSync(path.join(work,'hyperframes/plan.json'),JSON.stringify({version:1,look:false,rhythm:'spaced',frame:[144,81,1632,918],scenes:[]}));

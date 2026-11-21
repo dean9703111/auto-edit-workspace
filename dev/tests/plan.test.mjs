@@ -619,7 +619,8 @@ test('情境動畫綁句：P.at 的句號換成秒數；註解不算；不是句
 
 test('outro：錯誤原文 5 種；起點、對齊片尾、淡入淡出取 min；報告行', () => {
   const e = (o) => run([], { outro: o }).errors;
-  assert.ok(e({ from: '#11', music: 'ding' }).includes('outro.music：「ding」不是配樂（可用：bgm-cylinder-five）→ 改成可用的配樂名稱，或寫 null 不配'));
+  // 可用清單後面可能接本機曲庫（shared/music/，git 不追蹤）的配樂
+  assert.ok(e({ from: '#11', music: 'ding' }).some((x) => /^outro\.music：「ding」不是配樂（可用：bgm-cylinder-five(、[^）]+)?）→ 改成可用的配樂名稱，或寫 null 不配$/.test(x)));
   assert.ok(e({ from: '12' }).includes('outro.from：要寫 "#N" 或 "#N@詞"（結語金句講完後那一句），現在是 "12" → 改成收尾那一句的句號，例 "#120"；不寫＝只播片尾最後 30 秒'));
   assert.ok(e({ from: '#11', volume: 9 }).includes('outro.volume 要是 −20～+6 的 dB 數字（0＝預設），現在是 9 → 改成 −20～+6 之間的數字，或刪掉這個欄位用預設'));
   assert.ok(e({ from: '#11', fadeOut: 11 }).includes('outro.fadeOut 要是 0–10 的秒數（不寫＝用 kit/sfx.json 的 fadeOut），現在是 11 → 改成 0–10 之間的秒數，或刪掉這個欄位用預設'));

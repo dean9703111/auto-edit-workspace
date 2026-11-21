@@ -62,7 +62,8 @@ import { designState, designAsset, designPreviews, setDesignColor, uploadDesign,
 import { r3 } from './lib/time.mjs';
 import { LOUD } from './lib/audio.mjs';
 import { LOCAL_ROLES, localSfxDir, wavSeconds } from './lib/sfx-local.mjs';
-import { readBedInfo } from './lib/music.mjs';
+import { readBedInfo, readEndInfo } from './lib/music.mjs';
+import { ENDING, ENDING_MOTIONS, ENDING_MOTION, MOTION, readEndingSetting } from './lib/ending.mjs';
 import { soundOf, liveFingerprint, liveOk, LIVE_INFO, LIVE_INFO_V } from './editor/live-sound.mjs';
 
 export { LIMITS, defaultEdit, sanitizeEdit, sanitizeSegments, applySave, writeSrt, parseSrtBlocks, visibleLen, resolveTime, checkSlots, checkVars, checkTemplateSlots, subtitles };
@@ -517,6 +518,26 @@ function bedFile(ctx) {
   const b = readBedInfo(ctx.P.out), f = b && safeJoin(ctx.P.out, b.file);
   return f && statOf(f) ? f : null;
 }
+// 076 片尾：上一次 build 做進 index.html 的片尾配樂與片尾卡（.cache/ending.json）；檔不在了就當沒有
+//   { outro: { music, at, dur, fadeIn, fadeOut, url } | null, ending: { dur, quote: [行], image } | null }（at 是完成影片秒數；url、image 是 /composition/ 底下的網址）
+// 片尾金句文字動畫的工作區預設（和 build 讀同一份：lib/project.mjs；測試關掉本機設定時＝打字機）
+const endingMotionDefaultOf = (P) => (process.env.AUTO_EDIT_NO_LOCAL_BRAND === '1' ? ENDING_MOTION : readEndingSetting(path.resolve(P.templateDir, '..'))?.motion ?? ENDING_MOTION);
+function endInfo(ctx) {
+  const P = ctx.P, j = readEndInfo(P.out);
+  const urlOf = (rel) => {
+    const f = typeof rel === 'string' && rel ? safeJoin(P.out, rel) : null, st = f && statOf(f);
+    return st ? `/composition/${rel.split('/').map(encodeURIComponent).join('/')}?v=${Math.floor(st.mtimeMs).toString(36)}` : null;
+  };
+  const o = isObj(j?.outro) ? j.outro : null, e = isObj(j?.ending) ? j.ending : null;
+  const ou = o && urlOf(o.file), eu = e && urlOf(e.image);
+  return {
+    layout: { image: ENDING.image, quote: ENDING.quote, motion: MOTION },   // 快速試聽的片尾卡示意照這組數字排（lib/ending.mjs）
+    // 077 片尾金句的文字動畫：下拉選單的選項、工作區的預設（shared/setting.json 的 ending.motion；這一集的在 plan.json 的 ending.motion）、上一次 build 做進去的
+    motions: ENDING_MOTIONS, motionDefault: endingMotionDefaultOf(P), motionBuilt: e && typeof e.motion === 'string' ? e.motion : null,
+    outro: ou && isNum(o.dur) && o.dur > 0 ? { music: o.music ?? null, at: isNum(o.at) ? o.at : 0, dur: o.dur, fadeIn: isNum(o.fadeIn) ? o.fadeIn : 0, fadeOut: isNum(o.fadeOut) ? o.fadeOut : 0, url: ou } : null,
+    ending: e && isNum(e.dur) && e.dur > 0 ? { dur: e.dur, quote: Array.isArray(e.quote) ? e.quote.filter((x) => typeof x === 'string') : [], image: eu } : null,
+  };
+}
 function bedInfo(ctx, plan) {
   const P = ctx.P, b = isObj(plan) ? plan.bed : undefined;
   const music = b === undefined ? bedDefaultOf(P) : isObj(b) && typeof b.music === 'string' && b.music ? b.music : null;
@@ -796,6 +817,7 @@ async function getState(ctx) {
     srt: { exists: srt.exists, file: relRoot(ctx, P.srt), mtime: srt.mtime, hash: srt.hash, eol: srt.eol },
     edit: isObj(plan.data?.edit) ? plan.data.edit : null,
     bed: bedInfo(ctx, plan.data),
+    end: endInfo(ctx),
     look: lookState(ctx, plan.data),
     canvas: canvasInfo(P.project, plan.data, screenFrameOf(ctx, plan.data)),
     media, video, videoError, captions: srt.cues,
@@ -864,7 +886,7 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
   const base = isObj(body?.base) ? body.base : {};
   const hash = st ? sha(text) : null;
   // 同一筆存檔送了兩次（關頁時瀏覽器先把第一次算失敗、頁面又補送一次；或一時連不到後重送）：第一次已經存好了，不是別人改的
-  const sig = frameOnly ? null : sha(JSON.stringify([base.hash ?? null, base.srtHash ?? null, body.edit ?? null, body.segments ?? null, body.srt ?? null, body.look ?? null, body.theme ?? null, body.captionMarks ?? null, body.bed ?? null]));
+  const sig = frameOnly ? null : sha(JSON.stringify([base.hash ?? null, base.srtHash ?? null, body.edit ?? null, body.segments ?? null, body.srt ?? null, body.look ?? null, body.theme ?? null, body.captionMarks ?? null, body.bed ?? null, body.ending ?? null]));
   const duplicate = () => !!sig && !!st && (ctx.recentSaves || []).includes(sig);
   const planConflict = (h, m) => (!st ? base.hash != null : base.hash != null ? base.hash !== h : base.mtime == null || base.mtime !== m);
   if (planConflict(hash, st?.mtimeMs) && duplicate()) return [200, savedNow(ctx)];
@@ -892,7 +914,7 @@ async function doSave(ctx, rawBody, { deferBuild = false } = {}) {
     if (ctx.frameSession?.hash === hash) frameOrigin = ctx.frameSession.origin;
     else { const d0 = readPlan(P.plan).data; frameOrigin = isObj(d0) ? { frame: d0.frame ?? null, speakerBox: d0.speakerBox ?? null, pipCrop: d0.pipCrop ?? null } : null; }
   }
-  const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory, canvas: cv, frameOrigin, bedDefault: bedDefaultOf(P) });
+  const r = applySave(text, body, { videoDur, srtText: srt.text, mediaDur, schema, memory, canvas: cv, frameOrigin, bedDefault: bedDefaultOf(P), endingMotionDefault: endingMotionDefaultOf(P) });
   if (r.errors.length) return reject(400, { error: 'invalid', errors: r.errors, message: r.errors.join('\n') }, 'invalid');
   // plan.json 與 rough.srt 一起寫：兩個都先寫暫存檔；rename 之前再比對一次，任一個被改過就兩個都不寫
   const writes = [];
@@ -1504,7 +1526,9 @@ export async function startEditor({ flags = {}, cwd = process.cwd(), port, write
     closed = true;
     if (exportBusy(ctx)) cancelExport(ctx);
     if (writeState) { const s = readJson(ctx.stateFile); if (s?.pid === process.pid && s?.port === ctx.port) try { fs.unlinkSync(ctx.stateFile); } catch { /* 已經不在 */ } }
-    server.close(() => resolve());
+    // 等背景的 build --check、波形算完再回：子處理程序還開著時，Windows 刪不掉專案資料夾（EBUSY）
+    const jobs = [ctx.reportJob, ctx.schemaJob, ctx.peaksJob, ctx.bedPeaksJob].map((j) => j?.promise).filter(Boolean);
+    server.close(() => Promise.allSettled(jobs).then(() => resolve()));
     server.closeAllConnections?.();
   });
   return { url: ctx.url, port: ctx.port, server, ctx, close };
