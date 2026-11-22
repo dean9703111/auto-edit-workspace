@@ -113,6 +113,35 @@ export function sourceEnd(file, duration = null) {
   return { partial: PARTIAL.test(err), end: m ? r3(Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])) : null };
 }
 
+// 084 多個檔接主軌時先把音量拉齊（作者：minimax-ep1 開場、結語是攝影機收音約 −10 LUFS，中間三段另外錄的聲音檔約 −20，
+//   輸出後中間明顯偏小聲；「響度統一這件事，是否在一開始的階段就能做了？」）。每個檔量一次響度（ebur128，只解聲音），
+//   以中位數為準：大聲的調小，小聲的調大；調大會讓峰值超過 ceil dBTP 的，目標往下降到它拉得到的地方（調小不會爆音，
+//   之後 build 重新編碼底片時整支再調到 −14 LUFS）。差不到 tol dB 不動；靜音（< silent）不算
+export const LOUD = { tol: 1.5, ceil: -1, silent: -50, min: 0.5 };
+export function loudnessOf(abs, track = 0, src = null) {
+  const r = run('ffmpeg', ['-hide_banner', '-nostats', ...(src ? ['-ss', String(src[0]), '-t', String(r3(src[1] - src[0]))] : []), '-i', abs, '-map', `0:a:${track}`, '-af', 'ebur128=peak=true', '-f', 'null', '-']);
+  const err = String(r.stderr), sum = err.slice(err.lastIndexOf('Summary:'));
+  const I = Number((sum.match(/I:\s*(-?[\d.]+) LUFS/) || [])[1]), tp = Number((sum.match(/Peak:\s*(-?[\d.]+) dBFS/) || [])[1]);
+  return { I: Number.isFinite(I) ? I : null, tp: Number.isFinite(tp) ? tp : null };
+}
+// levels：[{ I, tp }｜null]（null＝沒有聲音）→ { target, gains: [dB…] }；不用拉齊＝target null、全 0
+export function matchGains(levels, { tol = LOUD.tol, ceil = LOUD.ceil, silent = LOUD.silent, min = LOUD.min } = {}) {
+  const zero = { target: null, gains: levels.map(() => 0) };
+  const ok = levels.map((x) => x && x.I != null && x.I > silent);
+  const vals = levels.filter((_, i) => ok[i]).map((x) => x.I).sort((a, b) => a - b);
+  if (vals.length < 2 || vals[vals.length - 1] - vals[0] < tol) return zero;
+  const mid = vals.length % 2 ? vals[(vals.length - 1) / 2] : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
+  // 每個檔最多拉到多大聲（峰值碰到 ceil 為止）；目標不超過最小的那個
+  const reach = levels.filter((_, i) => ok[i]).map((x) => x.I + Math.max(0, x.tp != null ? ceil - x.tp : Infinity));
+  const target = Math.min(mid, ...reach);
+  const gains = levels.map((x, i) => {
+    if (!ok[i]) return 0;
+    const g = target - x.I;
+    return Math.abs(g) < min ? 0 : Math.round(g * 10) / 10;
+  });
+  return { target: Math.round(target * 10) / 10, gains };
+}
+
 export function joinMain(P, { order = null, log = console.log } = {}) {
   const proj = P.project;
   const { cams, voices, screens } = mainCandidates(proj);
@@ -157,7 +186,7 @@ export function joinMain(P, { order = null, log = console.log } = {}) {
     if (resolveFormat({ projectDir: P.project, plan }).format === 'portrait') { W = 1080; H = 1920; }
   }
   // 一次接完（concat filter）：每一段的畫面與聲音都裁／補到同一個長度，接縫不會越接越偏
-  const inputs = [], chains = [], labels = [], clips = [], warnings = [], noAudio = [];
+  const inputs = [], chains = [], labels = [], clips = [], warnings = [], noAudio = [], audioAt = [];
   let anyHdr = false;
   let t = 0;
   list.forEach((x, i) => {
@@ -186,13 +215,28 @@ export function joinMain(P, { order = null, log = console.log } = {}) {
     // 聲音檔、邊錄邊講的螢幕錄影配純黑畫面（build 靠 blackdetect 認出「只有聲音」的區間，一定要是合成的純黑；螢幕錄影的畫面由 screen-sync 蓋回）
     else chains.push(`color=c=black:s=${W}x${H}:r=${F}:d=${D},format=yuv420p,setpts=PTS-STARTPTS[v${i}]`);
     // first_pts＝0、fps 的 start_time＝0：音軌或畫面晚開始（素材的起點偏移）就補靜音、補第一格，不然音畫會差那麼多
-    if (info.hasAudio) chains.push(`[${i}:a:${pick.track}]aresample=48000:first_pts=0,aformat=sample_fmts=fltp:channel_layouts=stereo,apad,atrim=duration=${D},asetpts=PTS-STARTPTS[a${i}]`);
+    if (info.hasAudio) { audioAt.push({ i, abs, track: pick.track, src, chain: chains.length }); chains.push(`[${i}:a:${pick.track}]aresample=48000:first_pts=0,aformat=sample_fmts=fltp:channel_layouts=stereo,@GAIN@apad,atrim=duration=${D},asetpts=PTS-STARTPTS[a${i}]`); }
     else chains.push(`anullsrc=r=48000:cl=stereo,atrim=duration=${D},asetpts=PTS-STARTPTS[a${i}]`);
     labels.push(`[v${i}][a${i}]`);
     clips.push({ file: x.file, kind: x.kind, start: r3(t), end: r3(t + D), ...(src ? { src } : {}), ...(pick.track ? { audioTrack: pick.track } : {}) });
     t += D;
     log(`接主軌 ${i + 1}/${list.length}：${x.file}${src ? `@${src[0]}–${src[1]}s` : ''}${x.kind === 'voice' ? '（聲音，配純黑畫面）' : x.kind === 'screen' ? '（邊錄邊講的螢幕錄影：取聲音、配純黑畫面）' : ''}（${D}s）`);
   });
+  // 084 音量拉齊：有聲音的檔 ≥ 2 個才量
+  if (audioAt.length >= 2) {
+    log(`量每個檔的音量（${audioAt.length} 個，拉齊用）…`);
+    const levels = audioAt.map((a) => loudnessOf(a.abs, a.track, a.src));
+    const m = matchGains(levels);
+    audioAt.forEach((a, k) => {
+      const g = m.gains[k];
+      chains[a.chain] = chains[a.chain].replace('@GAIN@', g ? `volume=${g}dB,` : '');
+      if (levels[k].I != null) clips[a.i].loudness = r3(levels[k].I);
+      if (g) clips[a.i].gainDb = g;
+    });
+    if (m.target != null) log(`音量拉齊（每個檔調到 ${m.target} LUFS）：${audioAt.map((a, k) => `${list[a.i].name} ${levels[k].I} LUFS${m.gains[k] ? ` ${m.gains[k] > 0 ? '+' : ''}${m.gains[k]} dB` : ''}`).join('、')}`);
+    else log(`音量：各檔差不到 ${LOUD.tol} dB，不用拉齊（${audioAt.map((a, k) => `${list[a.i].name} ${levels[k].I ?? '靜音'}`).join('、')}）`);
+  }
+  for (let k = 0; k < chains.length; k++) chains[k] = chains[k].replace('@GAIN@', '');
   if (noAudio.length === list.length) throw new Error(`${noAudio.join('、')} 沒有聲音軌 → 這個流程靠講話的聲音剪：確認錄影時有收音；聲音是另外錄的，就把聲音檔放 assets/voice/`);
   for (const f of noAudio) warnings.push(`${f} 沒有聲音軌，這段主軌是靜音的，逐字稿和字幕不會有內容`);
   const graph = `${chains.join(';')};${labels.join('')}concat=n=${list.length}:v=1:a=1[v][a]`;

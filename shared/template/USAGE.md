@@ -361,6 +361,7 @@ node shared/template/tools/media.mjs frame --project projects/<專案> --src ass
 | 步驟 | 工具做什麼 | 你要做的 |
 |---|---|---|
 | `media.mjs main` | 每支 `assets/screen/` 錄影判斷一次：有講話、有換氣停頓（有聲音的時間 20–95%）＝邊錄邊講，接進主軌（只取聲音、配純黑，`main.json` 的 `kind` 是 `screen`）；一路不停的背景音樂、沒聲音＝插入素材 | 判斷印在停點 ①；判斷錯了用 `--order` 指定要接的檔 |
+| `media.mjs main`（音量拉齊，084） | 接進主軌的檔 ≥ 2 個時，每個檔量一次響度（ebur128），以中間值為準：大聲的調小、小聲的調大（調大不讓峰值超過 −1 dBTP，拉不上去就把目標往下降），差不到 1.5 dB 不動；`main.json` 每個 clip 記 `loudness`（LUFS）與 `gainDb`。攝影機收音和另外錄的聲音檔差 10 dB 也會一樣大聲；每 20 分鐘的素材多花約 10 秒 | 不用做事；印的「音量拉齊」那一行放進停點 ① 的回報。已經接好主軌的舊專案要重接才會套用（`prep --again`），不然用剪輯台「整支 → 聲音」的拉平人聲 |
 | `media.mjs ng-snap` | 錄影那幾段整段 `--add-in`（扣掉 NG）：只剪 NG、停頓保留，畫面才不會亂跳；有講稿時照講稿比對主軌順序 | 順序 ⚠ 放進停點 ① |
 | `media.mjs prep` | 畫面在等、又沒人講話 ≥ 3 秒的地方列進 `cuts.md` 的「等待」表（預設不勾；和 NG 列一樣在剪輯清單頁勾） | 停點 ① 給使用者看；勾了就壓成等待長度五分之一的快轉（最少 1.5 秒、最多 4.5 秒），其他剪掉；等待 15 秒以上的，完成影片自動放等待卡、配秒針（style.md「螢幕錄影與圖片」），那一段（`screen-sync` 產生的快轉段）補一句 `"wait": "在等什麼"` |
 | `media.mjs screen-sync` | 照 `work/cuts.v1.json` 算初剪後每段對到錄影的哪一秒，寫 `work/screen-sync.json`（`sync01`、`sync02`…，NG 剪掉的地方切成兩段；勾了的等待多一段 `retime` 快轉，前後硬接） | 初剪、cutpoints 之後跑 |
