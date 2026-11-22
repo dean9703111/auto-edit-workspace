@@ -12,7 +12,7 @@
 //   sanitizeEnding(v, plan, { motionDefault })        → { ending, errors }（第一層 ending：片尾金句的文字動畫 motion（077）、字 quote、位置字級 x／y／size（082））
 //   parseSrtBlocks(text) / writeSrt(srtText, cues)     → rough.srt 讀寫（保留 CRLF／LF、BOM；沒改的句子原封不動）
 //   字幕增刪與句號重新對應的規則在 ../subtitles.mjs（頁面也用同一份）
-import { replay, parseRef, refTime, RULES } from '../subtitles.mjs';
+import { replay, settlePlan, parseRef, refTime, RULES } from '../subtitles.mjs';
 import { visibleLen, richPlain, splitItem, parseAttrs, findSceneDef, findFxDef } from '../text.mjs';
 import { LOOK_LIMITS } from '../../lib/look.mjs';
 import { sanitizeCaptionStyle, parseCaptionMarks, fmtCaptionMarks } from '../../lib/caption-style.mjs';
@@ -595,7 +595,8 @@ function withTop(plan, key, value) {
   return out;
 }
 
-function surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop, bed, ending }) {
+const TOP_SAVED = new Set(['scenes', 'edit', 'look', 'theme', 'captionStyle', 'captionMarks', 'frame', 'speakerBox', 'pipCrop', 'bed', 'ending']);
+function surgicalText(planText, next, { edit, segIdx, tops = [], look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop, bed, ending }) {
   const ind = detectIndent(planText);
   const nl = /\r\n/.test(planText) ? '\r\n' : '\n';
   const fix = (s) => s.replace(/\n/g, nl);
@@ -645,6 +646,11 @@ function surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle,
   if (look !== undefined) topKey('look', look);
   if (speakerBox !== undefined) topKey('speakerBox', speakerBox);
   if (pipCrop !== undefined) topKey('pipCrop', pipCrop);
+  for (const key of tops) {   // 原本就在的鍵原地換：多行的照多行排、一行的照一行
+    const e = top.entries.find((x) => x.key === key);
+    if (!e) return null;
+    ops.push([e.start, e.end, planText.slice(e.start, e.end).includes('\n') ? fix(pretty(next[key], ind, 1)) : inline(next[key])]);
+  }
   if (segIdx.length) {
     const sc = top.entries.find((x) => x.key === 'scenes');
     const arr = sc && scanJson(planText, sc.start);
@@ -696,7 +702,8 @@ export function applySave(planText, body, ctx = {}) {
       else {
         const r = replay(cues, plan, ops, { videoDur: ctx.videoDur ?? null });
         errors.push(...r.errors);
-        if (!r.errors.length) { cues = r.cues; planR = r.plan; anchors = r.anchors; structural = r.structural; srtChanged = true; }
+        // 085：整串做完詞還是找不到的 #N@詞，綁留著的開頭幾個字或原本那一刻（settlePlan）
+        if (!r.errors.length) { cues = r.cues; planR = settlePlan(plan, r.plan, cues0, r.cues); anchors = r.anchors; structural = r.structural; srtChanged = true; }
       }
     }
   }
@@ -816,9 +823,11 @@ export function applySave(planText, body, ctx = {}) {
   }
   // plan.json：有變的段（剪輯改的＋句號重新對應的）才重寫
   const segIdx = (next.scenes || []).map((seg, i) => (same(seg, plan.scenes?.[i]) ? -1 : i)).filter((i) => i >= 0);
+  // 085：字幕增刪重對過句號的第一層欄位（moods、outro、sections…）也原地換，不要整份重排
+  const tops = Object.keys(next).filter((k) => !TOP_SAVED.has(k) && k in plan && !same(next[k], plan[k]));
   let text = null;
-  if (edit || segIdx.length || look !== undefined || theme !== undefined || captionStyle !== undefined || captionMarks !== undefined || frame !== undefined || bed !== undefined || ending !== undefined) {
-    try { text = surgicalText(planText, next, { edit, segIdx, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop, bed, ending }); } catch { text = null; }
+  if (edit || segIdx.length || tops.length || look !== undefined || theme !== undefined || captionStyle !== undefined || captionMarks !== undefined || frame !== undefined || bed !== undefined || ending !== undefined) {
+    try { text = surgicalText(planText, next, { edit, segIdx, tops, look, theme, captionStyle, captionMarks, frame, speakerBox, pipCrop, bed, ending }); } catch { text = null; }
     if (text == null) {
       text = JSON.stringify(next, null, detectIndent(planText)) + '\n';
       if (/\r\n/.test(planText)) text = text.replace(/\n/g, '\r\n');

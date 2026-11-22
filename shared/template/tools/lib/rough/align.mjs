@@ -342,10 +342,7 @@ export function remapPlanByTime(plan, oldCues, newCues) {
       return { ...sg, at: `#${r.end ? r.n + 1 : r.n}` };
     }) };
   }
-  if (out.outro && typeof out.outro === 'object' && typeof out.outro.from === 'string') {
-    const v = mapRefStr(out.outro.from, mp, 'outro');
-    if (v !== out.outro.from) out = { ...out, outro: { ...out.outro, from: v } };
-  }
+  // outro.from、sections[].at 這些第一層的句號 mapPlanTimes 已經換了（085）
   // 038 重點字幕（captionMarks）照時間換到新字幕；格式不對的不動（build 會報 ✖）
   const pm = parseCaptionMarks(out.captionMarks);
   if ((pm.marks.length || pm.words.length) && !pm.errors.length) {

@@ -117,9 +117,18 @@ test('合併 k、k+1：#(k+1) → #k+（起點差）、#ke → #k+（k 的長度
   assert.match(S.canMerge(cues(), 5).why, /最後一句/);
 });
 
-test('刪除：有時間綁著要選改綁前一句或後一句；之後 > k 的 −1；沒綁就直接刪', () => {
-  const noBind = S.replay(cues(), plan(), [{ op: 'delete', n: 4 }]);
-  assert.match(noBind.errors[0], /第 4 句字幕有 plan\.json 的時間綁著：s02（#4e-0\.2）、s02（#4）.*m01（#4）.*bind/);
+test('刪除（085）：不用選改綁，綁著的時間留在原本那一刻（寫成比較近的前一句結尾＋秒數或後一句開頭−秒數）；之後 > k 的 −1', () => {
+  const auto = S.replay(cues(), plan(), [{ op: 'delete', n: 4 }]);
+  assert.deepEqual(auto.errors, []);
+  assert.deepEqual(auto.cues.map((c) => c.n), [1, 2, 3, 4]);
+  assert.equal(seg(auto.plan, 'm01').from, '#3e+0.5', '第 4 句開頭 11.5 秒：離前一句結尾（11）比較近');
+  assert.equal(seg(auto.plan, 's02').to, '#4-0.7', '第 4 句結尾 −0.2＝14.3 秒：離後一句開頭（15）比較近');
+  assert.equal(seg(auto.plan, 's02').beats.aAt, '#3e+0.5');
+  assert.equal(seg(auto.plan, 'm01').marks[0].at, '#4-0.5');
+  assert.equal(seg(auto.plan, 'm01').marks[0].until, '#4', '#5 → #4');
+  for (const [id, k] of [['m01', 'from'], ['s02', 'to']]) assert.equal(S.refTime(seg(auto.plan, id)[k], auto.cues), S.refTime(seg(plan(), id)[k], cues()), `${id}.${k} 時間不變`);
+  assert.match(S.replay(cues(), plan(), [{ op: 'delete', n: 4, bind: 'x' }]).errors[0], /bind 只能是/);
+  // 舊的寫法 bind prev／next 照舊
   const prev = S.replay(cues(), plan(), [{ op: 'delete', n: 4, bind: 'prev' }]);
   assert.deepEqual(prev.errors, []);
   assert.deepEqual(prev.cues.map((c) => c.n), [1, 2, 3, 4]);

@@ -8,15 +8,17 @@
 //   { op: 'split',  n, at, pos? }                在 at 秒、文字第 pos 個字的地方切成兩句（pos 不寫＝照時間比例找最近的標點）
 //   { op: 'insert', after, start, end, text }    在第 after 句後面新增一句（after＝0：放在最前面）；只能放在 ≥ 0.5 秒的空檔
 //   { op: 'merge',  n }                          第 n 句和第 n+1 句合成一句
-//   { op: 'delete', n, bind? }                   刪掉第 n 句；plan.json 有時間綁到它時 bind 要是 'prev'（改綁前一句）或 'next'（改綁後一句）
+//   { op: 'delete', n, bind? }                   刪掉第 n 句；綁著它的時間自動留在原本那一刻（085；bind 'prev'／'next' 是舊的寫法：整個改綁前／後一句的開頭）
 //
 // 句號重新對應（契約第 5 節）：句數一變就把字幕重新編號 1…N，plan.json 的時間欄位（任何物件的 from／to／at／until、
-// beats 的值、清單項目的 at，含「#N±秒」）、slots 裡整串是句號寫法的字串（模板的 openAt、hitAt…）、plan.moods 的 at 照新句號改寫；
+// beats 的值、清單項目的 at，含「#N±秒」）、slots 裡整串是句號寫法的字串（模板的 openAt、hitAt…）、plan.moods 的 at、
+// 整串都是句號寫法的陣列（media 的 clicks）、段落的 sfx 物件、第一層的 outro／sections…（085）照新句號改寫；
 // slots 裡的文字（夾著「#1」的也一樣）、vars 一律不動。
 //   分割第 k 句：#k 不變、#ke → #(k+1)e、> k 的 +1
 //   在第 k 句後新增：> k 的 +1
 //   合併 k、k+1：#(k+1) → #k+（k+1 起點 − k 起點）、#ke → #k+（k 結尾 − k 起點）、#(k+1)e → #ke、> k+1 的 −1
-//   刪除第 k 句：#k／#ke 改綁 #(k−1)／#(k−1)e（前一句）或原本的 #(k+1)／#(k+1)e（後一句），> k 的 −1
+//   刪除第 k 句：#k／#ke 留在原本那一刻，寫成前一句結尾＋秒數或後一句開頭−秒數（比較近的那邊）；> k 的 −1
+// 085 使用者不用懂句號：改字、刪句之後 "#N@詞" 的詞不見了，就綁還留著的開頭幾個字，再不行就綁在原本那一刻（stepRef）
 // 起點那句的 anchor 本來對得上、改完對不上了 → 換成新起點那句的開頭幾個字。
 
 import { findKw, textWidth } from './text.mjs';
@@ -221,14 +223,24 @@ export function remapRef(ref, op, cues) {
   }
   // delete
   const k = cues.findIndex((c) => c.n === op.n);
-  if (idx === k) return op.bind === 'prev' ? at(k - 1) : at(k);
+  if (idx === k) {
+    if (op.bind === 'prev' || op.bind === 'next') return op.bind === 'prev' ? at(k - 1) : at(k);
+    return keepMoment((ref.end ? cues[k].end : cues[k].start) + ref.off, k, cues) ?? at(k);
+  }
   return at(idx > k ? idx - 1 : idx);
+}
+// 刪掉第 k 句時，綁在它身上的時間 t 留在原地：寫成比較近的那一邊——前一句結尾＋秒數（#(k−1)e+…）或後一句開頭−秒數；回傳刪完之後的句號
+function keepMoment(t, k, cues) {
+  const p = cues[k - 1], q = cues[k + 1];
+  if (!isNum(t) || (!p && !q)) return null;
+  if (p && (!q || t - p.end <= q.start - t)) return { n: k, end: true, off: r3(t - p.end) };
+  return { n: k + 1, end: false, off: r3(t - q.start) };
 }
 
 // "#N@詞" 的句號重新對應：詞跟著文字走，不是跟著時間走
 //   分割第 k 句：詞在前半就留 #k、在後半改 #(k+1)；詞跨在切口上留 #k（build 找不到會報 ✖）
 //   合併 k、k+1：兩句的詞都改綁 #k（合併後的原文包含兩句，詞的位置照整句重算；同一個詞前後句都有時會綁到前面那個）
-//   刪除第 k 句：綁在被刪那句的詞拿掉詞，退成一般的 #k（再依 bind 綁前／後一句）
+//   刪除第 k 句：前一句或後一句有這個詞就綁過去（重複的字幕刪掉一則最常見）；都沒有就留在原本那一刻（keepMoment）
 function remapKwRef(ref, op, cues, idx) {
   const keep = (i, extra = {}) => ({ ...ref, n: i + 1, ...extra });
   const k = op.op === 'insert' ? (op.after === 0 ? -1 : cues.findIndex((c) => c.n === op.after)) : cues.findIndex((c) => c.n === op.n);
@@ -245,8 +257,12 @@ function remapKwRef(ref, op, cues, idx) {
   }
   // delete
   if (idx === k) {
-    const o = remapRef({ n: ref.n, end: false, off: 0 }, op, cues);
-    return { n: o.n, end: ref.end, off: 0 };
+    if (op.bind === 'prev' || op.bind === 'next') {
+      const o = remapRef({ n: ref.n, end: false, off: 0 }, op, cues);
+      return { n: o.n, end: ref.end, off: 0 };
+    }
+    for (const j of [k - 1, k + 1]) if (hasKw(cues[j], ref)) return keep(j > k ? j - 1 : j);
+    return keepMoment(refTime(fmtRef(ref), cues) ?? cues[k].start, k, cues) ?? keep(k);
   }
   return keep(idx > k ? idx - 1 : idx);
 }
@@ -267,9 +283,50 @@ export const movesWords = (op) => isObj(op) && (STRUCT.has(op.op) || (op.op === 
 export function followPlanKw(plan, op, cues) {
   return movesWords(op) ? mapPlanTimes(plan, (r) => followKw(r, cues)) : plan;
 }
+// 一步字幕操作之後，一個時間變成什麼（頁面、存檔重播、鏡位腳本／動畫檔都用這一個）：句號重新對應 → 詞跟到隔壁句（074）。before／after＝這一步之前／之後的字幕
+export function stepRef(ref, op, before, after) {
+  const y = remapRef(ref, op, before);
+  return movesWords(op) ? followKw(y, after) : y;
+}
+export function stepPlan(plan, op, before, after) {
+  return remapPlanMarks(mapPlanTimes(plan, (r) => stepRef(r, op, before, after)), op, before);
+}
+// 085 一次存檔的字幕操作都做完之後（不是每一步：詞可能下一步才搬到隔壁句）："#N@詞" 的詞在第 N 句找不到了（字改掉了），
+// 綁那一句還留著的開頭幾個字（≥ 2 字），再不行就綁在原本那一刻（orig＝存檔前的寫法，cues0＝存檔前的字幕）。build 就不會因為找不到詞 ✖
+export function settleRef(ref, orig, cues0, cues) {
+  if (!ref || ref.kw == null) return ref;
+  const c = cues.find((q) => q.n === ref.n);
+  if (!c || hasKw(c, ref)) return ref;
+  const w = [...ref.kw];
+  for (let L = w.length - 1; L >= 2; L--) { const p = w.slice(0, L).join(''); if (findKw(c.text, p)) return { n: ref.n, end: ref.end, off: ref.off, kw: p }; }
+  const t = orig ? refTime(fmtRef(orig), cues0) : null;
+  return t == null ? ref : { n: ref.n, end: false, off: r3(t - c.start) };
+}
+// 整份 plan.json 照 settleRef 收尾：同一個位置（JSON 路徑）存檔前的值當 orig；captionMarks（重點字幕只標幾個字）、vars、note 不動
+export function settlePlan(plan0, plan, cues0, cues) {
+  const walk = (v, v0, key) => {
+    if (typeof v === 'string') {
+      const r = parseRef(v);
+      if (!r || r.kw == null) return v;
+      const o = settleRef(r, typeof v0 === 'string' ? parseRef(v0) : null, cues0, cues);
+      return o === r ? v : fmtRef(o);
+    }
+    if (Array.isArray(v)) { const a = v.map((x, i) => walk(x, Array.isArray(v0) ? v0[i] : undefined)); return a.some((x, i) => x !== v[i]) ? a : v; }
+    if (!isObj(v)) return v;
+    let out = null;
+    for (const [k, x] of Object.entries(v)) {
+      if (k === 'captionMarks' || k === 'vars' || k === 'note') continue;
+      const nx = walk(x, isObj(v0) ? v0[k] : undefined, k);
+      if (nx !== x) { out ??= { ...v }; out[k] = nx; }
+    }
+    return out ?? v;
+  };
+  return walk(plan, plan0);
+}
 
 const TIME_KEYS = new Set(['from', 'to', 'at', 'until']);
-const SKIP_KEYS = new Set(['vars', 'note', 'anchor', 'css', 'src', 'label', 'id', 'type', 'scene', 'fx', 'layout', 'sfx']);
+const SKIP_KEYS = new Set(['vars', 'note', 'anchor', 'css', 'src', 'label', 'id', 'type', 'scene', 'fx', 'layout']);
+const isRefList = (v) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string' && parseRef(x));   // media 的 clicks：["#236+0.2", "#240"]
 const ATTRS_TAIL = /\s*[｜|]\s*((?:[\w.-]+=(?:"[^"]*"|\S+)\s*)+)$/;
 const ATTR_AT = /(^|\s|[｜|])at=(?:"([^"]*)"|(\S+))/;   // at="#12@Claude Code"（有空格的詞要加引號）
 
@@ -324,6 +381,7 @@ function mapSeg(o, fn) {
       nv = Object.keys(b).some((bk) => b[bk] !== v[bk]) ? b : v;
     } else if (k === 'slots' && isObj(v)) nv = mapSlots(v, fn);
     else if (SKIP_KEYS.has(k) || k === 'edit') nv = v;
+    else if (isRefList(v)) { const a = v.map((x) => mapTimeValue(x, fn)); nv = a.some((x, i) => x !== v[i]) ? a : v; }
     else if (v && typeof v === 'object') nv = mapSeg(v, fn);   // media 的 moves／marks／lens
     if (nv !== v) { out ??= { ...o }; out[k] = nv; }
   }
@@ -331,8 +389,17 @@ function mapSeg(o, fn) {
 }
 // fn(ref, segId) → 新 ref（或 null＝不動）；沒變的物件原樣回傳（=== 比得出來）
 // plan.moods（第一層的情緒點，lib/moods.mjs）的 at 也換（032 P3d）；segId 寫成 moods[i]
+// 085：第一層其他欄位（outro.from、sections[].at 本集地圖…）也照同一套換；segId 寫成欄位名稱。edit（秒數）、captionMarks（remapPlanMarks）不在這裡
+const TOP_OWN = new Set(['scenes', 'moods', 'captionMarks', 'edit']);
 export function mapPlanTimes(plan, fn) {
   if (!isObj(plan) || !Array.isArray(plan.scenes)) return plan;
+  let top = null;
+  for (const [k, v] of Object.entries(plan)) {
+    if (TOP_OWN.has(k) || !v || typeof v !== 'object') continue;
+    const nv = mapSeg(v, (r) => fn(r, k));
+    if (nv !== v) { top ??= {}; top[k] = nv; }
+  }
+  if (top) plan = { ...plan, ...top };
   const scenes = plan.scenes.map((s) => mapSeg(s, (r) => fn(r, isObj(s) ? s.id : null)));
   const moods = Array.isArray(plan.moods) ? plan.moods.map((m, i) => {
     if (!isObj(m) || typeof m.at !== 'string') return m;
@@ -429,21 +496,19 @@ export function replay(cues0, plan0, ops, { videoDur = null } = {}) {
   let structural = false;
   if (!Array.isArray(ops)) return { cues, plan, errors: ['srt.ops 要是陣列'], structural, anchors: [] };
   for (const [j, op] of ops.entries()) {
-    if (isObj(op) && op.op === 'delete') {
-      const refs = refsTo(plan, op.n);
+    if (isObj(op) && op.op === 'delete' && op.bind != null) {
+      // 085 不寫 bind＝綁著的時間留在原地；舊的寫法 prev／next 照舊
       const k = cues.findIndex((c) => c.n === op.n);
-      if (refs.length) {
-        const list = refs.map((x) => `${x.id}（${x.ref}）`).join('、');
-        if (!['prev', 'next'].includes(op.bind)) { errors.push(`第 ${op.n} 句字幕有 plan.json 的時間綁著：${list} → 刪除前要選改綁到前一句（bind: "prev"）或後一句（bind: "next"）`); break; }
+      if (!['prev', 'next'].includes(op.bind)) { errors.push('delete 的 bind 只能是 "prev"、"next"，或不寫（綁著的時間留在原本那一刻）'); break; }
+      if (refsTo(plan, op.n).length) {
         if (op.bind === 'prev' && k === 0) { errors.push(`第 ${op.n} 句是第一句，沒有前一句可以改綁 → 改綁後一句`); break; }
         if (op.bind === 'next' && k === cues.length - 1) { errors.push(`第 ${op.n} 句是最後一句，沒有後一句可以改綁 → 改綁前一句`); break; }
       }
     }
     const r = applyCueOp(cues, op, { videoDur });
     if (r.error) { errors.push(ops.length > 1 ? `第 ${j + 1} 個字幕操作：${r.error}` : r.error); break; }
-    let next = plan;
-    if (STRUCT.has(op.op)) { structural = true; next = remapPlan(plan, op, cues); }
-    next = followPlanKw(next, op, r.cues);   // 074：詞被改字搬到隔壁句就跟過去
+    if (STRUCT.has(op.op)) structural = true;
+    const next = stepPlan(plan, op, cues, r.cues);   // 085：句號重新對應＋詞跟著走（074）＋詞不見了綁原本那一刻
     const fx = fixAnchors(plan, next, cues, r.cues);
     fx.changed.forEach((id) => anchors.add(id));
     plan = fx.plan;

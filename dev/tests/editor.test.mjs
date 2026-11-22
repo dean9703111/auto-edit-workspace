@@ -358,7 +358,7 @@ test('字幕分割＋合併一起存：plan.json 的 #N 照規則重新對應（
   assert.ok(fs.readFileSync(plan2File, 'utf8').includes('"version": 1,\n  "scenes": ['), '沒改到的地方保留原本排版');
 });
 
-test('rough.srt 被改過：回 409，plan.json 和字幕都不寫；刪除有綁定的句子要選改綁；沒空間不能新增', async () => {
+test('rough.srt 被改過：回 409，plan.json 和字幕都不寫；刪除的 bind 寫錯擋下、舊寫法 prev 照舊；沒空間不能新增', async () => {
   await setup2(); reset2();
   const b = await base2();
   await new Promise((r) => setTimeout(r, 20));
@@ -374,9 +374,10 @@ test('rough.srt 被改過：回 409，plan.json 和字幕都不寫；刪除有�
   assert.equal(fs.readFileSync(srt2File, 'utf8'), aiSrt);
   assert.equal(fs.readFileSync(plan2File, 'utf8'), PLAN2);
   const b2 = await base2();
-  const del = await post2('/api/save', { base: b2, srt: { ops: [{ op: 'delete', n: 4 }] } });
+  // 085：不帶 bind 的刪除不再擋（時間留在原地，見 caption-auto-rebind.test.mjs）；bind 寫錯才擋
+  const del = await post2('/api/save', { base: b2, srt: { ops: [{ op: 'delete', n: 4, bind: 'x' }] } });
   assert.equal(del.status, 400);
-  assert.match((await del.json()).message, /第 4 句字幕有 plan\.json 的時間綁著：s02（#4e）、s02（#4）、s02（#4\+0\.2）、m01（#4e）.*bind/);
+  assert.match((await del.json()).message, /bind 只能是/);
   const ins = await post2('/api/save', { base: b2, srt: { ops: [{ op: 'insert', after: 1, start: 1.2, end: 1.4, text: '擠' }] } });
   assert.equal(ins.status, 400);
   assert.match((await ins.json()).message, /只有 0\.20 秒空檔（要 ≥ 0\.5 秒才能新增）/);

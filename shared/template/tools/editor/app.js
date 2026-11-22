@@ -6,7 +6,7 @@ import {
   adjOf, setAdj, sfxSpan, SFX_MIN,
   bedLane, bedHasMusic, bedLiveDb, BED_VOL, bedMutedAt, endingLane, outroLane, roughOf,
 } from './model.mjs';
-import { applyCueOp, remapPlan, followPlanKw, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
+import { applyCueOp, stepPlan, remapMarks, fixAnchors, refsTo, refTime, replay, canInsert, canSplit, canMerge, gapAround, splitPos, anchorFor, parseRef, RULES } from './subtitles.mjs';
 import { visibleLen, richPlain, lineLens, splitItem, joinItem, parseAttrs, findSceneDef, findFxDef, toggleEmph } from './text.mjs';
 import { Timeline, LANES, TRACK_NAMES } from './timeline.js';
 import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate, freezeAt, joinAt, isPlain, trimModel } from './speed.mjs';
@@ -555,7 +555,7 @@ function doSrtOp(op, { quiet = false } = {}) {
   if (r.error) { toast(r.error, 'err', 5000); return false; }
   return mutate(() => {
     const before = { scenes: app.scenes };
-    const after = followPlanKw(remapPlan(before, op, app.cues), op, r.cues);   // 074：詞被改字搬到隔壁句就跟過去
+    const after = stepPlan(before, op, app.cues, r.cues);   // 和存檔重播同一個 stepPlan（句號重對、刪句留在原本那一刻、詞跟著走）
     const fx = fixAnchors(before, after, app.cues, r.cues);
     app.scenes = fx.plan.scenes;
     app.marks = remapMarks(app.marks, op, app.cues);   // 038 重點字幕跟著句號走（分割兩半都是、合併任一句是就是、刪除拿掉）
@@ -618,29 +618,17 @@ function insertCue(where = 'after', c = selectedCue(), at = null) {
     setTimeout(() => openCapEditor(n), 30);
   }
 }
-let pendingDelete = null;
+// 085 直接刪：跟著這句的字卡、動畫、音效留在原本那一刻（stepPlan），不用選改綁哪一句
 function deleteCue(c = selectedCue()) {
   if (!c) { toast('先點一句字幕', 'warn'); return; }
   if (app.cues.length <= 1) { toast('只剩一句字幕，不能刪', 'warn'); return; }
-  const refs = refsTo({ scenes: app.scenes }, c.n);
-  if (!refs.length) { finishDelete(c, 'next'); return; }
+  const tied = refsTo({ scenes: app.scenes }, c.n).length > 0;
   const k = app.cues.findIndex((q) => q.n === c.n);
-  pendingDelete = c;
-  $('#delTitle').textContent = `刪除第 ${c.n} 句字幕`;
-  $('#delMsg').innerHTML = `「${esc(c.text)}」有字卡、動畫或素材的時間綁著。刪掉之前，這些時間要改綁到前一句或後一句：`;
-  $('#delRefs').innerHTML = refs.map((r) => `<li>· <b>${esc(r.id)}</b>（${esc(r.ref)}）</li>`).join('');
-  const prev = app.cues[k - 1], next = app.cues[k + 1];
-  $('#delPrev').disabled = !prev; $('#delNext').disabled = !next;
-  $('#delPrev').textContent = prev ? `改綁到前一句（#${prev.n}「${prev.text.slice(0, 10)}…」），再刪除` : '沒有前一句';
-  $('#delNext').textContent = next ? `改綁到後一句（#${next.n}「${next.text.slice(0, 10)}…」），再刪除` : '沒有後一句';
-  $('#dlgDelete').showModal();
-}
-function finishDelete(c, bind) {
-  const k = app.cues.findIndex((q) => q.n === c.n);
-  if (doSrtOp({ op: 'delete', n: c.n, bind })) {
+  if (doSrtOp({ op: 'delete', n: c.n })) {
     const nx = app.cues[Math.min(k, app.cues.length - 1)];
     app.select(nx ? { kind: 'cue', id: nx.n } : null, { lane: 'cap' });
-    toast(`已刪除第 ${c.n} 句（⌘／Ctrl＋Z 可以復原）`, 'ok', 3000);
+    const short = [...c.text].length > 12 ? `${[...c.text].slice(0, 12).join('')}…` : c.text;
+    toast(`已刪除「${short}」${tied ? '，跟著它的畫面留在原本的時間' : ''}（⌘／Ctrl＋Z 可以復原）`, 'ok', 3500);
   }
 }
 function setCue(n, patch, { coalesce = null } = {}) {
@@ -651,7 +639,7 @@ function setCue(n, patch, { coalesce = null } = {}) {
   if (r.error) { toast(r.error, 'err', 4000); return false; }
   return mutate(() => {
     const before = { scenes: app.scenes };
-    const fx = fixAnchors(before, followPlanKw(before, op, r.cues), app.cues, r.cues);
+    const fx = fixAnchors(before, stepPlan(before, op, app.cues, r.cues), app.cues, r.cues);
     app.scenes = fx.plan.scenes;
     app.cues = r.cues;
     pushSrtOp(op);
@@ -2474,8 +2462,8 @@ function inspCue(c) {
     <div class="ip-btns">${btn('capInsBefore', '＋ 前面新增', insB)}${btn('capInsAfter', '＋ 後面新增', insA)}<button class="small ghost" data-act="capPlay">▶ 播這句</button></div>
     <div class="ip-btns"><button class="small toggle" data-act="capMark" aria-pressed="${app.isMark(c.n)}" data-tip="這一則改用主色底的重點樣式，其他字幕不變；再按一次取消。分割後兩半都是重點，合併後也是">重點字幕（H）</button><span class="dim">${app.isMark(c.n) ? '這一則用重點樣式' : `整支 ${app.marks.length} 則重點`}</span></div>
   </section>
-  <section class="ip-sec"><h3>綁在這句的時間</h3>
-    ${refs.length ? `<ul class="ref-list">${refs.map((r) => `<li>· <b>${esc(r.id)}</b>　${esc(r.ref)}</li>`).join('')}</ul><p class="ip-note">分割、合併、刪除時，這些句號會自動跟著改。</p>` : '<p class="ip-note">沒有字卡、動畫或素材綁在這句。</p>'}
+  <section class="ip-sec"><h3>跟著這句出現的畫面</h3>
+    ${refs.length ? `<p class="ip-note">${[...new Set(refs.map((r) => r.id))].map((id) => `<b>${esc(id)}</b>`).join('、')}</p><p class="ip-note">改字、分割、合併、刪除都會自動跟著，不用另外調。</p>` : '<p class="ip-note">沒有字卡、動畫或素材跟著這句。</p>'}
   </section>`;
 }
 function sfxSection(it, sc) {
@@ -3761,7 +3749,7 @@ function replaceAll() {
       const r = applyCueOp(app.cues, op, { videoDur: app.dur });
       if (r.error) continue;
       const before = { scenes: app.scenes };
-      app.scenes = fixAnchors(before, followPlanKw(before, op, r.cues), app.cues, r.cues).plan.scenes;
+      app.scenes = fixAnchors(before, stepPlan(before, op, app.cues, r.cues), app.cues, r.cues).plan.scenes;
       app.cues = r.cues;
       app.srtOps.push(op);
     }
@@ -3887,9 +3875,6 @@ $('#checkList').addEventListener('click', (e) => {
 $('#conflictKeep').addEventListener('click', async () => { $('#dlgConflict').close(); banner(''); await loadState({ keep: keepState }); toast('已載入最新的檔案，你的調整還在，會自動存', 'ok', 5000); });
 $('#conflictDrop').addEventListener('click', async () => { $('#dlgConflict').close(); banner(''); await loadState(); toast('已載入最新的檔案'); });
 $('#conflictCancel').addEventListener('click', () => $('#dlgConflict').close());
-$('#delPrev').addEventListener('click', () => { $('#dlgDelete').close(); if (pendingDelete) finishDelete(pendingDelete, 'prev'); pendingDelete = null; });
-$('#delNext').addEventListener('click', () => { $('#dlgDelete').close(); if (pendingDelete) finishDelete(pendingDelete, 'next'); pendingDelete = null; });
-$('#delCancel').addEventListener('click', () => { $('#dlgDelete').close(); pendingDelete = null; });
 $('#findText').addEventListener('input', renderFind);
 $('#replText').addEventListener('input', renderFind);
 $('#findAll').addEventListener('click', replaceAll);

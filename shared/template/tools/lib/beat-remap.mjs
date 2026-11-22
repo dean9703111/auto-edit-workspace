@@ -8,7 +8,7 @@
 //                                                     changes＝[{ file（絕對路徑）, before, after }]，剪輯台復原／重做時照它把這些檔換回去（074）
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseRef, fmtRef, remapRef, applyCueOp, followKw, movesWords } from '../editor/subtitles.mjs';
+import { parseRef, fmtRef, stepRef, settleRef, applyCueOp, movesWords } from '../editor/subtitles.mjs';
 import { BEAT_REF_SOURCE } from './audit-beats.mjs';
 import { beatOwnerOf, scriptFileOf } from './beat-source.mjs';
 import { designFileOf, fillFileOf } from './custom-fill.mjs';
@@ -69,8 +69,9 @@ export function opsMapper(cues0, ops, { videoDur = null } = {}) {
     cues = r.cues;
   }
   // 074：每一步之後，"#N@詞" 的詞被改字搬到隔壁句就跟過去（和 subtitles.mjs replay 同一個時機）
-  const step = (x, [op, c, after]) => { const y = remapRef(x, op, c); return movesWords(op) ? followKw(y, after) : y; };
-  return { structural: steps.some(([op]) => ['split', 'insert', 'merge', 'delete'].includes(op?.op)), movesWords: steps.some(([op]) => movesWords(op)), map: (r) => steps.reduce(step, r) };
+  const step = (x, [op, c, after]) => stepRef(x, op, c, after);   // 和 subtitles.mjs replay 同一個 stepRef
+  // 085：整串做完詞還是不見了（字改掉了）→ settleRef（和存檔的 settlePlan 同一套）
+  return { structural: steps.some(([op]) => ['split', 'insert', 'merge', 'delete'].includes(op?.op)), movesWords: steps.some(([op]) => movesWords(op)), map: (r) => settleRef(steps.reduce(step, r), r, cues0, cues) };
 }
 
 const stampOf = (d) => { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; };

@@ -212,10 +212,12 @@ test('剪輯台合併：字串型 slot、plan.moods 照合併的規則（#(k+1) 
   assert.deepEqual(r.plan.moods.map((m) => m.at), ['#2@內容3', '#4', '#1']);
 });
 
-test('剪輯台刪句：plan.moods 綁著的也要選改綁；改綁後一句時字串型 slot 和 moods 一起換、綁詞的退成整句', async () => {
+test('剪輯台刪句：plan.moods 綁著的也跟著換；不選改綁時留在原本那一刻（085）；改綁後一句時字串型 slot 和 moods 一起換、綁詞的退成整句', async () => {
   const S = await imp('editor/subtitles.mjs');
-  const bad = S.replay(cues5(), planX(), [{ op: 'delete', n: 3 }]);
-  assert.match(bad.errors[0], /第 3 句字幕有 plan\.json 的時間綁著：.*moods\[0\]（#3@內容3）/);
+  const auto = S.replay(cues5(), planX(), [{ op: 'delete', n: 3 }]);
+  assert.deepEqual(auto.errors, []);
+  assert.equal(S.refTime(auto.plan.moods[0].at, auto.cues), S.refTime('#3@內容3', cues5()), '綁詞的：隔壁句沒有這個詞 → 留在原本那一刻');
+  assert.equal(S.refTime(x01(auto.plan).openAt, auto.cues), 8);
   assert.deepEqual(S.refsTo(planX(), 5), [{ id: 'moods[1]', ref: '#5' }]);
   const r = S.replay(cues5(), planX(), [{ op: 'delete', n: 3, bind: 'next' }]);
   assert.deepEqual(r.errors, []);
