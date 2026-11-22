@@ -804,8 +804,9 @@ test('右側步驟清單（錄影段 side）：直式錄影靠左、清單卡在
   const a = go({ side, pip: true });
   assert.deepEqual(a.errors, []);
   const m1 = byId(a, 'm1');
-  // 1080×2410 放進左邊 [120, 0, 720, 940]：421×940、左 270；兩條、有講者小視窗 → 卡高 112＋200＋64＝376，在 y 160–560 置中
-  assert.deepEqual([m1.media.geo.left, m1.media.geo.width, m1.media.geo.height], [270, 421, 940]);
+  // 1080×2410 放進左邊 [120, 47, 720, 846]（r30：90%、不貼頂）：379×846、左 291；兩條、有講者小視窗 → 卡高 112＋200＋64＝376，在 y 160–560 置中
+  assert.equal(m1.media.geo.top, 47);
+  assert.deepEqual([m1.media.geo.left, m1.media.geo.width, m1.media.geo.height], [291, 379, 846]);
   assert.deepEqual(m1.media.side.box, [840, 172, 960, 376]);
   assert.deepEqual(m1.media.side.items.map((x) => x.text), ['打開 App', '掃 QR Code']);
   const cap = buildCaptions(cues, { duration: VD });

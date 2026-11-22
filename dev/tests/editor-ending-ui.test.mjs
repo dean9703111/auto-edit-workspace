@@ -185,7 +185,7 @@ test('點片尾卡 → 屬性出「文字動畫」下拉選單（五種，預設
   await wait(300);
   const readPlan = () => JSON.parse(fs.readFileSync(planFile, 'utf8'));
   const saved = () => until(() => app(() => document.querySelector('#saveState').dataset.state === 'saved'), '要自動存好');
-  const panel = () => app(() => { const sel = document.querySelector('#inspBody select[data-f="endMotion"]'); return { kind: document.querySelector('#inspKind').textContent, title: document.querySelector('#inspTitle').textContent, value: sel?.value ?? null, options: sel ? [...sel.options].map((o) => `${o.value}:${o.textContent}`) : null, notes: [...document.querySelectorAll('#inspBody .ip-note')].map((n) => n.textContent) }; });
+  const panel = () => app(() => { const sel = document.querySelector('#inspBody select[data-f="endMotion"]'); return { kind: document.querySelector('#inspKind').textContent, title: document.querySelector('#inspTitle').textContent, value: sel?.value ?? null, text: document.querySelector('#inspBody textarea[data-f="endQuote"]')?.value ?? null, options: sel ? [...sel.options].map((o) => `${o.value}:${o.textContent}`) : null, notes: [...document.querySelectorAll('#inspBody .ip-note')].map((n) => n.textContent) }; });
 
   // 點時間軸上的片尾卡：右邊是片尾卡的屬性，下拉選單列出五種，現在是打字機（預設）
   const p = await pos('main', 42);
@@ -194,7 +194,7 @@ test('點片尾卡 → 屬性出「文字動畫」下拉選單（五種，預設
   let s = await panel();
   assert.deepEqual([s.kind, s.title, s.value], ['片尾卡', '影片講完後接 9.90 秒', 'type']);
   assert.deepEqual(s.options, ['type:打字機（預設）', 'fade:淡入', 'rise:逐行浮出', 'wipe:由左擦開', 'none:直接出現']);
-  assert.ok(s.notes[0].includes('好內容，才是一切的根源') && s.notes.includes('一個字一個字打出來（預設）'));
+  assert.ok(s.text === '好內容，才是一切的根源。' && s.notes.includes('一個字一個字打出來（預設）'), JSON.stringify(s));
   assert.equal(await app(() => document.querySelectorAll('#simEnd .ec').length), 10, '打字機：一個字一個 span');
 
   // 選「逐行浮出」：存進這一集、說明跟著換、快速試聽的示意換成一行一塊
@@ -220,7 +220,7 @@ test('點片尾卡 → 屬性出「文字動畫」下拉選單（五種，預設
 
   // 選「由左擦開」「淡入」「直接出現」：示意各自換寫法，都存得進去
   for (const [id, check] of [['wipe', () => app(() => [...document.querySelectorAll('#simEnd .el')].every((e) => e.style.clipPath === 'inset(0px 0% 0px 0px)' || e.style.clipPath === 'inset(0px 0%)' || /inset\(0(px)? 0(\.0)?%/.test(e.style.clipPath)))],
-    ['fade', () => app(() => document.querySelector('#simEndQuote').style.opacity === '1' && !document.querySelector('#simEnd .el'))],
+    ['fade', () => app(() => document.querySelector('#simEndQuote').style.opacity === '1' && !document.querySelector('#simEnd .ec') && document.querySelectorAll('#simEnd .el').length === 2)],
     ['none', () => app(() => document.querySelector('#simEndQuote').style.opacity === '1')]]) {
     await page.select('#inspBody select[data-f="endMotion"]', id);
     await saved();
@@ -248,5 +248,181 @@ test('工作區預設是「淡入」：下拉選單標在淡入上、一開始�
   await page.select('#inspBody select[data-f="endMotion"]', 'type');
   await until(() => app(() => document.querySelector('#saveState').dataset.state === 'saved'), '要自動存好');
   assert.deepEqual(JSON.parse(fs.readFileSync(planFile, 'utf8')).ending, { quote: '一句話', motion: 'type' });
+  assert.deepEqual(errors, []);
+});
+
+// 082 片尾金句的字、位置、字級在剪輯台改：預覽畫面上拖框移動、拖右下角放大縮小、文字框改字；快速試聽、完成影片預覽（播放器裡的 #end-quote）都即時跟著變
+test('082 片尾金句：播放頭在片尾卡出現虛線框；拖框移動、拖右下角放大、改字，存進 plan.json 的 ending.x／y／size／quote，快速試聽即時跟著；雙擊回原位', { timeout: 300000 }, async (t) => {
+  const plan = { version: 1, ending: { quote: '好內容，才是一切的根源。' }, scenes: SCENES };
+  const { page, errors, app, until, planFile } = await setup(t, plan, { built: true });
+  await until(() => app(() => window.__editor.endDur > 0), '要有片尾卡');
+  const readPlan = () => JSON.parse(fs.readFileSync(planFile, 'utf8'));
+  const saved = () => until(() => app(() => document.querySelector('#saveState').dataset.state === 'saved'), '要自動存好');
+  const box = () => app(() => { const el = document.querySelector('#endDrag'), r = el.getBoundingClientRect(), s = document.querySelector('#stageBox').getBoundingClientRect(), q = document.querySelector('#simEndQuote');
+    return { hidden: el.hidden, x: r.left, y: r.top, w: r.width, h: r.height, rx: (r.left - s.left) / s.width, ry: (r.top - s.top) / s.height, sc: 1920 / s.width, q: { left: q.style.left, top: q.style.top, size: q.style.fontSize, width: q.style.width, line: q.style.lineHeight } }; });
+
+  // 影片裡面沒有框；拖到片尾卡（打字打到一半）：框出現，框住整段（三行：好內容／空行／才是一切的根源）
+  await app(() => window.__editor.seek(5));
+  await wait(300);
+  assert.equal((await box()).hidden, true, '還在影片裡不出現');
+  await app(() => window.__editor.seek(window.__editor.dur + 2));
+  await wait(300);
+  let b = await box();
+  assert.equal(b.hidden, false);
+  assert.ok(Math.abs(b.rx - 1300 / 1920) < 0.002 && Math.abs(b.ry - 575 / 1080) < 0.002, JSON.stringify(b));
+  assert.ok(Math.abs(b.h * b.sc - 3 * 73) < 3, `框高三行：${b.h * b.sc}`);
+  assert.deepEqual(b.q, { left: '1300px', top: '575px', size: '48px', width: '580px', line: '73px' });
+
+  // 拖框往左 200、往上 100（畫布 px）：拖的過程快速試聽就跟著動；放開存檔
+  const drag = async (fx, fy, dx, dy) => { await page.mouse.move(fx, fy); await page.mouse.down(); for (let i = 1; i <= 5; i++) await page.mouse.move(fx + (dx * i) / 5, fy + (dy * i) / 5); return async () => { await page.mouse.up(); }; };
+  let up = await drag(b.x + b.w / 2, b.y + b.h / 2, -200 / b.sc, -100 / b.sc);
+  await wait(200);
+  const mid = await box();
+  assert.ok(Math.abs(parseFloat(mid.q.left) - 1100) <= 2 && Math.abs(parseFloat(mid.q.top) - 475) <= 2, `拖的時候快速試聽就跟著動：${JSON.stringify(mid.q)}`);
+  await up();
+  await saved();
+  let e = readPlan().ending;
+  assert.ok(Math.abs(e.x - 1100) <= 2 && Math.abs(e.y - 475) <= 2 && !('size' in e) && e.quote === '好內容，才是一切的根源。', JSON.stringify(e));
+  assert.equal(await app(() => document.querySelector('#inspKind').textContent), '片尾卡', '拖框就選到片尾卡');
+
+  // 拖右下角往右 145（框寬 580 → 725）：字級 48 → 60，框寬、行距跟著變，左上角不動
+  b = await box();
+  up = await drag(b.x + b.w + 1, b.y + b.h + 1, 145 / b.sc, 0);
+  await up();
+  await saved();
+  e = readPlan().ending;
+  assert.equal(e.size, 60, JSON.stringify(e));
+  b = await box();
+  assert.deepEqual([b.q.size, b.q.width, b.q.line], ['60px', '725px', '91px']);
+  assert.equal(await app(() => document.querySelector('#inspBody [data-out="endSize"]').textContent), '8.8（60 px）', '剪映的字號（括號裡是 px）');
+
+  // 文字框改字：快速試聽馬上換成新的字（打字機一個字一個 span），存成 ending.quote
+  await app(() => { const ta = document.querySelector('#inspBody textarea[data-f="endQuote"]'); ta.focus(); ta.select(); });
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('先求有，再求好');
+  await saved();
+  assert.equal(readPlan().ending.quote, '先求有，再求好');
+  await until(() => app(() => [...document.querySelectorAll('#simEnd .ec')].map((x) => x.textContent).join('') === '先求有再求好'), '快速試聽換成新的字');
+  assert.ok((await app(() => document.querySelector('#nowBar').textContent)).includes('片尾卡：先求有，再求好'), '「現在」列寫改過的金句');
+
+  // 方向鍵：往右 2、Shift 往下 10
+  await page.focus('#endDrag');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.down('Shift'); await page.keyboard.press('ArrowDown'); await page.keyboard.up('Shift');
+  await saved();
+  const e2 = readPlan().ending;
+  assert.deepEqual([e2.x - e.x, e2.y - e.y], [2, 10]);
+
+  // 拖出畫面：框夾在畫面裡（右緣不超出）
+  b = await box();
+  up = await drag(b.x + b.w / 2, b.y + b.h / 2, 3000 / b.sc, -3000 / b.sc);
+  await up();
+  await saved();
+  e = readPlan().ending;
+  assert.deepEqual([e.x, e.y], [1920 - 725, 0]);
+
+  // 雙擊框：位置、字級回到原本的（plan.json 拿掉 x／y／size，字照留）；可以復原
+  b = await box();
+  await page.mouse.click(b.x + b.w / 2, b.y + b.h / 2, { count: 2 });
+  await saved();
+  assert.deepEqual(readPlan().ending, { quote: '先求有，再求好' });
+  b = await box();
+  assert.deepEqual(b.q, { left: '1300px', top: '575px', size: '48px', width: '580px', line: '73px' });
+  await app(() => window.__editor.undo());
+  await saved();
+  assert.deepEqual([readPlan().ending.x, readPlan().ending.y], [1195, 0]);
+
+  // 自己分段（Enter）：一段一塊，逗號照留、太長照框寬換行；時間軸、「現在」列用／隔開
+  await app(() => { const ta = document.querySelector('#inspBody textarea[data-f="endQuote"]'); ta.focus(); ta.select(); });
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('AI 讓我們用白話文就可以剪片');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('但好內容，才是一切的基礎');
+  await saved();
+  assert.equal(readPlan().ending.quote, 'AI 讓我們用白話文就可以剪片\n但好內容，才是一切的基礎');
+  await until(() => app(() => [...document.querySelectorAll('#simEnd .el')].map((x) => x.textContent).join('|') === 'AI 讓我們用白話文就可以剪片|但好內容，才是一切的基礎'), '快速試聽照分的段、逗號照留');
+  assert.equal(await app(() => document.querySelector('#simEndQuote').style.overflowWrap), 'anywhere');
+  assert.ok((await app(() => document.querySelector('#nowBar').textContent)).includes('片尾卡：AI 讓我們用白話文就可以剪片／但好內容，才是一切的基礎'));
+  // 段落間距滑桿：0.3 行 → 存 ending.gap、快速試聽第二段的上間距＝0.3 個行高（這時字級 60、行高 91 → 27 px）；回到 1 拿掉
+  const slide = (f, v) => app((a) => { const el = document.querySelector(`#inspBody input[data-f="${a.f}"]`); el.value = String(a.v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }, { f, v });
+  await slide('endGap', 0.3);
+  await saved();
+  assert.equal(readPlan().ending.gap, 0.3);
+  await until(() => app(() => document.querySelectorAll('#simEnd .el')[1]?.style.marginTop === `${Math.round(parseInt(document.querySelector('#simEndQuote').style.lineHeight, 10) * 0.3)}px`), '段落間距 0.3 行');
+  assert.match(await app(() => document.querySelector('#inspBody [data-out="endGap"]').textContent), /^0\.3 行（27 px）$/);
+  // 數字用剪映的單位：字號（字級 60 px → 8.8）、固定寬度（725 px → 363）、行間距 0.07（行高 91）
+  assert.deepEqual(await app(() => ['endSize', 'endW', 'endLs'].map((k) => document.querySelector(`#inspBody [data-out="${k}"]`).textContent)), ['8.8（60 px）', '363（725 px）', '0.07（91 px）']);
+  // 行間距滑桿：0.5 → 存 ending.lineSpacing、行高 60 ×（1.448＋0.5）＝117；回到 0.07 拿掉
+  await slide('endLs', 0.5);
+  await saved();
+  assert.equal(readPlan().ending.lineSpacing, 0.5);
+  await until(() => app(() => document.querySelector('#simEndQuote').style.lineHeight === '117px'), '行高跟著行間距');
+  await slide('endLs', 0.07);
+  await saved();
+  assert.ok(!('lineSpacing' in readPlan().ending));
+  await slide('endGap', 1);
+  await saved();
+  assert.ok(!('gap' in readPlan().ending));
+  // 框寬：滑桿改成 500 → 存 ending.w、快速試聽的框跟著變窄、字照框寬換行（框變高）；再拖金句框的右邊往右 120 → 620；拖過畫面右緣夾住
+  const h0 = (await box()).h;
+  await slide('endW', 500);
+  await saved();
+  assert.equal(readPlan().ending.w, 500);
+  let bw = await box();
+  assert.equal(bw.q.width, '500px');
+  assert.ok(bw.h > h0, `框變窄、字換行、框變高：${h0} → ${bw.h}`);
+  up = await drag(bw.x + bw.w + 1, bw.y + bw.h / 2, 120 / bw.sc, 0);
+  await up();
+  await saved();
+  assert.equal(readPlan().ending.w, 620);
+  assert.equal((await box()).q.width, '620px');
+  bw = await box();
+  up = await drag(bw.x + bw.w + 1, bw.y + bw.h / 2, 3000 / bw.sc, 0);
+  await up();
+  await saved();
+  assert.equal(readPlan().ending.x + readPlan().ending.w, 1920, '框寬夾在畫面裡');
+
+  // 清空文字框＝這一集不放金句：框不見、存成 null
+  await app(() => { const ta = document.querySelector('#inspBody textarea[data-f="endQuote"]'); ta.focus(); ta.select(); });
+  await page.keyboard.press('Backspace');
+  await saved();
+  assert.equal(readPlan().ending.quote, null);
+  assert.equal((await box()).hidden, true);
+  assert.deepEqual(errors, []);
+});
+
+// 完成影片預覽：播放器 iframe 裡 build 寫的 #end-quote（打字機一個字一個 span、時間軸動畫抓著這些 span）直接改位置、字級；
+// 字不一樣先放整段新的字，改回來把原本的 span 原樣放回（動畫才抓得到）
+test('082 完成影片預覽的金句：位置、字級直接改播放器裡的 #end-quote；改字先放整段，改回來放回原本的 span', { timeout: 300000 }, async (t) => {
+  const { app, until, errors } = await setup(t, { version: 1, ending: { quote: '好內容，才是一切的根源。' }, scenes: SCENES }, { built: true });
+  await until(() => app(() => window.__editor.endDur > 0), '要有片尾卡');
+  const r = await app(async () => {
+    const { PlayerPreview } = await import('/editor/preview.js');
+    const A = window.__editor, f = document.createElement('iframe');
+    f.srcdoc = `<div id="end-quote" style="position:absolute;left:1300px;top:575px;width:580px;font:400 48px/73px sans-serif">${[...'好內容'].map((c) => `<span class="ec">${c}</span>`).join('')}<br><br>${[...'才是一切的根源'].map((c) => `<span class="ec">${c}</span>`).join('')}</div>`;
+    document.body.append(f);
+    await new Promise((ok) => { f.onload = ok; });
+    const q = f.contentDocument.getElementById('end-quote'), first = q.querySelector('.ec');
+    const fake = { p: { iframeElement: f }, app: A };
+    const run = () => PlayerPreview.prototype.applyEnding.call(fake);
+    const look = () => ({ left: q.style.left, top: q.style.top, size: q.style.fontSize, width: q.style.width, line: q.style.lineHeight, text: q.textContent, ec: q.querySelectorAll('.ec').length, same: q.querySelector('.ec') === first });
+    run();
+    const before = look();
+    A.endText = { ...A.endText, x: 900, y: 300, size: 60 }; run();
+    const moved = look();
+    A.endText = { ...A.endText, quote: '先求有，再求好' }; run();
+    const typed = look();
+    A.endText = { ...A.endText, quote: '第一行，有逗號\n第二行', gap: 0, w: 640 }; run();
+    const manual = { els: [...q.querySelectorAll('.el')].map((e) => e.textContent), wrap: q.style.overflowWrap, mt: q.querySelectorAll('.el')[1]?.style.marginTop, width: q.style.width };
+    A.endText = { ...A.endText, quote: '好內容，才是一切的根源。' }; delete A.endText.gap; delete A.endText.w; run();
+    const back = look();
+    f.remove();
+    return { before, moved, typed, manual, back };
+  });
+  assert.deepEqual(r.before, { left: '1300px', top: '575px', size: '48px', width: '580px', line: '73px', text: '好內容才是一切的根源', ec: 10, same: true });
+  assert.deepEqual(r.moved, { left: '900px', top: '300px', size: '60px', width: '725px', line: '91px', text: '好內容才是一切的根源', ec: 10, same: true });
+  assert.deepEqual([r.typed.text, r.typed.ec, r.typed.left], ['先求有再求好', 0, '900px']);
+  assert.deepEqual(r.manual, { els: ['第一行，有逗號', '第二行'], wrap: 'anywhere', mt: '0px', width: '640px' }, '自己分的段：一段一個 .el、照框寬換行、框寬與段落間距直接改');
+  assert.deepEqual([r.back.text, r.back.ec, r.back.same], ['好內容才是一切的根源', 10, true], '改回來：原本的 span 原樣放回');
   assert.deepEqual(errors, []);
 });

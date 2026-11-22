@@ -24,7 +24,10 @@ test('片尾卡：照檢查報告的秒數與金句；示意圖、分行照上�
   const e = endingLane(REPORT, BUILT);
   assert.deepEqual([e.dur, e.quote, e.image, e.lines], [9.9, '好內容，才是一切的根源', BUILT.ending.image, ['好內容', '才是一切的根源']]);
   // 還沒 build 過（沒有圖）：金句照報告的字切行，圖是 null
-  assert.deepEqual(endingLane(REPORT, null), { dur: 9.9, quote: '好內容，才是一切的根源', image: null, lines: ['好內容', '才是一切的根源'] });
+  assert.deepEqual(endingLane(REPORT, null), { dur: 9.9, quote: '好內容，才是一切的根源', image: null, lines: ['好內容', '才是一切的根源'], manual: false });
+  // 082 作者分的行（行裡有逗號）：照報告的 quoteLines，不再用逗號切
+  assert.deepEqual(endingLane({ ending: { at: 37, dur: 5, quote: 'AI 剪片／但好內容，才是基礎', quoteLines: ['AI 剪片', '但好內容，才是基礎'], quoteManual: true } }, null).lines, ['AI 剪片', '但好內容，才是基礎']);
+  assert.equal(endingLane({ ending: { at: 37, dur: 5, quote: 'a', quoteLines: ['a'], quoteManual: true } }, null).manual, true);
   // 報告還沒好（undefined）：上一次 build 的
   assert.deepEqual([endingLane(undefined, BUILT).dur, endingLane(undefined, BUILT).quote], [9.9, '好內容，才是一切的根源']);
   assert.equal(endingLane(undefined, null), null);
@@ -85,7 +88,7 @@ test('build 記下做進預覽的片尾（.cache/ending.json）：片尾配樂�
 });
 
 // ---------- 077 片尾金句的文字動畫（剪輯台點片尾卡 →「文字動畫」下拉選單，存 plan.json 的 ending.motion）----------
-test('存片尾金句的文字動畫：原本的 quote、subscribe 照留；和工作區預設一樣的不寫，空了整個拿掉；這一集關掉片尾不能改；只能改 motion', () => {
+test('存片尾金句的文字動畫：原本的 quote、subscribe 照留；和工作區預設一樣的不寫，空了整個拿掉；這一集關掉片尾不能改；不能改圖', () => {
   assert.ok(LIMITS.bodyKeys.includes('ending'));
   assert.deepEqual(sanitizeEnding({ motion: 'fade' }, { ending: { quote: '一句' } }), { ending: { quote: '一句', motion: 'fade' }, errors: [] });
   assert.deepEqual(sanitizeEnding({ motion: 'rise' }, {}), { ending: { motion: 'rise' }, errors: [] });
@@ -96,9 +99,32 @@ test('存片尾金句的文字動畫：原本的 quote、subscribe 照留；和�
   assert.deepEqual(sanitizeEnding({ motion: 'fade' }, { ending: { motion: 'wipe' } }, { motionDefault: 'fade' }).ending, null);
   assert.deepEqual(sanitizeEnding({ motion: 'type' }, {}, { motionDefault: 'fade' }).ending, { motion: 'type' });
   assert.match(sanitizeEnding({ motion: 'spin' }, {}).errors[0], /^ending\.motion 要是 type（打字機）、fade（淡入）、rise（逐行浮出）、wipe（由左擦開）、none（直接出現） 其中一個，現在是 "spin"/);
-  assert.match(sanitizeEnding({ motion: 'fade', quote: '偷改' }, {}).errors[0], /^ending 在剪輯台只能改 motion（片尾金句的文字動畫），不能寫「quote」/);
+  assert.match(sanitizeEnding({ motion: 'fade', image: '偷改' }, {}).errors[0], /^ending 在剪輯台只能改片尾金句的 motion（文字動畫）、quote（字）、x／y／size／w（位置、字級、框寬）、lineSpacing（行間距）、gap（段落間距），不能寫「image」/);
   assert.match(sanitizeEnding({ motion: 'fade' }, { ending: false }).errors[0], /這一集關掉了片尾/);
   assert.match(sanitizeEnding('fade', {}).errors[0], /ending 要寫成 \{ "motion"/);
+});
+
+// 082 剪輯台改片尾金句的字、拖位置、拉大小
+test('存片尾金句的字、位置、字級：空白＝這一集不放；null＝回到預設；取整數、字級夾在範圍裡；型別錯擋下', () => {
+  assert.deepEqual(sanitizeEnding({ quote: '  新的一句，第二段  ' }, { ending: { motion: 'fade' } }), { ending: { motion: 'fade', quote: '新的一句，第二段' }, errors: [] });
+  assert.deepEqual(sanitizeEnding({ quote: '   ' }, {}), { ending: { quote: null }, errors: [] });
+  assert.deepEqual(sanitizeEnding({ x: 900.6, y: 300.2, size: 64.4 }, { ending: { quote: '一句' } }), { ending: { quote: '一句', x: 901, y: 300, size: 64 }, errors: [] });
+  assert.deepEqual(sanitizeEnding({ size: 500 }, {}).ending, { size: 120 });
+  assert.deepEqual(sanitizeEnding({ size: 3 }, {}).ending, { size: 24 });
+  assert.deepEqual(sanitizeEnding({ x: null, y: null, size: null }, { ending: { x: 1, y: 2, size: 50 } }), { ending: null, errors: [] });
+  assert.match(sanitizeEnding({ x: '10' }, {}).errors[0], /^ending\.x 要是數字/);
+  assert.match(sanitizeEnding({ quote: 3 }, {}).errors[0], /^ending\.quote 要是一句話/);
+  assert.match(sanitizeEnding({ x: 10 }, { ending: false }).errors[0], /這一集關掉了片尾/);
+  // 段落間距：0–2 行、取到 0.05（不取整數）、預設一行不寫；框寬取整數、null 拿掉
+  assert.deepEqual(sanitizeEnding({ gap: 0.33 }, { ending: { quote: '一句' } }).ending, { quote: '一句', gap: 0.35 });
+  assert.deepEqual(sanitizeEnding({ gap: 5 }, {}).ending, { gap: 2 });
+  assert.deepEqual(sanitizeEnding({ gap: 1 }, { ending: { quote: '一句', gap: 0 } }).ending, { quote: '一句' });
+  assert.deepEqual(sanitizeEnding({ w: 663.6 }, { ending: { quote: '一句' } }).ending, { quote: '一句', w: 664 });
+  assert.deepEqual(sanitizeEnding({ w: null }, { ending: { quote: '一句', w: 700 } }).ending, { quote: '一句' });
+  assert.match(sanitizeEnding({ gap: 'x' }, {}).errors[0], /^ending\.gap 要是數字（段與段之間空幾行）/);
+  // 行間距：0–1、取到 0.01；和剪映的設定（0.07）一樣不寫
+  assert.deepEqual(sanitizeEnding({ lineSpacing: 0.234 }, {}).ending, { lineSpacing: 0.23 });
+  assert.deepEqual(sanitizeEnding({ lineSpacing: 0.07 }, { ending: { quote: '一句', lineSpacing: 0.3 } }).ending, { quote: '一句' });
 });
 
 test('存檔：只動 plan.json 的 ending 那一個鍵，其他字原樣（縮排、順序、沒動的鍵）；沒變不寫', () => {

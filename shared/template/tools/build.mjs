@@ -1309,7 +1309,7 @@ function bedJsonOf(res, clip, cues) {
 function endingJson(res) {
   const e = res.ending;
   if (!e || e.off) return null;
-  return { at: res.outDur, dur: e.dur, quote: e.card?.quote?.lines.join('，') ?? null, quoteFrom: e.card?.quote?.from ?? null, motion: e.card?.quote ? e.card.motion ?? null : null, subscribe: e.subscribe?.n ?? null, notes: e.notes };   // motion＝片尾金句的文字動畫（077）
+  return { at: res.outDur, dur: e.dur, quote: e.card?.quote?.lines.join(e.card.quote.manual ? '／' : '，') ?? null, quoteLines: e.card?.quote?.lines ?? null, quoteManual: !!e.card?.quote?.manual, quoteFrom: e.card?.quote?.from ?? null, motion: e.card?.quote ? e.card.motion ?? null : null, subscribe: e.subscribe?.n ?? null, notes: e.notes };   // motion＝片尾金句的文字動畫（077）
 }
 
 // 結尾配樂的起播點：量 shared/sfx/<music>.wav 的長度（一次 ffprobe）

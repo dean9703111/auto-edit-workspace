@@ -9,7 +9,7 @@
 //   remapToFrame(rect, from, to, { W, H }, kind)       → 換框時 speakerBox（'box'）／pipCrop（'rect'）換算成新框裡同一塊畫面
 //   sanitizeTheme(v)                                   → { theme, errors }（第一層 theme："light"｜"dark"；null＝拿掉＝亮色；specs/010-motion-v2/design-system.md §10）
 //   sanitizeBed(v, plan, { bedDefault })              → { bed, errors }（第一層 bed 的 volume：背景音樂的音量；057）
-//   sanitizeEnding(v, plan, { motionDefault })        → { ending, errors }（第一層 ending 的 motion：片尾金句的文字動畫；077）
+//   sanitizeEnding(v, plan, { motionDefault })        → { ending, errors }（第一層 ending：片尾金句的文字動畫 motion（077）、字 quote、位置字級 x／y／size（082））
 //   parseSrtBlocks(text) / writeSrt(srtText, cues)     → rough.srt 讀寫（保留 CRLF／LF、BOM；沒改的句子原封不動）
 //   字幕增刪與句號重新對應的規則在 ../subtitles.mjs（頁面也用同一份）
 import { replay, parseRef, refTime, RULES } from '../subtitles.mjs';
@@ -21,6 +21,7 @@ import { opsMapper, remapScripts } from '../../lib/beat-remap.mjs';
 import { r3 } from '../../lib/time.mjs';
 import { BED } from '../../lib/music.mjs';
 import { ENDING_MOTIONS, ENDING_MOTION } from '../../lib/ending.mjs';
+import { QUOTE, QUOTE_KEYS, QUOTE_SIZE, quoteGap, quoteLineSpacing } from '../ending-layout.mjs';
 import { SFX_ADJUST_ID, SFX_ADJUST_KEYS, SFX_TRIM_MAX, SFX_SHIFT_MAX, SFX_MIN_LEN } from '../../lib/edit.mjs';
 
 export { visibleLen, richPlain };
@@ -559,14 +560,25 @@ export function remapToFrame(rect, from, to, cv, kind = 'box') {
 // 原本寫的 quote、subscribe 照留；和工作區預設（motionDefault）一樣的不寫，ending 變成空的就整個拿掉。這一集關掉片尾（ending: false）不能改。
 // 回傳要寫的整個 ending；null＝拿掉；undefined＝不用動
 export function sanitizeEnding(v, plan, { motionDefault = ENDING_MOTION } = {}) {
-  if (!isObj(v)) return { ending: undefined, errors: ['ending 要寫成 { "motion": "<文字動畫>" }（片尾金句的文字動畫）'] };
+  if (!isObj(v)) return { ending: undefined, errors: ['ending 要寫成 { "motion": "<文字動畫>", "quote": "<金句>", "x": 1300, "y": 575, "size": 48, "w": 580, "lineSpacing": 0.07, "gap": 1 }（片尾金句）'] };
   const errors = [];
-  for (const k of Object.keys(v)) if (k !== 'motion') errors.push(`ending 在剪輯台只能改 motion（片尾金句的文字動畫），不能寫「${k}」→ 換金句、換圖請 AI 用 build.mjs --set ending.quote=…、brand.mjs ending`);
-  if (!ENDING_MOTIONS.some((m) => m.id === v.motion)) errors.push(`ending.motion 要是 ${ENDING_MOTIONS.map((m) => `${m.id}（${m.zh}）`).join('、')} 其中一個，現在是 ${JSON.stringify(v.motion)}`);
-  if (plan.ending === false) errors.push('這一集關掉了片尾（plan.json 的 ending 是 false），沒有片尾金句可以換動畫');
+  for (const k of Object.keys(v)) if (!['motion', 'quote', ...QUOTE_KEYS].includes(k)) errors.push(`ending 在剪輯台只能改片尾金句的 motion（文字動畫）、quote（字）、x／y／size／w（位置、字級、框寬）、lineSpacing（行間距）、gap（段落間距），不能寫「${k}」→ 換圖請 AI 用 brand.mjs ending`);
+  if ('motion' in v && !ENDING_MOTIONS.some((m) => m.id === v.motion)) errors.push(`ending.motion 要是 ${ENDING_MOTIONS.map((m) => `${m.id}（${m.zh}）`).join('、')} 其中一個，現在是 ${JSON.stringify(v.motion)}`);
+  if ('quote' in v && v.quote !== null && typeof v.quote !== 'string') errors.push(`ending.quote 要是一句話（字串），不放寫 null，現在是 ${JSON.stringify(v.quote)}`);
+  for (const k of QUOTE_KEYS) if (k in v && v[k] !== null && !isNum(v[k])) errors.push(`ending.${k} 要是數字（${k === 'gap' ? '段與段之間空幾行' : k === 'lineSpacing' ? '行間距，剪映的單位' : k === 'w' ? '框寬，畫布 px' : '畫布 px'}）或 null（回到預設），現在是 ${JSON.stringify(v[k])}`);
+  if (plan.ending === false) errors.push('這一集關掉了片尾（plan.json 的 ending 是 false），沒有片尾金句可以改');
   if (errors.length) return { ending: undefined, errors };
   const next = { ...(isObj(plan.ending) ? plan.ending : {}) };
-  if (v.motion === motionDefault) delete next.motion; else next.motion = v.motion;
+  if ('motion' in v) { if (v.motion === motionDefault) delete next.motion; else next.motion = v.motion; }
+  // 082 金句的字：空白＝這一集不放（null）；位置、字級、框寬：null＝拿掉回到預設，數字取整數、字級夾在範圍裡；段落間距：夾在 0–2 行、取到 0.05，預設（一行）不寫；行間距：夾在 0–1、取到 0.01，預設（0.07）不寫
+  if ('quote' in v) next.quote = typeof v.quote === 'string' && v.quote.trim() ? v.quote.trim() : null;
+  for (const k of QUOTE_KEYS) {
+    if (!(k in v)) continue;
+    if (v[k] === null || (k === 'gap' && quoteGap(v[k]) === QUOTE.gap) || (k === 'lineSpacing' && quoteLineSpacing(v[k]) === QUOTE.lineSpacing)) delete next[k];
+    else if (k === 'gap') next[k] = quoteGap(v[k]);
+    else if (k === 'lineSpacing') next[k] = quoteLineSpacing(v[k]);
+    else next[k] = k === 'size' ? Math.round(Math.min(QUOTE_SIZE.max, Math.max(QUOTE_SIZE.min, v[k]))) : Math.round(v[k]);
+  }
   return { ending: Object.keys(next).length ? next : null, errors: [] };
 }
 

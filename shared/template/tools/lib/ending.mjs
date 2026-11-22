@@ -4,11 +4,12 @@
 //   setting.json  "ending": { "image": "book-cover.jpg", "seconds": 9.9, "quote": true, "subscribe": "subscribe.gif" }
 //                 image＝片尾卡的圖（沒寫＝沒有片尾卡）；seconds＝片尾卡長度；quote＝圖右邊放片尾金句；subscribe＝訂閱動畫（沒寫＝不放）
 //                 motion＝片尾金句的文字動畫（077；ENDING_MOTIONS 的 id，沒寫＝打字機）
-//   plan.json     "ending": false（這一集不要）｜{ "quote": "<字>"｜null, "subscribe": "#N"｜null, "motion": "<id>" }（這一集換金句、指定訂閱那句、換文字動畫；null＝這集不放）
+//   plan.json     "ending": false（這一集不要）｜{ "quote": "<字>"｜null, "subscribe": "#N"｜null, "motion": "<id>", "x": 1300, "y": 575, "size": 48, "w": 580, "lineSpacing": 0.07, "gap": 1 }
+//                 （這一集換金句、指定訂閱那句、換文字動畫；null＝這集不放；082 x、y＝金句框左上角、size＝字級、w＝框寬，剪輯台拖的；lineSpacing＝行間距（剪映的單位）、gap＝段落間距（空幾行），editor/ending-layout.mjs）
 //
 //   readEndingSetting(sharedDir)                    → null（沒設定）｜{ image, seconds, quote, subscribe, problems[] }（image、subscribe 是完整路徑）
 //   resolveEnding(ctx)                              → null（沒設定）｜{ off }｜{ dur, card, subscribe, notes[] }（resolvePlan 的一節；⚠ 推進 ctx.warnings）
-//   quoteLines(text)                                → 片尾金句分段（逗點、// 換成空一行）
+//   quoteLines(text)                                → 片尾金句分段（有換行／// 照作者分的、標點照留；沒有照逗點分段；一段太長照框寬自動換行；editor/ending-layout.mjs quoteParse，剪輯台也用同一個）
 //   prepareEnding(ending, outDir)                   → 同一個物件加上 card.file、subscribe.file（相對 work/hyperframes/；build.mjs 複製圖、gif 轉透明 webm，同檔不重做）
 //   endingParts(ending, { t0, DUR, videoDur, base, W, H, nextTrack }) → { html[], tl[], css }（main.mjs 主合成；css 放 <head> 的 <style>）
 //   endingLines(ending, { portrait })               → 報告行（build 的結尾、停點 ③）
@@ -18,7 +19,7 @@ import { createHash } from 'node:crypto';
 import { readSettings } from './settings.mjs';
 import { parseTime, cueSeconds, r3 } from './time.mjs';
 import { readScript } from './script-file.mjs';
-import { richPlain } from './scenes.mjs';
+import { QUOTE, QUOTE_SIZE, QUOTE_LS, QUOTE_GAP, QUOTE_KEYS, quoteLines, quoteParse, quoteBox, quoteGap, quoteLineSpacing, quoteFits, quoteMaxRows, quotePerLine } from '../editor/ending-layout.mjs';
 import { probeDuration, run } from './ff.mjs';
 
 export const BRAND_DIR = 'brand';   // shared/brand/
@@ -27,7 +28,7 @@ export const ENDING = {
   seconds: 9.9, min: 3, max: 30,     // 片尾卡長度（剪映 ending.black_dur）
   black: 0.5,                         // 講者最後一段淡出到黑（剪映影片版渐隐 0.5 秒）
   image: { at: 0.1, scale: 0.63, fade: 0.5 },   // 圖：晚 0.1 秒淡入 0.5 秒、縮成填滿畫布的 0.63 倍置中；最後 0.5 秒淡出
-  quote: { at: 0.633, type: 5.23, fade: 0.5, left: 1300, top: 575, width: 580, size: 48, line: 73, maxLines: 6 },   // 片尾金句：書封右邊，晚 0.633 秒打字機進場 5.23 秒
+  quote: QUOTE,                       // 片尾金句：書封右邊，晚 0.633 秒打字機進場 5.23 秒；位置、字級這一集可以換（plan.json 的 ending.x／y／size，082）
   z: 80,                              // 蓋過字幕（60）和剪輯台的淡出（70）
 };
 // 077 片尾金句的文字動畫：剪輯台「片尾卡 → 文字動畫」的下拉選單、build.mjs --set ending.motion、brand.mjs ending --motion 都是這一組。
@@ -77,12 +78,8 @@ export function readEndingSetting(sharedDir) {
   };
 }
 
-// 片尾金句分段：逗點、//、換行處空一行（剪映的做法），拿掉句尾的句號與 **
-export function quoteLines(text) {
-  return richPlain(String(text ?? '').replace(/\/\//g, '\n')).split(/[，,\n]+/).map((s) => s.trim().replace(/[。.]+$/, '')).filter(Boolean);
-}
-// 一行放幾個字（全形 1、半形 0.5）→ 估總行數（含段與段之間的空行）
-const lineCount = (paras) => paras.reduce((n, p) => n + Math.max(1, Math.ceil([...p].reduce((w, ch) => w + (ch.codePointAt(0) <= 0x7e ? 0.5 : 1), 0) / Math.floor(ENDING.quote.width / ENDING.quote.size))), 0) + Math.max(0, paras.length - 1);
+// 片尾金句分段：逗點、//、換行處空一行（剪映的做法），拿掉句尾的句號與 **（editor/ending-layout.mjs）
+export { quoteLines };
 
 // 講稿最後一個 > 段落（字幕對齊本來就跳過 > 開頭的行）
 function scriptQuote(projectDir) {
@@ -100,7 +97,7 @@ function scriptQuote(projectDir) {
   return last ? last.join('\n') : null;
 }
 
-export function resolveEnding({ plan, lib, cues, timed, projectDir, videoDur, portrait, errors, warnings }) {
+export function resolveEnding({ plan, lib, cues, timed, projectDir, videoDur, portrait, C: canvas, errors, warnings }) {
   const conf = lib.ending ?? null;
   if (!conf) {
     if (plan.ending !== undefined && plan.ending !== false) warnings.push(`plan.json 寫了 ending，但工作區沒有設定片尾（shared/setting.json 沒有 ending）→ 用不到就刪掉；要片尾先設定：${SET_CMD}`);
@@ -110,7 +107,17 @@ export function resolveEnding({ plan, lib, cues, timed, projectDir, videoDur, po
   const pe = plan.ending;
   if (pe === false) return { off: 'plan.json 寫了 "ending": false', dur: 0 };
   if (pe !== undefined && !isObj(pe)) { errors.push(`ending 只能寫 false（這一集不要片尾）或物件 { "quote": "…", "subscribe": "#N" }，現在是 ${JSON.stringify(pe)} → 照例子改，或刪掉用工作區的設定`); return { off: 'plan.json 的 ending 寫錯', dur: 0 }; }
-  for (const k of Object.keys(pe || {})) if (!['quote', 'subscribe', 'motion'].includes(k)) errors.push(`ending 不能有「${k}」→ 只能寫 quote（片尾金句）、subscribe（訂閱動畫跟哪一句）、motion（片尾金句的文字動畫）`);
+  for (const k of Object.keys(pe || {})) if (!['quote', 'subscribe', 'motion', ...QUOTE_KEYS].includes(k)) errors.push(`ending 不能有「${k}」→ 只能寫 quote（片尾金句）、subscribe（訂閱動畫跟哪一句）、motion（片尾金句的文字動畫）、x／y／size／w／lineSpacing／gap（片尾金句的位置、字級、框寬、行間距、段落間距）`);
+  // 082 片尾金句的位置、字級、框寬（剪輯台拖的）、段落間距：數字才算，size、gap 夾在範圍裡
+  const pos = {};
+  for (const k of QUOTE_KEYS) {
+    if (!pe || !(k in pe)) continue;
+    if (typeof pe[k] !== 'number' || !Number.isFinite(pe[k])) { errors.push(`ending.${k} 要是數字（${k === 'gap' ? '段與段之間空幾行' : k === 'lineSpacing' ? '行間距，剪映的單位' : k === 'w' ? '框寬，畫布 px' : '畫布 px'}），現在是 ${JSON.stringify(pe[k])} → 改成數字，或刪掉用預設`); continue; }
+    if (k === 'lineSpacing' && (pe[k] < QUOTE_LS.min || pe[k] > QUOTE_LS.max)) warnings.push(`片尾金句的行間距 ${pe[k]} 超出範圍（${QUOTE_LS.min}–${QUOTE_LS.max}），用 ${quoteLineSpacing(pe[k])}`);
+    if (k === 'gap' && (pe[k] < QUOTE_GAP.min || pe[k] > QUOTE_GAP.max)) warnings.push(`片尾金句的段落間距 ${pe[k]} 行超出範圍（${QUOTE_GAP.min}–${QUOTE_GAP.max} 行），用 ${quoteGap(pe[k])}`);
+    pos[k] = pe[k];
+  }
+  if (pos.size !== undefined && (pos.size < QUOTE_SIZE.min || pos.size > QUOTE_SIZE.max)) warnings.push(`片尾金句的字級 ${pos.size} 超出範圍（${QUOTE_SIZE.min}–${QUOTE_SIZE.max}），用 ${Math.min(QUOTE_SIZE.max, Math.max(QUOTE_SIZE.min, Math.round(pos.size)))}`);
   // 片尾金句的文字動畫：這一集寫了就用這一集的，沒寫用工作區的預設
   let motion = conf.motion ?? ENDING_MOTION;
   if (pe && 'motion' in pe) {
@@ -120,7 +127,7 @@ export function resolveEnding({ plan, lib, cues, timed, projectDir, videoDur, po
   if (portrait) return { off: '直式不放片尾卡和訂閱動畫', dur: 0 };
   const notes = [];
   // 片尾卡＋金句
-  let card = null;
+  let card = null, parsed = null;
   if (conf.image) {
     let quote = null;
     if (conf.quote) {
@@ -137,14 +144,17 @@ export function resolveEnding({ plan, lib, cues, timed, projectDir, videoDur, po
           if (q) { text = q.seg.slots.text; from = `[${q.id}] 金句字卡`; }
         }
       }
-      const lines = text ? quoteLines(text) : [];
+      parsed = text ? quoteParse(text, { auto: from !== 'plan.json' }) : null;   // 講稿、金句字卡照剪映的定剪分；plan.json（剪輯台、AI 打的）有換行就照它分
+      const lines = parsed?.lines || [];
       if (lines.length) {
-        quote = { lines, from };
-        if (lineCount(lines) > ENDING.quote.maxLines) warnings.push(`片尾金句「${lines.join('，')}」太長，會超出畫面下緣（最多約 ${ENDING.quote.maxLines} 行、一行 ${Math.floor(ENDING.quote.width / ENDING.quote.size)} 字）→ 縮短：build.mjs --set "ending.quote=<短一點的句子>"`);
+        quote = { lines, from, manual: parsed.manual };
+        const W = canvas?.W || 1920, H = canvas?.H || 1080, box = quoteBox(pos, parsed), over = quoteFits(lines, box, { W, H });
+        if (over === '下緣') warnings.push(`片尾金句「${lines.join(parsed.manual ? '／' : '，')}」太長，會超出畫面下緣（這個位置、字級最多約 ${quoteMaxRows(box, H)} 行、一行 ${quotePerLine(box)} 字）→ 縮短：build.mjs --set "ending.quote=<短一點的句子>"，或在剪輯台把金句往上拖、縮小`);
+        else if (over === '右緣') warnings.push(`片尾金句的框超出畫面右緣（左邊 ${box.left}、寬 ${box.width}，畫面寬 ${W}）→ 在剪輯台把金句往左拖、縮小`);
       } else if (!from) notes.push('片尾金句：講稿沒有 > 引言、也沒有金句字卡，片尾卡只放圖（要放就在 plan.json 寫 ending.quote）');
       else if (from.startsWith('plan.json 寫了 null')) notes.push('片尾金句：這一集不放（plan.json 的 ending.quote 寫了 null）');
     }
-    card = { image: conf.image, quote, motion };
+    card = { image: conf.image, quote, motion, box: quoteBox(pos, quote ? parsed : null), moved: ['x', 'y', 'size', 'w'].some((k) => k in pos), gap: pos.gap, lineSpacing: pos.lineSpacing };
   }
   // 訂閱動畫：最後四分之一第一句講到「訂閱」的
   let subscribe = null;
@@ -224,34 +234,34 @@ export function endingParts(ending, { t0 = 0, DUR, videoDur, base = '', W, H, ne
   if (card?.file && ending.dur > 0) {
     const A = videoDur, end = r3(A + ending.dur), s = r3(A - ENDING.black - t0);
     if (s < DUR && end - t0 > 0) {
-      const I = ENDING.image, Q = ENDING.quote, iw = Math.round(W * I.scale), ih = Math.round(H * I.scale);
-      // 金句的字：打字機一個字一個 <span class="ec">；逐行的動畫（浮出、擦開）一行一個 <span class="el">（行與行之間空一行）；其他整段一起
-      const mo = card.quote ? card.motion || ENDING_MOTION : null, byLine = mo === 'rise' || mo === 'wipe';
-      const quote = !card.quote ? '' : mo === 'type' ? card.quote.lines.map((l) => [...l].map((ch) => `<span class="ec">${esc(ch)}</span>`).join('')).join('<br><br>')
-        : byLine ? card.quote.lines.map((l) => `<span class="el">${esc(l)}</span>`).join('') : card.quote.lines.map(esc).join('<br><br>');
+      const I = ENDING.image, Q = { ...ENDING.quote, ...(card.box || quoteBox()) }, iw = Math.round(W * I.scale), ih = Math.round(H * I.scale);
+      // 金句的字：一段一個 <span class="el">（區塊；段與段之間空 Q.gap px＝段落間距；一段太長照框寬自動換行）；打字機再一個字一個 <span class="ec">
+      //   作者自己分的段（有換行）照一般的換行規則（標點不放行首、英文字不拆開，太長才拆）；舊的照字斷；逐段的動畫（浮出、擦開）動 .el，其他整段一起
+      const mo = card.quote ? card.motion || ENDING_MOTION : null;
+      const quote = !card.quote ? '' : card.quote.lines.map((l) => `<span class="el">${mo === 'type' ? [...l].map((ch) => `<span class="ec">${esc(ch)}</span>`).join('') : esc(l)}</span>`).join('');
       html.push(`  <div id="end-card" class="clip" data-start="${n3(Math.max(0, s))}" data-duration="${n3(end - t0 - Math.max(0, s))}" data-track-index="${nextTrack()}" style="position:absolute;inset:0;background:#000;z-index:${ENDING.z};opacity:0">
     <img id="end-img" src="${base}${card.file}" alt="" style="position:absolute;left:${Math.round((W - iw) / 2)}px;top:${Math.round((H - ih) / 2)}px;width:${iw}px;height:${ih}px;object-fit:contain;opacity:0">${quote ? `
-    <div id="end-quote" style="position:absolute;left:${Q.left}px;top:${Q.top}px;width:${Q.width}px;font:400 ${Q.size}px/${Q.line}px 'Noto Sans TC', sans-serif;color:#fff;word-break:break-all">${quote}</div>` : ''}
+    <div id="end-quote" style="position:absolute;left:${Q.left}px;top:${Q.top}px;width:${Q.width}px;font:400 ${Q.size}px/${Q.line}px 'Noto Sans TC', sans-serif;color:#fff;${Q.manual ? 'overflow-wrap:anywhere' : 'word-break:break-all'}">${quote}</div>` : ''}
   </div>`);
       tl.push(s >= 0 ? `tl.fromTo('#end-card', { opacity: 0 }, { opacity: 1, duration: ${ENDING.black}, ease: 'none' }, ${n3(s)});` : `tl.set('#end-card', { opacity: 1 }, 0);`);
       tl.push(`tl.fromTo('#end-img', { opacity: 0 }, { opacity: 1, duration: ${I.fade}, ease: 'none' }, ${n3(pos(A + I.at))});`);
       if (quote) {
-        const qa = n3(pos(A + Q.at)), nl = card.quote.lines.length;
+        const qa = n3(pos(A + Q.at)), nl = card.quote.lines.length, base0 = `    #end-quote .el { display: block; }\n    #end-quote .el + .el { margin-top: ${Q.gap}px; }\n`;
         if (mo === 'type') {
-          css = '    #end-quote .ec { opacity: 0; }\n';
+          css = `${base0}    #end-quote .ec { opacity: 0; }\n`;
           const n = card.quote.lines.join('').length, type = Math.min(Q.type, Math.max(1, ending.dur - Q.at - I.fade - 1));
           tl.push(`tl.to('#end-quote .ec', { opacity: 1, duration: 0.01, ease: 'none', stagger: ${n3(type / n)} }, ${qa});`);
         } else if (mo === 'fade') {
-          css = '    #end-quote { opacity: 0; }\n';
+          css = `${base0}    #end-quote { opacity: 0; }\n`;
           tl.push(`tl.to('#end-quote', { opacity: 1, duration: ${MOTION.fade}, ease: 'none' }, ${qa});`);
         } else if (mo === 'rise') {
-          css = `    #end-quote .el { display: block; opacity: 0; }\n    #end-quote .el + .el { margin-top: ${Q.line}px; }\n`;
+          css = `${base0}    #end-quote .el { opacity: 0; }\n`;
           tl.push(`tl.fromTo('#end-quote .el', { opacity: 0, y: ${MOTION.rise.y} }, { opacity: 1, y: 0, duration: ${MOTION.rise.dur}, ease: 'power2.out', stagger: ${MOTION.rise.gap} }, ${qa});`);
         } else if (mo === 'wipe') {
-          css = `    #end-quote .el { display: block; clip-path: inset(0 100% 0 0); }\n    #end-quote .el + .el { margin-top: ${Q.line}px; }\n`;
+          css = `${base0}    #end-quote .el { clip-path: inset(0 100% 0 0); }\n`;
           tl.push(`tl.fromTo('#end-quote .el', { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: ${MOTION.wipe.dur}, ease: 'power2.inOut', stagger: ${nl > 1 ? MOTION.wipe.gap : 0} }, ${qa});`);
         } else {
-          css = '    #end-quote { opacity: 0; }\n';
+          css = `${base0}    #end-quote { opacity: 0; }\n`;
           tl.push(`tl.set('#end-quote', { opacity: 1 }, ${qa});`);
         }
       }
@@ -268,7 +278,8 @@ export function endingLines(ending) {
   const L = [];
   if (ending.card) {
     const q = ending.card.quote;
-    L.push(`片尾卡：影片結束後接 ${ending.dur} 秒（${path.basename(ending.card.image)}${q ? `＋片尾金句「${q.lines.join('，')}」，來源：${q.from}${(ending.card.motion || ENDING_MOTION) !== ENDING_MOTION ? `，文字動畫：${endingMotionZh(ending.card.motion)}` : ''}` : ''}）；講者最後 ${ENDING.black} 秒淡出到黑`);
+    const b = ending.card.box, at = (q && ending.card.moved && b ? `，位置 (${b.left}, ${b.top})、字級 ${b.size}、框寬 ${b.width}` : '') + (q && ending.card.lineSpacing !== undefined ? `，行間距 ${quoteLineSpacing(ending.card.lineSpacing)}（行高 ${b.line}）` : '') + (q && ending.card.gap !== undefined ? `，段落間距 ${quoteGap(ending.card.gap)} 行` : '');
+    L.push(`片尾卡：影片結束後接 ${ending.dur} 秒（${path.basename(ending.card.image)}${q ? `＋片尾金句「${q.lines.join(q.manual ? '／' : '，')}」，來源：${q.from}${(ending.card.motion || ENDING_MOTION) !== ENDING_MOTION ? `，文字動畫：${endingMotionZh(ending.card.motion)}` : ''}${at}` : ''}）；講者最後 ${ENDING.black} 秒淡出到黑`);
   }
   if (ending.subscribe) L.push(`訂閱動畫：#${ending.subscribe.n}${ending.subscribe.text ? `「${ending.subscribe.text}」` : ''}後 ${SUBSCRIBE.lead} 秒出現，播 ${ending.subscribe.dur} 秒`);
   return [...L, ...ending.notes];

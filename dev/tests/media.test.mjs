@@ -224,8 +224,9 @@ test('015 enter: "tape"：圖片縮小貼在全幕背景上（紙白邊、兩條
   assert.match(h, /<img id="mi-m03" class="clip mimg mimg--paper"/);
   const g = h.match(/<div id="mgr-m03" class="mgrow" style="left:(\d+)px;top:(\d+)px;width:(\d+)px;height:(\d+)px"/).slice(1).map(Number);
   assert.ok(g[0] >= 200 && g[1] >= 90 && g[0] + g[2] <= 1720 && g[1] + g[3] <= 880, `縮小到 TAPE.view 裡：${g}`);
-  assert.equal((h.match(/class="mtape"/g) || []).length, 2, '兩條膠帶');
-  assert.match(h, new RegExp(`<i id="mtp-m03-1" class="mtape" style="left:${g[0] - 36}px;top:${g[1] - 20}px;rotate:-34deg"`));
+  assert.equal((h.match(/class="clip mtape"/g) || []).length, 2, '兩條膠帶');
+  // 膠帶和圖片同一段計時（r30：不計時的話段落結束後還留在畫面上）
+  assert.match(h, new RegExp(`<i id="mtp-m03-1" class="clip mtape" data-start="7" data-duration="6" data-track-index="\\d+" style="left:${g[0] - 36}px;top:${g[1] - 20}px;rotate:-34deg"`));
   assert.match(h, /tl\.fromTo\('#mgr-m03', \{ scale: 1\.05, rotation: 3 \}, \{ scale: 1, rotation: 0, duration: 0\.35/);
   assert.match(h, /tl\.fromTo\('#mtp-m03-2', \{ opacity: 0, scale: 1\.4 \}, \{ opacity: 1, scale: 1, duration: 0\.15, ease: 'power2\.out' \}, 7\.45\);/);
   for (const [seg, re] of [[{ src: REC, enter: 'tape' }, /enter "tape"（紙膠帶貼上）只給圖片用/], [{ src: IMG, enter: 'tape', fit: 'cover' }, /enter "tape" 要配 fit "contain"/], [{ src: IMG, exit: 'tape' }, /exit 只能是 "cut"、"fade"、"slide"、"zoom"/]]) {

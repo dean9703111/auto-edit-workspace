@@ -51,13 +51,17 @@ test('片尾金句：講稿最後的 > 引言優先，沒有就用最後一張�
   const quoteScene = { id: 'q1', scene: 'quote', from: '#9', to: '#10e', slots: { text: '把經驗//變成資產' } };
   const fromScript = run({ ending: conf, projectDir: project(t, '# 標題\n\n> 中間的備註\n\n最後一句\n\n> 規格只能涵蓋你想到的，\n> 其他的要實戰\n'), scenes: [quoteScene] });
   assert.deepEqual(fromScript.errors, []);
-  assert.deepEqual(fromScript.ending.card.quote, { lines: ['規格只能涵蓋你想到的', '其他的要實戰'], from: '講稿最後的 > 引言' });
+  assert.deepEqual(fromScript.ending.card.quote, { lines: ['規格只能涵蓋你想到的', '其他的要實戰'], from: '講稿最後的 > 引言', manual: false }, '講稿的引言照剪映的定剪分（換行也當分段、拿掉逗號）');
   assert.equal(fromScript.ending.dur, ENDING.seconds);
   assert.equal(fromScript.finalDur, +(VD + ENDING.seconds).toFixed(3));
   const fromCard = run({ ending: conf, projectDir: project(t, '沒有引言\n'), scenes: [quoteScene] });
-  assert.deepEqual(fromCard.ending.card.quote, { lines: ['把經驗', '變成資產'], from: '[q1] 金句字卡' });
+  assert.deepEqual(fromCard.ending.card.quote, { lines: ['把經驗', '變成資產'], from: '[q1] 金句字卡', manual: false });
   const fromPlan = run({ ending: conf, projectDir: project(t, '> 講稿的\n'), plan: { ending: { quote: '這一集，換一句' } } });
-  assert.deepEqual(fromPlan.ending.card.quote, { lines: ['這一集', '換一句'], from: 'plan.json' });
+  assert.deepEqual(fromPlan.ending.card.quote, { lines: ['這一集', '換一句'], from: 'plan.json', manual: false });
+  // 082 作者自己分的行（有換行或 //）：一行就是一行，逗號、句號照留
+  const manual = run({ ending: conf, projectDir: project(t, '> 講稿的\n'), plan: { ending: { quote: 'AI 讓我們用白話文就可以剪片\n但好內容，才是一切的基礎。' } } });
+  assert.deepEqual(manual.ending.card.quote, { lines: ['AI 讓我們用白話文就可以剪片', '但好內容，才是一切的基礎。'], from: 'plan.json', manual: true });
+  assert.deepEqual(run({ ending: conf, plan: { ending: { quote: '第一行，有逗號//第二行' } } }).ending.card.quote.lines, ['第一行，有逗號', '第二行']);
   const none = run({ ending: conf, projectDir: project(t, '> 講稿的\n'), plan: { ending: { quote: null } } });
   assert.equal(none.ending.card.quote, null);
   const empty = run({ ending: conf, projectDir: project(t, '沒有\n') });
@@ -79,7 +83,7 @@ test('ending：plan.json 寫 false／直式＝不放（總長不變）；沒設�
   assert.equal(noConf.ending, null);
   assert.ok(noConf.warnings.some((w) => w.startsWith('plan.json 寫了 ending，但工作區沒有設定片尾')));
   assert.ok(run({ ending: conf, plan: { ending: 'yes' } }).errors.some((e) => e.startsWith('ending 只能寫 false')));
-  assert.ok(run({ ending: conf, plan: { ending: { color: 1 } } }).errors.includes('ending 不能有「color」→ 只能寫 quote（片尾金句）、subscribe（訂閱動畫跟哪一句）、motion（片尾金句的文字動畫）'));
+  assert.ok(run({ ending: conf, plan: { ending: { color: 1 } } }).errors.includes('ending 不能有「color」→ 只能寫 quote（片尾金句）、subscribe（訂閱動畫跟哪一句）、motion（片尾金句的文字動畫）、x／y／size／w／lineSpacing／gap（片尾金句的位置、字級、框寬、行間距、段落間距）'));
 });
 
 test('訂閱動畫：最後四分之一第一句講到「訂閱」的晚 0.5 秒；找不到、太靠近片尾只留一行說明；plan.json 指定句號', async (t) => {
@@ -209,18 +213,21 @@ test('主合成：每一種文字動畫各自的寫法；打字機和以前一�
   const type = parts(), dflt = parts('type');
   assert.deepEqual(dflt, type, '寫 type 和不寫一樣');
   assert.equal((type.html[0].match(/class="ec"/g) || []).length, 6);
-  assert.equal(type.css, '    #end-quote .ec { opacity: 0; }\n');
+  // 一行一個 .el（區塊），段與段之間空一行（73 px＝以前的 <br><br>，看起來一模一樣）
+  const blocks = `    #end-quote .el { display: block; }\n    #end-quote .el + .el { margin-top: ${ENDING.quote.line}px; }\n`;
+  assert.ok(type.html[0].includes('<span class="el"><span class="ec">第</span>'));
+  assert.equal(type.css, `${blocks}    #end-quote .ec { opacity: 0; }\n`);
   assert.ok(type.tl.some((l) => l.startsWith(`tl.to('#end-quote .ec', { opacity: 1, duration: 0.01, ease: 'none', stagger: `) && l.endsWith(`}, ${at});`)));
   const fade = parts('fade');
-  assert.ok(!fade.html[0].includes('class="ec"') && fade.html[0].includes('第一段<br><br>第二段'));
-  assert.equal(fade.css, '    #end-quote { opacity: 0; }\n');
+  assert.ok(!fade.html[0].includes('class="ec"') && fade.html[0].includes('<span class="el">第一段</span><span class="el">第二段</span>'));
+  assert.equal(fade.css, `${blocks}    #end-quote { opacity: 0; }\n`);
   assert.ok(fade.tl.includes(`tl.to('#end-quote', { opacity: 1, duration: ${MOTION.fade}, ease: 'none' }, ${at});`));
   const rise = parts('rise');
   assert.ok(rise.html[0].includes('<span class="el">第一段</span><span class="el">第二段</span>'));
-  assert.ok(rise.css.includes('#end-quote .el { display: block; opacity: 0; }') && rise.css.includes(`#end-quote .el + .el { margin-top: ${ENDING.quote.line}px; }`));
+  assert.equal(rise.css, `${blocks}    #end-quote .el { opacity: 0; }\n`);
   assert.ok(rise.tl.includes(`tl.fromTo('#end-quote .el', { opacity: 0, y: ${MOTION.rise.y} }, { opacity: 1, y: 0, duration: ${MOTION.rise.dur}, ease: 'power2.out', stagger: ${MOTION.rise.gap} }, ${at});`));
   const wipe = parts('wipe');
-  assert.ok(wipe.css.includes('#end-quote .el { display: block; clip-path: inset(0 100% 0 0); }'));
+  assert.equal(wipe.css, `${blocks}    #end-quote .el { clip-path: inset(0 100% 0 0); }\n`);
   assert.ok(wipe.tl.includes(`tl.fromTo('#end-quote .el', { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: ${MOTION.wipe.dur}, ease: 'power2.inOut', stagger: ${MOTION.wipe.gap} }, ${at});`));
   const none = parts('none');
   assert.ok(none.tl.includes(`tl.set('#end-quote', { opacity: 1 }, ${at});`));
@@ -237,4 +244,80 @@ test('--set ending.motion：只收那五種；和 ending.quote 一起寫、分�
   setPlan(proj, { 'ending.motion': 'rise' });
   assert.deepEqual(read().ending, { quote: '一句話', motion: 'rise' });
   assert.throws(() => setPlan(proj, { 'ending.motion': 'spin' }), /ending\.motion/);
+});
+
+// 082 片尾金句的位置、字級（剪輯台拖的）：plan.json 的 ending.x／y／size
+test('082 位置、字級：主合成照 x／y／size 排（框寬、行距等比例）；沒寫和以前一模一樣；寫錯 ✖、超出畫面 ⚠；--set ending.x／y／size', (t) => {
+  const conf = readEndingSetting(shared(t, { image: 'cover.jpg' }));
+  const parts = (res) => endingParts({ ...res.ending, card: { ...res.ending.card, file: 'assets/brand/ending-x.jpg' } }, { t0: 0, DUR: VD + ENDING.seconds, videoDur: VD, W: 1920, H: 1080, nextTrack: () => 1 });
+  const base = run({ ending: conf, plan: { ending: { quote: '第一段，第二段', motion: 'rise' } } });
+  assert.ok(parts(base).html[0].includes("left:1300px;top:575px;width:580px;font:400 48px/73px"));
+  assert.ok(!endingLines(base.ending)[0].includes('位置'), '沒拖過報告不多寫');
+  const moved = run({ ending: conf, plan: { ending: { quote: '第一段，第二段', motion: 'rise', x: 900, y: 300, size: 60 } } });
+  assert.deepEqual(moved.errors, []);
+  const p = parts(moved);
+  assert.ok(p.html[0].includes("left:900px;top:300px;width:725px;font:400 60px/91px"), p.html[0]);
+  assert.ok(p.css.includes('#end-quote .el + .el { margin-top: 91px; }'), '逐行的行距跟著字級');
+  assert.match(endingLines(moved.ending)[0], /位置 \(900, 300\)、字級 60/);
+  // 寫錯：不是數字 ✖；字級超出範圍 ⚠ 並夾住
+  assert.ok(run({ ending: conf, plan: { ending: { quote: 'x', x: '10' } } }).errors.some((e) => e.startsWith('ending.x 要是數字')));
+  const big = run({ ending: conf, plan: { ending: { quote: 'x', size: 300 } } });
+  assert.ok(big.warnings.some((w) => w.startsWith('片尾金句的字級 300 超出範圍（24–120），用 120')));
+  assert.equal(big.ending.card.box.size, 120);
+  // 超出畫面：往下拖太多 → 下緣 ⚠；往右拖太多 → 右緣 ⚠
+  assert.ok(run({ ending: conf, plan: { ending: { quote: '第一段，第二段', y: 1000 } } }).warnings.some((w) => w.includes('會超出畫面下緣') && w.includes('剪輯台')));
+  assert.ok(run({ ending: conf, plan: { ending: { quote: '一句', x: 1500 } } }).warnings.some((w) => w.startsWith('片尾金句的框超出畫面右緣')));
+  // --set
+  const proj = tmpDir(t, 'ending-pos-set-');
+  fs.mkdirSync(path.join(proj, 'work', 'hyperframes'), { recursive: true });
+  fs.writeFileSync(path.join(proj, 'work', 'hyperframes', 'plan.json'), '{\n  "version": 1\n}\n');
+  setPlan(proj, { 'ending.x': '900', 'ending.y': '300', 'ending.size': '60' });
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(proj, 'work', 'hyperframes', 'plan.json'), 'utf8')).ending, { x: 900, y: 300, size: 60 });
+  assert.throws(() => setPlan(proj, { 'ending.size': '500' }), /ending\.size/);
+  setPlan(proj, { 'ending.gap': '0.5', 'ending.w': '700', 'ending.lineSpacing': '0.2' });
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(proj, 'work', 'hyperframes', 'plan.json'), 'utf8')).ending, { x: 900, y: 300, size: 60, gap: 0.5, w: 700, lineSpacing: 0.2 });
+});
+
+test('082 作者分的段、框寬、段落間距：一段一塊（標點照留，太長照框寬換行）；w 固定框寬；gap 改段與段之間的距離（0–2 行，超出 ⚠ 夾住）；報告寫框寬、段落間距', (t) => {
+  const conf = readEndingSetting(shared(t, { image: 'cover.jpg' }));
+  const parts = (res) => endingParts({ ...res.ending, card: { ...res.ending.card, file: 'assets/brand/ending-x.jpg' } }, { t0: 0, DUR: VD + ENDING.seconds, videoDur: VD, W: 1920, H: 1080, nextTrack: () => 1 });
+  const quote = 'AI 讓我們用白話文就可以剪片\n但好內容，才是一切的基礎';
+  const m = run({ ending: conf, plan: { ending: { quote, x: 1238, y: 522 } } });
+  assert.deepEqual(m.errors, []);
+  const h = parts(m).html[0];
+  // 框寬照預設 580（固定），一段太長照框寬自動換行（一般的換行規則：標點不放行首、英文字不拆開）
+  assert.ok(h.includes('left:1238px;top:522px;width:580px;') && h.includes('overflow-wrap:anywhere') && !h.includes('word-break') && !h.includes('nowrap'), h);
+  assert.ok(h.includes('<span class="ec">，</span>'), '逗號照留');
+  assert.match(endingLines(m.ending)[0], /片尾金句「AI 讓我們用白話文就可以剪片／但好內容，才是一切的基礎」/);
+  // 框寬 w：固定寬，報告寫框寬
+  const wide = run({ ending: conf, plan: { ending: { quote, x: 1238, y: 522, w: 664 } } });
+  assert.ok(parts(wide).html[0].includes('left:1238px;top:522px;width:664px;'));
+  assert.match(endingLines(wide.ending)[0], /位置 \(1238, 522\)、字級 48、框寬 664/);
+  assert.ok(run({ ending: conf, plan: { ending: { quote, w: 900 } } }).warnings.some((w) => w.startsWith('片尾金句的框超出畫面右緣')), '1300＋900 超出右緣');
+  assert.ok(run({ ending: conf, plan: { ending: { quote, w: 'x' } } }).errors.some((e) => e.startsWith('ending.w 要是數字（框寬')));
+  // 段落間距：0–2 行（可以有小數）
+  for (const [gap, px] of [[0, 0], [0.5, 37], [0.3, 22], [1.5, 110]]) {
+    const r = run({ ending: conf, plan: { ending: { quote, gap } } });
+    assert.ok(parts(r).css.includes(`#end-quote .el + .el { margin-top: ${px}px; }`), `gap ${gap}`);
+  }
+  assert.match(endingLines(run({ ending: conf, plan: { ending: { quote, gap: 0.3 } } }).ending)[0], /段落間距 0\.3 行/);
+  const bad = run({ ending: conf, plan: { ending: { quote, gap: 3 } } });
+  assert.ok(bad.warnings.some((w) => w.startsWith('片尾金句的段落間距 3 行超出範圍（0–2 行），用 2')));
+  assert.ok(parts(bad).css.includes(`#end-quote .el + .el { margin-top: ${ENDING.quote.line * 2}px; }`), '夾到 2 行');
+  // 行間距（剪映的單位）：行高＝字級 ×（1.448＋行間距）；預設 0.07＝73 px（和剪映的定剪一樣）；段落間距跟著行高
+  const ls = run({ ending: conf, plan: { ending: { quote, lineSpacing: 0.5 } } });
+  assert.ok(parts(ls).html[0].includes('font:400 48px/94px'), '48 ×（1.448＋0.5）＝93.5 → 94');
+  assert.ok(parts(ls).css.includes('#end-quote .el + .el { margin-top: 94px; }'));
+  assert.match(endingLines(ls.ending)[0], /行間距 0\.5（行高 94）/);
+  assert.ok(run({ ending: conf, plan: { ending: { quote, lineSpacing: 3 } } }).warnings.some((w) => w.startsWith('片尾金句的行間距 3 超出範圍（0–1），用 1')));
+  // 沒換行的舊寫法照舊：折行、框寬 580
+  assert.ok(parts(run({ ending: conf, plan: { ending: { quote: '第一段，第二段' } } })).html[0].includes('width:580px;font:400 48px/73px \'Noto Sans TC\', sans-serif;color:#fff;word-break:break-all'));
+});
+
+test('082 即時套用：只改片尾金句的位置、字級，指紋不變（完成影片預覽直接改，不用更新預覽）；改字要更新預覽', async () => {
+  const { liveStrip } = await imp('editor/live-sound.mjs');
+  const strip = (ending) => JSON.stringify(liveStrip({ version: 1, ending }));
+  assert.equal(strip({ quote: '一句', x: 900, y: 300, size: 60, w: 700, lineSpacing: 0.3, gap: 0.5 }), strip({ quote: '一句' }));
+  assert.equal(strip({ x: 900 }), JSON.stringify(liveStrip({ version: 1 })), '只剩位置：整個 ending 拿掉，和沒寫一樣');
+  assert.notEqual(strip({ quote: '兩句', x: 900 }), strip({ quote: '一句', x: 900 }));
 });

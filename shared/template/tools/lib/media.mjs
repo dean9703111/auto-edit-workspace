@@ -124,7 +124,8 @@ const READ = 1.2, READ_QUICK = 0.8;   // 完整可讀（定案：一般 1.2s、q
 const CALLOUT = { gap: 56, gapV: 40, h: 96, padL: 14, padR: 32, padPlain: 32, icon: 64, iconGap: 20, border: 2, full: 40, half: 24, maxLen: 12,
   edge: 8, lineAt: 0.3, lineDur: 0.25, cardAt: 0.45, cardDur: 0.4, drift: 16, ready: 0.85, quick: 0.25, out: 0.3, elbow: 24, dot: 5 };
 const SPOT = { alpha: 0.35, pad: 8, rx: 12, fade: 0.4 };
-// 右側步驟清單（seg.side）：錄影放左邊 view（x 120、寬 720，置中），清單卡 x 840、寬 960，在 y 160–880（有講者小視窗：160–560）裡垂直置中
+// 右側步驟清單（seg.side）：錄影放左邊 view（x 120、寬 720，置中；高 846＝字幕帶以上 940 的 90%、上下各留 47：
+//   minimax-ep1 r22／r30 作者「手機錄影的片段可以90%，現在太貼齊上面了」「不應該完全置頂，這會導致畫面擁擠」），清單卡 x 840、寬 960，在 y 160–880（有講者小視窗：160–560）裡垂直置中
 // （使用者：「直式的可以靠左，右邊用動畫講解不是更好？」）
 // enter "tape"：截圖縮小放在這一區（上面留給膠帶、下面不碰字幕帶），紙白邊 12、膠帶 132×40
 export const TAPE = { view: [200, 90, 1520, 790], w: 132, out: 36, up: 20, drop: 0.35, gap: 0.1, dur: 0.15 };
@@ -135,7 +136,7 @@ const TAPE_PIP_GAP = 48;   // 072 有講者小視窗時，截圖區右緣離小�
 const CAPTION = { view: [200, 130, 1520, 635], gap: 44, h: 116, full: 56, half: 34, padL: 18, padR: 40, padPlain: 40, icon: 80, iconGap: 24, border: 2, maxLen: 30, in: 0.4, rise: 16 };
 const capWidth = (text, hasIcon) => CAPTION.border * 2 + (hasIcon ? CAPTION.padL + CAPTION.icon + CAPTION.iconGap : CAPTION.padPlain)
   + [...String(text)].reduce((a, ch) => a + (ch.codePointAt(0) >= 0x20 && ch.codePointAt(0) <= 0x7e ? CAPTION.half : CAPTION.full), 0) + CAPTION.padR;
-export const SIDE = { view: [120, 0, 720, 940], x: 840, w: 960, top: 160, bottom: 880, pipBottom: 560, bar: 112, row: 100, pad: 32, maxItems: 5, title: 12, text: 14, gap: 0.8, hi: 0.3, dim: 0.4, done: 0.7 };
+export const SIDE = { view: [120, 47, 720, 846], x: 840, w: 960, top: 160, bottom: 880, pipBottom: 560, bar: 112, row: 100, pad: 32, maxItems: 5, title: 12, text: 14, gap: 0.8, hi: 0.3, dim: 0.4, done: 0.7 };
 const STEP = { left: 48, top: 40, inset: 32, h: 80, extra: 118, maxLen: 12, in: 0.5, inX: -24, swOut: 0.25, swIn: 0.35, swDelay: 0.1, swReady: 0.45, carry: 0.1 };
 // 069 箭頭固定動畫（作者：「箭頭可以設計成固定使用的動畫，可以更有藝術感，外圍有輕微紅光，可以參考剪映」）：箭身由粗漸細（baseW→tailW）、外圍紅光（kit/media.css），
 // 沿箭身從 back px 外彈進來（enter 秒），到位後往目標點輕戳（poke px、單程 pokeDur 秒），until 前 exit 秒淡出。
@@ -2100,8 +2101,8 @@ export function mediaParts(it, { off = 0, lim = Infinity, base = '', nextTrack, 
   } else {
     html.push(`      <img id="mi-${id}" class="clip mimg${taped ? ' mimg--paper' : ''}" src="${base}${m.asset}" alt="" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}" style="${elStyle}">`);
   }
-  // 紙膠帶：貼在圖片兩個上角（stage 座標，跟著運鏡一起動）；不計時，進場時彈上去
-  if (taped) [[G.left - TAPE.out, -34], [G.left + G.width + TAPE.out - TAPE.w, 34]].forEach(([x, r], k) => html.push(`      <i id="mtp-${id}-${k + 1}" class="mtape" style="left:${Math.round(x)}px;top:${Math.round(G.top - TAPE.up)}px;rotate:${r}deg" data-layout-allow-overlap></i>`));
+  // 紙膠帶：貼在圖片兩個上角（stage 座標，跟著運鏡一起動）；進場時彈上去。要計時（和圖片同一段）：不計時的話段落結束後還留在畫面上（minimax-ep1 r17、r30 尾段左上的貼紙）
+  if (taped) [[G.left - TAPE.out, -34], [G.left + G.width + TAPE.out - TAPE.w, 34]].forEach(([x, r], k) => html.push(`      <i id="mtp-${id}-${k + 1}" class="clip mtape" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}" style="left:${Math.round(x)}px;top:${Math.round(G.top - TAPE.up)}px;rotate:${r}deg" data-layout-allow-overlap></i>`));
   if (m.marks.length) {
     html.push(`      <svg id="mmk-${id}" class="clip mmarks" data-start="${sh(s)}" data-duration="${n3(e - s)}" data-track-index="${nextTrack()}" viewBox="${vb}" data-layout-allow-overlap>`);
     for (const mk of m.marks) html.push(`        <g id="fo-${mk.id}"><rect id="${mk.id}" class="mmark" x="${mk.rect[0]}" y="${mk.rect[1]}" width="${mk.rect[2]}" height="${mk.rect[3]}" rx="${mk.rx}" pathLength="1" style="stroke-width:${mk.sw}px"/></g>`);

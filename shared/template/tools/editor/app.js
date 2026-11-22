@@ -13,6 +13,7 @@ import { SPEEDS, speedLabel, modelOf, fieldsOf, knotsOf, zoneAt, cutAt, setRate,
 import { transitionOf, speedSummary } from './motion.mjs';
 import { SimPreview, PlayerPreview } from './preview.js';
 import { soundOf, liveStrip, liveOk } from './live-sound.mjs';
+import { QUOTE, QUOTE_SIZE, QUOTE_LS, QUOTE_GAP, quoteParse, quoteBox, quoteHeight, quoteGap, quoteLineSpacing, quoteDefaultWidth, clampQuotePos, jySize, jyWidth } from './ending-layout.mjs';
 import { openMenu, closeMenu } from './menu.js';
 import { RQ_TAGS, RQ_REDO, RQ_REDO_NOTE, rqKindOf, rqTime, rqSpan, rqWhat, rqShown, rqFile, rqCommand as rqCommandOf, rqMarkdown as rqMarkdownOf, rqStamp } from '/lib/requests-md.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_WEIGHTS, CAP_SIZE, CAP_DEFAULT, sanitizeCaptionStyle, resolveCaptionStyle, captionGeom, captionRootVars, captionFontFace, describeCaptionStyle, CAP_VARS, CAP_LIFT, clampLift, describeLift, parseCaptionMarks, fmtCaptionMarks } from '/lib/caption-style.mjs';
@@ -47,6 +48,7 @@ const app = {
   report: null, reportReady: false, auditIssues: null, hiddenChecks: new Set(), requests: [], items: [], itemsView: [], animRows: 1, itemsHint: '檢查中…', sfxView: [], moodView: [], pieces: [], points: [],
   voiceOnly: [], voiceUncovered: [], uncovered: [], look: null, savedLook: null, lookPrev: {}, lookCss: 'none', theme: 'light', savedTheme: 'light', cap: null, savedCap: null, capDefault: true, marks: [], savedMarks: [], cutpoints: [], peaks: null, peaksHint: '波形計算中…', thumbs: {}, snapOn: true, tool: 'select',
   endMotion: 'type', savedEndMotion: 'type',   // 077 片尾金句的文字動畫（plan.json 的 ending.motion；沒寫＝工作區預設）
+  endText: {}, savedEndText: {},   // 082 片尾金句的字、位置、字級（plan.json 的 ending.quote／x／y／size；沒有的鍵＝沒寫，用預設）
   endView: null, outroView: null, endDur: 0,   // 076 片尾：片尾卡（model.mjs endingLane）、片尾配樂（outroLane）、片尾卡接在影片後面幾秒（時間軸多畫這一段，只能看）
   bedVol: 0, savedBedVol: 0, bedView: null, bedPeaks: null,   // 057 背景音樂：plan.json 的 bed.volume、時間軸那一軌（model.mjs bedLane）、上一次 build 的 wav 波形
   tracks: { anim: {}, media: {}, main: {}, cap: {}, voice: {}, sfx: {}, bed: {} },
@@ -150,7 +152,21 @@ app.outroPlay = () => {
   return { url: b.url, at: b.at || 0, dur: b.dur, gain: 1 };
 };
 // 片尾卡的示意（快速試聽走到片尾卡那幾秒時放）：圖和金句照上一次 build 的；還沒 build 過就只有字
-app.endCard = () => (app.endView ? { dur: app.endView.dur, image: app.endView.image, lines: app.endView.lines, layout: app.server?.end?.layout || null, motion: app.endMotion } : null);
+app.endCard = () => {
+  if (!app.endView) return null;
+  const L = app.server?.end?.layout || null;
+  return { dur: app.endView.dur, image: app.endView.image, lines: endLines(), layout: L && { ...L, quote: { ...L.quote, ...endBox() } }, motion: app.endMotion };
+};
+const ENDING_SHOW_AT = 6.5;   // 082 改字、改字級時把播放頭帶到片尾卡的這一秒（打字機 0.633＋5.23 秒打完，還沒淡出）
+// 082 片尾金句現在的字：這一集改過的（null＝不放）；沒改過照檢查報告（講稿最後的 > 引言、金句字卡）
+//   文字框照畫面上的分行放（一行一行）：框裡看到的＝畫面上的；有換行＝作者分的行，標點照留、不自動折行（ending-layout.mjs quoteParse）
+const endParse = () => ('quote' in app.endText ? quoteParse(app.endText.quote) : { lines: app.endView?.lines || [], manual: !!app.endView?.manual });
+const endQuoteText = () => ('quote' in app.endText ? app.endText.quote ?? '' : (app.endView?.lines || []).join('\n'));
+const endLines = () => endParse().lines;
+const endBox = () => quoteBox(app.endText, endParse());
+app.endQuoteShown = () => { const q = endParse(); return q.lines.join(q.manual ? '／' : '，'); };   // 時間軸的片尾卡方塊、「現在」列、提示寫的金句（改過就是改過的）
+// 完成影片預覽直接改金句框（preview.js applyEnding）：位置、字級；字和上次 build 的不一樣就先換成整段（文字動畫要更新預覽才照新的字排）
+app.endLive = () => (app.endView ? { box: endBox(), lines: endLines(), built: app.server?.end?.ending?.quote || [] } : null);
 app.endAt = () => app.dur + app.endDur;   // 時間軸的結尾（含片尾卡）
 app.isSelected = (kind, id) => app.selection?.kind === kind && app.selection.id === id;
 app.headTail = () => {
@@ -187,14 +203,15 @@ app.snapCandidates = ({ play = false } = {}) => {
 // ---------- 快照、復原 ----------
 const editableScenes = () => app.scenes;
 // 快照記著它是對哪一版檔案算的（base）：自動存檔之後檔案已經往前走，復原時要先把檔案換回那一版
-const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol, endMotion: app.endMotion });
-const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol, endMotion: app.endMotion });
+const snapshot = () => JSON.stringify({ base: app.base, edit: app.edit, scenes: editableScenes(), ops: app.srtOps, cues: app.cues, splits: app.splits, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol, endMotion: app.endMotion, endText: app.endText });
+const dirtySnap = () => JSON.stringify({ edit: app.edit, scenes: editableScenes(), ops: app.srtOps, look: app.look, theme: app.theme, cap: app.cap, marks: app.marks, bedVol: app.bedVol, endMotion: app.endMotion, endText: app.endText });
 const isDirty = () => app.savedSnap !== '' && dirtySnap() !== app.savedSnap;
 // 058 還沒存的修改是不是只有直接套得上的（聲音：人聲、音效、素材原聲、背景音樂、範圍音量、各段音量；字幕樣式；整則的重點字幕。
 // editor/live-sound.mjs 的 liveStrip 拿掉的那幾個欄位；cap、marks 是頁面上的字幕樣式和重點字幕）
 // 字幕只改字的操作（r8：完成影片預覽直接換字，preview.js applyText）；改時間、分割、合併、刪句不算
 const textOnlyOp = (o) => o?.op === 'set' && Object.keys(o).every((k) => k === 'op' || k === 'n' || k === 'text');
-const restSnap = (snap) => { const o = JSON.parse(snap), st = liveStrip({ edit: o.edit, scenes: o.scenes }); return JSON.stringify({ ...o, edit: st.edit, scenes: st.scenes, ops: (o.ops || []).filter((x) => !textOnlyOp(x)), bedVol: undefined, cap: undefined, marks: undefined }); };
+const restSnap = (snap) => { const o = JSON.parse(snap), st = liveStrip({ edit: o.edit, scenes: o.scenes }); return JSON.stringify({ ...o, edit: st.edit, scenes: st.scenes, ops: (o.ops || []).filter((x) => !textOnlyOp(x)), bedVol: undefined, cap: undefined, marks: undefined, endText: endTextOnly(o.endText) }); };
+const endTextOnly = (e) => (e && 'quote' in e ? { quote: e.quote } : {});   // 082 金句的位置、字級直接套；字要更新預覽
 const dirtyLiveOnly = () => isDirty() && restSnap(dirtySnap()) === restSnap(app.savedSnap);
 // 頁面上現在的聲音（還沒存的也算）：完成影片預覽照它和做進去的值（/api/state 的 preview.sound）的差改音量
 let soundCache = null;
@@ -266,7 +283,7 @@ app.gestureEnd = (commit = true) => {
 function restore(s) {
   const o = JSON.parse(s);
   app.edit = normEdit(o.edit);
-  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap; app.marks = o.marks ?? app.savedMarks; app.bedVol = o.bedVol ?? app.savedBedVol; app.endMotion = o.endMotion ?? app.savedEndMotion;
+  app.scenes = o.scenes; app.srtOps = o.ops; app.cues = o.cues; app.splits = o.splits || []; app.look = o.look ?? null; app.theme = o.theme ?? app.savedTheme; app.cap = 'cap' in o ? o.cap : app.savedCap; app.marks = o.marks ?? app.savedMarks; app.bedVol = o.bedVol ?? app.savedBedVol; app.endMotion = o.endMotion ?? app.savedEndMotion; app.endText = o.endText ?? app.savedEndText;
   app.lastCoalesce = null;
   if (app.selection?.kind === 'cue' && !app.cues.some((c) => c.n === app.selection.id)) app.selection = null;
   changed({ inspector: true });
@@ -983,6 +1000,8 @@ async function loadState({ keep = null, waitSave = true, framing = false } = {})
   app.bedVol = app.savedBedVol;
   app.savedEndMotion = normEndMotion(app.plan0);
   app.endMotion = app.savedEndMotion;
+  app.savedEndText = normEndText(app.plan0);
+  app.endText = clone(app.savedEndText);
   app.scenes = clone(Array.isArray(app.plan0.scenes) ? app.plan0.scenes : []);
   app.cues = clone(app.cues0);
   app.savedMarks = normMarks(app.plan0.captionMarks, app.cues0);
@@ -1044,6 +1063,7 @@ function applyKept(kept) {
   if ('cap' in kept) app.cap = kept.cap;
   if ('bedVol' in kept) app.bedVol = kept.bedVol;
   if ('endMotion' in kept) app.endMotion = kept.endMotion;
+  if ('endText' in kept) app.endText = kept.endText;
   let opsOk = !kept.ops?.length;
   if (kept.ops?.length && kept.srtHash === app.base.srtHash) {
     // 重點字幕（038）一起重播：檔案裡的標記照這幾步字幕操作換句號
@@ -1423,13 +1443,14 @@ function applySaved(d, { keepLocal = false, sentOps = 0, fallbackEdit = null } =
   app.savedMarks = normMarks(app.plan0.captionMarks, app.cues0);
   app.savedBedVol = normBedVol(app.plan0.bed);
   app.savedEndMotion = normEndMotion(app.plan0);
+  app.savedEndText = normEndText(app.plan0);
   if (d.look) app.server.look = d.look;
   if (d.captionStyle) app.server.captionStyle = d.captionStyle;
   if (keepLocal) {
     app.srtOps = app.srtOps.slice(sentOps);
     // 正在拖的快照也要換基準：沒拖動就放開會還原成快照，不能把已經存好的字幕操作再送一次
     if (app.gesture) { const g = JSON.parse(app.gesture); g.ops = g.ops.slice(sentOps); g.base = app.base; app.gesture = JSON.stringify(g); }
-    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap, marks: app.savedMarks, bedVol: app.savedBedVol, endMotion: app.savedEndMotion });
+    app.savedSnap = JSON.stringify({ edit: app.savedEdit, scenes: app.plan0.scenes || [], ops: [], look: app.savedLook, theme: app.savedTheme, cap: app.savedCap, marks: app.savedMarks, bedVol: app.savedBedVol, endMotion: app.savedEndMotion, endText: app.savedEndText });
     return;
   }
   app.edit = clone(app.savedEdit);
@@ -1439,6 +1460,7 @@ function applySaved(d, { keepLocal = false, sentOps = 0, fallbackEdit = null } =
   app.marks = clone(app.savedMarks);
   app.bedVol = app.savedBedVol;
   app.endMotion = app.savedEndMotion;
+  app.endText = clone(app.savedEndText);
   app.scenes = clone(app.plan0.scenes || []);
   app.cues = clone(app.cues0);
   app.srtOps = [];
@@ -1467,7 +1489,8 @@ async function saveOnce({ notify, retry = 0 }) {
   if (!same(app.look, app.savedLook)) body.look = app.look ? { color: r2(app.look.color), slim: r2(app.look.slim), ...(app.look.beauty > 0 ? { beauty: r2(app.look.beauty) } : {}), ...(app.look.belly > 0 ? { belly: r2(app.look.belly) } : {}) } : null;   // 美顏 0＝關，不寫
   if (app.theme !== app.savedTheme) body.theme = app.theme;
   if (!same(app.cap, app.savedCap)) body.captionStyle = app.cap;
-  if (app.endMotion !== app.savedEndMotion) body.ending = { motion: app.endMotion };   // 077 片尾金句的文字動畫（plan.json 的 ending.motion；和工作區預設一樣的伺服器不寫）
+  const ending = endingForSave();   // 077 片尾金句的文字動畫、082 字、位置、字級（plan.json 的 ending；和工作區預設一樣的伺服器不寫）
+  if (ending) body.ending = ending;
   if (app.bedVol !== app.savedBedVol) body.bed = { volume: app.bedVol };   // 057 背景音樂音量（plan.json 的 bed.volume；伺服器照 build.mjs --set 的規則檢查）
   // 重點字幕整份送（句號是字幕操作做完之後的）。同時有字幕操作時一定送：頁面上的句號已經換過，光和存檔時的清單比數字會比錯
   if (!same(app.marks, app.savedMarks) || (app.srtOps.length && (app.marks.length || app.savedMarks.length))) body.captionMarks = fmtCaptionMarks(app.marks);
@@ -1644,6 +1667,7 @@ function keepState() {
     ...(!same(app.cap, app.savedCap) ? { cap: clone(app.cap) } : {}),
     ...(app.bedVol !== app.savedBedVol ? { bedVol: app.bedVol } : {}),
     ...(app.endMotion !== app.savedEndMotion ? { endMotion: app.endMotion } : {}),
+    ...(!same(app.endText, app.savedEndText) ? { endText: clone(app.endText) } : {}),
     ...(!same(app.marks, app.savedMarks) || (app.srtOps.length && (app.marks.length || app.savedMarks.length)) ? { marks: clone(app.marks) } : {}) };
 }
 const keepIfDirty = () => (isDirty() ? keepState() : null);
@@ -2138,20 +2162,72 @@ function bedTip() {
 }
 
 // 077 片尾卡的屬性：金句的文字動畫用下拉選單選（常見的幾種；選了存進這一集 plan.json 的 ending.motion，快速試聽馬上照新的示意，完成影片預覽要更新預覽）。
-// 圖、金句的字、秒數在這裡只能看
+// 082 金句的字（文字框）、字級（滑桿）、位置（在預覽畫面上拖）：存進 ending.quote／size／x／y。位置、字級兩種預覽都馬上看得到；改字快速試聽馬上照新的字，
+// 完成影片預覽先換成整段字，文字動畫要更新預覽才照新的字排。圖、秒數在這裡只能看
 function inspEnding() {
   const E = app.endView;
   if (!E) return '<section class="ip-sec"><p class="ip-note">這一集沒有片尾卡。</p></section>';
-  const dflt = endMotionDefault(), built = app.server?.end?.motionBuilt;
+  const dflt = endMotionDefault(), built = app.server?.end?.motionBuilt, lines = endLines(), b = endBox(), gap = quoteGap(app.endText.gap), ls = quoteLineSpacing(app.endText.lineSpacing);
   const opts = endMotions().map((m) => `<option value="${esc(m.id)}"${m.id === app.endMotion ? ' selected' : ''}>${esc(m.zh)}${m.id === dflt ? '（預設）' : ''}</option>`).join('');
   const now = endMotions().find((m) => m.id === app.endMotion);
-  const stale = E.quote && built && built !== app.endMotion ? `<p class="ip-note">完成影片預覽裡還是「${esc(endMotionZh(built))}」：按「更新預覽」才會換；「快速試聽」已經是新的。</p>` : '';
+  const stale = lines.length && built && built !== app.endMotion ? `<p class="ip-note">完成影片預覽裡還是「${esc(endMotionZh(built))}」：按「更新預覽」才會換；「快速試聽」已經是新的。</p>` : '';
+  const builtLines = app.server?.end?.ending?.quote || [];
+  const textStale = app.server?.preview?.built && lines.length && !same(lines, builtLines) ? '<p class="ip-note">完成影片預覽先放整段新的字；要照新的字跑文字動畫，按「更新預覽」。</p>' : '';
+  const moved = ['x', 'y', 'size', 'w'].some((k) => k in app.endText);
   return `<section class="ip-sec"><h3>片尾金句</h3>
-    <p class="ip-note">${E.quote ? `「${esc(E.quote)}」` : '這一集沒有放片尾金句，只有圖。'}</p>
-    ${E.quote ? `<div class="ip-row"><label>文字動畫</label><select aria-label="片尾金句的文字動畫" data-f="endMotion">${opts}</select></div>
-    <p class="ip-note">${esc(now?.tip || '')}</p>${stale}` : ''}
+    <textarea class="ip-text end-quote-text" rows="3" aria-label="片尾金句的字" data-f="endQuote" placeholder="清空＝這一集不放金句">${esc(endQuoteText())}</textarea>
+    <p class="ip-note">按 Enter 換一段（段與段之間的距離用下面的「段落間距」調），標點照留；一段太長照框寬自動換行。清空＝這一集不放金句，只有圖。</p>${textStale}
+    ${lines.length ? `<div class="ip-row"><label>文字動畫</label><select aria-label="片尾金句的文字動畫" data-f="endMotion">${opts}</select></div>
+    <p class="ip-note">${esc(now?.tip || '')}</p>${stale}
+    ${sliderRow('字號', 'endSize', b.size, { min: QUOTE_SIZE.min, max: QUOTE_SIZE.max, step: 2, out: endSizeOut(b), def: QUOTE.size, tip: `剪映的字號（括號裡是畫面上的 px），你的剪映設定是 7（48 px）；框寬、行距跟著等比例變。也可以在預覽畫面上拖金句框的右下角` })}
+    ${sliderRow('固定寬度', 'endW', b.width, { min: b.size * 2, max: Math.max(b.size * 2, app.canvas().W - b.left), step: 2, out: endWOut(b), def: quoteDefaultWidth(b.size), tip: '剪映的固定寬度（括號裡是 px），你的剪映設定是 290（580 px）；一段太長照這個寬自動換行。也可以在預覽畫面上拖金句框的右邊' })}
+    ${sliderRow('行間距', 'endLs', ls, { min: QUOTE_LS.min, max: QUOTE_LS.max, step: 0.01, out: endLsOut(ls, b), def: QUOTE.lineSpacing, tip: '剪映的行間距（括號裡是行高 px），你的剪映設定是 0.07（73 px）：一段換行之後，行與行之間的距離' })}
+    ${sliderRow('段落間距', 'endGap', gap, { min: QUOTE_GAP.min, max: QUOTE_GAP.max, step: 0.05, out: endGapOut(gap, b), def: QUOTE.gap, tip: '段與段之間空幾行（剪映裡你是空一行＝1）' })}
+    <div class="ip-row"><label>位置</label><span class="ip-val" data-out="endPos">左 ${b.left}・上 ${b.top}</span></div>
+    <div class="ip-btns"><button class="small ghost" data-act="endBox0"${moved ? '' : ' disabled'} data-tip="位置、字級、框寬回到原本的（書封右邊、48 px、580 px）；雙擊預覽畫面上的金句框也可以">回到原本的位置和大小</button></div>
+    <p class="ip-note">播放頭在片尾卡時，預覽畫面上的金句有虛線框：拖框移動，拖右邊改框寬，拖右下角放大縮小，方向鍵微調（Shift 一次 10 px）。位置、大小、框寬、段落間距在完成影片預覽馬上看得到。</p>` : ''}
   </section>
-  <section class="ip-sec"><p class="ip-note">片尾卡接在影片講完之後，圖、金句的字和秒數在這裡不能改：要換請跟 AI 說（例：「片尾金句改成…」「這集不要片尾」）。每一集都用同一種文字動畫，也跟 AI 說。</p></section>`;
+  <section class="ip-sec"><p class="ip-note">片尾卡接在影片講完之後，圖和秒數在這裡不能改：要換請跟 AI 說（例：「片尾換這張圖」「這集不要片尾」）。每一集都用同一種文字動畫，也跟 AI 說。</p></section>`;
+}
+
+// 082 金句框的位置、字級：框不出畫面；和預設一樣的鍵拿掉（plan.json 不寫）
+function endBoxPatch(patch) {
+  const q = endParse(), b = quoteBox(app.endText, q), o = { ...app.endText };
+  const p = clampQuotePos({ x: b.left, y: b.top, size: b.size, ...('w' in o ? { w: b.width } : {}), ...patch }, app.canvas(), q);
+  const def = quoteBox({});
+  for (const [k, d] of [['x', def.left], ['y', def.top], ['size', def.size]]) { if (p[k] === d) delete o[k]; else o[k] = p[k]; }
+  if ('w' in p) { if (p.w === quoteDefaultWidth(p.size)) delete o.w; else o.w = p.w; }   // 框寬：和這個字級的預設寬一樣不寫
+  if ('gap' in patch) { if (quoteGap(patch.gap) === QUOTE.gap) delete o.gap; else o.gap = quoteGap(patch.gap); }   // 段落間距：和預設一樣不寫
+  if ('lineSpacing' in patch) { const v = quoteLineSpacing(patch.lineSpacing); if (v === QUOTE.lineSpacing) delete o.lineSpacing; else o.lineSpacing = v; }   // 行間距：和剪映的設定一樣不寫
+  return o;
+}
+const setEndBox = (patch, opts = {}) => mutate(() => { app.endText = endBoxPatch(patch); }, opts);
+function endBox0() { mutate(() => { const o = { ...app.endText }; delete o.x; delete o.y; delete o.size; delete o.w; app.endText = o; }, { inspector: true }); }
+const endGapOut = (g, b) => `${g} 行（${b.gap} px）`;
+// 剪映的單位（ending-layout.mjs JY）：字號、固定寬度、行間距；括號裡是畫面上的 px
+const endSizeOut = (b) => `${jySize(b.size)}（${b.size} px）`;
+const endWOut = (b) => `${jyWidth(b.width)}（${b.width} px）`;
+const endLsOut = (v, b) => `${v.toFixed(2)}（${b.line} px）`;
+// 拖框、改字級時順便更新屬性面板上的數字（不重畫整個面板，拖的時候滑桿才不會被換掉）
+function endOuts() {
+  const b = endBox(), set = (k, t) => { const o = $(`#inspBody [data-out="${k}"]`); if (o) o.textContent = t; };
+  set('endPos', `左 ${b.left}・上 ${b.top}`); set('endSize', endSizeOut(b)); set('endW', endWOut(b));
+  set('endLs', endLsOut(quoteLineSpacing(app.endText.lineSpacing), b)); set('endGap', endGapOut(quoteGap(app.endText.gap), b));
+}
+// 預覽畫面上的金句框（#endDrag）：播放頭在片尾卡、有金句時出現；框住整段打完的範圍（停在打字打到一半也一樣大）
+function placeEndDrag() {
+  const el = $('#endDrag');
+  if (!el) return;
+  const lines = endLines(), on = !!app.endView && app.endDur > 0 && app.t > app.dur + 1e-3 && lines.length > 0 && app.server?.canvas?.format !== 'portrait';
+  if (el.hidden === on) el.hidden = !on;
+  if (!on) return;
+  const { W, H } = app.canvas(), b = endBox(), h = Math.max(b.line, quoteHeight(lines, b));
+  const key = `${b.left},${b.top},${b.width},${b.size},${h},${W},${H}`;
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  Object.assign(el.style, { left: `${(b.left / W) * 100}%`, top: `${(b.top / H) * 100}%`, width: `${(b.width / W) * 100}%`, height: `${(h / H) * 100}%` });
+  el.firstElementChild.textContent = `片尾金句　左 ${b.left}・上 ${b.top}・字 ${b.size}・寬 ${b.width}`;
+  endOuts();
 }
 
 // 076 片尾配樂、片尾卡的提示（滑上去、點一下都是這幾行）：在哪裡、多長、怎麼改
@@ -2167,7 +2243,7 @@ function outroTip() {
 function endingTip() {
   const E = app.endView;
   if (!E) return '沒有片尾卡';
-  return `片尾卡 ${fmtSec(E.dur)}：影片講完後接黑底的圖${E.quote ? `＋片尾金句「${E.quote}」` : ''}\n這幾秒不在錄影裡，只能看、不能剪；「完成影片預覽」會播出來，「快速試聽」放示意\n要換圖、改金句、這一集不要片尾：跟 AI 說（例：「片尾金句改成…」「這集不要片尾」）`;
+  return `片尾卡 ${fmtSec(E.dur)}：影片講完後接黑底的圖${app.endQuoteShown() ? `＋片尾金句「${app.endQuoteShown()}」` : ''}\n這幾秒不在錄影裡，只能看、不能剪；「完成影片預覽」會播出來，「快速試聽」放示意\n金句的字、字級、文字動畫：點片尾卡在右邊「屬性」改；位置：播放頭停在片尾卡，在預覽畫面上拖金句\n要換圖、這一集不要片尾：跟 AI 說（例：「片尾換這張圖」「這集不要片尾」）`;
 }
 
 // ---------- 主題（亮／暗；plan.json 第一層 "theme"，specs/010-motion-v2/design-system.md §10）----------
@@ -2179,6 +2255,21 @@ const endMotions = () => app.server?.end?.motions || [];
 const endMotionDefault = () => app.server?.end?.motionDefault || 'type';
 const normEndMotion = (plan) => { const v = plan?.ending && typeof plan.ending === 'object' ? plan.ending.motion : undefined; return endMotions().some((m) => m.id === v) ? v : endMotionDefault(); };
 const endMotionZh = (id) => endMotions().find((m) => m.id === id)?.zh || id;
+// 082 這一集 plan.json 的 ending.quote／x／y／size／w／lineSpacing／gap（只留寫了的鍵；quote 寫 null＝不放）
+function normEndText(plan) {
+  const e = plan?.ending && typeof plan.ending === 'object' ? plan.ending : {}, o = {};
+  if (typeof e.quote === 'string' || e.quote === null) o.quote = e.quote;
+  for (const k of ['x', 'y', 'size', 'w', 'lineSpacing', 'gap']) if (Number.isFinite(e[k])) o[k] = e[k];
+  return o;
+}
+// 存檔送的 ending：只送改過的（null＝拿掉回到預設；quote 空白伺服器存成 null＝不放）
+function endingForSave() {
+  const o = {}, a = app.endText, b = app.savedEndText;
+  if (app.endMotion !== app.savedEndMotion) o.motion = app.endMotion;
+  if ('quote' in a && a.quote !== b.quote) o.quote = a.quote;
+  for (const k of ['x', 'y', 'size', 'w', 'lineSpacing', 'gap']) if (a[k] !== b[k]) o[k] = a[k] ?? null;
+  return Object.keys(o).length ? o : null;
+}
 function inspTheme() {
   // 用屬性面板的 .seg-btns（不能用 .seg：預覽模式切換會把所有 .seg button 的 on 重設）
   const b = (v, label, tip) => `<button class="${app.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}" aria-pressed="${app.theme === v}" data-tip="${esc(tip)}">${label}</button>`;
@@ -2779,6 +2870,11 @@ function onInspInput(e) {
   if (f === 'capSize') { outEl(f).textContent = `${num} px`; outEl(f).classList.toggle('changed', num !== CAP_SIZE.def); setCap({ size: num }, { coalesce: f, inspector: false }); return; }
   if (f === 'capLift') { outEl(f).textContent = describeLift(num); outEl(f).classList.toggle('changed', num !== 0); setCap({ lift: num }, { coalesce: f, inspector: false }); return; }
   if (f === 'capFont') { setCap({ font: el.value }); return; }
+  if (f === 'endQuote') { const v = el.value.trim(); mutate(() => { app.endText = { ...app.endText, quote: v || null }; }, { coalesce: f }); if (app.t <= app.dur) app.seek(app.dur + ENDING_SHOW_AT); return; }   // 082 打字就帶到片尾卡（金句打完那一格），馬上看得到
+  if (f === 'endLs') { setEndBox({ lineSpacing: num }, { coalesce: f }); endOuts(); outEl(f).classList.toggle('changed', quoteLineSpacing(num) !== QUOTE.lineSpacing); if (app.t <= app.dur) app.seek(app.dur + ENDING_SHOW_AT); return; }   // 082 行間距（剪映的單位）
+  if (f === 'endGap') { setEndBox({ gap: num }, { coalesce: f }); endOuts(); outEl(f).classList.toggle('changed', quoteGap(num) !== QUOTE.gap); if (app.t <= app.dur) app.seek(app.dur + ENDING_SHOW_AT); return; }   // 082 段落間距（行）
+  if (f === 'endW') { const b = endBox(); setEndBox({ w: num, size: b.size }, { coalesce: f }); endOuts(); outEl(f).classList.toggle('changed', 'w' in app.endText); if (app.t <= app.dur) app.seek(app.dur + ENDING_SHOW_AT); return; }   // 082 框寬
+  if (f === 'endSize') { outEl(f).classList.toggle('changed', num !== QUOTE.size); const b = endBox(); setEndBox({ size: num, ...('w' in app.endText ? { w: Math.round((b.width * num) / b.size) } : {}) }, { coalesce: f }); endOuts(); if (app.t <= app.dur) app.seek(app.dur + ENDING_SHOW_AT); return; }
   if (f === 'endMotion') { if (!endMotions().some((m) => m.id === el.value)) return; mutate(() => { app.endMotion = el.value; }, { inspector: true }); if (app.t <= app.dur) app.seek(app.dur + 0.4); return; }   // 077 選了就把播放頭帶到片尾卡，馬上看得到
   if (f === 'capDefault') { app.capDefault = el.checked; if (el.checked) pushCapDefault(); return; }
   if (f === 'level') { mutate(() => { app.edit.level = el.checked; }); return; }
@@ -2874,6 +2970,7 @@ function onInspClick(e) {
     case 'capLook': return setCap({ look: b.dataset.v });
     case 'capWeight': return setCap({ weight: Number(b.dataset.v) });
     case 'capReset': return setCap({ ...CAP_DEFAULT });
+    case 'endBox0': return endBox0();
     case 'capLift0': return setCap({ lift: 0 });
     case 'bulk': return bulkJoins(b.dataset.v);
     case 'restore': return restoreCut(Number(b.dataset.i));
@@ -3923,6 +4020,48 @@ $('#capEditor').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.
   });
 }
 $('#capEditor').addEventListener('blur', () => closeCapEditor(true));
+// 082 片尾金句拖曳：拖框＝移動，拖右邊＝框寬（字照框寬換行），拖右下角＝放大縮小（字級 2 px 一格，框寬、行距跟著變）；螢幕 px 換成畫布 px（畫布寬 ÷ 預覽框寬）。Esc 取消、雙擊回原位
+{
+  const el = $('#endDrag');
+  let d = null;
+  const end = (commit) => { if (!d) return; d = null; el.classList.remove('dragging'); app.gestureEnd(commit); placeEndDrag(); };
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || historyBlocked()) return;
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    el.focus({ preventScroll: true });
+    if (app.selection?.kind !== 'ending') app.select({ kind: 'ending', id: 'ending' }, { lane: 'ending' });   // 右邊屬性換成片尾卡（字、字級、文字動畫）
+    d = { x: e.clientX, y: e.clientY, b: endBox(), sc: app.canvas().W / ($('#stageBox').clientWidth || 1), grip: !!e.target.closest('.end-drag-grip'), edge: !!e.target.closest('.end-drag-edge'), hasW: 'w' in app.endText };
+    app.gestureBegin();
+    el.classList.add('dragging');
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!d) return;
+    const dx = (e.clientX - d.x) * d.sc, dy = (e.clientY - d.y) * d.sc;
+    let patch;
+    if (d.edge) patch = { x: d.b.left, y: d.b.top, size: d.b.size, w: Math.round((d.b.width + dx) / 2) * 2 };
+    else if (d.grip) {
+      const size = Math.round(clamp((d.b.size * (d.b.width + dx)) / d.b.width, QUOTE_SIZE.min, QUOTE_SIZE.max) / 2) * 2;
+      patch = { x: d.b.left, y: d.b.top, size, ...(d.hasW ? { w: Math.round((d.b.width * size) / d.b.size) } : {}) };   // 框寬拖過的：跟著字級等比例（一行放的字數不變）
+    } else patch = { x: Math.round(d.b.left + dx), y: Math.round(d.b.top + dy), size: d.b.size, ...(d.hasW ? { w: d.b.width } : {}) };
+    const next = endBoxPatch(patch);
+    if (same(next, app.endText)) return;
+    app.endText = next;   // 拖的過程直接改（兩種預覽每一格照它畫），放開才進復原清單、存檔
+    placeEndDrag();   // 屬性面板的數字（字號、固定寬度…）在這裡一起更新（endOuts）
+  });
+  el.addEventListener('pointerup', () => end(true));
+  el.addEventListener('pointercancel', () => end(true));
+  el.addEventListener('lostpointercapture', () => end(true));
+  el.addEventListener('dblclick', () => endBox0());
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && d) { e.preventDefault(); e.stopPropagation(); end(false); return; }
+    const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (!dir) return;
+    e.preventDefault(); e.stopPropagation();
+    const step = e.shiftKey ? 10 : 2, b = endBox();
+    setEndBox({ x: b.left + dir[0] * step, y: b.top + dir[1] * step, ...('w' in app.endText ? { w: b.width } : {}) }, { coalesce: 'endPos', inspector: true });
+  });
+}
 // 縮放
 $('#zoom').addEventListener('input', (e) => timeline.setZoom01(Number(e.target.value) / 1000));
 $('#zoom').addEventListener('change', (e) => e.target.blur());
@@ -4462,18 +4601,19 @@ function currentSeg(t) {
   return on.sort((a, b) => rank(a) - rank(b) || b.start - a.start)[0] || null;
 }
 function renderNow() {
+  placeEndDrag();
   const seg = currentSeg(app.t);
   const gap = seg ? null : app.uncovered.find(([a, b]) => app.t >= a && app.t < b);
   const voice = !seg && !gap && app.voiceOnly.some(([a, b]) => app.t >= a && app.t < b);
   const card = !seg && !gap && app.endDur > 0 && app.t > app.dur + 1e-3;   // 076 播放頭在片尾卡那幾秒
-  const key = seg ? `s:${seg.id}:${seg.title}` : gap ? `g:${gap[0]}` : card ? `end:${app.endView?.quote || ''}` : voice ? 'voice' : 'none';
+  const key = seg ? `s:${seg.id}:${seg.title}` : gap ? `g:${gap[0]}` : card ? `end:${app.endQuoteShown()}` : voice ? 'voice' : 'none';
   markNowRow();
   if (key === nowKey) return;
   nowKey = key;
   const bar = $('#nowBar');
   if (seg) bar.innerHTML = `<span class="k">現在</span><span class="x" title="${esc(seg.title)}">${esc(seg.title)}</span><button class="i small ghost" data-now="go" data-tip="選這段，看能改什麼">${esc(seg.id)}</button><button class="small" data-now="req">✎ 這段想改</button>`;
   else if (gap) bar.innerHTML = `<span class="k">現在</span><span class="x">這裡只有講者，沒有字卡</span><button class="small" data-now="gap">✎ 這裡想加畫面</button>`;
-  else if (card) bar.innerHTML = `<span class="k">現在</span><span class="x">片尾卡${app.endView?.quote ? `：${esc(app.endView.quote)}` : ''}</span>`;
+  else if (card) bar.innerHTML = `<span class="k">現在</span><span class="x">片尾卡${app.endQuoteShown() ? `：${esc(app.endQuoteShown())}` : ''}</span>`;
   else bar.innerHTML = `<span class="k">現在</span><span class="x">${voice ? '這裡只有聲音' : '這裡只有講者'}</span>`;
 }
 function markNowRow(force = false) {

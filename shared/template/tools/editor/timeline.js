@@ -411,7 +411,8 @@ export class Timeline {
         g.strokeStyle = sel ? '#FFFFFF' : 'rgba(255,255,255,0.55)'; g.lineWidth = sel ? 2 : 1; rr(ea + 0.5, y + 0.5, Math.max(2, eb - ea - 1), h - 1, 4); g.stroke();
         if (eb - ea > 44) clipRect(ea + 4, y, eb - ea - 8, h, () => {
           g.font = font(11, 700); g.textBaseline = 'middle'; g.fillStyle = '#fff';
-          g.fillText(`片尾卡 ${fmtSec(E.dur)}${E.quote ? `｜${E.quote}` : ''}`, Math.max(ea, 0) + 7, y + h / 2);
+          const q = A.endQuoteShown ? A.endQuoteShown() : E.quote;   // 082 剪輯台改過的金句
+          g.fillText(`片尾卡 ${fmtSec(E.dur)}${q ? `｜${q}` : ''}`, Math.max(ea, 0) + 7, y + h / 2);
         });
       }
     }

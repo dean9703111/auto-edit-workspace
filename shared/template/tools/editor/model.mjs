@@ -248,7 +248,9 @@ export function endingLane(report, server) {
   const e = report !== undefined ? report?.ending : built;
   if (!e || !(e.dur > 0)) return null;
   const quote = Array.isArray(e.quote) ? e.quote.join('，') : typeof e.quote === 'string' ? e.quote : '';
-  return { dur: r3(e.dur), quote, image: built?.image || null, lines: Array.isArray(built?.quote) && built.quote.length ? built.quote : quote ? quote.split('，') : [] };
+  // 082 行：報告的 quoteLines（作者分的行裡有逗號，不能再用逗號切）＞上次 build 的＞舊報告照逗號切
+  const lines = Array.isArray(e.quoteLines) && e.quoteLines.length ? e.quoteLines : Array.isArray(built?.quote) && built.quote.length ? built.quote : quote ? quote.split('，') : [];
+  return { dur: r3(e.dur), quote, image: built?.image || null, lines, manual: !!e.quoteManual };
 }
 //   outroLane → { music, outStart, outEnd（完成影片秒數，含片尾卡那幾秒）, fadeIn, fadeOut, relDb, auto }；沒有片尾配樂（或舊的報告沒有範圍）＝null
 export function outroLane(report, server) {

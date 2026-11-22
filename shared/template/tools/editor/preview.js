@@ -200,19 +200,15 @@ export class SimPreview {
       const { W, H } = this.app.canvas?.() || { W: 1920, H: 1080 }, iw = Math.round(W * I.scale), ih = Math.round(H * I.scale);
       const img = this.el.endImg;
       if (c.image) { img.src = c.image; img.hidden = false; Object.assign(img.style, { left: `${Math.round((W - iw) / 2)}px`, top: `${Math.round((H - ih) / 2)}px`, width: `${iw}px`, height: `${ih}px` }); } else { img.removeAttribute('src'); img.hidden = true; }
-      Object.assign(q.style, { left: `${Q.left}px`, top: `${Q.top}px`, width: `${Q.width}px`, fontSize: `${Q.size}px`, lineHeight: `${Q.line}px` });
+      Object.assign(q.style, { left: `${Q.left}px`, top: `${Q.top}px`, width: `${Q.width}px`, fontSize: `${Q.size}px`, lineHeight: `${Q.line}px`, wordBreak: Q.manual ? 'normal' : 'break-all', overflowWrap: Q.manual ? 'anywhere' : '' });
       q.textContent = '';
-      (c.lines || []).forEach((l, i) => {
-        if (byLine) {   // 一行一塊，行與行之間空一行
-          const el = document.createElement('span');
-          el.className = 'el'; el.textContent = l; el.style.display = 'block';
-          if (i) el.style.marginTop = `${Q.line}px`;
-          q.append(el);
-          return;
-        }
-        if (i) q.append(document.createElement('br'), document.createElement('br'));
-        if (mo === 'type') for (const ch of l) { const sp = document.createElement('span'); sp.className = 'ec'; sp.textContent = ch; q.append(sp); }
-        else q.append(document.createTextNode(l));
+      (c.lines || []).forEach((l, i) => {   // 一段一塊（lib/ending.mjs 一樣），段與段之間空 Q.gap px（段落間距）、太長照框寬換行；打字機再一個字一個 .ec
+        const el = document.createElement('span');
+        el.className = 'el'; el.style.display = 'block';
+        if (i) el.style.marginTop = `${Q.gap ?? Q.line}px`;
+        if (mo === 'type') for (const ch of l) { const sp = document.createElement('span'); sp.className = 'ec'; sp.textContent = ch; el.append(sp); }
+        else el.textContent = l;
+        q.append(el);
       });
     }
     const fade = I.fade || 0.5, out = clamp((c.dur - tt) / fade, 0, 1), q0 = tt - (Q.at || 0);
@@ -564,6 +560,26 @@ export class PlayerPreview {
     if (!face) { face = doc.createElement('style'); face.id = 'capFace'; doc.head.appendChild(face); }
     if (face.textContent !== c.face) face.textContent = c.face;
   }
+  // 082 片尾金句：改播放器裡 #end-quote（lib/ending.mjs endingParts 寫的）的位置、字級、框寬、段落間距，不用重新產生。
+  //   字和上次 build 的不一樣：把原本的字（文字動畫的對象）收起來，先放整段新的字（看得到、不跑動畫）；改回來再把原本的放回去，動畫照舊
+  applyEnding() {
+    let doc = null;
+    try { doc = this.p?.iframeElement?.contentDocument || null; } catch { /* 不同源時讀不到 */ }
+    const q = doc?.getElementById('end-quote'), live = q && this.app.endLive?.();
+    if (!live) return;
+    const key = JSON.stringify(live);
+    if (q.dataset.endKey === key) return;
+    q.dataset.endKey = key;
+    const b = live.box;
+    Object.assign(q.style, { left: `${b.left}px`, top: `${b.top}px`, width: `${b.width}px`, fontSize: `${b.size}px`, lineHeight: `${b.line}px`, wordBreak: b.manual ? 'normal' : 'break-all', overflowWrap: b.manual ? 'anywhere' : '' });
+    const same = live.lines.length === live.built.length && live.lines.every((l, i) => l === live.built[i]);
+    if (same) { if (q._built) { q.replaceChildren(...q._built); q._built = null; } }
+    else {
+      if (!q._built) q._built = [...q.childNodes];
+      q.replaceChildren(...live.lines.map((l) => { const el = doc.createElement('span'); el.className = 'el'; el.style.display = 'block'; el.textContent = l; return el; }));
+    }
+    for (const el of q.querySelectorAll('.el + .el')) el.style.marginTop = `${b.gap}px`;   // 段落間距（一行一個 .el，lib/ending.mjs）
+  }
   // 038 重點字幕：照剪輯台現在的標記切換播放器裡每一則字幕的 cg--em（build 寫在 compositions/captions.html 的 <div class="cg" id="cg-N">）。
   // 上次 build 之後才增刪、改字的那幾則（同一個句號的文字不一樣）不動：句號可能已經對不上，等「更新預覽」
   applyMarks() {
@@ -666,6 +682,7 @@ export class PlayerPreview {
     this.applyCaption();
     this.applyText();
     this.applyMarks();
+    this.applyEnding();
     const ct = this.p.currentTime;
     if (Number.isFinite(ct) && this.ready) this.outT = ct;
     const paused = this.p.paused;

@@ -7,6 +7,7 @@
 //   拉平人聲（edit.level）、剪段、加刪音效、換曲都不算：要重新排時間或重新處理底片
 //   第二輪：字幕樣式（captionStyle）、重點字幕（captionMarks 的整則 "#N"）也直接套（preview.js applyCaption、applyMarks 改播放器裡的字幕）。
 //     只標幾個字的 "#N@詞" 頁面不管（AI 寫的），照樣要 build；主題（theme）不算：卡片配色會即時換，背景圖是 build 寫死在 index.html 的
+//   082：片尾金句的位置、字級、框寬、行間距、段落間距（ending.x／y／size／w／lineSpacing／gap）也直接套（preview.js applyEnding 改播放器裡的 #end-quote）；改金句的字照樣要 build
 //
 //   soundOf(plan)              聲音那幾個欄位的值（build 記在 work/hyperframes/.cache/live.json＝「做進去的值」；頁面拿現在的值來比）
 //   liveStrip(plan, { bedDefault, look })  拿掉上面那些欄位、其他照舊的 plan（指紋用：跟上次 build 比只差這些＝指紋一樣）；
@@ -59,6 +60,8 @@ export function liveStrip(plan, { bedDefault = null, look } = {}) {
   if (look !== undefined) p.look = look;
   // 字幕樣式、整則的重點字幕：完成影片預覽直接改字幕（applyCaption、applyMarks）。"#N@詞" 留著（頁面不管，要 build），排好順序
   delete p.captionStyle;
+  // 082 片尾金句的位置、字級：完成影片預覽直接改金句框（preview.js applyEnding）；金句的字要 build（文字動畫照字數排時間）
+  if (isObj(p.ending)) { for (const k of ['x', 'y', 'size', 'w', 'lineSpacing', 'gap']) delete p.ending[k]; if (!Object.keys(p.ending).length) delete p.ending; }
   if (Array.isArray(p.captionMarks)) {
     const words = [...new Set(p.captionMarks.map((x) => {
       const m = typeof x === 'string' ? /^#(\d+)@(.+)$/.exec(x.trim()) : null;

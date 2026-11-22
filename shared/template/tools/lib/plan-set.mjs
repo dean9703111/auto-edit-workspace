@@ -17,6 +17,7 @@ import { LOOK_LIMITS } from './look.mjs';
 import { CAP_LOOKS, CAP_FONTS, CAP_SIZE, CAP_WEIGHTS, CAP_LIFT, fmtCaptionMarks, parseCaptionMarks } from './caption-style.mjs';
 import { readSettings } from './settings.mjs';
 import { ENDING_MOTIONS } from './ending.mjs';
+import { QUOTE_SIZE } from '../editor/ending-layout.mjs';
 import { FRAME, sanitizeScreenFrame } from './screen-frame.mjs';
 import { ok, fail, next, cmdLine } from './say.mjs';
 import { runToolUntilDoneSync } from './job.mjs';
@@ -64,6 +65,13 @@ const KEYS = {
   ending: { hint: () => 'false＝這一集不要片尾', parse: (v) => (v === false || v === 'false' || v === 'off' ? false : BAD) },
   'ending.quote': { hint: () => '片尾金句的字／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : String(v).trim() ? String(v).trim() : BAD) },
   'ending.motion': { hint: () => `片尾金句的文字動畫：${ENDING_MOTIONS.map((m) => `${m.id}（${m.zh}）`).join('／')}`, parse: (v) => (ENDING_MOTIONS.some((m) => m.id === v) ? v : BAD) },
+  // 082 片尾金句的位置、字級（剪輯台拖的；整數 px）
+  'ending.x': { hint: () => '片尾金句框的左邊（畫布 px，預設 1300）', parse: num(0, 1920) },
+  'ending.y': { hint: () => '片尾金句框的上緣（畫布 px，預設 575）', parse: num(0, 1080) },
+  'ending.size': { hint: () => `片尾金句的字級 ${QUOTE_SIZE.min}–${QUOTE_SIZE.max}（預設 48）`, parse: num(QUOTE_SIZE.min, QUOTE_SIZE.max) },
+  'ending.w': { hint: () => '片尾金句的框寬（畫布 px，預設 580 跟著字級等比例；一段太長照框寬自動換行）', parse: num(QUOTE_SIZE.min, 1920) },
+  'ending.lineSpacing': { hint: () => '片尾金句的行間距（剪映的單位，0–1，預設 0.07：行高＝字級 ×（1.448＋行間距））', parse: num(0, 1) },
+  'ending.gap': { hint: () => '片尾金句段與段之間空幾行：0–2（預設 1，可以有小數）', parse: num(0, 2) },
   'ending.subscribe': { hint: () => '#N＝講到「訂閱」的那一句／none＝這一集不放', parse: (v) => (v === null || v === 'none' ? null : /^#\d+$/.test(String(v).trim()) ? String(v).trim() : BAD) },
   // 字幕樣式（035，lib/caption-style.mjs）：以後每集的預設用 brand.mjs captions；這裡只改這一集，沒寫的欄位照預設
   'captionStyle.look': { hint: () => Object.keys(CAP_LOOKS).join('／'), parse: pick(Object.keys(CAP_LOOKS)), early: true },
