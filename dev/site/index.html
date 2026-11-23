@@ -394,6 +394,16 @@
   .btn.big { padding: 16px 32px; font-size: 19px; }
   .agents-line { margin: 26px 0 0; font-size: 16px; color: var(--faint); }
   .agents-line b { color: var(--muted); font-weight: 700; }
+  /* 線上課程 */
+  .course-line { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 22px 0 0; padding: 12px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); font-size: 17px; line-height: 1.5; color: var(--muted); text-decoration: none; }
+  .course-line:hover { border-color: var(--accent); }
+  .course-line b { color: var(--text); font-weight: 800; }
+  .course-line span { color: var(--accent-text); font-weight: 800; white-space: nowrap; }
+  .course-box { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; max-width: 880px; margin-top: 28px; padding: 20px; background: var(--card); border: 1px solid var(--accent); border-radius: 12px; }
+  .course-box > div { flex: 1 1 420px; }
+  .course-box h3 { margin: 0 0 6px; font-size: 24px; font-weight: 900; }
+  .course-box p { margin: 0; color: var(--muted); font-size: 17px; }
+  .course-box p b { color: var(--text); }
   @media (max-width: 900px) { .hero-body { grid-template-columns: 1fr; } }
 
   /* 預覽框：preview/*.html 自己把 1920×1080 的舞台縮到 iframe 大小 */
@@ -575,6 +585,7 @@
       <li><a href="#start">開始使用</a></li>
       <li><a href="#faq">常見問題</a></li>
       <li><a href="shared/template/index.html">情境庫</a></li>
+      <li><a href="https://academy.aiposthub.com/p/skill-shot-27-ai-auto-video-editing">線上課程</a></li>
     </ul>
     <a class="btn" href="https://github.com/dean9703111/auto-edit-workspace">GitHub ↗</a>
   </div>
@@ -592,6 +603,7 @@
           <a class="btn big" href="shared/template/index.html">看完整情境庫 →</a>
         </div>
         <p class="agents-line">支援 <b>Claude Code</b> · <b>ChatGPT（Codex）</b> · <b>MiniMax Code</b> · <b>Cursor</b>，以及其他會讀 <code>AGENTS.md</code> 的 Agent</p>
+        <a class="course-line" href="https://academy.aiposthub.com/p/skill-shot-27-ai-auto-video-editing">線上課程 <b>AI 負責剪片，你負責驗收</b><span>12/9 前早鳥優惠 300 元 →</span></a>
       </div>
       <figure class="player" style="margin:0">
         <div class="pv"><iframe id="feature" src="shared/template/preview/x-process.html" title="情境動畫預覽" tabindex="-1"></iframe></div>
@@ -944,6 +956,13 @@ P.sfx(<span class="s">'success'</span>, <span class="s">'#41'</span>);</pre>
     <li><h3>檢測環境</h3><p>說 <span class="say">「幫我檢測環境」</span>。AI 會先列出要裝的工具（git、Node.js、ffmpeg、whisper、auto-editor、HyperFrames）問你，同意後一步一步裝好。</p></li>
     <li><h3>開始剪</h3><p>說 <span class="say">「剪乾淨 @projects/example」</span>，接著是 <span class="say">「做出完成影片」</span>、<span class="say">「可以了，輸出完成影片」</span>。每到停點 AI 會停下來等你決定。完整提示詞在 <a href="https://github.com/dean9703111/auto-edit-workspace/blob/main/PROMPTS.md">PROMPTS.md</a>。</p></li>
   </ol>
+  <div class="course-box">
+    <div>
+      <h3>想跟著影片做一遍？</h3>
+      <p>線上課程「AI 負責剪片，你負責驗收」：從建立工作區、剪乾淨、剪好看，到橫式與直式實戰、把流程調成自己的風格，也會講每一道關卡為什麼這樣設計。<b>12/9 前早鳥優惠 300 元</b>（原價 500 元）。工作區本身免費，不買課也能用。</p>
+    </div>
+    <a class="btn primary" href="https://academy.aiposthub.com/p/skill-shot-27-ai-auto-video-editing">看課程內容 →</a>
+  </div>
 </section>
 
 <section class="block" id="faq">

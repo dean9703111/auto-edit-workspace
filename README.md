@@ -19,6 +19,7 @@
   <a href="https://deanlin.net/auto-edit-workspace/shared/template/">情境庫</a> ·
   <a href="https://deanlin.net/auto-edit-workspace/shared/template/fx/">字卡動態</a> ·
   <a href="PROMPTS.md">提示詞</a> ·
+  <a href="https://academy.aiposthub.com/p/skill-shot-27-ai-auto-video-editing">線上課程</a> ·
   <a href="shared/template/EDITOR.md">剪輯與構圖</a> ·
   <a href="#常見問題">常見問題</a>
 </p>
@@ -32,6 +33,8 @@ Claude Code、ChatGPT（Codex）、MiniMax Code、Cursor 都能用。工作區�
 > **English** — An open-source AI video editing workspace for talking-head videos. Drop in your footage, voice-over, screen recordings and images, then tell your AI agent (Claude Code, Codex, MiniMax Code or Cursor) in plain language to "cut it clean" or "make the final cut": it removes flubbed takes, aligns subtitles to your script, adds info cards, scene animations and sound effects, and renders an MP4 (or CapCut-ready layers). A browser-based editor lets you trim, fix subtitles and card text, and queue redo requests for the agent. The framing page previews your footage in animations, with custom colors, uploaded backgrounds and AI-generated background options applied per project. Built on [HyperFrames](https://github.com/heygen-com/hyperframes); docs are in Traditional Chinese.
 
 影片教學「AI 自動剪輯 EP1」：待補
+
+線上課程「[AI 負責剪片，你負責驗收](https://academy.aiposthub.com/p/skill-shot-27-ai-auto-video-editing)」：從建立工作區、剪乾淨、剪好看，到橫式與直式實戰、把流程調成自己的風格，跟著影片做一遍，也會講每一道關卡為什麼這樣設計。**12/9 前早鳥優惠 300 元**（原價 500 元）。工作區本身免費，不買課也能用。
 
 ## 目錄
 
@@ -446,6 +449,7 @@ Mac 的 exFAT 硬碟建議先在硬碟上建一個 APFS 映像檔（`hdiutil cre
 林鼎淵 (Dean Lin)，YouTube 頻道「工程師下班有約」。
 
 - 影片：待補
+- 線上課程：[AI 負責剪片，你負責驗收](https://academy.aiposthub.com/p/skill-shot-27-ai-auto-video-editing)
 - FB：https://www.facebook.com/deanlinbao
 - Medium：https://dean-lin.medium.com/
 - 書籍：[《工程師下班有約》](https://www.books.com.tw/products/E050284460)
