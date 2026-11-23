@@ -5,6 +5,12 @@
 //   joinItem(cols, tail)        反過來組回字串
 //   parseAttrs(tail)            「｜icon=x at=#3」→ { icon: 'x', at: '#3' }
 //   toggleEmph(s, a, b)         可強調欄位選了字按「重點」：沒標的包成 **詞**、已經標的拿掉（游標在 **…** 裡、沒選字也拿掉那一個）→ { value, a, b } 或 null（沒事可做）
+//   cjkSpace(s)                 086 中文字（含假名）和英文字母、數字相鄰時補一個半形空格（「安裝AI」→「安裝 AI」、「第3集」→「第 3 集」）；標點旁邊、已經有空格的不動
+
+// 086 中英數之間的半形空格（AGENTS.md 規則 4）：只看中文字、假名；全形標點（、「」，）旁邊不加
+const HAN = '\\u3040-\\u30ff\\u3400-\\u4dbf\\u4e00-\\u9fff\\uf900-\\ufaff';
+const CJK_ALNUM = new RegExp(`([${HAN}])(?=[A-Za-z0-9])|([A-Za-z0-9])(?=[${HAN}])`, 'g');
+export const cjkSpace = (s) => String(s ?? '').replace(CJK_ALNUM, '$1$2 ');
 
 export const richPlain = (s) => String(s).replace(/\*\*/g, '').replace(/(?<!:)\/\//g, '');
 // 重點的範圍（不含 **）：[[內文起點, 內文終點]…]

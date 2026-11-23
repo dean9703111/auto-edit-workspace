@@ -11,6 +11,7 @@
 //               不給或空的＝輸出和以前逐位元相同。回傳的 marks＝畫面上真的有顯示的那幾則
 //     words     047 只標幾個字 [{ n: 7, word: '關鍵詞' }]：那一則的 <span> 裡，那幾個字包成 <em class="cw">（整則已經是重點的不包）
 //   captionWarnings(cues, canvas, style)  → 字數／寬度警告（--check 也印）；字數與寬度上限讀 canvas.caption.maxChars／maxW（橫式 18／1840、直式 10／834），估寬照字級
+//   畫面上的字（items、final.srt、剪映的 字幕.srt）一律補中英數之間的半形空格（086 cjkSpace）；rough.srt 原文沒補的，captionWarnings 列出來
 //   isShortCaption(cue, min)              → 這則字幕不到 CAPTION.minDur（0.6）秒（qc.mjs F8、lib/plan.mjs 剪點檢查共用）
 //
 // 每則字幕 <div class="cg" id="cg-N"><span>…</span></div>（重點字幕是 class="cg cg--em"），初始 opacity:0; visibility:hidden（inline，captions.css 沒寫），
@@ -21,6 +22,7 @@ import { visibleLen } from './scenes.mjs';
 import { r3 } from './time.mjs';
 import { subtract } from './edit.mjs';
 import { captionGeom, captionRootAttrs, isDefaultStyle } from './caption-style.mjs';
+import { cjkSpace } from '../editor/text.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -51,6 +53,8 @@ export function captionWarnings(cues, canvas = null, style = null) {
   }
   const punct = cues.filter((c) => MID_PUNCT.test(c.text));
   if (punct.length) out.push(`字幕含句中標點「，。；：」：${listN(punct)} → 字幕不顯示這四種標點（保留「、！？」），跑 media.mjs srt-align 或在剪輯台改`);
+  const gap = cues.filter((c) => cjkSpace(c.text) !== c.text);
+  if (gap.length) out.push(`字幕中文和英文、數字之間少半形空格：${gap.slice(0, 3).map((c) => `#${c.n}「${c.text}」→「${cjkSpace(c.text)}」`).join('、')}${gap.length > 3 ? ` 等 ${gap.length} 則` : ''} → 畫面上和匯出的字幕已經自動補上；rough.srt 要一致就在剪輯台改那幾則`);
   const short = cues.filter((c) => isShortCaption(c));
   if (short.length) out.push(`字幕不到 ${CAPTION.minDur} 秒：${listN(short)} → 在剪輯台和前後句合併，或把起迄拉長`);
   return out;
@@ -74,7 +78,7 @@ export function buildCaptions(cues, { duration, offset = 0, compId = 'captions',
   const portrait = canvas?.format === 'portrait';
   const em = new Set(marks || []);
   const cw = new Map();
-  for (const w of words || []) { if (!em.has(w.n)) cw.set(w.n, [...(cw.get(w.n) || []), w.word]); }
+  for (const w of words || []) { if (!em.has(w.n)) cw.set(w.n, [...(cw.get(w.n) || []), cjkSpace(w.word)]); }
   const items = [];
   const sorted = [...cues].sort((a, b) => a.start - b.start);
   sorted.forEach((c, i) => {
@@ -85,9 +89,10 @@ export function buildCaptions(cues, { duration, offset = 0, compId = 'captions',
     b = Math.min(b, duration);
     if (a < 0.1) a = 0.1;                               // 0 秒就出現看起來像殘留
     if (b - a < 0.05) return;
-    if (!blackout.length) { items.push({ n: c.n, text: c.text, a: r3(a), b: r3(b), spans: [[r3(a), r3(b)]] }); return; }
+    const text = cjkSpace(c.text);
+    if (!blackout.length) { items.push({ n: c.n, text, a: r3(a), b: r3(b), spans: [[r3(a), r3(b)]] }); return; }
     const spans = subtract([a, b], blackout.map(([x, y]) => [x - offset, y - offset])).filter(([x, y]) => y - x >= 0.05).map(([x, y]) => [r3(x), r3(y)]);
-    if (spans.length) items.push({ n: c.n, text: c.text, a: spans[0][0], b: spans[spans.length - 1][1], spans });
+    if (spans.length) items.push({ n: c.n, text, a: spans[0][0], b: spans[spans.length - 1][1], spans });
   });
   const divs = items.map((it) => `    <div class="cg${em.has(it.n) ? ' cg--em' : ''}" id="cg-${it.n}" style="opacity:0;visibility:hidden"><span>${cw.has(it.n) ? markWords(it.text, cw.get(it.n)) : esc(it.text)}</span></div>`).join('\n');
   const sets = items.flatMap((it) => it.spans.map(([a, b]) => `    tl.set('#cg-${it.n}', { opacity: 1, visibility: 'visible' }, ${a});\n    tl.set('#cg-${it.n}', { opacity: 0, visibility: 'hidden' }, ${b});`)).join('\n');

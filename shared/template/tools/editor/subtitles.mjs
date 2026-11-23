@@ -21,7 +21,7 @@
 // 085 使用者不用懂句號：改字、刪句之後 "#N@詞" 的詞不見了，就綁還留著的開頭幾個字，再不行就綁在原本那一刻（stepRef）
 // 起點那句的 anchor 本來對得上、改完對不上了 → 換成新起點那句的開頭幾個字。
 
-import { findKw, textWidth } from './text.mjs';
+import { findKw, textWidth, cjkSpace } from './text.mjs';
 
 export const RULES = Object.freeze({ minGap: 0.5, minHalf: 0.3, minCue: 0.3, capMax: 18 });
 const EPS = 0.0005;
@@ -97,7 +97,8 @@ export function splitPos(text, frac) {
   }
   return base;
 }
-const joinText = (a, b) => (/[A-Za-z0-9]$/.test(a) && /^[A-Za-z0-9]/.test(b) ? `${a} ${b}` : `${a}${b}`);
+// 合併兩句：接縫兩邊都是英數，或一邊中文一邊英數（086：「安裝」＋「AI 也會」→「安裝 AI 也會」）就隔一個半形空格
+const joinText = (a, b) => (/[A-Za-z0-9]$/.test(a) && /^[A-Za-z0-9]/.test(b)) || cjkSpace(`${a.slice(-1)}${b.slice(0, 1)}`).length > 2 ? `${a} ${b}` : `${a}${b}`;
 
 // ---------- 能不能做（按鈕停用時的原因）----------
 
@@ -145,7 +146,7 @@ export function applyCueOp(cues, op, { videoDur = null } = {}) {
     if (!isNum(op.start) || !isNum(op.end)) return fail('新增的字幕要有 start、end（秒數）');
     if (op.start < g.lo - EPS || op.end > g.hi + EPS) return fail(`新增的字幕 ${r3(op.start)}–${r3(op.end)} 秒會壓到前後句（空檔是 ${g.lo}–${g.hi} 秒）`);
     if (op.end - op.start < RULES.minCue - EPS) return fail(`新增的字幕至少要 ${RULES.minCue} 秒`);
-    const text = cleanText(op.text);
+    const text = cjkSpace(cleanText(op.text));   // 086 新增的一句一次寫好；改字（set）不動，打字時游標才不會跳
     if (!text) return fail('新增的字幕不能是空的');
     const k = op.after === 0 ? -1 : cues.findIndex((c) => c.n === op.after);
     const list = [...cues.slice(0, k + 1), { n: 0, start: r3(op.start), end: r3(op.end), text }, ...cues.slice(k + 1)];

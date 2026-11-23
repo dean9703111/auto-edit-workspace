@@ -8,6 +8,7 @@ import { mapRefStr, remapScripts } from '../beat-remap.mjs';
 import { transcriptFresh, noteTranscript } from '../ff.mjs';
 import { parseSrt, formatSrt } from '../srt.mjs';
 import { readScript } from '../script-file.mjs';
+import { cjkSpace } from '../../editor/text.mjs';
 import { envelope, speechFromEnvelope, pickThreshold } from '../speech.mjs';
 import { writeAtomic } from '../atomic.mjs';
 import { markStep } from '../progress.mjs';
@@ -41,7 +42,7 @@ export function scriptLines(md) {
   return out;
 }
 
-// 顯示文字：去「，。；：」（半形 , ; : 不在數字中間時也去），保留「、！？」；拿掉標點後中英文之間補半形空格
+// 顯示文字：去「，。；：」（半形 , ; : 不在數字中間時也去），保留「、！？」；拿掉標點後中英文之間補半形空格；中文和英數相鄰也補（086）
 export function displayText(s) {
   const ch = [...String(s ?? '').trim()];
   let out = '';
@@ -52,7 +53,7 @@ export function displayText(s) {
     const prev = out.slice(-1), next = ch[i + 1] || '';
     if (prev && next && !/\s/.test(prev) && !/\s/.test(next) && (/[A-Za-z0-9]/.test(prev) || /[A-Za-z0-9]/.test(next))) out += ' ';
   }
-  return out.replace(/\s+/g, ' ').replace(/\s+([、！？])/g, '$1').replace(/、+$/, '').trim();
+  return cjkSpace(out.replace(/\s+/g, ' ').replace(/\s+([、！？])/g, '$1').replace(/、+$/, '').trim());
 }
 
 // 一段文字的正規化字元（比對用）與它在原文的位置
