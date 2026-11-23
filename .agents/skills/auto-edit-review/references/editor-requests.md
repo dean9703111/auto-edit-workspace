@@ -6,7 +6,7 @@
 
 1. `node shared/template/tools/versions.mjs begin --project projects/<專案> --requests`：段號、版本從修改單讀（plan.json 沒有的段自己略過，見第 1 節），剪輯台那幾段標「生成中」。
 2. 照第 2、3 節改。
-3. **回來一段就回報一段**：每個子代理回報（或你自己改完一段），馬上跑 `node shared/template/tools/versions.mjs done --project projects/<專案> --seg <段 id> --note "<子代理回報的那一行>"`：預覽換新、剪輯台那段標「已改完」並跳提示，使用者不用等全部改完。印 ✖ 就把原文交回那個子代理；印「⚠ build 沒過（別段的 ✖…）」照它的 → 等下一段。沒做的段、新增的段寫進 r<N>.md（第 4 節）。
+3. **回來一段就回報一段**：每個子代理回報（第 3 節表格寫「你自己改」的段，你改完一段也算；寫「一段一個子代理」的段一定要派），馬上跑 `node shared/template/tools/versions.mjs done --project projects/<專案> --seg <段 id> --note "<子代理回報的那一行>"`：預覽換新、剪輯台那段標「已改完」並跳提示，使用者不用等全部改完。印 ✖ 就把原文交回那個子代理；印「⚠ build 沒過（別段的 ✖…）」照它的 → 等下一段。沒做的段、新增的段寫進 r<N>.md（第 4 節）。
 4. 全部回來後跑 `node shared/template/tools/versions.mjs finish --project projects/<專案>`：build、audit 一次做完，剪輯台有改到的段標「已改完」、沒改到的標「失敗」（理由取 r<N>.md 那一列），不用另外跑 `editor.mjs --requests-state`。
 
 ## 1. 讀修改單
