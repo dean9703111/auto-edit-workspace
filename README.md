@@ -176,7 +176,7 @@ AI 先做一版，你有三種改法：
 
 <p align="center"><a href="dev/site/guides/background-flow.svg"><picture><source media="(max-width: 600px)" srcset="dev/site/guides/background-flow-mobile.svg"><img src="dev/site/guides/background-flow.svg" alt="AI 背景選圖流程：主色、參考圖與描述交給 AI，產生 A、B、C 三組共九張圖，再按全畫面、側邊欄、章節各自選圖混搭，選了就自動套用；小圖為流程示意" width="1000"></picture></a></p>
 
-這些設定只套用這一集，原素材、共用模板和歷次草稿都會保留。頁面的按鈕會準備生圖指令，圖片由你使用的 AI 工具產生。
+這些設定只套用這一集，原素材、共用模板和歷次草稿都會保留。頁面的按鈕會準備生圖指令，圖片由你使用的 AI 工具產生。預設 Claude Code 用網頁＋SVG 畫；想換成 Codex、Antigravity 生圖，跟 AI 說「生圖改用 Codex」就會記住。
 
 ### 修改單：勾給 AI 重做
 

@@ -24,14 +24,16 @@ const runner = (table) => (cmd, args) => {
 const ALL = {
   'codex --version': { stdout: 'codex-cli 0.163.0\n' }, 'codex login status': { stdout: 'Logged in using ChatGPT\n' },
   'mmx --version': { stdout: 'mmx 1.0.28\n' }, 'mmx auth status': { stdout: JSON.stringify({ method: 'api-key', source: 'config.json', key: 'sk-abcdefghijklmnop', balances: [{ amount: 12.5 }] }) },
+  'agy --version': { stdout: '1.5.17\n' },
   'npx --no -- hyperframes browser path': { stdout: `${chrome}\n` }, 'ffmpeg -version': { stdout: 'ffmpeg version 8.1 Copyright\n' }, 'ffprobe -version': { stdout: 'ffprobe version 8.1 Copyright\n' },
 };
 
-test('六列的結果、生圖路線、結束碼；mmx 的金鑰與餘額不出現在依據', () => {
+// 「這次生圖走哪條路」（087）在 image-route.test.mjs；這裡的 env 給空的，結果才不會跟著在哪個 Agent 裡跑測試而變
+test('七列的結果、這台能用的生圖路線、結束碼；mmx 的金鑰與餘額不出現在依據', () => {
   const root = fakeRoot('0.8.221', '0.8.221');
-  const r = probeCaps({ root, run: runner(ALL) });
-  assert.deepEqual(r.caps.map((c) => [c.id, c.result]), [['model', 'unknown'], ['codex', 'ok'], ['mmx', 'ok'], ['chrome', 'ok'], ['ffmpeg', 'ok'], ['hyperframes', 'ok']]);
-  assert.deepEqual(r.imageRoutes, ['codex', 'mmx', 'html']);
+  const r = probeCaps({ root, run: runner(ALL), env: {} });
+  assert.deepEqual(r.caps.map((c) => [c.id, c.result]), [['model', 'unknown'], ['codex', 'ok'], ['mmx', 'ok'], ['antigravity', 'ok'], ['chrome', 'ok'], ['ffmpeg', 'ok'], ['hyperframes', 'ok']]);
+  assert.deepEqual(r.imageRoutes, ['codex', 'mmx', 'antigravity', 'html']);
   assert.equal(r.exitCode, 0);
   const text = formatCaps(r);
   assert.ok(!/sk-|12\.5|abcdef/.test(text), text);
@@ -44,21 +46,24 @@ test('codex 壞掉（ENOENT）、codex 未登入、mmx 未登入、Chrome 不在
   const t = { ...ALL };
   delete t['codex --version'];
   t['mmx auth status'] = { code: 1, stdout: '', stderr: 'Not authenticated. Run mmx auth login\n' };
-  let r = probeCaps({ root, run: runner(t) });
+  let r = probeCaps({ root, run: runner(t), env: {} });
   assert.equal(r.caps.find((c) => c.id === 'codex').result, 'missing');
   assert.match(r.caps.find((c) => c.id === 'codex').evidence, /codex --version：spawn codex ENOENT/);
   assert.equal(r.caps.find((c) => c.id === 'mmx').result, 'not-logged-in');
   assert.equal(r.exitCode, 0, 'codex、mmx 不影響結束碼');
-  assert.deepEqual(r.imageRoutes, ['html']);
-  r = probeCaps({ root, run: runner({ ...ALL, 'codex login status': { code: 1, stdout: 'Not logged in\n' } }) });
+  assert.deepEqual(r.imageRoutes, ['antigravity', 'html']);
+  r = probeCaps({ root, run: runner({ ...ALL, 'codex login status': { code: 1, stdout: 'Not logged in\n' } }), env: {} });
   assert.equal(r.caps.find((c) => c.id === 'codex').result, 'not-logged-in');
   const t2 = { ...ALL, 'npx --no -- hyperframes browser path': { stdout: '/no/such/chrome\n' } };
   delete t2['ffmpeg -version'];
-  r = probeCaps({ root, run: runner(t2) });
+  delete t2['agy --version'];
+  r = probeCaps({ root, run: runner(t2), env: { CLAUDECODE: '1' } });
   assert.equal(r.caps.find((c) => c.id === 'chrome').result, 'missing');
   assert.equal(r.caps.find((c) => c.id === 'ffmpeg').result, 'missing');
+  assert.equal(r.caps.find((c) => c.id === 'antigravity').result, 'missing');
   assert.equal(r.exitCode, 1);
-  assert.match(formatCaps(r), /可用的生圖路線：codex → mmx/);
+  assert.deepEqual(r.imageRoutes, ['codex', 'mmx']);
+  assert.match(formatCaps(r), /這次生圖走：無（HTML 截圖不能用：npx hyperframes browser ensure）→ 背景圖只能用使用者上傳的圖$/);
 });
 
 test('HyperFrames 版本：相同、不同、沒裝、沒有 package.json 的版本行；根目錄 package.json 釘精確版本', () => {
@@ -66,7 +71,7 @@ test('HyperFrames 版本：相同、不同、沒裝、沒有 package.json 的版
   assert.equal(versionLine(hyperframesVersion(fakeRoot('0.8.221', '0.8.216'))), '⚠ HyperFrames 0.8.216 和 package.json 釘的 0.8.221 不同 → 在工作區根目錄跑 npm install');
   assert.match(versionLine(hyperframesVersion(fakeRoot('0.8.221', null))), /^⚠ 工作區根目錄還沒裝 HyperFrames（package\.json 釘 0\.8\.221）/);
   assert.match(versionLine(hyperframesVersion(fakeRoot(null, null))), /^⚠ 工作區根目錄沒有 package\.json/);
-  const r = probeCaps({ root: fakeRoot('0.8.221', '0.8.216'), run: runner(ALL) });
+  const r = probeCaps({ root: fakeRoot('0.8.221', '0.8.216'), run: runner(ALL), env: {} });
   assert.equal(r.caps.find((c) => c.id === 'hyperframes').result, 'version-mismatch');
   assert.equal(r.exitCode, 0, '版本不符只提醒');
   const pkg = JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'package.json'), 'utf8'));

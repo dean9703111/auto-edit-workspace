@@ -1,6 +1,6 @@
 # 背景圖：每條路的指令
 
-給 `auto-edit-style` 步驟 3 用。選哪條路照 `shared/template/USAGE-reference.md` R9.3；尺寸與留空區照 R9.2；HTML 路線的完整做法在 R9.4。這裡只放指令。
+給 `auto-edit-style` 步驟 3 用。走哪條路照 `caps.mjs` 最後印的「這次生圖走」（它印的第幾節就是下面的節號）；尺寸與留空區照 R9.2；HTML 路線的完整做法在 R9.4。這裡只放指令。
 
 ## 0. 暫存資料夾（每次換背景開一個新的）
 
@@ -16,7 +16,7 @@ node shared/template/tools/brand.mjs bg --tmp
 node shared/template/tools/brand.mjs bg --image "<圖>" --kind fs --out "$TMP"
 ```
 
-縮放到蓋滿、從中間裁成那一種的尺寸，存成 `$TMP/bg-<種類>.jpg`，另存 zones 圖、量留空區。三種（`fs`、`side`、`ch`）還缺哪幾種，它會印同一張圖接著裁的指令，照「→ 下一步」跑；三種齊了它印第 5 節那一條。暗色加 `--dark`（存成 `bg-<種類>-dark.jpg`）。
+縮放到蓋滿、從中間裁成那一種的尺寸，存成 `$TMP/bg-<種類>.jpg`，另存 zones 圖、量留空區。三種（`fs`、`side`、`ch`）還缺哪幾種，它會印同一張圖接著裁的指令，照「→ 下一步」跑；三種齊了它印第 5 節那一條。暗色加 `--dark`（存成 `bg-<種類>-dark.jpg`）。自己的生圖工具做出來的圖也一樣：存成 `$TMP/raw-<種類>.png`，用這一條轉。
 
 ## 2. Codex（提示詞一定從 stdin 給；`-i` 會吃掉後面的字串）
 
@@ -65,3 +65,11 @@ node shared/template/tools/brand.mjs bg --verify "$TMP"
 驗三張（和 `-dark` 三張，有的話）的尺寸、重做 zones 圖、量留空區、產生並排預覽 `preview.jpg`（暗色三張齊了另出 `preview-dark.jpg`），最後印回報段和停點 ⑥ 那兩行（完整路徑），照抄給使用者。尺寸不對、少一張會 ✖：照那一行的 → 做。派工人做的一律由主代理跑這一節。
 
 `zones-fs.jpg` 的紅框（全畫面主卡）、藍框（子母畫面）、黃框（字幕帶），`zones-side.jpg` 的紅框（側邊欄文字區）、`zones-ch.jpg` 的紅框（章名卡）裡都不能有裝飾（R9.2）；`--verify` 量到有裝飾會印 ⚠，照它的 → 做。
+
+## 6. Antigravity（`agy`）
+
+```
+agy -p "Use your built-in image generation tool directly. Do not run any shell commands. <那一張的提示詞>" --mode accept-edits --output-format json --print-timeout 300s
+```
+
+一張圖跑一次，三張互不相關，派工人同時跑（`references/bg-worker.md`）。提示詞寫主色色碼、要留空的區域（R9.2）、比例（fs、ch 寫 16:9，side 寫 3:4）。它印一個 JSON；圖不會放到你指定的位置，在家目錄的 `.gemini/antigravity-cli/brain/<JSON 的 conversation_id>/` 裡的 `.jpg`／`.png`，用第 1 節那一條轉成 `bg-<種類>.jpg`。那個資料夾沒有圖（JSON 有 `denied_actions`，或 `response` 寫 503）＝這次沒生成，重跑一次；第 2 次還沒有就改走第 4 節 HTML。

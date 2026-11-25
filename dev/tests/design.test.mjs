@@ -152,7 +152,8 @@ test('生圖指令：直接生成全部九張並存檔，每類背景可獨立�
   const request = prepared.request, dir = path.join(work, 'design', 'requests', request.id);
   assert.equal(prepared.draft.id, old, '複製指令不替換背景');
   assert.equal(request.expectedCount, 9, '即使舊版傳入單張範圍，也涵蓋全部三類');
-  assert.match(request.prompt, /^直接用生圖工具生成並儲存 9 張/);
+  assert.match(request.prompt, /^直接生成並儲存 9 張/);
+  assert.match(request.prompt, /生圖方式：先在工作區根目錄執行 node shared\/template\/tools\/caps\.mjs，照它最後印的「這次生圖走」那條路生成/, '087：走哪條路照設定，不寫死生圖工具');
   assert.doesNotMatch(request.prompt, /提案|等我|選定後|第一步|第二步/);
   for (const kind of ['fs', 'side', 'ch']) assert.ok(request.prompt.includes(`bg-${kind}.png`));
   assert.match(request.prompt, /960×1080/); assert.match(request.prompt, /1920×1080/);
